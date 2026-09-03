@@ -1,0 +1,14 @@
+<SmileProject Version="1.0">
+  <PropertyGroup>
+    <ProjectKind>Game</ProjectKind>
+    <StartupFile>Program.smile</StartupFile>
+    <OutputName>AetherBladeVfxTests</OutputName>
+    <ApplicationId>smile.examples.aether-blade-vfx-tests</ApplicationId>
+  </PropertyGroup>
+  <ItemGroup>
+    <SmileSource Include="Program.smile" StartupOnly="true" />
+    <Asset Include="Assets\AetherBladeActor.sm3d" />
+    <Asset Include="Assets\VfxAtlas.png" />
+    <SmileProjectReference Include="..\..\libraries\Smile.Simple3D\Smile.Simple3D.smilelibproj" />
+  </ItemGroup>
+</SmileProject>

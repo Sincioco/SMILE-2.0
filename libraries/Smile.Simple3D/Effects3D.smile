@@ -27,6 +27,25 @@ Public Const PRESET_FIRE_BURST = 3
 Public Const PRESET_FROST_BURST = 4
 Public Const PRESET_HEAL_SPIRAL = 5
 Public Const PRESET_DRAGON_FIRE_BREATH = 6
+Public Const SIMULATION_CPU_DETERMINISTIC = 1
+Public Const SIMULATION_GPU_FAST = 2
+Public Const SIMULATION_AUTO = 3
+Public Const SOFT_DEPTH_OFF = 0
+Public Const SOFT_DEPTH_RGBA8_PACKED = 1
+Public Const SOFT_DEPTH_FLOAT16 = 2
+Public Const SOFT_DEPTH_FLOAT32 = 3
+Public Const DISTORTION_OFF = 0
+Public Const DISTORTION_RGBA8_PACKED = 1
+Public Const DISTORTION_RG16_FLOAT = 2
+Public Const GPU_BACKEND_OFF = 0
+Public Const GPU_BACKEND_D3D11_COMPUTE = 1
+Public Const GPU_BACKEND_WEBGL2_TRANSFORM_FEEDBACK = 2
+Public Const FLAME_SHADING_BASIC_ATLAS = 1
+Public Const FLAME_SHADING_THERMAL = 2
+Public Const FALLBACK_GPU_SIMULATION_UNAVAILABLE = 1
+Public Const FALLBACK_SOFT_DEPTH_UNAVAILABLE = 2
+Public Const FALLBACK_DISTORTION_UNAVAILABLE = 4
+Public Const FALLBACK_THERMAL_SHADING_UNAVAILABLE = 8
 Public Const EFFECTS_ERROR_NONE = 0
 Public Const EFFECTS_ERROR_NOT_INITIALIZED = 1
 Public Const EFFECTS_ERROR_INVALID_QUALITY = 2
@@ -36,6 +55,7 @@ Public Const EFFECTS_ERROR_CAPACITY = 5
 Public Const EFFECTS_ERROR_INVALID_EFFECT = 6
 Public Const EFFECTS_ERROR_DRAW = 7
 Public Const EFFECTS_ERROR_RENDERER_RESET = 8
+Public Const EFFECTS_ERROR_INVALID_SIMULATION = 9
 Public Const PARTICLE_VALUE_ACTIVE = 1
 Public Const PARTICLE_VALUE_POSITION_X = 2
 Public Const PARTICLE_VALUE_POSITION_Y = 3
@@ -129,6 +149,13 @@ Private Dim LastCommittedAdditiveCount As Number
 Private Dim LastCommittedRibbonPoints As Number
 Private Dim DroppedImpulseRequestCountValue As Number
 Private Dim AttachmentLossCountValue As Number
+Private Dim RequestedSimulationValue As Number
+Private Dim EffectiveSimulationValue As Number
+Private Dim EffectiveSoftDepthValue As Number
+Private Dim EffectiveDistortionValue As Number
+Private Dim EffectiveGpuBackendValue As Number
+Private Dim EffectiveFlameShadingValue As Number
+Private Dim CapabilityFallbackFlagsValue As Number
 Private Dim LightRequestHead As Number
 Private Dim LightRequestCount As Number
 Private Dim LightRequestX[32] As Number
@@ -386,8 +413,82 @@ Private Sub ClearState()
     LightRequestCount = 0
     AudioRequestHead = 0
     AudioRequestCount = 0
+    RequestedSimulationValue = SIMULATION_AUTO
+    EffectiveSimulationValue = SIMULATION_CPU_DETERMINISTIC
+    EffectiveSoftDepthValue = SOFT_DEPTH_OFF
+    EffectiveDistortionValue = DISTORTION_OFF
+    EffectiveGpuBackendValue = GPU_BACKEND_OFF
+    EffectiveFlameShadingValue = FLAME_SHADING_BASIC_ATLAS
+    CapabilityFallbackFlagsValue = (
+        FALLBACK_GPU_SIMULATION_UNAVAILABLE +
+        FALLBACK_SOFT_DEPTH_UNAVAILABLE +
+        FALLBACK_DISTORTION_UNAVAILABLE +
+        FALLBACK_THERMAL_SHADING_UNAVAILABLE
+    )
 
 End Sub
+
+Private Sub SynchronizeCapabilityState()
+
+    If Initialized And RendererEpochValue <> Graphics3D.ResourceEpoch3D() Then
+
+        RequestedSimulationValue = SIMULATION_AUTO
+        EffectiveSimulationValue = SIMULATION_CPU_DETERMINISTIC
+        EffectiveSoftDepthValue = SOFT_DEPTH_OFF
+        EffectiveDistortionValue = DISTORTION_OFF
+        EffectiveGpuBackendValue = GPU_BACKEND_OFF
+        EffectiveFlameShadingValue = FLAME_SHADING_BASIC_ATLAS
+        CapabilityFallbackFlagsValue = (
+            FALLBACK_GPU_SIMULATION_UNAVAILABLE +
+            FALLBACK_SOFT_DEPTH_UNAVAILABLE +
+            FALLBACK_DISTORTION_UNAVAILABLE +
+            FALLBACK_THERMAL_SHADING_UNAVAILABLE
+        )
+
+    End If
+
+End Sub
+
+''' Selects the Generation 3 simulation policy while M7E-0 keeps GPU simulation unavailable.
+Public Function SetSimulationMode(Mode As Number) As Boolean
+
+    If (Mode < SIMULATION_CPU_DETERMINISTIC Or
+        Mode > SIMULATION_AUTO) Then
+        ErrorValue = EFFECTS_ERROR_INVALID_SIMULATION
+
+        Return False
+    End If
+
+    If Graphics3D.FrameActive3D() Then
+
+        ErrorValue = EFFECTS_ERROR_RENDERER_RESOURCE
+        RendererErrorValue = 14
+
+        Return False
+
+    End If
+
+    RequestedSimulationValue = Mode
+    EffectiveSimulationValue = SIMULATION_CPU_DETERMINISTIC
+    CapabilityFallbackFlagsValue = (
+        FALLBACK_SOFT_DEPTH_UNAVAILABLE +
+        FALLBACK_DISTORTION_UNAVAILABLE +
+        FALLBACK_THERMAL_SHADING_UNAVAILABLE
+    )
+
+    If Mode <> SIMULATION_CPU_DETERMINISTIC Then
+        CapabilityFallbackFlagsValue = (
+            CapabilityFallbackFlagsValue +
+            FALLBACK_GPU_SIMULATION_UNAVAILABLE
+        )
+    End If
+
+    ErrorValue = EFFECTS_ERROR_NONE
+    RendererErrorValue = 0
+
+    Return True
+
+End Function
 
 ''' Creates shared bounded renderer batches for the selected scene-quality profile.
 Public Function Initialize(
@@ -1993,6 +2094,88 @@ End Function
 Public Function LastRendererError() As Number
 
     Return RendererErrorValue
+
+End Function
+
+''' Returns the requested Generation 3 simulation policy.
+Public Function RequestedSimulation() As Number
+
+    Call SynchronizeCapabilityState()
+
+    Return RequestedSimulationValue
+
+End Function
+
+''' Returns the simulation policy currently in use.
+Public Function EffectiveSimulation() As Number
+
+    Call SynchronizeCapabilityState()
+
+    Return EffectiveSimulationValue
+
+End Function
+
+Public Function GpuSimulationSupported() As Boolean
+
+    Return False
+
+End Function
+
+Public Function EffectiveGpuBackend() As Number
+
+    Call SynchronizeCapabilityState()
+
+    Return EffectiveGpuBackendValue
+
+End Function
+
+Public Function SoftDepthSupported() As Boolean
+
+    Return False
+
+End Function
+
+Public Function EffectiveSoftDepth() As Number
+
+    Call SynchronizeCapabilityState()
+
+    Return EffectiveSoftDepthValue
+
+End Function
+
+Public Function DistortionSupported() As Boolean
+
+    Return False
+
+End Function
+
+Public Function EffectiveDistortion() As Number
+
+    Call SynchronizeCapabilityState()
+
+    Return EffectiveDistortionValue
+
+End Function
+
+Public Function ThermalShadingSupported() As Boolean
+
+    Return False
+
+End Function
+
+Public Function EffectiveFlameShading() As Number
+
+    Call SynchronizeCapabilityState()
+
+    Return EffectiveFlameShadingValue
+
+End Function
+
+Public Function CapabilityFallbackFlags() As Number
+
+    Call SynchronizeCapabilityState()
+
+    Return CapabilityFallbackFlagsValue
 
 End Function
 

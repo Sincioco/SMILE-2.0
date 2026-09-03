@@ -1,0 +1,868 @@
+''' Original socket-driven energy-blade effect with a deterministic CPU fallback.
+Module Smile.Simple3D.AetherBlade3D
+
+Option Explicit
+
+Import Smile.Simple3D.Character3D As Character3D
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Graphics3D As Graphics3D
+Import Smile.Simple3D.Math3D As Math3D
+
+Public Const SIMULATION_CPU_DETERMINISTIC = 1
+Public Const SIMULATION_GPU_FAST = 2
+Public Const SIMULATION_AUTO = 3
+
+Public Const ERROR_NONE = 0
+Public Const ERROR_NOT_INITIALIZED = 1
+Public Const ERROR_ALREADY_ACTIVE = 2
+Public Const ERROR_INVALID_ACTOR = 3
+Public Const ERROR_MISSING_BASE_SOCKET = 4
+Public Const ERROR_MISSING_TIP_SOCKET = 5
+Public Const ERROR_DEGENERATE_BLADE = 6
+Public Const ERROR_RENDERER_RESOURCE = 7
+Public Const ERROR_INVALID_EFFECT = 8
+Public Const ERROR_SOCKET_LOST = 9
+Public Const ERROR_DISCONTINUITY = 10
+
+Public Const LAYER_SAMPLE_COUNT = 24
+Public Const TRAIL_SAMPLE_COUNT = 16
+Public Const PARTICLE_CAPACITY = 88
+Public Const TRAIL_SAMPLE_MILLISECONDS = 12
+Public Const MAXIMUM_UPDATE_MILLISECONDS = 100
+
+Public Type BladeEffect
+    Handle As Number
+    Generation As Number
+End Type
+
+Private Dim Initialized As Boolean
+Private Dim Active As Boolean
+Private Dim Enabled As Boolean
+Private Dim GenerationValue As Number
+Private Dim ActorValue As Character3D.Actor
+Private Dim BaseSocketName As Text
+Private Dim TipSocketName As Text
+Private Dim WidthValue As Number
+Private Dim ParticleBatch As Core.ParticleBatch3D
+Private Dim OuterHaloRibbon As Core.RibbonBatch3D
+Private Dim InnerGlowRibbon As Core.RibbonBatch3D
+Private Dim CoreRibbon As Core.RibbonBatch3D
+Private Dim AtlasTexture As Core.Texture3D
+Private Dim BladeMaterial As Core.Material3D
+Private Dim RendererEpochValue As Number
+Private Dim ErrorValue As Number
+Private Dim SocketLossReasonValue As Number
+Private Dim RequestedSimulationValue As Number
+Private Dim EffectiveSimulationValue As Number
+Private Dim FallbackReasonValue As Number
+Private Dim TrailEnabledValue As Boolean
+Private Dim TrailAccumulator As Number
+Private Dim EffectSerialValue As Number
+Private Dim LastBase As Core.Vector3
+Private Dim LastTip As Core.Vector3
+Private Dim TrailX[16] As Number
+Private Dim TrailY[16] As Number
+Private Dim TrailZ[16] As Number
+Private Dim TrailValid[16] As Boolean
+Private Dim TrailCountValue As Number
+Private Dim LastCommittedCountValue As Number
+Private Dim DroppedTrailSamplesValue As Number
+
+Private Function IsCurrent(Value As BladeEffect) As Boolean
+
+    Dim Result As Boolean
+
+    Result = (Active And
+        Value.Handle = 1 And
+        Value.Generation = GenerationValue)
+
+    Return Result
+
+End Function
+
+Private Function IsFinitePosition(Value As Core.Vector3) As Boolean
+
+    Dim Result As Boolean
+
+    Result = (Value.X >= -1000000 And
+        Value.X <= 1000000 And
+        Value.Y >= -1000000 And
+        Value.Y <= 1000000 And
+        Value.Z >= -1000000 And
+        Value.Z <= 1000000)
+
+    Return Result
+
+End Function
+
+Private Sub ClearTrail()
+
+    Dim Index As Number
+
+    For Index = 0 To TRAIL_SAMPLE_COUNT - 1
+        TrailValid[Index] = False
+    End For
+
+    TrailAccumulator = 0
+    TrailCountValue = 0
+
+End Sub
+
+Private Sub SeedTrail(Tip As Core.Vector3)
+
+    Dim Index As Number
+
+    For Index = 0 To TRAIL_SAMPLE_COUNT - 1
+        TrailX[Index] = Tip.X
+        TrailY[Index] = Tip.Y
+        TrailZ[Index] = Tip.Z
+        TrailValid[Index] = False
+    End For
+
+    TrailAccumulator = 0
+    TrailCountValue = 0
+
+End Sub
+
+Private Sub AddTrailSample(Tip As Core.Vector3)
+
+    Dim Index As Number
+
+    For Index = 0 To TRAIL_SAMPLE_COUNT - 2
+        TrailX[Index] = TrailX[Index + 1]
+        TrailY[Index] = TrailY[Index + 1]
+        TrailZ[Index] = TrailZ[Index + 1]
+        TrailValid[Index] = TrailValid[Index + 1]
+    End For
+
+    TrailX[TRAIL_SAMPLE_COUNT - 1] = Tip.X
+    TrailY[TRAIL_SAMPLE_COUNT - 1] = Tip.Y
+    TrailZ[TRAIL_SAMPLE_COUNT - 1] = Tip.Z
+    TrailValid[TRAIL_SAMPLE_COUNT - 1] = True
+    TrailCountValue = Min(TRAIL_SAMPLE_COUNT, TrailCountValue + 1)
+
+End Sub
+
+Private Function StageParticle(
+    Index As Number,
+    Position As Core.Vector3,
+    Size As Number,
+    RedValue As Number,
+    GreenValue As Number,
+    BlueValue As Number,
+    Opacity As Number,
+    Frame As Number
+) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Graphics3D.SetParticle3D(
+        ParticleBatch,
+        Index,
+        Position.X,
+        Position.Y,
+        Position.Z,
+        Max(1, Size),
+        Index * 37 Mod 360,
+        Frame
+    )
+
+    If Result Then
+        Result = Graphics3D.SetParticleColor3D(
+            ParticleBatch,
+            Index,
+            RedValue,
+            GreenValue,
+            BlueValue,
+            Opacity
+        )
+    End If
+
+    Return Result
+
+End Function
+
+Private Function StageBladeLayer(
+    StartIndex As Number,
+    Base As Core.Vector3,
+    Tip As Core.Vector3,
+    Size As Number,
+    RedValue As Number,
+    GreenValue As Number,
+    BlueValue As Number,
+    Opacity As Number,
+    Frame As Number
+) As Boolean
+
+    Dim Index As Number
+    Dim Position As Core.Vector3
+    Dim Result As Boolean
+
+    Result = True
+
+    For Index = 0 To LAYER_SAMPLE_COUNT - 1
+
+        Position.X = Base.X + (Tip.X - Base.X) * Index / (LAYER_SAMPLE_COUNT - 1)
+        Position.Y = Base.Y + (Tip.Y - Base.Y) * Index / (LAYER_SAMPLE_COUNT - 1)
+        Position.Z = Base.Z + (Tip.Z - Base.Z) * Index / (LAYER_SAMPLE_COUNT - 1)
+        Result = StageParticle(
+            StartIndex + Index,
+            Position,
+            Size,
+            RedValue,
+            GreenValue,
+            BlueValue,
+            Opacity,
+            Frame
+        ) And Result
+    End For
+
+    Return Result
+
+End Function
+
+Private Function StageRibbon(
+    ByRef Ribbon As Core.RibbonBatch3D,
+    Base As Core.Vector3,
+    Tip As Core.Vector3,
+    HalfWidth As Number,
+    RedValue As Number,
+    GreenValue As Number,
+    BlueValue As Number,
+    Opacity As Number
+) As Boolean
+
+    Dim DirectionX As Number
+    Dim DirectionY As Number
+    Dim PerpendicularX As Number
+    Dim PerpendicularY As Number
+    Dim Result As Boolean
+
+    DirectionX = Tip.X - Base.X
+    DirectionY = Tip.Y - Base.Y
+
+    If Abs(DirectionX) >= Abs(DirectionY) Then
+        PerpendicularX = 0
+        PerpendicularY = HalfWidth
+    Else
+        PerpendicularX = HalfWidth
+        PerpendicularY = 0
+    End If
+
+    Result = Graphics3D.SetRibbonPoint3D(
+        Ribbon,
+        0,
+        Base.X - PerpendicularX,
+        Base.Y - PerpendicularY,
+        Base.Z,
+        Base.X + PerpendicularX,
+        Base.Y + PerpendicularY,
+        Base.Z,
+        0
+    )
+    Result = Graphics3D.SetRibbonPointColor3D(
+        Ribbon,
+        0,
+        RedValue,
+        GreenValue,
+        BlueValue,
+        Opacity
+    ) And Result
+    Result = Graphics3D.SetRibbonPoint3D(
+        Ribbon,
+        1,
+        Tip.X - PerpendicularX,
+        Tip.Y - PerpendicularY,
+        Tip.Z,
+        Tip.X + PerpendicularX,
+        Tip.Y + PerpendicularY,
+        Tip.Z,
+        1000
+    ) And Result
+    Result = Graphics3D.SetRibbonPointColor3D(
+        Ribbon,
+        1,
+        RedValue,
+        GreenValue,
+        BlueValue,
+        Opacity
+    ) And Result
+    Result = Graphics3D.CommitRibbonBatch3D(Ribbon, 2) And Result
+
+    Return Result
+
+End Function
+
+Private Function CommitBlade(Base As Core.Vector3, Tip As Core.Vector3) As Boolean
+
+    Dim CountValue As Number
+    Dim Index As Number
+    Dim Opacity As Number
+    Dim Position As Core.Vector3
+    Dim Result As Boolean
+
+    Result = StageRibbon(OuterHaloRibbon, Base, Tip, WidthValue * 2, 30, 122, 255, 18)
+    Result = StageRibbon(InnerGlowRibbon, Base, Tip, WidthValue, 72, 205, 255, 46) And Result
+    Result = StageRibbon(CoreRibbon, Base, Tip, Max(1, WidthValue / 3), 238, 252, 255, 100) And Result
+    Result = StageBladeLayer(0, Base, Tip, WidthValue * 4, 30, 122, 255, 14, 4) And Result
+    Result = StageBladeLayer(24, Base, Tip, WidthValue * 2, 72, 205, 255, 36, 1) And Result
+    Result = StageBladeLayer(48, Base, Tip, WidthValue, 238, 252, 255, 92, 0) And Result
+    CountValue = LAYER_SAMPLE_COUNT * 3
+
+    For Index = 0 To TRAIL_SAMPLE_COUNT - 1
+
+        If TrailValid[Index] Then
+
+            Position.X = TrailX[Index]
+            Position.Y = TrailY[Index]
+            Position.Z = TrailZ[Index]
+            Opacity = (Index + 1) * 42 / TRAIL_SAMPLE_COUNT
+            Result = StageParticle(
+                CountValue,
+                Position,
+                WidthValue * 3,
+                66,
+                192,
+                255,
+                Opacity,
+                5 + Index Mod 3
+            ) And Result
+            CountValue = CountValue + 1
+
+        End If
+
+    End For
+
+    If Result Then
+        Result = Graphics3D.CommitParticleBatch3D(ParticleBatch, CountValue)
+    End If
+
+    If Result Then
+        LastCommittedCountValue = CountValue
+    Else
+        ErrorValue = ERROR_RENDERER_RESOURCE
+    End If
+
+    Return Result
+
+End Function
+
+''' Creates the shared deterministic AetherBlade fallback resources.
+Public Function Initialize(AtlasPath As Text) As Boolean
+
+    Dim CandidateBatch As Core.ParticleBatch3D
+    Dim CandidateMaterial As Core.Material3D
+    Dim CandidateOuterRibbon As Core.RibbonBatch3D
+    Dim CandidateInnerRibbon As Core.RibbonBatch3D
+    Dim CandidateCoreRibbon As Core.RibbonBatch3D
+    Dim CandidateTexture As Core.Texture3D
+    Dim Result As Boolean
+
+    If Initialized Then
+        Return True
+    End If
+
+    If Graphics3D.FrameActive3D() Then
+        ErrorValue = ERROR_RENDERER_RESOURCE
+
+        Return False
+    End If
+
+    CandidateTexture = Graphics3D.LoadTexture3D(
+        AtlasPath,
+        Graphics3D.TEXTURE_FILTER_LINEAR,
+        Graphics3D.TEXTURE_WRAP_CLAMP
+    )
+
+    If CandidateTexture.Handle <> 0 Then
+        CandidateMaterial = Graphics3D.CreateEffectMaterial3D(
+            CandidateTexture,
+            Graphics3D.MATERIAL_ALPHA_ADDITIVE,
+            220
+        )
+    End If
+
+    If CandidateMaterial.Handle <> 0 Then
+        CandidateBatch = Graphics3D.CreateParticleBatch3D(
+            PARTICLE_CAPACITY,
+            CandidateMaterial,
+            Graphics3D.VFX_BILLBOARD_CAMERA,
+            4,
+            4
+        )
+    End If
+
+    If CandidateBatch.Handle <> 0 Then
+
+        CandidateOuterRibbon = Graphics3D.CreateRibbonBatch3D(2, CandidateMaterial)
+        CandidateInnerRibbon = Graphics3D.CreateRibbonBatch3D(2, CandidateMaterial)
+        CandidateCoreRibbon = Graphics3D.CreateRibbonBatch3D(2, CandidateMaterial)
+
+    End If
+
+    Result = (CandidateTexture.Handle <> 0 And
+        CandidateMaterial.Handle <> 0 And
+        CandidateBatch.Handle <> 0 And
+        CandidateOuterRibbon.Handle <> 0 And
+        CandidateInnerRibbon.Handle <> 0 And
+        CandidateCoreRibbon.Handle <> 0)
+
+    If Not Result Then
+
+        Call Graphics3D.DestroyParticleBatch3D(CandidateBatch)
+        Call Graphics3D.DestroyRibbonBatch3D(CandidateOuterRibbon)
+        Call Graphics3D.DestroyRibbonBatch3D(CandidateInnerRibbon)
+        Call Graphics3D.DestroyRibbonBatch3D(CandidateCoreRibbon)
+        Call Graphics3D.DestroyEffectMaterial3D(CandidateMaterial)
+        Call Graphics3D.DestroyTexture3D(CandidateTexture)
+
+        ErrorValue = ERROR_RENDERER_RESOURCE
+
+        Return False
+
+    End If
+
+    AtlasTexture = CandidateTexture
+    BladeMaterial = CandidateMaterial
+    ParticleBatch = CandidateBatch
+    OuterHaloRibbon = CandidateOuterRibbon
+    InnerGlowRibbon = CandidateInnerRibbon
+    CoreRibbon = CandidateCoreRibbon
+    RendererEpochValue = Graphics3D.ResourceEpoch3D()
+    RequestedSimulationValue = SIMULATION_AUTO
+    EffectiveSimulationValue = SIMULATION_CPU_DETERMINISTIC
+    FallbackReasonValue = SIMULATION_GPU_FAST
+    Initialized = True
+    Active = False
+    Enabled = False
+    ErrorValue = ERROR_NONE
+    SocketLossReasonValue = ERROR_NONE
+
+    Return True
+
+End Function
+
+''' Attaches one original energy blade to exact base and tip socket names.
+Public Function Attach(
+    Actor As Character3D.Actor,
+    BaseSocket As Text,
+    TipSocket As Text,
+    Optional Width As Number = 4
+) As BladeEffect
+
+    Dim Base As Core.Vector3
+    Dim Result As BladeEffect
+    Dim Tip As Core.Vector3
+
+    If Not Initialized Then
+        ErrorValue = ERROR_NOT_INITIALIZED
+
+        Return Result
+    End If
+
+    If Active Then
+        ErrorValue = ERROR_ALREADY_ACTIVE
+
+        Return Result
+    End If
+
+    If Not Character3D.IsValid(Actor) Then
+        ErrorValue = ERROR_INVALID_ACTOR
+
+        Return Result
+    End If
+
+    If Not Character3D.HasSocket(Actor, BaseSocket) Then
+        ErrorValue = ERROR_MISSING_BASE_SOCKET
+
+        Return Result
+    End If
+
+    If Not Character3D.HasSocket(Actor, TipSocket) Then
+        ErrorValue = ERROR_MISSING_TIP_SOCKET
+
+        Return Result
+    End If
+
+    Base = Character3D.SocketPosition(Actor, BaseSocket)
+    Tip = Character3D.SocketPosition(Actor, TipSocket)
+
+    If Math3D.Distance(Base, Tip) <= 0 Then
+        ErrorValue = ERROR_DEGENERATE_BLADE
+
+        Return Result
+    End If
+
+    GenerationValue = GenerationValue + 1
+
+    If GenerationValue <= 0 Then
+        GenerationValue = 1
+    End If
+
+    ActorValue = Actor
+    BaseSocketName = BaseSocket
+    TipSocketName = TipSocket
+    WidthValue = Min(1000, Max(1, Width))
+    LastBase = Base
+    LastTip = Tip
+    EffectSerialValue = 1
+    Active = True
+    Enabled = True
+    TrailEnabledValue = False
+    ErrorValue = ERROR_NONE
+    SocketLossReasonValue = ERROR_NONE
+
+    Call SeedTrail(Tip)
+
+    Result.Handle = 1
+    Result.Generation = GenerationValue
+
+    Return Result
+
+End Function
+
+''' Enables or disables the complete blade effect without destroying its resources.
+Public Function SetEnabled(Value As BladeEffect, NextEnabled As Boolean) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    If Not IsCurrent(Value) Then
+        ErrorValue = ERROR_INVALID_EFFECT
+
+        Return False
+    End If
+
+    Enabled = NextEnabled
+
+    If Not Enabled Then
+
+        Call ClearTrail()
+
+        LastCommittedCountValue = 0
+
+        ReturnValue = Graphics3D.CommitParticleBatch3D(ParticleBatch, 0)
+        ReturnValue = Graphics3D.CommitRibbonBatch3D(OuterHaloRibbon, 0) And ReturnValue
+        ReturnValue = Graphics3D.CommitRibbonBatch3D(InnerGlowRibbon, 0) And ReturnValue
+        ReturnValue = Graphics3D.CommitRibbonBatch3D(CoreRibbon, 0) And ReturnValue
+
+        Return ReturnValue
+
+    End If
+
+    Return True
+
+End Function
+
+''' Clears all temporal samples after a clip, seek, wrap, restart, or socket discontinuity.
+Public Function ResetTrail(Value As BladeEffect, EffectSerial As Number) As Boolean
+
+    If Not IsCurrent(Value) Then
+        ErrorValue = ERROR_INVALID_EFFECT
+
+        Return False
+    End If
+
+    EffectSerialValue = EffectSerial
+
+    Call SeedTrail(LastTip)
+
+    Return True
+
+End Function
+
+''' Updates sockets, fixed-interval unconnected afterimages, and the committed blade batch.
+Public Function Update(
+    Value As BladeEffect,
+    ElapsedMilliseconds As Number,
+    TrailEnabled As Boolean,
+    EffectSerial As Number
+) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    Dim Base As Core.Vector3
+    Dim CatchUp As Number
+    Dim Tip As Core.Vector3
+
+    If Not IsCurrent(Value) Then
+        ErrorValue = ERROR_INVALID_EFFECT
+
+        Return False
+    End If
+
+    If (Graphics3D.ResourceEpoch3D() <> RendererEpochValue Or
+        Not Graphics3D.ParticleBatchHandleValid3D(ParticleBatch) Or
+        Not Graphics3D.RibbonBatchHandleValid3D(OuterHaloRibbon) Or
+        Not Graphics3D.RibbonBatchHandleValid3D(InnerGlowRibbon) Or
+        Not Graphics3D.RibbonBatchHandleValid3D(CoreRibbon)) Then
+        ErrorValue = ERROR_RENDERER_RESOURCE
+
+        Return False
+    End If
+
+    If Not Enabled Then
+        Return True
+    End If
+
+    If Not Character3D.IsValid(ActorValue) Then
+
+        SocketLossReasonValue = ERROR_INVALID_ACTOR
+        ErrorValue = ERROR_SOCKET_LOST
+
+        Call ClearTrail()
+
+        Return False
+
+    End If
+
+    If Not Character3D.HasSocket(ActorValue, BaseSocketName) Then
+
+        SocketLossReasonValue = ERROR_MISSING_BASE_SOCKET
+        ErrorValue = ERROR_SOCKET_LOST
+
+        Call ClearTrail()
+
+        Return False
+
+    End If
+
+    If Not Character3D.HasSocket(ActorValue, TipSocketName) Then
+
+        SocketLossReasonValue = ERROR_MISSING_TIP_SOCKET
+        ErrorValue = ERROR_SOCKET_LOST
+
+        Call ClearTrail()
+
+        Return False
+
+    End If
+
+    Base = Character3D.SocketPosition(ActorValue, BaseSocketName)
+    Tip = Character3D.SocketPosition(ActorValue, TipSocketName)
+
+    If (Not IsFinitePosition(Base) Or
+        Not IsFinitePosition(Tip) Or
+        Math3D.Distance(Base, Tip) <= 0) Then
+
+        SocketLossReasonValue = ERROR_DEGENERATE_BLADE
+        ErrorValue = ERROR_SOCKET_LOST
+
+        Call ClearTrail()
+
+        Return False
+
+    End If
+
+    If (ElapsedMilliseconds < 0 Or
+        ElapsedMilliseconds > MAXIMUM_UPDATE_MILLISECONDS Or
+        EffectSerial <> EffectSerialValue) Then
+
+        EffectSerialValue = EffectSerial
+        ErrorValue = ERROR_DISCONTINUITY
+
+        Call SeedTrail(Tip)
+
+    End If
+
+    If TrailEnabled And Not TrailEnabledValue Then
+        Call SeedTrail(Tip)
+    Else If Not TrailEnabled And TrailEnabledValue Then
+        Call ClearTrail()
+    End If
+
+    TrailEnabledValue = TrailEnabled
+    ElapsedMilliseconds = Min(MAXIMUM_UPDATE_MILLISECONDS, Max(0, ElapsedMilliseconds))
+
+    If TrailEnabledValue Then
+
+        TrailAccumulator = TrailAccumulator + ElapsedMilliseconds
+        CatchUp = 0
+
+        Do
+
+            Call AddTrailSample(Tip)
+
+            TrailAccumulator = TrailAccumulator - TRAIL_SAMPLE_MILLISECONDS
+            CatchUp = CatchUp + 1
+
+        Loop Until TrailAccumulator < TRAIL_SAMPLE_MILLISECONDS Or CatchUp >= 4
+
+        If TrailAccumulator >= TRAIL_SAMPLE_MILLISECONDS Then
+            DroppedTrailSamplesValue = DroppedTrailSamplesValue + 1
+            TrailAccumulator = TrailAccumulator Mod TRAIL_SAMPLE_MILLISECONDS
+        End If
+
+    End If
+
+    LastBase = Base
+    LastTip = Tip
+    ErrorValue = ERROR_NONE
+
+    ReturnValue = CommitBlade(Base, Tip)
+
+    Return ReturnValue
+
+End Function
+
+Public Function Draw(Value As BladeEffect) As Boolean
+
+    Dim Result As Boolean
+
+    If Not IsCurrent(Value) Then
+        ErrorValue = ERROR_INVALID_EFFECT
+
+        Return False
+    End If
+
+    If Not Enabled Then
+        Return True
+    End If
+
+    Result = Graphics3D.DrawRibbonBatch3D(OuterHaloRibbon)
+    Result = Graphics3D.DrawRibbonBatch3D(InnerGlowRibbon) And Result
+    Result = Graphics3D.DrawRibbonBatch3D(CoreRibbon) And Result
+    Result = Graphics3D.DrawParticleBatch3D(ParticleBatch) And Result
+
+    If Not Result Then
+        ErrorValue = ERROR_RENDERER_RESOURCE
+    End If
+
+    Return Result
+
+End Function
+
+Public Sub Destroy(ByRef Value As BladeEffect)
+
+    If Not IsCurrent(Value) Then
+
+        Value.Handle = 0
+        Value.Generation = 0
+
+        Return
+
+    End If
+
+    Active = False
+    Enabled = False
+    ActorValue.Handle = 0
+    BaseSocketName = ""
+    TipSocketName = ""
+    LastCommittedCountValue = 0
+
+    Call ClearTrail()
+
+    Value.Handle = 0
+    Value.Generation = 0
+
+End Sub
+
+Public Sub Shutdown()
+
+    If Graphics3D.FrameActive3D() Then
+        ErrorValue = ERROR_RENDERER_RESOURCE
+
+        Return
+    End If
+
+    Call Graphics3D.DestroyParticleBatch3D(ParticleBatch)
+    Call Graphics3D.DestroyRibbonBatch3D(OuterHaloRibbon)
+    Call Graphics3D.DestroyRibbonBatch3D(InnerGlowRibbon)
+    Call Graphics3D.DestroyRibbonBatch3D(CoreRibbon)
+    Call Graphics3D.DestroyEffectMaterial3D(BladeMaterial)
+    Call Graphics3D.DestroyTexture3D(AtlasTexture)
+    Call ClearTrail()
+
+    Initialized = False
+    Active = False
+    Enabled = False
+    ActorValue.Handle = 0
+    RendererEpochValue = 0
+    LastCommittedCountValue = 0
+    ErrorValue = ERROR_NONE
+    SocketLossReasonValue = ERROR_NONE
+
+End Sub
+
+Public Function IsActive(Value As BladeEffect) As Boolean
+
+    Dim Result As Boolean
+
+    Result = IsCurrent(Value)
+
+    Return Result
+
+End Function
+
+Public Function RequestedSimulation() As Number
+
+    Return RequestedSimulationValue
+
+End Function
+
+Public Function EffectiveSimulation() As Number
+
+    Return EffectiveSimulationValue
+
+End Function
+
+Public Function GpuSimulationSupported() As Boolean
+
+    Return False
+
+End Function
+
+Public Function SoftDepthSupported() As Boolean
+
+    Return False
+
+End Function
+
+Public Function DistortionSupported() As Boolean
+
+    Return False
+
+End Function
+
+Public Function ThermalShadingSupported() As Boolean
+
+    Return False
+
+End Function
+
+Public Function FallbackReason() As Number
+
+    Return FallbackReasonValue
+
+End Function
+
+Public Function TrailParticleCount() As Number
+
+    Return TrailCountValue
+
+End Function
+
+Public Function CommittedParticleCount() As Number
+
+    Return LastCommittedCountValue
+
+End Function
+
+Public Function DroppedTrailSamples() As Number
+
+    Return DroppedTrailSamplesValue
+
+End Function
+
+Public Function LastError() As Number
+
+    Return ErrorValue
+
+End Function
+
+Public Function LastSocketLossReason() As Number
+
+    Return SocketLossReasonValue
+
+End Function
+
+End Module

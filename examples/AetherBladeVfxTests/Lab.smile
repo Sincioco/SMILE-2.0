@@ -1,0 +1,149 @@
+Option Explicit
+
+Import Smile.Simple3D.AetherBlade3D As AetherBlade3D
+Import Smile.Simple3D.Character3D As Character3D
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Graphics3D As Graphics3D
+Import Smile.Simple3D.Scene3D As Scene3D
+
+Dim Actor As Character3D.Actor
+Dim Blade As AetherBlade3D.BladeEffect
+Dim Camera As Core.Camera3D
+Dim Arena As Core.Object3D
+Dim AutomaticSwingTriggered As Boolean
+Dim CurrentTime As Number
+Dim ElapsedMilliseconds As Number
+Dim EffectSerial As Number
+Dim FrameReady As Boolean
+Dim GlowEnabled As Boolean
+Dim Key As Number
+Dim PreviousTime As Number
+Dim Running As Boolean
+Dim StartedTime As Number
+
+Game Window "SMILE 2.0 - AetherBlade M7E-0 Lab" Size 960 By 540
+
+Call Graphics3D.ResetRenderer3D()
+Call LoadLab()
+
+PreviousTime = Timer()
+StartedTime = PreviousTime
+Running = True
+
+Do
+
+    Get Key Key
+
+    If Key = KEY_ESCAPE Then
+
+        Running = False
+
+    Else If Key = KEY_2 Then
+
+        AutomaticSwingTriggered = True
+        EffectSerial = EffectSerial + 1
+        FrameReady = AetherBlade3D.ResetTrail(Blade, EffectSerial)
+        FrameReady = Character3D.PlayAnimation(Actor, "AttackLike", True) And FrameReady
+
+    Else If Key = KEY_1 Then
+
+        EffectSerial = EffectSerial + 1
+        FrameReady = AetherBlade3D.ResetTrail(Blade, EffectSerial)
+        FrameReady = Character3D.PlayAnimation(Actor, "Idle", True) And FrameReady
+
+    Else If Key = KEY_SPACE Then
+
+        GlowEnabled = Not GlowEnabled
+        FrameReady = AetherBlade3D.SetEnabled(Blade, GlowEnabled)
+
+    Else If Key = KEY_R Then
+
+        EffectSerial = EffectSerial + 1
+        FrameReady = AetherBlade3D.ResetTrail(Blade, EffectSerial)
+        FrameReady = Character3D.PlayAnimation(Actor, "AttackLike", True) And FrameReady
+
+    End If
+
+    CurrentTime = Timer()
+    ElapsedMilliseconds = Min(50, Max(0, CurrentTime - PreviousTime))
+    PreviousTime = CurrentTime
+
+    If Not AutomaticSwingTriggered And CurrentTime - StartedTime >= 4000 Then
+
+        AutomaticSwingTriggered = True
+        EffectSerial = EffectSerial + 1
+        FrameReady = AetherBlade3D.ResetTrail(Blade, EffectSerial)
+        FrameReady = Character3D.PlayAnimation(Actor, "AttackLike", True) And FrameReady
+
+    End If
+
+    FrameReady = Character3D.Update(Actor, ElapsedMilliseconds)
+    FrameReady = AetherBlade3D.Update(Blade, ElapsedMilliseconds, True, EffectSerial) And FrameReady
+    FrameReady = Scene3D.Begin(Camera, 2, 6, 18) And FrameReady
+
+    If FrameReady Then
+
+        FrameReady = Graphics3D.DrawObject3D(Arena)
+        FrameReady = Character3D.Draw(Actor) And FrameReady
+        FrameReady = AetherBlade3D.Draw(Blade) And FrameReady
+        FrameReady = Scene3D.EndScene() And FrameReady
+
+    End If
+
+    Call DrawOverlay()
+
+    Show Screen
+
+    Running = Running And Not Game_Closed()
+
+Loop Until Not Running
+
+Call DestroyLab()
+
+Sub LoadLab()
+
+    Camera = Graphics3D.DefaultCamera()
+    Camera.Position.X = 0
+    Camera.Position.Y = 105
+    Camera.Position.Z = -330
+    Camera.Target.X = 0
+    Camera.Target.Y = 48
+    Camera.Target.Z = 55
+    Arena = Graphics3D.CreatePlane3D(430, 280)
+
+    Call Graphics3D.SetObjectPosition(Arena, 0, -3, 60)
+
+    Actor = Character3D.LoadActor("Assets\AetherBladeActor.sm3d")
+    FrameReady = Character3D.Place(Actor, 0, 0, 56)
+    FrameReady = Character3D.SetScale(Actor, 1100) And FrameReady
+    FrameReady = Character3D.PlayAnimation(Actor, "Idle", True) And FrameReady
+    FrameReady = Character3D.SetShadows(Actor, True, True) And FrameReady
+    FrameReady = AetherBlade3D.Initialize("Assets\VfxAtlas.png") And FrameReady
+    Blade = AetherBlade3D.Attach(Actor, "SwordBase", "SwordTip", 4)
+    GlowEnabled = AetherBlade3D.IsActive(Blade)
+    EffectSerial = 1
+
+End Sub
+
+Sub DrawOverlay()
+
+    Draw Text "AETHERBLADE - M7E-0 CPU FALLBACK" At 18, 18 Size 22 Color CYAN
+    Draw Text "Socket Blade: Core + Glow + Halo + Unconnected Trail" At 18, 50 Size 14 Color WHITE
+    Draw Text "Requested Simulation: AUTO" At 18, 82 Size 14 Color LIGHT_GRAY
+    Draw Text "Effective Simulation: CPU_DETERMINISTIC" At 18, 104 Size 14 Color YELLOW
+    Draw Text "GPU / Soft Depth / Distortion / Thermal: Unavailable In M7E-0" At 18, 126 Size 14 Color LIGHT_GRAY
+    Draw Text "1: Idle   2: Swing   Space: Toggle Blade   R: Restart Trail   Esc: Exit" At 18, 500 Size 14 Color WHITE
+
+End Sub
+
+Sub DestroyLab()
+
+    Call AetherBlade3D.Destroy(Blade)
+    Call AetherBlade3D.Shutdown()
+    Call Character3D.Destroy(Actor)
+    Call Graphics3D.DestroyObject3D(Arena)
+    Call Character3D.Shutdown()
+    Call Scene3D.Shutdown()
+    Call Graphics3D.ResetRenderer3D()
+
+End Sub

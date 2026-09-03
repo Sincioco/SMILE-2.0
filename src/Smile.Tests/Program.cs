@@ -773,7 +773,7 @@ Run("Model3DAsset project metadata is strict and projects as a distinct hierarch
     var projectPath = Path.GetFullPath("games/Dragonfall/Character3DViewerCooked.smileproj");
     var sourceSet = SmileProjectSourceSet.Load(projectPath);
     sourceSet.ValidateAssetsForBuild();
-    Equal(2, sourceSet.Model3DAssets.Items.Count);
+    Equal(3, sourceSet.Model3DAssets.Items.Count);
     var model = sourceSet.Model3DAssets.Items.Single(item =>
         item.Include.Equals(
             "SourceAssets/Arin/sin-star-i-character-1-paladin-tripo-v01.original.glb",

@@ -1,0 +1,143 @@
+Option Explicit
+
+Import Smile.Simple3D.AetherBlade3D As AetherBlade3D
+Import Smile.Simple3D.Character3D As Character3D
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Effects3D As Effects3D
+Import Smile.Simple3D.Graphics3D As Graphics3D
+
+Dim Checks As Number
+Dim Failures As Number
+
+Game Window "AetherBlade M7E-0 Tests" Size 320 By 240
+
+Do
+
+    Call RunTests()
+
+Loop Until True
+
+If Failures = 0 Then
+    Print "AetherBlade M7E-0 tests passed"
+Else
+    Print "AetherBlade M7E-0 tests failed: "; Failures
+End If
+
+Sub RunTests()
+
+    Dim Actor As Character3D.Actor
+    Dim Blade As AetherBlade3D.BladeEffect
+    Dim Camera As Core.Camera3D
+    Dim Degenerate As AetherBlade3D.BladeEffect
+    Dim Missing As AetherBlade3D.BladeEffect
+    Dim AdditiveMaterial As Core.Material3D
+    Dim AlphaMaterial As Core.Material3D
+    Dim RibbonMaterial As Core.Material3D
+    Dim Texture As Core.Texture3D
+
+    Call Graphics3D.ResetRenderer3D()
+
+    Actor = Character3D.LoadActor("Assets\AetherBladeActor.sm3d")
+    Camera = Graphics3D.DefaultCamera()
+
+    Call Check(Character3D.IsValid(Actor))
+    Call Check(Character3D.HasSocket(Actor, "SwordBase"))
+    Call Check(Character3D.HasSocket(Actor, "SwordTip"))
+    Call Check(AetherBlade3D.Initialize("Assets\VfxAtlas.png"))
+    Call Check(AetherBlade3D.RequestedSimulation() = AetherBlade3D.SIMULATION_AUTO)
+    Call Check(AetherBlade3D.EffectiveSimulation() = AetherBlade3D.SIMULATION_CPU_DETERMINISTIC)
+    Call Check(Not AetherBlade3D.GpuSimulationSupported())
+    Call Check(Not AetherBlade3D.SoftDepthSupported())
+    Call Check(Not AetherBlade3D.DistortionSupported())
+    Call Check(Not AetherBlade3D.ThermalShadingSupported())
+
+    Blade = AetherBlade3D.Attach(Actor, "SwordBase", "SwordTip", 4)
+
+    Call Check(AetherBlade3D.IsActive(Blade))
+    Call Check(AetherBlade3D.Update(Blade, 12, False, 1))
+    Call Check(AetherBlade3D.CommittedParticleCount() = 72)
+    Call Check(AetherBlade3D.Update(Blade, 48, True, 1))
+    Call Check(AetherBlade3D.TrailParticleCount() = 4)
+    Call Check(AetherBlade3D.CommittedParticleCount() = 76)
+    Call Check(AetherBlade3D.ResetTrail(Blade, 2))
+    Call Check(AetherBlade3D.TrailParticleCount() = 0)
+    Call Check(AetherBlade3D.Update(Blade, 12, False, 2))
+    Call Check(AetherBlade3D.SetEnabled(Blade, False))
+    Call Check(AetherBlade3D.CommittedParticleCount() = 0)
+    Call Check(AetherBlade3D.SetEnabled(Blade, True))
+    Call Check(AetherBlade3D.Update(Blade, 12, False, 2))
+    Call Check(Graphics3D.Begin3D(Camera, 1, 2, 8))
+    Call Check(Character3D.Draw(Actor))
+    Call Check(AetherBlade3D.Draw(Blade))
+    Call Check(Graphics3D.End3DChecked())
+
+    Call AetherBlade3D.Destroy(Blade)
+
+    Missing = AetherBlade3D.Attach(Actor, "Missing", "SwordTip", 4)
+
+    Call Check(Not AetherBlade3D.IsActive(Missing))
+    Call Check(AetherBlade3D.LastError() = AetherBlade3D.ERROR_MISSING_BASE_SOCKET)
+
+    Missing = AetherBlade3D.Attach(Actor, "SwordBase", "Missing", 4)
+
+    Call Check(Not AetherBlade3D.IsActive(Missing))
+    Call Check(AetherBlade3D.LastError() = AetherBlade3D.ERROR_MISSING_TIP_SOCKET)
+
+    Degenerate = AetherBlade3D.Attach(Actor, "SwordBase", "SwordBase", 4)
+
+    Call Check(Not AetherBlade3D.IsActive(Degenerate))
+    Call Check(AetherBlade3D.LastError() = AetherBlade3D.ERROR_DEGENERATE_BLADE)
+
+    Blade = AetherBlade3D.Attach(Actor, "SwordBase", "SwordTip", 4)
+
+    Call Check(AetherBlade3D.Update(Blade, 12, True, 3))
+
+    Call Graphics3D.ResetRenderer3D()
+
+    Call Check(Not AetherBlade3D.Update(Blade, 12, True, 3))
+    Call Check(AetherBlade3D.LastError() = AetherBlade3D.ERROR_RENDERER_RESOURCE)
+    Call AetherBlade3D.Destroy(Blade)
+    Call AetherBlade3D.Shutdown()
+    Call Character3D.Shutdown()
+    Call Check(Graphics3D.LiveParticleBatchCount3D() = 0)
+    Call Check(Graphics3D.LiveObjectCount3D() = 0)
+    Call Check(Graphics3D.LiveModelCount3D() = 0)
+
+    Texture = Graphics3D.LoadTexture3D(
+        "Assets\VfxAtlas.png",
+        Graphics3D.TEXTURE_FILTER_LINEAR,
+        Graphics3D.TEXTURE_WRAP_CLAMP
+    )
+    AlphaMaterial = Graphics3D.CreateEffectMaterial3D(Texture, Graphics3D.MATERIAL_ALPHA_BLEND, 120)
+    AdditiveMaterial = Graphics3D.CreateEffectMaterial3D(Texture, Graphics3D.MATERIAL_ALPHA_ADDITIVE, 220)
+    RibbonMaterial = Graphics3D.CreateEffectMaterial3D(Texture, Graphics3D.MATERIAL_ALPHA_ADDITIVE, 180)
+
+    Call Check(Effects3D.Initialize(AlphaMaterial, AdditiveMaterial, RibbonMaterial))
+    Call Check(Effects3D.SetSimulationMode(Effects3D.SIMULATION_CPU_DETERMINISTIC))
+    Call Check(Effects3D.RequestedSimulation() = Effects3D.SIMULATION_CPU_DETERMINISTIC)
+    Call Check(Effects3D.EffectiveSimulation() = Effects3D.SIMULATION_CPU_DETERMINISTIC)
+    Call Check(Effects3D.CapabilityFallbackFlags() = 14)
+
+    Call Graphics3D.ResetRenderer3D()
+
+    Call Check(Effects3D.RequestedSimulation() = Effects3D.SIMULATION_AUTO)
+    Call Check(Effects3D.CapabilityFallbackFlags() = 15)
+    Call Effects3D.Shutdown()
+    Call Check(Effects3D.SetSimulationMode(Effects3D.SIMULATION_GPU_FAST))
+    Call Check(Effects3D.RequestedSimulation() = Effects3D.SIMULATION_GPU_FAST)
+    Call Check(Effects3D.EffectiveSimulation() = Effects3D.SIMULATION_CPU_DETERMINISTIC)
+    Call Check(Effects3D.CapabilityFallbackFlags() = 15)
+    Call Check(Not Effects3D.SetSimulationMode(99))
+    Call Check(Effects3D.LastError() = Effects3D.EFFECTS_ERROR_INVALID_SIMULATION)
+
+End Sub
+
+Sub Check(Condition As Boolean)
+
+    Checks = Checks + 1
+
+    If Not Condition Then
+        Failures = Failures + 1
+    End If
+
+End Sub
