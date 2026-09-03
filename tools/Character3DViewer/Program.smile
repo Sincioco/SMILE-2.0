@@ -31,6 +31,8 @@ Const MAX_CAMERA_ELAPSED = 250
 Const TIMELINE_LEFT = 18
 Const TIMELINE_HEIGHT = 18
 Const SWORD_GLOW_POINT_COUNT = 2
+Const SWORD_FLAME_PARTICLE_COUNT = 36
+Const SWORD_FLAME_LAYER_POINT_COUNT = 12
 Const EQUIPMENT_TRAIL_POINT_COUNT = 5
 Const EQUIPMENT_TRAIL_SAMPLE_MILLISECONDS = 24
 Const SWORD_TRAIL_START_MILLISECONDS = 300
@@ -41,6 +43,7 @@ Const ARIN_SHIELD_PART_INDEX = 1
 Const SHIELD_GLOW_SCALE_DIVISOR = 100
 Const SWORD_BLADE_START_OFFSET = 7
 Const SWORD_GLOW_HALF_WIDTH = 2
+Const SWORD_FLAME_FLICKER_MILLISECONDS = 45
 Const SWORD_TRAIL_PARTICLE_SIZE = 3
 Const SHIELD_TRAIL_PARTICLE_SIZE = 5
 
@@ -68,8 +71,13 @@ Dim SelectedSocket As Number
 Dim ShowAllSocketOrigins As Boolean
 Dim EpicGlowAvailable As Boolean
 Dim EpicGlowVisible As Boolean
+Dim EpicGlowTexture As Core.Texture3D
 Dim EpicGlowMaterial As Core.Material3D
+Dim EpicGlowParticleMaterial As Core.Material3D
+Dim SwordFlameTexture As Core.Texture3D
+Dim SwordFlameMaterial As Core.Material3D
 Dim SwordGlow As Core.RibbonBatch3D
+Dim SwordFlame As Core.ParticleBatch3D
 Dim ShieldGlow As Core.Object3D
 Dim SwordTrail As Core.ParticleBatch3D
 Dim ShieldTrail As Core.ParticleBatch3D
@@ -1275,12 +1283,48 @@ Sub CreateEpicGlow()
         Return
     End If
 
-    EpicGlowMaterial = Graphics3D.CreateEffectMaterial3D(
-        EmptyTexture,
-        Graphics3D.MATERIAL_ALPHA_ADDITIVE,
-        220
+    EpicGlowTexture = Graphics3D.LoadTexture3D(
+        "TechnicalAssets\Generation2\VfxAtlas.png",
+        Graphics3D.TEXTURE_FILTER_LINEAR,
+        Graphics3D.TEXTURE_WRAP_CLAMP
     )
-    GlowReady = EpicGlowMaterial.Handle <> 0
+    GlowReady = EpicGlowTexture.Handle <> 0
+
+    If GlowReady Then
+        EpicGlowMaterial = Graphics3D.CreateEffectMaterial3D(
+            EmptyTexture,
+            Graphics3D.MATERIAL_ALPHA_ADDITIVE,
+            220
+        )
+        GlowReady = EpicGlowMaterial.Handle <> 0
+    End If
+
+    If GlowReady Then
+        EpicGlowParticleMaterial = Graphics3D.CreateEffectMaterial3D(
+            EpicGlowTexture,
+            Graphics3D.MATERIAL_ALPHA_ADDITIVE,
+            220
+        )
+        GlowReady = EpicGlowParticleMaterial.Handle <> 0
+    End If
+
+    If GlowReady Then
+        SwordFlameTexture = Graphics3D.LoadTexture3D(
+            "TechnicalAssets\Generation2\CharacterViewerFlameAtlas.png",
+            Graphics3D.TEXTURE_FILTER_LINEAR,
+            Graphics3D.TEXTURE_WRAP_CLAMP
+        )
+        GlowReady = SwordFlameTexture.Handle <> 0
+    End If
+
+    If GlowReady Then
+        SwordFlameMaterial = Graphics3D.CreateEffectMaterial3D(
+            SwordFlameTexture,
+            Graphics3D.MATERIAL_ALPHA_ADDITIVE,
+            240
+        )
+        GlowReady = SwordFlameMaterial.Handle <> 0
+    End If
 
     If GlowReady Then
         SwordGlow = Graphics3D.CreateRibbonBatch3D(
@@ -1288,6 +1332,17 @@ Sub CreateEpicGlow()
             EpicGlowMaterial
         )
         GlowReady = SwordGlow.Handle <> 0
+    End If
+
+    If GlowReady Then
+        SwordFlame = Graphics3D.CreateParticleBatch3D(
+            SWORD_FLAME_PARTICLE_COUNT,
+            SwordFlameMaterial,
+            Graphics3D.VFX_BILLBOARD_CAMERA,
+            4,
+            1
+        )
+        GlowReady = SwordFlame.Handle <> 0
     End If
 
     If GlowReady Then
@@ -1313,10 +1368,10 @@ Sub CreateEpicGlow()
     If GlowReady Then
         SwordTrail = Graphics3D.CreateParticleBatch3D(
             EQUIPMENT_TRAIL_POINT_COUNT,
-            EpicGlowMaterial,
+            EpicGlowParticleMaterial,
             Graphics3D.VFX_BILLBOARD_CAMERA,
-            1,
-            1
+            4,
+            4
         )
         GlowReady = SwordTrail.Handle <> 0
     End If
@@ -1324,10 +1379,10 @@ Sub CreateEpicGlow()
     If GlowReady Then
         ShieldTrail = Graphics3D.CreateParticleBatch3D(
             EQUIPMENT_TRAIL_POINT_COUNT,
-            EpicGlowMaterial,
+            EpicGlowParticleMaterial,
             Graphics3D.VFX_BILLBOARD_CAMERA,
-            1,
-            1
+            4,
+            4
         )
         GlowReady = ShieldTrail.Handle <> 0
     End If
@@ -1344,10 +1399,15 @@ End Sub
 Sub DestroyEpicGlow()
 
     Call Graphics3D.DestroyRibbonBatch3D(SwordGlow)
+    Call Graphics3D.DestroyParticleBatch3D(SwordFlame)
     Call Graphics3D.DestroyParticleBatch3D(SwordTrail)
     Call Graphics3D.DestroyParticleBatch3D(ShieldTrail)
     Call Graphics3D.DestroyObject3D(ShieldGlow)
+    Call Graphics3D.DestroyEffectMaterial3D(SwordFlameMaterial)
+    Call Graphics3D.DestroyEffectMaterial3D(EpicGlowParticleMaterial)
     Call Graphics3D.DestroyEffectMaterial3D(EpicGlowMaterial)
+    Call Graphics3D.DestroyTexture3D(SwordFlameTexture)
+    Call Graphics3D.DestroyTexture3D(EpicGlowTexture)
 
     EpicGlowAvailable = False
     EpicGlowVisible = False
@@ -1432,9 +1492,101 @@ Function UpdateEpicGlow() As Boolean
         SwordGlow,
         SWORD_GLOW_POINT_COUNT
     ) And Result
+    Result = UpdateSwordFlame(SwordBladeBase, SwordTip, SwordWidth) And Result
 
     Result = UpdateShieldGlow(ShieldCenter) And Result
     Result = UpdateEpicGlowTrailBatches() And Result
+
+    Return Result
+
+End Function
+
+Function UpdateSwordFlame(
+    SwordBladeBase As Core.Vector3,
+    SwordTip As Core.Vector3,
+    SwordWidth As Core.Vector3
+) As Boolean
+
+    Dim BladeStep As Number
+    Dim FlamePhase As Number
+    Dim FlameRise As Number
+    Dim FlameSize As Number
+    Dim Index As Number
+    Dim Layer As Number
+    Dim LayerIndex As Number
+    Dim PositionX As Number
+    Dim PositionY As Number
+    Dim PositionZ As Number
+    Dim Rotation As Number
+    Dim Side As Number
+    Dim Result As Boolean
+
+    Result = True
+
+    For Index = 0 To SWORD_FLAME_PARTICLE_COUNT - 1
+
+        Layer = Index / SWORD_FLAME_LAYER_POINT_COUNT
+        LayerIndex = Index Mod SWORD_FLAME_LAYER_POINT_COUNT
+        BladeStep = LayerIndex * 1000 / (SWORD_FLAME_LAYER_POINT_COUNT - 1)
+        BladeStep = BladeStep + (LayerIndex * 47 + Layer * 71) Mod 83 - 41
+        BladeStep = Min(1000, Max(0, BladeStep))
+        FlamePhase = (CurrentTime / SWORD_FLAME_FLICKER_MILLISECONDS + Index * 5) Mod 9
+        FlameRise = Layer + (FlamePhase Mod 4) * Layer / 2
+        FlameSize = 3 + Layer + (FlamePhase Mod 3) / 2
+        Rotation = (LayerIndex * 29 + Layer * 47 + FlamePhase * 5) Mod 31 - 15
+        Side = (Index * 7) Mod 5 - 2
+        PositionX = SwordBladeBase.X + (SwordTip.X - SwordBladeBase.X) * BladeStep / 1000
+        PositionX = PositionX + SwordWidth.X * Side * (Layer + 1) / Core.FIXED_ONE
+        PositionY = SwordBladeBase.Y + (SwordTip.Y - SwordBladeBase.Y) * BladeStep / 1000
+        PositionY = PositionY + FlameRise
+        PositionZ = SwordBladeBase.Z + (SwordTip.Z - SwordBladeBase.Z) * BladeStep / 1000
+        PositionZ = PositionZ + SwordWidth.Z * Side * (Layer + 1) / Core.FIXED_ONE
+        Result = Graphics3D.SetParticle3D(
+            SwordFlame,
+            Index,
+            PositionX,
+            PositionY,
+            PositionZ,
+            FlameSize,
+            Rotation,
+            FlamePhase Mod 4
+        ) And Result
+
+        If Layer = 0 Then
+            Result = Graphics3D.SetParticleColor3D(
+                SwordFlame,
+                Index,
+                255,
+                255,
+                230,
+                94
+            ) And Result
+        Else If Layer = 1 Then
+            Result = Graphics3D.SetParticleColor3D(
+                SwordFlame,
+                Index,
+                255,
+                220,
+                150,
+                70
+            ) And Result
+        Else
+            Result = Graphics3D.SetParticleColor3D(
+                SwordFlame,
+                Index,
+                255,
+                160,
+                74,
+                46
+            ) And Result
+        End If
+
+    End For
+
+    Result = Graphics3D.CommitParticleBatch3D(
+        SwordFlame,
+        SWORD_FLAME_PARTICLE_COUNT
+    ) And Result
 
     Return Result
 
@@ -1581,7 +1733,8 @@ Function UpdateEpicGlowTrailBatches() As Boolean
             SwordTrailPoints[Index].Y,
             SwordTrailPoints[Index].Z,
             ParticleSize,
-            0
+            0,
+            4 + Index Mod 4
         ) And Result
         Result = Graphics3D.SetParticleColor3D(
             SwordTrail,
@@ -1599,7 +1752,8 @@ Function UpdateEpicGlowTrailBatches() As Boolean
             ShieldTrailPoints[Index].Y,
             ShieldTrailPoints[Index].Z,
             ParticleSize,
-            0
+            0,
+            Index Mod 4
         ) And Result
         Result = Graphics3D.SetParticleColor3D(
             ShieldTrail,
@@ -1638,6 +1792,7 @@ Function DrawEpicGlow() As Boolean
     Dim Result As Boolean
 
     Result = Graphics3D.DrawRibbonBatch3D(SwordGlow)
+    Result = Graphics3D.DrawParticleBatch3D(SwordFlame) And Result
 
     Return Result
 

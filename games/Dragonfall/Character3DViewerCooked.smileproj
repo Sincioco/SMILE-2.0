@@ -27,6 +27,8 @@
                   Identity="sin-star-i.character-1.paladin"
                   ProductionState="Prototype" />
     <Asset Include="TechnicalAssets\Generation2\AnimationArticulated.sm3d" />
+    <Asset Include="TechnicalAssets\Generation2\CharacterViewerFlameAtlas.png" />
+    <Asset Include="TechnicalAssets\Generation2\VfxAtlas.png" />
     <SmileProjectReference Include="..\..\libraries\Smile.Simple3D\Smile.Simple3D.smilelibproj" />
   </ItemGroup>
 </SmileProject>

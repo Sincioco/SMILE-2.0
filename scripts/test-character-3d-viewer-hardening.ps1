@@ -28,6 +28,8 @@ $graphicsFacadePath = Join-Path $repositoryRoot 'libraries\Smile.Simple3D\Graphi
 $interactionPath = Join-Path $repositoryRoot 'libraries\Smile.Simple3D\Interaction.smile'
 $temporaryPreparation = Join-Path $repositoryRoot `
     'artifacts\temp\dragonfall-arin-prototype-preparation'
+$flameAtlasGenerator = Join-Path $repositoryRoot `
+    'scripts\generate-character-viewer-flame-atlas.ps1'
 
 function Assert-True([bool]$Condition, [string]$Message) {
     if (-not $Condition) { throw $Message }
@@ -45,6 +47,8 @@ if (-not (Test-Path -LiteralPath $compiler -PathType Leaf)) {
 
 Push-Location $repositoryRoot
 try {
+    & $flameAtlasGenerator -Check
+
     $identity = Get-Content -LiteralPath $identityPath -Raw | ConvertFrom-Json -Depth 30
     $references = Get-Content -LiteralPath $referencePath -Raw | ConvertFrom-Json -Depth 10
     Assert-True ($identity.assetId -ceq 'sin-star-i.character-1.paladin') `
@@ -98,11 +102,16 @@ try {
         'SWORD_GLOW_POINT_COUNT,',
         'Const SWORD_GLOW_HALF_WIDTH = 2',
         'Graphics3D.CreateParticleBatch3D(',
+        'Graphics3D.LoadTexture3D(',
+        'TechnicalAssets\Generation2\VfxAtlas.png',
+        'TechnicalAssets\Generation2\CharacterViewerFlameAtlas.png',
+        'Dim SwordFlame As Core.ParticleBatch3D',
         'Dim SwordTrail As Core.ParticleBatch3D',
         'Dim ShieldTrail As Core.ParticleBatch3D',
         'Graphics3D.SetParticle3D(',
         'Graphics3D.SetParticleColor3D(',
         'Graphics3D.DrawParticleBatch3D(SwordTrail)',
+        'Graphics3D.DrawParticleBatch3D(SwordFlame)',
         'ShieldGlow = Graphics3D.CreateModelPart3D(CharacterModel, ARIN_SHIELD_PART_INDEX)',
         'Graphics3D.SetObjectAnimator3D(ShieldGlow, CharacterAnimator)',
         'Graphics3D.DrawObject3D(ShieldGlow)',
