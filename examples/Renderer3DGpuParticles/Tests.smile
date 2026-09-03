@@ -49,11 +49,15 @@ Sub RunTests()
         Graphics3D.MATERIAL_ALPHA_BLEND,
         150
     )
-    Oversized = Graphics3D.CreateGpuParticleSystem3D(8193, Material)
+    Oversized = Graphics3D.CreateGpuParticleSystem3D(
+        8193,
+        Material,
+        Graphics3D.GPU_PARTICLE_SIMULATION_CPU_DETERMINISTIC
+    )
     System = Graphics3D.CreateGpuParticleSystem3D(
         4,
         Material,
-        Graphics3D.GPU_PARTICLE_SIMULATION_AUTO,
+        Graphics3D.GPU_PARTICLE_SIMULATION_CPU_DETERMINISTIC,
         10
     )
 
@@ -73,7 +77,7 @@ Sub RunTests()
     Call Check(Graphics3D.GpuParticleValue3D(
         Graphics3D.GPU_PARTICLE_QUERY_RESOURCE_REQUESTED_SIMULATION,
         System.Handle
-    ) = Graphics3D.GPU_PARTICLE_SIMULATION_AUTO)
+    ) = Graphics3D.GPU_PARTICLE_SIMULATION_CPU_DETERMINISTIC)
     Call Check(Graphics3D.GpuParticleValue3D(
         Graphics3D.GPU_PARTICLE_QUERY_RESOURCE_EFFECTIVE_SIMULATION,
         System.Handle
@@ -81,20 +85,52 @@ Sub RunTests()
     Call Check(Graphics3D.GpuParticleValue3D(
         Graphics3D.GPU_PARTICLE_QUERY_RESOURCE_CPU_BYTES,
         System.Handle
-    ) = 46036)
+    ) = 46068)
     Call Check(Graphics3D.GpuParticleValue3D(
         Graphics3D.GPU_PARTICLE_QUERY_RESOURCE_GPU_BYTES,
         System.Handle
     ) = 0)
 
-    System2 = Graphics3D.CreateGpuParticleSystem3D(1, Material)
-    System3 = Graphics3D.CreateGpuParticleSystem3D(1, Material)
-    System4 = Graphics3D.CreateGpuParticleSystem3D(1, Material)
-    System5 = Graphics3D.CreateGpuParticleSystem3D(1, Material)
-    System6 = Graphics3D.CreateGpuParticleSystem3D(1, Material)
-    System7 = Graphics3D.CreateGpuParticleSystem3D(1, Material)
-    System8 = Graphics3D.CreateGpuParticleSystem3D(1, Material)
-    System9 = Graphics3D.CreateGpuParticleSystem3D(1, Material)
+    System2 = Graphics3D.CreateGpuParticleSystem3D(
+        1,
+        Material,
+        Graphics3D.GPU_PARTICLE_SIMULATION_CPU_DETERMINISTIC
+    )
+    System3 = Graphics3D.CreateGpuParticleSystem3D(
+        1,
+        Material,
+        Graphics3D.GPU_PARTICLE_SIMULATION_CPU_DETERMINISTIC
+    )
+    System4 = Graphics3D.CreateGpuParticleSystem3D(
+        1,
+        Material,
+        Graphics3D.GPU_PARTICLE_SIMULATION_CPU_DETERMINISTIC
+    )
+    System5 = Graphics3D.CreateGpuParticleSystem3D(
+        1,
+        Material,
+        Graphics3D.GPU_PARTICLE_SIMULATION_CPU_DETERMINISTIC
+    )
+    System6 = Graphics3D.CreateGpuParticleSystem3D(
+        1,
+        Material,
+        Graphics3D.GPU_PARTICLE_SIMULATION_CPU_DETERMINISTIC
+    )
+    System7 = Graphics3D.CreateGpuParticleSystem3D(
+        1,
+        Material,
+        Graphics3D.GPU_PARTICLE_SIMULATION_CPU_DETERMINISTIC
+    )
+    System8 = Graphics3D.CreateGpuParticleSystem3D(
+        1,
+        Material,
+        Graphics3D.GPU_PARTICLE_SIMULATION_CPU_DETERMINISTIC
+    )
+    System9 = Graphics3D.CreateGpuParticleSystem3D(
+        1,
+        Material,
+        Graphics3D.GPU_PARTICLE_SIMULATION_CPU_DETERMINISTIC
+    )
 
     Call Check(System2.Handle <> 0)
     Call Check(System3.Handle <> 0)
@@ -228,10 +264,15 @@ Sub RunTests()
         Graphics3D.MATERIAL_ALPHA_BLEND,
         150
     )
-    BigSystem = Graphics3D.CreateGpuParticleSystem3D(513, Material)
+    BigSystem = Graphics3D.CreateGpuParticleSystem3D(
+        513,
+        Material,
+        Graphics3D.GPU_PARTICLE_SIMULATION_CPU_DETERMINISTIC
+    )
     AllAccepted = BigSystem.Handle <> 0
 
     For Slot = 0 To 511
+
         If Not Graphics3D.SetGpuParticleSpawnVisual3D(
             BigSystem,
             Slot,
@@ -249,6 +290,7 @@ Sub RunTests()
         If Not Graphics3D.CommitGpuParticleSpawn3D(BigSystem, Slot, Slot + 1, Slot) Then
             AllAccepted = False
         End If
+
     End For
 
     Call Check(AllAccepted)

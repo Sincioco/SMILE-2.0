@@ -1,0 +1,70 @@
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Graphics3D As Graphics3D
+
+Dim Checks As Number
+Dim Camera As Core.Camera3D
+Dim EmptyTexture As Core.Texture3D
+Dim Failures As Number
+Dim Material As Core.Material3D
+Dim System As Core.GpuParticleSystem3D
+
+Game Window "Renderer3D M7E-D D3D11 GPU Particle Fallback Tests" Size 320 By 240
+
+Camera = Graphics3D.DefaultCamera()
+Material = Graphics3D.CreateEffectMaterial3D(
+    EmptyTexture,
+    Graphics3D.MATERIAL_ALPHA_BLEND,
+    150
+)
+System = Graphics3D.CreateGpuParticleSystem3D(
+    1024,
+    Material,
+    Graphics3D.GPU_PARTICLE_SIMULATION_AUTO,
+    10
+)
+
+Call Check(Material.Handle <> 0)
+Call Check(System.Handle <> 0)
+Call Check(System.EffectiveSimulation = Graphics3D.GPU_PARTICLE_SIMULATION_CPU_DETERMINISTIC)
+Call Check(Graphics3D.GpuParticleValue3D(
+    Graphics3D.GPU_PARTICLE_QUERY_RESOURCE_GPU_BYTES,
+    System.Handle
+) = 0)
+Call Check(Graphics3D.SetGpuParticleSpawnVisual3D(
+    System,
+    0,
+    1000,
+    24,
+    48,
+    0,
+    90,
+    900,
+    800
+))
+Call Check(Graphics3D.CommitGpuParticleSpawn3D(System, 0, 1, 123))
+Call Check(Graphics3D.AdvanceGpuParticleSystem3D(System, 10))
+Call Check(Graphics3D.GpuParticleValue3D(Graphics3D.GPU_PARTICLE_QUERY_DISPATCHES) = 0)
+Call Check(Graphics3D.GpuParticleValue3D(Graphics3D.GPU_PARTICLE_QUERY_READBACKS) = 0)
+Call Check(Graphics3D.Begin3D(Camera, 4, 8, 12))
+Call Check(Graphics3D.DrawGpuParticleSystem3D(System))
+Call Check(Graphics3D.End3DChecked())
+Call Check(Graphics3D.GpuParticleValue3D(Graphics3D.GPU_PARTICLE_QUERY_RENDER_DRAWS) = 0)
+
+If Failures = 0 Then
+    Print "Renderer3D M7E-D D3D11 GPU particle fallback tests passed"
+Else
+    Print "Renderer3D M7E-D D3D11 GPU particle fallback tests failed: "; Failures
+End If
+
+Sub Check(Condition As Boolean)
+
+    Checks = Checks + 1
+
+    If Not Condition Then
+        Print "D3D11 GPU particle fallback check failed: "; Checks
+        Failures = Failures + 1
+    End If
+
+End Sub

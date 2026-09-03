@@ -407,6 +407,7 @@ Public Const GPU_PARTICLE_QUERY_GPU_STATE_BYTES = 17
 Public Const GPU_PARTICLE_QUERY_RESTARTS = 18
 Public Const GPU_PARTICLE_QUERY_READBACKS = 19
 Public Const GPU_PARTICLE_QUERY_MAX_SPAWNS_PER_ADVANCE = 20
+Public Const GPU_PARTICLE_QUERY_GPU_MAX_CAPACITY = 21
 Public Const GPU_PARTICLE_QUERY_RESOURCE_CAPACITY = 30
 Public Const GPU_PARTICLE_QUERY_RESOURCE_ACTIVE = 31
 Public Const GPU_PARTICLE_QUERY_RESOURCE_PENDING = 32
@@ -3092,7 +3093,19 @@ Public Function CreateGpuParticleSystem3D(
 
         Result.Capacity = Capacity
         Result.RequestedSimulation = SimulationMode
-        Result.EffectiveSimulation = GPU_PARTICLE_SIMULATION_CPU_DETERMINISTIC
+        Result.EffectiveSimulation = Dispatch(
+            COMMAND_GPU_PARTICLE_SYSTEM,
+            10,
+            GPU_PARTICLE_QUERY_RESOURCE_EFFECTIVE_SIMULATION,
+            Result.Handle,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        )
         Result.FixedStepMilliseconds = FixedStepMilliseconds
 
     End If

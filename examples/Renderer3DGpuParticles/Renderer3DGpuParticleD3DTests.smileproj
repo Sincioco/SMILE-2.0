@@ -1,0 +1,12 @@
+<SmileProject Version="1.0">
+  <PropertyGroup>
+    <ProjectKind>Game</ProjectKind>
+    <StartupFile>D3DTests.smile</StartupFile>
+    <OutputName>Renderer3DGpuParticleD3DTests</OutputName>
+    <ApplicationId>smile.examples.renderer3d-gpu-particle-d3d-tests</ApplicationId>
+  </PropertyGroup>
+  <ItemGroup>
+    <SmileSource Include="D3DTests.smile" StartupOnly="true" />
+    <SmileProjectReference Include="..\..\libraries\Smile.Simple3D\Smile.Simple3D.smilelibproj" />
+  </ItemGroup>
+</SmileProject>

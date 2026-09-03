@@ -40,6 +40,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "%SMILE_ROOT%\scripts\test-r
 if errorlevel 1 exit /b %errorlevel%
 powershell -NoProfile -ExecutionPolicy Bypass -File "%SMILE_ROOT%\scripts\test-renderer3d-gpu-particle-common.ps1"
 if errorlevel 1 exit /b %errorlevel%
+powershell -NoProfile -ExecutionPolicy Bypass -File "%SMILE_ROOT%\scripts\test-renderer3d-gpu-particle-d3d11.ps1"
+if errorlevel 1 exit /b %errorlevel%
 
 powershell -NoProfile -ExecutionPolicy Bypass -File "%SMILE_ROOT%\scripts\test-model3d-asset-cooking.ps1"
 if errorlevel 1 exit /b %errorlevel%
