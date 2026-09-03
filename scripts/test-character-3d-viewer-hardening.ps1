@@ -259,6 +259,12 @@ try {
     Assert-Contains $nativeRuntime 'return SMILE_KEY_B;' 'Native B-key mapping'
     Assert-Contains $nativeRuntime 'return SMILE_KEY_CONTROL;' 'Native Control-key mapping'
     Assert-Contains $nativeRuntime 'case WM_CAPTURECHANGED:' 'Native pointer capture handling'
+    Assert-Contains $nativeRuntime 'smile_pointer_reconcile_buttons(wparam);' `
+        'Self-healing native pointer drag state'
+    Assert-Contains $pointerSource 'state->pressed_buttons |= pressed_buttons;' `
+        'Recovered native pointer press edge'
+    Assert-Contains $pointerSource 'state->released_buttons |= released_buttons;' `
+        'Recovered native pointer release edge'
     Assert-Contains $nativeRuntime 'if (smile_pointer.held_buttons != 0)' `
         'Normal native pointer release preservation'
     Assert-Contains $nativeRuntime 'long long smile_pointer_pressed(long long button)' `
@@ -312,7 +318,7 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Native pointer and graphics assertions failed.' }
 
     Write-Host ('Character 3D Viewer identity, release gate, profile auto-fit, elapsed zoom, ' +
-        'retained pointer input, precision wheel, O-key auto-orbit mapping, material inspection, ' +
+        'self-healing pointer drags, precision wheel, O-key auto-orbit mapping, material inspection, ' +
         'socket metadata, preparation safety, and native/Web parity tests passed.')
 }
 finally {

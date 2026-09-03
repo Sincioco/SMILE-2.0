@@ -21,6 +21,7 @@ void smile_pointer_state_begin_frame(SmilePointerState* state);
 void smile_pointer_state_position(SmilePointerState* state, long long x, long long y, int inside);
 int smile_pointer_state_press(SmilePointerState* state, long long button);
 int smile_pointer_state_release(SmilePointerState* state, long long button);
+void smile_pointer_state_reconcile_buttons(SmilePointerState* state, unsigned int held_buttons);
 void smile_pointer_state_cancel(SmilePointerState* state);
 void smile_pointer_state_wheel(SmilePointerState* state, long long raw_delta, long long units_per_step);
 

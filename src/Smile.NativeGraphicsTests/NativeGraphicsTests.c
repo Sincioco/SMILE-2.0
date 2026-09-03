@@ -428,12 +428,29 @@ int main(void)
         !pointer_state.inside && !pointer_state.position_valid,
         "Capture or focus loss releases every held pointer and invalidates position");
 
+    smile_pointer_state_begin_frame(&pointer_state);
+    smile_pointer_state_reconcile_buttons(&pointer_state, 5);
+    check(pointer_state.held_buttons == 5 && pointer_state.pressed_buttons == 5,
+        "Pointer movement repairs missed primary and middle press state");
+    smile_pointer_state_begin_frame(&pointer_state);
+    smile_pointer_state_reconcile_buttons(&pointer_state, 5);
+    check(pointer_state.held_buttons == 5 && pointer_state.pressed_buttons == 0 &&
+        pointer_state.released_buttons == 0,
+        "Pointer button reconciliation is stable while a drag remains held");
+    smile_pointer_state_reconcile_buttons(&pointer_state, 4);
+    check(pointer_state.held_buttons == 4 && pointer_state.released_buttons == 1,
+        "Pointer movement repairs a missed primary release without ending middle drag");
+    smile_pointer_state_begin_frame(&pointer_state);
+    smile_pointer_state_reconcile_buttons(&pointer_state, 0);
+    check(pointer_state.held_buttons == 0 && pointer_state.released_buttons == 4,
+        "Pointer movement repairs a missed middle release");
+
     reset_mocks();
     if (failures != 0)
     {
         fprintf(stderr, "%d native graphics selection test(s) failed.\n", failures);
         return 1;
     }
-    printf("54 native graphics, pointer-input, and audio-focus checks passed.\n");
+    printf("58 native graphics, pointer-input, and audio-focus checks passed.\n");
     return 0;
 }

@@ -382,6 +382,22 @@ static void smile_pointer_release(long long button)
         ReleaseCapture();
 }
 
+static void smile_pointer_reconcile_buttons(WPARAM wparam)
+{
+    unsigned int held_buttons = 0;
+    if ((wparam & MK_LBUTTON) != 0)
+        held_buttons |= 1U;
+    if ((wparam & MK_RBUTTON) != 0)
+        held_buttons |= 2U;
+    if ((wparam & MK_MBUTTON) != 0)
+        held_buttons |= 4U;
+    smile_pointer_state_reconcile_buttons(&smile_pointer, held_buttons);
+    if (held_buttons != 0 && smile_window != 0 && GetCapture() == 0)
+        SetCapture(smile_window);
+    else if (held_buttons == 0 && GetCapture() == smile_window)
+        ReleaseCapture();
+}
+
 static void smile_pointer_cancel(void)
 {
     smile_pointer_state_cancel(&smile_pointer);
@@ -1480,6 +1496,7 @@ static LRESULT CALLBACK smile_window_proc(HWND window, UINT message, WPARAM wpar
         {
             TRACKMOUSEEVENT tracking;
             smile_pointer_position(lparam);
+            smile_pointer_reconcile_buttons(wparam);
             smile_zero_memory(&tracking, sizeof(tracking));
             tracking.cbSize = sizeof(tracking);
             tracking.dwFlags = TME_LEAVE;

@@ -60,6 +60,21 @@ int smile_pointer_state_release(SmilePointerState* state, long long button)
     return 1;
 }
 
+void smile_pointer_state_reconcile_buttons(SmilePointerState* state, unsigned int held_buttons)
+{
+    unsigned int next_buttons;
+    unsigned int pressed_buttons;
+    unsigned int released_buttons;
+    if (state == 0)
+        return;
+    next_buttons = held_buttons & 7U;
+    pressed_buttons = next_buttons & ~state->held_buttons;
+    released_buttons = state->held_buttons & ~next_buttons;
+    state->held_buttons = next_buttons;
+    state->pressed_buttons |= pressed_buttons;
+    state->released_buttons |= released_buttons;
+}
+
 void smile_pointer_state_cancel(SmilePointerState* state)
 {
     if (state == 0)
