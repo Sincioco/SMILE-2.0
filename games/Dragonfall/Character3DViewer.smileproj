@@ -12,16 +12,13 @@
   <ItemGroup>
     <SmileSource Include="..\..\tools\Character3DViewer\Program.smile" StartupOnly="true" />
     <SmileSource Include="..\..\tools\Character3DViewer\Profiles.smile" />
-    <Asset Include="Assets\Generation2\ArinV54\ArinV54.sm3d" />
-    <Asset Include="Assets\Generation2\ArinV54\Textures\ArinV54-m0-base-color-ccd55f34588c.png" />
-    <Asset Include="Assets\Generation2\ArinV54\Textures\ArinV54-m0-normal-8dd49de64c69.png" />
-    <Asset Include="Assets\Generation2\ArinV54\Textures\ArinV54-m0-orm-49c70f0d00f7.png" />
-    <Asset Include="Assets\Generation2\ArinV54\Textures\ArinV54-m1-base-color-2cf18664e756.png" />
-    <Asset Include="Assets\Generation2\ArinV54\Textures\ArinV54-m1-normal-7c739452638b.png" />
-    <Asset Include="Assets\Generation2\ArinV54\Textures\ArinV54-m1-orm-0e21c722f772.png" />
-    <Asset Include="Assets\Generation2\ArinV54\Textures\ArinV54-m2-base-color-e57234f21964.png" />
-    <Asset Include="Assets\Generation2\ArinV54\Textures\ArinV54-m2-normal-e5eead8ec5d6.png" />
-    <Asset Include="Assets\Generation2\ArinV54\Textures\ArinV54-m2-orm-73d6d44faf5d.png" />
+    <Asset Include="Assets\Generation2\ArinV55\ArinV55.sm3d" />
+    <Asset Include="Assets\Generation2\ArinV55\Textures\ArinV55-m0-base-color-86d0e5baea69.png" />
+    <Asset Include="Assets\Generation2\ArinV55\Textures\ArinV55-m0-normal-559cefd6d085.png" />
+    <Asset Include="Assets\Generation2\ArinV55\Textures\ArinV55-m0-orm-3ebee4335ebd.png" />
+    <Asset Include="Assets\Generation2\ArinV55\Textures\ArinV55-m1-base-color-531735e0eb8c.png" />
+    <Asset Include="Assets\Generation2\ArinV55\Textures\ArinV55-m1-normal-e2ea7fdb9e58.png" />
+    <Asset Include="Assets\Generation2\ArinV55\Textures\ArinV55-m1-orm-8fa59370084a.png" />
     <Asset Include="Assets\Generation2\Arin\ArinPrototype.sm3d" />
     <Asset Include="Assets\Generation2\Arin\Textures\Arin-base-color.png" />
     <Asset Include="Assets\Generation2\Arin\Textures\Arin-normal.png" />

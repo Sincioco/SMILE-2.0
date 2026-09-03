@@ -1,0 +1,107 @@
+{
+  "version": 2,
+  "assetId": "sin-star-i.character-1.paladin",
+  "candidateVersion": "v5.5",
+  "baseCandidateVersion": "v5.4",
+  "baseBlend": "games/SinStarI/SourceAssets/Characters/Paladin/arin-integrated-candidate-v5.4.blend",
+  "bodySource": "games/SinStarI/SourceAssets/Characters/Paladin/arin-t-pose-2k.original.glb",
+  "equipmentSource": "games/SinStarI/SourceAssets/Characters/Paladin/paladin-equipment-2k.original.glb",
+  "armature": "ArinRig",
+  "body": "ArinBody",
+  "bodyPartPrefix": "tripo_part_",
+  "excludedBodyParts": [
+    "tripo_part_3"
+  ],
+  "expectedBodyParts": 29,
+  "expectedBodyVertices": 6341,
+  "equipmentTextureParts": {
+    "ArinSword": { "sourcePart": "tripo_part_8", "vertices": 259 },
+    "ArinShield": { "sourcePart": "tripo_part_9", "vertices": 239 },
+    "ArinSwordGripGlove": { "sourcePart": "tripo_part_5", "vertices": 534 }
+  },
+  "removedAttachments": [],
+  "actions": [
+    "Idle",
+    "Walk",
+    "Run",
+    "Ready",
+    "SwordAttack",
+    "ShieldBashCandidate",
+    "Defend",
+    "BlockImpact",
+    "Hit",
+    "KO",
+    "Victory"
+  ],
+  "animationSources": {
+    "Idle": {
+      "source": "games/SinStarI/SourceAssets/Characters/Paladin/MixamoV55/Idle.fbx",
+      "mixamoDescription": "Sword And Shield Sword Play Idle",
+      "frames": 227,
+      "sha256": "50C8E7DA7D1147C36C1D5C863EB2566A497C891026A08BF61F4EA344A9962A0B"
+    },
+    "Walk": {
+      "source": "games/SinStarI/SourceAssets/Characters/Paladin/MixamoV55/Walk.fbx",
+      "mixamoDescription": "Sword And Shield Walk",
+      "frames": 34,
+      "sha256": "203A28876C44F86534E207F73F63496D13D9A44315B18FF237BACCC8F1C06B87"
+    },
+    "Run": {
+      "source": "games/SinStarI/SourceAssets/Characters/Paladin/MixamoV55/Run.fbx",
+      "mixamoDescription": "Sword And Shield Run",
+      "frames": 22,
+      "sha256": "507310C07B9238ABD122E53EAB5DD80838D7324010465B63F99DAD5A2FE47823"
+    },
+    "Ready": {
+      "source": "games/SinStarI/SourceAssets/Characters/Paladin/MixamoV55/Ready.fbx",
+      "mixamoDescription": "Sword And Shield Idle To Block",
+      "frames": 21,
+      "sha256": "C5A528A5D2C4C2D4EB2AA9B274B28879206E23313AFEC10E795E16BEEE85B8F5"
+    },
+    "SwordAttack": {
+      "source": "games/SinStarI/SourceAssets/Characters/Paladin/MixamoV55/SwordAttack.fbx",
+      "mixamoDescription": "Sword And Shield Power Slash",
+      "frames": 74,
+      "sha256": "543F0E57002C29A7703034AE080F8178002F4FB3CAC390B07E93314AE56F6756"
+    },
+    "ShieldBashCandidate": {
+      "source": "games/SinStarI/SourceAssets/Characters/Paladin/MixamoV55/ShieldBashCandidate.fbx",
+      "mixamoDescription": "Sword And Shield Hilt Melee",
+      "frames": 31,
+      "sha256": "D3626C00DC1A4489420F47EFFA604260DE0E314D6344FE1F9A8CE1A71179FDD0"
+    },
+    "Defend": {
+      "source": "games/SinStarI/SourceAssets/Characters/Paladin/MixamoV55/Defend.fbx",
+      "mixamoDescription": "Sword And Shield Block Idle",
+      "frames": 43,
+      "sha256": "E8F9AAB222420479A9064AC2632F2E50B32A8FB773395F63CFFD287CB3BD64C9"
+    },
+    "BlockImpact": {
+      "source": "games/SinStarI/SourceAssets/Characters/Paladin/MixamoV55/BlockImpact.fbx",
+      "mixamoDescription": "Sword And Shield Blocked Impact",
+      "frames": 24,
+      "sha256": "E95A842ACD212903910AC9B221C0275055AF54E38FA96CE9746491DE40F25DF3"
+    },
+    "Hit": {
+      "source": "games/SinStarI/SourceAssets/Characters/Paladin/MixamoV55/Hit.fbx",
+      "mixamoDescription": "Sword And Shield Unblocked Impact",
+      "frames": 30,
+      "sha256": "038301C04A304D217E7935D8AD4CE64E73412EE77C9C572EF95DDA59F7883FC8"
+    },
+    "KO": {
+      "source": "games/SinStarI/SourceAssets/Characters/Paladin/MixamoV55/KO.fbx",
+      "mixamoDescription": "Sword And Shield Falling Back Death",
+      "frames": 70,
+      "sha256": "E667359D760160AD3520CC73B03BFC69D615C77CC9D8AA44F48321C1EA9E885F"
+    },
+    "Victory": {
+      "source": "games/SinStarI/SourceAssets/Characters/Paladin/MixamoV55/Victory.fbx",
+      "mixamoDescription": "Celebrating After A Win",
+      "frames": 257,
+      "sha256": "0E004E4A9026E3F946329153CDA16B0F0728DE9C1DC5E1591DC0D1DED7B4FCEE"
+    }
+  },
+  "expectedBlenderVersion": "5.2.1",
+  "restMatrixTolerance": 0.0001,
+  "expectedTextureSize": 2048
+}

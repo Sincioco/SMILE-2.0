@@ -181,7 +181,7 @@ Sub LoadLab()
     Ready = Graphics3D.SetObjectShadowsChecked3D(Arena, False, True)
     Ready = Graphics3D.SetObjectShadowsChecked3D(TargetDummy, True, True) And Ready
     Arin = Character3D.LoadWithPolicy(
-        "Assets\CombatLab\ArinV54.sm3d",
+        "Assets\CombatLab\ArinV55.sm3d",
         Character3D.CHARACTER_LOAD_REQUIRE_PBR
     )
     Ready = Character3D.IsValid(Arin) And Ready
@@ -1079,7 +1079,7 @@ Sub DrawOverlay()
 
     Fill Rectangle 14, 12, PanelX - 28, 88, Rgb(4, 9, 24) Opacity 78
     Draw Text "SIN STAR I // PALADIN COMBAT PRESENTATION LAB" At 28, 24 Size 19 Color CYAN
-    Draw Text "sin-star-i.character-1.paladin  •  v5.4  •  Candidate" At 28, 52 Size 12 Color LIGHT_GRAY
+    Draw Text "sin-star-i.character-1.paladin  •  v5.5  •  Candidate" At 28, 52 Size 12 Color LIGHT_GRAY
     Draw Text "Presentation events align VFX; they never authorize damage." At 28, 74 Size 11 Color YELLOW
 
     Call DrawButton(18, 112, 80, 28, "PLAY", False)

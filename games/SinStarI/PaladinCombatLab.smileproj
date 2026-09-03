@@ -11,10 +11,10 @@
   </PropertyGroup>
   <ItemGroup>
     <SmileSource Include="PaladinCombatLab.smile" StartupOnly="true" />
-    <Model3DAsset Include="SourceAssets\Characters\Paladin\CombatLab\arin-integrated-candidate-v5.4.glb"
-                  Descriptor="SourceAssets\Characters\Paladin\CombatLab\ArinV54.sm3d.json"
-                  LogicalPath="Assets\CombatLab\ArinV54.sm3d"
-                  TextureOutputDirectory="Assets\CombatLab\ArinV54Textures"
+    <Model3DAsset Include="SourceAssets\Characters\Paladin\CombatLab\arin-integrated-candidate-v5.5.glb"
+                  Descriptor="SourceAssets\Characters\Paladin\CombatLab\ArinV55.sm3d.json"
+                  LogicalPath="Assets\CombatLab\ArinV55.sm3d"
+                  TextureOutputDirectory="Assets\CombatLab\ArinV55Textures"
                   Profile="Character"
                   Identity="sin-star-i.character-1.paladin"
                   ProductionState="Prototype" />

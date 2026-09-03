@@ -29,12 +29,12 @@ Public Function ProfileAt(Index As Number) As CharacterViewer.Profile
     If Index = PROFILE_ARIN Then
 
         Result.AssetId = "sin-star-i.character-1.paladin"
-        Result.CandidateVersion = "v5.4"
+        Result.CandidateVersion = "v5.5"
         Result.DisplayName = "Arin"
         Result.PartyRole = "Paladin"
-        Result.PrototypeAlias = "dragonfall.arin-v5-4"
+        Result.PrototypeAlias = "dragonfall.arin-v5-5"
         Result.ProductionStatus = "Candidate"
-        Result.AssetPath = "Assets\Generation2\ArinV54\ArinV54.sm3d"
+        Result.AssetPath = "Assets\Generation2\ArinV55\ArinV55.sm3d"
         Result.ExpectedClipCount = 11
         Result.ExpectedSocketCount = 10
         Result.DesiredWorldHeight = 100

@@ -1,4 +1,4 @@
-"""Export Arin v5.4 as a single-skin GLB accepted by the SMILE asset cooker."""
+"""Export a versioned Arin candidate as a single-skin SMILE-ready GLB."""
 
 from __future__ import annotations
 
@@ -8,6 +8,7 @@ import json
 import struct
 import hashlib
 import math
+import re
 import uuid
 from math import ceil, floor
 
@@ -15,12 +16,12 @@ import bpy
 from mathutils import Matrix
 
 
-MANIFEST_PATH = os.path.splitext(__file__)[0] + ".manifest.json"
+DEFAULT_MANIFEST_PATH = os.path.splitext(__file__)[0] + ".manifest.json"
 SMILE_ROOT_BONE = "SMILE_Root"
 
 
-def load_manifest() -> dict:
-    with open(MANIFEST_PATH, "r", encoding="utf-8") as stream:
+def load_manifest(path: str) -> dict:
+    with open(path, "r", encoding="utf-8") as stream:
         value = json.load(stream)
     required = {
         "version", "assetId", "candidateVersion", "prototypeAlias", "armature",
@@ -28,14 +29,32 @@ def load_manifest() -> dict:
         "referenceTransformPolicy", "sampleRate", "expectedBlenderVersion",
         "allowedAttachmentModifiers", "allowedGlbExtensions",
     }
-    if set(value) != required or value["version"] != 1:
-        raise RuntimeError("The Arin export manifest schema is not the supported exact version 1 shape.")
-    if value["assetId"] != "sin-star-i.character-1.paladin" or value["candidateVersion"] != "v5.4":
-        raise RuntimeError("The export manifest does not identify the approved Arin v5.4 candidate.")
+    version = value.get("version")
+    expected = required if version == 1 else required | {"attachmentCorrections"}
+    if version not in (1, 2) or set(value) != expected:
+        raise RuntimeError("The Arin export manifest schema is not a supported exact shape.")
+    if value["assetId"] != "sin-star-i.character-1.paladin":
+        raise RuntimeError("The export manifest does not identify canonical Arin.")
+    if re.fullmatch(r"v[0-9]+\.[0-9]+", value["candidateVersion"]) is None:
+        raise RuntimeError("The export manifest candidateVersion is not a versioned candidate.")
     if len(value["actions"]) != len(set(value["actions"])) or not value["actions"]:
         raise RuntimeError("The export action allowlist must be non-empty and unique.")
     if value["referenceAction"] not in value["actions"] or value["sampleRate"] not in (24, 30, 60):
         raise RuntimeError("The manifest reference action or sample rate is invalid.")
+    if version == 2:
+        if set(value["attachmentCorrections"]) != set(value["attachments"]):
+            raise RuntimeError("Every attachment must have exactly one export correction.")
+        for correction in value["attachmentCorrections"].values():
+            if set(correction) != {"rotationDegrees"}:
+                raise RuntimeError("An attachment correction has an unsupported shape.")
+            rotation = correction["rotationDegrees"]
+            if (
+                not isinstance(rotation, list)
+                or len(rotation) != 3
+                or not all(isinstance(component, (int, float)) for component in rotation)
+                or not all(math.isfinite(component) and abs(component) <= 360 for component in rotation)
+            ):
+                raise RuntimeError("An attachment correction rotation is invalid.")
     if bpy.app.version_string.split()[0] != value["expectedBlenderVersion"]:
         raise RuntimeError(
             f"Expected Blender {value['expectedBlenderVersion']}; running {bpy.app.version_string}."
@@ -43,15 +62,18 @@ def load_manifest() -> dict:
     return value
 
 
-def output_path() -> str:
+def command_arguments() -> tuple[str, str]:
     if "--" not in sys.argv:
         raise RuntimeError("Pass the destination GLB path after --.")
 
     arguments = sys.argv[sys.argv.index("--") + 1 :]
-    if len(arguments) != 1:
-        raise RuntimeError("Expected exactly one destination GLB path after --.")
+    if len(arguments) not in (1, 2):
+        raise RuntimeError(
+            "Expected a destination GLB and optional manifest path after --."
+        )
 
-    return os.path.abspath(arguments[0])
+    manifest_path = arguments[1] if len(arguments) == 2 else DEFAULT_MANIFEST_PATH
+    return os.path.abspath(arguments[0]), os.path.abspath(manifest_path)
 
 
 def sha256_file(path: str) -> str:
@@ -76,6 +98,7 @@ def convert_rigid_attachment(
     bone_name: str,
     original_world: Matrix,
     allowed_modifiers: set[str],
+    rotation_degrees: list[float],
 ) -> None:
     if armature.data.bones.get(bone_name) is None:
         raise RuntimeError(f"Required attachment bone is missing: {bone_name}")
@@ -86,8 +109,13 @@ def convert_rigid_attachment(
             f"Attachment {value.name} has unsupported visible modifiers: {', '.join(unexpected)}"
         )
 
+    correction = (
+        Matrix.Rotation(math.radians(rotation_degrees[0]), 4, "X")
+        @ Matrix.Rotation(math.radians(rotation_degrees[1]), 4, "Y")
+        @ Matrix.Rotation(math.radians(rotation_degrees[2]), 4, "Z")
+    )
     value.data = value.data.copy()
-    value.data.transform(armature.matrix_world.inverted() @ original_world)
+    value.data.transform(armature.matrix_world.inverted() @ original_world @ correction)
     value.parent = armature
     value.parent_type = "OBJECT"
     value.parent_bone = ""
@@ -509,8 +537,8 @@ def optimize_glb_animation_tables(
 
 
 def main() -> None:
-    manifest = load_manifest()
-    destination = output_path()
+    destination, manifest_path = command_arguments()
+    manifest = load_manifest(manifest_path)
     temporary_destination = destination + f".tmp-{uuid.uuid4().hex}.glb"
     armature = require_object(manifest["armature"], "ARMATURE")
     body = require_object(manifest["body"], "MESH")
@@ -555,8 +583,12 @@ def main() -> None:
         original_world = {name: value.matrix_world.copy() for name, value in attachments.items()}
         allowed_modifiers = set(manifest["allowedAttachmentModifiers"])
         for name, bone_name in manifest["attachments"].items():
+            rotation = manifest.get("attachmentCorrections", {}).get(
+                name, {"rotationDegrees": [0, 0, 0]}
+            )["rotationDegrees"]
             convert_rigid_attachment(
-                attachments[name], armature, bone_name, original_world[name], allowed_modifiers
+                attachments[name], armature, bone_name, original_world[name],
+                allowed_modifiers, rotation
             )
 
         add_smile_root_bone(armature)
@@ -605,7 +637,7 @@ def main() -> None:
             "blenderVersion": bpy.app.version_string,
             "gltfExporter": "Blender io_scene_gltf2",
             "scriptSha256": sha256_file(__file__),
-            "manifestSha256": sha256_file(MANIFEST_PATH),
+            "manifestSha256": sha256_file(manifest_path),
             "sourceBlendSha256": sha256_file(bpy.data.filepath),
             "outputGlbSha256": sha256_file(destination),
             "textureFiles": [

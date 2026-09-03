@@ -102,7 +102,7 @@ try {
     Assert-Contains $viewerText 'AdvanceClock(' 'Elapsed-time clock'
     Assert-Contains $viewerText 'MINIMUM_VIEWER_WIDTH = 800' 'Responsive minimum width'
     Assert-Contains $profileText 'sin-star-i.character-1.paladin' 'Stable Paladin identity'
-    Assert-Contains $profileText 'Result.CandidateVersion = "v5.4"' 'Candidate version'
+    Assert-Contains $profileText 'Result.CandidateVersion = "v5.5"' 'Current Viewer candidate version'
     Assert-True ($manifest.version -eq 1) 'Exporter manifest version changed.'
     Assert-True ($manifest.assetId -ceq 'sin-star-i.character-1.paladin') `
         'Exporter stable asset identity changed.'

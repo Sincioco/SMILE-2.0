@@ -9,11 +9,14 @@ $assetTool = Join-Path $repositoryRoot 'artifacts\assettool\smileasset.exe'
 $dragonfallSourceRoot = Join-Path $repositoryRoot 'games\Dragonfall\SourceAssets\Arin'
 $sinStarSourceRoot = Join-Path $repositoryRoot `
     'games\SinStarI\SourceAssets\Characters\Paladin\CombatLab'
-$descriptorPath = Join-Path $dragonfallSourceRoot 'ArinV54.sm3d.json'
-$dragonfallGlb = Join-Path $dragonfallSourceRoot 'arin-integrated-candidate-v5.4.glb'
-$sinStarGlb = Join-Path $sinStarSourceRoot 'arin-integrated-candidate-v5.4.glb'
+$descriptorPath = Join-Path $dragonfallSourceRoot 'ArinV55.sm3d.json'
+$dragonfallGlb = Join-Path $dragonfallSourceRoot 'arin-integrated-candidate-v5.5.glb'
+$sinStarGlb = Join-Path $sinStarSourceRoot 'arin-integrated-candidate-v5.5.glb'
 $committedSm3d = Join-Path $repositoryRoot `
-    'games\Dragonfall\Assets\Generation2\ArinV54\ArinV54.sm3d'
+    'games\Dragonfall\Assets\Generation2\ArinV55\ArinV55.sm3d'
+$preservedV54Blend = Join-Path $repositoryRoot `
+    'games\SinStarI\SourceAssets\Characters\Paladin\arin-integrated-candidate-v5.4.blend'
+$preservedV54Glb = Join-Path $dragonfallSourceRoot 'arin-integrated-candidate-v5.4.glb'
 
 function Assert-True([bool]$Condition, [string]$Message) {
     if (-not $Condition) { throw $Message }
@@ -43,6 +46,10 @@ try {
         'Paladin clip names/order differ from the eleven-action review contract.'
     Assert-True (($actualSockets -join '|') -ceq ($expectedSockets -join '|')) `
         'Paladin socket names/order differ from the production socket contract.'
+    Assert-True (Test-Path -LiteralPath $preservedV54Blend -PathType Leaf) `
+        'The accepted v5.4 Blender candidate was not preserved.'
+    Assert-True (Test-Path -LiteralPath $preservedV54Glb -PathType Leaf) `
+        'The accepted v5.4 GLB candidate was not preserved.'
 
     $events = @(
         @('Walk', 200, 'FootstepLeft', 2001),
@@ -94,7 +101,8 @@ try {
         }
     }
 
-    Write-Host 'Paladin eleven-clip, eight-event, ten-socket, source-identity, and deterministic-cook gate passed.'
+    Write-Host ('Paladin v5.5 eleven-clip, eight-event, ten-socket, source-identity, ' +
+        'v5.4 preservation, and deterministic-cook gate passed.')
 }
 finally {
     Pop-Location

@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "sampleRate": 30,
+  "clips": {
+    "Idle": { "loop": true },
+    "Walk": {
+      "loop": true,
+      "events": [
+        { "timeMs": 200, "name": "FootstepLeft", "value": 2001 },
+        { "timeMs": 766, "name": "FootstepRight", "value": 2002 }
+      ]
+    },
+    "Run": {
+      "loop": true,
+      "events": [
+        { "timeMs": 117, "name": "FootstepLeft", "value": 2001 },
+        { "timeMs": 483, "name": "FootstepRight", "value": 2002 }
+      ]
+    },
+    "Ready": { "loop": true },
+    "SwordAttack": {
+      "loop": false,
+      "events": [
+        { "timeMs": 300, "name": "SwordTrailOn", "value": 1001 },
+        { "timeMs": 633, "name": "SwordImpact", "value": 1002 },
+        { "timeMs": 967, "name": "SwordTrailOff", "value": 1003 }
+      ]
+    },
+    "ShieldBashCandidate": {
+      "loop": false,
+      "events": [
+        { "timeMs": 500, "name": "ShieldImpact", "value": 1101 }
+      ]
+    },
+    "Defend": { "loop": true },
+    "BlockImpact": { "loop": false },
+    "Hit": { "loop": false },
+    "KO": { "loop": false },
+    "Victory": { "loop": false }
+  },
+  "sockets": {
+    "Root": { "node": "Root" },
+    "Head": { "node": "Head" },
+    "Chest": { "node": "Spine02" },
+    "SwordBase": { "node": "R_Hand", "translation": [0.006, 0.039, -0.015] },
+    "SwordTip": { "node": "R_Hand", "translation": [-0.2, -0.24, 0.43] },
+    "ShieldCenter": { "node": "L_Hand", "translation": [-0.02, 0.013, -0.013] },
+    "HandRight": { "node": "R_Hand" },
+    "HandLeft": { "node": "L_Hand" },
+    "FootLeft": { "node": "L_Foot" },
+    "FootRight": { "node": "R_Foot" }
+  }
+}

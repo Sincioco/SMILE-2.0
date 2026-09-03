@@ -112,7 +112,7 @@ try {
         '<ResponsiveWindow>true</ResponsiveWindow>' 'Character 3D Viewer project'
     Assert-Contains $profileSource `
         'Result.AssetId = "sin-star-i.character-1.paladin"' 'Viewer profile'
-    Assert-Contains $profileSource 'Result.CandidateVersion = "v5.4"' 'Viewer profile'
+    Assert-Contains $profileSource 'Result.CandidateVersion = "v5.5"' 'Viewer profile'
     Assert-Contains $profileSource 'Result.DisplayName = "Arin"' 'Viewer profile'
     Assert-Contains $profileSource 'Result.PartyRole = "Paladin"' 'Viewer profile'
     Assert-Contains $profileSource 'Result.GroundOffset = -10' 'Viewer profile'
