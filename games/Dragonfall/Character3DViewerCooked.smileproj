@@ -12,10 +12,10 @@
   <ItemGroup>
     <SmileSource Include="..\..\tools\Character3DViewer\Program.smile" StartupOnly="true" />
     <SmileSource Include="..\..\tools\Character3DViewer\Profiles.smile" />
-    <Model3DAsset Include="SourceAssets\Arin\arin-integrated-candidate-v5.5.glb"
-                  Descriptor="SourceAssets\Arin\ArinV55.sm3d.json"
-                  LogicalPath="Assets\Generation2\ArinV55\ArinV55.sm3d"
-                  TextureOutputDirectory="Assets\Generation2\ArinV55\Textures"
+    <Model3DAsset Include="SourceAssets\Arin\arin-integrated-candidate-v5.6.glb"
+                  Descriptor="SourceAssets\Arin\ArinV56.sm3d.json"
+                  LogicalPath="Assets\Generation2\ArinV56\ArinV56.sm3d"
+                  TextureOutputDirectory="Assets\Generation2\ArinV56\Textures"
                   Profile="Character"
                   Identity="sin-star-i.character-1.paladin"
                   ProductionState="Prototype" />
@@ -27,7 +27,6 @@
                   Identity="sin-star-i.character-1.paladin"
                   ProductionState="Prototype" />
     <Asset Include="TechnicalAssets\Generation2\AnimationArticulated.sm3d" />
-    <Asset Include="TechnicalAssets\Generation2\CharacterViewerFlameAtlas.png" />
     <Asset Include="TechnicalAssets\Generation2\VfxAtlas.png" />
     <SmileProjectReference Include="..\..\libraries\Smile.Simple3D\Smile.Simple3D.smilelibproj" />
   </ItemGroup>

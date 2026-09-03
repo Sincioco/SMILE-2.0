@@ -28,6 +28,9 @@
 #define SMILE_KEY_F 28
 #define SMILE_KEY_G 29
 #define SMILE_KEY_R 30
+#define SMILE_KEY_P 31
+#define SMILE_KEY_B 32
+#define SMILE_KEY_CONTROL 33
 #define SMILE_KEY_UP 10
 #define SMILE_KEY_DOWN 11
 #define SMILE_KEY_LEFT 12
@@ -1135,6 +1138,8 @@ static long long smile_map_key(WCHAR character, WORD virtual_key)
     if (character == L'f' || character == L'F' || virtual_key == 'F') return SMILE_KEY_F;
     if (character == L'g' || character == L'G' || virtual_key == 'G') return SMILE_KEY_G;
     if (character == L'r' || character == L'R' || virtual_key == 'R') return SMILE_KEY_R;
+    if (character == L'p' || character == L'P' || virtual_key == 'P') return SMILE_KEY_P;
+    if (character == L'b' || character == L'B' || virtual_key == 'B') return SMILE_KEY_B;
     if (virtual_key == VK_UP) return SMILE_KEY_UP;
     if (virtual_key == VK_DOWN) return SMILE_KEY_DOWN;
     if (virtual_key == VK_LEFT) return SMILE_KEY_LEFT;
@@ -1142,6 +1147,7 @@ static long long smile_map_key(WCHAR character, WORD virtual_key)
     if (virtual_key == VK_RETURN) return SMILE_KEY_ENTER;
     if (virtual_key == VK_ESCAPE) return SMILE_KEY_ESCAPE;
     if (virtual_key == VK_SPACE) return SMILE_KEY_SPACE;
+    if (virtual_key == VK_CONTROL) return SMILE_KEY_CONTROL;
     if (virtual_key == '1') return SMILE_KEY_1;
     if (virtual_key == '2') return SMILE_KEY_2;
     if (virtual_key == '3') return SMILE_KEY_3;
@@ -1162,6 +1168,8 @@ static int smile_key_virtual(long long key)
         case SMILE_KEY_F: return 'F';
         case SMILE_KEY_G: return 'G';
         case SMILE_KEY_R: return 'R';
+        case SMILE_KEY_P: return 'P';
+        case SMILE_KEY_B: return 'B';
         case SMILE_KEY_UP: return VK_UP;
         case SMILE_KEY_DOWN: return VK_DOWN;
         case SMILE_KEY_LEFT: return VK_LEFT;
@@ -1169,6 +1177,7 @@ static int smile_key_virtual(long long key)
         case SMILE_KEY_ENTER: return VK_RETURN;
         case SMILE_KEY_ESCAPE: return VK_ESCAPE;
         case SMILE_KEY_SPACE: return VK_SPACE;
+        case SMILE_KEY_CONTROL: return VK_CONTROL;
         case SMILE_KEY_1: return '1';
         case SMILE_KEY_2: return '2';
         case SMILE_KEY_3: return '3';
@@ -1242,6 +1251,9 @@ long long smile_get_key(void)
         if ((GetAsyncKeyState('F') & 0x8000) != 0) return SMILE_KEY_F;
         if ((GetAsyncKeyState('G') & 0x8000) != 0) return SMILE_KEY_G;
         if ((GetAsyncKeyState('R') & 0x8000) != 0) return SMILE_KEY_R;
+        if ((GetAsyncKeyState('P') & 0x8000) != 0) return SMILE_KEY_P;
+        if ((GetAsyncKeyState('B') & 0x8000) != 0) return SMILE_KEY_B;
+        if ((GetAsyncKeyState(VK_CONTROL) & 0x8000) != 0) return SMILE_KEY_CONTROL;
         return SMILE_KEY_NONE;
     }
 }
@@ -1735,6 +1747,19 @@ long long smile_window_width(void)
 long long smile_window_height(void)
 {
     return smile_logical_height;
+}
+
+long long smile_window_title(void* owned_value)
+{
+    SmileText* text = (SmileText*)owned_value;
+    WCHAR* wide_title = smile_utf8_to_wide(smile_text_bytes(text), smile_text_length(text));
+    long long result = 0;
+    if (smile_window != 0 && wide_title != 0)
+        result = SetWindowTextW(smile_window, wide_title) != 0;
+    if (wide_title != 0)
+        HeapFree(GetProcessHeap(), 0, wide_title);
+    smile_text_release(text);
+    return result;
 }
 
 static void smile_toggle_fullscreen(void)

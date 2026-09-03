@@ -591,6 +591,10 @@ internal static class WebOutputWriter
             function pointerX() { return pointerXValue; }
             function windowWidth() { return logicalWidth; }
             function windowHeight() { return logicalHeight; }
+            function windowTitle(value) {
+                document.title = String(value);
+                return true;
+            }
             function pointerY() { return pointerYValue; }
             function pointerDeltaX() { return pointerDeltaXValue; }
             function pointerDeltaY() { return pointerDeltaYValue; }
@@ -2989,6 +2993,10 @@ internal static class WebOutputWriter
                     case "KeyF": return 28;
                     case "KeyG": return 29;
                     case "KeyR": return 30;
+                    case "KeyP": return 31;
+                    case "KeyB": return 32;
+                    case "ControlLeft": return 33;
+                    case "ControlRight": return 33;
                     case "ArrowUp": return 10;
                     case "ArrowDown": return 11;
                     case "ArrowLeft": return 12;
@@ -3007,7 +3015,8 @@ internal static class WebOutputWriter
 
             function controlledKey(event) {
                 return event.code.startsWith("Arrow") || event.code === "Space" || event.code === "Enter" ||
-                    event.code === "Escape" || event.code === "Tab" || /^Key[WASDOFGR]$/.test(event.code);
+                    event.code === "Escape" || event.code === "Tab" || event.code.startsWith("Control") ||
+                    /^Key[WASDOFGRPB]$/.test(event.code);
             }
 
             async function toggleFullScreen() {
@@ -3411,7 +3420,7 @@ internal static class WebOutputWriter
                 fillQuadrilateral, drawQuadrilateral, drawLine, drawText, drawNumber, loadImage, imageRetain,
                 imageRelease, imageAssign, imageMoveAssign, imageLoaded, imageWidth, imageHeight, drawImage,
                 pushClip, popClip, textWidth, textHeight, textLength, textCodeAt, textSlice, showScreen,
-                print, clearScreen, wait, getKey, keyHeld, windowWidth, windowHeight, pointerX, pointerY, pointerDeltaX, pointerDeltaY,
+                print, clearScreen, wait, getKey, keyHeld, windowWidth, windowHeight, windowTitle, pointerX, pointerY, pointerDeltaX, pointerDeltaY,
                 pointerWheelDelta, pointerWheelRemainder, pointerInside, pointerHeld, pointerPressed, pointerReleased,
                 playSound, stopSound,
                 playMusic, pauseMusic, resumeMusic, stopMusic, setMusicVolume, loadTextFile,

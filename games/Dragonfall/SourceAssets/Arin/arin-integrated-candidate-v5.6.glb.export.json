@@ -1,36 +1,36 @@
 {
   "version": 1,
   "assetId": "sin-star-i.character-1.paladin",
-  "candidateVersion": "v5.5",
+  "candidateVersion": "v5.6",
   "blenderVersion": "5.2.1 LTS",
   "gltfExporter": "Blender io_scene_gltf2",
   "scriptSha256": "6858E08CC4794E2547BAF801BFF8ED37B46DFEF5A5AEDE3AD1C32B902644F79E",
-  "manifestSha256": "1612D3F6187FF6D208EBD7D4E9BD2972CB594883E9E24A396FF6FE613D25A6AE",
-  "sourceBlendSha256": "9919E010BFFD52FEAF26012593305CED9478B8A2AFF9852B33B4D3800A50C625",
-  "outputGlbSha256": "93FC8012D3771693C21C91B212D4BFC0FDD4D8C48472FA9FA83F0DBB8A393AE1",
+  "manifestSha256": "F604ED7AB8952D95727876D8BFD5FC0FA30F017CE199C5F4933C4AC02FF3617C",
+  "sourceBlendSha256": "CF929404A0F813AD71D8516AF8ED178A195AF212B46F785543E7BAAAD6BC3C10",
+  "outputGlbSha256": "A509CC1BCD7C90FFF7122B7E2F4DB9491F804FADA1C4F56F482CF63F9F076C59",
   "textureFiles": [
     {
-      "name": "arin-integrated-candidate-v5.5.texture-00.jpg",
+      "name": "arin-integrated-candidate-v5.6.texture-00.jpg",
       "sha256": "559CEFD6D085473F2669D657C02FE635F102BFF5E3552B2815E92B9AD2611E22"
     },
     {
-      "name": "arin-integrated-candidate-v5.5.texture-01.jpg",
+      "name": "arin-integrated-candidate-v5.6.texture-01.jpg",
       "sha256": "86D0E5BAEA698AA40887B6C1BCD9CC6FA7C732DB342D9551620C6FC15A9D5E67"
     },
     {
-      "name": "arin-integrated-candidate-v5.5.texture-02.jpg",
+      "name": "arin-integrated-candidate-v5.6.texture-02.jpg",
       "sha256": "3EBEE4335EBDE82DFD88701C18FC3CA5624316AD15386E69C4A62F1D66859249"
     },
     {
-      "name": "arin-integrated-candidate-v5.5.texture-03.jpg",
+      "name": "arin-integrated-candidate-v5.6.texture-03.jpg",
       "sha256": "E2EA7FDB9E584DA79C63FBE0DB2D858FCFA0F3FE6212EF418EBE53A21BC916C6"
     },
     {
-      "name": "arin-integrated-candidate-v5.5.texture-04.jpg",
+      "name": "arin-integrated-candidate-v5.6.texture-04.jpg",
       "sha256": "531735E0EB8CB72CCCCBF980B9FD0B2937BE247B0BF51DBF0B3D91B1663689E7"
     },
     {
-      "name": "arin-integrated-candidate-v5.5.texture-05.jpg",
+      "name": "arin-integrated-candidate-v5.6.texture-05.jpg",
       "sha256": "8FA59370084A53B25E5D0E145EE69E9FCE1FA9F4789450E8DF5F1D219834FA60"
     }
   ]

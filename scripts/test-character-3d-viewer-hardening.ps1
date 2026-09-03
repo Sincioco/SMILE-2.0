@@ -28,8 +28,6 @@ $graphicsFacadePath = Join-Path $repositoryRoot 'libraries\Smile.Simple3D\Graphi
 $interactionPath = Join-Path $repositoryRoot 'libraries\Smile.Simple3D\Interaction.smile'
 $temporaryPreparation = Join-Path $repositoryRoot `
     'artifacts\temp\dragonfall-arin-prototype-preparation'
-$flameAtlasGenerator = Join-Path $repositoryRoot `
-    'scripts\generate-character-viewer-flame-atlas.ps1'
 
 function Assert-True([bool]$Condition, [string]$Message) {
     if (-not $Condition) { throw $Message }
@@ -47,8 +45,6 @@ if (-not (Test-Path -LiteralPath $compiler -PathType Leaf)) {
 
 Push-Location $repositoryRoot
 try {
-    & $flameAtlasGenerator -Check
-
     $identity = Get-Content -LiteralPath $identityPath -Raw | ConvertFrom-Json -Depth 30
     $references = Get-Content -LiteralPath $referencePath -Raw | ConvertFrom-Json -Depth 10
     Assert-True ($identity.assetId -ceq 'sin-star-i.character-1.paladin') `
@@ -97,25 +93,43 @@ try {
         'Ready = DrawEpicGlow() And Ready',
         'Call ToggleEpicGlow()',
         'Graphics3D.CreateEffectMaterial3D(',
-        'Graphics3D.CreateRibbonBatch3D(',
-        'Const SWORD_GLOW_POINT_COUNT = 2',
-        'SWORD_GLOW_POINT_COUNT,',
-        'Const SWORD_GLOW_HALF_WIDTH = 2',
         'Graphics3D.CreateParticleBatch3D(',
         'Graphics3D.LoadTexture3D(',
         'TechnicalAssets\Generation2\VfxAtlas.png',
-        'TechnicalAssets\Generation2\CharacterViewerFlameAtlas.png',
-        'Dim SwordFlame As Core.ParticleBatch3D',
         'Dim SwordTrail As Core.ParticleBatch3D',
         'Dim ShieldTrail As Core.ParticleBatch3D',
         'Graphics3D.SetParticle3D(',
         'Graphics3D.SetParticleColor3D(',
         'Graphics3D.DrawParticleBatch3D(SwordTrail)',
-        'Graphics3D.DrawParticleBatch3D(SwordFlame)',
+        'Else If PressedKey = KEY_SPACE Or PressedKey = KEY_P Then',
+        'Else If PressedKey = KEY_B Then',
+        'Key_Held(KEY_CONTROL)',
+        'Dim ScenePaused As Boolean',
+        'Call AdvancePauseTimeout()',
+        'AUTO-RESUME AFTER 10 IDLE SECONDS',
+        'Call StepAnimationFrame(-1)',
+        'Call StepAnimationFrame(1)',
+        'Dim BackgroundIndex As Number',
+        'If PlaybackPaused Or ScenePaused Then',
+        'Const ANIMATION_BUTTON_Y = 352',
+        'Const ANIMATION_DETAILS_Y = 494',
+        'Const ZOOM_IN_LIMIT = -48',
+        'Text_Width(Label, LabelSize)',
+        'Text_Height(Label, LabelSize)',
+        'Call DrawButton(PanelLeft + 152, 56, 100, 22, BackgroundLabel(), BackgroundIndex > 0)',
+        'Result = "BG BLACK"',
+        'Result = "BG GREEN"',
+        'Result = "BG PURPLE"',
+        'Result = Scene3D.Begin(Camera, 0, 0, 0)',
+        'Result = Scene3D.Begin(Camera, 0, 96, 32)',
+        'Result = Scene3D.Begin(Camera, 62, 20, 96)',
+        'SwordGlow = Graphics3D.CreateModelPart3D(CharacterModel, ARIN_SWORD_PART_INDEX)',
         'ShieldGlow = Graphics3D.CreateModelPart3D(CharacterModel, ARIN_SHIELD_PART_INDEX)',
+        'Graphics3D.SetObjectAnimator3D(SwordGlow, CharacterAnimator)',
         'Graphics3D.SetObjectAnimator3D(ShieldGlow, CharacterAnimator)',
+        'Graphics3D.DrawObject3D(SwordGlow)',
         'Graphics3D.DrawObject3D(ShieldGlow)',
-        'SwordBladeBase.X =',
+        'Const EQUIPMENT_GLOW_SCALE_DIVISOR = 60',
         'Const EQUIPMENT_TRAIL_POINT_COUNT = 5',
         'Const SWORD_TRAIL_START_MILLISECONDS = 300',
         'Const SWORD_TRAIL_END_MILLISECONDS = 967',
@@ -134,6 +148,7 @@ try {
         'Graphics3D.SetMaterialInspection3D(',
         'Result = "11-clip candidate"',
         'Game Window "SMILE 2.0 - Character 3D Viewer" Size 1600 By 640',
+        'Ready = Window_Title(ViewerTitle()) And Ready',
         'Window_Width()',
         'Window_Height()',
         'Draw Text "Zoom / FPS"',
@@ -155,7 +170,7 @@ try {
         '<ResponsiveWindow>true</ResponsiveWindow>' 'Character 3D Viewer project'
     Assert-Contains $profileSource `
         'Result.AssetId = "sin-star-i.character-1.paladin"' 'Viewer profile'
-    Assert-Contains $profileSource 'Result.CandidateVersion = "v5.5"' 'Viewer profile'
+    Assert-Contains $profileSource 'Result.CandidateVersion = "v5.6"' 'Viewer profile'
     Assert-Contains $profileSource 'Result.DisplayName = "Arin"' 'Viewer profile'
     Assert-Contains $profileSource 'Result.PartyRole = "Paladin"' 'Viewer profile'
     Assert-Contains $profileSource 'Result.GroundOffset = -10' 'Viewer profile'
@@ -195,13 +210,23 @@ try {
     $interaction = Get-Content -LiteralPath $interactionPath -Raw
     Assert-Contains $pointerSource 'wheel_remainder / units_per_step' 'Native pointer accumulator'
     Assert-Contains $nativeRuntime 'return SMILE_KEY_O;' 'Native O-key mapping'
+    Assert-Contains $nativeRuntime 'return SMILE_KEY_P;' 'Native P-key mapping'
+    Assert-Contains $nativeRuntime 'return SMILE_KEY_B;' 'Native B-key mapping'
+    Assert-Contains $nativeRuntime 'return SMILE_KEY_CONTROL;' 'Native Control-key mapping'
     Assert-Contains $nativeRuntime 'case WM_CAPTURECHANGED:' 'Native pointer capture handling'
     Assert-Contains $nativeRuntime 'if (smile_pointer.held_buttons != 0)' `
         'Normal native pointer release preservation'
     Assert-Contains $nativeRuntime 'long long smile_pointer_pressed(long long button)' `
         'Stable native pointer snapshot'
     Assert-Contains $webRuntime 'case "KeyO": return 27;' 'Web O-key mapping'
+    Assert-Contains $webRuntime 'case "KeyP": return 31;' 'Web P-key mapping'
+    Assert-Contains $webRuntime 'case "KeyB": return 32;' 'Web B-key mapping'
+    Assert-Contains $webRuntime 'case "ControlLeft": return 33;' 'Web Control-key mapping'
     Assert-Contains $syntax '["KEY_O"] = SyntaxKind.KeyOKeyword' 'Language O-key syntax'
+    Assert-Contains $syntax '["KEY_P"] = SyntaxKind.KeyPKeyword' 'Language P-key syntax'
+    Assert-Contains $syntax '["KEY_B"] = SyntaxKind.KeyBKeyword' 'Language B-key syntax'
+    Assert-Contains $syntax '["KEY_CONTROL"] = SyntaxKind.KeyControlKeyword' `
+        'Language Control-key syntax'
     Assert-Contains $graphicsHeader 'SMILE_3D_MATERIAL_INSPECTION = 122' `
         'Renderer3D command ABI'
     Assert-Contains $graphicsHeader 'SMILE_3D_SET_CAMERA_UP = 123' `

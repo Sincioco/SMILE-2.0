@@ -208,23 +208,34 @@ Run("Viewer and game letter shortcuts are shared named input constants", () =>
     Equal(SyntaxKind.KeyFKeyword, SyntaxFacts.GetKeywordKind("key_f"));
     Equal(SyntaxKind.KeyGKeyword, SyntaxFacts.GetKeywordKind("KEY_G"));
     Equal(SyntaxKind.KeyRKeyword, SyntaxFacts.GetKeywordKind("Key_R"));
+    Equal(SyntaxKind.KeyPKeyword, SyntaxFacts.GetKeywordKind("key_p"));
+    Equal(SyntaxKind.KeyBKeyword, SyntaxFacts.GetKeywordKind("KEY_B"));
+    Equal(SyntaxKind.KeyControlKeyword, SyntaxFacts.GetKeywordKind("Key_Control"));
     Equal(28L, SyntaxFacts.GetBuiltInConstantValue(SyntaxKind.KeyFKeyword));
     Equal(29L, SyntaxFacts.GetBuiltInConstantValue(SyntaxKind.KeyGKeyword));
     Equal(30L, SyntaxFacts.GetBuiltInConstantValue(SyntaxKind.KeyRKeyword));
+    Equal(31L, SyntaxFacts.GetBuiltInConstantValue(SyntaxKind.KeyPKeyword));
+    Equal(32L, SyntaxFacts.GetBuiltInConstantValue(SyntaxKind.KeyBKeyword));
+    Equal(33L, SyntaxFacts.GetBuiltInConstantValue(SyntaxKind.KeyControlKeyword));
 });
-Run("Window dimensions are shared live game-window built-ins", () =>
+Run("Window dimensions and title are shared live game-window built-ins", () =>
 {
     Equal(SyntaxKind.WindowWidthKeyword, SyntaxFacts.GetKeywordKind("window_width"));
     Equal(SyntaxKind.WindowHeightKeyword, SyntaxFacts.GetKeywordKind("Window_Height"));
-    var analysis = Analyze("Game Window \"Responsive\"\nDim Area As Number\nArea = Window_Width() * Window_Height()\n");
+    Equal(SyntaxKind.WindowTitleKeyword, SyntaxFacts.GetKeywordKind("WINDOW_TITLE"));
+    var analysis = Analyze("Game Window \"Responsive\"\nDim Area As Number\nDim Updated As Boolean\nArea = Window_Width() * Window_Height()\nUpdated = Window_Title(\"Model.glb\")\n");
     Equal(false, analysis.HasErrors);
     Equal(true, Analyze("Print Window_Width()\n").HasErrors);
+    Equal(true, Analyze("Print Window_Title(\"No window\")\n").HasErrors);
+    Equal(true, Analyze("Game Window \"Wrong title\"\nPrint Window_Title(123)\n").HasErrors);
     var native = new MasmEmitter(analysis, SmileGraphicsBackend.DirectX, true, false).Emit();
     Equal(true, native.Contains("call smile_window_width", StringComparison.Ordinal));
     Equal(true, native.Contains("call smile_window_height", StringComparison.Ordinal));
+    Equal(true, native.Contains("call smile_window_title", StringComparison.Ordinal));
     var web = new WebEmitter(analysis).Emit();
     Equal(true, web.Contains("smile.windowWidth()", StringComparison.Ordinal));
     Equal(true, web.Contains("smile.windowHeight()", StringComparison.Ordinal));
+    Equal(true, web.Contains("smile.windowTitle(\"Model.glb\")", StringComparison.Ordinal));
 });
 Run("Renderer3D is a bounded game-window bridge on both targets", () =>
 {

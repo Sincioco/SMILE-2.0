@@ -29,12 +29,12 @@ Public Function ProfileAt(Index As Number) As CharacterViewer.Profile
     If Index = PROFILE_ARIN Then
 
         Result.AssetId = "sin-star-i.character-1.paladin"
-        Result.CandidateVersion = "v5.5"
+        Result.CandidateVersion = "v5.6"
         Result.DisplayName = "Arin"
         Result.PartyRole = "Paladin"
-        Result.PrototypeAlias = "dragonfall.arin-v5-5"
+        Result.PrototypeAlias = "dragonfall.arin-v5-6"
         Result.ProductionStatus = "Candidate"
-        Result.AssetPath = "Assets\Generation2\ArinV55\ArinV55.sm3d"
+        Result.AssetPath = "Assets\Generation2\ArinV56\ArinV56.sm3d"
         Result.ExpectedClipCount = 11
         Result.ExpectedSocketCount = 10
         Result.DesiredWorldHeight = 100
@@ -68,6 +68,22 @@ Public Function ProfileAt(Index As Number) As CharacterViewer.Profile
         Result.ExpectedSocketCount = 1
         Result.DesiredWorldHeight = 180
 
+    End If
+
+    Return Result
+
+End Function
+
+Public Function ModelFileName(ProfileIndex As Number) As Text
+
+    Dim Result As Text
+
+    If ProfileIndex = PROFILE_ARIN Then
+        Result = "arin-integrated-candidate-v5.6.glb"
+    Else If ProfileIndex = PROFILE_ARIN_ORIGINAL Then
+        Result = "sin-star-i-character-1-paladin-tripo-v01.original.glb"
+    Else If ProfileIndex = PROFILE_TECHNICAL_ARTICULATED Then
+        Result = "AnimationArticulated.sm3d"
     End If
 
     Return Result
