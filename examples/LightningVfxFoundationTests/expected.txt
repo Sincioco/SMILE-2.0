@@ -1,0 +1,1 @@
+LightningVfx3D foundation tests passed

@@ -1,0 +1,188 @@
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Graphics3D As Graphics3D
+Import Smile.Simple3D.LightningVfx3D As Lightning
+
+Dim Checks As Number
+Dim Failures As Number
+
+Game Window "LightningVfx3D Foundation Tests" Size 320 By 240
+
+Do
+
+    Call RunTests()
+
+Loop Until True
+
+If Failures = 0 Then
+    Print "LightningVfx3D foundation tests passed"
+Else
+    Print "LightningVfx3D foundation tests failed: "; Failures
+End If
+
+Sub RunTests()
+
+    Dim Camera As Core.Camera3D
+    Dim ChainTarget As Core.Vector3
+    Dim Effect As Lightning.LightningEffect
+    Dim Invalid As Lightning.LightningEffect
+    Dim Pool[8] As Lightning.LightningEffect
+    Dim Source As Core.Vector3
+    Dim Stale As Lightning.LightningEffect
+    Dim Target As Core.Vector3
+    Dim FirstChecksum As Number
+    Dim Initialized As Boolean
+    Dim Index As Number
+
+    Call Graphics3D.ResetRenderer3D()
+
+    Camera = Graphics3D.DefaultCamera()
+    Source.X = -37
+    Source.Y = 211
+    Source.Z = 19
+    Target.X = 83
+    Target.Y = 17
+    Target.Z = -41
+
+    Initialized = Lightning.Initialize("Assets/Lightning")
+
+    If Not Initialized Then
+
+        Print "Initialization diagnostic: "; Graphics3D.LastError(); " ";
+        Print Graphics3D.LiveTextureCount3D(); " "; Graphics3D.LiveMaterialCount3D(); " ";
+        Print Graphics3D.LiveRibbonBatchCount3D(); " "; Graphics3D.LiveParticleBatchCount3D()
+
+    End If
+
+    Call Check(Initialized)
+    Call Check(Lightning.Initialize("Assets/Lightning"))
+    Call Check(Graphics3D.LiveTextureCount3D() = 2)
+    Call Check(Graphics3D.LiveMaterialCount3D() = 4)
+    Call Check(Graphics3D.LiveRibbonBatchCount3D() = 3)
+    Call Check(Graphics3D.LiveParticleBatchCount3D() = 1)
+
+    Invalid = Lightning.StartAt("Unknown", Source, Target, 1)
+
+    Call Check(Not Lightning.IsActive(Invalid))
+    Call Check(Lightning.Value(Lightning.QUERY_LAST_ERROR, Invalid) = Lightning.ERROR_INVALID_PRESET)
+
+    Invalid = Lightning.StartAt("SkyStrike", Source, Source, 1)
+
+    Call Check(Not Lightning.IsActive(Invalid))
+    Call Check(Lightning.Value(Lightning.QUERY_LAST_ERROR, Invalid) = Lightning.ERROR_INVALID_POSITION)
+
+    Effect = Lightning.StartAt("SkyStrike", Source, Target, 1776)
+    FirstChecksum = Lightning.Value(Lightning.QUERY_TOPOLOGY_CHECKSUM, Effect)
+
+    Call Check(Lightning.IsActive(Effect))
+    Call Check(Lightning.Value(Lightning.QUERY_PRESET, Effect) = 2)
+    Call Check(Lightning.Value(Lightning.QUERY_QUALITY, Effect) = Lightning.QUALITY_HIGH)
+    Call Check(Lightning.Value(Lightning.QUERY_POINT_COUNT, Effect) > 0)
+    Call Check(Lightning.Value(Lightning.QUERY_POINT_COUNT, Effect) <= Lightning.MAX_POINTS_PER_EFFECT)
+    Call Check(FirstChecksum <> 0)
+    Call Check(Lightning.Value(Lightning.QUERY_FIRST_X, Effect) = Source.X)
+    Call Check(Lightning.Value(Lightning.QUERY_FIRST_Y, Effect) = Source.Y)
+    Call Check(Lightning.Value(Lightning.QUERY_FIRST_Z, Effect) = Source.Z)
+    Call Check(Lightning.Value(Lightning.QUERY_MAIN_TARGET_X, Effect) = Target.X)
+    Call Check(Lightning.Value(Lightning.QUERY_MAIN_TARGET_Y, Effect) = Target.Y)
+    Call Check(Lightning.Value(Lightning.QUERY_MAIN_TARGET_Z, Effect) = Target.Z)
+
+    Stale = Effect
+
+    Call Check(Lightning.Destroy(Effect))
+    Call Check(Not Lightning.IsActive(Stale))
+
+    Effect = Lightning.StartAt("SkyStrike", Source, Target, 1776)
+
+    Call Check(Lightning.Value(Lightning.QUERY_TOPOLOGY_CHECKSUM, Effect) = FirstChecksum)
+    Call Check(Lightning.Update(17, Camera))
+    Call Check(Lightning.Value(Lightning.QUERY_AGE, Effect) = 10)
+    Call Check(Lightning.Update(3, Camera))
+    Call Check(Lightning.Value(Lightning.QUERY_AGE, Effect) = 20)
+    Call Check(Lightning.ConsumeLightRequest(Effect) = 180)
+    Call Check(Lightning.ConsumeLightRequest(Effect) = 0)
+    Call Check(Lightning.SetFlashMode(Lightning.FLASH_REDUCED))
+    Call Check(Lightning.SetCharge(Effect, 1000))
+    Call Check(Lightning.Value(Lightning.QUERY_CHARGE, Effect) = 1000)
+    Call Check(Lightning.ConsumeFlashRequest(Effect) = 220)
+    Call Check(Lightning.ConsumeFlashRequest(Effect) = 0)
+    Call Check(Not Lightning.SetFlashMode(99))
+    Call Check(Lightning.Value(Lightning.QUERY_LAST_ERROR, Effect) = Lightning.ERROR_INVALID_FLASH_MODE)
+
+    ChainTarget.X = 130
+    ChainTarget.Y = 30
+    ChainTarget.Z = -20
+
+    For Index = 0 To Lightning.MAX_CHAIN_TARGETS - 1
+        ChainTarget.X = ChainTarget.X + 20
+
+        Call Check(Lightning.AddChainTarget(Effect, ChainTarget))
+    End For
+
+    Call Check(Lightning.Value(Lightning.QUERY_CHAIN_TARGETS, Effect) = Lightning.MAX_CHAIN_TARGETS)
+    Call Check(Not Lightning.AddChainTarget(Effect, ChainTarget))
+    Call Check(Lightning.Value(Lightning.QUERY_LAST_ERROR, Effect) = Lightning.ERROR_CHAIN_CAPACITY)
+    Call Check(Lightning.Value(Lightning.QUERY_POINT_COUNT, Effect) <= Lightning.MAX_POINTS_PER_EFFECT)
+    Call Check(Lightning.Update(0, Camera))
+    Call Check(Lightning.Value(Lightning.QUERY_ACTIVE_POINTS, Effect) > 0)
+    Call Check(Lightning.Value(Lightning.QUERY_DROPPED_POINTS, Effect) = 0)
+    Call Check(Graphics3D.Begin3D(Camera, 0, 0, 0))
+    Call Check(Lightning.DrawAll())
+    Call Check(Not Lightning.SetCharge(Effect, 500))
+    Call Check(Not Lightning.SetEndpoints(Effect, Target, Source))
+    Call Check(Not Lightning.SetEnabled(Effect, False))
+    Call Check(Not Lightning.Destroy(Effect))
+    Call Check(Lightning.Value(Lightning.QUERY_LAST_ERROR, Effect) = Lightning.ERROR_IN_FLIGHT)
+    Call Check(Graphics3D.End3DChecked())
+    Call Check(Lightning.Destroy(Effect))
+
+    For Index = 0 To Lightning.MAX_EFFECTS - 1
+        Pool[Index] = Lightning.StartAt("WeaponCorona", Source, Target, 2000 + Index)
+
+        Call Check(Lightning.IsActive(Pool[Index]))
+    End For
+
+    Invalid = Lightning.StartAt("StormCrown", Source, Target, 9999)
+
+    Call Check(Not Lightning.IsActive(Invalid))
+    Call Check(Lightning.Value(Lightning.QUERY_LAST_ERROR, Invalid) = Lightning.ERROR_CAPACITY)
+    Call Check(Lightning.Value(Lightning.QUERY_LIVE_EFFECTS, Invalid) = Lightning.MAX_EFFECTS)
+    Call Check(Lightning.Update(1000, Camera))
+    Call Check(Lightning.Value(Lightning.QUERY_AGE, Pool[0]) = 100)
+
+    If Lightning.Value(Lightning.QUERY_PARTICLE_BACKEND, Pool[0]) = Graphics3D.GPU_PARTICLE_SIMULATION_GPU_FAST Then
+        Call Check(Lightning.Value(Lightning.QUERY_PARTICLES, Pool[0]) > 0)
+        Call Check(Graphics3D.GpuParticleValue3D(Graphics3D.GPU_PARTICLE_QUERY_SPAWNS_REJECTED) = 0)
+    End If
+
+    Call Lightning.Shutdown()
+
+    Call Check(Graphics3D.LiveTextureCount3D() = 0)
+    Call Check(Graphics3D.LiveMaterialCount3D() = 0)
+    Call Check(Graphics3D.LiveRibbonBatchCount3D() = 0)
+    Call Check(Graphics3D.LiveParticleBatchCount3D() = 0)
+    Call Check(Not Lightning.IsActive(Pool[0]))
+
+    Call Check(Lightning.Initialize("Assets/Lightning"))
+
+    Effect = Lightning.StartAt("ThunderGroundSlam", Source, Target, 33, Lightning.QUALITY_ULTRA)
+
+    Call Graphics3D.ResetRenderer3D()
+    Call Check(Not Lightning.Update(Effect.Slot, Camera))
+    Call Lightning.Shutdown()
+    Call Check(Graphics3D.LiveTextureCount3D() = 0)
+    Call Check(Graphics3D.LiveMaterialCount3D() = 0)
+
+End Sub
+
+Sub Check(Condition As Boolean)
+
+    Checks = Checks + 1
+
+    If Not Condition Then
+        Failures = Failures + 1
+        Print "Failed check "; Checks
+    End If
+
+End Sub

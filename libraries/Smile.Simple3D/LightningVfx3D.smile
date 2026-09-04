@@ -1,0 +1,1856 @@
+''' Bounded deterministic lightning built from shared Renderer3D ribbons and particles.
+Module Smile.Simple3D.LightningVfx3D
+
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Graphics3D As Graphics3D
+Import Smile.Simple3D.Math3D As Math3D
+Import Smile.Simple3D.FixedMath As Fixed
+
+Public Const QUALITY_LOW = 1
+Public Const QUALITY_MEDIUM = 2
+Public Const QUALITY_HIGH = 3
+Public Const QUALITY_ULTRA = 4
+Public Const QUALITY_AUTO = 5
+
+Public Const FLASH_STANDARD = 1
+Public Const FLASH_REDUCED = 2
+Public Const FLASH_OFF = 3
+
+Public Const MAX_EFFECTS = 8
+Public Const MAX_CHAIN_TARGETS = 4
+Public Const MAX_POINTS_PER_EFFECT = 62
+Public Const RIBBON_CAPACITY = 512
+Public Const SPARK_CAPACITY = 64
+Public Const FIXED_STEP_MILLISECONDS = 10
+Public Const MAXIMUM_UPDATE_MILLISECONDS = 100
+
+Public Const ERROR_NONE = 0
+Public Const ERROR_NOT_INITIALIZED = 1
+Public Const ERROR_INVALID_PRESET = 2
+Public Const ERROR_INVALID_POSITION = 3
+Public Const ERROR_CAPACITY = 4
+Public Const ERROR_INVALID_EFFECT = 5
+Public Const ERROR_IN_FLIGHT = 6
+Public Const ERROR_RENDERER = 7
+Public Const ERROR_CHAIN_CAPACITY = 8
+Public Const ERROR_INVALID_FLASH_MODE = 9
+
+Public Const QUERY_LIVE_EFFECTS = 1
+Public Const QUERY_ACTIVE_POINTS = 2
+Public Const QUERY_DROPPED_POINTS = 3
+Public Const QUERY_LAST_ERROR = 4
+Public Const QUERY_PARTICLE_BACKEND = 5
+Public Const QUERY_PARTICLE_CAPACITY = 6
+Public Const QUERY_PARTICLES = 7
+Public Const QUERY_CPU_BYTES = 8
+Public Const QUERY_GPU_BYTES = 9
+Public Const QUERY_REBUILDS = 10
+Public Const QUERY_PRESET = 30
+Public Const QUERY_AGE = 31
+Public Const QUERY_DURATION = 32
+Public Const QUERY_QUALITY = 33
+Public Const QUERY_TOPOLOGY_CHECKSUM = 34
+Public Const QUERY_CHAIN_TARGETS = 35
+Public Const QUERY_FINISHED = 36
+Public Const QUERY_CHARGE = 37
+Public Const QUERY_POINT_COUNT = 38
+Public Const QUERY_FIRST_X = 40
+Public Const QUERY_FIRST_Y = 41
+Public Const QUERY_FIRST_Z = 42
+Public Const QUERY_MAIN_TARGET_X = 43
+Public Const QUERY_MAIN_TARGET_Y = 44
+Public Const QUERY_MAIN_TARGET_Z = 45
+
+Public Type LightningEffect
+    Slot As Number
+    Generation As Number
+End Type
+
+Private Type LightningState
+    Active As Boolean
+    Enabled As Boolean
+    Finished As Boolean
+    Generation As Number
+    Preset As Number
+    Quality As Number
+    Seed As Number
+    Age As Number
+    Duration As Number
+    Width As Number
+    Intensity As Number
+    Charge As Number
+    TopologyBucket As Number
+    TopologyChecksum As Number
+    PointCount As Number
+    ChainCount As Number
+    PresentationPhase As Number
+    LightRequest As Number
+    FlashRequest As Number
+    ShakeRequest As Number
+    AudioRequest As Number
+    Source As Core.Vector3
+    Target As Core.Vector3
+    MainTargetPoint As Number
+End Type
+
+Private Dim Ready As Boolean
+Private Dim RendererEpoch As Number
+Private Dim ErrorValue As Number
+Private Dim FlashMode As Number
+Private Dim UpdateRemainder As Number
+Private Dim ActivePointCount As Number
+Private Dim DroppedPointCount As Number
+Private Dim RebuildCount As Number
+Private Dim BranchesEnabled As Boolean
+Private Dim DebugLayer As Number
+Private Dim SpawnSerial As Number
+Private Dim SpawnCursor As Number
+Private Dim BuildDelay As Number
+Private Dim Items[8] As LightningState
+Private Dim PathX[8, 62] As Number
+Private Dim PathY[8, 62] As Number
+Private Dim PathZ[8, 62] As Number
+Private Dim PathWidth1000[8, 62] As Number
+Private Dim PathDelay[8, 62] As Number
+Private Dim ChainX[8, 4] As Number
+Private Dim ChainY[8, 4] As Number
+Private Dim ChainZ[8, 4] As Number
+Private Dim RibbonTexture As Core.Texture3D
+Private Dim SparkTexture As Core.Texture3D
+Private Dim HaloMaterial As Core.Material3D
+Private Dim GlowMaterial As Core.Material3D
+Private Dim CoreMaterial As Core.Material3D
+Private Dim SparkMaterial As Core.Material3D
+Private Dim HaloRibbon As Core.RibbonBatch3D
+Private Dim GlowRibbon As Core.RibbonBatch3D
+Private Dim CoreRibbon As Core.RibbonBatch3D
+Private Dim SparkBatch As Core.ParticleBatch3D
+Private Dim GpuSparks As Core.GpuParticleSystem3D
+
+Private Function UnitCross(First As Core.Vector3, Second As Core.Vector3) As Core.Vector3
+
+    Dim Result As Core.Vector3
+    Dim FirstUnit As Core.Vector3
+    Dim SecondUnit As Core.Vector3
+
+    FirstUnit = Math3D.Normalize(First)
+    SecondUnit = Math3D.Normalize(Second)
+    Result = Math3D.Cross(FirstUnit, SecondUnit)
+    Result.X = Result.X / Core.FIXED_ONE
+    Result.Y = Result.Y / Core.FIXED_ONE
+    Result.Z = Result.Z / Core.FIXED_ONE
+    Result = Math3D.Normalize(Result)
+
+    Return Result
+
+End Function
+
+Private Function PositionValid(Position As Core.Vector3) As Boolean
+
+    Dim Result As Boolean
+
+    Result = (Position.X >= -1000000 And
+        Position.X <= 1000000 And
+        Position.Y >= -1000000 And
+        Position.Y <= 1000000 And
+        Position.Z >= -1000000 And
+        Position.Z <= 1000000)
+
+    Return Result
+
+End Function
+
+Private Function Current(Value As LightningEffect) As Boolean
+
+    Dim Index As Number
+    Dim Result As Boolean
+
+    If Not Ready Or RendererEpoch <> Graphics3D.ResourceEpoch3D() Then
+        Return False
+    End If
+
+    If Value.Slot < 1 Or Value.Slot > MAX_EFFECTS Then
+        Return False
+    End If
+
+    Index = Value.Slot - 1
+    Result = Items[Index].Active And Items[Index].Generation = Value.Generation
+
+    Return Result
+
+End Function
+
+Private Function PresetId(Name As Text) As Number
+
+    If Name = "StormGather" Then
+        Return 1
+    Else If Name = "SkyStrike" Then
+        Return 2
+    Else If Name = "SkyToWeaponCharge" Then
+        Return 3
+    Else If Name = "WeaponCorona" Or Name = "StoredStorm" Then
+        Return 4
+    Else If Name = "ThunderLance" Or Name = "ChargedBlast" Then
+        Return 5
+    Else If Name = "ChainTempest" Then
+        Return 6
+    Else If Name = "ThunderGroundSlam" Then
+        Return 7
+    Else If Name = "StormCrown" Then
+        Return 8
+    End If
+
+    Return 0
+
+End Function
+
+Private Function EffectiveQuality(Requested As Number) As Number
+
+    Dim Result As Number
+
+    Result = Requested
+
+    If Requested = QUALITY_AUTO Then
+        Result = QUALITY_HIGH
+    End If
+
+    If Result < QUALITY_LOW Or Result > QUALITY_ULTRA Then
+        Result = QUALITY_HIGH
+    End If
+
+    Return Result
+
+End Function
+
+Private Function SegmentCount(Quality As Number) As Number
+
+    Dim Result As Number
+
+    Result = 8
+
+    If Quality = QUALITY_MEDIUM Then
+        Result = 12
+    Else If Quality = QUALITY_HIGH Then
+        Result = 18
+    Else If Quality = QUALITY_ULTRA Then
+        Result = 24
+    End If
+
+    Return Result
+
+End Function
+
+Private Function BranchCount(Quality As Number) As Number
+
+    Dim Result As Number
+
+    Result = 1
+
+    If Quality = QUALITY_MEDIUM Then
+        Result = 2
+    Else If Quality = QUALITY_HIGH Then
+        Result = 3
+    Else If Quality = QUALITY_ULTRA Then
+        Result = 4
+    End If
+
+    Return Result
+
+End Function
+
+Private Function HashValue(Seed As Number, Salt As Number) As Number
+
+    Dim Result As Number
+
+    Result = ((Abs(Seed) Mod 1000000) * 48271 + (Salt + 1) * 7919) Mod 2147483647
+    Result = (Result * 16807 + 97) Mod 2147483647
+
+    Return Result
+
+End Function
+
+Private Function AppendPoint(
+    Index As Number,
+    Position As Core.Vector3,
+    Width1000 As Number
+) As Boolean
+
+    Dim Point As Number
+
+    Point = Items[Index].PointCount
+
+    If Point >= MAX_POINTS_PER_EFFECT Then
+        DroppedPointCount = DroppedPointCount + 1
+
+        Return False
+    End If
+
+    PathX[Index, Point] = Position.X
+    PathY[Index, Point] = Position.Y
+    PathZ[Index, Point] = Position.Z
+    PathWidth1000[Index, Point] = Width1000
+    PathDelay[Index, Point] = BuildDelay
+    Items[Index].PointCount = Point + 1
+
+    Return True
+
+End Function
+
+Private Function AppendBreak(Index As Number, Position As Core.Vector3) As Boolean
+
+    Dim Previous As Core.Vector3
+    Dim Result As Boolean
+
+    If Items[Index].PointCount <= 0 Then
+        Return True
+    End If
+
+    Previous.X = PathX[Index, Items[Index].PointCount - 1]
+    Previous.Y = PathY[Index, Items[Index].PointCount - 1]
+    Previous.Z = PathZ[Index, Items[Index].PointCount - 1]
+    Result = AppendPoint(Index, Previous, 0)
+    Result = AppendPoint(Index, Position, 0) And Result
+
+    Return Result
+
+End Function
+
+Private Function AppendBoltPath(
+    Index As Number,
+    StartPosition As Core.Vector3,
+    EndPosition As Core.Vector3,
+    Segments As Number,
+    Amplitude As Number,
+    Salt As Number,
+    AddBreak As Boolean
+) As Boolean
+
+    Dim Direction As Core.Vector3
+    Dim Reference As Core.Vector3
+    Dim Side As Core.Vector3
+    Dim UpVector As Core.Vector3
+    Dim Position As Core.Vector3
+    Dim StepIndex As Number
+    Dim NoiseSide As Number
+    Dim NoiseUp As Number
+    Dim OffsetSide As Number
+    Dim OffsetUp As Number
+    Dim Samples[25] As Core.Vector3
+    Dim StackLow[32] As Number
+    Dim StackHigh[32] As Number
+    Dim StackAmplitude[32] As Number
+    Dim StackSize As Number
+    Dim LowIndex As Number
+    Dim HighIndex As Number
+    Dim MiddleIndex As Number
+    Dim LocalAmplitude As Number
+    Dim Result As Boolean
+
+    If Segments < 1 Then
+        Return False
+    End If
+
+    Direction = Math3D.Normalize(Math3D.Subtract(EndPosition, StartPosition))
+    Reference.Y = Core.FIXED_ONE
+
+    If Abs(Direction.Y) > Core.FIXED_ONE * 9 / 10 Then
+        Reference.X = Core.FIXED_ONE
+        Reference.Y = 0
+    End If
+
+    Side = UnitCross(Direction, Reference)
+    UpVector = UnitCross(Side, Direction)
+    Result = True
+
+    If AddBreak Then
+        Result = AppendBreak(Index, StartPosition)
+    End If
+
+    Samples[0] = StartPosition
+    Samples[Segments] = EndPosition
+    StackHigh[0] = Segments
+    StackAmplitude[0] = Amplitude
+    StackSize = 1
+
+    Do
+
+        StackSize = StackSize - 1
+        LowIndex = StackLow[StackSize]
+        HighIndex = StackHigh[StackSize]
+        MiddleIndex = (LowIndex + HighIndex) / 2
+        LocalAmplitude = StackAmplitude[StackSize]
+
+        If MiddleIndex > LowIndex Then
+
+            Position.X = (Samples[LowIndex].X + Samples[HighIndex].X) / 2
+            Position.Y = (Samples[LowIndex].Y + Samples[HighIndex].Y) / 2
+            Position.Z = (Samples[LowIndex].Z + Samples[HighIndex].Z) / 2
+            NoiseSide = HashValue(Items[Index].Seed, Salt + MiddleIndex * 2) Mod 2001 - 1000
+            NoiseUp = HashValue(Items[Index].Seed, Salt + MiddleIndex * 2 + 1) Mod 2001 - 1000
+            OffsetSide = NoiseSide * LocalAmplitude / 1000
+            OffsetUp = NoiseUp * LocalAmplitude / 1000
+            Position.X = Position.X + Side.X * OffsetSide / Core.FIXED_ONE
+            Position.Y = Position.Y + Side.Y * OffsetSide / Core.FIXED_ONE
+            Position.Z = Position.Z + Side.Z * OffsetSide / Core.FIXED_ONE
+            Position.X = Position.X + UpVector.X * OffsetUp / Core.FIXED_ONE
+            Position.Y = Position.Y + UpVector.Y * OffsetUp / Core.FIXED_ONE
+            Position.Z = Position.Z + UpVector.Z * OffsetUp / Core.FIXED_ONE
+            Samples[MiddleIndex] = Position
+            StackLow[StackSize] = LowIndex
+            StackHigh[StackSize] = MiddleIndex
+            StackAmplitude[StackSize] = Max(1, LocalAmplitude * 6 / 10)
+            StackSize = StackSize + 1
+            StackLow[StackSize] = MiddleIndex
+            StackHigh[StackSize] = HighIndex
+            StackAmplitude[StackSize] = Max(1, LocalAmplitude * 6 / 10)
+            StackSize = StackSize + 1
+
+        End If
+
+    Loop Until StackSize = 0
+
+    For StepIndex = 0 To Segments
+        Result = AppendPoint(Index, Samples[StepIndex], 1000) And Result
+    End For
+
+    Return Result
+
+End Function
+
+Private Sub BuildEffect(Index As Number)
+
+    Dim StartPosition As Core.Vector3
+    Dim EndPosition As Core.Vector3
+    Dim BranchStart As Core.Vector3
+    Dim BranchEnd As Core.Vector3
+    Dim Direction As Core.Vector3
+    Dim Reference As Core.Vector3
+    Dim Side As Core.Vector3
+    Dim UpVector As Core.Vector3
+    Dim Distance As Number
+    Dim Amplitude As Number
+    Dim Segments As Number
+    Dim Branches As Number
+    Dim Hop As Number
+    Dim Branch As Number
+    Dim MainStart As Number
+    Dim MainPoint As Number
+    Dim BranchFirst As Number
+    Dim BranchPoint As Number
+    Dim Result As Boolean
+
+    Items[Index].PointCount = 0
+    RebuildCount = RebuildCount + 1
+    BuildDelay = 0
+    StartPosition = Items[Index].Source
+    EndPosition = Items[Index].Target
+    Distance = Math3D.Distance(StartPosition, EndPosition)
+    Segments = SegmentCount(Items[Index].Quality)
+    Amplitude = Max(Items[Index].Width * 3, Distance / 11)
+
+    If Items[Index].ChainCount > 0 Then
+        Segments = Max(4, Segments / (Items[Index].ChainCount + 1))
+    End If
+
+    MainStart = Items[Index].PointCount
+    Items[Index].MainTargetPoint = Segments
+    Result = AppendBoltPath(Index, StartPosition, EndPosition, Segments, Amplitude,
+        Items[Index].TopologyBucket * 101, False)
+
+    For Hop = 0 To Items[Index].ChainCount - 1
+
+        BuildDelay = (Hop + 1) * 110
+        StartPosition = EndPosition
+        EndPosition.X = ChainX[Index, Hop]
+        EndPosition.Y = ChainY[Index, Hop]
+        EndPosition.Z = ChainZ[Index, Hop]
+        Result = AppendBoltPath(Index, StartPosition, EndPosition, Segments,
+            Amplitude, 2000 + Hop * 313 + Items[Index].TopologyBucket * 101, True) And Result
+    End For
+
+    Direction = Math3D.Normalize(Math3D.Subtract(Items[Index].Target, Items[Index].Source))
+    BuildDelay = 0
+    Reference.Y = Core.FIXED_ONE
+
+    If Abs(Direction.Y) > Core.FIXED_ONE * 9 / 10 Then
+        Reference.X = Core.FIXED_ONE
+        Reference.Y = 0
+    End If
+
+    Side = UnitCross(Direction, Reference)
+    UpVector = UnitCross(Side, Direction)
+    Branches = BranchCount(Items[Index].Quality)
+
+    If Not BranchesEnabled Then
+        Branches = 0
+    End If
+
+    For Branch = 0 To Branches - 1
+
+        MainPoint = MainStart + (Branch + 1) * Segments / (Branches + 1)
+        BranchStart.X = PathX[Index, MainPoint]
+        BranchStart.Y = PathY[Index, MainPoint]
+        BranchStart.Z = PathZ[Index, MainPoint]
+        BranchEnd = BranchStart
+        BranchEnd.X = BranchEnd.X + Direction.X * Distance / 5 / Core.FIXED_ONE
+        BranchEnd.Y = BranchEnd.Y + Direction.Y * Distance / 5 / Core.FIXED_ONE
+        BranchEnd.Z = BranchEnd.Z + Direction.Z * Distance / 5 / Core.FIXED_ONE
+        BranchEnd.X = BranchEnd.X + Side.X * Distance * (Branch * 2 - Branches + 1) / 12 / Core.FIXED_ONE
+        BranchEnd.Y = BranchEnd.Y + Side.Y * Distance * (Branch * 2 - Branches + 1) / 12 / Core.FIXED_ONE
+        BranchEnd.Z = BranchEnd.Z + Side.Z * Distance * (Branch * 2 - Branches + 1) / 12 / Core.FIXED_ONE
+        BranchEnd.X = BranchEnd.X + UpVector.X * Distance / 10 / Core.FIXED_ONE
+        BranchEnd.Y = BranchEnd.Y + UpVector.Y * Distance / 10 / Core.FIXED_ONE
+        BranchEnd.Z = BranchEnd.Z + UpVector.Z * Distance / 10 / Core.FIXED_ONE
+
+        If Items[Index].Preset = 7 Then
+            BranchEnd.Y = Items[Index].Target.Y
+        End If
+
+        BranchFirst = Items[Index].PointCount + 2
+        Result = AppendBoltPath(Index, BranchStart, BranchEnd, 4, Amplitude / 2,
+            4000 + Branch * 127 + Items[Index].TopologyBucket * 101, True) And Result
+
+        For BranchPoint = BranchFirst To Items[Index].PointCount - 1
+            PathWidth1000[Index, BranchPoint] = Max(0, 650 - (BranchPoint - BranchFirst) * 150)
+        End For
+
+        If Items[Index].PointCount > 0 Then
+            PathWidth1000[Index, Items[Index].PointCount - 1] = 0
+        End If
+
+    End For
+
+    Items[Index].TopologyChecksum = 17
+
+    For MainPoint = 0 To Items[Index].PointCount - 1
+        Items[Index].TopologyChecksum = (Items[Index].TopologyChecksum * 31 +
+            PathX[Index, MainPoint] * 3 + PathY[Index, MainPoint] * 5 +
+            PathZ[Index, MainPoint] * 7 + PathWidth1000[Index, MainPoint]) Mod 2147483647
+    End For
+
+End Sub
+
+Private Function StagePoint(
+    ByRef Ribbon As Core.RibbonBatch3D,
+    OutputIndex As Number,
+    EffectIndex As Number,
+    PointIndex As Number,
+    Camera As Core.Camera3D,
+    Width As Number,
+    RedValue As Number,
+    GreenValue As Number,
+    BlueValue As Number,
+    Opacity As Number
+) As Boolean
+
+    Dim Center As Core.Vector3
+    Dim Previous As Core.Vector3
+    Dim Following As Core.Vector3
+    Dim Tangent As Core.Vector3
+    Dim ToCamera As Core.Vector3
+    Dim Side As Core.Vector3
+    Dim HalfWidth As Number
+    Dim LeaderEnd As Number
+    Dim StreamerStart As Number
+    Dim Result As Boolean
+
+    Center.X = PathX[EffectIndex, PointIndex]
+    Center.Y = PathY[EffectIndex, PointIndex]
+    Center.Z = PathZ[EffectIndex, PointIndex]
+    Previous = Center
+    Following = Center
+
+    If PointIndex > 0 Then
+
+        Previous.X = PathX[EffectIndex, PointIndex - 1]
+        Previous.Y = PathY[EffectIndex, PointIndex - 1]
+        Previous.Z = PathZ[EffectIndex, PointIndex - 1]
+
+    End If
+
+    If PointIndex < Items[EffectIndex].PointCount - 1 Then
+
+        Following.X = PathX[EffectIndex, PointIndex + 1]
+        Following.Y = PathY[EffectIndex, PointIndex + 1]
+        Following.Z = PathZ[EffectIndex, PointIndex + 1]
+
+    End If
+
+    Tangent = Math3D.Subtract(Following, Previous)
+    ToCamera = Math3D.Subtract(Camera.Position, Center)
+    Side = UnitCross(Tangent, ToCamera)
+
+    If Math3D.Length(Side) = 0 Then
+        Side.X = Core.FIXED_ONE
+    End If
+
+    HalfWidth = Width * PathWidth1000[EffectIndex, PointIndex] / 1000
+
+    If Items[EffectIndex].Age < PathDelay[EffectIndex, PointIndex] Then
+        HalfWidth = 0
+        Opacity = 0
+    End If
+
+    If (Items[EffectIndex].Preset <= 3 And
+        Items[EffectIndex].Duration > 0 And
+        Items[EffectIndex].Age * 100 < Items[EffectIndex].Duration * 40) Then
+
+        LeaderEnd = (Items[EffectIndex].MainTargetPoint * Items[EffectIndex].Age * 80 /
+            Max(1, Items[EffectIndex].Duration * 40))
+        StreamerStart = Items[EffectIndex].MainTargetPoint * 9 / 10
+
+        If (PointIndex > LeaderEnd And
+            (PointIndex < StreamerStart Or
+                PointIndex > Items[EffectIndex].MainTargetPoint Or
+                Items[EffectIndex].Age * 100 < Items[EffectIndex].Duration * 20)) Then
+            HalfWidth = 0
+            Opacity = 0
+        Else
+            Opacity = Opacity * 35 / 100
+        End If
+
+    End If
+
+    Result = Graphics3D.SetRibbonPoint3D(
+        Ribbon,
+        OutputIndex,
+        Center.X - Side.X * HalfWidth / Core.FIXED_ONE,
+        Center.Y - Side.Y * HalfWidth / Core.FIXED_ONE,
+        Center.Z - Side.Z * HalfWidth / Core.FIXED_ONE,
+        Center.X + Side.X * HalfWidth / Core.FIXED_ONE,
+        Center.Y + Side.Y * HalfWidth / Core.FIXED_ONE,
+        Center.Z + Side.Z * HalfWidth / Core.FIXED_ONE,
+        500
+    )
+    Result = Graphics3D.SetRibbonPointColor3D(
+        Ribbon,
+        OutputIndex,
+        RedValue,
+        GreenValue,
+        BlueValue,
+        Opacity / 10
+    ) And Result
+
+    Return Result
+
+End Function
+
+Private Function EffectOpacity(Index As Number) As Number
+
+    Dim Remaining As Number
+    Dim Result As Number
+
+    Result = Items[Index].Intensity
+
+    If Items[Index].Duration > 0 Then
+
+        Remaining = Items[Index].Duration - Items[Index].Age
+
+        If Remaining < 180 Then
+            Result = Result * Max(0, Remaining) / 180
+        End If
+
+    End If
+
+    If FlashMode = FLASH_REDUCED Then
+        Result = Min(Result, 650)
+    End If
+
+    If Items[Index].Duration > 0 And Items[Index].Age > Items[Index].Duration * 4 / 10 Then
+        Result = Result * (70 + HashValue(Items[Index].Seed, Items[Index].Age / 60) Mod 31) / 100
+    End If
+
+    Return Result
+
+End Function
+
+Private Function StageLayer(
+    ByRef Ribbon As Core.RibbonBatch3D,
+    Camera As Core.Camera3D,
+    WidthMultiplier As Number,
+    RedValue As Number,
+    GreenValue As Number,
+    BlueValue As Number,
+    LayerOpacity As Number
+) As Boolean
+
+    Dim EffectIndex As Number
+    Dim PreviousEffectIndex As Number
+    Dim PointIndex As Number
+    Dim OutputIndex As Number
+    Dim Opacity As Number
+    Dim Result As Boolean
+
+    Result = True
+    PreviousEffectIndex = -1
+
+    For EffectIndex = 0 To MAX_EFFECTS - 1
+
+        If (Items[EffectIndex].Active And
+            Items[EffectIndex].Enabled And
+            Not Items[EffectIndex].Finished) Then
+
+            If OutputIndex > 0 And Items[EffectIndex].PointCount > 0 Then
+
+                If OutputIndex + 2 <= RIBBON_CAPACITY Then
+
+                    Result = StagePoint(
+                        Ribbon,
+                        OutputIndex,
+                        PreviousEffectIndex,
+                        Items[PreviousEffectIndex].PointCount - 1,
+                        Camera,
+                        0,
+                        RedValue, GreenValue, BlueValue, 0) And Result
+                    OutputIndex = OutputIndex + 1
+                    Result = StagePoint(Ribbon, OutputIndex, EffectIndex, 0, Camera, 0,
+                        RedValue, GreenValue, BlueValue, 0) And Result
+                    OutputIndex = OutputIndex + 1
+
+                End If
+
+            End If
+
+            Opacity = EffectOpacity(EffectIndex) * LayerOpacity / 1000
+
+            For PointIndex = 0 To Items[EffectIndex].PointCount - 1
+
+                If OutputIndex < RIBBON_CAPACITY Then
+                    Result = StagePoint(
+                        Ribbon,
+                        OutputIndex,
+                        EffectIndex,
+                        PointIndex,
+                        Camera,
+                        Max(1, Items[EffectIndex].Width * WidthMultiplier / 1000),
+                        RedValue,
+                        GreenValue,
+                        BlueValue,
+                        Opacity
+                    ) And Result
+                    OutputIndex = OutputIndex + 1
+                Else
+                    DroppedPointCount = DroppedPointCount + 1
+                End If
+
+            End For
+
+            PreviousEffectIndex = EffectIndex
+
+        End If
+
+    End For
+
+    Result = Graphics3D.CommitRibbonBatch3D(Ribbon, OutputIndex) And Result
+
+    Return Result
+
+End Function
+
+Private Function StageSparks() As Boolean
+
+    Dim EffectIndex As Number
+    Dim OutputIndex As Number
+    Dim Position As Core.Vector3
+    Dim Opacity As Number
+    Dim Result As Boolean
+
+    Result = True
+
+    For EffectIndex = 0 To MAX_EFFECTS - 1
+
+        If (Items[EffectIndex].Active And
+            Items[EffectIndex].Enabled And
+            Not Items[EffectIndex].Finished And
+            OutputIndex < SPARK_CAPACITY) Then
+
+            Position = Items[EffectIndex].Target
+            Opacity = EffectOpacity(EffectIndex) / 10
+            Result = Graphics3D.SetParticle3D(
+                SparkBatch,
+                OutputIndex,
+                Position.X,
+                Position.Y,
+                Position.Z,
+                Max(2, Items[EffectIndex].Width * 5),
+                Items[EffectIndex].Age * 3 Mod 360,
+                0
+            ) And Result
+            Result = Graphics3D.SetParticleColor3D(
+                SparkBatch,
+                OutputIndex,
+                235,
+                249,
+                255,
+                Opacity
+            ) And Result
+            OutputIndex = OutputIndex + 1
+
+        End If
+
+    End For
+
+    Result = Graphics3D.CommitParticleBatch3D(SparkBatch, OutputIndex) And Result
+
+    Return Result
+
+End Function
+
+Private Function StageAll(Camera As Core.Camera3D) As Boolean
+
+    Dim Result As Boolean
+
+    Result = StageLayer(HaloRibbon, Camera, 4200, 36, 116, 255, 180)
+    Result = StageLayer(GlowRibbon, Camera, 2100, 102, 216, 255, 520) And Result
+    Result = StageLayer(CoreRibbon, Camera, 700, 248, 254, 255, 1000) And Result
+    Result = StageSparks() And Result
+    ActivePointCount = HaloRibbon.PointCount
+
+    If Not Result Then
+        ErrorValue = ERROR_RENDERER
+    End If
+
+    Return Result
+
+End Function
+
+Private Function EmitSparks(Index As Number) As Boolean
+
+    Dim SpawnCount As Number
+    Dim Particle As Number
+    Dim Slot As Number
+    Dim Noise As Number
+    Dim Position As Core.Vector3
+    Dim Result As Boolean
+
+    Result = True
+
+    If GpuSparks.Handle = 0 Then
+        Return True
+    End If
+
+    SpawnCount = Items[Index].Quality * 3
+
+    For Particle = 0 To SpawnCount - 1
+
+        SpawnSerial = SpawnSerial + 1
+        Slot = SpawnCursor
+        SpawnCursor = (SpawnCursor + 1) Mod GpuSparks.Capacity
+        Result = Graphics3D.KillGpuParticleSlot3D(GpuSparks, Slot) And Result
+        Noise = HashValue(Items[Index].Seed, SpawnSerial)
+        Position = Items[Index].Target
+
+        If Items[Index].Preset = 4 Then
+
+            Position.X = (Items[Index].Source.X +
+                (Items[Index].Target.X - Items[Index].Source.X) * Particle / Max(1, SpawnCount - 1))
+            Position.Y = (Items[Index].Source.Y +
+                (Items[Index].Target.Y - Items[Index].Source.Y) * Particle / Max(1, SpawnCount - 1))
+            Position.Z = (Items[Index].Source.Z +
+                (Items[Index].Target.Z - Items[Index].Source.Z) * Particle / Max(1, SpawnCount - 1))
+
+        End If
+
+        Result = Graphics3D.SetGpuParticleSpawnKinematics3D(GpuSparks, Slot,
+            Position.X, Position.Y, Position.Z,
+            Noise Mod 161 - 80, 20 + Noise / 161 Mod 120, Noise / 19321 Mod 161 - 80) And Result
+        Result = Graphics3D.SetGpuParticleSpawnVisual3D(GpuSparks, Slot,
+            200 + Noise Mod 200, 2 + Noise Mod 3, 1, Noise Mod 360, 90, 1000, 800) And Result
+        Result = Graphics3D.CommitGpuParticleSpawn3D(GpuSparks, Slot,
+            SpawnSerial, Max(1, Noise)) And Result
+    End For
+
+    Return Result
+
+End Function
+
+Private Sub QueuePresentation(Index As Number, Phase As Number)
+
+    If Phase <= Items[Index].PresentationPhase Then
+        Return
+    End If
+
+    Items[Index].PresentationPhase = Phase
+
+    If Phase = 1 Then
+
+        Items[Index].LightRequest = 420
+        Items[Index].AudioRequest = 1
+
+    Else If Phase = 2 Then
+
+        Items[Index].LightRequest = 850
+        Items[Index].FlashRequest = 720
+        Items[Index].ShakeRequest = 180
+        Items[Index].AudioRequest = 2
+
+        If FlashMode = FLASH_REDUCED Then
+            Items[Index].FlashRequest = 240
+            Items[Index].ShakeRequest = 90
+        End If
+
+    Else If Phase >= 3 Then
+
+        Items[Index].LightRequest = 300
+        Items[Index].AudioRequest = 3
+
+    End If
+
+End Sub
+
+Private Sub AdvanceEffect(Index As Number)
+
+    Dim Phase As Number
+    Dim PreviousBucket As Number
+    Dim Result As Boolean
+
+    If (Not Items[Index].Active Or
+        Not Items[Index].Enabled Or
+        Items[Index].Finished) Then
+        Return
+    End If
+
+    PreviousBucket = Items[Index].TopologyBucket
+    Items[Index].Age = Items[Index].Age + FIXED_STEP_MILLISECONDS
+    Items[Index].TopologyBucket = Items[Index].Age / 40
+
+    If Items[Index].TopologyBucket <> PreviousBucket Then
+
+        Call BuildEffect(Index)
+
+        Result = EmitSparks(Index)
+
+        If Not Result Then
+            ErrorValue = ERROR_RENDERER
+        End If
+
+    End If
+
+    If Items[Index].Duration > 0 Then
+
+        Phase = Min(3, Items[Index].Age * 4 / Items[Index].Duration)
+
+        Call QueuePresentation(Index, Phase)
+
+        If Items[Index].Age >= Items[Index].Duration Then
+            Items[Index].Finished = True
+        End If
+
+    End If
+
+End Sub
+
+''' Allocates the shared three-layer ribbon and spark batches once.
+Public Function Initialize(
+    Directory As Text,
+    Optional ParticleCapacity As Number = 2048,
+    Optional Simulation As Number = Graphics3D.GPU_PARTICLE_SIMULATION_AUTO
+) As Boolean
+
+    Dim Result As Boolean
+
+    If Ready And RendererEpoch = Graphics3D.ResourceEpoch3D() Then
+        Return True
+    End If
+
+    If Ready Then
+        Call Shutdown()
+    End If
+
+    If Graphics3D.FrameActive3D() Then
+        ErrorValue = ERROR_IN_FLIGHT
+
+        Return False
+    End If
+
+    RendererEpoch = Graphics3D.ResourceEpoch3D()
+    BranchesEnabled = True
+    DebugLayer = 0
+    DroppedPointCount = 0
+    RebuildCount = 0
+    RibbonTexture = Graphics3D.LoadTexture3D(Directory + "/lightning-ribbon.png")
+    SparkTexture = Graphics3D.LoadTexture3D(Directory + "/lightning-spark.png")
+
+    If RibbonTexture.Handle <> 0 Then
+
+        HaloMaterial = Graphics3D.CreateEffectMaterial3D(
+            RibbonTexture, Graphics3D.MATERIAL_ALPHA_ADDITIVE, 360)
+        GlowMaterial = Graphics3D.CreateEffectMaterial3D(
+            RibbonTexture, Graphics3D.MATERIAL_ALPHA_ADDITIVE, 360)
+        CoreMaterial = Graphics3D.CreateEffectMaterial3D(
+            RibbonTexture, Graphics3D.MATERIAL_ALPHA_ADDITIVE, 400)
+
+    End If
+
+    If SparkTexture.Handle <> 0 Then
+        SparkMaterial = Graphics3D.CreateEffectMaterial3D(
+            SparkTexture, Graphics3D.MATERIAL_ALPHA_ADDITIVE, 400)
+    End If
+
+    If (HaloMaterial.Handle <> 0 And
+        GlowMaterial.Handle <> 0 And
+        CoreMaterial.Handle <> 0 And
+        SparkMaterial.Handle <> 0) Then
+
+        HaloRibbon = Graphics3D.CreateRibbonBatch3D(RIBBON_CAPACITY, HaloMaterial)
+        GlowRibbon = Graphics3D.CreateRibbonBatch3D(RIBBON_CAPACITY, GlowMaterial)
+        CoreRibbon = Graphics3D.CreateRibbonBatch3D(RIBBON_CAPACITY, CoreMaterial)
+        SparkBatch = Graphics3D.CreateParticleBatch3D(
+            SPARK_CAPACITY,
+            SparkMaterial,
+            Graphics3D.VFX_BILLBOARD_CAMERA,
+            1,
+            1
+        )
+
+    End If
+
+    Result = (RibbonTexture.Handle <> 0 And
+        SparkTexture.Handle <> 0 And
+        HaloMaterial.Handle <> 0 And
+        GlowMaterial.Handle <> 0 And
+        CoreMaterial.Handle <> 0 And
+        SparkMaterial.Handle <> 0 And
+        HaloRibbon.Handle <> 0 And
+        GlowRibbon.Handle <> 0 And
+        CoreRibbon.Handle <> 0 And
+        SparkBatch.Handle <> 0)
+
+    If Not Result Then
+
+        Call Shutdown()
+
+        ErrorValue = ERROR_RENDERER
+
+        Return False
+
+    End If
+
+    Ready = True
+    RendererEpoch = Graphics3D.ResourceEpoch3D()
+    FlashMode = FLASH_STANDARD
+    ErrorValue = ERROR_NONE
+
+    If Simulation <> Graphics3D.GPU_PARTICLE_SIMULATION_CPU_DETERMINISTIC Then
+
+        GpuSparks = Graphics3D.CreateGpuParticleSystem3D(
+            Min(16384, Max(64, ParticleCapacity)), SparkMaterial, Simulation, 10)
+
+        If GpuSparks.EffectiveSimulation <> Graphics3D.GPU_PARTICLE_SIMULATION_GPU_FAST Then
+            Call Graphics3D.DestroyGpuParticleSystem3D(GpuSparks)
+        End If
+
+    End If
+
+    Result = Graphics3D.SetEffectMaterialSoftDepth3D(SparkMaterial, 1)
+
+    Return True
+
+End Function
+
+''' Starts a caller-owned point-to-point visual. It never selects targets or applies damage.
+Public Function StartAt(
+    Preset As Text,
+    Source As Core.Vector3,
+    Target As Core.Vector3,
+    Seed As Number,
+    Optional Quality As Number = QUALITY_AUTO
+) As LightningEffect
+
+    Dim Index As Number
+    Dim PresetValue As Number
+    Dim Result As LightningEffect
+
+    If Not Ready Or RendererEpoch <> Graphics3D.ResourceEpoch3D() Then
+        ErrorValue = ERROR_NOT_INITIALIZED
+
+        Return Result
+    End If
+
+    If Graphics3D.FrameActive3D() Then
+        ErrorValue = ERROR_IN_FLIGHT
+
+        Return Result
+    End If
+
+    PresetValue = PresetId(Preset)
+
+    If PresetValue = 0 Then
+        ErrorValue = ERROR_INVALID_PRESET
+
+        Return Result
+    End If
+
+    If (Not PositionValid(Source) Or
+        Not PositionValid(Target) Or
+        Math3D.Distance(Source, Target) <= 0) Then
+        ErrorValue = ERROR_INVALID_POSITION
+
+        Return Result
+    End If
+
+    Index = -1
+
+    For Index = 0 To MAX_EFFECTS - 1
+
+        If Not Items[Index].Active Then
+            Exit For
+        End If
+
+    End For
+
+    If (Index < 0 Or
+        Index >= MAX_EFFECTS Or
+        Items[Index].Active) Then
+        ErrorValue = ERROR_CAPACITY
+
+        Return Result
+    End If
+
+    Items[Index].Generation = Items[Index].Generation + 1
+
+    If Items[Index].Generation <= 0 Then
+        Items[Index].Generation = 1
+    End If
+
+    Items[Index].Active = True
+    Items[Index].Enabled = True
+    Items[Index].Finished = False
+    Items[Index].Preset = PresetValue
+    Items[Index].Quality = EffectiveQuality(Quality)
+    Items[Index].Seed = Max(1, Abs(Seed))
+    Items[Index].Age = 0
+    Items[Index].Duration = 900
+    Items[Index].Width = 3
+    Items[Index].Intensity = 1000
+    Items[Index].Charge = 0
+    Items[Index].TopologyBucket = 0
+    Items[Index].TopologyChecksum = 0
+    Items[Index].ChainCount = 0
+    Items[Index].PresentationPhase = 0
+    Items[Index].LightRequest = 180
+    Items[Index].FlashRequest = 0
+    Items[Index].ShakeRequest = 0
+    Items[Index].AudioRequest = 0
+    Items[Index].Source = Source
+    Items[Index].Target = Target
+
+    If PresetValue = 1 Then
+
+        Items[Index].Duration = 1200
+        Items[Index].Width = 2
+
+    Else If PresetValue = 2 Then
+
+        Items[Index].Duration = 650
+        Items[Index].Width = 4
+
+    Else If PresetValue = 3 Then
+
+        Items[Index].Duration = 1200
+        Items[Index].Width = 3
+
+    Else If PresetValue = 4 Then
+
+        Items[Index].Duration = 0
+        Items[Index].Width = 2
+        Items[Index].Intensity = 820
+
+    Else If PresetValue = 5 Then
+
+        Items[Index].Duration = 700
+        Items[Index].Width = 5
+
+    Else If PresetValue = 6 Then
+
+        Items[Index].Duration = 950
+        Items[Index].Width = 4
+
+    Else If PresetValue = 7 Then
+
+        Items[Index].Duration = 1000
+        Items[Index].Width = 5
+
+    Else If PresetValue = 8 Then
+
+        Items[Index].Duration = 1800
+        Items[Index].Width = 5
+
+    End If
+
+    Call BuildEffect(Index)
+
+    Result.Slot = Index + 1
+    Result.Generation = Items[Index].Generation
+    ErrorValue = ERROR_NONE
+
+    Return Result
+
+End Function
+
+Public Function SetEndpoints(
+    Value As LightningEffect,
+    Source As Core.Vector3,
+    Target As Core.Vector3
+) As Boolean
+
+    Dim Index As Number
+
+    If Not Current(Value) Then
+        ErrorValue = ERROR_INVALID_EFFECT
+
+        Return False
+    End If
+
+    If Graphics3D.FrameActive3D() Then
+        ErrorValue = ERROR_IN_FLIGHT
+
+        Return False
+    End If
+
+    If (Not PositionValid(Source) Or
+        Not PositionValid(Target) Or
+        Math3D.Distance(Source, Target) <= 0) Then
+        ErrorValue = ERROR_INVALID_POSITION
+
+        Return False
+    End If
+
+    Index = Value.Slot - 1
+    Items[Index].Source = Source
+    Items[Index].Target = Target
+
+    Call BuildEffect(Index)
+
+    ErrorValue = ERROR_NONE
+
+    Return True
+
+End Function
+
+Public Function AddChainTarget(Value As LightningEffect, Target As Core.Vector3) As Boolean
+
+    Dim ChainIndex As Number
+    Dim Index As Number
+
+    If Not Current(Value) Then
+        ErrorValue = ERROR_INVALID_EFFECT
+
+        Return False
+    End If
+
+    If Graphics3D.FrameActive3D() Then
+        ErrorValue = ERROR_IN_FLIGHT
+
+        Return False
+    End If
+
+    If Not PositionValid(Target) Then
+        ErrorValue = ERROR_INVALID_POSITION
+
+        Return False
+    End If
+
+    Index = Value.Slot - 1
+    ChainIndex = Items[Index].ChainCount
+
+    If ChainIndex >= MAX_CHAIN_TARGETS Then
+        ErrorValue = ERROR_CHAIN_CAPACITY
+
+        Return False
+    End If
+
+    ChainX[Index, ChainIndex] = Target.X
+    ChainY[Index, ChainIndex] = Target.Y
+    ChainZ[Index, ChainIndex] = Target.Z
+    Items[Index].ChainCount = ChainIndex + 1
+
+    Call BuildEffect(Index)
+
+    ErrorValue = ERROR_NONE
+
+    Return True
+
+End Function
+
+Public Function SetCharge(Value As LightningEffect, Charge1000 As Number) As Boolean
+
+    Dim Index As Number
+    Dim Previous As Number
+
+    If Not Current(Value) Then
+        ErrorValue = ERROR_INVALID_EFFECT
+
+        Return False
+    End If
+
+    If Graphics3D.FrameActive3D() Then
+        ErrorValue = ERROR_IN_FLIGHT
+
+        Return False
+    End If
+
+    Index = Value.Slot - 1
+    Previous = Items[Index].Charge
+    Items[Index].Charge = Min(1000, Max(0, Charge1000))
+    Items[Index].Intensity = 520 + Items[Index].Charge * 480 / 1000
+
+    If Previous < 1000 And Items[Index].Charge = 1000 Then
+
+        Items[Index].LightRequest = 900
+        Items[Index].FlashRequest = 650
+        Items[Index].AudioRequest = 4
+
+        If FlashMode = FLASH_REDUCED Then
+            Items[Index].FlashRequest = 220
+        End If
+
+    End If
+
+    ErrorValue = ERROR_NONE
+
+    Return True
+
+End Function
+
+Public Function SetEnabled(Value As LightningEffect, Enabled As Boolean) As Boolean
+
+    Dim Index As Number
+
+    If Not Current(Value) Then
+        ErrorValue = ERROR_INVALID_EFFECT
+
+        Return False
+    End If
+
+    If Graphics3D.FrameActive3D() Then
+        ErrorValue = ERROR_IN_FLIGHT
+
+        Return False
+    End If
+
+    Index = Value.Slot - 1
+    Items[Index].Enabled = Enabled
+
+    Return True
+
+End Function
+
+Public Function SetFlashMode(Mode As Number) As Boolean
+
+    If Graphics3D.FrameActive3D() Then
+        ErrorValue = ERROR_IN_FLIGHT
+
+        Return False
+    End If
+
+    If Mode < FLASH_STANDARD Or Mode > FLASH_OFF Then
+        ErrorValue = ERROR_INVALID_FLASH_MODE
+
+        Return False
+    End If
+
+    FlashMode = Mode
+    ErrorValue = ERROR_NONE
+
+    Return True
+
+End Function
+
+''' Configures shared presentation layers outside frame submission.
+Public Function Configure(Branches As Boolean, Layer As Number,
+    SoftDepth As Boolean, Distortion As Boolean) As Boolean
+
+    Dim Index As Number
+    Dim SoftMode As Number
+    Dim DistortionStrength As Number
+    Dim Result As Boolean
+
+    If (Not Ready Or
+        Graphics3D.FrameActive3D() Or
+        Layer < 0 Or
+        Layer > 3) Then
+        Return False
+    End If
+
+    BranchesEnabled = Branches
+    DebugLayer = Layer
+
+    If SoftDepth Then
+        SoftMode = 1
+    End If
+
+    If Distortion Then
+        DistortionStrength = 8
+    End If
+
+    Result = Graphics3D.SetEffectMaterialSoftDepth3D(SparkMaterial, SoftMode)
+    Result = Graphics3D.SetEffectMaterialDistortion3D(SparkMaterial,
+        DistortionStrength, 180, 40, 30, 10) And Result
+
+    For Index = 0 To MAX_EFFECTS - 1
+
+        If Items[Index].Active Then
+            Call BuildEffect(Index)
+        End If
+
+    End For
+
+    Return Result
+
+End Function
+
+''' World-space width and per-mille intensity, independent of the caller's charge value.
+Public Function SetStyle(Effect As LightningEffect, Width As Number,
+    Intensity1000 As Number) As Boolean
+
+    If Not Current(Effect) Or Graphics3D.FrameActive3D() Then
+        Return False
+    End If
+
+    Items[Effect.Slot - 1].Width = Min(40, Max(1, Width))
+    Items[Effect.Slot - 1].Intensity = Min(1000, Max(0, Intensity1000))
+
+    Return True
+
+End Function
+
+Public Function PhaseName(Effect As LightningEffect) As Text
+
+    Dim Index As Number
+    Dim Phase1000 As Number
+
+    If Not Current(Effect) Then
+        Return "Inactive"
+    End If
+
+    Index = Effect.Slot - 1
+
+    If Items[Index].Duration = 0 Then
+        Return "Stored Storm"
+    End If
+
+    Phase1000 = Items[Index].Age * 1000 / Items[Index].Duration
+
+    If Phase1000 < 200 Then
+        Return "Descending Leader"
+    Else If Phase1000 < 400 Then
+        Return "Upward Streamer"
+    Else If Phase1000 < 700 Then
+        Return "Return Stroke"
+    Else If Phase1000 < 1000 Then
+        Return "Afterstroke"
+    End If
+
+    Return "Complete"
+
+End Function
+
+''' Advances all active effects in bounded fixed 10 ms steps and restages camera-facing edges.
+Public Function Update(ElapsedMilliseconds As Number, Camera As Core.Camera3D) As Boolean
+
+    Dim Index As Number
+    Dim StepIndex As Number
+    Dim Steps As Number
+    Dim Result As Boolean
+
+    If Not Ready Or RendererEpoch <> Graphics3D.ResourceEpoch3D() Then
+        ErrorValue = ERROR_NOT_INITIALIZED
+
+        Return False
+    End If
+
+    If Graphics3D.FrameActive3D() Then
+        ErrorValue = ERROR_IN_FLIGHT
+
+        Return False
+    End If
+
+    ElapsedMilliseconds = Min(MAXIMUM_UPDATE_MILLISECONDS, Max(0, ElapsedMilliseconds))
+    UpdateRemainder = UpdateRemainder + ElapsedMilliseconds
+    Steps = Min(10, UpdateRemainder / FIXED_STEP_MILLISECONDS)
+    UpdateRemainder = UpdateRemainder - Steps * FIXED_STEP_MILLISECONDS
+
+    Result = True
+
+    For StepIndex = 1 To Steps
+
+        For Index = 0 To MAX_EFFECTS - 1
+            Call AdvanceEffect(Index)
+        End For
+
+        If GpuSparks.Handle <> 0 Then
+            Result = Graphics3D.AdvanceGpuParticleSystem3D(GpuSparks, FIXED_STEP_MILLISECONDS) And Result
+        End If
+
+    End For
+
+    Result = StageAll(Camera) And Result
+
+    Return Result
+
+End Function
+
+Public Function DrawAll() As Boolean
+
+    Dim Result As Boolean
+
+    If Not Ready Or RendererEpoch <> Graphics3D.ResourceEpoch3D() Then
+        ErrorValue = ERROR_NOT_INITIALIZED
+
+        Return False
+    End If
+
+    Result = True
+
+    If DebugLayer = 0 Or DebugLayer = 2 Then
+        Result = Graphics3D.DrawRibbonBatch3D(HaloRibbon)
+        Result = Graphics3D.DrawRibbonBatch3D(GlowRibbon) And Result
+    End If
+
+    If DebugLayer = 0 Or DebugLayer = 1 Then
+        Result = Graphics3D.DrawRibbonBatch3D(CoreRibbon) And Result
+    End If
+
+    If DebugLayer = 0 Or DebugLayer = 3 Then
+
+        Result = Graphics3D.DrawParticleBatch3D(SparkBatch) And Result
+
+        If GpuSparks.Handle <> 0 Then
+            Result = Graphics3D.DrawGpuParticleSystem3D(GpuSparks) And Result
+        End If
+
+    End If
+
+    If Not Result Then
+        ErrorValue = ERROR_RENDERER
+    End If
+
+    Return Result
+
+End Function
+
+Public Function Destroy(ByRef Value As LightningEffect) As Boolean
+
+    Dim Index As Number
+
+    If Not Current(Value) Then
+
+        Value.Slot = 0
+        Value.Generation = 0
+        ErrorValue = ERROR_INVALID_EFFECT
+
+        Return False
+
+    End If
+
+    If Graphics3D.FrameActive3D() Then
+        ErrorValue = ERROR_IN_FLIGHT
+
+        Return False
+    End If
+
+    Index = Value.Slot - 1
+    Items[Index].Active = False
+    Items[Index].Enabled = False
+    Items[Index].Finished = False
+    Items[Index].PointCount = 0
+    Items[Index].ChainCount = 0
+    Value.Slot = 0
+    Value.Generation = 0
+    ErrorValue = ERROR_NONE
+
+    Return True
+
+End Function
+
+Public Function ConsumeLightRequest(Value As LightningEffect) As Number
+
+    Dim Index As Number
+    Dim Result As Number
+
+    If Not Current(Value) Then
+        Return 0
+    End If
+
+    Index = Value.Slot - 1
+    Result = Items[Index].LightRequest
+    Items[Index].LightRequest = 0
+
+    Return Result
+
+End Function
+
+Public Function ConsumeFlashRequest(Value As LightningEffect) As Number
+
+    Dim Index As Number
+    Dim Result As Number
+
+    If Not Current(Value) Then
+        Return 0
+    End If
+
+    Index = Value.Slot - 1
+    Result = Items[Index].FlashRequest
+    Items[Index].FlashRequest = 0
+
+    If FlashMode = FLASH_OFF Then
+        Result = 0
+    End If
+
+    Return Result
+
+End Function
+
+Public Function ConsumeShakeRequest(Value As LightningEffect) As Number
+
+    Dim Index As Number
+    Dim Result As Number
+
+    If Not Current(Value) Then
+        Return 0
+    End If
+
+    Index = Value.Slot - 1
+    Result = Items[Index].ShakeRequest
+    Items[Index].ShakeRequest = 0
+
+    Return Result
+
+End Function
+
+Public Function ConsumeAudioRequest(Value As LightningEffect) As Number
+
+    Dim Index As Number
+    Dim Result As Number
+
+    If Not Current(Value) Then
+        Return 0
+    End If
+
+    Index = Value.Slot - 1
+    Result = Items[Index].AudioRequest
+    Items[Index].AudioRequest = 0
+
+    Return Result
+
+End Function
+
+Public Function Value(Query As Number, Effect As LightningEffect) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Index As Number
+    Dim ItemIndex As Number
+    Dim TargetPoint As Number
+    Dim Result As Number
+
+    If Query = QUERY_LAST_ERROR Then
+
+        Return ErrorValue
+
+    Else If Query = QUERY_LIVE_EFFECTS Then
+
+        For ItemIndex = 0 To MAX_EFFECTS - 1
+
+            If Items[ItemIndex].Active Then
+                Result = Result + 1
+            End If
+
+        End For
+
+        Return Result
+
+    Else If Query = QUERY_ACTIVE_POINTS Then
+
+        Return ActivePointCount
+
+    Else If Query = QUERY_DROPPED_POINTS Then
+
+        Return DroppedPointCount
+
+    Else If Query = QUERY_PARTICLE_BACKEND Then
+
+        ReturnValue = GpuSparks.EffectiveSimulation
+
+        Return ReturnValue
+
+    Else If Query = QUERY_PARTICLE_CAPACITY Then
+
+        ReturnValue = GpuSparks.Capacity
+
+        Return ReturnValue
+
+    Else If Query = QUERY_PARTICLES Then
+
+        Result = Graphics3D.GpuParticleValue3D(Graphics3D.GPU_PARTICLE_QUERY_RESOURCE_ACTIVE,
+            GpuSparks.Handle)
+        Return Result
+
+    Else If Query = QUERY_CPU_BYTES Then
+
+        Result = Graphics3D.GpuParticleValue3D(Graphics3D.GPU_PARTICLE_QUERY_RESOURCE_CPU_BYTES,
+            GpuSparks.Handle)
+        Return Result
+
+    Else If Query = QUERY_GPU_BYTES Then
+
+        Result = Graphics3D.GpuParticleValue3D(Graphics3D.GPU_PARTICLE_QUERY_RESOURCE_GPU_BYTES,
+            GpuSparks.Handle)
+        Return Result
+
+    Else If Query = QUERY_REBUILDS Then
+
+        Return RebuildCount
+
+    End If
+
+    If Not Current(Effect) Then
+        Return 0
+    End If
+
+    Index = Effect.Slot - 1
+
+    If Query = QUERY_PRESET Then
+
+        Result = Items[Index].Preset
+
+    Else If Query = QUERY_AGE Then
+
+        Result = Items[Index].Age
+
+    Else If Query = QUERY_DURATION Then
+
+        Result = Items[Index].Duration
+
+    Else If Query = QUERY_QUALITY Then
+
+        Result = Items[Index].Quality
+
+    Else If Query = QUERY_TOPOLOGY_CHECKSUM Then
+
+        Result = Items[Index].TopologyChecksum
+
+    Else If Query = QUERY_CHAIN_TARGETS Then
+
+        Result = Items[Index].ChainCount
+
+    Else If Query = QUERY_FINISHED Then
+
+        If Items[Index].Finished Then
+            Result = 1
+        End If
+
+    Else If Query = QUERY_CHARGE Then
+
+        Result = Items[Index].Charge
+
+    Else If Query = QUERY_POINT_COUNT Then
+
+        Result = Items[Index].PointCount
+
+    Else If Query = QUERY_FIRST_X Then
+
+        Result = PathX[Index, 0]
+
+    Else If Query = QUERY_FIRST_Y Then
+
+        Result = PathY[Index, 0]
+
+    Else If Query = QUERY_FIRST_Z Then
+
+        Result = PathZ[Index, 0]
+
+    Else If (Query = QUERY_MAIN_TARGET_X Or
+        Query = QUERY_MAIN_TARGET_Y Or
+        Query = QUERY_MAIN_TARGET_Z) Then
+
+        TargetPoint = SegmentCount(Items[Index].Quality)
+
+        If Items[Index].ChainCount > 0 Then
+            TargetPoint = Max(4, TargetPoint / (Items[Index].ChainCount + 1))
+        End If
+
+        If Query = QUERY_MAIN_TARGET_X Then
+            Result = PathX[Index, TargetPoint]
+        Else If Query = QUERY_MAIN_TARGET_Y Then
+            Result = PathY[Index, TargetPoint]
+        Else
+            Result = PathZ[Index, TargetPoint]
+        End If
+
+    End If
+
+    Return Result
+
+End Function
+
+Public Function IsActive(Value As LightningEffect) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Current(Value)
+
+    Return Result
+
+End Function
+
+Public Sub Shutdown()
+
+    Dim Index As Number
+    Dim SameEpoch As Boolean
+
+    SameEpoch = RendererEpoch = Graphics3D.ResourceEpoch3D()
+
+    If Graphics3D.FrameActive3D() And SameEpoch Then
+        ErrorValue = ERROR_IN_FLIGHT
+
+        Return
+    End If
+
+    If SameEpoch Then
+
+        Call Graphics3D.DestroyParticleBatch3D(SparkBatch)
+        Call Graphics3D.DestroyGpuParticleSystem3D(GpuSparks)
+        Call Graphics3D.DestroyRibbonBatch3D(HaloRibbon)
+        Call Graphics3D.DestroyRibbonBatch3D(GlowRibbon)
+        Call Graphics3D.DestroyRibbonBatch3D(CoreRibbon)
+        Call Graphics3D.DestroyEffectMaterial3D(HaloMaterial)
+        Call Graphics3D.DestroyEffectMaterial3D(GlowMaterial)
+        Call Graphics3D.DestroyEffectMaterial3D(CoreMaterial)
+        Call Graphics3D.DestroyEffectMaterial3D(SparkMaterial)
+        Call Graphics3D.DestroyTexture3D(RibbonTexture)
+        Call Graphics3D.DestroyTexture3D(SparkTexture)
+
+    End If
+
+    For Index = 0 To MAX_EFFECTS - 1
+        Items[Index].Active = False
+        Items[Index].Enabled = False
+        Items[Index].PointCount = 0
+        Items[Index].ChainCount = 0
+    End For
+
+    SparkBatch.Handle = 0
+    GpuSparks.Handle = 0
+    GpuSparks.Capacity = 0
+    GpuSparks.EffectiveSimulation = 0
+    HaloRibbon.Handle = 0
+    GlowRibbon.Handle = 0
+    CoreRibbon.Handle = 0
+    HaloMaterial.Handle = 0
+    GlowMaterial.Handle = 0
+    CoreMaterial.Handle = 0
+    SparkMaterial.Handle = 0
+    RibbonTexture.Handle = 0
+    SparkTexture.Handle = 0
+    Ready = False
+    RendererEpoch = 0
+    UpdateRemainder = 0
+    ActivePointCount = 0
+
+End Sub
+
+End Module

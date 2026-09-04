@@ -1,0 +1,98 @@
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Graphics3D As Graphics3D
+Import Smile.Simple3D.Arena3D As Arena3D
+Import Smile.Simple3D.Math3D As Math3D
+Import Smile.Simple3D.LightningVfx3D As Lightning
+
+Dim Camera As Core.Camera3D
+Dim Arena As Arena3D.ArenaFloor
+Dim Effects[3] As Lightning.LightningEffect
+Dim Source As Core.Vector3
+Dim Target As Core.Vector3
+Dim Elapsed As Number
+Dim Previous As Number
+Dim SceneTime As Number
+Dim Index As Number
+Dim Ok As Boolean
+Dim Key As Number
+Dim Paused As Boolean
+
+Game Window "SMILE 2.0 - Lightning Foundation Preview" Size 1280 By 720
+
+Call Graphics3D.ResetRenderer3D()
+
+Camera = Graphics3D.DefaultCamera()
+Camera.Position = Math3D.Vector(350, 270, -650)
+Camera.Target = Math3D.Vector(0, 160, 0)
+Arena = Arena3D.Create(1000, 1000, 12, 65, 110, 100, 1)
+Ok = Lightning.Initialize("Assets/Lightning")
+Ok = Graphics3D.ConfigurePostProcessing3D(True, True, True, 100, 1200, 45, 2, 2, 4) And Ok
+
+Call Restart()
+
+Previous = Timer()
+
+Do
+
+    Get Key Key
+
+    If Key = KEY_SPACE Then
+        Paused = Not Paused
+    End If
+
+    Elapsed = Min(50, Max(0, Timer() - Previous))
+    Previous = Timer()
+
+    If Paused Then
+        Elapsed = 0
+    End If
+
+    SceneTime = SceneTime + Elapsed
+
+    If SceneTime >= 1500 Then
+        Call Restart()
+    End If
+
+    Ok = Lightning.Update(Elapsed, Camera) And Ok
+    Ok = Graphics3D.Begin3D(Camera, 1, 3, 12) And Ok
+    Ok = Arena3D.Draw(Arena, True, True) And Ok
+    Ok = Lightning.DrawAll() And Ok
+    Ok = Graphics3D.End3DChecked() And Ok
+
+    Draw Text "Lightning Foundation / Native Preview" At 24, 24 Size 24 Color CYAN
+    Draw Text Lightning.PhaseName(Effects[0]) At 24, 62 Size 18 Color WHITE
+    Draw Text "Jagged Paths + White Core + Cyan Halo + GPU Sparks" At 24, 92 Size 15 Color LIGHT_GRAY
+    Draw Text "Three Independent Bolts / No Geometry Between Them" At 24, 116 Size 15 Color LIGHT_GRAY
+    Draw Text "GPU Particle Slots" At 24, 660 Size 15 Color WHITE
+    Draw Number Lightning.Value(Lightning.QUERY_PARTICLES, Effects[0]) At 205, 660 Size 15 Color CYAN
+
+    If Not Ok Then
+        Draw Text "Renderer Error" At 920, 24 Size 20 Color RED
+    End If
+
+    Show Screen
+
+Loop Until Game_Closed()
+
+Call Lightning.Shutdown()
+Call Arena3D.Destroy(Arena)
+
+Sub Restart()
+
+    For Index = 0 To 2
+
+        If Lightning.IsActive(Effects[Index]) Then
+            Ok = Lightning.Destroy(Effects[Index])
+        End If
+
+        Source = Math3D.Vector((Index - 1) * 170, 400, 50)
+        Target = Math3D.Vector((Index - 1) * 170, 8, 50)
+        Effects[Index] = Lightning.StartAt("SkyStrike", Source, Target, 837 + Index,
+            Lightning.QUALITY_ULTRA)
+    End For
+
+    SceneTime = 0
+
+End Sub
