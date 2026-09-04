@@ -6,16 +6,60 @@
   "dataKey": "CharacterViewerCalibrationKeyframes",
   "storageVersion": 2,
   "savedKeyframe": {
-    "clipIndex": 7,
-    "clipName": "Walk",
-    "frame": 19
+    "clipIndex": 5,
+    "clipName": "SwordAttack",
+    "frame": 0
   },
-  "totalKeyframes": 5,
+  "totalKeyframes": 9,
   "clips": [
     {
       "index": 0,
       "name": "BlockImpact",
-      "keyframes": []
+      "keyframes": [
+        {
+          "frame": 0,
+          "swordWrist": {
+            "rotation": [
+              50,
+              -111,
+              9
+            ]
+          },
+          "shieldWrist": {
+            "rotation": [
+              0,
+              140,
+              16
+            ]
+          },
+          "sword": {
+            "decoupled": true,
+            "rotation": [
+              0,
+              -30,
+              0
+            ],
+            "position": [
+              1,
+              -1,
+              3
+            ]
+          },
+          "shield": {
+            "decoupled": true,
+            "rotation": [
+              -74,
+              48,
+              68
+            ],
+            "position": [
+              3,
+              -1,
+              2
+            ]
+          }
+        }
+      ]
     },
     {
       "index": 1,
@@ -69,7 +113,51 @@
     {
       "index": 2,
       "name": "Hit",
-      "keyframes": []
+      "keyframes": [
+        {
+          "frame": 0,
+          "swordWrist": {
+            "rotation": [
+              -2,
+              -119,
+              55
+            ]
+          },
+          "shieldWrist": {
+            "rotation": [
+              0,
+              124,
+              14
+            ]
+          },
+          "sword": {
+            "decoupled": true,
+            "rotation": [
+              0,
+              -2,
+              -10
+            ],
+            "position": [
+              -2,
+              1,
+              2
+            ]
+          },
+          "shield": {
+            "decoupled": true,
+            "rotation": [
+              -82,
+              37,
+              44
+            ],
+            "position": [
+              7,
+              0,
+              0
+            ]
+          }
+        }
+      ]
     },
     {
       "index": 3,
@@ -123,7 +211,51 @@
     {
       "index": 4,
       "name": "Run",
-      "keyframes": []
+      "keyframes": [
+        {
+          "frame": 0,
+          "swordWrist": {
+            "rotation": [
+              68,
+              -130,
+              0
+            ]
+          },
+          "shieldWrist": {
+            "rotation": [
+              0,
+              180,
+              0
+            ]
+          },
+          "sword": {
+            "decoupled": true,
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "position": [
+              -1,
+              -1,
+              2
+            ]
+          },
+          "shield": {
+            "decoupled": true,
+            "rotation": [
+              104,
+              -130,
+              180
+            ],
+            "position": [
+              0,
+              0,
+              0
+            ]
+          }
+        }
+      ]
     },
     {
       "index": 5,
@@ -141,8 +273,8 @@
           "shieldWrist": {
             "rotation": [
               0,
-              -180,
-              3
+              111,
+              -34
             ]
           },
           "sword": {
@@ -161,14 +293,14 @@
           "shield": {
             "decoupled": false,
             "rotation": [
-              109,
-              14,
-              -54
+              0,
+              0,
+              0
             ],
             "position": [
               0,
               0,
-              2
+              0
             ]
           }
         }
@@ -177,7 +309,51 @@
     {
       "index": 6,
       "name": "SwordAttack2",
-      "keyframes": []
+      "keyframes": [
+        {
+          "frame": 0,
+          "swordWrist": {
+            "rotation": [
+              39,
+              -111,
+              1
+            ]
+          },
+          "shieldWrist": {
+            "rotation": [
+              0,
+              137,
+              31
+            ]
+          },
+          "sword": {
+            "decoupled": true,
+            "rotation": [
+              29,
+              0,
+              0
+            ],
+            "position": [
+              -2,
+              0,
+              3
+            ]
+          },
+          "shield": {
+            "decoupled": true,
+            "rotation": [
+              -43,
+              49,
+              95
+            ],
+            "position": [
+              0,
+              0,
+              0
+            ]
+          }
+        }
+      ]
     },
     {
       "index": 7,

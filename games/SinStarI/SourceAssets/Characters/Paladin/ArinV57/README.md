@@ -6,6 +6,19 @@ This directory is the canonical repository home for the complete Arin v5.7 revis
 
 `arin-v5.7-package.json` is the machine-readable package index. `Calibration` holds the permanent pose-correction JSON. `arin-v57-idle-previews` holds the accepted checkpoint preview frames. Reusable build tooling remains in the repository `scripts` and `tools` directories rather than being duplicated inside the character package.
 
+## Visual Approval and Deferred Model Repair (September 4, 2026)
+
+Sin visually approved the current Viewer/editor and Arin v5.7 work, including the
+equipment flames, pose-editing controls, and close-up zoom. This records user
+acceptance of the current development checkpoint, not a new automated model audit.
+
+The remaining user-reported visual defect is **holes in Arin's model that expose
+its hollow interior**, especially around the armpits and other concealed body
+areas. Repairing those open surfaces is deferred to future source-model work.
+It does not block this approved checkpoint. Preserve the accepted v5.7 assets,
+rig, animations, equipment attachments, and saved calibration as the reference
+when repairing or re-exporting the model; no geometry repair is included here.
+
 ## Files
 
 | File | Bytes | SHA-256 | Purpose |
