@@ -19,6 +19,17 @@ It does not block this approved checkpoint. Preserve the accepted v5.7 assets,
 rig, animations, equipment attachments, and saved calibration as the reference
 when repairing or re-exporting the model; no geometry repair is included here.
 
+Keep Arin's approved sword, shield, flames, and pose corrections as-is. Develop
+the proposed Socket Calibration workflow with the second character, validating
+socket locations, orientation, attachment ownership, and displayed markers before
+pose fine-tuning. Do not reposition Arin's working attachments merely to match the
+current debug markers.
+
+The latest exported snapshot contains nine user-saved keys across all eight clips:
+frame 0 for BlockImpact, Defend, Hit, Idle, Run, and SwordAttack2; frame 38 for
+SwordAttack; and frames 0 and 19 for Walk. These are the user's saved corrections,
+not new agent-authored pose changes.
+
 ## Files
 
 | File | Bytes | SHA-256 | Purpose |

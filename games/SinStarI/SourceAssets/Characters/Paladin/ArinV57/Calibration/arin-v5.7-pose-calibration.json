@@ -6,8 +6,8 @@
   "dataKey": "CharacterViewerCalibrationKeyframes",
   "storageVersion": 2,
   "savedKeyframe": {
-    "clipIndex": 5,
-    "clipName": "SwordAttack",
+    "clipIndex": 0,
+    "clipName": "BlockImpact",
     "frame": 0
   },
   "totalKeyframes": 9,
@@ -262,40 +262,40 @@
       "name": "SwordAttack",
       "keyframes": [
         {
-          "frame": 0,
+          "frame": 38,
           "swordWrist": {
             "rotation": [
-              0,
-              0,
-              0
+              7,
+              -129,
+              36
             ]
           },
           "shieldWrist": {
             "rotation": [
               0,
-              111,
-              -34
+              0,
+              0
             ]
           },
           "sword": {
-            "decoupled": false,
+            "decoupled": true,
             "rotation": [
-              0,
-              0,
-              0
+              -4,
+              -28,
+              47
             ],
             "position": [
-              0,
-              0,
-              0
+              -1,
+              1,
+              2
             ]
           },
           "shield": {
-            "decoupled": false,
+            "decoupled": true,
             "rotation": [
-              0,
-              0,
-              0
+              -61,
+              -30,
+              44
             ],
             "position": [
               0,
