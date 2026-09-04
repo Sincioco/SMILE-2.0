@@ -36,6 +36,7 @@ Const MAX_CAMERA_ELAPSED = 250
 Const TIMELINE_LEFT = 18
 Const TIMELINE_HEIGHT = 18
 Const TIMELINE_KEYFRAME_HIT_RADIUS = 7
+Const FRAME_BUTTON_REPEAT_MILLISECONDS = 300
 Const EQUIPMENT_TRAIL_POINT_COUNT = 5
 Const EQUIPMENT_TRAIL_SAMPLE_MILLISECONDS = 24
 Const SWORD_TRAIL_START_MILLISECONDS = 300
@@ -144,6 +145,9 @@ Dim CalibrationGripAnchorActive As Boolean
 Dim CalibrationGripAnchorTarget As Number
 Dim CalibrationGripAnchorFrame As Number
 Dim CalibrationGripLimit As Boolean
+Dim FrameButtonRepeatDirection As Number
+Dim FrameButtonRepeatAt As Number
+Dim FlameAnimationPaused As Boolean
 Dim SwordTrail As Core.ParticleBatch3D
 Dim ShieldTrail As Core.ParticleBatch3D
 Dim SwordTrailPoints[EQUIPMENT_TRAIL_POINT_COUNT] As Core.Vector3
@@ -590,6 +594,7 @@ Sub LoadViewer()
 
     SwordFireVisible = True
     ShieldFireVisible = True
+    FlameAnimationPaused = False
     ShieldFireFailed = False
     SwordFireFailed = False
     SwordFireReady = False
@@ -820,6 +825,7 @@ Sub HandleKeyboard(PressedKey As Number)
         SliderDragOwner = 0
         TimelineScrubbing = False
         TimelineKeyframeDragging = False
+        FrameButtonRepeatDirection = 0
         Return
 
     End If
@@ -1289,6 +1295,28 @@ Function HandleInterfacePointer() As Boolean
 
     PanelLeft = StatusPanelX()
 
+    If FrameButtonRepeatDirection <> 0 Then
+
+        If (Pointer_Pressed(POINTER_SECONDARY) Or
+            (Not Pointer_Held(POINTER_PRIMARY) And Not Pointer_Pressed(POINTER_PRIMARY))) Then
+
+            FrameButtonRepeatDirection = 0
+
+        Else
+
+            If Timer() >= FrameButtonRepeatAt Then
+                Call StepAnimationFrame(FrameButtonRepeatDirection)
+
+                ''' No catch-up burst if rendering or input stalls.
+                FrameButtonRepeatAt = Timer() + FRAME_BUTTON_REPEAT_MILLISECONDS
+            End If
+
+            Return True
+
+        End If
+
+    End If
+
     If TimelineKeyframeDragging Then
 
         If Pointer_Pressed(POINTER_PRIMARY) Or Pointer_Held(POINTER_PRIMARY) Then
@@ -1368,6 +1396,18 @@ Function HandleInterfacePointer() As Boolean
         Return True
     End If
 
+    If (CalibrationAvailable And
+        PointerInRectangle(TIMELINE_LEFT, Window_Height() - 40,
+            Text_Width(CALIBRATION_FILE_PATH, 9), 14)) Then
+
+        If Pointer_Pressed(POINTER_PRIMARY) Then
+            Ready = File_Reveal(CALIBRATION_FILE_PATH) Or Ready
+        End If
+
+        Return True
+
+    End If
+
     If (UiVisibility = 0 And
         CalibrationAvailable And
         CalibrationVisible And
@@ -1408,9 +1448,15 @@ Function HandleInterfacePointer() As Boolean
 
         Call StepAnimationFrame(-1)
 
+        FrameButtonRepeatDirection = -1
+        FrameButtonRepeatAt = Timer() + FRAME_BUTTON_REPEAT_MILLISECONDS
+
     Else If PointerInRectangle(TIMELINE_LEFT + 272, Window_Height() - 96, 62, 24) Then
 
         Call StepAnimationFrame(1)
+
+        FrameButtonRepeatDirection = 1
+        FrameButtonRepeatAt = Timer() + FRAME_BUTTON_REPEAT_MILLISECONDS
 
     Else If KeyframeIndex >= 0 Then
 
@@ -1486,6 +1532,11 @@ Function HandleInterfacePointer() As Boolean
     Else If PointerInRectangle(PanelLeft + 174, 444, 78, 22) Then
 
         ShieldFireVisible = Not ShieldFireVisible
+
+    Else If (SwordFireReady And
+        PointerInRectangle(PanelLeft + 12, 470, 128, 20)) Then
+
+        FlameAnimationPaused = Not FlameAnimationPaused
 
     Else If PointerInRectangle(PanelLeft + 172, 204, 30, 24) Then
 
@@ -1676,23 +1727,15 @@ Sub HandleCalibrationPanelPointer()
 
         Call ResetCalibrationTarget()
 
-    Else If PointerInRectangle(34, 238, 52, 24) Then
-
-        Call AdjustCalibrationValue(-5)
-
-    Else If PointerInRectangle(90, 238, 52, 24) Then
-
-        Call AdjustCalibrationValue(5)
-
-    Else If PointerInRectangle(148, 238, 100, 24) Then
+    Else If PointerInRectangle(332, 412, 100, 24) Then
 
         Call SaveCalibrationFrame()
 
-    Else If PointerInRectangle(252, 238, 84, 24) Then
+    Else If PointerInRectangle(244, 412, 84, 24) Then
 
         Call CancelCalibrationEdit()
 
-    Else If PointerInRectangle(340, 238, 92, 24) Then
+    Else If PointerInRectangle(34, 238, 196, 24) Then
 
         If CalibrationClearConfirm Then
             Call ClearSelectedClipCalibration()
@@ -1739,10 +1782,6 @@ Sub HandleCalibrationPanelPointer()
         Call BeginCalibrationEdit()
 
         ShieldDecoupled[SelectedClip] = 1 - ShieldDecoupled[SelectedClip]
-
-    Else If PointerInRectangle(26, 403, 416, 38) Then
-
-        Ready = File_Reveal(CALIBRATION_FILE_PATH) Or Ready
 
     End If
 
@@ -2239,7 +2278,9 @@ Sub UpdateEquipmentFire()
         Call Fire.Update(100)
     End If
 
-    Call Fire.Update(AnimationUpdateElapsed)
+    If Not FlameAnimationPaused Then
+        Call Fire.Update(CameraElapsed)
+    End If
 
 End Sub
 
@@ -2281,10 +2322,10 @@ Sub UpdateSwordFire()
         Return
     End If
 
-    ''' Normal loop wraps retain emitted particles; explicit frame edits clear stale fire.
-    Restart = SelectedClip <> SwordFireClip Or (Time < SwordFireTime And AnimationUpdateElapsed = 0)
+    ''' Loops and clip changes retain world-space particles; paused pose edits clear stale fire.
+    Restart = False
 
-    If ScenePaused Then
+    If ScenePaused And CalibrationEditing Then
         Restart = (Restart Or Base.X <> SwordFireBase.X Or Base.Y <> SwordFireBase.Y Or
             Base.Z <> SwordFireBase.Z Or Tip.X <> SwordFireTip.X Or
             Tip.Y <> SwordFireTip.Y Or Tip.Z <> SwordFireTip.Z)
@@ -2324,7 +2365,7 @@ Sub UpdateSwordFire()
         Inheritance = 10
     End If
 
-    If Time < SwordFireTime Then
+    If Time < SwordFireTime Or SelectedClip <> SwordFireClip Then
         Inheritance = 0
     End If
 
@@ -2370,11 +2411,11 @@ Sub UpdateShieldFire()
     Points[1] = Character3D.SocketPosition(Character, "ShieldFireRight", ARIN_SHIELD_PART_INDEX)
     Points[2] = Character3D.SocketPosition(Character, "ShieldFireTip", ARIN_SHIELD_PART_INDEX)
     Time = Character3D.AnimationTime(Character)
-    Restart = SelectedClip <> ShieldFireClip Or (Time < ShieldFireTime And AnimationUpdateElapsed = 0)
+    Restart = False
 
     For Index = 0 To 2
 
-        If ScenePaused Then
+        If ScenePaused And CalibrationEditing Then
             Restart = (Restart Or Points[Index].X <> ShieldFirePoints[Index].X Or
                 Points[Index].Y <> ShieldFirePoints[Index].Y Or
                 Points[Index].Z <> ShieldFirePoints[Index].Z)
@@ -2405,7 +2446,7 @@ Sub UpdateShieldFire()
         Call Fire.SetIntensity(ShieldFire[Index], 75)
         Call Fire.SetSourceVelocityInheritance(ShieldFire[Index], 10)
 
-        If Time < ShieldFireTime Then
+        If Time < ShieldFireTime Or SelectedClip <> ShieldFireClip Then
             Call Fire.SetSourceVelocityInheritance(ShieldFire[Index], 0)
         End If
 
@@ -2865,6 +2906,7 @@ Sub ResetAll()
 
     PlaybackSpeed = ActiveProfile.DefaultPlaybackSpeed
     ScenePaused = False
+    FlameAnimationPaused = False
     UiVisibility = 0
     DemoEnabled = True
     FitLocked = True
@@ -2883,9 +2925,11 @@ Sub ResetAll()
     ShieldFireVisible = True
     CalibrationVisible = False
     SliderDragOwner = 0
+    FrameButtonRepeatDirection = 0
     TimelineScrubbing = False
     TimelineKeyframeDragging = False
 
+    Call ClearEquipmentFire()
     Call ApplyLighting()
     Call ApplyArenaFacing()
 
@@ -2897,6 +2941,25 @@ Sub ResetAll()
     Ready = Graphics3D.SetMaterialInspection3D(MaterialInspection) And Ready
 
     Call RestartPresentation()
+
+End Sub
+
+Sub ClearEquipmentFire()
+
+    Dim Index As Number
+    Dim Ok As Boolean
+
+    If SwordFire.Slot <> 0 Then
+        Ok = Fire.Destroy(SwordFire)
+    End If
+
+    For Index = 0 To 2
+
+        If ShieldFire[Index].Slot <> 0 Then
+            Ok = Fire.Destroy(ShieldFire[Index])
+        End If
+
+    End For
 
 End Sub
 
@@ -4807,9 +4870,9 @@ Function CalibrationResetClipLabel() As Text
     Dim Result As Text
 
     If CalibrationClearConfirm Then
-        Result = "Confirm Clip?"
+        Result = "Confirm Current Clip?"
     Else
-        Result = "Reset Clip"
+        Result = "Delete All Key Frames"
     End If
 
     Return Result
@@ -5095,9 +5158,11 @@ Sub DrawViewerOverlay()
 
         If SwordFireReady Then
 
-            Draw Text "Fire backend / error" At PanelText, 472 Size 11 Color LIGHT_GRAY
-            Draw Number Fire.Value(3, SwordFire) At PanelLeft + 160, 472 Size 11 Color CYAN
-            Draw Number Fire.Value(12, SwordFire) At PanelLeft + 216, 472 Size 11 Color YELLOW
+            Call DrawButton(PanelLeft + 12, 470, 128, 20, FlamePlaybackLabel(), Not FlameAnimationPaused)
+
+            Draw Text "Backend / Error" At PanelLeft + 150, 469 Size 9 Color LIGHT_GRAY
+            Draw Number Fire.Value(3, SwordFire) At PanelLeft + 160, 480 Size 10 Color CYAN
+            Draw Number Fire.Value(12, SwordFire) At PanelLeft + 216, 480 Size 10 Color YELLOW
 
         End If
 
@@ -5265,11 +5330,7 @@ Sub DrawCalibrationPanel()
     Call UI.DrawSlider(CALIBRATION_SLIDER_X, CALIBRATION_SLIDER_Y,
         CALIBRATION_SLIDER_WIDTH, CALIBRATION_SLIDER_HEIGHT, Value, MinimumValue, MaximumValue, 6)
 
-    Call DrawButton(34, 238, 52, 24, "-5", False)
-    Call DrawButton(90, 238, 52, 24, "+5", False)
-    Call DrawButton(148, 238, 100, 24, "Save Frame", CurrentKeyframe >= 0 And Not CalibrationEditing)
-    Call DrawButton(252, 238, 84, 24, "Cancel", CalibrationEditing)
-    Call DrawButton(340, 238, 92, 24, CalibrationResetClipLabel(), CalibrationClearConfirm)
+    Call DrawButton(34, 238, 196, 24, CalibrationResetClipLabel(), CalibrationClearConfirm)
     Call DrawButton(34, 268, 80, 24, "Copy Key", CurrentKeyframe >= 0 And Not CalibrationEditing)
     Call DrawButton(118, 268, 80, 24, "Paste Key", CalibrationClipboardAvailable And Not CalibrationEditing)
     Call DrawButton(202, 268, 90, 24, "Delete Key", CurrentKeyframe >= 0 And Not CalibrationEditing)
@@ -5278,9 +5339,8 @@ Sub DrawCalibrationPanel()
     Call DrawButton(34, 374, 194, 24, "Decouple Sword", SwordDecoupled[SelectedClip] <> 0)
     Call DrawButton(236, 374, 196, 24, "Decouple Shield", ShieldDecoupled[SelectedClip] <> 0)
 
-    Draw Text "D:\SMILE 2.0\games\SinStarI\SourceAssets\Characters\" At 26, 405 Size 9 Color CYAN
-    Draw Text "Paladin\ArinV57\Calibration\arin-v5.7-pose-calibration.json" At 26, 417 Size 9 Color CYAN
-    Draw Text "Click path to show saved file in Explorer" At 26, 430 Size 9 Color LIGHT_GRAY
+    Call DrawButton(332, 412, 100, 24, "Save Frame", CurrentKeyframe >= 0 And Not CalibrationEditing)
+    Call DrawButton(244, 412, 84, 24, "Cancel", CalibrationEditing)
 
     If CalibrationGripLimit Then
 
@@ -5322,6 +5382,20 @@ Sub DrawCalibrationPanel()
     End If
 
 End Sub
+
+Function FlamePlaybackLabel() As Text
+
+    Dim Result As Text
+
+    If FlameAnimationPaused Then
+        Result = "Play Flames"
+    Else
+        Result = "Pause Flames"
+    End If
+
+    Return Result
+
+End Function
 
 Function CalibrationTargetLabel() As Text
 
@@ -5387,8 +5461,8 @@ Sub DrawTimeline()
     Call DrawButton(TIMELINE_LEFT, Window_Height() - 96, 62, 24, "0-Frame", False)
     Call DrawButton(TIMELINE_LEFT + 68, Window_Height() - 96, 62, 24, "< Key", False)
     Call DrawButton(TIMELINE_LEFT + 136, Window_Height() - 96, 62, 24, "Key >", False)
-    Call DrawButton(TIMELINE_LEFT + 204, Window_Height() - 96, 62, 24, "< Frame", False)
-    Call DrawButton(TIMELINE_LEFT + 272, Window_Height() - 96, 62, 24, "Frame >", False)
+    Call DrawButton(TIMELINE_LEFT + 204, Window_Height() - 96, 62, 24, "< Frame", FrameButtonRepeatDirection < 0)
+    Call DrawButton(TIMELINE_LEFT + 272, Window_Height() - 96, 62, 24, "Frame >", FrameButtonRepeatDirection > 0)
 
     Draw Text SelectedClipName() At TIMELINE_LEFT + 348, Window_Height() - 88 Size 11 Color CYAN
 
@@ -5442,6 +5516,10 @@ Sub DrawTimeline()
 
     Draw Number Character3D.AnimationTime(Character) At TIMELINE_LEFT + 6, TimelineY + 3 Size 10 Color WHITE
     Draw Number Duration At TIMELINE_LEFT + Width - 48, TimelineY + 3 Size 10 Color WHITE
+
+    If CalibrationAvailable Then
+        Draw Text CALIBRATION_FILE_PATH At TIMELINE_LEFT, Window_Height() - 39 Size 9 Color LIGHT_GRAY
+    End If
 
 End Sub
 

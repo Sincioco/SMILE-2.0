@@ -40,7 +40,8 @@ fire-shield treatment; the old filled golden overlay is suppressed. The sword us
 200% emission, a blade-length/12 radius, and low velocity inheritance to leave a
 stronger world-space flame wake. Each shield emitter uses radius 3 and 75% emission,
 increased after the first, weaker preview. Normal loop wraps preserve particles and
-zero wrap-frame inheritance instead of destroying the entire trail. The shared
+zero transition-frame inheritance instead of destroying the entire trail, including
+when changing to the next clip. Explicit reset still clears the effects. The shared
 Fire Lab presets are unchanged.
 
 Pose Calibration's **In Place** editing option compensates equipment translation
@@ -50,6 +51,18 @@ The user's live saves are exported normally; three saved keys were preserved for
 this preview update. No old keyframe was deleted or rewritten by the new mode.
 
 ## Permanent Pose-Calibration Workflow
+
+Pose Calibration's **Save Frame** and **Cancel** buttons are in the lower-right corner;
+the -5/+5 buttons are removed. **Delete All
+Key Frames** (formerly Reset Clip) clears only the selected animation's saved
+corrections after **Confirm Current Clip?**; other clips and source animations are
+unchanged. The full calibration path remains clickable below the timeline, in
+muted gray at its original 9-point font size.
+Timeline frame buttons now step once on click and repeat every 300 ms while held,
+without changing pause state or modifying saved keys.
+The right-panel Pause Flames / Play Flames button controls thermal equipment
+fire independently: by default flames continue while Space pauses the character.
+Reset resumes both. None of these UI preferences alter keyframes.
 
 `Save Frame` writes the live multi-keyframe track to the stable `smile.tools.character3d-viewer` application-data identity, so rebuilding or renaming the executable does not lose current work. Launching through `tools\Character3DViewer\Launch.ps1` watches that live file and converts every saved change into `Calibration\arin-v5.7-pose-calibration.json` in this folder.
 

@@ -16,9 +16,10 @@ README for controls and the canonical ArinV57 README for asset provenance.
   Radius 3 and 75% emission replace the first radius-2/45% preview. The old shield
   golden mesh overlay and its legacy glow particles are no longer drawn while
   the thermal preview is available. This avoids its visible face-loss behavior.
-- Normal loop wraps no longer destroy the emitter. Existing particles dissipate
-  while fresh fire starts at the new blade pose; wrap-frame inheritance is zero.
-  Paused pose edits and clip changes still clear stale particles.
+- Normal loop wraps and clip changes no longer destroy the emitter. Existing
+  particles dissipate while fresh fire starts at the new blade pose; transition-frame
+  inheritance is zero. Paused pose edits still clear stale particles; explicit reset
+  clears the emitters for a fresh start.
 - Separate Sword Fire / Shield Fire buttons default on. Equipment visibility also
   hides its fire; reset restores both effects. Fire updates before scene submission.
 - Pose Calibration adds **In Place**: choose Sword or Shield, Rotate, then X/Y/Z.
@@ -27,6 +28,14 @@ README for controls and the canonical ArinV57 README for asset provenance.
   all resulting channels in the existing format; Cancel/Reload restores them.
   This editing mode is not a new keyframe channel. Whole-world-unit position
   precision and the existing +/-100-unit saved-position bounds still apply.
+- Pose Calibration's Delete All Key Frames replaces the Reset Clip label, retaining
+  current-clip-only scope and the Confirm Current Clip prompt. Save Frame and Cancel
+  move to the lower-right; -5/+5 buttons are removed. The full clickable JSON path
+  moves below the timeline in muted gray at the unchanged 9-point font size.
+- Timeline < Frame / Frame > buttons step immediately and repeat every 300 ms
+  while held, capturing the gesture until release without a catch-up burst.
+- Flames animate by default while the scene is paused. Pause Flames / Play Flames
+  controls the thermal simulation independently; Space controls scene movement.
 
 ## Preservation
 
@@ -53,7 +62,7 @@ directory by Prepare-BuildAssets.ps1.
 - `screenshots/m7e-g-arin-flaming-sword/01-arin-idle-flaming-sword.png`
   records the initial corrected sword-socket alignment, before the later shield
   and intensity adjustments. It is not evidence of the final shield tuning.
-- The final 21:12 Debug build was running in the user's newly opened 21:14 viewer;
+- The earlier 21:12 Debug build was running in the user's newly opened 21:14 viewer;
   the live status showed GPU backend 2/error 0 and the user was editing a pose.
   No unsaved user edit was interrupted for additional screenshots.
 - The old all-purpose Viewer hardening script stops at its obsolete requirement
@@ -64,8 +73,9 @@ directory by Prepare-BuildAssets.ps1.
 
 ## Remaining Manual Review / Scope
 
-Sin should review the increased shield intensity, attack-loop trail fade and
-In Place rotation on a fitted grip, then Save Frame if the correction is wanted.
+Sin should review the increased shield intensity, loop/clip-transition trail fade,
+independent flame pause, frame-button hold repeat and In Place rotation on a fitted
+grip, then Save Frame if the correction is wanted.
 The current wake consists of persistent flame particles, not the complete planned
 event-driven swept blade ribbon. Free-roam demo, authored attack events, full
 production preset pass and requested M7E-G endurance matrix remain later work.
