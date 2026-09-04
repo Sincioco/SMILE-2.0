@@ -1779,6 +1779,29 @@ long long smile_window_title(void* owned_value)
     return result;
 }
 
+/* Reveal a local file without executing it or constructing a shell command. */
+long long smile_file_reveal(void* owned_value)
+{
+    SmileText* text = (SmileText*)owned_value;
+    WCHAR* path = smile_utf8_to_wide(smile_text_bytes(text), smile_text_length(text));
+    long long result = 0;
+    if (path != 0 && wcslen(path) > 2 && path[1] == L':' &&
+        GetFileAttributesW(path) != INVALID_FILE_ATTRIBUTES)
+    {
+        HRESULT initialized = CoInitializeEx(0, COINIT_APARTMENTTHREADED);
+        PIDLIST_ABSOLUTE item = 0;
+        if (SUCCEEDED(SHParseDisplayName(path, 0, &item, 0, 0)))
+        {
+            result = SUCCEEDED(SHOpenFolderAndSelectItems(item, 0, 0, 0));
+            CoTaskMemFree(item);
+        }
+        if (SUCCEEDED(initialized)) CoUninitialize();
+    }
+    if (path != 0) HeapFree(GetProcessHeap(), 0, path);
+    smile_text_release(text);
+    return result;
+}
+
 long long smile_window_activate(void)
 {
     BOOL activated;

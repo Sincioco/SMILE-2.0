@@ -25,6 +25,9 @@
     "viewerProject": "tools/Character3DViewer/Character3DViewer.smileproj"
   },
   "calibration": {
+    "storageVersion": 2,
+    "keyframeChannels": 20,
+    "equipmentDecoupling": "per-key sword.decoupled and shield.decoupled; defaults false",
     "readableSnapshot": "Calibration/arin-v5.7-pose-calibration.json",
     "runtimeWorkingFormat": "generated SMILE SMD4 persistent-data envelope",
     "syncScript": "scripts/sync-arin-v5-7-calibration.ps1"

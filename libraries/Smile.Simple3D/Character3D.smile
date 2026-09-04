@@ -2167,7 +2167,8 @@ End Function
 Public Function SocketPosition(
     Value As Actor,
     Name As Text,
-    Optional ReferencePartIndex As Number = 0
+    Optional ReferencePartIndex As Number = 0,
+    Optional IgnoreNodeOffsets As Boolean = False
 ) As Core.Vector3
 
     Dim Result As Core.Vector3
@@ -2200,19 +2201,22 @@ Public Function SocketPosition(
         ActorAnimators[Slot],
         ActorParts[Slot, ReferencePartIndex],
         SocketIndex,
-        Graphics3D.ANIMATOR_SOCKET_POSITION_X
+        Graphics3D.ANIMATOR_SOCKET_POSITION_X,
+        IgnoreNodeOffsets
     ))
     Result.Y = RoundedThousandths(Graphics3D.AnimatorSocketWorldValue3D(
         ActorAnimators[Slot],
         ActorParts[Slot, ReferencePartIndex],
         SocketIndex,
-        Graphics3D.ANIMATOR_SOCKET_POSITION_Y
+        Graphics3D.ANIMATOR_SOCKET_POSITION_Y,
+        IgnoreNodeOffsets
     ))
     Result.Z = RoundedThousandths(Graphics3D.AnimatorSocketWorldValue3D(
         ActorAnimators[Slot],
         ActorParts[Slot, ReferencePartIndex],
         SocketIndex,
-        Graphics3D.ANIMATOR_SOCKET_POSITION_Z
+        Graphics3D.ANIMATOR_SOCKET_POSITION_Z,
+        IgnoreNodeOffsets
     ))
 
     Return Result
@@ -2421,6 +2425,37 @@ Public Function SetPartVisible(
     End If
 
     Result = Graphics3D.SetObjectVisibleChecked3D(ActorParts[Slot, PartIndex], Visible)
+
+    If Result Then
+        Call ClearActorError(Slot)
+    Else
+
+        Call SetActorFailure(Slot, CHARACTER_ERROR_INVALID_ARGUMENT, Graphics3D.LastError())
+    End If
+
+    Return Result
+
+End Function
+
+''' Keeps base animation while optionally excluding additive node corrections from one part.
+Public Function SetPartNodeOffsetsEnabled(ByRef Value As Actor, PartIndex As Number, Enabled As Boolean) As Boolean
+
+    Dim Slot As Number
+    Dim Result As Boolean
+
+    Slot = ActorSlot(Value)
+
+    If Slot < 0 Then
+        Return False
+    End If
+
+    If PartIndex < 0 Or PartIndex >= ActorPartCounts[Slot] Then
+        Call SetActorFailure(Slot, CHARACTER_ERROR_INVALID_PART, 0)
+
+        Return False
+    End If
+
+    Result = Graphics3D.SetObjectNodeOffsetsEnabled3D(ActorParts[Slot, PartIndex], Enabled)
 
     If Result Then
         Call ClearActorError(Slot)

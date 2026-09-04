@@ -903,6 +903,7 @@ internal sealed class WebEmitter
             SyntaxKind.WindowHeightKeyword => "smile.windowHeight()",
             SyntaxKind.WindowTitleKeyword => $"smile.windowTitle({arguments})",
             SyntaxKind.WindowActivateKeyword => "smile.windowActivate()",
+            SyntaxKind.FileRevealKeyword => $"(({arguments}), false)",
             SyntaxKind.KeyHeldKeyword => $"smile.isTrue(smile.keyHeld({arguments}))",
             SyntaxKind.PointerXKeyword => "smile.pointerX()",
             SyntaxKind.PointerYKeyword => "smile.pointerY()",

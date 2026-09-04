@@ -4193,7 +4193,7 @@ internal sealed class SemanticAnalyzer
                 RequireType(arguments[1], SmileType.Number, "SML3505", $"Built-in '{identifier.Text}' requires Number size.");
             return SmileType.Number;
         }
-        if (identifier.Kind == SyntaxKind.WindowTitleKeyword)
+        if (identifier.Kind is SyntaxKind.WindowTitleKeyword or SyntaxKind.FileRevealKeyword)
         {
             if (arguments.Count > 0)
                 RequireType(arguments[0], SmileType.Text, "SML3003",
@@ -4217,6 +4217,7 @@ internal sealed class SemanticAnalyzer
 
     private static bool IsBooleanBuiltIn(SyntaxKind kind) =>
         kind is SyntaxKind.GameClosedKeyword or SyntaxKind.WindowTitleKeyword or SyntaxKind.WindowActivateKeyword or
+            SyntaxKind.FileRevealKeyword or
             SyntaxKind.KeyHeldKeyword or SyntaxKind.ImageLoadedKeyword or
             SyntaxKind.PointerInsideKeyword or SyntaxKind.PointerHeldKeyword or SyntaxKind.PointerPressedKeyword or
             SyntaxKind.PointerReleasedKeyword;

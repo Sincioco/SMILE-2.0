@@ -38,6 +38,31 @@ Before any normal Arin v5.7 or Character Viewer calibration commit, Codex runs `
 | `arin-v5.7-mixamo-hit-without-skin.fbx` | 199,376 | `4E34878066F6139C8B51F939D011EE53EEF0345838200B45288DD853D9573B6F` | `Hit`; shield arm stabilized |
 | `arin-v5.7-mixamo-ko-without-skin.fbx` | 272,816 | `21DAD8BC8D9B1B2AA9DD03FFA6E6F55FB6C6B54CC5BA75C1F6FD57693B8470CD` | Archived but rejected because the fall forces the equipment through the body |
 
+## Independent Wrist Editing (September 4, 2026)
+
+In the native editor, **Decouple Sword** and **Decouple Shield** independently exclude
+additive wrist corrections from that equipment and its glow. The equipment still
+plays its original animation and still accepts its own Move/Rotate corrections;
+it is not frozen in world space. This can separate the hand from the handle until
+the artist finishes correcting the grip. Existing saved keys remain coupled.
+
+**Save Frame** captures all 18 editable channels (both wrist XYZ rotations and
+both equipment XYZ rotations/positions), plus both decoupling flags. Each saved
+key is a complete independent snapshot. Numeric channels interpolate between keys;
+decoupling flags hold until the next key. Version 1 snapshots load unchanged with
+both flags off; version 2 includes `sword.decoupled` and `shield.decoupled`.
+Wrist translation is not offered by the current editor.
+
+Edits belong to the frame where editing began. Timeline navigation cancels the
+unsaved preview before evaluating the destination frame, rather than carrying it
+over other saved keys. Use Save Frame before navigating to keep changes.
+
+The clickable full path at the bottom of Pose Calibration reveals
+`Calibration/arin-v5.7-pose-calibration.json` in File Explorer. The normal launcher
+exports live saves to this repository-owned file; generated binary storage remains
+an implementation detail. Native Windows is supported first; Web decoupling is
+deferred. `File_Reveal(Path)` returns False on Web, or for missing/unsupported paths.
+
 ## Verified Contents
 
 - Both untouched exports are valid glTF 2.0 binary files and import successfully.

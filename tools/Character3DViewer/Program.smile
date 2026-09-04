@@ -56,10 +56,11 @@ Const ARENA_FLOOR_WIDTH = 1000
 Const ARENA_FLOOR_DEPTH = 1000
 Const CALIBRATION_MAX_CLIPS = 64
 Const CALIBRATION_MAX_KEYFRAMES = 256
-Const CALIBRATION_CHANNEL_COUNT = 18
-Const CALIBRATION_KEYFRAME_VALUES_PER_CLIP = 4608
+Const CALIBRATION_CHANNEL_COUNT = 20
+Const CALIBRATION_KEYFRAME_VALUES_PER_CLIP = 5120
 Const CALIBRATION_STORAGE_CAPACITY = 700000
-Const CALIBRATION_STORAGE_VERSION = 1
+Const CALIBRATION_STORAGE_VERSION = 2
+Const CALIBRATION_FILE_PATH = "D:\SMILE 2.0\games\SinStarI\SourceAssets\Characters\Paladin\ArinV57\Calibration\arin-v5.7-pose-calibration.json"
 Const CALIBRATION_TARGET_SWORD_WRIST = 0
 Const CALIBRATION_TARGET_SHIELD_WRIST = 1
 Const CALIBRATION_TARGET_SWORD = 2
@@ -77,7 +78,7 @@ Const CALIBRATION_MAXIMUM_POSITION = 100
 Const CALIBRATION_PANEL_X = 18
 Const CALIBRATION_PANEL_Y = 92
 Const CALIBRATION_PANEL_WIDTH = 430
-Const CALIBRATION_PANEL_HEIGHT = 280
+Const CALIBRATION_PANEL_HEIGHT = 354
 Const CALIBRATION_SLIDER_X = 34
 Const CALIBRATION_SLIDER_Y = 204
 Const CALIBRATION_SLIDER_WIDTH = 360
@@ -208,6 +209,11 @@ Dim SwordWristNode As Number
 Dim ShieldWristNode As Number
 Dim CalibrationEditing As Boolean
 Dim CalibrationEditingClip As Number
+Dim CalibrationEditingFrame As Number
+Dim SwordDecoupled[CALIBRATION_MAX_CLIPS] As Number
+Dim ShieldDecoupled[CALIBRATION_MAX_CLIPS] As Number
+Dim SwordDecoupledBeforeEdit As Number
+Dim ShieldDecoupledBeforeEdit As Number
 Dim CalibrationAutoOrbitWasEnabled As Boolean
 Dim CalibrationSavedBeforeEdit As Boolean
 Dim CalibrationClearConfirm As Boolean
@@ -232,9 +238,12 @@ Dim TimelineDraggedKeyframeValues[CALIBRATION_CHANNEL_COUNT] As Number
 Game Window "SMILE 2.0 - 3D Viewer, Animation Editor" Size 1600 By 640
 
 Call Graphics3D.ResetRenderer3D()
+
 DemoEnabled = True
+
 Call LoadViewer()
 Call CaptureViewerFailure(20)
+
 WindowActivated = Window_Activate()
 
 Running = True
@@ -279,6 +288,7 @@ Do
     LongPauseCount = ViewerClock.LongPauseCount
 
     Call AdvanceFrameRate()
+
     If Not ViewerError Then
 
         If Not ScenePaused Then
@@ -298,10 +308,12 @@ Do
         Call CaptureViewerFailure(3)
 
         If CalibrationAvailable Then
+
             Call UpdateCalibrationForCurrentFrame()
             Call ApplyWristCalibration()
-
+            Call ApplyEquipmentCoupling()
             Call CaptureViewerFailure(4)
+
         End If
 
         If SocketGizmosVisible Then
@@ -345,6 +357,7 @@ Do
         Call CaptureViewerFailure(8)
 
         If Ready Then
+
             If FloorVisible Then
                 Ready = Graphics3D.DrawObject3D(Floor)
 
@@ -895,43 +908,33 @@ End Sub
 Sub HandleKeyboard(PressedKey As Number)
 
     If PressedKey = KEY_SPACE Then
-
         Call ToggleScenePause()
 
         Return
-
     End If
 
     If PressedKey = KEY_F Then
-
         Call ToggleFloorAndGrid()
 
         Return
-
     End If
 
     If PressedKey = KEY_D Then
-
         Call ToggleDragon()
 
         Return
-
     End If
 
     If PressedKey = KEY_W Then
-
         Call ToggleSword()
 
         Return
-
     End If
 
     If PressedKey = KEY_S Then
-
         Call ToggleShield()
 
         Return
-
     End If
 
     If CalibrationEditing Then
@@ -1050,9 +1053,7 @@ End Sub
 Sub ToggleDragon()
 
     If DragonAvailable Then
-
         DragonVisible = Not DragonVisible
-
     End If
 
 End Sub
@@ -1118,6 +1119,7 @@ Sub CreateBackdrop()
 
     If Not BackdropReady Then
         Call DestroyBackdrop()
+
         Return
     End If
 
@@ -1291,7 +1293,6 @@ Sub ToggleAutoOrbit()
     AutoOrbitYaw1000 = CameraControls.OrbitYaw * 1000
 
     If Not AutoOrbit Then
-
         Call RecordCameraInteraction()
     End If
 
@@ -1362,6 +1363,7 @@ Function HandleInterfacePointer() As Boolean
         End If
 
         Return True
+
     End If
 
     If CalibrationSliderDragging Then
@@ -1374,6 +1376,7 @@ Function HandleInterfacePointer() As Boolean
         End If
 
         Return True
+
     End If
 
     If CameraSliderDragging <> CAMERA_SLIDER_NONE Then
@@ -1385,15 +1388,18 @@ Function HandleInterfacePointer() As Boolean
             Else If CameraSliderDragging = CAMERA_SLIDER_VERTICAL_ORBIT Then
                 Call SetVerticalOrbitFromPointer()
             Else
+
                 Call SetZoomFromPointer()
             End If
 
         Else
 
             CameraSliderDragging = CAMERA_SLIDER_NONE
+
         End If
 
         Return True
+
     End If
 
     If (TimelineScrubbing And
@@ -1429,29 +1435,24 @@ Function HandleInterfacePointer() As Boolean
             CAMERA_SLIDER_WIDTH,
             CAMERA_SLIDER_HEIGHT
         ) Then
-
             Call AdjustHorizontalOrbit(WheelDelta)
 
             Return True
-
         Else If PointerInRectangle(
             PanelLeft + 76,
             Window_Height() - 116,
             CAMERA_SLIDER_WIDTH,
             CAMERA_SLIDER_HEIGHT
         ) Then
-
             Call AdjustVerticalOrbit(WheelDelta)
 
             Return True
-
         Else If PointerInRectangle(
             PanelLeft + 76,
             Window_Height() - 90,
             CAMERA_SLIDER_WIDTH,
             CAMERA_SLIDER_HEIGHT
         ) Then
-
             Call AdjustPreciseZoom(WheelDelta)
 
             Return True
@@ -1472,6 +1473,7 @@ Function HandleInterfacePointer() As Boolean
         Call SetHorizontalOrbitFromPointer()
 
         Return True
+
     End If
 
     If ((Pointer_Pressed(POINTER_PRIMARY) Or Pointer_Held(POINTER_PRIMARY)) And
@@ -1487,6 +1489,7 @@ Function HandleInterfacePointer() As Boolean
         Call SetVerticalOrbitFromPointer()
 
         Return True
+
     End If
 
     If ((Pointer_Pressed(POINTER_PRIMARY) Or Pointer_Held(POINTER_PRIMARY)) And
@@ -1502,6 +1505,7 @@ Function HandleInterfacePointer() As Boolean
         Call SetZoomFromPointer()
 
         Return True
+
     End If
 
     If TimelineScrubbing Then
@@ -1515,6 +1519,7 @@ Function HandleInterfacePointer() As Boolean
         End If
 
         Return True
+
     End If
 
     If PointerInRectangle(
@@ -1542,14 +1547,14 @@ Function HandleInterfacePointer() As Boolean
         Return True
     End If
 
-    If (CalibrationAvailable And CalibrationVisible And
+    If (CalibrationAvailable And
+        CalibrationVisible And
         PointerInRectangle(
             CALIBRATION_PANEL_X,
             CALIBRATION_PANEL_Y,
             CALIBRATION_PANEL_WIDTH,
             CALIBRATION_PANEL_HEIGHT
         )) Then
-
         Call HandleCalibrationPanelPointer()
 
         Return True
@@ -1730,6 +1735,7 @@ Sub HandleCalibrationPanelPointer()
         Call SetCalibrationFromPointer()
 
         Return
+
     End If
 
     If Not Pointer_Pressed(POINTER_PRIMARY) Then
@@ -1745,36 +1751,64 @@ Sub HandleCalibrationPanelPointer()
         Call SeekCalibrationKeyframe(1)
 
     Else If PointerInRectangle(34, 128, 92, 24) Then
+
         CalibrationTarget = CALIBRATION_TARGET_SWORD_WRIST
         CalibrationTransform = CALIBRATION_TRANSFORM_ROTATE
+
     Else If PointerInRectangle(130, 128, 96, 24) Then
+
         CalibrationTarget = CALIBRATION_TARGET_SHIELD_WRIST
         CalibrationTransform = CALIBRATION_TRANSFORM_ROTATE
+
     Else If PointerInRectangle(230, 128, 76, 24) Then
+
         CalibrationTarget = CALIBRATION_TARGET_SWORD
+
     Else If PointerInRectangle(310, 128, 76, 24) Then
+
         CalibrationTarget = CALIBRATION_TARGET_SHIELD
+
     Else If PointerInRectangle(34, 158, 48, 24) Then
+
         CalibrationAxis = CALIBRATION_AXIS_X
+
     Else If PointerInRectangle(86, 158, 48, 24) Then
+
         CalibrationAxis = CALIBRATION_AXIS_Y
+
     Else If PointerInRectangle(138, 158, 48, 24) Then
+
         CalibrationAxis = CALIBRATION_AXIS_Z
+
     Else If PointerInRectangle(202, 158, 72, 24) Then
+
         CalibrationTransform = CALIBRATION_TRANSFORM_ROTATE
+
     Else If (PointerInRectangle(278, 158, 72, 24) And
         CalibrationTarget >= CALIBRATION_TARGET_SWORD) Then
+
         CalibrationTransform = CALIBRATION_TRANSFORM_MOVE
+
     Else If PointerInRectangle(354, 158, 78, 24) Then
+
         Call ResetCalibrationTarget()
+
     Else If PointerInRectangle(34, 238, 52, 24) Then
+
         Call AdjustCalibrationValue(-5)
+
     Else If PointerInRectangle(90, 238, 52, 24) Then
+
         Call AdjustCalibrationValue(5)
+
     Else If PointerInRectangle(148, 238, 100, 24) Then
+
         Call SaveCalibrationFrame()
+
     Else If PointerInRectangle(252, 238, 84, 24) Then
+
         Call CancelCalibrationEdit()
+
     Else If PointerInRectangle(340, 238, 92, 24) Then
 
         If CalibrationClearConfirm Then
@@ -1805,6 +1839,22 @@ Sub HandleCalibrationPanelPointer()
     Else If PointerInRectangle(34, 298, 100, 24) Then
 
         Call ReloadCurrentCalibrationKeyframe()
+
+    Else If PointerInRectangle(34, 374, 194, 24) Then
+
+        Call BeginCalibrationEdit()
+
+        SwordDecoupled[SelectedClip] = 1 - SwordDecoupled[SelectedClip]
+
+    Else If PointerInRectangle(236, 374, 196, 24) Then
+
+        Call BeginCalibrationEdit()
+
+        ShieldDecoupled[SelectedClip] = 1 - ShieldDecoupled[SelectedClip]
+
+    Else If PointerInRectangle(26, 403, 416, 38) Then
+
+        Ready = File_Reveal(CALIBRATION_FILE_PATH) Or Ready
 
     End If
 
@@ -2292,9 +2342,9 @@ Function UpdateEpicGlow() As Boolean
     Dim ShieldCenter As Core.Vector3
     Dim Result As Boolean
 
-    SwordBase = Character3D.SocketPosition(Character, "SwordBase", ARIN_BODY_PART_INDEX)
-    SwordTip = Character3D.SocketPosition(Character, "SwordTip", ARIN_BODY_PART_INDEX)
-    ShieldCenter = Character3D.SocketPosition(Character, "ShieldCenter", ARIN_BODY_PART_INDEX)
+    SwordBase = Character3D.SocketPosition(Character, "SwordBase", ARIN_BODY_PART_INDEX, SwordDecoupled[SelectedClip] <> 0)
+    SwordTip = Character3D.SocketPosition(Character, "SwordTip", ARIN_BODY_PART_INDEX, SwordDecoupled[SelectedClip] <> 0)
+    ShieldCenter = Character3D.SocketPosition(Character, "ShieldCenter", ARIN_BODY_PART_INDEX, ShieldDecoupled[SelectedClip] <> 0)
     SwordCenter.X = (SwordBase.X + SwordTip.X) / 2
     SwordCenter.Y = (SwordBase.Y + SwordTip.Y) / 2
     SwordCenter.Z = (SwordBase.Z + SwordTip.Z) / 2
@@ -2824,6 +2874,8 @@ Sub StepAnimationFrame(Direction As Number)
     Dim StepMilliseconds As Number
     Dim TargetTime As Number
 
+    Call CancelCalibrationEdit()
+
     SampleRate = Character3D.ClipSampleRate(Character, SelectedClip)
     StepMilliseconds = Max(1, 1000 / Max(1, SampleRate))
     TargetTime = Character3D.AnimationTime(Character) + Direction * StepMilliseconds
@@ -2833,6 +2885,8 @@ Sub StepAnimationFrame(Direction As Number)
 End Sub
 
 Sub SeekFirstAnimationFrame()
+
+    Call CancelCalibrationEdit()
 
     SelectedTimelineEvent = FirstClipEvent()
     Ready = Character3D.SetAnimationTime(Character, 0) And Ready
@@ -2861,6 +2915,7 @@ Sub SeekCalibrationKeyframe(Direction As Number)
     CurrentFrame = CurrentAnimationFrame()
 
     If Direction < 0 Then
+
         CandidateIndex = KeyCount - 1
 
         For Index = 0 To KeyCount - 1
@@ -2957,6 +3012,8 @@ Sub SeekFromPointer()
 
     Dim Duration As Number
     Dim TargetTime As Number
+
+    Call CancelCalibrationEdit()
 
     Duration = Character3D.ClipDuration(Character, SelectedClip)
     TargetTime = (Pointer_X() - TIMELINE_LEFT) * Duration / Max(1, TimelineWidth())
@@ -3089,7 +3146,6 @@ Sub FinishTimelineKeyframeDrag()
         For Channel = 0 To CALIBRATION_CHANNEL_COUNT - 1
             CalibrationKeyframeValues[SelectedClip, Shift * CALIBRATION_CHANNEL_COUNT + Channel] = CalibrationKeyframeValues[SelectedClip, (Shift + 1) * CALIBRATION_CHANNEL_COUNT + Channel]
         End For
-
     End For
 
     Position = RemainingCount
@@ -3110,7 +3166,6 @@ Sub FinishTimelineKeyframeDrag()
         For Channel = 0 To CALIBRATION_CHANNEL_COUNT - 1
             CalibrationKeyframeValues[SelectedClip, Shift * CALIBRATION_CHANNEL_COUNT + Channel] = CalibrationKeyframeValues[SelectedClip, (Shift - 1) * CALIBRATION_CHANNEL_COUNT + Channel]
         End For
-
     End For
 
     CalibrationKeyframeFrames[SelectedClip, Position] = TimelineDraggedTargetFrame
@@ -3283,6 +3338,7 @@ Sub LoadSavedCalibration()
         Call ClearCalibrationMemory()
 
         Return
+
     End If
 
     Load StorageVersion From "CharacterViewerCalibrationVersion" Default 0
@@ -3353,8 +3409,11 @@ Sub ClearCalibrationMemory()
     For Clip = 0 To CALIBRATION_MAX_CLIPS - 1
 
         CalibrationKeyframeCounts[Clip] = 0
+        SwordDecoupled[Clip] = 0
+        ShieldDecoupled[Clip] = 0
 
         For Axis = 0 To CALIBRATION_AXIS_COUNT - 1
+
             SwordWristCalibration[Clip, Axis] = 0
             ShieldWristCalibration[Clip, Axis] = 0
             SwordCalibration[Clip, Axis] = 0
@@ -3362,7 +3421,6 @@ Sub ClearCalibrationMemory()
             SwordPositionCalibration[Clip, Axis] = 0
             ShieldPositionCalibration[Clip, Axis] = 0
         End For
-
     End For
 
     CalibrationSaved = False
@@ -3383,6 +3441,7 @@ Function DecodeCalibrationStorage(LoadedCount As Number) As Boolean
     Dim KeyframeCount As Number
     Dim Result As Boolean
     Dim StoredClipCount As Number
+    Dim StoredChannels As Number
 
     Result = False
 
@@ -3394,11 +3453,17 @@ Function DecodeCalibrationStorage(LoadedCount As Number) As Boolean
         CalibrationStorage[1] <> 77 Or
         CalibrationStorage[2] <> 75 Or
         CalibrationStorage[3] <> 70 Or
-        CalibrationStorage[4] <> CALIBRATION_STORAGE_VERSION) Then
+        (CalibrationStorage[4] <> 1 And
+        CalibrationStorage[4] <> CALIBRATION_STORAGE_VERSION)) Then
         Return False
     End If
 
     StoredClipCount = CalibrationStorage[5]
+    StoredChannels = 18
+
+    If CalibrationStorage[4] >= 2 Then
+        StoredChannels = CALIBRATION_CHANNEL_COUNT
+    End If
 
     If (StoredClipCount < 0 Or
         StoredClipCount > CALIBRATION_MAX_CLIPS Or
@@ -3422,7 +3487,7 @@ Function DecodeCalibrationStorage(LoadedCount As Number) As Boolean
 
         If (KeyframeCount < 0 Or
             KeyframeCount > CALIBRATION_MAX_KEYFRAMES Or
-            Index + KeyframeCount * (2 + CALIBRATION_CHANNEL_COUNT * 2) > LoadedCount) Then
+            Index + KeyframeCount * (2 + StoredChannels * 2) > LoadedCount) Then
             Return False
         End If
 
@@ -3440,7 +3505,11 @@ Function DecodeCalibrationStorage(LoadedCount As Number) As Boolean
 
             CalibrationKeyframeFrames[Clip, Keyframe] = FrameValue
 
-            For Channel = 0 To CALIBRATION_CHANNEL_COUNT - 1
+            CalibrationKeyframeValues[Clip, Keyframe * CALIBRATION_CHANNEL_COUNT + 18] = 0
+            CalibrationKeyframeValues[Clip, Keyframe * CALIBRATION_CHANNEL_COUNT + 19] = 0
+
+            For Channel = 0 To StoredChannels - 1
+
                 EncodedValue = CalibrationStorage[Index] + CalibrationStorage[Index + 1] * 256
                 Index = Index + 2
 
@@ -3448,11 +3517,13 @@ Function DecodeCalibrationStorage(LoadedCount As Number) As Boolean
                     Return False
                 End If
 
+                If Channel >= 18 And (EncodedValue < 180 Or EncodedValue > 181) Then
+                    Return False
+                End If
+
                 CalibrationKeyframeValues[Clip, Keyframe * CALIBRATION_CHANNEL_COUNT + Channel] = EncodedValue - 180
             End For
-
         End For
-
     End For
 
     If Index <> LoadedCount Then
@@ -3526,9 +3597,7 @@ Sub SaveCalibrationKeyframes()
                 CalibrationStorage[StorageCount + 1] = EncodedValue / 256
                 StorageCount = StorageCount + 2
             End For
-
         End For
-
     End For
 
     Save Data CalibrationStorage Count StorageCount To "CharacterViewerCalibrationKeyframes"
@@ -3582,9 +3651,13 @@ Function StoreCalibrationKeyframe(Clip As Number, FrameValue As Number) As Boole
 
     If (Position < KeyCount And
         CalibrationKeyframeFrames[Clip, Position] = FrameValue) Then
+
         Result = True
+
     Else If KeyCount >= CALIBRATION_MAX_KEYFRAMES Then
+
         Return False
+
     Else
 
         For Shift = KeyCount Down To Position + 1
@@ -3594,12 +3667,12 @@ Function StoreCalibrationKeyframe(Clip As Number, FrameValue As Number) As Boole
             For Channel = 0 To CALIBRATION_CHANNEL_COUNT - 1
                 CalibrationKeyframeValues[Clip, Shift * CALIBRATION_CHANNEL_COUNT + Channel] = CalibrationKeyframeValues[Clip, (Shift - 1) * CALIBRATION_CHANNEL_COUNT + Channel]
             End For
-
         End For
 
         CalibrationKeyframeFrames[Clip, Position] = FrameValue
         CalibrationKeyframeCounts[Clip] = KeyCount + 1
         Result = True
+
     End If
 
     For Channel = 0 To CALIBRATION_CHANNEL_COUNT - 1
@@ -3622,6 +3695,7 @@ Sub RefreshCalibrationSavedStatus()
     For Clip = 0 To Character3D.ClipCount(Character) - 1
 
         If CalibrationKeyframeCounts[Clip] > 0 And Not CalibrationSaved Then
+
             CalibrationSaved = True
             CalibrationSavedClip = Clip
             CalibrationSavedFrame = CalibrationKeyframeFrames[Clip, CalibrationKeyframeCounts[Clip] - 1]
@@ -3629,6 +3703,7 @@ Sub RefreshCalibrationSavedStatus()
                 CalibrationSavedClip,
                 CalibrationSavedFrame
             )
+
         End If
 
     End For
@@ -3659,7 +3734,6 @@ Sub DeleteCurrentCalibrationKeyframe()
         For Channel = 0 To CALIBRATION_CHANNEL_COUNT - 1
             CalibrationKeyframeValues[SelectedClip, Shift * CALIBRATION_CHANNEL_COUNT + Channel] = CalibrationKeyframeValues[SelectedClip, (Shift + 1) * CALIBRATION_CHANNEL_COUNT + Channel]
         End For
-
     End For
 
     CalibrationKeyframeCounts[SelectedClip] = KeyCount - 1
@@ -3739,6 +3813,7 @@ Sub PasteCalibrationKeyframe()
     CurrentFrame = CurrentAnimationFrame()
 
     For Channel = 0 To CALIBRATION_CHANNEL_COUNT - 1
+
         Call SetCalibrationChannelValue(
             SelectedClip,
             Channel,
@@ -3752,11 +3827,13 @@ Sub PasteCalibrationKeyframe()
     CalibrationSaveLimitReached = Not StoreCalibrationKeyframe(SelectedClip, CurrentFrame)
 
     If Not CalibrationSaveLimitReached Then
+
         CalibrationSaved = True
 
         Call SaveCalibrationKeyframes()
         Call UpdateCalibrationForCurrentFrame()
         Call ApplyWristCalibration()
+
     End If
 
 End Sub
@@ -3778,8 +3855,12 @@ Function CalibrationChannelValue(Clip As Number, Channel As Number) As Number
         Result = ShieldCalibration[Clip, Axis]
     Else If Channel < 15 Then
         Result = SwordPositionCalibration[Clip, Axis]
-    Else
+    Else If Channel < 18 Then
         Result = ShieldPositionCalibration[Clip, Axis]
+    Else If Channel = 18 Then
+        Result = SwordDecoupled[Clip]
+    Else
+        Result = ShieldDecoupled[Clip]
     End If
 
     Return Result
@@ -3802,8 +3883,12 @@ Sub SetCalibrationChannelValue(Clip As Number, Channel As Number, Value As Numbe
         ShieldCalibration[Clip, Axis] = Value
     Else If Channel < 15 Then
         SwordPositionCalibration[Clip, Axis] = Value
-    Else
+    Else If Channel < 18 Then
         ShieldPositionCalibration[Clip, Axis] = Value
+    Else If Channel = 18 Then
+        SwordDecoupled[Clip] = Value
+    Else
+        ShieldDecoupled[Clip] = Value
     End If
 
 End Sub
@@ -3846,6 +3931,14 @@ Function InterpolateCalibrationChannel(
     Dim Result As Number
 
     If StartFrame = EndFrame Then
+        Return StartValue
+    End If
+
+    If CurrentFrame = EndFrame Then
+        Return EndValue
+    End If
+
+    If Channel >= 18 Then
         Return StartValue
     End If
 
@@ -3905,6 +3998,7 @@ Sub UpdateCalibrationForCurrentFrame()
         End For
 
         Return
+
     End If
 
     CurrentFrame = CurrentAnimationFrame()
@@ -3913,26 +4007,36 @@ Sub UpdateCalibrationForCurrentFrame()
     EndKeyframe = 0
 
     If KeyCount = 1 Then
+
         StartKeyframe = 0
         EndKeyframe = 0
+
     Else If CurrentFrame < CalibrationKeyframeFrames[SelectedClip, 0] Then
+
         StartKeyframe = KeyCount - 1
         EndKeyframe = 0
         CurrentFrame = CurrentFrame + FrameCount
+
     Else If CurrentFrame > CalibrationKeyframeFrames[SelectedClip, KeyCount - 1] Then
+
         StartKeyframe = KeyCount - 1
         EndKeyframe = 0
+
     Else If CurrentFrame = CalibrationKeyframeFrames[SelectedClip, KeyCount - 1] Then
+
         StartKeyframe = KeyCount - 1
         EndKeyframe = KeyCount - 1
+
     Else If CurrentFrame > CalibrationKeyframeFrames[SelectedClip, 0] Then
 
         For Index = 1 To KeyCount - 1
 
             If CurrentFrame <= CalibrationKeyframeFrames[SelectedClip, Index] Then
+
                 StartKeyframe = Index - 1
                 EndKeyframe = Index
                 Exit For
+
             End If
 
         End For
@@ -3942,7 +4046,9 @@ Sub UpdateCalibrationForCurrentFrame()
     StartFrame = CalibrationKeyframeFrames[SelectedClip, StartKeyframe]
     EndFrame = CalibrationKeyframeFrames[SelectedClip, EndKeyframe]
 
-    If StartKeyframe = KeyCount - 1 And EndKeyframe = 0 And KeyCount > 1 Then
+    If (StartKeyframe = KeyCount - 1 And
+        EndKeyframe = 0 And
+        KeyCount > 1) Then
         EndFrame = EndFrame + FrameCount
     End If
 
@@ -3960,7 +4066,6 @@ Sub UpdateCalibrationForCurrentFrame()
         )
 
         Call SetCalibrationChannelValue(SelectedClip, Channel, ResultValue)
-
     End For
 
 End Sub
@@ -3988,6 +4093,22 @@ Sub ApplyWristCalibration()
 
 End Sub
 
+Sub ApplyEquipmentCoupling()
+
+    Ready = Character3D.SetPartNodeOffsetsEnabled(
+        Character, ARIN_SWORD_PART_INDEX, SwordDecoupled[SelectedClip] = 0
+    ) And Ready
+    Ready = Character3D.SetPartNodeOffsetsEnabled(
+        Character, ARIN_SHIELD_PART_INDEX, ShieldDecoupled[SelectedClip] = 0
+    ) And Ready
+
+    If EpicGlowAvailable Then
+        Ready = Graphics3D.SetObjectNodeOffsetsEnabled3D(SwordGlow, SwordDecoupled[SelectedClip] = 0) And Ready
+        Ready = Graphics3D.SetObjectNodeOffsetsEnabled3D(ShieldGlow, ShieldDecoupled[SelectedClip] = 0) And Ready
+    End If
+
+End Sub
+
 Sub ApplyEquipmentCalibration()
 
     Dim GlowReady As Boolean
@@ -3997,6 +4118,8 @@ Sub ApplyEquipmentCalibration()
     Dim SwordPivotX1000 As Number
     Dim SwordPivotY1000 As Number
     Dim SwordPivotZ1000 As Number
+
+    Call ApplyEquipmentCoupling()
 
     SwordPivotX1000 = Character3D.SocketValueThousandths(
         Character,
@@ -4213,10 +4336,14 @@ Sub BeginCalibrationEdit()
     CalibrationEditing = True
     CalibrationClearConfirm = False
     CalibrationEditingClip = SelectedClip
+    CalibrationEditingFrame = CurrentAnimationFrame()
+    SwordDecoupledBeforeEdit = SwordDecoupled[SelectedClip]
+    ShieldDecoupledBeforeEdit = ShieldDecoupled[SelectedClip]
     CalibrationAutoOrbitWasEnabled = AutoOrbit
     CalibrationSavedBeforeEdit = CalibrationSaved
 
     For Axis = 0 To CALIBRATION_AXIS_COUNT - 1
+
         SwordWristCalibrationBeforeEdit[Axis] = SwordWristCalibration[SelectedClip, Axis]
         ShieldWristCalibrationBeforeEdit[Axis] = ShieldWristCalibration[SelectedClip, Axis]
         SwordCalibrationBeforeEdit[Axis] = SwordCalibration[SelectedClip, Axis]
@@ -4249,6 +4376,7 @@ Sub CancelCalibrationEdit()
     End If
 
     For Axis = 0 To CALIBRATION_AXIS_COUNT - 1
+
         SwordWristCalibration[CalibrationEditingClip, Axis] = SwordWristCalibrationBeforeEdit[Axis]
         ShieldWristCalibration[CalibrationEditingClip, Axis] = ShieldWristCalibrationBeforeEdit[Axis]
         SwordCalibration[CalibrationEditingClip, Axis] = SwordCalibrationBeforeEdit[Axis]
@@ -4258,6 +4386,8 @@ Sub CancelCalibrationEdit()
     End For
 
     CalibrationSaved = CalibrationSavedBeforeEdit
+    SwordDecoupled[CalibrationEditingClip] = SwordDecoupledBeforeEdit
+    ShieldDecoupled[CalibrationEditingClip] = ShieldDecoupledBeforeEdit
     CalibrationClearConfirm = False
 
     Call ApplyWristCalibration()
@@ -4273,10 +4403,8 @@ Sub SetCurrentCalibrationValue(Value As Number)
     Call BeginCalibrationEdit()
 
     If CalibrationTransform = CALIBRATION_TRANSFORM_MOVE Then
-
         ClampedValue = Min(CALIBRATION_MAXIMUM_POSITION,
             Max(CALIBRATION_MINIMUM_POSITION, Value))
-
     Else
         ClampedValue = Min(CALIBRATION_MAXIMUM_DEGREES,
             Max(CALIBRATION_MINIMUM_DEGREES, Value))
@@ -4297,6 +4425,7 @@ Sub SetCurrentCalibrationValue(Value As Number)
     Else
         ShieldCalibration[SelectedClip, CalibrationAxis] = ClampedValue
     End If
+
     CalibrationSaveLimitReached = False
     CalibrationClearConfirm = False
     AutoOrbit = False
@@ -4368,6 +4497,7 @@ Sub ClearSelectedClipCalibration()
     Dim Axis As Number
 
     For Axis = 0 To CALIBRATION_AXIS_COUNT - 1
+
         SwordWristCalibration[SelectedClip, Axis] = 0
         ShieldWristCalibration[SelectedClip, Axis] = 0
         SwordCalibration[SelectedClip, Axis] = 0
@@ -4377,6 +4507,8 @@ Sub ClearSelectedClipCalibration()
     End For
 
     CalibrationKeyframeCounts[SelectedClip] = 0
+    SwordDecoupled[SelectedClip] = 0
+    ShieldDecoupled[SelectedClip] = 0
     CalibrationClearConfirm = False
     CalibrationSaveLimitReached = False
 
@@ -4440,7 +4572,7 @@ Sub SaveCalibrationFrame()
     Call BeginCalibrationEdit()
 
     CalibrationSavedClip = SelectedClip
-    CalibrationSavedFrame = CurrentAnimationFrame()
+    CalibrationSavedFrame = CalibrationEditingFrame
     CalibrationSavedTime = CalibrationFrameTimeMilliseconds(
         CalibrationSavedClip,
         CalibrationSavedFrame
@@ -4729,7 +4861,9 @@ Sub DrawViewerOverlay()
         End If
 
     Else If ScenePaused Then
+
         Draw Text "MOVEMENT PAUSED — SPACE TO RESUME; CAMERA CONTROLS REMAIN ACTIVE" At 18, 68 Size 14 Color YELLOW
+
     End If
 
     If ViewerError Then
@@ -4856,6 +4990,12 @@ Sub DrawCalibrationPanel()
     Call DrawButton(118, 268, 80, 24, "Paste Key", CalibrationClipboardAvailable And Not CalibrationEditing)
     Call DrawButton(202, 268, 90, 24, "Delete Key", CurrentKeyframe >= 0 And Not CalibrationEditing)
     Call DrawButton(34, 298, 100, 24, "Reload Key", CurrentKeyframe >= 0)
+    Call DrawButton(34, 374, 194, 24, "Decouple Sword", SwordDecoupled[SelectedClip] <> 0)
+    Call DrawButton(236, 374, 196, 24, "Decouple Shield", ShieldDecoupled[SelectedClip] <> 0)
+
+    Draw Text "D:\SMILE 2.0\games\SinStarI\SourceAssets\Characters\" At 26, 405 Size 9 Color CYAN
+    Draw Text "Paladin\ArinV57\Calibration\arin-v5.7-pose-calibration.json" At 26, 417 Size 9 Color CYAN
+    Draw Text "Click path to show saved file in Explorer" At 26, 430 Size 9 Color LIGHT_GRAY
 
     If CalibrationEditing Then
 
@@ -4867,19 +5007,29 @@ Sub DrawCalibrationPanel()
 
     Else
         Draw Text "Reload discards unsaved changes" At 146, 306 Size 11 Color LIGHT_GRAY
+
     End If
 
     If CalibrationSaveLimitReached Then
+
         Draw Text "Keyframe limit reached" At 34, 350 Size 11 Color YELLOW
+
     Else
         Draw Text "Keys" At 34, 350 Size 11 Color LIGHT_GRAY
         Draw Number CalibrationKeyframeCounts[SelectedClip] At 68, 350 Size 11 Color CYAN
-        Draw Text "Current frame" At 104, 350 Size 11 Color LIGHT_GRAY
-        Draw Number CurrentFrame At 190, 350 Size 11 Color WHITE
+
+        If CalibrationEditing Then
+            Draw Text "Editing frame" At 104, 350 Size 11 Color YELLOW
+            Draw Number CalibrationEditingFrame At 200, 350 Size 11 Color WHITE
+        Else
+            Draw Text "Current frame" At 104, 350 Size 11 Color LIGHT_GRAY
+            Draw Number CurrentFrame At 200, 350 Size 11 Color WHITE
+        End If
 
         If CurrentKeyframe >= 0 Then
             Draw Text "KEYED" At 230, 350 Size 11 Color GREEN
         End If
+
     End If
 
 End Sub
@@ -4997,7 +5147,6 @@ Sub DrawTimeline()
             MarkerX = TIMELINE_LEFT + KeyframeTime * Width / Duration
 
             Fill Rectangle MarkerX - 1, TimelineY - 5, 3, TIMELINE_HEIGHT + 10, GREEN Opacity 100
-
         End For
 
     End If
@@ -5100,11 +5249,14 @@ Function AnimationSecondsRemaining() As Number
     Dim Result As Number
 
     If DemoEnabled Then
+
         RequiredMilliseconds = DemoRequiredLoops() * DemoLoopDurationMilliseconds()
         RemainingMilliseconds = Max(0, RequiredMilliseconds - AnimationCycleElapsed)
         Result = (RemainingMilliseconds + 999) / 1000
+
     Else
         Result = 0
+
     End If
 
     Return Result

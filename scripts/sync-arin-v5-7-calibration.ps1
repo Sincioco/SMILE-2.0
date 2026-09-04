@@ -25,7 +25,7 @@ $clipNames = @(
     'SwordAttack2',
     'Walk'
 )
-$channelCount = 18
+$channelCount = 20
 
 function Get-TextSha256([string]$Text) {
     $bytes = [Text.Encoding]::UTF8.GetBytes($Text)
@@ -118,11 +118,12 @@ function Convert-PayloadToSnapshot([byte[]]$Payload) {
         $Payload[1] -ne 77 -or
         $Payload[2] -ne 75 -or
         $Payload[3] -ne 70 -or
-        $Payload[4] -ne 1) {
+        $Payload[4] -notin @(1, 2)) {
         throw 'Arin v5.7 calibration payload has an invalid SMKF header.'
     }
 
     $clipCount = [int]$Payload[5]
+    $storedChannels = if ($Payload[4] -eq 1) { 18 } else { 20 }
 
     if ($clipCount -ne $clipNames.Count) {
         throw "Arin v5.7 calibration must contain exactly $($clipNames.Count) clips."
@@ -150,7 +151,7 @@ function Convert-PayloadToSnapshot([byte[]]$Payload) {
         }
 
         for ($keyframeIndex = 0; $keyframeIndex -lt $keyframeCount; $keyframeIndex++) {
-            $required = 2 + $channelCount * 2
+            $required = 2 + $storedChannels * 2
 
             if ($offset + $required -gt $Payload.Length) {
                 throw 'Arin v5.7 calibration ended inside a keyframe record.'
@@ -166,7 +167,7 @@ function Convert-PayloadToSnapshot([byte[]]$Payload) {
             $previousFrame = $frame
             $values = [int[]]::new($channelCount)
 
-            for ($channel = 0; $channel -lt $channelCount; $channel++) {
+            for ($channel = 0; $channel -lt $storedChannels; $channel++) {
                 $encoded = Read-Unsigned16 $Payload $offset
                 $offset += 2
 
@@ -175,6 +176,9 @@ function Convert-PayloadToSnapshot([byte[]]$Payload) {
                 }
 
                 $values[$channel] = $encoded - 180
+                if ($channel -ge 18 -and $values[$channel] -notin @(0, 1)) {
+                    throw 'Invalid equipment decoupling flag.'
+                }
             }
 
             $keyframes.Add([ordered]@{
@@ -182,10 +186,12 @@ function Convert-PayloadToSnapshot([byte[]]$Payload) {
                 swordWrist = [ordered]@{ rotation = @($values[0], $values[1], $values[2]) }
                 shieldWrist = [ordered]@{ rotation = @($values[3], $values[4], $values[5]) }
                 sword = [ordered]@{
+                    decoupled = $values[18] -ne 0
                     rotation = @($values[6], $values[7], $values[8])
                     position = @($values[12], $values[13], $values[14])
                 }
                 shield = [ordered]@{
+                    decoupled = $values[19] -ne 0
                     rotation = @($values[9], $values[10], $values[11])
                     position = @($values[15], $values[16], $values[17])
                 }
@@ -230,7 +236,7 @@ function Convert-PayloadToSnapshot([byte[]]$Payload) {
         characterVersion = 'v5.7'
         applicationId = $applicationId
         dataKey = $dataKey
-        storageVersion = 1
+        storageVersion = 2
         savedKeyframe = $savedKeyframe
         totalKeyframes = $totalKeyframes
         clips = $clips.ToArray()
@@ -243,7 +249,7 @@ function Convert-SnapshotToPayload($Snapshot) {
         $Snapshot.characterVersion -cne 'v5.7' -or
         $Snapshot.applicationId -cne $applicationId -or
         $Snapshot.dataKey -cne $dataKey -or
-        $Snapshot.storageVersion -ne 1) {
+        $Snapshot.storageVersion -notin @(1, 2)) {
         throw 'Arin v5.7 calibration JSON identity or schema is invalid.'
     }
 
@@ -254,7 +260,7 @@ function Convert-SnapshotToPayload($Snapshot) {
     }
 
     $bytes = [Collections.Generic.List[byte]]::new()
-    $bytes.AddRange([byte[]]@(83, 77, 75, 70, 1, $clipNames.Count))
+    $bytes.AddRange([byte[]]@(83, 77, 75, 70, 2, $clipNames.Count))
     $saved = $null -ne $Snapshot.savedKeyframe
     $bytes.Add([byte]$(if ($saved) { 1 } else { 0 }))
     $savedClip = 0
@@ -315,6 +321,13 @@ function Convert-SnapshotToPayload($Snapshot) {
 
             foreach ($value in $values) {
                 Add-Unsigned16 $bytes ([int]$value + 180)
+            }
+
+            foreach ($part in @($keyframe.sword, $keyframe.shield)) {
+                if ($null -ne $part.decoupled -and $part.decoupled -isnot [bool]) {
+                    throw 'Equipment decoupled must be a Boolean.'
+                }
+                Add-Unsigned16 $bytes (180 + [int][bool]$part.decoupled)
             }
 
             if ($saved -and $savedClip -eq $clipIndex -and $savedFrame -eq $frame) {

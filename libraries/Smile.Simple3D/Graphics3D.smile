@@ -133,6 +133,7 @@ Private Const COMMAND_SOFT_DEPTH = 125
 Private Const COMMAND_DISTORTION = 126
 Private Const COMMAND_GPU_PARTICLE_SYSTEM = 127
 Private Const COMMAND_SET_MODEL_NODE_ROTATION_OFFSET = 128
+Private Const COMMAND_SET_OBJECT_NODE_OFFSETS = 132
 Private Const COMMAND_SET_OBJECT_PIVOT_ROTATION = 129
 Private Const COMMAND_SET_OBJECT_CULL_MODE = 130
 Private Const COMMAND_SET_BACKDROP_TEXTURE = 131
@@ -2393,10 +2394,16 @@ Public Function AnimatorSocketWorldValue3D(
     Animator As Core.Animator3D,
     Object As Core.Object3D,
     SocketIndex As Number,
-    Property As Number
+    Property As Number,
+    Optional IgnoreNodeOffsets As Boolean = False
 ) As Number
 
     Dim Result As Number
+    Dim IgnoreOffsets As Number
+
+    If IgnoreNodeOffsets Then
+        IgnoreOffsets = 1
+    End If
 
     Result = Dispatch(
         COMMAND_ANIMATOR_SOCKET_VALUE,
@@ -2404,7 +2411,7 @@ Public Function AnimatorSocketWorldValue3D(
         SocketIndex,
         Property,
         Object.Handle,
-        0,
+        IgnoreOffsets,
         0,
         0,
         0,
@@ -2534,6 +2541,22 @@ Public Function SetBackdropTexture3D(Texture As Core.Texture3D) As Boolean
     Dim Result As Boolean
 
     Result = Dispatch(COMMAND_SET_BACKDROP_TEXTURE, Texture.Handle, 0, 0, 0, 0, 0, 0, 0, 0, 0) <> 0
+    Return Result
+
+End Function
+
+''' Chooses whether an object inherits additive node corrections, not its base animation.
+Public Function SetObjectNodeOffsetsEnabled3D(Object As Core.Object3D, Enabled As Boolean) As Boolean
+
+    Dim Result As Boolean
+    Dim Mode As Number
+
+    If Enabled Then
+        Mode = 1
+    End If
+
+    Result = Dispatch(COMMAND_SET_OBJECT_NODE_OFFSETS, Object.Handle, Mode, 0, 0, 0, 0, 0, 0, 0, 0) <> 0
+
     Return Result
 
 End Function

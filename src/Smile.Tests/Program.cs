@@ -242,6 +242,18 @@ Run("Window dimensions, title, and activation are live game-window built-ins", (
     Equal(true, web.Contains("smile.windowTitle(\"Model.glb\")", StringComparison.Ordinal));
     Equal(true, web.Contains("smile.windowActivate()", StringComparison.Ordinal));
 });
+Run("File_Reveal takes a path and returns Boolean without a game window", () =>
+{
+    Equal(SyntaxKind.FileRevealKeyword, SyntaxFacts.GetKeywordKind("file_reveal"));
+    var analysis = Analyze("Dim Revealed As Boolean\nRevealed = File_Reveal(\"D:\\SMILE 2.0\\file.json\")\n");
+    Equal(false, analysis.HasErrors);
+    Equal(true, Analyze("Print File_Reveal(123)\n").HasErrors);
+    Equal(true, Analyze("Print File_Reveal()\n").HasErrors);
+    var native = new MasmEmitter(analysis, SmileGraphicsBackend.DirectX, true, false).Emit();
+    Equal(true, native.Contains("call smile_file_reveal", StringComparison.Ordinal));
+    Equal(true, new WebEmitter(analysis).Emit().Contains(
+        "((\"D:\\\\SMILE 2.0\\\\file.json\"), false)", StringComparison.Ordinal));
+});
 Run("Renderer3D is a bounded game-window bridge on both targets", () =>
 {
     Equal(SyntaxKind.Renderer3DKeyword, SyntaxFacts.GetKeywordKind("renderer3d"));
