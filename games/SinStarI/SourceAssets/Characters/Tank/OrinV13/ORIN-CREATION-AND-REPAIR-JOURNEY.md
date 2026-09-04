@@ -64,3 +64,24 @@ the accepted Mixamo skeleton or source animation.
    descriptor, or cooked SM3D hashes intentionally change.
 5. Restore the calibration with `-Character Orin -Mode Restore -Force` only for
    an explicit profile migration, then launch through `Launch.ps1`.
+
+## Lightning Attachment And Timing
+
+The builder now runs `scripts/update-orin-lightning-sockets.py` after exporting
+the accepted checkpoint. It verifies every equipment vertex is rigidly weighted
+to the intended hand, applies the inverse bind matrix, derives eight shield
+perimeter points and three hammer-head points, and updates only the descriptor.
+Do not copy these points into a changed rig without re-deriving them.
+
+Resolve those sockets through equipment parts 0 and 1 after calibration. A socket
+queried through the body will ignore independent prop Move/Rotate edits. The
+shield effect uses an exact closed polyline with no wandering branches; suppress
+the old full-shield overlay so the face and back remain textured.
+
+The viewer's SelectedClip and PartyCompanion.Clip are runtime indices. Resolve
+their names with Character3D.ClipName, not the UI presentation-order table. This
+distinction fixed initial lightning appearing during the wrong animation.
+
+CPU charge contact/release are latched per action and independently tested.
+Frame scrubbing previews visuals without repeated thunder or charge consumption.
+The accepted model checksum remains 6DD3EC872CAD79FD28AD3B8D5A5228149CBC35C74652A69B6123922D94901936.

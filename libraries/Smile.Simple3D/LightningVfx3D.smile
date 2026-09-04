@@ -76,6 +76,8 @@ Private Type LightningState
     Preset As Number
     Quality As Number
     BranchLimit As Number
+    PathJitter1000 As Number
+    SparkPercent As Number
     Seed As Number
     Age As Number
     Duration As Number
@@ -467,7 +469,7 @@ Private Sub BuildEffect(Index As Number)
     EndPosition = Items[Index].Target
     Distance = Math3D.Distance(StartPosition, EndPosition)
     Segments = SegmentCount(Items[Index].Quality)
-    Amplitude = Max(Items[Index].Width * 3, Distance / 5)
+    Amplitude = Max(Items[Index].Width * 3, Distance / 5) * Items[Index].PathJitter1000 / 1000
 
     If Items[Index].ChainCount > 0 Then
         Segments = Max(2, Segments / (Items[Index].ChainCount + 1))
@@ -481,6 +483,11 @@ Private Sub BuildEffect(Index As Number)
     For Hop = 0 To Items[Index].ChainCount - 1
 
         BuildDelay = (Hop + 1) * 110
+
+        If Items[Index].Preset = 4 Then
+            BuildDelay = 0
+        End If
+
         StartPosition = EndPosition
         EndPosition.X = ChainX[Index, Hop]
         EndPosition.Y = ChainY[Index, Hop]
@@ -872,6 +879,8 @@ Private Function EmitSparks(Index As Number) As Boolean
 
     End If
 
+    SpawnCount = SpawnCount * Items[Index].SparkPercent / 100
+
     For Particle = 0 To SpawnCount - 1
 
         SpawnSerial = SpawnSerial + 1
@@ -1171,6 +1180,8 @@ Public Function StartAt(
     Items[Index].Finished = False
     Items[Index].Preset = PresetValue
     Items[Index].BranchLimit = 64
+    Items[Index].PathJitter1000 = 1000
+    Items[Index].SparkPercent = 100
     Items[Index].Quality = EffectiveQuality(Quality)
     Items[Index].Seed = Max(1, Abs(Seed))
     Items[Index].Age = 0
@@ -1320,6 +1331,65 @@ Public Function AddChainTarget(Value As LightningEffect, Target As Core.Vector3)
     Items[Index].ChainCount = ChainIndex + 1
 
     Call BuildEffect(Index)
+
+    ErrorValue = ERROR_NONE
+
+    Return True
+
+End Function
+
+''' Reposition an existing chain point after resolving an animated attachment.
+Public Function SetChainTarget(Value As LightningEffect, ChainIndex As Number, Target As Core.Vector3) As Boolean
+
+    Dim Index As Number
+
+    If Not Current(Value) Then
+        ErrorValue = ERROR_INVALID_EFFECT
+        Return False
+    End If
+
+    If Graphics3D.FrameActive3D() Then
+        ErrorValue = ERROR_IN_FLIGHT
+        Return False
+    End If
+
+    Index = Value.Slot - 1
+
+    If (ChainIndex < 0 Or
+        ChainIndex >= Items[Index].ChainCount Or
+        Not PositionValid(Target)) Then
+        ErrorValue = ERROR_INVALID_POSITION
+        Return False
+    End If
+
+    ChainX[Index, ChainIndex] = Target.X
+    ChainY[Index, ChainIndex] = Target.Y
+    ChainZ[Index, ChainIndex] = Target.Z
+
+    Call BuildEffect(Index)
+
+    ErrorValue = ERROR_NONE
+
+    Return True
+
+End Function
+
+''' Restrict displacement for contours; zero produces an exact glowing path.
+Public Function SetPathJitter(Value As LightningEffect, Jitter1000 As Number) As Boolean
+
+    If Not Current(Value) Then
+        ErrorValue = ERROR_INVALID_EFFECT
+        Return False
+    End If
+
+    If Graphics3D.FrameActive3D() Then
+        ErrorValue = ERROR_IN_FLIGHT
+        Return False
+    End If
+
+    Items[Value.Slot - 1].PathJitter1000 = Min(1000, Max(0, Jitter1000))
+
+    Call BuildEffect(Value.Slot - 1)
 
     ErrorValue = ERROR_NONE
 
@@ -1478,6 +1548,18 @@ Public Function SetBranchBudget(Effect As LightningEffect, BranchLimit As Number
     Items[Effect.Slot - 1].BranchLimit = Min(64, Max(0, BranchLimit))
 
     Call BuildEffect(Effect.Slot - 1)
+
+    Return True
+
+End Function
+
+Public Function SetSparkIntensity(Effect As LightningEffect, Percent As Number) As Boolean
+
+    If Not Current(Effect) Or Graphics3D.FrameActive3D() Then
+        Return False
+    End If
+
+    Items[Effect.Slot - 1].SparkPercent = Min(100, Max(0, Percent))
 
     Return True
 

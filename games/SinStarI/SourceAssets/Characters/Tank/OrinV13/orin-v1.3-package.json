@@ -33,6 +33,13 @@
     "syncScript": "scripts/sync-arin-v5-7-calibration.ps1 -Character Orin"
   },
   "previews": "Previews",
+  "vfx": {
+    "presentation": "tools/Character3DViewer/OrinStorm.smile",
+    "module": "Smile.Simple3D.LightningVfx3D",
+    "socketBuilder": "scripts/update-orin-lightning-sockets.py",
+    "shieldPolicy": "Perimeter only; no face or back glow overlay",
+    "chargeRange": [0, 1000]
+  },
   "workflowHandoff": "ORIN-CREATION-AND-REPAIR-JOURNEY.md",
   "build": {
     "blenderBuilder": "scripts/build-orin-v1-3-mixamo.py",

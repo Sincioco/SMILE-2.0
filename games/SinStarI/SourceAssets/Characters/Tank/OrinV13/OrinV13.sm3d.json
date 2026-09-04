@@ -75,6 +75,94 @@
         -0.12913157,
         -0.04359787
       ]
+    },
+    "ShieldRim0": {
+      "node": "L_Hand",
+      "translation": [
+        -0.0575878,
+        -0.27211595,
+        0.31979534
+      ]
+    },
+    "ShieldRim1": {
+      "node": "L_Hand",
+      "translation": [
+        -0.09390203,
+        -0.11389889,
+        0.33697922
+      ]
+    },
+    "ShieldRim2": {
+      "node": "L_Hand",
+      "translation": [
+        -0.09234269,
+        -0.07014914,
+        0.30229385
+      ]
+    },
+    "ShieldRim3": {
+      "node": "L_Hand",
+      "translation": [
+        -0.05228788,
+        0.08334003,
+        -0.31136994
+      ]
+    },
+    "ShieldRim4": {
+      "node": "L_Hand",
+      "translation": [
+        -0.04480864,
+        0.06267305,
+        -0.37469592
+      ]
+    },
+    "ShieldRim5": {
+      "node": "L_Hand",
+      "translation": [
+        0.00366251,
+        -0.08523103,
+        -0.4363913
+      ]
+    },
+    "ShieldRim6": {
+      "node": "L_Hand",
+      "translation": [
+        0.04842993,
+        -0.19602483,
+        -0.38196054
+      ]
+    },
+    "ShieldRim7": {
+      "node": "L_Hand",
+      "translation": [
+        0.02478654,
+        -0.34745213,
+        0.22850342
+      ]
+    },
+    "HammerHead": {
+      "node": "R_Hand",
+      "translation": [
+        0.08806471,
+        -0.02936305,
+        0.26296752
+      ]
+    },
+    "HammerLeft": {
+      "node": "R_Hand",
+      "translation": [
+        0.13009667,
+        0.06684248,
+        0.27584311
+      ]
+    },
+    "HammerRight": {
+      "node": "R_Hand",
+      "translation": [
+        0.04981582,
+        -0.11690963,
+        0.2512508
+      ]
     }
   }
 }

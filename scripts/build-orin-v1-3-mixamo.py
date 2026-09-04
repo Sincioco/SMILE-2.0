@@ -479,6 +479,10 @@ def build() -> None:
         json.dumps(descriptor, indent=2) + "\n", encoding="utf-8"
     )
 
+    # Re-derive the VFX sockets from this exported checkpoint, never old fit offsets.
+    import runpy
+    runpy.run_path(str(PACKAGE.parents[5] / 'scripts/update-orin-lightning-sockets.py'))
+
     blend_path = PACKAGE / "Blender/orin-v1.3-animation-working.blend"
     bpy.ops.wm.save_as_mainfile(filepath=str(blend_path), compress=True)
 

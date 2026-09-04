@@ -8,6 +8,7 @@
   <ItemGroup>
     <SmileSource Include="HardeningTests.smile" StartupOnly="true" />
     <SmileSource Include="Profiles.smile" />
+    <SmileSource Include="OrinStorm.smile" />
     <SmileProjectReference Include="..\..\libraries\Smile.Simple3D\Smile.Simple3D.smilelibproj" />
   </ItemGroup>
 </SmileProject>

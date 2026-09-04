@@ -36,9 +36,10 @@ rotation corrections so it does not cut through his forearm, torso, or legs.
 
 The runtime set contains nine Mixamo clips: Idle, SwordAttack, JumpAttack,
 ThorAttack, Defend, Hit, Death, Victory, and Run. `ThorAttack` is the stable
-animation contract for the later Lightning Lab: raise the hammer, receive the
-charge, and release it into the ground. This Orin milestone uses white equipment
-glow only.
+animation contract for lightning: raise the hammer, receive the charge, and
+release it into the ground. The viewer adds a white hammer core, blue/white
+electrical aura and an eight-point shield perimeter glow. Neither shield face
+nor back receives a full-surface glow overlay.
 
 ## Known Visual Limits
 
@@ -59,6 +60,26 @@ animation selection, playback, timeline, pose corrections, storage, sockets,
 material inspection, camera controls, equipment toggles, and white equipment
 Glow. Party renders Arin and Orin together, facing the Red Dragon, taking turns
 advancing and attacking while the arena camera orbits.
+
+The Orin tab doubles as the Storm Presentation Lab. The button beside Floor/Grid
+cycles Thunder Smash, Storm Lance, Chain Arcs and Godstorm discharge previews.
+The next row controls full/reduced/off flash and shake and displays stored charge.
+Reduced is the default. Chain Arcs are arena presentation paths; this one-boss
+preview does not claim multiple-enemy damage or target selection. The generic
+Lightning Lab separately demonstrates caller-ordered multi-target chains.
+
+`tools/Character3DViewer/OrinStorm.smile` owns presentation timing and the pure
+0–1000 charge state. Contact at 35% of ThorAttack fills charge; release at 64%
+spends 350 once per action. Idle and Run retain the remaining aura. Paused frame
+inspection changes the visual phase without applying charge or audio events.
+Glow visibility does not change charge calculations. All transforms are resolved
+through the actual calibrated equipment parts after wrist, Move and Rotate edits.
+
+The original GLB, animations, UVs, textures and approved fit are unchanged.
+Eleven descriptor sockets were added: ShieldRim0–7 and HammerHead/Left/Right.
+`scripts/update-orin-lightning-sockets.py` derives them from the rigid hand bind
+matrices. The profile migration retained all Orin keys (zero at migration) and
+left Arin's 23-key snapshot unchanged.
 
 ## Rebuild
 

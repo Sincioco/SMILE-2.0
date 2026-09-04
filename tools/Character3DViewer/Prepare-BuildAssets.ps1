@@ -108,3 +108,10 @@ foreach ($fireFile in @('fire-shape-atlas.png', 'smoke-shape-atlas.png', 'ember-
     Copy-Item -LiteralPath (Join-Path $repositoryRoot "TechnicalAssets\Generation3\Fire\$fireFile") `
         -Destination (Join-Path $fireAssets $fireFile) -Force
 }
+
+$lightningAssets = Join-Path $toolRoot 'Assets\Lightning'
+New-Item -ItemType Directory -Path $lightningAssets -Force | Out-Null
+foreach ($lightningFile in @('lightning-ribbon.png', 'lightning-spark.png', 'thunder.wav')) {
+    Copy-Item -LiteralPath (Join-Path $repositoryRoot "TechnicalAssets\Generation3\Lightning\$lightningFile") `
+        -Destination (Join-Path $lightningAssets $lightningFile) -Force
+}

@@ -14,6 +14,7 @@ Import Smile.Simple3D.Interaction As Interaction
 Import Smile.Simple3D.Math3D As Math3D
 Import Smile.Simple3D.Scene3D As Scene3D
 Import Smile.Tools.Character3DViewerProfiles As ViewerProfiles
+Import Smile.Tools.OrinStorm As OrinStorm
 
 Const ANIMATION_CYCLE_MILLISECONDS = 5000
 Const ANIMATION_BUTTON_Y = 352
@@ -448,6 +449,8 @@ Do
             Call UpdatePartyCompanion()
         End If
 
+        Call UpdateOrinStorm()
+
         If SocketGizmosVisible Then
             Call UpdateSocketGizmos()
         End If
@@ -501,6 +504,7 @@ Do
             End If
 
             Call DrawShieldFire()
+            Call OrinStorm.Draw()
 
             If EpicGlowVisible Then
 
@@ -526,6 +530,7 @@ Do
 
     End If
 
+    Call OrinStorm.DrawFlash()
     Call DrawViewerOverlay()
 
     Show Screen
@@ -708,6 +713,10 @@ Sub LoadViewer()
 
     If PartyMode Then
         Call CreatePartyCompanion()
+    End If
+
+    If PartyMode Or ProfileIndex = ViewerProfiles.PROFILE_ORIN Then
+        Call OrinStorm.Initialize()
     End If
 
     ViewerEpoch = Graphics3D.ResourceEpoch3D()
@@ -2082,11 +2091,24 @@ Function HandleInterfacePointer() As Boolean
 
     Else If PointerInRectangle(PanelLeft + 94, 444, 76, 22) Then
 
-        SwordFireVisible = Not SwordFireVisible
+        If ProfileIndex = ViewerProfiles.PROFILE_ORIN Then
+            Call OrinStorm.CycleStyle()
+        Else
+            SwordFireVisible = Not SwordFireVisible
+        End If
 
     Else If PointerInRectangle(PanelLeft + 174, 444, 78, 22) Then
 
-        ShieldFireVisible = Not ShieldFireVisible
+        If ProfileIndex = ViewerProfiles.PROFILE_ORIN Then
+            Call OrinStorm.CycleStyle()
+        Else
+            ShieldFireVisible = Not ShieldFireVisible
+        End If
+
+    Else If (ProfileIndex = ViewerProfiles.PROFILE_ORIN And
+        PointerInRectangle(PanelLeft + 12, 470, 128, 20)) Then
+
+        Call OrinStorm.CycleComfort()
 
     Else If (SwordFireReady And
         PointerInRectangle(PanelLeft + 12, 470, 128, 20)) Then
@@ -2903,6 +2925,27 @@ Sub UpdateEquipmentFire()
 
 End Sub
 
+Sub UpdateOrinStorm()
+
+    Dim Target As Core.Vector3
+    Dim Clip As Text
+
+    Target = Math3D.Vector(-135, 85, -70)
+
+    If PartyMode And PartyReady Then
+        Clip = Character3D.ClipName(PartyCompanion.Actor, PartyCompanion.Clip)
+
+        Call OrinStorm.Update(PartyCompanion.Actor, Clip, Target, Camera, CameraElapsed,
+            EpicGlowVisible, SwordVisible, ShieldVisible, FlameAnimationPaused, ScenePaused)
+    Else If ProfileIndex = ViewerProfiles.PROFILE_ORIN Then
+        Clip = Character3D.ClipName(Character, SelectedClip)
+
+        Call OrinStorm.Update(Character, Clip, Target, Camera, CameraElapsed,
+            EpicGlowVisible, SwordVisible, ShieldVisible, FlameAnimationPaused, ScenePaused)
+    End If
+
+End Sub
+
 Sub RecordOptionalFireFailure()
 
     If EquipmentFireFirstError = 0 And (SwordFireFailed Or ShieldFireFailed) Then
@@ -3221,7 +3264,9 @@ Function DrawEquipmentGlow() As Boolean
         Result = Graphics3D.DrawObject3D(SwordGlow)
     End If
 
-    If ShieldVisible And Not SwordFireReady Then
+    If (ShieldVisible And
+        Not SwordFireReady And
+        ProfileIndex <> ViewerProfiles.PROFILE_ORIN) Then
         Result = Graphics3D.DrawObject3D(ShieldGlow) And Result
     End If
 
@@ -6367,10 +6412,18 @@ Sub DrawViewerOverlay()
         Call DrawButton(PanelLeft + 12, 444, 78, 22, "Floor/Grid", FloorVisible Or GridVisible)
 
         If ProfileIndex = ViewerProfiles.PROFILE_ARIN Then
+
             Call DrawButton(PanelLeft + 94, 444, 76, 22, "Sword Fire", SwordFireVisible)
             Call DrawButton(PanelLeft + 174, 444, 78, 22, "Shield Fire", ShieldFireVisible)
+
         Else If ProfileIndex = ViewerProfiles.PROFILE_ORIN Then
-            Draw Text "White Equipment Glow" At PanelLeft + 94, 450 Size 11 Color WHITE
+
+            Call DrawButton(PanelLeft + 94, 444, 158, 22, OrinStorm.StyleName(), True)
+            Call DrawButton(PanelLeft + 12, 470, 128, 20, OrinStorm.ComfortName(), True)
+
+            Draw Text "Charge" At PanelLeft + 146, 474 Size 11 Color CYAN
+            Draw Number OrinStorm.StoredCharge() At PanelLeft + 200, 474 Size 11 Color WHITE
+
         End If
 
         If SwordFireReady Then
@@ -7028,6 +7081,7 @@ Sub DestroyViewerResources()
 
     Call DestroyPartyCompanion()
     Call Fire.Shutdown()
+    Call OrinStorm.Shutdown()
 
     SwordFire.Slot = 0
     SwordFireReady = False
@@ -7413,10 +7467,6 @@ Function DrawPartyCompanion() As Boolean
             Result = Graphics3D.DrawObject3D(PartyCompanion.WeaponGlow) And Result
         End If
 
-        If ShieldVisible Then
-            Result = Graphics3D.DrawObject3D(PartyCompanion.ShieldGlow) And Result
-        End If
-
     End If
 
     Return Result
@@ -7525,6 +7575,7 @@ Sub DrawPartyOverlay()
 
             Draw Text "Edit Each Character In Its Tab" At Left + 16, 408 Size 12 Color LIGHT_GRAY
             Draw Text "Equipment Toggles Apply To Both" At Left + 16, 430 Size 12 Color LIGHT_GRAY
+            Draw Text OrinStorm.Caption() At Left + 16, 446 Size 12 Color CYAN
             Draw Text "FPS" At Left + 16, 462 Size 13 Color LIGHT_GRAY
             Draw Number CurrentFramesPerSecond At Left + 62, 462 Size 13 Color GREEN
 

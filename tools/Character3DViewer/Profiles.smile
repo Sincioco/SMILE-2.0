@@ -51,7 +51,7 @@ Public Function ProfileAt(Index As Number) As CharacterViewer.Profile
         Result.ProductionStatus = "Candidate"
         Result.AssetPath = "Assets\Generation2\OrinV13\OrinV13.sm3d"
         Result.ExpectedClipCount = 9
-        Result.ExpectedSocketCount = 10
+        Result.ExpectedSocketCount = 21
         Result.DesiredWorldHeight = 125
 
     Else If Index = PROFILE_ARIN_V56 Then
@@ -506,7 +506,7 @@ Public Function CalibrationFingerprint(ProfileIndex As Number) As Text
     Result = "f554574e00ec4a9f9c59eac1b3d4adaec9649c90972cc5f0dc6c92859568ba5d"
 
     If ProfileIndex = PROFILE_ORIN Then
-        Result = "b0b33519b67bbe94ad3d3c12bb79838b600909bc6448255be3cac36333dfc825"
+        Result = "bfb3b7d79acec5dbde993703f737f515196826ddc3c89dba91079f8580d6e002"
     End If
 
     Return Result

@@ -3,6 +3,7 @@ Option Explicit
 Import Smile.Tools.Character3DViewerProfiles As ViewerProfiles
 Import Smile.Simple3D.Character3D As Character3D
 Import Smile.Simple3D.CharacterViewer As CharacterViewer
+Import Smile.Tools.OrinStorm As OrinStorm
 
 Dim Alternating As CharacterViewer.ZoomState
 Dim Bounds As Character3D.Bounds3D
@@ -19,8 +20,45 @@ Dim Index As Number
 Dim Clock As CharacterViewer.ClockState
 Dim CycleElapsed As Number
 Dim OrbitYaw1000 As Number
+Dim Charge As OrinStorm.ChargeState
+Dim Events As Number
 
 Game Window "Character 3D Viewer Hardening Tests" Size 320 By 240
+
+Charge.Energy = 120
+
+Call OrinStorm.BeginAction(Charge)
+
+Events = OrinStorm.AdvanceCharge(Charge, 200, True, True)
+
+Call Check(Events = 0 And Charge.Energy = 120)
+
+Events = OrinStorm.AdvanceCharge(Charge, 400, True, True)
+
+Call Check(Events = 1 And Charge.Energy = 1000)
+
+Events = OrinStorm.AdvanceCharge(Charge, 450, True, True)
+
+Call Check(Events = 0 And Charge.Energy = 1000)
+
+Events = OrinStorm.AdvanceCharge(Charge, 700, True, True)
+
+Call Check(Events = 2 And Charge.Energy = 650)
+
+Events = OrinStorm.AdvanceCharge(Charge, 800, True, True)
+
+Call Check(Events = 0 And Charge.Energy = 650)
+Call OrinStorm.BeginAction(Charge)
+
+Events = OrinStorm.AdvanceCharge(Charge, 700, True, True)
+
+Call Check(Events = 3 And Charge.Energy = 650)
+Call OrinStorm.BeginAction(Charge)
+
+Charge.Energy = 10
+Events = OrinStorm.AdvanceCharge(Charge, 700, False, True)
+
+Call Check(Events = 2 And Charge.Energy = 0)
 
 Profile = ViewerProfiles.ProfileAt(ViewerProfiles.PROFILE_ARIN)
 
@@ -50,7 +88,7 @@ Call Check(Profile.CandidateVersion = "v1.3")
 Call Check(Profile.DisplayName = "Orin")
 Call Check(Profile.PartyRole = "Tank")
 Call Check(Profile.ExpectedClipCount = 9)
-Call Check(Profile.ExpectedSocketCount = 10)
+Call Check(Profile.ExpectedSocketCount = 21)
 Call Check(ViewerProfiles.ClipCount(ViewerProfiles.PROFILE_ORIN) = 9)
 Call Check(ViewerProfiles.ClipName(ViewerProfiles.PROFILE_ORIN, 0) = "Idle")
 Call Check(ViewerProfiles.ClipName(ViewerProfiles.PROFILE_ORIN, 1) = "SwordAttack")

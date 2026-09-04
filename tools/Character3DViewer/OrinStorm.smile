@@ -1,0 +1,520 @@
+''' Orin's presentation uses calibrated equipment sockets and the shared lightning module.
+Module Smile.Tools.OrinStorm
+
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Character3D As Character3D
+Import Smile.Simple3D.Graphics3D As Graphics3D
+Import Smile.Simple3D.LightningVfx3D As Lightning
+Import Smile.Simple3D.Math3D As Math3D
+Import Smile.Simple3D.FixedMath As Fixed
+
+Public Type ChargeState
+    Energy As Number
+    ContactApplied As Boolean
+    ReleaseApplied As Boolean
+End Type
+
+Private Dim Available As Boolean
+Private Dim Ok As Boolean
+Private Dim Effects[8] As Lightning.LightningEffect
+Private Dim PreviousClip As Text
+Private Dim PreviousTime As Number
+Private Dim StateText As Text
+Private Dim ThunderPlayed As Boolean
+Private Dim FirstError As Number
+Private Dim RimNames[8] As Text
+Private Dim ChargeValue As ChargeState
+Private Dim Comfort As Number
+Private Dim AttackStyle As Number
+Private Dim FlashOpacity As Number
+Private Dim RenderVisible As Boolean
+
+''' Pure caller-owned state; independent of rendering, handles and effect visibility.
+Public Sub BeginAction(ByRef Value As ChargeState)
+
+    Value.ContactApplied = False
+    Value.ReleaseApplied = False
+
+End Sub
+
+Public Function AdvanceCharge(ByRef Value As ChargeState, Progress1000 As Number,
+    Charging As Boolean, Attacking As Boolean) As Number
+
+    Dim Events As Number
+
+    If (Charging And
+        Progress1000 >= 350 And
+        Not Value.ContactApplied) Then
+
+        Value.Energy = 1000
+        Value.ContactApplied = True
+        Events = 1
+
+    End If
+
+    If (Attacking And
+        Progress1000 >= 640 And
+        Not Value.ReleaseApplied) Then
+
+        Value.Energy = Max(0, Value.Energy - 350)
+        Value.ReleaseApplied = True
+        Events = Events + 2
+
+    End If
+
+    Return Events
+
+End Function
+
+Public Sub Initialize()
+
+    Available = Lightning.Initialize("Assets/Lightning", 4096,
+        Graphics3D.GPU_PARTICLE_SIMULATION_AUTO, 2048)
+    FirstError = 0
+    PreviousClip = ""
+    PreviousTime = 0
+    StateText = "Stored Storm"
+    ChargeValue.Energy = 1000
+
+    If Comfort = 0 Then
+        Comfort = 2
+    End If
+
+    FlashOpacity = 0
+
+    Call BeginAction(ChargeValue)
+
+    RimNames[0] = "ShieldRim0"
+    RimNames[1] = "ShieldRim1"
+    RimNames[2] = "ShieldRim2"
+    RimNames[3] = "ShieldRim3"
+    RimNames[4] = "ShieldRim4"
+    RimNames[5] = "ShieldRim5"
+    RimNames[6] = "ShieldRim6"
+    RimNames[7] = "ShieldRim7"
+
+    If Available Then
+        Ok = Lightning.SetFlashMode(Comfort)
+    Else
+        FirstError = Lightning.Value(Lightning.QUERY_LAST_ERROR, Effects[0])
+    End If
+
+End Sub
+
+Private Sub ClearEffect(Index As Number)
+
+    If Effects[Index].Slot <> 0 Then
+        Ok = Lightning.Destroy(Effects[Index])
+    End If
+
+End Sub
+
+Public Sub Shutdown()
+
+    Dim Index As Number
+
+    For Index = 0 To 7
+        Call ClearEffect(Index)
+    End For
+
+    Call Lightning.Shutdown()
+
+    Available = False
+
+End Sub
+
+Private Sub Attach(Index As Number, Source As Core.Vector3, Target As Core.Vector3,
+    Preset As Text, Width As Number, Power As Number, Branches As Number)
+
+    If Math3D.Distance(Source, Target) < 1 Then
+        Return
+    End If
+
+    If Effects[Index].Slot <> 0 Then
+
+        If Lightning.Value(Lightning.QUERY_FINISHED, Effects[Index]) <> 0 Then
+            Call ClearEffect(Index)
+        End If
+
+    End If
+
+    If Effects[Index].Slot = 0 Then
+
+        Effects[Index] = Lightning.StartAt(Preset, Source, Target, 1307 + Index * 137,
+            Lightning.QUALITY_HIGH)
+
+        If Effects[Index].Slot = 0 Then
+            FirstError = Lightning.Value(Lightning.QUERY_LAST_ERROR, Effects[0])
+            Return
+        End If
+
+        Ok = Lightning.SetBranchBudget(Effects[Index], Branches)
+        Ok = Lightning.SetSparkIntensity(Effects[Index], 25)
+
+    End If
+
+    Ok = Lightning.SetEndpoints(Effects[Index], Source, Target)
+    Ok = Lightning.SetStyle(Effects[Index], Width, Power)
+
+End Sub
+
+Private Sub UpdateRim(Actor As Character3D.Actor, Visible As Boolean)
+
+    Dim Point As Core.Vector3
+    Dim First As Core.Vector3
+    Dim Second As Core.Vector3
+    Dim Index As Number
+    Dim Name As Text
+
+    If Not Visible Then
+        Call ClearEffect(0)
+
+        Return
+    End If
+
+    First = Character3D.SocketPosition(Actor, "ShieldRim0", 0)
+    Second = Character3D.SocketPosition(Actor, "ShieldRim1", 0)
+
+    If Effects[0].Slot = 0 Then
+
+        Effects[0] = Lightning.StartAt("StoredStorm", First, Second, 1300, Lightning.QUALITY_MEDIUM)
+
+        If Effects[0].Slot = 0 Then
+            FirstError = Lightning.Value(Lightning.QUERY_LAST_ERROR, Effects[0])
+            Return
+        End If
+
+        Ok = Lightning.SetStyle(Effects[0], 1, 720)
+        Ok = Lightning.SetBranchBudget(Effects[0], 0)
+        Ok = Lightning.SetPathJitter(Effects[0], 0)
+        Ok = Lightning.SetSparkIntensity(Effects[0], 15)
+
+        For Index = 2 To 7
+            Name = RimNames[Index]
+            Point = Character3D.SocketPosition(Actor, Name, 0)
+
+            Ok = Lightning.AddChainTarget(Effects[0], Point)
+        End For
+
+        Ok = Lightning.AddChainTarget(Effects[0], First)
+
+    Else
+
+        Ok = Lightning.SetEndpoints(Effects[0], First, Second)
+
+        For Index = 2 To 7
+            Name = RimNames[Index]
+            Point = Character3D.SocketPosition(Actor, Name, 0)
+
+            Ok = Lightning.SetChainTarget(Effects[0], Index - 2, Point)
+        End For
+
+        Ok = Lightning.SetChainTarget(Effects[0], 6, First)
+
+    End If
+
+End Sub
+
+Public Sub Update(Actor As Character3D.Actor, Clip As Text, Target As Core.Vector3,
+    ByRef Camera As Core.Camera3D, Elapsed As Number, Enabled As Boolean,
+    WeaponVisible As Boolean, ShieldVisible As Boolean, Paused As Boolean, MotionPaused As Boolean)
+
+    Dim Head As Core.Vector3
+    Dim LeftPoint As Core.Vector3
+    Dim RightPoint As Core.Vector3
+    Dim Sky As Core.Vector3
+    Dim Ground As Core.Vector3
+    Dim EndPoint As Core.Vector3
+    Dim Index As Number
+    Dim Duration As Number
+    Dim Time As Number
+    Dim Progress As Number
+    Dim Power As Number
+    Dim Attack As Boolean
+    Dim Charge As Boolean
+    Dim Release As Boolean
+    Dim Events As Number
+
+    If Not Available Then
+        Return
+    End If
+
+    Time = Character3D.AnimationTime(Actor)
+    Duration = 1
+
+    For Index = 0 To Character3D.ClipCount(Actor) - 1
+
+        If Character3D.ClipName(Actor, Index) = Clip Then
+            Duration = Max(1, Character3D.ClipDuration(Actor, Index))
+        End If
+
+    End For
+
+    Progress = Min(1000, Time * 1000 / Duration)
+
+    If Clip <> PreviousClip Or Time < PreviousTime Then
+
+        For Index = 3 To 7
+            Call ClearEffect(Index)
+        End For
+
+        ThunderPlayed = False
+
+        Call BeginAction(ChargeValue)
+
+    End If
+
+    PreviousClip = Clip
+    PreviousTime = Time
+    Attack = Clip = "SwordAttack" Or Clip = "JumpAttack" Or Clip = "ThorAttack"
+    Charge = Clip = "ThorAttack" And Progress >= 120 And Progress < 640
+    Release = Attack And Progress >= 640 And Progress < 930
+    Events = 0
+
+    If Not MotionPaused Then
+        Events = AdvanceCharge(ChargeValue, Progress, Clip = "ThorAttack", Attack)
+    End If
+
+    Power = 150 + ChargeValue.Energy * 500 / 1000
+    StateText = "Stored Storm"
+    FlashOpacity = Max(0, FlashOpacity - Elapsed)
+
+    If Charge Then
+        Power = Min(1000, 650 + Progress / 2)
+        StateText = "Sky Charge"
+    Else If Release Then
+        Power = 1000
+        StateText = "Lightning Discharge"
+    End If
+
+    If Clip = "Death" And Progress > 600 Then
+        Enabled = False
+        StateText = "Storm Fading"
+    End If
+
+    RenderVisible = Enabled
+
+    If Not Enabled Then
+
+        For Index = 0 To 7
+            Call ClearEffect(Index)
+        End For
+
+        Ok = Lightning.Update(Elapsed, Camera)
+        Ok = Graphics3D.SetPointLight3D(2, 0, 0, 0, 150, 190, 255, 0, 130)
+        FlashOpacity = 0
+
+        Return
+
+    End If
+
+    Call UpdateRim(Actor, ShieldVisible)
+
+    Head = Character3D.SocketPosition(Actor, "HammerHead", 1)
+    LeftPoint = Character3D.SocketPosition(Actor, "HammerLeft", 1)
+    RightPoint = Character3D.SocketPosition(Actor, "HammerRight", 1)
+
+    If WeaponVisible Then
+
+        Call Attach(1, LeftPoint, RightPoint, "StoredStorm", 1, Power, 2)
+
+        LeftPoint.Y = LeftPoint.Y + 3
+        RightPoint.Y = RightPoint.Y + 3
+
+        Call Attach(2, RightPoint, LeftPoint, "StoredStorm", 1, Power, 1)
+
+    Else
+
+        For Index = 1 To 7
+            Call ClearEffect(Index)
+        End For
+
+    End If
+
+    If Charge And WeaponVisible Then
+
+        Sky = Head
+        Sky.Y = Sky.Y + 250
+        Sky.X = Sky.X - 55
+
+        Call Attach(3, Sky, Head, "SkyToWeaponCharge", 2, 1000, 8)
+
+    Else
+
+        Call ClearEffect(3)
+
+    End If
+
+    If Release And WeaponVisible Then
+
+        Ground = Head
+        Ground.Y = 2
+
+        Call Attach(4, Head, Target, "StoredStorm", 1, 1000, 6)
+
+        For Index = 5 To 7
+
+            EndPoint = Ground
+            EndPoint.X = EndPoint.X + Fixed.CosFixed((Index - 5) * 120) * 42 / Core.FIXED_ONE
+            EndPoint.Z = EndPoint.Z + Fixed.SinFixed((Index - 5) * 120) * 42 / Core.FIXED_ONE
+
+            If AttackStyle = 1 Then
+
+                Call Attach(Index, Head, Target, "StoredStorm", 1, 850, 2)
+
+            Else If AttackStyle = 2 Then
+
+                Call Attach(Index, Head, EndPoint, "ChainTempest", 1, 850, 3)
+
+            Else If AttackStyle = 3 Then
+
+                Sky = Target
+                Sky.Y = Sky.Y + 240
+                Sky.X = Sky.X + (Index - 6) * 65
+
+                Call Attach(Index, Sky, EndPoint, "SkyStrike", 2, 1000, 8)
+
+            Else
+
+                Call Attach(Index, Ground, EndPoint, "ThunderGroundSlam", 1, 900, 3)
+
+            End If
+
+        End For
+
+        If (Not MotionPaused And
+            Events >= 2 And
+            Not ThunderPlayed) Then
+
+            ThunderPlayed = True
+            FlashOpacity = 180
+
+            Play Sound "Assets/Lightning/thunder.wav"
+
+        End If
+
+    Else
+
+        For Index = 4 To 7
+            Call ClearEffect(Index)
+        End For
+
+    End If
+
+    If Effects[1].Slot <> 0 Then
+        Ok = Lightning.SetCharge(Effects[1], ChargeValue.Energy)
+    End If
+
+    If Comfort <> 3 And FlashOpacity > 0 Then
+        Camera.Position.X = Camera.Position.X + FlashOpacity / (Comfort * 90)
+    End If
+
+    If WeaponVisible Then
+        Ok = Graphics3D.SetPointLight3D(2, Head.X, Head.Y, Head.Z,
+            150, 190, 255, Power / 5, 130)
+    Else
+        Ok = Graphics3D.SetPointLight3D(2, 0, 0, 0, 150, 190, 255, 0, 130)
+    End If
+
+    If Paused Then
+        Ok = Lightning.Update(0, Camera)
+    Else
+
+        Ok = Lightning.Update(Elapsed, Camera)
+    End If
+
+    If Lightning.Value(Lightning.QUERY_LAST_ERROR, Effects[0]) <> 0 And FirstError = 0 Then
+        FirstError = Lightning.Value(Lightning.QUERY_LAST_ERROR, Effects[0])
+    End If
+
+End Sub
+
+Public Sub DrawFlash()
+
+    If (Available And
+        RenderVisible And
+        Comfort <> 3 And
+        FlashOpacity > 0) Then
+        Fill Rectangle 0, 0, Window_Width(), Window_Height(), Rgb(155, 195, 255) Opacity FlashOpacity / (Comfort * 18)
+    End If
+
+End Sub
+
+Public Sub CycleStyle()
+
+    Dim Index As Number
+
+    AttackStyle = (AttackStyle + 1) Mod 4
+
+    For Index = 3 To 7
+        Call ClearEffect(Index)
+    End For
+
+End Sub
+
+Public Function StyleName() As Text
+
+    If AttackStyle = 1 Then
+        Return "Storm Lance"
+    Else If AttackStyle = 2 Then
+        Return "Chain Arcs"
+    Else If AttackStyle = 3 Then
+        Return "Godstorm"
+    End If
+
+    Return "Thunder Smash"
+
+End Function
+
+Public Sub CycleComfort()
+
+    Comfort = Comfort Mod 3 + 1
+    Ok = Lightning.SetFlashMode(Comfort)
+
+End Sub
+
+Public Function ComfortName() As Text
+
+    If Comfort = 1 Then
+        Return "Flash/Shake Full"
+    Else If Comfort = 2 Then
+        Return "Flash/Shake Low"
+    End If
+
+    Return "Flash/Shake Off"
+
+End Function
+
+Public Function StoredCharge() As Number
+
+    Dim ReturnValue As Number
+
+    ReturnValue = ChargeValue.Energy
+
+    Return ReturnValue
+
+End Function
+
+Public Sub Draw()
+
+    If Available And RenderVisible Then
+        Ok = Lightning.DrawAll()
+    End If
+
+End Sub
+
+Public Function Caption() As Text
+
+    Return StateText
+
+End Function
+
+Public Function LastError() As Number
+
+    Return FirstError
+
+End Function
+
+End Module
