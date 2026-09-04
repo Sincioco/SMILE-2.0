@@ -1,6 +1,7 @@
 [CmdletBinding()]
 param(
-    [string]$Configuration = 'Release'
+    [string]$Configuration = 'Release',
+    [switch]$NativeOnly
 )
 
 $ErrorActionPreference = 'Stop'
@@ -103,7 +104,7 @@ try {
         'Function InterpolateCalibrationChannel(',
         'Sub UndoLastCalibrationChange()',
         'Function SocketReferencePart(Name As Text)',
-        'Save Data CalibrationStorage Count StorageCount To "CharacterViewerCalibrationKeyframes"',
+        'Save Data CalibrationStorage Count StorageCount To CalibrationDataKey',
         'Sub ToggleDragon()',
         'Sub ToggleSword()',
         'Sub ToggleShield()',
@@ -261,22 +262,26 @@ try {
     Assert-True ($actualText -ceq $expectedText) `
         "Viewer hardening native assertions failed: $actualText"
 
-    & $compiler --project $testProject --target web --configuration $Configuration `
-        --output-dir $webOutput
-    if ($LASTEXITCODE -ne 0) { throw 'Viewer hardening Web compilation failed.' }
-    & node --check (Join-Path $webOutput 'game.js')
-    if ($LASTEXITCODE -ne 0) { throw 'Viewer hardening Web game syntax failed.' }
-    & node --check (Join-Path $webOutput 'smile-runtime.js')
-    if ($LASTEXITCODE -ne 0) { throw 'Viewer hardening Web runtime syntax failed.' }
-    & node 'scripts\run-web-test.js' $webOutput --expected $expected --timeout 60000
-    if ($LASTEXITCODE -ne 0) { throw 'Viewer hardening Web assertions failed.' }
+    if (-not $NativeOnly) {
+        & $compiler --project $testProject --target web --configuration $Configuration `
+            --output-dir $webOutput
+        if ($LASTEXITCODE -ne 0) { throw 'Viewer hardening Web compilation failed.' }
+        & node --check (Join-Path $webOutput 'game.js')
+        if ($LASTEXITCODE -ne 0) { throw 'Viewer hardening Web game syntax failed.' }
+        & node --check (Join-Path $webOutput 'smile-runtime.js')
+        if ($LASTEXITCODE -ne 0) { throw 'Viewer hardening Web runtime syntax failed.' }
+        & node 'scripts\run-web-test.js' $webOutput --expected $expected --timeout 60000
+        if ($LASTEXITCODE -ne 0) { throw 'Viewer hardening Web assertions failed.' }
+
+    }
+
 
     & 'artifacts\tests\Smile.NativeGraphicsTests.exe'
     if ($LASTEXITCODE -ne 0) { throw 'Native pointer and graphics assertions failed.' }
 
     Write-Host ('Character 3D Viewer identity, release gate, profile auto-fit, elapsed zoom, ' +
         'self-healing pointer drags, precision wheel, O-key auto-orbit mapping, material inspection, ' +
-        'socket metadata, preparation safety, and native/Web parity tests passed.')
+        'socket metadata and preparation safety passed. Web checks skipped: ' + $NativeOnly)
 }
 finally {
     Pop-Location

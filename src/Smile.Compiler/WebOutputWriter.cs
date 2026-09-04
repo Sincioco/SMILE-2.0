@@ -3213,6 +3213,10 @@ internal static class WebOutputWriter
                     case "KeyR": return 30;
                     case "KeyP": return 31;
                     case "KeyB": return 32;
+                    case "KeyX": return 35;
+                    case "KeyY": return 36;
+                    case "KeyZ": return 37;
+                    case "KeyE": return 38;
                     case "ControlLeft": return 33;
                     case "ControlRight": return 33;
                     case "Backquote": return 34;
@@ -3235,7 +3239,7 @@ internal static class WebOutputWriter
             function controlledKey(event) {
                 return event.code.startsWith("Arrow") || event.code === "Space" || event.code === "Enter" ||
                     event.code === "Escape" || event.code === "Tab" || event.code.startsWith("Control") ||
-                    event.code === "Backquote" || /^Key[WASDOFGRPB]$/.test(event.code);
+                    event.code === "Backquote" || /^Key[WASDOFGRPBXYZE]$/.test(event.code);
             }
 
             async function toggleFullScreen() {

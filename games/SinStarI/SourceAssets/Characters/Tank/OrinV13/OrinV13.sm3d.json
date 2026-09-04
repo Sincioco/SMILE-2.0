@@ -1,0 +1,80 @@
+{
+  "version": 1,
+  "sampleRate": 30,
+  "clips": {
+    "Idle": {
+      "loop": true
+    },
+    "SwordAttack": {
+      "loop": false
+    },
+    "ThorAttack": {
+      "loop": false
+    },
+    "Death": {
+      "loop": false
+    },
+    "Defend": {
+      "loop": true
+    },
+    "Victory": {
+      "loop": false
+    },
+    "Hit": {
+      "loop": false
+    },
+    "Run": {
+      "loop": true
+    },
+    "JumpAttack": {
+      "loop": false
+    }
+  },
+  "sockets": {
+    "Root": {
+      "node": "Hip"
+    },
+    "Head": {
+      "node": "Head"
+    },
+    "Chest": {
+      "node": "Spine02"
+    },
+    "HandRight": {
+      "node": "R_Hand"
+    },
+    "HandLeft": {
+      "node": "L_Hand"
+    },
+    "FootLeft": {
+      "node": "L_Foot"
+    },
+    "FootRight": {
+      "node": "R_Foot"
+    },
+    "SwordBase": {
+      "node": "R_Hand",
+      "translation": [
+        -0.01626826,
+        0.07797337,
+        -0.02393657
+      ]
+    },
+    "SwordTip": {
+      "node": "R_Hand",
+      "translation": [
+        0.1035291,
+        -0.03321466,
+        0.30007693
+      ]
+    },
+    "ShieldCenter": {
+      "node": "L_Hand",
+      "translation": [
+        -0.01570003,
+        -0.12913157,
+        -0.04359787
+      ]
+    }
+  }
+}

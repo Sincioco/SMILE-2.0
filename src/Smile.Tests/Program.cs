@@ -219,7 +219,15 @@ Run("Viewer and game letter shortcuts are shared named input constants", () =>
     Equal(33L, SyntaxFacts.GetBuiltInConstantValue(SyntaxKind.KeyControlKeyword));
     Equal(SyntaxKind.KeyBacktickKeyword, SyntaxFacts.GetKeywordKind("key_backtick"));
     Equal(34L, SyntaxFacts.GetBuiltInConstantValue(SyntaxKind.KeyBacktickKeyword));
-    Equal(false, Analyze("Game Window \"UI\"\nDim Key As Number\nDim Held As Boolean\nGet Key Key\nHeld = Key_Held(KEY_BACKTICK)\nIf Key = KEY_BACKTICK Then\nPrint Held\nEnd If\n").HasErrors);
+    Equal(SyntaxKind.KeyXKeyword, SyntaxFacts.GetKeywordKind("key_x"));
+    Equal(SyntaxKind.KeyYKeyword, SyntaxFacts.GetKeywordKind("key_y"));
+    Equal(SyntaxKind.KeyZKeyword, SyntaxFacts.GetKeywordKind("key_z"));
+    Equal(SyntaxKind.KeyEKeyword, SyntaxFacts.GetKeywordKind("key_e"));
+    Equal(35L, SyntaxFacts.GetBuiltInConstantValue(SyntaxKind.KeyXKeyword));
+    Equal(36L, SyntaxFacts.GetBuiltInConstantValue(SyntaxKind.KeyYKeyword));
+    Equal(37L, SyntaxFacts.GetBuiltInConstantValue(SyntaxKind.KeyZKeyword));
+    Equal(38L, SyntaxFacts.GetBuiltInConstantValue(SyntaxKind.KeyEKeyword));
+    Equal(false, Analyze("Game Window \"UI\"\nDim Key As Number\nDim Held As Boolean\nGet Key Key\nHeld = Key_Held(KEY_BACKTICK)\nIf Key = KEY_X Or Key = KEY_Y Or Key = KEY_Z Or Key = KEY_E Then\nPrint Held\nEnd If\n").HasErrors);
 });
 Run("Window dimensions, title, and activation are live game-window built-ins", () =>
 {

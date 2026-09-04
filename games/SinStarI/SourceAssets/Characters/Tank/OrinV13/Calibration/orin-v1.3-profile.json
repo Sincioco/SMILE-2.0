@@ -1,0 +1,58 @@
+{
+  "version": 1,
+  "assetId": "sin-star-i.character-2.tank",
+  "characterVersion": "v1.3",
+  "modelSha256": "6DD3EC872CAD79FD28AD3B8D5A5228149CBC35C74652A69B6123922D94901936",
+  "descriptorSha256": "8E3DB378BD44361753A0F994B182F8A5A663FFE0D0B5B68BE8ECAF13B43E94E4",
+  "sm3dSha256": "F61EAE1E3D75D5C88AC9FD2A36779F70DDAA911AF56670B498CF311A249EF1F0",
+  "clips": [
+    {
+      "name": "Death",
+      "sampleCount": 119
+    },
+    {
+      "name": "Defend",
+      "sampleCount": 19
+    },
+    {
+      "name": "Hit",
+      "sampleCount": 23
+    },
+    {
+      "name": "Idle",
+      "sampleCount": 78
+    },
+    {
+      "name": "JumpAttack",
+      "sampleCount": 72
+    },
+    {
+      "name": "Run",
+      "sampleCount": 23
+    },
+    {
+      "name": "SwordAttack",
+      "sampleCount": 47
+    },
+    {
+      "name": "ThorAttack",
+      "sampleCount": 91
+    },
+    {
+      "name": "Victory",
+      "sampleCount": 73
+    }
+  ],
+  "sockets": [
+    "Chest",
+    "FootLeft",
+    "FootRight",
+    "HandLeft",
+    "HandRight",
+    "Head",
+    "Root",
+    "ShieldCenter",
+    "SwordBase",
+    "SwordTip"
+  ]
+}

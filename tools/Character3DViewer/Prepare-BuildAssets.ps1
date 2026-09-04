@@ -10,6 +10,8 @@ $arinV56Root = Join-Path $repositoryRoot `
     'games\Dragonfall\SourceAssets\Arin'
 $paladinRoot = Join-Path $repositoryRoot `
     'games\SinStarI\SourceAssets\Characters\Paladin'
+$orinRoot = Join-Path $repositoryRoot `
+    'games\SinStarI\SourceAssets\Characters\Tank\OrinV13'
 $dragonRoot = Join-Path $repositoryRoot `
     'games\SinStarI\SourceAssets\Bosses\RedDragon'
 $technicalRoot = Join-Path $repositoryRoot `
@@ -23,6 +25,14 @@ $copies = @(
     @{
         Source = Join-Path $arinRoot 'ArinV57.sm3d.json'
         Destination = Join-Path $buildAssets 'ArinV57\ArinV57.sm3d.json'
+    },
+    @{
+        Source = Join-Path $orinRoot 'orin-v1.3-animation-checkpoint.glb'
+        Destination = Join-Path $buildAssets 'OrinV13\orin-v1.3-animation-checkpoint.glb'
+    },
+    @{
+        Source = Join-Path $orinRoot 'OrinV13.sm3d.json'
+        Destination = Join-Path $buildAssets 'OrinV13\OrinV13.sm3d.json'
     },
     @{
         Source = Join-Path $arinV56Root 'arin-integrated-candidate-v5.6.glb'

@@ -11,6 +11,12 @@ $syncScript = Join-Path $repositoryRoot 'scripts\sync-arin-v5-7-calibration.ps1'
 $resolvedExecutable = [IO.Path]::GetFullPath($Executable)
 
 & $syncScript -Mode Export -AllowMissing
+$orinProfile = Join-Path $repositoryRoot 'games\SinStarI\SourceAssets\Characters\Tank\OrinV13\Calibration\orin-v1.3-profile.json'
+$characters = @('Arin')
+if (Test-Path -LiteralPath $orinProfile) {
+    $characters += 'Orin'
+    & $syncScript -Character Orin -Mode Export -AllowMissing
+}
 
 $viewers = Get-Process -ErrorAction SilentlyContinue | Where-Object {
     $_.ProcessName -like 'Character3DViewer*' -or
@@ -42,7 +48,9 @@ if (-not (Test-Path -LiteralPath $resolvedExecutable -PathType Leaf)) {
     throw "Character Viewer/editor executable is missing: $resolvedExecutable"
 }
 
-& $syncScript -Mode Restore
+foreach ($character in $characters) {
+    & $syncScript -Character $character -Mode Restore
+}
 $viewerProcess = Start-Process -FilePath $resolvedExecutable `
     -WorkingDirectory ([IO.Path]::GetDirectoryName($resolvedExecutable)) -PassThru
 $shellCommand = Get-Command pwsh.exe -ErrorAction SilentlyContinue
@@ -51,10 +59,12 @@ if ($null -eq $shellCommand) {
     $shellCommand = Get-Command powershell.exe -ErrorAction Stop
 }
 
-$watchArguments = '-NoProfile -ExecutionPolicy Bypass -File "{0}" -Mode Watch -ViewerProcessId {1}' -f `
-    $syncScript, $viewerProcess.Id
-Start-Process -FilePath $shellCommand.Source -ArgumentList $watchArguments `
-    -WindowStyle Hidden | Out-Null
+foreach ($character in $characters) {
+    $watchArguments = '-NoProfile -ExecutionPolicy Bypass -File "{0}" -Character {1} -Mode Watch -ViewerProcessId {2}' -f `
+        $syncScript, $character, $viewerProcess.Id
+    Start-Process -FilePath $shellCommand.Source -ArgumentList $watchArguments `
+        -WindowStyle Hidden | Out-Null
+}
 
 Add-Type -TypeDefinition @'
 using System;

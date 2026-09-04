@@ -32,6 +32,10 @@
 #define SMILE_KEY_B 32
 #define SMILE_KEY_CONTROL 33
 #define SMILE_KEY_BACKTICK 34
+#define SMILE_KEY_X 35
+#define SMILE_KEY_Y 36
+#define SMILE_KEY_Z 37
+#define SMILE_KEY_E 38
 #define SMILE_KEY_UP 10
 #define SMILE_KEY_DOWN 11
 #define SMILE_KEY_LEFT 12
@@ -1157,6 +1161,10 @@ static long long smile_map_key(WCHAR character, WORD virtual_key)
     if (character == L'r' || character == L'R' || virtual_key == 'R') return SMILE_KEY_R;
     if (character == L'p' || character == L'P' || virtual_key == 'P') return SMILE_KEY_P;
     if (character == L'b' || character == L'B' || virtual_key == 'B') return SMILE_KEY_B;
+    if (character == L'x' || character == L'X' || virtual_key == 'X') return SMILE_KEY_X;
+    if (character == L'y' || character == L'Y' || virtual_key == 'Y') return SMILE_KEY_Y;
+    if (character == L'z' || character == L'Z' || virtual_key == 'Z') return SMILE_KEY_Z;
+    if (character == L'e' || character == L'E' || virtual_key == 'E') return SMILE_KEY_E;
     if (virtual_key == VK_UP) return SMILE_KEY_UP;
     if (virtual_key == VK_DOWN) return SMILE_KEY_DOWN;
     if (virtual_key == VK_LEFT) return SMILE_KEY_LEFT;
@@ -1188,6 +1196,10 @@ static int smile_key_virtual(long long key)
         case SMILE_KEY_R: return 'R';
         case SMILE_KEY_P: return 'P';
         case SMILE_KEY_B: return 'B';
+        case SMILE_KEY_X: return 'X';
+        case SMILE_KEY_Y: return 'Y';
+        case SMILE_KEY_Z: return 'Z';
+        case SMILE_KEY_E: return 'E';
         case SMILE_KEY_UP: return VK_UP;
         case SMILE_KEY_DOWN: return VK_DOWN;
         case SMILE_KEY_LEFT: return VK_LEFT;
@@ -1272,6 +1284,10 @@ long long smile_get_key(void)
         if ((GetAsyncKeyState('R') & 0x8000) != 0) return SMILE_KEY_R;
         if ((GetAsyncKeyState('P') & 0x8000) != 0) return SMILE_KEY_P;
         if ((GetAsyncKeyState('B') & 0x8000) != 0) return SMILE_KEY_B;
+        if ((GetAsyncKeyState('X') & 0x8000) != 0) return SMILE_KEY_X;
+        if ((GetAsyncKeyState('Y') & 0x8000) != 0) return SMILE_KEY_Y;
+        if ((GetAsyncKeyState('Z') & 0x8000) != 0) return SMILE_KEY_Z;
+        if ((GetAsyncKeyState('E') & 0x8000) != 0) return SMILE_KEY_E;
         if ((GetAsyncKeyState(VK_CONTROL) & 0x8000) != 0) return SMILE_KEY_CONTROL;
         if ((GetAsyncKeyState(VK_OEM_3) & 0x8000) != 0) return SMILE_KEY_BACKTICK;
         return SMILE_KEY_NONE;

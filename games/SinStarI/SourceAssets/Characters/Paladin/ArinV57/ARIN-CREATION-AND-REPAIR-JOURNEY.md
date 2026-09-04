@@ -680,3 +680,19 @@ not override current code, root instructions, or Sin's latest approval.
 Maintain this guide as the workflow changes. Record what changed, why it changed,
 which revision it applies to, evidence, and what remains unimplemented. That is
 more valuable than another confident but untested “rotate it 90 degrees” fix.
+
+## Multi-character Viewer Follow-up
+
+The native Viewer now uses separate Character tabs and calibration storage for Arin and
+Orin, plus a Party preview. The existing Arin storage key, profile fingerprint, and all
+saved values remain unchanged. The shared synchronizer retains its historical filename;
+`-Character Orin` selects Orin’s package and data key. Launch starts a watcher for each.
+Party reuses the same correction evaluator for both actors, with distinct in-memory clip
+ranges. Equipment UI labels now say Weapon so they also describe Orin’s hammer.
+
+Orin’s first equipped Tripo export illustrates another source-rig hazard: some hip-cloth
+vertices carried hand/arm weights, and its hand bone controlled much of a forearm. Raising
+arms lifted cloth and independent hand rotation separated the gauntlet. These were observed
+in the T-pose derivative, not evidence of deleted mesh geometry. Removing remote cloth
+influences fixed the lifted cloth; Sin is providing a clean T-pose as the preferred rigging
+source. Do not use this initial derivative as an accepted animation rig.

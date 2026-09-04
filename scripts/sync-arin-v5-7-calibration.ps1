@@ -9,7 +9,9 @@ param(
     [string]$DestinationPath,
     [string]$DataRoot,
     [switch]$MigrateLegacy,
-    [switch]$FunctionsOnly
+    [switch]$FunctionsOnly,
+    [ValidateSet('Arin', 'Orin')]
+    [string]$Character = 'Arin'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -31,7 +33,20 @@ $clipNames = @(
     'Walk'
 )
 $channelCount = 20
-$profile = Get-Content -LiteralPath (Join-Path $packageRoot 'Calibration\arin-v5.7-profile.json') -Raw |
+$profileFile = 'Calibration\arin-v5.7-profile.json'
+$modelFile = 'arin-v5.7-idle-equipment-checkpoint.glb'
+$descriptorFile = 'ArinV57.sm3d.json'
+$cookedRelativePath = 'ArinV57\ArinV57.sm3d'
+if ($Character -eq 'Orin') {
+    $packageRoot = Join-Path $repositoryRoot 'games\SinStarI\SourceAssets\Characters\Tank\OrinV13'
+    $snapshotPath = Join-Path $packageRoot 'Calibration\orin-v1.3-pose-calibration.json'
+    $profileFile = 'Calibration\orin-v1.3-profile.json'
+    $modelFile = 'orin-v1.3-animation-checkpoint.glb'
+    $descriptorFile = 'OrinV13.sm3d.json'
+    $cookedRelativePath = 'OrinV13\OrinV13.sm3d'
+    $dataKey = 'CharacterViewer.Orin.v1.3.CalibrationKeyframes'
+}
+$profile = Get-Content -LiteralPath (Join-Path $packageRoot $profileFile) -Raw |
     ConvertFrom-Json -AsHashtable
 $profileClips = $profile.clips
 $legacyClipNames = $clipNames.Clone()
@@ -100,8 +115,8 @@ function Get-ProfileFingerprint {
 
 function Assert-ProfileAssets {
     foreach ($pair in @(
-        @((Join-Path $packageRoot 'arin-v5.7-idle-equipment-checkpoint.glb'), $profile.modelSha256),
-        @((Join-Path $packageRoot 'ArinV57.sm3d.json'), $profile.descriptorSha256)
+        @((Join-Path $packageRoot $modelFile), $profile.modelSha256),
+        @((Join-Path $packageRoot $descriptorFile), $profile.descriptorSha256)
     )) {
         if ((Get-FileHash -LiteralPath $pair[0]).Hash -cne $pair[1]) {
             throw "Profile assets changed; an explicit calibration migration is required: $($pair[0])"
@@ -109,7 +124,7 @@ function Assert-ProfileAssets {
     }
     # The cooked mirror is disposable; when present it must match the identity
     # recorded alongside the canonical model/descriptor, never an older build.
-    $cookedPath = Join-Path $repositoryRoot 'tools\Character3DViewer\bin\Debug\Assets\Generation2\ArinV57\ArinV57.sm3d'
+    $cookedPath = Join-Path $repositoryRoot "tools\Character3DViewer\bin\Debug\Assets\Generation2\$cookedRelativePath"
     if (Test-Path -LiteralPath $cookedPath) {
         if ((Get-FileHash -LiteralPath $cookedPath).Hash -cne $profile.sm3dSha256) {
             throw "Cooked profile changed; explicit migration is required: $cookedPath"
@@ -189,14 +204,14 @@ function Read-LivePayload([string]$Path = $livePath) {
         $envelope[1] -ne 77 -or
         $envelope[2] -ne 68 -or
         $envelope[3] -ne 52) {
-        throw "Arin v5.7 live calibration has an invalid SMD4 envelope: $livePath"
+        throw "Character live calibration has an invalid SMD4 envelope: $livePath"
     }
 
     $envelopeVersion = [BitConverter]::ToUInt32($envelope, 4)
     $payloadLength = [BitConverter]::ToUInt32($envelope, 8)
 
     if ($envelopeVersion -ne 1 -or $envelope.Length -ne 44 + $payloadLength) {
-        throw "Arin v5.7 live calibration has an unsupported SMD4 envelope."
+        throw "Character live calibration has an unsupported SMD4 envelope."
     }
 
     $payload = [byte[]]::new($payloadLength)
@@ -207,7 +222,7 @@ function Read-LivePayload([string]$Path = $livePath) {
     )
 
     if ($actualDigest -cne $expectedDigest) {
-        throw "Arin v5.7 live calibration checksum does not match its payload."
+        throw "Character live calibration checksum does not match its payload."
     }
 
     return $payload
@@ -220,9 +235,12 @@ function Convert-PayloadToSnapshot([byte[]]$Payload) {
         $Payload[2] -ne 75 -or
         $Payload[3] -ne 70 -or
         $Payload[4] -notin @(1, 2, 3)) {
-        throw 'Arin v5.7 calibration payload has an invalid SMKF header.'
+        throw 'Character calibration payload has an invalid SMKF header.'
     }
 
+    if ($Character -eq 'Orin' -and $Payload[4] -ne 3) {
+        throw 'Orin requires a fingerprinted version-3 calibration payload.'
+    }
     $clipCount = [int]$Payload[5]
     $storedChannels = if ($Payload[4] -eq 1) { 18 } else { 20 }
 
@@ -257,7 +275,7 @@ function Convert-PayloadToSnapshot([byte[]]$Payload) {
             $offset += $nameLength
         }
         if ($offset + 2 -gt $Payload.Length) {
-            throw 'Arin v5.7 calibration ended before a clip keyframe count.'
+            throw 'Character calibration ended before a clip keyframe count.'
         }
 
         $keyframeCount = Read-Unsigned16 $Payload $offset
@@ -266,21 +284,21 @@ function Convert-PayloadToSnapshot([byte[]]$Payload) {
         $previousFrame = -1
 
         if ($keyframeCount -gt 256) {
-            throw 'Arin v5.7 calibration exceeds 256 keyframes in one clip.'
+            throw 'Character calibration exceeds 256 keyframes in one clip.'
         }
 
         for ($keyframeIndex = 0; $keyframeIndex -lt $keyframeCount; $keyframeIndex++) {
             $required = 2 + $storedChannels * 2
 
             if ($offset + $required -gt $Payload.Length) {
-                throw 'Arin v5.7 calibration ended inside a keyframe record.'
+                throw 'Character calibration ended inside a keyframe record.'
             }
 
             $frame = Read-Unsigned16 $Payload $offset
             $offset += 2
 
             if ($frame -le $previousFrame) {
-                throw 'Arin v5.7 calibration keyframes must be in ascending frame order.'
+                throw 'Character calibration keyframes must be in ascending frame order.'
             }
 
             $previousFrame = $frame
@@ -291,7 +309,7 @@ function Convert-PayloadToSnapshot([byte[]]$Payload) {
                 $offset += 2
 
                 if ($encoded -gt 360) {
-                    throw 'Arin v5.7 calibration contains a channel outside -180 through 180.'
+                    throw 'Character calibration contains a channel outside -180 through 180.'
                 }
 
                 $values[$channel] = $encoded - 180
@@ -326,20 +344,20 @@ function Convert-PayloadToSnapshot([byte[]]$Payload) {
     }
 
     if ($offset -ne $Payload.Length) {
-        throw 'Arin v5.7 calibration contains unexpected trailing data.'
+        throw 'Character calibration contains unexpected trailing data.'
     }
 
     $savedKeyframe = $null
 
     if ($saved) {
         if ($savedClip -lt 0 -or $savedClip -ge $clipCount) {
-            throw 'Arin v5.7 calibration refers to an invalid saved clip.'
+            throw 'Character calibration refers to an invalid saved clip.'
         }
 
         $matchingFrame = @($clips[$savedClip].keyframes | Where-Object frame -eq $savedFrame)
 
         if ($matchingFrame.Count -ne 1) {
-            throw 'Arin v5.7 calibration refers to a saved frame that is not keyed.'
+            throw 'Character calibration refers to a saved frame that is not keyed.'
         }
 
         $savedKeyframe = [ordered]@{
@@ -351,8 +369,8 @@ function Convert-PayloadToSnapshot([byte[]]$Payload) {
 
     $snapshot = [ordered]@{
         schemaVersion = 2
-        assetId = 'sin-star-i.character-1.paladin'
-        characterVersion = 'v5.7'
+        assetId = $profile.assetId
+        characterVersion = $profile.characterVersion
         applicationId = $applicationId
         dataKey = $dataKey
         storageVersion = 3
@@ -368,12 +386,15 @@ function Normalize-Snapshot($Snapshot) {
     Assert-Fields $Snapshot @('schemaVersion','assetId','characterVersion','applicationId',
         'dataKey','storageVersion','savedKeyframe','totalKeyframes','clips') @('profile') 'Calibration'
     if ($Snapshot.schemaVersion -notin @(1, 2) -or
-        $Snapshot.assetId -cne 'sin-star-i.character-1.paladin' -or
-        $Snapshot.characterVersion -cne 'v5.7' -or
+        $Snapshot.assetId -cne $profile.assetId -or
+        $Snapshot.characterVersion -cne $profile.characterVersion -or
         $Snapshot.applicationId -cne $applicationId -or
         $Snapshot.dataKey -cne $dataKey -or
         $Snapshot.storageVersion -notin @(1, 2, 3)) {
-        throw 'Arin v5.7 calibration JSON identity or schema is invalid.'
+        throw 'Character calibration JSON identity or schema is invalid.'
+    }
+    if ($Character -eq 'Orin' -and $Snapshot.schemaVersion -ne 2) {
+        throw 'Orin requires schema-2 calibration JSON with its own asset identity.'
     }
     $null = Assert-Integer $Snapshot.schemaVersion 1 2 'Schema version'
     $null = Assert-Integer $Snapshot.storageVersion 1 3 'Storage version'
@@ -471,7 +492,7 @@ function Convert-SnapshotToPayload($Snapshot) {
     $clips = @($Snapshot.clips | Where-Object index -ge 0)
 
     if ($clips.Count -ne $clipNames.Count) {
-        throw "Arin v5.7 calibration JSON must contain exactly $($clipNames.Count) clips."
+        throw "Character calibration JSON must contain exactly $($clipNames.Count) clips."
     }
 
     $bytes = [Collections.Generic.List[byte]]::new()
@@ -488,7 +509,7 @@ function Convert-SnapshotToPayload($Snapshot) {
         if ($savedClip -lt 0 -or $savedClip -ge $clipNames.Count -or
             $Snapshot.savedKeyframe.clipName -cne $clipNames[$savedClip] -or
             $savedFrame -lt 0 -or $savedFrame -gt 65535) {
-            throw 'Arin v5.7 savedKeyframe is invalid.'
+            throw 'Character savedKeyframe is invalid.'
         }
     }
 
@@ -502,7 +523,7 @@ function Convert-SnapshotToPayload($Snapshot) {
         $clip = $clips[$clipIndex]
 
         if ($clip.index -ne $clipIndex -or $clip.name -cne $clipNames[$clipIndex]) {
-            throw "Arin v5.7 clip $clipIndex identity is invalid."
+            throw "Character clip $clipIndex identity is invalid."
         }
 
         $keyframes = @($clip.keyframes)
@@ -511,7 +532,7 @@ function Convert-SnapshotToPayload($Snapshot) {
         $bytes.AddRange($nameBytes)
 
         if ($keyframes.Count -gt 256) {
-            throw "Arin v5.7 clip $($clip.name) exceeds 256 keyframes."
+            throw "Character clip $($clip.name) exceeds 256 keyframes."
         }
 
         Add-Unsigned16 $bytes $keyframes.Count
@@ -523,7 +544,7 @@ function Convert-SnapshotToPayload($Snapshot) {
             if ($frame -ne [Math]::Truncate($frame) -or
                 $frame -le $previousFrame -or
                 $frame -gt 65535) {
-                throw "Arin v5.7 clip $($clip.name) keyframes must use ascending whole frames."
+                throw "Character clip $($clip.name) keyframes must use ascending whole frames."
             }
 
             $frame = [int]$frame
@@ -558,11 +579,11 @@ function Convert-SnapshotToPayload($Snapshot) {
     }
 
     if (-not $savedFrameFound) {
-        throw 'Arin v5.7 savedKeyframe does not identify a keyframe in the JSON.'
+        throw 'Character savedKeyframe does not identify a keyframe in the JSON.'
     }
 
     if (($clips.keyframes | Measure-Object).Count -ne $totalKeyframes) {
-        throw 'Arin v5.7 totalKeyframes does not match the clip contents.'
+        throw 'Character totalKeyframes does not match the clip contents.'
     }
 
     return $bytes.ToArray()
@@ -641,12 +662,12 @@ function Export-LiveCalibration([bool]$MissingIsAllowed) {
 
     if ($null -eq $payload) {
         if ($MissingIsAllowed) {
-            Write-Host 'No live Arin v5.7 keyframe file exists yet; repository JSON remains unchanged.'
+            Write-Host 'No live Character keyframe file exists yet; repository JSON remains unchanged.'
 
             return $false
         }
 
-        throw 'No live Arin v5.7 keyframe file exists. Save a frame in the editor first.'
+        throw 'No live Character keyframe file exists. Save a frame in the editor first.'
     }
 
     $snapshot = Convert-PayloadToSnapshot $payload
@@ -668,20 +689,23 @@ function Restore-LiveCalibration([bool]$Overwrite) {
     $destination = if ($DestinationPath) { $DestinationPath } else { $livePath }
     if (-not (Test-Path -LiteralPath $source -PathType Leaf)) {
         if ($AllowMissing) {
-            Write-Host 'No repository Arin v5.7 calibration JSON exists yet.'
+            Write-Host 'No repository Character calibration JSON exists yet.'
 
             return $false
         }
 
-        throw "Arin v5.7 calibration JSON is missing: $snapshotPath"
+        throw "Character calibration JSON is missing: $snapshotPath"
     }
 
-    # Validate both existing files even when an overwrite is not requested.
+    # A normal restore validates both files. An explicit forced migration may
+    # replace a runtime payload bound to the preceding asset fingerprint.
     $snapshot = Read-Snapshot $source
     $previousHash = Get-PathHash $destination
-    if ($previousHash) { $null = Convert-PayloadToSnapshot (Read-LivePayload $destination) }
     if ($previousHash -and -not $Overwrite) {
-        Write-Host 'Live Arin v5.7 calibration already exists; repository JSON was not restored over it.'
+        $null = Convert-PayloadToSnapshot (Read-LivePayload $destination)
+    }
+    if ($previousHash -and -not $Overwrite) {
+        Write-Host 'Live Character calibration already exists; repository JSON was not restored over it.'
 
         return $false
     }
@@ -698,7 +722,7 @@ function Restore-LiveCalibration([bool]$Overwrite) {
     [Security.Cryptography.SHA256]::HashData($payload).CopyTo($envelope, 12)
     $payload.CopyTo($envelope, 44)
     Write-AtomicBytes $destination $envelope $previousHash
-    Write-Host "Restored $($snapshot.totalKeyframes) Arin v5.7 keyframes from repository JSON."
+    Write-Host "Restored $($snapshot.totalKeyframes) Character keyframes from repository JSON."
 
     return $true
 }

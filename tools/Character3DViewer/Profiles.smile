@@ -9,10 +9,11 @@ Public Const PROFILE_ARIN = 0
 Public Const PROFILE_ARIN_V56 = 1
 Public Const PROFILE_ARIN_ORIGINAL = 2
 Public Const PROFILE_TECHNICAL_ARTICULATED = 3
+Public Const PROFILE_ORIN = 4
 
 Public Function ProfileCount() As Number
 
-    Return 4
+    Return 5
 
 End Function
 
@@ -39,6 +40,19 @@ Public Function ProfileAt(Index As Number) As CharacterViewer.Profile
         Result.ExpectedClipCount = 8
         Result.ExpectedSocketCount = 13
         Result.DesiredWorldHeight = 100
+
+    Else If Index = PROFILE_ORIN Then
+
+        Result.AssetId = "sin-star-i.character-2.tank"
+        Result.CandidateVersion = "v1.3"
+        Result.DisplayName = "Orin"
+        Result.PartyRole = "Tank"
+        Result.PrototypeAlias = ""
+        Result.ProductionStatus = "Candidate"
+        Result.AssetPath = "Assets\Generation2\OrinV13\OrinV13.sm3d"
+        Result.ExpectedClipCount = 9
+        Result.ExpectedSocketCount = 10
+        Result.DesiredWorldHeight = 125
 
     Else If Index = PROFILE_ARIN_V56 Then
 
@@ -91,6 +105,8 @@ Public Function ModelFileName(ProfileIndex As Number) As Text
 
     If ProfileIndex = PROFILE_ARIN Then
         Result = "arin-v5.7-idle-equipment-checkpoint.glb"
+    Else If ProfileIndex = PROFILE_ORIN Then
+        Result = "orin-v1.3-animation-checkpoint.glb"
     Else If ProfileIndex = PROFILE_ARIN_V56 Then
         Result = "arin-integrated-candidate-v5.6.glb"
     Else If ProfileIndex = PROFILE_ARIN_ORIGINAL Then
@@ -107,7 +123,9 @@ Public Function ClipCount(ProfileIndex As Number) As Number
 
     Dim Result As Number
 
-    If ProfileIndex = PROFILE_ARIN Then
+    If ProfileIndex = PROFILE_ORIN Then
+        Result = 9
+    Else If IsPartyCharacter(ProfileIndex) Then
         Result = 8
     Else If ProfileIndex = PROFILE_ARIN_V56 Then
         Result = 11
@@ -125,7 +143,7 @@ Public Function InitialOrbitYaw(ProfileIndex As Number) As Number
 
     Dim Result As Number
 
-    If ProfileIndex = PROFILE_ARIN Or ProfileIndex = PROFILE_ARIN_V56 Then
+    If IsPartyCharacter(ProfileIndex) Or ProfileIndex = PROFILE_ARIN_V56 Then
         Result = -90
     End If
 
@@ -137,7 +155,7 @@ Public Function EpicGlowAvailable(ProfileIndex As Number) As Boolean
 
     Dim Result As Boolean
 
-    Result = ProfileIndex = PROFILE_ARIN
+    Result = IsPartyCharacter(ProfileIndex)
 
     Return Result
 
@@ -147,7 +165,7 @@ Public Function EpicGlowVisibleByDefault(ProfileIndex As Number) As Boolean
 
     Dim Result As Boolean
 
-    Result = ProfileIndex = PROFILE_ARIN
+    Result = IsPartyCharacter(ProfileIndex)
 
     Return Result
 
@@ -157,7 +175,29 @@ Public Function ClipName(ProfileIndex As Number, ClipIndex As Number) As Text
 
     Dim Result As Text
 
-    If ProfileIndex = PROFILE_ARIN Then
+    If ProfileIndex = PROFILE_ORIN Then
+
+        If ClipIndex = 0 Then
+            Result = "Idle"
+        Else If ClipIndex = 1 Then
+            Result = "SwordAttack"
+        Else If ClipIndex = 2 Then
+            Result = "JumpAttack"
+        Else If ClipIndex = 3 Then
+            Result = "ThorAttack"
+        Else If ClipIndex = 4 Then
+            Result = "Defend"
+        Else If ClipIndex = 5 Then
+            Result = "Hit"
+        Else If ClipIndex = 6 Then
+            Result = "Death"
+        Else If ClipIndex = 7 Then
+            Result = "Victory"
+        Else If ClipIndex = 8 Then
+            Result = "Run"
+        End If
+
+    Else If IsPartyCharacter(ProfileIndex) Then
 
         If ClipIndex = 0 Then
             Result = "Idle"
@@ -237,7 +277,21 @@ Public Function ClipLabel(ProfileIndex As Number, ClipIndex As Number) As Text
 
     Dim Result As Text
 
-    If ProfileIndex = PROFILE_ARIN Then
+    If ProfileIndex = PROFILE_ORIN Then
+
+        If ClipIndex = 1 Then
+            Result = "Attack"
+        Else If ClipIndex = 2 Then
+            Result = "Jump Attack"
+        Else If ClipIndex = 3 Then
+            Result = "Thor Attack"
+        Else If ClipIndex = 4 Then
+            Result = "Block"
+        Else
+            Result = ClipName(ProfileIndex, ClipIndex)
+        End If
+
+    Else If IsPartyCharacter(ProfileIndex) Then
 
         If ClipIndex = 1 Then
             Result = "Attack"
@@ -290,7 +344,9 @@ Public Function ClipLoops(ProfileIndex As Number, ClipIndex As Number) As Boolea
 
     Result = True
 
-    If ProfileIndex = PROFILE_ARIN Then
+    If ProfileIndex = PROFILE_ORIN Then
+        Result = ClipIndex = 0 Or ClipIndex = 4 Or ClipIndex = 8
+    Else If IsPartyCharacter(ProfileIndex) Then
         Result = (ClipIndex = 0 Or
             ClipIndex = 3 Or
             ClipIndex = 6 Or
@@ -313,7 +369,7 @@ Public Function SocketCount(ProfileIndex As Number) As Number
 
     Dim Result As Number
 
-    If ProfileIndex = PROFILE_ARIN Then
+    If IsPartyCharacter(ProfileIndex) Then
         Result = 10
     Else If ProfileIndex = PROFILE_ARIN_V56 Then
         Result = 10
@@ -331,7 +387,7 @@ Public Function SocketName(ProfileIndex As Number, SocketIndex As Number) As Tex
 
     Dim Result As Text
 
-    If (ProfileIndex = PROFILE_ARIN Or
+    If (IsPartyCharacter(ProfileIndex) Or
         ProfileIndex = PROFILE_ARIN_V56 Or
         ProfileIndex = PROFILE_ARIN_ORIGINAL) Then
 
@@ -347,19 +403,19 @@ Public Function SocketName(ProfileIndex As Number, SocketIndex As Number) As Tex
             Result = "SwordTip"
         Else If SocketIndex = 5 Then
             Result = "ShieldCenter"
-        Else If ((ProfileIndex = PROFILE_ARIN Or
+        Else If ((IsPartyCharacter(ProfileIndex) Or
             ProfileIndex = PROFILE_ARIN_V56) And
             SocketIndex = 6) Then
             Result = "HandRight"
-        Else If ((ProfileIndex = PROFILE_ARIN Or
+        Else If ((IsPartyCharacter(ProfileIndex) Or
             ProfileIndex = PROFILE_ARIN_V56) And
             SocketIndex = 7) Then
             Result = "HandLeft"
-        Else If ((ProfileIndex = PROFILE_ARIN Or
+        Else If ((IsPartyCharacter(ProfileIndex) Or
             ProfileIndex = PROFILE_ARIN_V56) And
             SocketIndex = 8) Then
             Result = "FootLeft"
-        Else If ((ProfileIndex = PROFILE_ARIN Or
+        Else If ((IsPartyCharacter(ProfileIndex) Or
             ProfileIndex = PROFILE_ARIN_V56) And
             SocketIndex = 9) Then
             Result = "FootRight"
@@ -369,6 +425,58 @@ Public Function SocketName(ProfileIndex As Number, SocketIndex As Number) As Tex
 
         Result = "Grip"
 
+    End If
+
+    Return Result
+
+End Function
+
+Public Function IsPartyCharacter(ProfileIndex As Number) As Boolean
+
+    Dim Result As Boolean
+
+    Result = ProfileIndex = PROFILE_ARIN Or ProfileIndex = PROFILE_ORIN
+
+    Return Result
+
+End Function
+
+Public Function CalibrationKey(ProfileIndex As Number) As Text
+
+    Dim Result As Text
+
+    Result = "CharacterViewerCalibrationKeyframes"
+
+    If ProfileIndex = PROFILE_ORIN Then
+        Result = "CharacterViewer.Orin.v1.3.CalibrationKeyframes"
+    End If
+
+    Return Result
+
+End Function
+
+Public Function CalibrationFile(ProfileIndex As Number) As Text
+
+    Dim Result As Text
+
+    Result = "D:\SMILE 2.0\games\SinStarI\SourceAssets\Characters\Paladin\ArinV57\Calibration\arin-v5.7-pose-calibration.json"
+
+    If ProfileIndex = PROFILE_ORIN Then
+        Result = "D:\SMILE 2.0\games\SinStarI\SourceAssets\Characters\Tank\OrinV13\Calibration\orin-v1.3-pose-calibration.json"
+    End If
+
+    Return Result
+
+End Function
+
+Public Function CalibrationFingerprint(ProfileIndex As Number) As Text
+
+    Dim Result As Text
+
+    Result = "f554574e00ec4a9f9c59eac1b3d4adaec9649c90972cc5f0dc6c92859568ba5d"
+
+    If ProfileIndex = PROFILE_ORIN Then
+        Result = "b0b33519b67bbe94ad3d3c12bb79838b600909bc6448255be3cac36333dfc825"
     End If
 
     Return Result

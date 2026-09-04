@@ -31,6 +31,24 @@ CalibrationSavedClip = 3
 CalibrationSavedFrame = 0
 
 Call CalibrationCheck(StoreCalibrationKeyframe(3, 0), "Store first key")
+
+CalibrationClipBase = CALIBRATION_MAX_CLIPS
+
+Call ClearCalibrationMemory()
+
+SwordPositionCalibration[CalibrationClipBase + 3, 0] = 19
+
+Call CalibrationCheck(StoreCalibrationKeyframe(3, 0), "Second character stores its own frame")
+Call CalibrationCheck(CalibrationKeyframeValues[3, 12] = 2, "Second character does not modify Arin's frame")
+Call CalibrationCheck(CalibrationKeyframeValues[CalibrationClipBase + 3, 12] = 19, "Same clip and frame retain distinct values")
+Call ClearCalibrationMemory()
+Call CalibrationCheck(CalibrationKeyframeCounts[3] = 1, "Clearing another character preserves Arin")
+
+CalibrationClipBase = 0
+CalibrationSaved = True
+CalibrationSavedClip = 3
+CalibrationSavedFrame = 0
+
 Call SaveCalibrationKeyframes()
 Call UndoLastCalibrationChange()
 Call CalibrationCheck(CalibrationKeyframeCounts[3] = 0, "Undo also restores a never-saved empty track")
@@ -62,7 +80,7 @@ CalibrationStorage[10] = 0
 
 Call CalibrationCheck(Not DecodeCalibrationStorage(TestSavedCount), "Reject profile fingerprint")
 
-CalibrationStorage[10] = Text_Code_At(CALIBRATION_PROFILE_FINGERPRINT, 0)
+CalibrationStorage[10] = Text_Code_At(CalibrationProfileFingerprint, 0)
 
 Call CalibrationCheck(DecodeCalibrationStorage(TestSavedCount), "Decode all named clips")
 Call ApplyWristCalibration()
@@ -70,7 +88,7 @@ Call ApplyEquipmentCalibration()
 
 CalibrationHoldGrip = True
 CalibrationTransform = CALIBRATION_TRANSFORM_ROTATE
-TestAnchor = EquipmentGripThousandths(ARIN_SWORD_PART_INDEX, "HandRight")
+TestAnchor = EquipmentGripThousandths(WEAPON_PART_INDEX, "HandRight")
 
 For TestIndex = 1 To 6
 
@@ -82,14 +100,14 @@ For TestIndex = 1 To 6
     Call ReloadCurrentCalibrationKeyframe()
 End For
 
-TestPosition = EquipmentGripThousandths(ARIN_SWORD_PART_INDEX, "HandRight")
+TestPosition = EquipmentGripThousandths(WEAPON_PART_INDEX, "HandRight")
 
 Call CalibrationCheck(Abs(TestPosition.X - TestAnchor.X) < 1000 And
     Abs(TestPosition.Y - TestAnchor.Y) < 1000 And Abs(TestPosition.Z - TestAnchor.Z) < 1000,
     "Repeated in-place inverse rotations do not accumulate whole-unit drift")
-Call CalibrationCheck(SocketReferencePart("SwordTip") = ARIN_SWORD_PART_INDEX, "Sword marker owns equipment transform")
-Call CalibrationCheck(SocketReferencePart("ShieldFireTip") = ARIN_SHIELD_PART_INDEX, "Shield marker owns equipment transform")
-Call CalibrationCheck(SocketReferencePart("HandRight") = ARIN_BODY_PART_INDEX, "Hand marker owns wrist transform")
+Call CalibrationCheck(SocketReferencePart("SwordTip") = WEAPON_PART_INDEX, "Sword marker owns equipment transform")
+Call CalibrationCheck(SocketReferencePart("ShieldFireTip") = SHIELD_PART_INDEX, "Shield marker owns equipment transform")
+Call CalibrationCheck(SocketReferencePart("HandRight") = BODY_PART_INDEX, "Hand marker owns wrist transform")
 
 CameraElapsed = 16
 FlameAnimationPaused = False

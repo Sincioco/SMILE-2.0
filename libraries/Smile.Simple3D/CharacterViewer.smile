@@ -6,6 +6,7 @@ Option Explicit
 Import Smile.Simple3D.Character3D As Character3D
 Import Smile.Simple3D.Core As Core
 Import Smile.Simple3D.FixedMath As Math3D
+Import Smile.Simple3D.Math3D As VectorMath
 
 Private Const MIN_SCALE_PERCENT = 1
 Private Const MAX_SCALE_PERCENT = 10000
@@ -17,6 +18,9 @@ Private Const MIN_GROUND_OFFSET = -100
 Private Const MAX_GROUND_OFFSET = 100
 Private Const MIN_ZOOM_RATE = 1000
 Private Const MAX_ZOOM_RATE = 360000
+Private Const GIZMO_MINIMUM_VIEW_SIZE = 40
+Private Const GIZMO_MINIMUM_WORLD_SIZE = 1
+Private Const GIZMO_MAXIMUM_WORLD_SIZE = 1000
 
 ''' Bounded, data-driven inputs for one inspectable character asset.
 Public Type Profile
@@ -80,6 +84,15 @@ Public Type ClockState
     DroppedAnimationMilliseconds As Number
     DroppedCameraMilliseconds As Number
     LongPauseCount As Number
+End Type
+
+''' Screen projection of a Blender-style world-axis transform gizmo.
+Public Type TransformGizmo
+    Origin As Core.ProjectedPoint3D
+    XAxis As Core.ProjectedPoint3D
+    YAxis As Core.ProjectedPoint3D
+    ZAxis As Core.ProjectedPoint3D
+    Visible As Boolean
 End Type
 
 Public Function AdvanceClock(
@@ -365,6 +378,360 @@ Public Function RetainedPointerDelta(
     Remainder = Total - Result * Divisor
 
     Return Result
+
+End Function
+
+''' Projects a Graphics3D look-at camera point into the current logical viewport.
+Public Function ProjectViewerPoint(
+    Point As Core.Vector3,
+    Camera As Core.Camera3D,
+    ViewWidth As Number,
+    ViewHeight As Number
+) As Core.ProjectedPoint3D
+
+    Dim Result As Core.ProjectedPoint3D
+    Dim Forward As Core.Vector3
+    Dim RightValue As Core.Vector3
+    Dim UpValue As Core.Vector3
+    Dim Relative As Core.Vector3
+    Dim CameraX As Number
+    Dim CameraY As Number
+    Dim Depth As Number
+    Dim FocalLength As Number
+    Dim HalfFov As Number
+    Dim Sine As Number
+    Dim Cosine As Number
+
+    If (ViewWidth < GIZMO_MINIMUM_VIEW_SIZE Or
+        ViewHeight < GIZMO_MINIMUM_VIEW_SIZE Or
+        Camera.FovDegrees <= 0 Or
+        Camera.FovDegrees >= 180) Then
+        Return Result
+    End If
+
+    Forward = VectorMath.Normalize(VectorMath.Subtract(Camera.Target, Camera.Position))
+    RightValue = VectorMath.Normalize(VectorMath.Cross(Camera.UpDirection, Forward))
+    UpValue = VectorMath.Normalize(VectorMath.Cross(Forward, RightValue))
+    Relative = VectorMath.Subtract(Point, Camera.Position)
+    CameraX = VectorMath.Dot(Relative, RightValue) / Core.FIXED_ONE
+    CameraY = VectorMath.Dot(Relative, UpValue) / Core.FIXED_ONE
+    Depth = VectorMath.Dot(Relative, Forward) / Core.FIXED_ONE
+
+    If Depth < Max(1, Camera.NearPlane) Then
+        Return Result
+    End If
+
+    HalfFov = Camera.FovDegrees / 2
+    Sine = Max(1, Abs(Math3D.SinFixed(HalfFov)))
+    Cosine = Max(1, Abs(Math3D.CosFixed(HalfFov)))
+    FocalLength = ViewHeight * Cosine / (2 * Sine)
+    Result.X = ViewWidth / 2 + CameraX * FocalLength / Depth
+    Result.Y = ViewHeight / 2 - CameraY * FocalLength / Depth
+    Result.Depth = Depth
+    Result.Visible = True
+
+    Return Result
+
+End Function
+
+''' Builds the projected origin and positive X, Y, and Z handles.
+Public Function ProjectTransformGizmo(
+    Origin As Core.Vector3,
+    WorldSize As Number,
+    Camera As Core.Camera3D,
+    ViewWidth As Number,
+    ViewHeight As Number
+) As TransformGizmo
+
+    Dim Result As TransformGizmo
+    Dim AxisPoint As Core.Vector3
+
+    WorldSize = Min(GIZMO_MAXIMUM_WORLD_SIZE, Max(GIZMO_MINIMUM_WORLD_SIZE, WorldSize))
+    Result.Origin = ProjectViewerPoint(Origin, Camera, ViewWidth, ViewHeight)
+    AxisPoint = Origin
+    AxisPoint.X = AxisPoint.X + WorldSize
+    Result.XAxis = ProjectViewerPoint(AxisPoint, Camera, ViewWidth, ViewHeight)
+    AxisPoint = Origin
+    AxisPoint.Y = AxisPoint.Y + WorldSize
+    Result.YAxis = ProjectViewerPoint(AxisPoint, Camera, ViewWidth, ViewHeight)
+    AxisPoint = Origin
+    AxisPoint.Z = AxisPoint.Z + WorldSize
+    Result.ZAxis = ProjectViewerPoint(AxisPoint, Camera, ViewWidth, ViewHeight)
+    Result.Visible = (Result.Origin.Visible And
+        Result.XAxis.Visible And
+        Result.YAxis.Visible And
+        Result.ZAxis.Visible)
+
+    Return Result
+
+End Function
+
+''' Projects one point on a world-axis rotation ring.
+Public Function ProjectTransformRingPoint(
+    Origin As Core.Vector3,
+    Axis As Number,
+    Segment As Number,
+    SegmentCount As Number,
+    WorldRadius As Number,
+    Camera As Core.Camera3D,
+    ViewWidth As Number,
+    ViewHeight As Number
+) As Core.ProjectedPoint3D
+
+    Dim Point As Core.Vector3
+    Dim Angle As Number
+    Dim FirstOffset As Number
+    Dim SecondOffset As Number
+    Dim Result As Core.ProjectedPoint3D
+
+    If SegmentCount < 8 Or SegmentCount > 128 Then
+        Return Result
+    End If
+
+    Segment = Segment Mod SegmentCount
+    WorldRadius = Min(GIZMO_MAXIMUM_WORLD_SIZE, Max(GIZMO_MINIMUM_WORLD_SIZE, WorldRadius))
+    Angle = Segment * 360 / SegmentCount
+    FirstOffset = WorldRadius * Math3D.CosFixed(Angle) / Core.FIXED_ONE
+    SecondOffset = WorldRadius * Math3D.SinFixed(Angle) / Core.FIXED_ONE
+    Point = Origin
+
+    If Axis = 0 Then
+        Point.Y = Point.Y + FirstOffset
+        Point.Z = Point.Z + SecondOffset
+    Else If Axis = 1 Then
+        Point.X = Point.X + FirstOffset
+        Point.Z = Point.Z + SecondOffset
+    Else
+        Point.X = Point.X + FirstOffset
+        Point.Y = Point.Y + SecondOffset
+    End If
+
+    Result = ProjectViewerPoint(Point, Camera, ViewWidth, ViewHeight)
+
+    Return Result
+
+End Function
+
+Private Function PointerNearSegment(
+    PointerX As Number,
+    PointerY As Number,
+    StartX As Number,
+    StartY As Number,
+    EndX As Number,
+    EndY As Number,
+    HitRadius As Number
+) As Boolean
+
+    Dim DeltaX As Number
+    Dim DeltaY As Number
+    Dim LengthSquared As Number
+    Dim Along1000 As Number
+    Dim ClosestX As Number
+    Dim ClosestY As Number
+    Dim DistanceX As Number
+    Dim DistanceY As Number
+    Dim Result As Boolean
+
+    DeltaX = EndX - StartX
+    DeltaY = EndY - StartY
+    LengthSquared = DeltaX * DeltaX + DeltaY * DeltaY
+
+    If LengthSquared <= 0 Then
+        Return False
+    End If
+
+    Along1000 = ((PointerX - StartX) * DeltaX + (PointerY - StartY) * DeltaY) * 1000 / LengthSquared
+    Along1000 = Min(1000, Max(0, Along1000))
+    ClosestX = StartX + DeltaX * Along1000 / 1000
+    ClosestY = StartY + DeltaY * Along1000 / 1000
+    DistanceX = PointerX - ClosestX
+    DistanceY = PointerY - ClosestY
+    Result = DistanceX * DistanceX + DistanceY * DistanceY <= HitRadius * HitRadius
+
+    Return Result
+
+End Function
+
+Private Function MoveAxisHit(
+    Value As TransformGizmo,
+    Axis As Number,
+    PointerX As Number,
+    PointerY As Number,
+    HitRadius As Number
+) As Boolean
+
+    Dim EndPoint As Core.ProjectedPoint3D
+    Dim StartX As Number
+    Dim StartY As Number
+    Dim Result As Boolean
+
+    EndPoint = Value.XAxis
+
+    If Axis = 1 Then
+        EndPoint = Value.YAxis
+    Else If Axis = 2 Then
+        EndPoint = Value.ZAxis
+    End If
+
+    StartX = Value.Origin.X + (EndPoint.X - Value.Origin.X) / 5
+    StartY = Value.Origin.Y + (EndPoint.Y - Value.Origin.Y) / 5
+    Result = PointerNearSegment(PointerX, PointerY, StartX, StartY,
+        EndPoint.X, EndPoint.Y, HitRadius)
+
+    Return Result
+
+End Function
+
+''' Returns the clicked move axis, preferring the currently selected axis at overlaps.
+Public Function TransformGizmoMoveAxisAtPointer(
+    Value As TransformGizmo,
+    PointerX As Number,
+    PointerY As Number,
+    PreferredAxis As Number,
+    Optional HitRadius As Number = 8
+) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Axis As Number
+
+    If Not Value.Visible Then
+        ReturnValue = -1
+
+        Return ReturnValue
+    End If
+
+    If (PreferredAxis >= 0 And
+        PreferredAxis <= 2 And
+        MoveAxisHit(Value, PreferredAxis, PointerX, PointerY, HitRadius)) Then
+        Return PreferredAxis
+    End If
+
+    For Axis = 0 To 2
+
+        If Axis <> PreferredAxis And MoveAxisHit(Value, Axis, PointerX, PointerY, HitRadius) Then
+            Return Axis
+        End If
+
+    End For
+
+    ReturnValue = -1
+
+    Return ReturnValue
+
+End Function
+
+''' Converts pointer motion to signed pixels along a projected move axis.
+Public Function TransformGizmoAxisPointerDelta(
+    Value As TransformGizmo,
+    Axis As Number,
+    DeltaX As Number,
+    DeltaY As Number
+) As Number
+
+    Dim EndPoint As Core.ProjectedPoint3D
+    Dim AxisX As Number
+    Dim AxisY As Number
+    Dim AxisLength As Number
+    Dim Result As Number
+
+    EndPoint = Value.XAxis
+
+    If Axis = 1 Then
+        EndPoint = Value.YAxis
+    Else If Axis = 2 Then
+        EndPoint = Value.ZAxis
+    End If
+
+    AxisX = EndPoint.X - Value.Origin.X
+    AxisY = EndPoint.Y - Value.Origin.Y
+    AxisLength = VectorMath.SquareRoot(AxisX * AxisX + AxisY * AxisY)
+
+    If AxisLength <= 0 Then
+        Return 0
+    End If
+
+    Result = (DeltaX * AxisX + DeltaY * AxisY) / AxisLength
+
+    Return Result
+
+End Function
+
+Private Function RotationAxisHit(
+    Origin As Core.Vector3,
+    Axis As Number,
+    PointerX As Number,
+    PointerY As Number,
+    WorldRadius As Number,
+    Camera As Core.Camera3D,
+    ViewWidth As Number,
+    ViewHeight As Number,
+    SegmentCount As Number,
+    HitRadius As Number
+) As Boolean
+
+    Dim Segment As Number
+    Dim StartPoint As Core.ProjectedPoint3D
+    Dim EndPoint As Core.ProjectedPoint3D
+
+    For Segment = 0 To SegmentCount - 1
+
+        StartPoint = ProjectTransformRingPoint(Origin, Axis, Segment,
+            SegmentCount, WorldRadius, Camera, ViewWidth, ViewHeight)
+        EndPoint = ProjectTransformRingPoint(Origin, Axis, Segment + 1,
+            SegmentCount, WorldRadius, Camera, ViewWidth, ViewHeight)
+
+        If (StartPoint.Visible And
+            EndPoint.Visible And
+            PointerNearSegment(PointerX, PointerY, StartPoint.X, StartPoint.Y,
+                EndPoint.X, EndPoint.Y, HitRadius)) Then
+            Return True
+        End If
+
+    End For
+
+    Return False
+
+End Function
+
+''' Returns the clicked rotation ring, preferring the currently selected axis.
+Public Function TransformGizmoRotationAxisAtPointer(
+    Origin As Core.Vector3,
+    PointerX As Number,
+    PointerY As Number,
+    PreferredAxis As Number,
+    WorldRadius As Number,
+    Camera As Core.Camera3D,
+    ViewWidth As Number,
+    ViewHeight As Number,
+    Optional SegmentCount As Number = 32,
+    Optional HitRadius As Number = 7
+) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Axis As Number
+
+    If (PreferredAxis >= 0 And
+        PreferredAxis <= 2 And
+        RotationAxisHit(Origin, PreferredAxis, PointerX, PointerY,
+            WorldRadius, Camera, ViewWidth, ViewHeight, SegmentCount, HitRadius)) Then
+        Return PreferredAxis
+    End If
+
+    For Axis = 0 To 2
+
+        If (Axis <> PreferredAxis And
+            RotationAxisHit(Origin, Axis, PointerX, PointerY,
+                WorldRadius, Camera, ViewWidth, ViewHeight, SegmentCount, HitRadius)) Then
+            Return Axis
+        End If
+
+    End For
+
+    ReturnValue = -1
+
+    Return ReturnValue
 
 End Function
 

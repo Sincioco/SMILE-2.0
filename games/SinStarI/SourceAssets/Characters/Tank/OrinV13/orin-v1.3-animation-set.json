@@ -1,0 +1,92 @@
+{
+  "version": "1.3",
+  "bodySource": "orin-v1.3.original.glb",
+  "skinAndAnimationSource": "orin-v1.3-mixamo-sword-and-shield-idle-with-skin.fbx",
+  "bodyTransfer": {
+    "source": "orin-v1.3.original.glb",
+    "meshes": 19,
+    "vertices": 7098,
+    "maximumLocalVertexDelta": 0.0,
+    "policy": "Pristine Tripo geometry, UVs, and JPEG materials with Mixamo skin weights"
+  },
+  "bodyVertices": 7098,
+  "normalizedScale": 0.9999999403953552,
+  "restRigSha256": "C9836E77A3AC69248B797E866B4E523F7DCA3AED5E5A9521C8994153B977DCB4",
+  "animations": [
+    {
+      "name": "Idle",
+      "file": "orin-v1.3-mixamo-sword-and-shield-idle-with-skin.fbx",
+      "sourceSha256": "330CA5DB3CC3644D84198C0B19DA4B1DC736E02B0DB8522442DD7D3058264BC2",
+      "frameStart": 1,
+      "frameEnd": 77,
+      "loop": true
+    },
+    {
+      "name": "SwordAttack",
+      "file": "orin-v1.3-mixamo-sword-and-shield-attack.fbx",
+      "sourceSha256": "E2207ECF868D4C3B588F1835F28259B8BFA7E541F703420E9ABC9ECA2E4B87CF",
+      "frameStart": 1,
+      "frameEnd": 46,
+      "loop": false
+    },
+    {
+      "name": "ThorAttack",
+      "file": "orin-v1.3-mixamo-thor-attack.fbx",
+      "sourceSha256": "713C6BE882969FDE06C58CBE36F871AF2063262F03E7E996DAC8C9FD0B2CC0E1",
+      "frameStart": 1,
+      "frameEnd": 90,
+      "loop": false
+    },
+    {
+      "name": "Death",
+      "file": "orin-v1.3-mixamo-death.fbx",
+      "sourceSha256": "92EF957415C492171EF3A361DE4BC7C28B1F28BB85838C0760F270B2B9A9E3ED",
+      "frameStart": 1,
+      "frameEnd": 118,
+      "loop": false
+    },
+    {
+      "name": "Defend",
+      "file": "orin-v1.3-mixamo-defend.fbx",
+      "sourceSha256": "535D8FFDD39D4DBA66EC8BC12BF88B078483F345728AFD92698E6553DBE47651",
+      "frameStart": 1,
+      "frameEnd": 18,
+      "loop": true
+    },
+    {
+      "name": "Victory",
+      "file": "orin-v1.3-mixamo-victory.fbx",
+      "sourceSha256": "643DE0B97985A32B47E10A293781C17C2C1E233EE4445B267D25BA267E2EAF9F",
+      "frameStart": 1,
+      "frameEnd": 72,
+      "loop": false
+    },
+    {
+      "name": "Hit",
+      "file": "orin-v1.3-mixamo-hit.fbx",
+      "sourceSha256": "AA840CA5DB1D2C566EEB491FF48B4698A26DCB76CBDBB7B8C391B856BF103A6B",
+      "frameStart": 1,
+      "frameEnd": 22,
+      "loop": false
+    },
+    {
+      "name": "Run",
+      "file": "orin-v1.3-mixamo-run.fbx",
+      "sourceSha256": "857912D6946A6A2212A7964231D53C685CCF6921A590315BDE1C150718E19B0E",
+      "frameStart": 1,
+      "frameEnd": 22,
+      "loop": true
+    },
+    {
+      "name": "JumpAttack",
+      "file": "orin-v1.3-mixamo-jump-attack.fbx",
+      "sourceSha256": "C11874DEACE394FB6C74A9BAC5D1646F221B5231E994B5DFEDB88E488C73BE28",
+      "frameStart": 1,
+      "frameEnd": 71,
+      "loop": false
+    }
+  ],
+  "equipmentSource": "orin-v1.0-equipment-source.glb",
+  "equipmentPolicy": "Rigid hand attachments from named v1.0 meshes; shield centered on left hand and user-approved Blender correction matrices applied after a 40-degree outward shield fit and butt-grip hammer fit",
+  "footIntegrity": "Preserved by retaining the Idle (8) skin weights, bind matrices, and rig on matching pristine body topology"
+}

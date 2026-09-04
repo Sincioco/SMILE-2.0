@@ -26,6 +26,13 @@
                   Profile="Character"
                   Identity="sin-star-i.character-1.paladin"
                   ProductionState="Prototype" />
+    <Model3DAsset Include="BuildAssets\OrinV13\orin-v1.3-animation-checkpoint.glb"
+                  Descriptor="BuildAssets\OrinV13\OrinV13.sm3d.json"
+                  LogicalPath="Assets\Generation2\OrinV13\OrinV13.sm3d"
+                  TextureOutputDirectory="Assets\Generation2\OrinV13\Textures"
+                  Profile="Character"
+                  Identity="sin-star-i.character-2.tank"
+                  ProductionState="Prototype" />
     <Model3DAsset Include="BuildAssets\ArinPrototype\sin-star-i-character-1-paladin-tripo-v01.original.glb"
                   Descriptor="BuildAssets\ArinPrototype\ArinPrototype.sm3d.json"
                   LogicalPath="Assets\Generation2\Arin\ArinPrototype.sm3d"
