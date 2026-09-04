@@ -29,7 +29,7 @@ Every slot uses schema version 1 with an exact 80-byte stride. The order is perm
 | 48 | `float4` | Temperature, density, noise phase, reserved |
 | 64 | `uint4` | Seed, active flags, gradient/frame selection, reserved |
 
-Native stores this as an asserted 80-byte structure. Web uses paired `Float32Array` and `Uint32Array` views over 80-byte-per-slot `ArrayBuffer` storage, so integer bits are not converted through floating-point values.
+Native stores this as an asserted 80-byte structure. Web uses paired `Float32Array` and `Uint32Array` views over 80-byte-per-slot `ArrayBuffer` storage for the deterministic reference path. Its M7E-E transform-feedback buffers encode the bounded integer fields as exactly representable floats while preserving the same offsets and stride.
 
 ## Deterministic Scheduling
 
@@ -41,7 +41,7 @@ CPU-to-backend upload accounting includes only committed changed-slot commands: 
 
 Queuing a nonempty system marks it in flight until `End3D`, the next `Begin3D`, reset, or device/context loss releases that frame reference. Mutation and destruction reject in-flight systems. Duplicate queue requests in one frame are idempotent. Submission groups reject this M7E-C no-visual resource because it has no physical draw submission yet.
 
-Reset destroys all particle systems, invalidates their handles, releases material references, and clears aggregate counters. Web context loss releases frame references but retains the deterministic CPU state for later milestones to rebuild GPU resources.
+Reset destroys all particle systems, invalidates their handles, releases material references, and clears aggregate counters. Web context loss releases frame references and GPU resources. A live fast simulation restarts empty without readback, records the restart, retains its handle and serial history, and lazily recreates resources after restoration.
 
 ## Backend Boundary
 

@@ -15,7 +15,16 @@ $snapshotPath = Join-Path $packageRoot `
     'Calibration\arin-v5.7-pose-calibration.json'
 $applicationId = 'smile.tools.character3d-viewer'
 $dataKey = 'CharacterViewerCalibrationKeyframes'
-$clipNames = @('Idle', 'Walk', 'Run', 'Defend', 'SwordAttack', 'BlockImpact', 'Hit')
+$clipNames = @(
+    'BlockImpact',
+    'Defend',
+    'Hit',
+    'Idle',
+    'Run',
+    'SwordAttack',
+    'SwordAttack2',
+    'Walk'
+)
 $channelCount = 18
 
 function Get-TextSha256([string]$Text) {

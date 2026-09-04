@@ -35,7 +35,7 @@ Public Function ProfileAt(Index As Number) As CharacterViewer.Profile
         Result.PrototypeAlias = "dragonfall.arin-v5-7"
         Result.ProductionStatus = "Candidate"
         Result.AssetPath = "Assets\Generation2\ArinV57\ArinV57.sm3d"
-        Result.ExpectedClipCount = 7
+        Result.ExpectedClipCount = 8
         Result.ExpectedSocketCount = 10
         Result.DesiredWorldHeight = 100
 
@@ -92,7 +92,7 @@ Public Function ClipCount(ProfileIndex As Number) As Number
     Dim Result As Number
 
     If ProfileIndex = PROFILE_ARIN Then
-        Result = 7
+        Result = 8
     Else If ProfileIndex = PROFILE_ARIN_ORIGINAL Then
         Result = 3
     Else If ProfileIndex = PROFILE_TECHNICAL_ARTICULATED Then
@@ -144,17 +144,19 @@ Public Function ClipName(ProfileIndex As Number, ClipIndex As Number) As Text
         If ClipIndex = 0 Then
             Result = "Idle"
         Else If ClipIndex = 1 Then
-            Result = "Walk"
+            Result = "SwordAttack"
         Else If ClipIndex = 2 Then
-            Result = "Run"
+            Result = "SwordAttack2"
         Else If ClipIndex = 3 Then
             Result = "Defend"
         Else If ClipIndex = 4 Then
-            Result = "SwordAttack"
-        Else If ClipIndex = 5 Then
             Result = "BlockImpact"
-        Else If ClipIndex = 6 Then
+        Else If ClipIndex = 5 Then
             Result = "Hit"
+        Else If ClipIndex = 6 Then
+            Result = "Walk"
+        Else If ClipIndex = 7 Then
+            Result = "Run"
         End If
 
     Else If ProfileIndex = PROFILE_ARIN_ORIGINAL Then
@@ -172,11 +174,11 @@ Public Function ClipName(ProfileIndex As Number, ClipIndex As Number) As Text
         If ClipIndex = 0 Then
             Result = "Idle"
         Else If ClipIndex = 1 Then
-            Result = "Bend"
-        Else If ClipIndex = 2 Then
-            Result = "WalkLike"
-        Else If ClipIndex = 3 Then
             Result = "AttackLike"
+        Else If ClipIndex = 2 Then
+            Result = "Bend"
+        Else If ClipIndex = 3 Then
+            Result = "WalkLike"
         Else If ClipIndex = 4 Then
             Result = "RootMove"
         End If
@@ -193,9 +195,11 @@ Public Function ClipLabel(ProfileIndex As Number, ClipIndex As Number) As Text
 
     If ProfileIndex = PROFILE_ARIN Then
 
-        If ClipIndex = 4 Then
-            Result = "Sword Attack"
-        Else If ClipIndex = 5 Then
+        If ClipIndex = 1 Then
+            Result = "Attack"
+        Else If ClipIndex = 2 Then
+            Result = "Attack 2"
+        Else If ClipIndex = 4 Then
             Result = "Block Impact"
         Else
             Result = ClipName(ProfileIndex, ClipIndex)
@@ -211,6 +215,8 @@ Public Function ClipLabel(ProfileIndex As Number, ClipIndex As Number) As Text
             Result = "Run"
         End If
 
+    Else If ProfileIndex = PROFILE_TECHNICAL_ARTICULATED And ClipIndex = 1 Then
+        Result = "Attack"
     Else
         Result = ClipName(ProfileIndex, ClipIndex)
 
@@ -227,9 +233,12 @@ Public Function ClipLoops(ProfileIndex As Number, ClipIndex As Number) As Boolea
     Result = True
 
     If ProfileIndex = PROFILE_ARIN Then
-        Result = ClipIndex <= 3
+        Result = (ClipIndex = 0 Or
+            ClipIndex = 3 Or
+            ClipIndex = 6 Or
+            ClipIndex = 7)
     Else If ProfileIndex = PROFILE_TECHNICAL_ARTICULATED Then
-        Result = ClipIndex <> 1 And ClipIndex <> 3
+        Result = ClipIndex <> 1 And ClipIndex <> 2
     End If
 
     Return Result

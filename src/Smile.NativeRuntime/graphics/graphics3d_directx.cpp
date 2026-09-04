@@ -147,6 +147,7 @@ struct SmileObject3D
     unsigned char visible;
     unsigned char casts_shadow;
     unsigned char receives_shadow;
+    unsigned char cull_mode;
     long long mesh_handle;
     long long material_handle;
     long long default_material_handle;
@@ -671,6 +672,7 @@ static ID3D11DepthStencilState* smile_depth_state3d;
 static ID3D11DepthStencilState* smile_depth_read_state3d;
 static ID3D11RasterizerState* smile_raster_state3d;
 static ID3D11RasterizerState* smile_cull_raster_state3d;
+static ID3D11RasterizerState* smile_front_cull_raster_state3d;
 static ID3D11BlendState* smile_blend_state3d;
 static ID3D11BlendState* smile_additive_blend_state3d;
 static ID3D11Texture2D* smile_color_texture3d;
@@ -692,6 +694,7 @@ static int smile_target_height3d;
 static UINT smile_sample_count3d = 1;
 static UINT smile_sample_quality3d;
 static int smile_frame_active3d;
+static long long smile_backdrop_texture_handle3d;
 static long long smile_resource_epoch3d = 1;
 static int smile_last_error3d;
 static long long smile_draw_call_count3d;
@@ -914,6 +917,8 @@ static int smile_3d_ensure_gpu_particle_resources(SmileGpuParticleSystem3D* syst
 static int smile_3d_draw_gpu_particle_system(SmileGpuParticleSystem3D* system);
 static int smile_3d_clear_model_pbr(SmileModel3D* model);
 static int smile_3d_create_pipeline(void);
+static int smile_3d_draw_backdrop(ID3D11DeviceContext* context,
+    ID3D11RenderTargetView* target, const D3D11_VIEWPORT* viewport);
 static int smile_3d_prepare_model_pbr(long long model_handle,
     long long filter, long long wrap, long long anisotropy);
 static int smile_3d_prepare_m5_resources(void);
@@ -1232,6 +1237,7 @@ static int smile_3d_texture_reference_count(long long texture_handle)
     SmileTexture3D* texture = smile_3d_texture(texture_handle);
     if (texture == 0) return 0;
     count = (int)texture->in_flight;
+    if (smile_backdrop_texture_handle3d == texture_handle) count++;
     for (index = 0; index < SMILE_3D_MAX_MATERIALS; ++index)
     {
         if (!smile_materials3d[index].active) continue;
@@ -3272,6 +3278,7 @@ static long long smile_3d_create_object_with_material(long long mesh_handle,
     if (object->generation == 0) object->generation = 1;
     object->active = 1; object->visible = 1;
     object->casts_shadow = 1; object->receives_shadow = 1;
+    object->cull_mode = 0;
     object->mesh_handle = mesh_handle;
     object->material_handle = default_material_handle;
     object->default_material_handle = default_material_handle;
@@ -4952,7 +4959,8 @@ static int smile_3d_create_pipeline(void)
         "float3 SampleBlur(float2 uv,float2 axis){float3 c=sceneTexture.Sample(postSampler,uv).rgb*.4;c+=(sceneTexture.Sample(postSampler,uv+axis).rgb+sceneTexture.Sample(postSampler,uv-axis).rgb)*.24;c+=(sceneTexture.Sample(postSampler,uv+axis*2).rgb+sceneTexture.Sample(postSampler,uv-axis*2).rgb)*.06;return c;}"
         "float3 Tone(float3 x){return saturate((x*(2.51*x+.03))/(x*(2.43*x+.59)+.14));}"
         "float3 Encode(float3 c){float3 low=c*12.92;float3 high=1.055*pow(max(c,0),1.0/2.4)-.055;return lerp(low,high,step(.0031308,c));}"
-        "float4 main(float4 p:SV_POSITION,float2 uv:TEXCOORD0):SV_TARGET{if(first.x<.5){float3 c=sceneTexture.Sample(postSampler,uv).rgb;float bright=max(c.r,max(c.g,c.b));return float4(bright>=first.w?c:0,1);}if(first.x<1.5)return float4(SampleBlur(uv,float2(first.y,0)),1);if(first.x<2.5)return float4(SampleBlur(uv,float2(0,first.z)),1);if(first.x>4.5){float2 delta=clamp(bloomTexture.Sample(postSampler,uv).rg,float2(-.03,-.03),float2(.03,.03));return sceneTexture.Sample(postSampler,clamp(uv+delta,float2(0,0),float2(1,1)));}if(first.x>3.5)return sceneTexture.Sample(postSampler,uv);float3 scene=sceneTexture.Sample(postSampler,uv).rgb;float3 bloom=bloomTexture.Sample(postSampler,uv).rgb*second.x;return float4(Encode(Tone(max((scene+bloom)*second.y,0))),1);}";
+        "float3 Decode(float3 c){return lerp(c/12.92,pow((c+.055)/1.055,2.4),step(.04045,c));}"
+        "float4 main(float4 p:SV_POSITION,float2 uv:TEXCOORD0):SV_TARGET{if(first.x<.5){float3 c=sceneTexture.Sample(postSampler,uv).rgb;float bright=max(c.r,max(c.g,c.b));return float4(bright>=first.w?c:0,1);}if(first.x<1.5)return float4(SampleBlur(uv,float2(first.y,0)),1);if(first.x<2.5)return float4(SampleBlur(uv,float2(0,first.z)),1);if(first.x>5.5){float4 c=sceneTexture.Sample(postSampler,uv);return float4(Decode(c.rgb),c.a);}if(first.x>4.5){float2 delta=clamp(bloomTexture.Sample(postSampler,uv).rg,float2(-.03,-.03),float2(.03,.03));return sceneTexture.Sample(postSampler,clamp(uv+delta,float2(0,0),float2(1,1)));}if(first.x>3.5)return sceneTexture.Sample(postSampler,uv);float3 scene=sceneTexture.Sample(postSampler,uv).rgb;float3 bloom=bloomTexture.Sample(postSampler,uv).rgb*second.x;return float4(Encode(Tone(max((scene+bloom)*second.y,0))),1);}";
     static const char* depth_copy_vertex_source =
         "struct O{float4 p:SV_POSITION;};O main(uint id:SV_VertexID){O o;float2 p=id==0?float2(-1,-1):(id==1?float2(-1,3):float2(3,-1));o.p=float4(p,0,1);return o;}";
     static const char* depth_copy_pixel_source =
@@ -5045,6 +5053,9 @@ static int smile_3d_create_pipeline(void)
         raster.CullMode = D3D11_CULL_BACK;
         if (SUCCEEDED(result))
             result = device->CreateRasterizerState(&raster, &smile_cull_raster_state3d);
+        raster.CullMode = D3D11_CULL_FRONT;
+        if (SUCCEEDED(result))
+            result = device->CreateRasterizerState(&raster, &smile_front_cull_raster_state3d);
         blend.RenderTarget[0].BlendEnable = TRUE;
         blend.RenderTarget[0].SrcBlend = D3D11_BLEND_SRC_ALPHA;
         blend.RenderTarget[0].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
@@ -5239,7 +5250,8 @@ static int smile_3d_create_pipeline(void)
             smile_m5_fallback_flags3d |= SMILE_3D_M5_FALLBACK_SHADOW_DISABLED;
         }
     }
-    if ((smile_post_requested3d || smile_distortion_requested3d) &&
+    if ((smile_post_requested3d || smile_distortion_requested3d ||
+        smile_backdrop_texture_handle3d != 0) &&
         smile_post_vertex_shader3d == 0)
     {
         D3D11_SAMPLER_DESC post_sampler = {};
@@ -7289,6 +7301,52 @@ static int smile_3d_capture_vfx_submission(unsigned char kind, long long handle,
     return 1;
 }
 
+static int smile_3d_draw_backdrop(ID3D11DeviceContext* context,
+    ID3D11RenderTargetView* target, const D3D11_VIEWPORT* viewport)
+{
+    SmileTexture3D* texture;
+    SmilePostConstants3D constants = {};
+    ID3D11ShaderResourceView* no_view = 0;
+    if (smile_backdrop_texture_handle3d == 0) return 1;
+    texture = smile_3d_texture(smile_backdrop_texture_handle3d);
+    if (context == 0 || target == 0 || viewport == 0 || texture == 0 ||
+        smile_post_vertex_shader3d == 0 || smile_post_pixel_shader3d == 0 ||
+        smile_post_constant_buffer3d == 0 || smile_post_sampler3d == 0 ||
+        !smile_3d_upload_texture(texture))
+    {
+        smile_last_error3d = 5;
+        return 0;
+    }
+    constants.first[0] = smile_hdr_effective3d ? 6.0f : 4.0f;
+    context->OMSetRenderTargets(1, &target, 0);
+    context->RSSetViewports(1, viewport);
+    context->OMSetDepthStencilState(0, 0);
+    context->OMSetBlendState(0, 0, 0xffffffff);
+    context->RSSetState(smile_raster_state3d);
+    context->IASetInputLayout(0);
+    context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    context->VSSetShader(smile_post_vertex_shader3d, 0, 0);
+    context->PSSetShader(smile_post_pixel_shader3d, 0, 0);
+    context->VSSetConstantBuffers(0, 1, &smile_post_constant_buffer3d);
+    context->PSSetConstantBuffers(0, 1, &smile_post_constant_buffer3d);
+    context->UpdateSubresource(smile_post_constant_buffer3d, 0, 0, &constants, 0, 0);
+    context->PSSetShaderResources(0, 1, &texture->view);
+    context->PSSetSamplers(0, 1, &smile_post_sampler3d);
+    context->Draw(3, 0);
+    context->PSSetShaderResources(0, 1, &no_view);
+    context->OMSetRenderTargets(1, &target, smile_depth_view3d);
+    context->OMSetDepthStencilState(smile_depth_state3d, 0);
+    context->OMSetBlendState(0, 0, 0xffffffff);
+    context->RSSetState(smile_raster_state3d);
+    context->IASetInputLayout(smile_input_layout3d);
+    context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    context->VSSetShader(smile_vertex_shader3d, 0, 0);
+    context->PSSetShader(smile_pixel_shader3d, 0, 0);
+    context->VSSetConstantBuffers(0, 1, &smile_constant_buffer3d);
+    context->PSSetConstantBuffers(0, 1, &smile_constant_buffer3d);
+    return 1;
+}
+
 static int smile_3d_begin(long long red, long long green, long long blue)
 {
     ID3D11DeviceContext* context;
@@ -7383,6 +7441,12 @@ static int smile_3d_begin(long long red, long long green, long long blue)
     smile_distortion_emitter_count3d = 0;
     smile_distortion_maximum_strength3d = 0;
     smile_rendering_distortion_vectors3d = 0;
+    if (!smile_3d_draw_backdrop(context, target, &viewport))
+    {
+        smile_graphics_directx_resume_2d();
+        smile_3d_clear_pending_camera();
+        return 0;
+    }
     smile_frame_active3d = 1;
     return 1;
 }
@@ -7477,7 +7541,10 @@ static int smile_3d_draw_pbr(const SmileSubmission3D* submission)
     context->UpdateSubresource(smile_pbr_constant_buffer3d, 0, 0, &constants, 0, 0);
     context->OMSetBlendState(material->alpha_mode == 2 ? smile_blend_state3d : 0, 0, 0xffffffff);
     context->OMSetDepthStencilState(material->alpha_mode == 2 ? smile_depth_read_state3d : smile_depth_state3d, 0);
-    context->RSSetState(material->double_sided ? smile_raster_state3d : smile_cull_raster_state3d);
+    if (submission->object.cull_mode == 1) context->RSSetState(smile_raster_state3d);
+    else if (submission->object.cull_mode == 2) context->RSSetState(smile_cull_raster_state3d);
+    else if (submission->object.cull_mode == 3) context->RSSetState(smile_front_cull_raster_state3d);
+    else context->RSSetState(material->double_sided ? smile_raster_state3d : smile_cull_raster_state3d);
     context->IASetInputLayout(smile_pbr_input_layout3d);
     context->IASetVertexBuffers(0, 1, &mesh->vertex_buffer, &stride, &offset);
     context->IASetIndexBuffer(mesh->index_buffer, DXGI_FORMAT_R32_UINT, 0);
@@ -7568,7 +7635,9 @@ static int smile_3d_draw_vfx_submission(const SmileSubmission3D* submission)
     context->OMSetBlendState(smile_rendering_distortion_vectors3d || material->alpha_mode == 3
         ? smile_additive_blend_state3d : smile_blend_state3d, 0, 0xffffffff);
     context->OMSetDepthStencilState(smile_depth_read_state3d, 0);
-    context->RSSetState(smile_raster_state3d);
+    if (submission->object.cull_mode == 2) context->RSSetState(smile_cull_raster_state3d);
+    else if (submission->object.cull_mode == 3) context->RSSetState(smile_front_cull_raster_state3d);
+    else context->RSSetState(smile_raster_state3d);
     context->PSSetShader(smile_vfx_pixel_shader3d, 0, 0);
     context->VSSetConstantBuffers(0, 1, &smile_vfx_constant_buffer3d);
     context->PSSetConstantBuffers(0, 1, &smile_vfx_constant_buffer3d);
@@ -8536,6 +8605,7 @@ extern "C" void smile_graphics3d_on_device_lost(void)
     smile_3d_release(smile_color_view3d); smile_3d_release(smile_color_texture3d);
     smile_3d_release(smile_depth_view3d); smile_3d_release(smile_depth_texture3d);
     smile_3d_release(smile_additive_blend_state3d); smile_3d_release(smile_blend_state3d);
+    smile_3d_release(smile_front_cull_raster_state3d);
     smile_3d_release(smile_cull_raster_state3d); smile_3d_release(smile_raster_state3d);
     smile_3d_release(smile_depth_read_state3d); smile_3d_release(smile_depth_state3d);
     smile_3d_release(smile_pbr_constant_buffer3d); smile_3d_release(smile_pbr_input_layout3d);
@@ -8978,6 +9048,7 @@ static void smile_3d_reset(void)
     int index;
     smile_3d_end();
     smile_material_inspection3d = 0;
+    smile_backdrop_texture_handle3d = 0;
     for (index = 0; index < SMILE_3D_MAX_OBJECTS; ++index)
         if (smile_objects3d[index].active)
         {
@@ -9236,6 +9307,16 @@ extern "C" long long smile_renderer3d_command(long long command,
             object->color[2] = (float)(d & 255) / 255.0f; object->color[3] = (float)(e < 0 ? 0 : e > 100 ? 100 : e) / 100.0f; return 1;
         case SMILE_3D_SET_VISIBLE:
             object = smile_3d_object(a); if (object == 0) { smile_last_error3d = 5; return 0; } object->visible = b != 0; return 1;
+        case SMILE_3D_SET_OBJECT_CULL_MODE:
+            object = smile_3d_object(a);
+            if (object == 0 || b < 0 || b > 3) { smile_last_error3d = 5; return 0; }
+            object->cull_mode = (unsigned char)b;
+            return 1;
+        case SMILE_3D_SET_BACKDROP_TEXTURE:
+            if (smile_frame_active3d || (a != 0 && smile_3d_texture(a) == 0))
+            { smile_last_error3d = 5; return 0; }
+            smile_backdrop_texture_handle3d = a;
+            return 1;
         case SMILE_3D_BEGIN: return smile_3d_begin(a, b, c);
         case SMILE_3D_DRAW: return smile_3d_draw(a);
         case SMILE_3D_END: return smile_3d_end();
@@ -9701,15 +9782,19 @@ extern "C" long long smile_renderer3d_command(long long command,
             return 1;
         case SMILE_3D_SET_OBJECT_PIVOT_ROTATION:
             object = smile_3d_object(a);
-            if (object == 0 || b < -SMILE_3D_CAMERA_WORLD_BOUND ||
-                b > SMILE_3D_CAMERA_WORLD_BOUND || c < -SMILE_3D_CAMERA_WORLD_BOUND ||
-                c > SMILE_3D_CAMERA_WORLD_BOUND || d < -SMILE_3D_CAMERA_WORLD_BOUND ||
-                d > SMILE_3D_CAMERA_WORLD_BOUND || e < -360 || e > 360 ||
+            {
+                long long pivot_bound = h == 1
+                    ? (long long)SMILE_3D_CAMERA_WORLD_BOUND * 1000LL
+                    : (long long)SMILE_3D_CAMERA_WORLD_BOUND;
+                if (object == 0 || h < 0 || h > 1 || b < -pivot_bound || b > pivot_bound ||
+                c < -pivot_bound || c > pivot_bound || d < -pivot_bound || d > pivot_bound ||
+                e < -360 || e > 360 ||
                 f < -360 || f > 360 || g < -360 || g > 360)
-            { smile_last_error3d = 5; return 0; }
-            object->pivot_rotation_position[0] = (float)b;
-            object->pivot_rotation_position[1] = (float)c;
-            object->pivot_rotation_position[2] = (float)d;
+                { smile_last_error3d = 5; return 0; }
+            }
+            object->pivot_rotation_position[0] = h == 1 ? (float)b / 1000.0f : (float)b;
+            object->pivot_rotation_position[1] = h == 1 ? (float)c / 1000.0f : (float)c;
+            object->pivot_rotation_position[2] = h == 1 ? (float)d / 1000.0f : (float)d;
             object->pivot_rotation[0] = (float)e;
             object->pivot_rotation[1] = (float)f;
             object->pivot_rotation[2] = (float)g;

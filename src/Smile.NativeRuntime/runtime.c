@@ -1779,6 +1779,25 @@ long long smile_window_title(void* owned_value)
     return result;
 }
 
+long long smile_window_activate(void)
+{
+    BOOL activated;
+
+    if (smile_window == 0)
+        return 0;
+    if (IsIconic(smile_window))
+        ShowWindow(smile_window, SW_RESTORE);
+    SetWindowPos(smile_window, HWND_TOPMOST, 0, 0, 0, 0,
+        SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
+    SetWindowPos(smile_window, HWND_NOTOPMOST, 0, 0, 0, 0,
+        SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
+    BringWindowToTop(smile_window);
+    activated = SetForegroundWindow(smile_window);
+    SetActiveWindow(smile_window);
+    SetFocus(smile_window);
+    return activated || GetForegroundWindow() == smile_window;
+}
+
 static void smile_toggle_fullscreen(void)
 {
     MONITORINFO monitor;

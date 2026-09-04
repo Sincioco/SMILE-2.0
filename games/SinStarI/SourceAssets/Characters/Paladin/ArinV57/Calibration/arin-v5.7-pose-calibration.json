@@ -6,14 +6,29 @@
   "dataKey": "CharacterViewerCalibrationKeyframes",
   "storageVersion": 1,
   "savedKeyframe": {
-    "clipIndex": 0,
+    "clipIndex": 3,
     "clipName": "Idle",
     "frame": 0
   },
-  "totalKeyframes": 1,
+  "totalKeyframes": 2,
   "clips": [
     {
       "index": 0,
+      "name": "BlockImpact",
+      "keyframes": []
+    },
+    {
+      "index": 1,
+      "name": "Defend",
+      "keyframes": []
+    },
+    {
+      "index": 2,
+      "name": "Hit",
+      "keyframes": []
+    },
+    {
+      "index": 3,
       "name": "Idle",
       "keyframes": [
         {
@@ -27,9 +42,9 @@
           },
           "shieldWrist": {
             "rotation": [
-              45,
-              127,
-              39
+              12,
+              129,
+              19
             ]
           },
           "sword": {
@@ -46,47 +61,79 @@
           },
           "shield": {
             "rotation": [
-              89,
-              -21,
-              -56
+              24,
+              -31,
+              -45
             ],
             "position": [
               0,
-              0,
-              0
+              3,
+              -6
             ]
           }
         }
       ]
     },
     {
-      "index": 1,
-      "name": "Walk",
-      "keyframes": []
-    },
-    {
-      "index": 2,
+      "index": 4,
       "name": "Run",
       "keyframes": []
     },
     {
-      "index": 3,
-      "name": "Defend",
-      "keyframes": []
-    },
-    {
-      "index": 4,
-      "name": "SwordAttack",
-      "keyframes": []
-    },
-    {
       "index": 5,
-      "name": "BlockImpact",
-      "keyframes": []
+      "name": "SwordAttack",
+      "keyframes": [
+        {
+          "frame": 0,
+          "swordWrist": {
+            "rotation": [
+              0,
+              0,
+              0
+            ]
+          },
+          "shieldWrist": {
+            "rotation": [
+              0,
+              -180,
+              3
+            ]
+          },
+          "sword": {
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "position": [
+              0,
+              0,
+              0
+            ]
+          },
+          "shield": {
+            "rotation": [
+              109,
+              14,
+              -54
+            ],
+            "position": [
+              0,
+              0,
+              2
+            ]
+          }
+        }
+      ]
     },
     {
       "index": 6,
-      "name": "Hit",
+      "name": "SwordAttack2",
+      "keyframes": []
+    },
+    {
+      "index": 7,
+      "name": "Walk",
       "keyframes": []
     }
   ]

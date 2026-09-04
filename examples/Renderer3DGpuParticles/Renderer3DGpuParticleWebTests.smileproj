@@ -1,0 +1,12 @@
+<SmileProject Version="1.0">
+  <PropertyGroup>
+    <ProjectKind>Game</ProjectKind>
+    <StartupFile>WebTests.smile</StartupFile>
+    <OutputName>Renderer3DGpuParticleWebTests</OutputName>
+    <ApplicationId>smile.examples.renderer3d-gpu-particle-web-tests</ApplicationId>
+  </PropertyGroup>
+  <ItemGroup>
+    <SmileSource Include="WebTests.smile" StartupOnly="true" />
+    <SmileProjectReference Include="..\..\libraries\Smile.Simple3D\Smile.Simple3D.smilelibproj" />
+  </ItemGroup>
+</SmileProject>

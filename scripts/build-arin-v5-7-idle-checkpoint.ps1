@@ -49,7 +49,7 @@ New-Item -ItemType Directory -Force -Path `
     ([IO.Path]::GetDirectoryName($resolvedBlend)), `
     ([IO.Path]::GetDirectoryName($resolvedGlb)) | Out-Null
 
-& $blender --background --python $builder -- `
+& $blender --background --python-exit-code 1 --python $builder -- `
     $skinnedFbx $tPoseFbx $animationManifest $cleanGlb $equippedGlb `
     $resolvedBlend $resolvedGlb
 if ($LASTEXITCODE -ne 0) {

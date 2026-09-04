@@ -242,6 +242,7 @@ internal sealed class MasmEmitter
         Line("EXTERN smile_window_width:PROC");
         Line("EXTERN smile_window_height:PROC");
         Line("EXTERN smile_window_title:PROC");
+        Line("EXTERN smile_window_activate:PROC");
         if (_rememberWindowPlacement) Line("EXTERN smile_window_persistence_configure:PROC");
         if (_responsiveWindow) Line("EXTERN smile_window_responsive_configure:PROC");
         Line("EXTERN smile_game_clear:PROC");
@@ -1694,6 +1695,9 @@ internal sealed class MasmEmitter
                 EmitExpression(call.Arguments[0].Expression);
                 Line("    mov rcx, rax");
                 CallAligned("smile_window_title");
+                break;
+            case SyntaxKind.WindowActivateKeyword:
+                CallAligned("smile_window_activate");
                 break;
             case SyntaxKind.KeyHeldKeyword:
                 EmitExpression(call.Arguments[0].Expression);

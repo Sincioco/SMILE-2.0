@@ -12,7 +12,6 @@ Import Smile.Simple3D.Scene3D As Scene3D
 Import Smile.Tools.Character3DViewerProfiles As ViewerProfiles
 
 Const ANIMATION_CYCLE_MILLISECONDS = 5000
-Const IDLE_RESET_MILLISECONDS = 10000
 Const ANIMATION_BUTTON_Y = 352
 Const ANIMATION_DETAILS_Y = 494
 Const ANIMATION_DETAILS_MINIMUM_HEIGHT = 650
@@ -32,6 +31,7 @@ Const MAX_ANIMATION_ELAPSED = 250
 Const MAX_CAMERA_ELAPSED = 250
 Const TIMELINE_LEFT = 18
 Const TIMELINE_HEIGHT = 18
+Const TIMELINE_KEYFRAME_HIT_RADIUS = 7
 Const EQUIPMENT_TRAIL_POINT_COUNT = 5
 Const EQUIPMENT_TRAIL_SAMPLE_MILLISECONDS = 24
 Const SWORD_TRAIL_START_MILLISECONDS = 300
@@ -40,6 +40,7 @@ Const SHIELD_TRAIL_START_MILLISECONDS = 350
 Const SHIELD_TRAIL_END_MILLISECONDS = 650
 Const ARIN_SHIELD_PART_INDEX = 0
 Const ARIN_SWORD_PART_INDEX = 1
+Const ARIN_BODY_PART_INDEX = 2
 Const EQUIPMENT_GLOW_SCALE_DIVISOR = 60
 Const SWORD_TRAIL_PARTICLE_SIZE = 3
 Const SHIELD_TRAIL_PARTICLE_SIZE = 5
@@ -76,13 +77,20 @@ Const CALIBRATION_MAXIMUM_POSITION = 100
 Const CALIBRATION_PANEL_X = 18
 Const CALIBRATION_PANEL_Y = 92
 Const CALIBRATION_PANEL_WIDTH = 430
-Const CALIBRATION_PANEL_HEIGHT = 220
+Const CALIBRATION_PANEL_HEIGHT = 280
 Const CALIBRATION_SLIDER_X = 34
 Const CALIBRATION_SLIDER_Y = 204
 Const CALIBRATION_SLIDER_WIDTH = 360
 Const CALIBRATION_SLIDER_HEIGHT = 20
 Const CAMERA_SLIDER_WIDTH = 146
 Const CAMERA_SLIDER_HEIGHT = 16
+Const CAMERA_SLIDER_NONE = 0
+Const CAMERA_SLIDER_HORIZONTAL_ORBIT = 1
+Const CAMERA_SLIDER_VERTICAL_ORBIT = 2
+Const CAMERA_SLIDER_ZOOM = 3
+Const BACKGROUND_COUNT = 5
+Const BACKDROP_LANDSCAPE_PATH = "Assets\Backgrounds\SinStarLandscape.png"
+Const BACKDROP_TITLE_PATH = "Assets\Backgrounds\SinStarTitleWithLogo.png"
 
 Dim BaseCamera As Core.Camera3D
 Dim Camera As Core.Camera3D
@@ -124,8 +132,10 @@ Dim ShieldTrailActive As Boolean
 Dim Ready As Boolean
 Dim Running As Boolean
 Dim ViewerError As Boolean
+Dim WindowActivated As Boolean
 Dim FirstViewerError As Number
 Dim FirstRendererError As Number
+Dim FirstFailureStage As Number
 Dim ViewerEpoch As Number
 Dim InterfacePointerBlocked As Boolean
 Dim SelectedClip As Number
@@ -161,11 +171,13 @@ Dim AnimationCycleElapsed As Number
 Dim DemoEnabled As Boolean
 Dim DemoCompletedLoops As Number
 Dim DemoPreviousAnimationTime As Number
-Dim IdleResetElapsed As Number
-Dim IdleResetPending As Boolean
 Dim ScenePaused As Boolean
 Dim AnimationUpdateElapsed As Number
 Dim BackgroundIndex As Number
+Dim BackdropLandscapeTexture As Core.Texture3D
+Dim BackdropTitleTexture As Core.Texture3D
+Dim BackdropAvailable As Boolean
+Dim BackdropTextureIndex As Number
 Dim DragonModel As Core.Model3D
 Dim Dragon As Core.Object3D
 Dim DragonAvailable As Boolean
@@ -200,6 +212,10 @@ Dim CalibrationAutoOrbitWasEnabled As Boolean
 Dim CalibrationSavedBeforeEdit As Boolean
 Dim CalibrationClearConfirm As Boolean
 Dim CalibrationClearAllStage As Number
+Dim CalibrationClipboardAvailable As Boolean
+Dim CalibrationClipboardValues[CALIBRATION_CHANNEL_COUNT] As Number
+Dim CalibrationSliderDragging As Boolean
+Dim CameraSliderDragging As Number
 Dim SwordWristCalibrationBeforeEdit[CALIBRATION_AXIS_COUNT] As Number
 Dim ShieldWristCalibrationBeforeEdit[CALIBRATION_AXIS_COUNT] As Number
 Dim SwordCalibrationBeforeEdit[CALIBRATION_AXIS_COUNT] As Number
@@ -207,11 +223,19 @@ Dim ShieldCalibrationBeforeEdit[CALIBRATION_AXIS_COUNT] As Number
 Dim SwordPositionCalibrationBeforeEdit[CALIBRATION_AXIS_COUNT] As Number
 Dim ShieldPositionCalibrationBeforeEdit[CALIBRATION_AXIS_COUNT] As Number
 Dim TimelineScrubbing As Boolean
+Dim TimelineKeyframeDragging As Boolean
+Dim TimelineDraggedKeyframe As Number
+Dim TimelineDraggedOriginalFrame As Number
+Dim TimelineDraggedTargetFrame As Number
+Dim TimelineDraggedKeyframeValues[CALIBRATION_CHANNEL_COUNT] As Number
 
 Game Window "SMILE 2.0 - 3D Viewer, Animation Editor" Size 1600 By 640
 
 Call Graphics3D.ResetRenderer3D()
+DemoEnabled = True
 Call LoadViewer()
+Call CaptureViewerFailure(20)
+WindowActivated = Window_Activate()
 
 Running = True
 PreviousTime = Timer()
@@ -222,9 +246,15 @@ Do
 
     Call HandleKeyboard(Key)
 
+    Call CaptureViewerFailure(21)
+
     InterfacePointerBlocked = HandleInterfacePointer()
 
+    Call CaptureViewerFailure(22)
+
     Call UpdateCameraPointer(InterfacePointerBlocked)
+
+    Call CaptureViewerFailure(23)
 
     CurrentTime = Timer()
     RawFrameMilliseconds = Max(0, CurrentTime - PreviousTime)
@@ -237,6 +267,9 @@ Do
         MAX_CAMERA_ELAPSED,
         MAX_RAW_FRAME_MILLISECONDS
     ) And Ready
+
+    Call CaptureViewerFailure(24)
+
     RawFrameMilliseconds = ViewerClock.RawFrameMilliseconds
     AnimationElapsed = ViewerClock.AnimationElapsed
     CameraElapsed = ViewerClock.CameraElapsed
@@ -250,6 +283,8 @@ Do
 
         If Not ScenePaused Then
             Call AdvanceAnimationSequence()
+
+            Call CaptureViewerFailure(2)
         End If
 
         If ScenePaused Then
@@ -260,9 +295,13 @@ Do
 
         Ready = Character3D.Update(Character, AnimationUpdateElapsed) And Ready
 
+        Call CaptureViewerFailure(3)
+
         If CalibrationAvailable Then
             Call UpdateCalibrationForCurrentFrame()
             Call ApplyWristCalibration()
+
+            Call CaptureViewerFailure(4)
         End If
 
         If SocketGizmosVisible Then
@@ -271,9 +310,12 @@ Do
 
         Call AdvanceSmoothZoom()
 
+        Call CaptureViewerFailure(5)
+
         If Not ScenePaused Then
-            Call AdvanceIdleReset()
             Call AdvanceAutoOrbit()
+
+            Call CaptureViewerFailure(6)
         End If
 
         Call UpdateResponsiveFit()
@@ -290,6 +332,8 @@ Do
 
         If CalibrationAvailable Then
             Call ApplyEquipmentCalibration()
+
+            Call CaptureViewerFailure(7)
         End If
 
         If Character3D.IsValid(Character) Then
@@ -298,18 +342,25 @@ Do
 
         Ready = BeginViewerScene() And Ready
 
-        If Ready Then
+        Call CaptureViewerFailure(8)
 
+        If Ready Then
             If FloorVisible Then
                 Ready = Graphics3D.DrawObject3D(Floor)
+
+                Call CaptureViewerFailure(9)
             End If
 
             If GridVisible Then
                 Ready = DrawStudioGrid() And Ready
+
+                Call CaptureViewerFailure(10)
             End If
 
             If DragonVisible Then
                 Ready = DrawDragon() And Ready
+
+                Call CaptureViewerFailure(11)
             End If
 
             If EpicGlowVisible Then
@@ -321,6 +372,8 @@ Do
             End If
 
             Ready = Character3D.Draw(Character) And Ready
+
+            Call CaptureViewerFailure(12)
 
             If EpicGlowVisible Then
 
@@ -335,6 +388,8 @@ Do
             End If
 
             Ready = Scene3D.EndScene() And Ready
+
+            Call CaptureViewerFailure(13)
 
         End If
 
@@ -363,12 +418,21 @@ Sub LoadViewer()
     ShieldVisible = True
     Ready = CharacterViewer.ValidateProfile(ActiveProfile)
     Ready = Window_Title(ViewerTitle()) And Ready
+
+    Call CaptureViewerFailure(30)
+
     Character = Character3D.LoadWithPolicy(
         ActiveProfile.AssetPath,
         Character3D.CHARACTER_LOAD_REQUIRE_PBR
     )
     Ready = Character3D.IsValid(Character) And Ready
+
+    Call CaptureViewerFailure(31)
+
     Ready = ValidateLoadedProfile() And Ready
+
+    Call CaptureViewerFailure(32)
+
     LocalCharacterBounds = Character3D.LocalBounds(Character)
     BaseCamera = Graphics3D.DefaultCamera()
     ViewerFrame = CharacterViewer.AutoFit(
@@ -379,6 +443,9 @@ Sub LoadViewer()
         BaseCamera.FovDegrees
     )
     Ready = ViewerFrame.Valid And Ready
+
+    Call CaptureViewerFailure(33)
+
     BaseCamera.Position.X = 0
     BaseCamera.Position.Y = ViewerFrame.CameraY
     BaseCamera.Position.Z = ViewerFrame.CameraZ
@@ -390,7 +457,10 @@ Sub LoadViewer()
     Call Graphics3D.SetObjectPosition(Floor, 0, -1, 0)
     Call Graphics3D.SetObjectColor(Floor, 28, 35, 54)
 
+    Call CreateBackdrop()
     Call CreateStudioGrid()
+
+    Call CaptureViewerFailure(34)
 
     FloorVisible = True
     GridVisible = True
@@ -431,6 +501,8 @@ Sub LoadViewer()
         ) And Ready
     End If
 
+    Call CaptureViewerFailure(35)
+
     Call ApplyLighting()
 
     Ready = Character3D.SetScale(Character, ViewerFrame.ScalePercent) And Ready
@@ -444,18 +516,36 @@ Sub LoadViewer()
     Call ApplyArenaFacing()
 
     Ready = Character3D.SetShadows(Character, True, True) And Ready
+
+    Call CaptureViewerFailure(36)
+
     SocketGizmosVisible = False
 
     Call CreateDragon()
+
+    Call CaptureViewerFailure(37)
+
     Call CreateSocketGizmos()
+
+    Call CaptureViewerFailure(38)
+
     Call CreateEpicGlow()
+
+    Call CaptureViewerFailure(39)
+
     Call ConfigureCalibration()
+
+    Call CaptureViewerFailure(40)
 
     PlaybackSpeed = ActiveProfile.DefaultPlaybackSpeed
     MaterialInspection = Graphics3D.MATERIAL_INSPECTION_LIT
     Ready = Graphics3D.SetMaterialInspection3D(MaterialInspection) And Ready
 
+    Call CaptureViewerFailure(41)
+
     Call RestartPresentation()
+
+    Call CaptureViewerFailure(42)
 
     ViewerEpoch = Graphics3D.ResourceEpoch3D()
 
@@ -524,7 +614,7 @@ Function InitialViewerOrbitYaw() As Number
 
     Dim Result As Number
 
-    If DragonVisible Then
+    If DragonAvailable Then
         Result = ARENA_INITIAL_ORBIT_YAW
     Else
         Result = ViewerProfiles.InitialOrbitYaw(ProfileIndex)
@@ -538,7 +628,7 @@ Function DefaultZoomDegrees() As Number
 
     Dim Result As Number
 
-    If DragonVisible Then
+    If DragonAvailable Then
         Result = ARENA_DEFAULT_ZOOM_DEGREES
     Else
         Result = DEFAULT_ZOOM_DEGREES
@@ -550,7 +640,7 @@ End Function
 
 Sub ApplyArenaFacing()
 
-    If DragonVisible Then
+    If DragonAvailable Then
         Ready = Character3D.Rotate(Character, 0, ARIN_ARENA_ROTATION_Y, 0) And Ready
     Else
         Ready = Character3D.Rotate(Character, 0, 0, 0) And Ready
@@ -804,6 +894,46 @@ End Sub
 
 Sub HandleKeyboard(PressedKey As Number)
 
+    If PressedKey = KEY_SPACE Then
+
+        Call ToggleScenePause()
+
+        Return
+
+    End If
+
+    If PressedKey = KEY_F Then
+
+        Call ToggleFloorAndGrid()
+
+        Return
+
+    End If
+
+    If PressedKey = KEY_D Then
+
+        Call ToggleDragon()
+
+        Return
+
+    End If
+
+    If PressedKey = KEY_W Then
+
+        Call ToggleSword()
+
+        Return
+
+    End If
+
+    If PressedKey = KEY_S Then
+
+        Call ToggleShield()
+
+        Return
+
+    End If
+
     If CalibrationEditing Then
         Return
     End If
@@ -848,29 +978,17 @@ Sub HandleKeyboard(PressedKey As Number)
 
         Call NudgePan(5, 0)
 
-    Else If PressedKey = KEY_D Then
-
-        Call NudgePan(-5, 0)
-
-    Else If PressedKey = KEY_W Then
-
-        Call NudgePan(0, -5)
-
-    Else If PressedKey = KEY_S Then
-
-        Call NudgePan(0, 5)
-
     Else If PressedKey = KEY_1 And Character3D.ClipCount(Character) > 0 Then
 
-        Call SelectClip(0)
+        Call SelectPresentationClip(0)
 
     Else If PressedKey = KEY_2 And Character3D.ClipCount(Character) > 1 Then
 
-        Call SelectClip(1)
+        Call SelectPresentationClip(1)
 
     Else If PressedKey = KEY_3 And Character3D.ClipCount(Character) > 2 Then
 
-        Call SelectClip(2)
+        Call SelectPresentationClip(2)
 
     Else If PressedKey = KEY_ENTER Then
 
@@ -885,10 +1003,6 @@ Sub HandleKeyboard(PressedKey As Number)
 
         Call ToggleAutoOrbit()
 
-    Else If PressedKey = KEY_F Then
-
-        Call ToggleFloorAndGrid()
-
     Else If PressedKey = KEY_G Then
 
         GridVisible = Not GridVisible
@@ -899,7 +1013,10 @@ Sub HandleKeyboard(PressedKey As Number)
 
     Else If PressedKey = KEY_TAB Then
 
-        Call SelectClip((SelectedClip + 1) Mod Character3D.ClipCount(Character))
+        Call SelectPresentationClip(
+            (PresentationIndexForRuntimeClip(SelectedClip) + 1) Mod
+                ViewerProfiles.ClipCount(ProfileIndex)
+        )
 
     Else If PressedKey = KEY_R Then
 
@@ -926,7 +1043,7 @@ End Sub
 
 Sub CycleBackground()
 
-    BackgroundIndex = (BackgroundIndex + 1) Mod 3
+    BackgroundIndex = (BackgroundIndex + 1) Mod BACKGROUND_COUNT
 
 End Sub
 
@@ -935,9 +1052,6 @@ Sub ToggleDragon()
     If DragonAvailable Then
 
         DragonVisible = Not DragonVisible
-
-        Call ApplyArenaFacing()
-        Call ResetView()
 
     End If
 
@@ -973,6 +1087,12 @@ Function BeginViewerScene() As Boolean
 
     Dim Result As Boolean
 
+    Result = ApplyBackdrop()
+
+    If Not Result Then
+        Return False
+    End If
+
     If BackgroundIndex = 1 Then
         Result = Scene3D.Begin(Camera, 0, 96, 32)
     Else If BackgroundIndex = 2 Then
@@ -984,6 +1104,66 @@ Function BeginViewerScene() As Boolean
     Return Result
 
 End Function
+
+Sub CreateBackdrop()
+
+    Dim BackdropReady As Boolean
+
+    BackdropAvailable = False
+    BackdropTextureIndex = -1
+    BackdropLandscapeTexture = Graphics3D.LoadTexture3D(BACKDROP_LANDSCAPE_PATH)
+    BackdropTitleTexture = Graphics3D.LoadTexture3D(BACKDROP_TITLE_PATH)
+    BackdropReady = BackdropLandscapeTexture.Handle <> 0
+    BackdropReady = BackdropTitleTexture.Handle <> 0 And BackdropReady
+
+    If Not BackdropReady Then
+        Call DestroyBackdrop()
+        Return
+    End If
+
+    BackdropAvailable = BackdropReady
+
+End Sub
+
+Function ApplyBackdrop() As Boolean
+
+    Dim Result As Boolean
+
+    Result = True
+
+    If BackdropTextureIndex = BackgroundIndex Then
+        Return True
+    End If
+
+    If BackdropAvailable And BackgroundIndex = 3 Then
+        Result = Graphics3D.SetBackdropTexture3D(BackdropLandscapeTexture)
+    Else If BackdropAvailable And BackgroundIndex = 4 Then
+        Result = Graphics3D.SetBackdropTexture3D(BackdropTitleTexture)
+    Else
+        Result = Graphics3D.ClearBackdropTexture3D()
+    End If
+
+    If Result Then
+        BackdropTextureIndex = BackgroundIndex
+    End If
+
+    Return Result
+
+End Function
+
+Sub DestroyBackdrop()
+
+    Dim BackdropCleared As Boolean
+
+    BackdropCleared = Graphics3D.ClearBackdropTexture3D()
+
+    Call Graphics3D.DestroyTexture3D(BackdropLandscapeTexture)
+    Call Graphics3D.DestroyTexture3D(BackdropTitleTexture)
+
+    BackdropAvailable = False
+    BackdropTextureIndex = -1
+
+End Sub
 
 Sub ToggleFloorAndGrid()
 
@@ -1041,6 +1221,31 @@ Sub RecordViewerError()
 
 End Sub
 
+Sub CaptureViewerFailure(Stage As Number)
+
+    If Ready Or FirstFailureStage <> 0 Then
+        Return
+    End If
+
+    FirstFailureStage = Stage
+    FirstViewerError = Character3D.LastError()
+
+    If FirstViewerError = 0 Then
+        FirstViewerError = Scene3D.LastError()
+    End If
+
+    FirstRendererError = Character3D.LastRendererError()
+
+    If FirstRendererError = 0 Then
+        FirstRendererError = Scene3D.LastRendererError()
+    End If
+
+    If FirstRendererError = 0 Then
+        FirstRendererError = Graphics3D.LastError()
+    End If
+
+End Sub
+
 Sub RetryViewer()
 
     Call DestroyViewerResources()
@@ -1052,6 +1257,7 @@ Sub RetryViewer()
     ViewerError = False
     FirstViewerError = 0
     FirstRendererError = 0
+    FirstFailureStage = 0
 
     Call LoadViewer()
 
@@ -1066,6 +1272,7 @@ Sub CycleProfile()
     ViewerError = False
     FirstViewerError = 0
     FirstRendererError = 0
+    FirstFailureStage = 0
 
     Call LoadViewer()
 
@@ -1083,26 +1290,9 @@ Sub ToggleAutoOrbit()
     AutoOrbit = Not AutoOrbit
     AutoOrbitYaw1000 = CameraControls.OrbitYaw * 1000
 
-    If AutoOrbit Then
-        IdleResetElapsed = 0
-        IdleResetPending = False
-    Else
+    If Not AutoOrbit Then
 
         Call RecordCameraInteraction()
-    End If
-
-End Sub
-
-Sub AdvanceIdleReset()
-
-    If IdleResetPending Then
-
-        IdleResetElapsed = IdleResetElapsed + PresentationElapsed
-
-        If IdleResetElapsed >= IDLE_RESET_MILLISECONDS Then
-            Call RestartPresentation()
-        End If
-
     End If
 
 End Sub
@@ -1140,7 +1330,9 @@ Sub AdvanceAnimationSequence()
     DemoPreviousAnimationTime = CurrentAnimationTime
 
     If DemoCompletedLoops >= DemoRequiredLoops() Then
-        SelectedClip = (SelectedClip + 1) Mod ClipCount
+        SelectedClip = RuntimeClipForPresentationIndex(
+            (PresentationIndexForRuntimeClip(SelectedClip) + 1) Mod ClipCount
+        )
 
         Call PlaySelectedClip()
     End If
@@ -1152,12 +1344,57 @@ Function HandleInterfacePointer() As Boolean
     Dim Blocked As Boolean
     Dim ClipCount As Number
     Dim Index As Number
+    Dim KeyframeIndex As Number
     Dim Column As Number
     Dim Row As Number
     Dim PanelLeft As Number
     Dim WheelDelta As Number
 
     PanelLeft = StatusPanelX()
+
+    If TimelineKeyframeDragging Then
+
+        If Pointer_Pressed(POINTER_PRIMARY) Or Pointer_Held(POINTER_PRIMARY) Then
+            Call UpdateTimelineKeyframeDrag()
+        Else
+
+            Call FinishTimelineKeyframeDrag()
+        End If
+
+        Return True
+    End If
+
+    If CalibrationSliderDragging Then
+
+        If Pointer_Pressed(POINTER_PRIMARY) Or Pointer_Held(POINTER_PRIMARY) Then
+            Call SetCalibrationFromPointer()
+        Else
+
+            CalibrationSliderDragging = False
+        End If
+
+        Return True
+    End If
+
+    If CameraSliderDragging <> CAMERA_SLIDER_NONE Then
+
+        If Pointer_Pressed(POINTER_PRIMARY) Or Pointer_Held(POINTER_PRIMARY) Then
+
+            If CameraSliderDragging = CAMERA_SLIDER_HORIZONTAL_ORBIT Then
+                Call SetHorizontalOrbitFromPointer()
+            Else If CameraSliderDragging = CAMERA_SLIDER_VERTICAL_ORBIT Then
+                Call SetVerticalOrbitFromPointer()
+            Else
+                Call SetZoomFromPointer()
+            End If
+
+        Else
+
+            CameraSliderDragging = CAMERA_SLIDER_NONE
+        End If
+
+        Return True
+    End If
 
     If (TimelineScrubbing And
         Not Pointer_Held(POINTER_PRIMARY) And
@@ -1171,7 +1408,12 @@ Function HandleInterfacePointer() As Boolean
 
     If Pointer_Pressed(POINTER_SECONDARY) Then
 
-        Call ToggleScenePause()
+        If ViewerError Then
+            Call RetryViewer()
+        Else
+
+            Call ResetAll()
+        End If
 
         Return True
 
@@ -1225,6 +1467,8 @@ Function HandleInterfacePointer() As Boolean
             CAMERA_SLIDER_HEIGHT
         )) Then
 
+        CameraSliderDragging = CAMERA_SLIDER_HORIZONTAL_ORBIT
+
         Call SetHorizontalOrbitFromPointer()
 
         Return True
@@ -1237,6 +1481,8 @@ Function HandleInterfacePointer() As Boolean
             CAMERA_SLIDER_WIDTH,
             CAMERA_SLIDER_HEIGHT
         )) Then
+
+        CameraSliderDragging = CAMERA_SLIDER_VERTICAL_ORBIT
 
         Call SetVerticalOrbitFromPointer()
 
@@ -1251,38 +1497,11 @@ Function HandleInterfacePointer() As Boolean
             CAMERA_SLIDER_HEIGHT
         )) Then
 
+        CameraSliderDragging = CAMERA_SLIDER_ZOOM
+
         Call SetZoomFromPointer()
 
         Return True
-    End If
-
-    If CalibrationEditing Then
-
-        If (Pointer_Pressed(POINTER_PRIMARY) And
-            PointerInRectangle(PanelLeft, 56, 108, 22)) Then
-
-            Call ToggleDragon()
-
-            Return True
-        End If
-
-        If PointerInRectangle(
-            CALIBRATION_PANEL_X,
-            CALIBRATION_PANEL_Y,
-            CALIBRATION_PANEL_WIDTH,
-            CALIBRATION_PANEL_HEIGHT
-        ) Then
-
-            Call HandleCalibrationPanelPointer()
-
-            Return True
-        End If
-
-        Blocked = (Pointer_Y() < 72 Or
-            Pointer_Y() >= Window_Height() - 100 Or
-            (Pointer_X() >= PanelLeft And Pointer_Y() >= 82))
-
-        Return Blocked
     End If
 
     If TimelineScrubbing Then
@@ -1344,34 +1563,31 @@ Function HandleInterfacePointer() As Boolean
         Return Blocked
     End If
 
-    If PointerInRectangle(TIMELINE_LEFT, Window_Height() - 96, 58, 24) Then
+    KeyframeIndex = TimelineKeyframeAtPointer()
 
-        If ViewerError Then
-            Call RetryViewer()
-        Else
-
-            Call RestartPresentation()
-        End If
-
-    Else If PointerInRectangle(TIMELINE_LEFT + 64, Window_Height() - 96, 62, 24) Then
+    If PointerInRectangle(TIMELINE_LEFT, Window_Height() - 96, 62, 24) Then
 
         Call SeekFirstAnimationFrame()
 
-    Else If PointerInRectangle(TIMELINE_LEFT + 132, Window_Height() - 96, 54, 24) Then
+    Else If PointerInRectangle(TIMELINE_LEFT + 68, Window_Height() - 96, 62, 24) Then
+
+        Call SeekCalibrationKeyframe(-1)
+
+    Else If PointerInRectangle(TIMELINE_LEFT + 136, Window_Height() - 96, 62, 24) Then
+
+        Call SeekCalibrationKeyframe(1)
+
+    Else If PointerInRectangle(TIMELINE_LEFT + 204, Window_Height() - 96, 62, 24) Then
 
         Call StepAnimationFrame(-1)
 
-    Else If PointerInRectangle(TIMELINE_LEFT + 192, Window_Height() - 96, 54, 24) Then
+    Else If PointerInRectangle(TIMELINE_LEFT + 272, Window_Height() - 96, 62, 24) Then
 
         Call StepAnimationFrame(1)
 
-    Else If PointerInRectangle(TIMELINE_LEFT + 252, Window_Height() - 96, 72, 24) Then
+    Else If KeyframeIndex >= 0 Then
 
-        Call SeekAuthoredEvent(-1)
-
-    Else If PointerInRectangle(TIMELINE_LEFT + 330, Window_Height() - 96, 72, 24) Then
-
-        Call SeekAuthoredEvent(1)
+        Call BeginTimelineKeyframeDrag(KeyframeIndex)
 
     Else If PointerInRectangle(
         TIMELINE_LEFT,
@@ -1428,6 +1644,10 @@ Function HandleInterfacePointer() As Boolean
 
         Call ToggleDemo()
 
+    Else If PointerInRectangle(PanelLeft + 12, 444, 110, 22) Then
+
+        Call ToggleFloorAndGrid()
+
     Else If PointerInRectangle(PanelLeft + 172, 204, 30, 24) Then
 
         Call AdjustPlaybackSpeed(-25)
@@ -1463,7 +1683,7 @@ Function HandleInterfacePointer() As Boolean
 
     End If
 
-    ClipCount = Character3D.ClipCount(Character)
+    ClipCount = ViewerProfiles.ClipCount(ProfileIndex)
 
     For Index = 0 To ClipCount - 1
 
@@ -1476,7 +1696,7 @@ Function HandleInterfacePointer() As Boolean
             ANIMATION_BUTTON_WIDTH,
             ANIMATION_BUTTON_HEIGHT
         ) Then
-            Call SelectClip(Index)
+            Call SelectPresentationClip(Index)
         End If
 
     End For
@@ -1505,14 +1725,26 @@ Sub HandleCalibrationPanelPointer()
             CALIBRATION_SLIDER_HEIGHT
         )) Then
 
+        CalibrationSliderDragging = True
+
         Call SetCalibrationFromPointer()
+
+        Return
     End If
 
     If Not Pointer_Pressed(POINTER_PRIMARY) Then
         Return
     End If
 
-    If PointerInRectangle(34, 128, 92, 24) Then
+    If PointerInRectangle(292, 96, 68, 22) Then
+
+        Call SeekCalibrationKeyframe(-1)
+
+    Else If PointerInRectangle(364, 96, 68, 22) Then
+
+        Call SeekCalibrationKeyframe(1)
+
+    Else If PointerInRectangle(34, 128, 92, 24) Then
         CalibrationTarget = CALIBRATION_TARGET_SWORD_WRIST
         CalibrationTransform = CALIBRATION_TRANSFORM_ROTATE
     Else If PointerInRectangle(130, 128, 96, 24) Then
@@ -1552,15 +1784,27 @@ Sub HandleCalibrationPanelPointer()
             CalibrationClearAllStage = 0
         End If
 
-    Else If PointerInRectangle(340, 268, 92, 24) Then
+    Else If PointerInRectangle(34, 268, 80, 24) Then
 
-        CalibrationClearConfirm = False
-
-        If CalibrationClearAllStage >= 2 Then
-            Call ClearAllCalibration()
-        Else
-            CalibrationClearAllStage = CalibrationClearAllStage + 1
+        If Not CalibrationEditing Then
+            Call CopyCurrentCalibrationKeyframe()
         End If
+
+    Else If PointerInRectangle(118, 268, 80, 24) Then
+
+        If Not CalibrationEditing Then
+            Call PasteCalibrationKeyframe()
+        End If
+
+    Else If PointerInRectangle(202, 268, 90, 24) Then
+
+        If Not CalibrationEditing Then
+            Call DeleteCurrentCalibrationKeyframe()
+        End If
+
+    Else If PointerInRectangle(34, 298, 100, 24) Then
+
+        Call ReloadCurrentCalibrationKeyframe()
 
     End If
 
@@ -1797,17 +2041,20 @@ Sub UpdateSocketGizmos()
     PositionX1000 = Character3D.SocketValueThousandths(
         Character,
         Name,
-        Graphics3D.ANIMATOR_SOCKET_POSITION_X
+        Graphics3D.ANIMATOR_SOCKET_POSITION_X,
+        ARIN_BODY_PART_INDEX
     )
     PositionY1000 = Character3D.SocketValueThousandths(
         Character,
         Name,
-        Graphics3D.ANIMATOR_SOCKET_POSITION_Y
+        Graphics3D.ANIMATOR_SOCKET_POSITION_Y,
+        ARIN_BODY_PART_INDEX
     )
     PositionZ1000 = Character3D.SocketValueThousandths(
         Character,
         Name,
-        Graphics3D.ANIMATOR_SOCKET_POSITION_Z
+        Graphics3D.ANIMATOR_SOCKET_POSITION_Z,
+        ARIN_BODY_PART_INDEX
     )
 
     For Axis = 0 To 3
@@ -1819,9 +2066,24 @@ Sub UpdateSocketGizmos()
         If Axis > 0 Then
 
             MatrixProperty = Graphics3D.ANIMATOR_SOCKET_MATRIX_M11 + (Axis - 1) * 3
-            AxisX1000 = Character3D.SocketValueThousandths(Character, Name, MatrixProperty)
-            AxisY1000 = Character3D.SocketValueThousandths(Character, Name, MatrixProperty + 1)
-            AxisZ1000 = Character3D.SocketValueThousandths(Character, Name, MatrixProperty + 2)
+            AxisX1000 = Character3D.SocketValueThousandths(
+                Character,
+                Name,
+                MatrixProperty,
+                ARIN_BODY_PART_INDEX
+            )
+            AxisY1000 = Character3D.SocketValueThousandths(
+                Character,
+                Name,
+                MatrixProperty + 1,
+                ARIN_BODY_PART_INDEX
+            )
+            AxisZ1000 = Character3D.SocketValueThousandths(
+                Character,
+                Name,
+                MatrixProperty + 2,
+                ARIN_BODY_PART_INDEX
+            )
             AxisLength = Max(1, Max(Abs(AxisX1000), Max(Abs(AxisY1000), Abs(AxisZ1000))))
             AxisX1000 = AxisX1000 * 8000 / AxisLength
             AxisY1000 = AxisY1000 * 8000 / AxisLength
@@ -1845,17 +2107,20 @@ Sub UpdateSocketGizmos()
             PositionX1000 = Character3D.SocketValueThousandths(
                 Character,
                 Name,
-                Graphics3D.ANIMATOR_SOCKET_POSITION_X
+                Graphics3D.ANIMATOR_SOCKET_POSITION_X,
+                ARIN_BODY_PART_INDEX
             )
             PositionY1000 = Character3D.SocketValueThousandths(
                 Character,
                 Name,
-                Graphics3D.ANIMATOR_SOCKET_POSITION_Y
+                Graphics3D.ANIMATOR_SOCKET_POSITION_Y,
+                ARIN_BODY_PART_INDEX
             )
             PositionZ1000 = Character3D.SocketValueThousandths(
                 Character,
                 Name,
-                Graphics3D.ANIMATOR_SOCKET_POSITION_Z
+                Graphics3D.ANIMATOR_SOCKET_POSITION_Z,
+                ARIN_BODY_PART_INDEX
             )
             Ready = Graphics3D.SetParticle3D(
                 SocketMarkers,
@@ -1959,6 +2224,10 @@ Sub CreateEpicGlow()
         GlowReady = Graphics3D.SetObjectAnimator3D(SwordGlow, CharacterAnimator) And GlowReady
         GlowReady = Graphics3D.SetObjectMaterial3D(ShieldGlow, EpicGlowMaterial)
         GlowReady = Graphics3D.SetObjectAnimator3D(ShieldGlow, CharacterAnimator) And GlowReady
+        GlowReady = Graphics3D.SetObjectCullMode3D(
+            ShieldGlow,
+            Graphics3D.OBJECT_CULL_FRONT
+        ) And GlowReady
 
         Call Graphics3D.SetObjectColor(SwordGlow, 210, 244, 255)
         Call Graphics3D.SetObjectOpacity(SwordGlow, 95)
@@ -2023,9 +2292,9 @@ Function UpdateEpicGlow() As Boolean
     Dim ShieldCenter As Core.Vector3
     Dim Result As Boolean
 
-    SwordBase = Character3D.SocketPosition(Character, "SwordBase")
-    SwordTip = Character3D.SocketPosition(Character, "SwordTip")
-    ShieldCenter = Character3D.SocketPosition(Character, "ShieldCenter")
+    SwordBase = Character3D.SocketPosition(Character, "SwordBase", ARIN_BODY_PART_INDEX)
+    SwordTip = Character3D.SocketPosition(Character, "SwordTip", ARIN_BODY_PART_INDEX)
+    ShieldCenter = Character3D.SocketPosition(Character, "ShieldCenter", ARIN_BODY_PART_INDEX)
     SwordCenter.X = (SwordBase.X + SwordTip.X) / 2
     SwordCenter.Y = (SwordBase.Y + SwordTip.Y) / 2
     SwordCenter.Z = (SwordBase.Z + SwordTip.Z) / 2
@@ -2063,7 +2332,7 @@ Function UpdateEquipmentGlow(
     PositionY = ViewerFrame.PositionY - PositionY
     PositionZ = ViewerFrame.PositionZ - PositionZ
 
-    If DragonVisible Then
+    If DragonAvailable Then
         RotationY = ARIN_ARENA_ROTATION_Y
     End If
 
@@ -2103,8 +2372,8 @@ Sub ResetEpicGlowTrails()
     Dim SwordTip As Core.Vector3
     Dim ShieldCenter As Core.Vector3
 
-    SwordTip = Character3D.SocketPosition(Character, "SwordTip")
-    ShieldCenter = Character3D.SocketPosition(Character, "ShieldCenter")
+    SwordTip = Character3D.SocketPosition(Character, "SwordTip", ARIN_BODY_PART_INDEX)
+    ShieldCenter = Character3D.SocketPosition(Character, "ShieldCenter", ARIN_BODY_PART_INDEX)
 
     Call SeedEpicGlowTrails(SwordTip, ShieldCenter)
 
@@ -2135,7 +2404,7 @@ Sub UpdateEpicGlowTrailState(SwordTip As Core.Vector3, ShieldCenter As Core.Vect
 
     AnimationTime = Character3D.AnimationTime(Character)
     NextSwordTrailActive = (SwordVisible And
-        SelectedClipName() = "SwordAttack" And
+        (SelectedClipName() = "SwordAttack" Or SelectedClipName() = "SwordAttack2") And
         AnimationTime >= SWORD_TRAIL_START_MILLISECONDS And
         AnimationTime <= SWORD_TRAIL_END_MILLISECONDS)
     NextShieldTrailActive = (ShieldVisible And
@@ -2362,8 +2631,6 @@ End Sub
 
 Sub AdjustZoomTarget(WheelDelta As Number)
 
-    Call RecordZoomInteraction()
-
     Call CharacterViewer.AdjustZoomTarget(SmoothZoom, WheelDelta, 8)
 
 End Sub
@@ -2406,11 +2673,8 @@ Sub RestartPresentation()
 
     AutoOrbit = True
     AutoOrbitYaw1000 = CameraControls.OrbitYaw * 1000
-    IdleResetElapsed = 0
-    IdleResetPending = False
     AnimationCycleElapsed = 0
-    DemoEnabled = True
-    SelectedClip = 0
+    SelectedClip = RuntimeClipForPresentationIndex(0)
 
     Call PlaySelectedClip()
 
@@ -2438,9 +2702,17 @@ End Sub
 
 Sub ResetAll()
 
+    If CalibrationEditing Then
+        Call CancelCalibrationEdit()
+    End If
+
     PlaybackSpeed = ActiveProfile.DefaultPlaybackSpeed
+    ScenePaused = False
+    DemoEnabled = True
+    FitLocked = True
     LightingIndex = 0
     MaterialInspection = Graphics3D.MATERIAL_INSPECTION_LIT
+    BackgroundIndex = 3
     SocketGizmosVisible = False
     ShowAllSocketOrigins = False
     FloorVisible = True
@@ -2449,6 +2721,11 @@ Sub ResetAll()
     DragonVisible = DragonAvailable
     SwordVisible = True
     ShieldVisible = True
+    CalibrationVisible = CalibrationAvailable
+    CalibrationSliderDragging = False
+    CameraSliderDragging = CAMERA_SLIDER_NONE
+    TimelineScrubbing = False
+    TimelineKeyframeDragging = False
 
     Call ApplyLighting()
     Call ApplyArenaFacing()
@@ -2467,16 +2744,6 @@ End Sub
 Sub RecordCameraInteraction()
 
     AutoOrbit = False
-    IdleResetElapsed = 0
-    IdleResetPending = True
-
-End Sub
-
-Sub RecordZoomInteraction()
-
-    If IdleResetPending Then
-        IdleResetElapsed = 0
-    End If
 
 End Sub
 
@@ -2491,6 +2758,65 @@ Sub SelectClip(Index As Number)
     Call PlaySelectedClip()
 
 End Sub
+
+Sub SelectPresentationClip(Index As Number)
+
+    Dim RuntimeClip As Number
+
+    RuntimeClip = RuntimeClipForPresentationIndex(Index)
+
+    If RuntimeClip >= 0 Then
+        Call SelectClip(RuntimeClip)
+    End If
+
+End Sub
+
+Function RuntimeClipForPresentationIndex(Index As Number) As Number
+
+    Dim ClipIndex As Number
+    Dim DesiredName As Text
+    Dim Result As Number
+
+    Result = -1
+
+    If Index < 0 Or Index >= ViewerProfiles.ClipCount(ProfileIndex) Then
+        Return Result
+    End If
+
+    DesiredName = ViewerProfiles.ClipName(ProfileIndex, Index)
+
+    For ClipIndex = 0 To Character3D.ClipCount(Character) - 1
+
+        If Character3D.ClipName(Character, ClipIndex) = DesiredName Then
+            Return ClipIndex
+        End If
+
+    End For
+
+    Return Result
+
+End Function
+
+Function PresentationIndexForRuntimeClip(RuntimeClip As Number) As Number
+
+    Dim Index As Number
+    Dim RuntimeName As Text
+    Dim Result As Number
+
+    Result = 0
+    RuntimeName = Character3D.ClipName(Character, RuntimeClip)
+
+    For Index = 0 To ViewerProfiles.ClipCount(ProfileIndex) - 1
+
+        If ViewerProfiles.ClipName(ProfileIndex, Index) = RuntimeName Then
+            Return Index
+        End If
+
+    End For
+
+    Return Result
+
+End Function
 
 Sub StepAnimationFrame(Direction As Number)
 
@@ -2510,6 +2836,61 @@ Sub SeekFirstAnimationFrame()
 
     SelectedTimelineEvent = FirstClipEvent()
     Ready = Character3D.SetAnimationTime(Character, 0) And Ready
+
+End Sub
+
+Sub SeekCalibrationKeyframe(Direction As Number)
+
+    Dim CandidateIndex As Number
+    Dim CurrentFrame As Number
+    Dim Index As Number
+    Dim KeyCount As Number
+    Dim TargetFrame As Number
+    Dim TargetTime As Number
+
+    If CalibrationEditing Then
+        Call CancelCalibrationEdit()
+    End If
+
+    KeyCount = CalibrationKeyframeCounts[SelectedClip]
+
+    If KeyCount <= 0 Then
+        Return
+    End If
+
+    CurrentFrame = CurrentAnimationFrame()
+
+    If Direction < 0 Then
+        CandidateIndex = KeyCount - 1
+
+        For Index = 0 To KeyCount - 1
+
+            If CalibrationKeyframeFrames[SelectedClip, Index] < CurrentFrame Then
+                CandidateIndex = Index
+            End If
+
+        End For
+
+    Else
+        CandidateIndex = 0
+
+        For Index = 0 To KeyCount - 1
+
+            If CalibrationKeyframeFrames[SelectedClip, Index] > CurrentFrame Then
+                CandidateIndex = Index
+                Exit For
+            End If
+
+        End For
+
+    End If
+
+    TargetFrame = CalibrationKeyframeFrames[SelectedClip, CandidateIndex]
+    TargetTime = CalibrationFrameTimeMilliseconds(SelectedClip, TargetFrame)
+    Ready = Character3D.SetAnimationTime(Character, TargetTime) And Ready
+
+    Call UpdateCalibrationForCurrentFrame()
+    Call ApplyWristCalibration()
 
 End Sub
 
@@ -2585,6 +2966,166 @@ Sub SeekFromPointer()
 
 End Sub
 
+Function TimelineFrameFromPointer() As Number
+
+    Dim Duration As Number
+    Dim Result As Number
+    Dim SampleRate As Number
+    Dim TargetTime As Number
+
+    Duration = Character3D.ClipDuration(Character, SelectedClip)
+    TargetTime = (Pointer_X() - TIMELINE_LEFT) * Duration / Max(1, TimelineWidth())
+    TargetTime = Max(0, Min(Duration, TargetTime))
+    SampleRate = Max(1, Character3D.ClipSampleRate(Character, SelectedClip))
+    Result = (TargetTime * SampleRate + 500) / 1000
+    Result = Min(Character3D.ClipSampleCount(Character, SelectedClip) - 1, Max(0, Result))
+
+    Return Result
+
+End Function
+
+Function TimelineKeyframeAtPointer() As Number
+
+    Dim Duration As Number
+    Dim Index As Number
+    Dim KeyframeTime As Number
+    Dim MarkerX As Number
+    Dim Result As Number
+    Dim TimelineY As Number
+    Dim Width As Number
+
+    Result = -1
+    TimelineY = Window_Height() - 64
+
+    If Not PointerInRectangle(
+        TIMELINE_LEFT,
+        TimelineY - TIMELINE_KEYFRAME_HIT_RADIUS,
+        TimelineWidth(),
+        TIMELINE_HEIGHT + TIMELINE_KEYFRAME_HIT_RADIUS * 2
+    ) Then
+        Return Result
+    End If
+
+    Duration = Max(1, Character3D.ClipDuration(Character, SelectedClip))
+    Width = TimelineWidth()
+
+    For Index = 0 To CalibrationKeyframeCounts[SelectedClip] - 1
+
+        KeyframeTime = CalibrationFrameTimeMilliseconds(
+            SelectedClip,
+            CalibrationKeyframeFrames[SelectedClip, Index]
+        )
+        MarkerX = TIMELINE_LEFT + KeyframeTime * Width / Duration
+
+        If Abs(Pointer_X() - MarkerX) <= TIMELINE_KEYFRAME_HIT_RADIUS Then
+            Result = Index
+            Exit For
+        End If
+
+    End For
+
+    Return Result
+
+End Function
+
+Sub BeginTimelineKeyframeDrag(KeyframeIndex As Number)
+
+    Dim Channel As Number
+
+    TimelineKeyframeDragging = True
+    TimelineScrubbing = False
+    TimelineDraggedKeyframe = KeyframeIndex
+    TimelineDraggedOriginalFrame = CalibrationKeyframeFrames[SelectedClip, KeyframeIndex]
+    TimelineDraggedTargetFrame = TimelineDraggedOriginalFrame
+
+    For Channel = 0 To CALIBRATION_CHANNEL_COUNT - 1
+        TimelineDraggedKeyframeValues[Channel] = CalibrationKeyframeValues[SelectedClip, KeyframeIndex * CALIBRATION_CHANNEL_COUNT + Channel]
+    End For
+
+    Call UpdateTimelineKeyframeDrag()
+
+End Sub
+
+Sub UpdateTimelineKeyframeDrag()
+
+    Dim ExistingKeyframe As Number
+    Dim TargetFrame As Number
+    Dim TargetTime As Number
+
+    TargetFrame = TimelineFrameFromPointer()
+    ExistingKeyframe = CalibrationKeyframeIndex(SelectedClip, TargetFrame)
+
+    If ExistingKeyframe < 0 Or ExistingKeyframe = TimelineDraggedKeyframe Then
+        TimelineDraggedTargetFrame = TargetFrame
+    End If
+
+    TargetTime = CalibrationFrameTimeMilliseconds(SelectedClip, TimelineDraggedTargetFrame)
+    Ready = Character3D.SetAnimationTime(Character, TargetTime) And Ready
+
+End Sub
+
+Sub FinishTimelineKeyframeDrag()
+
+    Dim Channel As Number
+    Dim Index As Number
+    Dim KeyCount As Number
+    Dim Position As Number
+    Dim RemainingCount As Number
+    Dim Shift As Number
+
+    TimelineKeyframeDragging = False
+
+    If TimelineDraggedTargetFrame = TimelineDraggedOriginalFrame Then
+        Return
+    End If
+
+    KeyCount = CalibrationKeyframeCounts[SelectedClip]
+    RemainingCount = KeyCount - 1
+
+    For Shift = TimelineDraggedKeyframe To RemainingCount - 1
+
+        CalibrationKeyframeFrames[SelectedClip, Shift] = CalibrationKeyframeFrames[SelectedClip, Shift + 1]
+
+        For Channel = 0 To CALIBRATION_CHANNEL_COUNT - 1
+            CalibrationKeyframeValues[SelectedClip, Shift * CALIBRATION_CHANNEL_COUNT + Channel] = CalibrationKeyframeValues[SelectedClip, (Shift + 1) * CALIBRATION_CHANNEL_COUNT + Channel]
+        End For
+
+    End For
+
+    Position = RemainingCount
+
+    For Index = 0 To RemainingCount - 1
+
+        If CalibrationKeyframeFrames[SelectedClip, Index] >= TimelineDraggedTargetFrame Then
+            Position = Index
+            Exit For
+        End If
+
+    End For
+
+    For Shift = RemainingCount Down To Position + 1
+
+        CalibrationKeyframeFrames[SelectedClip, Shift] = CalibrationKeyframeFrames[SelectedClip, Shift - 1]
+
+        For Channel = 0 To CALIBRATION_CHANNEL_COUNT - 1
+            CalibrationKeyframeValues[SelectedClip, Shift * CALIBRATION_CHANNEL_COUNT + Channel] = CalibrationKeyframeValues[SelectedClip, (Shift - 1) * CALIBRATION_CHANNEL_COUNT + Channel]
+        End For
+
+    End For
+
+    CalibrationKeyframeFrames[SelectedClip, Position] = TimelineDraggedTargetFrame
+
+    For Channel = 0 To CALIBRATION_CHANNEL_COUNT - 1
+        CalibrationKeyframeValues[SelectedClip, Position * CALIBRATION_CHANNEL_COUNT + Channel] = TimelineDraggedKeyframeValues[Channel]
+    End For
+
+    Call RefreshCalibrationSavedStatus()
+    Call SaveCalibrationKeyframes()
+    Call UpdateCalibrationForCurrentFrame()
+    Call ApplyWristCalibration()
+
+End Sub
+
 Sub SetHorizontalOrbitFromPointer()
 
     Dim Value As Number
@@ -2592,7 +3133,6 @@ Sub SetHorizontalOrbitFromPointer()
     Value = ((Pointer_X() - StatusPanelX() - 76) * 360 / CAMERA_SLIDER_WIDTH) - 180
     CameraControls.OrbitYaw = Min(180, Max(-180, Value))
     AutoOrbit = False
-    IdleResetPending = False
 
 End Sub
 
@@ -2600,7 +3140,6 @@ Sub AdjustHorizontalOrbit(Amount As Number)
 
     CameraControls.OrbitYaw = Min(180, Max(-180, CameraControls.OrbitYaw + Amount))
     AutoOrbit = False
-    IdleResetPending = False
 
 End Sub
 
@@ -2611,7 +3150,6 @@ Sub SetVerticalOrbitFromPointer()
     Value = ((Pointer_X() - StatusPanelX() - 76) * 360 / CAMERA_SLIDER_WIDTH) - 180
     CameraControls.OrbitPitch = Min(180, Max(-180, Value))
     AutoOrbit = False
-    IdleResetPending = False
 
 End Sub
 
@@ -2619,7 +3157,6 @@ Sub AdjustVerticalOrbit(Amount As Number)
 
     CameraControls.OrbitPitch = Min(180, Max(-180, CameraControls.OrbitPitch + Amount))
     AutoOrbit = False
-    IdleResetPending = False
 
 End Sub
 
@@ -2718,6 +3255,7 @@ Sub ConfigureCalibration()
     CalibrationEditing = False
     CalibrationClearConfirm = False
     CalibrationClearAllStage = 0
+    CalibrationClipboardAvailable = False
     CalibrationSaveLimitReached = False
 
     Call ClearCalibrationMemory()
@@ -3097,6 +3635,132 @@ Sub RefreshCalibrationSavedStatus()
 
 End Sub
 
+Sub DeleteCurrentCalibrationKeyframe()
+
+    Dim Channel As Number
+    Dim CurrentFrame As Number
+    Dim CurrentKeyframe As Number
+    Dim KeyCount As Number
+    Dim Shift As Number
+
+    CurrentFrame = CurrentAnimationFrame()
+    CurrentKeyframe = CalibrationKeyframeIndex(SelectedClip, CurrentFrame)
+
+    If CurrentKeyframe < 0 Then
+        Return
+    End If
+
+    KeyCount = CalibrationKeyframeCounts[SelectedClip]
+
+    For Shift = CurrentKeyframe To KeyCount - 2
+
+        CalibrationKeyframeFrames[SelectedClip, Shift] = CalibrationKeyframeFrames[SelectedClip, Shift + 1]
+
+        For Channel = 0 To CALIBRATION_CHANNEL_COUNT - 1
+            CalibrationKeyframeValues[SelectedClip, Shift * CALIBRATION_CHANNEL_COUNT + Channel] = CalibrationKeyframeValues[SelectedClip, (Shift + 1) * CALIBRATION_CHANNEL_COUNT + Channel]
+        End For
+
+    End For
+
+    CalibrationKeyframeCounts[SelectedClip] = KeyCount - 1
+    CalibrationSaveLimitReached = False
+    CalibrationClearConfirm = False
+    CalibrationClearAllStage = 0
+
+    Call RefreshCalibrationSavedStatus()
+    Call SaveCalibrationKeyframes()
+    Call UpdateCalibrationForCurrentFrame()
+    Call ApplyWristCalibration()
+
+End Sub
+
+Sub CopyCurrentCalibrationKeyframe()
+
+    Dim Channel As Number
+    Dim CurrentFrame As Number
+    Dim CurrentKeyframe As Number
+
+    CurrentFrame = CurrentAnimationFrame()
+    CurrentKeyframe = CalibrationKeyframeIndex(SelectedClip, CurrentFrame)
+
+    If CurrentKeyframe < 0 Then
+        Return
+    End If
+
+    For Channel = 0 To CALIBRATION_CHANNEL_COUNT - 1
+        CalibrationClipboardValues[Channel] = CalibrationKeyframeValues[SelectedClip, CurrentKeyframe * CALIBRATION_CHANNEL_COUNT + Channel]
+    End For
+
+    CalibrationClipboardAvailable = True
+
+End Sub
+
+Sub ReloadCurrentCalibrationKeyframe()
+
+    Dim Channel As Number
+    Dim CurrentFrame As Number
+    Dim CurrentKeyframe As Number
+
+    CurrentFrame = CurrentAnimationFrame()
+    CurrentKeyframe = CalibrationKeyframeIndex(SelectedClip, CurrentFrame)
+
+    If CurrentKeyframe < 0 Then
+        Return
+    End If
+
+    For Channel = 0 To CALIBRATION_CHANNEL_COUNT - 1
+
+        Call SetCalibrationChannelValue(
+            SelectedClip,
+            Channel,
+            CalibrationKeyframeValues[SelectedClip, CurrentKeyframe * CALIBRATION_CHANNEL_COUNT + Channel]
+        )
+    End For
+
+    CalibrationSaveLimitReached = False
+    CalibrationClearConfirm = False
+    CalibrationClearAllStage = 0
+
+    Call ApplyWristCalibration()
+    Call ApplyEquipmentCalibration()
+    Call FinishCalibrationEdit()
+
+End Sub
+
+Sub PasteCalibrationKeyframe()
+
+    Dim Channel As Number
+    Dim CurrentFrame As Number
+
+    If Not CalibrationClipboardAvailable Then
+        Return
+    End If
+
+    CurrentFrame = CurrentAnimationFrame()
+
+    For Channel = 0 To CALIBRATION_CHANNEL_COUNT - 1
+        Call SetCalibrationChannelValue(
+            SelectedClip,
+            Channel,
+            CalibrationClipboardValues[Channel]
+        )
+    End For
+
+    CalibrationSavedClip = SelectedClip
+    CalibrationSavedFrame = CurrentFrame
+    CalibrationSavedTime = CalibrationFrameTimeMilliseconds(SelectedClip, CurrentFrame)
+    CalibrationSaveLimitReached = Not StoreCalibrationKeyframe(SelectedClip, CurrentFrame)
+
+    If Not CalibrationSaveLimitReached Then
+        CalibrationSaved = True
+
+        Call SaveCalibrationKeyframes()
+        Call UpdateCalibrationForCurrentFrame()
+        Call ApplyWristCalibration()
+    End If
+
+End Sub
+
 Function CalibrationChannelValue(Clip As Number, Channel As Number) As Number
 
     Dim Axis As Number
@@ -3327,11 +3991,49 @@ End Sub
 Sub ApplyEquipmentCalibration()
 
     Dim GlowReady As Boolean
-    Dim ShieldPivot As Core.Vector3
-    Dim SwordPivot As Core.Vector3
+    Dim ShieldPivotX1000 As Number
+    Dim ShieldPivotY1000 As Number
+    Dim ShieldPivotZ1000 As Number
+    Dim SwordPivotX1000 As Number
+    Dim SwordPivotY1000 As Number
+    Dim SwordPivotZ1000 As Number
 
-    SwordPivot = Character3D.SocketPosition(Character, "HandRight")
-    ShieldPivot = Character3D.SocketPosition(Character, "HandLeft")
+    SwordPivotX1000 = Character3D.SocketValueThousandths(
+        Character,
+        "HandRight",
+        Graphics3D.ANIMATOR_SOCKET_POSITION_X,
+        ARIN_BODY_PART_INDEX
+    )
+    SwordPivotY1000 = Character3D.SocketValueThousandths(
+        Character,
+        "HandRight",
+        Graphics3D.ANIMATOR_SOCKET_POSITION_Y,
+        ARIN_BODY_PART_INDEX
+    )
+    SwordPivotZ1000 = Character3D.SocketValueThousandths(
+        Character,
+        "HandRight",
+        Graphics3D.ANIMATOR_SOCKET_POSITION_Z,
+        ARIN_BODY_PART_INDEX
+    )
+    ShieldPivotX1000 = Character3D.SocketValueThousandths(
+        Character,
+        "HandLeft",
+        Graphics3D.ANIMATOR_SOCKET_POSITION_X,
+        ARIN_BODY_PART_INDEX
+    )
+    ShieldPivotY1000 = Character3D.SocketValueThousandths(
+        Character,
+        "HandLeft",
+        Graphics3D.ANIMATOR_SOCKET_POSITION_Y,
+        ARIN_BODY_PART_INDEX
+    )
+    ShieldPivotZ1000 = Character3D.SocketValueThousandths(
+        Character,
+        "HandLeft",
+        Graphics3D.ANIMATOR_SOCKET_POSITION_Z,
+        ARIN_BODY_PART_INDEX
+    )
     Ready = Character3D.SetPartPositionOffset(
         Character,
         ARIN_SWORD_PART_INDEX,
@@ -3339,6 +4041,9 @@ Sub ApplyEquipmentCalibration()
         SwordPositionCalibration[SelectedClip, CALIBRATION_AXIS_Y],
         SwordPositionCalibration[SelectedClip, CALIBRATION_AXIS_Z]
     ) And Ready
+
+    Call CaptureViewerFailure(71)
+
     Ready = Character3D.SetPartPositionOffset(
         Character,
         ARIN_SHIELD_PART_INDEX,
@@ -3346,22 +4051,34 @@ Sub ApplyEquipmentCalibration()
         ShieldPositionCalibration[SelectedClip, CALIBRATION_AXIS_Y],
         ShieldPositionCalibration[SelectedClip, CALIBRATION_AXIS_Z]
     ) And Ready
-    Ready = Character3D.SetPartPivotRotation(
+
+    Call CaptureViewerFailure(72)
+
+    Ready = Character3D.SetPartPivotRotationThousandths(
         Character,
         ARIN_SWORD_PART_INDEX,
-        SwordPivot,
+        SwordPivotX1000,
+        SwordPivotY1000,
+        SwordPivotZ1000,
         SwordCalibration[SelectedClip, CALIBRATION_AXIS_X],
         SwordCalibration[SelectedClip, CALIBRATION_AXIS_Y],
         SwordCalibration[SelectedClip, CALIBRATION_AXIS_Z]
     ) And Ready
-    Ready = Character3D.SetPartPivotRotation(
+
+    Call CaptureViewerFailure(73)
+
+    Ready = Character3D.SetPartPivotRotationThousandths(
         Character,
         ARIN_SHIELD_PART_INDEX,
-        ShieldPivot,
+        ShieldPivotX1000,
+        ShieldPivotY1000,
+        ShieldPivotZ1000,
         ShieldCalibration[SelectedClip, CALIBRATION_AXIS_X],
         ShieldCalibration[SelectedClip, CALIBRATION_AXIS_Y],
         ShieldCalibration[SelectedClip, CALIBRATION_AXIS_Z]
     ) And Ready
+
+    Call CaptureViewerFailure(74)
 
     If EpicGlowVisible Then
 
@@ -3378,20 +4095,20 @@ Sub ApplyEquipmentCalibration()
             ShieldGlow.Position.Z + ShieldPositionCalibration[SelectedClip, CALIBRATION_AXIS_Z]
         ) And GlowReady
 
-        GlowReady = Graphics3D.SetObjectPivotRotation3D(
+        GlowReady = Graphics3D.SetObjectPivotRotationThousandths3D(
             SwordGlow,
-            SwordPivot.X,
-            SwordPivot.Y,
-            SwordPivot.Z,
+            SwordPivotX1000,
+            SwordPivotY1000,
+            SwordPivotZ1000,
             SwordCalibration[SelectedClip, CALIBRATION_AXIS_X],
             SwordCalibration[SelectedClip, CALIBRATION_AXIS_Y],
             SwordCalibration[SelectedClip, CALIBRATION_AXIS_Z]
         ) And GlowReady
-        GlowReady = Graphics3D.SetObjectPivotRotation3D(
+        GlowReady = Graphics3D.SetObjectPivotRotationThousandths3D(
             ShieldGlow,
-            ShieldPivot.X,
-            ShieldPivot.Y,
-            ShieldPivot.Z,
+            ShieldPivotX1000,
+            ShieldPivotY1000,
+            ShieldPivotZ1000,
             ShieldCalibration[SelectedClip, CALIBRATION_AXIS_X],
             ShieldCalibration[SelectedClip, CALIBRATION_AXIS_Y],
             ShieldCalibration[SelectedClip, CALIBRATION_AXIS_Z]
@@ -3828,7 +4545,10 @@ Function SelectedClipLabel() As Text
 
     Dim Result As Text
 
-    Result = Character3D.ClipName(Character, SelectedClip)
+    Result = ViewerProfiles.ClipLabel(
+        ProfileIndex,
+        PresentationIndexForRuntimeClip(SelectedClip)
+    )
 
     Return Result
 
@@ -3909,7 +4629,7 @@ Sub DrawViewerOverlay()
         Fill Rectangle 0, 0, Window_Width(), Window_Height(), Rgb(4, 9, 24) Opacity 92
         Draw Text "CHARACTER VIEWER NEEDS MORE ROOM" At 28, 40 Size 22 Color YELLOW
         Draw Text "Resize to at least 800 by 540 logical units." At 28, 78 Size 15 Color WHITE
-        Draw Text "Right-click still pauses or resumes movement." At 28, 108 Size 13 Color LIGHT_GRAY
+        Draw Text "Right-click still resets the scene." At 28, 108 Size 13 Color LIGHT_GRAY
         Return
 
     End If
@@ -3969,6 +4689,7 @@ Sub DrawViewerOverlay()
     Call DrawButton(PanelLeft + 178, 330, 74, 18, DemoLabel(), DemoEnabled)
 
     Call DrawAnimationButtons()
+    Call DrawButton(PanelLeft + 12, 444, 110, 22, "Floor / Grid", FloorVisible Or GridVisible)
 
     If Window_Height() >= ANIMATION_DETAILS_MINIMUM_HEIGHT Then
 
@@ -3997,30 +4718,32 @@ Sub DrawViewerOverlay()
         Call DrawCalibrationPanel()
     End If
 
-    Draw Text "LMB pan  •  MMB orbit  •  Wheel zoom  •  RMB pause/resume  •  RESET restarts  •  DEMO cycles clips" At 16, Window_Height() - 22 Size 11 Color LIGHT_GRAY
+    Draw Text "LMB pan  •  MMB orbit  •  Wheel zoom  •  Space pause  •  RMB reset  •  D dragon  •  W sword  •  S shield" At 16, Window_Height() - 22 Size 11 Color LIGHT_GRAY
 
     If CalibrationEditing Then
 
         If ScenePaused Then
-            Draw Text "POSE EDIT ACTIVE — MOVEMENT PAUSED BY RIGHT-CLICK" At 18, 68 Size 14 Color YELLOW
+            Draw Text "POSE EDIT ACTIVE — SPACE TO RESUME" At 18, 68 Size 14 Color YELLOW
         Else
-            Draw Text "POSE EDIT ACTIVE — RIGHT-CLICK TO PAUSE MOVEMENT" At 18, 68 Size 14 Color YELLOW
+            Draw Text "POSE EDIT ACTIVE — SPACE TO PAUSE MOVEMENT" At 18, 68 Size 14 Color YELLOW
         End If
 
     Else If ScenePaused Then
-        Draw Text "MOVEMENT PAUSED — RIGHT-CLICK TO RESUME; CAMERA CONTROLS REMAIN ACTIVE" At 18, 68 Size 14 Color YELLOW
+        Draw Text "MOVEMENT PAUSED — SPACE TO RESUME; CAMERA CONTROLS REMAIN ACTIVE" At 18, 68 Size 14 Color YELLOW
     End If
 
     If ViewerError Then
 
-        Fill Rectangle 120, 142, 580, 190, Rgb(56, 8, 18) Opacity 80
+        Fill Rectangle 120, 142, 580, 210, Rgb(56, 8, 18) Opacity 80
         Draw Text "CHARACTER VIEWER RECOVERY" At 148, 166 Size 22 Color WHITE
         Draw Text "The 3D renderer or character resource became unavailable." At 148, 204 Size 14 Color LIGHT_GRAY
         Draw Text "Viewer error" At 148, 238 Size 13 Color LIGHT_GRAY
         Draw Number FirstViewerError At 270, 238 Size 13 Color YELLOW
         Draw Text "Renderer error" At 348, 238 Size 13 Color LIGHT_GRAY
         Draw Number FirstRendererError At 486, 238 Size 13 Color YELLOW
-        Draw Text "Press Enter or click Reset to reload the profile safely." At 148, 280 Size 14 Color CYAN
+        Draw Text "Failure stage" At 148, 270 Size 13 Color LIGHT_GRAY
+        Draw Number FirstFailureStage At 270, 270 Size 13 Color YELLOW
+        Draw Text "Press Enter or click Reset to reload the profile safely." At 148, 310 Size 14 Color CYAN
 
     End If
 
@@ -4101,6 +4824,9 @@ Sub DrawCalibrationPanel()
     Draw Text "Pose Calibration" At 32, 102 Size 16 Color WHITE
     Draw Text SelectedClipLabel() At 174, 104 Size 12 Color CYAN
 
+    Call DrawButton(292, 96, 68, 22, "Prev Key", False)
+    Call DrawButton(364, 96, 68, 22, "Next Key", False)
+
     Call DrawButton(34, 128, 92, 24, "Sword Wrist", CalibrationTarget = CALIBRATION_TARGET_SWORD_WRIST)
     Call DrawButton(130, 128, 96, 24, "Shield Wrist", CalibrationTarget = CALIBRATION_TARGET_SHIELD_WRIST)
     Call DrawButton(230, 128, 76, 24, "Sword", CalibrationTarget = CALIBRATION_TARGET_SWORD)
@@ -4126,30 +4852,33 @@ Sub DrawCalibrationPanel()
     Call DrawButton(148, 238, 100, 24, "Save Frame", CurrentKeyframe >= 0 And Not CalibrationEditing)
     Call DrawButton(252, 238, 84, 24, "Cancel", CalibrationEditing)
     Call DrawButton(340, 238, 92, 24, CalibrationResetClipLabel(), CalibrationClearConfirm)
-    Call DrawButton(340, 268, 92, 24, CalibrationResetAllLabel(), CalibrationClearAllStage > 0)
+    Call DrawButton(34, 268, 80, 24, "Copy Key", CurrentKeyframe >= 0 And Not CalibrationEditing)
+    Call DrawButton(118, 268, 80, 24, "Paste Key", CalibrationClipboardAvailable And Not CalibrationEditing)
+    Call DrawButton(202, 268, 90, 24, "Delete Key", CurrentKeyframe >= 0 And Not CalibrationEditing)
+    Call DrawButton(34, 298, 100, 24, "Reload Key", CurrentKeyframe >= 0)
 
     If CalibrationEditing Then
 
         If ScenePaused Then
-            Draw Text "Editing — movement paused by RMB" At 34, 272 Size 11 Color YELLOW
+            Draw Text "Editing — movement paused by Space" At 146, 306 Size 11 Color YELLOW
         Else
-            Draw Text "Editing live — RMB pauses movement" At 34, 272 Size 11 Color YELLOW
+            Draw Text "Editing live — Space pauses movement" At 146, 306 Size 11 Color YELLOW
         End If
 
     Else
-        Draw Text "Drag slider or use wheel" At 34, 272 Size 11 Color LIGHT_GRAY
+        Draw Text "Reload discards unsaved changes" At 146, 306 Size 11 Color LIGHT_GRAY
     End If
 
     If CalibrationSaveLimitReached Then
-        Draw Text "Keyframe limit reached" At 34, 290 Size 11 Color YELLOW
+        Draw Text "Keyframe limit reached" At 34, 350 Size 11 Color YELLOW
     Else
-        Draw Text "Keys" At 34, 290 Size 11 Color LIGHT_GRAY
-        Draw Number CalibrationKeyframeCounts[SelectedClip] At 68, 290 Size 11 Color CYAN
-        Draw Text "Current frame" At 104, 290 Size 11 Color LIGHT_GRAY
-        Draw Number CurrentFrame At 190, 290 Size 11 Color WHITE
+        Draw Text "Keys" At 34, 350 Size 11 Color LIGHT_GRAY
+        Draw Number CalibrationKeyframeCounts[SelectedClip] At 68, 350 Size 11 Color CYAN
+        Draw Text "Current frame" At 104, 350 Size 11 Color LIGHT_GRAY
+        Draw Number CurrentFrame At 190, 350 Size 11 Color WHITE
 
         If CurrentKeyframe >= 0 Then
-            Draw Text "KEYED" At 230, 290 Size 11 Color GREEN
+            Draw Text "KEYED" At 230, 350 Size 11 Color GREEN
         End If
     End If
 
@@ -4204,6 +4933,7 @@ Sub DrawTimeline()
     Dim EventIndex As Number
     Dim EventTime As Number
     Dim Keyframe As Number
+    Dim KeyframeFrame As Number
     Dim KeyframeTime As Number
     Dim MarkerX As Number
     Dim ProgressWidth As Number
@@ -4215,14 +4945,13 @@ Sub DrawTimeline()
     Width = TimelineWidth()
     ProgressWidth = Character3D.AnimationTime(Character) * Width / Duration
 
-    Call DrawButton(TIMELINE_LEFT, Window_Height() - 96, 58, 24, "RESET", False)
-    Call DrawButton(TIMELINE_LEFT + 64, Window_Height() - 96, 62, 24, "0-FRAME", False)
-    Call DrawButton(TIMELINE_LEFT + 132, Window_Height() - 96, 54, 24, "-FRAME", False)
-    Call DrawButton(TIMELINE_LEFT + 192, Window_Height() - 96, 54, 24, "+FRAME", False)
-    Call DrawButton(TIMELINE_LEFT + 252, Window_Height() - 96, 72, 24, "< EVENT", False)
-    Call DrawButton(TIMELINE_LEFT + 330, Window_Height() - 96, 72, 24, "EVENT >", False)
+    Call DrawButton(TIMELINE_LEFT, Window_Height() - 96, 62, 24, "0-Frame", False)
+    Call DrawButton(TIMELINE_LEFT + 68, Window_Height() - 96, 62, 24, "< Key", False)
+    Call DrawButton(TIMELINE_LEFT + 136, Window_Height() - 96, 62, 24, "Key >", False)
+    Call DrawButton(TIMELINE_LEFT + 204, Window_Height() - 96, 62, 24, "< Frame", False)
+    Call DrawButton(TIMELINE_LEFT + 272, Window_Height() - 96, 62, 24, "Frame >", False)
 
-    Draw Text SelectedClipName() At TIMELINE_LEFT + 412, Window_Height() - 88 Size 11 Color CYAN
+    Draw Text SelectedClipName() At TIMELINE_LEFT + 348, Window_Height() - 88 Size 11 Color CYAN
 
     If SelectedTimelineEvent > 0 Then
 
@@ -4255,9 +4984,15 @@ Sub DrawTimeline()
 
         For Keyframe = 0 To CalibrationKeyframeCounts[SelectedClip] - 1
 
+            KeyframeFrame = CalibrationKeyframeFrames[SelectedClip, Keyframe]
+
+            If TimelineKeyframeDragging And Keyframe = TimelineDraggedKeyframe Then
+                KeyframeFrame = TimelineDraggedTargetFrame
+            End If
+
             KeyframeTime = CalibrationFrameTimeMilliseconds(
                 SelectedClip,
-                CalibrationKeyframeFrames[SelectedClip, Keyframe]
+                KeyframeFrame
             )
             MarkerX = TIMELINE_LEFT + KeyframeTime * Width / Duration
 
@@ -4280,6 +5015,10 @@ Function BackgroundLabel() As Text
         Result = "BG GREEN"
     Else If BackgroundIndex = 2 Then
         Result = "BG PURPLE"
+    Else If BackgroundIndex = 3 Then
+        Result = "BG SCENE"
+    Else If BackgroundIndex = 4 Then
+        Result = "BG LOGO"
     Else
         Result = "BG BLACK"
     End If
@@ -4333,7 +5072,7 @@ Sub DrawAnimationButtons()
     Dim ButtonX As Number
     Dim ButtonY As Number
 
-    ClipCount = Character3D.ClipCount(Character)
+    ClipCount = ViewerProfiles.ClipCount(ProfileIndex)
 
     For Index = 0 To ClipCount - 1
 
@@ -4347,8 +5086,8 @@ Sub DrawAnimationButtons()
             ButtonY,
             ANIMATION_BUTTON_WIDTH,
             ANIMATION_BUTTON_HEIGHT,
-            Character3D.ClipName(Character, Index),
-            SelectedClip = Index
+            ViewerProfiles.ClipLabel(ProfileIndex, Index),
+            SelectedClip = RuntimeClipForPresentationIndex(Index)
         )
     End For
 
@@ -4559,12 +5298,14 @@ End Sub
 
 Sub DestroyViewerResources()
 
-    Call DestroyDragon()
-    Call Character3D.Destroy(Character)
+    Call DestroyBackdrop()
+    Call DestroyEpicGlow()
+    Call DestroySocketGizmos()
+    Call DestroyStudioGrid()
+
     Call Graphics3D.DestroyObject3D(Floor)
 
-    Call DestroyStudioGrid()
-    Call DestroySocketGizmos()
-    Call DestroyEpicGlow()
+    Call DestroyDragon()
+    Call Character3D.Destroy(Character)
 
 End Sub

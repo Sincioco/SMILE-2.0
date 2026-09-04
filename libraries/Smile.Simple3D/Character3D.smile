@@ -2164,7 +2164,11 @@ Public Function HasClip(Value As Actor, Name As Text) As Boolean
 
 End Function
 
-Public Function SocketPosition(Value As Actor, Name As Text) As Core.Vector3
+Public Function SocketPosition(
+    Value As Actor,
+    Name As Text,
+    Optional ReferencePartIndex As Number = 0
+) As Core.Vector3
 
     Dim Result As Core.Vector3
     Dim Slot As Number
@@ -2174,6 +2178,12 @@ Public Function SocketPosition(Value As Actor, Name As Text) As Core.Vector3
     Slot = ActorSlot(Value)
 
     If Slot < 0 Then
+        Return Result
+    End If
+
+    If ReferencePartIndex < 0 Or ReferencePartIndex >= ActorPartCounts[Slot] Then
+        Call SetActorFailure(Slot, CHARACTER_ERROR_INVALID_PART, 0)
+
         Return Result
     End If
 
@@ -2188,19 +2198,19 @@ Public Function SocketPosition(Value As Actor, Name As Text) As Core.Vector3
 
     Result.X = RoundedThousandths(Graphics3D.AnimatorSocketWorldValue3D(
         ActorAnimators[Slot],
-        ActorParts[Slot, 0],
+        ActorParts[Slot, ReferencePartIndex],
         SocketIndex,
         Graphics3D.ANIMATOR_SOCKET_POSITION_X
     ))
     Result.Y = RoundedThousandths(Graphics3D.AnimatorSocketWorldValue3D(
         ActorAnimators[Slot],
-        ActorParts[Slot, 0],
+        ActorParts[Slot, ReferencePartIndex],
         SocketIndex,
         Graphics3D.ANIMATOR_SOCKET_POSITION_Y
     ))
     Result.Z = RoundedThousandths(Graphics3D.AnimatorSocketWorldValue3D(
         ActorAnimators[Slot],
-        ActorParts[Slot, 0],
+        ActorParts[Slot, ReferencePartIndex],
         SocketIndex,
         Graphics3D.ANIMATOR_SOCKET_POSITION_Z
     ))
@@ -2209,7 +2219,12 @@ Public Function SocketPosition(Value As Actor, Name As Text) As Core.Vector3
 
 End Function
 
-Public Function SocketValueThousandths(Value As Actor, Name As Text, Property As Number) As Number
+Public Function SocketValueThousandths(
+    Value As Actor,
+    Name As Text,
+    Property As Number,
+    Optional ReferencePartIndex As Number = 0
+) As Number
 
     Dim Slot As Number
     Dim AssetSlot As Number
@@ -2219,6 +2234,12 @@ Public Function SocketValueThousandths(Value As Actor, Name As Text, Property As
     Slot = ActorSlot(Value)
 
     If Slot < 0 Then
+        Return 0
+    End If
+
+    If ReferencePartIndex < 0 Or ReferencePartIndex >= ActorPartCounts[Slot] Then
+        Call SetActorFailure(Slot, CHARACTER_ERROR_INVALID_PART, 0)
+
         Return 0
     End If
 
@@ -2233,7 +2254,7 @@ Public Function SocketValueThousandths(Value As Actor, Name As Text, Property As
 
     Result = Graphics3D.AnimatorSocketWorldValue3D(
         ActorAnimators[Slot],
-        ActorParts[Slot, 0],
+        ActorParts[Slot, ReferencePartIndex],
         SocketIndex,
         Property
     )
@@ -2442,6 +2463,54 @@ Public Function SetPartPivotRotation(
         Pivot.X,
         Pivot.Y,
         Pivot.Z,
+        XDegrees,
+        YDegrees,
+        ZDegrees
+    )
+
+    If Result Then
+        Call ClearActorError(Slot)
+    Else
+
+        Call SetActorFailure(Slot, CHARACTER_ERROR_INVALID_ARGUMENT, Graphics3D.LastError())
+    End If
+
+    Return Result
+
+End Function
+
+''' Rotates one character part around a fixed-thousandths world-space pivot.
+Public Function SetPartPivotRotationThousandths(
+    ByRef Value As Actor,
+    PartIndex As Number,
+    PivotX1000 As Number,
+    PivotY1000 As Number,
+    PivotZ1000 As Number,
+    XDegrees As Number,
+    YDegrees As Number,
+    ZDegrees As Number
+) As Boolean
+
+    Dim Result As Boolean
+    Dim Slot As Number
+
+    Slot = ActorSlot(Value)
+
+    If Slot < 0 Then
+        Return False
+    End If
+
+    If PartIndex < 0 Or PartIndex >= ActorPartCounts[Slot] Then
+        Call SetActorFailure(Slot, CHARACTER_ERROR_INVALID_PART, 0)
+
+        Return False
+    End If
+
+    Result = Graphics3D.SetObjectPivotRotationThousandths3D(
+        ActorParts[Slot, PartIndex],
+        PivotX1000,
+        PivotY1000,
+        PivotZ1000,
         XDegrees,
         YDegrees,
         ZDegrees

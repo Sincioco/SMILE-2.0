@@ -77,6 +77,7 @@ public enum SyntaxKind
     WindowWidthKeyword,
     WindowHeightKeyword,
     WindowTitleKeyword,
+    WindowActivateKeyword,
     KeyHeldKeyword,
     PointerXKeyword,
     PointerYKeyword,
@@ -304,6 +305,7 @@ public static class SyntaxFacts
         ["Window_Width"] = SyntaxKind.WindowWidthKeyword,
         ["Window_Height"] = SyntaxKind.WindowHeightKeyword,
         ["Window_Title"] = SyntaxKind.WindowTitleKeyword,
+        ["Window_Activate"] = SyntaxKind.WindowActivateKeyword,
         ["Key_Held"] = SyntaxKind.KeyHeldKeyword,
         ["Pointer_X"] = SyntaxKind.PointerXKeyword,
         ["Pointer_Y"] = SyntaxKind.PointerYKeyword,
@@ -475,7 +477,7 @@ public static class SyntaxFacts
         return kind switch
         {
             SyntaxKind.TimerKeyword or SyntaxKind.GameClosedKeyword or SyntaxKind.WindowWidthKeyword or
-                SyntaxKind.WindowHeightKeyword or SyntaxKind.PointerXKeyword or
+                SyntaxKind.WindowHeightKeyword or SyntaxKind.WindowActivateKeyword or SyntaxKind.PointerXKeyword or
                 SyntaxKind.PointerYKeyword or SyntaxKind.PointerDeltaXKeyword or SyntaxKind.PointerDeltaYKeyword or
                 SyntaxKind.PointerWheelDeltaKeyword or SyntaxKind.PointerWheelRemainderKeyword or
                 SyntaxKind.PointerInsideKeyword => NoParameters,

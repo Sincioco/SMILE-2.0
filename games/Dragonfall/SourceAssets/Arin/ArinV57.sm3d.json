@@ -16,15 +16,15 @@
     "Chest": { "node": "mixamorig:Spine2" },
     "SwordBase": {
       "node": "mixamorig:RightHand",
-      "translation": [-0.01804384, -0.01913124, 0.02651112]
+      "translation": [0.03150511, -0.01913124, -0.00598727]
     },
     "SwordTip": {
       "node": "mixamorig:RightHand",
-      "translation": [-0.05871365, 0.54503998, -0.12869539]
+      "translation": [-0.04948456, 0.54503998, 0.13251820]
     },
     "ShieldCenter": {
       "node": "mixamorig:LeftHand",
-      "translation": [-0.01979548, 0.05179765, -0.01853369]
+      "translation": [-0.00089222, 0.05179765, -0.02710282]
     },
     "HandRight": { "node": "mixamorig:RightHand" },
     "HandLeft": { "node": "mixamorig:LeftHand" },

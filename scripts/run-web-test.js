@@ -10,7 +10,7 @@ function fail(message) {
 }
 
 const args = process.argv.slice(2);
-if (args.length === 0) fail("usage: node scripts/run-web-test.js <web-directory> [--expected <file>] [--native-output <file>] [--expected-runtime-error <text>] [--draw-text <value> | --draw-text-file <file>] [--frames <count>] [--timeout <ms>] [--phase4-media|--phase4-ownership|--phase4-clip|--phase4-audio|--phase5-ui|--phase5-hardening|--phase5-submenus|--phase5-submenu-viewport|--mobile-controls|--renderer3d|--force-renderer3d-pbr-failure|--force-renderer3d-hdr-failure|--force-renderer3d-shadow-failure|--force-renderer3d-soft-depth-failure|--force-renderer3d-distortion-failure|--neon-cycles-input]");
+if (args.length === 0) fail("usage: node scripts/run-web-test.js <web-directory> [--expected <file>] [--native-output <file>] [--expected-runtime-error <text>] [--draw-text <value> | --draw-text-file <file>] [--frames <count>] [--timeout <ms>] [--phase4-media|--phase4-ownership|--phase4-clip|--phase4-audio|--phase5-ui|--phase5-hardening|--phase5-submenus|--phase5-submenu-viewport|--mobile-controls|--renderer3d|--renderer3d-gpu-particles|--force-renderer3d-gpu-particle-shader-failure|--force-renderer3d-gpu-particle-attribute-failure|--force-renderer3d-pbr-failure|--force-renderer3d-hdr-failure|--force-renderer3d-shadow-failure|--force-renderer3d-soft-depth-failure|--force-renderer3d-distortion-failure|--neon-cycles-input]");
 
 const webDirectory = path.resolve(args.shift());
 let expectedPath = null;
@@ -29,6 +29,9 @@ let verifyPhase5Submenus = false;
 let verifyPhase5SubmenuViewport = false;
 let verifyMobileControls = false;
 let verifyRenderer3D = false;
+let verifyRenderer3DGpuParticles = false;
+let forceRenderer3DGpuParticleShaderFailure = false;
+let forceRenderer3DGpuParticleAttributeFailure = false;
 let forceRenderer3DPbrFailure = false;
 let forceRenderer3DHdrFailure = false;
 let forceRenderer3DShadowFailure = false;
@@ -50,6 +53,19 @@ while (args.length !== 0) {
     if (option === "--phase5-submenu-viewport") { verifyPhase5SubmenuViewport = true; continue; }
     if (option === "--mobile-controls") { verifyMobileControls = true; continue; }
     if (option === "--renderer3d") { verifyRenderer3D = true; continue; }
+    if (option === "--renderer3d-gpu-particles") {
+        verifyRenderer3D = true;
+        verifyRenderer3DGpuParticles = true;
+        continue;
+    }
+    if (option === "--force-renderer3d-gpu-particle-shader-failure") {
+        forceRenderer3DGpuParticleShaderFailure = true;
+        continue;
+    }
+    if (option === "--force-renderer3d-gpu-particle-attribute-failure") {
+        forceRenderer3DGpuParticleAttributeFailure = true;
+        continue;
+    }
     if (option === "--force-renderer3d-pbr-failure") { forceRenderer3DPbrFailure = true; continue; }
     if (option === "--force-renderer3d-hdr-failure") { forceRenderer3DHdrFailure = true; continue; }
     if (option === "--force-renderer3d-shadow-failure") { forceRenderer3DShadowFailure = true; continue; }
@@ -526,6 +542,9 @@ let renderer3DDepthEnables = 0;
 let renderer3DBufferUploads = 0;
 let renderer3DDrawCalls = 0;
 let renderer3DComposites = 0;
+let renderer3DTransformFeedbackDispatches = 0;
+let renderer3DTransformFeedbackVaryings = [];
+let renderer3DReadbacks = 0;
 
 function contextWebGL2() {
     const noop = () => {};
@@ -533,6 +552,10 @@ function contextWebGL2() {
         VERTEX_SHADER: 0x8b31, FRAGMENT_SHADER: 0x8b30, COMPILE_STATUS: 0x8b81, LINK_STATUS: 0x8b82,
         DEPTH_TEST: 0x0b71, LESS: 0x0201, CULL_FACE: 0x0b44, ARRAY_BUFFER: 0x8892,
         ELEMENT_ARRAY_BUFFER: 0x8893, STATIC_DRAW: 0x88e4, DYNAMIC_DRAW: 0x88e8,
+        DYNAMIC_COPY: 0x88ea, POINTS: 0x0000, RASTERIZER_DISCARD: 0x8c89,
+        TRANSFORM_FEEDBACK: 0x8e22, TRANSFORM_FEEDBACK_BUFFER: 0x8c8e,
+        INTERLEAVED_ATTRIBS: 0x8c8c, MAX_VERTEX_ATTRIBS: 0x8869,
+        MAX_TRANSFORM_FEEDBACK_INTERLEAVED_COMPONENTS: 0x8c8a,
         COLOR_BUFFER_BIT: 0x4000, DEPTH_BUFFER_BIT: 0x0100, TRIANGLES: 0x0004,
         TRIANGLE_STRIP: 0x0005, UNSIGNED_INT: 0x1405, UNSIGNED_SHORT: 0x1403, FLOAT: 0x1406,
         BLEND: 0x0be2, ONE: 1, SRC_ALPHA: 0x0302, ONE_MINUS_SRC_ALPHA: 0x0303,
@@ -552,6 +575,7 @@ function contextWebGL2() {
         createShader: () => ({}), shaderSource: noop, compileShader: noop,
         getShaderParameter: () => true, getShaderInfoLog: () => "", deleteShader: noop,
         createProgram: () => ({}), attachShader: noop, linkProgram: noop, deleteProgram: noop,
+        transformFeedbackVaryings: (_program, varyings) => { renderer3DTransformFeedbackVaryings = [...varyings]; },
         getProgramParameter: () => true, getProgramInfoLog: () => "", getUniformLocation: () => ({}),
         enable: value => { if (value === 0x0b71) renderer3DDepthEnables += 1; },
         depthFunc: noop, depthMask: noop, disable: noop, blendFunc: noop, cullFace: noop,
@@ -564,7 +588,8 @@ function contextWebGL2() {
         getExtension: name => name.includes("texture_filter_anisotropic")
             ? { MAX_TEXTURE_MAX_ANISOTROPY_EXT: 0x84ff, TEXTURE_MAX_ANISOTROPY_EXT: 0x84fe }
             : (name === "EXT_color_buffer_float" ? {} : null),
-        getParameter: value => value === 0x84ff ? 8 : (value === 0x0d33 ? 4096 : 0),
+        getParameter: value => value === 0x84ff ? 8 : (value === 0x0d33 ? 4096 :
+            (value === 0x8869 ? 16 : (value === 0x8c8a ? 64 : 0))),
         viewport: noop, clearColor: noop, clearDepth: noop, clear: noop, useProgram: noop,
         createFramebuffer: () => ({}), bindFramebuffer: noop, framebufferTexture2D: noop,
         drawBuffers: noop, readBuffer: noop, checkFramebufferStatus: () => 0x8cd5,
@@ -573,11 +598,18 @@ function contextWebGL2() {
         colorMask: noop, polygonOffset: noop,
         enableVertexAttribArray: noop, disableVertexAttribArray: noop, vertexAttribPointer: noop,
         vertexAttribDivisor: noop,
+        createVertexArray: () => ({}), bindVertexArray: noop, deleteVertexArray: noop,
+        createTransformFeedback: () => ({}), bindTransformFeedback: noop, deleteTransformFeedback: noop,
+        bindBufferBase: noop, beginTransformFeedback: noop, endTransformFeedback: noop,
         uniformMatrix4fv: noop, uniformMatrix3fv: noop, uniform4fv: noop, uniform3fv: noop,
         uniform4f: noop, uniform3f: noop, uniform2f: noop, uniform1i: noop, uniform1f: noop,
         drawElements: () => { renderer3DDrawCalls += 1; },
         drawElementsInstanced: () => { renderer3DDrawCalls += 1; },
-        drawArrays: () => { renderer3DDrawCalls += 1; }
+        drawArrays: mode => {
+            renderer3DDrawCalls += 1;
+            if (mode === 0x0000) renderer3DTransformFeedbackDispatches += 1;
+        },
+        getBufferSubData: () => { renderer3DReadbacks += 1; }
     };
 }
 
@@ -625,11 +657,20 @@ function context2d(name) {
 }
 function canvas(name = "offscreen") {
     const drawing = context2d(name);
-    return {
+    const listeners = new Map();
+    const result = {
         width: 0, height: 0, hidden: true, style: {},
         getContext: () => drawing,
-        addEventListener: () => {}, setAttribute: () => {}, focus: () => {}
+        addEventListener: (type, listener) => addListener(listeners, type, listener),
+        dispatch: (type, event = {}) => {
+            const payload = { type, defaultPrevented: false, ...event };
+            payload.preventDefault = () => { payload.defaultPrevented = true; };
+            dispatch(listeners, type, payload);
+            return payload;
+        },
+        setAttribute: () => {}, focus: () => {}
     };
+    return result;
 }
 
 const visibleCanvas = canvas("visible");
@@ -793,6 +834,8 @@ const host = {
         });
     }
 };
+host.SMILE_TEST_RENDERER3D_FORCE_GPU_PARTICLE_SHADER_FAILURE = forceRenderer3DGpuParticleShaderFailure;
+host.SMILE_TEST_RENDERER3D_FORCE_GPU_PARTICLE_ATTRIBUTE_FAILURE = forceRenderer3DGpuParticleAttributeFailure;
 if (verifyPhase4Audio) {
     host.AudioContext = class {
         constructor() { this.state = "running"; this.destination = {}; }
@@ -943,6 +986,22 @@ const started = Date.now();
             fail("Renderer3D WebGL2 canvas was not composited into Renderer2D");
         if (hostConsoleErrors.length !== 0)
             fail(`Renderer3D Web console reported errors: ${hostConsoleErrors.join("\n")}`);
+        if (verifyRenderer3DGpuParticles && !forceRenderer3DGpuParticleShaderFailure &&
+            !forceRenderer3DGpuParticleAttributeFailure) {
+            const expectedVaryings = ["nextPositionAge", "nextVelocityLifetime", "nextSizeRotationAngular",
+                "nextThermalDensityNoise", "nextSeedFlagsGradientFrame"];
+            if (renderer3DTransformFeedbackDispatches < 1)
+                fail("Renderer3D WebGL2 GPU particles did not dispatch transform feedback");
+            if (JSON.stringify(renderer3DTransformFeedbackVaryings) !== JSON.stringify(expectedVaryings))
+                fail(`Renderer3D WebGL2 transform-feedback varying order was ${JSON.stringify(renderer3DTransformFeedbackVaryings)}`);
+            if (renderer3DReadbacks !== 0)
+                fail(`Renderer3D WebGL2 GPU particles performed ${renderer3DReadbacks} GPU readbacks`);
+            renderer3DCanvasElement.dispatch("webglcontextlost");
+            const restartCount = host.smile.renderer3D(127, 10, 18, 0, 0, 0, 0, 0, 0, 0, 0);
+            if (restartCount < 1)
+                fail("Renderer3D WebGL2 GPU particles did not record context-loss recovery");
+            renderer3DCanvasElement.dispatch("webglcontextrestored");
+        }
         if (verifyNeonCyclesInput && (!drawnText.includes("P1") || !drawnText.includes("P2")))
             fail("Neon Cycles two-player input path did not reach the active HUD");
 

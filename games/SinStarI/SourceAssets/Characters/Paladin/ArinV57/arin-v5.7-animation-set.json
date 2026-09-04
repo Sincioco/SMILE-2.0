@@ -43,6 +43,10 @@
     },
     {
       "name": "SwordAttack",
+      "file": "arin-v5.7-mixamo-sword-and-shield-slash-4-without-skin.fbx"
+    },
+    {
+      "name": "SwordAttack2",
       "file": "arin-v5.7-mixamo-sword-and-shield-hilt-melee-without-skin.fbx",
       "stabilizeShieldArm": true
     },

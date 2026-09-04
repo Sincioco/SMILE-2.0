@@ -55,4 +55,57 @@ $watchArguments = '-NoProfile -ExecutionPolicy Bypass -File "{0}" -Mode Watch -V
     $syncScript, $viewerProcess.Id
 Start-Process -FilePath $shellCommand.Source -ArgumentList $watchArguments `
     -WindowStyle Hidden | Out-Null
+
+Add-Type -TypeDefinition @'
+using System;
+using System.Runtime.InteropServices;
+
+public static class SmileViewerWindowActivation
+{
+    [DllImport("user32.dll")]
+    public static extern bool SetWindowPos(
+        IntPtr windowHandle,
+        IntPtr insertAfter,
+        int x,
+        int y,
+        int width,
+        int height,
+        uint flags);
+
+    [DllImport("user32.dll")]
+    public static extern bool ShowWindowAsync(IntPtr windowHandle, int showCommand);
+
+    [DllImport("user32.dll")]
+    public static extern bool SetForegroundWindow(IntPtr windowHandle);
+}
+'@
+
+try {
+    $null = $viewerProcess.WaitForInputIdle(10000)
+    $activationDeadline = [DateTime]::UtcNow.AddSeconds(5)
+
+    do {
+        $viewerProcess.Refresh()
+        $windowHandle = $viewerProcess.MainWindowHandle
+
+        if ($windowHandle -eq [IntPtr]::Zero) {
+            Start-Sleep -Milliseconds 50
+        }
+    } while ($windowHandle -eq [IntPtr]::Zero -and [DateTime]::UtcNow -lt $activationDeadline)
+
+    if ($windowHandle -ne [IntPtr]::Zero) {
+        $null = [SmileViewerWindowActivation]::ShowWindowAsync($windowHandle, 9)
+        $positionFlags = [uint32]0x0043
+        $null = [SmileViewerWindowActivation]::SetWindowPos(
+            $windowHandle, [IntPtr](-1), 0, 0, 0, 0, $positionFlags)
+        $null = [SmileViewerWindowActivation]::SetWindowPos(
+            $windowHandle, [IntPtr](-2), 0, 0, 0, 0, $positionFlags)
+        $null = [SmileViewerWindowActivation]::SetForegroundWindow($windowHandle)
+        $windowShell = New-Object -ComObject WScript.Shell
+        $null = $windowShell.AppActivate($viewerProcess.Id)
+    }
+} catch {
+    Write-Warning "The Character Viewer/editor launched, but its window could not be activated: $($_.Exception.Message)"
+}
+
 Write-Host "Launched Character Viewer/editor process $($viewerProcess.Id): $resolvedExecutable"

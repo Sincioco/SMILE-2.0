@@ -1,0 +1,159 @@
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Graphics3D As Graphics3D
+
+Dim Checks As Number
+Dim Failures As Number
+
+Game Window "Renderer3D M7E-E WebGL2 GPU Particle Tests" Size 320 By 240
+
+Do
+
+    Call RunTests()
+
+Loop Until True
+
+If Failures = 0 Then
+    Print "Renderer3D M7E-E WebGL2 GPU particle tests passed"
+Else
+    Print "Renderer3D M7E-E WebGL2 GPU particle tests failed: "; Failures
+End If
+
+Sub RunTests()
+
+    Dim Camera As Core.Camera3D
+    Dim EmptyTexture As Core.Texture3D
+    Dim LargeSystem As Core.GpuParticleSystem3D
+    Dim Material As Core.Material3D
+    Dim MediumSystem As Core.GpuParticleSystem3D
+    Dim System As Core.GpuParticleSystem3D
+
+    Call Graphics3D.ResetRenderer3D()
+
+    Camera = Graphics3D.DefaultCamera()
+    Material = Graphics3D.CreateEffectMaterial3D(
+        EmptyTexture,
+        Graphics3D.MATERIAL_ALPHA_BLEND,
+        150
+    )
+    System = Graphics3D.CreateGpuParticleSystem3D(
+        1024,
+        Material,
+        Graphics3D.GPU_PARTICLE_SIMULATION_AUTO,
+        10
+    )
+    MediumSystem = Graphics3D.CreateGpuParticleSystem3D(
+        4096,
+        Material,
+        Graphics3D.GPU_PARTICLE_SIMULATION_GPU_FAST,
+        10
+    )
+    LargeSystem = Graphics3D.CreateGpuParticleSystem3D(
+        8192,
+        Material,
+        Graphics3D.GPU_PARTICLE_SIMULATION_GPU_FAST,
+        10
+    )
+
+    Call Check(System.Handle <> 0)
+    Call Check(MediumSystem.Handle <> 0)
+    Call Check(LargeSystem.Handle <> 0)
+    Call Check(System.EffectiveSimulation = Graphics3D.GPU_PARTICLE_SIMULATION_GPU_FAST)
+    Call Check(MediumSystem.EffectiveSimulation = Graphics3D.GPU_PARTICLE_SIMULATION_GPU_FAST)
+    Call Check(LargeSystem.EffectiveSimulation = Graphics3D.GPU_PARTICLE_SIMULATION_GPU_FAST)
+    Call Check(Graphics3D.GpuParticleValue3D(Graphics3D.GPU_PARTICLE_QUERY_BACKEND) =
+        Graphics3D.GPU_PARTICLE_BACKEND_WEBGL2_TRANSFORM_FEEDBACK)
+    Call Check(Graphics3D.GpuParticleValue3D(
+        Graphics3D.GPU_PARTICLE_QUERY_FALLBACK_REASON
+    ) = Graphics3D.GPU_PARTICLE_FALLBACK_NONE)
+    Call Check(Graphics3D.GpuParticleValue3D(
+        Graphics3D.GPU_PARTICLE_QUERY_GPU_MAX_CAPACITY
+    ) = 8192)
+    Call Check(Graphics3D.GpuParticleValue3D(
+        Graphics3D.GPU_PARTICLE_QUERY_TOTAL_CAPACITY
+    ) = 13312)
+    Call Check(Graphics3D.GpuParticleValue3D(
+        Graphics3D.GPU_PARTICLE_QUERY_GPU_STATE_BYTES
+    ) = 3194880)
+    Call Check(Graphics3D.GpuParticleValue3D(
+        Graphics3D.GPU_PARTICLE_QUERY_RESOURCE_GPU_BYTES,
+        System.Handle
+    ) = 245760)
+    Call Check(Graphics3D.SetGpuParticleSpawnKinematics3D(
+        System,
+        0,
+        0,
+        0,
+        40,
+        100,
+        0,
+        0
+    ))
+    Call Check(Graphics3D.SetGpuParticleSpawnVisual3D(
+        System,
+        0,
+        1000,
+        24,
+        48,
+        0,
+        90,
+        900,
+        800
+    ))
+    Call Check(Graphics3D.CommitGpuParticleSpawn3D(System, 0, 1, 123))
+    Call Check(Graphics3D.AdvanceGpuParticleSystem3D(System, 10))
+    Call Check(Graphics3D.GpuParticleValue3D(
+        Graphics3D.GPU_PARTICLE_QUERY_DISPATCHES
+    ) = 1)
+    Call Check(Graphics3D.GpuParticleValue3D(
+        Graphics3D.GPU_PARTICLE_QUERY_RESOURCE_READ_GENERATION,
+        System.Handle
+    ) = 2)
+    Call Check(Graphics3D.GpuParticleValue3D(
+        Graphics3D.GPU_PARTICLE_QUERY_RESOURCE_WRITE_GENERATION,
+        System.Handle
+    ) = 3)
+    Call Check(Graphics3D.GpuParticleValue3D(
+        Graphics3D.GPU_PARTICLE_QUERY_SLOT_AGE,
+        System.Handle,
+        0
+    ) = 10)
+    Call Check(Graphics3D.GpuParticleValue3D(
+        Graphics3D.GPU_PARTICLE_QUERY_RESOURCE_UPLOAD_BYTES,
+        System.Handle
+    ) = 88)
+    Call Check(Graphics3D.GpuParticleValue3D(
+        Graphics3D.GPU_PARTICLE_QUERY_CPU_UPLOAD_BYTES
+    ) = 88)
+    Call Check(Graphics3D.GpuParticleValue3D(
+        Graphics3D.GPU_PARTICLE_QUERY_READBACKS
+    ) = 0)
+    Call Check(Graphics3D.AdvanceGpuParticleSystem3D(System, 20))
+    Call Check(Graphics3D.GpuParticleValue3D(
+        Graphics3D.GPU_PARTICLE_QUERY_DISPATCHES
+    ) = 3)
+    Call Check(Graphics3D.GpuParticleValue3D(
+        Graphics3D.GPU_PARTICLE_QUERY_SLOT_AGE,
+        System.Handle,
+        0
+    ) = 30)
+    Call Check(Graphics3D.Begin3D(Camera, 4, 8, 12))
+    Call Check(Graphics3D.DrawGpuParticleSystem3D(System))
+    Call Check(Graphics3D.End3DChecked())
+    Call Check(Graphics3D.GpuParticleValue3D(
+        Graphics3D.GPU_PARTICLE_QUERY_RENDER_DRAWS
+    ) = 1)
+
+End Sub
+
+Sub Check(Condition As Boolean)
+
+    Checks = Checks + 1
+
+    If Not Condition Then
+        Print "WebGL2 GPU particle check failed: "; Checks
+        Failures = Failures + 1
+    End If
+
+End Sub

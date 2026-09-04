@@ -134,6 +134,8 @@ Private Const COMMAND_DISTORTION = 126
 Private Const COMMAND_GPU_PARTICLE_SYSTEM = 127
 Private Const COMMAND_SET_MODEL_NODE_ROTATION_OFFSET = 128
 Private Const COMMAND_SET_OBJECT_PIVOT_ROTATION = 129
+Private Const COMMAND_SET_OBJECT_CULL_MODE = 130
+Private Const COMMAND_SET_BACKDROP_TEXTURE = 131
 
 Public Const MATERIAL_INSPECTION_LIT = 0
 Public Const MATERIAL_INSPECTION_BASE_COLOR = 1
@@ -142,6 +144,10 @@ Public Const MATERIAL_INSPECTION_ROUGHNESS = 3
 Public Const MATERIAL_INSPECTION_METALLIC = 4
 Public Const MATERIAL_INSPECTION_OCCLUSION = 5
 Public Const MATERIAL_INSPECTION_EMISSIVE = 6
+Public Const OBJECT_CULL_DEFAULT = 0
+Public Const OBJECT_CULL_NONE = 1
+Public Const OBJECT_CULL_BACK = 2
+Public Const OBJECT_CULL_FRONT = 3
 
 Private Const ANIMATOR_QUERY_DESTINATION_CLIP = 1
 Private Const ANIMATOR_QUERY_TIME_REMAINDER = 2
@@ -2522,6 +2528,26 @@ Public Function LoadTexture3D(
 
 End Function
 
+''' Selects a screen-fixed bitmap drawn behind the 3D scene.
+Public Function SetBackdropTexture3D(Texture As Core.Texture3D) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(COMMAND_SET_BACKDROP_TEXTURE, Texture.Handle, 0, 0, 0, 0, 0, 0, 0, 0, 0) <> 0
+    Return Result
+
+End Function
+
+''' Removes the screen-fixed bitmap behind the 3D scene.
+Public Function ClearBackdropTexture3D() As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(COMMAND_SET_BACKDROP_TEXTURE, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0) <> 0
+    Return Result
+
+End Function
+
 ''' Loads a PBR texture with explicit color/data, mip, wrap, and anisotropy semantics.
 Public Function LoadTexture3DEx(
     Path As Text,
@@ -4295,6 +4321,16 @@ Public Function ClearObjectAnimator3D(ByRef Object As Core.Object3D) As Boolean
 
 End Function
 
+''' Overrides face culling for one object without changing its material.
+Public Function SetObjectCullMode3D(ByRef Object As Core.Object3D, Mode As Number) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(COMMAND_SET_OBJECT_CULL_MODE, Object.Handle, Mode, 0, 0, 0, 0, 0, 0, 0, 0) <> 0
+    Return Result
+
+End Function
+
 Public Sub SetObjectPosition(ByRef Object As Core.Object3D, X As Number, Y As Number, Z As Number)
 
     Dim Applied As Boolean
@@ -4400,6 +4436,36 @@ Public Function SetObjectPivotRotation3D(
         YDegrees,
         ZDegrees,
         0,
+        0,
+        0
+    ) <> 0
+    Return Result
+
+End Function
+
+''' Rotates one object around a world-space pivot supplied in fixed thousandths.
+Public Function SetObjectPivotRotationThousandths3D(
+    ByRef Object As Core.Object3D,
+    PivotX1000 As Number,
+    PivotY1000 As Number,
+    PivotZ1000 As Number,
+    XDegrees As Number,
+    YDegrees As Number,
+    ZDegrees As Number
+) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(
+        COMMAND_SET_OBJECT_PIVOT_ROTATION,
+        Object.Handle,
+        PivotX1000,
+        PivotY1000,
+        PivotZ1000,
+        XDegrees,
+        YDegrees,
+        ZDegrees,
+        1,
         0,
         0
     ) <> 0

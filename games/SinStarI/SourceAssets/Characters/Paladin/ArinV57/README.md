@@ -15,8 +15,8 @@ This directory is the canonical repository home for the complete Arin v5.7 revis
 | `arin-v5.7-no-equipment.cleaned.glb` | 3,424,928 | `B2168E7735140BEB0D3D65826BB85AACC74A9584E55F4C41A164063129886E54` | Working derivative with equipment meshes removed |
 | `arin-v5.7-mixamo-rigged-t-pose.fbx` | 2,818,128 | `F9807FA88D9AC205A37CEA4568C86BFBA1123D4EA36D81F124CFABF47B67A742` | Approved Mixamo auto-rigged neutral reference |
 | `arin-v5.7-mixamo-sword-and-shield-idle-with-skin.fbx` | 3,129,856 | `65B78FC6C06366E6B3D8619072A34277C2213C4B56FCEF8BFE5C77F2EA1654C6` | Skinned Mixamo reference used for the shared rig and weights |
-| `arin-v5.7-idle-equipment-checkpoint.glb` | 6,713,372 | `513D9482564819CAC269FA4F97931EC5F668431A326A2EDAED1CFDC539A727E8` | Accepted seven-clip viewer/editor checkpoint |
-| `ArinV57.sm3d.json` | 1,004 | `40A857DB750C2D16A6D3E23B71D42336180A3FDFD4083FEC172D3862613FA842` | Runtime clips and socket descriptor |
+| `arin-v5.7-idle-equipment-checkpoint.glb` | 6,742,636 | `393D82C06ECCEDF5A13CF3CA835700AA03A6E90ED74B1420569902885E3E1524` | Eight-clip viewer/editor checkpoint |
+| `ArinV57.sm3d.json` | 1,043 | `EDD7B9D5811A32D22EDDBFEE86178264A7E45C04BFF74245CDACFF335B6FC3D2` | Runtime clips and socket descriptor |
 
 ## Permanent Pose-Calibration Workflow
 
@@ -32,7 +32,8 @@ Before any normal Arin v5.7 or Character Viewer calibration commit, Codex runs `
 | `arin-v5.7-mixamo-walk-without-skin.fbx` | 213,856 | `B84A5D5960049C9F54A0DFEFC7EECBE13F4681C4F0A686B0F2709A49481D6D3E` | `Walk` |
 | `arin-v5.7-mixamo-run-without-skin.fbx` | 184,688 | `6B058650844EB8EC1E5BDE96E025BDBF616328562AEABDEA15ADB77B3B917C71` | `Run`; shield arm stabilized |
 | `arin-v5.7-mixamo-defend-without-skin.fbx` | 229,296 | `1E00AF02F647675E7390B5445572D454A0F94C76D5D51A7A04C417E6B9622D2F` | `Defend` and shield-arm reference pose |
-| `arin-v5.7-mixamo-sword-and-shield-hilt-melee-without-skin.fbx` | 201,216 | `92FC18033DA263BF1AC44C847A85E1A3D71CFEFBA2871E1F9C8E481921955852` | `SwordAttack`; blade-clear compact strike |
+| `arin-v5.7-mixamo-sword-and-shield-slash-4-without-skin.fbx` | 232,608 | `CD58D062937ED5A4CCEFF99752538D6890C10BB953A73390411D15DCFB5094A9` | `SwordAttack`; Sword And Shield Slash (4), downloaded on the v5.7 Mixamo rig |
+| `arin-v5.7-mixamo-sword-and-shield-hilt-melee-without-skin.fbx` | 201,216 | `92FC18033DA263BF1AC44C847A85E1A3D71CFEFBA2871E1F9C8E481921955852` | `SwordAttack2`; retained v5.7 compact hilt-melee strike |
 | `arin-v5.7-mixamo-block-impact-without-skin.fbx` | 191,680 | `2ACCB7FF446CFEDA50CCE6395A7A2B3F2F1F55BDAB45ED3A990888E92B596355` | `BlockImpact`; shield arm stabilized |
 | `arin-v5.7-mixamo-hit-without-skin.fbx` | 199,376 | `4E34878066F6139C8B51F939D011EE53EEF0345838200B45288DD853D9573B6F` | `Hit`; shield arm stabilized |
 | `arin-v5.7-mixamo-ko-without-skin.fbx` | 272,816 | `21DAD8BC8D9B1B2AA9DD03FFA6E6F55FB6C6B54CC5BA75C1F6FD57693B8470CD` | Archived but rejected because the fall forces the equipment through the body |
@@ -90,9 +91,9 @@ Run `scripts\build-arin-v5-7-idle-checkpoint.ps1` from the repository root. The 
 6. Applies the approved centered grip and outward shield offsets. The sword correction is XYZ `(-15.51063048, -43.72768386, -81.06488564)` degrees, offset `(-0.04017985, 0.00752897, 0.01881249)`, pivot `(-0.01415075, -0.00344447, 0.01844119)`, and final attachment-axis correction `(0, 135, 0)`. The shield correction is XYZ `(0, 0, -75)` degrees with offset `(0, 0, -0.055)` and final attachment-axis correction `(0, -45, 0)`.
 7. Holds the left shoulder, upper arm, forearm, and hand at the collision-free `Defend` frame 22 pose for actions marked `stabilizeShieldArm`, and holds the right equipment arm at the forward `Idle` frame 1 guard for non-attack actions marked `stabilizeSwordArm`.
 
-The accepted checkpoint contains seven clips: `Idle`, `Walk`, `Run`, `Defend`, `SwordAttack`, `BlockImpact`, and `Hit`. `Idle`, `Walk`, `Run`, and `Defend` loop; the three reactions or attacks do not.
+The accepted checkpoint contains eight clips: `Idle`, `Walk`, `Run`, `Defend`, `SwordAttack`, `SwordAttack2`, `BlockImpact`, and `Hit`. `SwordAttack` uses Sword And Shield Slash (4), downloaded directly on the v5.7 Mixamo rig. `SwordAttack2` preserves the prior v5.7 Hilt Melee motion. `Idle`, `Walk`, `Run`, and `Defend` loop; the reactions and attacks do not.
 
-After building, run Blender in background mode with `scripts\audit-arin-v5-7-animation-set.py`. The September 4 audit evaluated all 261 frames across the seven clips and found zero shield-to-body contacts and zero critical sword-to-body contacts. The audit intentionally permits the sword guard/handle to touch the adjacent right gauntlet because that constant contact is part of the modeled grip. All other sword/body contacts fail the checkpoint.
+After building, run Blender in background mode with `scripts\audit-arin-v5-7-animation-set.py`. The earlier September 4 audit evaluated all 261 frames across the previous seven-clip checkpoint and found zero shield-to-body contacts and zero critical sword-to-body contacts. The newly added `SwordAttack` must be manually reviewed in the viewer before its collision behavior is accepted. The audit intentionally permits the sword guard/handle to touch the adjacent right gauntlet because that constant contact is part of the modeled grip. All other sword/body contacts fail the checkpoint.
 
 ## Arin v5.8 Retopology Handoff
 
