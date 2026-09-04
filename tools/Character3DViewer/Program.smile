@@ -5169,6 +5169,8 @@ Function ProductionClipStatusLabel() As Text
 
     If ProfileIndex = ViewerProfiles.PROFILE_ARIN Then
         Result = "7-clip validated candidate"
+    Else If ProfileIndex = ViewerProfiles.PROFILE_ARIN_V56 Then
+        Result = "v5.6 diagnostic candidate"
     Else If ProfileIndex = ViewerProfiles.PROFILE_ARIN_ORIGINAL Then
         Result = "Original 3 clips"
     Else

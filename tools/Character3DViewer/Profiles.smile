@@ -6,12 +6,13 @@ Option Explicit
 Import Smile.Simple3D.CharacterViewer As CharacterViewer
 
 Public Const PROFILE_ARIN = 0
-Public Const PROFILE_ARIN_ORIGINAL = 1
-Public Const PROFILE_TECHNICAL_ARTICULATED = 2
+Public Const PROFILE_ARIN_V56 = 1
+Public Const PROFILE_ARIN_ORIGINAL = 2
+Public Const PROFILE_TECHNICAL_ARTICULATED = 3
 
 Public Function ProfileCount() As Number
 
-    Return 3
+    Return 4
 
 End Function
 
@@ -36,6 +37,19 @@ Public Function ProfileAt(Index As Number) As CharacterViewer.Profile
         Result.ProductionStatus = "Candidate"
         Result.AssetPath = "Assets\Generation2\ArinV57\ArinV57.sm3d"
         Result.ExpectedClipCount = 8
+        Result.ExpectedSocketCount = 10
+        Result.DesiredWorldHeight = 100
+
+    Else If Index = PROFILE_ARIN_V56 Then
+
+        Result.AssetId = "sin-star-i.character-1.paladin"
+        Result.CandidateVersion = "v5.6"
+        Result.DisplayName = "Arin"
+        Result.PartyRole = "Paladin"
+        Result.PrototypeAlias = "dragonfall.arin-v5-6"
+        Result.ProductionStatus = "Diagnostic"
+        Result.AssetPath = "Assets\Generation2\ArinV56\ArinV56.sm3d"
+        Result.ExpectedClipCount = 11
         Result.ExpectedSocketCount = 10
         Result.DesiredWorldHeight = 100
 
@@ -77,6 +91,8 @@ Public Function ModelFileName(ProfileIndex As Number) As Text
 
     If ProfileIndex = PROFILE_ARIN Then
         Result = "arin-v5.7-idle-equipment-checkpoint.glb"
+    Else If ProfileIndex = PROFILE_ARIN_V56 Then
+        Result = "arin-integrated-candidate-v5.6.glb"
     Else If ProfileIndex = PROFILE_ARIN_ORIGINAL Then
         Result = "sin-star-i-character-1-paladin-tripo-v01.original.glb"
     Else If ProfileIndex = PROFILE_TECHNICAL_ARTICULATED Then
@@ -93,6 +109,8 @@ Public Function ClipCount(ProfileIndex As Number) As Number
 
     If ProfileIndex = PROFILE_ARIN Then
         Result = 8
+    Else If ProfileIndex = PROFILE_ARIN_V56 Then
+        Result = 11
     Else If ProfileIndex = PROFILE_ARIN_ORIGINAL Then
         Result = 3
     Else If ProfileIndex = PROFILE_TECHNICAL_ARTICULATED Then
@@ -107,7 +125,7 @@ Public Function InitialOrbitYaw(ProfileIndex As Number) As Number
 
     Dim Result As Number
 
-    If ProfileIndex = PROFILE_ARIN Then
+    If ProfileIndex = PROFILE_ARIN Or ProfileIndex = PROFILE_ARIN_V56 Then
         Result = -90
     End If
 
@@ -159,6 +177,32 @@ Public Function ClipName(ProfileIndex As Number, ClipIndex As Number) As Text
             Result = "Run"
         End If
 
+    Else If ProfileIndex = PROFILE_ARIN_V56 Then
+
+        If ClipIndex = 0 Then
+            Result = "Idle"
+        Else If ClipIndex = 1 Then
+            Result = "SwordAttack"
+        Else If ClipIndex = 2 Then
+            Result = "ShieldBashCandidate"
+        Else If ClipIndex = 3 Then
+            Result = "Defend"
+        Else If ClipIndex = 4 Then
+            Result = "BlockImpact"
+        Else If ClipIndex = 5 Then
+            Result = "Hit"
+        Else If ClipIndex = 6 Then
+            Result = "Walk"
+        Else If ClipIndex = 7 Then
+            Result = "Run"
+        Else If ClipIndex = 8 Then
+            Result = "Ready"
+        Else If ClipIndex = 9 Then
+            Result = "KO"
+        Else If ClipIndex = 10 Then
+            Result = "Victory"
+        End If
+
     Else If ProfileIndex = PROFILE_ARIN_ORIGINAL Then
 
         If ClipIndex = 0 Then
@@ -205,6 +249,18 @@ Public Function ClipLabel(ProfileIndex As Number, ClipIndex As Number) As Text
             Result = ClipName(ProfileIndex, ClipIndex)
         End If
 
+    Else If ProfileIndex = PROFILE_ARIN_V56 Then
+
+        If ClipIndex = 1 Then
+            Result = "Attack"
+        Else If ClipIndex = 2 Then
+            Result = "Shield Bash"
+        Else If ClipIndex = 4 Then
+            Result = "Block Impact"
+        Else
+            Result = ClipName(ProfileIndex, ClipIndex)
+        End If
+
     Else If ProfileIndex = PROFILE_ARIN_ORIGINAL Then
 
         If ClipIndex = 0 Then
@@ -237,6 +293,12 @@ Public Function ClipLoops(ProfileIndex As Number, ClipIndex As Number) As Boolea
             ClipIndex = 3 Or
             ClipIndex = 6 Or
             ClipIndex = 7)
+    Else If ProfileIndex = PROFILE_ARIN_V56 Then
+        Result = (ClipIndex = 0 Or
+            ClipIndex = 3 Or
+            ClipIndex = 6 Or
+            ClipIndex = 7 Or
+            ClipIndex = 8)
     Else If ProfileIndex = PROFILE_TECHNICAL_ARTICULATED Then
         Result = ClipIndex <> 1 And ClipIndex <> 2
     End If
@@ -250,6 +312,8 @@ Public Function SocketCount(ProfileIndex As Number) As Number
     Dim Result As Number
 
     If ProfileIndex = PROFILE_ARIN Then
+        Result = 10
+    Else If ProfileIndex = PROFILE_ARIN_V56 Then
         Result = 10
     Else If ProfileIndex = PROFILE_ARIN_ORIGINAL Then
         Result = 6
@@ -265,7 +329,9 @@ Public Function SocketName(ProfileIndex As Number, SocketIndex As Number) As Tex
 
     Dim Result As Text
 
-    If ProfileIndex = PROFILE_ARIN Or ProfileIndex = PROFILE_ARIN_ORIGINAL Then
+    If (ProfileIndex = PROFILE_ARIN Or
+        ProfileIndex = PROFILE_ARIN_V56 Or
+        ProfileIndex = PROFILE_ARIN_ORIGINAL) Then
 
         If SocketIndex = 0 Then
             Result = "Root"
@@ -279,13 +345,17 @@ Public Function SocketName(ProfileIndex As Number, SocketIndex As Number) As Tex
             Result = "SwordTip"
         Else If SocketIndex = 5 Then
             Result = "ShieldCenter"
-        Else If ProfileIndex = PROFILE_ARIN And SocketIndex = 6 Then
+        Else If (ProfileIndex = PROFILE_ARIN Or
+            ProfileIndex = PROFILE_ARIN_V56) And SocketIndex = 6 Then
             Result = "HandRight"
-        Else If ProfileIndex = PROFILE_ARIN And SocketIndex = 7 Then
+        Else If (ProfileIndex = PROFILE_ARIN Or
+            ProfileIndex = PROFILE_ARIN_V56) And SocketIndex = 7 Then
             Result = "HandLeft"
-        Else If ProfileIndex = PROFILE_ARIN And SocketIndex = 8 Then
+        Else If (ProfileIndex = PROFILE_ARIN Or
+            ProfileIndex = PROFILE_ARIN_V56) And SocketIndex = 8 Then
             Result = "FootLeft"
-        Else If ProfileIndex = PROFILE_ARIN And SocketIndex = 9 Then
+        Else If (ProfileIndex = PROFILE_ARIN Or
+            ProfileIndex = PROFILE_ARIN_V56) And SocketIndex = 9 Then
             Result = "FootRight"
         End If
 

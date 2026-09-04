@@ -6,6 +6,8 @@ $toolRoot = $PSScriptRoot
 $repositoryRoot = [IO.Path]::GetFullPath((Join-Path $toolRoot '..\..'))
 $arinRoot = Join-Path $repositoryRoot `
     'games\SinStarI\SourceAssets\Characters\Paladin\ArinV57'
+$arinV56Root = Join-Path $repositoryRoot `
+    'games\Dragonfall\SourceAssets\Arin'
 $paladinRoot = Join-Path $repositoryRoot `
     'games\SinStarI\SourceAssets\Characters\Paladin'
 $dragonRoot = Join-Path $repositoryRoot `
@@ -21,6 +23,38 @@ $copies = @(
     @{
         Source = Join-Path $arinRoot 'ArinV57.sm3d.json'
         Destination = Join-Path $buildAssets 'ArinV57\ArinV57.sm3d.json'
+    },
+    @{
+        Source = Join-Path $arinV56Root 'arin-integrated-candidate-v5.6.glb'
+        Destination = Join-Path $buildAssets 'ArinV56\arin-integrated-candidate-v5.6.glb'
+    },
+    @{
+        Source = Join-Path $arinV56Root 'ArinV56.sm3d.json'
+        Destination = Join-Path $buildAssets 'ArinV56\ArinV56.sm3d.json'
+    },
+    @{
+        Source = Join-Path $arinV56Root 'arin-integrated-candidate-v5.6.texture-00.jpg'
+        Destination = Join-Path $buildAssets 'ArinV56\arin-integrated-candidate-v5.6.texture-00.jpg'
+    },
+    @{
+        Source = Join-Path $arinV56Root 'arin-integrated-candidate-v5.6.texture-01.jpg'
+        Destination = Join-Path $buildAssets 'ArinV56\arin-integrated-candidate-v5.6.texture-01.jpg'
+    },
+    @{
+        Source = Join-Path $arinV56Root 'arin-integrated-candidate-v5.6.texture-02.jpg'
+        Destination = Join-Path $buildAssets 'ArinV56\arin-integrated-candidate-v5.6.texture-02.jpg'
+    },
+    @{
+        Source = Join-Path $arinV56Root 'arin-integrated-candidate-v5.6.texture-03.jpg'
+        Destination = Join-Path $buildAssets 'ArinV56\arin-integrated-candidate-v5.6.texture-03.jpg'
+    },
+    @{
+        Source = Join-Path $arinV56Root 'arin-integrated-candidate-v5.6.texture-04.jpg'
+        Destination = Join-Path $buildAssets 'ArinV56\arin-integrated-candidate-v5.6.texture-04.jpg'
+    },
+    @{
+        Source = Join-Path $arinV56Root 'arin-integrated-candidate-v5.6.texture-05.jpg'
+        Destination = Join-Path $buildAssets 'ArinV56\arin-integrated-candidate-v5.6.texture-05.jpg'
     },
     @{
         Source = Join-Path $paladinRoot 'sin-star-i-character-1-paladin-tripo-v01.original.glb'
