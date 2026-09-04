@@ -1,8 +1,18 @@
 # M7E-G0: Approved Viewer and Thermal-Fire Hardening
 
-Status: **All local G0 acceptance gates passed.** Commit/push verification is
-the final phase boundary; do not begin free-roam or production-preset work until
-the containing G0 commit is confirmed at origin/main.
+Status: **G0 passed, committed, pushed and remote-verified.** Implementation commit:
+`fa81d737c8de43663501067aeacb2d9ac0c03cab`; local HEAD and origin/main matched,
+ahead/behind 0/0. Five unrelated untracked Tank reference PNGs were preserved.
+
+## Updated scope: Free roam deferred
+
+Sin subsequently deferred the separate free-roaming flaming-sword demo because
+the working Character Viewer already provides the desired visual proof. G1–G5
+are not started and are not claimed complete. Do not automatically resume that
+follow-up package; a later user request should select the next milestone.
+Arin's approved Viewer setup and all 23 saved keys remain unchanged. Future
+dragon fire and other characters' ice/magic effects remain shared-resource
+requirements, not authorization to implement them in this completed G0 task.
 
 ## Intake and preservation
 
