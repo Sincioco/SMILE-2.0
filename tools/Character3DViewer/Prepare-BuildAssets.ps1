@@ -76,8 +76,12 @@ $copies = @(
         Destination = Join-Path $buildAssets 'ArinPrototype\ArinPrototype.sm3d.json'
     },
     @{
-        Source = Join-Path $dragonRoot 'RedDragonV1.0.static.glb'
-        Destination = Join-Path $buildAssets 'RedDragon\RedDragonV1.0.static.glb'
+        Source = Join-Path $dragonRoot 'RedDragonV11\red-dragon-v1.1-animated.glb'
+        Destination = Join-Path $buildAssets 'RedDragon\red-dragon-v1.1-animated.glb'
+    },
+    @{
+        Source = Join-Path $dragonRoot 'RedDragonV11\RedDragonV11.sm3d.json'
+        Destination = Join-Path $buildAssets 'RedDragon\RedDragonV11.sm3d.json'
     },
     @{
         Source = Join-Path $technicalRoot 'AnimationArticulated.sm3d'

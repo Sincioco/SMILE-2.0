@@ -1,0 +1,55 @@
+{
+  "version": 1,
+  "sampleRate": 30,
+  "clips": {
+    "Idle": {
+      "loop": true
+    },
+    "Roar": {
+      "loop": false
+    },
+    "FireBreath": {
+      "loop": false
+    },
+    "ClawStrike": {
+      "loop": false
+    },
+    "Hit": {
+      "loop": false
+    }
+  },
+  "sockets": {
+    "Root": {
+      "node": "Root",
+      "translation": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    "Chest": {
+      "node": "Chest",
+      "translation": [
+        0.0,
+        0.08875206112861633,
+        0.061017051339149475
+      ]
+    },
+    "Head": {
+      "node": "Head",
+      "translation": [
+        0.0,
+        0.07976281642913818,
+        -0.021769002079963684
+      ]
+    },
+    "Mouth": {
+      "node": "Jaw",
+      "translation": [
+        0.0,
+        0.1016165167093277,
+        -0.030233800411224365
+      ]
+    }
+  }
+}

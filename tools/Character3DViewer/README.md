@@ -1,6 +1,6 @@
 # SMILE 2.0 - 3D Viewer, Animation Editor
 
-Native-first reusable inspection and lightweight pose-correction tool. Arin v5.7 is the default. The Character tabs select Arin, Orin, or the Party arena. Profile retains Arin v5.6, the earlier prototype, and the technical fixture for diagnostics. Web editor feature work is deferred.
+Native-first reusable inspection and lightweight pose-correction tool. Party is the launch default. The Character tabs select Arin, Orin, or the Party arena. Profile retains Arin v5.6, the earlier prototype, and the technical fixture for diagnostics. Web editor feature work is deferred.
 
 The editor source and build/launch entry points belong here. Sin Star I owns the self-contained character package at `games\SinStarI\SourceAssets\Characters\Paladin\ArinV57`. Orin owns `games\SinStarI\SourceAssets\Characters\Tank\OrinV13`. Do not edit ignored cooking inputs as canonical character assets.
 
@@ -57,14 +57,23 @@ and dragon. Arin and Orin begin side by side on the dragon's forward centerline,
 two close chest lanes, and stop outside its body before attacking. Orin applies his own -55-degree
 visual yaw correction so his imported hammer stance faces the target. The closer arena camera
 keeps both sides readable while the nearer actor crosses the foreground. The viewer opens
-directly in Party mode. Its controls sit in a dedicated right panel below the shared character
+directly in Party mode. Its controls sit in a dedicated left panel below the shared character
 tabs, and the panel names the active attack while a party member strikes. Orin's Death
 presentation follows a measured ground curve so his falling body settles onto the arena floor.
 Space pauses movement; the usual pan, orbit, eased zoom, keyboard controls and reset remain
 available. Weapon and Shield affect both members. Select the individual Character tab to
 edit that character’s animation; Party evaluates each member’s own saved correction track.
-Arin retains his thermal equipment fire. Orin uses white equipment glow; lightning is deferred
-to the separate Lightning Lab work.
+Arin retains his thermal equipment fire. Orin's hammer glows white with crawling lightning;
+only the shield perimeter receives the aura. His tab offers Thunder Smash, Storm Lance,
+Chain Arcs and Godstorm styles, with full/reduced/off flash and shake. Reduced is the default.
+The CPU charge controller and calibrated equipment sockets live in `OrinStorm.smile`.
+
+The dragon takes the third turn, alternating Fire Breath and Claw Strike. Mouth-attached
+fire sweeps toward Arin and then Orin while they guard and react. The claw animation
+includes a short approach and return. Idle wings, head and tail keep moving between turns;
+party impacts trigger a brief hit reaction. This is a presentation demo, without combat damage
+or enemy AI. The self-contained rig, five clips, original model, reference, descriptor and
+checksums belong to `games/SinStarI/SourceAssets/Bosses/RedDragon/RedDragonV11`.
 
 ## Shared presentation libraries
 

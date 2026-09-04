@@ -54,7 +54,7 @@ Const EQUIPMENT_GLOW_SCALE_DIVISOR = 60
 Const SWORD_TRAIL_PARTICLE_SIZE = 3
 Const SHIELD_TRAIL_PARTICLE_SIZE = 5
 Const DRAGON_ASSET_PATH = "Assets\Generation2\RedDragon\RedDragon.sm3d"
-Const DRAGON_SCALE_PERCENT = 50000
+Const DRAGON_SCALE_PERCENT = 25000
 Const DRAGON_POSITION_X = -208
 Const DRAGON_POSITION_Z = -120
 Const DRAGON_ROTATION_Y = 240
@@ -254,8 +254,12 @@ Dim BackdropLandscapeTexture As StaticBackdrop3D.Backdrop
 Dim BackdropTitleTexture As StaticBackdrop3D.Backdrop
 Dim BackdropAvailable As Boolean
 Dim BackdropTextureIndex As Number
-Dim DragonModel As Core.Model3D
-Dim Dragon As Core.Object3D
+Dim Dragon As Character3D.Actor
+Dim DragonClip As Text
+Dim DragonCounter As Number
+Dim DragonBreath As Fire.FireEmitter
+Dim FireInitialized As Boolean
+Dim DragonFireFailed As Boolean
 Dim DragonAvailable As Boolean
 Dim DragonVisible As Boolean
 Dim SwordVisible As Boolean
@@ -449,6 +453,7 @@ Do
             Call UpdatePartyCompanion()
         End If
 
+        Call UpdateDragon()
         Call UpdateOrinStorm()
 
         If SocketGizmosVisible Then
@@ -505,6 +510,10 @@ Do
 
             Call DrawShieldFire()
             Call OrinStorm.Draw()
+
+            If DragonVisible And DragonBreath.Slot <> 0 Then
+                DragonFireFailed = Not Fire.Draw(DragonBreath)
+            End If
 
             If EpicGlowVisible Then
 
@@ -701,8 +710,14 @@ Sub LoadViewer()
     SwordFireFailed = False
     SwordFireReady = False
 
+    FireInitialized = False
+
+    If DragonAvailable Then
+        FireInitialized = Fire.Initialize("Assets/Fire")
+    End If
+
     If CalibrationAvailable And ProfileIndex = ViewerProfiles.PROFILE_ARIN Then
-        SwordFireReady = Fire.Initialize("Assets/Fire")
+        SwordFireReady = FireInitialized
         SwordFireFailed = Not SwordFireReady
     End If
 
@@ -886,36 +901,17 @@ Sub CreateDragon()
         Return
     End If
 
-    DragonModel = Graphics3D.LoadModel3D(DRAGON_ASSET_PATH)
-    DragonReady = DragonModel.Handle <> 0
-    DragonReady = DragonModel.PartCount = 1 And DragonReady
-
-    If DragonReady Then
-        Dragon = Graphics3D.CreateModelPart3D(DragonModel, 0)
-        DragonReady = Dragon.Handle <> 0
-    End If
+    Dragon = Character3D.LoadWithPolicy(DRAGON_ASSET_PATH, Character3D.CHARACTER_LOAD_REQUIRE_PBR)
+    DragonReady = Character3D.IsValid(Dragon)
+    DragonFireFailed = False
+    DragonClip = "Idle"
 
     If DragonReady Then
 
-        DragonReady = Graphics3D.SetObjectScaleChecked3D(
-            Dragon,
-            DRAGON_SCALE_PERCENT,
-            DRAGON_SCALE_PERCENT,
-            DRAGON_SCALE_PERCENT
-        ) And DragonReady
-        DragonReady = Graphics3D.SetObjectPositionChecked3D(
-            Dragon,
-            DRAGON_POSITION_X,
-            0,
-            DRAGON_POSITION_Z
-        ) And DragonReady
-        DragonReady = Graphics3D.SetObjectRotationChecked3D(
-            Dragon,
-            0,
-            DRAGON_ROTATION_Y,
-            0
-        ) And DragonReady
-        DragonReady = Graphics3D.SetObjectShadowsChecked3D(Dragon, True, True) And DragonReady
+        DragonReady = Character3D.SetScale(Dragon, DRAGON_SCALE_PERCENT) And DragonReady
+        DragonReady = Character3D.Place(Dragon, DRAGON_POSITION_X, 0, DRAGON_POSITION_Z) And DragonReady
+        DragonReady = Character3D.Rotate(Dragon, 0, DRAGON_ROTATION_Y, 0) And DragonReady
+        DragonReady = Character3D.PlayAnimation(Dragon, DragonClip, True) And DragonReady
 
     End If
 
@@ -931,10 +927,10 @@ Function DrawDragon() As Boolean
 
     Dim Result As Boolean
 
-    Result = DragonAvailable And Dragon.Handle <> 0
+    Result = DragonAvailable And Character3D.IsValid(Dragon)
 
     If Result Then
-        Result = Graphics3D.DrawObject3D(Dragon)
+        Result = Character3D.Draw(Dragon)
     End If
 
     Return Result
@@ -943,8 +939,119 @@ End Function
 
 Sub DestroyDragon()
 
-    Call Graphics3D.DestroyObject3D(Dragon)
-    Call Graphics3D.DestroyModel3D(DragonModel)
+    Dim Ok As Boolean
+
+    If DragonBreath.Slot <> 0 Then
+        Ok = Fire.Destroy(DragonBreath)
+    End If
+
+    Call Character3D.Destroy(Dragon)
+
+End Sub
+
+Sub UpdateDragon()
+
+    Dim Name As Text
+    Dim Mouth As Core.Vector3
+    Dim Target As Core.Vector3
+    Dim Direction As Core.Vector3
+    Dim Time As Number
+    Dim Travel1000 As Number
+    Dim Breathe As Boolean
+    Dim Ok As Boolean
+
+    If Not DragonAvailable Or Not Character3D.IsValid(Dragon) Then
+        Return
+    End If
+
+    Name = "Idle"
+
+    If PartyMode And PartyTurn = 2 Then
+
+        If DragonCounter Mod 2 = 0 Then
+            Name = "FireBreath"
+        Else
+            Name = "ClawStrike"
+        End If
+
+    Else If (PartyMode And
+        PartyStage = 1 And
+        PartyElapsed > 700 + PartyAttackDuration() * 65 / 100 And
+        PartyElapsed < 700 + PartyAttackDuration() * 85 / 100) Then
+
+        Name = "Hit"
+
+    End If
+
+    If Name <> DragonClip Then
+        DragonClip = Name
+        Ready = Character3D.PlayAnimation(Dragon, Name, Name = "Idle") And Ready
+    End If
+
+    Ready = Character3D.Update(Dragon, AnimationUpdateElapsed) And Ready
+    Time = Character3D.AnimationTime(Dragon)
+    Travel1000 = 0
+
+    If Name = "ClawStrike" Then
+
+        Travel1000 = Min(1000, Time * 1000 / 1100)
+
+        If Time > 1100 Then
+            Travel1000 = Max(0, (2200 - Time) * 1000 / 1100)
+        End If
+
+        Travel1000 = Travel1000 * Travel1000 / 1000 * (3000 - 2 * Travel1000) / 1000
+
+    End If
+
+    Ready = Character3D.Place(Dragon,
+        DRAGON_POSITION_X + 79 * Travel1000 / 1000, 0,
+        DRAGON_POSITION_Z + 30 * Travel1000 / 1000) And Ready
+    Breathe = (DragonVisible And Name = "FireBreath" And Time >= 850 And Time < 3100)
+
+    If (Breathe And
+        FireInitialized And
+        Not DragonFireFailed) Then
+
+        Mouth = Character3D.SocketPosition(Dragon, "Mouth")
+        Target = Character3D.SocketPosition(Character, "Chest", BODY_PART_INDEX)
+
+        If PartyReady And Time > 1900 Then
+            Target = Character3D.SocketPosition(PartyCompanion.Actor, "Chest", BODY_PART_INDEX)
+        End If
+
+        If DragonBreath.Slot = 0 Then
+            DragonBreath = Fire.StartAt("DragonFireBreathPreview", Mouth, 3117,
+                Fire.QUALITY_HIGH, Fire.SIMULATION_AUTO, 6)
+            DragonFireFailed = DragonBreath.Slot = 0
+        End If
+
+        If DragonBreath.Slot <> 0 Then
+
+            Direction = Math3D.Subtract(Target, Mouth)
+            Direction.X = Direction.X * 2
+            Direction.Y = Direction.Y * 2
+            Direction.Z = Direction.Z * 2
+            Ok = Fire.SetPosition(DragonBreath, Mouth)
+            Ok = Fire.SetDirection(DragonBreath, Direction) And Ok
+            DragonFireFailed = Not Ok
+
+            Call Fire.SetIntensity(DragonBreath, 160)
+            Call Fire.SetSourceVelocityInheritance(DragonBreath, 0)
+
+        End If
+
+    Else If DragonBreath.Slot <> 0 Then
+
+        Ok = Fire.Destroy(DragonBreath)
+
+    End If
+
+    If (FireInitialized And
+        Not SwordFireReady And
+        Not FlameAnimationPaused) Then
+        Call Fire.Update(CameraElapsed)
+    End If
 
 End Sub
 
@@ -2930,7 +3037,11 @@ Sub UpdateOrinStorm()
     Dim Target As Core.Vector3
     Dim Clip As Text
 
-    Target = Math3D.Vector(-135, 85, -70)
+    If Not DragonAvailable Or Not Character3D.IsValid(Dragon) Then
+        Return
+    End If
+
+    Target = Character3D.SocketPosition(Dragon, "Chest")
 
     If PartyMode And PartyReady Then
         Clip = Character3D.ClipName(PartyCompanion.Actor, PartyCompanion.Clip)
@@ -7080,6 +7191,7 @@ Sub DestroyViewerResources()
     Dim Index As Number
 
     Call DestroyPartyCompanion()
+    Call DestroyDragon()
     Call Fire.Shutdown()
     Call OrinStorm.Shutdown()
 
@@ -7095,7 +7207,6 @@ Sub DestroyViewerResources()
     Call DestroySocketGizmos()
     Call DestroyStudioGrid()
 
-    Call DestroyDragon()
     Call Character3D.Destroy(Character)
 
 End Sub
@@ -7251,6 +7362,7 @@ Sub ResetPartyDemo()
 
     PartyElapsed = 0
     PartyTurn = 0
+    DragonCounter = 0
     PartyStage = -1
     DemoEnabled = True
     CalibrationVisible = False
@@ -7299,7 +7411,9 @@ Sub PlayPartyClip(ByRef Actor As Character3D.Actor, Name As Text, ByRef Clip As 
 
     Mode = Graphics3D.ANIMATION_LOOP
 
-    If Name = "SwordAttack" Or Name = "ThorAttack" Then
+    If (Name = "SwordAttack" Or
+        Name = "ThorAttack" Or
+        Name = "Hit") Then
         Mode = Graphics3D.ANIMATION_ONCE
     End If
 
@@ -7332,14 +7446,26 @@ Sub AdvancePartyDemo()
         PartyElapsed = PartyElapsed + AnimationUpdateElapsed
     End If
 
+    If PartyTurn = 2 Then
+        Call AdvanceDragonTurn()
+
+        Return
+    End If
+
     AttackDuration = PartyAttackDuration()
 
     If PartyElapsed >= AttackDuration + 2100 Then
 
         PartyElapsed = 0
-        PartyTurn = (PartyTurn + 1) Mod 2
+        PartyTurn = (PartyTurn + 1) Mod 3
         PartyStage = -1
 
+    End If
+
+    If PartyTurn = 2 Then
+        Call AdvanceDragonTurn()
+
+        Return
     End If
 
     Stage = 0
@@ -7406,6 +7532,67 @@ Sub AdvancePartyDemo()
         PartyCompanion.Frame.PositionZ = PartyCompanion.Frame.PositionZ - 55 * Travel1000 / 1000
     End If
 
+    Ready = Character3D.Place(Character, ViewerFrame.PositionX, ViewerFrame.PositionY, ViewerFrame.PositionZ) And Ready
+    Ready = Character3D.Place(PartyCompanion.Actor,
+        PartyCompanion.Frame.PositionX, PartyCompanion.Frame.PositionY, PartyCompanion.Frame.PositionZ) And Ready
+    Ready = FaceDragon(Character, 0) And Ready
+    Ready = FaceDragon(PartyCompanion.Actor, ORIN_ARENA_YAW_ADJUSTMENT) And Ready
+
+End Sub
+
+Sub AdvanceDragonTurn()
+
+    Dim Stage As Number
+    Dim Duration As Number
+
+    Duration = 4500
+
+    If DragonCounter Mod 2 = 1 Then
+        Duration = 2800
+    End If
+
+    If PartyElapsed >= Duration Then
+
+        PartyTurn = 0
+        PartyElapsed = 0
+        PartyStage = -1
+        DragonCounter = DragonCounter + 1
+        Return
+
+    End If
+
+    Stage = 0
+
+    If PartyElapsed >= 1200 And PartyElapsed < 1750 Then
+        Stage = 1
+    Else If (PartyElapsed >= 2200 And
+        PartyElapsed < 2700 And
+        DragonCounter Mod 2 = 0) Then
+        Stage = 2
+    End If
+
+    If Stage <> PartyStage Then
+
+        If Stage = 1 Then
+            Call PlayPartyClip(Character, "Hit", SelectedClip)
+            Call PlayPartyClip(PartyCompanion.Actor, "Defend", PartyCompanion.Clip)
+        Else If Stage = 2 Then
+            Call PlayPartyClip(Character, "Defend", SelectedClip)
+            Call PlayPartyClip(PartyCompanion.Actor, "Hit", PartyCompanion.Clip)
+        Else
+
+            Call PlayPartyClip(Character, "Defend", SelectedClip)
+            Call PlayPartyClip(PartyCompanion.Actor, "Defend", PartyCompanion.Clip)
+        End If
+
+        PartyStage = Stage
+
+    End If
+
+    ViewerFrame.PositionX = 58
+    ViewerFrame.PositionZ = -19
+    PartyCompanion.Frame.PositionX = 13
+    PartyCompanion.Frame.PositionZ = 59
     Ready = Character3D.Place(Character, ViewerFrame.PositionX, ViewerFrame.PositionY, ViewerFrame.PositionZ) And Ready
     Ready = Character3D.Place(PartyCompanion.Actor,
         PartyCompanion.Frame.PositionX, PartyCompanion.Frame.PositionY, PartyCompanion.Frame.PositionZ) And Ready
@@ -7540,12 +7727,24 @@ Sub DrawPartyOverlay()
 
     If PartyTurn = 1 Then
         Acting = "Orin"
+    Else If PartyTurn = 2 Then
+        Acting = "Dragon"
     End If
 
     AttackSequence = "Sword Attack"
 
     If PartyTurn = 1 Then
+
         AttackSequence = "Thor Attack"
+
+    Else If PartyTurn = 2 Then
+
+        If DragonCounter Mod 2 = 0 Then
+            AttackSequence = "Fire Breath"
+        Else
+            AttackSequence = "Claw Strike"
+        End If
+
     End If
 
     If UiVisibility = 0 Then
@@ -7563,7 +7762,7 @@ Sub DrawPartyOverlay()
         Draw Text "Orin  •  Tank" At Left + 16, 238 Size 15 Color WHITE
         Draw Text Acting + "'s Turn" At Left + 16, 272 Size 16 Color YELLOW
 
-        If PartyStage = 1 Then
+        If PartyStage = 1 Or PartyTurn = 2 Then
             Draw Text "Attack: " + AttackSequence At Left + 16, 296 Size 13 Color CYAN
         End If
 

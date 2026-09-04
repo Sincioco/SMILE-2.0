@@ -1,0 +1,52 @@
+[
+  {
+    "File": "cyber-dragon-red-all-poses-preview.png",
+    "Bytes": 907447,
+    "Sha256": "1F8430D426AE7942B06198E4921C12027E9DB3040A0CE08AF377539885C1900B"
+  },
+  {
+    "File": "dragon-fire-breath-rig-preview.png",
+    "Bytes": 833359,
+    "Sha256": "5B052477528AF44024CBA7A5B0662404AF63A5890276C258F8DF224FC8D2230C"
+  },
+  {
+    "File": "README.md",
+    "Bytes": 2108,
+    "Sha256": "6D4AB8780C75E44EC057A9B5FDA70F1CD985A7DA7E6D22447FDAF722EE208EF1"
+  },
+  {
+    "File": "red-dragon-v1.1-animated.glb",
+    "Bytes": 2341048,
+    "Sha256": "E0CB5D5457152053AD6723A01E58DB681CAF6D1CCC04E670CAD43006981CBBB5"
+  },
+  {
+    "File": "red-dragon-v1.1-package.json",
+    "Bytes": 7038,
+    "Sha256": "7518ACCFD7B0B0A92258D3A24C6D430544D005B07028CE671EA83BB644A000FE"
+  },
+  {
+    "File": "red-dragon-v1.1-rig.blend",
+    "Bytes": 2085332,
+    "Sha256": "F3325A171386F1C253E5D013BE4F10A3E85952F490D2AECEF5D88E1C62FED709"
+  },
+  {
+    "File": "RedDragonV1.0.original.glb",
+    "Bytes": 1994132,
+    "Sha256": "4A90AC7BCD5E0BEA9D0747CBB3E4B3B9379E1DCE2303DBA7797F6D0E72996D88"
+  },
+  {
+    "File": "RedDragonV1.0.static.glb",
+    "Bytes": 1994584,
+    "Sha256": "4909CD165FBA48EE64E73617E4B661DB7D4FA481BC0C9707243077D2C26B96AC"
+  },
+  {
+    "File": "RedDragonV11.sm3d.json",
+    "Bytes": 895,
+    "Sha256": "B4DE2EFEE8B7AF18CEC392A7645F120152314ABB3C517CDD5D9EE9DB03F3C4D3"
+  },
+  {
+    "File": "rig-validation.json",
+    "Bytes": 4630,
+    "Sha256": "CFD8F2CA042B43AEEC03EA267D5246F9323A68932C16F850B8D6767983D85C0F"
+  }
+]
