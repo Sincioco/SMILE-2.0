@@ -131,12 +131,17 @@ try {
     Assert-Contains $cookedProjectSource '<ResponsiveWindow>true</ResponsiveWindow>' `
         'Character 3D Viewer project'
     Assert-Contains $cookedProjectSource `
-        'BuildAssets\RedDragon\RedDragonV1.0.static.glb' 'Cooked Character 3D Viewer project'
+        'BuildAssets\RedDragon\red-dragon-v1.1-animated.glb' 'Cooked Character 3D Viewer project'
     Assert-Contains $cookedProjectSource `
         'LogicalPath="Assets\Generation2\RedDragon\RedDragon.sm3d"' `
         'Cooked Character 3D Viewer project'
-    Assert-Contains $cookedProjectSource 'Profile="Static"' `
-        'Cooked Character 3D Viewer project'
+    $cookedProjectXml = [xml]$cookedProjectSource
+    $dragonAssets = @($cookedProjectXml.SmileProject.ItemGroup.Model3DAsset | Where-Object {
+        $_.LogicalPath -eq 'Assets\Generation2\RedDragon\RedDragon.sm3d'
+    })
+    Assert-True ($dragonAssets.Count -eq 1 -and $dragonAssets[0].Profile -ceq 'Character' -and `
+        $dragonAssets[0].Descriptor -ceq 'BuildAssets\RedDragon\RedDragonV11.sm3d.json') `
+        'The animated Dragon must use its own Character cooking descriptor.'
     Assert-True ((Get-FileHash -LiteralPath $dragonSourcePath -Algorithm SHA256).Hash -ceq `
         '4A90AC7BCD5E0BEA9D0747CBB3E4B3B9379E1DCE2303DBA7797F6D0E72996D88') `
         'The preserved Red Dragon GLB differs from the user-supplied source.'
@@ -147,6 +152,14 @@ try {
         $dragonReport.removedDegenerateFaces -eq 4 -and `
         $dragonReport.outputTriangles -eq 9912) `
         'The prepared Red Dragon geometry contract changed.'
+    $dragonPackagePath = Join-Path $repositoryRoot 'games\SinStarI\SourceAssets\Bosses\RedDragon\RedDragonV11'
+    $dragonPackage = Get-Content (Join-Path $dragonPackagePath 'red-dragon-v1.1-package.json') -Raw | ConvertFrom-Json
+    Assert-True ($dragonPackage.triangles -eq 9912 -and -not $dragonPackage.geometryChanged -and `
+        @($dragonPackage.bones.PSObject.Properties).Count -eq 24 -and $dragonPackage.sockets.Count -eq 4 -and `
+        ($dragonPackage.clips -join ',') -ceq 'Idle,Roar,FireBreath,ClawStrike,Hit') `
+        'The Dragon preview rig, five clips and unchanged geometry contract changed.'
+    Assert-True ((Get-FileHash (Join-Path $dragonPackagePath 'red-dragon-v1.1-animated.glb')).Hash -ceq `
+        $dragonPackage.modelSha256) 'The animated Dragon differs from its canonical package manifest.'
     Assert-Contains $profileSource `
         'Result.AssetId = "sin-star-i.character-1.paladin"' 'Viewer profile'
     Assert-Contains $profileSource 'Result.CandidateVersion = "v5.7"' 'Viewer profile'
