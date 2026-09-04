@@ -365,6 +365,36 @@ Public Function ClipLoops(ProfileIndex As Number, ClipIndex As Number) As Boolea
 
 End Function
 
+Public Function ClipVerticalOffset1000(
+    ProfileIndex As Number,
+    ClipIndex As Number,
+    Frame As Number
+) As Number
+
+    Dim Result As Number
+
+    If ProfileIndex = PROFILE_ORIN And ClipIndex = 6 Then
+
+        If Frame < 42 Then
+            Result = 0
+        Else If Frame < 54 Then
+            Result = 0 - (Frame - 42) * 263 / 12
+        Else If Frame < 84 Then
+            Result = -263
+        Else If Frame < 96 Then
+            Result = -263 + (Frame - 84) * 213 / 12
+        Else If Frame < 118 Then
+            Result = -50 + (Frame - 96) * 31 / 22
+        Else
+            Result = -19
+        End If
+
+    End If
+
+    Return Result
+
+End Function
+
 Public Function SocketCount(ProfileIndex As Number) As Number
 
     Dim Result As Number

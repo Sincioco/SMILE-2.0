@@ -58,7 +58,7 @@ Const DRAGON_POSITION_X = -208
 Const DRAGON_POSITION_Z = -120
 Const DRAGON_ROTATION_Y = 240
 Const CHARACTER_MODEL_FORWARD_YAW_OFFSET = 180
-Const ORIN_ARENA_YAW_ADJUSTMENT = -45
+Const ORIN_ARENA_YAW_ADJUSTMENT = -55
 Const ARENA_INITIAL_ORBIT_YAW = 0
 Const ARENA_ORBIT_DEGREES_PER_SECOND = 12
 Const ARENA_CAMERA_DISTANCE = 480
@@ -325,6 +325,9 @@ Game Window "SMILE 2.0 - 3D Viewer, Animation Editor" Size 1600 By 640
 
 Call Graphics3D.ResetRenderer3D()
 
+SelectedCharacterTab = 2
+PartyMode = True
+ProfileIndex = ViewerProfiles.PROFILE_ARIN
 DemoEnabled = True
 UiVisibility = 0
 BackgroundIndex = 3
@@ -398,6 +401,7 @@ Do
         Ready = Character3D.Update(Character, AnimationUpdateElapsed) And Ready
 
         Call CaptureViewerFailure(3)
+        Call ApplyCharacterPresentationOffset()
 
         If CalibrationAvailable Then
 
@@ -840,6 +844,30 @@ Function FaceDragon(
     Return Result
 
 End Function
+
+Sub ApplyCharacterPresentationOffset()
+
+    Dim Offset1000 As Number
+    Dim OffsetY As Number
+
+    If PartyMode Or Not Character3D.IsValid(Character) Then
+        Return
+    End If
+
+    Offset1000 = ViewerProfiles.ClipVerticalOffset1000(
+        ProfileIndex,
+        SelectedClip,
+        CurrentAnimationFrame()
+    )
+    OffsetY = Offset1000 * ViewerFrame.ScalePercent / 100000
+    Ready = Character3D.Place(
+        Character,
+        ViewerFrame.PositionX,
+        ViewerFrame.PositionY + OffsetY,
+        ViewerFrame.PositionZ
+    ) And Ready
+
+End Sub
 
 Sub CreateDragon()
 
@@ -7411,7 +7439,7 @@ Function HandlePartyPointer() As Boolean
     Dim Result As Boolean
 
     Left = StatusPanelX()
-    Result = Pointer_Y() < 90 Or Pointer_X() >= Left Or Pointer_Y() >= Window_Height() - 100
+    Result = Pointer_Y() < 96 Or Pointer_X() >= Left Or Pointer_Y() >= Window_Height() - 100
 
     If HandleSharedSliders() Then
         Return True
@@ -7427,23 +7455,23 @@ Function HandlePartyPointer() As Boolean
         Return Result
     End If
 
-    If PointerInRectangle(Left, 18, 76, 30) Then
+    If PointerInRectangle(Left, 104, 76, 30) Then
         Call ToggleDragon()
-    Else If PointerInRectangle(Left + 82, 18, 76, 30) Then
+    Else If PointerInRectangle(Left + 82, 104, 76, 30) Then
         Call ToggleSword()
-    Else If PointerInRectangle(Left + 164, 18, 76, 30) Then
+    Else If PointerInRectangle(Left + 164, 104, 76, 30) Then
         Call ToggleShield()
-    Else If PointerInRectangle(Left, 56, 76, 22) Then
+    Else If PointerInRectangle(Left, 140, 76, 22) Then
         Call ToggleFloorAndGrid()
-    Else If PointerInRectangle(Left + 82, 56, 76, 22) Then
+    Else If PointerInRectangle(Left + 82, 140, 76, 22) Then
         Call CycleBackground()
-    Else If PointerInRectangle(Left + 164, 56, 76, 22) Then
+    Else If PointerInRectangle(Left + 164, 140, 76, 22) Then
         Call ToggleEpicGlow()
-    Else If PointerInRectangle(Left + 12, 250, 108, 28) Then
+    Else If PointerInRectangle(Left + 12, 324, 108, 28) Then
         Call ToggleScenePause()
-    Else If PointerInRectangle(Left + 128, 250, 108, 28) Then
+    Else If PointerInRectangle(Left + 128, 324, 108, 28) Then
         Call ToggleAutoOrbit()
-    Else If PointerInRectangle(Left + 12, 286, 224, 28) Then
+    Else If PointerInRectangle(Left + 12, 360, 224, 28) Then
         Call ResetAll()
     End If
 
@@ -7455,6 +7483,7 @@ Sub DrawPartyOverlay()
 
     Dim Left As Number
     Dim Acting As Text
+    Dim AttackSequence As Text
 
     Left = StatusPanelX()
     Acting = "Arin"
@@ -7463,29 +7492,43 @@ Sub DrawPartyOverlay()
         Acting = "Orin"
     End If
 
+    AttackSequence = "Sword Attack"
+
+    If PartyTurn = 1 Then
+        AttackSequence = "Thor Attack"
+    End If
+
     If UiVisibility = 0 Then
 
-        Call DrawButton(Left, 18, 76, 30, "Dragon", DragonVisible)
-        Call DrawButton(Left + 82, 18, 76, 30, "Weapon", SwordVisible)
-        Call DrawButton(Left + 164, 18, 76, 30, "Shield", ShieldVisible)
-        Call DrawButton(Left, 56, 76, 22, "Floor/Grid", FloorVisible Or GridVisible)
-        Call DrawButton(Left + 82, 56, 76, 22, "Backdrop", BackgroundIndex > 0)
-        Call DrawButton(Left + 164, 56, 76, 22, "Glow", EpicGlowVisible)
-        Call UI.DrawPanel(Left, 92, 252, Max(380, Window_Height() - 110))
+        Call UI.DrawPanel(Left, 96, 252, Max(374, Window_Height() - 114))
+        Call DrawButton(Left, 104, 76, 30, "Dragon", DragonVisible)
+        Call DrawButton(Left + 82, 104, 76, 30, "Weapon", SwordVisible)
+        Call DrawButton(Left + 164, 104, 76, 30, "Shield", ShieldVisible)
+        Call DrawButton(Left, 140, 76, 22, "Floor/Grid", FloorVisible Or GridVisible)
+        Call DrawButton(Left + 82, 140, 76, 22, "Backdrop", BackgroundIndex > 0)
+        Call DrawButton(Left + 164, 140, 76, 22, "Glow", EpicGlowVisible)
 
-        Draw Text "Party" At Left + 16, 106 Size 20 Color WHITE
-        Draw Text "Arin  •  Paladin" At Left + 16, 144 Size 15 Color CYAN
-        Draw Text "Orin  •  Tank" At Left + 16, 172 Size 15 Color WHITE
-        Draw Text Acting + "'s Turn" At Left + 16, 210 Size 16 Color YELLOW
+        Draw Text "Party" At Left + 16, 178 Size 20 Color WHITE
+        Draw Text "Arin  •  Paladin" At Left + 16, 212 Size 15 Color CYAN
+        Draw Text "Orin  •  Tank" At Left + 16, 238 Size 15 Color WHITE
+        Draw Text Acting + "'s Turn" At Left + 16, 272 Size 16 Color YELLOW
 
-        Call DrawButton(Left + 12, 250, 108, 28, "Pause", ScenePaused)
-        Call DrawButton(Left + 128, 250, 108, 28, "Orbit", AutoOrbit)
-        Call DrawButton(Left + 12, 286, 224, 28, "Restart Battle Demo", False)
+        If PartyStage = 1 Then
+            Draw Text "Attack: " + AttackSequence At Left + 16, 296 Size 13 Color CYAN
+        End If
 
-        Draw Text "Edit Each Character In Its Tab" At Left + 16, 338 Size 12 Color LIGHT_GRAY
-        Draw Text "Equipment Toggles Apply To Both" At Left + 16, 360 Size 12 Color LIGHT_GRAY
-        Draw Text "FPS" At Left + 16, 396 Size 13 Color LIGHT_GRAY
-        Draw Number CurrentFramesPerSecond At Left + 62, 396 Size 13 Color GREEN
+        Call DrawButton(Left + 12, 324, 108, 28, "Pause", ScenePaused)
+        Call DrawButton(Left + 128, 324, 108, 28, "Orbit", AutoOrbit)
+        Call DrawButton(Left + 12, 360, 224, 28, "Restart Battle Demo", False)
+
+        If Window_Height() >= 620 Then
+
+            Draw Text "Edit Each Character In Its Tab" At Left + 16, 408 Size 12 Color LIGHT_GRAY
+            Draw Text "Equipment Toggles Apply To Both" At Left + 16, 430 Size 12 Color LIGHT_GRAY
+            Draw Text "FPS" At Left + 16, 462 Size 13 Color LIGHT_GRAY
+            Draw Number CurrentFramesPerSecond At Left + 62, 462 Size 13 Color GREEN
+
+        End If
 
         Call DrawCameraControls()
 

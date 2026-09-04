@@ -47,9 +47,12 @@ Orin owns a separate profile, persistent-data key, calibration area, and JSON
 snapshot. Export it with
 `scripts/sync-arin-v5-7-calibration.ps1 -Character Orin -Mode Export -AllowMissing`
 before commits. The Party tab evaluates Orin's own clips and corrections. His
-arena pose uses a -45-degree visual yaw adjustment on top of live target facing
+arena pose uses a -55-degree visual yaw adjustment on top of live target facing
 because the imported hammer stance's visible forward direction differs from
-Arin's.
+Arin's. The Character Viewer also applies a measured presentation-only ground
+curve to Death frames 42 through 118. It removes the visible airborne pause
+during the fall and lets the final pose rest on the arena floor without changing
+the accepted Mixamo skeleton or source animation.
 
 ## Rebuild order
 

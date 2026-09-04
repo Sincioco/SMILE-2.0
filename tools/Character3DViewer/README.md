@@ -54,9 +54,12 @@ Party places Arin and Orin together on the arena, facing the dragon. They approa
 return to formation, and take turns while the other guards. The camera orbits by default.
 The automatic camera completes a full 360-degree orbit around the midpoint between the party
 and dragon. Arin and Orin begin side by side on the dragon's forward centerline, converge on
-two close chest lanes, and stop outside its body before attacking. Orin applies his own -45-degree
+two close chest lanes, and stop outside its body before attacking. Orin applies his own -55-degree
 visual yaw correction so his imported hammer stance faces the target. The closer arena camera
-keeps both sides readable while the nearer actor crosses the foreground.
+keeps both sides readable while the nearer actor crosses the foreground. The viewer opens
+directly in Party mode. Its controls sit in a dedicated right panel below the shared character
+tabs, and the panel names the active attack while a party member strikes. Orin's Death
+presentation follows a measured ground curve so his falling body settles onto the arena floor.
 Space pauses movement; the usual pan, orbit, eased zoom, keyboard controls and reset remain
 available. Weapon and Shield affect both members. Select the individual Character tab to
 edit that character’s animation; Party evaluates each member’s own saved correction track.
