@@ -25,10 +25,12 @@ socket locations, orientation, attachment ownership, and displayed markers befor
 pose fine-tuning. Do not reposition Arin's working attachments merely to match the
 current debug markers.
 
-The latest exported snapshot contains nine user-saved keys across all eight clips:
+The pre-hardening exported snapshot contains eight user-saved keys across all eight clips:
 frame 0 for BlockImpact, Defend, Hit, Idle, Run, and SwordAttack2; frame 38 for
-SwordAttack; and frames 0 and 19 for Walk. These are the user's saved corrections,
-not new agent-authored pose changes.
+SwordAttack; and frame 0 for Walk. The user's latest save consolidated Walk to
+one key. The previously approved nine-key snapshot remains in commit `de0fb92`;
+do not restore its removed Walk key over newer work. These are the user's saved
+corrections, not new agent-authored pose changes.
 
 ## Files
 

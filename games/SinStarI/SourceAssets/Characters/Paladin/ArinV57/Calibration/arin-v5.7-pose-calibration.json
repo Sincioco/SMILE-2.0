@@ -6,11 +6,11 @@
   "dataKey": "CharacterViewerCalibrationKeyframes",
   "storageVersion": 2,
   "savedKeyframe": {
-    "clipIndex": 0,
-    "clipName": "BlockImpact",
+    "clipIndex": 7,
+    "clipName": "Walk",
     "frame": 0
   },
-  "totalKeyframes": 9,
+  "totalKeyframes": 8,
   "clips": [
     {
       "index": 0,
@@ -361,49 +361,6 @@
       "keyframes": [
         {
           "frame": 0,
-          "swordWrist": {
-            "rotation": [
-              58,
-              -130,
-              0
-            ]
-          },
-          "shieldWrist": {
-            "rotation": [
-              0,
-              144,
-              0
-            ]
-          },
-          "sword": {
-            "decoupled": true,
-            "rotation": [
-              13,
-              0,
-              0
-            ],
-            "position": [
-              -2,
-              0,
-              1
-            ]
-          },
-          "shield": {
-            "decoupled": true,
-            "rotation": [
-              -112,
-              -14,
-              0
-            ],
-            "position": [
-              0,
-              0,
-              0
-            ]
-          }
-        },
-        {
-          "frame": 19,
           "swordWrist": {
             "rotation": [
               58,
