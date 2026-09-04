@@ -321,7 +321,11 @@ Do
         WrapMenuStyle.ShowScrollbar = MenuStyle.ShowScrollbar
         StyleChanged = True
 
-    Else If Key = KEY_OTHER Then
+    Else If (Key = KEY_OTHER Or
+        Key = KEY_X Or
+        Key = KEY_Y Or
+        Key = KEY_E Or
+        Key = KEY_P) Then
 
         If TestStage = 0 Then
 
