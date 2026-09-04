@@ -1,0 +1,93 @@
+{
+  "schemaVersion": 1,
+  "assetId": "sin-star-i.character-1.paladin",
+  "characterVersion": "v5.7",
+  "applicationId": "smile.tools.character3d-viewer",
+  "dataKey": "CharacterViewerCalibrationKeyframes",
+  "storageVersion": 1,
+  "savedKeyframe": {
+    "clipIndex": 0,
+    "clipName": "Idle",
+    "frame": 0
+  },
+  "totalKeyframes": 1,
+  "clips": [
+    {
+      "index": 0,
+      "name": "Idle",
+      "keyframes": [
+        {
+          "frame": 0,
+          "swordWrist": {
+            "rotation": [
+              0,
+              0,
+              0
+            ]
+          },
+          "shieldWrist": {
+            "rotation": [
+              45,
+              127,
+              39
+            ]
+          },
+          "sword": {
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "position": [
+              0,
+              0,
+              0
+            ]
+          },
+          "shield": {
+            "rotation": [
+              89,
+              -21,
+              -56
+            ],
+            "position": [
+              0,
+              0,
+              0
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "index": 1,
+      "name": "Walk",
+      "keyframes": []
+    },
+    {
+      "index": 2,
+      "name": "Run",
+      "keyframes": []
+    },
+    {
+      "index": 3,
+      "name": "Defend",
+      "keyframes": []
+    },
+    {
+      "index": 4,
+      "name": "SwordAttack",
+      "keyframes": []
+    },
+    {
+      "index": 5,
+      "name": "BlockImpact",
+      "keyframes": []
+    },
+    {
+      "index": 6,
+      "name": "Hit",
+      "keyframes": []
+    }
+  ]
+}

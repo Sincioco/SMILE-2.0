@@ -154,6 +154,8 @@ struct SmileObject3D
     float position[3];
     float rotation[3];
     float scale[3];
+    float pivot_rotation_position[3];
+    float pivot_rotation[3];
     float color[4];
 };
 
@@ -366,6 +368,7 @@ struct SmileAnimator3D
     unsigned char event_overflowed;
     unsigned int pending_events[SMILE_3D_MAX_PENDING_MODEL_EVENTS];
     float root_delta[4];
+    float node_rotation_offsets[SMILE_3D_MAX_MODEL_ANIMATION_NODES][3];
     SmileMatrix3D node_global[SMILE_3D_MAX_MODEL_ANIMATION_NODES];
     SmileMatrix3D bones[SMILE_3D_MAX_MODEL_ANIMATION_BONES];
 };
@@ -3276,6 +3279,9 @@ static long long smile_3d_create_object_with_material(long long mesh_handle,
     object->position[0] = object->position[1] = object->position[2] = 0.0f;
     object->rotation[0] = object->rotation[1] = object->rotation[2] = 0.0f;
     object->scale[0] = object->scale[1] = object->scale[2] = 1.0f;
+    object->pivot_rotation_position[0] = object->pivot_rotation_position[1] =
+        object->pivot_rotation_position[2] = 0.0f;
+    object->pivot_rotation[0] = object->pivot_rotation[1] = object->pivot_rotation[2] = 0.0f;
     object->color[0] = object->color[1] = object->color[2] = 1.0f; object->color[3] = 1.0f;
     return smile_3d_object_handle(slot, object->generation);
 }
@@ -4412,20 +4418,39 @@ static SmileMatrix3D smile_3d_multiply(const SmileMatrix3D& left, const SmileMat
     return result;
 }
 
-static SmileMatrix3D smile_3d_model(const SmileObject3D* object)
+static SmileMatrix3D smile_3d_rotation(float x_degrees, float y_degrees, float z_degrees)
 {
-    float sx = object->scale[0], sy = object->scale[1], sz = object->scale[2];
-    float ax = smile_3d_degrees((long long)object->rotation[0]);
-    float ay = smile_3d_degrees((long long)object->rotation[1]);
-    float az = smile_3d_degrees((long long)object->rotation[2]);
-    SmileMatrix3D scale = smile_3d_identity(), rx = smile_3d_identity(), ry = smile_3d_identity();
-    SmileMatrix3D rz = smile_3d_identity(), translation = smile_3d_identity();
-    scale.m[0] = sx; scale.m[5] = sy; scale.m[10] = sz;
+    float ax = x_degrees * SMILE_3D_PI / 180.0f;
+    float ay = y_degrees * SMILE_3D_PI / 180.0f;
+    float az = z_degrees * SMILE_3D_PI / 180.0f;
+    SmileMatrix3D rx = smile_3d_identity(), ry = smile_3d_identity();
+    SmileMatrix3D rz = smile_3d_identity();
     rx.m[5] = cosf(ax); rx.m[6] = sinf(ax); rx.m[9] = -sinf(ax); rx.m[10] = cosf(ax);
     ry.m[0] = cosf(ay); ry.m[2] = -sinf(ay); ry.m[8] = sinf(ay); ry.m[10] = cosf(ay);
     rz.m[0] = cosf(az); rz.m[1] = sinf(az); rz.m[4] = -sinf(az); rz.m[5] = cosf(az);
+    return smile_3d_multiply(smile_3d_multiply(rx, ry), rz);
+}
+
+static SmileMatrix3D smile_3d_model(const SmileObject3D* object)
+{
+    float sx = object->scale[0], sy = object->scale[1], sz = object->scale[2];
+    SmileMatrix3D scale = smile_3d_identity(), translation = smile_3d_identity();
+    scale.m[0] = sx; scale.m[5] = sy; scale.m[10] = sz;
     translation.m[12] = object->position[0]; translation.m[13] = object->position[1]; translation.m[14] = object->position[2];
-    return smile_3d_multiply(smile_3d_multiply(smile_3d_multiply(smile_3d_multiply(scale, rx), ry), rz), translation);
+    SmileMatrix3D result = smile_3d_multiply(smile_3d_multiply(scale,
+        smile_3d_rotation(object->rotation[0], object->rotation[1], object->rotation[2])), translation);
+    if (object->pivot_rotation[0] == 0.0f && object->pivot_rotation[1] == 0.0f &&
+        object->pivot_rotation[2] == 0.0f) return result;
+    SmileMatrix3D to_origin = smile_3d_identity(), from_origin = smile_3d_identity();
+    to_origin.m[12] = -object->pivot_rotation_position[0];
+    to_origin.m[13] = -object->pivot_rotation_position[1];
+    to_origin.m[14] = -object->pivot_rotation_position[2];
+    from_origin.m[12] = object->pivot_rotation_position[0];
+    from_origin.m[13] = object->pivot_rotation_position[1];
+    from_origin.m[14] = object->pivot_rotation_position[2];
+    return smile_3d_multiply(smile_3d_multiply(smile_3d_multiply(result, to_origin),
+        smile_3d_rotation(object->pivot_rotation[0], object->pivot_rotation[1],
+            object->pivot_rotation[2])), from_origin);
 }
 
 static SmileMatrix3D smile_3d_normal_matrix(const SmileMatrix3D& model)
@@ -5535,6 +5560,13 @@ static void smile_3d_update_model_pose(SmileAnimator3D* animator)
         SmileMatrix3D local = smile_3d_pose(translation[node][0], translation[node][1], translation[node][2],
             rotation[node][0], rotation[node][1], rotation[node][2], rotation[node][3],
             scale[node][0], scale[node][1], scale[node][2]);
+        if (animator->node_rotation_offsets[node][0] != 0.0f ||
+            animator->node_rotation_offsets[node][1] != 0.0f ||
+            animator->node_rotation_offsets[node][2] != 0.0f)
+            local = smile_3d_multiply(smile_3d_rotation(
+                animator->node_rotation_offsets[node][0],
+                animator->node_rotation_offsets[node][1],
+                animator->node_rotation_offsets[node][2]), local);
         animator->node_global[node] = parent < 0 ? local : smile_3d_multiply(local, animator->node_global[parent]);
     }
     for (unsigned int bone = 0; bone < model->animation_bone_count; ++bone)
@@ -9655,6 +9687,33 @@ extern "C" long long smile_renderer3d_command(long long command,
             return smile_3d_distortion_command(a, b, c, d, e, f, g);
         case SMILE_3D_GPU_PARTICLE_SYSTEM:
             return smile_3d_gpu_particle_system_command(a, b, c, d, e, f, g, h, i, j);
+        case SMILE_3D_SET_MODEL_NODE_ROTATION_OFFSET:
+            animator = smile_3d_animator(a);
+            model = animator == 0 ? 0 : smile_3d_model_resource(animator->model_handle);
+            if (animator == 0 || !animator->model_animation || model == 0 || b < 0 ||
+                b >= model->animation_node_count || c < -360 || c > 360 || d < -360 ||
+                d > 360 || e < -360 || e > 360)
+            { smile_last_error3d = 48; return 0; }
+            animator->node_rotation_offsets[b][0] = (float)c;
+            animator->node_rotation_offsets[b][1] = (float)d;
+            animator->node_rotation_offsets[b][2] = (float)e;
+            smile_3d_update_model_pose(animator);
+            return 1;
+        case SMILE_3D_SET_OBJECT_PIVOT_ROTATION:
+            object = smile_3d_object(a);
+            if (object == 0 || b < -SMILE_3D_CAMERA_WORLD_BOUND ||
+                b > SMILE_3D_CAMERA_WORLD_BOUND || c < -SMILE_3D_CAMERA_WORLD_BOUND ||
+                c > SMILE_3D_CAMERA_WORLD_BOUND || d < -SMILE_3D_CAMERA_WORLD_BOUND ||
+                d > SMILE_3D_CAMERA_WORLD_BOUND || e < -360 || e > 360 ||
+                f < -360 || f > 360 || g < -360 || g > 360)
+            { smile_last_error3d = 5; return 0; }
+            object->pivot_rotation_position[0] = (float)b;
+            object->pivot_rotation_position[1] = (float)c;
+            object->pivot_rotation_position[2] = (float)d;
+            object->pivot_rotation[0] = (float)e;
+            object->pivot_rotation[1] = (float)f;
+            object->pivot_rotation[2] = (float)g;
+            return 1;
         default: smile_last_error3d = 1; return 0;
     }
 }

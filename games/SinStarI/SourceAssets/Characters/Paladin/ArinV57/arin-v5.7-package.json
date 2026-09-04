@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "assetId": "sin-star-i.character-1.paladin",
+  "characterName": "Arin",
+  "partyRole": "Paladin",
+  "characterVersion": "v5.7",
+  "canonicalFolder": "games/SinStarI/SourceAssets/Characters/Paladin/ArinV57",
+  "models": {
+    "equippedOriginal": "arin-v5.7-with-sword-and-shield.original.glb",
+    "unequippedOriginal": "arin-v5.7-no-sword-and-shield.original.glb",
+    "cleanedBody": "arin-v5.7-no-equipment.cleaned.glb",
+    "acceptedViewerCheckpoint": "arin-v5.7-idle-equipment-checkpoint.glb"
+  },
+  "rig": {
+    "neutralReference": "arin-v5.7-mixamo-rigged-t-pose.fbx",
+    "skinnedReference": "arin-v5.7-mixamo-sword-and-shield-idle-with-skin.fbx"
+  },
+  "animations": {
+    "manifest": "arin-v5.7-animation-set.json",
+    "sourcePattern": "arin-v5.7-mixamo-*-without-skin.fbx"
+  },
+  "runtime": {
+    "descriptor": "ArinV57.sm3d.json",
+    "logicalPath": "Assets/Generation2/ArinV57/ArinV57.sm3d",
+    "viewerProject": "tools/Character3DViewer/Character3DViewer.smileproj"
+  },
+  "calibration": {
+    "readableSnapshot": "Calibration/arin-v5.7-pose-calibration.json",
+    "runtimeWorkingFormat": "generated SMILE SMD4 persistent-data envelope",
+    "syncScript": "scripts/sync-arin-v5-7-calibration.ps1"
+  },
+  "previews": "arin-v57-idle-previews",
+  "build": {
+    "entryPoint": "scripts/build-arin-v5-7-idle-checkpoint.ps1",
+    "blenderBuilder": "scripts/build-arin-v5-7-idle-checkpoint.py",
+    "animationAudit": "scripts/audit-arin-v5-7-animation-set.py"
+  }
+}

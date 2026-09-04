@@ -9,6 +9,16 @@
       "mixamorig:LeftHand"
     ]
   },
+  "swordArmStabilization": {
+    "sourceAction": "Idle",
+    "sourceFrame": 1,
+    "bones": [
+      "mixamorig:RightShoulder",
+      "mixamorig:RightArm",
+      "mixamorig:RightForeArm",
+      "mixamorig:RightHand"
+    ]
+  },
   "animations": [
     {
       "name": "Idle",
@@ -16,16 +26,20 @@
     },
     {
       "name": "Walk",
-      "file": "arin-v5.7-mixamo-walk-without-skin.fbx"
+      "file": "arin-v5.7-mixamo-walk-without-skin.fbx",
+      "stabilizeShieldArm": true,
+      "stabilizeSwordArm": true
     },
     {
       "name": "Run",
       "file": "arin-v5.7-mixamo-run-without-skin.fbx",
-      "stabilizeShieldArm": true
+      "stabilizeShieldArm": true,
+      "stabilizeSwordArm": true
     },
     {
       "name": "Defend",
-      "file": "arin-v5.7-mixamo-defend-without-skin.fbx"
+      "file": "arin-v5.7-mixamo-defend-without-skin.fbx",
+      "stabilizeSwordArm": true
     },
     {
       "name": "SwordAttack",
@@ -35,12 +49,14 @@
     {
       "name": "BlockImpact",
       "file": "arin-v5.7-mixamo-block-impact-without-skin.fbx",
-      "stabilizeShieldArm": true
+      "stabilizeShieldArm": true,
+      "stabilizeSwordArm": true
     },
     {
       "name": "Hit",
       "file": "arin-v5.7-mixamo-hit-without-skin.fbx",
-      "stabilizeShieldArm": true
+      "stabilizeShieldArm": true,
+      "stabilizeSwordArm": true
     }
   ]
 }

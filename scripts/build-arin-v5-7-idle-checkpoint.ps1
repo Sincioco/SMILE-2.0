@@ -12,10 +12,13 @@ $sourceRoot = Join-Path $repositoryRoot `
     'games\SinStarI\SourceAssets\Characters\Paladin\ArinV57'
 $skinnedFbx = Join-Path $sourceRoot `
     'arin-v5.7-mixamo-sword-and-shield-idle-with-skin.fbx'
+$tPoseFbx = Join-Path $sourceRoot 'arin-v5.7-mixamo-rigged-t-pose.fbx'
 $animationManifest = Join-Path $sourceRoot 'arin-v5.7-animation-set.json'
 $cleanGlb = Join-Path $sourceRoot 'arin-v5.7-no-equipment.cleaned.glb'
 $equippedGlb = Join-Path $sourceRoot `
     'arin-v5.7-with-sword-and-shield.original.glb'
+$canonicalGlb = Join-Path $sourceRoot `
+    'arin-v5.7-idle-equipment-checkpoint.glb'
 
 if ([string]::IsNullOrWhiteSpace($OutputBlend)) {
     $OutputBlend = Join-Path $repositoryRoot `
@@ -23,14 +26,14 @@ if ([string]::IsNullOrWhiteSpace($OutputBlend)) {
 }
 
 if ([string]::IsNullOrWhiteSpace($OutputGlb)) {
-    $OutputGlb = Join-Path $repositoryRoot `
-        'games\Dragonfall\SourceAssets\Arin\arin-v5.7-idle-equipment-checkpoint.glb'
+    $OutputGlb = $canonicalGlb
 }
 
 foreach ($requiredFile in @(
     $blender,
     $builder,
     $skinnedFbx,
+    $tPoseFbx,
     $animationManifest,
     $cleanGlb,
     $equippedGlb
@@ -47,7 +50,8 @@ New-Item -ItemType Directory -Force -Path `
     ([IO.Path]::GetDirectoryName($resolvedGlb)) | Out-Null
 
 & $blender --background --python $builder -- `
-    $skinnedFbx $animationManifest $cleanGlb $equippedGlb $resolvedBlend $resolvedGlb
+    $skinnedFbx $tPoseFbx $animationManifest $cleanGlb $equippedGlb `
+    $resolvedBlend $resolvedGlb
 if ($LASTEXITCODE -ne 0) {
     throw 'Arin v5.7 animation checkpoint build failed.'
 }

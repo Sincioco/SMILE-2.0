@@ -1,0 +1,39 @@
+<SmileProject Version="1.0">
+  <PropertyGroup>
+    <ProjectKind>Game</ProjectKind>
+    <StartupFile>Program.smile</StartupFile>
+    <OutputName>Character3DViewer</OutputName>
+    <ApplicationId>smile.tools.character3d-viewer</ApplicationId>
+    <RememberWindowPlacement>true</RememberWindowPlacement>
+    <ResponsiveWindow>true</ResponsiveWindow>
+    <GraphicsBackend>DirectX</GraphicsBackend>
+    <VSync>true</VSync>
+  </PropertyGroup>
+  <ItemGroup>
+    <SmileSource Include="Program.smile" StartupOnly="true" />
+    <SmileSource Include="Profiles.smile" />
+    <Model3DAsset Include="BuildAssets\ArinV57\arin-v5.7-idle-equipment-checkpoint.glb"
+                  Descriptor="BuildAssets\ArinV57\ArinV57.sm3d.json"
+                  LogicalPath="Assets\Generation2\ArinV57\ArinV57.sm3d"
+                  TextureOutputDirectory="Assets\Generation2\ArinV57\Textures"
+                  Profile="Character"
+                  Identity="sin-star-i.character-1.paladin"
+                  ProductionState="Prototype" />
+    <Model3DAsset Include="BuildAssets\ArinPrototype\sin-star-i-character-1-paladin-tripo-v01.original.glb"
+                  Descriptor="BuildAssets\ArinPrototype\ArinPrototype.sm3d.json"
+                  LogicalPath="Assets\Generation2\Arin\ArinPrototype.sm3d"
+                  TextureOutputDirectory="Assets\Generation2\Arin\Textures"
+                  Profile="Character"
+                  Identity="sin-star-i.character-1.paladin"
+                  ProductionState="Prototype" />
+    <Model3DAsset Include="BuildAssets\RedDragon\RedDragonV1.0.static.glb"
+                  LogicalPath="Assets\Generation2\RedDragon\RedDragon.sm3d"
+                  TextureOutputDirectory="Assets\Generation2\RedDragon\Textures"
+                  Profile="Static"
+                  Identity="sin-star-i.boss.red-dragon"
+                  ProductionState="Prototype" />
+    <Asset Include="TechnicalAssets\Generation2\AnimationArticulated.sm3d" />
+    <Asset Include="TechnicalAssets\Generation2\VfxAtlas.png" />
+    <SmileProjectReference Include="..\..\libraries\Smile.Simple3D\Smile.Simple3D.smilelibproj" />
+  </ItemGroup>
+</SmileProject>

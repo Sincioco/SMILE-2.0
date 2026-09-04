@@ -132,6 +132,8 @@ Private Const COMMAND_SET_MODEL_ANIMATOR_TIME = 124
 Private Const COMMAND_SOFT_DEPTH = 125
 Private Const COMMAND_DISTORTION = 126
 Private Const COMMAND_GPU_PARTICLE_SYSTEM = 127
+Private Const COMMAND_SET_MODEL_NODE_ROTATION_OFFSET = 128
+Private Const COMMAND_SET_OBJECT_PIVOT_ROTATION = 129
 
 Public Const MATERIAL_INSPECTION_LIT = 0
 Public Const MATERIAL_INSPECTION_BASE_COLOR = 1
@@ -2073,6 +2075,34 @@ Public Function SetModelAnimatorTime3D(
         0,
         0,
         0,
+        0,
+        0,
+        0,
+        0,
+        0
+    ) <> 0
+    Return Result
+
+End Function
+
+''' Applies one additive local Euler rotation after animation sampling.
+Public Function SetModelNodeRotationOffset3D(
+    ByRef Animator As Core.Animator3D,
+    NodeIndex As Number,
+    XDegrees As Number,
+    YDegrees As Number,
+    ZDegrees As Number
+) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(
+        COMMAND_SET_MODEL_NODE_ROTATION_OFFSET,
+        Animator.Handle,
+        NodeIndex,
+        XDegrees,
+        YDegrees,
+        ZDegrees,
         0,
         0,
         0,
@@ -4343,6 +4373,36 @@ Public Function SetObjectRotationChecked3D(
 
     End If
 
+    Return Result
+
+End Function
+
+''' Rotates one object around a world-space pivot without changing its base transform.
+Public Function SetObjectPivotRotation3D(
+    ByRef Object As Core.Object3D,
+    PivotX As Number,
+    PivotY As Number,
+    PivotZ As Number,
+    XDegrees As Number,
+    YDegrees As Number,
+    ZDegrees As Number
+) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(
+        COMMAND_SET_OBJECT_PIVOT_ROTATION,
+        Object.Handle,
+        PivotX,
+        PivotY,
+        PivotZ,
+        XDegrees,
+        YDegrees,
+        ZDegrees,
+        0,
+        0,
+        0
+    ) <> 0
     Return Result
 
 End Function

@@ -1,0 +1,13 @@
+<SmileProject Version="1.0">
+  <PropertyGroup>
+    <ProjectKind>Game</ProjectKind>
+    <StartupFile>HardeningTests.smile</StartupFile>
+    <OutputName>Character3DViewerHardeningTests</OutputName>
+    <ApplicationId>smile.tests.character3d-viewer-hardening</ApplicationId>
+  </PropertyGroup>
+  <ItemGroup>
+    <SmileSource Include="HardeningTests.smile" StartupOnly="true" />
+    <SmileSource Include="Profiles.smile" />
+    <SmileProjectReference Include="..\..\libraries\Smile.Simple3D\Smile.Simple3D.smilelibproj" />
+  </ItemGroup>
+</SmileProject>

@@ -5,6 +5,7 @@ Option Explicit
 
 Import Smile.Simple3D.Core As Core
 Import Smile.Simple3D.FixedMath As Math3D
+Import Smile.Simple3D.Math3D As VectorMath
 
 Private Const MAX_VELOCITY = 24
 Private Const MIN_DISTANCE = 200
@@ -314,6 +315,50 @@ Public Function ApplyCameraControls(
     Result.Position.Z = BaseCamera.Target.Z + Orbited.Z
     Result.Target.X = BaseCamera.Target.X + Controls.PanX
     Result.Target.Y = BaseCamera.Target.Y + Controls.PanY
+    Result.UpDirection = CameraUp
+    Result.FovDegrees = Min(120, Max(18, BaseCamera.FovDegrees + Controls.Zoom))
+
+    Return Result
+
+End Function
+
+''' Composes orbit with screen-aligned grab-and-drag pan and a pole-safe up-vector.
+Public Function ApplyScreenSpaceCameraControls(
+    BaseCamera As Core.Camera3D,
+    ByRef Controls As Core.CameraControl3D
+) As Core.Camera3D
+
+    Dim Result As Core.Camera3D
+    Dim CameraRight As Core.Vector3
+    Dim CameraUp As Core.Vector3
+    Dim Forward As Core.Vector3
+    Dim Offset As Core.Vector3
+    Dim Orbited As Core.Vector3
+    Dim PanOffset As Core.Vector3
+
+    Result = BaseCamera
+    Offset.X = BaseCamera.Position.X - BaseCamera.Target.X
+    Offset.Y = BaseCamera.Position.Y - BaseCamera.Target.Y
+    Offset.Z = BaseCamera.Position.Z - BaseCamera.Target.Z
+    Orbited = Math3D.RotateX(Offset, 0 - Controls.OrbitPitch)
+    Orbited = Math3D.RotateY(Orbited, 0 - Controls.OrbitYaw)
+    CameraRight.X = Core.FIXED_ONE
+    CameraRight = Math3D.RotateX(CameraRight, 0 - Controls.OrbitPitch)
+    CameraRight = Math3D.RotateY(CameraRight, 0 - Controls.OrbitYaw)
+    Forward.X = 0 - Orbited.X
+    Forward.Y = 0 - Orbited.Y
+    Forward.Z = 0 - Orbited.Z
+    Forward = VectorMath.Normalize(Forward)
+    CameraUp = VectorMath.Normalize(VectorMath.Cross(Forward, CameraRight))
+    PanOffset.X = (CameraRight.X * Controls.PanX + CameraUp.X * Controls.PanY) / Core.FIXED_ONE
+    PanOffset.Y = (CameraRight.Y * Controls.PanX + CameraUp.Y * Controls.PanY) / Core.FIXED_ONE
+    PanOffset.Z = (CameraRight.Z * Controls.PanX + CameraUp.Z * Controls.PanY) / Core.FIXED_ONE
+    Result.Position.X = BaseCamera.Target.X + PanOffset.X + Orbited.X
+    Result.Position.Y = BaseCamera.Target.Y + PanOffset.Y + Orbited.Y
+    Result.Position.Z = BaseCamera.Target.Z + PanOffset.Z + Orbited.Z
+    Result.Target.X = BaseCamera.Target.X + PanOffset.X
+    Result.Target.Y = BaseCamera.Target.Y + PanOffset.Y
+    Result.Target.Z = BaseCamera.Target.Z + PanOffset.Z
     Result.UpDirection = CameraUp
     Result.FovDegrees = Min(120, Max(18, BaseCamera.FovDegrees + Controls.Zoom))
 

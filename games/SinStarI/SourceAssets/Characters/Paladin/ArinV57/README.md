@@ -1,6 +1,10 @@
-# Arin v5.7 Tripo Source Archive
+# Arin v5.7 Self-Contained Character Package
 
 Inspected on September 4, 2026 with Blender 5.2.1 LTS.
+
+This directory is the canonical repository home for the complete Arin v5.7 revision. It keeps the original and cleaned models, rig references, animation sources, accepted viewer checkpoint, runtime descriptor, human-readable pose calibration, previews, package manifest, checksums, and v5.8 handoff knowledge together. Sin Star I owns this package; the Character Viewer/editor consumes a disposable tool-local cooking copy prepared from it.
+
+`arin-v5.7-package.json` is the machine-readable package index. `Calibration` holds the permanent pose-correction JSON. `arin-v57-idle-previews` holds the accepted checkpoint preview frames. Reusable build tooling remains in the repository `scripts` and `tools` directories rather than being duplicated inside the character package.
 
 ## Files
 
@@ -11,6 +15,14 @@ Inspected on September 4, 2026 with Blender 5.2.1 LTS.
 | `arin-v5.7-no-equipment.cleaned.glb` | 3,424,928 | `B2168E7735140BEB0D3D65826BB85AACC74A9584E55F4C41A164063129886E54` | Working derivative with equipment meshes removed |
 | `arin-v5.7-mixamo-rigged-t-pose.fbx` | 2,818,128 | `F9807FA88D9AC205A37CEA4568C86BFBA1123D4EA36D81F124CFABF47B67A742` | Approved Mixamo auto-rigged neutral reference |
 | `arin-v5.7-mixamo-sword-and-shield-idle-with-skin.fbx` | 3,129,856 | `65B78FC6C06366E6B3D8619072A34277C2213C4B56FCEF8BFE5C77F2EA1654C6` | Skinned Mixamo reference used for the shared rig and weights |
+| `arin-v5.7-idle-equipment-checkpoint.glb` | 6,713,372 | `513D9482564819CAC269FA4F97931EC5F668431A326A2EDAED1CFDC539A727E8` | Accepted seven-clip viewer/editor checkpoint |
+| `ArinV57.sm3d.json` | 1,004 | `40A857DB750C2D16A6D3E23B71D42336180A3FDFD4083FEC172D3862613FA842` | Runtime clips and socket descriptor |
+
+## Permanent Pose-Calibration Workflow
+
+`Save Frame` writes the live multi-keyframe track to the stable `smile.tools.character3d-viewer` application-data identity, so rebuilding or renaming the executable does not lose current work. Launching through `tools\Character3DViewer\Launch.ps1` watches that live file and converts every saved change into `Calibration\arin-v5.7-pose-calibration.json` in this folder.
+
+Before any normal Arin v5.7 or Character Viewer calibration commit, Codex runs `scripts\sync-arin-v5-7-calibration.ps1 -Mode Export -AllowMissing`. This makes the readable calibration part of the ordinary repository commit and push. On a fresh workstation or after application-data removal, the launcher regenerates the runtime binary from repository JSON only when no live working copy exists; it never overwrites newer live edits automatically.
 
 ## Animation Sources
 
@@ -65,13 +77,18 @@ The Arin v5.7 checkpoint builder implements these steps automatically and report
 
 Run `scripts\build-arin-v5-7-idle-checkpoint.ps1` from the repository root. The builder:
 
+- uses the approved rigged T-pose to straighten both wrist-to-forearm relationships across every clip;
+- rolls the shield wrist 135 degrees outward around the forearm so its face protects Arin's forward view;
+- rolls the sword wrist 135 degrees outward so the knuckles face away from the body while keeping the handle centered in the fist;
+- independently realigns the rigid shield and sword around those corrected grips so the shield faces forward and the blade stays outside Arin's body;
+
 1. Uses the skinned Mixamo FBX as the authoritative 65-bone rig and weight source.
 2. Imports every action declared by `arin-v5.7-animation-set.json` and rejects any skeleton mismatch.
 3. Restores the pristine Tripo body meshes, UVs, materials, and 2048 by 2048 embedded JPEG textures while transferring the Mixamo weights by exact nearest geometry.
 4. Normalizes the Mixamo `0.01` object scale and the corresponding bone-location keys.
 5. Rigidly attaches the sword to `mixamorig:RightHand` and the shield plus both straps to `mixamorig:LeftHand`. The sword receives a separate but visually identical material datablock so the cooker retains independently addressable shield, sword, and body parts without duplicating texture references.
-6. Applies the approved centered grip and outward shield offsets. The sword correction is XYZ `(-15.51063048, -43.72768386, -81.06488564)` degrees, offset `(-0.04017985, 0.00752897, 0.01881249)`, and pivot `(-0.01415075, -0.00344447, 0.01844119)`. The shield correction is XYZ `(0, 0, -75)` degrees with offset `(0, 0, -0.055)`.
-7. Holds the left shoulder, upper arm, forearm, and hand at the collision-free `Defend` frame 22 pose only for actions marked `stabilizeShieldArm`.
+6. Applies the approved centered grip and outward shield offsets. The sword correction is XYZ `(-15.51063048, -43.72768386, -81.06488564)` degrees, offset `(-0.04017985, 0.00752897, 0.01881249)`, pivot `(-0.01415075, -0.00344447, 0.01844119)`, and final attachment-axis correction `(0, 135, 0)`. The shield correction is XYZ `(0, 0, -75)` degrees with offset `(0, 0, -0.055)` and final attachment-axis correction `(0, -45, 0)`.
+7. Holds the left shoulder, upper arm, forearm, and hand at the collision-free `Defend` frame 22 pose for actions marked `stabilizeShieldArm`, and holds the right equipment arm at the forward `Idle` frame 1 guard for non-attack actions marked `stabilizeSwordArm`.
 
 The accepted checkpoint contains seven clips: `Idle`, `Walk`, `Run`, `Defend`, `SwordAttack`, `BlockImpact`, and `Hit`. `Idle`, `Walk`, `Run`, and `Defend` loop; the three reactions or attacks do not.
 

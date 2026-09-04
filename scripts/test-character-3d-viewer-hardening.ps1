@@ -6,8 +6,8 @@ param(
 $ErrorActionPreference = 'Stop'
 $repositoryRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $compiler = Join-Path $repositoryRoot 'artifacts\compiler\smilec.exe'
-$testProject = Join-Path $repositoryRoot 'games\Dragonfall\Character3DViewerHardeningTests.smileproj'
-$expected = Join-Path $repositoryRoot 'games\Dragonfall\Character3DViewerHardeningTests.expected.txt'
+$testProject = Join-Path $repositoryRoot 'tools\Character3DViewer\HardeningTests.smileproj'
+$expected = Join-Path $repositoryRoot 'tools\Character3DViewer\HardeningTests.expected.txt'
 $nativeOutput = Join-Path $repositoryRoot 'artifacts\tests\Character3DViewerHardeningTests.exe'
 $nativeLog = Join-Path $repositoryRoot 'artifacts\temp\Character3DViewerHardeningTests.out'
 $webOutput = Join-Path $repositoryRoot 'artifacts\web\Character3DViewerHardeningTests'
@@ -18,13 +18,13 @@ $referencePath = Join-Path $repositoryRoot `
 $viewerSourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\Program.smile'
 $profileSourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\Profiles.smile'
 $cookedProjectPath = Join-Path $repositoryRoot `
-    'games\Dragonfall\Character3DViewerCooked.smileproj'
+    'tools\Character3DViewer\Character3DViewer.smileproj'
 $dragonSourcePath = Join-Path $repositoryRoot `
-    'games\Dragonfall\SourceAssets\RedDragon\RedDragonV1.0.original.glb'
+    'games\SinStarI\SourceAssets\Bosses\RedDragon\RedDragonV1.0.original.glb'
 $dragonPreparedPath = Join-Path $repositoryRoot `
-    'games\Dragonfall\SourceAssets\RedDragon\RedDragonV1.0.static.glb'
+    'games\SinStarI\SourceAssets\Bosses\RedDragon\RedDragonV1.0.static.glb'
 $dragonReportPath = Join-Path $repositoryRoot `
-    'games\Dragonfall\SourceAssets\RedDragon\RedDragonV1.0.static.json'
+    'games\SinStarI\SourceAssets\Bosses\RedDragon\RedDragonV1.0.static.json'
 $adapterSourcePath = Join-Path $repositoryRoot 'games\Dragonfall\DragonfallVisualActor.smile'
 $preparationPath = Join-Path $repositoryRoot 'scripts\prepare-dragonfall-arin-prototype.ps1'
 $pointerSourcePath = Join-Path $repositoryRoot 'src\Smile.NativeRuntime\input\pointer_state.c'
@@ -34,6 +34,7 @@ $syntaxPath = Join-Path $repositoryRoot 'src\Smile.Language\Syntax.cs'
 $graphicsHeaderPath = Join-Path $repositoryRoot 'src\Smile.NativeRuntime\graphics\graphics3d.h'
 $graphicsFacadePath = Join-Path $repositoryRoot 'libraries\Smile.Simple3D\Graphics3D.smile'
 $interactionPath = Join-Path $repositoryRoot 'libraries\Smile.Simple3D\Interaction.smile'
+$arinBuilderPath = Join-Path $repositoryRoot 'scripts\build-arin-v5-7-idle-checkpoint.py'
 $temporaryPreparation = Join-Path $repositoryRoot `
     'artifacts\temp\dragonfall-arin-prototype-preparation'
 
@@ -50,6 +51,8 @@ function Assert-Contains([string]$Text, [string]$Expected, [string]$Label) {
 if (-not (Test-Path -LiteralPath $compiler -PathType Leaf)) {
     throw 'Build SMILE before running the Character 3D Viewer hardening gate.'
 }
+
+& (Join-Path $repositoryRoot 'tools\Character3DViewer\Prepare-BuildAssets.ps1')
 
 Push-Location $repositoryRoot
 try {
@@ -109,16 +112,27 @@ try {
         'Graphics3D.SetParticle3D(',
         'Graphics3D.SetParticleColor3D(',
         'Graphics3D.DrawParticleBatch3D(SwordTrail)',
-        'Else If PressedKey = KEY_SPACE Or PressedKey = KEY_P Then',
         'Else If PressedKey = KEY_B Then',
         'Key_Held(KEY_CONTROL)',
         'Dim ScenePaused As Boolean',
-        'Call AdvancePauseTimeout()',
-        'AUTO-RESUME AFTER 10 IDLE SECONDS',
+        'If Pointer_Pressed(POINTER_SECONDARY) Then',
+        'Call ToggleScenePause()',
+        'Call DrawButton(TIMELINE_LEFT, Window_Height() - 96, 58, 24, "RESET", False)',
         'Call StepAnimationFrame(-1)',
         'Call StepAnimationFrame(1)',
+        'Const CALIBRATION_MAX_KEYFRAMES = 256',
+        'Dim CalibrationKeyframeCounts[CALIBRATION_MAX_CLIPS] As Number',
+        'Call UpdateCalibrationForCurrentFrame()',
+        'Save Data CalibrationStorage Count StorageCount To "CharacterViewerCalibrationKeyframes"',
+        'Sub SaveCalibrationFrame()',
+        'Function InterpolateCalibrationChannel(',
+        'Fill Rectangle MarkerX - 1, TimelineY - 5, 3, TIMELINE_HEIGHT + 10, GREEN Opacity 100',
+        'Dim DemoEnabled As Boolean',
+        'If DemoCompletedLoops >= DemoRequiredLoops() Then',
+        'Function DemoRequiredLoops() As Number',
+        'Call DrawButton(PanelLeft + 178, 330, 74, 18, DemoLabel(), DemoEnabled)',
         'Dim BackgroundIndex As Number',
-        'If PlaybackPaused Or ScenePaused Then',
+        'If ScenePaused Then',
         'Const ANIMATION_BUTTON_Y = 352',
         'Const ANIMATION_DETAILS_Y = 494',
         'Const ZOOM_IN_LIMIT = -48',
@@ -127,9 +141,9 @@ try {
         'Call DrawButton(PanelLeft + 152, 56, 100, 22, BackgroundLabel(), BackgroundIndex > 0)',
         'Const DRAGON_ASSET_PATH = "Assets\Generation2\RedDragon\RedDragon.sm3d"',
         'Const DRAGON_SCALE_PERCENT = 50000',
-        'Const DRAGON_POSITION_X = -120',
-        'Const DRAGON_POSITION_Z = 208',
-        'Const DRAGON_ROTATION_Y = 150',
+        'Const DRAGON_POSITION_X = -208',
+        'Const DRAGON_POSITION_Z = -120',
+        'Const DRAGON_ROTATION_Y = 240',
         'Const ARIN_ARENA_ROTATION_Y = 60',
         'Const ARENA_INITIAL_ORBIT_YAW = -60',
         'Const ARENA_DEFAULT_ZOOM_DEGREES = 20',
@@ -174,7 +188,7 @@ try {
         '"GLOW", EpicGlowVisible',
         'Graphics3D.SetMaterialInspection3D(',
         'Result = "7-clip validated candidate"',
-        'Game Window "SMILE 2.0 - Character 3D Viewer" Size 1600 By 640',
+        'Game Window "SMILE 2.0 - 3D Viewer, Animation Editor" Size 1600 By 640',
         'Ready = Window_Title(ViewerTitle()) And Ready',
         'Window_Width()',
         'Window_Height()',
@@ -185,19 +199,18 @@ try {
         'Sub ToggleFloorAndGrid()',
         'Opacity 80',
         'Call AdvanceFrameRate()',
-        'LMB pan  •  MMB orbit  •  Wheel zoom  •  RMB reset')) {
+        'LMB pan  •  MMB orbit  •  Wheel zoom  •  RMB pause/resume')) {
         Assert-Contains $viewerSource $contract 'Character 3D Viewer'
     }
     Assert-True ($viewerSource.IndexOf(
         'Fill Rectangle 0, 0, 1600, 70',
         [System.StringComparison]::Ordinal) -lt 0) `
         'The hidden top panel background returned.'
-    Assert-Contains (Get-Content -LiteralPath (Join-Path $repositoryRoot `
-        'games\Dragonfall\Character3DViewer.smileproj') -Raw) `
-        '<ResponsiveWindow>true</ResponsiveWindow>' 'Character 3D Viewer project'
     $cookedProjectSource = Get-Content -LiteralPath $cookedProjectPath -Raw
+    Assert-Contains $cookedProjectSource '<ResponsiveWindow>true</ResponsiveWindow>' `
+        'Character 3D Viewer project'
     Assert-Contains $cookedProjectSource `
-        'SourceAssets\RedDragon\RedDragonV1.0.static.glb' 'Cooked Character 3D Viewer project'
+        'BuildAssets\RedDragon\RedDragonV1.0.static.glb' 'Cooked Character 3D Viewer project'
     Assert-Contains $cookedProjectSource `
         'LogicalPath="Assets\Generation2\RedDragon\RedDragon.sm3d"' `
         'Cooked Character 3D Viewer project'
@@ -253,6 +266,7 @@ try {
     $graphicsHeader = Get-Content -LiteralPath $graphicsHeaderPath -Raw
     $graphicsFacade = Get-Content -LiteralPath $graphicsFacadePath -Raw
     $interaction = Get-Content -LiteralPath $interactionPath -Raw
+    $arinBuilder = Get-Content -LiteralPath $arinBuilderPath -Raw
     Assert-Contains $pointerSource 'wheel_remainder / units_per_step' 'Native pointer accumulator'
     Assert-Contains $nativeRuntime 'return SMILE_KEY_O;' 'Native O-key mapping'
     Assert-Contains $nativeRuntime 'return SMILE_KEY_P;' 'Native P-key mapping'
@@ -286,6 +300,29 @@ try {
         'Simple3D camera-up command ABI'
     Assert-Contains $graphicsFacade 'Camera.UpDirection.Y = 1' 'Simple3D default camera up direction'
     Assert-Contains $interaction 'Result.UpDirection = CameraUp' 'Continuous vertical camera orbit'
+    Assert-Contains $interaction `
+        'Offset.X = BaseCamera.Position.X - BaseCamera.Target.X' `
+        'Target-anchored camera orbit'
+    Assert-Contains $interaction `
+        'Result.Position.X = BaseCamera.Target.X + Controls.PanX + Orbited.X' `
+        'Target-anchored camera orbit'
+    Assert-Contains $arinBuilder 'LEFT_WRIST_OUTWARD_ROLL_DEGREES = 135.0' `
+        'Arin shield-wrist correction'
+    Assert-Contains $arinBuilder 'RIGHT_WRIST_OUTWARD_ROLL_DEGREES = -135.0' `
+        'Arin sword-wrist correction'
+    Assert-Contains $arinBuilder 'SWORD_ATTACHMENT_ROTATION = (0.0, 135.0, 0.0)' `
+        'Arin sword attachment alignment'
+    Assert-Contains $arinBuilder 'SHIELD_ATTACHMENT_ROTATION = (0.0, -45.0, 0.0)' `
+        'Arin shield attachment facing correction'
+    Assert-Contains $arinBuilder '"stabilizedSwordArmActions": stabilized_sword_actions' `
+        'Arin equipped sword-arm stabilization report'
+    Assert-Contains $arinBuilder 'load_wrist_references(t_pose_fbx, target_bones)' `
+        'Arin T-pose wrist reference'
+    Assert-Contains $arinBuilder `
+        'normalized_wrist_bones = normalize_wrist_rotations(actions, wrist_references)' `
+        'Arin per-clip wrist normalization'
+    Assert-Contains $arinBuilder '"wristMaximumDeviationDegrees": wrist_deviations' `
+        'Arin wrist validation report'
     Assert-Contains $webRuntime 'renderer3DCamera.up' 'Web camera up direction'
 
     & 'scripts\prepare-dragonfall-arin-prototype.ps1' -Check

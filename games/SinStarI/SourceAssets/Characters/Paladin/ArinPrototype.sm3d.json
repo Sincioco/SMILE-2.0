@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "sampleRate": 30,
+  "clips": {
+    "preset:biped:walk": {
+      "loop": true,
+      "events": [
+        { "timeMs": 500, "name": "FootstepLeft" },
+        { "timeMs": 1650, "name": "FootstepRight" }
+      ]
+    },
+    "preset:biped:idle": {
+      "loop": true
+    },
+    "preset:biped:run": {
+      "loop": true,
+      "events": [
+        { "timeMs": 250, "name": "FootstepLeft" },
+        { "timeMs": 850, "name": "FootstepRight" }
+      ]
+    }
+  },
+  "sockets": {
+    "Root": { "node": "Root" },
+    "Head": { "node": "Head" },
+    "Chest": { "node": "Spine02" },
+    "SwordBase": { "node": "R_Hand" },
+    "SwordTip": { "node": "R_Hand", "translation": [0.0, 0.45, 0.0] },
+    "ShieldCenter": { "node": "L_Hand" }
+  }
+}

@@ -8,7 +8,7 @@ $ErrorActionPreference = 'Stop'
 $repositoryRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $blender = 'C:\Program Files\Blender Foundation\Blender 5.2\blender.exe'
 $builder = Join-Path $repositoryRoot 'scripts\prepare-red-dragon-static.py'
-$sourceRoot = Join-Path $repositoryRoot 'games\Dragonfall\SourceAssets\RedDragon'
+$sourceRoot = Join-Path $repositoryRoot 'games\SinStarI\SourceAssets\Bosses\RedDragon'
 $sourceGlb = Join-Path $sourceRoot 'RedDragonV1.0.original.glb'
 
 if ([string]::IsNullOrWhiteSpace($OutputGlb)) {

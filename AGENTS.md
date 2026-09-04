@@ -25,6 +25,27 @@ SMILE must evolve incrementally from the current SMILE 2.0 compiler and runtime 
 - Keep `Smile.Simple3D` a bounded source-level educational layer projected through the permanent 2D renderer. Do not turn it into a game-specific runtime helper or treat it as the future hardware `Renderer3D` API.
 - Keep logical-canvas pointer input generic and cross-target. Mouse, pen, touch, virtual controls, cameras, orbit behavior, and game actions must remain distinct source-level concerns.
 
+### Permanent 3D Viewer, Animation Editor direction
+
+The SMILE 2.0 - 3D Viewer, Animation Editor is allowed to evolve into a lightweight character-animation editor. Viewing exposes rig, pose, attachment, collision, and animation defects; correcting those defects in the same focused tool is an approved long-term workflow.
+
+- Preserve fast inspection as the default experience while adding small, task-driven editing capabilities incrementally.
+- Prioritize direct correction of bones, wrists, sockets, weapons, shields, and other attachments at selected animation frames, with precise numeric controls and clear save/export actions.
+- Support reusable per-clip keyframe corrections and interpolation when a current milestone requires them, so artists and developers can repair visible animation defects without repeatedly round-tripping through a full digital-content-creation application.
+- Keep the editor deliberately lightweight. Do not expand it into a general modeling, sculpting, retopology, rigging, or full animation-authoring suite.
+- Keep native Windows as priority 1 and backport stable editing workflows to Web as priority 2 unless Sin explicitly changes the order.
+
+### Permanent versioned character-package rule
+
+- Keep every named character revision self-contained in one canonical versioned repository folder. For Arin v5.7, that folder is `games\SinStarI\SourceAssets\Characters\Paladin\ArinV57`.
+- Store the revision's original model exports, cleaned derivatives, rig sources, animation sources and manifest, accepted viewer checkpoint, SM3D descriptor, pose-calibration snapshot, previews, package manifest, checksums, and handoff notes together in that folder.
+- Keep the Character Viewer/editor project, build script, launcher, and reusable editor source in `tools\Character3DViewer`. Generated tool-local cooking inputs and binaries are disposable mirrors and must remain ignored by Git.
+- Whenever Arin v5.7 model, animation, wrist, sword, shield, socket, equipment, or pose-calibration work changes, update the ArinV57 package and its documentation without waiting for Sin to repeat the instruction.
+- Before every normal commit or push containing Arin v5.7 or Character Viewer calibration changes, run `scripts\sync-arin-v5-7-calibration.ps1 -Mode Export -AllowMissing` so any live saved keyframes are captured in the canonical package and included in the commit.
+- Sin Star I is the long-term owner of the active Character Viewer/editor's Arin and Red Dragon assets. Keep the original Dragonfall game, but do not put new Character Viewer tooling or Sin Star I character/boss asset ownership in Dragonfall.
+- Keep `Calibration\arin-v5.7-pose-calibration.json` as the human-readable repository source of truth. The checksummed binary `Save Data` envelope is a generated runtime implementation detail and must not be committed.
+- Launch the native editor through `tools\Character3DViewer\Launch.ps1` when practical. It keeps the stable application-data working copy and the repository-owned Arin v5.7 calibration JSON synchronized while the editor runs.
+
 ### Permanent smooth 3D camera interaction rule
 
 - Future SMILE games, viewers, examples, templates, and programs with pan, zoom, orbit, or rotation controls must make those controls smooth by default on native and Web targets.

@@ -1921,6 +1921,43 @@ Public Function SetAnimationTime(ByRef Value As Actor, TimeMilliseconds As Numbe
 
 End Function
 
+''' Applies one additive local rotation to a model node after animation sampling.
+Public Function SetNodeRotationOffset(
+    ByRef Value As Actor,
+    NodeIndex As Number,
+    XDegrees As Number,
+    YDegrees As Number,
+    ZDegrees As Number
+) As Boolean
+
+    Dim Result As Boolean
+    Dim Slot As Number
+
+    Slot = ActorSlot(Value)
+
+    If Slot < 0 Then
+        Return False
+    End If
+
+    Result = Graphics3D.SetModelNodeRotationOffset3D(
+        ActorAnimators[Slot],
+        NodeIndex,
+        XDegrees,
+        YDegrees,
+        ZDegrees
+    )
+
+    If Result Then
+        Call ClearActorError(Slot)
+    Else
+
+        Call SetActorFailure(Slot, CHARACTER_ERROR_INVALID_ARGUMENT, Graphics3D.LastError())
+    End If
+
+    Return Result
+
+End Function
+
 Public Function CurrentClipNameMatches(Value As Actor, Name As Text) As Boolean
 
     Dim Slot As Number
@@ -2337,6 +2374,140 @@ Public Function PartObjectHandle(Value As Actor, PartIndex As Number) As Number
     ReturnValue = ActorParts[Slot, PartIndex].Handle
 
     Return ReturnValue
+
+End Function
+
+''' Shows or hides one character part without changing the actor or its animation.
+Public Function SetPartVisible(
+    ByRef Value As Actor,
+    PartIndex As Number,
+    Visible As Boolean
+) As Boolean
+
+    Dim Result As Boolean
+    Dim Slot As Number
+
+    Slot = ActorSlot(Value)
+
+    If Slot < 0 Then
+        Return False
+    End If
+
+    If PartIndex < 0 Or PartIndex >= ActorPartCounts[Slot] Then
+        Call SetActorFailure(Slot, CHARACTER_ERROR_INVALID_PART, 0)
+
+        Return False
+    End If
+
+    Result = Graphics3D.SetObjectVisibleChecked3D(ActorParts[Slot, PartIndex], Visible)
+
+    If Result Then
+        Call ClearActorError(Slot)
+    Else
+
+        Call SetActorFailure(Slot, CHARACTER_ERROR_INVALID_ARGUMENT, Graphics3D.LastError())
+    End If
+
+    Return Result
+
+End Function
+
+''' Rotates one character part around a world-space pivot without changing the actor transform.
+Public Function SetPartPivotRotation(
+    ByRef Value As Actor,
+    PartIndex As Number,
+    Pivot As Core.Vector3,
+    XDegrees As Number,
+    YDegrees As Number,
+    ZDegrees As Number
+) As Boolean
+
+    Dim Result As Boolean
+    Dim Slot As Number
+
+    Slot = ActorSlot(Value)
+
+    If Slot < 0 Then
+        Return False
+    End If
+
+    If PartIndex < 0 Or PartIndex >= ActorPartCounts[Slot] Then
+        Call SetActorFailure(Slot, CHARACTER_ERROR_INVALID_PART, 0)
+
+        Return False
+    End If
+
+    Result = Graphics3D.SetObjectPivotRotation3D(
+        ActorParts[Slot, PartIndex],
+        Pivot.X,
+        Pivot.Y,
+        Pivot.Z,
+        XDegrees,
+        YDegrees,
+        ZDegrees
+    )
+
+    If Result Then
+        Call ClearActorError(Slot)
+    Else
+
+        Call SetActorFailure(Slot, CHARACTER_ERROR_INVALID_ARGUMENT, Graphics3D.LastError())
+    End If
+
+    Return Result
+
+End Function
+
+''' Positions one character part relative to the actor's current world position.
+Public Function SetPartPositionOffset(
+    ByRef Value As Actor,
+    PartIndex As Number,
+    X As Number,
+    Y As Number,
+    Z As Number
+) As Boolean
+
+    Dim Result As Boolean
+    Dim Slot As Number
+
+    Slot = ActorSlot(Value)
+
+    If Slot < 0 Then
+        Return False
+    End If
+
+    If PartIndex < 0 Or PartIndex >= ActorPartCounts[Slot] Then
+        Call SetActorFailure(Slot, CHARACTER_ERROR_INVALID_PART, 0)
+
+        Return False
+    End If
+
+    If (X < -CHARACTER_MAX_WORLD_POSITION Or
+        X > CHARACTER_MAX_WORLD_POSITION Or
+        Y < -CHARACTER_MAX_WORLD_POSITION Or
+        Y > CHARACTER_MAX_WORLD_POSITION Or
+        Z < -CHARACTER_MAX_WORLD_POSITION Or
+        Z > CHARACTER_MAX_WORLD_POSITION) Then
+        Call SetActorFailure(Slot, CHARACTER_ERROR_INVALID_ARGUMENT, 0)
+
+        Return False
+    End If
+
+    Result = Graphics3D.SetObjectPositionChecked3D(
+        ActorParts[Slot, PartIndex],
+        RoundedThousandths(ActorPositionX1000[Slot]) + X,
+        RoundedThousandths(ActorPositionY1000[Slot]) + Y,
+        RoundedThousandths(ActorPositionZ1000[Slot]) + Z
+    )
+
+    If Result Then
+        Call ClearActorError(Slot)
+    Else
+
+        Call SetActorFailure(Slot, CHARACTER_ERROR_INVALID_ARGUMENT, Graphics3D.LastError())
+    End If
+
+    Return Result
 
 End Function
 

@@ -9,7 +9,7 @@ import sys
 
 import bpy
 import numpy as np
-from mathutils import Euler, Matrix, Vector
+from mathutils import Euler, Matrix, Quaternion, Vector
 
 
 SOURCE_RIGHT_HAND_MESH = "tripo_part_5"
@@ -23,6 +23,10 @@ SHIELD_CORRECTION_ROTATION = (0.0, 0.0, -75.0)
 SWORD_CORRECTION_OFFSET = (-0.04017985, 0.00752897, 0.01881249)
 SHIELD_CORRECTION_OFFSET = (0.0, 0.0, -0.055)
 SWORD_CORRECTION_PIVOT = (-0.01415075, -0.00344447, 0.01844119)
+SWORD_ATTACHMENT_ROTATION = (0.0, 135.0, 0.0)
+SHIELD_ATTACHMENT_ROTATION = (0.0, -45.0, 0.0)
+LEFT_WRIST_OUTWARD_ROLL_DEGREES = 135.0
+RIGHT_WRIST_OUTWARD_ROLL_DEGREES = -135.0
 EQUIPMENT = {
     "Sword": (SOURCE_RIGHT_HAND_MESH, SOURCE_RIGHT_HAND_BONE, TARGET_RIGHT_HAND_BONE),
     "Shield": (SOURCE_LEFT_HAND_MESH, SOURCE_LEFT_HAND_BONE, TARGET_LEFT_HAND_BONE),
@@ -39,12 +43,12 @@ EQUIPMENT = {
 }
 
 
-def arguments() -> tuple[str, str, str, str, str, str]:
+def arguments() -> tuple[str, str, str, str, str, str, str]:
     values = sys.argv[sys.argv.index("--") + 1 :]
-    if len(values) != 6:
+    if len(values) != 7:
         raise RuntimeError(
-            "Expected skinned FBX, animation manifest, clean GLB, equipped GLB, "
-            "output Blend, and output GLB paths."
+            "Expected skinned FBX, T-pose FBX, animation manifest, clean GLB, "
+            "equipped GLB, output Blend, and output GLB paths."
         )
     return tuple(os.path.abspath(value) for value in values)
 
@@ -105,31 +109,162 @@ def action_curves(action: bpy.types.Action):
                 yield from channel_bag.fcurves
 
 
-def stabilize_shield_arm(
+def action_bone_quaternion(
+    action: bpy.types.Action,
+    bone_name: str,
+    frame: float,
+) -> tuple[float, float, float, float]:
+    path = f'pose.bones["{bone_name}"].rotation_quaternion'
+    curves = {
+        curve.array_index: curve
+        for curve in action_curves(action)
+        if curve.data_path == path
+    }
+    if set(curves) != {0, 1, 2, 3}:
+        raise RuntimeError(
+            f"Action {action.name} has incomplete quaternion curves for {bone_name}."
+        )
+    quaternion = Quaternion(tuple(curves[index].evaluate(frame) for index in range(4)))
+    quaternion.normalize()
+    return tuple(float(value) for value in quaternion)
+
+
+def load_wrist_references(
+    t_pose_fbx: str,
+    target_bones: set[str],
+) -> dict[str, tuple[float, float, float, float]]:
+    before_objects = set(bpy.data.objects)
+    status = bpy.ops.import_scene.fbx(filepath=t_pose_fbx)
+    if "FINISHED" not in status:
+        raise RuntimeError("Failed to import the approved Mixamo T-pose FBX.")
+    imported = [obj for obj in bpy.data.objects if obj not in before_objects]
+    armatures = [obj for obj in imported if obj.type == "ARMATURE"]
+    if len(armatures) != 1:
+        raise RuntimeError("Mixamo T-pose FBX did not contain exactly one armature.")
+    reference_armature = armatures[0]
+    reference_bones = {bone.name for bone in reference_armature.data.bones}
+    if reference_bones != target_bones:
+        raise RuntimeError("Mixamo T-pose skeleton differs from the animation skeleton.")
+    if (
+        reference_armature.animation_data is None
+        or reference_armature.animation_data.action is None
+    ):
+        raise RuntimeError("Mixamo T-pose FBX is missing its reference action.")
+    reference_action = reference_armature.animation_data.action
+    reference_frame = float(reference_action.frame_range[0])
+    references = {
+        bone_name: action_bone_quaternion(reference_action, bone_name, reference_frame)
+        for bone_name in (TARGET_LEFT_HAND_BONE, TARGET_RIGHT_HAND_BONE)
+    }
+    left_reference = Quaternion(references[TARGET_LEFT_HAND_BONE])
+    left_reference = left_reference @ Quaternion(
+        (0.0, 1.0, 0.0),
+        math.radians(LEFT_WRIST_OUTWARD_ROLL_DEGREES),
+    )
+    left_reference.normalize()
+    references[TARGET_LEFT_HAND_BONE] = tuple(
+        float(value) for value in left_reference
+    )
+    right_reference = Quaternion(references[TARGET_RIGHT_HAND_BONE])
+    right_reference = right_reference @ Quaternion(
+        (0.0, 1.0, 0.0),
+        math.radians(RIGHT_WRIST_OUTWARD_ROLL_DEGREES),
+    )
+    right_reference.normalize()
+    references[TARGET_RIGHT_HAND_BONE] = tuple(
+        float(value) for value in right_reference
+    )
+    for obj in imported:
+        if obj.name in bpy.data.objects:
+            bpy.data.objects.remove(obj, do_unlink=True)
+    if reference_action.name in bpy.data.actions:
+        bpy.data.actions.remove(reference_action)
+    return references
+
+
+def normalize_wrist_rotations(
+    actions: list[bpy.types.Action],
+    references: dict[str, tuple[float, float, float, float]],
+) -> list[str]:
+    for action in actions:
+        for bone_name, quaternion in references.items():
+            path = f'pose.bones["{bone_name}"].rotation_quaternion'
+            curves = {
+                curve.array_index: curve
+                for curve in action_curves(action)
+                if curve.data_path == path
+            }
+            if set(curves) != {0, 1, 2, 3}:
+                raise RuntimeError(
+                    f"Action {action.name} has incomplete wrist curves for {bone_name}."
+                )
+            for index, value in enumerate(quaternion):
+                curve = curves[index]
+                for keyframe in curve.keyframe_points:
+                    keyframe.co.y = value
+                    keyframe.handle_left.y = value
+                    keyframe.handle_right.y = value
+                for sample in curve.sampled_points:
+                    sample.co.y = value
+    return [TARGET_LEFT_HAND_BONE, TARGET_RIGHT_HAND_BONE]
+
+
+def maximum_wrist_deviations(
+    armature: bpy.types.Object,
+    actions: list[bpy.types.Action],
+) -> dict[str, float]:
+    scene = bpy.context.scene
+    pairs = {
+        TARGET_LEFT_HAND_BONE: "mixamorig:LeftForeArm",
+        TARGET_RIGHT_HAND_BONE: "mixamorig:RightForeArm",
+    }
+    maximums = {bone_name: 0.0 for bone_name in pairs}
+    for action in actions:
+        armature.animation_data.action = action
+        armature.animation_data.action_slot = action.slots[0]
+        first = int(math.floor(action.frame_range[0]))
+        last = int(math.ceil(action.frame_range[1]))
+        for frame in range(first, last + 1):
+            scene.frame_set(frame)
+            bpy.context.view_layer.update()
+            for hand_name, forearm_name in pairs.items():
+                forearm = armature.pose.bones[forearm_name]
+                hand = armature.pose.bones[hand_name]
+                forearm_direction = (forearm.tail - forearm.head).normalized()
+                hand_direction = (hand.tail - hand.head).normalized()
+                deviation = math.degrees(forearm_direction.angle(hand_direction))
+                maximums[hand_name] = max(maximums[hand_name], deviation)
+    return maximums
+
+
+def stabilize_equipment_arm(
     configuration: dict,
     entries: list[dict],
     action_by_name: dict[str, bpy.types.Action],
+    configuration_name: str,
+    entry_name: str,
+    label: str,
 ) -> list[str]:
-    stabilization = configuration.get("shieldArmStabilization")
+    stabilization = configuration.get(configuration_name)
     target_names = [
         entry["name"]
         for entry in entries
-        if entry.get("stabilizeShieldArm", False)
+        if entry.get(entry_name, False)
     ]
     if not target_names:
         return []
     if not isinstance(stabilization, dict):
         raise RuntimeError(
-            "Shield-arm stabilization targets require shieldArmStabilization."
+            f"{label} stabilization targets require {configuration_name}."
         )
 
     source_name = stabilization.get("sourceAction")
     source_frame = stabilization.get("sourceFrame")
     bone_names = stabilization.get("bones")
     if source_name not in action_by_name or not isinstance(source_frame, (int, float)):
-        raise RuntimeError("Shield-arm stabilization source action or frame is invalid.")
+        raise RuntimeError(f"{label} stabilization source action or frame is invalid.")
     if not isinstance(bone_names, list) or not bone_names:
-        raise RuntimeError("Shield-arm stabilization requires at least one bone.")
+        raise RuntimeError(f"{label} stabilization requires at least one bone.")
 
     prefixes = tuple(f'pose.bones["{name}"]' for name in bone_names)
     source_values = {
@@ -138,7 +273,7 @@ def stabilize_shield_arm(
         if curve.data_path.startswith(prefixes)
     }
     if not source_values:
-        raise RuntimeError("Shield-arm stabilization source has no matching curves.")
+        raise RuntimeError(f"{label} stabilization source has no matching curves.")
 
     for target_name in target_names:
         updated_keys = set()
@@ -148,7 +283,7 @@ def stabilize_shield_arm(
             key = (curve.data_path, curve.array_index)
             if key not in source_values:
                 raise RuntimeError(
-                    f"Shield-arm source is missing {target_name} curve {key}."
+                    f"{label} source is missing {target_name} curve {key}."
                 )
             value = source_values[key]
             for keyframe in curve.keyframe_points:
@@ -161,7 +296,7 @@ def stabilize_shield_arm(
         if updated_keys != set(source_values):
             missing = sorted(set(source_values) - updated_keys)
             raise RuntimeError(
-                f"Shield-arm target {target_name} is missing curves: {missing}."
+                f"{label} target {target_name} is missing curves: {missing}."
             )
 
     return target_names
@@ -326,6 +461,7 @@ def rigid_attachment(
     correction_rotation: tuple[float, float, float],
     correction_offset: tuple[float, float, float],
     correction_pivot: tuple[float, float, float] | None,
+    attachment_rotation: tuple[float, float, float],
 ) -> bpy.types.Object:
     result = source.copy()
     result.data = source.data.copy()
@@ -369,6 +505,17 @@ def rigid_attachment(
         @ bone.matrix_local.inverted()
     )
     result.data.transform(offset)
+    attachment_pivot = Matrix.Translation((0.0, bone.length * 0.56, 0.0))
+    attachment_correction = (
+        bone.matrix_local
+        @ attachment_pivot
+        @ Euler(
+            tuple(math.radians(value) for value in attachment_rotation), "XYZ"
+        ).to_matrix().to_4x4()
+        @ attachment_pivot.inverted()
+        @ bone.matrix_local.inverted()
+    )
+    result.data.transform(attachment_correction)
     result.parent = target_reference.parent
     result.parent_type = target_reference.parent_type
     result.parent_bone = target_reference.parent_bone
@@ -447,6 +594,7 @@ def render_preview(
 def main() -> None:
     (
         skinned_fbx,
+        t_pose_fbx,
         animation_manifest,
         clean_glb,
         equipped_glb,
@@ -477,6 +625,7 @@ def main() -> None:
         raise RuntimeError("Arin animation manifest contains no animations.")
 
     target_bones = {bone.name for bone in target_armature.data.bones}
+    wrist_references = load_wrist_references(t_pose_fbx, target_bones)
     animation_directory = os.path.dirname(animation_manifest)
     actions = []
     action_by_name = {}
@@ -537,11 +686,26 @@ def main() -> None:
     target_armature.animation_data.action_slot = selected_action.slots[0]
 
     normalized_scale = normalize_mixamo_scale(target_armature, actions)
-    stabilized_actions = stabilize_shield_arm(
+    stabilized_shield_actions = stabilize_equipment_arm(
         animation_configuration,
         animation_entries,
         action_by_name,
+        "shieldArmStabilization",
+        "stabilizeShieldArm",
+        "Shield-arm",
     )
+    stabilized_sword_actions = stabilize_equipment_arm(
+        animation_configuration,
+        animation_entries,
+        action_by_name,
+        "swordArmStabilization",
+        "stabilizeSwordArm",
+        "Sword-arm",
+    )
+    normalized_wrist_bones = normalize_wrist_rotations(actions, wrist_references)
+    wrist_deviations = maximum_wrist_deviations(target_armature, actions)
+    target_armature.animation_data.action = selected_action
+    target_armature.animation_data.action_slot = selected_action.slots[0]
     target_body_meshes = [
         obj
         for obj in bpy.context.scene.objects
@@ -639,6 +803,11 @@ def main() -> None:
         correction_pivot = (
             SWORD_CORRECTION_PIVOT if equipment_name == "Sword" else None
         )
+        attachment_rotation = (
+            SWORD_ATTACHMENT_ROTATION
+            if equipment_name == "Sword"
+            else SHIELD_ATTACHMENT_ROTATION
+        )
         attachments.append(
             rigid_attachment(
                 source_equipment,
@@ -650,6 +819,7 @@ def main() -> None:
                 correction_rotation,
                 correction_offset,
                 correction_pivot,
+                attachment_rotation,
             )
         )
 
@@ -669,6 +839,25 @@ def main() -> None:
     target_armature["smile_sword_offset_xyz"] = SWORD_CORRECTION_OFFSET
     target_armature["smile_shield_offset_xyz"] = SHIELD_CORRECTION_OFFSET
     target_armature["smile_sword_pivot_xyz"] = SWORD_CORRECTION_PIVOT
+    target_armature["smile_sword_attachment_rotation_xyz"] = (
+        SWORD_ATTACHMENT_ROTATION
+    )
+    target_armature["smile_shield_attachment_rotation_xyz"] = (
+        SHIELD_ATTACHMENT_ROTATION
+    )
+    target_armature["smile_wrist_reference"] = os.path.basename(t_pose_fbx)
+    target_armature["smile_left_wrist_quaternion"] = wrist_references[
+        TARGET_LEFT_HAND_BONE
+    ]
+    target_armature["smile_left_wrist_outward_roll_degrees"] = (
+        LEFT_WRIST_OUTWARD_ROLL_DEGREES
+    )
+    target_armature["smile_right_wrist_quaternion"] = wrist_references[
+        TARGET_RIGHT_HAND_BONE
+    ]
+    target_armature["smile_right_wrist_outward_roll_degrees"] = (
+        RIGHT_WRIST_OUTWARD_ROLL_DEGREES
+    )
     target_armature["smile_body_source"] = "Pristine Tripo UVs with Mixamo weights"
     bpy.context.scene["smile_candidate_version"] = "v5.7"
     bpy.context.scene["smile_checkpoint"] = "mixamo-multi-animation-rigid-equipment"
@@ -729,9 +918,13 @@ def main() -> None:
                 "glb": output_glb,
                 "leftFit": left_diagnostics,
                 "normalizedMixamoScale": normalized_scale,
+                "normalizedWristBones": normalized_wrist_bones,
                 "previews": previews,
                 "rightFit": right_diagnostics,
-                "stabilizedShieldArmActions": stabilized_actions,
+                "stabilizedShieldArmActions": stabilized_shield_actions,
+                "stabilizedSwordArmActions": stabilized_sword_actions,
+                "wristMaximumDeviationDegrees": wrist_deviations,
+                "wristReference": os.path.basename(t_pose_fbx),
             },
             sort_keys=True,
         )
