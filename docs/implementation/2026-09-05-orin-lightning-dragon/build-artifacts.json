@@ -1,0 +1,27 @@
+[
+  {
+    "path": "tools/Character3DViewer/bin/Character3DViewer.exe",
+    "bytes": 23789568,
+    "sha256": "1659081F9F19F4CD51890362FC318E628C407D59D0039DCB172B526C03FF6CBE"
+  },
+  {
+    "path": "examples/AdvancedLightningVfxLab/bin/Debug/AdvancedLightningVfxLab.exe",
+    "bytes": 6737408,
+    "sha256": "28FE5B36C2278A9EBFC88C3D1D1D8089EBFD21A7A97333AF2068904053F35FAB"
+  },
+  {
+    "path": "artifacts/vsix/Smile.VisualStudio.vsix",
+    "bytes": 2709066,
+    "sha256": "4F752EE52EA2B94AA2E2A4D9461BC605A2A0160A58E0B830BE7964B9023DBB83"
+  },
+  {
+    "path": "artifacts/compiler/smilec.exe",
+    "bytes": 162304,
+    "sha256": "E9C37B471FE399651385AE8EA4266671BC1CF727F3EF3F2713AB22E77622625E"
+  },
+  {
+    "path": "artifacts/compiler/Smile.NativeRuntime.lib",
+    "bytes": 3161528,
+    "sha256": "5C67450DB453161793A16F0B457311BCA0550597EA59ED494BBC8E899BDB947B"
+  }
+]

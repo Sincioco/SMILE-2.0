@@ -1,0 +1,66 @@
+[
+  {
+    "path": "docs/implementation/screenshots/orin-storm/dragon-claw-strike.png",
+    "width": 1420,
+    "height": 683,
+    "bytes": 1390565,
+    "sha256": "53098307A825F2EAA8EF58210C64931EE250616CB89D7ACFECAC75F15E8A0513",
+    "kind": "Native window capture"
+  },
+  {
+    "path": "docs/implementation/screenshots/orin-storm/dragon-fire-breath.png",
+    "width": 1420,
+    "height": 683,
+    "bytes": 1339188,
+    "sha256": "04A2845BD9647FA2FE3CBBCC0D1FE4D73824B9B1E9461E3EBC35EDB6EC017CD7",
+    "kind": "Native window capture"
+  },
+  {
+    "path": "docs/implementation/screenshots/orin-storm/lightning-lab-godstorm.png",
+    "width": 1602,
+    "height": 932,
+    "bytes": 1340343,
+    "sha256": "A6B27FBBD1F6724208E1E77C0CF0848AFCB7DBF66DE88860DC07C57DCE9C5E2E",
+    "kind": "Native window capture"
+  },
+  {
+    "path": "docs/implementation/screenshots/orin-storm/lightning-lab-storm-lance.png",
+    "width": 1602,
+    "height": 932,
+    "bytes": 557567,
+    "sha256": "9EB8B5B65989BA6C29E8E94F8476FD9A57E22EC26166E5D4D7E88B474D77387D",
+    "kind": "Native window capture"
+  },
+  {
+    "path": "docs/implementation/screenshots/orin-storm/orin-charge.png",
+    "width": 1420,
+    "height": 683,
+    "bytes": 1363102,
+    "sha256": "77504371320C785DE17DFA7F00A32706C3877E2B88987194A9543B0679DA4B34",
+    "kind": "Native window capture"
+  },
+  {
+    "path": "docs/implementation/screenshots/orin-storm/orin-discharge.png",
+    "width": 1420,
+    "height": 683,
+    "bytes": 1339090,
+    "sha256": "044F399E81C6DB759395B246DCD3FA34D0209231346EDC91DA3264D1CDE8065C",
+    "kind": "Native window capture"
+  },
+  {
+    "path": "docs/implementation/screenshots/orin-storm/phone-contact-sheet.png",
+    "width": 1170,
+    "height": 4134,
+    "bytes": 4860025,
+    "sha256": "6C64F9EFDB23B46201CCCEDD99D65B3C14F2D578552F84E1C3CA33CD05237C86",
+    "kind": "Contact sheet of native captures"
+  },
+  {
+    "path": "games/SinStarI/SourceAssets/Bosses/RedDragon/RedDragonV11/dragon-fire-breath-rig-preview.png",
+    "width": 1100,
+    "height": 850,
+    "bytes": 833359,
+    "sha256": "5B052477528AF44024CBA7A5B0662404AF63A5890276C258F8DF224FC8D2230C",
+    "kind": "Blender rig render"
+  }
+]
