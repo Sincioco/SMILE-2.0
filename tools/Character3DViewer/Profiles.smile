@@ -37,7 +37,7 @@ Public Function ProfileAt(Index As Number) As CharacterViewer.Profile
         Result.ProductionStatus = "Candidate"
         Result.AssetPath = "Assets\Generation2\ArinV57\ArinV57.sm3d"
         Result.ExpectedClipCount = 8
-        Result.ExpectedSocketCount = 10
+        Result.ExpectedSocketCount = 13
         Result.DesiredWorldHeight = 100
 
     Else If Index = PROFILE_ARIN_V56 Then

@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "assetId": "sin-star-i.character-1.paladin",
+  "characterVersion": "v5.7",
+  "modelSha256": "393D82C06ECCEDF5A13CF3CA835700AA03A6E90ED74B1420569902885E3E1524",
+  "descriptorSha256": "05B8B081FDC1A7CD3ACA70F37D1AEF4BD3377FE6050B8ABE0A8C79AC5462D119",
+  "sm3dSha256": "DC623A682631525C9E921C62E92A21A99C770A1A9C9BFF3E3FD64CEA2F2539B5",
+  "clips": [
+    { "name": "BlockImpact", "sampleCount": 25 },
+    { "name": "Defend", "sampleCount": 44 },
+    { "name": "Hit", "sampleCount": 31 },
+    { "name": "Idle", "sampleCount": 78 },
+    { "name": "Run", "sampleCount": 23 },
+    { "name": "SwordAttack", "sampleCount": 47 },
+    { "name": "SwordAttack2", "sampleCount": 32 },
+    { "name": "Walk", "sampleCount": 35 }
+  ],
+  "sockets": [
+    "Chest", "FootLeft", "FootRight", "HandLeft", "HandRight", "Head", "Root",
+    "ShieldCenter", "ShieldFireLeft", "ShieldFireRight", "ShieldFireTip",
+    "SwordBase", "SwordTip"
+  ]
+}

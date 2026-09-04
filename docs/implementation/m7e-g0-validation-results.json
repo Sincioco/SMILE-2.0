@@ -1,0 +1,135 @@
+{
+  "schemaVersion": 1,
+  "milestone": "M7E-G0",
+  "baselineCommit": "a7fb138189e407f81f6dd096c0fd79738edb7ac4",
+  "evidenceRevision": "G0 containing commit; final commands ran against frozen implementation sources.",
+  "tests": [
+    {
+      "command": "scripts/smoke-test.cmd",
+      "exitCode": 0,
+      "result": "pass",
+      "log": "m7e-g0-final-smoke.log",
+      "logSha256": "490464D07012FDC92A00CCA7C663CCB2558E8C28A3AF7256C3A84F56AC9DF231",
+      "lastWriteUtc": "2026-09-04T16:40:20.6605381Z"
+    },
+    {
+      "command": "pwsh -NoProfile -File scripts/test-character-3d-viewer-hardening.ps1",
+      "exitCode": 0,
+      "result": "pass",
+      "log": "m7e-g0-final-viewer.log",
+      "logSha256": "06A40F76E75EC1E771D4C22BC695FE7D665E1893CED86910E1B4227E7F3D4497",
+      "lastWriteUtc": "2026-09-04T16:40:43.2966829Z"
+    },
+    {
+      "command": "pwsh -NoProfile -File scripts/test-native-thermal-fire.ps1 -SkipBuild",
+      "exitCode": 0,
+      "result": "pass",
+      "log": "m7e-g0-final-fire.log",
+      "logSha256": "95D5EFC9C04E0D1B54FC3B9EB740E5AAD0BD6CDE2C4FE718769D77E836587516",
+      "lastWriteUtc": "2026-09-04T16:41:25.2219191Z"
+    },
+    {
+      "command": "pwsh -NoProfile -File scripts/test-renderer3d-vfx-hardening.ps1",
+      "exitCode": 0,
+      "result": "pass",
+      "log": "m7e-g0-final-vfx.log",
+      "logSha256": "4267554203000802D1D2CDDCBF3604E4FD0F88BE1EF6CA23974B35718C13F3AF",
+      "lastWriteUtc": "2026-09-04T16:42:07.2538629Z"
+    },
+    {
+      "command": "pwsh -NoProfile -File scripts/test-character3d.ps1",
+      "exitCode": 0,
+      "result": "pass",
+      "log": "m7e-g0-final-character.log",
+      "logSha256": "CA0938D96E587DAD3FA8B6B9F938F9EE0B8D16DC94C4D6411EAB9BA25E125C3A",
+      "lastWriteUtc": "2026-09-04T16:42:17.0654589Z"
+    },
+    {
+      "command": "scripts/install-vsix.cmd",
+      "exitCode": 0,
+      "result": "pass",
+      "log": "m7e-g0-final-vsix-install.log",
+      "logSha256": "D7335A2C1E4A3622E3339C264EB2A8FCFA6F9DF93B421F8AE24C5C21B6C56E8F",
+      "lastWriteUtc": "2026-09-04T16:56:16.0572848Z"
+    }
+  ],
+  "coverage": [
+    "295 language/compiler/project tests",
+    "13 formatter integration tests and repository format check",
+    "D3D11 and WebGL2 GPU-particle gates",
+    "native/shared Web soft depth, distortion, HDR, MSAA, queue and lifecycle gates",
+    "42 calibration schema/atomic I/O cases",
+    "actual native Viewer procedures under isolated ApplicationId",
+    "58 native graphics/pointer/audio-focus checks",
+    "native thermal recovery and shared-capacity exhaustion",
+    "Effects3D and Character3D wrappers",
+    "final artifact verification"
+  ],
+  "nativePreview": {
+    "startUtc": "2026-09-04T16:32:07.731Z",
+    "endUtc": "2026-09-04T16:42:26.402Z",
+    "elapsedSeconds": 618.671,
+    "viewerPid": 71660,
+    "result": "pass",
+    "observedCrashOrRecovery": false,
+    "lastObservedEffectError": 0,
+    "lastObservedFps": 114,
+    "observedPrivateBytes": [
+      530341888,
+      531349504
+    ],
+    "observedWorkingSetBytes": [
+      229056512,
+      230436864
+    ],
+    "observedHandles": [
+      717,
+      719
+    ],
+    "gpuTiming": "unavailable",
+    "cpuSubmissionTiming": "not measured in Viewer; process CPU is not submission timing",
+    "limitation": "Point-in-time UI/process observations during a continuous demo, not a GPU benchmark. Regression windows and a diagnostic briefly changed foreground."
+  },
+  "concurrentFixture": {
+    "effects": [
+      "High PaladinFlameBlade",
+      "Medium FireBurstGen3",
+      "Medium TorchFire",
+      "Medium TorchFire",
+      "High DragonFireBreathPreview"
+    ],
+    "systems": 25,
+    "systemLimit": 32,
+    "reservedSlots": 5824,
+    "slotLimit": 32768,
+    "gpuStateBytes": 935440,
+    "allBackends": "GPU",
+    "fallbacks": [
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "dispatchesAtCapture": 1775,
+    "drawsAtCapture": 1713,
+    "uploadBytesAtCapture": 130240,
+    "teardown": "native contract checks zero systems, slots and CPU batches",
+    "futureIceMagic": "Generic resource-pressure fixtures only, not new presets"
+  },
+  "manualChecks": [
+    "saved Idle/Walk/Run/Attack/Attack2/BlockImpact/Hit poses",
+    "Walk frame 19 held from frame-0 key",
+    "timeline wheel and seek",
+    "next saved key",
+    "full profile cycle",
+    "socket origins on corrected equipment",
+    "independent flame pause",
+    "right-click demo reset",
+    "dragon visibility change",
+    "close/relaunch and exact saved-data reload"
+  ],
+  "visualApproval": "New G0 visuals available for Sin review; saved poses were user-authored and preserved.",
+  "sourceGeometry": "unchanged; production blocked by known open surfaces",
+  "webViewerParity": "deferred"
+}

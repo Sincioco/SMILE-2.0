@@ -4,7 +4,7 @@
 
 `GpuParticleSystem3D` is a persistent, bounded Renderer3D resource. SMILE source stages one fixed slot at a time, commits at most 512 changed slots between advances, advances a fixed-step scheduler, and queues the persistent system once per frame. The explicit 80-byte particle state and the public command 127 ABI remain shared by native and Web.
 
-The common deterministic CPU backend remains available for exact cross-target tests and graceful fallback. Native automatic and fast requests may use a larger 16,384-particle per-system limit. WebGL2 automatic and fast requests support up to 8,192 particles per system. The portable CPU limit remains 8,192, with eight systems and 32,768 total slots in either mode.
+The common deterministic CPU backend remains available for exact cross-target tests and graceful fallback. Native automatic and fast requests may use a larger 16,384-particle per-system limit. WebGL2 automatic and fast requests support up to 8,192 particles per system. The portable CPU limit remains 8,192, with 32 systems and 32,768 total slots in either mode. M7E-G0 raises only the system ceiling (formerly eight), not the aggregate particle allowance. Query 60 (`GPU_PARTICLE_QUERY_MAX_TOTAL_CAPACITY`) exposes that aggregate ceiling for complete preflight admission across fire, future ice/magic, and other shared effects.
 
 ## Native D3D11 backend
 

@@ -60,7 +60,7 @@ try {
     Assert-Contains $web 'case 121:return renderer3DM6Value(a,b);' 'Web numeric dispatch'
 
     foreach ($limit in @(
-        'SMILE_3D_MAX_PARTICLE_BATCHES 16',
+        'SMILE_3D_MAX_PARTICLE_BATCHES 32',
         'SMILE_3D_MAX_PARTICLES_PER_BATCH 4096',
         'SMILE_3D_MAX_STAGED_PARTICLES 8192',
         'SMILE_3D_MAX_RIBBON_BATCHES 16',

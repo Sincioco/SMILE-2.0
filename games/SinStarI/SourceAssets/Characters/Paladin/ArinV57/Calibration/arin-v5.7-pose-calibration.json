@@ -1,16 +1,24 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "assetId": "sin-star-i.character-1.paladin",
   "characterVersion": "v5.7",
   "applicationId": "smile.tools.character3d-viewer",
   "dataKey": "CharacterViewerCalibrationKeyframes",
-  "storageVersion": 2,
-  "savedKeyframe": {
-    "clipIndex": 7,
-    "clipName": "Walk",
-    "frame": 0
+  "storageVersion": 3,
+  "profile": {
+    "version": 1,
+    "modelSha256": "393D82C06ECCEDF5A13CF3CA835700AA03A6E90ED74B1420569902885E3E1524",
+    "descriptorSha256": "05B8B081FDC1A7CD3ACA70F37D1AEF4BD3377FE6050B8ABE0A8C79AC5462D119",
+    "sm3dSha256": "DC623A682631525C9E921C62E92A21A99C770A1A9C9BFF3E3FD64CEA2F2539B5",
+    "clipNamesSha256": "cd63e3a2c6a50872ea80f18c42868d81d7dac76d5680c9519b3827e793697c66",
+    "socketNamesSha256": "9bdb9312cf118c78c2805c00061541c72fe3aee23ff993269efba5a677a32d6e"
   },
-  "totalKeyframes": 8,
+  "savedKeyframe": {
+    "clipIndex": 5,
+    "clipName": "SwordAttack",
+    "frame": 21
+  },
+  "totalKeyframes": 23,
   "clips": [
     {
       "index": 0,
@@ -167,9 +175,9 @@
           "frame": 0,
           "swordWrist": {
             "rotation": [
-              0,
-              0,
-              0
+              28,
+              -134,
+              29
             ]
           },
           "shieldWrist": {
@@ -180,16 +188,16 @@
             ]
           },
           "sword": {
-            "decoupled": false,
+            "decoupled": true,
             "rotation": [
               0,
               0,
               0
             ],
             "position": [
+              -1,
               0,
-              0,
-              0
+              2
             ]
           },
           "shield": {
@@ -262,6 +270,522 @@
       "name": "SwordAttack",
       "keyframes": [
         {
+          "frame": 6,
+          "swordWrist": {
+            "rotation": [
+              10,
+              -126,
+              59
+            ]
+          },
+          "shieldWrist": {
+            "rotation": [
+              0,
+              0,
+              0
+            ]
+          },
+          "sword": {
+            "decoupled": true,
+            "rotation": [
+              -4,
+              -28,
+              1
+            ],
+            "position": [
+              -1,
+              -1,
+              1
+            ]
+          },
+          "shield": {
+            "decoupled": true,
+            "rotation": [
+              -61,
+              -30,
+              44
+            ],
+            "position": [
+              0,
+              0,
+              0
+            ]
+          }
+        },
+        {
+          "frame": 9,
+          "swordWrist": {
+            "rotation": [
+              10,
+              -146,
+              63
+            ]
+          },
+          "shieldWrist": {
+            "rotation": [
+              0,
+              0,
+              0
+            ]
+          },
+          "sword": {
+            "decoupled": true,
+            "rotation": [
+              -4,
+              -28,
+              -8
+            ],
+            "position": [
+              -1,
+              -1,
+              1
+            ]
+          },
+          "shield": {
+            "decoupled": true,
+            "rotation": [
+              -61,
+              -30,
+              44
+            ],
+            "position": [
+              0,
+              0,
+              0
+            ]
+          }
+        },
+        {
+          "frame": 11,
+          "swordWrist": {
+            "rotation": [
+              9,
+              -130,
+              39
+            ]
+          },
+          "shieldWrist": {
+            "rotation": [
+              0,
+              0,
+              0
+            ]
+          },
+          "sword": {
+            "decoupled": true,
+            "rotation": [
+              -2,
+              -27,
+              -14
+            ],
+            "position": [
+              -1,
+              1,
+              1
+            ]
+          },
+          "shield": {
+            "decoupled": true,
+            "rotation": [
+              -61,
+              -30,
+              44
+            ],
+            "position": [
+              0,
+              0,
+              0
+            ]
+          }
+        },
+        {
+          "frame": 16,
+          "swordWrist": {
+            "rotation": [
+              -7,
+              -154,
+              58
+            ]
+          },
+          "shieldWrist": {
+            "rotation": [
+              0,
+              0,
+              0
+            ]
+          },
+          "sword": {
+            "decoupled": true,
+            "rotation": [
+              -3,
+              -28,
+              -29
+            ],
+            "position": [
+              0,
+              1,
+              1
+            ]
+          },
+          "shield": {
+            "decoupled": true,
+            "rotation": [
+              -61,
+              -30,
+              44
+            ],
+            "position": [
+              0,
+              0,
+              0
+            ]
+          }
+        },
+        {
+          "frame": 19,
+          "swordWrist": {
+            "rotation": [
+              -81,
+              -116,
+              72
+            ]
+          },
+          "shieldWrist": {
+            "rotation": [
+              0,
+              0,
+              0
+            ]
+          },
+          "sword": {
+            "decoupled": true,
+            "rotation": [
+              -3,
+              -28,
+              -38
+            ],
+            "position": [
+              -1,
+              -1,
+              1
+            ]
+          },
+          "shield": {
+            "decoupled": true,
+            "rotation": [
+              -61,
+              -30,
+              44
+            ],
+            "position": [
+              0,
+              0,
+              0
+            ]
+          }
+        },
+        {
+          "frame": 21,
+          "swordWrist": {
+            "rotation": [
+              14,
+              -90,
+              82
+            ]
+          },
+          "shieldWrist": {
+            "rotation": [
+              0,
+              0,
+              0
+            ]
+          },
+          "sword": {
+            "decoupled": true,
+            "rotation": [
+              -4,
+              -29,
+              -45
+            ],
+            "position": [
+              -2,
+              -3,
+              0
+            ]
+          },
+          "shield": {
+            "decoupled": true,
+            "rotation": [
+              -61,
+              -30,
+              44
+            ],
+            "position": [
+              0,
+              0,
+              0
+            ]
+          }
+        },
+        {
+          "frame": 28,
+          "swordWrist": {
+            "rotation": [
+              -8,
+              -122,
+              54
+            ]
+          },
+          "shieldWrist": {
+            "rotation": [
+              0,
+              0,
+              0
+            ]
+          },
+          "sword": {
+            "decoupled": true,
+            "rotation": [
+              -35,
+              -10,
+              -8
+            ],
+            "position": [
+              4,
+              -1,
+              0
+            ]
+          },
+          "shield": {
+            "decoupled": true,
+            "rotation": [
+              -61,
+              -30,
+              44
+            ],
+            "position": [
+              0,
+              0,
+              0
+            ]
+          }
+        },
+        {
+          "frame": 30,
+          "swordWrist": {
+            "rotation": [
+              -5,
+              -123,
+              51
+            ]
+          },
+          "shieldWrist": {
+            "rotation": [
+              0,
+              0,
+              0
+            ]
+          },
+          "sword": {
+            "decoupled": true,
+            "rotation": [
+              -63,
+              -13,
+              3
+            ],
+            "position": [
+              3,
+              -1,
+              0
+            ]
+          },
+          "shield": {
+            "decoupled": true,
+            "rotation": [
+              -61,
+              -30,
+              44
+            ],
+            "position": [
+              0,
+              0,
+              0
+            ]
+          }
+        },
+        {
+          "frame": 32,
+          "swordWrist": {
+            "rotation": [
+              -2,
+              -124,
+              48
+            ]
+          },
+          "shieldWrist": {
+            "rotation": [
+              0,
+              0,
+              0
+            ]
+          },
+          "sword": {
+            "decoupled": true,
+            "rotation": [
+              -67,
+              -16,
+              14
+            ],
+            "position": [
+              2,
+              -1,
+              0
+            ]
+          },
+          "shield": {
+            "decoupled": true,
+            "rotation": [
+              -61,
+              -30,
+              44
+            ],
+            "position": [
+              0,
+              0,
+              0
+            ]
+          }
+        },
+        {
+          "frame": 33,
+          "swordWrist": {
+            "rotation": [
+              -1,
+              -124,
+              46
+            ]
+          },
+          "shieldWrist": {
+            "rotation": [
+              0,
+              0,
+              0
+            ]
+          },
+          "sword": {
+            "decoupled": true,
+            "rotation": [
+              -57,
+              -18,
+              72
+            ],
+            "position": [
+              2,
+              -1,
+              0
+            ]
+          },
+          "shield": {
+            "decoupled": true,
+            "rotation": [
+              -61,
+              -30,
+              44
+            ],
+            "position": [
+              0,
+              0,
+              0
+            ]
+          }
+        },
+        {
+          "frame": 34,
+          "swordWrist": {
+            "rotation": [
+              0,
+              -125,
+              44
+            ]
+          },
+          "shieldWrist": {
+            "rotation": [
+              0,
+              0,
+              0
+            ]
+          },
+          "sword": {
+            "decoupled": true,
+            "rotation": [
+              -47,
+              -20,
+              80
+            ],
+            "position": [
+              2,
+              -1,
+              0
+            ]
+          },
+          "shield": {
+            "decoupled": true,
+            "rotation": [
+              -61,
+              -30,
+              44
+            ],
+            "position": [
+              0,
+              0,
+              0
+            ]
+          }
+        },
+        {
+          "frame": 35,
+          "swordWrist": {
+            "rotation": [
+              1,
+              -126,
+              42
+            ]
+          },
+          "shieldWrist": {
+            "rotation": [
+              0,
+              0,
+              0
+            ]
+          },
+          "sword": {
+            "decoupled": true,
+            "rotation": [
+              -37,
+              -22,
+              83
+            ],
+            "position": [
+              2,
+              -1,
+              0
+            ]
+          },
+          "shield": {
+            "decoupled": true,
+            "rotation": [
+              -61,
+              -30,
+              44
+            ],
+            "position": [
+              0,
+              0,
+              0
+            ]
+          }
+        },
+        {
           "frame": 38,
           "swordWrist": {
             "rotation": [
@@ -315,7 +839,7 @@
           "swordWrist": {
             "rotation": [
               39,
-              -111,
+              -142,
               1
             ]
           },
@@ -342,9 +866,138 @@
           "shield": {
             "decoupled": true,
             "rotation": [
-              -43,
-              49,
-              95
+              -65,
+              16,
+              70
+            ],
+            "position": [
+              0,
+              0,
+              0
+            ]
+          }
+        },
+        {
+          "frame": 10,
+          "swordWrist": {
+            "rotation": [
+              62,
+              -143,
+              -7
+            ]
+          },
+          "shieldWrist": {
+            "rotation": [
+              0,
+              137,
+              31
+            ]
+          },
+          "sword": {
+            "decoupled": true,
+            "rotation": [
+              29,
+              0,
+              0
+            ],
+            "position": [
+              -2,
+              0,
+              3
+            ]
+          },
+          "shield": {
+            "decoupled": true,
+            "rotation": [
+              -65,
+              16,
+              70
+            ],
+            "position": [
+              0,
+              0,
+              0
+            ]
+          }
+        },
+        {
+          "frame": 14,
+          "swordWrist": {
+            "rotation": [
+              59,
+              -143,
+              -6
+            ]
+          },
+          "shieldWrist": {
+            "rotation": [
+              0,
+              137,
+              31
+            ]
+          },
+          "sword": {
+            "decoupled": true,
+            "rotation": [
+              29,
+              0,
+              0
+            ],
+            "position": [
+              -2,
+              0,
+              3
+            ]
+          },
+          "shield": {
+            "decoupled": true,
+            "rotation": [
+              -65,
+              16,
+              70
+            ],
+            "position": [
+              0,
+              0,
+              0
+            ]
+          }
+        },
+        {
+          "frame": 17,
+          "swordWrist": {
+            "rotation": [
+              56,
+              -180,
+              -5
+            ]
+          },
+          "shieldWrist": {
+            "rotation": [
+              0,
+              137,
+              31
+            ]
+          },
+          "sword": {
+            "decoupled": true,
+            "rotation": [
+              29,
+              -78,
+              0
+            ],
+            "position": [
+              -2,
+              0,
+              3
+            ]
+          },
+          "shield": {
+            "decoupled": true,
+            "rotation": [
+              -65,
+              16,
+              70
             ],
             "position": [
               0,

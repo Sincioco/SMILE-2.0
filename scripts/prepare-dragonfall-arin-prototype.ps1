@@ -114,6 +114,20 @@ function Assert-FileMatch([string]$Expected, [string]$Actual) {
     $expectedHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $Expected).Hash
     $actualHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $Actual).Hash
     if ($expectedHash -cne $actualHash) {
+        if ([IO.Path]::GetFileName($Expected) -ceq 'ArinPrototype.preparation-manifest.json') {
+            $published = Get-Content -LiteralPath $Expected -Raw | ConvertFrom-Json
+            $candidate = Get-Content -LiteralPath $Actual -Raw | ConvertFrom-Json
+            $currentToolHash = $candidate.tool.sha256
+            # The published record identifies its original cooker build. Rebuilding
+            # AssetTool may change that provenance, not the source/output contract.
+            # Still compare every other field and byte-check all generated assets.
+            $candidate.tool.sha256 = $published.tool.sha256
+            if (($published | ConvertTo-Json -Depth 20 -Compress) -ceq
+                ($candidate | ConvertTo-Json -Depth 20 -Compress)) {
+                Write-Host "Equivalent preparation; historical cooker $($published.tool.sha256), current cooker $currentToolHash"
+                return
+            }
+        }
         throw "Prepared Arin prototype output drifted: $Expected"
     }
 }

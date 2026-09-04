@@ -13,7 +13,7 @@ Public Const QUALITY_HIGH = 3
 Public Const SIMULATION_CPU = 1
 Public Const SIMULATION_GPU = 2
 Public Const SIMULATION_AUTO = 3
-Public Const MAX_EMITTERS = 4
+Public Const MAX_EMITTERS = 6
 Public Const ERROR_NONE = 0
 Public Const ERROR_INITIALIZATION = 1
 Public Const ERROR_CAPACITY = 2
@@ -23,6 +23,9 @@ Public Const ERROR_IN_FLIGHT = 5
 Public Const ERROR_RENDERER = 6
 Public Const FALLBACK_GPU_UNAVAILABLE = 1
 Public Const FALLBACK_CAPACITY = 2
+Public Const FALLBACK_SYSTEM_CAPACITY = 2
+Public Const FALLBACK_SLOT_CAPACITY = 3
+Public Const FALLBACK_RESOURCE_CREATION = 4
 
 Public Type FireEmitter
     Slot As Number
@@ -64,6 +67,11 @@ Private Type EmitterState
     Restarts As Number
     Finished As Boolean
     DebugLayer As Number
+    BoundsBucket As Number
+    BoundsMinimum As Core.Vector3
+    BoundsMaximum As Core.Vector3
+    PreviousBoundsMinimum As Core.Vector3
+    PreviousBoundsMaximum As Core.Vector3
 End Type
 
 Private Type CpuParticle
@@ -79,12 +87,12 @@ End Type
 Private Dim Ready As Boolean
 Private Dim ErrorValue As Number
 Private Dim Epoch As Number
-Private Dim Items[4] As EmitterState
-Private Dim Systems[20] As Core.GpuParticleSystem3D
-Private Dim Batches[16] As Core.ParticleBatch3D
-Private Dim Particles[1536] As CpuParticle
-Private Dim NextSlot[20] As Number
-Private Dim SpawnRemainder[20] As Number
+Private Dim Items[6] As EmitterState
+Private Dim Systems[30] As Core.GpuParticleSystem3D
+Private Dim Batches[24] As Core.ParticleBatch3D
+Private Dim Particles[2304] As CpuParticle
+Private Dim NextSlot[30] As Number
+Private Dim SpawnRemainder[30] As Number
 Private Dim Textures[3] As Core.Texture3D
 Private Dim Materials[5] As Core.Material3D
 Private Dim AssetDirectory As Text
@@ -194,7 +202,8 @@ Private Function Mutable(Index As Number) As Boolean
 
         If Systems[Index * 5 + Layer].Handle <> 0 Then
 
-            If Graphics3D.GpuParticleValue3D(39, Systems[Index * 5 + Layer].Handle) <> 0 Then
+            If Graphics3D.GpuParticleValue3D(Graphics3D.GPU_PARTICLE_QUERY_RESOURCE_IN_FLIGHT,
+                Systems[Index * 5 + Layer].Handle) <> 0 Then
                 ErrorValue = ERROR_IN_FLIGHT
                 Return False
             End If
@@ -205,7 +214,8 @@ Private Function Mutable(Index As Number) As Boolean
 
             If Batches[Index * 4 + Layer].Handle <> 0 Then
 
-                If Graphics3D.VfxValue3D(35, Batches[Index * 4 + Layer].Handle) <> 0 Then
+                If Graphics3D.VfxValue3D(Graphics3D.VFX_QUERY_RESOURCE_IN_FLIGHT,
+                    Batches[Index * 4 + Layer].Handle) <> 0 Then
                     ErrorValue = ERROR_IN_FLIGHT
                     Return False
                 End If
@@ -268,6 +278,13 @@ Private Function RandomValue(Index As Number, Range As Number) As Number
 
     Dim Result As Number
 
+    If (Index < 0 Or
+        Index >= MAX_EMITTERS Or
+        Range <= 0) Then
+        ErrorValue = ERROR_SOURCE
+        Return 0
+    End If
+
     Items[Index].Seed = (Items[Index].Seed * 48271) Mod 2147483647
     Result = Items[Index].Seed Mod Range
 
@@ -278,6 +295,13 @@ End Function
 Private Function LayerCapacity(Layer As Number, Quality As Number) As Number
 
     Dim Result As Number
+
+    If (Layer < 0 Or
+        Layer > 4 Or
+        Quality < QUALITY_LOW Or
+        Quality > QUALITY_HIGH) Then
+        Return 0
+    End If
 
     Result = 512
 
@@ -308,12 +332,22 @@ Private Function ConfigureLayer(Index As Number, Layer As Number) As Boolean
     Dim Shader As Number
     Dim Alignment As Number
     Dim Columns As Number
-    Dim Minimum As Core.Vector3
-    Dim Maximum As Core.Vector3
     Dim Ok As Boolean
+
+    If (Index < 0 Or
+        Index >= MAX_EMITTERS Or
+        Layer < 0 Or
+        Layer > 4) Then
+        Return False
+    End If
 
     Key = Index * 5 + Layer
     Radius = Items[Index].Radius
+
+    If Radius < 2 Or Radius > 2000 Then
+        Return False
+    End If
+
     Buoyancy = Radius * 5
     Drag = 700
     Cooling = 330
@@ -365,12 +399,6 @@ Private Function ConfigureLayer(Index As Number, Layer As Number) As Boolean
         Alignment = 0
     End If
 
-    Minimum.X = -1000000
-    Minimum.Y = -1000000
-    Minimum.Z = -1000000
-    Maximum.X = 1000000
-    Maximum.Y = 1000000
-    Maximum.Z = 1000000
     Ok = Graphics3D.SetGpuParticleForces3D(Systems[Key], 0, Gravity, 0,
         Items[Index].Wind.X, Items[Index].Wind.Y, Items[Index].Wind.Z, Buoyancy, Drag)
     Ok = Graphics3D.SetGpuParticleTurbulence3D(Systems[Key],
@@ -378,10 +406,57 @@ Private Function ConfigureLayer(Index As Number, Layer As Number) As Boolean
         Items[Index].Quality - 1) And Ok
     Ok = Graphics3D.SetGpuParticleThermalEvolution3D(Systems[Key],
         Cooling, Dissipation, Growth, Radius * 35) And Ok
-    Ok = Graphics3D.SetGpuParticleBounds3D(Systems[Key], Minimum, Maximum) And Ok
+    Ok = ApplyLayerBounds(Index, Layer) And Ok
     Ok = Graphics3D.SetGpuParticleRender3D(Systems[Key], Shader, Alignment, Columns, Columns) And Ok
 
     Return Ok
+
+End Function
+
+''' Two two-second source buckets outlive the longest particle (1.65 seconds).
+''' Keep old wakes inside the bound while a moving source travels away from them.
+Private Sub TrackSourceBounds(Index As Number)
+
+    If Items[Index].Age / 2000 > Items[Index].BoundsBucket Then
+
+        Items[Index].BoundsBucket = Items[Index].Age / 2000
+        Items[Index].PreviousBoundsMinimum = Items[Index].BoundsMinimum
+        Items[Index].PreviousBoundsMaximum = Items[Index].BoundsMaximum
+        Items[Index].BoundsMinimum = Items[Index].Source
+        Items[Index].BoundsMaximum = Items[Index].Source
+
+    End If
+
+    Items[Index].BoundsMinimum.X = Min(Items[Index].BoundsMinimum.X, Min(Items[Index].Source.X, Items[Index].Tip.X))
+    Items[Index].BoundsMinimum.Y = Min(Items[Index].BoundsMinimum.Y, Min(Items[Index].Source.Y, Items[Index].Tip.Y))
+    Items[Index].BoundsMinimum.Z = Min(Items[Index].BoundsMinimum.Z, Min(Items[Index].Source.Z, Items[Index].Tip.Z))
+    Items[Index].BoundsMaximum.X = Max(Items[Index].BoundsMaximum.X, Max(Items[Index].Source.X, Items[Index].Tip.X))
+    Items[Index].BoundsMaximum.Y = Max(Items[Index].BoundsMaximum.Y, Max(Items[Index].Source.Y, Items[Index].Tip.Y))
+    Items[Index].BoundsMaximum.Z = Max(Items[Index].BoundsMaximum.Z, Max(Items[Index].Source.Z, Items[Index].Tip.Z))
+
+End Sub
+
+Private Function ApplyLayerBounds(Index As Number, Layer As Number) As Boolean
+
+    Dim Minimum As Core.Vector3
+    Dim Maximum As Core.Vector3
+    Dim Margin As Number
+    Dim DirectionSpeed As Number
+    Dim Result As Boolean
+
+    DirectionSpeed = Max(Abs(Items[Index].Direction.X), Max(Abs(Items[Index].Direction.Y), Abs(Items[Index].Direction.Z)))
+    ''' Speed cap is 35 radii/sec, lifetime <= 1.65 sec, plus sprite growth,
+    ''' initial directed velocity and bounded inherited source velocity.
+    Margin = Items[Index].Radius * 100 + DirectionSpeed * 2 + 3200
+    Minimum.X = Max(-1000000, Min(Items[Index].BoundsMinimum.X, Items[Index].PreviousBoundsMinimum.X) - Margin)
+    Minimum.Y = Max(-1000000, Min(Items[Index].BoundsMinimum.Y, Items[Index].PreviousBoundsMinimum.Y) - Margin)
+    Minimum.Z = Max(-1000000, Min(Items[Index].BoundsMinimum.Z, Items[Index].PreviousBoundsMinimum.Z) - Margin)
+    Maximum.X = Min(1000000, Max(Items[Index].BoundsMaximum.X, Items[Index].PreviousBoundsMaximum.X) + Margin)
+    Maximum.Y = Min(1000000, Max(Items[Index].BoundsMaximum.Y, Items[Index].PreviousBoundsMaximum.Y) + Margin)
+    Maximum.Z = Min(1000000, Max(Items[Index].BoundsMaximum.Z, Items[Index].PreviousBoundsMaximum.Z) + Margin)
+    Result = Graphics3D.SetGpuParticleBounds3D(Systems[Index * 5 + Layer], Minimum, Maximum)
+
+    Return Result
 
 End Function
 
@@ -419,6 +494,57 @@ Private Function ReserveLayers(Index As Number) As Boolean
     Dim Columns As Number
     Dim MaterialIndex As Number
     Dim Ok As Boolean
+    Dim RequiredSlots As Number
+    Dim AvailableSystems As Number
+    Dim AvailableSlots As Number
+
+    If Index < 0 Or Index >= MAX_EMITTERS Then
+        Return False
+    End If
+
+    ''' Admission is complete before creating any layer. All effects share these limits.
+
+    If Items[Index].Backend = SIMULATION_GPU Then
+
+        AvailableSystems = (Graphics3D.GpuParticleValue3D(Graphics3D.GPU_PARTICLE_QUERY_MAX_SYSTEMS) -
+            Graphics3D.GpuParticleValue3D(Graphics3D.GPU_PARTICLE_QUERY_LIVE_SYSTEMS))
+
+        If AvailableSystems < 5 Then
+            Items[Index].Fallback = FALLBACK_SYSTEM_CAPACITY
+            Return False
+        End If
+
+        For Layer = 0 To 4
+            RequiredSlots = RequiredSlots + LayerCapacity(Layer, Items[Index].Quality)
+        End For
+
+        AvailableSlots = (Graphics3D.GpuParticleValue3D(Graphics3D.GPU_PARTICLE_QUERY_MAX_TOTAL_CAPACITY) -
+            Graphics3D.GpuParticleValue3D(Graphics3D.GPU_PARTICLE_QUERY_TOTAL_CAPACITY))
+
+        If AvailableSlots < RequiredSlots Then
+            Items[Index].Fallback = FALLBACK_SLOT_CAPACITY
+            Return False
+        End If
+
+    Else
+
+        AvailableSystems = (Graphics3D.VfxValue3D(Graphics3D.VFX_QUERY_MAX_PARTICLE_BATCHES) -
+            Graphics3D.VfxValue3D(Graphics3D.VFX_QUERY_LIVE_PARTICLE_BATCHES))
+
+        If AvailableSystems < 4 Then
+            Items[Index].Fallback = FALLBACK_SYSTEM_CAPACITY
+            Return False
+        End If
+
+        AvailableSlots = (Graphics3D.VfxValue3D(Graphics3D.VFX_QUERY_MAX_STAGED_PARTICLES) -
+            Graphics3D.VfxValue3D(Graphics3D.VFX_QUERY_STAGED_PARTICLE_CAPACITY))
+
+        If AvailableSlots < 384 Then
+            Items[Index].Fallback = FALLBACK_SLOT_CAPACITY
+            Return False
+        End If
+
+    End If
 
     Ok = True
 
@@ -457,9 +583,13 @@ Private Function ReserveLayers(Index As Number) As Boolean
         End If
 
         If Not Ok Then
+
+            Items[Index].Fallback = FALLBACK_RESOURCE_CREATION
+
             Call ReleaseLayers(Index)
 
             Return False
+
         End If
 
     End For
@@ -550,6 +680,11 @@ Public Function StartAt(Name As Text, Position As Core.Vector3, Seed As Number,
     Items[Index].Restarts = 0
     Items[Index].Finished = False
     Items[Index].DebugLayer = -1
+    Items[Index].BoundsBucket = 0
+    Items[Index].BoundsMinimum = Position
+    Items[Index].BoundsMaximum = Position
+    Items[Index].PreviousBoundsMinimum = Position
+    Items[Index].PreviousBoundsMaximum = Position
 
     For ParticleIndex = Index * 384 To Index * 384 + 383
         Particles[ParticleIndex].Lifetime = 0
@@ -579,7 +714,6 @@ Public Function StartAt(Name As Text, Position As Core.Vector3, Seed As Number,
 
             Items[Index].Backend = SIMULATION_CPU
             Items[Index].Quality = QUALITY_LOW
-            Items[Index].Fallback = FALLBACK_GPU_UNAVAILABLE
             Ok = ReserveLayers(Index)
 
         End If
@@ -1149,6 +1283,7 @@ Public Sub Update(ElapsedMilliseconds As Number)
     Dim Value As FireEmitter
     Dim Lost As Boolean
     Dim Travel As Number
+    Dim TipTravel As Number
 
     If Not Ready Then
         Return
@@ -1160,6 +1295,10 @@ Public Sub Update(ElapsedMilliseconds As Number)
     End If
 
     Accepted = Clamp(ElapsedMilliseconds, 0, 100)
+
+    If Accepted = 0 Then
+        Return
+    End If
 
     For Index = 0 To MAX_EMITTERS - 1
 
@@ -1209,8 +1348,11 @@ Public Sub Update(ElapsedMilliseconds As Number)
                 Travel = ((Source.X - Items[Index].Previous.X) * (Source.X - Items[Index].Previous.X) +
                     (Source.Y - Items[Index].Previous.Y) * (Source.Y - Items[Index].Previous.Y) +
                     (Source.Z - Items[Index].Previous.Z) * (Source.Z - Items[Index].Previous.Z))
+                TipTravel = ((Items[Index].Tip.X - Items[Index].PreviousTip.X) * (Items[Index].Tip.X - Items[Index].PreviousTip.X) +
+                    (Items[Index].Tip.Y - Items[Index].PreviousTip.Y) * (Items[Index].Tip.Y - Items[Index].PreviousTip.Y) +
+                    (Items[Index].Tip.Z - Items[Index].PreviousTip.Z) * (Items[Index].Tip.Z - Items[Index].PreviousTip.Z))
 
-                If Travel > Items[Index].Radius * Items[Index].Radius * 400 Then
+                If Max(Travel, TipTravel) > Items[Index].Radius * Items[Index].Radius * 400 Then
 
                     Items[Index].Velocity.X = 0
                     Items[Index].Velocity.Y = 0
@@ -1226,6 +1368,16 @@ Public Sub Update(ElapsedMilliseconds As Number)
 
             Items[Index].Remainder = Items[Index].Remainder + Accepted
             Lost = False
+
+            Call TrackSourceBounds(Index)
+
+            If Items[Index].Backend = SIMULATION_GPU Then
+
+                For Layer = 0 To 4
+                    Lost = Not ApplyLayerBounds(Index, Layer) Or Lost
+                End For
+
+            End If
 
             Do
 
@@ -1295,7 +1447,9 @@ Public Sub Update(ElapsedMilliseconds As Number)
 
                         If Items[Index].Backend = SIMULATION_GPU Then
                             Ok = Graphics3D.AdvanceGpuParticleSystem3D(Systems[Key], 10)
-                            Lost = (Not Ok Or Graphics3D.GpuParticleValue3D(38, Systems[Key].Handle) <> 2 Or Lost)
+                            Lost = (Not Ok Or Graphics3D.GpuParticleValue3D(
+                                Graphics3D.GPU_PARTICLE_QUERY_RESOURCE_EFFECTIVE_SIMULATION,
+                                Systems[Key].Handle) <> SIMULATION_GPU Or Lost)
                         Else
 
                             Call StepCpu(Index, Layer)

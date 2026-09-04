@@ -15,6 +15,7 @@ Game Window "Native Thermal Fire Contract Tests" Size 320 By 240
 Do
 
     Call RunTests()
+    Call TestSharedBudget()
     Call TestArena()
     Call TestBackdrop()
 
@@ -34,6 +35,86 @@ Sub Check(Condition As Boolean)
         Failures = Failures + 1
         Print "Failed check "; Checks
     End If
+
+End Sub
+
+Sub TestSharedBudget()
+
+    Dim OtherEffects[28] As Core.GpuParticleSystem3D
+    Dim FullSlots[2] As Core.GpuParticleSystem3D
+    Dim OtherBatches[29] As Core.ParticleBatch3D
+    Dim Material As Core.Material3D
+    Dim Texture As Core.Texture3D
+    Dim Position As Core.Vector3
+    Dim Emitter As Fire.FireEmitter
+    Dim Index As Number
+
+    Call Graphics3D.ResetRenderer3D()
+
+    If Graphics3D.GpuParticleValue3D(Graphics3D.GPU_PARTICLE_QUERY_NATIVE_THERMAL) = 0 Then
+        Return
+    End If
+
+    Call Check(Fire.Initialize("Assets/Fire"))
+
+    Material = Graphics3D.CreateEffectMaterial3D(Texture, Graphics3D.MATERIAL_ALPHA_ADDITIVE)
+
+    For Index = 0 To 27
+        OtherEffects[Index] = Graphics3D.CreateGpuParticleSystem3D(1, Material, Graphics3D.GPU_PARTICLE_SIMULATION_CPU_DETERMINISTIC, 10)
+
+        Call Check(OtherEffects[Index].Handle <> 0)
+    End For
+
+    ''' Generic ice/magic resources consume the same pool: no partial fire admission.
+    Emitter = Fire.StartAt("TorchFire", Position, 600)
+
+    Call Check(Emitter.Slot <> 0 And Fire.Value(9, Emitter) = Fire.FALLBACK_SYSTEM_CAPACITY)
+    Call Check(Fire.Value(3, Emitter) = Fire.SIMULATION_CPU)
+    Call Check(Graphics3D.GpuParticleValue3D(Graphics3D.GPU_PARTICLE_QUERY_LIVE_SYSTEMS) = 28)
+    Call Check(Fire.Destroy(Emitter))
+
+    For Index = 0 To 28
+        OtherBatches[Index] = Graphics3D.CreateParticleBatch3D(1, Material, Graphics3D.VFX_BILLBOARD_CAMERA, 1, 1)
+
+        Call Check(OtherBatches[Index].Handle <> 0)
+    End For
+
+    Emitter = Fire.StartAt("TorchFire", Position, 601)
+
+    Call Check(Emitter.Slot = 0)
+    Call Check(Graphics3D.LiveParticleBatchCount3D() = 29)
+    Call Check(Graphics3D.GpuParticleValue3D(Graphics3D.GPU_PARTICLE_QUERY_LIVE_SYSTEMS) = 28)
+
+    For Index = 0 To 28
+        Call Graphics3D.DestroyParticleBatch3D(OtherBatches[Index])
+    End For
+
+    For Index = 0 To 27
+        Call Graphics3D.DestroyGpuParticleSystem3D(OtherEffects[Index])
+    End For
+
+    For Index = 0 To 1
+        FullSlots[Index] = Graphics3D.CreateGpuParticleSystem3D(16384, Material, Graphics3D.GPU_PARTICLE_SIMULATION_GPU_FAST, 10)
+
+        Call Check(FullSlots[Index].Handle <> 0)
+    End For
+
+    Emitter = Fire.StartAt("TorchFire", Position, 602)
+
+    Call Check(Emitter.Slot <> 0 And Fire.Value(9, Emitter) = Fire.FALLBACK_SLOT_CAPACITY)
+    Call Check(Fire.Value(3, Emitter) = Fire.SIMULATION_CPU)
+    Call Check(Graphics3D.GpuParticleValue3D(Graphics3D.GPU_PARTICLE_QUERY_TOTAL_CAPACITY) = 32768)
+    Call Check(Fire.Destroy(Emitter))
+
+    For Index = 0 To 1
+        Call Graphics3D.DestroyGpuParticleSystem3D(FullSlots[Index])
+    End For
+
+    Call Graphics3D.DestroyMaterial3D(Material)
+    Call Fire.Shutdown()
+    Call Check(Graphics3D.GpuParticleValue3D(Graphics3D.GPU_PARTICLE_QUERY_LIVE_SYSTEMS) = 0)
+    Call Check(Graphics3D.GpuParticleValue3D(Graphics3D.GPU_PARTICLE_QUERY_TOTAL_CAPACITY) = 0)
+    Call Check(Graphics3D.LiveParticleBatchCount3D() = 0)
 
 End Sub
 
@@ -131,7 +212,7 @@ End Sub
 
 Sub RunTests()
 
-    Dim Emitters[4] As Fire.FireEmitter
+    Dim Emitters[6] As Fire.FireEmitter
     Dim Empty As Fire.FireEmitter
     Dim Stale As Fire.FireEmitter
     Dim Rejected As Fire.FireEmitter
@@ -207,7 +288,7 @@ Sub RunTests()
 
     Call Check(Fire.Destroy(Emitters[0]))
 
-    For Index = 0 To 3
+    For Index = 0 To 5
         Emitters[Index] = Fire.StartAt("TorchFire", Position, Index + 1, 3, 3)
 
         Call Check(Emitters[Index].Slot <> 0)
@@ -216,14 +297,21 @@ Sub RunTests()
     Rejected = Fire.StartAt("TorchFire", Position, 99)
 
     Call Check(Rejected.Slot = 0)
-    Call Check(Fire.Value(1, Empty) = 4)
-    Call Check(Fire.Value(3, Emitters[3]) = Fire.SIMULATION_CPU)
+    Call Check(Fire.Value(1, Empty) = 6)
+
+    If Graphics3D.GpuParticleValue3D(Graphics3D.GPU_PARTICLE_QUERY_NATIVE_THERMAL) <> 0 Then
+        Call Check(Fire.Value(3, Emitters[5]) = Fire.SIMULATION_GPU)
+        Call Check(Graphics3D.GpuParticleValue3D(Graphics3D.GPU_PARTICLE_QUERY_LIVE_SYSTEMS) = 30)
+    Else
+
+        Call Check(Fire.Value(3, Emitters[5]) = Fire.SIMULATION_CPU)
+    End If
 
     For Tick = 1 To 20
         Call Fire.Update(100)
     End For
 
-    For Index = 0 To 3
+    For Index = 0 To 5
         Call Fire.StopEmitter(Emitters[Index])
     End For
 
@@ -231,13 +319,52 @@ Sub RunTests()
         Call Fire.Update(100)
     End For
 
-    For Index = 0 To 3
+    For Index = 0 To 5
         Call Check(Fire.Value(6, Emitters[Index]) = 0)
         Call Check(Fire.Destroy(Emitters[Index]))
     End For
 
     Call Check(Graphics3D.GpuParticleValue3D(1) = 0)
     Call Check(Graphics3D.GpuParticleValue3D(8) = 0)
+    Call Check(Graphics3D.LiveParticleBatchCount3D() = 0)
+
+    ''' One sword, one impact and two torches coexist; a dragon adds a fifth effect.
+    Emitters[0] = Fire.StartAt("PaladinFlameBlade", Position, 100, Fire.QUALITY_HIGH)
+    Emitters[1] = Fire.StartAt("FireBurstGen3", Position, 101, Fire.QUALITY_MEDIUM)
+    Emitters[2] = Fire.StartAt("TorchFire", Position, 102, Fire.QUALITY_MEDIUM)
+    Emitters[3] = Fire.StartAt("TorchFire", Position, 103, Fire.QUALITY_MEDIUM)
+    Emitters[4] = Fire.StartAt("DragonFireBreathPreview", Position, 104, Fire.QUALITY_HIGH)
+
+    For Index = 0 To 4
+        Call Check(Emitters[Index].Slot <> 0)
+    End For
+
+    If Graphics3D.GpuParticleValue3D(Graphics3D.GPU_PARTICLE_QUERY_NATIVE_THERMAL) <> 0 Then
+
+        Call Check(Graphics3D.GpuParticleValue3D(Graphics3D.GPU_PARTICLE_QUERY_LIVE_SYSTEMS) = 25)
+        Call Check(Graphics3D.GpuParticleValue3D(Graphics3D.GPU_PARTICLE_QUERY_TOTAL_CAPACITY) = 5824)
+        Call Check(Fire.Value(3, Emitters[4]) = Fire.SIMULATION_GPU)
+
+    End If
+
+    Call Fire.Update(100)
+
+    Ok = Graphics3D.Begin3D(Camera, 0, 0, 0)
+
+    For Index = 0 To 4
+        Call Check(Fire.Draw(Emitters[Index]))
+    End For
+
+    Call Check(Ok And Graphics3D.End3DChecked())
+
+    Show Screen
+
+    For Index = 0 To 4
+        Call Check(Fire.Destroy(Emitters[Index]))
+    End For
+
+    Call Check(Graphics3D.GpuParticleValue3D(Graphics3D.GPU_PARTICLE_QUERY_LIVE_SYSTEMS) = 0)
+    Call Check(Graphics3D.GpuParticleValue3D(Graphics3D.GPU_PARTICLE_QUERY_TOTAL_CAPACITY) = 0)
     Call Check(Graphics3D.LiveParticleBatchCount3D() = 0)
 
     Emitters[0] = Fire.StartAt("FireBurstGen3", Position, 11, 1, 1)

@@ -25,7 +25,9 @@
     "viewerProject": "tools/Character3DViewer/Character3DViewer.smileproj"
   },
   "calibration": {
-    "storageVersion": 2,
+    "storageVersion": 3,
+    "jsonSchemaVersion": 2,
+    "profileIdentity": "Calibration/arin-v5.7-profile.json",
     "keyframeChannels": 20,
     "equipmentDecoupling": "per-key sword.decoupled and shield.decoupled; defaults false",
     "readableSnapshot": "Calibration/arin-v5.7-pose-calibration.json",
@@ -33,6 +35,13 @@
     "syncScript": "scripts/sync-arin-v5-7-calibration.ps1"
   },
   "previews": "arin-v57-idle-previews",
+  "modelQuality": {
+    "report": "Diagnostics/model-quality.json",
+    "developmentUse": "allowed",
+    "productionAssetApproval": "blocked",
+    "releaseEnablement": "blocked",
+    "reason": "Visible hollow interior through open surfaces; separate v5.8 geometry repair required."
+  },
   "build": {
     "entryPoint": "scripts/build-arin-v5-7-idle-checkpoint.ps1",
     "blenderBuilder": "scripts/build-arin-v5-7-idle-checkpoint.py",

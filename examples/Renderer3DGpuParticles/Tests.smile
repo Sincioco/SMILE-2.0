@@ -38,6 +38,7 @@ Sub RunTests()
     Dim System7 As Core.GpuParticleSystem3D
     Dim System8 As Core.GpuParticleSystem3D
     Dim System9 As Core.GpuParticleSystem3D
+    Dim ExtraSystems[24] As Core.GpuParticleSystem3D
     Dim OldSystem As Core.GpuParticleSystem3D
     Dim Slot As Number
 
@@ -66,7 +67,8 @@ Sub RunTests()
     Call Check(System.Handle <> 0)
     Call Check(Graphics3D.GpuParticleSystemHandleValid3D(System))
     Call Check(Graphics3D.GpuParticleValue3D(Graphics3D.GPU_PARTICLE_QUERY_LIVE_SYSTEMS) = 1)
-    Call Check(Graphics3D.GpuParticleValue3D(Graphics3D.GPU_PARTICLE_QUERY_MAX_SYSTEMS) = 8)
+    Call Check(Graphics3D.GpuParticleValue3D(Graphics3D.GPU_PARTICLE_QUERY_MAX_SYSTEMS) = 32)
+    Call Check(Graphics3D.GpuParticleValue3D(Graphics3D.GPU_PARTICLE_QUERY_MAX_TOTAL_CAPACITY) = 32768)
     Call Check(Graphics3D.GpuParticleValue3D(Graphics3D.GPU_PARTICLE_QUERY_MAX_CAPACITY) = 8192)
     Call Check(Graphics3D.GpuParticleValue3D(Graphics3D.GPU_PARTICLE_QUERY_STATE_SCHEMA) = 1)
     Call Check(Graphics3D.GpuParticleValue3D(Graphics3D.GPU_PARTICLE_QUERY_STATE_STRIDE) = 80)
@@ -126,6 +128,14 @@ Sub RunTests()
         Material,
         Graphics3D.GPU_PARTICLE_SIMULATION_CPU_DETERMINISTIC
     )
+    AllAccepted = True
+
+    For Slot = 0 To 23
+        ExtraSystems[Slot] = Graphics3D.CreateGpuParticleSystem3D(
+            1, Material, Graphics3D.GPU_PARTICLE_SIMULATION_CPU_DETERMINISTIC)
+        AllAccepted = AllAccepted And ExtraSystems[Slot].Handle <> 0
+    End For
+
     System9 = Graphics3D.CreateGpuParticleSystem3D(
         1,
         Material,
@@ -139,8 +149,8 @@ Sub RunTests()
     Call Check(System6.Handle <> 0)
     Call Check(System7.Handle <> 0)
     Call Check(System8.Handle <> 0)
-    Call Check(System9.Handle = 0)
-    Call Check(Graphics3D.GpuParticleValue3D(Graphics3D.GPU_PARTICLE_QUERY_LIVE_SYSTEMS) = 8)
+    Call Check(AllAccepted And System9.Handle = 0)
+    Call Check(Graphics3D.GpuParticleValue3D(Graphics3D.GPU_PARTICLE_QUERY_LIVE_SYSTEMS) = 32)
 
     Call Check(Graphics3D.SetGpuParticleSpawnKinematics3D(System, 0, 0, 0, 0, 100, 0, 0))
     Call Check(Graphics3D.SetGpuParticleSpawnVisual3D(System, 0, 30, 10, 20, 0, 90, 900, 800))

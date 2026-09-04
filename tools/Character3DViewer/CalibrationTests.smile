@@ -1,0 +1,189 @@
+''' Injected in place of the interactive startup only; all Viewer procedures are real.
+Dim TestFailures As Number
+Dim TestIndex As Number
+Dim TestSavedCount As Number
+Dim TestFireAge As Number
+Dim TestFireGeneration As Number
+Dim TestVisualEpoch As Number
+Dim TestAnchor As Core.Vector3
+Dim TestPosition As Core.Vector3
+
+Game Window "SMILE Calibration Isolation Tests" Size 640 By 480
+
+ProfileIndex = ViewerProfiles.PROFILE_ARIN
+
+Call LoadViewer()
+Call CalibrationCheck(Ready And Not ViewerError, "Load profile")
+Call CalibrationCheck(Character3D.SocketCount(Character) = 13, "Thirteen sockets")
+Call ClearCalibrationMemory()
+
+ScenePaused = True
+DemoEnabled = False
+SelectedClip = 3
+CalibrationTarget = CALIBRATION_TARGET_SWORD
+CalibrationAxis = CALIBRATION_AXIS_X
+
+Call PlaySelectedClip()
+
+SwordPositionCalibration[3, 0] = 2
+CalibrationSaved = True
+CalibrationSavedClip = 3
+CalibrationSavedFrame = 0
+
+Call CalibrationCheck(StoreCalibrationKeyframe(3, 0), "Store first key")
+Call SaveCalibrationKeyframes()
+Call UndoLastCalibrationChange()
+Call CalibrationCheck(CalibrationKeyframeCounts[3] = 0, "Undo also restores a never-saved empty track")
+
+CalibrationSaved = True
+CalibrationSavedClip = 3
+CalibrationSavedFrame = 0
+SwordPositionCalibration[3, 0] = 2
+
+Call CalibrationCheck(StoreCalibrationKeyframe(3, 0), "Restore first key")
+Call SaveCalibrationKeyframes()
+
+SwordPositionCalibration[3, 0] = 7
+
+Call CalibrationCheck(StoreCalibrationKeyframe(3, 10), "Store second key")
+Call SaveCalibrationKeyframes()
+Call CalibrationCheck(CalibrationKeyframeValues[3, 12] = 2, "Second key cannot modify first")
+Call CalibrationCheck(CalibrationKeyframeValues[3, 32] = 7, "Second key stores full move channels")
+Call UndoLastCalibrationChange()
+Call CalibrationCheck(CalibrationKeyframeCounts[3] = 1, "Undo insertion")
+Call CalibrationCheck(CalibrationKeyframeValues[3, 12] = 2, "Undo preserves all channels")
+Call ClearSelectedClipCalibration()
+Call CalibrationCheck(CalibrationKeyframeCounts[3] = 0, "Selected clip cleared")
+Call UndoLastCalibrationChange()
+Call CalibrationCheck(CalibrationKeyframeCounts[3] = 1, "Undo selected clip delete")
+
+TestSavedCount = CalibrationStorageCount
+CalibrationStorage[10] = 0
+
+Call CalibrationCheck(Not DecodeCalibrationStorage(TestSavedCount), "Reject profile fingerprint")
+
+CalibrationStorage[10] = Text_Code_At(CALIBRATION_PROFILE_FINGERPRINT, 0)
+
+Call CalibrationCheck(DecodeCalibrationStorage(TestSavedCount), "Decode all named clips")
+Call ApplyWristCalibration()
+Call ApplyEquipmentCalibration()
+
+CalibrationHoldGrip = True
+CalibrationTransform = CALIBRATION_TRANSFORM_ROTATE
+TestAnchor = EquipmentGripThousandths(ARIN_SWORD_PART_INDEX, "HandRight")
+
+For TestIndex = 1 To 6
+
+    Call SetCurrentCalibrationValue(45)
+    Call SaveCalibrationFrame()
+    Call ReloadCurrentCalibrationKeyframe()
+    Call SetCurrentCalibrationValue(0)
+    Call SaveCalibrationFrame()
+    Call ReloadCurrentCalibrationKeyframe()
+End For
+
+TestPosition = EquipmentGripThousandths(ARIN_SWORD_PART_INDEX, "HandRight")
+
+Call CalibrationCheck(Abs(TestPosition.X - TestAnchor.X) < 1000 And
+    Abs(TestPosition.Y - TestAnchor.Y) < 1000 And Abs(TestPosition.Z - TestAnchor.Z) < 1000,
+    "Repeated in-place inverse rotations do not accumulate whole-unit drift")
+Call CalibrationCheck(SocketReferencePart("SwordTip") = ARIN_SWORD_PART_INDEX, "Sword marker owns equipment transform")
+Call CalibrationCheck(SocketReferencePart("ShieldFireTip") = ARIN_SHIELD_PART_INDEX, "Shield marker owns equipment transform")
+Call CalibrationCheck(SocketReferencePart("HandRight") = ARIN_BODY_PART_INDEX, "Hand marker owns wrist transform")
+
+CameraElapsed = 16
+FlameAnimationPaused = False
+
+Call UpdateEquipmentFire()
+Call CalibrationCheck(SwordFire.Slot <> 0 And Not ShieldFireFailed, "All equipment emitters admitted")
+
+TestFireAge = Fire.Value(10, SwordFire)
+
+Call UpdateEquipmentFire()
+Call CalibrationCheck(Fire.Value(10, SwordFire) > TestFireAge, "Flames animate while scene paused")
+
+FlameAnimationPaused = True
+TestFireAge = Fire.Value(10, SwordFire)
+
+Call UpdateEquipmentFire()
+Call CalibrationCheck(Fire.Value(10, SwordFire) = TestFireAge, "Paused flame clock stays frozen")
+
+TestVisualEpoch = VisualContinuityEpoch
+
+Call SeekFirstAnimationFrame()
+Call CalibrationCheck(VisualContinuityEpoch > TestVisualEpoch, "Seek invalidates visual history")
+Call UpdateEquipmentFire()
+Call CalibrationCheck(Fire.Value(10, SwordFire) = 0, "Seek does not warm up paused flames")
+
+FlameAnimationPaused = False
+
+Call UpdateEquipmentFire()
+Call CalibrationCheck(Fire.Value(10, SwordFire) <= 20, "Flame resume has no catch-up burst")
+
+TestFireGeneration = SwordFire.Generation
+
+Call PlaySelectedClip(True)
+Call UpdateEquipmentFire()
+Call CalibrationCheck(SwordFire.Generation = TestFireGeneration, "Automatic playback keeps fire tails")
+Call SelectClip(0)
+Call UpdateEquipmentFire()
+Call CalibrationCheck(SwordFire.Generation <> TestFireGeneration, "Explicit clip selection clears old fire")
+
+Do
+
+    ScenePaused = True
+    PresentationElapsed = 60000
+
+    Call AdvanceAnimationSequence()
+    Call CalibrationCheck(Not DemoEnabled And ScenePaused, "No idle timer enables Demo or resumes")
+    Call HandleKeyboard(KEY_SPACE)
+    Call CalibrationCheck(Not ScenePaused, "Space resumes")
+    Call HandleKeyboard(KEY_SPACE)
+    Call CalibrationCheck(ScenePaused, "Space pauses")
+
+    Show Screen
+
+Loop Until True
+
+FlameAnimationPaused = True
+CalibrationVisible = True
+DragonVisible = False
+FloorVisible = False
+GridVisible = False
+UiVisibility = 2
+
+Call ResetAll()
+Call CalibrationCheck(Not ScenePaused And Not FlameAnimationPaused And DemoEnabled, "Reset restores playback defaults")
+Call CalibrationCheck(Not CalibrationVisible And UiVisibility = 0, "Reset hides pose panel and restores UI")
+Call CalibrationCheck(DragonVisible And FloorVisible And GridVisible, "Reset restores the arena")
+Call CalibrationCheck(CalibrationKeyframeCounts[3] = 1, "Reset preserves saved corrections")
+
+UiVisibility = 0
+
+Call HandleKeyboard(KEY_BACKTICK)
+Call CalibrationCheck(UiVisibility = 1, "First backtick hides panels")
+Call HandleKeyboard(KEY_BACKTICK)
+Call CalibrationCheck(UiVisibility = 2, "Second backtick hides all UI")
+Call HandleKeyboard(KEY_BACKTICK)
+Call CalibrationCheck(UiVisibility = 0, "Third backtick restores UI")
+
+Call DestroyViewer()
+
+If TestFailures = 0 Then
+    Print "Viewer calibration isolation passed"
+Else
+    Print "Viewer calibration failures:"
+    Print TestFailures
+End If
+
+Sub CalibrationCheck(Condition As Boolean, Label As Text)
+
+    If Not Condition Then
+
+        TestFailures = TestFailures + 1
+        Print "FAIL:"
+        Print Label
+
+    End If
+
+End Sub

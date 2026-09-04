@@ -1,0 +1,128 @@
+{
+  "schemaVersion": 1,
+  "milestone": "M7E-G0",
+  "baselineCommit": "a7fb138189e407f81f6dd096c0fd79738edb7ac4",
+  "evidenceRevision": "G0 changes committed with this report; resolve the containing Git commit.",
+  "canonicalPath": "games/SinStarI/SourceAssets/Characters/Paladin/ArinV57/Calibration/arin-v5.7-pose-calibration.json",
+  "canonicalSha256": "6FE2268E390D228AF4F52AF85E5358B66ACF8DE606D60C514FAC6CA0CF8B51B1",
+  "preMigrationSha256": "322C81349C1C08B8151F9DDA8ADB4ECFE7A200F5F8E0E143A13783B7F02267BA",
+  "liveEnvelopeSha256": "F584F8693EF8058FC1CA663EB8A3715527A4281254B8A12709FE665707D2D0D7",
+  "fingerprint": "f554574e00ec4a9f9c59eac1b3d4adaec9649c90972cc5f0dc6c92859568ba5d",
+  "schema": 2,
+  "storage": 3,
+  "keyCount": 23,
+  "planningKeyCount": 9,
+  "planningSnapshotSupersededByLaterUserSaves": true,
+  "userAuthorizedSavedPoseFreeze": true,
+  "sourceAssets": {
+    "version": 1,
+    "modelSha256": "393D82C06ECCEDF5A13CF3CA835700AA03A6E90ED74B1420569902885E3E1524",
+    "descriptorSha256": "05B8B081FDC1A7CD3ACA70F37D1AEF4BD3377FE6050B8ABE0A8C79AC5462D119",
+    "sm3dSha256": "DC623A682631525C9E921C62E92A21A99C770A1A9C9BFF3E3FD64CEA2F2539B5",
+    "clipNamesSha256": "cd63e3a2c6a50872ea80f18c42868d81d7dac76d5680c9519b3827e793697c66",
+    "socketNamesSha256": "9bdb9312cf118c78c2805c00061541c72fe3aee23ff993269efba5a677a32d6e"
+  },
+  "clipMapping": [
+    {
+      "name": "BlockImpact",
+      "index": 0,
+      "frames": [
+        0
+      ],
+      "sampleCount": 25
+    },
+    {
+      "name": "Defend",
+      "index": 1,
+      "frames": [
+        0
+      ],
+      "sampleCount": 44
+    },
+    {
+      "name": "Hit",
+      "index": 2,
+      "frames": [
+        0
+      ],
+      "sampleCount": 31
+    },
+    {
+      "name": "Idle",
+      "index": 3,
+      "frames": [
+        0
+      ],
+      "sampleCount": 78
+    },
+    {
+      "name": "Run",
+      "index": 4,
+      "frames": [
+        0
+      ],
+      "sampleCount": 23
+    },
+    {
+      "name": "SwordAttack",
+      "index": 5,
+      "frames": [
+        6,
+        9,
+        11,
+        16,
+        19,
+        21,
+        28,
+        30,
+        32,
+        33,
+        34,
+        35,
+        38
+      ],
+      "sampleCount": 47
+    },
+    {
+      "name": "SwordAttack2",
+      "index": 6,
+      "frames": [
+        0,
+        10,
+        14,
+        17
+      ],
+      "sampleCount": 32
+    },
+    {
+      "name": "Walk",
+      "index": 7,
+      "frames": [
+        0
+      ],
+      "sampleCount": 35
+    }
+  ],
+  "validations": {
+    "frameBounds": "pass",
+    "vectorsAndAll20Channels": "pass",
+    "flags": "pass",
+    "counts": "pass",
+    "duplicateFrames": "pass",
+    "duplicateJsonProperties": "pass",
+    "assetHashes": "pass",
+    "canonicalVersusLive": "exact normalized match",
+    "migration": "schema 1/storage 2 to schema 2/storage 3; exact normalized match",
+    "liveUserChannelsChanged": false,
+    "newKeysCreated": false,
+    "historicalWalkFrame19Restored": false
+  },
+  "focusedTests": {
+    "powershellChecks": 42,
+    "schemaAtomicBackupRestore": "pass",
+    "nativeViewerIsolation": "pass",
+    "nativeSaveDataAndPreviousGoodBackup": "pass",
+    "sixInPlaceRotationCycles": "pass, less than one world unit drift",
+    "lifecycleAndUndo": "pass"
+  }
+}

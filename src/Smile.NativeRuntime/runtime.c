@@ -2532,11 +2532,35 @@ fail:
     ExitProcess(2);
 }
 
+/* A failed/corrupt existing block must not replace the previous-known-good backup. */
+static int smile_data_validate_file(const WCHAR* path)
+{
+    HANDLE file = CreateFileW(path, GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
+    LARGE_INTEGER size;
+    unsigned char* bytes = 0;
+    unsigned char digest[32];
+    DWORD read = 0;
+    int valid = 0;
+    if (file == INVALID_HANDLE_VALUE) return 0;
+    if (!GetFileSizeEx(file, &size) || size.QuadPart < 44 || size.QuadPart > 1024 * 1024 + 44) goto done;
+    bytes = (unsigned char*)HeapAlloc(GetProcessHeap(), 0, (SIZE_T)size.QuadPart);
+    if (bytes == 0 || !ReadFile(file, bytes, (DWORD)size.QuadPart, &read, 0) || read != size.QuadPart) goto done;
+    if (bytes[0] != 'S' || bytes[1] != 'M' || bytes[2] != 'D' || bytes[3] != '4' ||
+        smile_data_u32(bytes + 4) != 1 || (long long)smile_data_u32(bytes + 8) != size.QuadPart - 44) goto done;
+    smile_sha_bytes(bytes + 44, (SIZE_T)size.QuadPart - 44, digest);
+    valid = smile_bytes_equal((const char*)digest, (const char*)bytes + 12, 32);
+done:
+    if (bytes != 0) HeapFree(GetProcessHeap(), 0, bytes);
+    CloseHandle(file);
+    return valid;
+}
+
 void smile_save_data_value(const long long* source, long long capacity, long long count, void* owned_key)
 {
     SmileText* key = (SmileText*)owned_key;
     WCHAR path[2048];
     WCHAR temporary[2100] = { 0 };
+    WCHAR backup[2100] = { 0 };
     HANDLE file = INVALID_HANDLE_VALUE;
     unsigned char header[44];
     unsigned char* payload = 0;
@@ -2555,7 +2579,7 @@ void smile_save_data_value(const long long* source, long long capacity, long lon
     if (!valid || !smile_storage_data_path(smile_text_bytes(key), smile_text_length(key), path,
         (int)(sizeof(path) / sizeof(path[0])))) goto fail;
     wsprintfW(temporary, L"%s.tmp.%lu.%I64u", path, GetCurrentProcessId(), GetTickCount64());
-    file = CreateFileW(temporary, GENERIC_WRITE, 0, 0, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
+    file = CreateFileW(temporary, GENERIC_WRITE, 0, 0, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, 0);
     if (file == INVALID_HANDLE_VALUE) goto fail;
     header[0] = 'S'; header[1] = 'M'; header[2] = 'D'; header[3] = '4';
     smile_data_put_u32(header + 4, 1);
@@ -2566,7 +2590,13 @@ void smile_save_data_value(const long long* source, long long capacity, long lon
         !FlushFileBuffers(file)) goto fail;
     CloseHandle(file);
     file = INVALID_HANDLE_VALUE;
-    if (!MoveFileExW(temporary, path, MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH)) goto fail;
+    if (GetFileAttributesW(path) != INVALID_FILE_ATTRIBUTES)
+    {
+        if (!smile_data_validate_file(path)) goto fail;
+        wsprintfW(backup, L"%s.bak", path);
+        if (!ReplaceFileW(path, temporary, backup, 0, 0, 0)) goto fail;
+    }
+    else if (!MoveFileExW(temporary, path, MOVEFILE_WRITE_THROUGH)) goto fail;
     HeapFree(GetProcessHeap(), 0, payload);
     smile_text_release(key);
     return;

@@ -34,6 +34,34 @@ corrections, not new agent-authored pose changes.
 
 ## Files
 
+### M7E-G0 Hardening Update
+
+The completed local hardening gates preserve all model/rig/animation-source bytes
+and Sin's 23 saved poses frozen on September 5, 2026. The schema-2/storage-3
+canonical JSON SHA-256 is
+`6FE2268E390D228AF4F52AF85E5358B66ACF8DE606D60C514FAC6CA0CF8B51B1`.
+All 20 channels per key match the pre-migration save exactly after normalization.
+Calibration now has name-bound full snapshots,
+profile identity, atomic previous-good backups and one-level Undo Last Change;
+see `Calibration/README.md`. Historical key counts below describe earlier
+checkpoints, not a required number of keys to restore.
+
+Socket debug markers now use the same corrected equipment object as the fire;
+hand/body markers retain the body transform. This fixes marker ownership without
+moving the accepted sword, shield or flames. Explicit editor seeks and pose
+changes reset visual history. Normal playback and automatic demo changes retain
+world-space fire tails with zero inheritance across a clip cut. These preview
+transitions are cuts, not corrected-pose cross-fades.
+
+`Diagnostics/model-quality.json` is a read-only Blender audit of the unchanged
+accepted checkpoint. It reports raw boundaries separately from temporary
+coincident-position welding, which leaves 670 boundary edges across 35 meshes.
+Some are intentional armor openings; counts alone cannot classify visible holes.
+The user-confirmed hollow interior remains a source-geometry defect:
+**development use allowed; production asset approval and release enablement
+blocked** until a separately accepted repair. No double-sided or smoke workaround
+has been applied.
+
 | File | Bytes | SHA-256 | Purpose |
 | --- | ---: | --- | --- |
 | `arin-v5.7-with-sword-and-shield.original.glb` | 3,475,428 | `87E9928CC0B80D1217C297001267D3B96D3BCD3380BFB251D74FCA505271857B` | Untouched equipped Tripo export |

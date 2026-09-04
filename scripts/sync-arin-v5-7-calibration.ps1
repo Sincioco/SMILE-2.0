@@ -1,10 +1,15 @@
 [CmdletBinding()]
 param(
-    [ValidateSet('Export', 'Restore', 'Watch')]
+    [ValidateSet('Validate', 'Export', 'Import', 'Compare', 'Backup', 'Restore', 'Watch')]
     [string]$Mode = 'Export',
     [int]$ViewerProcessId = 0,
     [switch]$AllowMissing,
-    [switch]$Force
+    [switch]$Force,
+    [string]$SourcePath,
+    [string]$DestinationPath,
+    [string]$DataRoot,
+    [switch]$MigrateLegacy,
+    [switch]$FunctionsOnly
 )
 
 $ErrorActionPreference = 'Stop'
@@ -26,6 +31,11 @@ $clipNames = @(
     'Walk'
 )
 $channelCount = 20
+$profile = Get-Content -LiteralPath (Join-Path $packageRoot 'Calibration\arin-v5.7-profile.json') -Raw |
+    ConvertFrom-Json -AsHashtable
+$profileClips = $profile.clips
+$legacyClipNames = $clipNames.Clone()
+$clipNames = @($profileClips.name)
 
 function Get-TextSha256([string]$Text) {
     $bytes = [Text.Encoding]::UTF8.GetBytes($Text)
@@ -42,6 +52,91 @@ $keyHash = Get-TextSha256 $dataKey
 $livePath = Join-Path $localAppData `
     "SMILE 2.0\Games\$applicationHash\Data\$keyHash.bin"
 
+function Assert-ConfinedPath([string]$Path) {
+    $resolved = [IO.Path]::GetFullPath($Path)
+    $allowedRoots = @($repositoryRoot, (Join-Path $localAppData 'SMILE 2.0'))
+    $allowed = $false
+    foreach ($root in $allowedRoots) {
+        if ($resolved.StartsWith($root.TrimEnd('\', '/') + [IO.Path]::DirectorySeparatorChar,
+            [StringComparison]::OrdinalIgnoreCase)) { $allowed = $true }
+    }
+    if (-not $allowed) { throw "Calibration path must stay under the repository or SMILE application data: $resolved" }
+    # Resolve existing ancestors as well: a junction must not escape the allowed roots.
+    $ancestor = $resolved
+    while ($ancestor -and -not (Test-Path -LiteralPath $ancestor)) { $ancestor = [IO.Path]::GetDirectoryName($ancestor) }
+    while ($ancestor) {
+        $item = Get-Item -LiteralPath $ancestor -Force
+        if ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) {
+            throw "Calibration paths cannot traverse a junction or symbolic link: $ancestor"
+        }
+        $ancestor = [IO.Path]::GetDirectoryName($ancestor)
+    }
+    return $resolved
+}
+
+if ($DataRoot) {
+    $livePath = Join-Path (Assert-ConfinedPath $DataRoot) "$keyHash.bin"
+}
+if ($SourcePath) { $SourcePath = Assert-ConfinedPath $SourcePath }
+if ($DestinationPath) { $DestinationPath = Assert-ConfinedPath $DestinationPath }
+
+function Get-ProfileIdentity {
+    return [ordered]@{
+        version = 1
+        modelSha256 = $profile.modelSha256
+        descriptorSha256 = $profile.descriptorSha256
+        sm3dSha256 = $profile.sm3dSha256
+        clipNamesSha256 = Get-TextSha256 ($profileClips.name -join "`n")
+        socketNamesSha256 = Get-TextSha256 ($profile.sockets -join "`n")
+    }
+}
+
+function Get-ProfileFingerprint {
+    $identity = Get-ProfileIdentity
+    return Get-TextSha256 (($profile.assetId, $profile.characterVersion,
+        $identity.modelSha256, $identity.descriptorSha256, $identity.sm3dSha256,
+        $identity.clipNamesSha256, $identity.socketNamesSha256) -join "`n")
+}
+
+function Assert-ProfileAssets {
+    foreach ($pair in @(
+        @((Join-Path $packageRoot 'arin-v5.7-idle-equipment-checkpoint.glb'), $profile.modelSha256),
+        @((Join-Path $packageRoot 'ArinV57.sm3d.json'), $profile.descriptorSha256)
+    )) {
+        if ((Get-FileHash -LiteralPath $pair[0]).Hash -cne $pair[1]) {
+            throw "Profile assets changed; an explicit calibration migration is required: $($pair[0])"
+        }
+    }
+    # The cooked mirror is disposable; when present it must match the identity
+    # recorded alongside the canonical model/descriptor, never an older build.
+    $cookedPath = Join-Path $repositoryRoot 'tools\Character3DViewer\bin\Debug\Assets\Generation2\ArinV57\ArinV57.sm3d'
+    if (Test-Path -LiteralPath $cookedPath) {
+        if ((Get-FileHash -LiteralPath $cookedPath).Hash -cne $profile.sm3dSha256) {
+            throw "Cooked profile changed; explicit migration is required: $cookedPath"
+        }
+    }
+}
+
+function Assert-Fields($Object, [string[]]$Required, [string[]]$Optional, [string]$Label) {
+    if ($Object -isnot [Collections.IDictionary]) { throw "$Label must be an object." }
+    foreach ($field in $Required) {
+        if (-not $Object.Contains($field)) { throw "$Label is missing $field." }
+    }
+    foreach ($field in $Object.Keys) {
+        if ($field -cnotin $Required -and $field -cnotin $Optional) { throw "$Label has an unknown field: $field" }
+    }
+}
+
+function Assert-Integer($Value, [int]$Minimum, [int]$Maximum, [string]$Label) {
+    if ($null -eq $Value -or $Value -is [bool] -or $Value -is [string] -or
+        $Value -is [Collections.IEnumerable] -or
+        [double]$Value -ne [Math]::Truncate([double]$Value) -or
+        [double]$Value -lt $Minimum -or [double]$Value -gt $Maximum) {
+        throw "$Label must be a whole number from $Minimum through $Maximum."
+    }
+    return [int]$Value
+}
+
 function Read-Unsigned16([byte[]]$Bytes, [int]$Offset) {
     return [int]$Bytes[$Offset] + ([int]$Bytes[$Offset + 1] * 256)
 }
@@ -54,34 +149,40 @@ function Add-Unsigned16(
     $Bytes.Add([byte](($Value -shr 8) -band 255))
 }
 
-function Assert-Triplet($Value, [string]$Label) {
+function Assert-Triplet($Value, [string]$Label, [int]$Limit = 180) {
     $items = @($Value)
 
-    if ($items.Count -ne 3) {
+    if ($Value -isnot [Collections.IList] -or $items.Count -ne 3) {
         throw "$Label must contain exactly three numeric values."
     }
 
     $result = [int[]]::new(3)
 
     for ($index = 0; $index -lt 3; $index++) {
-        $number = [double]$items[$index]
-
-        if ($number -ne [Math]::Truncate($number) -or $number -lt -180 -or $number -gt 180) {
-            throw "$Label values must be whole numbers from -180 through 180."
-        }
-
-        $result[$index] = [int]$number
+        $result[$index] = Assert-Integer $items[$index] (-$Limit) $Limit $Label
     }
 
     return $result
 }
 
-function Read-LivePayload() {
-    if (-not (Test-Path -LiteralPath $livePath -PathType Leaf)) {
+function Read-SharedBytes([string]$Path) {
+    # Watching a save must never hold a delete-denying handle across atomic replace.
+    $stream = [IO.FileStream]::new($Path, [IO.FileMode]::Open, [IO.FileAccess]::Read,
+        [IO.FileShare]::ReadWrite -bor [IO.FileShare]::Delete)
+    try {
+        if ($stream.Length -gt 8MB) { throw 'Calibration file exceeds bounded size.' }
+        $bytes = [byte[]]::new($stream.Length)
+        $stream.ReadExactly($bytes, 0, $bytes.Length)
+        return ,$bytes
+    } finally { $stream.Dispose() }
+}
+
+function Read-LivePayload([string]$Path = $livePath) {
+    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
         return $null
     }
 
-    $envelope = [IO.File]::ReadAllBytes($livePath)
+    $envelope = Read-SharedBytes $Path
 
     if ($envelope.Length -lt 44 -or
         $envelope[0] -ne 83 -or
@@ -118,25 +219,43 @@ function Convert-PayloadToSnapshot([byte[]]$Payload) {
         $Payload[1] -ne 77 -or
         $Payload[2] -ne 75 -or
         $Payload[3] -ne 70 -or
-        $Payload[4] -notin @(1, 2)) {
+        $Payload[4] -notin @(1, 2, 3)) {
         throw 'Arin v5.7 calibration payload has an invalid SMKF header.'
     }
 
     $clipCount = [int]$Payload[5]
     $storedChannels = if ($Payload[4] -eq 1) { 18 } else { 20 }
 
-    if ($clipCount -ne $clipNames.Count) {
-        throw "Arin v5.7 calibration must contain exactly $($clipNames.Count) clips."
-    }
+    if ($clipCount -lt 1 -or $clipCount -gt 64) { throw 'Invalid clip count.' }
+    if ($Payload[4] -eq 1 -and -not $MigrateLegacy) { throw 'Storage v1 requires -MigrateLegacy.' }
+    if ($Payload[4] -lt 3 -and $clipCount -ne $legacyClipNames.Count) { throw 'Invalid legacy clip count.' }
+    if ($Payload[6] -gt 1) { throw 'Invalid saved flag.' }
 
     $saved = $Payload[6] -ne 0
     $savedClip = [int]$Payload[7]
     $savedFrame = Read-Unsigned16 $Payload 8
     $offset = 10
+    if ($Payload[4] -eq 3) {
+        if ($Payload.Length -lt 74 -or
+            [Text.Encoding]::ASCII.GetString($Payload, 10, 64) -cne (Get-ProfileFingerprint)) {
+            throw 'Calibration runtime profile fingerprint mismatch; migrate by name before loading.'
+        }
+        $offset = 74
+    }
     $totalKeyframes = 0
     $clips = [Collections.Generic.List[object]]::new()
 
     for ($clipIndex = 0; $clipIndex -lt $clipCount; $clipIndex++) {
+        $clipName = $legacyClipNames[$clipIndex]
+        if ($Payload[4] -eq 3) {
+            if ($offset -ge $Payload.Length) { throw 'Missing clip name.' }
+            $nameLength = [int]$Payload[$offset++]
+            if ($nameLength -lt 1 -or $nameLength -gt 128 -or $offset + $nameLength -gt $Payload.Length) {
+                throw 'Invalid clip name length.'
+            }
+            $clipName = [Text.UTF8Encoding]::new($false, $true).GetString($Payload, $offset, $nameLength)
+            $offset += $nameLength
+        }
         if ($offset + 2 -gt $Payload.Length) {
             throw 'Arin v5.7 calibration ended before a clip keyframe count.'
         }
@@ -201,7 +320,7 @@ function Convert-PayloadToSnapshot([byte[]]$Payload) {
         $totalKeyframes += $keyframeCount
         $clips.Add([ordered]@{
             index = $clipIndex
-            name = $clipNames[$clipIndex]
+            name = $clipName
             keyframes = $keyframes.ToArray()
         })
     }
@@ -225,43 +344,139 @@ function Convert-PayloadToSnapshot([byte[]]$Payload) {
 
         $savedKeyframe = [ordered]@{
             clipIndex = $savedClip
-            clipName = $clipNames[$savedClip]
+            clipName = $clips[$savedClip].name
             frame = $savedFrame
         }
     }
 
-    return [ordered]@{
-        schemaVersion = 1
+    $snapshot = [ordered]@{
+        schemaVersion = 2
         assetId = 'sin-star-i.character-1.paladin'
         characterVersion = 'v5.7'
         applicationId = $applicationId
         dataKey = $dataKey
-        storageVersion = 2
+        storageVersion = 3
+        profile = Get-ProfileIdentity
         savedKeyframe = $savedKeyframe
         totalKeyframes = $totalKeyframes
         clips = $clips.ToArray()
     }
+    return Normalize-Snapshot $snapshot
 }
 
-function Convert-SnapshotToPayload($Snapshot) {
-    if ($Snapshot.schemaVersion -ne 1 -or
+function Normalize-Snapshot($Snapshot) {
+    Assert-Fields $Snapshot @('schemaVersion','assetId','characterVersion','applicationId',
+        'dataKey','storageVersion','savedKeyframe','totalKeyframes','clips') @('profile') 'Calibration'
+    if ($Snapshot.schemaVersion -notin @(1, 2) -or
         $Snapshot.assetId -cne 'sin-star-i.character-1.paladin' -or
         $Snapshot.characterVersion -cne 'v5.7' -or
         $Snapshot.applicationId -cne $applicationId -or
         $Snapshot.dataKey -cne $dataKey -or
-        $Snapshot.storageVersion -notin @(1, 2)) {
+        $Snapshot.storageVersion -notin @(1, 2, 3)) {
         throw 'Arin v5.7 calibration JSON identity or schema is invalid.'
     }
+    $null = Assert-Integer $Snapshot.schemaVersion 1 2 'Schema version'
+    $null = Assert-Integer $Snapshot.storageVersion 1 3 'Storage version'
+    if (($Snapshot.schemaVersion -eq 2 -and $Snapshot.storageVersion -ne 3) -or
+        ($Snapshot.schemaVersion -eq 1 -and $Snapshot.storageVersion -eq 3)) { throw 'Schema/storage version mismatch.' }
+    if ($Snapshot.storageVersion -eq 1 -and -not $MigrateLegacy) { throw 'Storage v1 requires -MigrateLegacy.' }
+    $identity = Get-ProfileIdentity
+    if ($Snapshot.schemaVersion -eq 2 -or $Snapshot.Contains('profile')) {
+        Assert-Fields $Snapshot.profile @('version','modelSha256','descriptorSha256','sm3dSha256',
+            'clipNamesSha256','socketNamesSha256') @() 'Profile'
+        foreach ($field in $identity.Keys) {
+            # Clip-name order is a migration hint, never the binding authority.
+            if ($field -eq 'clipNamesSha256') {
+                if ($Snapshot.profile[$field] -notmatch '^[a-fA-F0-9]{64}$') { throw 'Invalid clip-name hash.' }
+            } elseif ($Snapshot.profile[$field] -cne $identity[$field]) {
+                throw "Profile $field mismatch; explicit asset migration is required."
+            }
+        }
+    }
+    $byName = [Collections.Generic.Dictionary[string,object]]::new([StringComparer]::Ordinal)
+    $total = 0
+    if ($Snapshot.clips -isnot [Collections.IList]) { throw 'clips must be an array.' }
+    foreach ($clip in @($Snapshot.clips)) {
+        Assert-Fields $clip @('index','name','keyframes') @() 'Clip'
+        $null = Assert-Integer $clip.index -1 63 'Clip index hint'
+        if ($clip.name -isnot [string] -or $clip.name -cnotmatch '^[A-Za-z][A-Za-z0-9_]{0,127}$' -or
+            $byName.ContainsKey($clip.name)) { throw 'Invalid or duplicate exact clip name.' }
+        $runtimeIndex = [Array]::IndexOf($clipNames, $clip.name)
+        $frameLimit = if ($runtimeIndex -ge 0) { $profileClips[$runtimeIndex].sampleCount - 1 } else { 65535 }
+        if ($clip.keyframes -isnot [Collections.IList] -or @($clip.keyframes).Count -gt 256) {
+            throw 'keyframes must be an array with at most 256 entries.'
+        }
+        $frames = [Collections.Generic.HashSet[int]]::new()
+        $keys = [Collections.Generic.List[object]]::new()
+        foreach ($key in @($clip.keyframes)) {
+            Assert-Fields $key @('frame','swordWrist','shieldWrist','sword','shield') @() 'Keyframe'
+            $frame = Assert-Integer $key.frame 0 $frameLimit "$($clip.name) frame"
+            if (-not $frames.Add($frame)) { throw 'Duplicate keyframe.' }
+            $normalized = [ordered]@{ frame = $frame }
+            foreach ($partName in @('swordWrist','shieldWrist','sword','shield')) {
+                $part = $key[$partName]
+                $equipment = $partName -in @('sword','shield')
+                if ($equipment) {
+                    $required = @('rotation','position')
+                    if ($Snapshot.storageVersion -ne 1) { $required += 'decoupled' }
+                    Assert-Fields $part $required @('decoupled') $partName
+                } else { Assert-Fields $part @('rotation') @() $partName }
+                $outputPart = [ordered]@{}
+                if ($equipment) {
+                    if ($part.Contains('decoupled') -and $part.decoupled -isnot [bool]) { throw 'Decoupled must be Boolean.' }
+                    $outputPart.decoupled = [bool]$part.decoupled
+                }
+                $outputPart.rotation = @(Assert-Triplet $part.rotation "$partName rotation")
+                if ($equipment) { $outputPart.position = @(Assert-Triplet $part.position "$partName position" 100) }
+                $normalized[$partName] = $outputPart
+            }
+            $keys.Add($normalized)
+        }
+        $total += $keys.Count
+        $byName.Add($clip.name, [ordered]@{ index = $runtimeIndex; name = $clip.name;
+            keyframes = @($keys.ToArray() | Sort-Object frame) })
+    }
+    if ($byName.Count -gt 64 -or $byName.Count -eq 0) { throw 'Invalid clip count.' }
+    if ((Assert-Integer $Snapshot.totalKeyframes 0 16384 'Total keys') -ne $total) { throw 'totalKeyframes mismatch.' }
+    $saved = $null
+    if ($null -ne $Snapshot.savedKeyframe) {
+        $entry = $Snapshot.savedKeyframe
+        Assert-Fields $entry @('clipIndex','clipName','frame') @() 'Saved keyframe'
+        $null = Assert-Integer $entry.clipIndex -1 63 'Saved clip index hint'
+        $frame = Assert-Integer $entry.frame 0 65535 'Saved frame'
+        if ($entry.clipName -isnot [string] -or -not $byName.ContainsKey($entry.clipName) -or
+            @($byName[$entry.clipName].keyframes | Where-Object frame -eq $frame).Count -ne 1) {
+            throw 'savedKeyframe does not identify an exact clip name and keyed frame.'
+        }
+        $saved = [ordered]@{ clipIndex = [Array]::IndexOf($clipNames, $entry.clipName);
+            clipName = $entry.clipName; frame = $frame }
+    }
+    $orderedClips = [Collections.Generic.List[object]]::new()
+    foreach ($name in $clipNames) {
+        if ($byName.ContainsKey($name)) { $orderedClips.Add($byName[$name]) }
+        else { $orderedClips.Add([ordered]@{index = [Array]::IndexOf($clipNames,$name); name = $name; keyframes = @()}) }
+    }
+    foreach ($name in @($byName.Keys | Sort-Object -CaseSensitive)) {
+        if ($name -cnotin $clipNames) { $orderedClips.Add($byName[$name]) }
+    }
+    return [ordered]@{ schemaVersion = 2; assetId = $profile.assetId; characterVersion = $profile.characterVersion;
+        applicationId = $applicationId; dataKey = $dataKey; storageVersion = 3; profile = $identity;
+        savedKeyframe = $saved; totalKeyframes = $total; clips = $orderedClips.ToArray() }
+}
 
-    $clips = @($Snapshot.clips)
+function Convert-SnapshotToPayload($Snapshot) {
+    $Snapshot = Normalize-Snapshot $Snapshot
+
+    # Unresolved names stay in the canonical JSON, never bind by a stale number.
+    $clips = @($Snapshot.clips | Where-Object index -ge 0)
 
     if ($clips.Count -ne $clipNames.Count) {
         throw "Arin v5.7 calibration JSON must contain exactly $($clipNames.Count) clips."
     }
 
     $bytes = [Collections.Generic.List[byte]]::new()
-    $bytes.AddRange([byte[]]@(83, 77, 75, 70, 2, $clipNames.Count))
-    $saved = $null -ne $Snapshot.savedKeyframe
+    $bytes.AddRange([byte[]]@(83, 77, 75, 70, 3, $clipNames.Count))
+    $saved = $null -ne $Snapshot.savedKeyframe -and $Snapshot.savedKeyframe.clipIndex -ge 0
     $bytes.Add([byte]$(if ($saved) { 1 } else { 0 }))
     $savedClip = 0
     $savedFrame = 0
@@ -279,6 +494,7 @@ function Convert-SnapshotToPayload($Snapshot) {
 
     $bytes.Add([byte]$savedClip)
     Add-Unsigned16 $bytes $savedFrame
+    $bytes.AddRange([Text.Encoding]::ASCII.GetBytes((Get-ProfileFingerprint)))
     $totalKeyframes = 0
     $savedFrameFound = -not $saved
 
@@ -290,6 +506,9 @@ function Convert-SnapshotToPayload($Snapshot) {
         }
 
         $keyframes = @($clip.keyframes)
+        $nameBytes = [Text.Encoding]::UTF8.GetBytes($clip.name)
+        $bytes.Add([byte]$nameBytes.Length)
+        $bytes.AddRange($nameBytes)
 
         if ($keyframes.Count -gt 256) {
             throw "Arin v5.7 clip $($clip.name) exceeds 256 keyframes."
@@ -342,24 +561,83 @@ function Convert-SnapshotToPayload($Snapshot) {
         throw 'Arin v5.7 savedKeyframe does not identify a keyframe in the JSON.'
     }
 
-    if ($null -ne $Snapshot.totalKeyframes -and
-        [int]$Snapshot.totalKeyframes -ne $totalKeyframes) {
+    if (($clips.keyframes | Measure-Object).Count -ne $totalKeyframes) {
         throw 'Arin v5.7 totalKeyframes does not match the clip contents.'
     }
 
     return $bytes.ToArray()
 }
 
-function Write-AtomicText([string]$Path, [string]$Text) {
-    $directory = [IO.Path]::GetDirectoryName($Path)
-    [IO.Directory]::CreateDirectory($directory) | Out-Null
-    $temporary = "$Path.tmp.$PID"
-    [IO.File]::WriteAllText($temporary, $Text, [Text.UTF8Encoding]::new($false))
-    Move-Item -LiteralPath $temporary -Destination $Path -Force
+function Get-PathHash([string]$Path) {
+    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) { return '' }
+    return [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData((Read-SharedBytes $Path)))
+}
+
+function Assert-UniqueJsonFields($Element) {
+    if ($Element.ValueKind -eq [Text.Json.JsonValueKind]::Object) {
+        $names = [Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
+        foreach ($property in $Element.EnumerateObject()) {
+            if (-not $names.Add($property.Name)) { throw "Duplicate JSON field: $($property.Name)" }
+            Assert-UniqueJsonFields $property.Value
+        }
+    } elseif ($Element.ValueKind -eq [Text.Json.JsonValueKind]::Array) {
+        foreach ($child in $Element.EnumerateArray()) { Assert-UniqueJsonFields $child }
+    }
+}
+
+function Read-Snapshot([string]$Path) {
+    $text = [Text.UTF8Encoding]::new($false, $true).GetString((Read-SharedBytes $Path))
+    if ($text.Length -gt 8MB) { throw 'Calibration JSON exceeds the bounded input size.' }
+    $document = [Text.Json.JsonDocument]::Parse($text)
+    try { Assert-UniqueJsonFields $document.RootElement } finally { $document.Dispose() }
+    return Normalize-Snapshot ($text | ConvertFrom-Json -AsHashtable -Depth 24)
+}
+
+function Write-AtomicBytes([string]$Path, [byte[]]$Bytes, [string]$ExpectedHash) {
+    $Path = Assert-ConfinedPath $Path
+    if ((Get-PathHash $Path) -cne $ExpectedHash) { throw "Concurrent calibration change; no overwrite: $Path" }
+    if ($ExpectedHash -ceq [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($Bytes))) { return }
+    [IO.Directory]::CreateDirectory([IO.Path]::GetDirectoryName($Path)) | Out-Null
+    $temporary = "$Path.tmp.$([Guid]::NewGuid().ToString('N'))"
+    $stream = $null
+    try {
+        $stream = [IO.FileStream]::new($temporary, [IO.FileMode]::CreateNew, [IO.FileAccess]::Write, [IO.FileShare]::None)
+        $stream.Write($Bytes, 0, $Bytes.Length)
+        $stream.Flush($true)
+        $stream.Dispose()
+        $stream = $null
+        if ((Get-PathHash $Path) -cne $ExpectedHash) { throw "Concurrent calibration change; no overwrite: $Path" }
+        if ($ExpectedHash) {
+            # Same-volume atomic replacement retains the exact previous bytes.
+            [IO.File]::Replace($temporary, $Path, "$Path.bak", $false)
+        } else { [IO.File]::Move($temporary, $Path) }
+    } finally {
+        if ($stream) { $stream.Dispose() }
+        if (Test-Path -LiteralPath $temporary) { Remove-Item -LiteralPath $temporary }
+    }
+}
+
+function Write-Snapshot([string]$Path, $Snapshot, [string]$ExpectedHash) {
+    $normalized = Normalize-Snapshot $Snapshot
+    $json = ($normalized | ConvertTo-Json -Depth 16).Replace("`r`n", "`n") + "`n"
+    # Validate the actual serialized representation, not only the input object.
+    $null = Normalize-Snapshot ($json | ConvertFrom-Json -AsHashtable -Depth 24)
+    Write-AtomicBytes $Path ([Text.UTF8Encoding]::new($false).GetBytes($json)) $ExpectedHash
+}
+
+function Show-SnapshotSummary([string]$Label, $Snapshot) {
+    Write-Host "$Label keys=$($Snapshot.totalKeyframes), schema=$($Snapshot.schemaVersion), storage=$($Snapshot.storageVersion)"
+    foreach ($clip in $Snapshot.clips) {
+        $state = if ($clip.index -lt 0) { 'UNRESOLVED - retained, not applied' } else { "index $($clip.index)" }
+        Write-Host "  $($clip.name): [$($clip.keyframes.frame -join ', ')] ($state)"
+    }
 }
 
 function Export-LiveCalibration([bool]$MissingIsAllowed) {
-    $payload = Read-LivePayload
+    $source = if ($SourcePath) { $SourcePath } else { $livePath }
+    $destination = if ($DestinationPath) { $DestinationPath } else { $snapshotPath }
+    $previousHash = Get-PathHash $destination
+    $payload = Read-LivePayload $source
 
     if ($null -eq $payload) {
         if ($MissingIsAllowed) {
@@ -372,15 +650,23 @@ function Export-LiveCalibration([bool]$MissingIsAllowed) {
     }
 
     $snapshot = Convert-PayloadToSnapshot $payload
-    $json = $snapshot | ConvertTo-Json -Depth 12
-    Write-AtomicText $snapshotPath ($json + [Environment]::NewLine)
-    Write-Host "Exported $($snapshot.totalKeyframes) Arin v5.7 keyframes to $snapshotPath"
+    if ($previousHash) {
+        $previous = Read-Snapshot $destination
+        # The runtime cannot apply missing clips, but exports must not erase them.
+        $unresolved = @($previous.clips | Where-Object { $_.name -cnotin $clipNames })
+        $snapshot.clips = @($snapshot.clips) + $unresolved
+        foreach ($entry in $unresolved) { $snapshot.totalKeyframes += @($entry.keyframes).Count }
+    }
+    Write-Snapshot $destination $snapshot $previousHash
+    Write-Host "Exported $($snapshot.totalKeyframes) keys: $destination (SHA-256 $(Get-PathHash $destination))"
 
     return $true
 }
 
 function Restore-LiveCalibration([bool]$Overwrite) {
-    if (-not (Test-Path -LiteralPath $snapshotPath -PathType Leaf)) {
+    $source = if ($SourcePath) { $SourcePath } else { $snapshotPath }
+    $destination = if ($DestinationPath) { $DestinationPath } else { $livePath }
+    if (-not (Test-Path -LiteralPath $source -PathType Leaf)) {
         if ($AllowMissing) {
             Write-Host 'No repository Arin v5.7 calibration JSON exists yet.'
 
@@ -390,14 +676,18 @@ function Restore-LiveCalibration([bool]$Overwrite) {
         throw "Arin v5.7 calibration JSON is missing: $snapshotPath"
     }
 
-    if ((Test-Path -LiteralPath $livePath -PathType Leaf) -and -not $Overwrite) {
+    # Validate both existing files even when an overwrite is not requested.
+    $snapshot = Read-Snapshot $source
+    $previousHash = Get-PathHash $destination
+    if ($previousHash) { $null = Convert-PayloadToSnapshot (Read-LivePayload $destination) }
+    if ($previousHash -and -not $Overwrite) {
         Write-Host 'Live Arin v5.7 calibration already exists; repository JSON was not restored over it.'
 
         return $false
     }
 
-    $snapshot = Get-Content -LiteralPath $snapshotPath -Raw | ConvertFrom-Json -Depth 20
     $payload = Convert-SnapshotToPayload $snapshot
+    $null = Convert-PayloadToSnapshot $payload
     $envelope = [byte[]]::new(44 + $payload.Length)
     $envelope[0] = 83
     $envelope[1] = 77
@@ -407,11 +697,7 @@ function Restore-LiveCalibration([bool]$Overwrite) {
     [BitConverter]::GetBytes([uint32]$payload.Length).CopyTo($envelope, 8)
     [Security.Cryptography.SHA256]::HashData($payload).CopyTo($envelope, 12)
     $payload.CopyTo($envelope, 44)
-    $liveDirectory = [IO.Path]::GetDirectoryName($livePath)
-    [IO.Directory]::CreateDirectory($liveDirectory) | Out-Null
-    $temporary = "$livePath.tmp.$PID"
-    [IO.File]::WriteAllBytes($temporary, $envelope)
-    Move-Item -LiteralPath $temporary -Destination $livePath -Force
+    Write-AtomicBytes $destination $envelope $previousHash
     Write-Host "Restored $($snapshot.totalKeyframes) Arin v5.7 keyframes from repository JSON."
 
     return $true
@@ -427,10 +713,51 @@ function Get-LiveSignature() {
     return "$($file.Length):$($file.LastWriteTimeUtc.Ticks)"
 }
 
-if ($Mode -eq 'Export') {
+if ($FunctionsOnly) { return }
+
+Assert-ProfileAssets
+if ($Mode -eq 'Validate') {
+    $source = if ($SourcePath) { $SourcePath } else { $snapshotPath }
+    $snapshot = Read-Snapshot $source
+    Show-SnapshotSummary $source $snapshot
+    Write-Host "SHA-256 $(Get-PathHash $source); profile $(Get-ProfileFingerprint)"
+} elseif ($Mode -eq 'Compare') {
+    $source = if ($SourcePath) { $SourcePath } else { $snapshotPath }
+    $destination = if ($DestinationPath) { $DestinationPath } else { $livePath }
+    $snapshot = Read-Snapshot $source
+    $live = Convert-PayloadToSnapshot (Read-LivePayload $destination)
+    Show-SnapshotSummary 'Canonical' $snapshot
+    Show-SnapshotSummary 'Live' $live
+    Write-Host "Source SHA-256 $(Get-PathHash $source); destination SHA-256 $(Get-PathHash $destination)"
+    $canonicalJson = $snapshot | ConvertTo-Json -Depth 16
+    $liveJson = $live | ConvertTo-Json -Depth 16
+    if ($canonicalJson -cne $liveJson) {
+        Compare-Object ($canonicalJson -split "`n") ($liveJson -split "`n") | Format-Table -AutoSize
+        exit 2
+    }
+    Write-Host 'No calibration differences.'
+} elseif ($Mode -eq 'Backup') {
+    $source = if ($SourcePath) { $SourcePath } else { $snapshotPath }
+    $null = Read-Snapshot $source
+    $destination = if ($DestinationPath) { $DestinationPath } else { "$source.$(Get-PathHash $source).bak" }
+    if (Test-Path -LiteralPath $destination) { throw 'Backup already exists; no overwrite.' }
+    Write-AtomicBytes $destination ([IO.File]::ReadAllBytes($source)) ''
+    Write-Host "Exact backup: $destination; SHA-256 $(Get-PathHash $destination)"
+} elseif ($Mode -eq 'Export') {
     Export-LiveCalibration $AllowMissing.IsPresent | Out-Null
-} elseif ($Mode -eq 'Restore') {
+} elseif ($Mode -in @('Import','Restore')) {
+    # Restore without explicit paths retains the existing launcher contract.
+    # Explicit JSON destination restores a chosen backup to the canonical source.
+    if ($DestinationPath -and [IO.Path]::GetExtension($DestinationPath) -eq '.json') {
+        if (-not $SourcePath) { throw 'JSON Restore requires -SourcePath.' }
+        $snapshot = Read-Snapshot $SourcePath
+        $previousHash = Get-PathHash $DestinationPath
+        if ($previousHash -and -not $Force) { throw 'Use -Force to replace an existing JSON after Compare/Backup.' }
+        if ($previousHash) { $null = Read-Snapshot $DestinationPath }
+        Write-Snapshot $DestinationPath $snapshot $previousHash
+    } else {
     Restore-LiveCalibration $Force.IsPresent | Out-Null
+    }
 } else {
     if ($ViewerProcessId -le 0) {
         throw 'Watch mode requires -ViewerProcessId.'
@@ -444,8 +771,14 @@ if ($Mode -eq 'Export') {
         $signature = Get-LiveSignature
 
         if ($signature -cne $lastSignature) {
-            $lastSignature = $signature
-            Export-LiveCalibration $true | Out-Null
+            try {
+                Export-LiveCalibration $true | Out-Null
+                $lastSignature = $signature
+            } catch {
+                # Preserve the first failed save and retry only on a new live revision.
+                Write-Warning $_.Exception.Message
+                $lastSignature = $signature
+            }
         }
     }
 

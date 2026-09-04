@@ -1,0 +1,3 @@
+# Previous-known-good and immutable local recovery copies, never runtime sources.
+*.bak
+*.tmp.*

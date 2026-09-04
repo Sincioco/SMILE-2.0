@@ -24,6 +24,7 @@ SMILE must evolve incrementally from the current SMILE 2.0 compiler and runtime 
 - During 2D milestones, add only inexpensive architectural guardrails. Do not implement speculative 3D features or generalize stable code without a current requirement.
 - Keep `Smile.Simple3D` a bounded source-level educational layer projected through the permanent 2D renderer. Do not turn it into a game-specific runtime helper or treat it as the future hardware `Renderer3D` API.
 - Keep logical-canvas pointer input generic and cross-target. Mouse, pen, touch, virtual controls, cameras, orbit behavior, and game actions must remain distinct source-level concerns.
+- Budget reusable VFX for the whole battle scene: Arin's equipment is not the only effects consumer. The dragon will also use fire, and other characters may use ice and magic. Keep resource admission and attachment/lifecycle handling shared across actors and effect families; do not reserve the entire renderer for Arin or implement speculative ice/magic presets before their milestone.
 
 ### Permanent 3D Viewer, Animation Editor direction
 

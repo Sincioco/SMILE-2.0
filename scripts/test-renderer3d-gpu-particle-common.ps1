@@ -58,7 +58,7 @@ try {
     Assert-Contains $native 'static_assert(sizeof(SmileGpuParticleState3D) == 80' `
         'Native 80-byte state schema'
     Assert-Contains $web 'new ArrayBuffer(capacity*80)' 'Web 80-byte state schema'
-    Assert-Contains $native 'SMILE_3D_MAX_GPU_PARTICLE_SYSTEMS 8' 'Native system bound'
+    Assert-Contains $native 'SMILE_3D_MAX_GPU_PARTICLE_SYSTEMS 32' 'Native system bound'
     Assert-Contains $native 'SMILE_3D_MAX_GPU_SPAWN_COMMANDS 512' 'Native spawn bound'
     Assert-Contains $web 'commandBuffer=new ArrayBuffer(512*80)' 'Web bounded spawn state'
     Assert-Contains $native 'system->read_index = (unsigned char)(1 - system->read_index)' `
