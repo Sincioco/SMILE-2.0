@@ -31,6 +31,33 @@ public static class SmileLightningAssets
         return Math.Max(0.0, Math.Min(1.0, value));
     }
 
+    public static byte[] Thunder()
+    {
+        const int rate = 22050, samples = rate * 3;
+        using (var stream = new MemoryStream())
+        using (var writer = new BinaryWriter(stream))
+        {
+            writer.Write(new byte[] {82,73,70,70}); writer.Write(36 + samples * 2);
+            writer.Write(new byte[] {87,65,86,69,102,109,116,32}); writer.Write(16);
+            writer.Write((short)1); writer.Write((short)1); writer.Write(rate);
+            writer.Write(rate * 2); writer.Write((short)2); writer.Write((short)16);
+            writer.Write(new byte[] {100,97,116,97}); writer.Write(samples * 2);
+            uint seed = 20260905; double low = 0;
+            for (int i = 0; i < samples; i++)
+            {
+                seed = unchecked(seed * 1664525U + 1013904223U);
+                double noise = (seed >> 8) / 8388607.5 - 1;
+                double t = (double)i / rate;
+                low = low * .965 + noise * .035;
+                double attack = Math.Min(1, t * 500);
+                double value = attack * (noise * Math.Exp(-t * 25) * .35 +
+                    low * 3 * Math.Exp(-t * 1.8) + Math.Sin(t * 220) * .08 * Math.Exp(-t * 4));
+                writer.Write((short)(Math.Max(-.85, Math.Min(.85, value)) * 32767));
+            }
+            return stream.ToArray();
+        }
+    }
+
     public static byte[] Generate(int kind)
     {
         int width = kind == 0 ? 128 : 64;
@@ -79,7 +106,7 @@ public static class SmileLightningAssets
 '@
 }
 
-$names = @('lightning-ribbon.png', 'lightning-spark.png')
+$names = @('lightning-ribbon.png', 'lightning-spark.png', 'thunder.wav')
 
 if (-not $Check) {
     [IO.Directory]::CreateDirectory($assetRoot) | Out-Null
@@ -87,7 +114,7 @@ if (-not $Check) {
 
 for ($index = 0; $index -lt $names.Count; $index++) {
     $path = Join-Path $assetRoot $names[$index]
-    $bytes = [SmileLightningAssets]::Generate($index)
+    $bytes = if ($index -eq 2) { [SmileLightningAssets]::Thunder() } else { [SmileLightningAssets]::Generate($index) }
     $hasher = [Security.Cryptography.SHA256]::Create()
 
     try {

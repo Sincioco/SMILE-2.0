@@ -57,7 +57,7 @@ Sub RunTests()
     Call Check(Graphics3D.VfxValue3D(Graphics3D.VFX_QUERY_MAX_PARTICLE_BATCHES) = 32)
     Call Check(Graphics3D.VfxValue3D(Graphics3D.VFX_QUERY_MAX_RIBBON_BATCHES) = 16)
     Call Check(Graphics3D.VfxValue3D(Graphics3D.VFX_QUERY_MAX_STAGED_PARTICLES) = 8192)
-    Call Check(Graphics3D.VfxValue3D(Graphics3D.VFX_QUERY_MAX_STAGED_RIBBON_POINTS) = 2048)
+    Call Check(Graphics3D.VfxValue3D(Graphics3D.VFX_QUERY_MAX_STAGED_RIBBON_POINTS) = 32768)
 
     Particle = Graphics3D.CreateParticleBatch3D(
         1024,

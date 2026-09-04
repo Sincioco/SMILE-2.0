@@ -11,7 +11,7 @@ Web compilation/console parity. Run `scripts/generate-lightning-vfx-assets.ps1
 -Check` to verify deterministic source textures. Tool-local Assets are disposable
 copies of `TechnicalAssets/Generation3/Lightning`.
 
-The foundation admits eight effects, 62 points per effect, four ordered chain
+The default foundation budget admits eight effects, 62 points per effect, eight ordered chain
 targets, three 512-point ribbon batches and 64 CPU endpoint sprites. It admits
 an optional GPU spark pool separately. These are foundation bounds, not a claim
 of finished Ultra visual quality. Midpoint displacement preserves endpoints;
@@ -22,3 +22,8 @@ Validation covers deterministic paths, endpoints, capacity rejection, charge
 requests, stale handles, in-flight rejection, cleanup and actual GPU spark
 admission. The native visual preview uses HDR bloom and retained window placement.
 Space pauses/resumes. Close the window to exit. Web visual tuning is deferred.
+
+The optional path-capacity argument now admits larger shared batches for the
+Advanced Lightning Lab. The fixed per-effect storage holds at most 1,022 points;
+quality and branch admission respect the selected shared pool. The tests exercise
+the eight-effect Ultra path as well as the original small default budget.

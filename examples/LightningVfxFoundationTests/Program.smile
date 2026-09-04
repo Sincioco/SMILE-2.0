@@ -166,6 +166,24 @@ Sub RunTests()
 
     Call Check(Lightning.Initialize("Assets/Lightning"))
 
+    Call Lightning.Shutdown()
+    Call Check(Lightning.Initialize("Assets/Lightning", 16384, Graphics3D.GPU_PARTICLE_SIMULATION_AUTO, 8192))
+
+    For Index = 0 To 7
+        Pool[Index] = Lightning.StartAt("StormCrown", Source, Target, 340 + Index, Lightning.QUALITY_ULTRA)
+
+        Call Check(Lightning.IsActive(Pool[Index]))
+    End For
+
+    Call Check(Lightning.Update(100, Camera))
+    Call Check(Lightning.Value(Lightning.QUERY_DROPPED_POINTS, Pool[0]) = 0)
+    Call Check(Lightning.Value(Lightning.QUERY_ACTIVE_POINTS, Pool[0]) > 2000)
+    Call Check(Graphics3D.Begin3D(Camera, 0, 0, 0))
+    Call Check(Lightning.DrawAll())
+    Call Check(Graphics3D.End3DChecked())
+    Call Lightning.Shutdown()
+    Call Check(Lightning.Initialize("Assets/Lightning"))
+
     Effect = Lightning.StartAt("ThunderGroundSlam", Source, Target, 33, Lightning.QUALITY_ULTRA)
 
     Call Graphics3D.ResetRenderer3D()

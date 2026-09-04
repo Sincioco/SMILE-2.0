@@ -6,3 +6,6 @@ Runtime color, intensity, HDR emission, width, branching, and motion come from
 `Smile.Simple3D.LightningVfx3D`.
 
 Run the generator with `-Check` to verify byte-for-byte reproducibility.
+
+`thunder.wav` is an original three-second mono PCM cue generated from deterministic
+filtered noise and a decaying low tone. It contains no sampled or third-party audio.

@@ -1,0 +1,21 @@
+<SmileProject Version="1.0">
+  <PropertyGroup>
+    <ProjectKind>Game</ProjectKind>
+    <StartupFile>Program.smile</StartupFile>
+    <OutputName>AdvancedLightningVfxLab</OutputName>
+    <ApplicationId>smile.examples.advanced-lightning-vfx-lab</ApplicationId>
+    <GraphicsBackend>DirectX</GraphicsBackend>
+    <VSync>true</VSync>
+    <ResponsiveWindow>true</ResponsiveWindow>
+    <RememberWindowPlacement>true</RememberWindowPlacement>
+  </PropertyGroup>
+  <ItemGroup>
+    <SmileSource Include="Program.smile" StartupOnly="true" />
+    <Asset Include="Assets\Lightning\*.png" />
+    <Asset Include="Assets\Lightning\thunder.wav" />
+    <Asset Include="Assets\Backgrounds\SinStarLandscape.png" />
+    <Asset Include="Assets\Backgrounds\SinStarTitleWithLogo.png" />
+    <SmileProjectReference Include="..\..\libraries\Smile.Simple3D\Smile.Simple3D.smilelibproj" />
+    <SmileProjectReference Include="..\..\libraries\Smile.UI\Smile.UI.smilelibproj" />
+  </ItemGroup>
+</SmileProject>

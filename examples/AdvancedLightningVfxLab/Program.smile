@@ -1,0 +1,881 @@
+Option Explicit
+
+Import Smile.UI.Controls As UI
+Import Smile.Simple3D.Arena3D As Arena3D
+Import Smile.Simple3D.StaticBackdrop3D As StaticBackdrop3D
+Import Smile.Simple3D.CharacterViewer As CameraMotion
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Graphics3D As Graphics3D
+Import Smile.Simple3D.LightningVfx3D As Lightning
+Import Smile.Simple3D.Interaction As Interaction
+Import Smile.Simple3D.FixedMath As FixedMath
+Import Smile.Simple3D.Math3D As Math3D
+
+Const START_YAW = 10
+Const START_PITCH = 10
+Const AUTO_ORBIT_SPEED = 4
+Dim Camera As Core.Camera3D
+Dim BaseCamera As Core.Camera3D
+Dim CameraControls As Core.CameraControl3D
+Dim ZoomTarget As Number
+Dim ZoomLive As Number
+Dim SliderDragOwner As Number
+Dim PanRemainderX As Number
+Dim PanRemainderY As Number
+Dim OrbitRemainderX As Number
+Dim OrbitRemainderY As Number
+Dim Cinematic As Boolean
+Dim CinematicYaw1000 As Number
+Dim Demo As Boolean
+Dim DemoTime As Number
+Dim Arena As Arena3D.ArenaFloor
+Dim Landscape As StaticBackdrop3D.Backdrop
+Dim TitleBackdrop As StaticBackdrop3D.Backdrop
+Dim BackgroundIndex As Number
+Dim FloorVisible As Boolean
+Dim GridVisible As Boolean
+Dim UiVisibility As Number
+Dim Effects[8] As Lightning.LightningEffect
+Dim Fixture[8] As Core.Object3D
+Dim Source As Core.Vector3
+Dim Target As Core.Vector3
+Dim Empty As Lightning.LightningEffect
+Dim Key As Number
+Dim Station As Number
+Dim Quality As Number
+Dim Mode As Number
+Dim Time As Number
+Dim Cycle As Number
+Dim RestartSerial As Number
+Dim Previous As Number
+Dim Elapsed As Number
+Dim FrameRateStarted As Number
+Dim FrameRateFrames As Number
+Dim FramesPerSecond As Number
+Dim DebugLayer As Number
+Dim Enabled As Boolean
+Dim Paused As Boolean
+Dim Hdr As Boolean
+Dim Soft As Boolean
+Dim Distortion As Boolean
+Dim Branches As Boolean
+Dim FlashMode As Number
+Dim Flash As Number
+Dim LightPower As Number
+Dim AudioCue As Number
+Dim ThunderPlayed As Boolean
+Dim Charge As Number
+Dim ChargeAura As Boolean
+Dim Index As Number
+Dim Ok As Boolean
+
+Game Window "SMILE 2.0 - Advanced Lightning Lab" Size 1600 By 900
+
+Station = 9
+Quality = Lightning.QUALITY_ULTRA
+Mode = Graphics3D.GPU_PARTICLE_SIMULATION_AUTO
+Enabled = True
+Hdr = True
+Soft = True
+Branches = True
+FlashMode = Lightning.FLASH_REDUCED
+FloorVisible = True
+GridVisible = True
+Cinematic = True
+Demo = True
+
+Call Graphics3D.ResetRenderer3D()
+
+Camera = Graphics3D.DefaultCamera()
+Camera.Target = Math3D.Vector(0, 190, 20)
+BaseCamera = Camera
+ZoomTarget = 1500
+ZoomLive = 1500000
+Arena = Arena3D.Create(1600, 1600, 30, 75, 150, 140, 1)
+Landscape = StaticBackdrop3D.Create("Assets/Backgrounds/SinStarLandscape.png")
+TitleBackdrop = StaticBackdrop3D.Create("Assets/Backgrounds/SinStarTitleWithLogo.png")
+
+Call CreateFixture()
+Call InitializeLightning()
+Call Restart()
+
+Previous = Timer()
+FrameRateStarted = Previous
+
+Do
+    Get Key Key
+
+    If Key = KEY_BACKTICK Then
+
+        UiVisibility = (UiVisibility + 1) Mod 3
+
+    Else If Key = KEY_TAB Then
+
+        Demo = False
+        Station = Station Mod 10 + 1
+
+        Call Restart()
+
+    Else If Key = KEY_SPACE Then
+
+        Paused = Not Paused
+
+    Else If Key = KEY_R Then
+
+        Call Restart()
+
+    Else If Key = KEY_B Then
+
+        Call CycleBackground()
+
+    Else If Key = KEY_G Then
+
+        Mode = Mode Mod 3 + 1
+
+        Call InitializeLightning()
+        Call Restart()
+
+    Else If Key = KEY_4 Then
+
+        Quality = Quality Mod 5 + 1
+
+        Call InitializeLightning()
+        Call Restart()
+
+    End If
+
+    Elapsed = Min(50, Max(0, Timer() - Previous))
+    Previous = Timer()
+    FrameRateFrames = FrameRateFrames + 1
+
+    If Previous - FrameRateStarted >= 500 Then
+
+        FramesPerSecond = FrameRateFrames * 1000 / (Previous - FrameRateStarted)
+        FrameRateFrames = 0
+        FrameRateStarted = Previous
+
+    End If
+
+    Call UpdateCamera()
+
+    If Not Paused Then
+
+        Time = Time + Elapsed
+        DemoTime = DemoTime + Elapsed
+
+        If Demo And DemoTime >= 10000 Then
+
+            DemoTime = 0
+            Station = Station Mod 9 + 1
+
+            Call Restart()
+
+        Else If Time >= Cycle Then
+
+            Call Restart()
+
+        End If
+
+        Ok = Lightning.Update(Elapsed, Camera) And Ok
+
+    Else
+        Ok = Lightning.Update(0, Camera) And Ok
+
+    End If
+
+    LightPower = 0
+    Flash = Max(0, Flash - Elapsed * 3)
+
+    For Index = 0 To 7
+
+        If Lightning.IsActive(Effects[Index]) Then
+
+            LightPower = Max(LightPower, Lightning.ConsumeLightRequest(Effects[Index]))
+            Flash = Max(Flash, Lightning.ConsumeFlashRequest(Effects[Index]))
+            AudioCue = Lightning.ConsumeAudioRequest(Effects[Index])
+
+            If AudioCue = 2 And Not ThunderPlayed Then
+                ThunderPlayed = True
+
+                Play Sound "Assets/Lightning/thunder.wav"
+
+            End If
+
+        End If
+
+    End For
+
+    If (Station = 3 And
+        Time >= 1200 And
+        Not ChargeAura) Then
+
+        ChargeAura = True
+        Effects[1] = Lightning.StartAt("StoredStorm", Math3D.Vector(-115, 184, 0), Math3D.Vector(-65, 184, 0), 537, Quality)
+        Ok = Lightning.SetCharge(Effects[1], 1000) And Ok
+
+    End If
+
+    If Station = 3 Or Station = 4 Then
+        Charge = Min(1000, Time * 1000 / 1200)
+        Ok = Lightning.SetCharge(Effects[0], Charge) And Ok
+    End If
+
+    Ok = Graphics3D.SetPointLight3D(0, 0, 120, 20, 100, 170, 255, Min(200, LightPower / 4 + 35), 650) And Ok
+    Ok = BeginScene() And Ok
+    Ok = Arena3D.Draw(Arena, FloorVisible, GridVisible) And Ok
+
+    For Index = 0 To 7
+        Ok = Graphics3D.DrawObject3D(Fixture[Index]) And Ok
+    End For
+
+    If Enabled Then
+        Ok = Lightning.DrawAll() And Ok
+    End If
+
+    Ok = Graphics3D.End3DChecked() And Ok
+
+    If Flash > 0 And FlashMode <> Lightning.FLASH_OFF Then
+        Fill Rectangle 0, 0, Window_Width(), Window_Height(), Rgb(120, 185, 255) Opacity Min(12, Flash / 40)
+    End If
+
+    Call DrawHud()
+
+    Show Screen
+
+Loop Until Game_Closed()
+
+Call Lightning.Shutdown()
+
+For Index = 0 To 7
+    Call Graphics3D.DestroyObject3D(Fixture[Index])
+End For
+
+Call Arena3D.Destroy(Arena)
+Call StaticBackdrop3D.Destroy(Landscape)
+Call StaticBackdrop3D.Destroy(TitleBackdrop)
+
+Sub InitializeLightning()
+
+    Dim Capacity As Number
+    Dim Points As Number
+
+    Call Lightning.Shutdown()
+
+    Capacity = 2048
+    Points = 512
+
+    If Quality >= 3 Then
+        Capacity = 8192
+        Points = 2048
+    End If
+
+    If Quality = 4 Then
+        Capacity = 16384
+        Points = 8192
+    End If
+
+    Ok = Lightning.Initialize("Assets/Lightning", Capacity, Mode, Points)
+
+    If Not Ok Then
+        Quality = Lightning.QUALITY_LOW
+        Ok = Lightning.Initialize("Assets/Lightning", 2048, Graphics3D.GPU_PARTICLE_SIMULATION_CPU_DETERMINISTIC)
+    End If
+
+    Call ApplyModes()
+
+End Sub
+
+Sub ApplyModes()
+
+    Ok = Graphics3D.ConfigurePostProcessing3D(Hdr, Hdr, Hdr, 100, 1250, 55, 2, 2, 4) And Ok
+    Ok = Lightning.Configure(Branches, DebugLayer, Soft, Distortion) And Ok
+    Ok = Lightning.SetFlashMode(FlashMode) And Ok
+
+End Sub
+
+Sub CreateFixture()
+
+    Fixture[0] = Graphics3D.CreateCube3D(1)
+    Fixture[1] = Graphics3D.CreateSphere3D(15)
+    Fixture[2] = Graphics3D.CreateCube3D(1)
+    Fixture[3] = Graphics3D.CreateCube3D(1)
+    Fixture[4] = Graphics3D.CreateCylinder3D(5, 85)
+    Fixture[5] = Graphics3D.CreateCube3D(1)
+    Fixture[6] = Graphics3D.CreateSphere3D(24)
+    Fixture[7] = Graphics3D.CreateCylinder3D(65, 8)
+
+    Call Graphics3D.SetObjectScale(Fixture[0], 4000, 6000, 2800)
+    Call Graphics3D.SetObjectPosition(Fixture[0], -150, 100, 0)
+    Call Graphics3D.SetObjectPosition(Fixture[1], -150, 145, 0)
+    Call Graphics3D.SetObjectScale(Fixture[2], 1400, 6800, 1800)
+    Call Graphics3D.SetObjectPosition(Fixture[2], -165, 34, 0)
+    Call Graphics3D.SetObjectScale(Fixture[3], 1400, 6800, 1800)
+    Call Graphics3D.SetObjectPosition(Fixture[3], -135, 34, 0)
+    Call Graphics3D.SetObjectPosition(Fixture[4], -90, 130, 0)
+    Call Graphics3D.SetObjectScale(Fixture[5], 6000, 3400, 3400)
+    Call Graphics3D.SetObjectPosition(Fixture[5], -90, 182, 0)
+    Call Graphics3D.SetObjectPosition(Fixture[6], 200, 95, 20)
+    Call Graphics3D.SetObjectPosition(Fixture[7], 200, 4, 20)
+
+    For Index = 0 To 7
+        Call Graphics3D.SetObjectColor(Fixture[Index], 55, 90, 125)
+    End For
+
+    Call Graphics3D.SetObjectColor(Fixture[5], 190, 205, 230)
+
+End Sub
+
+Sub Restart()
+
+    Dim EffectCount As Number
+    Dim Angle As Number
+    Dim Preset As Text
+    Dim Hop As Number
+    Dim ItemQuality As Number
+
+    For Index = 0 To 7
+
+        If Lightning.IsActive(Effects[Index]) Then
+            Ok = Lightning.Destroy(Effects[Index])
+        End If
+
+    End For
+    RestartSerial = RestartSerial + 1
+    Charge = 0
+    ThunderPlayed = False
+    ChargeAura = False
+    Time = 0
+
+    Call FrameStation()
+
+    Flash = 0
+    EffectCount = 1
+    Cycle = 1800
+    Preset = "SkyStrike"
+
+    If Station = 2 Then
+
+        EffectCount = 4
+
+    Else If Station = 3 Then
+
+        Preset = "SkyToWeaponCharge"
+        Cycle = 3500
+
+    Else If Station = 4 Then
+
+        EffectCount = 4
+        Preset = "WeaponCorona"
+        Cycle = 5000
+
+    Else If Station = 5 Then
+
+        EffectCount = 8
+        Preset = "ThunderGroundSlam"
+
+    Else If Station = 6 Then
+
+        Preset = "ChainTempest"
+
+    Else If Station = 7 Then
+
+        EffectCount = 6
+        Preset = "WeaponCorona"
+        Cycle = 5000
+
+    Else If Station = 8 Or Station = 9 Then
+
+        EffectCount = 8
+        Preset = "StormCrown"
+        Cycle = 2100
+
+    Else If Station = 10 Then
+
+        EffectCount = 2
+        Preset = "WeaponCorona"
+        Cycle = 5000
+
+    End If
+
+    For Index = 0 To EffectCount - 1
+
+        Angle = Index * 360 / EffectCount
+        Source = Math3D.Vector(0, 540, 20)
+        Target = Math3D.Vector(200, 12, 20)
+
+        If Station = 2 Or Station = 9 Then
+
+            Source.X = FixedMath.SinFixed(Angle) * 290 / Core.FIXED_ONE
+            Source.Z = FixedMath.CosFixed(Angle) * 290 / Core.FIXED_ONE
+            Target.X = FixedMath.SinFixed(Angle + 30) * 220 / Core.FIXED_ONE
+            Target.Z = FixedMath.CosFixed(Angle + 30) * 220 / Core.FIXED_ONE
+
+        Else If Station = 3 Then
+
+            Target = Math3D.Vector(-90, 199, 0)
+
+        Else If Station = 4 Then
+
+            Source = Math3D.Vector(-116, 182, -14 + Index * 9)
+            Target = Math3D.Vector(-64, 182, -14 + Index * 9)
+
+        Else If Station = 5 Then
+
+            Source = Math3D.Vector(0, 8, 0)
+            Target = Math3D.Vector(FixedMath.SinFixed(Angle) * 360 / Core.FIXED_ONE, 8,
+                FixedMath.CosFixed(Angle) * 360 / Core.FIXED_ONE)
+
+        Else If Station = 6 Or Station = 7 Then
+
+            Source = Math3D.Vector(-90, 182 + Index * 2, Index * 3 - 8)
+            Target = Math3D.Vector(200, 95 + Index * 4, 20)
+
+        Else If Station = 8 Then
+
+            Source = Math3D.Vector(-90, 185, 0)
+            Target = Math3D.Vector(FixedMath.SinFixed(Angle) * 300 / Core.FIXED_ONE, 20,
+                FixedMath.CosFixed(Angle) * 300 / Core.FIXED_ONE)
+
+        Else If Station = 10 Then
+
+            Source = Math3D.Vector(-180 + Index * 300, 380, 20)
+            Target = Math3D.Vector(-180 + Index * 300, 10, 20)
+
+        End If
+
+        ItemQuality = Quality
+
+        If Station = 10 And Index = 0 Then
+            ItemQuality = Lightning.QUALITY_LOW
+        End If
+
+        Effects[Index] = Lightning.StartAt(Preset, Source, Target, 7187 + RestartSerial * 103 + Index * 197, ItemQuality)
+
+        If Station = 9 Then
+            Ok = Lightning.SetStyle(Effects[Index], 2, 920) And Ok
+        Else If Station = 4 Then
+            Ok = Lightning.SetStyle(Effects[Index], 1, 850) And Ok
+            Ok = Lightning.SetBranchBudget(Effects[Index], 2) And Ok
+        Else If Station = 7 Then
+            Ok = Lightning.SetStyle(Effects[Index], 1, 950) And Ok
+            Ok = Lightning.SetBranchBudget(Effects[Index], 3) And Ok
+        End If
+
+        If Station = 6 Then
+
+            For Hop = 0 To 3
+                Target = Math3D.Vector(160 - Hop * 80, 65, 90 + Hop * 55)
+                Ok = Lightning.AddChainTarget(Effects[Index], Target) And Ok
+            End For
+
+        End If
+
+    End For
+
+End Sub
+
+Function PanelX() As Number
+
+    Dim Result As Number
+
+    Result = Window_Width() - 290
+    Return Result
+
+End Function
+
+Function StationLabel(Value As Number) As Text
+
+    If Value = 1 Then
+        Return "Sky Strike"
+    Else If Value = 2 Then
+        Return "Forked Judgment"
+    Else If Value = 3 Then
+        Return "Weapon Charge"
+    Else If Value = 4 Then
+        Return "Charged Weapon"
+    Else If Value = 5 Then
+        Return "Thunder Smash"
+    Else If Value = 6 Then
+        Return "Chain Lightning"
+    Else If Value = 7 Then
+        Return "Storm Lance"
+    Else If Value = 8 Then
+        Return "Arc Storm"
+    Else If Value = 9 Then
+        Return "Godstorm Ultra"
+    End If
+
+    Return "Low / Selected"
+
+End Function
+
+Function QualityLabel() As Text
+
+    If Quality = 1 Then
+        Return "Low"
+    Else If Quality = 2 Then
+        Return "Medium"
+    Else If Quality = 3 Then
+        Return "High"
+    Else If Quality = 4 Then
+        Return "Ultra"
+    End If
+
+    Return "Auto"
+
+End Function
+
+Sub DrawHud()
+
+    Dim X As Number
+    Dim Row As Number
+
+    If UiVisibility = 2 Then
+        Return
+    End If
+
+    X = PanelX()
+    Draw Text "SMILE 2.0 - Advanced Lightning Lab" At 20, 20 Size 22 Color Cyan
+    Draw Text StationLabel(Station) At 20, 55 Size 20 Color White
+    Draw Text "FPS" At 20, 85 Size 13 Color Light_Gray
+    Draw Number FramesPerSecond At 60, 85 Size 13 Color Cyan
+
+    If Paused Then
+        Draw Text "Paused - Space To Resume" At 20, 112 Size 16 Color Yellow
+    End If
+
+    If Not Ok Then
+        Draw Text "Effect Error" At 20, 145 Size 16 Color Red
+        Draw Number Graphics3D.LastError() At 200, 145 Size 16 Color Red
+    End If
+
+    If UiVisibility = 0 Then
+
+        Call UI.DrawPanel(X, 16, 274, Window_Height() - 46)
+
+        Draw Text "Storm Controls" At X + 14, 30 Size 16 Color White
+
+        For Row = 0 To 9
+            Call UI.DrawButton(X + 10 + Row Mod 2 * 130, 65 + Row / 2 * 28, 124, 25, StationLabel(Row + 1), Station = Row + 1)
+        End For
+
+        Call UI.DrawButton(X + 10, 218, 124, 26, "Pause", Paused)
+        Call UI.DrawButton(X + 140, 218, 124, 26, "Demo", Demo)
+        Call UI.DrawButton(X + 10, 250, 124, 26, QualityLabel(), True)
+        Call UI.DrawButton(X + 140, 250, 124, 26, "CPU / GPU / Auto", True)
+        Call UI.DrawButton(X + 10, 282, 124, 26, "HDR / Bloom", Hdr)
+        Call UI.DrawButton(X + 140, 282, 124, 26, "Branches", Branches)
+        Call UI.DrawButton(X + 10, 314, 124, 26, "Auto Orbit", Cinematic)
+        Call UI.DrawButton(X + 140, 314, 124, 26, "Restart", False)
+        Call UI.DrawButton(X + 10, 346, 124, 26, "Floor / Grid", FloorVisible)
+        Call UI.DrawButton(X + 140, 346, 124, 26, BackgroundLabel(), BackgroundIndex > 0)
+        Call UI.DrawButton(X + 10, 378, 124, 26, "Flash Mode", FlashMode = 1)
+        Call UI.DrawButton(X + 140, 378, 124, 26, "Depth / Softness", Soft)
+        Call DrawStat("Flash 1/2/3", 422, FlashMode)
+        Call DrawStat("Backend 0 Basic / 2 GPU", 444, Lightning.Value(Lightning.QUERY_PARTICLE_BACKEND, Empty))
+        Call DrawStat("Bolt Points", 466, Lightning.Value(Lightning.QUERY_ACTIVE_POINTS, Empty))
+        Call DrawStat("Active Sparks", 488, Lightning.Value(Lightning.QUERY_PARTICLES, Empty))
+        Call DrawStat("GPU Pool", 510, Lightning.Value(Lightning.QUERY_PARTICLE_CAPACITY, Empty))
+        Call DrawStat("GPU Spark Bytes", 532, Lightning.Value(Lightning.QUERY_GPU_BYTES, Empty))
+        Call DrawStat("Dropped Points", 554, Lightning.Value(Lightning.QUERY_DROPPED_POINTS, Empty))
+        Call DrawStat("Charge", 576, Charge)
+        Call UI.DrawSlider(X + 72, Window_Height() - 90, 180, 18, ZoomTarget, 300, 2200)
+
+        Draw Text "Zoom" At X + 12, Window_Height() - 88 Size 12 Color White
+
+    End If
+
+    Draw Text "LMB Pan / MMB Orbit / Wheel Zoom / RMB Reset / Space Pause / Tab Station / 4 Quality / G Backend / ` Hide UI" At 20, Window_Height() - 20 Size 11 Color Light_Gray
+
+End Sub
+
+Sub DrawStat(Label As Text, Y As Number, Value As Number)
+
+    If Y > Window_Height() - 120 Then
+        Return
+    End If
+
+    Draw Text Label At PanelX() + 14, Y Size 11 Color Light_Gray
+    Draw Number Value At PanelX() + 213, Y Size 11 Color Cyan
+
+End Sub
+
+Function HandleUi() As Boolean
+
+    Dim X As Number
+    Dim Row As Number
+    Dim Result As Boolean
+
+    If UiVisibility <> 0 Then
+        Return False
+    End If
+
+    X = PanelX()
+
+    If UI.UpdateSlider(SliderDragOwner, 1, X + 72, Window_Height() - 90, 180, 18, 300, 2200, -10, ZoomTarget) Then
+        Return True
+    End If
+
+    For Row = 0 To 9
+
+        If UI.Clicked(X + 10 + Row Mod 2 * 130, 65 + Row / 2 * 28, 124, 25) Then
+
+            Station = Row + 1
+            Demo = False
+
+            Call Restart()
+
+        End If
+
+    End For
+
+    If UI.Clicked(X + 10, 218, 124, 26) Then
+
+        Paused = Not Paused
+
+    Else If UI.Clicked(X + 140, 218, 124, 26) Then
+
+        Demo = Not Demo
+
+    Else If UI.Clicked(X + 10, 250, 124, 26) Then
+
+        Quality = Quality Mod 5 + 1
+
+        Call InitializeLightning()
+        Call Restart()
+
+    Else If UI.Clicked(X + 140, 250, 124, 26) Then
+
+        Mode = Mode Mod 3 + 1
+
+        Call InitializeLightning()
+        Call Restart()
+
+    Else If UI.Clicked(X + 10, 282, 124, 26) Then
+
+        Hdr = Not Hdr
+
+        Call ApplyModes()
+
+    Else If UI.Clicked(X + 140, 282, 124, 26) Then
+
+        Branches = Not Branches
+
+        Call ApplyModes()
+
+    Else If UI.Clicked(X + 10, 314, 124, 26) Then
+
+        Cinematic = Not Cinematic
+
+    Else If UI.Clicked(X + 140, 314, 124, 26) Then
+
+        Call Restart()
+
+    Else If UI.Clicked(X + 10, 346, 124, 26) Then
+
+        FloorVisible = Not FloorVisible
+        GridVisible = FloorVisible
+
+    Else If UI.Clicked(X + 140, 346, 124, 26) Then
+
+        Call CycleBackground()
+
+    Else If UI.Clicked(X + 10, 378, 124, 26) Then
+
+        FlashMode = FlashMode Mod 3 + 1
+
+        Call ApplyModes()
+
+    Else If UI.Clicked(X + 140, 378, 124, 26) Then
+
+        Soft = Not Soft
+
+        Call ApplyModes()
+
+    End If
+
+    Result = Pointer_X() >= X
+    Return Result
+
+End Function
+
+Sub ResetView()
+
+    Call Interaction.ResetCameraControls(CameraControls)
+
+    ZoomTarget = 1500
+    CinematicYaw1000 = 0
+    PanRemainderX = 0
+    PanRemainderY = 0
+    OrbitRemainderX = 0
+    OrbitRemainderY = 0
+
+End Sub
+
+Sub UpdateCamera()
+
+    Dim OverPanel As Boolean
+    Dim MoveX As Number
+    Dim MoveY As Number
+    Dim Ease As Number
+    Dim Sine As Number
+    Dim Cosine As Number
+    Dim PitchSine As Number
+    Dim PitchCosine As Number
+    Dim Distance As Number
+    Dim PanX As Number
+    Dim PanY As Number
+    Dim PanZ As Number
+
+    OverPanel = HandleUi()
+
+    If Pointer_Pressed(POINTER_SECONDARY) Then
+        Call ResetView()
+    End If
+
+    If Not OverPanel Then
+
+        If Pointer_Held(POINTER_MIDDLE) Then
+
+            Cinematic = False
+            OrbitRemainderX = OrbitRemainderX + Pointer_Delta_X()
+            OrbitRemainderY = OrbitRemainderY + Pointer_Delta_Y()
+            MoveX = OrbitRemainderX / 3
+            MoveY = OrbitRemainderY / 3
+            OrbitRemainderX = OrbitRemainderX - MoveX * 3
+            OrbitRemainderY = OrbitRemainderY - MoveY * 3
+            CameraControls.OrbitYaw = (CameraControls.OrbitYaw + MoveX) Mod 360
+            CameraControls.OrbitPitch = Min(75, Max(-25, CameraControls.OrbitPitch + MoveY))
+
+        Else If Pointer_Held(POINTER_PRIMARY) Then
+
+            Cinematic = False
+            PanRemainderX = PanRemainderX + Pointer_Delta_X() * ZoomTarget
+            PanRemainderY = PanRemainderY + Pointer_Delta_Y() * ZoomTarget
+            MoveX = PanRemainderX / 1600
+            MoveY = PanRemainderY / 1600
+            PanRemainderX = PanRemainderX - MoveX * 1600
+            PanRemainderY = PanRemainderY - MoveY * 1600
+            CameraControls.PanX = Min(500, Max(-500, CameraControls.PanX - MoveX))
+            CameraControls.PanY = Min(350, Max(-350, CameraControls.PanY + MoveY))
+
+        End If
+
+    End If
+
+    If Not OverPanel Then
+        ZoomTarget = Min(2200, Max(300, ZoomTarget - Pointer_Wheel_Delta() * 80))
+    End If
+
+    Ease = (ZoomTarget * 1000 - ZoomLive) * Elapsed / (100 + Elapsed)
+    ZoomLive = ZoomLive + Ease
+    Camera = BaseCamera
+
+    If Cinematic Then
+        Ok = CameraMotion.AdvanceOrbitYaw1000(CinematicYaw1000, Elapsed, AUTO_ORBIT_SPEED)
+    End If
+
+    Sine = SmoothSine(CinematicYaw1000 + CameraControls.OrbitYaw * 1000 + START_YAW * 1000)
+    Cosine = SmoothSine(CinematicYaw1000 + CameraControls.OrbitYaw * 1000 + (START_YAW + 90) * 1000)
+    PitchSine = SmoothSine((START_PITCH + CameraControls.OrbitPitch) * 1000)
+    PitchCosine = SmoothSine((START_PITCH + 90 + CameraControls.OrbitPitch) * 1000)
+    Distance = 515 * ZoomLive / 1000000
+    PanX = (Cosine * CameraControls.PanX -
+        Sine * PitchSine * CameraControls.PanY / Core.FIXED_ONE) / Core.FIXED_ONE
+    PanY = PitchCosine * CameraControls.PanY / Core.FIXED_ONE
+    PanZ = (Sine * CameraControls.PanX +
+        Cosine * PitchSine * CameraControls.PanY / Core.FIXED_ONE) / Core.FIXED_ONE
+    Camera.Target.X = Camera.Target.X + PanX
+    Camera.Target.Y = Camera.Target.Y + PanY
+    Camera.Target.Z = Camera.Target.Z + PanZ
+    Camera.Position.X = Camera.Target.X + Distance * Sine * PitchCosine / Core.FIXED_ONE / Core.FIXED_ONE
+    Camera.Position.Y = Camera.Target.Y + Distance * PitchSine / Core.FIXED_ONE
+    Camera.Position.Z = Camera.Target.Z - Distance * Cosine * PitchCosine / Core.FIXED_ONE / Core.FIXED_ONE
+    Camera.UpDirection.X = 0
+    Camera.UpDirection.Y = Core.FIXED_ONE
+    Camera.UpDirection.Z = 0
+
+End Sub
+
+Sub FrameStation()
+
+    ZoomTarget = 1500
+    CameraControls.PanX = 0
+    CameraControls.PanY = 0
+    CameraControls.OrbitPitch = 0
+    BaseCamera.Target = Math3D.Vector(0, 230, 20)
+
+    If Station >= 3 And Station <= 8 Then
+        ZoomTarget = 1050
+        BaseCamera.Target = Math3D.Vector(20, 120, 20)
+    End If
+
+End Sub
+
+Function SmoothSine(Angle1000 As Number) As Number
+
+    Dim Angle As Number
+    Dim Fraction As Number
+    Dim Result As Number
+
+    Angle1000 = (Angle1000 Mod 360000 + 360000) Mod 360000
+    Angle = Angle1000 / 1000
+    Fraction = Angle1000 Mod 1000
+    Result = (FixedMath.SinFixed(Angle) * (1000 - Fraction) +
+        FixedMath.SinFixed(Angle + 1) * Fraction) / 1000
+
+    Return Result
+
+End Function
+
+Sub CycleBackground()
+
+    BackgroundIndex = (BackgroundIndex + 1) Mod 5
+
+    Call ApplyBackground()
+
+End Sub
+
+Sub ApplyBackground()
+
+    If BackgroundIndex = 3 Then
+        Ok = StaticBackdrop3D.SetActive(Landscape)
+    Else If BackgroundIndex = 4 Then
+        Ok = StaticBackdrop3D.SetActive(TitleBackdrop)
+    Else
+        Ok = StaticBackdrop3D.ClearActive()
+    End If
+
+End Sub
+
+Function BeginScene() As Boolean
+
+    Dim Result As Boolean
+
+    If BackgroundIndex = 1 Then
+        Result = Graphics3D.Begin3D(Camera, 0, 96, 32)
+    Else If BackgroundIndex = 2 Then
+        Result = Graphics3D.Begin3D(Camera, 62, 20, 96)
+    Else
+        Result = Graphics3D.Begin3D(Camera, 0, 0, 0)
+    End If
+
+    Return Result
+
+End Function
+
+Function BackgroundLabel() As Text
+
+    If BackgroundIndex = 1 Then
+        Return "BG Green"
+    Else If BackgroundIndex = 2 Then
+        Return "BG Purple"
+    Else If BackgroundIndex = 3 Then
+        Return "BG Landscape"
+    Else If BackgroundIndex = 4 Then
+        Return "BG Title"
+    End If
+
+    Return "BG Black"
+
+End Function

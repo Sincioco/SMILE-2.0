@@ -19,8 +19,8 @@ Public Const FLASH_REDUCED = 2
 Public Const FLASH_OFF = 3
 
 Public Const MAX_EFFECTS = 8
-Public Const MAX_CHAIN_TARGETS = 4
-Public Const MAX_POINTS_PER_EFFECT = 62
+Public Const MAX_CHAIN_TARGETS = 8
+Public Const MAX_POINTS_PER_EFFECT = 1022
 Public Const RIBBON_CAPACITY = 512
 Public Const SPARK_CAPACITY = 64
 Public Const FIXED_STEP_MILLISECONDS = 10
@@ -75,6 +75,7 @@ Private Type LightningState
     Generation As Number
     Preset As Number
     Quality As Number
+    BranchLimit As Number
     Seed As Number
     Age As Number
     Duration As Number
@@ -95,6 +96,7 @@ Private Type LightningState
     MainTargetPoint As Number
 End Type
 
+Private Dim RibbonPoints As Number
 Private Dim Ready As Boolean
 Private Dim RendererEpoch As Number
 Private Dim ErrorValue As Number
@@ -109,14 +111,14 @@ Private Dim SpawnSerial As Number
 Private Dim SpawnCursor As Number
 Private Dim BuildDelay As Number
 Private Dim Items[8] As LightningState
-Private Dim PathX[8, 62] As Number
-Private Dim PathY[8, 62] As Number
-Private Dim PathZ[8, 62] As Number
-Private Dim PathWidth1000[8, 62] As Number
-Private Dim PathDelay[8, 62] As Number
-Private Dim ChainX[8, 4] As Number
-Private Dim ChainY[8, 4] As Number
-Private Dim ChainZ[8, 4] As Number
+Private Dim PathX[8, 1022] As Number
+Private Dim PathY[8, 1022] As Number
+Private Dim PathZ[8, 1022] As Number
+Private Dim PathWidth1000[8, 1022] As Number
+Private Dim PathDelay[8, 1022] As Number
+Private Dim ChainX[8, 8] As Number
+Private Dim ChainY[8, 8] As Number
+Private Dim ChainZ[8, 8] As Number
 Private Dim RibbonTexture As Core.Texture3D
 Private Dim SparkTexture As Core.Texture3D
 Private Dim HaloMaterial As Core.Material3D
@@ -238,6 +240,14 @@ Private Function SegmentCount(Quality As Number) As Number
         Result = 24
     End If
 
+    If RibbonPoints >= 2048 And Quality >= QUALITY_HIGH Then
+        Result = 64
+    End If
+
+    If RibbonPoints >= 8192 And Quality = QUALITY_ULTRA Then
+        Result = 128
+    End If
+
     Return Result
 
 End Function
@@ -256,6 +266,14 @@ Private Function BranchCount(Quality As Number) As Number
         Result = 4
     End If
 
+    If RibbonPoints >= 2048 And Quality >= QUALITY_HIGH Then
+        Result = 16
+    End If
+
+    If RibbonPoints >= 8192 And Quality = QUALITY_ULTRA Then
+        Result = 24
+    End If
+
     Return Result
 
 End Function
@@ -265,7 +283,8 @@ Private Function HashValue(Seed As Number, Salt As Number) As Number
     Dim Result As Number
 
     Result = ((Abs(Seed) Mod 1000000) * 48271 + (Salt + 1) * 7919) Mod 2147483647
-    Result = (Result * 16807 + 97) Mod 2147483647
+    Result = Result Mod 32749
+    Result = (Result * Result * 16807 + 97) Mod 2147483647
 
     Return Result
 
@@ -281,7 +300,7 @@ Private Function AppendPoint(
 
     Point = Items[Index].PointCount
 
-    If Point >= MAX_POINTS_PER_EFFECT Then
+    If Point >= Min(MAX_POINTS_PER_EFFECT, RibbonPoints / MAX_EFFECTS - 2) Then
         DroppedPointCount = DroppedPointCount + 1
 
         Return False
@@ -337,7 +356,7 @@ Private Function AppendBoltPath(
     Dim NoiseUp As Number
     Dim OffsetSide As Number
     Dim OffsetUp As Number
-    Dim Samples[25] As Core.Vector3
+    Dim Samples[257] As Core.Vector3
     Dim StackLow[32] As Number
     Dim StackHigh[32] As Number
     Dim StackAmplitude[32] As Number
@@ -400,11 +419,11 @@ Private Function AppendBoltPath(
             Samples[MiddleIndex] = Position
             StackLow[StackSize] = LowIndex
             StackHigh[StackSize] = MiddleIndex
-            StackAmplitude[StackSize] = Max(1, LocalAmplitude * 6 / 10)
+            StackAmplitude[StackSize] = Max(1, LocalAmplitude * 55 / 100)
             StackSize = StackSize + 1
             StackLow[StackSize] = MiddleIndex
             StackHigh[StackSize] = HighIndex
-            StackAmplitude[StackSize] = Max(1, LocalAmplitude * 6 / 10)
+            StackAmplitude[StackSize] = Max(1, LocalAmplitude * 55 / 100)
             StackSize = StackSize + 1
 
         End If
@@ -448,10 +467,10 @@ Private Sub BuildEffect(Index As Number)
     EndPosition = Items[Index].Target
     Distance = Math3D.Distance(StartPosition, EndPosition)
     Segments = SegmentCount(Items[Index].Quality)
-    Amplitude = Max(Items[Index].Width * 3, Distance / 11)
+    Amplitude = Max(Items[Index].Width * 3, Distance / 5)
 
     If Items[Index].ChainCount > 0 Then
-        Segments = Max(4, Segments / (Items[Index].ChainCount + 1))
+        Segments = Max(2, Segments / (Items[Index].ChainCount + 1))
     End If
 
     MainStart = Items[Index].PointCount
@@ -481,11 +500,13 @@ Private Sub BuildEffect(Index As Number)
 
     Side = UnitCross(Direction, Reference)
     UpVector = UnitCross(Side, Direction)
-    Branches = BranchCount(Items[Index].Quality)
+    Branches = Min(Items[Index].BranchLimit, BranchCount(Items[Index].Quality))
 
     If Not BranchesEnabled Then
         Branches = 0
     End If
+
+    Branches = Min(Branches, Max(0, (RibbonPoints / MAX_EFFECTS - 2 - Items[Index].PointCount) / 11))
 
     For Branch = 0 To Branches - 1
 
@@ -497,9 +518,9 @@ Private Sub BuildEffect(Index As Number)
         BranchEnd.X = BranchEnd.X + Direction.X * Distance / 5 / Core.FIXED_ONE
         BranchEnd.Y = BranchEnd.Y + Direction.Y * Distance / 5 / Core.FIXED_ONE
         BranchEnd.Z = BranchEnd.Z + Direction.Z * Distance / 5 / Core.FIXED_ONE
-        BranchEnd.X = BranchEnd.X + Side.X * Distance * (Branch * 2 - Branches + 1) / 12 / Core.FIXED_ONE
-        BranchEnd.Y = BranchEnd.Y + Side.Y * Distance * (Branch * 2 - Branches + 1) / 12 / Core.FIXED_ONE
-        BranchEnd.Z = BranchEnd.Z + Side.Z * Distance * (Branch * 2 - Branches + 1) / 12 / Core.FIXED_ONE
+        BranchEnd.X = BranchEnd.X + Side.X * Distance * (HashValue(Items[Index].Seed, Branch * 97) Mod 2001 - 1000) / 2400 / Core.FIXED_ONE
+        BranchEnd.Y = BranchEnd.Y + Side.Y * Distance * (HashValue(Items[Index].Seed, Branch * 97) Mod 2001 - 1000) / 2400 / Core.FIXED_ONE
+        BranchEnd.Z = BranchEnd.Z + Side.Z * Distance * (HashValue(Items[Index].Seed, Branch * 97) Mod 2001 - 1000) / 2400 / Core.FIXED_ONE
         BranchEnd.X = BranchEnd.X + UpVector.X * Distance / 10 / Core.FIXED_ONE
         BranchEnd.Y = BranchEnd.Y + UpVector.Y * Distance / 10 / Core.FIXED_ONE
         BranchEnd.Z = BranchEnd.Z + UpVector.Z * Distance / 10 / Core.FIXED_ONE
@@ -509,11 +530,11 @@ Private Sub BuildEffect(Index As Number)
         End If
 
         BranchFirst = Items[Index].PointCount + 2
-        Result = AppendBoltPath(Index, BranchStart, BranchEnd, 4, Amplitude / 2,
+        Result = AppendBoltPath(Index, BranchStart, BranchEnd, 8, Amplitude / 4,
             4000 + Branch * 127 + Items[Index].TopologyBucket * 101, True) And Result
 
         For BranchPoint = BranchFirst To Items[Index].PointCount - 1
-            PathWidth1000[Index, BranchPoint] = Max(0, 650 - (BranchPoint - BranchFirst) * 150)
+            PathWidth1000[Index, BranchPoint] = Max(0, 650 * (8 - BranchPoint + BranchFirst) / 8)
         End For
 
         If Items[Index].PointCount > 0 Then
@@ -640,6 +661,8 @@ End Function
 Private Function EffectOpacity(Index As Number) As Number
 
     Dim Remaining As Number
+    Dim PulsePeriod As Number
+    Dim PulseAge As Number
     Dim Result As Number
 
     Result = Items[Index].Intensity
@@ -659,7 +682,11 @@ Private Function EffectOpacity(Index As Number) As Number
     End If
 
     If Items[Index].Duration > 0 And Items[Index].Age > Items[Index].Duration * 4 / 10 Then
-        Result = Result * (70 + HashValue(Items[Index].Seed, Items[Index].Age / 60) Mod 31) / 100
+
+        PulsePeriod = Max(60, Items[Index].Duration * 6 / 10 / 4)
+        PulseAge = (Items[Index].Age - Items[Index].Duration * 4 / 10) Mod PulsePeriod
+        Result = Result * (35 + Max(0, 60 - PulseAge) * 65 / 60) / 100
+
     End If
 
     Return Result
@@ -694,7 +721,7 @@ Private Function StageLayer(
 
             If OutputIndex > 0 And Items[EffectIndex].PointCount > 0 Then
 
-                If OutputIndex + 2 <= RIBBON_CAPACITY Then
+                If OutputIndex + 2 <= RibbonPoints Then
 
                     Result = StagePoint(
                         Ribbon,
@@ -717,7 +744,7 @@ Private Function StageLayer(
 
             For PointIndex = 0 To Items[EffectIndex].PointCount - 1
 
-                If OutputIndex < RIBBON_CAPACITY Then
+                If OutputIndex < RibbonPoints Then
                     Result = StagePoint(
                         Ribbon,
                         OutputIndex,
@@ -823,6 +850,8 @@ Private Function EmitSparks(Index As Number) As Boolean
     Dim Slot As Number
     Dim Noise As Number
     Dim Position As Core.Vector3
+    Dim VelocityRange As Number
+    Dim Lifetime As Number
     Dim Result As Boolean
 
     Result = True
@@ -831,7 +860,17 @@ Private Function EmitSparks(Index As Number) As Boolean
         Return True
     End If
 
-    SpawnCount = Items[Index].Quality * 3
+    SpawnCount = Min(64, Items[Index].Quality * Items[Index].Quality * 4)
+    VelocityRange = 220
+    Lifetime = 600
+
+    If Items[Index].Preset = 4 Then
+
+        SpawnCount = Items[Index].Quality * 2
+        VelocityRange = 35
+        Lifetime = 250
+
+    End If
 
     For Particle = 0 To SpawnCount - 1
 
@@ -855,9 +894,9 @@ Private Function EmitSparks(Index As Number) As Boolean
 
         Result = Graphics3D.SetGpuParticleSpawnKinematics3D(GpuSparks, Slot,
             Position.X, Position.Y, Position.Z,
-            Noise Mod 161 - 80, 20 + Noise / 161 Mod 120, Noise / 19321 Mod 161 - 80) And Result
+            Noise Mod (VelocityRange * 2 + 1) - VelocityRange, Noise / 441 Mod (VelocityRange * 2), Noise / 19321 Mod (VelocityRange * 2 + 1) - VelocityRange) And Result
         Result = Graphics3D.SetGpuParticleSpawnVisual3D(GpuSparks, Slot,
-            200 + Noise Mod 200, 2 + Noise Mod 3, 1, Noise Mod 360, 90, 1000, 800) And Result
+            Lifetime + Noise Mod Lifetime, 1 + Noise Mod 3, 1, Noise Mod 360, 90, 1000, 800) And Result
         Result = Graphics3D.CommitGpuParticleSpawn3D(GpuSparks, Slot,
             SpawnSerial, Max(1, Noise)) And Result
     End For
@@ -914,7 +953,7 @@ Private Sub AdvanceEffect(Index As Number)
 
     PreviousBucket = Items[Index].TopologyBucket
     Items[Index].Age = Items[Index].Age + FIXED_STEP_MILLISECONDS
-    Items[Index].TopologyBucket = Items[Index].Age / 40
+    Items[Index].TopologyBucket = Items[Index].Age / 60
 
     If Items[Index].TopologyBucket <> PreviousBucket Then
 
@@ -946,7 +985,8 @@ End Sub
 Public Function Initialize(
     Directory As Text,
     Optional ParticleCapacity As Number = 2048,
-    Optional Simulation As Number = Graphics3D.GPU_PARTICLE_SIMULATION_AUTO
+    Optional Simulation As Number = Graphics3D.GPU_PARTICLE_SIMULATION_AUTO,
+    Optional PathCapacity As Number = 512
 ) As Boolean
 
     Dim Result As Boolean
@@ -966,6 +1006,9 @@ Public Function Initialize(
     End If
 
     RendererEpoch = Graphics3D.ResourceEpoch3D()
+    SpawnCursor = 0
+    SpawnSerial = 0
+    RibbonPoints = Min(8192, Max(512, PathCapacity))
     BranchesEnabled = True
     DebugLayer = 0
     DroppedPointCount = 0
@@ -994,9 +1037,9 @@ Public Function Initialize(
         CoreMaterial.Handle <> 0 And
         SparkMaterial.Handle <> 0) Then
 
-        HaloRibbon = Graphics3D.CreateRibbonBatch3D(RIBBON_CAPACITY, HaloMaterial)
-        GlowRibbon = Graphics3D.CreateRibbonBatch3D(RIBBON_CAPACITY, GlowMaterial)
-        CoreRibbon = Graphics3D.CreateRibbonBatch3D(RIBBON_CAPACITY, CoreMaterial)
+        HaloRibbon = Graphics3D.CreateRibbonBatch3D(RibbonPoints, HaloMaterial)
+        GlowRibbon = Graphics3D.CreateRibbonBatch3D(RibbonPoints, GlowMaterial)
+        CoreRibbon = Graphics3D.CreateRibbonBatch3D(RibbonPoints, CoreMaterial)
         SparkBatch = Graphics3D.CreateParticleBatch3D(
             SPARK_CAPACITY,
             SparkMaterial,
@@ -1041,6 +1084,14 @@ Public Function Initialize(
         If GpuSparks.EffectiveSimulation <> Graphics3D.GPU_PARTICLE_SIMULATION_GPU_FAST Then
             Call Graphics3D.DestroyGpuParticleSystem3D(GpuSparks)
         End If
+
+    End If
+
+    If GpuSparks.Handle <> 0 Then
+
+        Result = Graphics3D.SetGpuParticleRender3D(GpuSparks, Graphics3D.GPU_PARTICLE_SHADER_THERMAL, 2)
+        Result = Graphics3D.SetGpuParticleForces3D(GpuSparks, 0, -160, 0, 0, 0, 0, 0, 120) And Result
+        Result = Graphics3D.SetGpuParticleThermalEvolution3D(GpuSparks, 0, 250, 0, 800) And Result
 
     End If
 
@@ -1119,6 +1170,7 @@ Public Function StartAt(
     Items[Index].Enabled = True
     Items[Index].Finished = False
     Items[Index].Preset = PresetValue
+    Items[Index].BranchLimit = 64
     Items[Index].Quality = EffectiveQuality(Quality)
     Items[Index].Seed = Max(1, Abs(Seed))
     Items[Index].Age = 0
@@ -1417,6 +1469,20 @@ Public Function SetStyle(Effect As LightningEffect, Width As Number,
 
 End Function
 
+Public Function SetBranchBudget(Effect As LightningEffect, BranchLimit As Number) As Boolean
+
+    If Not Current(Effect) Or Graphics3D.FrameActive3D() Then
+        Return False
+    End If
+
+    Items[Effect.Slot - 1].BranchLimit = Min(64, Max(0, BranchLimit))
+
+    Call BuildEffect(Effect.Slot - 1)
+
+    Return True
+
+End Function
+
 Public Function PhaseName(Effect As LightningEffect) As Text
 
     Dim Index As Number
@@ -1685,17 +1751,29 @@ Public Function Value(Query As Number, Effect As LightningEffect) As Number
 
     Else If Query = QUERY_PARTICLES Then
 
+        If GpuSparks.Handle = 0 Then
+            Return 0
+        End If
+
         Result = Graphics3D.GpuParticleValue3D(Graphics3D.GPU_PARTICLE_QUERY_RESOURCE_ACTIVE,
             GpuSparks.Handle)
         Return Result
 
     Else If Query = QUERY_CPU_BYTES Then
 
+        If GpuSparks.Handle = 0 Then
+            Return 0
+        End If
+
         Result = Graphics3D.GpuParticleValue3D(Graphics3D.GPU_PARTICLE_QUERY_RESOURCE_CPU_BYTES,
             GpuSparks.Handle)
         Return Result
 
     Else If Query = QUERY_GPU_BYTES Then
+
+        If GpuSparks.Handle = 0 Then
+            Return 0
+        End If
 
         Result = Graphics3D.GpuParticleValue3D(Graphics3D.GPU_PARTICLE_QUERY_RESOURCE_GPU_BYTES,
             GpuSparks.Handle)
