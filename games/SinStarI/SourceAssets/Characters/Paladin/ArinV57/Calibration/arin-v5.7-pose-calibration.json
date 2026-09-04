@@ -6,11 +6,11 @@
   "dataKey": "CharacterViewerCalibrationKeyframes",
   "storageVersion": 2,
   "savedKeyframe": {
-    "clipIndex": 1,
-    "clipName": "Defend",
-    "frame": 0
+    "clipIndex": 7,
+    "clipName": "Walk",
+    "frame": 19
   },
-  "totalKeyframes": 3,
+  "totalKeyframes": 5,
   "clips": [
     {
       "index": 0,
@@ -182,7 +182,94 @@
     {
       "index": 7,
       "name": "Walk",
-      "keyframes": []
+      "keyframes": [
+        {
+          "frame": 0,
+          "swordWrist": {
+            "rotation": [
+              58,
+              -130,
+              0
+            ]
+          },
+          "shieldWrist": {
+            "rotation": [
+              0,
+              144,
+              0
+            ]
+          },
+          "sword": {
+            "decoupled": true,
+            "rotation": [
+              13,
+              0,
+              0
+            ],
+            "position": [
+              -2,
+              0,
+              1
+            ]
+          },
+          "shield": {
+            "decoupled": true,
+            "rotation": [
+              -112,
+              -14,
+              0
+            ],
+            "position": [
+              0,
+              0,
+              0
+            ]
+          }
+        },
+        {
+          "frame": 19,
+          "swordWrist": {
+            "rotation": [
+              58,
+              -130,
+              0
+            ]
+          },
+          "shieldWrist": {
+            "rotation": [
+              0,
+              144,
+              0
+            ]
+          },
+          "sword": {
+            "decoupled": true,
+            "rotation": [
+              13,
+              0,
+              0
+            ],
+            "position": [
+              -2,
+              0,
+              1
+            ]
+          },
+          "shield": {
+            "decoupled": true,
+            "rotation": [
+              -112,
+              7,
+              0
+            ],
+            "position": [
+              0,
+              -5,
+              4
+            ]
+          }
+        }
+      ]
     }
   ]
 }

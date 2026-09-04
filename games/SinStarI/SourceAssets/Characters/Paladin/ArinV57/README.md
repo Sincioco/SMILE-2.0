@@ -54,7 +54,8 @@ this preview update. No old keyframe was deleted or rewritten by the new mode.
 
 Pose Calibration's **Save Frame** and **Cancel** buttons are in the lower-right corner;
 the -5/+5 buttons are removed. **Delete All
-Key Frames** (formerly Reset Clip) clears only the selected animation's saved
+Key Frames** (formerly Reset Clip) sits in the lower-left with a red warning border
+and clears only the selected animation's saved
 corrections after **Confirm Current Clip?**; other clips and source animations are
 unchanged. The full calibration path remains clickable below the timeline, in
 muted gray at its original 9-point font size.
@@ -63,6 +64,12 @@ without changing pause state or modifying saved keys.
 The right-panel Pause Flames / Play Flames button controls thermal equipment
 fire independently: by default flames continue while Space pauses the character.
 Reset resumes both. None of these UI preferences alter keyframes.
+
+The viewer's close-up zoom now continues past -48 to -144, moving to one tenth
+of the former camera distance for glove and grip inspection. Pan the desired
+glove to the center before zooming. Models, arena size, and poses are unchanged.
+The September 4 close-up checkpoint includes five user-saved corrections, with
+the new Walk keys at frames 0 and 19 exported from the live editor.
 
 `Save Frame` writes the live multi-keyframe track to the stable `smile.tools.character3d-viewer` application-data identity, so rebuilding or renaming the executable does not lose current work. Launching through `tools\Character3DViewer\Launch.ps1` watches that live file and converts every saved change into `Calibration\arin-v5.7-pose-calibration.json` in this folder.
 

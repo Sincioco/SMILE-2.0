@@ -28,7 +28,9 @@ Const MINIMUM_VIEWER_HEIGHT = 540
 Const ORBIT_POINTER_DIVISOR = 1
 Const PAN_POINTER_DIVISOR = 3
 Const DEFAULT_ZOOM_DEGREES = -16
-Const ZOOM_IN_LIMIT = -48
+Const ZOOM_IN_LIMIT = -144
+Const CLOSE_UP_ZOOM_START = -48
+Const CLOSE_UP_MINIMUM_DISTANCE_1000 = 100
 Const ZOOM_OUT_LIMIT = 36
 Const MAX_RAW_FRAME_MILLISECONDS = 60000
 Const MAX_ANIMATION_ELAPSED = 250
@@ -361,6 +363,8 @@ Do
         Call UpdateResponsiveFit()
 
         Camera = Interaction.ApplyScreenSpaceCameraControls(BaseCamera, CameraControls)
+
+        Call ApplyCloseUpZoom()
 
         If EpicGlowVisible Then
 
@@ -1636,13 +1640,8 @@ Function HandleSharedSliders() As Boolean
 
     If UI.UpdateSlider(SliderDragOwner, 3, PanelLeft + 76, Window_Height() - 90,
         CAMERA_SLIDER_WIDTH, CAMERA_SLIDER_HEIGHT, ZOOM_IN_LIMIT, ZOOM_OUT_LIMIT, -1, Value) Then
-
-        SmoothZoom.Current1000 = Value * 1000
-        SmoothZoom.Target1000 = SmoothZoom.Current1000
-        SmoothZoom.AdvanceRemainder = 0
-        CameraControls.Zoom = Value
+        SmoothZoom.Target1000 = Value * 1000
         Return True
-
     End If
 
     If CalibrationVisible Or SliderDragOwner = 4 Then
@@ -1735,7 +1734,7 @@ Sub HandleCalibrationPanelPointer()
 
         Call CancelCalibrationEdit()
 
-    Else If PointerInRectangle(34, 238, 196, 24) Then
+    Else If PointerInRectangle(34, 412, 196, 24) Then
 
         If CalibrationClearConfirm Then
             Call ClearSelectedClipCalibration()
@@ -2837,6 +2836,30 @@ Sub AdvanceSmoothZoom()
 
     Ready = CharacterViewer.AdvanceZoom(SmoothZoom, CameraElapsed) And Ready
     CameraControls.Zoom = CharacterViewer.ZoomDegrees(SmoothZoom)
+
+End Sub
+
+Sub ApplyCloseUpZoom()
+
+    Dim Progress1000 As Number
+    Dim Distance1000 As Number
+
+    If SmoothZoom.Current1000 >= CLOSE_UP_ZOOM_START * 1000 Then
+        Return
+    End If
+
+    ''' Continue past the lens limit by moving toward the current (panned) anchor.
+    ''' Recompose from the base camera every frame; never accumulate camera drift.
+    Progress1000 = ((CLOSE_UP_ZOOM_START * 1000 - SmoothZoom.Current1000) /
+        (CLOSE_UP_ZOOM_START - ZOOM_IN_LIMIT))
+    Progress1000 = Min(1000, Max(0, Progress1000))
+    Distance1000 = 1000 - Progress1000 * (1000 - CLOSE_UP_MINIMUM_DISTANCE_1000) / 1000
+    Camera.Position.X = (Camera.Target.X +
+        (Camera.Position.X - Camera.Target.X) * Distance1000 / 1000)
+    Camera.Position.Y = (Camera.Target.Y +
+        (Camera.Position.Y - Camera.Target.Y) * Distance1000 / 1000)
+    Camera.Position.Z = (Camera.Target.Z +
+        (Camera.Position.Z - Camera.Target.Z) * Distance1000 / 1000)
 
 End Sub
 
@@ -5144,7 +5167,7 @@ Sub DrawViewerOverlay()
         Draw Text "seconds" At PanelLeft + 192, 284 Size 11 Color LIGHT_GRAY
         Draw Text "Zoom / FPS" At PanelText, 306 Size 12 Color LIGHT_GRAY
         Draw Number CharacterViewer.ZoomDegrees(SmoothZoom) At PanelLeft + 116, 306 Size 12 Color CYAN
-        Draw Text "deg" At PanelLeft + 146, 306 Size 11 Color LIGHT_GRAY
+        Draw Text "level" At PanelLeft + 146, 306 Size 11 Color LIGHT_GRAY
         Draw Number CurrentFramesPerSecond At PanelLeft + 190, 306 Size 12 Color GREEN
         Draw Text "fps" At PanelLeft + 216, 306 Size 11 Color LIGHT_GRAY
         Draw Text "ANIMATIONS" At PanelText, 334 Size 13 Color WHITE
@@ -5330,7 +5353,6 @@ Sub DrawCalibrationPanel()
     Call UI.DrawSlider(CALIBRATION_SLIDER_X, CALIBRATION_SLIDER_Y,
         CALIBRATION_SLIDER_WIDTH, CALIBRATION_SLIDER_HEIGHT, Value, MinimumValue, MaximumValue, 6)
 
-    Call DrawButton(34, 238, 196, 24, CalibrationResetClipLabel(), CalibrationClearConfirm)
     Call DrawButton(34, 268, 80, 24, "Copy Key", CurrentKeyframe >= 0 And Not CalibrationEditing)
     Call DrawButton(118, 268, 80, 24, "Paste Key", CalibrationClipboardAvailable And Not CalibrationEditing)
     Call DrawButton(202, 268, 90, 24, "Delete Key", CurrentKeyframe >= 0 And Not CalibrationEditing)
@@ -5339,8 +5361,14 @@ Sub DrawCalibrationPanel()
     Call DrawButton(34, 374, 194, 24, "Decouple Sword", SwordDecoupled[SelectedClip] <> 0)
     Call DrawButton(236, 374, 196, 24, "Decouple Shield", ShieldDecoupled[SelectedClip] <> 0)
 
+    Call DrawButton(34, 412, 196, 24, CalibrationResetClipLabel(), CalibrationClearConfirm)
     Call DrawButton(332, 412, 100, 24, "Save Frame", CurrentKeyframe >= 0 And Not CalibrationEditing)
     Call DrawButton(244, 412, 84, 24, "Cancel", CalibrationEditing)
+
+    Fill Rectangle 34, 412, 196, 2, Rgb(210, 70, 76) Opacity 90
+    Fill Rectangle 34, 434, 196, 2, Rgb(210, 70, 76) Opacity 90
+    Fill Rectangle 34, 412, 2, 24, Rgb(210, 70, 76) Opacity 90
+    Fill Rectangle 228, 412, 2, 24, Rgb(210, 70, 76) Opacity 90
 
     If CalibrationGripLimit Then
 
