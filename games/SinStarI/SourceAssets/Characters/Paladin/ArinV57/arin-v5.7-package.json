@@ -35,6 +35,7 @@
     "syncScript": "scripts/sync-arin-v5-7-calibration.ps1"
   },
   "previews": "arin-v57-idle-previews",
+  "workflowHandoff": "ARIN-CREATION-AND-REPAIR-JOURNEY.md",
   "modelQuality": {
     "report": "Diagnostics/model-quality.json",
     "developmentUse": "allowed",

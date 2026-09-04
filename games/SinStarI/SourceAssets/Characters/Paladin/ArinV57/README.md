@@ -4,6 +4,11 @@ Inspected on September 4, 2026 with Blender 5.2.1 LTS.
 
 This directory is the canonical repository home for the complete Arin v5.7 revision. It keeps the original and cleaned models, rig references, animation sources, accepted viewer checkpoint, runtime descriptor, human-readable pose calibration, previews, package manifest, checksums, and v5.8 handoff knowledge together. Sin Star I owns this package; the Character Viewer/editor consumes a disposable tool-local cooking copy prepared from it.
 
+Read **`ARIN-CREATION-AND-REPAIR-JOURNEY.md`** before future character work. It
+consolidates the Tripo/Blender/Mixamo pipeline, exact version-specific adjustments,
+editor/persistence lessons, socket and fire failures, superseded advice, and the
+safe workflow for v5.8 or another character.
+
 `arin-v5.7-package.json` is the machine-readable package index. `Calibration` holds the permanent pose-correction JSON. `arin-v57-idle-previews` holds the accepted checkpoint preview frames. Reusable build tooling remains in the repository `scripts` and `tools` directories rather than being duplicated inside the character package.
 
 ## Visual Approval and Deferred Model Repair (September 4, 2026)
