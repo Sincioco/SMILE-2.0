@@ -32,8 +32,10 @@ if ($null -eq $dotnet) {
     Fail ".NET SDK was not found." "Install the .NET 10 SDK version selected by global.json."
 }
 else {
-    $sdkVersion = (& $dotnet.Source --version 2>$null | Select-Object -First 1).Trim()
-    if ($LASTEXITCODE -eq 0 -and $sdkVersion -eq "10.0.400") {
+    $sdkOutput = @(& $dotnet.Source --version 2>$null)
+    $sdkExitCode = $LASTEXITCODE
+    $sdkVersion = ($sdkOutput | Select-Object -First 1).Trim()
+    if ($sdkExitCode -eq 0 -and $sdkVersion -eq "10.0.400") {
         Pass ".NET SDK $sdkVersion"
     }
     else {
