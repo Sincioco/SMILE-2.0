@@ -417,6 +417,20 @@ Public Const GPU_PARTICLE_QUERY_RESTARTS = 18
 Public Const GPU_PARTICLE_QUERY_READBACKS = 19
 Public Const GPU_PARTICLE_QUERY_MAX_SPAWNS_PER_ADVANCE = 20
 Public Const GPU_PARTICLE_QUERY_GPU_MAX_CAPACITY = 21
+Public Const GPU_PARTICLE_QUERY_NATIVE_THERMAL = 22
+Public Const GPU_PARTICLE_QUERY_RESOURCE_THERMAL = 51
+Public Const GPU_PARTICLE_QUERY_CPU_Y_MILLI = 52
+Public Const GPU_PARTICLE_QUERY_CPU_VX_MILLI = 53
+Public Const GPU_PARTICLE_QUERY_CPU_VY_MILLI = 54
+Public Const GPU_PARTICLE_QUERY_CPU_TEMPERATURE = 55
+Public Const GPU_PARTICLE_QUERY_CPU_DENSITY = 56
+Public Const GPU_PARTICLE_QUERY_CPU_SIZE_MILLI = 57
+Public Const GPU_PARTICLE_QUERY_CPU_VISIBLE = 58
+Public Const GPU_PARTICLE_QUERY_CPU_X_MILLI = 59
+Public Const GPU_PARTICLE_SHADER_STANDARD = 0
+Public Const GPU_PARTICLE_SHADER_THERMAL = 1
+Public Const GPU_PARTICLE_SHADER_SMOKE = 2
+Public Const GPU_PARTICLE_SHADER_EMBER = 3
 Public Const GPU_PARTICLE_QUERY_RESOURCE_CAPACITY = 30
 Public Const GPU_PARTICLE_QUERY_RESOURCE_ACTIVE = 31
 Public Const GPU_PARTICLE_QUERY_RESOURCE_PENDING = 32
@@ -3290,7 +3304,83 @@ Public Function CommitGpuParticleSpawn3D(
 
 End Function
 
-''' Advances the CPU reference scheduler through bounded fixed simulation steps.
+''' Configures native fire acceleration in world units/second squared; drag is per mille/second.
+Public Function SetGpuParticleForces3D(
+    System As Core.GpuParticleSystem3D,
+    GravityX As Number, GravityY As Number, GravityZ As Number,
+    WindX As Number, WindY As Number, WindZ As Number,
+    Buoyancy As Number, DragPerMille As Number
+) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(COMMAND_GPU_PARTICLE_SYSTEM, 11, System.Handle,
+        GravityX, GravityY, GravityZ, WindX, WindY, WindZ, Buoyancy, DragPerMille) <> 0
+
+    Return Result
+
+End Function
+
+''' Frequency is cycles per million world units; speed is per mille/second; octaves are 0..2.
+Public Function SetGpuParticleTurbulence3D(
+    System As Core.GpuParticleSystem3D,
+    Strength As Number, FrequencyMillionths As Number,
+    SpeedPerMille As Number, Octaves As Number
+) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(COMMAND_GPU_PARTICLE_SYSTEM, 12, System.Handle,
+        Strength, FrequencyMillionths, SpeedPerMille, Octaves, 0, 0, 0, 0) <> 0
+
+    Return Result
+
+End Function
+
+''' Cooling and dissipation are per mille/second; growth and speed are world units/second.
+Public Function SetGpuParticleThermalEvolution3D(
+    System As Core.GpuParticleSystem3D,
+    Cooling As Number, Dissipation As Number, Growth As Number, MaximumVelocity As Number
+) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(COMMAND_GPU_PARTICLE_SYSTEM, 13, System.Handle,
+        Cooling, Dissipation, Growth, MaximumVelocity, 0, 0, 0, 0) <> 0
+
+    Return Result
+
+End Function
+
+Public Function SetGpuParticleBounds3D(
+    System As Core.GpuParticleSystem3D, Minimum As Core.Vector3, Maximum As Core.Vector3
+) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(COMMAND_GPU_PARTICLE_SYSTEM, 14, System.Handle,
+        Minimum.X, Minimum.Y, Minimum.Z, Maximum.X, Maximum.Y, Maximum.Z, 0, 0) <> 0
+
+    Return Result
+
+End Function
+
+''' Native thermal/smoke/ember shading, alignment 0 camera/1 vertical/2 velocity, padded atlas.
+Public Function SetGpuParticleRender3D(
+    System As Core.GpuParticleSystem3D, ShaderMode As Number, Alignment As Number,
+    Optional AtlasColumns As Number = 1, Optional AtlasRows As Number = 1
+) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(COMMAND_GPU_PARTICLE_SYSTEM, 15, System.Handle,
+        ShaderMode, Alignment, AtlasColumns, AtlasRows, 0, 0, 0, 0) <> 0
+
+    Return Result
+
+End Function
+
+''' Advances the CPU-owned schedule and effective simulation through bounded fixed steps.
 Public Function AdvanceGpuParticleSystem3D(
     ByRef System As Core.GpuParticleSystem3D,
     ElapsedMilliseconds As Number

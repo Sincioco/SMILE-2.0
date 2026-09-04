@@ -1,0 +1,187 @@
+''' One arena floor/grid recipe shared by native tools; only the grid tint varies.
+Module Smile.Simple3D.Arena3D
+
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Graphics3D As Graphics3D
+
+Public Type ArenaFloor
+    Floor As Core.Object3D
+    Grid As Core.Object3D
+    GridMaterial As Core.Material3D
+    Epoch As Number
+    LineCount As Number
+    Ready As Boolean
+End Type
+
+Public Function Create(Width As Number, Depth As Number,
+    RedValue As Number, GreenValue As Number, BlueValue As Number,
+    Optional TileSize As Number = 40, Optional LineThickness As Number = 2) As ArenaFloor
+
+    Dim Result As ArenaFloor
+    Dim EmptyTexture As Core.Texture3D
+    Dim HorizontalHalfCount As Number
+    Dim VerticalHalfCount As Number
+    Dim MeshHandle As Number
+    Dim Index As Number
+    Dim LineIndex As Number
+    Dim Position As Number
+    Dim Ok As Boolean
+
+    If Graphics3D.FrameActive3D() Then
+        Return Result
+    End If
+
+    If (Width < 40 Or
+        Depth < 40 Or
+        Width > 100000 Or
+        Depth > 100000) Then
+        Return Result
+    End If
+
+    If (TileSize < 2 Or
+        LineThickness < 1 Or
+        LineThickness >= TileSize) Then
+        Return Result
+    End If
+
+    ''' Bound the mesh rather than silently changing the requested spacing.
+
+    If Width / TileSize > 512 Or Depth / TileSize > 512 Then
+        Return Result
+    End If
+
+    Result.Epoch = Graphics3D.ResourceEpoch3D()
+    Result.Floor = Graphics3D.CreatePlane3D(Width, Depth)
+
+    Call Graphics3D.SetObjectPosition(Result.Floor, 0, -1, 0)
+    Call Graphics3D.SetObjectColor(Result.Floor, 0, 0, 0)
+
+    HorizontalHalfCount = (Depth - LineThickness * 2) / (TileSize * 2)
+    VerticalHalfCount = (Width - LineThickness * 2) / (TileSize * 2)
+    Result.LineCount = (HorizontalHalfCount * 2 + 1) + (VerticalHalfCount * 2 + 1)
+    Result.GridMaterial = Graphics3D.CreateMaterial3D(EmptyTexture,
+        Graphics3D.MATERIAL_ALPHA_ADDITIVE, RedValue, GreenValue, BlueValue, 70, True, 100, 50)
+    MeshHandle = Graphics3D.CreateMesh3D(Result.LineCount * 4, Result.LineCount * 6)
+    Result.Grid.MeshHandle = MeshHandle
+    Ok = Result.Floor.Handle <> 0 And Result.GridMaterial.Handle <> 0 And MeshHandle <> 0
+
+    If Ok Then
+
+        For Index = 0 To HorizontalHalfCount * 2
+            Position = (Index - HorizontalHalfCount) * TileSize
+            Ok = SetGridQuad(MeshHandle, LineIndex * 4, LineIndex * 2,
+                0 - Width / 2, Position, Width / 2, Position + LineThickness) And Ok
+            LineIndex = LineIndex + 1
+        End For
+
+        For Index = 0 To VerticalHalfCount * 2
+            Position = (Index - VerticalHalfCount) * TileSize
+            Ok = SetGridQuad(MeshHandle, LineIndex * 4, LineIndex * 2,
+                Position, 0 - Depth / 2, Position + LineThickness, Depth / 2) And Ok
+            LineIndex = LineIndex + 1
+        End For
+
+        Ok = Graphics3D.CommitMesh3D(MeshHandle) And Ok
+
+        If Ok Then
+
+            Result.Grid = Graphics3D.CreateObjectFromMesh3D(MeshHandle)
+            Result.Grid.MeshHandle = MeshHandle
+            Ok = Result.Grid.Handle <> 0 And Ok
+            Ok = Graphics3D.SetObjectMaterial3D(Result.Grid, Result.GridMaterial) And Ok
+            Ok = Graphics3D.SetObjectShadowsChecked3D(Result.Grid, False, False) And Ok
+
+        End If
+
+    End If
+
+    Result.Ready = Ok
+
+    If Not Ok Then
+        Call Destroy(Result)
+    End If
+
+    Return Result
+
+End Function
+
+Public Function Draw(ByRef Value As ArenaFloor, ShowFloor As Boolean, ShowGrid As Boolean) As Boolean
+
+    Dim Ok As Boolean
+
+    If Not Value.Ready Or Value.Epoch <> Graphics3D.ResourceEpoch3D() Then
+        Return False
+    End If
+
+    Ok = True
+
+    If ShowFloor Then
+        Ok = Graphics3D.DrawObject3D(Value.Floor) And Ok
+    End If
+
+    If ShowGrid Then
+        Ok = Graphics3D.DrawObject3D(Value.Grid) And Ok
+    End If
+
+    Return Ok
+
+End Function
+
+Public Sub Destroy(ByRef Value As ArenaFloor)
+
+    Dim Empty As ArenaFloor
+
+    If Graphics3D.FrameActive3D() Then
+        Return
+    End If
+
+    If Value.Epoch = Graphics3D.ResourceEpoch3D() Then
+
+        Call Graphics3D.DestroyObject3D(Value.Grid)
+        Call Graphics3D.DestroyObject3D(Value.Floor)
+        Call Graphics3D.DestroyMaterial3D(Value.GridMaterial)
+
+    End If
+
+    Value = Empty
+
+End Sub
+
+Private Function SetGridQuad(
+    MeshHandle As Number,
+    VertexIndex As Number,
+    TriangleIndex As Number,
+    MinimumX As Number,
+    MinimumZ As Number,
+    MaximumX As Number,
+    MaximumZ As Number
+) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Graphics3D.SetMeshVertex3D(MeshHandle, VertexIndex, MinimumX, 0, MinimumZ)
+    Result = Graphics3D.SetMeshVertex3D(MeshHandle, VertexIndex + 1, MaximumX, 0, MinimumZ) And Result
+    Result = Graphics3D.SetMeshVertex3D(MeshHandle, VertexIndex + 2, MaximumX, 0, MaximumZ) And Result
+    Result = Graphics3D.SetMeshVertex3D(MeshHandle, VertexIndex + 3, MinimumX, 0, MaximumZ) And Result
+    Result = Graphics3D.SetMeshTriangle3D(
+        MeshHandle,
+        TriangleIndex,
+        VertexIndex,
+        VertexIndex + 1,
+        VertexIndex + 2
+    ) And Result
+    Result = Graphics3D.SetMeshTriangle3D(
+        MeshHandle,
+        TriangleIndex + 1,
+        VertexIndex,
+        VertexIndex + 2,
+        VertexIndex + 3
+    ) And Result
+
+    Return Result
+
+End Function
+
+End Module

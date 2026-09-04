@@ -1,0 +1,326 @@
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Graphics3D As Graphics3D
+Import Smile.Simple3D.FireEmitter3D As Fire
+Import Smile.Simple3D.Character3D As Character3D
+Import Smile.Simple3D.Arena3D As Arena3D
+Import Smile.Simple3D.StaticBackdrop3D As StaticBackdrop3D
+
+Dim Checks As Number
+Dim Failures As Number
+
+Game Window "Native Thermal Fire Contract Tests" Size 320 By 240
+
+Do
+
+    Call RunTests()
+    Call TestArena()
+    Call TestBackdrop()
+
+Loop Until True
+
+If Failures = 0 Then
+    Print "FireEmitter3D tests passed"
+Else
+    Print "FireEmitter3D tests failed: "; Failures
+End If
+
+Sub Check(Condition As Boolean)
+
+    Checks = Checks + 1
+
+    If Not Condition Then
+        Failures = Failures + 1
+        Print "Failed check "; Checks
+    End If
+
+End Sub
+
+Sub TestBackdrop()
+
+    Dim First As StaticBackdrop3D.Backdrop
+    Dim Second As StaticBackdrop3D.Backdrop
+    Dim Rejected As StaticBackdrop3D.Backdrop
+    Dim Camera As Core.Camera3D
+    Dim Ok As Boolean
+
+    Call Graphics3D.ResetRenderer3D()
+
+    First = StaticBackdrop3D.Create("Assets/Fire/ember-shape.png")
+    Second = StaticBackdrop3D.Create("Assets/Fire/fire-shape-atlas.png")
+
+    Call Check(First.Ready And Second.Ready)
+
+    ''' Backdrop drawing is native-only. The wrapper must preserve the backend result.
+    Ok = Graphics3D.SetBackdropTexture3D(First.Texture)
+
+    Call Check(StaticBackdrop3D.SetActive(First) = Ok)
+    Call Check(StaticBackdrop3D.SetActive(Second) = Ok)
+    Call StaticBackdrop3D.Destroy(First)
+    Call Check(Not First.Ready And Graphics3D.LiveTextureCount3D() = 1)
+
+    Camera = Graphics3D.DefaultCamera()
+    Ok = Graphics3D.Begin3D(Camera, 0, 0, 0)
+    Rejected = StaticBackdrop3D.Create("Assets/Fire/ember-shape.png")
+
+    Call Check(Ok And Not Rejected.Ready)
+    Call Check(Not StaticBackdrop3D.ClearActive())
+    Call StaticBackdrop3D.Destroy(Second)
+    Call Check(Second.Ready)
+    Call Check(Graphics3D.End3DChecked())
+    Call StaticBackdrop3D.Destroy(Second)
+    Call StaticBackdrop3D.Destroy(Second)
+    Call Check(Not Second.Ready And Graphics3D.LiveTextureCount3D() = 0)
+
+    First = StaticBackdrop3D.Create("Assets/Fire/ember-shape.png")
+
+    Call Graphics3D.ResetRenderer3D()
+    Call Check(Not StaticBackdrop3D.SetActive(First))
+    Call StaticBackdrop3D.Destroy(First)
+    Call Check(Not First.Ready)
+
+End Sub
+
+Sub TestArena()
+
+    Dim BlueArena As Arena3D.ArenaFloor
+    Dim OrangeArena As Arena3D.ArenaFloor
+    Dim Invalid As Arena3D.ArenaFloor
+    Dim Camera As Core.Camera3D
+    Dim Ok As Boolean
+
+    Call Graphics3D.ResetRenderer3D()
+
+    BlueArena = Arena3D.Create(1000, 1000, 24, 150, 255)
+    OrangeArena = Arena3D.Create(1000, 1000, 255, 82, 8)
+    Invalid = Arena3D.Create(1000, 1000, 255, 82, 8, 0, 2)
+
+    Call Check(BlueArena.Ready And OrangeArena.Ready And Not Invalid.Ready)
+    Call Check(BlueArena.LineCount = 50 And OrangeArena.LineCount = BlueArena.LineCount)
+    Call Check(Graphics3D.LiveMaterialCount3D() = 2)
+
+    Camera = Graphics3D.DefaultCamera()
+    Ok = Graphics3D.Begin3D(Camera, 0, 0, 0)
+
+    Call Check(Ok)
+    Call Check(Arena3D.Draw(BlueArena, True, True))
+    Call Check(Arena3D.Draw(OrangeArena, False, True))
+    Call Arena3D.Destroy(BlueArena)
+    Call Check(BlueArena.Ready)
+    Call Check(Graphics3D.End3DChecked())
+
+    Show Screen
+
+    Call Arena3D.Destroy(BlueArena)
+    Call Arena3D.Destroy(BlueArena)
+    Call Arena3D.Destroy(OrangeArena)
+    Call Check(Graphics3D.LiveMaterialCount3D() = 0)
+
+    BlueArena = Arena3D.Create(800, 600, 10, 100, 250, 100, 4)
+
+    ''' Seven interior X lines plus five interior Z lines; no overhanging edge strips.
+
+    Call Check(BlueArena.Ready And BlueArena.LineCount = 12)
+    Call Graphics3D.ResetRenderer3D()
+    Call Check(Not Arena3D.Draw(BlueArena, True, True))
+    Call Arena3D.Destroy(BlueArena)
+    Call Check(Not BlueArena.Ready)
+
+End Sub
+
+Sub RunTests()
+
+    Dim Emitters[4] As Fire.FireEmitter
+    Dim Empty As Fire.FireEmitter
+    Dim Stale As Fire.FireEmitter
+    Dim Rejected As Fire.FireEmitter
+    Dim Position As Core.Vector3
+    Dim Tip As Core.Vector3
+    Dim Camera As Core.Camera3D
+    Dim InvalidActor As Character3D.Actor
+    Dim Material As Core.Material3D
+    Dim Blockers[128] As Core.Material3D
+    Dim Texture As Core.Texture3D
+    Dim System As Core.GpuParticleSystem3D
+    Dim Minimum As Core.Vector3
+    Dim Maximum As Core.Vector3
+    Dim Index As Number
+    Dim Tick As Number
+    Dim Before As Number
+    Dim Ok As Boolean
+
+    Call Graphics3D.ResetRenderer3D()
+
+    ''' Leave one material slot: failed initialization must roll back its partial layer.
+
+    For Index = 0 To Graphics3D.MaximumMaterialCount3D() - 2
+        Blockers[Index] = Graphics3D.CreateEffectMaterial3D(Texture, 3)
+    End For
+
+    Call Check(Not Fire.Initialize("Assets/Fire"))
+    Call Check(Graphics3D.LiveTextureCount3D() = 0)
+    Call Check(Graphics3D.LiveMaterialCount3D() = Graphics3D.MaximumMaterialCount3D() - 1)
+
+    For Index = 0 To Graphics3D.MaximumMaterialCount3D() - 2
+        Call Graphics3D.DestroyMaterial3D(Blockers[Index])
+    End For
+
+    Call Check(Fire.Initialize("Assets/Fire"))
+    Call Check(Fire.Initialize("Assets/Fire"))
+    Call Check(Graphics3D.LiveTextureCount3D() = 3)
+    Call Check(Graphics3D.LiveMaterialCount3D() = 5)
+
+    Camera = Graphics3D.DefaultCamera()
+    Position.Z = 50
+    Tip = Position
+    Tip.Y = 90
+    Emitters[0] = Fire.StartAt("LineFire", Position, 47)
+
+    Call Check(Emitters[0].Slot <> 0)
+    Call Check(Fire.SetSegment(Emitters[0], Position, Tip))
+    Call Check(Not Fire.SetSegment(Emitters[0], Position, Position))
+    Call Check(Fire.SetWind(Emitters[0], 100, 0, 0))
+    Call Check(Fire.SetTurbulence(Emitters[0], 150))
+    Call Fire.Update(100)
+    Call Check(Fire.Value(4, Emitters[0]) > 0)
+    Call Check(Fire.Value(6, Emitters[0]) > 0)
+
+    Ok = Graphics3D.Begin3D(Camera, 0, 0, 0)
+
+    Call Check(Ok)
+    Call Check(Fire.Draw(Emitters[0]))
+
+    Call Check(Not Fire.SetWind(Emitters[0], 0, 0, 0))
+    Call Check(Not Fire.SetSegment(Emitters[0], Position, Tip))
+    Call Check(Not Fire.Destroy(Emitters[0]))
+
+    Before = Fire.Value(10, Emitters[0])
+
+    Call Fire.Update(100)
+    Call Check(Fire.Value(10, Emitters[0]) = Before)
+    Call Fire.Shutdown()
+    Call Check(Fire.Value(1, Empty) = 1)
+    Call Check(Graphics3D.End3DChecked())
+
+    Show Screen
+
+    Call Check(Fire.Destroy(Emitters[0]))
+
+    For Index = 0 To 3
+        Emitters[Index] = Fire.StartAt("TorchFire", Position, Index + 1, 3, 3)
+
+        Call Check(Emitters[Index].Slot <> 0)
+    End For
+
+    Rejected = Fire.StartAt("TorchFire", Position, 99)
+
+    Call Check(Rejected.Slot = 0)
+    Call Check(Fire.Value(1, Empty) = 4)
+    Call Check(Fire.Value(3, Emitters[3]) = Fire.SIMULATION_CPU)
+
+    For Tick = 1 To 20
+        Call Fire.Update(100)
+    End For
+
+    For Index = 0 To 3
+        Call Fire.StopEmitter(Emitters[Index])
+    End For
+
+    For Tick = 1 To 20
+        Call Fire.Update(100)
+    End For
+
+    For Index = 0 To 3
+        Call Check(Fire.Value(6, Emitters[Index]) = 0)
+        Call Check(Fire.Destroy(Emitters[Index]))
+    End For
+
+    Call Check(Graphics3D.GpuParticleValue3D(1) = 0)
+    Call Check(Graphics3D.GpuParticleValue3D(8) = 0)
+    Call Check(Graphics3D.LiveParticleBatchCount3D() = 0)
+
+    Emitters[0] = Fire.StartAt("FireBurstGen3", Position, 11, 1, 1)
+    Stale = Emitters[0]
+
+    For Tick = 1 To 6
+        Call Fire.Update(100)
+    End For
+
+    Call Check(Fire.Value(11, Emitters[0]) = 1)
+    Call Check(Fire.LightIntensity(Emitters[0]) > 150)
+
+    Before = Fire.Value(4, Emitters[0])
+
+    Call Fire.Update(100)
+    Call Check(Fire.Value(4, Emitters[0]) - Before > 20)
+
+    For Tick = 1 To 21
+        Call Fire.Update(100)
+    End For
+
+    Call Check(Fire.Value(16, Emitters[0]) = 1)
+    Call Check(Fire.Value(6, Emitters[0]) = 0)
+    Call Check(Fire.Destroy(Emitters[0]))
+
+    Emitters[0] = Fire.StartAt("TorchFire", Position, 12, 1, 1)
+
+    Call Check(Not Fire.Destroy(Stale))
+    Call Check(Fire.Value(1, Empty) = 1)
+
+    Rejected = Fire.StartOnSegment("LineFire", InvalidActor, "Missing", "Missing", 12)
+
+    Call Check(Rejected.Slot = 0)
+    Call Check(Fire.Destroy(Emitters[0]))
+    Call Fire.Shutdown()
+    Call Check(Graphics3D.LiveMaterialCount3D() = 0)
+    Call Check(Graphics3D.LiveTextureCount3D() = 0)
+
+    If Graphics3D.GpuParticleValue3D(Graphics3D.GPU_PARTICLE_QUERY_NATIVE_THERMAL) <> 0 Then
+
+    Material = Graphics3D.CreateEffectMaterial3D(Texture, 3)
+    System = Graphics3D.CreateGpuParticleSystem3D(8, Material, 1, 10)
+    Minimum.X = -1000
+    Minimum.Y = -1000
+    Minimum.Z = -1000
+    Maximum.X = 1000
+    Maximum.Y = 1000
+    Maximum.Z = 1000
+
+    Call Check(Graphics3D.SetGpuParticleForces3D(System, 0, -10, 0, 20, 0, 0, 30, 0))
+    Call Check(Graphics3D.SetGpuParticleTurbulence3D(System, 0, 1000, 0, 1))
+    Call Check(Graphics3D.SetGpuParticleThermalEvolution3D(System, 300, 200, 2, 100))
+    Call Check(Graphics3D.SetGpuParticleBounds3D(System, Minimum, Maximum))
+    Call Check(Graphics3D.SetGpuParticleRender3D(System, 1, 1, 4, 4))
+    Call Check(Graphics3D.SetGpuParticleSpawnKinematics3D(System, 0, 0, 0, 0, 0, 0, 0))
+    Call Check(Graphics3D.SetGpuParticleSpawnVisual3D(System, 0, 1000, 1, 2, 0, 0, 1000, 1000))
+    Call Check(Graphics3D.CommitGpuParticleSpawn3D(System, 0, 1, 17))
+    Call Check(Graphics3D.AdvanceGpuParticleSystem3D(System, 10))
+    Call Check(Graphics3D.GpuParticleValue3D(55, System.Handle, 0) = 997)
+    Call Check(Graphics3D.GpuParticleValue3D(56, System.Handle, 0) = 998)
+    Call Check(Graphics3D.GpuParticleValue3D(57, System.Handle, 0) = 1020)
+    Call Check(Graphics3D.GpuParticleValue3D(53, System.Handle, 0) = 200)
+    Call Check(Not Graphics3D.SetGpuParticleTurbulence3D(System, 1, 1, 1, 3))
+    Call Graphics3D.DestroyGpuParticleSystem3D(System)
+    Call Graphics3D.DestroyMaterial3D(Material)
+
+    End If
+
+    Call Check(Fire.Initialize("Assets/Fire"))
+
+    Emitters[0] = Fire.StartAt("TorchFire", Position, 11)
+
+    Call Graphics3D.ResetRenderer3D()
+    Call Fire.Update(10)
+    Call Check(Not Fire.Draw(Emitters[0]))
+    Call Check(Fire.Initialize("Assets/Fire"))
+
+    Emitters[0] = Fire.StartAt("TorchFire", Position, 11)
+
+    Call Check(Emitters[0].Slot <> 0)
+    Call Check(Fire.Destroy(Emitters[0]))
+    Call Fire.Shutdown()
+    Call Check(Graphics3D.LiveMaterialCount3D() = 0)
+    Call Check(Graphics3D.LiveTextureCount3D() = 0)
+
+End Sub

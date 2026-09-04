@@ -31,6 +31,7 @@
 #define SMILE_KEY_P 31
 #define SMILE_KEY_B 32
 #define SMILE_KEY_CONTROL 33
+#define SMILE_KEY_BACKTICK 34
 #define SMILE_KEY_UP 10
 #define SMILE_KEY_DOWN 11
 #define SMILE_KEY_LEFT 12
@@ -1164,6 +1165,7 @@ static long long smile_map_key(WCHAR character, WORD virtual_key)
     if (virtual_key == VK_ESCAPE) return SMILE_KEY_ESCAPE;
     if (virtual_key == VK_SPACE) return SMILE_KEY_SPACE;
     if (virtual_key == VK_CONTROL) return SMILE_KEY_CONTROL;
+    if (character == L'`' || virtual_key == VK_OEM_3) return SMILE_KEY_BACKTICK;
     if (virtual_key == '1') return SMILE_KEY_1;
     if (virtual_key == '2') return SMILE_KEY_2;
     if (virtual_key == '3') return SMILE_KEY_3;
@@ -1194,6 +1196,7 @@ static int smile_key_virtual(long long key)
         case SMILE_KEY_ESCAPE: return VK_ESCAPE;
         case SMILE_KEY_SPACE: return VK_SPACE;
         case SMILE_KEY_CONTROL: return VK_CONTROL;
+        case SMILE_KEY_BACKTICK: return VK_OEM_3;
         case SMILE_KEY_1: return '1';
         case SMILE_KEY_2: return '2';
         case SMILE_KEY_3: return '3';
@@ -1270,6 +1273,7 @@ long long smile_get_key(void)
         if ((GetAsyncKeyState('P') & 0x8000) != 0) return SMILE_KEY_P;
         if ((GetAsyncKeyState('B') & 0x8000) != 0) return SMILE_KEY_B;
         if ((GetAsyncKeyState(VK_CONTROL) & 0x8000) != 0) return SMILE_KEY_CONTROL;
+        if ((GetAsyncKeyState(VK_OEM_3) & 0x8000) != 0) return SMILE_KEY_BACKTICK;
         return SMILE_KEY_NONE;
     }
 }

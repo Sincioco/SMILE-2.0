@@ -1,0 +1,109 @@
+''' Screen-fixed image background. Camera motion never changes its position or UVs.
+Module Smile.Simple3D.StaticBackdrop3D
+
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Graphics3D As Graphics3D
+
+Public Type Backdrop
+    Texture As Core.Texture3D
+    Epoch As Number
+    Ready As Boolean
+End Type
+
+Private Dim ActiveHandle As Number
+Private Dim ActiveEpoch As Number
+
+Public Function Create(Path As Text) As Backdrop
+
+    Dim Result As Backdrop
+
+    If Graphics3D.FrameActive3D() Then
+        Return Result
+    End If
+
+    Result.Epoch = Graphics3D.ResourceEpoch3D()
+    Result.Texture = Graphics3D.LoadTexture3D(Path)
+    Result.Ready = Result.Texture.Handle <> 0
+
+    Return Result
+
+End Function
+
+Public Function SetActive(Value As Backdrop) As Boolean
+
+    Dim Result As Boolean
+
+    If Graphics3D.FrameActive3D() Then
+        Return False
+    End If
+
+    If Not Value.Ready Or Value.Epoch <> Graphics3D.ResourceEpoch3D() Then
+        Return False
+    End If
+
+    Result = Graphics3D.SetBackdropTexture3D(Value.Texture)
+
+    If Result Then
+        ActiveHandle = Value.Texture.Handle
+        ActiveEpoch = Value.Epoch
+    End If
+
+    Return Result
+
+End Function
+
+Public Function ClearActive() As Boolean
+
+    Dim Result As Boolean
+
+    If Graphics3D.FrameActive3D() Then
+        Return False
+    End If
+
+    Result = Graphics3D.ClearBackdropTexture3D()
+
+    If Result Then
+        ActiveHandle = 0
+        ActiveEpoch = 0
+    End If
+
+    Return Result
+
+End Function
+
+Public Sub Destroy(ByRef Value As Backdrop)
+
+    Dim Empty As Backdrop
+    Dim Cleared As Boolean
+
+    If Graphics3D.FrameActive3D() Then
+        Return
+    End If
+
+    If Value.Epoch = Graphics3D.ResourceEpoch3D() And Value.Ready Then
+
+        If ActiveEpoch = Value.Epoch And ActiveHandle = Value.Texture.Handle Then
+
+            Cleared = ClearActive()
+
+            If Not Cleared Then
+                Return
+            End If
+
+        End If
+
+        Call Graphics3D.DestroyTexture3D(Value.Texture)
+
+        If Value.Texture.Handle <> 0 Then
+            Return
+        End If
+
+    End If
+
+    Value = Empty
+
+End Sub
+
+End Module

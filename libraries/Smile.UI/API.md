@@ -141,3 +141,15 @@ Dialogue preserves bounded Unicode wrapping, spill pagination, caller-time typew
 ## Capability boundary
 
 `Menu.Draw`, `Menu.DrawFocused`, `MenuNavigator.Draw`, `MenuNavigator.DrawActive`, `Dialogue.Draw`, and measurement-dependent Dialogue operations retain `requiresGameWindow` in format-6 metadata. State, binding, selection, geometry, and update operations remain usable by Console consumers. Project and package references enforce the same consumer-located `SML3704` diagnostics.
+
+## Smile.UI.Controls
+
+Shared immediate-mode controls used by Character Viewer and Fire Lab; applications still own layout and actions.
+
+- `DrawPanel(X, Y, Width, Height, Optional Opacity = 80)`: translucent dark panel.
+- `DrawButton(X, Y, Width, Height, Label, Selected)`: fitted centered white text, dark normal fill and cyan selected fill.
+- `DrawSlider(X, Y, Width, Height, Value, MinimumValue, MaximumValue, Optional KnobWidth = 4)`: dark track, cyan progress, white thumb.
+- `Contains(X, Y, Width, Height)`, `Clicked(X, Y, Width, Height)`: logical-canvas hit testing and primary press.
+- `UpdateSlider(ByRef DragOwner, Id, X, Y, Width, Height, MinimumValue, MaximumValue, WheelStep, ByRef Value) As Boolean`: press-only drag start, clamp across the entire drag even outside the track/window, release handling, and hover-wheel adjustment. Return True means consume the input frame; do not pan/orbit the scene in that frame. Share one DragOwner number among a panel's controls, use unique positive IDs, and clear it on scene reset. A press that started elsewhere cannot be stolen merely by entering the slider. Camera and calibration actions remain application-specific.
+
+No new language syntax, native widget framework, or per-frame object allocation was introduced.

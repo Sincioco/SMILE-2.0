@@ -11,6 +11,7 @@
 #include "graphics_common.h"
 #include "graphics_directx.h"
 #include "image_resource.h"
+#include "thermal_fire3d.h"
 
 #define SMILE_3D_MAX_MESHES 128
 #define SMILE_3D_MAX_OBJECTS 1024
@@ -489,7 +490,10 @@ struct SmileGpuParticleConstants3D
     float step_milliseconds;
     unsigned int capacity;
     float reserved;
+    SmileThermalDynamics3D fire;
 };
+
+static_assert(sizeof(SmileGpuParticleConstants3D) == 144, "Compute constants packing");
 
 struct SmileGpuParticleSystem3D
 {
@@ -521,6 +525,8 @@ struct SmileGpuParticleSystem3D
     ID3D11ShaderResourceView* gpu_state_views[2];
     ID3D11UnorderedAccessView* gpu_state_uavs[2];
     ID3D11Buffer* gpu_constant_buffer;
+    SmileThermalDynamics3D fire;
+    SmileMaterial3D frame_material;
 };
 
 struct SmileVfxConstants3D
@@ -533,6 +539,7 @@ struct SmileVfxConstants3D
     float soft_depth[4];
     float target[4];
     float distortion[4];
+    float fire_render[4];
 };
 
 struct SmileDepthConstants3D
@@ -1862,6 +1869,12 @@ static long long smile_3d_create_gpu_particle_system(unsigned int capacity,
         system->read_generation = 1;
         system->write_generation = 2;
         system->material_handle = material_handle;
+        system->fire.evolution[3] = 1000000.0f;
+        for (int axis = 0; axis < 3; ++axis)
+        {
+            system->fire.bounds_min[axis] = -1000000.0f;
+            system->fire.bounds_max[axis] = 1000000.0f;
+        }
         system->states[0] = state_a;
         system->states[1] = state_b;
         system->staged_states = staged;
@@ -2013,9 +2026,20 @@ static void smile_3d_step_gpu_particle_system(SmileGpuParticleSystem3D* system)
             destination[slot].seed_flags_gradient_frame[1] = 0;
             continue;
         }
-        destination[slot].position_age[0] += source[slot].velocity_lifetime[0] * seconds;
-        destination[slot].position_age[1] += source[slot].velocity_lifetime[1] * seconds;
-        destination[slot].position_age[2] += source[slot].velocity_lifetime[2] * seconds;
+        if (system->fire.render[0] != 0)
+        {
+            SmileGpuParticleState3D& state = destination[slot];
+            if (state.seed_flags_gradient_frame[1] != 0 && !smile_fire_step(
+                state.position_age, state.velocity_lifetime, state.size_rotation_angular,
+                state.thermal_density_noise, state.seed_flags_gradient_frame[0],
+                system->fire, seconds)) state.seed_flags_gradient_frame[1] = 0;
+        }
+        else
+        {
+            destination[slot].position_age[0] += source[slot].velocity_lifetime[0] * seconds;
+            destination[slot].position_age[1] += source[slot].velocity_lifetime[1] * seconds;
+            destination[slot].position_age[2] += source[slot].velocity_lifetime[2] * seconds;
+        }
         destination[slot].position_age[3] += (float)system->fixed_step_ms;
         system->slot_ages[slot] += system->fixed_step_ms;
         destination[slot].size_rotation_angular[2] +=
@@ -2080,6 +2104,7 @@ static int smile_3d_step_gpu_particle_system_fast(SmileGpuParticleSystem3D* syst
     constants.step_seconds = (float)system->fixed_step_ms / 1000.0f;
     constants.step_milliseconds = (float)system->fixed_step_ms;
     constants.capacity = system->capacity;
+    constants.fire = system->fire;
     context->UpdateSubresource(system->gpu_constant_buffer, 0, 0, &constants, 0, 0);
     context->VSSetShaderResources(7, 1, &no_view);
     context->CSSetShaderResources(0, 1, &system->gpu_state_views[system->read_index]);
@@ -2136,6 +2161,8 @@ static int smile_3d_advance_gpu_particle_system(SmileGpuParticleSystem3D* system
             system->effective_simulation = SMILE_3D_GPU_PARTICLE_SIMULATION_CPU;
         if (system->effective_simulation == SMILE_3D_GPU_PARTICLE_SIMULATION_CPU)
             smile_3d_step_gpu_particle_system(system);
+        system->fire.time[0] += (float)system->fixed_step_ms / 1000.0f;
+        if (system->fire.time[0] >= 4096.0f) system->fire.time[0] -= 4096.0f;
         system->accumulator_ms -= system->fixed_step_ms;
     }
     return 1;
@@ -4721,21 +4748,35 @@ static int smile_3d_create_gpu_particle_pipeline(void)
 {
     static const char* compute_source =
         "struct Particle{float4 positionAge;float4 velocityLifetime;float4 sizeRotationAngular;float4 thermalDensityNoise;uint4 seedFlagsGradientFrame;};"
-        "cbuffer Simulation:register(b0){float stepSeconds;float stepMilliseconds;uint capacity;float reserved;}"
+        "cbuffer Simulation:register(b0){float stepSeconds;float stepMilliseconds;uint capacity;float reserved;"
+        "float4 gravityBuoyancy;float4 windDrag;float4 turbulence;float4 evolution;float4 boundsMin;float4 boundsMax;float4 fireRender;float4 fireTime;}"
         "StructuredBuffer<Particle> inputState:register(t0);RWStructuredBuffer<Particle> outputState:register(u0);"
+        SMILE_THERMAL_HLSL
         "[numthreads(256,1,1)]void main(uint3 id:SV_DispatchThreadID){uint slot=id.x;if(slot>=capacity)return;Particle p=inputState[slot];"
-        "if(p.seedFlagsGradientFrame.y!=0){p.positionAge.xyz+=p.velocityLifetime.xyz*stepSeconds;p.positionAge.w+=stepMilliseconds;"
+        "if(p.seedFlagsGradientFrame.y!=0){if(fireRender.x>.5){if(!FireStep(p))p.seedFlagsGradientFrame.y=0;}else p.positionAge.xyz+=p.velocityLifetime.xyz*stepSeconds;p.positionAge.w+=stepMilliseconds;"
         "p.sizeRotationAngular.z+=p.sizeRotationAngular.w*stepSeconds;if(p.positionAge.w>=p.velocityLifetime.w)p.seedFlagsGradientFrame.y=0;}outputState[slot]=p;}";
     static const char* vertex_source =
         "struct Particle{float4 positionAge;float4 velocityLifetime;float4 sizeRotationAngular;float4 thermalDensityNoise;uint4 seedFlagsGradientFrame;};"
-        "cbuffer V:register(b0){row_major float4x4 vp;float4 cameraRight;float4 cameraUp;float4 atlasOutput;float4 material;}"
+        "cbuffer V:register(b0){row_major float4x4 vp;float4 cameraRight;float4 cameraUp;float4 atlasOutput;float4 material;float4 softDepth;float4 target;float4 distortion;float4 fireRender;}"
         "StructuredBuffer<Particle> particleState:register(t7);"
         "struct I{float2 corner:POSITION;float2 uv:TEXCOORD0;};struct O{float4 p:SV_POSITION;float2 uv:TEXCOORD0;float4 color:COLOR0;};"
+        "float3 ThermalColor(float t){if(t<.25)return lerp(float3(.16,.005,0),float3(.95,.1,.005),t*4);"
+        "if(t<.55)return lerp(float3(.95,.1,.005),float3(1,.55,.03),(t-.25)/.3);"
+        "if(t<.8)return lerp(float3(1,.55,.03),float3(1,.92,.3),(t-.55)/.25);return lerp(float3(1,.92,.3),float3(1,1,.96),(t-.8)*5);}"
         "O main(I i,uint id:SV_InstanceID){O o;Particle state=particleState[id];if(state.seedFlagsGradientFrame.y==0){o.p=float4(-2,-2,2,1);o.uv=0;o.color=0;return o;}"
         "float life=max(state.velocityLifetime.w,1);float ratio=saturate(state.positionAge.w/life);float size=lerp(state.sizeRotationAngular.x,state.sizeRotationAngular.y,ratio);"
         "float angle=radians(state.sizeRotationAngular.z);float c=cos(angle),s=sin(angle);float2 q=float2(i.corner.x*c-i.corner.y*s,i.corner.x*s+i.corner.y*c)*size;"
-        "float3 world=state.positionAge.xyz+cameraRight.xyz*q.x+cameraUp.xyz*q.y;o.p=mul(float4(world,1),vp);o.uv=i.uv;"
-        "float temperature=saturate(state.thermalDensityNoise.x),density=saturate(state.thermalDensityNoise.y);o.color=float4(1,lerp(.25,.85,temperature),.08,density*(1-ratio));return o;}";
+        "float3 right=cameraRight.xyz,up=cameraUp.xyz;"
+        "if(fireRender.y>.5){float3 forward=cross(cameraRight.xyz,cameraUp.xyz);up=fireRender.y<1.5?float3(0,1,0):state.velocityLifetime.xyz;"
+        "up-=forward*dot(up,forward);float n=length(up);if(n>.0001){up/=n;right=cross(up,forward);q=i.corner*size;q.y*=fireRender.y<1.5?1.7:clamp(length(state.velocityLifetime.xyz)/max(size,1)*.04,1,4);}else up=cameraUp.xyz;}"
+        "float3 world=state.positionAge.xyz+right*q.x+up*q.y;o.p=mul(float4(world,1),vp);"
+        "uint columns=(uint)max(fireRender.z,1),rows=(uint)max(fireRender.w,1);uint frame=state.seedFlagsGradientFrame.x%(columns*rows);"
+        "o.uv=(float2(frame%columns,frame/columns)+i.uv)/float2(columns,rows);"
+        "float temperature=saturate(state.thermalDensityNoise.x),density=saturate(state.thermalDensityNoise.y);"
+        "float3 color=fireRender.x>.5?ThermalColor(temperature):float3(1,lerp(.25,.85,temperature),.08);"
+        "if(fireRender.x>1.5&&fireRender.x<2.5)color=float3(.24,.22,.2);"
+        "float fade=(1-ratio);if(fireRender.x>.5)fade*=saturate(state.positionAge.w/60);"
+        "o.color=float4(color,density*fade);return o;}";
     ID3D11Device* device = (ID3D11Device*)smile_graphics_directx_device();
     ID3DBlob* compute_bytecode = 0;
     ID3DBlob* vertex_bytecode = 0;
@@ -6735,8 +6776,6 @@ static int smile_3d_create_targets(void)
                 UINT depth_levels = 1;
                 UINT quality = 0;
                 if ((int)samples > smile_requested_sample_count3d) continue;
-                if (smile_distortion_requested3d && smile_distortion_quality3d > 1 &&
-                    samples > 1) continue;
                 if (samples > 1)
                 {
                     color_levels = depth_levels = 0;
@@ -6850,8 +6889,6 @@ static int smile_3d_create_targets(void)
             UINT depth_levels = 1;
             UINT quality = 0;
             if ((int)samples > smile_requested_sample_count3d) continue;
-            if (smile_distortion_requested3d && smile_distortion_quality3d > 1 &&
-                samples > 1) continue;
             if (samples > 1)
             {
                 color_levels = depth_levels = 0;
@@ -6901,6 +6938,17 @@ static int smile_3d_create_targets(void)
             if (SUCCEEDED(result) && samples == 1 && smile_color_texture3d != 0)
                 result = device->CreateShaderResourceView(
                     smile_color_texture3d, 0, &smile_scene_shader_view3d);
+            if (SUCCEEDED(result) && samples > 1 &&
+                smile_distortion_requested3d && smile_distortion_quality3d > 1)
+            {
+                color.SampleDesc.Count = 1;
+                color.SampleDesc.Quality = 0;
+                color.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+                result = device->CreateTexture2D(
+                    &color, 0, &smile_scene_resolve_texture3d);
+                if (SUCCEEDED(result)) result = device->CreateShaderResourceView(
+                    smile_scene_resolve_texture3d, 0, &smile_scene_shader_view3d);
+            }
             if (SUCCEEDED(result))
             {
                 smile_sample_count3d = samples;
@@ -6910,6 +6958,7 @@ static int smile_3d_create_targets(void)
             smile_3d_release(smile_color_view3d);
             smile_3d_release(smile_color_texture3d);
             smile_3d_release(smile_scene_shader_view3d);
+            smile_3d_release(smile_scene_resolve_texture3d);
             smile_3d_release(smile_depth_view3d);
             smile_3d_release(smile_depth_texture3d);
         }
@@ -6936,7 +6985,7 @@ static int smile_3d_create_targets(void)
     smile_target_height3d = smile_m5_target_height3d = height;
     smile_scene_bytes3d = (long long)width * height *
         (smile_hdr_effective3d ? 8 : 4) *
-        (smile_sample_count3d + (smile_hdr_effective3d && smile_sample_count3d > 1 ? 1 : 0));
+        (smile_sample_count3d + (smile_scene_resolve_texture3d != 0 ? 1 : 0));
     smile_scene_bytes3d += (long long)width * height * 4 * smile_sample_count3d;
     smile_bloom_bytes3d = smile_bloom_effective3d
         ? (long long)smile_bloom_width3d * smile_bloom_height3d * 16
@@ -7735,7 +7784,7 @@ static int smile_3d_draw_gpu_particle_system(SmileGpuParticleSystem3D* system)
 {
     ID3D11DeviceContext* context =
         (ID3D11DeviceContext*)smile_graphics_directx_context();
-    SmileMaterial3D* material = smile_3d_material(system->material_handle);
+    SmileMaterial3D* material = &system->frame_material;
     SmileTexture3D* texture = 0;
     ID3D11ShaderResourceView* texture_view = 0;
     ID3D11SamplerState* texture_sampler = 0;
@@ -7781,6 +7830,10 @@ static int smile_3d_draw_gpu_particle_system(SmileGpuParticleSystem3D* system)
     constants.atlas_output[1] = 1.0f;
     constants.atlas_output[2] = smile_hdr_effective3d ? 1.0f : 0.0f;
     constants.atlas_output[3] = texture == 0 ? 0.0f : 1.0f;
+    constants.fire_render[0] = system->fire.render[1];
+    constants.fire_render[1] = system->fire.render[2];
+    constants.fire_render[2] = system->fire.render[3];
+    constants.fire_render[3] = system->fire.time[1];
     memcpy(constants.material, material->color, sizeof(constants.material));
     soft_depth_enabled = material->soft_depth_mode != SMILE_3D_SOFT_DEPTH_MATERIAL_OFF &&
         smile_soft_depth_effective3d != SMILE_3D_SOFT_DEPTH_OFF &&
@@ -8073,7 +8126,7 @@ static int smile_3d_submission_is_distortion(const SmileSubmission3D* submission
 static int smile_3d_gpu_particle_is_distortion(const SmileGpuParticleSystem3D* system)
 {
     const SmileMaterial3D* material = system == 0
-        ? 0 : smile_3d_material(system->material_handle);
+        ? 0 : &system->frame_material;
     return material != 0 &&
         material->vfx_shading_mode == SMILE_3D_VFX_SHADING_DISTORTION;
 }
@@ -8282,7 +8335,7 @@ static int smile_3d_render_distortion_pass(void)
             smile_gpu_particle_frame_handles3d[submission]);
         SmileMaterial3D* material;
         if (system == 0 || !smile_3d_gpu_particle_is_distortion(system)) continue;
-        material = smile_3d_material(system->material_handle);
+        material = &system->frame_material;
         if (!smile_3d_draw_gpu_particle_system(system))
         {
             smile_rendering_distortion_vectors3d = 0;
@@ -8298,6 +8351,15 @@ static int smile_3d_render_distortion_pass(void)
     context->PSSetShaderResources(0, 7, no_views);
     context->OMSetRenderTargets(0, 0, 0);
     if (smile_distortion_emitter_count3d == 0) return 1;
+    // Distort a resolved snapshot, not the multisampled scene attachment.
+    // Keep the original MSAA color/depth pair for subsequent transparent draws.
+    if (smile_sample_count3d > 1)
+    {
+        context->ResolveSubresource(smile_scene_resolve_texture3d, 0,
+            smile_color_texture3d, 0, smile_hdr_effective3d
+                ? DXGI_FORMAT_R16G16B16A16_FLOAT : DXGI_FORMAT_B8G8R8A8_UNORM);
+        smile_resolve_count3d++;
+    }
     constants.first[0] = 5.0f;
     smile_3d_bind_post_pass(context, smile_distortion_scratch_view3d,
         smile_graphics_directx_physical_width(),
@@ -8306,6 +8368,17 @@ static int smile_3d_render_distortion_pass(void)
     context->PSSetShaderResources(0, 7, no_views);
     context->OMSetRenderTargets(0, 0, 0);
     smile_distortion_composite_draw_count3d++;
+    if (smile_sample_count3d > 1)
+    {
+        constants.first[0] = 4.0f; // Raw color copy: do not tone-map twice.
+        smile_3d_bind_post_pass(context, smile_color_view3d,
+            smile_graphics_directx_physical_width(),
+            smile_graphics_directx_physical_height(),
+            smile_distortion_scratch_shader_view3d, 0, &constants);
+        context->PSSetShaderResources(0, 7, no_views);
+        context->OMSetRenderTargets(0, 0, 0);
+        return 1;
+    }
     {
         ID3D11Texture2D* texture = smile_color_texture3d;
         ID3D11RenderTargetView* target = smile_color_view3d;
@@ -8905,7 +8978,12 @@ static void smile_3d_release_gpu_particle_frame_systems(void)
     {
         SmileGpuParticleSystem3D* system = smile_3d_gpu_particle_system(
             smile_gpu_particle_frame_handles3d[--smile_gpu_particle_frame_count3d]);
-        if (system != 0 && system->in_flight != 0) system->in_flight--;
+        if (system != 0 && system->in_flight != 0)
+        {
+            SmileTexture3D* texture = smile_3d_texture(system->frame_material.texture_handles[0]);
+            if (texture != 0 && texture->in_flight != 0) texture->in_flight--;
+            system->in_flight--;
+        }
         smile_gpu_particle_frame_handles3d[smile_gpu_particle_frame_count3d] = 0;
     }
 }
@@ -8927,6 +9005,11 @@ static int smile_3d_queue_gpu_particle_system(long long handle,
     }
     for (unsigned int index = 0; index < smile_gpu_particle_frame_count3d; ++index)
         if (smile_gpu_particle_frame_handles3d[index] == handle) return 2;
+    SmileMaterial3D* material = smile_3d_material(system->material_handle);
+    if (material == 0) { smile_last_error3d = SMILE_3D_GPU_PARTICLE_ERROR_INVALID; return 0; }
+    system->frame_material = *material;
+    SmileTexture3D* texture = smile_3d_texture(material->texture_handles[0]);
+    if (texture != 0) texture->in_flight++;
     smile_gpu_particle_frame_handles3d[smile_gpu_particle_frame_count3d++] = handle;
     system->in_flight++;
     system->queue_entries++;
@@ -8977,6 +9060,26 @@ static long long smile_3d_gpu_particle_value(long long query,
     if (query == 19) return 0;
     if (query == 20) return SMILE_3D_MAX_GPU_SPAWN_COMMANDS;
     if (query == 21) return SMILE_3D_MAX_GPU_PARTICLES_PER_SYSTEM;
+    if (query == 22) return smile_3d_create_gpu_particle_pipeline() ? 1 : 0;
+    if (query >= 51 && query <= 59)
+    {
+        SmileGpuParticleSystem3D* system = smile_3d_gpu_particle_system(handle);
+        if (system == 0) { smile_last_error3d = SMILE_3D_GPU_PARTICLE_ERROR_INVALID; return 0; }
+        if (query == 51) return (long long)system->fire.render[0];
+        // CPU reference inspection only, never return a stale CPU mirror as GPU evidence.
+        if (system->effective_simulation != SMILE_3D_GPU_PARTICLE_SIMULATION_CPU) return -1;
+        if (slot < 0 || slot >= system->capacity)
+        { smile_last_error3d = SMILE_3D_GPU_PARTICLE_ERROR_INVALID; return 0; }
+        const SmileGpuParticleState3D& state = system->states[system->read_index][slot];
+        if (query == 52) return llroundf(state.position_age[1] * 1000);
+        if (query == 53) return llroundf(state.velocity_lifetime[0] * 1000);
+        if (query == 54) return llroundf(state.velocity_lifetime[1] * 1000);
+        if (query == 55) return llroundf(state.thermal_density_noise[0] * 1000);
+        if (query == 56) return llroundf(state.thermal_density_noise[1] * 1000);
+        if (query == 57) return llroundf(state.size_rotation_angular[0] * 1000);
+        if (query == 58) return state.seed_flags_gradient_frame[1] != 0;
+        if (query == 59) return llroundf(state.position_age[0] * 1000);
+    }
     if (query >= 30 && query <= 50)
     {
         SmileGpuParticleSystem3D* system = smile_3d_gpu_particle_system(handle);
@@ -9050,6 +9153,56 @@ static long long smile_3d_gpu_particle_system_command(long long operation,
     if (operation == 5) return smile_3d_advance_gpu_particle_system(system, c);
     if (operation == 6) return smile_3d_kill_gpu_particle_slot(system, c);
     if (operation == 7) return smile_3d_queue_gpu_particle_system(b, system);
+    // Append-only command-127 operations. No particle-state layout or older ID changes.
+    if (operation >= 11 && operation <= 15)
+    {
+        if (system->in_flight != 0)
+        { smile_last_error3d = SMILE_3D_GPU_PARTICLE_ERROR_IN_FLIGHT; return 0; }
+        SmileThermalDynamics3D next = system->fire;
+        bool valid = true;
+        if (operation == 11)
+        {
+            const long long values[6] = {c,d,e,f,g,h};
+            for (int axis = 0; axis < 6; ++axis)
+                if (values[axis] < -1000000 || values[axis] > 1000000) valid = false;
+            valid = valid && i >= -1000000 && i <= 1000000 && j >= 0 && j <= 100000;
+            for (int axis = 0; axis < 3; ++axis)
+            { next.gravity_buoyancy[axis] = (float)values[axis]; next.wind_drag[axis] = (float)values[axis+3]; }
+            next.gravity_buoyancy[3] = (float)i;
+            next.wind_drag[3] = (float)j / 1000.0f;
+        }
+        if (operation == 12)
+        {
+            valid = c >= 0 && c <= 1000000 && d >= 0 && d <= 1000000 &&
+                e >= 0 && e <= 10000 && f >= 0 && f <= 2;
+            next.turbulence[0]=(float)c; next.turbulence[1]=(float)d/1000000.0f;
+            next.turbulence[2]=(float)e/1000.0f; next.turbulence[3]=(float)f;
+        }
+        if (operation == 13)
+        {
+            valid = c >= 0 && c <= 100000 && d >= 0 && d <= 100000 &&
+                e >= -100000 && e <= 100000 && f >= 1 && f <= 1000000;
+            next.evolution[0]=(float)c/1000.0f; next.evolution[1]=(float)d/1000.0f;
+            next.evolution[2]=(float)e; next.evolution[3]=(float)f;
+        }
+        if (operation == 14)
+        {
+            valid = c >= -1000000 && d >= -1000000 && e >= -1000000 &&
+                f <= 1000000 && g <= 1000000 && h <= 1000000 && c < f && d < g && e < h;
+            next.bounds_min[0]=(float)c; next.bounds_min[1]=(float)d; next.bounds_min[2]=(float)e;
+            next.bounds_max[0]=(float)f; next.bounds_max[1]=(float)g; next.bounds_max[2]=(float)h;
+        }
+        if (operation == 15)
+        {
+            valid = c >= 0 && c <= 3 && d >= 0 && d <= 2 && e >= 1 && e <= 8 && f >= 1 && f <= 8;
+            next.render[1]=(float)c; next.render[2]=(float)d;
+            next.render[3]=(float)e; next.time[1]=(float)f;
+        }
+        if (!valid) { smile_last_error3d = SMILE_3D_GPU_PARTICLE_ERROR_INVALID; return 0; }
+        next.render[0] = 1;
+        system->fire = next;
+        return 1;
+    }
     if (operation == 9)
     {
         if (system->in_flight != 0)

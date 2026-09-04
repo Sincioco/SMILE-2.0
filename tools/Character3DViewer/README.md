@@ -1,54 +1,42 @@
 # SMILE 2.0 - 3D Viewer, Animation Editor
 
-The SMILE 2.0 - 3D Viewer, Animation Editor is a reusable tool for inspecting and lightly editing converted SM3D characters on the native or Web Renderer3D backend. Arin is the default character; Paladin is his party role. The original three-clip Arin model and the articulated technical fixture remain selectable with `PROFILE` or `4`.
+Native-first reusable inspection and lightweight pose-correction tool. Arin v5.7 is the default; Profile cycles Arin v5.6, the earlier prototype, and the technical fixture. Web editor feature work is deferred.
 
-This folder is the permanent home of the editor source, `.smileproj`, build entry point, and launcher. Sin Star I owns the canonical Arin v5.7 and Red Dragon assets. `Prepare-BuildAssets.ps1` copies only the required cooking inputs into the ignored `BuildAssets` directory so SMILE's project-confined asset rules remain intact without making Dragonfall own the editor.
+The editor source and build/launch entry points belong here. Sin Star I owns the self-contained character package at `games\SinStarI\SourceAssets\Characters\Paladin\ArinV57`. Do not edit ignored cooking inputs as canonical character assets.
 
-Build and launch from this folder:
+## Build and launch
 
-```powershell
-& .\Build.ps1
-& .\Launch.ps1
-```
+Run `Build.ps1`, then `Launch.ps1`. The regular launcher defaults to `bin\Character3DViewer.exe`. The active Debug development build is `bin\Debug\Character3DViewer.exe`; pass that absolute path with `Launch.ps1 -Executable` to launch it. The launcher exports live calibration, closes old instances, preserves/restores the stable working copy and watches saves to mirror them into the canonical repository JSON.
 
-The native executable is `bin\Character3DViewer.exe`. `Launch.ps1` closes older viewer instances before launch, restores repository calibration JSON only when no live working copy exists, and mirrors subsequent `Save Frame` changes back to Arin v5.7's canonical JSON while the editor is running.
+## Inspection
 
-Arin v5.4, v5.5, and v5.6 are preserved diagnostic candidates rather than approved character results. Each has unacceptable right sword-arm, wrist, hand-connection, or grip defects. Arin v5.7 is the active validated checkpoint with seven approved clips and a full-frame sword/shield collision audit.
+- Backtick cycles through panels hidden (including Pose Calibration), all UI hidden, then the prior UI restored. Headers, the timeline, and helper text remain after the first tap. Hidden controls cannot intercept the mouse. This does not change panel-open preferences, edits, playback, or the camera. Right-click reset restores the normal UI with Pose Calibration hidden.
+- Space pauses/resumes movement while keeping camera controls active.
+- Right-click resets presentation as on a fresh launch: Idle, Demo, dragon/floor/grid visible, landscape backdrop, unpaused. There is no inactivity timer that re-enables Demo.
+- Left drag pans the view; middle drag orbits; wheel zooms smoothly.
+- H Orbit, V Orbit and Zoom support hover-wheel adjustment and capture slider drags until release, even outside the track. Vertical orbit supports 360 degrees.
+- Demo completes at least three whole loops and at least five seconds before advancing. Selecting an animation disables Demo and loops that clip.
+- D toggles the dragon; W toggles sword; S toggles shield. Hiding the dragon does not shrink the arena.
+- B/BG cycles colors and two static bitmaps. The default is the Sin Star I landscape without its title.
+- Floor / Grid hides/shows both. Profile, Glow, Socket, Channel and lighting controls remain available.
+- Pose shows/hides Pose Calibration, which is **hidden at startup and reset**.
 
-The viewer starts in a hands-free presentation with `DEMO ON`: it auto-orbits and advances through the available animations. Demo always completes at least three full loops of the current animation and stays on it for at least five seconds. Short clips repeat additional whole loops until the five-second minimum is reached; long clips finish their third full loop. Demo never cuts an animation off mid-loop. Arin v5.7 defaults to a widened `20 deg` arena view while the Red Dragon is visible; hiding the Dragon restores the authored `-16 deg` character-inspection view. Its title bar includes the current source-model filename, and every available animation has a fitted, centered button in the right-side panel. Arin v5.7 also starts with an optional presentation-only equipment glow: enlarged additive copies of the animated sword and shield meshes are drawn behind the opaque character, leaving white/cyan and warm-gold silhouette outlines that remain visible from every angle. Unconnected fading glow particles follow the sword tip only during the authored Sword Attack trail window and the shield center around the Block Impact window; motion-trail triangles never span between sampled poses. Trail history is reset at each effect window so animation loops cannot connect distant poses. The effect has no flame emitter, surrounding halo, flat blade ribbon, or idle motion trail. `GLOW` toggles all four elements without changing Arin's source textures, materials, or candidate asset. The on-screen `RESET` button performs a complete presentation reset: it recenters and refits the current character/arena view, returns to Idle, enables Demo, and resumes auto-orbit without changing the current pause state. Manual camera input stops auto-orbit; ten seconds without further camera input performs the same one-shot reset while also preserving pause state.
+The timeline supports drag scrubbing and hover-wheel single-frame steps. `0-Frame` jumps to the start; `< Key` / `Key >` jump between saved corrections; `< Frame` / `Frame >` step individual frames. Drag a green keyframe tick to move it. These controls do not toggle pause.
 
-Controls:
+## Pose corrections
 
-- Hold the left mouse button and drag to pan.
-- Hold the middle mouse button and drag left/right or up/down to orbit at direct pointer sensitivity. Vertical orbit supports a complete 360-degree revolution.
-- Use the mouse wheel to set a bounded, responsive zoom target; each wheel step is visibly meaningful and the live camera eases toward it without stopping auto-orbit. The close-inspection range extends to `-48 deg`.
-- Right-click to pause or resume all scene movement. It is the only pause-state control; camera pan, orbit, and zoom remain active while paused.
-- Click `RESET` beside the timeline to reset the view and presentation without changing pause state.
-- Click `DEMO ON/OFF` to enable or disable the automatic animation presentation. Clicking an individual animation disables Demo and plays that animation continuously in a loop.
-- Arrow keys orbit. `Ctrl+Left` and `Ctrl+Right` step the selected animation backward or forward by one frame. `W`, `A`, `S`, and `D` pan.
-- `1`, `2`, and `3` select the first three animations.
-- `O` toggles auto-orbit. Turning it off starts the ten-second idle-reset timer.
-- `B` or the `BG` button cycles the scene background through black, green, and purple.
-- `DRAGON` hides or shows the Red Dragon. The Dragon is visible by default for Arin v5.7; toggling it also switches between the face-to-face arena staging and the normal isolated-character view.
-- `Sword` and `Shield` independently hide or show each equipment mesh together with its matching glow and particle trail.
-- `F` hides or shows the floor and grid together. `G` hides or shows only the grid.
-- `Enter` resets the presentation without changing pause state. Close the window to exit.
-- `PROFILE` or `4` switches profiles.
-- `GLOW` hides or shows the current profile's equipment aura. Arin v5.7 enables it by default; profiles without the required weapon sockets leave the toggle unavailable.
-- `SOCKET` shows socket origins and RGB local-axis endpoints.
-- `CHANNEL` cycles lit, base-color, normal, roughness, metallic, occlusion, and emissive inspection.
-- `-` and `+` change playback speed from 25% through 200%; authored speed is 100%.
+Select Sword Wrist, Shield Wrist, Sword or Shield, an axis, and Rotate or Move. The slider and increment controls edit the selected channel. Decouple switches allow each equipment item to retain its base animation while its wrist is corrected independently.
 
-The bottom timeline is model-driven. It displays the exact current clip name, duration, sample rate/count, loop recommendation, authored event markers, saved pose-keyframe markers, selected event name/time/payload, and current animation time. Click or drag the timeline to seek without firing skipped events, or hover over it and use the wheel to move one authored frame at a time. `0-FRAME` jumps to the start, `-FRAME` and `+FRAME` step by one authored sample, and `EVENT <` and `EVENT >` seek to the previous or next event. None of these controls changes pause state; right-click first when a stationary pose is required. Seeking cancels an in-progress fade and clears queued event/root-motion state so native and Web inspection remain deterministic.
+`Save Frame` stores the entire correction snapshot (all 20 channels, including both equipment coupling flags), not just the visible axis. There are up to 256 keys per clip. One key is held throughout a clip; multiple keys interpolate between frames, using shortest-path rotation and cyclic interpolation for loops.
 
-Pose Calibration stores as many as 256 correction keyframes per animation clip. `Save Frame` adds a keyframe at the displayed authored frame or updates the existing keyframe there. The viewer linearly interpolates wrist, sword, and shield corrections between saved frames; rotational channels use the shortest angular path, and looping clips blend cyclically from the last saved keyframe back to the first. A single saved keyframe is held throughout the clip. Green timeline ticks identify saved keyframes. `Reset Clip` clears only the selected animation's keyframes after one confirmation, while `Reset All` clears every animation's keyframes after two confirmations. The complete multi-clip track persists across viewer relaunches.
+Prev Key / Next Key navigate; Delete Key removes the current saved key. Copy Key / Paste Key transfer complete snapshots. Reload Key discards unsaved changes and restores saved corrections. Reset resets the selected target's correction values; Reset Clip clears only this animation's saved keys after confirmation. There is no Reset All button.
 
-Desktop mouse motion is accumulated so slow drags are not lost between frames, and partial Windows wheel units are retained until they form a complete step. The native runtime also reconciles its retained left, right, and middle button state from every Windows mouse-move message. A drag therefore repairs its own missing press or release transition and can reacquire an otherwise unowned mouse capture instead of leaving pan or orbit unresponsive. Each repository-owned profile supplies identity, asset, animation, desired view height, and an optional bounded ground offset. The reusable viewer helper derives actor scale, camera, target, floor, pan limits, lighting area, and shadow area from model bounds. A ground offset compensates only for a measured difference between a static bind AABB and the animated sole plane; it does not rewrite animation root motion.
+Saved JSON is `games\SinStarI\SourceAssets\Characters\Paladin\ArinV57\Calibration\arin-v5.7-pose-calibration.json`. The panel displays its full path; click it to select the file in Explorer. Runtime binary Save Data is disposable infrastructure, not the repository source of truth. Before committing calibration changes, run `scripts\sync-arin-v5-7-calibration.ps1 -Mode Export -AllowMissing`.
 
-The authored scene is 1600 by 640. On native desktop and Web, the opt-in responsive-window policy makes the logical canvas follow the live client size, so the scene fills wide, tall, maximized, and manually resized windows without letterbox bars. The header remains left aligned, controls and status remain right aligned, the top background panel is hidden, and the middle remains available to the orbiting scene. The remaining panels and button fills use 80% opacity while their labels stay fully opaque. The desktop executable preserves its native x, y, width, and height across an ordinary relaunch. The status panel reports the eased live zoom angle, current FPS, draw calls, and submitted triangles.
+## Shared presentation libraries
 
-The studio floor is an enlarged plane with an emissive blue line grid. Arin v5.7 expands it to a 1000 by 1000 shared arena for the default-visible Red Dragon; other profiles retain their fitted character-inspection floor. The complete grid remains one custom mesh, one object, and one shared material without per-line draw calls.
+- `Smile.Simple3D.Arena3D`: black floor and one emissive grid mesh, configurable dimensions, tile spacing, thickness and color. Viewer uses blue; Fire Lab uses orange and independently configured larger tiles.
+- `Smile.Simple3D.StaticBackdrop3D`: load/select/clear/destroy a screen-fixed backdrop, shared with Fire Lab. No world plane or camera-driven positioning.
+- `Smile.UI.Controls`: matching panels, buttons, slider drawing, hover hit-testing and exclusive drag capture.
 
-The Red Dragon is a static prototype prop loaded through the same validated SM3D/PBR path as other 3D assets. It is scaled to 50,000%, placed about 240 world units directly ahead of Arin, and rotated so its forward direction exactly opposes Arin's. The camera and orbit remain targeted on Arin, while the Dragon is intentionally much larger and may extend beyond the edge of the frame.
-
-The viewer intentionally consumes SM3D rather than loading GLB at runtime. To inspect another character, add a bounded profile, clip/socket mappings, and project asset publication; the main viewer source does not need character-specific camera constants. The viewer camera, interaction, lighting, animation selection, diagnostics, recovery, cleanup, and idle-reset behavior remain character-neutral.
+These changes do not modify Arin's models, rig, animation sources or saved calibration. The existing equipment outline glow remains separate from the upcoming thermal flaming-sword integration.

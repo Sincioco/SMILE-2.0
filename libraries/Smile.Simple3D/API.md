@@ -246,3 +246,32 @@ An object returned by a primitive creator or chosen as the owner of a custom mes
 ## Legacy wireframe modules
 
 `FixedMath`, `Mesh`, `Primitives`, `Renderer`, and the original `OrbitState3D` interaction calls remain source compatible with the deterministic wireframe examples, GDI builds, and Space Wars. `Interaction` also exposes the reusable true-3D camera-control contract above.
+
+## `Smile.Simple3D.Arena3D`
+
+`Create(Width, Depth, RedValue, GreenValue, BlueValue, Optional TileSize = 40, Optional LineThickness = 2) As ArenaFloor` creates a black floor plus one emissive grid mesh. All dimensions are integer world units. `ArenaFloor.Ready` reports success; `LineCount` reports the actual interior strips. Both Character Viewer and Fire Lab use the same geometry/material recipe (blue versus orange). Arin's arena remains 1000 by 1000 when the dragon is hidden.
+
+`Draw(ByRef ArenaFloor, ShowFloor, ShowGrid) As Boolean` supports independent visibility. `Destroy(ByRef ArenaFloor)` releases both meshes/objects and the grid material, is repeat-safe, and ignores stale resources after a renderer reset. Create/destroy are rejected while a 3D frame is active. Create rejects dimensions outside 40..100000, tile size below 2, thickness outside 1..TileSize-1, and more than 512 requested tiles on either axis. Partial creation rolls back; no per-frame allocation or per-line draw calls.
+
+Camera settings are separate: `Interaction.ResetCameraControls` initializes manual offsets and `CharacterViewer.AdvanceOrbitYaw1000(ByRef Angle1000, ElapsedMilliseconds, DegreesPerSecond)` provides smooth horizontal auto-orbit. Applications select a starting yaw/pitch, target, distance, and whether automatic motion is enabled. The arena does not own a camera or timer.
+
+## `Smile.Simple3D.FireEmitter3D`
+
+Bounded persistent native thermal fire with an explicit simpler CPU fallback. Initialize with `Initialize("Assets/Fire")`, then `StartAt(Preset, Position, Seed, Optional Quality = 3, Optional Simulation = 3, Optional Radius = 20)`. Presets: TorchFire, BrazierFire, LineFire, PaladinBladeFire, Fireball, FireBurstGen3, DragonFireBreathPreview. `StartOnSegment` uses an actor's base/tip sockets; `SetSegment` supplies a moving world-space segment directly.
+
+Use `Update(ElapsedMilliseconds)` before Begin3D and `Draw(Emitter)` inside the frame. `SetPosition`, `SetDirection`, `SetWind`, `SetTurbulence`, `SetIntensity`, `SetEnabled`, and `SetSourceVelocityInheritance` change bounded emitter settings. `StopEmitter` stops spawning while tails finish; `Destroy` releases one logical emitter; `Shutdown` releases the shared assets. Never mutate an in-flight emitter.
+
+Quality Low/Medium/High = 1/2/3. Simulation CPU/GPU/Auto = 1/2/3. Four logical emitters maximum. High reserves five GPU systems (1664 slots); the native runtime currently has eight systems total, so additional full presets fall back atomically to CPU Low rather than partially reserving GPU layers. Query requested and effective backend/quality separately with `Value`; CPU Low intentionally lacks GPU thermal/turbulence and heat-distortion parity. The retained WebGL2 low-level GPU backend is unchanged; the new high-level thermal emitter uses CPU Low on Web.
+
+Native thermal dynamics expose wind, gravity, buoyancy, dt-aware drag, seeded 1/2-octave turbulence, cooling, dissipation, size evolution, speed limits and kill bounds through the Graphics3D GPU-particle setters. Particle simulation has no GPU state readback. Heat distortion now retains supported 4x/2x/1x scene MSAA in HDR and LDR: resolve the opaque snapshot, distort it, copy color back without tone mapping, preserve MSAA depth for transparent draws, then perform normal final resolve/post-processing.
+
+## `Smile.Simple3D.StaticBackdrop3D`
+
+Shared screen-fixed image backgrounds for Character Viewer and Fire Lab; no camera-facing plane, world transform, per-frame image upload, or orbit-dependent UV calculations. The existing native renderer draws the backdrop behind the scene, then the existing post-processing and Renderer2D HUD run normally. Local heat refraction can affect pixels near a fire; it does not move the background with the camera. Web backdrop rendering remains deferred: selection returns `False` on that backend, leaving the clear color visible.
+
+- `Create(Path) As Backdrop` loads one published image; check `Backdrop.Ready`.
+- `SetActive(Backdrop) As Boolean` selects it before `Begin3D`. Selection persists across frames.
+- `ClearActive() As Boolean` returns to the scene's clear color without unloading images.
+- `Destroy(ByRef Backdrop)` clears this backdrop if selected, releases its texture, and empties the value. Destroying a different inactive backdrop does not clear the selected one.
+
+Creation, selection, clearing, and destruction are refused inside an active 3D frame. Renderer-epoch checks reject stale backgrounds after reset. Callers own the returned value and must not duplicate ownership or mix direct low-level backdrop selection with this module. Reload after `ResetRenderer3D`. This is a source-library addition, not new language syntax or an ABI extension.

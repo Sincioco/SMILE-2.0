@@ -272,7 +272,9 @@ Public Function ClipLabel(ProfileIndex As Number, ClipIndex As Number) As Text
         End If
 
     Else If ProfileIndex = PROFILE_TECHNICAL_ARTICULATED And ClipIndex = 1 Then
+
         Result = "Attack"
+
     Else
         Result = ClipName(ProfileIndex, ClipIndex)
 
@@ -345,17 +347,21 @@ Public Function SocketName(ProfileIndex As Number, SocketIndex As Number) As Tex
             Result = "SwordTip"
         Else If SocketIndex = 5 Then
             Result = "ShieldCenter"
-        Else If (ProfileIndex = PROFILE_ARIN Or
-            ProfileIndex = PROFILE_ARIN_V56) And SocketIndex = 6 Then
+        Else If ((ProfileIndex = PROFILE_ARIN Or
+            ProfileIndex = PROFILE_ARIN_V56) And
+            SocketIndex = 6) Then
             Result = "HandRight"
-        Else If (ProfileIndex = PROFILE_ARIN Or
-            ProfileIndex = PROFILE_ARIN_V56) And SocketIndex = 7 Then
+        Else If ((ProfileIndex = PROFILE_ARIN Or
+            ProfileIndex = PROFILE_ARIN_V56) And
+            SocketIndex = 7) Then
             Result = "HandLeft"
-        Else If (ProfileIndex = PROFILE_ARIN Or
-            ProfileIndex = PROFILE_ARIN_V56) And SocketIndex = 8 Then
+        Else If ((ProfileIndex = PROFILE_ARIN Or
+            ProfileIndex = PROFILE_ARIN_V56) And
+            SocketIndex = 8) Then
             Result = "FootLeft"
-        Else If (ProfileIndex = PROFILE_ARIN Or
-            ProfileIndex = PROFILE_ARIN_V56) And SocketIndex = 9 Then
+        Else If ((ProfileIndex = PROFILE_ARIN Or
+            ProfileIndex = PROFILE_ARIN_V56) And
+            SocketIndex = 9) Then
             Result = "FootRight"
         End If
 

@@ -122,6 +122,8 @@ After building, run Blender in background mode with `scripts\audit-arin-v5-7-ani
 
 ## Arin v5.8 Retopology Handoff
 
+The native Viewer now uses the shared `Arena3D`, `StaticBackdrop3D`, and `Smile.UI.Controls` modules. Pose Calibration starts hidden and stays hidden after a right-click reset. Backtick temporarily hides all panels, then all UI, then restores the prior panel visibility without changing saved corrections. The static landscape backdrop is the startup default. These inspection changes do not modify Arin's model, rig, animation binaries, or calibration channel format; the two current saved keys remain in `Calibration/arin-v5.7-pose-calibration.json`.
+
 If Tripo retopology changes topology or vertex order, repeat Mixamo rigging and weight transfer rather than reusing v5.7 vertex weights blindly. The normalization, pristine-texture restoration, rigid equipment attachment, centered sword transform, outward shield transform, shield-arm stabilization, descriptor wiring, and full-frame audit are reusable. Re-run the builder against the v5.8 inputs, verify the hand-fit diagnostics, and inspect the generated first/middle/final renders before promotion.
 
 ## Retirement Condition

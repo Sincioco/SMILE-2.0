@@ -1,0 +1,1639 @@
+''' Bounded persistent fire. CPU owns schedules and requests; particles never own gameplay.
+Module Smile.Simple3D.FireEmitter3D
+
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Graphics3D As Graphics3D
+Import Smile.Simple3D.Character3D As Character3D
+
+Public Const QUALITY_LOW = 1
+Public Const QUALITY_MEDIUM = 2
+Public Const QUALITY_HIGH = 3
+Public Const SIMULATION_CPU = 1
+Public Const SIMULATION_GPU = 2
+Public Const SIMULATION_AUTO = 3
+Public Const MAX_EMITTERS = 4
+Public Const ERROR_NONE = 0
+Public Const ERROR_INITIALIZATION = 1
+Public Const ERROR_CAPACITY = 2
+Public Const ERROR_SOURCE = 3
+Public Const ERROR_HANDLE = 4
+Public Const ERROR_IN_FLIGHT = 5
+Public Const ERROR_RENDERER = 6
+Public Const FALLBACK_GPU_UNAVAILABLE = 1
+Public Const FALLBACK_CAPACITY = 2
+
+Public Type FireEmitter
+    Slot As Number
+    Generation As Number
+End Type
+
+Private Type EmitterState
+    Active As Boolean
+    Enabled As Boolean
+    Generation As Number
+    Preset As Number
+    RequestedMode As Number
+    RequestedQuality As Number
+    Quality As Number
+    Backend As Number
+    Fallback As Number
+    Seed As Number
+    Serial As Number
+    Age As Number
+    Remainder As Number
+    Radius As Number
+    Intensity As Number
+    Turbulence As Number
+    Source As Core.Vector3
+    Tip As Core.Vector3
+    Previous As Core.Vector3
+    PreviousTip As Core.Vector3
+    Velocity As Core.Vector3
+    TipVelocity As Core.Vector3
+    Wind As Core.Vector3
+    Direction As Core.Vector3
+    Actor As Character3D.Actor
+    BaseSocket As Text
+    TipSocket As Text
+    Attachment As Number
+    Inheritance As Number
+    Spawned As Number
+    Dropped As Number
+    Restarts As Number
+    Finished As Boolean
+    DebugLayer As Number
+End Type
+
+Private Type CpuParticle
+    Age As Number
+    Lifetime As Number
+    Position As Core.Vector3
+    Velocity As Core.Vector3
+    Size As Number
+    Frame As Number
+    Rotation As Number
+End Type
+
+Private Dim Ready As Boolean
+Private Dim ErrorValue As Number
+Private Dim Epoch As Number
+Private Dim Items[4] As EmitterState
+Private Dim Systems[20] As Core.GpuParticleSystem3D
+Private Dim Batches[16] As Core.ParticleBatch3D
+Private Dim Particles[1536] As CpuParticle
+Private Dim NextSlot[20] As Number
+Private Dim SpawnRemainder[20] As Number
+Private Dim Textures[3] As Core.Texture3D
+Private Dim Materials[5] As Core.Material3D
+Private Dim AssetDirectory As Text
+
+Public Function Initialize(Directory As Text) As Boolean
+
+    Dim Index As Number
+    Dim TextureIndex As Number
+    Dim Blend As Number
+    Dim Emissive As Number
+    Dim Ok As Boolean
+
+    If Ready And Epoch = Graphics3D.ResourceEpoch3D() Then
+        Return True
+    End If
+
+    If Ready Then
+        Call Shutdown()
+    End If
+
+    AssetDirectory = Directory
+    Textures[0] = Graphics3D.LoadTexture3D(Directory + "/fire-shape-atlas.png")
+    Textures[1] = Graphics3D.LoadTexture3D(Directory + "/smoke-shape-atlas.png")
+    Textures[2] = Graphics3D.LoadTexture3D(Directory + "/ember-shape.png")
+    Ok = True
+
+    For Index = 0 To 4
+
+        TextureIndex = 0
+        Blend = Graphics3D.MATERIAL_ALPHA_ADDITIVE
+        Emissive = 400
+
+        If Index = 1 Then
+            Emissive = 180
+        Else If Index = 2 Then
+            TextureIndex = 1
+            Blend = Graphics3D.MATERIAL_ALPHA_BLEND
+        Else If Index = 3 Then
+            TextureIndex = 2
+            Emissive = 400
+        End If
+
+        If Index = 2 Then
+            Emissive = 100
+        End If
+
+        Materials[Index] = Graphics3D.CreateEffectMaterial3D(Textures[TextureIndex], Blend, Emissive)
+        Ok = Materials[Index].Handle <> 0 And Textures[TextureIndex].Handle <> 0 And Ok
+        Ok = Graphics3D.SetEffectMaterialSoftDepth3D(Materials[Index], 1) And Ok
+
+        If Index = 4 Then
+            Ok = Graphics3D.SetEffectMaterialDistortion3D(Materials[Index], 18, 160, 30, 20, 100) And Ok
+        End If
+
+    End For
+
+    If Not Ok Then
+
+        Call Shutdown()
+
+        ErrorValue = ERROR_INITIALIZATION
+        Return False
+
+    End If
+
+    Ready = True
+    Epoch = Graphics3D.ResourceEpoch3D()
+    ErrorValue = ERROR_NONE
+
+    Return True
+
+End Function
+
+Private Function Valid(Value As FireEmitter) As Boolean
+
+    Dim Result As Boolean
+
+    If Not Ready Or Epoch <> Graphics3D.ResourceEpoch3D() Then
+        Return False
+    End If
+
+    If Value.Slot < 1 Or Value.Slot > MAX_EMITTERS Then
+        Return False
+    End If
+
+    Result = Items[Value.Slot - 1].Active And Items[Value.Slot - 1].Generation = Value.Generation
+
+    Return Result
+
+End Function
+
+''' Reject the whole logical edit before changing any layer retained by Draw.
+Private Function Mutable(Index As Number) As Boolean
+
+    Dim Layer As Number
+
+    If Graphics3D.FrameActive3D() Then
+        ErrorValue = ERROR_IN_FLIGHT
+        Return False
+    End If
+
+    If Epoch <> Graphics3D.ResourceEpoch3D() Then
+        Return False
+    End If
+
+    For Layer = 0 To 4
+
+        If Systems[Index * 5 + Layer].Handle <> 0 Then
+
+            If Graphics3D.GpuParticleValue3D(39, Systems[Index * 5 + Layer].Handle) <> 0 Then
+                ErrorValue = ERROR_IN_FLIGHT
+                Return False
+            End If
+
+        End If
+
+        If Layer < 4 Then
+
+            If Batches[Index * 4 + Layer].Handle <> 0 Then
+
+                If Graphics3D.VfxValue3D(35, Batches[Index * 4 + Layer].Handle) <> 0 Then
+                    ErrorValue = ERROR_IN_FLIGHT
+                    Return False
+                End If
+
+            End If
+
+        End If
+
+    End For
+
+    Return True
+
+End Function
+
+Private Function PresetId(Name As Text) As Number
+
+    If Name = "TorchFire" Then
+        Return 1
+    Else If Name = "BrazierFire" Then
+        Return 2
+    Else If Name = "LineFire" Or Name = "PaladinFlameBlade" Then
+        Return 3
+    Else If Name = "Fireball" Then
+        Return 4
+    Else If Name = "FireBurstGen3" Then
+        Return 5
+    Else If Name = "DragonFireBreathPreview" Then
+        Return 6
+    End If
+
+    Return 0
+
+End Function
+
+Private Function PositionValid(Position As Core.Vector3) As Boolean
+
+    Dim Result As Boolean
+
+    Result = (Position.X >= -900000 And Position.X <= 900000 And
+        Position.Y >= -900000 And Position.Y <= 900000 And
+        Position.Z >= -900000 And Position.Z <= 900000)
+
+    Return Result
+
+End Function
+
+Private Function Clamp(Value As Number, Minimum As Number, Maximum As Number) As Number
+
+    If Value < Minimum Then
+        Return Minimum
+    Else If Value > Maximum Then
+        Return Maximum
+    End If
+
+    Return Value
+
+End Function
+
+Private Function RandomValue(Index As Number, Range As Number) As Number
+
+    Dim Result As Number
+
+    Items[Index].Seed = (Items[Index].Seed * 48271) Mod 2147483647
+    Result = Items[Index].Seed Mod Range
+
+    Return Result
+
+End Function
+
+Private Function LayerCapacity(Layer As Number, Quality As Number) As Number
+
+    Dim Result As Number
+
+    Result = 512
+
+    If Layer = 2 Or Layer = 4 Then
+        Result = 256
+    Else If Layer = 3 Then
+        Result = 128
+    End If
+
+    If Quality = QUALITY_MEDIUM Then
+        Result = Result / 2
+    End If
+
+    Return Result
+
+End Function
+
+Private Function ConfigureLayer(Index As Number, Layer As Number) As Boolean
+
+    Dim Key As Number
+    Dim Radius As Number
+    Dim Gravity As Number
+    Dim Buoyancy As Number
+    Dim Drag As Number
+    Dim Cooling As Number
+    Dim Dissipation As Number
+    Dim Growth As Number
+    Dim Shader As Number
+    Dim Alignment As Number
+    Dim Columns As Number
+    Dim Minimum As Core.Vector3
+    Dim Maximum As Core.Vector3
+    Dim Ok As Boolean
+
+    Key = Index * 5 + Layer
+    Radius = Items[Index].Radius
+    Buoyancy = Radius * 5
+    Drag = 700
+    Cooling = 330
+    Dissipation = 220
+    Growth = Radius
+    Shader = 1
+    Alignment = 1
+    Columns = 4
+
+    If Layer = 0 Then
+        Growth = Radius / 2
+        Cooling = 950
+    Else If Layer = 1 Then
+        Cooling = 500
+    Else If Layer = 2 Then
+        Shader = 2
+        Drag = 1800
+    Else If Layer = 3 Then
+        Shader = 3
+        Gravity = -Radius * 5
+    End If
+
+    If Layer = 2 Then
+
+        Buoyancy = Radius * 2
+        Dissipation = 300
+        Alignment = 0
+
+    Else If Layer = 3 Then
+
+        Buoyancy = 0
+        Drag = 100
+        Alignment = 2
+        Columns = 1
+        Growth = 0
+
+    End If
+
+    If (Items[Index].Preset = 4 Or Items[Index].Preset = 5) And Layer = 0 Then
+
+        Alignment = 0
+        Columns = 1
+        Buoyancy = 0
+        Growth = 0
+
+    End If
+
+    If Items[Index].Preset = 5 And Layer = 1 Then
+        Alignment = 0
+    End If
+
+    Minimum.X = -1000000
+    Minimum.Y = -1000000
+    Minimum.Z = -1000000
+    Maximum.X = 1000000
+    Maximum.Y = 1000000
+    Maximum.Z = 1000000
+    Ok = Graphics3D.SetGpuParticleForces3D(Systems[Key], 0, Gravity, 0,
+        Items[Index].Wind.X, Items[Index].Wind.Y, Items[Index].Wind.Z, Buoyancy, Drag)
+    Ok = Graphics3D.SetGpuParticleTurbulence3D(Systems[Key],
+        Radius * Items[Index].Turbulence / 25, 200000 / Radius, 600,
+        Items[Index].Quality - 1) And Ok
+    Ok = Graphics3D.SetGpuParticleThermalEvolution3D(Systems[Key],
+        Cooling, Dissipation, Growth, Radius * 35) And Ok
+    Ok = Graphics3D.SetGpuParticleBounds3D(Systems[Key], Minimum, Maximum) And Ok
+    Ok = Graphics3D.SetGpuParticleRender3D(Systems[Key], Shader, Alignment, Columns, Columns) And Ok
+
+    Return Ok
+
+End Function
+
+Private Sub ReleaseLayers(Index As Number)
+
+    Dim Layer As Number
+    Dim Key As Number
+
+    For Layer = 0 To 4
+
+        Key = Index * 5 + Layer
+
+        Call Graphics3D.DestroyGpuParticleSystem3D(Systems[Key])
+
+        Systems[Key].Handle = 0
+        Systems[Key].ActiveCount = 0
+
+        NextSlot[Key] = 0
+        SpawnRemainder[Key] = 0
+
+        If Layer < 4 Then
+            Call Graphics3D.DestroyParticleBatch3D(Batches[Index * 4 + Layer])
+
+            Batches[Index * 4 + Layer].Handle = 0
+        End If
+
+    End For
+
+End Sub
+
+Private Function ReserveLayers(Index As Number) As Boolean
+
+    Dim Layer As Number
+    Dim Key As Number
+    Dim Columns As Number
+    Dim MaterialIndex As Number
+    Dim Ok As Boolean
+
+    Ok = True
+
+    For Layer = 0 To 4
+
+        Key = Index * 5 + Layer
+        MaterialIndex = Layer
+
+        If (Items[Index].Preset = 4 Or Items[Index].Preset = 5) And Layer = 0 Then
+            MaterialIndex = 3
+        End If
+
+        If Items[Index].Backend = SIMULATION_GPU Then
+
+            Systems[Key] = Graphics3D.CreateGpuParticleSystem3D(
+                LayerCapacity(Layer, Items[Index].Quality), Materials[MaterialIndex], SIMULATION_GPU, 10)
+            Ok = Systems[Key].Handle <> 0 And Ok
+            Ok = Systems[Key].EffectiveSimulation = SIMULATION_GPU And Ok
+
+            If Ok Then
+                Ok = ConfigureLayer(Index, Layer)
+            End If
+
+        Else If Layer < 4 Then
+
+            Columns = 4
+
+            If MaterialIndex = 3 Then
+                Columns = 1
+            End If
+
+            Batches[Index * 4 + Layer] = Graphics3D.CreateParticleBatch3D(
+                96, Materials[MaterialIndex], Graphics3D.VFX_BILLBOARD_CAMERA, Columns, Columns)
+            Ok = Batches[Index * 4 + Layer].Handle <> 0 And Ok
+
+        End If
+
+        If Not Ok Then
+            Call ReleaseLayers(Index)
+
+            Return False
+        End If
+
+    End For
+
+    Return True
+
+End Function
+
+Public Function StartAt(Name As Text, Position As Core.Vector3, Seed As Number,
+    Optional Quality As Number = QUALITY_HIGH,
+    Optional Simulation As Number = SIMULATION_AUTO,
+    Optional Radius As Number = 20) As FireEmitter
+
+    Dim Result As FireEmitter
+    Dim Index As Number
+    Dim ParticleIndex As Number
+    Dim Preset As Number
+    Dim Ok As Boolean
+
+    Preset = PresetId(Name)
+
+    If Not Ready Or Epoch <> Graphics3D.ResourceEpoch3D() Then
+        ErrorValue = ERROR_INITIALIZATION
+        Return Result
+    End If
+
+    If (Preset = 0 Or
+        Not PositionValid(Position) Or
+        Radius < 2 Or
+        Radius > 2000 Or
+        Quality < 1 Or
+        Quality > 3 Or
+        Simulation < 1 Or
+        Simulation > 3) Then
+        ErrorValue = ERROR_SOURCE
+        Return Result
+    End If
+
+    Index = 0
+
+    Do
+
+        If Not Items[Index].Active Then
+            Exit Do
+        End If
+
+        Index = Index + 1
+
+    Loop Until Index >= MAX_EMITTERS
+
+    If Index = MAX_EMITTERS Then
+        ErrorValue = ERROR_CAPACITY
+        Return Result
+    End If
+
+    Items[Index].Generation = Items[Index].Generation + 1
+    Items[Index].RequestedMode = Simulation
+    Items[Index].RequestedQuality = Quality
+    Items[Index].Quality = Quality
+    Items[Index].Backend = SIMULATION_GPU
+    Items[Index].Fallback = 0
+    Items[Index].Preset = Preset
+    Items[Index].Source = Position
+    Items[Index].Tip = Position
+    Items[Index].Previous = Position
+    Items[Index].PreviousTip = Position
+    Items[Index].Velocity.X = 0
+    Items[Index].Velocity.Y = 0
+    Items[Index].Velocity.Z = 0
+    Items[Index].TipVelocity = Items[Index].Velocity
+    Items[Index].Wind.X = 0
+    Items[Index].Wind.Y = 0
+    Items[Index].Wind.Z = 0
+    Items[Index].Direction.X = 0
+    Items[Index].Direction.Y = Radius * 6
+    Items[Index].Direction.Z = 0
+    Items[Index].Seed = Clamp(Seed, 1, 2147483646)
+    Items[Index].Serial = 0
+    Items[Index].Age = 0
+    Items[Index].Remainder = 0
+    Items[Index].Radius = Radius
+    Items[Index].Intensity = 100
+    Items[Index].Turbulence = 100
+    Items[Index].Attachment = 0
+    Items[Index].Inheritance = 30
+    Items[Index].Spawned = 0
+    Items[Index].Dropped = 0
+    Items[Index].Restarts = 0
+    Items[Index].Finished = False
+    Items[Index].DebugLayer = -1
+
+    For ParticleIndex = Index * 384 To Index * 384 + 383
+        Particles[ParticleIndex].Lifetime = 0
+    End For
+
+    If (Simulation = SIMULATION_CPU Or
+        Quality = QUALITY_LOW Or
+        Graphics3D.GpuParticleValue3D(Graphics3D.GPU_PARTICLE_QUERY_NATIVE_THERMAL) = 0) Then
+        Items[Index].Backend = SIMULATION_CPU
+        Items[Index].Quality = QUALITY_LOW
+    End If
+
+    If (Items[Index].Backend = SIMULATION_CPU And
+        Simulation <> SIMULATION_CPU And
+        Quality <> QUALITY_LOW) Then
+        Items[Index].Fallback = FALLBACK_GPU_UNAVAILABLE
+    End If
+
+    Ok = ReserveLayers(Index)
+
+    If Not Ok And Items[Index].Backend = SIMULATION_GPU Then
+
+        Items[Index].Quality = QUALITY_MEDIUM
+        Ok = ReserveLayers(Index)
+
+        If Not Ok Then
+
+            Items[Index].Backend = SIMULATION_CPU
+            Items[Index].Quality = QUALITY_LOW
+            Items[Index].Fallback = FALLBACK_GPU_UNAVAILABLE
+            Ok = ReserveLayers(Index)
+
+        End If
+
+    End If
+
+    If Not Ok Then
+        ErrorValue = ERROR_CAPACITY
+        Return Result
+    End If
+
+    Items[Index].Enabled = True
+    Items[Index].Active = True
+    Result.Slot = Index + 1
+    Result.Generation = Items[Index].Generation
+    ErrorValue = ERROR_NONE
+
+    Return Result
+
+End Function
+
+Public Function SetSegment(Value As FireEmitter, Base As Core.Vector3, Tip As Core.Vector3) As Boolean
+
+    Dim Index As Number
+    Dim LengthSquared As Number
+
+    If (Not Valid(Value) Or
+        Not PositionValid(Base) Or
+        Not PositionValid(Tip)) Then
+        ErrorValue = ERROR_SOURCE
+        Return False
+    End If
+
+    Index = Value.Slot - 1
+
+    If Not Mutable(Index) Then
+        Return False
+    End If
+
+    LengthSquared = ((Tip.X - Base.X) * (Tip.X - Base.X) +
+        (Tip.Y - Base.Y) * (Tip.Y - Base.Y) + (Tip.Z - Base.Z) * (Tip.Z - Base.Z))
+
+    If LengthSquared < 16 Or LengthSquared > 100000000 Then
+        ErrorValue = ERROR_SOURCE
+        Return False
+    End If
+
+    Items[Index].Source = Base
+    Items[Index].Tip = Tip
+
+    Return True
+
+End Function
+
+''' Moves a point or cone source without moving already-emitted world-space particles.
+Public Function SetPosition(Value As FireEmitter, Position As Core.Vector3) As Boolean
+
+    If Not Valid(Value) Or Not PositionValid(Position) Then
+        ErrorValue = ERROR_SOURCE
+        Return False
+    End If
+
+    If Not Mutable(Value.Slot - 1) Then
+        Return False
+    End If
+
+    Items[Value.Slot - 1].Source = Position
+    Items[Value.Slot - 1].Tip = Position
+
+    Return True
+
+End Function
+
+Public Function StartOnSegment(Name As Text, Actor As Character3D.Actor,
+    BaseSocket As Text, TipSocket As Text, Seed As Number,
+    Optional Quality As Number = QUALITY_HIGH,
+    Optional Simulation As Number = SIMULATION_AUTO) As FireEmitter
+
+    Dim Result As FireEmitter
+    Dim Base As Core.Vector3
+    Dim Tip As Core.Vector3
+    Dim LengthSquared As Number
+    Dim Radius As Number
+    Dim Ok As Boolean
+
+    If (Not Character3D.IsValid(Actor) Or
+        Not Character3D.HasSocket(Actor, BaseSocket) Or
+        Not Character3D.HasSocket(Actor, TipSocket)) Then
+        ErrorValue = ERROR_SOURCE
+        Return Result
+    End If
+
+    Base = Character3D.SocketPosition(Actor, BaseSocket)
+    Tip = Character3D.SocketPosition(Actor, TipSocket)
+    LengthSquared = ((Tip.X - Base.X) * (Tip.X - Base.X) +
+        (Tip.Y - Base.Y) * (Tip.Y - Base.Y) + (Tip.Z - Base.Z) * (Tip.Z - Base.Z))
+
+    If LengthSquared < 16 Or LengthSquared > 100000000 Then
+        ErrorValue = ERROR_SOURCE
+        Return Result
+    End If
+
+    Radius = 2
+
+    Do
+
+        If Radius * Radius * 144 >= LengthSquared Then
+            Exit Do
+        End If
+
+        Radius = Radius + 1
+
+    Loop
+
+    Result = StartAt(Name, Base, Seed, Quality, Simulation, Radius)
+
+    If Result.Slot <> 0 Then
+
+        Items[Result.Slot - 1].Actor = Actor
+        Items[Result.Slot - 1].BaseSocket = BaseSocket
+        Items[Result.Slot - 1].TipSocket = TipSocket
+        Items[Result.Slot - 1].Attachment = 1
+        Ok = SetSegment(Result, Base, Tip)
+
+    End If
+
+    Return Result
+
+End Function
+
+''' Selects one diagnostic layer (0 core, 1 outer, 2 smoke, 3 embers, 4 heat), or -1 for all.
+Public Function SetDebugLayer(Value As FireEmitter, Layer As Number) As Boolean
+
+    If (Not Valid(Value) Or
+        Layer < -1 Or
+        Layer > 4) Then
+        Return False
+    End If
+
+    If Not Mutable(Value.Slot - 1) Then
+        Return False
+    End If
+
+    Items[Value.Slot - 1].DebugLayer = Layer
+
+    Return True
+
+End Function
+
+Public Function SetWind(Value As FireEmitter, X As Number, Y As Number, Z As Number) As Boolean
+
+    Dim Index As Number
+    Dim Layer As Number
+    Dim Ok As Boolean
+
+    If Not Valid(Value) Then
+        Return False
+    End If
+
+    Index = Value.Slot - 1
+
+    If Not Mutable(Index) Then
+        Return False
+    End If
+
+    Items[Index].Wind.X = Clamp(X, -10000, 10000)
+    Items[Index].Wind.Y = Clamp(Y, -10000, 10000)
+    Items[Index].Wind.Z = Clamp(Z, -10000, 10000)
+    Ok = True
+
+    If Items[Index].Backend = SIMULATION_GPU Then
+
+        For Layer = 0 To 4
+            Ok = ConfigureLayer(Index, Layer) And Ok
+        End For
+
+    End If
+
+    Return Ok
+
+End Function
+
+Public Function SetDirection(Value As FireEmitter, Direction As Core.Vector3) As Boolean
+
+    If Not Valid(Value) Then
+        Return False
+    End If
+
+    If Not Mutable(Value.Slot - 1) Then
+        Return False
+    End If
+
+    Items[Value.Slot - 1].Direction.X = Clamp(Direction.X, -10000, 10000)
+    Items[Value.Slot - 1].Direction.Y = Clamp(Direction.Y, -10000, 10000)
+    Items[Value.Slot - 1].Direction.Z = Clamp(Direction.Z, -10000, 10000)
+
+    Return True
+
+End Function
+
+Public Function SetTurbulence(Value As FireEmitter, Percent As Number) As Boolean
+
+    Dim Result As Boolean
+    Dim Wind As Core.Vector3
+
+    If Not Valid(Value) Then
+        Return False
+    End If
+
+    If Not Mutable(Value.Slot - 1) Then
+        Return False
+    End If
+
+    Items[Value.Slot - 1].Turbulence = Clamp(Percent, 0, 200)
+    Wind = Items[Value.Slot - 1].Wind
+    Result = SetWind(Value, Wind.X, Wind.Y, Wind.Z)
+
+    Return Result
+
+End Function
+
+Public Sub SetEnabled(Value As FireEmitter, Enabled As Boolean)
+
+    If Valid(Value) Then
+
+        If Mutable(Value.Slot - 1) Then
+            Items[Value.Slot - 1].Enabled = Enabled
+        End If
+
+    End If
+
+End Sub
+
+Public Sub StopEmitter(Value As FireEmitter)
+
+    Call SetEnabled(Value, False)
+
+End Sub
+
+Public Sub SetIntensity(Value As FireEmitter, Percent As Number)
+
+    If Valid(Value) Then
+
+        If Mutable(Value.Slot - 1) Then
+            Items[Value.Slot - 1].Intensity = Clamp(Percent, 0, 200)
+        End If
+
+    End If
+
+End Sub
+
+Public Sub SetSourceVelocityInheritance(Value As FireEmitter, Percent As Number)
+
+    If Valid(Value) Then
+
+        If Mutable(Value.Slot - 1) Then
+            Items[Value.Slot - 1].Inheritance = Clamp(Percent, 0, 80)
+        End If
+
+    End If
+
+End Sub
+
+Private Sub Spawn(Index As Number, Layer As Number)
+
+    Dim Key As Number
+    Dim Slot As Number
+    Dim Flat As Number
+    Dim Radius As Number
+    Dim Fraction As Number
+    Dim Position As Core.Vector3
+    Dim Velocity As Core.Vector3
+    Dim Lifetime As Number
+    Dim Size As Number
+    Dim EndSize As Number
+    Dim Temperature As Number
+    Dim Density As Number
+    Dim Rotation As Number
+    Dim AngularVelocity As Number
+    Dim Ok As Boolean
+
+    Key = Index * 5 + Layer
+    Radius = Items[Index].Radius
+    Slot = NextSlot[Key]
+    Fraction = (Items[Index].Serial * 137 + RandomValue(Index, 137)) Mod 1000
+    Position.X = Items[Index].Source.X + (Items[Index].Tip.X - Items[Index].Source.X) * Fraction / 1000
+    Position.Y = Items[Index].Source.Y + (Items[Index].Tip.Y - Items[Index].Source.Y) * Fraction / 1000
+    Position.Z = Items[Index].Source.Z + (Items[Index].Tip.Z - Items[Index].Source.Z) * Fraction / 1000
+    Position.X = Position.X + RandomValue(Index, Radius) - Radius / 2
+    Position.Z = Position.Z + RandomValue(Index, Radius) - Radius / 2
+    Velocity.X = Items[Index].Direction.X + RandomValue(Index, Radius * 2) - Radius
+    Velocity.Y = Items[Index].Direction.Y + RandomValue(Index, Radius * 2)
+    Velocity.Z = Items[Index].Direction.Z + RandomValue(Index, Radius * 2) - Radius
+    Velocity.X = Velocity.X + (Items[Index].Velocity.X * (1000 - Fraction) +
+        Items[Index].TipVelocity.X * Fraction) * Items[Index].Inheritance / 100000
+    Velocity.Y = Velocity.Y + (Items[Index].Velocity.Y * (1000 - Fraction) +
+        Items[Index].TipVelocity.Y * Fraction) * Items[Index].Inheritance / 100000
+    Velocity.Z = Velocity.Z + (Items[Index].Velocity.Z * (1000 - Fraction) +
+        Items[Index].TipVelocity.Z * Fraction) * Items[Index].Inheritance / 100000
+    Lifetime = 500 + RandomValue(Index, 350)
+    Size = Radius
+    Temperature = 970
+    Density = 180
+    Size = Max(2, Radius * 2 / 3)
+
+    If Layer = 1 Then
+
+        Size = Radius * 3 / 2
+        Temperature = 620
+        Density = 350
+
+    Else If Layer = 2 Then
+
+        Size = Radius * 2
+        Lifetime = 1100
+        Temperature = 200
+        Density = 250
+
+    Else If Layer = 3 Then
+
+        Size = 1 + RandomValue(Index, Max(1, Radius / 9))
+        Lifetime = 350 + RandomValue(Index, 1300)
+        Velocity.X = Velocity.X + RandomValue(Index, Radius * 8) - Radius * 4
+        Velocity.Y = Radius * 2 + RandomValue(Index, Radius * 14)
+        Velocity.Z = Velocity.Z + RandomValue(Index, Radius * 8) - Radius * 4
+        Temperature = 550 + RandomValue(Index, 451)
+        Density = 350 + RandomValue(Index, 500)
+
+    End If
+
+    If Items[Index].Preset = 4 And Layer = 0 Then
+
+        Position = Items[Index].Source
+        Size = Radius * 2
+        Lifetime = 180
+        Density = 650
+        Velocity.X = 0
+        Velocity.Y = 0
+        Velocity.Z = 0
+
+    End If
+
+    If Items[Index].Preset = 5 Then
+
+        If Items[Index].Age <= 650 Then
+
+            ''' Short-lived overlapping round cores grow into a hot ball before release.
+            Position = Items[Index].Source
+            Velocity.X = 0
+            Velocity.Y = 0
+            Velocity.Z = 0
+            Size = Max(2, Radius * (350 + Items[Index].Age * Items[Index].Age / 160) / 1000)
+            Lifetime = 160
+            Temperature = 1000
+            Density = 800
+
+            If Layer = 1 Then
+                Temperature = 650
+                Density = 450
+            End If
+
+        Else
+
+            Velocity.X = RandomValue(Index, Radius * 48) - Radius * 24
+            Velocity.Y = RandomValue(Index, Radius * 40) - Radius * 16
+            Velocity.Z = RandomValue(Index, Radius * 48) - Radius * 24
+
+            If Layer = 0 Then
+                Size = Radius * 4
+                Lifetime = 180 + RandomValue(Index, 100)
+            Else If Layer = 1 Then
+                Size = Radius + RandomValue(Index, Radius)
+                Lifetime = 500 + RandomValue(Index, 450)
+            End If
+
+        End If
+
+    End If
+
+    EndSize = Size * 2
+
+    If Layer = 3 Then
+        EndSize = 1
+    End If
+
+    Items[Index].Serial = Items[Index].Serial + 1
+    Rotation = RandomValue(Index, 360)
+    AngularVelocity = RandomValue(Index, 160) - 80
+
+    If (Items[Index].Preset = 5 And
+        Items[Index].Age <= 650 And
+        Layer = 1) Then
+        ''' Alternate upright and sideways flame silhouettes around the same hot core.
+        Rotation = (Slot Mod 2) * 90
+        AngularVelocity = 0
+    End If
+
+    If Items[Index].Backend = SIMULATION_GPU Then
+
+        NextSlot[Key] = (Slot + 1) Mod Systems[Key].Capacity
+
+        If Graphics3D.GpuParticleValue3D(Graphics3D.GPU_PARTICLE_QUERY_SLOT_ACTIVE, Systems[Key].Handle, Slot) <> 0 Then
+            Items[Index].Dropped = Items[Index].Dropped + 1
+            Return
+        End If
+
+        Ok = Graphics3D.SetGpuParticleSpawnKinematics3D(Systems[Key], Slot,
+            Position.X, Position.Y, Position.Z, Velocity.X, Velocity.Y, Velocity.Z)
+        Ok = Graphics3D.SetGpuParticleSpawnVisual3D(Systems[Key], Slot, Lifetime,
+            Size, EndSize, Rotation, AngularVelocity, Temperature, Density) And Ok
+        Ok = Graphics3D.CommitGpuParticleSpawn3D(Systems[Key], Slot, Items[Index].Serial, Items[Index].Seed) And Ok
+
+    Else
+
+        NextSlot[Key] = (Slot + 1) Mod 96
+        Flat = Index * 384 + Layer * 96 + Slot
+        Ok = Particles[Flat].Lifetime = 0
+
+        If Ok Then
+
+            Particles[Flat].Position.X = Position.X * 1000
+            Particles[Flat].Position.Y = Position.Y * 1000
+            Particles[Flat].Position.Z = Position.Z * 1000
+            Particles[Flat].Velocity.X = Velocity.X * 1000
+            Particles[Flat].Velocity.Y = Velocity.Y * 1000
+            Particles[Flat].Velocity.Z = Velocity.Z * 1000
+            Particles[Flat].Lifetime = Lifetime
+            Particles[Flat].Age = 0
+            Particles[Flat].Size = Size
+            Particles[Flat].Frame = RandomValue(Index, 16)
+            Particles[Flat].Rotation = Rotation
+
+            If (Layer = 3 Or
+                ((Items[Index].Preset = 4 Or Items[Index].Preset = 5) And Layer = 0)) Then
+                Particles[Flat].Frame = 0
+            End If
+
+        End If
+
+    End If
+
+    If Ok Then
+        Items[Index].Spawned = Items[Index].Spawned + 1
+    Else
+        Items[Index].Dropped = Items[Index].Dropped + 1
+    End If
+
+End Sub
+
+Private Sub StepCpu(Index As Number, Layer As Number)
+
+    Dim Slot As Number
+    Dim Flat As Number
+    Dim Gravity As Number
+    Dim SpeedBound As Number
+    Dim SpeedLimit As Number
+
+    Gravity = Items[Index].Radius * 2
+
+    If Layer = 3 Then
+        Gravity = -Items[Index].Radius * 5
+    End If
+
+    For Slot = 0 To 95
+
+        Flat = Index * 384 + Layer * 96 + Slot
+
+        If Particles[Flat].Lifetime > 0 Then
+
+            Particles[Flat].Age = Particles[Flat].Age + 10
+            Particles[Flat].Velocity.X = (Particles[Flat].Velocity.X + Items[Index].Wind.X * 10) * 993 / 1000
+            Particles[Flat].Velocity.Y = (Particles[Flat].Velocity.Y + (Items[Index].Wind.Y + Gravity) * 10) * 993 / 1000
+            Particles[Flat].Velocity.Z = (Particles[Flat].Velocity.Z + Items[Index].Wind.Z * 10) * 993 / 1000
+            SpeedBound = (Abs(Particles[Flat].Velocity.X) + Abs(Particles[Flat].Velocity.Y) +
+                Abs(Particles[Flat].Velocity.Z))
+            SpeedLimit = Items[Index].Radius * 35000
+
+            If SpeedBound > SpeedLimit Then
+
+                Particles[Flat].Velocity.X = Particles[Flat].Velocity.X * SpeedLimit / SpeedBound
+                Particles[Flat].Velocity.Y = Particles[Flat].Velocity.Y * SpeedLimit / SpeedBound
+                Particles[Flat].Velocity.Z = Particles[Flat].Velocity.Z * SpeedLimit / SpeedBound
+
+            End If
+
+            Particles[Flat].Position.X = Particles[Flat].Position.X + Particles[Flat].Velocity.X / 100
+            Particles[Flat].Position.Y = Particles[Flat].Position.Y + Particles[Flat].Velocity.Y / 100
+            Particles[Flat].Position.Z = Particles[Flat].Position.Z + Particles[Flat].Velocity.Z / 100
+
+            If (Particles[Flat].Age >= Particles[Flat].Lifetime Or
+                Abs(Particles[Flat].Position.X) > 1000000000 Or
+                Abs(Particles[Flat].Position.Y) > 1000000000 Or
+                Abs(Particles[Flat].Position.Z) > 1000000000) Then
+                Particles[Flat].Lifetime = 0
+            End If
+
+        End If
+
+    End For
+
+End Sub
+
+Private Sub CommitCpu(Index As Number, Layer As Number)
+
+    Dim Slot As Number
+    Dim Flat As Number
+    Dim ParticleCount As Number
+    Dim Fade As Number
+    Dim RedValue As Number
+    Dim GreenValue As Number
+    Dim BlueValue As Number
+    Dim Size As Number
+    Dim Ok As Boolean
+
+    For Slot = 0 To 95
+
+        Flat = Index * 384 + Layer * 96 + Slot
+
+        If Particles[Flat].Lifetime > 0 Then
+
+            Fade = 100 - Particles[Flat].Age * 100 / Particles[Flat].Lifetime
+            Fade = Fade * Clamp(Particles[Flat].Age * 100 / 60, 0, 100) / 100
+            RedValue = 255
+            GreenValue = Clamp(50 + Fade * 2, 0, 255)
+            BlueValue = Clamp(Fade * 3 - 170, 0, 255)
+            Size = Particles[Flat].Size + Items[Index].Radius * Particles[Flat].Age / 1000
+
+            If Layer = 3 Then
+                Size = Max(1, Particles[Flat].Size * Fade / 100)
+            End If
+
+            If Layer = 2 Then
+
+                RedValue = 60
+                GreenValue = 56
+                BlueValue = 52
+                Fade = Fade / 2
+
+            End If
+
+            Ok = Graphics3D.SetParticle3D(Batches[Index * 4 + Layer], ParticleCount,
+                Particles[Flat].Position.X / 1000, Particles[Flat].Position.Y / 1000,
+                Particles[Flat].Position.Z / 1000,
+                Size,
+                Particles[Flat].Rotation, Particles[Flat].Frame)
+            Ok = Graphics3D.SetParticleColor3D(Batches[Index * 4 + Layer], ParticleCount,
+                RedValue, GreenValue, BlueValue, Fade * 65 / 100) And Ok
+            ParticleCount = ParticleCount + 1
+
+        End If
+
+    End For
+
+    Ok = Graphics3D.CommitParticleBatch3D(Batches[Index * 4 + Layer], ParticleCount)
+
+End Sub
+
+Public Sub Update(ElapsedMilliseconds As Number)
+
+    Dim Index As Number
+    Dim Layer As Number
+    Dim Key As Number
+    Dim Rate As Number
+    Dim Accepted As Number
+    Dim Ok As Boolean
+    Dim Source As Core.Vector3
+    Dim Value As FireEmitter
+    Dim Lost As Boolean
+    Dim Travel As Number
+
+    If Not Ready Then
+        Return
+    End If
+
+    If Epoch <> Graphics3D.ResourceEpoch3D() Then
+        ErrorValue = ERROR_RENDERER
+        Return
+    End If
+
+    Accepted = Clamp(ElapsedMilliseconds, 0, 100)
+
+    For Index = 0 To MAX_EMITTERS - 1
+
+        If Items[Index].Active And Not Mutable(Index) Then
+            Return
+        End If
+
+    End For
+
+    For Index = 0 To MAX_EMITTERS - 1
+
+        If Items[Index].Active Then
+
+            If Items[Index].Attachment = 1 Then
+
+                If Character3D.IsValid(Items[Index].Actor) Then
+
+                    Value.Slot = Index + 1
+                    Value.Generation = Items[Index].Generation
+                    Ok = SetSegment(Value,
+                        Character3D.SocketPosition(Items[Index].Actor, Items[Index].BaseSocket),
+                        Character3D.SocketPosition(Items[Index].Actor, Items[Index].TipSocket))
+
+                    If Not Ok Then
+                        Items[Index].Enabled = False
+                    End If
+
+                Else
+
+                    Items[Index].Enabled = False
+                    ErrorValue = ERROR_SOURCE
+
+                End If
+
+            End If
+
+            Source = Items[Index].Source
+
+            If Accepted > 0 Then
+
+                Items[Index].Velocity.X = Clamp((Source.X - Items[Index].Previous.X) * 1000 / Accepted, -2000, 2000)
+                Items[Index].Velocity.Y = Clamp((Source.Y - Items[Index].Previous.Y) * 1000 / Accepted, -2000, 2000)
+                Items[Index].Velocity.Z = Clamp((Source.Z - Items[Index].Previous.Z) * 1000 / Accepted, -2000, 2000)
+                Items[Index].TipVelocity.X = Clamp((Items[Index].Tip.X - Items[Index].PreviousTip.X) * 1000 / Accepted, -2000, 2000)
+                Items[Index].TipVelocity.Y = Clamp((Items[Index].Tip.Y - Items[Index].PreviousTip.Y) * 1000 / Accepted, -2000, 2000)
+                Items[Index].TipVelocity.Z = Clamp((Items[Index].Tip.Z - Items[Index].PreviousTip.Z) * 1000 / Accepted, -2000, 2000)
+                Travel = ((Source.X - Items[Index].Previous.X) * (Source.X - Items[Index].Previous.X) +
+                    (Source.Y - Items[Index].Previous.Y) * (Source.Y - Items[Index].Previous.Y) +
+                    (Source.Z - Items[Index].Previous.Z) * (Source.Z - Items[Index].Previous.Z))
+
+                If Travel > Items[Index].Radius * Items[Index].Radius * 400 Then
+
+                    Items[Index].Velocity.X = 0
+                    Items[Index].Velocity.Y = 0
+                    Items[Index].Velocity.Z = 0
+                    Items[Index].TipVelocity = Items[Index].Velocity
+
+                End If
+
+                Items[Index].Previous = Source
+                Items[Index].PreviousTip = Items[Index].Tip
+
+            End If
+
+            Items[Index].Remainder = Items[Index].Remainder + Accepted
+            Lost = False
+
+            Do
+
+                If Items[Index].Remainder < 10 Then
+                    Exit Do
+                End If
+
+                Items[Index].Remainder = Items[Index].Remainder - 10
+                Items[Index].Age = Items[Index].Age + 10
+
+                If Items[Index].Preset = 5 And Items[Index].Age > 900 Then
+                    Items[Index].Enabled = False
+                End If
+
+                For Layer = 0 To 4
+
+                    If Items[Index].Backend = SIMULATION_GPU Or Layer < 4 Then
+
+                        Key = Index * 5 + Layer
+                        Rate = 270
+
+                        If Layer = 2 Then
+                            Rate = 24
+                        Else If Layer = 3 Then
+                            Rate = 30
+                        Else If Layer = 4 Then
+                            Rate = 48
+                        End If
+
+                        If Items[Index].Preset = 5 Then
+                            Rate = BurstRate(Items[Index].Age, Layer)
+                        End If
+
+                        If Layer = 2 Then
+                            Rate = Rate / 3
+                        End If
+
+                        If Items[Index].Quality = QUALITY_LOW Then
+                            Rate = Rate / 3
+                        Else If Items[Index].Quality = QUALITY_MEDIUM Then
+                            Rate = Rate / 2
+                        End If
+
+                        If Items[Index].Enabled Then
+
+                            ''' Jitter the emission intervals instead of evenly spaced ember rows.
+
+                            If Layer = 3 Then
+                                Rate = RandomValue(Index, Max(1, Rate * 2 + 1))
+                            End If
+
+                            SpawnRemainder[Key] = SpawnRemainder[Key] + Rate * Items[Index].Intensity / 100
+
+                            Do
+
+                                If SpawnRemainder[Key] < 100 Then
+                                    Exit Do
+                                End If
+
+                                SpawnRemainder[Key] = SpawnRemainder[Key] - 100
+
+                                Call Spawn(Index, Layer)
+
+                            Loop
+
+                        End If
+
+                        If Items[Index].Backend = SIMULATION_GPU Then
+                            Ok = Graphics3D.AdvanceGpuParticleSystem3D(Systems[Key], 10)
+                            Lost = (Not Ok Or Graphics3D.GpuParticleValue3D(38, Systems[Key].Handle) <> 2 Or Lost)
+                        Else
+
+                            Call StepCpu(Index, Layer)
+                        End If
+
+                    End If
+
+                End For
+
+            Loop
+
+            If Lost Then
+
+                Call ReleaseLayers(Index)
+
+                Items[Index].Backend = SIMULATION_CPU
+                Items[Index].Quality = QUALITY_LOW
+                Items[Index].Fallback = FALLBACK_GPU_UNAVAILABLE
+                Items[Index].Restarts = Items[Index].Restarts + 1
+                Ok = ReserveLayers(Index)
+
+                If Not Ok Then
+                    Items[Index].Active = False
+                    ErrorValue = ERROR_CAPACITY
+                End If
+
+            End If
+
+            If Items[Index].Backend = SIMULATION_CPU Then
+
+                For Layer = 0 To 3
+                    Call CommitCpu(Index, Layer)
+                End For
+
+            End If
+
+            If Items[Index].Preset = 5 And Items[Index].Age >= 2700 Then
+                Items[Index].Finished = True
+            End If
+
+        End If
+
+    End For
+
+End Sub
+
+Private Function BurstRate(Age As Number, Layer As Number) As Number
+
+    Dim Result As Number
+
+    If Age <= 650 Then
+
+        If Layer = 0 Then
+            Result = 100
+        Else If Layer = 1 Or Layer = 4 Then
+            Result = 35
+        End If
+
+    Else If Age <= 760 Then
+
+        Result = 1100
+
+        If Layer = 1 Then
+            Result = 1500
+        Else If Layer = 2 Then
+            Result = 350
+        Else If Layer = 3 Then
+            Result = 650
+        Else If Layer = 4 Then
+            Result = 320
+        End If
+
+    Else If Age <= 900 Then
+
+        If Layer = 1 Then
+            Result = 400
+        Else If Layer = 2 Then
+            Result = 220
+        Else If Layer = 3 Or Layer = 4 Then
+            Result = 80
+        End If
+
+    End If
+
+    Return Result
+
+End Function
+
+Public Function Draw(Value As FireEmitter) As Boolean
+
+    Dim Layer As Number
+    Dim Index As Number
+    Dim Ok As Boolean
+
+    If Not Valid(Value) Then
+        Return False
+    End If
+
+    Index = Value.Slot - 1
+    Ok = True
+
+    For Layer = 0 To 4
+
+        If Items[Index].DebugLayer = -1 Or Items[Index].DebugLayer = Layer Then
+
+            If Items[Index].Backend = SIMULATION_GPU Then
+                Ok = Graphics3D.DrawGpuParticleSystem3D(Systems[Index * 5 + Layer]) And Ok
+            Else If Layer < 4 Then
+                Ok = Graphics3D.DrawParticleBatch3D(Batches[Index * 4 + Layer]) And Ok
+            End If
+
+        End If
+
+    End For
+
+    Return Ok
+
+End Function
+
+Public Function Destroy(ByRef Value As FireEmitter) As Boolean
+
+    Dim Index As Number
+    Dim Layer As Number
+
+    If Not Valid(Value) Then
+        ErrorValue = ERROR_HANDLE
+        Return False
+    End If
+
+    Index = Value.Slot - 1
+
+    If Not Mutable(Index) Then
+        Return False
+    End If
+
+    Call ReleaseLayers(Index)
+
+    Items[Index].Active = False
+    Value.Slot = 0
+    Value.Generation = 0
+
+    Return True
+
+End Function
+
+Public Sub Shutdown()
+
+    Dim Index As Number
+
+    If Ready And Epoch = Graphics3D.ResourceEpoch3D() Then
+
+        For Index = 0 To MAX_EMITTERS - 1
+
+            If Not Mutable(Index) Then
+                Return
+            End If
+
+        End For
+
+    End If
+
+    For Index = 0 To MAX_EMITTERS - 1
+        Call ReleaseLayers(Index)
+
+        Items[Index].Active = False
+    End For
+
+    For Index = 0 To 4
+        Call Graphics3D.DestroyMaterial3D(Materials[Index])
+    End For
+
+    For Index = 0 To 2
+        Call Graphics3D.DestroyTexture3D(Textures[Index])
+    End For
+
+    Ready = False
+
+End Sub
+
+''' Query: 1 live, 2 quality, 3 backend, 4 spawned, 5 dropped, 6 logical particles,
+''' 7 systems, 8 reserved slots, 9 fallback, 10 age, 11 enabled, 12 last error.
+''' 13 requested mode, 14 requested quality, 15 thermal, 16 finished, 17 restarts.
+Public Function Value(Query As Number, Emitter As FireEmitter) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Result As Number
+    Dim Index As Number
+    Dim Layer As Number
+    Dim Slot As Number
+
+    If Query = 12 Then
+        Return ErrorValue
+    End If
+
+    If Query = 1 Then
+
+        For Index = 0 To MAX_EMITTERS - 1
+
+            If Items[Index].Active Then
+                Result = Result + 1
+            End If
+
+        End For
+
+        Return Result
+
+    End If
+
+    If Not Valid(Emitter) Then
+        Return 0
+    End If
+
+    Index = Emitter.Slot - 1
+
+    If Query = 2 Then
+        ReturnValue = Items[Index].Quality
+
+        Return ReturnValue
+    Else If Query = 3 Then
+        ReturnValue = Items[Index].Backend
+
+        Return ReturnValue
+    Else If Query = 4 Then
+        ReturnValue = Items[Index].Spawned
+
+        Return ReturnValue
+    Else If Query = 5 Then
+        ReturnValue = Items[Index].Dropped
+
+        Return ReturnValue
+    Else If Query = 9 Then
+        ReturnValue = Items[Index].Fallback
+
+        Return ReturnValue
+    Else If Query = 10 Then
+        ReturnValue = Items[Index].Age
+
+        Return ReturnValue
+    Else If Query = 13 Then
+        ReturnValue = Items[Index].RequestedMode
+
+        Return ReturnValue
+    Else If Query = 14 Then
+        ReturnValue = Items[Index].RequestedQuality
+
+        Return ReturnValue
+    Else If Query = 17 Then
+        ReturnValue = Items[Index].Restarts
+
+        Return ReturnValue
+    End If
+
+    If Query = 15 And Items[Index].Backend = SIMULATION_GPU Then
+        Return 1
+    Else If Query = 16 And Items[Index].Finished Then
+        Return 1
+    End If
+
+    If Query = 11 Then
+
+        If Items[Index].Enabled Then
+            Return 1
+        End If
+
+        Return 0
+
+    End If
+
+    For Layer = 0 To 4
+
+        If Items[Index].Backend = SIMULATION_GPU Then
+
+            If Query = 6 Then
+                Result = Result + Systems[Index * 5 + Layer].ActiveCount
+            Else If Query = 7 Then
+                Result = Result + 1
+            Else If Query = 8 Then
+                Result = Result + Systems[Index * 5 + Layer].Capacity
+            End If
+
+        Else If Layer < 4 Then
+
+            If Query = 8 Then
+                Result = Result + 96
+            Else If Query = 6 Then
+                Result = Result + Batches[Index * 4 + Layer].ParticleCount
+            End If
+
+        End If
+
+    End For
+
+    Return Result
+
+End Function
+
+''' One bounded light request per live emitter, sampled by the scene (no queue or GPU readback).
+Public Function LightPosition(Value As FireEmitter) As Core.Vector3
+
+    Dim Result As Core.Vector3
+
+    If Valid(Value) Then
+
+        Result.X = (Items[Value.Slot - 1].Source.X + Items[Value.Slot - 1].Tip.X) / 2
+        Result.Y = (Items[Value.Slot - 1].Source.Y + Items[Value.Slot - 1].Tip.Y) / 2
+        Result.Z = (Items[Value.Slot - 1].Source.Z + Items[Value.Slot - 1].Tip.Z) / 2
+
+    End If
+
+    Return Result
+
+End Function
+
+Public Function LightIntensity(Value As FireEmitter) As Number
+
+    Dim Result As Number
+
+    If Valid(Value) Then
+
+        If Items[Value.Slot - 1].Enabled Then
+            Result = 80 + (Items[Value.Slot - 1].Age / 50 Mod 7)
+        End If
+
+        If Items[Value.Slot - 1].Preset = 5 And Items[Value.Slot - 1].Enabled Then
+
+            If Items[Value.Slot - 1].Age <= 650 Then
+                Result = 40 + Items[Value.Slot - 1].Age / 3
+            Else
+                Result = Max(0, 550 - (Items[Value.Slot - 1].Age - 650) * 2)
+            End If
+
+        End If
+
+    End If
+
+    Return Result
+
+End Function
+
+End Module

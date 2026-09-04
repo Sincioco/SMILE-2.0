@@ -217,6 +217,9 @@ Run("Viewer and game letter shortcuts are shared named input constants", () =>
     Equal(31L, SyntaxFacts.GetBuiltInConstantValue(SyntaxKind.KeyPKeyword));
     Equal(32L, SyntaxFacts.GetBuiltInConstantValue(SyntaxKind.KeyBKeyword));
     Equal(33L, SyntaxFacts.GetBuiltInConstantValue(SyntaxKind.KeyControlKeyword));
+    Equal(SyntaxKind.KeyBacktickKeyword, SyntaxFacts.GetKeywordKind("key_backtick"));
+    Equal(34L, SyntaxFacts.GetBuiltInConstantValue(SyntaxKind.KeyBacktickKeyword));
+    Equal(false, Analyze("Game Window \"UI\"\nDim Key As Number\nDim Held As Boolean\nGet Key Key\nHeld = Key_Held(KEY_BACKTICK)\nIf Key = KEY_BACKTICK Then\nPrint Held\nEnd If\n").HasErrors);
 });
 Run("Window dimensions, title, and activation are live game-window built-ins", () =>
 {
@@ -5494,10 +5497,10 @@ Run("VSIX templates render localized identity metadata within the aligned header
     var border = gameTemplate.Split('\n')[0].TrimEnd('\r');
     var rendered = gameTemplate.Replace("$smileuser$", "Sin".PadRight(69), StringComparison.Ordinal)
         .Replace("$smiledate$", "August 15, 2026".PadRight(69), StringComparison.Ordinal)
-        .Replace("$smileversion$", "2.0.58", StringComparison.Ordinal);
+        .Replace("$smileversion$", "2.0.59", StringComparison.Ordinal);
     var header = rendered.Split('\n').Take(9).Select(line => line.TrimEnd('\r')).ToArray();
     Equal("' Programmed By: " + "Sin".PadRight(69) + "Version: 0.0.1", header[3]);
-    Equal("' Programmed Date: " + "August 15, 2026".PadRight(69) + "SMILE: 2.0.58", header[4]);
+    Equal("' Programmed Date: " + "August 15, 2026".PadRight(69) + "SMILE: 2.0.59", header[4]);
     Equal(header[3].IndexOf("Version:", StringComparison.Ordinal) + "Version".Length,
         header[4].IndexOf("SMILE:", StringComparison.Ordinal) + "SMILE".Length);
     Equal(true, header.All(line => line.Length <= border.Length));
@@ -5510,14 +5513,14 @@ Run("VSIX templates render localized identity metadata within the aligned header
     foreach (var manifest in new[] { gameManifest, consoleManifest })
     {
         Equal(true, manifest.Contains("SmileProjectTemplateWizard", StringComparison.Ordinal));
-        Equal(true, manifest.Contains("Version=2.0.58.0", StringComparison.Ordinal));
+        Equal(true, manifest.Contains("Version=2.0.59.0", StringComparison.Ordinal));
     }
     foreach (var applicationProject in new[] { gameProject, consoleProject })
         Equal(true, applicationProject.Contains("<ApplicationId>$smileapplicationid$</ApplicationId>", StringComparison.Ordinal));
     Equal(false, libraryProject.Contains("ApplicationId", StringComparison.Ordinal));
     Equal(true, wizard.Contains("\"smile.app.a\" + Guid.NewGuid().ToString(\"N\")", StringComparison.Ordinal));
     Equal(true, wizard.Contains("ToString(\"D\", CultureInfo.CurrentCulture)", StringComparison.Ordinal));
-    Equal(true, project.Contains("<Version>2.0.58</Version>", StringComparison.Ordinal));
+    Equal(true, project.Contains("<Version>2.0.59</Version>", StringComparison.Ordinal));
     Equal(true, vsixManifest.Contains("Type=\"Microsoft.VisualStudio.Assembly\"", StringComparison.Ordinal));
 });
 

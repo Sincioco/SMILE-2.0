@@ -1,0 +1,136 @@
+''' Shared immediate-mode controls. Application code owns actions and one drag owner.
+Module Smile.UI.Controls
+
+Option Explicit
+
+Public Function Contains(X As Number, Y As Number, Width As Number, Height As Number) As Boolean
+
+    Dim Result As Boolean
+
+    Result = (Pointer_Inside() And Pointer_X() >= X And Pointer_X() < X + Width And
+        Pointer_Y() >= Y And Pointer_Y() < Y + Height)
+    Return Result
+
+End Function
+
+Public Function Clicked(X As Number, Y As Number, Width As Number, Height As Number) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Pointer_Pressed(POINTER_PRIMARY) And Contains(X, Y, Width, Height)
+    Return Result
+
+End Function
+
+Public Sub DrawPanel(X As Number, Y As Number, Width As Number, Height As Number,
+    Optional Opacity As Number = 80)
+
+    Fill Rectangle X, Y, Width, Height, Rgb(4, 9, 24) Opacity Opacity
+
+End Sub
+
+Public Sub DrawButton(
+    X As Number,
+    Y As Number,
+    Width As Number,
+    Height As Number,
+    Label As Text,
+    Selected As Boolean
+)
+
+    Dim LabelHeight As Number
+    Dim LabelSize As Number
+    Dim LabelWidth As Number
+    Dim LabelX As Number
+    Dim LabelY As Number
+
+    If Selected Then
+        Fill Rectangle X, Y, Width, Height, Rgb(16, 102, 136) Opacity 80
+    Else
+        Fill Rectangle X, Y, Width, Height, Rgb(18, 35, 58) Opacity 80
+    End If
+
+    LabelSize = 11
+
+    If Text_Width(Label, LabelSize) > Width - 10 Then
+        LabelSize = 9
+    End If
+
+    If Text_Width(Label, LabelSize) > Width - 8 Then
+        LabelSize = 8
+    End If
+
+    LabelWidth = Text_Width(Label, LabelSize)
+    LabelHeight = Text_Height(Label, LabelSize)
+    LabelX = X + Max(4, (Width - LabelWidth) / 2)
+    LabelY = Y + Max(1, (Height - LabelHeight) / 2)
+
+    Draw Text Label At LabelX, LabelY Size LabelSize Color WHITE
+
+End Sub
+
+Public Sub DrawSlider(X As Number, Y As Number, Width As Number, Height As Number,
+    Value As Number, MinimumValue As Number, MaximumValue As Number,
+    Optional KnobWidth As Number = 4)
+
+    Dim Progress As Number
+
+    Progress = (Value - MinimumValue) * Width / Max(1, MaximumValue - MinimumValue)
+    Progress = Min(Width, Max(0, Progress))
+
+    Fill Rectangle X, Y, Width, Height, Rgb(18, 35, 58) Opacity 95
+    Fill Rectangle X, Y, Progress, Height, Rgb(16, 102, 136) Opacity 95
+    Fill Rectangle X + Progress - KnobWidth / 2, Y - 2, KnobWidth, Height + 4, White
+
+End Sub
+
+''' True consumes this input frame, including release outside the slider.
+''' Start only on press; entering a slider during a scene drag cannot steal it.
+Public Function UpdateSlider(ByRef DragOwner As Number, Id As Number,
+    X As Number, Y As Number, Width As Number, Height As Number,
+    MinimumValue As Number, MaximumValue As Number, WheelStep As Number,
+    ByRef Value As Number) As Boolean
+
+    Dim Over As Boolean
+
+    If (Width <= 0 Or
+        MaximumValue <= MinimumValue Or
+        Id <= 0) Then
+        Return False
+    End If
+
+    If DragOwner <> 0 And DragOwner <> Id Then
+        Return False
+    End If
+
+    Over = Contains(X, Y, Width, Height)
+
+    If (DragOwner = 0 And
+        Over And
+        Pointer_Pressed(POINTER_PRIMARY)) Then
+        DragOwner = Id
+    End If
+
+    If DragOwner = Id Then
+
+        If Pointer_Held(POINTER_PRIMARY) Or Pointer_Pressed(POINTER_PRIMARY) Then
+            Value = MinimumValue + (Pointer_X() - X) * (MaximumValue - MinimumValue) / Width
+            Value = Min(MaximumValue, Max(MinimumValue, Value))
+        Else
+            DragOwner = 0
+        End If
+
+        Return True
+
+    End If
+
+    If Over And Pointer_Wheel_Delta() <> 0 Then
+        Value = Min(MaximumValue, Max(MinimumValue, Value + Pointer_Wheel_Delta() * WheelStep))
+        Return True
+    End If
+
+    Return False
+
+End Function
+
+End Module

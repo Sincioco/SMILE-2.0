@@ -19,5 +19,8 @@
     <SmileSource Include="Character3D.smile" />
     <SmileSource Include="Effects3D.smile" />
     <SmileSource Include="AetherBlade3D.smile" />
+    <SmileSource Include="FireEmitter3D.smile" />
+    <SmileSource Include="Arena3D.smile" />
+    <SmileSource Include="StaticBackdrop3D.smile" />
   </ItemGroup>
 </SmileProject>

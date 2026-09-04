@@ -1,0 +1,55 @@
+fire-shape-atlas.png | 413743 bytes | 84c9a9e4f47e43aad9b2d403262f4ad17fe9fa3982d78b380ebcab9818799bd7
+smoke-shape-atlas.png | 328232 bytes | cd8c8547ee24ce66371b727b0d80a982f68f03632a4061e9a320fa820be28d48
+ember-shape.png | 1425 bytes | 8631834068bcc031eeca3d556b95f932ddfb6703c1b14faf1abd70f50e66dd0f
+thermal-gradient-lut.png | 938 bytes | 8d83c97e1f2cf84452f8dfb1286c944d4fd29ae8e9a1096c3eb235f42e08e93c
+ThermalDynamicsTests.cpp
+Thermal dynamics: 21 checks, 0 failures
+NativeFireGpuTests.cpp
+PERF requested=1920x1080 target=1920x1061 scenario=0 flame-slots=1024 flame-systems=1 heat-slots=0 HDR=0 depth=0 heat=0 submit+present-ms=0.577 dispatches=30 draws=30 warm-upload-bytes=0 state-bytes=163984 target-bytes=65187840 GPU-timer=unavailable
+PERF requested=1920x1080 target=1920x1061 scenario=0 flame-slots=1024 flame-systems=1 heat-slots=0 HDR=1 depth=0 heat=0 submit+present-ms=0.406 dispatches=30 draws=30 warm-upload-bytes=0 state-bytes=163984 target-bytes=122219520 GPU-timer=unavailable
+PERF requested=1920x1080 target=1920x1061 scenario=0 flame-slots=1024 flame-systems=1 heat-slots=0 HDR=0 depth=1 heat=0 submit+present-ms=0.166 dispatches=30 draws=30 warm-upload-bytes=0 state-bytes=163984 target-bytes=73336320 GPU-timer=unavailable
+PERF requested=1920x1080 target=1920x1061 scenario=0 flame-slots=1024 flame-systems=1 heat-slots=0 HDR=1 depth=1 heat=0 submit+present-ms=0.412 dispatches=30 draws=30 warm-upload-bytes=0 state-bytes=163984 target-bytes=130368000 GPU-timer=unavailable
+PERF requested=1920x1080 target=1920x1061 scenario=0 flame-slots=1024 flame-systems=1 heat-slots=64 HDR=0 depth=0 heat=1 submit+present-ms=0.727 dispatches=60 draws=60 warm-upload-bytes=0 state-bytes=174368 target-bytes=82502400 GPU-timer=unavailable
+PERF requested=1920x1080 target=1920x1061 scenario=0 flame-slots=1024 flame-systems=1 heat-slots=64 HDR=1 depth=0 heat=1 submit+present-ms=0.913 dispatches=60 draws=60 warm-upload-bytes=0 state-bytes=174368 target-bytes=139534080 GPU-timer=unavailable
+PERF requested=1920x1080 target=1920x1061 scenario=0 flame-slots=1024 flame-systems=1 heat-slots=64 HDR=0 depth=1 heat=1 submit+present-ms=0.526 dispatches=60 draws=60 warm-upload-bytes=0 state-bytes=174368 target-bytes=90650880 GPU-timer=unavailable
+PERF requested=1920x1080 target=1920x1061 scenario=0 flame-slots=1024 flame-systems=1 heat-slots=64 HDR=1 depth=1 heat=1 submit+present-ms=0.922 dispatches=60 draws=60 warm-upload-bytes=0 state-bytes=174368 target-bytes=147682560 GPU-timer=unavailable
+PERF requested=1920x1080 target=1920x1061 scenario=1 flame-slots=1024 flame-systems=4 heat-slots=0 HDR=0 depth=0 heat=0 submit+present-ms=0.435 dispatches=120 draws=120 warm-upload-bytes=0 state-bytes=164416 target-bytes=65187840 GPU-timer=unavailable
+PERF requested=1920x1080 target=1920x1061 scenario=1 flame-slots=1024 flame-systems=4 heat-slots=0 HDR=1 depth=0 heat=0 submit+present-ms=0.868 dispatches=120 draws=120 warm-upload-bytes=0 state-bytes=164416 target-bytes=122219520 GPU-timer=unavailable
+PERF requested=1920x1080 target=1920x1061 scenario=1 flame-slots=1024 flame-systems=4 heat-slots=0 HDR=0 depth=1 heat=0 submit+present-ms=0.848 dispatches=120 draws=120 warm-upload-bytes=0 state-bytes=164416 target-bytes=73336320 GPU-timer=unavailable
+PERF requested=1920x1080 target=1920x1061 scenario=1 flame-slots=1024 flame-systems=4 heat-slots=0 HDR=1 depth=1 heat=0 submit+present-ms=0.658 dispatches=120 draws=120 warm-upload-bytes=0 state-bytes=164416 target-bytes=130368000 GPU-timer=unavailable
+PERF requested=1920x1080 target=1920x1061 scenario=1 flame-slots=1024 flame-systems=4 heat-slots=64 HDR=0 depth=0 heat=1 submit+present-ms=0.585 dispatches=150 draws=150 warm-upload-bytes=0 state-bytes=174800 target-bytes=82502400 GPU-timer=unavailable
+PERF requested=1920x1080 target=1920x1061 scenario=1 flame-slots=1024 flame-systems=4 heat-slots=64 HDR=1 depth=0 heat=1 submit+present-ms=0.370 dispatches=150 draws=150 warm-upload-bytes=0 state-bytes=174800 target-bytes=139534080 GPU-timer=unavailable
+PERF requested=1920x1080 target=1920x1061 scenario=1 flame-slots=1024 flame-systems=4 heat-slots=64 HDR=0 depth=1 heat=1 submit+present-ms=0.355 dispatches=150 draws=150 warm-upload-bytes=0 state-bytes=174800 target-bytes=90650880 GPU-timer=unavailable
+PERF requested=1920x1080 target=1920x1061 scenario=1 flame-slots=1024 flame-systems=4 heat-slots=64 HDR=1 depth=1 heat=1 submit+present-ms=0.463 dispatches=150 draws=150 warm-upload-bytes=0 state-bytes=174800 target-bytes=147682560 GPU-timer=unavailable
+PERF requested=1920x1080 target=1920x1061 scenario=2 flame-slots=4096 flame-systems=1 heat-slots=0 HDR=0 depth=0 heat=0 submit+present-ms=0.372 dispatches=30 draws=30 warm-upload-bytes=0 state-bytes=655504 target-bytes=65187840 GPU-timer=unavailable
+PERF requested=1920x1080 target=1920x1061 scenario=2 flame-slots=4096 flame-systems=1 heat-slots=0 HDR=1 depth=0 heat=0 submit+present-ms=0.347 dispatches=30 draws=30 warm-upload-bytes=0 state-bytes=655504 target-bytes=122219520 GPU-timer=unavailable
+PERF requested=1920x1080 target=1920x1061 scenario=2 flame-slots=4096 flame-systems=1 heat-slots=0 HDR=0 depth=1 heat=0 submit+present-ms=0.289 dispatches=30 draws=30 warm-upload-bytes=0 state-bytes=655504 target-bytes=73336320 GPU-timer=unavailable
+PERF requested=1920x1080 target=1920x1061 scenario=2 flame-slots=4096 flame-systems=1 heat-slots=0 HDR=1 depth=1 heat=0 submit+present-ms=0.396 dispatches=30 draws=30 warm-upload-bytes=0 state-bytes=655504 target-bytes=130368000 GPU-timer=unavailable
+PERF requested=1920x1080 target=1920x1061 scenario=2 flame-slots=4096 flame-systems=1 heat-slots=64 HDR=0 depth=0 heat=1 submit+present-ms=0.395 dispatches=60 draws=60 warm-upload-bytes=0 state-bytes=665888 target-bytes=82502400 GPU-timer=unavailable
+PERF requested=1920x1080 target=1920x1061 scenario=2 flame-slots=4096 flame-systems=1 heat-slots=64 HDR=1 depth=0 heat=1 submit+present-ms=1.091 dispatches=60 draws=60 warm-upload-bytes=0 state-bytes=665888 target-bytes=139534080 GPU-timer=unavailable
+PERF requested=1920x1080 target=1920x1061 scenario=2 flame-slots=4096 flame-systems=1 heat-slots=64 HDR=0 depth=1 heat=1 submit+present-ms=1.052 dispatches=60 draws=60 warm-upload-bytes=0 state-bytes=665888 target-bytes=90650880 GPU-timer=unavailable
+PERF requested=1920x1080 target=1920x1061 scenario=2 flame-slots=4096 flame-systems=1 heat-slots=64 HDR=1 depth=1 heat=1 submit+present-ms=0.616 dispatches=60 draws=60 warm-upload-bytes=0 state-bytes=665888 target-bytes=147682560 GPU-timer=unavailable
+PERF requested=1920x1080 target=1920x1061 scenario=3 flame-slots=16384 flame-systems=1 heat-slots=0 HDR=0 depth=0 heat=0 submit+present-ms=0.490 dispatches=30 draws=30 warm-upload-bytes=0 state-bytes=2621584 target-bytes=65187840 GPU-timer=unavailable
+PERF requested=1920x1080 target=1920x1061 scenario=3 flame-slots=16384 flame-systems=1 heat-slots=0 HDR=1 depth=0 heat=0 submit+present-ms=0.486 dispatches=30 draws=30 warm-upload-bytes=0 state-bytes=2621584 target-bytes=122219520 GPU-timer=unavailable
+PERF requested=1920x1080 target=1920x1061 scenario=3 flame-slots=16384 flame-systems=1 heat-slots=0 HDR=0 depth=1 heat=0 submit+present-ms=0.878 dispatches=30 draws=30 warm-upload-bytes=0 state-bytes=2621584 target-bytes=73336320 GPU-timer=unavailable
+PERF requested=1920x1080 target=1920x1061 scenario=3 flame-slots=16384 flame-systems=1 heat-slots=0 HDR=1 depth=1 heat=0 submit+present-ms=0.826 dispatches=30 draws=30 warm-upload-bytes=0 state-bytes=2621584 target-bytes=130368000 GPU-timer=unavailable
+PERF requested=1920x1080 target=1920x1061 scenario=3 flame-slots=16384 flame-systems=1 heat-slots=64 HDR=0 depth=0 heat=1 submit+present-ms=0.380 dispatches=60 draws=60 warm-upload-bytes=0 state-bytes=2631968 target-bytes=82502400 GPU-timer=unavailable
+PERF requested=1920x1080 target=1920x1061 scenario=3 flame-slots=16384 flame-systems=1 heat-slots=64 HDR=1 depth=0 heat=1 submit+present-ms=1.142 dispatches=60 draws=60 warm-upload-bytes=0 state-bytes=2631968 target-bytes=139534080 GPU-timer=unavailable
+PERF requested=1920x1080 target=1920x1061 scenario=3 flame-slots=16384 flame-systems=1 heat-slots=64 HDR=0 depth=1 heat=1 submit+present-ms=0.986 dispatches=60 draws=60 warm-upload-bytes=0 state-bytes=2631968 target-bytes=90650880 GPU-timer=unavailable
+PERF requested=1920x1080 target=1920x1061 scenario=3 flame-slots=16384 flame-systems=1 heat-slots=64 HDR=1 depth=1 heat=1 submit+present-ms=0.601 dispatches=60 draws=60 warm-upload-bytes=0 state-bytes=2631968 target-bytes=147682560 GPU-timer=unavailable
+Native thermal GPU recovery: 0 failures
+Dependency is up to date: D:\SMILE 2.0\libraries\Smile.Simple3D\bin\Debug\Smile.Simple3D.smilelib
+Dependency is up to date: D:\SMILE 2.0\libraries\Smile.UI\bin\Debug\Smile.UI.smilelib
+Compiled D:\SMILE 2.0\examples\AdvancedFireVfxLab\AdvancedFireVfxLab.smileproj
+Output: D:\SMILE 2.0\examples\AdvancedFireVfxLab\bin\Debug\AdvancedFireVfxLab.exe
+Published 6 project assets.
+Dependency is up to date: D:\SMILE 2.0\libraries\Smile.Simple3D\bin\Debug\Smile.Simple3D.smilelib
+Compiled D:\SMILE 2.0\examples\AdvancedFireVfxLab\FireEmitterTests.smileproj
+Output: D:\SMILE 2.0\artifacts\tests\FireEmitterTests.exe
+Published 4 project assets.
+FireEmitter3D tests passed
+Dependency is up to date: D:\SMILE 2.0\libraries\Smile.Simple3D\bin\Debug\Smile.Simple3D.smilelib
+Compiled D:\SMILE 2.0\examples\AdvancedFireVfxLab\FireEmitterTests.smileproj for Web
+Output: D:\SMILE 2.0\artifacts\web\FireEmitterTests
+Published 4 project assets.
+Web execution passed: D:\SMILE 2.0\artifacts\web\FireEmitterTests (exact console parity)

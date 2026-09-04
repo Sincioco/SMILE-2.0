@@ -79,11 +79,11 @@ Sub RunTests()
     ) = 21504)
     Call Check(Graphics3D.GpuParticleValue3D(
         Graphics3D.GPU_PARTICLE_QUERY_GPU_STATE_BYTES
-    ) = 3440688)
+    ) = 3441072)
     Call Check(Graphics3D.GpuParticleValue3D(
         Graphics3D.GPU_PARTICLE_QUERY_RESOURCE_GPU_BYTES,
         System.Handle
-    ) = 163856)
+    ) = 163984)
     Call Check(Graphics3D.SetGpuParticleSpawnKinematics3D(
         System,
         0,

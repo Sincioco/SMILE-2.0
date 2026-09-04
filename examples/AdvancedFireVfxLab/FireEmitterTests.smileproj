@@ -1,0 +1,13 @@
+<SmileProject Version="1.0">
+  <PropertyGroup>
+    <ProjectKind>Game</ProjectKind>
+    <StartupFile>FireEmitterTests.smile</StartupFile>
+    <OutputName>FireEmitterTests</OutputName>
+    <ApplicationId>smile.tests.fire-emitter</ApplicationId>
+  </PropertyGroup>
+  <ItemGroup>
+    <SmileSource Include="FireEmitterTests.smile" StartupOnly="true" />
+    <Asset Include="Assets\Fire\*.png" />
+    <SmileProjectReference Include="..\..\libraries\Smile.Simple3D\Smile.Simple3D.smilelibproj" />
+  </ItemGroup>
+</SmileProject>
