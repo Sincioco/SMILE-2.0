@@ -6,11 +6,11 @@
   "dataKey": "CharacterViewerCalibrationKeyframes",
   "storageVersion": 2,
   "savedKeyframe": {
-    "clipIndex": 3,
-    "clipName": "Idle",
+    "clipIndex": 1,
+    "clipName": "Defend",
     "frame": 0
   },
-  "totalKeyframes": 2,
+  "totalKeyframes": 3,
   "clips": [
     {
       "index": 0,
@@ -20,7 +20,51 @@
     {
       "index": 1,
       "name": "Defend",
-      "keyframes": []
+      "keyframes": [
+        {
+          "frame": 0,
+          "swordWrist": {
+            "rotation": [
+              55,
+              -142,
+              0
+            ]
+          },
+          "shieldWrist": {
+            "rotation": [
+              -26,
+              180,
+              25
+            ]
+          },
+          "sword": {
+            "decoupled": false,
+            "rotation": [
+              0,
+              -37,
+              115
+            ],
+            "position": [
+              5,
+              -2,
+              0
+            ]
+          },
+          "shield": {
+            "decoupled": false,
+            "rotation": [
+              89,
+              -5,
+              -118
+            ],
+            "position": [
+              0,
+              0,
+              0
+            ]
+          }
+        }
+      ]
     },
     {
       "index": 2,

@@ -91,3 +91,10 @@ foreach ($copy in $copies) {
 }
 
 Write-Host "Prepared Character Viewer cooking inputs from Sin Star I: $buildAssets"
+
+$fireAssets = Join-Path $toolRoot 'Assets\Fire'
+New-Item -ItemType Directory -Path $fireAssets -Force | Out-Null
+foreach ($fireFile in @('fire-shape-atlas.png', 'smoke-shape-atlas.png', 'ember-shape.png')) {
+    Copy-Item -LiteralPath (Join-Path $repositoryRoot "TechnicalAssets\Generation3\Fire\$fireFile") `
+        -Destination (Join-Path $fireAssets $fireFile) -Force
+}

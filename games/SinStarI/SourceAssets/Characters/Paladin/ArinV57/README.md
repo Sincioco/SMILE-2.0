@@ -16,7 +16,38 @@ This directory is the canonical repository home for the complete Arin v5.7 revis
 | `arin-v5.7-mixamo-rigged-t-pose.fbx` | 2,818,128 | `F9807FA88D9AC205A37CEA4568C86BFBA1123D4EA36D81F124CFABF47B67A742` | Approved Mixamo auto-rigged neutral reference |
 | `arin-v5.7-mixamo-sword-and-shield-idle-with-skin.fbx` | 3,129,856 | `65B78FC6C06366E6B3D8619072A34277C2213C4B56FCEF8BFE5C77F2EA1654C6` | Skinned Mixamo reference used for the shared rig and weights |
 | `arin-v5.7-idle-equipment-checkpoint.glb` | 6,742,636 | `393D82C06ECCEDF5A13CF3CA835700AA03A6E90ED74B1420569902885E3E1524` | Eight-clip viewer/editor checkpoint |
-| `ArinV57.sm3d.json` | 1,043 | `EDD7B9D5811A32D22EDDBFEE86178264A7E45C04BFF74245CDACFF335B6FC3D2` | Runtime clips and socket descriptor |
+| `ArinV57.sm3d.json` | 1,425 | `05B8B081FDC1A7CD3ACA70F37D1AEF4BD3377FE6050B8ABE0A8C79AC5462D119` | Runtime clips and socket descriptor |
+
+## Blade Socket Correction (September 4, 2026)
+
+The thermal-fire preview exposed stale `SwordBase`/`SwordTip` metadata: the old tip was
+0.517122 model units from the nearest sword vertex and pointed away from the current
+blade. Both socket translations now use the accepted GLB's actual `ArinSword` geometry
+expressed in `mixamorig:RightHand` bind-local space. All sword vertices are rigidly
+weighted to that hand. The base is the center of the long blade triangles' root edge;
+the tip is the farthest blade-axis vertex (coordinate error below 0.000000003 units).
+The resulting base-to-tip segment is about 0.403 model units long.
+
+Only descriptor metadata changed. The GLB, rig, animation transforms, mesh, textures,
+and saved calibration remain untouched. Fire queries the actual equipment object's
+socket transform after calibration, so independent Move/Rotate and wrist-decoupling
+continue to apply to the flame source as well as the visible blade.
+
+`ShieldFireLeft`, `ShieldFireRight`, and `ShieldFireTip` are actual perimeter vertices
+195, 235, and 86 of the accepted `ArinShield` primitive, transformed into
+`mixamorig:LeftHand` bind-local space. Three low-intensity line emitters form a quiet
+fire-shield treatment; the old filled golden overlay is suppressed. The sword uses
+200% emission, a blade-length/12 radius, and low velocity inheritance to leave a
+stronger world-space flame wake. Each shield emitter uses radius 3 and 75% emission,
+increased after the first, weaker preview. Normal loop wraps preserve particles and
+zero wrap-frame inheritance instead of destroying the entire trail. The shared
+Fire Lab presets are unchanged.
+
+Pose Calibration's **In Place** editing option compensates equipment translation
+while changing rotation, retaining its current hand-attachment point without
+changing wrist channels. The existing 20-channel keyframe format stores the result.
+The user's live saves are exported normally; three saved keys were preserved for
+this preview update. No old keyframe was deleted or rewritten by the new mode.
 
 ## Permanent Pose-Calibration Workflow
 

@@ -7,6 +7,7 @@ Import Smile.Simple3D.CharacterViewer As CharacterViewer
 Import Smile.UI.Controls As UI
 Import Smile.Simple3D.Arena3D As Arena3D
 Import Smile.Simple3D.StaticBackdrop3D As StaticBackdrop3D
+Import Smile.Simple3D.FireEmitter3D As Fire
 Import Smile.Simple3D.Core As Core
 Import Smile.Simple3D.Graphics3D As Graphics3D
 Import Smile.Simple3D.Interaction As Interaction
@@ -122,6 +123,27 @@ Dim EpicGlowMaterial As Core.Material3D
 Dim EpicGlowParticleMaterial As Core.Material3D
 Dim SwordGlow As Core.Object3D
 Dim ShieldGlow As Core.Object3D
+Dim SwordFire As Fire.FireEmitter
+Dim SwordFireReady As Boolean
+Dim SwordFireVisible As Boolean
+Dim SwordFireFailed As Boolean
+Dim SwordFireClip As Number
+Dim SwordFireTime As Number
+Dim SwordFireBase As Core.Vector3
+Dim SwordFireTip As Core.Vector3
+Dim ShieldFire[3] As Fire.FireEmitter
+Dim ShieldFirePoints[3] As Core.Vector3
+Dim ShieldFireVisible As Boolean
+Dim ShieldFireFailed As Boolean
+Dim ShieldFireClip As Number
+Dim ShieldFireTime As Number
+Dim EquipmentFireWarmup As Boolean
+Dim CalibrationHoldGrip As Boolean
+Dim CalibrationGripAnchor As Core.Vector3
+Dim CalibrationGripAnchorActive As Boolean
+Dim CalibrationGripAnchorTarget As Number
+Dim CalibrationGripAnchorFrame As Number
+Dim CalibrationGripLimit As Boolean
 Dim SwordTrail As Core.ParticleBatch3D
 Dim ShieldTrail As Core.ParticleBatch3D
 Dim SwordTrailPoints[EQUIPMENT_TRAIL_POINT_COUNT] As Core.Vector3
@@ -350,6 +372,8 @@ Do
             Call CaptureViewerFailure(7)
         End If
 
+        Call UpdateEquipmentFire()
+
         If Character3D.IsValid(Character) Then
             CharacterBounds = Character3D.WorldBounds(Character, ActiveProfile.AnimationMargin)
         End If
@@ -389,6 +413,12 @@ Do
             Ready = Character3D.Draw(Character) And Ready
 
             Call CaptureViewerFailure(12)
+
+            If SwordFire.Slot <> 0 And Not SwordFireFailed Then
+                SwordFireFailed = Not Fire.Draw(SwordFire)
+            End If
+
+            Call DrawShieldFire()
 
             If EpicGlowVisible Then
 
@@ -557,6 +587,22 @@ Sub LoadViewer()
     Call RestartPresentation()
 
     Call CaptureViewerFailure(42)
+
+    SwordFireVisible = True
+    ShieldFireVisible = True
+    ShieldFireFailed = False
+    SwordFireFailed = False
+    SwordFireReady = False
+
+    If CalibrationAvailable Then
+        SwordFireReady = Fire.Initialize("Assets/Fire")
+        SwordFireFailed = Not SwordFireReady
+    End If
+
+    If SwordFireReady Then
+        SwordFireReady = Graphics3D.ConfigureSoftDepth3D(1)
+        SwordFireReady = Graphics3D.ConfigureDistortion3D(1, 2) And SwordFireReady
+    End If
 
     ViewerEpoch = Graphics3D.ResourceEpoch3D()
 
@@ -1429,9 +1475,17 @@ Function HandleInterfacePointer() As Boolean
 
         Call ToggleDemo()
 
-    Else If PointerInRectangle(PanelLeft + 12, 444, 110, 22) Then
+    Else If PointerInRectangle(PanelLeft + 12, 444, 78, 22) Then
 
         Call ToggleFloorAndGrid()
+
+    Else If PointerInRectangle(PanelLeft + 94, 444, 76, 22) Then
+
+        SwordFireVisible = Not SwordFireVisible
+
+    Else If PointerInRectangle(PanelLeft + 174, 444, 78, 22) Then
+
+        ShieldFireVisible = Not ShieldFireVisible
 
     Else If PointerInRectangle(PanelLeft + 172, 204, 30, 24) Then
 
@@ -1590,10 +1644,12 @@ Sub HandleCalibrationPanelPointer()
     Else If PointerInRectangle(230, 128, 76, 24) Then
 
         CalibrationTarget = CALIBRATION_TARGET_SWORD
+        CalibrationGripAnchorActive = False
 
     Else If PointerInRectangle(310, 128, 76, 24) Then
 
         CalibrationTarget = CALIBRATION_TARGET_SHIELD
+        CalibrationGripAnchorActive = False
 
     Else If PointerInRectangle(34, 158, 48, 24) Then
 
@@ -1666,6 +1722,11 @@ Sub HandleCalibrationPanelPointer()
     Else If PointerInRectangle(34, 298, 100, 24) Then
 
         Call ReloadCurrentCalibrationKeyframe()
+
+    Else If PointerInRectangle(140, 298, 100, 24) Then
+
+        CalibrationHoldGrip = Not CalibrationHoldGrip
+        CalibrationGripAnchorActive = False
 
     Else If PointerInRectangle(34, 374, 194, 24) Then
 
@@ -2106,7 +2167,7 @@ Sub CreateEpicGlow()
             Graphics3D.OBJECT_CULL_FRONT
         ) And GlowReady
 
-        Call Graphics3D.SetObjectColor(SwordGlow, 210, 244, 255)
+        Call Graphics3D.SetObjectColor(SwordGlow, 255, 182, 48)
         Call Graphics3D.SetObjectOpacity(SwordGlow, 95)
         Call Graphics3D.SetObjectShadows3D(SwordGlow, False, False)
         Call Graphics3D.SetObjectColor(ShieldGlow, 255, 196, 64)
@@ -2158,6 +2219,225 @@ Sub DestroyEpicGlow()
 
     EpicGlowAvailable = False
     EpicGlowVisible = False
+
+End Sub
+
+''' Resolve sockets through the actual equipment object AFTER pose calibration.
+''' Its object matrix includes move/pivot edits and its wrist-decoupling policy.
+Sub UpdateEquipmentFire()
+
+    If Not SwordFireReady Then
+        Return
+    End If
+
+    EquipmentFireWarmup = False
+
+    Call UpdateSwordFire()
+    Call UpdateShieldFire()
+
+    If EquipmentFireWarmup Then
+        Call Fire.Update(100)
+    End If
+
+    Call Fire.Update(AnimationUpdateElapsed)
+
+End Sub
+
+Sub UpdateSwordFire()
+
+    Dim Base As Core.Vector3
+    Dim Tip As Core.Vector3
+    Dim Delta As Core.Vector3
+    Dim Length As Number
+    Dim Time As Number
+    Dim Restart As Boolean
+    Dim Ok As Boolean
+    Dim Inheritance As Number
+
+    If Not SwordFireReady Or SwordFireFailed Then
+        Return
+    End If
+
+    If Not SwordFireVisible Or Not SwordVisible Then
+
+        If SwordFire.Slot <> 0 Then
+            Ok = Fire.Destroy(SwordFire)
+        End If
+
+        Return
+
+    End If
+
+    Base = Character3D.SocketPosition(Character, "SwordBase", ARIN_SWORD_PART_INDEX)
+    Tip = Character3D.SocketPosition(Character, "SwordTip", ARIN_SWORD_PART_INDEX)
+    Delta.X = Tip.X - Base.X
+    Delta.Y = Tip.Y - Base.Y
+    Delta.Z = Tip.Z - Base.Z
+    Length = Math3D.Length(Delta)
+    Time = Character3D.AnimationTime(Character)
+
+    If Length < 4 Or Length > 10000 Then
+        SwordFireFailed = True
+        Return
+    End If
+
+    ''' Normal loop wraps retain emitted particles; explicit frame edits clear stale fire.
+    Restart = SelectedClip <> SwordFireClip Or (Time < SwordFireTime And AnimationUpdateElapsed = 0)
+
+    If ScenePaused Then
+        Restart = (Restart Or Base.X <> SwordFireBase.X Or Base.Y <> SwordFireBase.Y Or
+            Base.Z <> SwordFireBase.Z Or Tip.X <> SwordFireTip.X Or
+            Tip.Y <> SwordFireTip.Y Or Tip.Z <> SwordFireTip.Z)
+    End If
+
+    If Restart And SwordFire.Slot <> 0 Then
+        Ok = Fire.Destroy(SwordFire)
+    End If
+
+    If SwordFire.Slot = 0 Then
+
+        SwordFire = Fire.StartAt("PaladinFlameBlade", Base, 5701,
+            Fire.QUALITY_HIGH, Fire.SIMULATION_AUTO, Max(2, Length / 12))
+        SwordFireFailed = SwordFire.Slot = 0
+
+        If SwordFireFailed Then
+            Return
+        End If
+
+        Ok = Fire.SetSegment(SwordFire, Base, Tip)
+
+        EquipmentFireWarmup = True
+
+    Else
+        Ok = Fire.SetSegment(SwordFire, Base, Tip)
+
+    End If
+
+    ''' Low inheritance leaves the fuller flame behind the moving blade instead of throwing it ahead.
+    Inheritance = 10
+
+    If SelectedClipLabel() = "Walk" Then
+        Inheritance = 15
+    Else If SelectedClipLabel() = "Run" Then
+        Inheritance = 20
+    Else If SelectedClipLabel() = "Attack" Or SelectedClipLabel() = "Attack 2" Then
+        Inheritance = 10
+    End If
+
+    If Time < SwordFireTime Then
+        Inheritance = 0
+    End If
+
+    Call Fire.SetIntensity(SwordFire, 200)
+    Call Fire.SetSourceVelocityInheritance(SwordFire, Inheritance)
+
+    SwordFireFailed = Not Ok
+    SwordFireBase = Base
+    SwordFireTip = Tip
+    SwordFireClip = SelectedClip
+    SwordFireTime = Time
+
+End Sub
+
+Sub UpdateShieldFire()
+
+    Dim Points[3] As Core.Vector3
+    Dim Index As Number
+    Dim NextIndex As Number
+    Dim Time As Number
+    Dim Restart As Boolean
+    Dim Ok As Boolean
+
+    If ShieldFireFailed Then
+        Return
+    End If
+
+    If Not ShieldFireVisible Or Not ShieldVisible Then
+
+        For Index = 0 To 2
+
+            If ShieldFire[Index].Slot <> 0 Then
+                Ok = Fire.Destroy(ShieldFire[Index])
+            End If
+
+        End For
+
+        Return
+
+    End If
+
+    Points[0] = Character3D.SocketPosition(Character, "ShieldFireLeft", ARIN_SHIELD_PART_INDEX)
+    Points[1] = Character3D.SocketPosition(Character, "ShieldFireRight", ARIN_SHIELD_PART_INDEX)
+    Points[2] = Character3D.SocketPosition(Character, "ShieldFireTip", ARIN_SHIELD_PART_INDEX)
+    Time = Character3D.AnimationTime(Character)
+    Restart = SelectedClip <> ShieldFireClip Or (Time < ShieldFireTime And AnimationUpdateElapsed = 0)
+
+    For Index = 0 To 2
+
+        If ScenePaused Then
+            Restart = (Restart Or Points[Index].X <> ShieldFirePoints[Index].X Or
+                Points[Index].Y <> ShieldFirePoints[Index].Y Or
+                Points[Index].Z <> ShieldFirePoints[Index].Z)
+        End If
+
+    End For
+
+    Ok = True
+
+    For Index = 0 To 2
+
+        If Restart And ShieldFire[Index].Slot <> 0 Then
+            Ok = Fire.Destroy(ShieldFire[Index]) And Ok
+        End If
+
+        If ShieldFire[Index].Slot = 0 Then
+
+            ShieldFire[Index] = Fire.StartAt("LineFire", Points[Index], 5710 + Index,
+                Fire.QUALITY_HIGH, Fire.SIMULATION_AUTO, 3)
+            Ok = ShieldFire[Index].Slot <> 0 And Ok
+            EquipmentFireWarmup = True
+
+        End If
+
+        NextIndex = (Index + 1) Mod 3
+        Ok = Fire.SetSegment(ShieldFire[Index], Points[Index], Points[NextIndex]) And Ok
+
+        Call Fire.SetIntensity(ShieldFire[Index], 75)
+        Call Fire.SetSourceVelocityInheritance(ShieldFire[Index], 10)
+
+        If Time < ShieldFireTime Then
+            Call Fire.SetSourceVelocityInheritance(ShieldFire[Index], 0)
+        End If
+
+        ShieldFirePoints[Index] = Points[Index]
+    End For
+
+    ShieldFireFailed = Not Ok
+    ShieldFireClip = SelectedClip
+    ShieldFireTime = Time
+
+End Sub
+
+Sub DrawShieldFire()
+
+    Dim Index As Number
+    Dim Ok As Boolean
+
+    If ShieldFireFailed Then
+        Return
+    End If
+
+    Ok = True
+
+    For Index = 0 To 2
+
+        If ShieldFire[Index].Slot <> 0 Then
+            Ok = Fire.Draw(ShieldFire[Index]) And Ok
+        End If
+
+    End For
+
+    ShieldFireFailed = Not Ok
 
 End Sub
 
@@ -2236,7 +2516,7 @@ Function DrawEquipmentGlow() As Boolean
         Result = Graphics3D.DrawObject3D(SwordGlow)
     End If
 
-    If ShieldVisible Then
+    If ShieldVisible And Not SwordFireReady Then
         Result = Graphics3D.DrawObject3D(ShieldGlow) And Result
     End If
 
@@ -2410,7 +2690,7 @@ Function DrawEpicGlow() As Boolean
         Result = Graphics3D.DrawParticleBatch3D(SwordTrail)
     End If
 
-    If ShieldVisible Then
+    If ShieldVisible And Not SwordFireReady Then
         Result = Graphics3D.DrawParticleBatch3D(ShieldTrail) And Result
     End If
 
@@ -2599,6 +2879,8 @@ Sub ResetAll()
     DragonVisible = DragonAvailable
     SwordVisible = True
     ShieldVisible = True
+    SwordFireVisible = True
+    ShieldFireVisible = True
     CalibrationVisible = False
     SliderDragOwner = 0
     TimelineScrubbing = False
@@ -4185,6 +4467,8 @@ End Sub
 
 Sub FinishCalibrationEdit()
 
+    CalibrationGripAnchorActive = False
+
     If Not CalibrationEditing Then
         Return
     End If
@@ -4226,6 +4510,42 @@ End Sub
 Sub SetCurrentCalibrationValue(Value As Number)
 
     Dim ClampedValue As Number
+    Dim HoldGrip As Boolean
+    Dim PartIndex As Number
+    Dim SocketName As Text
+    Dim PreviousValue As Number
+
+    PreviousValue = CurrentCalibrationValue()
+    CalibrationGripLimit = False
+
+    HoldGrip = (CalibrationHoldGrip And CalibrationTransform = CALIBRATION_TRANSFORM_ROTATE And
+        CalibrationTarget >= CALIBRATION_TARGET_SWORD)
+
+    If HoldGrip Then
+
+        PartIndex = ARIN_SWORD_PART_INDEX
+        SocketName = "HandRight"
+
+        If CalibrationTarget = CALIBRATION_TARGET_SHIELD Then
+            PartIndex = ARIN_SHIELD_PART_INDEX
+            SocketName = "HandLeft"
+        End If
+
+        If (Not CalibrationGripAnchorActive Or
+            CalibrationGripAnchorTarget <> CalibrationTarget Or
+            CalibrationGripAnchorFrame <> CurrentAnimationFrame()) Then
+
+            CalibrationGripAnchor = EquipmentGripThousandths(PartIndex, SocketName)
+            CalibrationGripAnchorActive = True
+            CalibrationGripAnchorTarget = CalibrationTarget
+            CalibrationGripAnchorFrame = CurrentAnimationFrame()
+
+        End If
+
+    Else
+        CalibrationGripAnchorActive = False
+
+    End If
 
     Call BeginCalibrationEdit()
 
@@ -4260,7 +4580,123 @@ Sub SetCurrentCalibrationValue(Value As Number)
     Call ApplyWristCalibration()
     Call ApplyEquipmentCalibration()
 
+    If HoldGrip Then
+
+        If Not RestoreEquipmentGrip(PartIndex, SocketName) Then
+
+            CalibrationGripLimit = True
+
+            If PartIndex = ARIN_SWORD_PART_INDEX Then
+                SwordCalibration[SelectedClip, CalibrationAxis] = PreviousValue
+            Else
+                ShieldCalibration[SelectedClip, CalibrationAxis] = PreviousValue
+            End If
+
+            Call ApplyEquipmentCalibration()
+
+        End If
+
+    End If
+
 End Sub
+
+Function EquipmentGripThousandths(PartIndex As Number, SocketName As Text) As Core.Vector3
+
+    Dim Result As Core.Vector3
+
+    Result.X = Character3D.SocketValueThousandths(Character, SocketName,
+        Graphics3D.ANIMATOR_SOCKET_POSITION_X, PartIndex)
+    Result.Y = Character3D.SocketValueThousandths(Character, SocketName,
+        Graphics3D.ANIMATOR_SOCKET_POSITION_Y, PartIndex)
+    Result.Z = Character3D.SocketValueThousandths(Character, SocketName,
+        Graphics3D.ANIMATOR_SOCKET_POSITION_Z, PartIndex)
+
+    Return Result
+
+End Function
+
+Function RestoreEquipmentGrip(PartIndex As Number, SocketName As Text) As Boolean
+
+    Dim Position As Core.Vector3
+    Dim Correction As Core.Vector3
+    Dim Angles As Core.Vector3
+    Dim Inverse As Core.Matrix4
+    Dim NextPosition As Core.Vector3
+
+    Position = EquipmentGripThousandths(PartIndex, SocketName)
+    Correction.X = CalibrationGripAnchor.X - Position.X
+    Correction.Y = CalibrationGripAnchor.Y - Position.Y
+    Correction.Z = CalibrationGripAnchor.Z - Position.Z
+    Angles.X = SwordCalibration[SelectedClip, CALIBRATION_AXIS_X]
+    Angles.Y = SwordCalibration[SelectedClip, CALIBRATION_AXIS_Y]
+    Angles.Z = SwordCalibration[SelectedClip, CALIBRATION_AXIS_Z]
+
+    If PartIndex = ARIN_SHIELD_PART_INDEX Then
+
+        Angles.X = ShieldCalibration[SelectedClip, CALIBRATION_AXIS_X]
+        Angles.Y = ShieldCalibration[SelectedClip, CALIBRATION_AXIS_Y]
+        Angles.Z = ShieldCalibration[SelectedClip, CALIBRATION_AXIS_Z]
+
+    End If
+
+    ''' Part translation precedes the XYZ pivot rotation; undo Z, Y, X for compensation.
+    Inverse = Math3D.Multiply(Math3D.RotationZ(-Angles.Z), Math3D.RotationY(-Angles.Y))
+    Inverse = Math3D.Multiply(Inverse, Math3D.RotationX(-Angles.X))
+    Correction = Math3D.TransformPoint(Correction, Inverse)
+
+    If PartIndex = ARIN_SWORD_PART_INDEX Then
+
+        NextPosition.X = SwordPositionCalibration[SelectedClip, 0] + RoundedGripOffset(Correction.X)
+        NextPosition.Y = SwordPositionCalibration[SelectedClip, 1] + RoundedGripOffset(Correction.Y)
+        NextPosition.Z = SwordPositionCalibration[SelectedClip, 2] + RoundedGripOffset(Correction.Z)
+
+    Else
+
+        NextPosition.X = ShieldPositionCalibration[SelectedClip, 0] + RoundedGripOffset(Correction.X)
+        NextPosition.Y = ShieldPositionCalibration[SelectedClip, 1] + RoundedGripOffset(Correction.Y)
+        NextPosition.Z = ShieldPositionCalibration[SelectedClip, 2] + RoundedGripOffset(Correction.Z)
+
+    End If
+
+    If (Abs(NextPosition.X) > CALIBRATION_MAXIMUM_POSITION Or
+        Abs(NextPosition.Y) > CALIBRATION_MAXIMUM_POSITION Or
+        Abs(NextPosition.Z) > CALIBRATION_MAXIMUM_POSITION) Then
+        Return False
+    End If
+
+    If PartIndex = ARIN_SWORD_PART_INDEX Then
+
+        SwordPositionCalibration[SelectedClip, 0] = NextPosition.X
+        SwordPositionCalibration[SelectedClip, 1] = NextPosition.Y
+        SwordPositionCalibration[SelectedClip, 2] = NextPosition.Z
+
+    Else
+
+        ShieldPositionCalibration[SelectedClip, 0] = NextPosition.X
+        ShieldPositionCalibration[SelectedClip, 1] = NextPosition.Y
+        ShieldPositionCalibration[SelectedClip, 2] = NextPosition.Z
+
+    End If
+
+    Call ApplyEquipmentCalibration()
+
+    Return True
+
+End Function
+
+Function RoundedGripOffset(Value As Number) As Number
+
+    Dim Result As Number
+
+    If Value < 0 Then
+        Result = (Value - 500) / 1000
+    Else
+        Result = (Value + 500) / 1000
+    End If
+
+    Return Result
+
+End Function
 
 Sub AdjustCalibrationValue(Amount As Number)
 
@@ -4287,6 +4723,8 @@ End Sub
 Sub ResetCalibrationTarget()
 
     Dim Axis As Number
+
+    CalibrationGripAnchorActive = False
 
     Call BeginCalibrationEdit()
 
@@ -4651,7 +5089,17 @@ Sub DrawViewerOverlay()
         Call DrawButton(PanelLeft + 178, 330, 74, 18, DemoLabel(), DemoEnabled)
 
         Call DrawAnimationButtons()
-        Call DrawButton(PanelLeft + 12, 444, 110, 22, "Floor / Grid", FloorVisible Or GridVisible)
+        Call DrawButton(PanelLeft + 12, 444, 78, 22, "Floor/Grid", FloorVisible Or GridVisible)
+        Call DrawButton(PanelLeft + 94, 444, 76, 22, "Sword Fire", SwordFireVisible)
+        Call DrawButton(PanelLeft + 174, 444, 78, 22, "Shield Fire", ShieldFireVisible)
+
+        If SwordFireReady Then
+
+            Draw Text "Fire backend / error" At PanelText, 472 Size 11 Color LIGHT_GRAY
+            Draw Number Fire.Value(3, SwordFire) At PanelLeft + 160, 472 Size 11 Color CYAN
+            Draw Number Fire.Value(12, SwordFire) At PanelLeft + 216, 472 Size 11 Color YELLOW
+
+        End If
 
         If Window_Height() >= ANIMATION_DETAILS_MINIMUM_HEIGHT Then
 
@@ -4826,6 +5274,7 @@ Sub DrawCalibrationPanel()
     Call DrawButton(118, 268, 80, 24, "Paste Key", CalibrationClipboardAvailable And Not CalibrationEditing)
     Call DrawButton(202, 268, 90, 24, "Delete Key", CurrentKeyframe >= 0 And Not CalibrationEditing)
     Call DrawButton(34, 298, 100, 24, "Reload Key", CurrentKeyframe >= 0)
+    Call DrawButton(140, 298, 100, 24, "In Place", CalibrationHoldGrip)
     Call DrawButton(34, 374, 194, 24, "Decouple Sword", SwordDecoupled[SelectedClip] <> 0)
     Call DrawButton(236, 374, 196, 24, "Decouple Shield", ShieldDecoupled[SelectedClip] <> 0)
 
@@ -4833,16 +5282,20 @@ Sub DrawCalibrationPanel()
     Draw Text "Paladin\ArinV57\Calibration\arin-v5.7-pose-calibration.json" At 26, 417 Size 9 Color CYAN
     Draw Text "Click path to show saved file in Explorer" At 26, 430 Size 9 Color LIGHT_GRAY
 
-    If CalibrationEditing Then
+    If CalibrationGripLimit Then
+
+        Draw Text "In Place reached the saved position limit" At 34, 330 Size 10 Color YELLOW
+
+    Else If CalibrationEditing Then
 
         If ScenePaused Then
-            Draw Text "Editing — movement paused by Space" At 146, 306 Size 11 Color YELLOW
+            Draw Text "Editing — movement paused by Space" At 34, 330 Size 11 Color YELLOW
         Else
-            Draw Text "Editing live — Space pauses movement" At 146, 306 Size 11 Color YELLOW
+            Draw Text "Editing live — Space pauses movement" At 34, 330 Size 11 Color YELLOW
         End If
 
     Else
-        Draw Text "Reload discards unsaved changes" At 146, 306 Size 11 Color LIGHT_GRAY
+        Draw Text "In Place: rotate equipment without shifting its grip" At 34, 330 Size 10 Color LIGHT_GRAY
 
     End If
 
@@ -5254,6 +5707,17 @@ Sub DestroyViewer()
 End Sub
 
 Sub DestroyViewerResources()
+
+    Dim Index As Number
+
+    Call Fire.Shutdown()
+
+    SwordFire.Slot = 0
+    SwordFireReady = False
+
+    For Index = 0 To 2
+        ShieldFire[Index].Slot = 0
+    End For
 
     Call DestroyBackdrop()
     Call DestroyEpicGlow()

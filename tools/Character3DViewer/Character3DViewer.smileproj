@@ -43,6 +43,9 @@
     <Asset Include="TechnicalAssets\Generation2\VfxAtlas.png" />
     <Asset Include="Assets\Backgrounds\SinStarLandscape.png" />
     <Asset Include="Assets\Backgrounds\SinStarTitleWithLogo.png" />
+    <Asset Include="Assets\Fire\fire-shape-atlas.png" />
+    <Asset Include="Assets\Fire\smoke-shape-atlas.png" />
+    <Asset Include="Assets\Fire\ember-shape.png" />
     <SmileProjectReference Include="..\..\libraries\Smile.Simple3D\Smile.Simple3D.smilelibproj" />
     <SmileProjectReference Include="..\..\libraries\Smile.UI\Smile.UI.smilelibproj" />
   </ItemGroup>

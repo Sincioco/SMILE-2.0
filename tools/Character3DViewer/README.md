@@ -20,12 +20,16 @@ Run `Build.ps1`, then `Launch.ps1`. The regular launcher defaults to `bin\Charac
 - B/BG cycles colors and two static bitmaps. The default is the Sin Star I landscape without its title.
 - Floor / Grid hides/shows both. Profile, Glow, Socket, Channel and lighting controls remain available.
 - Pose shows/hides Pose Calibration, which is **hidden at startup and reset**.
+- Sword Fire and Shield Fire independently toggle the default-on thermal effects on Arin v5.7. W/S also hide the corresponding fire with its equipment. The sword has a fuller orange flame and world-space lingering trail; the shield uses much smaller flames instead of the old solid golden glow.
+- Normal animation loop wraps retain existing fire particles until they fade; source velocity inheritance is zeroed for the wrap update so the pose reset does not launch particles across the gap. Selecting a different clip or changing a paused pose clears stale emission.
 
 The timeline supports drag scrubbing and hover-wheel single-frame steps. `0-Frame` jumps to the start; `< Key` / `Key >` jump between saved corrections; `< Frame` / `Frame >` step individual frames. Drag a green keyframe tick to move it. These controls do not toggle pause.
 
 ## Pose corrections
 
 Select Sword Wrist, Shield Wrist, Sword or Shield, an axis, and Rotate or Move. The slider and increment controls edit the selected channel. Decouple switches allow each equipment item to retain its base animation while its wrist is corrected independently.
+
+To turn a fitted sword or shield without pulling its grip away, select **Sword** or **Shield**, enable **In Place**, choose **Rotate**, then adjust X/Y/Z. This holds the equipment's current hand-attachment point while compensating its position offsets; it does not edit either wrist. Save Frame stores the resulting rotation and position together in the existing format. Cancel/Reload restores both. The control is an editing mode, not another animated property. Position compensation retains the existing whole-world-unit precision and rejects edits beyond the saved +/-100-unit range.
 
 `Save Frame` stores the entire correction snapshot (all 20 channels, including both equipment coupling flags), not just the visible axis. There are up to 256 keys per clip. One key is held throughout a clip; multiple keys interpolate between frames, using shortest-path rotation and cyclic interpolation for loops.
 
@@ -39,4 +43,4 @@ Saved JSON is `games\SinStarI\SourceAssets\Characters\Paladin\ArinV57\Calibratio
 - `Smile.Simple3D.StaticBackdrop3D`: load/select/clear/destroy a screen-fixed backdrop, shared with Fire Lab. No world plane or camera-driven positioning.
 - `Smile.UI.Controls`: matching panels, buttons, slider drawing, hover hit-testing and exclusive drag capture.
 
-These changes do not modify Arin's models, rig, animation sources or saved calibration. The existing equipment outline glow remains separate from the upcoming thermal flaming-sword integration.
+These effects do not modify Arin's models, rig or animation sources. The canonical descriptor supplies mesh-derived sword endpoints and shield flame anchors; the rendered equipment transform, including calibration and decoupling, positions the emitters. Existing saved keys remain valid. The sword keeps a fiery outline under its flames; the shield's old golden overlay and glow trail are not drawn when the thermal equipment preview is available.
