@@ -1,6 +1,6 @@
 # SMILE 2.0 - 3D Viewer, Animation Editor
 
-Native-first reusable inspection and lightweight pose-correction tool. Party is the launch default. The Character tabs select Arin, Orin, Dragon, or the Party arena. Profile retains Arin v5.6, the earlier prototype, and the technical fixture for diagnostics. Web editor feature work is deferred.
+Native-first reusable inspection and lightweight pose-correction tool. Party is the launch default. The Character tabs select Arin, Orin, Dragon, or the Party arena. Profile retains Arin v5.6, the earlier prototype, and the technical fixture for diagnostics. Current Web parity is in progress under H6.1; this is not the future Battle Scene Editor.
 
 Dragon inspection uses the same clip buttons, timeline/frame stepping, playback speed, demo, lighting/material channels, sockets, pan/orbit/zoom and reset as the hero tabs. Both heroes remain in the arena with their own assets and saved corrections. Head Aim constrains only the head joint; At Arin/At Orin selects its target. The current Pose Calibration targets remain humanoid wrists and equipment, so they do not apply to Dragon. Dragon VFX and hero equipment visibility remain independent. Party's Inspect Character also opens Dragon's tab.
 
@@ -18,6 +18,35 @@ The editor source and build/launch entry points belong here. Sin Star I owns the
 Run `Build.ps1`, then `Launch.ps1`. The regular launcher defaults to `bin\Character3DViewer.exe`. The active Debug development build is `bin\Debug\Character3DViewer.exe`; pass that absolute path with `Launch.ps1 -Executable` to launch it. The launcher exports live calibration, closes old instances, preserves/restores the stable working copy and watches both characters’ saves to mirror them into their separate canonical repository JSON files.
 
 ## Inspection
+
+Automation that already closes the old Viewer normally can pass
+`Launch.ps1 -Build -SkipWindowActivation`, then use its supported native window
+control to foreground the returned process. The normal interactive launch behavior
+is unchanged; calibration synchronization still runs in either mode.
+
+### Published pose defaults
+
+`Prepare-BuildAssets.ps1` validates the current canonical Arin and Orin JSON and
+serializes fingerprinted, name-bound SMKF defaults into ignored `Assets/Calibration`.
+Both native and Web publication include these declared assets. On first load the
+Viewer uses these corrections only when no saved working copy exists. Existing
+Save Data, including a deliberately cleared track, takes precedence; legacy Arin
+saves retain their migration path. Missing or invalid required defaults are rejected.
+Loading defaults does not write a save or change the canonical JSON/model.
+
+To build the current Web Viewer from the repository root:
+
+```powershell
+tools/Character3DViewer/Prepare-BuildAssets.ps1
+artifacts/compiler/smilec.exe --project tools/Character3DViewer/Character3DViewer.smileproj --target web --configuration Release --output-dir artifacts/web/h6-1/Character3DViewer
+python -m http.server 8765 --bind 127.0.0.1 --directory artifacts/web
+```
+
+Open `http://127.0.0.1:8765/h6-1/Character3DViewer/` in Chrome or Edge. Browser
+working saves are separate and origin-scoped; rebuilding does not replace them.
+The Windows JSON path/Explorer action belongs to native. Browser JSON transfer,
+storage recovery, MSAA and the rest of the H6.1 workflow gate remain in progress;
+no automatic browser-to-repository synchronization is claimed.
 
 - Backtick cycles through panels hidden (including Pose Calibration), all UI hidden, then the prior UI restored. Headers, the timeline, and helper text remain after the first tap. Hidden controls cannot intercept the mouse. This does not change panel-open preferences, edits, playback, or the camera. Right-click reset restores the normal UI with Pose Calibration hidden.
 - Space pauses/resumes movement while keeping camera controls active.

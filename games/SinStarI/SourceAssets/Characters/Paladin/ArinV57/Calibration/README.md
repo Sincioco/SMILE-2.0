@@ -51,3 +51,12 @@ must remain in this repository or SMILE application data; reparse paths are refu
 The live key count is deliberately not fixed in this README: Sin continues to
 refine poses. The latest successful Save Frame and exported JSON take precedence
 over historical eight- or nine-key planning snapshots.
+
+## Published Viewer defaults
+
+The Viewer preparation script now generates a read-only, fingerprinted SMKF asset
+from this current JSON for native and Web first-run loading. It reuses the same
+validated serializer and does not bake corrections into the model. Existing saved
+working copies always take precedence. Browser saves remain separate from native
+application data; the native synchronizer remains authoritative for repository
+integration. Generated defaults and runtime envelopes are not committed here.

@@ -10,7 +10,7 @@ Import Smile.Simple3D.StaticBackdrop3D As StaticBackdrop3D
 Dim Checks As Number
 Dim Failures As Number
 
-Game Window "Native Thermal Fire Contract Tests" Size 320 By 240
+Game Window "Thermal Fire Contract Tests" Size 320 By 240
 
 Do
 
@@ -41,13 +41,15 @@ End Sub
 Sub TestSharedBudget()
 
     Dim OtherEffects[28] As Core.GpuParticleSystem3D
-    Dim FullSlots[2] As Core.GpuParticleSystem3D
+    Dim FullSlots[4] As Core.GpuParticleSystem3D
     Dim OtherBatches[29] As Core.ParticleBatch3D
     Dim Material As Core.Material3D
     Dim Texture As Core.Texture3D
     Dim Position As Core.Vector3
     Dim Emitter As Fire.FireEmitter
     Dim Index As Number
+    Dim SystemCapacity As Number
+    Dim SystemCount As Number
 
     Call Graphics3D.ResetRenderer3D()
 
@@ -93,8 +95,11 @@ Sub TestSharedBudget()
         Call Graphics3D.DestroyGpuParticleSystem3D(OtherEffects[Index])
     End For
 
-    For Index = 0 To 1
-        FullSlots[Index] = Graphics3D.CreateGpuParticleSystem3D(16384, Material, Graphics3D.GPU_PARTICLE_SIMULATION_GPU_FAST, 10)
+    SystemCapacity = Graphics3D.GpuParticleValue3D(Graphics3D.GPU_PARTICLE_QUERY_GPU_MAX_CAPACITY)
+    SystemCount = Graphics3D.GpuParticleValue3D(Graphics3D.GPU_PARTICLE_QUERY_MAX_TOTAL_CAPACITY) / SystemCapacity
+
+    For Index = 0 To SystemCount - 1
+        FullSlots[Index] = Graphics3D.CreateGpuParticleSystem3D(SystemCapacity, Material, Graphics3D.GPU_PARTICLE_SIMULATION_GPU_FAST, 10)
 
         Call Check(FullSlots[Index].Handle <> 0)
     End For
@@ -106,7 +111,7 @@ Sub TestSharedBudget()
     Call Check(Graphics3D.GpuParticleValue3D(Graphics3D.GPU_PARTICLE_QUERY_TOTAL_CAPACITY) = 32768)
     Call Check(Fire.Destroy(Emitter))
 
-    For Index = 0 To 1
+    For Index = 0 To SystemCount - 1
         Call Graphics3D.DestroyGpuParticleSystem3D(FullSlots[Index])
     End For
 
@@ -124,6 +129,7 @@ Sub TestBackdrop()
     Dim Second As StaticBackdrop3D.Backdrop
     Dim Rejected As StaticBackdrop3D.Backdrop
     Dim Camera As Core.Camera3D
+    Dim ActiveCopy As Core.Texture3D
     Dim Ok As Boolean
 
     Call Graphics3D.ResetRenderer3D()
@@ -133,11 +139,16 @@ Sub TestBackdrop()
 
     Call Check(First.Ready And Second.Ready)
 
-    ''' Backdrop drawing is native-only. The wrapper must preserve the backend result.
-    Ok = Graphics3D.SetBackdropTexture3D(First.Texture)
+    Call Check(StaticBackdrop3D.SetActive(First))
+    Call Check(Graphics3D.TextureReferenceCount3D(First.Texture.Handle) = 1)
 
-    Call Check(StaticBackdrop3D.SetActive(First) = Ok)
-    Call Check(StaticBackdrop3D.SetActive(Second) = Ok)
+    ActiveCopy = First.Texture
+
+    Call Graphics3D.DestroyTexture3D(ActiveCopy)
+    Call Check(ActiveCopy.Handle <> 0)
+    Call Check(StaticBackdrop3D.SetActive(Second))
+    Call Check(Graphics3D.TextureReferenceCount3D(First.Texture.Handle) = 0)
+    Call Check(Graphics3D.TextureReferenceCount3D(Second.Texture.Handle) = 1)
     Call StaticBackdrop3D.Destroy(First)
     Call Check(Not First.Ready And Graphics3D.LiveTextureCount3D() = 1)
 

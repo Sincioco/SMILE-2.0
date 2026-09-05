@@ -1,7 +1,8 @@
 [CmdletBinding()]
 param(
     [string]$Executable = (Join-Path $PSScriptRoot 'bin\Character3DViewer.exe'),
-    [switch]$Build
+    [switch]$Build,
+    [switch]$SkipWindowActivation
 )
 
 $ErrorActionPreference = 'Stop'
@@ -64,6 +65,13 @@ foreach ($character in $characters) {
         $syncScript, $character, $viewerProcess.Id
     Start-Process -FilePath $shellCommand.Source -ArgumentList $watchArguments `
         -WindowStyle Hidden | Out-Null
+}
+
+# Automation can use the supported Windows app-control surface for foreground
+# activation while retaining this launcher's working directory and save watchers.
+if ($SkipWindowActivation) {
+    Write-Host "Launched Character Viewer/editor process $($viewerProcess.Id): $resolvedExecutable"
+    return
 }
 
 Add-Type -TypeDefinition @'

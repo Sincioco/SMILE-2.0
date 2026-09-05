@@ -3305,7 +3305,7 @@ Public Function CommitGpuParticleSpawn3D(
 
 End Function
 
-''' Configures native fire acceleration in world units/second squared; drag is per mille/second.
+''' Configures thermal-fire acceleration in world units/second squared; drag is per mille/second.
 Public Function SetGpuParticleForces3D(
     System As Core.GpuParticleSystem3D,
     GravityX As Number, GravityY As Number, GravityZ As Number,
@@ -3366,7 +3366,7 @@ Public Function SetGpuParticleBounds3D(
 
 End Function
 
-''' Native thermal/smoke/ember shading, alignment 0 camera/1 vertical/2 velocity, padded atlas.
+''' Thermal/smoke/ember shading, alignment 0 camera/1 vertical/2 velocity, padded atlas.
 Public Function SetGpuParticleRender3D(
     System As Core.GpuParticleSystem3D, ShaderMode As Number, Alignment As Number,
     Optional AtlasColumns As Number = 1, Optional AtlasRows As Number = 1

@@ -29,11 +29,13 @@ ProfileIndex = ViewerProfiles.PROFILE_ARIN
 Call LoadViewer()
 Call CalibrationCheck(Ready And Not ViewerError, "Load profile")
 Call CalibrationCheck(Not CalibrationStorageRejected, "Accept current Arin saved calibration")
+Call CheckPackagedCalibration()
 Call CalibrationCheck(Character3D.SocketCount(Character) = ActiveProfile.ExpectedSocketCount,
     "Profile socket contract")
 Call SelectCharacterTab(1)
 Call CalibrationCheck(Ready And Not ViewerError And Not CalibrationStorageRejected,
     "Orin loads with its canonical saved calibration")
+Call CheckPackagedCalibration()
 Call SelectCharacterTab(2)
 Call CalibrationCheck(Ready And Not ViewerError And PartyReady,
     "Dragon loads both calibrated companions")
@@ -147,6 +149,12 @@ SwordPositionCalibration[3, 0] = 2
 
 Call CalibrationCheck(StoreCalibrationKeyframe(3, 0), "Restore first key")
 Call SaveCalibrationKeyframes()
+
+SwordPositionCalibration[3, 0] = 7
+
+Call LoadSavedCalibration()
+Call CalibrationCheck(CalibrationKeyframeCounts[3] = 1 And
+    CalibrationKeyframeValues[3, 12] = 2, "Saved edits take precedence over packaged defaults")
 
 SwordPositionCalibration[3, 0] = 7
 
@@ -375,5 +383,33 @@ Sub CalibrationCheck(Condition As Boolean, Label As Text)
         Print Label
 
     End If
+
+End Sub
+
+Sub CheckPackagedCalibration()
+
+    Dim OriginalKey As Text
+
+    TestSavedCount = CalibrationStorageCount
+    OriginalKey = CalibrationDataKey
+
+    For TestIndex = 0 To TestSavedCount - 1
+        CalibrationUndoStorage[TestIndex] = CalibrationStorage[TestIndex]
+    End For
+
+    CalibrationDataKey = "ViewerCalibrationTests.MissingPackagedSeed"
+
+    Call ClearCalibrationMemory()
+    Call LoadSavedCalibration()
+    Call CalibrationCheck(Not CalibrationStorageRejected And
+        CalibrationStorageCount = TestSavedCount, "Fresh storage loads packaged calibration")
+
+    For TestIndex = 0 To TestSavedCount - 1
+        Call CalibrationCheck(CalibrationStorage[TestIndex] = CalibrationUndoStorage[TestIndex],
+            "Packaged calibration preserves every canonical byte")
+    End For
+
+    CalibrationDataKey = OriginalKey
+    CalibrationUndoCount = 0
 
 End Sub

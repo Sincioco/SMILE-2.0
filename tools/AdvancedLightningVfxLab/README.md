@@ -45,7 +45,7 @@ reserve smaller pools. Shared renderer resources remain bounded.
 
 White hot cores, blue halos, tapered branches, stepped leader/streamer timing,
 return-stroke flicker, residual arcs, sparks, light and flash cues are composed
-from the existing reusable renderer. The optional native particle dynamics retain
+from the existing reusable renderer. The native and WebGL2 particle dynamics retain
 white sparks with drag/gravity instead of relying on the default ember palette.
 One original synthesized thunder cue plays per strike cycle; window focus audio
 behavior is inherited from SMILE.
@@ -59,6 +59,9 @@ Validation entry points:
 - `scripts/generate-lightning-vfx-assets.ps1 -Check`: asset reproducibility.
 - `scripts/smoke-test.cmd`: normal repository smoke suite.
 
-Web visual tuning is deferred. The common Web ribbon bound remains compatible;
-the module preserves a basic fallback. No language syntax or ABI command IDs
-were added. Native shader and visual controls remain internal to SMILE.
+WebGL2 now accepts the same 16,384-slot GPU/Auto spark pool as native, while explicit
+CPU-reference pools retain their 8,192 cap and all actors share the 32,768-slot
+ceiling. Visible Edge validation showed backend 2, a 16,384-slot pool and 3,932,160
+GPU bytes, with no console/shader warnings. The module preserves a truthful basic
+fallback. Complete browser workflow acceptance remains in progress under H6.1.
+No language syntax or ABI command IDs were added.

@@ -1,0 +1,460 @@
+{
+  "schemaVersion": 1,
+  "packageIdentity": "smile-2.0-h6-1-hardening-and-web-parity",
+  "template": false,
+  "reviewedSha": "902a7022c895bf97010d979ea578fc5361cdcbf4",
+  "inventoryComplete": false,
+  "executionStartSha": "902a7022c895bf97010d979ea578fc5361cdcbf4",
+  "issues": [
+    {
+      "id": "F01",
+      "title": "Frozen Fire equipment visibility cleanup",
+      "classification": "source-finding",
+      "mandatory": true,
+      "baseline": "902a7022c895bf97010d979ea578fc5361cdcbf4",
+      "status": "IN-PROGRESS",
+      "phase": "W2",
+      "gateCheck": "G03",
+      "sourceRefs": [
+        "R06"
+      ],
+      "reproduction": null,
+      "rootCause": null,
+      "fixCommit": "b8fce49701738fcab3c45d7d5cdb343e1e4a9b33",
+      "evidenceIds": [
+        "docs/implementation/h6-1-hardening-and-web-parity-ledger.md"
+      ],
+      "dispositionRationale": "Implemented portions and remaining target-specific proof are separated in the ledger; not a final gate pass."
+    },
+    {
+      "id": "F02",
+      "title": "Frozen Orin hammer-trail hide/clear",
+      "classification": "source-finding",
+      "mandatory": true,
+      "baseline": "902a7022c895bf97010d979ea578fc5361cdcbf4",
+      "status": "IN-PROGRESS",
+      "phase": "W2",
+      "gateCheck": "G03",
+      "sourceRefs": [
+        "R07"
+      ],
+      "reproduction": null,
+      "rootCause": null,
+      "fixCommit": "b8fce49701738fcab3c45d7d5cdb343e1e4a9b33",
+      "evidenceIds": [
+        "docs/implementation/h6-1-hardening-and-web-parity-ledger.md"
+      ],
+      "dispositionRationale": "Implemented portions and remaining target-specific proof are separated in the ledger; not a final gate pass."
+    },
+    {
+      "id": "F03",
+      "title": "Actor comfort writes global Lightning policy",
+      "classification": "confirmed-coupling",
+      "mandatory": true,
+      "baseline": "902a7022c895bf97010d979ea578fc5361cdcbf4",
+      "status": "FIXED-VERIFIED",
+      "phase": "W2",
+      "gateCheck": "G04",
+      "sourceRefs": [
+        "R07",
+        "R08",
+        "tools/Character3DViewer/OrinStorm.smile:995"
+      ],
+      "reproduction": "Changing a per-actor comfort context previously set global Lightning policy.",
+      "rootCause": "Last-writer-wins actor policy; replaced by explicit scene-owned comfort.",
+      "fixCommit": "b8fce49701738fcab3c45d7d5cdb343e1e4a9b33",
+      "evidenceIds": [
+        "docs/implementation/h6-1-hardening-and-web-parity-ledger.md"
+      ],
+      "dispositionRationale": "Focused native and generated-Web actor-isolation/order tests pass; global policy is no longer context-owned."
+    },
+    {
+      "id": "F04",
+      "title": "Live same-model multi-actor effects proof",
+      "classification": "evidence-gap",
+      "mandatory": true,
+      "baseline": "902a7022c895bf97010d979ea578fc5361cdcbf4",
+      "status": "IN-PROGRESS",
+      "phase": "W6",
+      "gateCheck": "G05",
+      "sourceRefs": [
+        "R09",
+        "R10"
+      ],
+      "reproduction": null,
+      "rootCause": null,
+      "fixCommit": "b8fce49701738fcab3c45d7d5cdb343e1e4a9b33",
+      "evidenceIds": [
+        "docs/implementation/h6-1-hardening-and-web-parity-ledger.md"
+      ],
+      "dispositionRationale": "Implemented portions and remaining target-specific proof are separated in the ledger; not a final gate pass."
+    },
+    {
+      "id": "F05",
+      "title": "Formation scope and stale clip-count label",
+      "classification": "scope-label",
+      "mandatory": true,
+      "baseline": "902a7022c895bf97010d979ea578fc5361cdcbf4",
+      "status": "FIXED-VERIFIED",
+      "phase": "W5",
+      "gateCheck": "G12",
+      "sourceRefs": [
+        "R06",
+        "R09"
+      ],
+      "reproduction": "Stale eight-clip label after Death was added; technical three-slot formation is not a third hero.",
+      "rootCause": "Metadata label lagged accepted nine-clip Arin package.",
+      "fixCommit": "0768860e59e60c6231e0992f23b34a3a62c48483",
+      "evidenceIds": [
+        "docs/implementation/h6-1-hardening-and-web-parity-ledger.md"
+      ],
+      "dispositionRationale": "Current profile and rendered Edge HUD show nine clips. Documentation distinguishes two live heroes from three-slot formation test."
+    },
+    {
+      "id": "W01",
+      "title": "Camera unsafe-integer Web execution failure",
+      "classification": "recorded-failure",
+      "mandatory": true,
+      "baseline": "902a7022c895bf97010d979ea578fc5361cdcbf4",
+      "status": "IN-PROGRESS",
+      "phase": "W1",
+      "gateCheck": "G02",
+      "sourceRefs": [
+        "R02",
+        "R03",
+        "R11",
+        "R12"
+      ],
+      "reproduction": "Large camera/vector intermediate exceeded checked Number safe integer range.",
+      "rootCause": "Squared length overflowed before normalization.",
+      "fixCommit": "5c2036afb4435fb7375d6515f15491746bdf5560",
+      "evidenceIds": [
+        "docs/implementation/h6-1-hardening-and-web-parity-ledger.md"
+      ],
+      "dispositionRationale": "Shared/native and generated-Web references pass; actual Edge scenes run. Full slow/moderate camera interaction evidence still required."
+    },
+    {
+      "id": "W02",
+      "title": "Web screen-fixed backdrop missing",
+      "classification": "documented-parity-gap",
+      "mandatory": true,
+      "baseline": "902a7022c895bf97010d979ea578fc5361cdcbf4",
+      "status": "IN-PROGRESS",
+      "phase": "W3",
+      "gateCheck": "G06",
+      "sourceRefs": [
+        "R13",
+        "R14"
+      ],
+      "reproduction": null,
+      "rootCause": null,
+      "fixCommit": null,
+      "evidenceIds": [
+        "docs/implementation/h6-1-hardening-and-web-parity-ledger.md"
+      ],
+      "dispositionRationale": "Implemented portions and remaining target-specific proof are separated in the ledger; not a final gate pass."
+    },
+    {
+      "id": "W03",
+      "title": "High-level thermal Fire Web GPU parity",
+      "classification": "documented-parity-gap",
+      "mandatory": true,
+      "baseline": "902a7022c895bf97010d979ea578fc5361cdcbf4",
+      "status": "IN-PROGRESS",
+      "phase": "W4",
+      "gateCheck": "G07",
+      "sourceRefs": [
+        "R13",
+        "R15"
+      ],
+      "reproduction": null,
+      "rootCause": null,
+      "fixCommit": null,
+      "evidenceIds": [
+        "docs/implementation/h6-1-hardening-and-web-parity-ledger.md"
+      ],
+      "dispositionRationale": "Implemented portions and remaining target-specific proof are separated in the ledger; not a final gate pass."
+    },
+    {
+      "id": "W04",
+      "title": "Lightning current Web visual/behavior parity",
+      "classification": "documented-coverage-gap",
+      "mandatory": true,
+      "baseline": "902a7022c895bf97010d979ea578fc5361cdcbf4",
+      "status": "IN-PROGRESS",
+      "phase": "W4",
+      "gateCheck": "G07",
+      "sourceRefs": [
+        "R16",
+        "R17"
+      ],
+      "reproduction": null,
+      "rootCause": null,
+      "fixCommit": null,
+      "evidenceIds": [
+        "docs/implementation/h6-1-hardening-and-web-parity-ledger.md"
+      ],
+      "dispositionRationale": "Implemented portions and remaining target-specific proof are separated in the ledger; not a final gate pass."
+    },
+    {
+      "id": "W05",
+      "title": "Current browser Viewer/workflow parity",
+      "classification": "documented-coverage-gap",
+      "mandatory": true,
+      "baseline": "902a7022c895bf97010d979ea578fc5361cdcbf4",
+      "status": "IN-PROGRESS",
+      "phase": "W5",
+      "gateCheck": "G08",
+      "sourceRefs": [
+        "R02",
+        "R04"
+      ],
+      "reproduction": null,
+      "rootCause": null,
+      "fixCommit": null,
+      "evidenceIds": [
+        "docs/implementation/h6-1-hardening-and-web-parity-ledger.md"
+      ],
+      "dispositionRationale": "Implemented portions and remaining target-specific proof are separated in the ledger; not a final gate pass."
+    },
+    {
+      "id": "W06",
+      "title": "Actual browser execution beyond VM mocks",
+      "classification": "evidence-gap",
+      "mandatory": true,
+      "baseline": "902a7022c895bf97010d979ea578fc5361cdcbf4",
+      "status": "IN-PROGRESS",
+      "phase": "W6",
+      "gateCheck": "G10",
+      "sourceRefs": [
+        "R18",
+        "R19"
+      ],
+      "reproduction": null,
+      "rootCause": null,
+      "fixCommit": null,
+      "evidenceIds": [
+        "docs/implementation/h6-1-hardening-and-web-parity-ledger.md"
+      ],
+      "dispositionRationale": "Implemented portions and remaining target-specific proof are separated in the ledger; not a final gate pass."
+    },
+    {
+      "id": "W07",
+      "title": "Missing current Viewer correction dispatch on Web",
+      "classification": "execution-or-source-audit",
+      "mandatory": true,
+      "baseline": "0768860e59e60c6231e0992f23b34a3a62c48483",
+      "status": "FIXED-VERIFIED",
+      "phase": "W3",
+      "gateCheck": "G06",
+      "sourceRefs": [
+        "src/Smile.Compiler/WebOutputWriter.cs:2826"
+      ],
+      "reproduction": "Current Viewer failed during part/node correction configuration.",
+      "rootCause": "Missing native commands 128,129,130,132 plus base-palette/socket semantics.",
+      "fixCommit": null,
+      "evidenceIds": [
+        "docs/implementation/h6-1-hardening-and-web-parity-ledger.md"
+      ],
+      "dispositionRationale": "Ported existing ABI; native calibration fixture and real Edge calibrated four-tab scene checks pass."
+    },
+    {
+      "id": "W08",
+      "title": "Reserved GLSL identifier prevented thermal pipeline",
+      "classification": "execution-or-source-audit",
+      "mandatory": true,
+      "baseline": "0768860e59e60c6231e0992f23b34a3a62c48483",
+      "status": "FIXED-VERIFIED",
+      "phase": "W4",
+      "gateCheck": "G07",
+      "sourceRefs": [
+        "src/Smile.Compiler/WebOutputWriter.cs:2537"
+      ],
+      "reproduction": "Actual Chrome shader compile rejected active.",
+      "rootCause": "GLSL reserved identifier in particle vertex shader.",
+      "fixCommit": null,
+      "evidenceIds": [
+        "docs/implementation/h6-1-hardening-and-web-parity-ledger.md"
+      ],
+      "dispositionRationale": "Renamed particleActive; actual Chrome and Edge GPU thermal render without shader errors."
+    },
+    {
+      "id": "W09",
+      "title": "Transform-feedback buffer allocation/binding error",
+      "classification": "execution-or-source-audit",
+      "mandatory": true,
+      "baseline": "0768860e59e60c6231e0992f23b34a3a62c48483",
+      "status": "FIXED-VERIFIED",
+      "phase": "W4",
+      "gateCheck": "G07",
+      "sourceRefs": [
+        "src/Smile.Compiler/WebOutputWriter.cs:2586"
+      ],
+      "reproduction": "Actual browser GL error prevented GPU particle creation.",
+      "rootCause": "Storage allocation occurred after TF bindings exposed the same buffer.",
+      "fixCommit": null,
+      "evidenceIds": [
+        "docs/implementation/h6-1-hardening-and-web-parity-ledger.md"
+      ],
+      "dispositionRationale": "Allocate both buffers before VAO/TF binding; real Edge Fire and Lightning GPU paths now active."
+    },
+    {
+      "id": "W10",
+      "title": "Web scene MSAA remains forced single-sample",
+      "classification": "execution-or-source-audit",
+      "mandatory": true,
+      "baseline": "0768860e59e60c6231e0992f23b34a3a62c48483",
+      "status": "OPEN",
+      "phase": "W3",
+      "gateCheck": "G06",
+      "sourceRefs": [
+        "src/Smile.Compiler/WebOutputWriter.cs:2370"
+      ],
+      "reproduction": "Fire Lab requests AA but Edge reports one sample on capable hardware.",
+      "rootCause": "Offscreen scene target has no multisample resolve path.",
+      "fixCommit": null,
+      "evidenceIds": [
+        "docs/implementation/h6-1-hardening-and-web-parity-ledger.md"
+      ],
+      "dispositionRationale": "Implement bounded actual-capability selection and native-like HDR/LDR/heat resolve without framebuffer feedback."
+    },
+    {
+      "id": "W11",
+      "title": "Canvas keyboard and browser shortcut ownership",
+      "classification": "execution-or-source-audit",
+      "mandatory": true,
+      "baseline": "0768860e59e60c6231e0992f23b34a3a62c48483",
+      "status": "OPEN",
+      "phase": "W5",
+      "gateCheck": "G08",
+      "sourceRefs": [
+        "src/Smile.Compiler/WebOutputWriter.cs:3339"
+      ],
+      "reproduction": "Source audit finds window-wide key handler without focused editable-target exclusion.",
+      "rootCause": "Canvas ownership is not checked consistently.",
+      "fixCommit": null,
+      "evidenceIds": [
+        "docs/implementation/h6-1-hardening-and-web-parity-ledger.md"
+      ],
+      "dispositionRationale": "Reproduce focused canvas versus text/control/browser shortcut cases, then fix shared Web input glue."
+    },
+    {
+      "id": "W12",
+      "title": "Current calibration JSON browser import/download bridge absent",
+      "classification": "execution-or-source-audit",
+      "mandatory": true,
+      "baseline": "0768860e59e60c6231e0992f23b34a3a62c48483",
+      "status": "OPEN",
+      "phase": "W5",
+      "gateCheck": "G08",
+      "sourceRefs": [
+        "tools/Character3DViewer/Program.smile:7847"
+      ],
+      "reproduction": "Browser exposes a Windows JSON path but cannot use Explorer/native synchronizer.",
+      "rootCause": "No validated browser transfer workflow for existing snapshots.",
+      "fixCommit": null,
+      "evidenceIds": [
+        "docs/implementation/h6-1-hardening-and-web-parity-ledger.md"
+      ],
+      "dispositionRationale": "Implement smallest strict import/download bridge; no automatic browser-to-repository writes."
+    },
+    {
+      "id": "W13",
+      "title": "Canonical pose adjustments absent on fresh Web Viewer",
+      "classification": "execution-or-source-audit",
+      "mandatory": true,
+      "baseline": "0768860e59e60c6231e0992f23b34a3a62c48483",
+      "status": "FIXED-VERIFIED",
+      "phase": "W5",
+      "gateCheck": "G08",
+      "sourceRefs": [
+        "tools/Character3DViewer/Program.smile:5175"
+      ],
+      "reproduction": "Sin observed Arin without saved pose adjustments in Web.",
+      "rootCause": "Only models/effect assets were published; native Save Data is separate from browser origin storage.",
+      "fixCommit": null,
+      "evidenceIds": [
+        "docs/implementation/h6-1-hardening-and-web-parity-ledger.md"
+      ],
+      "dispositionRationale": "Declare generated canonical SMKF defaults, reuse authoritative serializer/decoder, prefer existing saves. Native and actual Edge byte-level fixture pass; Attack shows 13 saved keys."
+    },
+    {
+      "id": "W14",
+      "title": "Persistent Data failure atomicity and recovery",
+      "classification": "execution-or-source-audit",
+      "mandatory": true,
+      "baseline": "0768860e59e60c6231e0992f23b34a3a62c48483",
+      "status": "OPEN",
+      "phase": "W5",
+      "gateCheck": "G08",
+      "sourceRefs": [
+        "src/Smile.Compiler/WebOutputWriter.cs:3611"
+      ],
+      "reproduction": "Source audit: memory save updates before persistent write; load can throw on denied/corrupt storage.",
+      "rootCause": "Storage failure can leave memory/disk disagreement and lacks previous-good recovery.",
+      "fixCommit": null,
+      "evidenceIds": [
+        "docs/implementation/h6-1-hardening-and-web-parity-ledger.md"
+      ],
+      "dispositionRationale": "Reproduce with disposable origin/profile and add atomic last-good handling plus visible status."
+    },
+    {
+      "id": "W15",
+      "title": "Shadow compare linear filtering browser warning",
+      "classification": "execution-or-source-audit",
+      "mandatory": true,
+      "baseline": "0768860e59e60c6231e0992f23b34a3a62c48483",
+      "status": "FIXED-VERIFIED",
+      "phase": "W3",
+      "gateCheck": "G06",
+      "sourceRefs": [
+        "src/Smile.Compiler/WebOutputWriter.cs:2375"
+      ],
+      "reproduction": "Firefox diagnostic warned shadow sampling depended on implementation-specific filtering.",
+      "rootCause": "LINEAR hardware compare combined with explicit PCF.",
+      "fixCommit": null,
+      "evidenceIds": [
+        "docs/implementation/h6-1-hardening-and-web-parity-ledger.md"
+      ],
+      "dispositionRationale": "Use NEAREST comparisons with existing explicit PCF. Current Edge has no warning; Firefox is not claimed passed."
+    },
+    {
+      "id": "W16",
+      "title": "Lightning Ultra GPU pool rejected on Web",
+      "classification": "execution-or-source-audit",
+      "mandatory": true,
+      "baseline": "0768860e59e60c6231e0992f23b34a3a62c48483",
+      "status": "FIXED-VERIFIED",
+      "phase": "W4",
+      "gateCheck": "G07",
+      "sourceRefs": [
+        "src/Smile.Compiler/WebOutputWriter.cs:2561"
+      ],
+      "reproduction": "Real Edge Ultra showed Basic backend and zero GPU pool despite capable thermal GPU.",
+      "rootCause": "Web capped GPU/Auto at CPU reference maximum 8192 instead of native 16384.",
+      "fixCommit": null,
+      "evidenceIds": [
+        "docs/implementation/h6-1-hardening-and-web-parity-ledger.md"
+      ],
+      "dispositionRationale": "GPU/Auto now 16384, CPU remains8192 and scene32768. VM admission/rejection checks and real Edge backend2/pool16384/GPUbytes3932160 pass."
+    }
+  ],
+  "lastReviewedSourceParent": "0768860e59e60c6231e0992f23b34a3a62c48483",
+  "updatedLocalDate": "2026-09-06",
+  "browserScope": {
+    "required": [
+      "Chrome",
+      "Edge"
+    ],
+    "engineFamily": "Chromium",
+    "firefox": "Superseded by Sin's explicit installed-browser revision; incomplete diagnostics are not passes."
+  },
+  "audit": {
+    "githubOpenIssues": {
+      "url": "https://api.github.com/repos/Sincioco/SMILE-2.0/issues?state=open&per_page=100",
+      "observed": "[]",
+      "localDate": "2026-09-06"
+    },
+    "remaining": "Finish wider console/text/2D/media/RPG inventory and normal smoke; recheck newly discovered issues before gate."
+  }
+}

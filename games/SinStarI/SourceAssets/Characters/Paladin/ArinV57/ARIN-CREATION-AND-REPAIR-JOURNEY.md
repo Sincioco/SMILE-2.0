@@ -748,3 +748,19 @@ the current-pose emitter and advances it only by the current frame elapsed time;
 Automatic clip changes still retain world-space tails, while explicit cuts and paused
 pose edits preserve their documented clearing behavior. This ownership change does not
 alter the canonical GLB or calibration profile hashes.
+
+## September 5: publish the saved pose layer to Web
+
+Sin found that the Web Viewer showed the model without the native saved poses.
+The corrections are not baked into the GLB: publication must carry that separate
+layer. `Prepare-BuildAssets.ps1` now uses the authoritative synchronizer serializer
+to generate a declared, ignored SMKF default asset from the current canonical JSON.
+The shared Viewer loads it only in the absence of a working save, then uses its
+existing fingerprint/name/frame/channel decoder and correction evaluator. Existing
+native/browser saves and deliberate empty tracks are not replaced by the default.
+
+This checkpoint preserves all 23 keys and every canonical model/profile byte.
+The native isolation fixture compares the entire default payload with canonical
+saved data; that fixture also passed in visible Edge. Edge's Attack pose panel
+showed 13 keys and the saved timeline markers. This is technical evidence, not
+new artistic approval or completion of the remaining Web workflow gate.

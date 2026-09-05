@@ -321,6 +321,20 @@ Public Function ClipName(ProfileIndex As Number, ClipIndex As Number) As Text
 
 End Function
 
+Public Function CalibrationAsset(ProfileIndex As Number) As Text
+
+    Dim Result As Text
+
+    If ProfileIndex = PROFILE_ARIN Then
+        Result = "Assets\Calibration\arin-v5.7.smkf"
+    Else If ProfileIndex = PROFILE_ORIN Then
+        Result = "Assets\Calibration\orin-v1.3.smkf"
+    End If
+
+    Return Result
+
+End Function
+
 ''' Rotates every authored Party attack without rerolling during one turn.
 Public Function PartyAttackName(ProfileIndex As Number, AttackCycle As Number) As Text
 

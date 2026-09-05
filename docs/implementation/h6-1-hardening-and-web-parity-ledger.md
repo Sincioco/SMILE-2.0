@@ -4,6 +4,15 @@ Scope: W0-W6 from the user-supplied H6.1 package. No Battle Scene Editor E0-E12
 work is authorized or started. Historical H6 `PASS-NATIVE` remains historical;
 H6.1 is **IN-PROGRESS**, with real-browser acceptance still outstanding.
 
+Browser scope update from Sin after intake: use the installed Chrome and Edge,
+with browser tests visible on-screen. These are two Chromium-family browsers,
+not independent rendering engines. Firefox is no longer an acceptance target
+under this explicit user revision; its incomplete diagnostic runs are retained
+as historical observations, not claimed as passes. The original package's G10
+Firefox requirement must be shown as superseded in the final gate, not silently
+removed. Edge extension connection was verified by opening and reading an
+Example Domain tab on 2026-09-05. No browser permission settings were changed.
+
 ## Baseline and preservation
 
 Reviewed baseline: `902a7022c895bf97010d979ea578fc5361cdcbf4`. Actual branch is
@@ -24,7 +33,7 @@ The historical zero-key snapshot is not restored over a newer save.
 | --- | --- | --- | --- |
 | W1 safe camera math and urgent Orin shot fix | `5c2036afb4435fb7375d6515f15491746bdf5560` | Native/shared generated-Web reference tests passed; attack camera no longer follows unbounded animated-model bounds. | Real-browser camera evidence remains required. |
 | W2 scene-owned comfort and frozen ownership | `b8fce49701738fcab3c45d7d5cdb343e1e4a9b33` | `scripts/test-character-3d-viewer-actor-isolation.ps1`: native active two-Orin/GPU and forced fallback plus generated-Web exact-output checks passed. | Real-browser integrated effects observations remain required. |
-| User-reported Viewer regressions | Implementation commit containing this entry | `tools/Character3DViewer/Build.ps1 -Configuration Release`; `scripts/test-character-3d-viewer-hardening.ps1` **without** `-NativeOnly`: PASS, including seeded native calibration/tab loads, generated-Web hardening and 58 native graphics/input/audio checks. `scripts/test-character-3d-viewer-actor-isolation.ps1`: PASS after repaired Orin asset. Scoped formatter/style checks passed. | Direct off-window mouse scrub and comprehensive camera interaction evidence still required. |
+| User-reported Viewer regressions | `0768860e59e60c6231e0992f23b34a3a62c48483` | `tools/Character3DViewer/Build.ps1 -Configuration Release`; `scripts/test-character-3d-viewer-hardening.ps1` **without** `-NativeOnly`: PASS, including seeded native calibration/tab loads, generated-Web hardening and 58 native graphics/input/audio checks. `scripts/test-character-3d-viewer-actor-isolation.ps1`: PASS after repaired Orin asset. Scoped formatter/style checks passed. | Direct off-window mouse scrub and comprehensive camera interaction evidence still required. |
 | W3/W4 Web renderer parity | Uncommitted/in progress | Compiler build, `scripts/test-renderer3d-gpu-particle-webgl2.ps1` and `scripts/test-native-thermal-fire.ps1` passed during implementation. Viewer and both Labs published to ignored `artifacts/web/h6-1`. | Real shader/drawing checks, full workflows, current documentation, final VSIX installation and W6 remain. |
 
 ## Viewer regression checkpoint
@@ -50,7 +59,69 @@ The historical zero-key snapshot is not restored over a newer save.
   reported: “I can visually see all 4 tabs work again.” This confirms tab loading,
   not blanket artistic approval or completion of the browser gate.
 
-Both calibration exports are required again immediately before this milestone's
-commit/push. Web compiler work is deliberately kept out of the Viewer bug-fix commit
-until actual browser validation. The final affected VSIX rebuild/install/verification
-is still outstanding and must not be reported complete from the historical H6 run.
+The Viewer regression commit exported both calibrations and was pushed. Web
+compiler work was kept separate until actual browser validation below.
+
+## Web renderer and packaged calibration checkpoint — September 5–6
+
+Source parent: `0768860e59e60c6231e0992f23b34a3a62c48483`, branch `main`.
+Implementation SHA will be recorded after commit; this is not W6 acceptance.
+
+- Ported existing backdrop, animator node-offset, object pivot/cull and independent
+  equipment-offset dispatch through WebGL2. Shared models do not own mutable edits.
+- Ported thermal force/turbulence/evolution/bounds/render setters, GPU soft-depth
+  and heat composition. Real-browser failures found and fixed: reserved GLSL
+  identifier, transform-feedback buffer binding order, backdrop orientation and
+  implementation-dependent linear shadow comparison filtering.
+- Edge exposed Lightning Ultra silently falling back to Basic because Web capped
+  all systems at 8,192. GPU/Auto now match native's 16,384 limit; explicit CPU and
+  shared 32,768 limits remain bounded and have rejection tests.
+- Sin reported absent Arin corrections in Web. Normal project publication now
+  includes validated SMKF defaults from current canonical JSON, using the existing
+  serializer. The shared Viewer loads defaults only with no working/legacy save.
+  There is no model bake, live-save replacement or browser-to-repository write.
+- Fresh backups: ignored `artifacts/temp/codex-handoff/h6-1-web-defaults-20260905/`.
+  Arin remains 23 keys at the unchanged hash above; Orin remains zero at its current
+  migrated hash above. Default payload hashes are Arin
+  `9DD73F6BFCCF3A9F3AB9E10860D6DECD42CE917F99B6D37C2FB69EA076656508`, Orin
+  `4CCBE1D6B5E60964D6D9AF2802978970D4293C44F874B60AC0B44A8C86341819`.
+
+### Actual focused evidence
+
+| Command or observation | Result |
+| --- | --- |
+| `scripts/test-viewer-calibration-native.ps1` | PASS: both defaults match every canonical payload byte; a saved edited track wins over defaults; seeded four-tab loading, save and previous-good backup checks pass in isolated application storage. |
+| `scripts/test-character-3d-viewer-hardening.ps1` without `-NativeOnly` | PASS: 42 calibration checks, updated native calibration fixture, generated-Web hardening, 58 native graphics/pointer/audio checks. |
+| `scripts/test-renderer3d-gpu-particle-webgl2.ps1` | PASS: real generated runtime in VM/GL double, 16,384 GPU admission, CPU/scene-capacity rejection, forced shader/attribute fallback. Not browser rendering proof. |
+| `scripts/test-lightning-vfx-foundation.ps1` | PASS native and generated-Web exact output. |
+| `scripts/test-renderer3d-post-processing.ps1` | PASS native and generated-Web normal/HDR/shadow fallback. Its historical MSAA label is not proof of Web multisampling; Web still reports one sample. |
+| `scripts/format-smile-style.ps1 -Files ... -FormatLongIf` | Four changed SMILE files passed transaction preflight; no formatting changes needed. Initial CLI comma-list invocation was rejected without edits, then corrected to a PowerShell array. |
+| Visible Edge 146.0.3856.62, aligned by Sin with the Viewer | All four tabs and both Labs rendered; warnings/errors returned empty from browser diagnostics. Fire High showed GPU, five systems and 399,360 GPU bytes; paused fire stayed visible. The Fire toggle is emission enable/disable, not immediate visibility removal. |
+| Edge after calibration publication | Arin Attack displayed 13 keys, green ticks and saved channel values. The isolated Web fixture printed exactly `Viewer calibration isolation passed`. No user artistic approval is claimed. |
+| Edge after Lightning capacity fix | Backend 2, pool 16,384, 3,932,160 GPU bytes, active sparks and no console/shader warnings. |
+| `tools/Character3DViewer/Launch.ps1 -Build -SkipWindowActivation` | Built and launched current `bin/Character3DViewer.exe`, PID 51508. Both live saves retained; watchers started. Supported Windows control restored foreground and confirmed populated Party rendering. |
+| `scripts/install-vsix.cmd` | Full build and install PASS, VSIX 2.0.59, instance `91f001b5`; no Visual Studio editing process was open. |
+
+Installed extension DLL SHA-256:
+`B5137FFCC66B52D5BB9EBBC1DECAA462D2A872B46265B2B6AD5A7150A95C89D6`.
+VSIX `artifacts/vsix/Smile.VisualStudio.vsix`:
+`EC966348A29A272E20576F51B68D7D7321CB89F450BD8EADEF00247AF8D40E95`.
+Installed/built compiler, shared language and native runtime payload hashes matched:
+
+- `smilec.dll`: `EE0F5C4AF1B2AEAC58F9DE8F727CBE86020A7CAF747BAFD1A01B8C8193F11865`.
+- `Smile.Language.dll`: `D1C0CF65EF2A4A665B3DE570EC4C9F4BF2D1AB62DAE3DDC9BAFDE490B81D996A`.
+- `Smile.NativeRuntime.lib`: `4BE4122889512FC6BBE4E39B3767470FCFA217278CF3D00A9899A70C5F2C4599`.
+
+GitHub's current open-issues endpoint returned `[]` on September 6 (Taipei).
+This does not close repository-discovered issues. Initial PowerShell array wrapping
+misreported an empty response as one container; raw JSON was checked explicitly.
+
+### Remaining work / next actions
+
+Web scene MSAA, focused-canvas keyboard/shortcut ownership, accessible fullscreen
+and audio activation, strict current-snapshot import/download and storage recovery,
+complete context/resize/interaction evidence, refreshed Chrome checks, wider normal
+smoke, complete issue/parity reconciliation, portable deployment package, final
+H6.1 report/gate and final VSIX refresh if payload changes. No E0 work has started.
+Earlier Chrome/Firefox diagnostics are not current-final-browser acceptance. The
+native Viewer was left in the foreground after the visible Edge checks.

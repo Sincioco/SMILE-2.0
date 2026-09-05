@@ -25,6 +25,7 @@ Sub RunTests()
     Dim Camera As Core.Camera3D
     Dim EmptyTexture As Core.Texture3D
     Dim LargeSystem As Core.GpuParticleSystem3D
+    Dim RejectedSystem As Core.GpuParticleSystem3D
     Dim Material As Core.Material3D
     Dim MediumSystem As Core.GpuParticleSystem3D
     Dim System As Core.GpuParticleSystem3D
@@ -50,7 +51,7 @@ Sub RunTests()
         10
     )
     LargeSystem = Graphics3D.CreateGpuParticleSystem3D(
-        8192,
+        16384,
         Material,
         Graphics3D.GPU_PARTICLE_SIMULATION_GPU_FAST,
         10
@@ -69,17 +70,30 @@ Sub RunTests()
     ) = Graphics3D.GPU_PARTICLE_FALLBACK_NONE)
     Call Check(Graphics3D.GpuParticleValue3D(
         Graphics3D.GPU_PARTICLE_QUERY_GPU_MAX_CAPACITY
-    ) = 8192)
+    ) = 16384)
     Call Check(Graphics3D.GpuParticleValue3D(
         Graphics3D.GPU_PARTICLE_QUERY_TOTAL_CAPACITY
-    ) = 13312)
+    ) = 21504)
     Call Check(Graphics3D.GpuParticleValue3D(
         Graphics3D.GPU_PARTICLE_QUERY_GPU_STATE_BYTES
-    ) = 3194880)
+    ) = 5160960)
     Call Check(Graphics3D.GpuParticleValue3D(
         Graphics3D.GPU_PARTICLE_QUERY_RESOURCE_GPU_BYTES,
         System.Handle
     ) = 245760)
+
+    RejectedSystem = Graphics3D.CreateGpuParticleSystem3D(
+        8193, Material, Graphics3D.GPU_PARTICLE_SIMULATION_CPU_DETERMINISTIC, 10)
+
+    Call Check(RejectedSystem.Handle = 0)
+
+    RejectedSystem = Graphics3D.CreateGpuParticleSystem3D(
+        16384, Material, Graphics3D.GPU_PARTICLE_SIMULATION_AUTO, 10)
+
+    Call Check(RejectedSystem.Handle = 0)
+    Call Check(Graphics3D.GpuParticleValue3D(
+        Graphics3D.GPU_PARTICLE_QUERY_TOTAL_CAPACITY
+    ) = 21504)
     Call Check(Graphics3D.SetGpuParticleSpawnKinematics3D(
         System,
         0,

@@ -5174,11 +5174,39 @@ End Sub
 
 Sub LoadSavedCalibration()
 
+    Dim DefaultAsset As Text
     Dim LoadedCount As Number
     Dim SavedValue As Number
     Dim StorageVersion As Number
 
     Load Data CalibrationDataKey Into CalibrationStorage Count LoadedCount
+
+    If LoadedCount = 0 Then
+
+        If ProfileIndex = ViewerProfiles.PROFILE_ARIN Then
+            Load StorageVersion From "CharacterViewerCalibrationVersion" Default 0
+        End If
+
+        ''' Existing working copies, including the legacy Arin save, always win.
+
+        If StorageVersion <> 2 Then
+
+            DefaultAsset = ViewerProfiles.CalibrationAsset(ProfileIndex)
+
+            If DefaultAsset <> "" Then
+
+                Load Text File DefaultAsset Into CalibrationStorage Count LoadedCount
+
+                If LoadedCount = 0 Then
+                    CalibrationStorageRejected = True
+                    Return
+                End If
+
+            End If
+
+        End If
+
+    End If
 
     If LoadedCount > 0 Then
 

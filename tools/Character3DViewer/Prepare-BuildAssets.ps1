@@ -106,6 +106,30 @@ foreach ($copy in $copies) {
 
 Write-Host "Prepared Character Viewer cooking inputs from Sin Star I: $buildAssets"
 
+# Publish current canonical corrections as read-only first-run defaults. Reuse
+# the authoritative serializer; never copy live private SMD4 envelopes or import
+# a historical snapshot over a saved working copy during a build.
+foreach ($characterName in @('Arin', 'Orin')) {
+    & {
+        param($CharacterName, $CalibrationDirectory, $Synchronizer)
+        . $Synchronizer -Character $CharacterName -FunctionsOnly
+        Assert-ProfileAssets
+        $snapshot = Read-Snapshot $snapshotPath
+        $payload = Convert-SnapshotToPayload $snapshot
+        $roundTrip = Convert-PayloadToSnapshot $payload
+        $appliedKeys = @($snapshot.clips | Where-Object index -ge 0 |
+            ForEach-Object { $_.keyframes }).Count
+        if ($roundTrip.totalKeyframes -ne $appliedKeys) {
+            throw 'Packaged calibration lost resolved keyframes during serialization.'
+        }
+        $fileName = if ($CharacterName -eq 'Arin') { 'arin-v5.7.smkf' } else { 'orin-v1.3.smkf' }
+        $destination = Join-Path $CalibrationDirectory $fileName
+        Write-AtomicBytes $destination $payload (Get-PathHash $destination)
+        Write-Host "Packaged $CharacterName calibration: $appliedKeys keys; SHA-256 $(Get-PathHash $destination)"
+    } $characterName (Join-Path $toolRoot 'Assets\Calibration') `
+        (Join-Path $repositoryRoot 'scripts\sync-arin-v5-7-calibration.ps1')
+}
+
 $audioAssets = Join-Path $toolRoot 'Assets\Audio'
 New-Item -ItemType Directory -Path $audioAssets -Force | Out-Null
 foreach ($audioRoot in @((Join-Path $arinRoot 'Audio'), (Join-Path $dragonRoot 'RedDragonV11\Audio'))) {
