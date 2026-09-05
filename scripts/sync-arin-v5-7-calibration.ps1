@@ -124,10 +124,12 @@ function Assert-ProfileAssets {
     }
     # The cooked mirror is disposable; when present it must match the identity
     # recorded alongside the canonical model/descriptor, never an older build.
-    $cookedPath = Join-Path $repositoryRoot "tools\Character3DViewer\bin\Debug\Assets\Generation2\$cookedRelativePath"
-    if (Test-Path -LiteralPath $cookedPath) {
-        if ((Get-FileHash -LiteralPath $cookedPath).Hash -cne $profile.sm3dSha256) {
-            throw "Cooked profile changed; explicit migration is required: $cookedPath"
+    foreach ($configuration in @('Release', 'Debug')) {
+        $cookedPath = Join-Path $repositoryRoot "tools\Character3DViewer\bin\$configuration\Assets\Generation2\$cookedRelativePath"
+        if (Test-Path -LiteralPath $cookedPath) {
+            if ((Get-FileHash -LiteralPath $cookedPath).Hash -cne $profile.sm3dSha256) {
+                throw "Cooked profile changed; explicit migration is required: $cookedPath"
+            }
         }
     }
 }

@@ -354,3 +354,78 @@ Remaining work includes validated in-Viewer JSON import and its real selection
 proof, Viewer-origin save/reload evidence, MSAA, canvas keyboard/fullscreen,
 audio/lifecycle/mobile emulation, remaining multi-actor live evidence, wider smoke,
 deployment ZIP/manifest and the final readiness gate. No E0–E12 or Double work.
+
+## September 6: VSIX blocker cleared and normal tool output layout
+
+Parent/source checkpoint: `2cb6c523a43bb71e8f113b93bf426b1f43db1f1e` (pushed).
+Resumption found a clean `main`, fetched `origin/main`, and confirmed 0/0 divergence.
+Visual Studio was no longer running. `scripts/install-vsix.cmd` then completed:
+the repository verifier removed the proven orphan `Extensions/yinvwrss.gto` and
+installed version 2.0.59 under `Extensions/yzuphacw.t3f`. No user document was
+saved, closed or discarded by Codex. The old orphan's assemblies are replaceable
+from the built package; unrelated extensions were not removed.
+
+All five corresponding installed entries were compared directly against the
+built ZIP's entry streams (not against a later rebuilt native archive):
+
+| VSIX entry | Installed/package SHA-256 match |
+| --- | --- |
+| `Smile.VisualStudio.dll` | `812E60D391499A2419DC984B5FC0993B74146ABBF252AA988169BAE86F93B838` |
+| `Smile.Language.dll` | `4D7CFBB8589F80D35EF5623CE2BC936BB4B74FD4EDD02695032A915FD9B8971B` |
+| `Compiler/Smile.Language.dll` | `0012711C3DFBBC4E26B8D8C21C3BAE18A0E1025947822168056823796CAB9B41` |
+| `Compiler/smilec.dll` | `7BE7A9E0B4FD04947BA7743300524BF116F6CD6F16D8DAE54FB6A83FF6E3FCEF` |
+| `Compiler/Smile.NativeRuntime.lib` | `EE5EBF52F1A0B0EAA34511213ECBD0A07357A98F2D962A10AD8443980754FD77` |
+
+VSIX: `artifacts/vsix/Smile.VisualStudio.vsix`, SHA-256
+`4AC624A3783BB9E788F7D7AFE8208D892D27AB2C0B6DD27776E6BB7B02045271`.
+The build-layout changes below do not change the VSIX payload or language syntax.
+
+Sin requested normal configuration-local builds for the Viewer and both Labs,
+and asked to launch the Web Labs and provide all three publishable locations.
+
+- All three `Build.ps1` scripts default to `-Configuration Release -Target All`;
+  Native precedes Web. Debug and target-only builds are selectable. Native output
+  is `tools/<Tool>/bin/<Configuration>/<Tool>.exe`; Web is the adjacent `Web/`.
+  Existing Lab `-OutputPath` overrides remain native-only. The focused native
+  thermal script explicitly requests its existing Debug/native fixture.
+- Viewer `Launch.ps1` defaults to Release and honors `-Configuration Debug`.
+  Its `-Build` rebuilds that native configuration, not another executable.
+  Missing/custom-build overrides are rejected before export/closure/launch.
+  Asset, application, storage, and character identities are unchanged.
+- Executed each tool's `Build.ps1 -Configuration Release` and `-Configuration Debug`:
+  all twelve native/Web outputs PASS. Each output has its normal asset manifest;
+  every native/Web asset pair matches by SHA-256 (Viewer 46, Fire 6, Lightning 5).
+  All five Web bootstrap files exist in each publication. PowerShell parsing and
+  `git diff --check` pass. No broad soak or full smoke was needed for path-only work.
+- The old flat Viewer was closed normally through supported Windows control
+  after re-observing overlapping input. `Launch.ps1 -SkipWindowActivation` launched
+  PID 55044 from `bin/Release/Character3DViewer.exe`; the Party scene rendered.
+  Both synchronizers kept their live working copies. The exact old flat executable
+  was moved recoverably to ignored
+  `artifacts/temp/codex-handoff/viewer-layout-legacy-2cb6c52/Character3DViewer.exe`
+  after verifying its previous hash and that it was no longer running. Old test
+  publications, Debug outputs, assets and other user files were not deleted.
+- Release executable SHA-256: Viewer
+  `C66EC9541E8E0794DB6BC4EF9FA39E09DFDC90A28B572C70EF3E6E4CD82B7F16`, Fire
+  `DCD4E44443E6A517011B540682CF9D0D346F96C9E1AC3EEAA0A3E57CA92D0000`, Lightning
+  `39F61D59127D244A41116D06AD1DADB03DE4CF0E14E4F2DC4C5FC9C8EBCBA82E`.
+- Served the three Release/Web folders with `python -m http.server` bound to
+  `127.0.0.1`, ports 8766 (Viewer), 8767 (Fire), 8768 (Lightning); all returned HTTP
+  200. Existing port 8765 was left alone. Chrome rendered both requested Labs:
+  Fire High GPU/five systems/399360 bytes/error 0; Lightning GPU/backend 2,
+  pool 16384/3932160 bytes and visible bolts. Web AA still reports 1 and remains
+  an open H6.1 item. Edge's connection was unavailable at this check; these new
+  launch observations are Chrome, not claimed as new Edge acceptance.
+- Export/Compare preserves Arin's current 24 keys including Death frame 0 and
+  Orin's current zero-key snapshot at the unchanged W14 hashes. Added exact
+  pre-import backups under ignored `h6-1-json-import-preservation/Arin` and `Orin`.
+  The synchronizer now verifies both existing Release/Debug cooked mirrors.
+  `scripts/test-arin-calibration.ps1`: 42 PASS in isolated storage; Orin `-Mode
+  Validate` also passed with its existing profile fingerprint.
+
+The three README files identify the complete publishable `Web/` folders and
+explain origin-scoped storage: a new port does not inherit or erase previous
+browser saves. No remote website publication was performed. The Labs' live tabs
+are user-requested outputs, not a claim that every H6.1 browser test has passed.
+Next: resume strict atomic JSON import and the remaining W0-W6 work listed above.
+The stream must remain live until all approved work genuinely completes.

@@ -608,13 +608,15 @@ pwsh -NoProfile -File scripts/sync-arin-v5-7-calibration.ps1 -Mode Compare
 pwsh -NoProfile -File scripts/sync-arin-v5-7-calibration.ps1 -Mode Export -AllowMissing
 ```
 
-Build-path trap: `tools/Character3DViewer/Build.ps1 -Configuration Debug` currently
-still writes `bin/Character3DViewer.exe`. The separately used development output
-is `bin/Debug/Character3DViewer.exe`; configuration does not automatically select
-that path in this script. If compiling there explicitly, first run
-`Prepare-BuildAssets.ps1`, then invoke the compiler with the project and explicit
-`-o` path. Use `Launch.ps1 -Executable` with that exact executable. Do not say
-“rebuilt Debug” while launching the stale regular binary.
+September 6 build-layout correction: `Build.ps1 -Configuration Debug` now writes
+`bin/Debug/Character3DViewer.exe` and `bin/Debug/Web`; Release uses the corresponding
+`bin/Release` paths. Both targets build by default. `Launch.ps1 -Configuration`
+selects the matching native executable (Release by default), and `-Build` rebuilds
+that native configuration. Custom executable overrides must already exist and
+cannot silently trigger a different output build. The old flat `bin` executable
+and `artifacts/web/h6-1` publication are historical outputs, not current defaults.
+Calibrations remain keyed by the same application/character identities, not these
+binary folders. Both existing native configuration mirrors are hash-checked.
 
 For a deliberate source rebuild, use `build-arin-v5-7-idle-checkpoint.ps1` with
 both `-OutputBlend` and `-OutputGlb` pointing to a new experiment directory.

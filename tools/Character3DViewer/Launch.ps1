@@ -1,15 +1,25 @@
 [CmdletBinding()]
 param(
-    [string]$Executable = (Join-Path $PSScriptRoot 'bin\Character3DViewer.exe'),
+    [string]$Executable,
     [switch]$Build,
-    [switch]$SkipWindowActivation
+    [switch]$SkipWindowActivation,
+    [ValidateSet('Debug', 'Release')]
+    [string]$Configuration = 'Release'
 )
 
 $ErrorActionPreference = 'Stop'
 $toolRoot = $PSScriptRoot
 $repositoryRoot = [IO.Path]::GetFullPath((Join-Path $toolRoot '..\..'))
 $syncScript = Join-Path $repositoryRoot 'scripts\sync-arin-v5-7-calibration.ps1'
+$configurationExecutable = Join-Path $toolRoot "bin\$Configuration\Character3DViewer.exe"
+if ([string]::IsNullOrWhiteSpace($Executable)) {
+    $Executable = $configurationExecutable
+}
 $resolvedExecutable = [IO.Path]::GetFullPath($Executable)
+if ($resolvedExecutable -ine $configurationExecutable -and
+    ($Build -or -not (Test-Path -LiteralPath $resolvedExecutable -PathType Leaf))) {
+    throw 'A custom -Executable must already exist and cannot be combined with -Build. Use -Configuration to build and launch the standard output.'
+}
 
 & $syncScript -Mode Export -AllowMissing
 $orinProfile = Join-Path $repositoryRoot 'games\SinStarI\SourceAssets\Characters\Tank\OrinV13\Calibration\orin-v1.3-profile.json'
@@ -42,7 +52,7 @@ foreach ($viewer in $viewers) {
 }
 
 if ($Build -or -not (Test-Path -LiteralPath $resolvedExecutable -PathType Leaf)) {
-    & (Join-Path $toolRoot 'Build.ps1')
+    & (Join-Path $toolRoot 'Build.ps1') -Configuration $Configuration -Target Native
 }
 
 if (-not (Test-Path -LiteralPath $resolvedExecutable -PathType Leaf)) {

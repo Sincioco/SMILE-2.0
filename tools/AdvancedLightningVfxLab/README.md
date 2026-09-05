@@ -1,9 +1,30 @@
 # Advanced Lightning Lab
 
 Build with `tools/AdvancedLightningVfxLab/Build.ps1`, then launch
-`bin/Debug/AdvancedLightningVfxLab.exe`. Native Windows is the visual target.
+`bin/Release/AdvancedLightningVfxLab.exe`. Native Windows remains priority 1.
 The stable application ID preserves window X/Y, width/height and maximized state
 through SMILE's existing `RememberWindowPlacement` support, including rebuilds.
+
+## Build and launch
+
+`Build.ps1` defaults to `-Configuration Release -Target All`: native first, then Web.
+The complete publishable Web site is `bin\Release\Web` (upload all contents,
+including assets). `-Configuration Debug` writes `bin\Debug\AdvancedLightningVfxLab.exe`
+and `bin\Debug\Web`. Use `-Target Native` or `-Target Web` for one target.
+Existing `-OutputPath` overrides remain available for isolated native builds;
+they cannot be combined with Web/All.
+
+From the repository root, serve Release Web with:
+
+```powershell
+python -m http.server 8768 --bind 127.0.0.1 --directory tools/AdvancedLightningVfxLab/bin/Release/Web
+```
+
+Open `http://127.0.0.1:8768/`. Keep a stable host/port for browser persistence;
+an origin change does not migrate or erase old saves. Application identity and
+native settings remain unchanged by the build-folder layout.
+
+## Presentation and controls
 
 The on-screen header is uppercase; the Windows title bar is unchanged. Bare Alt
 no longer enters a modal menu loop in the rebuilt native runtime.

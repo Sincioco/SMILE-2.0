@@ -396,7 +396,7 @@
       "evidenceIds": [
         "docs/implementation/h6-1-hardening-and-web-parity-ledger.md"
       ],
-      "dispositionRationale": "Optional shared Data Status, native/Web backup recovery and transactional Viewer Save/Undo are implemented. Native filesystem denial/corruption and disposable Web VM checks pass, including exact Viewer console parity. Actual Chrome/Edge disposable probes retain bytes across refresh and tab reopen. Viewer-origin save/reload and final import/recovery workflow evidence remain required. VSIX installation is blocked by a locked extension DLL and unsaved Visual Studio work; not a final gate pass."
+      "dispositionRationale": "Optional shared Data Status, native/Web backup recovery and transactional Viewer Save/Undo are implemented in 2cb6c523a43bb71e8f113b93bf426b1f43db1f1e. Native filesystem denial/corruption and disposable Web VM checks pass, including exact Viewer console parity. Actual Chrome/Edge disposable probes retain bytes across refresh and tab reopen. The subsequent VSIX retry installed and hash-verified the payload after Visual Studio closed. Viewer-origin save/reload and final import/recovery workflow evidence remain required; not a final gate pass."
     },
     {
       "id": "W15",

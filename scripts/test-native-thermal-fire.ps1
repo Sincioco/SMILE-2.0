@@ -23,7 +23,7 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Native GPU recovery test compilation failed.' }
     & scripts\run-bounded-test.cmd 60 (Join-Path $taskRoot 'artifacts\tests\NativeFireGpuTests.exe')
     if ($LASTEXITCODE -ne 0) { throw 'Native GPU recovery test failed.' }
-    & tools\AdvancedFireVfxLab\Build.ps1
+    & tools\AdvancedFireVfxLab\Build.ps1 -Configuration Debug -Target Native
     & artifacts\compiler\smilec.exe --project tools\AdvancedFireVfxLab\FireEmitterTests.smileproj `
         --target windows-x64 --configuration Debug --graphics DirectX -o artifacts\tests\FireEmitterTests.exe
     if ($LASTEXITCODE -ne 0) { throw 'Fire contract compilation failed.' }

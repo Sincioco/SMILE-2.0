@@ -15,7 +15,34 @@ The editor source and build/launch entry points belong here. Sin Star I owns the
 
 ## Build and launch
 
-Run `Build.ps1`, then `Launch.ps1`. The regular launcher defaults to `bin\Character3DViewer.exe`. The active Debug development build is `bin\Debug\Character3DViewer.exe`; pass that absolute path with `Launch.ps1 -Executable` to launch it. The launcher exports live calibration, closes old instances, preserves/restores the stable working copy and watches both characters’ saves to mirror them into their separate canonical repository JSON files.
+Run `Build.ps1`, then `Launch.ps1`. Builds use the same configuration layout as
+normal SMILE Visual Studio projects:
+
+```text
+bin/
+  Debug/
+    Character3DViewer.exe
+    Assets/ ...
+    Web/index.html ...
+  Release/
+    Character3DViewer.exe
+    Assets/ ...
+    Web/index.html ...
+```
+
+`Build.ps1` defaults to `-Configuration Release -Target All`, building native
+first and then Web. Select `-Configuration Debug` for both Debug outputs, or
+`-Target Native` / `-Target Web` for one target. Each Web directory is a complete
+static publication; upload its entire contents, including all assets.
+
+`Launch.ps1` defaults to `bin\Release\Character3DViewer.exe`. Use
+`Launch.ps1 -Configuration Debug` for Debug. `-Build` rebuilds the selected native
+configuration before launch. A custom `-Executable` must already exist and cannot
+be combined with `-Build`, preventing an unrelated build followed by a stale launch.
+The launcher exports live calibration, closes old instances, preserves/restores
+the stable working copy and watches both characters' saves to mirror them into
+their separate canonical repository JSON files. Output relocation does not change
+application IDs, data keys, fingerprints, or the saved-data location.
 
 ## Inspection
 
@@ -37,13 +64,18 @@ Loading defaults does not write a save or change the canonical JSON/model.
 To build the current Web Viewer from the repository root:
 
 ```powershell
-tools/Character3DViewer/Prepare-BuildAssets.ps1
-artifacts/compiler/smilec.exe --project tools/Character3DViewer/Character3DViewer.smileproj --target web --configuration Release --output-dir artifacts/web/h6-1/Character3DViewer
-python -m http.server 8765 --bind 127.0.0.1 --directory artifacts/web
+tools/Character3DViewer/Build.ps1 -Configuration Release -Target Web
+python -m http.server 8766 --bind 127.0.0.1 --directory tools/Character3DViewer/bin/Release/Web
 ```
 
-Open `http://127.0.0.1:8765/h6-1/Character3DViewer/` in Chrome or Edge. Browser
-working saves are separate and origin-scoped; rebuilding does not replace them.
+Open `http://127.0.0.1:8766/` in Chrome or Edge. Port 8766 avoids the existing
+hardening server on 8765; changing ports changes the browser storage origin.
+To retain browser-authored saves from `http://127.0.0.1:8765`, stop that server
+first and serve this directory on **8765** instead (the URL path may change,
+but host, scheme and port must remain the same). Do not erase either origin's
+storage. The older `artifacts/web/h6-1/Character3DViewer` is test evidence, not the
+normal publishable build. Browser working saves are separate and origin-scoped;
+rebuilding does not replace them.
 The Windows JSON path/Explorer action belongs to native. Browser JSON transfer,
 storage recovery, MSAA and the rest of the H6.1 workflow gate remain in progress;
 no automatic browser-to-repository synchronization is claimed.

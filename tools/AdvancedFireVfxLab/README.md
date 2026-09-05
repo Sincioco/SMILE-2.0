@@ -1,6 +1,25 @@
 # Smile 2.0 - Advance Native Fire Lab
 
-Native Direct3D 11 thermal-fire demonstration. The complete project lives in `tools/AdvancedFireVfxLab`, beside the Lightning Lab and Character Viewer. Build with `tools/AdvancedFireVfxLab/Build.ps1`, then run `bin\Debug\AdvancedFireVfxLab.exe`. Assets are copied from the repository's `TechnicalAssets\Generation3\Fire` and Sin Star I landscape into ignored tool-local inputs; project publication places them beside the executable.
+Native Direct3D 11 and WebGL2 thermal-fire demonstration. The complete project lives in `tools/AdvancedFireVfxLab`, beside the Lightning Lab and Character Viewer. Assets are copied from the repository's `TechnicalAssets\Generation3\Fire` and Sin Star I landscape into ignored tool-local inputs; normal project publication includes them with each target.
+
+## Build and launch
+
+`Build.ps1` defaults to `-Configuration Release -Target All`: native first, then Web.
+Run `bin\Release\AdvancedFireVfxLab.exe` for Desktop. The complete publishable Web
+site is `bin\Release\Web` (upload all contents, not just `index.html`).
+`-Configuration Debug` writes `bin\Debug\AdvancedFireVfxLab.exe` and `bin\Debug\Web`.
+Use `-Target Native` or `-Target Web` for one target. Existing `-OutputPath` overrides
+remain available for isolated native builds; they cannot be combined with Web/All.
+
+From the repository root, serve Release Web with:
+
+```powershell
+python -m http.server 8767 --bind 127.0.0.1 --directory tools/AdvancedFireVfxLab/bin/Release/Web
+```
+
+Open `http://127.0.0.1:8767/`. Keep a stable host/port for browser persistence;
+an origin change does not migrate or erase old saves. Application identity and
+native settings remain unchanged by the build-folder layout.
 
 The shared native `RememberWindowPlacement` setting saves the window's position, dimensions and maximized state under its stable application ID. Rebuilds preserve that placement. The native runtime retains its existing monitor/DPI safety handling. The in-program header is uppercase; the Windows title bar is unchanged.
 
