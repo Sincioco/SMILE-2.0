@@ -148,7 +148,7 @@
       ],
       "reproduction": null,
       "rootCause": null,
-      "fixCommit": null,
+      "fixCommit": "519e780cc723cc6beb514edeb1278370abd8cc19",
       "evidenceIds": [
         "docs/implementation/h6-1-hardening-and-web-parity-ledger.md"
       ],
@@ -169,7 +169,7 @@
       ],
       "reproduction": null,
       "rootCause": null,
-      "fixCommit": null,
+      "fixCommit": "519e780cc723cc6beb514edeb1278370abd8cc19",
       "evidenceIds": [
         "docs/implementation/h6-1-hardening-and-web-parity-ledger.md"
       ],
@@ -190,7 +190,7 @@
       ],
       "reproduction": null,
       "rootCause": null,
-      "fixCommit": null,
+      "fixCommit": "519e780cc723cc6beb514edeb1278370abd8cc19",
       "evidenceIds": [
         "docs/implementation/h6-1-hardening-and-web-parity-ledger.md"
       ],
@@ -252,7 +252,7 @@
       ],
       "reproduction": "Current Viewer failed during part/node correction configuration.",
       "rootCause": "Missing native commands 128,129,130,132 plus base-palette/socket semantics.",
-      "fixCommit": null,
+      "fixCommit": "519e780cc723cc6beb514edeb1278370abd8cc19",
       "evidenceIds": [
         "docs/implementation/h6-1-hardening-and-web-parity-ledger.md"
       ],
@@ -272,7 +272,7 @@
       ],
       "reproduction": "Actual Chrome shader compile rejected active.",
       "rootCause": "GLSL reserved identifier in particle vertex shader.",
-      "fixCommit": null,
+      "fixCommit": "519e780cc723cc6beb514edeb1278370abd8cc19",
       "evidenceIds": [
         "docs/implementation/h6-1-hardening-and-web-parity-ledger.md"
       ],
@@ -292,7 +292,7 @@
       ],
       "reproduction": "Actual browser GL error prevented GPU particle creation.",
       "rootCause": "Storage allocation occurred after TF bindings exposed the same buffer.",
-      "fixCommit": null,
+      "fixCommit": "519e780cc723cc6beb514edeb1278370abd8cc19",
       "evidenceIds": [
         "docs/implementation/h6-1-hardening-and-web-parity-ledger.md"
       ],
@@ -372,7 +372,7 @@
       ],
       "reproduction": "Sin observed Arin without saved pose adjustments in Web.",
       "rootCause": "Only models/effect assets were published; native Save Data is separate from browser origin storage.",
-      "fixCommit": null,
+      "fixCommit": "519e780cc723cc6beb514edeb1278370abd8cc19",
       "evidenceIds": [
         "docs/implementation/h6-1-hardening-and-web-parity-ledger.md"
       ],
@@ -412,7 +412,7 @@
       ],
       "reproduction": "Firefox diagnostic warned shadow sampling depended on implementation-specific filtering.",
       "rootCause": "LINEAR hardware compare combined with explicit PCF.",
-      "fixCommit": null,
+      "fixCommit": "519e780cc723cc6beb514edeb1278370abd8cc19",
       "evidenceIds": [
         "docs/implementation/h6-1-hardening-and-web-parity-ledger.md"
       ],
@@ -432,11 +432,51 @@
       ],
       "reproduction": "Real Edge Ultra showed Basic backend and zero GPU pool despite capable thermal GPU.",
       "rootCause": "Web capped GPU/Auto at CPU reference maximum 8192 instead of native 16384.",
-      "fixCommit": null,
+      "fixCommit": "519e780cc723cc6beb514edeb1278370abd8cc19",
       "evidenceIds": [
         "docs/implementation/h6-1-hardening-and-web-parity-ledger.md"
       ],
       "dispositionRationale": "GPU/Auto now 16384, CPU remains8192 and scene32768. VM admission/rejection checks and real Edge backend2/pool16384/GPUbytes3932160 pass."
+    },
+    {
+      "id": "W17",
+      "title": "Web Euler rotation signs reverse arena facing and shield corrections",
+      "classification": "user-reported-and-reproduced",
+      "mandatory": true,
+      "baseline": "519e780cc723cc6beb514edeb1278370abd8cc19",
+      "status": "FIXED-VERIFIED",
+      "phase": "W3",
+      "gateCheck": "G06",
+      "sourceRefs": [
+        "src/Smile.Compiler/WebOutputWriter.cs:2302"
+      ],
+      "reproduction": "Old Web produced 30 socket-reference mismatches while native passed; user observed facing and shield defects.",
+      "rootCause": "Web Euler axis signs differed from native X-then-Y-then-Z transform convention.",
+      "fixCommit": null,
+      "evidenceIds": [
+        "docs/implementation/h6-1-hardening-and-web-parity-ledger.md"
+      ],
+      "dispositionRationale": "Focused native/Web normal and PBR fallback tests pass; visible Edge poses corrected. Sin reported Arin looks good and stopped further screenshot comparisons."
+    },
+    {
+      "id": "W18",
+      "title": "Browser context menu covers Viewer secondary-pointer reset",
+      "classification": "user-reported",
+      "mandatory": true,
+      "baseline": "519e780cc723cc6beb514edeb1278370abd8cc19",
+      "status": "FIXED-VERIFIED",
+      "phase": "W5",
+      "gateCheck": "G08",
+      "sourceRefs": [
+        "src/Smile.Compiler/WebOutputWriter.cs"
+      ],
+      "reproduction": "Right-click opened the browser menu over the game canvas.",
+      "rootCause": "Canvas contextmenu default was not canceled.",
+      "fixCommit": null,
+      "evidenceIds": [
+        "docs/implementation/h6-1-hardening-and-web-parity-ledger.md"
+      ],
+      "dispositionRationale": "Canvas-only prevention; real Edge reset still works with no menu. Mobile-controls fixture verifies outside menu remains unaffected."
     }
   ],
   "lastReviewedSourceParent": "0768860e59e60c6231e0992f23b34a3a62c48483",

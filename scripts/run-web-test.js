@@ -292,6 +292,10 @@ async function runMobileControlsTests() {
     mobileEqual(desktop.host.smile.pointerHeld(1), 0, "primary canvas pointer release clears held state");
     mobileEqual(desktop.host.smile.pointerReleased(1), 1, "primary canvas pointer released transition");
     desktop.canvasPointer("pointerdown", 3, 320, 210, "mouse", 2);
+    mobileEqual(desktop.canvas.dispatch("contextmenu", {}).defaultPrevented, true,
+        "canvas context menu is suppressed without suppressing secondary input");
+    mobileEqual(desktop.dispatchWindow("contextmenu", {}).defaultPrevented, false,
+        "context menu outside the canvas remains a browser concern");
     desktop.canvasPointer("pointerdown", 4, 340, 220, "mouse", 1);
     mobileEqual(desktop.host.smile.pointerHeld(2), 1, "secondary canvas pointer held state");
     mobileEqual(desktop.host.smile.pointerHeld(3), 1, "middle canvas pointer held state");

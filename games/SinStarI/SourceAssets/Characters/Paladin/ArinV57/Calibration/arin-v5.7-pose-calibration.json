@@ -14,11 +14,11 @@
     "socketNamesSha256": "5f2c3a617f331afff81f49310abba9c3570f8c80f505a34396f9d99412cf1871"
   },
   "savedKeyframe": {
-    "clipIndex": 6,
-    "clipName": "SwordAttack",
-    "frame": 21
+    "clipIndex": 1,
+    "clipName": "Death",
+    "frame": 0
   },
-  "totalKeyframes": 23,
+  "totalKeyframes": 24,
   "clips": [
     {
       "index": 0,
@@ -72,7 +72,51 @@
     {
       "index": 1,
       "name": "Death",
-      "keyframes": []
+      "keyframes": [
+        {
+          "frame": 0,
+          "swordWrist": {
+            "rotation": [
+              -26,
+              -89,
+              83
+            ]
+          },
+          "shieldWrist": {
+            "rotation": [
+              -11,
+              180,
+              31
+            ]
+          },
+          "sword": {
+            "decoupled": true,
+            "rotation": [
+              -39,
+              0,
+              52
+            ],
+            "position": [
+              0,
+              0,
+              0
+            ]
+          },
+          "shield": {
+            "decoupled": true,
+            "rotation": [
+              -128,
+              18,
+              11
+            ],
+            "position": [
+              0,
+              0,
+              0
+            ]
+          }
+        }
+      ]
     },
     {
       "index": 2,

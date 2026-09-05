@@ -4,6 +4,7 @@ Import Smile.Simple3D.Core As Core
 Import Smile.Simple3D.Graphics3D As Graphics3D
 Import Smile.Simple3D.Scene3D As Scene3D
 Import Smile.Simple3D.Character3D As Character3D
+Import Smile.Simple3D.Math3D As Math3D
 
 Dim Camera As Core.Camera3D
 Dim First As Character3D.Actor
@@ -260,6 +261,8 @@ Call Check(Character3D.SocketValueThousandths(
     "HandTip",
     Graphics3D.ANIMATOR_SOCKET_POSITION_Y
 ) <> 0)
+
+Call CheckRotationParity(First)
 
 Call Check(Character3D.Place(First, 0, 0, 0))
 Call Check(Character3D.PlayMode(First, "RootMove", Graphics3D.ANIMATION_LOOP, 100))
@@ -550,6 +553,99 @@ If Failures = 0 Then
 Else
     Print "Character3D and Scene3D tests failed: "; Failures
 End If
+
+Sub CheckRotationParity(ByRef Value As Character3D.Actor)
+
+    Dim BasePoint As Core.Vector3
+    Dim ExpectedPoint As Core.Vector3
+    Dim Angles As Core.Vector3
+    Dim Rotation As Core.Matrix4
+    Dim TestIndex As Number
+
+    Call Check(Character3D.Place(Value, 0, 0, 0))
+    Call Check(Character3D.Rotate(Value, 0, 0, 0))
+    Call Check(Character3D.SetScale(Value, 100))
+
+    BasePoint.X = Character3D.SocketValueThousandths(Value, "HandTip", Graphics3D.ANIMATOR_SOCKET_POSITION_X)
+    BasePoint.Y = Character3D.SocketValueThousandths(Value, "HandTip", Graphics3D.ANIMATOR_SOCKET_POSITION_Y)
+    BasePoint.Z = Character3D.SocketValueThousandths(Value, "HandTip", Graphics3D.ANIMATOR_SOCKET_POSITION_Z)
+
+    ' Compare actual renderer sockets with the shared, native-convention math.
+    ' Include mixed axes so merely reversing one yaw sign cannot pass.
+
+    For TestIndex = 0 To 3
+
+        Angles = Math3D.Vector(0, 0, 0)
+
+        If TestIndex = 0 Then
+            Angles.X = 90
+        Else If TestIndex = 1 Then
+            Angles.Y = 90
+        Else If TestIndex = 2 Then
+            Angles.Z = 90
+        Else
+            Angles = Math3D.Vector(30, 45, 60)
+        End If
+
+        Rotation = Math3D.Multiply(Math3D.RotationX(Angles.X), Math3D.RotationY(Angles.Y))
+        Rotation = Math3D.Multiply(Rotation, Math3D.RotationZ(Angles.Z))
+        ExpectedPoint = Math3D.TransformPoint(BasePoint, Rotation)
+
+        Call Check(Character3D.Rotate(Value, Angles.X, Angles.Y, Angles.Z))
+        Call CheckSocketNear(Value, ExpectedPoint)
+        Call Check(Character3D.Rotate(Value, 0, 0, 0))
+        Call Check(Character3D.SetNodeRotationOffset(Value, 0, Angles.X, Angles.Y, Angles.Z))
+        Call CheckSocketNear(Value, ExpectedPoint)
+        Call Check(Character3D.SetNodeRotationOffset(Value, 0, 0, 0, 0))
+
+        ' A fixed-thousandths world pivot must rotate around itself, not origin.
+        ExpectedPoint = BasePoint
+        ExpectedPoint.X = ExpectedPoint.X - 250
+        ExpectedPoint.Y = ExpectedPoint.Y + 125
+        ExpectedPoint.Z = ExpectedPoint.Z - 500
+        ExpectedPoint = Math3D.TransformPoint(ExpectedPoint, Rotation)
+        ExpectedPoint.X = ExpectedPoint.X + 250
+        ExpectedPoint.Y = ExpectedPoint.Y - 125
+        ExpectedPoint.Z = ExpectedPoint.Z + 500
+
+        Call Check(Character3D.SetPartPivotRotationThousandths(
+            Value, 0, 250, -125, 500, Angles.X, Angles.Y, Angles.Z))
+        Call CheckSocketNear(Value, ExpectedPoint)
+        Call Check(Character3D.SetPartPivotRotationThousandths(Value, 0, 0, 0, 0, 0, 0, 0))
+
+        ' Exercise combined scale, rotation, translation and the world pivot.
+        ExpectedPoint = Math3D.MultiplyScalar(BasePoint, 2)
+        ExpectedPoint = Math3D.TransformPoint(ExpectedPoint, Rotation)
+        ExpectedPoint.X = ExpectedPoint.X + 10000
+        ExpectedPoint.Y = ExpectedPoint.Y + 20000
+        ExpectedPoint.Z = ExpectedPoint.Z + 30000
+
+        Call Check(Character3D.SetScale(Value, 200))
+        Call Check(Character3D.Place(Value, 10, 20, 30))
+        Call Check(Character3D.Rotate(Value, Angles.X, Angles.Y, Angles.Z))
+        Call CheckSocketNear(Value, ExpectedPoint)
+        Call Check(Character3D.SetScale(Value, 100))
+        Call Check(Character3D.Place(Value, 0, 0, 0))
+        Call Check(Character3D.Rotate(Value, 0, 0, 0))
+    End For
+
+    Call Check(Character3D.SetScale(Value, 120))
+    Call Check(Character3D.Place(Value, -1, 0, 0))
+
+End Sub
+
+Sub CheckSocketNear(Value As Character3D.Actor, ExpectedPoint As Core.Vector3)
+
+    ' Shared fixed-point trig rounds; allow less than one hundredth of a unit.
+
+    Call Check(Abs(Character3D.SocketValueThousandths(Value, "HandTip",
+        Graphics3D.ANIMATOR_SOCKET_POSITION_X) - ExpectedPoint.X) <= 8)
+    Call Check(Abs(Character3D.SocketValueThousandths(Value, "HandTip",
+        Graphics3D.ANIMATOR_SOCKET_POSITION_Y) - ExpectedPoint.Y) <= 8)
+    Call Check(Abs(Character3D.SocketValueThousandths(Value, "HandTip",
+        Graphics3D.ANIMATOR_SOCKET_POSITION_Z) - ExpectedPoint.Z) <= 8)
+
+End Sub
 
 Sub Check(Condition As Boolean)
 

@@ -4700,6 +4700,7 @@ Sub StepAnimationFrame(Direction As Number)
 
     Call CancelCalibrationEdit()
 
+    ScenePaused = True
     SampleRate = Character3D.ClipSampleRate(Character, SelectedClip)
     StepMilliseconds = Max(1, 1000 / Max(1, SampleRate))
     TargetTime = Character3D.AnimationTime(Character) + Direction * StepMilliseconds
@@ -4714,6 +4715,7 @@ Sub SeekFirstAnimationFrame()
 
     Call CancelCalibrationEdit()
 
+    ScenePaused = True
     SelectedTimelineEvent = FirstClipEvent()
     Ready = Character3D.SetAnimationTime(Character, 0) And Ready
 
@@ -4729,6 +4731,9 @@ Sub SeekCalibrationKeyframe(Direction As Number)
     Dim KeyCount As Number
     Dim TargetFrame As Number
     Dim TargetTime As Number
+
+    ''' Navigation pauses even when this clip has no saved keys to visit.
+    ScenePaused = True
 
     If CalibrationEditing Then
         Call CancelCalibrationEdit()

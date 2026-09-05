@@ -764,3 +764,27 @@ The native isolation fixture compares the entire default payload with canonical
 saved data; that fixture also passed in visible Edge. Edge's Attack pose panel
 showed 13 keys and the saved timeline markers. This is technical evidence, not
 new artistic approval or completion of the remaining Web workflow gate.
+
+## September 6: Web rotation parity and Sin's Death correction
+
+Web's Euler matrix used the opposite rotation signs from native for all three
+axes. That reversed arena facing and changed wrist/node/world-pivot corrections,
+especially the shield. The Web renderer now matches native's X-then-Y-then-Z
+convention. Do not compensate for this renderer defect by changing accepted
+character offsets or baking a second Web-only model. Native/shared numeric
+fixtures cover axis and combined object, node and pivot rotations.
+
+Sin confirmed Desktop and Web were looking good and then asked to stop further
+screenshot comparisons because Arin looked good on Web. This is visual feedback
+on the observed Viewer, not acceptance of every remaining Web workflow.
+
+Sin subsequently saved Death frame 0, bringing the canonical snapshot to 24 keys.
+The exported JSON SHA-256 is
+`C05C87BF0A92B373DB7ECD1CB304F4446B851E7AFEA836E8BB05D058B1B20F0B`.
+All previous keys and model/profile bytes remain unchanged. Web publication now
+includes this current snapshot; existing browser-authored saves still take
+precedence. The earlier comparison captures retain their 23-key baseline.
+
+Timeline 0-Frame, previous/next key and previous/next frame now pause the shared
+scene on both targets, including navigation on clips with no saved keys. Space
+resumes, camera controls remain usable, and navigation does not save a new key.

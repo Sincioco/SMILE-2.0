@@ -2304,9 +2304,11 @@ internal static class WebOutputWriter
                 const x=xDegrees*Math.PI/180,y=yDegrees*Math.PI/180,z=zDegrees*Math.PI/180;
                 const cx=Math.cos(x),sx=Math.sin(x),cy=Math.cos(y),sy=Math.sin(y),cz=Math.cos(z),sz=Math.sin(z);
                 renderer3DIdentityInto(output);
-                output[0]=cz*cy;output[1]=-sz*cy;output[2]=sy;
-                output[4]=cz*sy*sx+sz*cx;output[5]=-sz*sy*sx+cz*cx;output[6]=-cy*sx;
-                output[8]=-cz*sy*cx+sz*sx;output[9]=sz*sy*cx+cz*sx;output[10]=cy*cx;
+                // Native uses row-vector Rx * Ry * Rz. Web's column-vector matrix
+                // is its transpose, not an angle negation: positive yaw turns +Z toward +X.
+                output[0]=cz*cy;output[1]=sz*cy;output[2]=-sy;
+                output[4]=cz*sy*sx-sz*cx;output[5]=sz*sy*sx+cz*cx;output[6]=cy*sx;
+                output[8]=cz*sy*cx+sz*sx;output[9]=sz*sy*cx-cz*sx;output[10]=cy*cx;
                 return output;
             }
 
@@ -2329,7 +2331,7 @@ internal static class WebOutputWriter
                 else {gl.enable(gl.CULL_FACE);gl.cullFace(mode===3?gl.FRONT:gl.BACK);}
             }
 
-            function renderer3DModelInto(output,object){const sx=object.scale[0],sy=object.scale[1],sz=object.scale[2],rx=object.rotation[0]*Math.PI/180,ry=object.rotation[1]*Math.PI/180,rz=object.rotation[2]*Math.PI/180,s=renderer3DIdentityInto(renderer3DMatrixScratchA),x=renderer3DIdentityInto(renderer3DMatrixScratchB),y=renderer3DIdentityInto(renderer3DMatrixScratchC),z=renderer3DIdentityInto(renderer3DMatrixScratchD);s[0]=sx;s[5]=sy;s[10]=sz;x[5]=Math.cos(rx);x[6]=-Math.sin(rx);x[9]=Math.sin(rx);x[10]=Math.cos(rx);y[0]=Math.cos(ry);y[2]=Math.sin(ry);y[8]=-Math.sin(ry);y[10]=Math.cos(ry);z[0]=Math.cos(rz);z[1]=-Math.sin(rz);z[4]=Math.sin(rz);z[5]=Math.cos(rz);renderer3DMultiplyInto(output,x,s);renderer3DMultiplyInto(s,y,output);renderer3DMultiplyInto(output,z,s);output[12]=object.position[0];output[13]=object.position[1];output[14]=object.position[2];output[15]=1;return renderer3DApplyPivot(output,object);}
+            function renderer3DModelInto(output,object){renderer3DEulerInto(output,object.rotation[0],object.rotation[1],object.rotation[2]);for(let column=0;column<3;column+=1)for(let row=0;row<3;row+=1)output[column*4+row]*=object.scale[column];output[12]=object.position[0];output[13]=object.position[1];output[14]=object.position[2];return renderer3DApplyPivot(output,object);}
             function renderer3DViewInto(output){const eye=renderer3DCamera.position,target=renderer3DCamera.target,up=renderer3DCamera.up;let zx=target[0]-eye[0],zy=target[1]-eye[1],zz=target[2]-eye[2],length=Math.hypot(zx,zy,zz);zx/=length;zy/=length;zz/=length;let xx=up[1]*zz-up[2]*zy,xy=up[2]*zx-up[0]*zz,xz=up[0]*zy-up[1]*zx;length=Math.hypot(xx,xy,xz);xx/=length;xy/=length;xz/=length;const yx=zy*xz-zz*xy,yy=zz*xx-zx*xz,yz=zx*xy-zy*xx;output[0]=xx;output[1]=yx;output[2]=zx;output[3]=0;output[4]=xy;output[5]=yy;output[6]=zy;output[7]=0;output[8]=xz;output[9]=yz;output[10]=zz;output[11]=0;output[12]=-(xx*eye[0]+xy*eye[1]+xz*eye[2]);output[13]=-(yx*eye[0]+yy*eye[1]+yz*eye[2]);output[14]=-(zx*eye[0]+zy*eye[1]+zz*eye[2]);output[15]=1;return output;}
             function renderer3DProjectionInto(output,aspect){const f=1/Math.tan(renderer3DCamera.fov*Math.PI/360),near=renderer3DCamera.near,far=renderer3DCamera.far;output.fill(0);output[0]=f/aspect;output[5]=f;output[10]=(far+near)/(far-near);output[11]=1;output[14]=-2*far*near/(far-near);return output;}
             function renderer3DLookAtInto(output,eyeX,eyeY,eyeZ,targetX,targetY,targetZ){let zx=targetX-eyeX,zy=targetY-eyeY,zz=targetZ-eyeZ,length=Math.hypot(zx,zy,zz)||1;zx/=length;zy/=length;zz/=length;
@@ -2398,7 +2400,7 @@ internal static class WebOutputWriter
             function renderer3DNormalize(v){const l=Math.hypot(v[0],v[1],v[2]);return l>.000001?[v[0]/l,v[1]/l,v[2]/l]:[0,1,0];}
             function renderer3DCross(a,b){return[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];}
             function renderer3DDot(a,b){return a[0]*b[0]+a[1]*b[1]+a[2]*b[2];}
-            function renderer3DModel(object){const [sx,sy,sz]=object.scale,[rx,ry,rz]=object.rotation.map(value=>value*Math.PI/180);let s=renderer3DIdentity(),x=renderer3DIdentity(),y=renderer3DIdentity(),z=renderer3DIdentity(),t=renderer3DIdentity();s[0]=sx;s[5]=sy;s[10]=sz;x[5]=Math.cos(rx);x[6]=-Math.sin(rx);x[9]=Math.sin(rx);x[10]=Math.cos(rx);y[0]=Math.cos(ry);y[2]=Math.sin(ry);y[8]=-Math.sin(ry);y[10]=Math.cos(ry);z[0]=Math.cos(rz);z[1]=-Math.sin(rz);z[4]=Math.sin(rz);z[5]=Math.cos(rz);t[12]=object.position[0];t[13]=object.position[1];t[14]=object.position[2];return renderer3DApplyPivot(renderer3DMultiply(t,renderer3DMultiply(z,renderer3DMultiply(y,renderer3DMultiply(x,s)))),object);}
+            function renderer3DModel(object){return renderer3DModelInto(new Float32Array(16),object);}
             function renderer3DView(){const eye=renderer3DCamera.position,target=renderer3DCamera.target,z=renderer3DNormalize([target[0]-eye[0],target[1]-eye[1],target[2]-eye[2]]),x=renderer3DNormalize(renderer3DCross(renderer3DCamera.up,z)),y=renderer3DCross(z,x);return[x[0],y[0],z[0],0,x[1],y[1],z[1],0,x[2],y[2],z[2],0,-renderer3DDot(x,eye),-renderer3DDot(y,eye),-renderer3DDot(z,eye),1];}
             function renderer3DProjection(aspect){const f=1/Math.tan(renderer3DCamera.fov*Math.PI/360),near=renderer3DCamera.near,far=renderer3DCamera.far;return[f/aspect,0,0,0,0,f,0,0,0,0,(far+near)/(far-near),1,0,0,-2*far*near/(far-near),0];}
 
@@ -3354,6 +3356,7 @@ internal static class WebOutputWriter
             window.addEventListener("keyup", event => { releaseInput(`keyboard:${event.code}`); });
 
             canvas.addEventListener("click", () => { userInteracted = true; canvas.focus(); syncMusic(); });
+            canvas.addEventListener("contextmenu", event => event.preventDefault());
             canvas.addEventListener("pointerdown", handleCanvasPointerDown);
             canvas.addEventListener("pointermove", handleCanvasPointerMove);
             canvas.addEventListener("pointerup", event => handleCanvasPointerEnd(event));

@@ -57,6 +57,36 @@ CalibrationUndoCount = 0
 Call SaveCalibrationKeyframes(False)
 Call RestartPresentation()
 
+ScenePaused = False
+
+Call SeekFirstAnimationFrame()
+Call CalibrationCheck(ScenePaused And Character3D.AnimationTime(Character) = 0,
+    "0-Frame pauses the scene at frame zero")
+
+ScenePaused = False
+
+Call StepAnimationFrame(1)
+Call CalibrationCheck(ScenePaused And Character3D.AnimationTime(Character) > 0,
+    "Frame forward pauses before stepping")
+
+ScenePaused = False
+
+Call StepAnimationFrame(-1)
+Call CalibrationCheck(ScenePaused And Character3D.AnimationTime(Character) = 0,
+    "Frame backward pauses before stepping")
+
+ScenePaused = False
+
+Call SeekCalibrationKeyframe(-1)
+Call CalibrationCheck(ScenePaused, "Previous key pauses even without saved keys")
+
+ScenePaused = False
+
+Call SeekCalibrationKeyframe(1)
+Call CalibrationCheck(ScenePaused, "Next key pauses even without saved keys")
+Call ToggleScenePause()
+Call CalibrationCheck(Not ScenePaused, "Space-style toggle resumes after navigation")
+
 TestTwin = Character3D.LoadWithPolicy(ActiveProfile.AssetPath,
     Character3D.CHARACTER_LOAD_REQUIRE_PBR)
 
