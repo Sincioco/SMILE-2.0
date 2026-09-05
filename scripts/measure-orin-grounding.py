@@ -12,7 +12,7 @@ parser=argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--model', type=Path, default=root/'orin-v1.3-animation-checkpoint.glb')
 parser.add_argument('--output', type=Path, default=root/'Calibration/orin-v1.3-grounding.json')
 parser.add_argument('--exclude', nargs='+', default=['00_Shield','01_Weapon'])
-parser.add_argument('--clips', nargs='+', default=['Idle','Defend','Hit','Death'])
+parser.add_argument('--clips', nargs='+', default=['Idle','Defend','Hit','Death','JumpAttack'])
 args=parser.parse_args()
 raw=args.model.read_bytes()
 length=struct.unpack_from('<I',raw,12)[0]; doc=json.loads(raw[20:20+length]); binary=raw[28+length:]

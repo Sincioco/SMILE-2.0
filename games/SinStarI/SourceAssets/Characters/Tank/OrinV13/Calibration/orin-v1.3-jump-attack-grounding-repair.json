@@ -1,0 +1,9 @@
+{
+  "beforeSha256": "84B55E0EC83746A0188A473102F73377E63C3E9F15F04B597CF3DABA6B78DDCF",
+  "afterSha256": "3100F1ACB2E9B1F3776E8A94C113BB23C0A90A7141590A0936958991CC99DC0C",
+  "clip": "JumpAttack",
+  "impactSample": 37,
+  "sampleRate": 30,
+  "idleReferenceMinimumY1000": 3,
+  "policy": "Preserve the accepted launch and all non-JumpAttack data; move only the Root translation from impact through the final get-up to the accepted Idle floor."
+}

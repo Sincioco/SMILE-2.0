@@ -321,6 +321,37 @@ Public Function ClipName(ProfileIndex As Number, ClipIndex As Number) As Text
 
 End Function
 
+''' Rotates every authored Party attack without rerolling during one turn.
+Public Function PartyAttackName(ProfileIndex As Number, AttackCycle As Number) As Text
+
+    Dim Result As Text
+
+    AttackCycle = Max(0, AttackCycle)
+
+    If ProfileIndex = PROFILE_ARIN Then
+
+        If AttackCycle Mod 2 = 0 Then
+            Result = "SwordAttack"
+        Else
+            Result = "SwordAttack2"
+        End If
+
+    Else If ProfileIndex = PROFILE_ORIN Then
+
+        If AttackCycle Mod 3 = 0 Then
+            Result = "SwordAttack"
+        Else If AttackCycle Mod 3 = 1 Then
+            Result = "JumpAttack"
+        Else
+            Result = "ThorAttack"
+        End If
+
+    End If
+
+    Return Result
+
+End Function
+
 Public Function ClipLabel(ProfileIndex As Number, ClipIndex As Number) As Text
 
     Dim Result As Text
@@ -764,7 +795,7 @@ Public Function CalibrationFingerprint(ProfileIndex As Number) As Text
     Result = "db3286e4a9dc8f3064f65c1bc36047e7af4f2ff771ebc51bf4c73dc6c16ac2ed"
 
     If ProfileIndex = PROFILE_ORIN Then
-        Result = "5a6f903ccc4c5ff669689cc2a176133874a6b0641ed8f33b8d4429f7a8d6ca4d"
+        Result = "df83d4b8076e6f903902acc27321ab5da2cbdbb1348fdb8f8045e70aed0691c8"
     End If
 
     Return Result

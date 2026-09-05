@@ -120,6 +120,21 @@ try {
     Assert-True (-not $viewerSource.Contains('ClearanceRadius') -and
         -not $viewerSource.Contains('MinimumSeparation')) `
         'Party attack approaches must not be displaced by animated full-model bounds.'
+    $timelineCapture = $viewerSource.IndexOf(
+        'If TimelineScrubbing Then', [System.StringComparison]::Ordinal)
+    $outsidePointerReturn = $viewerSource.IndexOf(
+        'If Not Pointer_Inside() Then', $timelineCapture, [System.StringComparison]::Ordinal)
+    Assert-True ($timelineCapture -ge 0 -and $outsidePointerReturn -gt $timelineCapture) `
+        'Timeline pointer ownership must be handled before an outside-window return.'
+    Assert-Contains $viewerSource `
+        'PartyHitTarget = 1) Then' `
+        'Dragon Party target ownership'
+    Assert-Contains $viewerSource `
+        'Call CharacterViewer.KeepCameraAboveGround(Camera, 0)' `
+        'Solid-floor camera comfort'
+    Assert-Contains $profileSource `
+        'Public Function PartyAttackName(ProfileIndex As Number, AttackCycle As Number) As Text' `
+        'Party attack rotation'
     & (Join-Path $PSScriptRoot 'test-arin-calibration.ps1')
     if ($LASTEXITCODE -ne 0) { throw 'Calibration persistence checks failed.' }
     & (Join-Path $PSScriptRoot 'test-viewer-calibration-native.ps1')

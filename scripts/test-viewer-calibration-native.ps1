@@ -8,18 +8,36 @@ $testRoot = Join-Path $repositoryRoot 'artifacts\tests\ViewerCalibrationIsolatio
 $null = New-Item -ItemType Directory -Path $testRoot -Force
 $viewerSource = Get-Content -LiteralPath (Join-Path $toolRoot 'Program.smile') -Raw
 $testStartup = Get-Content -LiteralPath (Join-Path $toolRoot 'CalibrationTests.smile') -Raw
+$profileConstants = foreach ($characterName in @('Arin', 'Orin')) {
+    $fingerprint = & {
+        . (Join-Path $PSScriptRoot 'sync-arin-v5-7-calibration.ps1') -Character $characterName -FunctionsOnly
+        Get-ProfileFingerprint
+    }
+    'Const TEST_' + $characterName.ToUpperInvariant() + '_PROFILE_FINGERPRINT = "' + $fingerprint + '"'
+}
 $startupIndex = $viewerSource.IndexOf('Game Window "')
 $helperIndex = $viewerSource.IndexOf('Sub LoadViewer()')
 if ($startupIndex -lt 0 -or $helperIndex -le $startupIndex) { throw 'Viewer startup boundaries changed; update the isolation harness.' }
 # Mechanical test-input assembly: retain the actual declarations and every actual
 # Viewer procedure, replacing only its interactive startup with bounded checks.
-$testSource = $viewerSource.Substring(0, $startupIndex) + $testStartup + "`n" + $viewerSource.Substring($helperIndex)
+$testSource = $viewerSource.Substring(0, $startupIndex) + ($profileConstants -join "`n") + "`n`n" +
+    $testStartup + "`n" + $viewerSource.Substring($helperIndex)
 $encoding = [Text.UTF8Encoding]::new($false)
 [IO.File]::WriteAllText((Join-Path $testRoot 'Program.smile'), $testSource, $encoding)
 [xml]$project = Get-Content -LiteralPath (Join-Path $toolRoot 'Character3DViewer.smileproj') -Raw
 $applicationId = "smile.tests.viewer-calibration.run-$([Guid]::NewGuid().ToString('N'))"
 $project.SmileProject.PropertyGroup.ApplicationId = $applicationId
 $project.SmileProject.PropertyGroup.RememberWindowPlacement = 'false'
+# Seed the isolated application with real canonical snapshots. Empty storage hid
+# a stale Orin runtime fingerprint during the JumpAttack asset migration.
+$nativeIdentityHash = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData(
+    [Text.Encoding]::UTF8.GetBytes($applicationId))).ToLowerInvariant()
+$testDataRoot = Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) `
+    "SMILE 2.0\Games\$nativeIdentityHash\Data"
+foreach ($characterName in @('Arin', 'Orin')) {
+    & (Join-Path $PSScriptRoot 'sync-arin-v5-7-calibration.ps1') `
+        -Character $characterName -Mode Restore -DataRoot $testDataRoot
+}
 # Include external model textures alongside their glTF/GLB cooking inputs.
 Copy-Item -LiteralPath (Join-Path $toolRoot 'BuildAssets') -Destination $testRoot -Recurse -Force
 foreach ($entry in $project.SmileProject.ItemGroup.ChildNodes) {
@@ -50,7 +68,7 @@ $result = $result -join "`n"
 [IO.File]::WriteAllText($output, $result, $encoding)
 if ($result.Trim() -cne 'Viewer calibration isolation passed') { throw "Native Viewer checks failed: $result" }
 Write-Host $result.Trim()
-Write-Host "Isolated ApplicationId: $applicationId; user calibration was not loaded or written."
+Write-Host "Isolated ApplicationId: $applicationId; canonical snapshot copies loaded; live user storage untouched."
 $nativeIdentity = $applicationId
 $nativeIdentityHash = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData(
     [Text.Encoding]::UTF8.GetBytes($nativeIdentity))).ToLowerInvariant()

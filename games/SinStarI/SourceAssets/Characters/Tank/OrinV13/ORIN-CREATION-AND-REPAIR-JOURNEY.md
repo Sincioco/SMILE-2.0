@@ -152,3 +152,19 @@ This prevents stale thunder, charge, or discharge thresholds from firing after a
 jump. The final grounded actor transform still drives every equipment socket and effect.
 The canonical Orin model, descriptor, zero-key calibration snapshot, and package hashes
 are unchanged by this runtime ownership repair.
+
+## September 5: Jump Attack impact grounding
+
+The Mixamo source confirms a single authored launch followed by a kneeling ground
+smash and a grounded get-up. The accepted checkpoint had kept the skeletal pose but
+discarded the armature-object descent, so samples 38–71 floated as much as 0.292
+model units above the Idle sole height. This was not intentional jump motion.
+
+`scripts/repair-orin-jump-attack-grounding.py` is a hash-gated surgical repair. It
+preserves samples 0–36 and all non-JumpAttack data, then writes only the JumpAttack
+Root translation from impact sample 37 through the last sample. The resulting 30 Hz
+measurement keeps the launch arc and reports every impact/get-up sample at +0.003,
+matching Idle. The accepted Death channels and contact report remain unchanged.
+
+The model and cooked SM3D fingerprint migration retains Orin's zero-key calibration
+identity; Arin's 23-key calibration is unrelated and remains unchanged.

@@ -102,8 +102,12 @@ after a normal swing. Hiding its hammer or owner destroys that context's trail i
 including while frozen, without affecting another actor. The slam does not retrigger during
 follow-through. The white glow mesh uses the actor's final grounded transform.
 
-The dragon takes the third turn, alternating Fire Breath and Claw Strike. Mouth-attached
-fire sweeps toward Arin and then Orin while they guard and react. The claw animation
+The dragon opens the demonstration, alternating Fire Breath and Claw Strike on its turns.
+Heroes guard before responding. Arin rotates through both sword attacks; Orin rotates
+through Sword Attack, Jump Attack and Thor Attack. An extra boss-first guard beat occurs
+periodically. This is bounded clip rotation, not a combat AI or randomized hero move picker.
+The dragon's aim, fire and hit/KO reaction share the same target chosen once per turn.
+The claw animation
 includes a short approach and return. Idle wings, head and tail keep moving between turns;
 party impacts trigger a brief hit reaction. This is a presentation demo, without combat damage
 or enemy AI. The self-contained rig, six clips, original model, reference, descriptor and
@@ -176,3 +180,16 @@ bounds never rewrite those cinematic positions. Animated dragon camera sockets
 fall back to stable arena anchors if a sampled socket leaves the scene envelope.
 Below Camera, Party displays rendered position/target XYZ, yaw/pitch, FOV and
 distance, so screenshots contain enough information to diagnose a bad angle.
+
+### September 5: grounding, capture and saved-profile regression fixes
+
+Orin's Jump Attack now lands for the kneeling smash/recovery while preserving its
+launch and the accepted other clips. Its canonical package records the surgical Root
+translation repair and hashes. Saved calibration fingerprints must match the repaired
+model and cooked SM3D: stale fingerprints can let individual geometry draw yet reject
+companions in Dragon/Party. The isolated native calibration test now seeds copies of
+both current canonical saves and loads all four tabs before testing edits.
+
+Solid-floor orbit is clamped at ground height in every tab; grid-only navigation still
+allows below-floor inspection. A timeline drag keeps exclusive pointer ownership beyond
+the window's left/right edges and through its release frame, preventing simultaneous pan.

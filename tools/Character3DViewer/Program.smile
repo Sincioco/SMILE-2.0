@@ -163,6 +163,8 @@ Dim PartyMode As Boolean
 Dim PartyCompanion As ViewerActorContext
 Dim PartyElapsed As Number
 Dim PartyTurn As Number
+Dim PartyAttackCycle As Number
+Dim PartyDragonOnlyTurn As Boolean
 Dim PartyPreviousShotStage As Number
 Dim PartyFatalTarget As Number
 Dim PartyFatalStarted As Boolean
@@ -533,6 +535,11 @@ Do
 
         Call UpdateDragon()
         Call ApplyPartyAttackCamera()
+
+        If FloorVisible Then
+            Call CharacterViewer.KeepCameraAboveGround(Camera, 0)
+        End If
+
         Call UpdateBattleAudio()
         Call UpdateOrinStorm()
         Call AdvanceSceneVfx()
@@ -1208,13 +1215,22 @@ Sub UpdateDragon()
         DRAGON_POSITION_Z + 30 * Travel1000 / 1000) And Ready
 
     If DragonInspection Then
+
         Target = Character3D.SocketPosition(DragonOpponent.Actor, "Chest", BODY_PART_INDEX)
+
+        If PartyReady And DragonCounter Mod 2 = 1 Then
+            Target = Character3D.SocketPosition(PartyCompanion.Actor, "Chest", BODY_PART_INDEX)
+        End If
+
+    Else If (PartyMode And
+        PartyReady And
+        PartyHitTarget = 1) Then
+
+        Target = Character3D.SocketPosition(PartyCompanion.Actor, "Chest", BODY_PART_INDEX)
+
     Else
         Target = Character3D.SocketPosition(Character, "Chest", BODY_PART_INDEX)
-    End If
 
-    If PartyReady And DragonCounter Mod 2 = 1 Then
-        Target = Character3D.SocketPosition(PartyCompanion.Actor, "Chest", BODY_PART_INDEX)
     End If
 
     ''' Head and child mouth/eyes follow the same target before attack VFX starts.
@@ -2565,10 +2581,21 @@ Function HandleInterfacePointer() As Boolean
         Return True
     End If
 
-    If (TimelineScrubbing And
-        Not Pointer_Held(POINTER_PRIMARY) And
-        Not Pointer_Pressed(POINTER_PRIMARY)) Then
-        TimelineScrubbing = False
+    If TimelineScrubbing Then
+
+        If Pointer_Pressed(POINTER_PRIMARY) Or Pointer_Held(POINTER_PRIMARY) Then
+            Call SeekFromPointer()
+        Else
+
+            TimelineScrubbing = False
+        End If
+
+        If Pointer_Released(POINTER_PRIMARY) Then
+            TimelineScrubbing = False
+        End If
+
+        Return True
+
     End If
 
     If Not Pointer_Inside() Then
@@ -2582,20 +2609,6 @@ Function HandleInterfacePointer() As Boolean
         Else
 
             Call ResetAll()
-        End If
-
-        Return True
-
-    End If
-
-    If TimelineScrubbing Then
-
-        If Pointer_Pressed(POINTER_PRIMARY) Or Pointer_Held(POINTER_PRIMARY) Then
-            Call SeekFromPointer()
-        End If
-
-        If Pointer_Released(POINTER_PRIMARY) Then
-            TimelineScrubbing = False
         End If
 
         Return True
@@ -8013,7 +8026,7 @@ Function ProductionClipStatusLabel() As Text
     If ProfileIndex = ViewerProfiles.PROFILE_ORIN Then
         Result = "9-animation viewer candidate"
     Else If ViewerProfiles.IsPartyCharacter(ProfileIndex) Then
-        Result = "8-clip viewer candidate"
+        Result = "9-animation viewer candidate"
     Else If ProfileIndex = ViewerProfiles.PROFILE_ARIN_V56 Then
         Result = "v5.6 diagnostic candidate"
     Else If ProfileIndex = ViewerProfiles.PROFILE_ARIN_ORIGINAL Then
@@ -8452,7 +8465,9 @@ End Sub
 Sub ResetPartyDemo()
 
     PartyElapsed = 0
-    PartyTurn = 0
+    PartyTurn = 2
+    PartyAttackCycle = 0
+    PartyDragonOnlyTurn = True
     PartyFatalTarget = -1
     PartyFatalStarted = False
     PartyHitTarget = -1
@@ -8466,10 +8481,24 @@ Sub ResetPartyDemo()
     Call SetPartyPresentationState(0, PARTY_STATE_ALIVE)
     Call SetPartyPresentationState(1, PARTY_STATE_ALIVE)
     Call InitializePartyFormation()
+    Call PreparePartyDragonTurn()
 
     If PartyReady Then
         Ready = Character3D.SetPartVisible(PartyCompanion.Actor, WEAPON_PART_INDEX, SwordVisible) And Ready
         Ready = Character3D.SetPartVisible(PartyCompanion.Actor, SHIELD_PART_INDEX, ShieldVisible) And Ready
+    End If
+
+End Sub
+
+Sub PreparePartyDragonTurn()
+
+    Random PartyFatalTarget From -1 To 1
+    PartyFatalStarted = False
+    PartyHitResolved = False
+    PartyHitTarget = PartyFatalTarget
+
+    If PartyHitTarget < 0 Then
+        PartyHitTarget = DragonCounter Mod PartyParticipantCount
     End If
 
 End Sub
@@ -8482,11 +8511,11 @@ Function PartyAttackDuration() As Number
     Dim Result As Number
 
     Actor = Character
-    Name = "SwordAttack"
+    Name = ViewerProfiles.PartyAttackName(ViewerProfiles.PROFILE_ARIN, PartyAttackCycle)
 
     If PartyTurn = 1 Then
         Actor = PartyCompanion.Actor
-        Name = "ThorAttack"
+        Name = ViewerProfiles.PartyAttackName(ViewerProfiles.PROFILE_ORIN, PartyAttackCycle)
     End If
 
     Result = 1200
@@ -8516,6 +8545,8 @@ Sub PlayPartyClip(ByRef Actor As Character3D.Actor, Name As Text, ByRef Clip As 
     HoldGuard = HoldGuard Or Name = "Death"
 
     If (Name = "SwordAttack" Or
+        Name = "SwordAttack2" Or
+        Name = "JumpAttack" Or
         Name = "ThorAttack" Or
         Name = "Hit" Or
         HoldGuard) Then
@@ -8573,16 +8604,9 @@ Sub AdvancePartyDemo()
         PartyStage = -1
 
         If PartyTurn = 2 Then
+            PartyDragonOnlyTurn = False
 
-            Random PartyFatalTarget From -1 To 1
-            PartyFatalStarted = False
-            PartyHitResolved = False
-            PartyHitTarget = PartyFatalTarget
-
-            If PartyHitTarget < 0 Then
-                PartyHitTarget = DragonCounter Mod PartyParticipantCount
-            End If
-
+            Call PreparePartyDragonTurn()
         End If
 
     End If
@@ -8621,10 +8645,10 @@ Sub AdvancePartyDemo()
 
         Stage = 1
         Travel1000 = 1000
-        Name = "SwordAttack"
+        Name = ViewerProfiles.PartyAttackName(ViewerProfiles.PROFILE_ARIN, PartyAttackCycle)
 
         If PartyTurn = 1 Then
-            Name = "ThorAttack"
+            Name = ViewerProfiles.PartyAttackName(ViewerProfiles.PROFILE_ORIN, PartyAttackCycle)
         End If
 
     End If
@@ -8729,10 +8753,33 @@ Sub AdvanceDragonTurn()
 
     If PartyElapsed >= Duration Then
 
-        PartyTurn = 0
         PartyElapsed = 0
         PartyStage = -1
         DragonCounter = DragonCounter + 1
+
+        If PartyDragonOnlyTurn Then
+
+            PartyDragonOnlyTurn = False
+            PartyTurn = 0
+
+        Else
+
+            PartyAttackCycle = PartyAttackCycle + 1
+
+            If DragonCounter Mod 3 = 0 Then
+
+                PartyDragonOnlyTurn = True
+                PartyTurn = 2
+
+                Call PreparePartyDragonTurn()
+
+            Else
+                PartyTurn = 0
+
+            End If
+
+        End If
+
         Return
 
     End If
@@ -9017,9 +9064,19 @@ Sub DrawPartyOverlay()
 
     AttackSequence = "Sword Attack"
 
-    If PartyTurn = 1 Then
+    If PartyTurn = 0 And PartyAttackCycle Mod 2 = 1 Then
 
-        AttackSequence = "Thor Attack"
+        AttackSequence = "Sword Attack 2"
+
+    Else If PartyTurn = 1 Then
+
+        If PartyAttackCycle Mod 3 = 0 Then
+            AttackSequence = "Sword Attack"
+        Else If PartyAttackCycle Mod 3 = 1 Then
+            AttackSequence = "Jump Attack"
+        Else
+            AttackSequence = "Thor Attack"
+        End If
 
     Else If PartyTurn = 2 Then
 

@@ -96,10 +96,11 @@ Block, Hit and Death also receive measured frame-dependent ground corrections.
 `Calibration/orin-v1.3-grounding.json` records the 30 Hz skinned-body measurements;
 `scripts/measure-orin-grounding.py` reproduces them without editing the GLB.
 The raw body bound starts at -0.116 model units while Idle starts near +0.003,
-so the shared baseline correction is -0.119. Jump/run motion is preserved above
-that corrected baseline. Corrections are selected by clip name, not cooker order,
-and apply in both the individual tab and Party. The hammer glow uses the final
-actor position, keeping it aligned with the lowered equipment.
+so the shared baseline correction is -0.119. JumpAttack preserves its launch,
+then its impact and get-up remain at the Idle floor; Run preserves its authored
+motion above the corrected baseline. Corrections are selected by clip name, not
+cooker order, and apply in both the individual tab and Party. The hammer glow
+uses the final actor position, keeping it aligned with the lowered equipment.
 
 ## Rebuild
 
@@ -130,3 +131,18 @@ and runtime policy; Party never restarts an already-held Orin guard.
 
 Both individual and Party paths use the final grounded transform for equipment
 and VFX. Current hashes live in `Calibration/orin-v1.3-profile.json`.
+
+## September 5: Jump Attack impact grounding
+
+The original Mixamo Jump Attack launches Orin, lands in a kneeling ground smash,
+and rises from that grounded pose. Its discarded armature-object descent left the
+accepted checkpoint floating during the entire recovery even though the final pose
+looked upright. `scripts/repair-orin-jump-attack-grounding.py` changes only the
+JumpAttack Root translation from impact sample 37 through the final sample. The
+first 37 launch samples, every other animation, geometry, materials, skin, textures,
+and equipment remain unchanged.
+
+`Calibration/orin-v1.3-jump-attack-grounding-repair.json` records the accepted
+before/after hashes. The grounding report now measures JumpAttack at 30 Hz: the
+authored airborne launch remains visible and every impact/recovery sample measures
+at the same +0.003 model-unit sole height as Idle before the shared baseline.

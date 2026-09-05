@@ -33,9 +33,10 @@
     "readableSnapshot": "Calibration/orin-v1.3-pose-calibration.json",
     "groundingMeasurements": "Calibration/orin-v1.3-grounding.json",
     "groundingBuilder": "scripts/measure-orin-grounding.py",
-    "groundingPolicy": "Shared -0.119 model-unit baseline, with measured Defend, Hit and Death contact corrections; glow uses the final actor position",
+    "groundingPolicy": "Shared -0.119 model-unit baseline, with measured Defend, Hit and Death contact corrections; JumpAttack preserves its launch and grounds impact through get-up; glow uses the final actor position",
     "syncScript": "scripts/sync-arin-v5-7-calibration.ps1 -Character Orin",
-    "deathRootRepair": "Calibration/orin-v1.3-death-root-repair.json"
+    "deathRootRepair": "Calibration/orin-v1.3-death-root-repair.json",
+    "jumpAttackGroundingRepair": "Calibration/orin-v1.3-jump-attack-grounding-repair.json"
   },
   "previews": "Previews",
   "vfx": {
@@ -55,6 +56,7 @@
   "build": {
     "blenderBuilder": "scripts/build-orin-v1-3-mixamo.py",
     "viewerBuild": "tools/Character3DViewer/Build.ps1",
-    "acceptedDeathRepair": "scripts/repair-orin-death-root.py"
+    "acceptedDeathRepair": "scripts/repair-orin-death-root.py",
+    "acceptedJumpAttackRepair": "scripts/repair-orin-jump-attack-grounding.py"
   }
 }

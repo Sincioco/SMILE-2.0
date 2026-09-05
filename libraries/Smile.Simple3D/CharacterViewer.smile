@@ -359,6 +359,15 @@ Public Function ZoomTargetDegrees(Value As ZoomState) As Number
 
 End Function
 
+''' Prevents a solid arena floor from exposing its empty underside while orbiting.
+Public Sub KeepCameraAboveGround(ByRef Camera As Core.Camera3D, MinimumY As Number)
+
+    If Camera.Position.Y < MinimumY Then
+        Camera.Position.Y = MinimumY
+    End If
+
+End Sub
+
 ''' Scales pointer motion without dropping sub-unit movement between frames.
 Public Function RetainedPointerDelta(
     ByRef Remainder As Number,

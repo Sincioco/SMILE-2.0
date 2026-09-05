@@ -19,12 +19,41 @@ Dim TestLightningTarget As Core.Vector3
 
 Game Window "SMILE Calibration Isolation Tests" Size 640 By 480
 
+Call CalibrationCheck(ViewerProfiles.CalibrationFingerprint(ViewerProfiles.PROFILE_ARIN) =
+    TEST_ARIN_PROFILE_FINGERPRINT, "Arin runtime fingerprint matches canonical package")
+Call CalibrationCheck(ViewerProfiles.CalibrationFingerprint(ViewerProfiles.PROFILE_ORIN) =
+    TEST_ORIN_PROFILE_FINGERPRINT, "Orin runtime fingerprint matches canonical package")
+
 ProfileIndex = ViewerProfiles.PROFILE_ARIN
 
 Call LoadViewer()
 Call CalibrationCheck(Ready And Not ViewerError, "Load profile")
+Call CalibrationCheck(Not CalibrationStorageRejected, "Accept current Arin saved calibration")
 Call CalibrationCheck(Character3D.SocketCount(Character) = ActiveProfile.ExpectedSocketCount,
     "Profile socket contract")
+Call SelectCharacterTab(1)
+Call CalibrationCheck(Ready And Not ViewerError And Not CalibrationStorageRejected,
+    "Orin loads with its canonical saved calibration")
+Call SelectCharacterTab(2)
+Call CalibrationCheck(Ready And Not ViewerError And PartyReady,
+    "Dragon loads both calibrated companions")
+Call SelectCharacterTab(3)
+Call CalibrationCheck(Ready And Not ViewerError And PartyReady,
+    "Party loads both calibrated heroes")
+Call SelectCharacterTab(0)
+Call CalibrationCheck(Ready And Not ViewerError And Not CalibrationStorageRejected,
+    "Return to Arin after Dragon and Party")
+
+''' The remaining editing checks start from an empty isolated track.
+
+Call ClearCalibrationMemory()
+
+CalibrationSaved = False
+CalibrationStorageCount = 0
+CalibrationUndoCount = 0
+
+Call SaveCalibrationKeyframes(False)
+Call RestartPresentation()
 
 TestTwin = Character3D.LoadWithPolicy(ActiveProfile.AssetPath,
     Character3D.CHARACTER_LOAD_REQUIRE_PBR)

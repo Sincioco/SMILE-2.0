@@ -56,6 +56,7 @@ Dim FormationLast As Core.Vector3
 Dim LargeVector As Core.Vector3
 Dim NormalizedVector As Core.Vector3
 Dim StableAnchor As Core.Vector3
+Dim GroundCamera As Core.Camera3D
 
 Game Window "Character 3D Viewer Hardening Tests" Size 320 By 240
 
@@ -132,6 +133,17 @@ CursorProjection = CharacterViewer.ProjectViewerPoint(CursorAnchor, OrbitFirst, 
 
 Call Check(CursorProjection.Visible)
 Call Check(Abs(CursorProjection.X - 850) <= 2 And Abs(CursorProjection.Y - 370) <= 2)
+
+GroundCamera.Position.Y = -40
+GroundCamera.Target.Y = 65
+
+Call CharacterViewer.KeepCameraAboveGround(GroundCamera, 0)
+Call Check(GroundCamera.Position.Y = 0 And GroundCamera.Target.Y = 65)
+
+GroundCamera.Position.Y = 25
+
+Call CharacterViewer.KeepCameraAboveGround(GroundCamera, 0)
+Call Check(GroundCamera.Position.Y = 25)
 
 OrbitControls.OrbitPitch = 25
 OrbitNext = BattleCamera.Orbit(OrbitBase, OrbitControls, 135000)
@@ -310,6 +322,9 @@ Call Check(ViewerProfiles.ClipName(ViewerProfiles.PROFILE_ARIN, 1) = "SwordAttac
 Call Check(ViewerProfiles.ClipName(ViewerProfiles.PROFILE_ARIN, 2) = "SwordAttack2")
 Call Check(ViewerProfiles.ClipName(ViewerProfiles.PROFILE_ARIN, 3) = "Defend")
 Call Check(ViewerProfiles.ClipName(ViewerProfiles.PROFILE_ARIN, 7) = "Run")
+Call Check(ViewerProfiles.PartyAttackName(ViewerProfiles.PROFILE_ARIN, 0) = "SwordAttack")
+Call Check(ViewerProfiles.PartyAttackName(ViewerProfiles.PROFILE_ARIN, 1) = "SwordAttack2")
+Call Check(ViewerProfiles.PartyAttackName(ViewerProfiles.PROFILE_ARIN, 2) = "SwordAttack")
 Call Check(ViewerProfiles.EpicGlowAvailable(ViewerProfiles.PROFILE_ARIN))
 Call Check(ViewerProfiles.EpicGlowVisibleByDefault(ViewerProfiles.PROFILE_ARIN))
 Call Check(ViewerProfiles.ProfileCount() = 6)
@@ -337,6 +352,10 @@ Call Check(ViewerProfiles.ClipName(ViewerProfiles.PROFILE_ORIN, 5) = "Hit")
 Call Check(ViewerProfiles.ClipName(ViewerProfiles.PROFILE_ORIN, 6) = "Death")
 Call Check(ViewerProfiles.ClipName(ViewerProfiles.PROFILE_ORIN, 7) = "Victory")
 Call Check(ViewerProfiles.ClipName(ViewerProfiles.PROFILE_ORIN, 8) = "Run")
+Call Check(ViewerProfiles.PartyAttackName(ViewerProfiles.PROFILE_ORIN, 0) = "SwordAttack")
+Call Check(ViewerProfiles.PartyAttackName(ViewerProfiles.PROFILE_ORIN, 1) = "JumpAttack")
+Call Check(ViewerProfiles.PartyAttackName(ViewerProfiles.PROFILE_ORIN, 2) = "ThorAttack")
+Call Check(ViewerProfiles.PartyAttackName(ViewerProfiles.PROFILE_ORIN, 3) = "SwordAttack")
 Call Check(ViewerProfiles.ClipLoops(ViewerProfiles.PROFILE_ORIN, 0))
 Call Check(Not ViewerProfiles.ClipLoops(ViewerProfiles.PROFILE_ORIN, 4))
 Call Check(ViewerProfiles.ClipLoops(ViewerProfiles.PROFILE_ORIN, 8))
