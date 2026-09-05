@@ -8,6 +8,8 @@ Demo starts automatically and cycles Torch, Windy Torch, Brazier, Line Fire, Fir
 
 ## Controls
 
+The floor grid uses a normal orange, opaque, non-emissive material rather than additive neon. Bare Alt no longer interrupts the frame loop in rebuilt native programs.
+
 - Backtick (the grave-accent key above Tab on US keyboards) cycles through panels hidden, all UI hidden, then the prior UI restored. The first tap keeps the header, FPS, and helper text. Hidden controls cannot intercept the mouse. The scene and camera continue normally. Right-click reset restores the UI.
 - Left drag pans; middle drag orbits; wheel zooms smoothly.
 - H Orbit, V Orbit, and Zoom sliders support hover-wheel adjustment and capture a drag until release, including outside the track.

@@ -193,6 +193,7 @@ Dim CalibrationGripLimit As Boolean
 Dim FrameButtonRepeatDirection As Number
 Dim FrameButtonRepeatAt As Number
 Dim FlameAnimationPaused As Boolean
+Dim LightningAnimationPaused As Boolean
 Dim FlamesWerePaused As Boolean
 Dim VisualContinuityEpoch As Number
 Dim EquipmentFireEpoch As Number
@@ -728,6 +729,7 @@ Sub LoadViewer()
     SwordFireVisible = True
     ShieldFireVisible = True
     FlameAnimationPaused = False
+    LightningAnimationPaused = False
     ShieldFireFailed = False
     SwordFireFailed = False
     SwordFireReady = False
@@ -1045,6 +1047,11 @@ Sub UpdateDragon()
     Ready = Character3D.Place(Dragon,
         DRAGON_POSITION_X + 79 * Travel1000 / 1000, 0,
         DRAGON_POSITION_Z + 30 * Travel1000 / 1000) And Ready
+
+    If FlameAnimationPaused Then
+        Return
+    End If
+
     Breathe = (DragonVisible And Name = "FireBreath" And Time >= 850 And Time < 3100)
 
     If (Breathe And
@@ -2508,6 +2515,11 @@ Function HandleInterfacePointer() As Boolean
 
         Call OrinStorm.CycleComfort()
 
+    Else If (ProfileIndex = ViewerProfiles.PROFILE_ORIN And
+        PointerInRectangle(PanelLeft + 144, 470, 108, 20)) Then
+
+        LightningAnimationPaused = Not LightningAnimationPaused
+
     Else If (SwordFireReady And
         PointerInRectangle(PanelLeft + 12, 470, 128, 20)) Then
 
@@ -3281,6 +3293,11 @@ End Sub
 
 Sub UpdateEquipmentFire()
 
+    If FlameAnimationPaused Then
+        FlamesWerePaused = True
+        Return
+    End If
+
     EquipmentFireFirstSample = VisualHistoryDirty Or EquipmentFireEpoch <> VisualContinuityEpoch
 
     If EquipmentFireFirstSample Then
@@ -3338,12 +3355,12 @@ Sub UpdateOrinStorm()
         Clip = Character3D.ClipName(PartyCompanion.Actor, PartyCompanion.Clip)
 
         Call OrinStorm.Update(PartyCompanion.Actor, Clip, Target, Camera, CameraElapsed,
-            EpicGlowVisible, SwordVisible, ShieldVisible, FlameAnimationPaused, ScenePaused)
+            EpicGlowVisible, SwordVisible, ShieldVisible, LightningAnimationPaused, ScenePaused)
     Else If ProfileIndex = ViewerProfiles.PROFILE_ORIN Then
         Clip = Character3D.ClipName(Character, SelectedClip)
 
         Call OrinStorm.Update(Character, Clip, Target, Camera, CameraElapsed,
-            EpicGlowVisible, SwordVisible, ShieldVisible, FlameAnimationPaused, ScenePaused)
+            EpicGlowVisible, SwordVisible, ShieldVisible, LightningAnimationPaused, ScenePaused)
     End If
 
 End Sub
@@ -4071,6 +4088,7 @@ Sub ResetAll()
     PlaybackSpeed = ActiveProfile.DefaultPlaybackSpeed
     ScenePaused = False
     FlameAnimationPaused = False
+    LightningAnimationPaused = False
     UiVisibility = 0
     SwordFireFailed = False
     ShieldFireFailed = False
@@ -6811,9 +6829,8 @@ Sub DrawViewerOverlay()
 
             Call DrawButton(PanelLeft + 94, 444, 158, 22, OrinStorm.StyleName(), True)
             Call DrawButton(PanelLeft + 12, 470, 128, 20, OrinStorm.ComfortName(), True)
-
-            Draw Text "Charge" At PanelLeft + 146, 474 Size 11 Color CYAN
-            Draw Number OrinStorm.StoredCharge() At PanelLeft + 200, 474 Size 11 Color WHITE
+            Call DrawButton(PanelLeft + 144, 470, 108, 20,
+                VfxPlaybackLabel("Lightning", LightningAnimationPaused), LightningAnimationPaused)
 
         End If
 
@@ -7183,6 +7200,20 @@ Function FlamePlaybackLabel() As Text
         Result = "Play Flames"
     Else
         Result = "Pause Flames"
+    End If
+
+    Return Result
+
+End Function
+
+Function VfxPlaybackLabel(Family As Text, Frozen As Boolean) As Text
+
+    Dim Result As Text
+
+    If Frozen Then
+        Result = "Play " + Family
+    Else
+        Result = "Freeze " + Family
     End If
 
     Return Result
@@ -8174,6 +8205,10 @@ Function HandlePartyPointer() As Boolean
         Call ToggleAutoOrbit()
     Else If PointerInRectangle(Left + 12, 360, 224, 28) Then
         Call ResetAll()
+    Else If PointerInRectangle(Left + 12, 410, 108, 24) Then
+        FlameAnimationPaused = Not FlameAnimationPaused
+    Else If PointerInRectangle(Left + 128, 410, 108, 24) Then
+        LightningAnimationPaused = Not LightningAnimationPaused
     End If
 
     Return Result
@@ -8236,15 +8271,22 @@ Sub DrawPartyOverlay()
         Call DrawButton(Left + 128, 324, 108, 28, "Orbit", AutoOrbit)
         Call DrawButton(Left + 12, 360, 224, 28, "Restart Battle Demo", False)
 
+        Draw Text "VFX Playback" At Left + 16, 394 Size 12 Color WHITE
+
+        Call DrawButton(Left + 12, 410, 108, 24,
+            VfxPlaybackLabel("Fire", FlameAnimationPaused), FlameAnimationPaused)
+        Call DrawButton(Left + 128, 410, 108, 24,
+            VfxPlaybackLabel("Lightning", LightningAnimationPaused), LightningAnimationPaused)
+
         If Window_Height() >= 620 Then
 
-            Draw Text "Edit Each Character In Its Tab" At Left + 16, 408 Size 12 Color LIGHT_GRAY
-            Draw Text "Equipment Toggles Apply To Both" At Left + 16, 430 Size 12 Color LIGHT_GRAY
-            Draw Text OrinStorm.Caption() At Left + 16, 446 Size 12 Color CYAN
-            Draw Text "Camera" At Left + 16, 486 Size 12 Color LIGHT_GRAY
-            Draw Number PartyActiveCamera At Left + 80, 486 Size 12 Color CYAN
-            Draw Text "FPS" At Left + 16, 462 Size 13 Color LIGHT_GRAY
-            Draw Number CurrentFramesPerSecond At Left + 62, 462 Size 13 Color GREEN
+            Draw Text "Edit Each Character In Its Tab" At Left + 16, 448 Size 12 Color LIGHT_GRAY
+            Draw Text "VFX Controls Apply To All Actors" At Left + 16, 468 Size 12 Color LIGHT_GRAY
+            Draw Text OrinStorm.Caption() At Left + 16, 488 Size 12 Color CYAN
+            Draw Text "Camera" At Left + 16, 528 Size 12 Color LIGHT_GRAY
+            Draw Number PartyActiveCamera At Left + 80, 528 Size 12 Color CYAN
+            Draw Text "FPS" At Left + 16, 508 Size 13 Color LIGHT_GRAY
+            Draw Number CurrentFramesPerSecond At Left + 62, 508 Size 13 Color GREEN
 
         End If
 

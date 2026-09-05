@@ -5,6 +5,9 @@ Build with `tools/AdvancedLightningVfxLab/Build.ps1`, then launch
 The stable application ID preserves window X/Y, width/height and maximized state
 through SMILE's existing `RememberWindowPlacement` support, including rebuilds.
 
+The on-screen header is uppercase; the Windows title bar is unchanged. Bare Alt
+no longer enters a modal menu loop in the rebuilt native runtime.
+
 The Lab lives beside the Character Viewer and Fire Lab in `tools`. Its default
 Sin Star I landscape is screen-fixed, using the same backdrop treatment as Fire
 Lab. Automatic orbit also eases through a small height and distance variation;

@@ -349,6 +349,16 @@ Public Sub Update(Actor As Character3D.Actor, Clip As Text, Target As Core.Vecto
         Return
     End If
 
+    If Paused Then
+
+        ''' Keep this VFX snapshot while animation and camera controls continue.
+        ''' Restage billboards for the live camera without aging or moving emitters.
+        TrailHasPrevious = False
+        Ok = Lightning.Update(0, Camera)
+        Return
+
+    End If
+
     Time = Character3D.AnimationTime(Actor)
     Duration = 1
 

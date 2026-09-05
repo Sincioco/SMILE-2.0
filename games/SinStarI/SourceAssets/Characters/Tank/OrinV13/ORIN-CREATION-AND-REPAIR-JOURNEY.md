@@ -49,10 +49,40 @@ snapshot. Export it with
 before commits. The Party tab evaluates Orin's own clips and corrections. His
 arena pose uses a -55-degree visual yaw adjustment on top of live target facing
 because the imported hammer stance's visible forward direction differs from
-Arin's. The Character Viewer also applies a measured presentation-only ground
-curve to Death frames 42 through 118. It removes the visible airborne pause
-during the fall and lets the final pose rest on the arena floor without changing
-the accepted Mixamo skeleton or source animation.
+Arin's. The Character Viewer applies a shared standing correction plus measured
+Block, Hit and Death contact curves by clip name, in both individual and Party
+playback. The accepted Mixamo skeleton and source animations remain unchanged.
+
+## Grounding lesson for the next character
+
+Orin floated even at frame 0 of Block, Attack and Victory. This was a common
+placement error, not three broken clips. Auto-fit used the bind-pose mesh's
+minimum Y (about -0.116), while animated Idle began near +0.003. Applying that
+bind-pose floor offset to the animated character raised him by about 0.119 model
+units. The accepted Orin presentation correction is therefore -0.119 model
+units before his additional measured contact curves. This number is specific
+to Orin; never copy it to character 3.
+
+Before accepting another character package:
+
+1. Compare the skinned body minimum Y in the bind pose and animated Idle frame 0.
+   Exclude weapons, shields and effects from the measurement. Record the model
+   checksum, sample rate, coordinate units and measured values in the package.
+2. Inspect every clip at frame 0 from a low, floor-level camera, with effects off.
+   If all clips float by the same amount, fix the shared placement baseline first.
+3. Sample Block and Hit contact through their final held poses, and Death through
+   its settled pose. Check genuine jumping clips separately so intended flight
+   is preserved. Do not floor-lock every animated sample indiscriminately.
+4. Resolve corrections by runtime clip name, not UI button index. Their orders
+   differ. Check both the character tab and Party's companion update path.
+5. Place equipment overlays, sockets, light sources and VFX from the actor's
+   final world transform after grounding and calibration. Orin's white hammer
+   silhouette initially kept the old auto-fit Y, leaving it above the hammer
+   after his body was lowered. Compare effects on/off at the same paused frame.
+
+`scripts/measure-orin-grounding.py` reproduces this revision's body-contact
+measurements in `Calibration/orin-v1.3-grounding.json`. Treat the procedure as
+reusable; regenerate its data and asset-specific mesh selection for a new rig.
 
 ## Rebuild order
 

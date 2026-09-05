@@ -33,6 +33,7 @@ Dim CinematicYaw1000 As Number
 Dim Demo As Boolean
 Dim DemoTime As Number
 Dim Arena As Arena3D.ArenaFloor
+Dim GridTexture As Core.Texture3D
 Dim Landscape As StaticBackdrop3D.Backdrop
 Dim TitleBackdrop As StaticBackdrop3D.Backdrop
 Dim BackgroundIndex As Number
@@ -98,8 +99,14 @@ ZoomTarget = 650
 ZoomLive = 650000
 Cinematic = True
 Demo = True
-Arena = Arena3D.Create(ARENA_WIDTH, ARENA_DEPTH, 255, 82, 8,
+Arena = Arena3D.Create(ARENA_WIDTH, ARENA_DEPTH, 210, 120, 40,
     ARENA_TILE_SIZE, ARENA_LINE_THICKNESS)
+
+Call Graphics3D.DestroyMaterial3D(Arena.GridMaterial)
+
+Arena.GridMaterial = Graphics3D.CreateMaterial3D(GridTexture,
+    Graphics3D.MATERIAL_ALPHA_OPAQUE, 210, 120, 40, 100, True, 0, 50)
+Ok = Graphics3D.SetObjectMaterial3D(Arena.Grid, Arena.GridMaterial)
 
 Landscape = StaticBackdrop3D.Create("Assets/Backgrounds/SinStarLandscape.png")
 TitleBackdrop = StaticBackdrop3D.Create("Assets/Backgrounds/SinStarTitleWithLogo.png")

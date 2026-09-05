@@ -541,7 +541,7 @@ Sub DrawHud()
     End If
 
     X = PanelX()
-    Draw Text "SMILE 2.0 - Advanced Lightning Lab" At 20, 20 Size 22 Color Cyan
+    Draw Text "SMILE 2.0 - ADVANCED LIGHTNING LAB" At 20, 20 Size 22 Color Cyan
     Draw Text StationLabel(Station) At 20, 55 Size 20 Color White
     Draw Text "FPS" At 20, 85 Size 13 Color Light_Gray
     Draw Number FramesPerSecond At 60, 85 Size 13 Color Cyan

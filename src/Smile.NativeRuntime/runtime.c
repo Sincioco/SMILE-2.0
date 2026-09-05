@@ -1487,6 +1487,13 @@ static LRESULT CALLBACK smile_window_proc(HWND window, UINT message, WPARAM wpar
             InvalidateRect(window, 0, FALSE);
             return 0;
         }
+        case WM_SYSCOMMAND:
+            /* Bare Alt/F10 must not enter the modal menu loop on a game canvas.
+               Keep explicit system-menu commands (such as Alt+Space), close,
+               minimize and other Windows shortcuts on their normal path. */
+            if ((wparam & 0xFFF0) == SC_KEYMENU && lparam == 0)
+                return 0;
+            break;
         case WM_SYSKEYDOWN:
             if (wparam == VK_RETURN && (lparam & (1LL << 29)) != 0)
             {
