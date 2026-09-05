@@ -68,6 +68,13 @@ Reduced is the default. Chain Arcs are arena presentation paths; this one-boss
 preview does not claim multiple-enemy damage or target selection. The generic
 Lightning Lab separately demonstrates caller-ordered multi-target chains.
 
+Forked Judgment now uses the Lightning Lab's four SkyStrike recipe during the
+raised-hammer charge (12–52% of ThorAttack). Thunder Smash begins at 64% and
+spreads eight radial ground spokes, paired into four effects to fit the shared
+battle budget. Strike effects use Ultra quality; equipment remains separately
+budgeted. A GPU particle trail deposits white sparks along the moving hammer
+and lets them linger in world space. The ground slam fires once per action.
+
 `tools/Character3DViewer/OrinStorm.smile` owns presentation timing and the pure
 0–1000 charge state. Contact at 35% of ThorAttack fills charge; release at 64%
 spends 350 once per action. Idle and Run retain the remaining aura. Paused frame
@@ -80,6 +87,19 @@ Eleven descriptor sockets were added: ShieldRim0–7 and HammerHead/Left/Right.
 `scripts/update-orin-lightning-sockets.py` derives them from the rigid hand bind
 matrices. The profile migration retained all Orin keys (zero at migration) and
 left Arin's 23-key snapshot unchanged.
+
+Arin and Orin default to playback speed 200. Individual demos target three seconds,
+then finish the current animation before advancing. Block plays once and holds.
+
+The viewer removes Orin's bind-pose-to-animated-sole height offset on every clip.
+Block, Hit and Death also receive measured frame-dependent ground corrections.
+`Calibration/orin-v1.3-grounding.json` records the 30 Hz skinned-body measurements;
+`scripts/measure-orin-grounding.py` reproduces them without editing the GLB.
+The raw body bound starts at -0.116 model units while Idle starts near +0.003,
+so the shared baseline correction is -0.119. Jump/run motion is preserved above
+that corrected baseline. Corrections are selected by clip name, not cooker order,
+and apply in both the individual tab and Party. The hammer glow uses the final
+actor position, keeping it aligned with the lowered equipment.
 
 ## Rebuild
 

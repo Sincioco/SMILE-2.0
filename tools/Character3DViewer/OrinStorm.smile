@@ -30,6 +30,15 @@ Private Dim Comfort As Number
 Private Dim AttackStyle As Number
 Private Dim FlashOpacity As Number
 Private Dim RenderVisible As Boolean
+Private Dim TrailTexture As Core.Texture3D
+Private Dim TrailMaterial As Core.Material3D
+Private Dim HammerTrail As Core.GpuParticleSystem3D
+Private Dim TrailPrevious As Core.Vector3
+Private Dim TrailHasPrevious As Boolean
+Private Dim TrailCursor As Number
+Private Dim TrailSerial As Number
+Private Dim AttackPhase As Number
+Private Dim ImpactGround As Core.Vector3
 
 ''' Pure caller-owned state; independent of rendering, handles and effect visibility.
 Public Sub BeginAction(ByRef Value As ChargeState)
@@ -70,8 +79,26 @@ End Function
 
 Public Sub Initialize()
 
-    Available = Lightning.Initialize("Assets/Lightning", 4096,
-        Graphics3D.GPU_PARTICLE_SIMULATION_AUTO, 2048)
+    Available = Lightning.Initialize("Assets/Lightning", 8192,
+        Graphics3D.GPU_PARTICLE_SIMULATION_AUTO, 4096)
+    TrailTexture = Graphics3D.LoadTexture3D("Assets/Lightning/lightning-spark.png")
+    TrailMaterial = Graphics3D.CreateEffectMaterial3D(TrailTexture,
+        Graphics3D.MATERIAL_ALPHA_ADDITIVE, 300)
+    HammerTrail = Graphics3D.CreateGpuParticleSystem3D(1024, TrailMaterial,
+        Graphics3D.GPU_PARTICLE_SIMULATION_AUTO, 10)
+    TrailHasPrevious = False
+    TrailCursor = 0
+    TrailSerial = 0
+    AttackPhase = 0
+
+    If HammerTrail.Handle <> 0 Then
+
+        Ok = Graphics3D.SetGpuParticleRender3D(HammerTrail, Graphics3D.GPU_PARTICLE_SHADER_THERMAL, 2)
+        Ok = Graphics3D.SetGpuParticleForces3D(HammerTrail, 0, -75, 0, 0, 0, 0, 0, 170)
+        Ok = Graphics3D.SetGpuParticleThermalEvolution3D(HammerTrail, 0, 250, 0, 800)
+
+    End If
+
     FirstError = 0
     PreviousClip = ""
     PreviousTime = 0
@@ -120,6 +147,9 @@ Public Sub Shutdown()
     End For
 
     Call Lightning.Shutdown()
+    Call Graphics3D.DestroyGpuParticleSystem3D(HammerTrail)
+    Call Graphics3D.DestroyEffectMaterial3D(TrailMaterial)
+    Call Graphics3D.DestroyTexture3D(TrailTexture)
 
     Available = False
 
@@ -128,6 +158,14 @@ End Sub
 Private Sub Attach(Index As Number, Source As Core.Vector3, Target As Core.Vector3,
     Preset As Text, Width As Number, Power As Number, Branches As Number)
 
+    Dim EffectQuality As Number
+
+    EffectQuality = Lightning.QUALITY_HIGH
+
+    If Index >= 3 Then
+        EffectQuality = Lightning.QUALITY_ULTRA
+    End If
+
     If Math3D.Distance(Source, Target) < 1 Then
         Return
     End If
@@ -135,7 +173,13 @@ Private Sub Attach(Index As Number, Source As Core.Vector3, Target As Core.Vecto
     If Effects[Index].Slot <> 0 Then
 
         If Lightning.Value(Lightning.QUERY_FINISHED, Effects[Index]) <> 0 Then
+
+            If Index >= 3 And AttackPhase = 2 Then
+                Return
+            End If
+
             Call ClearEffect(Index)
+
         End If
 
     End If
@@ -143,7 +187,7 @@ Private Sub Attach(Index As Number, Source As Core.Vector3, Target As Core.Vecto
     If Effects[Index].Slot = 0 Then
 
         Effects[Index] = Lightning.StartAt(Preset, Source, Target, 1307 + Index * 137,
-            Lightning.QUALITY_HIGH)
+            EffectQuality)
 
         If Effects[Index].Slot = 0 Then
             FirstError = Lightning.Value(Lightning.QUERY_LAST_ERROR, Effects[0])
@@ -151,12 +195,79 @@ Private Sub Attach(Index As Number, Source As Core.Vector3, Target As Core.Vecto
         End If
 
         Ok = Lightning.SetBranchBudget(Effects[Index], Branches)
-        Ok = Lightning.SetSparkIntensity(Effects[Index], 25)
+        Ok = Lightning.SetSparkIntensity(Effects[Index], 75)
 
     End If
 
     Ok = Lightning.SetEndpoints(Effects[Index], Source, Target)
     Ok = Lightning.SetStyle(Effects[Index], Width, Power)
+
+End Sub
+
+Private Sub UpdateHammerTrail(Position As Core.Vector3, Elapsed As Number,
+    Attacking As Boolean, Visible As Boolean, MotionPaused As Boolean, Paused As Boolean)
+
+    Dim SparkCount As Number
+    Dim Index As Number
+    Dim Step As Number
+    Dim Noise As Number
+    Dim Distance As Number
+    Dim Point As Core.Vector3
+    Dim Velocity As Core.Vector3
+
+    If HammerTrail.Handle = 0 Then
+        Return
+    End If
+
+    Step = Min(100, Max(0, Elapsed))
+    Distance = Math3D.Distance(TrailPrevious, Position)
+
+    If (Not TrailHasPrevious Or
+        Not Visible Or
+        MotionPaused Or
+        Distance > 100) Then
+        TrailPrevious = Position
+        Distance = 0
+    End If
+
+    If (Visible And
+        Attacking And
+        Not MotionPaused And
+        Not Paused And
+        Step > 0) Then
+
+        SparkCount = Min(32, Max(1, Step / 8) + Distance / 2)
+        Velocity.X = (Position.X - TrailPrevious.X) * 180 / Step
+        Velocity.Y = (Position.Y - TrailPrevious.Y) * 180 / Step
+        Velocity.Z = (Position.Z - TrailPrevious.Z) * 180 / Step
+
+        For Index = 0 To SparkCount - 1
+
+            TrailSerial = TrailSerial + 1
+            Noise = (TrailSerial * 7919) Mod 104729
+            Point.X = TrailPrevious.X + (Position.X - TrailPrevious.X) * (Index + 1) / SparkCount
+            Point.Y = TrailPrevious.Y + (Position.Y - TrailPrevious.Y) * (Index + 1) / SparkCount
+            Point.Z = TrailPrevious.Z + (Position.Z - TrailPrevious.Z) * (Index + 1) / SparkCount
+            Ok = Graphics3D.KillGpuParticleSlot3D(HammerTrail, TrailCursor)
+            Ok = Graphics3D.SetGpuParticleSpawnKinematics3D(HammerTrail, TrailCursor,
+                Point.X, Point.Y, Point.Z,
+                Velocity.X + Noise Mod 41 - 20, Velocity.Y + Noise / 41 Mod 50,
+                Velocity.Z + Noise / 2050 Mod 41 - 20) And Ok
+            Ok = Graphics3D.SetGpuParticleSpawnVisual3D(HammerTrail, TrailCursor,
+                650 + Noise Mod 400, 1 + Noise Mod 2, 1, Noise Mod 360, 85, 1000, 800) And Ok
+            Ok = Graphics3D.CommitGpuParticleSpawn3D(HammerTrail, TrailCursor,
+                TrailSerial, Max(1, Noise)) And Ok
+            TrailCursor = (TrailCursor + 1) Mod 1024
+        End For
+
+    End If
+
+    If Not Paused Then
+        Ok = Graphics3D.AdvanceGpuParticleSystem3D(HammerTrail, Step)
+    End If
+
+    TrailPrevious = Position
+    TrailHasPrevious = Visible
 
 End Sub
 
@@ -224,9 +335,6 @@ Public Sub Update(Actor As Character3D.Actor, Clip As Text, Target As Core.Vecto
     Dim Head As Core.Vector3
     Dim LeftPoint As Core.Vector3
     Dim RightPoint As Core.Vector3
-    Dim Sky As Core.Vector3
-    Dim Ground As Core.Vector3
-    Dim EndPoint As Core.Vector3
     Dim Index As Number
     Dim Duration As Number
     Dim Time As Number
@@ -256,6 +364,9 @@ Public Sub Update(Actor As Character3D.Actor, Clip As Text, Target As Core.Vecto
 
     If Clip <> PreviousClip Or Time < PreviousTime Then
 
+        TrailHasPrevious = False
+        AttackPhase = 0
+
         For Index = 3 To 7
             Call ClearEffect(Index)
         End For
@@ -269,8 +380,8 @@ Public Sub Update(Actor As Character3D.Actor, Clip As Text, Target As Core.Vecto
     PreviousClip = Clip
     PreviousTime = Time
     Attack = Clip = "SwordAttack" Or Clip = "JumpAttack" Or Clip = "ThorAttack"
-    Charge = Clip = "ThorAttack" And Progress >= 120 And Progress < 640
-    Release = Attack And Progress >= 640 And Progress < 930
+    Charge = Clip = "ThorAttack" And Progress >= 120 And Progress < 520
+    Release = Attack And Progress >= 640
     Events = 0
 
     If Not MotionPaused Then
@@ -298,11 +409,14 @@ Public Sub Update(Actor As Character3D.Actor, Clip As Text, Target As Core.Vecto
 
     If Not Enabled Then
 
+        TrailHasPrevious = False
+
         For Index = 0 To 7
             Call ClearEffect(Index)
         End For
 
         Ok = Lightning.Update(Elapsed, Camera)
+        Ok = Graphics3D.AdvanceGpuParticleSystem3D(HammerTrail, Min(100, Max(0, Elapsed))) And Ok
         Ok = Graphics3D.SetPointLight3D(2, 0, 0, 0, 150, 190, 255, 0, 130)
         FlashOpacity = 0
 
@@ -315,6 +429,8 @@ Public Sub Update(Actor As Character3D.Actor, Clip As Text, Target As Core.Vecto
     Head = Character3D.SocketPosition(Actor, "HammerHead", 1)
     LeftPoint = Character3D.SocketPosition(Actor, "HammerLeft", 1)
     RightPoint = Character3D.SocketPosition(Actor, "HammerRight", 1)
+
+    Call UpdateHammerTrail(Head, Elapsed, Attack, WeaponVisible, MotionPaused, Paused)
 
     If WeaponVisible Then
 
@@ -333,73 +449,18 @@ Public Sub Update(Actor As Character3D.Actor, Clip As Text, Target As Core.Vecto
 
     End If
 
-    If Charge And WeaponVisible Then
+    Call UpdateBattleEffects(Head, Target, Charge And WeaponVisible, Release And WeaponVisible)
 
-        Sky = Head
-        Sky.Y = Sky.Y + 250
-        Sky.X = Sky.X - 55
+    If (Release And
+        WeaponVisible And
+        Not MotionPaused And
+        Events >= 2 And
+        Not ThunderPlayed) Then
 
-        Call Attach(3, Sky, Head, "SkyToWeaponCharge", 2, 1000, 8)
+        ThunderPlayed = True
+        FlashOpacity = 180
 
-    Else
-
-        Call ClearEffect(3)
-
-    End If
-
-    If Release And WeaponVisible Then
-
-        Ground = Head
-        Ground.Y = 2
-
-        Call Attach(4, Head, Target, "StoredStorm", 1, 1000, 6)
-
-        For Index = 5 To 7
-
-            EndPoint = Ground
-            EndPoint.X = EndPoint.X + Fixed.CosFixed((Index - 5) * 120) * 42 / Core.FIXED_ONE
-            EndPoint.Z = EndPoint.Z + Fixed.SinFixed((Index - 5) * 120) * 42 / Core.FIXED_ONE
-
-            If AttackStyle = 1 Then
-
-                Call Attach(Index, Head, Target, "StoredStorm", 1, 850, 2)
-
-            Else If AttackStyle = 2 Then
-
-                Call Attach(Index, Head, EndPoint, "ChainTempest", 1, 850, 3)
-
-            Else If AttackStyle = 3 Then
-
-                Sky = Target
-                Sky.Y = Sky.Y + 240
-                Sky.X = Sky.X + (Index - 6) * 65
-
-                Call Attach(Index, Sky, EndPoint, "SkyStrike", 2, 1000, 8)
-
-            Else
-
-                Call Attach(Index, Ground, EndPoint, "ThunderGroundSlam", 1, 900, 3)
-
-            End If
-
-        End For
-
-        If (Not MotionPaused And
-            Events >= 2 And
-            Not ThunderPlayed) Then
-
-            ThunderPlayed = True
-            FlashOpacity = 180
-
-            Play Sound "Assets/Lightning/thunder.wav"
-
-        End If
-
-    Else
-
-        For Index = 4 To 7
-            Call ClearEffect(Index)
-        End For
+        Play Sound "Assets/Lightning/thunder.wav"
 
     End If
 
@@ -427,6 +488,106 @@ Public Sub Update(Actor As Character3D.Actor, Clip As Text, Target As Core.Vecto
 
     If Lightning.Value(Lightning.QUERY_LAST_ERROR, Effects[0]) <> 0 And FirstError = 0 Then
         FirstError = Lightning.Value(Lightning.QUERY_LAST_ERROR, Effects[0])
+    End If
+
+End Sub
+
+Private Sub UpdateBattleEffects(Head As Core.Vector3, Target As Core.Vector3,
+    Charging As Boolean, Releasing As Boolean)
+
+    Dim NextPhase As Number
+    Dim Index As Number
+    Dim Angle As Number
+    Dim Sky As Core.Vector3
+    Dim EndPoint As Core.Vector3
+    Dim Opposite As Core.Vector3
+
+    If Charging Then
+        NextPhase = 1
+    Else If Releasing Then
+        NextPhase = 2
+    End If
+
+    If NextPhase <> AttackPhase Then
+
+        For Index = 3 To 7
+            Call ClearEffect(Index)
+        End For
+
+        ImpactGround = Head
+        ImpactGround.Y = 3
+        AttackPhase = NextPhase
+
+    End If
+
+    If Charging Then
+
+        StateText = "Forked Judgment"
+
+        ''' The Lab's four SkyStrike recipe converges on the raised hammer.
+
+        For Index = 3 To 6
+
+            Angle = (Index - 3) * 90
+            Sky = Head
+            Sky.X = Sky.X + Fixed.SinFixed(Angle) * 220 / Core.FIXED_ONE
+            Sky.Y = Sky.Y + 400
+            Sky.Z = Sky.Z + Fixed.CosFixed(Angle) * 220 / Core.FIXED_ONE
+
+            Call Attach(Index, Sky, Head, "SkyStrike", 3, 1000, 24)
+        End For
+
+    Else If Releasing Then
+
+        StateText = StyleName()
+
+        For Index = 3 To 6
+
+            Angle = (Index - 3) * 45
+            EndPoint = ImpactGround
+            EndPoint.X = EndPoint.X + Fixed.SinFixed(Angle) * 250 / Core.FIXED_ONE
+            EndPoint.Z = EndPoint.Z + Fixed.CosFixed(Angle) * 250 / Core.FIXED_ONE
+            Opposite = ImpactGround
+            Opposite.X = Opposite.X - Fixed.SinFixed(Angle) * 250 / Core.FIXED_ONE
+            Opposite.Z = Opposite.Z - Fixed.CosFixed(Angle) * 250 / Core.FIXED_ONE
+
+            If AttackStyle = 1 Then
+
+                Call Attach(Index, Head, Target, "WeaponCorona", 2, 1000, 6)
+
+            Else If AttackStyle = 2 Then
+
+                Call Attach(Index, Head, EndPoint, "ChainTempest", 2, 1000, 10)
+
+            Else If AttackStyle = 3 Then
+
+                Sky = Target
+                Sky.Y = Sky.Y + 400
+                Sky.X = Sky.X + (Index - 4) * 80
+
+                Call Attach(Index, Sky, EndPoint, "SkyStrike", 3, 1000, 24)
+
+            Else
+
+                ''' Pair opposite spokes to reuse the Lab's eight-ray slam within the scene budget.
+
+                Call Attach(Index, ImpactGround, EndPoint, "ThunderGroundSlam", 3, 1000, 18)
+
+                If Effects[Index].Slot <> 0 Then
+
+                    If Lightning.Value(Lightning.QUERY_CHAIN_TARGETS, Effects[Index]) = 0 Then
+                        Ok = Lightning.AddChainTarget(Effects[Index], ImpactGround)
+                        Ok = Lightning.AddChainTarget(Effects[Index], Opposite) And Ok
+                    End If
+
+                End If
+
+            End If
+
+        End For
+
+        Call Attach(7, Head, Target, "StoredStorm", 2, 1000, 8)
+
     End If
 
 End Sub
@@ -500,7 +661,13 @@ End Function
 Public Sub Draw()
 
     If Available And RenderVisible Then
+
         Ok = Lightning.DrawAll()
+
+        If HammerTrail.Handle <> 0 Then
+            Ok = Graphics3D.DrawGpuParticleSystem3D(HammerTrail) And Ok
+        End If
+
     End If
 
 End Sub

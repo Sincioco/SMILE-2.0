@@ -30,6 +30,9 @@
     "jsonSchemaVersion": 2,
     "profileAndChecksums": "Calibration/orin-v1.3-profile.json",
     "readableSnapshot": "Calibration/orin-v1.3-pose-calibration.json",
+    "groundingMeasurements": "Calibration/orin-v1.3-grounding.json",
+    "groundingBuilder": "scripts/measure-orin-grounding.py",
+    "groundingPolicy": "Shared -0.119 model-unit baseline, with measured Defend, Hit and Death contact corrections; glow uses the final actor position",
     "syncScript": "scripts/sync-arin-v5-7-calibration.ps1 -Character Orin"
   },
   "previews": "Previews",
@@ -38,6 +41,9 @@
     "module": "Smile.Simple3D.LightningVfx3D",
     "socketBuilder": "scripts/update-orin-lightning-sockets.py",
     "shieldPolicy": "Perimeter only; no face or back glow overlay",
+    "thorCharge": "Forked Judgment",
+    "hammerImpact": "Thunder Smash",
+    "hammerTrail": "GPU sparks retained in world space",
     "chargeRange": [0, 1000]
   },
   "workflowHandoff": "ORIN-CREATION-AND-REPAIR-JOURNEY.md",

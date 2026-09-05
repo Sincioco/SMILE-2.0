@@ -38,15 +38,37 @@ This is an in-progress development push, not a completed milestone or release.
 - Saved calibration exported: Arin 23 keys, Orin 0 keys, unchanged identities.
 - Native camera inspection is ongoing. No long soak or Web visual validation is claimed.
 
+## Follow-up checkpoint
+
+- Camera 1 now sweeps smoothly across the Dragon's front at the individual
+  viewer's 12-degree-per-second phase rate. Camera 2 provides the heroes' waist
+  height battle view; Camera 3 looks past the Dragon toward the party during
+  attack preparation. The two battle cameras cut immediately between viewpoints.
+- Party's right panel follows the active actor, reports the current animation and
+  actual remaining turn time, and offers playback speed and character inspection.
+- Orin's hammer charge uses Forked Judgment and its impact uses Thunder Smash.
+  A separate GPU spark trail follows the hammer without moving old sparks with it.
+- Orin's standing baseline and measured Block, Hit and Death contact corrections
+  apply in both individual and Party playback. Equipment glow now follows the
+  final grounded actor transform, correcting the detached white hammer silhouette.
+- Arin and Orin default to speed 200. Individual demos target three seconds per
+  sequence and finish an animation already in progress. Orin Block still plays
+  once and holds.
+- Native compilation and the focused native hardening wrapper passed. The new
+  executable was installed and launched. Sin reported that the glow appeared
+  fixed after the restart; the agent's final screenshot verification was
+  temporarily blocked by the desktop capture error: "foreground window did not
+  report a process id." Camera composition and effects remain under visual review.
+
 ## Requested work still in progress
 
-1. Dynamic Party right panel showing the current attacker and its details.
+1. Cursor-anchored middle-button orbit while Pose Calibration is open.
 2. Dragon inspection/editor tab before Party, with party opponents.
 3. Retarget the newly supplied Arin Death FBX; party KO/guard/revive demonstration.
 4. Dragon head tracking toward its attack target.
 5. Wider party formation on a front arc, ready for additional members.
 6. Arin shield fire outline without outward flames.
-7. Denser Orin hammer sparks and lingering swing trail; stronger lightning impacts.
+7. Final visual review of Orin's grounded hammer glow and stronger lightning.
 8. Further visual review of camera composition, Dragon fireball and effects.
 
 The active native editor source is `tools/Character3DViewer`. Models, audio and

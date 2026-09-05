@@ -17,7 +17,7 @@ Run `Build.ps1`, then `Launch.ps1`. The regular launcher defaults to `bin\Charac
 - Left drag pans the view; middle drag orbits; wheel zooms smoothly.
 - Zoom extends to -144 for glove and grip inspection. Beyond the former -48 limit, it moves the camera closer to the current panned anchor, reaching one tenth of the former distance. Pan the glove toward the center, then zoom in; the arena size and character pose are unchanged.
 - H Orbit, V Orbit and Zoom support hover-wheel adjustment and capture slider drags until release, even outside the track. Vertical orbit supports 360 degrees.
-- Demo completes at least three whole loops and at least five seconds before advancing. Selecting an animation disables Demo and loops that clip.
+- Arin and Orin start at speed 200. Their individual demos target three seconds per sequence and let an in-progress animation finish before advancing. Orin Block plays once and holds its final pose. Selecting an animation disables Demo; Block remains a one-shot.
 - D toggles the dragon; W toggles the current character’s weapon; S toggles shield. Hiding the dragon does not shrink the arena.
 - B/BG cycles colors and two static bitmaps. The default is the Sin Star I landscape without its title.
 - Floor / Grid hides/shows both. Profile, Glow, Socket, Channel and lighting controls remain available.
@@ -52,8 +52,13 @@ for Save Frame or Cancel inside the editor. Both characters use the same correct
 
 Party places Arin and Orin together on the arena, facing the dragon. They approach, attack,
 return to formation, and take turns while the other guards. The camera orbits by default.
-The automatic camera completes a full 360-degree orbit around the midpoint between the party
-and dragon. Arin and Orin begin side by side on the dragon's forward centerline, converge on
+Camera 1 sweeps a smooth front arc from one side of the boss to the other, using the same
+12-degree-per-second phase rate as the individual tabs and easing at the arc endpoints.
+It keeps advancing while battle cameras are selected. Camera 2 frames the heroes' attack
+and defense beats; rear views sit near waist height and look upward toward the boss.
+Camera 3 looks past the Dragon's head and mouth toward the party during its windup and
+fireball charge. The two battle cameras cut immediately between their independent poses.
+Arin and Orin begin side by side on the dragon's forward centerline, converge on
 two close chest lanes, and stop outside its body before attacking. Orin applies his own -55-degree
 visual yaw correction so his imported hammer stance faces the target. The closer arena camera
 keeps both sides readable while the nearer actor crosses the foreground. The viewer opens
@@ -63,10 +68,16 @@ presentation follows a measured ground curve so his falling body settles onto th
 Space pauses movement; the usual pan, orbit, eased zoom, keyboard controls and reset remain
 available. Weapon and Shield affect both members. Select the individual Character tab to
 edit that character’s animation; Party evaluates each member’s own saved correction track.
+The right status panel follows the current attacker, including Dragon animation details,
+and reports the actual remaining turn time. Speed changes restart the Party demonstration.
 Arin retains his thermal equipment fire. Orin's hammer glows white with crawling lightning;
 only the shield perimeter receives the aura. His tab offers Thunder Smash, Storm Lance,
 Chain Arcs and Godstorm styles, with full/reduced/off flash and shake. Reduced is the default.
 The CPU charge controller and calibrated equipment sockets live in `OrinStorm.smile`.
+Forked Judgment converges four Ultra-quality sky strikes on the raised hammer; Thunder
+Smash sends eight ground spokes from the impact point. A GPU spark trail follows the
+hammer's swept path and fades in world space after the swing. The slam does not retrigger
+during follow-through. The white glow mesh uses the actor's final grounded transform.
 
 The dragon takes the third turn, alternating Fire Breath and Claw Strike. Mouth-attached
 fire sweeps toward Arin and then Orin while they guard and react. The claw animation
@@ -92,10 +103,9 @@ Blender-to-SMILE pipeline. The separate free-roam demo remains deferred by Sin.
 
 ## September 5 mid-development checkpoint
 
-Party automatic orbit preserves fractional yaw through camera composition and runs
-through 360 degrees. The orbit camera continues while separate portrait, approach and strike cameras
-are selected. Motion within each shot eases; close-ups preserve world-up and pull
-back to keep the Dragon head in frame. Camera composition remains under visual tuning.
+The initial checkpoint used a full orbit and four camera poses. Subsequent visual tuning
+replaces that with the front arc and two independently selected battle cameras described
+above. Close framing and Dragon point-of-view composition remain under visual tuning.
 Arin slash/crosscut and Dragon breath/claw/fireball now have original synthesized
 attack cues. Orin's Block plays once and holds instead of repeatedly restarting.
 Dragon's six-clip preview adds Fireball and stronger wing/arm/hit motion, eye anchors,

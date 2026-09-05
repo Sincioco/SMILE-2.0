@@ -30,7 +30,6 @@ Dim OrbitBase As Core.Camera3D
 Dim OrbitControls As Core.CameraControl3D
 Dim OrbitFirst As Core.Camera3D
 Dim OrbitNext As Core.Camera3D
-Dim HeadPoint As Core.Vector3
 
 Game Window "Character 3D Viewer Hardening Tests" Size 320 By 240
 
@@ -48,18 +47,12 @@ OrbitNext = BattleCamera.Orbit(OrbitBase, OrbitControls, 100)
 Call Check(Abs(OrbitFirst.Position.X - OrbitNext.Position.X) <= 5)
 Call Check(Abs(OrbitFirst.Position.Z - OrbitNext.Position.Z) <= 2)
 
-OrbitFirst.Position.X = 0
-OrbitFirst.Position.Y = 0
-OrbitFirst.Position.Z = -100
-OrbitFirst.Target.X = 0
-OrbitFirst.Target.Y = 0
-OrbitFirst.Target.Z = 0
-OrbitFirst.FovDegrees = 40
-HeadPoint.Y = 100
-
-Call BattleCamera.FramePoint(OrbitFirst, HeadPoint, 40, 800, 600)
-Call Check(OrbitFirst.Position.Z <= -384)
-Call Check(OrbitFirst.Position.X = 0 And OrbitFirst.Position.Y = 0)
+Call Check(BattleCamera.FrontArcYaw1000(0) = 120000)
+Call Check(BattleCamera.FrontArcYaw1000(90000) = 175000)
+Call Check(BattleCamera.FrontArcYaw1000(270000) = 65000)
+Call Check(BattleCamera.FrontArcYaw1000(360000) = BattleCamera.FrontArcYaw1000(0))
+Call Check(BattleCamera.FrontArcYaw1000(500) > BattleCamera.FrontArcYaw1000(0))
+Call Check(BattleCamera.FrontArcYaw1000(89900) = BattleCamera.FrontArcYaw1000(90100))
 
 Call Check(ViewerProfiles.HoldsFinalPose(ViewerProfiles.PROFILE_ORIN, "Defend"))
 Call Check(Not ViewerProfiles.HoldsFinalPose(ViewerProfiles.PROFILE_ARIN, "Defend"))
@@ -119,7 +112,7 @@ Call Check(Profile.DisplayName = "Arin")
 Call Check(Profile.PartyRole = "Paladin")
 Call Check(Profile.PrototypeAlias = "dragonfall.arin-v5-7")
 Call Check(Profile.GroundOffset = 0)
-Call Check(Profile.DefaultPlaybackSpeed = 100)
+Call Check(Profile.DefaultPlaybackSpeed = 200)
 Call Check(ViewerProfiles.ClipCount(ViewerProfiles.PROFILE_ARIN) = 8)
 Call Check(ViewerProfiles.ClipName(ViewerProfiles.PROFILE_ARIN, 0) = "Idle")
 Call Check(ViewerProfiles.ClipName(ViewerProfiles.PROFILE_ARIN, 1) = "SwordAttack")
@@ -139,6 +132,7 @@ Call Check(Profile.DisplayName = "Orin")
 Call Check(Profile.PartyRole = "Tank")
 Call Check(Profile.ExpectedClipCount = 9)
 Call Check(Profile.ExpectedSocketCount = 21)
+Call Check(Profile.DefaultPlaybackSpeed = 200)
 Call Check(ViewerProfiles.ClipCount(ViewerProfiles.PROFILE_ORIN) = 9)
 Call Check(ViewerProfiles.ClipName(ViewerProfiles.PROFILE_ORIN, 0) = "Idle")
 Call Check(ViewerProfiles.ClipName(ViewerProfiles.PROFILE_ORIN, 1) = "SwordAttack")
@@ -150,13 +144,15 @@ Call Check(ViewerProfiles.ClipName(ViewerProfiles.PROFILE_ORIN, 6) = "Death")
 Call Check(ViewerProfiles.ClipName(ViewerProfiles.PROFILE_ORIN, 7) = "Victory")
 Call Check(ViewerProfiles.ClipName(ViewerProfiles.PROFILE_ORIN, 8) = "Run")
 Call Check(ViewerProfiles.ClipLoops(ViewerProfiles.PROFILE_ORIN, 0))
-Call Check(ViewerProfiles.ClipLoops(ViewerProfiles.PROFILE_ORIN, 4))
+Call Check(Not ViewerProfiles.ClipLoops(ViewerProfiles.PROFILE_ORIN, 4))
 Call Check(ViewerProfiles.ClipLoops(ViewerProfiles.PROFILE_ORIN, 8))
 Call Check(Not ViewerProfiles.ClipLoops(ViewerProfiles.PROFILE_ORIN, 3))
-Call Check(ViewerProfiles.ClipVerticalOffset1000(ViewerProfiles.PROFILE_ORIN, 6, 41) = 0)
-Call Check(ViewerProfiles.ClipVerticalOffset1000(ViewerProfiles.PROFILE_ORIN, 6, 54) = -263)
-Call Check(ViewerProfiles.ClipVerticalOffset1000(ViewerProfiles.PROFILE_ORIN, 6, 118) = -19)
-Call Check(ViewerProfiles.ClipVerticalOffset1000(ViewerProfiles.PROFILE_ORIN, 0, 54) = 0)
+Call Check(ViewerProfiles.ClipVerticalOffset1000(ViewerProfiles.PROFILE_ORIN, "Defend", 0) = -119)
+Call Check(ViewerProfiles.ClipVerticalOffset1000(ViewerProfiles.PROFILE_ORIN, "Defend", 18) = -174)
+Call Check(ViewerProfiles.ClipVerticalOffset1000(ViewerProfiles.PROFILE_ORIN, "Defend", 100) = -174)
+Call Check(ViewerProfiles.ClipVerticalOffset1000(ViewerProfiles.PROFILE_ORIN, "Death", 118) = 59)
+Call Check(ViewerProfiles.ClipVerticalOffset1000(ViewerProfiles.PROFILE_ORIN, "JumpAttack", 54) = -119)
+Call Check(ViewerProfiles.ClipVerticalOffset1000(ViewerProfiles.PROFILE_ARIN, "Death", 118) = 0)
 Call Check(ViewerProfiles.EpicGlowAvailable(ViewerProfiles.PROFILE_ORIN))
 Call Check(ViewerProfiles.EpicGlowVisibleByDefault(ViewerProfiles.PROFILE_ORIN))
 Call Check(ViewerProfiles.CalibrationKey(ViewerProfiles.PROFILE_ORIN) <> ViewerProfiles.CalibrationKey(ViewerProfiles.PROFILE_ARIN))
