@@ -2,46 +2,167 @@
   "version": 1,
   "sampleRate": 30,
   "clips": {
-    "Idle": { "loop": true },
-    "Walk": { "loop": true },
-    "Run": { "loop": true },
-    "Defend": { "loop": true },
-    "SwordAttack": { "loop": false },
-    "SwordAttack2": { "loop": false },
-    "BlockImpact": { "loop": false },
-    "Hit": { "loop": false }
+    "Idle": {
+      "loop": true
+    },
+    "Walk": {
+      "loop": true
+    },
+    "Run": {
+      "loop": true
+    },
+    "Defend": {
+      "loop": true
+    },
+    "SwordAttack": {
+      "loop": false
+    },
+    "SwordAttack2": {
+      "loop": false
+    },
+    "BlockImpact": {
+      "loop": false
+    },
+    "Hit": {
+      "loop": false
+    },
+    "Death": {
+      "loop": false
+    }
   },
   "sockets": {
-    "Root": { "node": "mixamorig:Hips" },
-    "Head": { "node": "mixamorig:Head" },
-    "Chest": { "node": "mixamorig:Spine2" },
+    "Root": {
+      "node": "mixamorig:Hips"
+    },
+    "Head": {
+      "node": "mixamorig:Head"
+    },
+    "Chest": {
+      "node": "mixamorig:Spine2"
+    },
     "SwordBase": {
       "node": "mixamorig:RightHand",
-      "translation": [-0.09090214, -0.02039842, -0.04319661]
+      "translation": [
+        -0.09090214,
+        -0.02039842,
+        -0.04319661
+      ]
     },
     "SwordTip": {
       "node": "mixamorig:RightHand",
-      "translation": [-0.46575380, -0.07528231, -0.18014731]
+      "translation": [
+        -0.4657538,
+        -0.07528231,
+        -0.18014731
+      ]
     },
     "ShieldCenter": {
       "node": "mixamorig:LeftHand",
-      "translation": [-0.00089222, 0.05179765, -0.02710282]
+      "translation": [
+        -0.00089222,
+        0.05179765,
+        -0.02710282
+      ]
     },
     "ShieldFireLeft": {
       "node": "mixamorig:LeftHand",
-      "translation": [-0.10563793, 0.15781597, 0.03143543]
+      "translation": [
+        -0.10563793,
+        0.15781597,
+        0.03143543
+      ]
     },
     "ShieldFireRight": {
       "node": "mixamorig:LeftHand",
-      "translation": [-0.07904425, -0.03066517, -0.15973871]
+      "translation": [
+        -0.07904425,
+        -0.03066517,
+        -0.15973871
+      ]
     },
     "ShieldFireTip": {
       "node": "mixamorig:LeftHand",
-      "translation": [0.27916274, 0.02089159, 0.02995853]
+      "translation": [
+        0.27916274,
+        0.02089159,
+        0.02995853
+      ]
     },
-    "HandRight": { "node": "mixamorig:RightHand" },
-    "HandLeft": { "node": "mixamorig:LeftHand" },
-    "FootLeft": { "node": "mixamorig:LeftFoot" },
-    "FootRight": { "node": "mixamorig:RightFoot" }
+    "HandRight": {
+      "node": "mixamorig:RightHand"
+    },
+    "HandLeft": {
+      "node": "mixamorig:LeftHand"
+    },
+    "FootLeft": {
+      "node": "mixamorig:LeftFoot"
+    },
+    "FootRight": {
+      "node": "mixamorig:RightFoot"
+    },
+    "ShieldRim0": {
+      "node": "mixamorig:LeftHand",
+      "translation": [
+        -0.14933352,
+        0.07738725,
+        -0.08481098
+      ]
+    },
+    "ShieldRim1": {
+      "node": "mixamorig:LeftHand",
+      "translation": [
+        -0.10563793,
+        0.15781597,
+        0.03143543
+      ]
+    },
+    "ShieldRim2": {
+      "node": "mixamorig:LeftHand",
+      "translation": [
+        0.02069607,
+        0.13419772,
+        0.06902905
+      ]
+    },
+    "ShieldRim3": {
+      "node": "mixamorig:LeftHand",
+      "translation": [
+        0.14689683,
+        0.10075096,
+        0.07909802
+      ]
+    },
+    "ShieldRim4": {
+      "node": "mixamorig:LeftHand",
+      "translation": [
+        0.27916274,
+        0.02089159,
+        0.02995853
+      ]
+    },
+    "ShieldRim5": {
+      "node": "mixamorig:LeftHand",
+      "translation": [
+        0.16918018,
+        -0.03706243,
+        -0.07468187
+      ]
+    },
+    "ShieldRim6": {
+      "node": "mixamorig:LeftHand",
+      "translation": [
+        0.04961252,
+        -0.04296336,
+        -0.12509608
+      ]
+    },
+    "ShieldRim7": {
+      "node": "mixamorig:LeftHand",
+      "translation": [
+        -0.07904425,
+        -0.03066517,
+        -0.15973871
+      ]
+    }
   }
 }

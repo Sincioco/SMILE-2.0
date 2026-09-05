@@ -2,22 +2,68 @@
   "version": 1,
   "assetId": "sin-star-i.character-1.paladin",
   "characterVersion": "v5.7",
-  "modelSha256": "393D82C06ECCEDF5A13CF3CA835700AA03A6E90ED74B1420569902885E3E1524",
-  "descriptorSha256": "05B8B081FDC1A7CD3ACA70F37D1AEF4BD3377FE6050B8ABE0A8C79AC5462D119",
-  "sm3dSha256": "DC623A682631525C9E921C62E92A21A99C770A1A9C9BFF3E3FD64CEA2F2539B5",
+  "modelSha256": "EDCFC5F92E22DF7FD58030AB64410E0EBD9931D92F7AA2E297565B966C8C502E",
+  "descriptorSha256": "2768A01120F5E0D35A85AF8C445D70A186193097F223429809E95D5098081620",
+  "sm3dSha256": "401C14E7E00A90304C084AA8B766ABFEACD08A1F5B36DDA02025C1F8320B2CCD",
   "clips": [
-    { "name": "BlockImpact", "sampleCount": 25 },
-    { "name": "Defend", "sampleCount": 44 },
-    { "name": "Hit", "sampleCount": 31 },
-    { "name": "Idle", "sampleCount": 78 },
-    { "name": "Run", "sampleCount": 23 },
-    { "name": "SwordAttack", "sampleCount": 47 },
-    { "name": "SwordAttack2", "sampleCount": 32 },
-    { "name": "Walk", "sampleCount": 35 }
+    {
+      "name": "BlockImpact",
+      "sampleCount": 25
+    },
+    {
+      "name": "Death",
+      "sampleCount": 119
+    },
+    {
+      "name": "Defend",
+      "sampleCount": 44
+    },
+    {
+      "name": "Hit",
+      "sampleCount": 31
+    },
+    {
+      "name": "Idle",
+      "sampleCount": 78
+    },
+    {
+      "name": "Run",
+      "sampleCount": 23
+    },
+    {
+      "name": "SwordAttack",
+      "sampleCount": 47
+    },
+    {
+      "name": "SwordAttack2",
+      "sampleCount": 32
+    },
+    {
+      "name": "Walk",
+      "sampleCount": 35
+    }
   ],
   "sockets": [
-    "Chest", "FootLeft", "FootRight", "HandLeft", "HandRight", "Head", "Root",
-    "ShieldCenter", "ShieldFireLeft", "ShieldFireRight", "ShieldFireTip",
-    "SwordBase", "SwordTip"
+    "Chest",
+    "FootLeft",
+    "FootRight",
+    "HandLeft",
+    "HandRight",
+    "Head",
+    "Root",
+    "ShieldCenter",
+    "ShieldFireLeft",
+    "ShieldFireRight",
+    "ShieldFireTip",
+    "ShieldRim0",
+    "ShieldRim1",
+    "ShieldRim2",
+    "ShieldRim3",
+    "ShieldRim4",
+    "ShieldRim5",
+    "ShieldRim6",
+    "ShieldRim7",
+    "SwordBase",
+    "SwordTip"
   ]
 }

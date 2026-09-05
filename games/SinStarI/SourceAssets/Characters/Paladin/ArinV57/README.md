@@ -74,8 +74,8 @@ has been applied.
 | `arin-v5.7-no-equipment.cleaned.glb` | 3,424,928 | `B2168E7735140BEB0D3D65826BB85AACC74A9584E55F4C41A164063129886E54` | Working derivative with equipment meshes removed |
 | `arin-v5.7-mixamo-rigged-t-pose.fbx` | 2,818,128 | `F9807FA88D9AC205A37CEA4568C86BFBA1123D4EA36D81F124CFABF47B67A742` | Approved Mixamo auto-rigged neutral reference |
 | `arin-v5.7-mixamo-sword-and-shield-idle-with-skin.fbx` | 3,129,856 | `65B78FC6C06366E6B3D8619072A34277C2213C4B56FCEF8BFE5C77F2EA1654C6` | Skinned Mixamo reference used for the shared rig and weights |
-| `arin-v5.7-idle-equipment-checkpoint.glb` | 6,742,636 | `393D82C06ECCEDF5A13CF3CA835700AA03A6E90ED74B1420569902885E3E1524` | Eight-clip viewer/editor checkpoint |
-| `ArinV57.sm3d.json` | 1,425 | `05B8B081FDC1A7CD3ACA70F37D1AEF4BD3377FE6050B8ABE0A8C79AC5462D119` | Runtime clips and socket descriptor |
+| `arin-v5.7-idle-equipment-checkpoint.glb` | 6,802,764 | `EDCFC5F92E22DF7FD58030AB64410E0EBD9931D92F7AA2E297565B966C8C502E` | Nine-clip viewer/editor checkpoint |
+| `ArinV57.sm3d.json` | 3,210 | `2768A01120F5E0D35A85AF8C445D70A186193097F223429809E95D5098081620` | Runtime clips and 21 sockets |
 
 ## Blade Socket Correction (September 4, 2026)
 
@@ -239,3 +239,30 @@ If Tripo retopology changes topology or vertex order, repeat Mixamo rigging and 
 ## Retirement Condition
 
 Arin v5.4, v5.5, and v5.6 are retained only as unsuccessful diagnostic history. After v5.7 passes animation deformation, right-arm and wrist continuity, sword-grip, equipment attachment, and Character Viewer checks, the earlier model sources, cooked assets, textures, and candidate-specific build records are superseded and may be safely deleted in a dedicated cleanup commit.
+
+## September 5: Death and selectable shield outline
+
+The current package contains nine clips and 21 sockets. The new user-supplied
+`arin-v5.7-mixamo-death.fbx` is separate from the older rejected KO source.
+`scripts/append-character-animation.py` appended Death from a matching rebuilt
+rig while preserving the accepted mesh, skin, textures and eight previous clips
+byte-for-byte. `Diagnostics/death-append-validation.json` records that comparison.
+
+All 23 saved calibration keys were migrated by clip name when the sorted runtime
+indices changed. Their frame numbers and all 20 channel values remain identical.
+The hashes in `Calibration/arin-v5.7-profile.json` describe the current package;
+older hashes in historical sections describe their earlier milestones.
+
+`Calibration/arin-v5.7-grounding.json` records frame zero for every clip and full
+Idle/Death samples. Arin's Death ends horizontal and plays once, holding the final
+pose. Its measured contact correction is independent from Orin's placement offset.
+
+The viewer defaults to an eight-point warm ember shield outline. Choose **Flames**
+on Arin's tab or the Party's Arin Shield button to restore the previous effect.
+The original three fire sockets and emitter code remain intact. Both treatments
+follow calibrated shield geometry; Freeze Fire applies to either style.
+
+When rebuilding, prepare a review GLB with the manifest, compare existing clips,
+then run `scripts/prepare-arin-shield-rim.py` against the resulting checkpoint and
+descriptor. Any asset hash/clip/socket change requires an explicit name-preserving
+calibration migration before importing the new runtime profile.

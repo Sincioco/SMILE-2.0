@@ -118,6 +118,34 @@ def remove_armature_object_channels(actions: list[bpy.types.Action]) -> None:
                     channelbag.fcurves.remove(curve)
 
 
+def bake_armature_object_motion(rig, action):
+    """Retain the fall carried on Mixamo's armature object before stripping it.
+
+    Anchor to frame one so accepted facing remains unchanged. Capture the whole
+    action before writing keys; otherwise inserted Root keys alter later samples.
+    """
+    previous_action = rig.animation_data.action
+    previous_world = rig.matrix_world.copy()
+    assign_action(rig, action)
+    start, end = map(round, action.frame_range)
+    bpy.context.scene.frame_set(start)
+    bpy.context.view_layer.update()
+    reference_inverse = rig.matrix_world.inverted()
+    root_bone = rig.pose.bones['Root']
+    samples = []
+    for frame in range(start, end + 1):
+        bpy.context.scene.frame_set(frame)
+        samples.append((frame, reference_inverse @ rig.matrix_world @ root_bone.matrix))
+    root_bone.rotation_mode = 'QUATERNION'
+    for frame, pose in samples:
+        root_bone.matrix = pose
+        root_bone.keyframe_insert('location', frame=frame, group='Root')
+        root_bone.keyframe_insert('rotation_quaternion', frame=frame, group='Root')
+        root_bone.keyframe_insert('scale', frame=frame, group='Root')
+    assign_action(rig, previous_action)
+    rig.matrix_world = previous_world
+
+
 def clean_mesh(mesh_object: bpy.types.Object) -> None:
     edit_mesh = bmesh.new()
     edit_mesh.from_mesh(mesh_object.data)
@@ -375,6 +403,7 @@ def build() -> None:
             bpy.data.objects.remove(obj, do_unlink=True)
         bpy.data.actions.remove(source_action, do_unlink=True)
 
+    bake_armature_object_motion(rig, next(action for action in actions if action.name == 'Death'))
     remove_armature_object_channels(actions)
     normalized_scale = normalize_rig(rig, actions)
     body_transfer = restore_pristine_body(body_parts)
@@ -467,7 +496,7 @@ def build() -> None:
             "SwordAttack": {"loop": False},
             "ThorAttack": {"loop": False},
             "Death": {"loop": False},
-            "Defend": {"loop": True},
+            "Defend": {"loop": False},
             "Victory": {"loop": False},
             "Hit": {"loop": False},
             "Run": {"loop": True},
@@ -507,7 +536,7 @@ def build() -> None:
                 ),
                 "frameStart": int(action.frame_range[0]),
                 "frameEnd": int(action.frame_range[1]),
-                "loop": action.name in ("Idle", "Defend", "Run"),
+                "loop": action.name in ("Idle", "Run"),
             }
             for action in actions
         ],

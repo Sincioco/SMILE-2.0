@@ -120,3 +120,20 @@ and idle mouth fire. Both effect Labs now live in `tools` beside this Viewer.
 
 See `docs/implementation/party-battle-mid-development-2026-09-05.md` for the precise
 checkpoint scope, validation and remaining requested work. This is not a final release.
+
+### September 5: KO, shield comparison and camera diagnostics
+
+Arin now has Death alongside his existing eight clips. Both heroes play Death
+once and hold the final pose. On a Dragon turn, the whole party guards; randomly
+one hero takes a fatal hit, finishes the fall, and revives for their own next turn.
+Orin's guard never loops or restarts just because Party advances a stage.
+
+Arin Shield switches between Ember Outline and the preserved Flames effect.
+Freeze Fire affects either treatment; Freeze Lightning remains independent.
+
+Battle cameras use stable actor homes/travel instead of bone bobbing or KO
+height. They stay above the floor, keep clearance from both heroes, and cut at
+shot-stage changes rather than moving through a character. A brief decaying
+shake is reserved for Orin's ground smash and respects Flash/Shake Off.
+Below Camera, Party displays rendered position/target XYZ, yaw/pitch, FOV and
+distance, so screenshots contain enough information to diagnose a bad angle.

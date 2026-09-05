@@ -51,7 +51,7 @@
       "sourceSha256": "535D8FFDD39D4DBA66EC8BC12BF88B078483F345728AFD92698E6553DBE47651",
       "frameStart": 1,
       "frameEnd": 18,
-      "loop": true
+      "loop": false
     },
     {
       "name": "Victory",
@@ -88,5 +88,6 @@
   ],
   "equipmentSource": "orin-v1.0-equipment-source.glb",
   "equipmentPolicy": "Rigid hand attachments from named v1.0 meshes; shield centered on left hand and user-approved Blender correction matrices applied after a 40-degree outward shield fit and butt-grip hammer fit",
-  "footIntegrity": "Preserved by retaining the Idle (8) skin weights, bind matrices, and rig on matching pristine body topology"
+  "footIntegrity": "Preserved by retaining the Idle (8) skin weights, bind matrices, and rig on matching pristine body topology",
+  "deathRootMotion": "Preserve armature-object fall on Root before removing object curves; accepted repair evidence in Calibration/orin-v1.3-death-root-repair.json"
 }

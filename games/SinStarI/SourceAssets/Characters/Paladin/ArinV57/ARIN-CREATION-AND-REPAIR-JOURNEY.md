@@ -705,3 +705,30 @@ end frame does not repeat it. Shared window-focus audio muting remains authorita
 This addition does not change the accepted GLB, descriptor or 23 saved pose keys.
 The newly supplied Death FBX and the requested shield fire outline are pending
 in this mid-development checkpoint, not silently substituted with the archived KO.
+
+## September 5: Death and selectable shield outline
+
+The current package contains nine clips and 21 sockets. The new user-supplied
+`arin-v5.7-mixamo-death.fbx` is separate from the older rejected KO source.
+`scripts/append-character-animation.py` appended Death from a matching rebuilt
+rig while preserving the accepted mesh, skin, textures and eight previous clips
+byte-for-byte. `Diagnostics/death-append-validation.json` records that comparison.
+
+All 23 saved calibration keys were migrated by clip name when the sorted runtime
+indices changed. Their frame numbers and all 20 channel values remain identical.
+The hashes in `Calibration/arin-v5.7-profile.json` describe the current package;
+older hashes in historical sections describe their earlier milestones.
+
+`Calibration/arin-v5.7-grounding.json` records frame zero for every clip and full
+Idle/Death samples. Arin's Death ends horizontal and plays once, holding the final
+pose. Its measured contact correction is independent from Orin's placement offset.
+
+The viewer defaults to an eight-point warm ember shield outline. Choose **Flames**
+on Arin's tab or the Party's Arin Shield button to restore the previous effect.
+The original three fire sockets and emitter code remain intact. Both treatments
+follow calibrated shield geometry; Freeze Fire applies to either style.
+
+When rebuilding, prepare a review GLB with the manifest, compare existing clips,
+then run `scripts/prepare-arin-shield-rim.py` against the resulting checkpoint and
+descriptor. Any asset hash/clip/socket change requires an explicit name-preserving
+calibration migration before importing the new runtime profile.

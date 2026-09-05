@@ -1,0 +1,19 @@
+{
+  "baseSha256": "393d82c06eccedf5a13cf3ca835700aa03a6e90ed74b1420569902885e3e1524",
+  "donorSha256": "c66ff11404d06083672f399e8e9bbf5f5bae45554fd3b213f598cbd5a02adbc5",
+  "outputSha256": "edcfc5f92e22df7fd58030ab64410e0ebd9931d92f7aa2e297565b966c8c502e",
+  "clipAdded": "Death",
+  "originalClipsPreserved": [
+    "BlockImpact",
+    "Defend",
+    "Hit",
+    "Idle",
+    "Run",
+    "SwordAttack",
+    "SwordAttack2",
+    "Walk"
+  ],
+  "originalBinaryBytesPreserved": 6544684,
+  "restTransformsAndHierarchyMatch": true,
+  "meshSkinMaterialTextureMetadataUnchanged": true
+}

@@ -41,6 +41,22 @@ Dim AimLimits As Core.Vector3
 
 Game Window "Character 3D Viewer Hardening Tests" Size 320 By 240
 
+OrbitFirst.Position = Math3D.Vector(10, 42, 0)
+
+Call BattleCamera.KeepOutsideActor(OrbitFirst, Math3D.Vector(0, 0, 0), 100)
+Call Check(OrbitFirst.Position.X = 100 And OrbitFirst.Position.Y = 42)
+
+OrbitFirst.Position = Math3D.Vector(0, 42, 0)
+
+Call BattleCamera.KeepOutsideActor(OrbitFirst, Math3D.Vector(0, 0, 0), 100)
+Call Check(OrbitFirst.Position.X = 100)
+
+OrbitFirst.Position = Math3D.Vector(0, 0, 0)
+OrbitFirst.Target = Math3D.Vector(100, 100, 0)
+AimAngles = BattleCamera.ViewAngles(OrbitFirst)
+
+Call Check(Abs(AimAngles.Y - 90) <= 1 And Abs(AimAngles.X - 45) <= 1)
+
 AimForward = Math3D.Vector(0, 1, 0)
 AimLimits = Math3D.Vector(35, 0, 45)
 AimTarget = NodeAim3D.Direction(Math3D.Normalize(AimForward), Math3D.Vector(22, 0, -30))
@@ -162,7 +178,9 @@ Call Check(Profile.PartyRole = "Paladin")
 Call Check(Profile.PrototypeAlias = "dragonfall.arin-v5-7")
 Call Check(Profile.GroundOffset = 0)
 Call Check(Profile.DefaultPlaybackSpeed = 200)
-Call Check(ViewerProfiles.ClipCount(ViewerProfiles.PROFILE_ARIN) = 8)
+Call Check(ViewerProfiles.ClipCount(ViewerProfiles.PROFILE_ARIN) = 9)
+Call Check(ViewerProfiles.ClipName(ViewerProfiles.PROFILE_ARIN, 8) = "Death")
+Call Check(ViewerProfiles.HoldsFinalPose(ViewerProfiles.PROFILE_ARIN, "Death"))
 Call Check(ViewerProfiles.ClipName(ViewerProfiles.PROFILE_ARIN, 0) = "Idle")
 Call Check(ViewerProfiles.ClipName(ViewerProfiles.PROFILE_ARIN, 1) = "SwordAttack")
 Call Check(ViewerProfiles.ClipName(ViewerProfiles.PROFILE_ARIN, 2) = "SwordAttack2")
@@ -202,9 +220,9 @@ Call Check(Not ViewerProfiles.ClipLoops(ViewerProfiles.PROFILE_ORIN, 3))
 Call Check(ViewerProfiles.ClipVerticalOffset1000(ViewerProfiles.PROFILE_ORIN, "Defend", 0) = -119)
 Call Check(ViewerProfiles.ClipVerticalOffset1000(ViewerProfiles.PROFILE_ORIN, "Defend", 18) = -174)
 Call Check(ViewerProfiles.ClipVerticalOffset1000(ViewerProfiles.PROFILE_ORIN, "Defend", 100) = -174)
-Call Check(ViewerProfiles.ClipVerticalOffset1000(ViewerProfiles.PROFILE_ORIN, "Death", 118) = 59)
+Call Check(ViewerProfiles.ClipVerticalOffset1000(ViewerProfiles.PROFILE_ORIN, "Death", 118) = -97)
 Call Check(ViewerProfiles.ClipVerticalOffset1000(ViewerProfiles.PROFILE_ORIN, "JumpAttack", 54) = -119)
-Call Check(ViewerProfiles.ClipVerticalOffset1000(ViewerProfiles.PROFILE_ARIN, "Death", 118) = 0)
+Call Check(ViewerProfiles.ClipVerticalOffset1000(ViewerProfiles.PROFILE_ARIN, "Death", 118) = 42)
 Call Check(ViewerProfiles.EpicGlowAvailable(ViewerProfiles.PROFILE_ORIN))
 Call Check(ViewerProfiles.EpicGlowVisibleByDefault(ViewerProfiles.PROFILE_ORIN))
 Call Check(ViewerProfiles.CalibrationKey(ViewerProfiles.PROFILE_ORIN) <> ViewerProfiles.CalibrationKey(ViewerProfiles.PROFILE_ARIN))

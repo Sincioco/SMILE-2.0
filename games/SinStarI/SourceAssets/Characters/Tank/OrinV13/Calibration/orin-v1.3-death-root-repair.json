@@ -1,0 +1,22 @@
+{
+  "source": "orin-v1.3-mixamo-death.fbx",
+  "sourceSha256": "92ef957415c492171ef3a361de4bc7c28b1f28bb85838c0760f270b2b9a9e3ed",
+  "beforeSha256": "6dd3ec872cad79fd28ad3b8d5a5228149cbc35c74652a69b6123922d94901936",
+  "afterSha256": "84b55e0ec83746a0188a473102f73377e63c3e9f15f04b597cf3daba6b78ddcf",
+  "policy": "Bake armature object motion into Root, aligned to accepted Death frame zero; retain all other channels and assets.",
+  "samples": 119,
+  "duration": 3.933333333333333,
+  "alignmentMaximumError": 6.870031792392892e-07,
+  "firstRoot": [
+    -0.5807899832725525,
+    -0.3518753945827484,
+    -0.29172733426094055,
+    0.6736185550689697
+  ],
+  "lastRoot": [
+    0.04336961358785629,
+    0.0015854953089728951,
+    0.1507214456796646,
+    0.9876232147216797
+  ]
+}

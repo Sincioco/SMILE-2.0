@@ -114,4 +114,27 @@ distinction fixed initial lightning appearing during the wrong animation.
 
 CPU charge contact/release are latched per action and independently tested.
 Frame scrubbing previews visuals without repeated thunder or charge consumption.
-The accepted model checksum remains 6DD3EC872CAD79FD28AD3B8D5A5228149CBC35C74652A69B6123922D94901936.
+Before the Death repair, the model checksum was 6DD3EC872CAD79FD28AD3B8D5A5228149CBC35C74652A69B6123922D94901936.
+
+## September 5: Death root motion repair
+
+Orin's Mixamo Death export stores the fall's global rotation/translation on the
+armature object. Removing those object channels left him upright at the last
+frame; a floor-height adjustment could never correct that orientation defect.
+The accepted repair bakes that motion into the Root joint, aligned to the
+accepted first pose, while retaining every other clip and all geometry, skin,
+textures and equipment bytes. The source FBX is unchanged.
+
+`scripts/repair-orin-death-root.py` reproduces the surgical repair from the
+pre-repair checkpoint. `Calibration/orin-v1.3-death-root-repair.json` records
+source/result hashes and joint-position alignment error. The normal builder now
+bakes object motion before removing object channels. Inspect the whole
+fall and its final horizontal pose, not just a mid-fall screenshot.
+
+The regenerated grounding measurement and Death contact curve replace the old
+upright-pose correction. The shared -0.119 baseline remains unchanged. Death
+plays once and holds its settled pose. Defend is non-looping in both descriptor
+and runtime policy; Party never restarts an already-held Orin guard.
+
+Both individual and Party paths use the final grounded transform for equipment
+and VFX. Current hashes live in `Calibration/orin-v1.3-profile.json`.

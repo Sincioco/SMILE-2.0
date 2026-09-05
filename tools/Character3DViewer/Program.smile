@@ -17,6 +17,7 @@ Import Smile.Simple3D.NodeAim3D As NodeAim3D
 Import Smile.Simple3D.Scene3D As Scene3D
 Import Smile.Tools.Character3DViewerProfiles As ViewerProfiles
 Import Smile.Tools.OrinStorm As OrinStorm
+Import Smile.Tools.ArinShieldRim As ArinShieldRim
 Import Smile.Tools.BattleAudio As BattleAudio
 Import Smile.Tools.BattleCamera As BattleCamera
 Import Smile.Tools.DragonPresence As DragonPresence
@@ -138,6 +139,10 @@ Dim PartyMode As Boolean
 Dim PartyCompanion As ViewerActorContext
 Dim PartyElapsed As Number
 Dim PartyTurn As Number
+Dim PartyPreviousShotStage As Number
+Dim PartyFatalTarget As Number
+Dim PartyFatalStarted As Boolean
+Dim PartyKnockedOut[2] As Boolean
 Dim PartyStage As Number
 Dim PartyReady As Boolean
 Dim CharacterSwitchBlocked As Boolean
@@ -183,6 +188,7 @@ Dim SwordFireTip As Core.Vector3
 Dim ShieldFire[3] As Fire.FireEmitter
 Dim ShieldFirePoints[3] As Core.Vector3
 Dim ShieldFireVisible As Boolean
+Dim ShieldFlameStyle As Boolean
 Dim ShieldFireFailed As Boolean
 Dim ShieldFireClip As Number
 Dim ShieldFireTime As Number
@@ -266,6 +272,9 @@ Dim PartyPreviousCamera As Number
 Dim PartyPreviousCameraTurn As Number
 Dim PartyShotPosition1000 As Core.Vector3
 Dim PartyShotTarget1000 As Core.Vector3
+Dim PartyShotBoss As Core.Vector3
+Dim PartyShotBossHead As Core.Vector3
+Dim PartyShotMouth As Core.Vector3
 Dim ArinAudio As BattleAudio.CueState
 Dim DragonAudio As BattleAudio.CueState
 Dim AnimationCycleElapsed As Number
@@ -2129,6 +2138,7 @@ Sub ApplyPartyAttackCamera()
     Dim Impact1000 As Number
     Dim BattleShot As Boolean
     Dim BossChargeShot As Boolean
+    Dim ShotSide As Number
 
     PartyOrbitCamera = Camera
     PartyActiveCamera = 1
@@ -2153,17 +2163,20 @@ Sub ApplyPartyAttackCamera()
         Return
     End If
 
-    Hero = Character3D.SocketPosition(Character, "Chest", BODY_PART_INDEX)
+    ''' Actor homes/travel are stable. Bone bobbing and KO must not drive the camera.
+    Hero = Math3D.Vector(ViewerFrame.PositionX, ViewerFrame.PositionY + 68, ViewerFrame.PositionZ)
 
     If PartyTurn = 1 Then
-        Hero = Character3D.SocketPosition(PartyCompanion.Actor, "Chest", BODY_PART_INDEX)
+        Hero = Math3D.Vector(PartyCompanion.Frame.PositionX,
+            PartyCompanion.Frame.PositionY + 80, PartyCompanion.Frame.PositionZ)
     End If
 
     WaistHeight = Hero.Y - 32
 
     If PartyTurn = 2 Then
 
-        OtherHero = Character3D.SocketPosition(PartyCompanion.Actor, "Chest", BODY_PART_INDEX)
+        OtherHero = Math3D.Vector(PartyCompanion.Frame.PositionX,
+            PartyCompanion.Frame.PositionY + 80, PartyCompanion.Frame.PositionZ)
         WaistHeight = Min(Hero.Y, OtherHero.Y) - 32
         Hero.X = (Hero.X + OtherHero.X) / 2
         Hero.Y = (Hero.Y + OtherHero.Y) / 2
@@ -2171,8 +2184,18 @@ Sub ApplyPartyAttackCamera()
 
     End If
 
-    Boss = Character3D.SocketPosition(Dragon, "Chest")
-    BossHead = Character3D.SocketPosition(Dragon, "Head")
+    ''' Frame the boss at the cut; breathing, recoil and head aim do not shake the lens.
+
+    If PartyPreviousCamera = 1 Or PartyTurn <> PartyPreviousCameraTurn Then
+
+        PartyShotBoss = Character3D.SocketPosition(Dragon, "Chest")
+        PartyShotBossHead = Character3D.SocketPosition(Dragon, "Head")
+        PartyShotMouth = Character3D.SocketPosition(Dragon, "Mouth")
+
+    End If
+
+    Boss = PartyShotBoss
+    BossHead = PartyShotBossHead
     BossChargeShot = (PartyTurn = 2 And
         (PartyElapsed * PlaybackSpeed / 100 < 650 Or
         (DragonCounter Mod 3 = 2 And PartyElapsed * PlaybackSpeed / 100 < 1750)))
@@ -2182,17 +2205,22 @@ Sub ApplyPartyAttackCamera()
     Along = 150
     Across = 120
     Height = 55
+    ShotSide = -1
+
+    If PartyTurn = 1 Then
+        ShotSide = 1
+    End If
 
     If PartyElapsed < 650 Then
 
-        Along = -105
-        Across = 125
-        Height = 35
+        Along = -45
+        Across = 190
+        Height = 10
 
     Else If PartyStage = 0 And PartyTurn <> 2 Then
 
         Along = 160
-        Across = 55
+        Across = 85
         Height = 65
 
     Else
@@ -2210,6 +2238,8 @@ Sub ApplyPartyAttackCamera()
         Along = 170
         Across = 65
     End If
+
+    Across = Across * ShotSide
 
     Desired = PartyOrbitCamera
     Desired.UpDirection.X = 0
@@ -2237,7 +2267,7 @@ Sub ApplyPartyAttackCamera()
 
     ''' The orbit stays live. The two battle cameras have independent poses and cut directly.
 
-    Mouth = Character3D.SocketPosition(Dragon, "Mouth")
+    Mouth = PartyShotMouth
     PartyDragonCamera = Desired
     PartyDragonCamera.Position.X = BossHead.X - DeltaX * 120 / Distance - DeltaZ * 90 / Distance
     PartyDragonCamera.Position.Y = BossHead.Y + 20
@@ -2246,7 +2276,9 @@ Sub ApplyPartyAttackCamera()
     PartyDragonCamera.Target.Y = (Mouth.Y * 3 + Hero.Y) / 4
     PartyDragonCamera.Target.Z = (Mouth.Z * 3 + Hero.Z) / 4
 
-    If PartyPreviousCamera <> 2 Or PartyTurn <> PartyPreviousCameraTurn Then
+    If (PartyPreviousCamera <> 2 Or
+        PartyTurn <> PartyPreviousCameraTurn Or
+        PartyStage <> PartyPreviousShotStage) Then
 
         PartyShotPosition1000.X = Desired.Position.X * 1000
         PartyShotPosition1000.Y = Desired.Position.Y * 1000
@@ -2270,6 +2302,17 @@ Sub ApplyPartyAttackCamera()
     PartyHeroCamera.Target.X = PartyShotTarget1000.X / 1000
     PartyHeroCamera.Target.Y = PartyShotTarget1000.Y / 1000
     PartyHeroCamera.Target.Z = PartyShotTarget1000.Z / 1000
+
+    ''' Clear both armored silhouettes after smoothing, including a shield held out in front.
+    Hero = Math3D.Vector(ViewerFrame.PositionX, ViewerFrame.PositionY, ViewerFrame.PositionZ)
+    OtherHero = Math3D.Vector(PartyCompanion.Frame.PositionX, PartyCompanion.Frame.PositionY, PartyCompanion.Frame.PositionZ)
+
+    Call BattleCamera.KeepOutsideActor(PartyHeroCamera, Hero, 100)
+    Call BattleCamera.KeepOutsideActor(PartyHeroCamera, OtherHero, 115)
+
+    PartyHeroCamera.Position.Y = Max(24, PartyHeroCamera.Position.Y)
+    PartyDragonCamera.Position.Y = Max(24, PartyDragonCamera.Position.Y)
+
     Camera = PartyHeroCamera
     PartyActiveCamera = 2
 
@@ -2280,6 +2323,7 @@ Sub ApplyPartyAttackCamera()
 
     PartyPreviousCamera = PartyActiveCamera
     PartyPreviousCameraTurn = PartyTurn
+    PartyPreviousShotStage = PartyStage
 
 End Sub
 
@@ -2641,6 +2685,11 @@ Function HandleInterfacePointer() As Boolean
         PointerInRectangle(PanelLeft + 12, 470, 128, 20)) Then
 
         FlameAnimationPaused = Not FlameAnimationPaused
+
+    Else If (ProfileIndex = ViewerProfiles.PROFILE_ARIN And
+        PointerInRectangle(PanelLeft + 144, 470, 108, 20)) Then
+
+        Call ToggleShieldFireStyle()
 
     Else If PointerInRectangle(PanelLeft + 172, 204, 30, 24) Then
 
@@ -3666,6 +3715,29 @@ Sub UpdateShieldFire()
     Dim Restart As Boolean
     Dim Ok As Boolean
 
+    If Not ShieldFlameStyle Then
+
+        For Index = 0 To 2
+
+            If ShieldFire[Index].Slot <> 0 Then
+                Ok = Fire.Destroy(ShieldFire[Index])
+            End If
+
+        End For
+
+        If (ShieldFireVisible And
+            ShieldVisible And
+            EpicGlowVisible) Then
+            Call ArinShieldRim.Update(Character, Camera, CameraElapsed)
+        Else
+
+            Call ArinShieldRim.Shutdown()
+        End If
+
+        Return
+
+    End If
+
     If ShieldFireFailed Then
 
         For Index = 0 To 2
@@ -3755,6 +3827,12 @@ Sub DrawShieldFire()
 
     Dim Index As Number
     Dim Ok As Boolean
+
+    If Not ShieldFlameStyle Then
+        Call ArinShieldRim.Draw()
+
+        Return
+    End If
 
     If ShieldFireFailed Then
         Return
@@ -4303,6 +4381,8 @@ Sub ClearEquipmentFire()
 
     Dim Index As Number
     Dim Ok As Boolean
+
+    Call ArinShieldRim.Shutdown()
 
     If SwordFire.Slot <> 0 Then
         Ok = Fire.Destroy(SwordFire)
@@ -7017,13 +7097,9 @@ Sub DrawViewerOverlay()
         End If
 
         If SwordFireReady Then
-
             Call DrawButton(PanelLeft + 12, 470, 128, 20, FlamePlaybackLabel(), Not FlameAnimationPaused)
 
-            Draw Text "Backend / Error" At PanelLeft + 150, 469 Size 9 Color LIGHT_GRAY
-            Draw Number Fire.Value(3, SwordFire) At PanelLeft + 160, 480 Size 10 Color CYAN
-            Draw Number EquipmentFireFirstError At PanelLeft + 216, 480 Size 10 Color YELLOW
-
+            Call DrawButton(PanelLeft + 144, 470, 108, 20, ShieldFireStyleLabel(), Not ShieldFlameStyle)
         End If
 
         If Window_Height() >= ANIMATION_DETAILS_MINIMUM_HEIGHT Then
@@ -8103,6 +8179,10 @@ Sub ResetPartyDemo()
 
     PartyElapsed = 0
     PartyTurn = 0
+    PartyFatalTarget = -1
+    PartyFatalStarted = False
+    PartyKnockedOut[0] = False
+    PartyKnockedOut[1] = False
     DragonCounter = 0
     PartyStage = -1
     DragonReactionPending = False
@@ -8155,6 +8235,7 @@ Sub PlayPartyClip(ByRef Actor As Character3D.Actor, Name As Text, ByRef Clip As 
     Mode = Graphics3D.ANIMATION_LOOP
     HoldGuard = (Actor.Handle = PartyCompanion.Actor.Handle And
         ViewerProfiles.HoldsFinalPose(PartyCompanion.Profile, Name))
+    HoldGuard = HoldGuard Or Name = "Death"
 
     If (Name = "SwordAttack" Or
         Name = "ThorAttack" Or
@@ -8211,6 +8292,11 @@ Sub AdvancePartyDemo()
         PartyTurn = (PartyTurn + 1) Mod 3
         PartyStage = -1
 
+        If PartyTurn = 2 Then
+            Random PartyFatalTarget From -1 To 1
+            PartyFatalStarted = False
+        End If
+
     End If
 
     If PartyTurn = 2 Then
@@ -8265,12 +8351,22 @@ Sub AdvancePartyDemo()
         DragonReactionPending = Stage = 1
 
         If PartyTurn = 0 Then
+
+            PartyKnockedOut[0] = False
+
             Call PlayPartyClip(Character, Name, SelectedClip)
-            Call PlayPartyClip(PartyCompanion.Actor, "Defend", PartyCompanion.Clip)
+
+            If Not PartyKnockedOut[1] Then
+                Call PlayPartyClip(PartyCompanion.Actor, "Defend", PartyCompanion.Clip)
+            End If
+
         Else
+
+            PartyKnockedOut[1] = False
 
             Call PlayPartyClip(Character, "Defend", SelectedClip)
             Call PlayPartyClip(PartyCompanion.Actor, Name, PartyCompanion.Clip)
+
         End If
 
         PartyStage = Stage
@@ -8306,9 +8402,15 @@ Sub AdvanceDragonTurn()
     Dim Duration As Number
     Dim ActionTime As Number
     Dim Home As Core.Vector3
+    Dim ImpactTime As Number
 
     Duration = DragonTurnDuration()
     ActionTime = PartyElapsed * PlaybackSpeed / 100
+    ImpactTime = DragonImpactTime()
+
+    If PartyFatalTarget >= 0 Then
+        Duration = Max(Duration, (ImpactTime + 4300) * 100 / Max(25, PlaybackSpeed))
+    End If
 
     If PartyElapsed >= Duration Then
 
@@ -8320,31 +8422,28 @@ Sub AdvanceDragonTurn()
 
     End If
 
-    Stage = 0
+    If PartyStage <> 0 Then
 
-    If ActionTime >= 1200 And ActionTime < 1750 Then
-        Stage = 1
-    Else If (ActionTime >= 2200 And
-        ActionTime < 2700 And
-        DragonCounter Mod 3 = 0) Then
-        Stage = 2
+        Call PlayPartyClip(Character, "Defend", SelectedClip)
+        Call PlayPartyClip(PartyCompanion.Actor, "Defend", PartyCompanion.Clip)
+
+        PartyStage = 0
+
     End If
 
-    If Stage <> PartyStage Then
+    If ActionTime >= ImpactTime And Not PartyFatalStarted Then
 
-        If Stage = 1 Then
-            Call PlayPartyClip(Character, "Hit", SelectedClip)
-            Call PlayPartyClip(PartyCompanion.Actor, "Defend", PartyCompanion.Clip)
-        Else If Stage = 2 Then
-            Call PlayPartyClip(Character, "Defend", SelectedClip)
-            Call PlayPartyClip(PartyCompanion.Actor, "Hit", PartyCompanion.Clip)
-        Else
+        PartyFatalStarted = True
 
-            Call PlayPartyClip(Character, "Defend", SelectedClip)
-            Call PlayPartyClip(PartyCompanion.Actor, "Defend", PartyCompanion.Clip)
+        If PartyFatalTarget = 0 Then
+            PartyKnockedOut[0] = True
+
+            Call PlayPartyClip(Character, "Death", SelectedClip)
+        Else If PartyFatalTarget = 1 Then
+            PartyKnockedOut[1] = True
+
+            Call PlayPartyClip(PartyCompanion.Actor, "Death", PartyCompanion.Clip)
         End If
-
-        PartyStage = Stage
 
     End If
 
@@ -8379,6 +8478,37 @@ Function DragonTurnDuration() As Number
     Return Result
 
 End Function
+
+Function DragonImpactTime() As Number
+
+    If DragonCounter Mod 3 = 2 Then
+        Return 2500
+    Else If DragonCounter Mod 3 = 1 Then
+        Return 1000
+    End If
+
+    Return 1200
+
+End Function
+
+Function ShieldFireStyleLabel() As Text
+
+    If ShieldFlameStyle Then
+        Return "Flames"
+    End If
+
+    Return "Ember Outline"
+
+End Function
+
+Sub ToggleShieldFireStyle()
+
+    ShieldFlameStyle = Not ShieldFlameStyle
+    ShieldFireFailed = False
+
+    Call ClearEquipmentFire()
+
+End Sub
 
 Sub UpdatePartyCompanion()
 
@@ -8507,6 +8637,8 @@ Function HandlePartyPointer() As Boolean
         FlameAnimationPaused = Not FlameAnimationPaused
     Else If PointerInRectangle(Left + 128, 410, 108, 24) Then
         LightningAnimationPaused = Not LightningAnimationPaused
+    Else If PointerInRectangle(Left + 12, 440, 224, 22) Then
+        Call ToggleShieldFireStyle()
     End If
 
     Return Result
@@ -8575,14 +8707,24 @@ Sub DrawPartyOverlay()
             VfxPlaybackLabel("Fire", FlameAnimationPaused), FlameAnimationPaused)
         Call DrawButton(Left + 128, 410, 108, 24,
             VfxPlaybackLabel("Lightning", LightningAnimationPaused), LightningAnimationPaused)
+        Call DrawButton(Left + 12, 440, 224, 22, "Arin Shield: " + ShieldFireStyleLabel(), Not ShieldFlameStyle)
 
         If Window_Height() >= 620 Then
 
-            Draw Text "Edit Each Character In Its Tab" At Left + 16, 448 Size 12 Color LIGHT_GRAY
-            Draw Text "VFX Controls Apply To All Actors" At Left + 16, 468 Size 12 Color LIGHT_GRAY
+            If PartyKnockedOut[0] Then
+                Draw Text "Arin KO - Revives On His Turn" At Left + 16, 470 Size 12 Color YELLOW
+            Else If PartyKnockedOut[1] Then
+                Draw Text "Orin KO - Revives On His Turn" At Left + 16, 470 Size 12 Color YELLOW
+            Else
+                Draw Text "Edit Each Character In Its Tab" At Left + 16, 470 Size 12 Color LIGHT_GRAY
+            End If
+
             Draw Text OrinStorm.Caption() At Left + 16, 488 Size 12 Color CYAN
             Draw Text "Camera" At Left + 16, 528 Size 12 Color LIGHT_GRAY
             Draw Number PartyActiveCamera At Left + 80, 528 Size 12 Color CYAN
+
+            Call DrawPartyCameraDetails(Left + 16, 548)
+
             Draw Text "FPS" At Left + 16, 508 Size 13 Color LIGHT_GRAY
             Draw Number CurrentFramesPerSecond At Left + 62, 508 Size 13 Color GREEN
 
@@ -8599,5 +8741,27 @@ Sub DrawPartyOverlay()
         Draw Text "Party Could Not Load — Select A Character Or Press Enter To Retry" At 18, 112 Size 16 Color YELLOW
         Draw Number FirstFailureStage At 18, 140 Size 14 Color YELLOW
     End If
+
+End Sub
+
+Sub DrawPartyCameraDetails(X As Number, Y As Number)
+
+    Dim Angles As Core.Vector3
+
+    Angles = BattleCamera.ViewAngles(Camera)
+    Draw Text "Pos XYZ" At X, Y Size 11 Color LIGHT_GRAY
+    Draw Number Camera.Position.X At X + 74, Y Size 11 Color CYAN
+    Draw Number Camera.Position.Y At X + 124, Y Size 11 Color CYAN
+    Draw Number Camera.Position.Z At X + 174, Y Size 11 Color CYAN
+    Draw Text "Aim XYZ" At X, Y + 14 Size 11 Color LIGHT_GRAY
+    Draw Number Camera.Target.X At X + 74, Y + 14 Size 11 Color CYAN
+    Draw Number Camera.Target.Y At X + 124, Y + 14 Size 11 Color CYAN
+    Draw Number Camera.Target.Z At X + 174, Y + 14 Size 11 Color CYAN
+    Draw Text "Yaw / Pitch" At X, Y + 28 Size 11 Color LIGHT_GRAY
+    Draw Number Angles.Y At X + 100, Y + 28 Size 11 Color CYAN
+    Draw Number Angles.X At X + 158, Y + 28 Size 11 Color CYAN
+    Draw Text "FOV / Dist" At X, Y + 42 Size 11 Color LIGHT_GRAY
+    Draw Number Camera.FovDegrees At X + 100, Y + 42 Size 11 Color CYAN
+    Draw Number Math3D.Distance(Camera.Position, Camera.Target) At X + 158, Y + 42 Size 11 Color CYAN
 
 End Sub

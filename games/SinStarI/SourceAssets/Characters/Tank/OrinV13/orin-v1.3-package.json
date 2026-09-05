@@ -9,7 +9,8 @@
     "original": "orin-v1.3.original.glb",
     "neutralReference": "orin-v1.2-neutral-reference.glb",
     "equipmentSource": "orin-v1.0-equipment-source.glb",
-    "acceptedViewerCheckpoint": "orin-v1.3-animation-checkpoint.glb"
+    "acceptedViewerCheckpoint": "orin-v1.3-animation-checkpoint.glb",
+    "currentAnimationWorkingFile": "Blender/orin-v1.3-death-repaired.blend"
   },
   "rig": {
     "mixamoUpload": "orin-v1.3-mixamo-t-pose-with-skeleton.fbx",
@@ -33,7 +34,8 @@
     "groundingMeasurements": "Calibration/orin-v1.3-grounding.json",
     "groundingBuilder": "scripts/measure-orin-grounding.py",
     "groundingPolicy": "Shared -0.119 model-unit baseline, with measured Defend, Hit and Death contact corrections; glow uses the final actor position",
-    "syncScript": "scripts/sync-arin-v5-7-calibration.ps1 -Character Orin"
+    "syncScript": "scripts/sync-arin-v5-7-calibration.ps1 -Character Orin",
+    "deathRootRepair": "Calibration/orin-v1.3-death-root-repair.json"
   },
   "previews": "Previews",
   "vfx": {
@@ -44,11 +46,15 @@
     "thorCharge": "Forked Judgment",
     "hammerImpact": "Thunder Smash",
     "hammerTrail": "GPU sparks retained in world space",
-    "chargeRange": [0, 1000]
+    "chargeRange": [
+      0,
+      1000
+    ]
   },
   "workflowHandoff": "ORIN-CREATION-AND-REPAIR-JOURNEY.md",
   "build": {
     "blenderBuilder": "scripts/build-orin-v1-3-mixamo.py",
-    "viewerBuild": "tools/Character3DViewer/Build.ps1"
+    "viewerBuild": "tools/Character3DViewer/Build.ps1",
+    "acceptedDeathRepair": "scripts/repair-orin-death-root.py"
   }
 }

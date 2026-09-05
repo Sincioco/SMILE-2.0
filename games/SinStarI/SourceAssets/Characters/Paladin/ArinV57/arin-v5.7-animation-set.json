@@ -61,6 +61,10 @@
       "file": "arin-v5.7-mixamo-hit-without-skin.fbx",
       "stabilizeShieldArm": true,
       "stabilizeSwordArm": true
+    },
+    {
+      "name": "Death",
+      "file": "arin-v5.7-mixamo-death.fbx"
     }
   ]
 }

@@ -7,14 +7,14 @@
   "storageVersion": 3,
   "profile": {
     "version": 1,
-    "modelSha256": "393D82C06ECCEDF5A13CF3CA835700AA03A6E90ED74B1420569902885E3E1524",
-    "descriptorSha256": "05B8B081FDC1A7CD3ACA70F37D1AEF4BD3377FE6050B8ABE0A8C79AC5462D119",
-    "sm3dSha256": "DC623A682631525C9E921C62E92A21A99C770A1A9C9BFF3E3FD64CEA2F2539B5",
-    "clipNamesSha256": "cd63e3a2c6a50872ea80f18c42868d81d7dac76d5680c9519b3827e793697c66",
-    "socketNamesSha256": "9bdb9312cf118c78c2805c00061541c72fe3aee23ff993269efba5a677a32d6e"
+    "modelSha256": "EDCFC5F92E22DF7FD58030AB64410E0EBD9931D92F7AA2E297565B966C8C502E",
+    "descriptorSha256": "2768A01120F5E0D35A85AF8C445D70A186193097F223429809E95D5098081620",
+    "sm3dSha256": "401C14E7E00A90304C084AA8B766ABFEACD08A1F5B36DDA02025C1F8320B2CCD",
+    "clipNamesSha256": "b0c2aef40d6312f22da2fd20cb645b30f88a5621133ee07cd69517e337489d58",
+    "socketNamesSha256": "5f2c3a617f331afff81f49310abba9c3570f8c80f505a34396f9d99412cf1871"
   },
   "savedKeyframe": {
-    "clipIndex": 5,
+    "clipIndex": 6,
     "clipName": "SwordAttack",
     "frame": 21
   },
@@ -71,6 +71,11 @@
     },
     {
       "index": 1,
+      "name": "Death",
+      "keyframes": []
+    },
+    {
+      "index": 2,
       "name": "Defend",
       "keyframes": [
         {
@@ -119,7 +124,7 @@
       ]
     },
     {
-      "index": 2,
+      "index": 3,
       "name": "Hit",
       "keyframes": [
         {
@@ -168,7 +173,7 @@
       ]
     },
     {
-      "index": 3,
+      "index": 4,
       "name": "Idle",
       "keyframes": [
         {
@@ -217,7 +222,7 @@
       ]
     },
     {
-      "index": 4,
+      "index": 5,
       "name": "Run",
       "keyframes": [
         {
@@ -266,7 +271,7 @@
       ]
     },
     {
-      "index": 5,
+      "index": 6,
       "name": "SwordAttack",
       "keyframes": [
         {
@@ -831,7 +836,7 @@
       ]
     },
     {
-      "index": 6,
+      "index": 7,
       "name": "SwordAttack2",
       "keyframes": [
         {
@@ -1009,7 +1014,7 @@
       ]
     },
     {
-      "index": 7,
+      "index": 8,
       "name": "Walk",
       "keyframes": [
         {

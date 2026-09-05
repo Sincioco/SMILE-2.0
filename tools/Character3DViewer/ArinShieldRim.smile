@@ -1,0 +1,124 @@
+''' A quiet ember outline; the original shield flames remain a separate viewer option.
+Module Smile.Tools.ArinShieldRim
+
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Graphics3D As Graphics3D
+Import Smile.Simple3D.Character3D As Character3D
+Import Smile.Simple3D.Math3D As Math3D
+
+Private Dim Texture As Core.Texture3D
+Private Dim Material As Core.Material3D
+Private Dim Ribbons[3] As Core.RibbonBatch3D
+Private Dim Points[8] As Core.Vector3
+Private Dim Names[8] As Text
+Private Dim Clock As Number
+Private Dim Visible As Boolean
+
+Public Sub Update(Actor As Character3D.Actor, Camera As Core.Camera3D, Elapsed As Number)
+
+    Dim Index As Number
+    Dim Layer As Number
+    Dim PointIndex As Number
+    Dim Side As Core.Vector3
+    Dim Tangent As Core.Vector3
+    Dim View As Core.Vector3
+    Dim Center As Core.Vector3
+    Dim Width As Number
+    Dim Opacity As Number
+    Dim Ok As Boolean
+
+    If Material.Handle = 0 Then
+
+        Texture = Graphics3D.LoadTexture3D("Assets/Lightning/lightning-ribbon.png")
+        Material = Graphics3D.CreateEffectMaterial3D(Texture, Graphics3D.MATERIAL_ALPHA_ADDITIVE, 220)
+        Names[0] = "ShieldRim0"
+        Names[1] = "ShieldRim1"
+        Names[2] = "ShieldRim2"
+        Names[3] = "ShieldRim3"
+        Names[4] = "ShieldRim4"
+        Names[5] = "ShieldRim5"
+        Names[6] = "ShieldRim6"
+        Names[7] = "ShieldRim7"
+
+        For Layer = 0 To 2
+            Ribbons[Layer] = Graphics3D.CreateRibbonBatch3D(9, Material)
+        End For
+
+    End If
+
+    Clock = (Clock + Elapsed) Mod 120000
+    Ok = Material.Handle <> 0
+
+    For Index = 0 To 7
+        Points[Index] = Character3D.SocketPosition(Actor, Names[Index], 0)
+    End For
+
+    For Layer = 0 To 2
+
+        Width = 1 + Layer * Layer
+        Opacity = 85 - Layer * 32
+
+        For Index = 0 To 8
+
+            PointIndex = Index Mod 8
+            Center = Points[PointIndex]
+            Tangent = Math3D.Subtract(Points[(PointIndex + 1) Mod 8], Points[(PointIndex + 7) Mod 8])
+            View = Math3D.Subtract(Camera.Position, Center)
+            Tangent = Math3D.Normalize(Tangent)
+            View = Math3D.Normalize(View)
+            Side = Math3D.Cross(Tangent, View)
+            Side.X = Side.X / Core.FIXED_ONE
+            Side.Y = Side.Y / Core.FIXED_ONE
+            Side.Z = Side.Z / Core.FIXED_ONE
+            Side = Math3D.Normalize(Side)
+            Ok = Graphics3D.SetRibbonPoint3D(Ribbons[Layer], Index,
+                Center.X - Side.X * Width / Core.FIXED_ONE,
+                Center.Y - Side.Y * Width / Core.FIXED_ONE,
+                Center.Z - Side.Z * Width / Core.FIXED_ONE,
+                Center.X + Side.X * Width / Core.FIXED_ONE,
+                Center.Y + Side.Y * Width / Core.FIXED_ONE,
+                Center.Z + Side.Z * Width / Core.FIXED_ONE, 500) And Ok
+            Ok = Graphics3D.SetRibbonPointColor3D(Ribbons[Layer], Index,
+                255, 105 + (Clock / 80 + PointIndex * 11) Mod 40, 12, Opacity) And Ok
+        End For
+
+        Ok = Graphics3D.CommitRibbonBatch3D(Ribbons[Layer], 9) And Ok
+    End For
+
+    Visible = Ok
+
+End Sub
+
+Public Sub Draw()
+
+    Dim Layer As Number
+    Dim Ok As Boolean
+
+    If Not Visible Then
+        Return
+    End If
+
+    For Layer = 0 To 2
+        Ok = Graphics3D.DrawRibbonBatch3D(Ribbons[Layer])
+    End For
+
+End Sub
+
+Public Sub Shutdown()
+
+    Dim Layer As Number
+
+    For Layer = 0 To 2
+        Call Graphics3D.DestroyRibbonBatch3D(Ribbons[Layer])
+    End For
+
+    Call Graphics3D.DestroyEffectMaterial3D(Material)
+    Call Graphics3D.DestroyTexture3D(Texture)
+
+    Visible = False
+
+End Sub
+
+End Module

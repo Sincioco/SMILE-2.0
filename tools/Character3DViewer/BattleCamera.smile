@@ -6,6 +6,73 @@ Option Explicit
 Import Smile.Simple3D.Core As Core
 Import Smile.Simple3D.Interaction As Interaction
 Import Smile.Simple3D.FixedMath As Fixed
+Import Smile.Simple3D.Math3D As Math3D
+
+''' Camera clearance in the ground plane; height alone must not permit clipping through a shield.
+Public Sub KeepOutsideActor(ByRef Camera As Core.Camera3D, Center As Core.Vector3, Radius As Number)
+
+    Dim Offset As Core.Vector3
+    Dim Distance As Number
+
+    Offset = Math3D.Subtract(Camera.Position, Center)
+    Offset.Y = 0
+    Distance = Math3D.Length(Offset)
+
+    If Distance >= Radius Then
+        Return
+    End If
+
+    If Distance = 0 Then
+        Offset.X = 1
+        Distance = 1
+    End If
+
+    Camera.Position.X = Center.X + Offset.X * Radius / Distance
+    Camera.Position.Z = Center.Z + Offset.Z * Radius / Distance
+
+End Sub
+
+''' Diagnostic yaw/pitch from the rendered look direction, rounded to one degree.
+Public Function ViewAngles(Camera As Core.Camera3D) As Core.Vector3
+
+    Dim Direction As Core.Vector3
+    Dim Result As Core.Vector3
+    Dim Horizontal As Number
+    Dim Angle As Number
+    Dim Score As Number
+    Dim Best As Number
+
+    Direction = Math3D.Normalize(Math3D.Subtract(Camera.Target, Camera.Position))
+    Best = -2147483647
+
+    For Angle = -180 To 179
+
+        Score = Direction.X * Fixed.SinFixed(Angle) + Direction.Z * Fixed.CosFixed(Angle)
+
+        If Score > Best Then
+            Best = Score
+            Result.Y = Angle
+        End If
+
+    End For
+
+    Horizontal = Math3D.SquareRoot(Direction.X * Direction.X + Direction.Z * Direction.Z)
+    Best = -2147483647
+
+    For Angle = -90 To 90
+
+        Score = Direction.Y * Fixed.SinFixed(Angle) + Horizontal * Fixed.CosFixed(Angle)
+
+        If Score > Best Then
+            Best = Score
+            Result.X = Angle
+        End If
+
+    End For
+
+    Return Result
+
+End Function
 
 ''' A continuous front-of-boss sweep with gentle turnarounds and no angle truncation.
 Public Function FrontArcYaw1000(Phase1000 As Number) As Number

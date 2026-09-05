@@ -29,6 +29,7 @@ Private Dim ChargeValue As ChargeState
 Private Dim Comfort As Number
 Private Dim AttackStyle As Number
 Private Dim FlashOpacity As Number
+Private Dim ImpactShake As Number
 Private Dim RenderVisible As Boolean
 Private Dim TrailTexture As Core.Texture3D
 Private Dim TrailMaterial As Core.Material3D
@@ -110,6 +111,7 @@ Public Sub Initialize()
     End If
 
     FlashOpacity = 0
+    ImpactShake = 0
 
     Call BeginAction(ChargeValue)
 
@@ -401,6 +403,7 @@ Public Sub Update(Actor As Character3D.Actor, Clip As Text, Target As Core.Vecto
     Power = 150 + ChargeValue.Energy * 500 / 1000
     StateText = "Stored Storm"
     FlashOpacity = Max(0, FlashOpacity - Elapsed)
+    ImpactShake = Max(0, ImpactShake - Elapsed)
 
     If Charge Then
         Power = Min(1000, 650 + Progress / 2)
@@ -470,6 +473,10 @@ Public Sub Update(Actor As Character3D.Actor, Clip As Text, Target As Core.Vecto
         ThunderPlayed = True
         FlashOpacity = 180
 
+        If Clip = "ThorAttack" Or Clip = "JumpAttack" Then
+            ImpactShake = 260
+        End If
+
         Play Sound "Assets/Lightning/thunder.wav"
 
     End If
@@ -478,8 +485,10 @@ Public Sub Update(Actor As Character3D.Actor, Clip As Text, Target As Core.Vecto
         Ok = Lightning.SetCharge(Effects[1], ChargeValue.Energy)
     End If
 
-    If Comfort <> 3 And FlashOpacity > 0 Then
-        Camera.Position.X = Camera.Position.X + FlashOpacity / (Comfort * 90)
+    If Comfort <> 3 And ImpactShake > 0 Then
+        ''' A short decaying impact only, never the continuous camera or ordinary slash.
+        Camera.Position.X = Camera.Position.X + Fixed.SinFixed(ImpactShake * 4) * ImpactShake / (Core.FIXED_ONE * Comfort * 50)
+        Camera.Position.Y = Max(24, Camera.Position.Y + Fixed.SinFixed(ImpactShake * 5) * ImpactShake / (Core.FIXED_ONE * Comfort * 85))
     End If
 
     If WeaponVisible Then

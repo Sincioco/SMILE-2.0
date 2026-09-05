@@ -107,3 +107,26 @@ Run `scripts/build-orin-v1-3-mixamo.py` through Blender 5.2 after replacing or
 adding canonical Mixamo inputs. Then run
 `tools/Character3DViewer/Build.ps1`. Use the viewer launcher for normal editor
 work so Arin and Orin calibration snapshots stay synchronized.
+
+## September 5: Death root motion repair
+
+Orin's Mixamo Death export stores the fall's global rotation/translation on the
+armature object. Removing those object channels left him upright at the last
+frame; a floor-height adjustment could never correct that orientation defect.
+The accepted repair bakes that motion into the Root joint, aligned to the
+accepted first pose, while retaining every other clip and all geometry, skin,
+textures and equipment bytes. The source FBX is unchanged.
+
+`scripts/repair-orin-death-root.py` reproduces the surgical repair from the
+pre-repair checkpoint. `Calibration/orin-v1.3-death-root-repair.json` records
+source/result hashes and joint-position alignment error. The normal builder now
+bakes object motion before removing object channels. Inspect the whole
+fall and its final horizontal pose, not just a mid-fall screenshot.
+
+The regenerated grounding measurement and Death contact curve replace the old
+upright-pose correction. The shared -0.119 baseline remains unchanged. Death
+plays once and holds its settled pose. Defend is non-looping in both descriptor
+and runtime policy; Party never restarts an already-held Orin guard.
+
+Both individual and Party paths use the final grounded transform for equipment
+and VFX. Current hashes live in `Calibration/orin-v1.3-profile.json`.

@@ -15,7 +15,7 @@
       "loop": false
     },
     "Defend": {
-      "loop": true
+      "loop": false
     },
     "Victory": {
       "loop": false
