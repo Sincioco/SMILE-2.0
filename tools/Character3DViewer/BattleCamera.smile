@@ -1,0 +1,75 @@
+''' Fractional orbit composition for the native battle presentation.
+Module Smile.Tools.BattleCamera
+
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Interaction As Interaction
+Import Smile.Simple3D.Math3D As Math3D
+Import Smile.Simple3D.FixedMath As Fixed
+
+Public Function Orbit(Base As Core.Camera3D, Controls As Core.CameraControl3D,
+    Yaw1000 As Number) As Core.Camera3D
+
+    Dim First As Core.Camera3D
+    Dim Second As Core.Camera3D
+    Dim Fraction As Number
+
+    Yaw1000 = (Yaw1000 Mod 360000 + 360000) Mod 360000
+    Controls.OrbitYaw = Yaw1000 / 1000
+    Fraction = Yaw1000 Mod 1000
+    First = Interaction.ApplyScreenSpaceCameraControls(Base, Controls)
+    Controls.OrbitYaw = (Controls.OrbitYaw + 1) Mod 360
+    Second = Interaction.ApplyScreenSpaceCameraControls(Base, Controls)
+    First.Position.X = First.Position.X + (Second.Position.X - First.Position.X) * Fraction / 1000
+    First.Position.Y = First.Position.Y + (Second.Position.Y - First.Position.Y) * Fraction / 1000
+    First.Position.Z = First.Position.Z + (Second.Position.Z - First.Position.Z) * Fraction / 1000
+    First.Target.X = First.Target.X + (Second.Target.X - First.Target.X) * Fraction / 1000
+    First.Target.Y = First.Target.Y + (Second.Target.Y - First.Target.Y) * Fraction / 1000
+    First.Target.Z = First.Target.Z + (Second.Target.Z - First.Target.Z) * Fraction / 1000
+    First.UpDirection.X = First.UpDirection.X + (Second.UpDirection.X - First.UpDirection.X) * Fraction / 1000
+    First.UpDirection.Y = First.UpDirection.Y + (Second.UpDirection.Y - First.UpDirection.Y) * Fraction / 1000
+    First.UpDirection.Z = First.UpDirection.Z + (Second.UpDirection.Z - First.UpDirection.Z) * Fraction / 1000
+
+    Return First
+
+End Function
+
+''' Pull back along the view direction to keep a subject inside the safe frame.
+Public Sub FramePoint(ByRef Camera As Core.Camera3D, Point As Core.Vector3,
+    Radius As Number, ViewWidth As Number, ViewHeight As Number)
+
+    Dim Forward As Core.Vector3
+    Dim CameraRight As Core.Vector3
+    Dim CameraUp As Core.Vector3
+    Dim Offset As Core.Vector3
+    Dim Depth As Number
+    Dim RequiredDepth As Number
+    Dim HorizontalDepth As Number
+    Dim Pullback As Number
+    Dim Sine As Number
+    Dim Cosine As Number
+
+    Forward = Math3D.Normalize(Math3D.Subtract(Camera.Target, Camera.Position))
+    CameraUp.Y = 1
+    CameraRight = Math3D.Normalize(Math3D.Cross(Forward, CameraUp))
+    CameraUp = Math3D.Cross(CameraRight, Forward)
+    CameraUp.X = CameraUp.X / Core.FIXED_ONE
+    CameraUp.Y = CameraUp.Y / Core.FIXED_ONE
+    CameraUp.Z = CameraUp.Z / Core.FIXED_ONE
+    Offset = Math3D.Subtract(Point, Camera.Position)
+    Depth = Math3D.Dot(Offset, Forward) / Core.FIXED_ONE
+    Sine = Max(1, Fixed.SinFixed(Max(9, Camera.FovDegrees / 2)))
+    Cosine = Fixed.CosFixed(Max(9, Camera.FovDegrees / 2))
+    RequiredDepth = (Abs(Math3D.Dot(Offset, CameraUp) / Core.FIXED_ONE) + Radius) * Cosine / Sine
+    HorizontalDepth = (Abs(Math3D.Dot(Offset, CameraRight) / Core.FIXED_ONE) + Radius) * Cosine / Sine
+    HorizontalDepth = HorizontalDepth * Max(1, ViewHeight) / Max(1, ViewWidth)
+    RequiredDepth = Max(RequiredDepth, HorizontalDepth) + 3
+    Pullback = Max(0, RequiredDepth - Depth)
+    Camera.Position.X = Camera.Position.X - Forward.X * Pullback / Core.FIXED_ONE
+    Camera.Position.Y = Camera.Position.Y - Forward.Y * Pullback / Core.FIXED_ONE
+    Camera.Position.Z = Camera.Position.Z - Forward.Z * Pullback / Core.FIXED_ONE
+
+End Sub
+
+End Module

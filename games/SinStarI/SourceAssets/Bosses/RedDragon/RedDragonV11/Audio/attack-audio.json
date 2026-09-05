@@ -1,0 +1,34 @@
+{
+  "owner": "Dragon",
+  "sampleRate": 44100,
+  "encoding": "PCM16 mono",
+  "provenance": "Original deterministic synthesis; no third-party samples.",
+  "generator": "scripts/generate-character-attack-audio.py",
+  "timing": "Viewer presentation cues in clip milliseconds; not authored SM3D events.",
+  "cues": [
+    {
+      "clip": "FireBreath",
+      "file": "dragon-fire-breath.wav",
+      "cueTimeMs": 100,
+      "durationMs": 3100,
+      "bytes": 273464,
+      "sha256": "31b176ebe1c8097347bc0dd7e169570848d8ec4d5c0e3a5e133f59cfe3e07a11"
+    },
+    {
+      "clip": "ClawStrike",
+      "file": "dragon-claw-strike.wav",
+      "cueTimeMs": 200,
+      "durationMs": 1650,
+      "bytes": 145574,
+      "sha256": "a9d6e3b288ceab55c7dfab33fdc53ae451cb612c2dc9859f5ed1a9ee9169590f"
+    },
+    {
+      "clip": "Fireball",
+      "file": "dragon-fireball-impact.wav",
+      "cueTimeMs": 2500,
+      "durationMs": 2350,
+      "bytes": 207314,
+      "sha256": "ccd65c4375b7f9f9f901331ec2252fb6b0de8123779cac9cf0872fcfbd40b9f8"
+    }
+  ]
+}

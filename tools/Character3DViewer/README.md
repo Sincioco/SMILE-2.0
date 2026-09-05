@@ -72,7 +72,7 @@ The dragon takes the third turn, alternating Fire Breath and Claw Strike. Mouth-
 fire sweeps toward Arin and then Orin while they guard and react. The claw animation
 includes a short approach and return. Idle wings, head and tail keep moving between turns;
 party impacts trigger a brief hit reaction. This is a presentation demo, without combat damage
-or enemy AI. The self-contained rig, five clips, original model, reference, descriptor and
+or enemy AI. The self-contained rig, six clips, original model, reference, descriptor and
 checksums belong to `games/SinStarI/SourceAssets/Bosses/RedDragon/RedDragonV11`.
 
 ## Shared presentation libraries
@@ -89,3 +89,17 @@ Before changing Arin's import/export, attachments, calibration or effects, read
 `games/SinStarI/SourceAssets/Characters/Paladin/ArinV57/ARIN-CREATION-AND-REPAIR-JOURNEY.md`.
 It distinguishes current behavior from historical experiments and explains the
 Blender-to-SMILE pipeline. The separate free-roam demo remains deferred by Sin.
+
+## September 5 mid-development checkpoint
+
+Party automatic orbit preserves fractional yaw through camera composition and runs
+through 360 degrees. The orbit camera continues while separate portrait, approach and strike cameras
+are selected. Motion within each shot eases; close-ups preserve world-up and pull
+back to keep the Dragon head in frame. Camera composition remains under visual tuning.
+Arin slash/crosscut and Dragon breath/claw/fireball now have original synthesized
+attack cues. Orin's Block plays once and holds instead of repeatedly restarting.
+Dragon's six-clip preview adds Fireball and stronger wing/arm/hit motion, eye anchors,
+and idle mouth fire. Both effect Labs now live in `tools` beside this Viewer.
+
+See `docs/implementation/party-battle-mid-development-2026-09-05.md` for the precise
+checkpoint scope, validation and remaining requested work. This is not a final release.

@@ -1,0 +1,246 @@
+''' Bone-attached heat and a charge, flight, impact fireball using shared VFX resources.
+Module Smile.Tools.DragonPresence
+
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Character3D As Character3D
+Import Smile.Simple3D.Graphics3D As Graphics3D
+Import Smile.Simple3D.FireEmitter3D As Fire
+Import Smile.Simple3D.FixedMath As Fixed
+
+Private Dim Texture As Core.Texture3D
+Private Dim Material As Core.Material3D
+Private Dim Glow As Core.ParticleBatch3D
+Private Dim MouthFire As Fire.FireEmitter
+Private Dim Projectile As Fire.FireEmitter
+Private Dim LaunchPoint As Core.Vector3
+Private Dim ImpactPoint As Core.Vector3
+Private Dim PreviousClip As Text
+Private Dim PreviousTime As Number
+Private Dim Phase As Number
+Private Dim Visible As Boolean
+Private Dim Ok As Boolean
+
+Public Sub Initialize()
+
+    Texture = Graphics3D.LoadTexture3D("Assets/Fire/ember-shape.png",
+        Graphics3D.TEXTURE_FILTER_LINEAR, Graphics3D.TEXTURE_WRAP_CLAMP)
+    Material = Graphics3D.CreateEffectMaterial3D(Texture, Graphics3D.MATERIAL_ALPHA_ADDITIVE, 240)
+    Glow = Graphics3D.CreateParticleBatch3D(3, Material, Graphics3D.VFX_BILLBOARD_CAMERA, 1, 1)
+    PreviousClip = ""
+    PreviousTime = 0
+    Phase = 0
+
+End Sub
+
+Public Sub Shutdown()
+
+    If MouthFire.Slot <> 0 Then
+        Ok = Fire.Destroy(MouthFire)
+    End If
+
+    If Projectile.Slot <> 0 Then
+        Ok = Fire.Destroy(Projectile)
+    End If
+
+    Call Graphics3D.DestroyParticleBatch3D(Glow)
+    Call Graphics3D.DestroyEffectMaterial3D(Material)
+    Call Graphics3D.DestroyTexture3D(Texture)
+
+    Visible = False
+
+End Sub
+
+Public Function FireballPhase(Time As Number) As Number
+
+    If Time < 1800 Then
+        Return 1
+    Else If Time < 2500 Then
+        Return 2
+    Else If Time < 4900 Then
+        Return 3
+    End If
+
+    Return 0
+
+End Function
+
+Public Sub Update(Actor As Character3D.Actor, Clip As Text, Time As Number,
+    Target As Core.Vector3, Enabled As Boolean)
+
+    Dim Mouth As Core.Vector3
+    Dim Point As Core.Vector3
+    Dim Direction As Core.Vector3
+    Dim Index As Number
+    Dim NextPhase As Number
+    Dim Progress1000 As Number
+    Dim Heat As Number
+    Dim Size As Number
+    Dim Name As Text
+
+    Visible = Enabled And Character3D.IsValid(Actor)
+    Heat = 70 + Fixed.SinFixed(Time / 13) * 15 / Core.FIXED_ONE
+
+    If Visible Then
+        Mouth = Character3D.SocketPosition(Actor, "Mouth")
+    End If
+
+    If Clip <> PreviousClip Or Time < PreviousTime Then
+
+        If Projectile.Slot <> 0 Then
+            Ok = Fire.Destroy(Projectile)
+        End If
+
+        Phase = 0
+
+    End If
+
+    If Visible And Clip = "Fireball" Then
+        NextPhase = FireballPhase(Time)
+    End If
+
+    If NextPhase <> Phase Then
+
+        If NextPhase = 1 Or NextPhase = 2 Then
+
+            LaunchPoint = Mouth
+            ImpactPoint = Target
+
+            If Projectile.Slot = 0 Then
+                Projectile = Fire.StartAt("Fireball", Mouth, 9241,
+                    Fire.QUALITY_HIGH, Fire.SIMULATION_AUTO, 9)
+            End If
+
+        Else
+
+            If Projectile.Slot <> 0 Then
+                Ok = Fire.Destroy(Projectile)
+            End If
+
+            If NextPhase = 3 Then
+
+                ImpactPoint = Target
+                Projectile = Fire.StartAt("FireBurstGen3", ImpactPoint, 9281,
+                    Fire.QUALITY_HIGH, Fire.SIMULATION_AUTO, 24)
+
+                Play Sound "Assets/Audio/dragon-fireball-impact.wav"
+
+            End If
+
+        End If
+
+        Phase = NextPhase
+
+    End If
+
+    Point = Mouth
+    Size = 7
+
+    If Phase = 1 Then
+
+        Size = 7 + Time * 17 / 1800
+        Heat = 80 + Time * 120 / 1800
+
+        Call Fire.SetIntensity(Projectile, 25 + Time * 135 / 1800)
+
+    Else If Phase = 2 Then
+
+        Progress1000 = Min(1000, (Time - 1800) * 1000 / 700)
+        Point.X = LaunchPoint.X + (ImpactPoint.X - LaunchPoint.X) * Progress1000 / 1000
+        Point.Y = LaunchPoint.Y + (ImpactPoint.Y - LaunchPoint.Y) * Progress1000 / 1000
+        Point.Z = LaunchPoint.Z + (ImpactPoint.Z - LaunchPoint.Z) * Progress1000 / 1000
+        Heat = 180
+
+        Call Fire.SetIntensity(Projectile, 160)
+
+    Else If Phase = 3 Then
+
+        Point = ImpactPoint
+        Heat = Max(35, 260 - (Time - 2500) / 5)
+
+    End If
+
+    If Projectile.Slot <> 0 And Phase <> 3 Then
+        Ok = Fire.SetPosition(Projectile, Point)
+
+        Call Fire.SetSourceVelocityInheritance(Projectile, 0)
+    End If
+
+    If Visible And MouthFire.Slot = 0 Then
+        MouthFire = Fire.StartAt("TorchFire", Mouth, 9259,
+            Fire.QUALITY_MEDIUM, Fire.SIMULATION_AUTO, 2)
+    End If
+
+    If MouthFire.Slot <> 0 Then
+
+        Direction.Y = 5
+        Ok = Fire.SetPosition(MouthFire, Mouth)
+        Ok = Fire.SetDirection(MouthFire, Direction) And Ok
+
+        Call Fire.SetEnabled(MouthFire, Visible And Phase = 0)
+        Call Fire.SetIntensity(MouthFire, 45)
+        Call Fire.SetSourceVelocityInheritance(MouthFire, 0)
+
+    End If
+
+    Ok = Graphics3D.SetPointLight3D(3, Point.X, Point.Y, Point.Z,
+        255, 88, 18, Heat, 80)
+
+    If Not Visible Then
+        Ok = Graphics3D.SetPointLight3D(3, 0, 0, 0, 255, 88, 18, 0, 80)
+    End If
+
+    If Visible And Glow.Handle <> 0 Then
+
+        For Index = 0 To 2
+
+            Name = "EyeLeft"
+
+            If Index = 1 Then
+                Name = "EyeRight"
+            Else If Index = 2 Then
+                Name = "Mouth"
+            End If
+
+            Point = Character3D.SocketPosition(Actor, Name)
+
+            If Index < 2 Then
+                Ok = Graphics3D.SetParticle3D(Glow, Index, Point.X, Point.Y, Point.Z, 5, 0)
+            Else
+                Ok = Graphics3D.SetParticle3D(Glow, Index, Point.X, Point.Y, Point.Z, Size, 0)
+            End If
+
+            Ok = Graphics3D.SetParticleColor3D(Glow, Index, 255, 90, 15, 85) And Ok
+        End For
+
+        Ok = Graphics3D.CommitParticleBatch3D(Glow, 3)
+
+    End If
+
+    PreviousClip = Clip
+    PreviousTime = Time
+
+End Sub
+
+Public Sub Draw()
+
+    If Not Visible Then
+        Return
+    End If
+
+    If Glow.Handle <> 0 Then
+        Ok = Graphics3D.DrawParticleBatch3D(Glow)
+    End If
+
+    If MouthFire.Slot <> 0 Then
+        Ok = Fire.Draw(MouthFire)
+    End If
+
+    If Projectile.Slot <> 0 Then
+        Ok = Fire.Draw(Projectile)
+    End If
+
+End Sub
+
+End Module

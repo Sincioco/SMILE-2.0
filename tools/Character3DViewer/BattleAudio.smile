@@ -1,0 +1,35 @@
+''' Presentation cues follow clip time, so pause and playback speed stay synchronized.
+Module Smile.Tools.BattleAudio
+
+Option Explicit
+
+Public Type CueState
+    Clip As Text
+    PreviousTime As Number
+    Played As Boolean
+End Type
+
+Public Function CrossedCue(ByRef State As CueState, Clip As Text,
+    Time As Number, CueTime As Number, Audible As Boolean) As Boolean
+
+    Dim Result As Boolean
+
+    If Clip <> State.Clip Or Time < State.PreviousTime Then
+        State.Played = False
+    End If
+
+    If (CueTime >= 0 And
+        Time >= CueTime And
+        Not State.Played) Then
+        State.Played = True
+        Result = Audible
+    End If
+
+    State.Clip = Clip
+    State.PreviousTime = Time
+
+    Return Result
+
+End Function
+
+End Module

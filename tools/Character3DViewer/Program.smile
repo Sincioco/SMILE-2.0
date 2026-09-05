@@ -15,6 +15,9 @@ Import Smile.Simple3D.Math3D As Math3D
 Import Smile.Simple3D.Scene3D As Scene3D
 Import Smile.Tools.Character3DViewerProfiles As ViewerProfiles
 Import Smile.Tools.OrinStorm As OrinStorm
+Import Smile.Tools.BattleAudio As BattleAudio
+Import Smile.Tools.BattleCamera As BattleCamera
+Import Smile.Tools.DragonPresence As DragonPresence
 
 Const ANIMATION_CYCLE_MILLISECONDS = 5000
 Const ANIMATION_BUTTON_Y = 352
@@ -243,6 +246,17 @@ Dim OrbitPointerRemainderX As Number
 Dim OrbitPointerRemainderY As Number
 Dim AutoOrbit As Boolean
 Dim AutoOrbitYaw1000 As Number
+Dim PartyOrbitCamera As Core.Camera3D
+Dim PartyPortraitCamera As Core.Camera3D
+Dim PartyApproachCamera As Core.Camera3D
+Dim PartyStrikeCamera As Core.Camera3D
+Dim PartyActiveCamera As Number
+Dim PartyPreviousCamera As Number
+Dim PartyPreviousCameraTurn As Number
+Dim PartyShotPosition1000 As Core.Vector3
+Dim PartyShotTarget1000 As Core.Vector3
+Dim ArinAudio As BattleAudio.CueState
+Dim DragonAudio As BattleAudio.CueState
 Dim AnimationCycleElapsed As Number
 Dim DemoEnabled As Boolean
 Dim DemoCompletedLoops As Number
@@ -260,6 +274,7 @@ Dim DragonCounter As Number
 Dim DragonBreath As Fire.FireEmitter
 Dim FireInitialized As Boolean
 Dim DragonFireFailed As Boolean
+Dim DragonReactionPending As Boolean
 Dim DragonAvailable As Boolean
 Dim DragonVisible As Boolean
 Dim SwordVisible As Boolean
@@ -429,9 +444,14 @@ Do
 
         Call UpdateResponsiveFit()
 
-        Camera = Interaction.ApplyScreenSpaceCameraControls(BaseCamera, CameraControls)
+        If PartyMode And AutoOrbit Then
+            Camera = BattleCamera.Orbit(BaseCamera, CameraControls, AutoOrbitYaw1000)
+        Else
+            Camera = Interaction.ApplyScreenSpaceCameraControls(BaseCamera, CameraControls)
+        End If
 
         Call ApplyCloseUpZoom()
+        Call ApplyPartyAttackCamera()
 
         If EpicGlowVisible Then
 
@@ -454,6 +474,7 @@ Do
         End If
 
         Call UpdateDragon()
+        Call UpdateBattleAudio()
         Call UpdateOrinStorm()
 
         If SocketGizmosVisible Then
@@ -510,6 +531,7 @@ Do
 
             Call DrawShieldFire()
             Call OrinStorm.Draw()
+            Call DragonPresence.Draw()
 
             If DragonVisible And DragonBreath.Slot <> 0 Then
                 DragonFireFailed = Not Fire.Draw(DragonBreath)
@@ -714,6 +736,8 @@ Sub LoadViewer()
 
     If DragonAvailable Then
         FireInitialized = Fire.Initialize("Assets/Fire")
+
+        Call DragonPresence.Initialize()
     End If
 
     If CalibrationAvailable And ProfileIndex = ViewerProfiles.PROFILE_ARIN Then
@@ -968,16 +992,23 @@ Sub UpdateDragon()
 
     If PartyMode And PartyTurn = 2 Then
 
-        If DragonCounter Mod 2 = 0 Then
+        If DragonCounter Mod 3 = 0 Then
             Name = "FireBreath"
-        Else
+        Else If DragonCounter Mod 3 = 1 Then
             Name = "ClawStrike"
+        Else
+            Name = "Fireball"
         End If
 
     Else If (PartyMode And
+        DragonReactionPending And
         PartyStage = 1 And
-        PartyElapsed > 700 + PartyAttackDuration() * 65 / 100 And
-        PartyElapsed < 700 + PartyAttackDuration() * 85 / 100) Then
+        PartyElapsed >= 1300 + PartyAttackDuration() * 64 / 100) Then
+
+        Name = "Hit"
+        DragonReactionPending = False
+
+    Else If DragonClip = "Hit" And Character3D.AnimationTime(Dragon) < 800 Then
 
         Name = "Hit"
 
@@ -1047,10 +1078,83 @@ Sub UpdateDragon()
 
     End If
 
+    Target = Character3D.SocketPosition(Character, "Chest", BODY_PART_INDEX)
+
+    If PartyReady And DragonCounter Mod 2 = 1 Then
+        Target = Character3D.SocketPosition(PartyCompanion.Actor, "Chest", BODY_PART_INDEX)
+    End If
+
+    Call DragonPresence.Update(Dragon, Name, Time, Target, DragonVisible And FireInitialized)
+
     If (FireInitialized And
         Not SwordFireReady And
         Not FlameAnimationPaused) Then
         Call Fire.Update(CameraElapsed)
+    End If
+
+End Sub
+
+Sub UpdateBattleAudio()
+
+    Dim Name As Text
+    Dim CueTime As Number
+    Dim Audible As Boolean
+
+    Name = SelectedClipName()
+    CueTime = -1
+
+    If ProfileIndex = ViewerProfiles.PROFILE_ARIN Then
+
+        If Name = "SwordAttack" Then
+            CueTime = 280
+        Else If Name = "SwordAttack2" Then
+            CueTime = 160
+        End If
+
+    End If
+
+    Audible = Not ScenePaused And Not CalibrationEditing
+
+    If BattleAudio.CrossedCue(ArinAudio, Name,
+        Character3D.AnimationTime(Character), CueTime, Audible) Then
+
+        If Name = "SwordAttack" Then
+
+            Play Sound "Assets/Audio/arin-flame-slash.wav"
+
+        Else
+
+            Play Sound "Assets/Audio/arin-flame-crosscut.wav"
+
+        End If
+
+    End If
+
+    If Not DragonAvailable Or Not Character3D.IsValid(Dragon) Then
+        Return
+    End If
+
+    CueTime = -1
+
+    If DragonClip = "FireBreath" Then
+        CueTime = 100
+    Else If DragonClip = "ClawStrike" Then
+        CueTime = 200
+    End If
+
+    If BattleAudio.CrossedCue(DragonAudio, DragonClip,
+        Character3D.AnimationTime(Dragon), CueTime, Audible And DragonVisible) Then
+
+        If DragonClip = "FireBreath" Then
+
+            Play Sound "Assets/Audio/dragon-fire-breath.wav"
+
+        Else
+
+            Play Sound "Assets/Audio/dragon-claw-strike.wav"
+
+        End If
+
     End If
 
 End Sub
@@ -1867,13 +1971,137 @@ Sub AdvanceAutoOrbit()
 
     If AutoOrbit Then
         Ready = CharacterViewer.AdvanceOrbitYaw1000(
-            AutoOrbitYaw1000,
-            CameraElapsed,
-            ARENA_ORBIT_DEGREES_PER_SECOND
-        ) And Ready
+            AutoOrbitYaw1000, CameraElapsed, ARENA_ORBIT_DEGREES_PER_SECOND) And Ready
 
         CameraControls.OrbitYaw = AutoOrbitYaw1000 / 1000
     End If
+
+End Sub
+
+Sub ApplyPartyAttackCamera()
+
+    Dim Hero As Core.Vector3
+    Dim Boss As Core.Vector3
+    Dim BossHead As Core.Vector3
+    Dim Distance As Number
+    Dim DeltaX As Number
+    Dim DeltaZ As Number
+    Dim Shot As Number
+    Dim Impact1000 As Number
+    Dim SafeWidth As Number
+
+    PartyOrbitCamera = Camera
+    PartyActiveCamera = 1
+
+    If (Not PartyMode Or
+        Not PartyReady Or
+        Not DragonAvailable Or
+        Not AutoOrbit Or
+        Not DragonVisible) Then
+        PartyPreviousCamera = 1
+        Return
+    End If
+
+    Hero = Character3D.SocketPosition(Character, "Chest", BODY_PART_INDEX)
+
+    If PartyTurn = 1 Then
+        Hero = Character3D.SocketPosition(PartyCompanion.Actor, "Chest", BODY_PART_INDEX)
+    End If
+
+    Boss = Character3D.SocketPosition(Dragon, "Chest")
+    BossHead = Character3D.SocketPosition(Dragon, "Head")
+    DeltaX = Hero.X - Boss.X
+    DeltaZ = Hero.Z - Boss.Z
+    Distance = Max(1, Math3D.Distance(Hero, Boss))
+    PartyPortraitCamera = PartyOrbitCamera
+    PartyPortraitCamera.UpDirection.X = 0
+    PartyPortraitCamera.UpDirection.Y = Core.FIXED_ONE
+    PartyPortraitCamera.UpDirection.Z = 0
+    PartyPortraitCamera.Target.X = (Hero.X + BossHead.X) / 2
+    PartyPortraitCamera.Target.Y = (Hero.Y + BossHead.Y) / 2 + 10
+    PartyPortraitCamera.Target.Z = (Hero.Z + BossHead.Z) / 2
+    PartyPortraitCamera.Position.X = Hero.X - DeltaX * 120 / Distance - DeltaZ * 190 / Distance
+    PartyPortraitCamera.Position.Y = Hero.Y + 70
+    PartyPortraitCamera.Position.Z = Hero.Z - DeltaZ * 120 / Distance + DeltaX * 190 / Distance
+    PartyApproachCamera = PartyPortraitCamera
+    PartyApproachCamera.Position.X = Hero.X + DeltaX * 210 / Distance - DeltaZ * 80 / Distance
+    PartyApproachCamera.Position.Y = Hero.Y + 95
+    PartyApproachCamera.Position.Z = Hero.Z + DeltaZ * 210 / Distance + DeltaX * 80 / Distance
+    PartyStrikeCamera = PartyPortraitCamera
+    Impact1000 = Min(1000, Max(0, PartyElapsed - 1300) * 1000 / Max(1, PartyAttackDuration()))
+    PartyStrikeCamera.Position.X = Hero.X + DeltaX * (180 - Impact1000 * 25 / 1000) / Distance - DeltaZ * 175 / Distance
+    PartyStrikeCamera.Position.Y = PartyStrikeCamera.Target.Y + 55
+    PartyStrikeCamera.Position.Z = Hero.Z + DeltaZ * (180 - Impact1000 * 25 / 1000) / Distance + DeltaX * 175 / Distance
+    Shot = 1
+
+    If PartyTurn = 2 Then
+
+        If PartyElapsed < 800 Then
+            Shot = 2
+        Else If PartyElapsed < 3000 Then
+            Shot = 4
+        End If
+
+    Else If PartyStage = -2 Then
+
+        Shot = 2
+
+    Else If PartyStage = 0 Then
+
+        Shot = 3
+
+    Else If PartyStage = 1 Then
+
+        Shot = 4
+
+    End If
+
+    If Shot = 2 Then
+        Camera = PartyPortraitCamera
+    Else If Shot = 3 Then
+        Camera = PartyApproachCamera
+    Else If Shot = 4 Then
+        Camera = PartyStrikeCamera
+    End If
+
+    PartyActiveCamera = Shot
+
+    If Shot <> 1 Then
+
+        ''' Switch compositions; ease motion only within the selected camera.
+
+        If Shot <> PartyPreviousCamera Or PartyTurn <> PartyPreviousCameraTurn Then
+
+            PartyShotPosition1000.X = Camera.Position.X * 1000
+            PartyShotPosition1000.Y = Camera.Position.Y * 1000
+            PartyShotPosition1000.Z = Camera.Position.Z * 1000
+            PartyShotTarget1000.X = Camera.Target.X * 1000
+            PartyShotTarget1000.Y = Camera.Target.Y * 1000
+            PartyShotTarget1000.Z = Camera.Target.Z * 1000
+
+        End If
+
+        PartyShotPosition1000.X = PartyShotPosition1000.X + (Camera.Position.X * 1000 - PartyShotPosition1000.X) * CameraElapsed / (240 + CameraElapsed)
+        PartyShotPosition1000.Y = PartyShotPosition1000.Y + (Camera.Position.Y * 1000 - PartyShotPosition1000.Y) * CameraElapsed / (240 + CameraElapsed)
+        PartyShotPosition1000.Z = PartyShotPosition1000.Z + (Camera.Position.Z * 1000 - PartyShotPosition1000.Z) * CameraElapsed / (240 + CameraElapsed)
+        PartyShotTarget1000.X = PartyShotTarget1000.X + (Camera.Target.X * 1000 - PartyShotTarget1000.X) * CameraElapsed / (240 + CameraElapsed)
+        PartyShotTarget1000.Y = PartyShotTarget1000.Y + (Camera.Target.Y * 1000 - PartyShotTarget1000.Y) * CameraElapsed / (240 + CameraElapsed)
+        PartyShotTarget1000.Z = PartyShotTarget1000.Z + (Camera.Target.Z * 1000 - PartyShotTarget1000.Z) * CameraElapsed / (240 + CameraElapsed)
+        Camera.Position.X = PartyShotPosition1000.X / 1000
+        Camera.Position.Y = PartyShotPosition1000.Y / 1000
+        Camera.Position.Z = PartyShotPosition1000.Z / 1000
+        Camera.Target.X = PartyShotTarget1000.X / 1000
+        Camera.Target.Y = PartyShotTarget1000.Y / 1000
+        Camera.Target.Z = PartyShotTarget1000.Z / 1000
+        SafeWidth = Max(300, Window_Width() - 560)
+
+        Call BattleCamera.FramePoint(Camera, BossHead, 40, SafeWidth, Window_Height())
+        Call BattleCamera.FramePoint(Camera, Hero, 30, SafeWidth, Window_Height())
+
+    End If
+
+    PartyPreviousCamera = Shot
+    PartyPreviousCameraTurn = PartyTurn
 
 End Sub
 
@@ -1896,7 +2124,10 @@ Sub AdvanceAnimationSequence()
 
     DemoPreviousAnimationTime = CurrentAnimationTime
 
-    If DemoCompletedLoops >= DemoRequiredLoops() Then
+    If (DemoCompletedLoops >= DemoRequiredLoops() Or
+        (SelectedClipMode() = Graphics3D.ANIMATION_ONCE And
+        AnimationCycleElapsed >= ANIMATION_CYCLE_MILLISECONDS And
+        CurrentAnimationTime >= Character3D.ClipDuration(Character, SelectedClip))) Then
         SelectedClip = RuntimeClipForPresentationIndex(
             (PresentationIndexForRuntimeClip(SelectedClip) + 1) Mod ClipCount
         )
@@ -3745,6 +3976,7 @@ Sub ResetView()
     Call Interaction.ResetCameraControls(CameraControls)
 
     CameraControls.OrbitYaw = InitialViewerOrbitYaw()
+    PartyPreviousCamera = 0
     PanPointerRemainderX = 0
     PanPointerRemainderY = 0
     OrbitPointerRemainderX = 0
@@ -6110,9 +6342,10 @@ Sub PlaySelectedClip(Optional RetainFireTails As Boolean = False)
     Ready = Character3D.PlayMode(
         Character,
         SelectedClipName(),
-        Graphics3D.ANIMATION_LOOP,
+        SelectedClipMode(),
         PlaybackSpeed
     ) And Ready
+    ArinAudio.Clip = ""
     AnimationCycleElapsed = 0
     DemoCompletedLoops = 0
     DemoPreviousAnimationTime = Character3D.AnimationTime(Character)
@@ -6202,6 +6435,10 @@ Function SelectedClipMode() As Number
     Dim Result As Number
 
     Result = Graphics3D.ANIMATION_LOOP
+
+    If ViewerProfiles.HoldsFinalPose(ProfileIndex, SelectedClipName()) Then
+        Result = Graphics3D.ANIMATION_ONCE
+    End If
 
     Return Result
 
@@ -7018,6 +7255,11 @@ Function AnimationSecondsRemaining() As Number
     If DemoEnabled Then
 
         RequiredMilliseconds = DemoRequiredLoops() * DemoLoopDurationMilliseconds()
+
+        If SelectedClipMode() = Graphics3D.ANIMATION_ONCE Then
+            RequiredMilliseconds = Max(ANIMATION_CYCLE_MILLISECONDS, DemoLoopDurationMilliseconds())
+        End If
+
         RemainingMilliseconds = Max(0, RequiredMilliseconds - AnimationCycleElapsed)
         Result = (RemainingMilliseconds + 999) / 1000
 
@@ -7192,6 +7434,7 @@ Sub DestroyViewerResources()
 
     Call DestroyPartyCompanion()
     Call DestroyDragon()
+    Call DragonPresence.Shutdown()
     Call Fire.Shutdown()
     Call OrinStorm.Shutdown()
 
@@ -7364,6 +7607,7 @@ Sub ResetPartyDemo()
     PartyTurn = 0
     DragonCounter = 0
     PartyStage = -1
+    DragonReactionPending = False
     DemoEnabled = True
     CalibrationVisible = False
 
@@ -7408,18 +7652,26 @@ Sub PlayPartyClip(ByRef Actor As Character3D.Actor, Name As Text, ByRef Clip As 
 
     Dim Index As Number
     Dim Mode As Number
+    Dim HoldGuard As Boolean
 
     Mode = Graphics3D.ANIMATION_LOOP
+    HoldGuard = (Actor.Handle = PartyCompanion.Actor.Handle And
+        ViewerProfiles.HoldsFinalPose(PartyCompanion.Profile, Name))
 
     If (Name = "SwordAttack" Or
         Name = "ThorAttack" Or
-        Name = "Hit") Then
+        Name = "Hit" Or
+        HoldGuard) Then
         Mode = Graphics3D.ANIMATION_ONCE
     End If
 
     For Index = 0 To Character3D.ClipCount(Actor) - 1
 
         If Character3D.ClipName(Actor, Index) = Name Then
+
+            If HoldGuard And Clip = Index Then
+                Return
+            End If
 
             Clip = Index
             Ready = Character3D.PlayMode(Actor, Name, Mode, PlaybackSpeed) And Ready
@@ -7454,7 +7706,7 @@ Sub AdvancePartyDemo()
 
     AttackDuration = PartyAttackDuration()
 
-    If PartyElapsed >= AttackDuration + 2100 Then
+    If PartyElapsed >= AttackDuration + 4000 Then
 
         PartyElapsed = 0
         PartyTurn = (PartyTurn + 1) Mod 3
@@ -7469,30 +7721,30 @@ Sub AdvancePartyDemo()
     End If
 
     Stage = 0
-    Travel1000 = Min(1000, PartyElapsed * 1000 / 700)
+    Travel1000 = Min(1000, Max(0, PartyElapsed - 650) * 1000 / 650)
     Name = "Walk"
 
     If PartyTurn = 1 Then
         Name = "Run"
     End If
 
-    If PartyElapsed >= AttackDuration + 1400 Then
+    If PartyElapsed >= AttackDuration + 2000 Then
 
         Stage = 3
         Travel1000 = 0
         Name = "Idle"
 
-    Else If PartyElapsed >= AttackDuration + 700 Then
+    Else If PartyElapsed >= AttackDuration + 1300 Then
 
         Stage = 2
-        Travel1000 = Max(0, 1000 - (PartyElapsed - AttackDuration - 700) * 1000 / 700)
+        Travel1000 = Max(0, 1000 - (PartyElapsed - AttackDuration - 1300) * 1000 / 700)
         Name = "Walk"
 
         If PartyTurn = 1 Then
             Name = "Run"
         End If
 
-    Else If PartyElapsed >= 700 Then
+    Else If PartyElapsed >= 1300 Then
 
         Stage = 1
         Travel1000 = 1000
@@ -7504,7 +7756,14 @@ Sub AdvancePartyDemo()
 
     End If
 
+    If PartyElapsed < 650 Then
+        Stage = -2
+        Name = "Idle"
+    End If
+
     If Stage <> PartyStage Then
+
+        DragonReactionPending = Stage = 1
 
         If PartyTurn = 0 Then
             Call PlayPartyClip(Character, Name, SelectedClip)
@@ -7547,8 +7806,10 @@ Sub AdvanceDragonTurn()
 
     Duration = 4500
 
-    If DragonCounter Mod 2 = 1 Then
+    If DragonCounter Mod 3 = 1 Then
         Duration = 2800
+    Else If DragonCounter Mod 3 = 2 Then
+        Duration = 5400
     End If
 
     If PartyElapsed >= Duration Then
@@ -7567,7 +7828,7 @@ Sub AdvanceDragonTurn()
         Stage = 1
     Else If (PartyElapsed >= 2200 And
         PartyElapsed < 2700 And
-        DragonCounter Mod 2 = 0) Then
+        DragonCounter Mod 3 = 0) Then
         Stage = 2
     End If
 
@@ -7675,8 +7936,9 @@ Function HandlePartyPointer() As Boolean
     Dim Left As Number
     Dim Result As Boolean
 
-    Left = StatusPanelX()
-    Result = Pointer_Y() < 96 Or Pointer_X() >= Left Or Pointer_Y() >= Window_Height() - 100
+    Left = 12
+    Result = (Pointer_Y() < 96 Or Pointer_X() < Left + 252 Or
+        Pointer_Y() >= Window_Height() - 25)
 
     If HandleSharedSliders() Then
         Return True
@@ -7722,7 +7984,7 @@ Sub DrawPartyOverlay()
     Dim Acting As Text
     Dim AttackSequence As Text
 
-    Left = StatusPanelX()
+    Left = 12
     Acting = "Arin"
 
     If PartyTurn = 1 Then
@@ -7739,10 +8001,12 @@ Sub DrawPartyOverlay()
 
     Else If PartyTurn = 2 Then
 
-        If DragonCounter Mod 2 = 0 Then
+        If DragonCounter Mod 3 = 0 Then
             AttackSequence = "Fire Breath"
-        Else
+        Else If DragonCounter Mod 3 = 1 Then
             AttackSequence = "Claw Strike"
+        Else
+            AttackSequence = "Fireball"
         End If
 
     End If

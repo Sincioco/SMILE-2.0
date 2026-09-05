@@ -1,6 +1,6 @@
 # Smile 2.0 - Advance Native Fire Lab
 
-Native Direct3D 11 thermal-fire demonstration. Build with `Build.ps1`, then run `bin\Debug\AdvancedFireVfxLab.exe`. Assets are copied from the repository's `TechnicalAssets\Generation3\Fire` and Sin Star I landscape into ignored tool-local inputs; project publication places them beside the executable.
+Native Direct3D 11 thermal-fire demonstration. The complete project lives in `tools/AdvancedFireVfxLab`, beside the Lightning Lab and Character Viewer. Build with `tools/AdvancedFireVfxLab/Build.ps1`, then run `bin\Debug\AdvancedFireVfxLab.exe`. Assets are copied from the repository's `TechnicalAssets\Generation3\Fire` and Sin Star I landscape into ignored tool-local inputs; project publication places them beside the executable.
 
 The shared native `RememberWindowPlacement` setting saves the window's position, dimensions and maximized state under its stable application ID. Rebuilds preserve that placement. The native runtime retains its existing monitor/DPI safety handling. The in-program header is uppercase; the Windows title bar is unchanged.
 

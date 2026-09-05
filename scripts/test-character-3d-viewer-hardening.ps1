@@ -155,9 +155,9 @@ try {
     $dragonPackagePath = Join-Path $repositoryRoot 'games\SinStarI\SourceAssets\Bosses\RedDragon\RedDragonV11'
     $dragonPackage = Get-Content (Join-Path $dragonPackagePath 'red-dragon-v1.1-package.json') -Raw | ConvertFrom-Json
     Assert-True ($dragonPackage.triangles -eq 9912 -and -not $dragonPackage.geometryChanged -and `
-        @($dragonPackage.bones.PSObject.Properties).Count -eq 24 -and $dragonPackage.sockets.Count -eq 4 -and `
-        ($dragonPackage.clips -join ',') -ceq 'Idle,Roar,FireBreath,ClawStrike,Hit') `
-        'The Dragon preview rig, five clips and unchanged geometry contract changed.'
+        @($dragonPackage.bones.PSObject.Properties).Count -eq 24 -and $dragonPackage.sockets.Count -eq 6 -and `
+        ($dragonPackage.clips -join ',') -ceq 'Idle,Roar,FireBreath,ClawStrike,Hit,Fireball') `
+        'The Dragon preview rig, six clips and unchanged geometry contract changed.'
     Assert-True ((Get-FileHash (Join-Path $dragonPackagePath 'red-dragon-v1.1-animated.glb')).Hash -ceq `
         $dragonPackage.modelSha256) 'The animated Dragon differs from its canonical package manifest.'
     Assert-Contains $profileSource `

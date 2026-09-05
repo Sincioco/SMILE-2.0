@@ -4,6 +4,9 @@ Import Smile.Tools.Character3DViewerProfiles As ViewerProfiles
 Import Smile.Simple3D.Character3D As Character3D
 Import Smile.Simple3D.CharacterViewer As CharacterViewer
 Import Smile.Tools.OrinStorm As OrinStorm
+Import Smile.Tools.BattleAudio As BattleAudio
+Import Smile.Tools.BattleCamera As BattleCamera
+Import Smile.Simple3D.Core As Core
 
 Dim Alternating As CharacterViewer.ZoomState
 Dim Bounds As Character3D.Bounds3D
@@ -22,8 +25,55 @@ Dim CycleElapsed As Number
 Dim OrbitYaw1000 As Number
 Dim Charge As OrinStorm.ChargeState
 Dim Events As Number
+Dim AudioCue As BattleAudio.CueState
+Dim OrbitBase As Core.Camera3D
+Dim OrbitControls As Core.CameraControl3D
+Dim OrbitFirst As Core.Camera3D
+Dim OrbitNext As Core.Camera3D
+Dim HeadPoint As Core.Vector3
 
 Game Window "Character 3D Viewer Hardening Tests" Size 320 By 240
+
+OrbitBase.Position.Z = -1000
+OrbitBase.Position.Y = 400
+OrbitBase.FovDegrees = 55
+OrbitFirst = BattleCamera.Orbit(OrbitBase, OrbitControls, 100000)
+OrbitNext = BattleCamera.Orbit(OrbitBase, OrbitControls, 100500)
+
+Call Check(OrbitFirst.Position.X <> OrbitNext.Position.X Or OrbitFirst.Position.Z <> OrbitNext.Position.Z)
+
+OrbitFirst = BattleCamera.Orbit(OrbitBase, OrbitControls, 359900)
+OrbitNext = BattleCamera.Orbit(OrbitBase, OrbitControls, 100)
+
+Call Check(Abs(OrbitFirst.Position.X - OrbitNext.Position.X) <= 5)
+Call Check(Abs(OrbitFirst.Position.Z - OrbitNext.Position.Z) <= 2)
+
+OrbitFirst.Position.X = 0
+OrbitFirst.Position.Y = 0
+OrbitFirst.Position.Z = -100
+OrbitFirst.Target.X = 0
+OrbitFirst.Target.Y = 0
+OrbitFirst.Target.Z = 0
+OrbitFirst.FovDegrees = 40
+HeadPoint.Y = 100
+
+Call BattleCamera.FramePoint(OrbitFirst, HeadPoint, 40, 800, 600)
+Call Check(OrbitFirst.Position.Z <= -384)
+Call Check(OrbitFirst.Position.X = 0 And OrbitFirst.Position.Y = 0)
+
+Call Check(ViewerProfiles.HoldsFinalPose(ViewerProfiles.PROFILE_ORIN, "Defend"))
+Call Check(Not ViewerProfiles.HoldsFinalPose(ViewerProfiles.PROFILE_ARIN, "Defend"))
+Call Check(Not ViewerProfiles.HoldsFinalPose(ViewerProfiles.PROFILE_ORIN, "Idle"))
+Call Check(Not BattleAudio.CrossedCue(AudioCue, "SwordAttack", 100, 280, True))
+Call Check(BattleAudio.CrossedCue(AudioCue, "SwordAttack", 300, 280, True))
+Call Check(Not BattleAudio.CrossedCue(AudioCue, "SwordAttack", 300, 280, True))
+Call Check(Not BattleAudio.CrossedCue(AudioCue, "SwordAttack", 900, 280, True))
+Call Check(Not BattleAudio.CrossedCue(AudioCue, "SwordAttack", 0, 280, True))
+Call Check(BattleAudio.CrossedCue(AudioCue, "SwordAttack", 500, 280, True))
+Call Check(Not BattleAudio.CrossedCue(AudioCue, "FireBreath", 200, 100, False))
+Call Check(Not BattleAudio.CrossedCue(AudioCue, "FireBreath", 300, 100, True))
+Call Check(BattleAudio.CrossedCue(AudioCue, "ClawStrike", 900, 200, True))
+Call Check(Not BattleAudio.CrossedCue(AudioCue, "Idle", 900, -1, True))
 
 Charge.Energy = 120
 

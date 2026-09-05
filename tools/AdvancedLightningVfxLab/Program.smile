@@ -26,6 +26,9 @@ Dim OrbitRemainderX As Number
 Dim OrbitRemainderY As Number
 Dim Cinematic As Boolean
 Dim CinematicYaw1000 As Number
+Dim CinematicPhase1000 As Number
+Dim CinematicPitch1000 As Number
+Dim CinematicDistance1000 As Number
 Dim Demo As Boolean
 Dim DemoTime As Number
 Dim Arena As Arena3D.ArenaFloor
@@ -83,6 +86,8 @@ FloorVisible = True
 GridVisible = True
 Cinematic = True
 Demo = True
+BackgroundIndex = 3
+CinematicDistance1000 = 1000
 
 Call Graphics3D.ResetRenderer3D()
 
@@ -94,6 +99,7 @@ ZoomLive = 1500000
 Arena = Arena3D.Create(1600, 1600, 30, 75, 150, 140, 1)
 Landscape = StaticBackdrop3D.Create("Assets/Backgrounds/SinStarLandscape.png")
 TitleBackdrop = StaticBackdrop3D.Create("Assets/Backgrounds/SinStarTitleWithLogo.png")
+Ok = StaticBackdrop3D.SetActive(Landscape)
 
 Call CreateFixture()
 Call InitializeLightning()
@@ -705,6 +711,9 @@ Sub ResetView()
 
     ZoomTarget = 1500
     CinematicYaw1000 = 0
+    CinematicPhase1000 = 0
+    CinematicPitch1000 = 0
+    CinematicDistance1000 = 1000
     PanRemainderX = 0
     PanRemainderY = 0
     OrbitRemainderX = 0
@@ -764,22 +773,34 @@ Sub UpdateCamera()
     End If
 
     If Not OverPanel Then
+
         ZoomTarget = Min(2200, Max(300, ZoomTarget - Pointer_Wheel_Delta() * 80))
+
+        If Pointer_Wheel_Delta() <> 0 Then
+            Cinematic = False
+        End If
+
     End If
 
     Ease = (ZoomTarget * 1000 - ZoomLive) * Elapsed / (100 + Elapsed)
     ZoomLive = ZoomLive + Ease
     Camera = BaseCamera
 
-    If Cinematic Then
+    If Cinematic And Not Paused Then
+
         Ok = CameraMotion.AdvanceOrbitYaw1000(CinematicYaw1000, Elapsed, AUTO_ORBIT_SPEED)
+        Ok = CameraMotion.AdvanceOrbitYaw1000(CinematicPhase1000, Elapsed, 7) And Ok
+        CinematicPitch1000 = SmoothSine(CinematicPhase1000) * 6000 / Core.FIXED_ONE
+        CinematicDistance1000 = 1000 + SmoothSine(CinematicPhase1000 + 90000) * 90 / Core.FIXED_ONE
+
     End If
 
     Sine = SmoothSine(CinematicYaw1000 + CameraControls.OrbitYaw * 1000 + START_YAW * 1000)
     Cosine = SmoothSine(CinematicYaw1000 + CameraControls.OrbitYaw * 1000 + (START_YAW + 90) * 1000)
-    PitchSine = SmoothSine((START_PITCH + CameraControls.OrbitPitch) * 1000)
-    PitchCosine = SmoothSine((START_PITCH + 90 + CameraControls.OrbitPitch) * 1000)
+    PitchSine = SmoothSine((START_PITCH + CameraControls.OrbitPitch) * 1000 + CinematicPitch1000)
+    PitchCosine = SmoothSine((START_PITCH + 90 + CameraControls.OrbitPitch) * 1000 + CinematicPitch1000)
     Distance = 515 * ZoomLive / 1000000
+    Distance = Distance * CinematicDistance1000 / 1000
     PanX = (Cosine * CameraControls.PanX -
         Sine * PitchSine * CameraControls.PanY / Core.FIXED_ONE) / Core.FIXED_ONE
     PanY = PitchCosine * CameraControls.PanY / Core.FIXED_ONE

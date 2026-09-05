@@ -1,9 +1,14 @@
 # Advanced Lightning Lab
 
-Build with `examples/AdvancedLightningVfxLab/Build.ps1`, then launch
+Build with `tools/AdvancedLightningVfxLab/Build.ps1`, then launch
 `bin/Debug/AdvancedLightningVfxLab.exe`. Native Windows is the visual target.
 The stable application ID preserves window X/Y, width/height and maximized state
 through SMILE's existing `RememberWindowPlacement` support, including rebuilds.
+
+The Lab lives beside the Character Viewer and Fire Lab in `tools`. Its default
+Sin Star I landscape is screen-fixed, using the same backdrop treatment as Fire
+Lab. Automatic orbit also eases through a small height and distance variation;
+manual pan, orbit or zoom takes control without resetting the cinematic offset.
 
 The Lab starts in Godstorm Ultra and cycles through nine stations every ten
 seconds. Selecting a station turns Demo off. The tenth station compares Low

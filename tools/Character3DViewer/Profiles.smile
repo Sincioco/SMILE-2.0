@@ -11,6 +11,16 @@ Public Const PROFILE_ARIN_ORIGINAL = 2
 Public Const PROFILE_TECHNICAL_ARTICULATED = 3
 Public Const PROFILE_ORIN = 4
 
+Public Function HoldsFinalPose(ProfileIndex As Number, ClipName As Text) As Boolean
+
+    Dim Result As Boolean
+
+    Result = ProfileIndex = PROFILE_ORIN And ClipName = "Defend"
+
+    Return Result
+
+End Function
+
 Public Function ProfileCount() As Number
 
     Return 5

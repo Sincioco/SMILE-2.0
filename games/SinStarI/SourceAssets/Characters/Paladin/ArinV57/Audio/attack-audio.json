@@ -1,0 +1,26 @@
+{
+  "owner": "Arin",
+  "sampleRate": 44100,
+  "encoding": "PCM16 mono",
+  "provenance": "Original deterministic synthesis; no third-party samples.",
+  "generator": "scripts/generate-character-attack-audio.py",
+  "timing": "Viewer presentation cues in clip milliseconds; not authored SM3D events.",
+  "cues": [
+    {
+      "clip": "SwordAttack",
+      "file": "arin-flame-slash.wav",
+      "cueTimeMs": 280,
+      "durationMs": 1120,
+      "bytes": 98828,
+      "sha256": "912f529a5f54ecac7c9be076ff1e8694e9dd9c66dca86ab1c6684183e5b95e5d"
+    },
+    {
+      "clip": "SwordAttack2",
+      "file": "arin-flame-crosscut.wav",
+      "cueTimeMs": 160,
+      "durationMs": 920,
+      "bytes": 81188,
+      "sha256": "3c2802b760e49333969a7568f8e07faa875be032af595163320819967c8a5aac"
+    }
+  ]
+}

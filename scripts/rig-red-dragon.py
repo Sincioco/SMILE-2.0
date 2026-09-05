@@ -146,7 +146,7 @@ def rotate(name, axis, degrees):
     b.rotation_quaternion = rest.inverted() @ Quaternion(axis, math.radians(degrees)) @ rest
 
 
-for name, count in [('Idle', 121), ('Roar', 91), ('FireBreath', 121), ('ClawStrike', 67), ('Hit', 25)]:
+for name, count in [('Idle', 121), ('Roar', 91), ('FireBreath', 121), ('ClawStrike', 67), ('Hit', 25), ('Fireball', 151)]:
     action = bpy.data.actions.new(name)
     rig.animation_data.action = action
     actions.append(action)
@@ -159,12 +159,18 @@ for name, count in [('Idle', 121), ('Roar', 91), ('FireBreath', 121), ('ClawStri
             b.rotation_quaternion = Quaternion()
             b.location = (0, 0, 0)
             b.scale = (1, 1, 1)
-        rotate('Chest', (1,0,0), 1.2*wave)
-        rotate('Neck', (1,0,0), 1.4*wave)
-        rotate('Head', (0,0,1), 2*wave)
+        rotate('Chest', (1,0,0), 2*wave)
+        rotate('Neck', (1,0,0), 2.2*wave)
+        rotate('Head', (0,0,1), 3*wave)
+        rotate('Jaw', (1,0,0), 3 + 2*wave)
         for side, sign in [('L', -1), ('R', 1)]:
-            rotate(f'WingRoot{side}', (0,1,0), sign * (4*wave + (10*swell if name in ['Roar', 'FireBreath'] else 0)))
-            rotate(f'WingTip{side}', (0,1,0), sign * 3 * math.sin(t*math.tau+.4))
+            # Hands live at the wing elbows; use the wing chain, not the feet.
+            flap = 7*wave
+            if name in ['Roar', 'FireBreath', 'Fireball']:
+                flap += 15*swell + 13*math.sin(t*math.tau*2)*swell
+            rotate(f'WingRoot{side}', (0,1,0), sign * flap)
+            rotate(f'WingArm{side}', (0,0,1), sign * (4*wave + 7*swell))
+            rotate(f'WingTip{side}', (0,1,0), sign * 7 * math.sin(t*math.tau+.4))
         for i in range(4):
             rotate(f'Tail{i+1}', (0,0,1), math.sin(t*math.tau-i*.4) * (2+i*.7))
         if name in ['Roar', 'FireBreath']:
@@ -174,12 +180,28 @@ for name, count in [('Idle', 121), ('Roar', 91), ('FireBreath', 121), ('ClawStri
             rotate('Head', (0,0,1), 4*wave if name == 'FireBreath' else 0)
         if name == 'ClawStrike':
             strike = math.sin(math.pi*t)**3
-            rotate('FrontLegR', (1,0,0), -35*strike)
-            rotate('FrontFootR', (1,0,0), 12*strike)
-            rotate('Neck', (0,0,1), -7*strike)
+            rotate('WingRootR', (0,0,1), -28*strike)
+            rotate('WingArmR', (0,1,0), -30*strike)
+            rotate('WingRootL', (0,1,0), -15*strike)
+            rotate('Chest', (0,0,1), -5*strike)
+            rotate('Neck', (0,0,1), -10*strike)
         if name == 'Hit':
-            rotate('Chest', (1,0,0), -7*swell)
-            rotate('Head', (1,0,0), 6*swell)
+            recoil = math.sin(math.pi*t)**.7
+            rotate('Chest', (1,0,0), -11*recoil)
+            rotate('Neck', (0,0,1), 6*recoil)
+            rotate('Head', (1,0,0), 10*recoil)
+            rotate('WingRootL', (0,1,0), 19*recoil)
+            rotate('WingRootR', (0,1,0), -24*recoil)
+            rotate('WingArmR', (0,0,1), 12*recoil)
+            rotate('Jaw', (1,0,0), 11*recoil)
+        if name == 'Fireball':
+            seconds = (frame-1)/30
+            charge = min(1, seconds/1.8)
+            recovery = max(0, 1-(seconds-1.8)/1.6)
+            release = math.exp(-((seconds-1.85)/.18)**2)
+            rotate('Jaw', (1,0,0), 16*charge*recovery + 9*release)
+            rotate('Neck', (1,0,0), -7*charge*recovery + 15*release)
+            rotate('Head', (1,0,0), -3*charge*recovery + 8*release)
         for b in rig.pose.bones:
             b.keyframe_insert('rotation_quaternion', frame=frame, group=b.name)
     action.use_fake_user = True
@@ -226,7 +248,9 @@ bpy.ops.export_scene.gltf(filepath=str(output), export_format='GLB', use_selecti
 
 sockets = {}
 for name, joint, position in [('Root','Root',(0,-.17,.03)), ('Chest','Chest',(0,-.3,.20)),
-                              ('Head','Head',(0,-.38,.315)), ('Mouth','Jaw',(0,-.408,.284))]:
+                              ('Head','Head',(0,-.38,.315)), ('Mouth','Jaw',(0,-.408,.284)),
+                              ('EyeLeft','Head',(-.017,-.372,.310)),
+                              ('EyeRight','Head',(.017,-.372,.310))]:
     point = rig.data.bones[joint].matrix_local.inverted() @ (Vector(position)*2)
     sockets[name] = {'node': joint, 'translation': list(point)}
 descriptor = {'version':1,'sampleRate':30,'clips':{a.name:{'loop':a.name=='Idle'} for a in actions}, 'sockets':sockets}

@@ -327,13 +327,16 @@
     "Roar",
     "FireBreath",
     "ClawStrike",
-    "Hit"
+    "Hit",
+    "Fireball"
   ],
   "sockets": [
     "Root",
     "Chest",
     "Head",
-    "Mouth"
+    "Mouth",
+    "EyeLeft",
+    "EyeRight"
   ],
-  "modelSha256": "E0CB5D5457152053AD6723A01E58DB681CAF6D1CCC04E670CAD43006981CBBB5"
+  "modelSha256": "F73899F97957D333D7B7CAF985C8B6E6EF8A349B9C10E9384D16B8178E75A6C8"
 }

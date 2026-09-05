@@ -13,6 +13,9 @@
     <SmileSource Include="Program.smile" StartupOnly="true" />
     <SmileSource Include="Profiles.smile" />
     <SmileSource Include="OrinStorm.smile" />
+    <SmileSource Include="BattleAudio.smile" />
+    <SmileSource Include="BattleCamera.smile" />
+    <SmileSource Include="DragonPresence.smile" />
     <Model3DAsset Include="BuildAssets\ArinV57\arin-v5.7-idle-equipment-checkpoint.glb"
                   Descriptor="BuildAssets\ArinV57\ArinV57.sm3d.json"
                   LogicalPath="Assets\Generation2\ArinV57\ArinV57.sm3d"
@@ -58,6 +61,11 @@
     <Asset Include="Assets\Lightning\lightning-ribbon.png" />
     <Asset Include="Assets\Lightning\lightning-spark.png" />
     <Asset Include="Assets\Lightning\thunder.wav" />
+    <Asset Include="Assets\Audio\arin-flame-slash.wav" />
+    <Asset Include="Assets\Audio\arin-flame-crosscut.wav" />
+    <Asset Include="Assets\Audio\dragon-fire-breath.wav" />
+    <Asset Include="Assets\Audio\dragon-claw-strike.wav" />
+    <Asset Include="Assets\Audio\dragon-fireball-impact.wav" />
     <SmileProjectReference Include="..\..\libraries\Smile.Simple3D\Smile.Simple3D.smilelibproj" />
     <SmileProjectReference Include="..\..\libraries\Smile.UI\Smile.UI.smilelibproj" />
   </ItemGroup>

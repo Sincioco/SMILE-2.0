@@ -47,5 +47,10 @@
     "entryPoint": "scripts/build-arin-v5-7-idle-checkpoint.ps1",
     "blenderBuilder": "scripts/build-arin-v5-7-idle-checkpoint.py",
     "animationAudit": "scripts/audit-arin-v5-7-animation-set.py"
+  },
+  "audio": {
+    "manifest": "Audio/attack-audio.json",
+    "generator": "scripts/generate-character-attack-audio.py",
+    "policy": "Original synthesized slash and crosscut cues, once per animation cycle."
   }
 }

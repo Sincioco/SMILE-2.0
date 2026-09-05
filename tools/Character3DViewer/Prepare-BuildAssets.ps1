@@ -106,6 +106,14 @@ foreach ($copy in $copies) {
 
 Write-Host "Prepared Character Viewer cooking inputs from Sin Star I: $buildAssets"
 
+$audioAssets = Join-Path $toolRoot 'Assets\Audio'
+New-Item -ItemType Directory -Path $audioAssets -Force | Out-Null
+foreach ($audioRoot in @((Join-Path $arinRoot 'Audio'), (Join-Path $dragonRoot 'RedDragonV11\Audio'))) {
+    foreach ($audioFile in Get-ChildItem -LiteralPath $audioRoot -Filter '*.wav') {
+        Copy-Item -LiteralPath $audioFile.FullName -Destination $audioAssets -Force
+    }
+}
+
 $fireAssets = Join-Path $toolRoot 'Assets\Fire'
 New-Item -ItemType Directory -Path $fireAssets -Force | Out-Null
 foreach ($fireFile in @('fire-shape-atlas.png', 'smoke-shape-atlas.png', 'ember-shape.png')) {

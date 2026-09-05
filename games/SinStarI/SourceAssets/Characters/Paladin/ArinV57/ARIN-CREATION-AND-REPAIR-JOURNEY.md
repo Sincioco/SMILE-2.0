@@ -696,3 +696,12 @@ arms lifted cloth and independent hand rotation separated the gauntlet. These we
 in the T-pose derivative, not evidence of deleted mesh geometry. Removing remote cloth
 influences fixed the lifted cloth; Sin is providing a clean T-pose as the preferred rigging
 source. Do not use this initial derivative as an accepted animation rig.
+
+### Attack audio checkpoint (September 5)
+
+`Audio/attack-audio.json` records original synthesized slash and crosscut WAVs.
+The Viewer triggers each cue once when its clip crosses the cue time; holding an
+end frame does not repeat it. Shared window-focus audio muting remains authoritative.
+This addition does not change the accepted GLB, descriptor or 23 saved pose keys.
+The newly supplied Death FBX and the requested shield fire outline are pending
+in this mid-development checkpoint, not silently substituted with the archived KO.
