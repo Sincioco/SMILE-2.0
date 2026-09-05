@@ -89,6 +89,8 @@ try {
     # isolated native harness below instead of pinning obsolete labels/timers.
     foreach ($contract in @(
         'Import Smile.Simple3D.CharacterViewer As CharacterViewer',
+        'Import Smile.Simple3D.LightPool3D As LightPool3D',
+        'Import Smile.Simple3D.SceneVfx3D As SceneVfx3D',
         'Import Smile.UI.Controls As UI',
         'CharacterViewer.AutoFit(',
         'CharacterViewer.AdvanceZoom(',
@@ -100,16 +102,12 @@ try {
         'Call StepAnimationFrame(1)',
         'Const FRAME_BUTTON_REPEAT_MILLISECONDS = 300',
         'Const CALIBRATION_MAX_KEYFRAMES = 256',
-        'Sub SaveCalibrationFrame()',
-        'Function InterpolateCalibrationChannel(',
-        'Sub UndoLastCalibrationChange()',
-        'Function SocketReferencePart(Name As Text)',
-        'Save Data CalibrationStorage Count StorageCount To CalibrationDataKey',
         'Sub ToggleDragon()',
         'Sub ToggleSword()',
         'Sub ToggleShield()',
         'Sub ToggleFloorAndGrid()',
-        'Sub UpdateEquipmentFire()',
+        'SceneVfx3D.Advance(SceneVfxClock, Camera,',
+        'OrinLight = LightPool3D.Acquire()',
         'ScenePaused = Not ScenePaused',
         'Const ZOOM_IN_LIMIT = -144',
         'Window_Width()',
@@ -170,7 +168,7 @@ try {
         'Public Function EpicGlowAvailable(ProfileIndex As Number) As Boolean' 'Viewer profile'
     Assert-Contains $profileSource `
         'Public Function EpicGlowVisibleByDefault(ProfileIndex As Number) As Boolean' 'Viewer profile'
-    Assert-Contains $profileSource 'Result.ExpectedClipCount = 8' 'Current eight-clip Viewer profile'
+    Assert-Contains $profileSource 'Result.ExpectedClipCount = 9' 'Current nine-clip Viewer profile'
     Assert-Contains $profileSource 'AnimationArticulated.sm3d' 'Viewer fixture profile'
     foreach ($contract in @(
         'RequestedClipNames[Slot] = ClipName',

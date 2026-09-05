@@ -1,0 +1,263 @@
+''' Scene-owned leases for the renderer's bounded local point-light slots.
+Module Smile.Simple3D.LightPool3D
+
+Option Explicit
+
+Import Smile.Simple3D.Graphics3D As Graphics3D
+
+Public Const MAX_LEASES = 4
+Public Const ERROR_NONE = 0
+Public Const ERROR_CONFIGURATION = 1
+Public Const ERROR_CAPACITY = 2
+Public Const ERROR_HANDLE = 3
+Public Const ERROR_RENDERER = 4
+
+Private Const HANDLE_FACTOR = 10
+Private Const MAX_GENERATION = 1000000
+
+Public Type Lease
+    Handle As Number
+End Type
+
+Private Dim Ready As Boolean
+Private Dim FirstRendererSlot As Number
+Private Dim LeaseCapacity As Number
+Private Dim Used[4] As Boolean
+Private Dim Generations[4] As Number
+Private Dim ErrorValue As Number
+
+Public Function Initialize(FirstSlot As Number, Capacity As Number) As Boolean
+
+    Dim LastSlot As Number
+
+    LastSlot = FirstSlot + Capacity - 1
+
+    If (FirstSlot < 0 Or
+        Capacity < 1 Or
+        Capacity > MAX_LEASES Or
+        LastSlot > 3) Then
+        ErrorValue = ERROR_CONFIGURATION
+        Return False
+    End If
+
+    If Ready Then
+        Call Shutdown()
+    End If
+
+    FirstRendererSlot = FirstSlot
+    LeaseCapacity = Capacity
+    Ready = True
+    ErrorValue = ERROR_NONE
+
+    Return True
+
+End Function
+
+Private Function RawSlot(Value As Lease) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Generation As Number
+    Dim Slot As Number
+
+    Slot = (Value.Handle Mod HANDLE_FACTOR) - 1
+    Generation = Value.Handle / HANDLE_FACTOR
+
+    If (Not Ready Or
+        Slot < 0 Or
+        Slot >= LeaseCapacity Or
+        Not Used[Slot] Or
+        Generations[Slot] <> Generation) Then
+        ReturnValue = -1
+
+        Return ReturnValue
+    End If
+
+    Return Slot
+
+End Function
+
+Public Function Acquire() As Lease
+
+    Dim Index As Number
+    Dim Result As Lease
+
+    If Not Ready Then
+        ErrorValue = ERROR_CONFIGURATION
+        Return Result
+    End If
+
+    For Index = 0 To LeaseCapacity - 1
+
+        If Not Used[Index] Then
+
+            Generations[Index] = Generations[Index] + 1
+
+            If Generations[Index] <= 0 Or Generations[Index] > MAX_GENERATION Then
+                Generations[Index] = 1
+            End If
+
+            Used[Index] = True
+            Result.Handle = Generations[Index] * HANDLE_FACTOR + Index + 1
+            ErrorValue = ERROR_NONE
+            Return Result
+
+        End If
+
+    End For
+
+    ErrorValue = ERROR_CAPACITY
+
+    Return Result
+
+End Function
+
+Public Function IsValid(Value As Lease) As Boolean
+
+    Dim Result As Boolean
+
+    Result = RawSlot(Value) >= 0
+
+    Return Result
+
+End Function
+
+Public Function RendererSlot(Value As Lease) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = RawSlot(Value)
+
+    If Slot < 0 Then
+
+        ErrorValue = ERROR_HANDLE
+        ReturnValue = -1
+
+        Return ReturnValue
+
+    End If
+
+    ReturnValue = FirstRendererSlot + Slot
+
+    Return ReturnValue
+
+End Function
+
+Public Function SetPoint(Value As Lease, X As Number, Y As Number, Z As Number,
+    RedValue As Number, GreenValue As Number, BlueValue As Number, Intensity As Number,
+    Range As Number) As Boolean
+
+    Dim RendererIndex As Number
+    Dim Result As Boolean
+
+    RendererIndex = RendererSlot(Value)
+
+    If RendererIndex < 0 Then
+        Return False
+    End If
+
+    Result = Graphics3D.SetPointLight3D(RendererIndex, X, Y, Z,
+        RedValue, GreenValue, BlueValue, Intensity, Range)
+
+    If Result Then
+        ErrorValue = ERROR_NONE
+    Else
+        ErrorValue = ERROR_RENDERER
+    End If
+
+    Return Result
+
+End Function
+
+Public Function Disable(Value As Lease) As Boolean
+
+    Dim Result As Boolean
+
+    Result = SetPoint(Value, 0, 0, 0, 255, 255, 255, 0, 1)
+
+    Return Result
+
+End Function
+
+Public Function Release(ByRef Value As Lease) As Boolean
+
+    Dim Disabled As Boolean
+    Dim Slot As Number
+
+    Slot = RawSlot(Value)
+
+    If Slot < 0 Then
+        ErrorValue = ERROR_HANDLE
+        Return False
+    End If
+
+    Disabled = Disable(Value)
+
+    Used[Slot] = False
+    Value.Handle = 0
+
+    If Not Disabled Then
+        ErrorValue = ERROR_RENDERER
+        Return False
+    End If
+
+    ErrorValue = ERROR_NONE
+
+    Return True
+
+End Function
+
+Public Function LiveLeaseCount() As Number
+
+    Dim CurrentCount As Number
+    Dim Index As Number
+
+    For Index = 0 To LeaseCapacity - 1
+
+        If Used[Index] Then
+            CurrentCount = CurrentCount + 1
+        End If
+
+    End For
+
+    Return CurrentCount
+
+End Function
+
+Public Function LastError() As Number
+
+    Return ErrorValue
+
+End Function
+
+Public Sub Shutdown()
+
+    Dim Disabled As Boolean
+    Dim Index As Number
+    Dim Value As Lease
+
+    If Ready Then
+
+        For Index = 0 To LeaseCapacity - 1
+
+            If Used[Index] Then
+
+                Value.Handle = Generations[Index] * HANDLE_FACTOR + Index + 1
+                Disabled = Disable(Value)
+                Used[Index] = False
+
+            End If
+
+        End For
+
+    End If
+
+    Ready = False
+    FirstRendererSlot = 0
+    LeaseCapacity = 0
+
+End Sub
+
+End Module

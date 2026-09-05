@@ -7,6 +7,7 @@ Import Smile.Simple3D.Core As Core
 Import Smile.Simple3D.Character3D As Character3D
 Import Smile.Simple3D.Graphics3D As Graphics3D
 Import Smile.Simple3D.FireEmitter3D As Fire
+Import Smile.Simple3D.LightPool3D As LightPool3D
 Import Smile.Simple3D.FixedMath As Fixed
 
 Private Dim Texture As Core.Texture3D
@@ -67,7 +68,7 @@ Public Function FireballPhase(Time As Number) As Number
 End Function
 
 Public Sub Update(Actor As Character3D.Actor, Clip As Text, Time As Number,
-    Target As Core.Vector3, Enabled As Boolean)
+    Target As Core.Vector3, Enabled As Boolean, Light As LightPool3D.Lease)
 
     Dim Mouth As Core.Vector3
     Dim Point As Core.Vector3
@@ -184,11 +185,11 @@ Public Sub Update(Actor As Character3D.Actor, Clip As Text, Time As Number,
 
     End If
 
-    Ok = Graphics3D.SetPointLight3D(3, Point.X, Point.Y, Point.Z,
+    Ok = LightPool3D.SetPoint(Light, Point.X, Point.Y, Point.Z,
         255, 88, 18, Heat, 80)
 
     If Not Visible Then
-        Ok = Graphics3D.SetPointLight3D(3, 0, 0, 0, 255, 88, 18, 0, 80)
+        Ok = LightPool3D.Disable(Light)
     End If
 
     If Visible And Glow.Handle <> 0 Then

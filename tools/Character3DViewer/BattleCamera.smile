@@ -93,6 +93,28 @@ Public Function FrontArcYaw1000(Phase1000 As Number) As Number
 
 End Function
 
+''' Distributes any bounded participant count over a named front-arc formation.
+Public Function FormationPosition(Center As Core.Vector3, Radius As Number,
+    StartAngle As Number, EndAngle As Number, MemberIndex As Number,
+    MemberCount As Number) As Core.Vector3
+
+    Dim Angle As Number
+    Dim Result As Core.Vector3
+
+    Angle = (StartAngle + EndAngle) / 2
+
+    If MemberCount > 1 Then
+        Angle = StartAngle + (EndAngle - StartAngle) * MemberIndex / (MemberCount - 1)
+    End If
+
+    Result.X = Center.X + Radius * Fixed.CosFixed(Angle) / Core.FIXED_ONE
+    Result.Y = Center.Y
+    Result.Z = Center.Z + Radius * Fixed.SinFixed(Angle) / Core.FIXED_ONE
+
+    Return Result
+
+End Function
+
 Public Function Orbit(Base As Core.Camera3D, Controls As Core.CameraControl3D,
     Yaw1000 As Number) As Core.Camera3D
 

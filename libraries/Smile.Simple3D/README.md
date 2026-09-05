@@ -5,6 +5,8 @@
 - `Graphics3D` and `Math3D` use the true indexed-triangle `Renderer3D` on Windows DirectX and WebGL2.
 - `Character3D` shares animated SM3D character assets while giving each actor independent playback, transforms, events, sockets, and root motion.
 - `Scene3D` supplies deterministic asset/render quality profiles, named lights, one selected shadow caster, HDR tone mapping, bloom, and balanced begin/end ownership over `Graphics3D`.
+- `SceneVfx3D` gives a scene one advancement boundary for the shared Fire and Lightning families. Actors stage requests; they do not advance or shut down the shared clocks.
+- `LightPool3D` leases a caller-selected range of the four renderer point-light slots with bounded generation-safe handles. A borrower can update or disable its lease but must not release another actor's light.
 - Windows HDR Renderer3D prefers 4x MSAA and safely falls back to 2x or 1x; WebGL2 validates float-color targets and uses its documented single-sample fallback.
 - `Renderer`, `Primitives`, `Mesh`, and `Interaction` preserve the original bounded wireframe lessons over Renderer2D, including GDI support.
 
@@ -47,6 +49,15 @@ Show Screen
 `Graphics3D.RendererAvailable()` is `True` for Windows DirectX and WebGL2. It is `False` on the GDI fallback. `ResourceEpoch3D` and `FrameActive3D` let high-level modules reconcile logical resets and frame ownership. Handles are bounded and validated; create geometry outside the frame loop, share meshes with `CreateObjectFromMesh3D`, destroy shared instances with `DestroyObjectInstance3D`, destroy owning objects with `DestroyObject3D`, and call `ResetRenderer3D` during final cleanup.
 
 `Core.CameraControl3D` plus `Interaction.UpdateCameraControlsFromPointer` provides the shared primary-drag pan, continuous 360-degree middle-drag orbit, wheel zoom, lost-release recovery, and slow return behavior used by Dragonfall. The camera's explicit up direction travels through native Direct3D and WebGL2 so vertical orbit remains stable across both poles. Games retain control over which screen/world regions may start a gesture.
+
+For a scene with multiple effect-owning actors, initialize Fire and Lightning once,
+create one `SceneVfx3D.Clock`, and call `BeginFrame` plus `Advance` exactly once after
+all actors have staged their endpoints. `Advance` rejects a second call for the same
+frame. It can freeze Fire and Lightning independently; frozen Lightning is restaged
+with zero elapsed time for the live camera. Initialize `LightPool3D` only for point-light
+slots the scene has reserved, pass leases to actor presenters as borrowed handles, then
+release the leases before shutting down the pool. The application remains responsible
+for family initialization, drawing, and final shutdown.
 
 See [API.md](API.md), the [true Simple3D conformance sample](../../examples/Simple3DConformance/Program.smile), and [Neon Cycles](../../games/NeonCycles/README.md).
 

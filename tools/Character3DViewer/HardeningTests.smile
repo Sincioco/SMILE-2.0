@@ -9,6 +9,8 @@ Import Smile.Tools.BattleCamera As BattleCamera
 Import Smile.Simple3D.Core As Core
 Import Smile.Simple3D.NodeAim3D As NodeAim3D
 Import Smile.Simple3D.Math3D As Math3D
+Import Smile.Simple3D.LightPool3D As LightPool3D
+Import Smile.Simple3D.SceneVfx3D As SceneVfx3D
 
 Dim Alternating As CharacterViewer.ZoomState
 Dim Bounds As Character3D.Bounds3D
@@ -38,6 +40,19 @@ Dim AimForward As Core.Vector3
 Dim AimTarget As Core.Vector3
 Dim AimAngles As Core.Vector3
 Dim AimLimits As Core.Vector3
+Dim FirstStorm As OrinStorm.Context
+Dim SecondStorm As OrinStorm.Context
+Dim ReplacementStorm As OrinStorm.Context
+Dim FirstLight As LightPool3D.Lease
+Dim SecondLight As LightPool3D.Lease
+Dim ExtraLight As LightPool3D.Lease
+Dim StaleLight As LightPool3D.Lease
+Dim VfxClock As SceneVfx3D.Clock
+Dim TestResult As Boolean
+Dim FormationCenter As Core.Vector3
+Dim FormationFirst As Core.Vector3
+Dim FormationMiddle As Core.Vector3
+Dim FormationLast As Core.Vector3
 
 Game Window "Character 3D Viewer Hardening Tests" Size 320 By 240
 
@@ -119,6 +134,14 @@ Call Check(BattleCamera.FrontArcYaw1000(360000) = BattleCamera.FrontArcYaw1000(0
 Call Check(BattleCamera.FrontArcYaw1000(500) > BattleCamera.FrontArcYaw1000(0))
 Call Check(BattleCamera.FrontArcYaw1000(89900) = BattleCamera.FrontArcYaw1000(90100))
 
+FormationFirst = BattleCamera.FormationPosition(FormationCenter, 300, 10, 50, 0, 3)
+FormationMiddle = BattleCamera.FormationPosition(FormationCenter, 300, 10, 50, 1, 3)
+FormationLast = BattleCamera.FormationPosition(FormationCenter, 300, 10, 50, 2, 3)
+
+Call Check(FormationFirst.X <> FormationMiddle.X And FormationMiddle.X <> FormationLast.X)
+Call Check(Math3D.Distance(FormationFirst, FormationMiddle) > 90)
+Call Check(Math3D.Distance(FormationMiddle, FormationLast) > 90)
+
 Call Check(ViewerProfiles.HoldsFinalPose(ViewerProfiles.PROFILE_ORIN, "Defend"))
 Call Check(Not ViewerProfiles.HoldsFinalPose(ViewerProfiles.PROFILE_ARIN, "Defend"))
 Call Check(Not ViewerProfiles.HoldsFinalPose(ViewerProfiles.PROFILE_ORIN, "Idle"))
@@ -132,6 +155,59 @@ Call Check(Not BattleAudio.CrossedCue(AudioCue, "FireBreath", 200, 100, False))
 Call Check(Not BattleAudio.CrossedCue(AudioCue, "FireBreath", 300, 100, True))
 Call Check(BattleAudio.CrossedCue(AudioCue, "ClawStrike", 900, 200, True))
 Call Check(Not BattleAudio.CrossedCue(AudioCue, "Idle", 900, -1, True))
+
+Call OrinStorm.Prepare(False)
+
+FirstStorm = OrinStorm.Create()
+SecondStorm = OrinStorm.Create()
+
+Call Check(OrinStorm.IsValid(FirstStorm) And OrinStorm.IsValid(SecondStorm))
+
+Call OrinStorm.SetStyle(FirstStorm, 1)
+Call OrinStorm.SetStyle(SecondStorm, 3)
+
+Call Check(OrinStorm.StyleName(FirstStorm) = "Storm Lance")
+Call Check(OrinStorm.StyleName(SecondStorm) = "Godstorm")
+
+ReplacementStorm = FirstStorm
+TestResult = OrinStorm.Destroy(FirstStorm)
+
+Call Check(TestResult And Not OrinStorm.IsValid(ReplacementStorm))
+Call Check(OrinStorm.IsValid(SecondStorm) And OrinStorm.StyleName(SecondStorm) = "Godstorm")
+
+FirstStorm = OrinStorm.Create()
+
+Call Check(OrinStorm.IsValid(FirstStorm) And FirstStorm.Handle <> ReplacementStorm.Handle)
+
+Call OrinStorm.Shutdown()
+
+Call Check(LightPool3D.Initialize(2, 2))
+
+FirstLight = LightPool3D.Acquire()
+SecondLight = LightPool3D.Acquire()
+ExtraLight = LightPool3D.Acquire()
+
+Call Check(LightPool3D.IsValid(FirstLight) And LightPool3D.IsValid(SecondLight))
+Call Check(Not LightPool3D.IsValid(ExtraLight) And
+    LightPool3D.LastError() = LightPool3D.ERROR_CAPACITY)
+Call Check(LightPool3D.RendererSlot(FirstLight) <> LightPool3D.RendererSlot(SecondLight))
+
+StaleLight = FirstLight
+TestResult = LightPool3D.Release(FirstLight)
+
+Call Check(TestResult And Not LightPool3D.IsValid(StaleLight))
+Call Check(LightPool3D.IsValid(SecondLight) And LightPool3D.LiveLeaseCount() = 1)
+
+Call LightPool3D.Shutdown()
+
+Call SceneVfx3D.Initialize(VfxClock)
+Call Check(SceneVfx3D.BeginFrame(VfxClock, 16, False, False))
+
+TestResult = SceneVfx3D.Advance(VfxClock, OrbitBase, False, False)
+
+Call Check(TestResult And VfxClock.LastAdvancedFrame = VfxClock.FrameIdentity)
+Call Check(Not SceneVfx3D.Advance(VfxClock, OrbitBase, False, False))
+Call Check(VfxClock.DuplicateAdvanceCount = 1)
 
 Charge.Energy = 120
 

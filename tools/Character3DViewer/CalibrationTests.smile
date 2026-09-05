@@ -4,9 +4,18 @@ Dim TestIndex As Number
 Dim TestSavedCount As Number
 Dim TestFireAge As Number
 Dim TestFireGeneration As Number
+Dim TestFireAdvanceCount As Number
 Dim TestVisualEpoch As Number
 Dim TestAnchor As Core.Vector3
 Dim TestPosition As Core.Vector3
+Dim TestTwin As Character3D.Actor
+Dim TestFormationFirst As Core.Vector3
+Dim TestFormationMiddle As Core.Vector3
+Dim TestFormationLast As Core.Vector3
+Dim TestLightning As Lightning.LightningEffect
+Dim TestLightningAge As Number
+Dim TestLightningSource As Core.Vector3
+Dim TestLightningTarget As Core.Vector3
 
 Game Window "SMILE Calibration Isolation Tests" Size 640 By 480
 
@@ -14,7 +23,56 @@ ProfileIndex = ViewerProfiles.PROFILE_ARIN
 
 Call LoadViewer()
 Call CalibrationCheck(Ready And Not ViewerError, "Load profile")
-Call CalibrationCheck(Character3D.SocketCount(Character) = 13, "Thirteen sockets")
+Call CalibrationCheck(Character3D.SocketCount(Character) = ActiveProfile.ExpectedSocketCount,
+    "Profile socket contract")
+
+TestTwin = Character3D.LoadWithPolicy(ActiveProfile.AssetPath,
+    Character3D.CHARACTER_LOAD_REQUIRE_PBR)
+
+Call CalibrationCheck(Character3D.IsValid(TestTwin) And TestTwin.Handle <> Character.Handle,
+    "Two instances of the same model have independent handles")
+
+Ready = Character3D.PlayMode(Character, "Idle", Graphics3D.ANIMATION_LOOP, 100) And Ready
+Ready = Character3D.PlayMode(TestTwin, "SwordAttack", Graphics3D.ANIMATION_ONCE, 100) And Ready
+Ready = Character3D.SetAnimationTime(Character, 111) And Ready
+Ready = Character3D.SetAnimationTime(TestTwin, 444) And Ready
+
+Call CalibrationCheck(Character3D.CurrentClipNameMatches(Character, "Idle") And
+    Character3D.CurrentClipNameMatches(TestTwin, "SwordAttack"),
+    "Two instances retain different clips")
+Call CalibrationCheck(Character3D.AnimationTime(Character) = 111 And
+    Character3D.AnimationTime(TestTwin) = 444, "Two instances retain different times")
+
+Ready = Character3D.Update(Character, 16) And Ready
+
+Call CalibrationCheck(Character3D.AnimationTime(Character) > 111 And
+    Character3D.AnimationTime(TestTwin) = 444, "Advancing one instance does not advance the other")
+
+Call Character3D.Destroy(TestTwin)
+
+Call SetPartyPresentationState(0, PARTY_STATE_HIT)
+Call SetPartyPresentationState(1, PARTY_STATE_KO)
+Call CalibrationCheck(PartyPresentationState(0) = PARTY_STATE_HIT And
+    PartyPresentationState(1) = PARTY_STATE_KO, "Party actor states remain independent")
+Call CalibrationCheck(PartyPresentationStateName(PARTY_STATE_ALIVE) = "Alive" And
+    PartyPresentationStateName(PARTY_STATE_ACTING) = "Acting" And
+    PartyPresentationStateName(PARTY_STATE_GUARDING) = "Guarding" And
+    PartyPresentationStateName(PARTY_STATE_HIT) = "Hit" And
+    PartyPresentationStateName(PARTY_STATE_KO) = "KO" And
+    PartyPresentationStateName(PARTY_STATE_REVIVING) = "Reviving",
+    "Party presentation states are explicit")
+
+Call SetPartyPresentationState(0, PARTY_STATE_ALIVE)
+Call SetPartyPresentationState(1, PARTY_STATE_ALIVE)
+
+TestFormationFirst = PartyHomePosition(0, 3)
+TestFormationMiddle = PartyHomePosition(1, 3)
+TestFormationLast = PartyHomePosition(2, 3)
+
+Call CalibrationCheck(Math3D.Distance(TestFormationFirst, TestFormationMiddle) > 90 And
+    Math3D.Distance(TestFormationMiddle, TestFormationLast) > 90,
+    "Front-arc formation expands to three participants")
+
 Call ClearCalibrationMemory()
 
 ScenePaused = True
@@ -113,17 +171,20 @@ CameraElapsed = 16
 FlameAnimationPaused = False
 
 Call UpdateEquipmentFire()
+Call AdvanceSceneVfx()
 Call CalibrationCheck(SwordFire.Slot <> 0 And Not ShieldFireFailed, "All equipment emitters admitted")
 
 TestFireAge = Fire.Value(10, SwordFire)
 
 Call UpdateEquipmentFire()
+Call AdvanceSceneVfx()
 Call CalibrationCheck(Fire.Value(10, SwordFire) > TestFireAge, "Flames animate while scene paused")
 
 FlameAnimationPaused = True
 TestFireAge = Fire.Value(10, SwordFire)
 
 Call UpdateEquipmentFire()
+Call AdvanceSceneVfx()
 Call CalibrationCheck(Fire.Value(10, SwordFire) = TestFireAge, "Paused flame clock stays frozen")
 
 TestVisualEpoch = VisualContinuityEpoch
@@ -131,20 +192,75 @@ TestVisualEpoch = VisualContinuityEpoch
 Call SeekFirstAnimationFrame()
 Call CalibrationCheck(VisualContinuityEpoch > TestVisualEpoch, "Seek invalidates visual history")
 Call UpdateEquipmentFire()
+Call AdvanceSceneVfx()
 Call CalibrationCheck(Fire.Value(10, SwordFire) = 0, "Seek does not warm up paused flames")
 
 FlameAnimationPaused = False
 
 Call UpdateEquipmentFire()
+Call AdvanceSceneVfx()
 Call CalibrationCheck(Fire.Value(10, SwordFire) <= 20, "Flame resume has no catch-up burst")
+
+SwordFireReady = False
+TestFireAge = Fire.Value(10, SwordFire)
+TestFireAdvanceCount = SceneVfxClock.FireAdvanceCount
+
+Call UpdateEquipmentFire()
+Call AdvanceSceneVfx()
+Call CalibrationCheck(Fire.Value(10, SwordFire) > TestFireAge,
+    "Unavailable equipment component does not stall shared Fire")
+Call CalibrationCheck(SceneVfxClock.FireAdvanceCount = TestFireAdvanceCount + 1,
+    "Shared Fire advances exactly once per scene frame")
+
+SwordFireReady = FireInitialized
+
+LightningInitialized = Lightning.Initialize("Assets/Lightning", 8192,
+    Graphics3D.GPU_PARTICLE_SIMULATION_AUTO, 4096)
+TestLightningTarget.X = 40
+TestLightningTarget.Y = 80
+TestLightning = Lightning.StartAt("StoredStorm", TestLightningSource,
+    TestLightningTarget, 8647, Lightning.QUALITY_MEDIUM)
+
+Call CalibrationCheck(LightningInitialized And TestLightning.Slot <> 0,
+    "Shared Lightning test effect admitted")
+
+FlameAnimationPaused = False
+LightningAnimationPaused = True
+TestFireAge = Fire.Value(10, SwordFire)
+TestLightningAge = Lightning.Value(Lightning.QUERY_AGE, TestLightning)
+
+Call AdvanceSceneVfx()
+Call CalibrationCheck(Fire.Value(10, SwordFire) > TestFireAge And
+    Lightning.Value(Lightning.QUERY_AGE, TestLightning) = TestLightningAge,
+    "Frozen Lightning does not stop Fire")
+
+FlameAnimationPaused = True
+LightningAnimationPaused = False
+TestFireAge = Fire.Value(10, SwordFire)
+TestLightningAge = Lightning.Value(Lightning.QUERY_AGE, TestLightning)
+
+Call AdvanceSceneVfx()
+Call CalibrationCheck(Fire.Value(10, SwordFire) = TestFireAge And
+    Lightning.Value(Lightning.QUERY_AGE, TestLightning) > TestLightningAge,
+    "Frozen Fire does not stop Lightning")
+
+Ready = Lightning.Destroy(TestLightning) And Ready
+
+Call Lightning.Shutdown()
+
+LightningInitialized = False
+FlameAnimationPaused = False
+LightningAnimationPaused = False
 
 TestFireGeneration = SwordFire.Generation
 
 Call PlaySelectedClip(True)
 Call UpdateEquipmentFire()
+Call AdvanceSceneVfx()
 Call CalibrationCheck(SwordFire.Generation = TestFireGeneration, "Automatic playback keeps fire tails")
 Call SelectClip(0)
 Call UpdateEquipmentFire()
+Call AdvanceSceneVfx()
 Call CalibrationCheck(SwordFire.Generation <> TestFireGeneration, "Explicit clip selection clears old fire")
 
 Do

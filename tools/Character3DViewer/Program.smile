@@ -8,6 +8,9 @@ Import Smile.UI.Controls As UI
 Import Smile.Simple3D.Arena3D As Arena3D
 Import Smile.Simple3D.StaticBackdrop3D As StaticBackdrop3D
 Import Smile.Simple3D.FireEmitter3D As Fire
+Import Smile.Simple3D.LightningVfx3D As Lightning
+Import Smile.Simple3D.LightPool3D As LightPool3D
+Import Smile.Simple3D.SceneVfx3D As SceneVfx3D
 Import Smile.Simple3D.Core As Core
 Import Smile.Simple3D.Graphics3D As Graphics3D
 Import Smile.Simple3D.Interaction As Interaction
@@ -116,6 +119,16 @@ Const CAMERA_SLIDER_ZOOM = 3
 Const BACKGROUND_COUNT = 5
 Const BACKDROP_LANDSCAPE_PATH = "Assets\Backgrounds\SinStarLandscape.png"
 Const BACKDROP_TITLE_PATH = "Assets\Backgrounds\SinStarTitleWithLogo.png"
+Const PARTY_STATE_ALIVE = 0
+Const PARTY_STATE_ACTING = 1
+Const PARTY_STATE_GUARDING = 2
+Const PARTY_STATE_HIT = 3
+Const PARTY_STATE_KO = 4
+Const PARTY_STATE_REVIVING = 5
+Const PARTY_FORMATION_MEMBER_CAPACITY = 3
+Const PARTY_FORMATION_RADIUS = 300
+Const PARTY_FORMATION_START_ANGLE = 10
+Const PARTY_FORMATION_END_ANGLE = 50
 
 Type ViewerActorContext
     Actor As Character3D.Actor
@@ -130,6 +143,14 @@ Type ViewerActorContext
     CalibrationAvailable As Boolean
     GlowAvailable As Boolean
     GlowVisible As Boolean
+    PresentationState As Number
+End Type
+
+Type PartyParticipantLayout
+    Home As Core.Vector3
+    Approach As Core.Vector3
+    ClearanceRadius As Number
+    FacingAdjustment As Number
 End Type
 
 Dim SelectedCharacterTab As Number
@@ -142,10 +163,14 @@ Dim PartyTurn As Number
 Dim PartyPreviousShotStage As Number
 Dim PartyFatalTarget As Number
 Dim PartyFatalStarted As Boolean
-Dim PartyKnockedOut[2] As Boolean
+Dim PartyHitTarget As Number
+Dim PartyHitResolved As Boolean
+Dim PartyParticipants[PARTY_FORMATION_MEMBER_CAPACITY] As PartyParticipantLayout
+Dim PartyParticipantCount As Number
 Dim PartyStage As Number
 Dim PartyReady As Boolean
 Dim CharacterSwitchBlocked As Boolean
+Dim PresentationState As Number
 
 Dim CalibrationProfileFingerprint As Text
 Dim CalibrationFilePath As Text
@@ -192,7 +217,6 @@ Dim ShieldFlameStyle As Boolean
 Dim ShieldFireFailed As Boolean
 Dim ShieldFireClip As Number
 Dim ShieldFireTime As Number
-Dim EquipmentFireWarmup As Boolean
 Dim CalibrationHoldGrip As Boolean
 Dim CalibrationGripAnchor As Core.Vector3
 Dim CalibrationGripBasePosition As Core.Vector3
@@ -295,6 +319,11 @@ Dim DragonClip As Text
 Dim DragonCounter As Number
 Dim DragonBreath As Fire.FireEmitter
 Dim FireInitialized As Boolean
+Dim LightningInitialized As Boolean
+Dim SceneVfxClock As SceneVfx3D.Clock
+Dim OrinStormContext As OrinStorm.Context
+Dim OrinLight As LightPool3D.Lease
+Dim DragonLight As LightPool3D.Lease
 Dim DragonFireFailed As Boolean
 Dim DragonReactionPending As Boolean
 Dim DragonAvailable As Boolean
@@ -503,6 +532,7 @@ Do
         Call ApplyPartyAttackCamera()
         Call UpdateBattleAudio()
         Call UpdateOrinStorm()
+        Call AdvanceSceneVfx()
 
         If SocketGizmosVisible Then
             Call UpdateSocketGizmos()
@@ -538,7 +568,8 @@ Do
 
             If EpicGlowVisible Then
 
-                If Not DrawEquipmentGlow() Then
+                If ((Not PartyMode Or PartyPresentationState(0) <> PARTY_STATE_KO) And
+                    Not DrawEquipmentGlow()) Then
                     EpicGlowVisible = False
                 End If
 
@@ -561,7 +592,10 @@ Do
             End If
 
             Call DrawShieldFire()
-            Call OrinStorm.Draw()
+            Call OrinStorm.Draw(OrinStormContext)
+
+            Ready = SceneVfx3D.DrawLightning(LightningInitialized) And Ready
+
             Call DragonPresence.Draw()
 
             If DragonVisible And DragonBreath.Slot <> 0 Then
@@ -592,7 +626,7 @@ Do
 
     End If
 
-    Call OrinStorm.DrawFlash()
+    Call OrinStorm.DrawFlash(OrinStormContext)
     Call DrawViewerOverlay()
 
     Show Screen
@@ -774,6 +808,14 @@ Sub LoadViewer()
     SwordFireReady = False
 
     FireInitialized = False
+    LightningInitialized = False
+
+    Call SceneVfx3D.Initialize(SceneVfxClock)
+
+    Ready = LightPool3D.Initialize(2, 2) And Ready
+    OrinLight = LightPool3D.Acquire()
+    DragonLight = LightPool3D.Acquire()
+    Ready = LightPool3D.IsValid(OrinLight) And LightPool3D.IsValid(DragonLight) And Ready
 
     If DragonAvailable Then
         FireInitialized = Fire.Initialize("Assets/Fire")
@@ -811,7 +853,15 @@ Sub LoadViewer()
     If (PartyMode Or
         DragonInspection Or
         ProfileIndex = ViewerProfiles.PROFILE_ORIN) Then
-        Call OrinStorm.Initialize()
+
+        LightningInitialized = Lightning.Initialize("Assets/Lightning", 8192,
+            Graphics3D.GPU_PARTICLE_SIMULATION_AUTO, 4096)
+
+        Call OrinStorm.Prepare(LightningInitialized)
+
+        OrinStormContext = OrinStorm.Create()
+        Ready = LightningInitialized And OrinStorm.IsValid(OrinStormContext) And Ready
+
     End If
 
     ViewerEpoch = Graphics3D.ResourceEpoch3D()
@@ -1188,13 +1238,8 @@ Sub UpdateDragon()
 
     End If
 
-    Call DragonPresence.Update(Dragon, Name, Time, Target, DragonVisible And FireInitialized)
-
-    If (FireInitialized And
-        Not SwordFireReady And
-        Not FlameAnimationPaused) Then
-        Call Fire.Update(CameraElapsed)
-    End If
+    Call DragonPresence.Update(Dragon, Name, Time, Target,
+        DragonVisible And FireInitialized, DragonLight)
 
 End Sub
 
@@ -2656,7 +2701,7 @@ Function HandleInterfacePointer() As Boolean
         If DragonInspection Then
             DragonHeadTracking = Not DragonHeadTracking
         Else If ProfileIndex = ViewerProfiles.PROFILE_ORIN Then
-            Call OrinStorm.CycleStyle()
+            Call OrinStorm.CycleStyle(OrinStormContext)
         Else
             SwordFireVisible = Not SwordFireVisible
         End If
@@ -2666,7 +2711,7 @@ Function HandleInterfacePointer() As Boolean
         If DragonInspection Then
             DragonCounter = (DragonCounter + 1) Mod 2
         Else If ProfileIndex = ViewerProfiles.PROFILE_ORIN Then
-            Call OrinStorm.CycleStyle()
+            Call OrinStorm.CycleStyle(OrinStormContext)
         Else
             ShieldFireVisible = Not ShieldFireVisible
         End If
@@ -2674,7 +2719,7 @@ Function HandleInterfacePointer() As Boolean
     Else If (ProfileIndex = ViewerProfiles.PROFILE_ORIN And
         PointerInRectangle(PanelLeft + 12, 470, 128, 20)) Then
 
-        Call OrinStorm.CycleComfort()
+        Call OrinStorm.CycleComfort(OrinStormContext)
 
     Else If (ProfileIndex = ViewerProfiles.PROFILE_ORIN And
         PointerInRectangle(PanelLeft + 144, 470, 108, 20)) Then
@@ -3507,8 +3552,9 @@ Sub UpdateEquipmentFire()
         Return
     End If
 
-    If FlameAnimationPaused Then
-        FlamesWerePaused = True
+    If PartyMode And PartyPresentationState(0) = PARTY_STATE_KO Then
+        Call ClearEquipmentFire()
+
         Return
     End If
 
@@ -3527,26 +3573,19 @@ Sub UpdateEquipmentFire()
 
     End If
 
+    If FlameAnimationPaused Then
+        FlamesWerePaused = True
+        Return
+    End If
+
     If Not SwordFireReady Then
         Return
     End If
 
     Call RecordOptionalFireFailure()
 
-    EquipmentFireWarmup = False
-
     Call UpdateSwordFire()
     Call UpdateShieldFire()
-
-    If Not FlameAnimationPaused Then
-
-        If EquipmentFireWarmup Then
-            Call Fire.Update(100)
-        End If
-
-        Call Fire.Update(CameraElapsed)
-
-    End If
 
     FlamesWerePaused = FlameAnimationPaused
 
@@ -3568,15 +3607,27 @@ Sub UpdateOrinStorm()
     If (PartyMode Or DragonInspection) And PartyReady Then
         Clip = Character3D.ClipName(PartyCompanion.Actor, PartyCompanion.Clip)
 
-        Call OrinStorm.Update(PartyCompanion.Actor, Clip, Target, Camera, CameraElapsed,
-            PartyCompanion.GlowVisible And (EpicGlowVisible Or DragonInspection),
-            SwordVisible, ShieldVisible, LightningAnimationPaused, ScenePaused)
+        Call OrinStorm.Update(OrinStormContext, PartyCompanion.Actor, Clip, Target,
+            Camera, CameraElapsed,
+            PartyCompanion.GlowVisible And (EpicGlowVisible Or DragonInspection) And
+                PartyPresentationState(1) <> PARTY_STATE_KO,
+            SwordVisible, ShieldVisible, LightningAnimationPaused, ScenePaused, OrinLight)
     Else If ProfileIndex = ViewerProfiles.PROFILE_ORIN Then
         Clip = Character3D.ClipName(Character, SelectedClip)
 
-        Call OrinStorm.Update(Character, Clip, Target, Camera, CameraElapsed,
-            EpicGlowVisible, SwordVisible, ShieldVisible, LightningAnimationPaused, ScenePaused)
+        Call OrinStorm.Update(OrinStormContext, Character, Clip, Target, Camera,
+            CameraElapsed, EpicGlowVisible, SwordVisible, ShieldVisible,
+            LightningAnimationPaused, ScenePaused, OrinLight)
     End If
+
+End Sub
+
+Sub AdvanceSceneVfx()
+
+    Ready = SceneVfx3D.BeginFrame(SceneVfxClock, CameraElapsed,
+        FlameAnimationPaused, LightningAnimationPaused) And Ready
+    Ready = SceneVfx3D.Advance(SceneVfxClock, Camera,
+        FireInitialized, LightningInitialized) And Ready
 
 End Sub
 
@@ -3667,8 +3718,6 @@ Sub UpdateSwordFire()
         End If
 
         Ok = Fire.SetSegment(SwordFire, Base, Tip)
-
-        EquipmentFireWarmup = True
 
     Else
         Ok = Fire.SetSegment(SwordFire, Base, Tip)
@@ -3791,12 +3840,9 @@ Sub UpdateShieldFire()
         End If
 
         If ShieldFire[Index].Slot = 0 Then
-
             ShieldFire[Index] = Fire.StartAt("LineFire", Points[Index], 5710 + Index,
                 Fire.QUALITY_HIGH, Fire.SIMULATION_AUTO, 3)
             Ok = ShieldFire[Index].Slot <> 0 And Ok
-            EquipmentFireWarmup = True
-
         End If
 
         NextIndex = (Index + 1) Mod 3
@@ -7078,8 +7124,10 @@ Sub DrawViewerOverlay()
 
         Else If ProfileIndex = ViewerProfiles.PROFILE_ORIN Then
 
-            Call DrawButton(PanelLeft + 94, 444, 158, 22, OrinStorm.StyleName(), True)
-            Call DrawButton(PanelLeft + 12, 470, 128, 20, OrinStorm.ComfortName(), True)
+            Call DrawButton(PanelLeft + 94, 444, 158, 22,
+                OrinStorm.StyleName(OrinStormContext), True)
+            Call DrawButton(PanelLeft + 12, 470, 128, 20,
+                OrinStorm.ComfortName(OrinStormContext), True)
             Call DrawButton(PanelLeft + 144, 470, 108, 20,
                 VfxPlaybackLabel("Lightning", LightningAnimationPaused), LightningAnimationPaused)
 
@@ -7251,8 +7299,8 @@ Sub DrawPartyStatusPanel()
     Call DrawAnimationButtons()
 
     If PartyTurn = 1 Then
-        Draw Text OrinStorm.StyleName() At PanelLeft + 16, 434 Size 13 Color CYAN
-        Draw Text OrinStorm.Caption() At PanelLeft + 16, 456 Size 12 Color LIGHT_GRAY
+        Draw Text OrinStorm.StyleName(OrinStormContext) At PanelLeft + 16, 434 Size 13 Color CYAN
+        Draw Text OrinStorm.Caption(OrinStormContext) At PanelLeft + 16, 456 Size 12 Color LIGHT_GRAY
     Else If PartyTurn = 2 Then
         Draw Text "Mouth Fire / Charged Fireball" At PanelLeft + 16, 434 Size 12 Color CYAN
     Else
@@ -7914,8 +7962,19 @@ Sub DestroyViewerResources()
     Call Character3D.Destroy(DragonOpponent.Actor)
     Call DestroyDragon()
     Call DragonPresence.Shutdown()
-    Call Fire.Shutdown()
     Call OrinStorm.Shutdown()
+    Call Lightning.Shutdown()
+    Call Fire.Shutdown()
+
+    If LightPool3D.IsValid(OrinLight) Then
+        Ready = LightPool3D.Release(OrinLight) And Ready
+    End If
+
+    If LightPool3D.IsValid(DragonLight) Then
+        Ready = LightPool3D.Release(DragonLight) And Ready
+    End If
+
+    Call LightPool3D.Shutdown()
 
     SwordFire.Slot = 0
     SwordFireReady = False
@@ -7991,6 +8050,7 @@ Function CaptureActorContext() As ViewerActorContext
     Result.CalibrationAvailable = CalibrationAvailable
     Result.GlowAvailable = EpicGlowAvailable
     Result.GlowVisible = EpicGlowVisible
+    Result.PresentationState = PresentationState
 
     Return Result
 
@@ -8010,6 +8070,7 @@ Sub UseActorContext(Context As ViewerActorContext)
     CalibrationAvailable = Context.CalibrationAvailable
     EpicGlowAvailable = Context.GlowAvailable
     EpicGlowVisible = Context.GlowVisible
+    PresentationState = Context.PresentationState
 
 End Sub
 
@@ -8159,21 +8220,87 @@ End Function
 
 Function PartyHomePosition(MemberIndex As Number, MemberCount As Number) As Core.Vector3
 
-    Dim Angle As Number
+    Dim Center As Core.Vector3
     Dim Result As Core.Vector3
 
-    Angle = 30
-
-    If MemberCount > 1 Then
-        Angle = 10 + 40 * MemberIndex / (MemberCount - 1)
-    End If
-
-    Result.X = DRAGON_POSITION_X + 300 * Fixed.CosFixed(Angle) / Core.FIXED_ONE
-    Result.Z = DRAGON_POSITION_Z + 300 * Fixed.SinFixed(Angle) / Core.FIXED_ONE
+    Center.X = DRAGON_POSITION_X
+    Center.Z = DRAGON_POSITION_Z
+    Result = BattleCamera.FormationPosition(Center, PARTY_FORMATION_RADIUS,
+        PARTY_FORMATION_START_ANGLE, PARTY_FORMATION_END_ANGLE,
+        MemberIndex, MemberCount)
 
     Return Result
 
 End Function
+
+Function PartyPresentationState(MemberIndex As Number) As Number
+
+    Dim Result As Number
+
+    Result = PresentationState
+
+    If MemberIndex = 1 Then
+        Result = PartyCompanion.PresentationState
+    End If
+
+    Return Result
+
+End Function
+
+Sub SetPartyPresentationState(MemberIndex As Number, State As Number)
+
+    If MemberIndex = 1 Then
+        PartyCompanion.PresentationState = State
+    Else
+        PresentationState = State
+    End If
+
+End Sub
+
+Function PartyPresentationStateName(State As Number) As Text
+
+    If State = PARTY_STATE_ACTING Then
+        Return "Acting"
+    Else If State = PARTY_STATE_GUARDING Then
+        Return "Guarding"
+    Else If State = PARTY_STATE_HIT Then
+        Return "Hit"
+    Else If State = PARTY_STATE_KO Then
+        Return "KO"
+    Else If State = PARTY_STATE_REVIVING Then
+        Return "Reviving"
+    End If
+
+    Return "Alive"
+
+End Function
+
+Sub InitializePartyFormation()
+
+    Dim Bounds As Character3D.Bounds3D
+    Dim MinimumSeparation As Number
+
+    PartyParticipantCount = 2
+    PartyParticipants[0].Home = PartyHomePosition(0, PartyParticipantCount)
+    PartyParticipants[1].Home = PartyHomePosition(1, PartyParticipantCount)
+    PartyParticipants[0].Approach.X = -21
+    PartyParticipants[0].Approach.Z = -44
+    PartyParticipants[1].Approach.X = -49
+    PartyParticipants[1].Approach.Z = 4
+    PartyParticipants[0].FacingAdjustment = 0
+    PartyParticipants[1].FacingAdjustment = ORIN_ARENA_YAW_ADJUSTMENT
+    Bounds = Character3D.WorldBounds(Character, 0)
+    PartyParticipants[0].ClearanceRadius = Max(Bounds.Size.X, Bounds.Size.Z) / 2
+    Bounds = Character3D.WorldBounds(PartyCompanion.Actor, 0)
+    PartyParticipants[1].ClearanceRadius = Max(Bounds.Size.X, Bounds.Size.Z) / 2
+    MinimumSeparation = PartyParticipants[0].ClearanceRadius + PartyParticipants[1].ClearanceRadius + 20
+
+    If Math3D.Distance(PartyParticipants[0].Approach,
+        PartyParticipants[1].Approach) < MinimumSeparation Then
+        PartyParticipants[1].Approach.X = PartyParticipants[0].Approach.X - MinimumSeparation
+    End If
+
+End Sub
 
 Sub ResetPartyDemo()
 
@@ -8181,13 +8308,17 @@ Sub ResetPartyDemo()
     PartyTurn = 0
     PartyFatalTarget = -1
     PartyFatalStarted = False
-    PartyKnockedOut[0] = False
-    PartyKnockedOut[1] = False
+    PartyHitTarget = -1
+    PartyHitResolved = False
     DragonCounter = 0
     PartyStage = -1
     DragonReactionPending = False
     DemoEnabled = True
     CalibrationVisible = False
+
+    Call SetPartyPresentationState(0, PARTY_STATE_ALIVE)
+    Call SetPartyPresentationState(1, PARTY_STATE_ALIVE)
+    Call InitializePartyFormation()
 
     If PartyReady Then
         Ready = Character3D.SetPartVisible(PartyCompanion.Actor, WEAPON_PART_INDEX, SwordVisible) And Ready
@@ -8269,6 +8400,8 @@ Sub AdvancePartyDemo()
     Dim Travel1000 As Number
     Dim Name As Text
     Dim Home As Core.Vector3
+    Dim Approach As Core.Vector3
+    Dim TravelOffset As Number
 
     If Not PartyReady Then
         Return
@@ -8293,8 +8426,16 @@ Sub AdvancePartyDemo()
         PartyStage = -1
 
         If PartyTurn = 2 Then
+
             Random PartyFatalTarget From -1 To 1
             PartyFatalStarted = False
+            PartyHitResolved = False
+            PartyHitTarget = PartyFatalTarget
+
+            If PartyHitTarget < 0 Then
+                PartyHitTarget = DragonCounter Mod PartyParticipantCount
+            End If
+
         End If
 
     End If
@@ -8352,19 +8493,36 @@ Sub AdvancePartyDemo()
 
         If PartyTurn = 0 Then
 
-            PartyKnockedOut[0] = False
+            If PartyPresentationState(0) = PARTY_STATE_KO Then
+                Call SetPartyPresentationState(0, PARTY_STATE_REVIVING)
+            Else If Stage = 3 Then
+                Call SetPartyPresentationState(0, PARTY_STATE_ALIVE)
+            Else If Stage >= 0 Then
+                Call SetPartyPresentationState(0, PARTY_STATE_ACTING)
+            End If
 
             Call PlayPartyClip(Character, Name, SelectedClip)
 
-            If Not PartyKnockedOut[1] Then
+            If PartyPresentationState(1) <> PARTY_STATE_KO Then
+                Call SetPartyPresentationState(1, PARTY_STATE_GUARDING)
                 Call PlayPartyClip(PartyCompanion.Actor, "Defend", PartyCompanion.Clip)
             End If
 
         Else
 
-            PartyKnockedOut[1] = False
+            If PartyPresentationState(1) = PARTY_STATE_KO Then
+                Call SetPartyPresentationState(1, PARTY_STATE_REVIVING)
+            Else If Stage = 3 Then
+                Call SetPartyPresentationState(1, PARTY_STATE_ALIVE)
+            Else If Stage >= 0 Then
+                Call SetPartyPresentationState(1, PARTY_STATE_ACTING)
+            End If
 
-            Call PlayPartyClip(Character, "Defend", SelectedClip)
+            If PartyPresentationState(0) <> PARTY_STATE_KO Then
+                Call SetPartyPresentationState(0, PARTY_STATE_GUARDING)
+                Call PlayPartyClip(Character, "Defend", SelectedClip)
+            End If
+
             Call PlayPartyClip(PartyCompanion.Actor, Name, PartyCompanion.Clip)
 
         End If
@@ -8373,26 +8531,36 @@ Sub AdvancePartyDemo()
 
     End If
 
-    Home = PartyHomePosition(0, 2)
+    Home = PartyParticipants[0].Home
     ViewerFrame.PositionX = Home.X
     ViewerFrame.PositionZ = Home.Z
-    Home = PartyHomePosition(1, 2)
+    Home = PartyParticipants[1].Home
     PartyCompanion.Frame.PositionX = Home.X
     PartyCompanion.Frame.PositionZ = Home.Z
 
     If PartyTurn = 0 Then
-        ViewerFrame.PositionX = ViewerFrame.PositionX + (-21 - ViewerFrame.PositionX) * Travel1000 / 1000
-        ViewerFrame.PositionZ = ViewerFrame.PositionZ + (-44 - ViewerFrame.PositionZ) * Travel1000 / 1000
+
+        Approach = PartyParticipants[0].Approach
+        TravelOffset = Approach.X - ViewerFrame.PositionX
+        ViewerFrame.PositionX = ViewerFrame.PositionX + TravelOffset * Travel1000 / 1000
+        TravelOffset = Approach.Z - ViewerFrame.PositionZ
+        ViewerFrame.PositionZ = ViewerFrame.PositionZ + TravelOffset * Travel1000 / 1000
+
     Else
-        PartyCompanion.Frame.PositionX = PartyCompanion.Frame.PositionX + (-49 - PartyCompanion.Frame.PositionX) * Travel1000 / 1000
-        PartyCompanion.Frame.PositionZ = PartyCompanion.Frame.PositionZ + (4 - PartyCompanion.Frame.PositionZ) * Travel1000 / 1000
+        Approach = PartyParticipants[1].Approach
+        TravelOffset = Approach.X - PartyCompanion.Frame.PositionX
+        PartyCompanion.Frame.PositionX = PartyCompanion.Frame.PositionX + TravelOffset * Travel1000 / 1000
+        TravelOffset = Approach.Z - PartyCompanion.Frame.PositionZ
+        PartyCompanion.Frame.PositionZ = PartyCompanion.Frame.PositionZ + TravelOffset * Travel1000 / 1000
+
     End If
 
     Ready = Character3D.Place(Character, ViewerFrame.PositionX, ViewerFrame.PositionY, ViewerFrame.PositionZ) And Ready
     Ready = Character3D.Place(PartyCompanion.Actor,
         PartyCompanion.Frame.PositionX, PartyCompanion.Frame.PositionY, PartyCompanion.Frame.PositionZ) And Ready
-    Ready = FaceDragon(Character, 0) And Ready
-    Ready = FaceDragon(PartyCompanion.Actor, ORIN_ARENA_YAW_ADJUSTMENT) And Ready
+    Ready = FaceDragon(Character, PartyParticipants[0].FacingAdjustment) And Ready
+    Ready = FaceDragon(PartyCompanion.Actor,
+        PartyParticipants[1].FacingAdjustment) And Ready
 
 End Sub
 
@@ -8424,8 +8592,15 @@ Sub AdvanceDragonTurn()
 
     If PartyStage <> 0 Then
 
-        Call PlayPartyClip(Character, "Defend", SelectedClip)
-        Call PlayPartyClip(PartyCompanion.Actor, "Defend", PartyCompanion.Clip)
+        If PartyPresentationState(0) <> PARTY_STATE_KO Then
+            Call SetPartyPresentationState(0, PARTY_STATE_GUARDING)
+            Call PlayPartyClip(Character, "Defend", SelectedClip)
+        End If
+
+        If PartyPresentationState(1) <> PARTY_STATE_KO Then
+            Call SetPartyPresentationState(1, PARTY_STATE_GUARDING)
+            Call PlayPartyClip(PartyCompanion.Actor, "Defend", PartyCompanion.Clip)
+        End If
 
         PartyStage = 0
 
@@ -8435,29 +8610,61 @@ Sub AdvanceDragonTurn()
 
         PartyFatalStarted = True
 
-        If PartyFatalTarget = 0 Then
-            PartyKnockedOut[0] = True
+        Call SetPartyPresentationState(PartyHitTarget, PARTY_STATE_HIT)
 
-            Call PlayPartyClip(Character, "Death", SelectedClip)
-        Else If PartyFatalTarget = 1 Then
-            PartyKnockedOut[1] = True
+        If PartyHitTarget = 0 Then
+            Call PlayPartyClip(Character, "Hit", SelectedClip)
+        Else
 
-            Call PlayPartyClip(PartyCompanion.Actor, "Death", PartyCompanion.Clip)
+            Call PlayPartyClip(PartyCompanion.Actor, "Hit", PartyCompanion.Clip)
         End If
 
     End If
 
-    Home = PartyHomePosition(0, 2)
+    If (PartyFatalStarted And
+        Not PartyHitResolved And
+        ActionTime >= ImpactTime + 350) Then
+
+        PartyHitResolved = True
+
+        If PartyFatalTarget >= 0 Then
+
+            Call SetPartyPresentationState(PartyFatalTarget, PARTY_STATE_KO)
+
+            If PartyFatalTarget = 0 Then
+            Call PlayPartyClip(Character, "Death", SelectedClip)
+            Else
+
+                Call PlayPartyClip(PartyCompanion.Actor, "Death", PartyCompanion.Clip)
+            End If
+
+        Else
+
+            Call SetPartyPresentationState(PartyHitTarget, PARTY_STATE_GUARDING)
+
+            If PartyHitTarget = 0 Then
+                Call PlayPartyClip(Character, "Defend", SelectedClip)
+            Else
+
+                Call PlayPartyClip(PartyCompanion.Actor, "Defend", PartyCompanion.Clip)
+            End If
+
+        End If
+
+    End If
+
+    Home = PartyParticipants[0].Home
     ViewerFrame.PositionX = Home.X
     ViewerFrame.PositionZ = Home.Z
-    Home = PartyHomePosition(1, 2)
+    Home = PartyParticipants[1].Home
     PartyCompanion.Frame.PositionX = Home.X
     PartyCompanion.Frame.PositionZ = Home.Z
     Ready = Character3D.Place(Character, ViewerFrame.PositionX, ViewerFrame.PositionY, ViewerFrame.PositionZ) And Ready
     Ready = Character3D.Place(PartyCompanion.Actor,
         PartyCompanion.Frame.PositionX, PartyCompanion.Frame.PositionY, PartyCompanion.Frame.PositionZ) And Ready
-    Ready = FaceDragon(Character, 0) And Ready
-    Ready = FaceDragon(PartyCompanion.Actor, ORIN_ARENA_YAW_ADJUSTMENT) And Ready
+    Ready = FaceDragon(Character, PartyParticipants[0].FacingAdjustment) And Ready
+    Ready = FaceDragon(PartyCompanion.Actor,
+        PartyParticipants[1].FacingAdjustment) And Ready
 
 End Sub
 
@@ -8560,6 +8767,7 @@ Function DrawPartyCompanion() As Boolean
 
     If (PartyCompanion.GlowVisible And
         PartyCompanion.GlowAvailable And
+        (Not PartyMode Or PartyPresentationState(1) <> PARTY_STATE_KO) And
         (EpicGlowVisible Or DragonInspection)) Then
 
         If SwordVisible Then
@@ -8711,15 +8919,15 @@ Sub DrawPartyOverlay()
 
         If Window_Height() >= 620 Then
 
-            If PartyKnockedOut[0] Then
+            If PartyPresentationState(0) = PARTY_STATE_KO Then
                 Draw Text "Arin KO - Revives On His Turn" At Left + 16, 470 Size 12 Color YELLOW
-            Else If PartyKnockedOut[1] Then
+            Else If PartyPresentationState(1) = PARTY_STATE_KO Then
                 Draw Text "Orin KO - Revives On His Turn" At Left + 16, 470 Size 12 Color YELLOW
             Else
-                Draw Text "Edit Each Character In Its Tab" At Left + 16, 470 Size 12 Color LIGHT_GRAY
+                Draw Text "Arin " + PartyPresentationStateName(PartyPresentationState(0)) + " / Orin " + PartyPresentationStateName(PartyPresentationState(1)) At Left + 16, 470 Size 12 Color LIGHT_GRAY
             End If
 
-            Draw Text OrinStorm.Caption() At Left + 16, 488 Size 12 Color CYAN
+            Draw Text OrinStorm.Caption(OrinStormContext) At Left + 16, 488 Size 12 Color CYAN
             Draw Text "Camera" At Left + 16, 528 Size 12 Color LIGHT_GRAY
             Draw Number PartyActiveCamera At Left + 80, 528 Size 12 Color CYAN
 

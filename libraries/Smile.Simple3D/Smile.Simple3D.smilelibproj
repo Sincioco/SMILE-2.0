@@ -22,6 +22,8 @@
     <SmileSource Include="AetherBlade3D.smile" />
     <SmileSource Include="FireEmitter3D.smile" />
     <SmileSource Include="LightningVfx3D.smile" />
+    <SmileSource Include="LightPool3D.smile" />
+    <SmileSource Include="SceneVfx3D.smile" />
     <SmileSource Include="Arena3D.smile" />
     <SmileSource Include="StaticBackdrop3D.smile" />
   </ItemGroup>

@@ -1,0 +1,109 @@
+''' One scene-owned advancement boundary for shared Fire and Lightning families.
+Module Smile.Simple3D.SceneVfx3D
+
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.FireEmitter3D As Fire
+Import Smile.Simple3D.LightningVfx3D As Lightning
+
+Public Type Clock
+    FrameIdentity As Number
+    LastAdvancedFrame As Number
+    ElapsedMilliseconds As Number
+    FireFrozen As Boolean
+    LightningFrozen As Boolean
+    FireAdvanceCount As Number
+    LightningAdvanceCount As Number
+    LightningRestageCount As Number
+    DuplicateAdvanceCount As Number
+    Ready As Boolean
+End Type
+
+Public Sub Initialize(ByRef Value As Clock)
+
+    Value.FrameIdentity = 0
+    Value.LastAdvancedFrame = -1
+    Value.ElapsedMilliseconds = 0
+    Value.FireFrozen = False
+    Value.LightningFrozen = False
+    Value.FireAdvanceCount = 0
+    Value.LightningAdvanceCount = 0
+    Value.LightningRestageCount = 0
+    Value.DuplicateAdvanceCount = 0
+    Value.Ready = True
+
+End Sub
+
+Public Function BeginFrame(ByRef Value As Clock, ElapsedMilliseconds As Number,
+    FireFrozen As Boolean, LightningFrozen As Boolean) As Boolean
+
+    If Not Value.Ready Or ElapsedMilliseconds < 0 Then
+        Return False
+    End If
+
+    Value.FrameIdentity = Value.FrameIdentity + 1
+
+    If Value.FrameIdentity <= 0 Then
+        Value.FrameIdentity = 1
+        Value.LastAdvancedFrame = 0
+    End If
+
+    Value.ElapsedMilliseconds = ElapsedMilliseconds
+    Value.FireFrozen = FireFrozen
+    Value.LightningFrozen = LightningFrozen
+
+    Return True
+
+End Function
+
+Public Function Advance(ByRef Value As Clock, Camera As Core.Camera3D,
+    FireAvailable As Boolean, LightningAvailable As Boolean) As Boolean
+
+    Dim Result As Boolean
+
+    If Not Value.Ready Or Value.FrameIdentity = Value.LastAdvancedFrame Then
+        Value.DuplicateAdvanceCount = Value.DuplicateAdvanceCount + 1
+        Return False
+    End If
+
+    Value.LastAdvancedFrame = Value.FrameIdentity
+    Result = True
+
+    If FireAvailable And Not Value.FireFrozen Then
+        Call Fire.Update(Value.ElapsedMilliseconds)
+
+        Value.FireAdvanceCount = Value.FireAdvanceCount + 1
+    End If
+
+    If LightningAvailable Then
+
+        If Value.LightningFrozen Then
+            Result = Lightning.Update(0, Camera) And Result
+            Value.LightningRestageCount = Value.LightningRestageCount + 1
+        Else
+            Result = Lightning.Update(Value.ElapsedMilliseconds, Camera) And Result
+            Value.LightningAdvanceCount = Value.LightningAdvanceCount + 1
+        End If
+
+    End If
+
+    Return Result
+
+End Function
+
+Public Function DrawLightning(LightningAvailable As Boolean) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    If Not LightningAvailable Then
+        Return True
+    End If
+
+    ReturnValue = Lightning.DrawAll()
+
+    Return ReturnValue
+
+End Function
+
+End Module

@@ -138,3 +138,17 @@ and runtime policy; Party never restarts an already-held Orin guard.
 
 Both individual and Party paths use the final grounded transform for equipment
 and VFX. Current hashes live in `Calibration/orin-v1.3-profile.json`.
+
+## September 5: per-actor storm ownership
+
+`OrinStorm.smile` now issues generation-safe presentation contexts. Each context owns
+only its actor's charge latches, clip/time history, effect handles, attack style, trail,
+visibility, and error state. Destroying or recreating one context cannot invalidate a
+second context. Shared Lightning initialization, frame advancement, drawing, and final
+shutdown belong to the Viewer scene, and Orin borrows a scene-issued local-light lease.
+
+Freezing Lightning or seeking while frozen rebases the context before playback resumes.
+This prevents stale thunder, charge, or discharge thresholds from firing after a time
+jump. The final grounded actor transform still drives every equipment socket and effect.
+The canonical Orin model, descriptor, zero-key calibration snapshot, and package hashes
+are unchanged by this runtime ownership repair.

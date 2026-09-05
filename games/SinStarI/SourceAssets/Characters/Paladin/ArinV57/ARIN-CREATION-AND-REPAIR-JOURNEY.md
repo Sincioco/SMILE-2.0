@@ -732,3 +732,19 @@ When rebuilding, prepare a review GLB with the manifest, compare existing clips,
 then run `scripts/prepare-arin-shield-rim.py` against the resulting checkpoint and
 descriptor. Any asset hash/clip/socket change requires an explicit name-preserving
 calibration migration before importing the new runtime profile.
+
+## September 5: scene-owned Fire advancement
+
+The prerequisite hardening retained Arin's accepted model, descriptor, 23 calibration
+keys, fire presets, attachments, and rendered appearance. It changed only runtime
+ownership: the Viewer now stages sword and shield endpoints, then advances the shared
+Fire family once at the scene boundary. Dragon fire uses the same clock without either
+actor owning it. A disabled or failed optional equipment path therefore cannot freeze
+another actor's emitter.
+
+Paused visual-history invalidation clears stale emitters immediately. Resume creates
+the current-pose emitter and advances it only by the current frame elapsed time; the old
+100-millisecond warm-up was removed because it produced a visible catch-up burst.
+Automatic clip changes still retain world-space tails, while explicit cuts and paused
+pose edits preserve their documented clearing behavior. This ownership change does not
+alter the canonical GLB or calibration profile hashes.

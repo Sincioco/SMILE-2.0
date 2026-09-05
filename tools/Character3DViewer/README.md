@@ -6,6 +6,11 @@ Dragon inspection uses the same clip buttons, timeline/frame stepping, playback 
 
 Party members start on a 300-unit front arc with 40 degrees between its endpoints. The placement function distributes any supplied member count over that arc. The two current attack destinations remain in front of the Dragon; approach and retreat interpolate from each member's own home position. Battle cameras sample this frame's actor/Dragon poses.
 
+The Party runtime stores home, approach, bounds-derived clearance and facing metadata in
+participant records. It separates approach lanes when the actors' measured ground-plane
+bounds would overlap. The shared formation evaluator is covered with a technical third
+participant; no unfinished third hero asset is implied.
+
 The editor source and build/launch entry points belong here. Sin Star I owns the self-contained character package at `games\SinStarI\SourceAssets\Characters\Paladin\ArinV57`. Orin owns `games\SinStarI\SourceAssets\Characters\Tank\OrinV13`. Do not edit ignored cooking inputs as canonical character assets.
 
 ## Build and launch
@@ -18,6 +23,7 @@ Run `Build.ps1`, then `Launch.ps1`. The regular launcher defaults to `bin\Charac
 - Space pauses/resumes movement while keeping camera controls active.
 - Flames keep animating when Space pauses the scene. The separate Pause Flames / Play Flames button controls only the flames, independently of scene playback. Reset starts both again.
 - Orin has a Freeze Lightning / Play Lightning toggle. Party's VFX Playback row independently freezes Fire and Lightning across all actors. Frozen effects retain their current world-space snapshot while character animation and camera controls continue; resume advances from that snapshot without a catch-up burst. Reset unfreezes both families.
+- Fire and Lightning now advance once at the Viewer scene boundary after every actor has staged its effect endpoints. An unavailable optional equipment path cannot stall another emitter. Orin and Dragon borrow distinct generation-safe local-light leases instead of writing fixed renderer slots.
 - Bare Alt no longer enters Windows' modal keyboard-menu state. Alt+Enter still toggles fullscreen and Alt+F4 closes the window. Recompile older game executables to pick up the shared native runtime fix.
 - Right-click resets presentation as on a fresh launch: Idle, Demo, dragon/floor/grid visible, landscape backdrop, unpaused. There is no inactivity timer that re-enables Demo.
 - Left drag pans the view; middle drag orbits; wheel zooms smoothly.
@@ -81,6 +87,10 @@ Arin retains his thermal equipment fire. Orin's hammer glows white with crawling
 only the shield perimeter receives the aura. His tab offers Thunder Smash, Storm Lance,
 Chain Arcs and Godstorm styles, with full/reduced/off flash and shake. Reduced is the default.
 The CPU charge controller and calibrated equipment sockets live in `OrinStorm.smile`.
+Each Orin presenter has its own generation-safe context, charge latches, clip/time
+history, handles, style, visibility, trail, and first error. Shared Lightning textures,
+clock advancement, draw pass, and shutdown remain scene-owned. A paused seek rebases
+the actor context so resume cannot replay stale thunder or discharge thresholds.
 Forked Judgment converges four Ultra-quality sky strikes on the raised hammer; Thunder
 Smash sends eight ground spokes from the impact point. A GPU spark trail follows the
 hammer's swept path and fades in world space after the swing. The slam does not retrigger
@@ -97,6 +107,8 @@ checksums belong to `games/SinStarI/SourceAssets/Bosses/RedDragon/RedDragonV11`.
 
 - `Smile.Simple3D.Arena3D`: black floor and one emissive grid mesh, configurable dimensions, tile spacing, thickness and color. Viewer uses blue; Fire Lab uses orange and independently configured larger tiles.
 - `Smile.Simple3D.StaticBackdrop3D`: load/select/clear/destroy a screen-fixed backdrop, shared with Fire Lab. No world plane or camera-driven positioning.
+- `Smile.Simple3D.SceneVfx3D`: one per-scene Fire/Lightning advance boundary with independent family freeze and duplicate-frame rejection.
+- `Smile.Simple3D.LightPool3D`: bounded generation-safe leases over scene-reserved renderer point-light slots.
 - `Smile.UI.Controls`: matching panels, buttons, slider drawing, hover hit-testing and exclusive drag capture.
 
 These effects do not modify Arin's models, rig or animation sources. The canonical descriptor supplies mesh-derived sword endpoints and shield flame anchors; the rendered equipment transform, including calibration and decoupling, positions the emitters. Existing saved keys remain valid. The sword keeps a fiery outline under its flames; the shield's old golden overlay and glow trail are not drawn when the thermal equipment preview is available.
@@ -127,6 +139,12 @@ Arin now has Death alongside his existing eight clips. Both heroes play Death
 once and hold the final pose. On a Dragon turn, the whole party guards; randomly
 one hero takes a fatal hit, finishes the fall, and revives for their own next turn.
 Orin's guard never loops or restarts just because Party advances a stage.
+
+Party presentation uses explicit Alive, Acting, Guarding, Hit, KO and Reviving states.
+A hit is shown before a fatal actor enters KO, KO actors are excluded from guard/attack
+updates and incompatible equipment effects, and their own next turn first transitions
+through Reviving before normal movement resumes. These states are visual only and do
+not apply damage, consume MP, award rewards or modify a game save.
 
 Arin Shield switches between Ember Outline and the preserved Flames effect.
 Freeze Fire affects either treatment; Freeze Lightning remains independent.
