@@ -788,3 +788,18 @@ precedence. The earlier comparison captures retain their 23-key baseline.
 Timeline 0-Frame, previous/next key and previous/next frame now pause the shared
 scene on both targets, including navigation on clips with no saved keys. Space
 resumes, camera controls remain usable, and navigation does not save a new key.
+
+## September 6: saved JSON download and clip-order lesson
+
+The Web filename below the timeline now requests a schema-2 JSON download of
+the saved calibration buffer. Temporary preview edits are not silently saved.
+Identity metadata is generated from the validated canonical profile at publication;
+there are no separate hardcoded Web model hashes or Web-only pose defaults.
+
+The first export fixture caught an ordinal-clip assumption: a saved package can
+list clips in a different order from the loaded model. Match exact names and treat
+indices only as hints, just as the existing decoder does. Both current snapshots
+now round-trip through the desktop serializer. The actual Edge Arin download
+preserved all 24 keys, and native text-picker import/export reproduced its bytes.
+This does not yet establish an in-Viewer JSON import workflow or storage recovery.
+No live save, model, descriptor or profile identity changed in this milestone.

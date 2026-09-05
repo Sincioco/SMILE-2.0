@@ -419,6 +419,13 @@ End Sub
 Sub CheckPackagedCalibration()
 
     Dim OriginalKey As Text
+    Dim JsonSnapshot As Text
+
+    JsonSnapshot = SavedCalibrationJson()
+
+    Call CalibrationCheck(Text_Length(JsonSnapshot) > 0, "Saved JSON export is available")
+
+    Print "CALIBRATION_JSON: " + JsonSnapshot
 
     TestSavedCount = CalibrationStorageCount
     OriginalKey = CalibrationDataKey

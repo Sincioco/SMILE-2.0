@@ -367,6 +367,23 @@ Implemented control flow comprises multiline `If`/`Else If`/`Else`, `For ... To`
 
 The expression surface includes `+`, `-`, `*`, integer `/`, `Mod`, comparisons, parentheses, unary `-` and `Not`, and boolean `And`/`Or`. Common built-in functions include `Timer()`, `Rgb(r, g, b)`, `Abs(value)`, `Min(a, b)`, `Max(a, b)`, `Game_Closed()`, `Window_Title(title)`, `Window_Activate()`, and `Key_Held(key)`. `Window_Title` changes the live native title bar or Web document title. `Window_Activate()` restores the native Windows game window, requests foreground input focus, and returns whether Windows accepted the request; Web currently returns `False`. Both window operations are available only to `Game Window` programs. The game-window-only `Renderer3D(command, a, b, c, d, e, f, g, h, i, j)` built-in is the narrow compiler/runtime bridge used internally by `Smile.Simple3D.Graphics3D`; student programs should use that module rather than command values.
 
+## User-chosen UTF-8 files
+
+`File_Export(FileName As Text, Contents As Text) As Boolean` opens a native Save As
+dialog or requests a browser download. The suggested name must be a filename,
+not a path (at most 200 UTF-8 bytes, no separators, control characters or Windows
+reserved punctuation, and no trailing dot/space). Contents are bounded to 8 MiB.
+Native `True` means the chosen file was flushed and replaced successfully; Web
+`True` only means a download was requested. Browser policy and the user's choice
+still determine whether it reaches disk. Cancel/failure returns `False`.
+
+`File_Import() As Text` opens a user-controlled picker and returns UTF-8 text,
+removing an optional UTF-8 BOM. Cancel, failure, invalid UTF-8, an empty file or a
+file exceeding 8 MiB returns empty Text. It does not parse JSON or execute files.
+Browser import/export requires an active user gesture; neither function grants
+browser access to arbitrary local paths. Save Data and application identities are
+unchanged. `examples/TextFileTransferBasics.smile` compiles for native and Web.
+
 ## Multiline parenthesized expressions
 
 SMILE remains line-oriented: a physical newline normally ends an expression or statement. Inside balanced expression parentheses only, one or more newlines act as whitespace. Parentheses are therefore the visible signal that an expression continues; newlines are not ignored globally.

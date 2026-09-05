@@ -265,6 +265,24 @@ Run("File_Reveal takes a path and returns Boolean without a game window", () =>
     Equal(true, new WebEmitter(analysis).Emit().Contains(
         "((\"D:\\\\SMILE 2.0\\\\file.json\"), false)", StringComparison.Ordinal));
 });
+Run("UTF-8 file transfer uses shared types and both emitters", () =>
+{
+    Equal(SyntaxKind.FileExportKeyword, SyntaxFacts.GetKeywordKind("file_export"));
+    Equal(SyntaxKind.FileImportKeyword, SyntaxFacts.GetKeywordKind("file_import"));
+    var analysis = Analyze("Dim Contents As Text\nDim Exported As Boolean\n" +
+        "Contents = File_Import()\nExported = File_Export(\"snapshot.json\", Contents)\n");
+    Equal(false, analysis.HasErrors);
+    Equal(true, Analyze("Print File_Export(1, \"text\")\n").HasErrors);
+    Equal(true, Analyze("Print File_Export(\"name\", 1)\n").HasErrors);
+    Equal(true, Analyze("Print File_Export(\"name\")\n").HasErrors);
+    Equal(true, Analyze("Print File_Import(\"path\")\n").HasErrors);
+    var native = new MasmEmitter(analysis, SmileGraphicsBackend.DirectX, true, false).Emit();
+    Equal(true, native.Contains("call smile_file_export", StringComparison.Ordinal));
+    Equal(true, native.Contains("call smile_file_import", StringComparison.Ordinal));
+    var web = new WebEmitter(analysis).Emit();
+    Equal(true, web.Contains("await smile.fileImport()", StringComparison.Ordinal));
+    Equal(true, web.Contains("smile.fileExport(\"snapshot.json\"", StringComparison.Ordinal));
+});
 Run("Renderer3D is a bounded game-window bridge on both targets", () =>
 {
     Equal(SyntaxKind.Renderer3DKeyword, SyntaxFacts.GetKeywordKind("renderer3d"));

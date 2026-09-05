@@ -210,6 +210,22 @@ fall back to stable arena anchors if a sampled socket leaves the scene envelope.
 Below Camera, Party displays rendered position/target XYZ, yaw/pitch, FOV and
 distance, so screenshots contain enough information to diagnose a bad angle.
 
+### Saved JSON download (September 6)
+
+The filename below the timeline identifies the current character's calibration.
+On native Windows, clicking it still opens the canonical file's Explorer location.
+On Web, clicking it downloads the current **saved** schema-2 JSON snapshot, not
+temporary unsaved pose adjustments. All 20 channels and name-bound clips are
+preserved. The label does not claim the browser can read or write `D:\`.
+
+Downloads do not synchronize with the repository or another browser origin.
+The native calibration synchronizer remains authoritative for desktop integration.
+In-Viewer JSON import and browser storage-failure recovery remain in progress;
+the new generic `File_Import()` picker alone is not a validated calibration importer.
+The shared export fixture validates both characters against canonical JSON and
+the desktop binary serializer. An actual Edge Arin download also round-tripped
+byte-for-byte through the native text import/export dialogs in an isolated sample.
+
 ### September 5: grounding, capture and saved-profile regression fixes
 
 Orin's Jump Attack now lands for the kneeling smash/recovery while preserving its

@@ -344,7 +344,7 @@
       "classification": "execution-or-source-audit",
       "mandatory": true,
       "baseline": "0768860e59e60c6231e0992f23b34a3a62c48483",
-      "status": "OPEN",
+      "status": "IN-PROGRESS",
       "phase": "W5",
       "gateCheck": "G08",
       "sourceRefs": [
@@ -356,7 +356,7 @@
       "evidenceIds": [
         "docs/implementation/h6-1-hardening-and-web-parity-ledger.md"
       ],
-      "dispositionRationale": "Implement smallest strict import/download bridge; no automatic browser-to-repository writes."
+      "dispositionRationale": "Saved schema-2 JSON download implemented; both shared exports pass canonical/native round-trips and actual Edge Arin download matches. Generic UTF-8 file pickers compile on both targets and native dialogs round-trip exact bytes. In-Viewer atomic JSON import and real browser import-file selection remain unverified/incomplete; no automatic browser-to-repository writes."
     },
     {
       "id": "W13",
@@ -452,7 +452,7 @@
       ],
       "reproduction": "Old Web produced 30 socket-reference mismatches while native passed; user observed facing and shield defects.",
       "rootCause": "Web Euler axis signs differed from native X-then-Y-then-Z transform convention.",
-      "fixCommit": null,
+      "fixCommit": "6b62f3b28b998f45cdbfbd1992f89a68fb062043",
       "evidenceIds": [
         "docs/implementation/h6-1-hardening-and-web-parity-ledger.md"
       ],
@@ -472,7 +472,7 @@
       ],
       "reproduction": "Right-click opened the browser menu over the game canvas.",
       "rootCause": "Canvas contextmenu default was not canceled.",
-      "fixCommit": null,
+      "fixCommit": "6b62f3b28b998f45cdbfbd1992f89a68fb062043",
       "evidenceIds": [
         "docs/implementation/h6-1-hardening-and-web-parity-ledger.md"
       ],

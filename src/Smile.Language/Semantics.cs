@@ -4193,6 +4193,15 @@ internal sealed class SemanticAnalyzer
                 RequireType(arguments[1], SmileType.Number, "SML3505", $"Built-in '{identifier.Text}' requires Number size.");
             return SmileType.Number;
         }
+        if (identifier.Kind == SyntaxKind.FileImportKeyword)
+            return SmileType.Text;
+        if (identifier.Kind == SyntaxKind.FileExportKeyword)
+        {
+            foreach (var argument in arguments)
+                RequireType(argument, SmileType.Text, "SML3003",
+                    "Built-in 'File_Export' requires Text filename and contents.");
+            return SmileType.Boolean;
+        }
         if (identifier.Kind is SyntaxKind.WindowTitleKeyword or SyntaxKind.FileRevealKeyword)
         {
             if (arguments.Count > 0)
@@ -4217,7 +4226,7 @@ internal sealed class SemanticAnalyzer
 
     private static bool IsBooleanBuiltIn(SyntaxKind kind) =>
         kind is SyntaxKind.GameClosedKeyword or SyntaxKind.WindowTitleKeyword or SyntaxKind.WindowActivateKeyword or
-            SyntaxKind.FileRevealKeyword or
+            SyntaxKind.FileRevealKeyword or SyntaxKind.FileExportKeyword or
             SyntaxKind.KeyHeldKeyword or SyntaxKind.ImageLoadedKeyword or
             SyntaxKind.PointerInsideKeyword or SyntaxKind.PointerHeldKeyword or SyntaxKind.PointerPressedKeyword or
             SyntaxKind.PointerReleasedKeyword;

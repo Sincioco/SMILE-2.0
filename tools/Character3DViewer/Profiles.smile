@@ -816,4 +816,32 @@ Public Function CalibrationFingerprint(ProfileIndex As Number) As Text
 
 End Function
 
+Public Function CalibrationJsonName(ProfileIndex As Number) As Text
+
+    Dim Result As Text
+
+    Result = "arin-v5.7-pose-calibration.json"
+
+    If ProfileIndex = PROFILE_ORIN Then
+        Result = "orin-v1.3-pose-calibration.json"
+    End If
+
+    Return Result
+
+End Function
+
+Public Function CalibrationMetadataAsset(ProfileIndex As Number) As Text
+
+    Dim Result As Text
+
+    Result = "Assets/Calibration/arin-v5.7.metadata.json"
+
+    If ProfileIndex = PROFILE_ORIN Then
+        Result = "Assets/Calibration/orin-v1.3.metadata.json"
+    End If
+
+    Return Result
+
+End Function
+
 End Module

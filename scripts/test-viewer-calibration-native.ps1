@@ -65,9 +65,34 @@ $output = Join-Path $testRoot 'native.out'
 $result = & (Join-Path $PSScriptRoot 'run-bounded-test.cmd') 60 $executable
 if ($LASTEXITCODE -ne 0) { throw 'Isolated Viewer execution failed.' }
 $result = $result -join "`n"
-[IO.File]::WriteAllText($output, $result, $encoding)
-if ($result.Trim() -cne 'Viewer calibration isolation passed') { throw "Native Viewer checks failed: $result" }
-Write-Host $result.Trim()
+[IO.File]::WriteAllText($output, $result + "`n", $encoding)
+$jsonLines = @($result -split "`n" | Where-Object { $_.StartsWith('CALIBRATION_JSON: ') })
+if ($jsonLines.Count -ne 2) { throw 'Expected both current-character JSON exports.' }
+foreach ($jsonLine in $jsonLines) {
+    & {
+        param($Text)
+        if ($Text.Length -le 'CALIBRATION_JSON: '.Length) { throw 'Viewer returned an empty JSON export.' }
+        $snapshot = $Text.Substring('CALIBRATION_JSON: '.Length) | ConvertFrom-Json -AsHashtable
+        $characterName = if ($snapshot.assetId -ceq 'sin-star-i.character-1.paladin') { 'Arin' } else { 'Orin' }
+        . (Join-Path $PSScriptRoot 'sync-arin-v5-7-calibration.ps1') -Character $characterName -FunctionsOnly
+        $normalized = Normalize-Snapshot $snapshot
+        $canonical = Read-Snapshot $snapshotPath
+        if (($normalized | ConvertTo-Json -Depth 24 -Compress) -cne
+            ($canonical | ConvertTo-Json -Depth 24 -Compress)) {
+            throw "Shared Viewer JSON export differs from canonical $characterName."
+        }
+        $payload = Convert-SnapshotToPayload $normalized
+        $roundTrip = Convert-PayloadToSnapshot $payload
+        if (($roundTrip | ConvertTo-Json -Depth 24 -Compress) -cne
+            ($canonical | ConvertTo-Json -Depth 24 -Compress)) {
+            throw 'Downloaded JSON cannot round-trip through the native serializer.'
+        }
+    } $jsonLine
+}
+$assertionOutput = ($result -split "`n" | Where-Object { -not $_.StartsWith('CALIBRATION_JSON: ') }) -join "`n"
+if ($assertionOutput.Trim() -cne 'Viewer calibration isolation passed') { throw "Native Viewer checks failed: $result" }
+Write-Host $assertionOutput.Trim()
+Write-Host 'Both shared JSON exports exactly match canonical snapshots and native round-trips.'
 Write-Host "Isolated ApplicationId: $applicationId; canonical snapshot copies loaded; live user storage untouched."
 $nativeIdentity = $applicationId
 $nativeIdentityHash = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData(

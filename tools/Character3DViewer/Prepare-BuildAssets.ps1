@@ -125,6 +125,15 @@ foreach ($characterName in @('Arin', 'Orin')) {
         $fileName = if ($CharacterName -eq 'Arin') { 'arin-v5.7.smkf' } else { 'orin-v1.3.smkf' }
         $destination = Join-Path $CalibrationDirectory $fileName
         Write-AtomicBytes $destination $payload (Get-PathHash $destination)
+        # Identity-only JSON for the shared Viewer serializer. Values are read
+        # from its current saved buffer, never copied from this publication seed.
+        $metadata = [ordered]@{
+            schemaVersion = 2; assetId = $roundTrip.assetId
+            characterVersion = $roundTrip.characterVersion; applicationId = $roundTrip.applicationId
+            dataKey = $roundTrip.dataKey; storageVersion = 3; profile = $roundTrip.profile
+        } | ConvertTo-Json -Depth 8 -Compress
+        $metadataPath = [IO.Path]::ChangeExtension($destination, '.metadata.json')
+        Write-AtomicBytes $metadataPath ([Text.Encoding]::UTF8.GetBytes($metadata)) (Get-PathHash $metadataPath)
         Write-Host "Packaged $CharacterName calibration: $appliedKeys keys; SHA-256 $(Get-PathHash $destination)"
     } $characterName (Join-Path $toolRoot 'Assets\Calibration') `
         (Join-Path $repositoryRoot 'scripts\sync-arin-v5-7-calibration.ps1')

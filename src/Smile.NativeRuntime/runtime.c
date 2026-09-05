@@ -6,6 +6,7 @@
 #include <initguid.h>
 #include <knownfolders.h>
 #include <shlobj.h>
+#include <commdlg.h>
 #include <limits.h>
 #include <stdint.h>
 #include "graphics/graphics_common.h"
@@ -1826,6 +1827,120 @@ long long smile_file_reveal(void* owned_value)
     }
     if (path != 0) HeapFree(GetProcessHeap(), 0, path);
     smile_text_release(text);
+    return result;
+}
+
+/* User-selected UTF-8 transfer, separate from application-owned Save Data. */
+#define SMILE_FILE_TRANSFER_MAX_BYTES (8 * 1024 * 1024)
+
+static int smile_file_dialog(WCHAR* path, int capacity, int exporting)
+{
+    typedef BOOL (WINAPI *SmileFileDialog)(LPOPENFILENAMEW);
+    HMODULE library = LoadLibraryExW(L"comdlg32.dll", 0, LOAD_LIBRARY_SEARCH_SYSTEM32);
+    SmileFileDialog show;
+    OPENFILENAMEW dialog;
+    int result = 0;
+    if (library == 0) return 0;
+    show = (SmileFileDialog)GetProcAddress(library,
+        exporting ? "GetSaveFileNameW" : "GetOpenFileNameW");
+    smile_zero_memory(&dialog, sizeof(dialog));
+    dialog.lStructSize = sizeof(dialog);
+    dialog.hwndOwner = smile_window;
+    dialog.lpstrFile = path;
+    dialog.nMaxFile = capacity;
+    dialog.lpstrFilter = L"UTF-8 Text\0*.json;*.txt;*.smile;*.md\0All Files\0*.*\0\0";
+    dialog.lpstrTitle = exporting ? L"Export UTF-8 Text" : L"Import UTF-8 Text";
+    dialog.Flags = OFN_EXPLORER | OFN_NOCHANGEDIR | OFN_PATHMUSTEXIST |
+        (exporting ? OFN_OVERWRITEPROMPT : OFN_FILEMUSTEXIST);
+    if (show != 0) result = show(&dialog) != 0;
+    FreeLibrary(library);
+    return result;
+}
+
+long long smile_file_export(void* owned_name, void* owned_contents)
+{
+    SmileText* name = (SmileText*)owned_name;
+    SmileText* contents = (SmileText*)owned_contents;
+    WCHAR path[4096] = { 0 };
+    WCHAR directory[4096];
+    WCHAR temporary[MAX_PATH] = { 0 };
+    WCHAR* wide_name = 0;
+    WCHAR* leaf = 0;
+    HANDLE file = INVALID_HANDLE_VALUE;
+    DWORD written = 0;
+    DWORD path_length;
+    long long index, length = smile_text_length(contents);
+    long long result = 0;
+    const char* bytes = smile_text_bytes(name);
+    if (smile_text_length(name) < 1 || smile_text_length(name) > 200 ||
+        length > SMILE_FILE_TRANSFER_MAX_BYTES) goto finished;
+    for (index = 0; index < smile_text_length(name); ++index)
+        if ((unsigned char)bytes[index] < 32 || bytes[index] == '/' || bytes[index] == '\\' ||
+            bytes[index] == ':' || bytes[index] == '*' || bytes[index] == '?' ||
+            bytes[index] == '"' || bytes[index] == '<' || bytes[index] == '>' || bytes[index] == '|')
+            goto finished;
+    if (bytes[index - 1] == '.' || bytes[index - 1] == ' ') goto finished;
+    wide_name = smile_utf8_to_wide(bytes, smile_text_length(name));
+    if (wide_name == 0) goto finished;
+    lstrcpynW(path, wide_name, 4096);
+    if (!smile_file_dialog(path, 4096, 1)) goto finished;
+    path_length = GetFullPathNameW(path, 4096, directory, &leaf);
+    if (path_length == 0 || path_length >= 4096 || leaf == 0) goto finished;
+    *leaf = 0;
+    if (!GetTempFileNameW(directory, L"sme", 0, temporary)) goto finished;
+    file = CreateFileW(temporary, GENERIC_WRITE, 0, 0, TRUNCATE_EXISTING,
+        FILE_ATTRIBUTE_NORMAL, 0);
+    if (file == INVALID_HANDLE_VALUE) goto finished;
+    result = WriteFile(file, smile_text_bytes(contents), (DWORD)length, &written, 0) &&
+        written == (DWORD)length && FlushFileBuffers(file);
+    CloseHandle(file);
+    file = INVALID_HANDLE_VALUE;
+    if (result) result = MoveFileExW(temporary, path,
+        MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH) != 0;
+finished:
+    if (file != INVALID_HANDLE_VALUE) CloseHandle(file);
+    if (temporary[0] != 0) DeleteFileW(temporary);
+    if (wide_name != 0) HeapFree(GetProcessHeap(), 0, wide_name);
+    smile_text_release(name);
+    smile_text_release(contents);
+    return result;
+}
+
+void* smile_file_import(void)
+{
+    WCHAR path[4096] = { 0 };
+    HANDLE file;
+    LARGE_INTEGER size;
+    DWORD read = 0;
+    SmileText* result = 0;
+    long long offset = 0;
+    unsigned int scalar;
+    if (!smile_file_dialog(path, 4096, 0)) return 0;
+    file = CreateFileW(path, GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING,
+        FILE_ATTRIBUTE_NORMAL, 0);
+    if (file == INVALID_HANDLE_VALUE) return 0;
+    if (GetFileSizeEx(file, &size) && size.QuadPart > 0 &&
+        size.QuadPart <= SMILE_FILE_TRANSFER_MAX_BYTES)
+    {
+        result = smile_text_allocate(size.QuadPart);
+        if (!ReadFile(file, result->bytes, (DWORD)size.QuadPart, &read, 0) ||
+            read != (DWORD)size.QuadPart)
+        {
+            smile_text_release(result);
+            result = 0;
+        }
+    }
+    CloseHandle(file);
+    if (result == 0) return 0;
+    while (offset < result->length)
+        if (!smile_utf8_scalar(result->bytes, result->length, &offset, &scalar))
+        {
+            smile_text_release(result);
+            return 0;
+        }
+    if (result->length >= 3 && (unsigned char)result->bytes[0] == 0xef &&
+        (unsigned char)result->bytes[1] == 0xbb && (unsigned char)result->bytes[2] == 0xbf)
+        return smile_text_slice(result, 1, result->length);
     return result;
 }
 

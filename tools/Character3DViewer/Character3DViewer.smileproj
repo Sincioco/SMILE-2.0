@@ -58,6 +58,8 @@
     <Asset Include="Assets\Backgrounds\SinStarTitleWithLogo.png" />
     <Asset Include="Assets\Calibration\arin-v5.7.smkf" />
     <Asset Include="Assets\Calibration\orin-v1.3.smkf" />
+    <Asset Include="Assets\Calibration\arin-v5.7.metadata.json" />
+    <Asset Include="Assets\Calibration\orin-v1.3.metadata.json" />
     <Asset Include="Assets\Fire\fire-shape-atlas.png" />
     <Asset Include="Assets\Fire\smoke-shape-atlas.png" />
     <Asset Include="Assets\Fire\ember-shape.png" />

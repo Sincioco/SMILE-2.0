@@ -179,6 +179,12 @@ Dim PresentationState As Number
 
 Dim CalibrationProfileFingerprint As Text
 Dim CalibrationFilePath As Text
+Dim CalibrationFileLabel As Text
+Dim CalibrationTransferMessage As Text
+Dim CalibrationJsonMetadata As Text
+Dim CalibrationMetadataBytes[2048] As Number
+Dim CalibrationJsonOffset As Number
+Dim CalibrationJsonValid As Boolean
 Dim CalibrationDataKey As Text
 Dim CalibrationClipBase As Number
 Dim BaseCamera As Core.Camera3D
@@ -655,6 +661,8 @@ Sub LoadViewer()
     ActiveProfile = ViewerProfiles.ProfileAt(ProfileIndex)
     CalibrationProfileFingerprint = ViewerProfiles.CalibrationFingerprint(ProfileIndex)
     CalibrationFilePath = ViewerProfiles.CalibrationFile(ProfileIndex)
+    CalibrationFileLabel = ViewerProfiles.CalibrationJsonName(ProfileIndex)
+    CalibrationTransferMessage = "Click To Open/Download Saved JSON"
     CalibrationDataKey = ViewerProfiles.CalibrationKey(ProfileIndex)
     CalibrationClipBase = 0
 
@@ -2642,10 +2650,10 @@ Function HandleInterfacePointer() As Boolean
 
     If (CalibrationAvailable And
         PointerInRectangle(TIMELINE_LEFT, Window_Height() - 40,
-            Text_Width(CalibrationFilePath, 9), 14)) Then
+            Text_Width(CalibrationFileLabel, 9), 14)) Then
 
         If Pointer_Pressed(POINTER_PRIMARY) Then
-            Ready = File_Reveal(CalibrationFilePath) Or Ready
+            Call OpenSavedCalibrationJson()
         End If
 
         Return True
@@ -5292,6 +5300,309 @@ Sub LoadSavedCalibration()
 
 End Sub
 
+Sub OpenSavedCalibrationJson()
+
+    Dim Contents As Text
+    Dim Exported As Boolean
+
+    If File_Reveal(CalibrationFilePath) Then
+        Return
+    End If
+
+    Contents = SavedCalibrationJson()
+
+    If Contents = "" Then
+        CalibrationTransferMessage = "Saved JSON Unavailable"
+        Return
+    End If
+
+    Exported = File_Export(CalibrationFileLabel, Contents)
+
+    If Exported Then
+        CalibrationTransferMessage = "Download Requested (Saved Keys Only)"
+    Else
+        CalibrationTransferMessage = "Download Canceled Or Unavailable"
+    End If
+
+End Sub
+
+Function CalibrationAscii(Value As Number) As Text
+
+    Dim Result As Text
+
+    Result = ""
+
+    If Value >= 32 And Value <= 126 Then
+        Result = Text_Slice(" !""#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~", Value - 32, 1)
+    End If
+
+    Return Result
+
+End Function
+
+Function CalibrationJsonNumber(Value As Number) As Text
+
+    Dim Result As Text
+    Dim Negative As Boolean
+    Dim Digit As Number
+
+    Result = ""
+    Negative = Value < 0
+    Value = Abs(Value)
+
+    Do
+
+        Digit = Value Mod 10
+        Result = Text_Slice("0123456789", Digit, 1) + Result
+        Value = Value / 10
+
+    Loop Until Value = 0
+
+    If Negative Then
+        Result = "-" + Result
+    End If
+
+    Return Result
+
+End Function
+
+Function CalibrationJsonReadByte() As Number
+
+    Dim Result As Number
+
+    Result = 0
+
+    If CalibrationJsonOffset < 0 Or CalibrationJsonOffset >= CalibrationStorageCount Then
+        CalibrationJsonValid = False
+        Return Result
+    End If
+
+    Result = CalibrationStorage[CalibrationJsonOffset]
+    CalibrationJsonOffset = CalibrationJsonOffset + 1
+
+    If Result < 0 Or Result > 255 Then
+        CalibrationJsonValid = False
+        Result = 0
+    End If
+
+    Return Result
+
+End Function
+
+Function CalibrationJsonReadWord() As Number
+
+    Dim Result As Number
+    Dim Upper As Number
+
+    Result = CalibrationJsonReadByte()
+    Upper = CalibrationJsonReadByte()
+    Result = Result + Upper * 256
+
+    Return Result
+
+End Function
+
+Function CalibrationJsonTriplet() As Text
+
+    Dim Result As Text
+    Dim Value As Number
+    Dim Axis As Number
+
+    Result = "["
+
+    For Axis = 0 To 2
+
+        If Axis > 0 Then
+            Result = Result + ","
+        End If
+
+        Value = CalibrationJsonReadWord() - 180
+        Result = Result + CalibrationJsonNumber(Value)
+    End For
+
+    Result = Result + "]"
+
+    Return Result
+
+End Function
+
+Function SavedCalibrationJson() As Text
+
+    Dim Asset As Text
+    Dim MetadataCount As Number
+    Dim Index As Number
+    Dim Clip As Number
+    Dim RuntimeClip As Number
+    Dim Candidate As Number
+    Dim ClipCount As Number
+    Dim NameLength As Number
+    Dim ClipName As Text
+    Dim Clips As Text
+    Dim Keys As Text
+    Dim Key As Number
+    Dim KeyCount As Number
+    Dim TotalKeys As Number
+    Dim Frame As Number
+    Dim Saved As Text
+    Dim SavedClip As Number
+    Dim SavedFrame As Number
+    Dim SwordWrist As Text
+    Dim ShieldWrist As Text
+    Dim SwordRotation As Text
+    Dim ShieldRotation As Text
+    Dim SwordPosition As Text
+    Dim ShieldPosition As Text
+    Dim SwordFree As Text
+    Dim ShieldFree As Text
+    Dim Result As Text
+
+    Asset = ViewerProfiles.CalibrationMetadataAsset(ProfileIndex)
+
+    Load Text File Asset Into CalibrationMetadataBytes Count MetadataCount
+
+    If MetadataCount <= 2 Or MetadataCount >= 2048 Then
+        Return ""
+    End If
+
+    CalibrationJsonMetadata = ""
+
+    For Index = 0 To MetadataCount - 1
+
+        If CalibrationMetadataBytes[Index] < 32 Or CalibrationMetadataBytes[Index] > 126 Then
+            Return ""
+        End If
+
+        CalibrationJsonMetadata = CalibrationJsonMetadata + CalibrationAscii(CalibrationMetadataBytes[Index])
+    End For
+
+    If (CalibrationStorageCount < 74 Or
+        CalibrationStorage[0] <> 83 Or
+        CalibrationStorage[1] <> 77 Or
+        CalibrationStorage[2] <> 75 Or
+        CalibrationStorage[3] <> 70 Or
+        CalibrationStorage[4] <> 3) Then
+        Return ""
+    End If
+
+    For Index = 0 To 63
+
+        If CalibrationStorage[10 + Index] <> Text_Code_At(CalibrationProfileFingerprint, Index) Then
+            Return ""
+        End If
+
+    End For
+
+    ClipCount = CalibrationStorage[5]
+
+    If ClipCount < 1 Or ClipCount > CALIBRATION_MAX_CLIPS Then
+        Return ""
+    End If
+
+    SavedClip = CalibrationStorage[7]
+    SavedFrame = CalibrationStorage[8] + CalibrationStorage[9] * 256
+    CalibrationJsonOffset = 74
+    CalibrationJsonValid = True
+    Saved = "null"
+    Clips = "["
+
+    For Clip = 0 To ClipCount - 1
+
+        NameLength = CalibrationJsonReadByte()
+
+        If NameLength < 1 Or NameLength > 128 Then
+            Return ""
+        End If
+
+        ClipName = ""
+
+        For Index = 1 To NameLength
+            ClipName = ClipName + CalibrationAscii(CalibrationJsonReadByte())
+        End For
+
+        RuntimeClip = -1
+
+        For Candidate = 0 To Character3D.ClipCount(Character) - 1
+
+            If ClipName = Character3D.ClipName(Character, Candidate) Then
+                RuntimeClip = Candidate
+            End If
+
+        End For
+
+        If RuntimeClip < 0 Then
+            Return ""
+        End If
+
+        KeyCount = CalibrationJsonReadWord()
+
+        If KeyCount > CALIBRATION_MAX_KEYFRAMES Then
+            Return ""
+        End If
+
+        Keys = "["
+
+        For Key = 0 To KeyCount - 1
+
+            Frame = CalibrationJsonReadWord()
+            SwordWrist = CalibrationJsonTriplet()
+            ShieldWrist = CalibrationJsonTriplet()
+            SwordRotation = CalibrationJsonTriplet()
+            ShieldRotation = CalibrationJsonTriplet()
+            SwordPosition = CalibrationJsonTriplet()
+            ShieldPosition = CalibrationJsonTriplet()
+            SwordFree = "false"
+            ShieldFree = "false"
+
+            If CalibrationJsonReadWord() = 181 Then
+                SwordFree = "true"
+            End If
+
+            If CalibrationJsonReadWord() = 181 Then
+                ShieldFree = "true"
+            End If
+
+            If Key > 0 Then
+                Keys = Keys + ","
+            End If
+
+            Keys = (Keys + "{""frame"":" + CalibrationJsonNumber(Frame) +
+                ",""swordWrist"":{""rotation"":" + SwordWrist + "}" +
+                ",""shieldWrist"":{""rotation"":" + ShieldWrist + "}" +
+                ",""sword"":{""decoupled"":" + SwordFree + ",""rotation"":" + SwordRotation +
+                ",""position"":" + SwordPosition + "}" +
+                ",""shield"":{""decoupled"":" + ShieldFree + ",""rotation"":" + ShieldRotation +
+                ",""position"":" + ShieldPosition + "}}")
+
+            If (CalibrationStorage[6] = 1 And
+                Clip = SavedClip And
+                Frame = SavedFrame) Then
+                Saved = ("{""clipIndex"":" + CalibrationJsonNumber(RuntimeClip) +
+                    ",""clipName"":""" + ClipName + """,""frame"":" + CalibrationJsonNumber(Frame) + "}")
+            End If
+
+        End For
+
+        If Clip > 0 Then
+            Clips = Clips + ","
+        End If
+
+        Clips = (Clips + "{""index"":" + CalibrationJsonNumber(RuntimeClip) +
+            ",""name"":""" + ClipName + """,""keyframes"":" + Keys + "]}")
+        TotalKeys = TotalKeys + KeyCount
+    End For
+
+    If Not CalibrationJsonValid Or CalibrationJsonOffset <> CalibrationStorageCount Then
+        Return ""
+    End If
+
+    Result = (Text_Slice(CalibrationJsonMetadata, 0, MetadataCount - 1) +
+        ",""savedKeyframe"":" + Saved + ",""totalKeyframes"":" + CalibrationJsonNumber(TotalKeys) +
+        ",""clips"":" + Clips + "]}")
+
+    Return Result
+
+End Function
+
 Sub ClearCalibrationMemory()
 
     Dim Axis As Number
@@ -7849,7 +8160,8 @@ Sub DrawTimeline()
     Draw Number Duration At TIMELINE_LEFT + Width - 48, TimelineY + 3 Size 10 Color WHITE
 
     If CalibrationAvailable Then
-        Draw Text CalibrationFilePath At TIMELINE_LEFT, Window_Height() - 39 Size 9 Color LIGHT_GRAY
+        Draw Text CalibrationFileLabel At TIMELINE_LEFT, Window_Height() - 39 Size 9 Color LIGHT_GRAY
+        Draw Text CalibrationTransferMessage At TIMELINE_LEFT + 235, Window_Height() - 39 Size 9 Color CYAN
     End If
 
 End Sub

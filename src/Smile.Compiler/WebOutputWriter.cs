@@ -3533,6 +3533,70 @@ internal static class WebOutputWriter
                 syncMusic();
             }
 
+            const FILE_TRANSFER_MAX_BYTES = 8 * 1024 * 1024;
+            const fileTransferUrls = new Set();
+            let cancelFileImport = null;
+
+            function fileExport(fileName, contents) {
+                fileName = String(fileName);
+                contents = String(contents);
+                let link = null, url = null;
+                try {
+                    const bytes = utf8(contents);
+                    if (!fileName || utf8(fileName).length > 200 || /[\\/:*?"<>|\x00-\x1f]/.test(fileName) ||
+                        /[. ]$/.test(fileName) || bytes.length > FILE_TRANSFER_MAX_BYTES ||
+                        (navigator.userActivation && !navigator.userActivation.isActive)) return false;
+                    url = URL.createObjectURL(new Blob([bytes], { type: "text/plain;charset=utf-8" }));
+                    fileTransferUrls.add(url);
+                    link = document.createElement("a");
+                    link.href = url;
+                    link.download = fileName;
+                    link.hidden = true;
+                    document.body.appendChild(link);
+                    link.click();
+                    setTimeout(() => { URL.revokeObjectURL(url); fileTransferUrls.delete(url); }, 1000);
+                    return true; // Download initiated, not proof the user saved it to disk.
+                } catch (_) {
+                    if (url) { URL.revokeObjectURL(url); fileTransferUrls.delete(url); }
+                    return false;
+                } finally { if (link) link.remove(); }
+            }
+
+            async function fileImport() {
+                if (cancelFileImport || (navigator.userActivation && !navigator.userActivation.isActive)) return "";
+                return new Promise(resolve => {
+                    const input = document.createElement("input");
+                    input.type = "file";
+                    input.accept = "application/json,text/*,.smile";
+                    input.hidden = true;
+                    let finished = false;
+                    const finish = value => {
+                        if (finished) return;
+                        finished = true;
+                        input.removeEventListener("change", change);
+                        input.removeEventListener("cancel", cancel);
+                        input.remove();
+                        cancelFileImport = null;
+                        resolve(value);
+                    };
+                    const cancel = () => finish("");
+                    const change = async () => {
+                        try {
+                            const file = input.files && input.files[0];
+                            if (!file || file.size > FILE_TRANSFER_MAX_BYTES) return finish("");
+                            const bytes = await file.arrayBuffer();
+                            if (bytes.byteLength > FILE_TRANSFER_MAX_BYTES) return finish("");
+                            finish(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
+                        } catch (_) { finish(""); }
+                    };
+                    cancelFileImport = cancel;
+                    input.addEventListener("change", change);
+                    input.addEventListener("cancel", cancel);
+                    try { document.body.appendChild(input); input.click(); }
+                    catch (_) { finish(""); }
+                });
+            }
+
             async function loadTextFile(path, target) {
                 if (!target || !Array.isArray(target.data)) throw new Error("Load Text File requires a one-dimensional array.");
                 target.data.fill(0);
@@ -3677,6 +3741,9 @@ internal static class WebOutputWriter
             function mediaShutdown() {
                 if (mediaStopped) return;
                 mediaStopped = true;
+                if (cancelFileImport) cancelFileImport();
+                for (const url of fileTransferUrls) URL.revokeObjectURL(url);
+                fileTransferUrls.clear();
                 shutdownImageCacheEntries = imageCache.size;
                 shutdownImageReferences = 0;
                 for (const entry of imageCache.values()) {
@@ -3736,7 +3803,7 @@ internal static class WebOutputWriter
                 print, clearScreen, wait, getKey, keyHeld, windowWidth, windowHeight, windowTitle, windowActivate, pointerX, pointerY, pointerDeltaX, pointerDeltaY,
                 pointerWheelDelta, pointerWheelRemainder, pointerInside, pointerHeld, pointerPressed, pointerReleased,
                 playSound, stopSound,
-                playMusic, pauseMusic, resumeMusic, stopMusic, setMusicVolume, loadTextFile,
+                playMusic, pauseMusic, resumeMusic, stopMusic, setMusicVolume, loadTextFile, fileExport, fileImport,
                 loadInt, saveInt, loadData, saveData, renderer3D, renderer3DImage, renderer3DText, renderer3DTextValue,
                 gameClosed, endProgram, mediaShutdown, mediaDiagnostics, run
             };

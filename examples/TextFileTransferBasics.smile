@@ -1,0 +1,52 @@
+' User-chosen UTF-8 transfer. This never changes application Save Data.
+
+Option Explicit
+
+Dim Contents As Text
+Dim Imported As Text
+Dim Status As Text
+Dim Key As Number
+Dim Exported As Boolean
+
+Contents = "SMILE UTF-8 transfer — Café 臺灣"
+Status = "E: Export; O: Open/Import; Escape: Exit"
+
+Game Window "SMILE 2.0 - Text File Transfer" Size 800 By 450
+
+Do
+
+    Get Key Key
+
+    If Key = KEY_E Then
+
+        Exported = File_Export("smile-transfer.txt", Contents)
+
+        If Exported Then
+            Status = "Export Accepted (Web: Download Requested)"
+        Else
+            Status = "Export Canceled Or Unavailable"
+        End If
+
+    Else If Key = KEY_O Then
+
+        Imported = File_Import()
+
+        If Imported = "" Then
+            Status = "Import Canceled, Empty Or Unavailable"
+        Else
+            Contents = Imported
+            Status = "Imported UTF-8 Text; E To Export It"
+        End If
+
+    End If
+
+    Clear Rgb(8, 16, 32)
+    Draw Text "E: Export; O: Open/Import; Escape: Exit" At 20, 35 Size 22 Color CYAN
+    Draw Text Status At 20, 90 Size 18 Color YELLOW
+    Draw Text Text_Slice(Contents, 0, 64) At 20, 150 Size 18 Color WHITE
+    Show Screen
+    Wait 16 Milliseconds
+
+Loop Until Game_Closed() Or Key = KEY_ESCAPE
+
+End Program

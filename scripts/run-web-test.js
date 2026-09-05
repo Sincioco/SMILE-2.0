@@ -28,7 +28,9 @@ let verifyPhase5Hardening = false;
 let verifyPhase5Submenus = false;
 let verifyPhase5SubmenuViewport = false;
 let verifyMobileControls = false;
+let verifyFileTransfer = false;
 let verifyRenderer3D = false;
+let renderer3DStateOnly = false;
 let verifyRenderer3DGpuParticles = false;
 let forceRenderer3DGpuParticleShaderFailure = false;
 let forceRenderer3DGpuParticleAttributeFailure = false;
@@ -52,7 +54,10 @@ while (args.length !== 0) {
     if (option === "--phase5-submenus") { verifyPhase5Submenus = true; continue; }
     if (option === "--phase5-submenu-viewport") { verifyPhase5SubmenuViewport = true; continue; }
     if (option === "--mobile-controls") { verifyMobileControls = true; continue; }
+    if (option === "--file-transfer") { verifyFileTransfer = true; continue; }
     if (option === "--renderer3d") { verifyRenderer3D = true; continue; }
+    // Model/calibration console fixtures need the GL double but do not present a 3D frame.
+    if (option === "--renderer3d-state") { verifyRenderer3D = true; renderer3DStateOnly = true; continue; }
     if (option === "--renderer3d-gpu-particles") {
         verifyRenderer3D = true;
         verifyRenderer3DGpuParticles = true;
@@ -114,6 +119,9 @@ function createMobileEventTarget(initial = {}) {
         payload.preventDefault = () => { payload.defaultPrevented = true; };
         for (const listener of listeners.get(type) || []) listener(payload);
         return payload;
+    };
+    target.removeEventListener = (type, listener) => {
+        listeners.set(type, (listeners.get(type) || []).filter(item => item !== listener));
     };
     target.setAttribute = (name, value) => attributes.set(name, String(value));
     target.getAttribute = name => attributes.has(name) ? attributes.get(name) : null;
@@ -181,13 +189,24 @@ function createMobileControlsHost(options = {}) {
     ]);
     let audioPlays = 0;
     let audioPauses = 0;
+    const transferElements = [];
+    const transferUrls = new Map();
+    const downloads = [];
     const host = {
         console: { log() {}, warn() {}, error() {} },
         document: {
             title: "", hidden: false, fullscreenElement: null,
+            body: { appendChild(element) { transferElements.push(element); } },
             getElementById: id => elements.get(id) || null,
             createElement: tag => {
-                if (tag !== "canvas") return createMobileEventTarget();
+                if (tag !== "canvas") {
+                    const element = createMobileEventTarget();
+                    element.remove = () => { const index = transferElements.indexOf(element); if (index >= 0) transferElements.splice(index, 1); };
+                    element.click = () => {
+                        if (tag === "a") downloads.push({ name: element.download, blob: transferUrls.get(element.href) });
+                    };
+                    return element;
+                }
                 const offscreen = createMobileEventTarget({ width: 0, height: 0 });
                 offscreen.getContext = () => drawing;
                 return offscreen;
@@ -215,6 +234,11 @@ function createMobileControlsHost(options = {}) {
         btoa: value => Buffer.from(value, "binary").toString("base64"),
         atob: value => Buffer.from(value, "base64").toString("binary"),
         URLSearchParams,
+        Blob, TextDecoder,
+        URL: {
+            createObjectURL(blob) { const key = `blob:test-${transferUrls.size}`; transferUrls.set(key, blob); return key; },
+            revokeObjectURL(key) { transferUrls.delete(key); }
+        },
         setTimeout, clearTimeout, setImmediate, Promise, Map, Set, Uint8Array, Uint32Array, ArrayBuffer, DataView,
         innerWidth: 1280, innerHeight: 720, devicePixelRatio: 2,
         screen: { orientation: { addEventListener: (type, listener) => add(orientationListeners, type, listener) } },
@@ -243,6 +267,7 @@ function createMobileControlsHost(options = {}) {
     const canvasWheel = (clientX, clientY, deltaY) => canvas.dispatch("wheel", { clientX, clientY, deltaY });
     return {
         host, canvas, controls, buttons, unknownButton, errorElement,
+        transferElements, transferUrls, downloads,
         dispatchWindow, dispatchDocument, dispatchOrientation, pointer, keyboard, canvasPointer, canvasWheel,
         audioPlays: () => audioPlays, audioPauses: () => audioPauses
     };
@@ -511,7 +536,49 @@ async function runMobileControlsTests() {
     mobileEqual(failure.errorElement.hidden, false, "runtime failure displays the error panel");
 }
 
-if (verifyMobileControls) {
+async function runFileTransferTests() {
+    const env = createMobileControlsHost();
+    const runtime = env.host.smile;
+    env.host.navigator.userActivation = { isActive: true };
+    const text = '{"name":"Arin 臺灣","value":-27}\r\n';
+    mobileEqual(runtime.fileExport("pose 臺灣.json", text), true, "download initiated");
+    mobileEqual(env.downloads[0].name, "pose 臺灣.json", "download filename retained");
+    mobileEqual(await env.downloads[0].blob.text(), text, "download preserves UTF-8 and line endings");
+    mobileEqual(env.transferElements.length, 0, "download anchor removed");
+    for (const name of ["", "../pose.json", "D:\\pose.json", "pose?json", "pose.", "pose ", "臺".repeat(67)])
+        mobileEqual(runtime.fileExport(name, text), false, `invalid filename ${name}`);
+    mobileEqual(runtime.fileExport("pose.json", "x".repeat(8 * 1024 * 1024 + 1)), false, "oversized export rejected");
+    env.host.navigator.userActivation.isActive = false;
+    mobileEqual(runtime.fileExport("pose.json", text), false, "download needs activation");
+    mobileEqual(await runtime.fileImport(), "", "import needs activation");
+    env.host.navigator.userActivation.isActive = true;
+    async function importBytes(bytes, advertisedSize = bytes.length) {
+        const pending = runtime.fileImport();
+        const input = env.transferElements[0];
+        input.files = [{ size: advertisedSize, arrayBuffer: async () => Uint8Array.from(bytes).buffer }];
+        input.dispatch("change");
+        const result = await pending;
+        mobileEqual(env.transferElements.length, 0, "file input removed");
+        return result;
+    }
+    mobileEqual(await importBytes(Buffer.from("\ufeff" + text)), text, "UTF-8 BOM accepted and removed");
+    mobileEqual(await importBytes([0xc0, 0x80]), "", "invalid UTF-8 rejected");
+    mobileEqual(await importBytes([], 8 * 1024 * 1024 + 1), "", "oversized import rejected");
+    const canceled = runtime.fileImport();
+    mobileEqual(await runtime.fileImport(), "", "second pending picker rejected");
+    env.transferElements[0].dispatch("cancel");
+    mobileEqual(await canceled, "", "cancel leaves empty result");
+    const disposed = runtime.fileImport();
+    runtime.mediaShutdown();
+    mobileEqual(await disposed, "", "shutdown cancels pending import");
+    mobileEqual(env.transferUrls.size, 0, "shutdown revokes download URLs");
+    mobileEqual(env.transferElements.length, 0, "shutdown removes picker");
+    process.stdout.write("Web file transfer checks passed.\n");
+}
+
+if (verifyFileTransfer) {
+    runFileTransferTests().then(() => process.exit(0)).catch(error => fail(error.stack || error.message));
+} else if (verifyMobileControls) {
     runMobileControlsTests()
         .then(() => process.stdout.write(`Web execution passed: ${webDirectory} (mobile virtual controls)\n`))
         .catch(error => fail(error && error.stack ? error.stack : String(error)));
@@ -979,7 +1046,9 @@ const started = Date.now();
     const diagnostics = host.smile.mediaDiagnostics();
     if (diagnostics.classLiveCount !== 0 || host.smile.classLiveCount() !== 0)
         fail(`SMILE Class ownership leaked: ${JSON.stringify(diagnostics)}`);
-    if (verifyRenderer3D) {
+    if (verifyRenderer3D && hostConsoleErrors.length !== 0)
+        fail(`Renderer3D Web console reported errors: ${hostConsoleErrors.join("\n")}`);
+    if (verifyRenderer3D && !renderer3DStateOnly) {
         if (renderer3DDepthEnables < 1)
             fail("Renderer3D WebGL2 did not enable depth testing");
         if (renderer3DBufferUploads < 2)

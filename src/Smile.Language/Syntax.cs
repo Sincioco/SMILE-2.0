@@ -79,6 +79,8 @@ public enum SyntaxKind
     WindowTitleKeyword,
     WindowActivateKeyword,
     FileRevealKeyword,
+    FileExportKeyword,
+    FileImportKeyword,
     KeyHeldKeyword,
     PointerXKeyword,
     PointerYKeyword,
@@ -313,6 +315,8 @@ public static class SyntaxFacts
         ["Window_Title"] = SyntaxKind.WindowTitleKeyword,
         ["Window_Activate"] = SyntaxKind.WindowActivateKeyword,
         ["File_Reveal"] = SyntaxKind.FileRevealKeyword,
+        ["File_Export"] = SyntaxKind.FileExportKeyword,
+        ["File_Import"] = SyntaxKind.FileImportKeyword,
         ["Key_Held"] = SyntaxKind.KeyHeldKeyword,
         ["Pointer_X"] = SyntaxKind.PointerXKeyword,
         ["Pointer_Y"] = SyntaxKind.PointerYKeyword,
@@ -492,7 +496,7 @@ public static class SyntaxFacts
                 SyntaxKind.WindowHeightKeyword or SyntaxKind.WindowActivateKeyword or SyntaxKind.PointerXKeyword or
                 SyntaxKind.PointerYKeyword or SyntaxKind.PointerDeltaXKeyword or SyntaxKind.PointerDeltaYKeyword or
                 SyntaxKind.PointerWheelDeltaKeyword or SyntaxKind.PointerWheelRemainderKeyword or
-                SyntaxKind.PointerInsideKeyword => NoParameters,
+                SyntaxKind.PointerInsideKeyword or SyntaxKind.FileImportKeyword => NoParameters,
             SyntaxKind.AbsKeyword => ValueParameter,
             SyntaxKind.KeyHeldKeyword => KeyParameter,
             SyntaxKind.PointerHeldKeyword or SyntaxKind.PointerPressedKeyword or SyntaxKind.PointerReleasedKeyword =>
@@ -500,6 +504,7 @@ public static class SyntaxFacts
             SyntaxKind.ImageWidthKeyword or SyntaxKind.ImageHeightKeyword or SyntaxKind.ImageLoadedKeyword => ImageParameter,
             SyntaxKind.TextWidthKeyword or SyntaxKind.TextHeightKeyword => TextSizeParameters,
             SyntaxKind.WindowTitleKeyword or SyntaxKind.FileRevealKeyword => TextParameter,
+            SyntaxKind.FileExportKeyword => new[] { "fileName", "contents" },
             SyntaxKind.TextLengthKeyword => TextParameter,
             SyntaxKind.TextCodeAtKeyword => TextIndexParameters,
             SyntaxKind.TextSliceKeyword => TextSliceParameters,

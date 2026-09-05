@@ -183,3 +183,77 @@ Next: strict current-snapshot JSON transfer, browser input/storage recovery,
 remaining render/interaction/context evidence and ordinary smoke. The Web
 filename still shows the native path at this checkpoint; no JSON download or
 Web-to-native authoring round-trip is claimed implemented yet.
+
+## September 6: saved JSON download and generic UTF-8 transfer
+
+Source parent: `6b62f3b28b998f45cdbfbd1992f89a68fb062043`, branch `main`.
+This is a coherent W12 download milestone, not completed W5/W6 or final acceptance.
+
+- Added shared typed `File_Export(FileName, Contents) As Boolean` and
+  `File_Import() As Text`, native user-selected UTF-8 dialogs and browser download/
+  file-picker implementations. No new framework, numeric type or scene format.
+  Content is bounded to 8 MiB; filenames are bounded and not arbitrary paths.
+  Native export uses a flushed temporary file and replaces only the chosen path;
+  browser success means request initiated, not proof of disk persistence.
+- The Viewer filename no longer displays a native drive path. Native click keeps
+  Explorer reveal; Web click downloads schema-2 JSON from the saved SMKF buffer.
+  Unsaved temporary pose edits are not encoded or persisted by a download.
+  Publication generates identity-only metadata from the canonical validator;
+  both metadata files are declared project assets, bringing publication to 46.
+- Initial Arin export failed the native fixture because its saved-record order
+  differs from model clip indices (Death was appended). Fixed by exact clip-name
+  lookup, preserving indices as hints. No character data was edited to pass.
+- `dotnet run --project src/Smile.Tests/Smile.Tests.csproj -c Release --no-restore`:
+  PASS, 296 checks including shared transfer signatures/types and both emitters.
+- `scripts/test-viewer-calibration-native.ps1`: PASS, both exports normalize to
+  current canonical JSON and round-trip through native payload serialization.
+  `scripts/test-character-3d-viewer-hardening.ps1` without `-NativeOnly`: PASS,
+  including 42 calibration checks, seeded four-tab isolation, generated-Web
+  hardening and 58 native graphics/pointer/audio checks.
+- `examples/TextFileTransferBasics.smile` compiled native and Web. An initial
+  draft used unavailable `KEY_I`; switched to supported `KEY_O` without expanding
+  keyboard syntax. Scoped formatter and `git diff --check` passed.
+- `node scripts/run-web-test.js artifacts/web/h6-1/TextFileTransferBasics
+  --file-transfer`: PASS. Covers UTF-8/BOM, bounds, invalid names, denied activation,
+  cancellation, duplicate picker exclusion and shutdown URL/listener cleanup.
+  These DOM/VM checks are not actual browser selection evidence.
+- Actual Edge download: `Downloads/arin-v5.7-pose-calibration.json`, 6,596 bytes,
+  SHA-256 `168E229660185EA5611519232B694FC83564F75B73EAC76D5F4EEAA500B3BBF1`.
+  It normalizes to all 24 canonical keys. The native sample's real Open and Save As
+  dialogs reproduced those bytes in `artifacts/tests/native-transfer-roundtrip.json`.
+  Native cancellation preserved sample contents; the sample never loaded Viewer
+  Save Data or applied a calibration. The native Viewer was restored afterward.
+- Browser sample opened a chooser, but automated `setFiles` returned `Not allowed`.
+  No bypass was attempted. Live browser file selection/import is still unverified;
+  the disposable sample tab was closed. This is a tool limitation, not a passed test.
+- Export/Compare for Arin and Orin both passed again. Arin remains 24 keys at
+  `C05C87BF0A92B373DB7ECD1CB304F4446B851E7AFEA836E8BB05D058B1B20F0B`;
+  Orin remains zero at `13AE135FDA40302CB5A4B0146D7103A2ED5346AAEEBB3852AF6DD3C397F5D293`.
+  Canonical GLB, descriptor and profile identities are unchanged.
+- `scripts/install-vsix.cmd`: PASS, installed 2.0.59 in instance `91f001b5`, folder
+  `yko5a5kh.4uf`, DLL SHA-256
+  `A0EEBB8E582EE18E411A44B852F65A7766FE52021BB306294A30BB2930595B08`.
+  VSIX SHA-256: `CD8F501F9A9C8395C88C9669649DF5F5019DC97143758B4DA25A8D57F5BBB21E`.
+  Installed compiler/shared-language/native-library match staged payload hashes:
+  `80B1FE55B6AB6C2621B47F9AB69A0F493CBAB8F1EF2C873BF82E371D78AB2649`,
+  `C0671420B1B5743EBA36026023FD99C833FE1B9CA401C8C532C07F4E27B6D704`,
+  `800BB11558DF77DEA45F624CB32A68DF0E634C03F723DB0348FDFD549EDA618A`.
+- `CalibrationTransferTests` generated from the actual Viewer procedures passes
+  exact native/Web console parity, including both complete JSON snapshots. The
+  native harness initially omitted Print's final newline in its log; corrected
+  log preservation. The existing `--renderer3d` option also demands a presented
+  scene, which this state-only fixture does not provide. Added the explicit
+  `--renderer3d-state` option to supply the GL double for model state without
+  asserting visual presentation; existing render assertions remain unchanged.
+- Rebuilt native with `Launch.ps1 -Build -SkipWindowActivation`, after a normal
+  UI close and confirmation that the old process exited. PID 33292, executable
+  SHA-256 `54A7C2CB05D6049E0576BC2C66924988CF67108C502BEE7AD8B0376379DF6E80`.
+  Party rendered after launch; Arin's native filename label was observed and the
+  Viewer was left in the foreground. Both live saves retained precedence.
+- Published `artifacts/web/h6-1/Character3DViewer` from the current project with
+  46 assets. Republished `Phase3ATextGame` with the current runtime and reran
+  `--mobile-controls`: PASS. No remote website deployment was performed by Codex.
+
+Next: strict atomic in-Viewer JSON import and W14 storage recovery, then remaining
+MSAA/input/lifecycle/browser evidence, ordinary smoke, deployment ZIP and final
+H6.1 gate. No claim of completed Web authoring round-trip, final PASS or E0 work.

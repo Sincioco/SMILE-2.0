@@ -904,6 +904,8 @@ internal sealed class WebEmitter
             SyntaxKind.WindowTitleKeyword => $"smile.windowTitle({arguments})",
             SyntaxKind.WindowActivateKeyword => "smile.windowActivate()",
             SyntaxKind.FileRevealKeyword => $"(({arguments}), false)",
+            SyntaxKind.FileExportKeyword => $"smile.fileExport({arguments})",
+            SyntaxKind.FileImportKeyword => "await smile.fileImport()",
             SyntaxKind.KeyHeldKeyword => $"smile.isTrue(smile.keyHeld({arguments}))",
             SyntaxKind.PointerXKeyword => "smile.pointerX()",
             SyntaxKind.PointerYKeyword => "smile.pointerY()",
