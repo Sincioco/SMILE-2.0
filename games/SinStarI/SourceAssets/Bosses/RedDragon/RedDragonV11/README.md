@@ -37,3 +37,22 @@ angular wing surfaces and open-mouth topology remain. It does not include IK,
 foot planting, facial controls, collision-driven damage, navigation or flight.
 The rendered preview PNG is a Blender inspection render; the Party screenshot
 under `docs/implementation/screenshots/orin-storm` is native runtime evidence.
+
+## September 5 animation refinement
+
+The wing shoulder now leads the elbow and tip with a small left/right timing
+difference. ClawStrike winds up before the existing one-second hit cue and
+follows through; Hit recoils quickly and settles more slowly. Fireball's head
+recoil matches its 1.8-second launch (impact follows at 2.5 seconds). Breathing,
+neck and tail motion stay independent of the planted feet.
+
+`animation-refinement-validation.json` records re-imported Idle, Fireball,
+ClawStrike and Hit poses, unchanged geometry/skin/UV/texture bytes, and fixed
+foot positions. `dragon-claw-follow-through.png` is a Blender review render.
+Use `-- --output-dir <review-folder>` with the builder for a safe new output.
+
+The rigging research, current chain map, and recommended Blender/Unity/Unreal
+workflow are in `docs/implementation/party-viewer-final-handoff-2026-09-05.md`
+and `retarget-chains.json`. The current 24-bone deformation rig remains a
+bounded preview: there is no new IK system, membrane topology repair, or claim
+that unrelated humanoid animations can be directly applied to this dragon.

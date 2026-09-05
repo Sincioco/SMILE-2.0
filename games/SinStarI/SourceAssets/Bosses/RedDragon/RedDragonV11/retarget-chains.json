@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "rig": "RedDragonSkeleton",
+  "root": "Root",
+  "units": "Blender meters; source mesh scale multiplier 2; SMILE actor scale 25000 percent",
+  "policy": "Reference mapping only; a source animation must have compatible creature anatomy and an explicitly fitted reference pose.",
+  "chains": [
+    { "name": "Spine", "start": "Spine", "end": "Chest" },
+    { "name": "NeckHead", "start": "Neck", "end": "Head" },
+    { "name": "Jaw", "start": "Jaw", "end": "Jaw" },
+    { "name": "LeftWing", "start": "WingRootL", "end": "WingTipL" },
+    { "name": "RightWing", "start": "WingRootR", "end": "WingTipR" },
+    { "name": "LeftFrontLeg", "start": "FrontLegL", "end": "FrontFootL" },
+    { "name": "RightFrontLeg", "start": "FrontLegR", "end": "FrontFootR" },
+    { "name": "LeftHindLeg", "start": "HindLegL", "end": "HindFootL" },
+    { "name": "RightHindLeg", "start": "HindLegR", "end": "HindFootR" },
+    { "name": "Tail", "start": "Tail1", "end": "Tail4" }
+  ],
+  "contactBones": ["FrontFootL", "FrontFootR", "HindFootL", "HindFootR"],
+  "runtimeAim": { "node": "Head", "helper": "Smile.Simple3D.NodeAim3D", "bodyPivot": false },
+  "currentLimits": "No authored knee/elbow pole controls, individual wing-finger chains, membrane collision or flight. Do not silently substitute a humanoid avatar."
+}

@@ -338,5 +338,9 @@
     "EyeLeft",
     "EyeRight"
   ],
-  "modelSha256": "F73899F97957D333D7B7CAF985C8B6E6EF8A349B9C10E9384D16B8178E75A6C8"
+  "modelSha256": "782BF48A302665930F1F6872B159CEFBCE5FBA7C3272B7E53D2A63ECD842F4E8",
+  "animationRefinement": "Delayed wing chains, asymmetric idle, claw anticipation/follow-through, fast recoil/slow recovery; planted feet",
+  "refinementValidation": "animation-refinement-validation.json",
+  "retargetChainMap": "retarget-chains.json",
+  "refinementPreview": "dragon-claw-follow-through.png"
 }

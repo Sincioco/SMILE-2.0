@@ -4,17 +4,22 @@ Run in Blender 5.2: blender --background --python scripts/rig-red-dragon.py
 The accepted static mesh, UVs and texture are preserved in a new revision.
 """
 import bpy
+import argparse
 import hashlib
 import json
 import math
 import shutil
+import sys
 from pathlib import Path
 from mathutils import Vector, Quaternion
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / 'games/SinStarI/SourceAssets/Bosses/RedDragon'
-PACKAGE = SOURCE / 'RedDragonV11'
-PACKAGE.mkdir(exist_ok=True)
+parser = argparse.ArgumentParser()
+parser.add_argument('--output-dir', type=Path, default=SOURCE / 'RedDragonV11')
+arguments = parser.parse_args(sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else [])
+PACKAGE = arguments.output_dir.resolve()
+PACKAGE.mkdir(parents=True, exist_ok=True)
 for name in ['RedDragonV1.0.original.glb', 'RedDragonV1.0.static.glb', 'cyber-dragon-red-all-poses-preview.png']:
     shutil.copy2(SOURCE / name, PACKAGE / name)
 
@@ -159,18 +164,21 @@ for name, count in [('Idle', 121), ('Roar', 91), ('FireBreath', 121), ('ClawStri
             b.rotation_quaternion = Quaternion()
             b.location = (0, 0, 0)
             b.scale = (1, 1, 1)
-        rotate('Chest', (1,0,0), 2*wave)
-        rotate('Neck', (1,0,0), 2.2*wave)
-        rotate('Head', (0,0,1), 3*wave)
+        rotate('Chest', (1,0,0), 3*wave)
+        rotate('Neck', (1,0,0), 2.2*math.sin(t*math.tau-.3))
+        rotate('Head', (0,0,1), 3*math.sin(t*math.tau-.55))
         rotate('Jaw', (1,0,0), 3 + 2*wave)
         for side, sign in [('L', -1), ('R', 1)]:
             # Hands live at the wing elbows; use the wing chain, not the feet.
-            flap = 7*wave
+            # Shoulder initiates; elbow and membrane follow with a phase delay.
+            # Slight left/right timing differences avoid a rigid synchronized fan.
+            phase = t*math.tau + sign*.12
+            flap = 9*math.sin(phase)
             if name in ['Roar', 'FireBreath', 'Fireball']:
-                flap += 15*swell + 13*math.sin(t*math.tau*2)*swell
+                flap += 18*swell + 17*math.sin(t*math.tau*2)*swell
             rotate(f'WingRoot{side}', (0,1,0), sign * flap)
-            rotate(f'WingArm{side}', (0,0,1), sign * (4*wave + 7*swell))
-            rotate(f'WingTip{side}', (0,1,0), sign * 7 * math.sin(t*math.tau+.4))
+            rotate(f'WingArm{side}', (0,0,1), sign * (7*math.sin(phase-.45) + 9*swell))
+            rotate(f'WingTip{side}', (0,1,0), sign * 11 * math.sin(phase-.85))
         for i in range(4):
             rotate(f'Tail{i+1}', (0,0,1), math.sin(t*math.tau-i*.4) * (2+i*.7))
         if name in ['Roar', 'FireBreath']:
@@ -179,26 +187,32 @@ for name, count in [('Idle', 121), ('Roar', 91), ('FireBreath', 121), ('ClawStri
             rotate('Neck', (1,0,0), -4*swell if name == 'Roar' else 4*swell)
             rotate('Head', (0,0,1), 4*wave if name == 'FireBreath' else 0)
         if name == 'ClawStrike':
-            strike = math.sin(math.pi*t)**3
-            rotate('WingRootR', (0,0,1), -28*strike)
-            rotate('WingArmR', (0,1,0), -30*strike)
+            # Wind up, strike at the existing 1-second cue, then follow through.
+            windup = math.exp(-((t-.18)/.10)**2) * swell
+            strike = math.exp(-((t-.455)/.17)**2) * swell
+            rotate('WingRootR', (0,0,1), 17*windup - 38*strike)
+            rotate('WingArmR', (0,1,0), 14*windup - 40*strike)
             rotate('WingRootL', (0,1,0), -15*strike)
             rotate('Chest', (0,0,1), -5*strike)
             rotate('Neck', (0,0,1), -10*strike)
         if name == 'Hit':
-            recoil = math.sin(math.pi*t)**.7
+            # Quick hit followed by a slower settling recovery.
+            recoil = (min(1., t/.22) if t < .22 else max(0., (1-t)/.78))
+            recoil = recoil*recoil*(3-2*recoil)
             rotate('Chest', (1,0,0), -11*recoil)
             rotate('Neck', (0,0,1), 6*recoil)
             rotate('Head', (1,0,0), 10*recoil)
             rotate('WingRootL', (0,1,0), 19*recoil)
             rotate('WingRootR', (0,1,0), -24*recoil)
-            rotate('WingArmR', (0,0,1), 12*recoil)
+            rotate('WingArmR', (0,0,1), 17*recoil)
+            rotate('WingArmL', (0,0,1), -11*recoil)
             rotate('Jaw', (1,0,0), 11*recoil)
         if name == 'Fireball':
             seconds = (frame-1)/30
+            # Match the 1.8-second launch; the projectile reaches heroes at 2.5 s.
             charge = min(1, seconds/1.8)
             recovery = max(0, 1-(seconds-1.8)/1.6)
-            release = math.exp(-((seconds-1.85)/.18)**2)
+            release = math.exp(-((seconds-1.8)/.18)**2)
             rotate('Jaw', (1,0,0), 16*charge*recovery + 9*release)
             rotate('Neck', (1,0,0), -7*charge*recovery + 15*release)
             rotate('Head', (1,0,0), -3*charge*recovery + 8*release)

@@ -1,0 +1,78 @@
+{
+  "modelSha256": "782BF48A302665930F1F6872B159CEFBCE5FBA7C3272B7E53D2A63ECD842F4E8",
+  "geometrySkinUVAndTexturesUnchanged": true,
+  "clips": [
+    {
+      "name": "Idle",
+      "feetRemainFixed": true,
+      "samples": [
+        {
+          "frame": 1,
+          "bodyMinimumZ": -2.3568463802803308e-07
+        },
+        {
+          "frame": 61,
+          "bodyMinimumZ": -2.3568463802803308e-07
+        },
+        {
+          "frame": 121,
+          "bodyMinimumZ": -2.3568463802803308e-07
+        }
+      ]
+    },
+    {
+      "name": "Fireball",
+      "feetRemainFixed": true,
+      "samples": [
+        {
+          "frame": 1,
+          "bodyMinimumZ": -2.3568463802803308e-07
+        },
+        {
+          "frame": 55,
+          "bodyMinimumZ": -2.3568463802803308e-07
+        },
+        {
+          "frame": 151,
+          "bodyMinimumZ": -2.3568463802803308e-07
+        }
+      ]
+    },
+    {
+      "name": "ClawStrike",
+      "feetRemainFixed": true,
+      "samples": [
+        {
+          "frame": 1,
+          "bodyMinimumZ": -2.3568463802803308e-07
+        },
+        {
+          "frame": 31,
+          "bodyMinimumZ": -2.3568463802803308e-07
+        },
+        {
+          "frame": 67,
+          "bodyMinimumZ": -2.3568463802803308e-07
+        }
+      ]
+    },
+    {
+      "name": "Hit",
+      "feetRemainFixed": true,
+      "samples": [
+        {
+          "frame": 1,
+          "bodyMinimumZ": -2.3568463802803308e-07
+        },
+        {
+          "frame": 7,
+          "bodyMinimumZ": -2.3568463802803308e-07
+        },
+        {
+          "frame": 25,
+          "bodyMinimumZ": -2.3568463802803308e-07
+        }
+      ]
+    }
+  ]
+}
