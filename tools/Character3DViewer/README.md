@@ -88,13 +88,19 @@ only the shield perimeter receives the aura. His tab offers Thunder Smash, Storm
 Chain Arcs and Godstorm styles, with full/reduced/off flash and shake. Reduced is the default.
 The CPU charge controller and calibrated equipment sockets live in `OrinStorm.smile`.
 Each Orin presenter has its own generation-safe context, charge latches, clip/time
-history, handles, style, visibility, trail, and first error. Shared Lightning textures,
-clock advancement, draw pass, and shutdown remain scene-owned. A paused seek rebases
-the actor context so resume cannot replay stale thunder or discharge thresholds.
-Forked Judgment converges four Ultra-quality sky strikes on the raised hammer; Thunder
-Smash sends eight ground spokes from the impact point. A GPU spark trail follows the
-hammer's swept path and fades in world space after the swing. The slam does not retrigger
-during follow-through. The white glow mesh uses the actor's final grounded transform.
+history, handles, artistic style, visibility, trail, and first error. The scene owns one
+Full/Reduced/Off comfort ceiling for every actor, so an actor style cannot silently change
+another actor's accessibility policy. Shared Lightning textures, clock advancement, draw
+pass, and shutdown also remain scene-owned. A paused forward/backward seek or clip cut
+rebases the actor context so resume cannot replay stale thunder or discharge thresholds.
+Each context may own at most four of Lightning's eight logical effects. Charge and impact
+temporarily yield the decorative shield rim and second hammer arc, admitting up to three
+high-priority battle arcs plus the primary hammer effect while leaving the other four slots
+available to a second Orin. Requested/effective quality, effect counts and fallback cause
+are observable. A GPU spark trail follows the hammer's swept path and fades in world space
+after a normal swing. Hiding its hammer or owner destroys that context's trail immediately,
+including while frozen, without affecting another actor. The slam does not retrigger during
+follow-through. The white glow mesh uses the actor's final grounded transform.
 
 The dragon takes the third turn, alternating Fire Breath and Claw Strike. Mouth-attached
 fire sweeps toward Arin and then Orin while they guard and react. The claw animation
@@ -110,6 +116,18 @@ checksums belong to `games/SinStarI/SourceAssets/Bosses/RedDragon/RedDragonV11`.
 - `Smile.Simple3D.SceneVfx3D`: one per-scene Fire/Lightning advance boundary with independent family freeze and duplicate-frame rejection.
 - `Smile.Simple3D.LightPool3D`: bounded generation-safe leases over scene-reserved renderer point-light slots.
 - `Smile.UI.Controls`: matching panels, buttons, slider drawing, hover hit-testing and exclusive drag capture.
+
+Equipment and owner visibility are evaluated before Fire/Lightning freeze. Hiding Arin's
+sword or shield immediately destroys the matching emitters, clears glow trails and shuts
+down the shield rim; showing the equipment while frozen cannot resurrect the old effect.
+Hiding the dragon clears its breath, mouth/projectile Fire, glow and leased light before any
+freeze return. Normal emission stop still allows accepted world-space tails to age out.
+
+`ActorIsolationTests.smileproj` is the bounded real-render fixture for two instances of the
+current Orin model. It exercises different clips, times, speeds, transforms, fixture-local
+yaw corrections and styles; two independent storm contexts and local-light leases; shared
+single-frame advancement; frozen hide/seek/resume; scene comfort; capacity rejection;
+forced GPU fallback; context recreation; stale handles; and leak-free native/Web teardown.
 
 These effects do not modify Arin's models, rig or animation sources. The canonical descriptor supplies mesh-derived sword endpoints and shield flame anchors; the rendered equipment transform, including calibration and decoupling, positions the emitters. Existing saved keys remain valid. The sword keeps a fiery outline under its flames; the shield's old golden overlay and glow trail are not drawn when the thermal equipment preview is available.
 

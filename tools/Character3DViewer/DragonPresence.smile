@@ -21,6 +21,7 @@ Private Dim PreviousClip As Text
 Private Dim PreviousTime As Number
 Private Dim Phase As Number
 Private Dim Visible As Boolean
+Private Dim RebaseOnShow As Boolean
 Private Dim Ok As Boolean
 
 Public Sub Initialize()
@@ -32,6 +33,28 @@ Public Sub Initialize()
     PreviousClip = ""
     PreviousTime = 0
     Phase = 0
+    RebaseOnShow = True
+
+End Sub
+
+Public Sub Cancel(Light As LightPool3D.Lease)
+
+    If MouthFire.Slot <> 0 Then
+        Ok = Fire.Destroy(MouthFire)
+    End If
+
+    If Projectile.Slot <> 0 Then
+        Ok = Fire.Destroy(Projectile)
+    End If
+
+    If Glow.Handle <> 0 Then
+        Ok = Graphics3D.CommitParticleBatch3D(Glow, 0)
+    End If
+
+    Ok = LightPool3D.Disable(Light)
+    Phase = 0
+    Visible = False
+    RebaseOnShow = True
 
 End Sub
 
@@ -79,8 +102,22 @@ Public Sub Update(Actor As Character3D.Actor, Clip As Text, Time As Number,
     Dim Heat As Number
     Dim Size As Number
     Dim Name As Text
+    Dim SuppressImpactCue As Boolean
 
     Visible = Enabled And Character3D.IsValid(Actor)
+
+    If Not Visible Then
+
+        Call Cancel(Light)
+
+        PreviousClip = Clip
+        PreviousTime = Time
+
+        Return
+
+    End If
+
+    SuppressImpactCue = RebaseOnShow
     Heat = 70 + Fixed.SinFixed(Time / 13) * 15 / Core.FIXED_ONE
 
     If Visible Then
@@ -125,7 +162,11 @@ Public Sub Update(Actor As Character3D.Actor, Clip As Text, Time As Number,
                 Projectile = Fire.StartAt("FireBurstGen3", ImpactPoint, 9281,
                     Fire.QUALITY_HIGH, Fire.SIMULATION_AUTO, 24)
 
-                Play Sound "Assets/Audio/dragon-fireball-impact.wav"
+                If Not SuppressImpactCue Then
+
+                    Play Sound "Assets/Audio/dragon-fireball-impact.wav"
+
+                End If
 
             End If
 
@@ -221,6 +262,7 @@ Public Sub Update(Actor As Character3D.Actor, Clip As Text, Time As Number,
 
     PreviousClip = Clip
     PreviousTime = Time
+    RebaseOnShow = False
 
 End Sub
 

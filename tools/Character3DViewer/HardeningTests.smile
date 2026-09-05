@@ -199,6 +199,23 @@ Call OrinStorm.SetStyle(SecondStorm, 3)
 
 Call Check(OrinStorm.StyleName(FirstStorm) = "Storm Lance")
 Call Check(OrinStorm.StyleName(SecondStorm) = "Godstorm")
+Call Check(OrinStorm.SceneComfortValue() = OrinStorm.SCENE_COMFORT_REDUCED)
+Call Check(OrinStorm.SceneComfortName() = "Flash/Shake Reduced")
+
+Call OrinStorm.SetSceneComfort(OrinStorm.SCENE_COMFORT_OFF)
+Call OrinStorm.SetStyle(SecondStorm, 2)
+Call OrinStorm.SetStyle(FirstStorm, 0)
+
+Call Check(OrinStorm.SceneComfortValue() = OrinStorm.SCENE_COMFORT_OFF)
+Call Check(OrinStorm.SceneComfortName() = "Flash/Shake Off")
+Call Check(OrinStorm.StyleName(FirstStorm) = "Thunder Smash")
+Call Check(OrinStorm.StyleName(SecondStorm) = "Chain Arcs")
+
+Call OrinStorm.SetStyle(FirstStorm, 1)
+Call OrinStorm.SetStyle(SecondStorm, 3)
+Call OrinStorm.SetSceneComfort(OrinStorm.SCENE_COMFORT_REDUCED)
+
+Call Check(OrinStorm.MAX_LIGHTNING_EFFECTS_PER_CONTEXT * 2 = 8)
 
 ReplacementStorm = FirstStorm
 TestResult = OrinStorm.Destroy(FirstStorm)

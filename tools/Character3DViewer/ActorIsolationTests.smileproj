@@ -1,0 +1,25 @@
+<SmileProject Version="1.0">
+  <PropertyGroup>
+    <ProjectKind>Game</ProjectKind>
+    <StartupFile>ActorIsolationTests.smile</StartupFile>
+    <OutputName>Character3DViewerActorIsolationTests</OutputName>
+    <ApplicationId>smile.tests.character3d-viewer-actor-isolation</ApplicationId>
+    <GraphicsBackend>DirectX</GraphicsBackend>
+    <VSync>false</VSync>
+  </PropertyGroup>
+  <ItemGroup>
+    <SmileSource Include="ActorIsolationTests.smile" StartupOnly="true" />
+    <SmileSource Include="OrinStorm.smile" />
+    <Model3DAsset Include="BuildAssets\OrinV13\orin-v1.3-animation-checkpoint.glb"
+                  Descriptor="BuildAssets\OrinV13\OrinV13.sm3d.json"
+                  LogicalPath="Assets\Generation2\OrinV13\OrinV13.sm3d"
+                  TextureOutputDirectory="Assets\Generation2\OrinV13\Textures"
+                  Profile="Character"
+                  Identity="sin-star-i.character-2.tank"
+                  ProductionState="Prototype" />
+    <Asset Include="Assets\Lightning\lightning-ribbon.png" />
+    <Asset Include="Assets\Lightning\lightning-spark.png" />
+    <Asset Include="Assets\Lightning\thunder.wav" />
+    <SmileProjectReference Include="..\..\libraries\Smile.Simple3D\Smile.Simple3D.smilelibproj" />
+  </ItemGroup>
+</SmileProject>

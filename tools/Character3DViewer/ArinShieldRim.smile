@@ -106,6 +106,12 @@ Public Sub Draw()
 
 End Sub
 
+Public Function IsVisible() As Boolean
+
+    Return Visible
+
+End Function
+
 Public Sub Shutdown()
 
     Dim Layer As Number

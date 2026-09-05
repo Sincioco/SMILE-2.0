@@ -1,0 +1,256 @@
+''' Integrated same-model actor and real storm ownership fixture.
+
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Character3D As Character3D
+Import Smile.Simple3D.Graphics3D As Graphics3D
+Import Smile.Simple3D.LightningVfx3D As Lightning
+Import Smile.Simple3D.LightPool3D As LightPool3D
+Import Smile.Simple3D.Math3D As Math3D
+Import Smile.Simple3D.Scene3D As Scene3D
+Import Smile.Simple3D.SceneVfx3D As SceneVfx3D
+Import Smile.Tools.OrinStorm As OrinStorm
+
+Dim Camera As Core.Camera3D
+Dim Target As Core.Vector3
+Dim CapacitySource As Core.Vector3
+Dim CapacityTarget As Core.Vector3
+Dim FirstActor As Character3D.Actor
+Dim SecondActor As Character3D.Actor
+Dim FirstStorm As OrinStorm.Context
+Dim SecondStorm As OrinStorm.Context
+Dim ReplacementStorm As OrinStorm.Context
+Dim StaleStorm As OrinStorm.Context
+Dim FirstLight As LightPool3D.Lease
+Dim SecondLight As LightPool3D.Lease
+Dim RejectedEffect As Lightning.LightningEffect
+Dim VfxClock As SceneVfx3D.Clock
+Dim FirstHead As Core.Vector3
+Dim SecondHead As Core.Vector3
+Dim Ready As Boolean
+Dim FrameReady As Boolean
+Dim Destroyed As Boolean
+Dim ThunderBefore As Number
+Dim FirstTailCount As Number
+Dim FirstCorrectionYaw As Number
+Dim SecondCorrectionYaw As Number
+Dim Failures As Number
+Dim CheckIndex As Number
+
+Game Window "Character Viewer Two-Orin Isolation Tests" Size 960 By 540
+
+Call Graphics3D.ResetRenderer3D()
+
+Camera = Graphics3D.DefaultCamera()
+Camera.Position = Math3D.Vector(0, 180, -650)
+Camera.Target = Math3D.Vector(0, 100, 0)
+Target = Math3D.Vector(0, 70, 220)
+CapacitySource = Math3D.Vector(-20, 240, 100)
+CapacityTarget = Math3D.Vector(20, 10, 100)
+Ready = Scene3D.SetQuality(Scene3D.QUALITY_MEDIUM)
+Ready = LightPool3D.Initialize(2, 2) And Ready
+FirstLight = LightPool3D.Acquire()
+SecondLight = LightPool3D.Acquire()
+Ready = LightPool3D.IsValid(FirstLight) And LightPool3D.IsValid(SecondLight) And Ready
+Ready = Lightning.Initialize("Assets/Lightning", 8192,
+    Graphics3D.GPU_PARTICLE_SIMULATION_AUTO, 4096) And Ready
+
+Call SceneVfx3D.Initialize(VfxClock)
+Call OrinStorm.Prepare(Ready)
+
+FirstStorm = OrinStorm.Create()
+SecondStorm = OrinStorm.Create()
+FirstActor = Character3D.LoadWithPolicy("Assets/Generation2/OrinV13/OrinV13.sm3d",
+    Character3D.CHARACTER_LOAD_REQUIRE_PBR)
+SecondActor = Character3D.LoadWithPolicy("Assets/Generation2/OrinV13/OrinV13.sm3d",
+    Character3D.CHARACTER_LOAD_REQUIRE_PBR)
+
+Call Check(Ready)
+Call Check(Character3D.IsValid(FirstActor) And Character3D.IsValid(SecondActor))
+Call Check(Character3D.ModelHandle(FirstActor) = Character3D.ModelHandle(SecondActor))
+Call Check(Character3D.AnimatorHandle(FirstActor) <> Character3D.AnimatorHandle(SecondActor))
+Call Check(OrinStorm.IsValid(FirstStorm) And OrinStorm.IsValid(SecondStorm))
+Call Check(LightPool3D.RendererSlot(FirstLight) <> LightPool3D.RendererSlot(SecondLight))
+
+Call Check(Character3D.SetScale(FirstActor, 25000))
+Call Check(Character3D.SetScale(SecondActor, 25000))
+Call Check(Character3D.Place(FirstActor, -135, 0, 0))
+Call Check(Character3D.Place(SecondActor, 135, 0, 40))
+
+FirstCorrectionYaw = 2
+SecondCorrectionYaw = -3
+
+Call Check(Character3D.Rotate(FirstActor, 0, 15 + FirstCorrectionYaw, 0))
+Call Check(Character3D.Rotate(SecondActor, 0, -20 + SecondCorrectionYaw, 0))
+Call Check(Character3D.PlayMode(FirstActor, "ThorAttack",
+    Graphics3D.ANIMATION_ONCE, 100))
+Call Check(Character3D.PlayMode(SecondActor, "SwordAttack",
+    Graphics3D.ANIMATION_ONCE, 175))
+Call Check(Character3D.SetAnimationTime(FirstActor, 900))
+Call Check(Character3D.SetAnimationTime(SecondActor, 900))
+Call Check(Character3D.Update(FirstActor, 100))
+Call Check(Character3D.Update(SecondActor, 100))
+
+FirstHead = Character3D.SocketPosition(FirstActor, "HammerHead", 1)
+SecondHead = Character3D.SocketPosition(SecondActor, "HammerHead", 1)
+
+Call Check(Character3D.AnimationTime(FirstActor) <> Character3D.AnimationTime(SecondActor))
+Call Check(FirstHead.X <> SecondHead.X And FirstHead.Y > -100 And SecondHead.Y > -100)
+
+Call OrinStorm.SetStyle(FirstStorm, 1)
+Call OrinStorm.SetStyle(SecondStorm, 3)
+Call OrinStorm.Update(FirstStorm, FirstActor, "ThorAttack", Target, Camera,
+    50, True, True, True, False, False, FirstLight)
+Call OrinStorm.Update(SecondStorm, SecondActor, "SwordAttack", Target, Camera,
+    50, True, True, True, False, False, SecondLight)
+Call Check(SceneVfx3D.BeginFrame(VfxClock, 50, False, False))
+Call Check(SceneVfx3D.Advance(VfxClock, Camera, False, True))
+Call Check(OrinStorm.EffectiveEffectCount(FirstStorm) =
+    OrinStorm.MAX_LIGHTNING_EFFECTS_PER_CONTEXT)
+Call Check(OrinStorm.EffectiveEffectCount(SecondStorm) > 0)
+Call Check(OrinStorm.FallbackCause(FirstStorm) = OrinStorm.FALLBACK_CONTEXT_BUDGET)
+Call Check(OrinStorm.TrailParticleCount(FirstStorm) > 0)
+Call Check(OrinStorm.TrailParticleCount(SecondStorm) > 0)
+Call Check(Graphics3D.LightValue3D(Graphics3D.LIGHT_QUERY_LOCAL,
+    LightPool3D.RendererSlot(FirstLight), 11) > 0)
+Call Check(Graphics3D.LightValue3D(Graphics3D.LIGHT_QUERY_LOCAL,
+    LightPool3D.RendererSlot(SecondLight), 11) > 0)
+
+FirstTailCount = OrinStorm.TrailParticleCount(SecondStorm)
+
+FrameReady = Scene3D.Begin(Camera, 3, 7, 16)
+
+If FrameReady Then
+
+    FrameReady = Character3D.Draw(FirstActor)
+    FrameReady = Character3D.Draw(SecondActor) And FrameReady
+
+    Call OrinStorm.Draw(FirstStorm)
+    Call OrinStorm.Draw(SecondStorm)
+
+    FrameReady = SceneVfx3D.DrawLightning(True) And FrameReady
+
+End If
+
+Ready = Scene3D.EndScene() And Ready
+
+Show Screen
+
+Call Check(FrameReady And Ready)
+Call Check(Graphics3D.VfxValue3D(Graphics3D.VFX_QUERY_RIBBON_DRAWS) > 0)
+Call Check(VfxClock.LightningAdvanceCount = 1)
+Call Check(Not SceneVfx3D.Advance(VfxClock, Camera, False, True))
+Call Check(VfxClock.DuplicateAdvanceCount = 1)
+
+RejectedEffect = Lightning.StartAt("StoredStorm", CapacitySource, CapacityTarget,
+    8002, Lightning.QUALITY_LOW)
+
+Call Check(Lightning.Value(Lightning.QUERY_LIVE_EFFECTS, RejectedEffect) =
+    Lightning.MAX_EFFECTS)
+Call Check(RejectedEffect.Slot = 0 And
+    Lightning.Value(Lightning.QUERY_LAST_ERROR, RejectedEffect) = Lightning.ERROR_CAPACITY)
+Call Check(Lightning.Value(Lightning.QUERY_LIVE_EFFECTS, RejectedEffect) = Lightning.MAX_EFFECTS)
+
+Ready = Character3D.PlayMode(SecondActor, "Idle", Graphics3D.ANIMATION_LOOP, 80) And Ready
+Ready = Character3D.SetAnimationTime(SecondActor, 0) And Ready
+
+Call OrinStorm.Update(SecondStorm, SecondActor, "Idle", Target, Camera,
+    50, True, True, True, False, False, SecondLight)
+
+Call Check(OrinStorm.TrailParticleCount(SecondStorm) > 0 And
+    OrinStorm.TrailParticleCount(SecondStorm) <= FirstTailCount)
+
+ThunderBefore = OrinStorm.ThunderEventCount(FirstStorm)
+Ready = Character3D.SetAnimationTime(FirstActor, 2500) And Ready
+
+Call OrinStorm.Update(SecondStorm, SecondActor, "Idle", Target, Camera,
+    50, True, True, True, True, False, SecondLight)
+Call OrinStorm.Update(FirstStorm, FirstActor, "ThorAttack", Target, Camera,
+    50, True, False, True, True, False, FirstLight)
+Call Check(SceneVfx3D.BeginFrame(VfxClock, 50, False, True))
+Call Check(SceneVfx3D.Advance(VfxClock, Camera, False, True))
+Call Check(OrinStorm.TrailParticleCount(FirstStorm) = 0)
+Call Check(OrinStorm.RenderVisibility(FirstStorm) = 1)
+Call Check(Graphics3D.LightValue3D(Graphics3D.LIGHT_QUERY_LOCAL,
+    LightPool3D.RendererSlot(FirstLight), 11) = 0)
+Call Check(OrinStorm.EffectiveEffectCount(SecondStorm) > 0)
+Call Check(VfxClock.LightningRestageCount = 1)
+
+Call OrinStorm.Update(SecondStorm, SecondActor, "Idle", Target, Camera,
+    50, True, True, True, False, False, SecondLight)
+Call OrinStorm.Update(FirstStorm, FirstActor, "ThorAttack", Target, Camera,
+    50, True, True, True, False, False, FirstLight)
+Call Check(SceneVfx3D.BeginFrame(VfxClock, 50, False, False))
+Call Check(SceneVfx3D.Advance(VfxClock, Camera, False, True))
+Call Check(OrinStorm.ThunderEventCount(FirstStorm) = ThunderBefore)
+Call Check(OrinStorm.RenderVisibility(FirstStorm) = 2)
+
+Call OrinStorm.SetSceneComfort(OrinStorm.SCENE_COMFORT_OFF)
+
+Call Check(OrinStorm.SceneComfortName() = "Flash/Shake Off")
+Call Check(OrinStorm.StyleName(FirstStorm) = "Storm Lance")
+Call Check(OrinStorm.StyleName(SecondStorm) = "Godstorm")
+
+Ready = Character3D.SetVisible(FirstActor, False) And Ready
+
+Call OrinStorm.Update(FirstStorm, FirstActor, "ThorAttack", Target, Camera,
+    50, False, True, True, True, False, FirstLight)
+Call Check(OrinStorm.EffectiveEffectCount(FirstStorm) = 0)
+Call Check(OrinStorm.RenderVisibility(FirstStorm) = 0)
+Call Check(OrinStorm.EffectiveEffectCount(SecondStorm) > 0)
+
+StaleStorm = FirstStorm
+Destroyed = OrinStorm.Destroy(FirstStorm)
+
+Call Check(Destroyed And Not OrinStorm.IsValid(StaleStorm))
+Call Check(LightPool3D.Release(FirstLight))
+Call Check(OrinStorm.IsValid(SecondStorm) And LightPool3D.IsValid(SecondLight))
+
+ReplacementStorm = OrinStorm.Create()
+
+Call Check(OrinStorm.IsValid(ReplacementStorm))
+Call Check(ReplacementStorm.Handle <> StaleStorm.Handle)
+Call Check(Not OrinStorm.IsValid(StaleStorm))
+Call Check(OrinStorm.TrailRequestedSimulation(SecondStorm) =
+    Graphics3D.GPU_PARTICLE_SIMULATION_AUTO)
+Call Check(OrinStorm.TrailEffectiveSimulation(SecondStorm) =
+    Graphics3D.GPU_PARTICLE_SIMULATION_CPU_DETERMINISTIC Or
+    OrinStorm.TrailEffectiveSimulation(SecondStorm) =
+        Graphics3D.GPU_PARTICLE_SIMULATION_GPU_FAST)
+
+Call Character3D.Destroy(FirstActor)
+Call Character3D.Destroy(SecondActor)
+
+Destroyed = OrinStorm.Destroy(ReplacementStorm)
+Destroyed = OrinStorm.Destroy(SecondStorm) And Destroyed
+
+Call Check(Destroyed)
+Call Check(LightPool3D.Release(SecondLight))
+Call Check(LightPool3D.LiveLeaseCount() = 0)
+
+Call OrinStorm.Shutdown()
+Call Lightning.Shutdown()
+Call LightPool3D.Shutdown()
+Call Character3D.Shutdown()
+Call Scene3D.Shutdown()
+Call Check(Character3D.LiveActorCount() = 0)
+Call Check(Lightning.Value(Lightning.QUERY_LIVE_EFFECTS, RejectedEffect) = 0)
+Call Check(Graphics3D.GpuParticleValue3D(Graphics3D.GPU_PARTICLE_QUERY_LIVE_SYSTEMS) = 0)
+
+If Failures = 0 Then
+    Print "Character Viewer two-Orin isolation tests passed"
+Else
+    Print "Character Viewer two-Orin isolation tests failed: "; Failures
+End If
+
+Sub Check(Condition As Boolean)
+
+    CheckIndex = CheckIndex + 1
+
+    If Not Condition Then
+        Failures = Failures + 1
+        Print "Two-Orin isolation failed check "; CheckIndex
+    End If
+
+End Sub

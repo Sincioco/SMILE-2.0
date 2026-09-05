@@ -590,7 +590,10 @@ Do
 
             Call CaptureViewerFailure(12)
 
-            If SwordFire.Slot <> 0 And Not SwordFireFailed Then
+            If (SwordVisible And
+                SwordFireVisible And
+                SwordFire.Slot <> 0 And
+                Not SwordFireFailed) Then
                 SwordFireFailed = Not Fire.Draw(SwordFire)
             End If
 
@@ -1086,11 +1089,7 @@ End Function
 
 Sub DestroyDragon()
 
-    Dim Ok As Boolean
-
-    If DragonBreath.Slot <> 0 Then
-        Ok = Fire.Destroy(DragonBreath)
-    End If
+    Call ClearDragonOwnedEffects()
 
     If DragonInspection Then
         Dragon.Handle = 0
@@ -1098,6 +1097,18 @@ Sub DestroyDragon()
 
         Call Character3D.Destroy(Dragon)
     End If
+
+End Sub
+
+Sub ClearDragonOwnedEffects()
+
+    Dim Ok As Boolean
+
+    If DragonBreath.Slot <> 0 Then
+        Ok = Fire.Destroy(DragonBreath)
+    End If
+
+    Call DragonPresence.Cancel(DragonLight)
 
 End Sub
 
@@ -1113,6 +1124,14 @@ Sub UpdateDragon()
     Dim Ok As Boolean
 
     If Not DragonAvailable Or Not Character3D.IsValid(Dragon) Then
+        Call ClearDragonOwnedEffects()
+
+        Return
+    End If
+
+    If Not DragonVisible Then
+        Call ClearDragonOwnedEffects()
+
         Return
     End If
 
@@ -1850,7 +1869,13 @@ End Sub
 Sub ToggleDragon()
 
     If DragonAvailable Then
+
         DragonVisible = Not DragonVisible
+
+        If Not DragonVisible Then
+            Call ClearDragonOwnedEffects()
+        End If
+
     End If
 
 End Sub
@@ -1862,6 +1887,11 @@ Sub ToggleSword()
         SwordVisible = Not SwordVisible
         Ready = Character3D.SetPartVisible(DragonOpponent.Actor, WEAPON_PART_INDEX, SwordVisible) And Ready
         Ready = Character3D.SetPartVisible(PartyCompanion.Actor, WEAPON_PART_INDEX, SwordVisible) And Ready
+
+        If Not SwordVisible Then
+            Call HideSwordEffects()
+        End If
+
         Return
 
     End If
@@ -1879,6 +1909,10 @@ Sub ToggleSword()
             Ready = Character3D.SetPartVisible(PartyCompanion.Actor, WEAPON_PART_INDEX, SwordVisible) And Ready
         End If
 
+        If Not SwordVisible Then
+            Call HideSwordEffects()
+        End If
+
     End If
 
 End Sub
@@ -1890,6 +1924,11 @@ Sub ToggleShield()
         ShieldVisible = Not ShieldVisible
         Ready = Character3D.SetPartVisible(DragonOpponent.Actor, SHIELD_PART_INDEX, ShieldVisible) And Ready
         Ready = Character3D.SetPartVisible(PartyCompanion.Actor, SHIELD_PART_INDEX, ShieldVisible) And Ready
+
+        If Not ShieldVisible Then
+            Call HideShieldEffects()
+        End If
+
         Return
 
     End If
@@ -1905,6 +1944,10 @@ Sub ToggleShield()
 
         If PartyMode And PartyReady Then
             Ready = Character3D.SetPartVisible(PartyCompanion.Actor, SHIELD_PART_INDEX, ShieldVisible) And Ready
+        End If
+
+        If Not ShieldVisible Then
+            Call HideShieldEffects()
         End If
 
     End If
@@ -2022,6 +2065,9 @@ Sub ToggleEpicGlow()
 
         If EpicGlowVisible Then
             Call ResetEpicGlowTrails()
+        Else
+
+            Call ClearEquipmentGlowTrails()
         End If
 
     End If
@@ -2713,27 +2759,45 @@ Function HandleInterfacePointer() As Boolean
     Else If PointerInRectangle(PanelLeft + 94, 444, 76, 22) Then
 
         If DragonInspection Then
+
             DragonHeadTracking = Not DragonHeadTracking
+
         Else If ProfileIndex = ViewerProfiles.PROFILE_ORIN Then
+
             Call OrinStorm.CycleStyle(OrinStormContext)
+
         Else
             SwordFireVisible = Not SwordFireVisible
+
+            If Not SwordFireVisible Then
+                Call ClearSwordFire()
+            End If
+
         End If
 
     Else If PointerInRectangle(PanelLeft + 174, 444, 78, 22) Then
 
         If DragonInspection Then
+
             DragonCounter = (DragonCounter + 1) Mod 2
+
         Else If ProfileIndex = ViewerProfiles.PROFILE_ORIN Then
+
             Call OrinStorm.CycleStyle(OrinStormContext)
+
         Else
             ShieldFireVisible = Not ShieldFireVisible
+
+            If Not ShieldFireVisible Then
+                Call ClearShieldFire()
+            End If
+
         End If
 
     Else If (ProfileIndex = ViewerProfiles.PROFILE_ORIN And
         PointerInRectangle(PanelLeft + 12, 470, 128, 20)) Then
 
-        Call OrinStorm.CycleComfort(OrinStormContext)
+        Call OrinStorm.CycleSceneComfort()
 
     Else If (ProfileIndex = ViewerProfiles.PROFILE_ORIN And
         PointerInRectangle(PanelLeft + 144, 470, 108, 20)) Then
@@ -3572,6 +3636,18 @@ Sub UpdateEquipmentFire()
         Return
     End If
 
+    If Not SwordVisible Then
+        Call HideSwordEffects()
+    Else If Not SwordFireVisible Then
+        Call ClearSwordFire()
+    End If
+
+    If Not ShieldVisible Then
+        Call HideShieldEffects()
+    Else If Not ShieldFireVisible Then
+        Call ClearShieldFire()
+    End If
+
     EquipmentFireFirstSample = VisualHistoryDirty Or EquipmentFireEpoch <> VisualContinuityEpoch
 
     If EquipmentFireFirstSample Then
@@ -3780,6 +3856,12 @@ Sub UpdateShieldFire()
 
     If Not ShieldFlameStyle Then
 
+        If Not ShieldVisible Or Not ShieldFireVisible Then
+            Call ArinShieldRim.Shutdown()
+
+            Return
+        End If
+
         For Index = 0 To 2
 
             If ShieldFire[Index].Slot <> 0 Then
@@ -3887,6 +3969,10 @@ Sub DrawShieldFire()
 
     Dim Index As Number
     Dim Ok As Boolean
+
+    If Not ShieldVisible Or Not ShieldFireVisible Then
+        Return
+    End If
 
     If Not ShieldFlameStyle Then
         Call ArinShieldRim.Draw()
@@ -4439,14 +4525,27 @@ End Sub
 
 Sub ClearEquipmentFire()
 
-    Dim Index As Number
-    Dim Ok As Boolean
+    Call ClearSwordFire()
+    Call ClearShieldFire()
 
-    Call ArinShieldRim.Shutdown()
+End Sub
+
+Sub ClearSwordFire()
+
+    Dim Ok As Boolean
 
     If SwordFire.Slot <> 0 Then
         Ok = Fire.Destroy(SwordFire)
     End If
+
+End Sub
+
+Sub ClearShieldFire()
+
+    Dim Index As Number
+    Dim Ok As Boolean
+
+    Call ArinShieldRim.Shutdown()
 
     For Index = 0 To 2
 
@@ -4455,6 +4554,51 @@ Sub ClearEquipmentFire()
         End If
 
     End For
+
+End Sub
+
+Sub ClearEquipmentGlowTrails()
+
+    Dim Ok As Boolean
+
+    SwordTrailActive = False
+    ShieldTrailActive = False
+
+    If SwordTrail.Handle <> 0 Then
+        Ok = Graphics3D.CommitParticleBatch3D(SwordTrail, 0)
+    End If
+
+    If ShieldTrail.Handle <> 0 Then
+        Ok = Graphics3D.CommitParticleBatch3D(ShieldTrail, 0)
+    End If
+
+End Sub
+
+Sub HideSwordEffects()
+
+    Dim Ok As Boolean
+
+    Call ClearSwordFire()
+
+    SwordTrailActive = False
+
+    If SwordTrail.Handle <> 0 Then
+        Ok = Graphics3D.CommitParticleBatch3D(SwordTrail, 0)
+    End If
+
+End Sub
+
+Sub HideShieldEffects()
+
+    Dim Ok As Boolean
+
+    Call ClearShieldFire()
+
+    ShieldTrailActive = False
+
+    If ShieldTrail.Handle <> 0 Then
+        Ok = Graphics3D.CommitParticleBatch3D(ShieldTrail, 0)
+    End If
 
 End Sub
 
@@ -7141,7 +7285,7 @@ Sub DrawViewerOverlay()
             Call DrawButton(PanelLeft + 94, 444, 158, 22,
                 OrinStorm.StyleName(OrinStormContext), True)
             Call DrawButton(PanelLeft + 12, 470, 128, 20,
-                OrinStorm.ComfortName(OrinStormContext), True)
+                OrinStorm.SceneComfortName(), True)
             Call DrawButton(PanelLeft + 144, 470, 108, 20,
                 VfxPlaybackLabel("Lightning", LightningAnimationPaused), LightningAnimationPaused)
 

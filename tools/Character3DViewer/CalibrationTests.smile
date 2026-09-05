@@ -187,6 +187,33 @@ Call UpdateEquipmentFire()
 Call AdvanceSceneVfx()
 Call CalibrationCheck(Fire.Value(10, SwordFire) = TestFireAge, "Paused flame clock stays frozen")
 
+TestFireGeneration = SwordFire.Generation
+SwordVisible = False
+ShieldVisible = False
+
+Call UpdateEquipmentFire()
+Call AdvanceSceneVfx()
+Call CalibrationCheck(SwordFire.Slot = 0, "Hidden sword destroys frozen Fire immediately")
+Call CalibrationCheck(Not ArinShieldRim.IsVisible(),
+    "Hidden shield clears the frozen ember outline immediately")
+
+SwordVisible = True
+ShieldVisible = True
+
+Call UpdateEquipmentFire()
+Call AdvanceSceneVfx()
+Call CalibrationCheck(SwordFire.Slot = 0 And Not ArinShieldRim.IsVisible(),
+    "Showing equipment while frozen does not resurrect stale effects")
+
+FlameAnimationPaused = False
+
+Call UpdateEquipmentFire()
+Call AdvanceSceneVfx()
+Call CalibrationCheck(SwordFire.Slot <> 0 And SwordFire.Generation <> TestFireGeneration,
+    "Fire resumes from a new current attachment after a frozen hide")
+
+FlameAnimationPaused = True
+
 TestVisualEpoch = VisualContinuityEpoch
 
 Call SeekFirstAnimationFrame()

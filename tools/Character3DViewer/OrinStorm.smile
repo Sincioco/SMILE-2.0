@@ -12,6 +12,14 @@ Import Smile.Simple3D.Math3D As Math3D
 Import Smile.Simple3D.FixedMath As Fixed
 
 Public Const MAX_CONTEXTS = 4
+Public Const SCENE_COMFORT_FULL = 1
+Public Const SCENE_COMFORT_REDUCED = 2
+Public Const SCENE_COMFORT_OFF = 3
+Public Const MAX_LIGHTNING_EFFECTS_PER_CONTEXT = 4
+Public Const FALLBACK_NONE = 0
+Public Const FALLBACK_CONTEXT_BUDGET = 1
+Public Const FALLBACK_SHARED_CAPACITY = 2
+Public Const FALLBACK_PARTICLE_BACKEND = 3
 
 Private Const HANDLE_FACTOR = 10
 Private Const MAX_GENERATION = 1000000
@@ -29,6 +37,7 @@ End Type
 Private Dim Prepared As Boolean
 Private Dim EngineAvailable As Boolean
 Private Dim WorkResult As Boolean
+Private Dim SceneComfort As Number
 Private Dim ContextUsed[4] As Boolean
 Private Dim ContextGeneration[4] As Number
 Private Dim Effects[4, 8] As Lightning.LightningEffect
@@ -36,13 +45,14 @@ Private Dim PreviousClips[4] As Text
 Private Dim PreviousTimes[4] As Number
 Private Dim StateTexts[4] As Text
 Private Dim ThunderPlayed[4] As Boolean
+Private Dim ThunderEventCounts[4] As Number
 Private Dim FirstErrors[4] As Number
 Private Dim ChargeValues[4] As ChargeState
-Private Dim ComfortValues[4] As Number
 Private Dim AttackStyles[4] As Number
 Private Dim FlashOpacities[4] As Number
 Private Dim ImpactShakes[4] As Number
 Private Dim RenderVisible[4] As Boolean
+Private Dim WeaponRenderVisible[4] As Boolean
 Private Dim FrozenRebase[4] As Boolean
 Private Dim HammerTrails[4] As Core.GpuParticleSystem3D
 Private Dim TrailPrevious[4] As Core.Vector3
@@ -51,6 +61,11 @@ Private Dim TrailCursors[4] As Number
 Private Dim TrailSerials[4] As Number
 Private Dim AttackPhases[4] As Number
 Private Dim ActionIdentities[4] As Number
+Private Dim RequestedEffects[4] As Number
+Private Dim EffectiveEffects[4] As Number
+Private Dim RequestedQualities[4] As Number
+Private Dim EffectiveQualities[4] As Number
+Private Dim FallbackCauses[4] As Number
 Private Dim ImpactGrounds[4] As Core.Vector3
 Private Dim RimNames[8] As Text
 Private Dim TrailTexture As Core.Texture3D
@@ -135,6 +150,7 @@ Public Sub Prepare(LightningAvailable As Boolean)
 
     EngineAvailable = LightningAvailable
     Prepared = True
+    SceneComfort = SCENE_COMFORT_REDUCED
     RimNames[0] = "ShieldRim0"
     RimNames[1] = "ShieldRim1"
     RimNames[2] = "ShieldRim2"
@@ -149,7 +165,7 @@ Public Sub Prepare(LightningAvailable As Boolean)
         TrailTexture = Graphics3D.LoadTexture3D("Assets/Lightning/lightning-spark.png")
         TrailMaterial = Graphics3D.CreateEffectMaterial3D(TrailTexture,
             Graphics3D.MATERIAL_ALPHA_ADDITIVE, 300)
-        WorkResult = Lightning.SetFlashMode(2)
+        WorkResult = Lightning.SetFlashMode(SceneComfort)
 
     End If
 
@@ -179,39 +195,29 @@ Public Function Create() As Context
             PreviousTimes[Index] = 0
             StateTexts[Index] = "Stored Storm"
             ChargeValues[Index].Energy = 1000
-            ComfortValues[Index] = 2
             AttackStyles[Index] = 0
             FlashOpacities[Index] = 0
             ImpactShakes[Index] = 0
             RenderVisible[Index] = False
+            WeaponRenderVisible[Index] = False
             FrozenRebase[Index] = False
             TrailHasPrevious[Index] = False
             TrailCursors[Index] = 0
             TrailSerials[Index] = 0
             AttackPhases[Index] = 0
             ActionIdentities[Index] = 1
+            RequestedEffects[Index] = 0
+            EffectiveEffects[Index] = 0
+            RequestedQualities[Index] = Lightning.QUALITY_MEDIUM
+            EffectiveQualities[Index] = 0
+            FallbackCauses[Index] = FALLBACK_NONE
             ThunderPlayed[Index] = False
+            ThunderEventCounts[Index] = 0
             FirstErrors[Index] = 0
 
             Call BeginAction(ChargeValues[Index])
 
-            If EngineAvailable And TrailMaterial.Handle <> 0 Then
-
-                HammerTrails[Index] = Graphics3D.CreateGpuParticleSystem3D(1024,
-                    TrailMaterial, Graphics3D.GPU_PARTICLE_SIMULATION_AUTO, 10)
-
-                If HammerTrails[Index].Handle <> 0 Then
-
-                    WorkResult = Graphics3D.SetGpuParticleRender3D(HammerTrails[Index],
-                        Graphics3D.GPU_PARTICLE_SHADER_THERMAL, 2)
-                    WorkResult = Graphics3D.SetGpuParticleForces3D(HammerTrails[Index],
-                        0, -75, 0, 0, 0, 0, 0, 170) And WorkResult
-                    WorkResult = Graphics3D.SetGpuParticleThermalEvolution3D(
-                        HammerTrails[Index], 0, 250, 0, 800) And WorkResult
-
-                End If
-
-            End If
+            Call CreateHammerTrail(Index)
 
             If EngineAvailable And HammerTrails[Index].Handle = 0 Then
                 FirstErrors[Index] = Lightning.ERROR_RENDERER
@@ -228,6 +234,43 @@ Public Function Create() As Context
 
 End Function
 
+Private Sub CreateHammerTrail(Slot As Number)
+
+    If (Not EngineAvailable Or
+        TrailMaterial.Handle = 0 Or
+        HammerTrails[Slot].Handle <> 0) Then
+        Return
+    End If
+
+    HammerTrails[Slot] = Graphics3D.CreateGpuParticleSystem3D(1024,
+        TrailMaterial, Graphics3D.GPU_PARTICLE_SIMULATION_AUTO, 10)
+
+    If HammerTrails[Slot].Handle <> 0 Then
+
+        WorkResult = Graphics3D.SetGpuParticleRender3D(HammerTrails[Slot],
+            Graphics3D.GPU_PARTICLE_SHADER_THERMAL, 2)
+        WorkResult = Graphics3D.SetGpuParticleForces3D(HammerTrails[Slot],
+            0, -75, 0, 0, 0, 0, 0, 170) And WorkResult
+        WorkResult = Graphics3D.SetGpuParticleThermalEvolution3D(
+            HammerTrails[Slot], 0, 250, 0, 800) And WorkResult
+
+    Else If FirstErrors[Slot] = 0 Then
+
+        FirstErrors[Slot] = Lightning.ERROR_RENDERER
+
+    End If
+
+End Sub
+
+Private Sub ClearHammerTrail(Slot As Number)
+
+    Call Graphics3D.DestroyGpuParticleSystem3D(HammerTrails[Slot])
+
+    TrailHasPrevious[Slot] = False
+    TrailCursors[Slot] = 0
+
+End Sub
+
 Private Sub ClearEffect(Slot As Number, Index As Number)
 
     If Effects[Slot, Index].Slot <> 0 Then
@@ -235,6 +278,39 @@ Private Sub ClearEffect(Slot As Number, Index As Number)
     End If
 
 End Sub
+
+Private Function OwnedEffectCount(Slot As Number) As Number
+
+    Dim CurrentCount As Number
+    Dim Index As Number
+
+    For Index = 0 To 7
+
+        If Effects[Slot, Index].Slot <> 0 Then
+            CurrentCount = CurrentCount + 1
+        End If
+
+    End For
+
+    Return CurrentCount
+
+End Function
+
+Private Function CanAdmitEffect(Slot As Number, Index As Number,
+    Quality As Number) As Boolean
+
+    RequestedEffects[Slot] = RequestedEffects[Slot] + 1
+    RequestedQualities[Slot] = Max(RequestedQualities[Slot], Quality)
+
+    If (Effects[Slot, Index].Slot = 0 And
+        OwnedEffectCount(Slot) >= MAX_LIGHTNING_EFFECTS_PER_CONTEXT) Then
+        FallbackCauses[Slot] = FALLBACK_CONTEXT_BUDGET
+        Return False
+    End If
+
+    Return True
+
+End Function
 
 Public Function Destroy(ByRef Value As Context) As Boolean
 
@@ -251,10 +327,11 @@ Public Function Destroy(ByRef Value As Context) As Boolean
         Call ClearEffect(Slot, Index)
     End For
 
-    Call Graphics3D.DestroyGpuParticleSystem3D(HammerTrails[Slot])
+    Call ClearHammerTrail(Slot)
 
     ContextUsed[Slot] = False
     RenderVisible[Slot] = False
+    WeaponRenderVisible[Slot] = False
     TrailHasPrevious[Slot] = False
     Value.Handle = 0
 
@@ -300,6 +377,10 @@ Private Sub Attach(Slot As Number, Index As Number, Source As Core.Vector3,
         EffectQuality = Lightning.QUALITY_ULTRA
     End If
 
+    If Not CanAdmitEffect(Slot, Index, EffectQuality) Then
+        Return
+    End If
+
     If Math3D.Distance(Source, Target) < 1 Then
         Return
     End If
@@ -324,14 +405,23 @@ Private Sub Attach(Slot As Number, Index As Number, Source As Core.Vector3,
             1307 + Slot * 997 + Index * 137, EffectQuality)
 
         If Effects[Slot, Index].Slot = 0 Then
+
             FirstErrors[Slot] = Lightning.Value(Lightning.QUERY_LAST_ERROR, Effects[Slot, 0])
+
+            If FirstErrors[Slot] = Lightning.ERROR_CAPACITY Then
+                FallbackCauses[Slot] = FALLBACK_SHARED_CAPACITY
+            End If
+
             Return
+
         End If
 
         WorkResult = Lightning.SetBranchBudget(Effects[Slot, Index], Branches)
         WorkResult = Lightning.SetSparkIntensity(Effects[Slot, Index], 75) And WorkResult
 
     End If
+
+    EffectiveQualities[Slot] = Max(EffectiveQualities[Slot], EffectQuality)
 
     WorkResult = Lightning.SetEndpoints(Effects[Slot, Index], Source, Target)
     WorkResult = Lightning.SetStyle(Effects[Slot, Index], Width, Power) And WorkResult
@@ -422,6 +512,10 @@ Private Sub UpdateRim(Slot As Number, Actor As Character3D.Actor, Visible As Boo
         Return
     End If
 
+    If Not CanAdmitEffect(Slot, 0, Lightning.QUALITY_MEDIUM) Then
+        Return
+    End If
+
     FirstPoint = Character3D.SocketPosition(Actor, "ShieldRim0", 0)
     SecondPoint = Character3D.SocketPosition(Actor, "ShieldRim1", 0)
 
@@ -431,8 +525,15 @@ Private Sub UpdateRim(Slot As Number, Actor As Character3D.Actor, Visible As Boo
             1300 + Slot * 997, Lightning.QUALITY_MEDIUM)
 
         If Effects[Slot, 0].Slot = 0 Then
+
             FirstErrors[Slot] = Lightning.Value(Lightning.QUERY_LAST_ERROR, Effects[Slot, 0])
+
+            If FirstErrors[Slot] = Lightning.ERROR_CAPACITY Then
+                FallbackCauses[Slot] = FALLBACK_SHARED_CAPACITY
+            End If
+
             Return
+
         End If
 
         WorkResult = Lightning.SetStyle(Effects[Slot, 0], 1, 720)
@@ -461,6 +562,8 @@ Private Sub UpdateRim(Slot As Number, Actor As Character3D.Actor, Visible As Boo
         WorkResult = Lightning.SetChainTarget(Effects[Slot, 0], 6, FirstPoint) And WorkResult
 
     End If
+
+    EffectiveQualities[Slot] = Max(EffectiveQualities[Slot], Lightning.QUALITY_MEDIUM)
 
 End Sub
 
@@ -508,10 +611,55 @@ Public Sub Update(Value As Context, Actor As Character3D.Actor, Clip As Text,
     End If
 
     RenderVisible[Slot] = Enabled
+    WeaponRenderVisible[Slot] = Enabled And WeaponVisible
+    RequestedEffects[Slot] = 0
+    EffectiveEffects[Slot] = OwnedEffectCount(Slot)
+    RequestedQualities[Slot] = Lightning.QUALITY_MEDIUM
+    EffectiveQualities[Slot] = 0
+    FallbackCauses[Slot] = FALLBACK_NONE
+
+    If Not Enabled Then
+
+        For Index = 0 To 7
+            Call ClearEffect(Slot, Index)
+        End For
+
+        Call ClearHammerTrail(Slot)
+
+        WorkResult = LightPool3D.Disable(Light)
+        FlashOpacities[Slot] = 0
+        ImpactShakes[Slot] = 0
+        EffectiveEffects[Slot] = 0
+        EffectiveQualities[Slot] = 0
+        FrozenRebase[Slot] = Paused Or MotionPaused
+        PreviousClips[Slot] = Clip
+        PreviousTimes[Slot] = Time
+
+        Return
+
+    End If
+
+    If Not ShieldVisible Then
+        Call ClearEffect(Slot, 0)
+    End If
+
+    If Not WeaponVisible Then
+
+        For Index = 1 To 7
+            Call ClearEffect(Slot, Index)
+        End For
+
+        Call ClearHammerTrail(Slot)
+
+        WorkResult = LightPool3D.Disable(Light)
+        FlashOpacities[Slot] = 0
+        ImpactShakes[Slot] = 0
+
+    End If
 
     If Paused Then
 
-        If Clip <> PreviousClips[Slot] Or Time < PreviousTimes[Slot] Then
+        If Clip <> PreviousClips[Slot] Or Time <> PreviousTimes[Slot] Then
             ActionIdentities[Slot] = ActionIdentities[Slot] + 1
         End If
 
@@ -519,33 +667,7 @@ Public Sub Update(Value As Context, Actor As Character3D.Actor, Clip As Text,
         PreviousClips[Slot] = Clip
         PreviousTimes[Slot] = Time
         TrailHasPrevious[Slot] = False
-
-        If Not Enabled Then
-
-            For Index = 0 To 7
-                Call ClearEffect(Slot, Index)
-            End For
-
-            WorkResult = LightPool3D.Disable(Light)
-            FlashOpacities[Slot] = 0
-
-        Else
-
-            If Not ShieldVisible Then
-                Call ClearEffect(Slot, 0)
-            End If
-
-            If Not WeaponVisible Then
-
-                For Index = 1 To 7
-                    Call ClearEffect(Slot, Index)
-                End For
-
-                WorkResult = LightPool3D.Disable(Light)
-
-            End If
-
-        End If
+        EffectiveEffects[Slot] = OwnedEffectCount(Slot)
 
         Return
 
@@ -561,7 +683,9 @@ Public Sub Update(Value As Context, Actor As Character3D.Actor, Clip As Text,
         ChargeValues[Slot].ContactApplied = Progress >= 350
         ChargeValues[Slot].ReleaseApplied = Progress >= 640
 
-    Else If Clip <> PreviousClips[Slot] Or Time < PreviousTimes[Slot] Then
+    Else If (Clip <> PreviousClips[Slot] Or
+        Time < PreviousTimes[Slot] Or
+        (MotionPaused And Time <> PreviousTimes[Slot])) Then
 
         ActionIdentities[Slot] = ActionIdentities[Slot] + 1
         TrailHasPrevious[Slot] = False
@@ -571,9 +695,9 @@ Public Sub Update(Value As Context, Actor As Character3D.Actor, Clip As Text,
             Call ClearEffect(Slot, Index)
         End For
 
-        ThunderPlayed[Slot] = False
-
-        Call BeginAction(ChargeValues[Slot])
+        ThunderPlayed[Slot] = Progress >= 640
+        ChargeValues[Slot].ContactApplied = Progress >= 350
+        ChargeValues[Slot].ReleaseApplied = Progress >= 640
 
     End If
 
@@ -601,40 +725,37 @@ Public Sub Update(Value As Context, Actor As Character3D.Actor, Clip As Text,
         StateTexts[Slot] = "Lightning Discharge"
     End If
 
-    If Not Enabled Then
+    If Charge Or Release Then
+        Call ClearEffect(Slot, 0)
+        Call ClearEffect(Slot, 2)
+    Else
 
-        TrailHasPrevious[Slot] = False
-
-        For Index = 0 To 7
-            Call ClearEffect(Slot, Index)
-        End For
-
-        WorkResult = Graphics3D.AdvanceGpuParticleSystem3D(HammerTrails[Slot],
-            Min(100, Max(0, Elapsed)))
-        WorkResult = LightPool3D.Disable(Light) And WorkResult
-        FlashOpacities[Slot] = 0
-
-        Return
-
+        Call UpdateRim(Slot, Actor, ShieldVisible)
     End If
-
-    Call UpdateRim(Slot, Actor, ShieldVisible)
 
     Head = Character3D.SocketPosition(Actor, "HammerHead", 1)
     LeftPoint = Character3D.SocketPosition(Actor, "HammerLeft", 1)
     RightPoint = Character3D.SocketPosition(Actor, "HammerRight", 1)
 
-    Call UpdateHammerTrail(Slot, Head, Elapsed, Attack, WeaponVisible,
-        MotionPaused, Paused)
+    If WeaponVisible Then
+        Call CreateHammerTrail(Slot)
+
+        Call UpdateHammerTrail(Slot, Head, Elapsed, Attack, True,
+            MotionPaused, False)
+    End If
 
     If WeaponVisible Then
 
         Call Attach(Slot, 1, LeftPoint, RightPoint, "StoredStorm", 1, Power, 2)
 
-        LeftPoint.Y = LeftPoint.Y + 3
-        RightPoint.Y = RightPoint.Y + 3
+        If Not Charge And Not Release Then
 
-        Call Attach(Slot, 2, RightPoint, LeftPoint, "StoredStorm", 1, Power, 1)
+            LeftPoint.Y = LeftPoint.Y + 3
+            RightPoint.Y = RightPoint.Y + 3
+
+            Call Attach(Slot, 2, RightPoint, LeftPoint, "StoredStorm", 1, Power, 1)
+
+        End If
 
     Else
 
@@ -654,6 +775,7 @@ Public Sub Update(Value As Context, Actor As Character3D.Actor, Clip As Text,
         Not ThunderPlayed[Slot]) Then
 
         ThunderPlayed[Slot] = True
+        ThunderEventCounts[Slot] = ThunderEventCounts[Slot] + 1
         FlashOpacities[Slot] = 180
 
         If Clip = "ThorAttack" Or Clip = "JumpAttack" Then
@@ -668,10 +790,10 @@ Public Sub Update(Value As Context, Actor As Character3D.Actor, Clip As Text,
         WorkResult = Lightning.SetCharge(Effects[Slot, 1], ChargeValues[Slot].Energy)
     End If
 
-    If ComfortValues[Slot] <> 3 And ImpactShakes[Slot] > 0 Then
+    If SceneComfort <> SCENE_COMFORT_OFF And ImpactShakes[Slot] > 0 Then
         ''' A short decaying impact only, never the continuous camera or ordinary slash.
-        Camera.Position.X = Camera.Position.X + Fixed.SinFixed(ImpactShakes[Slot] * 4) * ImpactShakes[Slot] / (Core.FIXED_ONE * ComfortValues[Slot] * 50)
-        Camera.Position.Y = Max(24, Camera.Position.Y + Fixed.SinFixed(ImpactShakes[Slot] * 5) * ImpactShakes[Slot] / (Core.FIXED_ONE * ComfortValues[Slot] * 85))
+        Camera.Position.X = Camera.Position.X + Fixed.SinFixed(ImpactShakes[Slot] * 4) * ImpactShakes[Slot] / (Core.FIXED_ONE * SceneComfort * 50)
+        Camera.Position.Y = Max(24, Camera.Position.Y + Fixed.SinFixed(ImpactShakes[Slot] * 5) * ImpactShakes[Slot] / (Core.FIXED_ONE * SceneComfort * 85))
     End If
 
     If WeaponVisible Then
@@ -681,9 +803,12 @@ Public Sub Update(Value As Context, Actor As Character3D.Actor, Clip As Text,
         WorkResult = LightPool3D.Disable(Light)
     End If
 
-    If (Lightning.Value(Lightning.QUERY_LAST_ERROR, Effects[Slot, 0]) <> 0 And
-        FirstErrors[Slot] = 0) Then
-        FirstErrors[Slot] = Lightning.Value(Lightning.QUERY_LAST_ERROR, Effects[Slot, 0])
+    EffectiveEffects[Slot] = OwnedEffectCount(Slot)
+
+    If (HammerTrails[Slot].Handle <> 0 And
+        HammerTrails[Slot].RequestedSimulation <> HammerTrails[Slot].EffectiveSimulation And
+        FallbackCauses[Slot] = FALLBACK_NONE) Then
+        FallbackCauses[Slot] = FALLBACK_PARTICLE_BACKEND
     End If
 
 End Sub
@@ -797,9 +922,9 @@ Public Sub DrawFlash(Value As Context)
     If (Slot >= 0 And
         EngineAvailable And
         RenderVisible[Slot] And
-        ComfortValues[Slot] <> 3 And
+        SceneComfort <> SCENE_COMFORT_OFF And
         FlashOpacities[Slot] > 0) Then
-        Fill Rectangle 0, 0, Window_Width(), Window_Height(), Rgb(155, 195, 255) Opacity FlashOpacities[Slot] / (ComfortValues[Slot] * 18)
+        Fill Rectangle 0, 0, Window_Width(), Window_Height(), Rgb(155, 195, 255) Opacity FlashOpacities[Slot] / (SceneComfort * 18)
     End If
 
 End Sub
@@ -867,35 +992,41 @@ Public Function StyleName(Value As Context) As Text
 
 End Function
 
-Public Sub CycleComfort(Value As Context)
+Public Sub SetSceneComfort(Value As Number)
 
-    Dim Slot As Number
+    Dim Index As Number
 
-    Slot = RawSlot(Value)
+    SceneComfort = Max(SCENE_COMFORT_FULL, Min(SCENE_COMFORT_OFF, Value))
 
-    If Slot < 0 Then
-        Return
+    If EngineAvailable Then
+        WorkResult = Lightning.SetFlashMode(SceneComfort)
     End If
 
-    ComfortValues[Slot] = ComfortValues[Slot] Mod 3 + 1
-    WorkResult = Lightning.SetFlashMode(ComfortValues[Slot])
+    For Index = 0 To MAX_CONTEXTS - 1
+        FlashOpacities[Index] = 0
+        ImpactShakes[Index] = 0
+    End For
 
 End Sub
 
-Public Function ComfortName(Value As Context) As Text
+Public Sub CycleSceneComfort()
 
-    Dim Slot As Number
+    Call SetSceneComfort(SceneComfort Mod SCENE_COMFORT_OFF + 1)
 
-    Slot = RawSlot(Value)
+End Sub
 
-    If Slot < 0 Then
-        Return "Unavailable"
-    End If
+Public Function SceneComfortValue() As Number
 
-    If ComfortValues[Slot] = 1 Then
+    Return SceneComfort
+
+End Function
+
+Public Function SceneComfortName() As Text
+
+    If SceneComfort = SCENE_COMFORT_FULL Then
         Return "Flash/Shake Full"
-    Else If ComfortValues[Slot] = 2 Then
-        Return "Flash/Shake Low"
+    Else If SceneComfort = SCENE_COMFORT_REDUCED Then
+        Return "Flash/Shake Reduced"
     End If
 
     Return "Flash/Shake Off"
@@ -928,7 +1059,8 @@ Public Sub Draw(Value As Context)
 
     If (Slot >= 0 And
         EngineAvailable And
-        RenderVisible[Slot]) Then
+        RenderVisible[Slot] And
+        WeaponRenderVisible[Slot]) Then
 
         If HammerTrails[Slot].Handle <> 0 Then
             WorkResult = Graphics3D.DrawGpuParticleSystem3D(HammerTrails[Slot])
@@ -987,6 +1119,188 @@ Public Function ActionIdentity(Value As Context) As Number
     End If
 
     ReturnValue = ActionIdentities[Slot]
+
+    Return ReturnValue
+
+End Function
+
+Public Function RequestedEffectCount(Value As Context) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = RawSlot(Value)
+
+    If Slot < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = RequestedEffects[Slot]
+
+    Return ReturnValue
+
+End Function
+
+Public Function EffectiveEffectCount(Value As Context) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = RawSlot(Value)
+
+    If Slot < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = OwnedEffectCount(Slot)
+
+    Return ReturnValue
+
+End Function
+
+Public Function TrailParticleCount(Value As Context) As Number
+
+    Dim ReturnValue As Number
+    Dim Slot As Number
+
+    Slot = RawSlot(Value)
+
+    If Slot < 0 Or HammerTrails[Slot].Handle = 0 Then
+        Return 0
+    End If
+
+    ReturnValue = Graphics3D.GpuParticleValue3D(
+        Graphics3D.GPU_PARTICLE_QUERY_RESOURCE_ACTIVE,
+        HammerTrails[Slot].Handle
+    )
+
+    Return ReturnValue
+
+End Function
+
+Public Function TrailRequestedSimulation(Value As Context) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = RawSlot(Value)
+
+    If Slot < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = HammerTrails[Slot].RequestedSimulation
+
+    Return ReturnValue
+
+End Function
+
+Public Function TrailEffectiveSimulation(Value As Context) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = RawSlot(Value)
+
+    If Slot < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = HammerTrails[Slot].EffectiveSimulation
+
+    Return ReturnValue
+
+End Function
+
+Public Function ThunderEventCount(Value As Context) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = RawSlot(Value)
+
+    If Slot < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = ThunderEventCounts[Slot]
+
+    Return ReturnValue
+
+End Function
+
+Public Function RenderVisibility(Value As Context) As Number
+
+    Dim Slot As Number
+
+    Slot = RawSlot(Value)
+
+    If Slot < 0 Or Not RenderVisible[Slot] Then
+        Return 0
+    End If
+
+    If Not WeaponRenderVisible[Slot] Then
+        Return 1
+    End If
+
+    Return 2
+
+End Function
+
+Public Function RequestedQuality(Value As Context) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = RawSlot(Value)
+
+    If Slot < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = RequestedQualities[Slot]
+
+    Return ReturnValue
+
+End Function
+
+Public Function EffectiveQuality(Value As Context) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = RawSlot(Value)
+
+    If Slot < 0 Then
+        Return 0
+    End If
+
+    ReturnValue = EffectiveQualities[Slot]
+
+    Return ReturnValue
+
+End Function
+
+Public Function FallbackCause(Value As Context) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Slot As Number
+
+    Slot = RawSlot(Value)
+
+    If Slot < 0 Then
+        Return FALLBACK_SHARED_CAPACITY
+    End If
+
+    ReturnValue = FallbackCauses[Slot]
 
     Return ReturnValue
 
