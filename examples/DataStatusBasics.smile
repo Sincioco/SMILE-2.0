@@ -1,0 +1,37 @@
+''' Checked persistence: only report Saved after a durable write succeeds.
+
+Option Explicit
+
+Dim Bytes[8] As Number
+Dim ByteCount As Number
+Dim Status As Number
+
+Bytes[0] = 12
+Bytes[1] = 34
+
+Save Data Bytes Count 2 To "Data Status Example" Status Status
+
+If Status = DATA_STATUS_OK Then
+    Print "Saved"
+Else
+    Print "Save failed; previous data kept. Status "; Status
+End If
+
+Load Data "Data Status Example" Into Bytes Count ByteCount Status Status
+
+If Status = DATA_STATUS_OK Or Status = DATA_STATUS_RECOVERED Then
+    Print "Loaded bytes: "; ByteCount
+Else
+    Print "Load unavailable. Status "; Status
+End If
+
+''' Invalid bytes are rejected without terminating the program or replacing the save.
+Bytes[0] = 256
+
+Save Data Bytes Count 1 To "Data Status Example" Status Status
+
+Print "Rejected invalid byte: "; Status = DATA_STATUS_INVALID
+
+Load Data "Data Status Example" Into Bytes Count ByteCount Status Status
+
+Print "Previous value preserved: "; Bytes[0] = 12

@@ -34,6 +34,10 @@ $nativeIdentityHash = [Convert]::ToHexString([Security.Cryptography.SHA256]::Has
     [Text.Encoding]::UTF8.GetBytes($applicationId))).ToLowerInvariant()
 $testDataRoot = Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) `
     "SMILE 2.0\Games\$nativeIdentityHash\Data"
+# A directory at one disposable probe filename forces a real filesystem write failure.
+$deniedKeyHash = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData(
+    [Text.Encoding]::UTF8.GetBytes('Viewer Denied Storage Probe'))).ToLowerInvariant()
+$null = New-Item -ItemType Directory -Path (Join-Path $testDataRoot "$deniedKeyHash.bin") -Force
 foreach ($characterName in @('Arin', 'Orin')) {
     & (Join-Path $PSScriptRoot 'sync-arin-v5-7-calibration.ps1') `
         -Character $characterName -Mode Restore -DataRoot $testDataRoot

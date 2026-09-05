@@ -2620,10 +2620,12 @@ static void smile_data_error(const char* message)
     }
 }
 
-long long smile_load_data_value(void* owned_key, long long* destination, long long capacity)
+/* Values match the shared DATA_STATUS_* constants. No checked operation displays UI or exits. */
+enum { SMILE_DATA_OK, SMILE_DATA_MISSING, SMILE_DATA_RECOVERED, SMILE_DATA_INVALID,
+    SMILE_DATA_UNAVAILABLE, SMILE_DATA_CORRUPT, SMILE_DATA_TOO_LARGE };
+
+static int smile_data_read_file(const WCHAR* path, long long* destination, long long capacity, long long* count)
 {
-    SmileText* key = (SmileText*)owned_key;
-    WCHAR path[2048];
     HANDLE file = INVALID_HANDLE_VALUE;
     LARGE_INTEGER size;
     unsigned char* envelope = 0;
@@ -2631,43 +2633,81 @@ long long smile_load_data_value(void* owned_key, long long* destination, long lo
     DWORD read = 0;
     uint32_t payload_length;
     uint32_t index;
-    if (destination == 0 || capacity < 0 || capacity > 1024 * 1024)
-        goto fail;
-    smile_zero_memory(destination, (SIZE_T)capacity * sizeof(long long));
-    if (!smile_storage_data_path(smile_text_bytes(key), smile_text_length(key), path,
-        (int)(sizeof(path) / sizeof(path[0])))) goto fail;
+    int status = SMILE_DATA_UNAVAILABLE;
     file = CreateFileW(path, GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
     if (file == INVALID_HANDLE_VALUE)
     {
-        smile_text_release(key);
-        return 0;
+        DWORD error = GetLastError();
+        return error == ERROR_FILE_NOT_FOUND || error == ERROR_PATH_NOT_FOUND ? SMILE_DATA_MISSING : SMILE_DATA_UNAVAILABLE;
     }
-    if (!GetFileSizeEx(file, &size) || size.QuadPart < 44 || size.QuadPart > 1024 * 1024 + 44)
-        goto fail;
+    if (!GetFileSizeEx(file, &size)) goto done;
+    status = SMILE_DATA_CORRUPT;
+    if (size.QuadPart < 44 || size.QuadPart > 1024 * 1024 + 44) goto done;
+    status = SMILE_DATA_UNAVAILABLE;
     envelope = (unsigned char*)HeapAlloc(GetProcessHeap(), 0, (SIZE_T)size.QuadPart);
     if (envelope == 0 || !ReadFile(file, envelope, (DWORD)size.QuadPart, &read, 0) || read != (DWORD)size.QuadPart)
-        goto fail;
+        goto done;
+    status = SMILE_DATA_CORRUPT;
     if (envelope[0] != 'S' || envelope[1] != 'M' || envelope[2] != 'D' || envelope[3] != '4' ||
-        smile_data_u32(envelope + 4) != 1) goto fail;
+        smile_data_u32(envelope + 4) != 1) goto done;
     payload_length = smile_data_u32(envelope + 8);
-    if (payload_length > 1024 * 1024 || payload_length > capacity || size.QuadPart != (long long)payload_length + 44)
-        goto fail;
+    if (payload_length > 1024 * 1024 || size.QuadPart != (long long)payload_length + 44) goto done;
     smile_sha_bytes(envelope + 44, payload_length, digest);
-    if (!smile_bytes_equal((const char*)digest, (const char*)envelope + 12, 32)) goto fail;
+    if (!smile_bytes_equal((const char*)digest, (const char*)envelope + 12, 32)) goto done;
+    status = SMILE_DATA_TOO_LARGE;
+    if (payload_length > capacity) goto done;
     for (index = 0; index < payload_length; ++index) destination[index] = envelope[44 + index];
-    CloseHandle(file);
-    HeapFree(GetProcessHeap(), 0, envelope);
-    smile_text_release(key);
-    return payload_length;
-
-fail:
+    *count = payload_length;
+    status = SMILE_DATA_OK;
+done:
     if (file != INVALID_HANDLE_VALUE) CloseHandle(file);
     if (envelope != 0) HeapFree(GetProcessHeap(), 0, envelope);
+    return status;
+}
+
+static int smile_load_data_core(void* owned_key, long long* destination, long long capacity,
+    long long* count, int recover)
+{
+    SmileText* key = (SmileText*)owned_key;
+    WCHAR path[2048];
+    WCHAR backup[2100];
+    int status = SMILE_DATA_INVALID;
+    if (count != 0) *count = 0;
+    if (destination == 0 || capacity < 0 || capacity > 1024 * 1024 || count == 0) goto done;
+    status = SMILE_DATA_UNAVAILABLE;
+    if (!smile_storage_data_path(smile_text_bytes(key), smile_text_length(key), path, 2048)) goto done;
+    status = smile_data_read_file(path, destination, capacity, count);
+    if (recover && (status == SMILE_DATA_CORRUPT || status == SMILE_DATA_MISSING))
+    {
+        int backup_status;
+        wsprintfW(backup, L"%s.bak", path);
+        backup_status = smile_data_read_file(backup, destination, capacity, count);
+        if (backup_status == SMILE_DATA_OK) status = SMILE_DATA_RECOVERED;
+        else if (backup_status != SMILE_DATA_MISSING) status = backup_status;
+    }
+done:
+    smile_text_release(key);
+    return status;
+}
+
+long long smile_load_data_checked(void* owned_key, long long* destination, long long capacity, long long* count)
+{
+    return smile_load_data_core(owned_key, destination, capacity, count, 1);
+}
+
+long long smile_load_data_value(void* owned_key, long long* destination, long long capacity)
+{
+    long long count = 0;
+    int status;
     if (destination != 0 && capacity > 0 && capacity <= 1024 * 1024)
         smile_zero_memory(destination, (SIZE_T)capacity * sizeof(long long));
-    smile_text_release(key);
-    smile_data_error("Load Data encountered an invalid destination, corrupt block, or oversized block.");
-    ExitProcess(2);
+    status = smile_load_data_core(owned_key, destination, capacity, &count, 0);
+    if (status != SMILE_DATA_OK && status != SMILE_DATA_MISSING)
+    {
+        smile_data_error("Load Data encountered an invalid destination, corrupt block, oversized block, or unavailable storage.");
+        ExitProcess(2);
+    }
+    return count;
 }
 
 /* A failed/corrupt existing block must not replace the previous-known-good backup. */
@@ -2678,22 +2718,26 @@ static int smile_data_validate_file(const WCHAR* path)
     unsigned char* bytes = 0;
     unsigned char digest[32];
     DWORD read = 0;
-    int valid = 0;
-    if (file == INVALID_HANDLE_VALUE) return 0;
-    if (!GetFileSizeEx(file, &size) || size.QuadPart < 44 || size.QuadPart > 1024 * 1024 + 44) goto done;
+    int status = SMILE_DATA_UNAVAILABLE;
+    if (file == INVALID_HANDLE_VALUE) return status;
+    if (!GetFileSizeEx(file, &size)) goto done;
+    status = SMILE_DATA_CORRUPT;
+    if (size.QuadPart < 44 || size.QuadPart > 1024 * 1024 + 44) goto done;
+    status = SMILE_DATA_UNAVAILABLE;
     bytes = (unsigned char*)HeapAlloc(GetProcessHeap(), 0, (SIZE_T)size.QuadPart);
     if (bytes == 0 || !ReadFile(file, bytes, (DWORD)size.QuadPart, &read, 0) || read != size.QuadPart) goto done;
+    status = SMILE_DATA_CORRUPT;
     if (bytes[0] != 'S' || bytes[1] != 'M' || bytes[2] != 'D' || bytes[3] != '4' ||
         smile_data_u32(bytes + 4) != 1 || (long long)smile_data_u32(bytes + 8) != size.QuadPart - 44) goto done;
     smile_sha_bytes(bytes + 44, (SIZE_T)size.QuadPart - 44, digest);
-    valid = smile_bytes_equal((const char*)digest, (const char*)bytes + 12, 32);
+    if (smile_bytes_equal((const char*)digest, (const char*)bytes + 12, 32)) status = SMILE_DATA_OK;
 done:
     if (bytes != 0) HeapFree(GetProcessHeap(), 0, bytes);
     CloseHandle(file);
-    return valid;
+    return status;
 }
 
-void smile_save_data_value(const long long* source, long long capacity, long long count, void* owned_key)
+static int smile_save_data_core(const long long* source, long long capacity, long long count, void* owned_key, int recover)
 {
     SmileText* key = (SmileText*)owned_key;
     WCHAR path[2048];
@@ -2704,21 +2748,29 @@ void smile_save_data_value(const long long* source, long long capacity, long lon
     unsigned char* payload = 0;
     long long copied = 0;
     DWORD written;
+    int status = SMILE_DATA_INVALID;
+    int owns_temporary = 0;
     int valid = source != 0 && capacity >= 0 && capacity <= 1024 * 1024 && count >= 0 &&
         count <= capacity && count <= 1024 * 1024;
+    if (!valid) goto fail;
+    status = SMILE_DATA_UNAVAILABLE;
     payload = (unsigned char*)HeapAlloc(GetProcessHeap(), 0, (SIZE_T)(count > 0 ? count : 1));
-    if (payload == 0) valid = 0;
+    if (payload == 0) goto fail;
+    status = SMILE_DATA_INVALID;
     while (valid && copied < count)
     {
         long long value = source[copied++];
         if (value < 0 || value > 255) valid = 0;
         else payload[copied - 1] = (unsigned char)value;
     }
-    if (!valid || !smile_storage_data_path(smile_text_bytes(key), smile_text_length(key), path,
+    if (!valid) goto fail;
+    status = SMILE_DATA_UNAVAILABLE;
+    if (!smile_storage_data_path(smile_text_bytes(key), smile_text_length(key), path,
         (int)(sizeof(path) / sizeof(path[0])))) goto fail;
     wsprintfW(temporary, L"%s.tmp.%lu.%I64u", path, GetCurrentProcessId(), GetTickCount64());
     file = CreateFileW(temporary, GENERIC_WRITE, 0, 0, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, 0);
     if (file == INVALID_HANDLE_VALUE) goto fail;
+    owns_temporary = 1;
     header[0] = 'S'; header[1] = 'M'; header[2] = 'D'; header[3] = '4';
     smile_data_put_u32(header + 4, 1);
     smile_data_put_u32(header + 8, (uint32_t)count);
@@ -2730,22 +2782,48 @@ void smile_save_data_value(const long long* source, long long capacity, long lon
     file = INVALID_HANDLE_VALUE;
     if (GetFileAttributesW(path) != INVALID_FILE_ATTRIBUTES)
     {
-        if (!smile_data_validate_file(path)) goto fail;
         wsprintfW(backup, L"%s.bak", path);
-        if (!ReplaceFileW(path, temporary, backup, 0, 0, 0)) goto fail;
+        status = smile_data_validate_file(path);
+        if (status != SMILE_DATA_OK)
+        {
+            if (!recover || status != SMILE_DATA_CORRUPT) goto fail;
+            status = smile_data_validate_file(backup);
+            if (status != SMILE_DATA_OK) goto fail;
+            /* The corrupt primary never replaces the verified last-good backup. */
+            status = SMILE_DATA_UNAVAILABLE;
+            if (!ReplaceFileW(path, temporary, 0, 0, 0, 0)) goto fail;
+        }
+        else
+        {
+            status = SMILE_DATA_UNAVAILABLE;
+            if (!ReplaceFileW(path, temporary, backup, 0, 0, 0)) goto fail;
+        }
     }
     else if (!MoveFileExW(temporary, path, MOVEFILE_WRITE_THROUGH)) goto fail;
     HeapFree(GetProcessHeap(), 0, payload);
     smile_text_release(key);
-    return;
+    return SMILE_DATA_OK;
 
 fail:
     if (file != INVALID_HANDLE_VALUE) CloseHandle(file);
-    if (temporary[0] != 0) DeleteFileW(temporary);
+    if (owns_temporary) DeleteFileW(temporary);
     if (payload != 0) HeapFree(GetProcessHeap(), 0, payload);
     smile_text_release(key);
-    smile_data_error("Save Data received invalid bytes/count or could not atomically store the block.");
-    ExitProcess(2);
+    return status;
+}
+
+long long smile_save_data_checked(const long long* source, long long capacity, long long count, void* owned_key)
+{
+    return smile_save_data_core(source, capacity, count, owned_key, 1);
+}
+
+void smile_save_data_value(const long long* source, long long capacity, long long count, void* owned_key)
+{
+    if (smile_save_data_core(source, capacity, count, owned_key, 0) != SMILE_DATA_OK)
+    {
+        smile_data_error("Save Data received invalid bytes/count or could not atomically store the block.");
+        ExitProcess(2);
+    }
 }
 
 void smile_media_shutdown(void)

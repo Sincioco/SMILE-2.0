@@ -2903,6 +2903,7 @@ internal sealed class SemanticAnalyzer
         var countType = ResolveWritableTargetType(statement.CountTarget);
         if (countType != SmileType.Error && countType != SmileType.Number)
             Report("SML3506", statement.CountTarget.Span, "Load Data Count target must be Number.");
+        AnalyzeDataStatus(statement.StatusTarget);
     }
 
     private void AnalyzeDataSave(DataSaveStatementSyntax statement)
@@ -2913,6 +2914,15 @@ internal sealed class SemanticAnalyzer
                 "Save Data source must be a fixed one-dimensional Number array.");
         RequireType(statement.Count, SmileType.Number, "SML3506", "Save Data Count must be Number.");
         RequireType(statement.Key, SmileType.Text, "SML3506", "Save Data key must be Text.");
+        AnalyzeDataStatus(statement.StatusTarget);
+    }
+
+    private void AnalyzeDataStatus(AssignmentTargetSyntax? target)
+    {
+        if (target == null) return;
+        var type = ResolveWritableTargetType(target);
+        if (type != SmileType.Error && type != SmileType.Number)
+            Report("SML3506", target.Span, "Data Status target must be writable Number storage.");
     }
 
     private void AnalyzeGameWindow(GameWindowStatementSyntax statement, bool topLevel)

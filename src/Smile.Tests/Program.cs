@@ -385,6 +385,33 @@ Run("Image measurement and Text measurement built-ins type check", () => Equal(f
     Analyze("Game Window \"Measure\"\nDim Art As Image\nDim Caption As Text\nPrint Image_Width(Art)\nPrint Image_Height(Art)\nPrint Image_Loaded(Art)\nPrint Text_Width(Caption, 28)\nPrint Text_Height(Caption, 28)\n").HasErrors));
 Run("Persistent Data statements accept byte arrays and writable count targets", () => Equal(false,
     Analyze("Option Explicit\nDim Bytes[8]\nDim ByteCount As Number\nSave Data Bytes Count 8 To \"slot\"\nLoad Data \"slot\" Into Bytes Count ByteCount\n").HasErrors));
+Run("Optional Data Status is contextual and shared by both targets", () =>
+{
+    var analysis = Analyze("Option Explicit\nDim Bytes[8]\nDim Counts[2]\nDim Status As Text\n" +
+        "Status = \"slot\"\nSave Data Bytes Count 8 To Status Status Counts[0]\n" +
+        "Load Data Status Into Bytes Count Counts[Bytes[0]] Status Counts[1]\n" +
+        "Print DATA_STATUS_OK; DATA_STATUS_MISSING; DATA_STATUS_RECOVERED; DATA_STATUS_INVALID; " +
+        "DATA_STATUS_UNAVAILABLE; DATA_STATUS_CORRUPT; DATA_STATUS_TOO_LARGE\n");
+    Equal(false, analysis.HasErrors);
+    Equal(SyntaxKind.StatusKeyword, SyntaxFacts.GetKeywordKind("Status"));
+    var native = new MasmEmitter(analysis, SmileGraphicsBackend.DirectX, true, false).Emit();
+    Equal(true, native.Contains("call smile_load_data_checked", StringComparison.Ordinal));
+    Equal(true, native.Contains("call smile_save_data_checked", StringComparison.Ordinal));
+    var web = new WebEmitter(analysis).Emit();
+    Equal(true, web.Contains("smile.loadDataChecked", StringComparison.Ordinal));
+    Equal(true, web.Contains("smile.saveDataChecked", StringComparison.Ordinal));
+    Equal(true, HasDiagnostic(Analyze("Dim Bytes[8]\nDim Result As Text\nSave Data Bytes Count 1 To \"slot\" Status Result\n"), "SML3506"));
+    Equal(true, Analyze("Dim Bytes[8]\nDim CountValue\nConst Result = 0\nLoad Data \"slot\" Into Bytes Count CountValue Status Result\n").HasErrors);
+    Equal(true, Analyze("Dim Bytes[8]\nSave Data Bytes Count 1 To \"slot\" Status\n").HasErrors);
+    var module = Multi(
+        ("Program.smile", true, "Import Storage.Probe As Store\nDim CountValue As Number\nDim Status As Number\nCall Store.Read(CountValue, Status)\n"),
+        ("Probe.smile", false, "Module Storage.Probe\nDim Bytes[8]\nPublic Sub Read(ByRef CountValue As Number, ByRef Status As Number)\n" +
+            "Load Data \"slot\" Into Bytes Count CountValue Status Status\nEnd Sub\nEnd Module\n"));
+    if (module.HasErrors) throw new InvalidOperationException(string.Join(" | ", module.Diagnostics.Select(item => item.Message)));
+    Equal(false, module.HasErrors);
+    Equal(true, new MasmEmitter(module, SmileGraphicsBackend.DirectX, true, false).Emit().Contains("call smile_load_data_checked"));
+    Equal(true, new WebEmitter(module).Emit().Contains("smile.loadDataChecked"));
+});
 Run("Explicit WAV channels support play per-channel stop and global stop", () =>
 {
     var analysis = Analyze("Game Window \"Audio\"\nPlay Sound \"Assets\\One.wav\" On Channel 1\nPlay Sound \"Assets\\Two.wav\" On Channel 2\nStop Sound On Channel 1\nStop Sound\n");

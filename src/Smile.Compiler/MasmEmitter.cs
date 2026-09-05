@@ -110,6 +110,7 @@ internal sealed class MasmEmitter
     private readonly Dictionary<ParameterSymbol, TextLiteral> _optionalDefaultTextLiterals = new();
     private readonly Dictionary<SyntaxToken, TextLiteral> _gameTextLiterals = new();
     private readonly Dictionary<ForStatementSyntax, MasmTemporaryStorage> _forLimits = new();
+    private readonly Dictionary<DataLoadStatementSyntax, MasmTemporaryStorage> _dataLoadCounts = new();
     private readonly Dictionary<SelectStatementSyntax, MasmTemporaryStorage> _selectValues = new();
     private readonly Dictionary<WithStatementSyntax, MasmTemporaryStorage> _withLocations = new();
     private readonly Dictionary<WithStatementSyntax, MasmTemporaryStorage> _withRegistrations = new();
@@ -289,6 +290,8 @@ internal sealed class MasmEmitter
         Line("EXTERN smile_save_value:PROC");
         Line("EXTERN smile_load_data_value:PROC");
         Line("EXTERN smile_save_data_value:PROC");
+        Line("EXTERN smile_load_data_checked:PROC");
+        Line("EXTERN smile_save_data_checked:PROC");
         Line("EXTERN smile_media_shutdown:PROC");
         Line("EXTERN smile_media_configure:PROC");
         foreach (var site in _debugSites)
@@ -533,12 +536,15 @@ internal sealed class MasmEmitter
                     CollectExpression(textFileLoad.Path);
                     break;
                 case DataLoadStatementSyntax data:
+                    if (data.StatusTarget != null) _dataLoadCounts[data] = CreateTemporary("data_count", SmileType.Number);
                     CollectExpression(data.Key);
                     CollectExpression(data.CountTarget.Location);
+                    CollectExpression(data.StatusTarget?.Location);
                     break;
                 case DataSaveStatementSyntax data:
                     CollectExpression(data.Count);
                     CollectExpression(data.Key);
+                    CollectExpression(data.StatusTarget?.Location);
                     break;
                 case SaveStatementSyntax save:
                     CollectTextToken(save.Key);
@@ -1051,9 +1057,21 @@ internal sealed class MasmEmitter
                 PushRax();
                 Line($"    mov rax, {dataDestination.ArraySize.ToString(CultureInfo.InvariantCulture)}");
                 PushRax();
-                EmitNativeCall("smile_load_data_value", 3);
+                if (dataLoad.StatusTarget != null)
+                {
+                    EmitTemporaryAddress(_dataLoadCounts[dataLoad], "rax");
+                    PushRax();
+                    EmitNativeCall("smile_load_data_checked", 4);
+                    PushRax();
+                    EmitTargetAddress(dataLoad.CountTarget);
+                    Line("    mov rcx, rax");
+                    Line($"    mov rax, {TemporaryMemory(_dataLoadCounts[dataLoad])}");
+                    Line("    mov QWORD PTR [rcx], rax");
+                    PopRax();
+                }
+                else EmitNativeCall("smile_load_data_value", 3);
                 PushRax();
-                EmitTargetAddress(dataLoad.CountTarget);
+                EmitTargetAddress(dataLoad.StatusTarget ?? dataLoad.CountTarget);
                 Line("    mov rcx, rax");
                 PopRax();
                 Line("    mov QWORD PTR [rcx], rax");
@@ -1068,7 +1086,15 @@ internal sealed class MasmEmitter
                 PushRax();
                 EmitExpression(dataSave.Key);
                 PushRax();
-                EmitNativeCall("smile_save_data_value", 4);
+                EmitNativeCall(dataSave.StatusTarget == null ? "smile_save_data_value" : "smile_save_data_checked", 4);
+                if (dataSave.StatusTarget != null)
+                {
+                    PushRax();
+                    EmitTargetAddress(dataSave.StatusTarget);
+                    Line("    mov rcx, rax");
+                    PopRax();
+                    Line("    mov QWORD PTR [rcx], rax");
+                }
                 break;
             case SaveStatementSyntax save:
                 EmitTextArgument(save.Key);

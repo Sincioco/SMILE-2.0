@@ -1,0 +1,13 @@
+''' Read-only probe; the test project supplies an isolated application identity.
+
+Option Explicit
+
+Dim Bytes[8] As Number
+Dim Counts[2] As Number
+
+Bytes[0] = 99
+Bytes[1] = 98
+
+Load Data "Recovery Probe" Into Bytes Count Counts[0] Status Counts[1]
+
+Print Counts[1]; ","; Counts[0]; ","; Bytes[0]; ","; Bytes[1]

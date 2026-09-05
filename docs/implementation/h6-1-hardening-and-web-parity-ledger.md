@@ -257,3 +257,100 @@ This is a coherent W12 download milestone, not completed W5/W6 or final acceptan
 Next: strict atomic in-Viewer JSON import and W14 storage recovery, then remaining
 MSAA/input/lifecycle/browser evidence, ordinary smoke, deployment ZIP and final
 H6.1 gate. No claim of completed Web authoring round-trip, final PASS or E0 work.
+
+## September 6: W14 checked storage and transactional calibration checkpoint
+
+Source parent: `a375c83500726970487a5ea0e266e471438d52f3`, branch `main`.
+That parent is the pushed JSON-download milestone above. Fetch before this
+checkpoint found HEAD/origin/main aligned (0 ahead / 0 behind). Only this
+milestone's changes are staged; current model/calibration data remain unchanged.
+
+- Added optional `Status <writable Number target>` to existing Save Data/Load Data
+  in the shared parser/AST/semantics/module lowering and both emitters. Status is
+  contextual, so existing identifiers still compile. Shared DATA_STATUS constants
+  distinguish success, missing, recovered, invalid, unavailable, corrupt and
+  destination-too-small. The language reference includes the exact contract.
+  Strict statements still fail on corruption; checked failures preserve the
+  destination and set Count to zero. Native Count/Status assignment order matches
+  Web, including writable array/ByRef targets.
+- Checked native/Web loads can read verified `.bak` envelopes for missing/corrupt
+  primaries without rewriting them. A subsequent checked save preserves the good
+  backup when replacing a corrupt primary. Web writes persistent storage before
+  updating memory; denied/quota failures cannot turn an unsaved candidate into
+  the runtime's saved copy. Native temporary cleanup only removes files created
+  by that operation. No cross-tab/process merge or locking is claimed.
+- Viewer Save/Undo is transactional. Failed Save Frame preserves the temporary
+  preview for retry/cancel but restores the saved key track/JSON. Failed Undo keeps
+  the undo entry. Failed loads block writes rather than falling back to defaults
+  over unknown data. Visible failure/recovery status uses the existing HUD.
+- `dotnet run --project src/Smile.Tests/Smile.Tests.csproj -c Release --no-restore`:
+  PASS, 297 checks. Test drafts initially omitted explicit scalar types in a strict
+  module fixture; corrected the fixture, not the language contract.
+- `scripts/test-smile-formatter.ps1`: PASS, 13 focused checks. Repository-wide
+  `format-smile-style.ps1 -Check -FormatLongIf`: PASS, 382 tracked sources; scoped
+  check of all five changed/new Viewer/example sources also passed.
+- `scripts/test-data-status.ps1`: PASS with real filesystem sharing denials,
+  missing/corrupt/oversized primary and backup, unchanged destination on failure,
+  previous-good preservation, successful recovery/save and no leaked temporary
+  files. Latest disposable application:
+  `smile.tests.data-status.run-fc659e123f6246e28c27819e3519075d`.
+  Only an exact disposable primary file was deleted to test missing-primary
+  recovery; test evidence and its unrelated-to-user application folder are retained.
+- `node scripts/run-web-test.js artifacts/web/h6-1/DataStatusBasics --data-status`:
+  PASS, disposable VM storage denial/quota/corruption/backup/fresh-runtime tests.
+  This includes backup-write versus primary-write failure, strict legacy rejection,
+  corrupt/oversized data, and cache atomicity. Not actual private-mode/quota UI proof.
+- `scripts/test-character-3d-viewer-hardening.ps1` (Web not skipped): PASS, 42
+  calibration checks, actual native four-tab/edit/Save/Undo isolation, generated-Web
+  hardening console parity and 58 native graphics/pointer/audio checks.
+  Latest native isolation app: `smile.tests.viewer-calibration.run-ec721b1e01084d1a8d5703bf3f69700a`.
+  The isolated native test uses a directory at one probe filename to force failure;
+  no live native save is corrupted/locked/deleted by the fixture.
+- Published `CalibrationStorageTests` from the preceding isolated Viewer harness
+  and ran `--renderer3d-state --deny-data-key "Viewer Denied Storage Probe"
+  --native-output artifacts/tests/ViewerCalibrationIsolation/native.out --timeout
+  60000`: PASS, exact native/Web output including both full canonical JSON exports
+  and failed Viewer Save/Undo assertions. This is state/console evidence, not GPU
+  visual or real browser denial evidence. The fixture's per-run app identity is
+  intentionally disposable.
+- Existing `DataKeyIdentity` native/Web exact console checks and
+  `test-phase4-data-envelope.ps1` passed; strict corrupt load still exits 2 with
+  a diagnostic. Teaching example `DataStatusBasics`, both Read/Write probes and
+  the language-reference snippet compile for native/Web. The teaching example
+  executes with Saved, Loaded bytes 2, rejected-invalid-byte True and preserved True.
+- Actual Chrome and Edge at `http://127.0.0.1:8765` use separate test-only
+  `smile.tests.web-data-status.run-september-six` storage. Both showed initial
+  missing `1,0,99,98`, successful write `0`, and persisted `0,2,17,23` after refresh
+  and closing/reopening the test tab. Browser creation initially selected a
+  background tab (Chrome's window was minimized); brought each test tab visibly
+  forward and verified its rendered output, with foreground write/read checks.
+  This proves tab reopen, not termination/restart of the entire browser process.
+  Closed only the disposable tabs and returned the native Viewer to the foreground.
+- Both character Export/Compare checks pass: Arin 24 keys including Death frame 0,
+  JSON `C05C87BF0A92B373DB7ECD1CB304F4446B851E7AFEA836E8BB05D058B1B20F0B`;
+  Orin 0 keys, JSON `13AE135FDA40302CB5A4B0146D7103A2ED5346AAEEBB3852AF6DD3C397F5D293`.
+  No model, descriptor, profile identity or accepted calibration bytes changed.
+- Native rebuilt/relaunched through `Launch.ps1 -Build -SkipWindowActivation`
+  after normal UI close and confirmed process exit. New PID 47188; executable
+  `tools/Character3DViewer/bin/Character3DViewer.exe` SHA-256
+  `E891B76E3E31ECD51E971B90BB6260DAB36FAE2FA570192BB737B3BC4F8700B0`.
+  Published current Web Viewer to `artifacts/web/h6-1/Character3DViewer`, 46 assets.
+  Observed the rebuilt native Party scene playing with both heroes and the Dragon,
+  without a recovery/error overlay; left the Viewer in the foreground for the stream.
+- **VSIX installation BLOCKED, not passed.** `scripts/install-vsix.cmd` rebuilt
+  the package but failed removing an old locked `Smile.Language.dll` under
+  `Extensions/yinvwrss.gto`. A read-only UI inspection found unsaved `Web.config*`
+  in Visual Studio; it was not closed/discarded. Asked Sin to save and close it.
+  Built VSIX SHA-256:
+  `70488DEE46F87554052E2D1664922215071B643D79D988E7EE393D471EB7A51B`.
+  Built staged compiler/language/native-library hashes (NOT installed verification):
+  `1D0CD2FADB665F44299B3929B0F4D0B3E8BE28EB4AC92907CDA884988BA06784`,
+  `1351433D0CD54CDEE1E08BE5124F5A9D28DA5A670FE268EFB3B92E6E0247903E`,
+  `0070E3F4B1588D39D6174D8E235BC13F4B0D6CE1A7CB63B40B038A71F48CFD0D`.
+
+Next action requiring Sin: save/close Visual Studio, then rerun the repository
+installer and hash verification. This checkpoint does not complete H6.1/W14.
+Remaining work includes validated in-Viewer JSON import and its real selection
+proof, Viewer-origin save/reload evidence, MSAA, canvas keyboard/fullscreen,
+audio/lifecycle/mobile emulation, remaining multi-actor live evidence, wider smoke,
+deployment ZIP/manifest and the final readiness gate. No E0–E12 or Double work.

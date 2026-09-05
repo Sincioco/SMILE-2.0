@@ -367,6 +367,55 @@ Implemented control flow comprises multiline `If`/`Else If`/`Else`, `For ... To`
 
 The expression surface includes `+`, `-`, `*`, integer `/`, `Mod`, comparisons, parentheses, unary `-` and `Not`, and boolean `And`/`Or`. Common built-in functions include `Timer()`, `Rgb(r, g, b)`, `Abs(value)`, `Min(a, b)`, `Max(a, b)`, `Game_Closed()`, `Window_Title(title)`, `Window_Activate()`, and `Key_Held(key)`. `Window_Title` changes the live native title bar or Web document title. `Window_Activate()` restores the native Windows game window, requests foreground input focus, and returns whether Windows accepted the request; Web currently returns `False`. Both window operations are available only to `Game Window` programs. The game-window-only `Renderer3D(command, a, b, c, d, e, f, g, h, i, j)` built-in is the narrow compiler/runtime bridge used internally by `Smile.Simple3D.Graphics3D`; student programs should use that module rather than command values.
 
+## Recoverable persistent Data
+
+Existing `Save Data` and `Load Data` statements accept an optional final
+`Status` clause with a writable `Number` target. `Status` remains usable as an
+identifier. Without the clause, invalid/corrupt/unavailable storage still stops
+the program; a missing strict load returns zero bytes and clears its destination.
+
+```smile
+Dim Bytes[8] As Number
+Dim ByteCount As Number
+Dim SaveStatus As Number
+
+Bytes[0] = 12
+
+Save Data Bytes Count 1 To "Example" Status SaveStatus
+
+If SaveStatus = DATA_STATUS_OK Then
+    Print "Saved"
+End If
+
+Load Data "Example" Into Bytes Count ByteCount Status SaveStatus
+```
+
+| Status constant | Value | Meaning |
+| --- | ---: | --- |
+| `DATA_STATUS_OK` | 0 | Saved successfully or loaded the primary. |
+| `DATA_STATUS_MISSING` | 1 | Neither primary nor backup exists. |
+| `DATA_STATUS_RECOVERED` | 2 | Loaded a checksummed last-good backup. |
+| `DATA_STATUS_INVALID` | 3 | Invalid buffer, byte values or count. |
+| `DATA_STATUS_UNAVAILABLE` | 4 | Storage denied, quota, sharing, allocation or I/O failure. |
+| `DATA_STATUS_CORRUPT` | 5 | No usable checksummed envelope. |
+| `DATA_STATUS_TOO_LARGE` | 6 | Valid stored payload exceeds the destination capacity. |
+
+Checked loads set Count to zero on missing/failure and leave the byte destination
+unchanged. On success they replace exactly Count bytes, leaving the rest unchanged.
+Count and Status outputs are assigned in that order. Recovery reads the backup
+only for a missing/corrupt primary, does not rewrite it, and reports recovery
+explicitly. A subsequent checked save may replace that corrupt primary only if
+its backup validates; the corrupt file never replaces the good backup.
+
+Native saves use flushed temporary files and atomic replacement. Web saves keep
+the previous valid envelope in the same application/key namespace with `.bak`,
+then write the primary, and only then update the runtime cache. A failed primary
+write can advance the backup to the still-current primary, but cannot make an
+unsaved candidate the saved memory copy. Storage is origin-specific and browser
+eviction remains outside the application's control. Export important data.
+These operations do not provide cross-process/tab locking or merge concurrent
+edits. See the compiled `examples/DataStatusBasics.smile` teaching example.
+
 ## User-chosen UTF-8 files
 
 `File_Export(FileName As Text, Contents As Text) As Boolean` opens a native Save As

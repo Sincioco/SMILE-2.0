@@ -16,6 +16,9 @@ Dim TestLightning As Lightning.LightningEffect
 Dim TestLightningAge As Number
 Dim TestLightningSource As Core.Vector3
 Dim TestLightningTarget As Core.Vector3
+Dim TestDataKey As Text
+Dim TestSavedJson As Text
+Dim TestUndoCount As Number
 
 Game Window "SMILE Calibration Isolation Tests" Size 640 By 480
 
@@ -192,6 +195,35 @@ Call CalibrationCheck(StoreCalibrationKeyframe(3, 10), "Store second key")
 Call SaveCalibrationKeyframes()
 Call CalibrationCheck(CalibrationKeyframeValues[3, 12] = 2, "Second key cannot modify first")
 Call CalibrationCheck(CalibrationKeyframeValues[3, 32] = 7, "Second key stores full move channels")
+
+''' Failed Save/Undo must retain both the last saved bytes and the undo opportunity.
+TestDataKey = CalibrationDataKey
+TestSavedJson = SavedCalibrationJson()
+TestUndoCount = CalibrationUndoCount
+CalibrationDataKey = "Viewer Denied Storage Probe"
+
+Call UndoLastCalibrationChange()
+Call CalibrationCheck(CalibrationWriteFailed And Not CalibrationStorageRejected,
+    "Failed undo remains recoverable")
+Call CalibrationCheck(SavedCalibrationJson() = TestSavedJson And
+    CalibrationUndoCount = TestUndoCount, "Failed undo keeps saved JSON and undo")
+Call CalibrationCheck(CalibrationKeyframeCounts[3] = 2 And
+    CalibrationKeyframeValues[3, 32] = 7, "Failed undo restores complete key track")
+Call BeginCalibrationEdit()
+
+SwordPositionCalibration[3, 0] = 9
+
+Call SaveCalibrationFrame()
+Call CalibrationCheck(CalibrationWriteFailed And CalibrationEditing,
+    "Failed Save Frame keeps edit open for retry or cancel")
+Call CalibrationCheck(SavedCalibrationJson() = TestSavedJson,
+    "Failed Save Frame does not become downloadable saved JSON")
+Call CalibrationCheck(SwordPositionCalibration[3, 0] = 9,
+    "Failed Save Frame retains the temporary preview adjustment")
+Call CancelCalibrationEdit()
+
+CalibrationDataKey = TestDataKey
+
 Call UndoLastCalibrationChange()
 Call CalibrationCheck(CalibrationKeyframeCounts[3] = 1, "Undo insertion")
 Call CalibrationCheck(CalibrationKeyframeValues[3, 12] = 2, "Undo preserves all channels")

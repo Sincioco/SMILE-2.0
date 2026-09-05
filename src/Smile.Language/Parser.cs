@@ -1068,8 +1068,9 @@ internal sealed class Parser
         var destination = MatchIdentifier();
         MatchToken(SyntaxKind.CountKeyword);
         var countTarget = ParseAssignmentTarget();
+        var statusTarget = ParseDataStatusTarget();
         ConsumeLineEnd();
-        return new DataLoadStatementSyntax(load, data, key, destination, countTarget);
+        return new DataLoadStatementSyntax(load, data, key, destination, countTarget, statusTarget);
     }
 
     private DataSaveStatementSyntax ParseDataSaveStatement()
@@ -1081,8 +1082,16 @@ internal sealed class Parser
         var count = ParseExpression();
         MatchToken(SyntaxKind.ToKeyword);
         var key = ParseExpression();
+        var statusTarget = ParseDataStatusTarget();
         ConsumeLineEnd();
-        return new DataSaveStatementSyntax(save, data, source, count, key);
+        return new DataSaveStatementSyntax(save, data, source, count, key, statusTarget);
+    }
+
+    private AssignmentTargetSyntax? ParseDataStatusTarget()
+    {
+        if (!IsContextualText(Current, "Status")) return null;
+        NextToken();
+        return ParseAssignmentTarget();
     }
 
     private TextFileLoadStatementSyntax ParseTextFileLoadStatement()

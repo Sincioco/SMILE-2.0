@@ -803,3 +803,13 @@ now round-trip through the desktop serializer. The actual Edge Arin download
 preserved all 24 keys, and native text-picker import/export reproduced its bytes.
 This does not yet establish an in-Viewer JSON import workflow or storage recovery.
 No live save, model, descriptor or profile identity changed in this milestone.
+
+## September 6: checked calibration persistence
+
+The Viewer treats writing a pose as a transaction: no saved JSON or Undo state is
+committed until persistent storage accepts the block. Failed Save Frame keeps the
+temporary preview for retry/cancel while restoring the saved track; failed Undo
+retains its entry. A missing/corrupt primary may load a checksummed backup with an
+explicit recovery status, without rewriting the primary. Wrong profile fingerprints
+remain blocked. This changes no character offsets, accepted model bytes or saved
+identity; the current 24-key snapshot, including Death frame 0, is preserved.

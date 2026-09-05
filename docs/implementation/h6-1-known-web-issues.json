@@ -384,7 +384,7 @@
       "classification": "execution-or-source-audit",
       "mandatory": true,
       "baseline": "0768860e59e60c6231e0992f23b34a3a62c48483",
-      "status": "OPEN",
+      "status": "IN-PROGRESS",
       "phase": "W5",
       "gateCheck": "G08",
       "sourceRefs": [
@@ -396,7 +396,7 @@
       "evidenceIds": [
         "docs/implementation/h6-1-hardening-and-web-parity-ledger.md"
       ],
-      "dispositionRationale": "Reproduce with disposable origin/profile and add atomic last-good handling plus visible status."
+      "dispositionRationale": "Optional shared Data Status, native/Web backup recovery and transactional Viewer Save/Undo are implemented. Native filesystem denial/corruption and disposable Web VM checks pass, including exact Viewer console parity. Actual Chrome/Edge disposable probes retain bytes across refresh and tab reopen. Viewer-origin save/reload and final import/recovery workflow evidence remain required. VSIX installation is blocked by a locked extension DLL and unsaved Visual Studio work; not a final gate pass."
     },
     {
       "id": "W15",

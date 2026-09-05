@@ -3675,38 +3675,93 @@ internal static class WebOutputWriter
                 return payload;
             }
 
-            function saveData(target, count, key) {
-                if (!target || !Array.isArray(target.data) || target.dimensions.length !== 1)
-                    throw new Error("Save Data source must be a one-dimensional Number array.");
-                count = safe(count);
-                if (count < 0 || count > target.data.length || count > 1024 * 1024)
-                    throw new Error("Save Data Count is outside the buffer or DATA_BLOCK_MAX_BYTES.");
-                const bytes = target.data.slice(0, count).map(value => {
-                    value = safe(value);
-                    if (value < 0 || value > 255) throw new Error("Save Data values must be bytes from 0 through 255.");
-                    return value;
-                });
-                const fullKey = dataStorageKey(key);
-                const text = encodeBytes(dataEnvelope(new Uint8Array(bytes)));
-                memoryStorage.set(fullKey, text);
-                localStorage.setItem(fullKey, text);
+            // Values match the shared DATA_STATUS_* constants. Checked calls never abort the scene.
+            const DATA_OK = 0, DATA_MISSING = 1, DATA_RECOVERED = 2, DATA_INVALID = 3,
+                DATA_UNAVAILABLE = 4, DATA_CORRUPT = 5, DATA_TOO_LARGE = 6;
+
+            function dataBufferValid(target) {
+                return target && Array.isArray(target.data) && target.dimensions?.length === 1 &&
+                    target.data.length <= 1024 * 1024;
             }
 
+            function dataDecode(text) {
+                // Bound untrusted base64 before allocating/decoding it.
+                if (typeof text !== "string" || text.length > Math.ceil((1024 * 1024 + 44) / 3) * 4)
+                    throw new Error("Persistent-data envelope is oversized.");
+                return dataPayload(new Uint8Array(decodeBytes(text)));
+            }
+
+            function saveDataCore(target, count, key, recover) {
+                if (!dataBufferValid(target) || !Number.isSafeInteger(count) ||
+                    count < 0 || count > target.data.length || count > 1024 * 1024) return DATA_INVALID;
+                const bytes = new Uint8Array(count);
+                for (let index = 0; index < count; index += 1) {
+                    const value = target.data[index];
+                    if (!Number.isSafeInteger(value) || value < 0 || value > 255) return DATA_INVALID;
+                    bytes[index] = value;
+                }
+                try {
+                    const fullKey = dataStorageKey(key);
+                    const text = encodeBytes(dataEnvelope(bytes));
+                    const previous = localStorage.getItem(fullKey);
+                    if (previous !== null) {
+                        let valid = true;
+                        try { dataDecode(previous); } catch (_) { valid = false; }
+                        if (valid) {
+                            // A failed quota/write leaves the primary (and memory) unchanged.
+                            localStorage.setItem(fullKey + ".bak", previous);
+                        } else {
+                            if (!recover) return DATA_CORRUPT;
+                            const backup = localStorage.getItem(fullKey + ".bak");
+                            try { dataDecode(backup); } catch (_) { return DATA_CORRUPT; }
+                            // Do not rotate a corrupt primary over the verified last-good backup.
+                        }
+                    }
+                    localStorage.setItem(fullKey, text);
+                    memoryStorage.set(fullKey, text);
+                    return DATA_OK;
+                } catch (_) { return DATA_UNAVAILABLE; }
+            }
+
+            function saveDataChecked(target, count, key) { return saveDataCore(target, count, key, true); }
+
+            function saveData(target, count, key) {
+                if (saveDataCore(target, count, key, false) !== DATA_OK)
+                    throw new Error("Save Data received invalid bytes/count or could not atomically store the block.");
+            }
+
+            function loadDataCore(key, target, recover) {
+                if (!dataBufferValid(target)) return { status: DATA_INVALID, count: 0 };
+                try {
+                    const fullKey = dataStorageKey(key);
+                    // Persistent storage is authoritative for checked calls, including a missing entry.
+                    const text = localStorage.getItem(fullKey) ?? (!recover ? memoryStorage.get(fullKey) ?? null : null);
+                    let bytes, status = text === null ? DATA_MISSING : DATA_OK;
+                    if (text !== null) {
+                        try { bytes = dataDecode(text); } catch (_) { status = DATA_CORRUPT; }
+                    }
+                    if (recover && (status === DATA_MISSING || status === DATA_CORRUPT)) {
+                        const backup = localStorage.getItem(fullKey + ".bak");
+                        if (backup !== null) {
+                            try { bytes = dataDecode(backup); status = DATA_RECOVERED; }
+                            catch (_) { status = DATA_CORRUPT; }
+                        }
+                    }
+                    if (status !== DATA_OK && status !== DATA_RECOVERED) return { status, count: 0 };
+                    if (bytes.length > target.data.length) return { status: DATA_TOO_LARGE, count: 0 };
+                    for (let index = 0; index < bytes.length; index += 1) target.data[index] = bytes[index];
+                    return { status, count: bytes.length };
+                } catch (_) { return { status: DATA_UNAVAILABLE, count: 0 }; }
+            }
+
+            function loadDataChecked(key, target) { return loadDataCore(key, target, true); }
+
             function loadData(key, target) {
-                if (!target || !Array.isArray(target.data) || target.dimensions.length !== 1)
-                    throw new Error("Load Data destination must be a one-dimensional Number array.");
-                target.data.fill(0);
-                const fullKey = dataStorageKey(key);
-                let text = memoryStorage.has(fullKey) ? memoryStorage.get(fullKey) : null;
-                text = localStorage.getItem(fullKey) ?? text;
-                if (text === null) return 0;
-                let bytes;
-                try { bytes = dataPayload(new Uint8Array(decodeBytes(text))); }
-                catch (error) { target.data.fill(0); throw error; }
-                if (bytes.length > 1024 * 1024 || bytes.length > target.data.length)
-                    throw new Error("Load Data block exceeds the destination capacity.");
-                for (let index = 0; index < bytes.length; index += 1) target.data[index] = bytes[index];
-                return safe(bytes.length);
+                if (dataBufferValid(target)) target.data.fill(0);
+                const result = loadDataCore(key, target, false);
+                if (result.status !== DATA_OK && result.status !== DATA_MISSING)
+                    throw new Error("Load Data encountered an invalid destination, corrupt block, oversized block, or unavailable storage.");
+                return result.count;
             }
 
             function gameClosed() { return closed ? 1 : 0; }
@@ -3804,7 +3859,7 @@ internal static class WebOutputWriter
                 pointerWheelDelta, pointerWheelRemainder, pointerInside, pointerHeld, pointerPressed, pointerReleased,
                 playSound, stopSound,
                 playMusic, pauseMusic, resumeMusic, stopMusic, setMusicVolume, loadTextFile, fileExport, fileImport,
-                loadInt, saveInt, loadData, saveData, renderer3D, renderer3DImage, renderer3DText, renderer3DTextValue,
+                loadInt, saveInt, loadData, saveData, loadDataChecked, saveDataChecked, renderer3D, renderer3DImage, renderer3DText, renderer3DTextValue,
                 gameClosed, endProgram, mediaShutdown, mediaDiagnostics, run
             };
         })();

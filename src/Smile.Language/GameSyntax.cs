@@ -176,13 +176,14 @@ public sealed class ClipRectangleStatementSyntax : StatementSyntax
 public sealed class DataLoadStatementSyntax : StatementSyntax
 {
     public DataLoadStatementSyntax(SyntaxToken loadKeyword, SyntaxToken dataKeyword, ExpressionSyntax key,
-        SyntaxToken destination, AssignmentTargetSyntax countTarget)
+        SyntaxToken destination, AssignmentTargetSyntax countTarget, AssignmentTargetSyntax? statusTarget = null)
     {
         LoadKeyword = loadKeyword;
         DataKeyword = dataKeyword;
         Key = key;
         Destination = destination;
         CountTarget = countTarget;
+        StatusTarget = statusTarget;
     }
 
     public SyntaxToken LoadKeyword { get; }
@@ -190,19 +191,21 @@ public sealed class DataLoadStatementSyntax : StatementSyntax
     public ExpressionSyntax Key { get; }
     public SyntaxToken Destination { get; }
     public AssignmentTargetSyntax CountTarget { get; }
-    public override TextSpan Span => TextSpan.FromBounds(LoadKeyword.Span.Start, CountTarget.Span.End);
+    public AssignmentTargetSyntax? StatusTarget { get; }
+    public override TextSpan Span => TextSpan.FromBounds(LoadKeyword.Span.Start, (StatusTarget ?? CountTarget).Span.End);
 }
 
 public sealed class DataSaveStatementSyntax : StatementSyntax
 {
     public DataSaveStatementSyntax(SyntaxToken saveKeyword, SyntaxToken dataKeyword, SyntaxToken source,
-        ExpressionSyntax count, ExpressionSyntax key)
+        ExpressionSyntax count, ExpressionSyntax key, AssignmentTargetSyntax? statusTarget = null)
     {
         SaveKeyword = saveKeyword;
         DataKeyword = dataKeyword;
         Source = source;
         Count = count;
         Key = key;
+        StatusTarget = statusTarget;
     }
 
     public SyntaxToken SaveKeyword { get; }
@@ -210,7 +213,8 @@ public sealed class DataSaveStatementSyntax : StatementSyntax
     public SyntaxToken Source { get; }
     public ExpressionSyntax Count { get; }
     public ExpressionSyntax Key { get; }
-    public override TextSpan Span => TextSpan.FromBounds(SaveKeyword.Span.Start, Key.Span.End);
+    public AssignmentTargetSyntax? StatusTarget { get; }
+    public override TextSpan Span => TextSpan.FromBounds(SaveKeyword.Span.Start, StatusTarget?.Span.End ?? Key.Span.End);
 }
 
 public sealed class ShowScreenStatementSyntax : StatementSyntax

@@ -897,11 +897,13 @@ internal sealed class ModuleProcessor
                 return new DataLoadStatementSyntax(load.LoadKeyword, load.DataKeyword,
                     LowerExpression(load.Key, tree, module, locals),
                     ReferenceToken(load.Destination, tree, module, locals),
-                    LowerTarget(load.CountTarget, tree, module, locals));
+                    LowerTarget(load.CountTarget, tree, module, locals),
+                    load.StatusTarget == null ? null : LowerTarget(load.StatusTarget, tree, module, locals));
             case DataSaveStatementSyntax save:
                 return new DataSaveStatementSyntax(save.SaveKeyword, save.DataKeyword,
                     ReferenceToken(save.Source, tree, module, locals),
-                    LowerExpression(save.Count, tree, module, locals), LowerExpression(save.Key, tree, module, locals));
+                    LowerExpression(save.Count, tree, module, locals), LowerExpression(save.Key, tree, module, locals),
+                    save.StatusTarget == null ? null : LowerTarget(save.StatusTarget, tree, module, locals));
             case SaveStatementSyntax save:
                 return new SaveStatementSyntax(save.SaveKeyword, ReferenceToken(save.Identifier, tree, module, locals), save.Key);
             default:

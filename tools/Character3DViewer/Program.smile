@@ -358,6 +358,9 @@ Dim CalibrationKeyframeValues[128, CALIBRATION_KEYFRAME_VALUES_PER_CLIP] As Numb
 Dim CalibrationStorage[CALIBRATION_STORAGE_CAPACITY] As Number
 Dim CalibrationStorageCount As Number
 Dim CalibrationStorageRejected As Boolean
+Dim CalibrationPersistenceStatus As Number
+Dim CalibrationWriteFailed As Boolean
+Dim CalibrationPreviousStorage[CALIBRATION_STORAGE_CAPACITY] As Number
 Dim CalibrationUndoStorage[CALIBRATION_STORAGE_CAPACITY] As Number
 Dim CalibrationUndoCount As Number
 Dim CalibrationUndoApplying As Boolean
@@ -5171,6 +5174,8 @@ Sub ConfigureCalibration()
 
     CalibrationStorageCount = 0
     CalibrationStorageRejected = False
+    CalibrationPersistenceStatus = DATA_STATUS_OK
+    CalibrationWriteFailed = False
     CalibrationUndoCount = 0
 
     If CalibrationAvailable Then
@@ -5192,7 +5197,22 @@ Sub LoadSavedCalibration()
     Dim SavedValue As Number
     Dim StorageVersion As Number
 
-    Load Data CalibrationDataKey Into CalibrationStorage Count LoadedCount
+    Load Data CalibrationDataKey Into CalibrationStorage Count LoadedCount Status CalibrationPersistenceStatus
+
+    If (CalibrationPersistenceStatus <> DATA_STATUS_OK And
+        CalibrationPersistenceStatus <> DATA_STATUS_MISSING And
+        CalibrationPersistenceStatus <> DATA_STATUS_RECOVERED) Then
+
+        CalibrationStorageRejected = True
+        CalibrationTransferMessage = "Storage Unavailable Or Invalid; Saved Data Not Replaced"
+
+        Return
+
+    End If
+
+    If CalibrationPersistenceStatus = DATA_STATUS_RECOVERED Then
+        CalibrationTransferMessage = "Recovered Last-Good Backup; Primary Not Changed"
+    End If
 
     If LoadedCount = 0 Then
 
@@ -5911,20 +5931,19 @@ Sub SaveCalibrationKeyframes(Optional Persist As Boolean = True)
     Dim StorageVersion As Number
     Dim Index As Number
     Dim Name As Text
+    Dim PreviousCount As Number
+
+    CalibrationWriteFailed = False
 
     If CalibrationStorageRejected Then
         Return
     End If
 
-    If Persist And Not CalibrationUndoApplying Then
+    PreviousCount = CalibrationStorageCount
 
-        CalibrationUndoCount = CalibrationStorageCount
-
-        For Index = 0 To CalibrationUndoCount - 1
-            CalibrationUndoStorage[Index] = CalibrationStorage[Index]
-        End For
-
-    End If
+    For Index = 0 To PreviousCount - 1
+        CalibrationPreviousStorage[Index] = CalibrationStorage[Index]
+    End For
 
     CalibrationStorage[0] = 83
     CalibrationStorage[1] = 77
@@ -5982,15 +6001,36 @@ Sub SaveCalibrationKeyframes(Optional Persist As Boolean = True)
     End For
 
     If Not DecodeCalibrationStorage(StorageCount) Then
-        CalibrationStorageRejected = True
-        Return
-    End If
 
-    CalibrationStorageCount = StorageCount
+        CalibrationPersistenceStatus = DATA_STATUS_INVALID
+
+        Call RestoreFailedCalibrationWrite(PreviousCount)
+
+        Return
+
+    End If
 
     If Persist Then
 
-        Save Data CalibrationStorage Count StorageCount To CalibrationDataKey
+        Save Data CalibrationStorage Count StorageCount To CalibrationDataKey Status CalibrationPersistenceStatus
+
+        If CalibrationPersistenceStatus <> DATA_STATUS_OK Then
+            Call RestoreFailedCalibrationWrite(PreviousCount)
+
+            Return
+        End If
+
+        If Not CalibrationUndoApplying Then
+
+            CalibrationUndoCount = PreviousCount
+
+            For Index = 0 To PreviousCount - 1
+                CalibrationUndoStorage[Index] = CalibrationPreviousStorage[Index]
+            End For
+
+        End If
+
+        CalibrationTransferMessage = "Saved Locally; JSON Download Contains Saved Keys"
 
         StorageVersion = 3
 
@@ -6001,6 +6041,50 @@ Sub SaveCalibrationKeyframes(Optional Persist As Boolean = True)
         Call InvalidateVisualHistory()
 
     End If
+
+    CalibrationStorageCount = StorageCount
+
+End Sub
+
+Sub RestoreFailedCalibrationWrite(PreviousCount As Number)
+
+    Dim Index As Number
+    Dim Preview[CALIBRATION_CHANNEL_COUNT] As Number
+
+    For Index = 0 To CALIBRATION_CHANNEL_COUNT - 1
+        Preview[Index] = CalibrationChannelValue(SelectedClip, Index)
+    End For
+
+    Call ClearCalibrationMemory()
+
+    CalibrationStorageCount = PreviousCount
+
+    For Index = 0 To PreviousCount - 1
+        CalibrationStorage[Index] = CalibrationPreviousStorage[Index]
+    End For
+
+    If PreviousCount > 0 Then
+
+        If Not DecodeCalibrationStorage(PreviousCount) Then
+            CalibrationStorageRejected = True
+        End If
+
+    End If
+
+    Call UpdateCalibrationForCurrentFrame()
+
+    If CalibrationEditing Then
+
+        For Index = 0 To CALIBRATION_CHANNEL_COUNT - 1
+            Call SetCalibrationChannelValue(SelectedClip, Index, Preview[Index])
+        End For
+
+    End If
+
+    CalibrationWriteFailed = True
+    CalibrationTransferMessage = "Save Failed; Previous Saved Keys Kept"
+
+    Call InvalidateVisualHistory()
 
 End Sub
 
@@ -7189,7 +7273,9 @@ Sub SaveCalibrationFrame()
         Call SaveCalibrationKeyframes()
     End If
 
-    Call FinishCalibrationEdit()
+    If Not CalibrationWriteFailed Then
+        Call FinishCalibrationEdit()
+    End If
 
 End Sub
 
@@ -7204,21 +7290,39 @@ Sub UndoLastCalibrationChange()
     Call FinishCalibrationEdit()
     Call ClearCalibrationMemory()
 
+    For Index = 0 To CalibrationStorageCount - 1
+        CalibrationPreviousStorage[Index] = CalibrationStorage[Index]
+    End For
+
     For Index = 0 To CalibrationUndoCount - 1
         CalibrationStorage[Index] = CalibrationUndoStorage[Index]
     End For
 
     If Not DecodeCalibrationStorage(CalibrationUndoCount) Then
-        CalibrationStorageRejected = True
+
+        CalibrationPersistenceStatus = DATA_STATUS_INVALID
+
+        Call RestoreFailedCalibrationWrite(CalibrationStorageCount)
+
         Return
+
     End If
+
+    ''' Decode the undo candidate, but retain the committed bytes until Save succeeds.
+
+    For Index = 0 To CalibrationStorageCount - 1
+        CalibrationStorage[Index] = CalibrationPreviousStorage[Index]
+    End For
 
     CalibrationUndoApplying = True
 
     Call SaveCalibrationKeyframes()
 
     CalibrationUndoApplying = False
-    CalibrationUndoCount = 0
+
+    If Not CalibrationWriteFailed Then
+        CalibrationUndoCount = 0
+    End If
 
     Call UpdateCalibrationForCurrentFrame()
     Call ApplyWristCalibration()
@@ -7962,7 +8066,11 @@ Sub DrawCalibrationPanel()
 
     If CalibrationStorageRejected Then
 
-        Draw Text "Save blocked: invalid calibration; restore a backup" At 34, 330 Size 10 Color YELLOW
+        Draw Text "Storage blocked; no saved data replaced. See status." At 34, 330 Size 10 Color YELLOW
+
+    Else If CalibrationWriteFailed Then
+
+        Draw Text "Save failed; previous keys kept. Retry or Cancel." At 34, 330 Size 10 Color YELLOW
 
     Else If CalibrationClearConfirm Then
 

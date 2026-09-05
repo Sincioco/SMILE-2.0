@@ -1,0 +1,13 @@
+''' A checked write; the test project supplies an isolated application identity.
+
+Option Explicit
+
+Dim Bytes[8] As Number
+Dim Result As Number
+
+Bytes[0] = 17
+Bytes[1] = 23
+
+Save Data Bytes Count 2 To "Recovery Probe" Status Result
+
+Print Result

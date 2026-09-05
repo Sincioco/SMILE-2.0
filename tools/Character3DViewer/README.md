@@ -238,3 +238,19 @@ both current canonical saves and loads all four tabs before testing edits.
 Solid-floor orbit is clamped at ground height in every tab; grid-only navigation still
 allows below-floor inspection. A timeline drag keeps exclusive pointer ownership beyond
 the window's left/right edges and through its release frame, preventing simultaneous pan.
+
+### Checked calibration persistence
+
+The shared Viewer now uses optional `Save Data` / `Load Data` Status results.
+Denied storage, quota, corrupt envelopes and oversized blocks no longer terminate
+the scene. A failed load blocks saves instead of silently seeding over the unknown
+working copy. A checksummed backup can be read with a visible recovery notice;
+the primary is not changed until a successful explicit save.
+
+Failed writes restore the previous saved bytes and key track. Save Frame keeps its
+temporary pose preview open for Retry/Cancel; a failed Undo retains the undo entry.
+The JSON download still contains saved keys, never a failed candidate. Browser
+primary and last-good backup remain origin/app/key-specific; neither writes Drive D.
+Concurrent tabs/processes still require coordination by the user (no merge/locking).
+Wrong-profile data remains rejected; validated JSON import is a separate unfinished
+workflow, not implied by the generic picker or this storage recovery change.

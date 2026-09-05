@@ -29,6 +29,8 @@ let verifyPhase5Submenus = false;
 let verifyPhase5SubmenuViewport = false;
 let verifyMobileControls = false;
 let verifyFileTransfer = false;
+let verifyDataStatus = false;
+let deniedDataKey = null;
 let verifyRenderer3D = false;
 let renderer3DStateOnly = false;
 let verifyRenderer3DGpuParticles = false;
@@ -55,6 +57,7 @@ while (args.length !== 0) {
     if (option === "--phase5-submenu-viewport") { verifyPhase5SubmenuViewport = true; continue; }
     if (option === "--mobile-controls") { verifyMobileControls = true; continue; }
     if (option === "--file-transfer") { verifyFileTransfer = true; continue; }
+    if (option === "--data-status") { verifyDataStatus = true; continue; }
     if (option === "--renderer3d") { verifyRenderer3D = true; continue; }
     // Model/calibration console fixtures need the GL double but do not present a 3D frame.
     if (option === "--renderer3d-state") { verifyRenderer3D = true; renderer3DStateOnly = true; continue; }
@@ -80,6 +83,7 @@ while (args.length !== 0) {
     const value = args.shift();
     if (value === undefined) fail(`missing value for ${option}`);
     if (option === "--expected") expectedPath = path.resolve(value);
+    else if (option === "--deny-data-key") deniedDataKey = require("crypto").createHash("sha256").update(value).digest("hex");
     else if (option === "--native-output") nativeOutputPath = path.resolve(value);
     else if (option === "--expected-runtime-error") expectedRuntimeError = value;
     else if (option === "--draw-text") expectedDrawText = value;
@@ -221,7 +225,7 @@ function createMobileControlsHost(options = {}) {
             matches: query === "(pointer: coarse)" ? Boolean(options.coarsePointer) :
                 query === "(hover: none)" ? Boolean(options.noHover) : false
         }),
-        localStorage: { getItem: () => null, setItem() {} },
+        localStorage: options.localStorage || { getItem: () => null, setItem() {} },
         performance: { now: () => 0 },
         Audio: class {
             constructor(source) { this.src = source; this.loop = false; this.volume = 1; this.currentTime = 0; }
@@ -576,7 +580,89 @@ async function runFileTransferTests() {
     process.stdout.write("Web file transfer checks passed.\n");
 }
 
-if (verifyFileTransfer) {
+function runDataStatusTests() {
+    const stored = new Map();
+    let denyRead = false, denyWrite = "";
+    const localStorage = {
+        getItem(key) { if (denyRead) throw new Error("SecurityError"); return stored.get(key) ?? null; },
+        setItem(key, value) { if (denyWrite === "all" || denyWrite === key) throw new Error("QuotaExceededError"); stored.set(key, value); }
+    };
+    const createRuntime = () => {
+        const runtime = createMobileControlsHost({ localStorage }).host.smile;
+        runtime.configure("smile.tests.data-status.disposable", []);
+        return runtime;
+    };
+    const runtime = createRuntime();
+    const source = { data: [17, 23], dimensions: [2] };
+    const destination = { data: [99, 98], dimensions: [2] };
+    const load = (status, count, expected = "99,98") => {
+        destination.data = [99, 98];
+        const result = runtime.loadDataChecked("slot", destination);
+        mobileEqual(result.status, status, "checked load status");
+        mobileEqual(result.count, count, "checked load count");
+        mobileEqual(destination.data.join(","), expected, "load contents / failure atomicity");
+    };
+    load(1, 0);
+    mobileEqual(runtime.saveDataChecked(source, 2, "slot"), 0, "first durable save");
+    const key = [...stored.keys()][0];
+    const first = stored.get(key);
+    source.data = [41, 43];
+    mobileEqual(runtime.saveDataChecked(source, 2, "slot"), 0, "second durable save");
+    const second = stored.get(key);
+    mobileEqual(stored.get(key + ".bak"), first, "previous-good backup");
+    load(0, 2, "41,43");
+    const reloaded = createRuntime();
+    mobileEqual(reloaded.loadDataChecked("slot", destination).status, 0, "fresh runtime reads persistent state");
+    mobileEqual(destination.data.join(","), "41,43", "fresh runtime exact bytes");
+    source.data = [51, 53];
+    denyWrite = key;
+    mobileEqual(runtime.saveDataChecked(source, 2, "slot"), 4, "quota at primary write");
+    mobileEqual(stored.get(key), second, "failed write kept primary");
+    mobileEqual(stored.get(key + ".bak"), second, "failed primary write still has a good backup");
+    denyWrite = "all";
+    mobileEqual(runtime.saveDataChecked(source, 2, "slot"), 4, "quota at backup write");
+    denyWrite = "";
+    load(0, 2, "41,43");
+    denyRead = true;
+    load(4, 0);
+    mobileEqual(runtime.saveDataChecked(source, 2, "slot"), 4, "denied storage save");
+    denyRead = false;
+    source.data[0] = 256;
+    mobileEqual(runtime.saveDataChecked(source, 2, "slot"), 3, "invalid byte");
+    mobileEqual(runtime.saveDataChecked(source, -1, "slot"), 3, "invalid count");
+    mobileEqual(stored.get(key), second, "invalid input kept primary");
+    mobileEqual(runtime.loadDataChecked("slot", { data: [99], dimensions: [1] }).status, 6, "too-small destination");
+    stored.set(key, "invalid base64");
+    load(2, 2, "41,43");
+    mobileEqual(runtime.loadDataChecked("slot", { data: [99], dimensions: [1] }).status, 6,
+        "too-small destination also rejects a valid backup");
+    mobileEqual(stored.get(key), "invalid base64", "backup recovery is read-only");
+    let strictFailed = false;
+    try { runtime.loadData("slot", destination); } catch (_) { strictFailed = true; }
+    mobileEqual(strictFailed, true, "legacy strict load still fails on corrupt primary");
+    mobileEqual(destination.data.join(","), "0,0", "strict load still clears destination");
+    source.data = [61, 63];
+    mobileEqual(runtime.saveDataChecked(source, 2, "slot"), 0, "explicit save after recovery");
+    mobileEqual(stored.get(key + ".bak"), second, "corrupt primary never replaces good backup");
+    stored.set(key, "corrupt"); stored.set(key + ".bak", "also corrupt");
+    load(5, 0);
+    mobileEqual(runtime.saveDataChecked(source, 2, "slot"), 5, "unrecoverable corruption blocks save");
+    stored.set(key, "x".repeat(1398161));
+    load(5, 0);
+    stored.delete(key); stored.set(key + ".bak", first);
+    load(2, 2, "17,23");
+    stored.delete(key + ".bak");
+    load(1, 0); // Do not resurrect the previous in-memory save after external deletion.
+    // Strict memory fallback must also never receive an unsuccessful candidate.
+    destination.data = [0, 0];
+    runtime.loadData("slot", destination);
+    mobileEqual(destination.data.join(","), "61,63", "failed writes never poisoned legacy memory fallback");
+    process.stdout.write("Web checked Data denial, quota, corruption, backup, reload and atomicity tests passed (disposable VM storage).\n");
+}
+
+if (verifyDataStatus) {
+    try { runDataStatusTests(); } catch (error) { fail(error.stack || error.message); }
+} else if (verifyFileTransfer) {
     runFileTransferTests().then(() => process.exit(0)).catch(error => fail(error.stack || error.message));
 } else if (verifyMobileControls) {
     runMobileControlsTests()
@@ -779,8 +865,14 @@ const host = {
         exitFullscreen: async () => {}
     },
     localStorage: {
-        getItem: key => storage.has(key) ? storage.get(key) : null,
-        setItem: (key, value) => storage.set(key, String(value))
+        getItem: key => {
+            if (deniedDataKey && key.endsWith(":data:" + deniedDataKey)) throw new Error("Test-only storage denial");
+            return storage.has(key) ? storage.get(key) : null;
+        },
+        setItem: (key, value) => {
+            if (deniedDataKey && key.endsWith(":data:" + deniedDataKey)) throw new Error("Test-only storage denial");
+            storage.set(key, String(value));
+        }
     },
     performance: { now: () => verifyPhase5Ui || verifyPhase5Submenus ? virtualNow : Date.now() },
     Audio: class {

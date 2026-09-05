@@ -159,6 +159,7 @@ public enum SyntaxKind
     UnloadKeyword,
     ClipKeyword,
     DataKeyword,
+    StatusKeyword,
     OpacityKeyword,
     AnchorKeyword,
     FlipKeyword,
@@ -235,6 +236,13 @@ public enum SyntaxKind
     LightGrayKeyword,
     SoundChannelCountKeyword,
     DataBlockMaxBytesKeyword,
+    DataStatusOkKeyword,
+    DataStatusMissingKeyword,
+    DataStatusRecoveredKeyword,
+    DataStatusInvalidKeyword,
+    DataStatusUnavailableKeyword,
+    DataStatusCorruptKeyword,
+    DataStatusTooLargeKeyword,
 }
 
 public static class SyntaxFacts
@@ -395,6 +403,7 @@ public static class SyntaxFacts
         ["Unload"] = SyntaxKind.UnloadKeyword,
         ["Clip"] = SyntaxKind.ClipKeyword,
         ["Data"] = SyntaxKind.DataKeyword,
+        ["Status"] = SyntaxKind.StatusKeyword,
         ["Opacity"] = SyntaxKind.OpacityKeyword,
         ["Anchor"] = SyntaxKind.AnchorKeyword,
         ["Flip"] = SyntaxKind.FlipKeyword,
@@ -471,6 +480,13 @@ public static class SyntaxFacts
         ["LIGHT_GRAY"] = SyntaxKind.LightGrayKeyword,
         ["SOUND_CHANNEL_COUNT"] = SyntaxKind.SoundChannelCountKeyword,
         ["DATA_BLOCK_MAX_BYTES"] = SyntaxKind.DataBlockMaxBytesKeyword,
+        ["DATA_STATUS_OK"] = SyntaxKind.DataStatusOkKeyword,
+        ["DATA_STATUS_MISSING"] = SyntaxKind.DataStatusMissingKeyword,
+        ["DATA_STATUS_RECOVERED"] = SyntaxKind.DataStatusRecoveredKeyword,
+        ["DATA_STATUS_INVALID"] = SyntaxKind.DataStatusInvalidKeyword,
+        ["DATA_STATUS_UNAVAILABLE"] = SyntaxKind.DataStatusUnavailableKeyword,
+        ["DATA_STATUS_CORRUPT"] = SyntaxKind.DataStatusCorruptKeyword,
+        ["DATA_STATUS_TOO_LARGE"] = SyntaxKind.DataStatusTooLargeKeyword,
     };
 
     public static SyntaxKind GetKeywordKind(string text) =>
@@ -483,7 +499,7 @@ public static class SyntaxFacts
         (kind >= SyntaxKind.ImageKeyword && kind <= SyntaxKind.ChannelKeyword);
 
     public static bool IsBuiltInConstant(SyntaxKind kind) =>
-        kind >= SyntaxKind.NoneKeyword && kind <= SyntaxKind.DataBlockMaxBytesKeyword || kind == SyntaxKind.DownKeyword;
+        kind >= SyntaxKind.NoneKeyword && kind <= SyntaxKind.DataStatusTooLargeKeyword || kind == SyntaxKind.DownKeyword;
 
     public static bool IsBuiltInFunction(SyntaxKind kind) =>
         kind >= SyntaxKind.TimerKeyword && kind <= SyntaxKind.Renderer3DTextValueKeyword;
@@ -648,6 +664,13 @@ public static class SyntaxFacts
             SyntaxKind.LightGrayKeyword => 0xC0C0C0,
             SyntaxKind.SoundChannelCountKeyword => 16,
             SyntaxKind.DataBlockMaxBytesKeyword => 1024 * 1024,
+            SyntaxKind.DataStatusOkKeyword => 0,
+            SyntaxKind.DataStatusMissingKeyword => 1,
+            SyntaxKind.DataStatusRecoveredKeyword => 2,
+            SyntaxKind.DataStatusInvalidKeyword => 3,
+            SyntaxKind.DataStatusUnavailableKeyword => 4,
+            SyntaxKind.DataStatusCorruptKeyword => 5,
+            SyntaxKind.DataStatusTooLargeKeyword => 6,
             _ => throw new ArgumentOutOfRangeException(nameof(kind))
         };
     }

@@ -363,11 +363,22 @@ internal sealed class WebEmitter
                 EmitTextFileLoad(textFileLoad);
                 return;
             case DataLoadStatementSyntax dataLoad:
-                Line(WriteTarget(dataLoad.CountTarget,
-                    $"smile.loadData({Expression(dataLoad.Key)}, {_variableNames[ResolveVariable(dataLoad.Destination)]})") + ";");
+                var loadCall = $"({Expression(dataLoad.Key)}, {_variableNames[ResolveVariable(dataLoad.Destination)]})";
+                if (dataLoad.StatusTarget == null)
+                    Line(WriteTarget(dataLoad.CountTarget, "smile.loadData" + loadCall) + ";");
+                else
+                {
+                    Line("{");
+                    Line("const dataResult = smile.loadDataChecked" + loadCall + ";");
+                    Line(WriteTarget(dataLoad.CountTarget, "dataResult.count") + ";");
+                    Line(WriteTarget(dataLoad.StatusTarget, "dataResult.status") + ";");
+                    Line("}");
+                }
                 return;
             case DataSaveStatementSyntax dataSave:
-                Line($"smile.saveData({_variableNames[ResolveVariable(dataSave.Source)]}, {Expression(dataSave.Count)}, {Expression(dataSave.Key)});");
+                var saveCall = $"({_variableNames[ResolveVariable(dataSave.Source)]}, {Expression(dataSave.Count)}, {Expression(dataSave.Key)})";
+                Line(dataSave.StatusTarget == null ? "smile.saveData" + saveCall + ";" :
+                    WriteTarget(dataSave.StatusTarget, "smile.saveDataChecked" + saveCall) + ";");
                 return;
             case SaveStatementSyntax save:
                 Line($"smile.saveInt({Json(save.Key.Value as string ?? string.Empty)}, {ReadVariable(save.Identifier)});");
