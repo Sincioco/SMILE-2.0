@@ -1,0 +1,190 @@
+''' Bounded additive joint aiming after clip sampling; actor placement is untouched.
+Module Smile.Simple3D.NodeAim3D
+
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Character3D As Character3D
+Import Smile.Simple3D.Graphics3D As Graphics3D
+Import Smile.Simple3D.Math3D As Math3D
+Import Smile.Simple3D.FixedMath As Fixed
+
+Public Type Constraint
+    SocketName As Text
+    NodeIndex As Number
+    LocalForward As Core.Vector3
+    Limits As Core.Vector3
+    Angles1000 As Core.Vector3
+    Ready As Boolean
+End Type
+
+''' Use a socket without an additional authored rotation on the joint being aimed.
+Public Function Configure(ByRef Value As Constraint, Actor As Character3D.Actor,
+    SocketName As Text, LocalForward As Core.Vector3, Limits As Core.Vector3) As Boolean
+
+    Dim Index As Number
+
+    Value.Ready = False
+
+    If (Not Character3D.IsValid(Actor) Or
+        Math3D.Length(LocalForward) = 0 Or
+        Limits.X < 0 Or
+        Limits.X > 90 Or
+        Limits.Y < 0 Or
+        Limits.Y > 90 Or
+        Limits.Z < 0 Or
+        Limits.Z > 90) Then
+        Return False
+    End If
+
+    For Index = 0 To Character3D.SocketCount(Actor) - 1
+
+        If Character3D.SocketName(Actor, Index) = SocketName Then
+
+            Value.SocketName = SocketName
+            Value.NodeIndex = Character3D.SocketNodeIndex(Actor, Index)
+            Value.LocalForward = Math3D.Normalize(LocalForward)
+            Value.Limits = Limits
+            Value.Angles1000 = Math3D.Vector(0, 0, 0)
+            Value.Ready = True
+            Return True
+
+        End If
+
+    End For
+
+    Return False
+
+End Function
+
+Public Function Direction(LocalForward As Core.Vector3, Angles As Core.Vector3) As Core.Vector3
+
+    Dim Result As Core.Vector3
+
+    Result = Fixed.RotateX(LocalForward, Angles.X)
+    Result = Fixed.RotateY(Result, Angles.Y)
+    Result = Fixed.RotateZ(Result, Angles.Z)
+
+    Return Result
+
+End Function
+
+''' Small deterministic coordinate search; zero limits lock unwanted twist axes.
+Public Function Solve(LocalForward As Core.Vector3, LocalTarget As Core.Vector3,
+    Limits As Core.Vector3) As Core.Vector3
+
+    Dim Result As Core.Vector3
+    Dim Candidate As Core.Vector3
+    Dim Axis As Number
+    Dim Pass As Number
+    Dim Angle As Number
+    Dim Limit As Number
+    Dim Score As Number
+    Dim BestScore As Number
+
+    LocalForward = Math3D.Normalize(LocalForward)
+    LocalTarget = Math3D.Normalize(LocalTarget)
+    BestScore = Math3D.Dot(LocalForward, LocalTarget)
+
+    For Pass = 1 To 2
+
+        For Axis = 1 To 3
+
+            Limit = Limits.X
+
+            If Axis = 2 Then
+                Limit = Limits.Y
+            Else If Axis = 3 Then
+                Limit = Limits.Z
+            End If
+
+            Limit = Min(90, Max(0, Limit))
+
+            For Angle = 0 - Limit To Limit
+
+                Candidate = Result
+
+                If Axis = 1 Then
+                    Candidate.X = Angle
+                Else If Axis = 2 Then
+                    Candidate.Y = Angle
+                Else
+                    Candidate.Z = Angle
+                End If
+
+                Score = Math3D.Dot(Direction(LocalForward, Candidate), LocalTarget)
+
+                If Score > BestScore Then
+                    BestScore = Score
+                    Result = Candidate
+                End If
+
+            End For
+        End For
+    End For
+
+    Return Result
+
+End Function
+
+Private Function SocketAxis(Actor As Character3D.Actor, SocketName As Text,
+    FirstProperty As Number) As Core.Vector3
+
+    Dim Result As Core.Vector3
+
+    Result.X = Character3D.SocketValueThousandths(Actor, SocketName, FirstProperty)
+    Result.Y = Character3D.SocketValueThousandths(Actor, SocketName, FirstProperty + 1)
+    Result.Z = Character3D.SocketValueThousandths(Actor, SocketName, FirstProperty + 2)
+    Result = Math3D.Normalize(Result)
+
+    Return Result
+
+End Function
+
+Public Function Update(ByRef Value As Constraint, ByRef Actor As Character3D.Actor,
+    Target As Core.Vector3, Elapsed As Number, Enabled As Boolean) As Boolean
+
+    Dim Origin As Core.Vector3
+    Dim WorldDirection As Core.Vector3
+    Dim LocalTarget As Core.Vector3
+    Dim Desired As Core.Vector3
+    Dim Step As Number
+    Dim Result As Boolean
+
+    If Not Value.Ready Or Not Character3D.IsValid(Actor) Then
+        Return False
+    End If
+
+    ''' Read this frame's unmodified animated basis, avoiding accumulated offsets.
+    Result = Character3D.SetNodeRotationOffset(Actor, Value.NodeIndex, 0, 0, 0)
+
+    If Not Result Then
+        Return False
+    End If
+
+    If Enabled Then
+
+        Origin = Character3D.SocketPosition(Actor, Value.SocketName)
+        WorldDirection = Math3D.Normalize(Math3D.Subtract(Target, Origin))
+        LocalTarget.X = Math3D.Dot(WorldDirection,
+            SocketAxis(Actor, Value.SocketName, Graphics3D.ANIMATOR_SOCKET_MATRIX_M11)) / Core.FIXED_ONE
+        LocalTarget.Y = Math3D.Dot(WorldDirection,
+            SocketAxis(Actor, Value.SocketName, Graphics3D.ANIMATOR_SOCKET_MATRIX_M21)) / Core.FIXED_ONE
+        LocalTarget.Z = Math3D.Dot(WorldDirection,
+            SocketAxis(Actor, Value.SocketName, Graphics3D.ANIMATOR_SOCKET_MATRIX_M31)) / Core.FIXED_ONE
+        Desired = Solve(Value.LocalForward, LocalTarget, Value.Limits)
+
+    End If
+
+    Step = Min(250, Max(0, Elapsed))
+    Value.Angles1000.X = Value.Angles1000.X + (Desired.X * 1000 - Value.Angles1000.X) * Step / (160 + Step)
+    Value.Angles1000.Y = Value.Angles1000.Y + (Desired.Y * 1000 - Value.Angles1000.Y) * Step / (160 + Step)
+    Value.Angles1000.Z = Value.Angles1000.Z + (Desired.Z * 1000 - Value.Angles1000.Z) * Step / (160 + Step)
+    Result = Character3D.SetNodeRotationOffset(Actor, Value.NodeIndex,
+        Value.Angles1000.X / 1000, Value.Angles1000.Y / 1000, Value.Angles1000.Z / 1000)
+
+    Return Result
+
+End Function
+
+End Module

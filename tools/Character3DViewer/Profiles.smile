@@ -24,7 +24,7 @@ End Function
 
 Public Function ProfileCount() As Number
 
-    Return 5
+    Return 6
 
 End Function
 
@@ -132,6 +132,8 @@ Public Function ModelFileName(ProfileIndex As Number) As Text
         Result = "arin-v5.7-idle-equipment-checkpoint.glb"
     Else If ProfileIndex = PROFILE_ORIN Then
         Result = "orin-v1.3-animation-checkpoint.glb"
+    Else If ProfileIndex = PROFILE_DRAGON Then
+        Result = "red-dragon-v1.1-animated.glb"
     Else If ProfileIndex = PROFILE_ARIN_V56 Then
         Result = "arin-integrated-candidate-v5.6.glb"
     Else If ProfileIndex = PROFILE_ARIN_ORIGINAL Then
@@ -395,7 +397,9 @@ Public Function ClipLoops(ProfileIndex As Number, ClipIndex As Number) As Boolea
 
     Result = True
 
-    If ProfileIndex = PROFILE_ORIN Then
+    If ProfileIndex = PROFILE_DRAGON Then
+        Result = ClipIndex = 0
+    Else If ProfileIndex = PROFILE_ORIN Then
         Result = ClipIndex = 0 Or ClipIndex = 8
     Else If IsPartyCharacter(ProfileIndex) Then
         Result = (ClipIndex = 0 Or
@@ -568,7 +572,9 @@ Public Function SocketCount(ProfileIndex As Number) As Number
 
     Dim Result As Number
 
-    If IsPartyCharacter(ProfileIndex) Then
+    If ProfileIndex = PROFILE_DRAGON Then
+        Result = 6
+    Else If IsPartyCharacter(ProfileIndex) Then
         Result = 10
     Else If ProfileIndex = PROFILE_ARIN_V56 Then
         Result = 10
@@ -586,7 +592,23 @@ Public Function SocketName(ProfileIndex As Number, SocketIndex As Number) As Tex
 
     Dim Result As Text
 
-    If (IsPartyCharacter(ProfileIndex) Or
+    If ProfileIndex = PROFILE_DRAGON Then
+
+        If SocketIndex = 0 Then
+            Result = "Root"
+        Else If SocketIndex = 1 Then
+            Result = "Head"
+        Else If SocketIndex = 2 Then
+            Result = "Chest"
+        Else If SocketIndex = 3 Then
+            Result = "Mouth"
+        Else If SocketIndex = 4 Then
+            Result = "EyeLeft"
+        Else If SocketIndex = 5 Then
+            Result = "EyeRight"
+        End If
+
+    Else If (IsPartyCharacter(ProfileIndex) Or
         ProfileIndex = PROFILE_ARIN_V56 Or
         ProfileIndex = PROFILE_ARIN_ORIGINAL) Then
 

@@ -23,8 +23,12 @@ or downloaded animation was needed. Original asset hashes appear in `checksums.j
 
 The viewer advances Arin, Orin, then Dragon. Dragon turns cycle a mouth-socket
 fire sweep, a claw strike and a charged fireball. The current preview includes stronger wings/arms, a held recoil, idle mouth heat,
-and a charge/flight/explosion effect. Head tracking and cinematic composition remain
-under development. Characters guard and play
+and a charge/flight/explosion effect. Head-only aiming uses the shared `NodeAim3D`
+helper after animation sampling, with 35-degree local pitch and 45-degree local
+side-to-side limits and no twist. The body retains its authored orientation.
+The head, child mouth and eyes aim at the same party member before breath or
+fireball emission; the target remains consistent for the turn. Cinematic composition
+remains under development. Characters guard and play
 their own Hit clips. Existing shared FireEmitter3D resources handle the breath;
 no native game-specific helper or language syntax was added.
 

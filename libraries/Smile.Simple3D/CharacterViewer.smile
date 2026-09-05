@@ -434,6 +434,80 @@ Public Function ProjectViewerPoint(
 
 End Function
 
+''' Resolves a logical cursor on the camera-facing plane at a chosen world depth.
+''' This is a depth-plane anchor, not mesh collision or surface picking.
+Public Function CursorPointAtDepth(
+    Camera As Core.Camera3D,
+    CursorX As Number,
+    CursorY As Number,
+    Depth As Number,
+    ViewWidth As Number,
+    ViewHeight As Number
+) As Core.Vector3
+
+    Dim Result As Core.Vector3
+    Dim Forward As Core.Vector3
+    Dim RightValue As Core.Vector3
+    Dim UpValue As Core.Vector3
+    Dim FocalLength As Number
+    Dim Horizontal1000 As Number
+    Dim Vertical1000 As Number
+    Dim HalfFov As Number
+
+    Result = Camera.Target
+
+    If (ViewWidth < GIZMO_MINIMUM_VIEW_SIZE Or
+        ViewHeight < GIZMO_MINIMUM_VIEW_SIZE Or
+        Camera.FovDegrees <= 0 Or
+        Camera.FovDegrees >= 180 Or
+        Depth < Max(1, Camera.NearPlane)) Then
+        Return Result
+    End If
+
+    Forward = VectorMath.Normalize(VectorMath.Subtract(Camera.Target, Camera.Position))
+    RightValue = VectorMath.Normalize(VectorMath.Cross(Camera.UpDirection, Forward))
+    UpValue = VectorMath.Normalize(VectorMath.Cross(Forward, RightValue))
+    HalfFov = Camera.FovDegrees / 2
+    FocalLength = (ViewHeight * Max(1, Abs(Math3D.CosFixed(HalfFov))) /
+        (2 * Max(1, Abs(Math3D.SinFixed(HalfFov)))))
+    Horizontal1000 = (CursorX - ViewWidth / 2) * Depth * 1000 / Max(1, FocalLength)
+    Vertical1000 = (ViewHeight / 2 - CursorY) * Depth * 1000 / Max(1, FocalLength)
+    Result.X = Camera.Position.X + (Forward.X * Depth * 1000 +
+        RightValue.X * Horizontal1000 + UpValue.X * Vertical1000) / (Core.FIXED_ONE * 1000)
+    Result.Y = Camera.Position.Y + (Forward.Y * Depth * 1000 +
+        RightValue.Y * Horizontal1000 + UpValue.Y * Vertical1000) / (Core.FIXED_ONE * 1000)
+    Result.Z = Camera.Position.Z + (Forward.Z * Depth * 1000 +
+        RightValue.Z * Horizontal1000 + UpValue.Z * Vertical1000) / (Core.FIXED_ONE * 1000)
+
+    Return Result
+
+End Function
+
+''' Translates a composed camera so one world anchor retains its logical pixel.
+Public Function KeepCursorAnchor(
+    Camera As Core.Camera3D,
+    Anchor As Core.Vector3,
+    CursorX As Number,
+    CursorY As Number,
+    Depth As Number,
+    ViewWidth As Number,
+    ViewHeight As Number
+) As Core.Camera3D
+
+    Dim Result As Core.Camera3D
+    Dim CursorPoint As Core.Vector3
+    Dim Translation As Core.Vector3
+
+    Result = Camera
+    CursorPoint = CursorPointAtDepth(Camera, CursorX, CursorY, Depth, ViewWidth, ViewHeight)
+    Translation = VectorMath.Subtract(Anchor, CursorPoint)
+    Result.Position = VectorMath.Add(Result.Position, Translation)
+    Result.Target = VectorMath.Add(Result.Target, Translation)
+
+    Return Result
+
+End Function
+
 ''' Builds the projected origin and positive X, Y, and Z handles.
 Public Function ProjectTransformGizmo(
     Origin As Core.Vector3,

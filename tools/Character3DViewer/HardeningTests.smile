@@ -7,6 +7,8 @@ Import Smile.Tools.OrinStorm As OrinStorm
 Import Smile.Tools.BattleAudio As BattleAudio
 Import Smile.Tools.BattleCamera As BattleCamera
 Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.NodeAim3D As NodeAim3D
+Import Smile.Simple3D.Math3D As Math3D
 
 Dim Alternating As CharacterViewer.ZoomState
 Dim Bounds As Character3D.Bounds3D
@@ -30,8 +32,31 @@ Dim OrbitBase As Core.Camera3D
 Dim OrbitControls As Core.CameraControl3D
 Dim OrbitFirst As Core.Camera3D
 Dim OrbitNext As Core.Camera3D
+Dim CursorAnchor As Core.Vector3
+Dim CursorProjection As Core.ProjectedPoint3D
+Dim AimForward As Core.Vector3
+Dim AimTarget As Core.Vector3
+Dim AimAngles As Core.Vector3
+Dim AimLimits As Core.Vector3
 
 Game Window "Character 3D Viewer Hardening Tests" Size 320 By 240
+
+AimForward = Math3D.Vector(0, 1, 0)
+AimLimits = Math3D.Vector(35, 0, 45)
+AimTarget = NodeAim3D.Direction(Math3D.Normalize(AimForward), Math3D.Vector(22, 0, -30))
+AimAngles = NodeAim3D.Solve(AimForward, AimTarget, AimLimits)
+
+Call Check(Abs(AimAngles.X - 22) <= 1 And Abs(AimAngles.Z + 30) <= 1)
+Call Check(AimAngles.Y = 0)
+
+AimAngles = NodeAim3D.Solve(AimForward, Math3D.Vector(10, -10, 10), AimLimits)
+
+Call Check(Abs(AimAngles.X) <= 35 And Abs(AimAngles.Z) <= 45)
+Call Check(AimAngles.Y = 0)
+
+AimAngles = NodeAim3D.Solve(AimForward, AimForward, AimLimits)
+
+Call Check(AimAngles.X = 0 And AimAngles.Y = 0 And AimAngles.Z = 0)
 
 OrbitBase.Position.Z = -1000
 OrbitBase.Position.Y = 400
@@ -46,6 +71,30 @@ OrbitNext = BattleCamera.Orbit(OrbitBase, OrbitControls, 100)
 
 Call Check(Abs(OrbitFirst.Position.X - OrbitNext.Position.X) <= 5)
 Call Check(Abs(OrbitFirst.Position.Z - OrbitNext.Position.Z) <= 2)
+
+OrbitControls.PanX = 130
+OrbitControls.PanY = -85
+OrbitFirst = BattleCamera.Orbit(OrbitBase, OrbitControls, 80000)
+CursorAnchor = CharacterViewer.CursorPointAtDepth(OrbitFirst, 850, 370, 700, 1440, 900)
+CursorProjection = CharacterViewer.ProjectViewerPoint(CursorAnchor, OrbitFirst, 1440, 900)
+
+Call Check(CursorProjection.Visible)
+Call Check(Abs(CursorProjection.X - 850) <= 2 And Abs(CursorProjection.Y - 370) <= 2)
+
+OrbitControls.OrbitPitch = 25
+OrbitNext = BattleCamera.Orbit(OrbitBase, OrbitControls, 135000)
+OrbitNext = CharacterViewer.KeepCursorAnchor(OrbitNext, CursorAnchor, 850, 370, 700, 1440, 900)
+CursorProjection = CharacterViewer.ProjectViewerPoint(CursorAnchor, OrbitNext, 1440, 900)
+
+Call Check(CursorProjection.Visible)
+Call Check(Abs(CursorProjection.X - 850) <= 2 And Abs(CursorProjection.Y - 370) <= 2)
+
+OrbitControls.OrbitPitch = -20
+OrbitNext = BattleCamera.Orbit(OrbitBase, OrbitControls, 10000)
+OrbitNext = CharacterViewer.KeepCursorAnchor(OrbitNext, CursorAnchor, 850, 370, 700, 1440, 900)
+CursorProjection = CharacterViewer.ProjectViewerPoint(CursorAnchor, OrbitNext, 1440, 900)
+
+Call Check(Abs(CursorProjection.X - 850) <= 2 And Abs(CursorProjection.Y - 370) <= 2)
 
 Call Check(BattleCamera.FrontArcYaw1000(0) = 120000)
 Call Check(BattleCamera.FrontArcYaw1000(90000) = 175000)
@@ -121,7 +170,10 @@ Call Check(ViewerProfiles.ClipName(ViewerProfiles.PROFILE_ARIN, 3) = "Defend")
 Call Check(ViewerProfiles.ClipName(ViewerProfiles.PROFILE_ARIN, 7) = "Run")
 Call Check(ViewerProfiles.EpicGlowAvailable(ViewerProfiles.PROFILE_ARIN))
 Call Check(ViewerProfiles.EpicGlowVisibleByDefault(ViewerProfiles.PROFILE_ARIN))
-Call Check(ViewerProfiles.ProfileCount() = 5)
+Call Check(ViewerProfiles.ProfileCount() = 6)
+Call Check(ViewerProfiles.SocketCount(ViewerProfiles.PROFILE_DRAGON) = 6)
+Call Check(ViewerProfiles.ClipLoops(ViewerProfiles.PROFILE_DRAGON, 0))
+Call Check(Not ViewerProfiles.ClipLoops(ViewerProfiles.PROFILE_DRAGON, 1))
 
 Profile = ViewerProfiles.ProfileAt(ViewerProfiles.PROFILE_ORIN)
 

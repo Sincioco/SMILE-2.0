@@ -1,6 +1,10 @@
 # SMILE 2.0 - 3D Viewer, Animation Editor
 
-Native-first reusable inspection and lightweight pose-correction tool. Party is the launch default. The Character tabs select Arin, Orin, or the Party arena. Profile retains Arin v5.6, the earlier prototype, and the technical fixture for diagnostics. Web editor feature work is deferred.
+Native-first reusable inspection and lightweight pose-correction tool. Party is the launch default. The Character tabs select Arin, Orin, Dragon, or the Party arena. Profile retains Arin v5.6, the earlier prototype, and the technical fixture for diagnostics. Web editor feature work is deferred.
+
+Dragon inspection uses the same clip buttons, timeline/frame stepping, playback speed, demo, lighting/material channels, sockets, pan/orbit/zoom and reset as the hero tabs. Both heroes remain in the arena with their own assets and saved corrections. Head Aim constrains only the head joint; At Arin/At Orin selects its target. The current Pose Calibration targets remain humanoid wrists and equipment, so they do not apply to Dragon. Dragon VFX and hero equipment visibility remain independent. Party's Inspect Character also opens Dragon's tab.
+
+Party members start on a 300-unit front arc with 40 degrees between its endpoints. The placement function distributes any supplied member count over that arc. The two current attack destinations remain in front of the Dragon; approach and retreat interpolate from each member's own home position. Battle cameras sample this frame's actor/Dragon poses.
 
 The editor source and build/launch entry points belong here. Sin Star I owns the self-contained character package at `games\SinStarI\SourceAssets\Characters\Paladin\ArinV57`. Orin owns `games\SinStarI\SourceAssets\Characters\Tank\OrinV13`. Do not edit ignored cooking inputs as canonical character assets.
 
@@ -17,6 +21,7 @@ Run `Build.ps1`, then `Launch.ps1`. The regular launcher defaults to `bin\Charac
 - Bare Alt no longer enters Windows' modal keyboard-menu state. Alt+Enter still toggles fullscreen and Alt+F4 closes the window. Recompile older game executables to pick up the shared native runtime fix.
 - Right-click resets presentation as on a fresh launch: Idle, Demo, dragon/floor/grid visible, landscape backdrop, unpaused. There is no inactivity timer that re-enables Demo.
 - Left drag pans the view; middle drag orbits; wheel zooms smoothly.
+- With Pose Calibration open, a middle drag anchors the point under the cursor at the selected joint/equipment depth. It preserves that point's on-screen location, including after prior pan or close-up zoom, instead of orbiting the distant arena center. The view remains where it was on release; reset clears the custom anchor. This uses a depth plane rather than mesh-surface picking.
 - Zoom extends to -144 for glove and grip inspection. Beyond the former -48 limit, it moves the camera closer to the current panned anchor, reaching one tenth of the former distance. Pan the glove toward the center, then zoom in; the arena size and character pose are unchanged.
 - H Orbit, V Orbit and Zoom support hover-wheel adjustment and capture slider drags until release, even outside the track. Vertical orbit supports 360 degrees.
 - Arin and Orin start at speed 200. Their individual demos target three seconds per sequence and let an in-progress animation finish before advancing. Orin Block plays once and holds its final pose. Selecting an animation disables Demo; Block remains a one-shot.

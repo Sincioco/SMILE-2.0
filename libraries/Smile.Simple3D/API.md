@@ -182,6 +182,8 @@ Yaw and pitch remain unbounded while an orbit gesture is held, then normalize on
 
 `ZoomState`, `InitializeZoom`, `AdjustZoomTarget`, and `AdvanceZoom` provide frame-rate-independent bounded zoom easing. `RetainedPointerDelta` preserves fractional pointer movement so slow pan and orbit gestures remain smooth at integer-world scale.
 
+`CursorPointAtDepth` resolves a logical pointer position on a camera-facing plane at an explicit world depth. `KeepCursorAnchor` translates a newly orbited camera so that world point remains at its original logical pixel. These are reusable projection helpers, not mesh raycasts; an inspector can choose the selected joint's depth without changing the pose or snapping the camera on mouse-down.
+
 ## `Smile.Simple3D.Effects3D`
 
 `EffectPreset` defines bounded deterministic particle, ribbon, flash, shake, light, audio, and composite-emitter presentation data. `RibbonPointCount`, `RibbonWidth`, and `RibbonRadius` control a zero-particle ribbon independently: radius `0` preserves the legacy 170-world-unit curve, while an explicit value from `1` through `100,000` calibrates the curve to the scene or subject scale. Effects may follow a `Character3D` socket through `SpawnAtSocket` and `MoveToSocket`; caller-owned light and audio requests remain presentation-only and never authorize gameplay damage.
@@ -246,6 +248,10 @@ An object returned by a primitive creator or chosen as the owner of a custom mes
 ## Legacy wireframe modules
 
 `FixedMath`, `Mesh`, `Primitives`, `Renderer`, and the original `OrbitState3D` interaction calls remain source compatible with the deterministic wireframe examples, GDI builds, and Space Wars. `Interaction` also exposes the reusable true-3D camera-control contract above.
+
+## `Smile.Simple3D.NodeAim3D`
+
+Bounded additive joint aiming uses the existing animated socket matrices and node rotation offsets. `Configure(ByRef Constraint, Actor, SocketName, LocalForward, Limits)` selects one joint through a socket with no extra authored rotation. Limits are maximum X/Y/Z angles in degrees (0..90); zero locks an axis. `Update(ByRef Constraint, ByRef Actor, Target, Elapsed, Enabled)` aims after clip sampling and actor placement, before reading attached effects. It reads the unmodified animated joint basis every frame, eases toward the bounded correction, and blends back to the clip when disabled. It never changes the actor's position or body rotation. `Solve` and `Direction` expose the same bounded local-space math for inspection. This is a source-library helper, not IK or new language syntax.
 
 ## `Smile.Simple3D.Arena3D`
 
