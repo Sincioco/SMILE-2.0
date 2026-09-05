@@ -1,8 +1,8 @@
 # Battle Scene Prerequisite Execution Baseline
 
-Date: 5 September 2026  
-Package: `2026-09-05-01-smile-2.0-pre-battle-editor-hardening.zip`  
-Reviewed reference: `651492993a8709dd4e9489e57faca8888c89539d`  
+Date: 5 September 2026
+Package: `2026-09-05-01-smile-2.0-pre-battle-editor-hardening.zip`
+Reviewed reference: `651492993a8709dd4e9489e57faca8888c89539d`
 Execution start: `e02403dc3fda301cec236408e9326eb946c25d0b`
 
 ## Repository state

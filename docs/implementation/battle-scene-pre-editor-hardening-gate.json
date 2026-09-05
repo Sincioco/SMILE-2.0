@@ -1,0 +1,142 @@
+{
+  "schemaVersion": 1,
+  "packageIdentity": "smile-2.0-pre-battle-editor-hardening",
+  "packageFile": "2026-09-05-01-smile-2.0-pre-battle-editor-hardening.zip",
+  "packageSha256": "A4C1BC8EF81956EDEC50BBE3AAE2FD0D25ED112DF5990A195524F3A3D5AC4AB8",
+  "reviewedSha": "651492993a8709dd4e9489e57faca8888c89539d",
+  "executionStartSha": "e02403dc3fda301cec236408e9326eb946c25d0b",
+  "validatedCommit": "56513fbcf74ebe3f192b6e34f2d230ec161425f7",
+  "branch": "main",
+  "status": "PASS-NATIVE",
+  "editorWorkStarted": false,
+  "requiredChecks": [
+    {
+      "id": "H0",
+      "status": "PASS",
+      "evidence": [
+        "12/12 manifest-listed package files matched byte counts and SHA-256",
+        "Execution baseline pinned to e02403dc3fda301cec236408e9326eb946c25d0b"
+      ]
+    },
+    {
+      "id": "H1",
+      "status": "PASS",
+      "evidence": [
+        "Arin final export preserved 23 keys",
+        "Orin final export preserved 0 keys",
+        "Isolated native load/edit/undo/save and envelope validation passed"
+      ]
+    },
+    {
+      "id": "H2",
+      "status": "PASS",
+      "evidence": [
+        "58 native graphics, pointer-input and audio-focus checks passed",
+        "Native Viewer and Lightning Lab interaction/lifecycle observations completed"
+      ]
+    },
+    {
+      "id": "H3",
+      "status": "PASS",
+      "evidence": [
+        "Scene-owned Fire and Lightning advancement with duplicate-frame rejection",
+        "Per-instance Orin storm contexts and generation-safe light leases passed isolation tests",
+        "Independent family freeze/resume and optional-emitter failure paths passed"
+      ]
+    },
+    {
+      "id": "H4",
+      "status": "PASS",
+      "evidence": [
+        "Current Dragon tab/head aim, six clips and six sockets verified",
+        "Accepted Arin and Orin Death/grounding identity verified",
+        "Explicit Party KO/revive state and three-member formation tests passed"
+      ]
+    },
+    {
+      "id": "H5",
+      "status": "PASS",
+      "evidence": [
+        "LightPool3D and SceneVfx3D reusable modules build and pass native tests",
+        "CharacterViewer calibration and interaction coverage retained"
+      ]
+    },
+    {
+      "id": "H6",
+      "status": "PASS-NATIVE",
+      "evidence": [
+        "13 formatter integration tests passed",
+        "Repository style check passed for 380 SMILE files",
+        "Native hardening wrapper passed",
+        "Ordinary smoke suite passed",
+        "Final Viewer and Lightning Lab executed natively",
+        "VSIX 2.0.59 rebuilt, installed and hash-verified"
+      ]
+    }
+  ],
+  "assetFingerprints": {
+    "arinV57": {
+      "modelSha256": "EDCFC5F92E22DF7FD58030AB64410E0EBD9931D92F7AA2E297565B966C8C502E",
+      "descriptorSha256": "2768A01120F5E0D35A85AF8C445D70A186193097F223429809E95D5098081620",
+      "packageSha256": "6D1B792747AB6F92E04F8D3515013E9761308C1A8E15F442B592A3568386973A",
+      "cookedSha256": "401C14E7E00A90304C084AA8B766ABFEACD08A1F5B36DDA02025C1F8320B2CCD",
+      "deathSourceSha256": "D059E99F96BE79C209261CD2668F02809679CCADA1D2043BA177625005231ADC",
+      "groundingSha256": "8E706E5147F6CD4149BAE4D78A269CD460CCBBAC11762AA33E07415F35D3DEF3"
+    },
+    "orinV13": {
+      "modelSha256": "84B55E0EC83746A0188A473102F73377E63C3E9F15F04B597CF3DABA6B78DDCF",
+      "descriptorSha256": "4345D2F60230F20353FAD7FFE395E8555096D2EF1F26A456C7D68B81AAE85649",
+      "packageSha256": "E5BDE7A822EADD46FC514E23F40D755D5FF2013EC2F17C73428F08FFB1C87E3D",
+      "cookedSha256": "459CC2F787479454F2DF4FDDE6BE18871A5BF3EE41E824439D9B2EF8B9A75C43",
+      "deathSourceSha256": "92EF957415C492171EF3A361DE4BC7C28B1F28BB85838C0760F270B2B9A9E3ED",
+      "deathRootRepairSha256": "6D263A01FCE179D7CDE6D7F74E4B326A034DA11E09520D236AB81AF9BA15B2D5",
+      "groundingSha256": "9BE7CAC5F913087FC01419E0F6869DD76DE26E92FCD5F28531E9F8E80204FAB1"
+    },
+    "redDragonV11": {
+      "modelSha256": "782BF48A302665930F1F6872B159CEFBCE5FBA7C3272B7E53D2A63ECD842F4E8",
+      "descriptorSha256": "A341DA15B7B97C28DA4B954B2B8F13B72737E2B264074C43EBEDA843035EC724",
+      "packageSha256": "1CFFB9135E2BB7A7002B8E50A443379C9AEFD8099F901F006BF31284BEECA855",
+      "cookedSha256": "D3CD6FF6BAB02BE0ECD759494DF5E1A8BBD644700EEB2305E009D2821F2A0825"
+    }
+  },
+  "calibration": {
+    "arinV57": {
+      "savedKey": "CharacterViewerCalibrationKeyframes",
+      "keyCount": 23,
+      "canonicalSha256": "1747367DD5E411D8230AB5159DE1309F221867C8DE6745661DA1396EAE6DB867",
+      "profileFingerprint": "DB3286E4A9DC8F3064F65C1BC36047E7AF4F2FF771EBC51BF4C73DC6C16AC2ED"
+    },
+    "orinV13": {
+      "savedKey": "CharacterViewer.Orin.v1.3.CalibrationKeyframes",
+      "keyCount": 0,
+      "canonicalSha256": "07927539BD086FF8581D112FCEB648F5F89F1B12A5DECB263047554DD71E7937",
+      "profileFingerprint": "5A6F903CCC4C5FF669689CC2A176133874A6B0641ED8F33B8D4429F7A8D6CA4D"
+    },
+    "backupRoot": "artifacts/temp/codex-handoff/2026-09-05-01-pre-battle-editor-hardening/calibration-backup-start-6957ac0",
+    "historicalCheckpointImported": false
+  },
+  "buildIdentity": {
+    "compilerSha256": "BFB4AA71C967656C4C3BB735DD721E926E6160D31321693ACC4A865D5CE4F2FF",
+    "viewerSha256": "94CD91FB5A2F1D6A0D69E8E25E12A5C8C8F47CE6D712E7184E058A8C962B4041",
+    "vsixVersion": "2.0.59",
+    "vsixSha256": "95A18D14318E309423673B29BB0321DC38C95F680B72D62B966BEB68B6405C7E",
+    "installedVsixDllSha256": "285980242FA4FEFEFDC0CAD390C7BC062BF9F6FA3A8FD7F39CC53FF7F5E8EE16",
+    "installedVsixVerified": true
+  },
+  "web": {
+    "status": "DEFERRED-PERMITTED",
+    "projectCompilation": "PASS",
+    "hardeningHarnessExecution": "FAIL",
+    "reason": "Existing screen-space camera normalization produced a 9650663384084100 intermediate outside the JavaScript safe-integer range.",
+    "lightningFoundationParity": "PASS",
+    "fireFoundationParity": "PASS",
+    "ordinarySmokeWebCoverage": "PASS",
+    "visualAcceptance": "NOT-PERFORMED"
+  },
+  "mandatoryBlockers": [],
+  "nonblockingLimitations": [
+    "Web-safe screen-space camera normalization remains deferred.",
+    "Direct automated middle-button drag and audibility were not manually claimed; native executable checks cover capture/release and focus audio.",
+    "User aesthetic approval remains pending and is not claimed."
+  ]
+}
