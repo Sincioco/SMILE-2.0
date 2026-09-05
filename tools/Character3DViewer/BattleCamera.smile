@@ -8,6 +8,25 @@ Import Smile.Simple3D.Interaction As Interaction
 Import Smile.Simple3D.FixedMath As Fixed
 Import Smile.Simple3D.Math3D As Math3D
 
+''' Rejects a transient animated socket that escapes its actor's stable scene envelope.
+Public Function BoundedAnchor(Candidate As Core.Vector3, Fallback As Core.Vector3,
+    MaximumDelta As Number) As Core.Vector3
+
+    Dim Result As Core.Vector3
+
+    Result = Candidate
+
+    If (MaximumDelta < 0 Or
+        Abs(Candidate.X - Fallback.X) > MaximumDelta Or
+        Abs(Candidate.Y - Fallback.Y) > MaximumDelta Or
+        Abs(Candidate.Z - Fallback.Z) > MaximumDelta) Then
+        Result = Fallback
+    End If
+
+    Return Result
+
+End Function
+
 ''' Camera clearance in the ground plane; height alone must not permit clipping through a shield.
 Public Sub KeepOutsideActor(ByRef Camera As Core.Camera3D, Center As Core.Vector3, Radius As Number)
 

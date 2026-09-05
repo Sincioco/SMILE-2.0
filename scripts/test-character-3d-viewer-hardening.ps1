@@ -117,6 +117,9 @@ try {
     }
     Assert-True (-not $viewerSource.Contains('IDLE_RESET_MILLISECONDS') -and
         -not $viewerSource.Contains('AdvanceIdleReset')) 'Automatic idle reset must not return.'
+    Assert-True (-not $viewerSource.Contains('ClearanceRadius') -and
+        -not $viewerSource.Contains('MinimumSeparation')) `
+        'Party attack approaches must not be displaced by animated full-model bounds.'
     & (Join-Path $PSScriptRoot 'test-arin-calibration.ps1')
     if ($LASTEXITCODE -ne 0) { throw 'Calibration persistence checks failed.' }
     & (Join-Path $PSScriptRoot 'test-viewer-calibration-native.ps1')

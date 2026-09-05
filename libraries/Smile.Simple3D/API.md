@@ -21,7 +21,7 @@ The legacy wireframe types and limits remain source compatible.
 
 ## `Smile.Simple3D.Math3D`
 
-- `Vector`, `Add`, `Subtract`, `MultiplyScalar`, `Dot`, `Cross`, `Length`, `Normalize`, and `Distance`.
+- `Vector`, `Add`, `Subtract`, `MultiplyScalar`, `Dot`, `Cross`, `Length`, `Normalize`, and `Distance`. `Normalize` safely scales large intermediate vectors before measuring them so native and Web camera composition remain deterministic; raw `Dot`, `Cross`, and `Length` behavior is unchanged.
 - `Identity`, `Translation`, `Scale`, `RotationX`, `RotationY`, `RotationZ`, and `Multiply`.
 - `TransformPoint`, `Perspective`, and `LookAt`.
 

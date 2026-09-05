@@ -6,6 +6,9 @@ Option Explicit
 Import Smile.Simple3D.Core As Core
 Import Smile.Simple3D.FixedMath As Fixed
 
+''' Largest equal vector component whose three squared components remain Web-safe.
+Private Const MAX_SAFE_LENGTH_COMPONENT = 54794158
+
 Public Function Vector(X As Number, Y As Number, Z As Number) As Core.Vector3
 
     Dim Result As Core.Vector3
@@ -118,13 +121,38 @@ Public Function Length(Value As Core.Vector3) As Number
 
 End Function
 
+Private Function NormalizationMagnitude(Value As Core.Vector3) As Number
+
+    Dim LargestComponent As Number
+    Dim ScaleDivisor As Number
+    Dim Scaled As Core.Vector3
+    Dim ReturnValue As Number
+
+    LargestComponent = Max(Abs(Value.X), Max(Abs(Value.Y), Abs(Value.Z)))
+
+    If LargestComponent <= MAX_SAFE_LENGTH_COMPONENT Then
+        ReturnValue = Length(Value)
+
+        Return ReturnValue
+    End If
+
+    ScaleDivisor = LargestComponent / MAX_SAFE_LENGTH_COMPONENT + 1
+    Scaled.X = Value.X / ScaleDivisor
+    Scaled.Y = Value.Y / ScaleDivisor
+    Scaled.Z = Value.Z / ScaleDivisor
+    ReturnValue = Length(Scaled) * ScaleDivisor
+
+    Return ReturnValue
+
+End Function
+
 ''' Returns a FIXED_ONE-length vector. Zero normalizes to the zero vector.
 Public Function Normalize(Value As Core.Vector3) As Core.Vector3
 
     Dim Result As Core.Vector3
     Dim Magnitude As Number
 
-    Magnitude = Length(Value)
+    Magnitude = NormalizationMagnitude(Value)
 
     If Magnitude = 0 Then
         Return Result

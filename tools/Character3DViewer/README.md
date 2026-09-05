@@ -153,5 +153,8 @@ Battle cameras use stable actor homes/travel instead of bone bobbing or KO
 height. They stay above the floor, keep clearance from both heroes, and cut at
 shot-stage changes rather than moving through a character. A brief decaying
 shake is reserved for Orin's ground smash and respects Flash/Shake Off.
+Only the active hero enters an authored attack approach; full animated-model
+bounds never rewrite those cinematic positions. Animated dragon camera sockets
+fall back to stable arena anchors if a sampled socket leaves the scene envelope.
 Below Camera, Party displays rendered position/target XYZ, yaw/pitch, FOV and
 distance, so screenshots contain enough information to diagnose a bad angle.

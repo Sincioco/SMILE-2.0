@@ -78,6 +78,10 @@ Const ARENA_CAMERA_CENTER_Z = -45
 Const ARENA_DEFAULT_ZOOM_DEGREES = -15
 Const ARENA_FLOOR_WIDTH = 1000
 Const ARENA_FLOOR_DEPTH = 1000
+Const DRAGON_CAMERA_CHEST_HEIGHT = 70
+Const DRAGON_CAMERA_HEAD_HEIGHT = 115
+Const DRAGON_CAMERA_MOUTH_HEIGHT = 100
+Const DRAGON_CAMERA_ANCHOR_MAXIMUM_DELTA = 500
 Const CALIBRATION_MAX_CLIPS = 64
 Const CALIBRATION_MAX_KEYFRAMES = 256
 Const CALIBRATION_CHANNEL_COUNT = 20
@@ -149,7 +153,6 @@ End Type
 Type PartyParticipantLayout
     Home As Core.Vector3
     Approach As Core.Vector3
-    ClearanceRadius As Number
     FacingAdjustment As Number
 End Type
 
@@ -2184,6 +2187,7 @@ Sub ApplyPartyAttackCamera()
     Dim BattleShot As Boolean
     Dim BossChargeShot As Boolean
     Dim ShotSide As Number
+    Dim StableAnchor As Core.Vector3
 
     PartyOrbitCamera = Camera
     PartyActiveCamera = 1
@@ -2233,9 +2237,19 @@ Sub ApplyPartyAttackCamera()
 
     If PartyPreviousCamera = 1 Or PartyTurn <> PartyPreviousCameraTurn Then
 
-        PartyShotBoss = Character3D.SocketPosition(Dragon, "Chest")
-        PartyShotBossHead = Character3D.SocketPosition(Dragon, "Head")
-        PartyShotMouth = Character3D.SocketPosition(Dragon, "Mouth")
+        StableAnchor = Math3D.Vector(
+            DRAGON_POSITION_X, DRAGON_CAMERA_CHEST_HEIGHT, DRAGON_POSITION_Z)
+        PartyShotBoss = BattleCamera.BoundedAnchor(
+            Character3D.SocketPosition(Dragon, "Chest"), StableAnchor,
+            DRAGON_CAMERA_ANCHOR_MAXIMUM_DELTA)
+        StableAnchor.Y = DRAGON_CAMERA_HEAD_HEIGHT
+        PartyShotBossHead = BattleCamera.BoundedAnchor(
+            Character3D.SocketPosition(Dragon, "Head"), StableAnchor,
+            DRAGON_CAMERA_ANCHOR_MAXIMUM_DELTA)
+        StableAnchor.Y = DRAGON_CAMERA_MOUTH_HEIGHT
+        PartyShotMouth = BattleCamera.BoundedAnchor(
+            Character3D.SocketPosition(Dragon, "Mouth"), StableAnchor,
+            DRAGON_CAMERA_ANCHOR_MAXIMUM_DELTA)
 
     End If
 
@@ -8277,9 +8291,6 @@ End Function
 
 Sub InitializePartyFormation()
 
-    Dim Bounds As Character3D.Bounds3D
-    Dim MinimumSeparation As Number
-
     PartyParticipantCount = 2
     PartyParticipants[0].Home = PartyHomePosition(0, PartyParticipantCount)
     PartyParticipants[1].Home = PartyHomePosition(1, PartyParticipantCount)
@@ -8289,16 +8300,8 @@ Sub InitializePartyFormation()
     PartyParticipants[1].Approach.Z = 4
     PartyParticipants[0].FacingAdjustment = 0
     PartyParticipants[1].FacingAdjustment = ORIN_ARENA_YAW_ADJUSTMENT
-    Bounds = Character3D.WorldBounds(Character, 0)
-    PartyParticipants[0].ClearanceRadius = Max(Bounds.Size.X, Bounds.Size.Z) / 2
-    Bounds = Character3D.WorldBounds(PartyCompanion.Actor, 0)
-    PartyParticipants[1].ClearanceRadius = Max(Bounds.Size.X, Bounds.Size.Z) / 2
-    MinimumSeparation = PartyParticipants[0].ClearanceRadius + PartyParticipants[1].ClearanceRadius + 20
 
-    If Math3D.Distance(PartyParticipants[0].Approach,
-        PartyParticipants[1].Approach) < MinimumSeparation Then
-        PartyParticipants[1].Approach.X = PartyParticipants[0].Approach.X - MinimumSeparation
-    End If
+    ''' Only one hero approaches at a time; animated full-model bounds must not move these shots.
 
 End Sub
 

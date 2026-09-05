@@ -53,6 +53,9 @@ Dim FormationCenter As Core.Vector3
 Dim FormationFirst As Core.Vector3
 Dim FormationMiddle As Core.Vector3
 Dim FormationLast As Core.Vector3
+Dim LargeVector As Core.Vector3
+Dim NormalizedVector As Core.Vector3
+Dim StableAnchor As Core.Vector3
 
 Game Window "Character 3D Viewer Hardening Tests" Size 320 By 240
 
@@ -103,6 +106,24 @@ OrbitNext = BattleCamera.Orbit(OrbitBase, OrbitControls, 100)
 Call Check(Abs(OrbitFirst.Position.X - OrbitNext.Position.X) <= 5)
 Call Check(Abs(OrbitFirst.Position.Z - OrbitNext.Position.Z) <= 2)
 
+LargeVector = Math3D.Vector(60000000, -80000000, 0)
+NormalizedVector = Math3D.Normalize(LargeVector)
+
+Call Check(Abs(NormalizedVector.X * 4 + NormalizedVector.Y * 3) <= 1)
+Call Check(NormalizedVector.Z = 0 And
+    Abs(Math3D.Length(NormalizedVector) - Core.FIXED_ONE) <= 1)
+
+OrbitBase.Position.Z = -98237870
+OrbitBase.Position.Y = 180
+OrbitControls.OrbitPitch = 0
+OrbitControls.PanX = 130
+OrbitControls.PanY = -85
+OrbitNext = BattleCamera.Orbit(OrbitBase, OrbitControls, 153000)
+
+Call Check(Abs(OrbitNext.UpDirection.X) <= Core.FIXED_ONE)
+Call Check(Abs(OrbitNext.UpDirection.Y) <= Core.FIXED_ONE)
+Call Check(Abs(OrbitNext.UpDirection.Z) <= Core.FIXED_ONE)
+
 OrbitControls.PanX = 130
 OrbitControls.PanY = -85
 OrbitFirst = BattleCamera.Orbit(OrbitBase, OrbitControls, 80000)
@@ -141,6 +162,16 @@ FormationLast = BattleCamera.FormationPosition(FormationCenter, 300, 10, 50, 2, 
 Call Check(FormationFirst.X <> FormationMiddle.X And FormationMiddle.X <> FormationLast.X)
 Call Check(Math3D.Distance(FormationFirst, FormationMiddle) > 90)
 Call Check(Math3D.Distance(FormationMiddle, FormationLast) > 90)
+
+StableAnchor = BattleCamera.BoundedAnchor(
+    Math3D.Vector(-190, 80, -100), Math3D.Vector(-208, 70, -120), 500)
+
+Call Check(StableAnchor.X = -190 And StableAnchor.Y = 80 And StableAnchor.Z = -100)
+
+StableAnchor = BattleCamera.BoundedAnchor(
+    Math3D.Vector(-111708, 59, -116), Math3D.Vector(-208, 70, -120), 500)
+
+Call Check(StableAnchor.X = -208 And StableAnchor.Y = 70 And StableAnchor.Z = -120)
 
 Call Check(ViewerProfiles.HoldsFinalPose(ViewerProfiles.PROFILE_ORIN, "Defend"))
 Call Check(Not ViewerProfiles.HoldsFinalPose(ViewerProfiles.PROFILE_ARIN, "Defend"))
