@@ -6,6 +6,15 @@ Option Explicit
 Import Smile.Simple3D.Core As Core
 Import Smile.Simple3D.CharacterViewer As CharacterViewer
 Import Smile.Simple3D.FixedMath As Fixed
+Import Smile.Simple3D.Math3D As Math3D
+
+Private Const AXIS_X = 0
+Private Const AXIS_Y = 1
+Private Const AXIS_Z = 2
+Private Const TRANSFORM_ROTATE = 0
+Private Const TRANSFORM_MOVE = 1
+Private Const RING_SEGMENTS = 128
+Private Const HIT_RADIUS = 12
 
 Public Type State
     Projection As CharacterViewer.TransformGizmo
@@ -115,6 +124,349 @@ Public Sub UpdateProjection(ByRef Value As State, Origin As Core.Vector3,
         WindowWidth,
         WindowHeight
     )
+
+End Sub
+
+Public Function AxisAtPointer(ByRef Value As State,
+    PointerX As Number, PointerY As Number, PointerInside As Boolean,
+    MinimumY As Number, MaximumY As Number, StatusPanelX As Number,
+    PanelX As Number, PanelY As Number, PanelWidth As Number,
+    PanelHeight As Number, Transform As Number, SelectedAxis As Number,
+    Camera As Core.Camera3D, WindowWidth As Number,
+    WindowHeight As Number) As Number
+
+    Dim InCalibrationPanel As Boolean
+    Dim Result As Number
+
+    Result = -1
+    InCalibrationPanel = (PointerX >= PanelX And
+        PointerX < PanelX + PanelWidth And
+        PointerY >= PanelY And
+        PointerY < PanelY + PanelHeight)
+
+    If (Not Value.Visible Or
+        Not PointerInside Or
+        PointerY < MinimumY Or
+        PointerY >= MaximumY Or
+        PointerX >= StatusPanelX Or
+        InCalibrationPanel) Then
+        Return Result
+    End If
+
+    If Transform = TRANSFORM_MOVE Then
+        Result = CharacterViewer.TransformGizmoMoveAxisAtPointer(
+            Value.Projection,
+            PointerX,
+            PointerY,
+            SelectedAxis,
+            HIT_RADIUS
+        )
+    Else
+        Result = CharacterViewer.TransformGizmoRotationAxisAtPointer(
+            Value.Origin,
+            PointerX,
+            PointerY,
+            SelectedAxis,
+            Value.WorldSize,
+            Camera,
+            WindowWidth,
+            WindowHeight,
+            RING_SEGMENTS,
+            HIT_RADIUS
+        )
+    End If
+
+    Return Result
+
+End Function
+
+''' Project pointer travel onto the nearest visible ring segment. Keep thousandths
+''' of a degree so slow drags accumulate without snapping; edge-on collapsed
+''' segments are skipped instead of amplifying tiny motions.
+Public Function RingPointerDelta(ByRef Value As State, SelectedAxis As Number,
+    PointerX As Number, PointerY As Number, DeltaX As Number, DeltaY As Number,
+    Camera As Core.Camera3D, WindowWidth As Number,
+    WindowHeight As Number) As Number
+
+    Dim Segment As Number
+    Dim StartPoint As Core.ProjectedPoint3D
+    Dim EndPoint As Core.ProjectedPoint3D
+    Dim AxisX As Number
+    Dim AxisY As Number
+    Dim LengthSquared As Number
+    Dim Along1000 As Number
+    Dim DistanceX As Number
+    Dim DistanceY As Number
+    Dim DistanceSquared As Number
+    Dim BestDistance As Number
+    Dim AngleSpan As Number
+    Dim Result As Number
+
+    BestDistance = -1
+
+    For Segment = 0 To RING_SEGMENTS - 1
+
+        StartPoint = CharacterViewer.ProjectTransformRingPoint(
+            Value.Origin, SelectedAxis, Segment, RING_SEGMENTS,
+            Value.WorldSize, Camera, WindowWidth, WindowHeight)
+        EndPoint = CharacterViewer.ProjectTransformRingPoint(
+            Value.Origin, SelectedAxis, Segment + 1, RING_SEGMENTS,
+            Value.WorldSize, Camera, WindowWidth, WindowHeight)
+        AxisX = EndPoint.X - StartPoint.X
+        AxisY = EndPoint.Y - StartPoint.Y
+        LengthSquared = AxisX * AxisX + AxisY * AxisY
+
+        If (StartPoint.Visible And
+            EndPoint.Visible And
+            LengthSquared >= 9) Then
+
+            Along1000 = ((PointerX - StartPoint.X) * AxisX +
+                (PointerY - StartPoint.Y) * AxisY) * 1000 / LengthSquared
+            Along1000 = Min(1000, Max(0, Along1000))
+            DistanceX = PointerX - StartPoint.X - AxisX * Along1000 / 1000
+            DistanceY = PointerY - StartPoint.Y - AxisY * Along1000 / 1000
+            DistanceSquared = DistanceX * DistanceX + DistanceY * DistanceY
+
+            If BestDistance < 0 Or DistanceSquared < BestDistance Then
+
+                BestDistance = DistanceSquared
+                AngleSpan = ((Segment + 1) * 360 / RING_SEGMENTS -
+                    Segment * 360 / RING_SEGMENTS)
+                Result = DeltaX * AxisX + DeltaY * AxisY
+                Result = Result * AngleSpan * 1000 / LengthSquared
+
+            End If
+
+        End If
+
+    End For
+
+    If SelectedAxis = AXIS_Y Then
+        Result = 0 - Result
+    End If
+
+    Return Result
+
+End Function
+
+Private Sub DrawStroke(X1 As Number, Y1 As Number, X2 As Number, Y2 As Number,
+    ColorValue As Number, Selected As Boolean)
+
+    Dim Offset As Number
+    Dim Radius As Number
+
+    Radius = 1
+
+    If Selected Then
+        Radius = 2
+    End If
+
+    For Offset = 0 - Radius To Radius
+
+        If Abs(X2 - X1) >= Abs(Y2 - Y1) Then
+            Draw Line X1, Y1 + Offset, X2, Y2 + Offset, ColorValue
+        Else
+            Draw Line X1 + Offset, Y1, X2 + Offset, Y2, ColorValue
+        End If
+
+    End For
+
+    Fill Circle X1, Y1, Radius, ColorValue
+    Fill Circle X2, Y2, Radius, ColorValue
+
+End Sub
+
+Private Function AxisPoint(ByRef Value As State,
+    Axis As Number) As Core.ProjectedPoint3D
+
+    Dim Result As Core.ProjectedPoint3D
+
+    Result = Value.Projection.XAxis
+
+    If Axis = AXIS_Y Then
+        Result = Value.Projection.YAxis
+    Else If Axis = AXIS_Z Then
+        Result = Value.Projection.ZAxis
+    End If
+
+    Return Result
+
+End Function
+
+Private Function AxisColor(ByRef Value As State, Axis As Number,
+    Selected As Boolean) As Number
+
+    Dim Result As Number
+
+    If Axis = Value.HoverAxis Then
+        Result = Rgb(255, 255, 255)
+
+        Return Result
+    End If
+
+    If Axis = AXIS_X Then
+
+        If Selected Then
+            Result = Rgb(255, 112, 137)
+        Else
+            Result = Rgb(232, 84, 112)
+        End If
+
+    Else If Axis = AXIS_Y Then
+
+        If Selected Then
+            Result = Rgb(156, 225, 94)
+        Else
+            Result = Rgb(131, 196, 70)
+        End If
+
+    Else
+
+        If Selected Then
+            Result = Rgb(126, 173, 255)
+        Else
+            Result = Rgb(83, 136, 235)
+        End If
+
+    End If
+
+    Return Result
+
+End Function
+
+Private Sub DrawArrow(Origin As Core.ProjectedPoint3D,
+    Tip As Core.ProjectedPoint3D, ColorValue As Number)
+
+    Dim Direction As Core.Vector3
+    Dim Length As Number
+    Dim StepIndex As Number
+    Dim CenterX As Number
+    Dim CenterY As Number
+    Dim SideX As Number
+    Dim SideY As Number
+
+    Direction.X = Tip.X - Origin.X
+    Direction.Y = Tip.Y - Origin.Y
+    Length = Math3D.Length(Direction)
+
+    If Length < 1 Then
+        Return
+    End If
+
+    For StepIndex = 0 To 14
+
+        CenterX = Tip.X - Direction.X * StepIndex / Length
+        CenterY = Tip.Y - Direction.Y * StepIndex / Length
+        SideX = Direction.Y * StepIndex / (Length * 2)
+        SideY = Direction.X * StepIndex / (Length * 2)
+        Draw Line CenterX - SideX, CenterY + SideY, CenterX + SideX, CenterY - SideY, ColorValue
+    End For
+
+End Sub
+
+Private Sub DrawMove(ByRef Value As State, SelectedAxis As Number)
+
+    Dim Axis As Number
+    Dim AxisProjection As Core.ProjectedPoint3D
+    Dim ColorValue As Number
+    Dim Selected As Boolean
+    Dim Label As Text
+
+    For Axis = AXIS_X To AXIS_Z
+
+        AxisProjection = AxisPoint(Value, Axis)
+        Selected = Axis = SelectedAxis Or Axis = Value.HoverAxis
+        ColorValue = AxisColor(Value, Axis, Selected)
+
+        Call DrawStroke(Value.Projection.Origin.X, Value.Projection.Origin.Y,
+            AxisProjection.X, AxisProjection.Y, ColorValue, Selected)
+        Call DrawArrow(Value.Projection.Origin, AxisProjection, ColorValue)
+
+        Label = "X"
+
+        If Axis = AXIS_Y Then
+            Label = "Y"
+        Else If Axis = AXIS_Z Then
+            Label = "Z"
+        End If
+
+        Draw Text Label At AxisProjection.X + 7, AxisProjection.Y - 7 Size 12 Color ColorValue
+    End For
+
+End Sub
+
+Private Sub DrawRotate(ByRef Value As State, SelectedAxis As Number,
+    Camera As Core.Camera3D, WindowWidth As Number, WindowHeight As Number)
+
+    Dim Axis As Number
+    Dim Segment As Number
+    Dim ColorValue As Number
+    Dim Selected As Boolean
+    Dim StartPoint As Core.ProjectedPoint3D
+    Dim EndPoint As Core.ProjectedPoint3D
+    Dim RearSegment As Boolean
+    Dim SegmentDepth As Number
+
+    For Axis = AXIS_X To AXIS_Z
+
+        Selected = Axis = SelectedAxis Or Axis = Value.HoverAxis
+        ColorValue = AxisColor(Value, Axis, Selected)
+        StartPoint = CharacterViewer.ProjectTransformRingPoint(
+            Value.Origin, Axis, 0, RING_SEGMENTS, Value.WorldSize,
+            Camera, WindowWidth, WindowHeight)
+
+        For Segment = 1 To RING_SEGMENTS
+
+            EndPoint = CharacterViewer.ProjectTransformRingPoint(
+                Value.Origin, Axis, Segment, RING_SEGMENTS, Value.WorldSize,
+                Camera, WindowWidth, WindowHeight)
+
+            If StartPoint.Visible And EndPoint.Visible Then
+
+                SegmentDepth = (StartPoint.Depth + EndPoint.Depth) / 2
+                RearSegment = SegmentDepth > Value.Projection.Origin.Depth
+
+                If RearSegment And Not Value.Dragging Then
+                    ColorValue = Rgb(78, 83, 93)
+                Else
+                    ColorValue = AxisColor(Value, Axis, Selected)
+                End If
+
+                Call DrawStroke(StartPoint.X, StartPoint.Y,
+                    EndPoint.X, EndPoint.Y, ColorValue,
+                    Selected And Not RearSegment)
+
+            End If
+
+            StartPoint = EndPoint
+        End For
+    End For
+
+    ''' Camera-facing silhouette guide, not an extra editable rotation channel.
+    Draw Circle Value.Projection.Origin.X, Value.Projection.Origin.Y, 90, Rgb(220, 220, 220)
+
+End Sub
+
+Public Sub Draw(ByRef Value As State, Transform As Number,
+    SelectedAxis As Number, Camera As Core.Camera3D,
+    WindowWidth As Number, WindowHeight As Number)
+
+    If Not Value.Visible Or Not Value.Projection.Visible Then
+        Return
+    End If
+
+    If Value.Dragging Then
+        Value.HoverAxis = SelectedAxis
+    End If
+
+    If Transform = TRANSFORM_MOVE Then
+        Call DrawMove(Value, SelectedAxis)
+    Else
+
+        Call DrawRotate(Value, SelectedAxis, Camera, WindowWidth, WindowHeight)
+    End If
+
+    Draw Circle Value.Projection.Origin.X, Value.Projection.Origin.Y, 7, Rgb(242, 242, 242)
 
 End Sub
 

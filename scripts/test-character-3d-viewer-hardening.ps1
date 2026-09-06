@@ -195,7 +195,10 @@ try {
         'Public Sub BeginDrag(',
         'Public Sub FinishDrag(',
         'Public Sub Hide(',
-        'Public Sub UpdateProjection(')) {
+        'Public Sub UpdateProjection(',
+        'Public Function AxisAtPointer(',
+        'Public Function RingPointerDelta(',
+        'Public Sub Draw(')) {
         Assert-Contains $gizmoSource $contract 'Viewer gizmo owner'
     }
     foreach ($contract in @(
@@ -269,6 +272,14 @@ try {
         -not $viewerSource.Contains('Dim TransformGizmoDragging As Boolean') -and
         -not $viewerSource.Contains('Dim CalibrationEditing As Boolean')) `
         'Input, UI and gizmo state must not return to Program.smile.'
+    Assert-True (-not $viewerSource.Contains('Function TransformGizmoAxisAtPointer(') -and
+        -not $viewerSource.Contains('Function TransformGizmoRingPointerDelta(') -and
+        -not $viewerSource.Contains('Sub DrawTransformGizmo(') -and
+        -not $viewerSource.Contains('Sub DrawTransformGizmoMove(') -and
+        -not $viewerSource.Contains('Sub DrawTransformGizmoRotate(') -and
+        -not $viewerSource.Contains('Sub DrawGizmoStroke(') -and
+        -not $viewerSource.Contains('Sub DrawGizmoArrow(')) `
+        'Transform gizmo hit testing, drag math and drawing must remain in ViewerGizmo.'
     Assert-True (-not $viewerSource.Contains('Dim PartyElapsed As Number') -and
         -not $viewerSource.Contains('Dim PartyCompanion As') -and
         -not $viewerSource.Contains('Dim SceneVfxClock As') -and

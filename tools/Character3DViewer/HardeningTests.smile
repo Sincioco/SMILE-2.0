@@ -301,6 +301,11 @@ Call Check(GizmoState.Dragging And GizmoState.PointerOwned)
 Call Check(GizmoState.OpenedEdit And GizmoState.DragStartValue = 27)
 Call ViewerGizmo.Hide(GizmoState)
 Call Check(Not GizmoState.Visible And Not GizmoState.Dragging)
+Call Check(ViewerGizmo.AxisAtPointer(
+    GizmoState, 120, 120, True, 90, 540, 700,
+    18, 92, 430, 354, 0, 0, DirectCamera, 800, 640) = -1)
+
+Call ViewerGizmo.Draw(GizmoState, 0, 0, DirectCamera, 800, 640)
 
 Call ViewerParty.ResetChoreography(PartyState)
 Call Check(PartyState.Turn = 2 And PartyState.DragonOnlyTurn)

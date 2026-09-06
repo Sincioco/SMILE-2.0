@@ -82,8 +82,6 @@ Const CALIBRATION_AXIS_Z = 2
 Const CALIBRATION_AXIS_COUNT = ViewerCalibration.AXIS_COUNT
 Const CALIBRATION_TRANSFORM_ROTATE = 0
 Const CALIBRATION_TRANSFORM_MOVE = 1
-Const TRANSFORM_GIZMO_RING_SEGMENTS = 128
-Const TRANSFORM_GIZMO_HIT_RADIUS = 12
 Const TRANSFORM_GIZMO_MOVE_DIVISOR = 3
 Const TRANSFORM_GIZMO_ROTATE_DIVISOR = 1000
 Const CALIBRATION_MINIMUM_DEGREES = -180
@@ -1364,7 +1362,24 @@ Function HandleTransformGizmoPointer() As Boolean
         Return False
     End If
 
-    Axis = TransformGizmoAxisAtPointer()
+    Axis = ViewerGizmo.AxisAtPointer(
+        ViewerGizmoState,
+        Pointer_X(),
+        Pointer_Y(),
+        Pointer_Inside(),
+        90,
+        Window_Height() - 100,
+        StatusPanelX(),
+        CALIBRATION_PANEL_X,
+        CALIBRATION_PANEL_Y,
+        CALIBRATION_PANEL_WIDTH,
+        CALIBRATION_PANEL_HEIGHT,
+        ViewerUiState.CalibrationTransform,
+        ViewerUiState.CalibrationAxis,
+        ViewerCameraState.Live,
+        Window_Width(),
+        Window_Height()
+    )
 
     If Axis < 0 Then
         Return False
@@ -1382,49 +1397,6 @@ Function HandleTransformGizmoPointer() As Boolean
     End If
 
     Return True
-
-End Function
-
-Function TransformGizmoAxisAtPointer() As Number
-
-    Dim Axis As Number
-
-    Axis = -1
-
-    If (Not ViewerGizmoState.Visible Or
-        Not Pointer_Inside() Or
-        Pointer_Y() < 90 Or
-        Pointer_Y() >= Window_Height() - 100 Or
-        Pointer_X() >= StatusPanelX() Or
-        PointerInRectangle(CALIBRATION_PANEL_X, CALIBRATION_PANEL_Y,
-            CALIBRATION_PANEL_WIDTH, CALIBRATION_PANEL_HEIGHT)) Then
-        Return Axis
-    End If
-
-    If ViewerUiState.CalibrationTransform = CALIBRATION_TRANSFORM_MOVE Then
-        Axis = CharacterViewer.TransformGizmoMoveAxisAtPointer(
-            ViewerGizmoState.Projection,
-            Pointer_X(),
-            Pointer_Y(),
-            ViewerUiState.CalibrationAxis,
-            TRANSFORM_GIZMO_HIT_RADIUS
-        )
-    Else
-        Axis = CharacterViewer.TransformGizmoRotationAxisAtPointer(
-            ViewerGizmoState.Origin,
-            Pointer_X(),
-            Pointer_Y(),
-            ViewerUiState.CalibrationAxis,
-            ViewerGizmoState.WorldSize,
-            ViewerCameraState.Live,
-            Window_Width(),
-            Window_Height(),
-            TRANSFORM_GIZMO_RING_SEGMENTS,
-            TRANSFORM_GIZMO_HIT_RADIUS
-        )
-    End If
-
-    Return Axis
 
 End Function
 
@@ -1447,8 +1419,17 @@ Sub UpdateTransformGizmoFromPointer()
         )
     Else
 
-        PointerAmount = TransformGizmoRingPointerDelta(Pointer_X(), Pointer_Y(),
-            Pointer_Delta_X(), Pointer_Delta_Y())
+        PointerAmount = ViewerGizmo.RingPointerDelta(
+            ViewerGizmoState,
+            ViewerUiState.CalibrationAxis,
+            Pointer_X(),
+            Pointer_Y(),
+            Pointer_Delta_X(),
+            Pointer_Delta_Y(),
+            ViewerCameraState.Live,
+            Window_Width(),
+            Window_Height()
+        )
 
         ValueAmount = CharacterViewer.RetainedPointerDelta(
             ViewerGizmoState.DragRemainder,
@@ -1463,72 +1444,6 @@ Sub UpdateTransformGizmoFromPointer()
     End If
 
 End Sub
-
-''' Project pointer travel onto the nearest visible ring segment. Keep thousandths
-''' of a degree so slow drags accumulate without snapping; edge-on collapsed
-''' segments are skipped instead of amplifying tiny motions.
-Function TransformGizmoRingPointerDelta(PointerX As Number, PointerY As Number,
-    DeltaX As Number, DeltaY As Number) As Number
-
-    Dim Segment As Number
-    Dim StartPoint As Core.ProjectedPoint3D
-    Dim EndPoint As Core.ProjectedPoint3D
-    Dim AxisX As Number
-    Dim AxisY As Number
-    Dim LengthSquared As Number
-    Dim Along1000 As Number
-    Dim DistanceX As Number
-    Dim DistanceY As Number
-    Dim DistanceSquared As Number
-    Dim BestDistance As Number
-    Dim AngleSpan As Number
-    Dim Result As Number
-
-    BestDistance = -1
-
-    For Segment = 0 To TRANSFORM_GIZMO_RING_SEGMENTS - 1
-
-        StartPoint = CharacterViewer.ProjectTransformRingPoint(ViewerGizmoState.Origin,
-            ViewerUiState.CalibrationAxis, Segment, TRANSFORM_GIZMO_RING_SEGMENTS,
-            ViewerGizmoState.WorldSize, ViewerCameraState.Live, Window_Width(), Window_Height())
-        EndPoint = CharacterViewer.ProjectTransformRingPoint(ViewerGizmoState.Origin,
-            ViewerUiState.CalibrationAxis, Segment + 1, TRANSFORM_GIZMO_RING_SEGMENTS,
-            ViewerGizmoState.WorldSize, ViewerCameraState.Live, Window_Width(), Window_Height())
-        AxisX = EndPoint.X - StartPoint.X
-        AxisY = EndPoint.Y - StartPoint.Y
-        LengthSquared = AxisX * AxisX + AxisY * AxisY
-
-        If (StartPoint.Visible And
-            EndPoint.Visible And
-            LengthSquared >= 9) Then
-
-            Along1000 = ((PointerX - StartPoint.X) * AxisX +
-                (PointerY - StartPoint.Y) * AxisY) * 1000 / LengthSquared
-            Along1000 = Min(1000, Max(0, Along1000))
-            DistanceX = PointerX - StartPoint.X - AxisX * Along1000 / 1000
-            DistanceY = PointerY - StartPoint.Y - AxisY * Along1000 / 1000
-            DistanceSquared = DistanceX * DistanceX + DistanceY * DistanceY
-
-            If BestDistance < 0 Or DistanceSquared < BestDistance Then
-
-                BestDistance = DistanceSquared
-                AngleSpan = ((Segment + 1) * 360 / TRANSFORM_GIZMO_RING_SEGMENTS -
-                    Segment * 360 / TRANSFORM_GIZMO_RING_SEGMENTS)
-                Result = (DeltaX * AxisX + DeltaY * AxisY) * AngleSpan * 1000 / LengthSquared
-
-            End If
-
-        End If
-
-    End For
-
-    If ViewerUiState.CalibrationAxis = CALIBRATION_AXIS_Y Then
-        Result = 0 - Result
-    End If
-
-    Return Result
-
-End Function
 
 Sub UpdateTransformGizmo()
 
@@ -4362,236 +4277,6 @@ Function GlowButtonWidth() As Number
 
 End Function
 
-Sub DrawGizmoStroke(X1 As Number, Y1 As Number, X2 As Number, Y2 As Number,
-    ColorValue As Number, Selected As Boolean)
-
-    Dim Offset As Number
-    Dim Radius As Number
-
-    Radius = 1
-
-    If Selected Then
-        Radius = 2
-    End If
-
-    For Offset = 0 - Radius To Radius
-
-        If Abs(X2 - X1) >= Abs(Y2 - Y1) Then
-            Draw Line X1, Y1 + Offset, X2, Y2 + Offset, ColorValue
-        Else
-            Draw Line X1 + Offset, Y1, X2 + Offset, Y2, ColorValue
-        End If
-
-    End For
-
-    Fill Circle X1, Y1, Radius, ColorValue
-    Fill Circle X2, Y2, Radius, ColorValue
-
-End Sub
-
-Function TransformGizmoAxisPoint(Axis As Number) As Core.ProjectedPoint3D
-
-    Dim Result As Core.ProjectedPoint3D
-
-    Result = ViewerGizmoState.Projection.XAxis
-
-    If Axis = CALIBRATION_AXIS_Y Then
-        Result = ViewerGizmoState.Projection.YAxis
-    Else If Axis = CALIBRATION_AXIS_Z Then
-        Result = ViewerGizmoState.Projection.ZAxis
-    End If
-
-    Return Result
-
-End Function
-
-Function TransformGizmoAxisColor(Axis As Number, Selected As Boolean) As Number
-
-    Dim Result As Number
-
-    If Axis = ViewerGizmoState.HoverAxis Then
-        Result = Rgb(255, 255, 255)
-
-        Return Result
-    End If
-
-    If Axis = CALIBRATION_AXIS_X Then
-
-        If Selected Then
-            Result = Rgb(255, 112, 137)
-        Else
-            Result = Rgb(232, 84, 112)
-        End If
-
-    Else If Axis = CALIBRATION_AXIS_Y Then
-
-        If Selected Then
-            Result = Rgb(156, 225, 94)
-        Else
-            Result = Rgb(131, 196, 70)
-        End If
-
-    Else
-
-        If Selected Then
-            Result = Rgb(126, 173, 255)
-        Else
-            Result = Rgb(83, 136, 235)
-        End If
-
-    End If
-
-    Return Result
-
-End Function
-
-Sub DrawTransformGizmo()
-
-    If Not ViewerGizmoState.Visible Or Not ViewerGizmoState.Projection.Visible Then
-        Return
-    End If
-
-    ViewerGizmoState.HoverAxis = TransformGizmoAxisAtPointer()
-
-    If ViewerGizmoState.Dragging Then
-        ViewerGizmoState.HoverAxis = ViewerUiState.CalibrationAxis
-    End If
-
-    If ViewerUiState.CalibrationTransform = CALIBRATION_TRANSFORM_MOVE Then
-        Call DrawTransformGizmoMove()
-    Else
-
-        Call DrawTransformGizmoRotate()
-    End If
-
-    Draw Circle ViewerGizmoState.Projection.Origin.X, ViewerGizmoState.Projection.Origin.Y, 7, Rgb(242, 242, 242)
-
-End Sub
-
-Sub DrawTransformGizmoMove()
-
-    Dim Axis As Number
-    Dim AxisPoint As Core.ProjectedPoint3D
-    Dim ColorValue As Number
-    Dim Selected As Boolean
-    Dim Label As Text
-
-    For Axis = CALIBRATION_AXIS_X To CALIBRATION_AXIS_Z
-
-        AxisPoint = TransformGizmoAxisPoint(Axis)
-        Selected = Axis = ViewerUiState.CalibrationAxis Or Axis = ViewerGizmoState.HoverAxis
-        ColorValue = TransformGizmoAxisColor(Axis, Selected)
-
-        Call DrawGizmoStroke(ViewerGizmoState.Projection.Origin.X, ViewerGizmoState.Projection.Origin.Y,
-            AxisPoint.X, AxisPoint.Y, ColorValue, Selected)
-
-        Call DrawGizmoArrow(ViewerGizmoState.Projection.Origin, AxisPoint, ColorValue)
-
-        Label = "X"
-
-        If Axis = CALIBRATION_AXIS_Y Then
-            Label = "Y"
-        Else If Axis = CALIBRATION_AXIS_Z Then
-            Label = "Z"
-        End If
-
-        Draw Text Label At AxisPoint.X + 7, AxisPoint.Y - 7 Size 12 Color ColorValue
-    End For
-
-End Sub
-
-Sub DrawGizmoArrow(Origin As Core.ProjectedPoint3D, Tip As Core.ProjectedPoint3D,
-    ColorValue As Number)
-
-    Dim Direction As Core.Vector3
-    Dim Length As Number
-    Dim StepIndex As Number
-    Dim CenterX As Number
-    Dim CenterY As Number
-    Dim SideX As Number
-    Dim SideY As Number
-
-    Direction.X = Tip.X - Origin.X
-    Direction.Y = Tip.Y - Origin.Y
-    Length = Math3D.Length(Direction)
-
-    If Length < 1 Then
-        Return
-    End If
-
-    For StepIndex = 0 To 14
-
-        CenterX = Tip.X - Direction.X * StepIndex / Length
-        CenterY = Tip.Y - Direction.Y * StepIndex / Length
-        SideX = Direction.Y * StepIndex / (Length * 2)
-        SideY = Direction.X * StepIndex / (Length * 2)
-        Draw Line CenterX - SideX, CenterY + SideY, CenterX + SideX, CenterY - SideY, ColorValue
-    End For
-
-End Sub
-
-Sub DrawTransformGizmoRotate()
-
-    Dim Axis As Number
-    Dim Segment As Number
-    Dim ColorValue As Number
-    Dim Selected As Boolean
-    Dim StartPoint As Core.ProjectedPoint3D
-    Dim EndPoint As Core.ProjectedPoint3D
-    Dim RearSegment As Boolean
-
-    For Axis = CALIBRATION_AXIS_X To CALIBRATION_AXIS_Z
-
-        Selected = Axis = ViewerUiState.CalibrationAxis Or Axis = ViewerGizmoState.HoverAxis
-        ColorValue = TransformGizmoAxisColor(Axis, Selected)
-        StartPoint = CharacterViewer.ProjectTransformRingPoint(
-            ViewerGizmoState.Origin,
-            Axis,
-            0,
-            TRANSFORM_GIZMO_RING_SEGMENTS,
-            ViewerGizmoState.WorldSize,
-            ViewerCameraState.Live,
-            Window_Width(),
-            Window_Height()
-        )
-
-        For Segment = 1 To TRANSFORM_GIZMO_RING_SEGMENTS
-
-            EndPoint = CharacterViewer.ProjectTransformRingPoint(
-                ViewerGizmoState.Origin,
-                Axis,
-                Segment,
-                TRANSFORM_GIZMO_RING_SEGMENTS,
-                ViewerGizmoState.WorldSize,
-                ViewerCameraState.Live,
-                Window_Width(),
-                Window_Height()
-            )
-
-            If StartPoint.Visible And EndPoint.Visible Then
-
-                RearSegment = (StartPoint.Depth + EndPoint.Depth) / 2 > ViewerGizmoState.Projection.Origin.Depth
-
-                If RearSegment And Not ViewerGizmoState.Dragging Then
-                    ColorValue = Rgb(78, 83, 93)
-                Else
-                    ColorValue = TransformGizmoAxisColor(Axis, Selected)
-                End If
-
-                Call DrawGizmoStroke(StartPoint.X, StartPoint.Y,
-                    EndPoint.X, EndPoint.Y, ColorValue, Selected And Not RearSegment)
-
-            End If
-
-            StartPoint = EndPoint
-        End For
-    End For
-
-    ''' Camera-facing silhouette guide, not an extra editable rotation channel.
-    Draw Circle ViewerGizmoState.Projection.Origin.X, ViewerGizmoState.Projection.Origin.Y, 90, Rgb(220, 220, 220)
-
-End Sub
-
 Sub DrawViewerOverlay()
 
     Call BeginPartyInspector()
@@ -4600,8 +4285,37 @@ Sub DrawViewerOverlay()
         CalibrationAvailable And
         ViewerUiState.CalibrationVisible And
         ViewerGizmoState.Visible) Then
+
         Call UpdateTransformGizmo()
-        Call DrawTransformGizmo()
+
+        ViewerGizmoState.HoverAxis = ViewerGizmo.AxisAtPointer(
+            ViewerGizmoState,
+            Pointer_X(),
+            Pointer_Y(),
+            Pointer_Inside(),
+            90,
+            Window_Height() - 100,
+            StatusPanelX(),
+            CALIBRATION_PANEL_X,
+            CALIBRATION_PANEL_Y,
+            CALIBRATION_PANEL_WIDTH,
+            CALIBRATION_PANEL_HEIGHT,
+            ViewerUiState.CalibrationTransform,
+            ViewerUiState.CalibrationAxis,
+            ViewerCameraState.Live,
+            Window_Width(),
+            Window_Height()
+        )
+
+        Call ViewerGizmo.Draw(
+            ViewerGizmoState,
+            ViewerUiState.CalibrationTransform,
+            ViewerUiState.CalibrationAxis,
+            ViewerCameraState.Live,
+            Window_Width(),
+            Window_Height()
+        )
+
     End If
 
     Call DrawInspectorOverlay()
