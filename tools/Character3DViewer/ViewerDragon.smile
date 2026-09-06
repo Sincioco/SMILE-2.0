@@ -1,0 +1,494 @@
+''' Red Dragon actor, animation, presentation effects and lifecycle ownership.
+Module Smile.Tools.Character3DViewerDragon
+
+Option Explicit
+
+Import Smile.Simple3D.Character3D As Character3D
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.FireEmitter3D As Fire
+Import Smile.Simple3D.Graphics3D As Graphics3D
+Import Smile.Simple3D.LightPool3D As LightPool3D
+Import Smile.Simple3D.Math3D As Math3D
+Import Smile.Simple3D.NodeAim3D As NodeAim3D
+Import Smile.Tools.BattleAudio As BattleAudio
+Import Smile.Tools.DragonPresence As DragonPresence
+
+Private Const ASSET_PATH = "Assets\Generation2\RedDragon\RedDragon.sm3d"
+Private Const SCALE_PERCENT = 25000
+Private Const POSITION_X = -208
+Private Const POSITION_Z = -120
+Private Const ROTATION_Y = 240
+Private Const BODY_PART_INDEX = 2
+
+Public Type State
+    Actor As Character3D.Actor
+    HeadAim As NodeAim3D.Constraint
+    Clip As Text
+    HeadTracking As Boolean
+    Breath As Fire.FireEmitter
+    FireFailed As Boolean
+    Available As Boolean
+    Visible As Boolean
+    OwnsActor As Boolean
+    FireClip As Text
+    FireTime As Number
+    FireEpoch As Number
+    FireWasPaused As Boolean
+    Audio As BattleAudio.CueState
+End Type
+
+Public Sub SetAvailable(ByRef Value As State, Available As Boolean)
+
+    Value.Available = Available
+    Value.Visible = Available
+
+End Sub
+
+Public Sub ResetVisibility(ByRef Value As State)
+
+    Value.Visible = Value.Available
+
+End Sub
+
+Public Sub CaptureInspectedActor(ByRef Value As State,
+    ByRef Actor As Character3D.Actor, Clip As Text)
+
+    Value.Actor = Actor
+    Value.Clip = Clip
+
+End Sub
+
+Public Function ScalePercent() As Number
+
+    Return SCALE_PERCENT
+
+End Function
+
+Public Function PositionX() As Number
+
+    Return POSITION_X
+
+End Function
+
+Public Function PositionZ() As Number
+
+    Return POSITION_Z
+
+End Function
+
+Public Function RotationY() As Number
+
+    Return ROTATION_Y
+
+End Function
+
+Public Sub InitializeEffects()
+
+    Call DragonPresence.Initialize()
+
+End Sub
+
+Public Function Create(ByRef Value As State, ByRef BorrowedActor As Character3D.Actor,
+    Inspection As Boolean) As Boolean
+
+    Dim EmptyLight As LightPool3D.Lease
+    Dim Result As Boolean
+
+    If Not Value.Available Then
+        Return True
+    End If
+
+    Value.OwnsActor = Not Inspection
+
+    If Inspection Then
+        Value.Actor = BorrowedActor
+    Else
+        Value.Actor = Character3D.LoadWithPolicy(
+            ASSET_PATH,
+            Character3D.CHARACTER_LOAD_REQUIRE_PBR
+        )
+    End If
+
+    Result = Character3D.IsValid(Value.Actor)
+    Value.FireFailed = False
+    Value.Clip = "Idle"
+    Value.HeadTracking = True
+
+    If Result Then
+
+        Result = Character3D.SetScale(Value.Actor, SCALE_PERCENT) And Result
+        Result = Character3D.Place(Value.Actor, POSITION_X, 0, POSITION_Z) And Result
+        Result = Character3D.Rotate(Value.Actor, 0, ROTATION_Y, 0) And Result
+        Result = Character3D.PlayAnimation(Value.Actor, Value.Clip, True) And Result
+        Result = NodeAim3D.Configure(
+            Value.HeadAim,
+            Value.Actor,
+            "Head",
+            Math3D.Vector(0, 1, 0),
+            Math3D.Vector(35, 0, 45)
+        ) And Result
+
+    End If
+
+    If Not Result Then
+        Call Destroy(Value, EmptyLight)
+    End If
+
+    Return Result
+
+End Function
+
+Public Function IsValid(ByRef Value As State) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Value.Available And Character3D.IsValid(Value.Actor)
+
+    Return Result
+
+End Function
+
+Public Function Draw(ByRef Value As State) As Boolean
+
+    Dim Result As Boolean
+
+    Result = IsValid(Value)
+
+    If Result Then
+        Result = Character3D.Draw(Value.Actor)
+    End If
+
+    Return Result
+
+End Function
+
+Public Sub DrawEffects(ByRef Value As State)
+
+    Call DragonPresence.Draw()
+
+    If Value.Visible And Value.Breath.Slot <> 0 Then
+        Value.FireFailed = Not Fire.Draw(Value.Breath)
+    End If
+
+End Sub
+
+Public Sub ClearOwnedEffects(ByRef Value As State, Light As LightPool3D.Lease)
+
+    Dim Ok As Boolean
+
+    If Value.Breath.Slot <> 0 Then
+        Ok = Fire.Destroy(Value.Breath)
+    End If
+
+    Call DragonPresence.Cancel(Light)
+
+End Sub
+
+Public Sub Destroy(ByRef Value As State, Light As LightPool3D.Lease)
+
+    Call ClearOwnedEffects(Value, Light)
+
+    If Value.OwnsActor Then
+        Call Character3D.Destroy(Value.Actor)
+    Else
+        Value.Actor.Handle = 0
+    End If
+
+    Value.OwnsActor = False
+
+End Sub
+
+Public Sub Shutdown(ByRef Value As State, Light As LightPool3D.Lease)
+
+    Call Destroy(Value, Light)
+    Call DragonPresence.Shutdown()
+
+End Sub
+
+Public Sub ToggleVisible(ByRef Value As State, Light As LightPool3D.Lease)
+
+    If Not Value.Available Then
+        Return
+    End If
+
+    Value.Visible = Not Value.Visible
+
+    If Not Value.Visible Then
+        Call ClearOwnedEffects(Value, Light)
+    End If
+
+End Sub
+
+Public Sub ToggleHeadTracking(ByRef Value As State)
+
+    Value.HeadTracking = Not Value.HeadTracking
+
+End Sub
+
+Public Function DesiredClip(
+    ByRef Value As State,
+    Inspection As Boolean,
+    SelectedClipName As Text,
+    PartyEnabled As Boolean,
+    ScenePaused As Boolean,
+    PartyTurn As Number,
+    DragonCounter As Number,
+    ReactionRequested As Boolean
+) As Text
+
+    Dim Result As Text
+
+    Result = "Idle"
+
+    If PartyEnabled And ScenePaused Then
+
+        Result = Value.Clip
+
+    Else If Inspection Then
+
+        Result = SelectedClipName
+
+    Else If PartyEnabled And PartyTurn = 2 Then
+
+        If DragonCounter Mod 3 = 0 Then
+            Result = "FireBreath"
+        Else If DragonCounter Mod 3 = 1 Then
+            Result = "ClawStrike"
+        Else
+            Result = "Fireball"
+        End If
+
+    Else If ReactionRequested Then
+
+        Result = "Hit"
+
+    Else If Value.Clip = "Hit" And Character3D.AnimationTime(Value.Actor) < 800 Then
+
+        Result = "Hit"
+
+    End If
+
+    Return Result
+
+End Function
+
+Public Function Update(
+    ByRef Value As State,
+    Name As Text,
+    Inspection As Boolean,
+    PlaybackSpeed As Number,
+    AnimationElapsed As Number,
+    Target As Core.Vector3,
+    VisualContinuityEpoch As Number,
+    FlamePaused As Boolean,
+    FireInitialized As Boolean,
+    Light As LightPool3D.Lease
+) As Boolean
+
+    Dim Mouth As Core.Vector3
+    Dim Direction As Core.Vector3
+    Dim Time As Number
+    Dim Travel1000 As Number
+    Dim Breathe As Boolean
+    Dim Ok As Boolean
+    Dim Result As Boolean
+
+    Result = True
+
+    If Not IsValid(Value) Then
+        Call ClearOwnedEffects(Value, Light)
+
+        Return True
+    End If
+
+    If Not Value.Visible Then
+        Call ClearOwnedEffects(Value, Light)
+
+        Return True
+    End If
+
+    If Name <> Value.Clip Then
+
+        Value.Clip = Name
+
+        If Inspection Then
+
+            ''' The shared inspector already selected playback mode and timeline time.
+
+        Else If Name = "Idle" Then
+
+            Result = Character3D.PlayMode(
+                Value.Actor,
+                Name,
+                Graphics3D.ANIMATION_LOOP,
+                PlaybackSpeed
+            ) And Result
+
+        Else
+            Result = Character3D.PlayMode(
+                Value.Actor,
+                Name,
+                Graphics3D.ANIMATION_ONCE,
+                PlaybackSpeed
+            ) And Result
+
+        End If
+
+    End If
+
+    If Not Inspection Then
+        Result = Character3D.Update(Value.Actor, AnimationElapsed) And Result
+    End If
+
+    Time = Character3D.AnimationTime(Value.Actor)
+    Travel1000 = ClawTravel1000(Name, Time)
+    Result = Character3D.Place(
+        Value.Actor,
+        POSITION_X + 79 * Travel1000 / 1000,
+        0,
+        POSITION_Z + 30 * Travel1000 / 1000
+    ) And Result
+    Result = NodeAim3D.Update(
+        Value.HeadAim,
+        Value.Actor,
+        Target,
+        AnimationElapsed,
+        Value.HeadTracking And
+            (Name = "FireBreath" Or Name = "Fireball" Or Name = "ClawStrike")
+    ) And Result
+
+    ''' Explicit seeks/cuts outrank freeze; normal frozen playback retains its snapshot.
+    ''' Resume from a different action/time rebases impact cues instead of replaying them.
+
+    If (Value.FireEpoch <> VisualContinuityEpoch Or
+        (FlamePaused And Name <> Value.FireClip) Or
+        (Value.FireWasPaused And Not FlamePaused And
+            (Name <> Value.FireClip Or Time <> Value.FireTime))) Then
+        Call ClearOwnedEffects(Value, Light)
+    End If
+
+    Value.FireEpoch = VisualContinuityEpoch
+    Value.FireClip = Name
+
+    If FlamePaused Then
+        Value.FireWasPaused = True
+        Return Result
+    End If
+
+    Value.FireWasPaused = False
+    Value.FireTime = Time
+    Breathe = Value.Visible And Name = "FireBreath" And Time >= 850 And Time < 3100
+
+    If (Breathe And
+        FireInitialized And
+        Not Value.FireFailed) Then
+
+        Mouth = Character3D.SocketPosition(Value.Actor, "Mouth")
+
+        If Value.Breath.Slot = 0 Then
+            Value.Breath = Fire.StartAt(
+                "DragonFireBreathPreview",
+                Mouth,
+                3117,
+                Fire.QUALITY_HIGH,
+                Fire.SIMULATION_AUTO,
+                6
+            )
+            Value.FireFailed = Value.Breath.Slot = 0
+        End If
+
+        If Value.Breath.Slot <> 0 Then
+
+            Direction = Math3D.Subtract(Target, Mouth)
+            Direction.X = Direction.X * 2
+            Direction.Y = Direction.Y * 2
+            Direction.Z = Direction.Z * 2
+            Ok = Fire.SetPosition(Value.Breath, Mouth)
+            Ok = Fire.SetDirection(Value.Breath, Direction) And Ok
+            Value.FireFailed = Not Ok
+
+            Call Fire.SetIntensity(Value.Breath, 160)
+            Call Fire.SetSourceVelocityInheritance(Value.Breath, 0)
+
+        End If
+
+    Else If Value.Breath.Slot <> 0 Then
+
+        Ok = Fire.Destroy(Value.Breath)
+
+    End If
+
+    Call DragonPresence.Update(
+        Value.Actor,
+        Name,
+        Time,
+        Target,
+        Value.Visible And FireInitialized,
+        Light
+    )
+
+    Return Result
+
+End Function
+
+Public Function ClawTravel1000(Name As Text, Time As Number) As Number
+
+    Dim Result As Number
+
+    Result = 0
+
+    If Name = "ClawStrike" Then
+
+        Result = Min(1000, Time * 1000 / 1100)
+
+        If Time > 1100 Then
+            Result = Max(0, (2200 - Time) * 1000 / 1100)
+        End If
+
+        Result = Result * Result / 1000 * (3000 - 2 * Result) / 1000
+
+    End If
+
+    Return Result
+
+End Function
+
+Public Sub UpdateAudio(ByRef Value As State, Audible As Boolean)
+
+    Dim CueTime As Number
+
+    If Not IsValid(Value) Then
+        Return
+    End If
+
+    CueTime = -1
+
+    If Value.Clip = "FireBreath" Then
+        CueTime = 100
+    Else If Value.Clip = "ClawStrike" Then
+        CueTime = 200
+    End If
+
+    If BattleAudio.CrossedCue(
+        Value.Audio,
+        Value.Clip,
+        Character3D.AnimationTime(Value.Actor),
+        CueTime,
+        Audible And Value.Visible
+    ) Then
+
+        If Value.Clip = "FireBreath" Then
+
+            Play Sound "Assets/Audio/dragon-fire-breath.wav"
+
+        Else
+
+            Play Sound "Assets/Audio/dragon-claw-strike.wav"
+
+        End If
+
+    End If
+
+End Sub
+
+End Module

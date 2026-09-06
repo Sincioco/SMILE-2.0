@@ -19,6 +19,7 @@ Import Smile.Tools.Character3DViewerUi As ViewerUi
 Import Smile.Tools.Character3DViewerGizmo As ViewerGizmo
 Import Smile.Tools.Character3DViewerParty As ViewerParty
 Import Smile.Tools.Character3DViewerEffects As ViewerEffects
+Import Smile.Tools.Character3DViewerDragon As ViewerDragon
 Import Smile.Tools.Character3DViewerRendering As ViewerRendering
 Import Smile.Simple3D.Core As Core
 Import Smile.Simple3D.NodeAim3D As NodeAim3D
@@ -89,6 +90,7 @@ Dim PartyState As ViewerParty.State
 Dim PartyPrimary As ViewerActors.Context
 Dim PartyActions As ViewerParty.FrameActions
 Dim EffectsState As ViewerEffects.State
+Dim DragonState As ViewerDragon.State
 Dim RenderingState As ViewerRendering.State
 Dim FirstApproach As Core.Vector3
 Dim SecondApproach As Core.Vector3
@@ -464,6 +466,33 @@ Call ViewerEffects.ResetPlaybackControls(EffectsState)
 Call Check(Not EffectsState.FlamePaused And Not EffectsState.LightningPaused)
 Call Check(Not EffectsState.SwordFireFailed And Not EffectsState.ShieldFireFailed)
 Call Check(EffectsState.EquipmentFireFirstError = 0)
+
+Call ViewerDragon.SetAvailable(DragonState, True)
+Call Check(DragonState.Available And DragonState.Visible)
+
+DragonState.Clip = "ClawStrike"
+
+Call Check(ViewerDragon.DesiredClip(
+    DragonState, False, "Idle", True, True, 0, 0, False) = "ClawStrike")
+Call Check(ViewerDragon.DesiredClip(
+    DragonState, True, "Roar", False, False, 0, 0, False) = "Roar")
+Call Check(ViewerDragon.DesiredClip(
+    DragonState, False, "Idle", True, False, 2, 0, False) = "FireBreath")
+Call Check(ViewerDragon.DesiredClip(
+    DragonState, False, "Idle", True, False, 2, 1, False) = "ClawStrike")
+Call Check(ViewerDragon.DesiredClip(
+    DragonState, False, "Idle", True, False, 2, 2, False) = "Fireball")
+Call Check(ViewerDragon.DesiredClip(
+    DragonState, False, "Idle", True, False, 0, 0, True) = "Hit")
+Call Check(ViewerDragon.ClawTravel1000("Idle", 1100) = 0)
+Call Check(ViewerDragon.ClawTravel1000("ClawStrike", 0) = 0)
+Call Check(ViewerDragon.ClawTravel1000("ClawStrike", 550) = 500)
+Call Check(ViewerDragon.ClawTravel1000("ClawStrike", 1100) = 1000)
+Call Check(ViewerDragon.ClawTravel1000("ClawStrike", 1650) = 500)
+Call Check(ViewerDragon.ClawTravel1000("ClawStrike", 2200) = 0)
+
+Call ViewerDragon.ResetVisibility(DragonState)
+Call Check(DragonState.Visible)
 
 Call ViewerRendering.Reset(RenderingState, 3)
 Call Check(RenderingState.FloorVisible And RenderingState.GridVisible)

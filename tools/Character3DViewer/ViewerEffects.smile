@@ -38,8 +38,6 @@ Public Type State
     FlamesWerePaused As Boolean
     VisualContinuityEpoch As Number
     EquipmentFireEpoch As Number
-    DragonFireEpoch As Number
-    DragonFireWasPaused As Boolean
     VisualHistoryDirty As Boolean
     EquipmentFireFirstSample As Boolean
     EquipmentFireFirstError As Number
@@ -47,7 +45,6 @@ Public Type State
     OrinLight As LightPool3D.Lease
     DragonLight As LightPool3D.Lease
     ArinAudio As BattleAudio.CueState
-    DragonAudio As BattleAudio.CueState
     EpicGlowAvailable As Boolean
     EpicGlowVisible As Boolean
     EpicGlowTexture As Core.Texture3D

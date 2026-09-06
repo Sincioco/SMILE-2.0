@@ -31,6 +31,7 @@
     <SmileSource Include="ViewerGizmo.smile" />
     <SmileSource Include="ViewerParty.smile" />
     <SmileSource Include="ViewerEffects.smile" />
+    <SmileSource Include="ViewerDragon.smile" />
     <SmileSource Include="ViewerRendering.smile" />
     <Model3DAsset Include="BuildAssets\ArinV57\arin-v5.7-idle-equipment-checkpoint.glb"
                   Descriptor="BuildAssets\ArinV57\ArinV57.sm3d.json"

@@ -22,10 +22,12 @@ if ($startupIndex -lt 0 -or $helperIndex -le $startupIndex) { throw 'Viewer star
 # Viewer procedure, replacing only its interactive startup with bounded checks.
 $testPrefix = $viewerSource.Substring(0, $startupIndex)
 $testPrefix = $testPrefix.Replace(
-    "Import Smile.Simple3D.FireEmitter3D As Fire`n",
+    "Import Smile.Simple3D.Core As Core`n",
     "Import Smile.Simple3D.FireEmitter3D As Fire`n" +
         "Import Smile.Simple3D.LightningVfx3D As Lightning`n" +
-        "Import Smile.Tools.ArinShieldRim As ArinShieldRim`n")
+        "Import Smile.Tools.ArinShieldRim As ArinShieldRim`n" +
+        "Import Smile.Tools.DragonPresence As DragonPresence`n" +
+        "Import Smile.Simple3D.Core As Core`n")
 $testSource = $testPrefix + ($profileConstants -join "`n") + "`n`n" +
     $testStartup + "`n" + $viewerSource.Substring($helperIndex)
 $encoding = [Text.UTF8Encoding]::new($false)

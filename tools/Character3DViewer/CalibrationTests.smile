@@ -457,7 +457,7 @@ Loop Until True
 
 Effects.FlamePaused = True
 ViewerUiState.CalibrationVisible = True
-DragonVisible = False
+DragonState.Visible = False
 Rendering.FloorVisible = False
 Rendering.GridVisible = False
 ViewerUiState.Visibility = 2
@@ -465,7 +465,7 @@ ViewerUiState.Visibility = 2
 Call ResetAll()
 Call CalibrationCheck(Not Playback.ScenePaused And Not Effects.FlamePaused And Playback.DemoEnabled, "Reset restores playback defaults")
 Call CalibrationCheck(Not ViewerUiState.CalibrationVisible And ViewerUiState.Visibility = 0, "Reset hides pose panel and restores UI")
-Call CalibrationCheck(DragonVisible And Rendering.FloorVisible And Rendering.GridVisible, "Reset restores the arena")
+Call CalibrationCheck(DragonState.Visible And Rendering.FloorVisible And Rendering.GridVisible, "Reset restores the arena")
 Call CalibrationCheck(ViewerCalibration.KeyCount(Calibration, 3) = 1,
     "Reset preserves saved corrections")
 
@@ -531,29 +531,29 @@ Sub CheckDragonFireContinuity()
         Call AdvanceTestSceneVfx()
     End For
 
-    Call CalibrationCheck(DragonBreath.Slot <> 0 And Fire.Value(6, DragonBreath) > 0,
+    Call CalibrationCheck(DragonState.Breath.Slot <> 0 And Fire.Value(6, DragonState.Breath) > 0,
         "Dragon breath has live particles before freezing")
 
-    PreviousGeneration = DragonBreath.Generation
-    PreviousAge = Fire.Value(10, DragonBreath)
+    PreviousGeneration = DragonState.Breath.Generation
+    PreviousAge = Fire.Value(10, DragonState.Breath)
     Effects.FlamePaused = True
     ViewerCameraState.Live.Position.X = ViewerCameraState.Live.Position.X + 40
 
     Call UpdateDragon()
     Call AdvanceTestSceneVfx()
-    Call CalibrationCheck(DragonBreath.Generation = PreviousGeneration And
-        Fire.Value(10, DragonBreath) = PreviousAge, "Frozen dragon retains its permitted snapshot")
+    Call CalibrationCheck(DragonState.Breath.Generation = PreviousGeneration And
+        Fire.Value(10, DragonState.Breath) = PreviousAge, "Frozen dragon retains its permitted snapshot")
     Call StepAnimationFrame(1)
     Call UpdateDragon()
-    Call CalibrationCheck(DragonBreath.Slot = 0 And Fire.Value(1, OtherFire) = 1,
+    Call CalibrationCheck(DragonState.Breath.Slot = 0 And Fire.Value(1, OtherFire) = 1,
         "Forward frozen Dragon seek clears breath and presence, not another owner")
 
     Effects.FlamePaused = False
 
     Call UpdateDragon()
     Call AdvanceTestSceneVfx()
-    Call CalibrationCheck(DragonBreath.Slot <> 0 And
-        DragonBreath.Generation <> PreviousGeneration And Fire.Value(10, DragonBreath) <= 16,
+    Call CalibrationCheck(DragonState.Breath.Slot <> 0 And
+        DragonState.Breath.Generation <> PreviousGeneration And Fire.Value(10, DragonState.Breath) <= 16,
         "Dragon resumes at current pose without stale breath or catch-up")
 
     Effects.FlamePaused = True
@@ -635,7 +635,7 @@ Sub CheckDragonFireContinuity()
     Call UpdateDragon()
     Call CalibrationCheck(DragonPresence.ImpactCueCount() = PreviousCues + 1,
         "Continuous playback still submits exactly one normal impact cue")
-    Call ClearDragonOwnedEffects()
+    Call ViewerDragon.ClearOwnedEffects(DragonState, Effects.DragonLight)
 
     Session.Ready = Fire.Destroy(OtherFire) And Session.Ready
     Effects.FlamePaused = False
@@ -682,7 +682,7 @@ Sub CheckPartyInspector()
                 Calibration.DataKey = ViewerProfiles.CalibrationKey(ViewerProfiles.PROFILE_ORIN),
                 "Orin inspector owns Orin actor, key range and save identity")
         Else If Owner = 2 Then
-            Call CalibrationCheck(Character.Handle = Dragon.Handle,
+            Call CalibrationCheck(Character.Handle = DragonState.Actor.Handle,
                 "Dragon inspector uses the live boss, without pose storage")
         End If
 

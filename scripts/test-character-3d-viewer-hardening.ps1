@@ -26,6 +26,7 @@ $gizmoSourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\ViewerGizm
 $partySourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\ViewerParty.smile'
 $actorsSourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\ViewerActors.smile'
 $effectsSourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\ViewerEffects.smile'
+$viewerDragonSourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\ViewerDragon.smile'
 $renderingSourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\ViewerRendering.smile'
 $profileSourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\Profiles.smile'
 $cookedProjectPath = Join-Path $repositoryRoot `
@@ -101,6 +102,7 @@ try {
     $partySource = Get-Content -LiteralPath $partySourcePath -Raw
     $actorsSource = Get-Content -LiteralPath $actorsSourcePath -Raw
     $effectsSource = Get-Content -LiteralPath $effectsSourcePath -Raw
+    $viewerDragonSource = Get-Content -LiteralPath $viewerDragonSourcePath -Raw
     $renderingSource = Get-Content -LiteralPath $renderingSourcePath -Raw
     $profileSource = Get-Content -LiteralPath $profileSourcePath -Raw
     $adapterSource = Get-Content -LiteralPath $adapterSourcePath -Raw
@@ -116,6 +118,7 @@ try {
         'Import Smile.Tools.Character3DViewerGizmo As ViewerGizmo',
         'Import Smile.Tools.Character3DViewerParty As ViewerParty',
         'Import Smile.Tools.Character3DViewerEffects As ViewerEffects',
+        'Import Smile.Tools.Character3DViewerDragon As ViewerDragon',
         'Import Smile.Tools.Character3DViewerRendering As ViewerRendering',
         'CharacterViewer.AutoFit(',
         'ViewerCamera.AdvanceZoom(',
@@ -224,6 +227,16 @@ try {
         Assert-Contains $effectsSource $contract 'Viewer effects owner'
     }
     foreach ($contract in @(
+        'Public Type State',
+        'Public Function Create(',
+        'Public Function DesiredClip(',
+        'Public Function Update(',
+        'Public Function ClawTravel1000(',
+        'Public Sub UpdateAudio(',
+        'Public Sub Shutdown(')) {
+        Assert-Contains $viewerDragonSource $contract 'Viewer Dragon owner'
+    }
+    foreach ($contract in @(
         'Public Function BeginScene(',
         'Public Function DrawFloor(',
         'Public Function DrawGrid(',
@@ -252,6 +265,12 @@ try {
         -not $viewerSource.Contains('Function UpdateEpicGlow() As Boolean') -and
         -not $viewerSource.Contains('Sub ClearEquipmentFire()')) `
         'Equipment effects state, behavior and lifecycle must remain in ViewerEffects.'
+    Assert-True (-not $viewerSource.Contains('Dim Dragon As Character3D.Actor') -and
+        -not $viewerSource.Contains('Dim DragonBreath As Fire.FireEmitter') -and
+        -not $viewerSource.Contains('Sub CreateDragon()') -and
+        -not $viewerSource.Contains('Sub ClearDragonOwnedEffects()') -and
+        -not $viewerSource.Contains('Character3D.Update(Dragon,')) `
+        'Dragon actor, animation, VFX and lifecycle must remain in ViewerDragon.'
     Assert-True (-not $viewerSource.Contains('Window_Activate()')) `
         'The Viewer must not steal foreground by activating its window every frame.'
     Assert-Contains $profileSource `

@@ -54,7 +54,6 @@ module.
 | Still implemented in `Program.smile` | Current evidence | Intended focused owner |
 |---|---|---|
 | Party transitions, camera application, companion lifecycle, inspector/preview binding, pointer handling and Party overlay | R7.5 moved the stage/Dragon-turn state machine, attack selection, KO/revive decisions and formation interpolation to `ViewerParty.AdvanceChoreography`; `ApplyPartyFrame` now applies its narrow actor commands. Camera application, companion lifecycle, binding, pointer handling and overlays remain in `Program.smile`. | `ViewerParty.smile`, with actor binding in a focused actor owner only if needed |
-| Dragon actor lifecycle, timing, turn behavior and battle-audio coordination | `CreateDragon`, `UpdateDragon`, `AdvanceDragonTurn`, `UpdateBattleAudio` and related routines | retained `DragonPresence.smile`, `BattleAudio.smile`, and narrow Party contracts |
 | Inspector, calibration panel, timeline, camera controls, buttons and overlays | `HandleInspectorPointer`, `HandleCalibrationPanelPointer`, `DrawInspectorOverlay`, `DrawCalibrationPanel`, `DrawTimeline` and related layout/label routines | `ViewerInput.smile` and `ViewerUi.smile`, borrowing narrow subsystem operations |
 | Transform-gizmo pointer/update/draw implementation | `HandleTransformGizmoPointer`, `UpdateTransformGizmoFromPointer`, `DrawTransformGizmo` and related routines | `ViewerGizmo.smile` |
 | Socket resources and studio grid drawing | socket create/update/draw/destroy routines and `DrawStudioGrid` | `ViewerRendering.smile` or a focused socket-render owner |
@@ -72,14 +71,18 @@ and its focused production tests exercise the destination owner.
 | Party state-machine move | 8,032 | 231 | Party/Dragon-turn state transitions and interpolation moved; a narrow actor command application routine remains in the coordinator. |
 | Actor-context/lifecycle move | 8,033 | 231 | The new explicit actor-owner import/contract adds one coordinator line while actor context, companion load, update, draw and destruction move to `ViewerActors`; no line-count compression was used. |
 | Equipment-effects behavior/lifecycle move | 7,160 | 205 | From the 8,033-line/231-procedure actor-owner checkpoint, 873 lines and 26 procedures left the coordinator. `ViewerEffects` now owns equipment Fire, shield rim, glow objects, trails, Orin-storm controls, shared scene-VFX drawing, pause/reset controls and teardown. |
+| Dragon actor/presentation lifecycle move | 6,943 | 201 | From the 7,160-line/205-procedure effects checkpoint, Dragon actor creation, animation/playback timing, claw travel, head aim, breath continuity, presentation VFX, audio, drawing and destruction moved to `ViewerDragon`. The coordinator retains target and Party-reaction selection in a bounded `UpdateDragon` call. |
 
-Substantial implementation still in `Program.smile` after the equipment-effects
-checkpoint is intentionally explicit: startup/retry/tab-switch orchestration; Dragon
-creation, timing, breath, audio and destruction; Party inspector/preview binding,
-companion presentation, pointer handling, camera application and overlay drawing;
+Substantial implementation still in `Program.smile` after the Dragon checkpoint is
+intentionally explicit: startup/retry/tab-switch orchestration; Party
+inspector/preview binding, companion presentation, pointer handling, camera
+application and overlay drawing;
 input routing and UI layout; transform-gizmo interaction/drawing; calibration and
 file-transaction orchestration; socket/grid resources; playback/timeline operations;
-and general overlay composition. `UpdateOrinStorm` remains because the coordinator
+and general overlay composition. `UpdateDragon` remains because the coordinator
+selects the explicit Party/inspection target and consumes the Party-reaction request;
+actor update, timing, aim, breath and audio behavior are delegated to `ViewerDragon`.
+`UpdateOrinStorm` remains because the coordinator
 chooses the current borrowed actor and Dragon target; storm simulation itself now
 belongs to `ViewerEffects.UpdateStorm`.
 
@@ -96,7 +99,8 @@ belongs to `ViewerEffects.UpdateStorm`.
 | Input ownership | `Program.smile` | `ViewerInput.smile` | Pointer capture, timeline/frame repeat and queued command routing | Route keyboard/pointer; borrows UI, calibration and camera operations | Frame/capture; queued-modifier and outside-window fixtures |
 | UI and transform gizmo | `Program.smile` | `ViewerUi.smile` and `ViewerGizmo.smile` | Panel visibility, slider owner, opt-in gizmo drag state | Hit test/update/draw/cancel; borrows camera projection and calibration edit operations | Scene/edit; pointer exclusivity and cancel tests |
 | Party choreography | `Program.smile` | `ViewerParty.smile` | Participants, turn/stage/timing, guard/hit/KO/revive, preview state and Party cameras | Create/reset/advance/draw/destroy/bind inspector; borrows actors, camera and effects | Party scene; timing, same-model isolation and inspector fixtures |
-| Effects/audio | `Program.smile`, `OrinStorm.smile`, `DragonPresence.smile`, `BattleAudio.smile` | `ViewerEffects.smile` plus retained focused modules | Equipment emitters, trails, leases, scene clocks and visual-continuity epochs; Dragon breath remains with the pending Dragon owner | Create/update/advance-once/draw/invalidate/destroy; borrows final actor transforms | Scene; direct control/state assertions plus frozen-cut/skipped-cue/lease cleanup tests |
+| Effects/audio | `Program.smile`, `OrinStorm.smile`, `DragonPresence.smile`, `BattleAudio.smile` | `ViewerEffects.smile` plus retained focused modules | Equipment emitters, trails, leases, scene clocks and visual-continuity epochs; the Dragon owner borrows its scene light lease | Create/update/advance-once/draw/invalidate/destroy; borrows final actor transforms | Scene; direct control/state assertions plus frozen-cut/skipped-cue/lease cleanup tests |
+| Dragon actor/presentation | `Program.smile`, `DragonPresence.smile`, `BattleAudio.smile` | `ViewerDragon.smile` with retained focused presence/audio modules | Dragon actor, ownership flag, clip, head aim, breath, continuity epoch, visibility and cue state | Create/update/draw/toggle/destroy; borrows the coordinator-selected target, shared Fire readiness/light lease and visual epoch | Scene; pure clip/travel assertions plus native frozen seek/cut/hide/resume and cue tests |
 | Rendering and overlay composition | `Program.smile` | `ViewerRendering.smile` | Arena/backdrop/grid/socket render resources and transient layout | Begin/draw/end/overlay; borrows read-only snapshots from owners | Scene; native/generated-Web draw and resize checks |
 | Build/publication | `Build.ps1`, `Prepare-BuildAssets.ps1`, explicit projects | same scripts with explicit module inventory | Disposable staging/publications only | Canonical preflight, compile, selected-output validation | Build; Release/Debug and Full/Low/Medium/High manifests |
 
@@ -127,6 +131,7 @@ state. Arin, Orin, Dragon, Party, and inspected-actor identities remain distinct
 | `CalibrationJson.*` | `CalibrationJson.*` | Bounded reader retained; no second codec |
 | `OrinStorm.*` | `OrinStorm.*` | Per-actor contexts and scene-owned Lightning retained |
 | `DragonPresence.*` | `DragonPresence.*` | Frozen continuity ordering retained |
+| Dragon actor globals plus `CreateDragon`, most of `UpdateDragon`, `DrawDragon`, `ClearDragonOwnedEffects`, Dragon audio and `DestroyDragon` | `ViewerDragon.State`, `Create`, `DesiredClip`, `Update`, `Draw`, `DrawEffects`, `UpdateAudio`, `ClearOwnedEffects` and `Shutdown` | Actor lifecycle, animation timing, aim, breath, frozen continuity and audio moved together. Party target/reaction choice remains visible in the coordinator. |
 
 This table is updated in the same commit as each later move. Deleted routines are not
 copied or left as dead wrappers.
