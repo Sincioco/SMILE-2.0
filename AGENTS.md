@@ -59,6 +59,14 @@ The SMILE 2.0 - 3D Viewer, Animation Editor is allowed to evolve into a lightwei
 - Keep input sensitivity proportional to the scene and subject. Do not copy constants from a differently scaled scene without recalibration.
 - Validate every new or substantively changed camera interaction with one slow and one moderate horizontal/vertical drag, pan, zoom-in, zoom-out, reset, and the documented keyboard controls on the applicable native and Web targets.
 
+## Permanent Go Live workflow
+
+- When Sin says **Go Live** for SMILE 2.0, prepare/start a YouTube Live Stream, then go to Meld Studio and activate **Go Live**. Verify that YouTube reports live and Meld is sending the configured output; encoder-dependent YouTube streams may become live only after Meld starts sending video.
+- Keep the existing stream title unless Sin supplies a new one. For a new title, use the exact prefix `ChatGPT CODEX - SMILE 2.0 - ` followed by Sin's new title. Do not duplicate the prefix when Sin provides the full title.
+- Inspect the current YouTube and Meld states first. If either is already live, preserve that live session rather than starting a duplicate or interrupting it. Apply an explicitly requested new title to the active session.
+- Preserve the existing channel, configured output, description, visibility, and other stream settings unless Sin asks to change them. Never expose a stream key in chat.
+- Once YouTube is live, make a best effort to show the actual work on-screen within the configured stream capture area: relevant source changes, builds/results, native tools, and visible browser tests. Keep browser tests visible, match the Character Viewer's position/size when practical, and restore the Character Viewer to the foreground after those checks. Do not expose credentials, stream keys, or unrelated private content, and do not present unperformed tests as demonstrations.
+
 ## KISS and velocity
 
 Use KISS: Keep It Simple, Stupid.
