@@ -6,6 +6,7 @@ Import Smile.Simple3D.CharacterViewer As CharacterViewer
 Import Smile.Tools.OrinStorm As OrinStorm
 Import Smile.Tools.BattleAudio As BattleAudio
 Import Smile.Tools.BattleCamera As BattleCamera
+Import Smile.Tools.Character3DViewerTiming As ViewerTiming
 Import Smile.Simple3D.Core As Core
 Import Smile.Simple3D.NodeAim3D As NodeAim3D
 Import Smile.Simple3D.Math3D As Math3D
@@ -58,8 +59,15 @@ Dim LargeVector As Core.Vector3
 Dim NormalizedVector As Core.Vector3
 Dim StableAnchor As Core.Vector3
 Dim GroundCamera As Core.Camera3D
+Dim FrameRate As ViewerTiming.FrameRateState
 
 Game Window "Character 3D Viewer Hardening Tests" Size 320 By 240
+
+Call ViewerTiming.Advance(FrameRate, 250)
+Call ViewerTiming.Advance(FrameRate, 250)
+Call Check(ViewerTiming.FramesPerSecond(FrameRate) = 4)
+Call ViewerTiming.Reset(FrameRate)
+Call Check(ViewerTiming.FramesPerSecond(FrameRate) = 0)
 
 Call CheckRingProjection()
 

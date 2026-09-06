@@ -11,6 +11,7 @@
     <SmileSource Include="OrinStorm.smile" />
     <SmileSource Include="BattleAudio.smile" />
     <SmileSource Include="BattleCamera.smile" />
+    <SmileSource Include="ViewerTiming.smile" />
     <SmileProjectReference Include="..\..\libraries\Smile.Simple3D\Smile.Simple3D.smilelibproj" />
   </ItemGroup>
 </SmileProject>

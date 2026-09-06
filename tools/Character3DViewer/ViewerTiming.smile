@@ -1,0 +1,45 @@
+''' Frame-rate sampling owned independently from animation and camera clocks.
+Module Smile.Tools.Character3DViewerTiming
+
+Option Explicit
+
+Public Type FrameRateState
+    Elapsed As Number
+    Frames As Number
+    CurrentFramesPerSecond As Number
+End Type
+
+Public Sub Reset(ByRef Value As FrameRateState)
+
+    Value.Elapsed = 0
+    Value.Frames = 0
+    Value.CurrentFramesPerSecond = 0
+
+End Sub
+
+Public Sub Advance(ByRef Value As FrameRateState, RawFrameMilliseconds As Number)
+
+    Value.Elapsed = Value.Elapsed + RawFrameMilliseconds
+    Value.Frames = Value.Frames + 1
+
+    If Value.Elapsed >= 500 Then
+
+        Value.CurrentFramesPerSecond = Value.Frames * 1000 / Value.Elapsed
+        Value.Elapsed = 0
+        Value.Frames = 0
+
+    End If
+
+End Sub
+
+Public Function FramesPerSecond(ByRef Value As FrameRateState) As Number
+
+    Dim ReturnValue As Number
+
+    ReturnValue = Value.CurrentFramesPerSecond
+
+    Return ReturnValue
+
+End Function
+
+End Module

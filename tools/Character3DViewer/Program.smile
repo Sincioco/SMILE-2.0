@@ -25,6 +25,7 @@ Import Smile.Tools.BattleAudio As BattleAudio
 Import Smile.Tools.BattleCamera As BattleCamera
 Import Smile.Tools.DragonPresence As DragonPresence
 Import Smile.Tools.CalibrationJson As CalibrationJson
+Import Smile.Tools.Character3DViewerTiming As ViewerTiming
 
 Const ANIMATION_CYCLE_MILLISECONDS = 5000
 Const ANIMATION_BUTTON_Y = 352
@@ -303,9 +304,7 @@ Dim ViewerClock As CharacterViewer.ClockState
 Dim FitLocked As Boolean
 Dim LastFitWidth As Number
 Dim LastFitHeight As Number
-Dim FrameRateElapsed As Number
-Dim FrameRateFrames As Number
-Dim CurrentFramesPerSecond As Number
+Dim FrameRate As ViewerTiming.FrameRateState
 Dim PanPointerRemainderX As Number
 Dim PanPointerRemainderY As Number
 Dim OrbitPointerRemainderX As Number
@@ -485,7 +484,7 @@ Do
     DroppedCameraMilliseconds = ViewerClock.DroppedCameraMilliseconds
     LongPauseCount = ViewerClock.LongPauseCount
 
-    Call AdvanceFrameRate()
+    Call ViewerTiming.Advance(FrameRate, RawFrameMilliseconds)
 
     If Not ViewerError Then
 
@@ -1426,21 +1425,6 @@ End Function
 Sub DestroyStudioGrid()
 
     Call Arena3D.Destroy(Arena)
-
-End Sub
-
-Sub AdvanceFrameRate()
-
-    FrameRateElapsed = FrameRateElapsed + RawFrameMilliseconds
-    FrameRateFrames = FrameRateFrames + 1
-
-    If FrameRateElapsed >= 500 Then
-
-        CurrentFramesPerSecond = FrameRateFrames * 1000 / FrameRateElapsed
-        FrameRateElapsed = 0
-        FrameRateFrames = 0
-
-    End If
 
 End Sub
 
@@ -8513,7 +8497,7 @@ Sub DrawCharacterStatusSummary(PanelLeft As Number)
         Draw Text "Zoom / FPS" At PanelText, 306 Size 12 Color LIGHT_GRAY
         Draw Number CharacterViewer.ZoomDegrees(SmoothZoom) At PanelLeft + 116, 306 Size 12 Color CYAN
         Draw Text "level" At PanelLeft + 146, 306 Size 11 Color LIGHT_GRAY
-        Draw Number CurrentFramesPerSecond At PanelLeft + 190, 306 Size 12 Color GREEN
+        Draw Number ViewerTiming.FramesPerSecond(FrameRate) At PanelLeft + 190, 306 Size 12 Color GREEN
         Draw Text "fps" At PanelLeft + 216, 306 Size 11 Color LIGHT_GRAY
 
 End Sub
@@ -10420,7 +10404,7 @@ Sub DrawPartyOverlay()
             Call DrawPartyCameraDetails(Left + 16, 548)
 
             Draw Text "FPS" At Left + 16, 508 Size 13 Color LIGHT_GRAY
-            Draw Number CurrentFramesPerSecond At Left + 62, 508 Size 13 Color GREEN
+            Draw Number ViewerTiming.FramesPerSecond(FrameRate) At Left + 62, 508 Size 13 Color GREEN
 
         End If
 
