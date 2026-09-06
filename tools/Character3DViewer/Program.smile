@@ -14,7 +14,6 @@ Import Smile.Simple3D.SceneVfx3D As SceneVfx3D
 Import Smile.Simple3D.Core As Core
 Import Smile.Simple3D.Graphics3D As Graphics3D
 Import Smile.Simple3D.Math3D As Math3D
-Import Smile.Simple3D.FixedMath As Fixed
 Import Smile.Simple3D.NodeAim3D As NodeAim3D
 Import Smile.Simple3D.Scene3D As Scene3D
 Import Smile.Tools.Character3DViewerProfiles As ViewerProfiles
@@ -28,6 +27,9 @@ Import Smile.Tools.Character3DViewerSession As ViewerSession
 Import Smile.Tools.Character3DViewerPlayback As ViewerPlayback
 Import Smile.Tools.Character3DViewerCamera As ViewerCamera
 Import Smile.Tools.Character3DViewerCalibration As ViewerCalibration
+Import Smile.Tools.Character3DViewerInput As ViewerInput
+Import Smile.Tools.Character3DViewerUi As ViewerUi
+Import Smile.Tools.Character3DViewerGizmo As ViewerGizmo
 
 Const ANIMATION_CYCLE_MILLISECONDS = 5000
 Const ANIMATION_BUTTON_Y = 352
@@ -221,15 +223,6 @@ Dim ShieldFlameStyle As Boolean
 Dim ShieldFireFailed As Boolean
 Dim ShieldFireClip As Number
 Dim ShieldFireTime As Number
-Dim CalibrationHoldGrip As Boolean
-Dim CalibrationGripAnchor As Core.Vector3
-Dim CalibrationGripBasePosition As Core.Vector3
-Dim CalibrationGripAnchorActive As Boolean
-Dim CalibrationGripAnchorTarget As Number
-Dim CalibrationGripAnchorFrame As Number
-Dim CalibrationGripLimit As Boolean
-Dim FrameButtonRepeatDirection As Number
-Dim FrameButtonRepeatAt As Number
 Dim FlameAnimationPaused As Boolean
 Dim LightningAnimationPaused As Boolean
 Dim FlamesWerePaused As Boolean
@@ -250,8 +243,6 @@ Dim EquipmentTrailElapsed As Number
 Dim EquipmentTrailAnimationTime As Number
 Dim SwordTrailActive As Boolean
 Dim ShieldTrailActive As Boolean
-Dim InterfacePointerBlocked As Boolean
-Dim UiVisibility As Number
 Dim LightingIndex As Number
 Dim MaterialInspection As Number
 Dim Key As Number
@@ -261,6 +252,9 @@ Dim Session As ViewerSession.State
 Dim Playback As ViewerPlayback.State
 Dim ViewerCameraState As ViewerCamera.State
 Dim Calibration As ViewerCalibration.State
+Dim ViewerInputState As ViewerInput.State
+Dim ViewerUiState As ViewerUi.State
+Dim ViewerGizmoState As ViewerGizmo.State
 Dim PartyOrbitCamera As Core.Camera3D
 Dim PartyHeroCamera As Core.Camera3D
 Dim PartyDragonCamera As Core.Camera3D
@@ -299,34 +293,8 @@ Dim DragonVisible As Boolean
 Dim SwordVisible As Boolean
 Dim ShieldVisible As Boolean
 Dim CalibrationAvailable As Boolean
-Dim CalibrationVisible As Boolean
-Dim CalibrationTarget As Number
-Dim CalibrationAxis As Number
-Dim CalibrationTransform As Number
 Dim SwordWristNode As Number
 Dim ShieldWristNode As Number
-Dim CalibrationEditing As Boolean
-Dim CalibrationEditingClip As Number
-Dim CalibrationEditingFrame As Number
-Dim CalibrationAutoOrbitWasEnabled As Boolean
-Dim CalibrationClearConfirm As Boolean
-Dim CalibrationClearAllStage As Number
-Dim TransformGizmo As CharacterViewer.TransformGizmo
-Dim TransformGizmoOrigin As Core.Vector3
-Dim TransformGizmoWorldSize As Number
-Dim TransformGizmoVisible As Boolean
-Dim TransformGizmoDragging As Boolean
-Dim TransformGizmoHoverAxis As Number
-Dim TransformGizmoPointerOwned As Boolean
-Dim TransformGizmoOpenedEdit As Boolean
-Dim TransformGizmoDragStartValue As Number
-Dim TransformGizmoDragRemainder As Number
-Dim SliderDragOwner As Number
-Dim TimelineScrubbing As Boolean
-Dim TimelineKeyframeDragging As Boolean
-Dim TimelineDraggedKeyframe As Number
-Dim TimelineDraggedOriginalFrame As Number
-Dim TimelineDraggedTargetFrame As Number
 
 Game Window "SMILE 2.0 - 3D Viewer, Animation Editor" Size 1600 By 640
 
@@ -335,15 +303,17 @@ Call Graphics3D.ResetRenderer3D()
 Session.SelectedCharacterTab = 3
 PartyMode = True
 Session.ProfileIndex = ViewerProfiles.PROFILE_ARIN
-UiVisibility = 0
 BackgroundIndex = 3
 
 Call ViewerPlayback.Reset(Playback, 100)
+Call ViewerInput.Reset(ViewerInputState, Window_Activate())
+Call ViewerUi.Reset(ViewerUiState)
+Call ViewerGizmo.Reset(ViewerGizmoState)
 
 Call LoadViewer()
 Call ViewerSession.CaptureFailure(Session, 20)
 
-Session.WindowActivated = Window_Activate()
+Session.WindowActivated = ViewerInputState.WindowActivated
 
 Session.Running = True
 
@@ -351,17 +321,23 @@ Call ViewerTiming.Start(Timing, Timer())
 
 Do
 
+    If ViewerInput.UpdateActivation(ViewerInputState, Window_Activate()) Then
+        Call CancelInteractionCaptures()
+    End If
+
+    Session.WindowActivated = ViewerInputState.WindowActivated
+
     Get Key Key
 
     Call HandleKeyboard(Key)
 
     Call ViewerSession.CaptureFailure(Session, 21)
 
-    InterfacePointerBlocked = HandleInterfacePointer()
+    ViewerInputState.InterfaceBlocked = HandleInterfacePointer()
 
     Call ViewerSession.CaptureFailure(Session, 22)
 
-    Call UpdateCameraPointer(InterfacePointerBlocked)
+    Call UpdateCameraPointer(ViewerInputState.InterfaceBlocked)
 
     Call ViewerSession.CaptureFailure(Session, 23)
 
@@ -1244,7 +1220,7 @@ Sub UpdateBattleAudio()
 
     End If
 
-    Audible = Not Playback.ScenePaused And Not CalibrationEditing
+    Audible = Not Playback.ScenePaused And Not ViewerUiState.CalibrationEditing
 
     If BattleAudio.CrossedCue(ArinAudio, Name,
         Character3D.AnimationTime(Character), CueTime, Audible) Then
@@ -1312,11 +1288,37 @@ Sub DestroyStudioGrid()
 
 End Sub
 
+Sub CancelInteractionCaptures()
+
+    If ViewerGizmoState.Dragging Then
+        Call FinishTransformGizmoDrag()
+    End If
+
+    If ViewerInputState.TimelineKeyframeDragging Then
+        Session.Ready = Character3D.SetAnimationTime(
+            Character,
+            CalibrationFrameTimeMilliseconds(
+                Playback.SelectedClip,
+                ViewerInputState.TimelineDraggedOriginalFrame
+            )
+        ) And Session.Ready
+    End If
+
+    If (ViewerInputState.TimelineScrubbing Or
+        ViewerInputState.TimelineKeyframeDragging) Then
+        Call RestorePartyPreview()
+    End If
+
+    Call ViewerInput.CancelCaptures(ViewerInputState)
+    Call ViewerCamera.CancelPointerControls(ViewerCameraState)
+
+End Sub
+
 Sub HandleKeyboard(PressedKey As Number)
 
     If (PartyMode And
         (PressedKey = KEY_4 Or
-        (PressedKey = KEY_ENTER And Not CalibrationEditing And Not TransformGizmoDragging))) Then
+        (PressedKey = KEY_ENTER And Not ViewerUiState.CalibrationEditing And Not ViewerGizmoState.Dragging))) Then
 
         If PressedKey = KEY_ENTER Then
             Call ResetPartyInspector()
@@ -1334,13 +1336,13 @@ End Sub
 
 Sub HandleInspectorKeyboard(PressedKey As Number)
 
+    Dim ArrowCommand As Number
+
     If PressedKey = KEY_BACKTICK Then
 
-        UiVisibility = (UiVisibility + 1) Mod 3
-        SliderDragOwner = 0
-        TimelineScrubbing = False
-        TimelineKeyframeDragging = False
-        FrameButtonRepeatDirection = 0
+        Call ViewerUi.CycleVisibility(ViewerUiState)
+        Call CancelInteractionCaptures()
+
         Return
 
     End If
@@ -1379,7 +1381,7 @@ Sub HandleInspectorKeyboard(PressedKey As Number)
         Return
     End If
 
-    If CalibrationEditing Then
+    If ViewerUiState.CalibrationEditing Then
         Return
     End If
 
@@ -1395,42 +1397,51 @@ Sub HandleInspectorKeyboard(PressedKey As Number)
 
     End If
 
+    ArrowCommand = ViewerInput.ClassifyArrow(
+        PressedKey,
+        KEY_LEFT,
+        KEY_RIGHT,
+        KEY_UP,
+        KEY_DOWN,
+        Key_Event_Held(KEY_CONTROL)
+    )
+
     If PressedKey = KEY_B Then
 
         Call CycleBackground()
 
-    Else If PressedKey = KEY_LEFT And Key_Event_Held(KEY_CONTROL) Then
+    Else If ArrowCommand = ViewerInput.ARROW_FRAME_PREVIOUS Then
 
         Call StepAnimationFrame(-1)
 
-    Else If PressedKey = KEY_RIGHT And Key_Event_Held(KEY_CONTROL) Then
+    Else If ArrowCommand = ViewerInput.ARROW_FRAME_NEXT Then
 
         Call StepAnimationFrame(1)
 
-    Else If PressedKey = KEY_LEFT And SocketGizmosVisible Then
+    Else If ArrowCommand = ViewerInput.ARROW_PLAIN_LEFT And SocketGizmosVisible Then
 
         Call SelectPreviousSocket()
 
-    Else If PressedKey = KEY_RIGHT And SocketGizmosVisible Then
+    Else If ArrowCommand = ViewerInput.ARROW_PLAIN_RIGHT And SocketGizmosVisible Then
 
         Call SelectNextSocket()
 
-    Else If PressedKey = KEY_LEFT Then
+    Else If ArrowCommand = ViewerInput.ARROW_PLAIN_LEFT Then
 
         Session.Ready = ViewerCamera.NudgeOrbit(
             ViewerCameraState, -5, 0) And Session.Ready
 
-    Else If PressedKey = KEY_RIGHT Then
+    Else If ArrowCommand = ViewerInput.ARROW_PLAIN_RIGHT Then
 
         Session.Ready = ViewerCamera.NudgeOrbit(
             ViewerCameraState, 5, 0) And Session.Ready
 
-    Else If PressedKey = KEY_UP Then
+    Else If ArrowCommand = ViewerInput.ARROW_PLAIN_UP Then
 
         Session.Ready = ViewerCamera.NudgeOrbit(
             ViewerCameraState, 0, -5) And Session.Ready
 
-    Else If PressedKey = KEY_DOWN Then
+    Else If ArrowCommand = ViewerInput.ARROW_PLAIN_DOWN Then
 
         Session.Ready = ViewerCamera.NudgeOrbit(
             ViewerCameraState, 0, 5) And Session.Ready
@@ -1491,16 +1502,16 @@ End Sub
 Function HandleTransformGizmoKeyboard(PressedKey As Number) As Boolean
 
     If (Not CalibrationAvailable Or
-        Not CalibrationVisible Or
-        UiVisibility <> 0) Then
+        Not ViewerUiState.CalibrationVisible Or
+        ViewerUiState.Visibility <> 0) Then
         Return False
     End If
 
     If PressedKey = KEY_ESCAPE Then
 
-        If TransformGizmoDragging Then
+        If ViewerGizmoState.Dragging Then
             Call CancelTransformGizmoDrag()
-        Else If CalibrationEditing Then
+        Else If ViewerUiState.CalibrationEditing Then
             Call CancelCalibrationEdit()
         End If
 
@@ -1525,9 +1536,9 @@ Function HandleTransformGizmoKeyboard(PressedKey As Number) As Boolean
         Return True
 
     Else If (PressedKey = KEY_G And
-        CalibrationTarget >= CALIBRATION_TARGET_SWORD) Then
+        ViewerUiState.CalibrationTarget >= CALIBRATION_TARGET_SWORD) Then
 
-        CalibrationTransform = CALIBRATION_TRANSFORM_MOVE
+        ViewerUiState.CalibrationTransform = CALIBRATION_TRANSFORM_MOVE
 
         Call BeginTransformGizmoDrag(False)
 
@@ -1535,7 +1546,7 @@ Function HandleTransformGizmoKeyboard(PressedKey As Number) As Boolean
 
     Else If PressedKey = KEY_R Or PressedKey = KEY_E Then
 
-        CalibrationTransform = CALIBRATION_TRANSFORM_ROTATE
+        ViewerUiState.CalibrationTransform = CALIBRATION_TRANSFORM_ROTATE
 
         Call BeginTransformGizmoDrag(False)
 
@@ -1543,9 +1554,9 @@ Function HandleTransformGizmoKeyboard(PressedKey As Number) As Boolean
 
     Else If PressedKey = KEY_ENTER Then
 
-        If TransformGizmoDragging Then
+        If ViewerGizmoState.Dragging Then
             Call FinishTransformGizmoDrag()
-        Else If CalibrationEditing Then
+        Else If ViewerUiState.CalibrationEditing Then
             Call SaveCalibrationFrame()
         Else
             Return False
@@ -1565,16 +1576,16 @@ Sub SelectTransformGizmoAxis(Axis As Number)
         Return
     End If
 
-    If TransformGizmoDragging Then
+    If ViewerGizmoState.Dragging Then
 
-        Call SetCurrentCalibrationValue(TransformGizmoDragStartValue)
+        Call SetCurrentCalibrationValue(ViewerGizmoState.DragStartValue)
 
-        CalibrationAxis = Axis
-        TransformGizmoDragStartValue = CurrentCalibrationValue()
-        TransformGizmoDragRemainder = 0
+        ViewerUiState.CalibrationAxis = Axis
+
+        Call ViewerGizmo.SelectAxis(ViewerGizmoState, CurrentCalibrationValue())
 
     Else
-        CalibrationAxis = Axis
+        ViewerUiState.CalibrationAxis = Axis
 
     End If
 
@@ -1582,24 +1593,21 @@ End Sub
 
 Sub BeginTransformGizmoDrag(PointerOwned As Boolean)
 
-    If Not TransformGizmoVisible Then
+    Dim OpenedEdit As Boolean
+
+    If Not ViewerGizmoState.Visible Then
         Return
     End If
 
-    If TransformGizmoDragging Then
-        TransformGizmoPointerOwned = PointerOwned
-
-        Return
-    End If
-
-    TransformGizmoOpenedEdit = Not CalibrationEditing
+    OpenedEdit = Not ViewerUiState.CalibrationEditing
 
     Call BeginCalibrationEdit()
-
-    TransformGizmoDragging = True
-    TransformGizmoPointerOwned = PointerOwned
-    TransformGizmoDragStartValue = CurrentCalibrationValue()
-    TransformGizmoDragRemainder = 0
+    Call ViewerGizmo.BeginDrag(
+        ViewerGizmoState,
+        PointerOwned,
+        OpenedEdit,
+        CurrentCalibrationValue()
+    )
 
 End Sub
 
@@ -1607,19 +1615,13 @@ Sub ToggleTransformGizmo()
 
     ' Hiding the handles keeps the current unsaved numeric preview, without saving it.
 
-    Call FinishTransformGizmoDrag()
-
-    TransformGizmoVisible = Not TransformGizmoVisible
-    TransformGizmoHoverAxis = -1
+    Call ViewerGizmo.Toggle(ViewerGizmoState)
 
 End Sub
 
 Sub FinishTransformGizmoDrag()
 
-    TransformGizmoDragging = False
-    TransformGizmoPointerOwned = False
-    TransformGizmoOpenedEdit = False
-    TransformGizmoDragRemainder = 0
+    Call ViewerGizmo.FinishDrag(ViewerGizmoState)
 
 End Sub
 
@@ -1627,17 +1629,17 @@ Sub CancelTransformGizmoDrag()
 
     Dim OpenedEdit As Boolean
 
-    If Not TransformGizmoDragging Then
+    If Not ViewerGizmoState.Dragging Then
         Return
     End If
 
-    OpenedEdit = TransformGizmoOpenedEdit
+    OpenedEdit = ViewerGizmoState.OpenedEdit
 
     If OpenedEdit Then
         Call CancelCalibrationEdit()
     Else
 
-        Call SetCurrentCalibrationValue(TransformGizmoDragStartValue)
+        Call SetCurrentCalibrationValue(ViewerGizmoState.DragStartValue)
     End If
 
     Call FinishTransformGizmoDrag()
@@ -1649,8 +1651,8 @@ Function HandleTransformGizmoPointer() As Boolean
     Dim Axis As Number
 
     If (Not CalibrationAvailable Or
-        Not CalibrationVisible Or
-        UiVisibility <> 0 Or
+        Not ViewerUiState.CalibrationVisible Or
+        ViewerUiState.Visibility <> 0 Or
         Session.ViewerError) Then
         Return False
     End If
@@ -1665,13 +1667,13 @@ Function HandleTransformGizmoPointer() As Boolean
 
     End If
 
-    If Not TransformGizmoVisible Then
+    If Not ViewerGizmoState.Visible Then
         Return False
     End If
 
     Call UpdateTransformGizmo()
 
-    If TransformGizmoDragging Then
+    If ViewerGizmoState.Dragging Then
 
         If Pointer_Pressed(POINTER_SECONDARY) Then
             Call CancelTransformGizmoDrag()
@@ -1679,7 +1681,7 @@ Function HandleTransformGizmoPointer() As Boolean
             Return True
         End If
 
-        If TransformGizmoPointerOwned Then
+        If ViewerGizmoState.PointerOwned Then
 
             If Pointer_Released(POINTER_PRIMARY) Then
 
@@ -1720,7 +1722,7 @@ Function HandleTransformGizmoPointer() As Boolean
         Return False
     End If
 
-    CalibrationAxis = Axis
+    ViewerUiState.CalibrationAxis = Axis
 
     Call BeginTransformGizmoDrag(True)
 
@@ -1741,7 +1743,7 @@ Function TransformGizmoAxisAtPointer() As Number
 
     Axis = -1
 
-    If (Not TransformGizmoVisible Or
+    If (Not ViewerGizmoState.Visible Or
         Not Pointer_Inside() Or
         Pointer_Y() < 90 Or
         Pointer_Y() >= Window_Height() - 100 Or
@@ -1751,21 +1753,21 @@ Function TransformGizmoAxisAtPointer() As Number
         Return Axis
     End If
 
-    If CalibrationTransform = CALIBRATION_TRANSFORM_MOVE Then
+    If ViewerUiState.CalibrationTransform = CALIBRATION_TRANSFORM_MOVE Then
         Axis = CharacterViewer.TransformGizmoMoveAxisAtPointer(
-            TransformGizmo,
+            ViewerGizmoState.Projection,
             Pointer_X(),
             Pointer_Y(),
-            CalibrationAxis,
+            ViewerUiState.CalibrationAxis,
             TRANSFORM_GIZMO_HIT_RADIUS
         )
     Else
         Axis = CharacterViewer.TransformGizmoRotationAxisAtPointer(
-            TransformGizmoOrigin,
+            ViewerGizmoState.Origin,
             Pointer_X(),
             Pointer_Y(),
-            CalibrationAxis,
-            TransformGizmoWorldSize,
+            ViewerUiState.CalibrationAxis,
+            ViewerGizmoState.WorldSize,
             ViewerCameraState.Live,
             Window_Width(),
             Window_Height(),
@@ -1783,15 +1785,15 @@ Sub UpdateTransformGizmoFromPointer()
     Dim PointerAmount As Number
     Dim ValueAmount As Number
 
-    If CalibrationTransform = CALIBRATION_TRANSFORM_MOVE Then
+    If ViewerUiState.CalibrationTransform = CALIBRATION_TRANSFORM_MOVE Then
         PointerAmount = CharacterViewer.TransformGizmoAxisPointerDelta(
-            TransformGizmo,
-            CalibrationAxis,
+            ViewerGizmoState.Projection,
+            ViewerUiState.CalibrationAxis,
             Pointer_Delta_X(),
             Pointer_Delta_Y()
         )
         ValueAmount = CharacterViewer.RetainedPointerDelta(
-            TransformGizmoDragRemainder,
+            ViewerGizmoState.DragRemainder,
             PointerAmount,
             TRANSFORM_GIZMO_MOVE_DIVISOR
         )
@@ -1801,7 +1803,7 @@ Sub UpdateTransformGizmoFromPointer()
             Pointer_Delta_X(), Pointer_Delta_Y())
 
         ValueAmount = CharacterViewer.RetainedPointerDelta(
-            TransformGizmoDragRemainder,
+            ViewerGizmoState.DragRemainder,
             PointerAmount,
             TRANSFORM_GIZMO_ROTATE_DIVISOR
         )
@@ -1838,12 +1840,12 @@ Function TransformGizmoRingPointerDelta(PointerX As Number, PointerY As Number,
 
     For Segment = 0 To TRANSFORM_GIZMO_RING_SEGMENTS - 1
 
-        StartPoint = CharacterViewer.ProjectTransformRingPoint(TransformGizmoOrigin,
-            CalibrationAxis, Segment, TRANSFORM_GIZMO_RING_SEGMENTS,
-            TransformGizmoWorldSize, ViewerCameraState.Live, Window_Width(), Window_Height())
-        EndPoint = CharacterViewer.ProjectTransformRingPoint(TransformGizmoOrigin,
-            CalibrationAxis, Segment + 1, TRANSFORM_GIZMO_RING_SEGMENTS,
-            TransformGizmoWorldSize, ViewerCameraState.Live, Window_Width(), Window_Height())
+        StartPoint = CharacterViewer.ProjectTransformRingPoint(ViewerGizmoState.Origin,
+            ViewerUiState.CalibrationAxis, Segment, TRANSFORM_GIZMO_RING_SEGMENTS,
+            ViewerGizmoState.WorldSize, ViewerCameraState.Live, Window_Width(), Window_Height())
+        EndPoint = CharacterViewer.ProjectTransformRingPoint(ViewerGizmoState.Origin,
+            ViewerUiState.CalibrationAxis, Segment + 1, TRANSFORM_GIZMO_RING_SEGMENTS,
+            ViewerGizmoState.WorldSize, ViewerCameraState.Live, Window_Width(), Window_Height())
         AxisX = EndPoint.X - StartPoint.X
         AxisY = EndPoint.Y - StartPoint.Y
         LengthSquared = AxisX * AxisX + AxisY * AxisY
@@ -1872,7 +1874,7 @@ Function TransformGizmoRingPointerDelta(PointerX As Number, PointerY As Number,
 
     End For
 
-    If CalibrationAxis = CALIBRATION_AXIS_Y Then
+    If ViewerUiState.CalibrationAxis = CALIBRATION_AXIS_Y Then
         Result = 0 - Result
     End If
 
@@ -1882,18 +1884,9 @@ End Function
 
 Sub UpdateTransformGizmo()
 
-    Dim OriginProjection As Core.ProjectedPoint3D
-    Dim FocalLength As Number
-
-    TransformGizmoOrigin = CurrentTransformGizmoOrigin()
-    OriginProjection = CharacterViewer.ProjectViewerPoint(TransformGizmoOrigin,
-        ViewerCameraState.Live, Window_Width(), Window_Height())
-    FocalLength = (Window_Height() * Fixed.CosFixed(ViewerCameraState.Live.FovDegrees / 2) /
-        (2 * Max(1, Fixed.SinFixed(ViewerCameraState.Live.FovDegrees / 2))))
-    TransformGizmoWorldSize = Min(1000, Max(1, OriginProjection.Depth * 80 / Max(1, FocalLength)))
-    TransformGizmo = CharacterViewer.ProjectTransformGizmo(
-        TransformGizmoOrigin,
-        TransformGizmoWorldSize,
+    Call ViewerGizmo.UpdateProjection(
+        ViewerGizmoState,
+        CurrentTransformGizmoOrigin(),
         ViewerCameraState.Live,
         Window_Width(),
         Window_Height()
@@ -1910,12 +1903,12 @@ Function CurrentTransformGizmoOrigin() As Core.Vector3
     PartIndex = BODY_PART_INDEX
     SocketName = "HandRight"
 
-    If CalibrationTarget = CALIBRATION_TARGET_SHIELD_WRIST Then
+    If ViewerUiState.CalibrationTarget = CALIBRATION_TARGET_SHIELD_WRIST Then
         SocketName = "HandLeft"
-    Else If CalibrationTarget = CALIBRATION_TARGET_SWORD Then
+    Else If ViewerUiState.CalibrationTarget = CALIBRATION_TARGET_SWORD Then
         PartIndex = WEAPON_PART_INDEX
         SocketName = "SwordBase"
-    Else If CalibrationTarget = CALIBRATION_TARGET_SHIELD Then
+    Else If ViewerUiState.CalibrationTarget = CALIBRATION_TARGET_SHIELD Then
         PartIndex = SHIELD_PART_INDEX
         SocketName = "ShieldCenter"
     End If
@@ -1935,7 +1928,7 @@ Sub ToggleScenePause()
 
     If PartyMode And Playback.ScenePaused Then
 
-        If CalibrationEditing Then
+        If ViewerUiState.CalibrationEditing Then
             Session.CharacterSwitchBlocked = True
             Return
         End If
@@ -2216,7 +2209,7 @@ Sub CycleProfile()
         Return
     End If
 
-    If CalibrationEditing Then
+    If ViewerUiState.CalibrationEditing Then
         Session.CharacterSwitchBlocked = True
         Return
     End If
@@ -2513,11 +2506,11 @@ Function HandleInterfacePointer() As Boolean
     Dim PanelLeft As Number
     Dim WheelDelta As Number
 
-    If (TimelineScrubbing Or
-        TimelineKeyframeDragging Or
-        FrameButtonRepeatDirection <> 0 Or
-        SliderDragOwner <> 0 Or
-        TransformGizmoDragging) Then
+    If (ViewerInputState.TimelineScrubbing Or
+        ViewerInputState.TimelineKeyframeDragging Or
+        ViewerInputState.FrameButtonRepeatDirection <> 0 Or
+        ViewerInputState.SliderDragOwner <> 0 Or
+        ViewerGizmoState.Dragging) Then
 
         Call BeginPartyInspector()
 
@@ -2529,7 +2522,7 @@ Function HandleInterfacePointer() As Boolean
 
     End If
 
-    If UiVisibility = 2 Then
+    If ViewerUiState.Visibility = 2 Then
 
         If Pointer_Pressed(POINTER_SECONDARY) Then
 
@@ -2611,20 +2604,20 @@ Function HandleInspectorPointer() As Boolean
         Return True
     End If
 
-    If FrameButtonRepeatDirection <> 0 Then
+    If ViewerInputState.FrameButtonRepeatDirection <> 0 Then
 
         If (Pointer_Pressed(POINTER_SECONDARY) Or
             (Not Pointer_Held(POINTER_PRIMARY) And Not Pointer_Pressed(POINTER_PRIMARY))) Then
 
-            FrameButtonRepeatDirection = 0
+            ViewerInputState.FrameButtonRepeatDirection = 0
 
         Else
 
-            If Timer() >= FrameButtonRepeatAt Then
-                Call StepAnimationFrame(FrameButtonRepeatDirection)
+            If Timer() >= ViewerInputState.FrameButtonRepeatAt Then
+                Call StepAnimationFrame(ViewerInputState.FrameButtonRepeatDirection)
 
                 ''' No catch-up burst if rendering or input stalls.
-                FrameButtonRepeatAt = Timer() + FRAME_BUTTON_REPEAT_MILLISECONDS
+                ViewerInputState.FrameButtonRepeatAt = Timer() + FRAME_BUTTON_REPEAT_MILLISECONDS
             End If
 
             Return True
@@ -2633,7 +2626,7 @@ Function HandleInspectorPointer() As Boolean
 
     End If
 
-    If TimelineKeyframeDragging Then
+    If ViewerInputState.TimelineKeyframeDragging Then
 
         If Pointer_Pressed(POINTER_PRIMARY) Or Pointer_Held(POINTER_PRIMARY) Then
             Call UpdateTimelineKeyframeDrag()
@@ -2650,17 +2643,17 @@ Function HandleInspectorPointer() As Boolean
         Return True
     End If
 
-    If TimelineScrubbing Then
+    If ViewerInputState.TimelineScrubbing Then
 
         If Pointer_Pressed(POINTER_PRIMARY) Or Pointer_Held(POINTER_PRIMARY) Then
             Call SeekFromPointer()
         Else
 
-            TimelineScrubbing = False
+            Call ViewerInput.FinishTimelineGesture(ViewerInputState)
         End If
 
         If Pointer_Released(POINTER_PRIMARY) Then
-            TimelineScrubbing = False
+            Call ViewerInput.FinishTimelineGesture(ViewerInputState)
         End If
 
         Return True
@@ -2745,9 +2738,9 @@ Function HandleInspectorPointer() As Boolean
 
     End If
 
-    If (UiVisibility = 0 And
+    If (ViewerUiState.Visibility = 0 And
         CalibrationAvailable And
-        CalibrationVisible And
+        ViewerUiState.CalibrationVisible And
         PointerInRectangle(
             CALIBRATION_PANEL_X,
             CALIBRATION_PANEL_Y,
@@ -2761,7 +2754,7 @@ Function HandleInspectorPointer() As Boolean
 
     Blocked = (Pointer_Y() < 90 Or
         Pointer_Y() >= Window_Height() - 100 Or
-        (UiVisibility = 0 And Pointer_X() >= PanelLeft And Pointer_Y() >= 82))
+        (ViewerUiState.Visibility = 0 And Pointer_X() >= PanelLeft And Pointer_Y() >= 82))
 
     If Not Pointer_Pressed(POINTER_PRIMARY) Then
         Return Blocked
@@ -2785,15 +2778,15 @@ Function HandleInspectorPointer() As Boolean
 
         Call StepAnimationFrame(-1)
 
-        FrameButtonRepeatDirection = -1
-        FrameButtonRepeatAt = Timer() + FRAME_BUTTON_REPEAT_MILLISECONDS
+        ViewerInputState.FrameButtonRepeatDirection = -1
+        ViewerInputState.FrameButtonRepeatAt = Timer() + FRAME_BUTTON_REPEAT_MILLISECONDS
 
     Else If PointerInRectangle(TIMELINE_LEFT + 272, Window_Height() - 96, 62, 24) Then
 
         Call StepAnimationFrame(1)
 
-        FrameButtonRepeatDirection = 1
-        FrameButtonRepeatAt = Timer() + FRAME_BUTTON_REPEAT_MILLISECONDS
+        ViewerInputState.FrameButtonRepeatDirection = 1
+        ViewerInputState.FrameButtonRepeatAt = Timer() + FRAME_BUTTON_REPEAT_MILLISECONDS
 
     Else If KeyframeIndex >= 0 Then
 
@@ -2806,11 +2799,11 @@ Function HandleInspectorPointer() As Boolean
         TIMELINE_HEIGHT
     ) Then
 
-        TimelineScrubbing = True
+        Call ViewerInput.BeginTimelineScrub(ViewerInputState)
 
         Call SeekFromPointer()
 
-    Else If UiVisibility <> 0 Then
+    Else If ViewerUiState.Visibility <> 0 Then
 
         Return Blocked
 
@@ -2846,10 +2839,14 @@ Function HandleInspectorPointer() As Boolean
 
     Else If PointerInRectangle(PanelLeft + 128, 56, 36, 22) Then
 
-        CalibrationVisible = CalibrationAvailable And Not CalibrationVisible
+        ViewerUiState.CalibrationVisible = CalibrationAvailable And Not ViewerUiState.CalibrationVisible
 
-        If CalibrationVisible Then
+        If ViewerUiState.CalibrationVisible Then
             Call BeginPartyPreview()
+        Else
+
+            Call ViewerGizmo.Hide(ViewerGizmoState)
+            Call ViewerInput.CancelCaptures(ViewerInputState)
         End If
 
     Else If PointerInRectangle(PanelLeft + 168, 56, 40, 22) Then
@@ -2975,7 +2972,7 @@ Function HandleInspectorPointer() As Boolean
 
     End If
 
-    If UiVisibility <> 0 Then
+    If ViewerUiState.Visibility <> 0 Then
         Return Blocked
     End If
 
@@ -3007,14 +3004,14 @@ Function HandleSharedSliders() As Boolean
     Dim PanelLeft As Number
     Dim PreviousValue As Number
 
-    If UiVisibility <> 0 Then
+    If ViewerUiState.Visibility <> 0 Then
         Return False
     End If
 
     PanelLeft = StatusPanelX()
     Value = ViewerCameraState.Controls.OrbitYaw
 
-    If UI.UpdateSlider(SliderDragOwner, 1, PanelLeft + 76, Window_Height() - 142,
+    If UI.UpdateSlider(ViewerInputState.SliderDragOwner, 1, PanelLeft + 76, Window_Height() - 142,
         CAMERA_SLIDER_WIDTH, CAMERA_SLIDER_HEIGHT, -180, 180, 1, Value) Then
         Call ViewerCamera.SetHorizontalOrbit(ViewerCameraState, Value)
 
@@ -3023,7 +3020,7 @@ Function HandleSharedSliders() As Boolean
 
     Value = ViewerCameraState.Controls.OrbitPitch
 
-    If UI.UpdateSlider(SliderDragOwner, 2, PanelLeft + 76, Window_Height() - 116,
+    If UI.UpdateSlider(ViewerInputState.SliderDragOwner, 2, PanelLeft + 76, Window_Height() - 116,
         CAMERA_SLIDER_WIDTH, CAMERA_SLIDER_HEIGHT, -180, 180, 1, Value) Then
         Call ViewerCamera.SetVerticalOrbit(ViewerCameraState, Value)
 
@@ -3032,19 +3029,19 @@ Function HandleSharedSliders() As Boolean
 
     Value = CharacterViewer.ZoomTargetDegrees(ViewerCameraState.Zoom)
 
-    If UI.UpdateSlider(SliderDragOwner, 3, PanelLeft + 76, Window_Height() - 90,
+    If UI.UpdateSlider(ViewerInputState.SliderDragOwner, 3, PanelLeft + 76, Window_Height() - 90,
         CAMERA_SLIDER_WIDTH, CAMERA_SLIDER_HEIGHT, ZOOM_IN_LIMIT, ZOOM_OUT_LIMIT, -1, Value) Then
         Call ViewerCamera.SetZoomTarget(ViewerCameraState, Value)
 
         Return True
     End If
 
-    If CalibrationVisible Or SliderDragOwner = 4 Then
+    If ViewerUiState.CalibrationVisible Or ViewerInputState.SliderDragOwner = 4 Then
 
         Value = CurrentCalibrationValue()
         PreviousValue = Value
 
-        If UI.UpdateSlider(SliderDragOwner, 4, CALIBRATION_SLIDER_X, CALIBRATION_SLIDER_Y,
+        If UI.UpdateSlider(ViewerInputState.SliderDragOwner, 4, CALIBRATION_SLIDER_X, CALIBRATION_SLIDER_Y,
             CALIBRATION_SLIDER_WIDTH, CALIBRATION_SLIDER_HEIGHT,
             CalibrationMinimumValue(), CalibrationMaximumValue(), 1, Value) Then
 
@@ -3078,44 +3075,44 @@ Sub HandleCalibrationPanelPointer()
 
     Else If PointerInRectangle(34, 128, 92, 24) Then
 
-        CalibrationTarget = CALIBRATION_TARGET_SWORD_WRIST
-        CalibrationTransform = CALIBRATION_TRANSFORM_ROTATE
+        ViewerUiState.CalibrationTarget = CALIBRATION_TARGET_SWORD_WRIST
+        ViewerUiState.CalibrationTransform = CALIBRATION_TRANSFORM_ROTATE
 
     Else If PointerInRectangle(130, 128, 96, 24) Then
 
-        CalibrationTarget = CALIBRATION_TARGET_SHIELD_WRIST
-        CalibrationTransform = CALIBRATION_TRANSFORM_ROTATE
+        ViewerUiState.CalibrationTarget = CALIBRATION_TARGET_SHIELD_WRIST
+        ViewerUiState.CalibrationTransform = CALIBRATION_TRANSFORM_ROTATE
 
     Else If PointerInRectangle(230, 128, 76, 24) Then
 
-        CalibrationTarget = CALIBRATION_TARGET_SWORD
-        CalibrationGripAnchorActive = False
+        ViewerUiState.CalibrationTarget = CALIBRATION_TARGET_SWORD
+        ViewerGizmoState.GripAnchorActive = False
 
     Else If PointerInRectangle(310, 128, 76, 24) Then
 
-        CalibrationTarget = CALIBRATION_TARGET_SHIELD
-        CalibrationGripAnchorActive = False
+        ViewerUiState.CalibrationTarget = CALIBRATION_TARGET_SHIELD
+        ViewerGizmoState.GripAnchorActive = False
 
     Else If PointerInRectangle(34, 158, 48, 24) Then
 
-        CalibrationAxis = CALIBRATION_AXIS_X
+        ViewerUiState.CalibrationAxis = CALIBRATION_AXIS_X
 
     Else If PointerInRectangle(86, 158, 48, 24) Then
 
-        CalibrationAxis = CALIBRATION_AXIS_Y
+        ViewerUiState.CalibrationAxis = CALIBRATION_AXIS_Y
 
     Else If PointerInRectangle(138, 158, 48, 24) Then
 
-        CalibrationAxis = CALIBRATION_AXIS_Z
+        ViewerUiState.CalibrationAxis = CALIBRATION_AXIS_Z
 
     Else If PointerInRectangle(202, 158, 72, 24) Then
 
-        CalibrationTransform = CALIBRATION_TRANSFORM_ROTATE
+        ViewerUiState.CalibrationTransform = CALIBRATION_TRANSFORM_ROTATE
 
     Else If (PointerInRectangle(278, 158, 72, 24) And
-        CalibrationTarget >= CALIBRATION_TARGET_SWORD) Then
+        ViewerUiState.CalibrationTarget >= CALIBRATION_TARGET_SWORD) Then
 
-        CalibrationTransform = CALIBRATION_TRANSFORM_MOVE
+        ViewerUiState.CalibrationTransform = CALIBRATION_TRANSFORM_MOVE
 
     Else If PointerInRectangle(354, 158, 78, 24) Then
 
@@ -3131,28 +3128,28 @@ Sub HandleCalibrationPanelPointer()
 
     Else If PointerInRectangle(34, 412, 196, 24) Then
 
-        If CalibrationClearConfirm Then
+        If ViewerUiState.CalibrationClearConfirm Then
             Call ClearSelectedClipCalibration()
         Else
-            CalibrationClearConfirm = True
-            CalibrationClearAllStage = 0
+
+            Call ViewerUi.BeginClearConfirmation(ViewerUiState)
         End If
 
     Else If PointerInRectangle(34, 268, 80, 24) Then
 
-        If Not CalibrationEditing Then
+        If Not ViewerUiState.CalibrationEditing Then
             Call CopyCurrentCalibrationKeyframe()
         End If
 
     Else If PointerInRectangle(118, 268, 80, 24) Then
 
-        If Not CalibrationEditing Then
+        If Not ViewerUiState.CalibrationEditing Then
             Call PasteCalibrationKeyframe()
         End If
 
     Else If PointerInRectangle(202, 268, 90, 24) Then
 
-        If Not CalibrationEditing Then
+        If Not ViewerUiState.CalibrationEditing Then
             Call DeleteCurrentCalibrationKeyframe()
         End If
 
@@ -3162,11 +3159,11 @@ Sub HandleCalibrationPanelPointer()
 
     Else If PointerInRectangle(140, 298, 100, 24) Then
 
-        CalibrationHoldGrip = Not CalibrationHoldGrip
+        ViewerGizmoState.HoldGrip = Not ViewerGizmoState.HoldGrip
 
         Call InvalidateVisualHistory()
 
-        CalibrationGripAnchorActive = False
+        ViewerGizmoState.GripAnchorActive = False
 
     Else If PointerInRectangle(246, 298, 186, 24) Then
 
@@ -3219,7 +3216,7 @@ Sub UpdateCameraPointer(Blocked As Boolean)
     PointerDeltaX = Pointer_Delta_X()
     PointerDeltaY = Pointer_Delta_Y()
 
-    ViewerCameraState.CalibrationOrbitActive = OrbitActive And CalibrationVisible And Not PartyMode
+    ViewerCameraState.CalibrationOrbitActive = OrbitActive And ViewerUiState.CalibrationVisible And Not PartyMode
 
     If OrbitPressed And ViewerCameraState.CalibrationOrbitActive Then
         Call ViewerCamera.BeginCalibrationOrbitAnchor(
@@ -3800,7 +3797,7 @@ Sub UpdateSwordFire()
     ''' Loops and clip changes retain world-space particles; paused pose edits clear stale fire.
     Restart = False
 
-    If Playback.ScenePaused And CalibrationEditing Then
+    If Playback.ScenePaused And ViewerUiState.CalibrationEditing Then
         Restart = (Restart Or Base.X <> SwordFireBase.X Or Base.Y <> SwordFireBase.Y Or
             Base.Z <> SwordFireBase.Z Or Tip.X <> SwordFireTip.X Or
             Tip.Y <> SwordFireTip.Y Or Tip.Z <> SwordFireTip.Z)
@@ -3932,7 +3929,7 @@ Sub UpdateShieldFire()
 
     For Index = 0 To 2
 
-        If Playback.ScenePaused And CalibrationEditing Then
+        If Playback.ScenePaused And ViewerUiState.CalibrationEditing Then
             Restart = (Restart Or Points[Index].X <> ShieldFirePoints[Index].X Or
                 Points[Index].Y <> ShieldFirePoints[Index].Y Or
                 Points[Index].Z <> ShieldFirePoints[Index].Z)
@@ -4375,7 +4372,7 @@ Sub ResetAll()
 
     PartyPreviewActive = False
 
-    If CalibrationEditing Then
+    If ViewerUiState.CalibrationEditing Then
         Call CancelCalibrationEdit()
     End If
 
@@ -4383,7 +4380,6 @@ Sub ResetAll()
     Playback.ScenePaused = False
     FlameAnimationPaused = False
     LightningAnimationPaused = False
-    UiVisibility = 0
     SwordFireFailed = False
     ShieldFireFailed = False
     EquipmentFireFirstError = 0
@@ -4402,12 +4398,11 @@ Sub ResetAll()
     ShieldVisible = True
     SwordFireVisible = True
     ShieldFireVisible = True
-    CalibrationVisible = False
-    SliderDragOwner = 0
-    TransformGizmoVisible = False
-    FrameButtonRepeatDirection = 0
-    TimelineScrubbing = False
-    TimelineKeyframeDragging = False
+
+    Call ViewerUi.Reset(ViewerUiState)
+    Call ViewerInput.CancelCaptures(ViewerInputState)
+    Call ViewerGizmo.Hide(ViewerGizmoState)
+    Call ViewerCamera.CancelPointerControls(ViewerCameraState)
 
     Call ClearEquipmentFire()
     Call ApplyLighting()
@@ -4526,8 +4521,8 @@ Sub SelectClip(Index As Number)
         Playback.DemoEnabled = False
     End If
 
-    CalibrationClearConfirm = False
-    CalibrationClearAllStage = 0
+    ViewerUiState.CalibrationClearConfirm = False
+    ViewerUiState.CalibrationClearAllStage = 0
 
     Call PlaySelectedClip()
 
@@ -4644,7 +4639,7 @@ Sub SeekCalibrationKeyframe(Direction As Number)
         Return
     End If
 
-    If CalibrationEditing Then
+    If ViewerUiState.CalibrationEditing Then
         Call CancelCalibrationEdit()
     End If
 
@@ -4844,13 +4839,11 @@ End Function
 Sub BeginTimelineKeyframeDrag(KeyframeIndex As Number)
 
     Call BeginPartyPreview()
-
-    TimelineKeyframeDragging = True
-    TimelineScrubbing = False
-    TimelineDraggedKeyframe = KeyframeIndex
-    TimelineDraggedOriginalFrame = ViewerCalibration.KeyFrame(
-        Calibration, Playback.SelectedClip, KeyframeIndex)
-    TimelineDraggedTargetFrame = TimelineDraggedOriginalFrame
+    Call ViewerInput.BeginTimelineKeyframeDrag(
+        ViewerInputState,
+        KeyframeIndex,
+        ViewerCalibration.KeyFrame(Calibration, Playback.SelectedClip, KeyframeIndex)
+    )
 
     Call UpdateTimelineKeyframeDrag()
 
@@ -4865,11 +4858,11 @@ Sub UpdateTimelineKeyframeDrag()
     TargetFrame = TimelineFrameFromPointer()
     ExistingKeyframe = CalibrationKeyframeIndex(Playback.SelectedClip, TargetFrame)
 
-    If ExistingKeyframe < 0 Or ExistingKeyframe = TimelineDraggedKeyframe Then
-        TimelineDraggedTargetFrame = TargetFrame
+    If ExistingKeyframe < 0 Or ExistingKeyframe = ViewerInputState.TimelineDraggedKeyframe Then
+        ViewerInputState.TimelineDraggedTargetFrame = TargetFrame
     End If
 
-    TargetTime = CalibrationFrameTimeMilliseconds(Playback.SelectedClip, TimelineDraggedTargetFrame)
+    TargetTime = CalibrationFrameTimeMilliseconds(Playback.SelectedClip, ViewerInputState.TimelineDraggedTargetFrame)
     Session.Ready = Character3D.SetAnimationTime(Character, TargetTime) And Session.Ready
 
     Call InvalidateVisualHistory()
@@ -4878,17 +4871,17 @@ End Sub
 
 Sub FinishTimelineKeyframeDrag()
 
-    TimelineKeyframeDragging = False
+    Call ViewerInput.FinishTimelineGesture(ViewerInputState)
 
-    If TimelineDraggedTargetFrame = TimelineDraggedOriginalFrame Then
+    If ViewerInputState.TimelineDraggedTargetFrame = ViewerInputState.TimelineDraggedOriginalFrame Then
         Return
     End If
 
     If Not ViewerCalibration.MoveKey(
         Calibration,
         Playback.SelectedClip,
-        TimelineDraggedKeyframe,
-        TimelineDraggedTargetFrame
+        ViewerInputState.TimelineDraggedKeyframe,
+        ViewerInputState.TimelineDraggedTargetFrame
     ) Then
         Return
     End If
@@ -4959,19 +4952,15 @@ Sub ConfigureCalibration()
         Character3D.PartCount(Character) > WEAPON_PART_INDEX And
         SwordWristNode >= 0 And
         ShieldWristNode >= 0)
-    CalibrationVisible = False
-    CalibrationTarget = CALIBRATION_TARGET_SWORD_WRIST
-    CalibrationAxis = CALIBRATION_AXIS_X
-    CalibrationTransform = CALIBRATION_TRANSFORM_ROTATE
-    CalibrationEditing = False
-    TransformGizmoVisible = False
-    TransformGizmoDragging = False
-    TransformGizmoPointerOwned = False
-    TransformGizmoOpenedEdit = False
-    TransformGizmoDragRemainder = 0
     Session.CharacterSwitchBlocked = False
-    CalibrationClearConfirm = False
-    CalibrationClearAllStage = 0
+
+    Call ViewerUi.ResetCalibration(
+        ViewerUiState,
+        CALIBRATION_TARGET_SWORD_WRIST,
+        CALIBRATION_AXIS_X,
+        CALIBRATION_TRANSFORM_ROTATE
+    )
+    Call ViewerGizmo.Reset(ViewerGizmoState)
 
     Call ViewerCalibration.Configure(
         Calibration,
@@ -5010,7 +4999,7 @@ Sub HandleCalibrationImport()
 
     WasPending = Calibration.ImportPending
     Accepted = ViewerCalibration.ImportOrCommit(
-        Calibration, Character, Playback.SelectedClip, CalibrationEditing)
+        Calibration, Character, Playback.SelectedClip, ViewerUiState.CalibrationEditing)
 
     If Accepted And WasPending Then
 
@@ -5028,7 +5017,7 @@ Function PrepareCalibrationImport(Contents As Text) As Boolean
     Dim Result As Boolean
 
     Result = ViewerCalibration.PrepareImport(
-        Calibration, Character, Contents, CalibrationEditing)
+        Calibration, Character, Contents, ViewerUiState.CalibrationEditing)
 
     Return Result
 
@@ -5039,7 +5028,7 @@ Function CommitCalibrationImport() As Boolean
     Dim Result As Boolean
 
     Result = ViewerCalibration.CommitImport(
-        Calibration, Character, Playback.SelectedClip, CalibrationEditing)
+        Calibration, Character, Playback.SelectedClip, ViewerUiState.CalibrationEditing)
 
     If Result Then
 
@@ -5075,7 +5064,7 @@ Sub SaveCalibrationKeyframes(Optional Persist As Boolean = True)
     Dim SavedSuccessfully As Boolean
 
     SavedSuccessfully = ViewerCalibration.Persist(
-        Calibration, Character, Playback.SelectedClip, CalibrationEditing, Persist)
+        Calibration, Character, Playback.SelectedClip, ViewerUiState.CalibrationEditing, Persist)
 
     If SavedSuccessfully And Persist Then
         Call InvalidateVisualHistory()
@@ -5156,7 +5145,7 @@ Sub UpdateCalibrationForCurrentFrame()
         Character,
         Playback.SelectedClip,
         CurrentAnimationFrame(),
-        CalibrationEditing And Calibration.OwnerProfile = Session.ProfileIndex
+        ViewerUiState.CalibrationEditing And Calibration.OwnerProfile = Session.ProfileIndex
     )
 
 End Sub
@@ -5173,8 +5162,8 @@ Sub DeleteCurrentCalibrationKeyframe()
     End If
 
     Calibration.SaveLimitReached = False
-    CalibrationClearConfirm = False
-    CalibrationClearAllStage = 0
+    ViewerUiState.CalibrationClearConfirm = False
+    ViewerUiState.CalibrationClearAllStage = 0
 
     Call RefreshCalibrationSavedStatus()
     Call SaveCalibrationKeyframes()
@@ -5214,8 +5203,8 @@ Sub ReloadCurrentCalibrationKeyframe()
     End For
 
     Calibration.SaveLimitReached = False
-    CalibrationClearConfirm = False
-    CalibrationClearAllStage = 0
+    ViewerUiState.CalibrationClearConfirm = False
+    ViewerUiState.CalibrationClearAllStage = 0
 
     Call ApplyWristCalibration()
     Call ApplyEquipmentCalibration()
@@ -5236,7 +5225,7 @@ Sub PasteCalibrationKeyframe()
 
     CurrentFrame = CurrentAnimationFrame()
     SavedSuccessfully = ViewerCalibration.CommitCurrentKey(
-        Calibration, Character, Playback.SelectedClip, CurrentFrame, CalibrationEditing)
+        Calibration, Character, Playback.SelectedClip, CurrentFrame, ViewerUiState.CalibrationEditing)
 
     If SavedSuccessfully Then
 
@@ -5427,20 +5416,20 @@ Function CurrentCalibrationValue() As Number
 
     Dim Result As Number
 
-    If (CalibrationTransform = CALIBRATION_TRANSFORM_MOVE And
-        CalibrationTarget = CALIBRATION_TARGET_SWORD) Then
-        Result = CalibrationChannelValue(Playback.SelectedClip, 12 + CalibrationAxis)
-    Else If (CalibrationTransform = CALIBRATION_TRANSFORM_MOVE And
-        CalibrationTarget = CALIBRATION_TARGET_SHIELD) Then
-        Result = CalibrationChannelValue(Playback.SelectedClip, 15 + CalibrationAxis)
-    Else If CalibrationTarget = CALIBRATION_TARGET_SWORD_WRIST Then
-        Result = CalibrationChannelValue(Playback.SelectedClip, CalibrationAxis)
-    Else If CalibrationTarget = CALIBRATION_TARGET_SHIELD_WRIST Then
-        Result = CalibrationChannelValue(Playback.SelectedClip, 3 + CalibrationAxis)
-    Else If CalibrationTarget = CALIBRATION_TARGET_SWORD Then
-        Result = CalibrationChannelValue(Playback.SelectedClip, 6 + CalibrationAxis)
+    If (ViewerUiState.CalibrationTransform = CALIBRATION_TRANSFORM_MOVE And
+        ViewerUiState.CalibrationTarget = CALIBRATION_TARGET_SWORD) Then
+        Result = CalibrationChannelValue(Playback.SelectedClip, 12 + ViewerUiState.CalibrationAxis)
+    Else If (ViewerUiState.CalibrationTransform = CALIBRATION_TRANSFORM_MOVE And
+        ViewerUiState.CalibrationTarget = CALIBRATION_TARGET_SHIELD) Then
+        Result = CalibrationChannelValue(Playback.SelectedClip, 15 + ViewerUiState.CalibrationAxis)
+    Else If ViewerUiState.CalibrationTarget = CALIBRATION_TARGET_SWORD_WRIST Then
+        Result = CalibrationChannelValue(Playback.SelectedClip, ViewerUiState.CalibrationAxis)
+    Else If ViewerUiState.CalibrationTarget = CALIBRATION_TARGET_SHIELD_WRIST Then
+        Result = CalibrationChannelValue(Playback.SelectedClip, 3 + ViewerUiState.CalibrationAxis)
+    Else If ViewerUiState.CalibrationTarget = CALIBRATION_TARGET_SWORD Then
+        Result = CalibrationChannelValue(Playback.SelectedClip, 6 + ViewerUiState.CalibrationAxis)
     Else
-        Result = CalibrationChannelValue(Playback.SelectedClip, 9 + CalibrationAxis)
+        Result = CalibrationChannelValue(Playback.SelectedClip, 9 + ViewerUiState.CalibrationAxis)
     End If
 
     Return Result
@@ -5451,7 +5440,7 @@ Function CalibrationMinimumValue() As Number
 
     Dim Result As Number
 
-    If CalibrationTransform = CALIBRATION_TRANSFORM_MOVE Then
+    If ViewerUiState.CalibrationTransform = CALIBRATION_TRANSFORM_MOVE Then
         Result = CALIBRATION_MINIMUM_POSITION
     Else
         Result = CALIBRATION_MINIMUM_DEGREES
@@ -5465,7 +5454,7 @@ Function CalibrationMaximumValue() As Number
 
     Dim Result As Number
 
-    If CalibrationTransform = CALIBRATION_TRANSFORM_MOVE Then
+    If ViewerUiState.CalibrationTransform = CALIBRATION_TRANSFORM_MOVE Then
         Result = CALIBRATION_MAXIMUM_POSITION
     Else
         Result = CALIBRATION_MAXIMUM_DEGREES
@@ -5479,7 +5468,7 @@ Function CalibrationTransformLabel() As Text
 
     Dim Result As Text
 
-    If CalibrationTransform = CALIBRATION_TRANSFORM_MOVE Then
+    If ViewerUiState.CalibrationTransform = CALIBRATION_TRANSFORM_MOVE Then
         Result = "Move"
     Else
         Result = "Rotate"
@@ -5493,7 +5482,7 @@ Function CalibrationUnitLabel() As Text
 
     Dim Result As Text
 
-    If CalibrationTransform = CALIBRATION_TRANSFORM_MOVE Then
+    If ViewerUiState.CalibrationTransform = CALIBRATION_TRANSFORM_MOVE Then
         Result = "units"
     Else
         Result = "degrees"
@@ -5505,17 +5494,18 @@ End Function
 
 Sub BeginCalibrationEdit()
 
-    If CalibrationEditing Then
+    If ViewerUiState.CalibrationEditing Then
         Return
     End If
 
     Call BeginPartyPreview()
 
-    CalibrationEditing = True
-    CalibrationClearConfirm = False
-    CalibrationEditingClip = Playback.SelectedClip
-    CalibrationEditingFrame = CurrentAnimationFrame()
-    CalibrationAutoOrbitWasEnabled = ViewerCameraState.AutoOrbit
+    Call ViewerUi.BeginCalibrationEdit(
+        ViewerUiState,
+        Playback.SelectedClip,
+        CurrentAnimationFrame(),
+        ViewerCameraState.AutoOrbit
+    )
 
     Call ViewerCalibration.CaptureEdit(Calibration, Playback.SelectedClip)
     Call ViewerCamera.SetAutoOrbit(ViewerCameraState, False)
@@ -5525,20 +5515,17 @@ End Sub
 
 Sub FinishCalibrationEdit()
 
-    CalibrationGripAnchorActive = False
+    ViewerGizmoState.GripAnchorActive = False
 
-    If Not CalibrationEditing Then
+    If Not ViewerUiState.CalibrationEditing Then
         Return
     End If
 
-    CalibrationEditing = False
-    TransformGizmoDragging = False
-    TransformGizmoPointerOwned = False
-    TransformGizmoOpenedEdit = False
-    TransformGizmoDragRemainder = 0
     Session.CharacterSwitchBlocked = False
 
-    Call ViewerCamera.SetAutoOrbit(ViewerCameraState, CalibrationAutoOrbitWasEnabled)
+    Call ViewerUi.FinishCalibrationEdit(ViewerUiState)
+    Call ViewerGizmo.FinishDrag(ViewerGizmoState)
+    Call ViewerCamera.SetAutoOrbit(ViewerCameraState, ViewerUiState.CalibrationAutoOrbitWasEnabled)
 
     Call InvalidateVisualHistory()
 
@@ -5546,11 +5533,11 @@ End Sub
 
 Sub CancelCalibrationEdit()
 
-    If Not CalibrationEditing Then
+    If Not ViewerUiState.CalibrationEditing Then
         Return
     End If
 
-    Call ViewerCalibration.RestoreEdit(Calibration, CalibrationEditingClip)
+    Call ViewerCalibration.RestoreEdit(Calibration, ViewerUiState.CalibrationEditingClip)
     Call ApplyWristCalibration()
     Call ApplyEquipmentCalibration()
     Call FinishCalibrationEdit()
@@ -5566,51 +5553,51 @@ Sub SetCurrentCalibrationValue(Value As Number)
     Dim PreviousValue As Number
 
     PreviousValue = CurrentCalibrationValue()
-    CalibrationGripLimit = False
+    ViewerGizmoState.GripLimit = False
 
-    HoldGrip = (CalibrationHoldGrip And CalibrationTransform = CALIBRATION_TRANSFORM_ROTATE And
-        CalibrationTarget >= CALIBRATION_TARGET_SWORD)
+    HoldGrip = (ViewerGizmoState.HoldGrip And ViewerUiState.CalibrationTransform = CALIBRATION_TRANSFORM_ROTATE And
+        ViewerUiState.CalibrationTarget >= CALIBRATION_TARGET_SWORD)
 
     If HoldGrip Then
 
         PartIndex = WEAPON_PART_INDEX
         SocketName = "HandRight"
 
-        If CalibrationTarget = CALIBRATION_TARGET_SHIELD Then
+        If ViewerUiState.CalibrationTarget = CALIBRATION_TARGET_SHIELD Then
             PartIndex = SHIELD_PART_INDEX
             SocketName = "HandLeft"
         End If
 
-        If (Not CalibrationGripAnchorActive Or
-            CalibrationGripAnchorTarget <> CalibrationTarget Or
-            CalibrationGripAnchorFrame <> CurrentAnimationFrame()) Then
+        If (Not ViewerGizmoState.GripAnchorActive Or
+            ViewerGizmoState.GripAnchorTarget <> ViewerUiState.CalibrationTarget Or
+            ViewerGizmoState.GripAnchorFrame <> CurrentAnimationFrame()) Then
 
-            CalibrationGripAnchor = EquipmentGripThousandths(PartIndex, SocketName)
-            CalibrationGripAnchorActive = True
-            CalibrationGripAnchorTarget = CalibrationTarget
-            CalibrationGripAnchorFrame = CurrentAnimationFrame()
-            CalibrationGripBasePosition.X = CalibrationChannelValue(Playback.SelectedClip, 12 + 0)
-            CalibrationGripBasePosition.Y = CalibrationChannelValue(Playback.SelectedClip, 12 + 1)
-            CalibrationGripBasePosition.Z = CalibrationChannelValue(Playback.SelectedClip, 12 + 2)
+            ViewerGizmoState.GripAnchor = EquipmentGripThousandths(PartIndex, SocketName)
+            ViewerGizmoState.GripAnchorActive = True
+            ViewerGizmoState.GripAnchorTarget = ViewerUiState.CalibrationTarget
+            ViewerGizmoState.GripAnchorFrame = CurrentAnimationFrame()
+            ViewerGizmoState.GripBasePosition.X = CalibrationChannelValue(Playback.SelectedClip, 12 + 0)
+            ViewerGizmoState.GripBasePosition.Y = CalibrationChannelValue(Playback.SelectedClip, 12 + 1)
+            ViewerGizmoState.GripBasePosition.Z = CalibrationChannelValue(Playback.SelectedClip, 12 + 2)
 
             If PartIndex = SHIELD_PART_INDEX Then
 
-                CalibrationGripBasePosition.X = CalibrationChannelValue(Playback.SelectedClip, 15 + 0)
-                CalibrationGripBasePosition.Y = CalibrationChannelValue(Playback.SelectedClip, 15 + 1)
-                CalibrationGripBasePosition.Z = CalibrationChannelValue(Playback.SelectedClip, 15 + 2)
+                ViewerGizmoState.GripBasePosition.X = CalibrationChannelValue(Playback.SelectedClip, 15 + 0)
+                ViewerGizmoState.GripBasePosition.Y = CalibrationChannelValue(Playback.SelectedClip, 15 + 1)
+                ViewerGizmoState.GripBasePosition.Z = CalibrationChannelValue(Playback.SelectedClip, 15 + 2)
 
             End If
 
         End If
 
     Else
-        CalibrationGripAnchorActive = False
+        ViewerGizmoState.GripAnchorActive = False
 
     End If
 
     Call BeginCalibrationEdit()
 
-    If CalibrationTransform = CALIBRATION_TRANSFORM_MOVE Then
+    If ViewerUiState.CalibrationTransform = CALIBRATION_TRANSFORM_MOVE Then
         ClampedValue = Min(CALIBRATION_MAXIMUM_POSITION,
             Max(CALIBRATION_MINIMUM_POSITION, Value))
     Else
@@ -5618,25 +5605,25 @@ Sub SetCurrentCalibrationValue(Value As Number)
             Max(CALIBRATION_MINIMUM_DEGREES, Value))
     End If
 
-    If (CalibrationTransform = CALIBRATION_TRANSFORM_MOVE And
-        CalibrationTarget = CALIBRATION_TARGET_SWORD) Then
-        Call SetCalibrationChannelValue(Playback.SelectedClip, 12 + CalibrationAxis, ClampedValue)
-    Else If (CalibrationTransform = CALIBRATION_TRANSFORM_MOVE And
-        CalibrationTarget = CALIBRATION_TARGET_SHIELD) Then
-        Call SetCalibrationChannelValue(Playback.SelectedClip, 15 + CalibrationAxis, ClampedValue)
-    Else If CalibrationTarget = CALIBRATION_TARGET_SWORD_WRIST Then
-        Call SetCalibrationChannelValue(Playback.SelectedClip, CalibrationAxis, ClampedValue)
-    Else If CalibrationTarget = CALIBRATION_TARGET_SHIELD_WRIST Then
-        Call SetCalibrationChannelValue(Playback.SelectedClip, 3 + CalibrationAxis, ClampedValue)
-    Else If CalibrationTarget = CALIBRATION_TARGET_SWORD Then
-        Call SetCalibrationChannelValue(Playback.SelectedClip, 6 + CalibrationAxis, ClampedValue)
+    If (ViewerUiState.CalibrationTransform = CALIBRATION_TRANSFORM_MOVE And
+        ViewerUiState.CalibrationTarget = CALIBRATION_TARGET_SWORD) Then
+        Call SetCalibrationChannelValue(Playback.SelectedClip, 12 + ViewerUiState.CalibrationAxis, ClampedValue)
+    Else If (ViewerUiState.CalibrationTransform = CALIBRATION_TRANSFORM_MOVE And
+        ViewerUiState.CalibrationTarget = CALIBRATION_TARGET_SHIELD) Then
+        Call SetCalibrationChannelValue(Playback.SelectedClip, 15 + ViewerUiState.CalibrationAxis, ClampedValue)
+    Else If ViewerUiState.CalibrationTarget = CALIBRATION_TARGET_SWORD_WRIST Then
+        Call SetCalibrationChannelValue(Playback.SelectedClip, ViewerUiState.CalibrationAxis, ClampedValue)
+    Else If ViewerUiState.CalibrationTarget = CALIBRATION_TARGET_SHIELD_WRIST Then
+        Call SetCalibrationChannelValue(Playback.SelectedClip, 3 + ViewerUiState.CalibrationAxis, ClampedValue)
+    Else If ViewerUiState.CalibrationTarget = CALIBRATION_TARGET_SWORD Then
+        Call SetCalibrationChannelValue(Playback.SelectedClip, 6 + ViewerUiState.CalibrationAxis, ClampedValue)
     Else
 
-        Call SetCalibrationChannelValue(Playback.SelectedClip, 9 + CalibrationAxis, ClampedValue)
+        Call SetCalibrationChannelValue(Playback.SelectedClip, 9 + ViewerUiState.CalibrationAxis, ClampedValue)
     End If
 
     Calibration.SaveLimitReached = False
-    CalibrationClearConfirm = False
+    ViewerUiState.CalibrationClearConfirm = False
 
     Call ViewerCamera.SetAutoOrbit(ViewerCameraState, False)
 
@@ -5647,13 +5634,13 @@ Sub SetCurrentCalibrationValue(Value As Number)
 
         If Not RestoreEquipmentGrip(PartIndex, SocketName) Then
 
-            CalibrationGripLimit = True
+            ViewerGizmoState.GripLimit = True
 
             If PartIndex = WEAPON_PART_INDEX Then
-                Call SetCalibrationChannelValue(Playback.SelectedClip, 6 + CalibrationAxis, PreviousValue)
+                Call SetCalibrationChannelValue(Playback.SelectedClip, 6 + ViewerUiState.CalibrationAxis, PreviousValue)
             Else
 
-                Call SetCalibrationChannelValue(Playback.SelectedClip, 9 + CalibrationAxis, PreviousValue)
+                Call SetCalibrationChannelValue(Playback.SelectedClip, 9 + ViewerUiState.CalibrationAxis, PreviousValue)
             End If
 
             Call ApplyEquipmentCalibration()
@@ -5693,24 +5680,24 @@ Function RestoreEquipmentGrip(PartIndex As Number, SocketName As Text) As Boolea
 
     If PartIndex = WEAPON_PART_INDEX Then
 
-        Call SetCalibrationChannelValue(Playback.SelectedClip, 12 + 0, CalibrationGripBasePosition.X)
-        Call SetCalibrationChannelValue(Playback.SelectedClip, 12 + 1, CalibrationGripBasePosition.Y)
-        Call SetCalibrationChannelValue(Playback.SelectedClip, 12 + 2, CalibrationGripBasePosition.Z)
+        Call SetCalibrationChannelValue(Playback.SelectedClip, 12 + 0, ViewerGizmoState.GripBasePosition.X)
+        Call SetCalibrationChannelValue(Playback.SelectedClip, 12 + 1, ViewerGizmoState.GripBasePosition.Y)
+        Call SetCalibrationChannelValue(Playback.SelectedClip, 12 + 2, ViewerGizmoState.GripBasePosition.Z)
 
     Else
 
-        Call SetCalibrationChannelValue(Playback.SelectedClip, 15 + 0, CalibrationGripBasePosition.X)
-        Call SetCalibrationChannelValue(Playback.SelectedClip, 15 + 1, CalibrationGripBasePosition.Y)
-        Call SetCalibrationChannelValue(Playback.SelectedClip, 15 + 2, CalibrationGripBasePosition.Z)
+        Call SetCalibrationChannelValue(Playback.SelectedClip, 15 + 0, ViewerGizmoState.GripBasePosition.X)
+        Call SetCalibrationChannelValue(Playback.SelectedClip, 15 + 1, ViewerGizmoState.GripBasePosition.Y)
+        Call SetCalibrationChannelValue(Playback.SelectedClip, 15 + 2, ViewerGizmoState.GripBasePosition.Z)
 
     End If
 
     Call ApplyEquipmentCalibration()
 
     Position = EquipmentGripThousandths(PartIndex, SocketName)
-    Correction.X = CalibrationGripAnchor.X - Position.X
-    Correction.Y = CalibrationGripAnchor.Y - Position.Y
-    Correction.Z = CalibrationGripAnchor.Z - Position.Z
+    Correction.X = ViewerGizmoState.GripAnchor.X - Position.X
+    Correction.Y = ViewerGizmoState.GripAnchor.Y - Position.Y
+    Correction.Z = ViewerGizmoState.GripAnchor.Z - Position.Z
     Angles.X = CalibrationChannelValue(Playback.SelectedClip, 6 + CALIBRATION_AXIS_X)
     Angles.Y = CalibrationChannelValue(Playback.SelectedClip, 6 + CALIBRATION_AXIS_Y)
     Angles.Z = CalibrationChannelValue(Playback.SelectedClip, 6 + CALIBRATION_AXIS_Z)
@@ -5808,23 +5795,23 @@ Sub ResetCalibrationTarget()
 
     Dim Axis As Number
 
-    CalibrationGripAnchorActive = False
+    ViewerGizmoState.GripAnchorActive = False
 
     Call BeginCalibrationEdit()
 
     For Axis = 0 To CALIBRATION_AXIS_COUNT - 1
 
-        If (CalibrationTransform = CALIBRATION_TRANSFORM_MOVE And
-            CalibrationTarget = CALIBRATION_TARGET_SWORD) Then
+        If (ViewerUiState.CalibrationTransform = CALIBRATION_TRANSFORM_MOVE And
+            ViewerUiState.CalibrationTarget = CALIBRATION_TARGET_SWORD) Then
             Call SetCalibrationChannelValue(Playback.SelectedClip, 12 + Axis, 0)
-        Else If (CalibrationTransform = CALIBRATION_TRANSFORM_MOVE And
-            CalibrationTarget = CALIBRATION_TARGET_SHIELD) Then
+        Else If (ViewerUiState.CalibrationTransform = CALIBRATION_TRANSFORM_MOVE And
+            ViewerUiState.CalibrationTarget = CALIBRATION_TARGET_SHIELD) Then
             Call SetCalibrationChannelValue(Playback.SelectedClip, 15 + Axis, 0)
-        Else If CalibrationTarget = CALIBRATION_TARGET_SWORD_WRIST Then
+        Else If ViewerUiState.CalibrationTarget = CALIBRATION_TARGET_SWORD_WRIST Then
             Call SetCalibrationChannelValue(Playback.SelectedClip, Axis, 0)
-        Else If CalibrationTarget = CALIBRATION_TARGET_SHIELD_WRIST Then
+        Else If ViewerUiState.CalibrationTarget = CALIBRATION_TARGET_SHIELD_WRIST Then
             Call SetCalibrationChannelValue(Playback.SelectedClip, 3 + Axis, 0)
-        Else If CalibrationTarget = CALIBRATION_TARGET_SWORD Then
+        Else If ViewerUiState.CalibrationTarget = CALIBRATION_TARGET_SWORD Then
             Call SetCalibrationChannelValue(Playback.SelectedClip, 6 + Axis, 0)
         Else
 
@@ -5834,7 +5821,7 @@ Sub ResetCalibrationTarget()
     End For
 
     Calibration.SaveLimitReached = False
-    CalibrationClearConfirm = False
+    ViewerUiState.CalibrationClearConfirm = False
 
     Call ViewerCamera.SetAutoOrbit(ViewerCameraState, False)
 
@@ -5849,7 +5836,7 @@ Sub ClearSelectedClipCalibration()
 
     Call ViewerCalibration.ClearClip(Calibration, Playback.SelectedClip)
 
-    CalibrationClearConfirm = False
+    ViewerUiState.CalibrationClearConfirm = False
     Calibration.SaveLimitReached = False
 
     Call RefreshCalibrationSavedStatus()
@@ -5865,8 +5852,8 @@ Sub ClearAllCalibration()
 
     Call ClearCalibrationMemory()
 
-    CalibrationClearConfirm = False
-    CalibrationClearAllStage = 0
+    ViewerUiState.CalibrationClearConfirm = False
+    ViewerUiState.CalibrationClearAllStage = 0
     Calibration.SaveLimitReached = False
 
     Call SaveCalibrationKeyframes()
@@ -5881,7 +5868,7 @@ Function CalibrationResetClipLabel() As Text
 
     Dim Result As Text
 
-    If CalibrationClearConfirm Then
+    If ViewerUiState.CalibrationClearConfirm Then
         Result = "Confirm Current Clip?"
     Else
         Result = "Delete All Key Frames"
@@ -5895,9 +5882,9 @@ Function CalibrationResetAllLabel() As Text
 
     Dim Result As Text
 
-    If CalibrationClearAllStage = 1 Then
+    If ViewerUiState.CalibrationClearAllStage = 1 Then
         Result = "Confirm All?"
-    Else If CalibrationClearAllStage >= 2 Then
+    Else If ViewerUiState.CalibrationClearAllStage >= 2 Then
         Result = "Really Clear?"
     Else
         Result = "Reset All"
@@ -5917,13 +5904,13 @@ Sub SaveCalibrationFrame()
 
     Call BeginCalibrationEdit()
 
-    CalibrationClearConfirm = False
+    ViewerUiState.CalibrationClearConfirm = False
     SavedSuccessfully = ViewerCalibration.CommitCurrentKey(
         Calibration,
         Character,
         Playback.SelectedClip,
-        CalibrationEditingFrame,
-        CalibrationEditing
+        ViewerUiState.CalibrationEditingFrame,
+        ViewerUiState.CalibrationEditing
     )
 
     If SavedSuccessfully Then
@@ -6160,12 +6147,12 @@ Function TransformGizmoAxisPoint(Axis As Number) As Core.ProjectedPoint3D
 
     Dim Result As Core.ProjectedPoint3D
 
-    Result = TransformGizmo.XAxis
+    Result = ViewerGizmoState.Projection.XAxis
 
     If Axis = CALIBRATION_AXIS_Y Then
-        Result = TransformGizmo.YAxis
+        Result = ViewerGizmoState.Projection.YAxis
     Else If Axis = CALIBRATION_AXIS_Z Then
-        Result = TransformGizmo.ZAxis
+        Result = ViewerGizmoState.Projection.ZAxis
     End If
 
     Return Result
@@ -6176,7 +6163,7 @@ Function TransformGizmoAxisColor(Axis As Number, Selected As Boolean) As Number
 
     Dim Result As Number
 
-    If Axis = TransformGizmoHoverAxis Then
+    If Axis = ViewerGizmoState.HoverAxis Then
         Result = Rgb(255, 255, 255)
 
         Return Result
@@ -6214,24 +6201,24 @@ End Function
 
 Sub DrawTransformGizmo()
 
-    If Not TransformGizmoVisible Or Not TransformGizmo.Visible Then
+    If Not ViewerGizmoState.Visible Or Not ViewerGizmoState.Projection.Visible Then
         Return
     End If
 
-    TransformGizmoHoverAxis = TransformGizmoAxisAtPointer()
+    ViewerGizmoState.HoverAxis = TransformGizmoAxisAtPointer()
 
-    If TransformGizmoDragging Then
-        TransformGizmoHoverAxis = CalibrationAxis
+    If ViewerGizmoState.Dragging Then
+        ViewerGizmoState.HoverAxis = ViewerUiState.CalibrationAxis
     End If
 
-    If CalibrationTransform = CALIBRATION_TRANSFORM_MOVE Then
+    If ViewerUiState.CalibrationTransform = CALIBRATION_TRANSFORM_MOVE Then
         Call DrawTransformGizmoMove()
     Else
 
         Call DrawTransformGizmoRotate()
     End If
 
-    Draw Circle TransformGizmo.Origin.X, TransformGizmo.Origin.Y, 7, Rgb(242, 242, 242)
+    Draw Circle ViewerGizmoState.Projection.Origin.X, ViewerGizmoState.Projection.Origin.Y, 7, Rgb(242, 242, 242)
 
 End Sub
 
@@ -6246,13 +6233,13 @@ Sub DrawTransformGizmoMove()
     For Axis = CALIBRATION_AXIS_X To CALIBRATION_AXIS_Z
 
         AxisPoint = TransformGizmoAxisPoint(Axis)
-        Selected = Axis = CalibrationAxis Or Axis = TransformGizmoHoverAxis
+        Selected = Axis = ViewerUiState.CalibrationAxis Or Axis = ViewerGizmoState.HoverAxis
         ColorValue = TransformGizmoAxisColor(Axis, Selected)
 
-        Call DrawGizmoStroke(TransformGizmo.Origin.X, TransformGizmo.Origin.Y,
+        Call DrawGizmoStroke(ViewerGizmoState.Projection.Origin.X, ViewerGizmoState.Projection.Origin.Y,
             AxisPoint.X, AxisPoint.Y, ColorValue, Selected)
 
-        Call DrawGizmoArrow(TransformGizmo.Origin, AxisPoint, ColorValue)
+        Call DrawGizmoArrow(ViewerGizmoState.Projection.Origin, AxisPoint, ColorValue)
 
         Label = "X"
 
@@ -6309,14 +6296,14 @@ Sub DrawTransformGizmoRotate()
 
     For Axis = CALIBRATION_AXIS_X To CALIBRATION_AXIS_Z
 
-        Selected = Axis = CalibrationAxis Or Axis = TransformGizmoHoverAxis
+        Selected = Axis = ViewerUiState.CalibrationAxis Or Axis = ViewerGizmoState.HoverAxis
         ColorValue = TransformGizmoAxisColor(Axis, Selected)
         StartPoint = CharacterViewer.ProjectTransformRingPoint(
-            TransformGizmoOrigin,
+            ViewerGizmoState.Origin,
             Axis,
             0,
             TRANSFORM_GIZMO_RING_SEGMENTS,
-            TransformGizmoWorldSize,
+            ViewerGizmoState.WorldSize,
             ViewerCameraState.Live,
             Window_Width(),
             Window_Height()
@@ -6325,11 +6312,11 @@ Sub DrawTransformGizmoRotate()
         For Segment = 1 To TRANSFORM_GIZMO_RING_SEGMENTS
 
             EndPoint = CharacterViewer.ProjectTransformRingPoint(
-                TransformGizmoOrigin,
+                ViewerGizmoState.Origin,
                 Axis,
                 Segment,
                 TRANSFORM_GIZMO_RING_SEGMENTS,
-                TransformGizmoWorldSize,
+                ViewerGizmoState.WorldSize,
                 ViewerCameraState.Live,
                 Window_Width(),
                 Window_Height()
@@ -6337,9 +6324,9 @@ Sub DrawTransformGizmoRotate()
 
             If StartPoint.Visible And EndPoint.Visible Then
 
-                RearSegment = (StartPoint.Depth + EndPoint.Depth) / 2 > TransformGizmo.Origin.Depth
+                RearSegment = (StartPoint.Depth + EndPoint.Depth) / 2 > ViewerGizmoState.Projection.Origin.Depth
 
-                If RearSegment And Not TransformGizmoDragging Then
+                If RearSegment And Not ViewerGizmoState.Dragging Then
                     ColorValue = Rgb(78, 83, 93)
                 Else
                     ColorValue = TransformGizmoAxisColor(Axis, Selected)
@@ -6355,7 +6342,7 @@ Sub DrawTransformGizmoRotate()
     End For
 
     ''' Camera-facing silhouette guide, not an extra editable rotation channel.
-    Draw Circle TransformGizmo.Origin.X, TransformGizmo.Origin.Y, 90, Rgb(220, 220, 220)
+    Draw Circle ViewerGizmoState.Projection.Origin.X, ViewerGizmoState.Projection.Origin.Y, 90, Rgb(220, 220, 220)
 
 End Sub
 
@@ -6363,10 +6350,10 @@ Sub DrawViewerOverlay()
 
     Call BeginPartyInspector()
 
-    If (UiVisibility = 0 And
+    If (ViewerUiState.Visibility = 0 And
         CalibrationAvailable And
-        CalibrationVisible And
-        TransformGizmoVisible) Then
+        ViewerUiState.CalibrationVisible And
+        ViewerGizmoState.Visible) Then
         Call UpdateTransformGizmo()
         Call DrawTransformGizmo()
     End If
@@ -6382,7 +6369,7 @@ Sub DrawInspectorOverlay()
     Dim PanelText As Number
     Dim Subtitle As Text
 
-    If UiVisibility = 2 Then
+    If ViewerUiState.Visibility = 2 Then
         Return
     End If
 
@@ -6419,11 +6406,11 @@ Sub DrawInspectorOverlay()
     Call DrawButton(260, 62, 72, 26, "Dragon", Session.SelectedCharacterTab = 2)
     Call DrawButton(338, 62, 72, 26, "Party", Session.SelectedCharacterTab = 3)
 
-    If PartyMode And Not CalibrationVisible Then
+    If PartyMode And Not ViewerUiState.CalibrationVisible Then
         Call DrawPartyOverlay()
     End If
 
-    If UiVisibility = 0 Then
+    If ViewerUiState.Visibility = 0 Then
 
         Call DrawButton(PanelLeft, 18, 44, 34, "LIGHT", False)
         Call DrawButton(PanelLeft + 48, 18, 56, 34, "CHANNEL", False)
@@ -6438,7 +6425,7 @@ Sub DrawInspectorOverlay()
         Call DrawButton(PanelLeft + 76, 56, 48, 22, BackgroundLabel(), BackgroundIndex > 0)
 
         If CalibrationAvailable Then
-            Call DrawButton(PanelLeft + 128, 56, 36, 22, "Pose", CalibrationVisible)
+            Call DrawButton(PanelLeft + 128, 56, 36, 22, "Pose", ViewerUiState.CalibrationVisible)
         Else
             Draw Text "Pose" At PanelLeft + 132, 62 Size 10 Color GRAY
         End If
@@ -6516,9 +6503,9 @@ Sub DrawInspectorOverlay()
 
     Call DrawTimeline()
 
-    If (UiVisibility = 0 And
+    If (ViewerUiState.Visibility = 0 And
         CalibrationAvailable And
-        CalibrationVisible) Then
+        ViewerUiState.CalibrationVisible) Then
         Call DrawCalibrationPanel()
     End If
 
@@ -6530,7 +6517,7 @@ Sub DrawInspectorOverlay()
         Draw Text "LMB pan  •  MMB orbit  •  Wheel zoom  •  Space pause  •  RMB reset  •  D dragon  •  W sword  •  S shield" At 16, Window_Height() - 22 Size 11 Color LIGHT_GRAY
     End If
 
-    If (CalibrationEditing Or
+    If (ViewerUiState.CalibrationEditing Or
         Playback.ScenePaused Or
         Session.CharacterSwitchBlocked) Then
         Fill Rectangle 18, 40, Max(0, PanelLeft - 24), 18, Rgb(4, 9, 24)
@@ -6540,7 +6527,7 @@ Sub DrawInspectorOverlay()
 
         Draw Text "Save Or Cancel The Pose Before Switching" At 18, 42 Size 12 Color YELLOW
 
-    Else If CalibrationEditing Then
+    Else If ViewerUiState.CalibrationEditing Then
 
         If PartyMode Then
             Draw Text "Pose Edit Active - Save Or Cancel Before Resuming" At 18, 42 Size 12 Color YELLOW
@@ -6556,7 +6543,7 @@ Sub DrawInspectorOverlay()
 
     End If
 
-    If UiVisibility = 0 And Session.ViewerError Then
+    If ViewerUiState.Visibility = 0 And Session.ViewerError Then
 
         Fill Rectangle 120, 142, 580, 210, Rgb(56, 8, 18) Opacity 80
         Draw Text "CHARACTER VIEWER RECOVERY" At 148, 166 Size 22 Color WHITE
@@ -6691,15 +6678,15 @@ Sub DrawCalibrationPanel()
     Call DrawButton(292, 96, 68, 22, "Prev Key", False)
     Call DrawButton(364, 96, 68, 22, "Next Key", False)
 
-    Call DrawButton(34, 128, 92, 24, "Weapon Wrist", CalibrationTarget = CALIBRATION_TARGET_SWORD_WRIST)
-    Call DrawButton(130, 128, 96, 24, "Shield Wrist", CalibrationTarget = CALIBRATION_TARGET_SHIELD_WRIST)
-    Call DrawButton(230, 128, 76, 24, "Weapon", CalibrationTarget = CALIBRATION_TARGET_SWORD)
-    Call DrawButton(310, 128, 76, 24, "Shield", CalibrationTarget = CALIBRATION_TARGET_SHIELD)
-    Call DrawButton(34, 158, 48, 24, "X", CalibrationAxis = CALIBRATION_AXIS_X)
-    Call DrawButton(86, 158, 48, 24, "Y", CalibrationAxis = CALIBRATION_AXIS_Y)
-    Call DrawButton(138, 158, 48, 24, "Z", CalibrationAxis = CALIBRATION_AXIS_Z)
-    Call DrawButton(202, 158, 72, 24, "Rotate", CalibrationTransform = CALIBRATION_TRANSFORM_ROTATE)
-    Call DrawButton(278, 158, 72, 24, "Move", CalibrationTransform = CALIBRATION_TRANSFORM_MOVE)
+    Call DrawButton(34, 128, 92, 24, "Weapon Wrist", ViewerUiState.CalibrationTarget = CALIBRATION_TARGET_SWORD_WRIST)
+    Call DrawButton(130, 128, 96, 24, "Shield Wrist", ViewerUiState.CalibrationTarget = CALIBRATION_TARGET_SHIELD_WRIST)
+    Call DrawButton(230, 128, 76, 24, "Weapon", ViewerUiState.CalibrationTarget = CALIBRATION_TARGET_SWORD)
+    Call DrawButton(310, 128, 76, 24, "Shield", ViewerUiState.CalibrationTarget = CALIBRATION_TARGET_SHIELD)
+    Call DrawButton(34, 158, 48, 24, "X", ViewerUiState.CalibrationAxis = CALIBRATION_AXIS_X)
+    Call DrawButton(86, 158, 48, 24, "Y", ViewerUiState.CalibrationAxis = CALIBRATION_AXIS_Y)
+    Call DrawButton(138, 158, 48, 24, "Z", ViewerUiState.CalibrationAxis = CALIBRATION_AXIS_Z)
+    Call DrawButton(202, 158, 72, 24, "Rotate", ViewerUiState.CalibrationTransform = CALIBRATION_TRANSFORM_ROTATE)
+    Call DrawButton(278, 158, 72, 24, "Move", ViewerUiState.CalibrationTransform = CALIBRATION_TRANSFORM_MOVE)
     Call DrawButton(354, 158, 78, 24, "Reset", False)
 
     Draw Text CalibrationTargetLabel() At 34, 187 Size 12 Color LIGHT_GRAY
@@ -6711,7 +6698,7 @@ Sub DrawCalibrationPanel()
     Call UI.DrawSlider(CALIBRATION_SLIDER_X, CALIBRATION_SLIDER_Y,
         CALIBRATION_SLIDER_WIDTH, CALIBRATION_SLIDER_HEIGHT, Value, MinimumValue, MaximumValue, 6)
 
-    If TransformGizmoVisible Then
+    If ViewerGizmoState.Visible Then
         Draw Text "G Move  •  R/E Rotate  •  X/Y/Z Constrain" At 34, 232 Size 11 Color WHITE
         Draw Text "Enter Confirm/Save  •  Esc Cancel  •  Drag Colored Handles" At 34, 248 Size 10 Color LIGHT_GRAY
     Else
@@ -6720,11 +6707,11 @@ Sub DrawCalibrationPanel()
         Draw Text "Enter Save  •  Esc Cancel  •  Show Gizmo For Mouse Handles" At 34, 248 Size 10 Color LIGHT_GRAY
     End If
 
-    Call DrawButton(34, 268, 80, 24, "Copy Key", CurrentKeyframe >= 0 And Not CalibrationEditing)
-    Call DrawButton(118, 268, 80, 24, "Paste Key", Calibration.ClipboardAvailable And Not CalibrationEditing)
-    Call DrawButton(202, 268, 90, 24, "Delete Key", CurrentKeyframe >= 0 And Not CalibrationEditing)
+    Call DrawButton(34, 268, 80, 24, "Copy Key", CurrentKeyframe >= 0 And Not ViewerUiState.CalibrationEditing)
+    Call DrawButton(118, 268, 80, 24, "Paste Key", Calibration.ClipboardAvailable And Not ViewerUiState.CalibrationEditing)
+    Call DrawButton(202, 268, 90, 24, "Delete Key", CurrentKeyframe >= 0 And Not ViewerUiState.CalibrationEditing)
 
-    If TransformGizmoVisible Then
+    If ViewerGizmoState.Visible Then
         Call DrawButton(300, 268, 132, 24, "Hide Gizmo", True)
     Else
 
@@ -6732,14 +6719,14 @@ Sub DrawCalibrationPanel()
     End If
 
     Call DrawButton(34, 298, 100, 24, "Reload Key", CurrentKeyframe >= 0)
-    Call DrawButton(140, 298, 100, 24, "In Place", CalibrationHoldGrip)
+    Call DrawButton(140, 298, 100, 24, "In Place", ViewerGizmoState.HoldGrip)
     Call DrawButton(246, 298, 186, 24, "Undo Last Change", Calibration.UndoCount > 0)
     Call DrawButton(34, 374, 194, 24, "Decouple Weapon", CalibrationChannelValue(Playback.SelectedClip, 18) <> 0)
     Call DrawButton(236, 374, 196, 24, "Decouple Shield", CalibrationChannelValue(Playback.SelectedClip, 19) <> 0)
 
-    Call DrawButton(34, 412, 196, 24, CalibrationResetClipLabel(), CalibrationClearConfirm)
-    Call DrawButton(332, 412, 100, 24, "Save Frame", CurrentKeyframe >= 0 And Not CalibrationEditing)
-    Call DrawButton(244, 412, 84, 24, "Cancel", CalibrationEditing)
+    Call DrawButton(34, 412, 196, 24, CalibrationResetClipLabel(), ViewerUiState.CalibrationClearConfirm)
+    Call DrawButton(332, 412, 100, 24, "Save Frame", CurrentKeyframe >= 0 And Not ViewerUiState.CalibrationEditing)
+    Call DrawButton(244, 412, 84, 24, "Cancel", ViewerUiState.CalibrationEditing)
 
     Fill Rectangle 34, 412, 196, 2, Rgb(210, 70, 76) Opacity 90
     Fill Rectangle 34, 434, 196, 2, Rgb(210, 70, 76) Opacity 90
@@ -6754,17 +6741,17 @@ Sub DrawCalibrationPanel()
 
         Draw Text "Save failed; previous keys kept. Retry or Cancel." At 34, 330 Size 10 Color YELLOW
 
-    Else If CalibrationClearConfirm Then
+    Else If ViewerUiState.CalibrationClearConfirm Then
 
         Draw Text "Delete saved keys for:" At 34, 330 Size 10 Color YELLOW
         Draw Text SelectedClipName() At 188, 330 Size 10 Color WHITE
         Draw Number ViewerCalibration.KeyCount(Calibration, Playback.SelectedClip) At 350, 330 Size 10 Color YELLOW
 
-    Else If CalibrationGripLimit Then
+    Else If ViewerGizmoState.GripLimit Then
 
         Draw Text "In Place reached the saved position limit" At 34, 330 Size 10 Color YELLOW
 
-    Else If CalibrationEditing Then
+    Else If ViewerUiState.CalibrationEditing Then
 
         If Playback.ScenePaused Then
             Draw Text "Editing — movement paused by Space" At 34, 330 Size 11 Color YELLOW
@@ -6785,9 +6772,9 @@ Sub DrawCalibrationPanel()
         Draw Text "Keys" At 34, 350 Size 11 Color LIGHT_GRAY
         Draw Number ViewerCalibration.KeyCount(Calibration, Playback.SelectedClip) At 68, 350 Size 11 Color CYAN
 
-        If CalibrationEditing Then
+        If ViewerUiState.CalibrationEditing Then
             Draw Text "Editing frame" At 104, 350 Size 11 Color YELLOW
-            Draw Number CalibrationEditingFrame At 200, 350 Size 11 Color WHITE
+            Draw Number ViewerUiState.CalibrationEditingFrame At 200, 350 Size 11 Color WHITE
         Else
             Draw Text "Current frame" At 104, 350 Size 11 Color LIGHT_GRAY
             Draw Number CurrentFrame At 200, 350 Size 11 Color WHITE
@@ -6833,11 +6820,11 @@ Function CalibrationTargetLabel() As Text
 
     Dim Result As Text
 
-    If CalibrationTarget = CALIBRATION_TARGET_SWORD_WRIST Then
+    If ViewerUiState.CalibrationTarget = CALIBRATION_TARGET_SWORD_WRIST Then
         Result = "Weapon Wrist"
-    Else If CalibrationTarget = CALIBRATION_TARGET_SHIELD_WRIST Then
+    Else If ViewerUiState.CalibrationTarget = CALIBRATION_TARGET_SHIELD_WRIST Then
         Result = "Shield Wrist"
-    Else If CalibrationTarget = CALIBRATION_TARGET_SWORD Then
+    Else If ViewerUiState.CalibrationTarget = CALIBRATION_TARGET_SWORD Then
         Result = "Weapon"
     Else
         Result = "Shield"
@@ -6851,9 +6838,9 @@ Function CalibrationAxisLabel() As Text
 
     Dim Result As Text
 
-    If CalibrationAxis = CALIBRATION_AXIS_X Then
+    If ViewerUiState.CalibrationAxis = CALIBRATION_AXIS_X Then
         Result = "X"
-    Else If CalibrationAxis = CALIBRATION_AXIS_Y Then
+    Else If ViewerUiState.CalibrationAxis = CALIBRATION_AXIS_Y Then
         Result = "Y"
     Else
         Result = "Z"
@@ -6893,8 +6880,8 @@ Sub DrawTimeline()
     Call DrawButton(TIMELINE_LEFT, Window_Height() - 96, 62, 24, "0-Frame", False)
     Call DrawButton(TIMELINE_LEFT + 68, Window_Height() - 96, 62, 24, "< Key", False)
     Call DrawButton(TIMELINE_LEFT + 136, Window_Height() - 96, 62, 24, "Key >", False)
-    Call DrawButton(TIMELINE_LEFT + 204, Window_Height() - 96, 62, 24, "< Frame", FrameButtonRepeatDirection < 0)
-    Call DrawButton(TIMELINE_LEFT + 272, Window_Height() - 96, 62, 24, "Frame >", FrameButtonRepeatDirection > 0)
+    Call DrawButton(TIMELINE_LEFT + 204, Window_Height() - 96, 62, 24, "< Frame", ViewerInputState.FrameButtonRepeatDirection < 0)
+    Call DrawButton(TIMELINE_LEFT + 272, Window_Height() - 96, 62, 24, "Frame >", ViewerInputState.FrameButtonRepeatDirection > 0)
 
     Draw Text SelectedClipName() At TIMELINE_LEFT + 348, Window_Height() - 88 Size 11 Color CYAN
 
@@ -6931,8 +6918,9 @@ Sub DrawTimeline()
 
             KeyframeFrame = ViewerCalibration.KeyFrame(Calibration, Playback.SelectedClip, Keyframe)
 
-            If TimelineKeyframeDragging And Keyframe = TimelineDraggedKeyframe Then
-                KeyframeFrame = TimelineDraggedTargetFrame
+            If (ViewerInputState.TimelineKeyframeDragging And
+                Keyframe = ViewerInputState.TimelineDraggedKeyframe) Then
+                KeyframeFrame = ViewerInputState.TimelineDraggedTargetFrame
             End If
 
             KeyframeTime = CalibrationFrameTimeMilliseconds(
@@ -7307,10 +7295,13 @@ Sub SelectCharacterTab(Index As Number)
         Return
     End If
 
-    If CalibrationEditing Then
+    If (ViewerUiState.CalibrationEditing Or
+        Calibration.ImportPending) Then
         Session.CharacterSwitchBlocked = True
         Return
     End If
+
+    Call CancelInteractionCaptures()
 
     Fill Rectangle 300, 120, Max(240, Window_Width() - 600), 44, Rgb(8, 16, 30)
     Draw Text "Loading Selected Character..." At 312, 132 Size 16 Color WHITE
@@ -7333,10 +7324,6 @@ Sub SelectCharacterTab(Index As Number)
 
     Playback.DemoEnabled = True
     Playback.ScenePaused = False
-    SliderDragOwner = 0
-    TimelineScrubbing = False
-    TimelineKeyframeDragging = False
-    FrameButtonRepeatDirection = 0
 
     Call LoadViewer()
 
@@ -7428,11 +7415,11 @@ Sub BeginPartyInspector()
 
         ''' One editing owner at a time. Never carry a pending import, Undo, or
         ''' clipboard into another character's independent storage identity.
-        WasVisible = CalibrationVisible
+        WasVisible = ViewerUiState.CalibrationVisible
 
         Call ConfigureCalibration()
 
-        CalibrationVisible = WasVisible And CalibrationAvailable
+        ViewerUiState.CalibrationVisible = WasVisible And CalibrationAvailable
         Playback.SelectedTimelineEvent = FirstClipEvent()
 
     End If
@@ -7508,10 +7495,9 @@ Sub RestorePartyPreview()
         PartyPreviewMode, Playback.PlaybackSpeed) And Session.Ready
     Session.Ready = Character3D.SetAnimationTime(Character, PartyPreviewTime) And Session.Ready
     PartyPreviewActive = False
-    CalibrationVisible = False
-    TimelineScrubbing = False
-    TimelineKeyframeDragging = False
-    FrameButtonRepeatDirection = 0
+    ViewerUiState.CalibrationVisible = False
+
+    Call ViewerInput.CancelCaptures(ViewerInputState)
 
     Call UpdateCalibrationForCurrentFrame()
     Call InvalidateVisualHistory()
@@ -7763,7 +7749,7 @@ Sub ResetPartyDemo()
     PartyStage = -1
     DragonReactionPending = False
     Playback.DemoEnabled = True
-    CalibrationVisible = False
+    ViewerUiState.CalibrationVisible = False
 
     Call SetPartyPresentationState(0, PARTY_STATE_ALIVE)
     Call SetPartyPresentationState(1, PARTY_STATE_ALIVE)
@@ -8277,15 +8263,15 @@ Function HandlePartyPointer() As Boolean
     Dim Result As Boolean
 
     Left = 12
-    Result = (UiVisibility = 0 And Not CalibrationVisible And
+    Result = (ViewerUiState.Visibility = 0 And Not ViewerUiState.CalibrationVisible And
         Pointer_X() < Left + 252 And Pointer_Y() >= 96 And
         Pointer_Y() < Window_Height() - 104)
 
-    If (TimelineScrubbing Or
-        TimelineKeyframeDragging Or
-        FrameButtonRepeatDirection <> 0 Or
-        SliderDragOwner <> 0 Or
-        TransformGizmoDragging) Then
+    If (ViewerInputState.TimelineScrubbing Or
+        ViewerInputState.TimelineKeyframeDragging Or
+        ViewerInputState.FrameButtonRepeatDirection <> 0 Or
+        ViewerInputState.SliderDragOwner <> 0 Or
+        ViewerGizmoState.Dragging) Then
         Return False
     End If
 
@@ -8295,7 +8281,7 @@ Function HandlePartyPointer() As Boolean
         Return True
     End If
 
-    If Not Pointer_Pressed(POINTER_PRIMARY) Or UiVisibility <> 0 Then
+    If Not Pointer_Pressed(POINTER_PRIMARY) Or ViewerUiState.Visibility <> 0 Then
         Return Result
     End If
 
@@ -8429,7 +8415,7 @@ Sub DrawPartyOverlay()
 
     End If
 
-    If UiVisibility = 0 Then
+    If ViewerUiState.Visibility = 0 Then
 
         Call UI.DrawPanel(Left, 96, 252, Max(330, Window_Height() - 200))
         Call DrawButton(Left, 104, 76, 30, "Dragon", DragonVisible)

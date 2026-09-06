@@ -20,6 +20,9 @@ $viewerSourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\Program.s
 $cameraSourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\ViewerCamera.smile'
 $calibrationSourcePath = Join-Path $repositoryRoot `
     'tools\Character3DViewer\ViewerCalibration.smile'
+$inputSourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\ViewerInput.smile'
+$uiSourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\ViewerUi.smile'
+$gizmoSourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\ViewerGizmo.smile'
 $profileSourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\Profiles.smile'
 $cookedProjectPath = Join-Path $repositoryRoot `
     'tools\Character3DViewer\Character3DViewer.smileproj'
@@ -88,6 +91,9 @@ try {
     $viewerSource = Get-Content -LiteralPath $viewerSourcePath -Raw
     $cameraSource = Get-Content -LiteralPath $cameraSourcePath -Raw
     $calibrationSource = Get-Content -LiteralPath $calibrationSourcePath -Raw
+    $inputSource = Get-Content -LiteralPath $inputSourcePath -Raw
+    $uiSource = Get-Content -LiteralPath $uiSourcePath -Raw
+    $gizmoSource = Get-Content -LiteralPath $gizmoSourcePath -Raw
     $profileSource = Get-Content -LiteralPath $profileSourcePath -Raw
     $adapterSource = Get-Content -LiteralPath $adapterSourcePath -Raw
     # Keep architectural wiring checks here. Current behavior is executed by the
@@ -99,6 +105,9 @@ try {
         'Import Smile.UI.Controls As UI',
         'Import Smile.Tools.Character3DViewerCamera As ViewerCamera',
         'Import Smile.Tools.Character3DViewerCalibration As ViewerCalibration',
+        'Import Smile.Tools.Character3DViewerInput As ViewerInput',
+        'Import Smile.Tools.Character3DViewerUi As ViewerUi',
+        'Import Smile.Tools.Character3DViewerGizmo As ViewerGizmo',
         'CharacterViewer.AutoFit(',
         'ViewerCamera.AdvanceZoom(',
         'ViewerCamera.UpdatePointerControls(',
@@ -128,7 +137,7 @@ try {
         -not $viewerSource.Contains('MinimumSeparation')) `
         'Party attack approaches must not be displaced by animated full-model bounds.'
     $timelineCapture = $viewerSource.IndexOf(
-        'If TimelineScrubbing Then', [System.StringComparison]::Ordinal)
+        'If ViewerInputState.TimelineScrubbing Then', [System.StringComparison]::Ordinal)
     $outsidePointerReturn = $viewerSource.IndexOf(
         'If Not Pointer_Inside() Then', $timelineCapture, [System.StringComparison]::Ordinal)
     Assert-True ($timelineCapture -ge 0 -and $outsidePointerReturn -gt $timelineCapture) `
@@ -157,10 +166,35 @@ try {
         'Public Sub Evaluate(')) {
         Assert-Contains $calibrationSource $contract 'Viewer calibration owner'
     }
+    foreach ($contract in @(
+        'Public Function ClassifyArrow(',
+        'Public Sub CancelCaptures(',
+        'Public Function UpdateActivation(',
+        'Public Function HasPointerCapture(')) {
+        Assert-Contains $inputSource $contract 'Viewer input owner'
+    }
+    foreach ($contract in @(
+        'Public Sub ResetCalibration(',
+        'Public Sub BeginCalibrationEdit(',
+        'Public Sub FinishCalibrationEdit(')) {
+        Assert-Contains $uiSource $contract 'Viewer UI owner'
+    }
+    foreach ($contract in @(
+        'Public Sub BeginDrag(',
+        'Public Sub FinishDrag(',
+        'Public Sub Hide(',
+        'Public Sub UpdateProjection(')) {
+        Assert-Contains $gizmoSource $contract 'Viewer gizmo owner'
+    }
     Assert-True (-not $viewerSource.Contains('Dim CalibrationStorage[') -and
         -not $viewerSource.Contains('Dim CalibrationKeyframeValues[') -and
         -not $viewerSource.Contains('Dim CalibrationUndoStorage[')) `
         'Calibration banks and transaction buffers must not return to Program.smile.'
+    Assert-True (-not $viewerSource.Contains('Dim TimelineScrubbing As Boolean') -and
+        -not $viewerSource.Contains('Dim SliderDragOwner As Number') -and
+        -not $viewerSource.Contains('Dim TransformGizmoDragging As Boolean') -and
+        -not $viewerSource.Contains('Dim CalibrationEditing As Boolean')) `
+        'Input, UI and gizmo state must not return to Program.smile.'
     Assert-Contains $profileSource `
         'Public Function PartyAttackName(ProfileIndex As Number, AttackCycle As Number) As Text' `
         'Party attack rotation'

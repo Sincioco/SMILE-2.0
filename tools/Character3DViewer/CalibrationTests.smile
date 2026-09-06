@@ -54,6 +54,16 @@ Call SelectCharacterTab(0)
 Call CalibrationCheck(Session.Ready And Not Session.ViewerError And Not Calibration.StorageRejected,
     "Return to Arin after Dragon and Party")
 
+Calibration.ImportPending = True
+Session.CharacterSwitchBlocked = False
+
+Call SelectCharacterTab(1)
+Call CalibrationCheck(Session.SelectedCharacterTab = 0 And Session.CharacterSwitchBlocked,
+    "Pending import blocks an actor switch without losing its owner")
+
+Calibration.ImportPending = False
+Session.CharacterSwitchBlocked = False
+
 ''' The remaining editing checks start from an empty isolated track.
 
 Call ClearCalibrationMemory()
@@ -147,8 +157,8 @@ Call ClearCalibrationMemory()
 Playback.ScenePaused = True
 Playback.DemoEnabled = False
 Playback.SelectedClip = 3
-CalibrationTarget = CALIBRATION_TARGET_SWORD
-CalibrationAxis = CALIBRATION_AXIS_X
+ViewerUiState.CalibrationTarget = CALIBRATION_TARGET_SWORD
+ViewerUiState.CalibrationAxis = CALIBRATION_AXIS_X
 
 Call PlaySelectedClip()
 
@@ -237,7 +247,7 @@ Call BeginCalibrationEdit()
 Call SetCalibrationChannelValue(3, 12, 9)
 
 Call SaveCalibrationFrame()
-Call CalibrationCheck(Calibration.WriteFailed And CalibrationEditing,
+Call CalibrationCheck(Calibration.WriteFailed And ViewerUiState.CalibrationEditing,
     "Failed Save Frame keeps edit open for retry or cancel")
 Call CalibrationCheck(SavedCalibrationJson() = TestSavedJson,
     "Failed Save Frame does not become downloadable saved JSON")
@@ -273,8 +283,8 @@ Call CalibrationCheck(ViewerCalibration.ValidateStorage(
 Call ApplyWristCalibration()
 Call ApplyEquipmentCalibration()
 
-CalibrationHoldGrip = True
-CalibrationTransform = CALIBRATION_TRANSFORM_ROTATE
+ViewerGizmoState.HoldGrip = True
+ViewerUiState.CalibrationTransform = CALIBRATION_TRANSFORM_ROTATE
 TestAnchor = EquipmentGripThousandths(WEAPON_PART_INDEX, "HandRight")
 
 For TestIndex = 1 To 6
@@ -436,27 +446,27 @@ Do
 Loop Until True
 
 FlameAnimationPaused = True
-CalibrationVisible = True
+ViewerUiState.CalibrationVisible = True
 DragonVisible = False
 FloorVisible = False
 GridVisible = False
-UiVisibility = 2
+ViewerUiState.Visibility = 2
 
 Call ResetAll()
 Call CalibrationCheck(Not Playback.ScenePaused And Not FlameAnimationPaused And Playback.DemoEnabled, "Reset restores playback defaults")
-Call CalibrationCheck(Not CalibrationVisible And UiVisibility = 0, "Reset hides pose panel and restores UI")
+Call CalibrationCheck(Not ViewerUiState.CalibrationVisible And ViewerUiState.Visibility = 0, "Reset hides pose panel and restores UI")
 Call CalibrationCheck(DragonVisible And FloorVisible And GridVisible, "Reset restores the arena")
 Call CalibrationCheck(ViewerCalibration.KeyCount(Calibration, 3) = 1,
     "Reset preserves saved corrections")
 
-UiVisibility = 0
+ViewerUiState.Visibility = 0
 
 Call HandleKeyboard(KEY_BACKTICK)
-Call CalibrationCheck(UiVisibility = 1, "First backtick hides panels")
+Call CalibrationCheck(ViewerUiState.Visibility = 1, "First backtick hides panels")
 Call HandleKeyboard(KEY_BACKTICK)
-Call CalibrationCheck(UiVisibility = 2, "Second backtick hides all UI")
+Call CalibrationCheck(ViewerUiState.Visibility = 2, "Second backtick hides all UI")
 Call HandleKeyboard(KEY_BACKTICK)
-Call CalibrationCheck(UiVisibility = 0, "Third backtick restores UI")
+Call CalibrationCheck(ViewerUiState.Visibility = 0, "Third backtick restores UI")
 
 Call DestroyViewer()
 
@@ -683,16 +693,16 @@ Sub CheckPartyInspector()
 
         If Owner < 2 Then
 
-            CalibrationVisible = True
+            ViewerUiState.CalibrationVisible = True
 
             Call ToggleTransformGizmo()
-            Call CalibrationCheck(TransformGizmoVisible, "Party hero explicitly enables the gizmo")
+            Call CalibrationCheck(ViewerGizmoState.Visible, "Party hero explicitly enables the gizmo")
             Call BeginTransformGizmoDrag(False)
             Call SetCurrentCalibrationValue(9)
             Call EndPartyInspector()
             Call HandleKeyboard(KEY_ENTER)
             Call BeginPartyInspector()
-            Call CalibrationCheck(Not TransformGizmoDragging And CalibrationEditing And
+            Call CalibrationCheck(Not ViewerGizmoState.Dragging And ViewerUiState.CalibrationEditing And
                 PartyElapsed = 1234 And Playback.ScenePaused,
                 "Party Enter confirms gizmo preview without restarting the battle")
             Call CancelCalibrationEdit()
@@ -701,13 +711,13 @@ Sub CheckPartyInspector()
             Call EndPartyInspector()
             Call HandleKeyboard(KEY_ENTER)
             Call BeginPartyInspector()
-            Call CalibrationCheck(Not Calibration.WriteFailed And Not CalibrationEditing,
+            Call CalibrationCheck(Not Calibration.WriteFailed And Not ViewerUiState.CalibrationEditing,
                 "Party Enter saves the active hero pose without restarting the battle")
             Call UndoLastCalibrationChange()
             Call CalibrationCheck(SavedCalibrationJson() = OriginalJson,
                 "Party Undo restores every saved key of only the active hero")
             Call ToggleTransformGizmo()
-            Call CalibrationCheck(Not TransformGizmoVisible, "Party hero can hide the gizmo")
+            Call CalibrationCheck(Not ViewerGizmoState.Visible, "Party hero can hide the gizmo")
 
         End If
 
@@ -737,29 +747,29 @@ Sub CheckGizmoVisibility()
     SavedJson = SavedCalibrationJson()
     OriginalValue = CurrentCalibrationValue()
     PreviewValue = 0
-    CalibrationVisible = True
+    ViewerUiState.CalibrationVisible = True
 
     If OriginalValue = 0 Then
         PreviewValue = 1
     End If
 
-    Call CalibrationCheck(Not TransformGizmoVisible, "Gizmo defaults hidden")
+    Call CalibrationCheck(Not ViewerGizmoState.Visible, "Gizmo defaults hidden")
 
     Handled = HandleTransformGizmoKeyboard(KEY_R)
 
-    Call CalibrationCheck(Handled And Not TransformGizmoDragging And Not CalibrationEditing,
+    Call CalibrationCheck(Handled And Not ViewerGizmoState.Dragging And Not ViewerUiState.CalibrationEditing,
         "Hidden gizmo cannot start an invisible keyboard drag")
     Call CalibrationCheck(Not HandleTransformGizmoPointer(), "Hidden gizmo does not capture the scene")
     Call SetCurrentCalibrationValue(PreviewValue)
-    Call CalibrationCheck(CalibrationEditing And CurrentCalibrationValue() = PreviewValue,
+    Call CalibrationCheck(ViewerUiState.CalibrationEditing And CurrentCalibrationValue() = PreviewValue,
         "Numeric pose editing works with the gizmo hidden")
     Call ToggleTransformGizmo()
     Call BeginTransformGizmoDrag(False)
-    Call CalibrationCheck(TransformGizmoVisible And TransformGizmoDragging,
+    Call CalibrationCheck(ViewerGizmoState.Visible And ViewerGizmoState.Dragging,
         "Explicit Show Gizmo enables handles and keyboard drag")
     Call ToggleTransformGizmo()
-    Call CalibrationCheck(Not TransformGizmoVisible And Not TransformGizmoDragging And
-        CalibrationEditing And CurrentCalibrationValue() = PreviewValue,
+    Call CalibrationCheck(Not ViewerGizmoState.Visible And Not ViewerGizmoState.Dragging And
+        ViewerUiState.CalibrationEditing And CurrentCalibrationValue() = PreviewValue,
         "Hide ends capture but preserves the unsaved numeric preview")
     Call CalibrationCheck(SavedCalibrationJson() = SavedJson, "Visibility toggle never saves keys")
     Call CancelCalibrationEdit()
@@ -767,7 +777,7 @@ Sub CheckGizmoVisibility()
         SavedCalibrationJson() = SavedJson, "Cancel preserves the original saved pose")
     Call ToggleTransformGizmo()
     Call ResetAll()
-    Call CalibrationCheck(Not TransformGizmoVisible, "Full reset restores hidden gizmo default")
+    Call CalibrationCheck(Not ViewerGizmoState.Visible, "Full reset restores hidden gizmo default")
 
 End Sub
 

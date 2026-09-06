@@ -1,0 +1,80 @@
+''' Character Viewer presentation and calibration-control state, independent from stored key data.
+Module Smile.Tools.Character3DViewerUi
+
+Option Explicit
+
+Public Type State
+    Visibility As Number
+    CalibrationVisible As Boolean
+    CalibrationTarget As Number
+    CalibrationAxis As Number
+    CalibrationTransform As Number
+    CalibrationEditing As Boolean
+    CalibrationEditingClip As Number
+    CalibrationEditingFrame As Number
+    CalibrationAutoOrbitWasEnabled As Boolean
+    CalibrationClearConfirm As Boolean
+    CalibrationClearAllStage As Number
+End Type
+
+Public Sub Reset(ByRef Value As State)
+
+    Value.Visibility = 0
+    Value.CalibrationVisible = False
+    Value.CalibrationEditing = False
+    Value.CalibrationClearConfirm = False
+    Value.CalibrationClearAllStage = 0
+
+End Sub
+
+Public Sub ResetCalibration(ByRef Value As State, Target As Number,
+    Axis As Number, Transform As Number)
+
+    Value.CalibrationVisible = False
+    Value.CalibrationTarget = Target
+    Value.CalibrationAxis = Axis
+    Value.CalibrationTransform = Transform
+    Value.CalibrationEditing = False
+    Value.CalibrationClearConfirm = False
+    Value.CalibrationClearAllStage = 0
+
+End Sub
+
+Public Sub CycleVisibility(ByRef Value As State)
+
+    Value.Visibility = (Value.Visibility + 1) Mod 3
+
+End Sub
+
+Public Sub BeginCalibrationEdit(ByRef Value As State, Clip As Number,
+    Frame As Number, AutoOrbitEnabled As Boolean)
+
+    Value.CalibrationEditing = True
+    Value.CalibrationClearConfirm = False
+    Value.CalibrationEditingClip = Clip
+    Value.CalibrationEditingFrame = Frame
+    Value.CalibrationAutoOrbitWasEnabled = AutoOrbitEnabled
+
+End Sub
+
+Public Sub FinishCalibrationEdit(ByRef Value As State)
+
+    Value.CalibrationEditing = False
+
+End Sub
+
+Public Sub BeginClearConfirmation(ByRef Value As State)
+
+    Value.CalibrationClearConfirm = True
+    Value.CalibrationClearAllStage = 0
+
+End Sub
+
+Public Sub ClearConfirmation(ByRef Value As State)
+
+    Value.CalibrationClearConfirm = False
+    Value.CalibrationClearAllStage = 0
+
+End Sub
+
+End Module

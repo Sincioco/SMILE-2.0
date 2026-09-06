@@ -1,0 +1,121 @@
+''' Opt-in transform-gizmo projection and drag state, independent from calibration storage.
+Module Smile.Tools.Character3DViewerGizmo
+
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.CharacterViewer As CharacterViewer
+Import Smile.Simple3D.FixedMath As Fixed
+
+Public Type State
+    Projection As CharacterViewer.TransformGizmo
+    Origin As Core.Vector3
+    WorldSize As Number
+    Visible As Boolean
+    Dragging As Boolean
+    HoverAxis As Number
+    PointerOwned As Boolean
+    OpenedEdit As Boolean
+    DragStartValue As Number
+    DragRemainder As Number
+    HoldGrip As Boolean
+    GripAnchor As Core.Vector3
+    GripBasePosition As Core.Vector3
+    GripAnchorActive As Boolean
+    GripAnchorTarget As Number
+    GripAnchorFrame As Number
+    GripLimit As Boolean
+End Type
+
+Public Sub Reset(ByRef Value As State)
+
+    Value.Visible = False
+    Value.HoverAxis = -1
+    Value.HoldGrip = False
+    Value.GripAnchorActive = False
+    Value.GripLimit = False
+
+    Call FinishDrag(Value)
+
+End Sub
+
+Public Sub Toggle(ByRef Value As State)
+
+    Call FinishDrag(Value)
+
+    Value.Visible = Not Value.Visible
+    Value.HoverAxis = -1
+
+End Sub
+
+Public Sub Hide(ByRef Value As State)
+
+    Call FinishDrag(Value)
+
+    Value.Visible = False
+    Value.HoverAxis = -1
+
+End Sub
+
+Public Sub BeginDrag(ByRef Value As State, PointerOwned As Boolean,
+    OpenedEdit As Boolean, CurrentValue As Number)
+
+    If Not Value.Visible Then
+        Return
+    End If
+
+    If Value.Dragging Then
+        Value.PointerOwned = PointerOwned
+
+        Return
+    End If
+
+    Value.Dragging = True
+    Value.PointerOwned = PointerOwned
+    Value.OpenedEdit = OpenedEdit
+    Value.DragStartValue = CurrentValue
+    Value.DragRemainder = 0
+
+End Sub
+
+Public Sub FinishDrag(ByRef Value As State)
+
+    Value.Dragging = False
+    Value.PointerOwned = False
+    Value.OpenedEdit = False
+    Value.DragRemainder = 0
+
+End Sub
+
+Public Sub SelectAxis(ByRef Value As State, CurrentValue As Number)
+
+    If Value.Dragging Then
+        Value.DragStartValue = CurrentValue
+        Value.DragRemainder = 0
+    End If
+
+End Sub
+
+Public Sub UpdateProjection(ByRef Value As State, Origin As Core.Vector3,
+    Camera As Core.Camera3D, WindowWidth As Number, WindowHeight As Number)
+
+    Dim FocalLength As Number
+    Dim OriginProjection As Core.ProjectedPoint3D
+
+    Value.Origin = Origin
+    OriginProjection = CharacterViewer.ProjectViewerPoint(
+        Value.Origin, Camera, WindowWidth, WindowHeight)
+    FocalLength = (WindowHeight * Fixed.CosFixed(Camera.FovDegrees / 2) /
+        (2 * Max(1, Fixed.SinFixed(Camera.FovDegrees / 2))))
+    Value.WorldSize = Min(1000, Max(1, OriginProjection.Depth * 80 / Max(1, FocalLength)))
+    Value.Projection = CharacterViewer.ProjectTransformGizmo(
+        Value.Origin,
+        Value.WorldSize,
+        Camera,
+        WindowWidth,
+        WindowHeight
+    )
+
+End Sub
+
+End Module

@@ -69,6 +69,7 @@ async function installTextObserver(page) {
             set: value => {
                 api = value;
                 const drawText = api.drawText;
+                const drawNumber = api.drawNumber;
                 const showScreen = api.showScreen;
                 api.showScreen = (...callArgs) => {
                     window.__calibrationChrome.lastText = window.__calibrationChrome.text;
@@ -78,6 +79,10 @@ async function installTextObserver(page) {
                 api.drawText = (...callArgs) => {
                     window.__calibrationChrome.text.push(callArgs);
                     return drawText(...callArgs);
+                };
+                api.drawNumber = (...callArgs) => {
+                    window.__calibrationChrome.text.push(callArgs);
+                    return drawNumber(...callArgs);
                 };
             },
         });
@@ -126,6 +131,18 @@ async function clickText(page, label, maximumY = Infinity, waitForNextFrames = t
 async function waitForText(page, predicateText) {
     await page.waitForFunction(text => window.__calibrationChrome.lastText.some(
         item => String(item[0]).includes(text)), predicateText, { timeout: 30000 });
+}
+
+async function currentInspectorFrame(page) {
+    return page.evaluate(() => {
+        const entry = window.__calibrationChrome.lastText.find(item =>
+            item[1] >= 190 && item[1] <= 230 && item[2] >= 340 && item[2] <= 365 &&
+            /^-?\d+$/.test(String(item[0])));
+        if (!entry) {
+            throw new Error("Current inspector frame value was not rendered");
+        }
+        return Number(entry[0]);
+    });
 }
 
 function findKey(snapshot, clipName, frame) {
@@ -216,6 +233,24 @@ async function run() {
         await clickText(page, "Arin", 110);
         await clickText(page, "Pose");
         await waitForText(page, "Pose Calibration");
+        const frameBeforeQueuedKey = await currentInspectorFrame(page);
+        await page.keyboard.down("Control");
+        await page.keyboard.press("ArrowRight");
+        await page.keyboard.up("Control");
+        await waitForFrames(page);
+        const frameAfterQueuedKey = await currentInspectorFrame(page);
+        assert(frameAfterQueuedKey > frameBeforeQueuedKey);
+        await page.keyboard.press("ArrowLeft");
+        await waitForFrames(page);
+        assert.equal(await currentInspectorFrame(page), frameAfterQueuedKey);
+        report.queuedFrameStep = { before: frameBeforeQueuedKey, after: frameAfterQueuedKey };
+        report.checks.push("Queued Ctrl+Right advanced after modifier release; plain Left remained a camera command");
+
+        await clickText(page, "Show Gizmo");
+        await waitForText(page, "Hide Gizmo");
+        await clickText(page, "Hide Gizmo");
+        await waitForText(page, "Show Gizmo");
+        report.checks.push("The opt-in gizmo showed and hid without closing the numeric Pose inspector");
         await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
         await waitForFrames(page, 2);
         await page.screenshot({ path: path.join(output, "after-reload-inspection.png") });

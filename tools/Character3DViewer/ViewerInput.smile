@@ -1,0 +1,126 @@
+''' Viewer input classification and exclusive gesture ownership, independent from domain actions.
+Module Smile.Tools.Character3DViewerInput
+
+Option Explicit
+
+Public Const ARROW_NONE = 0
+Public Const ARROW_FRAME_PREVIOUS = 1
+Public Const ARROW_FRAME_NEXT = 2
+Public Const ARROW_PLAIN_LEFT = 3
+Public Const ARROW_PLAIN_RIGHT = 4
+Public Const ARROW_PLAIN_UP = 5
+Public Const ARROW_PLAIN_DOWN = 6
+
+Public Type State
+    WindowActivated As Boolean
+    InterfaceBlocked As Boolean
+    SliderDragOwner As Number
+    TimelineScrubbing As Boolean
+    TimelineKeyframeDragging As Boolean
+    TimelineDraggedKeyframe As Number
+    TimelineDraggedOriginalFrame As Number
+    TimelineDraggedTargetFrame As Number
+    FrameButtonRepeatDirection As Number
+    FrameButtonRepeatAt As Number
+End Type
+
+Public Sub Reset(ByRef Value As State, Activated As Boolean)
+
+    Value.WindowActivated = Activated
+    Value.InterfaceBlocked = False
+
+    Call CancelCaptures(Value)
+
+End Sub
+
+Public Function UpdateActivation(ByRef Value As State, Activated As Boolean) As Boolean
+
+    Dim LostFocus As Boolean
+
+    LostFocus = Value.WindowActivated And Not Activated
+    Value.WindowActivated = Activated
+
+    Return LostFocus
+
+End Function
+
+Public Function ClassifyArrow(PressedKey As Number, LeftKey As Number,
+    RightKey As Number, UpKey As Number, DownKey As Number,
+    QueuedControlHeld As Boolean) As Number
+
+    Dim Command As Number
+
+    Command = ARROW_NONE
+
+    If PressedKey = LeftKey And QueuedControlHeld Then
+        Command = ARROW_FRAME_PREVIOUS
+    Else If PressedKey = RightKey And QueuedControlHeld Then
+        Command = ARROW_FRAME_NEXT
+    Else If PressedKey = LeftKey Then
+        Command = ARROW_PLAIN_LEFT
+    Else If PressedKey = RightKey Then
+        Command = ARROW_PLAIN_RIGHT
+    Else If PressedKey = UpKey Then
+        Command = ARROW_PLAIN_UP
+    Else If PressedKey = DownKey Then
+        Command = ARROW_PLAIN_DOWN
+    End If
+
+    Return Command
+
+End Function
+
+Public Sub BeginTimelineScrub(ByRef Value As State)
+
+    Value.TimelineScrubbing = True
+    Value.TimelineKeyframeDragging = False
+    Value.SliderDragOwner = 0
+
+End Sub
+
+Public Sub BeginTimelineKeyframeDrag(ByRef Value As State, KeyframeIndex As Number,
+    OriginalFrame As Number)
+
+    Value.TimelineKeyframeDragging = True
+    Value.TimelineScrubbing = False
+    Value.SliderDragOwner = 0
+    Value.TimelineDraggedKeyframe = KeyframeIndex
+    Value.TimelineDraggedOriginalFrame = OriginalFrame
+    Value.TimelineDraggedTargetFrame = OriginalFrame
+
+End Sub
+
+Public Sub FinishTimelineGesture(ByRef Value As State)
+
+    Value.TimelineScrubbing = False
+    Value.TimelineKeyframeDragging = False
+
+End Sub
+
+Public Sub CancelCaptures(ByRef Value As State)
+
+    Value.SliderDragOwner = 0
+    Value.TimelineScrubbing = False
+    Value.TimelineKeyframeDragging = False
+    Value.TimelineDraggedKeyframe = -1
+    Value.TimelineDraggedOriginalFrame = 0
+    Value.TimelineDraggedTargetFrame = 0
+    Value.FrameButtonRepeatDirection = 0
+    Value.FrameButtonRepeatAt = 0
+    Value.InterfaceBlocked = False
+
+End Sub
+
+Public Function HasPointerCapture(ByRef Value As State) As Boolean
+
+    Dim Captured As Boolean
+
+    Captured = (Value.SliderDragOwner <> 0 Or
+        Value.TimelineScrubbing Or
+        Value.TimelineKeyframeDragging)
+
+    Return Captured
+
+End Function
+
+End Module

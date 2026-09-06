@@ -13,6 +13,9 @@ Import Smile.Tools.Character3DViewerSession As ViewerSession
 Import Smile.Tools.Character3DViewerPlayback As ViewerPlayback
 Import Smile.Tools.Character3DViewerCamera As ViewerCamera
 Import Smile.Tools.Character3DViewerCalibration As ViewerCalibration
+Import Smile.Tools.Character3DViewerInput As ViewerInput
+Import Smile.Tools.Character3DViewerUi As ViewerUi
+Import Smile.Tools.Character3DViewerGizmo As ViewerGizmo
 Import Smile.Simple3D.Core As Core
 Import Smile.Simple3D.NodeAim3D As NodeAim3D
 Import Smile.Simple3D.Math3D As Math3D
@@ -75,6 +78,9 @@ Dim DirectZoom As CharacterViewer.ZoomState
 Dim DirectCamera As Core.Camera3D
 Dim CameraPhase1000 As Number
 Dim CalibrationState As ViewerCalibration.State
+Dim InputState As ViewerInput.State
+Dim UiState As ViewerUi.State
+Dim GizmoState As ViewerGizmo.State
 
 Game Window "Character 3D Viewer Hardening Tests" Size 320 By 240
 
@@ -196,6 +202,15 @@ CameraState.Live.Target.Y = 65
 Call ViewerCamera.KeepAboveGround(CameraState, 0)
 Call Check(CameraState.Live.Position.Y = 0 And CameraState.Live.Target.Y = 65)
 
+CameraState.Controls.Orbiting = True
+CameraState.Controls.Panning = True
+CameraState.PanPointerRemainderX = 2
+CameraState.OrbitPointerRemainderY = -2
+
+Call ViewerCamera.CancelPointerControls(CameraState)
+Call Check(Not CameraState.Controls.Orbiting And Not CameraState.Controls.Panning)
+Call Check(CameraState.PanPointerRemainderX = 0 And CameraState.OrbitPointerRemainderY = 0)
+
 CalibrationState.KeyBase = 0
 
 Call ViewerCalibration.ResetBank(CalibrationState)
@@ -226,6 +241,53 @@ CalibrationState.KeyBase = 0
 Call Check(ViewerCalibration.KeyValue(CalibrationState, 3, 0, 12) = 2)
 Call Check(ViewerCalibration.InterpolateChannel(6, 170, -170, 5, 0, 10) = 180)
 Call Check(ViewerCalibration.InterpolateChannel(18, 0, 1, 5, 0, 10) = 0)
+
+Call ViewerInput.Reset(InputState, True)
+Call Check(InputState.WindowActivated)
+Call Check(ViewerInput.ClassifyArrow(37, 37, 39, 38, 40, True) =
+    ViewerInput.ARROW_FRAME_PREVIOUS)
+Call Check(ViewerInput.ClassifyArrow(39, 37, 39, 38, 40, True) =
+    ViewerInput.ARROW_FRAME_NEXT)
+Call Check(ViewerInput.ClassifyArrow(37, 37, 39, 38, 40, False) =
+    ViewerInput.ARROW_PLAIN_LEFT)
+Call Check(ViewerInput.ClassifyArrow(38, 37, 39, 38, 40, False) =
+    ViewerInput.ARROW_PLAIN_UP)
+
+Call ViewerInput.BeginTimelineScrub(InputState)
+Call Check(ViewerInput.HasPointerCapture(InputState))
+Call Check(ViewerInput.UpdateActivation(InputState, False))
+Call ViewerInput.CancelCaptures(InputState)
+Call Check(Not ViewerInput.HasPointerCapture(InputState))
+Call ViewerInput.BeginTimelineKeyframeDrag(InputState, 4, 18)
+Call Check(InputState.TimelineKeyframeDragging)
+Call Check(InputState.TimelineDraggedKeyframe = 4)
+Call Check(InputState.TimelineDraggedOriginalFrame = 18)
+Call ViewerInput.FinishTimelineGesture(InputState)
+Call Check(Not ViewerInput.HasPointerCapture(InputState))
+
+Call ViewerUi.Reset(UiState)
+Call ViewerUi.ResetCalibration(UiState, 0, 1, 0)
+Call ViewerUi.CycleVisibility(UiState)
+Call Check(UiState.Visibility = 1)
+Call ViewerUi.BeginCalibrationEdit(UiState, 3, 14, True)
+Call Check(UiState.CalibrationEditing And UiState.CalibrationEditingClip = 3)
+Call Check(UiState.CalibrationEditingFrame = 14 And UiState.CalibrationAutoOrbitWasEnabled)
+Call ViewerUi.BeginClearConfirmation(UiState)
+Call Check(UiState.CalibrationClearConfirm)
+Call ViewerUi.FinishCalibrationEdit(UiState)
+Call ViewerUi.ClearConfirmation(UiState)
+Call Check(Not UiState.CalibrationEditing And Not UiState.CalibrationClearConfirm)
+
+Call ViewerGizmo.Reset(GizmoState)
+Call Check(Not GizmoState.Visible And Not GizmoState.Dragging)
+
+GizmoState.Visible = True
+
+Call ViewerGizmo.BeginDrag(GizmoState, True, True, 27)
+Call Check(GizmoState.Dragging And GizmoState.PointerOwned)
+Call Check(GizmoState.OpenedEdit And GizmoState.DragStartValue = 27)
+Call ViewerGizmo.Hide(GizmoState)
+Call Check(Not GizmoState.Visible And Not GizmoState.Dragging)
 
 Call CheckRingProjection()
 

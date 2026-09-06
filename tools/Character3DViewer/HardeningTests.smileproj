@@ -17,6 +17,9 @@
     <SmileSource Include="ViewerCamera.smile" />
     <SmileSource Include="CalibrationJson.smile" />
     <SmileSource Include="ViewerCalibration.smile" />
+    <SmileSource Include="ViewerInput.smile" />
+    <SmileSource Include="ViewerUi.smile" />
+    <SmileSource Include="ViewerGizmo.smile" />
     <SmileProjectReference Include="..\..\libraries\Smile.Simple3D\Smile.Simple3D.smilelibproj" />
   </ItemGroup>
 </SmileProject>

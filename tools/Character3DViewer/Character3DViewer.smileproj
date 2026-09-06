@@ -25,6 +25,9 @@
     <SmileSource Include="ViewerPlayback.smile" />
     <SmileSource Include="ViewerCamera.smile" />
     <SmileSource Include="ViewerCalibration.smile" />
+    <SmileSource Include="ViewerInput.smile" />
+    <SmileSource Include="ViewerUi.smile" />
+    <SmileSource Include="ViewerGizmo.smile" />
     <Model3DAsset Include="BuildAssets\ArinV57\arin-v5.7-idle-equipment-checkpoint.glb"
                   Descriptor="BuildAssets\ArinV57\ArinV57.sm3d.json"
                   LogicalPath="Assets\Generation2\ArinV57\ArinV57.sm3d"

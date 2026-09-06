@@ -199,6 +199,18 @@ Public Sub ClampControls(ByRef Value As State)
 
 End Sub
 
+Public Sub CancelPointerControls(ByRef Value As State)
+
+    Value.Controls.Orbiting = False
+    Value.Controls.Panning = False
+    Value.CalibrationOrbitActive = False
+    Value.PanPointerRemainderX = 0
+    Value.PanPointerRemainderY = 0
+    Value.OrbitPointerRemainderX = 0
+    Value.OrbitPointerRemainderY = 0
+
+End Sub
+
 Public Function NudgeOrbit(ByRef Value As State, DeltaX As Number,
     DeltaY As Number) As Boolean
 
