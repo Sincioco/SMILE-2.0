@@ -3475,34 +3475,6 @@ Function CalibrationMaximumValue() As Number
 
 End Function
 
-Function CalibrationTransformLabel() As Text
-
-    Dim Result As Text
-
-    If ViewerUiState.CalibrationTransform = CALIBRATION_TRANSFORM_MOVE Then
-        Result = "Move"
-    Else
-        Result = "Rotate"
-    End If
-
-    Return Result
-
-End Function
-
-Function CalibrationUnitLabel() As Text
-
-    Dim Result As Text
-
-    If ViewerUiState.CalibrationTransform = CALIBRATION_TRANSFORM_MOVE Then
-        Result = "units"
-    Else
-        Result = "degrees"
-    End If
-
-    Return Result
-
-End Function
-
 Sub BeginCalibrationEdit()
 
     If ViewerUiState.CalibrationEditing Then
@@ -3777,36 +3749,6 @@ Sub ClearAllCalibration()
 
 End Sub
 
-Function CalibrationResetClipLabel() As Text
-
-    Dim Result As Text
-
-    If ViewerUiState.CalibrationClearConfirm Then
-        Result = "Confirm Current Clip?"
-    Else
-        Result = "Delete All Key Frames"
-    End If
-
-    Return Result
-
-End Function
-
-Function CalibrationResetAllLabel() As Text
-
-    Dim Result As Text
-
-    If ViewerUiState.CalibrationClearAllStage = 1 Then
-        Result = "Confirm All?"
-    Else If ViewerUiState.CalibrationClearAllStage >= 2 Then
-        Result = "Really Clear?"
-    Else
-        Result = "Reset All"
-    End If
-
-    Return Result
-
-End Function
-
 Sub SaveCalibrationFrame()
 
     Dim SavedSuccessfully As Boolean
@@ -3954,24 +3896,6 @@ Function SelectedClipLabel() As Text
 
 End Function
 
-Function LightingLabel() As Text
-
-    Dim Result As Text
-
-    If LightingIndex = 0 Then
-        Result = "Viewer Studio"
-    Else If LightingIndex = 1 Then
-        Result = "Character Studio"
-    Else If LightingIndex = 2 Then
-        Result = "Daylight"
-    Else
-        Result = "Moonlight"
-    End If
-
-    Return Result
-
-End Function
-
 Function PointerInRectangle(X As Number, Y As Number, Width As Number, Height As Number) As Boolean
 
     Dim Result As Boolean
@@ -4099,9 +4023,11 @@ Sub DrawInspectorOverlay()
     End If
 
     If Window_Width() < 1100 Then
-        Subtitle = ActiveProfile.DisplayName + "  •  " + PartyRoleLabel() + "  •  PBR"
+        Subtitle = ActiveProfile.DisplayName + "  •  "
+        Subtitle = Subtitle + ViewerUi.PartyRoleLabel(ActiveProfile.PartyRole) + "  •  PBR"
     Else
-        Subtitle = ActiveProfile.DisplayName + "  •  Party role: " + PartyRoleLabel() + "  •  Renderer3D PBR"
+        Subtitle = ActiveProfile.DisplayName + "  •  Party role: "
+        Subtitle = Subtitle + ViewerUi.PartyRoleLabel(ActiveProfile.PartyRole) + "  •  Renderer3D PBR"
     End If
 
     Draw Text "SMILE 2.0 - 3D Viewer, Animation Editor" At 18, 10 Size 22 Color WHITE
@@ -4133,8 +4059,8 @@ Sub DrawInspectorOverlay()
             ViewerCameraState.AutoOrbit,
             Effects.FlamePaused,
             Effects.LightningPaused,
-            VfxPlaybackLabel("Fire", Effects.FlamePaused),
-            VfxPlaybackLabel("Lightning", Effects.LightningPaused),
+            ViewerUi.PlaybackLabel("Fire", Effects.FlamePaused, "Freeze"),
+            ViewerUi.PlaybackLabel("Lightning", Effects.LightningPaused, "Freeze"),
             ViewerEffects.ShieldFireStyleLabel(Effects),
             Effects.ShieldFlameStyle,
             ViewerEffects.StormCaption(Effects),
@@ -4157,8 +4083,12 @@ Sub DrawInspectorOverlay()
         End If
 
         Call DrawButton(GlowButtonX(), 18, GlowButtonWidth(), 34, "GLOW", Effects.EpicGlowVisible)
-        Call DrawButton(PanelLeft, 56, 72, 22, DragonLabel(), DragonState.Visible)
-        Call DrawButton(PanelLeft + 76, 56, 48, 22, BackgroundLabel(), Rendering.BackgroundIndex > 0)
+        Call DrawButton(PanelLeft, 56, 72, 22,
+            ViewerUi.DragonLabel(Session.DragonInspection,
+                DragonState.Available, DragonState.Visible), DragonState.Visible)
+        Call DrawButton(PanelLeft + 76, 56, 48, 22,
+            ViewerUi.BackgroundLabel(Rendering.BackgroundIndex),
+            Rendering.BackgroundIndex > 0)
 
         If CalibrationAvailable Then
             Call DrawButton(PanelLeft + 128, 56, 36, 22, "Pose", ViewerUiState.CalibrationVisible)
@@ -4175,7 +4105,9 @@ Sub DrawInspectorOverlay()
 
         Draw Text "ANIMATIONS" At PanelText, 334 Size 13 Color WHITE
 
-        Call DrawButton(PanelLeft + 178, 330, 74, 18, DemoLabel(), Playback.DemoEnabled)
+        Call DrawButton(PanelLeft + 178, 330, 74, 18,
+            ViewerUi.DemoLabel(Party.Enabled, Playback.ScenePaused,
+                Playback.DemoEnabled), Playback.DemoEnabled)
 
         Call DrawAnimationButtons()
         Call DrawButton(PanelLeft + 12, 444, 78, 22, "Floor/Grid", Rendering.FloorVisible Or Rendering.GridVisible)
@@ -4193,7 +4125,9 @@ Sub DrawInspectorOverlay()
             Call DrawButton(PanelLeft + 12, 470, 128, 20,
                 ViewerEffects.StormSceneComfortName(), True)
             Call DrawButton(PanelLeft + 144, 470, 108, 20,
-                VfxPlaybackLabel("Lightning", Effects.LightningPaused), Effects.LightningPaused)
+                ViewerUi.PlaybackLabel(
+                    "Lightning", Effects.LightningPaused, "Freeze"),
+                Effects.LightningPaused)
 
         Else If Session.ProfileIndex = ViewerProfiles.PROFILE_DRAGON Then
 
@@ -4210,7 +4144,9 @@ Sub DrawInspectorOverlay()
         End If
 
         If Effects.SwordFireReady And Session.ProfileIndex = ViewerProfiles.PROFILE_ARIN Then
-            Call DrawButton(PanelLeft + 12, 470, 128, 20, FlamePlaybackLabel(), Not Effects.FlamePaused)
+            Call DrawButton(PanelLeft + 12, 470, 128, 20,
+                ViewerUi.PlaybackLabel("Flames", Effects.FlamePaused, "Pause"),
+                Not Effects.FlamePaused)
 
             Call DrawButton(PanelLeft + 144, 470, 108, 20,
                 ViewerEffects.ShieldFireStyleLabel(Effects),
@@ -4309,7 +4245,7 @@ Sub DrawCharacterStatusSummary(PanelLeft As Number)
         Draw Text "Name" At PanelText, 124 Size 12 Color LIGHT_GRAY
         Draw Text ActiveProfile.DisplayName At PanelLeft + 116, 124 Size 12 Color CYAN
         Draw Text "Party Role" At PanelText, 146 Size 12 Color LIGHT_GRAY
-        Draw Text PartyRoleLabel() At PanelLeft + 116, 146 Size 12 Color CYAN
+        Draw Text ViewerUi.PartyRoleLabel(ActiveProfile.PartyRole) At PanelLeft + 116, 146 Size 12 Color CYAN
         Draw Text "Animation" At PanelText, 168 Size 12 Color LIGHT_GRAY
         Draw Text SelectedClipLabel() At PanelLeft + 116, 168 Size 12 Color GREEN
         Draw Text "Candidate" At PanelText, 190 Size 12 Color LIGHT_GRAY
@@ -4321,12 +4257,12 @@ Sub DrawCharacterStatusSummary(PanelLeft As Number)
         Call DrawButton(PanelLeft + 208, 204, 30, 24, "+", False)
 
         Draw Text "Material" At PanelText, 240 Size 12 Color LIGHT_GRAY
-        Draw Text MaterialInspectionLabel() At PanelLeft + 116, 240 Size 12 Color YELLOW
+        Draw Text ViewerUi.MaterialInspectionLabel(MaterialInspection) At PanelLeft + 116, 240 Size 12 Color YELLOW
         Draw Text "Draws / Triangles" At PanelText, 262 Size 12 Color LIGHT_GRAY
         Draw Number Graphics3D.DrawCallCount3D() At PanelLeft + 148, 262 Size 12 Color WHITE
         Draw Number Graphics3D.SubmittedTriangleCount3D() At PanelLeft + 192, 262 Size 12 Color WHITE
         Draw Text "Demo / Next" At PanelText, 284 Size 12 Color LIGHT_GRAY
-        Draw Text DemoStatusLabel() At PanelLeft + 116, 284 Size 12 Color CYAN
+        Draw Text ViewerUi.DemoStatusLabel(Party.Enabled, Playback.ScenePaused, Playback.DemoEnabled) At PanelLeft + 116, 284 Size 12 Color CYAN
         Draw Number AnimationSecondsRemaining() At PanelLeft + 172, 284 Size 12 Color WHITE
         Draw Text "seconds" At PanelLeft + 192, 284 Size 11 Color LIGHT_GRAY
         Draw Text "Zoom / FPS" At PanelText, 306 Size 12 Color LIGHT_GRAY
@@ -4428,11 +4364,11 @@ Sub DrawCalibrationPanel()
     Call DrawButton(278, 158, 72, 24, "Move", ViewerUiState.CalibrationTransform = CALIBRATION_TRANSFORM_MOVE)
     Call DrawButton(354, 158, 78, 24, "Reset", False)
 
-    Draw Text CalibrationTargetLabel() At 34, 187 Size 12 Color LIGHT_GRAY
-    Draw Text CalibrationTransformLabel() At 142, 187 Size 12 Color CYAN
-    Draw Text CalibrationAxisLabel() At 208, 187 Size 12 Color CYAN
+    Draw Text ViewerUi.CalibrationTargetLabel(ViewerUiState.CalibrationTarget) At 34, 187 Size 12 Color LIGHT_GRAY
+    Draw Text ViewerUi.CalibrationTransformLabel(ViewerUiState.CalibrationTransform) At 142, 187 Size 12 Color CYAN
+    Draw Text ViewerUi.CalibrationAxisLabel(ViewerUiState.CalibrationAxis) At 208, 187 Size 12 Color CYAN
     Draw Number Value At 230, 187 Size 12 Color WHITE
-    Draw Text CalibrationUnitLabel() At 274, 187 Size 11 Color LIGHT_GRAY
+    Draw Text ViewerUi.CalibrationUnitLabel(ViewerUiState.CalibrationTransform) At 274, 187 Size 11 Color LIGHT_GRAY
 
     Call UI.DrawSlider(CALIBRATION_SLIDER_X, CALIBRATION_SLIDER_Y,
         CALIBRATION_SLIDER_WIDTH, CALIBRATION_SLIDER_HEIGHT, Value, MinimumValue, MaximumValue, 6)
@@ -4463,7 +4399,9 @@ Sub DrawCalibrationPanel()
     Call DrawButton(34, 374, 194, 24, "Decouple Weapon", CalibrationChannelValue(Playback.SelectedClip, 18) <> 0)
     Call DrawButton(236, 374, 196, 24, "Decouple Shield", CalibrationChannelValue(Playback.SelectedClip, 19) <> 0)
 
-    Call DrawButton(34, 412, 196, 24, CalibrationResetClipLabel(), ViewerUiState.CalibrationClearConfirm)
+    Call DrawButton(34, 412, 196, 24,
+        ViewerUi.CalibrationResetClipLabel(ViewerUiState.CalibrationClearConfirm),
+        ViewerUiState.CalibrationClearConfirm)
     Call DrawButton(332, 412, 100, 24, "Save Frame", CurrentKeyframe >= 0 And Not ViewerUiState.CalibrationEditing)
     Call DrawButton(244, 412, 84, 24, "Cancel", ViewerUiState.CalibrationEditing)
 
@@ -4526,68 +4464,6 @@ Sub DrawCalibrationPanel()
     End If
 
 End Sub
-
-Function FlamePlaybackLabel() As Text
-
-    Dim Result As Text
-
-    If Effects.FlamePaused Then
-        Result = "Play Flames"
-    Else
-        Result = "Pause Flames"
-    End If
-
-    Return Result
-
-End Function
-
-Function VfxPlaybackLabel(Family As Text, Frozen As Boolean) As Text
-
-    Dim Result As Text
-
-    If Frozen Then
-        Result = "Play " + Family
-    Else
-        Result = "Freeze " + Family
-    End If
-
-    Return Result
-
-End Function
-
-Function CalibrationTargetLabel() As Text
-
-    Dim Result As Text
-
-    If ViewerUiState.CalibrationTarget = CALIBRATION_TARGET_SWORD_WRIST Then
-        Result = "Weapon Wrist"
-    Else If ViewerUiState.CalibrationTarget = CALIBRATION_TARGET_SHIELD_WRIST Then
-        Result = "Shield Wrist"
-    Else If ViewerUiState.CalibrationTarget = CALIBRATION_TARGET_SWORD Then
-        Result = "Weapon"
-    Else
-        Result = "Shield"
-    End If
-
-    Return Result
-
-End Function
-
-Function CalibrationAxisLabel() As Text
-
-    Dim Result As Text
-
-    If ViewerUiState.CalibrationAxis = CALIBRATION_AXIS_X Then
-        Result = "X"
-    Else If ViewerUiState.CalibrationAxis = CALIBRATION_AXIS_Y Then
-        Result = "Y"
-    Else
-        Result = "Z"
-    End If
-
-    Return Result
-
-End Function
 
 Function TimelineWidth() As Number
 
@@ -4701,55 +4577,6 @@ Sub DrawTimeline()
 
 End Sub
 
-Function BackgroundLabel() As Text
-
-    Dim Result As Text
-
-    If Rendering.BackgroundIndex = 1 Then
-        Result = "BG GREEN"
-    Else If Rendering.BackgroundIndex = 2 Then
-        Result = "BG PURPLE"
-    Else If Rendering.BackgroundIndex = 3 Then
-        Result = "BG SCENE"
-    Else If Rendering.BackgroundIndex = 4 Then
-        Result = "BG LOGO"
-    Else
-        Result = "BG BLACK"
-    End If
-
-    Return Result
-
-End Function
-
-Function DragonLabel() As Text
-
-    Dim Result As Text
-
-    If Session.DragonInspection Then
-
-        Result = "VFX ON"
-
-        If Not DragonState.Visible Then
-            Result = "VFX OFF"
-        End If
-
-    Else If Not DragonState.Available Then
-
-        Result = "NO DRAGON"
-
-    Else If DragonState.Visible Then
-
-        Result = "DRAGON ON"
-
-    Else
-        Result = "DRAGON OFF"
-
-    End If
-
-    Return Result
-
-End Function
-
 Function ViewerTitle() As Text
 
     Dim Result As Text
@@ -4848,112 +4675,6 @@ Function AnimationSecondsRemaining() As Number
     Else
         Result = 0
 
-    End If
-
-    Return Result
-
-End Function
-
-Function DemoLabel() As Text
-
-    Dim Result As Text
-
-    If Party.Enabled And Playback.ScenePaused Then
-        Result = "RESUME"
-    Else If Party.Enabled Then
-        Result = "PAUSE"
-    Else If Playback.DemoEnabled Then
-        Result = "DEMO ON"
-    Else
-        Result = "DEMO OFF"
-    End If
-
-    Return Result
-
-End Function
-
-Function DemoStatusLabel() As Text
-
-    Dim Result As Text
-
-    If Party.Enabled And Playback.ScenePaused Then
-        Result = "Paused"
-    Else If Playback.DemoEnabled Then
-        Result = "On"
-    Else
-        Result = "Off"
-    End If
-
-    Return Result
-
-End Function
-
-Function ProductionClipStatusLabel() As Text
-
-    Dim Result As Text
-
-    If Session.ProfileIndex = ViewerProfiles.PROFILE_ORIN Then
-        Result = "9-animation viewer candidate"
-    Else If ViewerProfiles.IsPartyCharacter(Session.ProfileIndex) Then
-        Result = "9-animation viewer candidate"
-    Else If Session.ProfileIndex = ViewerProfiles.PROFILE_ARIN_V56 Then
-        Result = "v5.6 diagnostic candidate"
-    Else If Session.ProfileIndex = ViewerProfiles.PROFILE_ARIN_ORIGINAL Then
-        Result = "Original 3 clips"
-    Else
-        Result = "Technical fixture"
-    End If
-
-    Return Result
-
-End Function
-
-Function PartyRoleLabel() As Text
-
-    Dim Result As Text
-
-    Result = ActiveProfile.PartyRole
-
-    If Result = "" Then
-        Result = "Technical"
-    End If
-
-    Return Result
-
-End Function
-
-Function MaterialInspectionLabel() As Text
-
-    Dim Result As Text
-
-    If MaterialInspection = Graphics3D.MATERIAL_INSPECTION_LIT Then
-        Result = "Lit"
-    Else If MaterialInspection = Graphics3D.MATERIAL_INSPECTION_BASE_COLOR Then
-        Result = "Base Color"
-    Else If MaterialInspection = Graphics3D.MATERIAL_INSPECTION_NORMAL Then
-        Result = "Normal"
-    Else If MaterialInspection = Graphics3D.MATERIAL_INSPECTION_ROUGHNESS Then
-        Result = "Roughness"
-    Else If MaterialInspection = Graphics3D.MATERIAL_INSPECTION_METALLIC Then
-        Result = "Metallic"
-    Else If MaterialInspection = Graphics3D.MATERIAL_INSPECTION_OCCLUSION Then
-        Result = "Occlusion"
-    Else
-        Result = "Emissive"
-    End If
-
-    Return Result
-
-End Function
-
-Function AutoOrbitLabel() As Text
-
-    Dim Result As Text
-
-    If ViewerCameraState.AutoOrbit Then
-        Result = "On"
-    Else
-        Result = "Off"
     End If
 
     Return Result

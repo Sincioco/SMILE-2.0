@@ -3,6 +3,8 @@ Module Smile.Tools.Character3DViewerUi
 
 Option Explicit
 
+Import Smile.Simple3D.Graphics3D As Graphics3D
+
 Public Type State
     Visibility As Number
     CalibrationVisible As Boolean
@@ -76,5 +78,236 @@ Public Sub ClearConfirmation(ByRef Value As State)
     Value.CalibrationClearAllStage = 0
 
 End Sub
+
+Public Function PlaybackLabel(Family As Text, Paused As Boolean,
+    PausedVerb As Text) As Text
+
+    Dim Result As Text
+
+    If Paused Then
+        Result = "Play " + Family
+    Else
+        Result = PausedVerb + " " + Family
+    End If
+
+    Return Result
+
+End Function
+
+Public Function CalibrationTargetLabel(Target As Number) As Text
+
+    Dim Result As Text
+
+    If Target = 0 Then
+        Result = "Weapon Wrist"
+    Else If Target = 1 Then
+        Result = "Shield Wrist"
+    Else If Target = 2 Then
+        Result = "Weapon"
+    Else
+        Result = "Shield"
+    End If
+
+    Return Result
+
+End Function
+
+Public Function CalibrationAxisLabel(Axis As Number) As Text
+
+    Dim Result As Text
+
+    If Axis = 0 Then
+        Result = "X"
+    Else If Axis = 1 Then
+        Result = "Y"
+    Else
+        Result = "Z"
+    End If
+
+    Return Result
+
+End Function
+
+Public Function CalibrationTransformLabel(Transform As Number) As Text
+
+    Dim Result As Text
+
+    If Transform = 1 Then
+        Result = "Move"
+    Else
+        Result = "Rotate"
+    End If
+
+    Return Result
+
+End Function
+
+Public Function CalibrationUnitLabel(Transform As Number) As Text
+
+    Dim Result As Text
+
+    If Transform = 1 Then
+        Result = "units"
+    Else
+        Result = "degrees"
+    End If
+
+    Return Result
+
+End Function
+
+Public Function CalibrationResetClipLabel(Confirming As Boolean) As Text
+
+    Dim Result As Text
+
+    If Confirming Then
+        Result = "Confirm Current Clip?"
+    Else
+        Result = "Delete All Key Frames"
+    End If
+
+    Return Result
+
+End Function
+
+Public Function CalibrationResetAllLabel(Stage As Number) As Text
+
+    Dim Result As Text
+
+    If Stage = 1 Then
+        Result = "Confirm All?"
+    Else If Stage >= 2 Then
+        Result = "Really Clear?"
+    Else
+        Result = "Reset All"
+    End If
+
+    Return Result
+
+End Function
+
+Public Function BackgroundLabel(Index As Number) As Text
+
+    Dim Result As Text
+
+    If Index = 1 Then
+        Result = "BG GREEN"
+    Else If Index = 2 Then
+        Result = "BG PURPLE"
+    Else If Index = 3 Then
+        Result = "BG SCENE"
+    Else If Index = 4 Then
+        Result = "BG LOGO"
+    Else
+        Result = "BG BLACK"
+    End If
+
+    Return Result
+
+End Function
+
+Public Function DragonLabel(Inspection As Boolean, Available As Boolean,
+    Visible As Boolean) As Text
+
+    Dim Result As Text
+
+    If Inspection Then
+
+        Result = "VFX ON"
+
+        If Not Visible Then
+            Result = "VFX OFF"
+        End If
+
+    Else If Not Available Then
+
+        Result = "NO DRAGON"
+
+    Else If Visible Then
+
+        Result = "DRAGON ON"
+
+    Else
+        Result = "DRAGON OFF"
+
+    End If
+
+    Return Result
+
+End Function
+
+Public Function MaterialInspectionLabel(Inspection As Number) As Text
+
+    Dim Result As Text
+
+    If Inspection = Graphics3D.MATERIAL_INSPECTION_LIT Then
+        Result = "Lit"
+    Else If Inspection = Graphics3D.MATERIAL_INSPECTION_BASE_COLOR Then
+        Result = "Base Color"
+    Else If Inspection = Graphics3D.MATERIAL_INSPECTION_NORMAL Then
+        Result = "Normal"
+    Else If Inspection = Graphics3D.MATERIAL_INSPECTION_ROUGHNESS Then
+        Result = "Roughness"
+    Else If Inspection = Graphics3D.MATERIAL_INSPECTION_METALLIC Then
+        Result = "Metallic"
+    Else If Inspection = Graphics3D.MATERIAL_INSPECTION_OCCLUSION Then
+        Result = "Occlusion"
+    Else
+        Result = "Emissive"
+    End If
+
+    Return Result
+
+End Function
+
+Public Function DemoLabel(PartyEnabled As Boolean, ScenePaused As Boolean,
+    DemoEnabled As Boolean) As Text
+
+    Dim Result As Text
+
+    If PartyEnabled And ScenePaused Then
+        Result = "RESUME"
+    Else If PartyEnabled Then
+        Result = "PAUSE"
+    Else If DemoEnabled Then
+        Result = "DEMO ON"
+    Else
+        Result = "DEMO OFF"
+    End If
+
+    Return Result
+
+End Function
+
+Public Function DemoStatusLabel(PartyEnabled As Boolean,
+    ScenePaused As Boolean, DemoEnabled As Boolean) As Text
+
+    Dim Result As Text
+
+    If PartyEnabled And ScenePaused Then
+        Result = "Paused"
+    Else If DemoEnabled Then
+        Result = "On"
+    Else
+        Result = "Off"
+    End If
+
+    Return Result
+
+End Function
+
+Public Function PartyRoleLabel(Role As Text) As Text
+
+    Dim Result As Text
+
+    Result = Role
+
+    If Result = "" Then
+        Result = "Technical"
+    End If
+
+    Return Result
+
+End Function
 
 End Module

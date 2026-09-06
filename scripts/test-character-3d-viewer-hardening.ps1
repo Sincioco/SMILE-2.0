@@ -196,9 +196,34 @@ try {
     foreach ($contract in @(
         'Public Sub ResetCalibration(',
         'Public Sub BeginCalibrationEdit(',
-        'Public Sub FinishCalibrationEdit(')) {
+        'Public Sub FinishCalibrationEdit(',
+        'Public Function PlaybackLabel(',
+        'Public Function CalibrationTargetLabel(',
+        'Public Function BackgroundLabel(',
+        'Public Function DragonLabel(',
+        'Public Function MaterialInspectionLabel(',
+        'Public Function DemoLabel(',
+        'Public Function PartyRoleLabel(')) {
         Assert-Contains $uiSource $contract 'Viewer UI owner'
     }
+    Assert-True (-not $viewerSource.Contains('Function LightingLabel(') -and
+        -not $viewerSource.Contains('Function FlamePlaybackLabel(') -and
+        -not $viewerSource.Contains('Function VfxPlaybackLabel(') -and
+        -not $viewerSource.Contains('Function CalibrationTargetLabel(') -and
+        -not $viewerSource.Contains('Function CalibrationAxisLabel(') -and
+        -not $viewerSource.Contains('Function CalibrationTransformLabel(') -and
+        -not $viewerSource.Contains('Function CalibrationUnitLabel(') -and
+        -not $viewerSource.Contains('Function CalibrationResetClipLabel(') -and
+        -not $viewerSource.Contains('Function CalibrationResetAllLabel(') -and
+        -not $viewerSource.Contains('Function BackgroundLabel(') -and
+        -not $viewerSource.Contains('Function DragonLabel(') -and
+        -not $viewerSource.Contains('Function MaterialInspectionLabel(') -and
+        -not $viewerSource.Contains('Function DemoLabel(') -and
+        -not $viewerSource.Contains('Function DemoStatusLabel(') -and
+        -not $viewerSource.Contains('Function ProductionClipStatusLabel(') -and
+        -not $viewerSource.Contains('Function PartyRoleLabel(') -and
+        -not $viewerSource.Contains('Function AutoOrbitLabel(')) `
+        'UI presentation-label policy must remain in ViewerUi.'
     foreach ($contract in @(
         'Public Sub BeginDrag(',
         'Public Sub FinishDrag(',
