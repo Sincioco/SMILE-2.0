@@ -286,7 +286,8 @@ Call ApplyEquipmentCalibration()
 
 ViewerGizmoState.HoldGrip = True
 ViewerUiState.CalibrationTransform = CALIBRATION_TRANSFORM_ROTATE
-TestAnchor = EquipmentGripThousandths(WEAPON_PART_INDEX, "HandRight")
+TestAnchor = ViewerCalibration.EquipmentGripThousandths(
+    Character, WEAPON_PART_INDEX, "HandRight")
 
 For TestIndex = 1 To 6
 
@@ -298,7 +299,8 @@ For TestIndex = 1 To 6
     Call ReloadCurrentCalibrationKeyframe()
 End For
 
-TestPosition = EquipmentGripThousandths(WEAPON_PART_INDEX, "HandRight")
+TestPosition = ViewerCalibration.EquipmentGripThousandths(
+    Character, WEAPON_PART_INDEX, "HandRight")
 
 Call CalibrationCheck(Abs(TestPosition.X - TestAnchor.X) < 1000 And
     Abs(TestPosition.Y - TestAnchor.Y) < 1000 And Abs(TestPosition.Z - TestAnchor.Z) < 1000,

@@ -429,6 +429,14 @@ Call Check(ViewerActors.ApplyPresentationOffset(
 Call Check(ViewerCalibration.ApplyWristOffsets(
     CalibrationState, PartyPrimary.Actor, 0, -1, -1, False))
 
+Call ViewerCalibration.SetTargetValue(CalibrationState, 0, 2, 1, 1, 17)
+Call Check(ViewerCalibration.TargetChannel(2, 1, 1) = 13)
+Call Check(ViewerCalibration.TargetValue(CalibrationState, 0, 2, 1, 1) = 17)
+Call ViewerCalibration.ResetTarget(CalibrationState, 0, 2, 1)
+Call Check(ViewerCalibration.TargetValue(CalibrationState, 0, 2, 1, 1) = 0)
+Call Check(ViewerCalibration.RoundedGripOffset(1500) = 2 And
+    ViewerCalibration.RoundedGripOffset(-1500) = -2)
+
 PartyState.DragonCounter = 1
 
 Call ViewerParty.PrepareDragonTurn(PartyState, -1)

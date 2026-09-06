@@ -25,6 +25,7 @@ $testPrefix = $testPrefix.Replace(
     "Import Smile.Simple3D.Core As Core`n",
     "Import Smile.Simple3D.FireEmitter3D As Fire`n" +
         "Import Smile.Simple3D.LightningVfx3D As Lightning`n" +
+        "Import Smile.Simple3D.Math3D As Math3D`n" +
         "Import Smile.Tools.ArinShieldRim As ArinShieldRim`n" +
         "Import Smile.Tools.DragonPresence As DragonPresence`n" +
         "Import Smile.Simple3D.Core As Core`n")

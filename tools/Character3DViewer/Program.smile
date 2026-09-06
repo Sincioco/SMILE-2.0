@@ -7,7 +7,6 @@ Import Smile.Simple3D.CharacterViewer As CharacterViewer
 Import Smile.UI.Controls As UI
 Import Smile.Simple3D.Core As Core
 Import Smile.Simple3D.Graphics3D As Graphics3D
-Import Smile.Simple3D.Math3D As Math3D
 Import Smile.Simple3D.Scene3D As Scene3D
 Import Smile.Tools.Character3DViewerProfiles As ViewerProfiles
 Import Smile.Tools.BattleAudio As BattleAudio
@@ -3436,21 +3435,13 @@ Function CurrentCalibrationValue() As Number
 
     Dim Result As Number
 
-    If (ViewerUiState.CalibrationTransform = CALIBRATION_TRANSFORM_MOVE And
-        ViewerUiState.CalibrationTarget = CALIBRATION_TARGET_SWORD) Then
-        Result = CalibrationChannelValue(Playback.SelectedClip, 12 + ViewerUiState.CalibrationAxis)
-    Else If (ViewerUiState.CalibrationTransform = CALIBRATION_TRANSFORM_MOVE And
-        ViewerUiState.CalibrationTarget = CALIBRATION_TARGET_SHIELD) Then
-        Result = CalibrationChannelValue(Playback.SelectedClip, 15 + ViewerUiState.CalibrationAxis)
-    Else If ViewerUiState.CalibrationTarget = CALIBRATION_TARGET_SWORD_WRIST Then
-        Result = CalibrationChannelValue(Playback.SelectedClip, ViewerUiState.CalibrationAxis)
-    Else If ViewerUiState.CalibrationTarget = CALIBRATION_TARGET_SHIELD_WRIST Then
-        Result = CalibrationChannelValue(Playback.SelectedClip, 3 + ViewerUiState.CalibrationAxis)
-    Else If ViewerUiState.CalibrationTarget = CALIBRATION_TARGET_SWORD Then
-        Result = CalibrationChannelValue(Playback.SelectedClip, 6 + ViewerUiState.CalibrationAxis)
-    Else
-        Result = CalibrationChannelValue(Playback.SelectedClip, 9 + ViewerUiState.CalibrationAxis)
-    End If
+    Result = ViewerCalibration.TargetValue(
+        Calibration,
+        Playback.SelectedClip,
+        ViewerUiState.CalibrationTarget,
+        ViewerUiState.CalibrationTransform,
+        ViewerUiState.CalibrationAxis
+    )
 
     Return Result
 
@@ -3592,7 +3583,8 @@ Sub SetCurrentCalibrationValue(Value As Number)
             ViewerGizmoState.GripAnchorTarget <> ViewerUiState.CalibrationTarget Or
             ViewerGizmoState.GripAnchorFrame <> CurrentAnimationFrame()) Then
 
-            ViewerGizmoState.GripAnchor = EquipmentGripThousandths(PartIndex, SocketName)
+            ViewerGizmoState.GripAnchor = ViewerCalibration.EquipmentGripThousandths(
+                Character, PartIndex, SocketName)
             ViewerGizmoState.GripAnchorActive = True
             ViewerGizmoState.GripAnchorTarget = ViewerUiState.CalibrationTarget
             ViewerGizmoState.GripAnchorFrame = CurrentAnimationFrame()
@@ -3625,22 +3617,14 @@ Sub SetCurrentCalibrationValue(Value As Number)
             Max(CALIBRATION_MINIMUM_DEGREES, Value))
     End If
 
-    If (ViewerUiState.CalibrationTransform = CALIBRATION_TRANSFORM_MOVE And
-        ViewerUiState.CalibrationTarget = CALIBRATION_TARGET_SWORD) Then
-        Call SetCalibrationChannelValue(Playback.SelectedClip, 12 + ViewerUiState.CalibrationAxis, ClampedValue)
-    Else If (ViewerUiState.CalibrationTransform = CALIBRATION_TRANSFORM_MOVE And
-        ViewerUiState.CalibrationTarget = CALIBRATION_TARGET_SHIELD) Then
-        Call SetCalibrationChannelValue(Playback.SelectedClip, 15 + ViewerUiState.CalibrationAxis, ClampedValue)
-    Else If ViewerUiState.CalibrationTarget = CALIBRATION_TARGET_SWORD_WRIST Then
-        Call SetCalibrationChannelValue(Playback.SelectedClip, ViewerUiState.CalibrationAxis, ClampedValue)
-    Else If ViewerUiState.CalibrationTarget = CALIBRATION_TARGET_SHIELD_WRIST Then
-        Call SetCalibrationChannelValue(Playback.SelectedClip, 3 + ViewerUiState.CalibrationAxis, ClampedValue)
-    Else If ViewerUiState.CalibrationTarget = CALIBRATION_TARGET_SWORD Then
-        Call SetCalibrationChannelValue(Playback.SelectedClip, 6 + ViewerUiState.CalibrationAxis, ClampedValue)
-    Else
-
-        Call SetCalibrationChannelValue(Playback.SelectedClip, 9 + ViewerUiState.CalibrationAxis, ClampedValue)
-    End If
+    Call ViewerCalibration.SetTargetValue(
+        Calibration,
+        Playback.SelectedClip,
+        ViewerUiState.CalibrationTarget,
+        ViewerUiState.CalibrationTransform,
+        ViewerUiState.CalibrationAxis,
+        ClampedValue
+    )
 
     Calibration.SaveLimitReached = False
     ViewerUiState.CalibrationClearConfirm = False
@@ -3673,116 +3657,41 @@ Sub SetCurrentCalibrationValue(Value As Number)
 
 End Sub
 
-Function EquipmentGripThousandths(PartIndex As Number, SocketName As Text) As Core.Vector3
-
-    Dim Result As Core.Vector3
-
-    Result.X = Character3D.SocketValueThousandths(Character, SocketName,
-        Graphics3D.ANIMATOR_SOCKET_POSITION_X, PartIndex)
-    Result.Y = Character3D.SocketValueThousandths(Character, SocketName,
-        Graphics3D.ANIMATOR_SOCKET_POSITION_Y, PartIndex)
-    Result.Z = Character3D.SocketValueThousandths(Character, SocketName,
-        Graphics3D.ANIMATOR_SOCKET_POSITION_Z, PartIndex)
-
-    Return Result
-
-End Function
-
 Function RestoreEquipmentGrip(PartIndex As Number, SocketName As Text) As Boolean
 
-    Dim Position As Core.Vector3
-    Dim Correction As Core.Vector3
-    Dim Angles As Core.Vector3
-    Dim Inverse As Core.Matrix4
-    Dim NextPosition As Core.Vector3
+    Dim Application As ViewerCalibration.ApplicationResult
+    Dim FailureStage As Number
+    Dim Result As Boolean
 
     ''' Recalculate from the captured base, never from an already rounded drag sample.
 
-    If PartIndex = WEAPON_PART_INDEX Then
+    Result = ViewerCalibration.RestoreEquipmentGrip(
+        Calibration,
+        Character,
+        Playback.SelectedClip,
+        PartIndex,
+        SocketName,
+        ViewerGizmoState.GripAnchor,
+        ViewerGizmoState.GripBasePosition,
+        CALIBRATION_MAXIMUM_POSITION,
+        Effects.SwordGlow,
+        Effects.ShieldGlow,
+        Effects.EpicGlowAvailable,
+        Effects.EpicGlowVisible,
+        Application
+    )
+    Session.Ready = Application.Ready And Session.Ready
 
-        Call SetCalibrationChannelValue(Playback.SelectedClip, 12 + 0, ViewerGizmoState.GripBasePosition.X)
-        Call SetCalibrationChannelValue(Playback.SelectedClip, 12 + 1, ViewerGizmoState.GripBasePosition.Y)
-        Call SetCalibrationChannelValue(Playback.SelectedClip, 12 + 2, ViewerGizmoState.GripBasePosition.Z)
+    If Not Session.Ready Then
 
-    Else
+        FailureStage = Application.FailureStage
 
-        Call SetCalibrationChannelValue(Playback.SelectedClip, 15 + 0, ViewerGizmoState.GripBasePosition.X)
-        Call SetCalibrationChannelValue(Playback.SelectedClip, 15 + 1, ViewerGizmoState.GripBasePosition.Y)
-        Call SetCalibrationChannelValue(Playback.SelectedClip, 15 + 2, ViewerGizmoState.GripBasePosition.Z)
+        If FailureStage = 0 Then
+            FailureStage = 71
+        End If
 
-    End If
+        Call ViewerSession.CaptureFailure(Session, FailureStage)
 
-    Call ApplyEquipmentCalibration()
-
-    Position = EquipmentGripThousandths(PartIndex, SocketName)
-    Correction.X = ViewerGizmoState.GripAnchor.X - Position.X
-    Correction.Y = ViewerGizmoState.GripAnchor.Y - Position.Y
-    Correction.Z = ViewerGizmoState.GripAnchor.Z - Position.Z
-    Angles.X = CalibrationChannelValue(Playback.SelectedClip, 6 + CALIBRATION_AXIS_X)
-    Angles.Y = CalibrationChannelValue(Playback.SelectedClip, 6 + CALIBRATION_AXIS_Y)
-    Angles.Z = CalibrationChannelValue(Playback.SelectedClip, 6 + CALIBRATION_AXIS_Z)
-
-    If PartIndex = SHIELD_PART_INDEX Then
-
-        Angles.X = CalibrationChannelValue(Playback.SelectedClip, 9 + CALIBRATION_AXIS_X)
-        Angles.Y = CalibrationChannelValue(Playback.SelectedClip, 9 + CALIBRATION_AXIS_Y)
-        Angles.Z = CalibrationChannelValue(Playback.SelectedClip, 9 + CALIBRATION_AXIS_Z)
-
-    End If
-
-    ''' Part translation precedes the XYZ pivot rotation; undo Z, Y, X for compensation.
-    Inverse = Math3D.Multiply(Math3D.RotationZ(-Angles.Z), Math3D.RotationY(-Angles.Y))
-    Inverse = Math3D.Multiply(Inverse, Math3D.RotationX(-Angles.X))
-    Correction = Math3D.TransformPoint(Correction, Inverse)
-
-    If PartIndex = WEAPON_PART_INDEX Then
-
-        NextPosition.X = CalibrationChannelValue(Playback.SelectedClip, 12 + 0) + RoundedGripOffset(Correction.X)
-        NextPosition.Y = CalibrationChannelValue(Playback.SelectedClip, 12 + 1) + RoundedGripOffset(Correction.Y)
-        NextPosition.Z = CalibrationChannelValue(Playback.SelectedClip, 12 + 2) + RoundedGripOffset(Correction.Z)
-
-    Else
-
-        NextPosition.X = CalibrationChannelValue(Playback.SelectedClip, 15 + 0) + RoundedGripOffset(Correction.X)
-        NextPosition.Y = CalibrationChannelValue(Playback.SelectedClip, 15 + 1) + RoundedGripOffset(Correction.Y)
-        NextPosition.Z = CalibrationChannelValue(Playback.SelectedClip, 15 + 2) + RoundedGripOffset(Correction.Z)
-
-    End If
-
-    If (Abs(NextPosition.X) > CALIBRATION_MAXIMUM_POSITION Or
-        Abs(NextPosition.Y) > CALIBRATION_MAXIMUM_POSITION Or
-        Abs(NextPosition.Z) > CALIBRATION_MAXIMUM_POSITION) Then
-        Return False
-    End If
-
-    If PartIndex = WEAPON_PART_INDEX Then
-
-        Call SetCalibrationChannelValue(Playback.SelectedClip, 12 + 0, NextPosition.X)
-        Call SetCalibrationChannelValue(Playback.SelectedClip, 12 + 1, NextPosition.Y)
-        Call SetCalibrationChannelValue(Playback.SelectedClip, 12 + 2, NextPosition.Z)
-
-    Else
-
-        Call SetCalibrationChannelValue(Playback.SelectedClip, 15 + 0, NextPosition.X)
-        Call SetCalibrationChannelValue(Playback.SelectedClip, 15 + 1, NextPosition.Y)
-        Call SetCalibrationChannelValue(Playback.SelectedClip, 15 + 2, NextPosition.Z)
-
-    End If
-
-    Call ApplyEquipmentCalibration()
-
-    Return True
-
-End Function
-
-Function RoundedGripOffset(Value As Number) As Number
-
-    Dim Result As Number
-
-    If Value < 0 Then
-        Result = (Value - 500) / 1000
-    Else
-        Result = (Value + 500) / 1000
     End If
 
     Return Result
@@ -3813,32 +3722,16 @@ End Sub
 
 Sub ResetCalibrationTarget()
 
-    Dim Axis As Number
-
     ViewerGizmoState.GripAnchorActive = False
 
     Call BeginCalibrationEdit()
 
-    For Axis = 0 To CALIBRATION_AXIS_COUNT - 1
-
-        If (ViewerUiState.CalibrationTransform = CALIBRATION_TRANSFORM_MOVE And
-            ViewerUiState.CalibrationTarget = CALIBRATION_TARGET_SWORD) Then
-            Call SetCalibrationChannelValue(Playback.SelectedClip, 12 + Axis, 0)
-        Else If (ViewerUiState.CalibrationTransform = CALIBRATION_TRANSFORM_MOVE And
-            ViewerUiState.CalibrationTarget = CALIBRATION_TARGET_SHIELD) Then
-            Call SetCalibrationChannelValue(Playback.SelectedClip, 15 + Axis, 0)
-        Else If ViewerUiState.CalibrationTarget = CALIBRATION_TARGET_SWORD_WRIST Then
-            Call SetCalibrationChannelValue(Playback.SelectedClip, Axis, 0)
-        Else If ViewerUiState.CalibrationTarget = CALIBRATION_TARGET_SHIELD_WRIST Then
-            Call SetCalibrationChannelValue(Playback.SelectedClip, 3 + Axis, 0)
-        Else If ViewerUiState.CalibrationTarget = CALIBRATION_TARGET_SWORD Then
-            Call SetCalibrationChannelValue(Playback.SelectedClip, 6 + Axis, 0)
-        Else
-
-            Call SetCalibrationChannelValue(Playback.SelectedClip, 9 + Axis, 0)
-        End If
-
-    End For
+    Call ViewerCalibration.ResetTarget(
+        Calibration,
+        Playback.SelectedClip,
+        ViewerUiState.CalibrationTarget,
+        ViewerUiState.CalibrationTransform
+    )
 
     Calibration.SaveLimitReached = False
     ViewerUiState.CalibrationClearConfirm = False

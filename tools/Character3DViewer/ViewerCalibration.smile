@@ -6,6 +6,7 @@ Option Explicit
 Import Smile.Simple3D.Character3D As Character3D
 Import Smile.Simple3D.Core As Core
 Import Smile.Simple3D.Graphics3D As Graphics3D
+Import Smile.Simple3D.Math3D As Math3D
 Import Smile.Tools.Character3DViewerProfiles As ViewerProfiles
 Import Smile.Tools.CalibrationJson As CalibrationJson
 
@@ -175,6 +176,65 @@ Public Function ChannelValue(ByRef Value As State, Clip As Number, Channel As Nu
     Return Result
 
 End Function
+
+Public Function TargetChannel(Target As Number, Transform As Number,
+    Axis As Number) As Number
+
+    Dim Result As Number
+
+    If Transform = 1 And Target = 2 Then
+        Result = 12 + Axis
+    Else If Transform = 1 And Target = 3 Then
+        Result = 15 + Axis
+    Else If Target = 0 Then
+        Result = Axis
+    Else If Target = 1 Then
+        Result = 3 + Axis
+    Else If Target = 2 Then
+        Result = 6 + Axis
+    Else
+        Result = 9 + Axis
+    End If
+
+    Return Result
+
+End Function
+
+Public Function TargetValue(ByRef Value As State, Clip As Number,
+    Target As Number, Transform As Number, Axis As Number) As Number
+
+    Dim Channel As Number
+    Dim Result As Number
+
+    Channel = TargetChannel(Target, Transform, Axis)
+    Result = ChannelValue(Value, Clip, Channel)
+
+    Return Result
+
+End Function
+
+Public Sub SetTargetValue(ByRef Value As State, Clip As Number,
+    Target As Number, Transform As Number, Axis As Number,
+    NextValue As Number)
+
+    Dim Channel As Number
+
+    Channel = TargetChannel(Target, Transform, Axis)
+
+    Call SetChannelValue(Value, Clip, Channel, NextValue)
+
+End Sub
+
+Public Sub ResetTarget(ByRef Value As State, Clip As Number,
+    Target As Number, Transform As Number)
+
+    Dim Axis As Number
+
+    For Axis = 0 To AXIS_COUNT - 1
+        Call SetTargetValue(Value, Clip, Target, Transform, Axis, 0)
+    End For
+
+End Sub
 
 Public Sub SetChannelValue(ByRef Value As State, Clip As Number, Channel As Number,
     ChannelValue As Number)
@@ -842,6 +902,117 @@ Public Function ApplyEquipmentTransforms(ByRef Value As State,
     End If
 
     Return Result
+
+End Function
+
+Public Function EquipmentGripThousandths(ByRef Actor As Character3D.Actor,
+    PartIndex As Number, SocketName As Text) As Core.Vector3
+
+    Dim Result As Core.Vector3
+
+    Result.X = Character3D.SocketValueThousandths(
+        Actor, SocketName, Graphics3D.ANIMATOR_SOCKET_POSITION_X, PartIndex)
+    Result.Y = Character3D.SocketValueThousandths(
+        Actor, SocketName, Graphics3D.ANIMATOR_SOCKET_POSITION_Y, PartIndex)
+    Result.Z = Character3D.SocketValueThousandths(
+        Actor, SocketName, Graphics3D.ANIMATOR_SOCKET_POSITION_Z, PartIndex)
+
+    Return Result
+
+End Function
+
+Public Function RoundedGripOffset(Value As Number) As Number
+
+    Dim Result As Number
+
+    If Value < 0 Then
+        Result = (Value - 500) / 1000
+    Else
+        Result = (Value + 500) / 1000
+    End If
+
+    Return Result
+
+End Function
+
+Private Sub MergeApplication(ByRef Value As ApplicationResult,
+    NextValue As ApplicationResult)
+
+    Value.Ready = NextValue.Ready And Value.Ready
+
+    If Value.FailureStage = 0 Then
+        Value.FailureStage = NextValue.FailureStage
+    End If
+
+End Sub
+
+Public Function RestoreEquipmentGrip(ByRef Value As State,
+    ByRef Actor As Character3D.Actor, Clip As Number,
+    PartIndex As Number, SocketName As Text, GripAnchor As Core.Vector3,
+    GripBasePosition As Core.Vector3, MaximumPosition As Number,
+    ByRef SwordGlow As Core.Object3D, ByRef ShieldGlow As Core.Object3D,
+    GlowAvailable As Boolean, ByRef GlowVisible As Boolean,
+    ByRef Application As ApplicationResult) As Boolean
+
+    Dim Angles As Core.Vector3
+    Dim Correction As Core.Vector3
+    Dim Inverse As Core.Matrix4
+    Dim NextApplication As ApplicationResult
+    Dim NextPosition As Core.Vector3
+    Dim Position As Core.Vector3
+    Dim PositionChannel As Number
+    Dim RotationChannel As Number
+
+    PositionChannel = 12
+    RotationChannel = 6
+
+    If PartIndex = SHIELD_PART_INDEX Then
+        PositionChannel = 15
+        RotationChannel = 9
+    End If
+
+    Call SetChannelValue(Value, Clip, PositionChannel, GripBasePosition.X)
+    Call SetChannelValue(Value, Clip, PositionChannel + 1, GripBasePosition.Y)
+    Call SetChannelValue(Value, Clip, PositionChannel + 2, GripBasePosition.Z)
+
+    Application = ApplyEquipmentTransforms(Value, Actor, Clip,
+        SwordGlow, ShieldGlow, GlowAvailable, GlowVisible)
+    Position = EquipmentGripThousandths(Actor, PartIndex, SocketName)
+    Correction.X = GripAnchor.X - Position.X
+    Correction.Y = GripAnchor.Y - Position.Y
+    Correction.Z = GripAnchor.Z - Position.Z
+    Angles.X = ChannelValue(Value, Clip, RotationChannel)
+    Angles.Y = ChannelValue(Value, Clip, RotationChannel + 1)
+    Angles.Z = ChannelValue(Value, Clip, RotationChannel + 2)
+
+    ''' Part translation precedes the XYZ pivot rotation; undo Z, Y, X for compensation.
+    Inverse = Math3D.Multiply(
+        Math3D.RotationZ(-Angles.Z), Math3D.RotationY(-Angles.Y))
+    Inverse = Math3D.Multiply(Inverse, Math3D.RotationX(-Angles.X))
+    Correction = Math3D.TransformPoint(Correction, Inverse)
+    NextPosition.X = ChannelValue(Value, Clip, PositionChannel)
+    NextPosition.Y = ChannelValue(Value, Clip, PositionChannel + 1)
+    NextPosition.Z = ChannelValue(Value, Clip, PositionChannel + 2)
+    NextPosition.X = NextPosition.X + RoundedGripOffset(Correction.X)
+    NextPosition.Y = NextPosition.Y + RoundedGripOffset(Correction.Y)
+    NextPosition.Z = NextPosition.Z + RoundedGripOffset(Correction.Z)
+
+    If (Abs(NextPosition.X) > MaximumPosition Or
+        Abs(NextPosition.Y) > MaximumPosition Or
+        Abs(NextPosition.Z) > MaximumPosition) Then
+        Return False
+    End If
+
+    Call SetChannelValue(Value, Clip, PositionChannel, NextPosition.X)
+    Call SetChannelValue(Value, Clip, PositionChannel + 1, NextPosition.Y)
+    Call SetChannelValue(Value, Clip, PositionChannel + 2, NextPosition.Z)
+
+    NextApplication = ApplyEquipmentTransforms(Value, Actor, Clip,
+        SwordGlow, ShieldGlow, GlowAvailable, GlowVisible)
+
+    Call MergeApplication(Application, NextApplication)
+
+    Return True
 
 End Function
 

@@ -177,9 +177,14 @@ try {
         'Public Function Persist(',
         'Public Function Undo(',
         'Public Sub Evaluate(',
+        'Public Function TargetValue(',
+        'Public Sub SetTargetValue(',
+        'Public Sub ResetTarget(',
         'Public Function ApplyWristOffsets(',
         'Public Function ApplyEquipmentCoupling(',
-        'Public Function ApplyEquipmentTransforms(')) {
+        'Public Function ApplyEquipmentTransforms(',
+        'Public Function EquipmentGripThousandths(',
+        'Public Function RestoreEquipmentGrip(')) {
         Assert-Contains $calibrationSource $contract 'Viewer calibration owner'
     }
     foreach ($contract in @(
@@ -277,6 +282,10 @@ try {
         -not $viewerSource.Contains('Character3D.SetPartPivotRotationThousandths(') -and
         -not $viewerSource.Contains('Graphics3D.SetObjectPivotRotationThousandths3D(')) `
         'Calibration application and equipment-transform implementation must remain in ViewerCalibration.'
+    Assert-True (-not $viewerSource.Contains('Function EquipmentGripThousandths(') -and
+        -not $viewerSource.Contains('Function RoundedGripOffset(') -and
+        -not $viewerSource.Contains('Correction.X = ViewerGizmoState.GripAnchor.X')) `
+        'Calibration target mapping and grip-preservation math must remain in ViewerCalibration.'
     Assert-True (-not $viewerSource.Contains('Dim TimelineScrubbing As Boolean') -and
         -not $viewerSource.Contains('Dim SliderDragOwner As Number') -and
         -not $viewerSource.Contains('Dim TransformGizmoDragging As Boolean') -and
