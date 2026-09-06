@@ -18,6 +18,8 @@ Private Const BODY_PART_INDEX = 2
 
 Public Type OperationResult
     Applied As Boolean
+    Persisted As Boolean
+    Finished As Boolean
     Ready As Boolean
     FailureStage As Number
 End Type
@@ -198,7 +200,6 @@ Public Function CancelEdit(ByRef Calibration As ViewerCalibration.State,
     ByRef Gizmo As ViewerGizmo.State, ByRef Camera As ViewerCamera.State,
     ByRef Effects As ViewerEffects.State) As OperationResult
 
-    Dim Finished As Boolean
     Dim Result As OperationResult
 
     Result.Ready = True
@@ -213,7 +214,7 @@ Public Function CancelEdit(ByRef Calibration As ViewerCalibration.State,
     Result = ApplyPose(
         Calibration, Actor, Clip, SwordWristNode, ShieldWristNode,
         Available, Effects)
-    Finished = FinishEdit(Ui, Gizmo, Camera, Effects)
+    Result.Finished = FinishEdit(Ui, Gizmo, Camera, Effects)
 
     Return Result
 
@@ -387,6 +388,301 @@ Public Function ResetTarget(ByRef Calibration As ViewerCalibration.State,
     Result = ApplyPose(
         Calibration, Actor, Clip, SwordWristNode, ShieldWristNode,
         Available, Effects)
+
+    Call ViewerEffects.InvalidateVisualHistory(Effects)
+
+    Return Result
+
+End Function
+
+Private Function ApplyWristPose(ByRef Calibration As ViewerCalibration.State,
+    ByRef Actor As Character3D.Actor, Clip As Number,
+    SwordWristNode As Number, ShieldWristNode As Number,
+    Available As Boolean) As OperationResult
+
+    Dim Result As OperationResult
+
+    Result.Applied = True
+    Result.Ready = ViewerCalibration.ApplyWristOffsets(
+        Calibration,
+        Actor,
+        Clip,
+        SwordWristNode,
+        ShieldWristNode,
+        Available
+    )
+
+    Return Result
+
+End Function
+
+Public Function ImportOrCommit(ByRef Calibration As ViewerCalibration.State,
+    ByRef Actor As Character3D.Actor, Clip As Number, ProfileIndex As Number,
+    SwordWristNode As Number, ShieldWristNode As Number,
+    Available As Boolean, ByRef Ui As ViewerUi.State,
+    ByRef Effects As ViewerEffects.State) As OperationResult
+
+    Dim Accepted As Boolean
+    Dim Result As OperationResult
+    Dim WasPending As Boolean
+
+    Result.Ready = True
+    WasPending = Calibration.ImportPending
+    Accepted = ViewerCalibration.ImportOrCommit(
+        Calibration, Actor, Clip, Ui.CalibrationEditing)
+
+    If Not Accepted Or Not WasPending Then
+        Return Result
+    End If
+
+    Call EvaluateCurrent(
+        Calibration, Actor, Clip, ProfileIndex,
+        Ui.CalibrationEditing, Available)
+
+    Result = ApplyPose(
+        Calibration, Actor, Clip, SwordWristNode, ShieldWristNode,
+        Available, Effects)
+
+    Call ViewerEffects.InvalidateVisualHistory(Effects)
+
+    Return Result
+
+End Function
+
+Public Function DeleteCurrentKey(
+    ByRef Calibration As ViewerCalibration.State,
+    ByRef Actor As Character3D.Actor, Clip As Number, ProfileIndex As Number,
+    SwordWristNode As Number, ShieldWristNode As Number,
+    Available As Boolean, ByRef Ui As ViewerUi.State,
+    ByRef Effects As ViewerEffects.State) As OperationResult
+
+    Dim Result As OperationResult
+    Dim Transaction As ViewerCalibration.TransactionResult
+
+    Result.Ready = True
+    Transaction = ViewerCalibration.DeleteCurrentKeyAndPersist(
+        Calibration, Actor, Clip, Ui.CalibrationEditing)
+
+    If Not Transaction.Applied Then
+        Return Result
+    End If
+
+    Ui.CalibrationClearConfirm = False
+    Ui.CalibrationClearAllStage = 0
+
+    If Transaction.Persisted Then
+        Call ViewerEffects.InvalidateVisualHistory(Effects)
+    End If
+
+    Call EvaluateCurrent(
+        Calibration, Actor, Clip, ProfileIndex,
+        Ui.CalibrationEditing, Available)
+
+    Result = ApplyWristPose(
+        Calibration, Actor, Clip, SwordWristNode, ShieldWristNode,
+        Available)
+    Result.Persisted = Transaction.Persisted
+
+    Return Result
+
+End Function
+
+Public Sub CopyCurrentKey(ByRef Calibration As ViewerCalibration.State,
+    ByRef Actor As Character3D.Actor, Clip As Number)
+
+    Call ViewerCalibration.CopyKey(
+        Calibration, Clip,
+        ViewerCalibration.CurrentAnimationFrame(Actor, Clip))
+
+End Sub
+
+Public Function ReloadCurrentKey(
+    ByRef Calibration As ViewerCalibration.State,
+    ByRef Actor As Character3D.Actor, Clip As Number,
+    SwordWristNode As Number, ShieldWristNode As Number,
+    Available As Boolean, ByRef Ui As ViewerUi.State,
+    ByRef Gizmo As ViewerGizmo.State, ByRef Camera As ViewerCamera.State,
+    ByRef Effects As ViewerEffects.State) As OperationResult
+
+    Dim Result As OperationResult
+
+    Result.Ready = True
+
+    If Not ViewerCalibration.ReloadCurrentKey(
+        Calibration, Actor, Clip) Then
+        Return Result
+    End If
+
+    Ui.CalibrationClearConfirm = False
+    Ui.CalibrationClearAllStage = 0
+    Result = ApplyPose(
+        Calibration, Actor, Clip, SwordWristNode, ShieldWristNode,
+        Available, Effects)
+    Result.Finished = FinishEdit(Ui, Gizmo, Camera, Effects)
+
+    Call ViewerEffects.InvalidateVisualHistory(Effects)
+
+    Return Result
+
+End Function
+
+Public Function PasteCurrentKey(
+    ByRef Calibration As ViewerCalibration.State,
+    ByRef Actor As Character3D.Actor, Clip As Number, ProfileIndex As Number,
+    SwordWristNode As Number, ShieldWristNode As Number,
+    Available As Boolean, ByRef Ui As ViewerUi.State,
+    ByRef Effects As ViewerEffects.State) As OperationResult
+
+    Dim Result As OperationResult
+
+    Result.Ready = True
+    Result.Persisted = ViewerCalibration.PasteClipboardAndPersist(
+        Calibration, Actor, Clip, Ui.CalibrationEditing)
+
+    If Not Result.Persisted Then
+        Return Result
+    End If
+
+    Call EvaluateCurrent(
+        Calibration, Actor, Clip, ProfileIndex,
+        Ui.CalibrationEditing, Available)
+
+    Result = ApplyWristPose(
+        Calibration, Actor, Clip, SwordWristNode, ShieldWristNode,
+        Available)
+    Result.Persisted = True
+
+    Call ViewerEffects.InvalidateVisualHistory(Effects)
+
+    Return Result
+
+End Function
+
+Public Function ClearSelectedClip(
+    ByRef Calibration As ViewerCalibration.State,
+    ByRef Actor As Character3D.Actor, Clip As Number,
+    SwordWristNode As Number, ShieldWristNode As Number,
+    Available As Boolean, ByRef Ui As ViewerUi.State,
+    ByRef Gizmo As ViewerGizmo.State, ByRef Camera As ViewerCamera.State,
+    ByRef Effects As ViewerEffects.State) As OperationResult
+
+    Dim Result As OperationResult
+    Dim Transaction As ViewerCalibration.TransactionResult
+
+    Transaction = ViewerCalibration.ClearClipAndPersist(
+        Calibration, Actor, Clip, Ui.CalibrationEditing)
+    Ui.CalibrationClearConfirm = False
+
+    If Transaction.Persisted Then
+        Call ViewerEffects.InvalidateVisualHistory(Effects)
+    End If
+
+    Result = ApplyPose(
+        Calibration, Actor, Clip, SwordWristNode, ShieldWristNode,
+        Available, Effects)
+    Result.Persisted = Transaction.Persisted
+    Result.Finished = FinishEdit(Ui, Gizmo, Camera, Effects)
+
+    Return Result
+
+End Function
+
+Public Function ClearAll(ByRef Calibration As ViewerCalibration.State,
+    ByRef Actor As Character3D.Actor, Clip As Number,
+    SwordWristNode As Number, ShieldWristNode As Number,
+    Available As Boolean, ByRef Ui As ViewerUi.State,
+    ByRef Gizmo As ViewerGizmo.State, ByRef Camera As ViewerCamera.State,
+    ByRef Effects As ViewerEffects.State) As OperationResult
+
+    Dim Result As OperationResult
+    Dim Transaction As ViewerCalibration.TransactionResult
+
+    Transaction = ViewerCalibration.ClearAllAndPersist(
+        Calibration, Actor, Clip, Ui.CalibrationEditing)
+    Ui.CalibrationClearConfirm = False
+    Ui.CalibrationClearAllStage = 0
+
+    If Transaction.Persisted Then
+        Call ViewerEffects.InvalidateVisualHistory(Effects)
+    End If
+
+    Result = ApplyPose(
+        Calibration, Actor, Clip, SwordWristNode, ShieldWristNode,
+        Available, Effects)
+    Result.Persisted = Transaction.Persisted
+    Result.Finished = FinishEdit(Ui, Gizmo, Camera, Effects)
+
+    Return Result
+
+End Function
+
+Public Function SaveCurrentFrame(
+    ByRef Calibration As ViewerCalibration.State,
+    ByRef Actor As Character3D.Actor, Clip As Number,
+    ByRef Ui As ViewerUi.State, ByRef Gizmo As ViewerGizmo.State,
+    ByRef Camera As ViewerCamera.State,
+    ByRef Effects As ViewerEffects.State) As OperationResult
+
+    Dim Result As OperationResult
+
+    Result.Ready = True
+
+    If Calibration.StorageRejected Then
+        Return Result
+    End If
+
+    Call BeginEdit(Calibration, Actor, Clip, Ui, Camera, Effects)
+
+    Ui.CalibrationClearConfirm = False
+    Result.Applied = True
+    Result.Persisted = ViewerCalibration.CommitCurrentKey(
+        Calibration,
+        Actor,
+        Clip,
+        Ui.CalibrationEditingFrame,
+        Ui.CalibrationEditing
+    )
+
+    If Result.Persisted Then
+        Call ViewerEffects.InvalidateVisualHistory(Effects)
+    End If
+
+    If Not Calibration.WriteFailed Then
+        Result.Finished = FinishEdit(Ui, Gizmo, Camera, Effects)
+    End If
+
+    Return Result
+
+End Function
+
+Public Function UndoLastChange(
+    ByRef Calibration As ViewerCalibration.State,
+    ByRef Actor As Character3D.Actor, Clip As Number, ProfileIndex As Number,
+    SwordWristNode As Number, ShieldWristNode As Number,
+    Available As Boolean, ByRef Ui As ViewerUi.State,
+    ByRef Gizmo As ViewerGizmo.State, ByRef Camera As ViewerCamera.State,
+    ByRef Effects As ViewerEffects.State) As OperationResult
+
+    Dim Finished As Boolean
+    Dim Result As OperationResult
+
+    Result.Ready = True
+    Finished = FinishEdit(Ui, Gizmo, Camera, Effects)
+
+    If Not ViewerCalibration.Undo(Calibration, Actor, Clip) Then
+        Result.Finished = Finished
+
+        Return Result
+    End If
+
+    Call EvaluateCurrent(
+        Calibration, Actor, Clip, ProfileIndex,
+        Ui.CalibrationEditing, Available)
+
+    Result = ApplyPose(
+        Calibration, Actor, Clip, SwordWristNode, ShieldWristNode,
+        Available, Effects)
+    Result.Finished = Finished
 
     Call ViewerEffects.InvalidateVisualHistory(Effects)
 

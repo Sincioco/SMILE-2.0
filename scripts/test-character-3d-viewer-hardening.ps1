@@ -227,7 +227,16 @@ try {
         'Public Function FinishEdit(',
         'Public Function CancelEdit(',
         'Public Function SetCurrentValue(',
-        'Public Function ResetTarget(')) {
+        'Public Function ResetTarget(',
+        'Public Function ImportOrCommit(',
+        'Public Function DeleteCurrentKey(',
+        'Public Sub CopyCurrentKey(',
+        'Public Function ReloadCurrentKey(',
+        'Public Function PasteCurrentKey(',
+        'Public Function ClearSelectedClip(',
+        'Public Function ClearAll(',
+        'Public Function SaveCurrentFrame(',
+        'Public Function UndoLastChange(')) {
         Assert-Contains $calibrationEditingSource $contract 'Viewer calibration editing owner'
     }
     foreach ($contract in @(
@@ -512,6 +521,16 @@ try {
         -not $viewerSource.Contains('ViewerCalibration.EquipmentGripThousandths(') -and
         -not $viewerSource.Contains('ViewerGizmoState.GripBasePosition.')) `
         'Calibration edit-session implementation must remain in ViewerCalibrationEditing.'
+    Assert-True (-not $viewerSource.Contains('ViewerCalibration.DeleteCurrentKeyAndPersist(') -and
+        -not $viewerSource.Contains('ViewerCalibration.CopyKey(') -and
+        -not $viewerSource.Contains('ViewerCalibration.ReloadCurrentKey(') -and
+        -not $viewerSource.Contains('ViewerCalibration.PasteClipboardAndPersist(') -and
+        -not $viewerSource.Contains('ViewerCalibration.ClearClipAndPersist(') -and
+        -not $viewerSource.Contains('ViewerCalibration.ClearAllAndPersist(') -and
+        -not $viewerSource.Contains('ViewerCalibration.CommitCurrentKey(') -and
+        -not $viewerSource.Contains('ViewerCalibration.Undo(') -and
+        -not $viewerSource.Contains('ViewerCalibration.ImportOrCommit(')) `
+        'Calibration command transactions and pose-refresh ordering must remain in ViewerCalibrationEditing.'
     Assert-True (-not $viewerSource.Contains('Dim TimelineScrubbing As Boolean') -and
         -not $viewerSource.Contains('Dim SliderDragOwner As Number') -and
         -not $viewerSource.Contains('Dim TransformGizmoDragging As Boolean') -and

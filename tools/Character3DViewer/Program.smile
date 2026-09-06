@@ -2465,8 +2465,7 @@ End Sub
 
 Sub HandleCalibrationImport()
 
-    Dim Accepted As Boolean
-    Dim WasPending As Boolean
+    Dim Result As ViewerCalibrationEditing.OperationResult
 
     Call BeginPartyPreview()
 
@@ -2476,18 +2475,12 @@ Sub HandleCalibrationImport()
         Playback.DemoEnabled = False
     End If
 
-    WasPending = Calibration.ImportPending
-    Accepted = ViewerCalibration.ImportOrCommit(
-        Calibration, Character, Playback.SelectedClip, ViewerUiState.CalibrationEditing)
+    Result = ViewerCalibrationEditing.ImportOrCommit(
+        Calibration, Character, Playback.SelectedClip, Session.ProfileIndex,
+        SwordWristNode, ShieldWristNode, CalibrationAvailable,
+        ViewerUiState, Effects)
 
-    If Accepted And WasPending Then
-
-        Call UpdateCalibrationForCurrentFrame()
-        Call ApplyWristCalibration()
-        Call ApplyEquipmentCalibration()
-    Call ViewerEffects.InvalidateVisualHistory(Effects)
-
-    End If
+    Call ApplyCalibrationEditingResult(Result)
 
 End Sub
 
@@ -2506,70 +2499,45 @@ End Sub
 
 Sub DeleteCurrentCalibrationKeyframe()
 
-    Dim Transaction As ViewerCalibration.TransactionResult
+    Dim Result As ViewerCalibrationEditing.OperationResult
 
-    Transaction = ViewerCalibration.DeleteCurrentKeyAndPersist(
-        Calibration, Character, Playback.SelectedClip,
-        ViewerUiState.CalibrationEditing)
-
-    If Not Transaction.Applied Then
-        Return
-    End If
-
-    ViewerUiState.CalibrationClearConfirm = False
-    ViewerUiState.CalibrationClearAllStage = 0
-
-    If Transaction.Persisted Then
-        Call ViewerEffects.InvalidateVisualHistory(Effects)
-    End If
-
-    Call UpdateCalibrationForCurrentFrame()
-    Call ApplyWristCalibration()
+    Result = ViewerCalibrationEditing.DeleteCurrentKey(
+        Calibration, Character, Playback.SelectedClip, Session.ProfileIndex,
+        SwordWristNode, ShieldWristNode, CalibrationAvailable,
+        ViewerUiState, Effects)
+    Session.Ready = Result.Ready And Session.Ready
 
 End Sub
 
 Sub CopyCurrentCalibrationKeyframe()
 
-    Call ViewerCalibration.CopyKey(
-        Calibration, Playback.SelectedClip,
-        ViewerCalibration.CurrentAnimationFrame(
-            Character, Playback.SelectedClip))
+    Call ViewerCalibrationEditing.CopyCurrentKey(
+        Calibration, Character, Playback.SelectedClip)
 
 End Sub
 
 Sub ReloadCurrentCalibrationKeyframe()
 
-    If Not ViewerCalibration.ReloadCurrentKey(
-        Calibration, Character, Playback.SelectedClip) Then
-        Return
-    End If
+    Dim Result As ViewerCalibrationEditing.OperationResult
 
-    ViewerUiState.CalibrationClearConfirm = False
-    ViewerUiState.CalibrationClearAllStage = 0
+    Result = ViewerCalibrationEditing.ReloadCurrentKey(
+        Calibration, Character, Playback.SelectedClip,
+        SwordWristNode, ShieldWristNode, CalibrationAvailable,
+        ViewerUiState, ViewerGizmoState, ViewerCameraState, Effects)
 
-    Call ApplyWristCalibration()
-    Call ApplyEquipmentCalibration()
-    Call FinishCalibrationEdit()
-
-    Call ViewerEffects.InvalidateVisualHistory(Effects)
+    Call ApplyCalibrationEditingResult(Result)
 
 End Sub
 
 Sub PasteCalibrationKeyframe()
 
-    Dim SavedSuccessfully As Boolean
+    Dim Result As ViewerCalibrationEditing.OperationResult
 
-    SavedSuccessfully = ViewerCalibration.PasteClipboardAndPersist(
-        Calibration, Character, Playback.SelectedClip,
-        ViewerUiState.CalibrationEditing)
-
-    If SavedSuccessfully Then
-
-        Call UpdateCalibrationForCurrentFrame()
-        Call ApplyWristCalibration()
-    Call ViewerEffects.InvalidateVisualHistory(Effects)
-
-    End If
+    Result = ViewerCalibrationEditing.PasteCurrentKey(
+        Calibration, Character, Playback.SelectedClip, Session.ProfileIndex,
+        SwordWristNode, ShieldWristNode, CalibrationAvailable,
+        ViewerUiState, Effects)
+    Session.Ready = Result.Ready And Session.Ready
 
 End Sub
 
@@ -2634,14 +2602,14 @@ Sub ApplyCalibrationEditingResult(
 
     Session.Ready = Result.Ready And Session.Ready
 
-    If Result.Applied And Not Session.Ready Then
-
-        If Result.FailureStage = 0 Then
-            Result.FailureStage = 71
-        End If
-
+    If (Result.Applied And
+        Not Session.Ready And
+        Result.FailureStage <> 0) Then
         Call ViewerSession.CaptureFailure(Session, Result.FailureStage)
+    End If
 
+    If Result.Finished Then
+        Session.CharacterSwitchBlocked = False
     End If
 
 End Sub
@@ -2682,10 +2650,6 @@ Sub CancelCalibrationEdit()
         ViewerUiState, ViewerGizmoState, ViewerCameraState, Effects)
 
     Call ApplyCalibrationEditingResult(Result)
-
-    If Result.Applied Then
-        Session.CharacterSwitchBlocked = False
-    End If
 
 End Sub
 
@@ -2748,87 +2712,60 @@ End Sub
 
 Sub ClearSelectedClipCalibration()
 
-    Dim Transaction As ViewerCalibration.TransactionResult
+    Dim Result As ViewerCalibrationEditing.OperationResult
 
-    Transaction = ViewerCalibration.ClearClipAndPersist(
+    Result = ViewerCalibrationEditing.ClearSelectedClip(
         Calibration, Character, Playback.SelectedClip,
-        ViewerUiState.CalibrationEditing)
+        SwordWristNode, ShieldWristNode, CalibrationAvailable,
+        ViewerUiState, ViewerGizmoState, ViewerCameraState, Effects)
 
-    ViewerUiState.CalibrationClearConfirm = False
-
-    If Transaction.Persisted Then
-        Call ViewerEffects.InvalidateVisualHistory(Effects)
-    End If
-
-    Call ApplyWristCalibration()
-    Call ApplyEquipmentCalibration()
-    Call FinishCalibrationEdit()
+    Call ApplyCalibrationEditingResult(Result)
 
 End Sub
 
 Sub ClearAllCalibration()
 
-    Dim Transaction As ViewerCalibration.TransactionResult
+    Dim Result As ViewerCalibrationEditing.OperationResult
 
-    Transaction = ViewerCalibration.ClearAllAndPersist(
+    Result = ViewerCalibrationEditing.ClearAll(
         Calibration, Character, Playback.SelectedClip,
-        ViewerUiState.CalibrationEditing)
+        SwordWristNode, ShieldWristNode, CalibrationAvailable,
+        ViewerUiState, ViewerGizmoState, ViewerCameraState, Effects)
 
-    ViewerUiState.CalibrationClearConfirm = False
-    ViewerUiState.CalibrationClearAllStage = 0
-
-    If Transaction.Persisted Then
-        Call ViewerEffects.InvalidateVisualHistory(Effects)
-    End If
-
-    Call ApplyWristCalibration()
-    Call ApplyEquipmentCalibration()
-    Call FinishCalibrationEdit()
+    Call ApplyCalibrationEditingResult(Result)
 
 End Sub
 
 Sub SaveCalibrationFrame()
 
-    Dim SavedSuccessfully As Boolean
+    Dim Result As ViewerCalibrationEditing.OperationResult
 
     If Calibration.StorageRejected Then
         Return
     End If
 
-    Call BeginCalibrationEdit()
-
-    ViewerUiState.CalibrationClearConfirm = False
-    SavedSuccessfully = ViewerCalibration.CommitCurrentKey(
-        Calibration,
-        Character,
-        Playback.SelectedClip,
-        ViewerUiState.CalibrationEditingFrame,
-        ViewerUiState.CalibrationEditing
-    )
-
-    If SavedSuccessfully Then
-    Call ViewerEffects.InvalidateVisualHistory(Effects)
+    If Not ViewerUiState.CalibrationEditing Then
+        Call BeginPartyPreview()
     End If
 
-    If Not Calibration.WriteFailed Then
-        Call FinishCalibrationEdit()
-    End If
+    Result = ViewerCalibrationEditing.SaveCurrentFrame(
+        Calibration, Character, Playback.SelectedClip,
+        ViewerUiState, ViewerGizmoState, ViewerCameraState, Effects)
+
+    Call ApplyCalibrationEditingResult(Result)
 
 End Sub
 
 Sub UndoLastCalibrationChange()
 
-    Call FinishCalibrationEdit()
+    Dim Result As ViewerCalibrationEditing.OperationResult
 
-    If Not ViewerCalibration.Undo(
-        Calibration, Character, Playback.SelectedClip) Then
-        Return
-    End If
+    Result = ViewerCalibrationEditing.UndoLastChange(
+        Calibration, Character, Playback.SelectedClip, Session.ProfileIndex,
+        SwordWristNode, ShieldWristNode, CalibrationAvailable,
+        ViewerUiState, ViewerGizmoState, ViewerCameraState, Effects)
 
-    Call UpdateCalibrationForCurrentFrame()
-    Call ApplyWristCalibration()
-    Call ApplyEquipmentCalibration()
-    Call ViewerEffects.InvalidateVisualHistory(Effects)
+    Call ApplyCalibrationEditingResult(Result)
 
 End Sub
 

@@ -86,6 +86,7 @@ Dim CameraPhase1000 As Number
 Dim CalibrationState As ViewerCalibration.State
 Dim CalibrationConfigurationState As ViewerCalibration.State
 Dim CalibrationConfiguration As ViewerCalibration.ConfigurationResult
+Dim CalibrationOperation As ViewerCalibrationEditing.OperationResult
 Dim InputState As ViewerInput.State
 Dim UiState As ViewerUi.State
 Dim SliderUpdate As ViewerUi.SliderUpdate
@@ -740,6 +741,20 @@ CalibrationConfiguration = ViewerCalibration.ConfigureForActor(
 Call Check(Not CalibrationConfiguration.Available)
 Call Check(CalibrationConfiguration.SwordWristNode = -1 And
     CalibrationConfiguration.ShieldWristNode = -1)
+
+CalibrationOperation = ViewerCalibrationEditing.DeleteCurrentKey(
+    CalibrationConfigurationState,
+    PartyPrimary.Actor,
+    0,
+    ViewerProfiles.PROFILE_DRAGON,
+    -1,
+    -1,
+    False,
+    UiState,
+    EffectsState
+)
+
+Call Check(CalibrationOperation.Ready And Not CalibrationOperation.Applied)
 Call Check(ViewerCalibration.MinimumValue(ViewerUi.CALIBRATION_TRANSFORM_ROTATE) = -180)
 Call Check(ViewerCalibration.MaximumValue(ViewerUi.CALIBRATION_TRANSFORM_ROTATE) = 180)
 Call Check(ViewerCalibration.MinimumValue(ViewerUi.CALIBRATION_TRANSFORM_MOVE) = -100)
