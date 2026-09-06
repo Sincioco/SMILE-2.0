@@ -944,7 +944,7 @@ End Sub
 
 Sub HandleInspectorKeyboard(PressedKey As Number)
 
-    Dim ArrowCommand As Number
+    Dim Action As Number
 
     If PressedKey = KEY_BACKTICK Then
 
@@ -959,123 +959,95 @@ Sub HandleInspectorKeyboard(PressedKey As Number)
         Return
     End If
 
-    If PressedKey = KEY_SPACE Then
-        Call ToggleScenePause()
-
-        Return
-    End If
-
-    If PressedKey = KEY_F Then
-        Call ToggleFloorAndGrid()
-
-        Return
-    End If
-
-    If PressedKey = KEY_D Then
-        Call ToggleDragon()
-
-        Return
-    End If
-
-    If PressedKey = KEY_W Then
-        Call ToggleSword()
-
-        Return
-    End If
-
-    If PressedKey = KEY_S Then
-        Call ToggleShield()
-
-        Return
-    End If
-
-    If ViewerUiState.CalibrationEditing Then
-        Return
-    End If
-
-    If Party.Enabled Then
-
-        If (PressedKey = KEY_1 Or
-            PressedKey = KEY_2 Or
-            PressedKey = KEY_3 Or
-            PressedKey = KEY_TAB Or
-            PressedKey = KEY_R) Then
-            Return
-        End If
-
-    End If
-
-    ArrowCommand = ViewerInput.ClassifyArrow(
+    Action = ViewerInput.ClassifyInspectorKey(
         PressedKey,
-        KEY_LEFT,
-        KEY_RIGHT,
-        KEY_UP,
-        KEY_DOWN,
-        Key_Event_Held(KEY_CONTROL)
+        Key_Event_Held(KEY_CONTROL),
+        ViewerUiState.CalibrationEditing,
+        Party.Enabled,
+        Rendering.SocketGizmosVisible,
+        Character3D.ClipCount(Character)
     )
 
-    If PressedKey = KEY_B Then
+    If Action = ViewerInput.INSPECTOR_KEY_TOGGLE_PAUSE Then
+
+        Call ToggleScenePause()
+
+    Else If Action = ViewerInput.INSPECTOR_KEY_TOGGLE_FLOOR Then
+
+        Call ToggleFloorAndGrid()
+
+    Else If Action = ViewerInput.INSPECTOR_KEY_TOGGLE_DRAGON Then
+
+        Call ToggleDragon()
+
+    Else If Action = ViewerInput.INSPECTOR_KEY_TOGGLE_SWORD Then
+
+        Call ToggleSword()
+
+    Else If Action = ViewerInput.INSPECTOR_KEY_TOGGLE_SHIELD Then
+
+        Call ToggleShield()
+
+    Else If Action = ViewerInput.INSPECTOR_KEY_CYCLE_BACKGROUND Then
 
         Call CycleBackground()
 
-    Else If ArrowCommand = ViewerInput.ARROW_FRAME_PREVIOUS Then
+    Else If Action = ViewerInput.INSPECTOR_KEY_FRAME_PREVIOUS Then
 
         Call StepAnimationFrame(-1)
 
-    Else If ArrowCommand = ViewerInput.ARROW_FRAME_NEXT Then
+    Else If Action = ViewerInput.INSPECTOR_KEY_FRAME_NEXT Then
 
         Call StepAnimationFrame(1)
 
-    Else If (ArrowCommand = ViewerInput.ARROW_PLAIN_LEFT And
-        Rendering.SocketGizmosVisible) Then
+    Else If Action = ViewerInput.INSPECTOR_KEY_SOCKET_PREVIOUS Then
 
         Call ViewerRendering.SelectPreviousSocket(
             Rendering, Character3D.SocketCount(Character))
 
-    Else If (ArrowCommand = ViewerInput.ARROW_PLAIN_RIGHT And
-        Rendering.SocketGizmosVisible) Then
+    Else If Action = ViewerInput.INSPECTOR_KEY_SOCKET_NEXT Then
 
         Call ViewerRendering.SelectNextSocket(
             Rendering, Character3D.SocketCount(Character))
 
-    Else If ArrowCommand = ViewerInput.ARROW_PLAIN_LEFT Then
+    Else If Action = ViewerInput.INSPECTOR_KEY_ORBIT_LEFT Then
 
         Session.Ready = ViewerCamera.NudgeOrbit(
             ViewerCameraState, -5, 0) And Session.Ready
 
-    Else If ArrowCommand = ViewerInput.ARROW_PLAIN_RIGHT Then
+    Else If Action = ViewerInput.INSPECTOR_KEY_ORBIT_RIGHT Then
 
         Session.Ready = ViewerCamera.NudgeOrbit(
             ViewerCameraState, 5, 0) And Session.Ready
 
-    Else If ArrowCommand = ViewerInput.ARROW_PLAIN_UP Then
+    Else If Action = ViewerInput.INSPECTOR_KEY_ORBIT_UP Then
 
         Session.Ready = ViewerCamera.NudgeOrbit(
             ViewerCameraState, 0, -5) And Session.Ready
 
-    Else If ArrowCommand = ViewerInput.ARROW_PLAIN_DOWN Then
+    Else If Action = ViewerInput.INSPECTOR_KEY_ORBIT_DOWN Then
 
         Session.Ready = ViewerCamera.NudgeOrbit(
             ViewerCameraState, 0, 5) And Session.Ready
 
-    Else If PressedKey = KEY_A Then
+    Else If Action = ViewerInput.INSPECTOR_KEY_PAN Then
 
         Session.Ready = ViewerCamera.NudgePan(
             ViewerCameraState, 5, 0) And Session.Ready
 
-    Else If PressedKey = KEY_1 And Character3D.ClipCount(Character) > 0 Then
+    Else If Action = ViewerInput.INSPECTOR_KEY_CLIP_1 Then
 
         Call SelectPresentationClip(0)
 
-    Else If PressedKey = KEY_2 And Character3D.ClipCount(Character) > 1 Then
+    Else If Action = ViewerInput.INSPECTOR_KEY_CLIP_2 Then
 
         Call SelectPresentationClip(1)
 
-    Else If PressedKey = KEY_3 And Character3D.ClipCount(Character) > 2 Then
+    Else If Action = ViewerInput.INSPECTOR_KEY_CLIP_3 Then
 
         Call SelectPresentationClip(2)
 
-    Else If PressedKey = KEY_ENTER Then
+    Else If Action = ViewerInput.INSPECTOR_KEY_RESET Then
 
         If Session.ViewerError Then
             Call RetryViewer()
@@ -1084,19 +1056,19 @@ Sub HandleInspectorKeyboard(PressedKey As Number)
             Call ResetAll()
         End If
 
-    Else If PressedKey = KEY_O Then
+    Else If Action = ViewerInput.INSPECTOR_KEY_TOGGLE_ORBIT Then
 
         Call ViewerCamera.ToggleAutoOrbit(ViewerCameraState)
 
-    Else If PressedKey = KEY_G Then
+    Else If Action = ViewerInput.INSPECTOR_KEY_TOGGLE_GRID Then
 
         Rendering.GridVisible = Not Rendering.GridVisible
 
-    Else If PressedKey = KEY_4 Then
+    Else If Action = ViewerInput.INSPECTOR_KEY_CYCLE_PROFILE Then
 
         Call CycleProfile()
 
-    Else If PressedKey = KEY_TAB Then
+    Else If Action = ViewerInput.INSPECTOR_KEY_NEXT_CLIP Then
 
         Call SelectPresentationClip(
             (ViewerPlayback.PresentationIndexForRuntimeClip(
@@ -1104,7 +1076,7 @@ Sub HandleInspectorKeyboard(PressedKey As Number)
                 ViewerProfiles.ClipCount(Session.ProfileIndex)
         )
 
-    Else If PressedKey = KEY_R Then
+    Else If Action = ViewerInput.INSPECTOR_KEY_RESTART_CLIP Then
 
         Call PlaySelectedClip()
 

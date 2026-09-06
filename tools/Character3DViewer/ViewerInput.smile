@@ -10,6 +10,31 @@ Public Const ARROW_PLAIN_LEFT = 3
 Public Const ARROW_PLAIN_RIGHT = 4
 Public Const ARROW_PLAIN_UP = 5
 Public Const ARROW_PLAIN_DOWN = 6
+Public Const INSPECTOR_KEY_NONE = 0
+Public Const INSPECTOR_KEY_TOGGLE_PAUSE = 1
+Public Const INSPECTOR_KEY_TOGGLE_FLOOR = 2
+Public Const INSPECTOR_KEY_TOGGLE_DRAGON = 3
+Public Const INSPECTOR_KEY_TOGGLE_SWORD = 4
+Public Const INSPECTOR_KEY_TOGGLE_SHIELD = 5
+Public Const INSPECTOR_KEY_CYCLE_BACKGROUND = 6
+Public Const INSPECTOR_KEY_FRAME_PREVIOUS = 7
+Public Const INSPECTOR_KEY_FRAME_NEXT = 8
+Public Const INSPECTOR_KEY_SOCKET_PREVIOUS = 9
+Public Const INSPECTOR_KEY_SOCKET_NEXT = 10
+Public Const INSPECTOR_KEY_ORBIT_LEFT = 11
+Public Const INSPECTOR_KEY_ORBIT_RIGHT = 12
+Public Const INSPECTOR_KEY_ORBIT_UP = 13
+Public Const INSPECTOR_KEY_ORBIT_DOWN = 14
+Public Const INSPECTOR_KEY_PAN = 15
+Public Const INSPECTOR_KEY_CLIP_1 = 16
+Public Const INSPECTOR_KEY_CLIP_2 = 17
+Public Const INSPECTOR_KEY_CLIP_3 = 18
+Public Const INSPECTOR_KEY_RESET = 19
+Public Const INSPECTOR_KEY_TOGGLE_ORBIT = 20
+Public Const INSPECTOR_KEY_TOGGLE_GRID = 21
+Public Const INSPECTOR_KEY_CYCLE_PROFILE = 22
+Public Const INSPECTOR_KEY_NEXT_CLIP = 23
+Public Const INSPECTOR_KEY_RESTART_CLIP = 24
 
 Public Type State
     InterfaceBlocked As Boolean
@@ -54,6 +79,106 @@ Public Function ClassifyArrow(PressedKey As Number, LeftKey As Number,
     End If
 
     Return Command
+
+End Function
+
+Public Function ClassifyInspectorKey(PressedKey As Number,
+    QueuedControlHeld As Boolean, CalibrationEditing As Boolean,
+    PartyEnabled As Boolean, SocketGizmosVisible As Boolean,
+    ClipCount As Number) As Number
+
+    Dim ArrowCommand As Number
+    Dim Result As Number
+
+    Result = INSPECTOR_KEY_NONE
+
+    If PressedKey = KEY_SPACE Then
+
+        Result = INSPECTOR_KEY_TOGGLE_PAUSE
+
+    Else If PressedKey = KEY_F Then
+
+        Result = INSPECTOR_KEY_TOGGLE_FLOOR
+
+    Else If PressedKey = KEY_D Then
+
+        Result = INSPECTOR_KEY_TOGGLE_DRAGON
+
+    Else If PressedKey = KEY_W Then
+
+        Result = INSPECTOR_KEY_TOGGLE_SWORD
+
+    Else If PressedKey = KEY_S Then
+
+        Result = INSPECTOR_KEY_TOGGLE_SHIELD
+
+    Else If CalibrationEditing Then
+
+        Return Result
+
+    Else If (PartyEnabled And
+        (PressedKey = KEY_1 Or
+        PressedKey = KEY_2 Or
+        PressedKey = KEY_3 Or
+        PressedKey = KEY_TAB Or
+        PressedKey = KEY_R)) Then
+
+        Return Result
+
+    Else
+
+        ArrowCommand = ClassifyArrow(
+            PressedKey,
+            KEY_LEFT,
+            KEY_RIGHT,
+            KEY_UP,
+            KEY_DOWN,
+            QueuedControlHeld
+        )
+
+        If PressedKey = KEY_B Then
+            Result = INSPECTOR_KEY_CYCLE_BACKGROUND
+        Else If ArrowCommand = ARROW_FRAME_PREVIOUS Then
+            Result = INSPECTOR_KEY_FRAME_PREVIOUS
+        Else If ArrowCommand = ARROW_FRAME_NEXT Then
+            Result = INSPECTOR_KEY_FRAME_NEXT
+        Else If ArrowCommand = ARROW_PLAIN_LEFT And SocketGizmosVisible Then
+            Result = INSPECTOR_KEY_SOCKET_PREVIOUS
+        Else If ArrowCommand = ARROW_PLAIN_RIGHT And SocketGizmosVisible Then
+            Result = INSPECTOR_KEY_SOCKET_NEXT
+        Else If ArrowCommand = ARROW_PLAIN_LEFT Then
+            Result = INSPECTOR_KEY_ORBIT_LEFT
+        Else If ArrowCommand = ARROW_PLAIN_RIGHT Then
+            Result = INSPECTOR_KEY_ORBIT_RIGHT
+        Else If ArrowCommand = ARROW_PLAIN_UP Then
+            Result = INSPECTOR_KEY_ORBIT_UP
+        Else If ArrowCommand = ARROW_PLAIN_DOWN Then
+            Result = INSPECTOR_KEY_ORBIT_DOWN
+        Else If PressedKey = KEY_A Then
+            Result = INSPECTOR_KEY_PAN
+        Else If PressedKey = KEY_1 And ClipCount > 0 Then
+            Result = INSPECTOR_KEY_CLIP_1
+        Else If PressedKey = KEY_2 And ClipCount > 1 Then
+            Result = INSPECTOR_KEY_CLIP_2
+        Else If PressedKey = KEY_3 And ClipCount > 2 Then
+            Result = INSPECTOR_KEY_CLIP_3
+        Else If PressedKey = KEY_ENTER Then
+            Result = INSPECTOR_KEY_RESET
+        Else If PressedKey = KEY_O Then
+            Result = INSPECTOR_KEY_TOGGLE_ORBIT
+        Else If PressedKey = KEY_G Then
+            Result = INSPECTOR_KEY_TOGGLE_GRID
+        Else If PressedKey = KEY_4 Then
+            Result = INSPECTOR_KEY_CYCLE_PROFILE
+        Else If PressedKey = KEY_TAB Then
+            Result = INSPECTOR_KEY_NEXT_CLIP
+        Else If PressedKey = KEY_R Then
+            Result = INSPECTOR_KEY_RESTART_CLIP
+        End If
+
+    End If
+
+    Return Result
 
 End Function
 

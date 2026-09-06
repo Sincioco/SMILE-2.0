@@ -284,6 +284,24 @@ Call Check(ViewerInput.ClassifyArrow(37, 37, 39, 38, 40, True) =
     ViewerInput.ARROW_FRAME_PREVIOUS)
 Call Check(ViewerInput.ClassifyArrow(39, 37, 39, 38, 40, True) =
     ViewerInput.ARROW_FRAME_NEXT)
+Call Check(ViewerInput.ClassifyInspectorKey(
+    KEY_SPACE, False, True, True, False, 0) =
+    ViewerInput.INSPECTOR_KEY_TOGGLE_PAUSE)
+Call Check(ViewerInput.ClassifyInspectorKey(
+    KEY_R, False, False, True, False, 3) =
+    ViewerInput.INSPECTOR_KEY_NONE)
+Call Check(ViewerInput.ClassifyInspectorKey(
+    KEY_LEFT, True, False, False, False, 3) =
+    ViewerInput.INSPECTOR_KEY_FRAME_PREVIOUS)
+Call Check(ViewerInput.ClassifyInspectorKey(
+    KEY_LEFT, False, False, False, True, 3) =
+    ViewerInput.INSPECTOR_KEY_SOCKET_PREVIOUS)
+Call Check(ViewerInput.ClassifyInspectorKey(
+    KEY_3, False, False, False, False, 2) =
+    ViewerInput.INSPECTOR_KEY_NONE)
+Call Check(ViewerInput.ClassifyInspectorKey(
+    KEY_3, False, False, False, False, 3) =
+    ViewerInput.INSPECTOR_KEY_CLIP_3)
 Call Check(ViewerInput.ClassifyArrow(37, 37, 39, 38, 40, False) =
     ViewerInput.ARROW_PLAIN_LEFT)
 Call Check(ViewerInput.ClassifyArrow(38, 37, 39, 38, 40, False) =

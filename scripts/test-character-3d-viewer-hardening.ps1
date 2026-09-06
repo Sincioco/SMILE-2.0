@@ -234,6 +234,7 @@ try {
     }
     foreach ($contract in @(
         'Public Function ClassifyArrow(',
+        'Public Function ClassifyInspectorKey(',
         'Public Sub CancelCaptures(',
         'Public Function HasPointerCapture(')) {
         Assert-Contains $inputSource $contract 'Viewer input owner'
@@ -481,6 +482,11 @@ try {
         -not $viewerSource.Contains('Dim TransformGizmoDragging As Boolean') -and
         -not $viewerSource.Contains('Dim CalibrationEditing As Boolean')) `
         'Input, UI and gizmo state must not return to Program.smile.'
+    Assert-True (-not $viewerSource.Contains('ViewerInput.ClassifyArrow(') -and
+        -not $viewerSource.Contains('PressedKey = KEY_SPACE') -and
+        -not $viewerSource.Contains('PressedKey = KEY_B Then') -and
+        -not $viewerSource.Contains('PressedKey = KEY_TAB Then')) `
+        'Inspector keyboard policy and queued-arrow classification must remain in ViewerInput.'
     Assert-True (-not $viewerSource.Contains('Function TransformGizmoAxisAtPointer(') -and
         -not $viewerSource.Contains('Function CurrentTransformGizmoOrigin(') -and
         -not $viewerSource.Contains('CharacterViewer.TransformGizmoAxisPointerDelta(') -and
