@@ -757,3 +757,91 @@ the camera. Event coalescing/endpoint-only delivery is a possible explanation,
 not a proven runtime diagnosis. Keyboard-initiated rotation did change the
 displayed value. Physical ring dragging remains an explicit manual limitation
 for the larger gizmo acceptance; full Blender equivalence is not claimed.
+
+### W10 — Web scene MSAA — 2026-09-06
+
+Source milestone: `78e00f496e47f95e7bcfb504bf578da44dd5381e`, following
+`0fd79938ae8073191bfae18097c6039a7db69157` on main. W10 is FIXED-VERIFIED;
+this does not complete H6.1. The root README remains queued as the final task.
+
+The existing WebGL2 renderer now chooses supported 4x/2x/1x scene targets by
+intersecting color/depth capabilities and checking actual sample counts and
+framebuffer completeness. Partial targets are released before a lower-sample
+retry. Color/depth resolves provide the opaque snapshot; heat composition copies
+color back without tone mapping while retaining multisample depth, followed by
+transparent effects and final resolve. Queries report actual samples, resolves
+and allocated bytes. AA alone preserves the immediate submission path rather
+than imposing the deferred submission limit. Existing target bundles own reuse,
+resize, replacement and context-reset lifetimes. No new SMILE syntax was added.
+
+Validation commands/results (logs under `artifacts/temp`, generated/ignored):
+
+| Command/check | Result and log |
+|---|---|
+| Compiler publish | PASS; `h6-1-msaa-compiler-build.log` |
+| `scripts/test-renderer3d-post-processing-hardening.ps1` | PASS including base native/Web normal, HDR and shadow fallbacks; `h6-1-msaa-final-post-hardening.log` |
+| `node scripts/run-web-test.js artifacts/web/Renderer3DPostProcessingTests --renderer3d-msaa --expected examples/Renderer3DPostProcessingTests/expected-normal.txt --timeout 60000` | PASS exact console plus GL-double capability, resolve/depth, reuse, resize, fallback, context recreation and cleanup assertions; `h6-1-msaa-capability-tests.log` |
+| `scripts/test-renderer3d-distortion.ps1` | PASS native/Web HDR, LDR, half/quarter quality and fallback; `h6-1-msaa-distortion-tests.log` |
+| `scripts/test-renderer3d-soft-particles.ps1` | PASS native/Web MSAA, 1x, soft fade and fallback; `h6-1-msaa-soft-tests.log` |
+| Targeted SMILE formatter check | PASS one changed fixture; `h6-1-msaa-formatter.log` |
+| Release Web builds of Viewer, Fire and Lightning | PASS; `h6-1-msaa-{viewer,fire,lightning}-build.log` |
+| `scripts/install-vsix.cmd` | PASS rebuild/install/verification; `h6-1-msaa-vsix-install.log` |
+| `git diff --check` | PASS |
+
+Three old hardening assertions were updated to match already-existing source:
+shared cull helper, two bounded GPU allocation/first-dispatch error probes, and
+whitespace-split native byte accounting. Those are stale test expectations, not
+new runtime fixes. No visual tolerance was loosened to conceal a regression.
+
+Real visible browser observations, separate from the GL double:
+
+- Chrome at `http://127.0.0.1:8767/`: Fire GPU backend, High quality, scene AA
+  samples 4 and error 0 in HDR and LDR with depth/heat. After the final immediate-
+  path correction, reloaded and disabled HDR/depth/heat: fire still rendered,
+  samples 4 and error 0; captured warnings/errors were empty. Reloaded defaults.
+- Edge at the same Fire origin: HDR/LDR with depth/heat, GPU/High, samples 4,
+  error 0 and no captured warnings/errors. This preceded the final AA-only queue
+  correction; the depth/heat path was unchanged by that correction.
+- Edge at `http://127.0.0.1:8768/`: GPU Lightning/Ultra rendered. Maximizing then
+  restoring the browser changed the viewport from approximately 1415x901 to
+  1912x901 and back, with effects still visible and no captured warnings/errors.
+- Edge at `http://127.0.0.1:8766/`: branded startup loader, Party then Arin, Orin,
+  Dragon and Party all rendered without a recovery overlay or captured errors.
+- Full Screen control changed its label/pressed state, but the DOM observation
+  still reported no fullscreen element. This is NOT actual fullscreen acceptance;
+  W11 remains open for that evidence. Window resize above is independent evidence.
+
+Chrome and Edge share Chromium. These observations do not claim independent-
+engine, Firefox, Safari, physical mobile-device, performance benchmark, real
+context-loss injection or user visual approval. Sin's explicit Chrome/Edge choice
+supersedes the package's Firefox requirement. No website upload was performed.
+Exactly one native Viewer remained running and was restored to the foreground.
+
+VSIX 2.0.59: `artifacts/vsix/Smile.VisualStudio.vsix`, SHA256
+`25E01235B784F7AB3DB128CBC3E17986AFB4E505F3C4A0BCAA98DB6C4489C440`.
+Installed under
+`C:/Users/louie/AppData/Local/Microsoft/VisualStudio/18.0_91f001b5/Extensions/m2b0la0n.j3x`.
+Installed and artifact compiler SHA256 both
+`E3054DE95B12F38950CE0155E45C265DAE2C10AB94E36128592E4F089D7130EF`.
+Installed extension DLL SHA256
+`5C25A63893B8865386F6736BEB24BDBD62717323E631FC8C6EE977DA13626B28`.
+
+Native generated fixtures include
+`artifacts/tests/Renderer3DPostProcessingTests.exe`,
+`artifacts/tests/Renderer3DDistortionFallbackTests.exe`,
+`artifacts/tests/Renderer3DSoftParticleFallbackTests.exe` and
+`artifacts/examples/Renderer3DPostProcessingLab.exe`. The native Viewer did not
+need a rebuild for this Web-only runtime change. The three current Web outputs
+remain each tool's `bin/Release/Web` directory.
+
+Both canonical exports remained unchanged: Arin 24 keys, SHA256
+`C05C87BF0A92B373DB7ECD1CB304F4446B851E7AFEA836E8BB05D058B1B20F0B`;
+Orin zero keys, SHA256
+`13AE135FDA40302CB5A4B0146D7103A2ED5346AAEEBB3852AF6DD3C397F5D293`.
+Logs: `h6-1-msaa-arin-export.log` and `h6-1-msaa-orin-export.log`.
+No calibration Save/import or historical restore occurred in this milestone.
+
+Next: remaining integrated native/actual-browser lifecycle, same-model effects,
+calibration persistence and interaction proof; normal smoke; final H6.1 reports,
+gate and portable evidence package. Then finish nine optimized Web tier outputs
+and finally the requested visual README rewrite. No E0 or Double work.

@@ -304,19 +304,19 @@
       "classification": "execution-or-source-audit",
       "mandatory": true,
       "baseline": "0768860e59e60c6231e0992f23b34a3a62c48483",
-      "status": "OPEN",
+      "status": "FIXED-VERIFIED",
       "phase": "W3",
       "gateCheck": "G06",
       "sourceRefs": [
-        "src/Smile.Compiler/WebOutputWriter.cs:2370"
+        "src/Smile.Compiler/WebOutputWriter.cs:2497"
       ],
       "reproduction": "Fire Lab requests AA but Edge reports one sample on capable hardware.",
       "rootCause": "Offscreen scene target has no multisample resolve path.",
-      "fixCommit": null,
+      "fixCommit": "78e00f496e47f95e7bcfb504bf578da44dd5381e",
       "evidenceIds": [
         "docs/implementation/h6-1-hardening-and-web-parity-ledger.md"
       ],
-      "dispositionRationale": "Implement bounded actual-capability selection and native-like HDR/LDR/heat resolve without framebuffer feedback."
+      "dispositionRationale": "Capability-checked 4x/2x/1x targets and opaque/final resolves now preserve HDR/LDR, heat composition and MSAA depth. Native/Web post, soft-particle and distortion fixtures pass; the explicit GL double verifies fallback, target compatibility, reuse, resize, context recreation and cleanup. Actual Chrome and Edge Fire report four samples, GPU backend and error zero with HDR/LDR. Chrome also renders AA-only LDR with depth/heat disabled. Real Edge Lightning resize and four Viewer tabs render without captured warnings/errors. Detailed evidence and remaining whole-gate limitations are in the ledger."
     },
     {
       "id": "W11",
