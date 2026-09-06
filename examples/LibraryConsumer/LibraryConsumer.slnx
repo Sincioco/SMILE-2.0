@@ -2,6 +2,9 @@
   <Configurations>
     <Platform Name="Windows 64-bit .exe" />
     <Platform Name="Web" />
+    <Platform Name="Web - Optimized Low" />
+    <Platform Name="Web - Optimized Medium" />
+    <Platform Name="Web - Optimized High" />
   </Configurations>
   <Project Path="LibraryConsumer.smileproj" Type="4fbc4e72-6b0f-40d8-b758-bf8932926d5d" Id="522c1b48-571b-6b96-9510-2b7948672fd8" />
   <Project Path="..\..\libraries\Smile.Math.Extras\Smile.Math.Extras.smilelibproj" Type="4fbc4e72-6b0f-40d8-b758-bf8932926d5d" Id="411d512c-9aef-51bb-b46e-c95142817c9a" />

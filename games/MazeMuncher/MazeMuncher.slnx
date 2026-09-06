@@ -4,6 +4,9 @@
     <BuildType Name="Release" />
     <Platform Name="Windows 64-bit .exe" />
     <Platform Name="Web" />
+    <Platform Name="Web - Optimized Low" />
+    <Platform Name="Web - Optimized Medium" />
+    <Platform Name="Web - Optimized High" />
   </Configurations>
   <Project Path="MazeMuncher.smileproj" Type="4fbc4e72-6b0f-40d8-b758-bf8932926d5d" Id="850c1592-d971-7e9d-a095-86259ba03667" />
 </Solution>

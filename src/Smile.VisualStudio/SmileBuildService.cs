@@ -90,13 +90,18 @@ internal static class SmileBuildService
 
     public static Task<CompilerResult> RunProjectAsync(string compilerPath, string projectPath, string target,
         string outputPath, string configuration, SmileGraphicsBackend graphicsBackend = SmileGraphicsBackend.Auto,
-        bool vSync = true, bool emitDebugInformation = false, CancellationToken cancellationToken = default)
+        bool vSync = true, bool emitDebugInformation = false, CancellationToken cancellationToken = default,
+        SmileWebQuality webQuality = SmileWebQuality.Full)
     {
         var arguments = new StringBuilder("--project ").Append(Quote(projectPath))
             .Append(" --target ").Append(target)
             .Append(" --configuration ").Append(Quote(configuration));
         if (string.Equals(target, "web", StringComparison.OrdinalIgnoreCase))
+        {
             arguments.Append(" --output-dir ").Append(Quote(outputPath));
+            if (webQuality != SmileWebQuality.Full)
+                arguments.Append(" --web-quality ").Append(webQuality.ToString());
+        }
         else
             arguments.Append(" -o ").Append(Quote(outputPath));
         if (string.Equals(target, "windows-x64", StringComparison.OrdinalIgnoreCase))

@@ -2,6 +2,9 @@
   <Configurations>
     <Platform Name="Windows 64-bit .exe" />
     <Platform Name="Web" />
+    <Platform Name="Web - Optimized Low" />
+    <Platform Name="Web - Optimized Medium" />
+    <Platform Name="Web - Optimized High" />
   </Configurations>
   <Project Path="Simple3DGallery.smileproj" Type="4fbc4e72-6b0f-40d8-b758-bf8932926d5d" Id="cd2c1be9-94df-0cbe-576c-4a23cacb8a8b" />
 </Solution>

@@ -6,20 +6,38 @@ Project("{4FBC4E72-6B0F-40D8-B758-BF8932926D5D}") = "Dragonfall", "Dragonfall.sm
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
-		Debug|Web = Debug|Web
 		Debug|Windows 64-bit .exe = Debug|Windows 64-bit .exe
-		Release|Web = Release|Web
+		Debug|Web = Debug|Web
+		Debug|Web - Optimized Low = Debug|Web - Optimized Low
+		Debug|Web - Optimized Medium = Debug|Web - Optimized Medium
+		Debug|Web - Optimized High = Debug|Web - Optimized High
 		Release|Windows 64-bit .exe = Release|Windows 64-bit .exe
+		Release|Web = Release|Web
+		Release|Web - Optimized Low = Release|Web - Optimized Low
+		Release|Web - Optimized Medium = Release|Web - Optimized Medium
+		Release|Web - Optimized High = Release|Web - Optimized High
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{55352F94-24AC-6EEF-B211-58168070F639}.Debug|Web.ActiveCfg = Debug|Web
-		{55352F94-24AC-6EEF-B211-58168070F639}.Debug|Web.Build.0 = Debug|Web
 		{55352F94-24AC-6EEF-B211-58168070F639}.Debug|Windows 64-bit .exe.ActiveCfg = Debug|Windows 64-bit .exe
 		{55352F94-24AC-6EEF-B211-58168070F639}.Debug|Windows 64-bit .exe.Build.0 = Debug|Windows 64-bit .exe
-		{55352F94-24AC-6EEF-B211-58168070F639}.Release|Web.ActiveCfg = Release|Web
-		{55352F94-24AC-6EEF-B211-58168070F639}.Release|Web.Build.0 = Release|Web
+		{55352F94-24AC-6EEF-B211-58168070F639}.Debug|Web.ActiveCfg = Debug|Web
+		{55352F94-24AC-6EEF-B211-58168070F639}.Debug|Web.Build.0 = Debug|Web
+		{55352F94-24AC-6EEF-B211-58168070F639}.Debug|Web - Optimized Low.ActiveCfg = Debug|Web - Optimized Low
+		{55352F94-24AC-6EEF-B211-58168070F639}.Debug|Web - Optimized Low.Build.0 = Debug|Web - Optimized Low
+		{55352F94-24AC-6EEF-B211-58168070F639}.Debug|Web - Optimized Medium.ActiveCfg = Debug|Web - Optimized Medium
+		{55352F94-24AC-6EEF-B211-58168070F639}.Debug|Web - Optimized Medium.Build.0 = Debug|Web - Optimized Medium
+		{55352F94-24AC-6EEF-B211-58168070F639}.Debug|Web - Optimized High.ActiveCfg = Debug|Web - Optimized High
+		{55352F94-24AC-6EEF-B211-58168070F639}.Debug|Web - Optimized High.Build.0 = Debug|Web - Optimized High
 		{55352F94-24AC-6EEF-B211-58168070F639}.Release|Windows 64-bit .exe.ActiveCfg = Release|Windows 64-bit .exe
 		{55352F94-24AC-6EEF-B211-58168070F639}.Release|Windows 64-bit .exe.Build.0 = Release|Windows 64-bit .exe
+		{55352F94-24AC-6EEF-B211-58168070F639}.Release|Web.ActiveCfg = Release|Web
+		{55352F94-24AC-6EEF-B211-58168070F639}.Release|Web.Build.0 = Release|Web
+		{55352F94-24AC-6EEF-B211-58168070F639}.Release|Web - Optimized Low.ActiveCfg = Release|Web - Optimized Low
+		{55352F94-24AC-6EEF-B211-58168070F639}.Release|Web - Optimized Low.Build.0 = Release|Web - Optimized Low
+		{55352F94-24AC-6EEF-B211-58168070F639}.Release|Web - Optimized Medium.ActiveCfg = Release|Web - Optimized Medium
+		{55352F94-24AC-6EEF-B211-58168070F639}.Release|Web - Optimized Medium.Build.0 = Release|Web - Optimized Medium
+		{55352F94-24AC-6EEF-B211-58168070F639}.Release|Web - Optimized High.ActiveCfg = Release|Web - Optimized High
+		{55352F94-24AC-6EEF-B211-58168070F639}.Release|Web - Optimized High.Build.0 = Release|Web - Optimized High
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

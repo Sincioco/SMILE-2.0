@@ -19,7 +19,7 @@ internal sealed class CompilerDriver
             if (!string.IsNullOrWhiteSpace(argumentError))
                 Console.Error.WriteLine($"error SML5007: {argumentError}");
             Console.Error.WriteLine("SMILE 2.0: Simple Modern and Intuitive Language for Everyone");
-            Console.Error.WriteLine("Usage: smilec <startup.smile> [--source <support.smile>]... [--library <package.smilelib>]... [--application-id <id>] [--target windows-x64 -o <output.exe>] [--target web --output-dir <directory>] | smilec --project <project> [--target windows-x64|web|library] [-o <output>] [--configuration <name>] [--application-id <id>]");
+            Console.Error.WriteLine("Usage: smilec <startup.smile> [--source <support.smile>]... [--library <package.smilelib>]... [--application-id <id>] [--target windows-x64 -o <output.exe>] [--target web --output-dir <directory> [--web-quality Full|Low|Medium|High]] | smilec --project <project> [--target windows-x64|web|library] [-o <output>] [--configuration <name>] [--application-id <id>] [--web-quality Full|Low|Medium|High]");
             return 2;
         }
 
@@ -65,6 +65,7 @@ internal sealed class CompilerDriver
                 try
                 {
                     var previousPaths = new List<string>(WebOutputWriter.ManagedFileNames);
+                    previousPaths.Add(WebImageOptimizer.ManifestName);
                     SmilePublishedAssetSnapshot? previousAssets = null;
                     if (input.Project != null)
                     {
@@ -75,12 +76,6 @@ internal sealed class CompilerDriver
                         previousPaths.AddRange(previousAssets.LegacyManifestNames);
                     }
 
-                    WebOutputWriter.Write(webStagingDirectory, new WebEmitter(analysis, appIdentity,
-                        buildAssets?.AssetPaths,
-                        responsiveWindow: input.Project?.ResponsiveWindow == true,
-                        webLoadingAuthor: input.Project?.WebLoadingAuthor,
-                        webLoadingLogo: input.Project?.WebLoadingLogoPath == null ? null : Model3DAssetBuildPipeline.WebLoadingLogoLogicalPath),
-                        _testHooks?.AfterWebStagedFile);
                     var currentPaths = new List<string>(WebOutputWriter.ManagedFileNames);
                     if (input.Project != null)
                     {
@@ -90,6 +85,16 @@ internal sealed class CompilerDriver
                         currentPaths.AddRange(buildAssets.AssetPaths);
                         currentPaths.Add(Path.GetFileName(publication.ManifestPath));
                     }
+                    var optimizedImageSizes = WebImageOptimizer.Optimize(webStagingDirectory,
+                        buildAssets?.AssetPaths ?? Array.Empty<string>(), options.WebQuality);
+                    if (options.WebQuality != SmileWebQuality.Full)
+                        currentPaths.Add(WebImageOptimizer.ManifestName);
+                    WebOutputWriter.Write(webStagingDirectory, new WebEmitter(analysis, appIdentity,
+                        buildAssets?.AssetPaths,
+                        responsiveWindow: input.Project?.ResponsiveWindow == true,
+                        webLoadingAuthor: input.Project?.WebLoadingAuthor,
+                        webLoadingLogo: input.Project?.WebLoadingLogoPath == null ? null : Model3DAssetBuildPipeline.WebLoadingLogoLogicalPath),
+                        _testHooks?.AfterWebStagedFile, optimizedImageSizes);
                     TransactionalOutputPublisher.PublishDirectory(webStagingDirectory, outputDirectory,
                         currentPaths, previousPaths, _testHooks?.OutputPublicationHook);
                     if (publication != null && previousAssets != null && previousAssets.Warnings.Count != 0)

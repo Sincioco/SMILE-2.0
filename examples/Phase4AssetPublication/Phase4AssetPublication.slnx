@@ -2,6 +2,9 @@
   <Configurations>
     <Platform Name="Windows 64-bit .exe" />
     <Platform Name="Web" />
+    <Platform Name="Web - Optimized Low" />
+    <Platform Name="Web - Optimized Medium" />
+    <Platform Name="Web - Optimized High" />
   </Configurations>
   <Project Path="Phase4AssetPublication.smileproj" Type="4fbc4e72-6b0f-40d8-b758-bf8932926d5d" Id="00ce9805-775a-3602-6ce3-012633ad4aa2" />
 </Solution>

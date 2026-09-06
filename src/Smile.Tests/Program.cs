@@ -621,6 +621,72 @@ Run("Web compiler target is case-insensitive", () =>
 });
 Run("Web output rejects native output options", () => Equal(false,
     CompilerOptions.TryParse(new[] { "Program.smile", "--target", "web", "--output-dir", "Web", "-o", "Program.exe" }, out _, out _)));
+Run("Web deployment profiles map to isolated outputs and validated CLI quality", () =>
+{
+    foreach (var platform in SmileWebDeployment.Platforms)
+    {
+        Equal(true, SmileWebDeployment.TryGetQuality(platform, out var quality));
+        Equal(platform, SmileWebDeployment.OutputFolder(quality));
+        Equal(true, CompilerOptions.TryParse(new[] { "Program.smile", "--target", "web", "--output-dir", platform,
+            "--web-quality", quality.ToString().ToLowerInvariant() }, out var options, out _));
+        Equal(quality, options.WebQuality);
+    }
+    Equal(false, SmileWebDeployment.TryGetQuality("Windows 64-bit .exe", out _));
+    Equal(false, CompilerOptions.TryParse(new[] { "Program.smile", "--web-quality", "Low" }, out _, out _));
+    foreach (var invalid in new[] { "0", "4", "Lowest", "" })
+        Equal(false, CompilerOptions.TryParse(new[] { "Program.smile", "--target", "web", "--output-dir", "Web",
+            "--web-quality", invalid }, out _, out _));
+    Equal(false, CompilerOptions.TryParse(new[] { "Program.smile", "--target", "web", "--output-dir", "Web",
+        "--web-quality", "Low", "--web-quality", "High" }, out _, out _));
+});
+Run("Web PNG profiles downsample only staging copies and preserve alpha and logical dimensions", () =>
+{
+    if (!OperatingSystem.IsWindowsVersionAtLeast(6, 1)) return;
+    var root = Path.GetFullPath(Path.Combine("artifacts", "temp", "web-quality-test-" + Guid.NewGuid().ToString("N")));
+    Directory.CreateDirectory(root);
+    using var original = new System.Drawing.Bitmap(512, 256, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+    var random = new Random(173);
+    for (var y = 0; y < original.Height; y++)
+    for (var x = 0; x < original.Width; x++)
+        original.SetPixel(x, y, System.Drawing.Color.FromArgb(x < 32 ? 0 : 128,
+            random.Next(256), random.Next(256), random.Next(256)));
+    using var originalStream = new MemoryStream();
+    original.Save(originalStream, System.Drawing.Imaging.ImageFormat.Png);
+    var bytes = originalStream.ToArray();
+    var expectedWidths = new[] { 512, 128, 256, 384 };
+    foreach (var quality in Enum.GetValues<SmileWebQuality>())
+    {
+        var directory = Path.Combine(root, quality.ToString());
+        Directory.CreateDirectory(directory);
+        File.WriteAllBytes(Path.Combine(directory, "Alpha.png"), bytes);
+        File.WriteAllText(Path.Combine(directory, "Model.sm3d"), "Unchanged model identity");
+        var sizes = WebImageOptimizer.Optimize(directory, new[] { "Alpha.png", "Model.sm3d" }, quality);
+        using var result = new System.Drawing.Bitmap(Path.Combine(directory, "Alpha.png"));
+        Equal(expectedWidths[(int)quality], result.Width);
+        Equal(result.Width / 2, result.Height);
+        Equal(0, (int)result.GetPixel(1, 1).A);
+        Equal(128, (int)result.GetPixel(result.Width / 2, result.Height / 2).A);
+        Equal("Unchanged model identity", File.ReadAllText(Path.Combine(directory, "Model.sm3d")));
+        if (quality == SmileWebQuality.Full)
+        {
+            Equal(0, sizes.Count);
+            Equal(true, File.ReadAllBytes(Path.Combine(directory, "Alpha.png")).SequenceEqual(bytes));
+            Equal(false, File.Exists(Path.Combine(directory, WebImageOptimizer.ManifestName)));
+        }
+        else
+        {
+            Equal(512, sizes["Alpha.png"][0]);
+            Equal(256, sizes["Alpha.png"][1]);
+            Equal(true, new FileInfo(Path.Combine(directory, "Alpha.png")).Length < bytes.Length);
+            var analysis = Analyze("Game Window \"Quality\"\nShow Screen\nEnd Program\n");
+            WebOutputWriter.Write(directory, new WebEmitter(analysis), null, sizes);
+            Equal(true, File.ReadAllText(Path.Combine(directory, "smile-runtime.js")).Contains("\"Alpha.png\":[512,256]"));
+        }
+    }
+    File.WriteAllText(Path.Combine(root, "Invalid.png"), "not an image");
+    ThrowsContains(() => WebImageOptimizer.Optimize(root, new[] { "Invalid.png" }, SmileWebQuality.Low), "not a PNG");
+    // Keep the bounded ignored fixture for inspection; no user or canonical asset was modified.
+});
 Run("Web emitter lowers integer division arrays routines booleans and frame yield", () =>
 {
     const string source = "Dim Values[2]\nSub SetValue(Index)\nValues[Index] = 9 / 2\nEnd Sub\nGame Window \"Test\" Size 320 By 180\nCall SetValue(0)\nIf Values[0] = 4 Then\nShow Screen\nEnd If\nEnd Program\n";

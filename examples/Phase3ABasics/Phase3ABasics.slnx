@@ -2,6 +2,9 @@
   <Configurations>
     <Platform Name="Windows 64-bit .exe" />
     <Platform Name="Web" />
+    <Platform Name="Web - Optimized Low" />
+    <Platform Name="Web - Optimized Medium" />
+    <Platform Name="Web - Optimized High" />
   </Configurations>
   <Project Path="Phase3ABasics.smileproj" Type="4fbc4e72-6b0f-40d8-b758-bf8932926d5d" Id="c4ff4c2d-160f-083b-5cf1-d23de0dbc2f5" />
   <Project Path="..\..\libraries\Smile.Text.Extras\Smile.Text.Extras.smilelibproj" Type="4fbc4e72-6b0f-40d8-b758-bf8932926d5d" Id="fc039996-d26b-3754-a57a-b6a6b7ee64d5" />

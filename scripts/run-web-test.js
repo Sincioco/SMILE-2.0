@@ -30,6 +30,7 @@ let verifyPhase5SubmenuViewport = false;
 let verifyMobileControls = false;
 let verifyFileTransfer = false;
 let verifyStartupLoading = false;
+let verifyOptimizedImages = false;
 let verifyDataStatus = false;
 let deniedDataKey = null;
 let verifyRenderer3D = false;
@@ -60,6 +61,7 @@ while (args.length !== 0) {
     if (option === "--mobile-controls") { verifyMobileControls = true; continue; }
     if (option === "--file-transfer") { verifyFileTransfer = true; continue; }
     if (option === "--startup-loading") { verifyStartupLoading = true; continue; }
+    if (option === "--optimized-images") { verifyOptimizedImages = true; continue; }
     if (option === "--data-status") { verifyDataStatus = true; continue; }
     if (option === "--renderer3d") { verifyRenderer3D = true; continue; }
     if (option === "--renderer3d-msaa") { verifyRenderer3D = true; verifyRenderer3DMsaa = true; continue; }
@@ -109,6 +111,12 @@ function mobileAssert(condition, message) {
 
 function mobileEqual(actual, expected, message) {
     if (actual !== expected)
+        throw new Error(`mobile-controls: ${message}; expected ${JSON.stringify(expected)}, found ${JSON.stringify(actual)}`);
+}
+
+function mobileNear(actual, expected, message) {
+    const tolerance = Math.max(1, Math.abs(expected)) * Number.EPSILON * 4;
+    if (Math.abs(actual - expected) > tolerance)
         throw new Error(`mobile-controls: ${message}; expected ${JSON.stringify(expected)}, found ${JSON.stringify(actual)}`);
 }
 
@@ -886,7 +894,50 @@ function runDataStatusTests() {
     process.stdout.write("Web checked Data denial, quota, corruption, backup, reload and atomicity tests passed (disposable VM storage).\n");
 }
 
-if (verifyDataStatus) {
+async function runOptimizedImageTests() {
+    const manifest = JSON.parse(fs.readFileSync(path.join(webDirectory, "smile-web-quality.json"), "utf8"));
+    const image = manifest.images[0];
+    mobileAssert(image && image.width < image.sourceWidth, "profile includes a reduced image");
+    const env = createMobileControlsHost();
+    const runtime = env.host.smile;
+    const draws = [];
+    env.canvas.getContext("2d").drawImage = (...values) => draws.push(values);
+    env.host.fetch = async () => ({ ok: true,
+        arrayBuffer: async () => Uint8Array.from(fs.readFileSync(path.join(webDirectory, image.path))).buffer });
+    env.host.Image = class {
+        constructor() { this.naturalWidth = image.width; this.naturalHeight = image.height; }
+        set src(value) { setImmediate(() => this.onload()); }
+    };
+    runtime.configure("smile.tests.optimized-images.disposable", [image.path]);
+    runtime.gameWindow("Optimized image coordinates", 960, 540);
+    const handle = await runtime.loadImage(image.path);
+    mobileEqual(runtime.imageWidth(runtime.imageRetain(handle)), image.sourceWidth, "logical width is preserved");
+    mobileEqual(runtime.imageHeight(runtime.imageRetain(handle)), image.sourceHeight, "logical height is preserved");
+    const x = Math.floor(image.sourceWidth / 4), y = Math.floor(image.sourceHeight / 4);
+    for (const flip of [0, 3]) {
+        runtime.drawImage(runtime.imageRetain(handle), x, y, x, y, 100, 100, 80, 90, 100, 0, flip, 0, 0);
+        const draw = draws[draws.length - 1];
+        mobileNear(draw[1], x * image.width / image.sourceWidth, "crop X maps to physical pixels");
+        mobileNear(draw[2], y * image.height / image.sourceHeight, "crop Y maps to physical pixels");
+        mobileNear(draw[3], x * image.width / image.sourceWidth, "crop width maps to physical pixels");
+        mobileNear(draw[4], y * image.height / image.sourceHeight, "crop height maps to physical pixels");
+        mobileEqual(draw[7], 80, "destination width is unchanged");
+        mobileEqual(draw[8], 90, "destination height is unchanged");
+    }
+    let rejected = false;
+    try { runtime.drawImage(runtime.imageRetain(handle), image.sourceWidth, 0, 1, 1, 0, 0, 1, 1, 100, 0, 0, 0, 0); }
+    catch (_) { rejected = true; }
+    mobileEqual(rejected, true, "logical out-of-bounds crop stays rejected");
+    runtime.imageRelease(handle);
+    runtime.mediaShutdown();
+    mobileEqual(runtime.mediaDiagnostics().imageReferenceCount, 0, "no image reference leak");
+    mobileEqual(env.transferUrls.size, 0, "temporary decode URL released");
+    process.stdout.write(`Web ${manifest.quality} optimized-image logical size/crop/flip/cleanup checks passed (VM).\n`);
+}
+
+if (verifyOptimizedImages) {
+    runOptimizedImageTests().catch(error => fail(error.stack || String(error)));
+} else if (verifyDataStatus) {
     try { runDataStatusTests(); } catch (error) { fail(error.stack || error.message); }
 } else if (verifyStartupLoading) {
     runStartupLoadingTests().catch(error => fail(error.stack || String(error)));

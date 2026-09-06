@@ -25,6 +25,7 @@ internal sealed class CompilerOptions
     public bool EmitDebugInformation { get; private set; }
     public Smile.Language.SmileGraphicsBackend GraphicsBackend { get; private set; } = Smile.Language.SmileGraphicsBackend.Auto;
     public bool VSync { get; private set; } = true;
+    public Smile.Language.SmileWebQuality WebQuality { get; private set; } = Smile.Language.SmileWebQuality.Full;
 
     public static bool TryParse(string[] args, out CompilerOptions options, out string? error)
     {
@@ -33,6 +34,7 @@ internal sealed class CompilerOptions
         var targetSpecified = false;
         var graphicsSpecified = false;
         var vSyncSpecified = false;
+        var webQualitySpecified = false;
 
         for (var i = 0; i < args.Length; i++)
         {
@@ -64,6 +66,17 @@ internal sealed class CompilerOptions
                     return false;
                 }
                 options.OutputDirectory = args[i];
+            }
+            else if (string.Equals(args[i], "--web-quality", StringComparison.OrdinalIgnoreCase))
+            {
+                if (++i >= args.Length || webQualitySpecified ||
+                    !Smile.Language.SmileWebDeployment.TryParseQuality(args[i], out var quality))
+                {
+                    error = "--web-quality requires one value: Full, Low, Medium, or High.";
+                    return false;
+                }
+                webQualitySpecified = true;
+                options.WebQuality = quality;
             }
             else if (string.Equals(args[i], "--keep-temp", StringComparison.OrdinalIgnoreCase))
             {
@@ -172,6 +185,12 @@ internal sealed class CompilerOptions
         if (options.ProjectPath != null && (options._sourcePaths.Count != 0 || options._libraryPaths.Count != 0))
         {
             error = "--project reads sources and references from the project and cannot be combined with --source or --library.";
+            return false;
+        }
+
+        if (webQualitySpecified && options.Target != SmileCompilationTarget.Web)
+        {
+            error = "--web-quality is available only for the Web target.";
             return false;
         }
 

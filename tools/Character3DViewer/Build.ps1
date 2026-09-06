@@ -3,10 +3,15 @@ param(
     [ValidateSet('Debug', 'Release')]
     [string]$Configuration = 'Release',
     [ValidateSet('Native', 'Web', 'All')]
-    [string]$Target = 'All'
+    [string]$Target = 'All',
+    [ValidateSet('Full', 'Low', 'Medium', 'High')]
+    [string]$WebQuality = 'Full'
 )
 
 $ErrorActionPreference = 'Stop'
+if ($WebQuality -ne 'Full' -and $Target -ne 'Web') {
+    throw 'Optimized profiles require -Target Web; normal native/Web output is preserved.'
+}
 $toolRoot = $PSScriptRoot
 $repositoryRoot = [IO.Path]::GetFullPath((Join-Path $toolRoot '..\..'))
 $compiler = Join-Path $repositoryRoot 'artifacts\compiler\smilec.exe'
@@ -30,10 +35,11 @@ if ($Target -in @('Native', 'All')) {
 }
 
 if ($Target -in @('Web', 'All')) {
-    $webOutput = Join-Path $outputRoot 'Web'
+    $webFolder = if ($WebQuality -eq 'Full') { 'Web' } else { "Web - Optimized $WebQuality" }
+    $webOutput = Join-Path $outputRoot $webFolder
     # Keep source ownership and native diagnostics intact. Generate only the
-    # Web publication's profile policy and project asset list; never transcode
-    # or resize accepted textures. The existing asset publisher transaction
+    # Web publication's profile policy and project asset list. Quality profiles
+    # resize only unpublished staging copies, never accepted textures. The existing asset publisher transaction
     # removes obsolete managed files from this exact configuration's Web folder.
     [xml]$webProject = Get-Content -LiteralPath $project -Raw
     $profileText = Get-Content -LiteralPath (Join-Path $toolRoot 'Profiles.smile') -Raw
@@ -61,7 +67,7 @@ if ($Target -in @('Web', 'All')) {
     $webProjectPath = Join-Path $toolRoot 'Character3DViewer.WebPublication.smileproj'
     $webProject.Save($webProjectPath)
     & $compiler --project $webProjectPath --target web `
-        --configuration $Configuration --output-dir $webOutput
+        --configuration $Configuration --output-dir $webOutput --web-quality $WebQuality
     if ($LASTEXITCODE -ne 0) {
         throw 'Character Viewer/editor Web compilation failed.'
     }

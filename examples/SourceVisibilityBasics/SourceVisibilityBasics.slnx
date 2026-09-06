@@ -2,6 +2,9 @@
   <Configurations>
     <Platform Name="Windows 64-bit .exe" />
     <Platform Name="Web" />
+    <Platform Name="Web - Optimized Low" />
+    <Platform Name="Web - Optimized Medium" />
+    <Platform Name="Web - Optimized High" />
   </Configurations>
   <Project Path="SourceVisibilityBasics.smileproj" Type="4fbc4e72-6b0f-40d8-b758-bf8932926d5d" Id="42d718ab-33ef-48cd-a43a-ef54f2e892a1" />
 </Solution>

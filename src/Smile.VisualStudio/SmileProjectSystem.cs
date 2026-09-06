@@ -187,8 +187,10 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
         SourceSet.IsLibrary ? SourceSet.GetLibraryOutputPath(configuration) :
         Path.Combine(ProjectDirectory, "bin", NormalizeConfiguration(configuration), SafeFileName(OutputName) + ".exe");
 
-    public string GetWebOutputDirectory(string configuration) =>
-        Path.Combine(ProjectDirectory, "bin", NormalizeConfiguration(configuration), "Web");
+    public string GetWebOutputDirectory(string configuration, string platform = "Web") =>
+        Path.Combine(ProjectDirectory, "bin", NormalizeConfiguration(configuration),
+            SmileWebDeployment.TryGetQuality(platform, out var quality)
+                ? SmileWebDeployment.OutputFolder(quality) : "Web");
 
     public async Task<bool> BuildAsync(string configuration, string platform, IVsOutputWindowPane? pane,
         CancellationToken cancellationToken = default)
@@ -242,11 +244,13 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
         }
         else if (IsWeb(platform))
         {
-            var outputDirectory = GetWebOutputDirectory(configuration);
+            var outputDirectory = GetWebOutputDirectory(configuration, platform);
+            SmileWebDeployment.TryGetQuality(platform, out var webQuality);
             Directory.CreateDirectory(outputDirectory);
-            pane.OutputStringThreadSafe($"> \"{compilerPath}\" --project \"{ProjectPath}\" --target web --output-dir \"{outputDirectory}\" --configuration \"{NormalizeConfiguration(configuration)}\"\r\n");
+            var qualityArgument = webQuality == SmileWebQuality.Full ? string.Empty : $" --web-quality {webQuality}";
+            pane.OutputStringThreadSafe($"> \"{compilerPath}\" --project \"{ProjectPath}\" --target web --output-dir \"{outputDirectory}\" --configuration \"{NormalizeConfiguration(configuration)}\"{qualityArgument}\r\n");
             result = await SmileBuildService.RunProjectAsync(compilerPath, ProjectPath, "web", outputDirectory,
-                NormalizeConfiguration(configuration), cancellationToken: cancellationToken);
+                NormalizeConfiguration(configuration), cancellationToken: cancellationToken, webQuality: webQuality);
             outputPath = Path.Combine(outputDirectory, "index.html");
         }
         else
@@ -309,7 +313,7 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
     {
         ThreadHelper.ThrowIfNotOnUIThread();
         pane ??= SmileBuildService.GetOutputPane();
-        var target = IsWeb(platform) ? GetWebOutputDirectory(configuration) : GetOutputPath(configuration);
+        var target = IsWeb(platform) ? GetWebOutputDirectory(configuration, platform) : GetOutputPath(configuration);
         try
         {
             if (IsWeb(platform))
@@ -350,7 +354,7 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
             // Visual Studio completes the configured build before calling DebugLaunch.
             if (IsWeb(platform))
             {
-                var url = SmileWebServer.Start(GetWebOutputDirectory(configuration), OutputName);
+                var url = SmileWebServer.Start(GetWebOutputDirectory(configuration, platform), OutputName);
                 System.Diagnostics.Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
                 return true;
             }
@@ -483,7 +487,7 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
     private static string NormalizeConfiguration(string value) =>
         value.StartsWith("Release", StringComparison.OrdinalIgnoreCase) ? "Release" : "Debug";
 
-    private static bool IsWeb(string platform) => platform.Equals("Web", StringComparison.OrdinalIgnoreCase);
+    private static bool IsWeb(string platform) => SmileWebDeployment.TryGetQuality(platform, out _);
 
     private static string SafeFileName(string value)
     {
@@ -1653,9 +1657,9 @@ internal static class SmileSourceNameDialog
 
 internal sealed class SmileConfigurationProvider : IVsCfgProvider2, IVsProjectCfgProvider
 {
-    private const string NativePlatformName = "Windows 64-bit .exe";
+    internal const string NativePlatformName = "Windows 64-bit .exe";
     private static readonly string[] ConfigurationNames = { "Debug", "Release" };
-    private static readonly string[] PlatformNames = { NativePlatformName, "Web" };
+    private static readonly string[] PlatformNames = new[] { NativePlatformName }.Concat(SmileWebDeployment.Platforms).ToArray();
     private readonly SmileProject _project;
     private readonly Dictionary<string, SmileProjectConfiguration> _configurations;
 
@@ -1670,9 +1674,13 @@ internal sealed class SmileConfigurationProvider : IVsCfgProvider2, IVsProjectCf
 
     public int GetCfgs(uint celt, IVsCfg[] rgpcfg, uint[] pcActual, uint[] prgfFlags)
     {
-        var values = _configurations.Values.Cast<IVsCfg>().ToArray();
-        if (pcActual != null && pcActual.Length != 0) pcActual[0] = (uint)values.Length;
-        for (var index = 0; index < Math.Min((int)celt, values.Length); index++) rgpcfg[index] = values[index];
+        ThreadHelper.ThrowIfNotOnUIThread();
+        var values = new List<IVsCfg>();
+        foreach (var platform in PlatformNames)
+        foreach (var configuration in ConfigurationNames)
+            values.Add(_configurations[$"{configuration}|{platform}"]);
+        if (pcActual != null && pcActual.Length != 0) pcActual[0] = (uint)values.Count;
+        for (var index = 0; index < Math.Min((int)celt, values.Count); index++) rgpcfg[index] = values[index];
         return VSConstants.S_OK;
     }
 
@@ -1745,7 +1753,11 @@ internal sealed class SmileProjectConfiguration : IVsProjectCfg2, IVsBuildablePr
     public SmileProjectConfiguration(SmileConfigurationProvider provider, SmileProject project, string configuration, string platform)
     { _provider = provider; _project = project; _configuration = configuration; _platform = platform; }
 
-    public int get_DisplayName(out string pbstrDisplayName) { pbstrDisplayName = _configuration; return VSConstants.S_OK; }
+    // Visual Studio derives the solution-platform list from these configuration
+    // display names. Omitting the platform collapses a custom project to its
+    // generic "Default" solution platform even though GetPlatformNames is valid.
+    public int get_DisplayName(out string pbstrDisplayName)
+    { pbstrDisplayName = _configuration + "|" + _platform; return VSConstants.S_OK; }
     public int get_IsDebugOnly(out int pfIsDebugOnly) { pfIsDebugOnly = 0; return VSConstants.S_OK; }
     public int get_IsReleaseOnly(out int pfIsReleaseOnly) { pfIsReleaseOnly = 0; return VSConstants.S_OK; }
     public int get_CanonicalName(out string pbstrCanonicalName) { pbstrCanonicalName = _configuration + "|" + _platform; return VSConstants.S_OK; }
@@ -1808,8 +1820,8 @@ internal sealed class SmileProjectConfiguration : IVsProjectCfg2, IVsBuildablePr
             pfCanLaunch = 0;
             return VSConstants.S_OK;
         }
-        var output = _platform.Equals("Web", StringComparison.OrdinalIgnoreCase)
-            ? Path.Combine(_project.GetWebOutputDirectory(_configuration), "index.html")
+        var output = SmileWebDeployment.TryGetQuality(_platform, out _)
+            ? Path.Combine(_project.GetWebOutputDirectory(_configuration, _platform), "index.html")
             : _project.GetOutputPath(_configuration);
         pfCanLaunch = File.Exists(output) || File.Exists(Path.Combine(_project.ProjectDirectory, _project.StartupFile)) ? 1 : 0;
         return VSConstants.S_OK;

@@ -13,10 +13,15 @@ internal static class WebOutputWriter
     public static void Write(string outputDirectory, WebEmitter emitter)
         => Write(outputDirectory, emitter, null);
 
-    internal static void Write(string outputDirectory, WebEmitter emitter, Action<string>? afterFileWrite)
+    internal static void Write(string outputDirectory, WebEmitter emitter, Action<string>? afterFileWrite,
+        IReadOnlyDictionary<string, int[]>? optimizedImageSizes = null)
     {
         var game = emitter.Emit();
         var runtime = RuntimeFor(emitter.ResponsiveWindow);
+        if (optimizedImageSizes?.Count > 0)
+            runtime = runtime.Replace("const optimizedImageSizes = {};",
+                "const optimizedImageSizes = " + System.Text.Json.JsonSerializer.Serialize(optimizedImageSizes) + ";",
+                StringComparison.Ordinal);
         var buildVersion = BuildVersion(emitter.Title, game, runtime, emitter.WebLoadingAuthor, emitter.WebLoadingLogo);
         Directory.CreateDirectory(outputDirectory);
         File.WriteAllText(Path.Combine(outputDirectory, "index.html"), Index(emitter.Title, buildVersion,
@@ -325,6 +330,7 @@ internal static class WebOutputWriter
             const virtualControlsMode = readVirtualControlsMode();
             const initiallyTouchFirst = initialTouchFirstCapability();
             const responsiveWindowEnabled = false;
+            const optimizedImageSizes = {};
             let logicalWidth = 960;
             let logicalHeight = 540;
             let backingWidth = 960;
@@ -1748,7 +1754,7 @@ internal static class WebOutputWriter
                 }
                 renderer3DInitialize();
                 const handle=renderer3DHandle();
-                const mipLevels=filter>=2?Math.floor(Math.log2(Math.max(image.entry.width,image.entry.height)))+1:1;
+                const mipLevels=filter>=2?Math.floor(Math.log2(Math.max(image.entry.pixelWidth,image.entry.pixelHeight)))+1:1;
                 renderer3DTextures.set(handle,{image,filter,effectiveFilter:filter===3&&renderer3DMaximumAnisotropy===1?2:filter,
                     wrap,pbr:true,usage,requestedAnisotropy:anisotropy,
                     effectiveAnisotropy:filter===3?Math.min(anisotropy,renderer3DMaximumAnisotropy):1,
@@ -2893,8 +2899,8 @@ internal static class WebOutputWriter
                     case 35:return 128;
                     case 36:return renderer3DTextures.has(a)?1:0;
                     case 37:return renderer3DMaterials.has(a)?1:0;
-                    case 38:texture=renderer3DTextures.get(a);return texture?texture.image.entry.width:0;
-                    case 39:texture=renderer3DTextures.get(a);return texture?texture.image.entry.height:0;
+                    case 38:texture=renderer3DTextures.get(a);return texture?texture.image.entry.pixelWidth:0;
+                    case 39:texture=renderer3DTextures.get(a);return texture?texture.image.entry.pixelHeight:0;
                     case 40:return renderer3DTextureReferenceCount(a);
                     case 41:return renderer3DMaterialReferenceCount(a);
                     case 42:material=renderer3DRequireMaterial(a);return renderer3DSetMaterial(material,b,c,d,e,f,g,h,i)?1:0;
@@ -3282,9 +3288,12 @@ internal static class WebOutputWriter
                         const resource = new Image();
                         resource.onload = () => {
                             entry.resource = resource;
-                            entry.width = safe(resource.naturalWidth || resource.width);
-                            entry.height = safe(resource.naturalHeight || resource.height);
-                            if (entry.width <= 0 || entry.height <= 0) reject(new Error(`Load Image decoded invalid dimensions: ${logical}`));
+                            entry.pixelWidth = safe(resource.naturalWidth || resource.width);
+                            entry.pixelHeight = safe(resource.naturalHeight || resource.height);
+                            const originalSize = optimizedImageSizes[logical];
+                            entry.width = originalSize ? safe(originalSize[0]) : entry.pixelWidth;
+                            entry.height = originalSize ? safe(originalSize[1]) : entry.pixelHeight;
+                            if (entry.pixelWidth <= 0 || entry.pixelHeight <= 0 || entry.width <= 0 || entry.height <= 0) reject(new Error(`Load Image decoded invalid dimensions: ${logical}`));
                             else { startupAsset(logical, "ready"); resolve(entry); }
                         };
                         resource.onerror = () => reject(new Error(`Load Image failed: ${logical}`));
@@ -3370,6 +3379,12 @@ internal static class WebOutputWriter
                     if (destinationWidth <= 0 || destinationHeight <= 0 || opacity < 0 || opacity > 100 ||
                         (filter !== 0 && filter !== 1) || (flip & ~3) !== 0)
                         throw new Error("Draw Image destination, opacity, filter, or flip is invalid.");
+                    // Keep source-level dimensions/crops stable while sampling a
+                    // smaller deployment image; GPU textures use physical pixels.
+                    sourceX *= entry.pixelWidth / entry.width;
+                    sourceY *= entry.pixelHeight / entry.height;
+                    sourceWidth *= entry.pixelWidth / entry.width;
+                    sourceHeight *= entry.pixelHeight / entry.height;
                     const left = destinationX - anchorX;
                     const top = destinationY - anchorY;
                     const flipX = (flip & 1) !== 0;

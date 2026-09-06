@@ -96,6 +96,12 @@ Use KISS: Keep It Simple, Stupid.
 - Do not add CI, GitHub Actions, a large automated test suite, cross-platform support, a package manager, or speculative infrastructure.
 - Do not stop after planning or scaffolding. Continue through implementation, build, native compilation, execution, debugging, validation, commit, and push.
 
+### Permanent defect follow-through rule
+
+- Correct defects discovered during authorized SMILE 2.0 work when the fix is safe and within scope.
+- Never silently leave a discovered defect behind. If a defect must genuinely be deferred, record it in the applicable tracked issue report or milestone ledger with its user-visible impact, evidence, reason for deferral, and concrete next action so future work can recover it.
+- Report both fixed and deferred discovered defects in the milestone or final handoff. A passing unrelated test does not erase a known defect.
+
 ### Permanent single-agent rule
 
 - Use exactly one Codex agent for all current and future SMILE 2.0 repository work.

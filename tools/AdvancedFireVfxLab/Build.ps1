@@ -4,10 +4,15 @@ param(
     [ValidateSet('Debug', 'Release')]
     [string]$Configuration = 'Release',
     [ValidateSet('Native', 'Web', 'All')]
-    [string]$Target = 'All'
+    [string]$Target = 'All',
+    [ValidateSet('Full', 'Low', 'Medium', 'High')]
+    [string]$WebQuality = 'Full'
 )
 
 $ErrorActionPreference = 'Stop'
+if ($WebQuality -ne 'Full' -and $Target -ne 'Web') {
+    throw 'Optimized profiles require -Target Web; normal native/Web output is preserved.'
+}
 $taskRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..'))
 $compiler = Join-Path $taskRoot 'artifacts\compiler\smilec.exe'
 $project = Join-Path $PSScriptRoot 'AdvancedFireVfxLab.smileproj'
@@ -40,9 +45,10 @@ if ($Target -in @('Native', 'All')) {
     Write-Host "Built Fire Lab: $OutputPath"
 }
 if ($Target -in @('Web', 'All')) {
-    $webOutput = Join-Path $outputRoot 'Web'
+    $webFolder = if ($WebQuality -eq 'Full') { 'Web' } else { "Web - Optimized $WebQuality" }
+    $webOutput = Join-Path $outputRoot $webFolder
     & $compiler --project $project --target web `
-        --configuration $Configuration --output-dir $webOutput
+        --configuration $Configuration --output-dir $webOutput --web-quality $WebQuality
     if ($LASTEXITCODE -ne 0) { throw 'Advanced Fire Lab Web compilation failed.' }
     Write-Host "Built Fire Lab Web: $webOutput"
 }
