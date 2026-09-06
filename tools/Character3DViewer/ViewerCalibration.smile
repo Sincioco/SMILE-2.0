@@ -4,6 +4,8 @@ Module Smile.Tools.Character3DViewerCalibration
 Option Explicit
 
 Import Smile.Simple3D.Character3D As Character3D
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Graphics3D As Graphics3D
 Import Smile.Tools.Character3DViewerProfiles As ViewerProfiles
 Import Smile.Tools.CalibrationJson As CalibrationJson
 
@@ -17,6 +19,9 @@ Private Const VALUES_PER_CLIP = 5120
 Private Const STORAGE_CAPACITY = 700000
 Private Const STORAGE_VERSION = 3
 Private Const METADATA_CAPACITY = 2048
+Private Const SHIELD_PART_INDEX = 0
+Private Const WEAPON_PART_INDEX = 1
+Private Const BODY_PART_INDEX = 2
 
 Public Type State
     OwnerProfile As Number
@@ -42,6 +47,11 @@ Public Type State
     SaveLimitReached As Boolean
     ClipboardAvailable As Boolean
     EditSavedBefore As Boolean
+End Type
+
+Public Type ApplicationResult
+    Ready As Boolean
+    FailureStage As Number
 End Type
 
 Private Dim SwordWrist[TOTAL_CLIPS, AXIS_COUNT] As Number
@@ -639,6 +649,201 @@ Public Sub Evaluate(ByRef Value As State, ByRef Actor As Character3D.Actor,
     End For
 
 End Sub
+
+Public Function ApplyWristOffsets(ByRef Value As State,
+    ByRef Actor As Character3D.Actor, Clip As Number,
+    SwordWristNode As Number, ShieldWristNode As Number,
+    Available As Boolean) As Boolean
+
+    Dim Result As Boolean
+
+    Result = True
+
+    If Not Available Then
+        Return Result
+    End If
+
+    Result = Character3D.SetNodeRotationOffset(
+        Actor,
+        SwordWristNode,
+        ChannelValue(Value, Clip, 0),
+        ChannelValue(Value, Clip, 1),
+        ChannelValue(Value, Clip, 2)
+    )
+    Result = Character3D.SetNodeRotationOffset(
+        Actor,
+        ShieldWristNode,
+        ChannelValue(Value, Clip, 3),
+        ChannelValue(Value, Clip, 4),
+        ChannelValue(Value, Clip, 5)
+    ) And Result
+
+    Return Result
+
+End Function
+
+Public Function ApplyEquipmentCoupling(ByRef Value As State,
+    ByRef Actor As Character3D.Actor, Clip As Number,
+    ByRef SwordGlow As Core.Object3D, ByRef ShieldGlow As Core.Object3D,
+    GlowAvailable As Boolean) As Boolean
+
+    Dim ShieldCoupled As Boolean
+    Dim SwordCoupled As Boolean
+    Dim Result As Boolean
+
+    SwordCoupled = ChannelValue(Value, Clip, 18) = 0
+    ShieldCoupled = ChannelValue(Value, Clip, 19) = 0
+    Result = Character3D.SetPartNodeOffsetsEnabled(
+        Actor, WEAPON_PART_INDEX, SwordCoupled)
+    Result = Character3D.SetPartNodeOffsetsEnabled(
+        Actor, SHIELD_PART_INDEX, ShieldCoupled) And Result
+
+    If GlowAvailable Then
+        Result = Graphics3D.SetObjectNodeOffsetsEnabled3D(
+            SwordGlow, SwordCoupled) And Result
+        Result = Graphics3D.SetObjectNodeOffsetsEnabled3D(
+            ShieldGlow, ShieldCoupled) And Result
+    End If
+
+    Return Result
+
+End Function
+
+Private Sub CaptureApplicationFailure(ByRef Result As ApplicationResult,
+    Ready As Boolean, Stage As Number)
+
+    Result.Ready = Ready And Result.Ready
+
+    If Not Ready And Result.FailureStage = 0 Then
+        Result.FailureStage = Stage
+    End If
+
+End Sub
+
+Public Function ApplyEquipmentTransforms(ByRef Value As State,
+    ByRef Actor As Character3D.Actor, Clip As Number,
+    ByRef SwordGlow As Core.Object3D, ByRef ShieldGlow As Core.Object3D,
+    GlowAvailable As Boolean, ByRef GlowVisible As Boolean) As ApplicationResult
+
+    Dim GlowReady As Boolean
+    Dim OperationReady As Boolean
+    Dim Result As ApplicationResult
+    Dim ShieldPivotX1000 As Number
+    Dim ShieldPivotY1000 As Number
+    Dim ShieldPivotZ1000 As Number
+    Dim SwordPivotX1000 As Number
+    Dim SwordPivotY1000 As Number
+    Dim SwordPivotZ1000 As Number
+
+    Result.Ready = ApplyEquipmentCoupling(
+        Value, Actor, Clip, SwordGlow, ShieldGlow, GlowAvailable)
+    Result.FailureStage = 0
+    SwordPivotX1000 = Character3D.SocketValueThousandths(
+        Actor, "HandRight", Graphics3D.ANIMATOR_SOCKET_POSITION_X,
+        BODY_PART_INDEX)
+    SwordPivotY1000 = Character3D.SocketValueThousandths(
+        Actor, "HandRight", Graphics3D.ANIMATOR_SOCKET_POSITION_Y,
+        BODY_PART_INDEX)
+    SwordPivotZ1000 = Character3D.SocketValueThousandths(
+        Actor, "HandRight", Graphics3D.ANIMATOR_SOCKET_POSITION_Z,
+        BODY_PART_INDEX)
+    ShieldPivotX1000 = Character3D.SocketValueThousandths(
+        Actor, "HandLeft", Graphics3D.ANIMATOR_SOCKET_POSITION_X,
+        BODY_PART_INDEX)
+    ShieldPivotY1000 = Character3D.SocketValueThousandths(
+        Actor, "HandLeft", Graphics3D.ANIMATOR_SOCKET_POSITION_Y,
+        BODY_PART_INDEX)
+    ShieldPivotZ1000 = Character3D.SocketValueThousandths(
+        Actor, "HandLeft", Graphics3D.ANIMATOR_SOCKET_POSITION_Z,
+        BODY_PART_INDEX)
+    OperationReady = Character3D.SetPartPositionOffset(
+        Actor,
+        WEAPON_PART_INDEX,
+        ChannelValue(Value, Clip, 12),
+        ChannelValue(Value, Clip, 13),
+        ChannelValue(Value, Clip, 14)
+    )
+
+    Call CaptureApplicationFailure(Result, OperationReady, 71)
+
+    OperationReady = Character3D.SetPartPositionOffset(
+        Actor,
+        SHIELD_PART_INDEX,
+        ChannelValue(Value, Clip, 15),
+        ChannelValue(Value, Clip, 16),
+        ChannelValue(Value, Clip, 17)
+    )
+
+    Call CaptureApplicationFailure(Result, OperationReady, 72)
+
+    OperationReady = Character3D.SetPartPivotRotationThousandths(
+        Actor,
+        WEAPON_PART_INDEX,
+        SwordPivotX1000,
+        SwordPivotY1000,
+        SwordPivotZ1000,
+        ChannelValue(Value, Clip, 6),
+        ChannelValue(Value, Clip, 7),
+        ChannelValue(Value, Clip, 8)
+    )
+
+    Call CaptureApplicationFailure(Result, OperationReady, 73)
+
+    OperationReady = Character3D.SetPartPivotRotationThousandths(
+        Actor,
+        SHIELD_PART_INDEX,
+        ShieldPivotX1000,
+        ShieldPivotY1000,
+        ShieldPivotZ1000,
+        ChannelValue(Value, Clip, 9),
+        ChannelValue(Value, Clip, 10),
+        ChannelValue(Value, Clip, 11)
+    )
+
+    Call CaptureApplicationFailure(Result, OperationReady, 74)
+
+    If GlowVisible Then
+
+        GlowReady = Graphics3D.SetObjectPositionChecked3D(
+            SwordGlow,
+            SwordGlow.Position.X + ChannelValue(Value, Clip, 12),
+            SwordGlow.Position.Y + ChannelValue(Value, Clip, 13),
+            SwordGlow.Position.Z + ChannelValue(Value, Clip, 14)
+        )
+        GlowReady = Graphics3D.SetObjectPositionChecked3D(
+            ShieldGlow,
+            ShieldGlow.Position.X + ChannelValue(Value, Clip, 15),
+            ShieldGlow.Position.Y + ChannelValue(Value, Clip, 16),
+            ShieldGlow.Position.Z + ChannelValue(Value, Clip, 17)
+        ) And GlowReady
+        GlowReady = Graphics3D.SetObjectPivotRotationThousandths3D(
+            SwordGlow,
+            SwordPivotX1000,
+            SwordPivotY1000,
+            SwordPivotZ1000,
+            ChannelValue(Value, Clip, 6),
+            ChannelValue(Value, Clip, 7),
+            ChannelValue(Value, Clip, 8)
+        ) And GlowReady
+        GlowReady = Graphics3D.SetObjectPivotRotationThousandths3D(
+            ShieldGlow,
+            ShieldPivotX1000,
+            ShieldPivotY1000,
+            ShieldPivotZ1000,
+            ChannelValue(Value, Clip, 9),
+            ChannelValue(Value, Clip, 10),
+            ChannelValue(Value, Clip, 11)
+        ) And GlowReady
+
+        If Not GlowReady Then
+            GlowVisible = False
+        End If
+
+    End If
+
+    Return Result
+
+End Function
 
 Public Function FrameTimeMilliseconds(ByRef Actor As Character3D.Actor, Clip As Number,
     FrameValue As Number) As Number

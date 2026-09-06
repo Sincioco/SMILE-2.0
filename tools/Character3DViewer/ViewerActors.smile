@@ -151,6 +151,40 @@ Public Function FaceToward(ByRef Value As Character3D.Actor,
 
 End Function
 
+Public Function ApplyPresentationOffset(ByRef Value As Character3D.Actor,
+    ProfileIndex As Number, Clip As Number,
+    Frame As CharacterViewer.Framing) As Boolean
+
+    Dim AnimationFrame As Number
+    Dim Offset1000 As Number
+    Dim OffsetY As Number
+    Dim Result As Boolean
+    Dim SampleRate As Number
+
+    Result = True
+
+    If Not Character3D.IsValid(Value) Then
+        Return Result
+    End If
+
+    If ProfileIndex = ViewerProfiles.PROFILE_DRAGON Then
+        Return Result
+    End If
+
+    SampleRate = Max(1, Character3D.ClipSampleRate(Value, Clip))
+    AnimationFrame = (Character3D.AnimationTime(Value) * SampleRate + 500) / 1000
+    AnimationFrame = Min(
+        Character3D.ClipSampleCount(Value, Clip) - 1, Max(0, AnimationFrame))
+    Offset1000 = ViewerProfiles.ClipVerticalOffset1000(
+        ProfileIndex, Character3D.ClipName(Value, Clip), AnimationFrame)
+    OffsetY = Offset1000 * Frame.ScalePercent / 100000
+    Result = Character3D.Place(Value, Frame.PositionX,
+        Frame.PositionY + OffsetY, Frame.PositionZ)
+
+    Return Result
+
+End Function
+
 Public Sub Destroy(ByRef Value As Context)
 
     Call Graphics3D.DestroyObject3D(Value.WeaponGlow)

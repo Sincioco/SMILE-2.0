@@ -176,7 +176,10 @@ try {
         'Public Function CommitImport(',
         'Public Function Persist(',
         'Public Function Undo(',
-        'Public Sub Evaluate(')) {
+        'Public Sub Evaluate(',
+        'Public Function ApplyWristOffsets(',
+        'Public Function ApplyEquipmentCoupling(',
+        'Public Function ApplyEquipmentTransforms(')) {
         Assert-Contains $calibrationSource $contract 'Viewer calibration owner'
     }
     foreach ($contract in @(
@@ -222,6 +225,7 @@ try {
         'Public Sub Apply(',
         'Public Function LoadContext(',
         'Public Function FaceToward(',
+        'Public Function ApplyPresentationOffset(',
         'Public Sub Destroy(')) {
         Assert-Contains $actorsSource $contract 'Viewer actor owner'
     }
@@ -267,6 +271,12 @@ try {
         -not $viewerSource.Contains('Dim CalibrationKeyframeValues[') -and
         -not $viewerSource.Contains('Dim CalibrationUndoStorage[')) `
         'Calibration banks and transaction buffers must not return to Program.smile.'
+    Assert-True (-not $viewerSource.Contains('Character3D.SetNodeRotationOffset(') -and
+        -not $viewerSource.Contains('Character3D.SetPartNodeOffsetsEnabled(') -and
+        -not $viewerSource.Contains('Character3D.SetPartPositionOffset(') -and
+        -not $viewerSource.Contains('Character3D.SetPartPivotRotationThousandths(') -and
+        -not $viewerSource.Contains('Graphics3D.SetObjectPivotRotationThousandths3D(')) `
+        'Calibration application and equipment-transform implementation must remain in ViewerCalibration.'
     Assert-True (-not $viewerSource.Contains('Dim TimelineScrubbing As Boolean') -and
         -not $viewerSource.Contains('Dim SliderDragOwner As Number') -and
         -not $viewerSource.Contains('Dim TransformGizmoDragging As Boolean') -and

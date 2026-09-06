@@ -200,7 +200,13 @@ Do
         Session.Ready = Character3D.Update(Character, Playback.AnimationUpdateElapsed) And Session.Ready
 
         Call ViewerSession.CaptureFailure(Session, 3)
-        Call ApplyCharacterPresentationOffset()
+
+        Session.Ready = ViewerActors.ApplyPresentationOffset(
+            Character,
+            Session.ProfileIndex,
+            Playback.SelectedClip,
+            ViewerCameraState.Frame
+        ) And Session.Ready
 
         If CalibrationAvailable Then
 
@@ -773,34 +779,6 @@ Function CharacterArenaYawAdjustment() As Number
     Return Result
 
 End Function
-
-Sub ApplyCharacterPresentationOffset()
-
-    Dim Offset1000 As Number
-    Dim OffsetY As Number
-
-    If Not Character3D.IsValid(Character) Then
-        Return
-    End If
-
-    If Session.ProfileIndex = ViewerProfiles.PROFILE_DRAGON Then
-        Return
-    End If
-
-    Offset1000 = ViewerProfiles.ClipVerticalOffset1000(
-        Session.ProfileIndex,
-        SelectedClipName(),
-        CurrentAnimationFrame()
-    )
-    OffsetY = Offset1000 * ViewerCameraState.Frame.ScalePercent / 100000
-    Session.Ready = Character3D.Place(
-        Character,
-        ViewerCameraState.Frame.PositionX,
-        ViewerCameraState.Frame.PositionY + OffsetY,
-        ViewerCameraState.Frame.PositionZ
-    ) And Session.Ready
-
-End Sub
 
 Sub UpdateDragon()
 
@@ -3400,174 +3378,55 @@ End Sub
 
 Sub ApplyWristCalibration()
 
-    If Not CalibrationAvailable Then
-        Return
-    End If
-
-    Session.Ready = Character3D.SetNodeRotationOffset(
+    Session.Ready = ViewerCalibration.ApplyWristOffsets(
+        Calibration,
         Character,
+        Playback.SelectedClip,
         SwordWristNode,
-        CalibrationChannelValue(Playback.SelectedClip, CALIBRATION_AXIS_X),
-        CalibrationChannelValue(Playback.SelectedClip, CALIBRATION_AXIS_Y),
-        CalibrationChannelValue(Playback.SelectedClip, CALIBRATION_AXIS_Z)
-    ) And Session.Ready
-    Session.Ready = Character3D.SetNodeRotationOffset(
-        Character,
         ShieldWristNode,
-        CalibrationChannelValue(Playback.SelectedClip, 3 + CALIBRATION_AXIS_X),
-        CalibrationChannelValue(Playback.SelectedClip, 3 + CALIBRATION_AXIS_Y),
-        CalibrationChannelValue(Playback.SelectedClip, 3 + CALIBRATION_AXIS_Z)
+        CalibrationAvailable
     ) And Session.Ready
 
 End Sub
 
 Sub ApplyEquipmentCoupling()
 
-    Session.Ready = Character3D.SetPartNodeOffsetsEnabled(
-        Character, WEAPON_PART_INDEX, CalibrationChannelValue(Playback.SelectedClip, 18) = 0
+    Session.Ready = ViewerCalibration.ApplyEquipmentCoupling(
+        Calibration,
+        Character,
+        Playback.SelectedClip,
+        Effects.SwordGlow,
+        Effects.ShieldGlow,
+        Effects.EpicGlowAvailable
     ) And Session.Ready
-    Session.Ready = Character3D.SetPartNodeOffsetsEnabled(
-        Character, SHIELD_PART_INDEX, CalibrationChannelValue(Playback.SelectedClip, 19) = 0
-    ) And Session.Ready
-
-    If Effects.EpicGlowAvailable Then
-        Session.Ready = Graphics3D.SetObjectNodeOffsetsEnabled3D(Effects.SwordGlow, CalibrationChannelValue(Playback.SelectedClip, 18) = 0) And Session.Ready
-        Session.Ready = Graphics3D.SetObjectNodeOffsetsEnabled3D(Effects.ShieldGlow, CalibrationChannelValue(Playback.SelectedClip, 19) = 0) And Session.Ready
-    End If
 
 End Sub
 
 Sub ApplyEquipmentCalibration()
 
-    Dim GlowReady As Boolean
-    Dim ShieldPivotX1000 As Number
-    Dim ShieldPivotY1000 As Number
-    Dim ShieldPivotZ1000 As Number
-    Dim SwordPivotX1000 As Number
-    Dim SwordPivotY1000 As Number
-    Dim SwordPivotZ1000 As Number
+    Dim Application As ViewerCalibration.ApplicationResult
+    Dim FailureStage As Number
 
-    Call ApplyEquipmentCoupling()
-
-    SwordPivotX1000 = Character3D.SocketValueThousandths(
+    Application = ViewerCalibration.ApplyEquipmentTransforms(
+        Calibration,
         Character,
-        "HandRight",
-        Graphics3D.ANIMATOR_SOCKET_POSITION_X,
-        BODY_PART_INDEX
+        Playback.SelectedClip,
+        Effects.SwordGlow,
+        Effects.ShieldGlow,
+        Effects.EpicGlowAvailable,
+        Effects.EpicGlowVisible
     )
-    SwordPivotY1000 = Character3D.SocketValueThousandths(
-        Character,
-        "HandRight",
-        Graphics3D.ANIMATOR_SOCKET_POSITION_Y,
-        BODY_PART_INDEX
-    )
-    SwordPivotZ1000 = Character3D.SocketValueThousandths(
-        Character,
-        "HandRight",
-        Graphics3D.ANIMATOR_SOCKET_POSITION_Z,
-        BODY_PART_INDEX
-    )
-    ShieldPivotX1000 = Character3D.SocketValueThousandths(
-        Character,
-        "HandLeft",
-        Graphics3D.ANIMATOR_SOCKET_POSITION_X,
-        BODY_PART_INDEX
-    )
-    ShieldPivotY1000 = Character3D.SocketValueThousandths(
-        Character,
-        "HandLeft",
-        Graphics3D.ANIMATOR_SOCKET_POSITION_Y,
-        BODY_PART_INDEX
-    )
-    ShieldPivotZ1000 = Character3D.SocketValueThousandths(
-        Character,
-        "HandLeft",
-        Graphics3D.ANIMATOR_SOCKET_POSITION_Z,
-        BODY_PART_INDEX
-    )
-    Session.Ready = Character3D.SetPartPositionOffset(
-        Character,
-        WEAPON_PART_INDEX,
-        CalibrationChannelValue(Playback.SelectedClip, 12 + CALIBRATION_AXIS_X),
-        CalibrationChannelValue(Playback.SelectedClip, 12 + CALIBRATION_AXIS_Y),
-        CalibrationChannelValue(Playback.SelectedClip, 12 + CALIBRATION_AXIS_Z)
-    ) And Session.Ready
+    Session.Ready = Application.Ready And Session.Ready
 
-    Call ViewerSession.CaptureFailure(Session, 71)
+    If Not Session.Ready Then
 
-    Session.Ready = Character3D.SetPartPositionOffset(
-        Character,
-        SHIELD_PART_INDEX,
-        CalibrationChannelValue(Playback.SelectedClip, 15 + CALIBRATION_AXIS_X),
-        CalibrationChannelValue(Playback.SelectedClip, 15 + CALIBRATION_AXIS_Y),
-        CalibrationChannelValue(Playback.SelectedClip, 15 + CALIBRATION_AXIS_Z)
-    ) And Session.Ready
+        FailureStage = Application.FailureStage
 
-    Call ViewerSession.CaptureFailure(Session, 72)
-
-    Session.Ready = Character3D.SetPartPivotRotationThousandths(
-        Character,
-        WEAPON_PART_INDEX,
-        SwordPivotX1000,
-        SwordPivotY1000,
-        SwordPivotZ1000,
-        CalibrationChannelValue(Playback.SelectedClip, 6 + CALIBRATION_AXIS_X),
-        CalibrationChannelValue(Playback.SelectedClip, 6 + CALIBRATION_AXIS_Y),
-        CalibrationChannelValue(Playback.SelectedClip, 6 + CALIBRATION_AXIS_Z)
-    ) And Session.Ready
-
-    Call ViewerSession.CaptureFailure(Session, 73)
-
-    Session.Ready = Character3D.SetPartPivotRotationThousandths(
-        Character,
-        SHIELD_PART_INDEX,
-        ShieldPivotX1000,
-        ShieldPivotY1000,
-        ShieldPivotZ1000,
-        CalibrationChannelValue(Playback.SelectedClip, 9 + CALIBRATION_AXIS_X),
-        CalibrationChannelValue(Playback.SelectedClip, 9 + CALIBRATION_AXIS_Y),
-        CalibrationChannelValue(Playback.SelectedClip, 9 + CALIBRATION_AXIS_Z)
-    ) And Session.Ready
-
-    Call ViewerSession.CaptureFailure(Session, 74)
-
-    If Effects.EpicGlowVisible Then
-
-        GlowReady = Graphics3D.SetObjectPositionChecked3D(
-            Effects.SwordGlow,
-            Effects.SwordGlow.Position.X + CalibrationChannelValue(Playback.SelectedClip, 12 + CALIBRATION_AXIS_X),
-            Effects.SwordGlow.Position.Y + CalibrationChannelValue(Playback.SelectedClip, 12 + CALIBRATION_AXIS_Y),
-            Effects.SwordGlow.Position.Z + CalibrationChannelValue(Playback.SelectedClip, 12 + CALIBRATION_AXIS_Z)
-        )
-        GlowReady = Graphics3D.SetObjectPositionChecked3D(
-            Effects.ShieldGlow,
-            Effects.ShieldGlow.Position.X + CalibrationChannelValue(Playback.SelectedClip, 15 + CALIBRATION_AXIS_X),
-            Effects.ShieldGlow.Position.Y + CalibrationChannelValue(Playback.SelectedClip, 15 + CALIBRATION_AXIS_Y),
-            Effects.ShieldGlow.Position.Z + CalibrationChannelValue(Playback.SelectedClip, 15 + CALIBRATION_AXIS_Z)
-        ) And GlowReady
-
-        GlowReady = Graphics3D.SetObjectPivotRotationThousandths3D(
-            Effects.SwordGlow,
-            SwordPivotX1000,
-            SwordPivotY1000,
-            SwordPivotZ1000,
-            CalibrationChannelValue(Playback.SelectedClip, 6 + CALIBRATION_AXIS_X),
-            CalibrationChannelValue(Playback.SelectedClip, 6 + CALIBRATION_AXIS_Y),
-            CalibrationChannelValue(Playback.SelectedClip, 6 + CALIBRATION_AXIS_Z)
-        ) And GlowReady
-        GlowReady = Graphics3D.SetObjectPivotRotationThousandths3D(
-            Effects.ShieldGlow,
-            ShieldPivotX1000,
-            ShieldPivotY1000,
-            ShieldPivotZ1000,
-            CalibrationChannelValue(Playback.SelectedClip, 9 + CALIBRATION_AXIS_X),
-            CalibrationChannelValue(Playback.SelectedClip, 9 + CALIBRATION_AXIS_Y),
-            CalibrationChannelValue(Playback.SelectedClip, 9 + CALIBRATION_AXIS_Z)
-        ) And GlowReady
-
-        If Not GlowReady Then
-            Effects.EpicGlowVisible = False
+        If FailureStage = 0 Then
+            FailureStage = 71
         End If
+
+        Call ViewerSession.CaptureFailure(Session, FailureStage)
 
     End If
 
@@ -5756,7 +5615,13 @@ Sub UpdatePartyCompanion()
 
     Call UseActorContext(Party.Companion)
 
-    Call ApplyCharacterPresentationOffset()
+    Session.Ready = ViewerActors.ApplyPresentationOffset(
+        Character,
+        Session.ProfileIndex,
+        Playback.SelectedClip,
+        ViewerCameraState.Frame
+    ) And Session.Ready
+
     Call UpdateCalibrationForCurrentFrame()
     Call ApplyWristCalibration()
     Call ApplyEquipmentCoupling()

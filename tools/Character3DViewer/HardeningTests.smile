@@ -424,6 +424,10 @@ Call Check(ViewerParty.ApplyFrame(
     PartyPrimary.Clip, 100, -208, 0, -120, 180))
 Call Check(Not ViewerActors.FaceToward(
     PartyPrimary.Actor, -208, 0, -120, 180, 0))
+Call Check(ViewerActors.ApplyPresentationOffset(
+    PartyPrimary.Actor, ViewerProfiles.PROFILE_DRAGON, 0, Frame))
+Call Check(ViewerCalibration.ApplyWristOffsets(
+    CalibrationState, PartyPrimary.Actor, 0, -1, -1, False))
 
 PartyState.DragonCounter = 1
 
