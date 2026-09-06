@@ -29,13 +29,45 @@ The coordinator retains this dependency order:
 `CaptureViewerFailure` remains immediately after the stages it identifies. The first
 Viewer/renderer error is retained until explicit retry or reload.
 
-## Ownership map
+## R7.5 responsibility-completion audit
 
-| Responsibility | Baseline owner | Refactor owner | Owned mutable state | Public operations and borrowed dependencies | Lifetime / focused proof |
+The September 6, 2026 audit at repository commit `ed5e6bb` found that the state
+extractions through R7 did not finish the corresponding implementation moves.
+`Program.smile` still contains 8,319 lines and 233 procedures. In particular, it
+still implements substantial Party transitions, Dragon timing and turn behavior,
+companion updates, Party pointer handling and overlays, equipment effects,
+inspector/calibration UI, gizmo drawing and interaction, and resource lifecycle.
+Passing module tests proves the extracted seams but does not make those remaining
+procedures owned by the new modules.
+
+`ViewerActors.smile` does not yet exist. Earlier text naming it as the current owner
+was an architecture target stated as a completed fact. The actor/inspector move is
+therefore not complete. The bounded R7.5 stage must move each implementation and its
+state to a focused existing owner, or introduce a focused actor owner if the contract
+cannot correctly fit an existing module. It must not introduce a whole-application
+state record or a replacement `ViewerApplication` module.
+
+| Still implemented in `Program.smile` | Current evidence | Intended focused owner |
+|---|---|---|
+| Party transitions, camera application, companion lifecycle, inspector/preview binding, pointer handling and Party overlay | `ApplyPartyAttackCamera`, `AdvancePartyDemo`, `AdvanceDragonTurn`, `CreatePartyCompanion`, `HandlePartyPointer`, `DrawPartyOverlay` and related routines | `ViewerParty.smile`, with actor binding in a focused actor owner only if needed |
+| Dragon actor lifecycle, timing, turn behavior and battle-audio coordination | `CreateDragon`, `UpdateDragon`, `AdvanceDragonTurn`, `UpdateBattleAudio` and related routines | retained `DragonPresence.smile`, `BattleAudio.smile`, and narrow Party contracts |
+| Equipment Fire/glow/trails, scene VFX coordination and effect teardown | `CreateEpicGlow`, `UpdateEquipmentFire`, `UpdateSwordFire`, `UpdateShieldFire`, trail routines and clear/hide routines | `ViewerEffects.smile` plus retained focused effect modules |
+| Inspector, calibration panel, timeline, camera controls, buttons and overlays | `HandleInspectorPointer`, `HandleCalibrationPanelPointer`, `DrawInspectorOverlay`, `DrawCalibrationPanel`, `DrawTimeline` and related layout/label routines | `ViewerInput.smile` and `ViewerUi.smile`, borrowing narrow subsystem operations |
+| Transform-gizmo pointer/update/draw implementation | `HandleTransformGizmoPointer`, `UpdateTransformGizmoFromPointer`, `DrawTransformGizmo` and related routines | `ViewerGizmo.smile` |
+| Socket resources and studio grid drawing | socket create/update/draw/destroy routines and `DrawStudioGrid` | `ViewerRendering.smile` or a focused socket-render owner |
+| Load/retry/switch/destroy orchestration mixed with resource implementation | `LoadViewer`, `RetryViewer`, `SelectCharacterTab`, `DestroyViewerResources` and related routines | thin `Program.smile` coordinator plus focused session/actor/render/effect owners |
+
+The ownership and symbol maps below describe the required destination. A row is not
+completion evidence until the implementation no longer remains in `Program.smile`
+and its focused production tests exercise the destination owner.
+
+## Ownership target map
+
+| Responsibility | Baseline owner | Intended refactor owner | Owned mutable state | Public operations and borrowed dependencies | Lifetime / focused proof |
 |---|---|---|---|---|---|
 | Startup and failure/session lifecycle | `Program.smile` | `ViewerSession.smile` plus thin `Program.smile` coordinator | Running/readiness, first error/stage, resource epoch, tab/profile and scene mode | Reset/record/capture failure; coordinator borrows renderer and subsystem owners for load/retry/switch/shutdown | One application session; direct module assertions plus native launch, reload and failure fixtures |
 | Frame clocks and playback sequence | `Program.smile` plus `CharacterViewer.ClockState` | `ViewerTiming.smile` and `ViewerPlayback.smile` | Frame-rate and clamped clocks; selection, speed, pause/demo sequence | Start/advance/reset/query, clip mode and demo target; borrows current actor/profile only for duration queries | Session; direct native module assertions and playback fixture |
-| Actor/inspector binding | `Program.smile` (`ViewerActorContext`, `PartyUi*`, `CalibrationOwnerProfile`) | `ViewerActors.smile` | Primary/inspected actor identity and temporary Party preview binding | Capture/use/begin/end preview; borrows actor handles and calibration owner | Scene/preview; Party isolation fixture |
+| Actor/inspector binding | `Program.smile` (`ViewerActorContext`, `PartyUi*`, `CalibrationOwnerProfile`) | focused actor owner to be completed during R7.5; no `ViewerActors.smile` exists at the audit baseline | Primary/inspected actor identity and temporary Party preview binding | Capture/use/begin/end preview; borrows actor handles and calibration owner | Scene/preview; Party isolation fixture |
 | Camera and transforms | `Program.smile`, `BattleCamera.smile`, shared `Interaction` | `ViewerCamera.smile` and retained `BattleCamera.smile` math | `ViewerCamera.State`: base/live camera, frame, controls, zoom target, fractional pointer remainder, orbit anchor and auto-orbit | Reset/compose/nudge/drag/advance/apply/query; borrows framing profile and current actor bounds without retaining either | Scene; direct integer-output assertions plus native/installed-Chrome controls |
 | Calibration editing | `Program.smile`, `CalibrationJson.smile` | `ViewerCalibration.smile` and retained bounded JSON reader | Per-profile key banks, edit/clipboard/Undo/import workspace and selected transform | Configure/load/evaluate/edit/save/Undo/import/export/query; borrows inspected actor and storage primitives | Profile workspace; native/generated-Web isolation and malformed imports |
 | File transactions and launcher synchronization | Viewer Save/Load statements, synchronizer and launcher | `ViewerCalibration.smile`, `sync-arin-v5-7-calibration.ps1`, `Launch.ps1` | Checked save baseline/pending revision; primary/backup selection | Transaction commit/recovery/watch; canonical JSON is borrowed source of truth | Save/application identity; preservation fixtures |
@@ -50,9 +82,9 @@ Immutable `Character3D` cache entries are shared resources. Actor pose, equipmen
 visibility, calibration, inspector selection, effects, and scene clocks are never cache
 state. Arin, Orin, Dragon, Party, and inspected-actor identities remain distinct.
 
-## Symbol migration map
+## Symbol migration target map
 
-| Old symbol/location | Current owner/symbol | Preservation note |
+| Old symbol/location | Intended owner/symbol | Preservation note |
 |---|---|---|
 | `AdvanceFrameRate`, `FrameRateElapsed`, `FrameRateFrames`, `CurrentFramesPerSecond` | `ViewerTiming.Advance`, `ViewerTiming.FrameRateState`, `ViewerTiming.FramesPerSecond` | First low-risk extraction; identical 500 ms integer sampling, directly tested |
 | `PreviousTime`, `ViewerClock`, copied elapsed/drop counters | `ViewerTiming.ClockState`, `ViewerTiming.Start`, `ViewerTiming.AdvanceClock` | Identical raw sample, clamp and long-pause contract; coordinator consumes explicit animation/camera/presentation outputs |
@@ -61,12 +93,12 @@ state. Arin, Orin, Dragon, Party, and inspected-actor identities remain distinct
 | `BaseCamera`, `Camera`, `ViewerFrame`, `CameraControls`, `SmoothZoom`, pointer remainders, calibration orbit anchor and `AutoOrbit*` | `ViewerCamera.State` with `Reset`, `Compose`, `UpdatePointerControls`, `AdvanceZoom`, `AdvanceAutoOrbit`, `UpdateResponsiveFit`, `ApplyCloseUp` and `ApplyCalibrationOrbitAnchor` | Camera interaction state now has one focused owner; `Program.smile` coordinates borrowed profile/bounds and keeps Party shot intent separate for the later Party owner |
 | Calibration key banks, selection/edit/clipboard/Undo buffers, storage envelope and import baseline in `Program.smile` | `ViewerCalibration.State` plus module-private bounded workspaces in `ViewerCalibration.smile` | `Program.smile` now coordinates UI-visible operations only; profile-scoped storage, codec validation, rollback and import confirmation are direct production-module paths |
 | `LoadCalibration`, `SaveCalibration`, raw `CalibrationStorage*`/`CalibrationCandidate*` arrays and in-place key-array edits | `ViewerCalibration.Load`, `Persist`, `PrepareImport`, `CommitImport`, `MoveKey`, `CommitCurrentKey`, `Undo` and focused query operations | Primary/backup recovery, rejected candidates and failed writes preserve the previous valid in-memory and stored revision; tests use disposable identities and buffers |
-| Slider/timeline/repeat capture flags and ad hoc queued arrow checks in `Program.smile` | `ViewerInput.State`, `ClassifyArrow` and capture begin/finish/reset operations | Queued Ctrl state is sampled from `Key_Event_Held`; captured release is routed before outside-window return. The invalid per-frame `Window_Activate()` focus probe was removed because that operation actively foregrounds the native window rather than querying activation. |
-| UI visibility and calibration panel/edit/confirmation fields in `Program.smile` | `ViewerUi.State` with explicit visibility, calibration reset, edit and confirmation transitions | Presentation state is separate from calibration banks and actor resources; pending edits and imports block actor switches without changing their owner |
-| Transform-gizmo projection, pointer ownership, drag remainder and grip state globals in `Program.smile` | `ViewerGizmo.State` with reset/show-hide/begin/finish/select/projection operations | Gizmos remain opt-in; hiding ends handle capture while retaining the unsaved numeric preview for explicit Save or Cancel |
-| Party participants, inspector/preview binding, turn/stage/timing, attack/reaction state and Party camera globals in `Program.smile` | `ViewerParty.State`, two explicit `ParticipantLayout` values and focused reset/formation/binding/elapsed operations | Exactly two live Party participants remain explicit; primary, companion, Dragon and inspector contexts stay distinct, and same-model fallback never aliases actor state |
-| Scene VFX clock, Fire/Lightning pause flags, visual-continuity epochs, light leases and audio-cue state in `Program.smile` | `ViewerEffects.State`, `AdvanceScene`, independent Fire/Lightning toggles, continuity invalidation and shared shutdown | One scene clock advances once per frame; scene pause freezes choreography but not VFX by default, while each existing family toggle freezes only that family |
-| Arena, floor/grid visibility, backdrop handles and backdrop index in `Program.smile` | `ViewerRendering.State` with reset/create/draw/apply/destroy/toggle/cycle operations | Rendering owns renderer resources and presentation selection; it borrows actor/effects snapshots and does not own gameplay, Party or calibration state |
+| Slider/timeline/repeat capture flags and ad hoc queued arrow checks in `Program.smile` | `ViewerInput.State`, `ClassifyArrow` and capture begin/finish/reset operations | State and low-level capture transitions moved; substantial inspector, timeline and calibration pointer routing remains for R7.5. Queued Ctrl is sampled from `Key_Event_Held`, and the invalid foreground-stealing `Window_Activate()` probe remains removed. |
+| UI visibility and calibration panel/edit/confirmation fields in `Program.smile` | `ViewerUi.State` with explicit visibility, calibration reset, edit and confirmation transitions | State transitions moved; substantial layout, drawing and labels remain for R7.5. Pending edits and imports must continue to block actor switches without changing their owner. |
+| Transform-gizmo projection, pointer ownership, drag remainder and grip state globals in `Program.smile` | `ViewerGizmo.State` with reset/show-hide/begin/finish/select/projection operations | State moved; pointer mathematics and drawing implementation remain for R7.5. Gizmos remain opt-in and hiding retains the unsaved numeric preview for explicit Save or Cancel. |
+| Party participants, inspector/preview binding, turn/stage/timing, attack/reaction state and Party camera globals in `Program.smile` | `ViewerParty.State`, two explicit `ParticipantLayout` values and focused reset/formation/binding/elapsed operations | State and a few calculations moved; the transitions, actor lifecycle, pointer/UI and camera implementation remain for R7.5. Exactly two live Party participants remain explicit and same-model fallback must not alias actor state. |
+| Scene VFX clock, Fire/Lightning pause flags, visual-continuity epochs, light leases and audio-cue state in `Program.smile` | `ViewerEffects.State`, `AdvanceScene`, independent Fire/Lightning toggles, continuity invalidation and shared shutdown | Scene-clock state moved; equipment emitters, glow, trails, update/draw and teardown implementation remain for R7.5. Scene pause continues to leave VFX running by default while each family toggle freezes only that family. |
+| Arena, floor/grid visibility, backdrop handles and backdrop index in `Program.smile` | `ViewerRendering.State` with reset/create/draw/apply/destroy/toggle/cycle operations | Basic state and backdrop/floor operations moved; grid, sockets and overlay composition remain for R7.5. Rendering borrows actor/effects snapshots and does not own gameplay, Party or calibration state. |
 | `BattleCamera.*` | `BattleCamera.*` | Already focused, retained |
 | `BattleAudio.CueState/CrossedCue` | `BattleAudio.*` | Already focused, retained |
 | `CalibrationJson.*` | `CalibrationJson.*` | Bounded reader retained; no second codec |
@@ -87,8 +119,10 @@ copied or left as dead wrappers.
 
 ## R6 preservation and defect evidence
 
-- Party, effects and rendering moved into focused owners without a shared replacement
-  state monolith. `Program.smile` retains ordering and coordinates borrowed handles.
+- Party, effects and rendering state plus selected calculations moved into focused
+  owners without a shared replacement state monolith. The R7.5 audit corrects the
+  earlier overstatement that their implementation had fully moved: `Program.smile`
+  still contains the substantial routines listed above.
 - Native and generated-Web hardening pass with exact console parity. The isolated
   calibration fixture uses a random application identity and validates primary/backup
   recovery without reading or replacing live Arin/Orin storage.

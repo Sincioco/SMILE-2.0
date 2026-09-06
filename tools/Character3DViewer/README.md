@@ -21,11 +21,15 @@ The editor source and build/launch entry points belong here. Sin Star I owns the
 ## Maintainer routing
 
 Start with `ARCHITECTURE.md` for the current ownership and test map. `Program.smile`
-is the thin ordered coordinator. Startup/session/playback, camera, calibration,
-input/UI/gizmo, Party, effects, and rendering state live with their corresponding
-`Viewer*.smile` production modules; retained focused helpers continue to own audio,
-Dragon presence, Orin storm, profiles, and bounded calibration JSON. Do not recreate
-those fields in `Program.smile` or gather them into a shared replacement state.
+is intended to become the thin ordered coordinator. The R7.5 audit records that it
+is not yet thin: at the audit baseline it contains 8,319 lines and 233 procedures,
+including substantial subsystem implementation that must still move. Extracted
+startup/session/playback, camera, calibration, input/UI/gizmo, Party, effects, and
+rendering state lives with the corresponding `Viewer*.smile` production modules;
+retained focused helpers continue to own audio, Dragon presence, Orin storm,
+profiles, and bounded calibration JSON. Do not recreate those fields in
+`Program.smile`, mistake state extraction for a completed responsibility move, or
+gather them into a shared replacement state.
 
 The one compact current checkpoint is
 `docs\implementation\character-viewer-refactor-checkpoint.json`. The H6.1 records are
