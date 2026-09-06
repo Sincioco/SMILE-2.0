@@ -815,3 +815,38 @@ retains its entry. A missing/corrupt primary may load a checksummed backup with 
 explicit recovery status, without rewriting the primary. Wrong profile fingerprints
 remain blocked. This changes no character offsets, accepted model bytes or saved
 identity; the current 24-key snapshot, including Death frame 0, is preserved.
+
+## September 6: strict snapshot import
+
+The Viewer now has a shared source-level schema-2 reader, separate from the file
+picker and live correction evaluator. It validates the complete candidate before
+the user confirms replacing saved keys. Name-bound clips and all 20 channels pass
+through the existing transaction and one-level Undo. Malformed, wrong-character,
+wrong-asset, out-of-range or oversized input must leave the saved track unchanged.
+This adds no model repair, animation bake, `.battle` format or identity migration.
+
+The focused native and generated-Web fixtures use disposable application storage
+and compare both final snapshots with the canonical desktop serializer. The
+writer orders records by runtime clip index, which may differ from a downloaded
+JSON's alphabetical order; compare complete name-bound values rather than treating
+record order as a changed pose. Canonical Arin's 24 keys and Orin's zero-key
+snapshot remain unchanged. Actual picker/browser workflow evidence is recorded
+separately in the H6.1 ledger; compile or VM results are not visual approval.
+
+## September 6: shared Party pose inspector
+
+Party temporarily binds the existing inspector to the active actor and restores
+the scene's primary actor afterward. Arin and Orin keep distinct key ranges,
+metadata, saves and Undo ownership. A timeline preview pauses the battle and
+restores its original clip/time on resume; it must not advance turns or choose
+another target. Dragon has timeline inspection, not humanoid pose calibration.
+Native and generated-Web isolation tests cover each owner and verify that Orin
+and Dragon inspection leave Arin's saved JSON unchanged. A native temporary ring
+drag was canceled and restored its original value. The accepted 24-key snapshot,
+including Death frame 0, remains unchanged; the larger gizmo is only editor UI.
+
+Sin subsequently requested opt-in handles for unobstructed numeric calibration.
+Show Gizmo / Hide Gizmo now lives in Pose Calibration on both targets. Fresh
+character loads and full reset default to hidden; hiding ends a handle drag but
+keeps its unsaved numeric preview for explicit Save or Cancel. It never changes
+the character JSON, accepted model, or calibration identity.

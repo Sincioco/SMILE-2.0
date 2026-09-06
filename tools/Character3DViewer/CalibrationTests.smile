@@ -1,4 +1,5 @@
 ''' Injected in place of the interactive startup only; all Viewer procedures are real.
+Const TEST_IMPORT_REJECTION_COUNT = 0
 Dim TestFailures As Number
 Dim TestIndex As Number
 Dim TestSavedCount As Number
@@ -19,6 +20,7 @@ Dim TestLightningTarget As Core.Vector3
 Dim TestDataKey As Text
 Dim TestSavedJson As Text
 Dim TestUndoCount As Number
+Dim TestImportFixtureBytes[150000] As Number
 
 Game Window "SMILE Calibration Isolation Tests" Size 640 By 480
 
@@ -32,6 +34,7 @@ ProfileIndex = ViewerProfiles.PROFILE_ARIN
 Call LoadViewer()
 Call CalibrationCheck(Ready And Not ViewerError, "Load profile")
 Call CalibrationCheck(Not CalibrationStorageRejected, "Accept current Arin saved calibration")
+Call CheckGizmoVisibility()
 Call CheckPackagedCalibration()
 Call CalibrationCheck(Character3D.SocketCount(Character) = ActiveProfile.ExpectedSocketCount,
     "Profile socket contract")
@@ -45,6 +48,7 @@ Call CalibrationCheck(Ready And Not ViewerError And PartyReady,
 Call SelectCharacterTab(3)
 Call CalibrationCheck(Ready And Not ViewerError And PartyReady,
     "Party loads both calibrated heroes")
+Call CheckPartyInspector()
 Call SelectCharacterTab(0)
 Call CalibrationCheck(Ready And Not ViewerError And Not CalibrationStorageRejected,
     "Return to Arin after Dragon and Party")
@@ -448,6 +452,155 @@ Sub CalibrationCheck(Condition As Boolean, Label As Text)
 
 End Sub
 
+Sub CheckPartyInspector()
+
+    Dim Owner As Number
+    Dim PrimaryHandle As Number
+    Dim CompanionHandle As Number
+    Dim SavedClip As Number
+    Dim OriginalJson As Text
+    Dim SavedArinJson As Text
+
+    PrimaryHandle = Character.Handle
+    CompanionHandle = PartyCompanion.Actor.Handle
+    SavedArinJson = SavedCalibrationJson()
+    PartyElapsed = 1234
+    PartyStage = 1
+    PartyHitTarget = 1
+    PartyFatalTarget = 0
+
+    For Owner = 0 To 2
+
+        PartyTurn = Owner
+
+        Call BeginPartyInspector()
+
+        OriginalJson = ""
+
+        If Owner < 2 Then
+            OriginalJson = SavedCalibrationJson()
+        End If
+
+        Call CalibrationCheck(PartyUiBound And ProfileIndex = CalibrationOwnerProfile,
+            "Party inspector binds the active profile")
+        Call CalibrationCheck(CalibrationAvailable = (Owner < 2),
+            "Only the two calibrated heroes expose Pose")
+
+        If Owner = 1 Then
+            Call CalibrationCheck(Character.Handle = CompanionHandle And
+                CalibrationClipBase = CALIBRATION_MAX_CLIPS And
+                CalibrationDataKey = ViewerProfiles.CalibrationKey(ViewerProfiles.PROFILE_ORIN),
+                "Orin inspector owns Orin actor, key range and save identity")
+        Else If Owner = 2 Then
+            Call CalibrationCheck(Character.Handle = Dragon.Handle,
+                "Dragon inspector uses the live boss, without pose storage")
+        End If
+
+        SavedClip = SelectedClip
+        Ready = Character3D.SetAnimationTime(Character, 333) And Ready
+
+        Call SeekFirstAnimationFrame()
+        Call CalibrationCheck(ScenePaused And PartyPreviewActive And
+            Character3D.AnimationTime(Character) = 0,
+            "Party timeline pauses and seeks the active actor")
+        Call EndPartyInspector()
+        Call AdvancePartyDemo()
+        Call CalibrationCheck(Character.Handle = PrimaryHandle And
+            PartyCompanion.Actor.Handle = CompanionHandle And PartyElapsed = 1234 And
+            PartyStage = 1 And PartyHitTarget = 1 And PartyFatalTarget = 0,
+            "Inspector restores scene ownership and paused demo state stays unchanged")
+        Call BeginPartyInspector()
+
+        If Owner < 2 Then
+
+            CalibrationVisible = True
+
+            Call ToggleTransformGizmo()
+            Call CalibrationCheck(TransformGizmoVisible, "Party hero explicitly enables the gizmo")
+            Call BeginTransformGizmoDrag(False)
+            Call SetCurrentCalibrationValue(9)
+            Call EndPartyInspector()
+            Call HandleKeyboard(KEY_ENTER)
+            Call BeginPartyInspector()
+            Call CalibrationCheck(Not TransformGizmoDragging And CalibrationEditing And
+                PartyElapsed = 1234 And ScenePaused,
+                "Party Enter confirms gizmo preview without restarting the battle")
+            Call CancelCalibrationEdit()
+            Call BeginCalibrationEdit()
+            Call SetCurrentCalibrationValue(11)
+            Call EndPartyInspector()
+            Call HandleKeyboard(KEY_ENTER)
+            Call BeginPartyInspector()
+            Call CalibrationCheck(Not CalibrationWriteFailed And Not CalibrationEditing,
+                "Party Enter saves the active hero pose without restarting the battle")
+            Call UndoLastCalibrationChange()
+            Call CalibrationCheck(SavedCalibrationJson() = OriginalJson,
+                "Party Undo restores every saved key of only the active hero")
+            Call ToggleTransformGizmo()
+            Call CalibrationCheck(Not TransformGizmoVisible, "Party hero can hide the gizmo")
+
+        End If
+
+        Call ToggleScenePause()
+        Call CalibrationCheck(Not ScenePaused And Not PartyPreviewActive And
+            SelectedClip = SavedClip And Character3D.AnimationTime(Character) = 333,
+            "Resume restores the exact demo clip and time after scrubbing")
+        Call EndPartyInspector()
+    End For
+
+    PartyTurn = 0
+
+    Call BeginPartyInspector()
+    Call CalibrationCheck(SavedCalibrationJson() = SavedArinJson,
+        "Companion and Dragon inspection never change Arin's saved keys")
+    Call EndPartyInspector()
+
+End Sub
+
+Sub CheckGizmoVisibility()
+
+    Dim SavedJson As Text
+    Dim OriginalValue As Number
+    Dim PreviewValue As Number
+    Dim Handled As Boolean
+
+    SavedJson = SavedCalibrationJson()
+    OriginalValue = CurrentCalibrationValue()
+    PreviewValue = 0
+    CalibrationVisible = True
+
+    If OriginalValue = 0 Then
+        PreviewValue = 1
+    End If
+
+    Call CalibrationCheck(Not TransformGizmoVisible, "Gizmo defaults hidden")
+
+    Handled = HandleTransformGizmoKeyboard(KEY_R)
+
+    Call CalibrationCheck(Handled And Not TransformGizmoDragging And Not CalibrationEditing,
+        "Hidden gizmo cannot start an invisible keyboard drag")
+    Call CalibrationCheck(Not HandleTransformGizmoPointer(), "Hidden gizmo does not capture the scene")
+    Call SetCurrentCalibrationValue(PreviewValue)
+    Call CalibrationCheck(CalibrationEditing And CurrentCalibrationValue() = PreviewValue,
+        "Numeric pose editing works with the gizmo hidden")
+    Call ToggleTransformGizmo()
+    Call BeginTransformGizmoDrag(False)
+    Call CalibrationCheck(TransformGizmoVisible And TransformGizmoDragging,
+        "Explicit Show Gizmo enables handles and keyboard drag")
+    Call ToggleTransformGizmo()
+    Call CalibrationCheck(Not TransformGizmoVisible And Not TransformGizmoDragging And
+        CalibrationEditing And CurrentCalibrationValue() = PreviewValue,
+        "Hide ends capture but preserves the unsaved numeric preview")
+    Call CalibrationCheck(SavedCalibrationJson() = SavedJson, "Visibility toggle never saves keys")
+    Call CancelCalibrationEdit()
+    Call CalibrationCheck(CurrentCalibrationValue() = OriginalValue And
+        SavedCalibrationJson() = SavedJson, "Cancel preserves the original saved pose")
+    Call ToggleTransformGizmo()
+    Call ResetAll()
+    Call CalibrationCheck(Not TransformGizmoVisible, "Full reset restores hidden gizmo default")
+
+End Sub
+
 Sub CheckPackagedCalibration()
 
     Dim OriginalKey As Text
@@ -456,8 +609,6 @@ Sub CheckPackagedCalibration()
     JsonSnapshot = SavedCalibrationJson()
 
     Call CalibrationCheck(Text_Length(JsonSnapshot) > 0, "Saved JSON export is available")
-
-    Print "CALIBRATION_JSON: " + JsonSnapshot
 
     TestSavedCount = CalibrationStorageCount
     OriginalKey = CalibrationDataKey
@@ -479,6 +630,134 @@ Sub CheckPackagedCalibration()
     End For
 
     CalibrationDataKey = OriginalKey
+    CalibrationUndoCount = 0
+
+    Call CheckCalibrationImport(JsonSnapshot)
+
+    Print "CALIBRATION_JSON: " + SavedCalibrationJson()
+
+End Sub
+
+Function ReadImportFixture(Name As Text) As Text
+
+    Dim Loaded As Number
+    Dim Index As Number
+    Dim Result As Text
+
+    Load Text File "ImportFixtures/" + Name Into TestImportFixtureBytes Count Loaded
+
+    For Index = 0 To Loaded - 1
+
+        If TestImportFixtureBytes[Index] >= 32 Then
+            Result = Result + CalibrationAscii(TestImportFixtureBytes[Index])
+        End If
+
+    End For
+
+    Return Result
+
+End Function
+
+Sub CheckCalibrationImport(Original As Text)
+
+    Dim Index As Number
+    Dim Candidate As Text
+    Dim EmptySnapshot As Text
+    Dim SavedKey As Text
+    Dim SavedUndoCount As Number
+    Dim Accepted As Boolean
+
+    Call CalibrationCheck(PrepareCalibrationImport(Original), "Accept shared saved JSON")
+    Call CalibrationCheck(CalibrationJson.ByteCount() = CalibrationStorageCount,
+        "Shared import reproduces the complete saved payload")
+
+    For Index = 0 To CalibrationStorageCount - 1
+        Call CalibrationCheck(CalibrationJson.ByteAt(Index) = CalibrationStorage[Index],
+            "Shared JSON import preserves every saved payload byte")
+    End For
+
+    ''' The existing writer canonicalizes records into runtime clip order.
+
+    Call CalibrationCheck(CommitCalibrationImport(), "Import current snapshot through native transaction")
+
+    Original = SavedCalibrationJson()
+
+    If ProfileIndex = ViewerProfiles.PROFILE_ARIN Then
+
+        Candidate = ReadImportFixture("canonical.json")
+
+        Call CalibrationCheck(PrepareCalibrationImport(Candidate), "Accept canonical desktop JSON")
+
+        Candidate = ReadImportFixture("reordered.json")
+
+        Call CalibrationCheck(PrepareCalibrationImport(Candidate), "Names override reordered clip/index hints")
+
+        For Index = 0 To TEST_IMPORT_REJECTION_COUNT - 1
+
+            Candidate = ReadImportFixture("reject-" + CalibrationJsonNumber(Index) + ".json")
+
+            Call CalibrationCheck(Not PrepareCalibrationImport(Candidate),
+                "Reject malformed snapshot " + CalibrationJsonNumber(Index))
+            Call CalibrationCheck(SavedCalibrationJson() = Original,
+                "Rejected JSON leaves saved bytes unchanged")
+        End For
+
+        Candidate = ReadImportFixture("orin.json")
+
+        Call CalibrationCheck(Not PrepareCalibrationImport(Candidate), "Reject Orin JSON on Arin")
+
+        Candidate = " "
+
+        For Index = 0 To 22
+            Candidate = Candidate + Candidate
+        End For
+
+        Candidate = Candidate + " "
+
+        Call CalibrationCheck(Not PrepareCalibrationImport(Candidate), "Reject oversized JSON before parsing")
+
+        Candidate = ""
+
+    Else
+
+        Candidate = ReadImportFixture("orin.json")
+
+        Call CalibrationCheck(PrepareCalibrationImport(Candidate), "Accept canonical Orin zero-key JSON")
+
+        Candidate = ReadImportFixture("canonical.json")
+
+        Call CalibrationCheck(Not PrepareCalibrationImport(Candidate), "Reject Arin JSON on Orin")
+
+    End If
+
+    EmptySnapshot = (Text_Slice(CalibrationJsonMetadata, 0, Text_Length(CalibrationJsonMetadata) - 1) +
+        ",""savedKeyframe"":null,""totalKeyframes"":0,""clips"":[]}")
+
+    Call CalibrationCheck(PrepareCalibrationImport(EmptySnapshot), "Validate deliberate empty replacement")
+    Call CalibrationCheck(SavedCalibrationJson() = Original, "Validation alone does not replace keys")
+
+    SavedKey = CalibrationDataKey
+    SavedUndoCount = CalibrationUndoCount
+    CalibrationDataKey = "Viewer Denied Storage Probe"
+    Accepted = CommitCalibrationImport()
+
+    Call CalibrationCheck(Not Accepted And CalibrationWriteFailed, "Import reports failed persistent write")
+    Call CalibrationCheck(SavedCalibrationJson() = Original And CalibrationUndoCount = SavedUndoCount,
+        "Failed import preserves saved track and undo")
+
+    CalibrationDataKey = SavedKey
+
+    Call CalibrationCheck(PrepareCalibrationImport(EmptySnapshot), "Prepare before concurrent saved edit")
+
+    CalibrationImportBaseline = "Changed Since Validation"
+
+    Call CalibrationCheck(Not CommitCalibrationImport(), "Refuse replacement after baseline changes")
+    Call CalibrationCheck(SavedCalibrationJson() = Original, "Changed baseline leaves current keys intact")
+    Call CalibrationCheck(PrepareCalibrationImport(EmptySnapshot), "Prepare replacement again after denial")
+    Call CalibrationCheck(CommitCalibrationImport(), "Confirmed import replaces saved track")
+    Call UndoLastCalibrationChange()
+    Call CalibrationCheck(SavedCalibrationJson() = Original, "Undo import restores complete snapshot")
+
     CalibrationUndoCount = 0
 
 End Sub

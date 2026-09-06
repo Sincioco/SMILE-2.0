@@ -4,6 +4,8 @@
     <StartupFile>Program.smile</StartupFile>
     <OutputName>Character3DViewer</OutputName>
     <ApplicationId>smile.tools.character3d-viewer</ApplicationId>
+    <WebLoadingAuthor>Louiery R. Sincioco (Sin)</WebLoadingAuthor>
+    <WebLoadingLogo>..\..\assets\branding\smile-2.0-logo-web.png</WebLoadingLogo>
     <RememberWindowPlacement>true</RememberWindowPlacement>
     <ResponsiveWindow>true</ResponsiveWindow>
     <GraphicsBackend>DirectX</GraphicsBackend>
@@ -17,6 +19,7 @@
     <SmileSource Include="BattleAudio.smile" />
     <SmileSource Include="BattleCamera.smile" />
     <SmileSource Include="DragonPresence.smile" />
+    <SmileSource Include="CalibrationJson.smile" />
     <Model3DAsset Include="BuildAssets\ArinV57\arin-v5.7-idle-equipment-checkpoint.glb"
                   Descriptor="BuildAssets\ArinV57\ArinV57.sm3d.json"
                   LogicalPath="Assets\Generation2\ArinV57\ArinV57.sm3d"

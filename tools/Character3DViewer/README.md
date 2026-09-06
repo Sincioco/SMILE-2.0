@@ -1,8 +1,8 @@
 # SMILE 2.0 - 3D Viewer, Animation Editor
 
-Native-first reusable inspection and lightweight pose-correction tool. Party is the launch default. The Character tabs select Arin, Orin, Dragon, or the Party arena. Profile retains Arin v5.6, the earlier prototype, and the technical fixture for diagnostics. Current Web parity is in progress under H6.1; this is not the future Battle Scene Editor.
+Native-first reusable inspection and lightweight pose-correction tool. Party is the launch default. The Character tabs select Arin, Orin, Dragon, or the Party arena. Desktop Profile retains Arin v5.6, the earlier prototype, and the technical fixture for diagnostics. Web publication omits that control, its shortcut and the obsolete diagnostic assets. Current Web parity is in progress under H6.1; this is not the future Battle Scene Editor.
 
-Dragon inspection uses the same clip buttons, timeline/frame stepping, playback speed, demo, lighting/material channels, sockets, pan/orbit/zoom and reset as the hero tabs. Both heroes remain in the arena with their own assets and saved corrections. Head Aim constrains only the head joint; At Arin/At Orin selects its target. The current Pose Calibration targets remain humanoid wrists and equipment, so they do not apply to Dragon. Dragon VFX and hero equipment visibility remain independent. Party's Inspect Character also opens Dragon's tab.
+Dragon inspection uses the same clip buttons, timeline/frame stepping, playback speed, demo, lighting/material channels, sockets, pan/orbit/zoom and reset as the hero tabs. Both heroes remain in the arena with their own assets and saved corrections. Head Aim constrains only the head joint; At Arin/At Orin selects its target. The current Pose Calibration targets remain humanoid wrists and equipment, so they do not apply to Dragon. Dragon VFX and hero equipment visibility remain independent. Pose is disabled for Dragon, including its turn in Party.
 
 Party members start on a 300-unit front arc with 40 degrees between its endpoints. The placement function distributes any supplied member count over that arc. The two current attack destinations remain in front of the Dragon; approach and retreat interpolate from each member's own home position. Battle cameras sample this frame's actor/Dragon poses.
 
@@ -34,6 +34,13 @@ bin/
 first and then Web. Select `-Configuration Debug` for both Debug outputs, or
 `-Target Native` / `-Target Web` for one target. Each Web directory is a complete
 static publication; upload its entire contents, including all assets.
+
+The Viewer Web build generates an ignored publication project and profile policy
+containing only the current Arin, Orin and Dragon model assets. The normal asset
+publisher removes obsolete managed diagnostic files from that Web output only.
+Textures are neither transcoded nor resized; Desktop diagnostics and canonical
+packages remain intact. Visual Studio's direct project build does not invoke this
+tool-specific publication script yet; use `Build.ps1` for the current slim bundle.
 
 `Launch.ps1` defaults to `bin\Release\Character3DViewer.exe`. Use
 `Launch.ps1 -Configuration Debug` for Debug. `-Build` rebuilds the selected native
@@ -94,19 +101,21 @@ no automatic browser-to-repository synchronization is claimed.
 - Arin and Orin start at speed 200. Their individual demos target three seconds per sequence and let an in-progress animation finish before advancing. Orin Block plays once and holds its final pose. Selecting an animation disables Demo; Block remains a one-shot.
 - D toggles the dragon; W toggles the current character’s weapon; S toggles shield. Hiding the dragon does not shrink the arena.
 - B/BG cycles colors and two static bitmaps. The default is the Sin Star I landscape without its title.
-- Floor / Grid hides/shows both. Profile, Glow, Socket, Channel and lighting controls remain available.
+- Floor / Grid hides/shows both. Glow, Socket, Channel and lighting controls remain available. Profile is Desktop-only and hidden in Party.
 - Pose shows/hides Pose Calibration, which is **hidden at startup and reset**.
 - Sword Fire and Shield Fire independently toggle the default-on thermal effects on Arin v5.7. W/S also hide the corresponding fire with its equipment. The sword has a fuller orange flame and world-space lingering trail; the shield uses much smaller flames instead of the old solid golden glow.
 - Normal animation loop wraps and clip changes retain existing fire particles until they fade; source velocity inheritance is zeroed for the transition update so the pose reset does not launch particles across the gap. Editing a paused pose clears stale emission. Explicit right-click reset clears the effects for a fresh start.
 - G0 clarification: the retained-tail clip-change behavior applies to automatic Demo advancement. Explicit clip selection/navigation is a cut that clears/reseeds visual history; it is not a corrected-pose cross-fade.
 
-The timeline supports drag scrubbing and hover-wheel single-frame steps. `0-Frame` jumps to the start; `< Key` / `Key >` jump between saved corrections; `< Frame` / `Frame >` step immediately on click and repeat one frame every 300 ms while held. Release stops repetition; reset or hiding the UI cancels it. Holding captures the gesture so it cannot pan the camera; a delayed update never catches up with a burst of frame steps. Drag a green keyframe tick to move it. These controls do not toggle pause.
+The timeline supports drag scrubbing and hover-wheel single-frame steps. `0-Frame` jumps to the start; `< Key` / `Key >` jump between saved corrections; `< Frame` / `Frame >` step immediately on click and repeat one frame every 300 ms while held. Release stops repetition; reset or hiding the UI cancels it. Holding captures the gesture so it cannot pan the camera; a delayed update never catches up with a burst of frame steps. Drag a green keyframe tick to move it. All timeline navigation pauses the scene automatically and never toggles it back into playback. Dragon has no saved pose keys to navigate or drag.
 
 ## Pose corrections
 
 Select Weapon Wrist, Shield Wrist, Weapon or Shield, an axis, and Rotate or Move. The slider and hover-wheel edit the selected channel; the former -5/+5 buttons are removed. Decouple switches allow each equipment item to retain its base animation while its wrist is corrected independently.
 
-The viewport uses Blender-compatible transform controls. Red X, green Y and blue Z handles appear at the selected wrist or equipment socket. Drag an arrow to move equipment or drag a colored ring to rotate the selected target. `G` starts Move for equipment, `R` starts Rotate, and `X`, `Y`, or `Z` constrains the active axis. `Enter` accepts the current drag and saves an active edit; `Esc` or right-click cancels it. The `E` key is also accepted as a classroom-friendly Rotate alias.
+The viewport uses Blender-inspired axis transform controls, not Blender's full transform system. They are **hidden and disabled by default** on Desktop and Web. Click **Show Gizmo** in Pose Calibration to enable them; **Hide Gizmo** removes their drawing and mouse hit testing without changing or saving the current numeric preview. Hidden handles cannot start an invisible keyboard drag. Numeric controls, axis selection and Save/Cancel remain available. A fresh character load or full reset restores the hidden default; this UI setting is not written into character calibration JSON.
+
+When enabled, red X, green Y and blue Z handles appear at the selected wrist or equipment socket. The rings use 128 segments, camera-relative thousandths for smooth projection, round stroke joins and a 12-pixel pick tolerance; hover highlights the picked axis. Drag an arrow to move equipment or drag along a colored ring to rotate the selected target. Slow rotation retains partial degrees. `G` starts Move for equipment, `R` starts Rotate, and `X`, `Y`, or `Z` constrains the active axis. `Enter` first accepts an active drag as an unsaved preview; pressing Enter again or Save Frame saves the pose. `Esc` or right-click cancels the drag. The `E` key is also accepted as a classroom-friendly Rotate alias. Plane handles, free trackball, scaling and local/global space selection are not provided; the outer ring is a visual guide only.
 
 To turn a fitted sword or shield without pulling its grip away, select **Weapon** or **Shield**, enable **In Place**, choose **Rotate**, then adjust X/Y/Z. This holds the equipment's current hand-attachment point while compensating its position offsets; it does not edit either wrist. Save Frame stores the resulting rotation and position together in the existing format. Cancel/Reload restores both. The control is an editing mode, not another animated property. Position compensation retains the existing whole-world-unit precision and rejects edits beyond the saved +/-100-unit range.
 
@@ -140,8 +149,15 @@ directly in Party mode. Its controls sit in a dedicated left panel below the sha
 tabs, and the panel names the active attack while a party member strikes. Orin's Death
 presentation follows a measured ground curve so his falling body settles onto the arena floor.
 Space pauses movement; the usual pan, orbit, eased zoom, keyboard controls and reset remain
-available. Weapon and Shield affect both members. Select the individual Character tab to
-edit that character’s animation; Party evaluates each member’s own saved correction track.
+available. Weapon and Shield affect both members. Party uses the same right inspector and
+bottom timeline as the individual tabs, following whichever actor owns the current turn.
+Timeline navigation pauses the scene and previews that actor without advancing the battle.
+Open Pose to edit the active Arin or Orin using that hero's own saved correction track.
+The Pose panel temporarily occupies the Party/Enemy left-panel area; closing it restores
+the Party controls. Dragon permits timeline inspection only. Resume restores the original
+demo clip/time after preview, without rerolling a target, advancing a turn, or applying any
+combat side effects. Save or cancel an active pose edit before resuming. The existing demo
+choreography remains unchanged; this is not a battle-sequence authoring interface.
 The right status panel follows the current attacker, including Dragon animation details,
 and reports the actual remaining turn time. Speed changes restart the Party demonstration.
 Arin retains his thermal equipment fire. Orin's hammer glows white with crawling lightning;
@@ -245,15 +261,37 @@ distance, so screenshots contain enough information to diagnose a bad angle.
 ### Saved JSON download (September 6)
 
 The filename below the timeline identifies the current character's calibration.
-On native Windows, clicking it still opens the canonical file's Explorer location.
-On Web, clicking it downloads the current **saved** schema-2 JSON snapshot, not
+**Download Key Frames**, beside **Import Key Frames**, exports the current saved JSON snapshot:
+Web requests a browser download; native Windows uses a Save As dialog. This
+explicit export button does not open Explorer or include temporary preview edits.
+On native Windows, clicking the **filename** opens the canonical file's Explorer location.
+On Web, clicking the **filename** downloads the current **saved** schema-2 JSON snapshot, not
 temporary unsaved pose adjustments. All 20 channels and name-bound clips are
 preserved. The label does not claim the browser can read or write `D:\`.
 
 Downloads do not synchronize with the repository or another browser origin.
 The native calibration synchronizer remains authoritative for desktop integration.
-In-Viewer JSON import and browser storage-failure recovery remain in progress;
-the new generic `File_Import()` picker alone is not a validated calibration importer.
+**Import Key Frames** uses the shared UTF-8 picker. The transfer row is ordered
+Import Key Frames, Download Key Frames, JSON filename, then status text. Narrow
+windows show status on the line below instead of truncating the confirmation.
+Save or cancel
+an active pose edit first. Selecting a file validates it without changing saved
+keys; click **Replace Keys?** to confirm replacing this character's complete saved
+track. **Undo Last Change** restores the preceding track. Import pauses the scene.
+Changing character/profile cancels a pending import, and a changed saved baseline
+requires choosing the file again. A failed write retains the saved track and Undo.
+
+The source-level `CalibrationJson` reader accepts current schema-2/storage-3
+snapshots with this publication's exact character, application, data-key and asset
+hash metadata. Clip names are authoritative; object property order and clip order
+may differ, and indices are hints. It rejects unknown/duplicate fields or clips,
+incomplete channels, invalid flags/vectors/ranges, repeated or out-of-range frames,
+count mismatches, malformed/trailing JSON and files above the 8 MiB transfer limit.
+Current identity/clip strings are bounded printable ASCII (including equivalent
+JSON escapes). This is not a general JSON API or a legacy-character migration tool.
+Omitted clips are cleared by the explicitly confirmed full-snapshot replacement.
+Rejected/unavailable working storage remains write-blocked; its existing recovery
+workflow must be resolved first. There is no automatic cross-tab/process merge.
 The shared export fixture validates both characters against canonical JSON and
 the desktop binary serializer. An actual Edge Arin download also round-tripped
 byte-for-byte through the native text import/export dialogs in an isolated sample.
@@ -284,5 +322,31 @@ temporary pose preview open for Retry/Cancel; a failed Undo retains the undo ent
 The JSON download still contains saved keys, never a failed candidate. Browser
 primary and last-good backup remain origin/app/key-specific; neither writes Drive D.
 Concurrent tabs/processes still require coordination by the user (no merge/locking).
-Wrong-profile data remains rejected; validated JSON import is a separate unfinished
-workflow, not implied by the generic picker or this storage recovery change.
+Wrong-profile working data remains rejected. The import validator never guesses
+an identity migration or silently overrides a rejected working save.
+
+### Tab switching and startup loading
+
+Desktop and Web both opt into `Character3D.SetUnusedAssetCacheLimit(3)`. Changing
+tabs still destroys the old actor instances, animation/pose state and scene VFX,
+but up to three unused character assets can remain loaded: model geometry,
+textures, materials and animation source data. Reopening a compatible character
+reuses that asset and creates fresh independent actor/animator state. Cache keys
+still include asset path, rendering profile and fallback variant. Eviction,
+shutdown and renderer-reset invalidation remain bounded and explicit; the
+default for other Character3D callers remains immediate last-owner release.
+The tradeoff is retained memory (bounded by the chosen assets), not duplicate
+actors. Setting the limit to zero purges unused retained assets. Resource
+admission failure evicts unused entries before one retry.
+
+The Web runtime also retains a bounded page-local encoded download cache, helping
+repeated loads of backgrounds/effects without retaining their live instances.
+A first visit can still take time to download, decode and prepare new assets.
+Native and Web show a loading notice while changing tabs. No speed percentage
+is promised without a measured comparison on the user's deployed connection.
+
+All three tools' generated Web startup pages use the official logo derivative,
+real asset activity/counts, creator credits and the Snake tutorial copyright
+footer with new-tab links. The original branding PNG and full-fidelity character
+textures remain unchanged. The loader does not represent tab-switch or GPU
+preparation time as a false completed-download percentage.

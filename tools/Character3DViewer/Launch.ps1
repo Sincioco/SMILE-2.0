@@ -30,9 +30,12 @@ if (Test-Path -LiteralPath $orinProfile) {
 }
 
 $viewers = Get-Process -ErrorAction SilentlyContinue | Where-Object {
-    $_.ProcessName -like 'Character3DViewer*' -or
-    $_.MainWindowTitle -like 'SMILE 2.0 - 3D Viewer, Animation Editor*' -or
-    $_.MainWindowTitle -like 'SMILE 2.0 - Character 3D Viewer*'
+    # A browser displaying the Web Viewer can have the same window title.
+    # Match repository executable identity, never a title alone.
+    $_.Path -ieq $resolvedExecutable -or
+    ($_.ProcessName -like 'Character3DViewer*' -and $_.Path -and
+        $_.Path.StartsWith($toolRoot + [IO.Path]::DirectorySeparatorChar,
+            [StringComparison]::OrdinalIgnoreCase))
 }
 
 foreach ($viewer in $viewers) {

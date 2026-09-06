@@ -377,7 +377,7 @@ Sub DrawHud()
 
     X = PanelX()
 
-    Draw Text "SMILE 2.0 - ADVANCE NATIVE FIRE LAB" At 18, 14 Size 20 Color Cyan
+    Draw Text "SMILE 2.0 - ADVANCE NATIVE FIRE LAB" At 18, 14 Size 20 Color White
     Draw Text Preset At 18, 46 Size 12 Color Light_Gray
     Draw Text "FPS" At 18, 72 Size 12 Color Light_Gray
     Draw Number FramesPerSecond At 54, 72 Size 12 Color Cyan

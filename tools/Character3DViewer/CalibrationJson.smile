@@ -1,0 +1,983 @@
+''' Bounded schema-2 snapshot reader. It never edits an actor or writes a save.
+Module Smile.Tools.CalibrationJson
+
+Option Explicit
+
+Import Smile.Simple3D.Character3D As Character3D
+
+Private Const CAPACITY = 700000
+Private Const MAX_TEXT = 8388608
+Private Dim Source As Text
+Private Dim Page As Text
+Private Dim Block As Text
+Private Dim PageStart As Number
+Private Dim BlockStart As Number
+Private Dim Length As Number
+Private Dim Offset As Number
+Private Dim Token As Text
+Private Dim Value As Text
+Private Dim IntegerValue As Number
+Private Dim Valid As Boolean
+Private Dim ReadingMetadata As Boolean
+Private Dim Expected[12] As Text
+Private Dim Bytes[CAPACITY] As Number
+Private Dim PayloadCount As Number
+Private Dim KeyBytes[10752] As Number
+Private Dim KeyValues[20] As Number
+Private Dim ClipSeen[64] As Number
+Private Dim ClipNames[64] As Text
+Private Dim ClipSamples[64] As Number
+Private Dim RuntimeCount As Number
+Private Dim StoredCount As Number
+Private Dim TotalKeys As Number
+Private Dim DeclaredKeys As Number
+Private Dim SavedName As Text
+Private Dim SavedFrame As Number
+Private Dim RecordNames[64] As Text
+Private Dim RecordStarts[64] As Number
+Private Dim RecordKeys[64] As Number
+
+Private Function Peek() As Number
+
+    Dim ReturnValue As Number
+
+    Dim Result As Number
+
+    If Offset >= Length Then
+        ReturnValue = -1
+
+        Return ReturnValue
+    End If
+
+    ''' Two bounded slices avoid rescanning the entire UTF-8 text for every scalar.
+
+    If Offset < PageStart Or Offset >= PageStart + 16384 Then
+        PageStart = Offset
+        Page = Text_Slice(Source, Offset, 16384)
+    End If
+
+    If Offset < BlockStart Or Offset >= BlockStart + 128 Then
+        BlockStart = Offset
+        Block = Text_Slice(Page, Offset - PageStart, 128)
+    End If
+
+    Result = Text_Code_At(Block, Offset - BlockStart)
+
+    Return Result
+
+End Function
+
+Private Function Ascii(Code As Number) As Text
+
+    Dim Result As Text
+
+    If Code < 32 Or Code > 126 Then
+        Valid = False
+        Return ""
+    End If
+
+    Result = Text_Slice(" !""#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~", Code - 32, 1)
+
+    Return Result
+
+End Function
+
+Private Sub NextToken()
+
+    Dim Code As Number
+    Dim Digit As Number
+    Dim Unicode As Number
+    Dim Index As Number
+    Dim Negative As Boolean
+    Dim FirstDigit As Number
+
+    Token = ""
+    Value = ""
+    IntegerValue = 0
+    Code = Peek()
+
+    Do
+
+        If (Code = 32 Or
+            Code = 9 Or
+            Code = 10 Or
+            Code = 13) Then
+            Offset = Offset + 1
+            Code = Peek()
+        End If
+
+    Loop Until Not (Code = 32 Or Code = 9 Or Code = 10 Or Code = 13)
+
+    If Code = -1 Or Not Valid Then
+        Return
+    End If
+
+    Offset = Offset + 1
+
+    If Code = 34 Then
+
+        Token = "String"
+        Code = Peek()
+
+        Do
+
+            If Valid And Code <> 34 Then
+
+                Offset = Offset + 1
+
+                If Code = 92 Then
+
+                    Code = Peek()
+                    Offset = Offset + 1
+
+                    If Code = 117 Then
+
+                        Unicode = 0
+
+                        For Index = 0 To 3
+
+                            Code = Peek()
+                            Offset = Offset + 1
+                            Digit = -1
+
+                            If Code >= 48 And Code <= 57 Then
+                                Digit = Code - 48
+                            Else If Code >= 65 And Code <= 70 Then
+                                Digit = Code - 55
+                            Else If Code >= 97 And Code <= 102 Then
+                                Digit = Code - 87
+                            End If
+
+                            If Digit < 0 Then
+                                Valid = False
+                            End If
+
+                            Unicode = Unicode * 16 + Max(0, Digit)
+                        End For
+
+                        Code = Unicode
+
+                    Else If (Code <> 34 And
+                        Code <> 92 And
+                        Code <> 47) Then
+
+                        Valid = False
+
+                    End If
+
+                End If
+
+                Value = Value + Ascii(Code)
+
+                If Text_Length(Value) > 128 Then
+                    Valid = False
+                End If
+
+                Code = Peek()
+
+            End If
+
+        Loop Until Not (Valid And Code <> 34)
+
+        Offset = Offset + 1
+
+    Else If Code = 45 Or (Code >= 48 And Code <= 57) Then
+
+        Token = "Integer"
+        Negative = Code = 45
+
+        If Negative Then
+            Code = Peek()
+            Offset = Offset + 1
+        End If
+
+        FirstDigit = Code
+
+        If Code < 48 Or Code > 57 Then
+            Valid = False
+            Return
+        End If
+
+        IntegerValue = Code - 48
+        Code = Peek()
+
+        Do
+
+            If (Valid And
+                Code >= 48 And
+                Code <= 57) Then
+
+                If FirstDigit = 48 Or IntegerValue > 6553 Then
+                    Valid = False
+                    Return
+                End If
+
+                IntegerValue = IntegerValue * 10 + Code - 48
+                Offset = Offset + 1
+                Code = Peek()
+
+            End If
+
+        Loop Until Not (Valid And Code >= 48 And Code <= 57)
+
+        If Negative Then
+            IntegerValue = -IntegerValue
+        End If
+
+    Else If (Code = 116 Or
+        Code = 102 Or
+        Code = 110) Then
+
+        Token = Ascii(Code)
+        Code = Peek()
+
+        Do
+
+            If (Code >= 97 And
+                Code <= 122 And
+                Text_Length(Token) < 6) Then
+
+                Token = Token + Ascii(Code)
+                Offset = Offset + 1
+                Code = Peek()
+
+            End If
+
+        Loop Until Not (Code >= 97 And Code <= 122 And Text_Length(Token) < 6)
+
+        If (Token <> "true" And
+            Token <> "false" And
+            Token <> "null") Then
+            Valid = False
+        End If
+
+    Else
+
+        Token = Ascii(Code)
+
+        If (Token <> "{" And
+            Token <> "}" And
+            Token <> "[" And
+            Token <> "]" And
+            Token <> ":" And
+            Token <> ",") Then
+            Valid = False
+        End If
+
+    End If
+
+End Sub
+
+Private Sub Start(Text As Text)
+
+    Source = Text
+    Length = Text_Length(Source)
+    Offset = 0
+    PageStart = -16384
+    BlockStart = -128
+    Valid = Length > 0 And Length <= MAX_TEXT
+
+    If Not Valid Then
+        Token = ""
+        Return
+    End If
+
+    Call NextToken()
+
+End Sub
+
+Private Sub Expect(Kind As Text)
+
+    If Token <> Kind Then
+        Valid = False
+        Return
+    End If
+
+    Call NextToken()
+
+End Sub
+
+Private Function ReadInteger(Minimum As Number, Maximum As Number) As Number
+
+    Dim Result As Number
+
+    Result = IntegerValue
+
+    If (Token <> "Integer" Or
+        Result < Minimum Or
+        Result > Maximum) Then
+        Valid = False
+    End If
+
+    Call NextToken()
+
+    Return Result
+
+End Function
+
+Private Function ReadString() As Text
+
+    Dim Result As Text
+
+    Result = Value
+
+    Call Expect("String")
+
+    Return Result
+
+End Function
+
+Private Function PropertyName(ByRef First As Boolean) As Text
+
+    Dim Result As Text
+
+    If Not First Then
+        Call Expect(",")
+    End If
+
+    First = False
+    Result = ReadString()
+
+    Call Expect(":")
+
+    Return Result
+
+End Function
+
+Private Sub Mark(ByRef Seen As Number, Bit As Number)
+
+    If Bit = 0 Then
+        Valid = False
+        Return
+    End If
+
+    If (Seen / Bit) Mod 2 <> 0 Then
+        Valid = False
+    Else
+        Seen = Seen + Bit
+    End If
+
+End Sub
+
+Private Sub Identity(Index As Number, Numeric As Boolean)
+
+    Dim Current As Text
+    Dim NumericValue As Number
+
+    If Numeric Then
+        NumericValue = ReadInteger(0, 3)
+        Current = Ascii(48 + NumericValue)
+    Else
+
+        Current = ReadString()
+    End If
+
+    If ReadingMetadata Then
+        Expected[Index] = Current
+    Else If Current <> Expected[Index] Then
+        Valid = False
+    End If
+
+End Sub
+
+Private Sub ReadProfile()
+
+    Dim First As Boolean
+    Dim Seen As Number
+    Dim Name As Text
+
+    First = True
+
+    Call Expect("{")
+
+    Do
+
+        If Valid And Token <> "}" Then
+
+            Name = PropertyName(First)
+
+            If Name = "version" Then
+                Call Mark(Seen, 1)
+                Call Identity(6, True)
+            Else If Name = "modelSha256" Then
+                Call Mark(Seen, 2)
+                Call Identity(7, False)
+            Else If Name = "descriptorSha256" Then
+                Call Mark(Seen, 4)
+                Call Identity(8, False)
+            Else If Name = "sm3dSha256" Then
+                Call Mark(Seen, 8)
+                Call Identity(9, False)
+            Else If Name = "clipNamesSha256" Then
+                Call Mark(Seen, 16)
+                Call Identity(10, False)
+            Else If Name = "socketNamesSha256" Then
+                Call Mark(Seen, 32)
+                Call Identity(11, False)
+            Else
+                Valid = False
+            End If
+
+        End If
+
+    Loop Until Not (Valid And Token <> "}")
+
+    Call Expect("}")
+
+    Valid = Valid And Seen = 63
+
+End Sub
+
+Private Sub Triplet(Channel As Number, Limit As Number)
+
+    Dim Axis As Number
+
+    Call Expect("[")
+
+    For Axis = 0 To 2
+
+        If Axis > 0 Then
+            Call Expect(",")
+        End If
+
+        KeyValues[Channel + Axis] = ReadInteger(-Limit, Limit)
+    End For
+
+    Call Expect("]")
+
+End Sub
+
+Private Sub Part(Rotation As Number, Position As Number, Flag As Number)
+
+    Dim First As Boolean
+    Dim Seen As Number
+    Dim Name As Text
+
+    First = True
+
+    Call Expect("{")
+
+    Do
+
+        If Valid And Token <> "}" Then
+
+            Name = PropertyName(First)
+
+            If Name = "rotation" Then
+
+                Call Mark(Seen, 1)
+                Call Triplet(Rotation, 180)
+
+            Else If Name = "position" And Position >= 0 Then
+
+                Call Mark(Seen, 2)
+                Call Triplet(Position, 100)
+
+            Else If Name = "decoupled" And Flag >= 0 Then
+
+                Call Mark(Seen, 4)
+
+                KeyValues[Flag] = 0
+
+                If Token = "true" Then
+                    KeyValues[Flag] = 1
+                Else If Token <> "false" Then
+                    Valid = False
+                End If
+
+                Call NextToken()
+
+            Else
+
+                Valid = False
+
+            End If
+
+        End If
+
+    Loop Until Not (Valid And Token <> "}")
+
+    Call Expect("}")
+
+    If Position < 0 Then
+        Valid = Valid And Seen = 1
+    Else
+        Valid = Valid And Seen = 7
+    End If
+
+End Sub
+
+Private Function ReadKey() As Number
+
+    Dim First As Boolean
+    Dim Seen As Number
+    Dim Name As Text
+    Dim Frame As Number
+
+    First = True
+
+    Call Expect("{")
+
+    Do
+
+        If Valid And Token <> "}" Then
+
+            Name = PropertyName(First)
+
+            If Name = "frame" Then
+                Call Mark(Seen, 1)
+
+                Frame = ReadInteger(0, 65535)
+            Else If Name = "swordWrist" Then
+                Call Mark(Seen, 2)
+                Call Part(0, -1, -1)
+            Else If Name = "shieldWrist" Then
+                Call Mark(Seen, 4)
+                Call Part(3, -1, -1)
+            Else If Name = "sword" Then
+                Call Mark(Seen, 8)
+                Call Part(6, 12, 18)
+            Else If Name = "shield" Then
+                Call Mark(Seen, 16)
+                Call Part(9, 15, 19)
+            Else
+                Valid = False
+            End If
+
+        End If
+
+    Loop Until Not (Valid And Token <> "}")
+
+    Call Expect("}")
+
+    Valid = Valid And Seen = 31
+
+    Return Frame
+
+End Function
+
+Private Function ReadKeys() As Number
+
+    Dim Keys As Number
+    Dim Frame As Number
+    Dim Previous As Number
+    Dim Channel As Number
+    Dim Encoded As Number
+    Dim ByteOffset As Number
+
+    Previous = -1
+
+    Call Expect("[")
+
+    Do
+
+        If Valid And Token <> "]" Then
+
+            If Keys >= 256 Then
+                Valid = False
+                Return 0
+            End If
+
+            If Keys > 0 Then
+                Call Expect(",")
+            End If
+
+            Frame = ReadKey()
+            Valid = Valid And Frame > Previous
+            Previous = Frame
+            ByteOffset = Keys * 42
+            KeyBytes[ByteOffset] = Frame Mod 256
+            KeyBytes[ByteOffset + 1] = Frame / 256
+
+            For Channel = 0 To 19
+                Encoded = KeyValues[Channel] + 180
+                KeyBytes[ByteOffset + 2 + Channel * 2] = Encoded Mod 256
+                KeyBytes[ByteOffset + 3 + Channel * 2] = Encoded / 256
+            End For
+
+            Keys = Keys + 1
+
+        End If
+
+    Loop Until Not (Valid And Token <> "]")
+
+    Call Expect("]")
+
+    Return Keys
+
+End Function
+
+Private Sub Put(Byte As Number)
+
+    If PayloadCount >= CAPACITY Then
+        Valid = False
+        Return
+    End If
+
+    Bytes[PayloadCount] = Byte
+    PayloadCount = PayloadCount + 1
+
+End Sub
+
+Private Sub ReadClip()
+
+    Dim First As Boolean
+    Dim Seen As Number
+    Dim Name As Text
+    Dim ClipName As Text
+    Dim Hint As Number
+    Dim Keys As Number
+    Dim Clip As Number
+    Dim Index As Number
+    Dim Frame As Number
+
+    First = True
+
+    Call Expect("{")
+
+    Do
+
+        If Valid And Token <> "}" Then
+
+            Name = PropertyName(First)
+
+            If Name = "index" Then
+                Call Mark(Seen, 1)
+
+                Hint = ReadInteger(0, 63)
+            Else If Name = "name" Then
+                Call Mark(Seen, 2)
+
+                ClipName = ReadString()
+            Else If Name = "keyframes" Then
+                Call Mark(Seen, 4)
+
+                Keys = ReadKeys()
+            Else
+                Valid = False
+            End If
+
+        End If
+
+    Loop Until Not (Valid And Token <> "}")
+
+    Call Expect("}")
+
+    Clip = -1
+
+    For Index = 0 To RuntimeCount - 1
+
+        If ClipNames[Index] = ClipName Then
+            Clip = Index
+        End If
+
+    End For
+
+    If (Not Valid Or
+        Seen <> 7 Or
+        Clip < 0) Then
+        Valid = False
+        Return
+    End If
+
+    If ClipSeen[Clip] <> 0 Then
+        Valid = False
+        Return
+    End If
+
+    ClipSeen[Clip] = 1
+    RecordNames[StoredCount] = ClipName
+    RecordKeys[StoredCount] = Keys
+
+    Call Put(Text_Length(ClipName))
+
+    For Index = 0 To Text_Length(ClipName) - 1
+        Call Put(Text_Code_At(ClipName, Index))
+    End For
+
+    Call Put(Keys Mod 256)
+    Call Put(Keys / 256)
+
+    RecordStarts[StoredCount] = PayloadCount
+
+    For Index = 0 To Keys - 1
+        Frame = KeyBytes[Index * 42] + KeyBytes[Index * 42 + 1] * 256
+        Valid = Valid And Frame < ClipSamples[Clip]
+    End For
+
+    For Index = 0 To Keys * 42 - 1
+        Call Put(KeyBytes[Index])
+    End For
+
+    TotalKeys = TotalKeys + Keys
+    StoredCount = StoredCount + 1
+
+End Sub
+
+Private Sub ReadClips()
+
+    Call Expect("[")
+
+    Do
+
+        If Valid And Token <> "]" Then
+
+            If StoredCount >= RuntimeCount Then
+                Valid = False
+                Return
+            End If
+
+            If StoredCount > 0 Then
+                Call Expect(",")
+            End If
+
+            Call ReadClip()
+
+        End If
+
+    Loop Until Not (Valid And Token <> "]")
+
+    Call Expect("]")
+
+End Sub
+
+Private Sub ReadSaved()
+
+    Dim First As Boolean
+    Dim Seen As Number
+    Dim Name As Text
+    Dim Hint As Number
+
+    SavedName = ""
+
+    If Token = "null" Then
+        Call NextToken()
+
+        Return
+    End If
+
+    First = True
+
+    Call Expect("{")
+
+    Do
+
+        If Valid And Token <> "}" Then
+
+            Name = PropertyName(First)
+
+            If Name = "clipIndex" Then
+                Call Mark(Seen, 1)
+
+                Hint = ReadInteger(0, 63)
+            Else If Name = "clipName" Then
+                Call Mark(Seen, 2)
+
+                SavedName = ReadString()
+            Else If Name = "frame" Then
+                Call Mark(Seen, 4)
+
+                SavedFrame = ReadInteger(0, 65535)
+            Else
+                Valid = False
+            End If
+
+        End If
+
+    Loop Until Not (Valid And Token <> "}")
+
+    Call Expect("}")
+
+    Valid = Valid And Seen = 7 And SavedName <> ""
+
+End Sub
+
+Private Sub ReadRoot()
+
+    Dim First As Boolean
+    Dim Seen As Number
+    Dim Name As Text
+
+    First = True
+
+    Call Expect("{")
+
+    Do
+
+        If Valid And Token <> "}" Then
+
+            Name = PropertyName(First)
+
+            If Name = "schemaVersion" Then
+                Call Mark(Seen, 1)
+                Call Identity(0, True)
+            Else If Name = "assetId" Then
+                Call Mark(Seen, 2)
+                Call Identity(1, False)
+            Else If Name = "characterVersion" Then
+                Call Mark(Seen, 4)
+                Call Identity(2, False)
+            Else If Name = "applicationId" Then
+                Call Mark(Seen, 8)
+                Call Identity(3, False)
+            Else If Name = "dataKey" Then
+                Call Mark(Seen, 16)
+                Call Identity(4, False)
+            Else If Name = "storageVersion" Then
+                Call Mark(Seen, 32)
+                Call Identity(5, True)
+            Else If Name = "profile" Then
+                Call Mark(Seen, 64)
+                Call ReadProfile()
+            Else If Name = "savedKeyframe" And Not ReadingMetadata Then
+                Call Mark(Seen, 128)
+                Call ReadSaved()
+            Else If Name = "totalKeyframes" And Not ReadingMetadata Then
+                Call Mark(Seen, 256)
+
+                DeclaredKeys = ReadInteger(0, 16384)
+            Else If Name = "clips" And Not ReadingMetadata Then
+                Call Mark(Seen, 512)
+                Call ReadClips()
+            Else
+                Valid = False
+            End If
+
+        End If
+
+    Loop Until Not (Valid And Token <> "}")
+
+    Call Expect("}")
+
+    If ReadingMetadata Then
+        Valid = Valid And Seen = 127
+    Else
+        Valid = Valid And Seen = 1023
+    End If
+
+    Valid = Valid And Token = ""
+
+End Sub
+
+Public Function Decode(Contents As Text, Metadata As Text,
+    Fingerprint As Text, Actor As Character3D.Actor) As Boolean
+
+    Dim Index As Number
+    Dim Key As Number
+    Dim ByteOffset As Number
+    Dim Found As Boolean
+    Dim Result As Boolean
+
+    PayloadCount = 0
+    ReadingMetadata = True
+
+    Call Start(Metadata)
+    Call ReadRoot()
+
+    If (Not Valid Or
+        Expected[0] <> "2" Or
+        Expected[5] <> "3" Or
+        Expected[6] <> "1") Then
+        Return False
+    End If
+
+    RuntimeCount = Character3D.ClipCount(Actor)
+
+    If (RuntimeCount < 1 Or
+        RuntimeCount > 64 Or
+        Text_Length(Fingerprint) <> 64) Then
+        Return False
+    End If
+
+    For Index = 0 To RuntimeCount - 1
+        ClipNames[Index] = Character3D.ClipName(Actor, Index)
+        ClipSamples[Index] = Character3D.ClipSampleCount(Actor, Index)
+        ClipSeen[Index] = 0
+    End For
+
+    For Index = 0 To 73
+        Bytes[Index] = 0
+    End For
+
+    Bytes[0] = 83
+    Bytes[1] = 77
+    Bytes[2] = 75
+    Bytes[3] = 70
+    Bytes[4] = 3
+
+    For Index = 0 To 63
+        Bytes[10 + Index] = Text_Code_At(Fingerprint, Index)
+    End For
+
+    PayloadCount = 74
+    StoredCount = 0
+    TotalKeys = 0
+    DeclaredKeys = -1
+    SavedName = ""
+    SavedFrame = 0
+    ReadingMetadata = False
+
+    Call Start(Contents)
+    Call ReadRoot()
+
+    Valid = Valid And TotalKeys = DeclaredKeys
+    Bytes[5] = StoredCount
+    Found = SavedName = ""
+
+    For Index = 0 To StoredCount - 1
+
+        If RecordNames[Index] = SavedName Then
+
+            For Key = 0 To RecordKeys[Index] - 1
+
+                ByteOffset = RecordStarts[Index] + Key * 42
+
+                If Bytes[ByteOffset] + Bytes[ByteOffset + 1] * 256 = SavedFrame Then
+                    Found = True
+                End If
+
+            End For
+
+            Bytes[6] = 1
+            Bytes[7] = Index
+            Bytes[8] = SavedFrame Mod 256
+            Bytes[9] = SavedFrame / 256
+
+        End If
+
+    End For
+
+    Result = Valid And Found
+    Source = ""
+    Page = ""
+    Block = ""
+
+    If Not Result Then
+        PayloadCount = 0
+    End If
+
+    Return Result
+
+End Function
+
+Public Function ByteCount() As Number
+
+    Return PayloadCount
+
+End Function
+
+Public Function ByteAt(Index As Number) As Number
+
+    Dim Result As Number
+
+    Result = 0
+
+    If Index >= 0 And Index < PayloadCount Then
+        Result = Bytes[Index]
+    End If
+
+    Return Result
+
+End Function
+
+End Module

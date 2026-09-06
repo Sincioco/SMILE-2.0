@@ -566,6 +566,7 @@ Public Function ProjectTransformRingPoint(
     Dim FirstOffset As Number
     Dim SecondOffset As Number
     Dim Result As Core.ProjectedPoint3D
+    Dim PreciseCamera As Core.Camera3D
 
     If SegmentCount < 8 Or SegmentCount > 128 Then
         Return Result
@@ -574,9 +575,16 @@ Public Function ProjectTransformRingPoint(
     Segment = Segment Mod SegmentCount
     WorldRadius = Min(GIZMO_MAXIMUM_WORLD_SIZE, Max(GIZMO_MINIMUM_WORLD_SIZE, WorldRadius))
     Angle = Segment * 360 / SegmentCount
-    FirstOffset = WorldRadius * Math3D.CosFixed(Angle) / Core.FIXED_ONE
-    SecondOffset = WorldRadius * Math3D.SinFixed(Angle) / Core.FIXED_ONE
-    Point = Origin
+    ''' Work camera-relative in thousandths until the final pixel projection.
+    ''' Whole-world rounding creates visible corners even in a dense ring.
+    FirstOffset = WorldRadius * 1000 * Math3D.CosFixed(Angle) / Core.FIXED_ONE
+    SecondOffset = WorldRadius * 1000 * Math3D.SinFixed(Angle) / Core.FIXED_ONE
+    Point = VectorMath.MultiplyScalar(VectorMath.Subtract(Origin, Camera.Position), 1000)
+    PreciseCamera = Camera
+    PreciseCamera.Position = VectorMath.Vector(0, 0, 0)
+    PreciseCamera.Target = VectorMath.MultiplyScalar(
+        VectorMath.Subtract(Camera.Target, Camera.Position), 1000)
+    PreciseCamera.NearPlane = Max(1, Camera.NearPlane) * 1000
 
     If Axis = 0 Then
         Point.Y = Point.Y + FirstOffset
@@ -589,7 +597,8 @@ Public Function ProjectTransformRingPoint(
         Point.Y = Point.Y + SecondOffset
     End If
 
-    Result = ProjectViewerPoint(Point, Camera, ViewWidth, ViewHeight)
+    Result = ProjectViewerPoint(Point, PreciseCamera, ViewWidth, ViewHeight)
+    Result.Depth = Result.Depth / 1000
 
     Return Result
 

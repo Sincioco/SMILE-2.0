@@ -694,3 +694,66 @@ reopen, latest gizmo interaction/remaining native and real Chrome/Edge parity
 checks, W10 MSAA, audio/lifecycle/mobile and integrated same-model VFX evidence,
 wider normal smoke, final report/gate/portable evidence package; then the nine
 Web Optimized Low/Medium/High outputs. H6.1 remains incomplete. No E0 or Double.
+
+### Final-task request — public README showcase
+
+Sin requests a complete root README rewrite as the final task after the remaining
+implementation and validation work. Replace the technical-manual presentation
+with a concise, professional, high-level visual showcase for casual visitors,
+developers, prospective employers, collaborators, business partners and investors.
+Use genuine Viewer/VFX screenshots for the opening visual hook and recent
+accomplishments; link detailed technical guidance separately. Briefly explain
+SMILE's full name, mission and continued evolution. Describe the planned Battle
+Scene Editor and declarative scene-authoring direction as future work, without
+introducing another version name or presenting proposed syntax as supported.
+Do not mark this final task complete before the earlier approved work is done.
+
+### Viewer integration and opt-in gizmo — 2026-09-06
+
+The shared runtime/cache/loader milestone is committed and pushed as
+`89755fe9a44404d3d9d1867c256d10a841f29dd0` on main. This next Viewer milestone
+adopts the shared cache and loader, preserves the Party demo behind a shared
+active-actor inspector, and includes the strict schema-2 keyframe import/export
+workflow documented above. Native diagnostic profiles remain available; normal
+Web publication excludes those historical diagnostic assets. All three tools
+use white headers. The launcher identifies only the tool's own executable.
+
+Sin requests that transform handles be opt-in, with precise numeric editing
+available without them. `Show Gizmo` / `Hide Gizmo` is in the Pose Calibration
+panel on both targets. Fresh calibration initialization and full reset hide it.
+Hidden handles are neither drawn nor hit-tested, and R/E/G cannot initiate an
+invisible drag. Hiding ends drag capture but preserves the current unsaved
+preview; it does not save, cancel, or resume playback. Numeric controls and
+X/Y/Z selection remain usable. No JSON schema or saved key values change.
+
+Actual additional checks:
+
+- `scripts/test-viewer-calibration-native.ps1`: PASS, disposable identity
+  `smile.tests.viewer-calibration.run-f6ab16e854d74d68ba44270d92eada47`;
+  `artifacts/temp/h6-1-gizmo-visibility-native.log`. Assertions cover hidden
+  startup/reset, keyboard and pointer guards, numeric editing, explicit show,
+  hide-during-preview without saving, exact Cancel restoration, and each Party
+  hero explicitly enabling its own gizmo.
+- Generated isolated Web fixture and the bounded 16-frame exact-console parity
+  command above: PASS; `artifacts/temp/h6-1-gizmo-visibility-web.log`.
+- `tools/Character3DViewer/Build.ps1 -Configuration Release -Target All`: PASS;
+  `artifacts/temp/h6-1-gizmo-visibility-build.log`. Release native executable and
+  Release/Web are current; Debug has not been rebuilt for this latest toggle.
+- Visible native: launched the current Release through Launch.ps1, exactly one
+  Viewer at observation (PID 64604). Arin's panel opened with no gizmo; Show
+  revealed the rings, Hide removed them. Keyboard-initiated R plus pointer
+  travel changed Run frame-zero wrist X from 68 to the bounded 180 preview;
+  Hide preserved it and Cancel restored 68, without saving.
+- Visible Chrome, current `127.0.0.1:8766` publication: panel default hidden,
+  Show/Hide both rendered correctly. With handles hidden, the numeric slider
+  changed Defend frame-zero wrist X from 55 to 78; Cancel restored 55. No Save
+  or import replacement was performed during these checks.
+
+The pointer handler now applies final release-frame travel before finishing an
+existing drag, and releases capture when press/release arrive in one frame.
+Fast automated native mouse drags still did not prove numeric rotation: short
+gestures selected a ring without changing its value; one larger gesture panned
+the camera. Event coalescing/endpoint-only delivery is a possible explanation,
+not a proven runtime diagnosis. Keyboard-initiated rotation did change the
+displayed value. Physical ring dragging remains an explicit manual limitation
+for the larger gizmo acceptance; full Blender equivalence is not claimed.

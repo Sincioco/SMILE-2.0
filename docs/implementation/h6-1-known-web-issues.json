@@ -336,7 +336,7 @@
       "evidenceIds": [
         "docs/implementation/h6-1-hardening-and-web-parity-ledger.md"
       ],
-      "dispositionRationale": "Shared Web glue now gates keyboard ownership by focused program surface, preserves browser/text shortcuts, clears held keys on surface blur and provides a focus-revealed Full Screen button. Focused generated-runtime VM checks pass, including Ctrl+Arrow navigation, repeat, console transitions, touch-owner isolation and fullscreen state. Actual Chrome/Edge interaction and installed VSIX validation remain required; not closed by VM evidence alone."
+      "dispositionRationale": "Shared Web glue now gates keyboard ownership by focused program surface, preserves browser/text shortcuts, clears held keys on surface blur and provides a focus-revealed Full Screen button. Focused generated-runtime VM checks pass, including Ctrl+Arrow navigation, repeat, console transitions, touch-owner isolation and fullscreen state. The current VSIX is installed and hash-verified. Final actual Chrome/Edge interaction remains required; not closed by VM evidence alone."
     },
     {
       "id": "W12",
@@ -356,7 +356,7 @@
       "evidenceIds": [
         "docs/implementation/h6-1-hardening-and-web-parity-ledger.md"
       ],
-      "dispositionRationale": "Saved schema-2 JSON download implemented; both shared exports pass canonical/native round-trips and actual Edge Arin download matches. Generic UTF-8 file pickers compile on both targets and native dialogs round-trip exact bytes. In-Viewer atomic JSON import and real browser import-file selection remain unverified/incomplete; no automatic browser-to-repository writes."
+      "dispositionRationale": "Shared strict schema-2 import validates before explicit replacement and uses transactional storage plus Undo. Native and generated-Web fixtures pass canonical name-bound round-trips and invalid-input rejection. Real native/Chrome selection and confirmed isolated replacement/Undo were exercised as recorded in the ledger. Distinct imported-state refresh/reopen proof remains required. Downloads never automatically write the repository or synchronize origins."
     },
     {
       "id": "W13",
@@ -478,7 +478,7 @@
       "evidenceIds": [
         "docs/implementation/h6-1-hardening-and-web-parity-ledger.md"
       ],
-      "dispositionRationale": "Implemented bounded optional immutable asset retention in shared Character3D and page-local encoded Web reuse. Native and generated-Web ownership tests and real native/Chrome four-tab switching pass. Working-copy changes are awaiting milestone commit; new deployed/Mac timing acceptance is not claimed. First visits still load and actor/VFX instances are intentionally recreated."
+      "dispositionRationale": "Shared runtime caching is committed/pushed in 89755fe9a44404d3d9d1867c256d10a841f29dd0; Viewer adoption belongs to the following integration milestone. Native and generated-Web ownership tests and real native/Chrome four-tab switching pass. New deployed/Mac timing acceptance is not claimed. First visits still load and actor/VFX instances are intentionally recreated."
     },
     {
       "id": "W18",

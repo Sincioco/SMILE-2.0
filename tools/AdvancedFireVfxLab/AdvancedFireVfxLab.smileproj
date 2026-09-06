@@ -4,6 +4,8 @@
     <StartupFile>Program.smile</StartupFile>
     <OutputName>AdvancedFireVfxLab</OutputName>
     <ApplicationId>smile.examples.advanced-fire-vfx-lab</ApplicationId>
+    <WebLoadingAuthor>Louiery R. Sincioco (Sin)</WebLoadingAuthor>
+    <WebLoadingLogo>..\..\assets\branding\smile-2.0-logo-web.png</WebLoadingLogo>
     <GraphicsBackend>DirectX</GraphicsBackend>
     <VSync>true</VSync>
     <ResponsiveWindow>true</ResponsiveWindow>

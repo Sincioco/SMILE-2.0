@@ -9,6 +9,7 @@ Import Smile.Tools.BattleCamera As BattleCamera
 Import Smile.Simple3D.Core As Core
 Import Smile.Simple3D.NodeAim3D As NodeAim3D
 Import Smile.Simple3D.Math3D As Math3D
+Import Smile.Simple3D.FixedMath As Fixed
 Import Smile.Simple3D.LightPool3D As LightPool3D
 Import Smile.Simple3D.SceneVfx3D As SceneVfx3D
 
@@ -59,6 +60,8 @@ Dim StableAnchor As Core.Vector3
 Dim GroundCamera As Core.Camera3D
 
 Game Window "Character 3D Viewer Hardening Tests" Size 320 By 240
+
+Call CheckRingProjection()
 
 OrbitFirst.Position = Math3D.Vector(10, 42, 0)
 
@@ -502,6 +505,38 @@ Sub InitializeZoomTest(ByRef Value As CharacterViewer.ZoomState)
 
     Call CharacterViewer.InitializeZoom(Value, 0, -24, 36, 24000)
     Call CharacterViewer.AdjustZoomTarget(Value, -1, 36)
+
+End Sub
+
+Sub CheckRingProjection()
+
+    Dim RingCamera As Core.Camera3D
+    Dim Origin As Core.Vector3
+    Dim Point As Core.ProjectedPoint3D
+    Dim Segment As Number
+    Dim Angle As Number
+    Dim FocalLength As Number
+    Dim ExpectedX As Number
+    Dim ExpectedY As Number
+
+    RingCamera.Position = Math3D.Vector(0, 0, -200)
+    RingCamera.Target = Origin
+    RingCamera.UpDirection = Math3D.Vector(0, Core.FIXED_ONE, 0)
+    RingCamera.NearPlane = 1
+    RingCamera.FovDegrees = 40
+    FocalLength = 1000 * Fixed.CosFixed(20) / (2 * Fixed.SinFixed(20))
+
+    For Segment = 0 To 127
+
+        Point = CharacterViewer.ProjectTransformRingPoint(Origin, 2, Segment, 128,
+            10, RingCamera, 1000, 1000)
+        Angle = Segment * 360 / 128
+        ExpectedX = 500 + 10 * Fixed.CosFixed(Angle) * FocalLength / (200 * Core.FIXED_ONE)
+        ExpectedY = 500 - 10 * Fixed.SinFixed(Angle) * FocalLength / (200 * Core.FIXED_ONE)
+
+        Call Check(Point.Visible And Point.Depth = 200)
+        Call Check(Abs(Point.X - ExpectedX) <= 1 And Abs(Point.Y - ExpectedY) <= 1)
+    End For
 
 End Sub
 

@@ -168,3 +168,17 @@ matching Idle. The accepted Death channels and contact report remain unchanged.
 
 The model and cooked SM3D fingerprint migration retains Orin's zero-key calibration
 identity; Arin's 23-key calibration is unrelated and remains unchanged.
+
+## September 6: active-actor Party calibration
+
+Orin's Party turn can now be paused and inspected with the shared timeline and
+Pose panel. The inspector temporarily binds Orin's actor, key range and storage
+metadata, then restores primary scene ownership. It never borrows Arin's saved
+track. Native and generated-Web tests save and Undo only in disposable storage,
+then verify complete per-character JSON identity and unchanged battle state.
+The live Orin snapshot remains at zero keys. No model, grounding curve, animation
+or fingerprint changed. Resume restores the demo clip/time that preceded preview.
+
+Pose Calibration's Show Gizmo / Hide Gizmo control is shared with Arin. Handles
+default off while numeric editing stays available. Visibility is a transient UI
+choice, not a saved Orin correction or character-package change.

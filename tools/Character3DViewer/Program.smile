@@ -24,6 +24,7 @@ Import Smile.Tools.ArinShieldRim As ArinShieldRim
 Import Smile.Tools.BattleAudio As BattleAudio
 Import Smile.Tools.BattleCamera As BattleCamera
 Import Smile.Tools.DragonPresence As DragonPresence
+Import Smile.Tools.CalibrationJson As CalibrationJson
 
 Const ANIMATION_CYCLE_MILLISECONDS = 5000
 Const ANIMATION_BUTTON_Y = 352
@@ -49,6 +50,11 @@ Const MAX_CAMERA_ELAPSED = 250
 Const TIMELINE_LEFT = 18
 Const TIMELINE_HEIGHT = 18
 Const TIMELINE_KEYFRAME_HIT_RADIUS = 7
+Const CALIBRATION_IMPORT_WIDTH = 152
+Const CALIBRATION_DOWNLOAD_OFFSET = 158
+Const CALIBRATION_DOWNLOAD_WIDTH = 172
+Const CALIBRATION_FILENAME_OFFSET = 336
+Const CALIBRATION_TRANSFER_TEXT_OFFSET = 510
 Const FRAME_BUTTON_REPEAT_MILLISECONDS = 300
 Const EQUIPMENT_TRAIL_POINT_COUNT = 5
 Const EQUIPMENT_TRAIL_SAMPLE_MILLISECONDS = 24
@@ -98,10 +104,10 @@ Const CALIBRATION_AXIS_Z = 2
 Const CALIBRATION_AXIS_COUNT = 3
 Const CALIBRATION_TRANSFORM_ROTATE = 0
 Const CALIBRATION_TRANSFORM_MOVE = 1
-Const TRANSFORM_GIZMO_RING_SEGMENTS = 32
-Const TRANSFORM_GIZMO_HIT_RADIUS = 8
+Const TRANSFORM_GIZMO_RING_SEGMENTS = 128
+Const TRANSFORM_GIZMO_HIT_RADIUS = 12
 Const TRANSFORM_GIZMO_MOVE_DIVISOR = 3
-Const TRANSFORM_GIZMO_ROTATE_DIVISOR = 2
+Const TRANSFORM_GIZMO_ROTATE_DIVISOR = 1000
 Const CALIBRATION_MINIMUM_DEGREES = -180
 Const CALIBRATION_MAXIMUM_DEGREES = 180
 Const CALIBRATION_MINIMUM_POSITION = -100
@@ -174,6 +180,14 @@ Dim PartyParticipants[PARTY_FORMATION_MEMBER_CAPACITY] As PartyParticipantLayout
 Dim PartyParticipantCount As Number
 Dim PartyStage As Number
 Dim PartyReady As Boolean
+Dim PartyUiBound As Boolean
+Dim PartyUiPrimary As ViewerActorContext
+Dim PartyUiTurn As Number
+Dim PartyPreviewActive As Boolean
+Dim PartyPreviewClip As Number
+Dim PartyPreviewTime As Number
+Dim PartyPreviewMode As Number
+Dim CalibrationOwnerProfile As Number
 Dim CharacterSwitchBlocked As Boolean
 Dim PresentationState As Number
 
@@ -181,6 +195,8 @@ Dim CalibrationProfileFingerprint As Text
 Dim CalibrationFilePath As Text
 Dim CalibrationFileLabel As Text
 Dim CalibrationTransferMessage As Text
+Dim CalibrationImportPending As Boolean
+Dim CalibrationImportBaseline As Text
 Dim CalibrationJsonMetadata As Text
 Dim CalibrationMetadataBytes[2048] As Number
 Dim CalibrationJsonOffset As Number
@@ -387,7 +403,9 @@ Dim CalibrationClipboardValues[CALIBRATION_CHANNEL_COUNT] As Number
 Dim TransformGizmo As CharacterViewer.TransformGizmo
 Dim TransformGizmoOrigin As Core.Vector3
 Dim TransformGizmoWorldSize As Number
+Dim TransformGizmoVisible As Boolean
 Dim TransformGizmoDragging As Boolean
+Dim TransformGizmoHoverAxis As Number
 Dim TransformGizmoPointerOwned As Boolean
 Dim TransformGizmoOpenedEdit As Boolean
 Dim TransformGizmoDragStartValue As Number
@@ -661,11 +679,19 @@ Call DestroyViewer()
 
 Sub LoadViewer()
 
+    Ready = Scene3D.SetQuality(Scene3D.QUALITY_HIGH)
+    Ready = Character3D.SetUnusedAssetCacheLimit(3) And Ready
+
+    PartyUiBound = False
+    PartyPreviewActive = False
+
     ActiveProfile = ViewerProfiles.ProfileAt(ProfileIndex)
     CalibrationProfileFingerprint = ViewerProfiles.CalibrationFingerprint(ProfileIndex)
     CalibrationFilePath = ViewerProfiles.CalibrationFile(ProfileIndex)
     CalibrationFileLabel = ViewerProfiles.CalibrationJsonName(ProfileIndex)
     CalibrationTransferMessage = "Click To Open/Download Saved JSON"
+    CalibrationImportPending = False
+    CalibrationImportBaseline = ""
     CalibrationDataKey = ViewerProfiles.CalibrationKey(ProfileIndex)
     CalibrationClipBase = 0
 
@@ -677,7 +703,7 @@ Sub LoadViewer()
     DragonVisible = DragonAvailable
     SwordVisible = True
     ShieldVisible = True
-    Ready = CharacterViewer.ValidateProfile(ActiveProfile)
+    Ready = CharacterViewer.ValidateProfile(ActiveProfile) And Ready
     Ready = Window_Title(ViewerTitle()) And Ready
 
     Call CaptureViewerFailure(30)
@@ -1155,7 +1181,11 @@ Sub UpdateDragon()
 
     Name = "Idle"
 
-    If DragonInspection Then
+    If PartyMode And ScenePaused Then
+
+        Name = DragonClip
+
+    Else If DragonInspection Then
 
         Name = SelectedClipName()
 
@@ -1396,6 +1426,26 @@ End Sub
 
 Sub HandleKeyboard(PressedKey As Number)
 
+    If (PartyMode And
+        (PressedKey = KEY_4 Or
+        (PressedKey = KEY_ENTER And Not CalibrationEditing And Not TransformGizmoDragging))) Then
+
+        If PressedKey = KEY_ENTER Then
+            Call ResetPartyInspector()
+        End If
+
+        Return
+
+    End If
+
+    Call BeginPartyInspector()
+    Call HandleInspectorKeyboard(PressedKey)
+    Call EndPartyInspector()
+
+End Sub
+
+Sub HandleInspectorKeyboard(PressedKey As Number)
+
     If PressedKey = KEY_BACKTICK Then
 
         UiVisibility = (UiVisibility + 1) Mod 3
@@ -1451,8 +1501,7 @@ Sub HandleKeyboard(PressedKey As Number)
             PressedKey = KEY_2 Or
             PressedKey = KEY_3 Or
             PressedKey = KEY_TAB Or
-            PressedKey = KEY_R Or
-            ((PressedKey = KEY_LEFT Or PressedKey = KEY_RIGHT) And Key_Held(KEY_CONTROL))) Then
+            PressedKey = KEY_R) Then
             Return
         End If
 
@@ -1550,7 +1599,6 @@ Function HandleTransformGizmoKeyboard(PressedKey As Number) As Boolean
 
     If (Not CalibrationAvailable Or
         Not CalibrationVisible Or
-        PartyMode Or
         UiVisibility <> 0) Then
         Return False
     End If
@@ -1641,6 +1689,10 @@ End Sub
 
 Sub BeginTransformGizmoDrag(PointerOwned As Boolean)
 
+    If Not TransformGizmoVisible Then
+        Return
+    End If
+
     If TransformGizmoDragging Then
         TransformGizmoPointerOwned = PointerOwned
 
@@ -1655,6 +1707,17 @@ Sub BeginTransformGizmoDrag(PointerOwned As Boolean)
     TransformGizmoPointerOwned = PointerOwned
     TransformGizmoDragStartValue = CurrentCalibrationValue()
     TransformGizmoDragRemainder = 0
+
+End Sub
+
+Sub ToggleTransformGizmo()
+
+    ' Hiding the handles keeps the current unsaved numeric preview, without saving it.
+
+    Call FinishTransformGizmoDrag()
+
+    TransformGizmoVisible = Not TransformGizmoVisible
+    TransformGizmoHoverAxis = -1
 
 End Sub
 
@@ -1694,9 +1757,22 @@ Function HandleTransformGizmoPointer() As Boolean
 
     If (Not CalibrationAvailable Or
         Not CalibrationVisible Or
-        PartyMode Or
         UiVisibility <> 0 Or
         ViewerError) Then
+        Return False
+    End If
+
+    If PointerInRectangle(300, 268, 132, 24) Then
+
+        If Pointer_Pressed(POINTER_PRIMARY) Then
+            Call ToggleTransformGizmo()
+        End If
+
+        Return True
+
+    End If
+
+    If Not TransformGizmoVisible Then
         Return False
     End If
 
@@ -1713,9 +1789,12 @@ Function HandleTransformGizmoPointer() As Boolean
         If TransformGizmoPointerOwned Then
 
             If Pointer_Released(POINTER_PRIMARY) Then
+
+                Call UpdateTransformGizmoFromPointer()
                 Call FinishTransformGizmoDrag()
 
                 Return True
+
             End If
 
             If Pointer_Held(POINTER_PRIMARY) Or Pointer_Pressed(POINTER_PRIMARY) Then
@@ -1738,16 +1817,46 @@ Function HandleTransformGizmoPointer() As Boolean
 
     End If
 
-    If (Not Pointer_Inside() Or
-        Not Pointer_Pressed(POINTER_PRIMARY) Or
-        Pointer_Y() < 90 Or
-        Pointer_X() >= StatusPanelX() Or
-        PointerInRectangle(CALIBRATION_PANEL_X, CALIBRATION_PANEL_Y,
-            CALIBRATION_PANEL_WIDTH, CALIBRATION_PANEL_HEIGHT)) Then
+    If Not Pointer_Pressed(POINTER_PRIMARY) Then
         Return False
     End If
 
+    Axis = TransformGizmoAxisAtPointer()
+
+    If Axis < 0 Then
+        Return False
+    End If
+
+    CalibrationAxis = Axis
+
+    Call BeginTransformGizmoDrag(True)
+
+    ' A quick click can deliver press and release in one rendered frame.
+    ' End its pointer capture now; do not leave a phantom drag for the next frame.
+
+    If Pointer_Released(POINTER_PRIMARY) Then
+        Call FinishTransformGizmoDrag()
+    End If
+
+    Return True
+
+End Function
+
+Function TransformGizmoAxisAtPointer() As Number
+
+    Dim Axis As Number
+
     Axis = -1
+
+    If (Not TransformGizmoVisible Or
+        Not Pointer_Inside() Or
+        Pointer_Y() < 90 Or
+        Pointer_Y() >= Window_Height() - 100 Or
+        Pointer_X() >= StatusPanelX() Or
+        PointerInRectangle(CALIBRATION_PANEL_X, CALIBRATION_PANEL_Y,
+            CALIBRATION_PANEL_WIDTH, CALIBRATION_PANEL_HEIGHT)) Then
+        Return Axis
+    End If
 
     If CalibrationTransform = CALIBRATION_TRANSFORM_MOVE Then
         Axis = CharacterViewer.TransformGizmoMoveAxisAtPointer(
@@ -1772,15 +1881,7 @@ Function HandleTransformGizmoPointer() As Boolean
         )
     End If
 
-    If Axis < 0 Then
-        Return False
-    End If
-
-    CalibrationAxis = Axis
-
-    Call BeginTransformGizmoDrag(True)
-
-    Return True
+    Return Axis
 
 End Function
 
@@ -1790,7 +1891,6 @@ Sub UpdateTransformGizmoFromPointer()
     Dim ValueAmount As Number
 
     If CalibrationTransform = CALIBRATION_TRANSFORM_MOVE Then
-
         PointerAmount = CharacterViewer.TransformGizmoAxisPointerDelta(
             TransformGizmo,
             CalibrationAxis,
@@ -1802,23 +1902,16 @@ Sub UpdateTransformGizmoFromPointer()
             PointerAmount,
             TRANSFORM_GIZMO_MOVE_DIVISOR
         )
-
     Else
 
-        If CalibrationAxis = CALIBRATION_AXIS_X Then
-            PointerAmount = 0 - Pointer_Delta_Y()
-        Else If CalibrationAxis = CALIBRATION_AXIS_Y Then
-            PointerAmount = Pointer_Delta_X()
-        Else
-            PointerAmount = Pointer_Delta_X() - Pointer_Delta_Y()
-        End If
+        PointerAmount = TransformGizmoRingPointerDelta(Pointer_X(), Pointer_Y(),
+            Pointer_Delta_X(), Pointer_Delta_Y())
 
         ValueAmount = CharacterViewer.RetainedPointerDelta(
             TransformGizmoDragRemainder,
             PointerAmount,
             TRANSFORM_GIZMO_ROTATE_DIVISOR
         )
-
     End If
 
     If ValueAmount <> 0 Then
@@ -1828,10 +1921,83 @@ Sub UpdateTransformGizmoFromPointer()
 
 End Sub
 
+''' Project pointer travel onto the nearest visible ring segment. Keep thousandths
+''' of a degree so slow drags accumulate without snapping; edge-on collapsed
+''' segments are skipped instead of amplifying tiny motions.
+Function TransformGizmoRingPointerDelta(PointerX As Number, PointerY As Number,
+    DeltaX As Number, DeltaY As Number) As Number
+
+    Dim Segment As Number
+    Dim StartPoint As Core.ProjectedPoint3D
+    Dim EndPoint As Core.ProjectedPoint3D
+    Dim AxisX As Number
+    Dim AxisY As Number
+    Dim LengthSquared As Number
+    Dim Along1000 As Number
+    Dim DistanceX As Number
+    Dim DistanceY As Number
+    Dim DistanceSquared As Number
+    Dim BestDistance As Number
+    Dim AngleSpan As Number
+    Dim Result As Number
+
+    BestDistance = -1
+
+    For Segment = 0 To TRANSFORM_GIZMO_RING_SEGMENTS - 1
+
+        StartPoint = CharacterViewer.ProjectTransformRingPoint(TransformGizmoOrigin,
+            CalibrationAxis, Segment, TRANSFORM_GIZMO_RING_SEGMENTS,
+            TransformGizmoWorldSize, Camera, Window_Width(), Window_Height())
+        EndPoint = CharacterViewer.ProjectTransformRingPoint(TransformGizmoOrigin,
+            CalibrationAxis, Segment + 1, TRANSFORM_GIZMO_RING_SEGMENTS,
+            TransformGizmoWorldSize, Camera, Window_Width(), Window_Height())
+        AxisX = EndPoint.X - StartPoint.X
+        AxisY = EndPoint.Y - StartPoint.Y
+        LengthSquared = AxisX * AxisX + AxisY * AxisY
+
+        If (StartPoint.Visible And
+            EndPoint.Visible And
+            LengthSquared >= 9) Then
+
+            Along1000 = ((PointerX - StartPoint.X) * AxisX +
+                (PointerY - StartPoint.Y) * AxisY) * 1000 / LengthSquared
+            Along1000 = Min(1000, Max(0, Along1000))
+            DistanceX = PointerX - StartPoint.X - AxisX * Along1000 / 1000
+            DistanceY = PointerY - StartPoint.Y - AxisY * Along1000 / 1000
+            DistanceSquared = DistanceX * DistanceX + DistanceY * DistanceY
+
+            If BestDistance < 0 Or DistanceSquared < BestDistance Then
+
+                BestDistance = DistanceSquared
+                AngleSpan = ((Segment + 1) * 360 / TRANSFORM_GIZMO_RING_SEGMENTS -
+                    Segment * 360 / TRANSFORM_GIZMO_RING_SEGMENTS)
+                Result = (DeltaX * AxisX + DeltaY * AxisY) * AngleSpan * 1000 / LengthSquared
+
+            End If
+
+        End If
+
+    End For
+
+    If CalibrationAxis = CALIBRATION_AXIS_Y Then
+        Result = 0 - Result
+    End If
+
+    Return Result
+
+End Function
+
 Sub UpdateTransformGizmo()
 
+    Dim OriginProjection As Core.ProjectedPoint3D
+    Dim FocalLength As Number
+
     TransformGizmoOrigin = CurrentTransformGizmoOrigin()
-    TransformGizmoWorldSize = Max(36, ViewerFrame.FittedHeight / 5)
+    OriginProjection = CharacterViewer.ProjectViewerPoint(TransformGizmoOrigin,
+        Camera, Window_Width(), Window_Height())
+    FocalLength = (Window_Height() * Fixed.CosFixed(Camera.FovDegrees / 2) /
+        (2 * Max(1, Fixed.SinFixed(Camera.FovDegrees / 2))))
+    TransformGizmoWorldSize = Min(1000, Max(1, OriginProjection.Depth * 80 / Max(1, FocalLength)))
     TransformGizmo = CharacterViewer.ProjectTransformGizmo(
         TransformGizmoOrigin,
         TransformGizmoWorldSize,
@@ -1874,11 +2040,28 @@ End Function
 
 Sub ToggleScenePause()
 
+    If PartyMode And ScenePaused Then
+
+        If CalibrationEditing Then
+            CharacterSwitchBlocked = True
+            Return
+        End If
+
+        Call RestorePartyPreview()
+
+    End If
+
     ScenePaused = Not ScenePaused
 
 End Sub
 
 Sub ToggleDemo()
+
+    If PartyMode Then
+        Call ToggleScenePause()
+
+        Return
+    End If
 
     DemoEnabled = Not DemoEnabled
     AnimationCycleElapsed = 0
@@ -1908,6 +2091,16 @@ Sub ToggleDragon()
 End Sub
 
 Sub ToggleSword()
+
+    If PartyUiBound Then
+
+        Call EndPartyInspector()
+        Call ToggleSword()
+        Call BeginPartyInspector()
+
+        Return
+
+    End If
 
     If DragonInspection Then
 
@@ -1945,6 +2138,16 @@ Sub ToggleSword()
 End Sub
 
 Sub ToggleShield()
+
+    If PartyUiBound Then
+
+        Call EndPartyInspector()
+        Call ToggleShield()
+        Call BeginPartyInspector()
+
+        Return
+
+    End If
 
     If DragonInspection Then
 
@@ -2175,6 +2378,10 @@ End Sub
 
 Sub CycleProfile()
 
+    If Not ViewerProfiles.INCLUDE_DIAGNOSTIC_PROFILES Or PartyMode Then
+        Return
+    End If
+
     If CalibrationEditing Then
         CharacterSwitchBlocked = True
         Return
@@ -2185,7 +2392,7 @@ Sub CycleProfile()
     PartyMode = False
     DragonInspection = False
     SelectedCharacterTab = 0
-    ProfileIndex = (ProfileIndex + 1) Mod ViewerProfiles.ProfileCount()
+    ProfileIndex = ViewerProfiles.NextProfile(ProfileIndex)
 
     If ProfileIndex = ViewerProfiles.PROFILE_ORIN Then
         SelectedCharacterTab = 1
@@ -2502,11 +2709,29 @@ Function HandleInterfacePointer() As Boolean
     Dim PanelLeft As Number
     Dim WheelDelta As Number
 
+    If (TimelineScrubbing Or
+        TimelineKeyframeDragging Or
+        FrameButtonRepeatDirection <> 0 Or
+        SliderDragOwner <> 0 Or
+        TransformGizmoDragging) Then
+
+        Call BeginPartyInspector()
+
+        Blocked = HandleInspectorPointer()
+
+        Call EndPartyInspector()
+
+        Return Blocked
+
+    End If
+
     If UiVisibility = 2 Then
 
         If Pointer_Pressed(POINTER_SECONDARY) Then
 
-            If ViewerError Then
+            If PartyMode Then
+                Call ResetPartyInspector()
+            Else If ViewerError Then
                 Call RetryViewer()
             Else
 
@@ -2544,10 +2769,39 @@ Function HandleInterfacePointer() As Boolean
     End If
 
     If PartyMode Then
-        Blocked = HandlePartyPointer()
+
+        If HandlePartyPointer() Then
+            Return True
+        End If
+
+        Call BeginPartyInspector()
+
+        Blocked = HandleInspectorPointer()
+
+        Call EndPartyInspector()
 
         Return Blocked
+
     End If
+
+    Blocked = HandleInspectorPointer()
+
+    Return Blocked
+
+End Function
+
+Function HandleInspectorPointer() As Boolean
+
+    Dim PanelLeft As Number
+    Dim Blocked As Boolean
+    Dim WheelDelta As Number
+    Dim KeyframeIndex As Number
+    Dim ClipCount As Number
+    Dim Index As Number
+    Dim Column As Number
+    Dim Row As Number
+
+    PanelLeft = StatusPanelX()
 
     If HandleTransformGizmoPointer() Then
         Return True
@@ -2652,7 +2906,31 @@ Function HandleInterfacePointer() As Boolean
     End If
 
     If (CalibrationAvailable And
-        PointerInRectangle(TIMELINE_LEFT, Window_Height() - 40,
+        PointerInRectangle(TIMELINE_LEFT + CALIBRATION_DOWNLOAD_OFFSET,
+            Window_Height() - 43, CALIBRATION_DOWNLOAD_WIDTH, 18)) Then
+
+        If Pointer_Pressed(POINTER_PRIMARY) Then
+            Call DownloadSavedCalibrationJson()
+        End If
+
+        Return True
+
+    End If
+
+    If (CalibrationAvailable And
+        PointerInRectangle(TIMELINE_LEFT, Window_Height() - 43,
+            CALIBRATION_IMPORT_WIDTH, 18)) Then
+
+        If Pointer_Pressed(POINTER_PRIMARY) Then
+            Call HandleCalibrationImport()
+        End If
+
+        Return True
+
+    End If
+
+    If (CalibrationAvailable And
+        PointerInRectangle(TIMELINE_LEFT + CALIBRATION_FILENAME_OFFSET, Window_Height() - 40,
             Text_Width(CalibrationFileLabel, 9), 14)) Then
 
         If Pointer_Pressed(POINTER_PRIMARY) Then
@@ -2744,11 +3022,13 @@ Function HandleInterfacePointer() As Boolean
 
         Call CycleSocketDisplay()
 
-    Else If PointerInRectangle(PanelLeft + 162, 18, 50, 34) Then
+    Else If (ViewerProfiles.INCLUDE_DIAGNOSTIC_PROFILES And
+        Not PartyMode And
+        PointerInRectangle(PanelLeft + 162, 18, 50, 34)) Then
 
         Call CycleProfile()
 
-    Else If PointerInRectangle(PanelLeft + 216, 18, 36, 34) Then
+    Else If PointerInRectangle(GlowButtonX(), 18, GlowButtonWidth(), 34) Then
 
         Call ToggleEpicGlow()
 
@@ -2763,6 +3043,10 @@ Function HandleInterfacePointer() As Boolean
     Else If PointerInRectangle(PanelLeft + 128, 56, 36, 22) Then
 
         CalibrationVisible = CalibrationAvailable And Not CalibrationVisible
+
+        If CalibrationVisible Then
+            Call BeginPartyPreview()
+        End If
 
     Else If PointerInRectangle(PanelLeft + 168, 56, 40, 22) Then
 
@@ -2782,7 +3066,7 @@ Function HandleInterfacePointer() As Boolean
 
     Else If PointerInRectangle(PanelLeft + 94, 444, 76, 22) Then
 
-        If DragonInspection Then
+        If ProfileIndex = ViewerProfiles.PROFILE_DRAGON Then
 
             DragonHeadTracking = Not DragonHeadTracking
 
@@ -2801,9 +3085,11 @@ Function HandleInterfacePointer() As Boolean
 
     Else If PointerInRectangle(PanelLeft + 174, 444, 78, 22) Then
 
-        If DragonInspection Then
+        If ProfileIndex = ViewerProfiles.PROFILE_DRAGON Then
 
-            DragonCounter = (DragonCounter + 1) Mod 2
+            If Not PartyMode Then
+                DragonCounter = (DragonCounter + 1) Mod 2
+            End If
 
         Else If ProfileIndex = ViewerProfiles.PROFILE_ORIN Then
 
@@ -3788,13 +4074,6 @@ Sub UpdateSwordFire()
 
     End If
 
-    If (UiVisibility = 0 And
-        CalibrationAvailable And
-        CalibrationVisible) Then
-        Call UpdateTransformGizmo()
-        Call DrawTransformGizmo()
-    End If
-
     Base = Character3D.SocketPosition(Character, "SwordBase", WEAPON_PART_INDEX)
     Tip = Character3D.SocketPosition(Character, "SwordTip", WEAPON_PART_INDEX)
     Delta.X = Tip.X - Base.X
@@ -4320,6 +4599,11 @@ End Sub
 
 Sub AdjustPlaybackSpeed(Amount As Number)
 
+    If PartyMode And PartyPreviewActive Then
+        CalibrationTransferMessage = "Resume Or Reset Before Changing Demo Speed"
+        Return
+    End If
+
     PlaybackSpeed = Min(ActiveProfile.MaximumPlaybackSpeed,
         Max(ActiveProfile.MinimumPlaybackSpeed, PlaybackSpeed + Amount))
 
@@ -4457,7 +4741,9 @@ End Sub
 Sub RestartPresentation()
 
     If PartyMode And PartyReady Then
-        Call ResetPartyDemo()
+        Call ResetPartyInspector()
+
+        Return
     End If
 
     Call ResetView()
@@ -4499,6 +4785,16 @@ End Sub
 
 Sub ResetAll()
 
+    If PartyUiBound Then
+
+        Call CancelCalibrationEdit()
+        Call RestorePartyPreview()
+        Call EndPartyInspector()
+
+    End If
+
+    PartyPreviewActive = False
+
     If CalibrationEditing Then
         Call CancelCalibrationEdit()
     End If
@@ -4528,6 +4824,7 @@ Sub ResetAll()
     ShieldFireVisible = True
     CalibrationVisible = False
     SliderDragOwner = 0
+    TransformGizmoVisible = False
     FrameButtonRepeatDirection = 0
     TimelineScrubbing = False
     TimelineKeyframeDragging = False
@@ -4543,7 +4840,18 @@ Sub ResetAll()
 
     Ready = Graphics3D.SetMaterialInspection3D(MaterialInspection) And Ready
 
-    Call RestartPresentation()
+    If PartyMode And PartyReady Then
+
+        Call ResetPartyDemo()
+        Call ResetView()
+
+        AutoOrbit = True
+
+    Else
+
+        Call RestartPresentation()
+
+    End If
 
 End Sub
 
@@ -4634,9 +4942,16 @@ End Sub
 
 Sub SelectClip(Index As Number)
 
+    Call BeginPartyPreview()
+    Call CancelCalibrationEdit()
+
     SelectedClip = Index
     AnimationCycleElapsed = 0
-    DemoEnabled = False
+
+    If Not PartyMode Then
+        DemoEnabled = False
+    End If
+
     CalibrationClearConfirm = False
     CalibrationClearAllStage = 0
 
@@ -4709,6 +5024,7 @@ Sub StepAnimationFrame(Direction As Number)
     Dim StepMilliseconds As Number
     Dim TargetTime As Number
 
+    Call BeginPartyPreview()
     Call CancelCalibrationEdit()
 
     ScenePaused = True
@@ -4724,6 +5040,7 @@ End Sub
 
 Sub SeekFirstAnimationFrame()
 
+    Call BeginPartyPreview()
     Call CancelCalibrationEdit()
 
     ScenePaused = True
@@ -4744,7 +5061,14 @@ Sub SeekCalibrationKeyframe(Direction As Number)
     Dim TargetTime As Number
 
     ''' Navigation pauses even when this clip has no saved keys to visit.
+
+    Call BeginPartyPreview()
+
     ScenePaused = True
+
+    If Not CalibrationAvailable Then
+        Return
+    End If
 
     If CalibrationEditing Then
         Call CancelCalibrationEdit()
@@ -4861,7 +5185,10 @@ Sub SeekFromPointer()
     Dim Duration As Number
     Dim TargetTime As Number
 
+    Call BeginPartyPreview()
     Call CancelCalibrationEdit()
+
+    ScenePaused = True
 
     Duration = Character3D.ClipDuration(Character, SelectedClip)
     TargetTime = (Pointer_X() - TIMELINE_LEFT) * Duration / Max(1, TimelineWidth())
@@ -4902,6 +5229,11 @@ Function TimelineKeyframeAtPointer() As Number
     Dim Width As Number
 
     Result = -1
+
+    If Not CalibrationAvailable Then
+        Return Result
+    End If
+
     TimelineY = Window_Height() - 64
 
     If Not PointerInRectangle(
@@ -4938,6 +5270,8 @@ End Function
 Sub BeginTimelineKeyframeDrag(KeyframeIndex As Number)
 
     Dim Channel As Number
+
+    Call BeginPartyPreview()
 
     TimelineKeyframeDragging = True
     TimelineScrubbing = False
@@ -5135,6 +5469,15 @@ Sub ConfigureCalibration()
     Dim Index As Number
     Dim Name As Text
 
+    CalibrationOwnerProfile = ProfileIndex
+    CalibrationProfileFingerprint = ViewerProfiles.CalibrationFingerprint(ProfileIndex)
+    CalibrationDataKey = ViewerProfiles.CalibrationKey(ProfileIndex)
+    CalibrationFilePath = ViewerProfiles.CalibrationFile(ProfileIndex)
+    CalibrationFileLabel = ViewerProfiles.CalibrationJsonName(ProfileIndex)
+    CalibrationImportPending = False
+    CalibrationImportBaseline = ""
+    CalibrationTransferMessage = "Saved Keys: " + CalibrationFileLabel
+
     SwordWristNode = -1
     ShieldWristNode = -1
 
@@ -5160,6 +5503,7 @@ Sub ConfigureCalibration()
     CalibrationTransform = CALIBRATION_TRANSFORM_ROTATE
     CalibrationSaved = False
     CalibrationEditing = False
+    TransformGizmoVisible = False
     TransformGizmoDragging = False
     TransformGizmoPointerOwned = False
     TransformGizmoOpenedEdit = False
@@ -5170,7 +5514,9 @@ Sub ConfigureCalibration()
     CalibrationClipboardAvailable = False
     CalibrationSaveLimitReached = False
 
-    Call ClearCalibrationMemory()
+    If CalibrationAvailable Then
+        Call ClearCalibrationMemory()
+    End If
 
     CalibrationStorageCount = 0
     CalibrationStorageRejected = False
@@ -5322,12 +5668,18 @@ End Sub
 
 Sub OpenSavedCalibrationJson()
 
-    Dim Contents As Text
-    Dim Exported As Boolean
-
     If File_Reveal(CalibrationFilePath) Then
         Return
     End If
+
+    Call DownloadSavedCalibrationJson()
+
+End Sub
+
+Sub DownloadSavedCalibrationJson()
+
+    Dim Contents As Text
+    Dim Exported As Boolean
 
     Contents = SavedCalibrationJson()
 
@@ -5345,6 +5697,145 @@ Sub OpenSavedCalibrationJson()
     End If
 
 End Sub
+
+Sub HandleCalibrationImport()
+
+    Dim Contents As Text
+    Dim Accepted As Boolean
+
+    Call BeginPartyPreview()
+
+    ScenePaused = True
+
+    If Not PartyMode Then
+        DemoEnabled = False
+    End If
+
+    If CalibrationEditing Then
+        CalibrationTransferMessage = "Save Or Cancel Your Pose Edit First"
+        Return
+    End If
+
+    If CalibrationStorageRejected Then
+        CalibrationTransferMessage = "Resolve Rejected Storage Before Import"
+        Return
+    End If
+
+    If CalibrationImportPending Then
+        Accepted = CommitCalibrationImport()
+        Return
+    End If
+
+    Contents = File_Import()
+
+    If Contents = "" Then
+        CalibrationTransferMessage = "Import Canceled, Empty Or Unavailable"
+        Return
+    End If
+
+    Accepted = PrepareCalibrationImport(Contents)
+
+End Sub
+
+Function PrepareCalibrationImport(Contents As Text) As Boolean
+
+    Dim Saved As Text
+
+    CalibrationImportPending = False
+    CalibrationImportBaseline = ""
+
+    If CalibrationEditing Or CalibrationStorageRejected Then
+        Return False
+    End If
+
+    ''' Export also loads the current publication's authoritative identity metadata.
+    Saved = SavedCalibrationJson()
+
+    If Saved = "" Then
+        CalibrationTransferMessage = "Current Saved Snapshot Unavailable"
+        Return False
+    End If
+
+    If Not CalibrationJson.Decode(Contents, CalibrationJsonMetadata,
+        CalibrationProfileFingerprint, Character) Then
+        CalibrationTransferMessage = "Import Rejected: Schema, Identity Or Pose Data"
+        Return False
+    End If
+
+    CalibrationImportBaseline = Saved
+    CalibrationImportPending = True
+    CalibrationTransferMessage = "Validated; Replace All Keys? Undo Is Available"
+
+    Return True
+
+End Function
+
+Function CommitCalibrationImport() As Boolean
+
+    Dim PreviousCount As Number
+    Dim Index As Number
+    Dim CandidateCount As Number
+
+    If (Not CalibrationImportPending Or
+        CalibrationEditing Or
+        CalibrationStorageRejected) Then
+        Return False
+    End If
+
+    CalibrationImportPending = False
+
+    If SavedCalibrationJson() <> CalibrationImportBaseline Then
+
+        CalibrationTransferMessage = "Saved Keys Changed; Choose Import Again"
+        CalibrationImportBaseline = ""
+        Return False
+
+    End If
+
+    CalibrationImportBaseline = ""
+    PreviousCount = CalibrationStorageCount
+    CandidateCount = CalibrationJson.ByteCount()
+
+    For Index = 0 To PreviousCount - 1
+        CalibrationPreviousStorage[Index] = CalibrationStorage[Index]
+    End For
+
+    For Index = 0 To CandidateCount - 1
+        CalibrationStorage[Index] = CalibrationJson.ByteAt(Index)
+    End For
+
+    Call ClearCalibrationMemory()
+
+    If Not DecodeCalibrationStorage(CandidateCount) Then
+
+        CalibrationPersistenceStatus = DATA_STATUS_INVALID
+
+        Call RestoreFailedCalibrationWrite(PreviousCount)
+
+        Return False
+
+    End If
+
+    ''' Save's transaction owns the previous bytes, Undo and persistent replacement.
+
+    For Index = 0 To PreviousCount - 1
+        CalibrationStorage[Index] = CalibrationPreviousStorage[Index]
+    End For
+
+    Call SaveCalibrationKeyframes()
+    Call UpdateCalibrationForCurrentFrame()
+    Call ApplyWristCalibration()
+    Call ApplyEquipmentCalibration()
+
+    If CalibrationWriteFailed Then
+        Return False
+    End If
+
+    CalibrationTransferMessage = "Imported Saved Keys; Undo Last Change To Restore"
+
+    Return True
+
+End Function
 
 Function CalibrationAscii(Value As Number) As Text
 
@@ -6467,7 +6958,8 @@ Sub UpdateCalibrationForCurrentFrame()
     Dim StartKeyframe As Number
     Dim StartValue As Number
 
-    If Not CalibrationAvailable Or CalibrationEditing Then
+    If (Not CalibrationAvailable Or
+        (CalibrationEditing And CalibrationOwnerProfile = ProfileIndex)) Then
         Return
     End If
 
@@ -6814,6 +7306,8 @@ Sub BeginCalibrationEdit()
     If CalibrationEditing Then
         Return
     End If
+
+    Call BeginPartyPreview()
 
     CalibrationEditing = True
     CalibrationClearConfirm = False
@@ -7494,6 +7988,61 @@ Function AnimationButtonX() As Number
 
 End Function
 
+Function GlowButtonX() As Number
+
+    Dim Result As Number
+
+    Result = StatusPanelX() + 162
+
+    If ViewerProfiles.INCLUDE_DIAGNOSTIC_PROFILES And Not PartyMode Then
+        Result = StatusPanelX() + 216
+    End If
+
+    Return Result
+
+End Function
+
+Function GlowButtonWidth() As Number
+
+    Dim Result As Number
+
+    Result = 90
+
+    If ViewerProfiles.INCLUDE_DIAGNOSTIC_PROFILES And Not PartyMode Then
+        Result = 36
+    End If
+
+    Return Result
+
+End Function
+
+Sub DrawGizmoStroke(X1 As Number, Y1 As Number, X2 As Number, Y2 As Number,
+    ColorValue As Number, Selected As Boolean)
+
+    Dim Offset As Number
+    Dim Radius As Number
+
+    Radius = 1
+
+    If Selected Then
+        Radius = 2
+    End If
+
+    For Offset = 0 - Radius To Radius
+
+        If Abs(X2 - X1) >= Abs(Y2 - Y1) Then
+            Draw Line X1, Y1 + Offset, X2, Y2 + Offset, ColorValue
+        Else
+            Draw Line X1 + Offset, Y1, X2 + Offset, Y2, ColorValue
+        End If
+
+    End For
+
+    Fill Circle X1, Y1, Radius, ColorValue
+    Fill Circle X2, Y2, Radius, ColorValue
+
+End Sub
+
 Function TransformGizmoAxisPoint(Axis As Number) As Core.ProjectedPoint3D
 
     Dim Result As Core.ProjectedPoint3D
@@ -7514,28 +8063,34 @@ Function TransformGizmoAxisColor(Axis As Number, Selected As Boolean) As Number
 
     Dim Result As Number
 
+    If Axis = TransformGizmoHoverAxis Then
+        Result = Rgb(255, 255, 255)
+
+        Return Result
+    End If
+
     If Axis = CALIBRATION_AXIS_X Then
 
         If Selected Then
-            Result = Rgb(255, 126, 126)
+            Result = Rgb(255, 112, 137)
         Else
-            Result = Rgb(224, 52, 52)
+            Result = Rgb(232, 84, 112)
         End If
 
     Else If Axis = CALIBRATION_AXIS_Y Then
 
         If Selected Then
-            Result = Rgb(142, 255, 142)
+            Result = Rgb(156, 225, 94)
         Else
-            Result = Rgb(48, 204, 72)
+            Result = Rgb(131, 196, 70)
         End If
 
     Else
 
         If Selected Then
-            Result = Rgb(136, 184, 255)
+            Result = Rgb(126, 173, 255)
         Else
-            Result = Rgb(54, 112, 240)
+            Result = Rgb(83, 136, 235)
         End If
 
     End If
@@ -7546,8 +8101,14 @@ End Function
 
 Sub DrawTransformGizmo()
 
-    If Not TransformGizmo.Visible Then
+    If Not TransformGizmoVisible Or Not TransformGizmo.Visible Then
         Return
+    End If
+
+    TransformGizmoHoverAxis = TransformGizmoAxisAtPointer()
+
+    If TransformGizmoDragging Then
+        TransformGizmoHoverAxis = CalibrationAxis
     End If
 
     If CalibrationTransform = CALIBRATION_TRANSFORM_MOVE Then
@@ -7557,7 +8118,7 @@ Sub DrawTransformGizmo()
         Call DrawTransformGizmoRotate()
     End If
 
-    Fill Circle TransformGizmo.Origin.X, TransformGizmo.Origin.Y, 4, Rgb(242, 242, 242)
+    Draw Circle TransformGizmo.Origin.X, TransformGizmo.Origin.Y, 7, Rgb(242, 242, 242)
 
 End Sub
 
@@ -7572,17 +8133,14 @@ Sub DrawTransformGizmoMove()
     For Axis = CALIBRATION_AXIS_X To CALIBRATION_AXIS_Z
 
         AxisPoint = TransformGizmoAxisPoint(Axis)
-        Selected = Axis = CalibrationAxis
+        Selected = Axis = CalibrationAxis Or Axis = TransformGizmoHoverAxis
         ColorValue = TransformGizmoAxisColor(Axis, Selected)
 
-        Draw Line TransformGizmo.Origin.X, TransformGizmo.Origin.Y, AxisPoint.X, AxisPoint.Y, ColorValue
+        Call DrawGizmoStroke(TransformGizmo.Origin.X, TransformGizmo.Origin.Y,
+            AxisPoint.X, AxisPoint.Y, ColorValue, Selected)
 
-        If Selected Then
-            Draw Line TransformGizmo.Origin.X + 1, TransformGizmo.Origin.Y, AxisPoint.X + 1, AxisPoint.Y, ColorValue
-            Draw Line TransformGizmo.Origin.X, TransformGizmo.Origin.Y + 1, AxisPoint.X, AxisPoint.Y + 1, ColorValue
-        End If
+        Call DrawGizmoArrow(TransformGizmo.Origin, AxisPoint, ColorValue)
 
-        Fill Circle AxisPoint.X, AxisPoint.Y, 5, ColorValue
         Label = "X"
 
         If Axis = CALIBRATION_AXIS_Y Then
@@ -7596,6 +8154,36 @@ Sub DrawTransformGizmoMove()
 
 End Sub
 
+Sub DrawGizmoArrow(Origin As Core.ProjectedPoint3D, Tip As Core.ProjectedPoint3D,
+    ColorValue As Number)
+
+    Dim Direction As Core.Vector3
+    Dim Length As Number
+    Dim StepIndex As Number
+    Dim CenterX As Number
+    Dim CenterY As Number
+    Dim SideX As Number
+    Dim SideY As Number
+
+    Direction.X = Tip.X - Origin.X
+    Direction.Y = Tip.Y - Origin.Y
+    Length = Math3D.Length(Direction)
+
+    If Length < 1 Then
+        Return
+    End If
+
+    For StepIndex = 0 To 14
+
+        CenterX = Tip.X - Direction.X * StepIndex / Length
+        CenterY = Tip.Y - Direction.Y * StepIndex / Length
+        SideX = Direction.Y * StepIndex / (Length * 2)
+        SideY = Direction.X * StepIndex / (Length * 2)
+        Draw Line CenterX - SideX, CenterY + SideY, CenterX + SideX, CenterY - SideY, ColorValue
+    End For
+
+End Sub
+
 Sub DrawTransformGizmoRotate()
 
     Dim Axis As Number
@@ -7604,10 +8192,11 @@ Sub DrawTransformGizmoRotate()
     Dim Selected As Boolean
     Dim StartPoint As Core.ProjectedPoint3D
     Dim EndPoint As Core.ProjectedPoint3D
+    Dim RearSegment As Boolean
 
     For Axis = CALIBRATION_AXIS_X To CALIBRATION_AXIS_Z
 
-        Selected = Axis = CalibrationAxis
+        Selected = Axis = CalibrationAxis Or Axis = TransformGizmoHoverAxis
         ColorValue = TransformGizmoAxisColor(Axis, Selected)
         StartPoint = CharacterViewer.ProjectTransformRingPoint(
             TransformGizmoOrigin,
@@ -7635,11 +8224,16 @@ Sub DrawTransformGizmoRotate()
 
             If StartPoint.Visible And EndPoint.Visible Then
 
-                Draw Line StartPoint.X, StartPoint.Y, EndPoint.X, EndPoint.Y, ColorValue
+                RearSegment = (StartPoint.Depth + EndPoint.Depth) / 2 > TransformGizmo.Origin.Depth
 
-                If Selected Then
-                    Draw Line StartPoint.X + 1, StartPoint.Y, EndPoint.X + 1, EndPoint.Y, ColorValue
+                If RearSegment And Not TransformGizmoDragging Then
+                    ColorValue = Rgb(78, 83, 93)
+                Else
+                    ColorValue = TransformGizmoAxisColor(Axis, Selected)
                 End If
+
+                Call DrawGizmoStroke(StartPoint.X, StartPoint.Y,
+                    EndPoint.X, EndPoint.Y, ColorValue, Selected And Not RearSegment)
 
             End If
 
@@ -7647,19 +8241,29 @@ Sub DrawTransformGizmoRotate()
         End For
     End For
 
-    ColorValue = TransformGizmoAxisColor(CALIBRATION_AXIS_X,
-        CalibrationAxis = CALIBRATION_AXIS_X)
-    Draw Text "X" At TransformGizmo.XAxis.X + 5, TransformGizmo.XAxis.Y - 6 Size 11 Color ColorValue
-    ColorValue = TransformGizmoAxisColor(CALIBRATION_AXIS_Y,
-        CalibrationAxis = CALIBRATION_AXIS_Y)
-    Draw Text "Y" At TransformGizmo.YAxis.X + 5, TransformGizmo.YAxis.Y - 6 Size 11 Color ColorValue
-    ColorValue = TransformGizmoAxisColor(CALIBRATION_AXIS_Z,
-        CalibrationAxis = CALIBRATION_AXIS_Z)
-    Draw Text "Z" At TransformGizmo.ZAxis.X + 5, TransformGizmo.ZAxis.Y - 6 Size 11 Color ColorValue
+    ''' Camera-facing silhouette guide, not an extra editable rotation channel.
+    Draw Circle TransformGizmo.Origin.X, TransformGizmo.Origin.Y, 90, Rgb(220, 220, 220)
 
 End Sub
 
 Sub DrawViewerOverlay()
+
+    Call BeginPartyInspector()
+
+    If (UiVisibility = 0 And
+        CalibrationAvailable And
+        CalibrationVisible And
+        TransformGizmoVisible) Then
+        Call UpdateTransformGizmo()
+        Call DrawTransformGizmo()
+    End If
+
+    Call DrawInspectorOverlay()
+    Call EndPartyInspector()
+
+End Sub
+
+Sub DrawInspectorOverlay()
 
     Dim PanelLeft As Number
     Dim PanelText As Number
@@ -7688,7 +8292,7 @@ Sub DrawViewerOverlay()
         Subtitle = ActiveProfile.DisplayName + "  •  Party role: " + PartyRoleLabel() + "  •  Renderer3D PBR"
     End If
 
-    Draw Text "SMILE 2.0 - 3D Viewer, Animation Editor" At 18, 10 Size 22 Color CYAN
+    Draw Text "SMILE 2.0 - 3D Viewer, Animation Editor" At 18, 10 Size 22 Color WHITE
 
     If PartyMode Then
         Subtitle = "Sin Star I  •  Arin And Orin  •  Party Battle Preview"
@@ -7702,14 +8306,8 @@ Sub DrawViewerOverlay()
     Call DrawButton(260, 62, 72, 26, "Dragon", SelectedCharacterTab = 2)
     Call DrawButton(338, 62, 72, 26, "Party", SelectedCharacterTab = 3)
 
-    If CharacterSwitchBlocked Then
-        Draw Text "Save Or Cancel The Pose Before Switching" At 348, 68 Size 12 Color YELLOW
-    End If
-
-    If PartyMode Then
+    If PartyMode And Not CalibrationVisible Then
         Call DrawPartyOverlay()
-
-        Return
     End If
 
     If UiVisibility = 0 Then
@@ -7717,11 +8315,21 @@ Sub DrawViewerOverlay()
         Call DrawButton(PanelLeft, 18, 44, 34, "LIGHT", False)
         Call DrawButton(PanelLeft + 48, 18, 56, 34, "CHANNEL", False)
         Call DrawButton(PanelLeft + 108, 18, 50, 34, "SOCKET", SocketGizmosVisible)
-        Call DrawButton(PanelLeft + 162, 18, 50, 34, "PROFILE", False)
-        Call DrawButton(PanelLeft + 216, 18, 36, 34, "GLOW", EpicGlowVisible)
+
+        If ViewerProfiles.INCLUDE_DIAGNOSTIC_PROFILES And Not PartyMode Then
+            Call DrawButton(PanelLeft + 162, 18, 50, 34, "PROFILE", False)
+        End If
+
+        Call DrawButton(GlowButtonX(), 18, GlowButtonWidth(), 34, "GLOW", EpicGlowVisible)
         Call DrawButton(PanelLeft, 56, 72, 22, DragonLabel(), DragonVisible)
         Call DrawButton(PanelLeft + 76, 56, 48, 22, BackgroundLabel(), BackgroundIndex > 0)
-        Call DrawButton(PanelLeft + 128, 56, 36, 22, "Pose", CalibrationVisible)
+
+        If CalibrationAvailable Then
+            Call DrawButton(PanelLeft + 128, 56, 36, 22, "Pose", CalibrationVisible)
+        Else
+            Draw Text "Pose" At PanelLeft + 132, 62 Size 10 Color GRAY
+        End If
+
         Call DrawButton(PanelLeft + 168, 56, 40, 22, "Weapon", SwordVisible)
         Call DrawButton(PanelLeft + 212, 56, 40, 22, "Shield", ShieldVisible)
 
@@ -7750,11 +8358,12 @@ Sub DrawViewerOverlay()
             Call DrawButton(PanelLeft + 144, 470, 108, 20,
                 VfxPlaybackLabel("Lightning", LightningAnimationPaused), LightningAnimationPaused)
 
-        Else If DragonInspection Then
+        Else If ProfileIndex = ViewerProfiles.PROFILE_DRAGON Then
 
             Call DrawButton(PanelLeft + 94, 444, 76, 22, "Head Aim", DragonHeadTracking)
 
-            If DragonCounter Mod 2 = 0 Then
+            If ((PartyMode And PartyHitTarget = 0) Or
+                (Not PartyMode And DragonCounter Mod 2 = 0)) Then
                 Call DrawButton(PanelLeft + 174, 444, 78, 22, "At Arin", True)
             Else
 
@@ -7763,7 +8372,7 @@ Sub DrawViewerOverlay()
 
         End If
 
-        If SwordFireReady Then
+        If SwordFireReady And ProfileIndex = ViewerProfiles.PROFILE_ARIN Then
             Call DrawButton(PanelLeft + 12, 470, 128, 20, FlamePlaybackLabel(), Not FlameAnimationPaused)
 
             Call DrawButton(PanelLeft + 144, 470, 108, 20, ShieldFireStyleLabel(), Not ShieldFlameStyle)
@@ -7800,19 +8409,37 @@ Sub DrawViewerOverlay()
         Call DrawCalibrationPanel()
     End If
 
-    Draw Text "LMB pan  •  MMB orbit  •  Wheel zoom  •  Space pause  •  RMB reset  •  D dragon  •  W sword  •  S shield" At 16, Window_Height() - 22 Size 11 Color LIGHT_GRAY
+    If (CalibrationAvailable And
+        Text_Width(CalibrationTransferMessage, 9) >
+            TimelineWidth() - CALIBRATION_TRANSFER_TEXT_OFFSET) Then
+        Draw Text CalibrationTransferMessage At TIMELINE_LEFT, Window_Height() - 22 Size 9 Color CYAN
+    Else
+        Draw Text "LMB pan  •  MMB orbit  •  Wheel zoom  •  Space pause  •  RMB reset  •  D dragon  •  W sword  •  S shield" At 16, Window_Height() - 22 Size 11 Color LIGHT_GRAY
+    End If
 
-    If CalibrationEditing Then
+    If (CalibrationEditing Or
+        ScenePaused Or
+        CharacterSwitchBlocked) Then
+        Fill Rectangle 18, 40, Max(0, PanelLeft - 24), 18, Rgb(4, 9, 24)
+    End If
 
-        If ScenePaused Then
-            Draw Text "POSE EDIT ACTIVE — SPACE TO RESUME" At 348, 68 Size 12 Color YELLOW
+    If CharacterSwitchBlocked Then
+
+        Draw Text "Save Or Cancel The Pose Before Switching" At 18, 42 Size 12 Color YELLOW
+
+    Else If CalibrationEditing Then
+
+        If PartyMode Then
+            Draw Text "Pose Edit Active - Save Or Cancel Before Resuming" At 18, 42 Size 12 Color YELLOW
+        Else If ScenePaused Then
+            Draw Text "Pose Edit Active - Space To Resume" At 18, 42 Size 12 Color YELLOW
         Else
-            Draw Text "POSE EDIT ACTIVE — SPACE TO PAUSE MOVEMENT" At 348, 68 Size 12 Color YELLOW
+            Draw Text "Pose Edit Active - Space To Pause Movement" At 18, 42 Size 12 Color YELLOW
         End If
 
     Else If ScenePaused Then
 
-        Draw Text "MOVEMENT PAUSED — SPACE TO RESUME; CAMERA CONTROLS REMAIN ACTIVE" At 348, 68 Size 12 Color YELLOW
+        Draw Text "Paused - Space To Resume; Camera Controls Remain Active" At 18, 42 Size 12 Color YELLOW
 
     End If
 
@@ -7868,78 +8495,6 @@ Sub DrawCharacterStatusSummary(PanelLeft As Number)
         Draw Text "level" At PanelLeft + 146, 306 Size 11 Color LIGHT_GRAY
         Draw Number CurrentFramesPerSecond At PanelLeft + 190, 306 Size 12 Color GREEN
         Draw Text "fps" At PanelLeft + 216, 306 Size 11 Color LIGHT_GRAY
-
-End Sub
-
-Sub DrawPartyStatusPanel()
-
-    Dim SavedCharacter As Character3D.Actor
-    Dim SavedProfile As CharacterViewer.Profile
-    Dim SavedProfileIndex As Number
-    Dim SavedClip As Number
-    Dim PanelLeft As Number
-    Dim Index As Number
-
-    SavedCharacter = Character
-    SavedProfile = ActiveProfile
-    SavedProfileIndex = ProfileIndex
-    SavedClip = SelectedClip
-    PanelLeft = StatusPanelX()
-
-    If PartyTurn = 1 Then
-
-        Character = PartyCompanion.Actor
-        ProfileIndex = ViewerProfiles.PROFILE_ORIN
-        SelectedClip = PartyCompanion.Clip
-
-    Else If PartyTurn = 2 Then
-
-        Character = Dragon
-        ProfileIndex = ViewerProfiles.PROFILE_DRAGON
-
-        For Index = 0 To Character3D.ClipCount(Dragon) - 1
-
-            If Character3D.ClipName(Dragon, Index) = DragonClip Then
-                SelectedClip = Index
-            End If
-
-        End For
-
-    End If
-
-    ActiveProfile = ViewerProfiles.ProfileAt(ProfileIndex)
-
-    Call UI.DrawPanel(PanelLeft, 82, 252, Max(446, Window_Height() - 94))
-    Call DrawCharacterStatusSummary(PanelLeft)
-
-    Draw Text "Following Active Attacker" At PanelLeft + 16, 62 Size 13 Color CYAN
-    Draw Text "Animations" At PanelLeft + 16, 334 Size 13 Color WHITE
-
-    Call DrawAnimationButtons()
-
-    If PartyTurn = 1 Then
-        Draw Text OrinStorm.StyleName(OrinStormContext) At PanelLeft + 16, 434 Size 13 Color CYAN
-        Draw Text OrinStorm.Caption(OrinStormContext) At PanelLeft + 16, 456 Size 12 Color LIGHT_GRAY
-    Else If PartyTurn = 2 Then
-        Draw Text "Mouth Fire / Charged Fireball" At PanelLeft + 16, 434 Size 12 Color CYAN
-    Else
-        Draw Text "Sword And Shield Fire" At PanelLeft + 16, 434 Size 13 Color CYAN
-    End If
-
-    If Window_Height() >= 720 Then
-
-    Draw Text "Frame / Clip Frames" At PanelLeft + 16, 484 Size 11 Color LIGHT_GRAY
-    Draw Number Character3D.AnimationTime(Character) * 30 / 1000 At PanelLeft + 16, 502 Size 11 Color WHITE
-    Draw Number Character3D.ClipSampleCount(Character, SelectedClip) At PanelLeft + 108, 502 Size 11 Color CYAN
-
-    End If
-
-    Call DrawButton(PanelLeft + 12, Window_Height() - 64, 228, 24, "Inspect Character", False)
-
-    Character = SavedCharacter
-    ActiveProfile = SavedProfile
-    ProfileIndex = SavedProfileIndex
-    SelectedClip = SavedClip
 
 End Sub
 
@@ -8043,12 +8598,26 @@ Sub DrawCalibrationPanel()
     Call UI.DrawSlider(CALIBRATION_SLIDER_X, CALIBRATION_SLIDER_Y,
         CALIBRATION_SLIDER_WIDTH, CALIBRATION_SLIDER_HEIGHT, Value, MinimumValue, MaximumValue, 6)
 
-    Draw Text "G Move  •  R/E Rotate  •  X/Y/Z Constrain" At 34, 232 Size 11 Color WHITE
-    Draw Text "Enter Confirm/Save  •  Esc Cancel  •  Drag Colored Handles" At 34, 248 Size 10 Color LIGHT_GRAY
+    If TransformGizmoVisible Then
+        Draw Text "G Move  •  R/E Rotate  •  X/Y/Z Constrain" At 34, 232 Size 11 Color WHITE
+        Draw Text "Enter Confirm/Save  •  Esc Cancel  •  Drag Colored Handles" At 34, 248 Size 10 Color LIGHT_GRAY
+    Else
+
+        Draw Text "Numeric Controls  •  X/Y/Z Select Axis" At 34, 232 Size 11 Color WHITE
+        Draw Text "Enter Save  •  Esc Cancel  •  Show Gizmo For Mouse Handles" At 34, 248 Size 10 Color LIGHT_GRAY
+    End If
 
     Call DrawButton(34, 268, 80, 24, "Copy Key", CurrentKeyframe >= 0 And Not CalibrationEditing)
     Call DrawButton(118, 268, 80, 24, "Paste Key", CalibrationClipboardAvailable And Not CalibrationEditing)
     Call DrawButton(202, 268, 90, 24, "Delete Key", CurrentKeyframe >= 0 And Not CalibrationEditing)
+
+    If TransformGizmoVisible Then
+        Call DrawButton(300, 268, 132, 24, "Hide Gizmo", True)
+    Else
+
+        Call DrawButton(300, 268, 132, 24, "Show Gizmo", False)
+    End If
+
     Call DrawButton(34, 298, 100, 24, "Reload Key", CurrentKeyframe >= 0)
     Call DrawButton(140, 298, 100, 24, "In Place", CalibrationHoldGrip)
     Call DrawButton(246, 298, 186, 24, "Undo Last Change", CalibrationUndoCount > 0)
@@ -8268,8 +8837,26 @@ Sub DrawTimeline()
     Draw Number Duration At TIMELINE_LEFT + Width - 48, TimelineY + 3 Size 10 Color WHITE
 
     If CalibrationAvailable Then
-        Draw Text CalibrationFileLabel At TIMELINE_LEFT, Window_Height() - 39 Size 9 Color LIGHT_GRAY
-        Draw Text CalibrationTransferMessage At TIMELINE_LEFT + 235, Window_Height() - 39 Size 9 Color CYAN
+
+        If CalibrationImportPending Then
+            Call DrawButton(TIMELINE_LEFT, Window_Height() - 43,
+                CALIBRATION_IMPORT_WIDTH, 18, "Replace Keys?", True)
+        Else
+
+            Call DrawButton(TIMELINE_LEFT, Window_Height() - 43,
+                CALIBRATION_IMPORT_WIDTH, 18, "Import Key Frames", False)
+        End If
+
+        Call DrawButton(TIMELINE_LEFT + CALIBRATION_DOWNLOAD_OFFSET, Window_Height() - 43,
+            CALIBRATION_DOWNLOAD_WIDTH, 18, "Download Key Frames", False)
+
+        Draw Text CalibrationFileLabel At TIMELINE_LEFT + CALIBRATION_FILENAME_OFFSET, Window_Height() - 39 Size 9 Color LIGHT_GRAY
+
+        If (Text_Width(CalibrationTransferMessage, 9) <=
+            Width - CALIBRATION_TRANSFER_TEXT_OFFSET) Then
+            Draw Text CalibrationTransferMessage At TIMELINE_LEFT + CALIBRATION_TRANSFER_TEXT_OFFSET, Window_Height() - 39 Size 9 Color CYAN
+        End If
+
     End If
 
 End Sub
@@ -8448,7 +9035,11 @@ Function DemoLabel() As Text
 
     Dim Result As Text
 
-    If DemoEnabled Then
+    If PartyMode And ScenePaused Then
+        Result = "RESUME"
+    Else If PartyMode Then
+        Result = "PAUSE"
+    Else If DemoEnabled Then
         Result = "DEMO ON"
     Else
         Result = "DEMO OFF"
@@ -8462,7 +9053,9 @@ Function DemoStatusLabel() As Text
 
     Dim Result As Text
 
-    If DemoEnabled Then
+    If PartyMode And ScenePaused Then
+        Result = "Paused"
+    Else If DemoEnabled Then
         Result = "On"
     Else
         Result = "Off"
@@ -8629,6 +9222,10 @@ Sub SelectCharacterTab(Index As Number)
         Return
     End If
 
+    Fill Rectangle 300, 120, Max(240, Window_Width() - 600), 44, Rgb(8, 16, 30)
+    Draw Text "Loading Selected Character..." At 312, 132 Size 16 Color WHITE
+    Show Screen
+
     Call DestroyViewerResources()
 
     SelectedCharacterTab = Index
@@ -8685,6 +9282,7 @@ Sub UseActorContext(Context As ViewerActorContext)
     Character = Context.Actor
     ViewerFrame = Context.Frame
     ProfileIndex = Context.Profile
+    ActiveProfile = ViewerProfiles.ProfileAt(ProfileIndex)
     SelectedClip = Context.Clip
     CalibrationClipBase = Context.KeyBase
     SwordWristNode = Context.WeaponWrist
@@ -8695,6 +9293,157 @@ Sub UseActorContext(Context As ViewerActorContext)
     EpicGlowAvailable = Context.GlowAvailable
     EpicGlowVisible = Context.GlowVisible
     PresentationState = Context.PresentationState
+
+End Sub
+
+Sub BeginPartyInspector()
+
+    Dim Index As Number
+    Dim WasVisible As Boolean
+
+    If (Not PartyMode Or
+        Not PartyReady Or
+        ViewerError Or
+        PartyUiBound) Then
+        Return
+    End If
+
+    PartyUiPrimary = CaptureActorContext()
+    PartyUiTurn = PartyTurn
+    PartyUiBound = True
+
+    If PartyUiTurn = 1 Then
+
+        Call UseActorContext(PartyCompanion)
+
+    Else If PartyUiTurn = 2 Then
+
+        Character = Dragon
+        ProfileIndex = ViewerProfiles.PROFILE_DRAGON
+        ActiveProfile = ViewerProfiles.ProfileAt(ProfileIndex)
+        CalibrationAvailable = False
+        EpicGlowAvailable = False
+        SwordWristNode = -1
+        ShieldWristNode = -1
+        SelectedClip = 0
+
+        For Index = 0 To Character3D.ClipCount(Character) - 1
+
+            If Character3D.ClipName(Character, Index) = DragonClip Then
+                SelectedClip = Index
+            End If
+
+        End For
+
+    End If
+
+    If CalibrationOwnerProfile <> ProfileIndex Then
+
+        ''' One editing owner at a time. Never carry a pending import, Undo, or
+        ''' clipboard into another character's independent storage identity.
+        WasVisible = CalibrationVisible
+
+        Call ConfigureCalibration()
+
+        CalibrationVisible = WasVisible And CalibrationAvailable
+        SelectedTimelineEvent = FirstClipEvent()
+
+    End If
+
+End Sub
+
+Sub EndPartyInspector()
+
+    If Not PartyUiBound Then
+        Return
+    End If
+
+    If PartyUiTurn = 1 Then
+
+        PartyCompanion = CaptureActorContext()
+
+        Call UseActorContext(PartyUiPrimary)
+
+    Else If PartyUiTurn = 2 Then
+
+        Dragon = Character
+        DragonClip = SelectedClipName()
+
+        Call UseActorContext(PartyUiPrimary)
+
+    End If
+
+    PartyUiBound = False
+
+End Sub
+
+Sub BeginPartyPreview()
+
+    Dim Name As Text
+
+    If Not PartyUiBound Then
+        Return
+    End If
+
+    If Not PartyPreviewActive Then
+
+        PartyPreviewClip = SelectedClip
+        PartyPreviewTime = Character3D.AnimationTime(Character)
+        PartyPreviewMode = Graphics3D.ANIMATION_LOOP
+        Name = SelectedClipName()
+
+        If ((PartyUiTurn = 2 And Name <> "Idle") Or
+            Name = "SwordAttack" Or
+            Name = "SwordAttack2" Or
+            Name = "JumpAttack" Or
+            Name = "ThorAttack" Or
+            Name = "Hit" Or
+            ViewerProfiles.HoldsFinalPose(ProfileIndex, Name)) Then
+            PartyPreviewMode = Graphics3D.ANIMATION_ONCE
+        End If
+
+        PartyPreviewActive = True
+
+    End If
+
+    ScenePaused = True
+
+End Sub
+
+Sub RestorePartyPreview()
+
+    If Not PartyPreviewActive Or Not PartyUiBound Then
+        Return
+    End If
+
+    SelectedClip = PartyPreviewClip
+    Ready = Character3D.PlayMode(Character, SelectedClipName(),
+        PartyPreviewMode, PlaybackSpeed) And Ready
+    Ready = Character3D.SetAnimationTime(Character, PartyPreviewTime) And Ready
+    PartyPreviewActive = False
+    CalibrationVisible = False
+    TimelineScrubbing = False
+    TimelineKeyframeDragging = False
+    FrameButtonRepeatDirection = 0
+
+    Call UpdateCalibrationForCurrentFrame()
+    Call InvalidateVisualHistory()
+
+End Sub
+
+Sub ResetPartyInspector()
+
+    Call BeginPartyInspector()
+    Call CancelCalibrationEdit()
+    Call RestorePartyPreview()
+    Call EndPartyInspector()
+
+    If ViewerError Then
+        Call RetryViewer()
+    Else
+
+        Call ResetAll()
+    End If
 
 End Sub
 
@@ -8862,6 +9611,10 @@ Function PartyPresentationState(MemberIndex As Number) As Number
     Dim Result As Number
 
     Result = PresentationState
+
+    If PartyUiBound Then
+        Result = PartyUiPrimary.PresentationState
+    End If
 
     If MemberIndex = 1 Then
         Result = PartyCompanion.PresentationState
@@ -9034,7 +9787,7 @@ Sub AdvancePartyDemo()
     Dim Approach As Core.Vector3
     Dim TravelOffset As Number
 
-    If Not PartyReady Then
+    If Not PartyReady Or ScenePaused Then
         Return
     End If
 
@@ -9443,57 +10196,109 @@ Function HandlePartyPointer() As Boolean
     Dim Result As Boolean
 
     Left = 12
-    Result = (Pointer_Y() < 96 Or Pointer_X() < Left + 252 Or
-        Pointer_X() >= StatusPanelX() Or Pointer_Y() >= Window_Height() - 25)
+    Result = (UiVisibility = 0 And Not CalibrationVisible And
+        Pointer_X() < Left + 252 And Pointer_Y() >= 96 And
+        Pointer_Y() < Window_Height() - 104)
 
-    If HandleSharedSliders() Then
-        Return True
+    If (TimelineScrubbing Or
+        TimelineKeyframeDragging Or
+        FrameButtonRepeatDirection <> 0 Or
+        SliderDragOwner <> 0 Or
+        TransformGizmoDragging) Then
+        Return False
     End If
 
     If Pointer_Pressed(POINTER_SECONDARY) Then
-        Call ResetAll()
+        Call ResetPartyInspector()
 
         Return True
     End If
 
-    If Not Pointer_Pressed(POINTER_PRIMARY) Then
+    If Not Pointer_Pressed(POINTER_PRIMARY) Or UiVisibility <> 0 Then
         Return Result
     End If
 
-    If PointerInRectangle(StatusPanelX() + 12, Window_Height() - 64, 228, 24) Then
-        Call SelectCharacterTab(PartyTurn)
+    If PointerInRectangle(StatusPanelX() + 12, Window_Height() - 64, 52, 24) Then
+        Call ResetView()
+
+        Return True
+    Else If (PointerInRectangle(StatusPanelX() + 68, Window_Height() - 64, 74, 24) Or
+        PointerInRectangle(StatusPanelX() + 146, Window_Height() - 64, 40, 24)) Then
+        Call ResetPartyInspector()
+
+        Return True
+    Else If PointerInRectangle(GlowButtonX(), 18, GlowButtonWidth(), 34) Then
+        Call ToggleEpicGlow()
+
+        Return True
+    Else If PointerInRectangle(StatusPanelX() + 108, 18, 50, 34) Then
+        Call CycleSocketDisplay()
+
+        Return True
+    Else If PointerInRectangle(StatusPanelX() + 172, 204, 30, 24) Then
+        Call AdjustPlaybackSpeed(-25)
+
+        Return True
+    Else If PointerInRectangle(StatusPanelX() + 208, 204, 30, 24) Then
+        Call AdjustPlaybackSpeed(25)
 
         Return True
     End If
 
-    If PointerInRectangle(StatusPanelX() + 172, 204, 30, 24) Then
-        Call AdjustPlaybackSpeed(-25)
-    Else If PointerInRectangle(StatusPanelX() + 208, 204, 30, 24) Then
-        Call AdjustPlaybackSpeed(25)
-    Else If PointerInRectangle(Left, 104, 76, 30) Then
+    If Not Result Then
+        Return False
+    End If
+
+    If PointerInRectangle(Left, 104, 76, 30) Then
+
         Call ToggleDragon()
+
     Else If PointerInRectangle(Left + 82, 104, 76, 30) Then
+
         Call ToggleSword()
+
     Else If PointerInRectangle(Left + 164, 104, 76, 30) Then
+
         Call ToggleShield()
+
     Else If PointerInRectangle(Left, 140, 76, 22) Then
+
         Call ToggleFloorAndGrid()
+
     Else If PointerInRectangle(Left + 82, 140, 76, 22) Then
+
         Call CycleBackground()
+
     Else If PointerInRectangle(Left + 164, 140, 76, 22) Then
+
         Call ToggleEpicGlow()
+
     Else If PointerInRectangle(Left + 12, 324, 108, 28) Then
+
+        Call BeginPartyInspector()
         Call ToggleScenePause()
+        Call EndPartyInspector()
+
     Else If PointerInRectangle(Left + 128, 324, 108, 28) Then
+
         Call ToggleAutoOrbit()
+
     Else If PointerInRectangle(Left + 12, 360, 224, 28) Then
-        Call ResetAll()
-    Else If PointerInRectangle(Left + 12, 410, 108, 24) Then
+
+        Call ResetPartyInspector()
+
+    Else If Window_Height() >= 580 And PointerInRectangle(Left + 12, 410, 108, 24) Then
+
         FlameAnimationPaused = Not FlameAnimationPaused
-    Else If PointerInRectangle(Left + 128, 410, 108, 24) Then
+
+    Else If Window_Height() >= 580 And PointerInRectangle(Left + 128, 410, 108, 24) Then
+
         LightningAnimationPaused = Not LightningAnimationPaused
-    Else If PointerInRectangle(Left + 12, 440, 224, 22) Then
+
+    Else If Window_Height() >= 580 And PointerInRectangle(Left + 12, 440, 224, 22) Then
+
         Call ToggleShieldFireStyle()
+
     End If
 
     Return Result
@@ -9545,7 +10350,7 @@ Sub DrawPartyOverlay()
 
     If UiVisibility = 0 Then
 
-        Call UI.DrawPanel(Left, 96, 252, Max(374, Window_Height() - 114))
+        Call UI.DrawPanel(Left, 96, 252, Max(330, Window_Height() - 200))
         Call DrawButton(Left, 104, 76, 30, "Dragon", DragonVisible)
         Call DrawButton(Left + 82, 104, 76, 30, "Weapon", SwordVisible)
         Call DrawButton(Left + 164, 104, 76, 30, "Shield", ShieldVisible)
@@ -9553,7 +10358,7 @@ Sub DrawPartyOverlay()
         Call DrawButton(Left + 82, 140, 76, 22, "Backdrop", BackgroundIndex > 0)
         Call DrawButton(Left + 164, 140, 76, 22, "Glow", EpicGlowVisible)
 
-        Draw Text "Party" At Left + 16, 178 Size 20 Color WHITE
+        Draw Text "Party / Enemy" At Left + 16, 178 Size 20 Color WHITE
         Draw Text "Arin  •  Paladin" At Left + 16, 212 Size 15 Color CYAN
         Draw Text "Orin  •  Tank" At Left + 16, 238 Size 15 Color WHITE
         Draw Text Acting + "'s Turn" At Left + 16, 272 Size 16 Color YELLOW
@@ -9566,7 +10371,9 @@ Sub DrawPartyOverlay()
         Call DrawButton(Left + 128, 324, 108, 28, "Orbit", AutoOrbit)
         Call DrawButton(Left + 12, 360, 224, 28, "Restart Battle Demo", False)
 
-        Draw Text "VFX Playback" At Left + 16, 394 Size 12 Color WHITE
+        If Window_Height() >= 580 Then
+
+            Draw Text "VFX Playback" At Left + 16, 394 Size 12 Color WHITE
 
         Call DrawButton(Left + 12, 410, 108, 24,
             VfxPlaybackLabel("Fire", FlameAnimationPaused), FlameAnimationPaused)
@@ -9574,7 +10381,9 @@ Sub DrawPartyOverlay()
             VfxPlaybackLabel("Lightning", LightningAnimationPaused), LightningAnimationPaused)
         Call DrawButton(Left + 12, 440, 224, 22, "Arin Shield: " + ShieldFireStyleLabel(), Not ShieldFlameStyle)
 
-        If Window_Height() >= 620 Then
+        End If
+
+        If Window_Height() >= 740 Then
 
             If PartyPresentationState(0) = PARTY_STATE_KO Then
                 Draw Text "Arin KO - Revives On His Turn" At Left + 16, 470 Size 12 Color YELLOW
@@ -9595,12 +10404,7 @@ Sub DrawPartyOverlay()
 
         End If
 
-        Call DrawPartyStatusPanel()
-        Call DrawCameraControls()
-
     End If
-
-    Draw Text "LMB pan  •  MMB orbit  •  Wheel zoom  •  Space pause  •  RMB reset" At 18, Window_Height() - 28 Size 12 Color LIGHT_GRAY
 
     If ViewerError Then
         Draw Text "Party Could Not Load — Select A Character Or Press Enter To Retry" At 18, 112 Size 16 Color YELLOW
