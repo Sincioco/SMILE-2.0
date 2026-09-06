@@ -17,6 +17,83 @@ $repositoryRoot = [IO.Path]::GetFullPath((Join-Path $toolRoot '..\..'))
 $compiler = Join-Path $repositoryRoot 'artifacts\compiler\smilec.exe'
 $project = Join-Path $toolRoot 'Character3DViewer.smileproj'
 $outputRoot = Join-Path $toolRoot "bin\$Configuration"
+$viewerSources = @(
+    'Program.smile',
+    'Profiles.smile',
+    'OrinStorm.smile',
+    'ArinShieldRim.smile',
+    'BattleAudio.smile',
+    'BattleCamera.smile',
+    'DragonPresence.smile',
+    'CalibrationJson.smile',
+    'ViewerTiming.smile',
+    'ViewerSession.smile',
+    'ViewerPlayback.smile',
+    'ViewerCamera.smile',
+    'ViewerCalibration.smile',
+    'ViewerInput.smile',
+    'ViewerUi.smile',
+    'ViewerGizmo.smile',
+    'ViewerParty.smile',
+    'ViewerEffects.smile',
+    'ViewerRendering.smile'
+)
+
+function Assert-ViewerSourceInventory(
+    [xml]$ProjectXml,
+    [string]$ProfileSource,
+    [string]$Label
+) {
+    $expectedSources = @($viewerSources | ForEach-Object {
+        if ($_ -eq 'Profiles.smile') { $ProfileSource } else { $_ }
+    })
+    $sourceNodes = @($ProjectXml.SmileProject.ItemGroup.SmileSource)
+
+    if ([string]$ProjectXml.SmileProject.PropertyGroup.StartupFile -cne 'Program.smile') {
+        throw "$Label must keep Program.smile as StartupFile."
+    }
+    if ([string]$ProjectXml.SmileProject.PropertyGroup.ApplicationId -cne
+        'smile.tools.character3d-viewer') {
+        throw "$Label changed the stable Character Viewer ApplicationId."
+    }
+    if ($sourceNodes.Count -ne $expectedSources.Count) {
+        throw "$Label must contain exactly $($expectedSources.Count) explicit SmileSource items."
+    }
+    foreach ($source in $expectedSources) {
+        $matches = @($sourceNodes | Where-Object { [string]$_.Include -ceq $source })
+        if ($matches.Count -ne 1) {
+            throw "$Label must include $source exactly once."
+        }
+        if (-not (Test-Path -LiteralPath (Join-Path $toolRoot $source) -PathType Leaf)) {
+            throw "$Label source does not exist: $source"
+        }
+    }
+    $programNode = @($sourceNodes | Where-Object {
+        [string]$_.Include -ceq 'Program.smile'
+    })
+    if ([string]$programNode[0].StartupOnly -cne 'true') {
+        throw "$Label must keep Program.smile StartupOnly."
+    }
+}
+
+function Assert-WebModelInventory([xml]$ProjectXml) {
+    $expectedModels = @(
+        'Assets\Generation2\ArinV57\ArinV57.sm3d',
+        'Assets\Generation2\OrinV13\OrinV13.sm3d',
+        'Assets\Generation2\RedDragon\RedDragon.sm3d'
+    )
+    $modelNodes = @($ProjectXml.SmileProject.ItemGroup.Model3DAsset)
+
+    if ($modelNodes.Count -ne $expectedModels.Count) {
+        throw 'Web publication must contain exactly the current Arin, Orin and Dragon models.'
+    }
+    foreach ($model in $expectedModels) {
+        $matches = @($modelNodes | Where-Object { [string]$_.LogicalPath -ceq $model })
+        if ($matches.Count -ne 1) {
+            throw "Web publication must include $model exactly once."
+        }
+    }
+}
 
 function Assert-CharacterPublication([string]$PublicationRoot) {
     $synchronizer = Join-Path $repositoryRoot 'scripts\sync-arin-v5-7-calibration.ps1'
@@ -33,6 +110,9 @@ function Assert-CharacterPublication([string]$PublicationRoot) {
 if (-not (Test-Path -LiteralPath $compiler -PathType Leaf)) {
     throw "Build SMILE before compiling the Character Viewer/editor: $compiler"
 }
+
+[xml]$nativeProject = Get-Content -LiteralPath $project -Raw
+Assert-ViewerSourceInventory $nativeProject 'Profiles.smile' 'Character Viewer project'
 
 & (Join-Path $toolRoot 'Prepare-BuildAssets.ps1')
 if ($Target -in @('Native', 'All')) {
@@ -54,7 +134,7 @@ if ($Target -in @('Web', 'All')) {
     # Web publication's profile policy and project asset list. Quality profiles
     # resize only unpublished staging copies, never accepted textures. The existing asset publisher transaction
     # removes obsolete managed files from this exact configuration's Web folder.
-    [xml]$webProject = Get-Content -LiteralPath $project -Raw
+    [xml]$webProject = $nativeProject.OuterXml
     $profileText = Get-Content -LiteralPath (Join-Path $toolRoot 'Profiles.smile') -Raw
     $nativePolicy = 'Public Const INCLUDE_DIAGNOSTIC_PROFILES = True'
     if ([regex]::Matches($profileText, [regex]::Escape($nativePolicy)).Count -ne 1) {
@@ -77,6 +157,9 @@ if ($Target -in @('Web', 'All')) {
             $null = $item.ParentNode.RemoveChild($item)
         }
     }
+    Assert-ViewerSourceInventory $webProject 'BuildAssets\ViewerWeb\Profiles.smile' `
+        'Character Viewer Web publication project'
+    Assert-WebModelInventory $webProject
     $webProjectPath = Join-Path $toolRoot 'Character3DViewer.WebPublication.smileproj'
     $webProject.Save($webProjectPath)
     & $compiler --project $webProjectPath --target web `

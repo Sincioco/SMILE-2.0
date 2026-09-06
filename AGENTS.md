@@ -29,7 +29,10 @@ These instructions apply to the entire SMILE 2.0 repository.
 ## Project identity
 
 - `SMILE` stands for **Simple Modern and Intuitive Language for Everyone** and always means **SMILE 2.0**, the new native compiler project.
-- Do not maintain SMILE 1.0 compatibility unless Sin explicitly requests it.
+- SMILE 2.0 is authoritative; do not maintain a parallel SMILE 1.0 compiler or
+  compatibility implementation unless Sin explicitly requests it. Practical
+  unchanged-program compatibility and forward-porting of text/console capabilities
+  remain goals. Any deliberate incompatibility must have a documented alignment path.
 - Local repository: `D:\SMILE 2.0`
 - Public GitHub repository: `Sincioco/SMILE-2.0`
 - Sin authorizes Codex to create, edit, rename, move, delete, build, run, commit, and push files belonging to this repository.
@@ -92,6 +95,24 @@ The SMILE 2.0 - 3D Viewer, Animation Editor is allowed to evolve into a lightwei
 - Before accepting each new character package, compare the skinned body's bind-pose minimum Y with animated Idle frame 0, excluding equipment and VFX. Inspect frame 0 of every clip against the arena floor, then check Block/Hit contact and the settled Death pose. Fix a shared placement error before adding per-clip corrections; preserve intentional jumps. Record measurements and the asset checksum in that character's package, resolve corrections by clip name, and verify individual and Party playback. All equipment overlays and VFX must use the final grounded actor transform. Read OrinV13's `ORIN-CREATION-AND-REPAIR-JOURNEY.md` grounding lesson; do not copy Orin's numeric offset to another character.
 - Keep `Calibration\arin-v5.7-pose-calibration.json` as the human-readable repository source of truth. The checksummed binary `Save Data` envelope is a generated runtime implementation detail and must not be committed.
 - Launch the native editor through `tools\Character3DViewer\Launch.ps1` when practical. It keeps the stable application-data working copy and the repository-owned Arin v5.7 calibration JSON synchronized while the editor runs.
+
+### Character Viewer task routing
+
+- For every Character Viewer implementation or review task, read
+  `tools\Character3DViewer\ARCHITECTURE.md` for the current owner/public-operation/test
+  source map and `tools\Character3DViewer\README.md` for current build, launch, Web
+  publication, interaction, and calibration-transfer guidance.
+- Consult `docs\implementation\character-viewer-refactor-checkpoint.json` as the one
+  compact current refactor checkpoint. H6.1 ledgers and reports are retained historical
+  evidence; do not restart that completed milestone or substitute it for the current
+  refactor gate.
+- Before character-specific asset, animation, equipment, grounding, calibration, or VFX
+  work, also read that character package's creation-and-repair journey. Arin and Orin
+  numeric corrections are version-specific and must not be copied between characters.
+- Apply `docs\SMILE-2.0-Authoritative-Code-Formatting-Conventions.md` to SMILE sources and
+  keep the refactor-first precedence explicit: finish and verify the Character Viewer
+  before Double. Loader/splash enhancements, Double, the semantic-inspection CLI, Battle
+  Scene Editor, and subject-first syntax remain deferred until their own approved phase.
 
 ### Permanent smooth 3D camera interaction rule
 

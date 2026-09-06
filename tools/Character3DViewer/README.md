@@ -5,7 +5,7 @@ Desktop and Web. Quick taps remain frame steps even after Control is released;
 plain arrows still orbit. This uses the shared `Key_Event_Held` built-in and does
 not change live `Key_Held` behavior or any saved calibration.
 
-Native-first reusable inspection and lightweight pose-correction tool. Party is the launch default. The Character tabs select Arin, Orin, Dragon, or the Party arena. Desktop Profile retains Arin v5.6, the earlier prototype, and the technical fixture for diagnostics. Web publication omits that control, its shortcut and the obsolete diagnostic assets. Current Web parity is in progress under H6.1; this is not the future Battle Scene Editor.
+Native-first reusable inspection and lightweight pose-correction tool. Party is the launch default. The Character tabs select Arin, Orin, Dragon, or the Party arena. Desktop Profile retains Arin v5.6, the earlier prototype, and the technical fixture for diagnostics. Web publication omits that control, its shortcut and the obsolete diagnostic assets. H6.1 is retained historical PASS evidence; the current refactor uses its own gate tied to current code. This is not the future Battle Scene Editor.
 
 Dragon inspection uses the same clip buttons, timeline/frame stepping, playback speed, demo, lighting/material channels, sockets, pan/orbit/zoom and reset as the hero tabs. Both heroes remain in the arena with their own assets and saved corrections. Head Aim constrains only the head joint; At Arin/At Orin selects its target. The current Pose Calibration targets remain humanoid wrists and equipment, so they do not apply to Dragon. Dragon VFX and hero equipment visibility remain independent. Pose is disabled for Dragon, including its turn in Party.
 
@@ -18,6 +18,20 @@ participant; no unfinished third hero asset is implied.
 
 The editor source and build/launch entry points belong here. Sin Star I owns the self-contained character package at `games\SinStarI\SourceAssets\Characters\Paladin\ArinV57`. Orin owns `games\SinStarI\SourceAssets\Characters\Tank\OrinV13`. Do not edit ignored cooking inputs as canonical character assets.
 
+## Maintainer routing
+
+Start with `ARCHITECTURE.md` for the current ownership and test map. `Program.smile`
+is the thin ordered coordinator. Startup/session/playback, camera, calibration,
+input/UI/gizmo, Party, effects, and rendering state live with their corresponding
+`Viewer*.smile` production modules; retained focused helpers continue to own audio,
+Dragon presence, Orin storm, profiles, and bounded calibration JSON. Do not recreate
+those fields in `Program.smile` or gather them into a shared replacement state.
+
+The one compact current checkpoint is
+`docs\implementation\character-viewer-refactor-checkpoint.json`. The H6.1 records are
+historical evidence, not an active milestone. Character-specific corrections also
+require the applicable ArinV57 or OrinV13 creation-and-repair journey.
+
 ## Build and launch
 
 Run `Build.ps1`, then `Launch.ps1`. Builds use the same configuration layout as
@@ -29,16 +43,25 @@ bin/
     Character3DViewer.exe
     Assets/ ...
     Web/index.html ...
+    Web - Optimized Low/index.html ...
+    Web - Optimized Medium/index.html ...
+    Web - Optimized High/index.html ...
   Release/
     Character3DViewer.exe
     Assets/ ...
     Web/index.html ...
+    Web - Optimized Low/index.html ...
+    Web - Optimized Medium/index.html ...
+    Web - Optimized High/index.html ...
 ```
 
 `Build.ps1` defaults to `-Configuration Release -Target All`, building native
 first and then Web. Select `-Configuration Debug` for both Debug outputs, or
 `-Target Native` / `-Target Web` for one target. Each Web directory is a complete
-static publication; upload its entire contents, including all assets.
+static publication; upload its entire contents, including all assets. Full is the
+default. Low, Medium, and High require `-Target Web -WebQuality <quality>` and write
+only to their named optimized directory, so the four Web publications do not
+overwrite one another.
 
 The Viewer Web build generates an ignored publication project and profile policy
 containing only the current Arin, Orin and Dragon model assets. The normal asset
@@ -80,7 +103,8 @@ tools/Character3DViewer/Build.ps1 -Configuration Release -Target Web
 python -m http.server 8766 --bind 127.0.0.1 --directory tools/Character3DViewer/bin/Release/Web
 ```
 
-Open `http://127.0.0.1:8766/` in Chrome or Edge. Port 8766 avoids the existing
+Open `http://127.0.0.1:8766/` in installed Chrome. Chrome is the primary Web
+acceptance browser; use Edge only for an Edge-specific problem. Port 8766 avoids the existing
 hardening server on 8765; changing ports changes the browser storage origin.
 To retain browser-authored saves from `http://127.0.0.1:8765`, stop that server
 first and serve this directory on **8765** instead (the URL path may change,
@@ -88,14 +112,19 @@ but host, scheme and port must remain the same). Do not erase either origin's
 storage. The older `artifacts/web/h6-1/Character3DViewer` is test evidence, not the
 normal publishable build. Browser working saves are separate and origin-scoped;
 rebuilding does not replace them.
-The Windows JSON path/Explorer action belongs to native. Browser JSON transfer,
-storage recovery, MSAA and the rest of the H6.1 workflow gate remain in progress;
-no automatic browser-to-repository synchronization is claimed.
+The Windows JSON path/Explorer action belongs to native. Browser JSON import/download,
+primary/backup recovery, MSAA, context restoration, and the H6.1 workflow gate have
+current passing evidence. No automatic browser-to-repository synchronization is claimed.
 
 - Backtick cycles through panels hidden (including Pose Calibration), all UI hidden, then the prior UI restored. Headers, the timeline, and helper text remain after the first tap. Hidden controls cannot intercept the mouse. This does not change panel-open preferences, edits, playback, or the camera. Right-click reset restores the normal UI with Pose Calibration hidden.
 - Space pauses/resumes movement while keeping camera controls active.
-- Flames keep animating when Space pauses the scene. The separate Pause Flames / Play Flames button controls only the flames, independently of scene playback. Reset starts both again.
-- Orin has a Freeze Lightning / Play Lightning toggle. Party's VFX Playback row independently freezes Fire and Lightning across all actors. Frozen effects retain their current world-space snapshot while character animation and camera controls continue; resume advances from that snapshot without a catch-up burst. Reset unfreezes both families.
+- Fire and Lightning keep animating by default when Space pauses the scene on Desktop
+  and Web. Scene pause freezes actor/choreography time and leaves camera controls active;
+  it does not implicitly freeze either VFX family.
+- The existing Freeze Fire / Play Fire and Freeze Lightning / Play Lightning controls
+  independently freeze each family across Party actors, even while the scene remains
+  paused. Frozen effects retain their current world-space snapshot; re-enabling advances
+  from that snapshot without a catch-up burst. Reset re-enables both families.
 - Fire and Lightning now advance once at the Viewer scene boundary after every actor has staged its effect endpoints. An unavailable optional equipment path cannot stall another emitter. Orin and Dragon borrow distinct generation-safe local-light leases instead of writing fixed renderer slots.
 - Bare Alt no longer enters Windows' modal keyboard-menu state. Alt+Enter still toggles fullscreen and Alt+F4 closes the window. Recompile older game executables to pick up the shared native runtime fix.
 - Right-click resets presentation as on a fresh launch: Idle, Demo, dragon/floor/grid visible, landscape backdrop, unpaused. There is no inactivity timer that re-enables Demo.
