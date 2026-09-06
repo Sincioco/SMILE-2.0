@@ -22,6 +22,7 @@ Import Smile.Tools.DragonPresence As DragonPresence
 Import Smile.Tools.Character3DViewerTiming As ViewerTiming
 Import Smile.Tools.Character3DViewerSession As ViewerSession
 Import Smile.Tools.Character3DViewerPlayback As ViewerPlayback
+Import Smile.Tools.Character3DViewerActors As ViewerActors
 Import Smile.Tools.Character3DViewerCamera As ViewerCamera
 Import Smile.Tools.Character3DViewerCalibration As ViewerCalibration
 Import Smile.Tools.Character3DViewerInput As ViewerInput
@@ -7093,9 +7094,7 @@ Sub DestroyViewerResources()
     Dim Index As Number
 
     Call DestroyPartyCompanion()
-    Call Graphics3D.DestroyObject3D(Party.DragonOpponent.WeaponGlow)
-    Call Graphics3D.DestroyObject3D(Party.DragonOpponent.ShieldGlow)
-    Call Character3D.Destroy(Party.DragonOpponent.Actor)
+    Call ViewerActors.Destroy(Party.DragonOpponent)
     Call DestroyDragon()
     Call DragonPresence.Shutdown()
 
@@ -7159,44 +7158,50 @@ Sub SelectCharacterTab(Index As Number)
 
 End Sub
 
-Function CaptureActorContext() As ViewerParty.ActorContext
+Function CaptureActorContext() As ViewerActors.Context
 
-    Dim Result As ViewerParty.ActorContext
+    Dim Result As ViewerActors.Context
 
-    Result.Actor = Character
-    Result.Frame = ViewerCameraState.Frame
-    Result.Profile = Session.ProfileIndex
-    Result.Clip = Playback.SelectedClip
-    Result.KeyBase = Calibration.KeyBase
-    Result.WeaponWrist = SwordWristNode
-    Result.ShieldWrist = ShieldWristNode
-    Result.WeaponGlow = SwordGlow
-    Result.ShieldGlow = ShieldGlow
-    Result.CalibrationAvailable = CalibrationAvailable
-    Result.GlowAvailable = EpicGlowAvailable
-    Result.GlowVisible = EpicGlowVisible
-    Result.PresentationState = Party.PrimaryPresentationState
+    Result = ViewerActors.Capture(
+        Character,
+        ViewerCameraState.Frame,
+        Session.ProfileIndex,
+        Playback.SelectedClip,
+        Calibration.KeyBase,
+        SwordWristNode,
+        ShieldWristNode,
+        SwordGlow,
+        ShieldGlow,
+        CalibrationAvailable,
+        EpicGlowAvailable,
+        EpicGlowVisible,
+        Party.PrimaryPresentationState
+    )
 
     Return Result
 
 End Function
 
-Sub UseActorContext(Context As ViewerParty.ActorContext)
+Sub UseActorContext(Context As ViewerActors.Context)
 
-    Character = Context.Actor
-    ViewerCameraState.Frame = Context.Frame
-    Session.ProfileIndex = Context.Profile
+    Call ViewerActors.Apply(
+        Context,
+        Character,
+        ViewerCameraState.Frame,
+        Session.ProfileIndex,
+        Playback.SelectedClip,
+        Calibration.KeyBase,
+        SwordWristNode,
+        ShieldWristNode,
+        SwordGlow,
+        ShieldGlow,
+        CalibrationAvailable,
+        EpicGlowAvailable,
+        EpicGlowVisible,
+        Party.PrimaryPresentationState
+    )
+
     ActiveProfile = ViewerProfiles.ProfileAt(Session.ProfileIndex)
-    Playback.SelectedClip = Context.Clip
-    Calibration.KeyBase = Context.KeyBase
-    SwordWristNode = Context.WeaponWrist
-    ShieldWristNode = Context.ShieldWrist
-    SwordGlow = Context.WeaponGlow
-    ShieldGlow = Context.ShieldGlow
-    CalibrationAvailable = Context.CalibrationAvailable
-    EpicGlowAvailable = Context.GlowAvailable
-    EpicGlowVisible = Context.GlowVisible
-    Party.PrimaryPresentationState = Context.PresentationState
 
 End Sub
 
@@ -7361,32 +7366,25 @@ End Sub
 
 Sub CreatePartyCompanion(Optional CompanionIndex As Number = ViewerProfiles.PROFILE_ORIN)
 
-    Dim Primary As ViewerParty.ActorContext
-    Dim CompanionProfile As CharacterViewer.Profile
-    Dim CompanionBounds As Character3D.Bounds3D
+    Dim Companion As ViewerActors.Context
+    Dim CompanionKeyBase As Number
+    Dim Primary As ViewerActors.Context
     Dim CompanionModel As Core.Model3D
     Dim CompanionAnimator As Core.Animator3D
 
     Primary = CaptureActorContext()
-    Session.ProfileIndex = CompanionIndex
-    CompanionProfile = ViewerProfiles.ProfileAt(Session.ProfileIndex)
-    Character = Character3D.LoadWithPolicy(
-        CompanionProfile.AssetPath, Character3D.CHARACTER_LOAD_REQUIRE_PBR
-    )
-    Party.Ready = Character3D.IsValid(Character)
+    CompanionKeyBase = 0
+
+    If CompanionIndex = ViewerProfiles.PROFILE_ORIN Then
+        CompanionKeyBase = CALIBRATION_MAX_CLIPS
+    End If
+
+    Companion = ViewerActors.LoadContext(CompanionIndex, CompanionKeyBase)
+    Party.Ready = Companion.Ready
+
+    Call UseActorContext(Companion)
 
     If Party.Ready Then
-
-        CompanionBounds = Character3D.LocalBounds(Character)
-        ViewerCameraState.Frame = CharacterViewer.AutoFit(CompanionProfile, CompanionBounds)
-        Party.Ready = ViewerCameraState.Frame.Valid
-        Session.Ready = Character3D.SetScale(Character, ViewerCameraState.Frame.ScalePercent) And Session.Ready
-        Session.Ready = Character3D.SetShadows(Character, True, True) And Session.Ready
-        Calibration.KeyBase = 0
-
-        If CompanionIndex = ViewerProfiles.PROFILE_ORIN Then
-            Calibration.KeyBase = CALIBRATION_MAX_CLIPS
-        End If
 
         Call ConfigureCalibration()
 
@@ -7427,6 +7425,7 @@ Sub CreatePartyCompanion(Optional CompanionIndex As Number = ViewerProfiles.PROF
         Call PlayPartyClip(Character, "Idle", Playback.SelectedClip)
 
         Party.Companion = CaptureActorContext()
+        Party.Companion.Ready = Party.Ready
 
     End If
 
@@ -7440,7 +7439,7 @@ Sub CreatePartyCompanion(Optional CompanionIndex As Number = ViewerProfiles.PROF
         Call ResetPartyDemo()
     End If
 
-    Session.Ready = Party.Ready And Session.Ready
+    Session.Ready = Companion.Ready And Party.Ready And Session.Ready
 
 End Sub
 
@@ -7465,8 +7464,8 @@ End Sub
 
 Sub UpdateDragonOpponent()
 
-    Dim SavedCompanion As ViewerParty.ActorContext
-    Dim Primary As ViewerParty.ActorContext
+    Dim SavedCompanion As ViewerActors.Context
+    Dim Primary As ViewerActors.Context
 
     SavedCompanion = Party.Companion
     Party.Companion = Party.DragonOpponent
@@ -7485,7 +7484,7 @@ End Sub
 
 Function DrawDragonOpponent() As Boolean
 
-    Dim SavedCompanion As ViewerParty.ActorContext
+    Dim SavedCompanion As ViewerActors.Context
     Dim Result As Boolean
 
     SavedCompanion = Party.Companion
@@ -7715,7 +7714,8 @@ End Sub
 
 Sub UpdatePartyCompanion()
 
-    Dim Primary As ViewerParty.ActorContext
+    Dim CompanionReady As Boolean
+    Dim Primary As ViewerActors.Context
     Dim Center As Core.Vector3
     Dim Tip As Core.Vector3
 
@@ -7723,11 +7723,12 @@ Sub UpdatePartyCompanion()
         Return
     End If
 
+    CompanionReady = ViewerActors.Update(
+        Party.Companion, Playback.AnimationUpdateElapsed)
+    Session.Ready = CompanionReady And Session.Ready
     Primary = CaptureActorContext()
 
     Call UseActorContext(Party.Companion)
-
-    Session.Ready = Character3D.Update(Character, Playback.AnimationUpdateElapsed) And Session.Ready
 
     Call ApplyCharacterPresentationOffset()
     Call UpdateCalibrationForCurrentFrame()
@@ -7750,6 +7751,8 @@ Sub UpdatePartyCompanion()
     Call ApplyEquipmentCalibration()
 
     Party.Companion = CaptureActorContext()
+    Party.Companion.Ready = CompanionReady
+    Party.Ready = CompanionReady
 
     Call UseActorContext(Primary)
 
@@ -7759,7 +7762,7 @@ Function DrawPartyCompanion() As Boolean
 
     Dim Result As Boolean
 
-    Result = Character3D.Draw(Party.Companion.Actor)
+    Result = ViewerActors.Draw(Party.Companion)
 
     If (Party.Companion.GlowVisible And
         Party.Companion.GlowAvailable And
@@ -7778,9 +7781,7 @@ End Function
 
 Sub DestroyPartyCompanion()
 
-    Call Graphics3D.DestroyObject3D(Party.Companion.WeaponGlow)
-    Call Graphics3D.DestroyObject3D(Party.Companion.ShieldGlow)
-    Call Character3D.Destroy(Party.Companion.Actor)
+    Call ViewerActors.Destroy(Party.Companion)
 
     Party.Ready = False
 

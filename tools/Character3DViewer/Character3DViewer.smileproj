@@ -23,6 +23,7 @@
     <SmileSource Include="ViewerTiming.smile" />
     <SmileSource Include="ViewerSession.smile" />
     <SmileSource Include="ViewerPlayback.smile" />
+    <SmileSource Include="ViewerActors.smile" />
     <SmileSource Include="ViewerCamera.smile" />
     <SmileSource Include="ViewerCalibration.smile" />
     <SmileSource Include="ViewerInput.smile" />

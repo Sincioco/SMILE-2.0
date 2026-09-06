@@ -40,12 +40,12 @@ inspector/calibration UI, gizmo drawing and interaction, and resource lifecycle.
 Passing module tests proves the extracted seams but does not make those remaining
 procedures owned by the new modules.
 
-`ViewerActors.smile` does not yet exist. Earlier text naming it as the current owner
-was an architecture target stated as a completed fact. The actor/inspector move is
-therefore not complete. The bounded R7.5 stage must move each implementation and its
-state to a focused existing owner, or introduce a focused actor owner if the contract
-cannot correctly fit an existing module. It must not introduce a whole-application
-state record or a replacement `ViewerApplication` module.
+`ViewerActors.smile` did not exist at the audit baseline. Earlier text naming it as
+the current owner was an architecture target stated as a completed fact. R7.5 has now
+introduced that focused owner for the actor context and actor load/update/draw/destroy
+lifecycle. Inspector selection, preview orchestration and calibration/effect coupling
+still remain to move. The bounded stage must not introduce a whole-application state
+record or a replacement `ViewerApplication` module.
 
 | Still implemented in `Program.smile` | Current evidence | Intended focused owner |
 |---|---|---|
@@ -67,6 +67,7 @@ and its focused production tests exercise the destination owner.
 |---|---:|---:|---|
 | R7.5 audit baseline at `ed5e6bb` | 8,319 | 233 | State seams existed, but substantial subsystem implementation remained. |
 | Party state-machine move | 8,032 | 231 | Party/Dragon-turn state transitions and interpolation moved; a narrow actor command application routine remains in the coordinator. |
+| Actor-context/lifecycle move | 8,033 | 231 | The new explicit actor-owner import/contract adds one coordinator line while actor context, companion load, update, draw and destruction move to `ViewerActors`; no line-count compression was used. |
 
 ## Ownership target map
 
@@ -74,7 +75,7 @@ and its focused production tests exercise the destination owner.
 |---|---|---|---|---|---|
 | Startup and failure/session lifecycle | `Program.smile` | `ViewerSession.smile` plus thin `Program.smile` coordinator | Running/readiness, first error/stage, resource epoch, tab/profile and scene mode | Reset/record/capture failure; coordinator borrows renderer and subsystem owners for load/retry/switch/shutdown | One application session; direct module assertions plus native launch, reload and failure fixtures |
 | Frame clocks and playback sequence | `Program.smile` plus `CharacterViewer.ClockState` | `ViewerTiming.smile` and `ViewerPlayback.smile` | Frame-rate and clamped clocks; selection, speed, pause/demo sequence | Start/advance/reset/query, clip mode and demo target; borrows current actor/profile only for duration queries | Session; direct native module assertions and playback fixture |
-| Actor/inspector binding | `Program.smile` (`ViewerActorContext`, `PartyUi*`, `CalibrationOwnerProfile`) | focused actor owner to be completed during R7.5; no `ViewerActors.smile` exists at the audit baseline | Primary/inspected actor identity and temporary Party preview binding | Capture/use/begin/end preview; borrows actor handles and calibration owner | Scene/preview; Party isolation fixture |
+| Actor/inspector binding | `Program.smile` (`ViewerActorContext`, `PartyUi*`, `CalibrationOwnerProfile`) | `ViewerActors.smile` now owns `Context` and actor load/update/draw/destroy; inspector selection and preview orchestration remain for R7.5 | Primary/inspected actor identity and temporary Party preview binding | Capture/apply/load/update/draw/destroy now moved; begin/end preview still borrows calibration owner from `Program.smile` | Scene/preview; direct context assertions plus integrated Party isolation fixture |
 | Camera and transforms | `Program.smile`, `BattleCamera.smile`, shared `Interaction` | `ViewerCamera.smile` and retained `BattleCamera.smile` math | `ViewerCamera.State`: base/live camera, frame, controls, zoom target, fractional pointer remainder, orbit anchor and auto-orbit | Reset/compose/nudge/drag/advance/apply/query; borrows framing profile and current actor bounds without retaining either | Scene; direct integer-output assertions plus native/installed-Chrome controls |
 | Calibration editing | `Program.smile`, `CalibrationJson.smile` | `ViewerCalibration.smile` and retained bounded JSON reader | Per-profile key banks, edit/clipboard/Undo/import workspace and selected transform | Configure/load/evaluate/edit/save/Undo/import/export/query; borrows inspected actor and storage primitives | Profile workspace; native/generated-Web isolation and malformed imports |
 | File transactions and launcher synchronization | Viewer Save/Load statements, synchronizer and launcher | `ViewerCalibration.smile`, `sync-arin-v5-7-calibration.ps1`, `Launch.ps1` | Checked save baseline/pending revision; primary/backup selection | Transaction commit/recovery/watch; canonical JSON is borrowed source of truth | Save/application identity; preservation fixtures |
@@ -95,6 +96,7 @@ state. Arin, Orin, Dragon, Party, and inspected-actor identities remain distinct
 |---|---|---|
 | `AdvanceFrameRate`, `FrameRateElapsed`, `FrameRateFrames`, `CurrentFramesPerSecond` | `ViewerTiming.Advance`, `ViewerTiming.FrameRateState`, `ViewerTiming.FramesPerSecond` | First low-risk extraction; identical 500 ms integer sampling, directly tested |
 | `PreviousTime`, `ViewerClock`, copied elapsed/drop counters | `ViewerTiming.ClockState`, `ViewerTiming.Start`, `ViewerTiming.AdvanceClock` | Identical raw sample, clamp and long-pause contract; coordinator consumes explicit animation/camera/presentation outputs |
+| `ViewerParty.ActorContext`, companion actor load/update/draw/destroy mapping in `Program.smile` | `ViewerActors.Context`, `Capture`, `Apply`, `LoadContext`, `Update`, `Draw` and `Destroy` | Actor handles and per-actor inspection fields have a focused owner. Party borrows contexts; calibration and effects remain separate owners. Inspector/preview orchestration remains to move. |
 | `SelectedClip`, speed, pause/demo counters and helper calculations | `ViewerPlayback.State`, `ResolveAnimationElapsed`, `AdjustSpeed`, `ClipMode`, `Demo*` | Playback state is explicit; actor/profile handles are borrowed for queries and never retained |
 | `Ready`, `ViewerError`, first error/stage, tab/profile and resource epoch | `ViewerSession.State`, `ResetFailure`, `RecordError`, `CaptureFailure` | First-failure retention and explicit retry reset preserved; stage capture remains adjacent to the coordinator stage |
 | `BaseCamera`, `Camera`, `ViewerFrame`, `CameraControls`, `SmoothZoom`, pointer remainders, calibration orbit anchor and `AutoOrbit*` | `ViewerCamera.State` with `Reset`, `Compose`, `UpdatePointerControls`, `AdvanceZoom`, `AdvanceAutoOrbit`, `UpdateResponsiveFit`, `ApplyCloseUp` and `ApplyCalibrationOrbitAnchor` | Camera interaction state now has one focused owner; `Program.smile` coordinates borrowed profile/bounds and keeps Party shot intent separate for the later Party owner |

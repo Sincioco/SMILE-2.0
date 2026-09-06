@@ -11,6 +11,7 @@ Import Smile.Tools.BattleCamera As BattleCamera
 Import Smile.Tools.Character3DViewerTiming As ViewerTiming
 Import Smile.Tools.Character3DViewerSession As ViewerSession
 Import Smile.Tools.Character3DViewerPlayback As ViewerPlayback
+Import Smile.Tools.Character3DViewerActors As ViewerActors
 Import Smile.Tools.Character3DViewerCamera As ViewerCamera
 Import Smile.Tools.Character3DViewerCalibration As ViewerCalibration
 Import Smile.Tools.Character3DViewerInput As ViewerInput
@@ -85,7 +86,7 @@ Dim InputState As ViewerInput.State
 Dim UiState As ViewerUi.State
 Dim GizmoState As ViewerGizmo.State
 Dim PartyState As ViewerParty.State
-Dim PartyPrimary As ViewerParty.ActorContext
+Dim PartyPrimary As ViewerActors.Context
 Dim PartyActions As ViewerParty.FrameActions
 Dim EffectsState As ViewerEffects.State
 Dim RenderingState As ViewerRendering.State
@@ -316,8 +317,26 @@ Call Check(PartyState.First.Home.X = FormationFirst.X)
 Call Check(PartyState.Second.Home.Z = FormationLast.Z)
 Call Check(PartyState.Second.FacingAdjustment = -55)
 
-PartyPrimary.Profile = 7
-PartyPrimary.PresentationState = ViewerParty.STATE_GUARDING
+PartyPrimary = ViewerActors.Capture(
+    PartyPrimary.Actor,
+    Frame,
+    7,
+    3,
+    100,
+    4,
+    5,
+    PartyPrimary.WeaponGlow,
+    PartyPrimary.ShieldGlow,
+    True,
+    True,
+    False,
+    ViewerParty.STATE_GUARDING
+)
+
+Call Check(PartyPrimary.Profile = 7 And PartyPrimary.Clip = 3)
+Call Check(PartyPrimary.KeyBase = 100 And PartyPrimary.WeaponWrist = 4)
+Call Check(PartyPrimary.CalibrationAvailable And PartyPrimary.GlowAvailable)
+Call Check(Not PartyPrimary.GlowVisible And Not PartyPrimary.Ready)
 
 Call Check(ViewerParty.BeginInspectorBinding(PartyState, PartyPrimary, 1))
 Call Check(PartyState.UiBound And PartyState.UiTurn = 1)

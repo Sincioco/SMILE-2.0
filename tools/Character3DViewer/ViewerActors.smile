@@ -1,0 +1,146 @@
+''' Active Character Viewer actor contexts and their focused load/update/draw lifecycle.
+Module Smile.Tools.Character3DViewerActors
+
+Option Explicit
+
+Import Smile.Simple3D.Character3D As Character3D
+Import Smile.Simple3D.CharacterViewer As CharacterViewer
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Graphics3D As Graphics3D
+Import Smile.Tools.Character3DViewerProfiles As ViewerProfiles
+
+Public Type Context
+    Actor As Character3D.Actor
+    Frame As CharacterViewer.Framing
+    Profile As Number
+    Clip As Number
+    KeyBase As Number
+    WeaponWrist As Number
+    ShieldWrist As Number
+    WeaponGlow As Core.Object3D
+    ShieldGlow As Core.Object3D
+    CalibrationAvailable As Boolean
+    GlowAvailable As Boolean
+    GlowVisible As Boolean
+    PresentationState As Number
+    Ready As Boolean
+End Type
+
+Public Function Capture(Actor As Character3D.Actor,
+    Frame As CharacterViewer.Framing, Profile As Number, Clip As Number,
+    KeyBase As Number, WeaponWrist As Number, ShieldWrist As Number,
+    WeaponGlow As Core.Object3D, ShieldGlow As Core.Object3D,
+    CalibrationAvailable As Boolean, GlowAvailable As Boolean,
+    GlowVisible As Boolean, PresentationState As Number) As Context
+
+    Dim Result As Context
+
+    Result.Actor = Actor
+    Result.Frame = Frame
+    Result.Profile = Profile
+    Result.Clip = Clip
+    Result.KeyBase = KeyBase
+    Result.WeaponWrist = WeaponWrist
+    Result.ShieldWrist = ShieldWrist
+    Result.WeaponGlow = WeaponGlow
+    Result.ShieldGlow = ShieldGlow
+    Result.CalibrationAvailable = CalibrationAvailable
+    Result.GlowAvailable = GlowAvailable
+    Result.GlowVisible = GlowVisible
+    Result.PresentationState = PresentationState
+    Result.Ready = Character3D.IsValid(Actor)
+
+    Return Result
+
+End Function
+
+Public Sub Apply(Value As Context, ByRef Actor As Character3D.Actor,
+    ByRef Frame As CharacterViewer.Framing, ByRef Profile As Number,
+    ByRef Clip As Number, ByRef KeyBase As Number, ByRef WeaponWrist As Number,
+    ByRef ShieldWrist As Number, ByRef WeaponGlow As Core.Object3D,
+    ByRef ShieldGlow As Core.Object3D, ByRef CalibrationAvailable As Boolean,
+    ByRef GlowAvailable As Boolean, ByRef GlowVisible As Boolean,
+    ByRef PresentationState As Number)
+
+    Actor = Value.Actor
+    Frame = Value.Frame
+    Profile = Value.Profile
+    Clip = Value.Clip
+    KeyBase = Value.KeyBase
+    WeaponWrist = Value.WeaponWrist
+    ShieldWrist = Value.ShieldWrist
+    WeaponGlow = Value.WeaponGlow
+    ShieldGlow = Value.ShieldGlow
+    CalibrationAvailable = Value.CalibrationAvailable
+    GlowAvailable = Value.GlowAvailable
+    GlowVisible = Value.GlowVisible
+    PresentationState = Value.PresentationState
+
+End Sub
+
+Public Function LoadContext(ProfileIndex As Number, KeyBase As Number) As Context
+
+    Dim Bounds As Character3D.Bounds3D
+    Dim Profile As CharacterViewer.Profile
+    Dim Result As Context
+
+    Profile = ViewerProfiles.ProfileAt(ProfileIndex)
+    Result.Profile = ProfileIndex
+    Result.KeyBase = KeyBase
+    Result.Clip = 0
+    Result.WeaponWrist = -1
+    Result.ShieldWrist = -1
+    Result.Actor = Character3D.LoadWithPolicy(
+        Profile.AssetPath, Character3D.CHARACTER_LOAD_REQUIRE_PBR)
+    Result.Ready = Character3D.IsValid(Result.Actor)
+
+    If Not Result.Ready Then
+        Return Result
+    End If
+
+    Bounds = Character3D.LocalBounds(Result.Actor)
+    Result.Frame = CharacterViewer.AutoFit(Profile, Bounds)
+    Result.Ready = Result.Frame.Valid
+    Result.Ready = Character3D.SetScale(
+        Result.Actor, Result.Frame.ScalePercent) And Result.Ready
+    Result.Ready = Character3D.SetShadows(Result.Actor, True, True) And Result.Ready
+
+    Return Result
+
+End Function
+
+Public Function Update(ByRef Value As Context, Elapsed As Number) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Value.Ready And Character3D.Update(Value.Actor, Elapsed)
+    Value.Ready = Result
+
+    Return Result
+
+End Function
+
+Public Function Draw(ByRef Value As Context) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Value.Ready And Character3D.Draw(Value.Actor)
+
+    Return Result
+
+End Function
+
+Public Sub Destroy(ByRef Value As Context)
+
+    Call Graphics3D.DestroyObject3D(Value.WeaponGlow)
+    Call Graphics3D.DestroyObject3D(Value.ShieldGlow)
+    Call Character3D.Destroy(Value.Actor)
+
+    Value.Ready = False
+    Value.CalibrationAvailable = False
+    Value.GlowAvailable = False
+    Value.GlowVisible = False
+
+End Sub
+
+End Module

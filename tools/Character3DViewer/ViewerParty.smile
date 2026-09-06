@@ -8,6 +8,7 @@ Import Smile.Simple3D.CharacterViewer As CharacterViewer
 Import Smile.Simple3D.Core As Core
 Import Smile.Simple3D.Graphics3D As Graphics3D
 Import Smile.Tools.BattleCamera As BattleCamera
+Import Smile.Tools.Character3DViewerActors As ViewerActors
 Import Smile.Tools.Character3DViewerProfiles As ViewerProfiles
 
 Public Const STATE_ALIVE = 0
@@ -18,22 +19,6 @@ Public Const STATE_KO = 4
 Public Const STATE_REVIVING = 5
 Public Const LIVE_PARTICIPANT_COUNT = 2
 
-Public Type ActorContext
-    Actor As Character3D.Actor
-    Frame As CharacterViewer.Framing
-    Profile As Number
-    Clip As Number
-    KeyBase As Number
-    WeaponWrist As Number
-    ShieldWrist As Number
-    WeaponGlow As Core.Object3D
-    ShieldGlow As Core.Object3D
-    CalibrationAvailable As Boolean
-    GlowAvailable As Boolean
-    GlowVisible As Boolean
-    PresentationState As Number
-End Type
-
 Public Type ParticipantLayout
     Home As Core.Vector3
     Approach As Core.Vector3
@@ -43,9 +28,9 @@ End Type
 Public Type State
     Enabled As Boolean
     Ready As Boolean
-    Companion As ActorContext
-    DragonOpponent As ActorContext
-    UiPrimary As ActorContext
+    Companion As ViewerActors.Context
+    DragonOpponent As ViewerActors.Context
+    UiPrimary As ViewerActors.Context
     UiBound As Boolean
     UiTurn As Number
     PreviewActive As Boolean
@@ -190,7 +175,7 @@ Public Function PresentationStateName(Presentation As Number) As Text
 
 End Function
 
-Public Function BeginInspectorBinding(ByRef Value As State, Primary As ActorContext,
+Public Function BeginInspectorBinding(ByRef Value As State, Primary As ViewerActors.Context,
     Turn As Number) As Boolean
 
     If Value.UiBound Then

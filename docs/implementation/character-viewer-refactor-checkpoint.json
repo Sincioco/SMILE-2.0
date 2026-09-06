@@ -25,7 +25,8 @@
     "c251ecc0eac7c68bed94c986670eda66cd7cb9f6",
     "3aeee2fb35594a97516c8304a9545b88c68c81ec",
     "05f3f1e6eea2e4db85b2d7d5a30d54f0f79862f3",
-    "d951647ed29daf093315805f78447c5013c22cfc"
+    "d951647ed29daf093315805f78447c5013c22cfc",
+    "9a616ef35adae9b0c5bbc864ecf689bbd6fc1aed"
   ],
   "preservedCalibration": {
     "arinJsonSha256": "C05C87BF0A92B373DB7ECD1CB304F4446B851E7AFEA836E8BB05D058B1B20F0B",
@@ -33,9 +34,14 @@
   },
   "changedFiles": [
     "docs/implementation/character-viewer-refactor-checkpoint.json",
+    "scripts/test-character-3d-viewer-hardening.ps1",
     "tools/Character3DViewer/ARCHITECTURE.md",
+    "tools/Character3DViewer/Build.ps1",
+    "tools/Character3DViewer/Character3DViewer.smileproj",
     "tools/Character3DViewer/HardeningTests.smile",
+    "tools/Character3DViewer/HardeningTests.smileproj",
     "tools/Character3DViewer/Program.smile",
+    "tools/Character3DViewer/ViewerActors.smile",
     "tools/Character3DViewer/ViewerParty.smile"
   ],
   "validation": [
@@ -50,7 +56,11 @@
     "PASS: Party state machine moved to ViewerParty; Program.smile reduced to 8032 lines and 231 procedures",
     "PASS: direct Party stage, Dragon-turn, KO/revive, attack and formation production assertions",
     "PASS: full focused native and generated-Web hardening with exact console parity",
-    "PASS: 42 isolated calibration checks and 58 native graphics, pointer-input and audio-focus checks"
+    "PASS: 42 isolated calibration checks and 58 native graphics, pointer-input and audio-focus checks",
+    "PASS: focused ViewerActors context and companion load/update/draw/destroy lifecycle is in the explicit project inventory",
+    "PASS: Release Desktop build publishes 46 assets with ViewerActors included exactly once",
+    "PASS: actor-owner integrated calibration and native/generated-Web hardening preserve exact parity",
+    "MEASURE: Program.smile is 8033 lines and 231 procedures after the explicit actor-owner contract"
   ],
   "blockers": [],
   "nextConcreteAction": "Move remaining subsystem implementations out of Program.smile in coherent tested owner stages before R8 acceptance.",

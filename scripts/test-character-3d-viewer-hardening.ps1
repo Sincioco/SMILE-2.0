@@ -24,6 +24,7 @@ $inputSourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\ViewerInpu
 $uiSourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\ViewerUi.smile'
 $gizmoSourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\ViewerGizmo.smile'
 $partySourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\ViewerParty.smile'
+$actorsSourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\ViewerActors.smile'
 $effectsSourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\ViewerEffects.smile'
 $renderingSourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\ViewerRendering.smile'
 $profileSourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\Profiles.smile'
@@ -98,6 +99,7 @@ try {
     $uiSource = Get-Content -LiteralPath $uiSourcePath -Raw
     $gizmoSource = Get-Content -LiteralPath $gizmoSourcePath -Raw
     $partySource = Get-Content -LiteralPath $partySourcePath -Raw
+    $actorsSource = Get-Content -LiteralPath $actorsSourcePath -Raw
     $effectsSource = Get-Content -LiteralPath $effectsSourcePath -Raw
     $renderingSource = Get-Content -LiteralPath $renderingSourcePath -Raw
     $profileSource = Get-Content -LiteralPath $profileSourcePath -Raw
@@ -195,12 +197,19 @@ try {
         Assert-Contains $gizmoSource $contract 'Viewer gizmo owner'
     }
     foreach ($contract in @(
-        'Public Type ActorContext',
         'Public Sub ResetChoreography(',
         'Public Function BeginInspectorBinding(',
         'Public Sub InitializeFormation(',
         'Public Function AdvanceElapsed(')) {
         Assert-Contains $partySource $contract 'Viewer Party owner'
+    }
+    foreach ($contract in @(
+        'Public Type Context',
+        'Public Function Capture(',
+        'Public Sub Apply(',
+        'Public Function LoadContext(',
+        'Public Sub Destroy(')) {
+        Assert-Contains $actorsSource $contract 'Viewer actor owner'
     }
     foreach ($contract in @(
         'Public Function ShouldFreeze(',
