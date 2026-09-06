@@ -1,0 +1,83 @@
+Remember this permanently:  When I say "Report", I want you look at the latest SMILE 2.0 code in the repository, inspect the commits since you last inspected it and tell me what Codex implemented and how well it did them.  Recommend hardenings if you find any defects and automatically create the markdowns for them.  If we are working on a long-term plan / mission / multi-phase work, provide the next phase's markdown files if there are no defects detected or if the defects detected are minor enough that they can be done first followed by the next phase's work in the same Codex session.  Provide the markdown files as .zip files and fix the filename of the .zip file so it uses dashes instead of spaces.
+
+Then give me the CODEX instructions I need to paste to instruct it to use the markdown files you generated.
+
+I want the .zip file and the markdown files to have a date and time infront of them like this:
+
+2026-10-01 1303 - 00 - Readme.md
+
+--------------------------------------------
+Report Tasks
+--------------------------------------------
+As you begin a new task, state what it is in bolded bulleted list.
+
+As you complete a task, list the remaining task you have left in bolded bulleted list.
+
+If you get interrupted and resume a task, state what it is you will resume to do in bolded bulleted list and what remains to be done in bulleted list.
+
+--------------------------------------------
+General
+--------------------------------------------
+I agree with all of your recommendations.
+
+Give me the markdown files so I can hand it off to CODEX for implementation.
+
+Provide the markdown files as .zip files and fix the filename of the .zip file so it uses dashes instead of spaces.
+
+Then give me the CODEX instructions I need to paste to instruct it to use the markdown files you generated.
+
+--------------------------------------------
+Combined
+--------------------------------------------
+Codex just comitted the latest code.
+
+Report.
+
+Give me the markdown files for any hardenings / fixes / recommendations that you think we need to do first, otherwise, provide me the markdown files for the next phase.
+
+Provide the markdown files as .zip files and fix the filename of the .zip file so it uses dashes instead of spaces.
+
+Then give me the CODEX instructions I need to paste to instruct it to use the markdown files you generated.
+
+--------------------------------------------
+NEXT PHASE
+--------------------------------------------
+Codex just comitted the latest code.
+
+Report.
+
+Give me the markdown files for the next phase.
+
+Provide the markdown files as .zip files and fix the filename of the .zip file so it uses dashes instead of spaces.
+
+Then give me the CODEX instructions I need to paste to instruct it to use the markdown files you generated.
+
+
+--------------------------------------------
+HARDENING
+--------------------------------------------
+Codex just comitted the latest code.
+
+Report.
+
+Give me the markdown files for the hardenings and your recommendations. Provide the markdown files as .zip files and fix the filename of the .zip file so it uses dashes instead of spaces.
+
+Then give me the CODEX instructions I need to paste to instruct it to use the markdown files you generated.
+
+
+--------------------------------------------
+HARDENING + NEXT PHASE
+--------------------------------------------
+
+Codex just comitted the latest code.
+
+Report.
+
+Give me the markdown files for the hardenings / fixes / recommendations you have followed by the markdown for the next phase.  Instruct CODEX to execute the hardenings / fixes / recommendations first, before the next phase's markdown.
+
+Provide the markdown files as .zip files and fix the filename of the .zip file so it uses dashes instead of spaces.
+
+Then give me the CODEX instructions I need to paste to instruct it to use the markdown files you generated.
+
+Instruct CODEX to scan the downloads folder for the latest zip files for the instructions it has not been provided or cannot be found.
+
