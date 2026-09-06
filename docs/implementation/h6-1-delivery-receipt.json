@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "sourceCommit": "bc6f607bec5a60df1e72a0d3541156bc9175fe82",
+  "branch": "main",
+  "gateStatus": "PASS-NATIVE-WEB",
+  "browserBaseline": "Windows Chrome, explicitly revised by Sin; Firefox NOT-RUN",
+  "verification": {
+    "command": "pwsh -NoProfile -File artifacts/temp/verify-package-h61-report.ps1",
+    "exitCode": 0,
+    "gateSchemaVersion": 2,
+    "fixedCheckCount": 12,
+    "closedIssueCount": 26,
+    "currentArtifactAndCalibrationHashesMatch": true,
+    "installedCompilerHashMatches": true,
+    "webApplicationStreamsVerified": 63,
+    "evidenceMembersVerified": 46
+  },
+  "webArchive": {
+    "path": "artifacts/handoffs/h6-1-bc6f607/smile-2.0-h6-1-web-bc6f607.zip",
+    "sha256": "79FD91E2F8ED922478458E8CE00991B1F242322894DAB4455EDC328E44055A92"
+  },
+  "evidenceArchive": {
+    "path": "artifacts/handoffs/h6-1-bc6f607/smile-2.0-h6-1-evidence-bc6f607.zip",
+    "sha256": "EE93D743F4D8B2266B5E625C8B9138D8D1024C9C3D362DE036C6B3DC36072936"
+  },
+  "notes": [
+    "This receipt is outside the evidence archive to avoid a circular self-hash. All other H6.1 report files at this checkpoint are archive members.",
+    "This is a documentation-only certification of the source endpoint. Later code/assets/runtime/test changes require proportional refreshed evidence.",
+    "Public deployment was not performed. Later optimized-tier, README and splash milestones remain outstanding; E0-E12 and Double remain out of scope."
+  ]
+}

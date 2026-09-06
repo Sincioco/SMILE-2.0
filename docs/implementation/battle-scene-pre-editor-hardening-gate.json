@@ -8,6 +8,8 @@
   "validatedCommit": "56513fbcf74ebe3f192b6e34f2d230ec161425f7",
   "branch": "main",
   "status": "PASS-NATIVE",
+  "currentFollowupGate": "docs/implementation/h6-1-hardening-and-web-parity-gate.json",
+  "historicalResultPreserved": true,
   "editorWorkStarted": false,
   "requiredChecks": [
     {

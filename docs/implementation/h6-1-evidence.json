@@ -1,0 +1,119 @@
+{
+  "schemaVersion": 1,
+  "template": false,
+  "sourceEndpoint": "bc6f607bec5a60df1e72a0d3541156bc9175fe82",
+  "entries": [
+    {
+      "id": "E-baseline",
+      "kind": "command-and-observation-record",
+      "sourceSha": "bc6f607bec5a60df1e72a0d3541156bc9175fe82",
+      "relativePath": "docs/implementation/h6-1-native-and-browser-observations.md#e-baseline",
+      "result": "PASS",
+      "notes": "The referenced section distinguishes original per-milestone source identities, native/VM/actual-browser evidence and limitations; this endpoint is not a claim that every old test was rerun at this SHA."
+    },
+    {
+      "id": "E-artifacts",
+      "kind": "artifact-manifest",
+      "sourceSha": "bc6f607bec5a60df1e72a0d3541156bc9175fe82",
+      "relativePath": "docs/implementation/h6-1-artifacts.json",
+      "result": "PASS",
+      "notes": "The referenced section distinguishes original per-milestone source identities, native/VM/actual-browser evidence and limitations; this endpoint is not a claim that every old test was rerun at this SHA."
+    },
+    {
+      "id": "E-camera",
+      "kind": "command-and-observation-record",
+      "sourceSha": "bc6f607bec5a60df1e72a0d3541156bc9175fe82",
+      "relativePath": "docs/implementation/h6-1-native-and-browser-observations.md#e-camera",
+      "result": "PASS",
+      "notes": "The referenced section distinguishes original per-milestone source identities, native/VM/actual-browser evidence and limitations; this endpoint is not a claim that every old test was rerun at this SHA."
+    },
+    {
+      "id": "E-input",
+      "kind": "command-and-observation-record",
+      "sourceSha": "bc6f607bec5a60df1e72a0d3541156bc9175fe82",
+      "relativePath": "docs/implementation/h6-1-native-and-browser-observations.md#e-input",
+      "result": "PASS",
+      "notes": "The referenced section distinguishes original per-milestone source identities, native/VM/actual-browser evidence and limitations; this endpoint is not a claim that every old test was rerun at this SHA."
+    },
+    {
+      "id": "E-regression",
+      "kind": "command-and-observation-record",
+      "sourceSha": "bc6f607bec5a60df1e72a0d3541156bc9175fe82",
+      "relativePath": "docs/implementation/h6-1-native-and-browser-observations.md#e-regression",
+      "result": "PASS",
+      "notes": "The referenced section distinguishes original per-milestone source identities, native/VM/actual-browser evidence and limitations; this endpoint is not a claim that every old test was rerun at this SHA."
+    },
+    {
+      "id": "E-effects",
+      "kind": "command-and-observation-record",
+      "sourceSha": "bc6f607bec5a60df1e72a0d3541156bc9175fe82",
+      "relativePath": "docs/implementation/h6-1-native-and-browser-observations.md#e-effects",
+      "result": "PASS",
+      "notes": "The referenced section distinguishes original per-milestone source identities, native/VM/actual-browser evidence and limitations; this endpoint is not a claim that every old test was rerun at this SHA."
+    },
+    {
+      "id": "E-actors",
+      "kind": "command-and-observation-record",
+      "sourceSha": "bc6f607bec5a60df1e72a0d3541156bc9175fe82",
+      "relativePath": "docs/implementation/h6-1-native-and-browser-observations.md#e-actors",
+      "result": "PASS",
+      "notes": "The referenced section distinguishes original per-milestone source identities, native/VM/actual-browser evidence and limitations; this endpoint is not a claim that every old test was rerun at this SHA."
+    },
+    {
+      "id": "E-rendering",
+      "kind": "command-and-observation-record",
+      "sourceSha": "bc6f607bec5a60df1e72a0d3541156bc9175fe82",
+      "relativePath": "docs/implementation/h6-1-native-and-browser-observations.md#e-rendering",
+      "result": "PASS",
+      "notes": "The referenced section distinguishes original per-milestone source identities, native/VM/actual-browser evidence and limitations; this endpoint is not a claim that every old test was rerun at this SHA."
+    },
+    {
+      "id": "E-lifecycle",
+      "kind": "command-and-observation-record",
+      "sourceSha": "bc6f607bec5a60df1e72a0d3541156bc9175fe82",
+      "relativePath": "docs/implementation/h6-1-native-and-browser-observations.md#e-lifecycle",
+      "result": "PASS",
+      "notes": "The referenced section distinguishes original per-milestone source identities, native/VM/actual-browser evidence and limitations; this endpoint is not a claim that every old test was rerun at this SHA."
+    },
+    {
+      "id": "E-thermal",
+      "kind": "command-and-observation-record",
+      "sourceSha": "bc6f607bec5a60df1e72a0d3541156bc9175fe82",
+      "relativePath": "docs/implementation/h6-1-native-and-browser-observations.md#e-thermal",
+      "result": "PASS",
+      "notes": "The referenced section distinguishes original per-milestone source identities, native/VM/actual-browser evidence and limitations; this endpoint is not a claim that every old test was rerun at this SHA."
+    },
+    {
+      "id": "E-storage",
+      "kind": "command-and-observation-record",
+      "sourceSha": "bc6f607bec5a60df1e72a0d3541156bc9175fe82",
+      "relativePath": "docs/implementation/h6-1-native-and-browser-observations.md#e-storage",
+      "result": "PASS",
+      "notes": "The referenced section distinguishes original per-milestone source identities, native/VM/actual-browser evidence and limitations; this endpoint is not a claim that every old test was rerun at this SHA."
+    },
+    {
+      "id": "E-environment",
+      "kind": "command-and-observation-record",
+      "sourceSha": "bc6f607bec5a60df1e72a0d3541156bc9175fe82",
+      "relativePath": "docs/implementation/h6-1-native-and-browser-observations.md#e-environment",
+      "result": "PASS",
+      "notes": "The referenced section distinguishes original per-milestone source identities, native/VM/actual-browser evidence and limitations; this endpoint is not a claim that every old test was rerun at this SHA."
+    },
+    {
+      "id": "E-scope",
+      "kind": "command-and-observation-record",
+      "sourceSha": "bc6f607bec5a60df1e72a0d3541156bc9175fe82",
+      "relativePath": "docs/implementation/h6-1-native-and-browser-observations.md#e-scope",
+      "result": "USER-SCOPE-OVERRIDE",
+      "notes": "The referenced section distinguishes original per-milestone source identities, native/VM/actual-browser evidence and limitations; this endpoint is not a claim that every old test was rerun at this SHA."
+    },
+    {
+      "id": "E-builds",
+      "kind": "command-and-observation-record",
+      "sourceSha": "bc6f607bec5a60df1e72a0d3541156bc9175fe82",
+      "relativePath": "docs/implementation/h6-1-native-and-browser-observations.md#e-builds",
+      "result": "PASS",
+      "notes": "The referenced section distinguishes original per-milestone source identities, native/VM/actual-browser evidence and limitations; this endpoint is not a claim that every old test was rerun at this SHA."
+    }
+  ]
+}

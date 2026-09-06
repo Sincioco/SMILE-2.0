@@ -3,7 +3,7 @@
   "packageIdentity": "smile-2.0-h6-1-hardening-and-web-parity",
   "template": false,
   "reviewedSha": "902a7022c895bf97010d979ea578fc5361cdcbf4",
-  "inventoryComplete": false,
+  "inventoryComplete": true,
   "executionStartSha": "902a7022c895bf97010d979ea578fc5361cdcbf4",
   "issues": [
     {
@@ -15,12 +15,17 @@
       "status": "FIXED-VERIFIED",
       "phase": "W6",
       "gateCheck": "G08",
-      "sourceRefs": ["src/Smile.Compiler/WebOutputWriter.cs:renderer3DContext"],
+      "sourceRefs": [
+        "src/Smile.Compiler/WebOutputWriter.cs:renderer3DContext"
+      ],
       "reproduction": "Real WEBGL_lose_context on the live Viewer caused GPU-particle recreation to compile against the lost context and permanently stop the program.",
       "rootCause": "The context accessor accepted a lost WebGL object, including before the queued DOM loss event.",
-      "fixCommit": null,
-      "evidenceIds": ["docs/implementation/h6-1-hardening-and-web-parity-ledger.md"],
-      "dispositionRationale": "Lost-context accessor now returns renderer-unavailable until restoration. Old generated runtime fails the new focused test; current normal and fallback GPU/VFX tests pass. Actual fresh Chrome Viewer survives loss and recovers by selecting Arin, then Party; Fire/Lightning automatically resume GPU rendering. Real audio focus and shutdown checks also pass. Current shared runtime, all three Web outputs and rebuilt/installed VSIX hashes are in the ledger. Implementation SHA is the commit introducing this entry, recorded by the following milestone."
+      "fixCommit": "bc6f607bec5a60df1e72a0d3541156bc9175fe82",
+      "evidenceIds": [
+        "docs/implementation/h6-1-hardening-and-web-parity-ledger.md",
+        "docs/implementation/h6-1-native-and-browser-observations.md"
+      ],
+      "dispositionRationale": "Lost-context accessor returns renderer-unavailable until restoration. Old generated runtime fails the focused regression; current normal/fallback GPU/VFX tests pass. Actual Chrome Viewer survives and recovers by selecting Arin then Party; Fire/Lightning automatically resume GPU rendering. Real audio focus and shutdown checks also pass. An automated Enter attempt did not recover Viewer and is not claimed passed."
     },
     {
       "id": "W20",
@@ -31,12 +36,19 @@
       "status": "FIXED-VERIFIED",
       "phase": "W5",
       "gateCheck": "G08",
-      "sourceRefs": ["src/Smile.NativeRuntime/runtime.c", "src/Smile.Compiler/WebOutputWriter.cs", "tools/Character3DViewer/Program.smile"],
+      "sourceRefs": [
+        "src/Smile.NativeRuntime/runtime.c",
+        "src/Smile.Compiler/WebOutputWriter.cs",
+        "tools/Character3DViewer/Program.smile"
+      ],
       "reproduction": "Actual Chrome receives the whole chord, but released Control is no longer physically held when Get Key consumes the queued arrow; the Viewer orbits instead of stepping.",
       "rootCause": "Queued event and live physical held-state were sampled at different times.",
       "fixCommit": "c4379a7175c25c957dfe65a9f616b9649eb35029",
-      "evidenceIds": ["docs/implementation/h6-1-hardening-and-web-parity-ledger.md"],
-      "dispositionRationale": "Shared Key_Event_Held snapshot semantics preserve Key_Held. Native real window-procedure fixture and generated-runtime VM release-before-poll/focus tests pass; actual foreground Chrome Ctrl+Right/Left steps 550/583/550 ms without changing H158/V0/zoom-15. Plain arrow still orbits. 300 shared tests, Viewer native/Web hardening, current builds and installed VSIX pass. Native manual chord repetition is not claimed. Implementation commit is the commit introducing this entry; its SHA is recorded by the next milestone."
+      "evidenceIds": [
+        "docs/implementation/h6-1-hardening-and-web-parity-ledger.md",
+        "docs/implementation/h6-1-native-and-browser-observations.md"
+      ],
+      "dispositionRationale": "Shared Key_Event_Held preserves physical Key_Held. Native real window-procedure and generated-Web release-before-poll/focus fixtures pass. Actual Chrome Ctrl+Right/Left steps 550/583/550 ms at H158/V0/zoom-15; native Hit steps 0/33/0 ms at H234/V0/zoom-15. Plain arrow still orbits. 300 shared tests, full Viewer hardening, builds and installed VSIX pass."
     },
     {
       "id": "F01",
@@ -148,7 +160,7 @@
       "classification": "recorded-failure",
       "mandatory": true,
       "baseline": "902a7022c895bf97010d979ea578fc5361cdcbf4",
-      "status": "IN-PROGRESS",
+      "status": "FIXED-VERIFIED",
       "phase": "W1",
       "gateCheck": "G02",
       "sourceRefs": [
@@ -161,9 +173,10 @@
       "rootCause": "Squared length overflowed before normalization.",
       "fixCommit": "5c2036afb4435fb7375d6515f15491746bdf5560",
       "evidenceIds": [
-        "docs/implementation/h6-1-hardening-and-web-parity-ledger.md"
+        "docs/implementation/h6-1-hardening-and-web-parity-ledger.md",
+        "docs/implementation/h6-1-native-and-browser-observations.md"
       ],
-      "dispositionRationale": "Shared/native and generated-Web references pass; actual Edge scenes run. Full slow/moderate camera interaction evidence still required."
+      "dispositionRationale": "Native/shared and generated-Web unsafe-integer regression references and full Viewer hardening pass. Actual scenes navigate on native and Chrome; Sin's slow/moderate middle-orbit, pan, wheel and pose-ring check reports 'It seems to be working'. No quantified latency or simulated held-middle drag is claimed."
     },
     {
       "id": "W02",
@@ -171,7 +184,7 @@
       "classification": "documented-parity-gap",
       "mandatory": true,
       "baseline": "902a7022c895bf97010d979ea578fc5361cdcbf4",
-      "status": "IN-PROGRESS",
+      "status": "FIXED-VERIFIED",
       "phase": "W3",
       "gateCheck": "G06",
       "sourceRefs": [
@@ -182,9 +195,10 @@
       "rootCause": null,
       "fixCommit": "519e780cc723cc6beb514edeb1278370abd8cc19",
       "evidenceIds": [
-        "docs/implementation/h6-1-hardening-and-web-parity-ledger.md"
+        "docs/implementation/h6-1-hardening-and-web-parity-ledger.md",
+        "docs/implementation/h6-1-native-and-browser-observations.md"
       ],
-      "dispositionRationale": "Implemented portions and remaining target-specific proof are separated in the ledger; not a final gate pass."
+      "dispositionRationale": "Screen-fixed Web backdrop and composition are implemented. Actual four-tab Viewer and both Labs render the anchored image; native/Web post fixtures and later MSAA/resize/recovery checks pass. See E-rendering and E-lifecycle observations."
     },
     {
       "id": "W03",
@@ -192,7 +206,7 @@
       "classification": "documented-parity-gap",
       "mandatory": true,
       "baseline": "902a7022c895bf97010d979ea578fc5361cdcbf4",
-      "status": "IN-PROGRESS",
+      "status": "FIXED-VERIFIED",
       "phase": "W4",
       "gateCheck": "G07",
       "sourceRefs": [
@@ -203,9 +217,10 @@
       "rootCause": null,
       "fixCommit": "519e780cc723cc6beb514edeb1278370abd8cc19",
       "evidenceIds": [
-        "docs/implementation/h6-1-hardening-and-web-parity-ledger.md"
+        "docs/implementation/h6-1-hardening-and-web-parity-ledger.md",
+        "docs/implementation/h6-1-native-and-browser-observations.md"
       ],
-      "dispositionRationale": "Implemented portions and remaining target-specific proof are separated in the ledger; not a final gate pass."
+      "dispositionRationale": "Capable actual Chrome renders thermal High/GPU, five systems, 399360 GPU bytes and AA4/error0, including after context restoration. Native thermal, generated-Web GPU/shader/buffer/attribute fallback and actual two-Orin forced CPU paths pass separately. The old CPU-Low-only restriction is removed."
     },
     {
       "id": "W04",
@@ -213,7 +228,7 @@
       "classification": "documented-coverage-gap",
       "mandatory": true,
       "baseline": "902a7022c895bf97010d979ea578fc5361cdcbf4",
-      "status": "IN-PROGRESS",
+      "status": "FIXED-VERIFIED",
       "phase": "W4",
       "gateCheck": "G07",
       "sourceRefs": [
@@ -224,9 +239,10 @@
       "rootCause": null,
       "fixCommit": "519e780cc723cc6beb514edeb1278370abd8cc19",
       "evidenceIds": [
-        "docs/implementation/h6-1-hardening-and-web-parity-ledger.md"
+        "docs/implementation/h6-1-hardening-and-web-parity-ledger.md",
+        "docs/implementation/h6-1-native-and-browser-observations.md"
       ],
-      "dispositionRationale": "Implemented portions and remaining target-specific proof are separated in the ledger; not a final gate pass."
+      "dispositionRationale": "Current Lightning renders Ultra Storm Lance using Web GPU backend2; historical Edge confirmed 16384 GPU slots and 3932160 bytes. Native/VM foundations, actual two-Orin GPU/CPU lifecycle/comfort and current Chrome loss/restore pass. This is technical acceptance, not pixel equivalence or blanket artistic approval."
     },
     {
       "id": "W05",
@@ -234,7 +250,7 @@
       "classification": "documented-coverage-gap",
       "mandatory": true,
       "baseline": "902a7022c895bf97010d979ea578fc5361cdcbf4",
-      "status": "IN-PROGRESS",
+      "status": "FIXED-VERIFIED",
       "phase": "W5",
       "gateCheck": "G08",
       "sourceRefs": [
@@ -245,9 +261,10 @@
       "rootCause": null,
       "fixCommit": null,
       "evidenceIds": [
-        "docs/implementation/h6-1-hardening-and-web-parity-ledger.md"
+        "docs/implementation/h6-1-hardening-and-web-parity-ledger.md",
+        "docs/implementation/h6-1-native-and-browser-observations.md"
       ],
-      "dispositionRationale": "Implemented portions and remaining target-specific proof are separated in the ledger; not a final gate pass."
+      "dispositionRationale": "Current native/Chrome four tabs, Party active-actor inspector, hero calibration/Dragon timeline, opt-in gizmo, transfer/Undo/reload, input/fullscreen, audio focus and context recovery pass via the actions in E-input/E-storage/E-lifecycle. Browser-local saves and Viewer character-selection recovery are explicitly documented differences."
     },
     {
       "id": "W06",
@@ -255,7 +272,7 @@
       "classification": "evidence-gap",
       "mandatory": true,
       "baseline": "902a7022c895bf97010d979ea578fc5361cdcbf4",
-      "status": "IN-PROGRESS",
+      "status": "FIXED-VERIFIED",
       "phase": "W6",
       "gateCheck": "G10",
       "sourceRefs": [
@@ -266,9 +283,10 @@
       "rootCause": null,
       "fixCommit": null,
       "evidenceIds": [
-        "docs/implementation/h6-1-hardening-and-web-parity-ledger.md"
+        "docs/implementation/h6-1-hardening-and-web-parity-ledger.md",
+        "docs/implementation/h6-1-native-and-browser-observations.md"
       ],
-      "dispositionRationale": "Implemented portions and remaining target-specific proof are separated in the ledger; not a final gate pass."
+      "dispositionRationale": "Actual visible Chrome checks now supplement, not replace, the VM runner: real shaders/GPU/fallback, drawing, events/fullscreen, JSON persistence, audio focus/overlap and context loss/restore/teardown. Firefox is explicitly superseded by Sin's installed-browser then Chrome-only instructions and remains NOT-RUN. Historical Edge is not independent-engine coverage."
     },
     {
       "id": "W07",
@@ -356,7 +374,7 @@
       "classification": "execution-or-source-audit",
       "mandatory": true,
       "baseline": "0768860e59e60c6231e0992f23b34a3a62c48483",
-      "status": "IN-PROGRESS",
+      "status": "FIXED-VERIFIED",
       "phase": "W5",
       "gateCheck": "G08",
       "sourceRefs": [
@@ -366,9 +384,10 @@
       "rootCause": "Canvas ownership is not checked consistently.",
       "fixCommit": null,
       "evidenceIds": [
-        "docs/implementation/h6-1-hardening-and-web-parity-ledger.md"
+        "docs/implementation/h6-1-hardening-and-web-parity-ledger.md",
+        "docs/implementation/h6-1-native-and-browser-observations.md"
       ],
-      "dispositionRationale": "Shared Web glue now gates keyboard ownership by focused program surface, preserves browser/text shortcuts, clears held keys on surface blur and provides a focus-revealed Full Screen button. Focused generated-runtime VM checks pass, including Ctrl+Arrow navigation, repeat, console transitions, touch-owner isolation and fullscreen state. The current VSIX is installed and hash-verified. Final actual Chrome/Edge interaction remains required; not closed by VM evidence alone."
+      "dispositionRationale": "Focused canvas/editable/browser shortcut ownership and blur cleanup pass generated-runtime tests. Actual Chrome Alt+Enter and focus-revealed Full Screen/Enter toggle both ways. Queued Ctrl+Arrow steps native and Chrome without orbit after c4379a7; plain arrow still orbits. No redundant Edge run is required by the revised scope."
     },
     {
       "id": "W12",
@@ -533,7 +552,7 @@
       "dispositionRationale": "Canvas-only prevention; real Edge reset still works with no menu. Mobile-controls fixture verifies outside menu remains unaffected."
     }
   ],
-  "lastReviewedSourceParent": "0768860e59e60c6231e0992f23b34a3a62c48483",
+  "lastReviewedSourceParent": "bc6f607bec5a60df1e72a0d3541156bc9175fe82",
   "updatedLocalDate": "2026-09-06",
   "browserScope": {
     "required": [
@@ -549,6 +568,7 @@
       "observed": "[]",
       "localDate": "2026-09-06"
     },
-    "remaining": "Normal smoke completed in the recorded initial run and exact continuation; reconcile remaining real Viewer/Lab interaction and lifecycle issues before final gate."
+    "remaining": "No open applicable defect in the reconciled 26-item hardening inventory. Original smoke plus exact continuation and later focused checks completed; final actual Chrome lifecycle/interaction observations recorded. Separately approved optimized profiles, README and later startup branding extensions are not hardening features claimed here.",
+    "finalMarkerReview": "Tracked current source/docs Web unsupported/deferred/TODO audit reconciled at bc6f607; generic unsupported-expression diagnostic is not a missing currently used feature."
   }
 }

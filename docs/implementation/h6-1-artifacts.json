@@ -1,0 +1,571 @@
+{
+  "schemaVersion": 1,
+  "template": false,
+  "sourceCommit": "bc6f607bec5a60df1e72a0d3541156bc9175fe82",
+  "branch": "main",
+  "archive": {
+    "path": "artifacts/handoffs/h6-1-bc6f607/smile-2.0-h6-1-web-bc6f607.zip",
+    "bytes": 113222717,
+    "sha256": "79FD91E2F8ED922478458E8CE00991B1F242322894DAB4455EDC328E44055A92",
+    "verifiedEntries": 63
+  },
+  "applications": [
+    {
+      "name": "Character3DViewer",
+      "files": 40,
+      "bytes": 102568992
+    },
+    {
+      "name": "AdvancedFireVfxLab",
+      "files": 12,
+      "bytes": 10997449
+    },
+    {
+      "name": "AdvancedLightningVfxLab",
+      "files": 11,
+      "bytes": 10400419
+    }
+  ],
+  "files": [
+    {
+      "path": "Character3DViewer/game.js",
+      "repositoryPath": "tools/Character3DViewer/bin/Release/Web/game.js",
+      "bytes": 3702039,
+      "sha256": "F6D3BC514807ED8F36B13B62236B8C8AE961B2AA107B96496B11B945460E7C6E"
+    },
+    {
+      "path": "Character3DViewer/index.html",
+      "repositoryPath": "tools/Character3DViewer/bin/Release/Web/index.html",
+      "bytes": 6261,
+      "sha256": "CAB4C4D3A3AE566CC43537BAF22787D24641EA7F07C7412D4AAB0A3D523681DE"
+    },
+    {
+      "path": "Character3DViewer/smile-assets.json",
+      "repositoryPath": "tools/Character3DViewer/bin/Release/Web/smile-assets.json",
+      "bytes": 2024,
+      "sha256": "3017B98E9B9D3B4B4665C394BCD5283C622FCA2518BD7F59622E6861F965952C"
+    },
+    {
+      "path": "Character3DViewer/smile-runtime.js",
+      "repositoryPath": "tools/Character3DViewer/bin/Release/Web/smile-runtime.js",
+      "bytes": 392202,
+      "sha256": "9D29DA566A288E75E7876A9B1E0ED6835612D53B1BC9D202839C19EB9B4494AD"
+    },
+    {
+      "path": "Character3DViewer/smile.css",
+      "repositoryPath": "tools/Character3DViewer/bin/Release/Web/smile.css",
+      "bytes": 4752,
+      "sha256": "1EFE8A69A4AAA801032CC6035D7D4FF543940D8285C4A2D06F196E999CF0B8F0"
+    },
+    {
+      "path": "Character3DViewer/Assets/Audio/arin-flame-crosscut.wav",
+      "repositoryPath": "tools/Character3DViewer/bin/Release/Web/Assets/Audio/arin-flame-crosscut.wav",
+      "bytes": 81188,
+      "sha256": "3C2802B760E49333969A7568F8E07FAA875BE032AF595163320819967C8A5AAC"
+    },
+    {
+      "path": "Character3DViewer/Assets/Audio/arin-flame-slash.wav",
+      "repositoryPath": "tools/Character3DViewer/bin/Release/Web/Assets/Audio/arin-flame-slash.wav",
+      "bytes": 98828,
+      "sha256": "912F529A5F54ECAC7C9BE076FF1E8694E9DD9C66DCA86AB1C6684183E5B95E5D"
+    },
+    {
+      "path": "Character3DViewer/Assets/Audio/dragon-claw-strike.wav",
+      "repositoryPath": "tools/Character3DViewer/bin/Release/Web/Assets/Audio/dragon-claw-strike.wav",
+      "bytes": 145574,
+      "sha256": "A9D6E3B288CEAB55C7DFAB33FDC53AE451CB612C2DC9859F5ED1A9EE9169590F"
+    },
+    {
+      "path": "Character3DViewer/Assets/Audio/dragon-fire-breath.wav",
+      "repositoryPath": "tools/Character3DViewer/bin/Release/Web/Assets/Audio/dragon-fire-breath.wav",
+      "bytes": 273464,
+      "sha256": "31B176EBE1C8097347BC0DD7E169570848D8EC4D5C0E3A5E133F59CFE3E07A11"
+    },
+    {
+      "path": "Character3DViewer/Assets/Audio/dragon-fireball-impact.wav",
+      "repositoryPath": "tools/Character3DViewer/bin/Release/Web/Assets/Audio/dragon-fireball-impact.wav",
+      "bytes": 207314,
+      "sha256": "CCD65C4375B7F9F9F901331EC2252FB6B0DE8123779CAC9CF0872FCFBD40B9F8"
+    },
+    {
+      "path": "Character3DViewer/Assets/Backgrounds/SinStarLandscape.png",
+      "repositoryPath": "tools/Character3DViewer/bin/Release/Web/Assets/Backgrounds/SinStarLandscape.png",
+      "bytes": 3421296,
+      "sha256": "9C72B40446739330ACA8220D8C7E2F3B516F233B21952168EA386FB9D0700F71"
+    },
+    {
+      "path": "Character3DViewer/Assets/Backgrounds/SinStarTitleWithLogo.png",
+      "repositoryPath": "tools/Character3DViewer/bin/Release/Web/Assets/Backgrounds/SinStarTitleWithLogo.png",
+      "bytes": 3628148,
+      "sha256": "5CD6CA95247263F88B02841272CBF3ABFC99A619EAB55B901AF5F44680289F8B"
+    },
+    {
+      "path": "Character3DViewer/Assets/Branding/WebLoadingLogo.png",
+      "repositoryPath": "tools/Character3DViewer/bin/Release/Web/Assets/Branding/WebLoadingLogo.png",
+      "bytes": 427320,
+      "sha256": "494F2B7A8476EA58702DEF84105ADEB52D77BCE3AA209A85A5507ECF5371A374"
+    },
+    {
+      "path": "Character3DViewer/Assets/Calibration/arin-v5.7.metadata.json",
+      "repositoryPath": "tools/Character3DViewer/bin/Release/Web/Assets/Calibration/arin-v5.7.metadata.json",
+      "bytes": 647,
+      "sha256": "DD67B6A1B3831D8E2403474D6C3C3F4EE48AA9CA746C44A088E555DBCB8C017E"
+    },
+    {
+      "path": "Character3DViewer/Assets/Calibration/arin-v5.7.smkf",
+      "repositoryPath": "tools/Character3DViewer/bin/Release/Web/Assets/Calibration/arin-v5.7.smkf",
+      "bytes": 1168,
+      "sha256": "CEA45992C925D6DC049548671D9FD0EE706DD9D6A460659C03A338F765047037"
+    },
+    {
+      "path": "Character3DViewer/Assets/Calibration/orin-v1.3.metadata.json",
+      "repositoryPath": "tools/Character3DViewer/bin/Release/Web/Assets/Calibration/orin-v1.3.metadata.json",
+      "bytes": 655,
+      "sha256": "093A21B53EE62342EA9EB733983E4DC95ED40C9A6EBC1ACD1D79FD1A10CCD720"
+    },
+    {
+      "path": "Character3DViewer/Assets/Calibration/orin-v1.3.smkf",
+      "repositoryPath": "tools/Character3DViewer/bin/Release/Web/Assets/Calibration/orin-v1.3.smkf",
+      "bytes": 160,
+      "sha256": "4CCBE1D6B5E60964D6D9AF2802978970D4293C44F874B60AC0B44A8C86341819"
+    },
+    {
+      "path": "Character3DViewer/Assets/Fire/ember-shape.png",
+      "repositoryPath": "tools/Character3DViewer/bin/Release/Web/Assets/Fire/ember-shape.png",
+      "bytes": 1425,
+      "sha256": "8631834068BCC031EECA3D556B95F932DDFB6703C1B14FAF1ABD70F50E66DD0F"
+    },
+    {
+      "path": "Character3DViewer/Assets/Fire/fire-shape-atlas.png",
+      "repositoryPath": "tools/Character3DViewer/bin/Release/Web/Assets/Fire/fire-shape-atlas.png",
+      "bytes": 413743,
+      "sha256": "84C9A9E4F47E43AAD9B2D403262F4AD17FE9FA3982D78B380EBCAB9818799BD7"
+    },
+    {
+      "path": "Character3DViewer/Assets/Fire/smoke-shape-atlas.png",
+      "repositoryPath": "tools/Character3DViewer/bin/Release/Web/Assets/Fire/smoke-shape-atlas.png",
+      "bytes": 328232,
+      "sha256": "CD8C8547EE24CE66371B727B0D80A982F68F03632A4061E9A320FA820BE28D48"
+    },
+    {
+      "path": "Character3DViewer/Assets/Generation2/ArinV57/ArinV57.sm3d",
+      "repositoryPath": "tools/Character3DViewer/bin/Release/Web/Assets/Generation2/ArinV57/ArinV57.sm3d",
+      "bytes": 699600,
+      "sha256": "401C14E7E00A90304C084AA8B766ABFEACD08A1F5B36DDA02025C1F8320B2CCD"
+    },
+    {
+      "path": "Character3DViewer/Assets/Generation2/ArinV57/Textures/ArinV57-m0-base-color-2efa61a12b5b.png",
+      "repositoryPath": "tools/Character3DViewer/bin/Release/Web/Assets/Generation2/ArinV57/Textures/ArinV57-m0-base-color-2efa61a12b5b.png",
+      "bytes": 9500062,
+      "sha256": "AEB56C5F624FD160824BB55FEF93CA6A92F20F34E76F42A64E5A4473E7401684"
+    },
+    {
+      "path": "Character3DViewer/Assets/Generation2/ArinV57/Textures/ArinV57-m0-normal-fc0687edec99.png",
+      "repositoryPath": "tools/Character3DViewer/bin/Release/Web/Assets/Generation2/ArinV57/Textures/ArinV57-m0-normal-fc0687edec99.png",
+      "bytes": 4158473,
+      "sha256": "6ACFFF02C155B160150BF27724BF2FEEC37D8E65F6394F2A37C382B6B49E8D21"
+    },
+    {
+      "path": "Character3DViewer/Assets/Generation2/ArinV57/Textures/ArinV57-m0-orm-4fa60d5a765d.png",
+      "repositoryPath": "tools/Character3DViewer/bin/Release/Web/Assets/Generation2/ArinV57/Textures/ArinV57-m0-orm-4fa60d5a765d.png",
+      "bytes": 6249901,
+      "sha256": "A948C614D9CE4CA0E9A57E8189A7939FF3498D3D7391F6700721752D2050152E"
+    },
+    {
+      "path": "Character3DViewer/Assets/Generation2/ArinV57/Textures/ArinV57-m2-base-color-6a3e00d81558.png",
+      "repositoryPath": "tools/Character3DViewer/bin/Release/Web/Assets/Generation2/ArinV57/Textures/ArinV57-m2-base-color-6a3e00d81558.png",
+      "bytes": 9496365,
+      "sha256": "535DF8BE8CAAF6EF1BCE5CC4AACFB4DF3F01FAE10CA3BB50ACA173D24F52370F"
+    },
+    {
+      "path": "Character3DViewer/Assets/Generation2/ArinV57/Textures/ArinV57-m2-normal-a99d9cda620c.png",
+      "repositoryPath": "tools/Character3DViewer/bin/Release/Web/Assets/Generation2/ArinV57/Textures/ArinV57-m2-normal-a99d9cda620c.png",
+      "bytes": 4157809,
+      "sha256": "FC8EF52912987ED9A2FBA8727E610358B508761D39FB87491E52CE7E84764269"
+    },
+    {
+      "path": "Character3DViewer/Assets/Generation2/ArinV57/Textures/ArinV57-m2-orm-5388c87d4f6d.png",
+      "repositoryPath": "tools/Character3DViewer/bin/Release/Web/Assets/Generation2/ArinV57/Textures/ArinV57-m2-orm-5388c87d4f6d.png",
+      "bytes": 6248487,
+      "sha256": "9AF8C43F176C9A2FBDEF412AC45864E1BAED8B512E9D07E992A4FDF032AA382E"
+    },
+    {
+      "path": "Character3DViewer/Assets/Generation2/OrinV13/OrinV13.sm3d",
+      "repositoryPath": "tools/Character3DViewer/bin/Release/Web/Assets/Generation2/OrinV13/OrinV13.sm3d",
+      "bytes": 833616,
+      "sha256": "1741564CDBD4F3ADB305AACD1AAD295B373672D34E1490C103601E8BD4BF8DAF"
+    },
+    {
+      "path": "Character3DViewer/Assets/Generation2/OrinV13/Textures/OrinV13-m0-base-color-8364ee1df71d.png",
+      "repositoryPath": "tools/Character3DViewer/bin/Release/Web/Assets/Generation2/OrinV13/Textures/OrinV13-m0-base-color-8364ee1df71d.png",
+      "bytes": 7999967,
+      "sha256": "3CC6555008B0392CB7CD67AC57468858656A16F8C3319D4F4210563FB2C6CA78"
+    },
+    {
+      "path": "Character3DViewer/Assets/Generation2/OrinV13/Textures/OrinV13-m0-normal-3ec3945059fc.png",
+      "repositoryPath": "tools/Character3DViewer/bin/Release/Web/Assets/Generation2/OrinV13/Textures/OrinV13-m0-normal-3ec3945059fc.png",
+      "bytes": 4830013,
+      "sha256": "5DBF3920DCF5F4804412AE875953246A1CF3219DDD5B1DC41E18BDAAC2D5723C"
+    },
+    {
+      "path": "Character3DViewer/Assets/Generation2/OrinV13/Textures/OrinV13-m0-orm-0801f5b4b6a6.png",
+      "repositoryPath": "tools/Character3DViewer/bin/Release/Web/Assets/Generation2/OrinV13/Textures/OrinV13-m0-orm-0801f5b4b6a6.png",
+      "bytes": 6387503,
+      "sha256": "2DD90EDCD0B5D7DEA8B880252DD2F9723763D0AD3E9DB91BEA5458D4B2758B61"
+    },
+    {
+      "path": "Character3DViewer/Assets/Generation2/OrinV13/Textures/OrinV13-m2-base-color-208a8c959e03.png",
+      "repositoryPath": "tools/Character3DViewer/bin/Release/Web/Assets/Generation2/OrinV13/Textures/OrinV13-m2-base-color-208a8c959e03.png",
+      "bytes": 8159713,
+      "sha256": "3A6FD224D500B19F0F7128A8257D39D4FF0B6C61623C89616C918A2F062D7DEF"
+    },
+    {
+      "path": "Character3DViewer/Assets/Generation2/OrinV13/Textures/OrinV13-m2-normal-af3340b71e93.png",
+      "repositoryPath": "tools/Character3DViewer/bin/Release/Web/Assets/Generation2/OrinV13/Textures/OrinV13-m2-normal-af3340b71e93.png",
+      "bytes": 4847655,
+      "sha256": "46EFA5B06DF541BA183EBD10BEA90AEE5D006DE0D8AE0DC3F898249334812706"
+    },
+    {
+      "path": "Character3DViewer/Assets/Generation2/OrinV13/Textures/OrinV13-m2-orm-4e8c41b36d62.png",
+      "repositoryPath": "tools/Character3DViewer/bin/Release/Web/Assets/Generation2/OrinV13/Textures/OrinV13-m2-orm-4e8c41b36d62.png",
+      "bytes": 5545910,
+      "sha256": "969BE8CDE6E3096B12753C91005076A97991F88A1D00D9BE60E35D15BA78A242"
+    },
+    {
+      "path": "Character3DViewer/Assets/Generation2/RedDragon/RedDragon.sm3d",
+      "repositoryPath": "tools/Character3DViewer/bin/Release/Web/Assets/Generation2/RedDragon/RedDragon.sm3d",
+      "bytes": 1233168,
+      "sha256": "D3CD6FF6BAB02BE0ECD759494DF5E1A8BBD644700EEB2305E009D2821F2A0825"
+    },
+    {
+      "path": "Character3DViewer/Assets/Generation2/RedDragon/Textures/RedDragon-m0-base-color-ee663b42c841.png",
+      "repositoryPath": "tools/Character3DViewer/bin/Release/Web/Assets/Generation2/RedDragon/Textures/RedDragon-m0-base-color-ee663b42c841.png",
+      "bytes": 8921538,
+      "sha256": "0C7D6EAE7DAC3894CC0BC7CCDC0FFCAEC8639066B1B432D1B9D87EE54E2733E4"
+    },
+    {
+      "path": "Character3DViewer/Assets/Lightning/lightning-ribbon.png",
+      "repositoryPath": "tools/Character3DViewer/bin/Release/Web/Assets/Lightning/lightning-ribbon.png",
+      "bytes": 762,
+      "sha256": "E377E3239E60FD50BFC046C9DEA89C13AD308400A4028291B226F2D994DF87D3"
+    },
+    {
+      "path": "Character3DViewer/Assets/Lightning/lightning-spark.png",
+      "repositoryPath": "tools/Character3DViewer/bin/Release/Web/Assets/Lightning/lightning-spark.png",
+      "bytes": 1563,
+      "sha256": "D848886B7FFC530E61DFD7EF5E07B9B31F9C5A5F9CFB33EB9DE42804FAA84122"
+    },
+    {
+      "path": "Character3DViewer/Assets/Lightning/thunder.wav",
+      "repositoryPath": "tools/Character3DViewer/bin/Release/Web/Assets/Lightning/thunder.wav",
+      "bytes": 132344,
+      "sha256": "45DB9FCD280E490A37ECF78A25EE02727C4823F41B6A427CA5C05060C1F55D52"
+    },
+    {
+      "path": "Character3DViewer/TechnicalAssets/Generation2/VfxAtlas.png",
+      "repositoryPath": "tools/Character3DViewer/bin/Release/Web/TechnicalAssets/Generation2/VfxAtlas.png",
+      "bytes": 28103,
+      "sha256": "F76344DE74BE7D306D38540DC578C294E0F61B0FA651B4DFFA8B9447C3ACD57D"
+    },
+    {
+      "path": "AdvancedFireVfxLab/game.js",
+      "repositoryPath": "tools/AdvancedFireVfxLab/bin/Release/Web/game.js",
+      "bytes": 2372759,
+      "sha256": "2734EFCC1DED65814D51B9CB4D62FA30833DB93ECF8852E025428C1DF035E2BF"
+    },
+    {
+      "path": "AdvancedFireVfxLab/index.html",
+      "repositoryPath": "tools/AdvancedFireVfxLab/bin/Release/Web/index.html",
+      "bytes": 6249,
+      "sha256": "C36D939E257CC53B0754DA7A498F6DA469BD3EEBE503F881CBDFD27B3E1CAD6A"
+    },
+    {
+      "path": "AdvancedFireVfxLab/smile-assets.json",
+      "repositoryPath": "tools/AdvancedFireVfxLab/bin/Release/Web/smile-assets.json",
+      "bytes": 385,
+      "sha256": "745B8209D236E7571460C346DD0D1C775425EBF1FC07E56E0EC072EF677A11CC"
+    },
+    {
+      "path": "AdvancedFireVfxLab/smile-runtime.js",
+      "repositoryPath": "tools/AdvancedFireVfxLab/bin/Release/Web/smile-runtime.js",
+      "bytes": 392202,
+      "sha256": "9D29DA566A288E75E7876A9B1E0ED6835612D53B1BC9D202839C19EB9B4494AD"
+    },
+    {
+      "path": "AdvancedFireVfxLab/smile.css",
+      "repositoryPath": "tools/AdvancedFireVfxLab/bin/Release/Web/smile.css",
+      "bytes": 4752,
+      "sha256": "1EFE8A69A4AAA801032CC6035D7D4FF543940D8285C4A2D06F196E999CF0B8F0"
+    },
+    {
+      "path": "AdvancedFireVfxLab/Assets/Backgrounds/SinStarLandscape.png",
+      "repositoryPath": "tools/AdvancedFireVfxLab/bin/Release/Web/Assets/Backgrounds/SinStarLandscape.png",
+      "bytes": 3421296,
+      "sha256": "9C72B40446739330ACA8220D8C7E2F3B516F233B21952168EA386FB9D0700F71"
+    },
+    {
+      "path": "AdvancedFireVfxLab/Assets/Backgrounds/SinStarTitleWithLogo.png",
+      "repositoryPath": "tools/AdvancedFireVfxLab/bin/Release/Web/Assets/Backgrounds/SinStarTitleWithLogo.png",
+      "bytes": 3628148,
+      "sha256": "5CD6CA95247263F88B02841272CBF3ABFC99A619EAB55B901AF5F44680289F8B"
+    },
+    {
+      "path": "AdvancedFireVfxLab/Assets/Branding/WebLoadingLogo.png",
+      "repositoryPath": "tools/AdvancedFireVfxLab/bin/Release/Web/Assets/Branding/WebLoadingLogo.png",
+      "bytes": 427320,
+      "sha256": "494F2B7A8476EA58702DEF84105ADEB52D77BCE3AA209A85A5507ECF5371A374"
+    },
+    {
+      "path": "AdvancedFireVfxLab/Assets/Fire/ember-shape.png",
+      "repositoryPath": "tools/AdvancedFireVfxLab/bin/Release/Web/Assets/Fire/ember-shape.png",
+      "bytes": 1425,
+      "sha256": "8631834068BCC031EECA3D556B95F932DDFB6703C1B14FAF1ABD70F50E66DD0F"
+    },
+    {
+      "path": "AdvancedFireVfxLab/Assets/Fire/fire-shape-atlas.png",
+      "repositoryPath": "tools/AdvancedFireVfxLab/bin/Release/Web/Assets/Fire/fire-shape-atlas.png",
+      "bytes": 413743,
+      "sha256": "84C9A9E4F47E43AAD9B2D403262F4AD17FE9FA3982D78B380EBCAB9818799BD7"
+    },
+    {
+      "path": "AdvancedFireVfxLab/Assets/Fire/smoke-shape-atlas.png",
+      "repositoryPath": "tools/AdvancedFireVfxLab/bin/Release/Web/Assets/Fire/smoke-shape-atlas.png",
+      "bytes": 328232,
+      "sha256": "CD8C8547EE24CE66371B727B0D80A982F68F03632A4061E9A320FA820BE28D48"
+    },
+    {
+      "path": "AdvancedFireVfxLab/Assets/Fire/thermal-gradient-lut.png",
+      "repositoryPath": "tools/AdvancedFireVfxLab/bin/Release/Web/Assets/Fire/thermal-gradient-lut.png",
+      "bytes": 938,
+      "sha256": "8D83C97E1F2CF84452F8DFB1286C944D4FD29AE8E9A1096C3EB235F42E08E93C"
+    },
+    {
+      "path": "AdvancedLightningVfxLab/game.js",
+      "repositoryPath": "tools/AdvancedLightningVfxLab/bin/Release/Web/game.js",
+      "bytes": 2385428,
+      "sha256": "6ABFE869C6F709DF6E09C9CB9E57F6C6E952F50ECCC60EA93785195E0A9227B0"
+    },
+    {
+      "path": "AdvancedLightningVfxLab/index.html",
+      "repositoryPath": "tools/AdvancedLightningVfxLab/bin/Release/Web/index.html",
+      "bytes": 6246,
+      "sha256": "B4848EC7EB09D38582988A28BD1BBAEC88158FEF3C346BF697FEAC479196D2D0"
+    },
+    {
+      "path": "AdvancedLightningVfxLab/smile-assets.json",
+      "repositoryPath": "tools/AdvancedLightningVfxLab/bin/Release/Web/smile-assets.json",
+      "bytes": 358,
+      "sha256": "BFC18B13F41EFCDE9AD6CFD20C778B32F61D29E28400E0A90B778F6FEEB7DCFD"
+    },
+    {
+      "path": "AdvancedLightningVfxLab/smile-runtime.js",
+      "repositoryPath": "tools/AdvancedLightningVfxLab/bin/Release/Web/smile-runtime.js",
+      "bytes": 392202,
+      "sha256": "9D29DA566A288E75E7876A9B1E0ED6835612D53B1BC9D202839C19EB9B4494AD"
+    },
+    {
+      "path": "AdvancedLightningVfxLab/smile.css",
+      "repositoryPath": "tools/AdvancedLightningVfxLab/bin/Release/Web/smile.css",
+      "bytes": 4752,
+      "sha256": "1EFE8A69A4AAA801032CC6035D7D4FF543940D8285C4A2D06F196E999CF0B8F0"
+    },
+    {
+      "path": "AdvancedLightningVfxLab/Assets/Backgrounds/SinStarLandscape.png",
+      "repositoryPath": "tools/AdvancedLightningVfxLab/bin/Release/Web/Assets/Backgrounds/SinStarLandscape.png",
+      "bytes": 3421296,
+      "sha256": "9C72B40446739330ACA8220D8C7E2F3B516F233B21952168EA386FB9D0700F71"
+    },
+    {
+      "path": "AdvancedLightningVfxLab/Assets/Backgrounds/SinStarTitleWithLogo.png",
+      "repositoryPath": "tools/AdvancedLightningVfxLab/bin/Release/Web/Assets/Backgrounds/SinStarTitleWithLogo.png",
+      "bytes": 3628148,
+      "sha256": "5CD6CA95247263F88B02841272CBF3ABFC99A619EAB55B901AF5F44680289F8B"
+    },
+    {
+      "path": "AdvancedLightningVfxLab/Assets/Branding/WebLoadingLogo.png",
+      "repositoryPath": "tools/AdvancedLightningVfxLab/bin/Release/Web/Assets/Branding/WebLoadingLogo.png",
+      "bytes": 427320,
+      "sha256": "494F2B7A8476EA58702DEF84105ADEB52D77BCE3AA209A85A5507ECF5371A374"
+    },
+    {
+      "path": "AdvancedLightningVfxLab/Assets/Lightning/lightning-ribbon.png",
+      "repositoryPath": "tools/AdvancedLightningVfxLab/bin/Release/Web/Assets/Lightning/lightning-ribbon.png",
+      "bytes": 762,
+      "sha256": "E377E3239E60FD50BFC046C9DEA89C13AD308400A4028291B226F2D994DF87D3"
+    },
+    {
+      "path": "AdvancedLightningVfxLab/Assets/Lightning/lightning-spark.png",
+      "repositoryPath": "tools/AdvancedLightningVfxLab/bin/Release/Web/Assets/Lightning/lightning-spark.png",
+      "bytes": 1563,
+      "sha256": "D848886B7FFC530E61DFD7EF5E07B9B31F9C5A5F9CFB33EB9DE42804FAA84122"
+    },
+    {
+      "path": "AdvancedLightningVfxLab/Assets/Lightning/thunder.wav",
+      "repositoryPath": "tools/AdvancedLightningVfxLab/bin/Release/Web/Assets/Lightning/thunder.wav",
+      "bytes": 132344,
+      "sha256": "45DB9FCD280E490A37ECF78A25EE02727C4823F41B6A427CA5C05060C1F55D52"
+    }
+  ],
+  "calibration": [
+    {
+      "name": "Arin",
+      "snapshotPath": "games\\SinStarI\\SourceAssets\\Characters\\Paladin\\ArinV57\\Calibration\\arin-v5.7-pose-calibration.json",
+      "snapshotHash": "C05C87BF0A92B373DB7ECD1CB304F4446B851E7AFEA836E8BB05D058B1B20F0B",
+      "applicationId": "smile.tools.character3d-viewer",
+      "assetId": "sin-star-i.character-1.paladin",
+      "dataKey": "CharacterViewerCalibrationKeyframes",
+      "profile": {
+        "version": 1,
+        "modelSha256": "EDCFC5F92E22DF7FD58030AB64410E0EBD9931D92F7AA2E297565B966C8C502E",
+        "descriptorSha256": "2768A01120F5E0D35A85AF8C445D70A186193097F223429809E95D5098081620",
+        "sm3dSha256": "401C14E7E00A90304C084AA8B766ABFEACD08A1F5B36DDA02025C1F8320B2CCD",
+        "clipNamesSha256": "b0c2aef40d6312f22da2fd20cb645b30f88a5621133ee07cd69517e337489d58",
+        "socketNamesSha256": "5f2c3a617f331afff81f49310abba9c3570f8c80f505a34396f9d99412cf1871"
+      },
+      "totalKeyframes": 24,
+      "perClip": [
+        {
+          "name": "BlockImpact",
+          "keys": 1
+        },
+        {
+          "name": "Death",
+          "keys": 1
+        },
+        {
+          "name": "Defend",
+          "keys": 1
+        },
+        {
+          "name": "Hit",
+          "keys": 1
+        },
+        {
+          "name": "Idle",
+          "keys": 1
+        },
+        {
+          "name": "Run",
+          "keys": 1
+        },
+        {
+          "name": "SwordAttack",
+          "keys": 13
+        },
+        {
+          "name": "SwordAttack2",
+          "keys": 4
+        },
+        {
+          "name": "Walk",
+          "keys": 1
+        }
+      ],
+      "packageHash": "6D1B792747AB6F92E04F8D3515013E9761308C1A8E15F442B592A3568386973A",
+      "modelHash": "EDCFC5F92E22DF7FD58030AB64410E0EBD9931D92F7AA2E297565B966C8C502E",
+      "descriptorHash": "2768A01120F5E0D35A85AF8C445D70A186193097F223429809E95D5098081620"
+    },
+    {
+      "name": "Orin",
+      "snapshotPath": "games\\SinStarI\\SourceAssets\\Characters\\Tank\\OrinV13\\Calibration\\orin-v1.3-pose-calibration.json",
+      "snapshotHash": "13AE135FDA40302CB5A4B0146D7103A2ED5346AAEEBB3852AF6DD3C397F5D293",
+      "applicationId": "smile.tools.character3d-viewer",
+      "assetId": "sin-star-i.character-2.tank",
+      "dataKey": "CharacterViewer.Orin.v1.3.CalibrationKeyframes",
+      "profile": {
+        "version": 1,
+        "modelSha256": "3100F1ACB2E9B1F3776E8A94C113BB23C0A90A7141590A0936958991CC99DC0C",
+        "descriptorSha256": "4345D2F60230F20353FAD7FFE395E8555096D2EF1F26A456C7D68B81AAE85649",
+        "sm3dSha256": "1741564CDBD4F3ADB305AACD1AAD295B373672D34E1490C103601E8BD4BF8DAF",
+        "clipNamesSha256": "93e3e3d155d83af0c2c739477cddbf9e5bfae4d39f9e2b869ca76d98b131e5e3",
+        "socketNamesSha256": "5d0eda887c2b06503024e75a05e057c38043b691e5998a01b1e08185f1ab922c"
+      },
+      "totalKeyframes": 0,
+      "perClip": [
+        {
+          "name": "Death",
+          "keys": 0
+        },
+        {
+          "name": "Defend",
+          "keys": 0
+        },
+        {
+          "name": "Hit",
+          "keys": 0
+        },
+        {
+          "name": "Idle",
+          "keys": 0
+        },
+        {
+          "name": "JumpAttack",
+          "keys": 0
+        },
+        {
+          "name": "Run",
+          "keys": 0
+        },
+        {
+          "name": "SwordAttack",
+          "keys": 0
+        },
+        {
+          "name": "ThorAttack",
+          "keys": 0
+        },
+        {
+          "name": "Victory",
+          "keys": 0
+        }
+      ],
+      "packageHash": "9FBCDF7FFE5277A502F2F1FB10084DAED4CDB3D68CD00A4E62769C2DEB7372A3",
+      "modelHash": "3100F1ACB2E9B1F3776E8A94C113BB23C0A90A7141590A0936958991CC99DC0C",
+      "descriptorHash": "4345D2F60230F20353FAD7FFE395E8555096D2EF1F26A456C7D68B81AAE85649"
+    }
+  ],
+  "nativeAndToolchain": [
+    {
+      "path": "tools/AdvancedFireVfxLab/bin/Release/AdvancedFireVfxLab.exe",
+      "sha256": "8B558F265314EAFA91694506D1371CDC319CAE99C38F2B4E2BD4F24C9EF7F096"
+    },
+    {
+      "path": "tools/AdvancedLightningVfxLab/bin/Release/AdvancedLightningVfxLab.exe",
+      "sha256": "F8357B8B32BA8D8B207261360C833D8C9D9901AD49DFBDBA82D2830F7DD58D74"
+    },
+    {
+      "path": "artifacts/compiler/smilec.dll",
+      "sha256": "6419287F47B139ED721F325F762995A0A9D0C366E7968DF36D6683EA3C76DDA7"
+    },
+    {
+      "path": "artifacts/compiler/Smile.Language.dll",
+      "sha256": "9114840618977672D7D46AD536AD677904AC888F39C0F3B05B262F197CBF8FFD"
+    },
+    {
+      "path": "artifacts/runtime/Smile.NativeRuntime.lib",
+      "sha256": "216E8936C6890F714739CE5D192B36E369A375348164B98202EC7B5C592868E5"
+    },
+    {
+      "path": "tools/Character3DViewer/bin/Release/Character3DViewer.exe",
+      "sha256": "90F0CB43AD45FE6C1515B8BF8611A71280788B8B4CE555B9804CE609BCD18C6C"
+    },
+    {
+      "path": "artifacts/vsix/Smile.VisualStudio.vsix",
+      "sha256": "54255DD3DE1A2CE06FF2B50DDD288915B61F76C0FED260A74974A7F40B605C6E"
+    }
+  ],
+  "vsix": {
+    "version": "2.0.59",
+    "assemblyVersion": "2.0.59.0",
+    "verified": true,
+    "installedDirectory": "C:/Users/louie/AppData/Local/Microsoft/VisualStudio/18.0_91f001b5/Extensions/p3fwicpi.oet",
+    "extensionDllSha256": "650D729423D51888107CBD910416C6D32000BC76ABA0972001A395E02F3F3C0B",
+    "compilerSha256": "6419287F47B139ED721F325F762995A0A9D0C366E7968DF36D6683EA3C76DDA7"
+  },
+  "intake": {
+    "path": "C:/Users/louie/Downloads/2026-09-05-smile-2.0-h6-1-hardening-and-web-parity.zip",
+    "bytes": 48073,
+    "sha256": "0C23AA583AC97520B55841785B533CAA3936492500891EAD86C754E994A287D9",
+    "verifiedManifestFiles": 22
+  }
+}

@@ -2,7 +2,11 @@
 
 Scope: W0-W6 from the user-supplied H6.1 package. No Battle Scene Editor E0-E12
 work is authorized or started. Historical H6 `PASS-NATIVE` remains historical;
-H6.1 is **IN-PROGRESS**, with real-browser acceptance still outstanding.
+H6.1 reached **PASS-NATIVE-WEB on Sin's revised Windows/Chrome baseline** at
+implementation `bc6f607bec5a60df1e72a0d3541156bc9175fe82`. See the current
+[report](h6-1-hardening-and-web-parity-report.md) and
+[gate](h6-1-hardening-and-web-parity-gate.json). Earlier entries below preserve
+their original in-progress status and are superseded only by later evidence.
 
 Browser scope update from Sin after intake: use the installed Chrome and Edge,
 with browser tests visible on-screen. These are two Chromium-family browsers,
@@ -1319,3 +1323,33 @@ Validation:
 Next: consolidate current issue dispositions, report/matrix/gate and portable
 delivery. Then the separately approved optimized profiles, README rewrite and
 loader/splash work, in that order. E0-E12 and Double remain prohibited.
+
+### Final H6.1 reconciliation — September 6, 2026
+
+Implementation `bc6f607bec5a60df1e72a0d3541156bc9175fe82` was committed/pushed.
+Final fetch finds main aligned with origin/main (0/0), reviewed ancestor retained,
+and no unrelated dirty files. W01-W06/W11 now close against the actual accumulated
+evidence; W20 includes the later native manual chord result and W21 names its
+commit. The register retains all 26 IDs, with no open applicable hardening defect.
+G01-G12 are all retained. Gate schema2 explicitly records Sin's Chrome-only scope
+override: Firefox remains NOT-RUN rather than a fabricated passing browser.
+
+Both current calibrations exported unchanged again, Arin24/Orin0. All22 supplied
+handoff hashes/byte counts reverified. Full source/model/save identities and current
+native/compiler/VSIX hashes are in h6-1-artifacts.json. The full-fidelity portable
+Web ZIP contains63 application files; every archived stream was SHA256 compared
+with its generated source file. No diagnostic wrapper or native Save Data envelope
+is in that publication. Build/serve instructions and separate report/evidence
+packaging accompany the machine gate. The initial packer's console summary and
+aggregate size fields used Select-Object/Measure-Object against ordered dictionaries
+and were null; derived per-application byte totals were corrected from the recorded
+file lengths before publishing the manifest. ZIP contents/checksums were unaffected.
+
+Current Chrome cleanup is complete: all windows closed, no cache/history/cookies/
+calibration storage cleared. The native Viewer remains available. Closing the
+Studio browser window did not invoke End Stream; livestream shutdown remains
+authorized only when all approved work, including later milestones, is done.
+
+Next authorized work: Web Optimized Low/Medium/High for all three tools, then the
+visual README rewrite, then real loader progress/build metadata/shared one-second
+splash. No Battle Scene Editor or Double work begins.

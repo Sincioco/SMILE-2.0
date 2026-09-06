@@ -1,5 +1,9 @@
 # Battle Scene Pre-Editor Hardening Report
 
+Historical H0–H6 result retained below. Current follow-up status and browser
+evidence: [H6.1 hardening and Web parity report](h6-1-hardening-and-web-parity-report.md).
+The original Web failure/deferral is not retroactively relabeled as a pass.
+
 ## Identity
 
 - Status: `PASS-NATIVE`

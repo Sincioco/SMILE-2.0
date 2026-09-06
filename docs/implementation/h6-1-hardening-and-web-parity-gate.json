@@ -1,0 +1,170 @@
+{
+  "schemaVersion": 2,
+  "packageIdentity": "smile-2.0-h6-1-hardening-and-web-parity",
+  "template": false,
+  "reviewedSha": "902a7022c895bf97010d979ea578fc5361cdcbf4",
+  "executionStartSha": "902a7022c895bf97010d979ea578fc5361cdcbf4",
+  "validatedCommit": "bc6f607bec5a60df1e72a0d3541156bc9175fe82",
+  "branch": "main",
+  "status": "PASS-NATIVE-WEB",
+  "editorWorkStarted": false,
+  "knownIssueInventoryComplete": true,
+  "knownIssueRegister": "docs/implementation/h6-1-known-web-issues.json",
+  "requiredChecks": [
+    {
+      "id": "G01",
+      "status": "PASS",
+      "evidenceIds": [
+        "E-baseline",
+        "E-artifacts"
+      ]
+    },
+    {
+      "id": "G02",
+      "status": "PASS",
+      "evidenceIds": [
+        "E-camera",
+        "E-input",
+        "E-regression"
+      ]
+    },
+    {
+      "id": "G03",
+      "status": "PASS",
+      "evidenceIds": [
+        "E-effects",
+        "E-actors"
+      ]
+    },
+    {
+      "id": "G04",
+      "status": "PASS",
+      "evidenceIds": [
+        "E-effects",
+        "E-actors"
+      ]
+    },
+    {
+      "id": "G05",
+      "status": "PASS",
+      "evidenceIds": [
+        "E-actors"
+      ]
+    },
+    {
+      "id": "G06",
+      "status": "PASS",
+      "evidenceIds": [
+        "E-rendering",
+        "E-lifecycle"
+      ]
+    },
+    {
+      "id": "G07",
+      "status": "PASS",
+      "evidenceIds": [
+        "E-thermal",
+        "E-rendering",
+        "E-actors"
+      ]
+    },
+    {
+      "id": "G08",
+      "status": "PASS",
+      "evidenceIds": [
+        "E-input",
+        "E-storage",
+        "E-lifecycle"
+      ]
+    },
+    {
+      "id": "G09",
+      "status": "PASS",
+      "evidenceIds": [
+        "E-baseline",
+        "E-regression"
+      ]
+    },
+    {
+      "id": "G10",
+      "status": "PASS",
+      "evidenceIds": [
+        "E-environment",
+        "E-scope",
+        "E-rendering",
+        "E-lifecycle"
+      ]
+    },
+    {
+      "id": "G11",
+      "status": "PASS",
+      "evidenceIds": [
+        "E-baseline",
+        "E-regression",
+        "E-builds",
+        "E-artifacts"
+      ]
+    },
+    {
+      "id": "G12",
+      "status": "PASS",
+      "evidenceIds": [
+        "E-artifacts",
+        "E-scope"
+      ]
+    }
+  ],
+  "browsers": [
+    {
+      "engine": "chromium",
+      "version": "Chrome 152.0.7977.77",
+      "operatingSystem": "Windows 11 Pro 10.0.26200",
+      "renderer": "WebGL2 / WebKit WebGL, OpenGL ES 3 Chromium; actual GPU backend/capabilities observed, generic string is not physical hardware identity",
+      "realBrowser": true,
+      "status": "PASS",
+      "evidenceIds": [
+        "E-environment",
+        "E-rendering",
+        "E-thermal",
+        "E-actors",
+        "E-input",
+        "E-storage",
+        "E-lifecycle"
+      ]
+    },
+    {
+      "engine": "firefox",
+      "version": null,
+      "operatingSystem": null,
+      "renderer": null,
+      "realBrowser": true,
+      "status": "NOT-RUN",
+      "evidenceIds": [
+        "E-scope"
+      ]
+    }
+  ],
+  "unresolvedKnownIssueIds": [],
+  "nativeStatus": "PASS",
+  "webStatus": "PASS",
+  "calibrationEvidenceIds": [
+    "E-baseline",
+    "E-storage",
+    "E-artifacts"
+  ],
+  "artifactEvidenceIds": [
+    "E-artifacts",
+    "E-builds"
+  ],
+  "limitations": [
+    "PASS applies to the explicit user-revised Chrome baseline, not the unmodified package's Firefox requirement.",
+    "Firefox, Safari/iOS and physical mobile-device validation are not claimed; historical Edge is not independent-engine coverage.",
+    "Viewer context recovery was verified by selecting a character after restore. An automated Enter attempt did not clear the overlay; Labs resumed automatically.",
+    "Audio scheduling/overlap/focus is verified, not physical speaker audibility. Native recovery uses existing fixture/source checks, not induced driver removal.",
+    "Real quota/private-mode failure and whole-browser-process save restart were not tested; isolated native/VM failure checks and actual import/reload/tab reopen were tested.",
+    "Normal smoke completed as the recorded initial run plus exact continuation; later focused checks cover subsequent changes. Manual gameplay of every graphical game is not claimed.",
+    "User camera/gizmo and Mac/Arin visual reports are scoped observations, not timing promises, full Blender equivalence or blanket artistic approval.",
+    "Optimized Web profiles, README rewrite and later loader/splash progress/metadata/minimum-duration requirements remain separate authorized milestones. E0-E12 and Double remain unimplemented."
+  ],
+  "browserScopeOverride": "Sin explicitly replaced the package Firefox requirement, then directed Chrome-only routine acceptance for velocity. G10 is retained; Firefox remains NOT-RUN and Edge is historical evidence only."
+}

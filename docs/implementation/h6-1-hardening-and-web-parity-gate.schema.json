@@ -1,0 +1,606 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "H6.1 native and Web readiness gate — user-revised Chrome baseline",
+  "description": "Revision 2 retains G01-G12 and both engine records. Sin explicitly superseded required Firefox/duplicate Edge testing with Chrome-only acceptance; Firefox remains NOT-RUN, never PASS.",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "packageIdentity",
+    "template",
+    "reviewedSha",
+    "executionStartSha",
+    "validatedCommit",
+    "branch",
+    "status",
+    "editorWorkStarted",
+    "knownIssueInventoryComplete",
+    "knownIssueRegister",
+    "requiredChecks",
+    "browsers",
+    "unresolvedKnownIssueIds",
+    "nativeStatus",
+    "webStatus",
+    "calibrationEvidenceIds",
+    "artifactEvidenceIds",
+    "limitations",
+    "browserScopeOverride"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 2
+    },
+    "packageIdentity": {
+      "const": "smile-2.0-h6-1-hardening-and-web-parity"
+    },
+    "template": {
+      "type": "boolean"
+    },
+    "reviewedSha": {
+      "const": "902a7022c895bf97010d979ea578fc5361cdcbf4"
+    },
+    "executionStartSha": {
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "validatedCommit": {
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "branch": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "status": {
+      "enum": [
+        "NOT-RUN",
+        "IN-PROGRESS",
+        "BLOCKED",
+        "FAIL",
+        "PASS-NATIVE-WEB"
+      ]
+    },
+    "editorWorkStarted": {
+      "const": false
+    },
+    "knownIssueInventoryComplete": {
+      "type": "boolean"
+    },
+    "knownIssueRegister": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "requiredChecks": {
+      "type": "array",
+      "minItems": 12,
+      "maxItems": 12,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "status",
+          "evidenceIds"
+        ],
+        "properties": {
+          "id": {
+            "enum": [
+              "G01",
+              "G02",
+              "G03",
+              "G04",
+              "G05",
+              "G06",
+              "G07",
+              "G08",
+              "G09",
+              "G10",
+              "G11",
+              "G12"
+            ]
+          },
+          "status": {
+            "enum": [
+              "NOT-RUN",
+              "IN-PROGRESS",
+              "BLOCKED",
+              "FAIL",
+              "PASS"
+            ]
+          },
+          "evidenceIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "uniqueItems": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "allOf": [
+        {
+          "contains": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "const": "G01"
+              }
+            },
+            "required": [
+              "id"
+            ]
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "const": "G02"
+              }
+            },
+            "required": [
+              "id"
+            ]
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "const": "G03"
+              }
+            },
+            "required": [
+              "id"
+            ]
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "const": "G04"
+              }
+            },
+            "required": [
+              "id"
+            ]
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "const": "G05"
+              }
+            },
+            "required": [
+              "id"
+            ]
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "const": "G06"
+              }
+            },
+            "required": [
+              "id"
+            ]
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "const": "G07"
+              }
+            },
+            "required": [
+              "id"
+            ]
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "const": "G08"
+              }
+            },
+            "required": [
+              "id"
+            ]
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "const": "G09"
+              }
+            },
+            "required": [
+              "id"
+            ]
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "const": "G10"
+              }
+            },
+            "required": [
+              "id"
+            ]
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "const": "G11"
+              }
+            },
+            "required": [
+              "id"
+            ]
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "const": "G12"
+              }
+            },
+            "required": [
+              "id"
+            ]
+          },
+          "minContains": 1,
+          "maxContains": 1
+        }
+      ]
+    },
+    "browsers": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": {
+        "type": "object",
+        "required": [
+          "engine",
+          "version",
+          "operatingSystem",
+          "renderer",
+          "realBrowser",
+          "status",
+          "evidenceIds"
+        ],
+        "properties": {
+          "engine": {
+            "enum": [
+              "chromium",
+              "firefox"
+            ]
+          },
+          "version": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "operatingSystem": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "renderer": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "realBrowser": {
+            "const": true
+          },
+          "status": {
+            "enum": [
+              "NOT-RUN",
+              "IN-PROGRESS",
+              "BLOCKED",
+              "FAIL",
+              "PASS"
+            ]
+          },
+          "evidenceIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "uniqueItems": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "allOf": [
+        {
+          "contains": {
+            "type": "object",
+            "properties": {
+              "engine": {
+                "const": "chromium"
+              }
+            },
+            "required": [
+              "engine"
+            ]
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "type": "object",
+            "properties": {
+              "engine": {
+                "const": "firefox"
+              }
+            },
+            "required": [
+              "engine"
+            ]
+          },
+          "minContains": 1,
+          "maxContains": 1
+        }
+      ]
+    },
+    "unresolvedKnownIssueIds": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "nativeStatus": {
+      "enum": [
+        "NOT-RUN",
+        "IN-PROGRESS",
+        "BLOCKED",
+        "FAIL",
+        "PASS"
+      ]
+    },
+    "webStatus": {
+      "enum": [
+        "NOT-RUN",
+        "IN-PROGRESS",
+        "BLOCKED",
+        "FAIL",
+        "PASS"
+      ]
+    },
+    "calibrationEvidenceIds": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "artifactEvidenceIds": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "limitations": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "browserScopeOverride": {
+      "const": "Sin explicitly replaced the package Firefox requirement, then directed Chrome-only routine acceptance for velocity. G10 is retained; Firefox remains NOT-RUN and Edge is historical evidence only."
+    }
+  },
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "PASS-NATIVE-WEB"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "properties": {
+          "template": {
+            "const": false
+          },
+          "executionStartSha": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{40}$"
+          },
+          "validatedCommit": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{40}$"
+          },
+          "branch": {
+            "type": "string",
+            "minLength": 1
+          },
+          "knownIssueInventoryComplete": {
+            "const": true
+          },
+          "knownIssueRegister": {
+            "type": "string",
+            "minLength": 1
+          },
+          "unresolvedKnownIssueIds": {
+            "maxItems": 0
+          },
+          "nativeStatus": {
+            "const": "PASS"
+          },
+          "webStatus": {
+            "const": "PASS"
+          },
+          "calibrationEvidenceIds": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
+          },
+          "artifactEvidenceIds": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
+          },
+          "requiredChecks": {
+            "items": {
+              "properties": {
+                "status": {
+                  "const": "PASS"
+                },
+                "evidenceIds": {
+                  "type": "array",
+                  "minItems": 1,
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "uniqueItems": true
+                }
+              }
+            }
+          },
+          "browsers": {
+            "items": {
+              "if": {
+                "properties": {
+                  "engine": {
+                    "const": "chromium"
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "version": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "operatingSystem": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "renderer": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "status": {
+                    "const": "PASS"
+                  },
+                  "evidenceIds": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "uniqueItems": true
+                  }
+                }
+              },
+              "else": {
+                "properties": {
+                  "status": {
+                    "const": "NOT-RUN"
+                  },
+                  "version": {
+                    "type": "null"
+                  },
+                  "evidenceIds": {
+                    "type": "array",
+                    "contains": {
+                      "const": "E-scope"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}
