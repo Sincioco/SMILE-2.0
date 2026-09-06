@@ -89,6 +89,7 @@ Dim GizmoState As ViewerGizmo.State
 Dim PartyState As ViewerParty.State
 Dim PartyPrimary As ViewerActors.Context
 Dim PartyActions As ViewerParty.FrameActions
+Dim EmptyPartyActions As ViewerParty.FrameActions
 Dim PartyPointer As ViewerParty.PointerDecision
 Dim EffectsState As ViewerEffects.State
 Dim DragonState As ViewerDragon.State
@@ -397,6 +398,27 @@ Call Check(Not PartyState.UiBound And PartyState.UiPrimary.Profile = 7)
 Call ViewerParty.SetPresentationState(PartyState, 1, ViewerParty.STATE_KO)
 Call Check(ViewerParty.PresentationState(PartyState, 1) = ViewerParty.STATE_KO)
 Call Check(ViewerParty.PresentationStateName(ViewerParty.STATE_REVIVING) = "Reviving")
+Call Check(ViewerParty.ResolvePreviewMode(
+    1, ViewerProfiles.PROFILE_ORIN, "Idle") = Graphics3D.ANIMATION_LOOP)
+Call Check(ViewerParty.ResolvePreviewMode(
+    2, ViewerProfiles.PROFILE_DRAGON, "Idle") = Graphics3D.ANIMATION_LOOP)
+Call Check(ViewerParty.ResolvePreviewMode(
+    2, ViewerProfiles.PROFILE_DRAGON, "Hit") = Graphics3D.ANIMATION_ONCE)
+Call Check(ViewerParty.ResolvePreviewMode(
+    1, ViewerProfiles.PROFILE_ORIN, "Death") = Graphics3D.ANIMATION_ONCE)
+
+Call ViewerParty.CapturePreview(
+    PartyState, 3, 77, Graphics3D.ANIMATION_ONCE)
+Call Check(PartyState.PreviewActive And PartyState.PreviewClip = 3)
+Call Check(PartyState.PreviewTime = 77 And
+    PartyState.PreviewMode = Graphics3D.ANIMATION_ONCE)
+Call ViewerParty.ClearPreview(PartyState)
+Call Check(Not PartyState.PreviewActive)
+Call Check(ViewerParty.ApplyFrame(
+    PartyState, EmptyPartyActions, PartyPrimary.Actor, Frame,
+    PartyPrimary.Clip, 100, -208, 0, -120, 180))
+Call Check(Not ViewerActors.FaceToward(
+    PartyPrimary.Actor, -208, 0, -120, 180, 0))
 
 PartyState.DragonCounter = 1
 

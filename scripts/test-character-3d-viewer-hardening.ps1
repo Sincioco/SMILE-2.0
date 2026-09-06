@@ -201,8 +201,11 @@ try {
     foreach ($contract in @(
         'Public Sub ResetChoreography(',
         'Public Function BeginInspectorBinding(',
+        'Public Sub BeginPreview(',
+        'Public Function RestorePreview(',
         'Public Sub InitializeFormation(',
         'Public Function AdvanceElapsed(',
+        'Public Function ApplyFrame(',
         'Public Sub ApplyAttackCamera(',
         'Public Function ClassifyPointer(',
         'Public Function DrawCompanion(',
@@ -215,6 +218,7 @@ try {
         'Public Function Capture(',
         'Public Sub Apply(',
         'Public Function LoadContext(',
+        'Public Function FaceToward(',
         'Public Sub Destroy(')) {
         Assert-Contains $actorsSource $contract 'Viewer actor owner'
     }
@@ -225,6 +229,8 @@ try {
         'Public Function AdvanceScene(',
         'Public Sub UpdateEquipmentFire(',
         'Public Function UpdateEpicGlow(',
+        'Public Function CreateBorrowedEpicGlow(',
+        'Public Function UpdateBorrowedEpicGlow(',
         'Public Sub DrawEquipmentFire(',
         'Public Function DrawScene(',
         'Public Sub ResetPlaybackControls(',
@@ -282,8 +288,11 @@ try {
         -not $viewerSource.Contains('Sub DestroyPartyCompanion()') -and
         -not $viewerSource.Contains('Sub DrawPartyOverlay()') -and
         -not $viewerSource.Contains('Sub DrawPartyCameraDetails(') -and
-        -not $viewerSource.Contains('Sub ApplyPartyAttackCamera()')) `
-        'Party cameras, drawing, overlay presentation and participant lifecycle must remain in ViewerParty.'
+        -not $viewerSource.Contains('Sub ApplyPartyAttackCamera()') -and
+        -not $viewerSource.Contains('Sub ApplyPartyFrame(') -and
+        -not $viewerSource.Contains('Sub PlayPartyClip(') -and
+        -not $viewerSource.Contains('Function FaceDragon(')) `
+        'Party frame application, cameras, presentation and participant lifecycle must remain in their owners.'
     Assert-True (-not $viewerSource.Contains('Dim ShieldFire[') -and
         -not $viewerSource.Contains('Dim ShieldFirePoints[') -and
         -not $viewerSource.Contains('Dim SwordTrailPoints[') -and

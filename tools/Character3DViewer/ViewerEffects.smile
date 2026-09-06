@@ -401,6 +401,44 @@ Public Sub DestroyEpicGlow(ByRef Value As State)
 
 End Sub
 
+Public Function CreateBorrowedEpicGlow(ByRef Actor As Character3D.Actor,
+    Material As Core.Material3D, ByRef SwordGlow As Core.Object3D,
+    ByRef ShieldGlow As Core.Object3D) As Boolean
+
+    Dim Animator As Core.Animator3D
+    Dim Model As Core.Model3D
+    Dim Result As Boolean
+
+    Model.Handle = Character3D.ModelHandle(Actor)
+    Animator.Handle = Character3D.AnimatorHandle(Actor)
+    SwordGlow = Graphics3D.CreateModelPart3D(Model, WEAPON_PART_INDEX)
+    ShieldGlow = Graphics3D.CreateModelPart3D(Model, SHIELD_PART_INDEX)
+    Result = SwordGlow.Handle <> 0 And ShieldGlow.Handle <> 0
+
+    If Result Then
+
+        Result = Graphics3D.SetObjectMaterial3D(SwordGlow, Material)
+        Result = Graphics3D.SetObjectAnimator3D(SwordGlow, Animator) And Result
+        Result = Graphics3D.SetObjectMaterial3D(ShieldGlow, Material) And Result
+        Result = Graphics3D.SetObjectAnimator3D(ShieldGlow, Animator) And Result
+        Result = Graphics3D.SetObjectCullMode3D(
+            ShieldGlow,
+            Graphics3D.OBJECT_CULL_FRONT
+        ) And Result
+
+        Call Graphics3D.SetObjectColor(SwordGlow, 255, 255, 255)
+        Call Graphics3D.SetObjectColor(ShieldGlow, 255, 255, 255)
+        Call Graphics3D.SetObjectOpacity(SwordGlow, 95)
+        Call Graphics3D.SetObjectOpacity(ShieldGlow, 90)
+        Call Graphics3D.SetObjectShadows3D(SwordGlow, False, False)
+        Call Graphics3D.SetObjectShadows3D(ShieldGlow, False, False)
+
+    End If
+
+    Return Result
+
+End Function
+
 Public Sub ToggleEpicGlow(ByRef Value As State, ByRef Actor As Character3D.Actor)
 
     If Value.EpicGlowAvailable Then
@@ -908,6 +946,34 @@ Public Function UpdateEquipmentGlow(
         OutlineScale,
         OutlineScale
     ) And Result
+
+    Return Result
+
+End Function
+
+Public Function UpdateBorrowedEpicGlow(ByRef Actor As Character3D.Actor,
+    ByRef SwordGlow As Core.Object3D, ByRef ShieldGlow As Core.Object3D,
+    ScalePercent As Number, SwordCoupled As Boolean,
+    ShieldCoupled As Boolean) As Boolean
+
+    Dim SwordBase As Core.Vector3
+    Dim SwordCenter As Core.Vector3
+    Dim SwordTip As Core.Vector3
+    Dim ShieldCenter As Core.Vector3
+    Dim Result As Boolean
+
+    SwordBase = Character3D.SocketPosition(
+        Actor, "SwordBase", BODY_PART_INDEX, SwordCoupled)
+    SwordTip = Character3D.SocketPosition(
+        Actor, "SwordTip", BODY_PART_INDEX, SwordCoupled)
+    ShieldCenter = Character3D.SocketPosition(
+        Actor, "ShieldCenter", BODY_PART_INDEX, ShieldCoupled)
+    SwordCenter.X = (SwordBase.X + SwordTip.X) / 2
+    SwordCenter.Y = (SwordBase.Y + SwordTip.Y) / 2
+    SwordCenter.Z = (SwordBase.Z + SwordTip.Z) / 2
+    Result = UpdateEquipmentGlow(Actor, SwordGlow, SwordCenter, ScalePercent)
+    Result = UpdateEquipmentGlow(
+        Actor, ShieldGlow, ShieldCenter, ScalePercent) And Result
 
     Return Result
 

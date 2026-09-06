@@ -130,6 +130,27 @@ Public Function Draw(ByRef Value As Context) As Boolean
 
 End Function
 
+Public Function FaceToward(ByRef Value As Character3D.Actor,
+    TargetX As Number, TargetY As Number, TargetZ As Number,
+    ModelForwardYawOffset As Number, YawAdjustment As Number) As Boolean
+
+    Dim FacingYaw As Number
+    Dim Result As Boolean
+
+    Result = Character3D.LookAt(Value, TargetX, TargetY, TargetZ)
+
+    If Result Then
+
+        FacingYaw = Character3D.RotationY(Value) + ModelForwardYawOffset
+        FacingYaw = FacingYaw + YawAdjustment
+        Result = Character3D.Rotate(Value, 0, FacingYaw, 0)
+
+    End If
+
+    Return Result
+
+End Function
+
 Public Sub Destroy(ByRef Value As Context)
 
     Call Graphics3D.DestroyObject3D(Value.WeaponGlow)

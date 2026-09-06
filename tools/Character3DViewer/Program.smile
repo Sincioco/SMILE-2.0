@@ -312,7 +312,12 @@ Do
             ViewerCameraState.AutoOrbit,
             Playback.PlaybackSpeed,
             Timing.CameraElapsed,
-            PartyAttackDuration(),
+            ViewerParty.AttackDuration(
+                Party,
+                Character,
+                Party.Companion.Actor,
+                Playback.PlaybackSpeed
+            ),
             ViewerDragon.PositionX(),
             ViewerDragon.PositionZ()
         )
@@ -745,7 +750,14 @@ Sub ApplyArenaFacing()
             0
         ) And Session.Ready
     Else If DragonState.Available Then
-        Session.Ready = FaceDragon(Character, CharacterArenaYawAdjustment()) And Session.Ready
+        Session.Ready = ViewerActors.FaceToward(
+            Character,
+            ViewerDragon.PositionX(),
+            0,
+            ViewerDragon.PositionZ(),
+            CHARACTER_MODEL_FORWARD_YAW_OFFSET,
+            CharacterArenaYawAdjustment()
+        ) And Session.Ready
     Else
         Session.Ready = Character3D.Rotate(Character, 0, 0, 0) And Session.Ready
     End If
@@ -758,28 +770,6 @@ Function CharacterArenaYawAdjustment() As Number
 
     If Session.ProfileIndex = ViewerProfiles.PROFILE_ORIN Then
         Result = ORIN_ARENA_YAW_ADJUSTMENT
-    End If
-
-    Return Result
-
-End Function
-
-Function FaceDragon(
-    ByRef Value As Character3D.Actor,
-    YawAdjustment As Number
-) As Boolean
-
-    Dim DragonYaw As Number
-    Dim Result As Boolean
-
-    Result = Character3D.LookAt(Value, ViewerDragon.PositionX(), 0, ViewerDragon.PositionZ())
-
-    If Result Then
-
-        DragonYaw = Character3D.RotationY(Value) + CHARACTER_MODEL_FORWARD_YAW_OFFSET
-        DragonYaw = DragonYaw + YawAdjustment
-        Result = Character3D.Rotate(Value, 0, DragonYaw, 0)
-
     End If
 
     Return Result
@@ -835,7 +825,12 @@ Sub UpdateDragon()
     ReactionRequested = (Party.Enabled And
         Party.DragonReactionPending And
         Party.Stage = 1 And
-        Party.Elapsed >= 1300 + PartyAttackDuration() * 64 / 100)
+        Party.Elapsed >= 1300 + ViewerParty.AttackDuration(
+            Party,
+            Character,
+            Party.Companion.Actor,
+            Playback.PlaybackSpeed
+        ) * 64 / 100)
     Name = ViewerDragon.DesiredClip(
         DragonState,
         Session.DragonInspection,
@@ -5347,7 +5342,12 @@ Function AnimationSecondsRemaining() As Number
 
     If Party.Enabled Then
 
-        RequiredMilliseconds = PartyAttackDuration() + 4000
+        RequiredMilliseconds = ViewerParty.AttackDuration(
+            Party,
+            Character,
+            Party.Companion.Actor,
+            Playback.PlaybackSpeed
+        ) + 4000
 
         If Party.Turn = 2 Then
             RequiredMilliseconds = ViewerParty.DragonTurnDuration(
@@ -5701,35 +5701,16 @@ End Sub
 
 Sub BeginPartyPreview()
 
-    Dim Name As Text
-
     If Not Party.UiBound Then
         Return
     End If
 
-    If Not Party.PreviewActive Then
-
-        Party.PreviewMode = Graphics3D.ANIMATION_LOOP
-        Name = SelectedClipName()
-
-        If ((Party.UiTurn = 2 And Name <> "Idle") Or
-            Name = "SwordAttack" Or
-            Name = "SwordAttack2" Or
-            Name = "JumpAttack" Or
-            Name = "ThorAttack" Or
-            Name = "Hit" Or
-            ViewerProfiles.HoldsFinalPose(Session.ProfileIndex, Name)) Then
-            Party.PreviewMode = Graphics3D.ANIMATION_ONCE
-        End If
-
-        Call ViewerParty.CapturePreview(
-            Party,
-            Playback.SelectedClip,
-            Character3D.AnimationTime(Character),
-            Party.PreviewMode
-        )
-
-    End If
+    Call ViewerParty.BeginPreview(
+        Party,
+        Character,
+        Playback.SelectedClip,
+        Session.ProfileIndex
+    )
 
     Playback.ScenePaused = True
 
@@ -5741,12 +5722,12 @@ Sub RestorePartyPreview()
         Return
     End If
 
-    Playback.SelectedClip = Party.PreviewClip
-    Session.Ready = Character3D.PlayMode(Character, SelectedClipName(),
-        Party.PreviewMode, Playback.PlaybackSpeed) And Session.Ready
-    Session.Ready = Character3D.SetAnimationTime(Character, Party.PreviewTime) And Session.Ready
-
-    Call ViewerParty.ClearPreview(Party)
+    Session.Ready = ViewerParty.RestorePreview(
+        Party,
+        Character,
+        Playback.SelectedClip,
+        Playback.PlaybackSpeed
+    ) And Session.Ready
 
     ViewerUiState.CalibrationVisible = False
 
@@ -5778,8 +5759,6 @@ Sub CreatePartyCompanion(Optional CompanionIndex As Number = ViewerProfiles.PROF
     Dim Companion As ViewerActors.Context
     Dim CompanionKeyBase As Number
     Dim Primary As ViewerActors.Context
-    Dim CompanionModel As Core.Model3D
-    Dim CompanionAnimator As Core.Animator3D
 
     Primary = CaptureActorContext()
     CompanionKeyBase = 0
@@ -5798,40 +5777,28 @@ Sub CreatePartyCompanion(Optional CompanionIndex As Number = ViewerProfiles.PROF
         Call ConfigureCalibration()
 
         Party.Ready = CalibrationAvailable And Not Calibration.StorageRejected And Party.Ready
-        CompanionModel.Handle = Character3D.ModelHandle(Character)
-        CompanionAnimator.Handle = Character3D.AnimatorHandle(Character)
 
         If Effects.EpicGlowMaterial.Handle = 0 Then
-
             Call ViewerEffects.CreateEpicGlow(Effects, Session.ProfileIndex, Character)
-
         Else
 
-        Effects.SwordGlow = Graphics3D.CreateModelPart3D(CompanionModel, WEAPON_PART_INDEX)
-        Effects.ShieldGlow = Graphics3D.CreateModelPart3D(CompanionModel, SHIELD_PART_INDEX)
-        Effects.EpicGlowAvailable = Effects.SwordGlow.Handle <> 0 And Effects.ShieldGlow.Handle <> 0
-        Effects.EpicGlowVisible = Effects.EpicGlowAvailable
-
-        If Effects.EpicGlowAvailable Then
-
-            Session.Ready = Graphics3D.SetObjectMaterial3D(Effects.SwordGlow, Effects.EpicGlowMaterial) And Session.Ready
-            Session.Ready = Graphics3D.SetObjectMaterial3D(Effects.ShieldGlow, Effects.EpicGlowMaterial) And Session.Ready
-            Session.Ready = Graphics3D.SetObjectAnimator3D(Effects.SwordGlow, CompanionAnimator) And Session.Ready
-            Session.Ready = Graphics3D.SetObjectAnimator3D(Effects.ShieldGlow, CompanionAnimator) And Session.Ready
-            Session.Ready = Graphics3D.SetObjectCullMode3D(Effects.ShieldGlow, Graphics3D.OBJECT_CULL_FRONT) And Session.Ready
-
-            Call Graphics3D.SetObjectColor(Effects.SwordGlow, 255, 255, 255)
-            Call Graphics3D.SetObjectColor(Effects.ShieldGlow, 255, 255, 255)
-            Call Graphics3D.SetObjectOpacity(Effects.SwordGlow, 95)
-            Call Graphics3D.SetObjectOpacity(Effects.ShieldGlow, 90)
-            Call Graphics3D.SetObjectShadows3D(Effects.SwordGlow, False, False)
-            Call Graphics3D.SetObjectShadows3D(Effects.ShieldGlow, False, False)
-
+            Effects.EpicGlowAvailable = ViewerEffects.CreateBorrowedEpicGlow(
+                Character,
+                Effects.EpicGlowMaterial,
+                Effects.SwordGlow,
+                Effects.ShieldGlow
+            )
+            Effects.EpicGlowVisible = Effects.EpicGlowAvailable
         End If
 
-        End If
-
-        Call PlayPartyClip(Character, "Idle", Playback.SelectedClip)
+        Session.Ready = ViewerParty.PlayClip(
+            Character,
+            "Idle",
+            Playback.SelectedClip,
+            Character.Handle,
+            Session.ProfileIndex,
+            Playback.PlaybackSpeed
+        ) And Session.Ready
 
         Party.Companion = CaptureActorContext()
         Party.Companion.Ready = Party.Ready
@@ -5866,8 +5833,22 @@ Sub PositionDragonOpponents()
         Party.DragonOpponent.Frame.PositionY, Party.DragonOpponent.Frame.PositionZ) And Session.Ready
     Session.Ready = Character3D.Place(Party.Companion.Actor, Party.Companion.Frame.PositionX,
         Party.Companion.Frame.PositionY, Party.Companion.Frame.PositionZ) And Session.Ready
-    Session.Ready = FaceDragon(Party.DragonOpponent.Actor, 0) And Session.Ready
-    Session.Ready = FaceDragon(Party.Companion.Actor, ORIN_ARENA_YAW_ADJUSTMENT) And Session.Ready
+    Session.Ready = ViewerActors.FaceToward(
+        Party.DragonOpponent.Actor,
+        ViewerDragon.PositionX(),
+        0,
+        ViewerDragon.PositionZ(),
+        CHARACTER_MODEL_FORWARD_YAW_OFFSET,
+        0
+    ) And Session.Ready
+    Session.Ready = ViewerActors.FaceToward(
+        Party.Companion.Actor,
+        ViewerDragon.PositionX(),
+        0,
+        ViewerDragon.PositionZ(),
+        CHARACTER_MODEL_FORWARD_YAW_OFFSET,
+        ORIN_ARENA_YAW_ADJUSTMENT
+    ) And Session.Ready
 
 End Sub
 
@@ -5995,79 +5976,18 @@ Sub PreparePartyDragonTurn()
 
 End Sub
 
-Function PartyAttackDuration() As Number
-
-    Dim Result As Number
-
-    Result = ViewerParty.AttackDuration(
-        Party,
-        Character,
-        Party.Companion.Actor,
-        Playback.PlaybackSpeed
-    )
-
-    Return Result
-
-End Function
-
-Sub PlayPartyClip(ByRef Actor As Character3D.Actor, Name As Text, ByRef Clip As Number)
-
-    Session.Ready = ViewerParty.PlayClip(
-        Actor,
-        Name,
-        Clip,
-        Party.Companion.Actor.Handle,
-        Party.Companion.Profile,
-        Playback.PlaybackSpeed
-    ) And Session.Ready
-
-End Sub
-
-Sub ApplyPartyFrame(Actions As ViewerParty.FrameActions)
-
-    If Actions.FirstClipRequested Then
-        Call PlayPartyClip(Character, Actions.FirstClip, Playback.SelectedClip)
-    End If
-
-    If Actions.SecondClipRequested Then
-        Call PlayPartyClip(Party.Companion.Actor, Actions.SecondClip,
-            Party.Companion.Clip)
-    End If
-
-    If Not Actions.PositionsAvailable Then
-        Return
-    End If
-
-    ViewerCameraState.Frame.PositionX = Actions.FirstPosition.X
-    ViewerCameraState.Frame.PositionZ = Actions.FirstPosition.Z
-    Party.Companion.Frame.PositionX = Actions.SecondPosition.X
-    Party.Companion.Frame.PositionZ = Actions.SecondPosition.Z
-    Session.Ready = Character3D.Place(
-        Character,
-        ViewerCameraState.Frame.PositionX,
-        ViewerCameraState.Frame.PositionY,
-        ViewerCameraState.Frame.PositionZ
-    ) And Session.Ready
-    Session.Ready = Character3D.Place(
-        Party.Companion.Actor,
-        Party.Companion.Frame.PositionX,
-        Party.Companion.Frame.PositionY,
-        Party.Companion.Frame.PositionZ
-    ) And Session.Ready
-    Session.Ready = FaceDragon(Character,
-        Party.First.FacingAdjustment) And Session.Ready
-    Session.Ready = FaceDragon(Party.Companion.Actor,
-        Party.Second.FacingAdjustment) And Session.Ready
-
-End Sub
-
 Sub AdvancePartyDemo()
 
     Dim Actions As ViewerParty.FrameActions
     Dim AttackMilliseconds As Number
     Dim RolledTarget As Number
 
-    AttackMilliseconds = PartyAttackDuration()
+    AttackMilliseconds = ViewerParty.AttackDuration(
+        Party,
+        Character,
+        Party.Companion.Actor,
+        Playback.PlaybackSpeed
+    )
     RolledTarget = -1
 
     If ViewerParty.WillPrepareDragonTurn(
@@ -6091,7 +6011,18 @@ Sub AdvancePartyDemo()
         RolledTarget
     )
 
-    Call ApplyPartyFrame(Actions)
+    Session.Ready = ViewerParty.ApplyFrame(
+        Party,
+        Actions,
+        Character,
+        ViewerCameraState.Frame,
+        Playback.SelectedClip,
+        Playback.PlaybackSpeed,
+        ViewerDragon.PositionX(),
+        0,
+        ViewerDragon.PositionZ(),
+        CHARACTER_MODEL_FORWARD_YAW_OFFSET
+    ) And Session.Ready
 
 End Sub
 
@@ -6099,8 +6030,6 @@ Sub UpdatePartyCompanion()
 
     Dim CompanionReady As Boolean
     Dim Primary As ViewerActors.Context
-    Dim Center As Core.Vector3
-    Dim Tip As Core.Vector3
 
     If Not Party.Ready Then
         Return
@@ -6119,26 +6048,14 @@ Sub UpdatePartyCompanion()
     Call ApplyEquipmentCoupling()
 
     If Effects.EpicGlowAvailable Then
-
-        Center = Character3D.SocketPosition(Character, "SwordBase", BODY_PART_INDEX, CalibrationChannelValue(Playback.SelectedClip, 18) <> 0)
-        Tip = Character3D.SocketPosition(Character, "SwordTip", BODY_PART_INDEX, CalibrationChannelValue(Playback.SelectedClip, 18) <> 0)
-        Center.X = (Center.X + Tip.X) / 2
-        Center.Y = (Center.Y + Tip.Y) / 2
-        Center.Z = (Center.Z + Tip.Z) / 2
-        Session.Ready = ViewerEffects.UpdateEquipmentGlow(
+        Session.Ready = ViewerEffects.UpdateBorrowedEpicGlow(
             Character,
             Effects.SwordGlow,
-            Center,
-            ViewerCameraState.Frame.ScalePercent
-        ) And Session.Ready
-        Center = Character3D.SocketPosition(Character, "ShieldCenter", BODY_PART_INDEX, CalibrationChannelValue(Playback.SelectedClip, 19) <> 0)
-        Session.Ready = ViewerEffects.UpdateEquipmentGlow(
-            Character,
             Effects.ShieldGlow,
-            Center,
-            ViewerCameraState.Frame.ScalePercent
+            ViewerCameraState.Frame.ScalePercent,
+            CalibrationChannelValue(Playback.SelectedClip, 18) <> 0,
+            CalibrationChannelValue(Playback.SelectedClip, 19) <> 0
         ) And Session.Ready
-
     End If
 
     Call ApplyEquipmentCalibration()

@@ -240,6 +240,66 @@ Public Sub CapturePreview(ByRef Value As State, Clip As Number, Time As Number,
 
 End Sub
 
+Public Function ResolvePreviewMode(UiTurn As Number, ProfileIndex As Number,
+    Name As Text) As Number
+
+    Dim Result As Number
+
+    Result = Graphics3D.ANIMATION_LOOP
+
+    If ((UiTurn = 2 And Name <> "Idle") Or
+        Name = "SwordAttack" Or
+        Name = "SwordAttack2" Or
+        Name = "JumpAttack" Or
+        Name = "ThorAttack" Or
+        Name = "Hit" Or
+        ViewerProfiles.HoldsFinalPose(ProfileIndex, Name)) Then
+        Result = Graphics3D.ANIMATION_ONCE
+    End If
+
+    Return Result
+
+End Function
+
+Public Sub BeginPreview(ByRef Value As State, ByRef Actor As Character3D.Actor,
+    Clip As Number, ProfileIndex As Number)
+
+    Dim Mode As Number
+    Dim Name As Text
+
+    If Not Value.UiBound Or Value.PreviewActive Then
+        Return
+    End If
+
+    Name = Character3D.ClipName(Actor, Clip)
+    Mode = ResolvePreviewMode(Value.UiTurn, ProfileIndex, Name)
+
+    Call CapturePreview(Value, Clip, Character3D.AnimationTime(Actor), Mode)
+
+End Sub
+
+Public Function RestorePreview(ByRef Value As State,
+    ByRef Actor As Character3D.Actor, ByRef Clip As Number,
+    PlaybackSpeed As Number) As Boolean
+
+    Dim Name As Text
+    Dim Result As Boolean
+
+    If Not Value.PreviewActive Or Not Value.UiBound Then
+        Return True
+    End If
+
+    Clip = Value.PreviewClip
+    Name = Character3D.ClipName(Actor, Clip)
+    Result = Character3D.PlayMode(Actor, Name, Value.PreviewMode, PlaybackSpeed)
+    Result = Character3D.SetAnimationTime(Actor, Value.PreviewTime) And Result
+
+    Call ClearPreview(Value)
+
+    Return Result
+
+End Function
+
 Public Sub ClearPreview(ByRef Value As State)
 
     Value.PreviewActive = False
@@ -362,6 +422,52 @@ Public Function PlayClip(ByRef Actor As Character3D.Actor, Name As Text,
         End If
 
     End For
+
+    Return Result
+
+End Function
+
+Public Function ApplyFrame(ByRef Value As State, Actions As FrameActions,
+    ByRef FirstActor As Character3D.Actor,
+    ByRef FirstFrame As CharacterViewer.Framing,
+    ByRef FirstClip As Number, PlaybackSpeed As Number,
+    TargetX As Number, TargetY As Number, TargetZ As Number,
+    ModelForwardYawOffset As Number) As Boolean
+
+    Dim Result As Boolean
+
+    Result = True
+
+    If Actions.FirstClipRequested Then
+        Result = PlayClip(FirstActor, Actions.FirstClip, FirstClip,
+            Value.Companion.Actor.Handle, Value.Companion.Profile,
+            PlaybackSpeed)
+    End If
+
+    If Actions.SecondClipRequested Then
+        Result = PlayClip(Value.Companion.Actor, Actions.SecondClip,
+            Value.Companion.Clip, Value.Companion.Actor.Handle,
+            Value.Companion.Profile, PlaybackSpeed) And Result
+    End If
+
+    If Not Actions.PositionsAvailable Then
+        Return Result
+    End If
+
+    FirstFrame.PositionX = Actions.FirstPosition.X
+    FirstFrame.PositionZ = Actions.FirstPosition.Z
+    Value.Companion.Frame.PositionX = Actions.SecondPosition.X
+    Value.Companion.Frame.PositionZ = Actions.SecondPosition.Z
+    Result = Character3D.Place(FirstActor, FirstFrame.PositionX,
+        FirstFrame.PositionY, FirstFrame.PositionZ) And Result
+    Result = Character3D.Place(Value.Companion.Actor,
+        Value.Companion.Frame.PositionX, Value.Companion.Frame.PositionY,
+        Value.Companion.Frame.PositionZ) And Result
+    Result = ViewerActors.FaceToward(FirstActor, TargetX, TargetY, TargetZ,
+        ModelForwardYawOffset, Value.First.FacingAdjustment) And Result
+    Result = ViewerActors.FaceToward(Value.Companion.Actor,
+        TargetX, TargetY, TargetZ, ModelForwardYawOffset,
+        Value.Second.FacingAdjustment) And Result
 
     Return Result
 
