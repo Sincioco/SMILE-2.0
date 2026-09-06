@@ -213,6 +213,16 @@ try {
         'Public Function LayoutTooSmall(',
         'Public Function CalibrationPointerAction(',
         'Public Function ApplyCalibrationSelection(',
+        'Public Sub DrawMinimumSizeNotice(',
+        'Public Sub DrawHeader(',
+        'Public Sub DrawInspectorToolbar(',
+        'Public Sub DrawDemoControl(',
+        'Public Sub DrawProfileEffectControls(',
+        'Public Sub DrawAnimationDetails(',
+        'Public Sub DrawViewControls(',
+        'Public Sub DrawFooterMessage(',
+        'Public Sub DrawPauseStatus(',
+        'Public Sub DrawRecoveryOverlay(',
         'Public Sub DrawCharacterStatusSummary(',
         'Public Sub DrawCameraControls(',
         'Public Sub DrawAnimationButtons(',
@@ -268,6 +278,14 @@ try {
         -not $viewerSource.Contains('Function TimelineKeyframeAtPointer(') -and
         -not $viewerSource.Contains('Function CalibrationFrameTimeMilliseconds(')) `
         'Timeline frame/key hit math and calibration frame-time conversion must use their production owners.'
+    Assert-True (-not $viewerSource.Contains('Const ANIMATION_DETAILS_Y =') -and
+        -not $viewerSource.Contains('Const ANIMATION_DETAILS_MINIMUM_HEIGHT =') -and
+        -not $viewerSource.Contains('Sub DrawButton(') -and
+        -not $viewerSource.Contains('"CHARACTER VIEWER NEEDS MORE ROOM"') -and
+        -not $viewerSource.Contains('"Clip ms / Rate / Samples / Events"') -and
+        -not $viewerSource.Contains('"Save Or Cancel The Pose Before Switching"') -and
+        -not $viewerSource.Contains('"CHARACTER VIEWER RECOVERY"')) `
+        'Inspector chrome, detail, footer/status and recovery drawing must remain in ViewerUi.'
     foreach ($contract in @(
         'Public Sub BeginDrag(',
         'Public Sub FinishDrag(',

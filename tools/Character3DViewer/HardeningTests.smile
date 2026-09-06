@@ -330,6 +330,34 @@ Call Check(ViewerUi.ApplyCalibrationSelection(
     UiState, ViewerUi.CALIBRATION_ACTION_AXIS_Z))
 Call Check(UiState.CalibrationAxis = ViewerUi.CALIBRATION_AXIS_Z)
 
+Call ViewerUi.DrawMinimumSizeNotice(800, 640)
+Call ViewerUi.DrawHeader("Arin", "Paladin", False, 0, 800)
+Call ViewerUi.DrawHeader("Arin", "Paladin", True, 3, 1200)
+Call ViewerUi.DrawInspectorToolbar(
+    800, 640, False, False, True, True, "DRAGON ON", True,
+    "BG LOGO", True, True, True, True, True)
+Call ViewerUi.DrawDemoControl(532, False, False, True)
+Call ViewerUi.DrawProfileEffectControls(
+    800, ViewerProfiles.PROFILE_ARIN, True, True, True,
+    "Storm", "Comfort", "Freeze Lightning", False,
+    True, True, True, "Pause Flames", True, "Shield Fire", False)
+Call ViewerUi.DrawProfileEffectControls(
+    800, ViewerProfiles.PROFILE_ORIN, True, False, False,
+    "Storm", "Comfort", "Freeze Lightning", False,
+    False, False, False, "Pause Flames", True, "Shield Fire", False)
+Call ViewerUi.DrawProfileEffectControls(
+    800, ViewerProfiles.PROFILE_DRAGON, True, False, False,
+    "Storm", "Comfort", "Freeze Lightning", False,
+    True, False, False, "Pause Flames", True, "Shield Fire", False)
+Call ViewerUi.DrawAnimationDetails(532, 650, 1000, 30, 31, 2, 12, 4, 8)
+Call ViewerUi.DrawViewControls(800, 640, True)
+Call ViewerUi.DrawFooterMessage(800, 640, True,
+    "Imported calibration key frames successfully")
+Call ViewerUi.DrawPauseStatus(532, True, False, False, True)
+Call ViewerUi.DrawPauseStatus(532, False, True, False, False)
+Call ViewerUi.DrawPauseStatus(532, False, False, True, False)
+Call ViewerUi.DrawRecoveryOverlay(0, True, 71, 0, 71)
+
 Call ViewerUi.DrawCharacterStatusSummary(
     500, "Arin", "Paladin", "Idle", "v5.7", 100,
     Graphics3D.MATERIAL_INSPECTION_LIT, 1, 2, "Off", 0, -16, 60)

@@ -70,6 +70,8 @@ Public Const CALIBRATION_ACTION_DECOUPLE_SHIELD = 23
 
 Private Const MINIMUM_VIEWER_WIDTH = 800
 Private Const MINIMUM_VIEWER_HEIGHT = 540
+Private Const ANIMATION_DETAILS_Y = 494
+Private Const ANIMATION_DETAILS_MINIMUM_HEIGHT = 650
 
 Public Type State
     Visibility As Number
@@ -619,6 +621,278 @@ Public Function ApplyCalibrationSelection(ByRef Value As State,
     Return Result
 
 End Function
+
+Public Sub DrawMinimumSizeNotice(WindowWidth As Number, WindowHeight As Number)
+
+    Fill Rectangle 0, 0, WindowWidth, WindowHeight, Rgb(4, 9, 24) Opacity 92
+    Draw Text "CHARACTER VIEWER NEEDS MORE ROOM" At 28, 40 Size 22 Color YELLOW
+    Draw Text "Resize to at least 800 by 540 logical units." At 28, 78 Size 15 Color WHITE
+    Draw Text "Right-click still resets the scene." At 28, 108 Size 13 Color LIGHT_GRAY
+
+End Sub
+
+Public Sub DrawHeader(DisplayName As Text, PartyRole As Text,
+    PartyEnabled As Boolean, SelectedCharacterTab As Number, WindowWidth As Number)
+
+    Dim Subtitle As Text
+
+    If WindowWidth < 1100 Then
+        Subtitle = DisplayName + "  •  "
+        Subtitle = Subtitle + PartyRoleLabel(PartyRole) + "  •  PBR"
+    Else
+        Subtitle = DisplayName + "  •  Party role: "
+        Subtitle = Subtitle + PartyRoleLabel(PartyRole) + "  •  Renderer3D PBR"
+    End If
+
+    Draw Text "SMILE 2.0 - 3D Viewer, Animation Editor" At 18, 10 Size 22 Color WHITE
+
+    If PartyEnabled Then
+        Subtitle = "Sin Star I  •  Arin And Orin  •  Party Battle Preview"
+    End If
+
+    Draw Text Subtitle At 18, 42 Size 13 Color LIGHT_GRAY
+    Draw Text "Character" At 18, 68 Size 13 Color WHITE
+
+    Call UI.DrawButton(104, 62, 72, 26, "Arin", SelectedCharacterTab = 0)
+    Call UI.DrawButton(182, 62, 72, 26, "Orin", SelectedCharacterTab = 1)
+    Call UI.DrawButton(260, 62, 72, 26, "Dragon", SelectedCharacterTab = 2)
+    Call UI.DrawButton(338, 62, 72, 26, "Party", SelectedCharacterTab = 3)
+
+End Sub
+
+Public Sub DrawInspectorToolbar(
+    WindowWidth As Number,
+    WindowHeight As Number,
+    DiagnosticProfiles As Boolean,
+    PartyEnabled As Boolean,
+    SocketGizmosVisible As Boolean,
+    EpicGlowVisible As Boolean,
+    DragonControlLabel As Text,
+    DragonVisible As Boolean,
+    BackgroundControlLabel As Text,
+    BackgroundVisible As Boolean,
+    CalibrationAvailable As Boolean,
+    CalibrationVisible As Boolean,
+    SwordVisible As Boolean,
+    ShieldVisible As Boolean
+)
+
+    Dim PanelLeft As Number
+
+    PanelLeft = StatusPanelX(WindowWidth)
+
+    Call UI.DrawButton(PanelLeft, 18, 44, 34, "LIGHT", False)
+    Call UI.DrawButton(PanelLeft + 48, 18, 56, 34, "CHANNEL", False)
+    Call UI.DrawButton(PanelLeft + 108, 18, 50, 34, "SOCKET", SocketGizmosVisible)
+
+    If DiagnosticProfiles And Not PartyEnabled Then
+        Call UI.DrawButton(PanelLeft + 162, 18, 50, 34, "PROFILE", False)
+    End If
+
+    Call UI.DrawButton(
+        GlowButtonX(WindowWidth, DiagnosticProfiles, PartyEnabled),
+        18,
+        GlowButtonWidth(DiagnosticProfiles, PartyEnabled),
+        34,
+        "GLOW",
+        EpicGlowVisible
+    )
+    Call UI.DrawButton(PanelLeft, 56, 72, 22, DragonControlLabel, DragonVisible)
+    Call UI.DrawButton(PanelLeft + 76, 56, 48, 22,
+        BackgroundControlLabel, BackgroundVisible)
+
+    If CalibrationAvailable Then
+        Call UI.DrawButton(PanelLeft + 128, 56, 36, 22, "Pose", CalibrationVisible)
+    Else
+        Draw Text "Pose" At PanelLeft + 132, 62 Size 10 Color GRAY
+    End If
+
+    Call UI.DrawButton(PanelLeft + 168, 56, 40, 22, "Weapon", SwordVisible)
+    Call UI.DrawButton(PanelLeft + 212, 56, 40, 22, "Shield", ShieldVisible)
+
+    Call UI.DrawPanel(PanelLeft, 82, 252, Max(446, WindowHeight - 94))
+
+End Sub
+
+Public Sub DrawDemoControl(PanelLeft As Number, PartyEnabled As Boolean,
+    ScenePaused As Boolean, DemoEnabled As Boolean)
+
+    Draw Text "ANIMATIONS" At PanelLeft + 16, 334 Size 13 Color WHITE
+
+    Call UI.DrawButton(PanelLeft + 178, 330, 74, 18,
+        DemoLabel(PartyEnabled, ScenePaused, DemoEnabled), DemoEnabled)
+
+End Sub
+
+Public Sub DrawProfileEffectControls(
+    WindowWidth As Number,
+    ProfileIndex As Number,
+    FloorOrGridVisible As Boolean,
+    SwordFireVisible As Boolean,
+    ShieldFireVisible As Boolean,
+    StormStyleLabel As Text,
+    StormComfortLabel As Text,
+    LightningPlaybackLabel As Text,
+    LightningPaused As Boolean,
+    DragonHeadTracking As Boolean,
+    DragonTargetsArin As Boolean,
+    SwordFireReady As Boolean,
+    FlamePlaybackLabel As Text,
+    FlamePlaying As Boolean,
+    ShieldFireStyleLabel As Text,
+    ShieldFlameStyle As Boolean
+)
+
+    Dim PanelLeft As Number
+
+    PanelLeft = StatusPanelX(WindowWidth)
+
+    Call UI.DrawButton(PanelLeft + 12, 444, 78, 22, "Floor/Grid", FloorOrGridVisible)
+
+    If ProfileIndex = ViewerProfiles.PROFILE_ARIN Then
+
+        Call UI.DrawButton(PanelLeft + 94, 444, 76, 22, "Sword Fire", SwordFireVisible)
+        Call UI.DrawButton(PanelLeft + 174, 444, 78, 22, "Shield Fire", ShieldFireVisible)
+
+    Else If ProfileIndex = ViewerProfiles.PROFILE_ORIN Then
+
+        Call UI.DrawButton(PanelLeft + 94, 444, 158, 22, StormStyleLabel, True)
+        Call UI.DrawButton(PanelLeft + 12, 470, 128, 20, StormComfortLabel, True)
+        Call UI.DrawButton(PanelLeft + 144, 470, 108, 20,
+            LightningPlaybackLabel, LightningPaused)
+
+    Else If ProfileIndex = ViewerProfiles.PROFILE_DRAGON Then
+
+        Call UI.DrawButton(PanelLeft + 94, 444, 76, 22, "Head Aim", DragonHeadTracking)
+
+        If DragonTargetsArin Then
+            Call UI.DrawButton(PanelLeft + 174, 444, 78, 22, "At Arin", True)
+        Else
+
+            Call UI.DrawButton(PanelLeft + 174, 444, 78, 22, "At Orin", True)
+        End If
+
+    End If
+
+    If SwordFireReady And ProfileIndex = ViewerProfiles.PROFILE_ARIN Then
+        Call UI.DrawButton(PanelLeft + 12, 470, 128, 20,
+            FlamePlaybackLabel, FlamePlaying)
+        Call UI.DrawButton(PanelLeft + 144, 470, 108, 20,
+            ShieldFireStyleLabel, Not ShieldFlameStyle)
+    End If
+
+End Sub
+
+Public Sub DrawAnimationDetails(
+    PanelLeft As Number,
+    WindowHeight As Number,
+    ClipDuration As Number,
+    ClipSampleRate As Number,
+    ClipSampleCount As Number,
+    ClipEventCount As Number,
+    ModelClipCount As Number,
+    ModelSocketCount As Number,
+    ModelEventCount As Number
+)
+
+    Dim PanelText As Number
+
+    If WindowHeight < ANIMATION_DETAILS_MINIMUM_HEIGHT Then
+        Return
+    End If
+
+    PanelText = PanelLeft + 16
+
+    Draw Text "Clip ms / Rate / Samples / Events" At PanelText, ANIMATION_DETAILS_Y Size 11 Color LIGHT_GRAY
+    Draw Number ClipDuration At PanelText, ANIMATION_DETAILS_Y + 20 Size 11 Color WHITE
+    Draw Number ClipSampleRate At PanelText + 58, ANIMATION_DETAILS_Y + 20 Size 11 Color CYAN
+    Draw Number ClipSampleCount At PanelText + 104, ANIMATION_DETAILS_Y + 20 Size 11 Color WHITE
+    Draw Number ClipEventCount At PanelText + 166, ANIMATION_DETAILS_Y + 20 Size 11 Color YELLOW
+    Draw Text "Model clips / sockets / events" At PanelText, ANIMATION_DETAILS_Y + 42 Size 11 Color LIGHT_GRAY
+    Draw Number ModelClipCount At PanelText, ANIMATION_DETAILS_Y + 62 Size 11 Color WHITE
+    Draw Number ModelSocketCount At PanelText + 58, ANIMATION_DETAILS_Y + 62 Size 11 Color CYAN
+    Draw Number ModelEventCount At PanelText + 116, ANIMATION_DETAILS_Y + 62 Size 11 Color YELLOW
+
+End Sub
+
+Public Sub DrawViewControls(WindowWidth As Number, WindowHeight As Number,
+    FitLocked As Boolean)
+
+    Dim PanelLeft As Number
+
+    PanelLeft = StatusPanelX(WindowWidth)
+
+    Call UI.DrawButton(PanelLeft + 12, WindowHeight - 64, 52, 24, "VIEW", False)
+    Call UI.DrawButton(PanelLeft + 68, WindowHeight - 64, 74, 24, "PRESENT", False)
+    Call UI.DrawButton(PanelLeft + 146, WindowHeight - 64, 40, 24, "ALL", False)
+    Call UI.DrawButton(PanelLeft + 190, WindowHeight - 64, 50, 24, "FIT", FitLocked)
+
+End Sub
+
+Public Sub DrawFooterMessage(WindowWidth As Number, WindowHeight As Number,
+    CalibrationAvailable As Boolean, TransferMessage As Text)
+
+    If (CalibrationAvailable And
+        Text_Width(TransferMessage, 9) >
+            TimelineWidth(WindowWidth, TIMELINE_LEFT) - CALIBRATION_TRANSFER_TEXT_OFFSET) Then
+        Draw Text TransferMessage At TIMELINE_LEFT, WindowHeight - 22 Size 9 Color CYAN
+    Else
+        Draw Text "LMB pan  •  MMB orbit  •  Wheel zoom  •  Space pause  •  RMB reset  •  D dragon  •  W sword  •  S shield" At 16, WindowHeight - 22 Size 11 Color LIGHT_GRAY
+    End If
+
+End Sub
+
+Public Sub DrawPauseStatus(PanelLeft As Number, CalibrationEditing As Boolean,
+    ScenePaused As Boolean, CharacterSwitchBlocked As Boolean, PartyEnabled As Boolean)
+
+    If (CalibrationEditing Or
+        ScenePaused Or
+        CharacterSwitchBlocked) Then
+        Fill Rectangle 18, 40, Max(0, PanelLeft - 24), 18, Rgb(4, 9, 24)
+    End If
+
+    If CharacterSwitchBlocked Then
+
+        Draw Text "Save Or Cancel The Pose Before Switching" At 18, 42 Size 12 Color YELLOW
+
+    Else If CalibrationEditing Then
+
+        If PartyEnabled Then
+            Draw Text "Pose Edit Active - Save Or Cancel Before Resuming" At 18, 42 Size 12 Color YELLOW
+        Else If ScenePaused Then
+            Draw Text "Pose Edit Active - Space To Resume" At 18, 42 Size 12 Color YELLOW
+        Else
+            Draw Text "Pose Edit Active - Space To Pause Movement" At 18, 42 Size 12 Color YELLOW
+        End If
+
+    Else If ScenePaused Then
+
+        Draw Text "Paused - Space To Resume; Camera Controls Remain Active" At 18, 42 Size 12 Color YELLOW
+
+    End If
+
+End Sub
+
+Public Sub DrawRecoveryOverlay(Visibility As Number, ViewerError As Boolean,
+    FirstViewerError As Number, FirstRendererError As Number,
+    FirstFailureStage As Number)
+
+    If Visibility <> 0 Or Not ViewerError Then
+        Return
+    End If
+
+    Fill Rectangle 120, 142, 580, 210, Rgb(56, 8, 18) Opacity 80
+    Draw Text "CHARACTER VIEWER RECOVERY" At 148, 166 Size 22 Color WHITE
+    Draw Text "The 3D renderer or character resource became unavailable." At 148, 204 Size 14 Color LIGHT_GRAY
+    Draw Text "Viewer error" At 148, 238 Size 13 Color LIGHT_GRAY
+    Draw Number FirstViewerError At 270, 238 Size 13 Color YELLOW
+    Draw Text "Renderer error" At 348, 238 Size 13 Color LIGHT_GRAY
+    Draw Number FirstRendererError At 486, 238 Size 13 Color YELLOW
+    Draw Text "Failure stage" At 148, 270 Size 13 Color LIGHT_GRAY
+    Draw Number FirstFailureStage At 270, 270 Size 13 Color YELLOW
+    Draw Text "Press Enter or click Reset to reload the profile safely." At 148, 310 Size 14 Color CYAN
+
+End Sub
 
 Public Sub DrawCharacterStatusSummary(
     PanelLeft As Number,
