@@ -43,6 +43,30 @@ Public Const CALIBRATION_AXIS_Y = 1
 Public Const CALIBRATION_AXIS_Z = 2
 Public Const CALIBRATION_TRANSFORM_ROTATE = 0
 Public Const CALIBRATION_TRANSFORM_MOVE = 1
+Public Const CALIBRATION_ACTION_NONE = 0
+Public Const CALIBRATION_ACTION_PREVIOUS_KEY = 1
+Public Const CALIBRATION_ACTION_NEXT_KEY = 2
+Public Const CALIBRATION_ACTION_WEAPON_WRIST = 3
+Public Const CALIBRATION_ACTION_SHIELD_WRIST = 4
+Public Const CALIBRATION_ACTION_WEAPON = 5
+Public Const CALIBRATION_ACTION_SHIELD = 6
+Public Const CALIBRATION_ACTION_AXIS_X = 7
+Public Const CALIBRATION_ACTION_AXIS_Y = 8
+Public Const CALIBRATION_ACTION_AXIS_Z = 9
+Public Const CALIBRATION_ACTION_ROTATE = 10
+Public Const CALIBRATION_ACTION_MOVE = 11
+Public Const CALIBRATION_ACTION_RESET = 12
+Public Const CALIBRATION_ACTION_SAVE = 13
+Public Const CALIBRATION_ACTION_CANCEL = 14
+Public Const CALIBRATION_ACTION_CLEAR = 15
+Public Const CALIBRATION_ACTION_COPY = 16
+Public Const CALIBRATION_ACTION_PASTE = 17
+Public Const CALIBRATION_ACTION_DELETE = 18
+Public Const CALIBRATION_ACTION_RELOAD = 19
+Public Const CALIBRATION_ACTION_HOLD_GRIP = 20
+Public Const CALIBRATION_ACTION_UNDO = 21
+Public Const CALIBRATION_ACTION_DECOUPLE_WEAPON = 22
+Public Const CALIBRATION_ACTION_DECOUPLE_SHIELD = 23
 
 Private Const MINIMUM_VIEWER_WIDTH = 800
 Private Const MINIMUM_VIEWER_HEIGHT = 540
@@ -422,6 +446,103 @@ Public Function LayoutTooSmall(WindowWidth As Number, WindowHeight As Number) As
 
 End Function
 
+Public Function CalibrationPointerAction(PointerX As Number, PointerY As Number,
+    PrimaryPressed As Boolean, Target As Number) As Number
+
+    Dim Result As Number
+
+    If Not PrimaryPressed Then
+        Return Result
+    End If
+
+    If InRectangle(PointerX, PointerY, 292, 96, 68, 22) Then
+        Result = CALIBRATION_ACTION_PREVIOUS_KEY
+    Else If InRectangle(PointerX, PointerY, 364, 96, 68, 22) Then
+        Result = CALIBRATION_ACTION_NEXT_KEY
+    Else If InRectangle(PointerX, PointerY, 34, 128, 92, 24) Then
+        Result = CALIBRATION_ACTION_WEAPON_WRIST
+    Else If InRectangle(PointerX, PointerY, 130, 128, 96, 24) Then
+        Result = CALIBRATION_ACTION_SHIELD_WRIST
+    Else If InRectangle(PointerX, PointerY, 230, 128, 76, 24) Then
+        Result = CALIBRATION_ACTION_WEAPON
+    Else If InRectangle(PointerX, PointerY, 310, 128, 76, 24) Then
+        Result = CALIBRATION_ACTION_SHIELD
+    Else If InRectangle(PointerX, PointerY, 34, 158, 48, 24) Then
+        Result = CALIBRATION_ACTION_AXIS_X
+    Else If InRectangle(PointerX, PointerY, 86, 158, 48, 24) Then
+        Result = CALIBRATION_ACTION_AXIS_Y
+    Else If InRectangle(PointerX, PointerY, 138, 158, 48, 24) Then
+        Result = CALIBRATION_ACTION_AXIS_Z
+    Else If InRectangle(PointerX, PointerY, 202, 158, 72, 24) Then
+        Result = CALIBRATION_ACTION_ROTATE
+    Else If (InRectangle(PointerX, PointerY, 278, 158, 72, 24) And
+        Target >= CALIBRATION_TARGET_SWORD) Then
+        Result = CALIBRATION_ACTION_MOVE
+    Else If InRectangle(PointerX, PointerY, 354, 158, 78, 24) Then
+        Result = CALIBRATION_ACTION_RESET
+    Else If InRectangle(PointerX, PointerY, 332, 412, 100, 24) Then
+        Result = CALIBRATION_ACTION_SAVE
+    Else If InRectangle(PointerX, PointerY, 244, 412, 84, 24) Then
+        Result = CALIBRATION_ACTION_CANCEL
+    Else If InRectangle(PointerX, PointerY, 34, 412, 196, 24) Then
+        Result = CALIBRATION_ACTION_CLEAR
+    Else If InRectangle(PointerX, PointerY, 34, 268, 80, 24) Then
+        Result = CALIBRATION_ACTION_COPY
+    Else If InRectangle(PointerX, PointerY, 118, 268, 80, 24) Then
+        Result = CALIBRATION_ACTION_PASTE
+    Else If InRectangle(PointerX, PointerY, 202, 268, 90, 24) Then
+        Result = CALIBRATION_ACTION_DELETE
+    Else If InRectangle(PointerX, PointerY, 34, 298, 100, 24) Then
+        Result = CALIBRATION_ACTION_RELOAD
+    Else If InRectangle(PointerX, PointerY, 140, 298, 100, 24) Then
+        Result = CALIBRATION_ACTION_HOLD_GRIP
+    Else If InRectangle(PointerX, PointerY, 246, 298, 186, 24) Then
+        Result = CALIBRATION_ACTION_UNDO
+    Else If InRectangle(PointerX, PointerY, 34, 374, 194, 24) Then
+        Result = CALIBRATION_ACTION_DECOUPLE_WEAPON
+    Else If InRectangle(PointerX, PointerY, 236, 374, 196, 24) Then
+        Result = CALIBRATION_ACTION_DECOUPLE_SHIELD
+    End If
+
+    Return Result
+
+End Function
+
+Public Function ApplyCalibrationSelection(ByRef Value As State,
+    Action As Number) As Boolean
+
+    Dim Result As Boolean
+
+    Result = True
+
+    If Action = CALIBRATION_ACTION_WEAPON_WRIST Then
+        Value.CalibrationTarget = CALIBRATION_TARGET_SWORD_WRIST
+        Value.CalibrationTransform = CALIBRATION_TRANSFORM_ROTATE
+    Else If Action = CALIBRATION_ACTION_SHIELD_WRIST Then
+        Value.CalibrationTarget = CALIBRATION_TARGET_SHIELD_WRIST
+        Value.CalibrationTransform = CALIBRATION_TRANSFORM_ROTATE
+    Else If Action = CALIBRATION_ACTION_WEAPON Then
+        Value.CalibrationTarget = CALIBRATION_TARGET_SWORD
+    Else If Action = CALIBRATION_ACTION_SHIELD Then
+        Value.CalibrationTarget = CALIBRATION_TARGET_SHIELD
+    Else If Action = CALIBRATION_ACTION_AXIS_X Then
+        Value.CalibrationAxis = CALIBRATION_AXIS_X
+    Else If Action = CALIBRATION_ACTION_AXIS_Y Then
+        Value.CalibrationAxis = CALIBRATION_AXIS_Y
+    Else If Action = CALIBRATION_ACTION_AXIS_Z Then
+        Value.CalibrationAxis = CALIBRATION_AXIS_Z
+    Else If Action = CALIBRATION_ACTION_ROTATE Then
+        Value.CalibrationTransform = CALIBRATION_TRANSFORM_ROTATE
+    Else If Action = CALIBRATION_ACTION_MOVE Then
+        Value.CalibrationTransform = CALIBRATION_TRANSFORM_MOVE
+    Else
+        Result = False
+    End If
+
+    Return Result
+
+End Function
+
 Public Sub DrawCharacterStatusSummary(
     PanelLeft As Number,
     DisplayName As Text,
@@ -790,5 +911,17 @@ Private Sub DrawCameraSlider(PanelLeft As Number, Label As Text, Y As Number,
     Draw Number Value At PanelLeft + 226, Y + 2 Size 10 Color CYAN
 
 End Sub
+
+Private Function InRectangle(PointerX As Number, PointerY As Number,
+    X As Number, Y As Number, Width As Number, Height As Number) As Boolean
+
+    Dim Result As Boolean
+
+    Result = PointerX >= X And PointerX < X + Width
+    Result = Result And PointerY >= Y And PointerY < Y + Height
+
+    Return Result
+
+End Function
 
 End Module

@@ -209,6 +209,8 @@ try {
         'Public Function GlowButtonX(',
         'Public Function TimelineWidth(',
         'Public Function LayoutTooSmall(',
+        'Public Function CalibrationPointerAction(',
+        'Public Function ApplyCalibrationSelection(',
         'Public Sub DrawCharacterStatusSummary(',
         'Public Sub DrawCameraControls(',
         'Public Sub DrawAnimationButtons(',
@@ -256,6 +258,10 @@ try {
         -not $viewerSource.Contains('Const CALIBRATION_TARGET_SWORD =') -and
         -not $viewerSource.Contains('Const CALIBRATION_TRANSFORM_MOVE =')) `
         'Calibration and timeline geometry and selection constants must remain in ViewerUi.'
+    Assert-True (-not $viewerSource.Contains('If PointerInRectangle(292, 96, 68, 22)') -and
+        -not $viewerSource.Contains('Else If PointerInRectangle(34, 128, 92, 24)') -and
+        -not $viewerSource.Contains('Else If PointerInRectangle(34, 374, 194, 24)')) `
+        'Calibration panel pointer classification must remain in ViewerUi.'
     foreach ($contract in @(
         'Public Sub BeginDrag(',
         'Public Sub FinishDrag(',

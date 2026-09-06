@@ -314,6 +314,18 @@ Call Check(ViewerUi.CALIBRATION_PANEL_WIDTH = 430 And
     ViewerUi.CALIBRATION_SLIDER_WIDTH = 360)
 Call Check(ViewerUi.LayoutTooSmall(799, 640))
 Call Check(Not ViewerUi.LayoutTooSmall(800, 540))
+Call Check(ViewerUi.CalibrationPointerAction(293, 97, True, 0) =
+    ViewerUi.CALIBRATION_ACTION_PREVIOUS_KEY)
+Call Check(ViewerUi.CalibrationPointerAction(279, 159, True, 0) =
+    ViewerUi.CALIBRATION_ACTION_NONE)
+Call Check(ViewerUi.CalibrationPointerAction(279, 159, True, 2) =
+    ViewerUi.CALIBRATION_ACTION_MOVE)
+Call Check(ViewerUi.ApplyCalibrationSelection(
+    UiState, ViewerUi.CALIBRATION_ACTION_WEAPON))
+Call Check(UiState.CalibrationTarget = ViewerUi.CALIBRATION_TARGET_SWORD)
+Call Check(ViewerUi.ApplyCalibrationSelection(
+    UiState, ViewerUi.CALIBRATION_ACTION_AXIS_Z))
+Call Check(UiState.CalibrationAxis = ViewerUi.CALIBRATION_AXIS_Z)
 
 Call ViewerUi.DrawCharacterStatusSummary(
     500, "Arin", "Paladin", "Idle", "v5.7", 100,

@@ -2274,72 +2274,47 @@ End Function
 
 Sub HandleCalibrationPanelPointer()
 
-    If Not Pointer_Pressed(POINTER_PRIMARY) Then
+    Dim Action As Number
+
+    Action = ViewerUi.CalibrationPointerAction(
+        Pointer_X(),
+        Pointer_Y(),
+        Pointer_Pressed(POINTER_PRIMARY),
+        ViewerUiState.CalibrationTarget
+    )
+
+    If ViewerUi.ApplyCalibrationSelection(ViewerUiState, Action) Then
+
+        If (Action = ViewerUi.CALIBRATION_ACTION_WEAPON Or
+            Action = ViewerUi.CALIBRATION_ACTION_SHIELD) Then
+            ViewerGizmoState.GripAnchorActive = False
+        End If
+
         Return
+
     End If
 
-    If PointerInRectangle(292, 96, 68, 22) Then
+    If Action = ViewerUi.CALIBRATION_ACTION_PREVIOUS_KEY Then
 
         Call SeekCalibrationKeyframe(-1)
 
-    Else If PointerInRectangle(364, 96, 68, 22) Then
+    Else If Action = ViewerUi.CALIBRATION_ACTION_NEXT_KEY Then
 
         Call SeekCalibrationKeyframe(1)
 
-    Else If PointerInRectangle(34, 128, 92, 24) Then
-
-        ViewerUiState.CalibrationTarget = ViewerUi.CALIBRATION_TARGET_SWORD_WRIST
-        ViewerUiState.CalibrationTransform = ViewerUi.CALIBRATION_TRANSFORM_ROTATE
-
-    Else If PointerInRectangle(130, 128, 96, 24) Then
-
-        ViewerUiState.CalibrationTarget = ViewerUi.CALIBRATION_TARGET_SHIELD_WRIST
-        ViewerUiState.CalibrationTransform = ViewerUi.CALIBRATION_TRANSFORM_ROTATE
-
-    Else If PointerInRectangle(230, 128, 76, 24) Then
-
-        ViewerUiState.CalibrationTarget = ViewerUi.CALIBRATION_TARGET_SWORD
-        ViewerGizmoState.GripAnchorActive = False
-
-    Else If PointerInRectangle(310, 128, 76, 24) Then
-
-        ViewerUiState.CalibrationTarget = ViewerUi.CALIBRATION_TARGET_SHIELD
-        ViewerGizmoState.GripAnchorActive = False
-
-    Else If PointerInRectangle(34, 158, 48, 24) Then
-
-        ViewerUiState.CalibrationAxis = ViewerUi.CALIBRATION_AXIS_X
-
-    Else If PointerInRectangle(86, 158, 48, 24) Then
-
-        ViewerUiState.CalibrationAxis = ViewerUi.CALIBRATION_AXIS_Y
-
-    Else If PointerInRectangle(138, 158, 48, 24) Then
-
-        ViewerUiState.CalibrationAxis = ViewerUi.CALIBRATION_AXIS_Z
-
-    Else If PointerInRectangle(202, 158, 72, 24) Then
-
-        ViewerUiState.CalibrationTransform = ViewerUi.CALIBRATION_TRANSFORM_ROTATE
-
-    Else If (PointerInRectangle(278, 158, 72, 24) And
-        ViewerUiState.CalibrationTarget >= ViewerUi.CALIBRATION_TARGET_SWORD) Then
-
-        ViewerUiState.CalibrationTransform = ViewerUi.CALIBRATION_TRANSFORM_MOVE
-
-    Else If PointerInRectangle(354, 158, 78, 24) Then
+    Else If Action = ViewerUi.CALIBRATION_ACTION_RESET Then
 
         Call ResetCalibrationTarget()
 
-    Else If PointerInRectangle(332, 412, 100, 24) Then
+    Else If Action = ViewerUi.CALIBRATION_ACTION_SAVE Then
 
         Call SaveCalibrationFrame()
 
-    Else If PointerInRectangle(244, 412, 84, 24) Then
+    Else If Action = ViewerUi.CALIBRATION_ACTION_CANCEL Then
 
         Call CancelCalibrationEdit()
 
-    Else If PointerInRectangle(34, 412, 196, 24) Then
+    Else If Action = ViewerUi.CALIBRATION_ACTION_CLEAR Then
 
         If ViewerUiState.CalibrationClearConfirm Then
             Call ClearSelectedClipCalibration()
@@ -2348,51 +2323,57 @@ Sub HandleCalibrationPanelPointer()
             Call ViewerUi.BeginClearConfirmation(ViewerUiState)
         End If
 
-    Else If PointerInRectangle(34, 268, 80, 24) Then
+    Else If Action = ViewerUi.CALIBRATION_ACTION_COPY Then
 
         If Not ViewerUiState.CalibrationEditing Then
             Call CopyCurrentCalibrationKeyframe()
         End If
 
-    Else If PointerInRectangle(118, 268, 80, 24) Then
+    Else If Action = ViewerUi.CALIBRATION_ACTION_PASTE Then
 
         If Not ViewerUiState.CalibrationEditing Then
             Call PasteCalibrationKeyframe()
         End If
 
-    Else If PointerInRectangle(202, 268, 90, 24) Then
+    Else If Action = ViewerUi.CALIBRATION_ACTION_DELETE Then
 
         If Not ViewerUiState.CalibrationEditing Then
             Call DeleteCurrentCalibrationKeyframe()
         End If
 
-    Else If PointerInRectangle(34, 298, 100, 24) Then
+    Else If Action = ViewerUi.CALIBRATION_ACTION_RELOAD Then
 
         Call ReloadCurrentCalibrationKeyframe()
 
-    Else If PointerInRectangle(140, 298, 100, 24) Then
+    Else If Action = ViewerUi.CALIBRATION_ACTION_HOLD_GRIP Then
 
         ViewerGizmoState.HoldGrip = Not ViewerGizmoState.HoldGrip
 
-    Call ViewerEffects.InvalidateVisualHistory(Effects)
+        Call ViewerEffects.InvalidateVisualHistory(Effects)
 
         ViewerGizmoState.GripAnchorActive = False
 
-    Else If PointerInRectangle(246, 298, 186, 24) Then
+    Else If Action = ViewerUi.CALIBRATION_ACTION_UNDO Then
 
         Call UndoLastCalibrationChange()
 
-    Else If PointerInRectangle(34, 374, 194, 24) Then
+    Else If Action = ViewerUi.CALIBRATION_ACTION_DECOUPLE_WEAPON Then
 
         Call BeginCalibrationEdit()
+        Call SetCalibrationChannelValue(
+            Playback.SelectedClip,
+            18,
+            1 - CalibrationChannelValue(Playback.SelectedClip, 18)
+        )
 
-        Call SetCalibrationChannelValue(Playback.SelectedClip, 18, 1 - CalibrationChannelValue(Playback.SelectedClip, 18))
-
-    Else If PointerInRectangle(236, 374, 196, 24) Then
+    Else If Action = ViewerUi.CALIBRATION_ACTION_DECOUPLE_SHIELD Then
 
         Call BeginCalibrationEdit()
-
-        Call SetCalibrationChannelValue(Playback.SelectedClip, 19, 1 - CalibrationChannelValue(Playback.SelectedClip, 19))
+        Call SetCalibrationChannelValue(
+            Playback.SelectedClip,
+            19,
+            1 - CalibrationChannelValue(Playback.SelectedClip, 19)
+        )
 
     End If
 
