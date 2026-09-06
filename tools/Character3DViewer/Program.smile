@@ -3394,7 +3394,7 @@ End Sub
 
 Sub BeginPartyInspector()
 
-    Dim Index As Number
+    Dim Binding As ViewerParty.InspectorBindingResult
     Dim WasVisible As Boolean
 
     If (Not Party.Enabled Or
@@ -3404,38 +3404,18 @@ Sub BeginPartyInspector()
         Return
     End If
 
-    If Not ViewerParty.BeginInspectorBinding(
+    Binding = ViewerParty.BeginInspectorSelection(
         Party,
         CaptureActorContext(),
-        Party.Turn
-    ) Then
+        Party.Turn,
+        DragonState
+    )
+
+    If Not Binding.Bound Then
         Return
     End If
 
-    If Party.UiTurn = 1 Then
-
-        Call UseActorContext(Party.Companion)
-
-    Else If Party.UiTurn = 2 Then
-
-        Character = DragonState.Actor
-        Session.ProfileIndex = ViewerProfiles.PROFILE_DRAGON
-        ActiveProfile = ViewerProfiles.ProfileAt(Session.ProfileIndex)
-        CalibrationAvailable = False
-        Effects.EpicGlowAvailable = False
-        SwordWristNode = -1
-        ShieldWristNode = -1
-        Playback.SelectedClip = 0
-
-        For Index = 0 To Character3D.ClipCount(Character) - 1
-
-            If Character3D.ClipName(Character, Index) = DragonState.Clip Then
-                Playback.SelectedClip = Index
-            End If
-
-        End For
-
-    End If
+    Call UseActorContext(Binding.Context)
 
     If Calibration.OwnerProfile <> Session.ProfileIndex Then
 
@@ -3459,21 +3439,11 @@ Sub EndPartyInspector()
         Return
     End If
 
-    If Party.UiTurn = 1 Then
-        Party.Companion = CaptureActorContext()
-
-        Call UseActorContext(Party.UiPrimary)
-    Else If Party.UiTurn = 2 Then
-        Call ViewerDragon.CaptureInspectedActor(
-            DragonState,
-            Character,
-            ViewerPlayback.SelectedClipName(Character, Playback)
-        )
-
-        Call UseActorContext(Party.UiPrimary)
-    End If
-
-    Call ViewerParty.EndInspectorBinding(Party)
+    Call UseActorContext(ViewerParty.EndInspectorSelection(
+        Party,
+        CaptureActorContext(),
+        DragonState
+    ))
 
 End Sub
 

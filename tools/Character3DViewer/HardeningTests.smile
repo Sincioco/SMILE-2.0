@@ -91,6 +91,7 @@ Dim UiState As ViewerUi.State
 Dim GizmoState As ViewerGizmo.State
 Dim PartyState As ViewerParty.State
 Dim PartyParticipantUpdate As ViewerParty.ParticipantUpdateResult
+Dim PartyInspectorBinding As ViewerParty.InspectorBindingResult
 Dim PartyPrimary As ViewerActors.Context
 Dim PartyActions As ViewerParty.FrameActions
 Dim EmptyPartyActions As ViewerParty.FrameActions
@@ -593,6 +594,33 @@ Call Check(ViewerParty.PresentationState(PartyState, 0) = ViewerParty.STATE_GUAR
 Call Check(Not ViewerParty.BeginInspectorBinding(PartyState, PartyPrimary, 0))
 Call ViewerParty.EndInspectorBinding(PartyState)
 Call Check(Not PartyState.UiBound And PartyState.UiPrimary.Profile = 7)
+
+PartyState.Companion = PartyPrimary
+PartyInspectorBinding = ViewerParty.BeginInspectorSelection(
+    PartyState, PartyPrimary, 1, DragonState)
+
+Call Check(PartyInspectorBinding.Bound)
+Call Check(PartyInspectorBinding.Context.Profile = 7)
+
+PartyInspectorBinding.Context.Profile = 8
+PartyPrimary = ViewerParty.EndInspectorSelection(
+    PartyState, PartyInspectorBinding.Context, DragonState)
+
+Call Check(PartyState.Companion.Profile = 8)
+Call Check(PartyPrimary.Profile = 7 And Not PartyState.UiBound)
+
+DragonState.Clip = "Idle"
+PartyInspectorBinding = ViewerParty.BeginInspectorSelection(
+    PartyState, PartyPrimary, 2, DragonState)
+
+Call Check(PartyInspectorBinding.Bound)
+Call Check(PartyInspectorBinding.Context.Profile = ViewerProfiles.PROFILE_DRAGON)
+Call Check(Not PartyInspectorBinding.Context.CalibrationAvailable)
+Call Check(PartyInspectorBinding.Context.WeaponWrist = -1 And
+    PartyInspectorBinding.Context.ShieldWrist = -1)
+
+Call ViewerParty.EndInspectorBinding(PartyState)
+
 Call ViewerParty.SetPresentationState(PartyState, 1, ViewerParty.STATE_KO)
 Call Check(ViewerParty.PresentationState(PartyState, 1) = ViewerParty.STATE_KO)
 Call Check(ViewerParty.PresentationStateName(ViewerParty.STATE_REVIVING) = "Reviving")

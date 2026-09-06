@@ -392,6 +392,8 @@ try {
         'Public Sub ResetChoreography(',
         'Public Function ResetDemo(',
         'Public Function BeginInspectorBinding(',
+        'Public Function BeginInspectorSelection(',
+        'Public Function EndInspectorSelection(',
         'Public Sub BeginPreview(',
         'Public Function RestorePreview(',
         'Public Sub InitializeFormation(',
@@ -533,6 +535,11 @@ try {
         -not $viewerSource.Contains('ViewerDragon.DesiredClip(') -and
         -not $viewerSource.Contains('ViewerDragon.Update(')) `
         'Party Dragon target, reaction and presentation update behavior must remain in ViewerParty.'
+    Assert-True (-not $viewerSource.Contains('Character = DragonState.Actor') -and
+        -not $viewerSource.Contains('Party.Companion = CaptureActorContext()') -and
+        -not $viewerSource.Contains('ViewerDragon.CaptureInspectedActor(') -and
+        -not $viewerSource.Contains('ViewerParty.BeginInspectorBinding(')) `
+        'Party inspector target selection and participant capture must remain in ViewerParty.'
     Assert-True (-not $viewerSource.Contains('Function ValidateLoadedProfile(') -and
         -not $viewerSource.Contains('Function ViewerFloorWidth(') -and
         -not $viewerSource.Contains('Function ViewerFloorDepth(') -and

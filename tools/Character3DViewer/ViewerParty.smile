@@ -119,6 +119,11 @@ Public Type ParticipantUpdateResult
     FailureStage As Number
 End Type
 
+Public Type InspectorBindingResult
+    Bound As Boolean
+    Context As ViewerActors.Context
+End Type
+
 Public Sub ResetChoreography(ByRef Value As State)
 
     Value.Elapsed = 0
@@ -268,6 +273,79 @@ Public Sub EndInspectorBinding(ByRef Value As State)
     Value.UiBound = False
 
 End Sub
+
+Public Function BeginInspectorSelection(ByRef Value As State,
+    Primary As ViewerActors.Context, PartyTurn As Number,
+    ByRef Dragon As ViewerDragon.State) As InspectorBindingResult
+
+    Dim Index As Number
+    Dim Result As InspectorBindingResult
+
+    Result.Context = Primary
+    Result.Bound = BeginInspectorBinding(Value, Primary, PartyTurn)
+
+    If Not Result.Bound Then
+        Return Result
+    End If
+
+    If Value.UiTurn = 1 Then
+
+        Result.Context = Value.Companion
+
+    Else If Value.UiTurn = 2 Then
+
+        Result.Context.Actor = Dragon.Actor
+        Result.Context.Profile = ViewerProfiles.PROFILE_DRAGON
+        Result.Context.CalibrationAvailable = False
+        Result.Context.GlowAvailable = False
+        Result.Context.WeaponWrist = -1
+        Result.Context.ShieldWrist = -1
+        Result.Context.Clip = 0
+        Result.Context.Ready = Character3D.IsValid(Dragon.Actor)
+
+        For Index = 0 To Character3D.ClipCount(Dragon.Actor) - 1
+
+            If Character3D.ClipName(Dragon.Actor, Index) = Dragon.Clip Then
+                Result.Context.Clip = Index
+            End If
+
+        End For
+
+    End If
+
+    Return Result
+
+End Function
+
+Public Function EndInspectorSelection(ByRef Value As State,
+    Current As ViewerActors.Context,
+    ByRef Dragon As ViewerDragon.State) As ViewerActors.Context
+
+    Dim Result As ViewerActors.Context
+
+    Result = Current
+
+    If Not Value.UiBound Then
+        Return Result
+    End If
+
+    If Value.UiTurn = 1 Then
+        Value.Companion = Current
+    Else If Value.UiTurn = 2 Then
+        Call ViewerDragon.CaptureInspectedActor(
+            Dragon,
+            Current.Actor,
+            Character3D.ClipName(Current.Actor, Current.Clip)
+        )
+    End If
+
+    Result = Value.UiPrimary
+
+    Call EndInspectorBinding(Value)
+
+    Return Result
+
+End Function
 
 Public Sub CapturePreview(ByRef Value As State, Clip As Number, Time As Number,
     Mode As Number)
