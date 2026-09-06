@@ -7,6 +7,22 @@
   "executionStartSha": "902a7022c895bf97010d979ea578fc5361cdcbf4",
   "issues": [
     {
+      "id": "W21",
+      "title": "Context loss becomes a fatal Web shader compilation error",
+      "classification": "actual-browser-reproduction",
+      "mandatory": true,
+      "baseline": "c4379a7175c25c957dfe65a9f616b9649eb35029",
+      "status": "FIXED-VERIFIED",
+      "phase": "W6",
+      "gateCheck": "G08",
+      "sourceRefs": ["src/Smile.Compiler/WebOutputWriter.cs:renderer3DContext"],
+      "reproduction": "Real WEBGL_lose_context on the live Viewer caused GPU-particle recreation to compile against the lost context and permanently stop the program.",
+      "rootCause": "The context accessor accepted a lost WebGL object, including before the queued DOM loss event.",
+      "fixCommit": null,
+      "evidenceIds": ["docs/implementation/h6-1-hardening-and-web-parity-ledger.md"],
+      "dispositionRationale": "Lost-context accessor now returns renderer-unavailable until restoration. Old generated runtime fails the new focused test; current normal and fallback GPU/VFX tests pass. Actual fresh Chrome Viewer survives loss and recovers by selecting Arin, then Party; Fire/Lightning automatically resume GPU rendering. Real audio focus and shutdown checks also pass. Current shared runtime, all three Web outputs and rebuilt/installed VSIX hashes are in the ledger. Implementation SHA is the commit introducing this entry, recorded by the following milestone."
+    },
+    {
       "id": "W20",
       "title": "Quick queued Ctrl+Arrow loses its modifier before Viewer consumes it",
       "classification": "actual-browser-reproduction",
@@ -18,8 +34,8 @@
       "sourceRefs": ["src/Smile.NativeRuntime/runtime.c", "src/Smile.Compiler/WebOutputWriter.cs", "tools/Character3DViewer/Program.smile"],
       "reproduction": "Actual Chrome receives the whole chord, but released Control is no longer physically held when Get Key consumes the queued arrow; the Viewer orbits instead of stepping.",
       "rootCause": "Queued event and live physical held-state were sampled at different times.",
-      "fixCommit": null,
-      "evidenceIds": ["docs/implementation/h6-1-hardening-and-web-parity-ledger.md#W20--Queued-modifier-snapshot--2026-09-06"],
+      "fixCommit": "c4379a7175c25c957dfe65a9f616b9649eb35029",
+      "evidenceIds": ["docs/implementation/h6-1-hardening-and-web-parity-ledger.md"],
       "dispositionRationale": "Shared Key_Event_Held snapshot semantics preserve Key_Held. Native real window-procedure fixture and generated-runtime VM release-before-poll/focus tests pass; actual foreground Chrome Ctrl+Right/Left steps 550/583/550 ms without changing H158/V0/zoom-15. Plain arrow still orbits. 300 shared tests, Viewer native/Web hardening, current builds and installed VSIX pass. Native manual chord repetition is not claimed. Implementation commit is the commit introducing this entry; its SHA is recorded by the next milestone."
     },
     {

@@ -361,6 +361,7 @@ internal static class WebOutputWriter
             let pointerPressedButtons = 0;
             let pointerReleasedButtons = 0;
             let renderer3DGl = null;
+            let renderer3DContextLost = false;
             let renderer3DProgram = null;
             let renderer3DPbrProgram = null;
             let renderer3DPbrAttempted = false;
@@ -1088,19 +1089,23 @@ internal static class WebOutputWriter
             }
 
             function renderer3DContext() {
-                if (renderer3DGl) return renderer3DGl;
+                // Context loss can precede its queued DOM event. Never compile against
+                // that invalid driver object or treat it as a permanent shader defect.
+                if (renderer3DContextLost) return null;
+                if (renderer3DGl) return renderer3DGl.isContextLost() ? null : renderer3DGl;
                 let context = null;
                 try {
                     context = renderer3DCanvas.getContext("webgl2", {
                         alpha: false, antialias: true, depth: true, preserveDrawingBuffer: true
                     });
                 } catch (_) { }
-                if (!context || typeof context.createShader !== "function") return null;
+                if (!context || typeof context.createShader !== "function" || context.isContextLost()) return null;
                 renderer3DGl = context;
                 if (!renderer3DContextEvents) {
                     renderer3DContextEvents = true;
                     renderer3DCanvas.addEventListener("webglcontextlost", event => {
                         event.preventDefault();
+                        renderer3DContextLost = true;
                         renderer3DFrameActive = false;
                         renderer3DGl = null;
                         renderer3DProgram = null;
@@ -1167,6 +1172,7 @@ internal static class WebOutputWriter
                         }
                     });
                     renderer3DCanvas.addEventListener("webglcontextrestored", () => {
+                        renderer3DContextLost = false;
                         renderer3DGl = null;
                         renderer3DProgram = null;
                         renderer3DPbrProgram = null;

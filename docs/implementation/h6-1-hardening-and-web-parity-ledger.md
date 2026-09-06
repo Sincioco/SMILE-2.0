@@ -1222,3 +1222,100 @@ This closes the newly discovered queued-shortcut defect, not remaining camera,
 audio/context-loss observations or H6.1 delivery. Existing split normal-smoke
 evidence remains recorded above. No saved calibration key was edited by these
 UI checks; both canonical snapshots must be exported again before commit/push.
+
+Follow-up: shortcut milestone committed and pushed as
+`c4379a7175c25c957dfe65a9f616b9649eb35029`. Sin restored the native Viewer;
+the actual native Hit clip then stepped 0 -> 33 -> 0 ms with Ctrl+Right/Left,
+H234/V0/zoom-15 unchanged. This supersedes the earlier manual-check limitation.
+Sin also answered the requested Desktop/Chrome slow/moderate orbit, pan, wheel
+and pose-ring drag check: **"It seems to be working"**. This is user-reported
+interaction evidence, not an agent timing measurement or full Blender equivalence.
+
+### W21 — Actual context-loss recovery — 2026-09-06
+
+Baseline `c4379a7175c25c957dfe65a9f616b9649eb35029`. A bounded real Chrome
+`WEBGL_lose_context` test exposed shader compilation against a lost driver
+context. Viewer stopped with `Renderer3D WebGL2 shader compilation failed:
+unknown shader error`, in GPU-particle recreation. Restoration could not resume
+the stopped program. This was an actual browser failure, not an expected shader
+fallback and not grounds to mark the existing gate passed.
+
+The shared Web context accessor now rejects a lost context both before its
+queued loss event (`isContextLost`) and until the restoration event. It returns
+normal renderer-unavailable status instead of compiling shaders. Existing
+resource invalidation, scene recovery and post-restoration lazy recreation are
+retained. No native renderer, asset, calibration, combat logic or syntax changes.
+
+Validation:
+
+- Added focused assertions to the existing GPU-particle Web runner: init is
+  rejected before and after the loss event, creates no shaders while lost,
+  and initializes after restoration. Old runtime fails with
+  `Renderer3D accepted a lost context before the browser loss event` in
+  `artifacts/temp/h6-1-context-loss-red.log`.
+- `cmd /c scripts\build.cmd`: PASS, `h6-1-context-build.log`.
+  An initial forward-slash cmd path was rejected before running; corrected.
+- `scripts/test-renderer3d-gpu-particle-webgl2.ps1`: PASS normal plus shader/
+  attribute fallbacks, `h6-1-context-webgl.log`. This is the VM/GL-double layer.
+- `scripts/test-renderer3d-vfx-batches.ps1`: PASS native and generated Web,
+  including 1,024-instance, HDR/direct-LDR and lifecycle checks;
+  `h6-1-context-vfx.log`.
+- Viewer `Build.ps1 -Target Web`: PASS, `h6-1-context-viewer-web.log`.
+  Fire/Lightning `Build.ps1 -Target All`: PASS, logs
+  `h6-1-context-{fire,lightning}-build.log`. Native Viewer code is unchanged and
+  its current executable/manual evidence is retained from c4379a7.
+- Actual Chrome 152 (full version previously recorded as 152.0.7977.77), Windows
+  11, real WebGL2. One fresh visible tab reused for URLs
+  `http://127.0.0.1:8766/h6-1-lifecycle.html`, then ports 8767 and 8768.
+  Outer viewport 1463x814, reported browser DPR about 0.9; runtime clamps DPR to
+  1 and the diagnostic iframe is 1463x595. This reduced-height wrapper is not a
+  normal Viewer layout/quality acceptance screenshot. GL reports WebKit WebGL;
+  that generic renderer string alone is not hardware identification.
+- Viewer: actual lost/restored events, frame counts 937/968/1089 with runtime
+  still running. Recovery overlay reports renderer-unavailable error 20;
+  selecting Arin reloads successfully, then Party renders actors and fire.
+  An automated Enter attempt did not clear the overlay; the tested recovery
+  action is selecting a character, not automatic Viewer recovery. No page reload
+  was needed for that action, and no fatal runtime/shader error remained.
+- Fire: frames 1138/1169/1279, running throughout loss/restoration; resumes
+  automatically with visible fire, High/GPU, 5 systems, 399360 GPU bytes,
+  4 AA samples and error 0. Lightning: frames 498/529/628, running throughout;
+  resumes visible Storm Lance with Ultra, backend 2/GPU. Neither Lab required
+  a page reload. Their captured URL-filtered error/warning lists are empty.
+- Actual Viewer WebAudio: user-activated canvas, paused scene, two real buffer
+  sources on channels 14/15. Active voices 2 -> 0 on actual iframe focus loss ->
+  0 on refocus, starts remain 2 and stops become 2. AudioContext is running.
+  Explicit shutdown then reports stopped, audio context closed, image references,
+  image/cache entries, encoded cache bytes, SFX, input owners and queue all zero.
+  This proves scheduling/cleanup, not speaker audibility. Reload/second launch
+  rendered successfully; normal application/origin saved keys were not edited.
+- The disposable HTML wrapper observes genuine GL/WebAudio calls and exposes
+  visible test buttons; it does not replace GL, audio, runtime or program code.
+  Final source `artifacts/temp/h6-1-lifecycle.html`, SHA256
+  `5E4F7ED7C4F8D7DA8A3FD597E0E96B0D962B55640ECF3CD6859F5E09B8D4C534`.
+  Earlier wrapper snapshots accidentally retained live runtime/event references;
+  fixed by copying snapshot values. Its first external End Program invocation
+  also exposed the normal STOP sentinel as a browser `Object` error; the wrapper
+  now catches that sentinel after confirming Game Closed. Final shutdown counters
+  are from the corrected wrapper. That initial wrapper error is not hidden or
+  attributed to a product shader defect. No screenshot file is claimed.
+- `cmd /c scripts\install-vsix.cmd`: PASS build/install/verification,
+  `h6-1-context-vsix.log`. VSIX 2.0.59, assembly 2.0.59.0, installed folder
+  `C:/Users/louie/AppData/Local/Microsoft/VisualStudio/18.0_91f001b5/Extensions/p3fwicpi.oet`.
+  Installed extension SHA256 `650D729423D51888107CBD910416C6D32000BC76ABA0972001A395E02F3F3C0B`;
+  installed/built compiler SHA256 both `6419287F47B139ED721F325F762995A0A9D0C366E7968DF36D6683EA3C76DDA7`.
+  VSIX SHA256 `54255DD3DE1A2CE06FF2B50DDD288915B61F76C0FED260A74974A7F40B605C6E`.
+- All three generated Web runtime hashes match
+  `9D29DA566A288E75E7876A9B1E0ED6835612D53B1BC9D202839C19EB9B4494AD`.
+  Viewer game.js remains `F6D3BC514807ED8F36B13B62236B8C8AE961B2AA107B96496B11B945460E7C6E`;
+  Fire `2734EFCC1DED65814D51B9CB4D62FA30833DB93ECF8852E025428C1DF035E2BF`;
+  Lightning `6ABFE869C6F709DF6E09C9CB9E57F6C6E952F50ECCC60EA93785195E0A9227B0`.
+- Both canonical snapshots exported again: Arin 24 / Orin 0, hashes unchanged
+  from the preceding milestone. Sin requested closing all accumulated Chrome
+  instances. All were closed without clearing browser data or ending the stream;
+  one fresh test tab was subsequently reused and closed. Final Windows inventory
+  and process check contain no Chrome, and the single native Viewer is visible.
+
+Next: consolidate current issue dispositions, report/matrix/gate and portable
+delivery. Then the separately approved optimized profiles, README rewrite and
+loader/splash work, in that order. E0-E12 and Double remain prohibited.

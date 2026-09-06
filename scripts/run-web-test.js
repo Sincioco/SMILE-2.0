@@ -930,6 +930,8 @@ let renderer3DComposites = 0;
 let renderer3DTransformFeedbackDispatches = 0;
 let renderer3DTransformFeedbackVaryings = [];
 let renderer3DReadbacks = 0;
+let renderer3DContextIsLost = false;
+let renderer3DShaderCreates = 0;
 let renderer3DMsaaColorSamples = [4, 2];
 let renderer3DMsaaDepthSamples = [4, 2];
 let renderer3DMsaaIncomplete = false;
@@ -967,7 +969,8 @@ function contextWebGL2() {
         CLAMP_TO_EDGE: 0x812f, REPEAT: 0x2901, NO_ERROR: 0,
         UNPACK_FLIP_Y_WEBGL: 0x9240, UNPACK_PREMULTIPLY_ALPHA_WEBGL: 0x9241,
         UNPACK_COLORSPACE_CONVERSION_WEBGL: 0x9243,
-        createShader: () => ({}), shaderSource: noop, compileShader: noop,
+        isContextLost: () => renderer3DContextIsLost,
+        createShader: () => { renderer3DShaderCreates++; return {}; }, shaderSource: noop, compileShader: noop,
         getShaderParameter: () => true, getShaderInfoLog: () => "", deleteShader: noop,
         createProgram: () => ({}), attachShader: noop, linkProgram: noop, deleteProgram: noop,
         transformFeedbackVaryings: (_program, varyings) => { renderer3DTransformFeedbackVaryings = [...varyings]; },
@@ -1449,11 +1452,21 @@ const started = Date.now();
                 fail(`Renderer3D WebGL2 transform-feedback varying order was ${JSON.stringify(renderer3DTransformFeedbackVaryings)}`);
             if (renderer3DReadbacks !== 0)
                 fail(`Renderer3D WebGL2 GPU particles performed ${renderer3DReadbacks} GPU readbacks`);
+            renderer3DContextIsLost = true;
+            const shadersBeforeLoss = renderer3DShaderCreates;
+            if (host.smile.renderer3D(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0) !== 0)
+                fail("Renderer3D accepted a lost context before the browser loss event");
             renderer3DCanvasElement.dispatch("webglcontextlost");
+            if (host.smile.renderer3D(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0) !== 0 ||
+                renderer3DShaderCreates !== shadersBeforeLoss)
+                fail("Renderer3D rebuilt shaders while its context was lost");
             const restartCount = host.smile.renderer3D(127, 10, 18, 0, 0, 0, 0, 0, 0, 0, 0);
             if (restartCount < 1)
                 fail("Renderer3D WebGL2 GPU particles did not record context-loss recovery");
+            renderer3DContextIsLost = false;
             renderer3DCanvasElement.dispatch("webglcontextrestored");
+            if (host.smile.renderer3D(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0) !== 1)
+                fail("Renderer3D did not initialize after the real restoration boundary");
         }
         if (verifyNeonCyclesInput && (!drawnText.includes("P1") || !drawnText.includes("P2")))
             fail("Neon Cycles two-player input path did not reach the active HUD");
