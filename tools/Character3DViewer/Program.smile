@@ -216,7 +216,7 @@ Do
                 Session.ProfileIndex,
                 ViewerCameraState.Frame.ScalePercent,
                 Playback.AnimationUpdateElapsed,
-                SelectedClipName(),
+                ViewerPlayback.SelectedClipName(Character, Playback),
                 SwordVisible,
                 ShieldVisible,
                 ViewerCalibration.ChannelValue(
@@ -246,7 +246,8 @@ Do
             ViewerUiState.CalibrationEditing,
             Playback.ScenePaused,
             Playback.SelectedClip,
-            SelectedClipLabel(),
+            ViewerPlayback.SelectedClipLabel(
+                Character, Playback, Session.ProfileIndex),
             ViewerCameraState.Live,
             Timing.CameraElapsed
         )
@@ -764,7 +765,7 @@ Sub UpdateDragon()
     Name = ViewerDragon.DesiredClip(
         DragonState,
         Session.DragonInspection,
-        SelectedClipName(),
+        ViewerPlayback.SelectedClipName(Character, Playback),
         Party.Enabled,
         Playback.ScenePaused,
         Party.Turn,
@@ -828,7 +829,7 @@ Sub UpdateBattleAudio()
     Dim CueTime As Number
     Dim Audible As Boolean
 
-    Name = SelectedClipName()
+    Name = ViewerPlayback.SelectedClipName(Character, Playback)
     CueTime = -1
 
     If Session.ProfileIndex = ViewerProfiles.PROFILE_ARIN Then
@@ -1066,7 +1067,8 @@ Sub HandleInspectorKeyboard(PressedKey As Number)
     Else If PressedKey = KEY_TAB Then
 
         Call SelectPresentationClip(
-            (PresentationIndexForRuntimeClip(Playback.SelectedClip) + 1) Mod
+            (ViewerPlayback.PresentationIndexForRuntimeClip(
+                Character, Session.ProfileIndex, Playback.SelectedClip) + 1) Mod
                 ViewerProfiles.ClipCount(Session.ProfileIndex)
         )
 
@@ -1669,35 +1671,13 @@ End Sub
 
 Sub AdvanceAnimationSequence()
 
-    Dim ClipCount As Number
-    Dim CurrentAnimationTime As Number
-
-    If Not Playback.DemoEnabled Or Party.Enabled Then
+    If Party.Enabled Then
         Return
     End If
 
-    ClipCount = Character3D.ClipCount(Character)
-    CurrentAnimationTime = Character3D.AnimationTime(Character)
-    Playback.AnimationCycleElapsed = Playback.AnimationCycleElapsed + Timing.PresentationElapsed
-
-    If CurrentAnimationTime < Playback.DemoPreviousAnimationTime Then
-        Playback.DemoCompletedLoops = Playback.DemoCompletedLoops + 1
-    End If
-
-    Playback.DemoPreviousAnimationTime = CurrentAnimationTime
-
-    If (Playback.DemoCompletedLoops >= ViewerPlayback.DemoRequiredLoops(
-        Character, Playback.SelectedClip, Playback.PlaybackSpeed,
-        Session.ProfileIndex, ANIMATION_CYCLE_MILLISECONDS) Or
-        (ViewerPlayback.ClipMode(Session.ProfileIndex, SelectedClipName()) =
-        Graphics3D.ANIMATION_ONCE And
-        Playback.AnimationCycleElapsed >= ViewerPlayback.DemoTarget(
-        Session.ProfileIndex, ANIMATION_CYCLE_MILLISECONDS) And
-        CurrentAnimationTime >= Character3D.ClipDuration(Character, Playback.SelectedClip))) Then
-        Playback.SelectedClip = RuntimeClipForPresentationIndex(
-            (PresentationIndexForRuntimeClip(Playback.SelectedClip) + 1) Mod ClipCount
-        )
-
+    If ViewerPlayback.AdvanceDemo(
+        Playback, Character, Session.ProfileIndex,
+        ANIMATION_CYCLE_MILLISECONDS, Timing.PresentationElapsed) Then
         Call PlaySelectedClip(True)
     End If
 
@@ -2449,7 +2429,8 @@ Sub RestartPresentation()
     Call ViewerCamera.StartAutoOrbit(ViewerCameraState)
 
     Playback.AnimationCycleElapsed = 0
-    Playback.SelectedClip = RuntimeClipForPresentationIndex(0)
+    Playback.SelectedClip = ViewerPlayback.RuntimeClipForPresentationIndex(
+        Character, Session.ProfileIndex, 0)
 
     Call PlaySelectedClip()
 
@@ -2542,12 +2523,7 @@ Sub SelectClip(Index As Number)
     Call BeginPartyPreview()
     Call CancelCalibrationEdit()
 
-    Playback.SelectedClip = Index
-    Playback.AnimationCycleElapsed = 0
-
-    If Not Party.Enabled Then
-        Playback.DemoEnabled = False
-    End If
+    Call ViewerPlayback.SelectClip(Playback, Index, Party.Enabled)
 
     ViewerUiState.CalibrationClearConfirm = False
     ViewerUiState.CalibrationClearAllStage = 0
@@ -2560,7 +2536,8 @@ Sub SelectPresentationClip(Index As Number)
 
     Dim RuntimeClip As Number
 
-    RuntimeClip = RuntimeClipForPresentationIndex(Index)
+    RuntimeClip = ViewerPlayback.RuntimeClipForPresentationIndex(
+        Character, Session.ProfileIndex, Index)
 
     If RuntimeClip >= 0 Then
         Call SelectClip(RuntimeClip)
@@ -2568,68 +2545,13 @@ Sub SelectPresentationClip(Index As Number)
 
 End Sub
 
-Function RuntimeClipForPresentationIndex(Index As Number) As Number
-
-    Dim ClipIndex As Number
-    Dim DesiredName As Text
-    Dim Result As Number
-
-    Result = -1
-
-    If Index < 0 Or Index >= ViewerProfiles.ClipCount(Session.ProfileIndex) Then
-        Return Result
-    End If
-
-    DesiredName = ViewerProfiles.ClipName(Session.ProfileIndex, Index)
-
-    For ClipIndex = 0 To Character3D.ClipCount(Character) - 1
-
-        If Character3D.ClipName(Character, ClipIndex) = DesiredName Then
-            Return ClipIndex
-        End If
-
-    End For
-
-    Return Result
-
-End Function
-
-Function PresentationIndexForRuntimeClip(RuntimeClip As Number) As Number
-
-    Dim Index As Number
-    Dim RuntimeName As Text
-    Dim Result As Number
-
-    Result = 0
-    RuntimeName = Character3D.ClipName(Character, RuntimeClip)
-
-    For Index = 0 To ViewerProfiles.ClipCount(Session.ProfileIndex) - 1
-
-        If ViewerProfiles.ClipName(Session.ProfileIndex, Index) = RuntimeName Then
-            Return Index
-        End If
-
-    End For
-
-    Return Result
-
-End Function
-
 Sub StepAnimationFrame(Direction As Number)
-
-    Dim SampleRate As Number
-    Dim StepMilliseconds As Number
-    Dim TargetTime As Number
 
     Call BeginPartyPreview()
     Call CancelCalibrationEdit()
 
-    Playback.ScenePaused = True
-    SampleRate = Character3D.ClipSampleRate(Character, Playback.SelectedClip)
-    StepMilliseconds = Max(1, 1000 / Max(1, SampleRate))
-    TargetTime = Character3D.AnimationTime(Character) + Direction * StepMilliseconds
-    TargetTime = Max(0, Min(Character3D.ClipDuration(Character, Playback.SelectedClip), TargetTime))
-    Session.Ready = Character3D.SetAnimationTime(Character, TargetTime) And Session.Ready
+    Session.Ready = ViewerPlayback.StepFrame(
+        Playback, Character, Direction) And Session.Ready
 
     Call ViewerEffects.InvalidateVisualHistory(Effects)
 
@@ -2640,9 +2562,8 @@ Sub SeekFirstAnimationFrame()
     Call BeginPartyPreview()
     Call CancelCalibrationEdit()
 
-    Playback.ScenePaused = True
-    Playback.SelectedTimelineEvent = FirstClipEvent()
-    Session.Ready = Character3D.SetAnimationTime(Character, 0) And Session.Ready
+    Session.Ready = ViewerPlayback.SeekFirstFrame(
+        Playback, Character) And Session.Ready
 
     Call ViewerEffects.InvalidateVisualHistory(Effects)
 
@@ -2650,10 +2571,7 @@ End Sub
 
 Sub SeekCalibrationKeyframe(Direction As Number)
 
-    Dim CandidateIndex As Number
     Dim CurrentFrame As Number
-    Dim Index As Number
-    Dim KeyCount As Number
     Dim TargetFrame As Number
     Dim TargetTime As Number
 
@@ -2671,42 +2589,15 @@ Sub SeekCalibrationKeyframe(Direction As Number)
         Call CancelCalibrationEdit()
     End If
 
-    KeyCount = ViewerCalibration.KeyCount(Calibration, Playback.SelectedClip)
+    CurrentFrame = ViewerCalibration.CurrentAnimationFrame(
+        Character, Playback.SelectedClip)
+    TargetFrame = ViewerCalibration.AdjacentKeyFrame(
+        Calibration, Playback.SelectedClip, CurrentFrame, Direction)
 
-    If KeyCount <= 0 Then
+    If TargetFrame < 0 Then
         Return
     End If
 
-    CurrentFrame = ViewerCalibration.CurrentAnimationFrame(
-        Character, Playback.SelectedClip)
-
-    If Direction < 0 Then
-
-        CandidateIndex = KeyCount - 1
-
-        For Index = 0 To KeyCount - 1
-
-            If ViewerCalibration.KeyFrame(Calibration, Playback.SelectedClip, Index) < CurrentFrame Then
-                CandidateIndex = Index
-            End If
-
-        End For
-
-    Else
-        CandidateIndex = 0
-
-        For Index = 0 To KeyCount - 1
-
-            If ViewerCalibration.KeyFrame(Calibration, Playback.SelectedClip, Index) > CurrentFrame Then
-                CandidateIndex = Index
-                Exit For
-            End If
-
-        End For
-
-    End If
-
-    TargetFrame = ViewerCalibration.KeyFrame(Calibration, Playback.SelectedClip, CandidateIndex)
     TargetTime = ViewerCalibration.FrameTimeMilliseconds(
         Character, Playback.SelectedClip, TargetFrame)
     Session.Ready = Character3D.SetAnimationTime(Character, TargetTime) And Session.Ready
@@ -2718,67 +2609,6 @@ Sub SeekCalibrationKeyframe(Direction As Number)
 
 End Sub
 
-Sub SeekAuthoredEvent(Direction As Number)
-
-    Dim CandidateIndex As Number
-    Dim CandidateTime As Number
-    Dim CurrentAnimationTime As Number
-    Dim Duration As Number
-    Dim EventIndex As Number
-    Dim EventTime As Number
-
-    CurrentAnimationTime = Character3D.AnimationTime(Character)
-    Duration = Character3D.ClipDuration(Character, Playback.SelectedClip)
-
-    If Direction < 0 Then
-        CandidateTime = -1
-    Else
-        CandidateTime = Duration + 1
-    End If
-
-    CandidateIndex = 0
-
-    For EventIndex = 1 To Character3D.EventCount(Character)
-
-        If Character3D.EventClipIndex(Character, EventIndex) = Playback.SelectedClip Then
-
-            EventTime = Character3D.EventTime(Character, EventIndex)
-
-            If Direction < 0 And EventTime < CurrentAnimationTime Then
-
-                If EventTime > CandidateTime Then
-                    CandidateTime = EventTime
-                    CandidateIndex = EventIndex
-                End If
-
-            Else If Direction > 0 And EventTime > CurrentAnimationTime Then
-
-                If EventTime < CandidateTime Then
-                    CandidateTime = EventTime
-                    CandidateIndex = EventIndex
-                End If
-
-            End If
-
-        End If
-
-    End For
-
-    If CandidateTime < 0 Then
-        CandidateTime = 0
-        CandidateIndex = 0
-    Else If CandidateTime > Duration Then
-        CandidateTime = Duration
-        CandidateIndex = 0
-    End If
-
-    Playback.SelectedTimelineEvent = CandidateIndex
-    Session.Ready = Character3D.SetAnimationTime(Character, CandidateTime) And Session.Ready
-
-    Call ViewerEffects.InvalidateVisualHistory(Effects)
-
-End Sub
-
 Sub SeekFromPointer()
 
     Dim Duration As Number
@@ -2787,13 +2617,10 @@ Sub SeekFromPointer()
     Call BeginPartyPreview()
     Call CancelCalibrationEdit()
 
-    Playback.ScenePaused = True
-
     Duration = Character3D.ClipDuration(Character, Playback.SelectedClip)
     TargetTime = (Pointer_X() - ViewerUi.TIMELINE_LEFT) * Duration / Max(1, ViewerUi.TimelineWidth(Window_Width(), ViewerUi.TIMELINE_LEFT))
-    TargetTime = Max(0, Min(Duration, TargetTime))
-    Playback.SelectedTimelineEvent = NearestClipEvent(TargetTime)
-    Session.Ready = Character3D.SetAnimationTime(Character, TargetTime) And Session.Ready
+    Session.Ready = ViewerPlayback.SeekTime(
+        Playback, Character, TargetTime) And Session.Ready
 
     Call ViewerEffects.InvalidateVisualHistory(Effects)
 
@@ -3466,17 +3293,9 @@ Sub PlaySelectedClip(Optional RetainFireTails As Boolean = False)
     Call ViewerEffects.InvalidateVisualHistory(Effects)
     End If
 
-    Playback.SelectedTimelineEvent = FirstClipEvent()
-    Session.Ready = Character3D.PlayMode(
-        Character,
-        SelectedClipName(),
-        ViewerPlayback.ClipMode(Session.ProfileIndex, SelectedClipName()),
-        Playback.PlaybackSpeed
-    ) And Session.Ready
+    Session.Ready = ViewerPlayback.StartSelectedClip(
+        Playback, Character, Session.ProfileIndex) And Session.Ready
     Effects.ArinAudio.Clip = ""
-    Playback.AnimationCycleElapsed = 0
-    Playback.DemoCompletedLoops = 0
-    Playback.DemoPreviousAnimationTime = Character3D.AnimationTime(Character)
 
     Call UpdateCalibrationForCurrentFrame()
     Call ApplyWristCalibration()
@@ -3486,78 +3305,6 @@ Sub PlaySelectedClip(Optional RetainFireTails As Boolean = False)
     End If
 
 End Sub
-
-Function FirstClipEvent() As Number
-
-    Dim EventIndex As Number
-    Dim Result As Number
-
-    Result = 0
-
-    For EventIndex = 1 To Character3D.EventCount(Character)
-
-        If (Character3D.EventClipIndex(Character, EventIndex) = Playback.SelectedClip And
-            Result = 0) Then
-            Result = EventIndex
-        End If
-
-    End For
-
-    Return Result
-
-End Function
-
-Function NearestClipEvent(TimeValue As Number) As Number
-
-    Dim BestDistance As Number
-    Dim Distance As Number
-    Dim EventIndex As Number
-    Dim Result As Number
-
-    BestDistance = 2147483647
-    Result = 0
-
-    For EventIndex = 1 To Character3D.EventCount(Character)
-
-        If Character3D.EventClipIndex(Character, EventIndex) = Playback.SelectedClip Then
-
-            Distance = Abs(Character3D.EventTime(Character, EventIndex) - TimeValue)
-
-            If Distance < BestDistance Then
-                BestDistance = Distance
-                Result = EventIndex
-            End If
-
-        End If
-
-    End For
-
-    Return Result
-
-End Function
-
-Function SelectedClipName() As Text
-
-    Dim Result As Text
-
-    Result = Character3D.ClipName(Character, Playback.SelectedClip)
-
-    Return Result
-
-End Function
-
-Function SelectedClipLabel() As Text
-
-    Dim Result As Text
-
-    Result = ViewerProfiles.ClipLabel(
-        Session.ProfileIndex,
-        PresentationIndexForRuntimeClip(Playback.SelectedClip)
-    )
-
-    Return Result
-
-End Function
 
 Sub DrawViewerOverlay()
 
@@ -3681,7 +3428,8 @@ Sub DrawInspectorOverlay()
             PanelLeft,
             ActiveProfile.DisplayName,
             ActiveProfile.PartyRole,
-            SelectedClipLabel(),
+            ViewerPlayback.SelectedClipLabel(
+                Character, Playback, Session.ProfileIndex),
             ActiveProfile.CandidateVersion,
             Playback.PlaybackSpeed,
             MaterialInspection,
@@ -3699,7 +3447,8 @@ Sub DrawInspectorOverlay()
 
         Call ViewerUi.DrawAnimationButtons(
             Session.ProfileIndex,
-            PresentationIndexForRuntimeClip(Playback.SelectedClip),
+            ViewerPlayback.PresentationIndexForRuntimeClip(
+                Character, Session.ProfileIndex, Playback.SelectedClip),
             Window_Width()
         )
 
@@ -3760,7 +3509,7 @@ Sub DrawInspectorOverlay()
         Calibration,
         ViewerInputState,
         Playback.SelectedClip,
-        SelectedClipName(),
+        ViewerPlayback.SelectedClipName(Character, Playback),
         Playback.SelectedTimelineEvent,
         CalibrationAvailable,
         Window_Width(),
@@ -3774,8 +3523,9 @@ Sub DrawInspectorOverlay()
             ViewerUiState,
             Calibration,
             Playback.SelectedClip,
-            SelectedClipLabel(),
-            SelectedClipName(),
+            ViewerPlayback.SelectedClipLabel(
+                Character, Playback, Session.ProfileIndex),
+            ViewerPlayback.SelectedClipName(Character, Playback),
             ViewerCalibration.CurrentAnimationFrame(
                 Character, Playback.SelectedClip),
             ViewerCalibration.KeyIndex(
@@ -3851,30 +3601,10 @@ Function AnimationSecondsRemaining() As Number
         RemainingMilliseconds = Max(0, RequiredMilliseconds - Party.Elapsed)
         Result = (RemainingMilliseconds + 999) / 1000
 
-    Else If Playback.DemoEnabled Then
-
-        RequiredMilliseconds = ViewerPlayback.DemoRequiredLoops(
-            Character, Playback.SelectedClip, Playback.PlaybackSpeed,
-            Session.ProfileIndex, ANIMATION_CYCLE_MILLISECONDS
-        ) * ViewerPlayback.DemoLoopDuration(
-            Character, Playback.SelectedClip, Playback.PlaybackSpeed
-        )
-
-        If (ViewerPlayback.ClipMode(Session.ProfileIndex, SelectedClipName()) =
-            Graphics3D.ANIMATION_ONCE) Then
-            RequiredMilliseconds = Max(
-                ViewerPlayback.DemoTarget(Session.ProfileIndex, ANIMATION_CYCLE_MILLISECONDS),
-                ViewerPlayback.DemoLoopDuration(
-                    Character, Playback.SelectedClip, Playback.PlaybackSpeed
-                )
-            )
-        End If
-
-        RemainingMilliseconds = Max(0, RequiredMilliseconds - Playback.AnimationCycleElapsed)
-        Result = (RemainingMilliseconds + 999) / 1000
-
     Else
-        Result = 0
+        Result = ViewerPlayback.DemoSecondsRemaining(
+            Playback, Character, Session.ProfileIndex,
+            ANIMATION_CYCLE_MILLISECONDS)
 
     End If
 
@@ -4050,7 +3780,8 @@ Sub BeginPartyInspector()
         Call ConfigureCalibration()
 
         ViewerUiState.CalibrationVisible = WasVisible And CalibrationAvailable
-        Playback.SelectedTimelineEvent = FirstClipEvent()
+        Playback.SelectedTimelineEvent = ViewerPlayback.FirstClipEvent(
+            Character, Playback.SelectedClip)
 
     End If
 
@@ -4070,7 +3801,7 @@ Sub EndPartyInspector()
         Call ViewerDragon.CaptureInspectedActor(
             DragonState,
             Character,
-            SelectedClipName()
+            ViewerPlayback.SelectedClipName(Character, Playback)
         )
 
         Call UseActorContext(Party.UiPrimary)
@@ -4258,7 +3989,8 @@ Sub UpdateDragonOpponent()
         ViewerUiState.CalibrationEditing,
         Playback.ScenePaused,
         Playback.SelectedClip,
-        SelectedClipLabel(),
+        ViewerPlayback.SelectedClipLabel(
+            Character, Playback, Session.ProfileIndex),
         ViewerCameraState.Live,
         Timing.CameraElapsed
     )

@@ -18,6 +18,7 @@ $referencePath = Join-Path $repositoryRoot `
     'games\Dragonfall\SourceAssets\Arin\paladin-reference-images.json'
 $viewerSourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\Program.smile'
 $cameraSourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\ViewerCamera.smile'
+$playbackSourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\ViewerPlayback.smile'
 $calibrationSourcePath = Join-Path $repositoryRoot `
     'tools\Character3DViewer\ViewerCalibration.smile'
 $inputSourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\ViewerInput.smile'
@@ -95,6 +96,7 @@ try {
 
     $viewerSource = Get-Content -LiteralPath $viewerSourcePath -Raw
     $cameraSource = Get-Content -LiteralPath $cameraSourcePath -Raw
+    $playbackSource = Get-Content -LiteralPath $playbackSourcePath -Raw
     $calibrationSource = Get-Content -LiteralPath $calibrationSourcePath -Raw
     $inputSource = Get-Content -LiteralPath $inputSourcePath -Raw
     $uiSource = Get-Content -LiteralPath $uiSourcePath -Raw
@@ -170,6 +172,22 @@ try {
         Assert-Contains $cameraSource $contract 'Viewer camera owner'
     }
     foreach ($contract in @(
+        'Public Sub SelectClip(',
+        'Public Function RuntimeClipForPresentationIndex(',
+        'Public Function PresentationIndexForRuntimeClip(',
+        'Public Function SelectedClipName(',
+        'Public Function SelectedClipLabel(',
+        'Public Function FirstClipEvent(',
+        'Public Function NearestClipEvent(',
+        'Public Function StepFrame(',
+        'Public Function SeekFirstFrame(',
+        'Public Function SeekTime(',
+        'Public Function StartSelectedClip(',
+        'Public Function AdvanceDemo(',
+        'Public Function DemoSecondsRemaining(')) {
+        Assert-Contains $playbackSource $contract 'Viewer playback owner'
+    }
+    foreach ($contract in @(
         'Private Dim Storage[STORAGE_CAPACITY] As Number',
         'Private Dim PreviousStorage[STORAGE_CAPACITY] As Number',
         'Private Dim UndoStorage[STORAGE_CAPACITY] As Number',
@@ -179,6 +197,7 @@ try {
         'Public Function ConfigureForActor(',
         'Public Function MinimumValue(',
         'Public Function MaximumValue(',
+        'Public Function AdjacentKeyFrame(',
         'Public Function DeleteCurrentKeyAndPersist(',
         'Public Function MoveKeyAndPersist(',
         'Public Function PasteClipboardAndPersist(',
@@ -296,6 +315,14 @@ try {
         -not $viewerSource.Contains('Function TimelineKeyframeAtPointer(') -and
         -not $viewerSource.Contains('Function CalibrationFrameTimeMilliseconds(')) `
         'Timeline frame/key hit math and calibration frame-time conversion must use their production owners.'
+    Assert-True (-not $viewerSource.Contains('Function RuntimeClipForPresentationIndex(') -and
+        -not $viewerSource.Contains('Function PresentationIndexForRuntimeClip(') -and
+        -not $viewerSource.Contains('Function FirstClipEvent(') -and
+        -not $viewerSource.Contains('Function NearestClipEvent(') -and
+        -not $viewerSource.Contains('Function SelectedClipName(') -and
+        -not $viewerSource.Contains('Function SelectedClipLabel(') -and
+        -not $viewerSource.Contains('Sub SeekAuthoredEvent(')) `
+        'Playback mapping, event queries, labels and dead authored-event code must not return to the coordinator.'
     Assert-True (-not $viewerSource.Contains('Const ANIMATION_DETAILS_Y =') -and
         -not $viewerSource.Contains('Const ANIMATION_DETAILS_MINIMUM_HEIGHT =') -and
         -not $viewerSource.Contains('Sub DrawButton(') -and

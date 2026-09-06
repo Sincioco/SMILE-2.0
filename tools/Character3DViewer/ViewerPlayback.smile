@@ -106,4 +106,290 @@ Public Function DemoRequiredLoops(ByRef Actor As Character3D.Actor, SelectedClip
 
 End Function
 
+Public Sub SelectClip(ByRef Value As State, ClipIndex As Number, PartyEnabled As Boolean)
+
+    Value.SelectedClip = ClipIndex
+    Value.AnimationCycleElapsed = 0
+
+    If Not PartyEnabled Then
+        Value.DemoEnabled = False
+    End If
+
+End Sub
+
+Public Function RuntimeClipForPresentationIndex(ByRef Actor As Character3D.Actor,
+    ProfileIndex As Number, PresentationIndex As Number) As Number
+
+    Dim ClipIndex As Number
+    Dim DesiredName As Text
+    Dim Result As Number
+
+    Result = -1
+
+    If (PresentationIndex < 0 Or
+        PresentationIndex >= ViewerProfiles.ClipCount(ProfileIndex)) Then
+        Return Result
+    End If
+
+    DesiredName = ViewerProfiles.ClipName(ProfileIndex, PresentationIndex)
+
+    For ClipIndex = 0 To Character3D.ClipCount(Actor) - 1
+
+        If Character3D.ClipName(Actor, ClipIndex) = DesiredName Then
+            Return ClipIndex
+        End If
+
+    End For
+
+    Return Result
+
+End Function
+
+Public Function PresentationIndexForRuntimeClip(ByRef Actor As Character3D.Actor,
+    ProfileIndex As Number, RuntimeClip As Number) As Number
+
+    Dim Index As Number
+    Dim RuntimeName As Text
+    Dim Result As Number
+
+    Result = 0
+    RuntimeName = Character3D.ClipName(Actor, RuntimeClip)
+
+    For Index = 0 To ViewerProfiles.ClipCount(ProfileIndex) - 1
+
+        If ViewerProfiles.ClipName(ProfileIndex, Index) = RuntimeName Then
+            Return Index
+        End If
+
+    End For
+
+    Return Result
+
+End Function
+
+Public Function SelectedClipName(ByRef Actor As Character3D.Actor,
+    ByRef Value As State) As Text
+
+    Dim Result As Text
+
+    Result = Character3D.ClipName(Actor, Value.SelectedClip)
+
+    Return Result
+
+End Function
+
+Public Function SelectedClipLabel(ByRef Actor As Character3D.Actor,
+    ByRef Value As State, ProfileIndex As Number) As Text
+
+    Dim PresentationIndex As Number
+    Dim Result As Text
+
+    PresentationIndex = PresentationIndexForRuntimeClip(
+        Actor, ProfileIndex, Value.SelectedClip)
+    Result = ViewerProfiles.ClipLabel(ProfileIndex, PresentationIndex)
+
+    Return Result
+
+End Function
+
+Public Function FirstClipEvent(ByRef Actor As Character3D.Actor,
+    SelectedClip As Number) As Number
+
+    Dim EventIndex As Number
+    Dim Result As Number
+
+    Result = 0
+
+    For EventIndex = 1 To Character3D.EventCount(Actor)
+
+        If (Character3D.EventClipIndex(Actor, EventIndex) = SelectedClip And
+            Result = 0) Then
+            Result = EventIndex
+        End If
+
+    End For
+
+    Return Result
+
+End Function
+
+Public Function NearestClipEvent(ByRef Actor As Character3D.Actor,
+    SelectedClip As Number, TimeValue As Number) As Number
+
+    Dim BestDistance As Number
+    Dim Distance As Number
+    Dim EventIndex As Number
+    Dim Result As Number
+
+    BestDistance = 2147483647
+    Result = 0
+
+    For EventIndex = 1 To Character3D.EventCount(Actor)
+
+        If Character3D.EventClipIndex(Actor, EventIndex) = SelectedClip Then
+
+            Distance = Abs(Character3D.EventTime(Actor, EventIndex) - TimeValue)
+
+            If Distance < BestDistance Then
+                BestDistance = Distance
+                Result = EventIndex
+            End If
+
+        End If
+
+    End For
+
+    Return Result
+
+End Function
+
+Public Function StepFrame(ByRef Value As State, ByRef Actor As Character3D.Actor,
+    Direction As Number) As Boolean
+
+    Dim SampleRate As Number
+    Dim StepMilliseconds As Number
+    Dim TargetTime As Number
+    Dim Result As Boolean
+
+    Value.ScenePaused = True
+    SampleRate = Character3D.ClipSampleRate(Actor, Value.SelectedClip)
+    StepMilliseconds = Max(1, 1000 / Max(1, SampleRate))
+    TargetTime = Character3D.AnimationTime(Actor) + Direction * StepMilliseconds
+    TargetTime = Max(0, Min(Character3D.ClipDuration(Actor, Value.SelectedClip), TargetTime))
+    Result = Character3D.SetAnimationTime(Actor, TargetTime)
+
+    Return Result
+
+End Function
+
+Public Function SeekFirstFrame(ByRef Value As State,
+    ByRef Actor As Character3D.Actor) As Boolean
+
+    Dim Result As Boolean
+
+    Value.ScenePaused = True
+    Value.SelectedTimelineEvent = FirstClipEvent(Actor, Value.SelectedClip)
+    Result = Character3D.SetAnimationTime(Actor, 0)
+
+    Return Result
+
+End Function
+
+Public Function SeekTime(ByRef Value As State, ByRef Actor As Character3D.Actor,
+    TimeValue As Number) As Boolean
+
+    Dim Duration As Number
+    Dim TargetTime As Number
+    Dim Result As Boolean
+
+    Value.ScenePaused = True
+    Duration = Character3D.ClipDuration(Actor, Value.SelectedClip)
+    TargetTime = Max(0, Min(Duration, TimeValue))
+    Value.SelectedTimelineEvent = NearestClipEvent(
+        Actor, Value.SelectedClip, TargetTime)
+    Result = Character3D.SetAnimationTime(Actor, TargetTime)
+
+    Return Result
+
+End Function
+
+Public Function StartSelectedClip(ByRef Value As State,
+    ByRef Actor As Character3D.Actor, ProfileIndex As Number) As Boolean
+
+    Dim Name As Text
+    Dim Result As Boolean
+
+    Name = SelectedClipName(Actor, Value)
+    Value.SelectedTimelineEvent = FirstClipEvent(Actor, Value.SelectedClip)
+    Result = Character3D.PlayMode(
+        Actor, Name, ClipMode(ProfileIndex, Name), Value.PlaybackSpeed)
+    Value.AnimationCycleElapsed = 0
+    Value.DemoCompletedLoops = 0
+    Value.DemoPreviousAnimationTime = Character3D.AnimationTime(Actor)
+
+    Return Result
+
+End Function
+
+Public Function AdvanceDemo(ByRef Value As State, ByRef Actor As Character3D.Actor,
+    ProfileIndex As Number, DefaultTargetMilliseconds As Number,
+    PresentationElapsed As Number) As Boolean
+
+    Dim ClipCount As Number
+    Dim CurrentAnimationTime As Number
+    Dim PresentationIndex As Number
+    Dim Result As Boolean
+
+    If Not Value.DemoEnabled Then
+        Return False
+    End If
+
+    ClipCount = Character3D.ClipCount(Actor)
+    CurrentAnimationTime = Character3D.AnimationTime(Actor)
+    Value.AnimationCycleElapsed = Value.AnimationCycleElapsed + PresentationElapsed
+
+    If CurrentAnimationTime < Value.DemoPreviousAnimationTime Then
+        Value.DemoCompletedLoops = Value.DemoCompletedLoops + 1
+    End If
+
+    Value.DemoPreviousAnimationTime = CurrentAnimationTime
+
+    If (Value.DemoCompletedLoops >= DemoRequiredLoops(
+        Actor, Value.SelectedClip, Value.PlaybackSpeed,
+        ProfileIndex, DefaultTargetMilliseconds) Or
+        (ClipMode(ProfileIndex, SelectedClipName(Actor, Value)) =
+        Graphics3D.ANIMATION_ONCE And
+        Value.AnimationCycleElapsed >= DemoTarget(
+        ProfileIndex, DefaultTargetMilliseconds) And
+        CurrentAnimationTime >= Character3D.ClipDuration(Actor, Value.SelectedClip))) Then
+
+        PresentationIndex = PresentationIndexForRuntimeClip(
+            Actor, ProfileIndex, Value.SelectedClip)
+        Value.SelectedClip = RuntimeClipForPresentationIndex(
+            Actor, ProfileIndex, (PresentationIndex + 1) Mod ClipCount)
+        Result = True
+
+    End If
+
+    Return Result
+
+End Function
+
+Public Function DemoSecondsRemaining(ByRef Value As State,
+    ByRef Actor As Character3D.Actor, ProfileIndex As Number,
+    DefaultTargetMilliseconds As Number) As Number
+
+    Dim LoopDuration As Number
+    Dim RequiredMilliseconds As Number
+    Dim RequiredLoops As Number
+    Dim RemainingMilliseconds As Number
+    Dim Result As Number
+
+    If Not Value.DemoEnabled Then
+        Return 0
+    End If
+
+    RequiredLoops = DemoRequiredLoops(
+        Actor, Value.SelectedClip, Value.PlaybackSpeed,
+        ProfileIndex, DefaultTargetMilliseconds)
+    LoopDuration = DemoLoopDuration(
+        Actor, Value.SelectedClip, Value.PlaybackSpeed)
+    RequiredMilliseconds = RequiredLoops * LoopDuration
+
+    If (ClipMode(ProfileIndex, SelectedClipName(Actor, Value)) =
+        Graphics3D.ANIMATION_ONCE) Then
+        RequiredMilliseconds = Max(
+            DemoTarget(ProfileIndex, DefaultTargetMilliseconds),
+            DemoLoopDuration(Actor, Value.SelectedClip, Value.PlaybackSpeed)
+        )
+    End If
+
+    RemainingMilliseconds = Max(
+        0, RequiredMilliseconds - Value.AnimationCycleElapsed)
+    Result = (RemainingMilliseconds + 999) / 1000
+
+    Return Result
+
+End Function
+
 End Module

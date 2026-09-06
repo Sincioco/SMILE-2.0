@@ -80,21 +80,49 @@ TestTransactionResult = ViewerCalibration.Persist(
 
 Call RestartPresentation()
 
+TestIndex = ViewerPlayback.PresentationIndexForRuntimeClip(
+    Character, Session.ProfileIndex, Playback.SelectedClip)
+
+Call CalibrationCheck(ViewerPlayback.RuntimeClipForPresentationIndex(
+    Character, Session.ProfileIndex, TestIndex) = Playback.SelectedClip,
+    "Playback owner maps presentation and runtime clips")
+Call CalibrationCheck(ViewerPlayback.SelectedClipName(Character, Playback) =
+    Character3D.ClipName(Character, Playback.SelectedClip),
+    "Playback owner resolves the selected runtime clip name")
+
+Playback.AnimationCycleElapsed = 123
+Playback.DemoCompletedLoops = 2
+TestTransactionResult = ViewerPlayback.StartSelectedClip(
+    Playback, Character, Session.ProfileIndex)
+
+Call CalibrationCheck(TestTransactionResult And
+    Playback.AnimationCycleElapsed = 0 And
+    Playback.DemoCompletedLoops = 0 And
+    Playback.SelectedTimelineEvent = ViewerPlayback.FirstClipEvent(
+        Character, Playback.SelectedClip),
+    "Playback owner starts a clip and resets its cycle state")
+
 Playback.ScenePaused = False
 
-Call SeekFirstAnimationFrame()
+Session.Ready = ViewerPlayback.SeekFirstFrame(
+    Playback, Character) And Session.Ready
+
 Call CalibrationCheck(Playback.ScenePaused And Character3D.AnimationTime(Character) = 0,
     "0-Frame pauses the scene at frame zero")
 
 Playback.ScenePaused = False
 
-Call StepAnimationFrame(1)
+Session.Ready = ViewerPlayback.StepFrame(
+    Playback, Character, 1) And Session.Ready
+
 Call CalibrationCheck(Playback.ScenePaused And Character3D.AnimationTime(Character) > 0,
     "Frame forward pauses before stepping")
 
 Playback.ScenePaused = False
 
-Call StepAnimationFrame(-1)
+Session.Ready = ViewerPlayback.StepFrame(
+    Playback, Character, -1) And Session.Ready
+
 Call CalibrationCheck(Playback.ScenePaused And Character3D.AnimationTime(Character) = 0,
     "Frame backward pauses before stepping")
 
@@ -258,6 +286,11 @@ Call CalibrationCheck(ViewerCalibration.KeyValue(Calibration, 3, 0, 12) = 2,
     "Second key cannot modify first")
 Call CalibrationCheck(ViewerCalibration.KeyValue(Calibration, 3, 1, 12) = 7,
     "Second key stores full move channels")
+Call CalibrationCheck(ViewerCalibration.AdjacentKeyFrame(
+    Calibration, 3, 0, -1) = 10 And
+    ViewerCalibration.AdjacentKeyFrame(Calibration, 3, 0, 1) = 10 And
+    ViewerCalibration.AdjacentKeyFrame(Calibration, 3, 10, 1) = 0,
+    "Calibration owner navigates adjacent keyframes with wraparound")
 
 TestCalibrationTransaction = ViewerCalibration.MoveKeyAndPersist(
     Calibration, Character, 3, 1, 12, False, False)
@@ -1057,7 +1090,8 @@ Sub UpdateTestEquipmentFire()
         ViewerUiState.CalibrationEditing,
         Playback.ScenePaused,
         Playback.SelectedClip,
-        SelectedClipLabel(),
+        ViewerPlayback.SelectedClipLabel(
+            Character, Playback, Session.ProfileIndex),
         ViewerCameraState.Live,
         Timing.CameraElapsed
     )

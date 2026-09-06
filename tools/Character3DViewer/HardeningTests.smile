@@ -145,6 +145,14 @@ Call Check(ViewerPlayback.ClipMode(ViewerProfiles.PROFILE_ARIN, "Idle") =
 Call Check(ViewerPlayback.DemoTarget(ViewerProfiles.PROFILE_DRAGON, 7000) = 7000)
 Call Check(ViewerPlayback.DemoTarget(ViewerProfiles.PROFILE_ORIN, 7000) = 3000)
 
+PlaybackState.AnimationCycleElapsed = 90
+
+Call ViewerPlayback.SelectClip(PlaybackState, 2, True)
+Call Check(PlaybackState.SelectedClip = 2 And
+    PlaybackState.AnimationCycleElapsed = 0 And PlaybackState.DemoEnabled)
+Call ViewerPlayback.SelectClip(PlaybackState, 1, False)
+Call Check(PlaybackState.SelectedClip = 1 And Not PlaybackState.DemoEnabled)
+
 Call ViewerSession.ResetFailure(SessionState)
 Call Check(SessionState.Ready)
 Call Check(Not SessionState.ViewerError)

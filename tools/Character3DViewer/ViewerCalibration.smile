@@ -370,6 +370,53 @@ Public Function KeyIndex(ByRef Value As State, Clip As Number, FrameValue As Num
 
 End Function
 
+Public Function AdjacentKeyFrame(ByRef Value As State, Clip As Number,
+    CurrentFrame As Number, Direction As Number) As Number
+
+    Dim CandidateIndex As Number
+    Dim Index As Number
+    Dim KeyCountValue As Number
+    Dim Result As Number
+
+    Result = -1
+    KeyCountValue = KeyCount(Value, Clip)
+
+    If KeyCountValue <= 0 Then
+        Return Result
+    End If
+
+    If Direction < 0 Then
+
+        CandidateIndex = KeyCountValue - 1
+
+        For Index = 0 To KeyCountValue - 1
+
+            If KeyFrame(Value, Clip, Index) < CurrentFrame Then
+                CandidateIndex = Index
+            End If
+
+        End For
+
+    Else
+        CandidateIndex = 0
+
+        For Index = 0 To KeyCountValue - 1
+
+            If KeyFrame(Value, Clip, Index) > CurrentFrame Then
+                CandidateIndex = Index
+                Exit For
+            End If
+
+        End For
+
+    End If
+
+    Result = KeyFrame(Value, Clip, CandidateIndex)
+
+    Return Result
+
+End Function
+
 Public Function StoreKey(ByRef Value As State, Clip As Number, FrameValue As Number) As Boolean
 
     Dim Channel As Number
