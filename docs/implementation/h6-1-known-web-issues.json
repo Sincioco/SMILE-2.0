@@ -32,7 +32,7 @@
       "classification": "source-finding",
       "mandatory": true,
       "baseline": "902a7022c895bf97010d979ea578fc5361cdcbf4",
-      "status": "IN-PROGRESS",
+      "status": "FIXED-VERIFIED",
       "phase": "W2",
       "gateCheck": "G03",
       "sourceRefs": [
@@ -44,7 +44,7 @@
       "evidenceIds": [
         "docs/implementation/h6-1-hardening-and-web-parity-ledger.md"
       ],
-      "dispositionRationale": "Implemented portions and remaining target-specific proof are separated in the ledger; not a final gate pass."
+      "dispositionRationale": "The expanded two-Orin fixture verifies frozen weapon hide clears the first trail and its light while the second context remains active; it draws that phase and later resume/teardown phases. Native Auto and forced shader fallback, generated-Web exact console, and actual Chrome/Edge GPU and forced CPU-fallback runs all pass. Verification commit cf84ac8c09468368bf77629becbe83fdf940279d extends the original fix without modifying canonical calibration. This closes the Orin-trail item, not the separate Fire lifecycle item or whole gate."
     },
     {
       "id": "F03",
@@ -74,7 +74,7 @@
       "classification": "evidence-gap",
       "mandatory": true,
       "baseline": "902a7022c895bf97010d979ea578fc5361cdcbf4",
-      "status": "IN-PROGRESS",
+      "status": "FIXED-VERIFIED",
       "phase": "W6",
       "gateCheck": "G05",
       "sourceRefs": [
@@ -83,11 +83,11 @@
       ],
       "reproduction": null,
       "rootCause": null,
-      "fixCommit": "b8fce49701738fcab3c45d7d5cdb343e1e4a9b33",
+      "fixCommit": "cf84ac8c09468368bf77629becbe83fdf940279d",
       "evidenceIds": [
         "docs/implementation/h6-1-hardening-and-web-parity-ledger.md"
       ],
-      "dispositionRationale": "Implemented portions and remaining target-specific proof are separated in the ledger; not a final gate pass."
+      "dispositionRationale": "Current two-Orin model instances share a model but own independent animators, node corrections, storm contexts, artistic styles and light leases. Native and actual Chrome/Edge runs pass real rendering after freeze/hide, resume and context destruction, stale-lease rejection, bounded admission failure and forced CPU fallback. All assertion output matches, with GPU/CPU path labels and no captured browser warnings/errors. Source and artifact hashes are in the ledger. This is focused integrated proof, not a whole-gate or performance claim."
     },
     {
       "id": "F05",

@@ -17,6 +17,15 @@ These instructions apply to the entire SMILE 2.0 repository.
 
 - The current official SMILE 2.0 logo is `assets\branding\smile-2.0-logo.png`, designated by Sin on September 6, 2026. Use this canonical source for new branding. Preserve it when making optimized deployment copies; the original tutorial copy may remain for compatibility.
 
+### Permanent startup branding requirement
+
+- Every SMILE 2.0 program and tool, on native Desktop and Web, must show the official SMILE logo on its loader/splash screen for at least one second, including fast and cached startup. This is Sin's September 6, 2026 requirement and supersedes the earlier two-second suggestion.
+- Measure that minimum from visible presentation, not from process launch or a network request. Let actual loading overlap it; wait only for any remaining portion of the one-second minimum. Keep useful loading status visible if startup takes longer.
+- Preserve the approved program name, author credits, footer/contact links and build metadata. Compile time and the SMILE version must describe the generated artifact, not the viewer's current clock; use the authoritative VSIX product version and an explicit time-zone offset without guessing a physical location.
+- Web progress must distinguish overall loading from the current asset download. Use real byte progress when reliable totals exist, and clearly label unknown-size/indeterminate phases rather than inventing percentages or ETAs.
+- Keep startup presentation reusable in the shared SMILE library/runtime where practical, but include and enforce it automatically through the standard compiler/runtime. It must not depend on an optional user import/call, and standard generated programs must not expose a source-level or build-setting opt-out from the branded one-second minimum. Editable compiler sources/generated output are not tamper-proof; do not claim otherwise or introduce DRM/obfuscation to imply that guarantee.
+- As of this instruction, the shared Web loader exists; the new progress/metadata/minimum-duration behavior and shared native splash are queued implementation requirements, not claims of completed runtime support. Implement them after the requested README rewrite, following the earlier hardening and optimized-Web milestones.
+
 ## Permanent future 3D direction
 
 SMILE must evolve incrementally from the current SMILE 2.0 compiler and runtime into a language/runtime capable of modern 3D games, including a Final Fantasy VII-style cinematic 3D RPG battle system. A future SMILE 3.0 name may mark mature first-class 3D support, but it must remain an evolution of SMILE 2.0 rather than a replacement compiler or from-scratch rewrite.

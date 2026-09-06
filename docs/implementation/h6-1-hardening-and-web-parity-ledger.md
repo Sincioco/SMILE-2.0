@@ -845,3 +845,119 @@ Next: remaining integrated native/actual-browser lifecycle, same-model effects,
 calibration persistence and interaction proof; normal smoke; final H6.1 reports,
 gate and portable evidence package. Then finish nine optimized Web tier outputs
 and finally the requested visual README rewrite. No E0 or Double work.
+
+### Follow-up request — truthful Web loader progress, after README
+
+Sin explicitly adds one task after the README rewrite: replace the ambiguous
+animated loading indicator with an overall progress bar and a secondary bar for
+the current asset download. Show real byte percentages when totals are known;
+where a server does not provide a reliable length, show received bytes and an
+honestly labeled completed-item measure rather than inventing a percentage or
+ETA. Preserve the approved prominent logo, program name and working footer links.
+Reconcile the existing shared loader/fetch pipeline before choosing the smallest
+implementation, and validate the three tools and affected VSIX payload.
+
+This later instruction changes the final ordering: existing hardening and Web
+Optimized work first, visual README rewrite next, then loader progress last.
+It does not authorize starting E0 or Double, and streaming shutdown still waits
+until every approved task is actually complete.
+
+The loader follow-up also includes compile-time metadata below the author credit:
+the actual build date/time, an explicit time-zone offset, and the authoritative
+SMILE/VSIX product version. The user's October 31 example is formatting guidance,
+not a literal date or evidence of the build machine's geographic location. Do not
+substitute page-open time or infer a physical city from its UTC offset.
+
+Sin also authorizes native branding. The current HTML loader is Web-only;
+**Flag:** a reusable startup splash for native graphical programs is additional
+runtime work, not an existing supported loader feature. Implement a branded
+splash with the official logo, credits/footer and build
+metadata, overlapping real startup loading where practical and retaining useful
+status if startup takes longer. Keep console programs and ordinary graphical
+input/focus behavior intact. Inspect existing native startup/asset preparation
+before selecting the smallest shared implementation. This stays in the final
+loader milestone after README, including native validation and VSIX refresh.
+
+Sin subsequently sets the permanent minimum to **one second**, on both native
+Desktop and Web and for all SMILE programs/tools, even with fast/cached startup.
+This supersedes the earlier two-second native suggestion. Measure actual visible
+presentation and overlap loading; do not add an unconditional second after assets
+finish. The root AGENTS.md records this as a pending implementation requirement,
+not a claim that current executables already meet it. Loader work remains after
+README; no new startup code has been implemented while recording these requests.
+
+Sin additionally requires reusable library/runtime presentation with mandatory
+compiler/runtime inclusion: no optional import/call and no standard source-level
+or build-setting bypass. Explain the boundary honestly: editable compiler sources
+and generated Web files cannot be made tamper-proof. No DRM, obfuscation or new
+framework is implied by this branding requirement.
+
+### F02/F04 — real same-model correction and effect evidence — 2026-09-06
+
+Implementation/test milestone: `cf84ac8c09468368bf77629becbe83fdf940279d`,
+on top of `ee2a951` (W10 evidence) and `78e00f4` (Web MSAA). Existing production
+ownership fixes are retained; this closes their remaining focused Orin evidence
+gap, not all H6.1 requirements.
+
+The test previously varied actor yaw but did not prove actual independent wrist
+corrections in the combined live scene. It now resolves the right wrist from the
+HandRight socket and applies different local rotations to the two animators.
+Each hammer-head socket moves while the other actor's corrected socket stays
+exactly unchanged. The current profile supplies Orin's standing baseline. No
+fixture correction is saved. Both actors retain distinct clips/times/speeds,
+transforms, storm contexts, styles and scene-issued light leases.
+
+It now presents real draw frames after frozen weapon hide, resume, scene Off,
+and destruction of the first context. Assertions prove the first trail/light
+clear while the second survives, no resumed thunder is replayed, scene Off
+survives reversed frozen staging without moving the camera, and stale light
+leases cannot disable replacement/current owners. Existing bounded effect
+admission and complete actor/effect/GPU-system cleanup assertions remain active.
+The visible last frame identifies the actual GPU versus CPU fallback trail path.
+
+- `scripts/test-character-3d-viewer-actor-isolation.ps1`: PASS native Auto and
+  forced shader-failure paths; both generated-Web exact-console paths PASS.
+  Log `artifacts/temp/h6-1-live-actor-isolation.log`; native outputs
+  `Character3DViewerActorIsolationTests.out` and
+  `Character3DViewerActorIsolationFallbackTests.out` under `artifacts/temp`.
+- `scripts/format-smile-style.ps1 -Check -FormatLongIf -Files tools/Character3DViewer/ActorIsolationTests.smile`:
+  PASS; `git diff --check` PASS.
+- Actual visible Edge 146.0.3856.62 and Chrome 152.0.7977.77, Windows 11 Pro
+  10.0.26200: normal and `fallback.html` at
+  `http://127.0.0.1:8765/Character3DViewerActorIsolationTests/` all print exactly
+  `Character Viewer two-Orin isolation tests passed`. Normal pages show GPU;
+  fallback pages show CPU Fallback. The last rendered frame shows the remaining
+  actor and lightning after first-context release. Captured warning/error logs
+  are empty in all four runs. These are real browser draws, not the GL double.
+- The script creates ignored `fallback.html` beside the test publication. It
+  injects only the existing GPU shader-failure test flag before runtime startup;
+  normal production/index pages are unchanged. It is a deliberate capability
+  fallback, not a claim that real hardware failed spontaneously.
+- Both local browser tabs were returned to `http://127.0.0.1:8766/`; the one native
+  Viewer was restored to foreground. No screenshot files are claimed: the live
+  tool images and these explicit observations are the evidence.
+
+Final generated fixture SHA256 values:
+
+| Artifact | SHA256 |
+|---|---|
+| `artifacts/tests/Character3DViewerActorIsolationTests.exe` | `6D26694AED1D2C77F8DFD3B791197BAF4526328E9671C6322E851068C65E3912` |
+| `artifacts/web/Character3DViewerActorIsolationTests/game.js` | `3AB4EA9843A0787A3C82D2F1EA2ADAC3495A87468FF4138EB57ED7B5AA9F95D0` |
+| `artifacts/web/Character3DViewerActorIsolationTests/smile-runtime.js` | `F034E3439FB2D937D58A3CF37260B65EBE1FA8F24C748394DA3EEC6096C9C408` |
+| `artifacts/web/Character3DViewerActorIsolationTests/fallback.html` | `D413AF92AD74E98A10CCD2119F8E965D3F2C6F38A1C9A4B8B778CCC9E7B4D4A0` |
+
+The first expanded Web run stopped at the test runner's old three-frame limit
+before printing a result; the five presented lifecycle frames now receive an
+explicit eight-frame allowance. No assertion or expected output was weakened.
+A draft loop spelling was rejected by SML2001 and corrected to the existing
+`Loop Until True` syntax before final builds; no language feature was added.
+
+Before committing, both exports remained Arin 24 keys and Orin zero keys with the
+same SHA256 values recorded above; logs `h6-1-live-actors-{arin,orin}-export.log`.
+Canonical model/descriptor/calibration data are unchanged. This fixture/docs
+milestone changes no VSIX payload; the W10 installed VSIX remains current.
+
+Next actions: remaining Fire frozen lifecycle, actual Viewer interaction,
+imported-state persistence, focus/audio/mobile/context recovery and normal smoke;
+finish truthful H6.1 reports/gate/package, then Web Optimized tiers, README, and
+the newly requested mandatory loader/splash improvements, in that order.
