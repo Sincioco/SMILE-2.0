@@ -179,6 +179,12 @@ try {
         'Public Function ConfigureForActor(',
         'Public Function MinimumValue(',
         'Public Function MaximumValue(',
+        'Public Function DeleteCurrentKeyAndPersist(',
+        'Public Function MoveKeyAndPersist(',
+        'Public Function PasteClipboardAndPersist(',
+        'Public Function ReloadCurrentKey(',
+        'Public Function ClearClipAndPersist(',
+        'Public Function ClearAllAndPersist(',
         'Public Sub Evaluate(',
         'Public Function TargetValue(',
         'Public Sub SetTargetValue(',
@@ -314,6 +320,18 @@ try {
         -not $viewerSource.Contains('Sub DownloadSavedCalibrationJson(') -and
         -not $viewerSource.Contains('(Pointer_X() - ViewerUi.CALIBRATION_SLIDER_X)')) `
         'Calibration discovery, value bounds, transfer calls and slider mapping must use production owners.'
+    Assert-True (-not $viewerSource.Contains('Function PrepareCalibrationImport(') -and
+        -not $viewerSource.Contains('Function CommitCalibrationImport(') -and
+        -not $viewerSource.Contains('Function SavedCalibrationJson(') -and
+        -not $viewerSource.Contains('Sub ClearCalibrationMemory(') -and
+        -not $viewerSource.Contains('Sub SaveCalibrationKeyframes(') -and
+        -not $viewerSource.Contains('Function CalibrationKeyframeIndex(') -and
+        -not $viewerSource.Contains('Function StoreCalibrationKeyframe(') -and
+        -not $viewerSource.Contains('Sub RefreshCalibrationSavedStatus(') -and
+        -not $viewerSource.Contains('Function CalibrationChannelValue(') -and
+        -not $viewerSource.Contains('Sub SetCalibrationChannelValue(') -and
+        -not $viewerSource.Contains('Function CurrentAnimationFrame(')) `
+        'Calibration storage/key transactions and direct queries must not return as coordinator wrappers.'
     foreach ($contract in @(
         'Public Sub BeginDrag(',
         'Public Sub FinishDrag(',

@@ -52,7 +52,6 @@ Const ARENA_DEFAULT_ZOOM_DEGREES = -15
 Const ARENA_FLOOR_WIDTH = 1000
 Const ARENA_FLOOR_DEPTH = 1000
 Const CALIBRATION_MAX_CLIPS = ViewerCalibration.MAX_CLIPS
-Const CALIBRATION_CHANNEL_COUNT = ViewerCalibration.CHANNEL_COUNT
 Const TRANSFORM_GIZMO_MOVE_DIVISOR = 3
 Const TRANSFORM_GIZMO_ROTATE_DIVISOR = 1000
 Const BACKGROUND_COUNT = 5
@@ -220,8 +219,10 @@ Do
                 SelectedClipName(),
                 SwordVisible,
                 ShieldVisible,
-                CalibrationChannelValue(Playback.SelectedClip, 18) <> 0,
-                CalibrationChannelValue(Playback.SelectedClip, 19) <> 0
+                ViewerCalibration.ChannelValue(
+                    Calibration, Playback.SelectedClip, 18) <> 0,
+                ViewerCalibration.ChannelValue(
+                    Calibration, Playback.SelectedClip, 19) <> 0
             ) Then
                 Effects.EpicGlowVisible = False
             End If
@@ -2292,19 +2293,23 @@ Sub HandleCalibrationPanelPointer()
     Else If Action = ViewerUi.CALIBRATION_ACTION_DECOUPLE_WEAPON Then
 
         Call BeginCalibrationEdit()
-        Call SetCalibrationChannelValue(
+        Call ViewerCalibration.SetChannelValue(
+            Calibration,
             Playback.SelectedClip,
             18,
-            1 - CalibrationChannelValue(Playback.SelectedClip, 18)
+            1 - ViewerCalibration.ChannelValue(
+                Calibration, Playback.SelectedClip, 18)
         )
 
     Else If Action = ViewerUi.CALIBRATION_ACTION_DECOUPLE_SHIELD Then
 
         Call BeginCalibrationEdit()
-        Call SetCalibrationChannelValue(
+        Call ViewerCalibration.SetChannelValue(
+            Calibration,
             Playback.SelectedClip,
             19,
-            1 - CalibrationChannelValue(Playback.SelectedClip, 19)
+            1 - ViewerCalibration.ChannelValue(
+                Calibration, Playback.SelectedClip, 19)
         )
 
     End If
@@ -2672,7 +2677,8 @@ Sub SeekCalibrationKeyframe(Direction As Number)
         Return
     End If
 
-    CurrentFrame = CurrentAnimationFrame()
+    CurrentFrame = ViewerCalibration.CurrentAnimationFrame(
+        Character, Playback.SelectedClip)
 
     If Direction < 0 Then
 
@@ -2819,7 +2825,8 @@ Sub UpdateTimelineKeyframeDrag()
         Character3D.ClipSampleRate(Character, Playback.SelectedClip),
         Character3D.ClipSampleCount(Character, Playback.SelectedClip)
     )
-    ExistingKeyframe = CalibrationKeyframeIndex(Playback.SelectedClip, TargetFrame)
+    ExistingKeyframe = ViewerCalibration.KeyIndex(
+        Calibration, Playback.SelectedClip, TargetFrame)
 
     If ExistingKeyframe < 0 Or ExistingKeyframe = ViewerInputState.TimelineDraggedKeyframe Then
         ViewerInputState.TimelineDraggedTargetFrame = TargetFrame
@@ -2835,23 +2842,31 @@ End Sub
 
 Sub FinishTimelineKeyframeDrag()
 
+    Dim Transaction As ViewerCalibration.TransactionResult
+
     Call ViewerInput.FinishTimelineGesture(ViewerInputState)
 
     If ViewerInputState.TimelineDraggedTargetFrame = ViewerInputState.TimelineDraggedOriginalFrame Then
         Return
     End If
 
-    If Not ViewerCalibration.MoveKey(
+    Transaction = ViewerCalibration.MoveKeyAndPersist(
         Calibration,
+        Character,
         Playback.SelectedClip,
         ViewerInputState.TimelineDraggedKeyframe,
-        ViewerInputState.TimelineDraggedTargetFrame
-    ) Then
+        ViewerInputState.TimelineDraggedTargetFrame,
+        ViewerUiState.CalibrationEditing
+    )
+
+    If Not Transaction.Applied Then
         Return
     End If
 
-    Call RefreshCalibrationSavedStatus()
-    Call SaveCalibrationKeyframes()
+    If Transaction.Persisted Then
+        Call ViewerEffects.InvalidateVisualHistory(Effects)
+    End If
+
     Call UpdateCalibrationForCurrentFrame()
     Call ApplyWristCalibration()
 
@@ -2946,118 +2961,6 @@ Sub HandleCalibrationImport()
 
 End Sub
 
-Function PrepareCalibrationImport(Contents As Text) As Boolean
-
-    Dim Result As Boolean
-
-    Result = ViewerCalibration.PrepareImport(
-        Calibration, Character, Contents, ViewerUiState.CalibrationEditing)
-
-    Return Result
-
-End Function
-
-Function CommitCalibrationImport() As Boolean
-
-    Dim Result As Boolean
-
-    Result = ViewerCalibration.CommitImport(
-        Calibration, Character, Playback.SelectedClip, ViewerUiState.CalibrationEditing)
-
-    If Result Then
-
-        Call UpdateCalibrationForCurrentFrame()
-        Call ApplyWristCalibration()
-        Call ApplyEquipmentCalibration()
-    Call ViewerEffects.InvalidateVisualHistory(Effects)
-
-    End If
-
-    Return Result
-
-End Function
-
-Function SavedCalibrationJson() As Text
-
-    Dim Result As Text
-
-    Result = ViewerCalibration.SavedJson(Calibration, Character)
-
-    Return Result
-
-End Function
-
-Sub ClearCalibrationMemory()
-
-    Call ViewerCalibration.ResetBank(Calibration)
-
-End Sub
-
-Sub SaveCalibrationKeyframes(Optional Persist As Boolean = True)
-
-    Dim SavedSuccessfully As Boolean
-
-    SavedSuccessfully = ViewerCalibration.Persist(
-        Calibration, Character, Playback.SelectedClip, ViewerUiState.CalibrationEditing, Persist)
-
-    If SavedSuccessfully And Persist Then
-    Call ViewerEffects.InvalidateVisualHistory(Effects)
-    End If
-
-End Sub
-
-Function CalibrationKeyframeIndex(Clip As Number, FrameValue As Number) As Number
-
-    Dim Result As Number
-
-    Result = ViewerCalibration.KeyIndex(Calibration, Clip, FrameValue)
-
-    Return Result
-
-End Function
-
-Function StoreCalibrationKeyframe(Clip As Number, FrameValue As Number) As Boolean
-
-    Dim Result As Boolean
-
-    Result = ViewerCalibration.StoreKey(Calibration, Clip, FrameValue)
-
-    Return Result
-
-End Function
-
-Sub RefreshCalibrationSavedStatus()
-
-    Call ViewerCalibration.RefreshSaved(Calibration, Character)
-
-End Sub
-
-Function CalibrationChannelValue(Clip As Number, Channel As Number) As Number
-
-    Dim Result As Number
-
-    Result = ViewerCalibration.ChannelValue(Calibration, Clip, Channel)
-
-    Return Result
-
-End Function
-
-Sub SetCalibrationChannelValue(Clip As Number, Channel As Number, Value As Number)
-
-    Call ViewerCalibration.SetChannelValue(Calibration, Clip, Channel, Value)
-
-End Sub
-
-Function CurrentAnimationFrame() As Number
-
-    Dim Result As Number
-
-    Result = ViewerCalibration.CurrentAnimationFrame(Character, Playback.SelectedClip)
-
-    Return Result
-
-End Function
-
 Sub UpdateCalibrationForCurrentFrame()
 
     If Not CalibrationAvailable Then
@@ -3068,7 +2971,8 @@ Sub UpdateCalibrationForCurrentFrame()
         Calibration,
         Character,
         Playback.SelectedClip,
-        CurrentAnimationFrame(),
+        ViewerCalibration.CurrentAnimationFrame(
+            Character, Playback.SelectedClip),
         ViewerUiState.CalibrationEditing And Calibration.OwnerProfile = Session.ProfileIndex
     )
 
@@ -3076,21 +2980,23 @@ End Sub
 
 Sub DeleteCurrentCalibrationKeyframe()
 
-    Dim CurrentFrame As Number
+    Dim Transaction As ViewerCalibration.TransactionResult
 
-    CurrentFrame = CurrentAnimationFrame()
+    Transaction = ViewerCalibration.DeleteCurrentKeyAndPersist(
+        Calibration, Character, Playback.SelectedClip,
+        ViewerUiState.CalibrationEditing)
 
-    If Not ViewerCalibration.DeleteKey(
-        Calibration, Playback.SelectedClip, CurrentFrame) Then
+    If Not Transaction.Applied Then
         Return
     End If
 
-    Calibration.SaveLimitReached = False
     ViewerUiState.CalibrationClearConfirm = False
     ViewerUiState.CalibrationClearAllStage = 0
 
-    Call RefreshCalibrationSavedStatus()
-    Call SaveCalibrationKeyframes()
+    If Transaction.Persisted Then
+        Call ViewerEffects.InvalidateVisualHistory(Effects)
+    End If
+
     Call UpdateCalibrationForCurrentFrame()
     Call ApplyWristCalibration()
 
@@ -3099,34 +3005,19 @@ End Sub
 Sub CopyCurrentCalibrationKeyframe()
 
     Call ViewerCalibration.CopyKey(
-        Calibration, Playback.SelectedClip, CurrentAnimationFrame())
+        Calibration, Playback.SelectedClip,
+        ViewerCalibration.CurrentAnimationFrame(
+            Character, Playback.SelectedClip))
 
 End Sub
 
 Sub ReloadCurrentCalibrationKeyframe()
 
-    Dim Channel As Number
-    Dim CurrentFrame As Number
-    Dim CurrentKeyframe As Number
-
-    CurrentFrame = CurrentAnimationFrame()
-    CurrentKeyframe = CalibrationKeyframeIndex(Playback.SelectedClip, CurrentFrame)
-
-    If CurrentKeyframe < 0 Then
+    If Not ViewerCalibration.ReloadCurrentKey(
+        Calibration, Character, Playback.SelectedClip) Then
         Return
     End If
 
-    For Channel = 0 To CALIBRATION_CHANNEL_COUNT - 1
-
-        Call SetCalibrationChannelValue(
-            Playback.SelectedClip,
-            Channel,
-            ViewerCalibration.KeyValue(
-                Calibration, Playback.SelectedClip, CurrentKeyframe, Channel)
-        )
-    End For
-
-    Calibration.SaveLimitReached = False
     ViewerUiState.CalibrationClearConfirm = False
     ViewerUiState.CalibrationClearAllStage = 0
 
@@ -3140,16 +3031,11 @@ End Sub
 
 Sub PasteCalibrationKeyframe()
 
-    Dim CurrentFrame As Number
     Dim SavedSuccessfully As Boolean
 
-    If Not ViewerCalibration.PasteClipboard(Calibration, Playback.SelectedClip) Then
-        Return
-    End If
-
-    CurrentFrame = CurrentAnimationFrame()
-    SavedSuccessfully = ViewerCalibration.CommitCurrentKey(
-        Calibration, Character, Playback.SelectedClip, CurrentFrame, ViewerUiState.CalibrationEditing)
+    SavedSuccessfully = ViewerCalibration.PasteClipboardAndPersist(
+        Calibration, Character, Playback.SelectedClip,
+        ViewerUiState.CalibrationEditing)
 
     If SavedSuccessfully Then
 
@@ -3244,7 +3130,8 @@ Sub BeginCalibrationEdit()
     Call ViewerUi.BeginCalibrationEdit(
         ViewerUiState,
         Playback.SelectedClip,
-        CurrentAnimationFrame(),
+        ViewerCalibration.CurrentAnimationFrame(
+            Character, Playback.SelectedClip),
         ViewerCameraState.AutoOrbit
     )
 
@@ -3311,22 +3198,31 @@ Sub SetCurrentCalibrationValue(Value As Number)
 
         If (Not ViewerGizmoState.GripAnchorActive Or
             ViewerGizmoState.GripAnchorTarget <> ViewerUiState.CalibrationTarget Or
-            ViewerGizmoState.GripAnchorFrame <> CurrentAnimationFrame()) Then
+            ViewerGizmoState.GripAnchorFrame <>
+                ViewerCalibration.CurrentAnimationFrame(
+                    Character, Playback.SelectedClip)) Then
 
             ViewerGizmoState.GripAnchor = ViewerCalibration.EquipmentGripThousandths(
                 Character, PartIndex, SocketName)
             ViewerGizmoState.GripAnchorActive = True
             ViewerGizmoState.GripAnchorTarget = ViewerUiState.CalibrationTarget
-            ViewerGizmoState.GripAnchorFrame = CurrentAnimationFrame()
-            ViewerGizmoState.GripBasePosition.X = CalibrationChannelValue(Playback.SelectedClip, 12 + 0)
-            ViewerGizmoState.GripBasePosition.Y = CalibrationChannelValue(Playback.SelectedClip, 12 + 1)
-            ViewerGizmoState.GripBasePosition.Z = CalibrationChannelValue(Playback.SelectedClip, 12 + 2)
+            ViewerGizmoState.GripAnchorFrame = ViewerCalibration.CurrentAnimationFrame(
+                Character, Playback.SelectedClip)
+            ViewerGizmoState.GripBasePosition.X = ViewerCalibration.ChannelValue(
+                Calibration, Playback.SelectedClip, 12 + 0)
+            ViewerGizmoState.GripBasePosition.Y = ViewerCalibration.ChannelValue(
+                Calibration, Playback.SelectedClip, 12 + 1)
+            ViewerGizmoState.GripBasePosition.Z = ViewerCalibration.ChannelValue(
+                Calibration, Playback.SelectedClip, 12 + 2)
 
             If PartIndex = SHIELD_PART_INDEX Then
 
-                ViewerGizmoState.GripBasePosition.X = CalibrationChannelValue(Playback.SelectedClip, 15 + 0)
-                ViewerGizmoState.GripBasePosition.Y = CalibrationChannelValue(Playback.SelectedClip, 15 + 1)
-                ViewerGizmoState.GripBasePosition.Z = CalibrationChannelValue(Playback.SelectedClip, 15 + 2)
+                ViewerGizmoState.GripBasePosition.X = ViewerCalibration.ChannelValue(
+                    Calibration, Playback.SelectedClip, 15 + 0)
+                ViewerGizmoState.GripBasePosition.Y = ViewerCalibration.ChannelValue(
+                    Calibration, Playback.SelectedClip, 15 + 1)
+                ViewerGizmoState.GripBasePosition.Z = ViewerCalibration.ChannelValue(
+                    Calibration, Playback.SelectedClip, 15 + 2)
 
             End If
 
@@ -3368,10 +3264,14 @@ Sub SetCurrentCalibrationValue(Value As Number)
             ViewerGizmoState.GripLimit = True
 
             If PartIndex = WEAPON_PART_INDEX Then
-                Call SetCalibrationChannelValue(Playback.SelectedClip, 6 + ViewerUiState.CalibrationAxis, PreviousValue)
+                Call ViewerCalibration.SetChannelValue(
+                    Calibration, Playback.SelectedClip,
+                    6 + ViewerUiState.CalibrationAxis, PreviousValue)
             Else
 
-                Call SetCalibrationChannelValue(Playback.SelectedClip, 9 + ViewerUiState.CalibrationAxis, PreviousValue)
+                Call ViewerCalibration.SetChannelValue(
+                    Calibration, Playback.SelectedClip,
+                    9 + ViewerUiState.CalibrationAxis, PreviousValue)
             End If
 
             Call ApplyEquipmentCalibration()
@@ -3473,13 +3373,17 @@ End Sub
 
 Sub ClearSelectedClipCalibration()
 
-    Call ViewerCalibration.ClearClip(Calibration, Playback.SelectedClip)
+    Dim Transaction As ViewerCalibration.TransactionResult
+
+    Transaction = ViewerCalibration.ClearClipAndPersist(
+        Calibration, Character, Playback.SelectedClip,
+        ViewerUiState.CalibrationEditing)
 
     ViewerUiState.CalibrationClearConfirm = False
-    Calibration.SaveLimitReached = False
 
-    Call RefreshCalibrationSavedStatus()
-    Call SaveCalibrationKeyframes()
+    If Transaction.Persisted Then
+        Call ViewerEffects.InvalidateVisualHistory(Effects)
+    End If
 
     Call ApplyWristCalibration()
     Call ApplyEquipmentCalibration()
@@ -3489,13 +3393,18 @@ End Sub
 
 Sub ClearAllCalibration()
 
-    Call ClearCalibrationMemory()
+    Dim Transaction As ViewerCalibration.TransactionResult
+
+    Transaction = ViewerCalibration.ClearAllAndPersist(
+        Calibration, Character, Playback.SelectedClip,
+        ViewerUiState.CalibrationEditing)
 
     ViewerUiState.CalibrationClearConfirm = False
     ViewerUiState.CalibrationClearAllStage = 0
-    Calibration.SaveLimitReached = False
 
-    Call SaveCalibrationKeyframes()
+    If Transaction.Persisted Then
+        Call ViewerEffects.InvalidateVisualHistory(Effects)
+    End If
 
     Call ApplyWristCalibration()
     Call ApplyEquipmentCalibration()
@@ -3867,9 +3776,14 @@ Sub DrawInspectorOverlay()
             Playback.SelectedClip,
             SelectedClipLabel(),
             SelectedClipName(),
-            CurrentAnimationFrame(),
-            CalibrationKeyframeIndex(
-                Playback.SelectedClip, CurrentAnimationFrame()),
+            ViewerCalibration.CurrentAnimationFrame(
+                Character, Playback.SelectedClip),
+            ViewerCalibration.KeyIndex(
+                Calibration,
+                Playback.SelectedClip,
+                ViewerCalibration.CurrentAnimationFrame(
+                    Character, Playback.SelectedClip)
+            ),
             CurrentCalibrationValue(),
             ViewerCalibration.MinimumValue(ViewerUiState.CalibrationTransform),
             ViewerCalibration.MaximumValue(ViewerUiState.CalibrationTransform),
@@ -3877,8 +3791,10 @@ Sub DrawInspectorOverlay()
             ViewerGizmoState.HoldGrip,
             ViewerGizmoState.GripLimit,
             Playback.ScenePaused,
-            CalibrationChannelValue(Playback.SelectedClip, 18) <> 0,
-            CalibrationChannelValue(Playback.SelectedClip, 19) <> 0
+            ViewerCalibration.ChannelValue(
+                Calibration, Playback.SelectedClip, 18) <> 0,
+            ViewerCalibration.ChannelValue(
+                Calibration, Playback.SelectedClip, 19) <> 0
         )
     End If
 
@@ -4524,8 +4440,10 @@ Sub UpdatePartyCompanion()
             Effects.SwordGlow,
             Effects.ShieldGlow,
             ViewerCameraState.Frame.ScalePercent,
-            CalibrationChannelValue(Playback.SelectedClip, 18) <> 0,
-            CalibrationChannelValue(Playback.SelectedClip, 19) <> 0
+            ViewerCalibration.ChannelValue(
+                Calibration, Playback.SelectedClip, 18) <> 0,
+            ViewerCalibration.ChannelValue(
+                Calibration, Playback.SelectedClip, 19) <> 0
         ) And Session.Ready
     End If
 

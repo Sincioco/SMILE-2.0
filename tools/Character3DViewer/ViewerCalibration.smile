@@ -65,6 +65,11 @@ Public Type ConfigurationResult
     ShieldWristNode As Number
 End Type
 
+Public Type TransactionResult
+    Applied As Boolean
+    Persisted As Boolean
+End Type
+
 Private Dim SwordWrist[TOTAL_CLIPS, AXIS_COUNT] As Number
 Private Dim ShieldWrist[TOTAL_CLIPS, AXIS_COUNT] As Number
 Private Dim SwordRotation[TOTAL_CLIPS, AXIS_COUNT] As Number
@@ -420,7 +425,8 @@ Public Function StoreKey(ByRef Value As State, Clip As Number, FrameValue As Num
 End Function
 
 Public Function CommitCurrentKey(ByRef Value As State, ByRef Actor As Character3D.Actor,
-    Clip As Number, FrameValue As Number, Editing As Boolean) As Boolean
+    Clip As Number, FrameValue As Number, Editing As Boolean,
+    Optional PersistChanges As Boolean = True) As Boolean
 
     Dim Result As Boolean
 
@@ -434,7 +440,7 @@ Public Function CommitCurrentKey(ByRef Value As State, ByRef Actor As Character3
     End If
 
     Value.Saved = True
-    Result = Persist(Value, Actor, Clip, Editing)
+    Result = Persist(Value, Actor, Clip, Editing, PersistChanges)
 
     Return Result
 
@@ -467,6 +473,30 @@ Public Function DeleteKey(ByRef Value As State, Clip As Number, FrameValue As Nu
     KeyCounts[Value.KeyBase + Clip] = CurrentKeyCount - 1
 
     Return True
+
+End Function
+
+Public Function DeleteCurrentKeyAndPersist(ByRef Value As State,
+    ByRef Actor As Character3D.Actor, CurrentClip As Number,
+    Editing As Boolean, Optional PersistChanges As Boolean = True) As TransactionResult
+
+    Dim CurrentFrame As Number
+    Dim Result As TransactionResult
+
+    CurrentFrame = CurrentAnimationFrame(Actor, CurrentClip)
+
+    If Not DeleteKey(Value, CurrentClip, CurrentFrame) Then
+        Return Result
+    End If
+
+    Result.Applied = True
+    Value.SaveLimitReached = False
+
+    Call RefreshSaved(Value, Actor)
+
+    Result.Persisted = Persist(Value, Actor, CurrentClip, Editing, PersistChanges)
+
+    Return Result
 
 End Function
 
@@ -533,6 +563,27 @@ Public Function MoveKey(ByRef Value As State, Clip As Number, Index As Number,
 
 End Function
 
+Public Function MoveKeyAndPersist(ByRef Value As State,
+    ByRef Actor As Character3D.Actor, CurrentClip As Number,
+    Index As Number, TargetFrame As Number, Editing As Boolean,
+    Optional PersistChanges As Boolean = True) As TransactionResult
+
+    Dim Result As TransactionResult
+
+    If Not MoveKey(Value, CurrentClip, Index, TargetFrame) Then
+        Return Result
+    End If
+
+    Result.Applied = True
+
+    Call RefreshSaved(Value, Actor)
+
+    Result.Persisted = Persist(Value, Actor, CurrentClip, Editing, PersistChanges)
+
+    Return Result
+
+End Function
+
 Public Sub CopyKey(ByRef Value As State, Clip As Number, FrameValue As Number)
 
     Dim Channel As Number
@@ -563,6 +614,50 @@ Public Function PasteClipboard(ByRef Value As State, Clip As Number) As Boolean
     For Channel = 0 To CHANNEL_COUNT - 1
         Call SetChannelValue(Value, Clip, Channel, ClipboardValues[Channel])
     End For
+
+    Return True
+
+End Function
+
+Public Function PasteClipboardAndPersist(ByRef Value As State,
+    ByRef Actor As Character3D.Actor, CurrentClip As Number,
+    Editing As Boolean, Optional PersistChanges As Boolean = True) As Boolean
+
+    Dim CurrentFrame As Number
+    Dim Result As Boolean
+
+    If Not PasteClipboard(Value, CurrentClip) Then
+        Return False
+    End If
+
+    CurrentFrame = CurrentAnimationFrame(Actor, CurrentClip)
+    Result = CommitCurrentKey(
+        Value, Actor, CurrentClip, CurrentFrame, Editing, PersistChanges)
+
+    Return Result
+
+End Function
+
+Public Function ReloadCurrentKey(ByRef Value As State,
+    ByRef Actor As Character3D.Actor, CurrentClip As Number) As Boolean
+
+    Dim Channel As Number
+    Dim CurrentFrame As Number
+    Dim CurrentKeyframe As Number
+
+    CurrentFrame = CurrentAnimationFrame(Actor, CurrentClip)
+    CurrentKeyframe = KeyIndex(Value, CurrentClip, CurrentFrame)
+
+    If CurrentKeyframe < 0 Then
+        Return False
+    End If
+
+    For Channel = 0 To CHANNEL_COUNT - 1
+        Call SetChannelValue(Value, CurrentClip, Channel,
+            KeyValue(Value, CurrentClip, CurrentKeyframe, Channel))
+    End For
+
+    Value.SaveLimitReached = False
 
     Return True
 
@@ -640,6 +735,41 @@ Public Sub ClearClip(ByRef Value As State, Clip As Number)
     ShieldDecoupled[Value.KeyBase + Clip] = 0
 
 End Sub
+
+Public Function ClearClipAndPersist(ByRef Value As State,
+    ByRef Actor As Character3D.Actor, CurrentClip As Number,
+    Editing As Boolean, Optional PersistChanges As Boolean = True) As TransactionResult
+
+    Dim Result As TransactionResult
+
+    Call ClearClip(Value, CurrentClip)
+
+    Result.Applied = True
+    Value.SaveLimitReached = False
+
+    Call RefreshSaved(Value, Actor)
+
+    Result.Persisted = Persist(Value, Actor, CurrentClip, Editing, PersistChanges)
+
+    Return Result
+
+End Function
+
+Public Function ClearAllAndPersist(ByRef Value As State,
+    ByRef Actor As Character3D.Actor, CurrentClip As Number,
+    Editing As Boolean, Optional PersistChanges As Boolean = True) As TransactionResult
+
+    Dim Result As TransactionResult
+
+    Call ResetBank(Value)
+
+    Result.Applied = True
+    Value.SaveLimitReached = False
+    Result.Persisted = Persist(Value, Actor, CurrentClip, Editing, PersistChanges)
+
+    Return Result
+
+End Function
 
 Public Function InterpolateChannel(Channel As Number, StartValue As Number,
     EndValue As Number, CurrentFrame As Number, StartFrame As Number,
