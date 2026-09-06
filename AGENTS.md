@@ -7,11 +7,24 @@ These instructions apply to the entire SMILE 2.0 repository.
 - When beginning a new task, state what the task is in a bolded bulleted list.
 - When completing a task, list every remaining task in a bolded bulleted list.
 - When work is interrupted and then resumed, state what task will be resumed in a bolded bulleted list.
-- Use status markers consistently in progress reports: `🟩 COMPLETE` for completed work,
-  `🟨 ACTIVE` for active work, `⬛ NOT STARTED` for work not yet begun, `🟦 UPDATE`
-  for informational updates, and `🟥 ISSUE / FLAG` for problems or capability flags.
-  These markers are the dependable Markdown substitute for foreground/background colors
-  that the Codex chat renderer does not expose.
+- Use clear Markdown formatting and these visual status indicators consistently in progress
+  updates, implementation reports, summaries, and final responses:
+  - `✅ Completed` for work successfully implemented and validated;
+  - `🔄 In Progress` for work currently being implemented or investigated;
+  - `⚠️ Issues Found` for defects, regressions, warnings, architectural concerns, missing
+    tests, incomplete work, or anything requiring attention;
+  - `❌ Failed` for failed tests, builds, validations, commands, implementations, or
+    attempted approaches;
+  - `🧪 Testing` for tests or validation currently being performed;
+  - `🔧 Fixing` for an identified issue currently being corrected;
+  - `📋 Planned` for work identified but not yet started;
+  - `🎯 Objective` for the current goal or intended outcome;
+  - `🏗️ Architecture` for architecture or design work and decisions;
+  - `📦 Commit` for commit-related information;
+  - `🚧 Blocked` for work that cannot proceed because of a dependency or unresolved issue.
+- Never use Markdown completed-task checkboxes or strikethrough for completed work. Keep
+  every completed task clearly visible with a green `✅` checkmark. Use `📋` for pending
+  work and `🔄` for active work. Use these symbols semantically rather than decoratively.
 
 ## Project identity
 
