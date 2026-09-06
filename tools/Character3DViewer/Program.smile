@@ -377,7 +377,13 @@ Do
             Session.Ready = Character3D.Draw(Character) And Session.Ready
 
             If (Party.Enabled Or Session.DragonInspection) And Party.Ready Then
-                Session.Ready = DrawPartyCompanion() And Session.Ready
+                Session.Ready = ViewerParty.DrawCompanion(
+                    Party,
+                    Party.Enabled,
+                    Session.DragonInspection,
+                    Effects.EpicGlowVisible,
+                    SwordVisible
+                ) And Session.Ready
             End If
 
             If Session.DragonInspection Then
@@ -5160,7 +5166,30 @@ Sub DrawInspectorOverlay()
     Call DrawButton(338, 62, 72, 26, "Party", Session.SelectedCharacterTab = 3)
 
     If Party.Enabled And Not ViewerUiState.CalibrationVisible Then
-        Call DrawPartyOverlay()
+        Call ViewerParty.DrawOverlay(
+            Party,
+            ViewerUiState.Visibility,
+            Window_Height(),
+            DragonState.Visible,
+            SwordVisible,
+            ShieldVisible,
+            Rendering.FloorVisible Or Rendering.GridVisible,
+            Rendering.BackgroundIndex > 0,
+            Effects.EpicGlowVisible,
+            Playback.ScenePaused,
+            ViewerCameraState.AutoOrbit,
+            Effects.FlamePaused,
+            Effects.LightningPaused,
+            VfxPlaybackLabel("Fire", Effects.FlamePaused),
+            VfxPlaybackLabel("Lightning", Effects.LightningPaused),
+            ViewerEffects.ShieldFireStyleLabel(Effects),
+            Effects.ShieldFlameStyle,
+            ViewerEffects.StormCaption(Effects),
+            ViewerTiming.FramesPerSecond(FrameRate),
+            Session.ViewerError,
+            Session.FirstFailureStage,
+            ViewerCameraState.Live
+        )
     End If
 
     If ViewerUiState.Visibility = 0 Then
@@ -6006,8 +6035,7 @@ End Sub
 
 Sub DestroyViewerResources()
 
-    Call DestroyPartyCompanion()
-    Call ViewerActors.Destroy(Party.DragonOpponent)
+    Call ViewerParty.DestroyParticipants(Party)
     Call ViewerDragon.Shutdown(DragonState, Effects.DragonLight)
 
     Session.Ready = ViewerEffects.ShutdownShared(Effects) And Session.Ready
@@ -6406,7 +6434,13 @@ Function DrawDragonOpponent() As Boolean
 
     SavedCompanion = Party.Companion
     Party.Companion = Party.DragonOpponent
-    Result = DrawPartyCompanion()
+    Result = ViewerParty.DrawCompanion(
+        Party,
+        Party.Enabled,
+        Session.DragonInspection,
+        Effects.EpicGlowVisible,
+        SwordVisible
+    )
     Party.Companion = SavedCompanion
 
     Return Result
@@ -6666,278 +6700,106 @@ Sub UpdatePartyCompanion()
 
 End Sub
 
-Function DrawPartyCompanion() As Boolean
-
-    Dim Result As Boolean
-
-    Result = ViewerActors.Draw(Party.Companion)
-
-    If (Party.Companion.GlowVisible And
-        Party.Companion.GlowAvailable And
-        (Not Party.Enabled Or PartyPresentationState(1) <> ViewerParty.STATE_KO) And
-        (Effects.EpicGlowVisible Or Session.DragonInspection)) Then
-
-        If SwordVisible Then
-            Result = Graphics3D.DrawObject3D(Party.Companion.WeaponGlow) And Result
-        End If
-
-    End If
-
-    Return Result
-
-End Function
-
-Sub DestroyPartyCompanion()
-
-    Call ViewerActors.Destroy(Party.Companion)
-
-    Party.Ready = False
-
-End Sub
-
 Function HandlePartyPointer() As Boolean
 
-    Dim Left As Number
-    Dim Result As Boolean
+    Dim ReturnValue As Boolean
 
-    Left = 12
-    Result = (ViewerUiState.Visibility = 0 And Not ViewerUiState.CalibrationVisible And
-        Pointer_X() < Left + 252 And Pointer_Y() >= 96 And
-        Pointer_Y() < Window_Height() - 104)
+    Dim CapturesActive As Boolean
+    Dim Decision As ViewerParty.PointerDecision
 
-    If (ViewerInputState.TimelineScrubbing Or
+    CapturesActive = (ViewerInputState.TimelineScrubbing Or
         ViewerInputState.TimelineKeyframeDragging Or
         ViewerInputState.FrameButtonRepeatDirection <> 0 Or
         ViewerInputState.SliderDragOwner <> 0 Or
-        ViewerGizmoState.Dragging) Then
-        Return False
-    End If
+        ViewerGizmoState.Dragging)
+    Decision = ViewerParty.ClassifyPointer(
+        Pointer_X(),
+        Pointer_Y(),
+        Pointer_Pressed(POINTER_PRIMARY),
+        Pointer_Pressed(POINTER_SECONDARY),
+        ViewerUiState.Visibility,
+        ViewerUiState.CalibrationVisible,
+        CapturesActive,
+        Window_Height(),
+        StatusPanelX(),
+        GlowButtonX(),
+        GlowButtonWidth()
+    )
 
-    If Pointer_Pressed(POINTER_SECONDARY) Then
-        Call ResetPartyInspector()
+    If Decision.Action = ViewerParty.POINTER_ACTION_RESET_VIEW Then
 
-        Return True
-    End If
-
-    If Not Pointer_Pressed(POINTER_PRIMARY) Or ViewerUiState.Visibility <> 0 Then
-        Return Result
-    End If
-
-    If PointerInRectangle(StatusPanelX() + 12, Window_Height() - 64, 52, 24) Then
         Call ResetView()
 
-        Return True
-    Else If (PointerInRectangle(StatusPanelX() + 68, Window_Height() - 64, 74, 24) Or
-        PointerInRectangle(StatusPanelX() + 146, Window_Height() - 64, 40, 24)) Then
+    Else If Decision.Action = ViewerParty.POINTER_ACTION_RESET_INSPECTOR Then
+
         Call ResetPartyInspector()
 
-        Return True
-    Else If PointerInRectangle(GlowButtonX(), 18, GlowButtonWidth(), 34) Then
+    Else If Decision.Action = ViewerParty.POINTER_ACTION_TOGGLE_GLOW Then
+
         Call ToggleEpicGlow()
 
-        Return True
-    Else If PointerInRectangle(StatusPanelX() + 108, 18, 50, 34) Then
+    Else If Decision.Action = ViewerParty.POINTER_ACTION_CYCLE_SOCKET Then
+
         Call CycleSocketDisplay()
 
-        Return True
-    Else If PointerInRectangle(StatusPanelX() + 172, 204, 30, 24) Then
+    Else If Decision.Action = ViewerParty.POINTER_ACTION_SPEED_DOWN Then
+
         Call AdjustPlaybackSpeed(-25)
 
-        Return True
-    Else If PointerInRectangle(StatusPanelX() + 208, 204, 30, 24) Then
+    Else If Decision.Action = ViewerParty.POINTER_ACTION_SPEED_UP Then
+
         Call AdjustPlaybackSpeed(25)
 
-        Return True
-    End If
-
-    If Not Result Then
-        Return False
-    End If
-
-    If PointerInRectangle(Left, 104, 76, 30) Then
+    Else If Decision.Action = ViewerParty.POINTER_ACTION_TOGGLE_DRAGON Then
 
         Call ToggleDragon()
 
-    Else If PointerInRectangle(Left + 82, 104, 76, 30) Then
+    Else If Decision.Action = ViewerParty.POINTER_ACTION_TOGGLE_SWORD Then
 
         Call ToggleSword()
 
-    Else If PointerInRectangle(Left + 164, 104, 76, 30) Then
+    Else If Decision.Action = ViewerParty.POINTER_ACTION_TOGGLE_SHIELD Then
 
         Call ToggleShield()
 
-    Else If PointerInRectangle(Left, 140, 76, 22) Then
+    Else If Decision.Action = ViewerParty.POINTER_ACTION_TOGGLE_FLOOR Then
 
         Call ToggleFloorAndGrid()
 
-    Else If PointerInRectangle(Left + 82, 140, 76, 22) Then
+    Else If Decision.Action = ViewerParty.POINTER_ACTION_CYCLE_BACKGROUND Then
 
         Call CycleBackground()
 
-    Else If PointerInRectangle(Left + 164, 140, 76, 22) Then
-
-        Call ToggleEpicGlow()
-
-    Else If PointerInRectangle(Left + 12, 324, 108, 28) Then
+    Else If Decision.Action = ViewerParty.POINTER_ACTION_TOGGLE_PAUSE Then
 
         Call BeginPartyInspector()
         Call ToggleScenePause()
         Call EndPartyInspector()
 
-    Else If PointerInRectangle(Left + 128, 324, 108, 28) Then
+    Else If Decision.Action = ViewerParty.POINTER_ACTION_TOGGLE_ORBIT Then
 
         Call ViewerCamera.ToggleAutoOrbit(ViewerCameraState)
 
-    Else If PointerInRectangle(Left + 12, 360, 224, 28) Then
+    Else If Decision.Action = ViewerParty.POINTER_ACTION_RESTART Then
 
         Call ResetPartyInspector()
 
-    Else If Window_Height() >= 580 And PointerInRectangle(Left + 12, 410, 108, 24) Then
+    Else If Decision.Action = ViewerParty.POINTER_ACTION_TOGGLE_FIRE Then
 
         Call ViewerEffects.ToggleFlamePause(Effects)
 
-    Else If Window_Height() >= 580 And PointerInRectangle(Left + 128, 410, 108, 24) Then
+    Else If Decision.Action = ViewerParty.POINTER_ACTION_TOGGLE_LIGHTNING Then
 
         Call ViewerEffects.ToggleLightningPause(Effects)
 
-    Else If Window_Height() >= 580 And PointerInRectangle(Left + 12, 440, 224, 22) Then
+    Else If Decision.Action = ViewerParty.POINTER_ACTION_TOGGLE_SHIELD_STYLE Then
 
         Call ViewerEffects.ToggleShieldFireStyle(Effects)
 
     End If
 
-    Return Result
+    ReturnValue = Decision.Consumed
+
+    Return ReturnValue
 
 End Function
-
-Sub DrawPartyOverlay()
-
-    Dim Left As Number
-    Dim Acting As Text
-    Dim AttackSequence As Text
-
-    Left = 12
-    Acting = "Arin"
-
-    If Party.Turn = 1 Then
-        Acting = "Orin"
-    Else If Party.Turn = 2 Then
-        Acting = "Dragon"
-    End If
-
-    AttackSequence = "Sword Attack"
-
-    If Party.Turn = 0 And Party.AttackCycle Mod 2 = 1 Then
-
-        AttackSequence = "Sword Attack 2"
-
-    Else If Party.Turn = 1 Then
-
-        If Party.AttackCycle Mod 3 = 0 Then
-            AttackSequence = "Sword Attack"
-        Else If Party.AttackCycle Mod 3 = 1 Then
-            AttackSequence = "Jump Attack"
-        Else
-            AttackSequence = "Thor Attack"
-        End If
-
-    Else If Party.Turn = 2 Then
-
-        If Party.DragonCounter Mod 3 = 0 Then
-            AttackSequence = "Fire Breath"
-        Else If Party.DragonCounter Mod 3 = 1 Then
-            AttackSequence = "Claw Strike"
-        Else
-            AttackSequence = "Fireball"
-        End If
-
-    End If
-
-    If ViewerUiState.Visibility = 0 Then
-
-        Call UI.DrawPanel(Left, 96, 252, Max(330, Window_Height() - 200))
-        Call DrawButton(Left, 104, 76, 30, "Dragon", DragonState.Visible)
-        Call DrawButton(Left + 82, 104, 76, 30, "Weapon", SwordVisible)
-        Call DrawButton(Left + 164, 104, 76, 30, "Shield", ShieldVisible)
-        Call DrawButton(Left, 140, 76, 22, "Floor/Grid", Rendering.FloorVisible Or Rendering.GridVisible)
-        Call DrawButton(Left + 82, 140, 76, 22, "Backdrop", Rendering.BackgroundIndex > 0)
-        Call DrawButton(Left + 164, 140, 76, 22, "Glow", Effects.EpicGlowVisible)
-
-        Draw Text "Party / Enemy" At Left + 16, 178 Size 20 Color WHITE
-        Draw Text "Arin  •  Paladin" At Left + 16, 212 Size 15 Color CYAN
-        Draw Text "Orin  •  Tank" At Left + 16, 238 Size 15 Color WHITE
-        Draw Text Acting + "'s Turn" At Left + 16, 272 Size 16 Color YELLOW
-
-        If Party.Stage = 1 Or Party.Turn = 2 Then
-            Draw Text "Attack: " + AttackSequence At Left + 16, 296 Size 13 Color CYAN
-        End If
-
-        Call DrawButton(Left + 12, 324, 108, 28, "Pause", Playback.ScenePaused)
-        Call DrawButton(Left + 128, 324, 108, 28, "Orbit", ViewerCameraState.AutoOrbit)
-        Call DrawButton(Left + 12, 360, 224, 28, "Restart Battle Demo", False)
-
-        If Window_Height() >= 580 Then
-
-            Draw Text "VFX Playback" At Left + 16, 394 Size 12 Color WHITE
-
-        Call DrawButton(Left + 12, 410, 108, 24,
-            VfxPlaybackLabel("Fire", Effects.FlamePaused), Effects.FlamePaused)
-        Call DrawButton(Left + 128, 410, 108, 24,
-            VfxPlaybackLabel("Lightning", Effects.LightningPaused), Effects.LightningPaused)
-        Call DrawButton(Left + 12, 440, 224, 22,
-            "Arin Shield: " + ViewerEffects.ShieldFireStyleLabel(Effects),
-            Not Effects.ShieldFlameStyle)
-
-        End If
-
-        If Window_Height() >= 740 Then
-
-            If PartyPresentationState(0) = ViewerParty.STATE_KO Then
-                Draw Text "Arin KO - Revives On His Turn" At Left + 16, 470 Size 12 Color YELLOW
-            Else If PartyPresentationState(1) = ViewerParty.STATE_KO Then
-                Draw Text "Orin KO - Revives On His Turn" At Left + 16, 470 Size 12 Color YELLOW
-            Else
-                Draw Text "Arin " + PartyPresentationStateName(PartyPresentationState(0)) + " / Orin " + PartyPresentationStateName(PartyPresentationState(1)) At Left + 16, 470 Size 12 Color LIGHT_GRAY
-            End If
-
-            Draw Text ViewerEffects.StormCaption(Effects) At Left + 16, 488 Size 12 Color CYAN
-            Draw Text "Camera" At Left + 16, 528 Size 12 Color LIGHT_GRAY
-            Draw Number Party.ActiveCamera At Left + 80, 528 Size 12 Color CYAN
-
-            Call DrawPartyCameraDetails(Left + 16, 548)
-
-            Draw Text "FPS" At Left + 16, 508 Size 13 Color LIGHT_GRAY
-            Draw Number ViewerTiming.FramesPerSecond(FrameRate) At Left + 62, 508 Size 13 Color GREEN
-
-        End If
-
-    End If
-
-    If Session.ViewerError Then
-        Draw Text "Party Could Not Load — Select A Character Or Press Enter To Retry" At 18, 112 Size 16 Color YELLOW
-        Draw Number Session.FirstFailureStage At 18, 140 Size 14 Color YELLOW
-    End If
-
-End Sub
-
-Sub DrawPartyCameraDetails(X As Number, Y As Number)
-
-    Dim Angles As Core.Vector3
-
-    Angles = BattleCamera.ViewAngles(ViewerCameraState.Live)
-    Draw Text "Pos XYZ" At X, Y Size 11 Color LIGHT_GRAY
-    Draw Number ViewerCameraState.Live.Position.X At X + 74, Y Size 11 Color CYAN
-    Draw Number ViewerCameraState.Live.Position.Y At X + 124, Y Size 11 Color CYAN
-    Draw Number ViewerCameraState.Live.Position.Z At X + 174, Y Size 11 Color CYAN
-    Draw Text "Aim XYZ" At X, Y + 14 Size 11 Color LIGHT_GRAY
-    Draw Number ViewerCameraState.Live.Target.X At X + 74, Y + 14 Size 11 Color CYAN
-    Draw Number ViewerCameraState.Live.Target.Y At X + 124, Y + 14 Size 11 Color CYAN
-    Draw Number ViewerCameraState.Live.Target.Z At X + 174, Y + 14 Size 11 Color CYAN
-    Draw Text "Yaw / Pitch" At X, Y + 28 Size 11 Color LIGHT_GRAY
-    Draw Number Angles.Y At X + 100, Y + 28 Size 11 Color CYAN
-    Draw Number Angles.X At X + 158, Y + 28 Size 11 Color CYAN
-    Draw Text "FOV / Dist" At X, Y + 42 Size 11 Color LIGHT_GRAY
-    Draw Number ViewerCameraState.Live.FovDegrees At X + 100, Y + 42 Size 11 Color CYAN
-    Draw Number Math3D.Distance(ViewerCameraState.Live.Position, ViewerCameraState.Live.Target) At X + 158, Y + 42 Size 11 Color CYAN
-
-End Sub

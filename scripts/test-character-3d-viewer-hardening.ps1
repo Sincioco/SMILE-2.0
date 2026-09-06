@@ -202,7 +202,11 @@ try {
         'Public Sub ResetChoreography(',
         'Public Function BeginInspectorBinding(',
         'Public Sub InitializeFormation(',
-        'Public Function AdvanceElapsed(')) {
+        'Public Function AdvanceElapsed(',
+        'Public Function ClassifyPointer(',
+        'Public Function DrawCompanion(',
+        'Public Sub DrawOverlay(',
+        'Public Sub DestroyParticipants(')) {
         Assert-Contains $partySource $contract 'Viewer Party owner'
     }
     foreach ($contract in @(
@@ -257,6 +261,11 @@ try {
         -not $viewerSource.Contains('Dim SceneVfxClock As') -and
         -not $viewerSource.Contains('Dim Arena As')) `
         'Party, scene VFX and arena resource state must not return to Program.smile.'
+    Assert-True (-not $viewerSource.Contains('Function DrawPartyCompanion()') -and
+        -not $viewerSource.Contains('Sub DestroyPartyCompanion()') -and
+        -not $viewerSource.Contains('Sub DrawPartyOverlay()') -and
+        -not $viewerSource.Contains('Sub DrawPartyCameraDetails(')) `
+        'Party drawing, overlay presentation and participant lifecycle must remain in ViewerParty.'
     Assert-True (-not $viewerSource.Contains('Dim ShieldFire[') -and
         -not $viewerSource.Contains('Dim ShieldFirePoints[') -and
         -not $viewerSource.Contains('Dim SwordTrailPoints[') -and

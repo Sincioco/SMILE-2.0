@@ -28,5 +28,6 @@
     <SmileSource Include="ViewerDragon.smile" />
     <SmileSource Include="ViewerRendering.smile" />
     <SmileProjectReference Include="..\..\libraries\Smile.Simple3D\Smile.Simple3D.smilelibproj" />
+    <SmileProjectReference Include="..\..\libraries\Smile.UI\Smile.UI.smilelibproj" />
   </ItemGroup>
 </SmileProject>

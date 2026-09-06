@@ -7,6 +7,8 @@ Import Smile.Simple3D.Character3D As Character3D
 Import Smile.Simple3D.CharacterViewer As CharacterViewer
 Import Smile.Simple3D.Core As Core
 Import Smile.Simple3D.Graphics3D As Graphics3D
+Import Smile.Simple3D.Math3D As Math3D
+Import Smile.UI.Controls As UI
 Import Smile.Tools.BattleCamera As BattleCamera
 Import Smile.Tools.Character3DViewerActors As ViewerActors
 Import Smile.Tools.Character3DViewerProfiles As ViewerProfiles
@@ -18,6 +20,24 @@ Public Const STATE_HIT = 3
 Public Const STATE_KO = 4
 Public Const STATE_REVIVING = 5
 Public Const LIVE_PARTICIPANT_COUNT = 2
+Public Const POINTER_ACTION_NONE = 0
+Public Const POINTER_ACTION_RESET_VIEW = 1
+Public Const POINTER_ACTION_RESET_INSPECTOR = 2
+Public Const POINTER_ACTION_TOGGLE_GLOW = 3
+Public Const POINTER_ACTION_CYCLE_SOCKET = 4
+Public Const POINTER_ACTION_SPEED_DOWN = 5
+Public Const POINTER_ACTION_SPEED_UP = 6
+Public Const POINTER_ACTION_TOGGLE_DRAGON = 7
+Public Const POINTER_ACTION_TOGGLE_SWORD = 8
+Public Const POINTER_ACTION_TOGGLE_SHIELD = 9
+Public Const POINTER_ACTION_TOGGLE_FLOOR = 10
+Public Const POINTER_ACTION_CYCLE_BACKGROUND = 11
+Public Const POINTER_ACTION_TOGGLE_PAUSE = 12
+Public Const POINTER_ACTION_TOGGLE_ORBIT = 13
+Public Const POINTER_ACTION_RESTART = 14
+Public Const POINTER_ACTION_TOGGLE_FIRE = 15
+Public Const POINTER_ACTION_TOGGLE_LIGHTNING = 16
+Public Const POINTER_ACTION_TOGGLE_SHIELD_STYLE = 17
 
 Public Type ParticipantLayout
     Home As Core.Vector3
@@ -75,6 +95,11 @@ Public Type FrameActions
     PositionsAvailable As Boolean
     FirstPosition As Core.Vector3
     SecondPosition As Core.Vector3
+End Type
+
+Public Type PointerDecision
+    Consumed As Boolean
+    Action As Number
 End Type
 
 Public Sub ResetChoreography(ByRef Value As State)
@@ -715,5 +740,328 @@ Public Function AdvanceChoreography(ByRef Value As State,
     Return Actions
 
 End Function
+
+Public Function ClassifyPointer(
+    PointerX As Number,
+    PointerY As Number,
+    PrimaryPressed As Boolean,
+    SecondaryPressed As Boolean,
+    UiVisibility As Number,
+    CalibrationVisible As Boolean,
+    CapturesActive As Boolean,
+    WindowHeight As Number,
+    StatusPanelX As Number,
+    GlowButtonX As Number,
+    GlowButtonWidth As Number
+) As PointerDecision
+
+    Dim Result As PointerDecision
+    Dim Left As Number
+
+    Left = 12
+    Result.Consumed = (UiVisibility = 0 And Not CalibrationVisible And
+        PointerX < Left + 252 And PointerY >= 96 And
+        PointerY < WindowHeight - 104)
+
+    If CapturesActive Then
+        Result.Consumed = False
+
+        Return Result
+    End If
+
+    If SecondaryPressed Then
+
+        Result.Action = POINTER_ACTION_RESET_INSPECTOR
+        Result.Consumed = True
+
+        Return Result
+
+    End If
+
+    If Not PrimaryPressed Or UiVisibility <> 0 Then
+        Return Result
+    End If
+
+    If InRectangle(PointerX, PointerY,
+        StatusPanelX + 12, WindowHeight - 64, 52, 24) Then
+        Result.Action = POINTER_ACTION_RESET_VIEW
+    Else If (InRectangle(PointerX, PointerY,
+        StatusPanelX + 68, WindowHeight - 64, 74, 24) Or
+        InRectangle(PointerX, PointerY,
+            StatusPanelX + 146, WindowHeight - 64, 40, 24)) Then
+        Result.Action = POINTER_ACTION_RESET_INSPECTOR
+    Else If InRectangle(PointerX, PointerY,
+        GlowButtonX, 18, GlowButtonWidth, 34) Then
+        Result.Action = POINTER_ACTION_TOGGLE_GLOW
+    Else If InRectangle(PointerX, PointerY,
+        StatusPanelX + 108, 18, 50, 34) Then
+        Result.Action = POINTER_ACTION_CYCLE_SOCKET
+    Else If InRectangle(PointerX, PointerY,
+        StatusPanelX + 172, 204, 30, 24) Then
+        Result.Action = POINTER_ACTION_SPEED_DOWN
+    Else If InRectangle(PointerX, PointerY,
+        StatusPanelX + 208, 204, 30, 24) Then
+        Result.Action = POINTER_ACTION_SPEED_UP
+    Else If Not Result.Consumed Then
+        Return Result
+    Else If InRectangle(PointerX, PointerY, Left, 104, 76, 30) Then
+        Result.Action = POINTER_ACTION_TOGGLE_DRAGON
+    Else If InRectangle(PointerX, PointerY, Left + 82, 104, 76, 30) Then
+        Result.Action = POINTER_ACTION_TOGGLE_SWORD
+    Else If InRectangle(PointerX, PointerY, Left + 164, 104, 76, 30) Then
+        Result.Action = POINTER_ACTION_TOGGLE_SHIELD
+    Else If InRectangle(PointerX, PointerY, Left, 140, 76, 22) Then
+        Result.Action = POINTER_ACTION_TOGGLE_FLOOR
+    Else If InRectangle(PointerX, PointerY, Left + 82, 140, 76, 22) Then
+        Result.Action = POINTER_ACTION_CYCLE_BACKGROUND
+    Else If InRectangle(PointerX, PointerY, Left + 164, 140, 76, 22) Then
+        Result.Action = POINTER_ACTION_TOGGLE_GLOW
+    Else If InRectangle(PointerX, PointerY, Left + 12, 324, 108, 28) Then
+        Result.Action = POINTER_ACTION_TOGGLE_PAUSE
+    Else If InRectangle(PointerX, PointerY, Left + 128, 324, 108, 28) Then
+        Result.Action = POINTER_ACTION_TOGGLE_ORBIT
+    Else If InRectangle(PointerX, PointerY, Left + 12, 360, 224, 28) Then
+        Result.Action = POINTER_ACTION_RESTART
+    Else If (WindowHeight >= 580 And
+        InRectangle(PointerX, PointerY, Left + 12, 410, 108, 24)) Then
+        Result.Action = POINTER_ACTION_TOGGLE_FIRE
+    Else If (WindowHeight >= 580 And
+        InRectangle(PointerX, PointerY, Left + 128, 410, 108, 24)) Then
+        Result.Action = POINTER_ACTION_TOGGLE_LIGHTNING
+    Else If (WindowHeight >= 580 And
+        InRectangle(PointerX, PointerY, Left + 12, 440, 224, 22)) Then
+        Result.Action = POINTER_ACTION_TOGGLE_SHIELD_STYLE
+    End If
+
+    Return Result
+
+End Function
+
+Private Function InRectangle(PointerX As Number, PointerY As Number,
+    X As Number, Y As Number, Width As Number, Height As Number) As Boolean
+
+    Dim Result As Boolean
+
+    Result = (PointerX >= X And PointerX < X + Width And
+        PointerY >= Y And PointerY < Y + Height)
+
+    Return Result
+
+End Function
+
+Public Function ActingName(ByRef Value As State) As Text
+
+    Dim Result As Text
+
+    Result = "Arin"
+
+    If Value.Turn = 1 Then
+        Result = "Orin"
+    Else If Value.Turn = 2 Then
+        Result = "Dragon"
+    End If
+
+    Return Result
+
+End Function
+
+Public Function AttackSequenceName(ByRef Value As State) As Text
+
+    Dim Result As Text
+
+    Result = "Sword Attack"
+
+    If Value.Turn = 0 And Value.AttackCycle Mod 2 = 1 Then
+
+        Result = "Sword Attack 2"
+
+    Else If Value.Turn = 1 Then
+
+        If Value.AttackCycle Mod 3 = 0 Then
+            Result = "Sword Attack"
+        Else If Value.AttackCycle Mod 3 = 1 Then
+            Result = "Jump Attack"
+        Else
+            Result = "Thor Attack"
+        End If
+
+    Else If Value.Turn = 2 Then
+
+        If Value.DragonCounter Mod 3 = 0 Then
+            Result = "Fire Breath"
+        Else If Value.DragonCounter Mod 3 = 1 Then
+            Result = "Claw Strike"
+        Else
+            Result = "Fireball"
+        End If
+
+    End If
+
+    Return Result
+
+End Function
+
+Public Function DrawCompanion(ByRef Value As State, PartyEnabled As Boolean,
+    DragonInspection As Boolean, SceneGlowVisible As Boolean,
+    SwordVisible As Boolean) As Boolean
+
+    Dim Result As Boolean
+
+    Result = ViewerActors.Draw(Value.Companion)
+
+    If (Value.Companion.GlowVisible And
+        Value.Companion.GlowAvailable And
+        (Not PartyEnabled Or PresentationState(Value, 1) <> STATE_KO) And
+        (SceneGlowVisible Or DragonInspection) And
+        SwordVisible) Then
+        Result = Graphics3D.DrawObject3D(Value.Companion.WeaponGlow) And Result
+    End If
+
+    Return Result
+
+End Function
+
+Public Sub DestroyParticipants(ByRef Value As State)
+
+    Call ViewerActors.Destroy(Value.Companion)
+    Call ViewerActors.Destroy(Value.DragonOpponent)
+
+    Value.Ready = False
+
+End Sub
+
+Public Sub DrawOverlay(
+    ByRef Value As State,
+    UiVisibility As Number,
+    WindowHeight As Number,
+    DragonVisible As Boolean,
+    SwordVisible As Boolean,
+    ShieldVisible As Boolean,
+    FloorOrGridVisible As Boolean,
+    BackgroundVisible As Boolean,
+    GlowVisible As Boolean,
+    ScenePaused As Boolean,
+    AutoOrbit As Boolean,
+    FlamePaused As Boolean,
+    LightningPaused As Boolean,
+    FirePlaybackLabel As Text,
+    LightningPlaybackLabel As Text,
+    ShieldStyleLabel As Text,
+    ShieldFlameStyle As Boolean,
+    StormCaption As Text,
+    FramesPerSecond As Number,
+    ViewerError As Boolean,
+    FirstFailureStage As Number,
+    Camera As Core.Camera3D
+)
+
+    Dim Left As Number
+    Dim Acting As Text
+    Dim AttackSequence As Text
+    Dim PrimaryState As Number
+    Dim CompanionState As Number
+    Dim PresentationCaption As Text
+
+    Left = 12
+    Acting = ActingName(Value)
+    AttackSequence = AttackSequenceName(Value)
+    PrimaryState = PresentationState(Value, 0)
+    CompanionState = PresentationState(Value, 1)
+
+    If UiVisibility = 0 Then
+
+        Call UI.DrawPanel(Left, 96, 252, Max(330, WindowHeight - 200))
+        Call UI.DrawButton(Left, 104, 76, 30, "Dragon", DragonVisible)
+        Call UI.DrawButton(Left + 82, 104, 76, 30, "Weapon", SwordVisible)
+        Call UI.DrawButton(Left + 164, 104, 76, 30, "Shield", ShieldVisible)
+        Call UI.DrawButton(Left, 140, 76, 22, "Floor/Grid", FloorOrGridVisible)
+        Call UI.DrawButton(Left + 82, 140, 76, 22, "Backdrop", BackgroundVisible)
+        Call UI.DrawButton(Left + 164, 140, 76, 22, "Glow", GlowVisible)
+
+        Draw Text "Party / Enemy" At Left + 16, 178 Size 20 Color WHITE
+        Draw Text "Arin  •  Paladin" At Left + 16, 212 Size 15 Color CYAN
+        Draw Text "Orin  •  Tank" At Left + 16, 238 Size 15 Color WHITE
+        Draw Text Acting + "'s Turn" At Left + 16, 272 Size 16 Color YELLOW
+
+        If Value.Stage = 1 Or Value.Turn = 2 Then
+            Draw Text "Attack: " + AttackSequence At Left + 16, 296 Size 13 Color CYAN
+        End If
+
+        Call UI.DrawButton(Left + 12, 324, 108, 28, "Pause", ScenePaused)
+        Call UI.DrawButton(Left + 128, 324, 108, 28, "Orbit", AutoOrbit)
+        Call UI.DrawButton(Left + 12, 360, 224, 28, "Restart Battle Demo", False)
+
+        If WindowHeight >= 580 Then
+
+            Draw Text "VFX Playback" At Left + 16, 394 Size 12 Color WHITE
+
+            Call UI.DrawButton(Left + 12, 410, 108, 24,
+                FirePlaybackLabel, FlamePaused)
+            Call UI.DrawButton(Left + 128, 410, 108, 24,
+                LightningPlaybackLabel, LightningPaused)
+            Call UI.DrawButton(Left + 12, 440, 224, 22,
+                "Arin Shield: " + ShieldStyleLabel, Not ShieldFlameStyle)
+
+        End If
+
+        If WindowHeight >= 740 Then
+
+            If PrimaryState = STATE_KO Then
+
+                Draw Text "Arin KO - Revives On His Turn" At Left + 16, 470 Size 12 Color YELLOW
+
+            Else If CompanionState = STATE_KO Then
+
+                Draw Text "Orin KO - Revives On His Turn" At Left + 16, 470 Size 12 Color YELLOW
+
+            Else
+                PresentationCaption = "Arin " + PresentationStateName(PrimaryState)
+                PresentationCaption = PresentationCaption + " / Orin "
+                PresentationCaption = PresentationCaption + PresentationStateName(CompanionState)
+                Draw Text PresentationCaption At Left + 16, 470 Size 12 Color LIGHT_GRAY
+
+            End If
+
+            Draw Text StormCaption At Left + 16, 488 Size 12 Color CYAN
+            Draw Text "Camera" At Left + 16, 528 Size 12 Color LIGHT_GRAY
+            Draw Number Value.ActiveCamera At Left + 80, 528 Size 12 Color CYAN
+
+            Call DrawCameraDetails(Camera, Left + 16, 548)
+
+            Draw Text "FPS" At Left + 16, 508 Size 13 Color LIGHT_GRAY
+            Draw Number FramesPerSecond At Left + 62, 508 Size 13 Color GREEN
+
+        End If
+
+    End If
+
+    If ViewerError Then
+        Draw Text "Party Could Not Load — Select A Character Or Press Enter To Retry" At 18, 112 Size 16 Color YELLOW
+        Draw Number FirstFailureStage At 18, 140 Size 14 Color YELLOW
+    End If
+
+End Sub
+
+Private Sub DrawCameraDetails(Camera As Core.Camera3D, X As Number, Y As Number)
+
+    Dim Angles As Core.Vector3
+
+    Angles = BattleCamera.ViewAngles(Camera)
+    Draw Text "Pos XYZ" At X, Y Size 11 Color LIGHT_GRAY
+    Draw Number Camera.Position.X At X + 74, Y Size 11 Color CYAN
+    Draw Number Camera.Position.Y At X + 124, Y Size 11 Color CYAN
+    Draw Number Camera.Position.Z At X + 174, Y Size 11 Color CYAN
+    Draw Text "Aim XYZ" At X, Y + 14 Size 11 Color LIGHT_GRAY
+    Draw Number Camera.Target.X At X + 74, Y + 14 Size 11 Color CYAN
+    Draw Number Camera.Target.Y At X + 124, Y + 14 Size 11 Color CYAN
+    Draw Number Camera.Target.Z At X + 174, Y + 14 Size 11 Color CYAN
+    Draw Text "Yaw / Pitch" At X, Y + 28 Size 11 Color LIGHT_GRAY
+    Draw Number Angles.Y At X + 100, Y + 28 Size 11 Color CYAN
+    Draw Number Angles.X At X + 158, Y + 28 Size 11 Color CYAN
+    Draw Text "FOV / Dist" At X, Y + 42 Size 11 Color LIGHT_GRAY
+    Draw Number Camera.FovDegrees At X + 100, Y + 42 Size 11 Color CYAN
+    Draw Number Math3D.Distance(Camera.Position, Camera.Target) At X + 158, Y + 42 Size 11 Color CYAN
+
+End Sub
 
 End Module
