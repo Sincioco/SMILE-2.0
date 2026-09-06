@@ -304,6 +304,19 @@ Call Check(ViewerUi.MaterialInspectionLabel(Graphics3D.MATERIAL_INSPECTION_NORMA
 Call Check(ViewerUi.DemoLabel(True, True, False) = "RESUME")
 Call Check(ViewerUi.DemoStatusLabel(False, False, True) = "On")
 Call Check(ViewerUi.PartyRoleLabel("") = "Technical")
+Call Check(ViewerUi.StatusPanelX(1600) = 1332)
+Call Check(ViewerUi.AnimationButtonX(1600) = 1344)
+Call Check(ViewerUi.GlowButtonX(1600, True, False) = 1548)
+Call Check(ViewerUi.GlowButtonWidth(True, False) = 36)
+Call Check(ViewerUi.TimelineWidth(1600, 18) = 1294)
+Call Check(ViewerUi.LayoutTooSmall(799, 640))
+Call Check(Not ViewerUi.LayoutTooSmall(800, 540))
+
+Call ViewerUi.DrawCharacterStatusSummary(
+    500, "Arin", "Paladin", "Idle", "v5.7", 100,
+    Graphics3D.MATERIAL_INSPECTION_LIT, 1, 2, "Off", 0, -16, 60)
+Call ViewerUi.DrawCameraControls(500, 640, 0, 0, -16, -144, 36)
+Call ViewerUi.DrawAnimationButtons(ViewerProfiles.PROFILE_ARIN, 0, 800)
 
 Call ViewerGizmo.Reset(GizmoState)
 Call Check(Not GizmoState.Visible And Not GizmoState.Dragging)

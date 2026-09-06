@@ -203,7 +203,15 @@ try {
         'Public Function DragonLabel(',
         'Public Function MaterialInspectionLabel(',
         'Public Function DemoLabel(',
-        'Public Function PartyRoleLabel(')) {
+        'Public Function PartyRoleLabel(',
+        'Public Function StatusPanelX(',
+        'Public Function AnimationButtonX(',
+        'Public Function GlowButtonX(',
+        'Public Function TimelineWidth(',
+        'Public Function LayoutTooSmall(',
+        'Public Sub DrawCharacterStatusSummary(',
+        'Public Sub DrawCameraControls(',
+        'Public Sub DrawAnimationButtons(')) {
         Assert-Contains $uiSource $contract 'Viewer UI owner'
     }
     Assert-True (-not $viewerSource.Contains('Function LightingLabel(') -and
@@ -224,6 +232,17 @@ try {
         -not $viewerSource.Contains('Function PartyRoleLabel(') -and
         -not $viewerSource.Contains('Function AutoOrbitLabel(')) `
         'UI presentation-label policy must remain in ViewerUi.'
+    Assert-True (-not $viewerSource.Contains('Function StatusPanelX(') -and
+        -not $viewerSource.Contains('Function AnimationButtonX(') -and
+        -not $viewerSource.Contains('Function GlowButtonX(') -and
+        -not $viewerSource.Contains('Function GlowButtonWidth(') -and
+        -not $viewerSource.Contains('Function TimelineWidth(') -and
+        -not $viewerSource.Contains('Function ViewerLayoutTooSmall(') -and
+        -not $viewerSource.Contains('Sub DrawCharacterStatusSummary(') -and
+        -not $viewerSource.Contains('Sub DrawCameraControls(') -and
+        -not $viewerSource.Contains('Sub DrawCameraSlider(') -and
+        -not $viewerSource.Contains('Sub DrawAnimationButtons(')) `
+        'Inspector layout, status, camera and animation-control drawing must remain in ViewerUi.'
     foreach ($contract in @(
         'Public Sub BeginDrag(',
         'Public Sub FinishDrag(',

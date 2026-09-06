@@ -4,6 +4,20 @@ Module Smile.Tools.Character3DViewerUi
 Option Explicit
 
 Import Smile.Simple3D.Graphics3D As Graphics3D
+Import Smile.UI.Controls As UI
+Import Smile.Tools.Character3DViewerProfiles As ViewerProfiles
+
+Public Const ANIMATION_BUTTON_Y = 352
+Public Const ANIMATION_BUTTON_WIDTH = 70
+Public Const ANIMATION_BUTTON_HEIGHT = 18
+Public Const ANIMATION_BUTTON_COLUMN_GAP = 8
+Public Const ANIMATION_BUTTON_COLUMN_COUNT = 3
+Public Const ANIMATION_BUTTON_ROW_GAP = 4
+Public Const CAMERA_SLIDER_WIDTH = 146
+Public Const CAMERA_SLIDER_HEIGHT = 16
+
+Private Const MINIMUM_VIEWER_WIDTH = 800
+Private Const MINIMUM_VIEWER_HEIGHT = 540
 
 Public Type State
     Visibility As Number
@@ -309,5 +323,185 @@ Public Function PartyRoleLabel(Role As Text) As Text
     Return Result
 
 End Function
+
+Public Function StatusPanelX(WindowWidth As Number) As Number
+
+    Dim Result As Number
+
+    Result = Max(492, WindowWidth - 268)
+
+    Return Result
+
+End Function
+
+Public Function AnimationButtonX(WindowWidth As Number) As Number
+
+    Dim Result As Number
+
+    Result = StatusPanelX(WindowWidth) + 12
+
+    Return Result
+
+End Function
+
+Public Function GlowButtonX(WindowWidth As Number, DiagnosticProfiles As Boolean,
+    PartyEnabled As Boolean) As Number
+
+    Dim Result As Number
+
+    Result = StatusPanelX(WindowWidth) + 162
+
+    If DiagnosticProfiles And Not PartyEnabled Then
+        Result = StatusPanelX(WindowWidth) + 216
+    End If
+
+    Return Result
+
+End Function
+
+Public Function GlowButtonWidth(DiagnosticProfiles As Boolean,
+    PartyEnabled As Boolean) As Number
+
+    Dim Result As Number
+
+    Result = 90
+
+    If DiagnosticProfiles And Not PartyEnabled Then
+        Result = 36
+    End If
+
+    Return Result
+
+End Function
+
+Public Function TimelineWidth(WindowWidth As Number, TimelineLeft As Number) As Number
+
+    Dim Result As Number
+
+    Result = Max(120, StatusPanelX(WindowWidth) - TimelineLeft - 20)
+
+    Return Result
+
+End Function
+
+Public Function LayoutTooSmall(WindowWidth As Number, WindowHeight As Number) As Boolean
+
+    Dim Result As Boolean
+
+    Result = WindowWidth < MINIMUM_VIEWER_WIDTH Or WindowHeight < MINIMUM_VIEWER_HEIGHT
+
+    Return Result
+
+End Function
+
+Public Sub DrawCharacterStatusSummary(
+    PanelLeft As Number,
+    DisplayName As Text,
+    PartyRole As Text,
+    ClipLabel As Text,
+    CandidateVersion As Text,
+    PlaybackSpeed As Number,
+    MaterialInspection As Number,
+    DrawCallCount As Number,
+    TriangleCount As Number,
+    DemoStatus As Text,
+    SecondsRemaining As Number,
+    ZoomDegrees As Number,
+    FramesPerSecond As Number
+)
+
+    Dim PanelText As Number
+
+    PanelText = PanelLeft + 16
+
+    Draw Text "CHARACTER STATUS" At PanelText, 96 Size 16 Color WHITE
+    Draw Text "Name" At PanelText, 124 Size 12 Color LIGHT_GRAY
+    Draw Text DisplayName At PanelLeft + 116, 124 Size 12 Color CYAN
+    Draw Text "Party Role" At PanelText, 146 Size 12 Color LIGHT_GRAY
+    Draw Text PartyRoleLabel(PartyRole) At PanelLeft + 116, 146 Size 12 Color CYAN
+    Draw Text "Animation" At PanelText, 168 Size 12 Color LIGHT_GRAY
+    Draw Text ClipLabel At PanelLeft + 116, 168 Size 12 Color GREEN
+    Draw Text "Candidate" At PanelText, 190 Size 12 Color LIGHT_GRAY
+    Draw Text CandidateVersion At PanelLeft + 116, 190 Size 11 Color YELLOW
+    Draw Text "Speed" At PanelText, 216 Size 12 Color LIGHT_GRAY
+    Draw Number PlaybackSpeed At PanelLeft + 116, 216 Size 12 Color WHITE
+
+    Call UI.DrawButton(PanelLeft + 172, 204, 30, 24, "-", False)
+    Call UI.DrawButton(PanelLeft + 208, 204, 30, 24, "+", False)
+
+    Draw Text "Material" At PanelText, 240 Size 12 Color LIGHT_GRAY
+    Draw Text MaterialInspectionLabel(MaterialInspection) At PanelLeft + 116, 240 Size 12 Color YELLOW
+    Draw Text "Draws / Triangles" At PanelText, 262 Size 12 Color LIGHT_GRAY
+    Draw Number DrawCallCount At PanelLeft + 148, 262 Size 12 Color WHITE
+    Draw Number TriangleCount At PanelLeft + 192, 262 Size 12 Color WHITE
+    Draw Text "Demo / Next" At PanelText, 284 Size 12 Color LIGHT_GRAY
+    Draw Text DemoStatus At PanelLeft + 116, 284 Size 12 Color CYAN
+    Draw Number SecondsRemaining At PanelLeft + 172, 284 Size 12 Color WHITE
+    Draw Text "seconds" At PanelLeft + 192, 284 Size 11 Color LIGHT_GRAY
+    Draw Text "Zoom / FPS" At PanelText, 306 Size 12 Color LIGHT_GRAY
+    Draw Number ZoomDegrees At PanelLeft + 116, 306 Size 12 Color CYAN
+    Draw Text "level" At PanelLeft + 146, 306 Size 11 Color LIGHT_GRAY
+    Draw Number FramesPerSecond At PanelLeft + 190, 306 Size 12 Color GREEN
+    Draw Text "fps" At PanelLeft + 216, 306 Size 11 Color LIGHT_GRAY
+
+End Sub
+
+Public Sub DrawCameraControls(PanelLeft As Number, WindowHeight As Number,
+    HorizontalOrbit As Number, VerticalOrbit As Number, ZoomDegrees As Number,
+    ZoomInLimit As Number, ZoomOutLimit As Number)
+
+    Call DrawCameraSlider(PanelLeft, "H Orbit", WindowHeight - 142,
+        HorizontalOrbit, -180, 180)
+    Call DrawCameraSlider(PanelLeft, "V Orbit", WindowHeight - 116,
+        VerticalOrbit, -180, 180)
+    Call DrawCameraSlider(PanelLeft, "Zoom", WindowHeight - 90,
+        ZoomDegrees, ZoomInLimit, ZoomOutLimit)
+
+End Sub
+
+Public Sub DrawAnimationButtons(ProfileIndex As Number,
+    SelectedPresentationIndex As Number, WindowWidth As Number)
+
+    Dim ButtonX As Number
+    Dim ButtonY As Number
+    Dim ClipCount As Number
+    Dim Column As Number
+    Dim Index As Number
+    Dim Row As Number
+
+    ClipCount = ViewerProfiles.ClipCount(ProfileIndex)
+
+    For Index = 0 To ClipCount - 1
+
+        Column = Index Mod ANIMATION_BUTTON_COLUMN_COUNT
+        Row = Index / ANIMATION_BUTTON_COLUMN_COUNT
+        ButtonX = AnimationButtonX(WindowWidth)
+        ButtonX = ButtonX + Column * (ANIMATION_BUTTON_WIDTH + ANIMATION_BUTTON_COLUMN_GAP)
+        ButtonY = ANIMATION_BUTTON_Y
+        ButtonY = ButtonY + Row * (ANIMATION_BUTTON_HEIGHT + ANIMATION_BUTTON_ROW_GAP)
+
+        Call UI.DrawButton(
+            ButtonX,
+            ButtonY,
+            ANIMATION_BUTTON_WIDTH,
+            ANIMATION_BUTTON_HEIGHT,
+            ViewerProfiles.ClipLabel(ProfileIndex, Index),
+            Index = SelectedPresentationIndex
+        )
+    End For
+
+End Sub
+
+Private Sub DrawCameraSlider(PanelLeft As Number, Label As Text, Y As Number,
+    Value As Number, MinimumValue As Number, MaximumValue As Number)
+
+    Draw Text Label At PanelLeft + 12, Y + 2 Size 11 Color LIGHT_GRAY
+
+    Call UI.DrawSlider(PanelLeft + 76, Y, CAMERA_SLIDER_WIDTH, CAMERA_SLIDER_HEIGHT,
+        Value, MinimumValue, MaximumValue)
+
+    Draw Number Value At PanelLeft + 226, Y + 2 Size 10 Color CYAN
+
+End Sub
 
 End Module
