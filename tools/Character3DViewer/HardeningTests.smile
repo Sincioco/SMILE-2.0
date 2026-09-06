@@ -86,6 +86,7 @@ Dim UiState As ViewerUi.State
 Dim GizmoState As ViewerGizmo.State
 Dim PartyState As ViewerParty.State
 Dim PartyPrimary As ViewerParty.ActorContext
+Dim PartyActions As ViewerParty.FrameActions
 Dim EffectsState As ViewerEffects.State
 Dim RenderingState As ViewerRendering.State
 Dim FirstApproach As Core.Vector3
@@ -339,6 +340,61 @@ Call Check(ViewerParty.AdvanceElapsed(PartyState, 17, True, False))
 Call Check(PartyState.Elapsed = 17)
 Call Check(Not ViewerParty.AdvanceElapsed(PartyState, 17, True, True))
 Call Check(PartyState.Elapsed = 17)
+
+Call ViewerParty.ResetChoreography(PartyState)
+
+PartyState.Turn = 0
+PartyState.Stage = -1
+PartyState.Elapsed = 0
+PartyActions = ViewerParty.AdvanceChoreography(
+    PartyState, 100, True, False, 1200, 100, -1)
+
+Call Check(PartyState.Elapsed = 100 And PartyState.Stage = -2)
+Call Check(PartyActions.FirstClipRequested And PartyActions.FirstClip = "Idle")
+Call Check(PartyActions.SecondClipRequested And PartyActions.SecondClip = "Defend")
+Call Check(PartyActions.PositionsAvailable And
+    PartyActions.FirstPosition.X = PartyState.First.Home.X)
+
+PartyState.Elapsed = 1299
+PartyState.Stage = 0
+PartyActions = ViewerParty.AdvanceChoreography(
+    PartyState, 1, True, False, 1200, 100, -1)
+
+Call Check(PartyState.Stage = 1 And PartyState.DragonReactionPending)
+Call Check(ViewerParty.PresentationState(PartyState, 0) = ViewerParty.STATE_ACTING)
+Call Check(PartyActions.FirstClip = "SwordAttack")
+Call Check(PartyActions.FirstPosition.X = PartyState.First.Approach.X And
+    PartyActions.FirstPosition.Z = PartyState.First.Approach.Z)
+
+PartyState.Turn = 1
+PartyState.Elapsed = 5199
+PartyState.Stage = 3
+
+Call Check(ViewerParty.WillPrepareDragonTurn(
+    PartyState, 1, True, False, 1200, 100))
+
+Call ViewerParty.ResetChoreography(PartyState)
+
+PartyState.Ready = True
+
+Call ViewerParty.PrepareDragonTurn(PartyState, 0)
+
+PartyActions = ViewerParty.AdvanceChoreography(
+    PartyState, 1, True, False, 1200, 100, -1)
+
+Call Check(PartyState.Stage = 0 And
+    ViewerParty.PresentationState(PartyState, 0) = ViewerParty.STATE_GUARDING)
+Call Check(PartyActions.FirstClip = "Defend" And PartyActions.SecondClip = "Defend")
+Call Check(ViewerParty.DragonTurnDuration(PartyState, 100) = 4500 And
+    ViewerParty.DragonImpactTime(PartyState) = 1200)
+
+PartyState.Elapsed = 1200
+PartyActions = ViewerParty.AdvanceChoreography(
+    PartyState, 0, False, False, 1200, 100, -1)
+
+Call Check(PartyState.FatalStarted And
+    ViewerParty.PresentationState(PartyState, 0) = ViewerParty.STATE_HIT)
+Call Check(PartyActions.FirstClipRequested And PartyActions.FirstClip = "Hit")
 
 Call SceneVfx3D.Initialize(EffectsState.Clock)
 Call Check(ViewerEffects.AdvanceScene(EffectsState, 16, True, OrbitBase))

@@ -6,7 +6,9 @@ Option Explicit
 Import Smile.Simple3D.Character3D As Character3D
 Import Smile.Simple3D.CharacterViewer As CharacterViewer
 Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Graphics3D As Graphics3D
 Import Smile.Tools.BattleCamera As BattleCamera
+Import Smile.Tools.Character3DViewerProfiles As ViewerProfiles
 
 Public Const STATE_ALIVE = 0
 Public Const STATE_ACTING = 1
@@ -78,6 +80,16 @@ Public Type State
     ShotBoss As Core.Vector3
     ShotBossHead As Core.Vector3
     ShotMouth As Core.Vector3
+End Type
+
+Public Type FrameActions
+    FirstClip As Text
+    SecondClip As Text
+    FirstClipRequested As Boolean
+    SecondClipRequested As Boolean
+    PositionsAvailable As Boolean
+    FirstPosition As Core.Vector3
+    SecondPosition As Core.Vector3
 End Type
 
 Public Sub ResetChoreography(ByRef Value As State)
@@ -244,6 +256,478 @@ Public Function AdvanceElapsed(ByRef Value As State, Elapsed As Number,
     End If
 
     Return True
+
+End Function
+
+Public Function FormationPosition(Center As Core.Vector3, Radius As Number,
+    StartAngle As Number, EndAngle As Number, MemberIndex As Number,
+    MemberCount As Number) As Core.Vector3
+
+    Dim Result As Core.Vector3
+
+    Result = BattleCamera.FormationPosition(Center, Radius, StartAngle,
+        EndAngle, MemberIndex, MemberCount)
+
+    Return Result
+
+End Function
+
+Public Function AttackDuration(ByRef Value As State,
+    Primary As Character3D.Actor, Companion As Character3D.Actor,
+    PlaybackSpeed As Number) As Number
+
+    Dim Actor As Character3D.Actor
+    Dim Index As Number
+    Dim Name As Text
+    Dim Result As Number
+
+    Actor = Primary
+    Name = ViewerProfiles.PartyAttackName(ViewerProfiles.PROFILE_ARIN,
+        Value.AttackCycle)
+
+    If Value.Turn = 1 Then
+        Actor = Companion
+        Name = ViewerProfiles.PartyAttackName(ViewerProfiles.PROFILE_ORIN,
+            Value.AttackCycle)
+    End If
+
+    Result = 1200
+
+    For Index = 0 To Character3D.ClipCount(Actor) - 1
+
+        If Character3D.ClipName(Actor, Index) = Name Then
+            Result = (Character3D.ClipDuration(Actor, Index) * 100 /
+                Max(25, PlaybackSpeed))
+            Exit For
+        End If
+
+    End For
+
+    Return Result
+
+End Function
+
+Public Function PlayClip(ByRef Actor As Character3D.Actor, Name As Text,
+    ByRef Clip As Number, CompanionActorHandle As Number,
+    CompanionProfile As Number, PlaybackSpeed As Number) As Boolean
+
+    Dim HoldFinalPose As Boolean
+    Dim Index As Number
+    Dim Mode As Number
+    Dim Result As Boolean
+
+    Mode = Graphics3D.ANIMATION_LOOP
+    HoldFinalPose = (Actor.Handle = CompanionActorHandle And
+        ViewerProfiles.HoldsFinalPose(CompanionProfile, Name))
+    HoldFinalPose = HoldFinalPose Or Name = "Death"
+
+    If (Name = "SwordAttack" Or
+        Name = "SwordAttack2" Or
+        Name = "JumpAttack" Or
+        Name = "ThorAttack" Or
+        Name = "Hit" Or
+        HoldFinalPose) Then
+        Mode = Graphics3D.ANIMATION_ONCE
+    End If
+
+    Result = True
+
+    For Index = 0 To Character3D.ClipCount(Actor) - 1
+
+        If Character3D.ClipName(Actor, Index) = Name Then
+
+            If HoldFinalPose And Clip = Index Then
+                Return True
+            End If
+
+            Clip = Index
+            Result = Character3D.PlayMode(Actor, Name, Mode, PlaybackSpeed)
+            Exit For
+
+        End If
+
+    End For
+
+    Return Result
+
+End Function
+
+Public Function DragonTurnDuration(ByRef Value As State,
+    PlaybackSpeed As Number) As Number
+
+    Dim Result As Number
+
+    Result = 4500
+
+    If Value.DragonCounter Mod 3 = 1 Then
+        Result = 2800
+    Else If Value.DragonCounter Mod 3 = 2 Then
+        Result = 5400
+    End If
+
+    Result = Result * 100 / Max(25, PlaybackSpeed)
+
+    Return Result
+
+End Function
+
+Public Function DragonImpactTime(ByRef Value As State) As Number
+
+    If Value.DragonCounter Mod 3 = 2 Then
+        Return 2500
+    Else If Value.DragonCounter Mod 3 = 1 Then
+        Return 1000
+    End If
+
+    Return 1200
+
+End Function
+
+Private Function EffectiveDragonTurnDuration(ByRef Value As State,
+    PlaybackSpeed As Number) As Number
+
+    Dim ImpactTime As Number
+    Dim Result As Number
+
+    Result = DragonTurnDuration(Value, PlaybackSpeed)
+    ImpactTime = DragonImpactTime(Value)
+
+    If Value.FatalTarget >= 0 Then
+        Result = Max(Result, (ImpactTime + 4300) * 100 /
+            Max(25, PlaybackSpeed))
+    End If
+
+    Return Result
+
+End Function
+
+Public Function WillPrepareDragonTurn(ByRef Value As State,
+    Elapsed As Number, DemoEnabled As Boolean, ScenePaused As Boolean,
+    AttackMilliseconds As Number, PlaybackSpeed As Number) As Boolean
+
+    Dim NextElapsed As Number
+    Dim Result As Boolean
+
+    Result = False
+
+    If Not Value.Ready Or ScenePaused Then
+        Return False
+    End If
+
+    NextElapsed = Value.Elapsed
+
+    If DemoEnabled Then
+        NextElapsed = NextElapsed + Elapsed
+    End If
+
+    If Value.Turn = 1 Then
+        Result = NextElapsed >= AttackMilliseconds + 4000
+    Else If (Value.Turn = 2 And
+        Not Value.DragonOnlyTurn And
+        NextElapsed >= EffectiveDragonTurnDuration(Value, PlaybackSpeed)) Then
+        Result = (Value.DragonCounter + 1) Mod 3 = 0
+    End If
+
+    Return Result
+
+End Function
+
+Private Sub SetPositions(ByRef Value As State, Travel1000 As Number,
+    ByRef Actions As FrameActions)
+
+    Dim TravelOffset As Number
+
+    Actions.FirstPosition = Value.First.Home
+    Actions.SecondPosition = Value.Second.Home
+
+    If Value.Turn = 0 Then
+
+        TravelOffset = Value.First.Approach.X - Actions.FirstPosition.X
+        Actions.FirstPosition.X = (Actions.FirstPosition.X +
+            TravelOffset * Travel1000 / 1000)
+        TravelOffset = Value.First.Approach.Z - Actions.FirstPosition.Z
+        Actions.FirstPosition.Z = (Actions.FirstPosition.Z +
+            TravelOffset * Travel1000 / 1000)
+
+    Else
+        TravelOffset = Value.Second.Approach.X - Actions.SecondPosition.X
+        Actions.SecondPosition.X = (Actions.SecondPosition.X +
+            TravelOffset * Travel1000 / 1000)
+        TravelOffset = Value.Second.Approach.Z - Actions.SecondPosition.Z
+        Actions.SecondPosition.Z = (Actions.SecondPosition.Z +
+            TravelOffset * Travel1000 / 1000)
+
+    End If
+
+    Actions.PositionsAvailable = True
+
+End Sub
+
+Private Function AdvanceDragonTurn(ByRef Value As State,
+    PlaybackSpeed As Number, RolledTarget As Number) As FrameActions
+
+    Dim ActionTime As Number
+    Dim Actions As FrameActions
+    Dim Duration As Number
+    Dim ImpactTime As Number
+
+    Duration = EffectiveDragonTurnDuration(Value, PlaybackSpeed)
+    ActionTime = Value.Elapsed * PlaybackSpeed / 100
+    ImpactTime = DragonImpactTime(Value)
+
+    If Value.Elapsed >= Duration Then
+
+        Value.Elapsed = 0
+        Value.Stage = -1
+        Value.DragonCounter = Value.DragonCounter + 1
+
+        If Value.DragonOnlyTurn Then
+
+            Value.DragonOnlyTurn = False
+            Value.Turn = 0
+
+        Else
+            Value.AttackCycle = Value.AttackCycle + 1
+
+            If Value.DragonCounter Mod 3 = 0 Then
+
+                Value.DragonOnlyTurn = True
+                Value.Turn = 2
+
+                Call PrepareDragonTurn(Value, RolledTarget)
+
+            Else
+                Value.Turn = 0
+
+            End If
+
+        End If
+
+        Return Actions
+
+    End If
+
+    If Value.Stage <> 0 Then
+
+        If PresentationState(Value, 0) <> STATE_KO Then
+
+            Call SetPresentationState(Value, 0, STATE_GUARDING)
+
+            Actions.FirstClip = "Defend"
+            Actions.FirstClipRequested = True
+
+        End If
+
+        If PresentationState(Value, 1) <> STATE_KO Then
+
+            Call SetPresentationState(Value, 1, STATE_GUARDING)
+
+            Actions.SecondClip = "Defend"
+            Actions.SecondClipRequested = True
+
+        End If
+
+        Value.Stage = 0
+
+    End If
+
+    If ActionTime >= ImpactTime And Not Value.FatalStarted Then
+
+        Value.FatalStarted = True
+
+        Call SetPresentationState(Value, Value.HitTarget, STATE_HIT)
+
+        If Value.HitTarget = 0 Then
+            Actions.FirstClip = "Hit"
+            Actions.FirstClipRequested = True
+        Else
+            Actions.SecondClip = "Hit"
+            Actions.SecondClipRequested = True
+        End If
+
+    End If
+
+    If (Value.FatalStarted And
+        Not Value.HitResolved And
+        ActionTime >= ImpactTime + 350) Then
+
+        Value.HitResolved = True
+
+        If Value.FatalTarget >= 0 Then
+
+            Call SetPresentationState(Value, Value.FatalTarget, STATE_KO)
+
+            If Value.FatalTarget = 0 Then
+                Actions.FirstClip = "Death"
+                Actions.FirstClipRequested = True
+            Else
+                Actions.SecondClip = "Death"
+                Actions.SecondClipRequested = True
+            End If
+
+        Else
+
+            Call SetPresentationState(Value, Value.HitTarget, STATE_GUARDING)
+
+            If Value.HitTarget = 0 Then
+                Actions.FirstClip = "Defend"
+                Actions.FirstClipRequested = True
+            Else
+                Actions.SecondClip = "Defend"
+                Actions.SecondClipRequested = True
+            End If
+
+        End If
+
+    End If
+
+    Call SetPositions(Value, 0, Actions)
+
+    Return Actions
+
+End Function
+
+Public Function AdvanceChoreography(ByRef Value As State,
+    Elapsed As Number, DemoEnabled As Boolean, ScenePaused As Boolean,
+    AttackMilliseconds As Number, PlaybackSpeed As Number,
+    RolledTarget As Number) As FrameActions
+
+    Dim Actions As FrameActions
+    Dim Name As Text
+    Dim Stage As Number
+    Dim Travel1000 As Number
+
+    If Not AdvanceElapsed(Value, Elapsed, DemoEnabled, ScenePaused) Then
+        Return Actions
+    End If
+
+    If Value.Turn = 2 Then
+        Actions = AdvanceDragonTurn(Value, PlaybackSpeed, RolledTarget)
+
+        Return Actions
+    End If
+
+    If Value.Elapsed >= AttackMilliseconds + 4000 Then
+
+        Value.Elapsed = 0
+        Value.Turn = (Value.Turn + 1) Mod 3
+        Value.Stage = -1
+
+        If Value.Turn = 2 Then
+            Value.DragonOnlyTurn = False
+
+            Call PrepareDragonTurn(Value, RolledTarget)
+        End If
+
+    End If
+
+    If Value.Turn = 2 Then
+        Actions = AdvanceDragonTurn(Value, PlaybackSpeed, RolledTarget)
+
+        Return Actions
+    End If
+
+    Stage = 0
+    Travel1000 = Min(1000, Max(0, Value.Elapsed - 650) * 1000 / 650)
+    Name = "Walk"
+
+    If Value.Turn = 1 Then
+        Name = "Run"
+    End If
+
+    If Value.Elapsed >= AttackMilliseconds + 2000 Then
+
+        Stage = 3
+        Travel1000 = 0
+        Name = "Idle"
+
+    Else If Value.Elapsed >= AttackMilliseconds + 1300 Then
+
+        Stage = 2
+        Travel1000 = Max(0, 1000 -
+            (Value.Elapsed - AttackMilliseconds - 1300) * 1000 / 700)
+        Name = "Walk"
+
+        If Value.Turn = 1 Then
+            Name = "Run"
+        End If
+
+    Else If Value.Elapsed >= 1300 Then
+
+        Stage = 1
+        Travel1000 = 1000
+        Name = ViewerProfiles.PartyAttackName(ViewerProfiles.PROFILE_ARIN,
+            Value.AttackCycle)
+
+        If Value.Turn = 1 Then
+            Name = ViewerProfiles.PartyAttackName(ViewerProfiles.PROFILE_ORIN,
+                Value.AttackCycle)
+        End If
+
+    End If
+
+    If Value.Elapsed < 650 Then
+        Stage = -2
+        Name = "Idle"
+    End If
+
+    If Stage <> Value.Stage Then
+
+        Value.DragonReactionPending = Stage = 1
+
+        If Value.Turn = 0 Then
+
+            If PresentationState(Value, 0) = STATE_KO Then
+                Call SetPresentationState(Value, 0, STATE_REVIVING)
+            Else If Stage = 3 Then
+                Call SetPresentationState(Value, 0, STATE_ALIVE)
+            Else If Stage >= 0 Then
+                Call SetPresentationState(Value, 0, STATE_ACTING)
+            End If
+
+            Actions.FirstClip = Name
+            Actions.FirstClipRequested = True
+
+            If PresentationState(Value, 1) <> STATE_KO Then
+
+                Call SetPresentationState(Value, 1, STATE_GUARDING)
+
+                Actions.SecondClip = "Defend"
+                Actions.SecondClipRequested = True
+
+            End If
+
+        Else
+
+            If PresentationState(Value, 1) = STATE_KO Then
+                Call SetPresentationState(Value, 1, STATE_REVIVING)
+            Else If Stage = 3 Then
+                Call SetPresentationState(Value, 1, STATE_ALIVE)
+            Else If Stage >= 0 Then
+                Call SetPresentationState(Value, 1, STATE_ACTING)
+            End If
+
+            If PresentationState(Value, 0) <> STATE_KO Then
+
+                Call SetPresentationState(Value, 0, STATE_GUARDING)
+
+                Actions.FirstClip = "Defend"
+                Actions.FirstClipRequested = True
+
+            End If
+
+            Actions.SecondClip = Name
+            Actions.SecondClipRequested = True
+
+        End If
+
+        Value.Stage = Stage
+
+    End If
+
+    Call SetPositions(Value, Travel1000, Actions)
+
+    Return Actions
 
 End Function
 

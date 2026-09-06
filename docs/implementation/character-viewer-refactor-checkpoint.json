@@ -34,7 +34,9 @@
   "changedFiles": [
     "docs/implementation/character-viewer-refactor-checkpoint.json",
     "tools/Character3DViewer/ARCHITECTURE.md",
-    "tools/Character3DViewer/README.md"
+    "tools/Character3DViewer/HardeningTests.smile",
+    "tools/Character3DViewer/Program.smile",
+    "tools/Character3DViewer/ViewerParty.smile"
   ],
   "validation": [
     "PASS: R7 native Debug and Release builds, 46 assets each",
@@ -44,7 +46,11 @@
     "PASS: R7 optimized receipts verify 18 PNG source/output hashes, dimensions and transparency",
     "AUDIT: Program.smile contains 8319 lines and 233 procedures at ed5e6bb",
     "AUDIT: responsibility implementation remains in Program despite earlier state seams and passing tests",
-    "AUDIT: ViewerActors.smile does not exist; prior current-owner claim corrected to a completion target"
+    "AUDIT: ViewerActors.smile does not exist; prior current-owner claim corrected to a completion target",
+    "PASS: Party state machine moved to ViewerParty; Program.smile reduced to 8032 lines and 231 procedures",
+    "PASS: direct Party stage, Dragon-turn, KO/revive, attack and formation production assertions",
+    "PASS: full focused native and generated-Web hardening with exact console parity",
+    "PASS: 42 isolated calibration checks and 58 native graphics, pointer-input and audio-focus checks"
   ],
   "blockers": [],
   "nextConcreteAction": "Move remaining subsystem implementations out of Program.smile in coherent tested owner stages before R8 acceptance.",

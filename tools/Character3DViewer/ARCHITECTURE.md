@@ -49,7 +49,7 @@ state record or a replacement `ViewerApplication` module.
 
 | Still implemented in `Program.smile` | Current evidence | Intended focused owner |
 |---|---|---|
-| Party transitions, camera application, companion lifecycle, inspector/preview binding, pointer handling and Party overlay | `ApplyPartyAttackCamera`, `AdvancePartyDemo`, `AdvanceDragonTurn`, `CreatePartyCompanion`, `HandlePartyPointer`, `DrawPartyOverlay` and related routines | `ViewerParty.smile`, with actor binding in a focused actor owner only if needed |
+| Party transitions, camera application, companion lifecycle, inspector/preview binding, pointer handling and Party overlay | R7.5 moved the stage/Dragon-turn state machine, attack selection, KO/revive decisions and formation interpolation to `ViewerParty.AdvanceChoreography`; `ApplyPartyFrame` now applies its narrow actor commands. Camera application, companion lifecycle, binding, pointer handling and overlays remain in `Program.smile`. | `ViewerParty.smile`, with actor binding in a focused actor owner only if needed |
 | Dragon actor lifecycle, timing, turn behavior and battle-audio coordination | `CreateDragon`, `UpdateDragon`, `AdvanceDragonTurn`, `UpdateBattleAudio` and related routines | retained `DragonPresence.smile`, `BattleAudio.smile`, and narrow Party contracts |
 | Equipment Fire/glow/trails, scene VFX coordination and effect teardown | `CreateEpicGlow`, `UpdateEquipmentFire`, `UpdateSwordFire`, `UpdateShieldFire`, trail routines and clear/hide routines | `ViewerEffects.smile` plus retained focused effect modules |
 | Inspector, calibration panel, timeline, camera controls, buttons and overlays | `HandleInspectorPointer`, `HandleCalibrationPanelPointer`, `DrawInspectorOverlay`, `DrawCalibrationPanel`, `DrawTimeline` and related layout/label routines | `ViewerInput.smile` and `ViewerUi.smile`, borrowing narrow subsystem operations |
@@ -60,6 +60,13 @@ state record or a replacement `ViewerApplication` module.
 The ownership and symbol maps below describe the required destination. A row is not
 completion evidence until the implementation no longer remains in `Program.smile`
 and its focused production tests exercise the destination owner.
+
+### Program metrics during responsibility completion
+
+| Checkpoint | Lines | Procedures | Architectural result |
+|---|---:|---:|---|
+| R7.5 audit baseline at `ed5e6bb` | 8,319 | 233 | State seams existed, but substantial subsystem implementation remained. |
+| Party state-machine move | 8,032 | 231 | Party/Dragon-turn state transitions and interpolation moved; a narrow actor command application routine remains in the coordinator. |
 
 ## Ownership target map
 

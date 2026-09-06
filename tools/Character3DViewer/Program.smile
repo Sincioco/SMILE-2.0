@@ -6912,7 +6912,8 @@ Function AnimationSecondsRemaining() As Number
         RequiredMilliseconds = PartyAttackDuration() + 4000
 
         If Party.Turn = 2 Then
-            RequiredMilliseconds = DragonTurnDuration()
+            RequiredMilliseconds = ViewerParty.DragonTurnDuration(
+                Party, Playback.PlaybackSpeed)
         End If
 
         RemainingMilliseconds = Max(0, RequiredMilliseconds - Party.Elapsed)
@@ -7503,7 +7504,7 @@ Function PartyHomePosition(MemberIndex As Number, MemberCount As Number) As Core
 
     Center.X = DRAGON_POSITION_X
     Center.Z = DRAGON_POSITION_Z
-    Result = BattleCamera.FormationPosition(Center, PARTY_FORMATION_RADIUS,
+    Result = ViewerParty.FormationPosition(Center, PARTY_FORMATION_RADIUS,
         PARTY_FORMATION_START_ANGLE, PARTY_FORMATION_END_ANGLE,
         MemberIndex, MemberCount)
 
@@ -7575,8 +7576,10 @@ Sub ResetPartyDemo()
     Call PreparePartyDragonTurn()
 
     If Party.Ready Then
-        Session.Ready = Character3D.SetPartVisible(Party.Companion.Actor, WEAPON_PART_INDEX, SwordVisible) And Session.Ready
-        Session.Ready = Character3D.SetPartVisible(Party.Companion.Actor, SHIELD_PART_INDEX, ShieldVisible) And Session.Ready
+        Session.Ready = Character3D.SetPartVisible(Party.Companion.Actor,
+            WEAPON_PART_INDEX, SwordVisible) And Session.Ready
+        Session.Ready = Character3D.SetPartVisible(Party.Companion.Actor,
+            SHIELD_PART_INDEX, ShieldVisible) And Session.Ready
     End If
 
 End Sub
@@ -7593,29 +7596,14 @@ End Sub
 
 Function PartyAttackDuration() As Number
 
-    Dim Actor As Character3D.Actor
-    Dim Index As Number
-    Dim Name As Text
     Dim Result As Number
 
-    Actor = Character
-    Name = ViewerProfiles.PartyAttackName(ViewerProfiles.PROFILE_ARIN, Party.AttackCycle)
-
-    If Party.Turn = 1 Then
-        Actor = Party.Companion.Actor
-        Name = ViewerProfiles.PartyAttackName(ViewerProfiles.PROFILE_ORIN, Party.AttackCycle)
-    End If
-
-    Result = 1200
-
-    For Index = 0 To Character3D.ClipCount(Actor) - 1
-
-        If Character3D.ClipName(Actor, Index) = Name Then
-            Result = Character3D.ClipDuration(Actor, Index) * 100 / Max(25, Playback.PlaybackSpeed)
-            Exit For
-        End If
-
-    End For
+    Result = ViewerParty.AttackDuration(
+        Party,
+        Character,
+        Party.Companion.Actor,
+        Playback.PlaybackSpeed
+    )
 
     Return Result
 
@@ -7623,363 +7611,88 @@ End Function
 
 Sub PlayPartyClip(ByRef Actor As Character3D.Actor, Name As Text, ByRef Clip As Number)
 
-    Dim Index As Number
-    Dim Mode As Number
-    Dim HoldGuard As Boolean
+    Session.Ready = ViewerParty.PlayClip(
+        Actor,
+        Name,
+        Clip,
+        Party.Companion.Actor.Handle,
+        Party.Companion.Profile,
+        Playback.PlaybackSpeed
+    ) And Session.Ready
 
-    Mode = Graphics3D.ANIMATION_LOOP
-    HoldGuard = (Actor.Handle = Party.Companion.Actor.Handle And
-        ViewerProfiles.HoldsFinalPose(Party.Companion.Profile, Name))
-    HoldGuard = HoldGuard Or Name = "Death"
+End Sub
 
-    If (Name = "SwordAttack" Or
-        Name = "SwordAttack2" Or
-        Name = "JumpAttack" Or
-        Name = "ThorAttack" Or
-        Name = "Hit" Or
-        HoldGuard) Then
-        Mode = Graphics3D.ANIMATION_ONCE
+Sub ApplyPartyFrame(Actions As ViewerParty.FrameActions)
+
+    If Actions.FirstClipRequested Then
+        Call PlayPartyClip(Character, Actions.FirstClip, Playback.SelectedClip)
     End If
 
-    For Index = 0 To Character3D.ClipCount(Actor) - 1
+    If Actions.SecondClipRequested Then
+        Call PlayPartyClip(Party.Companion.Actor, Actions.SecondClip,
+            Party.Companion.Clip)
+    End If
 
-        If Character3D.ClipName(Actor, Index) = Name Then
+    If Not Actions.PositionsAvailable Then
+        Return
+    End If
 
-            If HoldGuard And Clip = Index Then
-                Return
-            End If
-
-            Clip = Index
-            Session.Ready = Character3D.PlayMode(Actor, Name, Mode, Playback.PlaybackSpeed) And Session.Ready
-            Exit For
-
-        End If
-
-    End For
+    ViewerCameraState.Frame.PositionX = Actions.FirstPosition.X
+    ViewerCameraState.Frame.PositionZ = Actions.FirstPosition.Z
+    Party.Companion.Frame.PositionX = Actions.SecondPosition.X
+    Party.Companion.Frame.PositionZ = Actions.SecondPosition.Z
+    Session.Ready = Character3D.Place(
+        Character,
+        ViewerCameraState.Frame.PositionX,
+        ViewerCameraState.Frame.PositionY,
+        ViewerCameraState.Frame.PositionZ
+    ) And Session.Ready
+    Session.Ready = Character3D.Place(
+        Party.Companion.Actor,
+        Party.Companion.Frame.PositionX,
+        Party.Companion.Frame.PositionY,
+        Party.Companion.Frame.PositionZ
+    ) And Session.Ready
+    Session.Ready = FaceDragon(Character,
+        Party.First.FacingAdjustment) And Session.Ready
+    Session.Ready = FaceDragon(Party.Companion.Actor,
+        Party.Second.FacingAdjustment) And Session.Ready
 
 End Sub
 
 Sub AdvancePartyDemo()
 
-    Dim AttackDuration As Number
-    Dim Stage As Number
-    Dim Travel1000 As Number
-    Dim Name As Text
-    Dim Home As Core.Vector3
-    Dim Approach As Core.Vector3
-    Dim TravelOffset As Number
+    Dim Actions As ViewerParty.FrameActions
+    Dim AttackMilliseconds As Number
+    Dim RolledTarget As Number
 
-    If Not ViewerParty.AdvanceElapsed(
+    AttackMilliseconds = PartyAttackDuration()
+    RolledTarget = -1
+
+    If ViewerParty.WillPrepareDragonTurn(
         Party,
         Playback.AnimationUpdateElapsed,
         Playback.DemoEnabled,
-        Playback.ScenePaused
+        Playback.ScenePaused,
+        AttackMilliseconds,
+        Playback.PlaybackSpeed
     ) Then
-        Return
+        Random RolledTarget From -1 To 1
     End If
 
-    If Party.Turn = 2 Then
-        Call AdvanceDragonTurn()
+    Actions = ViewerParty.AdvanceChoreography(
+        Party,
+        Playback.AnimationUpdateElapsed,
+        Playback.DemoEnabled,
+        Playback.ScenePaused,
+        AttackMilliseconds,
+        Playback.PlaybackSpeed,
+        RolledTarget
+    )
 
-        Return
-    End If
-
-    AttackDuration = PartyAttackDuration()
-
-    If Party.Elapsed >= AttackDuration + 4000 Then
-
-        Party.Elapsed = 0
-        Party.Turn = (Party.Turn + 1) Mod 3
-        Party.Stage = -1
-
-        If Party.Turn = 2 Then
-            Party.DragonOnlyTurn = False
-
-            Call PreparePartyDragonTurn()
-        End If
-
-    End If
-
-    If Party.Turn = 2 Then
-        Call AdvanceDragonTurn()
-
-        Return
-    End If
-
-    Stage = 0
-    Travel1000 = Min(1000, Max(0, Party.Elapsed - 650) * 1000 / 650)
-    Name = "Walk"
-
-    If Party.Turn = 1 Then
-        Name = "Run"
-    End If
-
-    If Party.Elapsed >= AttackDuration + 2000 Then
-
-        Stage = 3
-        Travel1000 = 0
-        Name = "Idle"
-
-    Else If Party.Elapsed >= AttackDuration + 1300 Then
-
-        Stage = 2
-        Travel1000 = Max(0, 1000 - (Party.Elapsed - AttackDuration - 1300) * 1000 / 700)
-        Name = "Walk"
-
-        If Party.Turn = 1 Then
-            Name = "Run"
-        End If
-
-    Else If Party.Elapsed >= 1300 Then
-
-        Stage = 1
-        Travel1000 = 1000
-        Name = ViewerProfiles.PartyAttackName(ViewerProfiles.PROFILE_ARIN, Party.AttackCycle)
-
-        If Party.Turn = 1 Then
-            Name = ViewerProfiles.PartyAttackName(ViewerProfiles.PROFILE_ORIN, Party.AttackCycle)
-        End If
-
-    End If
-
-    If Party.Elapsed < 650 Then
-        Stage = -2
-        Name = "Idle"
-    End If
-
-    If Stage <> Party.Stage Then
-
-        Party.DragonReactionPending = Stage = 1
-
-        If Party.Turn = 0 Then
-
-            If PartyPresentationState(0) = ViewerParty.STATE_KO Then
-                Call SetPartyPresentationState(0, ViewerParty.STATE_REVIVING)
-            Else If Stage = 3 Then
-                Call SetPartyPresentationState(0, ViewerParty.STATE_ALIVE)
-            Else If Stage >= 0 Then
-                Call SetPartyPresentationState(0, ViewerParty.STATE_ACTING)
-            End If
-
-            Call PlayPartyClip(Character, Name, Playback.SelectedClip)
-
-            If PartyPresentationState(1) <> ViewerParty.STATE_KO Then
-                Call SetPartyPresentationState(1, ViewerParty.STATE_GUARDING)
-                Call PlayPartyClip(Party.Companion.Actor, "Defend", Party.Companion.Clip)
-            End If
-
-        Else
-
-            If PartyPresentationState(1) = ViewerParty.STATE_KO Then
-                Call SetPartyPresentationState(1, ViewerParty.STATE_REVIVING)
-            Else If Stage = 3 Then
-                Call SetPartyPresentationState(1, ViewerParty.STATE_ALIVE)
-            Else If Stage >= 0 Then
-                Call SetPartyPresentationState(1, ViewerParty.STATE_ACTING)
-            End If
-
-            If PartyPresentationState(0) <> ViewerParty.STATE_KO Then
-                Call SetPartyPresentationState(0, ViewerParty.STATE_GUARDING)
-                Call PlayPartyClip(Character, "Defend", Playback.SelectedClip)
-            End If
-
-            Call PlayPartyClip(Party.Companion.Actor, Name, Party.Companion.Clip)
-
-        End If
-
-        Party.Stage = Stage
-
-    End If
-
-    Home = Party.First.Home
-    ViewerCameraState.Frame.PositionX = Home.X
-    ViewerCameraState.Frame.PositionZ = Home.Z
-    Home = Party.Second.Home
-    Party.Companion.Frame.PositionX = Home.X
-    Party.Companion.Frame.PositionZ = Home.Z
-
-    If Party.Turn = 0 Then
-
-        Approach = Party.First.Approach
-        TravelOffset = Approach.X - ViewerCameraState.Frame.PositionX
-        ViewerCameraState.Frame.PositionX = ViewerCameraState.Frame.PositionX + TravelOffset * Travel1000 / 1000
-        TravelOffset = Approach.Z - ViewerCameraState.Frame.PositionZ
-        ViewerCameraState.Frame.PositionZ = ViewerCameraState.Frame.PositionZ + TravelOffset * Travel1000 / 1000
-
-    Else
-        Approach = Party.Second.Approach
-        TravelOffset = Approach.X - Party.Companion.Frame.PositionX
-        Party.Companion.Frame.PositionX = Party.Companion.Frame.PositionX + TravelOffset * Travel1000 / 1000
-        TravelOffset = Approach.Z - Party.Companion.Frame.PositionZ
-        Party.Companion.Frame.PositionZ = Party.Companion.Frame.PositionZ + TravelOffset * Travel1000 / 1000
-
-    End If
-
-    Session.Ready = Character3D.Place(Character, ViewerCameraState.Frame.PositionX, ViewerCameraState.Frame.PositionY, ViewerCameraState.Frame.PositionZ) And Session.Ready
-    Session.Ready = Character3D.Place(Party.Companion.Actor,
-        Party.Companion.Frame.PositionX, Party.Companion.Frame.PositionY, Party.Companion.Frame.PositionZ) And Session.Ready
-    Session.Ready = FaceDragon(Character, Party.First.FacingAdjustment) And Session.Ready
-    Session.Ready = FaceDragon(Party.Companion.Actor,
-        Party.Second.FacingAdjustment) And Session.Ready
+    Call ApplyPartyFrame(Actions)
 
 End Sub
-
-Sub AdvanceDragonTurn()
-
-    Dim Stage As Number
-    Dim Duration As Number
-    Dim ActionTime As Number
-    Dim Home As Core.Vector3
-    Dim ImpactTime As Number
-
-    Duration = DragonTurnDuration()
-    ActionTime = Party.Elapsed * Playback.PlaybackSpeed / 100
-    ImpactTime = DragonImpactTime()
-
-    If Party.FatalTarget >= 0 Then
-        Duration = Max(Duration, (ImpactTime + 4300) * 100 / Max(25, Playback.PlaybackSpeed))
-    End If
-
-    If Party.Elapsed >= Duration Then
-
-        Party.Elapsed = 0
-        Party.Stage = -1
-        Party.DragonCounter = Party.DragonCounter + 1
-
-        If Party.DragonOnlyTurn Then
-
-            Party.DragonOnlyTurn = False
-            Party.Turn = 0
-
-        Else
-
-            Party.AttackCycle = Party.AttackCycle + 1
-
-            If Party.DragonCounter Mod 3 = 0 Then
-
-                Party.DragonOnlyTurn = True
-                Party.Turn = 2
-
-                Call PreparePartyDragonTurn()
-
-            Else
-                Party.Turn = 0
-
-            End If
-
-        End If
-
-        Return
-
-    End If
-
-    If Party.Stage <> 0 Then
-
-        If PartyPresentationState(0) <> ViewerParty.STATE_KO Then
-            Call SetPartyPresentationState(0, ViewerParty.STATE_GUARDING)
-            Call PlayPartyClip(Character, "Defend", Playback.SelectedClip)
-        End If
-
-        If PartyPresentationState(1) <> ViewerParty.STATE_KO Then
-            Call SetPartyPresentationState(1, ViewerParty.STATE_GUARDING)
-            Call PlayPartyClip(Party.Companion.Actor, "Defend", Party.Companion.Clip)
-        End If
-
-        Party.Stage = 0
-
-    End If
-
-    If ActionTime >= ImpactTime And Not Party.FatalStarted Then
-
-        Party.FatalStarted = True
-
-        Call SetPartyPresentationState(Party.HitTarget, ViewerParty.STATE_HIT)
-
-        If Party.HitTarget = 0 Then
-            Call PlayPartyClip(Character, "Hit", Playback.SelectedClip)
-        Else
-
-            Call PlayPartyClip(Party.Companion.Actor, "Hit", Party.Companion.Clip)
-        End If
-
-    End If
-
-    If (Party.FatalStarted And
-        Not Party.HitResolved And
-        ActionTime >= ImpactTime + 350) Then
-
-        Party.HitResolved = True
-
-        If Party.FatalTarget >= 0 Then
-
-            Call SetPartyPresentationState(Party.FatalTarget, ViewerParty.STATE_KO)
-
-            If Party.FatalTarget = 0 Then
-            Call PlayPartyClip(Character, "Death", Playback.SelectedClip)
-            Else
-
-                Call PlayPartyClip(Party.Companion.Actor, "Death", Party.Companion.Clip)
-            End If
-
-        Else
-
-            Call SetPartyPresentationState(Party.HitTarget, ViewerParty.STATE_GUARDING)
-
-            If Party.HitTarget = 0 Then
-                Call PlayPartyClip(Character, "Defend", Playback.SelectedClip)
-            Else
-
-                Call PlayPartyClip(Party.Companion.Actor, "Defend", Party.Companion.Clip)
-            End If
-
-        End If
-
-    End If
-
-    Home = Party.First.Home
-    ViewerCameraState.Frame.PositionX = Home.X
-    ViewerCameraState.Frame.PositionZ = Home.Z
-    Home = Party.Second.Home
-    Party.Companion.Frame.PositionX = Home.X
-    Party.Companion.Frame.PositionZ = Home.Z
-    Session.Ready = Character3D.Place(Character, ViewerCameraState.Frame.PositionX, ViewerCameraState.Frame.PositionY, ViewerCameraState.Frame.PositionZ) And Session.Ready
-    Session.Ready = Character3D.Place(Party.Companion.Actor,
-        Party.Companion.Frame.PositionX, Party.Companion.Frame.PositionY, Party.Companion.Frame.PositionZ) And Session.Ready
-    Session.Ready = FaceDragon(Character, Party.First.FacingAdjustment) And Session.Ready
-    Session.Ready = FaceDragon(Party.Companion.Actor,
-        Party.Second.FacingAdjustment) And Session.Ready
-
-End Sub
-
-Function DragonTurnDuration() As Number
-
-    Dim Result As Number
-
-    Result = 4500
-
-    If Party.DragonCounter Mod 3 = 1 Then
-        Result = 2800
-    Else If Party.DragonCounter Mod 3 = 2 Then
-        Result = 5400
-    End If
-
-    Result = Result * 100 / Max(25, Playback.PlaybackSpeed)
-
-    Return Result
-
-End Function
-
-Function DragonImpactTime() As Number
-
-    If Party.DragonCounter Mod 3 = 2 Then
-        Return 2500
-    Else If Party.DragonCounter Mod 3 = 1 Then
-        Return 1000
-    End If
-
-    Return 1200
-
-End Function
 
 Function ShieldFireStyleLabel() As Text
 
