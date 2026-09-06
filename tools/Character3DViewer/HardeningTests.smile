@@ -83,6 +83,8 @@ Dim DirectZoom As CharacterViewer.ZoomState
 Dim DirectCamera As Core.Camera3D
 Dim CameraPhase1000 As Number
 Dim CalibrationState As ViewerCalibration.State
+Dim CalibrationConfigurationState As ViewerCalibration.State
+Dim CalibrationConfiguration As ViewerCalibration.ConfigurationResult
 Dim InputState As ViewerInput.State
 Dim UiState As ViewerUi.State
 Dim GizmoState As ViewerGizmo.State
@@ -565,6 +567,20 @@ Call Check(ViewerActors.ApplyPresentationOffset(
     PartyPrimary.Actor, ViewerProfiles.PROFILE_DRAGON, 0, Frame))
 Call Check(ViewerCalibration.ApplyWristOffsets(
     CalibrationState, PartyPrimary.Actor, 0, -1, -1, False))
+
+CalibrationConfiguration = ViewerCalibration.ConfigureForActor(
+    CalibrationConfigurationState, ViewerProfiles.PROFILE_DRAGON, 0,
+    PartyPrimary.Actor)
+
+Call Check(Not CalibrationConfiguration.Available)
+Call Check(CalibrationConfiguration.SwordWristNode = -1 And
+    CalibrationConfiguration.ShieldWristNode = -1)
+Call Check(ViewerCalibration.MinimumValue(ViewerUi.CALIBRATION_TRANSFORM_ROTATE) = -180)
+Call Check(ViewerCalibration.MaximumValue(ViewerUi.CALIBRATION_TRANSFORM_ROTATE) = 180)
+Call Check(ViewerCalibration.MinimumValue(ViewerUi.CALIBRATION_TRANSFORM_MOVE) = -100)
+Call Check(ViewerCalibration.MaximumValue(ViewerUi.CALIBRATION_TRANSFORM_MOVE) = 100)
+Call Check(ViewerUi.CalibrationValueAtPointer(34, -100, 100) = -100)
+Call Check(ViewerUi.CalibrationValueAtPointer(394, -100, 100) = 100)
 
 Call ViewerCalibration.SetTargetValue(CalibrationState, 0, 2, 1, 1, 17)
 Call Check(ViewerCalibration.TargetChannel(2, 1, 1) = 13)

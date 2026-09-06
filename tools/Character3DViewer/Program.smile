@@ -55,10 +55,6 @@ Const CALIBRATION_MAX_CLIPS = ViewerCalibration.MAX_CLIPS
 Const CALIBRATION_CHANNEL_COUNT = ViewerCalibration.CHANNEL_COUNT
 Const TRANSFORM_GIZMO_MOVE_DIVISOR = 3
 Const TRANSFORM_GIZMO_ROTATE_DIVISOR = 1000
-Const CALIBRATION_MINIMUM_DEGREES = -180
-Const CALIBRATION_MAXIMUM_DEGREES = 180
-Const CALIBRATION_MINIMUM_POSITION = -100
-Const CALIBRATION_MAXIMUM_POSITION = 100
 Const BACKGROUND_COUNT = 5
 Const BACKDROP_LANDSCAPE_PATH = "Assets\Backgrounds\SinStarLandscape.png"
 Const BACKDROP_TITLE_PATH = "Assets\Backgrounds\SinStarTitleWithLogo.png"
@@ -1905,11 +1901,11 @@ Function HandleInspectorPointer() As Boolean
         If Pointer_Pressed(POINTER_PRIMARY) Then
 
             If TransferAction = ViewerUi.TRANSFER_ACTION_DOWNLOAD Then
-                Call DownloadSavedCalibrationJson()
+                Call ViewerCalibration.Download(Calibration, Character)
             Else If TransferAction = ViewerUi.TRANSFER_ACTION_IMPORT Then
                 Call HandleCalibrationImport()
             Else If TransferAction = ViewerUi.TRANSFER_ACTION_OPEN Then
-                Call OpenSavedCalibrationJson()
+                Call ViewerCalibration.OpenOrDownload(Calibration, Character)
             End If
 
         End If
@@ -2191,7 +2187,8 @@ Function HandleSharedSliders() As Boolean
 
         If UI.UpdateSlider(ViewerInputState.SliderDragOwner, 4, ViewerUi.CALIBRATION_SLIDER_X, ViewerUi.CALIBRATION_SLIDER_Y,
             ViewerUi.CALIBRATION_SLIDER_WIDTH, ViewerUi.CALIBRATION_SLIDER_HEIGHT,
-            CalibrationMinimumValue(), CalibrationMaximumValue(), 1, Value) Then
+            ViewerCalibration.MinimumValue(ViewerUiState.CalibrationTransform),
+            ViewerCalibration.MaximumValue(ViewerUiState.CalibrationTransform), 1, Value) Then
 
             If Value <> PreviousValue Then
                 Call SetCurrentCalibrationValue(Value)
@@ -2897,28 +2894,8 @@ End Sub
 
 Sub ConfigureCalibration()
 
-    Dim Index As Number
-    Dim Name As Text
+    Dim Configuration As ViewerCalibration.ConfigurationResult
 
-    SwordWristNode = -1
-    ShieldWristNode = -1
-
-    For Index = 0 To Character3D.SocketCount(Character) - 1
-
-        Name = Character3D.SocketName(Character, Index)
-
-        If Name = "HandRight" Then
-            SwordWristNode = Character3D.SocketNodeIndex(Character, Index)
-        Else If Name = "HandLeft" Then
-            ShieldWristNode = Character3D.SocketNodeIndex(Character, Index)
-        End If
-
-    End For
-
-    CalibrationAvailable = (ViewerProfiles.IsPartyCharacter(Session.ProfileIndex) And
-        Character3D.PartCount(Character) > WEAPON_PART_INDEX And
-        SwordWristNode >= 0 And
-        ShieldWristNode >= 0)
     Session.CharacterSwitchBlocked = False
 
     Call ViewerUi.ResetCalibration(
@@ -2929,25 +2906,15 @@ Sub ConfigureCalibration()
     )
     Call ViewerGizmo.Reset(ViewerGizmoState)
 
-    Call ViewerCalibration.Configure(
+    Configuration = ViewerCalibration.ConfigureForActor(
         Calibration,
         Session.ProfileIndex,
         Calibration.KeyBase,
-        CalibrationAvailable,
         Character
     )
-
-End Sub
-
-Sub OpenSavedCalibrationJson()
-
-    Call ViewerCalibration.OpenOrDownload(Calibration, Character)
-
-End Sub
-
-Sub DownloadSavedCalibrationJson()
-
-    Call ViewerCalibration.Download(Calibration, Character)
+    CalibrationAvailable = Configuration.Available
+    SwordWristNode = Configuration.SwordWristNode
+    ShieldWristNode = Configuration.ShieldWristNode
 
 End Sub
 
@@ -3266,34 +3233,6 @@ Function CurrentCalibrationValue() As Number
 
 End Function
 
-Function CalibrationMinimumValue() As Number
-
-    Dim Result As Number
-
-    If ViewerUiState.CalibrationTransform = ViewerUi.CALIBRATION_TRANSFORM_MOVE Then
-        Result = CALIBRATION_MINIMUM_POSITION
-    Else
-        Result = CALIBRATION_MINIMUM_DEGREES
-    End If
-
-    Return Result
-
-End Function
-
-Function CalibrationMaximumValue() As Number
-
-    Dim Result As Number
-
-    If ViewerUiState.CalibrationTransform = ViewerUi.CALIBRATION_TRANSFORM_MOVE Then
-        Result = CALIBRATION_MAXIMUM_POSITION
-    Else
-        Result = CALIBRATION_MAXIMUM_DEGREES
-    End If
-
-    Return Result
-
-End Function
-
 Sub BeginCalibrationEdit()
 
     If ViewerUiState.CalibrationEditing Then
@@ -3400,13 +3339,10 @@ Sub SetCurrentCalibrationValue(Value As Number)
 
     Call BeginCalibrationEdit()
 
-    If ViewerUiState.CalibrationTransform = ViewerUi.CALIBRATION_TRANSFORM_MOVE Then
-        ClampedValue = Min(CALIBRATION_MAXIMUM_POSITION,
-            Max(CALIBRATION_MINIMUM_POSITION, Value))
-    Else
-        ClampedValue = Min(CALIBRATION_MAXIMUM_DEGREES,
-            Max(CALIBRATION_MINIMUM_DEGREES, Value))
-    End If
+    ClampedValue = Min(
+        ViewerCalibration.MaximumValue(ViewerUiState.CalibrationTransform),
+        Max(ViewerCalibration.MinimumValue(ViewerUiState.CalibrationTransform), Value)
+    )
 
     Call ViewerCalibration.SetTargetValue(
         Calibration,
@@ -3464,7 +3400,7 @@ Function RestoreEquipmentGrip(PartIndex As Number, SocketName As Text) As Boolea
         SocketName,
         ViewerGizmoState.GripAnchor,
         ViewerGizmoState.GripBasePosition,
-        CALIBRATION_MAXIMUM_POSITION,
+        ViewerCalibration.MaximumValue(ViewerUi.CALIBRATION_TRANSFORM_MOVE),
         Effects.SwordGlow,
         Effects.ShieldGlow,
         Effects.EpicGlowAvailable,
@@ -3501,11 +3437,10 @@ Sub SetCalibrationFromPointer()
     Dim MinimumValue As Number
     Dim Value As Number
 
-    MinimumValue = CalibrationMinimumValue()
-    MaximumValue = CalibrationMaximumValue()
-    Value = ((Pointer_X() - ViewerUi.CALIBRATION_SLIDER_X) *
-        (MaximumValue - MinimumValue) /
-        ViewerUi.CALIBRATION_SLIDER_WIDTH) + MinimumValue
+    MaximumValue = ViewerCalibration.MaximumValue(ViewerUiState.CalibrationTransform)
+    MinimumValue = ViewerCalibration.MinimumValue(ViewerUiState.CalibrationTransform)
+    Value = ViewerUi.CalibrationValueAtPointer(
+        Pointer_X(), MinimumValue, MaximumValue)
 
     Call SetCurrentCalibrationValue(Value)
 
@@ -3936,8 +3871,8 @@ Sub DrawInspectorOverlay()
             CalibrationKeyframeIndex(
                 Playback.SelectedClip, CurrentAnimationFrame()),
             CurrentCalibrationValue(),
-            CalibrationMinimumValue(),
-            CalibrationMaximumValue(),
+            ViewerCalibration.MinimumValue(ViewerUiState.CalibrationTransform),
+            ViewerCalibration.MaximumValue(ViewerUiState.CalibrationTransform),
             ViewerGizmoState.Visible,
             ViewerGizmoState.HoldGrip,
             ViewerGizmoState.GripLimit,

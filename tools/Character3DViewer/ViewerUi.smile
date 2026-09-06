@@ -932,6 +932,18 @@ Public Function CalibrationPointerAction(PointerX As Number, PointerY As Number,
 
 End Function
 
+Public Function CalibrationValueAtPointer(PointerX As Number,
+    MinimumValue As Number, MaximumValue As Number) As Number
+
+    Dim Result As Number
+
+    Result = (PointerX - CALIBRATION_SLIDER_X) * (MaximumValue - MinimumValue)
+    Result = Result / CALIBRATION_SLIDER_WIDTH + MinimumValue
+
+    Return Result
+
+End Function
+
 Public Function ApplyCalibrationSelection(ByRef Value As State,
     Action As Number) As Boolean
 

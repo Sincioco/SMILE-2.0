@@ -23,6 +23,10 @@ Private Const METADATA_CAPACITY = 2048
 Private Const SHIELD_PART_INDEX = 0
 Private Const WEAPON_PART_INDEX = 1
 Private Const BODY_PART_INDEX = 2
+Private Const MINIMUM_DEGREES = -180
+Private Const MAXIMUM_DEGREES = 180
+Private Const MINIMUM_POSITION = -100
+Private Const MAXIMUM_POSITION = 100
 
 Public Type State
     OwnerProfile As Number
@@ -53,6 +57,12 @@ End Type
 Public Type ApplicationResult
     Ready As Boolean
     FailureStage As Number
+End Type
+
+Public Type ConfigurationResult
+    Available As Boolean
+    SwordWristNode As Number
+    ShieldWristNode As Number
 End Type
 
 Private Dim SwordWrist[TOTAL_CLIPS, AXIS_COUNT] As Number
@@ -114,6 +124,39 @@ Public Sub Configure(ByRef Value As State, ProfileIndex As Number, KeyBase As Nu
     End If
 
 End Sub
+
+Public Function ConfigureForActor(ByRef Value As State, ProfileIndex As Number,
+    KeyBase As Number, ByRef Actor As Character3D.Actor) As ConfigurationResult
+
+    Dim Index As Number
+    Dim Name As Text
+    Dim Result As ConfigurationResult
+
+    Result.SwordWristNode = -1
+    Result.ShieldWristNode = -1
+
+    For Index = 0 To Character3D.SocketCount(Actor) - 1
+
+        Name = Character3D.SocketName(Actor, Index)
+
+        If Name = "HandRight" Then
+            Result.SwordWristNode = Character3D.SocketNodeIndex(Actor, Index)
+        Else If Name = "HandLeft" Then
+            Result.ShieldWristNode = Character3D.SocketNodeIndex(Actor, Index)
+        End If
+
+    End For
+
+    Result.Available = (ViewerProfiles.IsPartyCharacter(ProfileIndex) And
+        Character3D.PartCount(Actor) > WEAPON_PART_INDEX And
+        Result.SwordWristNode >= 0 And
+        Result.ShieldWristNode >= 0)
+
+    Call Configure(Value, ProfileIndex, KeyBase, Result.Available, Actor)
+
+    Return Result
+
+End Function
 
 Public Sub CancelPendingImport(ByRef Value As State)
 
@@ -224,6 +267,34 @@ Public Sub SetTargetValue(ByRef Value As State, Clip As Number,
     Call SetChannelValue(Value, Clip, Channel, NextValue)
 
 End Sub
+
+Public Function MinimumValue(Transform As Number) As Number
+
+    Dim Result As Number
+
+    If Transform = 1 Then
+        Result = MINIMUM_POSITION
+    Else
+        Result = MINIMUM_DEGREES
+    End If
+
+    Return Result
+
+End Function
+
+Public Function MaximumValue(Transform As Number) As Number
+
+    Dim Result As Number
+
+    If Transform = 1 Then
+        Result = MAXIMUM_POSITION
+    Else
+        Result = MAXIMUM_DEGREES
+    End If
+
+    Return Result
+
+End Function
 
 Public Sub ResetTarget(ByRef Value As State, Clip As Number,
     Target As Number, Transform As Number)

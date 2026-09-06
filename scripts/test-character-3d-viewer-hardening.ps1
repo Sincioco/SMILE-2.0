@@ -176,6 +176,9 @@ try {
         'Public Function CommitImport(',
         'Public Function Persist(',
         'Public Function Undo(',
+        'Public Function ConfigureForActor(',
+        'Public Function MinimumValue(',
+        'Public Function MaximumValue(',
         'Public Sub Evaluate(',
         'Public Function TargetValue(',
         'Public Sub SetTargetValue(',
@@ -220,6 +223,7 @@ try {
         'Public Function InspectorBlocksScene(',
         'Public Function InspectorActionAtPointer(',
         'Public Function CalibrationPointerAction(',
+        'Public Function CalibrationValueAtPointer(',
         'Public Function ApplyCalibrationSelection(',
         'Public Sub DrawMinimumSizeNotice(',
         'Public Sub DrawHeader(',
@@ -301,6 +305,15 @@ try {
         -not $viewerSource.Contains('PanelLeft + 94, 444') -and
         -not $viewerSource.Contains('PanelLeft + 174, 444')) `
         'Character tabs, transfers, inspector actions and animation-button hit maps must remain in ViewerUi.'
+    Assert-True (-not $viewerSource.Contains('Character3D.SocketName(Character') -and
+        -not $viewerSource.Contains('Const CALIBRATION_MINIMUM_DEGREES =') -and
+        -not $viewerSource.Contains('Const CALIBRATION_MAXIMUM_POSITION =') -and
+        -not $viewerSource.Contains('Function CalibrationMinimumValue(') -and
+        -not $viewerSource.Contains('Function CalibrationMaximumValue(') -and
+        -not $viewerSource.Contains('Sub OpenSavedCalibrationJson(') -and
+        -not $viewerSource.Contains('Sub DownloadSavedCalibrationJson(') -and
+        -not $viewerSource.Contains('(Pointer_X() - ViewerUi.CALIBRATION_SLIDER_X)')) `
+        'Calibration discovery, value bounds, transfer calls and slider mapping must use production owners.'
     foreach ($contract in @(
         'Public Sub BeginDrag(',
         'Public Sub FinishDrag(',
