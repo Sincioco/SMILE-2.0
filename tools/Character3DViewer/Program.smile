@@ -593,16 +593,43 @@ Sub LoadViewer()
     End If
 
     If Party.Enabled Then
-        Call CreatePartyCompanion()
+
+        Session.Ready = ViewerParty.CreateCompanion(
+            Party,
+            Calibration,
+            Effects,
+            ViewerProfiles.PROFILE_ORIN,
+            CALIBRATION_MAX_CLIPS,
+            Playback.PlaybackSpeed
+        ) And Session.Ready
+
+        Call ConfigureCalibration()
+        Call ResetPartyDemo()
+
     End If
 
     If Session.DragonInspection Then
 
-        Call CreatePartyCompanion(ViewerProfiles.PROFILE_ARIN)
+        Session.Ready = ViewerParty.CreateCompanion(
+            Party,
+            Calibration,
+            Effects,
+            ViewerProfiles.PROFILE_ARIN,
+            0,
+            Playback.PlaybackSpeed
+        ) And Session.Ready
 
         Party.DragonOpponent = Party.Companion
 
-        Call CreatePartyCompanion()
+        Session.Ready = ViewerParty.CreateCompanion(
+            Party,
+            Calibration,
+            Effects,
+            ViewerProfiles.PROFILE_ORIN,
+            CALIBRATION_MAX_CLIPS,
+            Playback.PlaybackSpeed
+        ) And Session.Ready
+
         Call PositionDragonOpponents()
 
         Call ViewerEffects.EnableSwordFire(Effects)
@@ -3722,71 +3749,6 @@ Sub ResetPartyInspector()
 
         Call ResetAll()
     End If
-
-End Sub
-
-Sub CreatePartyCompanion(Optional CompanionIndex As Number = ViewerProfiles.PROFILE_ORIN)
-
-    Dim Companion As ViewerActors.Context
-    Dim CompanionKeyBase As Number
-    Dim Primary As ViewerActors.Context
-
-    Primary = CaptureActorContext()
-    CompanionKeyBase = 0
-
-    If CompanionIndex = ViewerProfiles.PROFILE_ORIN Then
-        CompanionKeyBase = CALIBRATION_MAX_CLIPS
-    End If
-
-    Companion = ViewerActors.LoadContext(CompanionIndex, CompanionKeyBase)
-    Party.Ready = Companion.Ready
-
-    Call UseActorContext(Companion)
-
-    If Party.Ready Then
-
-        Call ConfigureCalibration()
-
-        Party.Ready = CalibrationAvailable And Not Calibration.StorageRejected And Party.Ready
-
-        If Effects.EpicGlowMaterial.Handle = 0 Then
-            Call ViewerEffects.CreateEpicGlow(Effects, Session.ProfileIndex, Character)
-        Else
-
-            Effects.EpicGlowAvailable = ViewerEffects.CreateBorrowedEpicGlow(
-                Character,
-                Effects.EpicGlowMaterial,
-                Effects.SwordGlow,
-                Effects.ShieldGlow
-            )
-            Effects.EpicGlowVisible = Effects.EpicGlowAvailable
-        End If
-
-        Session.Ready = ViewerParty.PlayClip(
-            Character,
-            "Idle",
-            Playback.SelectedClip,
-            Character.Handle,
-            Session.ProfileIndex,
-            Playback.PlaybackSpeed
-        ) And Session.Ready
-
-        Party.Companion = CaptureActorContext()
-        Party.Companion.Ready = Party.Ready
-
-    End If
-
-    Call UseActorContext(Primary)
-
-    If Not Session.DragonInspection Then
-        Call ConfigureCalibration()
-    End If
-
-    If Party.Enabled Then
-        Call ResetPartyDemo()
-    End If
-
-    Session.Ready = Companion.Ready And Party.Ready And Session.Ready
 
 End Sub
 

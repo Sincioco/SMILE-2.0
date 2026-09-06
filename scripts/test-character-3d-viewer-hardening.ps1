@@ -393,6 +393,7 @@ try {
         'Public Sub InitializeFormation(',
         'Public Function AdvanceElapsed(',
         'Public Function ApplyFrame(',
+        'Public Function CreateCompanion(',
         'Public Function UpdateCompanion(',
         'Public Function UpdateDragonOpponent(',
         'Public Function PlaceDragonInspectionParticipants(',
@@ -491,6 +492,10 @@ try {
         -not $viewerSource.Contains('Dim SceneVfxClock As') -and
         -not $viewerSource.Contains('Dim Arena As')) `
         'Party, scene VFX and arena resource state must not return to Program.smile.'
+    Assert-True (-not $viewerSource.Contains('Sub CreatePartyCompanion(') -and
+        -not $viewerSource.Contains('ViewerActors.LoadContext(') -and
+        -not $viewerSource.Contains('Call UseActorContext(Companion)')) `
+        'Party companion creation and calibration/glow setup must remain in ViewerParty.'
     Assert-True (-not $viewerSource.Contains('Dim SocketGizmos[') -and
         -not $viewerSource.Contains('Dim SocketMarkers As') -and
         -not $viewerSource.Contains('Sub CreateSocketGizmos()') -and

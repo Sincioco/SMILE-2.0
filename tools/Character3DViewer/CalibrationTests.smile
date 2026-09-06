@@ -53,6 +53,12 @@ Call CheckDragonFireContinuity()
 Call SelectCharacterTab(3)
 Call CalibrationCheck(Session.Ready And Not Session.ViewerError And Party.Ready,
     "Party loads both calibrated heroes")
+Call CalibrationCheck(
+    Party.Companion.Profile = ViewerProfiles.PROFILE_ORIN And
+    Party.Companion.CalibrationAvailable And
+    Calibration.KeyBase = 0 And
+    Session.ProfileIndex = ViewerProfiles.PROFILE_ARIN,
+    "Party owner creates the calibrated companion without replacing primary context")
 
 TestIndex = Calibration.KeyBase
 TestPartyUpdate = ViewerParty.UpdateCompanion(

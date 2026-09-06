@@ -481,6 +481,94 @@ Public Function ApplyFrame(ByRef Value As State, Actions As FrameActions,
 
 End Function
 
+Public Function CreateCompanion(ByRef Value As State,
+    ByRef Calibration As ViewerCalibration.State,
+    ByRef Effects As ViewerEffects.State,
+    ProfileIndex As Number, KeyBase As Number,
+    PlaybackSpeed As Number) As Boolean
+
+    Dim Companion As ViewerActors.Context
+    Dim Configuration As ViewerCalibration.ConfigurationResult
+    Dim EmptyObject As Core.Object3D
+    Dim PreviousGlowAvailable As Boolean
+    Dim PreviousGlowVisible As Boolean
+    Dim PreviousKeyBase As Number
+    Dim PreviousShieldGlow As Core.Object3D
+    Dim PreviousSwordGlow As Core.Object3D
+    Dim PlaybackReady As Boolean
+    Dim Result As Boolean
+
+    PreviousKeyBase = Calibration.KeyBase
+    PreviousSwordGlow = Effects.SwordGlow
+    PreviousShieldGlow = Effects.ShieldGlow
+    PreviousGlowAvailable = Effects.EpicGlowAvailable
+    PreviousGlowVisible = Effects.EpicGlowVisible
+    Companion = ViewerActors.LoadContext(ProfileIndex, KeyBase)
+    Value.Ready = Companion.Ready
+    PlaybackReady = True
+
+    If Companion.Ready Then
+
+        Configuration = ViewerCalibration.ConfigureForActor(
+            Calibration, ProfileIndex, KeyBase, Companion.Actor)
+        Companion.CalibrationAvailable = Configuration.Available
+        Companion.WeaponWrist = Configuration.SwordWristNode
+        Companion.ShieldWrist = Configuration.ShieldWristNode
+        Value.Ready = (Configuration.Available And
+            Not Calibration.StorageRejected And Value.Ready)
+
+        If Effects.EpicGlowMaterial.Handle = 0 Then
+
+            Effects.SwordGlow = EmptyObject
+            Effects.ShieldGlow = EmptyObject
+            Effects.EpicGlowAvailable = False
+            Effects.EpicGlowVisible = False
+
+            Call ViewerEffects.CreateEpicGlow(
+                Effects, ProfileIndex, Companion.Actor)
+
+            Companion.WeaponGlow = Effects.SwordGlow
+            Companion.ShieldGlow = Effects.ShieldGlow
+            Companion.GlowAvailable = Effects.EpicGlowAvailable
+            Companion.GlowVisible = Effects.EpicGlowVisible
+
+        Else
+
+            Companion.GlowAvailable = ViewerEffects.CreateBorrowedEpicGlow(
+                Companion.Actor,
+                Effects.EpicGlowMaterial,
+                Companion.WeaponGlow,
+                Companion.ShieldGlow
+            )
+            Companion.GlowVisible = Companion.GlowAvailable
+
+        End If
+
+        PlaybackReady = PlayClip(
+            Companion.Actor,
+            "Idle",
+            Companion.Clip,
+            Companion.Actor.Handle,
+            ProfileIndex,
+            PlaybackSpeed
+        )
+
+        Value.Companion = Companion
+        Value.Companion.Ready = Value.Ready
+
+    End If
+
+    Calibration.KeyBase = PreviousKeyBase
+    Effects.SwordGlow = PreviousSwordGlow
+    Effects.ShieldGlow = PreviousShieldGlow
+    Effects.EpicGlowAvailable = PreviousGlowAvailable
+    Effects.EpicGlowVisible = PreviousGlowVisible
+    Result = Companion.Ready And Value.Ready And PlaybackReady
+
+    Return Result
+
+End Function
+
 Public Function UpdateCompanion(ByRef Value As State,
     ByRef Calibration As ViewerCalibration.State,
     ByRef Effects As ViewerEffects.State, AnimationElapsed As Number,
