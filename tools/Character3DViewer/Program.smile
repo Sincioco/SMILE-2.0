@@ -4,7 +4,6 @@ Option Explicit
 
 Import Smile.Simple3D.Character3D As Character3D
 Import Smile.Simple3D.CharacterViewer As CharacterViewer
-Import Smile.UI.Controls As UI
 Import Smile.Simple3D.Core As Core
 Import Smile.Simple3D.Graphics3D As Graphics3D
 Import Smile.Simple3D.Scene3D As Scene3D
@@ -1910,67 +1909,53 @@ End Function
 
 Function HandleSharedSliders() As Boolean
 
-    Dim Value As Number
-    Dim PanelLeft As Number
-    Dim PreviousValue As Number
+    Dim ReturnValue As Boolean
 
-    If ViewerUiState.Visibility <> 0 Then
-        Return False
+    Dim Update As ViewerUi.SliderUpdate
+
+    Update = ViewerUi.UpdateCameraSliders(
+        ViewerInputState.SliderDragOwner,
+        ViewerUiState.Visibility,
+        ViewerUi.StatusPanelX(Window_Width()),
+        Window_Height(),
+        ViewerCameraState.Controls.OrbitYaw,
+        ViewerCameraState.Controls.OrbitPitch,
+        CharacterViewer.ZoomTargetDegrees(ViewerCameraState.Zoom),
+        ZOOM_IN_LIMIT,
+        ZOOM_OUT_LIMIT
+    )
+
+    If Update.Action = ViewerUi.SLIDER_ACTION_HORIZONTAL_ORBIT Then
+        Call ViewerCamera.SetHorizontalOrbit(ViewerCameraState, Update.Value)
+    Else If Update.Action = ViewerUi.SLIDER_ACTION_VERTICAL_ORBIT Then
+        Call ViewerCamera.SetVerticalOrbit(ViewerCameraState, Update.Value)
+    Else If Update.Action = ViewerUi.SLIDER_ACTION_ZOOM Then
+        Call ViewerCamera.SetZoomTarget(ViewerCameraState, Update.Value)
     End If
 
-    PanelLeft = ViewerUi.StatusPanelX(Window_Width())
-    Value = ViewerCameraState.Controls.OrbitYaw
-
-    If UI.UpdateSlider(ViewerInputState.SliderDragOwner, 1, PanelLeft + 76, Window_Height() - 142,
-        ViewerUi.CAMERA_SLIDER_WIDTH, ViewerUi.CAMERA_SLIDER_HEIGHT,
-        -180, 180, 1, Value) Then
-        Call ViewerCamera.SetHorizontalOrbit(ViewerCameraState, Value)
-
-        Return True
-    End If
-
-    Value = ViewerCameraState.Controls.OrbitPitch
-
-    If UI.UpdateSlider(ViewerInputState.SliderDragOwner, 2, PanelLeft + 76, Window_Height() - 116,
-        ViewerUi.CAMERA_SLIDER_WIDTH, ViewerUi.CAMERA_SLIDER_HEIGHT,
-        -180, 180, 1, Value) Then
-        Call ViewerCamera.SetVerticalOrbit(ViewerCameraState, Value)
-
-        Return True
-    End If
-
-    Value = CharacterViewer.ZoomTargetDegrees(ViewerCameraState.Zoom)
-
-    If UI.UpdateSlider(ViewerInputState.SliderDragOwner, 3, PanelLeft + 76, Window_Height() - 90,
-        ViewerUi.CAMERA_SLIDER_WIDTH, ViewerUi.CAMERA_SLIDER_HEIGHT,
-        ZOOM_IN_LIMIT, ZOOM_OUT_LIMIT, -1, Value) Then
-        Call ViewerCamera.SetZoomTarget(ViewerCameraState, Value)
-
+    If Update.Consumed Then
         Return True
     End If
 
     If ViewerUiState.CalibrationVisible Or ViewerInputState.SliderDragOwner = 4 Then
 
-        Value = ViewerCalibrationEditing.CurrentValue(
-            Calibration, Playback.SelectedClip, ViewerUiState)
-        PreviousValue = Value
-
-        If UI.UpdateSlider(ViewerInputState.SliderDragOwner, 4, ViewerUi.CALIBRATION_SLIDER_X, ViewerUi.CALIBRATION_SLIDER_Y,
-            ViewerUi.CALIBRATION_SLIDER_WIDTH, ViewerUi.CALIBRATION_SLIDER_HEIGHT,
+        Update = ViewerUi.UpdateCalibrationSlider(
+            ViewerInputState.SliderDragOwner,
+            ViewerCalibrationEditing.CurrentValue(
+                Calibration, Playback.SelectedClip, ViewerUiState),
             ViewerCalibration.MinimumValue(ViewerUiState.CalibrationTransform),
-            ViewerCalibration.MaximumValue(ViewerUiState.CalibrationTransform), 1, Value) Then
+            ViewerCalibration.MaximumValue(ViewerUiState.CalibrationTransform)
+        )
 
-            If Value <> PreviousValue Then
-                Call SetCurrentCalibrationValue(Value)
-            End If
-
-            Return True
-
+        If Update.Consumed And Update.Changed Then
+            Call SetCurrentCalibrationValue(Update.Value)
         End If
 
     End If
 
-    Return False
+    ReturnValue = Update.Consumed
+
+    Return ReturnValue
 
 End Function
 

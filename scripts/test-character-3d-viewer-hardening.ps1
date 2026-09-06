@@ -115,7 +115,6 @@ try {
     # isolated native harness below instead of pinning obsolete labels/timers.
     foreach ($contract in @(
         'Import Smile.Simple3D.CharacterViewer As CharacterViewer',
-        'Import Smile.UI.Controls As UI',
         'Import Smile.Tools.Character3DViewerCamera As ViewerCamera',
         'Import Smile.Tools.Character3DViewerCalibration As ViewerCalibration',
         'Import Smile.Tools.Character3DViewerCalibrationEditing As ViewerCalibrationEditing',
@@ -240,6 +239,7 @@ try {
         Assert-Contains $inputSource $contract 'Viewer input owner'
     }
     foreach ($contract in @(
+        'Import Smile.UI.Controls As UI',
         'Public Sub ResetCalibration(',
         'Public Sub BeginCalibrationEdit(',
         'Public Sub FinishCalibrationEdit(',
@@ -268,6 +268,8 @@ try {
         'Public Function CalibrationPointerAction(',
         'Public Function CalibrationValueAtPointer(',
         'Public Function ApplyCalibrationSelection(',
+        'Public Function UpdateCameraSliders(',
+        'Public Function UpdateCalibrationSlider(',
         'Public Sub DrawMinimumSizeNotice(',
         'Public Sub DrawHeader(',
         'Public Sub DrawInspectorToolbar(',
@@ -329,6 +331,9 @@ try {
         -not $viewerSource.Contains('Else If PointerInRectangle(34, 128, 92, 24)') -and
         -not $viewerSource.Contains('Else If PointerInRectangle(34, 374, 194, 24)')) `
         'Calibration panel pointer classification must remain in ViewerUi.'
+    Assert-True (-not $viewerSource.Contains('UI.UpdateSlider(') -and
+        -not $viewerSource.Contains('Import Smile.UI.Controls As UI')) `
+        'Shared slider hit testing and capture must remain in ViewerUi.'
     Assert-True (-not $viewerSource.Contains('Function TimelineFrameFromPointer(') -and
         -not $viewerSource.Contains('Function TimelineKeyframeAtPointer(') -and
         -not $viewerSource.Contains('Function CalibrationFrameTimeMilliseconds(')) `

@@ -88,6 +88,7 @@ Dim CalibrationConfigurationState As ViewerCalibration.State
 Dim CalibrationConfiguration As ViewerCalibration.ConfigurationResult
 Dim InputState As ViewerInput.State
 Dim UiState As ViewerUi.State
+Dim SliderUpdate As ViewerUi.SliderUpdate
 Dim GizmoState As ViewerGizmo.State
 Dim PartyState As ViewerParty.State
 Dim PartyParticipantUpdate As ViewerParty.ParticipantUpdateResult
@@ -320,6 +321,21 @@ Call ViewerInput.FinishTimelineGesture(InputState)
 Call Check(Not ViewerInput.HasPointerCapture(InputState))
 
 Call ViewerUi.Reset(UiState)
+
+SliderUpdate = ViewerUi.UpdateCameraSliders(
+    InputState.SliderDragOwner, UiState.Visibility,
+    100, 640, 0, 0, 0, -144, 36)
+
+Call Check(Not SliderUpdate.Consumed)
+Call Check(SliderUpdate.Action = ViewerUi.SLIDER_ACTION_NONE)
+Call Check(InputState.SliderDragOwner = 0)
+
+SliderUpdate = ViewerUi.UpdateCalibrationSlider(
+    InputState.SliderDragOwner, 17, -180, 180)
+
+Call Check(Not SliderUpdate.Consumed)
+Call Check(SliderUpdate.Action = ViewerUi.SLIDER_ACTION_NONE)
+
 Call ViewerUi.ResetCalibration(UiState, 0, 1, 0)
 Call ViewerUi.CycleVisibility(UiState)
 Call Check(UiState.Visibility = 1)

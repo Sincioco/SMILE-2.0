@@ -107,6 +107,11 @@ Public Const INSPECTOR_ACTION_RESTART_PRESENTATION = 32
 Public Const INSPECTOR_ACTION_RESET_ALL = 33
 Public Const INSPECTOR_ACTION_FIT = 34
 Public Const INSPECTOR_ACTION_CLIP_BASE = 100
+Public Const SLIDER_ACTION_NONE = 0
+Public Const SLIDER_ACTION_HORIZONTAL_ORBIT = 1
+Public Const SLIDER_ACTION_VERTICAL_ORBIT = 2
+Public Const SLIDER_ACTION_ZOOM = 3
+Public Const SLIDER_ACTION_CALIBRATION = 4
 
 Private Const MINIMUM_VIEWER_WIDTH = 800
 Private Const MINIMUM_VIEWER_HEIGHT = 540
@@ -127,6 +132,13 @@ Public Type State
     CalibrationClearAllStage As Number
 End Type
 
+Public Type SliderUpdate
+    Consumed As Boolean
+    Changed As Boolean
+    Action As Number
+    Value As Number
+End Type
+
 Public Sub Reset(ByRef Value As State)
 
     Value.Visibility = 0
@@ -136,6 +148,125 @@ Public Sub Reset(ByRef Value As State)
     Value.CalibrationClearAllStage = 0
 
 End Sub
+
+Public Function UpdateCameraSliders(ByRef DragOwner As Number,
+    Visibility As Number, PanelLeft As Number, WindowHeight As Number,
+    HorizontalOrbit As Number, VerticalOrbit As Number, Zoom As Number,
+    ZoomInLimit As Number, ZoomOutLimit As Number) As SliderUpdate
+
+    Dim CurrentValue As Number
+    Dim Result As SliderUpdate
+
+    If Visibility <> 0 Then
+        Return Result
+    End If
+
+    CurrentValue = HorizontalOrbit
+
+    If UI.UpdateSlider(
+        DragOwner,
+        SLIDER_ACTION_HORIZONTAL_ORBIT,
+        PanelLeft + 76,
+        WindowHeight - 142,
+        CAMERA_SLIDER_WIDTH,
+        CAMERA_SLIDER_HEIGHT,
+        -180,
+        180,
+        1,
+        CurrentValue
+    ) Then
+
+        Result.Consumed = True
+        Result.Changed = CurrentValue <> HorizontalOrbit
+        Result.Action = SLIDER_ACTION_HORIZONTAL_ORBIT
+        Result.Value = CurrentValue
+
+        Return Result
+
+    End If
+
+    CurrentValue = VerticalOrbit
+
+    If UI.UpdateSlider(
+        DragOwner,
+        SLIDER_ACTION_VERTICAL_ORBIT,
+        PanelLeft + 76,
+        WindowHeight - 116,
+        CAMERA_SLIDER_WIDTH,
+        CAMERA_SLIDER_HEIGHT,
+        -180,
+        180,
+        1,
+        CurrentValue
+    ) Then
+
+        Result.Consumed = True
+        Result.Changed = CurrentValue <> VerticalOrbit
+        Result.Action = SLIDER_ACTION_VERTICAL_ORBIT
+        Result.Value = CurrentValue
+
+        Return Result
+
+    End If
+
+    CurrentValue = Zoom
+
+    If UI.UpdateSlider(
+        DragOwner,
+        SLIDER_ACTION_ZOOM,
+        PanelLeft + 76,
+        WindowHeight - 90,
+        CAMERA_SLIDER_WIDTH,
+        CAMERA_SLIDER_HEIGHT,
+        ZoomInLimit,
+        ZoomOutLimit,
+        -1,
+        CurrentValue
+    ) Then
+
+        Result.Consumed = True
+        Result.Changed = CurrentValue <> Zoom
+        Result.Action = SLIDER_ACTION_ZOOM
+        Result.Value = CurrentValue
+
+    End If
+
+    Return Result
+
+End Function
+
+Public Function UpdateCalibrationSlider(ByRef DragOwner As Number,
+    CurrentCalibrationValue As Number,
+    MinimumValue As Number, MaximumValue As Number) As SliderUpdate
+
+    Dim CurrentValue As Number
+    Dim Result As SliderUpdate
+
+    CurrentValue = CurrentCalibrationValue
+
+    If UI.UpdateSlider(
+        DragOwner,
+        SLIDER_ACTION_CALIBRATION,
+        CALIBRATION_SLIDER_X,
+        CALIBRATION_SLIDER_Y,
+        CALIBRATION_SLIDER_WIDTH,
+        CALIBRATION_SLIDER_HEIGHT,
+        MinimumValue,
+        MaximumValue,
+        1,
+        CurrentValue
+    ) Then
+
+        Result.Consumed = True
+        Result.Changed = CurrentValue <> CurrentCalibrationValue
+        Result.Action = SLIDER_ACTION_CALIBRATION
+        Result.Value = CurrentValue
+
+    End If
+
+    Return Result
+
+End Function
 
 Public Sub ResetCalibration(ByRef Value As State, Target As Number,
     Axis As Number, Transform As Number)
