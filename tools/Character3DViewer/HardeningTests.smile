@@ -16,6 +16,7 @@ Import Smile.Tools.Character3DViewerCamera As ViewerCamera
 Import Smile.Tools.Character3DViewerCalibration As ViewerCalibration
 Import Smile.Tools.Character3DViewerCalibrationEditing As ViewerCalibrationEditing
 Import Smile.Tools.Character3DViewerInput As ViewerInput
+Import Smile.Tools.Character3DViewerTimelineEditing As ViewerTimelineEditing
 Import Smile.Tools.Character3DViewerUi As ViewerUi
 Import Smile.Tools.Character3DViewerGizmo As ViewerGizmo
 Import Smile.Tools.Character3DViewerParty As ViewerParty
@@ -88,6 +89,7 @@ Dim CalibrationConfigurationState As ViewerCalibration.State
 Dim CalibrationConfiguration As ViewerCalibration.ConfigurationResult
 Dim CalibrationOperation As ViewerCalibrationEditing.OperationResult
 Dim InputState As ViewerInput.State
+Dim PointerGesture As ViewerInput.PointerGestureUpdate
 Dim UiState As ViewerUi.State
 Dim SliderUpdate As ViewerUi.SliderUpdate
 Dim GizmoState As ViewerGizmo.State
@@ -332,14 +334,69 @@ Call Check(ViewerInput.ClassifyArrow(38, 37, 39, 38, 40, False) =
 
 Call ViewerInput.BeginTimelineScrub(InputState)
 Call Check(ViewerInput.HasPointerCapture(InputState))
+
+PointerGesture = ViewerInput.UpdateTimelineScrub(
+    InputState, False, False, True)
+
+Call Check(PointerGesture.Consumed)
+Call Check(PointerGesture.Action = ViewerInput.POINTER_GESTURE_NONE)
+Call Check(Not InputState.TimelineScrubbing)
+
 Call ViewerInput.CancelCaptures(InputState)
 Call Check(Not ViewerInput.HasPointerCapture(InputState))
+
+Call ViewerInput.BeginFrameRepeat(InputState, -1, 100)
+
+PointerGesture = ViewerInput.UpdateBeforeSliders(
+    InputState, 99, 300, False, True, False)
+
+Call Check(PointerGesture.Consumed)
+Call Check(PointerGesture.Action = ViewerInput.POINTER_GESTURE_NONE)
+
+PointerGesture = ViewerInput.UpdateBeforeSliders(
+    InputState, 100, 300, False, True, False)
+
+Call Check(PointerGesture.Action = ViewerInput.POINTER_GESTURE_STEP_FRAME)
+Call Check(PointerGesture.Value = -1 And InputState.FrameButtonRepeatAt = 400)
+
+PointerGesture = ViewerInput.UpdateBeforeSliders(
+    InputState, 101, 300, False, False, False)
+
+Call Check(Not PointerGesture.Consumed And InputState.FrameButtonRepeatDirection = 0)
+
 Call ViewerInput.BeginTimelineKeyframeDrag(InputState, 4, 18)
 Call Check(InputState.TimelineKeyframeDragging)
 Call Check(InputState.TimelineDraggedKeyframe = 4)
 Call Check(InputState.TimelineDraggedOriginalFrame = 18)
-Call ViewerInput.FinishTimelineGesture(InputState)
+
+PointerGesture = ViewerInput.UpdateBeforeSliders(
+    InputState, 0, 300, True, False, False)
+
+Call Check(PointerGesture.Consumed And
+    PointerGesture.Action = ViewerInput.POINTER_GESTURE_UPDATE_KEYFRAME)
+Call Check(ViewerTimelineEditing.AcceptDragTarget(InputState, 20, -1))
+Call Check(InputState.TimelineDraggedTargetFrame = 20)
+Call Check(Not ViewerTimelineEditing.AcceptDragTarget(InputState, 21, 3))
+Call Check(InputState.TimelineDraggedTargetFrame = 20)
+Call Check(ViewerTimelineEditing.AcceptDragTarget(InputState, 21, 4))
+
+PointerGesture = ViewerInput.UpdateBeforeSliders(
+    InputState, 0, 300, False, False, False)
+
+Call Check(PointerGesture.Consumed And
+    PointerGesture.Action = ViewerInput.POINTER_GESTURE_FINISH_KEYFRAME)
 Call Check(Not ViewerInput.HasPointerCapture(InputState))
+
+Call ViewerInput.BeginTimelineKeyframeDrag(InputState, 4, 18)
+
+CalibrationOperation = ViewerTimelineEditing.FinishKeyframeDrag(
+    InputState, CalibrationState, PartyPrimary.Actor, 0, 0,
+    -1, -1, False, False, EffectsState)
+
+Call Check(CalibrationOperation.Ready And Not CalibrationOperation.Applied)
+Call Check(ViewerTimelineEditing.SeekAdjacentKey(
+    CalibrationState, PartyPrimary.Actor, 0, 1, 0,
+    -1, -1, False, False, EffectsState))
 
 Call ViewerUi.Reset(UiState)
 

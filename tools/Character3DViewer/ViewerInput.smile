@@ -43,6 +43,11 @@ Public Const GIZMO_KEY_AXIS_Z = 4
 Public Const GIZMO_KEY_MOVE = 5
 Public Const GIZMO_KEY_ROTATE = 6
 Public Const GIZMO_KEY_COMMIT = 7
+Public Const POINTER_GESTURE_NONE = 0
+Public Const POINTER_GESTURE_STEP_FRAME = 1
+Public Const POINTER_GESTURE_UPDATE_KEYFRAME = 2
+Public Const POINTER_GESTURE_FINISH_KEYFRAME = 3
+Public Const POINTER_GESTURE_SEEK_TIMELINE = 4
 
 Public Type State
     InterfaceBlocked As Boolean
@@ -54,6 +59,12 @@ Public Type State
     TimelineDraggedTargetFrame As Number
     FrameButtonRepeatDirection As Number
     FrameButtonRepeatAt As Number
+End Type
+
+Public Type PointerGestureUpdate
+    Action As Number
+    Value As Number
+    Consumed As Boolean
 End Type
 
 Public Sub Reset(ByRef Value As State)
@@ -221,6 +232,104 @@ Public Function ClassifyGizmoKey(PressedKey As Number,
     End If
 
     Return Result
+
+End Function
+
+Public Function UpdateBeforeSliders(ByRef Value As State,
+    CurrentTime As Number, RepeatMilliseconds As Number,
+    PrimaryPressed As Boolean, PrimaryHeld As Boolean,
+    SecondaryPressed As Boolean) As PointerGestureUpdate
+
+    Dim Result As PointerGestureUpdate
+
+    If Value.FrameButtonRepeatDirection <> 0 Then
+
+        If (SecondaryPressed Or
+            (Not PrimaryHeld And Not PrimaryPressed)) Then
+
+            Value.FrameButtonRepeatDirection = 0
+
+        Else
+
+            Result.Consumed = True
+
+            If CurrentTime >= Value.FrameButtonRepeatAt Then
+
+                Result.Action = POINTER_GESTURE_STEP_FRAME
+                Result.Value = Value.FrameButtonRepeatDirection
+                Value.FrameButtonRepeatAt = CurrentTime + RepeatMilliseconds
+
+            End If
+
+            Return Result
+
+        End If
+
+    End If
+
+    If Value.TimelineKeyframeDragging Then
+
+        Result.Consumed = True
+
+        If PrimaryPressed Or PrimaryHeld Then
+            Result.Action = POINTER_GESTURE_UPDATE_KEYFRAME
+        Else
+            Result.Action = POINTER_GESTURE_FINISH_KEYFRAME
+
+            Call FinishTimelineGesture(Value)
+        End If
+
+    End If
+
+    Return Result
+
+End Function
+
+Public Function UpdateTimelineScrub(ByRef Value As State,
+    PrimaryPressed As Boolean, PrimaryHeld As Boolean,
+    PrimaryReleased As Boolean) As PointerGestureUpdate
+
+    Dim Result As PointerGestureUpdate
+
+    If Not Value.TimelineScrubbing Then
+        Return Result
+    End If
+
+    Result.Consumed = True
+
+    If PrimaryPressed Or PrimaryHeld Then
+        Result.Action = POINTER_GESTURE_SEEK_TIMELINE
+    End If
+
+    If (PrimaryReleased Or
+        (Not PrimaryPressed And Not PrimaryHeld)) Then
+        Call FinishTimelineGesture(Value)
+    End If
+
+    Return Result
+
+End Function
+
+Public Sub BeginFrameRepeat(ByRef Value As State, Direction As Number,
+    FirstRepeatAt As Number)
+
+    Value.FrameButtonRepeatDirection = Direction
+    Value.FrameButtonRepeatAt = FirstRepeatAt
+
+End Sub
+
+Public Function HasInterfaceCapture(ByRef Value As State,
+    GizmoDragging As Boolean) As Boolean
+
+    Dim Captured As Boolean
+
+    Captured = (Value.TimelineScrubbing Or
+        Value.TimelineKeyframeDragging Or
+        Value.FrameButtonRepeatDirection <> 0 Or
+        Value.SliderDragOwner <> 0 Or
+        GizmoDragging)
+
+    Return Captured
 
 End Function
 

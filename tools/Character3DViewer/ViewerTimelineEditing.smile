@@ -1,0 +1,183 @@
+''' Timeline seek and calibration-key drag workflow with explicit borrowed Viewer owners.
+Module Smile.Tools.Character3DViewerTimelineEditing
+
+Option Explicit
+
+Import Smile.Simple3D.Character3D As Character3D
+Import Smile.Tools.Character3DViewerCalibration As ViewerCalibration
+Import Smile.Tools.Character3DViewerCalibrationEditing As ViewerCalibrationEditing
+Import Smile.Tools.Character3DViewerEffects As ViewerEffects
+Import Smile.Tools.Character3DViewerInput As ViewerInput
+Import Smile.Tools.Character3DViewerPlayback As ViewerPlayback
+Import Smile.Tools.Character3DViewerUi As ViewerUi
+
+Public Function SeekFromPointer(ByRef Playback As ViewerPlayback.State,
+    ByRef Actor As Character3D.Actor, PointerX As Number,
+    WindowWidth As Number, ByRef Effects As ViewerEffects.State) As Boolean
+
+    Dim Duration As Number
+    Dim Ready As Boolean
+    Dim TargetTime As Number
+    Dim TimelineWidth As Number
+
+    Duration = Character3D.ClipDuration(Actor, Playback.SelectedClip)
+    TimelineWidth = Max(1,
+        ViewerUi.TimelineWidth(WindowWidth, ViewerUi.TIMELINE_LEFT))
+    TargetTime = (PointerX - ViewerUi.TIMELINE_LEFT) * Duration / TimelineWidth
+    Ready = ViewerPlayback.SeekTime(Playback, Actor, TargetTime)
+
+    Call ViewerEffects.InvalidateVisualHistory(Effects)
+
+    Return Ready
+
+End Function
+
+Public Function SeekAdjacentKey(ByRef Calibration As ViewerCalibration.State,
+    ByRef Actor As Character3D.Actor, Clip As Number, Direction As Number,
+    ProfileIndex As Number, SwordWristNode As Number,
+    ShieldWristNode As Number, Available As Boolean,
+    Editing As Boolean, ByRef Effects As ViewerEffects.State) As Boolean
+
+    Dim CurrentFrame As Number
+    Dim Ready As Boolean
+    Dim TargetFrame As Number
+    Dim TargetTime As Number
+
+    Ready = True
+
+    If Not Available Then
+        Return Ready
+    End If
+
+    CurrentFrame = ViewerCalibration.CurrentAnimationFrame(Actor, Clip)
+    TargetFrame = ViewerCalibration.AdjacentKeyFrame(
+        Calibration, Clip, CurrentFrame, Direction)
+
+    If TargetFrame < 0 Then
+        Return Ready
+    End If
+
+    TargetTime = ViewerCalibration.FrameTimeMilliseconds(
+        Actor, Clip, TargetFrame)
+    Ready = Character3D.SetAnimationTime(Actor, TargetTime)
+
+    Call ViewerEffects.InvalidateVisualHistory(Effects)
+    Call ViewerCalibrationEditing.EvaluateCurrent(
+        Calibration, Actor, Clip, ProfileIndex, Editing, Available)
+
+    Ready = ViewerCalibration.ApplyWristOffsets(
+        Calibration,
+        Actor,
+        Clip,
+        SwordWristNode,
+        ShieldWristNode,
+        Available
+    ) And Ready
+
+    Return Ready
+
+End Function
+
+Public Function AcceptDragTarget(ByRef Input As ViewerInput.State,
+    TargetFrame As Number, ExistingKeyframe As Number) As Boolean
+
+    Dim Accepted As Boolean
+
+    Accepted = (ExistingKeyframe < 0 Or
+        ExistingKeyframe = Input.TimelineDraggedKeyframe)
+
+    If Accepted Then
+        Input.TimelineDraggedTargetFrame = TargetFrame
+    End If
+
+    Return Accepted
+
+End Function
+
+Public Function UpdateKeyframeDrag(ByRef Input As ViewerInput.State,
+    ByRef Calibration As ViewerCalibration.State,
+    ByRef Actor As Character3D.Actor, Clip As Number,
+    PointerX As Number, WindowWidth As Number,
+    ByRef Effects As ViewerEffects.State) As Boolean
+
+    Dim ExistingKeyframe As Number
+    Dim Ready As Boolean
+    Dim TargetFrame As Number
+    Dim TargetTime As Number
+
+    TargetFrame = ViewerUi.TimelineFrameAtPointer(
+        PointerX,
+        WindowWidth,
+        Character3D.ClipDuration(Actor, Clip),
+        Character3D.ClipSampleRate(Actor, Clip),
+        Character3D.ClipSampleCount(Actor, Clip)
+    )
+    ExistingKeyframe = ViewerCalibration.KeyIndex(
+        Calibration, Clip, TargetFrame)
+
+    If Not AcceptDragTarget(Input, TargetFrame, ExistingKeyframe) Then
+        TargetFrame = Input.TimelineDraggedTargetFrame
+    End If
+
+    TargetTime = ViewerCalibration.FrameTimeMilliseconds(
+        Actor, Clip, TargetFrame)
+    Ready = Character3D.SetAnimationTime(Actor, TargetTime)
+
+    Call ViewerEffects.InvalidateVisualHistory(Effects)
+
+    Return Ready
+
+End Function
+
+Public Function FinishKeyframeDrag(ByRef Input As ViewerInput.State,
+    ByRef Calibration As ViewerCalibration.State,
+    ByRef Actor As Character3D.Actor, Clip As Number,
+    ProfileIndex As Number, SwordWristNode As Number,
+    ShieldWristNode As Number, Available As Boolean,
+    Editing As Boolean, ByRef Effects As ViewerEffects.State) As ViewerCalibrationEditing.OperationResult
+
+    Dim Result As ViewerCalibrationEditing.OperationResult
+    Dim Transaction As ViewerCalibration.TransactionResult
+
+    Result.Ready = True
+
+    If Input.TimelineDraggedTargetFrame = Input.TimelineDraggedOriginalFrame Then
+        Return Result
+    End If
+
+    Transaction = ViewerCalibration.MoveKeyAndPersist(
+        Calibration,
+        Actor,
+        Clip,
+        Input.TimelineDraggedKeyframe,
+        Input.TimelineDraggedTargetFrame,
+        Editing
+    )
+    Result.Applied = Transaction.Applied
+    Result.Persisted = Transaction.Persisted
+
+    If Not Transaction.Applied Then
+        Return Result
+    End If
+
+    If Transaction.Persisted Then
+        Call ViewerEffects.InvalidateVisualHistory(Effects)
+    End If
+
+    Call ViewerCalibrationEditing.EvaluateCurrent(
+        Calibration, Actor, Clip, ProfileIndex, Editing, Available)
+
+    Result.Ready = ViewerCalibration.ApplyWristOffsets(
+        Calibration,
+        Actor,
+        Clip,
+        SwordWristNode,
+        ShieldWristNode,
+        Available
+    )
+
+    Return Result
+
+End Function
+
+End Module

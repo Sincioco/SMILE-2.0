@@ -17,6 +17,7 @@ Import Smile.Tools.Character3DViewerCamera As ViewerCamera
 Import Smile.Tools.Character3DViewerCalibration As ViewerCalibration
 Import Smile.Tools.Character3DViewerCalibrationEditing As ViewerCalibrationEditing
 Import Smile.Tools.Character3DViewerInput As ViewerInput
+Import Smile.Tools.Character3DViewerTimelineEditing As ViewerTimelineEditing
 Import Smile.Tools.Character3DViewerUi As ViewerUi
 Import Smile.Tools.Character3DViewerGizmo As ViewerGizmo
 Import Smile.Tools.Character3DViewerParty As ViewerParty
@@ -1336,11 +1337,8 @@ Function HandleInterfacePointer() As Boolean
     Dim Blocked As Boolean
     Dim Index As Number
 
-    If (ViewerInputState.TimelineScrubbing Or
-        ViewerInputState.TimelineKeyframeDragging Or
-        ViewerInputState.FrameButtonRepeatDirection <> 0 Or
-        ViewerInputState.SliderDragOwner <> 0 Or
-        ViewerGizmoState.Dragging) Then
+    If ViewerInput.HasInterfaceCapture(
+        ViewerInputState, ViewerGizmoState.Dragging) Then
 
         Call BeginPartyInspector()
 
@@ -1415,6 +1413,7 @@ Function HandleInspectorPointer() As Boolean
 
     Dim Action As Number
     Dim Blocked As Boolean
+    Dim Gesture As ViewerInput.PointerGestureUpdate
     Dim KeyframeIndex As Number
     Dim TransferAction As Number
     Dim WheelDelta As Number
@@ -1423,60 +1422,44 @@ Function HandleInspectorPointer() As Boolean
         Return True
     End If
 
-    If ViewerInputState.FrameButtonRepeatDirection <> 0 Then
+    Gesture = ViewerInput.UpdateBeforeSliders(
+        ViewerInputState,
+        Timer(),
+        FRAME_BUTTON_REPEAT_MILLISECONDS,
+        Pointer_Pressed(POINTER_PRIMARY),
+        Pointer_Held(POINTER_PRIMARY),
+        Pointer_Pressed(POINTER_SECONDARY)
+    )
 
-        If (Pointer_Pressed(POINTER_SECONDARY) Or
-            (Not Pointer_Held(POINTER_PRIMARY) And Not Pointer_Pressed(POINTER_PRIMARY))) Then
-
-            ViewerInputState.FrameButtonRepeatDirection = 0
-
-        Else
-
-            If Timer() >= ViewerInputState.FrameButtonRepeatAt Then
-                Call StepAnimationFrame(ViewerInputState.FrameButtonRepeatDirection)
-
-                ''' No catch-up burst if rendering or input stalls.
-                ViewerInputState.FrameButtonRepeatAt = Timer() + FRAME_BUTTON_REPEAT_MILLISECONDS
-            End If
-
-            Return True
-
-        End If
-
+    If Gesture.Action = ViewerInput.POINTER_GESTURE_STEP_FRAME Then
+        Call StepAnimationFrame(Gesture.Value)
+    Else If Gesture.Action = ViewerInput.POINTER_GESTURE_UPDATE_KEYFRAME Then
+        Call UpdateTimelineKeyframeDrag()
+    Else If Gesture.Action = ViewerInput.POINTER_GESTURE_FINISH_KEYFRAME Then
+        Call FinishTimelineKeyframeDrag()
     End If
 
-    If ViewerInputState.TimelineKeyframeDragging Then
-
-        If Pointer_Pressed(POINTER_PRIMARY) Or Pointer_Held(POINTER_PRIMARY) Then
-            Call UpdateTimelineKeyframeDrag()
-        Else
-
-            Call FinishTimelineKeyframeDrag()
-        End If
-
+    If Gesture.Consumed Then
         Return True
-
     End If
 
     If HandleSharedSliders() Then
         Return True
     End If
 
-    If ViewerInputState.TimelineScrubbing Then
+    Gesture = ViewerInput.UpdateTimelineScrub(
+        ViewerInputState,
+        Pointer_Pressed(POINTER_PRIMARY),
+        Pointer_Held(POINTER_PRIMARY),
+        Pointer_Released(POINTER_PRIMARY)
+    )
 
-        If Pointer_Pressed(POINTER_PRIMARY) Or Pointer_Held(POINTER_PRIMARY) Then
-            Call SeekFromPointer()
-        Else
+    If Gesture.Action = ViewerInput.POINTER_GESTURE_SEEK_TIMELINE Then
+        Call SeekFromPointer()
+    End If
 
-            Call ViewerInput.FinishTimelineGesture(ViewerInputState)
-        End If
-
-        If Pointer_Released(POINTER_PRIMARY) Then
-            Call ViewerInput.FinishTimelineGesture(ViewerInputState)
-        End If
-
+    If Gesture.Consumed Then
         Return True
-
     End If
 
     If Not Pointer_Inside() Then
@@ -1599,15 +1582,17 @@ Function HandleInspectorPointer() As Boolean
 
         Call StepAnimationFrame(-1)
 
-        ViewerInputState.FrameButtonRepeatDirection = -1
-        ViewerInputState.FrameButtonRepeatAt = Timer() + FRAME_BUTTON_REPEAT_MILLISECONDS
+        Call ViewerInput.BeginFrameRepeat(
+            ViewerInputState, -1,
+            Timer() + FRAME_BUTTON_REPEAT_MILLISECONDS)
 
     Else If Action = ViewerUi.INSPECTOR_ACTION_NEXT_FRAME Then
 
         Call StepAnimationFrame(1)
 
-        ViewerInputState.FrameButtonRepeatDirection = 1
-        ViewerInputState.FrameButtonRepeatAt = Timer() + FRAME_BUTTON_REPEAT_MILLISECONDS
+        Call ViewerInput.BeginFrameRepeat(
+            ViewerInputState, 1,
+            Timer() + FRAME_BUTTON_REPEAT_MILLISECONDS)
 
     Else If Action = ViewerUi.INSPECTOR_ACTION_KEYFRAME Then
 
@@ -2203,58 +2188,38 @@ End Sub
 
 Sub SeekCalibrationKeyframe(Direction As Number)
 
-    Dim CurrentFrame As Number
-    Dim TargetFrame As Number
-    Dim TargetTime As Number
-
     ''' Navigation pauses even when this clip has no saved keys to visit.
 
     Call BeginPartyPreview()
 
     Playback.ScenePaused = True
 
-    If Not CalibrationAvailable Then
-        Return
-    End If
-
     If ViewerUiState.CalibrationEditing Then
         Call CancelCalibrationEdit()
     End If
 
-    CurrentFrame = ViewerCalibration.CurrentAnimationFrame(
-        Character, Playback.SelectedClip)
-    TargetFrame = ViewerCalibration.AdjacentKeyFrame(
-        Calibration, Playback.SelectedClip, CurrentFrame, Direction)
-
-    If TargetFrame < 0 Then
-        Return
-    End If
-
-    TargetTime = ViewerCalibration.FrameTimeMilliseconds(
-        Character, Playback.SelectedClip, TargetFrame)
-    Session.Ready = Character3D.SetAnimationTime(Character, TargetTime) And Session.Ready
-
-    Call ViewerEffects.InvalidateVisualHistory(Effects)
-
-    Call UpdateCalibrationForCurrentFrame()
-    Call ApplyWristCalibration()
+    Session.Ready = ViewerTimelineEditing.SeekAdjacentKey(
+        Calibration,
+        Character,
+        Playback.SelectedClip,
+        Direction,
+        Session.ProfileIndex,
+        SwordWristNode,
+        ShieldWristNode,
+        CalibrationAvailable,
+        ViewerUiState.CalibrationEditing,
+        Effects
+    ) And Session.Ready
 
 End Sub
 
 Sub SeekFromPointer()
 
-    Dim Duration As Number
-    Dim TargetTime As Number
-
     Call BeginPartyPreview()
     Call CancelCalibrationEdit()
 
-    Duration = Character3D.ClipDuration(Character, Playback.SelectedClip)
-    TargetTime = (Pointer_X() - ViewerUi.TIMELINE_LEFT) * Duration / Max(1, ViewerUi.TimelineWidth(Window_Width(), ViewerUi.TIMELINE_LEFT))
-    Session.Ready = ViewerPlayback.SeekTime(
-        Playback, Character, TargetTime) And Session.Ready
-
-    Call ViewerEffects.InvalidateVisualHistory(Effects)
+    Session.Ready = ViewerTimelineEditing.SeekFromPointer(
+        Playback, Character, Pointer_X(), Window_Width(), Effects) And Session.Ready
 
 End Sub
 
@@ -2273,61 +2238,36 @@ End Sub
 
 Sub UpdateTimelineKeyframeDrag()
 
-    Dim ExistingKeyframe As Number
-    Dim TargetFrame As Number
-    Dim TargetTime As Number
-
-    TargetFrame = ViewerUi.TimelineFrameAtPointer(
+    Session.Ready = ViewerTimelineEditing.UpdateKeyframeDrag(
+        ViewerInputState,
+        Calibration,
+        Character,
+        Playback.SelectedClip,
         Pointer_X(),
         Window_Width(),
-        Character3D.ClipDuration(Character, Playback.SelectedClip),
-        Character3D.ClipSampleRate(Character, Playback.SelectedClip),
-        Character3D.ClipSampleCount(Character, Playback.SelectedClip)
-    )
-    ExistingKeyframe = ViewerCalibration.KeyIndex(
-        Calibration, Playback.SelectedClip, TargetFrame)
-
-    If ExistingKeyframe < 0 Or ExistingKeyframe = ViewerInputState.TimelineDraggedKeyframe Then
-        ViewerInputState.TimelineDraggedTargetFrame = TargetFrame
-    End If
-
-    TargetTime = ViewerCalibration.FrameTimeMilliseconds(
-        Character, Playback.SelectedClip, ViewerInputState.TimelineDraggedTargetFrame)
-    Session.Ready = Character3D.SetAnimationTime(Character, TargetTime) And Session.Ready
-
-    Call ViewerEffects.InvalidateVisualHistory(Effects)
+        Effects
+    ) And Session.Ready
 
 End Sub
 
 Sub FinishTimelineKeyframeDrag()
 
-    Dim Transaction As ViewerCalibration.TransactionResult
+    Dim Result As ViewerCalibrationEditing.OperationResult
 
-    Call ViewerInput.FinishTimelineGesture(ViewerInputState)
-
-    If ViewerInputState.TimelineDraggedTargetFrame = ViewerInputState.TimelineDraggedOriginalFrame Then
-        Return
-    End If
-
-    Transaction = ViewerCalibration.MoveKeyAndPersist(
+    Result = ViewerTimelineEditing.FinishKeyframeDrag(
+        ViewerInputState,
         Calibration,
         Character,
         Playback.SelectedClip,
-        ViewerInputState.TimelineDraggedKeyframe,
-        ViewerInputState.TimelineDraggedTargetFrame,
-        ViewerUiState.CalibrationEditing
+        Session.ProfileIndex,
+        SwordWristNode,
+        ShieldWristNode,
+        CalibrationAvailable,
+        ViewerUiState.CalibrationEditing,
+        Effects
     )
 
-    If Not Transaction.Applied Then
-        Return
-    End If
-
-    If Transaction.Persisted Then
-        Call ViewerEffects.InvalidateVisualHistory(Effects)
-    End If
-
-    Call UpdateCalibrationForCurrentFrame()
-    Call ApplyWristCalibration()
+    Call ApplyCalibrationEditingResult(Result)
 
 End Sub
 
@@ -3348,11 +3288,8 @@ Function HandlePartyPointer() As Boolean
     Dim CapturesActive As Boolean
     Dim Decision As ViewerParty.PointerDecision
 
-    CapturesActive = (ViewerInputState.TimelineScrubbing Or
-        ViewerInputState.TimelineKeyframeDragging Or
-        ViewerInputState.FrameButtonRepeatDirection <> 0 Or
-        ViewerInputState.SliderDragOwner <> 0 Or
-        ViewerGizmoState.Dragging)
+    CapturesActive = ViewerInput.HasInterfaceCapture(
+        ViewerInputState, ViewerGizmoState.Dragging)
     Decision = ViewerParty.ClassifyPointer(
         Pointer_X(),
         Pointer_Y(),

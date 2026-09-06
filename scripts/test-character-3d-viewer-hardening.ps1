@@ -24,6 +24,8 @@ $calibrationSourcePath = Join-Path $repositoryRoot `
 $calibrationEditingSourcePath = Join-Path $repositoryRoot `
     'tools\Character3DViewer\ViewerCalibrationEditing.smile'
 $inputSourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\ViewerInput.smile'
+$timelineEditingSourcePath = Join-Path $repositoryRoot `
+    'tools\Character3DViewer\ViewerTimelineEditing.smile'
 $uiSourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\ViewerUi.smile'
 $gizmoSourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\ViewerGizmo.smile'
 $partySourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\ViewerParty.smile'
@@ -102,6 +104,7 @@ try {
     $calibrationSource = Get-Content -LiteralPath $calibrationSourcePath -Raw
     $calibrationEditingSource = Get-Content -LiteralPath $calibrationEditingSourcePath -Raw
     $inputSource = Get-Content -LiteralPath $inputSourcePath -Raw
+    $timelineEditingSource = Get-Content -LiteralPath $timelineEditingSourcePath -Raw
     $uiSource = Get-Content -LiteralPath $uiSourcePath -Raw
     $gizmoSource = Get-Content -LiteralPath $gizmoSourcePath -Raw
     $partySource = Get-Content -LiteralPath $partySourcePath -Raw
@@ -119,6 +122,7 @@ try {
         'Import Smile.Tools.Character3DViewerCalibration As ViewerCalibration',
         'Import Smile.Tools.Character3DViewerCalibrationEditing As ViewerCalibrationEditing',
         'Import Smile.Tools.Character3DViewerInput As ViewerInput',
+        'Import Smile.Tools.Character3DViewerTimelineEditing As ViewerTimelineEditing',
         'Import Smile.Tools.Character3DViewerUi As ViewerUi',
         'Import Smile.Tools.Character3DViewerGizmo As ViewerGizmo',
         'Import Smile.Tools.Character3DViewerParty As ViewerParty',
@@ -154,7 +158,7 @@ try {
         -not $viewerSource.Contains('MinimumSeparation')) `
         'Party attack approaches must not be displaced by animated full-model bounds.'
     $timelineCapture = $viewerSource.IndexOf(
-        'If ViewerInputState.TimelineScrubbing Then', [System.StringComparison]::Ordinal)
+        'ViewerInput.UpdateTimelineScrub(', [System.StringComparison]::Ordinal)
     $outsidePointerReturn = $viewerSource.IndexOf(
         'If Not Pointer_Inside() Then', $timelineCapture, [System.StringComparison]::Ordinal)
     Assert-True ($timelineCapture -ge 0 -and $outsidePointerReturn -gt $timelineCapture) `
@@ -247,9 +251,21 @@ try {
         'Public Function ClassifyArrow(',
         'Public Function ClassifyInspectorKey(',
         'Public Function ClassifyGizmoKey(',
+        'Public Function UpdateBeforeSliders(',
+        'Public Function UpdateTimelineScrub(',
+        'Public Sub BeginFrameRepeat(',
+        'Public Function HasInterfaceCapture(',
         'Public Sub CancelCaptures(',
         'Public Function HasPointerCapture(')) {
         Assert-Contains $inputSource $contract 'Viewer input owner'
+    }
+    foreach ($contract in @(
+        'Public Function SeekFromPointer(',
+        'Public Function SeekAdjacentKey(',
+        'Public Function AcceptDragTarget(',
+        'Public Function UpdateKeyframeDrag(',
+        'Public Function FinishKeyframeDrag(')) {
+        Assert-Contains $timelineEditingSource $contract 'Viewer timeline editing owner'
     }
     foreach ($contract in @(
         'Import Smile.UI.Controls As UI',
@@ -557,6 +573,13 @@ try {
         -not $viewerSource.Contains('PressedKey = KEY_B Then') -and
         -not $viewerSource.Contains('PressedKey = KEY_TAB Then')) `
         'Inspector keyboard policy and queued-arrow classification must remain in ViewerInput.'
+    Assert-True (-not $viewerSource.Contains(
+            'If ViewerInputState.FrameButtonRepeatDirection <> 0 Then') -and
+        -not $viewerSource.Contains('ViewerInputState.FrameButtonRepeatAt =') -and
+        -not $viewerSource.Contains('ViewerCalibration.MoveKeyAndPersist(') -and
+        -not $viewerSource.Contains('ViewerUi.TimelineFrameAtPointer(') -and
+        -not $viewerSource.Contains('ViewerCalibration.AdjacentKeyFrame(')) `
+        'Detailed frame-repeat and timeline gesture behavior must remain in its production owners.'
     Assert-True (-not $viewerSource.Contains('Function TransformGizmoAxisAtPointer(') -and
         -not $viewerSource.Contains('Function CurrentTransformGizmoOrigin(') -and
         -not $viewerSource.Contains('CharacterViewer.TransformGizmoAxisPointerDelta(') -and

@@ -22,6 +22,7 @@
     <SmileSource Include="ViewerCalibration.smile" />
     <SmileSource Include="ViewerCalibrationEditing.smile" />
     <SmileSource Include="ViewerInput.smile" />
+    <SmileSource Include="ViewerTimelineEditing.smile" />
     <SmileSource Include="ViewerUi.smile" />
     <SmileSource Include="ViewerGizmo.smile" />
     <SmileSource Include="ViewerParty.smile" />
