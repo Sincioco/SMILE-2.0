@@ -390,12 +390,14 @@ try {
     }
     foreach ($contract in @(
         'Public Sub ResetChoreography(',
+        'Public Function ResetDemo(',
         'Public Function BeginInspectorBinding(',
         'Public Sub BeginPreview(',
         'Public Function RestorePreview(',
         'Public Sub InitializeFormation(',
         'Public Function AdvanceElapsed(',
         'Public Function ApplyFrame(',
+        'Public Function AdvanceDemo(',
         'Public Function CreateCompanion(',
         'Public Function UpdateCompanion(',
         'Public Function UpdateDragonOpponent(',
@@ -509,6 +511,12 @@ try {
         -not $viewerSource.Contains('ViewerActors.LoadContext(') -and
         -not $viewerSource.Contains('Call UseActorContext(Companion)')) `
         'Party companion creation and calibration/glow setup must remain in ViewerParty.'
+    Assert-True (-not $viewerSource.Contains('Sub InitializePartyFormation(') -and
+        -not $viewerSource.Contains('Sub PreparePartyDragonTurn(') -and
+        -not $viewerSource.Contains('ViewerParty.WillPrepareDragonTurn(') -and
+        -not $viewerSource.Contains('ViewerParty.AdvanceChoreography(') -and
+        -not $viewerSource.Contains('ViewerParty.ApplyFrame(')) `
+        'Party reset/formation and per-frame demo behavior must remain in ViewerParty.'
     Assert-True (-not $viewerSource.Contains('Dim SocketGizmos[') -and
         -not $viewerSource.Contains('Dim SocketMarkers As') -and
         -not $viewerSource.Contains('Sub CreateSocketGizmos()') -and

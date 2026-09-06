@@ -3720,12 +3720,14 @@ Sub UpdateDragonOpponent()
 
 End Sub
 
-Sub InitializePartyFormation()
+Sub ResetPartyDemo()
 
     Dim Center As Core.Vector3
     Dim FirstApproach As Core.Vector3
     Dim SecondApproach As Core.Vector3
 
+    Playback.DemoEnabled = True
+    ViewerUiState.CalibrationVisible = False
     Center.X = ViewerDragon.PositionX()
     Center.Z = ViewerDragon.PositionZ()
     FirstApproach.X = -21
@@ -3733,7 +3735,9 @@ Sub InitializePartyFormation()
     SecondApproach.X = -49
     SecondApproach.Z = 4
 
-    Call ViewerParty.InitializeFormation(
+    ''' Only one hero approaches at a time; animated full-model bounds must not move these shots.
+
+    Session.Ready = ViewerParty.ResetDemo(
         Party,
         Center,
         PARTY_FORMATION_RADIUS,
@@ -3741,83 +3745,24 @@ Sub InitializePartyFormation()
         PARTY_FORMATION_END_ANGLE,
         FirstApproach,
         SecondApproach,
-        ORIN_ARENA_YAW_ADJUSTMENT
-    )
-
-    ''' Only one hero approaches at a time; animated full-model bounds must not move these shots.
-
-End Sub
-
-Sub ResetPartyDemo()
-
-    Playback.DemoEnabled = True
-    ViewerUiState.CalibrationVisible = False
-
-    Call ViewerParty.ResetChoreography(Party)
-    Call InitializePartyFormation()
-    Call PreparePartyDragonTurn()
-
-    If Party.Ready Then
-        Session.Ready = Character3D.SetPartVisible(Party.Companion.Actor,
-            WEAPON_PART_INDEX, SwordVisible) And Session.Ready
-        Session.Ready = Character3D.SetPartVisible(Party.Companion.Actor,
-            SHIELD_PART_INDEX, ShieldVisible) And Session.Ready
-    End If
-
-End Sub
-
-Sub PreparePartyDragonTurn()
-
-    Dim RolledTarget As Number
-
-    Random RolledTarget From -1 To 1
-
-    Call ViewerParty.PrepareDragonTurn(Party, RolledTarget)
+        ORIN_ARENA_YAW_ADJUSTMENT,
+        SwordVisible,
+        ShieldVisible
+    ) And Session.Ready
 
 End Sub
 
 Sub AdvancePartyDemo()
 
-    Dim Actions As ViewerParty.FrameActions
-    Dim AttackMilliseconds As Number
-    Dim RolledTarget As Number
-
-    AttackMilliseconds = ViewerParty.AttackDuration(
-        Party,
-        Character,
-        Party.Companion.Actor,
-        Playback.PlaybackSpeed
-    )
-    RolledTarget = -1
-
-    If ViewerParty.WillPrepareDragonTurn(
+    Session.Ready = ViewerParty.AdvanceDemo(
         Party,
         Playback.AnimationUpdateElapsed,
         Playback.DemoEnabled,
         Playback.ScenePaused,
-        AttackMilliseconds,
-        Playback.PlaybackSpeed
-    ) Then
-        Random RolledTarget From -1 To 1
-    End If
-
-    Actions = ViewerParty.AdvanceChoreography(
-        Party,
-        Playback.AnimationUpdateElapsed,
-        Playback.DemoEnabled,
-        Playback.ScenePaused,
-        AttackMilliseconds,
         Playback.PlaybackSpeed,
-        RolledTarget
-    )
-
-    Session.Ready = ViewerParty.ApplyFrame(
-        Party,
-        Actions,
         Character,
         ViewerCameraState.Frame,
         Playback.SelectedClip,
-        Playback.PlaybackSpeed,
         ViewerDragon.PositionX(),
         0,
         ViewerDragon.PositionZ(),

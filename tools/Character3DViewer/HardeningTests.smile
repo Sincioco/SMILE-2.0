@@ -554,8 +554,9 @@ FormationCenter = Math3D.Vector(-208, 0, -120)
 FirstApproach = Math3D.Vector(-21, 0, -44)
 SecondApproach = Math3D.Vector(-49, 0, 4)
 
-Call ViewerParty.InitializeFormation(PartyState, FormationCenter, 300, 10, 50,
-    FirstApproach, SecondApproach, -55)
+Call Check(ViewerParty.ResetDemo(
+    PartyState, FormationCenter, 300, 10, 50,
+    FirstApproach, SecondApproach, -55, True, True))
 
 FormationFirst = BattleCamera.FormationPosition(FormationCenter, 300, 10, 50, 0, 2)
 FormationLast = BattleCamera.FormationPosition(FormationCenter, 300, 10, 50, 1, 2)

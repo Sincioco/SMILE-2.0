@@ -19,6 +19,8 @@ Private Const DRAGON_CAMERA_CHEST_HEIGHT = 70
 Private Const DRAGON_CAMERA_HEAD_HEIGHT = 115
 Private Const DRAGON_CAMERA_MOUTH_HEIGHT = 100
 Private Const DRAGON_CAMERA_ANCHOR_MAXIMUM_DELTA = 500
+Private Const SHIELD_PART_INDEX = 0
+Private Const WEAPON_PART_INDEX = 1
 
 Public Const STATE_ALIVE = 0
 Public Const STATE_ACTING = 1
@@ -151,6 +153,37 @@ Public Sub InitializeFormation(ByRef Value As State, Center As Core.Vector3,
     Value.Second.FacingAdjustment = SecondFacingAdjustment
 
 End Sub
+
+Public Function ResetDemo(ByRef Value As State, Center As Core.Vector3,
+    Radius As Number, StartAngle As Number, EndAngle As Number,
+    FirstApproach As Core.Vector3, SecondApproach As Core.Vector3,
+    SecondFacingAdjustment As Number,
+    SwordVisible As Boolean, ShieldVisible As Boolean) As Boolean
+
+    Dim Result As Boolean
+    Dim RolledTarget As Number
+
+    Call ResetChoreography(Value)
+    Call InitializeFormation(
+        Value, Center, Radius, StartAngle, EndAngle,
+        FirstApproach, SecondApproach, SecondFacingAdjustment)
+
+    Random RolledTarget From -1 To 1
+
+    Call PrepareDragonTurn(Value, RolledTarget)
+
+    Result = True
+
+    If Value.Ready Then
+        Result = Character3D.SetPartVisible(
+            Value.Companion.Actor, WEAPON_PART_INDEX, SwordVisible)
+        Result = Character3D.SetPartVisible(
+            Value.Companion.Actor, SHIELD_PART_INDEX, ShieldVisible) And Result
+    End If
+
+    Return Result
+
+End Function
 
 Public Function HomePosition(ByRef Value As State, MemberIndex As Number) As Core.Vector3
 
@@ -1130,6 +1163,42 @@ Public Function AdvanceChoreography(ByRef Value As State,
     Call SetPositions(Value, Travel1000, Actions)
 
     Return Actions
+
+End Function
+
+Public Function AdvanceDemo(ByRef Value As State,
+    AnimationElapsed As Number, DemoEnabled As Boolean,
+    ScenePaused As Boolean, PlaybackSpeed As Number,
+    ByRef PrimaryActor As Character3D.Actor,
+    ByRef PrimaryFrame As CharacterViewer.Framing,
+    ByRef PrimaryClip As Number,
+    TargetX As Number, TargetY As Number, TargetZ As Number,
+    ModelForwardYawOffset As Number) As Boolean
+
+    Dim Actions As FrameActions
+    Dim AttackMilliseconds As Number
+    Dim Result As Boolean
+    Dim RolledTarget As Number
+
+    AttackMilliseconds = AttackDuration(
+        Value, PrimaryActor, Value.Companion.Actor, PlaybackSpeed)
+    RolledTarget = -1
+
+    If WillPrepareDragonTurn(
+        Value, AnimationElapsed, DemoEnabled, ScenePaused,
+        AttackMilliseconds, PlaybackSpeed) Then
+        Random RolledTarget From -1 To 1
+    End If
+
+    Actions = AdvanceChoreography(
+        Value, AnimationElapsed, DemoEnabled, ScenePaused,
+        AttackMilliseconds, PlaybackSpeed, RolledTarget)
+    Result = ApplyFrame(
+        Value, Actions, PrimaryActor, PrimaryFrame, PrimaryClip,
+        PlaybackSpeed, TargetX, TargetY, TargetZ,
+        ModelForwardYawOffset)
+
+    Return Result
 
 End Function
 
