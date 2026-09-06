@@ -89,6 +89,7 @@ Dim InputState As ViewerInput.State
 Dim UiState As ViewerUi.State
 Dim GizmoState As ViewerGizmo.State
 Dim PartyState As ViewerParty.State
+Dim PartyParticipantUpdate As ViewerParty.ParticipantUpdateResult
 Dim PartyPrimary As ViewerActors.Context
 Dim PartyActions As ViewerParty.FrameActions
 Dim EmptyPartyActions As ViewerParty.FrameActions
@@ -152,6 +153,12 @@ Call Check(PlaybackState.SelectedClip = 2 And
     PlaybackState.AnimationCycleElapsed = 0 And PlaybackState.DemoEnabled)
 Call ViewerPlayback.SelectClip(PlaybackState, 1, False)
 Call Check(PlaybackState.SelectedClip = 1 And Not PlaybackState.DemoEnabled)
+
+PartyParticipantUpdate = ViewerParty.UpdateCompanion(
+    PartyState, CalibrationState, EffectsState, 16, False)
+
+Call Check(Not PartyParticipantUpdate.Updated And
+    PartyParticipantUpdate.Ready)
 
 Call ViewerSession.ResetFailure(SessionState)
 Call Check(SessionState.Ready)

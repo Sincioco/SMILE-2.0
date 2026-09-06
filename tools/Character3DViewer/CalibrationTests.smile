@@ -5,6 +5,7 @@ Dim TestIndex As Number
 Dim TestSavedCount As Number
 Dim TestTransactionResult As Boolean
 Dim TestCalibrationTransaction As ViewerCalibration.TransactionResult
+Dim TestPartyUpdate As ViewerParty.ParticipantUpdateResult
 Dim TestFireAge As Number
 Dim TestFireGeneration As Number
 Dim TestFireAdvanceCount As Number
@@ -12,6 +13,7 @@ Dim TestVisualEpoch As Number
 Dim TestAnchor As Core.Vector3
 Dim TestPosition As Core.Vector3
 Dim TestTwin As Character3D.Actor
+Dim TestFormationCenter As Core.Vector3
 Dim TestFormationFirst As Core.Vector3
 Dim TestFormationMiddle As Core.Vector3
 Dim TestFormationLast As Core.Vector3
@@ -51,6 +53,14 @@ Call CheckDragonFireContinuity()
 Call SelectCharacterTab(3)
 Call CalibrationCheck(Session.Ready And Not Session.ViewerError And Party.Ready,
     "Party loads both calibrated heroes")
+
+TestIndex = Calibration.KeyBase
+TestPartyUpdate = ViewerParty.UpdateCompanion(
+    Party, Calibration, Effects, 0, False)
+
+Call CalibrationCheck(TestPartyUpdate.Updated And TestPartyUpdate.Ready And
+    Calibration.KeyBase = TestIndex,
+    "Party owner updates its calibrated companion and restores the primary bank")
 Call CheckPartyInspector()
 Call SelectCharacterTab(0)
 Call CalibrationCheck(Session.Ready And Not Session.ViewerError And Not Calibration.StorageRejected,
@@ -178,9 +188,17 @@ Call CalibrationCheck(ViewerParty.PresentationStateName(ViewerParty.STATE_ALIVE)
 Call ViewerParty.SetPresentationState(Party, 0, ViewerParty.STATE_ALIVE)
 Call ViewerParty.SetPresentationState(Party, 1, ViewerParty.STATE_ALIVE)
 
-TestFormationFirst = PartyHomePosition(0, 3)
-TestFormationMiddle = PartyHomePosition(1, 3)
-TestFormationLast = PartyHomePosition(2, 3)
+TestFormationCenter.X = ViewerDragon.PositionX()
+TestFormationCenter.Z = ViewerDragon.PositionZ()
+TestFormationFirst = ViewerParty.FormationPosition(
+    TestFormationCenter, PARTY_FORMATION_RADIUS,
+    PARTY_FORMATION_START_ANGLE, PARTY_FORMATION_END_ANGLE, 0, 3)
+TestFormationMiddle = ViewerParty.FormationPosition(
+    TestFormationCenter, PARTY_FORMATION_RADIUS,
+    PARTY_FORMATION_START_ANGLE, PARTY_FORMATION_END_ANGLE, 1, 3)
+TestFormationLast = ViewerParty.FormationPosition(
+    TestFormationCenter, PARTY_FORMATION_RADIUS,
+    PARTY_FORMATION_START_ANGLE, PARTY_FORMATION_END_ANGLE, 2, 3)
 
 Call CalibrationCheck(Math3D.Distance(TestFormationFirst, TestFormationMiddle) > 90 And
     Math3D.Distance(TestFormationMiddle, TestFormationLast) > 90,

@@ -11,6 +11,8 @@ Import Smile.Simple3D.Math3D As Math3D
 Import Smile.UI.Controls As UI
 Import Smile.Tools.BattleCamera As BattleCamera
 Import Smile.Tools.Character3DViewerActors As ViewerActors
+Import Smile.Tools.Character3DViewerCalibration As ViewerCalibration
+Import Smile.Tools.Character3DViewerEffects As ViewerEffects
 Import Smile.Tools.Character3DViewerProfiles As ViewerProfiles
 
 Private Const DRAGON_CAMERA_CHEST_HEIGHT = 70
@@ -105,6 +107,12 @@ End Type
 Public Type PointerDecision
     Consumed As Boolean
     Action As Number
+End Type
+
+Public Type ParticipantUpdateResult
+    Updated As Boolean
+    Ready As Boolean
+    FailureStage As Number
 End Type
 
 Public Sub ResetChoreography(ByRef Value As State)
@@ -468,6 +476,191 @@ Public Function ApplyFrame(ByRef Value As State, Actions As FrameActions,
     Result = ViewerActors.FaceToward(Value.Companion.Actor,
         TargetX, TargetY, TargetZ, ModelForwardYawOffset,
         Value.Second.FacingAdjustment) And Result
+
+    Return Result
+
+End Function
+
+Public Function UpdateCompanion(ByRef Value As State,
+    ByRef Calibration As ViewerCalibration.State,
+    ByRef Effects As ViewerEffects.State, AnimationElapsed As Number,
+    CalibrationEditing As Boolean) As ParticipantUpdateResult
+
+    Dim Application As ViewerCalibration.ApplicationResult
+    Dim CompanionReady As Boolean
+    Dim PreviousKeyBase As Number
+    Dim Result As ParticipantUpdateResult
+
+    Result.Ready = True
+
+    If Not Value.Ready Then
+        Return Result
+    End If
+
+    Result.Updated = True
+    CompanionReady = ViewerActors.Update(Value.Companion, AnimationElapsed)
+    Result.Ready = CompanionReady
+    PreviousKeyBase = Calibration.KeyBase
+    Calibration.KeyBase = Value.Companion.KeyBase
+    Result.Ready = ViewerActors.ApplyPresentationOffset(
+        Value.Companion.Actor,
+        Value.Companion.Profile,
+        Value.Companion.Clip,
+        Value.Companion.Frame
+    ) And Result.Ready
+
+    If Value.Companion.CalibrationAvailable Then
+        Call ViewerCalibration.Evaluate(
+            Calibration,
+            Value.Companion.Actor,
+            Value.Companion.Clip,
+            ViewerCalibration.CurrentAnimationFrame(
+                Value.Companion.Actor, Value.Companion.Clip),
+            CalibrationEditing And
+                Calibration.OwnerProfile = Value.Companion.Profile
+        )
+    End If
+
+    Result.Ready = ViewerCalibration.ApplyWristOffsets(
+        Calibration,
+        Value.Companion.Actor,
+        Value.Companion.Clip,
+        Value.Companion.WeaponWrist,
+        Value.Companion.ShieldWrist,
+        Value.Companion.CalibrationAvailable
+    ) And Result.Ready
+    Result.Ready = ViewerCalibration.ApplyEquipmentCoupling(
+        Calibration,
+        Value.Companion.Actor,
+        Value.Companion.Clip,
+        Value.Companion.WeaponGlow,
+        Value.Companion.ShieldGlow,
+        Value.Companion.GlowAvailable
+    ) And Result.Ready
+
+    If Value.Companion.GlowAvailable Then
+        Result.Ready = ViewerEffects.UpdateBorrowedEpicGlow(
+            Value.Companion.Actor,
+            Value.Companion.WeaponGlow,
+            Value.Companion.ShieldGlow,
+            Value.Companion.Frame.ScalePercent,
+            ViewerCalibration.ChannelValue(
+                Calibration, Value.Companion.Clip, 18) <> 0,
+            ViewerCalibration.ChannelValue(
+                Calibration, Value.Companion.Clip, 19) <> 0
+        ) And Result.Ready
+    End If
+
+    Application = ViewerCalibration.ApplyEquipmentTransforms(
+        Calibration,
+        Value.Companion.Actor,
+        Value.Companion.Clip,
+        Value.Companion.WeaponGlow,
+        Value.Companion.ShieldGlow,
+        Value.Companion.GlowAvailable,
+        Value.Companion.GlowVisible
+    )
+    Result.Ready = Application.Ready And Result.Ready
+
+    If Not Result.Ready Then
+
+        Result.FailureStage = Application.FailureStage
+
+        If Result.FailureStage = 0 Then
+            Result.FailureStage = 71
+        End If
+
+    End If
+
+    Calibration.KeyBase = PreviousKeyBase
+    Value.Companion.Ready = CompanionReady
+    Value.Ready = CompanionReady
+
+    Return Result
+
+End Function
+
+Public Function UpdateDragonOpponent(ByRef Value As State,
+    ByRef Calibration As ViewerCalibration.State,
+    ByRef Effects As ViewerEffects.State, AnimationElapsed As Number,
+    CalibrationEditing As Boolean, SwordVisible As Boolean,
+    ShieldVisible As Boolean, ScenePaused As Boolean,
+    SelectedClipLabel As Text, Camera As Core.Camera3D,
+    CameraElapsed As Number) As ParticipantUpdateResult
+
+    Dim Result As ParticipantUpdateResult
+    Dim SavedCompanion As ViewerActors.Context
+
+    SavedCompanion = Value.Companion
+    Value.Companion = Value.DragonOpponent
+    Result = UpdateCompanion(
+        Value, Calibration, Effects, AnimationElapsed, CalibrationEditing)
+    Value.DragonOpponent = Value.Companion
+    Value.Companion = SavedCompanion
+
+    Call ViewerEffects.UpdateEquipmentFire(
+        Effects,
+        Value.DragonOpponent.Actor,
+        Value.DragonOpponent.Profile,
+        False,
+        SwordVisible,
+        ShieldVisible,
+        CalibrationEditing,
+        ScenePaused,
+        Value.DragonOpponent.Clip,
+        SelectedClipLabel,
+        Camera,
+        CameraElapsed
+    )
+
+    Return Result
+
+End Function
+
+Public Function PlaceDragonInspectionParticipants(ByRef Value As State,
+    Center As Core.Vector3, Radius As Number, StartAngle As Number,
+    EndAngle As Number, ModelForwardYawOffset As Number,
+    CompanionYawAdjustment As Number) As Boolean
+
+    Dim Home As Core.Vector3
+    Dim Result As Boolean
+
+    Home = FormationPosition(
+        Center, Radius, StartAngle, EndAngle, 0, 2)
+    Value.DragonOpponent.Frame.PositionX = Home.X
+    Value.DragonOpponent.Frame.PositionZ = Home.Z
+    Home = FormationPosition(
+        Center, Radius, StartAngle, EndAngle, 1, 2)
+    Value.Companion.Frame.PositionX = Home.X
+    Value.Companion.Frame.PositionZ = Home.Z
+    Result = Character3D.Place(
+        Value.DragonOpponent.Actor,
+        Value.DragonOpponent.Frame.PositionX,
+        Value.DragonOpponent.Frame.PositionY,
+        Value.DragonOpponent.Frame.PositionZ
+    )
+    Result = Character3D.Place(
+        Value.Companion.Actor,
+        Value.Companion.Frame.PositionX,
+        Value.Companion.Frame.PositionY,
+        Value.Companion.Frame.PositionZ
+    ) And Result
+    Result = ViewerActors.FaceToward(
+        Value.DragonOpponent.Actor,
+        Center.X,
+        Center.Y,
+        Center.Z,
+        ModelForwardYawOffset,
+        0
+    ) And Result
+    Result = ViewerActors.FaceToward(
+        Value.Companion.Actor,
+        Center.X,
+        Center.Y,
+        Center.Z,
+        ModelForwardYawOffset,
+        CompanionYawAdjustment
+    ) And Result
 
     Return Result
 
@@ -1258,6 +1451,23 @@ Public Function DrawCompanion(ByRef Value As State, PartyEnabled As Boolean,
         SwordVisible) Then
         Result = Graphics3D.DrawObject3D(Value.Companion.WeaponGlow) And Result
     End If
+
+    Return Result
+
+End Function
+
+Public Function DrawDragonOpponent(ByRef Value As State,
+    PartyEnabled As Boolean, DragonInspection As Boolean,
+    SceneGlowVisible As Boolean, SwordVisible As Boolean) As Boolean
+
+    Dim Result As Boolean
+    Dim SavedCompanion As ViewerActors.Context
+
+    SavedCompanion = Value.Companion
+    Value.Companion = Value.DragonOpponent
+    Result = DrawCompanion(
+        Value, PartyEnabled, DragonInspection, SceneGlowVisible, SwordVisible)
+    Value.Companion = SavedCompanion
 
     Return Result
 

@@ -177,6 +177,7 @@ try {
         'Public Function PresentationIndexForRuntimeClip(',
         'Public Function SelectedClipName(',
         'Public Function SelectedClipLabel(',
+        'Public Function ClipLabel(',
         'Public Function FirstClipEvent(',
         'Public Function NearestClipEvent(',
         'Public Function StepFrame(',
@@ -377,9 +378,13 @@ try {
         'Public Sub InitializeFormation(',
         'Public Function AdvanceElapsed(',
         'Public Function ApplyFrame(',
+        'Public Function UpdateCompanion(',
+        'Public Function UpdateDragonOpponent(',
+        'Public Function PlaceDragonInspectionParticipants(',
         'Public Sub ApplyAttackCamera(',
         'Public Function ClassifyPointer(',
         'Public Function DrawCompanion(',
+        'Public Function DrawDragonOpponent(',
         'Public Sub DrawOverlay(',
         'Public Sub DestroyParticipants(')) {
         Assert-Contains $partySource $contract 'Viewer Party owner'
@@ -481,8 +486,10 @@ try {
         -not $viewerSource.Contains('Sub ApplyPartyAttackCamera()') -and
         -not $viewerSource.Contains('Sub ApplyPartyFrame(') -and
         -not $viewerSource.Contains('Sub PlayPartyClip(') -and
+        -not $viewerSource.Contains('Function DrawDragonOpponent(') -and
+        -not $viewerSource.Contains('Function PartyHomePosition(') -and
         -not $viewerSource.Contains('Function FaceDragon(')) `
-        'Party frame application, cameras, presentation and participant lifecycle must remain in their owners.'
+        'Party participant update, frame application, cameras, presentation and lifecycle must remain in their owners.'
     Assert-True (-not $viewerSource.Contains('Dim ShieldFire[') -and
         -not $viewerSource.Contains('Dim ShieldFirePoints[') -and
         -not $viewerSource.Contains('Dim SwordTrailPoints[') -and

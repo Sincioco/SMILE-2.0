@@ -362,7 +362,13 @@ Do
             End If
 
             If Session.DragonInspection Then
-                Session.Ready = DrawDragonOpponent() And Session.Ready
+                Session.Ready = ViewerParty.DrawDragonOpponent(
+                    Party,
+                    Party.Enabled,
+                    Session.DragonInspection,
+                    Effects.EpicGlowVisible,
+                    SwordVisible
+                ) And Session.Ready
             End If
 
             Call ViewerSession.CaptureFailure(Session, 12)
@@ -3933,31 +3939,16 @@ End Sub
 
 Sub PositionDragonOpponents()
 
-    Dim Home As Core.Vector3
+    Dim Center As Core.Vector3
 
-    Home = PartyHomePosition(0, 2)
-    Party.DragonOpponent.Frame.PositionX = Home.X
-    Party.DragonOpponent.Frame.PositionZ = Home.Z
-    Home = PartyHomePosition(1, 2)
-    Party.Companion.Frame.PositionX = Home.X
-    Party.Companion.Frame.PositionZ = Home.Z
-    Session.Ready = Character3D.Place(Party.DragonOpponent.Actor, Party.DragonOpponent.Frame.PositionX,
-        Party.DragonOpponent.Frame.PositionY, Party.DragonOpponent.Frame.PositionZ) And Session.Ready
-    Session.Ready = Character3D.Place(Party.Companion.Actor, Party.Companion.Frame.PositionX,
-        Party.Companion.Frame.PositionY, Party.Companion.Frame.PositionZ) And Session.Ready
-    Session.Ready = ViewerActors.FaceToward(
-        Party.DragonOpponent.Actor,
-        ViewerDragon.PositionX(),
-        0,
-        ViewerDragon.PositionZ(),
-        CHARACTER_MODEL_FORWARD_YAW_OFFSET,
-        0
-    ) And Session.Ready
-    Session.Ready = ViewerActors.FaceToward(
-        Party.Companion.Actor,
-        ViewerDragon.PositionX(),
-        0,
-        ViewerDragon.PositionZ(),
+    Center.X = ViewerDragon.PositionX()
+    Center.Z = ViewerDragon.PositionZ()
+    Session.Ready = ViewerParty.PlaceDragonInspectionParticipants(
+        Party,
+        Center,
+        PARTY_FORMATION_RADIUS,
+        PARTY_FORMATION_START_ANGLE,
+        PARTY_FORMATION_END_ANGLE,
         CHARACTER_MODEL_FORWARD_YAW_OFFSET,
         ORIN_ARENA_YAW_ADJUSTMENT
     ) And Session.Ready
@@ -3966,72 +3957,33 @@ End Sub
 
 Sub UpdateDragonOpponent()
 
-    Dim SavedCompanion As ViewerActors.Context
-    Dim Primary As ViewerActors.Context
+    Dim Update As ViewerParty.ParticipantUpdateResult
 
-    SavedCompanion = Party.Companion
-    Party.Companion = Party.DragonOpponent
-
-    Call UpdatePartyCompanion()
-
-    Party.DragonOpponent = Party.Companion
-    Party.Companion = SavedCompanion
-    Primary = CaptureActorContext()
-
-    Call UseActorContext(Party.DragonOpponent)
-    Call ViewerEffects.UpdateEquipmentFire(
+    Update = ViewerParty.UpdateDragonOpponent(
+        Party,
+        Calibration,
         Effects,
-        Character,
-        Session.ProfileIndex,
-        False,
+        Playback.AnimationUpdateElapsed,
+        ViewerUiState.CalibrationEditing,
         SwordVisible,
         ShieldVisible,
-        ViewerUiState.CalibrationEditing,
         Playback.ScenePaused,
-        Playback.SelectedClip,
-        ViewerPlayback.SelectedClipLabel(
-            Character, Playback, Session.ProfileIndex),
+        ViewerPlayback.ClipLabel(
+            Party.DragonOpponent.Actor,
+            Party.DragonOpponent.Profile,
+            Party.DragonOpponent.Clip
+        ),
         ViewerCameraState.Live,
         Timing.CameraElapsed
     )
-    Call UseActorContext(Primary)
+
+    Session.Ready = Update.Ready And Session.Ready
+
+    If Update.Updated And Not Session.Ready Then
+        Call CapturePartyParticipantFailure(Update.FailureStage)
+    End If
 
 End Sub
-
-Function DrawDragonOpponent() As Boolean
-
-    Dim SavedCompanion As ViewerActors.Context
-    Dim Result As Boolean
-
-    SavedCompanion = Party.Companion
-    Party.Companion = Party.DragonOpponent
-    Result = ViewerParty.DrawCompanion(
-        Party,
-        Party.Enabled,
-        Session.DragonInspection,
-        Effects.EpicGlowVisible,
-        SwordVisible
-    )
-    Party.Companion = SavedCompanion
-
-    Return Result
-
-End Function
-
-Function PartyHomePosition(MemberIndex As Number, MemberCount As Number) As Core.Vector3
-
-    Dim Center As Core.Vector3
-    Dim Result As Core.Vector3
-
-    Center.X = ViewerDragon.PositionX()
-    Center.Z = ViewerDragon.PositionZ()
-    Result = ViewerParty.FormationPosition(Center, PARTY_FORMATION_RADIUS,
-        PARTY_FORMATION_START_ANGLE, PARTY_FORMATION_END_ANGLE,
-        MemberIndex, MemberCount)
-
-    Return Result
-
-End Function
 
 Sub InitializePartyFormation()
 
@@ -4141,51 +4093,34 @@ End Sub
 
 Sub UpdatePartyCompanion()
 
-    Dim CompanionReady As Boolean
-    Dim Primary As ViewerActors.Context
+    Dim Update As ViewerParty.ParticipantUpdateResult
 
     If Not Party.Ready Then
         Return
     End If
 
-    CompanionReady = ViewerActors.Update(
-        Party.Companion, Playback.AnimationUpdateElapsed)
-    Session.Ready = CompanionReady And Session.Ready
-    Primary = CaptureActorContext()
+    Update = ViewerParty.UpdateCompanion(
+        Party,
+        Calibration,
+        Effects,
+        Playback.AnimationUpdateElapsed,
+        ViewerUiState.CalibrationEditing
+    )
+    Session.Ready = Update.Ready And Session.Ready
 
-    Call UseActorContext(Party.Companion)
-
-    Session.Ready = ViewerActors.ApplyPresentationOffset(
-        Character,
-        Session.ProfileIndex,
-        Playback.SelectedClip,
-        ViewerCameraState.Frame
-    ) And Session.Ready
-
-    Call UpdateCalibrationForCurrentFrame()
-    Call ApplyWristCalibration()
-    Call ApplyEquipmentCoupling()
-
-    If Effects.EpicGlowAvailable Then
-        Session.Ready = ViewerEffects.UpdateBorrowedEpicGlow(
-            Character,
-            Effects.SwordGlow,
-            Effects.ShieldGlow,
-            ViewerCameraState.Frame.ScalePercent,
-            ViewerCalibration.ChannelValue(
-                Calibration, Playback.SelectedClip, 18) <> 0,
-            ViewerCalibration.ChannelValue(
-                Calibration, Playback.SelectedClip, 19) <> 0
-        ) And Session.Ready
+    If Update.Updated And Not Session.Ready Then
+        Call CapturePartyParticipantFailure(Update.FailureStage)
     End If
 
-    Call ApplyEquipmentCalibration()
+End Sub
 
-    Party.Companion = CaptureActorContext()
-    Party.Companion.Ready = CompanionReady
-    Party.Ready = CompanionReady
+Sub CapturePartyParticipantFailure(FailureStage As Number)
 
-    Call UseActorContext(Primary)
+    If FailureStage = 0 Then
+        FailureStage = 71
+    End If
+
+    Call ViewerSession.CaptureFailure(Session, FailureStage)
 
 End Sub
 

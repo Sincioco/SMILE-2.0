@@ -181,11 +181,22 @@ End Function
 Public Function SelectedClipLabel(ByRef Actor As Character3D.Actor,
     ByRef Value As State, ProfileIndex As Number) As Text
 
+    Dim Result As Text
+
+    Result = ClipLabel(Actor, ProfileIndex, Value.SelectedClip)
+
+    Return Result
+
+End Function
+
+Public Function ClipLabel(ByRef Actor As Character3D.Actor,
+    ProfileIndex As Number, RuntimeClip As Number) As Text
+
     Dim PresentationIndex As Number
     Dim Result As Text
 
     PresentationIndex = PresentationIndexForRuntimeClip(
-        Actor, ProfileIndex, Value.SelectedClip)
+        Actor, ProfileIndex, RuntimeClip)
     Result = ViewerProfiles.ClipLabel(ProfileIndex, PresentationIndex)
 
     Return Result
