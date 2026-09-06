@@ -61,7 +61,6 @@ Const PARTY_FORMATION_END_ANGLE = 50
 Dim Party As ViewerParty.State
 Dim Character As Character3D.Actor
 Dim CharacterBounds As Character3D.Bounds3D
-Dim LocalCharacterBounds As Character3D.Bounds3D
 Dim ActiveProfile As CharacterViewer.Profile
 Dim Rendering As ViewerRendering.State
 Dim Effects As ViewerEffects.State
@@ -185,7 +184,6 @@ Do
         Call ViewerCamera.UpdateResponsiveFit(
             ViewerCameraState,
             ActiveProfile,
-            LocalCharacterBounds,
             Window_Width(),
             Window_Height(),
             Max(1, Window_Width() - 284),
@@ -442,10 +440,7 @@ Sub LoadViewer()
 
     Call ViewerSession.CaptureFailure(Session, 30)
 
-    Character = Character3D.LoadWithPolicy(
-        ActiveProfile.AssetPath,
-        Character3D.CHARACTER_LOAD_REQUIRE_PBR
-    )
+    Character = ViewerActors.LoadPrimary(ActiveProfile)
     Session.Ready = Character3D.IsValid(Character) And Session.Ready
 
     Call ViewerSession.CaptureFailure(Session, 31)
@@ -455,36 +450,25 @@ Sub LoadViewer()
 
     Call ViewerSession.CaptureFailure(Session, 32)
 
-    LocalCharacterBounds = Character3D.LocalBounds(Character)
-    ViewerCameraState.Base = Graphics3D.DefaultCamera()
-    ViewerCameraState.Frame = CharacterViewer.AutoFit(
+    Session.Ready = ViewerCamera.ConfigureFraming(
+        ViewerCameraState,
         ActiveProfile,
-        LocalCharacterBounds,
+        Character,
         Max(1, Window_Width() - 284),
         Max(1, Window_Height()),
-        ViewerCameraState.Base.FovDegrees
-    )
-    Session.Ready = ViewerCameraState.Frame.Valid And Session.Ready
-
-    If Session.DragonInspection Then
-
-        ViewerCameraState.Frame.ScalePercent = ViewerDragon.ScalePercent()
-        ViewerCameraState.Frame.PositionX = ViewerDragon.PositionX()
-        ViewerCameraState.Frame.PositionY = 0
-        ViewerCameraState.Frame.PositionZ = ViewerDragon.PositionZ()
-
-    End If
-
-    Call ViewerSession.CaptureFailure(Session, 33)
-
-    Call ViewerCamera.SetBaseFromFrame(
-        ViewerCameraState,
+        Session.DragonInspection,
+        ViewerDragon.ScalePercent(),
+        ViewerDragon.PositionX(),
+        0,
+        ViewerDragon.PositionZ(),
         DragonState.Available,
         ARENA_CAMERA_CENTER_X,
         ARENA_CAMERA_CENTER_Z,
         ARENA_CAMERA_DISTANCE,
         ARENA_CAMERA_HEIGHT
-    )
+    ) And Session.Ready
+
+    Call ViewerSession.CaptureFailure(Session, 33)
 
     Call CreateBackdrop()
     Call ViewerRendering.CreateArena(
@@ -549,16 +533,9 @@ Sub LoadViewer()
 
     Session.Ready = ViewerRendering.ApplyLighting(Rendering) And Session.Ready
 
-    Session.Ready = Character3D.SetScale(Character, ViewerCameraState.Frame.ScalePercent) And Session.Ready
-    Session.Ready = Character3D.Place(
+    Session.Ready = ViewerActors.PreparePrimaryPresentation(
         Character,
-        ViewerCameraState.Frame.PositionX,
-        ViewerCameraState.Frame.PositionY,
-        ViewerCameraState.Frame.PositionZ
-    ) And Session.Ready
-
-    Session.Ready = ViewerActors.ApplyArenaFacing(
-        Character,
+        ViewerCameraState.Frame,
         Session.ProfileIndex,
         Session.DragonInspection,
         DragonState.Available,
@@ -569,8 +546,6 @@ Sub LoadViewer()
         CHARACTER_MODEL_FORWARD_YAW_OFFSET,
         ORIN_ARENA_YAW_ADJUSTMENT
     ) And Session.Ready
-
-    Session.Ready = Character3D.SetShadows(Character, True, True) And Session.Ready
 
     Call ViewerSession.CaptureFailure(Session, 36)
 
@@ -1884,7 +1859,6 @@ Function HandleInspectorPointer() As Boolean
             Call ViewerCamera.UpdateResponsiveFit(
                 ViewerCameraState,
                 ActiveProfile,
-                LocalCharacterBounds,
                 Window_Width(),
                 Window_Height(),
                 Max(1, Window_Width() - 284),

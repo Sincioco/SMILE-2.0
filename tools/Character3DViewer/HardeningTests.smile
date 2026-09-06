@@ -682,6 +682,19 @@ Call Check(Not ViewerActors.ApplyArenaFacing(
     180,
     -55
 ))
+Call Check(Not ViewerActors.PreparePrimaryPresentation(
+    PartyPrimary.Actor,
+    Frame,
+    ViewerProfiles.PROFILE_ARIN,
+    False,
+    True,
+    -208,
+    0,
+    -120,
+    240,
+    180,
+    -55
+))
 Call Check(ViewerCamera.InitialOrbitYaw(False, 25, 0) = 25)
 Call Check(ViewerCamera.InitialOrbitYaw(True, 25, 0) = 0)
 Call Check(ViewerCamera.DefaultZoomDegrees(False, -16, -15) = -16)

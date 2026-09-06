@@ -125,7 +125,6 @@ try {
         'Import Smile.Tools.Character3DViewerEffects As ViewerEffects',
         'Import Smile.Tools.Character3DViewerDragon As ViewerDragon',
         'Import Smile.Tools.Character3DViewerRendering As ViewerRendering',
-        'CharacterViewer.AutoFit(',
         'ViewerCamera.AdvanceZoom(',
         'ViewerCamera.UpdatePointerControls(',
         'If Pointer_Pressed(POINTER_SECONDARY) Then',
@@ -425,6 +424,8 @@ try {
         'Public Function Capture(',
         'Public Sub Apply(',
         'Public Function LoadContext(',
+        'Public Function LoadPrimary(',
+        'Public Function PreparePrimaryPresentation(',
         'Public Function FaceToward(',
         'Public Function ValidateProfile(',
         'Public Function ArenaYawAdjustment(',
@@ -478,6 +479,8 @@ try {
         Assert-Contains $renderingSource $contract 'Viewer rendering owner'
     }
     foreach ($contract in @(
+        'Public Function ConfigureFraming(',
+        'CharacterViewer.AutoFit(',
         'Public Function InitialOrbitYaw(',
         'Public Function DefaultZoomDegrees(')) {
         Assert-Contains $cameraSource $contract 'Viewer camera policy owner'
@@ -551,6 +554,11 @@ try {
         -not $viewerSource.Contains('ViewerParty.BeginInspectorBinding(')) `
         'Party inspector target selection and participant capture must remain in ViewerParty.'
     Assert-True (-not $viewerSource.Contains('Function ValidateLoadedProfile(') -and
+        -not $viewerSource.Contains('Character3D.LoadWithPolicy(') -and
+        -not $viewerSource.Contains('Character3D.LocalBounds(') -and
+        -not $viewerSource.Contains('CharacterViewer.AutoFit(') -and
+        -not $viewerSource.Contains('Character3D.SetScale(') -and
+        -not $viewerSource.Contains('Character3D.SetShadows(') -and
         -not $viewerSource.Contains('Function ViewerFloorWidth(') -and
         -not $viewerSource.Contains('Function ViewerFloorDepth(') -and
         -not $viewerSource.Contains('Function InitialViewerOrbitYaw(') -and

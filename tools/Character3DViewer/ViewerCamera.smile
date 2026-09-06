@@ -6,6 +6,7 @@ Option Explicit
 Import Smile.Simple3D.Core As Core
 Import Smile.Simple3D.Character3D As Character3D
 Import Smile.Simple3D.CharacterViewer As CharacterViewer
+Import Smile.Simple3D.Graphics3D As Graphics3D
 Import Smile.Simple3D.Interaction As Interaction
 Import Smile.Simple3D.Math3D As Math3D
 Import Smile.Tools.BattleCamera As BattleCamera
@@ -15,6 +16,7 @@ Public Type State
     Live As Core.Camera3D
     Controls As Core.CameraControl3D
     Frame As CharacterViewer.Framing
+    LocalBounds As Character3D.Bounds3D
     Zoom As CharacterViewer.ZoomState
     FitLocked As Boolean
     LastFitWidth As Number
@@ -32,6 +34,51 @@ Public Type State
     AutoOrbit As Boolean
     AutoOrbitYaw1000 As Number
 End Type
+
+Public Function ConfigureFraming(ByRef Value As State,
+    Profile As CharacterViewer.Profile, ByRef Actor As Character3D.Actor,
+    ContentWidth As Number, ContentHeight As Number,
+    DragonInspection As Boolean, DragonScalePercent As Number,
+    DragonX As Number, DragonY As Number, DragonZ As Number,
+    DragonAvailable As Boolean, ArenaCenterX As Number,
+    ArenaCenterZ As Number, ArenaDistance As Number,
+    ArenaHeight As Number) As Boolean
+
+    Dim Result As Boolean
+
+    Value.Base = Graphics3D.DefaultCamera()
+    Value.LocalBounds = Character3D.LocalBounds(Actor)
+    Value.Frame = CharacterViewer.AutoFit(
+        Profile,
+        Value.LocalBounds,
+        ContentWidth,
+        ContentHeight,
+        Value.Base.FovDegrees
+    )
+
+    If DragonInspection Then
+
+        Value.Frame.ScalePercent = DragonScalePercent
+        Value.Frame.PositionX = DragonX
+        Value.Frame.PositionY = DragonY
+        Value.Frame.PositionZ = DragonZ
+
+    End If
+
+    Call SetBaseFromFrame(
+        Value,
+        DragonAvailable,
+        ArenaCenterX,
+        ArenaCenterZ,
+        ArenaDistance,
+        ArenaHeight
+    )
+
+    Result = Value.Frame.Valid
+
+    Return Result
+
+End Function
 
 Public Sub Reset(ByRef Value As State, InitialOrbitYaw As Number,
     DefaultZoomDegrees As Number, ZoomInLimit As Number, ZoomOutLimit As Number,
@@ -349,7 +396,7 @@ Public Sub ApplyCloseUp(ByRef Value As State, CloseUpStart As Number,
 End Sub
 
 Public Sub UpdateResponsiveFit(ByRef Value As State, Profile As CharacterViewer.Profile,
-    Bounds As Character3D.Bounds3D, WindowWidth As Number, WindowHeight As Number,
+    WindowWidth As Number, WindowHeight As Number,
     ContentWidth As Number, DragonAvailable As Boolean, ArenaCenterX As Number,
     ArenaCenterZ As Number, ArenaDistance As Number, ArenaHeight As Number)
 
@@ -365,7 +412,7 @@ Public Sub UpdateResponsiveFit(ByRef Value As State, Profile As CharacterViewer.
     Value.LastFitHeight = WindowHeight
     Value.Frame = CharacterViewer.AutoFit(
         Profile,
-        Bounds,
+        Value.LocalBounds,
         ContentWidth,
         Max(1, WindowHeight),
         Value.Base.FovDegrees + CharacterViewer.ZoomDegrees(Value.Zoom)

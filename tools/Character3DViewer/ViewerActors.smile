@@ -26,6 +26,53 @@ Public Type Context
     Ready As Boolean
 End Type
 
+Public Function LoadPrimary(Profile As CharacterViewer.Profile) As Character3D.Actor
+
+    Dim Result As Character3D.Actor
+
+    Result = Character3D.LoadWithPolicy(
+        Profile.AssetPath,
+        Character3D.CHARACTER_LOAD_REQUIRE_PBR
+    )
+
+    Return Result
+
+End Function
+
+Public Function PreparePrimaryPresentation(ByRef Value As Character3D.Actor,
+    Frame As CharacterViewer.Framing, ProfileIndex As Number,
+    DragonInspection As Boolean, DragonAvailable As Boolean,
+    DragonX As Number, DragonY As Number, DragonZ As Number,
+    DragonRotationY As Number, ModelForwardYawOffset As Number,
+    OrinAdjustment As Number) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Character3D.SetScale(Value, Frame.ScalePercent)
+    Result = Character3D.Place(
+        Value,
+        Frame.PositionX,
+        Frame.PositionY,
+        Frame.PositionZ
+    ) And Result
+    Result = ApplyArenaFacing(
+        Value,
+        ProfileIndex,
+        DragonInspection,
+        DragonAvailable,
+        DragonX,
+        DragonY,
+        DragonZ,
+        DragonRotationY,
+        ModelForwardYawOffset,
+        OrinAdjustment
+    ) And Result
+    Result = Character3D.SetShadows(Value, True, True) And Result
+
+    Return Result
+
+End Function
+
 Public Function Capture(Actor As Character3D.Actor,
     Frame As CharacterViewer.Framing, Profile As Number, Clip As Number,
     KeyBase As Number, WeaponWrist As Number, ShieldWrist As Number,
@@ -90,8 +137,7 @@ Public Function LoadContext(ProfileIndex As Number, KeyBase As Number) As Contex
     Result.Clip = 0
     Result.WeaponWrist = -1
     Result.ShieldWrist = -1
-    Result.Actor = Character3D.LoadWithPolicy(
-        Profile.AssetPath, Character3D.CHARACTER_LOAD_REQUIRE_PBR)
+    Result.Actor = LoadPrimary(Profile)
     Result.Ready = Character3D.IsValid(Result.Actor)
 
     If Not Result.Ready Then
