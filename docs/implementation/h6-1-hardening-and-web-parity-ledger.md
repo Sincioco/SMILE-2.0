@@ -961,3 +961,97 @@ Next actions: remaining Fire frozen lifecycle, actual Viewer interaction,
 imported-state persistence, focus/audio/mobile/context recovery and normal smoke;
 finish truthful H6.1 reports/gate/package, then Web Optimized tiers, README, and
 the newly requested mandatory loader/splash improvements, in that order.
+
+### Future browser priority and accepted Web branding boundary
+
+Sin accepts that editable generated Web files cannot be made tamper-proof. This
+is not an outstanding approval blocker for the final splash milestone. Keep
+mandatory branding in standard builds without adding DRM or obfuscation.
+
+After this currently approved task set is complete, Chrome becomes the primary
+development/test browser; Edge is reserved for Edge-specific diagnosis or fixes.
+Do not carry the current Chrome/Edge validation pattern forward as a routine
+matrix. Existing Edge observations remain valid historical evidence, not a
+separate-engine pass. Root AGENTS.md records this permanent velocity preference.
+
+Sin's subsequent correction makes this effective immediately for current work:
+skip an Edge check if it already passes in Chrome. Chrome-only actual-browser
+evidence is sufficient for the current requested browser scope unless an
+Edge-specific defect needs investigation. Do not repeat the already-completed
+two-actor Edge checks or retain a redundant Edge requirement in the final gate.
+
+### Frozen equipment visibility follow-up — 2026-09-06
+
+Implementation commit: `b8356281079e964554676e8080de2068c66d39ff`, pushed to main.
+On main after `5f247e0`, the actual Chrome frozen-Fire workflow exposed a shared
+Character3D defect: SetPartVisible hid the renderer object, but the next actor
+transform restored every mesh to whole-actor visibility. Fire cleared correctly
+while the sword/shield reappeared. Retained per-part intent now survives Place,
+Rotate, SetScale and whole-actor hide/show. A hidden actor masks all parts; failed
+renderer writes do not commit new intent. No new syntax or public API was added.
+
+- Native red reproduction: compile `examples/Character3DTests/Character3DTests.smileproj`
+  with `--target windows-x64 --configuration Release --graphics DirectX`, then
+  `scripts/run-bounded-test.cmd 60 artifacts/tests/Character3DVisibilityRegression.exe`.
+  Before the fix, checks 281, 285 and 289 failed (three failures).
+- `scripts/test-character3d.ps1`: PASS after the fix, native normal/PBR fallback
+  and generated-Web normal/PBR fallback, plus both Character3DLab builds.
+  Log: `artifacts/temp/h6-1-part-visibility-test.log`.
+- Targeted formatter check PASS: `h6-1-visibility-format.log`.
+- `tools/Character3DViewer/Launch.ps1 -Build -SkipWindowActivation` and
+  `Build.ps1 -Target Web`: PASS. Outputs are the normal
+  `tools/Character3DViewer/bin/Release/Character3DViewer.exe` and `bin/Release/Web`.
+  Logs: `h6-1-visibility-native-build.log`, `h6-1-visibility-web-build.log`.
+- Actual Chrome at `http://127.0.0.1:8766/`: Block Impact frame 0, motion paused,
+  Play Flames label (Fire frozen); Weapon hide removes sword and Fire, Shield
+  hide removes shield and outline. Both remain hidden in later rendered frames.
+  A reload restores the normal Party demo. No Save/Import was used.
+- Native process inventory confirms exactly one new Viewer, PID 43292. The
+  desktop-control helper returned stale handles and then
+  `foreground window did not report a process id`; native visual confirmation
+  and foreground restoration are not claimed. Native automated execution passed.
+- Both calibration exports remain Arin 24 keys / Orin zero keys, unchanged hashes
+  recorded above; logs `h6-1-visibility-{arin,orin}-export.log`.
+
+The normal smoke started on `5f247e0` and passed through Phase 3B.1 before two
+stale Web harness assumptions surfaced in Phase4VisualSlice: painter-order
+recording compared revoked blob URLs instead of original asset identities, and
+the test dispatched its audio-unlock key before the queued Game Window startup.
+The harness now retains decoded asset identity and queues the test gesture after
+startup. The unchanged painter-order, overlapping audio and shutdown assertions
+pass. Runtime code is not changed to accommodate these test assumptions.
+
+To avoid repeating completed work, `artifacts/temp/h6-1-smoke-continue.cmd` is an
+ignored exact continuation of `scripts/smoke-test.cmd` from line 594 with only its
+root/setup preamble supplied. Log `h6-1-smoke-continue.log`: PASS, exit 0, including
+all remaining fixtures, native/Web demo/no-demo builds and final artifact verification.
+Earlier smoke stages predate the later part-visibility fix; the focused red/green
+suite validates that change. Together the initial and continuation runs cover the
+ordinary smoke stages, not an uninterrupted single run or the final H6.1 gate.
+
+This source-library/test milestone does not change VSIX payload: the extension
+bundles `artifacts/compiler`, not repository Smile.Simple3D sources. W10's installed
+compiler was the installed version before the smoke rebuild. A post-smoke hash
+check found rebuilt compiler bytes differed from that installation, so the normal
+repository VSIX rebuild/install/verification is being run; its final result will
+be recorded separately. Later compiler/profile/loader changes require their own
+rebuild/install verification.
+
+Follow-up: resetting/reconnecting the desktop-control session cleared the stale
+window cache. The rebuilt native Viewer was foregrounded successfully. Arin
+Defend frame 0, motion paused and Fire frozen: Weapon hide removed sword/Fire;
+Shield hide removed shield/outline, with both absent in later frames. Right-click
+reset restored equipment, Fire and Demo; the Party tab was then restored in the
+foreground. This closes the manual check for the part-visibility regression,
+not the entire remaining F01 lifecycle matrix. No saved key was changed.
+
+`scripts/install-vsix.cmd`: PASS, exit 0, including normal build and repository
+installation verification. Log `artifacts/temp/h6-1-visibility-vsix-install.log`.
+Installed VSIX 2.0.59 / assembly 2.0.59.0:
+`C:/Users/louie/AppData/Local/Microsoft/VisualStudio/18.0_91f001b5/Extensions/wtefrjkv.lma`.
+Installed/built compiler DLL SHA256 both
+`1C07535CA1C9860491D0086BE8E2D4944C80C20B75E34D6B1866368329FE4950`;
+installed extension DLL SHA256
+`D2A42F3EDB12E3647855E1F2E839520A57852BE99B7FA612788CFD9DBF0954B3`.
+`artifacts/vsix/Smile.VisualStudio.vsix` SHA256
+`99629470EA433448F876C02B5EEB839F0B30D54B53363A3A45F43D94CEEF3ACA`.

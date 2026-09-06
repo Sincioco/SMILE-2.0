@@ -13,6 +13,11 @@ These instructions apply to the entire SMILE 2.0 repository.
 - Web compilation and execution is priority 2.
 - Both targets consume the same shared language, semantic model, and compiler front end.
 
+### Permanent browser validation priority
+
+- Effective immediately, use Chrome as the primary browser for Web development and testing, including the current task set. Sin prioritizes velocity; skip Edge checks that already pass in Chrome and do not routinely include a redundant second Chromium pass.
+- Use Edge only when identifying or solving an Edge-specific issue. Preserve actual historical Edge results without treating them as independent-engine coverage or a standing requirement for future milestones.
+
 ## Current official branding
 
 - The current official SMILE 2.0 logo is `assets\branding\smile-2.0-logo.png`, designated by Sin on September 6, 2026. Use this canonical source for new branding. Preserve it when making optimized deployment copies; the original tutorial copy may remain for compatibility.
@@ -24,6 +29,7 @@ These instructions apply to the entire SMILE 2.0 repository.
 - Preserve the approved program name, author credits, footer/contact links and build metadata. Compile time and the SMILE version must describe the generated artifact, not the viewer's current clock; use the authoritative VSIX product version and an explicit time-zone offset without guessing a physical location.
 - Web progress must distinguish overall loading from the current asset download. Use real byte progress when reliable totals exist, and clearly label unknown-size/indeterminate phases rather than inventing percentages or ETAs.
 - Keep startup presentation reusable in the shared SMILE library/runtime where practical, but include and enforce it automatically through the standard compiler/runtime. It must not depend on an optional user import/call, and standard generated programs must not expose a source-level or build-setting opt-out from the branded one-second minimum. Editable compiler sources/generated output are not tamper-proof; do not claim otherwise or introduce DRM/obfuscation to imply that guarantee.
+- Sin explicitly accepts the limitation that someone can modify generated Web files to remove branding after compilation. Enforce the standard build contract; do not expand this task into anti-tampering work.
 - As of this instruction, the shared Web loader exists; the new progress/metadata/minimum-duration behavior and shared native splash are queued implementation requirements, not claims of completed runtime support. Implement them after the requested README rewrite, following the earlier hardening and optimized-Web milestones.
 
 ## Permanent future 3D direction

@@ -1042,7 +1042,7 @@ function context2d(name) {
             if (name === "back" && resource === renderer3DCanvasElement)
                 renderer3DComposites += 1;
             if (name === "back" && resource && typeof resource.src === "string") {
-                imageDraws.push({ source: resource.src, values, smoothing: context.imageSmoothingEnabled,
+                imageDraws.push({ source: resource.logicalSource || resource.src, values, smoothing: context.imageSmoothingEnabled,
                     alpha: context.globalAlpha, frame: requestedFrames, order: ++drawOrder });
             }
         },
@@ -1146,6 +1146,8 @@ const host = {
         set src(value) {
             this._src = value;
             const normalized = String(testImageUrls.get(value)?.logical || value).replace(/\\/g, "/");
+            // Keep the decoded asset identity after the runtime revokes its temporary blob URL.
+            this.logicalSource = normalized;
             if (normalized.endsWith("/Background.png")) {
                 this.naturalWidth = this.width = verifyPhase5Ui ? 1920 : 2304;
                 this.naturalHeight = this.height = verifyPhase5Ui ? 1080 : 1296;
@@ -1291,14 +1293,18 @@ try {
     vm.runInContext(fs.readFileSync(runtimePath, "utf8"), context, { filename: runtimePath });
     vm.runInContext(fs.readFileSync(gamePath, "utf8"), context, { filename: gamePath });
     if (verifyPhase4Media || verifyPhase4Audio) {
-        dispatch(windowListeners, "keydown", {
+        // run() queues main in a microtask. Send the gesture after Game Window
+        // has made the program surface visible, as required by focus ownership.
+        queueMicrotask(() => dispatch(windowListeners, "keydown", {
             code: "KeyX", repeat: false, ctrlKey: false, altKey: false, metaKey: false,
             preventDefault: () => {}
-        });
+        }));
     }
     if (verifyPhase4Audio) {
-        host.smile.playSound("Assets/ToneOne.wav", 5);
-        host.smile.playSound("Assets/ToneTwo.wav", 5);
+        queueMicrotask(() => {
+            host.smile.playSound("Assets/ToneOne.wav", 5);
+            host.smile.playSound("Assets/ToneTwo.wav", 5);
+        });
     }
 } catch (error) {
     fail(error && error.stack ? error.stack : String(error));
