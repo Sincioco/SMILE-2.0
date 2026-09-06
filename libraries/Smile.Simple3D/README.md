@@ -7,7 +7,7 @@
 - `Scene3D` supplies deterministic asset/render quality profiles, named lights, one selected shadow caster, HDR tone mapping, bloom, and balanced begin/end ownership over `Graphics3D`.
 - `SceneVfx3D` gives a scene one advancement boundary for the shared Fire and Lightning families. Actors stage requests; they do not advance or shut down the shared clocks.
 - `LightPool3D` leases a caller-selected range of the four renderer point-light slots with bounded generation-safe handles. A borrower can update or disable its lease but must not release another actor's light.
-- Windows HDR Renderer3D prefers 4x MSAA and safely falls back to 2x or 1x; WebGL2 validates float-color targets and uses its documented single-sample fallback.
+- Windows and WebGL2 Renderer3D prefer requested 4x MSAA and safely fall back to 2x or 1x. WebGL2 checks both color and depth sample support and framebuffer completeness; the reported scene sample count is the effective count, not the request.
 - `Renderer`, `Primitives`, `Mesh`, and `Interaction` preserve the original bounded wireframe lessons over Renderer2D, including GDI support.
 
 Reference the source library from a game project:

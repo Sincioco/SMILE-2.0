@@ -99,8 +99,10 @@ try {
     Assert-Contains $nativeSource 'smile_shadow_double_raster_state3d' 'Native double-sided shadow state'
     Assert-Contains $nativeSource 'entry->double_sided' `
         'Native per-submission shadow culling'
-    Assert-Contains $webSource 'if(material&&material.doubleSided)gl.disable(gl.CULL_FACE)' `
+    Assert-Contains $webSource 'renderer3DApplyCull(object,!!(material&&material.doubleSided))' `
         'Web per-submission shadow culling'
+    Assert-Contains $webSource 'if(mode===1||(mode===0&&doubleSided))gl.disable(gl.CULL_FACE)' `
+        'Web explicit or material-driven two-sided culling'
     Assert-Contains $nativeSource 'roundf(light_x / texel_x) * texel_x' 'Native directional shadow snapping'
     Assert-Contains $webSource 'Math.round(lightX/texelX)*texelX-lightX' 'Web directional shadow snapping'
     Assert-Contains $nativeSource 'constants.shadow_light, smile_local_lights3d[smile_shadow_slot3d].position' `
@@ -114,8 +116,13 @@ try {
     Assert-Contains $nativeSource 'smile_m5_resource_generation3d++' 'Native target generation'
     Assert-Contains $webSource 'renderer3DM5ResourceGeneration+=1' 'Web target generation'
 
-    if ($webSource.IndexOf('gl.getError()', [System.StringComparison]::Ordinal) -ge 0) {
-        throw 'Renderer3D Web source contains a global stale-error poll.'
+    # M5 predates the GPU particle backend's bounded allocation/first-dispatch probes.
+    # Keep the no-poll rule for every other renderer path, including MSAA targets.
+    $nonParticleProbeSource = ($webSource -split '\r?\n' | Where-Object {
+        $_ -notmatch '^\s*function renderer3DGpuParticle(CreateGpu|GpuStep)\('
+    }) -join "`n"
+    if ($nonParticleProbeSource.IndexOf('gl.getError()', [System.StringComparison]::Ordinal) -ge 0) {
+        throw 'Renderer3D Web source contains an unbounded or non-particle stale-error poll.'
     }
 
     $frameStart = $webSource.IndexOf('function renderer3DBegin(', [System.StringComparison]::Ordinal)
@@ -150,7 +157,7 @@ try {
     Assert-Contains $nativeSource 'SMILE_3D_PALETTE_SNAPSHOT_BYTES 8208' 'Native palette byte accounting'
     Assert-Contains $webSource 'renderer3DSubmissionCount*512+renderer3DPaletteSnapshotCount*8208' `
         'Web snapshot byte accounting'
-    Assert-Contains $nativeSource 'smile_shadow_bytes3d + smile_scene_bytes3d + smile_bloom_bytes3d' `
+    Assert-Contains ([regex]::Replace($nativeSource, '\s+', ' ')) 'smile_shadow_bytes3d + smile_scene_bytes3d + smile_bloom_bytes3d' `
         'Native target byte accounting'
     Assert-Contains $webSource 'renderer3DShadowBytes+renderer3DSceneBytes+renderer3DBloomBytes' `
         'Web target byte accounting'

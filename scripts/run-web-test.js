@@ -34,6 +34,7 @@ let verifyDataStatus = false;
 let deniedDataKey = null;
 let verifyRenderer3D = false;
 let renderer3DStateOnly = false;
+let verifyRenderer3DMsaa = false;
 let verifyRenderer3DGpuParticles = false;
 let forceRenderer3DGpuParticleShaderFailure = false;
 let forceRenderer3DGpuParticleAttributeFailure = false;
@@ -61,6 +62,7 @@ while (args.length !== 0) {
     if (option === "--startup-loading") { verifyStartupLoading = true; continue; }
     if (option === "--data-status") { verifyDataStatus = true; continue; }
     if (option === "--renderer3d") { verifyRenderer3D = true; continue; }
+    if (option === "--renderer3d-msaa") { verifyRenderer3D = true; verifyRenderer3DMsaa = true; continue; }
     // Model/calibration console fixtures need the GL double but do not present a 3D frame.
     if (option === "--renderer3d-state") { verifyRenderer3D = true; renderer3DStateOnly = true; continue; }
     if (option === "--renderer3d-gpu-particles") {
@@ -908,9 +910,17 @@ let renderer3DComposites = 0;
 let renderer3DTransformFeedbackDispatches = 0;
 let renderer3DTransformFeedbackVaryings = [];
 let renderer3DReadbacks = 0;
+let renderer3DMsaaColorSamples = [4, 2];
+let renderer3DMsaaDepthSamples = [4, 2];
+let renderer3DMsaaIncomplete = false;
+let renderer3DMsaaFailNextBuffer = false;
+const renderer3DLiveRenderbuffers = new Set();
+const renderer3DLiveFramebuffers = new Set();
+const renderer3DBlits = [];
 
 function contextWebGL2() {
     const noop = () => {};
+    let readFramebuffer = null, drawFramebuffer = null, renderbuffer = null, texture = null;
     return {
         VERTEX_SHADER: 0x8b31, FRAGMENT_SHADER: 0x8b30, COMPILE_STATUS: 0x8b81, LINK_STATUS: 0x8b82,
         DEPTH_TEST: 0x0b71, LESS: 0x0201, CULL_FACE: 0x0b44, ARRAY_BUFFER: 0x8892,
@@ -925,6 +935,8 @@ function contextWebGL2() {
         TEXTURE_2D: 0x0de1, TEXTURE0: 0x84c0, RGBA: 0x1908, RGBA8: 0x8058,
         SRGB8_ALPHA8: 0x8c43, UNSIGNED_BYTE: 0x1401, BACK: 0x0405, NONE: 0,
         FRAMEBUFFER: 0x8d40, RENDERBUFFER: 0x8d41, FRAMEBUFFER_COMPLETE: 0x8cd5,
+        READ_FRAMEBUFFER: 0x8ca8, DRAW_FRAMEBUFFER: 0x8ca9, SAMPLES: 0x80a9,
+        MAX_SAMPLES: 0x8d57, RENDERBUFFER_SAMPLES: 0x8cab,
         COLOR_ATTACHMENT0: 0x8ce0, DEPTH_ATTACHMENT: 0x8d00, DEPTH_COMPONENT24: 0x81a6,
         DEPTH_COMPONENT: 0x1902, RGBA16F: 0x881a, HALF_FLOAT: 0x140b, MAX_TEXTURE_SIZE: 0x0d33,
         TEXTURE_COMPARE_MODE: 0x884c, COMPARE_REF_TO_TEXTURE: 0x884e,
@@ -945,19 +957,49 @@ function contextWebGL2() {
         createBuffer: () => ({}), bindBuffer: noop,
         bufferData: () => { renderer3DBufferUploads += 1; },
         bufferSubData: () => { renderer3DBufferUploads += 1; }, deleteBuffer: noop,
-        createTexture: () => ({}), bindTexture: noop, deleteTexture: noop, activeTexture: noop,
-        pixelStorei: noop, texImage2D: noop, texSubImage2D: noop, texParameteri: noop, texParameterf: noop,
+        createTexture: () => ({}), bindTexture: (_target, value) => { texture = value; }, deleteTexture: noop, activeTexture: noop,
+        pixelStorei: noop,
+        texImage2D: (_target, _level, format, width, height) => { if (texture) Object.assign(texture, { format, width, height, samples: 0 }); },
+        texSubImage2D: noop, texParameteri: noop, texParameterf: noop,
         generateMipmap: noop, getError: () => 0,
         getExtension: name => name.includes("texture_filter_anisotropic")
             ? { MAX_TEXTURE_MAX_ANISOTROPY_EXT: 0x84ff, TEXTURE_MAX_ANISOTROPY_EXT: 0x84fe }
             : (name === "EXT_color_buffer_float" ? {} : null),
-        getParameter: value => value === 0x84ff ? 8 : (value === 0x0d33 ? 4096 :
+        getParameter: value => value === 0x8d57 ? 4 : value === 0x84ff ? 8 : (value === 0x0d33 ? 4096 :
             (value === 0x8869 ? 16 : (value === 0x8c8a ? 64 : 0))),
+        getInternalformatParameter: (_target, format) => new Int32Array(format === 0x81a6 ? renderer3DMsaaDepthSamples : renderer3DMsaaColorSamples),
         viewport: noop, clearColor: noop, clearDepth: noop, clear: noop, useProgram: noop,
-        createFramebuffer: () => ({}), bindFramebuffer: noop, framebufferTexture2D: noop,
-        drawBuffers: noop, readBuffer: noop, checkFramebufferStatus: () => 0x8cd5,
-        deleteFramebuffer: noop, createRenderbuffer: () => ({}), bindRenderbuffer: noop,
-        renderbufferStorage: noop, framebufferRenderbuffer: noop, deleteRenderbuffer: noop,
+        createFramebuffer: () => { const value = {}; renderer3DLiveFramebuffers.add(value); return value; },
+        bindFramebuffer: (target, value) => {
+            if (target !== 0x8ca9) readFramebuffer = value;
+            if (target !== 0x8ca8) drawFramebuffer = value;
+        },
+        framebufferTexture2D: (_target, attachment, _textureTarget, value) => { drawFramebuffer[attachment] = value; },
+        drawBuffers: noop, readBuffer: noop,
+        checkFramebufferStatus: () => renderer3DMsaaIncomplete && drawFramebuffer?.[0x8ce0]?.samples > 0 ? 0x8d56 : 0x8cd5,
+        deleteFramebuffer: value => { renderer3DLiveFramebuffers.delete(value); },
+        createRenderbuffer: () => {
+            if (renderer3DMsaaFailNextBuffer) { renderer3DMsaaFailNextBuffer = false; return null; }
+            const value = {}; renderer3DLiveRenderbuffers.add(value); return value;
+        },
+        bindRenderbuffer: (_target, value) => { renderbuffer = value; },
+        renderbufferStorage: noop,
+        renderbufferStorageMultisample: (_target, samples, format, width, height) => { Object.assign(renderbuffer, { samples, format, width, height }); },
+        getRenderbufferParameter: () => renderbuffer.samples,
+        framebufferRenderbuffer: (_target, attachment, _bufferTarget, value) => { drawFramebuffer[attachment] = value; },
+        deleteRenderbuffer: value => { renderer3DLiveRenderbuffers.delete(value); },
+        blitFramebuffer: (sx, sy, sw, sh, dx, dy, dw, dh, mask, filter) => {
+            if (!readFramebuffer || !drawFramebuffer || readFramebuffer === drawFramebuffer || filter !== 0x2600 ||
+                sx !== dx || sy !== dy || sw !== dw || sh !== dh) fail("MSAA resolve requires distinct, same-size targets and NEAREST filtering");
+            for (const [bit, attachment] of [[0x4000, 0x8ce0], [0x0100, 0x8d00]]) {
+                if (!(mask & bit)) continue;
+                const source = readFramebuffer[attachment], destination = drawFramebuffer[attachment];
+                if (!source || !destination || source.samples <= 1 || destination.samples !== 0 ||
+                    source.format !== destination.format || source.width !== sw || source.height !== sh ||
+                    destination.width !== dw || destination.height !== dh) fail("MSAA resolve attachments are incompatible");
+            }
+            renderer3DBlits.push(mask);
+        },
         colorMask: noop, polygonOffset: noop,
         enableVertexAttribArray: noop, disableVertexAttribArray: noop, vertexAttribPointer: noop,
         vertexAttribDivisor: noop,
@@ -1418,6 +1460,77 @@ const started = Date.now();
                 fail("Renderer3D accepted a deleted object handle");
         }
         host.smile.renderer3D(2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+        if (verifyRenderer3DMsaa) {
+            const command = (id, ...values) => host.smile.renderer3D(id, ...Array.from({ length: 10 }, (_, index) => values[index] || 0));
+            const query = id => command(117, id);
+            const check = (condition, label) => { if (!condition) fail(`MSAA: ${label}`); };
+            const frame = () => { check(command(16) === 1, "begin frame"); check(command(18) === 1, "end frame"); };
+            const configure = (hdr, samples) => check(command(113, 1, hdr, 0, 100, 1200, 0, 2, 0, samples) === 1, "configure");
+            const reset = () => {
+                command(2);
+                check(renderer3DLiveRenderbuffers.size === 0 && renderer3DLiveFramebuffers.size === 0, "target handles released");
+                renderer3DBlits.length = 0;
+            };
+            for (const hdr of [1, 0]) {
+                configure(hdr, 4);
+                frame();
+                check(query(13) === 4 && query(16) === 1, "four-sample color resolve");
+                check(query(3) === hdr, "AA alone preserves the immediate submission path");
+                check(query(36) === query(14) * query(15) * (hdr ? 12 : 8) * 5, "resolved plus multisample byte accounting");
+                const handles = renderer3DLiveFramebuffers.size, generation = query(26);
+                frame();
+                check(query(26) === generation && renderer3DLiveFramebuffers.size === handles, "unchanged frame reuses targets");
+                command(125, 1, 1);
+                frame();
+                check(query(16) === 2 && renderer3DBlits.includes(0x4100), "opaque color/depth snapshot plus final color resolve");
+                reset();
+            }
+            renderer3DMsaaDepthSamples = [2];
+            configure(1, 4);
+            frame();
+            check(query(13) === 2 && (query(25) & 8) !== 0, "color/depth capability intersection falls back to two");
+            const oldWidth = host.innerWidth, oldHeight = host.innerHeight, oldBackingWidth = query(14), oldGeneration = query(26);
+            host.innerWidth = 820; host.innerHeight = 560;
+            dispatch(windowListeners, "resize");
+            frame();
+            check(query(14) !== oldBackingWidth && query(26) > oldGeneration && renderer3DLiveRenderbuffers.size === 2, "resize replaces matching color/depth targets");
+            host.innerWidth = oldWidth; host.innerHeight = oldHeight;
+            dispatch(windowListeners, "resize");
+            frame();
+            check(query(14) === oldBackingWidth, "resize restored");
+            reset();
+            renderer3DMsaaDepthSamples = [];
+            configure(1, 4);
+            frame();
+            check(query(13) === 1 && query(16) === 0 && (query(25) & 8) !== 0, "unsupported MSAA falls back to one");
+            reset();
+            renderer3DMsaaDepthSamples = [4, 2];
+            renderer3DMsaaIncomplete = true;
+            configure(1, 4);
+            frame();
+            check(query(13) === 1 && renderer3DLiveRenderbuffers.size === 0, "incomplete targets discarded");
+            reset();
+            renderer3DMsaaIncomplete = false;
+            renderer3DMsaaFailNextBuffer = true;
+            configure(1, 4);
+            frame();
+            check(query(13) === 2 && renderer3DLiveRenderbuffers.size === 2, "partial allocation released before two-sample retry");
+            configure(1, 1);
+            frame();
+            check(query(13) === 1 && renderer3DLiveRenderbuffers.size === 0 && query(16) === 0, "one-sample reconfiguration retires MSAA");
+            reset();
+            configure(1, 4);
+            frame();
+            renderer3DCanvasElement.dispatch("webglcontextlost");
+            check(query(13) === 1, "context loss invalidates effective samples");
+            // A lost GL context destroys its objects; model that driver action in the double.
+            renderer3DLiveRenderbuffers.clear(); renderer3DLiveFramebuffers.clear();
+            renderer3DCanvasElement.dispatch("webglcontextrestored");
+            frame();
+            check(query(13) === 4 && query(16) === 1 && renderer3DLiveRenderbuffers.size === 2, "restored context recreates requested targets");
+            reset();
+            process.stdout.write("Web MSAA capability, resolve, depth, reuse, resize, fallback, context and cleanup checks passed (GL test double).\n");
+        }
     }
     if (verifyPhase4Media || verifyPhase4Ownership || verifyPhase4Clip) {
         if (diagnostics.backingWidth !== visibleCanvas.width || diagnostics.backingHeight !== visibleCanvas.height ||

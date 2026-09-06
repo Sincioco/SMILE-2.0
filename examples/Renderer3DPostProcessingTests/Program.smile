@@ -183,6 +183,10 @@ Sub RunM5Tests()
         Graphics3D.M5Value3D(Graphics3D.M5_QUERY_SAMPLE_COUNT, 0) = 2 Or
         Graphics3D.M5Value3D(Graphics3D.M5_QUERY_SAMPLE_COUNT, 0) = 4)
 
+    If Graphics3D.M5Value3D(Graphics3D.M5_QUERY_SAMPLE_COUNT, 0) > 1 Then
+        Call Check(Graphics3D.M5Value3D(Graphics3D.M5_QUERY_RESOLVE_COUNT, 0) > 0)
+    End If
+
     If ShadowWasEffective Then
 
         Call Check(Graphics3D.M5Value3D(Graphics3D.M5_QUERY_SHADOW_DRAWS, 0) = ExpectedSubmissions)
@@ -207,7 +211,11 @@ Sub RunM5Tests()
     Else
 
         Call Check(Graphics3D.M5Value3D(Graphics3D.M5_QUERY_SCENE_FORMAT, 0) = Graphics3D.SCENE_FORMAT_DIRECT_LDR)
-        Call Check(Graphics3D.M5Value3D(Graphics3D.M5_QUERY_POST_DRAWS, 0) = 0)
+
+        ' Web copies the resolved LDR texture to its canvas; native can resolve directly.
+
+        Call Check(Graphics3D.M5Value3D(Graphics3D.M5_QUERY_POST_DRAWS, 0) = 0 Or
+            Graphics3D.M5Value3D(Graphics3D.M5_QUERY_POST_DRAWS, 0) = 1)
         Call Check(FlagPresent(Flags, Graphics3D.M5_FALLBACK_HDR_UNAVAILABLE))
         Call Check(FlagPresent(Flags, Graphics3D.M5_FALLBACK_DIRECT_LDR))
 
