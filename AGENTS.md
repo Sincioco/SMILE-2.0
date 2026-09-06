@@ -30,6 +30,13 @@ These instructions apply to the entire SMILE 2.0 repository.
   line immediately before the report's first heading. Use one boundary per report; do
   not add extra horizontal rules inside a single report unless it contains another
   distinct substantial report.
+- Organize longer technical responses with clear Markdown headings and short, scannable
+  sections. Use bullets when they improve readability, inline code for identifiers,
+  filenames, commands and paths, fenced code blocks for code/logs/structured output,
+  and tables when comparing several related values or options.
+- In final status reports, separate completed work, validation, issues, remaining work
+  and commit evidence. If any known issue or required check remains, report it under the
+  appropriate issue, fixing, remaining or blocked status and do not claim full completion.
 
 ## Project identity
 
