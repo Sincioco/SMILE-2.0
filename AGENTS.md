@@ -2,6 +2,12 @@
 
 These instructions apply to the entire SMILE 2.0 repository.
 
+## Permanent task progress reporting
+
+- When beginning a new task, state what the task is in a bolded bulleted list.
+- When completing a task, list every remaining task in a bolded bulleted list.
+- When work is interrupted and then resumed, state what task will be resumed in a bolded bulleted list.
+
 ## Project identity
 
 - `SMILE` stands for **Simple Modern and Intuitive Language for Everyone** and always means **SMILE 2.0**, the new native compiler project.
