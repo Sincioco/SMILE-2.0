@@ -33,8 +33,8 @@ Viewer/renderer error is retained until explicit retry or reload.
 
 | Responsibility | Baseline owner | Refactor owner | Owned mutable state | Public operations and borrowed dependencies | Lifetime / focused proof |
 |---|---|---|---|---|---|
-| Startup and failure/session lifecycle | `Program.smile` | `ViewerSession.smile` plus thin `Program.smile` coordinator | Running/readiness, first error/stage, resource epoch, tab/profile and scene mode | Load/retry/switch/shutdown; borrows renderer and subsystem owners | One application session; native launch, reload and failure fixtures |
-| Frame clocks and playback sequence | `Program.smile` plus `CharacterViewer.ClockState` | `ViewerTiming.smile`, then `ViewerPlayback.smile` | Frame-rate sample; selection, speed, pause/demo sequence | Advance/reset/query; borrows current actor and profile | Session; direct native/Web module assertions and playback fixture |
+| Startup and failure/session lifecycle | `Program.smile` | `ViewerSession.smile` plus thin `Program.smile` coordinator | Running/readiness, first error/stage, resource epoch, tab/profile and scene mode | Reset/record/capture failure; coordinator borrows renderer and subsystem owners for load/retry/switch/shutdown | One application session; direct module assertions plus native launch, reload and failure fixtures |
+| Frame clocks and playback sequence | `Program.smile` plus `CharacterViewer.ClockState` | `ViewerTiming.smile` and `ViewerPlayback.smile` | Frame-rate and clamped clocks; selection, speed, pause/demo sequence | Start/advance/reset/query, clip mode and demo target; borrows current actor/profile only for duration queries | Session; direct native module assertions and playback fixture |
 | Actor/inspector binding | `Program.smile` (`ViewerActorContext`, `PartyUi*`, `CalibrationOwnerProfile`) | `ViewerActors.smile` | Primary/inspected actor identity and temporary Party preview binding | Capture/use/begin/end preview; borrows actor handles and calibration owner | Scene/preview; Party isolation fixture |
 | Camera and transforms | `Program.smile`, `BattleCamera.smile`, shared `Interaction` | `ViewerCamera.smile` and retained `BattleCamera.smile` math | Base/live camera, controls, zoom target, fractional pointer remainder, orbit anchor, auto-orbit | Reset/nudge/drag/advance/apply/query; borrows framing and current actor bounds | Scene; scripted integer outputs plus native/Chrome controls |
 | Calibration editing | `Program.smile`, `CalibrationJson.smile` | `ViewerCalibration.smile` and retained bounded JSON reader | Per-profile key banks, edit/clipboard/Undo/import workspace and selected transform | Configure/load/evaluate/edit/save/Undo/import/export/query; borrows inspected actor and storage primitives | Profile workspace; native/generated-Web isolation and malformed imports |
@@ -55,6 +55,9 @@ state. Arin, Orin, Dragon, Party, and inspected-actor identities remain distinct
 | Old symbol/location | Current owner/symbol | Preservation note |
 |---|---|---|
 | `AdvanceFrameRate`, `FrameRateElapsed`, `FrameRateFrames`, `CurrentFramesPerSecond` | `ViewerTiming.Advance`, `ViewerTiming.FrameRateState`, `ViewerTiming.FramesPerSecond` | First low-risk extraction; identical 500 ms integer sampling, directly tested |
+| `PreviousTime`, `ViewerClock`, copied elapsed/drop counters | `ViewerTiming.ClockState`, `ViewerTiming.Start`, `ViewerTiming.AdvanceClock` | Identical raw sample, clamp and long-pause contract; coordinator consumes explicit animation/camera/presentation outputs |
+| `SelectedClip`, speed, pause/demo counters and helper calculations | `ViewerPlayback.State`, `ResolveAnimationElapsed`, `AdjustSpeed`, `ClipMode`, `Demo*` | Playback state is explicit; actor/profile handles are borrowed for queries and never retained |
+| `Ready`, `ViewerError`, first error/stage, tab/profile and resource epoch | `ViewerSession.State`, `ResetFailure`, `RecordError`, `CaptureFailure` | First-failure retention and explicit retry reset preserved; stage capture remains adjacent to the coordinator stage |
 | `BattleCamera.*` | `BattleCamera.*` | Already focused, retained |
 | `BattleAudio.CueState/CrossedCue` | `BattleAudio.*` | Already focused, retained |
 | `CalibrationJson.*` | `CalibrationJson.*` | Bounded reader retained; no second codec |
@@ -68,7 +71,7 @@ copied or left as dead wrappers.
 
 | Existing proof | Production owner exercised after move | Migration status |
 |---|---|---|
-| `HardeningTests.smile` clock/zoom/camera assertions | `ViewerTiming`, `BattleCamera`, shared `CharacterViewer` | `ViewerTiming` now included and called directly; remaining checks migrate with owners |
+| `HardeningTests.smile` session/playback/clock/zoom/camera assertions | `ViewerSession`, `ViewerPlayback`, `ViewerTiming`, `BattleCamera`, shared `CharacterViewer` | New owners are included and called directly; remaining checks migrate with owners |
 | `CalibrationTests.smile` plus generated isolated project | Calibration, actor binding, Party/effects owners | Temporarily still uses bounded startup assembly; final project will include production modules directly |
 | `ActorIsolationTests.smile` | `OrinStorm`, `Character3D`, scene VFX ownership | Already direct; retain explicit source list |
 | PowerShell preservation fixtures | Launcher, synchronizer, canonical/publication validators | Direct production functions; disposable storage/processes only |
@@ -81,4 +84,3 @@ Three short maintenance routes define the desired end state:
   isolated storage fixture; UI consumes only the resulting status/Undo state.
 - Party timing: `ViewerParty` stage transition and actor snapshots, then
   `ViewerEffects` once-per-scene advancement; rendering only consumes snapshots.
-

@@ -3,10 +3,13 @@ Option Explicit
 Import Smile.Tools.Character3DViewerProfiles As ViewerProfiles
 Import Smile.Simple3D.Character3D As Character3D
 Import Smile.Simple3D.CharacterViewer As CharacterViewer
+Import Smile.Simple3D.Graphics3D As Graphics3D
 Import Smile.Tools.OrinStorm As OrinStorm
 Import Smile.Tools.BattleAudio As BattleAudio
 Import Smile.Tools.BattleCamera As BattleCamera
 Import Smile.Tools.Character3DViewerTiming As ViewerTiming
+Import Smile.Tools.Character3DViewerSession As ViewerSession
+Import Smile.Tools.Character3DViewerPlayback As ViewerPlayback
 Import Smile.Simple3D.Core As Core
 Import Smile.Simple3D.NodeAim3D As NodeAim3D
 Import Smile.Simple3D.Math3D As Math3D
@@ -60,6 +63,9 @@ Dim NormalizedVector As Core.Vector3
 Dim StableAnchor As Core.Vector3
 Dim GroundCamera As Core.Camera3D
 Dim FrameRate As ViewerTiming.FrameRateState
+Dim RuntimeClock As ViewerTiming.ClockState
+Dim SessionState As ViewerSession.State
+Dim PlaybackState As ViewerPlayback.State
 
 Game Window "Character 3D Viewer Hardening Tests" Size 320 By 240
 
@@ -68,6 +74,56 @@ Call ViewerTiming.Advance(FrameRate, 250)
 Call Check(ViewerTiming.FramesPerSecond(FrameRate) = 4)
 Call ViewerTiming.Reset(FrameRate)
 Call Check(ViewerTiming.FramesPerSecond(FrameRate) = 0)
+
+Call ViewerTiming.Start(RuntimeClock, 1000)
+Call Check(ViewerTiming.AdvanceClock(RuntimeClock, 1100, 250, 250, 60000))
+Call Check(RuntimeClock.RawFrameMilliseconds = 100)
+Call Check(RuntimeClock.AnimationElapsed = 100)
+Call Check(RuntimeClock.CameraElapsed = 100)
+Call Check(RuntimeClock.PresentationElapsed = 100)
+Call Check(ViewerTiming.AdvanceClock(RuntimeClock, 101100, 250, 250, 60000))
+Call Check(RuntimeClock.RawFrameMilliseconds = 60000)
+Call Check(RuntimeClock.AnimationElapsed = 250)
+Call Check(RuntimeClock.CameraElapsed = 250)
+Call Check(RuntimeClock.DroppedAnimationMilliseconds = 59750)
+Call Check(RuntimeClock.DroppedCameraMilliseconds = 59750)
+Call Check(RuntimeClock.LongPauseCount = 1)
+
+Call ViewerPlayback.Reset(PlaybackState, 100)
+Call Check(PlaybackState.SelectedClip = 0)
+Call Check(PlaybackState.PlaybackSpeed = 100)
+Call Check(PlaybackState.DemoEnabled)
+Call Check(Not PlaybackState.ScenePaused)
+
+PlaybackState.ScenePaused = True
+
+Call ViewerPlayback.ResolveAnimationElapsed(PlaybackState, 16)
+Call Check(PlaybackState.AnimationUpdateElapsed = 0)
+
+PlaybackState.ScenePaused = False
+
+Call ViewerPlayback.ResolveAnimationElapsed(PlaybackState, 16)
+Call Check(PlaybackState.AnimationUpdateElapsed = 16)
+Call ViewerPlayback.AdjustSpeed(PlaybackState, 25, 200, 150)
+Call Check(PlaybackState.PlaybackSpeed = 200)
+Call ViewerPlayback.AdjustSpeed(PlaybackState, 25, 200, -500)
+Call Check(PlaybackState.PlaybackSpeed = 25)
+Call Check(ViewerPlayback.ClipMode(ViewerProfiles.PROFILE_ARIN, "Idle") =
+    Graphics3D.ANIMATION_LOOP)
+Call Check(ViewerPlayback.DemoTarget(ViewerProfiles.PROFILE_DRAGON, 7000) = 7000)
+Call Check(ViewerPlayback.DemoTarget(ViewerProfiles.PROFILE_ORIN, 7000) = 3000)
+
+Call ViewerSession.ResetFailure(SessionState)
+Call Check(SessionState.Ready)
+Call Check(Not SessionState.ViewerError)
+
+SessionState.Ready = False
+
+Call ViewerSession.CaptureFailure(SessionState, 77)
+Call ViewerSession.CaptureFailure(SessionState, 78)
+Call Check(SessionState.FirstFailureStage = 77)
+Call ViewerSession.RecordError(SessionState)
+Call Check(SessionState.ViewerError)
 
 Call CheckRingProjection()
 

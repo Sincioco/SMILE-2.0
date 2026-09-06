@@ -1,0 +1,109 @@
+''' Clip, pause, speed and demo timing state independent from UI and persistence.
+Module Smile.Tools.Character3DViewerPlayback
+
+Option Explicit
+
+Import Smile.Simple3D.Graphics3D As Graphics3D
+Import Smile.Simple3D.Character3D As Character3D
+Import Smile.Tools.Character3DViewerProfiles As ViewerProfiles
+
+Public Type State
+    SelectedClip As Number
+    PlaybackSpeed As Number
+    SelectedTimelineEvent As Number
+    AnimationCycleElapsed As Number
+    DemoEnabled As Boolean
+    DemoCompletedLoops As Number
+    DemoPreviousAnimationTime As Number
+    ScenePaused As Boolean
+    AnimationUpdateElapsed As Number
+End Type
+
+Public Sub Reset(ByRef Value As State, DefaultPlaybackSpeed As Number)
+
+    Value.SelectedClip = 0
+    Value.PlaybackSpeed = DefaultPlaybackSpeed
+    Value.SelectedTimelineEvent = 0
+    Value.AnimationCycleElapsed = 0
+    Value.DemoEnabled = True
+    Value.DemoCompletedLoops = 0
+    Value.DemoPreviousAnimationTime = 0
+    Value.ScenePaused = False
+    Value.AnimationUpdateElapsed = 0
+
+End Sub
+
+Public Sub ResolveAnimationElapsed(ByRef Value As State, AnimationElapsed As Number)
+
+    If Value.ScenePaused Then
+        Value.AnimationUpdateElapsed = 0
+    Else
+        Value.AnimationUpdateElapsed = AnimationElapsed
+    End If
+
+End Sub
+
+Public Sub AdjustSpeed(ByRef Value As State, MinimumSpeed As Number,
+    MaximumSpeed As Number, Amount As Number)
+
+    Value.PlaybackSpeed = Min(MaximumSpeed, Max(MinimumSpeed, Value.PlaybackSpeed + Amount))
+
+End Sub
+
+Public Function ClipMode(ProfileIndex As Number, ClipName As Text) As Number
+
+    Dim Result As Number
+
+    Result = Graphics3D.ANIMATION_LOOP
+
+    If ViewerProfiles.HoldsFinalPose(ProfileIndex, ClipName) Then
+        Result = Graphics3D.ANIMATION_ONCE
+    End If
+
+    Return Result
+
+End Function
+
+Public Function DemoLoopDuration(ByRef Actor As Character3D.Actor, SelectedClip As Number,
+    PlaybackSpeed As Number) As Number
+
+    Dim Result As Number
+
+    Result = Character3D.ClipDuration(Actor, SelectedClip) * 100 / Max(1, PlaybackSpeed)
+    Result = Max(1, Result)
+
+    Return Result
+
+End Function
+
+Public Function DemoTarget(ProfileIndex As Number, DefaultTargetMilliseconds As Number) As Number
+
+    Dim Result As Number
+
+    Result = DefaultTargetMilliseconds
+
+    If ViewerProfiles.IsPartyCharacter(ProfileIndex) Then
+        Result = 3000
+    End If
+
+    Return Result
+
+End Function
+
+Public Function DemoRequiredLoops(ByRef Actor As Character3D.Actor, SelectedClip As Number,
+    PlaybackSpeed As Number, ProfileIndex As Number, DefaultTargetMilliseconds As Number) As Number
+
+    Dim LoopDuration As Number
+    Dim Target As Number
+    Dim Result As Number
+
+    LoopDuration = DemoLoopDuration(Actor, SelectedClip, PlaybackSpeed)
+    Target = DemoTarget(ProfileIndex, DefaultTargetMilliseconds)
+    Result = (Target + LoopDuration - 1) / LoopDuration
+    Result = Max(1, Result)
+
+    Return Result
+
+End Function
+
+End Module

@@ -3,11 +3,53 @@ Module Smile.Tools.Character3DViewerTiming
 
 Option Explicit
 
+Import Smile.Simple3D.CharacterViewer As CharacterViewer
+
+Public Type ClockState
+    PreviousTime As Number
+    RawFrameMilliseconds As Number
+    AnimationElapsed As Number
+    CameraElapsed As Number
+    PresentationElapsed As Number
+    DroppedAnimationMilliseconds As Number
+    DroppedCameraMilliseconds As Number
+    LongPauseCount As Number
+    Clock As CharacterViewer.ClockState
+End Type
+
 Public Type FrameRateState
     Elapsed As Number
     Frames As Number
     CurrentFramesPerSecond As Number
 End Type
+
+Public Sub Start(ByRef Value As ClockState, CurrentTime As Number)
+
+    Value.PreviousTime = CurrentTime
+
+End Sub
+
+Public Function AdvanceClock(ByRef Value As ClockState, CurrentTime As Number,
+    MaximumAnimationElapsed As Number, MaximumCameraElapsed As Number,
+    MaximumRawFrameMilliseconds As Number) As Boolean
+
+    Dim Result As Boolean
+
+    Value.RawFrameMilliseconds = Max(0, CurrentTime - Value.PreviousTime)
+    Value.PreviousTime = CurrentTime
+    Result = CharacterViewer.AdvanceClock(Value.Clock, Value.RawFrameMilliseconds,
+        MaximumAnimationElapsed, MaximumCameraElapsed, MaximumRawFrameMilliseconds)
+    Value.RawFrameMilliseconds = Value.Clock.RawFrameMilliseconds
+    Value.AnimationElapsed = Value.Clock.AnimationElapsed
+    Value.CameraElapsed = Value.Clock.CameraElapsed
+    Value.PresentationElapsed = Value.Clock.PresentationElapsed
+    Value.DroppedAnimationMilliseconds = Value.Clock.DroppedAnimationMilliseconds
+    Value.DroppedCameraMilliseconds = Value.Clock.DroppedCameraMilliseconds
+    Value.LongPauseCount = Value.Clock.LongPauseCount
+
+    Return Result
+
+End Function
 
 Public Sub Reset(ByRef Value As FrameRateState)
 

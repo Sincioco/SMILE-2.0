@@ -26,6 +26,8 @@ Import Smile.Tools.BattleCamera As BattleCamera
 Import Smile.Tools.DragonPresence As DragonPresence
 Import Smile.Tools.CalibrationJson As CalibrationJson
 Import Smile.Tools.Character3DViewerTiming As ViewerTiming
+Import Smile.Tools.Character3DViewerSession As ViewerSession
+Import Smile.Tools.Character3DViewerPlayback As ViewerPlayback
 
 Const ANIMATION_CYCLE_MILLISECONDS = 5000
 Const ANIMATION_BUTTON_Y = 352
@@ -163,8 +165,6 @@ Type PartyParticipantLayout
     FacingAdjustment As Number
 End Type
 
-Dim SelectedCharacterTab As Number
-Dim DragonInspection As Boolean
 Dim DragonOpponent As ViewerActorContext
 Dim PartyMode As Boolean
 Dim PartyCompanion As ViewerActorContext
@@ -189,7 +189,6 @@ Dim PartyPreviewClip As Number
 Dim PartyPreviewTime As Number
 Dim PartyPreviewMode As Number
 Dim CalibrationOwnerProfile As Number
-Dim CharacterSwitchBlocked As Boolean
 Dim PresentationState As Number
 
 Dim CalibrationProfileFingerprint As Text
@@ -274,37 +273,18 @@ Dim EquipmentTrailElapsed As Number
 Dim EquipmentTrailAnimationTime As Number
 Dim SwordTrailActive As Boolean
 Dim ShieldTrailActive As Boolean
-Dim Ready As Boolean
-Dim Running As Boolean
-Dim ViewerError As Boolean
-Dim WindowActivated As Boolean
-Dim FirstViewerError As Number
-Dim FirstRendererError As Number
-Dim FirstFailureStage As Number
-Dim ViewerEpoch As Number
 Dim InterfacePointerBlocked As Boolean
 Dim UiVisibility As Number
-Dim SelectedClip As Number
 Dim LightingIndex As Number
-Dim ProfileIndex As Number
-Dim PlaybackSpeed As Number
 Dim MaterialInspection As Number
-Dim SelectedTimelineEvent As Number
 Dim Key As Number
-Dim CurrentTime As Number
-Dim PreviousTime As Number
-Dim RawFrameMilliseconds As Number
-Dim AnimationElapsed As Number
-Dim CameraElapsed As Number
-Dim PresentationElapsed As Number
-Dim DroppedAnimationMilliseconds As Number
-Dim DroppedCameraMilliseconds As Number
-Dim LongPauseCount As Number
-Dim ViewerClock As CharacterViewer.ClockState
 Dim FitLocked As Boolean
 Dim LastFitWidth As Number
 Dim LastFitHeight As Number
 Dim FrameRate As ViewerTiming.FrameRateState
+Dim Timing As ViewerTiming.ClockState
+Dim Session As ViewerSession.State
+Dim Playback As ViewerPlayback.State
 Dim PanPointerRemainderX As Number
 Dim PanPointerRemainderY As Number
 Dim OrbitPointerRemainderX As Number
@@ -331,12 +311,6 @@ Dim PartyShotBossHead As Core.Vector3
 Dim PartyShotMouth As Core.Vector3
 Dim ArinAudio As BattleAudio.CueState
 Dim DragonAudio As BattleAudio.CueState
-Dim AnimationCycleElapsed As Number
-Dim DemoEnabled As Boolean
-Dim DemoCompletedLoops As Number
-Dim DemoPreviousAnimationTime As Number
-Dim ScenePaused As Boolean
-Dim AnimationUpdateElapsed As Number
 Dim BackgroundIndex As Number
 Dim BackdropLandscapeTexture As StaticBackdrop3D.Backdrop
 Dim BackdropTitleTexture As StaticBackdrop3D.Backdrop
@@ -431,20 +405,22 @@ Game Window "SMILE 2.0 - 3D Viewer, Animation Editor" Size 1600 By 640
 
 Call Graphics3D.ResetRenderer3D()
 
-SelectedCharacterTab = 3
+Session.SelectedCharacterTab = 3
 PartyMode = True
-ProfileIndex = ViewerProfiles.PROFILE_ARIN
-DemoEnabled = True
+Session.ProfileIndex = ViewerProfiles.PROFILE_ARIN
 UiVisibility = 0
 BackgroundIndex = 3
 
+Call ViewerPlayback.Reset(Playback, 100)
+
 Call LoadViewer()
-Call CaptureViewerFailure(20)
+Call ViewerSession.CaptureFailure(Session, 20)
 
-WindowActivated = Window_Activate()
+Session.WindowActivated = Window_Activate()
 
-Running = True
-PreviousTime = Timer()
+Session.Running = True
+
+Call ViewerTiming.Start(Timing, Timer())
 
 Do
 
@@ -452,61 +428,45 @@ Do
 
     Call HandleKeyboard(Key)
 
-    Call CaptureViewerFailure(21)
+    Call ViewerSession.CaptureFailure(Session, 21)
 
     InterfacePointerBlocked = HandleInterfacePointer()
 
-    Call CaptureViewerFailure(22)
+    Call ViewerSession.CaptureFailure(Session, 22)
 
     Call UpdateCameraPointer(InterfacePointerBlocked)
 
-    Call CaptureViewerFailure(23)
+    Call ViewerSession.CaptureFailure(Session, 23)
 
-    CurrentTime = Timer()
-    RawFrameMilliseconds = Max(0, CurrentTime - PreviousTime)
-    PreviousTime = CurrentTime
-
-    Ready = CharacterViewer.AdvanceClock(
-        ViewerClock,
-        RawFrameMilliseconds,
+    Session.Ready = ViewerTiming.AdvanceClock(
+        Timing,
+        Timer(),
         MAX_ANIMATION_ELAPSED,
         MAX_CAMERA_ELAPSED,
         MAX_RAW_FRAME_MILLISECONDS
-    ) And Ready
+    ) And Session.Ready
 
-    Call CaptureViewerFailure(24)
+    Call ViewerSession.CaptureFailure(Session, 24)
 
-    RawFrameMilliseconds = ViewerClock.RawFrameMilliseconds
-    AnimationElapsed = ViewerClock.AnimationElapsed
-    CameraElapsed = ViewerClock.CameraElapsed
-    PresentationElapsed = ViewerClock.PresentationElapsed
-    DroppedAnimationMilliseconds = ViewerClock.DroppedAnimationMilliseconds
-    DroppedCameraMilliseconds = ViewerClock.DroppedCameraMilliseconds
-    LongPauseCount = ViewerClock.LongPauseCount
+    Call ViewerTiming.Advance(FrameRate, Timing.RawFrameMilliseconds)
 
-    Call ViewerTiming.Advance(FrameRate, RawFrameMilliseconds)
+    If Not Session.ViewerError Then
 
-    If Not ViewerError Then
-
-        If Not ScenePaused Then
+        If Not Playback.ScenePaused Then
             Call AdvanceAnimationSequence()
 
-            Call CaptureViewerFailure(2)
+            Call ViewerSession.CaptureFailure(Session, 2)
         End If
 
-        If ScenePaused Then
-            AnimationUpdateElapsed = 0
-        Else
-            AnimationUpdateElapsed = AnimationElapsed
-        End If
+        Call ViewerPlayback.ResolveAnimationElapsed(Playback, Timing.AnimationElapsed)
 
         If PartyMode Then
             Call AdvancePartyDemo()
         End If
 
-        Ready = Character3D.Update(Character, AnimationUpdateElapsed) And Ready
+        Session.Ready = Character3D.Update(Character, Playback.AnimationUpdateElapsed) And Session.Ready
 
-        Call CaptureViewerFailure(3)
+        Call ViewerSession.CaptureFailure(Session, 3)
         Call ApplyCharacterPresentationOffset()
 
         If CalibrationAvailable Then
@@ -514,18 +474,18 @@ Do
             Call UpdateCalibrationForCurrentFrame()
             Call ApplyWristCalibration()
             Call ApplyEquipmentCoupling()
-            Call CaptureViewerFailure(4)
+            Call ViewerSession.CaptureFailure(Session, 4)
 
         End If
 
         Call AdvanceSmoothZoom()
 
-        Call CaptureViewerFailure(5)
+        Call ViewerSession.CaptureFailure(Session, 5)
 
-        If Not ScenePaused Then
+        If Not Playback.ScenePaused Then
             Call AdvanceAutoOrbit()
 
-            Call CaptureViewerFailure(6)
+            Call ViewerSession.CaptureFailure(Session, 6)
         End If
 
         Call UpdateResponsiveFit()
@@ -550,16 +510,16 @@ Do
         If CalibrationAvailable Then
             Call ApplyEquipmentCalibration()
 
-            Call CaptureViewerFailure(7)
+            Call ViewerSession.CaptureFailure(Session, 7)
         End If
 
         Call UpdateEquipmentFire()
 
-        If PartyMode Or DragonInspection Then
+        If PartyMode Or Session.DragonInspection Then
             Call UpdatePartyCompanion()
         End If
 
-        If DragonInspection Then
+        If Session.DragonInspection Then
             Call UpdateDragonOpponent()
         End If
 
@@ -582,28 +542,28 @@ Do
             CharacterBounds = Character3D.WorldBounds(Character, ActiveProfile.AnimationMargin)
         End If
 
-        Ready = BeginViewerScene() And Ready
+        Session.Ready = BeginViewerScene() And Session.Ready
 
-        Call CaptureViewerFailure(8)
+        Call ViewerSession.CaptureFailure(Session, 8)
 
-        If Ready Then
+        If Session.Ready Then
 
             If FloorVisible Then
-                Ready = Arena3D.Draw(Arena, True, False)
+                Session.Ready = Arena3D.Draw(Arena, True, False)
 
-                Call CaptureViewerFailure(9)
+                Call ViewerSession.CaptureFailure(Session, 9)
             End If
 
             If GridVisible Then
-                Ready = DrawStudioGrid() And Ready
+                Session.Ready = DrawStudioGrid() And Session.Ready
 
-                Call CaptureViewerFailure(10)
+                Call ViewerSession.CaptureFailure(Session, 10)
             End If
 
-            If DragonVisible And Not DragonInspection Then
-                Ready = DrawDragon() And Ready
+            If DragonVisible And Not Session.DragonInspection Then
+                Session.Ready = DrawDragon() And Session.Ready
 
-                Call CaptureViewerFailure(11)
+                Call ViewerSession.CaptureFailure(Session, 11)
             End If
 
             If EpicGlowVisible Then
@@ -615,17 +575,17 @@ Do
 
             End If
 
-            Ready = Character3D.Draw(Character) And Ready
+            Session.Ready = Character3D.Draw(Character) And Session.Ready
 
-            If (PartyMode Or DragonInspection) And PartyReady Then
-                Ready = DrawPartyCompanion() And Ready
+            If (PartyMode Or Session.DragonInspection) And PartyReady Then
+                Session.Ready = DrawPartyCompanion() And Session.Ready
             End If
 
-            If DragonInspection Then
-                Ready = DrawDragonOpponent() And Ready
+            If Session.DragonInspection Then
+                Session.Ready = DrawDragonOpponent() And Session.Ready
             End If
 
-            Call CaptureViewerFailure(12)
+            Call ViewerSession.CaptureFailure(Session, 12)
 
             If (SwordVisible And
                 SwordFireVisible And
@@ -637,7 +597,7 @@ Do
             Call DrawShieldFire()
             Call OrinStorm.Draw(OrinStormContext)
 
-            Ready = SceneVfx3D.DrawLightning(LightningInitialized) And Ready
+            Session.Ready = SceneVfx3D.DrawLightning(LightningInitialized) And Session.Ready
 
             Call DragonPresence.Draw()
 
@@ -654,17 +614,17 @@ Do
             End If
 
             If SocketGizmosVisible Then
-                Ready = DrawSocketGizmos() And Ready
+                Session.Ready = DrawSocketGizmos() And Session.Ready
             End If
 
-            Ready = Scene3D.EndScene() And Ready
+            Session.Ready = Scene3D.EndScene() And Session.Ready
 
-            Call CaptureViewerFailure(13)
+            Call ViewerSession.CaptureFailure(Session, 13)
 
         End If
 
-        If Not Ready Then
-            Call RecordViewerError()
+        If Not Session.Ready Then
+            Call ViewerSession.RecordError(Session)
         End If
 
     End If
@@ -674,54 +634,54 @@ Do
 
     Show Screen
 
-    Running = Running And Not Game_Closed()
+    Session.Running = Session.Running And Not Game_Closed()
 
-Loop Until Not Running
+Loop Until Not Session.Running
 
 Call DestroyViewer()
 
 Sub LoadViewer()
 
-    Ready = Scene3D.SetQuality(Scene3D.QUALITY_HIGH)
-    Ready = Character3D.SetUnusedAssetCacheLimit(3) And Ready
+    Session.Ready = Scene3D.SetQuality(Scene3D.QUALITY_HIGH)
+    Session.Ready = Character3D.SetUnusedAssetCacheLimit(3) And Session.Ready
 
     PartyUiBound = False
     PartyPreviewActive = False
 
-    ActiveProfile = ViewerProfiles.ProfileAt(ProfileIndex)
-    CalibrationProfileFingerprint = ViewerProfiles.CalibrationFingerprint(ProfileIndex)
-    CalibrationFilePath = ViewerProfiles.CalibrationFile(ProfileIndex)
-    CalibrationFileLabel = ViewerProfiles.CalibrationJsonName(ProfileIndex)
+    ActiveProfile = ViewerProfiles.ProfileAt(Session.ProfileIndex)
+    CalibrationProfileFingerprint = ViewerProfiles.CalibrationFingerprint(Session.ProfileIndex)
+    CalibrationFilePath = ViewerProfiles.CalibrationFile(Session.ProfileIndex)
+    CalibrationFileLabel = ViewerProfiles.CalibrationJsonName(Session.ProfileIndex)
     CalibrationTransferMessage = "Click To Open/Download Saved JSON"
     CalibrationImportPending = False
     CalibrationImportBaseline = ""
-    CalibrationDataKey = ViewerProfiles.CalibrationKey(ProfileIndex)
+    CalibrationDataKey = ViewerProfiles.CalibrationKey(Session.ProfileIndex)
     CalibrationClipBase = 0
 
-    If ProfileIndex = ViewerProfiles.PROFILE_ORIN Then
+    If Session.ProfileIndex = ViewerProfiles.PROFILE_ORIN Then
         CalibrationClipBase = CALIBRATION_MAX_CLIPS
     End If
 
-    DragonAvailable = ViewerProfiles.IsPartyCharacter(ProfileIndex) Or DragonInspection
+    DragonAvailable = ViewerProfiles.IsPartyCharacter(Session.ProfileIndex) Or Session.DragonInspection
     DragonVisible = DragonAvailable
     SwordVisible = True
     ShieldVisible = True
-    Ready = CharacterViewer.ValidateProfile(ActiveProfile) And Ready
-    Ready = Window_Title(ViewerTitle()) And Ready
+    Session.Ready = CharacterViewer.ValidateProfile(ActiveProfile) And Session.Ready
+    Session.Ready = Window_Title(ViewerTitle()) And Session.Ready
 
-    Call CaptureViewerFailure(30)
+    Call ViewerSession.CaptureFailure(Session, 30)
 
     Character = Character3D.LoadWithPolicy(
         ActiveProfile.AssetPath,
         Character3D.CHARACTER_LOAD_REQUIRE_PBR
     )
-    Ready = Character3D.IsValid(Character) And Ready
+    Session.Ready = Character3D.IsValid(Character) And Session.Ready
 
-    Call CaptureViewerFailure(31)
+    Call ViewerSession.CaptureFailure(Session, 31)
 
-    Ready = ValidateLoadedProfile() And Ready
+    Session.Ready = ValidateLoadedProfile() And Session.Ready
 
-    Call CaptureViewerFailure(32)
+    Call ViewerSession.CaptureFailure(Session, 32)
 
     LocalCharacterBounds = Character3D.LocalBounds(Character)
     BaseCamera = Graphics3D.DefaultCamera()
@@ -732,9 +692,9 @@ Sub LoadViewer()
         Max(1, Window_Height()),
         BaseCamera.FovDegrees
     )
-    Ready = ViewerFrame.Valid And Ready
+    Session.Ready = ViewerFrame.Valid And Session.Ready
 
-    If DragonInspection Then
+    If Session.DragonInspection Then
 
         ViewerFrame.ScalePercent = DRAGON_SCALE_PERCENT
         ViewerFrame.PositionX = DRAGON_POSITION_X
@@ -743,7 +703,7 @@ Sub LoadViewer()
 
     End If
 
-    Call CaptureViewerFailure(33)
+    Call ViewerSession.CaptureFailure(Session, 33)
 
     BaseCamera.Position.X = 0
     BaseCamera.Position.Y = ViewerFrame.CameraY
@@ -765,7 +725,7 @@ Sub LoadViewer()
     Call CreateBackdrop()
     Call CreateStudioGrid()
 
-    Call CaptureViewerFailure(34)
+    Call ViewerSession.CaptureFailure(Session, 34)
 
     FloorVisible = True
     GridVisible = True
@@ -782,10 +742,10 @@ Sub LoadViewer()
         96000
     )
 
-    Ready = Scene3D.SetQuality(Scene3D.QUALITY_HIGH)
+    Session.Ready = Scene3D.SetQuality(Scene3D.QUALITY_HIGH)
 
     If DragonAvailable Then
-        Ready = Scene3D.SetShadowArea(
+        Session.Ready = Scene3D.SetShadowArea(
             DRAGON_POSITION_X / 2,
             ViewerFrame.TargetY,
             DRAGON_POSITION_Z / 2,
@@ -793,9 +753,9 @@ Sub LoadViewer()
             ARENA_FLOOR_DEPTH,
             ViewerFrame.ShadowNear,
             ARENA_FLOOR_DEPTH
-        ) And Ready
+        ) And Session.Ready
     Else
-        Ready = Scene3D.SetShadowArea(
+        Session.Ready = Scene3D.SetShadowArea(
             0,
             ViewerFrame.TargetY,
             0,
@@ -803,54 +763,54 @@ Sub LoadViewer()
             ViewerFrame.ShadowDepth,
             ViewerFrame.ShadowNear,
             ViewerFrame.ShadowFar
-        ) And Ready
+        ) And Session.Ready
     End If
 
-    Call CaptureViewerFailure(35)
+    Call ViewerSession.CaptureFailure(Session, 35)
 
     Call ApplyLighting()
 
-    Ready = Character3D.SetScale(Character, ViewerFrame.ScalePercent) And Ready
-    Ready = Character3D.Place(
+    Session.Ready = Character3D.SetScale(Character, ViewerFrame.ScalePercent) And Session.Ready
+    Session.Ready = Character3D.Place(
         Character,
         ViewerFrame.PositionX,
         ViewerFrame.PositionY,
         ViewerFrame.PositionZ
-    ) And Ready
+    ) And Session.Ready
 
     Call ApplyArenaFacing()
 
-    Ready = Character3D.SetShadows(Character, True, True) And Ready
+    Session.Ready = Character3D.SetShadows(Character, True, True) And Session.Ready
 
-    Call CaptureViewerFailure(36)
+    Call ViewerSession.CaptureFailure(Session, 36)
 
     SocketGizmosVisible = False
 
     Call CreateDragon()
 
-    Call CaptureViewerFailure(37)
+    Call ViewerSession.CaptureFailure(Session, 37)
 
     Call CreateSocketGizmos()
 
-    Call CaptureViewerFailure(38)
+    Call ViewerSession.CaptureFailure(Session, 38)
 
     Call CreateEpicGlow()
 
-    Call CaptureViewerFailure(39)
+    Call ViewerSession.CaptureFailure(Session, 39)
 
     Call ConfigureCalibration()
 
-    Call CaptureViewerFailure(40)
+    Call ViewerSession.CaptureFailure(Session, 40)
 
-    PlaybackSpeed = ActiveProfile.DefaultPlaybackSpeed
+    Playback.PlaybackSpeed = ActiveProfile.DefaultPlaybackSpeed
     MaterialInspection = Graphics3D.MATERIAL_INSPECTION_LIT
-    Ready = Graphics3D.SetMaterialInspection3D(MaterialInspection) And Ready
+    Session.Ready = Graphics3D.SetMaterialInspection3D(MaterialInspection) And Session.Ready
 
-    Call CaptureViewerFailure(41)
+    Call ViewerSession.CaptureFailure(Session, 41)
 
     Call RestartPresentation()
 
-    Call CaptureViewerFailure(42)
+    Call ViewerSession.CaptureFailure(Session, 42)
 
     SwordFireVisible = True
     ShieldFireVisible = True
@@ -865,10 +825,10 @@ Sub LoadViewer()
 
     Call SceneVfx3D.Initialize(SceneVfxClock)
 
-    Ready = LightPool3D.Initialize(2, 2) And Ready
+    Session.Ready = LightPool3D.Initialize(2, 2) And Session.Ready
     OrinLight = LightPool3D.Acquire()
     DragonLight = LightPool3D.Acquire()
-    Ready = LightPool3D.IsValid(OrinLight) And LightPool3D.IsValid(DragonLight) And Ready
+    Session.Ready = LightPool3D.IsValid(OrinLight) And LightPool3D.IsValid(DragonLight) And Session.Ready
 
     If DragonAvailable Then
         FireInitialized = Fire.Initialize("Assets/Fire")
@@ -876,7 +836,7 @@ Sub LoadViewer()
         Call DragonPresence.Initialize()
     End If
 
-    If CalibrationAvailable And ProfileIndex = ViewerProfiles.PROFILE_ARIN Then
+    If CalibrationAvailable And Session.ProfileIndex = ViewerProfiles.PROFILE_ARIN Then
         SwordFireReady = FireInitialized
         SwordFireFailed = Not SwordFireReady
     End If
@@ -890,7 +850,7 @@ Sub LoadViewer()
         Call CreatePartyCompanion()
     End If
 
-    If DragonInspection Then
+    If Session.DragonInspection Then
 
         Call CreatePartyCompanion(ViewerProfiles.PROFILE_ARIN)
 
@@ -904,8 +864,8 @@ Sub LoadViewer()
     End If
 
     If (PartyMode Or
-        DragonInspection Or
-        ProfileIndex = ViewerProfiles.PROFILE_ORIN) Then
+        Session.DragonInspection Or
+        Session.ProfileIndex = ViewerProfiles.PROFILE_ORIN) Then
 
         LightningInitialized = Lightning.Initialize("Assets/Lightning", 8192,
             Graphics3D.GPU_PARTICLE_SIMULATION_AUTO, 4096)
@@ -913,14 +873,14 @@ Sub LoadViewer()
         Call OrinStorm.Prepare(LightningInitialized)
 
         OrinStormContext = OrinStorm.Create()
-        Ready = LightningInitialized And OrinStorm.IsValid(OrinStormContext) And Ready
+        Session.Ready = LightningInitialized And OrinStorm.IsValid(OrinStormContext) And Session.Ready
 
     End If
 
-    ViewerEpoch = Graphics3D.ResourceEpoch3D()
+    Session.ViewerEpoch = Graphics3D.ResourceEpoch3D()
 
-    If Not Ready Then
-        Call RecordViewerError()
+    If Not Session.Ready Then
+        Call ViewerSession.RecordError(Session)
     End If
 
 End Sub
@@ -934,17 +894,17 @@ Function ValidateLoadedProfile() As Boolean
     Result = Character3D.ClipCount(Character) = ActiveProfile.ExpectedClipCount And Result
     Result = Character3D.SocketCount(Character) = ActiveProfile.ExpectedSocketCount And Result
 
-    For Index = 0 To ViewerProfiles.ClipCount(ProfileIndex) - 1
+    For Index = 0 To ViewerProfiles.ClipCount(Session.ProfileIndex) - 1
         Result = Character3D.HasClip(
             Character,
-            ViewerProfiles.ClipName(ProfileIndex, Index)
+            ViewerProfiles.ClipName(Session.ProfileIndex, Index)
         ) And Result
     End For
 
-    For Index = 0 To ViewerProfiles.SocketCount(ProfileIndex) - 1
+    For Index = 0 To ViewerProfiles.SocketCount(Session.ProfileIndex) - 1
         Result = Character3D.HasSocket(
             Character,
-            ViewerProfiles.SocketName(ProfileIndex, Index)
+            ViewerProfiles.SocketName(Session.ProfileIndex, Index)
         ) And Result
     End For
 
@@ -987,7 +947,7 @@ Function InitialViewerOrbitYaw() As Number
     If DragonAvailable Then
         Result = ARENA_INITIAL_ORBIT_YAW
     Else
-        Result = ViewerProfiles.InitialOrbitYaw(ProfileIndex)
+        Result = ViewerProfiles.InitialOrbitYaw(Session.ProfileIndex)
     End If
 
     Return Result
@@ -1010,12 +970,12 @@ End Function
 
 Sub ApplyArenaFacing()
 
-    If DragonInspection Then
-        Ready = Character3D.Rotate(Character, 0, DRAGON_ROTATION_Y, 0) And Ready
+    If Session.DragonInspection Then
+        Session.Ready = Character3D.Rotate(Character, 0, DRAGON_ROTATION_Y, 0) And Session.Ready
     Else If DragonAvailable Then
-        Ready = FaceDragon(Character, CharacterArenaYawAdjustment()) And Ready
+        Session.Ready = FaceDragon(Character, CharacterArenaYawAdjustment()) And Session.Ready
     Else
-        Ready = Character3D.Rotate(Character, 0, 0, 0) And Ready
+        Session.Ready = Character3D.Rotate(Character, 0, 0, 0) And Session.Ready
     End If
 
 End Sub
@@ -1024,7 +984,7 @@ Function CharacterArenaYawAdjustment() As Number
 
     Dim Result As Number
 
-    If ProfileIndex = ViewerProfiles.PROFILE_ORIN Then
+    If Session.ProfileIndex = ViewerProfiles.PROFILE_ORIN Then
         Result = ORIN_ARENA_YAW_ADJUSTMENT
     End If
 
@@ -1063,22 +1023,22 @@ Sub ApplyCharacterPresentationOffset()
         Return
     End If
 
-    If ProfileIndex = ViewerProfiles.PROFILE_DRAGON Then
+    If Session.ProfileIndex = ViewerProfiles.PROFILE_DRAGON Then
         Return
     End If
 
     Offset1000 = ViewerProfiles.ClipVerticalOffset1000(
-        ProfileIndex,
+        Session.ProfileIndex,
         SelectedClipName(),
         CurrentAnimationFrame()
     )
     OffsetY = Offset1000 * ViewerFrame.ScalePercent / 100000
-    Ready = Character3D.Place(
+    Session.Ready = Character3D.Place(
         Character,
         ViewerFrame.PositionX,
         ViewerFrame.PositionY + OffsetY,
         ViewerFrame.PositionZ
-    ) And Ready
+    ) And Session.Ready
 
 End Sub
 
@@ -1090,7 +1050,7 @@ Sub CreateDragon()
         Return
     End If
 
-    If DragonInspection Then
+    If Session.DragonInspection Then
         Dragon = Character
     Else
         Dragon = Character3D.LoadWithPolicy(DRAGON_ASSET_PATH, Character3D.CHARACTER_LOAD_REQUIRE_PBR)
@@ -1113,7 +1073,7 @@ Sub CreateDragon()
     End If
 
     If Not DragonReady Then
-        Ready = False
+        Session.Ready = False
 
         Call DestroyDragon()
     End If
@@ -1138,7 +1098,7 @@ Sub DestroyDragon()
 
     Call ClearDragonOwnedEffects()
 
-    If DragonInspection Then
+    If Session.DragonInspection Then
         Dragon.Handle = 0
     Else
 
@@ -1184,11 +1144,11 @@ Sub UpdateDragon()
 
     Name = "Idle"
 
-    If PartyMode And ScenePaused Then
+    If PartyMode And Playback.ScenePaused Then
 
         Name = DragonClip
 
-    Else If DragonInspection Then
+    Else If Session.DragonInspection Then
 
         Name = SelectedClipName()
 
@@ -1220,23 +1180,23 @@ Sub UpdateDragon()
 
         DragonClip = Name
 
-        If DragonInspection Then
+        If Session.DragonInspection Then
 
             ''' The shared inspector already selected playback mode and timeline time.
 
         Else If Name = "Idle" Then
 
-            Ready = Character3D.PlayMode(Dragon, Name, Graphics3D.ANIMATION_LOOP, PlaybackSpeed) And Ready
+            Session.Ready = Character3D.PlayMode(Dragon, Name, Graphics3D.ANIMATION_LOOP, Playback.PlaybackSpeed) And Session.Ready
 
         Else
-            Ready = Character3D.PlayMode(Dragon, Name, Graphics3D.ANIMATION_ONCE, PlaybackSpeed) And Ready
+            Session.Ready = Character3D.PlayMode(Dragon, Name, Graphics3D.ANIMATION_ONCE, Playback.PlaybackSpeed) And Session.Ready
 
         End If
 
     End If
 
-    If Not DragonInspection Then
-        Ready = Character3D.Update(Dragon, AnimationUpdateElapsed) And Ready
+    If Not Session.DragonInspection Then
+        Session.Ready = Character3D.Update(Dragon, Playback.AnimationUpdateElapsed) And Session.Ready
     End If
 
     Time = Character3D.AnimationTime(Dragon)
@@ -1254,11 +1214,11 @@ Sub UpdateDragon()
 
     End If
 
-    Ready = Character3D.Place(Dragon,
+    Session.Ready = Character3D.Place(Dragon,
         DRAGON_POSITION_X + 79 * Travel1000 / 1000, 0,
-        DRAGON_POSITION_Z + 30 * Travel1000 / 1000) And Ready
+        DRAGON_POSITION_Z + 30 * Travel1000 / 1000) And Session.Ready
 
-    If DragonInspection Then
+    If Session.DragonInspection Then
 
         Target = Character3D.SocketPosition(DragonOpponent.Actor, "Chest", BODY_PART_INDEX)
 
@@ -1278,8 +1238,8 @@ Sub UpdateDragon()
     End If
 
     ''' Head and child mouth/eyes follow the same target before attack VFX starts.
-    Ready = NodeAim3D.Update(DragonHeadAim, Dragon, Target, AnimationUpdateElapsed,
-        DragonHeadTracking And (Name = "FireBreath" Or Name = "Fireball" Or Name = "ClawStrike")) And Ready
+    Session.Ready = NodeAim3D.Update(DragonHeadAim, Dragon, Target, Playback.AnimationUpdateElapsed,
+        DragonHeadTracking And (Name = "FireBreath" Or Name = "Fireball" Or Name = "ClawStrike")) And Session.Ready
 
     ''' Explicit seeks/cuts outrank freeze; normal frozen playback retains its snapshot.
     ''' Resume from a different action/time rebases impact cues instead of replaying them.
@@ -1350,7 +1310,7 @@ Sub UpdateBattleAudio()
     Name = SelectedClipName()
     CueTime = -1
 
-    If ProfileIndex = ViewerProfiles.PROFILE_ARIN Then
+    If Session.ProfileIndex = ViewerProfiles.PROFILE_ARIN Then
 
         If Name = "SwordAttack" Then
             CueTime = 280
@@ -1360,7 +1320,7 @@ Sub UpdateBattleAudio()
 
     End If
 
-    Audible = Not ScenePaused And Not CalibrationEditing
+    Audible = Not Playback.ScenePaused And Not CalibrationEditing
 
     If BattleAudio.CrossedCue(ArinAudio, Name,
         Character3D.AnimationTime(Character), CueTime, Audible) Then
@@ -1409,7 +1369,7 @@ End Sub
 Sub CreateStudioGrid()
 
     Arena = Arena3D.Create(ViewerFloorWidth(), ViewerFloorDepth(), 24, 150, 255)
-    Ready = Arena.Ready And Ready
+    Session.Ready = Arena.Ready And Session.Ready
 
 End Sub
 
@@ -1565,7 +1525,7 @@ Sub HandleInspectorKeyboard(PressedKey As Number)
 
     Else If PressedKey = KEY_ENTER Then
 
-        If ViewerError Then
+        If Session.ViewerError Then
             Call RetryViewer()
         Else
 
@@ -1587,8 +1547,8 @@ Sub HandleInspectorKeyboard(PressedKey As Number)
     Else If PressedKey = KEY_TAB Then
 
         Call SelectPresentationClip(
-            (PresentationIndexForRuntimeClip(SelectedClip) + 1) Mod
-                ViewerProfiles.ClipCount(ProfileIndex)
+            (PresentationIndexForRuntimeClip(Playback.SelectedClip) + 1) Mod
+                ViewerProfiles.ClipCount(Session.ProfileIndex)
         )
 
     Else If PressedKey = KEY_R Then
@@ -1762,7 +1722,7 @@ Function HandleTransformGizmoPointer() As Boolean
     If (Not CalibrationAvailable Or
         Not CalibrationVisible Or
         UiVisibility <> 0 Or
-        ViewerError) Then
+        Session.ViewerError) Then
         Return False
     End If
 
@@ -2044,10 +2004,10 @@ End Function
 
 Sub ToggleScenePause()
 
-    If PartyMode And ScenePaused Then
+    If PartyMode And Playback.ScenePaused Then
 
         If CalibrationEditing Then
-            CharacterSwitchBlocked = True
+            Session.CharacterSwitchBlocked = True
             Return
         End If
 
@@ -2055,7 +2015,7 @@ Sub ToggleScenePause()
 
     End If
 
-    ScenePaused = Not ScenePaused
+    Playback.ScenePaused = Not Playback.ScenePaused
 
 End Sub
 
@@ -2067,8 +2027,8 @@ Sub ToggleDemo()
         Return
     End If
 
-    DemoEnabled = Not DemoEnabled
-    AnimationCycleElapsed = 0
+    Playback.DemoEnabled = Not Playback.DemoEnabled
+    Playback.AnimationCycleElapsed = 0
 
     Call PlaySelectedClip()
 
@@ -2106,11 +2066,11 @@ Sub ToggleSword()
 
     End If
 
-    If DragonInspection Then
+    If Session.DragonInspection Then
 
         SwordVisible = Not SwordVisible
-        Ready = Character3D.SetPartVisible(DragonOpponent.Actor, WEAPON_PART_INDEX, SwordVisible) And Ready
-        Ready = Character3D.SetPartVisible(PartyCompanion.Actor, WEAPON_PART_INDEX, SwordVisible) And Ready
+        Session.Ready = Character3D.SetPartVisible(DragonOpponent.Actor, WEAPON_PART_INDEX, SwordVisible) And Session.Ready
+        Session.Ready = Character3D.SetPartVisible(PartyCompanion.Actor, WEAPON_PART_INDEX, SwordVisible) And Session.Ready
 
         If Not SwordVisible Then
             Call HideSwordEffects()
@@ -2123,14 +2083,14 @@ Sub ToggleSword()
     If CalibrationAvailable Then
 
         SwordVisible = Not SwordVisible
-        Ready = Character3D.SetPartVisible(
+        Session.Ready = Character3D.SetPartVisible(
             Character,
             WEAPON_PART_INDEX,
             SwordVisible
-        ) And Ready
+        ) And Session.Ready
 
         If PartyMode And PartyReady Then
-            Ready = Character3D.SetPartVisible(PartyCompanion.Actor, WEAPON_PART_INDEX, SwordVisible) And Ready
+            Session.Ready = Character3D.SetPartVisible(PartyCompanion.Actor, WEAPON_PART_INDEX, SwordVisible) And Session.Ready
         End If
 
         If Not SwordVisible Then
@@ -2153,11 +2113,11 @@ Sub ToggleShield()
 
     End If
 
-    If DragonInspection Then
+    If Session.DragonInspection Then
 
         ShieldVisible = Not ShieldVisible
-        Ready = Character3D.SetPartVisible(DragonOpponent.Actor, SHIELD_PART_INDEX, ShieldVisible) And Ready
-        Ready = Character3D.SetPartVisible(PartyCompanion.Actor, SHIELD_PART_INDEX, ShieldVisible) And Ready
+        Session.Ready = Character3D.SetPartVisible(DragonOpponent.Actor, SHIELD_PART_INDEX, ShieldVisible) And Session.Ready
+        Session.Ready = Character3D.SetPartVisible(PartyCompanion.Actor, SHIELD_PART_INDEX, ShieldVisible) And Session.Ready
 
         If Not ShieldVisible Then
             Call HideShieldEffects()
@@ -2170,14 +2130,14 @@ Sub ToggleShield()
     If CalibrationAvailable Then
 
         ShieldVisible = Not ShieldVisible
-        Ready = Character3D.SetPartVisible(
+        Session.Ready = Character3D.SetPartVisible(
             Character,
             SHIELD_PART_INDEX,
             ShieldVisible
-        ) And Ready
+        ) And Session.Ready
 
         If PartyMode And PartyReady Then
-            Ready = Character3D.SetPartVisible(PartyCompanion.Actor, SHIELD_PART_INDEX, ShieldVisible) And Ready
+            Session.Ready = Character3D.SetPartVisible(PartyCompanion.Actor, SHIELD_PART_INDEX, ShieldVisible) And Session.Ready
         End If
 
         If Not ShieldVisible Then
@@ -2285,7 +2245,7 @@ End Sub
 
 Sub ToggleEpicGlow()
 
-    If DragonInspection Then
+    If Session.DragonInspection Then
 
         DragonOpponent.GlowVisible = Not DragonOpponent.GlowVisible
         PartyCompanion.GlowVisible = DragonOpponent.GlowVisible
@@ -2308,61 +2268,6 @@ Sub ToggleEpicGlow()
 
 End Sub
 
-Sub RecordViewerError()
-
-    ViewerError = True
-
-    If FirstViewerError = 0 Then
-
-        FirstViewerError = Character3D.LastError()
-
-        If FirstViewerError = 0 Then
-            FirstViewerError = Scene3D.LastError()
-        End If
-
-    End If
-
-    If FirstRendererError = 0 Then
-
-        FirstRendererError = Character3D.LastRendererError()
-
-        If FirstRendererError = 0 Then
-            FirstRendererError = Scene3D.LastRendererError()
-        End If
-
-        If FirstRendererError = 0 Then
-            FirstRendererError = Graphics3D.LastError()
-        End If
-
-    End If
-
-End Sub
-
-Sub CaptureViewerFailure(Stage As Number)
-
-    If Ready Or FirstFailureStage <> 0 Then
-        Return
-    End If
-
-    FirstFailureStage = Stage
-    FirstViewerError = Character3D.LastError()
-
-    If FirstViewerError = 0 Then
-        FirstViewerError = Scene3D.LastError()
-    End If
-
-    FirstRendererError = Character3D.LastRendererError()
-
-    If FirstRendererError = 0 Then
-        FirstRendererError = Scene3D.LastRendererError()
-    End If
-
-    If FirstRendererError = 0 Then
-        FirstRendererError = Graphics3D.LastError()
-    End If
-
-End Sub
-
 Sub RetryViewer()
 
     Call DestroyViewerResources()
@@ -2370,11 +2275,7 @@ Sub RetryViewer()
     Call Scene3D.Shutdown()
     Call Graphics3D.ResetRenderer3D()
 
-    Ready = True
-    ViewerError = False
-    FirstViewerError = 0
-    FirstRendererError = 0
-    FirstFailureStage = 0
+    Call ViewerSession.ResetFailure(Session)
 
     Call LoadViewer()
 
@@ -2387,29 +2288,25 @@ Sub CycleProfile()
     End If
 
     If CalibrationEditing Then
-        CharacterSwitchBlocked = True
+        Session.CharacterSwitchBlocked = True
         Return
     End If
 
     Call DestroyViewerResources()
 
     PartyMode = False
-    DragonInspection = False
-    SelectedCharacterTab = 0
-    ProfileIndex = ViewerProfiles.NextProfile(ProfileIndex)
+    Session.DragonInspection = False
+    Session.SelectedCharacterTab = 0
+    Session.ProfileIndex = ViewerProfiles.NextProfile(Session.ProfileIndex)
 
-    If ProfileIndex = ViewerProfiles.PROFILE_ORIN Then
-        SelectedCharacterTab = 1
-    Else If ProfileIndex = ViewerProfiles.PROFILE_DRAGON Then
-        SelectedCharacterTab = 2
-        DragonInspection = True
+    If Session.ProfileIndex = ViewerProfiles.PROFILE_ORIN Then
+        Session.SelectedCharacterTab = 1
+    Else If Session.ProfileIndex = ViewerProfiles.PROFILE_DRAGON Then
+        Session.SelectedCharacterTab = 2
+        Session.DragonInspection = True
     End If
 
-    Ready = True
-    ViewerError = False
-    FirstViewerError = 0
-    FirstRendererError = 0
-    FirstFailureStage = 0
+    Call ViewerSession.ResetFailure(Session)
 
     Call LoadViewer()
 
@@ -2418,7 +2315,7 @@ End Sub
 Sub CycleMaterialInspection()
 
     MaterialInspection = (MaterialInspection + 1) Mod 7
-    Ready = Graphics3D.SetMaterialInspection3D(MaterialInspection) And Ready
+    Session.Ready = Graphics3D.SetMaterialInspection3D(MaterialInspection) And Session.Ready
 
 End Sub
 
@@ -2438,12 +2335,12 @@ Sub AdvanceAutoOrbit()
     If AutoOrbit Then
 
         If PartyMode Then
-            Ready = CharacterViewer.AdvanceOrbitYaw1000(
-                PartyOrbitPhase1000, CameraElapsed, ARENA_ORBIT_DEGREES_PER_SECOND) And Ready
+            Session.Ready = CharacterViewer.AdvanceOrbitYaw1000(
+                PartyOrbitPhase1000, Timing.CameraElapsed, ARENA_ORBIT_DEGREES_PER_SECOND) And Session.Ready
             AutoOrbitYaw1000 = BattleCamera.FrontArcYaw1000(PartyOrbitPhase1000)
         Else
-            Ready = CharacterViewer.AdvanceOrbitYaw1000(
-                AutoOrbitYaw1000, CameraElapsed, ARENA_ORBIT_DEGREES_PER_SECOND) And Ready
+            Session.Ready = CharacterViewer.AdvanceOrbitYaw1000(
+                AutoOrbitYaw1000, Timing.CameraElapsed, ARENA_ORBIT_DEGREES_PER_SECOND) And Session.Ready
         End If
 
         CameraControls.OrbitYaw = AutoOrbitYaw1000 / 1000
@@ -2540,8 +2437,8 @@ Sub ApplyPartyAttackCamera()
     Boss = PartyShotBoss
     BossHead = PartyShotBossHead
     BossChargeShot = (PartyTurn = 2 And
-        (PartyElapsed * PlaybackSpeed / 100 < 650 Or
-        (DragonCounter Mod 3 = 2 And PartyElapsed * PlaybackSpeed / 100 < 1750)))
+        (PartyElapsed * Playback.PlaybackSpeed / 100 < 650 Or
+        (DragonCounter Mod 3 = 2 And PartyElapsed * Playback.PlaybackSpeed / 100 < 1750)))
     DeltaX = Hero.X - Boss.X
     DeltaZ = Hero.Z - Boss.Z
     Distance = Max(1, Math3D.Distance(Hero, Boss))
@@ -2632,12 +2529,12 @@ Sub ApplyPartyAttackCamera()
 
     End If
 
-    PartyShotPosition1000.X = PartyShotPosition1000.X + (Desired.Position.X * 1000 - PartyShotPosition1000.X) * CameraElapsed / (320 + CameraElapsed)
-    PartyShotPosition1000.Y = PartyShotPosition1000.Y + (Desired.Position.Y * 1000 - PartyShotPosition1000.Y) * CameraElapsed / (320 + CameraElapsed)
-    PartyShotPosition1000.Z = PartyShotPosition1000.Z + (Desired.Position.Z * 1000 - PartyShotPosition1000.Z) * CameraElapsed / (320 + CameraElapsed)
-    PartyShotTarget1000.X = PartyShotTarget1000.X + (Desired.Target.X * 1000 - PartyShotTarget1000.X) * CameraElapsed / (180 + CameraElapsed)
-    PartyShotTarget1000.Y = PartyShotTarget1000.Y + (Desired.Target.Y * 1000 - PartyShotTarget1000.Y) * CameraElapsed / (180 + CameraElapsed)
-    PartyShotTarget1000.Z = PartyShotTarget1000.Z + (Desired.Target.Z * 1000 - PartyShotTarget1000.Z) * CameraElapsed / (180 + CameraElapsed)
+    PartyShotPosition1000.X = PartyShotPosition1000.X + (Desired.Position.X * 1000 - PartyShotPosition1000.X) * Timing.CameraElapsed / (320 + Timing.CameraElapsed)
+    PartyShotPosition1000.Y = PartyShotPosition1000.Y + (Desired.Position.Y * 1000 - PartyShotPosition1000.Y) * Timing.CameraElapsed / (320 + Timing.CameraElapsed)
+    PartyShotPosition1000.Z = PartyShotPosition1000.Z + (Desired.Position.Z * 1000 - PartyShotPosition1000.Z) * Timing.CameraElapsed / (320 + Timing.CameraElapsed)
+    PartyShotTarget1000.X = PartyShotTarget1000.X + (Desired.Target.X * 1000 - PartyShotTarget1000.X) * Timing.CameraElapsed / (180 + Timing.CameraElapsed)
+    PartyShotTarget1000.Y = PartyShotTarget1000.Y + (Desired.Target.Y * 1000 - PartyShotTarget1000.Y) * Timing.CameraElapsed / (180 + Timing.CameraElapsed)
+    PartyShotTarget1000.Z = PartyShotTarget1000.Z + (Desired.Target.Z * 1000 - PartyShotTarget1000.Z) * Timing.CameraElapsed / (180 + Timing.CameraElapsed)
     PartyHeroCamera = Desired
     PartyHeroCamera.Position.X = PartyShotPosition1000.X / 1000
     PartyHeroCamera.Position.Y = PartyShotPosition1000.Y / 1000
@@ -2675,26 +2572,30 @@ Sub AdvanceAnimationSequence()
     Dim ClipCount As Number
     Dim CurrentAnimationTime As Number
 
-    If Not DemoEnabled Or PartyMode Then
+    If Not Playback.DemoEnabled Or PartyMode Then
         Return
     End If
 
     ClipCount = Character3D.ClipCount(Character)
     CurrentAnimationTime = Character3D.AnimationTime(Character)
-    AnimationCycleElapsed = AnimationCycleElapsed + PresentationElapsed
+    Playback.AnimationCycleElapsed = Playback.AnimationCycleElapsed + Timing.PresentationElapsed
 
-    If CurrentAnimationTime < DemoPreviousAnimationTime Then
-        DemoCompletedLoops = DemoCompletedLoops + 1
+    If CurrentAnimationTime < Playback.DemoPreviousAnimationTime Then
+        Playback.DemoCompletedLoops = Playback.DemoCompletedLoops + 1
     End If
 
-    DemoPreviousAnimationTime = CurrentAnimationTime
+    Playback.DemoPreviousAnimationTime = CurrentAnimationTime
 
-    If (DemoCompletedLoops >= DemoRequiredLoops() Or
-        (SelectedClipMode() = Graphics3D.ANIMATION_ONCE And
-        AnimationCycleElapsed >= DemoSequenceTargetMilliseconds() And
-        CurrentAnimationTime >= Character3D.ClipDuration(Character, SelectedClip))) Then
-        SelectedClip = RuntimeClipForPresentationIndex(
-            (PresentationIndexForRuntimeClip(SelectedClip) + 1) Mod ClipCount
+    If (Playback.DemoCompletedLoops >= ViewerPlayback.DemoRequiredLoops(
+        Character, Playback.SelectedClip, Playback.PlaybackSpeed,
+        Session.ProfileIndex, ANIMATION_CYCLE_MILLISECONDS) Or
+        (ViewerPlayback.ClipMode(Session.ProfileIndex, SelectedClipName()) =
+        Graphics3D.ANIMATION_ONCE And
+        Playback.AnimationCycleElapsed >= ViewerPlayback.DemoTarget(
+        Session.ProfileIndex, ANIMATION_CYCLE_MILLISECONDS) And
+        CurrentAnimationTime >= Character3D.ClipDuration(Character, Playback.SelectedClip))) Then
+        Playback.SelectedClip = RuntimeClipForPresentationIndex(
+            (PresentationIndexForRuntimeClip(Playback.SelectedClip) + 1) Mod ClipCount
         )
 
         Call PlaySelectedClip(True)
@@ -2735,7 +2636,7 @@ Function HandleInterfacePointer() As Boolean
 
             If PartyMode Then
                 Call ResetPartyInspector()
-            Else If ViewerError Then
+            Else If Session.ViewerError Then
                 Call RetryViewer()
             Else
 
@@ -2873,7 +2774,7 @@ Function HandleInspectorPointer() As Boolean
 
     If Pointer_Pressed(POINTER_SECONDARY) Then
 
-        If ViewerError Then
+        If Session.ViewerError Then
             Call RetryViewer()
         Else
 
@@ -3070,11 +2971,11 @@ Function HandleInspectorPointer() As Boolean
 
     Else If PointerInRectangle(PanelLeft + 94, 444, 76, 22) Then
 
-        If ProfileIndex = ViewerProfiles.PROFILE_DRAGON Then
+        If Session.ProfileIndex = ViewerProfiles.PROFILE_DRAGON Then
 
             DragonHeadTracking = Not DragonHeadTracking
 
-        Else If ProfileIndex = ViewerProfiles.PROFILE_ORIN Then
+        Else If Session.ProfileIndex = ViewerProfiles.PROFILE_ORIN Then
 
             Call OrinStorm.CycleStyle(OrinStormContext)
 
@@ -3089,13 +2990,13 @@ Function HandleInspectorPointer() As Boolean
 
     Else If PointerInRectangle(PanelLeft + 174, 444, 78, 22) Then
 
-        If ProfileIndex = ViewerProfiles.PROFILE_DRAGON Then
+        If Session.ProfileIndex = ViewerProfiles.PROFILE_DRAGON Then
 
             If Not PartyMode Then
                 DragonCounter = (DragonCounter + 1) Mod 2
             End If
 
-        Else If ProfileIndex = ViewerProfiles.PROFILE_ORIN Then
+        Else If Session.ProfileIndex = ViewerProfiles.PROFILE_ORIN Then
 
             Call OrinStorm.CycleStyle(OrinStormContext)
 
@@ -3108,12 +3009,12 @@ Function HandleInspectorPointer() As Boolean
 
         End If
 
-    Else If (ProfileIndex = ViewerProfiles.PROFILE_ORIN And
+    Else If (Session.ProfileIndex = ViewerProfiles.PROFILE_ORIN And
         PointerInRectangle(PanelLeft + 12, 470, 128, 20)) Then
 
         Call OrinStorm.CycleSceneComfort()
 
-    Else If (ProfileIndex = ViewerProfiles.PROFILE_ORIN And
+    Else If (Session.ProfileIndex = ViewerProfiles.PROFILE_ORIN And
         PointerInRectangle(PanelLeft + 144, 470, 108, 20)) Then
 
         LightningAnimationPaused = Not LightningAnimationPaused
@@ -3123,7 +3024,7 @@ Function HandleInspectorPointer() As Boolean
 
         FlameAnimationPaused = Not FlameAnimationPaused
 
-    Else If (ProfileIndex = ViewerProfiles.PROFILE_ARIN And
+    Else If (Session.ProfileIndex = ViewerProfiles.PROFILE_ARIN And
         PointerInRectangle(PanelLeft + 144, 470, 108, 20)) Then
 
         Call ToggleShieldFireStyle()
@@ -3167,7 +3068,7 @@ Function HandleInspectorPointer() As Boolean
         Return Blocked
     End If
 
-    ClipCount = ViewerProfiles.ClipCount(ProfileIndex)
+    ClipCount = ViewerProfiles.ClipCount(Session.ProfileIndex)
 
     For Index = 0 To ClipCount - 1
 
@@ -3367,13 +3268,13 @@ Sub HandleCalibrationPanelPointer()
 
         Call BeginCalibrationEdit()
 
-        SwordDecoupled[CalibrationClipBase + SelectedClip] = 1 - SwordDecoupled[CalibrationClipBase + SelectedClip]
+        SwordDecoupled[CalibrationClipBase + Playback.SelectedClip] = 1 - SwordDecoupled[CalibrationClipBase + Playback.SelectedClip]
 
     Else If PointerInRectangle(236, 374, 196, 24) Then
 
         Call BeginCalibrationEdit()
 
-        ShieldDecoupled[CalibrationClipBase + SelectedClip] = 1 - ShieldDecoupled[CalibrationClipBase + SelectedClip]
+        ShieldDecoupled[CalibrationClipBase + Playback.SelectedClip] = 1 - ShieldDecoupled[CalibrationClipBase + Playback.SelectedClip]
 
     End If
 
@@ -3464,15 +3365,15 @@ Sub UpdateCameraPointer(Blocked As Boolean)
         Call AdjustZoomTarget(WheelDelta)
     End If
 
-    Ready = Interaction.UpdateOrbitControls(
+    Session.Ready = Interaction.UpdateOrbitControls(
         CameraControls,
         OrbitPressed,
         OrbitHeld,
         OrbitReleased,
         0,
         0
-    ) And Ready
-    Ready = Interaction.UpdatePanZoomControls(
+    ) And Session.Ready
+    Session.Ready = Interaction.UpdatePanZoomControls(
         CameraControls,
         PanPressed,
         PanHeld,
@@ -3480,7 +3381,7 @@ Sub UpdateCameraPointer(Blocked As Boolean)
         0,
         0,
         0
-    ) And Ready
+    ) And Session.Ready
 
     If OrbitActive Then
 
@@ -3610,7 +3511,7 @@ Sub CreateSocketGizmos()
     End For
 
     If Not GizmosReady Then
-        Ready = False
+        Session.Ready = False
 
         Call DestroySocketGizmos()
     End If
@@ -3640,7 +3541,7 @@ Function SocketReferencePart(Name As Text) As Number
 
     Result = 0
 
-    If ViewerProfiles.IsPartyCharacter(ProfileIndex) Then
+    If ViewerProfiles.IsPartyCharacter(Session.ProfileIndex) Then
 
         Result = BODY_PART_INDEX
 
@@ -3760,7 +3661,7 @@ Sub UpdateSocketGizmos()
                 Graphics3D.ANIMATOR_SOCKET_POSITION_Z,
                 SocketReferencePart(Name)
             )
-            Ready = Graphics3D.SetParticle3D(
+            Session.Ready = Graphics3D.SetParticle3D(
                 SocketMarkers,
                 SocketIndex,
                 PositionX1000 / 1000,
@@ -3768,18 +3669,18 @@ Sub UpdateSocketGizmos()
                 PositionZ1000 / 1000,
                 4,
                 0
-            ) And Ready
-            Ready = Graphics3D.SetParticleColor3D(
+            ) And Session.Ready
+            Session.Ready = Graphics3D.SetParticleColor3D(
                 SocketMarkers,
                 SocketIndex,
                 120,
                 220,
                 255,
                 75
-            ) And Ready
+            ) And Session.Ready
         End For
 
-        Ready = Graphics3D.CommitParticleBatch3D(SocketMarkers, SocketCount) And Ready
+        Session.Ready = Graphics3D.CommitParticleBatch3D(SocketMarkers, SocketCount) And Session.Ready
 
     End If
 
@@ -3811,11 +3712,11 @@ Sub CreateEpicGlow()
     Dim CharacterAnimator As Core.Animator3D
     Dim GlowReady As Boolean
 
-    EpicGlowAvailable = ViewerProfiles.EpicGlowAvailable(ProfileIndex)
+    EpicGlowAvailable = ViewerProfiles.EpicGlowAvailable(Session.ProfileIndex)
     EpicGlowAvailable = Character3D.HasSocket(Character, "SwordBase") And EpicGlowAvailable
     EpicGlowAvailable = Character3D.HasSocket(Character, "SwordTip") And EpicGlowAvailable
     EpicGlowAvailable = Character3D.HasSocket(Character, "ShieldCenter") And EpicGlowAvailable
-    EpicGlowVisible = ViewerProfiles.EpicGlowVisibleByDefault(ProfileIndex) And EpicGlowAvailable
+    EpicGlowVisible = ViewerProfiles.EpicGlowVisibleByDefault(Session.ProfileIndex) And EpicGlowAvailable
 
     If Not EpicGlowAvailable Then
         Return
@@ -3872,7 +3773,7 @@ Sub CreateEpicGlow()
         Call Graphics3D.SetObjectShadows3D(SwordGlow, False, False)
         Call Graphics3D.SetObjectColor(ShieldGlow, 255, 196, 64)
 
-        If ProfileIndex = ViewerProfiles.PROFILE_ORIN Then
+        If Session.ProfileIndex = ViewerProfiles.PROFILE_ORIN Then
             Call Graphics3D.SetObjectColor(SwordGlow, 255, 255, 255)
             Call Graphics3D.SetObjectColor(ShieldGlow, 255, 255, 255)
         End If
@@ -3940,7 +3841,7 @@ End Sub
 
 Sub UpdateEquipmentFire()
 
-    If ProfileIndex = ViewerProfiles.PROFILE_DRAGON Then
+    If Session.ProfileIndex = ViewerProfiles.PROFILE_DRAGON Then
         Return
     End If
 
@@ -4008,30 +3909,30 @@ Sub UpdateOrinStorm()
 
     Target = Character3D.SocketPosition(Dragon, "Chest")
 
-    If (PartyMode Or DragonInspection) And PartyReady Then
+    If (PartyMode Or Session.DragonInspection) And PartyReady Then
         Clip = Character3D.ClipName(PartyCompanion.Actor, PartyCompanion.Clip)
 
         Call OrinStorm.Update(OrinStormContext, PartyCompanion.Actor, Clip, Target,
-            Camera, CameraElapsed,
-            PartyCompanion.GlowVisible And (EpicGlowVisible Or DragonInspection) And
+            Camera, Timing.CameraElapsed,
+            PartyCompanion.GlowVisible And (EpicGlowVisible Or Session.DragonInspection) And
                 PartyPresentationState(1) <> PARTY_STATE_KO,
-            SwordVisible, ShieldVisible, LightningAnimationPaused, ScenePaused, OrinLight)
-    Else If ProfileIndex = ViewerProfiles.PROFILE_ORIN Then
-        Clip = Character3D.ClipName(Character, SelectedClip)
+            SwordVisible, ShieldVisible, LightningAnimationPaused, Playback.ScenePaused, OrinLight)
+    Else If Session.ProfileIndex = ViewerProfiles.PROFILE_ORIN Then
+        Clip = Character3D.ClipName(Character, Playback.SelectedClip)
 
         Call OrinStorm.Update(OrinStormContext, Character, Clip, Target, Camera,
-            CameraElapsed, EpicGlowVisible, SwordVisible, ShieldVisible,
-            LightningAnimationPaused, ScenePaused, OrinLight)
+            Timing.CameraElapsed, EpicGlowVisible, SwordVisible, ShieldVisible,
+            LightningAnimationPaused, Playback.ScenePaused, OrinLight)
     End If
 
 End Sub
 
 Sub AdvanceSceneVfx()
 
-    Ready = SceneVfx3D.BeginFrame(SceneVfxClock, CameraElapsed,
-        FlameAnimationPaused, LightningAnimationPaused) And Ready
-    Ready = SceneVfx3D.Advance(SceneVfxClock, Camera,
-        FireInitialized, LightningInitialized) And Ready
+    Session.Ready = SceneVfx3D.BeginFrame(SceneVfxClock, Timing.CameraElapsed,
+        FlameAnimationPaused, LightningAnimationPaused) And Session.Ready
+    Session.Ready = SceneVfx3D.Advance(SceneVfxClock, Camera,
+        FireInitialized, LightningInitialized) And Session.Ready
 
 End Sub
 
@@ -4094,7 +3995,7 @@ Sub UpdateSwordFire()
     ''' Loops and clip changes retain world-space particles; paused pose edits clear stale fire.
     Restart = False
 
-    If ScenePaused And CalibrationEditing Then
+    If Playback.ScenePaused And CalibrationEditing Then
         Restart = (Restart Or Base.X <> SwordFireBase.X Or Base.Y <> SwordFireBase.Y Or
             Base.Z <> SwordFireBase.Z Or Tip.X <> SwordFireTip.X Or
             Tip.Y <> SwordFireTip.Y Or Tip.Z <> SwordFireTip.Z)
@@ -4133,8 +4034,8 @@ Sub UpdateSwordFire()
     End If
 
     If (Time < SwordFireTime Or
-        SelectedClip <> SwordFireClip Or
-        ScenePaused Or
+        Playback.SelectedClip <> SwordFireClip Or
+        Playback.ScenePaused Or
         FlameAnimationPaused Or
         FlamesWerePaused Or
         EquipmentFireFirstSample) Then
@@ -4147,7 +4048,7 @@ Sub UpdateSwordFire()
     SwordFireFailed = Not Ok
     SwordFireBase = Base
     SwordFireTip = Tip
-    SwordFireClip = SelectedClip
+    SwordFireClip = Playback.SelectedClip
     SwordFireTime = Time
 
 End Sub
@@ -4180,7 +4081,7 @@ Sub UpdateShieldFire()
         If (ShieldFireVisible And
             ShieldVisible And
             EpicGlowVisible) Then
-            Call ArinShieldRim.Update(Character, Camera, CameraElapsed)
+            Call ArinShieldRim.Update(Character, Camera, Timing.CameraElapsed)
         Else
 
             Call ArinShieldRim.Shutdown()
@@ -4226,7 +4127,7 @@ Sub UpdateShieldFire()
 
     For Index = 0 To 2
 
-        If ScenePaused And CalibrationEditing Then
+        If Playback.ScenePaused And CalibrationEditing Then
             Restart = (Restart Or Points[Index].X <> ShieldFirePoints[Index].X Or
                 Points[Index].Y <> ShieldFirePoints[Index].Y Or
                 Points[Index].Z <> ShieldFirePoints[Index].Z)
@@ -4255,8 +4156,8 @@ Sub UpdateShieldFire()
         Call Fire.SetSourceVelocityInheritance(ShieldFire[Index], 10)
 
         If (Time < ShieldFireTime Or
-            SelectedClip <> ShieldFireClip Or
-            ScenePaused Or
+            Playback.SelectedClip <> ShieldFireClip Or
+            Playback.ScenePaused Or
             FlameAnimationPaused Or
             FlamesWerePaused Or
             EquipmentFireFirstSample) Then
@@ -4267,7 +4168,7 @@ Sub UpdateShieldFire()
     End For
 
     ShieldFireFailed = Not Ok
-    ShieldFireClip = SelectedClip
+    ShieldFireClip = Playback.SelectedClip
     ShieldFireTime = Time
 
 End Sub
@@ -4313,14 +4214,14 @@ Function UpdateEpicGlow() As Boolean
     Dim ShieldCenter As Core.Vector3
     Dim Result As Boolean
 
-    SwordBase = Character3D.SocketPosition(Character, "SwordBase", BODY_PART_INDEX, SwordDecoupled[CalibrationClipBase + SelectedClip] <> 0)
-    SwordTip = Character3D.SocketPosition(Character, "SwordTip", BODY_PART_INDEX, SwordDecoupled[CalibrationClipBase + SelectedClip] <> 0)
-    ShieldCenter = Character3D.SocketPosition(Character, "ShieldCenter", BODY_PART_INDEX, ShieldDecoupled[CalibrationClipBase + SelectedClip] <> 0)
+    SwordBase = Character3D.SocketPosition(Character, "SwordBase", BODY_PART_INDEX, SwordDecoupled[CalibrationClipBase + Playback.SelectedClip] <> 0)
+    SwordTip = Character3D.SocketPosition(Character, "SwordTip", BODY_PART_INDEX, SwordDecoupled[CalibrationClipBase + Playback.SelectedClip] <> 0)
+    ShieldCenter = Character3D.SocketPosition(Character, "ShieldCenter", BODY_PART_INDEX, ShieldDecoupled[CalibrationClipBase + Playback.SelectedClip] <> 0)
     SwordCenter.X = (SwordBase.X + SwordTip.X) / 2
     SwordCenter.Y = (SwordBase.Y + SwordTip.Y) / 2
     SwordCenter.Z = (SwordBase.Z + SwordTip.Z) / 2
 
-    If ProfileIndex = ViewerProfiles.PROFILE_ARIN Then
+    If Session.ProfileIndex = ViewerProfiles.PROFILE_ARIN Then
         Call UpdateEpicGlowTrailState(SwordTip, ShieldCenter)
         Call AdvanceEpicGlowTrails(SwordTip, ShieldCenter)
     End If
@@ -4386,7 +4287,7 @@ Function DrawEquipmentGlow() As Boolean
 
     If (ShieldVisible And
         Not SwordFireReady And
-        ProfileIndex <> ViewerProfiles.PROFILE_ORIN) Then
+        Session.ProfileIndex <> ViewerProfiles.PROFILE_ORIN) Then
         Result = Graphics3D.DrawObject3D(ShieldGlow) And Result
     End If
 
@@ -4459,7 +4360,7 @@ Sub AdvanceEpicGlowTrails(SwordTip As Core.Vector3, ShieldCenter As Core.Vector3
         Return
     End If
 
-    EquipmentTrailElapsed = EquipmentTrailElapsed + AnimationUpdateElapsed
+    EquipmentTrailElapsed = EquipmentTrailElapsed + Playback.AnimationUpdateElapsed
 
     If EquipmentTrailElapsed < EQUIPMENT_TRAIL_SAMPLE_MILLISECONDS Then
         Return
@@ -4556,7 +4457,7 @@ Function DrawEpicGlow() As Boolean
 
     Result = True
 
-    If ProfileIndex <> ViewerProfiles.PROFILE_ARIN Then
+    If Session.ProfileIndex <> ViewerProfiles.PROFILE_ARIN Then
         Return True
     End If
 
@@ -4608,8 +4509,8 @@ Sub AdjustPlaybackSpeed(Amount As Number)
         Return
     End If
 
-    PlaybackSpeed = Min(ActiveProfile.MaximumPlaybackSpeed,
-        Max(ActiveProfile.MinimumPlaybackSpeed, PlaybackSpeed + Amount))
+    Call ViewerPlayback.AdjustSpeed(Playback, ActiveProfile.MinimumPlaybackSpeed,
+        ActiveProfile.MaximumPlaybackSpeed, Amount)
 
     If PartyMode Then
         Call ResetPartyDemo()
@@ -4633,14 +4534,14 @@ Sub NudgeOrbit(DeltaX As Number, DeltaY As Number)
 
     Call RecordCameraInteraction()
 
-    Ready = Interaction.UpdateOrbitControls(
+    Session.Ready = Interaction.UpdateOrbitControls(
         CameraControls,
         True,
         True,
         True,
         DeltaX,
         DeltaY
-    ) And Ready
+    ) And Session.Ready
 
     Call ClampCameraControls()
 
@@ -4650,7 +4551,7 @@ Sub NudgePan(DeltaX As Number, DeltaY As Number)
 
     Call RecordCameraInteraction()
 
-    Ready = Interaction.UpdatePanZoomControls(
+    Session.Ready = Interaction.UpdatePanZoomControls(
         CameraControls,
         True,
         True,
@@ -4658,7 +4559,7 @@ Sub NudgePan(DeltaX As Number, DeltaY As Number)
         DeltaX,
         DeltaY,
         0
-    ) And Ready
+    ) And Session.Ready
 
     Call ClampCameraControls()
 
@@ -4678,7 +4579,7 @@ End Sub
 
 Sub AdvanceSmoothZoom()
 
-    Ready = CharacterViewer.AdvanceZoom(SmoothZoom, CameraElapsed) And Ready
+    Session.Ready = CharacterViewer.AdvanceZoom(SmoothZoom, Timing.CameraElapsed) And Session.Ready
     CameraControls.Zoom = CharacterViewer.ZoomDegrees(SmoothZoom)
 
 End Sub
@@ -4754,8 +4655,8 @@ Sub RestartPresentation()
 
     AutoOrbit = True
     AutoOrbitYaw1000 = CameraControls.OrbitYaw * 1000
-    AnimationCycleElapsed = 0
-    SelectedClip = RuntimeClipForPresentationIndex(0)
+    Playback.AnimationCycleElapsed = 0
+    Playback.SelectedClip = RuntimeClipForPresentationIndex(0)
 
     Call PlaySelectedClip()
 
@@ -4803,15 +4704,15 @@ Sub ResetAll()
         Call CancelCalibrationEdit()
     End If
 
-    PlaybackSpeed = ActiveProfile.DefaultPlaybackSpeed
-    ScenePaused = False
+    Playback.PlaybackSpeed = ActiveProfile.DefaultPlaybackSpeed
+    Playback.ScenePaused = False
     FlameAnimationPaused = False
     LightningAnimationPaused = False
     UiVisibility = 0
     SwordFireFailed = False
     ShieldFireFailed = False
     EquipmentFireFirstError = 0
-    DemoEnabled = True
+    Playback.DemoEnabled = True
     FitLocked = True
     LightingIndex = 0
     MaterialInspection = Graphics3D.MATERIAL_INSPECTION_LIT
@@ -4820,7 +4721,7 @@ Sub ResetAll()
     ShowAllSocketOrigins = False
     FloorVisible = True
     GridVisible = True
-    EpicGlowVisible = ViewerProfiles.EpicGlowVisibleByDefault(ProfileIndex) And EpicGlowAvailable
+    EpicGlowVisible = ViewerProfiles.EpicGlowVisibleByDefault(Session.ProfileIndex) And EpicGlowAvailable
     DragonVisible = DragonAvailable
     SwordVisible = True
     ShieldVisible = True
@@ -4838,11 +4739,11 @@ Sub ResetAll()
     Call ApplyArenaFacing()
 
     If CalibrationAvailable Then
-        Ready = Character3D.SetPartVisible(Character, WEAPON_PART_INDEX, True) And Ready
-        Ready = Character3D.SetPartVisible(Character, SHIELD_PART_INDEX, True) And Ready
+        Session.Ready = Character3D.SetPartVisible(Character, WEAPON_PART_INDEX, True) And Session.Ready
+        Session.Ready = Character3D.SetPartVisible(Character, SHIELD_PART_INDEX, True) And Session.Ready
     End If
 
-    Ready = Graphics3D.SetMaterialInspection3D(MaterialInspection) And Ready
+    Session.Ready = Graphics3D.SetMaterialInspection3D(MaterialInspection) And Session.Ready
 
     If PartyMode And PartyReady Then
 
@@ -4949,11 +4850,11 @@ Sub SelectClip(Index As Number)
     Call BeginPartyPreview()
     Call CancelCalibrationEdit()
 
-    SelectedClip = Index
-    AnimationCycleElapsed = 0
+    Playback.SelectedClip = Index
+    Playback.AnimationCycleElapsed = 0
 
     If Not PartyMode Then
-        DemoEnabled = False
+        Playback.DemoEnabled = False
     End If
 
     CalibrationClearConfirm = False
@@ -4983,11 +4884,11 @@ Function RuntimeClipForPresentationIndex(Index As Number) As Number
 
     Result = -1
 
-    If Index < 0 Or Index >= ViewerProfiles.ClipCount(ProfileIndex) Then
+    If Index < 0 Or Index >= ViewerProfiles.ClipCount(Session.ProfileIndex) Then
         Return Result
     End If
 
-    DesiredName = ViewerProfiles.ClipName(ProfileIndex, Index)
+    DesiredName = ViewerProfiles.ClipName(Session.ProfileIndex, Index)
 
     For ClipIndex = 0 To Character3D.ClipCount(Character) - 1
 
@@ -5010,9 +4911,9 @@ Function PresentationIndexForRuntimeClip(RuntimeClip As Number) As Number
     Result = 0
     RuntimeName = Character3D.ClipName(Character, RuntimeClip)
 
-    For Index = 0 To ViewerProfiles.ClipCount(ProfileIndex) - 1
+    For Index = 0 To ViewerProfiles.ClipCount(Session.ProfileIndex) - 1
 
-        If ViewerProfiles.ClipName(ProfileIndex, Index) = RuntimeName Then
+        If ViewerProfiles.ClipName(Session.ProfileIndex, Index) = RuntimeName Then
             Return Index
         End If
 
@@ -5031,12 +4932,12 @@ Sub StepAnimationFrame(Direction As Number)
     Call BeginPartyPreview()
     Call CancelCalibrationEdit()
 
-    ScenePaused = True
-    SampleRate = Character3D.ClipSampleRate(Character, SelectedClip)
+    Playback.ScenePaused = True
+    SampleRate = Character3D.ClipSampleRate(Character, Playback.SelectedClip)
     StepMilliseconds = Max(1, 1000 / Max(1, SampleRate))
     TargetTime = Character3D.AnimationTime(Character) + Direction * StepMilliseconds
-    TargetTime = Max(0, Min(Character3D.ClipDuration(Character, SelectedClip), TargetTime))
-    Ready = Character3D.SetAnimationTime(Character, TargetTime) And Ready
+    TargetTime = Max(0, Min(Character3D.ClipDuration(Character, Playback.SelectedClip), TargetTime))
+    Session.Ready = Character3D.SetAnimationTime(Character, TargetTime) And Session.Ready
 
     Call InvalidateVisualHistory()
 
@@ -5047,9 +4948,9 @@ Sub SeekFirstAnimationFrame()
     Call BeginPartyPreview()
     Call CancelCalibrationEdit()
 
-    ScenePaused = True
-    SelectedTimelineEvent = FirstClipEvent()
-    Ready = Character3D.SetAnimationTime(Character, 0) And Ready
+    Playback.ScenePaused = True
+    Playback.SelectedTimelineEvent = FirstClipEvent()
+    Session.Ready = Character3D.SetAnimationTime(Character, 0) And Session.Ready
 
     Call InvalidateVisualHistory()
 
@@ -5068,7 +4969,7 @@ Sub SeekCalibrationKeyframe(Direction As Number)
 
     Call BeginPartyPreview()
 
-    ScenePaused = True
+    Playback.ScenePaused = True
 
     If Not CalibrationAvailable Then
         Return
@@ -5078,7 +4979,7 @@ Sub SeekCalibrationKeyframe(Direction As Number)
         Call CancelCalibrationEdit()
     End If
 
-    KeyCount = CalibrationKeyframeCounts[CalibrationClipBase + SelectedClip]
+    KeyCount = CalibrationKeyframeCounts[CalibrationClipBase + Playback.SelectedClip]
 
     If KeyCount <= 0 Then
         Return
@@ -5092,7 +4993,7 @@ Sub SeekCalibrationKeyframe(Direction As Number)
 
         For Index = 0 To KeyCount - 1
 
-            If CalibrationKeyframeFrames[CalibrationClipBase + SelectedClip, Index] < CurrentFrame Then
+            If CalibrationKeyframeFrames[CalibrationClipBase + Playback.SelectedClip, Index] < CurrentFrame Then
                 CandidateIndex = Index
             End If
 
@@ -5103,7 +5004,7 @@ Sub SeekCalibrationKeyframe(Direction As Number)
 
         For Index = 0 To KeyCount - 1
 
-            If CalibrationKeyframeFrames[CalibrationClipBase + SelectedClip, Index] > CurrentFrame Then
+            If CalibrationKeyframeFrames[CalibrationClipBase + Playback.SelectedClip, Index] > CurrentFrame Then
                 CandidateIndex = Index
                 Exit For
             End If
@@ -5112,9 +5013,9 @@ Sub SeekCalibrationKeyframe(Direction As Number)
 
     End If
 
-    TargetFrame = CalibrationKeyframeFrames[CalibrationClipBase + SelectedClip, CandidateIndex]
-    TargetTime = CalibrationFrameTimeMilliseconds(SelectedClip, TargetFrame)
-    Ready = Character3D.SetAnimationTime(Character, TargetTime) And Ready
+    TargetFrame = CalibrationKeyframeFrames[CalibrationClipBase + Playback.SelectedClip, CandidateIndex]
+    TargetTime = CalibrationFrameTimeMilliseconds(Playback.SelectedClip, TargetFrame)
+    Session.Ready = Character3D.SetAnimationTime(Character, TargetTime) And Session.Ready
 
     Call InvalidateVisualHistory()
 
@@ -5133,7 +5034,7 @@ Sub SeekAuthoredEvent(Direction As Number)
     Dim EventTime As Number
 
     CurrentAnimationTime = Character3D.AnimationTime(Character)
-    Duration = Character3D.ClipDuration(Character, SelectedClip)
+    Duration = Character3D.ClipDuration(Character, Playback.SelectedClip)
 
     If Direction < 0 Then
         CandidateTime = -1
@@ -5145,7 +5046,7 @@ Sub SeekAuthoredEvent(Direction As Number)
 
     For EventIndex = 1 To Character3D.EventCount(Character)
 
-        If Character3D.EventClipIndex(Character, EventIndex) = SelectedClip Then
+        If Character3D.EventClipIndex(Character, EventIndex) = Playback.SelectedClip Then
 
             EventTime = Character3D.EventTime(Character, EventIndex)
 
@@ -5177,8 +5078,8 @@ Sub SeekAuthoredEvent(Direction As Number)
         CandidateIndex = 0
     End If
 
-    SelectedTimelineEvent = CandidateIndex
-    Ready = Character3D.SetAnimationTime(Character, CandidateTime) And Ready
+    Playback.SelectedTimelineEvent = CandidateIndex
+    Session.Ready = Character3D.SetAnimationTime(Character, CandidateTime) And Session.Ready
 
     Call InvalidateVisualHistory()
 
@@ -5192,13 +5093,13 @@ Sub SeekFromPointer()
     Call BeginPartyPreview()
     Call CancelCalibrationEdit()
 
-    ScenePaused = True
+    Playback.ScenePaused = True
 
-    Duration = Character3D.ClipDuration(Character, SelectedClip)
+    Duration = Character3D.ClipDuration(Character, Playback.SelectedClip)
     TargetTime = (Pointer_X() - TIMELINE_LEFT) * Duration / Max(1, TimelineWidth())
     TargetTime = Max(0, Min(Duration, TargetTime))
-    SelectedTimelineEvent = NearestClipEvent(TargetTime)
-    Ready = Character3D.SetAnimationTime(Character, TargetTime) And Ready
+    Playback.SelectedTimelineEvent = NearestClipEvent(TargetTime)
+    Session.Ready = Character3D.SetAnimationTime(Character, TargetTime) And Session.Ready
 
     Call InvalidateVisualHistory()
 
@@ -5211,12 +5112,12 @@ Function TimelineFrameFromPointer() As Number
     Dim SampleRate As Number
     Dim TargetTime As Number
 
-    Duration = Character3D.ClipDuration(Character, SelectedClip)
+    Duration = Character3D.ClipDuration(Character, Playback.SelectedClip)
     TargetTime = (Pointer_X() - TIMELINE_LEFT) * Duration / Max(1, TimelineWidth())
     TargetTime = Max(0, Min(Duration, TargetTime))
-    SampleRate = Max(1, Character3D.ClipSampleRate(Character, SelectedClip))
+    SampleRate = Max(1, Character3D.ClipSampleRate(Character, Playback.SelectedClip))
     Result = (TargetTime * SampleRate + 500) / 1000
-    Result = Min(Character3D.ClipSampleCount(Character, SelectedClip) - 1, Max(0, Result))
+    Result = Min(Character3D.ClipSampleCount(Character, Playback.SelectedClip) - 1, Max(0, Result))
 
     Return Result
 
@@ -5249,14 +5150,14 @@ Function TimelineKeyframeAtPointer() As Number
         Return Result
     End If
 
-    Duration = Max(1, Character3D.ClipDuration(Character, SelectedClip))
+    Duration = Max(1, Character3D.ClipDuration(Character, Playback.SelectedClip))
     Width = TimelineWidth()
 
-    For Index = 0 To CalibrationKeyframeCounts[CalibrationClipBase + SelectedClip] - 1
+    For Index = 0 To CalibrationKeyframeCounts[CalibrationClipBase + Playback.SelectedClip] - 1
 
         KeyframeTime = CalibrationFrameTimeMilliseconds(
-            SelectedClip,
-            CalibrationKeyframeFrames[CalibrationClipBase + SelectedClip, Index]
+            Playback.SelectedClip,
+            CalibrationKeyframeFrames[CalibrationClipBase + Playback.SelectedClip, Index]
         )
         MarkerX = TIMELINE_LEFT + KeyframeTime * Width / Duration
 
@@ -5280,11 +5181,11 @@ Sub BeginTimelineKeyframeDrag(KeyframeIndex As Number)
     TimelineKeyframeDragging = True
     TimelineScrubbing = False
     TimelineDraggedKeyframe = KeyframeIndex
-    TimelineDraggedOriginalFrame = CalibrationKeyframeFrames[CalibrationClipBase + SelectedClip, KeyframeIndex]
+    TimelineDraggedOriginalFrame = CalibrationKeyframeFrames[CalibrationClipBase + Playback.SelectedClip, KeyframeIndex]
     TimelineDraggedTargetFrame = TimelineDraggedOriginalFrame
 
     For Channel = 0 To CALIBRATION_CHANNEL_COUNT - 1
-        TimelineDraggedKeyframeValues[Channel] = CalibrationKeyframeValues[CalibrationClipBase + SelectedClip, KeyframeIndex * CALIBRATION_CHANNEL_COUNT + Channel]
+        TimelineDraggedKeyframeValues[Channel] = CalibrationKeyframeValues[CalibrationClipBase + Playback.SelectedClip, KeyframeIndex * CALIBRATION_CHANNEL_COUNT + Channel]
     End For
 
     Call UpdateTimelineKeyframeDrag()
@@ -5298,14 +5199,14 @@ Sub UpdateTimelineKeyframeDrag()
     Dim TargetTime As Number
 
     TargetFrame = TimelineFrameFromPointer()
-    ExistingKeyframe = CalibrationKeyframeIndex(SelectedClip, TargetFrame)
+    ExistingKeyframe = CalibrationKeyframeIndex(Playback.SelectedClip, TargetFrame)
 
     If ExistingKeyframe < 0 Or ExistingKeyframe = TimelineDraggedKeyframe Then
         TimelineDraggedTargetFrame = TargetFrame
     End If
 
-    TargetTime = CalibrationFrameTimeMilliseconds(SelectedClip, TimelineDraggedTargetFrame)
-    Ready = Character3D.SetAnimationTime(Character, TargetTime) And Ready
+    TargetTime = CalibrationFrameTimeMilliseconds(Playback.SelectedClip, TimelineDraggedTargetFrame)
+    Session.Ready = Character3D.SetAnimationTime(Character, TargetTime) And Session.Ready
 
     Call InvalidateVisualHistory()
 
@@ -5326,15 +5227,15 @@ Sub FinishTimelineKeyframeDrag()
         Return
     End If
 
-    KeyCount = CalibrationKeyframeCounts[CalibrationClipBase + SelectedClip]
+    KeyCount = CalibrationKeyframeCounts[CalibrationClipBase + Playback.SelectedClip]
     RemainingCount = KeyCount - 1
 
     For Shift = TimelineDraggedKeyframe To RemainingCount - 1
 
-        CalibrationKeyframeFrames[CalibrationClipBase + SelectedClip, Shift] = CalibrationKeyframeFrames[CalibrationClipBase + SelectedClip, Shift + 1]
+        CalibrationKeyframeFrames[CalibrationClipBase + Playback.SelectedClip, Shift] = CalibrationKeyframeFrames[CalibrationClipBase + Playback.SelectedClip, Shift + 1]
 
         For Channel = 0 To CALIBRATION_CHANNEL_COUNT - 1
-            CalibrationKeyframeValues[CalibrationClipBase + SelectedClip, Shift * CALIBRATION_CHANNEL_COUNT + Channel] = CalibrationKeyframeValues[CalibrationClipBase + SelectedClip, (Shift + 1) * CALIBRATION_CHANNEL_COUNT + Channel]
+            CalibrationKeyframeValues[CalibrationClipBase + Playback.SelectedClip, Shift * CALIBRATION_CHANNEL_COUNT + Channel] = CalibrationKeyframeValues[CalibrationClipBase + Playback.SelectedClip, (Shift + 1) * CALIBRATION_CHANNEL_COUNT + Channel]
         End For
     End For
 
@@ -5342,7 +5243,7 @@ Sub FinishTimelineKeyframeDrag()
 
     For Index = 0 To RemainingCount - 1
 
-        If CalibrationKeyframeFrames[CalibrationClipBase + SelectedClip, Index] >= TimelineDraggedTargetFrame Then
+        If CalibrationKeyframeFrames[CalibrationClipBase + Playback.SelectedClip, Index] >= TimelineDraggedTargetFrame Then
             Position = Index
             Exit For
         End If
@@ -5351,17 +5252,17 @@ Sub FinishTimelineKeyframeDrag()
 
     For Shift = RemainingCount Down To Position + 1
 
-        CalibrationKeyframeFrames[CalibrationClipBase + SelectedClip, Shift] = CalibrationKeyframeFrames[CalibrationClipBase + SelectedClip, Shift - 1]
+        CalibrationKeyframeFrames[CalibrationClipBase + Playback.SelectedClip, Shift] = CalibrationKeyframeFrames[CalibrationClipBase + Playback.SelectedClip, Shift - 1]
 
         For Channel = 0 To CALIBRATION_CHANNEL_COUNT - 1
-            CalibrationKeyframeValues[CalibrationClipBase + SelectedClip, Shift * CALIBRATION_CHANNEL_COUNT + Channel] = CalibrationKeyframeValues[CalibrationClipBase + SelectedClip, (Shift - 1) * CALIBRATION_CHANNEL_COUNT + Channel]
+            CalibrationKeyframeValues[CalibrationClipBase + Playback.SelectedClip, Shift * CALIBRATION_CHANNEL_COUNT + Channel] = CalibrationKeyframeValues[CalibrationClipBase + Playback.SelectedClip, (Shift - 1) * CALIBRATION_CHANNEL_COUNT + Channel]
         End For
     End For
 
-    CalibrationKeyframeFrames[CalibrationClipBase + SelectedClip, Position] = TimelineDraggedTargetFrame
+    CalibrationKeyframeFrames[CalibrationClipBase + Playback.SelectedClip, Position] = TimelineDraggedTargetFrame
 
     For Channel = 0 To CALIBRATION_CHANNEL_COUNT - 1
-        CalibrationKeyframeValues[CalibrationClipBase + SelectedClip, Position * CALIBRATION_CHANNEL_COUNT + Channel] = TimelineDraggedKeyframeValues[Channel]
+        CalibrationKeyframeValues[CalibrationClipBase + Playback.SelectedClip, Position * CALIBRATION_CHANNEL_COUNT + Channel] = TimelineDraggedKeyframeValues[Channel]
     End For
 
     Call RefreshCalibrationSavedStatus()
@@ -5445,24 +5346,24 @@ Sub ApplyLighting()
 
     If LightingIndex = 0 Then
 
-        Ready = Graphics3D.ClearAdditionalLights3DChecked() And Ready
-        Ready = Graphics3D.SetAmbientLight3D(255, 255, 255, 68) And Ready
-        Ready = Graphics3D.SetDirectionalLight3D(-35, -80, 25, 255, 248, 235, 220) And Ready
-        Ready = Graphics3D.SetPointLight3D(0, -80, 120, -30, 170, 205, 255, 260, 360) And Ready
-        Ready = Graphics3D.SetPointLight3D(1, 80, 80, 0, 255, 205, 145, 180, 300) And Ready
+        Session.Ready = Graphics3D.ClearAdditionalLights3DChecked() And Session.Ready
+        Session.Ready = Graphics3D.SetAmbientLight3D(255, 255, 255, 68) And Session.Ready
+        Session.Ready = Graphics3D.SetDirectionalLight3D(-35, -80, 25, 255, 248, 235, 220) And Session.Ready
+        Session.Ready = Graphics3D.SetPointLight3D(0, -80, 120, -30, 170, 205, 255, 260, 360) And Session.Ready
+        Session.Ready = Graphics3D.SetPointLight3D(1, 80, 80, 0, 255, 205, 145, 180, 300) And Session.Ready
 
         Call Scene3D.UseCustomLighting()
 
     Else If LightingIndex = 1 Then
 
-        Ready = Scene3D.UseLighting("CharacterStudio") And Ready
+        Session.Ready = Scene3D.UseLighting("CharacterStudio") And Session.Ready
 
     Else If LightingIndex = 2 Then
 
-        Ready = Scene3D.UseLighting("Daylight") And Ready
+        Session.Ready = Scene3D.UseLighting("Daylight") And Session.Ready
 
     Else
-        Ready = Scene3D.UseLighting("Moonlight") And Ready
+        Session.Ready = Scene3D.UseLighting("Moonlight") And Session.Ready
 
     End If
 
@@ -5473,11 +5374,11 @@ Sub ConfigureCalibration()
     Dim Index As Number
     Dim Name As Text
 
-    CalibrationOwnerProfile = ProfileIndex
-    CalibrationProfileFingerprint = ViewerProfiles.CalibrationFingerprint(ProfileIndex)
-    CalibrationDataKey = ViewerProfiles.CalibrationKey(ProfileIndex)
-    CalibrationFilePath = ViewerProfiles.CalibrationFile(ProfileIndex)
-    CalibrationFileLabel = ViewerProfiles.CalibrationJsonName(ProfileIndex)
+    CalibrationOwnerProfile = Session.ProfileIndex
+    CalibrationProfileFingerprint = ViewerProfiles.CalibrationFingerprint(Session.ProfileIndex)
+    CalibrationDataKey = ViewerProfiles.CalibrationKey(Session.ProfileIndex)
+    CalibrationFilePath = ViewerProfiles.CalibrationFile(Session.ProfileIndex)
+    CalibrationFileLabel = ViewerProfiles.CalibrationJsonName(Session.ProfileIndex)
     CalibrationImportPending = False
     CalibrationImportBaseline = ""
     CalibrationTransferMessage = "Saved Keys: " + CalibrationFileLabel
@@ -5497,7 +5398,7 @@ Sub ConfigureCalibration()
 
     End For
 
-    CalibrationAvailable = (ViewerProfiles.IsPartyCharacter(ProfileIndex) And
+    CalibrationAvailable = (ViewerProfiles.IsPartyCharacter(Session.ProfileIndex) And
         Character3D.PartCount(Character) > WEAPON_PART_INDEX And
         SwordWristNode >= 0 And
         ShieldWristNode >= 0)
@@ -5512,7 +5413,7 @@ Sub ConfigureCalibration()
     TransformGizmoPointerOwned = False
     TransformGizmoOpenedEdit = False
     TransformGizmoDragRemainder = 0
-    CharacterSwitchBlocked = False
+    Session.CharacterSwitchBlocked = False
     CalibrationClearConfirm = False
     CalibrationClearAllStage = 0
     CalibrationClipboardAvailable = False
@@ -5566,7 +5467,7 @@ Sub LoadSavedCalibration()
 
     If LoadedCount = 0 Then
 
-        If ProfileIndex = ViewerProfiles.PROFILE_ARIN Then
+        If Session.ProfileIndex = ViewerProfiles.PROFILE_ARIN Then
             Load StorageVersion From "CharacterViewerCalibrationVersion" Default 0
         End If
 
@@ -5574,7 +5475,7 @@ Sub LoadSavedCalibration()
 
         If StorageVersion <> 2 Then
 
-            DefaultAsset = ViewerProfiles.CalibrationAsset(ProfileIndex)
+            DefaultAsset = ViewerProfiles.CalibrationAsset(Session.ProfileIndex)
 
             If DefaultAsset <> "" Then
 
@@ -5606,7 +5507,7 @@ Sub LoadSavedCalibration()
 
     End If
 
-    If ProfileIndex <> ViewerProfiles.PROFILE_ARIN Then
+    If Session.ProfileIndex <> ViewerProfiles.PROFILE_ARIN Then
         Return
     End If
 
@@ -5709,10 +5610,10 @@ Sub HandleCalibrationImport()
 
     Call BeginPartyPreview()
 
-    ScenePaused = True
+    Playback.ScenePaused = True
 
     If Not PartyMode Then
-        DemoEnabled = False
+        Playback.DemoEnabled = False
     End If
 
     If CalibrationEditing Then
@@ -5971,7 +5872,7 @@ Function SavedCalibrationJson() As Text
     Dim ShieldFree As Text
     Dim Result As Text
 
-    Asset = ViewerProfiles.CalibrationMetadataAsset(ProfileIndex)
+    Asset = ViewerProfiles.CalibrationMetadataAsset(Session.ProfileIndex)
 
     Load Text File Asset Into CalibrationMetadataBytes Count MetadataCount
 
@@ -6185,7 +6086,7 @@ Function DecodeCalibrationStorage(LoadedCount As Number) As Boolean
         Return False
     End If
 
-    If ProfileIndex = ViewerProfiles.PROFILE_ORIN And CalibrationStorage[4] <> 3 Then
+    If Session.ProfileIndex = ViewerProfiles.PROFILE_ORIN And CalibrationStorage[4] <> 3 Then
         Return False
     End If
 
@@ -6529,7 +6430,7 @@ Sub SaveCalibrationKeyframes(Optional Persist As Boolean = True)
 
         StorageVersion = 3
 
-        If ProfileIndex = ViewerProfiles.PROFILE_ARIN Then
+        If Session.ProfileIndex = ViewerProfiles.PROFILE_ARIN Then
             Save StorageVersion To "CharacterViewerCalibrationVersion"
         End If
 
@@ -6547,7 +6448,7 @@ Sub RestoreFailedCalibrationWrite(PreviousCount As Number)
     Dim Preview[CALIBRATION_CHANNEL_COUNT] As Number
 
     For Index = 0 To CALIBRATION_CHANNEL_COUNT - 1
-        Preview[Index] = CalibrationChannelValue(SelectedClip, Index)
+        Preview[Index] = CalibrationChannelValue(Playback.SelectedClip, Index)
     End For
 
     Call ClearCalibrationMemory()
@@ -6571,7 +6472,7 @@ Sub RestoreFailedCalibrationWrite(PreviousCount As Number)
     If CalibrationEditing Then
 
         For Index = 0 To CALIBRATION_CHANNEL_COUNT - 1
-            Call SetCalibrationChannelValue(SelectedClip, Index, Preview[Index])
+            Call SetCalibrationChannelValue(Playback.SelectedClip, Index, Preview[Index])
         End For
 
     End If
@@ -6694,24 +6595,24 @@ Sub DeleteCurrentCalibrationKeyframe()
     Dim Shift As Number
 
     CurrentFrame = CurrentAnimationFrame()
-    CurrentKeyframe = CalibrationKeyframeIndex(SelectedClip, CurrentFrame)
+    CurrentKeyframe = CalibrationKeyframeIndex(Playback.SelectedClip, CurrentFrame)
 
     If CurrentKeyframe < 0 Then
         Return
     End If
 
-    KeyCount = CalibrationKeyframeCounts[CalibrationClipBase + SelectedClip]
+    KeyCount = CalibrationKeyframeCounts[CalibrationClipBase + Playback.SelectedClip]
 
     For Shift = CurrentKeyframe To KeyCount - 2
 
-        CalibrationKeyframeFrames[CalibrationClipBase + SelectedClip, Shift] = CalibrationKeyframeFrames[CalibrationClipBase + SelectedClip, Shift + 1]
+        CalibrationKeyframeFrames[CalibrationClipBase + Playback.SelectedClip, Shift] = CalibrationKeyframeFrames[CalibrationClipBase + Playback.SelectedClip, Shift + 1]
 
         For Channel = 0 To CALIBRATION_CHANNEL_COUNT - 1
-            CalibrationKeyframeValues[CalibrationClipBase + SelectedClip, Shift * CALIBRATION_CHANNEL_COUNT + Channel] = CalibrationKeyframeValues[CalibrationClipBase + SelectedClip, (Shift + 1) * CALIBRATION_CHANNEL_COUNT + Channel]
+            CalibrationKeyframeValues[CalibrationClipBase + Playback.SelectedClip, Shift * CALIBRATION_CHANNEL_COUNT + Channel] = CalibrationKeyframeValues[CalibrationClipBase + Playback.SelectedClip, (Shift + 1) * CALIBRATION_CHANNEL_COUNT + Channel]
         End For
     End For
 
-    CalibrationKeyframeCounts[CalibrationClipBase + SelectedClip] = KeyCount - 1
+    CalibrationKeyframeCounts[CalibrationClipBase + Playback.SelectedClip] = KeyCount - 1
     CalibrationSaveLimitReached = False
     CalibrationClearConfirm = False
     CalibrationClearAllStage = 0
@@ -6730,14 +6631,14 @@ Sub CopyCurrentCalibrationKeyframe()
     Dim CurrentKeyframe As Number
 
     CurrentFrame = CurrentAnimationFrame()
-    CurrentKeyframe = CalibrationKeyframeIndex(SelectedClip, CurrentFrame)
+    CurrentKeyframe = CalibrationKeyframeIndex(Playback.SelectedClip, CurrentFrame)
 
     If CurrentKeyframe < 0 Then
         Return
     End If
 
     For Channel = 0 To CALIBRATION_CHANNEL_COUNT - 1
-        CalibrationClipboardValues[Channel] = CalibrationKeyframeValues[CalibrationClipBase + SelectedClip, CurrentKeyframe * CALIBRATION_CHANNEL_COUNT + Channel]
+        CalibrationClipboardValues[Channel] = CalibrationKeyframeValues[CalibrationClipBase + Playback.SelectedClip, CurrentKeyframe * CALIBRATION_CHANNEL_COUNT + Channel]
     End For
 
     CalibrationClipboardAvailable = True
@@ -6751,7 +6652,7 @@ Sub ReloadCurrentCalibrationKeyframe()
     Dim CurrentKeyframe As Number
 
     CurrentFrame = CurrentAnimationFrame()
-    CurrentKeyframe = CalibrationKeyframeIndex(SelectedClip, CurrentFrame)
+    CurrentKeyframe = CalibrationKeyframeIndex(Playback.SelectedClip, CurrentFrame)
 
     If CurrentKeyframe < 0 Then
         Return
@@ -6760,9 +6661,9 @@ Sub ReloadCurrentCalibrationKeyframe()
     For Channel = 0 To CALIBRATION_CHANNEL_COUNT - 1
 
         Call SetCalibrationChannelValue(
-            SelectedClip,
+            Playback.SelectedClip,
             Channel,
-            CalibrationKeyframeValues[CalibrationClipBase + SelectedClip, CurrentKeyframe * CALIBRATION_CHANNEL_COUNT + Channel]
+            CalibrationKeyframeValues[CalibrationClipBase + Playback.SelectedClip, CurrentKeyframe * CALIBRATION_CHANNEL_COUNT + Channel]
         )
     End For
 
@@ -6792,16 +6693,16 @@ Sub PasteCalibrationKeyframe()
     For Channel = 0 To CALIBRATION_CHANNEL_COUNT - 1
 
         Call SetCalibrationChannelValue(
-            SelectedClip,
+            Playback.SelectedClip,
             Channel,
             CalibrationClipboardValues[Channel]
         )
     End For
 
-    CalibrationSavedClip = SelectedClip
+    CalibrationSavedClip = Playback.SelectedClip
     CalibrationSavedFrame = CurrentFrame
-    CalibrationSavedTime = CalibrationFrameTimeMilliseconds(SelectedClip, CurrentFrame)
-    CalibrationSaveLimitReached = Not StoreCalibrationKeyframe(SelectedClip, CurrentFrame)
+    CalibrationSavedTime = CalibrationFrameTimeMilliseconds(Playback.SelectedClip, CurrentFrame)
+    CalibrationSaveLimitReached = Not StoreCalibrationKeyframe(Playback.SelectedClip, CurrentFrame)
 
     If Not CalibrationSaveLimitReached Then
 
@@ -6875,9 +6776,9 @@ Function CurrentAnimationFrame() As Number
     Dim Result As Number
     Dim SampleRate As Number
 
-    SampleRate = Max(1, Character3D.ClipSampleRate(Character, SelectedClip))
+    SampleRate = Max(1, Character3D.ClipSampleRate(Character, Playback.SelectedClip))
     Result = (Character3D.AnimationTime(Character) * SampleRate + 500) / 1000
-    Result = Min(Character3D.ClipSampleCount(Character, SelectedClip) - 1, Max(0, Result))
+    Result = Min(Character3D.ClipSampleCount(Character, Playback.SelectedClip) - 1, Max(0, Result))
 
     Return Result
 
@@ -6963,16 +6864,16 @@ Sub UpdateCalibrationForCurrentFrame()
     Dim StartValue As Number
 
     If (Not CalibrationAvailable Or
-        (CalibrationEditing And CalibrationOwnerProfile = ProfileIndex)) Then
+        (CalibrationEditing And CalibrationOwnerProfile = Session.ProfileIndex)) Then
         Return
     End If
 
-    KeyCount = CalibrationKeyframeCounts[CalibrationClipBase + SelectedClip]
+    KeyCount = CalibrationKeyframeCounts[CalibrationClipBase + Playback.SelectedClip]
 
     If KeyCount = 0 Then
 
         For Channel = 0 To CALIBRATION_CHANNEL_COUNT - 1
-            Call SetCalibrationChannelValue(SelectedClip, Channel, 0)
+            Call SetCalibrationChannelValue(Playback.SelectedClip, Channel, 0)
         End For
 
         Return
@@ -6980,7 +6881,7 @@ Sub UpdateCalibrationForCurrentFrame()
     End If
 
     CurrentFrame = CurrentAnimationFrame()
-    FrameCount = Max(1, Character3D.ClipSampleCount(Character, SelectedClip))
+    FrameCount = Max(1, Character3D.ClipSampleCount(Character, Playback.SelectedClip))
     StartKeyframe = 0
     EndKeyframe = 0
 
@@ -6989,27 +6890,27 @@ Sub UpdateCalibrationForCurrentFrame()
         StartKeyframe = 0
         EndKeyframe = 0
 
-    Else If CurrentFrame < CalibrationKeyframeFrames[CalibrationClipBase + SelectedClip, 0] Then
+    Else If CurrentFrame < CalibrationKeyframeFrames[CalibrationClipBase + Playback.SelectedClip, 0] Then
 
         StartKeyframe = KeyCount - 1
         EndKeyframe = 0
         CurrentFrame = CurrentFrame + FrameCount
 
-    Else If CurrentFrame > CalibrationKeyframeFrames[CalibrationClipBase + SelectedClip, KeyCount - 1] Then
+    Else If CurrentFrame > CalibrationKeyframeFrames[CalibrationClipBase + Playback.SelectedClip, KeyCount - 1] Then
 
         StartKeyframe = KeyCount - 1
         EndKeyframe = 0
 
-    Else If CurrentFrame = CalibrationKeyframeFrames[CalibrationClipBase + SelectedClip, KeyCount - 1] Then
+    Else If CurrentFrame = CalibrationKeyframeFrames[CalibrationClipBase + Playback.SelectedClip, KeyCount - 1] Then
 
         StartKeyframe = KeyCount - 1
         EndKeyframe = KeyCount - 1
 
-    Else If CurrentFrame > CalibrationKeyframeFrames[CalibrationClipBase + SelectedClip, 0] Then
+    Else If CurrentFrame > CalibrationKeyframeFrames[CalibrationClipBase + Playback.SelectedClip, 0] Then
 
         For Index = 1 To KeyCount - 1
 
-            If CurrentFrame <= CalibrationKeyframeFrames[CalibrationClipBase + SelectedClip, Index] Then
+            If CurrentFrame <= CalibrationKeyframeFrames[CalibrationClipBase + Playback.SelectedClip, Index] Then
 
                 StartKeyframe = Index - 1
                 EndKeyframe = Index
@@ -7021,8 +6922,8 @@ Sub UpdateCalibrationForCurrentFrame()
 
     End If
 
-    StartFrame = CalibrationKeyframeFrames[CalibrationClipBase + SelectedClip, StartKeyframe]
-    EndFrame = CalibrationKeyframeFrames[CalibrationClipBase + SelectedClip, EndKeyframe]
+    StartFrame = CalibrationKeyframeFrames[CalibrationClipBase + Playback.SelectedClip, StartKeyframe]
+    EndFrame = CalibrationKeyframeFrames[CalibrationClipBase + Playback.SelectedClip, EndKeyframe]
 
     If (StartKeyframe = KeyCount - 1 And
         EndKeyframe = 0 And
@@ -7032,8 +6933,8 @@ Sub UpdateCalibrationForCurrentFrame()
 
     For Channel = 0 To CALIBRATION_CHANNEL_COUNT - 1
 
-        StartValue = CalibrationKeyframeValues[CalibrationClipBase + SelectedClip, StartKeyframe * CALIBRATION_CHANNEL_COUNT + Channel]
-        EndValue = CalibrationKeyframeValues[CalibrationClipBase + SelectedClip, EndKeyframe * CALIBRATION_CHANNEL_COUNT + Channel]
+        StartValue = CalibrationKeyframeValues[CalibrationClipBase + Playback.SelectedClip, StartKeyframe * CALIBRATION_CHANNEL_COUNT + Channel]
+        EndValue = CalibrationKeyframeValues[CalibrationClipBase + Playback.SelectedClip, EndKeyframe * CALIBRATION_CHANNEL_COUNT + Channel]
         ResultValue = InterpolateCalibrationChannel(
             Channel,
             StartValue,
@@ -7043,7 +6944,7 @@ Sub UpdateCalibrationForCurrentFrame()
             EndFrame
         )
 
-        Call SetCalibrationChannelValue(SelectedClip, Channel, ResultValue)
+        Call SetCalibrationChannelValue(Playback.SelectedClip, Channel, ResultValue)
     End For
 
 End Sub
@@ -7054,35 +6955,35 @@ Sub ApplyWristCalibration()
         Return
     End If
 
-    Ready = Character3D.SetNodeRotationOffset(
+    Session.Ready = Character3D.SetNodeRotationOffset(
         Character,
         SwordWristNode,
-        SwordWristCalibration[CalibrationClipBase + SelectedClip, CALIBRATION_AXIS_X],
-        SwordWristCalibration[CalibrationClipBase + SelectedClip, CALIBRATION_AXIS_Y],
-        SwordWristCalibration[CalibrationClipBase + SelectedClip, CALIBRATION_AXIS_Z]
-    ) And Ready
-    Ready = Character3D.SetNodeRotationOffset(
+        SwordWristCalibration[CalibrationClipBase + Playback.SelectedClip, CALIBRATION_AXIS_X],
+        SwordWristCalibration[CalibrationClipBase + Playback.SelectedClip, CALIBRATION_AXIS_Y],
+        SwordWristCalibration[CalibrationClipBase + Playback.SelectedClip, CALIBRATION_AXIS_Z]
+    ) And Session.Ready
+    Session.Ready = Character3D.SetNodeRotationOffset(
         Character,
         ShieldWristNode,
-        ShieldWristCalibration[CalibrationClipBase + SelectedClip, CALIBRATION_AXIS_X],
-        ShieldWristCalibration[CalibrationClipBase + SelectedClip, CALIBRATION_AXIS_Y],
-        ShieldWristCalibration[CalibrationClipBase + SelectedClip, CALIBRATION_AXIS_Z]
-    ) And Ready
+        ShieldWristCalibration[CalibrationClipBase + Playback.SelectedClip, CALIBRATION_AXIS_X],
+        ShieldWristCalibration[CalibrationClipBase + Playback.SelectedClip, CALIBRATION_AXIS_Y],
+        ShieldWristCalibration[CalibrationClipBase + Playback.SelectedClip, CALIBRATION_AXIS_Z]
+    ) And Session.Ready
 
 End Sub
 
 Sub ApplyEquipmentCoupling()
 
-    Ready = Character3D.SetPartNodeOffsetsEnabled(
-        Character, WEAPON_PART_INDEX, SwordDecoupled[CalibrationClipBase + SelectedClip] = 0
-    ) And Ready
-    Ready = Character3D.SetPartNodeOffsetsEnabled(
-        Character, SHIELD_PART_INDEX, ShieldDecoupled[CalibrationClipBase + SelectedClip] = 0
-    ) And Ready
+    Session.Ready = Character3D.SetPartNodeOffsetsEnabled(
+        Character, WEAPON_PART_INDEX, SwordDecoupled[CalibrationClipBase + Playback.SelectedClip] = 0
+    ) And Session.Ready
+    Session.Ready = Character3D.SetPartNodeOffsetsEnabled(
+        Character, SHIELD_PART_INDEX, ShieldDecoupled[CalibrationClipBase + Playback.SelectedClip] = 0
+    ) And Session.Ready
 
     If EpicGlowAvailable Then
-        Ready = Graphics3D.SetObjectNodeOffsetsEnabled3D(SwordGlow, SwordDecoupled[CalibrationClipBase + SelectedClip] = 0) And Ready
-        Ready = Graphics3D.SetObjectNodeOffsetsEnabled3D(ShieldGlow, ShieldDecoupled[CalibrationClipBase + SelectedClip] = 0) And Ready
+        Session.Ready = Graphics3D.SetObjectNodeOffsetsEnabled3D(SwordGlow, SwordDecoupled[CalibrationClipBase + Playback.SelectedClip] = 0) And Session.Ready
+        Session.Ready = Graphics3D.SetObjectNodeOffsetsEnabled3D(ShieldGlow, ShieldDecoupled[CalibrationClipBase + Playback.SelectedClip] = 0) And Session.Ready
     End If
 
 End Sub
@@ -7135,65 +7036,65 @@ Sub ApplyEquipmentCalibration()
         Graphics3D.ANIMATOR_SOCKET_POSITION_Z,
         BODY_PART_INDEX
     )
-    Ready = Character3D.SetPartPositionOffset(
+    Session.Ready = Character3D.SetPartPositionOffset(
         Character,
         WEAPON_PART_INDEX,
-        SwordPositionCalibration[CalibrationClipBase + SelectedClip, CALIBRATION_AXIS_X],
-        SwordPositionCalibration[CalibrationClipBase + SelectedClip, CALIBRATION_AXIS_Y],
-        SwordPositionCalibration[CalibrationClipBase + SelectedClip, CALIBRATION_AXIS_Z]
-    ) And Ready
+        SwordPositionCalibration[CalibrationClipBase + Playback.SelectedClip, CALIBRATION_AXIS_X],
+        SwordPositionCalibration[CalibrationClipBase + Playback.SelectedClip, CALIBRATION_AXIS_Y],
+        SwordPositionCalibration[CalibrationClipBase + Playback.SelectedClip, CALIBRATION_AXIS_Z]
+    ) And Session.Ready
 
-    Call CaptureViewerFailure(71)
+    Call ViewerSession.CaptureFailure(Session, 71)
 
-    Ready = Character3D.SetPartPositionOffset(
+    Session.Ready = Character3D.SetPartPositionOffset(
         Character,
         SHIELD_PART_INDEX,
-        ShieldPositionCalibration[CalibrationClipBase + SelectedClip, CALIBRATION_AXIS_X],
-        ShieldPositionCalibration[CalibrationClipBase + SelectedClip, CALIBRATION_AXIS_Y],
-        ShieldPositionCalibration[CalibrationClipBase + SelectedClip, CALIBRATION_AXIS_Z]
-    ) And Ready
+        ShieldPositionCalibration[CalibrationClipBase + Playback.SelectedClip, CALIBRATION_AXIS_X],
+        ShieldPositionCalibration[CalibrationClipBase + Playback.SelectedClip, CALIBRATION_AXIS_Y],
+        ShieldPositionCalibration[CalibrationClipBase + Playback.SelectedClip, CALIBRATION_AXIS_Z]
+    ) And Session.Ready
 
-    Call CaptureViewerFailure(72)
+    Call ViewerSession.CaptureFailure(Session, 72)
 
-    Ready = Character3D.SetPartPivotRotationThousandths(
+    Session.Ready = Character3D.SetPartPivotRotationThousandths(
         Character,
         WEAPON_PART_INDEX,
         SwordPivotX1000,
         SwordPivotY1000,
         SwordPivotZ1000,
-        SwordCalibration[CalibrationClipBase + SelectedClip, CALIBRATION_AXIS_X],
-        SwordCalibration[CalibrationClipBase + SelectedClip, CALIBRATION_AXIS_Y],
-        SwordCalibration[CalibrationClipBase + SelectedClip, CALIBRATION_AXIS_Z]
-    ) And Ready
+        SwordCalibration[CalibrationClipBase + Playback.SelectedClip, CALIBRATION_AXIS_X],
+        SwordCalibration[CalibrationClipBase + Playback.SelectedClip, CALIBRATION_AXIS_Y],
+        SwordCalibration[CalibrationClipBase + Playback.SelectedClip, CALIBRATION_AXIS_Z]
+    ) And Session.Ready
 
-    Call CaptureViewerFailure(73)
+    Call ViewerSession.CaptureFailure(Session, 73)
 
-    Ready = Character3D.SetPartPivotRotationThousandths(
+    Session.Ready = Character3D.SetPartPivotRotationThousandths(
         Character,
         SHIELD_PART_INDEX,
         ShieldPivotX1000,
         ShieldPivotY1000,
         ShieldPivotZ1000,
-        ShieldCalibration[CalibrationClipBase + SelectedClip, CALIBRATION_AXIS_X],
-        ShieldCalibration[CalibrationClipBase + SelectedClip, CALIBRATION_AXIS_Y],
-        ShieldCalibration[CalibrationClipBase + SelectedClip, CALIBRATION_AXIS_Z]
-    ) And Ready
+        ShieldCalibration[CalibrationClipBase + Playback.SelectedClip, CALIBRATION_AXIS_X],
+        ShieldCalibration[CalibrationClipBase + Playback.SelectedClip, CALIBRATION_AXIS_Y],
+        ShieldCalibration[CalibrationClipBase + Playback.SelectedClip, CALIBRATION_AXIS_Z]
+    ) And Session.Ready
 
-    Call CaptureViewerFailure(74)
+    Call ViewerSession.CaptureFailure(Session, 74)
 
     If EpicGlowVisible Then
 
         GlowReady = Graphics3D.SetObjectPositionChecked3D(
             SwordGlow,
-            SwordGlow.Position.X + SwordPositionCalibration[CalibrationClipBase + SelectedClip, CALIBRATION_AXIS_X],
-            SwordGlow.Position.Y + SwordPositionCalibration[CalibrationClipBase + SelectedClip, CALIBRATION_AXIS_Y],
-            SwordGlow.Position.Z + SwordPositionCalibration[CalibrationClipBase + SelectedClip, CALIBRATION_AXIS_Z]
+            SwordGlow.Position.X + SwordPositionCalibration[CalibrationClipBase + Playback.SelectedClip, CALIBRATION_AXIS_X],
+            SwordGlow.Position.Y + SwordPositionCalibration[CalibrationClipBase + Playback.SelectedClip, CALIBRATION_AXIS_Y],
+            SwordGlow.Position.Z + SwordPositionCalibration[CalibrationClipBase + Playback.SelectedClip, CALIBRATION_AXIS_Z]
         )
         GlowReady = Graphics3D.SetObjectPositionChecked3D(
             ShieldGlow,
-            ShieldGlow.Position.X + ShieldPositionCalibration[CalibrationClipBase + SelectedClip, CALIBRATION_AXIS_X],
-            ShieldGlow.Position.Y + ShieldPositionCalibration[CalibrationClipBase + SelectedClip, CALIBRATION_AXIS_Y],
-            ShieldGlow.Position.Z + ShieldPositionCalibration[CalibrationClipBase + SelectedClip, CALIBRATION_AXIS_Z]
+            ShieldGlow.Position.X + ShieldPositionCalibration[CalibrationClipBase + Playback.SelectedClip, CALIBRATION_AXIS_X],
+            ShieldGlow.Position.Y + ShieldPositionCalibration[CalibrationClipBase + Playback.SelectedClip, CALIBRATION_AXIS_Y],
+            ShieldGlow.Position.Z + ShieldPositionCalibration[CalibrationClipBase + Playback.SelectedClip, CALIBRATION_AXIS_Z]
         ) And GlowReady
 
         GlowReady = Graphics3D.SetObjectPivotRotationThousandths3D(
@@ -7201,18 +7102,18 @@ Sub ApplyEquipmentCalibration()
             SwordPivotX1000,
             SwordPivotY1000,
             SwordPivotZ1000,
-            SwordCalibration[CalibrationClipBase + SelectedClip, CALIBRATION_AXIS_X],
-            SwordCalibration[CalibrationClipBase + SelectedClip, CALIBRATION_AXIS_Y],
-            SwordCalibration[CalibrationClipBase + SelectedClip, CALIBRATION_AXIS_Z]
+            SwordCalibration[CalibrationClipBase + Playback.SelectedClip, CALIBRATION_AXIS_X],
+            SwordCalibration[CalibrationClipBase + Playback.SelectedClip, CALIBRATION_AXIS_Y],
+            SwordCalibration[CalibrationClipBase + Playback.SelectedClip, CALIBRATION_AXIS_Z]
         ) And GlowReady
         GlowReady = Graphics3D.SetObjectPivotRotationThousandths3D(
             ShieldGlow,
             ShieldPivotX1000,
             ShieldPivotY1000,
             ShieldPivotZ1000,
-            ShieldCalibration[CalibrationClipBase + SelectedClip, CALIBRATION_AXIS_X],
-            ShieldCalibration[CalibrationClipBase + SelectedClip, CALIBRATION_AXIS_Y],
-            ShieldCalibration[CalibrationClipBase + SelectedClip, CALIBRATION_AXIS_Z]
+            ShieldCalibration[CalibrationClipBase + Playback.SelectedClip, CALIBRATION_AXIS_X],
+            ShieldCalibration[CalibrationClipBase + Playback.SelectedClip, CALIBRATION_AXIS_Y],
+            ShieldCalibration[CalibrationClipBase + Playback.SelectedClip, CALIBRATION_AXIS_Z]
         ) And GlowReady
 
         If Not GlowReady Then
@@ -7229,18 +7130,18 @@ Function CurrentCalibrationValue() As Number
 
     If (CalibrationTransform = CALIBRATION_TRANSFORM_MOVE And
         CalibrationTarget = CALIBRATION_TARGET_SWORD) Then
-        Result = SwordPositionCalibration[CalibrationClipBase + SelectedClip, CalibrationAxis]
+        Result = SwordPositionCalibration[CalibrationClipBase + Playback.SelectedClip, CalibrationAxis]
     Else If (CalibrationTransform = CALIBRATION_TRANSFORM_MOVE And
         CalibrationTarget = CALIBRATION_TARGET_SHIELD) Then
-        Result = ShieldPositionCalibration[CalibrationClipBase + SelectedClip, CalibrationAxis]
+        Result = ShieldPositionCalibration[CalibrationClipBase + Playback.SelectedClip, CalibrationAxis]
     Else If CalibrationTarget = CALIBRATION_TARGET_SWORD_WRIST Then
-        Result = SwordWristCalibration[CalibrationClipBase + SelectedClip, CalibrationAxis]
+        Result = SwordWristCalibration[CalibrationClipBase + Playback.SelectedClip, CalibrationAxis]
     Else If CalibrationTarget = CALIBRATION_TARGET_SHIELD_WRIST Then
-        Result = ShieldWristCalibration[CalibrationClipBase + SelectedClip, CalibrationAxis]
+        Result = ShieldWristCalibration[CalibrationClipBase + Playback.SelectedClip, CalibrationAxis]
     Else If CalibrationTarget = CALIBRATION_TARGET_SWORD Then
-        Result = SwordCalibration[CalibrationClipBase + SelectedClip, CalibrationAxis]
+        Result = SwordCalibration[CalibrationClipBase + Playback.SelectedClip, CalibrationAxis]
     Else
-        Result = ShieldCalibration[CalibrationClipBase + SelectedClip, CalibrationAxis]
+        Result = ShieldCalibration[CalibrationClipBase + Playback.SelectedClip, CalibrationAxis]
     End If
 
     Return Result
@@ -7315,21 +7216,21 @@ Sub BeginCalibrationEdit()
 
     CalibrationEditing = True
     CalibrationClearConfirm = False
-    CalibrationEditingClip = SelectedClip
+    CalibrationEditingClip = Playback.SelectedClip
     CalibrationEditingFrame = CurrentAnimationFrame()
-    SwordDecoupledBeforeEdit = SwordDecoupled[CalibrationClipBase + SelectedClip]
-    ShieldDecoupledBeforeEdit = ShieldDecoupled[CalibrationClipBase + SelectedClip]
+    SwordDecoupledBeforeEdit = SwordDecoupled[CalibrationClipBase + Playback.SelectedClip]
+    ShieldDecoupledBeforeEdit = ShieldDecoupled[CalibrationClipBase + Playback.SelectedClip]
     CalibrationAutoOrbitWasEnabled = AutoOrbit
     CalibrationSavedBeforeEdit = CalibrationSaved
 
     For Axis = 0 To CALIBRATION_AXIS_COUNT - 1
 
-        SwordWristCalibrationBeforeEdit[Axis] = SwordWristCalibration[CalibrationClipBase + SelectedClip, Axis]
-        ShieldWristCalibrationBeforeEdit[Axis] = ShieldWristCalibration[CalibrationClipBase + SelectedClip, Axis]
-        SwordCalibrationBeforeEdit[Axis] = SwordCalibration[CalibrationClipBase + SelectedClip, Axis]
-        ShieldCalibrationBeforeEdit[Axis] = ShieldCalibration[CalibrationClipBase + SelectedClip, Axis]
-        SwordPositionCalibrationBeforeEdit[Axis] = SwordPositionCalibration[CalibrationClipBase + SelectedClip, Axis]
-        ShieldPositionCalibrationBeforeEdit[Axis] = ShieldPositionCalibration[CalibrationClipBase + SelectedClip, Axis]
+        SwordWristCalibrationBeforeEdit[Axis] = SwordWristCalibration[CalibrationClipBase + Playback.SelectedClip, Axis]
+        ShieldWristCalibrationBeforeEdit[Axis] = ShieldWristCalibration[CalibrationClipBase + Playback.SelectedClip, Axis]
+        SwordCalibrationBeforeEdit[Axis] = SwordCalibration[CalibrationClipBase + Playback.SelectedClip, Axis]
+        ShieldCalibrationBeforeEdit[Axis] = ShieldCalibration[CalibrationClipBase + Playback.SelectedClip, Axis]
+        SwordPositionCalibrationBeforeEdit[Axis] = SwordPositionCalibration[CalibrationClipBase + Playback.SelectedClip, Axis]
+        ShieldPositionCalibrationBeforeEdit[Axis] = ShieldPositionCalibration[CalibrationClipBase + Playback.SelectedClip, Axis]
     End For
 
     AutoOrbit = False
@@ -7351,7 +7252,7 @@ Sub FinishCalibrationEdit()
     TransformGizmoPointerOwned = False
     TransformGizmoOpenedEdit = False
     TransformGizmoDragRemainder = 0
-    CharacterSwitchBlocked = False
+    Session.CharacterSwitchBlocked = False
     AutoOrbit = CalibrationAutoOrbitWasEnabled
 
     Call InvalidateVisualHistory()
@@ -7419,15 +7320,15 @@ Sub SetCurrentCalibrationValue(Value As Number)
             CalibrationGripAnchorActive = True
             CalibrationGripAnchorTarget = CalibrationTarget
             CalibrationGripAnchorFrame = CurrentAnimationFrame()
-            CalibrationGripBasePosition.X = SwordPositionCalibration[CalibrationClipBase + SelectedClip, 0]
-            CalibrationGripBasePosition.Y = SwordPositionCalibration[CalibrationClipBase + SelectedClip, 1]
-            CalibrationGripBasePosition.Z = SwordPositionCalibration[CalibrationClipBase + SelectedClip, 2]
+            CalibrationGripBasePosition.X = SwordPositionCalibration[CalibrationClipBase + Playback.SelectedClip, 0]
+            CalibrationGripBasePosition.Y = SwordPositionCalibration[CalibrationClipBase + Playback.SelectedClip, 1]
+            CalibrationGripBasePosition.Z = SwordPositionCalibration[CalibrationClipBase + Playback.SelectedClip, 2]
 
             If PartIndex = SHIELD_PART_INDEX Then
 
-                CalibrationGripBasePosition.X = ShieldPositionCalibration[CalibrationClipBase + SelectedClip, 0]
-                CalibrationGripBasePosition.Y = ShieldPositionCalibration[CalibrationClipBase + SelectedClip, 1]
-                CalibrationGripBasePosition.Z = ShieldPositionCalibration[CalibrationClipBase + SelectedClip, 2]
+                CalibrationGripBasePosition.X = ShieldPositionCalibration[CalibrationClipBase + Playback.SelectedClip, 0]
+                CalibrationGripBasePosition.Y = ShieldPositionCalibration[CalibrationClipBase + Playback.SelectedClip, 1]
+                CalibrationGripBasePosition.Z = ShieldPositionCalibration[CalibrationClipBase + Playback.SelectedClip, 2]
 
             End If
 
@@ -7450,18 +7351,18 @@ Sub SetCurrentCalibrationValue(Value As Number)
 
     If (CalibrationTransform = CALIBRATION_TRANSFORM_MOVE And
         CalibrationTarget = CALIBRATION_TARGET_SWORD) Then
-        SwordPositionCalibration[CalibrationClipBase + SelectedClip, CalibrationAxis] = ClampedValue
+        SwordPositionCalibration[CalibrationClipBase + Playback.SelectedClip, CalibrationAxis] = ClampedValue
     Else If (CalibrationTransform = CALIBRATION_TRANSFORM_MOVE And
         CalibrationTarget = CALIBRATION_TARGET_SHIELD) Then
-        ShieldPositionCalibration[CalibrationClipBase + SelectedClip, CalibrationAxis] = ClampedValue
+        ShieldPositionCalibration[CalibrationClipBase + Playback.SelectedClip, CalibrationAxis] = ClampedValue
     Else If CalibrationTarget = CALIBRATION_TARGET_SWORD_WRIST Then
-        SwordWristCalibration[CalibrationClipBase + SelectedClip, CalibrationAxis] = ClampedValue
+        SwordWristCalibration[CalibrationClipBase + Playback.SelectedClip, CalibrationAxis] = ClampedValue
     Else If CalibrationTarget = CALIBRATION_TARGET_SHIELD_WRIST Then
-        ShieldWristCalibration[CalibrationClipBase + SelectedClip, CalibrationAxis] = ClampedValue
+        ShieldWristCalibration[CalibrationClipBase + Playback.SelectedClip, CalibrationAxis] = ClampedValue
     Else If CalibrationTarget = CALIBRATION_TARGET_SWORD Then
-        SwordCalibration[CalibrationClipBase + SelectedClip, CalibrationAxis] = ClampedValue
+        SwordCalibration[CalibrationClipBase + Playback.SelectedClip, CalibrationAxis] = ClampedValue
     Else
-        ShieldCalibration[CalibrationClipBase + SelectedClip, CalibrationAxis] = ClampedValue
+        ShieldCalibration[CalibrationClipBase + Playback.SelectedClip, CalibrationAxis] = ClampedValue
     End If
 
     CalibrationSaveLimitReached = False
@@ -7478,9 +7379,9 @@ Sub SetCurrentCalibrationValue(Value As Number)
             CalibrationGripLimit = True
 
             If PartIndex = WEAPON_PART_INDEX Then
-                SwordCalibration[CalibrationClipBase + SelectedClip, CalibrationAxis] = PreviousValue
+                SwordCalibration[CalibrationClipBase + Playback.SelectedClip, CalibrationAxis] = PreviousValue
             Else
-                ShieldCalibration[CalibrationClipBase + SelectedClip, CalibrationAxis] = PreviousValue
+                ShieldCalibration[CalibrationClipBase + Playback.SelectedClip, CalibrationAxis] = PreviousValue
             End If
 
             Call ApplyEquipmentCalibration()
@@ -7520,15 +7421,15 @@ Function RestoreEquipmentGrip(PartIndex As Number, SocketName As Text) As Boolea
 
     If PartIndex = WEAPON_PART_INDEX Then
 
-        SwordPositionCalibration[CalibrationClipBase + SelectedClip, 0] = CalibrationGripBasePosition.X
-        SwordPositionCalibration[CalibrationClipBase + SelectedClip, 1] = CalibrationGripBasePosition.Y
-        SwordPositionCalibration[CalibrationClipBase + SelectedClip, 2] = CalibrationGripBasePosition.Z
+        SwordPositionCalibration[CalibrationClipBase + Playback.SelectedClip, 0] = CalibrationGripBasePosition.X
+        SwordPositionCalibration[CalibrationClipBase + Playback.SelectedClip, 1] = CalibrationGripBasePosition.Y
+        SwordPositionCalibration[CalibrationClipBase + Playback.SelectedClip, 2] = CalibrationGripBasePosition.Z
 
     Else
 
-        ShieldPositionCalibration[CalibrationClipBase + SelectedClip, 0] = CalibrationGripBasePosition.X
-        ShieldPositionCalibration[CalibrationClipBase + SelectedClip, 1] = CalibrationGripBasePosition.Y
-        ShieldPositionCalibration[CalibrationClipBase + SelectedClip, 2] = CalibrationGripBasePosition.Z
+        ShieldPositionCalibration[CalibrationClipBase + Playback.SelectedClip, 0] = CalibrationGripBasePosition.X
+        ShieldPositionCalibration[CalibrationClipBase + Playback.SelectedClip, 1] = CalibrationGripBasePosition.Y
+        ShieldPositionCalibration[CalibrationClipBase + Playback.SelectedClip, 2] = CalibrationGripBasePosition.Z
 
     End If
 
@@ -7538,15 +7439,15 @@ Function RestoreEquipmentGrip(PartIndex As Number, SocketName As Text) As Boolea
     Correction.X = CalibrationGripAnchor.X - Position.X
     Correction.Y = CalibrationGripAnchor.Y - Position.Y
     Correction.Z = CalibrationGripAnchor.Z - Position.Z
-    Angles.X = SwordCalibration[CalibrationClipBase + SelectedClip, CALIBRATION_AXIS_X]
-    Angles.Y = SwordCalibration[CalibrationClipBase + SelectedClip, CALIBRATION_AXIS_Y]
-    Angles.Z = SwordCalibration[CalibrationClipBase + SelectedClip, CALIBRATION_AXIS_Z]
+    Angles.X = SwordCalibration[CalibrationClipBase + Playback.SelectedClip, CALIBRATION_AXIS_X]
+    Angles.Y = SwordCalibration[CalibrationClipBase + Playback.SelectedClip, CALIBRATION_AXIS_Y]
+    Angles.Z = SwordCalibration[CalibrationClipBase + Playback.SelectedClip, CALIBRATION_AXIS_Z]
 
     If PartIndex = SHIELD_PART_INDEX Then
 
-        Angles.X = ShieldCalibration[CalibrationClipBase + SelectedClip, CALIBRATION_AXIS_X]
-        Angles.Y = ShieldCalibration[CalibrationClipBase + SelectedClip, CALIBRATION_AXIS_Y]
-        Angles.Z = ShieldCalibration[CalibrationClipBase + SelectedClip, CALIBRATION_AXIS_Z]
+        Angles.X = ShieldCalibration[CalibrationClipBase + Playback.SelectedClip, CALIBRATION_AXIS_X]
+        Angles.Y = ShieldCalibration[CalibrationClipBase + Playback.SelectedClip, CALIBRATION_AXIS_Y]
+        Angles.Z = ShieldCalibration[CalibrationClipBase + Playback.SelectedClip, CALIBRATION_AXIS_Z]
 
     End If
 
@@ -7557,15 +7458,15 @@ Function RestoreEquipmentGrip(PartIndex As Number, SocketName As Text) As Boolea
 
     If PartIndex = WEAPON_PART_INDEX Then
 
-        NextPosition.X = SwordPositionCalibration[CalibrationClipBase + SelectedClip, 0] + RoundedGripOffset(Correction.X)
-        NextPosition.Y = SwordPositionCalibration[CalibrationClipBase + SelectedClip, 1] + RoundedGripOffset(Correction.Y)
-        NextPosition.Z = SwordPositionCalibration[CalibrationClipBase + SelectedClip, 2] + RoundedGripOffset(Correction.Z)
+        NextPosition.X = SwordPositionCalibration[CalibrationClipBase + Playback.SelectedClip, 0] + RoundedGripOffset(Correction.X)
+        NextPosition.Y = SwordPositionCalibration[CalibrationClipBase + Playback.SelectedClip, 1] + RoundedGripOffset(Correction.Y)
+        NextPosition.Z = SwordPositionCalibration[CalibrationClipBase + Playback.SelectedClip, 2] + RoundedGripOffset(Correction.Z)
 
     Else
 
-        NextPosition.X = ShieldPositionCalibration[CalibrationClipBase + SelectedClip, 0] + RoundedGripOffset(Correction.X)
-        NextPosition.Y = ShieldPositionCalibration[CalibrationClipBase + SelectedClip, 1] + RoundedGripOffset(Correction.Y)
-        NextPosition.Z = ShieldPositionCalibration[CalibrationClipBase + SelectedClip, 2] + RoundedGripOffset(Correction.Z)
+        NextPosition.X = ShieldPositionCalibration[CalibrationClipBase + Playback.SelectedClip, 0] + RoundedGripOffset(Correction.X)
+        NextPosition.Y = ShieldPositionCalibration[CalibrationClipBase + Playback.SelectedClip, 1] + RoundedGripOffset(Correction.Y)
+        NextPosition.Z = ShieldPositionCalibration[CalibrationClipBase + Playback.SelectedClip, 2] + RoundedGripOffset(Correction.Z)
 
     End If
 
@@ -7577,15 +7478,15 @@ Function RestoreEquipmentGrip(PartIndex As Number, SocketName As Text) As Boolea
 
     If PartIndex = WEAPON_PART_INDEX Then
 
-        SwordPositionCalibration[CalibrationClipBase + SelectedClip, 0] = NextPosition.X
-        SwordPositionCalibration[CalibrationClipBase + SelectedClip, 1] = NextPosition.Y
-        SwordPositionCalibration[CalibrationClipBase + SelectedClip, 2] = NextPosition.Z
+        SwordPositionCalibration[CalibrationClipBase + Playback.SelectedClip, 0] = NextPosition.X
+        SwordPositionCalibration[CalibrationClipBase + Playback.SelectedClip, 1] = NextPosition.Y
+        SwordPositionCalibration[CalibrationClipBase + Playback.SelectedClip, 2] = NextPosition.Z
 
     Else
 
-        ShieldPositionCalibration[CalibrationClipBase + SelectedClip, 0] = NextPosition.X
-        ShieldPositionCalibration[CalibrationClipBase + SelectedClip, 1] = NextPosition.Y
-        ShieldPositionCalibration[CalibrationClipBase + SelectedClip, 2] = NextPosition.Z
+        ShieldPositionCalibration[CalibrationClipBase + Playback.SelectedClip, 0] = NextPosition.X
+        ShieldPositionCalibration[CalibrationClipBase + Playback.SelectedClip, 1] = NextPosition.Y
+        ShieldPositionCalibration[CalibrationClipBase + Playback.SelectedClip, 2] = NextPosition.Z
 
     End If
 
@@ -7643,18 +7544,18 @@ Sub ResetCalibrationTarget()
 
         If (CalibrationTransform = CALIBRATION_TRANSFORM_MOVE And
             CalibrationTarget = CALIBRATION_TARGET_SWORD) Then
-            SwordPositionCalibration[CalibrationClipBase + SelectedClip, Axis] = 0
+            SwordPositionCalibration[CalibrationClipBase + Playback.SelectedClip, Axis] = 0
         Else If (CalibrationTransform = CALIBRATION_TRANSFORM_MOVE And
             CalibrationTarget = CALIBRATION_TARGET_SHIELD) Then
-            ShieldPositionCalibration[CalibrationClipBase + SelectedClip, Axis] = 0
+            ShieldPositionCalibration[CalibrationClipBase + Playback.SelectedClip, Axis] = 0
         Else If CalibrationTarget = CALIBRATION_TARGET_SWORD_WRIST Then
-            SwordWristCalibration[CalibrationClipBase + SelectedClip, Axis] = 0
+            SwordWristCalibration[CalibrationClipBase + Playback.SelectedClip, Axis] = 0
         Else If CalibrationTarget = CALIBRATION_TARGET_SHIELD_WRIST Then
-            ShieldWristCalibration[CalibrationClipBase + SelectedClip, Axis] = 0
+            ShieldWristCalibration[CalibrationClipBase + Playback.SelectedClip, Axis] = 0
         Else If CalibrationTarget = CALIBRATION_TARGET_SWORD Then
-            SwordCalibration[CalibrationClipBase + SelectedClip, Axis] = 0
+            SwordCalibration[CalibrationClipBase + Playback.SelectedClip, Axis] = 0
         Else
-            ShieldCalibration[CalibrationClipBase + SelectedClip, Axis] = 0
+            ShieldCalibration[CalibrationClipBase + Playback.SelectedClip, Axis] = 0
         End If
 
     End For
@@ -7676,17 +7577,17 @@ Sub ClearSelectedClipCalibration()
 
     For Axis = 0 To CALIBRATION_AXIS_COUNT - 1
 
-        SwordWristCalibration[CalibrationClipBase + SelectedClip, Axis] = 0
-        ShieldWristCalibration[CalibrationClipBase + SelectedClip, Axis] = 0
-        SwordCalibration[CalibrationClipBase + SelectedClip, Axis] = 0
-        ShieldCalibration[CalibrationClipBase + SelectedClip, Axis] = 0
-        SwordPositionCalibration[CalibrationClipBase + SelectedClip, Axis] = 0
-        ShieldPositionCalibration[CalibrationClipBase + SelectedClip, Axis] = 0
+        SwordWristCalibration[CalibrationClipBase + Playback.SelectedClip, Axis] = 0
+        ShieldWristCalibration[CalibrationClipBase + Playback.SelectedClip, Axis] = 0
+        SwordCalibration[CalibrationClipBase + Playback.SelectedClip, Axis] = 0
+        ShieldCalibration[CalibrationClipBase + Playback.SelectedClip, Axis] = 0
+        SwordPositionCalibration[CalibrationClipBase + Playback.SelectedClip, Axis] = 0
+        ShieldPositionCalibration[CalibrationClipBase + Playback.SelectedClip, Axis] = 0
     End For
 
-    CalibrationKeyframeCounts[CalibrationClipBase + SelectedClip] = 0
-    SwordDecoupled[CalibrationClipBase + SelectedClip] = 0
-    ShieldDecoupled[CalibrationClipBase + SelectedClip] = 0
+    CalibrationKeyframeCounts[CalibrationClipBase + Playback.SelectedClip] = 0
+    SwordDecoupled[CalibrationClipBase + Playback.SelectedClip] = 0
+    ShieldDecoupled[CalibrationClipBase + Playback.SelectedClip] = 0
     CalibrationClearConfirm = False
     CalibrationSaveLimitReached = False
 
@@ -7753,7 +7654,7 @@ Sub SaveCalibrationFrame()
 
     Call BeginCalibrationEdit()
 
-    CalibrationSavedClip = SelectedClip
+    CalibrationSavedClip = Playback.SelectedClip
     CalibrationSavedFrame = CalibrationEditingFrame
     CalibrationSavedTime = CalibrationFrameTimeMilliseconds(
         CalibrationSavedClip,
@@ -7839,17 +7740,17 @@ Sub PlaySelectedClip(Optional RetainFireTails As Boolean = False)
         Call InvalidateVisualHistory()
     End If
 
-    SelectedTimelineEvent = FirstClipEvent()
-    Ready = Character3D.PlayMode(
+    Playback.SelectedTimelineEvent = FirstClipEvent()
+    Session.Ready = Character3D.PlayMode(
         Character,
         SelectedClipName(),
-        SelectedClipMode(),
-        PlaybackSpeed
-    ) And Ready
+        ViewerPlayback.ClipMode(Session.ProfileIndex, SelectedClipName()),
+        Playback.PlaybackSpeed
+    ) And Session.Ready
     ArinAudio.Clip = ""
-    AnimationCycleElapsed = 0
-    DemoCompletedLoops = 0
-    DemoPreviousAnimationTime = Character3D.AnimationTime(Character)
+    Playback.AnimationCycleElapsed = 0
+    Playback.DemoCompletedLoops = 0
+    Playback.DemoPreviousAnimationTime = Character3D.AnimationTime(Character)
 
     Call UpdateCalibrationForCurrentFrame()
     Call ApplyWristCalibration()
@@ -7869,7 +7770,8 @@ Function FirstClipEvent() As Number
 
     For EventIndex = 1 To Character3D.EventCount(Character)
 
-        If Character3D.EventClipIndex(Character, EventIndex) = SelectedClip And Result = 0 Then
+        If (Character3D.EventClipIndex(Character, EventIndex) = Playback.SelectedClip And
+            Result = 0) Then
             Result = EventIndex
         End If
 
@@ -7891,7 +7793,7 @@ Function NearestClipEvent(TimeValue As Number) As Number
 
     For EventIndex = 1 To Character3D.EventCount(Character)
 
-        If Character3D.EventClipIndex(Character, EventIndex) = SelectedClip Then
+        If Character3D.EventClipIndex(Character, EventIndex) = Playback.SelectedClip Then
 
             Distance = Abs(Character3D.EventTime(Character, EventIndex) - TimeValue)
 
@@ -7912,7 +7814,7 @@ Function SelectedClipName() As Text
 
     Dim Result As Text
 
-    Result = Character3D.ClipName(Character, SelectedClip)
+    Result = Character3D.ClipName(Character, Playback.SelectedClip)
 
     Return Result
 
@@ -7923,23 +7825,9 @@ Function SelectedClipLabel() As Text
     Dim Result As Text
 
     Result = ViewerProfiles.ClipLabel(
-        ProfileIndex,
-        PresentationIndexForRuntimeClip(SelectedClip)
+        Session.ProfileIndex,
+        PresentationIndexForRuntimeClip(Playback.SelectedClip)
     )
-
-    Return Result
-
-End Function
-
-Function SelectedClipMode() As Number
-
-    Dim Result As Number
-
-    Result = Graphics3D.ANIMATION_LOOP
-
-    If ViewerProfiles.HoldsFinalPose(ProfileIndex, SelectedClipName()) Then
-        Result = Graphics3D.ANIMATION_ONCE
-    End If
 
     Return Result
 
@@ -8305,10 +8193,10 @@ Sub DrawInspectorOverlay()
     Draw Text Subtitle At 18, 42 Size 13 Color LIGHT_GRAY
     Draw Text "Character" At 18, 68 Size 13 Color WHITE
 
-    Call DrawButton(104, 62, 72, 26, "Arin", SelectedCharacterTab = 0)
-    Call DrawButton(182, 62, 72, 26, "Orin", SelectedCharacterTab = 1)
-    Call DrawButton(260, 62, 72, 26, "Dragon", SelectedCharacterTab = 2)
-    Call DrawButton(338, 62, 72, 26, "Party", SelectedCharacterTab = 3)
+    Call DrawButton(104, 62, 72, 26, "Arin", Session.SelectedCharacterTab = 0)
+    Call DrawButton(182, 62, 72, 26, "Orin", Session.SelectedCharacterTab = 1)
+    Call DrawButton(260, 62, 72, 26, "Dragon", Session.SelectedCharacterTab = 2)
+    Call DrawButton(338, 62, 72, 26, "Party", Session.SelectedCharacterTab = 3)
 
     If PartyMode And Not CalibrationVisible Then
         Call DrawPartyOverlay()
@@ -8343,17 +8231,17 @@ Sub DrawInspectorOverlay()
 
         Draw Text "ANIMATIONS" At PanelText, 334 Size 13 Color WHITE
 
-        Call DrawButton(PanelLeft + 178, 330, 74, 18, DemoLabel(), DemoEnabled)
+        Call DrawButton(PanelLeft + 178, 330, 74, 18, DemoLabel(), Playback.DemoEnabled)
 
         Call DrawAnimationButtons()
         Call DrawButton(PanelLeft + 12, 444, 78, 22, "Floor/Grid", FloorVisible Or GridVisible)
 
-        If ProfileIndex = ViewerProfiles.PROFILE_ARIN Then
+        If Session.ProfileIndex = ViewerProfiles.PROFILE_ARIN Then
 
             Call DrawButton(PanelLeft + 94, 444, 76, 22, "Sword Fire", SwordFireVisible)
             Call DrawButton(PanelLeft + 174, 444, 78, 22, "Shield Fire", ShieldFireVisible)
 
-        Else If ProfileIndex = ViewerProfiles.PROFILE_ORIN Then
+        Else If Session.ProfileIndex = ViewerProfiles.PROFILE_ORIN Then
 
             Call DrawButton(PanelLeft + 94, 444, 158, 22,
                 OrinStorm.StyleName(OrinStormContext), True)
@@ -8362,7 +8250,7 @@ Sub DrawInspectorOverlay()
             Call DrawButton(PanelLeft + 144, 470, 108, 20,
                 VfxPlaybackLabel("Lightning", LightningAnimationPaused), LightningAnimationPaused)
 
-        Else If ProfileIndex = ViewerProfiles.PROFILE_DRAGON Then
+        Else If Session.ProfileIndex = ViewerProfiles.PROFILE_DRAGON Then
 
             Call DrawButton(PanelLeft + 94, 444, 76, 22, "Head Aim", DragonHeadTracking)
 
@@ -8376,7 +8264,7 @@ Sub DrawInspectorOverlay()
 
         End If
 
-        If SwordFireReady And ProfileIndex = ViewerProfiles.PROFILE_ARIN Then
+        If SwordFireReady And Session.ProfileIndex = ViewerProfiles.PROFILE_ARIN Then
             Call DrawButton(PanelLeft + 12, 470, 128, 20, FlamePlaybackLabel(), Not FlameAnimationPaused)
 
             Call DrawButton(PanelLeft + 144, 470, 108, 20, ShieldFireStyleLabel(), Not ShieldFlameStyle)
@@ -8385,10 +8273,10 @@ Sub DrawInspectorOverlay()
         If Window_Height() >= ANIMATION_DETAILS_MINIMUM_HEIGHT Then
 
             Draw Text "Clip ms / Rate / Samples / Events" At PanelText, ANIMATION_DETAILS_Y Size 11 Color LIGHT_GRAY
-            Draw Number Character3D.ClipDuration(Character, SelectedClip) At PanelText, ANIMATION_DETAILS_Y + 20 Size 11 Color WHITE
-            Draw Number Character3D.ClipSampleRate(Character, SelectedClip) At PanelText + 58, ANIMATION_DETAILS_Y + 20 Size 11 Color CYAN
-            Draw Number Character3D.ClipSampleCount(Character, SelectedClip) At PanelText + 104, ANIMATION_DETAILS_Y + 20 Size 11 Color WHITE
-            Draw Number Character3D.ClipEventCount(Character, SelectedClip) At PanelText + 166, ANIMATION_DETAILS_Y + 20 Size 11 Color YELLOW
+            Draw Number Character3D.ClipDuration(Character, Playback.SelectedClip) At PanelText, ANIMATION_DETAILS_Y + 20 Size 11 Color WHITE
+            Draw Number Character3D.ClipSampleRate(Character, Playback.SelectedClip) At PanelText + 58, ANIMATION_DETAILS_Y + 20 Size 11 Color CYAN
+            Draw Number Character3D.ClipSampleCount(Character, Playback.SelectedClip) At PanelText + 104, ANIMATION_DETAILS_Y + 20 Size 11 Color WHITE
+            Draw Number Character3D.ClipEventCount(Character, Playback.SelectedClip) At PanelText + 166, ANIMATION_DETAILS_Y + 20 Size 11 Color YELLOW
             Draw Text "Model clips / sockets / events" At PanelText, ANIMATION_DETAILS_Y + 42 Size 11 Color LIGHT_GRAY
             Draw Number Character3D.ClipCount(Character) At PanelText, ANIMATION_DETAILS_Y + 62 Size 11 Color WHITE
             Draw Number Character3D.SocketCount(Character) At PanelText + 58, ANIMATION_DETAILS_Y + 62 Size 11 Color CYAN
@@ -8422,12 +8310,12 @@ Sub DrawInspectorOverlay()
     End If
 
     If (CalibrationEditing Or
-        ScenePaused Or
-        CharacterSwitchBlocked) Then
+        Playback.ScenePaused Or
+        Session.CharacterSwitchBlocked) Then
         Fill Rectangle 18, 40, Max(0, PanelLeft - 24), 18, Rgb(4, 9, 24)
     End If
 
-    If CharacterSwitchBlocked Then
+    If Session.CharacterSwitchBlocked Then
 
         Draw Text "Save Or Cancel The Pose Before Switching" At 18, 42 Size 12 Color YELLOW
 
@@ -8435,29 +8323,29 @@ Sub DrawInspectorOverlay()
 
         If PartyMode Then
             Draw Text "Pose Edit Active - Save Or Cancel Before Resuming" At 18, 42 Size 12 Color YELLOW
-        Else If ScenePaused Then
+        Else If Playback.ScenePaused Then
             Draw Text "Pose Edit Active - Space To Resume" At 18, 42 Size 12 Color YELLOW
         Else
             Draw Text "Pose Edit Active - Space To Pause Movement" At 18, 42 Size 12 Color YELLOW
         End If
 
-    Else If ScenePaused Then
+    Else If Playback.ScenePaused Then
 
         Draw Text "Paused - Space To Resume; Camera Controls Remain Active" At 18, 42 Size 12 Color YELLOW
 
     End If
 
-    If UiVisibility = 0 And ViewerError Then
+    If UiVisibility = 0 And Session.ViewerError Then
 
         Fill Rectangle 120, 142, 580, 210, Rgb(56, 8, 18) Opacity 80
         Draw Text "CHARACTER VIEWER RECOVERY" At 148, 166 Size 22 Color WHITE
         Draw Text "The 3D renderer or character resource became unavailable." At 148, 204 Size 14 Color LIGHT_GRAY
         Draw Text "Viewer error" At 148, 238 Size 13 Color LIGHT_GRAY
-        Draw Number FirstViewerError At 270, 238 Size 13 Color YELLOW
+        Draw Number Session.FirstViewerError At 270, 238 Size 13 Color YELLOW
         Draw Text "Renderer error" At 348, 238 Size 13 Color LIGHT_GRAY
-        Draw Number FirstRendererError At 486, 238 Size 13 Color YELLOW
+        Draw Number Session.FirstRendererError At 486, 238 Size 13 Color YELLOW
         Draw Text "Failure stage" At 148, 270 Size 13 Color LIGHT_GRAY
-        Draw Number FirstFailureStage At 270, 270 Size 13 Color YELLOW
+        Draw Number Session.FirstFailureStage At 270, 270 Size 13 Color YELLOW
         Draw Text "Press Enter or click Reset to reload the profile safely." At 148, 310 Size 14 Color CYAN
 
     End If
@@ -8480,7 +8368,7 @@ Sub DrawCharacterStatusSummary(PanelLeft As Number)
         Draw Text "Candidate" At PanelText, 190 Size 12 Color LIGHT_GRAY
         Draw Text ActiveProfile.CandidateVersion At PanelLeft + 116, 190 Size 11 Color YELLOW
         Draw Text "Speed" At PanelText, 216 Size 12 Color LIGHT_GRAY
-        Draw Number PlaybackSpeed At PanelLeft + 116, 216 Size 12 Color WHITE
+        Draw Number Playback.PlaybackSpeed At PanelLeft + 116, 216 Size 12 Color WHITE
 
         Call DrawButton(PanelLeft + 172, 204, 30, 24, "-", False)
         Call DrawButton(PanelLeft + 208, 204, 30, 24, "+", False)
@@ -8566,7 +8454,7 @@ Sub DrawCalibrationPanel()
     Dim Value As Number
 
     CurrentFrame = CurrentAnimationFrame()
-    CurrentKeyframe = CalibrationKeyframeIndex(SelectedClip, CurrentFrame)
+    CurrentKeyframe = CalibrationKeyframeIndex(Playback.SelectedClip, CurrentFrame)
     Value = CurrentCalibrationValue()
     MinimumValue = CalibrationMinimumValue()
     MaximumValue = CalibrationMaximumValue()
@@ -8625,8 +8513,8 @@ Sub DrawCalibrationPanel()
     Call DrawButton(34, 298, 100, 24, "Reload Key", CurrentKeyframe >= 0)
     Call DrawButton(140, 298, 100, 24, "In Place", CalibrationHoldGrip)
     Call DrawButton(246, 298, 186, 24, "Undo Last Change", CalibrationUndoCount > 0)
-    Call DrawButton(34, 374, 194, 24, "Decouple Weapon", SwordDecoupled[CalibrationClipBase + SelectedClip] <> 0)
-    Call DrawButton(236, 374, 196, 24, "Decouple Shield", ShieldDecoupled[CalibrationClipBase + SelectedClip] <> 0)
+    Call DrawButton(34, 374, 194, 24, "Decouple Weapon", SwordDecoupled[CalibrationClipBase + Playback.SelectedClip] <> 0)
+    Call DrawButton(236, 374, 196, 24, "Decouple Shield", ShieldDecoupled[CalibrationClipBase + Playback.SelectedClip] <> 0)
 
     Call DrawButton(34, 412, 196, 24, CalibrationResetClipLabel(), CalibrationClearConfirm)
     Call DrawButton(332, 412, 100, 24, "Save Frame", CurrentKeyframe >= 0 And Not CalibrationEditing)
@@ -8649,7 +8537,7 @@ Sub DrawCalibrationPanel()
 
         Draw Text "Delete saved keys for:" At 34, 330 Size 10 Color YELLOW
         Draw Text SelectedClipName() At 188, 330 Size 10 Color WHITE
-        Draw Number CalibrationKeyframeCounts[CalibrationClipBase + SelectedClip] At 350, 330 Size 10 Color YELLOW
+        Draw Number CalibrationKeyframeCounts[CalibrationClipBase + Playback.SelectedClip] At 350, 330 Size 10 Color YELLOW
 
     Else If CalibrationGripLimit Then
 
@@ -8657,7 +8545,7 @@ Sub DrawCalibrationPanel()
 
     Else If CalibrationEditing Then
 
-        If ScenePaused Then
+        If Playback.ScenePaused Then
             Draw Text "Editing — movement paused by Space" At 34, 330 Size 11 Color YELLOW
         Else
             Draw Text "Editing live — Space pauses movement" At 34, 330 Size 11 Color YELLOW
@@ -8674,7 +8562,7 @@ Sub DrawCalibrationPanel()
 
     Else
         Draw Text "Keys" At 34, 350 Size 11 Color LIGHT_GRAY
-        Draw Number CalibrationKeyframeCounts[CalibrationClipBase + SelectedClip] At 68, 350 Size 11 Color CYAN
+        Draw Number CalibrationKeyframeCounts[CalibrationClipBase + Playback.SelectedClip] At 68, 350 Size 11 Color CYAN
 
         If CalibrationEditing Then
             Draw Text "Editing frame" At 104, 350 Size 11 Color YELLOW
@@ -8776,7 +8664,7 @@ Sub DrawTimeline()
     Dim TimelineY As Number
     Dim Width As Number
 
-    Duration = Max(1, Character3D.ClipDuration(Character, SelectedClip))
+    Duration = Max(1, Character3D.ClipDuration(Character, Playback.SelectedClip))
     TimelineY = Window_Height() - 64
     Width = TimelineWidth()
     ProgressWidth = Character3D.AnimationTime(Character) * Width / Duration
@@ -8789,11 +8677,11 @@ Sub DrawTimeline()
 
     Draw Text SelectedClipName() At TIMELINE_LEFT + 348, Window_Height() - 88 Size 11 Color CYAN
 
-    If SelectedTimelineEvent > 0 Then
+    If Playback.SelectedTimelineEvent > 0 Then
 
-        Draw Text Character3D.EventName(Character, SelectedTimelineEvent) At TIMELINE_LEFT + 518, Window_Height() - 88 Size 11 Color YELLOW
-        Draw Number Character3D.EventTime(Character, SelectedTimelineEvent) At TIMELINE_LEFT + 616, Window_Height() - 88 Size 11 Color WHITE
-        Draw Number Character3D.EventValue(Character, SelectedTimelineEvent) At TIMELINE_LEFT + 672, Window_Height() - 88 Size 11 Color CYAN
+        Draw Text Character3D.EventName(Character, Playback.SelectedTimelineEvent) At TIMELINE_LEFT + 518, Window_Height() - 88 Size 11 Color YELLOW
+        Draw Number Character3D.EventTime(Character, Playback.SelectedTimelineEvent) At TIMELINE_LEFT + 616, Window_Height() - 88 Size 11 Color WHITE
+        Draw Number Character3D.EventValue(Character, Playback.SelectedTimelineEvent) At TIMELINE_LEFT + 672, Window_Height() - 88 Size 11 Color CYAN
 
     Else
         Draw Text "No authored event" At TIMELINE_LEFT + 518, Window_Height() - 88 Size 11 Color LIGHT_GRAY
@@ -8805,7 +8693,7 @@ Sub DrawTimeline()
 
     For EventIndex = 1 To Character3D.EventCount(Character)
 
-        If Character3D.EventClipIndex(Character, EventIndex) = SelectedClip Then
+        If Character3D.EventClipIndex(Character, EventIndex) = Playback.SelectedClip Then
 
             EventTime = Character3D.EventTime(Character, EventIndex)
             MarkerX = TIMELINE_LEFT + EventTime * Width / Duration
@@ -8818,16 +8706,16 @@ Sub DrawTimeline()
 
     If CalibrationAvailable Then
 
-        For Keyframe = 0 To CalibrationKeyframeCounts[CalibrationClipBase + SelectedClip] - 1
+        For Keyframe = 0 To CalibrationKeyframeCounts[CalibrationClipBase + Playback.SelectedClip] - 1
 
-            KeyframeFrame = CalibrationKeyframeFrames[CalibrationClipBase + SelectedClip, Keyframe]
+            KeyframeFrame = CalibrationKeyframeFrames[CalibrationClipBase + Playback.SelectedClip, Keyframe]
 
             If TimelineKeyframeDragging And Keyframe = TimelineDraggedKeyframe Then
                 KeyframeFrame = TimelineDraggedTargetFrame
             End If
 
             KeyframeTime = CalibrationFrameTimeMilliseconds(
-                SelectedClip,
+                Playback.SelectedClip,
                 KeyframeFrame
             )
             MarkerX = TIMELINE_LEFT + KeyframeTime * Width / Duration
@@ -8889,7 +8777,7 @@ Function DragonLabel() As Text
 
     Dim Result As Text
 
-    If DragonInspection Then
+    If Session.DragonInspection Then
 
         Result = "VFX ON"
 
@@ -8918,7 +8806,7 @@ Function ViewerTitle() As Text
 
     Dim Result As Text
 
-    Result = "SMILE 2.0 - 3D Viewer, Animation Editor - " + ViewerProfiles.ModelFileName(ProfileIndex)
+    Result = "SMILE 2.0 - 3D Viewer, Animation Editor - " + ViewerProfiles.ModelFileName(Session.ProfileIndex)
 
     Return Result
 
@@ -8943,7 +8831,7 @@ Sub DrawAnimationButtons()
     Dim ButtonX As Number
     Dim ButtonY As Number
 
-    ClipCount = ViewerProfiles.ClipCount(ProfileIndex)
+    ClipCount = ViewerProfiles.ClipCount(Session.ProfileIndex)
 
     For Index = 0 To ClipCount - 1
 
@@ -8957,8 +8845,8 @@ Sub DrawAnimationButtons()
             ButtonY,
             ANIMATION_BUTTON_WIDTH,
             ANIMATION_BUTTON_HEIGHT,
-            ViewerProfiles.ClipLabel(ProfileIndex, Index),
-            SelectedClip = RuntimeClipForPresentationIndex(Index)
+            ViewerProfiles.ClipLabel(Session.ProfileIndex, Index),
+            Playback.SelectedClip = RuntimeClipForPresentationIndex(Index)
         )
     End For
 
@@ -8981,15 +8869,26 @@ Function AnimationSecondsRemaining() As Number
         RemainingMilliseconds = Max(0, RequiredMilliseconds - PartyElapsed)
         Result = (RemainingMilliseconds + 999) / 1000
 
-    Else If DemoEnabled Then
+    Else If Playback.DemoEnabled Then
 
-        RequiredMilliseconds = DemoRequiredLoops() * DemoLoopDurationMilliseconds()
+        RequiredMilliseconds = ViewerPlayback.DemoRequiredLoops(
+            Character, Playback.SelectedClip, Playback.PlaybackSpeed,
+            Session.ProfileIndex, ANIMATION_CYCLE_MILLISECONDS
+        ) * ViewerPlayback.DemoLoopDuration(
+            Character, Playback.SelectedClip, Playback.PlaybackSpeed
+        )
 
-        If SelectedClipMode() = Graphics3D.ANIMATION_ONCE Then
-            RequiredMilliseconds = Max(DemoSequenceTargetMilliseconds(), DemoLoopDurationMilliseconds())
+        If (ViewerPlayback.ClipMode(Session.ProfileIndex, SelectedClipName()) =
+            Graphics3D.ANIMATION_ONCE) Then
+            RequiredMilliseconds = Max(
+                ViewerPlayback.DemoTarget(Session.ProfileIndex, ANIMATION_CYCLE_MILLISECONDS),
+                ViewerPlayback.DemoLoopDuration(
+                    Character, Playback.SelectedClip, Playback.PlaybackSpeed
+                )
+            )
         End If
 
-        RemainingMilliseconds = Max(0, RequiredMilliseconds - AnimationCycleElapsed)
+        RemainingMilliseconds = Max(0, RequiredMilliseconds - Playback.AnimationCycleElapsed)
         Result = (RemainingMilliseconds + 999) / 1000
 
     Else
@@ -9001,49 +8900,15 @@ Function AnimationSecondsRemaining() As Number
 
 End Function
 
-Function DemoLoopDurationMilliseconds() As Number
-
-    Dim Result As Number
-
-    Result = Character3D.ClipDuration(Character, SelectedClip) * 100 / Max(1, PlaybackSpeed)
-    Result = Max(1, Result)
-
-    Return Result
-
-End Function
-
-Function DemoRequiredLoops() As Number
-
-    Dim LoopDuration As Number
-    Dim Result As Number
-
-    LoopDuration = DemoLoopDurationMilliseconds()
-    Result = (DemoSequenceTargetMilliseconds() + LoopDuration - 1) / LoopDuration
-    Result = Max(1, Result)
-
-    Return Result
-
-End Function
-
-Function DemoSequenceTargetMilliseconds() As Number
-
-    If ViewerProfiles.IsPartyCharacter(ProfileIndex) Then
-        Return 3000
-    End If
-
-    Return ANIMATION_CYCLE_MILLISECONDS
-
-End Function
-
 Function DemoLabel() As Text
 
     Dim Result As Text
 
-    If PartyMode And ScenePaused Then
+    If PartyMode And Playback.ScenePaused Then
         Result = "RESUME"
     Else If PartyMode Then
         Result = "PAUSE"
-    Else If DemoEnabled Then
+    Else If Playback.DemoEnabled Then
         Result = "DEMO ON"
     Else
         Result = "DEMO OFF"
@@ -9057,9 +8922,9 @@ Function DemoStatusLabel() As Text
 
     Dim Result As Text
 
-    If PartyMode And ScenePaused Then
+    If PartyMode And Playback.ScenePaused Then
         Result = "Paused"
-    Else If DemoEnabled Then
+    Else If Playback.DemoEnabled Then
         Result = "On"
     Else
         Result = "Off"
@@ -9073,13 +8938,13 @@ Function ProductionClipStatusLabel() As Text
 
     Dim Result As Text
 
-    If ProfileIndex = ViewerProfiles.PROFILE_ORIN Then
+    If Session.ProfileIndex = ViewerProfiles.PROFILE_ORIN Then
         Result = "9-animation viewer candidate"
-    Else If ViewerProfiles.IsPartyCharacter(ProfileIndex) Then
+    Else If ViewerProfiles.IsPartyCharacter(Session.ProfileIndex) Then
         Result = "9-animation viewer candidate"
-    Else If ProfileIndex = ViewerProfiles.PROFILE_ARIN_V56 Then
+    Else If Session.ProfileIndex = ViewerProfiles.PROFILE_ARIN_V56 Then
         Result = "v5.6 diagnostic candidate"
-    Else If ProfileIndex = ViewerProfiles.PROFILE_ARIN_ORIGINAL Then
+    Else If Session.ProfileIndex = ViewerProfiles.PROFILE_ARIN_ORIGINAL Then
         Result = "Original 3 clips"
     Else
         Result = "Technical fixture"
@@ -9188,11 +9053,11 @@ Sub DestroyViewerResources()
     Call Fire.Shutdown()
 
     If LightPool3D.IsValid(OrinLight) Then
-        Ready = LightPool3D.Release(OrinLight) And Ready
+        Session.Ready = LightPool3D.Release(OrinLight) And Session.Ready
     End If
 
     If LightPool3D.IsValid(DragonLight) Then
-        Ready = LightPool3D.Release(DragonLight) And Ready
+        Session.Ready = LightPool3D.Release(DragonLight) And Session.Ready
     End If
 
     Call LightPool3D.Shutdown()
@@ -9215,14 +9080,14 @@ End Sub
 
 Sub SelectCharacterTab(Index As Number)
 
-    If (Index = SelectedCharacterTab And
-        Not ViewerError And
-        (PartyMode Or DragonInspection Or ViewerProfiles.IsPartyCharacter(ProfileIndex))) Then
+    If (Index = Session.SelectedCharacterTab And
+        Not Session.ViewerError And
+        (PartyMode Or Session.DragonInspection Or ViewerProfiles.IsPartyCharacter(Session.ProfileIndex))) Then
         Return
     End If
 
     If CalibrationEditing Then
-        CharacterSwitchBlocked = True
+        Session.CharacterSwitchBlocked = True
         Return
     End If
 
@@ -9232,24 +9097,21 @@ Sub SelectCharacterTab(Index As Number)
 
     Call DestroyViewerResources()
 
-    SelectedCharacterTab = Index
+    Session.SelectedCharacterTab = Index
     PartyMode = Index = 3
-    DragonInspection = Index = 2
-    ProfileIndex = ViewerProfiles.PROFILE_ARIN
+    Session.DragonInspection = Index = 2
+    Session.ProfileIndex = ViewerProfiles.PROFILE_ARIN
 
     If Index = 1 Then
-        ProfileIndex = ViewerProfiles.PROFILE_ORIN
+        Session.ProfileIndex = ViewerProfiles.PROFILE_ORIN
     Else If Index = 2 Then
-        ProfileIndex = ViewerProfiles.PROFILE_DRAGON
+        Session.ProfileIndex = ViewerProfiles.PROFILE_DRAGON
     End If
 
-    Ready = True
-    ViewerError = False
-    FirstViewerError = 0
-    FirstRendererError = 0
-    FirstFailureStage = 0
-    DemoEnabled = True
-    ScenePaused = False
+    Call ViewerSession.ResetFailure(Session)
+
+    Playback.DemoEnabled = True
+    Playback.ScenePaused = False
     SliderDragOwner = 0
     TimelineScrubbing = False
     TimelineKeyframeDragging = False
@@ -9265,8 +9127,8 @@ Function CaptureActorContext() As ViewerActorContext
 
     Result.Actor = Character
     Result.Frame = ViewerFrame
-    Result.Profile = ProfileIndex
-    Result.Clip = SelectedClip
+    Result.Profile = Session.ProfileIndex
+    Result.Clip = Playback.SelectedClip
     Result.KeyBase = CalibrationClipBase
     Result.WeaponWrist = SwordWristNode
     Result.ShieldWrist = ShieldWristNode
@@ -9285,9 +9147,9 @@ Sub UseActorContext(Context As ViewerActorContext)
 
     Character = Context.Actor
     ViewerFrame = Context.Frame
-    ProfileIndex = Context.Profile
-    ActiveProfile = ViewerProfiles.ProfileAt(ProfileIndex)
-    SelectedClip = Context.Clip
+    Session.ProfileIndex = Context.Profile
+    ActiveProfile = ViewerProfiles.ProfileAt(Session.ProfileIndex)
+    Playback.SelectedClip = Context.Clip
     CalibrationClipBase = Context.KeyBase
     SwordWristNode = Context.WeaponWrist
     ShieldWristNode = Context.ShieldWrist
@@ -9307,7 +9169,7 @@ Sub BeginPartyInspector()
 
     If (Not PartyMode Or
         Not PartyReady Or
-        ViewerError Or
+        Session.ViewerError Or
         PartyUiBound) Then
         Return
     End If
@@ -9323,25 +9185,25 @@ Sub BeginPartyInspector()
     Else If PartyUiTurn = 2 Then
 
         Character = Dragon
-        ProfileIndex = ViewerProfiles.PROFILE_DRAGON
-        ActiveProfile = ViewerProfiles.ProfileAt(ProfileIndex)
+        Session.ProfileIndex = ViewerProfiles.PROFILE_DRAGON
+        ActiveProfile = ViewerProfiles.ProfileAt(Session.ProfileIndex)
         CalibrationAvailable = False
         EpicGlowAvailable = False
         SwordWristNode = -1
         ShieldWristNode = -1
-        SelectedClip = 0
+        Playback.SelectedClip = 0
 
         For Index = 0 To Character3D.ClipCount(Character) - 1
 
             If Character3D.ClipName(Character, Index) = DragonClip Then
-                SelectedClip = Index
+                Playback.SelectedClip = Index
             End If
 
         End For
 
     End If
 
-    If CalibrationOwnerProfile <> ProfileIndex Then
+    If CalibrationOwnerProfile <> Session.ProfileIndex Then
 
         ''' One editing owner at a time. Never carry a pending import, Undo, or
         ''' clipboard into another character's independent storage identity.
@@ -9350,7 +9212,7 @@ Sub BeginPartyInspector()
         Call ConfigureCalibration()
 
         CalibrationVisible = WasVisible And CalibrationAvailable
-        SelectedTimelineEvent = FirstClipEvent()
+        Playback.SelectedTimelineEvent = FirstClipEvent()
 
     End If
 
@@ -9391,7 +9253,7 @@ Sub BeginPartyPreview()
 
     If Not PartyPreviewActive Then
 
-        PartyPreviewClip = SelectedClip
+        PartyPreviewClip = Playback.SelectedClip
         PartyPreviewTime = Character3D.AnimationTime(Character)
         PartyPreviewMode = Graphics3D.ANIMATION_LOOP
         Name = SelectedClipName()
@@ -9402,7 +9264,7 @@ Sub BeginPartyPreview()
             Name = "JumpAttack" Or
             Name = "ThorAttack" Or
             Name = "Hit" Or
-            ViewerProfiles.HoldsFinalPose(ProfileIndex, Name)) Then
+            ViewerProfiles.HoldsFinalPose(Session.ProfileIndex, Name)) Then
             PartyPreviewMode = Graphics3D.ANIMATION_ONCE
         End If
 
@@ -9410,7 +9272,7 @@ Sub BeginPartyPreview()
 
     End If
 
-    ScenePaused = True
+    Playback.ScenePaused = True
 
 End Sub
 
@@ -9420,10 +9282,10 @@ Sub RestorePartyPreview()
         Return
     End If
 
-    SelectedClip = PartyPreviewClip
-    Ready = Character3D.PlayMode(Character, SelectedClipName(),
-        PartyPreviewMode, PlaybackSpeed) And Ready
-    Ready = Character3D.SetAnimationTime(Character, PartyPreviewTime) And Ready
+    Playback.SelectedClip = PartyPreviewClip
+    Session.Ready = Character3D.PlayMode(Character, SelectedClipName(),
+        PartyPreviewMode, Playback.PlaybackSpeed) And Session.Ready
+    Session.Ready = Character3D.SetAnimationTime(Character, PartyPreviewTime) And Session.Ready
     PartyPreviewActive = False
     CalibrationVisible = False
     TimelineScrubbing = False
@@ -9442,7 +9304,7 @@ Sub ResetPartyInspector()
     Call RestorePartyPreview()
     Call EndPartyInspector()
 
-    If ViewerError Then
+    If Session.ViewerError Then
         Call RetryViewer()
     Else
 
@@ -9460,8 +9322,8 @@ Sub CreatePartyCompanion(Optional CompanionIndex As Number = ViewerProfiles.PROF
     Dim CompanionAnimator As Core.Animator3D
 
     Primary = CaptureActorContext()
-    ProfileIndex = CompanionIndex
-    CompanionProfile = ViewerProfiles.ProfileAt(ProfileIndex)
+    Session.ProfileIndex = CompanionIndex
+    CompanionProfile = ViewerProfiles.ProfileAt(Session.ProfileIndex)
     Character = Character3D.LoadWithPolicy(
         CompanionProfile.AssetPath, Character3D.CHARACTER_LOAD_REQUIRE_PBR
     )
@@ -9472,16 +9334,16 @@ Sub CreatePartyCompanion(Optional CompanionIndex As Number = ViewerProfiles.PROF
         CompanionBounds = Character3D.LocalBounds(Character)
         ViewerFrame = CharacterViewer.AutoFit(CompanionProfile, CompanionBounds)
         PartyReady = ViewerFrame.Valid
-        Ready = Character3D.SetScale(Character, ViewerFrame.ScalePercent) And Ready
-        Ready = Character3D.SetShadows(Character, True, True) And Ready
+        Session.Ready = Character3D.SetScale(Character, ViewerFrame.ScalePercent) And Session.Ready
+        Session.Ready = Character3D.SetShadows(Character, True, True) And Session.Ready
         CalibrationClipBase = 0
 
         If CompanionIndex = ViewerProfiles.PROFILE_ORIN Then
             CalibrationClipBase = CALIBRATION_MAX_CLIPS
         End If
 
-        CalibrationProfileFingerprint = ViewerProfiles.CalibrationFingerprint(ProfileIndex)
-        CalibrationDataKey = ViewerProfiles.CalibrationKey(ProfileIndex)
+        CalibrationProfileFingerprint = ViewerProfiles.CalibrationFingerprint(Session.ProfileIndex)
+        CalibrationDataKey = ViewerProfiles.CalibrationKey(Session.ProfileIndex)
 
         Call ConfigureCalibration()
 
@@ -9502,11 +9364,11 @@ Sub CreatePartyCompanion(Optional CompanionIndex As Number = ViewerProfiles.PROF
 
         If EpicGlowAvailable Then
 
-            Ready = Graphics3D.SetObjectMaterial3D(SwordGlow, EpicGlowMaterial) And Ready
-            Ready = Graphics3D.SetObjectMaterial3D(ShieldGlow, EpicGlowMaterial) And Ready
-            Ready = Graphics3D.SetObjectAnimator3D(SwordGlow, CompanionAnimator) And Ready
-            Ready = Graphics3D.SetObjectAnimator3D(ShieldGlow, CompanionAnimator) And Ready
-            Ready = Graphics3D.SetObjectCullMode3D(ShieldGlow, Graphics3D.OBJECT_CULL_FRONT) And Ready
+            Session.Ready = Graphics3D.SetObjectMaterial3D(SwordGlow, EpicGlowMaterial) And Session.Ready
+            Session.Ready = Graphics3D.SetObjectMaterial3D(ShieldGlow, EpicGlowMaterial) And Session.Ready
+            Session.Ready = Graphics3D.SetObjectAnimator3D(SwordGlow, CompanionAnimator) And Session.Ready
+            Session.Ready = Graphics3D.SetObjectAnimator3D(ShieldGlow, CompanionAnimator) And Session.Ready
+            Session.Ready = Graphics3D.SetObjectCullMode3D(ShieldGlow, Graphics3D.OBJECT_CULL_FRONT) And Session.Ready
 
             Call Graphics3D.SetObjectColor(SwordGlow, 255, 255, 255)
             Call Graphics3D.SetObjectColor(ShieldGlow, 255, 255, 255)
@@ -9519,7 +9381,7 @@ Sub CreatePartyCompanion(Optional CompanionIndex As Number = ViewerProfiles.PROF
 
         End If
 
-        Call PlayPartyClip(Character, "Idle", SelectedClip)
+        Call PlayPartyClip(Character, "Idle", Playback.SelectedClip)
 
         PartyCompanion = CaptureActorContext()
 
@@ -9527,10 +9389,10 @@ Sub CreatePartyCompanion(Optional CompanionIndex As Number = ViewerProfiles.PROF
 
     Call UseActorContext(Primary)
 
-    CalibrationProfileFingerprint = ViewerProfiles.CalibrationFingerprint(ProfileIndex)
-    CalibrationDataKey = ViewerProfiles.CalibrationKey(ProfileIndex)
+    CalibrationProfileFingerprint = ViewerProfiles.CalibrationFingerprint(Session.ProfileIndex)
+    CalibrationDataKey = ViewerProfiles.CalibrationKey(Session.ProfileIndex)
 
-    If Not DragonInspection Then
+    If Not Session.DragonInspection Then
         Call ConfigureCalibration()
     End If
 
@@ -9538,7 +9400,7 @@ Sub CreatePartyCompanion(Optional CompanionIndex As Number = ViewerProfiles.PROF
         Call ResetPartyDemo()
     End If
 
-    Ready = PartyReady And Ready
+    Session.Ready = PartyReady And Session.Ready
 
 End Sub
 
@@ -9552,12 +9414,12 @@ Sub PositionDragonOpponents()
     Home = PartyHomePosition(1, 2)
     PartyCompanion.Frame.PositionX = Home.X
     PartyCompanion.Frame.PositionZ = Home.Z
-    Ready = Character3D.Place(DragonOpponent.Actor, DragonOpponent.Frame.PositionX,
-        DragonOpponent.Frame.PositionY, DragonOpponent.Frame.PositionZ) And Ready
-    Ready = Character3D.Place(PartyCompanion.Actor, PartyCompanion.Frame.PositionX,
-        PartyCompanion.Frame.PositionY, PartyCompanion.Frame.PositionZ) And Ready
-    Ready = FaceDragon(DragonOpponent.Actor, 0) And Ready
-    Ready = FaceDragon(PartyCompanion.Actor, ORIN_ARENA_YAW_ADJUSTMENT) And Ready
+    Session.Ready = Character3D.Place(DragonOpponent.Actor, DragonOpponent.Frame.PositionX,
+        DragonOpponent.Frame.PositionY, DragonOpponent.Frame.PositionZ) And Session.Ready
+    Session.Ready = Character3D.Place(PartyCompanion.Actor, PartyCompanion.Frame.PositionX,
+        PartyCompanion.Frame.PositionY, PartyCompanion.Frame.PositionZ) And Session.Ready
+    Session.Ready = FaceDragon(DragonOpponent.Actor, 0) And Session.Ready
+    Session.Ready = FaceDragon(PartyCompanion.Actor, ORIN_ARENA_YAW_ADJUSTMENT) And Session.Ready
 
 End Sub
 
@@ -9685,7 +9547,7 @@ Sub ResetPartyDemo()
     DragonCounter = 0
     PartyStage = -1
     DragonReactionPending = False
-    DemoEnabled = True
+    Playback.DemoEnabled = True
     CalibrationVisible = False
 
     Call SetPartyPresentationState(0, PARTY_STATE_ALIVE)
@@ -9694,8 +9556,8 @@ Sub ResetPartyDemo()
     Call PreparePartyDragonTurn()
 
     If PartyReady Then
-        Ready = Character3D.SetPartVisible(PartyCompanion.Actor, WEAPON_PART_INDEX, SwordVisible) And Ready
-        Ready = Character3D.SetPartVisible(PartyCompanion.Actor, SHIELD_PART_INDEX, ShieldVisible) And Ready
+        Session.Ready = Character3D.SetPartVisible(PartyCompanion.Actor, WEAPON_PART_INDEX, SwordVisible) And Session.Ready
+        Session.Ready = Character3D.SetPartVisible(PartyCompanion.Actor, SHIELD_PART_INDEX, ShieldVisible) And Session.Ready
     End If
 
 End Sub
@@ -9733,7 +9595,7 @@ Function PartyAttackDuration() As Number
     For Index = 0 To Character3D.ClipCount(Actor) - 1
 
         If Character3D.ClipName(Actor, Index) = Name Then
-            Result = Character3D.ClipDuration(Actor, Index) * 100 / Max(25, PlaybackSpeed)
+            Result = Character3D.ClipDuration(Actor, Index) * 100 / Max(25, Playback.PlaybackSpeed)
             Exit For
         End If
 
@@ -9772,7 +9634,7 @@ Sub PlayPartyClip(ByRef Actor As Character3D.Actor, Name As Text, ByRef Clip As 
             End If
 
             Clip = Index
-            Ready = Character3D.PlayMode(Actor, Name, Mode, PlaybackSpeed) And Ready
+            Session.Ready = Character3D.PlayMode(Actor, Name, Mode, Playback.PlaybackSpeed) And Session.Ready
             Exit For
 
         End If
@@ -9791,12 +9653,12 @@ Sub AdvancePartyDemo()
     Dim Approach As Core.Vector3
     Dim TravelOffset As Number
 
-    If Not PartyReady Or ScenePaused Then
+    If Not PartyReady Or Playback.ScenePaused Then
         Return
     End If
 
-    If DemoEnabled Then
-        PartyElapsed = PartyElapsed + AnimationUpdateElapsed
+    If Playback.DemoEnabled Then
+        PartyElapsed = PartyElapsed + Playback.AnimationUpdateElapsed
     End If
 
     If PartyTurn = 2 Then
@@ -9882,7 +9744,7 @@ Sub AdvancePartyDemo()
                 Call SetPartyPresentationState(0, PARTY_STATE_ACTING)
             End If
 
-            Call PlayPartyClip(Character, Name, SelectedClip)
+            Call PlayPartyClip(Character, Name, Playback.SelectedClip)
 
             If PartyPresentationState(1) <> PARTY_STATE_KO Then
                 Call SetPartyPresentationState(1, PARTY_STATE_GUARDING)
@@ -9901,7 +9763,7 @@ Sub AdvancePartyDemo()
 
             If PartyPresentationState(0) <> PARTY_STATE_KO Then
                 Call SetPartyPresentationState(0, PARTY_STATE_GUARDING)
-                Call PlayPartyClip(Character, "Defend", SelectedClip)
+                Call PlayPartyClip(Character, "Defend", Playback.SelectedClip)
             End If
 
             Call PlayPartyClip(PartyCompanion.Actor, Name, PartyCompanion.Clip)
@@ -9936,12 +9798,12 @@ Sub AdvancePartyDemo()
 
     End If
 
-    Ready = Character3D.Place(Character, ViewerFrame.PositionX, ViewerFrame.PositionY, ViewerFrame.PositionZ) And Ready
-    Ready = Character3D.Place(PartyCompanion.Actor,
-        PartyCompanion.Frame.PositionX, PartyCompanion.Frame.PositionY, PartyCompanion.Frame.PositionZ) And Ready
-    Ready = FaceDragon(Character, PartyParticipants[0].FacingAdjustment) And Ready
-    Ready = FaceDragon(PartyCompanion.Actor,
-        PartyParticipants[1].FacingAdjustment) And Ready
+    Session.Ready = Character3D.Place(Character, ViewerFrame.PositionX, ViewerFrame.PositionY, ViewerFrame.PositionZ) And Session.Ready
+    Session.Ready = Character3D.Place(PartyCompanion.Actor,
+        PartyCompanion.Frame.PositionX, PartyCompanion.Frame.PositionY, PartyCompanion.Frame.PositionZ) And Session.Ready
+    Session.Ready = FaceDragon(Character, PartyParticipants[0].FacingAdjustment) And Session.Ready
+    Session.Ready = FaceDragon(PartyCompanion.Actor,
+        PartyParticipants[1].FacingAdjustment) And Session.Ready
 
 End Sub
 
@@ -9954,11 +9816,11 @@ Sub AdvanceDragonTurn()
     Dim ImpactTime As Number
 
     Duration = DragonTurnDuration()
-    ActionTime = PartyElapsed * PlaybackSpeed / 100
+    ActionTime = PartyElapsed * Playback.PlaybackSpeed / 100
     ImpactTime = DragonImpactTime()
 
     If PartyFatalTarget >= 0 Then
-        Duration = Max(Duration, (ImpactTime + 4300) * 100 / Max(25, PlaybackSpeed))
+        Duration = Max(Duration, (ImpactTime + 4300) * 100 / Max(25, Playback.PlaybackSpeed))
     End If
 
     If PartyElapsed >= Duration Then
@@ -9998,7 +9860,7 @@ Sub AdvanceDragonTurn()
 
         If PartyPresentationState(0) <> PARTY_STATE_KO Then
             Call SetPartyPresentationState(0, PARTY_STATE_GUARDING)
-            Call PlayPartyClip(Character, "Defend", SelectedClip)
+            Call PlayPartyClip(Character, "Defend", Playback.SelectedClip)
         End If
 
         If PartyPresentationState(1) <> PARTY_STATE_KO Then
@@ -10017,7 +9879,7 @@ Sub AdvanceDragonTurn()
         Call SetPartyPresentationState(PartyHitTarget, PARTY_STATE_HIT)
 
         If PartyHitTarget = 0 Then
-            Call PlayPartyClip(Character, "Hit", SelectedClip)
+            Call PlayPartyClip(Character, "Hit", Playback.SelectedClip)
         Else
 
             Call PlayPartyClip(PartyCompanion.Actor, "Hit", PartyCompanion.Clip)
@@ -10036,7 +9898,7 @@ Sub AdvanceDragonTurn()
             Call SetPartyPresentationState(PartyFatalTarget, PARTY_STATE_KO)
 
             If PartyFatalTarget = 0 Then
-            Call PlayPartyClip(Character, "Death", SelectedClip)
+            Call PlayPartyClip(Character, "Death", Playback.SelectedClip)
             Else
 
                 Call PlayPartyClip(PartyCompanion.Actor, "Death", PartyCompanion.Clip)
@@ -10047,7 +9909,7 @@ Sub AdvanceDragonTurn()
             Call SetPartyPresentationState(PartyHitTarget, PARTY_STATE_GUARDING)
 
             If PartyHitTarget = 0 Then
-                Call PlayPartyClip(Character, "Defend", SelectedClip)
+                Call PlayPartyClip(Character, "Defend", Playback.SelectedClip)
             Else
 
                 Call PlayPartyClip(PartyCompanion.Actor, "Defend", PartyCompanion.Clip)
@@ -10063,12 +9925,12 @@ Sub AdvanceDragonTurn()
     Home = PartyParticipants[1].Home
     PartyCompanion.Frame.PositionX = Home.X
     PartyCompanion.Frame.PositionZ = Home.Z
-    Ready = Character3D.Place(Character, ViewerFrame.PositionX, ViewerFrame.PositionY, ViewerFrame.PositionZ) And Ready
-    Ready = Character3D.Place(PartyCompanion.Actor,
-        PartyCompanion.Frame.PositionX, PartyCompanion.Frame.PositionY, PartyCompanion.Frame.PositionZ) And Ready
-    Ready = FaceDragon(Character, PartyParticipants[0].FacingAdjustment) And Ready
-    Ready = FaceDragon(PartyCompanion.Actor,
-        PartyParticipants[1].FacingAdjustment) And Ready
+    Session.Ready = Character3D.Place(Character, ViewerFrame.PositionX, ViewerFrame.PositionY, ViewerFrame.PositionZ) And Session.Ready
+    Session.Ready = Character3D.Place(PartyCompanion.Actor,
+        PartyCompanion.Frame.PositionX, PartyCompanion.Frame.PositionY, PartyCompanion.Frame.PositionZ) And Session.Ready
+    Session.Ready = FaceDragon(Character, PartyParticipants[0].FacingAdjustment) And Session.Ready
+    Session.Ready = FaceDragon(PartyCompanion.Actor,
+        PartyParticipants[1].FacingAdjustment) And Session.Ready
 
 End Sub
 
@@ -10084,7 +9946,7 @@ Function DragonTurnDuration() As Number
         Result = 5400
     End If
 
-    Result = Result * 100 / Max(25, PlaybackSpeed)
+    Result = Result * 100 / Max(25, Playback.PlaybackSpeed)
 
     Return Result
 
@@ -10135,7 +9997,7 @@ Sub UpdatePartyCompanion()
 
     Call UseActorContext(PartyCompanion)
 
-    Ready = Character3D.Update(Character, AnimationUpdateElapsed) And Ready
+    Session.Ready = Character3D.Update(Character, Playback.AnimationUpdateElapsed) And Session.Ready
 
     Call ApplyCharacterPresentationOffset()
     Call UpdateCalibrationForCurrentFrame()
@@ -10144,14 +10006,14 @@ Sub UpdatePartyCompanion()
 
     If EpicGlowAvailable Then
 
-        Center = Character3D.SocketPosition(Character, "SwordBase", BODY_PART_INDEX, SwordDecoupled[CalibrationClipBase + SelectedClip] <> 0)
-        Tip = Character3D.SocketPosition(Character, "SwordTip", BODY_PART_INDEX, SwordDecoupled[CalibrationClipBase + SelectedClip] <> 0)
+        Center = Character3D.SocketPosition(Character, "SwordBase", BODY_PART_INDEX, SwordDecoupled[CalibrationClipBase + Playback.SelectedClip] <> 0)
+        Tip = Character3D.SocketPosition(Character, "SwordTip", BODY_PART_INDEX, SwordDecoupled[CalibrationClipBase + Playback.SelectedClip] <> 0)
         Center.X = (Center.X + Tip.X) / 2
         Center.Y = (Center.Y + Tip.Y) / 2
         Center.Z = (Center.Z + Tip.Z) / 2
-        Ready = UpdateEquipmentGlow(SwordGlow, Center) And Ready
-        Center = Character3D.SocketPosition(Character, "ShieldCenter", BODY_PART_INDEX, ShieldDecoupled[CalibrationClipBase + SelectedClip] <> 0)
-        Ready = UpdateEquipmentGlow(ShieldGlow, Center) And Ready
+        Session.Ready = UpdateEquipmentGlow(SwordGlow, Center) And Session.Ready
+        Center = Character3D.SocketPosition(Character, "ShieldCenter", BODY_PART_INDEX, ShieldDecoupled[CalibrationClipBase + Playback.SelectedClip] <> 0)
+        Session.Ready = UpdateEquipmentGlow(ShieldGlow, Center) And Session.Ready
 
     End If
 
@@ -10172,7 +10034,7 @@ Function DrawPartyCompanion() As Boolean
     If (PartyCompanion.GlowVisible And
         PartyCompanion.GlowAvailable And
         (Not PartyMode Or PartyPresentationState(1) <> PARTY_STATE_KO) And
-        (EpicGlowVisible Or DragonInspection)) Then
+        (EpicGlowVisible Or Session.DragonInspection)) Then
 
         If SwordVisible Then
             Result = Graphics3D.DrawObject3D(PartyCompanion.WeaponGlow) And Result
@@ -10371,7 +10233,7 @@ Sub DrawPartyOverlay()
             Draw Text "Attack: " + AttackSequence At Left + 16, 296 Size 13 Color CYAN
         End If
 
-        Call DrawButton(Left + 12, 324, 108, 28, "Pause", ScenePaused)
+        Call DrawButton(Left + 12, 324, 108, 28, "Pause", Playback.ScenePaused)
         Call DrawButton(Left + 128, 324, 108, 28, "Orbit", AutoOrbit)
         Call DrawButton(Left + 12, 360, 224, 28, "Restart Battle Demo", False)
 
@@ -10410,9 +10272,9 @@ Sub DrawPartyOverlay()
 
     End If
 
-    If ViewerError Then
+    If Session.ViewerError Then
         Draw Text "Party Could Not Load — Select A Character Or Press Enter To Retry" At 18, 112 Size 16 Color YELLOW
-        Draw Number FirstFailureStage At 18, 140 Size 14 Color YELLOW
+        Draw Number Session.FirstFailureStage At 18, 140 Size 14 Color YELLOW
     End If
 
 End Sub

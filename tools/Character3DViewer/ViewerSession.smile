@@ -1,0 +1,90 @@
+''' Application-session identity, readiness and first-failure ownership.
+Module Smile.Tools.Character3DViewerSession
+
+Option Explicit
+
+Import Smile.Simple3D.Character3D As Character3D
+Import Smile.Simple3D.Graphics3D As Graphics3D
+Import Smile.Simple3D.Scene3D As Scene3D
+
+Public Type State
+    SelectedCharacterTab As Number
+    DragonInspection As Boolean
+    CharacterSwitchBlocked As Boolean
+    Ready As Boolean
+    Running As Boolean
+    ViewerError As Boolean
+    WindowActivated As Boolean
+    FirstViewerError As Number
+    FirstRendererError As Number
+    FirstFailureStage As Number
+    ViewerEpoch As Number
+    ProfileIndex As Number
+End Type
+
+Public Sub ResetFailure(ByRef Value As State)
+
+    Value.Ready = True
+    Value.ViewerError = False
+    Value.FirstViewerError = 0
+    Value.FirstRendererError = 0
+    Value.FirstFailureStage = 0
+
+End Sub
+
+Public Sub RecordError(ByRef Value As State)
+
+    Value.ViewerError = True
+
+    If Value.FirstViewerError = 0 Then
+
+        Value.FirstViewerError = Character3D.LastError()
+
+        If Value.FirstViewerError = 0 Then
+            Value.FirstViewerError = Scene3D.LastError()
+        End If
+
+    End If
+
+    If Value.FirstRendererError = 0 Then
+
+        Value.FirstRendererError = Character3D.LastRendererError()
+
+        If Value.FirstRendererError = 0 Then
+            Value.FirstRendererError = Scene3D.LastRendererError()
+        End If
+
+        If Value.FirstRendererError = 0 Then
+            Value.FirstRendererError = Graphics3D.LastError()
+        End If
+
+    End If
+
+End Sub
+
+Public Sub CaptureFailure(ByRef Value As State, Stage As Number)
+
+    If Value.Ready Or Value.FirstFailureStage <> 0 Then
+        Return
+    End If
+
+    Value.FirstFailureStage = Stage
+    Value.FirstViewerError = Character3D.LastError()
+
+    If Value.FirstViewerError = 0 Then
+        Value.FirstViewerError = Scene3D.LastError()
+    End If
+
+    Value.FirstRendererError = Character3D.LastRendererError()
+
+    If Value.FirstRendererError = 0 Then
+        Value.FirstRendererError = Scene3D.LastRendererError()
+    End If
+
+    If Value.FirstRendererError = 0 Then
+        Value.FirstRendererError = Graphics3D.LastError()
+    End If
+
+End Sub
+
+End Module

@@ -108,11 +108,11 @@ try {
         'Sub ToggleFloorAndGrid()',
         'SceneVfx3D.Advance(SceneVfxClock, Camera,',
         'OrinLight = LightPool3D.Acquire()',
-        'ScenePaused = Not ScenePaused',
+        'Playback.ScenePaused = Not Playback.ScenePaused',
         'Const ZOOM_IN_LIMIT = -144',
         'Window_Width()',
         'Window_Height()',
-        'Ready = Window_Title(ViewerTitle()) And Ready')) {
+        'Session.Ready = Window_Title(ViewerTitle()) And Session.Ready')) {
         Assert-Contains $viewerSource $contract 'Character 3D Viewer'
     }
     Assert-True (-not $viewerSource.Contains('IDLE_RESET_MILLISECONDS') -and
