@@ -850,3 +850,20 @@ Show Gizmo / Hide Gizmo now lives in Pose Calibration on both targets. Fresh
 character loads and full reset default to hidden; hiding ends a handle drag but
 keeps its unsaved numeric preview for explicit Save or Cancel. It never changes
 the character JSON, accepted model, or calibration identity.
+
+## September 6: equipment visibility survives grounding
+
+The frozen-Fire check exposed a separate shared Character3D defect: hiding a
+sword/shield cleared its fire, but the next actor placement restored the mesh.
+Part visibility was only stored on the renderer object, while actor transforms
+reapplied whole-actor visibility. Character3D now retains independent per-part
+intent and combines it with actor visibility for every transform. Showing a part
+while its actor is hidden cannot expose it, and whole-actor hide/show preserves
+hidden equipment. Failed renderer writes do not commit changed intent.
+
+The focused native regression failed three checks before the fix and passed
+afterward, including same-model actor independence; generated-Web checks also
+pass. In Chrome, Arin Block Impact frame 0 with frozen Fire now hides both sword
+and shield meshes and their effects. This is a library-state repair, not an
+asset, socket, wrist or pose adjustment. Arin's 24 saved keys and Orin's zero-key
+snapshot remain unchanged. See the H6.1 ledger for remaining manual evidence.

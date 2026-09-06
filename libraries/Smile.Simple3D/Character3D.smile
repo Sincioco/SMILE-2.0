@@ -79,6 +79,7 @@ Private Dim ActorGeneration[32] As Number
 Private Dim ActorAssetSlot[32] As Number
 Private Dim ActorPartCounts[32] As Number
 Private Dim ActorParts[32, 16] As Core.Object3D
+Private Dim ActorPartVisible[32, 16] As Boolean
 Private Dim ActorAnimators[32] As Core.Animator3D
 Private Dim ActorPositionX1000[32] As Number
 Private Dim ActorPositionY1000[32] As Number
@@ -256,6 +257,7 @@ Private Sub ClearActorStorage(Slot As Number)
 
     For PartIndex = 0 To CHARACTER3D_MAX_PARTS - 1
         ActorParts[Slot, PartIndex] = EmptyObject
+        ActorPartVisible[Slot, PartIndex] = False
     End For
 
     ActorUsed[Slot] = False
@@ -1011,7 +1013,8 @@ Private Function ApplyTransformSnapshot(
             Return False
         End If
 
-        If Not Graphics3D.SetObjectVisibleChecked3D(ActorParts[Slot, PartIndex], Visible) Then
+        If Not Graphics3D.SetObjectVisibleChecked3D(ActorParts[Slot, PartIndex],
+            Visible And ActorPartVisible[Slot, PartIndex]) Then
             Return False
         End If
 
@@ -1380,6 +1383,7 @@ Public Function LoadWithPolicy(Path As Text, Policy As Number) As Actor
 
     For PartIndex = 0 To Model.PartCount - 1
         ActorParts[Slot, PartIndex] = Parts[PartIndex]
+        ActorPartVisible[Slot, PartIndex] = True
     End For
 
     AssetReferences[AssetSlot] = AssetReferences[AssetSlot] + 1
@@ -2510,7 +2514,7 @@ Public Function PartObjectHandle(Value As Actor, PartIndex As Number) As Number
 
 End Function
 
-''' Shows or hides one character part without changing the actor or its animation.
+''' Retains one part's visibility through transforms and whole-actor hide/show.
 Public Function SetPartVisible(
     ByRef Value As Actor,
     PartIndex As Number,
@@ -2532,9 +2536,12 @@ Public Function SetPartVisible(
         Return False
     End If
 
-    Result = Graphics3D.SetObjectVisibleChecked3D(ActorParts[Slot, PartIndex], Visible)
+    Result = Graphics3D.SetObjectVisibleChecked3D(ActorParts[Slot, PartIndex],
+        ActorVisible[Slot] And Visible)
 
     If Result Then
+        ActorPartVisible[Slot, PartIndex] = Visible
+
         Call ClearActorError(Slot)
     Else
 

@@ -336,6 +336,24 @@ Call Check(Graphics3D.DrawCallCount3D() = 4)
 Call Check(Graphics3D.SubmittedTriangleCount3D() = 72)
 Call Check(Graphics3D.ModelPaletteUploadCount3D() - UploadsBefore = 2)
 
+' Part visibility is actor-owned intent, not a temporary object transform flag.
+
+Call Check(Character3D.SetPartVisible(First, 0, False))
+Call Check(VisibleActorDrawCount() = 3)
+Call Check(Character3D.Place(First, Character3D.PositionX(First),
+    Character3D.PositionY(First), Character3D.PositionZ(First)))
+Call Check(Character3D.Rotate(First, 0, 0, 0))
+Call Check(Character3D.SetScale(First, 200))
+Call Check(VisibleActorDrawCount() = 3)
+Call Check(Character3D.SetVisible(First, False))
+Call Check(Character3D.SetPartVisible(First, 0, True))
+Call Check(VisibleActorDrawCount() = 2)
+Call Check(Character3D.SetPartVisible(First, 0, False))
+Call Check(Character3D.SetVisible(First, True))
+Call Check(VisibleActorDrawCount() = 3)
+Call Check(Character3D.SetPartVisible(First, 0, True))
+Call Check(VisibleActorDrawCount() = 4)
+
 Call Check(Scene3D.SetQuality(Scene3D.QUALITY_MEDIUM))
 
 Third = Character3D.LoadActor("Assets\AnimationArticulated.sm3d")
@@ -712,6 +730,28 @@ Sub CheckSocketNear(Value As Character3D.Actor, ExpectedPoint As Core.Vector3)
         Graphics3D.ANIMATOR_SOCKET_POSITION_Z) - ExpectedPoint.Z) <= 8)
 
 End Sub
+
+Function VisibleActorDrawCount() As Number
+
+    Dim Result As Number
+    Dim Rendered As Boolean
+
+    Rendered = Scene3D.Begin(Camera, 5, 7, 14)
+
+    If Rendered Then
+        Rendered = Character3D.Draw(First)
+        Rendered = Character3D.Draw(Second) And Rendered
+    End If
+
+    Rendered = Scene3D.EndScene() And Rendered
+
+    Call Check(Rendered)
+
+    Result = Graphics3D.DrawCallCount3D()
+
+    Return Result
+
+End Function
 
 Sub Check(Condition As Boolean)
 
