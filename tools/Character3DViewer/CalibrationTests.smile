@@ -309,46 +309,46 @@ Call CalibrationCheck(SocketReferencePart("HandRight") = BODY_PART_INDEX, "Hand 
 Timing.CameraElapsed = 16
 Effects.FlamePaused = False
 
-Call UpdateEquipmentFire()
-Call AdvanceSceneVfx()
-Call CalibrationCheck(SwordFire.Slot <> 0 And Not ShieldFireFailed, "All equipment emitters admitted")
+Call UpdateTestEquipmentFire()
+Call AdvanceTestSceneVfx()
+Call CalibrationCheck(Effects.SwordFire.Slot <> 0 And Not Effects.ShieldFireFailed, "All equipment emitters admitted")
 
-TestFireAge = Fire.Value(10, SwordFire)
+TestFireAge = Fire.Value(10, Effects.SwordFire)
 
-Call UpdateEquipmentFire()
-Call AdvanceSceneVfx()
-Call CalibrationCheck(Fire.Value(10, SwordFire) > TestFireAge, "Flames animate while scene paused")
+Call UpdateTestEquipmentFire()
+Call AdvanceTestSceneVfx()
+Call CalibrationCheck(Fire.Value(10, Effects.SwordFire) > TestFireAge, "Flames animate while scene paused")
 
 Effects.FlamePaused = True
-TestFireAge = Fire.Value(10, SwordFire)
+TestFireAge = Fire.Value(10, Effects.SwordFire)
 
-Call UpdateEquipmentFire()
-Call AdvanceSceneVfx()
-Call CalibrationCheck(Fire.Value(10, SwordFire) = TestFireAge, "Paused flame clock stays frozen")
+Call UpdateTestEquipmentFire()
+Call AdvanceTestSceneVfx()
+Call CalibrationCheck(Fire.Value(10, Effects.SwordFire) = TestFireAge, "Paused flame clock stays frozen")
 
-TestFireGeneration = SwordFire.Generation
+TestFireGeneration = Effects.SwordFire.Generation
 SwordVisible = False
 ShieldVisible = False
 
-Call UpdateEquipmentFire()
-Call AdvanceSceneVfx()
-Call CalibrationCheck(SwordFire.Slot = 0, "Hidden sword destroys frozen Fire immediately")
+Call UpdateTestEquipmentFire()
+Call AdvanceTestSceneVfx()
+Call CalibrationCheck(Effects.SwordFire.Slot = 0, "Hidden sword destroys frozen Fire immediately")
 Call CalibrationCheck(Not ArinShieldRim.IsVisible(),
     "Hidden shield clears the frozen ember outline immediately")
 
 SwordVisible = True
 ShieldVisible = True
 
-Call UpdateEquipmentFire()
-Call AdvanceSceneVfx()
-Call CalibrationCheck(SwordFire.Slot = 0 And Not ArinShieldRim.IsVisible(),
+Call UpdateTestEquipmentFire()
+Call AdvanceTestSceneVfx()
+Call CalibrationCheck(Effects.SwordFire.Slot = 0 And Not ArinShieldRim.IsVisible(),
     "Showing equipment while frozen does not resurrect stale effects")
 
 Effects.FlamePaused = False
 
-Call UpdateEquipmentFire()
-Call AdvanceSceneVfx()
-Call CalibrationCheck(SwordFire.Slot <> 0 And SwordFire.Generation <> TestFireGeneration,
+Call UpdateTestEquipmentFire()
+Call AdvanceTestSceneVfx()
+Call CalibrationCheck(Effects.SwordFire.Slot <> 0 And Effects.SwordFire.Generation <> TestFireGeneration,
     "Fire resumes from a new current attachment after a frozen hide")
 
 Effects.FlamePaused = True
@@ -357,28 +357,28 @@ TestVisualEpoch = Effects.VisualContinuityEpoch
 
 Call SeekFirstAnimationFrame()
 Call CalibrationCheck(Effects.VisualContinuityEpoch > TestVisualEpoch, "Seek invalidates visual history")
-Call UpdateEquipmentFire()
-Call AdvanceSceneVfx()
-Call CalibrationCheck(Fire.Value(10, SwordFire) = 0, "Seek does not warm up paused flames")
+Call UpdateTestEquipmentFire()
+Call AdvanceTestSceneVfx()
+Call CalibrationCheck(Fire.Value(10, Effects.SwordFire) = 0, "Seek does not warm up paused flames")
 
 Effects.FlamePaused = False
 
-Call UpdateEquipmentFire()
-Call AdvanceSceneVfx()
-Call CalibrationCheck(Fire.Value(10, SwordFire) <= 20, "Flame resume has no catch-up burst")
+Call UpdateTestEquipmentFire()
+Call AdvanceTestSceneVfx()
+Call CalibrationCheck(Fire.Value(10, Effects.SwordFire) <= 20, "Flame resume has no catch-up burst")
 
-SwordFireReady = False
-TestFireAge = Fire.Value(10, SwordFire)
+Effects.SwordFireReady = False
+TestFireAge = Fire.Value(10, Effects.SwordFire)
 TestFireAdvanceCount = Effects.Clock.FireAdvanceCount
 
-Call UpdateEquipmentFire()
-Call AdvanceSceneVfx()
-Call CalibrationCheck(Fire.Value(10, SwordFire) > TestFireAge,
+Call UpdateTestEquipmentFire()
+Call AdvanceTestSceneVfx()
+Call CalibrationCheck(Fire.Value(10, Effects.SwordFire) > TestFireAge,
     "Unavailable equipment component does not stall shared Fire")
 Call CalibrationCheck(Effects.Clock.FireAdvanceCount = TestFireAdvanceCount + 1,
     "Shared Fire advances exactly once per scene frame")
 
-SwordFireReady = Effects.FireInitialized
+Effects.SwordFireReady = Effects.FireInitialized
 
 Effects.LightningInitialized = Lightning.Initialize("Assets/Lightning", 8192,
     Graphics3D.GPU_PARTICLE_SIMULATION_AUTO, 4096)
@@ -392,31 +392,31 @@ Call CalibrationCheck(Effects.LightningInitialized And TestLightning.Slot <> 0,
 
 Effects.FlamePaused = False
 Effects.LightningPaused = False
-TestFireAge = Fire.Value(10, SwordFire)
+TestFireAge = Fire.Value(10, Effects.SwordFire)
 TestLightningAge = Lightning.Value(Lightning.QUERY_AGE, TestLightning)
 
-Call AdvanceSceneVfx()
+Call AdvanceTestSceneVfx()
 Call CalibrationCheck(Playback.ScenePaused And
-    Fire.Value(10, SwordFire) > TestFireAge And
+    Fire.Value(10, Effects.SwordFire) > TestFireAge And
     Lightning.Value(Lightning.QUERY_AGE, TestLightning) > TestLightningAge,
     "Scene pause leaves Fire and Lightning animating by default")
 
 Effects.LightningPaused = True
-TestFireAge = Fire.Value(10, SwordFire)
+TestFireAge = Fire.Value(10, Effects.SwordFire)
 TestLightningAge = Lightning.Value(Lightning.QUERY_AGE, TestLightning)
 
-Call AdvanceSceneVfx()
-Call CalibrationCheck(Fire.Value(10, SwordFire) > TestFireAge And
+Call AdvanceTestSceneVfx()
+Call CalibrationCheck(Fire.Value(10, Effects.SwordFire) > TestFireAge And
     Lightning.Value(Lightning.QUERY_AGE, TestLightning) = TestLightningAge,
     "Frozen Lightning does not stop Fire")
 
 Effects.FlamePaused = True
 Effects.LightningPaused = False
-TestFireAge = Fire.Value(10, SwordFire)
+TestFireAge = Fire.Value(10, Effects.SwordFire)
 TestLightningAge = Lightning.Value(Lightning.QUERY_AGE, TestLightning)
 
-Call AdvanceSceneVfx()
-Call CalibrationCheck(Fire.Value(10, SwordFire) = TestFireAge And
+Call AdvanceTestSceneVfx()
+Call CalibrationCheck(Fire.Value(10, Effects.SwordFire) = TestFireAge And
     Lightning.Value(Lightning.QUERY_AGE, TestLightning) > TestLightningAge,
     "Frozen Fire does not stop Lightning")
 
@@ -428,16 +428,16 @@ Effects.LightningInitialized = False
 Effects.FlamePaused = False
 Effects.LightningPaused = False
 
-TestFireGeneration = SwordFire.Generation
+TestFireGeneration = Effects.SwordFire.Generation
 
 Call PlaySelectedClip(True)
-Call UpdateEquipmentFire()
-Call AdvanceSceneVfx()
-Call CalibrationCheck(SwordFire.Generation = TestFireGeneration, "Automatic playback keeps fire tails")
+Call UpdateTestEquipmentFire()
+Call AdvanceTestSceneVfx()
+Call CalibrationCheck(Effects.SwordFire.Generation = TestFireGeneration, "Automatic playback keeps fire tails")
 Call SelectClip(0)
-Call UpdateEquipmentFire()
-Call AdvanceSceneVfx()
-Call CalibrationCheck(SwordFire.Generation <> TestFireGeneration, "Explicit clip selection clears old fire")
+Call UpdateTestEquipmentFire()
+Call AdvanceTestSceneVfx()
+Call CalibrationCheck(Effects.SwordFire.Generation <> TestFireGeneration, "Explicit clip selection clears old fire")
 
 Do
 
@@ -528,7 +528,7 @@ Sub CheckDragonFireContinuity()
 
     For ClipIndex = 0 To 9
         Call UpdateDragon()
-        Call AdvanceSceneVfx()
+        Call AdvanceTestSceneVfx()
     End For
 
     Call CalibrationCheck(DragonBreath.Slot <> 0 And Fire.Value(6, DragonBreath) > 0,
@@ -540,7 +540,7 @@ Sub CheckDragonFireContinuity()
     ViewerCameraState.Live.Position.X = ViewerCameraState.Live.Position.X + 40
 
     Call UpdateDragon()
-    Call AdvanceSceneVfx()
+    Call AdvanceTestSceneVfx()
     Call CalibrationCheck(DragonBreath.Generation = PreviousGeneration And
         Fire.Value(10, DragonBreath) = PreviousAge, "Frozen dragon retains its permitted snapshot")
     Call StepAnimationFrame(1)
@@ -551,7 +551,7 @@ Sub CheckDragonFireContinuity()
     Effects.FlamePaused = False
 
     Call UpdateDragon()
-    Call AdvanceSceneVfx()
+    Call AdvanceTestSceneVfx()
     Call CalibrationCheck(DragonBreath.Slot <> 0 And
         DragonBreath.Generation <> PreviousGeneration And Fire.Value(10, DragonBreath) <= 16,
         "Dragon resumes at current pose without stale breath or catch-up")
@@ -598,7 +598,7 @@ Sub CheckDragonFireContinuity()
     Session.Ready = Character3D.SetAnimationTime(Character, 2490) And Session.Ready
 
     Call UpdateDragon()
-    Call AdvanceSceneVfx()
+    Call AdvanceTestSceneVfx()
 
     PreviousCues = DragonPresence.ImpactCueCount()
     Effects.FlamePaused = True
@@ -612,7 +612,7 @@ Sub CheckDragonFireContinuity()
     Effects.FlamePaused = False
 
     Call UpdateDragon()
-    Call AdvanceSceneVfx()
+    Call AdvanceTestSceneVfx()
     Call UpdateDragon()
     Call CalibrationCheck(DragonPresence.ImpactCueCount() = PreviousCues,
         "Resume after forward impact seek never replays the skipped impact cue")
@@ -952,5 +952,35 @@ Sub CheckCalibrationImport(Original As Text)
     Call CalibrationCheck(SavedCalibrationJson() = Original, "Undo import restores complete snapshot")
 
     Calibration.UndoCount = 0
+
+End Sub
+
+Sub UpdateTestEquipmentFire()
+
+    Call ViewerEffects.UpdateEquipmentFire(
+        Effects,
+        Character,
+        Session.ProfileIndex,
+        Party.Enabled And PartyPresentationState(0) = ViewerParty.STATE_KO,
+        SwordVisible,
+        ShieldVisible,
+        ViewerUiState.CalibrationEditing,
+        Playback.ScenePaused,
+        Playback.SelectedClip,
+        SelectedClipLabel(),
+        ViewerCameraState.Live,
+        Timing.CameraElapsed
+    )
+
+End Sub
+
+Sub AdvanceTestSceneVfx()
+
+    Session.Ready = ViewerEffects.AdvanceScene(
+        Effects,
+        Timing.CameraElapsed,
+        Playback.ScenePaused,
+        ViewerCameraState.Live
+    ) And Session.Ready
 
 End Sub

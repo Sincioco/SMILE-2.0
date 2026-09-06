@@ -108,7 +108,6 @@ try {
     # isolated native harness below instead of pinning obsolete labels/timers.
     foreach ($contract in @(
         'Import Smile.Simple3D.CharacterViewer As CharacterViewer',
-        'Import Smile.Simple3D.SceneVfx3D As SceneVfx3D',
         'Import Smile.UI.Controls As UI',
         'Import Smile.Tools.Character3DViewerCamera As ViewerCamera',
         'Import Smile.Tools.Character3DViewerCalibration As ViewerCalibration',
@@ -212,9 +211,15 @@ try {
         Assert-Contains $actorsSource $contract 'Viewer actor owner'
     }
     foreach ($contract in @(
+        'Import Smile.Simple3D.SceneVfx3D As SceneVfx3D',
         'Public Function ShouldFreeze(',
         'Result = ExplicitlyPaused',
         'Public Function AdvanceScene(',
+        'Public Sub UpdateEquipmentFire(',
+        'Public Function UpdateEpicGlow(',
+        'Public Sub DrawEquipmentFire(',
+        'Public Function DrawScene(',
+        'Public Sub ResetPlaybackControls(',
         'Public Function ShutdownShared(')) {
         Assert-Contains $effectsSource $contract 'Viewer effects owner'
     }
@@ -239,6 +244,14 @@ try {
         -not $viewerSource.Contains('Dim SceneVfxClock As') -and
         -not $viewerSource.Contains('Dim Arena As')) `
         'Party, scene VFX and arena resource state must not return to Program.smile.'
+    Assert-True (-not $viewerSource.Contains('Dim ShieldFire[') -and
+        -not $viewerSource.Contains('Dim ShieldFirePoints[') -and
+        -not $viewerSource.Contains('Dim SwordTrailPoints[') -and
+        -not $viewerSource.Contains('Dim ShieldTrailPoints[') -and
+        -not $viewerSource.Contains('Sub UpdateEquipmentFire()') -and
+        -not $viewerSource.Contains('Function UpdateEpicGlow() As Boolean') -and
+        -not $viewerSource.Contains('Sub ClearEquipmentFire()')) `
+        'Equipment effects state, behavior and lifecycle must remain in ViewerEffects.'
     Assert-True (-not $viewerSource.Contains('Window_Activate()')) `
         'The Viewer must not steal foreground by activating its window every frame.'
     Assert-Contains $profileSource `

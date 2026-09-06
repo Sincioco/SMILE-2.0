@@ -9,6 +9,7 @@
     <SmileSource Include="HardeningTests.smile" StartupOnly="true" />
     <SmileSource Include="Profiles.smile" />
     <SmileSource Include="OrinStorm.smile" />
+    <SmileSource Include="ArinShieldRim.smile" />
     <SmileSource Include="BattleAudio.smile" />
     <SmileSource Include="BattleCamera.smile" />
     <SmileSource Include="ViewerTiming.smile" />

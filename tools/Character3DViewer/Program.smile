@@ -6,16 +6,12 @@ Import Smile.Simple3D.Character3D As Character3D
 Import Smile.Simple3D.CharacterViewer As CharacterViewer
 Import Smile.UI.Controls As UI
 Import Smile.Simple3D.FireEmitter3D As Fire
-Import Smile.Simple3D.LightningVfx3D As Lightning
-Import Smile.Simple3D.SceneVfx3D As SceneVfx3D
 Import Smile.Simple3D.Core As Core
 Import Smile.Simple3D.Graphics3D As Graphics3D
 Import Smile.Simple3D.Math3D As Math3D
 Import Smile.Simple3D.NodeAim3D As NodeAim3D
 Import Smile.Simple3D.Scene3D As Scene3D
 Import Smile.Tools.Character3DViewerProfiles As ViewerProfiles
-Import Smile.Tools.OrinStorm As OrinStorm
-Import Smile.Tools.ArinShieldRim As ArinShieldRim
 Import Smile.Tools.BattleAudio As BattleAudio
 Import Smile.Tools.BattleCamera As BattleCamera
 Import Smile.Tools.DragonPresence As DragonPresence
@@ -62,18 +58,9 @@ Const CALIBRATION_DOWNLOAD_WIDTH = 172
 Const CALIBRATION_FILENAME_OFFSET = 336
 Const CALIBRATION_TRANSFER_TEXT_OFFSET = 510
 Const FRAME_BUTTON_REPEAT_MILLISECONDS = 300
-Const EQUIPMENT_TRAIL_POINT_COUNT = 5
-Const EQUIPMENT_TRAIL_SAMPLE_MILLISECONDS = 24
-Const SWORD_TRAIL_START_MILLISECONDS = 300
-Const SWORD_TRAIL_END_MILLISECONDS = 967
-Const SHIELD_TRAIL_START_MILLISECONDS = 350
-Const SHIELD_TRAIL_END_MILLISECONDS = 650
 Const SHIELD_PART_INDEX = 0
 Const WEAPON_PART_INDEX = 1
 Const BODY_PART_INDEX = 2
-Const EQUIPMENT_GLOW_SCALE_DIVISOR = 60
-Const SWORD_TRAIL_PARTICLE_SIZE = 3
-Const SHIELD_TRAIL_PARTICLE_SIZE = 5
 Const DRAGON_ASSET_PATH = "Assets\Generation2\RedDragon\RedDragon.sm3d"
 Const DRAGON_SCALE_PERCENT = 25000
 Const DRAGON_POSITION_X = -208
@@ -147,39 +134,9 @@ Dim SocketMarkers As Core.ParticleBatch3D
 Dim SocketMarkerMaterial As Core.Material3D
 Dim SelectedSocket As Number
 Dim ShowAllSocketOrigins As Boolean
-Dim EpicGlowAvailable As Boolean
-Dim EpicGlowVisible As Boolean
-Dim EpicGlowTexture As Core.Texture3D
-Dim EpicGlowMaterial As Core.Material3D
-Dim EpicGlowParticleMaterial As Core.Material3D
-Dim SwordGlow As Core.Object3D
-Dim ShieldGlow As Core.Object3D
-Dim SwordFire As Fire.FireEmitter
-Dim SwordFireReady As Boolean
-Dim SwordFireVisible As Boolean
-Dim SwordFireFailed As Boolean
-Dim SwordFireClip As Number
-Dim SwordFireTime As Number
-Dim SwordFireBase As Core.Vector3
-Dim SwordFireTip As Core.Vector3
-Dim ShieldFire[3] As Fire.FireEmitter
-Dim ShieldFirePoints[3] As Core.Vector3
-Dim ShieldFireVisible As Boolean
-Dim ShieldFlameStyle As Boolean
-Dim ShieldFireFailed As Boolean
-Dim ShieldFireClip As Number
-Dim ShieldFireTime As Number
 Dim DragonFireClip As Text
 Dim DragonFireTime As Number
 Dim Effects As ViewerEffects.State
-Dim SwordTrail As Core.ParticleBatch3D
-Dim ShieldTrail As Core.ParticleBatch3D
-Dim SwordTrailPoints[EQUIPMENT_TRAIL_POINT_COUNT] As Core.Vector3
-Dim ShieldTrailPoints[EQUIPMENT_TRAIL_POINT_COUNT] As Core.Vector3
-Dim EquipmentTrailElapsed As Number
-Dim EquipmentTrailAnimationTime As Number
-Dim SwordTrailActive As Boolean
-Dim ShieldTrailActive As Boolean
 Dim LightingIndex As Number
 Dim MaterialInspection As Number
 Dim Key As Number
@@ -322,10 +279,21 @@ Do
         Call ViewerCamera.ApplyCalibrationOrbitAnchor(
             ViewerCameraState, Window_Width(), Window_Height())
 
-        If EpicGlowVisible Then
+        If Effects.EpicGlowVisible Then
 
-            If Not UpdateEpicGlow() Then
-                EpicGlowVisible = False
+            If Not ViewerEffects.UpdateEpicGlow(
+                Effects,
+                Character,
+                Session.ProfileIndex,
+                ViewerCameraState.Frame.ScalePercent,
+                Playback.AnimationUpdateElapsed,
+                SelectedClipName(),
+                SwordVisible,
+                ShieldVisible,
+                CalibrationChannelValue(Playback.SelectedClip, 18) <> 0,
+                CalibrationChannelValue(Playback.SelectedClip, 19) <> 0
+            ) Then
+                Effects.EpicGlowVisible = False
             End If
 
         End If
@@ -336,7 +304,20 @@ Do
             Call ViewerSession.CaptureFailure(Session, 7)
         End If
 
-        Call UpdateEquipmentFire()
+        Call ViewerEffects.UpdateEquipmentFire(
+            Effects,
+            Character,
+            Session.ProfileIndex,
+            Party.Enabled And PartyPresentationState(0) = ViewerParty.STATE_KO,
+            SwordVisible,
+            ShieldVisible,
+            ViewerUiState.CalibrationEditing,
+            Playback.ScenePaused,
+            Playback.SelectedClip,
+            SelectedClipLabel(),
+            ViewerCameraState.Live,
+            Timing.CameraElapsed
+        )
 
         If Party.Enabled Or Session.DragonInspection Then
             Call UpdatePartyCompanion()
@@ -355,7 +336,13 @@ Do
 
         Call UpdateBattleAudio()
         Call UpdateOrinStorm()
-        Call AdvanceSceneVfx()
+
+        Session.Ready = ViewerEffects.AdvanceScene(
+            Effects,
+            Timing.CameraElapsed,
+            Playback.ScenePaused,
+            ViewerCameraState.Live
+        ) And Session.Ready
 
         If SocketGizmosVisible Then
             Call UpdateSocketGizmos()
@@ -389,11 +376,16 @@ Do
                 Call ViewerSession.CaptureFailure(Session, 11)
             End If
 
-            If EpicGlowVisible Then
+            If Effects.EpicGlowVisible Then
 
                 If ((Not Party.Enabled Or PartyPresentationState(0) <> ViewerParty.STATE_KO) And
-                    Not DrawEquipmentGlow()) Then
-                    EpicGlowVisible = False
+                    Not ViewerEffects.DrawEquipmentGlow(
+                        Effects,
+                        Session.ProfileIndex,
+                        SwordVisible,
+                        ShieldVisible
+                    )) Then
+                    Effects.EpicGlowVisible = False
                 End If
 
             End If
@@ -410,17 +402,9 @@ Do
 
             Call ViewerSession.CaptureFailure(Session, 12)
 
-            If (SwordVisible And
-                SwordFireVisible And
-                SwordFire.Slot <> 0 And
-                Not SwordFireFailed) Then
-                SwordFireFailed = Not Fire.Draw(SwordFire)
-            End If
+            Call ViewerEffects.DrawEquipmentFire(Effects, SwordVisible, ShieldVisible)
 
-            Call DrawShieldFire()
-            Call OrinStorm.Draw(Effects.OrinStorm)
-
-            Session.Ready = SceneVfx3D.DrawLightning(Effects.LightningInitialized) And Session.Ready
+            Session.Ready = ViewerEffects.DrawScene(Effects) And Session.Ready
 
             Call DragonPresence.Draw()
 
@@ -428,10 +412,15 @@ Do
                 DragonFireFailed = Not Fire.Draw(DragonBreath)
             End If
 
-            If EpicGlowVisible Then
+            If Effects.EpicGlowVisible Then
 
-                If Not DrawEpicGlow() Then
-                    EpicGlowVisible = False
+                If Not ViewerEffects.DrawEpicGlow(
+                    Effects,
+                    Session.ProfileIndex,
+                    SwordVisible,
+                    ShieldVisible
+                ) Then
+                    Effects.EpicGlowVisible = False
                 End If
 
             End If
@@ -452,7 +441,7 @@ Do
 
     End If
 
-    Call OrinStorm.DrawFlash(Effects.OrinStorm)
+    Call ViewerEffects.DrawStormFlash(Effects)
     Call DrawViewerOverlay()
 
     Show Screen
@@ -596,7 +585,7 @@ Sub LoadViewer()
 
     Call ViewerSession.CaptureFailure(Session, 38)
 
-    Call CreateEpicGlow()
+    Call ViewerEffects.CreateEpicGlow(Effects, Session.ProfileIndex, Character)
 
     Call ViewerSession.CaptureFailure(Session, 39)
 
@@ -614,28 +603,18 @@ Sub LoadViewer()
 
     Call ViewerSession.CaptureFailure(Session, 42)
 
-    SwordFireVisible = True
-    ShieldFireVisible = True
-    ShieldFireFailed = False
-    SwordFireFailed = False
-    SwordFireReady = False
+    Call ViewerEffects.ResetEquipmentDefaults(Effects)
 
     Session.Ready = ViewerEffects.PrepareShared(Effects) And Session.Ready
 
+    Call ViewerEffects.PrepareFire(
+        Effects,
+        DragonAvailable,
+        CalibrationAvailable And Session.ProfileIndex = ViewerProfiles.PROFILE_ARIN
+    )
+
     If DragonAvailable Then
-        Effects.FireInitialized = Fire.Initialize("Assets/Fire")
-
         Call DragonPresence.Initialize()
-    End If
-
-    If CalibrationAvailable And Session.ProfileIndex = ViewerProfiles.PROFILE_ARIN Then
-        SwordFireReady = Effects.FireInitialized
-        SwordFireFailed = Not SwordFireReady
-    End If
-
-    If SwordFireReady Then
-        SwordFireReady = Graphics3D.ConfigureSoftDepth3D(1)
-        SwordFireReady = Graphics3D.ConfigureDistortion3D(1, 2) And SwordFireReady
     End If
 
     If Party.Enabled Then
@@ -651,22 +630,14 @@ Sub LoadViewer()
         Call CreatePartyCompanion()
         Call PositionDragonOpponents()
 
-        SwordFireReady = Effects.FireInitialized
+        Call ViewerEffects.EnableSwordFire(Effects)
 
     End If
 
     If (Party.Enabled Or
         Session.DragonInspection Or
         Session.ProfileIndex = ViewerProfiles.PROFILE_ORIN) Then
-
-        Effects.LightningInitialized = Lightning.Initialize("Assets/Lightning", 8192,
-            Graphics3D.GPU_PARTICLE_SIMULATION_AUTO, 4096)
-
-        Call OrinStorm.Prepare(Effects.LightningInitialized)
-
-        Effects.OrinStorm = OrinStorm.Create()
-        Session.Ready = Effects.LightningInitialized And OrinStorm.IsValid(Effects.OrinStorm) And Session.Ready
-
+        Session.Ready = ViewerEffects.PrepareLightning(Effects) And Session.Ready
     End If
 
     Session.ViewerEpoch = Graphics3D.ResourceEpoch3D()
@@ -1889,7 +1860,7 @@ Sub ToggleSword()
         Session.Ready = Character3D.SetPartVisible(Party.Companion.Actor, WEAPON_PART_INDEX, SwordVisible) And Session.Ready
 
         If Not SwordVisible Then
-            Call HideSwordEffects()
+            Call ViewerEffects.HideSwordEffects(Effects)
         End If
 
         Return
@@ -1910,7 +1881,7 @@ Sub ToggleSword()
         End If
 
         If Not SwordVisible Then
-            Call HideSwordEffects()
+            Call ViewerEffects.HideSwordEffects(Effects)
         End If
 
     End If
@@ -1936,7 +1907,7 @@ Sub ToggleShield()
         Session.Ready = Character3D.SetPartVisible(Party.Companion.Actor, SHIELD_PART_INDEX, ShieldVisible) And Session.Ready
 
         If Not ShieldVisible Then
-            Call HideShieldEffects()
+            Call ViewerEffects.HideShieldEffects(Effects)
         End If
 
         Return
@@ -1957,7 +1928,7 @@ Sub ToggleShield()
         End If
 
         If Not ShieldVisible Then
-            Call HideShieldEffects()
+            Call ViewerEffects.HideShieldEffects(Effects)
         End If
 
     End If
@@ -2016,17 +1987,8 @@ Sub ToggleEpicGlow()
 
     End If
 
-    If EpicGlowAvailable Then
-
-        EpicGlowVisible = Not EpicGlowVisible
-
-        If EpicGlowVisible Then
-            Call ResetEpicGlowTrails()
-        Else
-
-            Call ClearEquipmentGlowTrails()
-        End If
-
+    If Effects.EpicGlowAvailable Then
+        Call ViewerEffects.ToggleEpicGlow(Effects, Character)
     End If
 
 End Sub
@@ -2709,20 +2671,12 @@ Function HandleInspectorPointer() As Boolean
     Else If PointerInRectangle(PanelLeft + 94, 444, 76, 22) Then
 
         If Session.ProfileIndex = ViewerProfiles.PROFILE_DRAGON Then
-
             DragonHeadTracking = Not DragonHeadTracking
-
         Else If Session.ProfileIndex = ViewerProfiles.PROFILE_ORIN Then
-
-            Call OrinStorm.CycleStyle(Effects.OrinStorm)
-
+            Call ViewerEffects.CycleStormStyle(Effects)
         Else
-            SwordFireVisible = Not SwordFireVisible
 
-            If Not SwordFireVisible Then
-                Call ClearSwordFire()
-            End If
-
+            Call ViewerEffects.ToggleSwordFire(Effects)
         End If
 
     Else If PointerInRectangle(PanelLeft + 174, 444, 78, 22) Then
@@ -2735,28 +2689,25 @@ Function HandleInspectorPointer() As Boolean
 
         Else If Session.ProfileIndex = ViewerProfiles.PROFILE_ORIN Then
 
-            Call OrinStorm.CycleStyle(Effects.OrinStorm)
+            Call ViewerEffects.CycleStormStyle(Effects)
 
         Else
-            ShieldFireVisible = Not ShieldFireVisible
 
-            If Not ShieldFireVisible Then
-                Call ClearShieldFire()
-            End If
+            Call ViewerEffects.ToggleShieldFire(Effects)
 
         End If
 
     Else If (Session.ProfileIndex = ViewerProfiles.PROFILE_ORIN And
         PointerInRectangle(PanelLeft + 12, 470, 128, 20)) Then
 
-        Call OrinStorm.CycleSceneComfort()
+        Call ViewerEffects.CycleStormSceneComfort()
 
     Else If (Session.ProfileIndex = ViewerProfiles.PROFILE_ORIN And
         PointerInRectangle(PanelLeft + 144, 470, 108, 20)) Then
 
         Call ViewerEffects.ToggleLightningPause(Effects)
 
-    Else If (SwordFireReady And
+    Else If (Effects.SwordFireReady And
         PointerInRectangle(PanelLeft + 12, 470, 128, 20)) Then
 
         Call ViewerEffects.ToggleFlamePause(Effects)
@@ -2764,7 +2715,7 @@ Function HandleInspectorPointer() As Boolean
     Else If (Session.ProfileIndex = ViewerProfiles.PROFILE_ARIN And
         PointerInRectangle(PanelLeft + 144, 470, 108, 20)) Then
 
-        Call ToggleShieldFireStyle()
+        Call ViewerEffects.ToggleShieldFireStyle(Effects)
 
     Else If PointerInRectangle(PanelLeft + 172, 204, 30, 24) Then
 
@@ -3002,7 +2953,7 @@ Sub HandleCalibrationPanelPointer()
 
         ViewerGizmoState.HoldGrip = Not ViewerGizmoState.HoldGrip
 
-        Call InvalidateVisualHistory()
+    Call ViewerEffects.InvalidateVisualHistory(Effects)
 
         ViewerGizmoState.GripAnchorActive = False
 
@@ -3348,197 +3299,6 @@ Function DrawSocketGizmos() As Boolean
 
 End Function
 
-Sub CreateEpicGlow()
-
-    Dim EmptyTexture As Core.Texture3D
-    Dim CharacterModel As Core.Model3D
-    Dim CharacterAnimator As Core.Animator3D
-    Dim GlowReady As Boolean
-
-    EpicGlowAvailable = ViewerProfiles.EpicGlowAvailable(Session.ProfileIndex)
-    EpicGlowAvailable = Character3D.HasSocket(Character, "SwordBase") And EpicGlowAvailable
-    EpicGlowAvailable = Character3D.HasSocket(Character, "SwordTip") And EpicGlowAvailable
-    EpicGlowAvailable = Character3D.HasSocket(Character, "ShieldCenter") And EpicGlowAvailable
-    EpicGlowVisible = ViewerProfiles.EpicGlowVisibleByDefault(Session.ProfileIndex) And EpicGlowAvailable
-
-    If Not EpicGlowAvailable Then
-        Return
-    End If
-
-    EpicGlowTexture = Graphics3D.LoadTexture3D(
-        "TechnicalAssets\Generation2\VfxAtlas.png",
-        Graphics3D.TEXTURE_FILTER_LINEAR,
-        Graphics3D.TEXTURE_WRAP_CLAMP
-    )
-    GlowReady = EpicGlowTexture.Handle <> 0
-
-    If GlowReady Then
-        EpicGlowMaterial = Graphics3D.CreateEffectMaterial3D(
-            EmptyTexture,
-            Graphics3D.MATERIAL_ALPHA_ADDITIVE,
-            220
-        )
-        GlowReady = EpicGlowMaterial.Handle <> 0
-    End If
-
-    If GlowReady Then
-        EpicGlowParticleMaterial = Graphics3D.CreateEffectMaterial3D(
-            EpicGlowTexture,
-            Graphics3D.MATERIAL_ALPHA_ADDITIVE,
-            220
-        )
-        GlowReady = EpicGlowParticleMaterial.Handle <> 0
-    End If
-
-    If GlowReady Then
-
-        CharacterModel.Handle = Character3D.ModelHandle(Character)
-        CharacterAnimator.Handle = Character3D.AnimatorHandle(Character)
-        SwordGlow = Graphics3D.CreateModelPart3D(CharacterModel, WEAPON_PART_INDEX)
-        ShieldGlow = Graphics3D.CreateModelPart3D(CharacterModel, SHIELD_PART_INDEX)
-        GlowReady = SwordGlow.Handle <> 0 And ShieldGlow.Handle <> 0
-
-    End If
-
-    If GlowReady Then
-
-        GlowReady = Graphics3D.SetObjectMaterial3D(SwordGlow, EpicGlowMaterial)
-        GlowReady = Graphics3D.SetObjectAnimator3D(SwordGlow, CharacterAnimator) And GlowReady
-        GlowReady = Graphics3D.SetObjectMaterial3D(ShieldGlow, EpicGlowMaterial)
-        GlowReady = Graphics3D.SetObjectAnimator3D(ShieldGlow, CharacterAnimator) And GlowReady
-        GlowReady = Graphics3D.SetObjectCullMode3D(
-            ShieldGlow,
-            Graphics3D.OBJECT_CULL_FRONT
-        ) And GlowReady
-
-        Call Graphics3D.SetObjectColor(SwordGlow, 255, 182, 48)
-        Call Graphics3D.SetObjectOpacity(SwordGlow, 95)
-        Call Graphics3D.SetObjectShadows3D(SwordGlow, False, False)
-        Call Graphics3D.SetObjectColor(ShieldGlow, 255, 196, 64)
-
-        If Session.ProfileIndex = ViewerProfiles.PROFILE_ORIN Then
-            Call Graphics3D.SetObjectColor(SwordGlow, 255, 255, 255)
-            Call Graphics3D.SetObjectColor(ShieldGlow, 255, 255, 255)
-        End If
-
-        Call Graphics3D.SetObjectOpacity(ShieldGlow, 90)
-        Call Graphics3D.SetObjectShadows3D(ShieldGlow, False, False)
-
-    End If
-
-    If GlowReady Then
-        SwordTrail = Graphics3D.CreateParticleBatch3D(
-            EQUIPMENT_TRAIL_POINT_COUNT,
-            EpicGlowParticleMaterial,
-            Graphics3D.VFX_BILLBOARD_CAMERA,
-            4,
-            4
-        )
-        GlowReady = SwordTrail.Handle <> 0
-    End If
-
-    If GlowReady Then
-        ShieldTrail = Graphics3D.CreateParticleBatch3D(
-            EQUIPMENT_TRAIL_POINT_COUNT,
-            EpicGlowParticleMaterial,
-            Graphics3D.VFX_BILLBOARD_CAMERA,
-            4,
-            4
-        )
-        GlowReady = ShieldTrail.Handle <> 0
-    End If
-
-    If Not GlowReady Then
-        Call DestroyEpicGlow()
-    Else
-
-        Call ResetEpicGlowTrails()
-    End If
-
-End Sub
-
-Sub DestroyEpicGlow()
-
-    Call Graphics3D.DestroyObject3D(SwordGlow)
-    Call Graphics3D.DestroyParticleBatch3D(SwordTrail)
-    Call Graphics3D.DestroyParticleBatch3D(ShieldTrail)
-    Call Graphics3D.DestroyObject3D(ShieldGlow)
-    Call Graphics3D.DestroyEffectMaterial3D(EpicGlowParticleMaterial)
-    Call Graphics3D.DestroyEffectMaterial3D(EpicGlowMaterial)
-    Call Graphics3D.DestroyTexture3D(EpicGlowTexture)
-
-    EpicGlowAvailable = False
-    EpicGlowVisible = False
-
-End Sub
-
-''' Resolve sockets through the actual equipment object AFTER pose calibration.
-''' Its object matrix includes move/pivot edits and its wrist-decoupling policy.
-Sub InvalidateVisualHistory()
-
-    Call ViewerEffects.InvalidateVisualHistory(Effects)
-
-End Sub
-
-Sub UpdateEquipmentFire()
-
-    If Session.ProfileIndex = ViewerProfiles.PROFILE_DRAGON Then
-        Return
-    End If
-
-    If Party.Enabled And PartyPresentationState(0) = ViewerParty.STATE_KO Then
-        Call ClearEquipmentFire()
-
-        Return
-    End If
-
-    If Not SwordVisible Then
-        Call HideSwordEffects()
-    Else If Not SwordFireVisible Then
-        Call ClearSwordFire()
-    End If
-
-    If Not ShieldVisible Then
-        Call HideShieldEffects()
-    Else If Not ShieldFireVisible Then
-        Call ClearShieldFire()
-    End If
-
-    Effects.EquipmentFireFirstSample = Effects.VisualHistoryDirty Or Effects.EquipmentFireEpoch <> Effects.VisualContinuityEpoch
-
-    If Effects.EquipmentFireFirstSample Then
-
-        Call ClearEquipmentFire()
-
-        If EpicGlowAvailable Then
-            Call ResetEpicGlowTrails()
-        End If
-
-        Effects.EquipmentFireEpoch = Effects.VisualContinuityEpoch
-        Effects.VisualHistoryDirty = False
-
-    End If
-
-    If Effects.FlamePaused Then
-        Effects.FlamesWerePaused = True
-        Return
-    End If
-
-    If Not SwordFireReady Then
-        Return
-    End If
-
-    Call RecordOptionalFireFailure()
-
-    Call UpdateSwordFire()
-    Call UpdateShieldFire()
-
-    Effects.FlamesWerePaused = Effects.FlamePaused
-
-    Call RecordOptionalFireFailure()
-
-End Sub
-
 Sub UpdateOrinStorm()
 
     Dim Target As Core.Vector3
@@ -3553,568 +3313,20 @@ Sub UpdateOrinStorm()
     If (Party.Enabled Or Session.DragonInspection) And Party.Ready Then
         Clip = Character3D.ClipName(Party.Companion.Actor, Party.Companion.Clip)
 
-        Call OrinStorm.Update(Effects.OrinStorm, Party.Companion.Actor, Clip, Target,
+        Call ViewerEffects.UpdateStorm(Effects, Party.Companion.Actor, Clip, Target,
             ViewerCameraState.Live, Timing.CameraElapsed,
-            Party.Companion.GlowVisible And (EpicGlowVisible Or Session.DragonInspection) And
+            Party.Companion.GlowVisible And (Effects.EpicGlowVisible Or Session.DragonInspection) And
                 PartyPresentationState(1) <> ViewerParty.STATE_KO,
-            SwordVisible, ShieldVisible, Effects.LightningPaused, Playback.ScenePaused, Effects.OrinLight)
+            SwordVisible, ShieldVisible, Playback.ScenePaused)
     Else If Session.ProfileIndex = ViewerProfiles.PROFILE_ORIN Then
         Clip = Character3D.ClipName(Character, Playback.SelectedClip)
 
-        Call OrinStorm.Update(Effects.OrinStorm, Character, Clip, Target, ViewerCameraState.Live,
-            Timing.CameraElapsed, EpicGlowVisible, SwordVisible, ShieldVisible,
-            Effects.LightningPaused, Playback.ScenePaused, Effects.OrinLight)
+        Call ViewerEffects.UpdateStorm(Effects, Character, Clip, Target, ViewerCameraState.Live,
+            Timing.CameraElapsed, Effects.EpicGlowVisible, SwordVisible, ShieldVisible,
+            Playback.ScenePaused)
     End If
 
 End Sub
-
-Sub AdvanceSceneVfx()
-
-    Session.Ready = ViewerEffects.AdvanceScene(
-        Effects,
-        Timing.CameraElapsed,
-        Playback.ScenePaused,
-        ViewerCameraState.Live
-    ) And Session.Ready
-
-End Sub
-
-Sub RecordOptionalFireFailure()
-
-    If Effects.EquipmentFireFirstError = 0 And (SwordFireFailed Or ShieldFireFailed) Then
-
-        Effects.EquipmentFireFirstError = Fire.Value(12, SwordFire)
-
-        If Effects.EquipmentFireFirstError = 0 Then
-            Effects.EquipmentFireFirstError = Fire.ERROR_RENDERER
-        End If
-
-    End If
-
-End Sub
-
-Sub UpdateSwordFire()
-
-    Dim Base As Core.Vector3
-    Dim Tip As Core.Vector3
-    Dim Delta As Core.Vector3
-    Dim Length As Number
-    Dim Time As Number
-    Dim Restart As Boolean
-    Dim Ok As Boolean
-    Dim Inheritance As Number
-
-    If SwordFireFailed And SwordFire.Slot <> 0 Then
-        Ok = Fire.Destroy(SwordFire)
-    End If
-
-    If Not SwordFireReady Or SwordFireFailed Then
-        Return
-    End If
-
-    If Not SwordFireVisible Or Not SwordVisible Then
-
-        If SwordFire.Slot <> 0 Then
-            Ok = Fire.Destroy(SwordFire)
-        End If
-
-        Return
-
-    End If
-
-    Base = Character3D.SocketPosition(Character, "SwordBase", WEAPON_PART_INDEX)
-    Tip = Character3D.SocketPosition(Character, "SwordTip", WEAPON_PART_INDEX)
-    Delta.X = Tip.X - Base.X
-    Delta.Y = Tip.Y - Base.Y
-    Delta.Z = Tip.Z - Base.Z
-    Length = Math3D.Length(Delta)
-    Time = Character3D.AnimationTime(Character)
-
-    If Length < 4 Or Length > 10000 Then
-        SwordFireFailed = True
-        Return
-    End If
-
-    ''' Loops and clip changes retain world-space particles; paused pose edits clear stale fire.
-    Restart = False
-
-    If Playback.ScenePaused And ViewerUiState.CalibrationEditing Then
-        Restart = (Restart Or Base.X <> SwordFireBase.X Or Base.Y <> SwordFireBase.Y Or
-            Base.Z <> SwordFireBase.Z Or Tip.X <> SwordFireTip.X Or
-            Tip.Y <> SwordFireTip.Y Or Tip.Z <> SwordFireTip.Z)
-    End If
-
-    If Restart And SwordFire.Slot <> 0 Then
-        Ok = Fire.Destroy(SwordFire)
-    End If
-
-    If SwordFire.Slot = 0 Then
-
-        SwordFire = Fire.StartAt("PaladinFlameBlade", Base, 5701,
-            Fire.QUALITY_HIGH, Fire.SIMULATION_AUTO, Max(2, Length / 12))
-        SwordFireFailed = SwordFire.Slot = 0
-
-        If SwordFireFailed Then
-            Return
-        End If
-
-        Ok = Fire.SetSegment(SwordFire, Base, Tip)
-
-    Else
-        Ok = Fire.SetSegment(SwordFire, Base, Tip)
-
-    End If
-
-    ''' Low inheritance leaves the fuller flame behind the moving blade instead of throwing it ahead.
-    Inheritance = 10
-
-    If SelectedClipLabel() = "Walk" Then
-        Inheritance = 15
-    Else If SelectedClipLabel() = "Run" Then
-        Inheritance = 20
-    Else If SelectedClipLabel() = "Attack" Or SelectedClipLabel() = "Attack 2" Then
-        Inheritance = 10
-    End If
-
-    If (Time < SwordFireTime Or
-        Playback.SelectedClip <> SwordFireClip Or
-        Playback.ScenePaused Or
-        Effects.FlamePaused Or
-        Effects.FlamesWerePaused Or
-        Effects.EquipmentFireFirstSample) Then
-        Inheritance = 0
-    End If
-
-    Call Fire.SetIntensity(SwordFire, 200)
-    Call Fire.SetSourceVelocityInheritance(SwordFire, Inheritance)
-
-    SwordFireFailed = Not Ok
-    SwordFireBase = Base
-    SwordFireTip = Tip
-    SwordFireClip = Playback.SelectedClip
-    SwordFireTime = Time
-
-End Sub
-
-Sub UpdateShieldFire()
-
-    Dim Points[3] As Core.Vector3
-    Dim Index As Number
-    Dim NextIndex As Number
-    Dim Time As Number
-    Dim Restart As Boolean
-    Dim Ok As Boolean
-
-    If Not ShieldFlameStyle Then
-
-        If Not ShieldVisible Or Not ShieldFireVisible Then
-            Call ArinShieldRim.Shutdown()
-
-            Return
-        End If
-
-        For Index = 0 To 2
-
-            If ShieldFire[Index].Slot <> 0 Then
-                Ok = Fire.Destroy(ShieldFire[Index])
-            End If
-
-        End For
-
-        If (ShieldFireVisible And
-            ShieldVisible And
-            EpicGlowVisible) Then
-            Call ArinShieldRim.Update(Character, ViewerCameraState.Live, Timing.CameraElapsed)
-        Else
-
-            Call ArinShieldRim.Shutdown()
-        End If
-
-        Return
-
-    End If
-
-    If ShieldFireFailed Then
-
-        For Index = 0 To 2
-
-            If ShieldFire[Index].Slot <> 0 Then
-                Ok = Fire.Destroy(ShieldFire[Index])
-            End If
-
-        End For
-
-        Return
-
-    End If
-
-    If Not ShieldFireVisible Or Not ShieldVisible Then
-
-        For Index = 0 To 2
-
-            If ShieldFire[Index].Slot <> 0 Then
-                Ok = Fire.Destroy(ShieldFire[Index])
-            End If
-
-        End For
-
-        Return
-
-    End If
-
-    Points[0] = Character3D.SocketPosition(Character, "ShieldFireLeft", SHIELD_PART_INDEX)
-    Points[1] = Character3D.SocketPosition(Character, "ShieldFireRight", SHIELD_PART_INDEX)
-    Points[2] = Character3D.SocketPosition(Character, "ShieldFireTip", SHIELD_PART_INDEX)
-    Time = Character3D.AnimationTime(Character)
-    Restart = False
-
-    For Index = 0 To 2
-
-        If Playback.ScenePaused And ViewerUiState.CalibrationEditing Then
-            Restart = (Restart Or Points[Index].X <> ShieldFirePoints[Index].X Or
-                Points[Index].Y <> ShieldFirePoints[Index].Y Or
-                Points[Index].Z <> ShieldFirePoints[Index].Z)
-        End If
-
-    End For
-
-    Ok = True
-
-    For Index = 0 To 2
-
-        If Restart And ShieldFire[Index].Slot <> 0 Then
-            Ok = Fire.Destroy(ShieldFire[Index]) And Ok
-        End If
-
-        If ShieldFire[Index].Slot = 0 Then
-            ShieldFire[Index] = Fire.StartAt("LineFire", Points[Index], 5710 + Index,
-                Fire.QUALITY_HIGH, Fire.SIMULATION_AUTO, 3)
-            Ok = ShieldFire[Index].Slot <> 0 And Ok
-        End If
-
-        NextIndex = (Index + 1) Mod 3
-        Ok = Fire.SetSegment(ShieldFire[Index], Points[Index], Points[NextIndex]) And Ok
-
-        Call Fire.SetIntensity(ShieldFire[Index], 75)
-        Call Fire.SetSourceVelocityInheritance(ShieldFire[Index], 10)
-
-        If (Time < ShieldFireTime Or
-            Playback.SelectedClip <> ShieldFireClip Or
-            Playback.ScenePaused Or
-            Effects.FlamePaused Or
-            Effects.FlamesWerePaused Or
-            Effects.EquipmentFireFirstSample) Then
-            Call Fire.SetSourceVelocityInheritance(ShieldFire[Index], 0)
-        End If
-
-        ShieldFirePoints[Index] = Points[Index]
-    End For
-
-    ShieldFireFailed = Not Ok
-    ShieldFireClip = Playback.SelectedClip
-    ShieldFireTime = Time
-
-End Sub
-
-Sub DrawShieldFire()
-
-    Dim Index As Number
-    Dim Ok As Boolean
-
-    If Not ShieldVisible Or Not ShieldFireVisible Then
-        Return
-    End If
-
-    If Not ShieldFlameStyle Then
-        Call ArinShieldRim.Draw()
-
-        Return
-    End If
-
-    If ShieldFireFailed Then
-        Return
-    End If
-
-    Ok = True
-
-    For Index = 0 To 2
-
-        If ShieldFire[Index].Slot <> 0 Then
-            Ok = Fire.Draw(ShieldFire[Index]) And Ok
-        End If
-
-    End For
-
-    ShieldFireFailed = Not Ok
-
-End Sub
-
-Function UpdateEpicGlow() As Boolean
-
-    Dim SwordBase As Core.Vector3
-    Dim SwordCenter As Core.Vector3
-    Dim SwordTip As Core.Vector3
-    Dim ShieldCenter As Core.Vector3
-    Dim Result As Boolean
-
-    SwordBase = Character3D.SocketPosition(Character, "SwordBase", BODY_PART_INDEX, CalibrationChannelValue(Playback.SelectedClip, 18) <> 0)
-    SwordTip = Character3D.SocketPosition(Character, "SwordTip", BODY_PART_INDEX, CalibrationChannelValue(Playback.SelectedClip, 18) <> 0)
-    ShieldCenter = Character3D.SocketPosition(Character, "ShieldCenter", BODY_PART_INDEX, CalibrationChannelValue(Playback.SelectedClip, 19) <> 0)
-    SwordCenter.X = (SwordBase.X + SwordTip.X) / 2
-    SwordCenter.Y = (SwordBase.Y + SwordTip.Y) / 2
-    SwordCenter.Z = (SwordBase.Z + SwordTip.Z) / 2
-
-    If Session.ProfileIndex = ViewerProfiles.PROFILE_ARIN Then
-        Call UpdateEpicGlowTrailState(SwordTip, ShieldCenter)
-        Call AdvanceEpicGlowTrails(SwordTip, ShieldCenter)
-    End If
-
-    Result = UpdateEquipmentGlow(SwordGlow, SwordCenter)
-    Result = UpdateEquipmentGlow(ShieldGlow, ShieldCenter) And Result
-    Result = UpdateEpicGlowTrailBatches() And Result
-
-    Return Result
-
-End Function
-
-Function UpdateEquipmentGlow(
-    ByRef GlowObject As Core.Object3D,
-    Center As Core.Vector3
-) As Boolean
-
-    Dim OutlineScale As Number
-    Dim RotationY As Number
-    Dim ScaleDelta As Number
-    Dim PositionX As Number
-    Dim PositionY As Number
-    Dim PositionZ As Number
-    Dim ActorPosition As Core.Vector3
-    Dim Result As Boolean
-
-    ActorPosition.X = Character3D.PositionX(Character)
-    ActorPosition.Y = Character3D.PositionY(Character)
-    ActorPosition.Z = Character3D.PositionZ(Character)
-    ScaleDelta = Max(2, ViewerCameraState.Frame.ScalePercent / EQUIPMENT_GLOW_SCALE_DIVISOR)
-    OutlineScale = ViewerCameraState.Frame.ScalePercent + ScaleDelta
-    PositionX = (Center.X - ActorPosition.X) * ScaleDelta / ViewerCameraState.Frame.ScalePercent
-    PositionY = (Center.Y - ActorPosition.Y) * ScaleDelta / ViewerCameraState.Frame.ScalePercent
-    PositionZ = (Center.Z - ActorPosition.Z) * ScaleDelta / ViewerCameraState.Frame.ScalePercent
-    PositionX = ActorPosition.X - PositionX
-    PositionY = ActorPosition.Y - PositionY
-    PositionZ = ActorPosition.Z - PositionZ
-
-    RotationY = Character3D.RotationY(Character)
-
-    Result = Graphics3D.SetObjectPositionChecked3D(GlowObject, PositionX, PositionY, PositionZ)
-    Result = Graphics3D.SetObjectRotationChecked3D(GlowObject, 0, RotationY, 0) And Result
-    Result = Graphics3D.SetObjectScaleChecked3D(
-        GlowObject,
-        OutlineScale,
-        OutlineScale,
-        OutlineScale
-    ) And Result
-
-    Return Result
-
-End Function
-
-Function DrawEquipmentGlow() As Boolean
-
-    Dim Result As Boolean
-
-    Result = True
-
-    If SwordVisible Then
-        Result = Graphics3D.DrawObject3D(SwordGlow)
-    End If
-
-    If (ShieldVisible And
-        Not SwordFireReady And
-        Session.ProfileIndex <> ViewerProfiles.PROFILE_ORIN) Then
-        Result = Graphics3D.DrawObject3D(ShieldGlow) And Result
-    End If
-
-    Return Result
-
-End Function
-
-Sub ResetEpicGlowTrails()
-
-    Dim SwordTip As Core.Vector3
-    Dim ShieldCenter As Core.Vector3
-
-    SwordTip = Character3D.SocketPosition(Character, "SwordTip", BODY_PART_INDEX)
-    ShieldCenter = Character3D.SocketPosition(Character, "ShieldCenter", BODY_PART_INDEX)
-
-    Call SeedEpicGlowTrails(SwordTip, ShieldCenter)
-
-    EquipmentTrailAnimationTime = Character3D.AnimationTime(Character)
-    SwordTrailActive = False
-    ShieldTrailActive = False
-
-End Sub
-
-Sub SeedEpicGlowTrails(SwordTip As Core.Vector3, ShieldCenter As Core.Vector3)
-
-    Dim Index As Number
-
-    For Index = 0 To EQUIPMENT_TRAIL_POINT_COUNT - 1
-        SwordTrailPoints[Index] = SwordTip
-        ShieldTrailPoints[Index] = ShieldCenter
-    End For
-
-    EquipmentTrailElapsed = 0
-
-End Sub
-
-Sub UpdateEpicGlowTrailState(SwordTip As Core.Vector3, ShieldCenter As Core.Vector3)
-
-    Dim AnimationTime As Number
-    Dim NextSwordTrailActive As Boolean
-    Dim NextShieldTrailActive As Boolean
-
-    AnimationTime = Character3D.AnimationTime(Character)
-    NextSwordTrailActive = (SwordVisible And
-        (SelectedClipName() = "SwordAttack" Or SelectedClipName() = "SwordAttack2") And
-        AnimationTime >= SWORD_TRAIL_START_MILLISECONDS And
-        AnimationTime <= SWORD_TRAIL_END_MILLISECONDS)
-    NextShieldTrailActive = (ShieldVisible And
-        SelectedClipName() = "BlockImpact" And
-        AnimationTime >= SHIELD_TRAIL_START_MILLISECONDS And
-        AnimationTime <= SHIELD_TRAIL_END_MILLISECONDS)
-
-    If ((NextSwordTrailActive And Not SwordTrailActive) Or
-        (NextShieldTrailActive And Not ShieldTrailActive) Or
-        AnimationTime < EquipmentTrailAnimationTime) Then
-        Call SeedEpicGlowTrails(SwordTip, ShieldCenter)
-    End If
-
-    SwordTrailActive = NextSwordTrailActive
-    ShieldTrailActive = NextShieldTrailActive
-    EquipmentTrailAnimationTime = AnimationTime
-
-End Sub
-
-Sub AdvanceEpicGlowTrails(SwordTip As Core.Vector3, ShieldCenter As Core.Vector3)
-
-    Dim Index As Number
-
-    If Not SwordTrailActive And Not ShieldTrailActive Then
-        Return
-    End If
-
-    EquipmentTrailElapsed = EquipmentTrailElapsed + Playback.AnimationUpdateElapsed
-
-    If EquipmentTrailElapsed < EQUIPMENT_TRAIL_SAMPLE_MILLISECONDS Then
-        Return
-    End If
-
-    For Index = 0 To EQUIPMENT_TRAIL_POINT_COUNT - 2
-        SwordTrailPoints[Index] = SwordTrailPoints[Index + 1]
-        ShieldTrailPoints[Index] = ShieldTrailPoints[Index + 1]
-    End For
-
-    SwordTrailPoints[EQUIPMENT_TRAIL_POINT_COUNT - 1] = SwordTip
-    ShieldTrailPoints[EQUIPMENT_TRAIL_POINT_COUNT - 1] = ShieldCenter
-    EquipmentTrailElapsed = EquipmentTrailElapsed Mod EQUIPMENT_TRAIL_SAMPLE_MILLISECONDS
-
-End Sub
-
-Function UpdateEpicGlowTrailBatches() As Boolean
-
-    Dim ParticleSize As Number
-    Dim Opacity As Number
-    Dim Index As Number
-    Dim Result As Boolean
-
-    Result = True
-
-    For Index = 0 To EQUIPMENT_TRAIL_POINT_COUNT - 1
-
-        Opacity = Index * 7
-        ParticleSize = Max(1, SWORD_TRAIL_PARTICLE_SIZE - 1 + Index / 2)
-        Result = Graphics3D.SetParticle3D(
-            SwordTrail,
-            Index,
-            SwordTrailPoints[Index].X,
-            SwordTrailPoints[Index].Y,
-            SwordTrailPoints[Index].Z,
-            ParticleSize,
-            0,
-            4 + Index Mod 4
-        ) And Result
-        Result = Graphics3D.SetParticleColor3D(
-            SwordTrail,
-            Index,
-            72,
-            196,
-            255,
-            Opacity
-        ) And Result
-        ParticleSize = Max(1, SHIELD_TRAIL_PARTICLE_SIZE - 1 + Index / 2)
-        Result = Graphics3D.SetParticle3D(
-            ShieldTrail,
-            Index,
-            ShieldTrailPoints[Index].X,
-            ShieldTrailPoints[Index].Y,
-            ShieldTrailPoints[Index].Z,
-            ParticleSize,
-            0,
-            Index Mod 4
-        ) And Result
-        Result = Graphics3D.SetParticleColor3D(
-            ShieldTrail,
-            Index,
-            255,
-            196,
-            64,
-            Opacity * 3 / 4
-        ) And Result
-    End For
-
-    If SwordTrailActive Then
-        Result = Graphics3D.CommitParticleBatch3D(
-            SwordTrail,
-            EQUIPMENT_TRAIL_POINT_COUNT
-        ) And Result
-    Else
-        Result = Graphics3D.CommitParticleBatch3D(SwordTrail, 0) And Result
-    End If
-
-    If ShieldTrailActive Then
-        Result = Graphics3D.CommitParticleBatch3D(
-            ShieldTrail,
-            EQUIPMENT_TRAIL_POINT_COUNT
-        ) And Result
-    Else
-        Result = Graphics3D.CommitParticleBatch3D(ShieldTrail, 0) And Result
-    End If
-
-    Return Result
-
-End Function
-
-Function DrawEpicGlow() As Boolean
-
-    Dim Result As Boolean
-
-    Result = True
-
-    If Session.ProfileIndex <> ViewerProfiles.PROFILE_ARIN Then
-        Return True
-    End If
-
-    If SwordVisible Then
-        Result = Graphics3D.DrawParticleBatch3D(SwordTrail)
-    End If
-
-    If ShieldVisible And Not SwordFireReady Then
-        Result = Graphics3D.DrawParticleBatch3D(ShieldTrail) And Result
-    End If
-
-    Return Result
-
-End Function
 
 Sub CycleSocketDisplay()
 
@@ -4219,11 +3431,6 @@ Sub ResetAll()
 
     Playback.PlaybackSpeed = ActiveProfile.DefaultPlaybackSpeed
     Playback.ScenePaused = False
-    Effects.FlamePaused = False
-    Effects.LightningPaused = False
-    SwordFireFailed = False
-    ShieldFireFailed = False
-    Effects.EquipmentFireFirstError = 0
     Playback.DemoEnabled = True
     ViewerCameraState.FitLocked = True
     LightingIndex = 0
@@ -4233,19 +3440,18 @@ Sub ResetAll()
     ShowAllSocketOrigins = False
     Rendering.FloorVisible = True
     Rendering.GridVisible = True
-    EpicGlowVisible = ViewerProfiles.EpicGlowVisibleByDefault(Session.ProfileIndex) And EpicGlowAvailable
+    Effects.EpicGlowVisible = ViewerProfiles.EpicGlowVisibleByDefault(Session.ProfileIndex) And Effects.EpicGlowAvailable
     DragonVisible = DragonAvailable
     SwordVisible = True
     ShieldVisible = True
-    SwordFireVisible = True
-    ShieldFireVisible = True
+
+    Call ViewerEffects.ResetPlaybackControls(Effects)
 
     Call ViewerUi.Reset(ViewerUiState)
     Call ViewerInput.CancelCaptures(ViewerInputState)
     Call ViewerGizmo.Hide(ViewerGizmoState)
     Call ViewerCamera.CancelPointerControls(ViewerCameraState)
 
-    Call ClearEquipmentFire()
     Call ApplyLighting()
     Call ApplyArenaFacing()
 
@@ -4267,85 +3473,6 @@ Sub ResetAll()
 
         Call RestartPresentation()
 
-    End If
-
-End Sub
-
-Sub ClearEquipmentFire()
-
-    Call ClearSwordFire()
-    Call ClearShieldFire()
-
-End Sub
-
-Sub ClearSwordFire()
-
-    Dim Ok As Boolean
-
-    If SwordFire.Slot <> 0 Then
-        Ok = Fire.Destroy(SwordFire)
-    End If
-
-End Sub
-
-Sub ClearShieldFire()
-
-    Dim Index As Number
-    Dim Ok As Boolean
-
-    Call ArinShieldRim.Shutdown()
-
-    For Index = 0 To 2
-
-        If ShieldFire[Index].Slot <> 0 Then
-            Ok = Fire.Destroy(ShieldFire[Index])
-        End If
-
-    End For
-
-End Sub
-
-Sub ClearEquipmentGlowTrails()
-
-    Dim Ok As Boolean
-
-    SwordTrailActive = False
-    ShieldTrailActive = False
-
-    If SwordTrail.Handle <> 0 Then
-        Ok = Graphics3D.CommitParticleBatch3D(SwordTrail, 0)
-    End If
-
-    If ShieldTrail.Handle <> 0 Then
-        Ok = Graphics3D.CommitParticleBatch3D(ShieldTrail, 0)
-    End If
-
-End Sub
-
-Sub HideSwordEffects()
-
-    Dim Ok As Boolean
-
-    Call ClearSwordFire()
-
-    SwordTrailActive = False
-
-    If SwordTrail.Handle <> 0 Then
-        Ok = Graphics3D.CommitParticleBatch3D(SwordTrail, 0)
-    End If
-
-End Sub
-
-Sub HideShieldEffects()
-
-    Dim Ok As Boolean
-
-    Call ClearShieldFire()
-
-    ShieldTrailActive = False
-
-    If ShieldTrail.Handle <> 0 Then
-        Ok = Graphics3D.CommitParticleBatch3D(ShieldTrail, 0)
     End If
 
 End Sub
@@ -4444,7 +3571,7 @@ Sub StepAnimationFrame(Direction As Number)
     TargetTime = Max(0, Min(Character3D.ClipDuration(Character, Playback.SelectedClip), TargetTime))
     Session.Ready = Character3D.SetAnimationTime(Character, TargetTime) And Session.Ready
 
-    Call InvalidateVisualHistory()
+    Call ViewerEffects.InvalidateVisualHistory(Effects)
 
 End Sub
 
@@ -4457,7 +3584,7 @@ Sub SeekFirstAnimationFrame()
     Playback.SelectedTimelineEvent = FirstClipEvent()
     Session.Ready = Character3D.SetAnimationTime(Character, 0) And Session.Ready
 
-    Call InvalidateVisualHistory()
+    Call ViewerEffects.InvalidateVisualHistory(Effects)
 
 End Sub
 
@@ -4522,7 +3649,7 @@ Sub SeekCalibrationKeyframe(Direction As Number)
     TargetTime = CalibrationFrameTimeMilliseconds(Playback.SelectedClip, TargetFrame)
     Session.Ready = Character3D.SetAnimationTime(Character, TargetTime) And Session.Ready
 
-    Call InvalidateVisualHistory()
+    Call ViewerEffects.InvalidateVisualHistory(Effects)
 
     Call UpdateCalibrationForCurrentFrame()
     Call ApplyWristCalibration()
@@ -4586,7 +3713,7 @@ Sub SeekAuthoredEvent(Direction As Number)
     Playback.SelectedTimelineEvent = CandidateIndex
     Session.Ready = Character3D.SetAnimationTime(Character, CandidateTime) And Session.Ready
 
-    Call InvalidateVisualHistory()
+    Call ViewerEffects.InvalidateVisualHistory(Effects)
 
 End Sub
 
@@ -4606,7 +3733,7 @@ Sub SeekFromPointer()
     Playback.SelectedTimelineEvent = NearestClipEvent(TargetTime)
     Session.Ready = Character3D.SetAnimationTime(Character, TargetTime) And Session.Ready
 
-    Call InvalidateVisualHistory()
+    Call ViewerEffects.InvalidateVisualHistory(Effects)
 
 End Sub
 
@@ -4706,7 +3833,7 @@ Sub UpdateTimelineKeyframeDrag()
     TargetTime = CalibrationFrameTimeMilliseconds(Playback.SelectedClip, ViewerInputState.TimelineDraggedTargetFrame)
     Session.Ready = Character3D.SetAnimationTime(Character, TargetTime) And Session.Ready
 
-    Call InvalidateVisualHistory()
+    Call ViewerEffects.InvalidateVisualHistory(Effects)
 
 End Sub
 
@@ -4847,7 +3974,7 @@ Sub HandleCalibrationImport()
         Call UpdateCalibrationForCurrentFrame()
         Call ApplyWristCalibration()
         Call ApplyEquipmentCalibration()
-        Call InvalidateVisualHistory()
+    Call ViewerEffects.InvalidateVisualHistory(Effects)
 
     End If
 
@@ -4876,7 +4003,7 @@ Function CommitCalibrationImport() As Boolean
         Call UpdateCalibrationForCurrentFrame()
         Call ApplyWristCalibration()
         Call ApplyEquipmentCalibration()
-        Call InvalidateVisualHistory()
+    Call ViewerEffects.InvalidateVisualHistory(Effects)
 
     End If
 
@@ -4908,7 +4035,7 @@ Sub SaveCalibrationKeyframes(Optional Persist As Boolean = True)
         Calibration, Character, Playback.SelectedClip, ViewerUiState.CalibrationEditing, Persist)
 
     If SavedSuccessfully And Persist Then
-        Call InvalidateVisualHistory()
+    Call ViewerEffects.InvalidateVisualHistory(Effects)
     End If
 
 End Sub
@@ -5051,7 +4178,7 @@ Sub ReloadCurrentCalibrationKeyframe()
     Call ApplyEquipmentCalibration()
     Call FinishCalibrationEdit()
 
-    Call InvalidateVisualHistory()
+    Call ViewerEffects.InvalidateVisualHistory(Effects)
 
 End Sub
 
@@ -5072,7 +4199,7 @@ Sub PasteCalibrationKeyframe()
 
         Call UpdateCalibrationForCurrentFrame()
         Call ApplyWristCalibration()
-        Call InvalidateVisualHistory()
+    Call ViewerEffects.InvalidateVisualHistory(Effects)
 
     End If
 
@@ -5110,9 +4237,9 @@ Sub ApplyEquipmentCoupling()
         Character, SHIELD_PART_INDEX, CalibrationChannelValue(Playback.SelectedClip, 19) = 0
     ) And Session.Ready
 
-    If EpicGlowAvailable Then
-        Session.Ready = Graphics3D.SetObjectNodeOffsetsEnabled3D(SwordGlow, CalibrationChannelValue(Playback.SelectedClip, 18) = 0) And Session.Ready
-        Session.Ready = Graphics3D.SetObjectNodeOffsetsEnabled3D(ShieldGlow, CalibrationChannelValue(Playback.SelectedClip, 19) = 0) And Session.Ready
+    If Effects.EpicGlowAvailable Then
+        Session.Ready = Graphics3D.SetObjectNodeOffsetsEnabled3D(Effects.SwordGlow, CalibrationChannelValue(Playback.SelectedClip, 18) = 0) And Session.Ready
+        Session.Ready = Graphics3D.SetObjectNodeOffsetsEnabled3D(Effects.ShieldGlow, CalibrationChannelValue(Playback.SelectedClip, 19) = 0) And Session.Ready
     End If
 
 End Sub
@@ -5211,23 +4338,23 @@ Sub ApplyEquipmentCalibration()
 
     Call ViewerSession.CaptureFailure(Session, 74)
 
-    If EpicGlowVisible Then
+    If Effects.EpicGlowVisible Then
 
         GlowReady = Graphics3D.SetObjectPositionChecked3D(
-            SwordGlow,
-            SwordGlow.Position.X + CalibrationChannelValue(Playback.SelectedClip, 12 + CALIBRATION_AXIS_X),
-            SwordGlow.Position.Y + CalibrationChannelValue(Playback.SelectedClip, 12 + CALIBRATION_AXIS_Y),
-            SwordGlow.Position.Z + CalibrationChannelValue(Playback.SelectedClip, 12 + CALIBRATION_AXIS_Z)
+            Effects.SwordGlow,
+            Effects.SwordGlow.Position.X + CalibrationChannelValue(Playback.SelectedClip, 12 + CALIBRATION_AXIS_X),
+            Effects.SwordGlow.Position.Y + CalibrationChannelValue(Playback.SelectedClip, 12 + CALIBRATION_AXIS_Y),
+            Effects.SwordGlow.Position.Z + CalibrationChannelValue(Playback.SelectedClip, 12 + CALIBRATION_AXIS_Z)
         )
         GlowReady = Graphics3D.SetObjectPositionChecked3D(
-            ShieldGlow,
-            ShieldGlow.Position.X + CalibrationChannelValue(Playback.SelectedClip, 15 + CALIBRATION_AXIS_X),
-            ShieldGlow.Position.Y + CalibrationChannelValue(Playback.SelectedClip, 15 + CALIBRATION_AXIS_Y),
-            ShieldGlow.Position.Z + CalibrationChannelValue(Playback.SelectedClip, 15 + CALIBRATION_AXIS_Z)
+            Effects.ShieldGlow,
+            Effects.ShieldGlow.Position.X + CalibrationChannelValue(Playback.SelectedClip, 15 + CALIBRATION_AXIS_X),
+            Effects.ShieldGlow.Position.Y + CalibrationChannelValue(Playback.SelectedClip, 15 + CALIBRATION_AXIS_Y),
+            Effects.ShieldGlow.Position.Z + CalibrationChannelValue(Playback.SelectedClip, 15 + CALIBRATION_AXIS_Z)
         ) And GlowReady
 
         GlowReady = Graphics3D.SetObjectPivotRotationThousandths3D(
-            SwordGlow,
+            Effects.SwordGlow,
             SwordPivotX1000,
             SwordPivotY1000,
             SwordPivotZ1000,
@@ -5236,7 +4363,7 @@ Sub ApplyEquipmentCalibration()
             CalibrationChannelValue(Playback.SelectedClip, 6 + CALIBRATION_AXIS_Z)
         ) And GlowReady
         GlowReady = Graphics3D.SetObjectPivotRotationThousandths3D(
-            ShieldGlow,
+            Effects.ShieldGlow,
             ShieldPivotX1000,
             ShieldPivotY1000,
             ShieldPivotZ1000,
@@ -5246,7 +4373,7 @@ Sub ApplyEquipmentCalibration()
         ) And GlowReady
 
         If Not GlowReady Then
-            EpicGlowVisible = False
+            Effects.EpicGlowVisible = False
         End If
 
     End If
@@ -5350,7 +4477,7 @@ Sub BeginCalibrationEdit()
 
     Call ViewerCalibration.CaptureEdit(Calibration, Playback.SelectedClip)
     Call ViewerCamera.SetAutoOrbit(ViewerCameraState, False)
-    Call InvalidateVisualHistory()
+    Call ViewerEffects.InvalidateVisualHistory(Effects)
 
 End Sub
 
@@ -5368,7 +4495,7 @@ Sub FinishCalibrationEdit()
     Call ViewerGizmo.FinishDrag(ViewerGizmoState)
     Call ViewerCamera.SetAutoOrbit(ViewerCameraState, ViewerUiState.CalibrationAutoOrbitWasEnabled)
 
-    Call InvalidateVisualHistory()
+    Call ViewerEffects.InvalidateVisualHistory(Effects)
 
 End Sub
 
@@ -5490,7 +4617,7 @@ Sub SetCurrentCalibrationValue(Value As Number)
 
     End If
 
-    Call InvalidateVisualHistory()
+    Call ViewerEffects.InvalidateVisualHistory(Effects)
 
 End Sub
 
@@ -5669,7 +4796,7 @@ Sub ResetCalibrationTarget()
     Call ApplyWristCalibration()
     Call ApplyEquipmentCalibration()
 
-    Call InvalidateVisualHistory()
+    Call ViewerEffects.InvalidateVisualHistory(Effects)
 
 End Sub
 
@@ -5755,7 +4882,7 @@ Sub SaveCalibrationFrame()
     )
 
     If SavedSuccessfully Then
-        Call InvalidateVisualHistory()
+    Call ViewerEffects.InvalidateVisualHistory(Effects)
     End If
 
     If Not Calibration.WriteFailed Then
@@ -5776,7 +4903,7 @@ Sub UndoLastCalibrationChange()
     Call UpdateCalibrationForCurrentFrame()
     Call ApplyWristCalibration()
     Call ApplyEquipmentCalibration()
-    Call InvalidateVisualHistory()
+    Call ViewerEffects.InvalidateVisualHistory(Effects)
 
 End Sub
 
@@ -5786,7 +4913,7 @@ Sub PlaySelectedClip(Optional RetainFireTails As Boolean = False)
     ''' Automatic demo changes keep existing fire but never inherit across the cut.
 
     If Not RetainFireTails Then
-        Call InvalidateVisualHistory()
+    Call ViewerEffects.InvalidateVisualHistory(Effects)
     End If
 
     Playback.SelectedTimelineEvent = FirstClipEvent()
@@ -5804,8 +4931,8 @@ Sub PlaySelectedClip(Optional RetainFireTails As Boolean = False)
     Call UpdateCalibrationForCurrentFrame()
     Call ApplyWristCalibration()
 
-    If EpicGlowAvailable Then
-        Call ResetEpicGlowTrails()
+    If Effects.EpicGlowAvailable Then
+        Call ViewerEffects.ResetEpicGlowTrails(Effects, Character)
     End If
 
 End Sub
@@ -6261,7 +5388,7 @@ Sub DrawInspectorOverlay()
             Call DrawButton(PanelLeft + 162, 18, 50, 34, "PROFILE", False)
         End If
 
-        Call DrawButton(GlowButtonX(), 18, GlowButtonWidth(), 34, "GLOW", EpicGlowVisible)
+        Call DrawButton(GlowButtonX(), 18, GlowButtonWidth(), 34, "GLOW", Effects.EpicGlowVisible)
         Call DrawButton(PanelLeft, 56, 72, 22, DragonLabel(), DragonVisible)
         Call DrawButton(PanelLeft + 76, 56, 48, 22, BackgroundLabel(), Rendering.BackgroundIndex > 0)
 
@@ -6287,15 +5414,16 @@ Sub DrawInspectorOverlay()
 
         If Session.ProfileIndex = ViewerProfiles.PROFILE_ARIN Then
 
-            Call DrawButton(PanelLeft + 94, 444, 76, 22, "Sword Fire", SwordFireVisible)
-            Call DrawButton(PanelLeft + 174, 444, 78, 22, "Shield Fire", ShieldFireVisible)
+            Call DrawButton(PanelLeft + 94, 444, 76, 22, "Sword Fire", Effects.SwordFireVisible)
+            Call DrawButton(PanelLeft + 174, 444, 78, 22,
+                "Shield Fire", Effects.ShieldFireVisible)
 
         Else If Session.ProfileIndex = ViewerProfiles.PROFILE_ORIN Then
 
             Call DrawButton(PanelLeft + 94, 444, 158, 22,
-                OrinStorm.StyleName(Effects.OrinStorm), True)
+                ViewerEffects.StormStyleName(Effects), True)
             Call DrawButton(PanelLeft + 12, 470, 128, 20,
-                OrinStorm.SceneComfortName(), True)
+                ViewerEffects.StormSceneComfortName(), True)
             Call DrawButton(PanelLeft + 144, 470, 108, 20,
                 VfxPlaybackLabel("Lightning", Effects.LightningPaused), Effects.LightningPaused)
 
@@ -6313,10 +5441,12 @@ Sub DrawInspectorOverlay()
 
         End If
 
-        If SwordFireReady And Session.ProfileIndex = ViewerProfiles.PROFILE_ARIN Then
+        If Effects.SwordFireReady And Session.ProfileIndex = ViewerProfiles.PROFILE_ARIN Then
             Call DrawButton(PanelLeft + 12, 470, 128, 20, FlamePlaybackLabel(), Not Effects.FlamePaused)
 
-            Call DrawButton(PanelLeft + 144, 470, 108, 20, ShieldFireStyleLabel(), Not ShieldFlameStyle)
+            Call DrawButton(PanelLeft + 144, 470, 108, 20,
+                ViewerEffects.ShieldFireStyleLabel(Effects),
+                Not Effects.ShieldFlameStyle)
         End If
 
         If Window_Height() >= ANIMATION_DETAILS_MINIMUM_HEIGHT Then
@@ -7091,8 +6221,6 @@ End Sub
 
 Sub DestroyViewerResources()
 
-    Dim Index As Number
-
     Call DestroyPartyCompanion()
     Call ViewerActors.Destroy(Party.DragonOpponent)
     Call DestroyDragon()
@@ -7100,15 +6228,8 @@ Sub DestroyViewerResources()
 
     Session.Ready = ViewerEffects.ShutdownShared(Effects) And Session.Ready
 
-    SwordFire.Slot = 0
-    SwordFireReady = False
-
-    For Index = 0 To 2
-        ShieldFire[Index].Slot = 0
-    End For
-
     Call DestroyBackdrop()
-    Call DestroyEpicGlow()
+    Call ViewerEffects.DestroyEpicGlow(Effects)
     Call DestroySocketGizmos()
     Call DestroyStudioGrid()
 
@@ -7170,11 +6291,11 @@ Function CaptureActorContext() As ViewerActors.Context
         Calibration.KeyBase,
         SwordWristNode,
         ShieldWristNode,
-        SwordGlow,
-        ShieldGlow,
+        Effects.SwordGlow,
+        Effects.ShieldGlow,
         CalibrationAvailable,
-        EpicGlowAvailable,
-        EpicGlowVisible,
+        Effects.EpicGlowAvailable,
+        Effects.EpicGlowVisible,
         Party.PrimaryPresentationState
     )
 
@@ -7193,11 +6314,11 @@ Sub UseActorContext(Context As ViewerActors.Context)
         Calibration.KeyBase,
         SwordWristNode,
         ShieldWristNode,
-        SwordGlow,
-        ShieldGlow,
+        Effects.SwordGlow,
+        Effects.ShieldGlow,
         CalibrationAvailable,
-        EpicGlowAvailable,
-        EpicGlowVisible,
+        Effects.EpicGlowAvailable,
+        Effects.EpicGlowVisible,
         Party.PrimaryPresentationState
     )
 
@@ -7235,7 +6356,7 @@ Sub BeginPartyInspector()
         Session.ProfileIndex = ViewerProfiles.PROFILE_DRAGON
         ActiveProfile = ViewerProfiles.ProfileAt(Session.ProfileIndex)
         CalibrationAvailable = False
-        EpicGlowAvailable = False
+        Effects.EpicGlowAvailable = False
         SwordWristNode = -1
         ShieldWristNode = -1
         Playback.SelectedClip = 0
@@ -7344,7 +6465,7 @@ Sub RestorePartyPreview()
     Call ViewerInput.CancelCaptures(ViewerInputState)
 
     Call UpdateCalibrationForCurrentFrame()
-    Call InvalidateVisualHistory()
+    Call ViewerEffects.InvalidateVisualHistory(Effects)
 
 End Sub
 
@@ -7392,31 +6513,31 @@ Sub CreatePartyCompanion(Optional CompanionIndex As Number = ViewerProfiles.PROF
         CompanionModel.Handle = Character3D.ModelHandle(Character)
         CompanionAnimator.Handle = Character3D.AnimatorHandle(Character)
 
-        If EpicGlowMaterial.Handle = 0 Then
+        If Effects.EpicGlowMaterial.Handle = 0 Then
 
-            Call CreateEpicGlow()
+            Call ViewerEffects.CreateEpicGlow(Effects, Session.ProfileIndex, Character)
 
         Else
 
-        SwordGlow = Graphics3D.CreateModelPart3D(CompanionModel, WEAPON_PART_INDEX)
-        ShieldGlow = Graphics3D.CreateModelPart3D(CompanionModel, SHIELD_PART_INDEX)
-        EpicGlowAvailable = SwordGlow.Handle <> 0 And ShieldGlow.Handle <> 0
-        EpicGlowVisible = EpicGlowAvailable
+        Effects.SwordGlow = Graphics3D.CreateModelPart3D(CompanionModel, WEAPON_PART_INDEX)
+        Effects.ShieldGlow = Graphics3D.CreateModelPart3D(CompanionModel, SHIELD_PART_INDEX)
+        Effects.EpicGlowAvailable = Effects.SwordGlow.Handle <> 0 And Effects.ShieldGlow.Handle <> 0
+        Effects.EpicGlowVisible = Effects.EpicGlowAvailable
 
-        If EpicGlowAvailable Then
+        If Effects.EpicGlowAvailable Then
 
-            Session.Ready = Graphics3D.SetObjectMaterial3D(SwordGlow, EpicGlowMaterial) And Session.Ready
-            Session.Ready = Graphics3D.SetObjectMaterial3D(ShieldGlow, EpicGlowMaterial) And Session.Ready
-            Session.Ready = Graphics3D.SetObjectAnimator3D(SwordGlow, CompanionAnimator) And Session.Ready
-            Session.Ready = Graphics3D.SetObjectAnimator3D(ShieldGlow, CompanionAnimator) And Session.Ready
-            Session.Ready = Graphics3D.SetObjectCullMode3D(ShieldGlow, Graphics3D.OBJECT_CULL_FRONT) And Session.Ready
+            Session.Ready = Graphics3D.SetObjectMaterial3D(Effects.SwordGlow, Effects.EpicGlowMaterial) And Session.Ready
+            Session.Ready = Graphics3D.SetObjectMaterial3D(Effects.ShieldGlow, Effects.EpicGlowMaterial) And Session.Ready
+            Session.Ready = Graphics3D.SetObjectAnimator3D(Effects.SwordGlow, CompanionAnimator) And Session.Ready
+            Session.Ready = Graphics3D.SetObjectAnimator3D(Effects.ShieldGlow, CompanionAnimator) And Session.Ready
+            Session.Ready = Graphics3D.SetObjectCullMode3D(Effects.ShieldGlow, Graphics3D.OBJECT_CULL_FRONT) And Session.Ready
 
-            Call Graphics3D.SetObjectColor(SwordGlow, 255, 255, 255)
-            Call Graphics3D.SetObjectColor(ShieldGlow, 255, 255, 255)
-            Call Graphics3D.SetObjectOpacity(SwordGlow, 95)
-            Call Graphics3D.SetObjectOpacity(ShieldGlow, 90)
-            Call Graphics3D.SetObjectShadows3D(SwordGlow, False, False)
-            Call Graphics3D.SetObjectShadows3D(ShieldGlow, False, False)
+            Call Graphics3D.SetObjectColor(Effects.SwordGlow, 255, 255, 255)
+            Call Graphics3D.SetObjectColor(Effects.ShieldGlow, 255, 255, 255)
+            Call Graphics3D.SetObjectOpacity(Effects.SwordGlow, 95)
+            Call Graphics3D.SetObjectOpacity(Effects.ShieldGlow, 90)
+            Call Graphics3D.SetObjectShadows3D(Effects.SwordGlow, False, False)
+            Call Graphics3D.SetObjectShadows3D(Effects.ShieldGlow, False, False)
 
         End If
 
@@ -7477,7 +6598,20 @@ Sub UpdateDragonOpponent()
     Primary = CaptureActorContext()
 
     Call UseActorContext(Party.DragonOpponent)
-    Call UpdateEquipmentFire()
+    Call ViewerEffects.UpdateEquipmentFire(
+        Effects,
+        Character,
+        Session.ProfileIndex,
+        False,
+        SwordVisible,
+        ShieldVisible,
+        ViewerUiState.CalibrationEditing,
+        Playback.ScenePaused,
+        Playback.SelectedClip,
+        SelectedClipLabel(),
+        ViewerCameraState.Live,
+        Timing.CameraElapsed
+    )
     Call UseActorContext(Primary)
 
 End Sub
@@ -7693,25 +6827,6 @@ Sub AdvancePartyDemo()
 
 End Sub
 
-Function ShieldFireStyleLabel() As Text
-
-    If ShieldFlameStyle Then
-        Return "Flames"
-    End If
-
-    Return "Ember Outline"
-
-End Function
-
-Sub ToggleShieldFireStyle()
-
-    ShieldFlameStyle = Not ShieldFlameStyle
-    ShieldFireFailed = False
-
-    Call ClearEquipmentFire()
-
-End Sub
-
 Sub UpdatePartyCompanion()
 
     Dim CompanionReady As Boolean
@@ -7735,16 +6850,26 @@ Sub UpdatePartyCompanion()
     Call ApplyWristCalibration()
     Call ApplyEquipmentCoupling()
 
-    If EpicGlowAvailable Then
+    If Effects.EpicGlowAvailable Then
 
         Center = Character3D.SocketPosition(Character, "SwordBase", BODY_PART_INDEX, CalibrationChannelValue(Playback.SelectedClip, 18) <> 0)
         Tip = Character3D.SocketPosition(Character, "SwordTip", BODY_PART_INDEX, CalibrationChannelValue(Playback.SelectedClip, 18) <> 0)
         Center.X = (Center.X + Tip.X) / 2
         Center.Y = (Center.Y + Tip.Y) / 2
         Center.Z = (Center.Z + Tip.Z) / 2
-        Session.Ready = UpdateEquipmentGlow(SwordGlow, Center) And Session.Ready
+        Session.Ready = ViewerEffects.UpdateEquipmentGlow(
+            Character,
+            Effects.SwordGlow,
+            Center,
+            ViewerCameraState.Frame.ScalePercent
+        ) And Session.Ready
         Center = Character3D.SocketPosition(Character, "ShieldCenter", BODY_PART_INDEX, CalibrationChannelValue(Playback.SelectedClip, 19) <> 0)
-        Session.Ready = UpdateEquipmentGlow(ShieldGlow, Center) And Session.Ready
+        Session.Ready = ViewerEffects.UpdateEquipmentGlow(
+            Character,
+            Effects.ShieldGlow,
+            Center,
+            ViewerCameraState.Frame.ScalePercent
+        ) And Session.Ready
 
     End If
 
@@ -7767,7 +6892,7 @@ Function DrawPartyCompanion() As Boolean
     If (Party.Companion.GlowVisible And
         Party.Companion.GlowAvailable And
         (Not Party.Enabled Or PartyPresentationState(1) <> ViewerParty.STATE_KO) And
-        (EpicGlowVisible Or Session.DragonInspection)) Then
+        (Effects.EpicGlowVisible Or Session.DragonInspection)) Then
 
         If SwordVisible Then
             Result = Graphics3D.DrawObject3D(Party.Companion.WeaponGlow) And Result
@@ -7894,7 +7019,7 @@ Function HandlePartyPointer() As Boolean
 
     Else If Window_Height() >= 580 And PointerInRectangle(Left + 12, 440, 224, 22) Then
 
-        Call ToggleShieldFireStyle()
+        Call ViewerEffects.ToggleShieldFireStyle(Effects)
 
     End If
 
@@ -7953,7 +7078,7 @@ Sub DrawPartyOverlay()
         Call DrawButton(Left + 164, 104, 76, 30, "Shield", ShieldVisible)
         Call DrawButton(Left, 140, 76, 22, "Floor/Grid", Rendering.FloorVisible Or Rendering.GridVisible)
         Call DrawButton(Left + 82, 140, 76, 22, "Backdrop", Rendering.BackgroundIndex > 0)
-        Call DrawButton(Left + 164, 140, 76, 22, "Glow", EpicGlowVisible)
+        Call DrawButton(Left + 164, 140, 76, 22, "Glow", Effects.EpicGlowVisible)
 
         Draw Text "Party / Enemy" At Left + 16, 178 Size 20 Color WHITE
         Draw Text "Arin  •  Paladin" At Left + 16, 212 Size 15 Color CYAN
@@ -7976,7 +7101,9 @@ Sub DrawPartyOverlay()
             VfxPlaybackLabel("Fire", Effects.FlamePaused), Effects.FlamePaused)
         Call DrawButton(Left + 128, 410, 108, 24,
             VfxPlaybackLabel("Lightning", Effects.LightningPaused), Effects.LightningPaused)
-        Call DrawButton(Left + 12, 440, 224, 22, "Arin Shield: " + ShieldFireStyleLabel(), Not ShieldFlameStyle)
+        Call DrawButton(Left + 12, 440, 224, 22,
+            "Arin Shield: " + ViewerEffects.ShieldFireStyleLabel(Effects),
+            Not Effects.ShieldFlameStyle)
 
         End If
 
@@ -7990,7 +7117,7 @@ Sub DrawPartyOverlay()
                 Draw Text "Arin " + PartyPresentationStateName(PartyPresentationState(0)) + " / Orin " + PartyPresentationStateName(PartyPresentationState(1)) At Left + 16, 470 Size 12 Color LIGHT_GRAY
             End If
 
-            Draw Text OrinStorm.Caption(Effects.OrinStorm) At Left + 16, 488 Size 12 Color CYAN
+            Draw Text ViewerEffects.StormCaption(Effects) At Left + 16, 488 Size 12 Color CYAN
             Draw Text "Camera" At Left + 16, 528 Size 12 Color LIGHT_GRAY
             Draw Number Party.ActiveCamera At Left + 80, 528 Size 12 Color CYAN
 

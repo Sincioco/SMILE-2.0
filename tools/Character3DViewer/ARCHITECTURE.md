@@ -35,8 +35,8 @@ The September 6, 2026 audit at repository commit `ed5e6bb` found that the state
 extractions through R7 did not finish the corresponding implementation moves.
 `Program.smile` still contains 8,319 lines and 233 procedures. In particular, it
 still implements substantial Party transitions, Dragon timing and turn behavior,
-companion updates, Party pointer handling and overlays, equipment effects,
-inspector/calibration UI, gizmo drawing and interaction, and resource lifecycle.
+companion updates, Party pointer handling and overlays, inspector/calibration UI,
+gizmo drawing and interaction, and resource lifecycle.
 Passing module tests proves the extracted seams but does not make those remaining
 procedures owned by the new modules.
 
@@ -44,14 +44,17 @@ procedures owned by the new modules.
 the current owner was an architecture target stated as a completed fact. R7.5 has now
 introduced that focused owner for the actor context and actor load/update/draw/destroy
 lifecycle. Inspector selection, preview orchestration and calibration/effect coupling
-still remain to move. The bounded stage must not introduce a whole-application state
-record or a replacement `ViewerApplication` module.
+still remain to move. The next bounded checkpoint moved equipment Fire, glow, trails,
+shield-rim behavior, Orin-storm controls, shared scene-VFX drawing and their resource
+lifecycle into `ViewerEffects.smile`. The coordinator retains only the ordering and
+actor-selection decisions needed to call that owner. The bounded stage must not
+introduce a whole-application state record or a replacement `ViewerApplication`
+module.
 
 | Still implemented in `Program.smile` | Current evidence | Intended focused owner |
 |---|---|---|
 | Party transitions, camera application, companion lifecycle, inspector/preview binding, pointer handling and Party overlay | R7.5 moved the stage/Dragon-turn state machine, attack selection, KO/revive decisions and formation interpolation to `ViewerParty.AdvanceChoreography`; `ApplyPartyFrame` now applies its narrow actor commands. Camera application, companion lifecycle, binding, pointer handling and overlays remain in `Program.smile`. | `ViewerParty.smile`, with actor binding in a focused actor owner only if needed |
 | Dragon actor lifecycle, timing, turn behavior and battle-audio coordination | `CreateDragon`, `UpdateDragon`, `AdvanceDragonTurn`, `UpdateBattleAudio` and related routines | retained `DragonPresence.smile`, `BattleAudio.smile`, and narrow Party contracts |
-| Equipment Fire/glow/trails, scene VFX coordination and effect teardown | `CreateEpicGlow`, `UpdateEquipmentFire`, `UpdateSwordFire`, `UpdateShieldFire`, trail routines and clear/hide routines | `ViewerEffects.smile` plus retained focused effect modules |
 | Inspector, calibration panel, timeline, camera controls, buttons and overlays | `HandleInspectorPointer`, `HandleCalibrationPanelPointer`, `DrawInspectorOverlay`, `DrawCalibrationPanel`, `DrawTimeline` and related layout/label routines | `ViewerInput.smile` and `ViewerUi.smile`, borrowing narrow subsystem operations |
 | Transform-gizmo pointer/update/draw implementation | `HandleTransformGizmoPointer`, `UpdateTransformGizmoFromPointer`, `DrawTransformGizmo` and related routines | `ViewerGizmo.smile` |
 | Socket resources and studio grid drawing | socket create/update/draw/destroy routines and `DrawStudioGrid` | `ViewerRendering.smile` or a focused socket-render owner |
@@ -68,6 +71,17 @@ and its focused production tests exercise the destination owner.
 | R7.5 audit baseline at `ed5e6bb` | 8,319 | 233 | State seams existed, but substantial subsystem implementation remained. |
 | Party state-machine move | 8,032 | 231 | Party/Dragon-turn state transitions and interpolation moved; a narrow actor command application routine remains in the coordinator. |
 | Actor-context/lifecycle move | 8,033 | 231 | The new explicit actor-owner import/contract adds one coordinator line while actor context, companion load, update, draw and destruction move to `ViewerActors`; no line-count compression was used. |
+| Equipment-effects behavior/lifecycle move | 7,160 | 205 | From the 8,033-line/231-procedure actor-owner checkpoint, 873 lines and 26 procedures left the coordinator. `ViewerEffects` now owns equipment Fire, shield rim, glow objects, trails, Orin-storm controls, shared scene-VFX drawing, pause/reset controls and teardown. |
+
+Substantial implementation still in `Program.smile` after the equipment-effects
+checkpoint is intentionally explicit: startup/retry/tab-switch orchestration; Dragon
+creation, timing, breath, audio and destruction; Party inspector/preview binding,
+companion presentation, pointer handling, camera application and overlay drawing;
+input routing and UI layout; transform-gizmo interaction/drawing; calibration and
+file-transaction orchestration; socket/grid resources; playback/timeline operations;
+and general overlay composition. `UpdateOrinStorm` remains because the coordinator
+chooses the current borrowed actor and Dragon target; storm simulation itself now
+belongs to `ViewerEffects.UpdateStorm`.
 
 ## Ownership target map
 
@@ -82,7 +96,7 @@ and its focused production tests exercise the destination owner.
 | Input ownership | `Program.smile` | `ViewerInput.smile` | Pointer capture, timeline/frame repeat and queued command routing | Route keyboard/pointer; borrows UI, calibration and camera operations | Frame/capture; queued-modifier and outside-window fixtures |
 | UI and transform gizmo | `Program.smile` | `ViewerUi.smile` and `ViewerGizmo.smile` | Panel visibility, slider owner, opt-in gizmo drag state | Hit test/update/draw/cancel; borrows camera projection and calibration edit operations | Scene/edit; pointer exclusivity and cancel tests |
 | Party choreography | `Program.smile` | `ViewerParty.smile` | Participants, turn/stage/timing, guard/hit/KO/revive, preview state and Party cameras | Create/reset/advance/draw/destroy/bind inspector; borrows actors, camera and effects | Party scene; timing, same-model isolation and inspector fixtures |
-| Effects/audio | `Program.smile`, `OrinStorm.smile`, `DragonPresence.smile`, `BattleAudio.smile` | `ViewerEffects.smile` plus retained focused modules | Equipment/Dragon emitters, trails, leases, scene clocks and visual-continuity epochs | Create/update/advance-once/draw/invalidate/destroy; borrows final actor transforms | Scene; frozen-cut/skipped-cue/lease cleanup tests |
+| Effects/audio | `Program.smile`, `OrinStorm.smile`, `DragonPresence.smile`, `BattleAudio.smile` | `ViewerEffects.smile` plus retained focused modules | Equipment emitters, trails, leases, scene clocks and visual-continuity epochs; Dragon breath remains with the pending Dragon owner | Create/update/advance-once/draw/invalidate/destroy; borrows final actor transforms | Scene; direct control/state assertions plus frozen-cut/skipped-cue/lease cleanup tests |
 | Rendering and overlay composition | `Program.smile` | `ViewerRendering.smile` | Arena/backdrop/grid/socket render resources and transient layout | Begin/draw/end/overlay; borrows read-only snapshots from owners | Scene; native/generated-Web draw and resize checks |
 | Build/publication | `Build.ps1`, `Prepare-BuildAssets.ps1`, explicit projects | same scripts with explicit module inventory | Disposable staging/publications only | Canonical preflight, compile, selected-output validation | Build; Release/Debug and Full/Low/Medium/High manifests |
 
@@ -106,7 +120,7 @@ state. Arin, Orin, Dragon, Party, and inspected-actor identities remain distinct
 | UI visibility and calibration panel/edit/confirmation fields in `Program.smile` | `ViewerUi.State` with explicit visibility, calibration reset, edit and confirmation transitions | State transitions moved; substantial layout, drawing and labels remain for R7.5. Pending edits and imports must continue to block actor switches without changing their owner. |
 | Transform-gizmo projection, pointer ownership, drag remainder and grip state globals in `Program.smile` | `ViewerGizmo.State` with reset/show-hide/begin/finish/select/projection operations | State moved; pointer mathematics and drawing implementation remain for R7.5. Gizmos remain opt-in and hiding retains the unsaved numeric preview for explicit Save or Cancel. |
 | Party participants, inspector/preview binding, turn/stage/timing, attack/reaction state and Party camera globals in `Program.smile` | `ViewerParty.State`, two explicit `ParticipantLayout` values and focused reset/formation/binding/elapsed operations | State and a few calculations moved; the transitions, actor lifecycle, pointer/UI and camera implementation remain for R7.5. Exactly two live Party participants remain explicit and same-model fallback must not alias actor state. |
-| Scene VFX clock, Fire/Lightning pause flags, visual-continuity epochs, light leases and audio-cue state in `Program.smile` | `ViewerEffects.State`, `AdvanceScene`, independent Fire/Lightning toggles, continuity invalidation and shared shutdown | Scene-clock state moved; equipment emitters, glow, trails, update/draw and teardown implementation remain for R7.5. Scene pause continues to leave VFX running by default while each family toggle freezes only that family. |
+| Scene VFX clock, equipment Fire/glow/trails, Fire/Lightning pause flags, visual-continuity epochs, light leases and Orin-storm state in `Program.smile` | `ViewerEffects.State`, `PrepareFire`, `PrepareLightning`, `UpdateEquipmentFire`, `UpdateEpicGlow`, `UpdateStorm`, draw operations, independent toggles, continuity invalidation and shared shutdown | State, implementation and lifecycle now move together. No duplicate wrappers or equipment-effect arrays remain in `Program.smile`. Scene pause continues to leave VFX running by default while each family toggle freezes only that family. |
 | Arena, floor/grid visibility, backdrop handles and backdrop index in `Program.smile` | `ViewerRendering.State` with reset/create/draw/apply/destroy/toggle/cycle operations | Basic state and backdrop/floor operations moved; grid, sockets and overlay composition remain for R7.5. Rendering borrows actor/effects snapshots and does not own gameplay, Party or calibration state. |
 | `BattleCamera.*` | `BattleCamera.*` | Already focused, retained |
 | `BattleAudio.CueState/CrossedCue` | `BattleAudio.*` | Already focused, retained |
@@ -130,8 +144,9 @@ copied or left as dead wrappers.
 
 - Party, effects and rendering state plus selected calculations moved into focused
   owners without a shared replacement state monolith. The R7.5 audit corrects the
-  earlier overstatement that their implementation had fully moved: `Program.smile`
-  still contains the substantial routines listed above.
+  earlier overstatement that their implementation had fully moved. Equipment-effects
+  implementation has since moved; `Program.smile` still contains the other substantial
+  routines listed above.
 - Native and generated-Web hardening pass with exact console parity. The isolated
   calibration fixture uses a random application identity and validates primary/backup
   recovery without reading or replacing live Arin/Orin storage.

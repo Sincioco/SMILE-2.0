@@ -433,6 +433,38 @@ Call Check(Not EffectsState.Clock.FireFrozen And EffectsState.Clock.LightningFro
 Call Check(Not ViewerEffects.ShouldFreeze(True, False))
 Call Check(ViewerEffects.ShouldFreeze(False, True))
 
+Call ViewerEffects.ResetEquipmentDefaults(EffectsState)
+Call Check(EffectsState.SwordFireVisible And EffectsState.ShieldFireVisible)
+Call ViewerEffects.ToggleSwordFire(EffectsState)
+Call Check(Not EffectsState.SwordFireVisible)
+Call ViewerEffects.ToggleSwordFire(EffectsState)
+Call Check(EffectsState.SwordFireVisible)
+Call ViewerEffects.ToggleShieldFire(EffectsState)
+Call Check(Not EffectsState.ShieldFireVisible)
+Call ViewerEffects.ToggleShieldFire(EffectsState)
+Call Check(EffectsState.ShieldFireVisible)
+Call Check(ViewerEffects.ShieldFireStyleLabel(EffectsState) = "Ember Outline")
+Call ViewerEffects.ToggleShieldFireStyle(EffectsState)
+Call Check(EffectsState.ShieldFlameStyle)
+Call Check(ViewerEffects.ShieldFireStyleLabel(EffectsState) = "Flames")
+
+EffectsState.ShieldFirePoints[1].X = 73
+
+Call Check(EffectsState.ShieldFirePoints[1].X = 73)
+Call ViewerEffects.InvalidateVisualHistory(EffectsState)
+Call Check(EffectsState.VisualHistoryDirty And EffectsState.VisualContinuityEpoch = 1)
+
+EffectsState.FlamePaused = True
+EffectsState.LightningPaused = True
+EffectsState.SwordFireFailed = True
+EffectsState.ShieldFireFailed = True
+EffectsState.EquipmentFireFirstError = 12
+
+Call ViewerEffects.ResetPlaybackControls(EffectsState)
+Call Check(Not EffectsState.FlamePaused And Not EffectsState.LightningPaused)
+Call Check(Not EffectsState.SwordFireFailed And Not EffectsState.ShieldFireFailed)
+Call Check(EffectsState.EquipmentFireFirstError = 0)
+
 Call ViewerRendering.Reset(RenderingState, 3)
 Call Check(RenderingState.FloorVisible And RenderingState.GridVisible)
 Call ViewerRendering.ToggleFloorAndGrid(RenderingState)

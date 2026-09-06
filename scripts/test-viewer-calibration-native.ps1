@@ -20,7 +20,13 @@ $helperIndex = $viewerSource.IndexOf('Sub LoadViewer()')
 if ($startupIndex -lt 0 -or $helperIndex -le $startupIndex) { throw 'Viewer startup boundaries changed; update the isolation harness.' }
 # Mechanical test-input assembly: retain the actual declarations and every actual
 # Viewer procedure, replacing only its interactive startup with bounded checks.
-$testSource = $viewerSource.Substring(0, $startupIndex) + ($profileConstants -join "`n") + "`n`n" +
+$testPrefix = $viewerSource.Substring(0, $startupIndex)
+$testPrefix = $testPrefix.Replace(
+    "Import Smile.Simple3D.FireEmitter3D As Fire`n",
+    "Import Smile.Simple3D.FireEmitter3D As Fire`n" +
+        "Import Smile.Simple3D.LightningVfx3D As Lightning`n" +
+        "Import Smile.Tools.ArinShieldRim As ArinShieldRim`n")
+$testSource = $testPrefix + ($profileConstants -join "`n") + "`n`n" +
     $testStartup + "`n" + $viewerSource.Substring($helperIndex)
 $encoding = [Text.UTF8Encoding]::new($false)
 [IO.File]::WriteAllText((Join-Path $testRoot 'Program.smile'), $testSource, $encoding)
