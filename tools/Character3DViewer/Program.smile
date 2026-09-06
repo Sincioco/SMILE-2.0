@@ -681,88 +681,16 @@ End Sub
 
 Sub UpdateDragon()
 
-    Dim Name As Text
-    Dim Target As Core.Vector3
-    Dim ReactionRequested As Boolean
-
-    If Not ViewerDragon.IsValid(DragonState) Then
-        Call ViewerDragon.ClearOwnedEffects(DragonState, Effects.DragonLight)
-
-        Return
-    End If
-
-    If Not DragonState.Visible Then
-        Call ViewerDragon.ClearOwnedEffects(DragonState, Effects.DragonLight)
-
-        Return
-    End If
-
-    ReactionRequested = (Party.Enabled And
-        Party.DragonReactionPending And
-        Party.Stage = 1 And
-        Party.Elapsed >= 1300 + ViewerParty.AttackDuration(
-            Party,
-            Character,
-            Party.Companion.Actor,
-            Playback.PlaybackSpeed
-        ) * 64 / 100)
-    Name = ViewerDragon.DesiredClip(
+    Session.Ready = ViewerParty.UpdateDragon(
+        Party,
         DragonState,
+        Effects,
+        Character,
         Session.DragonInspection,
         ViewerPlayback.SelectedClipName(Character, Playback),
-        Party.Enabled,
         Playback.ScenePaused,
-        Party.Turn,
-        Party.DragonCounter,
-        ReactionRequested
-    )
-
-    If ReactionRequested And Name = "Hit" Then
-        Party.DragonReactionPending = False
-    End If
-
-    If Session.DragonInspection Then
-
-        Target = Character3D.SocketPosition(
-            Party.DragonOpponent.Actor,
-            "Chest",
-            BODY_PART_INDEX
-        )
-
-        If Party.Ready And Party.DragonCounter Mod 2 = 1 Then
-            Target = Character3D.SocketPosition(
-                Party.Companion.Actor,
-                "Chest",
-                BODY_PART_INDEX
-            )
-        End If
-
-    Else If (Party.Enabled And
-        Party.Ready And
-        Party.HitTarget = 1) Then
-
-        Target = Character3D.SocketPosition(
-            Party.Companion.Actor,
-            "Chest",
-            BODY_PART_INDEX
-        )
-
-    Else
-        Target = Character3D.SocketPosition(Character, "Chest", BODY_PART_INDEX)
-
-    End If
-
-    Session.Ready = ViewerDragon.Update(
-        DragonState,
-        Name,
-        Session.DragonInspection,
         Playback.PlaybackSpeed,
-        Playback.AnimationUpdateElapsed,
-        Target,
-        Effects.VisualContinuityEpoch,
-        Effects.FlamePaused,
-        Effects.FireInitialized,
-        Effects.DragonLight
+        Playback.AnimationUpdateElapsed
     ) And Session.Ready
 
 End Sub

@@ -684,6 +684,22 @@ Call Check(PartyState.Elapsed = 17)
 Call Check(Not ViewerParty.AdvanceElapsed(PartyState, 17, True, True))
 Call Check(PartyState.Elapsed = 17)
 
+PartyState.Enabled = True
+PartyState.DragonReactionPending = True
+PartyState.Stage = 1
+PartyState.Elapsed = 1939
+
+Call Check(Not ViewerParty.DragonReactionRequested(PartyState, 1000))
+
+PartyState.Elapsed = 1940
+
+Call Check(ViewerParty.DragonReactionRequested(PartyState, 1000))
+
+Call ViewerParty.ConsumeDragonReaction(PartyState, True, "Idle")
+Call Check(PartyState.DragonReactionPending)
+Call ViewerParty.ConsumeDragonReaction(PartyState, True, "Hit")
+Call Check(Not PartyState.DragonReactionPending)
+
 Call ViewerParty.ResetChoreography(PartyState)
 
 PartyState.Turn = 0

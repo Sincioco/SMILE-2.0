@@ -161,8 +161,8 @@ try {
         'If Not Pointer_Inside() Then', $timelineCapture, [System.StringComparison]::Ordinal)
     Assert-True ($timelineCapture -ge 0 -and $outsidePointerReturn -gt $timelineCapture) `
         'Timeline pointer ownership must be handled before an outside-window return.'
-    Assert-Contains $viewerSource `
-        'Party.HitTarget = 1) Then' `
+    Assert-Contains $partySource `
+        'Value.HitTarget = 1) Then' `
         'Dragon Party target ownership'
     Assert-Contains $viewerSource `
         'Call ViewerCamera.KeepAboveGround(ViewerCameraState, 0)' `
@@ -400,6 +400,9 @@ try {
         'Public Function AdvanceDemo(',
         'Public Function CreateCompanion(',
         'Public Function UpdateCompanion(',
+        'Public Function DragonReactionRequested(',
+        'Public Sub ConsumeDragonReaction(',
+        'Public Function UpdateDragon(',
         'Public Function UpdateDragonOpponent(',
         'Public Function PlaceDragonInspectionParticipants(',
         'Public Sub ApplyAttackCamera(',
@@ -526,6 +529,10 @@ try {
         -not $viewerSource.Contains('ViewerParty.AdvanceChoreography(') -and
         -not $viewerSource.Contains('ViewerParty.ApplyFrame(')) `
         'Party reset/formation and per-frame demo behavior must remain in ViewerParty.'
+    Assert-True (-not $viewerSource.Contains('Party.DragonReactionPending') -and
+        -not $viewerSource.Contains('ViewerDragon.DesiredClip(') -and
+        -not $viewerSource.Contains('ViewerDragon.Update(')) `
+        'Party Dragon target, reaction and presentation update behavior must remain in ViewerParty.'
     Assert-True (-not $viewerSource.Contains('Function ValidateLoadedProfile(') -and
         -not $viewerSource.Contains('Function ViewerFloorWidth(') -and
         -not $viewerSource.Contains('Function ViewerFloorDepth(') -and

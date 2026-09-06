@@ -13,6 +13,7 @@ Import Smile.Tools.BattleCamera As BattleCamera
 Import Smile.Tools.Character3DViewerActors As ViewerActors
 Import Smile.Tools.Character3DViewerCalibration As ViewerCalibration
 Import Smile.Tools.Character3DViewerEffects As ViewerEffects
+Import Smile.Tools.Character3DViewerDragon As ViewerDragon
 Import Smile.Tools.Character3DViewerProfiles As ViewerProfiles
 
 Private Const DRAGON_CAMERA_CHEST_HEIGHT = 70
@@ -21,6 +22,7 @@ Private Const DRAGON_CAMERA_MOUTH_HEIGHT = 100
 Private Const DRAGON_CAMERA_ANCHOR_MAXIMUM_DELTA = 500
 Private Const SHIELD_PART_INDEX = 0
 Private Const WEAPON_PART_INDEX = 1
+Private Const BODY_PART_INDEX = 2
 
 Public Const STATE_ALIVE = 0
 Public Const STATE_ACTING = 1
@@ -732,6 +734,132 @@ Public Function UpdateDragonOpponent(ByRef Value As State,
         SelectedClipLabel,
         Camera,
         CameraElapsed
+    )
+
+    Return Result
+
+End Function
+
+Public Function DragonReactionRequested(ByRef Value As State,
+    AttackDurationMilliseconds As Number) As Boolean
+
+    Dim Result As Boolean
+
+    Result = (Value.Enabled And
+        Value.DragonReactionPending And
+        Value.Stage = 1 And
+        Value.Elapsed >= 1300 + AttackDurationMilliseconds * 64 / 100)
+
+    Return Result
+
+End Function
+
+Public Sub ConsumeDragonReaction(ByRef Value As State,
+    Requested As Boolean, DragonClip As Text)
+
+    If Requested And DragonClip = "Hit" Then
+        Value.DragonReactionPending = False
+    End If
+
+End Sub
+
+Public Function UpdateDragon(
+    ByRef Value As State,
+    ByRef Dragon As ViewerDragon.State,
+    ByRef Effects As ViewerEffects.State,
+    ByRef PrimaryActor As Character3D.Actor,
+    Inspection As Boolean,
+    SelectedClipName As Text,
+    ScenePaused As Boolean,
+    PlaybackSpeed As Number,
+    AnimationElapsed As Number
+) As Boolean
+
+    Dim Name As Text
+    Dim Target As Core.Vector3
+    Dim ReactionRequested As Boolean
+    Dim Result As Boolean
+
+    If Not ViewerDragon.IsValid(Dragon) Then
+        Call ViewerDragon.ClearOwnedEffects(Dragon, Effects.DragonLight)
+
+        Return True
+    End If
+
+    If Not Dragon.Visible Then
+        Call ViewerDragon.ClearOwnedEffects(Dragon, Effects.DragonLight)
+
+        Return True
+    End If
+
+    ReactionRequested = DragonReactionRequested(
+        Value,
+        AttackDuration(
+            Value,
+            PrimaryActor,
+            Value.Companion.Actor,
+            PlaybackSpeed
+        )
+    )
+    Name = ViewerDragon.DesiredClip(
+        Dragon,
+        Inspection,
+        SelectedClipName,
+        Value.Enabled,
+        ScenePaused,
+        Value.Turn,
+        Value.DragonCounter,
+        ReactionRequested
+    )
+
+    Call ConsumeDragonReaction(Value, ReactionRequested, Name)
+
+    If Inspection Then
+
+        Target = Character3D.SocketPosition(
+            Value.DragonOpponent.Actor,
+            "Chest",
+            BODY_PART_INDEX
+        )
+
+        If Value.Ready And Value.DragonCounter Mod 2 = 1 Then
+            Target = Character3D.SocketPosition(
+                Value.Companion.Actor,
+                "Chest",
+                BODY_PART_INDEX
+            )
+        End If
+
+    Else If (Value.Enabled And
+        Value.Ready And
+        Value.HitTarget = 1) Then
+
+        Target = Character3D.SocketPosition(
+            Value.Companion.Actor,
+            "Chest",
+            BODY_PART_INDEX
+        )
+
+    Else
+        Target = Character3D.SocketPosition(
+            PrimaryActor,
+            "Chest",
+            BODY_PART_INDEX
+        )
+
+    End If
+
+    Result = ViewerDragon.Update(
+        Dragon,
+        Name,
+        Inspection,
+        PlaybackSpeed,
+        AnimationElapsed,
+        Target,
+        Effects.VisualContinuityEpoch,
+        Effects.FlamePaused,
+        Effects.FireInitialized,
+        Effects.DragonLight
     )
 
     Return Result
