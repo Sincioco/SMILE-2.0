@@ -4463,9 +4463,10 @@ Run("Type fields support fixed arrays through syntax semantics layouts and both 
     var nativeCopyStart = native.IndexOf("record_1_bag_copy PROC", StringComparison.Ordinal);
     var nativeCopyEnd = native.IndexOf("record_1_bag_copy ENDP", nativeCopyStart, StringComparison.Ordinal);
     var nativeCopy = native[nativeCopyStart..nativeCopyEnd];
-    Equal(2, nativeCopy.Split("call smile_text_retain", StringSplitOptions.None).Length - 1);
-    Equal(2, nativeCopy.Split("call record_0_point_copy", StringSplitOptions.None).Length - 1);
-    Equal(2, nativeCopy.Split("call smile_image_retain", StringSplitOptions.None).Length - 1);
+    Equal(1, nativeCopy.Split("call smile_text_retain", StringSplitOptions.None).Length - 1);
+    Equal(1, nativeCopy.Split("call record_0_point_copy", StringSplitOptions.None).Length - 1);
+    Equal(1, nativeCopy.Split("call smile_image_retain", StringSplitOptions.None).Length - 1);
+    Equal(true, nativeCopy.Contains("record_copy_array_loop", StringComparison.Ordinal));
 
     var web = new WebEmitter(analysis).Emit();
     Equal(true, web.Contains("smile.array([2], \"\")", StringComparison.Ordinal));
@@ -4477,6 +4478,69 @@ Run("Type fields support fixed arrays through syntax semantics layouts and both 
         StringComparison.Ordinal));
     Equal(false, web.Split('\n').Any(line => line.TrimStart().StartsWith("smile.get(",
         StringComparison.Ordinal) && line.Contains(" = ", StringComparison.Ordinal)));
+});
+
+Run("Fixed-array indexing validates every native dimension and captures Web ByRef bounds", () =>
+{
+    const string source = "Option Explicit\nType Bag\nValues[2, 3] As Number\nEnd Type\nDim Shared As Bag\nDim Standalone[2, 3] As Number\nShared.Values[1, 2] = 7\nStandalone[1, 2] = Shared.Values[1, 2]\nCall SetValue(Shared.Values[1, 2], 9)\nSub SetValue(ByRef Value As Number, NewValue As Number)\nValue = NewValue\nEnd Sub\n";
+    var analysis = Analyze(source);
+    Equal(false, analysis.HasErrors);
+
+    var native = new MasmEmitter(analysis, SmileGraphicsBackend.Auto, true, false).Emit();
+    Equal(true, native.Contains("EXTERN smile_array_index_failure_report:PROC", StringComparison.Ordinal));
+    Equal(true, native.Split("call smile_array_index_failure_report", StringSplitOptions.None).Length - 1 >= 8);
+    Equal(true, native.Contains("SMILE runtime error", StringComparison.Ordinal) == false);
+
+    var web = new WebEmitter(analysis).Emit();
+    var capture = web.IndexOf("_indexed_array", StringComparison.Ordinal);
+    var reference = web.IndexOf("return { get: () => smile.get(", capture, StringComparison.Ordinal);
+    var validation = web.LastIndexOf("smile.get(", reference - 1, StringComparison.Ordinal);
+    Equal(true, capture >= 0);
+    Equal(true, validation > capture);
+    Equal(true, reference > validation);
+});
+
+Run("Returned record fixed-array projections retain selected resources before clearing owners", () =>
+{
+    const string source = "Option Explicit\nType Payload\nImages[2] As Image\nEnd Type\nType Envelope\nItems[2] As Payload\nEnd Type\nDim Selected As Image\nSelected = MakeEnvelope().Items[1].Images[0]\nPrint Image_Loaded(Selected)\nFunction MakeEnvelope() As Envelope\nDim Result As Envelope\nReturn Result\nEnd Function\n";
+    var analysis = Analyze(source);
+    Equal(false, analysis.HasErrors);
+
+    var native = new MasmEmitter(analysis, SmileGraphicsBackend.Auto, true, false).Emit();
+    var mainStart = native.IndexOf("main PROC", StringComparison.Ordinal);
+    var mainEnd = native.IndexOf("main ENDP", mainStart, StringComparison.Ordinal);
+    var main = native[mainStart..mainEnd];
+    var selectedRetain = main.IndexOf("call smile_image_retain", StringComparison.Ordinal);
+    var ownerClear = main.IndexOf("call record_1_envelope_clear", selectedRetain, StringComparison.Ordinal);
+    Equal(true, selectedRetain >= 0);
+    Equal(true, ownerClear > selectedRetain);
+
+    var web = new WebEmitter(analysis).Emit();
+    var retained = web.IndexOf("smile.imageRetain(smile.get", StringComparison.Ordinal);
+    var cleared = web.IndexOf("record_1_envelope_clear(", retained, StringComparison.Ordinal);
+    Equal(true, retained >= 0);
+    Equal(true, cleared > retained);
+});
+
+Run("Native record helper size stays bounded for large fixed-array fields", () =>
+{
+    string HelperFor(int count)
+    {
+        var analysis = Analyze($"Option Explicit\nType Buffer\nValues[{count}] As Number\nEnd Type\nDim First As Buffer\nDim Second As Buffer\nSecond = First\n");
+        Equal(false, analysis.HasErrors);
+        var native = new MasmEmitter(analysis, SmileGraphicsBackend.Auto, true, false).Emit();
+        var start = native.IndexOf("record_0_buffer_init PROC", StringComparison.Ordinal);
+        var end = native.IndexOf("record_0_buffer_copy ENDP", start, StringComparison.Ordinal) +
+                  "record_0_buffer_copy ENDP".Length;
+        return native[start..end];
+    }
+
+    var sixtyFour = HelperFor(64);
+    var tenThousand = HelperFor(10000);
+    Equal(sixtyFour.Split('\n').Length, tenThousand.Split('\n').Length);
+    Equal(2, sixtyFour.Split("record_copy_array_loop", StringSplitOptions.None).Length - 1);
+    Equal(2, tenThousand.Split("record_copy_array_loop", StringSplitOptions.None).Length - 1);
+    Equal(true, tenThousand.Length < 2000);
 });
 
 Run("Type fixed-array fields retain bounded diagnostics and indexed-field rules", () =>

@@ -238,6 +238,13 @@ and its focused production tests exercise the destination owner.
 | Presentation audio/storm routing move | 3,517 | 93 | From the 3,561-line/93-procedure calibration-command checkpoint, Arin attack cue timing, cue-state reset and sound submission moved with `Effects.ArinAudio` into `ViewerEffects`; companion-versus-primary Orin selection, Dragon chest targeting, KO/glow eligibility and storm dispatch moved with Party state into `ViewerParty`. `UpdateBattleAudio` and `UpdateOrinStorm` remain thin visible frame-order adapters, so no false procedure reduction is claimed. Direct reset/invalid-Dragon checks, existing continuous/skipped cue and Party/Dragon storm integration, plus static raw-call guards cover the move. |
 | Transform-gizmo interaction move | 3,448 | 91 | From the 3,517-line/93-procedure presentation-routing checkpoint, gizmo keyboard classification moved to `ViewerInput`; pointer gating, toggle/cancel/update/finish/begin-axis decisions moved with retained drag conversion to `ViewerGizmo`; axis changes, edit opening, drag cancellation and calibrated value mutation moved to `ViewerCalibrationEditing`. The two implementation helpers `UpdateTransformGizmoFromPointer` and `AdjustCalibrationValue` left `Program.smile`; the retained coordinator samples runtime input, protects socket-origin evaluation and dispatches typed actions in the established order. Direct keyboard/pointer/no-op operation assertions, native/generated-Web hardening, Full Web compilation and static raw-operation guards cover the move. |
 
+The separate fixed-array hardening gate did not move Viewer responsibility or change
+these coordinator metrics. It added immediate per-dimension native bounds checks,
+Web `ByRef` capture validation, returned-record projection cleanup and bounded native
+record-helper loops, then exercised those compiler/runtime changes with disposable
+native and Web fixtures. `Program.smile` therefore remains 3,448 lines and 91
+procedures while R7.5 resumes from the exact ownership inventory below.
+
 Substantial implementation still in `Program.smile` after the transform-gizmo interaction checkpoint is
 intentionally explicit: startup/retry/tab-switch orchestration; Party
 inspector calibration adaptation and pointer action dispatch;

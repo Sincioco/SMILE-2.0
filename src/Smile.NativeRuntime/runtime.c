@@ -739,6 +739,22 @@ void smile_class_allocation_failure_report(void)
     smile_print_newline();
 }
 
+void smile_array_index_failure_report(long long value, long long dimension, long long size)
+{
+    static const char prefix[] = "SMILE runtime error: Array index ";
+    static const char middle[] = " is outside dimension ";
+    static const char size_prefix[] = " (size ";
+    static const char suffix[] = ").";
+    smile_print_text(prefix, (long long)(sizeof(prefix) - 1));
+    smile_print_number(value);
+    smile_print_text(middle, (long long)(sizeof(middle) - 1));
+    smile_print_number(dimension);
+    smile_print_text(size_prefix, (long long)(sizeof(size_prefix) - 1));
+    smile_print_number(size);
+    smile_print_text(suffix, (long long)(sizeof(suffix) - 1));
+    smile_print_newline();
+}
+
 void smile_image_lifetime_report(void)
 {
     WCHAR enabled[2];

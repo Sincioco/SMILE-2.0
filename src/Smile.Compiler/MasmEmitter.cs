@@ -210,6 +210,7 @@ internal sealed class MasmEmitter
         Line("EXTERN smile_class_lifetime_report:PROC");
         Line("EXTERN smile_class_nothing_report:PROC");
         Line("EXTERN smile_class_allocation_failure_report:PROC");
+        Line("EXTERN smile_array_index_failure_report:PROC");
         Line("EXTERN smile_image_retain:PROC");
         Line("EXTERN smile_image_release:PROC");
         Line("EXTERN smile_image_move_assign:PROC");
@@ -954,6 +955,7 @@ internal sealed class MasmEmitter
                     Line("    mov rdx, rax");
                     Line($"    mov rcx, QWORD PTR [rbp-{_currentFrame!.ReturnOffset}]");
                     CallAligned(RecordCopy(returnRecord));
+                    ClearConsumedRecordResults(returnStatement.Expression!);
                     ReleaseClassLocationOwner(returnStatement.Expression!);
                 }
                 else
@@ -1315,6 +1317,7 @@ internal sealed class MasmEmitter
         {
             Line("    mov rdx, rax");
             CallAligned(RecordCopy(targetRecord));
+            ClearConsumedRecordResults(assignment.Expression);
             ReleaseClassLocationOwner(assignment.Target.Location);
             ReleaseClassLocationOwner(assignment.Expression);
             return;
@@ -1341,10 +1344,12 @@ internal sealed class MasmEmitter
     private void EmitArrayIndex(IReadOnlyList<ExpressionSyntax> indices, VariableSymbol symbol)
     {
         EmitExpression(indices[0]);
+        EmitRequireArrayIndex(symbol.ArrayDimensions[0], 1);
         if (indices.Count == 1)
             return;
         PushRax();
         EmitExpression(indices[1]);
+        EmitRequireArrayIndex(symbol.ArrayDimensions[1], 2);
         Line("    mov rcx, rax");
         PopRax();
         Line($"    imul rax, {symbol.ArrayDimensions[1].ToString(CultureInfo.InvariantCulture)}");
@@ -1589,6 +1594,9 @@ internal sealed class MasmEmitter
                         CallAligned(indexedType == SmileType.Text ? "smile_text_retain" :
                             indexedType == SmileType.Image ? "smile_image_retain" : "smile_class_retain");
                     }
+                    PushRax();
+                    ClearConsumedRecordResults(indexed);
+                    PopRax();
                     ReleaseClassLocationOwner(indexed);
                 }
                 break;
@@ -1617,6 +1625,9 @@ internal sealed class MasmEmitter
                             ? "smile_text_retain" : _analysis.SemanticModel.GetType(field) == SmileType.Image
                                 ? "smile_image_retain" : "smile_class_retain");
                     }
+                    PushRax();
+                    ClearConsumedRecordResults(field);
+                    PopRax();
                     ReleaseClassLocationOwner(field);
                 }
                 break;
@@ -2111,6 +2122,9 @@ internal sealed class MasmEmitter
             case FieldAccessExpressionSyntax field:
                 ClearConsumedRecordResults(field.Receiver);
                 break;
+            case IndexedExpressionSyntax indexed:
+                ClearConsumedRecordResults(indexed.Receiver);
+                break;
             case MemberInvocationExpressionSyntax member:
                 ClearConsumedRecordResults(member.Receiver);
                 break;
@@ -2335,10 +2349,12 @@ internal sealed class MasmEmitter
     private void EmitInstanceFieldIndex(IReadOnlyList<ExpressionSyntax> indices, IInstanceFieldSymbol field)
     {
         EmitExpression(indices[0]);
+        EmitRequireArrayIndex(field.Dimensions[0], 1);
         if (indices.Count == 1)
             return;
         PushRax();
         EmitExpression(indices[1]);
+        EmitRequireArrayIndex(field.Dimensions[1], 2);
         Line("    mov rcx, rax");
         PopRax();
         Line($"    imul rax, {field.Dimensions[1].ToString(CultureInfo.InvariantCulture)}");
@@ -2708,6 +2724,24 @@ internal sealed class MasmEmitter
         Line($"{valid}:");
     }
 
+    private void EmitRequireArrayIndex(int dimension, int dimensionOrdinal)
+    {
+        var valid = NewLabel("array_index_valid");
+        var invalid = NewLabel("array_index_invalid");
+        Line("    cmp rax, 0");
+        Line($"    jl {invalid}");
+        Line($"    cmp rax, {dimension.ToString(CultureInfo.InvariantCulture)}");
+        Line($"    jl {valid}");
+        Line($"{invalid}:");
+        Line("    mov rcx, rax");
+        Line($"    mov rdx, {dimensionOrdinal.ToString(CultureInfo.InvariantCulture)}");
+        Line($"    mov r8, {dimension.ToString(CultureInfo.InvariantCulture)}");
+        CallAligned("smile_array_index_failure_report");
+        EmitPopClipsTo(0);
+        EmitTermination(4);
+        Line($"{valid}:");
+    }
+
     private void EmitTermination(int exitCode)
     {
         CallAligned("smile_cleanup_staged_arguments");
@@ -2855,11 +2889,21 @@ internal sealed class MasmEmitter
     private void EmitRecordHelpers(RecordTypeSymbol record)
     {
         var prefix = _recordHelperLabels[record];
+        var initLoop = NewLabel("record_init_loop");
+        var initDone = NewLabel("record_init_done");
         Line();
         Line($"{prefix}_init PROC");
-        for (var offset = 0; offset < record.Size; offset += 8)
-            Line($"    mov QWORD PTR [rcx{Offset(offset)}], 0");
         Line("    mov rax, rcx");
+        Line("    mov r8, rcx");
+        Line($"    mov rdx, {(record.Size / 8).ToString(CultureInfo.InvariantCulture)}");
+        Line($"{initLoop}:");
+        Line("    test rdx, rdx");
+        Line($"    jz {initDone}");
+        Line("    mov QWORD PTR [r8], 0");
+        Line("    add r8, 8");
+        Line("    dec rdx");
+        Line($"    jmp {initLoop}");
+        Line($"{initDone}:");
         Line("    ret");
         Line($"{prefix}_init ENDP");
 
@@ -2873,15 +2917,31 @@ internal sealed class MasmEmitter
             if (!field.Type.RequiresCleanup)
                 continue;
             var elementSize = Math.Max(8, field.Type.Size);
-            for (var index = field.ElementCount - 1; index >= 0; index--)
+            if (field.ElementCount == 1)
             {
-                var elementOffset = field.Offset + index * elementSize;
                 Line("    mov rax, QWORD PTR [rbp-8]");
-                Line($"    lea rcx, [rax{Offset(elementOffset)}]");
+                Line($"    lea rcx, [rax{Offset(field.Offset)}]");
                 Line(field.Type is RecordTypeSymbol nested
                     ? $"    call {RecordClear(nested)}"
                     : field.Type == SmileType.Text ? "    call smile_text_clear" : "    call smile_image_clear");
+                continue;
             }
+            var clearLoop = NewLabel("record_clear_array_loop");
+            var clearDone = NewLabel("record_clear_array_done");
+            Line($"    mov QWORD PTR [rbp-24], {field.ElementCount.ToString(CultureInfo.InvariantCulture)}");
+            Line($"{clearLoop}:");
+            Line("    cmp QWORD PTR [rbp-24], 0");
+            Line($"    je {clearDone}");
+            Line("    sub QWORD PTR [rbp-24], 1");
+            Line("    mov rax, QWORD PTR [rbp-8]");
+            Line("    mov rcx, QWORD PTR [rbp-24]");
+            Line($"    imul rcx, {elementSize.ToString(CultureInfo.InvariantCulture)}");
+            Line($"    lea rcx, [rax+rcx{Offset(field.Offset)}]");
+            Line(field.Type is RecordTypeSymbol arrayNested
+                ? $"    call {RecordClear(arrayNested)}"
+                : field.Type == SmileType.Text ? "    call smile_text_clear" : "    call smile_image_clear");
+            Line($"    jmp {clearLoop}");
+            Line($"{clearDone}:");
         }
         Line("    mov rax, QWORD PTR [rbp-8]");
         Line("    mov rsp, rbp");
@@ -2901,45 +2961,21 @@ internal sealed class MasmEmitter
         foreach (var field in record.Fields)
         {
             var elementSize = Math.Max(8, field.Type.Size);
-            for (var index = 0; index < field.ElementCount; index++)
+            if (field.ElementCount == 1)
             {
-                var elementOffset = field.Offset + index * elementSize;
-                if (field.Type is RecordTypeSymbol nested)
-                {
-                    Line("    mov rax, QWORD PTR [rbp-8]");
-                    Line($"    lea rcx, [rax{Offset(elementOffset)}]");
-                    Line("    mov rax, QWORD PTR [rbp-16]");
-                    Line($"    lea rdx, [rax{Offset(elementOffset)}]");
-                    Line($"    call {RecordCopy(nested)}");
-                }
-                else if (field.Type == SmileType.Text)
-                {
-                    Line("    mov rax, QWORD PTR [rbp-16]");
-                    Line($"    mov rcx, QWORD PTR [rax{Offset(elementOffset)}]");
-                    Line("    call smile_text_retain");
-                    Line("    mov rdx, rax");
-                    Line("    mov rax, QWORD PTR [rbp-8]");
-                    Line($"    lea rcx, [rax{Offset(elementOffset)}]");
-                    Line("    call smile_text_move_assign");
-                }
-                else if (field.Type == SmileType.Image)
-                {
-                    Line("    mov rax, QWORD PTR [rbp-16]");
-                    Line($"    mov rcx, QWORD PTR [rax{Offset(elementOffset)}]");
-                    Line("    call smile_image_retain");
-                    Line("    mov rdx, rax");
-                    Line("    mov rax, QWORD PTR [rbp-8]");
-                    Line($"    lea rcx, [rax{Offset(elementOffset)}]");
-                    Line("    call smile_image_move_assign");
-                }
-                else
-                {
-                    Line("    mov rax, QWORD PTR [rbp-16]");
-                    Line($"    mov rdx, QWORD PTR [rax{Offset(elementOffset)}]");
-                    Line("    mov rax, QWORD PTR [rbp-8]");
-                    Line($"    mov QWORD PTR [rax{Offset(elementOffset)}], rdx");
-                }
+                EmitRecordElementCopy(field, field.Offset, null);
+                continue;
             }
+            var copyLoop = NewLabel("record_copy_array_loop");
+            var copyDone = NewLabel("record_copy_array_done");
+            Line("    mov QWORD PTR [rbp-24], 0");
+            Line($"{copyLoop}:");
+            Line($"    cmp QWORD PTR [rbp-24], {field.ElementCount.ToString(CultureInfo.InvariantCulture)}");
+            Line($"    jge {copyDone}");
+            EmitRecordElementCopy(field, field.Offset, elementSize);
+            Line("    add QWORD PTR [rbp-24], 1");
+            Line($"    jmp {copyLoop}");
+            Line($"{copyDone}:");
         }
         Line("    mov rax, QWORD PTR [rbp-8]");
         Line("    mov rsp, rbp");
@@ -2949,6 +2985,73 @@ internal sealed class MasmEmitter
         Line("    mov rax, rcx");
         Line("    ret");
         Line($"{prefix}_copy ENDP");
+    }
+
+    private void EmitRecordElementCopy(RecordFieldSymbol field, int fieldOffset, int? arrayElementSize)
+    {
+        var dynamicOffset = arrayElementSize != null;
+        if (field.Type is RecordTypeSymbol nested)
+        {
+            Line("    mov rax, QWORD PTR [rbp-8]");
+            if (dynamicOffset)
+            {
+                Line("    mov rcx, QWORD PTR [rbp-24]");
+                Line($"    imul rcx, {arrayElementSize!.Value.ToString(CultureInfo.InvariantCulture)}");
+                Line($"    lea rcx, [rax+rcx{Offset(fieldOffset)}]");
+            }
+            else
+                Line($"    lea rcx, [rax{Offset(fieldOffset)}]");
+            Line("    mov rax, QWORD PTR [rbp-16]");
+            if (dynamicOffset)
+            {
+                Line("    mov rdx, QWORD PTR [rbp-24]");
+                Line($"    imul rdx, {arrayElementSize!.Value.ToString(CultureInfo.InvariantCulture)}");
+                Line($"    lea rdx, [rax+rdx{Offset(fieldOffset)}]");
+            }
+            else
+                Line($"    lea rdx, [rax{Offset(fieldOffset)}]");
+            Line($"    call {RecordCopy(nested)}");
+            return;
+        }
+
+        Line("    mov rax, QWORD PTR [rbp-16]");
+        if (dynamicOffset)
+        {
+            Line("    mov rcx, QWORD PTR [rbp-24]");
+            Line($"    imul rcx, {arrayElementSize!.Value.ToString(CultureInfo.InvariantCulture)}");
+        }
+        if (field.Type == SmileType.Text || field.Type == SmileType.Image)
+        {
+            Line(dynamicOffset
+                ? $"    mov rcx, QWORD PTR [rax+rcx{Offset(fieldOffset)}]"
+                : $"    mov rcx, QWORD PTR [rax{Offset(fieldOffset)}]");
+            Line(field.Type == SmileType.Text ? "    call smile_text_retain" : "    call smile_image_retain");
+            Line("    mov rdx, rax");
+            Line("    mov rax, QWORD PTR [rbp-8]");
+            if (dynamicOffset)
+            {
+                Line("    mov rcx, QWORD PTR [rbp-24]");
+                Line($"    imul rcx, {arrayElementSize!.Value.ToString(CultureInfo.InvariantCulture)}");
+                Line($"    lea rcx, [rax+rcx{Offset(fieldOffset)}]");
+            }
+            else
+                Line($"    lea rcx, [rax{Offset(fieldOffset)}]");
+            Line(field.Type == SmileType.Text ? "    call smile_text_move_assign" : "    call smile_image_move_assign");
+            return;
+        }
+
+        Line(dynamicOffset
+            ? $"    mov rdx, QWORD PTR [rax+rcx{Offset(fieldOffset)}]"
+            : $"    mov rdx, QWORD PTR [rax{Offset(fieldOffset)}]");
+        Line("    mov rax, QWORD PTR [rbp-8]");
+        if (dynamicOffset)
+        {
+            Line("    mov rcx, QWORD PTR [rbp-24]");
+            Line($"    imul rcx, {arrayElementSize!.Value.ToString(CultureInfo.InvariantCulture)}");
+            Line($"    mov QWORD PTR [rax+rcx{Offset(fieldOffset)}], rdx");
+        }
+        else
+            Line($"    mov QWORD PTR [rax{Offset(fieldOffset)}], rdx");
     }
 
     private void EmitClassFinalizer(ClassTypeSymbol classType)

@@ -711,14 +711,27 @@ internal sealed class WebEmitter
 
     private void EmitImageLoad(ImageLoadStatementSyntax image)
     {
+        var reference = Temporary("image_target");
         if (image.IsUnload)
         {
-            Line(WriteTarget(image.Target, $"smile.imageMoveAssign({ReadTarget(image.Target)}, null)") + ";");
+            Line($"const {reference} = {Reference(image.Target.Location)};");
+            Line($"try {{ {reference}.set(smile.imageMoveAssign({reference}.get(), null)); }} " +
+                 $"finally {{ {reference}.release(); }}");
             return;
         }
         var loaded = Temporary("image");
+        var transferred = Temporary("image_transferred");
         Line($"const {loaded} = await smile.loadImage({Expression(image.Path!)});");
-        Line(WriteTarget(image.Target, $"smile.imageMoveAssign({ReadTarget(image.Target)}, {loaded})") + ";");
+        Line($"let {reference};");
+        Line($"let {transferred} = false;");
+        Line("try {");
+        _indent++;
+        Line($"{reference} = {Reference(image.Target.Location)};");
+        Line($"{reference}.set(smile.imageMoveAssign({reference}.get(), {loaded}));");
+        Line($"{transferred} = true;");
+        _indent--;
+        Line($"}} finally {{ if ({reference}) {reference}.release(); " +
+             $"if (!{transferred}) smile.imageRelease({loaded}); }}");
     }
 
     private void EmitClip(ClipRectangleStatementSyntax clip, bool topLevel)
@@ -872,6 +885,17 @@ internal sealed class WebEmitter
 
         if (expression is IndexedExpressionSyntax)
         {
+            if (TryGetOwnedRecordRoot(expression, out var rootExpression, out var rootType))
+            {
+                var root = Temporary("record_root");
+                var ownedIndexedValue = RecordLocationAccess(expression, rootExpression, root);
+                var ownedResult = fieldType is RecordTypeSymbol
+                    ? CloneValue(fieldType, ownedIndexedValue)
+                    : fieldType == SmileType.Image ? $"smile.imageRetain({ownedIndexedValue})"
+                    : fieldType.IsClass ? $"smile.classRetain({ownedIndexedValue})" : ownedIndexedValue;
+                return $"await (async () => {{ const {root} = {Expression(rootExpression)}; " +
+                       $"try {{ return {ownedResult}; }} finally {{ {_recordNames[rootType]}_clear({root}); }} }})()";
+            }
             var indexedValue = Location(expression);
             return fieldType == SmileType.Image ? $"smile.imageRetain({indexedValue})"
                 : fieldType.IsClass ? $"smile.classRetain({indexedValue})" : indexedValue;
@@ -1278,6 +1302,8 @@ internal sealed class WebEmitter
                 .Append(Expression(index)).Append("); ");
         var access = ClassLocationAccess(expression, owner.RootExpression, root, indexNames);
         var setter = ClassLocationSetter(expression, owner.RootExpression, root, indexNames);
+        if (indexExpressions.Count != 0)
+            builder.Append(access).Append("; ");
         builder.Append("return smile.classOwnedRef(").Append(root).Append(", root => ")
             .Append(access).Append(", (root, value) => { ").Append(setter).Append(" }); ")
             .Append("} catch (error) { smile.classRelease(").Append(root).Append("); throw error; } })()");
@@ -1346,6 +1372,7 @@ internal sealed class WebEmitter
     private string IndexedReference(string receiverReference, IReadOnlyList<ExpressionSyntax> indices)
     {
         var target = Temporary("indexed_target");
+        var array = Temporary("indexed_array");
         var indexNames = indices.Select(_ => Temporary("index")).ToArray();
         var builder = new StringBuilder();
         builder.Append("await (async () => { const ").Append(target).Append(" = ")
@@ -1354,9 +1381,11 @@ internal sealed class WebEmitter
             builder.Append("const ").Append(indexNames[index]).Append(" = smile.safe(")
                 .Append(Expression(indices[index])).Append("); ");
         var values = string.Join(", ", indexNames);
-        builder.Append("return { get: () => smile.get(").Append(target).Append(".get(), [")
-            .Append(values).Append("]), set: value => smile.set(").Append(target)
-            .Append(".get(), [").Append(values).Append("], value), release: () => ")
+        builder.Append("const ").Append(array).Append(" = ").Append(target).Append(".get(); ")
+            .Append("smile.get(").Append(array).Append(", [").Append(values).Append("]); ")
+            .Append("return { get: () => smile.get(").Append(array).Append(", [")
+            .Append(values).Append("]), set: value => smile.set(").Append(array)
+            .Append(", [").Append(values).Append("], value), release: () => ")
             .Append(target).Append(".release() }; } catch (error) { ").Append(target)
             .Append(".release(); throw error; } })()");
         return builder.ToString();
@@ -1366,7 +1395,7 @@ internal sealed class WebEmitter
         $"smile.ref(() => {reference}.get(), value => {reference}.set(value))";
 
     private static string MemberReference(string receiverReference, string key) =>
-        $"(() => {{ const target = {receiverReference}; return {{ get: () => target.get()[{key}], " +
+        $"await (async () => {{ const target = {receiverReference}; return {{ get: () => target.get()[{key}], " +
         $"set: value => {{ target.get()[{key}] = value; }}, release: () => target.release() }}; }})()";
 
     private string DefaultValue(SmileType type) => type is RecordTypeSymbol record
@@ -1407,14 +1436,58 @@ internal sealed class WebEmitter
                call.Routine.ReturnType is RecordTypeSymbol => true,
         FieldAccessExpressionSyntax field when _analysis.SemanticModel.GetType(field) is RecordTypeSymbol =>
             IsOwnedRecordExpression(field.Receiver),
+        IndexedExpressionSyntax indexed when _analysis.SemanticModel.GetType(indexed) is RecordTypeSymbol =>
+            IsOwnedRecordExpression(indexed.Receiver),
         _ => false
     };
+
+    private bool TryGetOwnedRecordRoot(ExpressionSyntax expression, out ExpressionSyntax root,
+        out RecordTypeSymbol rootType)
+    {
+        while (expression is ParenthesizedExpressionSyntax parenthesized)
+            expression = parenthesized.Expression;
+        if (_analysis.SemanticModel.TryGetBoundCall(expression, out var call) &&
+            call.Routine.ReturnType is RecordTypeSymbol returnedRecord)
+        {
+            root = expression;
+            rootType = returnedRecord;
+            return true;
+        }
+        ExpressionSyntax? receiver = expression switch
+        {
+            FieldAccessExpressionSyntax field => field.Receiver,
+            IndexedExpressionSyntax indexed => indexed.Receiver,
+            _ => null
+        };
+        if (receiver != null)
+            return TryGetOwnedRecordRoot(receiver, out root, out rootType);
+        root = null!;
+        rootType = null!;
+        return false;
+    }
+
+    private string RecordLocationAccess(ExpressionSyntax expression, ExpressionSyntax rootExpression,
+        string rootName)
+    {
+        if (ReferenceEquals(expression, rootExpression))
+            return rootName;
+        return expression switch
+        {
+            ParenthesizedExpressionSyntax parenthesized =>
+                RecordLocationAccess(parenthesized.Expression, rootExpression, rootName),
+            FieldAccessExpressionSyntax field =>
+                $"({RecordLocationAccess(field.Receiver, rootExpression, rootName)})" +
+                $"[{Json(FieldKey(RequireInstanceField(field)))}]",
+            IndexedExpressionSyntax indexed =>
+                $"smile.get({RecordLocationAccess(indexed.Receiver, rootExpression, rootName)}, " +
+                $"[{Arguments(indexed.Indices)}])",
+            _ => throw new InvalidOperationException("Unsupported owned-record Web location.")
+        };
+    }
 
     private string StoreValue(SmileType type, string value) => type == SmileType.Number
         ? $"smile.safe({value})"
         : CloneValue(type, value);
-
-    private string ReadTarget(AssignmentTargetSyntax target) => TargetLocation(target);
 
     private string WriteTarget(AssignmentTargetSyntax target, string value)
     {
@@ -1462,8 +1535,6 @@ internal sealed class WebEmitter
     {
         return _analysis.SemanticModel.GetType(target.Location);
     }
-
-    private string TargetLocation(AssignmentTargetSyntax target) => Location(target.Location);
 
     private string Location(ExpressionSyntax expression)
     {

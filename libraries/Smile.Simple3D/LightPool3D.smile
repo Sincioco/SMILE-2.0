@@ -65,9 +65,13 @@ Private Function RawSlot(Value As Lease) As Number
 
     If (Not Ready Or
         Slot < 0 Or
-        Slot >= LeaseCapacity Or
-        Not Used[Slot] Or
-        Generations[Slot] <> Generation) Then
+        Slot >= LeaseCapacity) Then
+        ReturnValue = -1
+
+        Return ReturnValue
+    End If
+
+    If Not Used[Slot] Or Generations[Slot] <> Generation Then
         ReturnValue = -1
 
         Return ReturnValue

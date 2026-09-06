@@ -1411,6 +1411,8 @@ const started = Date.now();
         const failureDiagnostics = host.smile.mediaDiagnostics();
         if (failureDiagnostics.classLiveCount !== 0 || host.smile.classLiveCount() !== 0)
             fail(`SMILE Class ownership leaked on runtime failure: ${JSON.stringify(failureDiagnostics)}`);
+        if (failureDiagnostics.imageReferenceCount !== 0)
+            fail(`SMILE Image ownership leaked on runtime failure: ${JSON.stringify(failureDiagnostics)}`);
         process.stdout.write(`Web execution passed: ${webDirectory} (expected runtime failure)\n`);
         return;
     }
@@ -1480,6 +1482,8 @@ const started = Date.now();
     const diagnostics = host.smile.mediaDiagnostics();
     if (diagnostics.classLiveCount !== 0 || host.smile.classLiveCount() !== 0)
         fail(`SMILE Class ownership leaked: ${JSON.stringify(diagnostics)}`);
+    if (diagnostics.imageReferenceCount !== 0)
+        fail(`SMILE Image ownership leaked: ${JSON.stringify(diagnostics)}`);
     if (verifyRenderer3D && hostConsoleErrors.length !== 0)
         fail(`Renderer3D Web console reported errors: ${hostConsoleErrors.join("\n")}`);
     if (verifyRenderer3D && !renderer3DStateOnly) {

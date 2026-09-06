@@ -120,9 +120,13 @@ Private Function RawSlot(Value As Context) As Number
 
     If (Not Prepared Or
         Slot < 0 Or
-        Slot >= MAX_CONTEXTS Or
-        Not ContextUsed[Slot] Or
-        ContextGeneration[Slot] <> Generation) Then
+        Slot >= MAX_CONTEXTS) Then
+        ReturnValue = -1
+
+        Return ReturnValue
+    End If
+
+    If Not ContextUsed[Slot] Or ContextGeneration[Slot] <> Generation Then
         ReturnValue = -1
 
         Return ReturnValue

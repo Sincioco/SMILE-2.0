@@ -1,11 +1,28 @@
 {
-  "schemaVersion": 1,
-  "packageIdentity": "smile-2.0-character-viewer-refactor-first",
-  "packageRevision": 1,
-  "reviewedSha": "5bfd4f96ee838ca1b6b255c28c4117b0e0a5ec7b",
-  "previousInspectionSha": "909fd6acf8eb80e370a88ea4f024583faffaa33e",
-  "status": "IN-PROGRESS",
+  "schemaVersion": 2,
+  "packageEvidence": {
+    "refactorPackage": {
+      "packageIdentity": "smile-2.0-character-viewer-refactor-first",
+      "revision": 1,
+      "reviewedSha": "5bfd4f96ee838ca1b6b255c28c4117b0e0a5ec7b",
+      "previousInspectionSha": "909fd6acf8eb80e370a88ea4f024583faffaa33e"
+    },
+    "latestReviewAddendum": {
+      "archive": "2026-09-07-0613-smile-2.0-report-hardening-refactor-update.zip",
+      "archiveSha256": "2FEF295159A813BDD1E7A5377E2E4CE9E8D8FAEA880CDBEF21BDAD12F51F54A7",
+      "packageIdentity": "smile-2.0-fixed-array-hardening-refactor-continuation",
+      "revision": 2,
+      "reviewedSha": "d5b7d9ec804a1561d2fab928fd78f69eba38d73e",
+      "previousInspectionSha": "b011e727bcc3e1fef6bfa68774f866c5ce7c58f6"
+    }
+  },
+  "status": {
+    "viewerRefactor": "IN-PROGRESS",
+    "fixedArrayHardeningMilestone": "COMPLETE",
+    "blocked": false
+  },
   "headAtStageStart": "ed5e6bbb554dd9056752ad7c183ef5ad463c5011",
+  "baseHeadBeforeCurrentMilestone": "e4c99fc911589a24966790293011382f0650c192",
   "currentStage": "R7.5-program-responsibility-completion",
   "completedStages": [
     "R0-preservation-hardening",
@@ -17,7 +34,7 @@
     "R6-party-effects-render-lifecycle",
     "R7-build-publication-guidance"
   ],
-  "implementationCommits": [
+  "historicalImplementationCommits": [
     "0a61c0a85e300af4d14f94f17271bf209122fa86",
     "7195f96f67a2e01c562766ad44050607f8a41bc7",
     "cad5eec022d1f603f5b89301aed4898e355ab567",
@@ -28,46 +45,95 @@
     "d951647ed29daf093315805f78447c5013c22cfc",
     "9a616ef35adae9b0c5bbc864ecf689bbd6fc1aed"
   ],
+  "currentExtractionCommitRange": {
+    "first": "9a616ef35adae9b0c5bbc864ecf689bbd6fc1aed",
+    "last": "e4c99fc911589a24966790293011382f0650c192"
+  },
+  "programMetrics": {
+    "initialAudit": {
+      "commit": "ed5e6bbb554dd9056752ad7c183ef5ad463c5011",
+      "lines": 8319,
+      "procedures": 233
+    },
+    "afterFirstPartyMove": {
+      "commit": "9a616ef35adae9b0c5bbc864ecf689bbd6fc1aed",
+      "lines": 8033,
+      "procedures": 231
+    },
+    "current": {
+      "commit": "e4c99fc911589a24966790293011382f0650c192",
+      "lines": 3448,
+      "procedures": 91,
+      "sha256": "17853B7B210061F9D46D70913AABA39C4F798503F69C2E8CCA4D8511646AC670"
+    }
+  },
+  "substantialResponsibilitiesMovedFromProgram": [
+    "Party choreography, preview, formation, calibrated companion and Dragon integration",
+    "primary actor load, update, draw and destroy lifecycle",
+    "Dragon presentation lifecycle, battle camera policy and opponent behavior",
+    "equipment effects, equipment visibility and socket rendering",
+    "rendering modes, backdrop/profile/arena policy and UI control drawing",
+    "calibration discovery, bounds, key transactions, command lifecycle, target/grip application and edit coordination",
+    "playback timeline behavior, timeline math and calibration/timeline drawing",
+    "transform-gizmo geometry, interaction state and production drawing",
+    "presentation audio, storm routing, shared sliders and inspector key policy"
+  ],
+  "currentDestinationOwners": [
+    "ViewerActors",
+    "ViewerParty",
+    "ViewerDragon",
+    "ViewerEquipmentEffects",
+    "ViewerEquipmentVisibility",
+    "ViewerRendering",
+    "ViewerCalibration",
+    "ViewerTimeline",
+    "ViewerTransformGizmo",
+    "ViewerPresentation",
+    "ViewerUI"
+  ],
+  "substantialResponsibilitiesStillInProgram": [
+    "startup, retry and character-tab orchestration",
+    "Party inspector calibration adaptation and Party pointer action dispatch",
+    "input capture sequencing and the remaining inspector, keyboard and timeline action dispatchers",
+    "reset orchestration and cross-owner overlay/gizmo composition",
+    "narrow calibration command and edit adapters",
+    "thin UpdateDragon, UpdateBattleAudio and UpdateOrinStorm frame-order adapters"
+  ],
   "preservedCalibration": {
+    "arinKeyframes": 24,
     "arinJsonSha256": "C05C87BF0A92B373DB7ECD1CB304F4446B851E7AFEA836E8BB05D058B1B20F0B",
+    "orinKeyframes": 0,
     "orinJsonSha256": "13AE135FDA40302CB5A4B0146D7103A2ED5346AAEEBB3852AF6DD3C397F5D293"
   },
-  "changedFiles": [
-    "docs/implementation/character-viewer-refactor-checkpoint.json",
-    "scripts/test-character-3d-viewer-hardening.ps1",
-    "tools/Character3DViewer/ARCHITECTURE.md",
-    "tools/Character3DViewer/Build.ps1",
-    "tools/Character3DViewer/Character3DViewer.smileproj",
-    "tools/Character3DViewer/HardeningTests.smile",
-    "tools/Character3DViewer/HardeningTests.smileproj",
-    "tools/Character3DViewer/Program.smile",
-    "tools/Character3DViewer/ViewerActors.smile",
-    "tools/Character3DViewer/ViewerParty.smile"
+  "currentMilestoneChanges": [
+    "native per-dimension fixed-array bounds validation with precise diagnostics",
+    "Web ByRef fixed-array capture validation",
+    "returned Image-owning record-array projection ownership",
+    "bounded native record helper generation",
+    "safe invalid-handle guards in Viewer storm and shared light-pool integration"
   ],
   "validation": [
-    "PASS: R7 native Debug and Release builds, 46 assets each",
-    "PASS: R7 scripted Release Full, Low, Medium and High Web builds, 35 assets each",
-    "PASS: R7 direct-project Release Web build, 47 assets",
-    "PASS: R7 four Web manifests preserve identity and logical paths without output overlap",
-    "PASS: R7 optimized receipts verify 18 PNG source/output hashes, dimensions and transparency",
-    "AUDIT: Program.smile contains 8319 lines and 233 procedures at ed5e6bb",
-    "AUDIT: responsibility implementation remains in Program despite earlier state seams and passing tests",
-    "AUDIT: ViewerActors.smile does not exist; prior current-owner claim corrected to a completion target",
-    "PASS: Party state machine moved to ViewerParty; Program.smile reduced to 8032 lines and 231 procedures",
-    "PASS: direct Party stage, Dragon-turn, KO/revive, attack and formation production assertions",
-    "PASS: full focused native and generated-Web hardening with exact console parity",
+    "PASS: 308 shared compiler/language tests",
+    "PASS: fixed-array native/Web hardening with disposable run-ea0af26017d7498c84def7585e2bf633 artifacts",
+    "PASS: valid endpoints, evaluation order, nested arrays, ByVal isolation and ByRef mutation",
+    "PASS: Image-owning returned function/property records retain selected values and release siblings with zero outstanding references",
+    "PASS: negative and upper-bound field, standalone, nested, class and returned-record failures report the exact dimension and exit safely",
+    "PASS: 64-element and 10000-element record helpers remain bounded",
+    "PASS: lightweight OOP native/Web hardening with resource cleanup",
+    "PASS: full Character Viewer native and generated-Web hardening after safe invalid-handle guard repair",
     "PASS: 42 isolated calibration checks and 58 native graphics, pointer-input and audio-focus checks",
-    "PASS: focused ViewerActors context and companion load/update/draw/destroy lifecycle is in the explicit project inventory",
-    "PASS: Release Desktop build publishes 46 assets with ViewerActors included exactly once",
-    "PASS: actor-owner integrated calibration and native/generated-Web hardening preserve exact parity",
-    "MEASURE: Program.smile is 8033 lines and 231 procedures after the explicit actor-owner contract"
+    "PASS: repository build produced the current compiler, native runtime and VSIX payload",
+    "PASS: 13 focused formatter integration tests and the 401-file repository style check",
+    "PASS: VSIX 2.0.60 installed in instance 91f001b5; assembly 2.0.60.0 SHA256 69ED3D3C3AE6CAD634A806B87FDE100BCBB63DAB6CD5E4A875524241F8DD4D57"
+  ],
+  "pendingValidation": [
+    "final Character Viewer native and installed-Chrome acceptance after remaining extractions"
   ],
   "blockers": [],
-  "nextConcreteAction": "Move remaining subsystem implementations out of Program.smile in coherent tested owner stages before R8 acceptance.",
+  "nextConcreteAction": "Move one cohesive remaining Viewer responsibility with its state and focused production tests.",
   "nextStages": [
-    "R7.5-party-actor-dragon-ownership",
-    "R7.5-effects-equipment-ownership",
-    "R7.5-input-ui-gizmo-render-lifecycle-ownership",
+    "R7.5-input-inspector-calibration-reset-ownership",
+    "R7.5-startup-session-and-overlay-coordination",
     "R8-native-chrome-refactor-acceptance"
   ],
   "deferred": [
