@@ -1055,3 +1055,42 @@ installed extension DLL SHA256
 `D2A42F3EDB12E3647855E1F2E839520A57852BE99B7FA612788CFD9DBF0954B3`.
 `artifacts/vsix/Smile.VisualStudio.vsix` SHA256
 `99629470EA433448F876C02B5EEB839F0B30D54B53363A3A45F43D94CEEF3ACA`.
+
+### Distinct Chrome import persistence and evidence reconciliation — 2026-09-06
+
+Source baseline `4a30cd3081445057ec6303b577c950df0f11570f`, main, clean at start.
+The disposable origin `http://127.0.0.1:8769/` serves the current normal Viewer
+publication, independently of normal browser-origin and native saves. The probe
+copies all current 24 keys, changing only Idle frame-zero sword-wrist X from 28
+to 35 and the saved-key selector. No canonical calibration is changed.
+
+The actual Chrome file picker opened but automation could not reliably target
+its controls. Sin selected `artifacts/temp/h6-1-arin-distinct-import.json` and
+reported Done. Codex observed the validated `Replace Keys?` confirmation, clicked
+it, observed Imported Keys, and reloaded. After selecting Arin / Idle / 0-Frame /
+Pose, the live numeric control showed Weapon Wrist Rotate X **35**. Download Key
+Frames produced `arin-v5.7-pose-calibration (5).json` in Windows Downloads.
+All 24 keyframes and all channels match the input when resolved by clip name;
+the runtime clip order differs legitimately from canonical ordering. Identity,
+version and data key are preserved. The refreshed Viewer did not revert to its
+packaged 28-degree default. Chrome returned to normal origin 8766 and the single
+native Viewer was restored to foreground in Party mode.
+
+| Evidence | SHA256 |
+|---|---|
+| Ignored distinct import probe JSON | `AC915DA3AEF0BAE85529FDEEF8A0B7B9A27EAEC661F8A60C1A9AB344D6358CA7` |
+| Actual downloaded JSON | `63CF4584FD066CC59FD48010097AE5670E81A912B2F33AA7641DF400572BD5C6` |
+| Current Viewer Release/Web/game.js | `8785E33F4DB6028712BCBB2D8DD60636A244395A54C60233D460143686B37EE5` |
+| Current Viewer Release/Web/smile-runtime.js | `622E3AC4F73216AD82BE2449D3137F415FBC73BDA8E16B09BF4173CEFD996141` |
+
+Canonical Arin remains 24 keys / `C05C87BF0A92B373DB7ECD1CB304F4446B851E7AFEA836E8BB05D058B1B20F0B`;
+Orin remains zero keys / `13AE135FDA40302CB5A4B0146D7103A2ED5346AAEEBB3852AF6DD3C397F5D293`.
+W12/W14 now combine this actual Viewer persistence proof with the already
+recorded native/VM invalid-input, failure-recovery, native/Chrome replacement /
+Undo, and actual disposable storage tab-reopen checks. This is not a full browser
+process restart, private-mode, or actual quota-exhaustion claim.
+
+W19 is reconciled with the already pushed cache integration and native/Chrome
+checks above. No new fixed switching-time promise or Mac timing result is added.
+Chrome alone is now the required browser; historical Edge evidence is retained,
+not repeated. These three issue closures are not the entire H6.1 gate.

@@ -344,7 +344,7 @@
       "classification": "execution-or-source-audit",
       "mandatory": true,
       "baseline": "0768860e59e60c6231e0992f23b34a3a62c48483",
-      "status": "IN-PROGRESS",
+      "status": "FIXED-VERIFIED",
       "phase": "W5",
       "gateCheck": "G08",
       "sourceRefs": [
@@ -352,11 +352,11 @@
       ],
       "reproduction": "Browser exposes a Windows JSON path but cannot use Explorer/native synchronizer.",
       "rootCause": "No validated browser transfer workflow for existing snapshots.",
-      "fixCommit": null,
+      "fixCommit": "0fd79938ae8073191bfae18097c6039a7db69157",
       "evidenceIds": [
         "docs/implementation/h6-1-hardening-and-web-parity-ledger.md"
       ],
-      "dispositionRationale": "Shared strict schema-2 import validates before explicit replacement and uses transactional storage plus Undo. Native and generated-Web fixtures pass canonical name-bound round-trips and invalid-input rejection. Real native/Chrome selection and confirmed isolated replacement/Undo were exercised as recorded in the ledger. Distinct imported-state refresh/reopen proof remains required. Downloads never automatically write the repository or synchronize origins."
+      "dispositionRationale": "Shared strict schema-2 import validates before explicit replacement and uses transactional storage plus Undo. Native/generated-Web round-trip and invalid-input fixtures pass. Actual native/Chrome isolated replacement and Undo pass. On current Chrome Viewer at disposable origin 127.0.0.1:8769, the user selected the distinct 24-key JSON; Codex confirmed Replace Keys, reloaded, observed Idle frame-zero wrist X=35, then downloaded and compared every key/channel by clip name with no differences. Existing actual storage probes also cover tab reopen. Normal native/origin saves are unchanged; downloads do not automatically synchronize origins or write the repository."
     },
     {
       "id": "W13",
@@ -384,7 +384,7 @@
       "classification": "execution-or-source-audit",
       "mandatory": true,
       "baseline": "0768860e59e60c6231e0992f23b34a3a62c48483",
-      "status": "IN-PROGRESS",
+      "status": "FIXED-VERIFIED",
       "phase": "W5",
       "gateCheck": "G08",
       "sourceRefs": [
@@ -392,11 +392,11 @@
       ],
       "reproduction": "Source audit: memory save updates before persistent write; load can throw on denied/corrupt storage.",
       "rootCause": "Storage failure can leave memory/disk disagreement and lacks previous-good recovery.",
-      "fixCommit": null,
+      "fixCommit": "2cb6c523a43bb71e8f113b93bf426b1f43db1f1e",
       "evidenceIds": [
         "docs/implementation/h6-1-hardening-and-web-parity-ledger.md"
       ],
-      "dispositionRationale": "Optional shared Data Status, native/Web backup recovery and transactional Viewer Save/Undo are implemented in 2cb6c523a43bb71e8f113b93bf426b1f43db1f1e. Native filesystem denial/corruption and disposable Web VM checks pass, including exact Viewer console parity. Actual Chrome/Edge disposable probes retain bytes across refresh and tab reopen. The subsequent VSIX retry installed and hash-verified the payload after Visual Studio closed. Viewer-origin save/reload and final import/recovery workflow evidence remain required; not a final gate pass."
+      "dispositionRationale": "Shared Data Status, backup recovery and transactional Viewer Save/Undo are implemented and installed. Native filesystem denial/corruption and disposable Web VM failure cases pass, including exact Viewer console parity. Actual Chrome/Edge disposable probes retain bytes across refresh/tab reopen. Current actual Chrome Viewer distinct import survives reload and its downloaded 24 keys match all imported channels by clip name. Real browser private-mode/quota exhaustion and full browser-process restart are not claimed; injected failure coverage is explicitly separate."
     },
     {
       "id": "W15",
@@ -464,7 +464,7 @@
       "classification": "user-reported-and-source-confirmed",
       "mandatory": true,
       "baseline": "1747003bddfb1188921084ac60bc3fc235232b54",
-      "status": "IN-PROGRESS",
+      "status": "FIXED-VERIFIED",
       "phase": "W5",
       "gateCheck": "G08",
       "sourceRefs": [
@@ -474,11 +474,11 @@
       ],
       "reproduction": "Sin observed long frozen switches in deployed Chrome on PC and Mac; shared source destroyed last actor assets and Web fetched model bytes again.",
       "rootCause": "Scene teardown also released reusable model resources; encoded Web model/image bytes were not retained after their last decoded owner.",
-      "fixCommit": null,
+      "fixCommit": "89755fe9a44404d3d9d1867c256d10a841f29dd0",
       "evidenceIds": [
         "docs/implementation/h6-1-hardening-and-web-parity-ledger.md"
       ],
-      "dispositionRationale": "Shared runtime caching is committed/pushed in 89755fe9a44404d3d9d1867c256d10a841f29dd0; Viewer adoption belongs to the following integration milestone. Native and generated-Web ownership tests and real native/Chrome four-tab switching pass. New deployed/Mac timing acceptance is not claimed. First visits still load and actor/VFX instances are intentionally recreated."
+      "dispositionRationale": "Shared bounded cache in 89755fe9a44404d3d9d1867c256d10a841f29dd0 is adopted by Viewer integration 0fd79938ae8073191bfae18097c6039a7db69157. Native/generated-Web ownership checks prove model-handle reuse with fresh independent animators, eviction and shutdown. Real native/Chrome four-tab switching passes. First visits still load, actor/VFX instances are deliberately recreated, and no fixed latency or new deployed/Mac timing acceptance is claimed."
     },
     {
       "id": "W18",
@@ -505,11 +505,11 @@
   "updatedLocalDate": "2026-09-06",
   "browserScope": {
     "required": [
-      "Chrome",
-      "Edge"
+      "Chrome"
     ],
     "engineFamily": "Chromium",
-    "firefox": "Superseded by Sin's explicit installed-browser revision; incomplete diagnostics are not passes."
+    "firefox": "Superseded by Sin's explicit installed-browser revision; incomplete diagnostics are not passes.",
+    "edge": "Historical observations retained; further tests only for Edge-specific issues per Sin's immediate velocity correction."
   },
   "audit": {
     "githubOpenIssues": {
@@ -517,6 +517,6 @@
       "observed": "[]",
       "localDate": "2026-09-06"
     },
-    "remaining": "Finish wider console/text/2D/media/RPG inventory and normal smoke; recheck newly discovered issues before gate."
+    "remaining": "Normal smoke completed in the recorded initial run and exact continuation; reconcile remaining real Viewer/Lab interaction and lifecycle issues before final gate."
   }
 }
