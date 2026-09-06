@@ -18,6 +18,7 @@ Import Smile.Tools.Character3DViewerCalibration As ViewerCalibration
 Import Smile.Tools.Character3DViewerCalibrationEditing As ViewerCalibrationEditing
 Import Smile.Tools.Character3DViewerCalibrationControls As ViewerCalibrationControls
 Import Smile.Tools.Character3DViewerInput As ViewerInput
+Import Smile.Tools.Character3DViewerInspectorCommands As ViewerInspectorCommands
 Import Smile.Tools.Character3DViewerTimelineEditing As ViewerTimelineEditing
 Import Smile.Tools.Character3DViewerUi As ViewerUi
 Import Smile.Tools.Character3DViewerGizmo As ViewerGizmo
@@ -1415,6 +1416,7 @@ Function HandleInspectorPointer() As Boolean
     Dim Action As Number
     Dim Blocked As Boolean
     Dim Gesture As ViewerInput.PointerGestureUpdate
+    Dim InspectorResult As ViewerInspectorCommands.OperationResult
     Dim KeyframeIndex As Number
     Dim TransferAction As Number
     Dim WheelDelta As Number
@@ -1567,6 +1569,15 @@ Function HandleInspectorPointer() As Boolean
         KeyframeIndex
     )
 
+    InspectorResult = ViewerInspectorCommands.ApplyPresentationAction(
+        Action, Rendering, BACKGROUND_COUNT, Effects)
+
+    If InspectorResult.Handled Then
+        Session.Ready = InspectorResult.Ready And Session.Ready
+
+        Return Blocked
+    End If
+
     If Action = ViewerUi.INSPECTOR_ACTION_FIRST_FRAME Then
 
         Call SeekFirstAnimationFrame()
@@ -1605,18 +1616,6 @@ Function HandleInspectorPointer() As Boolean
 
         Call SeekFromPointer()
 
-    Else If Action = ViewerUi.INSPECTOR_ACTION_LIGHTING Then
-
-        Session.Ready = ViewerRendering.CycleLighting(Rendering) And Session.Ready
-
-    Else If Action = ViewerUi.INSPECTOR_ACTION_MATERIAL Then
-
-        Session.Ready = ViewerRendering.CycleMaterialInspection(Rendering) And Session.Ready
-
-    Else If Action = ViewerUi.INSPECTOR_ACTION_SOCKET Then
-
-        Call ViewerRendering.CycleSocketDisplay(Rendering)
-
     Else If Action = ViewerUi.INSPECTOR_ACTION_PROFILE Then
 
         Call CycleProfile()
@@ -1628,10 +1627,6 @@ Function HandleInspectorPointer() As Boolean
     Else If Action = ViewerUi.INSPECTOR_ACTION_DRAGON Then
 
         Call ToggleDragon()
-
-    Else If Action = ViewerUi.INSPECTOR_ACTION_BACKGROUND Then
-
-        Call CycleBackground()
 
     Else If Action = ViewerUi.INSPECTOR_ACTION_CALIBRATION Then
 
@@ -1657,10 +1652,6 @@ Function HandleInspectorPointer() As Boolean
 
         Call ToggleDemo()
 
-    Else If Action = ViewerUi.INSPECTOR_ACTION_FLOOR Then
-
-        Call ToggleFloorAndGrid()
-
     Else If Action = ViewerUi.INSPECTOR_ACTION_DRAGON_HEAD Then
 
         Call ViewerDragon.ToggleHeadTracking(DragonState)
@@ -1670,34 +1661,6 @@ Function HandleInspectorPointer() As Boolean
         If Not Party.Enabled Then
             Party.DragonCounter = (Party.DragonCounter + 1) Mod 2
         End If
-
-    Else If Action = ViewerUi.INSPECTOR_ACTION_STORM_STYLE Then
-
-        Call ViewerEffects.CycleStormStyle(Effects)
-
-    Else If Action = ViewerUi.INSPECTOR_ACTION_SWORD_FIRE Then
-
-        Call ViewerEffects.ToggleSwordFire(Effects)
-
-    Else If Action = ViewerUi.INSPECTOR_ACTION_SHIELD_FIRE Then
-
-        Call ViewerEffects.ToggleShieldFire(Effects)
-
-    Else If Action = ViewerUi.INSPECTOR_ACTION_STORM_COMFORT Then
-
-        Call ViewerEffects.CycleStormSceneComfort()
-
-    Else If Action = ViewerUi.INSPECTOR_ACTION_LIGHTNING_PAUSE Then
-
-        Call ViewerEffects.ToggleLightningPause(Effects)
-
-    Else If Action = ViewerUi.INSPECTOR_ACTION_FLAME_PAUSE Then
-
-        Call ViewerEffects.ToggleFlamePause(Effects)
-
-    Else If Action = ViewerUi.INSPECTOR_ACTION_SHIELD_FIRE_STYLE Then
-
-        Call ViewerEffects.ToggleShieldFireStyle(Effects)
 
     Else If Action = ViewerUi.INSPECTOR_ACTION_SPEED_DOWN Then
 

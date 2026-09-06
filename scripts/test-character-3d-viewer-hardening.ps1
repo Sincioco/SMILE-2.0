@@ -26,6 +26,8 @@ $calibrationEditingSourcePath = Join-Path $repositoryRoot `
 $calibrationControlsSourcePath = Join-Path $repositoryRoot `
     'tools\Character3DViewer\ViewerCalibrationControls.smile'
 $inputSourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\ViewerInput.smile'
+$inspectorCommandsSourcePath = Join-Path $repositoryRoot `
+    'tools\Character3DViewer\ViewerInspectorCommands.smile'
 $timelineEditingSourcePath = Join-Path $repositoryRoot `
     'tools\Character3DViewer\ViewerTimelineEditing.smile'
 $uiSourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\ViewerUi.smile'
@@ -107,6 +109,7 @@ try {
     $calibrationEditingSource = Get-Content -LiteralPath $calibrationEditingSourcePath -Raw
     $calibrationControlsSource = Get-Content -LiteralPath $calibrationControlsSourcePath -Raw
     $inputSource = Get-Content -LiteralPath $inputSourcePath -Raw
+    $inspectorCommandsSource = Get-Content -LiteralPath $inspectorCommandsSourcePath -Raw
     $timelineEditingSource = Get-Content -LiteralPath $timelineEditingSourcePath -Raw
     $uiSource = Get-Content -LiteralPath $uiSourcePath -Raw
     $gizmoSource = Get-Content -LiteralPath $gizmoSourcePath -Raw
@@ -126,6 +129,7 @@ try {
         'Import Smile.Tools.Character3DViewerCalibrationEditing As ViewerCalibrationEditing',
         'Import Smile.Tools.Character3DViewerCalibrationControls As ViewerCalibrationControls',
         'Import Smile.Tools.Character3DViewerInput As ViewerInput',
+        'Import Smile.Tools.Character3DViewerInspectorCommands As ViewerInspectorCommands',
         'Import Smile.Tools.Character3DViewerTimelineEditing As ViewerTimelineEditing',
         'Import Smile.Tools.Character3DViewerUi As ViewerUi',
         'Import Smile.Tools.Character3DViewerGizmo As ViewerGizmo',
@@ -259,6 +263,18 @@ try {
         'Private Function ApplyLocalCommand(',
         'Public Function ApplyPointerAction(')) {
         Assert-Contains $calibrationControlsSource $contract 'Viewer calibration controls owner'
+    }
+    foreach ($contract in @(
+        'Public Type OperationResult',
+        'Public Function ApplyPresentationAction(',
+        'ViewerRendering.CycleLighting(Rendering)',
+        'ViewerRendering.CycleMaterialInspection(Rendering)',
+        'ViewerRendering.CycleSocketDisplay(Rendering)',
+        'ViewerRendering.CycleBackground(Rendering, BackgroundCount)',
+        'ViewerRendering.ToggleFloorAndGrid(Rendering)',
+        'ViewerEffects.ToggleLightningPause(Effects)',
+        'ViewerEffects.ToggleFlamePause(Effects)')) {
+        Assert-Contains $inspectorCommandsSource $contract 'Viewer inspector command owner'
     }
     foreach ($contract in @(
         'Public Function ClassifyArrow(',
@@ -583,6 +599,23 @@ try {
         -not $viewerSource.Contains('Sub FinishCalibrationEdit(') -and
         -not $viewerSource.Contains('Sub SetCalibrationFromPointer(')) `
         'Calibration panel command routing and dead wrappers must not return to Program.smile.'
+    $inspectorPointerStart = $viewerSource.IndexOf('Function HandleInspectorPointer() As Boolean')
+    $sharedSliderStart = $viewerSource.IndexOf('Function HandleSharedSliders() As Boolean')
+    Assert-True ($inspectorPointerStart -ge 0 -and $sharedSliderStart -gt $inspectorPointerStart) `
+        'Inspector pointer ownership boundaries must remain discoverable.'
+    $inspectorPointerSource = $viewerSource.Substring(
+        $inspectorPointerStart, $sharedSliderStart - $inspectorPointerStart)
+    Assert-True ($inspectorPointerSource.Contains(
+            'ViewerInspectorCommands.ApplyPresentationAction(') -and
+        -not $inspectorPointerSource.Contains('ViewerRendering.CycleLighting(') -and
+        -not $inspectorPointerSource.Contains('ViewerRendering.CycleMaterialInspection(') -and
+        -not $inspectorPointerSource.Contains('ViewerRendering.CycleSocketDisplay(') -and
+        -not $inspectorPointerSource.Contains('ViewerEffects.CycleStormStyle(') -and
+        -not $inspectorPointerSource.Contains('ViewerEffects.ToggleSwordFire(') -and
+        -not $inspectorPointerSource.Contains('ViewerEffects.ToggleShieldFire(') -and
+        -not $inspectorPointerSource.Contains('ViewerEffects.ToggleLightningPause(') -and
+        -not $inspectorPointerSource.Contains('ViewerEffects.ToggleFlamePause(')) `
+        'Inspector rendering and VFX command routing must remain in its focused owner.'
     Assert-True (-not $viewerSource.Contains('Sub AdjustCalibrationValue(') -and
         -not $viewerSource.Contains('Sub UpdateTransformGizmoFromPointer(') -and
         -not $viewerSource.Contains('ViewerGizmo.DragValueAmount(') -and

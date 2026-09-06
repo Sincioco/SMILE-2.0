@@ -48,7 +48,7 @@
   ],
   "currentExtractionCommitRange": {
     "first": "9a616ef35adae9b0c5bbc864ecf689bbd6fc1aed",
-    "lastCommittedBeforeCurrentCheckpoint": "42c6ceb7938f2a32fe3214ebe1d5f4b8f6212b85"
+    "lastCommittedBeforeCurrentCheckpoint": "7647dc24d0b2b04ef053c7374da88230a0ca812c"
   },
   "programMetrics": {
     "initialAudit": {
@@ -68,11 +68,11 @@
       "sha256": "17853B7B210061F9D46D70913AABA39C4F798503F69C2E8CCA4D8511646AC670"
     },
     "current": {
-      "checkpoint": "calibration-panel-command-workflow",
-      "baseCommit": "42c6ceb7938f2a32fe3214ebe1d5f4b8f6212b85",
-      "lines": 3183,
+      "checkpoint": "inspector-rendering-vfx-command-workflow",
+      "baseCommit": "7647dc24d0b2b04ef053c7374da88230a0ca812c",
+      "lines": 3146,
       "procedures": 81,
-      "sha256": "86DD57B6A877C2A08BAF324931BD23858A674F013DA17D6A54007A8D896F58A5"
+      "sha256": "F54B86BDF07316EC880D01476EE45D7CA457F7E060F6C011F61BD33EEC9B2D2E"
     }
   },
   "substantialResponsibilitiesMovedFromProgram": [
@@ -86,7 +86,8 @@
     "transform-gizmo geometry, interaction state and production drawing",
     "presentation audio, storm routing, shared sliders and inspector key policy",
     "frame-repeat and timeline capture transitions plus timeline seek, drag, duplicate-key and persistence workflow",
-    "calibration-panel selection, navigation, clear confirmation, key command, Hold Grip and decouple routing"
+    "calibration-panel selection, navigation, clear confirmation, key command, Hold Grip and decouple routing",
+    "inspector rendering and VFX action mapping with explicit owner readiness"
   ],
   "currentDestinationOwners": [
     "ViewerActors",
@@ -97,6 +98,7 @@
     "ViewerRendering",
     "ViewerCalibration",
     "ViewerCalibrationControls",
+    "ViewerInspectorCommands",
     "ViewerTimelineEditing",
     "ViewerGizmo",
     "ViewerUi"
@@ -128,7 +130,8 @@
     "timeline pointer seek, adjacent-key navigation, duplicate-key rejection, drag playback, persistence and pose refresh moved to ViewerTimelineEditing",
     "calibration-panel selection, navigation, clear confirmation, key commands, Hold Grip and decouple routing moved to ViewerCalibrationControls",
     "ten one-command calibration wrappers were deleted and the isolated fixture now calls the production command owner",
-    "Program.smile reduced from 3385 lines and 91 procedures to 3183 lines and 81 procedures without formatting compression"
+    "inspector lighting, material, socket, background, floor/grid and seven VFX action routes moved through ViewerInspectorCommands with rendering/effect state retained by those owners",
+    "Program.smile reduced from 3183 lines and 81 procedures to 3146 lines and 81 procedures without formatting compression"
   ],
   "validation": [
     "PASS: 308 shared compiler/language tests",
@@ -148,7 +151,11 @@
     "PASS: post-extraction 42 isolated calibration checks and 58 native graphics, pointer-input and audio-focus checks",
     "PASS: post-extraction Release Desktop Viewer build with 46 published assets",
     "PASS: post-extraction Release Full Web Viewer build with 35 published assets",
-    "PASS: calibration-panel command extraction 42-check native/generated-Web isolation and 58-check native/generated-Web hardening gate with exact console parity"
+    "PASS: calibration-panel command extraction 42-check native/generated-Web isolation and 58-check native/generated-Web hardening gate with exact console parity",
+    "PASS: inspector rendering/VFX command extraction native/generated-Web hardening with direct no-op, readiness, rendering-state and independent VFX-toggle assertions",
+    "PASS: inspector rendering/VFX extraction Release Desktop Viewer build with 46 published assets",
+    "PASS: inspector rendering/VFX extraction Release Full Web Viewer build with 35 published assets",
+    "PASS: post-extraction repository style check for 403 SMILE files"
   ],
   "pendingValidation": [
     "final Character Viewer native and installed-Chrome acceptance after remaining extractions"

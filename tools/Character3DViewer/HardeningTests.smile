@@ -17,6 +17,7 @@ Import Smile.Tools.Character3DViewerCalibration As ViewerCalibration
 Import Smile.Tools.Character3DViewerCalibrationEditing As ViewerCalibrationEditing
 Import Smile.Tools.Character3DViewerCalibrationControls As ViewerCalibrationControls
 Import Smile.Tools.Character3DViewerInput As ViewerInput
+Import Smile.Tools.Character3DViewerInspectorCommands As ViewerInspectorCommands
 Import Smile.Tools.Character3DViewerTimelineEditing As ViewerTimelineEditing
 Import Smile.Tools.Character3DViewerUi As ViewerUi
 Import Smile.Tools.Character3DViewerGizmo As ViewerGizmo
@@ -106,6 +107,7 @@ Dim PartyPointer As ViewerParty.PointerDecision
 Dim EffectsState As ViewerEffects.State
 Dim DragonState As ViewerDragon.State
 Dim RenderingState As ViewerRendering.State
+Dim InspectorOperation As ViewerInspectorCommands.OperationResult
 Dim FirstApproach As Core.Vector3
 Dim SecondApproach As Core.Vector3
 
@@ -1186,18 +1188,52 @@ Call Check(Not EffectsState.Clock.FireFrozen And EffectsState.Clock.LightningFro
 Call Check(Not ViewerEffects.ShouldFreeze(True, False))
 Call Check(ViewerEffects.ShouldFreeze(False, True))
 
+InspectorOperation = ViewerInspectorCommands.ApplyPresentationAction(
+    ViewerUi.INSPECTOR_ACTION_LIGHTNING_PAUSE,
+    RenderingState, 5, EffectsState)
+
+Call Check(InspectorOperation.Handled And InspectorOperation.Ready)
+Call Check(Not EffectsState.LightningPaused)
+
+InspectorOperation = ViewerInspectorCommands.ApplyPresentationAction(
+    ViewerUi.INSPECTOR_ACTION_FLAME_PAUSE,
+    RenderingState, 5, EffectsState)
+
+Call Check(InspectorOperation.Handled And EffectsState.FlamePaused)
+
 Call ViewerEffects.ResetEquipmentDefaults(EffectsState)
 Call Check(EffectsState.SwordFireVisible And EffectsState.ShieldFireVisible)
-Call ViewerEffects.ToggleSwordFire(EffectsState)
+
+InspectorOperation = ViewerInspectorCommands.ApplyPresentationAction(
+    ViewerUi.INSPECTOR_ACTION_SWORD_FIRE,
+    RenderingState, 5, EffectsState)
+
+Call Check(InspectorOperation.Handled)
 Call Check(Not EffectsState.SwordFireVisible)
-Call ViewerEffects.ToggleSwordFire(EffectsState)
+
+InspectorOperation = ViewerInspectorCommands.ApplyPresentationAction(
+    ViewerUi.INSPECTOR_ACTION_SWORD_FIRE,
+    RenderingState, 5, EffectsState)
+
 Call Check(EffectsState.SwordFireVisible)
-Call ViewerEffects.ToggleShieldFire(EffectsState)
+
+InspectorOperation = ViewerInspectorCommands.ApplyPresentationAction(
+    ViewerUi.INSPECTOR_ACTION_SHIELD_FIRE,
+    RenderingState, 5, EffectsState)
+
 Call Check(Not EffectsState.ShieldFireVisible)
-Call ViewerEffects.ToggleShieldFire(EffectsState)
+
+InspectorOperation = ViewerInspectorCommands.ApplyPresentationAction(
+    ViewerUi.INSPECTOR_ACTION_SHIELD_FIRE,
+    RenderingState, 5, EffectsState)
+
 Call Check(EffectsState.ShieldFireVisible)
 Call Check(ViewerEffects.ShieldFireStyleLabel(EffectsState) = "Ember Outline")
-Call ViewerEffects.ToggleShieldFireStyle(EffectsState)
+
+InspectorOperation = ViewerInspectorCommands.ApplyPresentationAction(
+    ViewerUi.INSPECTOR_ACTION_SHIELD_FIRE_STYLE,
+    RenderingState, 5, EffectsState)
+
 Call Check(EffectsState.ShieldFlameStyle)
 Call Check(ViewerEffects.ShieldFireStyleLabel(EffectsState) = "Flames")
 
@@ -1270,25 +1306,51 @@ Call Check(RenderingState.FloorVisible And RenderingState.GridVisible)
 Call Check(RenderingState.LightingIndex = 0)
 Call Check(RenderingState.MaterialInspection = Graphics3D.MATERIAL_INSPECTION_LIT)
 Call Check(ViewerRendering.ApplyLighting(RenderingState))
-Call Check(ViewerRendering.CycleLighting(RenderingState))
+
+InspectorOperation = ViewerInspectorCommands.ApplyPresentationAction(
+    ViewerUi.INSPECTOR_ACTION_NONE,
+    RenderingState, 5, EffectsState)
+
+Call Check(Not InspectorOperation.Handled And InspectorOperation.Ready)
+
+InspectorOperation = ViewerInspectorCommands.ApplyPresentationAction(
+    ViewerUi.INSPECTOR_ACTION_LIGHTING,
+    RenderingState, 5, EffectsState)
+
+Call Check(InspectorOperation.Handled And InspectorOperation.Ready)
 Call Check(RenderingState.LightingIndex = 1)
-Call Check(ViewerRendering.CycleMaterialInspection(RenderingState))
+
+InspectorOperation = ViewerInspectorCommands.ApplyPresentationAction(
+    ViewerUi.INSPECTOR_ACTION_MATERIAL,
+    RenderingState, 5, EffectsState)
+
+Call Check(InspectorOperation.Handled And InspectorOperation.Ready)
 Call Check(RenderingState.MaterialInspection =
     (Graphics3D.MATERIAL_INSPECTION_LIT + 1) Mod 7)
 Call Check(ViewerRendering.ResetMaterialInspection(RenderingState))
 Call Check(RenderingState.MaterialInspection = Graphics3D.MATERIAL_INSPECTION_LIT)
-Call ViewerRendering.ToggleFloorAndGrid(RenderingState)
+
+InspectorOperation = ViewerInspectorCommands.ApplyPresentationAction(
+    ViewerUi.INSPECTOR_ACTION_FLOOR,
+    RenderingState, 5, EffectsState)
+
 Call Check(Not RenderingState.FloorVisible And Not RenderingState.GridVisible)
-Call ViewerRendering.ToggleFloorAndGrid(RenderingState)
-Call ViewerRendering.CycleBackground(RenderingState, 5)
+
+InspectorOperation = ViewerInspectorCommands.ApplyPresentationAction(
+    ViewerUi.INSPECTOR_ACTION_FLOOR,
+    RenderingState, 5, EffectsState)
+InspectorOperation = ViewerInspectorCommands.ApplyPresentationAction(
+    ViewerUi.INSPECTOR_ACTION_BACKGROUND,
+    RenderingState, 5, EffectsState)
+
 Call Check(RenderingState.FloorVisible And RenderingState.GridVisible)
 Call Check(RenderingState.BackgroundIndex = 4)
-Call Check(Not RenderingState.SocketGizmosVisible And
-    Not RenderingState.ShowAllSocketOrigins)
 
-Call ViewerRendering.CycleSocketDisplay(RenderingState)
-Call Check(RenderingState.SocketGizmosVisible And
-    Not RenderingState.ShowAllSocketOrigins)
+InspectorOperation = ViewerInspectorCommands.ApplyPresentationAction(
+    ViewerUi.INSPECTOR_ACTION_SOCKET,
+    RenderingState, 5, EffectsState)
+
+Call Check(InspectorOperation.Handled And RenderingState.SocketGizmosVisible)
 Call ViewerRendering.CycleSocketDisplay(RenderingState)
 Call Check(RenderingState.SocketGizmosVisible And
     RenderingState.ShowAllSocketOrigins)

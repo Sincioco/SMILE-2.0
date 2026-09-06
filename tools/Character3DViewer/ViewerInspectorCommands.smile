@@ -1,0 +1,57 @@
+''' Focused inspector routing for rendering and VFX commands that own their state.
+Module Smile.Tools.Character3DViewerInspectorCommands
+
+Option Explicit
+
+Import Smile.Tools.Character3DViewerEffects As ViewerEffects
+Import Smile.Tools.Character3DViewerRendering As ViewerRendering
+Import Smile.Tools.Character3DViewerUi As ViewerUi
+
+Public Type OperationResult
+    Handled As Boolean
+    Ready As Boolean
+End Type
+
+Public Function ApplyPresentationAction(Action As Number,
+    ByRef Rendering As ViewerRendering.State, BackgroundCount As Number,
+    ByRef Effects As ViewerEffects.State) As OperationResult
+
+    Dim Result As OperationResult
+
+    Result.Ready = True
+
+    If Action = ViewerUi.INSPECTOR_ACTION_LIGHTING Then
+        Result.Ready = ViewerRendering.CycleLighting(Rendering)
+    Else If Action = ViewerUi.INSPECTOR_ACTION_MATERIAL Then
+        Result.Ready = ViewerRendering.CycleMaterialInspection(Rendering)
+    Else If Action = ViewerUi.INSPECTOR_ACTION_SOCKET Then
+        Call ViewerRendering.CycleSocketDisplay(Rendering)
+    Else If Action = ViewerUi.INSPECTOR_ACTION_BACKGROUND Then
+        Call ViewerRendering.CycleBackground(Rendering, BackgroundCount)
+    Else If Action = ViewerUi.INSPECTOR_ACTION_FLOOR Then
+        Call ViewerRendering.ToggleFloorAndGrid(Rendering)
+    Else If Action = ViewerUi.INSPECTOR_ACTION_STORM_STYLE Then
+        Call ViewerEffects.CycleStormStyle(Effects)
+    Else If Action = ViewerUi.INSPECTOR_ACTION_SWORD_FIRE Then
+        Call ViewerEffects.ToggleSwordFire(Effects)
+    Else If Action = ViewerUi.INSPECTOR_ACTION_SHIELD_FIRE Then
+        Call ViewerEffects.ToggleShieldFire(Effects)
+    Else If Action = ViewerUi.INSPECTOR_ACTION_STORM_COMFORT Then
+        Call ViewerEffects.CycleStormSceneComfort()
+    Else If Action = ViewerUi.INSPECTOR_ACTION_LIGHTNING_PAUSE Then
+        Call ViewerEffects.ToggleLightningPause(Effects)
+    Else If Action = ViewerUi.INSPECTOR_ACTION_FLAME_PAUSE Then
+        Call ViewerEffects.ToggleFlamePause(Effects)
+    Else If Action = ViewerUi.INSPECTOR_ACTION_SHIELD_FIRE_STYLE Then
+        Call ViewerEffects.ToggleShieldFireStyle(Effects)
+    Else
+        Return Result
+    End If
+
+    Result.Handled = True
+
+    Return Result
+
+End Function
+
+End Module
