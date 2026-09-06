@@ -309,6 +309,9 @@ Call Check(ViewerUi.AnimationButtonX(1600) = 1344)
 Call Check(ViewerUi.GlowButtonX(1600, True, False) = 1548)
 Call Check(ViewerUi.GlowButtonWidth(True, False) = 36)
 Call Check(ViewerUi.TimelineWidth(1600, 18) = 1294)
+Call Check(ViewerUi.TIMELINE_LEFT = 18 And ViewerUi.TIMELINE_HEIGHT = 18)
+Call Check(ViewerUi.CALIBRATION_PANEL_WIDTH = 430 And
+    ViewerUi.CALIBRATION_SLIDER_WIDTH = 360)
 Call Check(ViewerUi.LayoutTooSmall(799, 640))
 Call Check(Not ViewerUi.LayoutTooSmall(800, 540))
 
@@ -317,6 +320,12 @@ Call ViewerUi.DrawCharacterStatusSummary(
     Graphics3D.MATERIAL_INSPECTION_LIT, 1, 2, "Off", 0, -16, 60)
 Call ViewerUi.DrawCameraControls(500, 640, 0, 0, -16, -144, 36)
 Call ViewerUi.DrawAnimationButtons(ViewerProfiles.PROFILE_ARIN, 0, 800)
+Call ViewerUi.DrawCalibrationPanel(
+    UiState, CalibrationState, 3, "Idle", "Idle", 0, 0,
+    0, -180, 180, False, False, False, False, False, False)
+Call ViewerUi.DrawTimeline(
+    PartyPrimary.Actor, CalibrationState, InputState,
+    3, "Idle", 0, True, 800, 640)
 
 Call ViewerGizmo.Reset(GizmoState)
 Call Check(Not GizmoState.Visible And Not GizmoState.Dragging)

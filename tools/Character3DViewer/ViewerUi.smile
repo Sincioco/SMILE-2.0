@@ -3,8 +3,11 @@ Module Smile.Tools.Character3DViewerUi
 
 Option Explicit
 
+Import Smile.Simple3D.Character3D As Character3D
 Import Smile.Simple3D.Graphics3D As Graphics3D
 Import Smile.UI.Controls As UI
+Import Smile.Tools.Character3DViewerCalibration As ViewerCalibration
+Import Smile.Tools.Character3DViewerInput As ViewerInput
 Import Smile.Tools.Character3DViewerProfiles As ViewerProfiles
 
 Public Const ANIMATION_BUTTON_Y = 352
@@ -15,6 +18,31 @@ Public Const ANIMATION_BUTTON_COLUMN_COUNT = 3
 Public Const ANIMATION_BUTTON_ROW_GAP = 4
 Public Const CAMERA_SLIDER_WIDTH = 146
 Public Const CAMERA_SLIDER_HEIGHT = 16
+Public Const TIMELINE_LEFT = 18
+Public Const TIMELINE_HEIGHT = 18
+Public Const TIMELINE_KEYFRAME_HIT_RADIUS = 7
+Public Const CALIBRATION_IMPORT_WIDTH = 152
+Public Const CALIBRATION_DOWNLOAD_OFFSET = 158
+Public Const CALIBRATION_DOWNLOAD_WIDTH = 172
+Public Const CALIBRATION_FILENAME_OFFSET = 336
+Public Const CALIBRATION_TRANSFER_TEXT_OFFSET = 510
+Public Const CALIBRATION_PANEL_X = 18
+Public Const CALIBRATION_PANEL_Y = 92
+Public Const CALIBRATION_PANEL_WIDTH = 430
+Public Const CALIBRATION_PANEL_HEIGHT = 354
+Public Const CALIBRATION_SLIDER_X = 34
+Public Const CALIBRATION_SLIDER_Y = 204
+Public Const CALIBRATION_SLIDER_WIDTH = 360
+Public Const CALIBRATION_SLIDER_HEIGHT = 20
+Public Const CALIBRATION_TARGET_SWORD_WRIST = 0
+Public Const CALIBRATION_TARGET_SHIELD_WRIST = 1
+Public Const CALIBRATION_TARGET_SWORD = 2
+Public Const CALIBRATION_TARGET_SHIELD = 3
+Public Const CALIBRATION_AXIS_X = 0
+Public Const CALIBRATION_AXIS_Y = 1
+Public Const CALIBRATION_AXIS_Z = 2
+Public Const CALIBRATION_TRANSFORM_ROTATE = 0
+Public Const CALIBRATION_TRANSFORM_MOVE = 1
 
 Private Const MINIMUM_VIEWER_WIDTH = 800
 Private Const MINIMUM_VIEWER_HEIGHT = 540
@@ -489,6 +517,265 @@ Public Sub DrawAnimationButtons(ProfileIndex As Number,
             Index = SelectedPresentationIndex
         )
     End For
+
+End Sub
+
+Public Sub DrawCalibrationPanel(
+    ByRef Value As State,
+    ByRef Calibration As ViewerCalibration.State,
+    SelectedClip As Number,
+    SelectedClipLabel As Text,
+    SelectedClipName As Text,
+    CurrentFrame As Number,
+    CurrentKeyframe As Number,
+    CurrentValue As Number,
+    MinimumValue As Number,
+    MaximumValue As Number,
+    GizmoVisible As Boolean,
+    HoldGrip As Boolean,
+    GripLimit As Boolean,
+    ScenePaused As Boolean,
+    WeaponDecoupled As Boolean,
+    ShieldDecoupled As Boolean
+)
+
+    Call UI.DrawPanel(CALIBRATION_PANEL_X, CALIBRATION_PANEL_Y,
+        CALIBRATION_PANEL_WIDTH, CALIBRATION_PANEL_HEIGHT, 90)
+
+    Draw Text "Pose Calibration" At 32, 102 Size 16 Color WHITE
+    Draw Text SelectedClipLabel At 174, 104 Size 12 Color CYAN
+
+    Call UI.DrawButton(292, 96, 68, 22, "Prev Key", False)
+    Call UI.DrawButton(364, 96, 68, 22, "Next Key", False)
+    Call UI.DrawButton(34, 128, 92, 24, "Weapon Wrist",
+        Value.CalibrationTarget = CALIBRATION_TARGET_SWORD_WRIST)
+    Call UI.DrawButton(130, 128, 96, 24, "Shield Wrist",
+        Value.CalibrationTarget = CALIBRATION_TARGET_SHIELD_WRIST)
+    Call UI.DrawButton(230, 128, 76, 24, "Weapon",
+        Value.CalibrationTarget = CALIBRATION_TARGET_SWORD)
+    Call UI.DrawButton(310, 128, 76, 24, "Shield",
+        Value.CalibrationTarget = CALIBRATION_TARGET_SHIELD)
+    Call UI.DrawButton(34, 158, 48, 24, "X", Value.CalibrationAxis = CALIBRATION_AXIS_X)
+    Call UI.DrawButton(86, 158, 48, 24, "Y", Value.CalibrationAxis = CALIBRATION_AXIS_Y)
+    Call UI.DrawButton(138, 158, 48, 24, "Z", Value.CalibrationAxis = CALIBRATION_AXIS_Z)
+    Call UI.DrawButton(202, 158, 72, 24, "Rotate",
+        Value.CalibrationTransform = CALIBRATION_TRANSFORM_ROTATE)
+    Call UI.DrawButton(278, 158, 72, 24, "Move",
+        Value.CalibrationTransform = CALIBRATION_TRANSFORM_MOVE)
+    Call UI.DrawButton(354, 158, 78, 24, "Reset", False)
+
+    Draw Text CalibrationTargetLabel(Value.CalibrationTarget) At 34, 187 Size 12 Color LIGHT_GRAY
+    Draw Text CalibrationTransformLabel(Value.CalibrationTransform) At 142, 187 Size 12 Color CYAN
+    Draw Text CalibrationAxisLabel(Value.CalibrationAxis) At 208, 187 Size 12 Color CYAN
+    Draw Number CurrentValue At 230, 187 Size 12 Color WHITE
+    Draw Text CalibrationUnitLabel(Value.CalibrationTransform) At 274, 187 Size 11 Color LIGHT_GRAY
+
+    Call UI.DrawSlider(CALIBRATION_SLIDER_X, CALIBRATION_SLIDER_Y,
+        CALIBRATION_SLIDER_WIDTH, CALIBRATION_SLIDER_HEIGHT,
+        CurrentValue, MinimumValue, MaximumValue, 6)
+
+    If GizmoVisible Then
+        Draw Text "G Move  •  R/E Rotate  •  X/Y/Z Constrain" At 34, 232 Size 11 Color WHITE
+        Draw Text "Enter Confirm/Save  •  Esc Cancel  •  Drag Colored Handles" At 34, 248 Size 10 Color LIGHT_GRAY
+    Else
+        Draw Text "Numeric Controls  •  X/Y/Z Select Axis" At 34, 232 Size 11 Color WHITE
+        Draw Text "Enter Save  •  Esc Cancel  •  Show Gizmo For Mouse Handles" At 34, 248 Size 10 Color LIGHT_GRAY
+    End If
+
+    Call UI.DrawButton(34, 268, 80, 24, "Copy Key", CurrentKeyframe >= 0 And Not Value.CalibrationEditing)
+    Call UI.DrawButton(118, 268, 80, 24, "Paste Key", Calibration.ClipboardAvailable And Not Value.CalibrationEditing)
+    Call UI.DrawButton(202, 268, 90, 24, "Delete Key", CurrentKeyframe >= 0 And Not Value.CalibrationEditing)
+
+    If GizmoVisible Then
+        Call UI.DrawButton(300, 268, 132, 24, "Hide Gizmo", True)
+    Else
+
+        Call UI.DrawButton(300, 268, 132, 24, "Show Gizmo", False)
+    End If
+
+    Call UI.DrawButton(34, 298, 100, 24, "Reload Key", CurrentKeyframe >= 0)
+    Call UI.DrawButton(140, 298, 100, 24, "In Place", HoldGrip)
+    Call UI.DrawButton(246, 298, 186, 24, "Undo Last Change", Calibration.UndoCount > 0)
+    Call UI.DrawButton(34, 374, 194, 24, "Decouple Weapon", WeaponDecoupled)
+    Call UI.DrawButton(236, 374, 196, 24, "Decouple Shield", ShieldDecoupled)
+    Call UI.DrawButton(34, 412, 196, 24,
+        CalibrationResetClipLabel(Value.CalibrationClearConfirm),
+        Value.CalibrationClearConfirm)
+    Call UI.DrawButton(332, 412, 100, 24, "Save Frame",
+        CurrentKeyframe >= 0 And Not Value.CalibrationEditing)
+    Call UI.DrawButton(244, 412, 84, 24, "Cancel", Value.CalibrationEditing)
+
+    Fill Rectangle 34, 412, 196, 2, Rgb(210, 70, 76) Opacity 90
+    Fill Rectangle 34, 434, 196, 2, Rgb(210, 70, 76) Opacity 90
+    Fill Rectangle 34, 412, 2, 24, Rgb(210, 70, 76) Opacity 90
+    Fill Rectangle 228, 412, 2, 24, Rgb(210, 70, 76) Opacity 90
+
+    If Calibration.StorageRejected Then
+
+        Draw Text "Storage blocked; no saved data replaced. See status." At 34, 330 Size 10 Color YELLOW
+
+    Else If Calibration.WriteFailed Then
+
+        Draw Text "Save failed; previous keys kept. Retry or Cancel." At 34, 330 Size 10 Color YELLOW
+
+    Else If Value.CalibrationClearConfirm Then
+
+        Draw Text "Delete saved keys for:" At 34, 330 Size 10 Color YELLOW
+        Draw Text SelectedClipName At 188, 330 Size 10 Color WHITE
+        Draw Number ViewerCalibration.KeyCount(Calibration, SelectedClip) At 350, 330 Size 10 Color YELLOW
+
+    Else If GripLimit Then
+
+        Draw Text "In Place reached the saved position limit" At 34, 330 Size 10 Color YELLOW
+
+    Else If Value.CalibrationEditing Then
+
+        If ScenePaused Then
+            Draw Text "Editing — movement paused by Space" At 34, 330 Size 11 Color YELLOW
+        Else
+            Draw Text "Editing live — Space pauses movement" At 34, 330 Size 11 Color YELLOW
+        End If
+
+    Else
+        Draw Text "In Place: rotate equipment without shifting its grip" At 34, 330 Size 10 Color LIGHT_GRAY
+
+    End If
+
+    If Calibration.SaveLimitReached Then
+
+        Draw Text "Keyframe limit reached" At 34, 350 Size 11 Color YELLOW
+
+    Else
+
+        Draw Text "Keys" At 34, 350 Size 11 Color LIGHT_GRAY
+        Draw Number ViewerCalibration.KeyCount(Calibration, SelectedClip) At 68, 350 Size 11 Color CYAN
+
+        If Value.CalibrationEditing Then
+            Draw Text "Editing frame" At 104, 350 Size 11 Color YELLOW
+            Draw Number Value.CalibrationEditingFrame At 200, 350 Size 11 Color WHITE
+        Else
+            Draw Text "Current frame" At 104, 350 Size 11 Color LIGHT_GRAY
+            Draw Number CurrentFrame At 200, 350 Size 11 Color WHITE
+        End If
+
+        If CurrentKeyframe >= 0 Then
+            Draw Text "KEYED" At 230, 350 Size 11 Color GREEN
+        End If
+
+    End If
+
+End Sub
+
+Public Sub DrawTimeline(
+    ByRef Actor As Character3D.Actor,
+    ByRef Calibration As ViewerCalibration.State,
+    ByRef Input As ViewerInput.State,
+    SelectedClip As Number,
+    SelectedClipName As Text,
+    SelectedTimelineEvent As Number,
+    CalibrationAvailable As Boolean,
+    WindowWidth As Number,
+    WindowHeight As Number
+)
+
+    Dim Duration As Number
+    Dim EventIndex As Number
+    Dim EventTime As Number
+    Dim Keyframe As Number
+    Dim KeyframeFrame As Number
+    Dim KeyframeTime As Number
+    Dim MarkerX As Number
+    Dim ProgressWidth As Number
+    Dim TimelineY As Number
+    Dim Width As Number
+
+    Duration = Max(1, Character3D.ClipDuration(Actor, SelectedClip))
+    TimelineY = WindowHeight - 64
+    Width = TimelineWidth(WindowWidth, TIMELINE_LEFT)
+    ProgressWidth = Character3D.AnimationTime(Actor) * Width / Duration
+
+    Call UI.DrawButton(TIMELINE_LEFT, WindowHeight - 96, 62, 24, "0-Frame", False)
+    Call UI.DrawButton(TIMELINE_LEFT + 68, WindowHeight - 96, 62, 24, "< Key", False)
+    Call UI.DrawButton(TIMELINE_LEFT + 136, WindowHeight - 96, 62, 24, "Key >", False)
+    Call UI.DrawButton(TIMELINE_LEFT + 204, WindowHeight - 96, 62, 24,
+        "< Frame", Input.FrameButtonRepeatDirection < 0)
+    Call UI.DrawButton(TIMELINE_LEFT + 272, WindowHeight - 96, 62, 24,
+        "Frame >", Input.FrameButtonRepeatDirection > 0)
+
+    Draw Text SelectedClipName At TIMELINE_LEFT + 348, WindowHeight - 88 Size 11 Color CYAN
+
+    If SelectedTimelineEvent > 0 Then
+
+        Draw Text Character3D.EventName(Actor, SelectedTimelineEvent) At TIMELINE_LEFT + 518, WindowHeight - 88 Size 11 Color YELLOW
+        Draw Number Character3D.EventTime(Actor, SelectedTimelineEvent) At TIMELINE_LEFT + 616, WindowHeight - 88 Size 11 Color WHITE
+        Draw Number Character3D.EventValue(Actor, SelectedTimelineEvent) At TIMELINE_LEFT + 672, WindowHeight - 88 Size 11 Color CYAN
+
+    Else
+        Draw Text "No authored event" At TIMELINE_LEFT + 518, WindowHeight - 88 Size 11 Color LIGHT_GRAY
+
+    End If
+
+    Fill Rectangle TIMELINE_LEFT, TimelineY, Width, TIMELINE_HEIGHT, Rgb(18, 35, 58) Opacity 88
+    Fill Rectangle TIMELINE_LEFT, TimelineY, ProgressWidth, TIMELINE_HEIGHT, Rgb(16, 102, 136) Opacity 90
+
+    For EventIndex = 1 To Character3D.EventCount(Actor)
+
+        If Character3D.EventClipIndex(Actor, EventIndex) = SelectedClip Then
+
+            EventTime = Character3D.EventTime(Actor, EventIndex)
+            MarkerX = TIMELINE_LEFT + EventTime * Width / Duration
+
+            Fill Rectangle MarkerX, TimelineY - 3, 2, TIMELINE_HEIGHT + 6, YELLOW Opacity 100
+
+        End If
+
+    End For
+
+    If CalibrationAvailable Then
+
+        For Keyframe = 0 To ViewerCalibration.KeyCount(Calibration, SelectedClip) - 1
+
+            KeyframeFrame = ViewerCalibration.KeyFrame(Calibration, SelectedClip, Keyframe)
+
+            If (Input.TimelineKeyframeDragging And
+                Keyframe = Input.TimelineDraggedKeyframe) Then
+                KeyframeFrame = Input.TimelineDraggedTargetFrame
+            End If
+
+            KeyframeTime = ViewerCalibration.FrameTimeMilliseconds(
+                Actor, SelectedClip, KeyframeFrame)
+            MarkerX = TIMELINE_LEFT + KeyframeTime * Width / Duration
+
+            Fill Rectangle MarkerX - 1, TimelineY - 5, 3, TIMELINE_HEIGHT + 10, GREEN Opacity 100
+        End For
+
+    End If
+
+    Draw Number Character3D.AnimationTime(Actor) At TIMELINE_LEFT + 6, TimelineY + 3 Size 10 Color WHITE
+    Draw Number Duration At TIMELINE_LEFT + Width - 48, TimelineY + 3 Size 10 Color WHITE
+
+    If CalibrationAvailable Then
+
+        If Calibration.ImportPending Then
+            Call UI.DrawButton(TIMELINE_LEFT, WindowHeight - 43,
+                CALIBRATION_IMPORT_WIDTH, 18, "Replace Keys?", True)
+        Else
+
+            Call UI.DrawButton(TIMELINE_LEFT, WindowHeight - 43,
+                CALIBRATION_IMPORT_WIDTH, 18, "Import Key Frames", False)
+        End If
+
+        Call UI.DrawButton(TIMELINE_LEFT + CALIBRATION_DOWNLOAD_OFFSET, WindowHeight - 43,
+            CALIBRATION_DOWNLOAD_WIDTH, 18, "Download Key Frames", False)
+
+        Draw Text Calibration.FileLabel At TIMELINE_LEFT + CALIBRATION_FILENAME_OFFSET, WindowHeight - 39 Size 9 Color LIGHT_GRAY
+
+        If (Text_Width(Calibration.TransferMessage, 9) <=
+            Width - CALIBRATION_TRANSFER_TEXT_OFFSET) Then
+            Draw Text Calibration.TransferMessage At TIMELINE_LEFT + CALIBRATION_TRANSFER_TEXT_OFFSET, WindowHeight - 39 Size 9 Color CYAN
+        End If
+
+    End If
 
 End Sub
 

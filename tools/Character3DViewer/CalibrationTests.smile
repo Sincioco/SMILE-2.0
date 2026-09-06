@@ -158,8 +158,8 @@ Call ClearCalibrationMemory()
 Playback.ScenePaused = True
 Playback.DemoEnabled = False
 Playback.SelectedClip = 3
-ViewerUiState.CalibrationTarget = CALIBRATION_TARGET_SWORD
-ViewerUiState.CalibrationAxis = CALIBRATION_AXIS_X
+ViewerUiState.CalibrationTarget = ViewerUi.CALIBRATION_TARGET_SWORD
+ViewerUiState.CalibrationAxis = ViewerUi.CALIBRATION_AXIS_X
 
 Call PlaySelectedClip()
 
@@ -285,7 +285,7 @@ Call ApplyWristCalibration()
 Call ApplyEquipmentCalibration()
 
 ViewerGizmoState.HoldGrip = True
-ViewerUiState.CalibrationTransform = CALIBRATION_TRANSFORM_ROTATE
+ViewerUiState.CalibrationTransform = ViewerUi.CALIBRATION_TRANSFORM_ROTATE
 TestAnchor = ViewerCalibration.EquipmentGripThousandths(
     Character, WEAPON_PART_INDEX, "HandRight")
 

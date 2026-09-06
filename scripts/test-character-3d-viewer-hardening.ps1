@@ -211,7 +211,9 @@ try {
         'Public Function LayoutTooSmall(',
         'Public Sub DrawCharacterStatusSummary(',
         'Public Sub DrawCameraControls(',
-        'Public Sub DrawAnimationButtons(')) {
+        'Public Sub DrawAnimationButtons(',
+        'Public Sub DrawCalibrationPanel(',
+        'Public Sub DrawTimeline(')) {
         Assert-Contains $uiSource $contract 'Viewer UI owner'
     }
     Assert-True (-not $viewerSource.Contains('Function LightingLabel(') -and
@@ -241,8 +243,19 @@ try {
         -not $viewerSource.Contains('Sub DrawCharacterStatusSummary(') -and
         -not $viewerSource.Contains('Sub DrawCameraControls(') -and
         -not $viewerSource.Contains('Sub DrawCameraSlider(') -and
-        -not $viewerSource.Contains('Sub DrawAnimationButtons(')) `
-        'Inspector layout, status, camera and animation-control drawing must remain in ViewerUi.'
+        -not $viewerSource.Contains('Sub DrawAnimationButtons(') -and
+        -not $viewerSource.Contains('Sub DrawCalibrationPanel(') -and
+        -not $viewerSource.Contains('Sub DrawTimeline(')) `
+        'Inspector layout, status, camera, animation, calibration and timeline drawing must remain in ViewerUi.'
+    Assert-True (-not $viewerSource.Contains('Const TIMELINE_LEFT =') -and
+        -not $viewerSource.Contains('Const TIMELINE_HEIGHT =') -and
+        -not $viewerSource.Contains('Const CALIBRATION_PANEL_X =') -and
+        -not $viewerSource.Contains('Const CALIBRATION_PANEL_WIDTH =') -and
+        -not $viewerSource.Contains('Const CALIBRATION_SLIDER_X =') -and
+        -not $viewerSource.Contains('Const CALIBRATION_SLIDER_WIDTH =') -and
+        -not $viewerSource.Contains('Const CALIBRATION_TARGET_SWORD =') -and
+        -not $viewerSource.Contains('Const CALIBRATION_TRANSFORM_MOVE =')) `
+        'Calibration and timeline geometry and selection constants must remain in ViewerUi.'
     foreach ($contract in @(
         'Public Sub BeginDrag(',
         'Public Sub FinishDrag(',
