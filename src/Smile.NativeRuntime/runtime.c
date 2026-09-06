@@ -57,6 +57,8 @@ static long long smile_logical_height = 540;
 static long long smile_closed;
 static unsigned char smile_held[256];
 static long long smile_key_queue[64];
+static uint64_t smile_key_held_queue[64];
+static uint64_t smile_key_event_held_mask;
 static int smile_key_head;
 static int smile_key_tail;
 static SmilePointerState smile_pointer;
@@ -1222,17 +1224,27 @@ static int smile_key_virtual(long long key)
 static void smile_queue_key(long long key)
 {
     int next;
+    int held_key;
+    uint64_t held_mask = 0;
     if (key == SMILE_KEY_NONE)
         return;
     next = (smile_key_tail + 1) % (int)(sizeof(smile_key_queue) / sizeof(smile_key_queue[0]));
     if (next == smile_key_head)
         return;
     smile_key_queue[smile_key_tail] = key;
+    for (held_key = 1; held_key <= SMILE_KEY_E; held_key++)
+    {
+        int virtual_key = smile_key_virtual(held_key);
+        if (virtual_key > 0 && smile_held[virtual_key])
+            held_mask |= UINT64_C(1) << held_key;
+    }
+    smile_key_held_queue[smile_key_tail] = held_mask;
     smile_key_tail = next;
 }
 
 long long smile_get_key(void)
 {
+    smile_key_event_held_mask = 0;
     if (smile_window != 0 || smile_closed != 0)
     {
         long long key;
@@ -1240,6 +1252,7 @@ long long smile_get_key(void)
         if (smile_key_head == smile_key_tail)
             return SMILE_KEY_NONE;
         key = smile_key_queue[smile_key_head];
+        smile_key_event_held_mask = smile_key_held_queue[smile_key_head];
         smile_key_head = (smile_key_head + 1) % (int)(sizeof(smile_key_queue) / sizeof(smile_key_queue[0]));
         return key;
     }
@@ -1299,6 +1312,12 @@ long long smile_key_held(long long key)
 {
     int virtual_key = smile_key_virtual(key);
     return virtual_key > 0 && virtual_key < 256 && smile_held[virtual_key] != 0;
+}
+
+long long smile_key_event_held(long long key)
+{
+    return key > 0 && key <= SMILE_KEY_E &&
+        (smile_key_event_held_mask & (UINT64_C(1) << key)) != 0;
 }
 
 long long smile_pointer_x(void) { return smile_pointer.x; }
@@ -1578,6 +1597,8 @@ static LRESULT CALLBACK smile_window_proc(HWND window, UINT message, WPARAM wpar
             return 0;
         case WM_KILLFOCUS:
             smile_zero_memory(smile_held, sizeof(smile_held));
+            smile_key_head = smile_key_tail;
+            smile_key_event_held_mask = 0;
             smile_pointer_cancel();
             return 0;
         case WM_CLOSE:
@@ -1590,6 +1611,8 @@ static LRESULT CALLBACK smile_window_proc(HWND window, UINT message, WPARAM wpar
             smile_window = 0;
             smile_closed = 1;
             smile_zero_memory(smile_held, sizeof(smile_held));
+            smile_key_head = smile_key_tail;
+            smile_key_event_held_mask = 0;
             smile_pointer_reset();
             smile_graphics_shutdown();
             smile_graphics_diagnostics_shutdown();
@@ -1646,6 +1669,7 @@ void smile_game_open(const char* title, long long title_length, long long width,
     smile_closed = 0;
     smile_key_head = 0;
     smile_key_tail = 0;
+    smile_key_event_held_mask = 0;
     smile_zero_memory(smile_held, sizeof(smile_held));
     smile_pointer_reset();
     smile_audio_focus_initialize(&smile_audio_focus);

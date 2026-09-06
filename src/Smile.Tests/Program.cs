@@ -229,6 +229,18 @@ Run("Viewer and game letter shortcuts are shared named input constants", () =>
     Equal(38L, SyntaxFacts.GetBuiltInConstantValue(SyntaxKind.KeyEKeyword));
     Equal(false, Analyze("Game Window \"UI\"\nDim Key As Number\nDim Held As Boolean\nGet Key Key\nHeld = Key_Held(KEY_BACKTICK)\nIf Key = KEY_X Or Key = KEY_Y Or Key = KEY_Z Or Key = KEY_E Then\nPrint Held\nEnd If\n").HasErrors);
 });
+Run("Queued key snapshots share typing and backend dispatch", () =>
+{
+    Equal(SyntaxKind.KeyEventHeldKeyword, SyntaxFacts.GetKeywordKind("key_event_held"));
+    var analysis = Analyze("Game Window \"Input\"\nDim Key As Number\nDim Held As Boolean\nGet Key Key\nHeld = Key_Event_Held(KEY_CONTROL)\n");
+    Equal(false, analysis.HasErrors);
+    Equal(true, Analyze("Print Key_Event_Held(KEY_CONTROL)\n").HasErrors);
+    Equal(true, Analyze("Game Window \"Input\"\nPrint Key_Event_Held()\n").HasErrors);
+    Equal(true, Analyze("Game Window \"Input\"\nPrint Key_Event_Held(\"Control\")\n").HasErrors);
+    Equal(true, new MasmEmitter(analysis, SmileGraphicsBackend.DirectX, true, false).Emit()
+        .Contains("call smile_key_event_held", StringComparison.Ordinal));
+    Equal(true, new WebEmitter(analysis).Emit().Contains("smile.keyEventHeld(", StringComparison.Ordinal));
+});
 Run("Window dimensions, title, and activation are live game-window built-ins", () =>
 {
     Equal(SyntaxKind.WindowWidthKeyword, SyntaxFacts.GetKeywordKind("window_width"));

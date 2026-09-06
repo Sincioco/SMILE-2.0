@@ -299,6 +299,7 @@ internal static class WebOutputWriter
                 ? Array.from(virtualControls.querySelectorAll("button[data-smile-control]"))
                 : [];
             const keys = [];
+            let keyEventHeldKeys = new Set();
             const inputSources = new Map();
             const heldKeyCounts = new Map();
             const activeVirtualPointers = new Map();
@@ -620,7 +621,7 @@ internal static class WebOutputWriter
 
             function enqueueKey(key) {
                 if (!Number.isSafeInteger(key)) return false;
-                keys.push(key);
+                keys.push({ key, held: new Set(heldKeyCounts.keys()) });
                 if (keys.length > MAX_QUEUED_KEYS) keys.shift();
                 return true;
             }
@@ -658,6 +659,7 @@ internal static class WebOutputWriter
             }
 
             function releaseAllInputs() {
+                keyEventHeldKeys.clear();
                 inputSources.clear();
                 heldKeyCounts.clear();
                 activeVirtualPointers.clear();
@@ -3566,9 +3568,9 @@ internal static class WebOutputWriter
             window.addEventListener("keyup", event => { releaseInput(`keyboard:${event.code}`); });
 
             canvas.addEventListener("click", () => { userInteracted = true; canvas.focus(); syncMusic(); });
-            canvas.addEventListener("blur", () => { keys.length = 0; releaseInputsByPrefix("keyboard:"); });
+            canvas.addEventListener("blur", () => { keys.length = 0; keyEventHeldKeys.clear(); releaseInputsByPrefix("keyboard:"); });
             consoleOutput.addEventListener("click", () => { consoleOutput.focus(); });
-            consoleOutput.addEventListener("blur", () => { keys.length = 0; releaseInputsByPrefix("keyboard:"); });
+            consoleOutput.addEventListener("blur", () => { keys.length = 0; keyEventHeldKeys.clear(); releaseInputsByPrefix("keyboard:"); });
             canvas.addEventListener("contextmenu", event => event.preventDefault());
             canvas.addEventListener("pointerdown", handleCanvasPointerDown);
             canvas.addEventListener("pointermove", handleCanvasPointerMove);
@@ -3606,8 +3608,13 @@ internal static class WebOutputWriter
                 mediaShutdown();
             });
 
-            function getKey() { return keys.length === 0 ? 0 : keys.shift(); }
+            function getKey() {
+                const event = keys.shift();
+                keyEventHeldKeys = event ? event.held : new Set();
+                return event ? event.key : 0;
+            }
             function keyHeld(key) { return (heldKeyCounts.get(safe(key)) || 0) > 0 ? 1 : 0; }
+            function keyEventHeld(key) { return key !== 19 && keyEventHeldKeys.has(safe(key)) ? 1 : 0; }
 
             function checkedChannel(channel) {
                 channel = safe(channel);
@@ -4072,7 +4079,7 @@ internal static class WebOutputWriter
                 fillQuadrilateral, drawQuadrilateral, drawLine, drawText, drawNumber, loadImage, imageRetain,
                 imageRelease, imageAssign, imageMoveAssign, imageLoaded, imageWidth, imageHeight, drawImage,
                 pushClip, popClip, textWidth, textHeight, textLength, textCodeAt, textSlice, showScreen,
-                print, clearScreen, wait, getKey, keyHeld, windowWidth, windowHeight, windowTitle, windowActivate, pointerX, pointerY, pointerDeltaX, pointerDeltaY,
+                print, clearScreen, wait, getKey, keyHeld, keyEventHeld, windowWidth, windowHeight, windowTitle, windowActivate, pointerX, pointerY, pointerDeltaX, pointerDeltaY,
                 pointerWheelDelta, pointerWheelRemainder, pointerInside, pointerHeld, pointerPressed, pointerReleased,
                 playSound, stopSound,
                 playMusic, pauseMusic, resumeMusic, stopMusic, setMusicVolume, loadTextFile, fileExport, fileImport,

@@ -7,6 +7,22 @@
   "executionStartSha": "902a7022c895bf97010d979ea578fc5361cdcbf4",
   "issues": [
     {
+      "id": "W20",
+      "title": "Quick queued Ctrl+Arrow loses its modifier before Viewer consumes it",
+      "classification": "actual-browser-reproduction",
+      "mandatory": true,
+      "baseline": "28b78a3d1b24db3464410459536d0e7e68854533",
+      "status": "FIXED-VERIFIED",
+      "phase": "W5",
+      "gateCheck": "G08",
+      "sourceRefs": ["src/Smile.NativeRuntime/runtime.c", "src/Smile.Compiler/WebOutputWriter.cs", "tools/Character3DViewer/Program.smile"],
+      "reproduction": "Actual Chrome receives the whole chord, but released Control is no longer physically held when Get Key consumes the queued arrow; the Viewer orbits instead of stepping.",
+      "rootCause": "Queued event and live physical held-state were sampled at different times.",
+      "fixCommit": null,
+      "evidenceIds": ["docs/implementation/h6-1-hardening-and-web-parity-ledger.md#W20--Queued-modifier-snapshot--2026-09-06"],
+      "dispositionRationale": "Shared Key_Event_Held snapshot semantics preserve Key_Held. Native real window-procedure fixture and generated-runtime VM release-before-poll/focus tests pass; actual foreground Chrome Ctrl+Right/Left steps 550/583/550 ms without changing H158/V0/zoom-15. Plain arrow still orbits. 300 shared tests, Viewer native/Web hardening, current builds and installed VSIX pass. Native manual chord repetition is not claimed. Implementation commit is the commit introducing this entry; its SHA is recorded by the next milestone."
+    },
+    {
       "id": "F01",
       "title": "Frozen Fire equipment visibility cleanup",
       "classification": "source-finding",

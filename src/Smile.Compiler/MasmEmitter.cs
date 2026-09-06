@@ -140,6 +140,7 @@ internal sealed class MasmEmitter
     private bool _usesTimer;
     private bool _usesGameClosed;
     private bool _usesKeyHeld;
+    private bool _usesKeyEventHeld;
     private bool _usesMusic;
     private int _dynamicStackSlots;
     private int _clipDepth;
@@ -228,6 +229,7 @@ internal sealed class MasmEmitter
         if (_usesTimer) Line("EXTERN smile_timer:PROC");
         if (_usesGameClosed) Line("EXTERN smile_game_closed:PROC");
         if (_usesKeyHeld) Line("EXTERN smile_key_held:PROC");
+        if (_usesKeyEventHeld) Line("EXTERN smile_key_event_held:PROC");
         Line("EXTERN smile_pointer_x:PROC");
         Line("EXTERN smile_pointer_y:PROC");
         Line("EXTERN smile_pointer_delta_x:PROC");
@@ -635,6 +637,7 @@ internal sealed class MasmEmitter
                 _usesTimer |= call.Identifier.Kind == SyntaxKind.TimerKeyword;
                 _usesGameClosed |= call.Identifier.Kind == SyntaxKind.GameClosedKeyword;
                 _usesKeyHeld |= call.Identifier.Kind == SyntaxKind.KeyHeldKeyword;
+                _usesKeyEventHeld |= call.Identifier.Kind == SyntaxKind.KeyEventHeldKeyword;
                 foreach (var argument in call.Arguments)
                     CollectExpression(argument.Expression);
                 CollectBoundCall(call);
@@ -1745,9 +1748,11 @@ internal sealed class MasmEmitter
                 CallAligned("smile_file_import");
                 break;
             case SyntaxKind.KeyHeldKeyword:
+            case SyntaxKind.KeyEventHeldKeyword:
                 EmitExpression(call.Arguments[0].Expression);
                 Line("    mov rcx, rax");
-                CallAligned("smile_key_held");
+                CallAligned(call.Identifier.Kind == SyntaxKind.KeyHeldKeyword
+                    ? "smile_key_held" : "smile_key_event_held");
                 break;
             case SyntaxKind.PointerXKeyword:
             case SyntaxKind.PointerYKeyword:

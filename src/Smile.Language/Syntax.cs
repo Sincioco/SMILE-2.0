@@ -82,6 +82,7 @@ public enum SyntaxKind
     FileExportKeyword,
     FileImportKeyword,
     KeyHeldKeyword,
+    KeyEventHeldKeyword,
     PointerXKeyword,
     PointerYKeyword,
     PointerDeltaXKeyword,
@@ -326,6 +327,7 @@ public static class SyntaxFacts
         ["File_Export"] = SyntaxKind.FileExportKeyword,
         ["File_Import"] = SyntaxKind.FileImportKeyword,
         ["Key_Held"] = SyntaxKind.KeyHeldKeyword,
+        ["Key_Event_Held"] = SyntaxKind.KeyEventHeldKeyword,
         ["Pointer_X"] = SyntaxKind.PointerXKeyword,
         ["Pointer_Y"] = SyntaxKind.PointerYKeyword,
         ["Pointer_Delta_X"] = SyntaxKind.PointerDeltaXKeyword,
@@ -514,7 +516,7 @@ public static class SyntaxFacts
                 SyntaxKind.PointerWheelDeltaKeyword or SyntaxKind.PointerWheelRemainderKeyword or
                 SyntaxKind.PointerInsideKeyword or SyntaxKind.FileImportKeyword => NoParameters,
             SyntaxKind.AbsKeyword => ValueParameter,
-            SyntaxKind.KeyHeldKeyword => KeyParameter,
+            SyntaxKind.KeyHeldKeyword or SyntaxKind.KeyEventHeldKeyword => KeyParameter,
             SyntaxKind.PointerHeldKeyword or SyntaxKind.PointerPressedKeyword or SyntaxKind.PointerReleasedKeyword =>
                 new[] { "button" },
             SyntaxKind.ImageWidthKeyword or SyntaxKind.ImageHeightKeyword or SyntaxKind.ImageLoadedKeyword => ImageParameter,

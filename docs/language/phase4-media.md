@@ -94,6 +94,15 @@ by itself. Repeated keydown events do not duplicate queued actions. Leaving the
 program surface clears queued/held keyboard input without taking ownership away
 from independently held virtual-controller buttons.
 
+For queued shortcuts, use `Key_Event_Held(KEY_CONTROL)` immediately after
+`Get Key`, rather than `Key_Held(KEY_CONTROL)`. On native and Web, the former
+queries named keys held when that queued press occurred; the latter still
+queries the current live state. This preserves a quick Ctrl+Arrow even if both
+keys were released before the next frame. The event snapshot includes its own
+key and remains until the next `Get Key` (an empty read clears it), focus loss,
+or shutdown. Unnamed/invalid keys return `False`. It requires `Game Window`.
+See the compilable [queued-key example](../../examples/KeyEventBasics.smile).
+
 `Shift+Tab` leaves the canvas and focuses the generated Full Screen button,
 which becomes visible on keyboard focus; Enter activates it. Alt+Enter also
 toggles fullscreen while the program surface has focus. The button follows the

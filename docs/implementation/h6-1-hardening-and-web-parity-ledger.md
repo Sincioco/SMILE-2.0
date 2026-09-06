@@ -1154,3 +1154,71 @@ not audio hardware playback. Continuous playback still submits exactly one cue.
 Together with the prior native/Chrome frozen-equipment observations and the
 passing shared Fire/Lightning lifecycle assertions, this closes F01. H6.1 as
 a whole still needs remaining interaction/lifecycle evidence and final reports.
+
+### W20 — Queued modifier snapshot — 2026-09-06
+
+Baseline `28b78a3d1b24db3464410459536d0e7e68854533`, main. Actual Chrome
+Ctrl+Arrow sometimes orbited instead of stepping: the released Control key was
+queried when the queued arrow was consumed, not when pressed. A disposable DOM
+keyboard probe confirmed that the browser received the correct trusted chord.
+No change to physical `Key_Held` semantics was appropriate.
+
+The new shared `Key_Event_Held(key)` Boolean builtin reads the held-key snapshot
+belonging to the last `Get Key` event. Both backends clear it on the next read
+(including an empty queue), focus loss and shutdown. The Viewer uses it for
+Ctrl+Left/Right. Existing standalone modifier queue behavior is preserved.
+Shared syntax, diagnostics, emission, documentation and a compiled teaching
+example accompany the small runtime change. No Double or editor API was added.
+
+Validation (all completed, no whole-smoke rerun):
+
+- `cmd /c scripts/build.cmd`: PASS; `artifacts/temp/h6-1-key-event-build.log`.
+- `dotnet run --project src/Smile.Tests/Smile.Tests.csproj -c Release`: 300 PASS;
+  `h6-1-key-event-language.log`. Synthetic rollback errors are expected tests.
+- In the normal VC x64 environment: `cl /nologo /MT /O2 /Gy src/Smile.NativeGraphicsTests/KeyEventTests.c /Foartifacts/tests/KeyEventTests.obj /Feartifacts/tests/KeyEventTests.exe /link /OPT:REF artifacts/runtime/Smile.NativeRuntime.lib kernel32.lib user32.lib gdi32.lib gdiplus.lib dwmapi.lib d3d11.lib d3dcompiler.lib dxgi.lib d2d1.lib dwrite.lib windowscodecs.lib winmm.lib shell32.lib ole32.lib windowsapp.lib xaudio2.lib comdlg32.lib`.
+  Final compile is warning-free; `artifacts/tests/KeyEventTests.exe` prints
+  `Native queued key snapshots passed`. Logs `h6-1-key-event-native{,-build}.log`.
+  This fixture calls the real native window procedure without an OS window or
+  injected desktop input, including release-before-poll and focus discard.
+- `artifacts/compiler/smilec.exe examples/KeyEventBasics.smile -o artifacts/tests/KeyEventBasics.exe`
+  and `--target web --output-dir artifacts/web/h6-1/KeyEventBasics`: PASS.
+  `node scripts/run-web-test.js artifacts/web/h6-1/KeyEventBasics --mobile-controls --timeout 10000`:
+  PASS. The old generated runtime lacks the API and fails the added check.
+- `scripts/test-character-3d-viewer-hardening.ps1`, including Web: PASS;
+  `h6-1-key-event-viewer-hardening.log`, including 58 native graphics/input/audio
+  checks. Targeted formatter and `git diff --check`: PASS.
+- Viewer `Build.ps1 -Configuration Release -Target Web` and
+  `Launch.ps1 -Build -SkipWindowActivation`: PASS; logs
+  `h6-1-key-event-viewer-web.log`, `h6-1-key-event-viewer-native.log`.
+- Actual foreground Chrome at `http://127.0.0.1:8766/?key-event-check=1`, build
+  marker `b9ac7d1d04b26fb4`: paused Arin Defend 550 ms -> Ctrl+Right 583 ms ->
+  Ctrl+Left 550 ms, with H158/V0/zoom-15 unchanged. Earlier current-tab checks
+  separately verified plain Right still orbits. Warning/error log `[]`.
+  Background-tab checks are not represented as stream-visible observations.
+- Actual Chrome fullscreen: Alt+Enter enters/exits; Shift+Tab reveals the
+  Full Screen button and Enter enters/exits without leaking into the paused
+  Viewer. The DOM `:fullscreen` element/button state and screenshots were
+  checked; an unsupported read-only DOM proxy property was not used as proof.
+- Native Viewer is rebuilt and running once. A manual native chord repetition
+  is not claimed: restoring its minimized window failed with the computer-use
+  message `user input was detected in this window`; Sin was asked to restore it.
+  The native executable fixture supplies the focused native behavior proof.
+- `cmd /c scripts/install-vsix.cmd`: PASS, including rebuild/install/hash
+  verification; `h6-1-key-event-vsix-install.log`. VSIX 2.0.59 / assembly 2.0.59.0,
+  installed at `C:/Users/louie/AppData/Local/Microsoft/VisualStudio/18.0_91f001b5/Extensions/4btjknza.ctg`.
+  Built/installed `Compiler/smilec.dll` SHA256 both
+  `0D5035AB2C8C19B6932636FD718F2C7D00AC8AB1E7F6C0147443CA191C3C5909`;
+  extension DLL `CEDD5390FAB91AFE18BA1C9F27FB42B976A72BCA95DF5801B086DA08AA0389E5`.
+
+| Artifact | SHA256 |
+|---|---|
+| VSIX | `48CD14E7045E604518003909BC10D39A5C5F34CDBBBC4DB4E1FF13976FE718EF` |
+| Native runtime library | `99D15243B2C7D40DB99F89B9016284924D9CAE79ADF70BEC9CC231C28D2EC287` |
+| Viewer Release executable | `90F0CB43AD45FE6C1515B8BF8611A71280788B8B4CE555B9804CE609BCD18C6C` |
+| Viewer Web/game.js | `F6D3BC514807ED8F36B13B62236B8C8AE961B2AA107B96496B11B945460E7C6E` |
+| Viewer Web/smile-runtime.js | `06748EB06CE18AB640A678240003073ACEF3C11D00B3838B8F50FE6B3BBDE8E7` |
+
+This closes the newly discovered queued-shortcut defect, not remaining camera,
+audio/context-loss observations or H6.1 delivery. Existing split normal-smoke
+evidence remains recorded above. No saved calibration key was edited by these
+UI checks; both canonical snapshots must be exported again before commit/push.

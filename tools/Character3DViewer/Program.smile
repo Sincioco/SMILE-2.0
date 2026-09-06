@@ -1531,11 +1531,11 @@ Sub HandleInspectorKeyboard(PressedKey As Number)
 
         Call CycleBackground()
 
-    Else If PressedKey = KEY_LEFT And Key_Held(KEY_CONTROL) Then
+    Else If PressedKey = KEY_LEFT And Key_Event_Held(KEY_CONTROL) Then
 
         Call StepAnimationFrame(-1)
 
-    Else If PressedKey = KEY_RIGHT And Key_Held(KEY_CONTROL) Then
+    Else If PressedKey = KEY_RIGHT And Key_Event_Held(KEY_CONTROL) Then
 
         Call StepAnimationFrame(1)
 

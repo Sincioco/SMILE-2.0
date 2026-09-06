@@ -1,0 +1,32 @@
+' A quick Ctrl+Arrow keeps its modifier even when released before the next frame.
+Dim Key As Number
+Dim LastKey As Number
+Dim WithControl As Boolean
+
+Game Window "SMILE 2.0 - Queued Key Snapshot" Size 800 By 450
+
+Do
+
+    Get Key Key
+
+    If Key <> KEY_NONE Then
+        LastKey = Key
+        WithControl = Key_Event_Held(KEY_CONTROL)
+    End If
+
+    Clear BLACK
+    Draw Text "Press Ctrl+Left, then plain Right." At 24, 24 Size 24 Color WHITE
+    Draw Text "Last Key" At 24, 76 Size 20 Color WHITE
+    Draw Number LastKey At 180, 76 Size 20 Color CYAN
+
+    If WithControl Then
+        Draw Text "Control Was Held" At 24, 112 Size 20 Color GREEN
+    Else
+        Draw Text "Control Was Not Held" At 24, 112 Size 20 Color WHITE
+    End If
+
+    Show Screen
+
+Loop Until Game_Closed()
+
+End Program

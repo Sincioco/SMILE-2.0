@@ -357,8 +357,28 @@ async function runMobileControlsTests() {
         desktop.keyboard("keyup", code, { ctrlKey: true });
     }
     desktop.keyboard("keyup", "ControlLeft");
+    // A complete shortcut may arrive between two game frames. Live held state
+    // must release immediately, while Get Key retains the press-time snapshot.
+    desktop.keyboard("keydown", "ControlLeft", { ctrlKey: true });
+    desktop.keyboard("keydown", "ArrowLeft", { ctrlKey: true });
+    desktop.keyboard("keyup", "ArrowLeft", { ctrlKey: true });
+    desktop.keyboard("keyup", "ControlLeft");
+    desktop.keyboard("keydown", "ArrowRight");
+    desktop.keyboard("keyup", "ArrowRight");
+    mobileEqual(desktop.host.smile.keyHeld(33), 0, "released Control is not physically held");
+    mobileEqual(desktop.host.smile.getKey(), 12, "quick shortcut remains queued");
+    mobileEqual(desktop.host.smile.keyEventHeld(33), 1, "quick shortcut retains press-time Control");
+    mobileEqual(desktop.host.smile.keyEventHeld(12), 1, "press snapshot includes its own key");
+    mobileEqual(desktop.host.smile.keyEventHeld(19), 0, "unnamed key is not a held event key");
+    mobileEqual(desktop.host.smile.getKey(), 13, "next plain key keeps queue order");
+    mobileEqual(desktop.host.smile.keyEventHeld(33), 0, "modifier does not leak into next plain key");
+    mobileEqual(desktop.host.smile.getKey(), 0, "queue drains after two actions");
+    mobileEqual(desktop.host.smile.keyEventHeld(13), 0, "empty Get Key clears the event snapshot");
     desktop.keyboard("keydown", "KeyW");
+    mobileEqual(desktop.host.smile.getKey(), 1, "focus probe reads the W event");
+    mobileEqual(desktop.host.smile.keyEventHeld(1), 1, "focus probe has an event snapshot");
     desktop.canvas.dispatch("blur");
+    mobileEqual(desktop.host.smile.keyEventHeld(1), 0, "canvas blur clears the event snapshot");
     mobileEqual(desktop.host.smile.keyHeld(1), 0, "leaving canvas clears held keyboard state");
     mobileEqual(desktop.host.smile.getKey(), 0, "leaving canvas clears queued keyboard state");
     desktop.host.document.hidden = true;

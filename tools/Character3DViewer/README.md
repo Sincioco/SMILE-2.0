@@ -1,5 +1,10 @@
 # SMILE 2.0 - 3D Viewer, Animation Editor
 
+Ctrl+Left/Right step the timeline using the queued press's modifier snapshot on
+Desktop and Web. Quick taps remain frame steps even after Control is released;
+plain arrows still orbit. This uses the shared `Key_Event_Held` built-in and does
+not change live `Key_Held` behavior or any saved calibration.
+
 Native-first reusable inspection and lightweight pose-correction tool. Party is the launch default. The Character tabs select Arin, Orin, Dragon, or the Party arena. Desktop Profile retains Arin v5.6, the earlier prototype, and the technical fixture for diagnostics. Web publication omits that control, its shortcut and the obsolete diagnostic assets. Current Web parity is in progress under H6.1; this is not the future Battle Scene Editor.
 
 Dragon inspection uses the same clip buttons, timeline/frame stepping, playback speed, demo, lighting/material channels, sockets, pan/orbit/zoom and reset as the hero tabs. Both heroes remain in the arena with their own assets and saved corrections. Head Aim constrains only the head joint; At Arin/At Orin selects its target. The current Pose Calibration targets remain humanoid wrists and equipment, so they do not apply to Dragon. Dragon VFX and hero equipment visibility remain independent. Pose is disabled for Dragon, including its turn in Party.

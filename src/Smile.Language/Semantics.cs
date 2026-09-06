@@ -4144,7 +4144,7 @@ internal sealed class SemanticAnalyzer
         var expected = SyntaxFacts.GetBuiltInFunctionParameters(identifier.Kind).Count;
         if (identifier.Kind is SyntaxKind.GameClosedKeyword or SyntaxKind.WindowWidthKeyword or
             SyntaxKind.WindowHeightKeyword or SyntaxKind.WindowTitleKeyword or SyntaxKind.WindowActivateKeyword or
-            SyntaxKind.KeyHeldKeyword or
+            SyntaxKind.KeyHeldKeyword or SyntaxKind.KeyEventHeldKeyword or
             SyntaxKind.PointerXKeyword or SyntaxKind.PointerYKeyword or SyntaxKind.PointerDeltaXKeyword or
             SyntaxKind.PointerDeltaYKeyword or SyntaxKind.PointerWheelDeltaKeyword or
             SyntaxKind.PointerWheelRemainderKeyword or SyntaxKind.PointerInsideKeyword or
@@ -4237,7 +4237,7 @@ internal sealed class SemanticAnalyzer
     private static bool IsBooleanBuiltIn(SyntaxKind kind) =>
         kind is SyntaxKind.GameClosedKeyword or SyntaxKind.WindowTitleKeyword or SyntaxKind.WindowActivateKeyword or
             SyntaxKind.FileRevealKeyword or SyntaxKind.FileExportKeyword or
-            SyntaxKind.KeyHeldKeyword or SyntaxKind.ImageLoadedKeyword or
+            SyntaxKind.KeyHeldKeyword or SyntaxKind.KeyEventHeldKeyword or SyntaxKind.ImageLoadedKeyword or
             SyntaxKind.PointerInsideKeyword or SyntaxKind.PointerHeldKeyword or SyntaxKind.PointerPressedKeyword or
             SyntaxKind.PointerReleasedKeyword;
 

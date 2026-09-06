@@ -923,6 +923,7 @@ internal sealed class WebEmitter
             SyntaxKind.FileExportKeyword => $"smile.fileExport({arguments})",
             SyntaxKind.FileImportKeyword => "await smile.fileImport()",
             SyntaxKind.KeyHeldKeyword => $"smile.isTrue(smile.keyHeld({arguments}))",
+            SyntaxKind.KeyEventHeldKeyword => $"smile.isTrue(smile.keyEventHeld({arguments}))",
             SyntaxKind.PointerXKeyword => "smile.pointerX()",
             SyntaxKind.PointerYKeyword => "smile.pointerY()",
             SyntaxKind.PointerDeltaXKeyword => "smile.pointerDeltaX()",
