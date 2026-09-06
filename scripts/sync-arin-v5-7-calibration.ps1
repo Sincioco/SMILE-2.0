@@ -113,7 +113,7 @@ function Get-ProfileFingerprint {
         $identity.clipNamesSha256, $identity.socketNamesSha256) -join "`n")
 }
 
-function Assert-ProfileAssets {
+function Assert-CanonicalProfileAssets {
     foreach ($pair in @(
         @((Join-Path $packageRoot $modelFile), $profile.modelSha256),
         @((Join-Path $packageRoot $descriptorFile), $profile.descriptorSha256)
@@ -122,15 +122,18 @@ function Assert-ProfileAssets {
             throw "Profile assets changed; an explicit calibration migration is required: $($pair[0])"
         }
     }
-    # The cooked mirror is disposable; when present it must match the identity
-    # recorded alongside the canonical model/descriptor, never an older build.
-    foreach ($configuration in @('Release', 'Debug')) {
-        $cookedPath = Join-Path $repositoryRoot "tools\Character3DViewer\bin\$configuration\Assets\Generation2\$cookedRelativePath"
-        if (Test-Path -LiteralPath $cookedPath) {
-            if ((Get-FileHash -LiteralPath $cookedPath).Hash -cne $profile.sm3dSha256) {
-                throw "Cooked profile changed; explicit migration is required: $cookedPath"
-            }
-        }
+}
+
+function Assert-PublishedProfileAsset([string]$PublicationRoot) {
+    $resolvedRoot = Assert-ConfinedPath $PublicationRoot
+    $cookedPath = Join-Path $resolvedRoot "Assets\Generation2\$cookedRelativePath"
+
+    if (-not (Test-Path -LiteralPath $cookedPath -PathType Leaf)) {
+        throw "Published cooked profile is missing: $cookedPath"
+    }
+
+    if ((Get-FileHash -LiteralPath $cookedPath).Hash -cne $profile.sm3dSha256) {
+        throw "Published cooked profile is stale; rebuild this publication: $cookedPath"
     }
 }
 
@@ -195,8 +198,14 @@ function Read-SharedBytes([string]$Path) {
 }
 
 function Read-LivePayload([string]$Path = $livePath) {
-    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
+    try {
+        $item = Get-Item -LiteralPath $Path -Force -ErrorAction Stop
+    } catch [Management.Automation.ItemNotFoundException] {
         return $null
+    }
+
+    if ($item.PSIsContainer) {
+        throw "Character live calibration path is not a file: $Path"
     }
 
     $envelope = Read-SharedBytes $Path
@@ -206,7 +215,7 @@ function Read-LivePayload([string]$Path = $livePath) {
         $envelope[1] -ne 77 -or
         $envelope[2] -ne 68 -or
         $envelope[3] -ne 52) {
-        throw "Character live calibration has an invalid SMD4 envelope: $livePath"
+        throw "Character live calibration has an invalid SMD4 envelope: $Path"
     }
 
     $envelopeVersion = [BitConverter]::ToUInt32($envelope, 4)
@@ -228,6 +237,63 @@ function Read-LivePayload([string]$Path = $livePath) {
     }
 
     return $payload
+}
+
+function Select-UsableLiveCalibration([string]$Path = $livePath) {
+    $primaryMissing = $false
+    $primaryError = $null
+
+    try {
+        $payload = Read-LivePayload $Path
+
+        if ($null -eq $payload) {
+            $primaryMissing = $true
+        } else {
+            $snapshot = Convert-PayloadToSnapshot $payload
+
+            return [pscustomobject]@{
+                Source = 'Primary'
+                Path = $Path
+                Payload = $payload
+                Snapshot = $snapshot
+            }
+        }
+    } catch {
+        $primaryError = $_.Exception
+    }
+
+    $backupPath = "$Path.bak"
+    $backupMissing = $false
+    $backupError = $null
+
+    try {
+        $payload = Read-LivePayload $backupPath
+
+        if ($null -eq $payload) {
+            $backupMissing = $true
+        } else {
+            $snapshot = Convert-PayloadToSnapshot $payload
+            $reason = if ($primaryMissing) { 'missing' } else { 'unusable' }
+            Write-Warning "Using validated previous-good Character calibration because the primary is ${reason}: $backupPath"
+
+            return [pscustomobject]@{
+                Source = 'Backup'
+                Path = $backupPath
+                Payload = $payload
+                Snapshot = $snapshot
+            }
+        }
+    } catch {
+        $backupError = $_.Exception
+    }
+
+    if ($primaryMissing -and $backupMissing) {
+        return $null
+    }
+
+    $primaryDetail = if ($primaryMissing) { 'missing' } else { $primaryError.Message }
+    $backupDetail = if ($backupMissing) { 'missing' } else { $backupError.Message }
+    throw "No usable Character calibration exists. Primary: $primaryDetail Backup: $backupDetail"
 }
 
 function Convert-PayloadToSnapshot([byte[]]$Payload) {
@@ -616,7 +682,12 @@ function Read-Snapshot([string]$Path) {
     return Normalize-Snapshot ($text | ConvertFrom-Json -AsHashtable -Depth 24)
 }
 
-function Write-AtomicBytes([string]$Path, [byte[]]$Bytes, [string]$ExpectedHash) {
+function Write-AtomicBytes(
+    [string]$Path,
+    [byte[]]$Bytes,
+    [string]$ExpectedHash,
+    [switch]$PreservePreviousBackup
+) {
     $Path = Assert-ConfinedPath $Path
     if ((Get-PathHash $Path) -cne $ExpectedHash) { throw "Concurrent calibration change; no overwrite: $Path" }
     if ($ExpectedHash -ceq [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($Bytes))) { return }
@@ -631,8 +702,38 @@ function Write-AtomicBytes([string]$Path, [byte[]]$Bytes, [string]$ExpectedHash)
         $stream = $null
         if ((Get-PathHash $Path) -cne $ExpectedHash) { throw "Concurrent calibration change; no overwrite: $Path" }
         if ($ExpectedHash) {
-            # Same-volume atomic replacement retains the exact previous bytes.
-            [IO.File]::Replace($temporary, $Path, "$Path.bak", $false)
+            if ($PreservePreviousBackup) {
+                $rejectedPath = "$Path.rejected.$($ExpectedHash.ToLowerInvariant())"
+
+                if (Test-Path -LiteralPath $rejectedPath -PathType Leaf) {
+                    if ((Get-PathHash $rejectedPath) -cne $ExpectedHash) {
+                        throw "Rejected calibration evidence has an unexpected hash: $rejectedPath"
+                    }
+                } else {
+                    $source = [IO.File]::Open($Path, [IO.FileMode]::Open, [IO.FileAccess]::Read,
+                        [IO.FileShare]::ReadWrite -bor [IO.FileShare]::Delete)
+                    try {
+                        $evidence = [IO.File]::Open($rejectedPath, [IO.FileMode]::CreateNew,
+                            [IO.FileAccess]::Write, [IO.FileShare]::None)
+                        try {
+                            $source.CopyTo($evidence)
+                            $evidence.Flush($true)
+                        } finally { $evidence.Dispose() }
+                    } finally { $source.Dispose() }
+                }
+
+                $replacementBackup = "$Path.replaced.$([Guid]::NewGuid().ToString('N'))"
+                [IO.File]::Replace($temporary, $Path, $replacementBackup, $false)
+
+                if ((Get-PathHash $replacementBackup) -cne $ExpectedHash) {
+                    throw "Replacement backup does not match rejected primary evidence: $replacementBackup"
+                }
+
+                [IO.File]::Delete($replacementBackup)
+            } else {
+                # Same-volume atomic replacement retains the exact previous bytes.
+                [IO.File]::Replace($temporary, $Path, "$Path.bak", $false)
+            }
         } else { [IO.File]::Move($temporary, $Path) }
     } finally {
         if ($stream) { $stream.Dispose() }
@@ -660,9 +761,9 @@ function Export-LiveCalibration([bool]$MissingIsAllowed) {
     $source = if ($SourcePath) { $SourcePath } else { $livePath }
     $destination = if ($DestinationPath) { $DestinationPath } else { $snapshotPath }
     $previousHash = Get-PathHash $destination
-    $payload = Read-LivePayload $source
+    $usable = Select-UsableLiveCalibration $source
 
-    if ($null -eq $payload) {
+    if ($null -eq $usable) {
         if ($MissingIsAllowed) {
             Write-Host 'No live Character keyframe file exists yet; repository JSON remains unchanged.'
 
@@ -672,7 +773,7 @@ function Export-LiveCalibration([bool]$MissingIsAllowed) {
         throw 'No live Character keyframe file exists. Save a frame in the editor first.'
     }
 
-    $snapshot = Convert-PayloadToSnapshot $payload
+    $snapshot = $usable.Snapshot
     if ($previousHash) {
         $previous = Read-Snapshot $destination
         # The runtime cannot apply missing clips, but exports must not erase them.
@@ -699,17 +800,24 @@ function Restore-LiveCalibration([bool]$Overwrite) {
         throw "Character calibration JSON is missing: $snapshotPath"
     }
 
-    # A normal restore validates both files. An explicit forced migration may
-    # replace a runtime payload bound to the preceding asset fingerprint.
+    # A normal restore accepts a validated primary or previous-good backup.
+    # An explicit forced migration may replace a runtime payload bound to the
+    # preceding asset fingerprint while preserving rejected primary evidence.
     $snapshot = Read-Snapshot $source
     $previousHash = Get-PathHash $destination
-    if ($previousHash -and -not $Overwrite) {
-        $null = Convert-PayloadToSnapshot (Read-LivePayload $destination)
-    }
-    if ($previousHash -and -not $Overwrite) {
-        Write-Host 'Live Character calibration already exists; repository JSON was not restored over it.'
 
-        return $false
+    if (-not $Overwrite) {
+        $usable = Select-UsableLiveCalibration $destination
+
+        if ($null -ne $usable) {
+            if ($usable.Source -eq 'Backup') {
+                Write-Host 'Previous-good Character calibration is usable; repository defaults were not restored over it.'
+            } else {
+                Write-Host 'Live Character calibration already exists; repository JSON was not restored over it.'
+            }
+
+            return $false
+        }
     }
 
     $payload = Convert-SnapshotToPayload $snapshot
@@ -723,7 +831,7 @@ function Restore-LiveCalibration([bool]$Overwrite) {
     [BitConverter]::GetBytes([uint32]$payload.Length).CopyTo($envelope, 8)
     [Security.Cryptography.SHA256]::HashData($payload).CopyTo($envelope, 12)
     $payload.CopyTo($envelope, 44)
-    Write-AtomicBytes $destination $envelope $previousHash
+    Write-AtomicBytes $destination $envelope $previousHash -PreservePreviousBackup:$Overwrite
     Write-Host "Restored $($snapshot.totalKeyframes) Character keyframes from repository JSON."
 
     return $true
@@ -741,7 +849,7 @@ function Get-LiveSignature() {
 
 if ($FunctionsOnly) { return }
 
-Assert-ProfileAssets
+Assert-CanonicalProfileAssets
 if ($Mode -eq 'Validate') {
     $source = if ($SourcePath) { $SourcePath } else { $snapshotPath }
     $snapshot = Read-Snapshot $source
@@ -751,7 +859,9 @@ if ($Mode -eq 'Validate') {
     $source = if ($SourcePath) { $SourcePath } else { $snapshotPath }
     $destination = if ($DestinationPath) { $DestinationPath } else { $livePath }
     $snapshot = Read-Snapshot $source
-    $live = Convert-PayloadToSnapshot (Read-LivePayload $destination)
+    $usable = Select-UsableLiveCalibration $destination
+    if ($null -eq $usable) { throw 'No live Character keyframe file exists.' }
+    $live = $usable.Snapshot
     Show-SnapshotSummary 'Canonical' $snapshot
     Show-SnapshotSummary 'Live' $live
     Write-Host "Source SHA-256 $(Get-PathHash $source); destination SHA-256 $(Get-PathHash $destination)"
@@ -789,26 +899,74 @@ if ($Mode -eq 'Validate') {
         throw 'Watch mode requires -ViewerProcessId.'
     }
 
-    $lastSignature = Get-LiveSignature
-    Export-LiveCalibration $true | Out-Null
+    $lastExportedSignature = ''
+    $pendingSignature = Get-LiveSignature
+    $nextAttempt = [DateTime]::UtcNow
+    $retryMilliseconds = 250
+    $lastWarning = ''
 
     while ($null -ne (Get-Process -Id $ViewerProcessId -ErrorAction SilentlyContinue)) {
-        Start-Sleep -Milliseconds 250
         $signature = Get-LiveSignature
 
-        if ($signature -cne $lastSignature) {
+        if ($signature -cne $pendingSignature) {
+            $pendingSignature = $signature
+            $nextAttempt = [DateTime]::UtcNow
+            $retryMilliseconds = 250
+        }
+
+        if ($pendingSignature -cne $lastExportedSignature -and
+            [DateTime]::UtcNow -ge $nextAttempt) {
             try {
                 Export-LiveCalibration $true | Out-Null
-                $lastSignature = $signature
+                $afterExport = Get-LiveSignature
+
+                if ($afterExport -ceq $pendingSignature) {
+                    $lastExportedSignature = $pendingSignature
+                } else {
+                    $pendingSignature = $afterExport
+                }
+
+                $retryMilliseconds = 250
+                $lastWarning = ''
             } catch {
-                # Preserve the first failed save and retry only on a new live revision.
-                Write-Warning $_.Exception.Message
-                $lastSignature = $signature
+                if ($_.Exception.Message -cne $lastWarning) {
+                    Write-Warning $_.Exception.Message
+                    $lastWarning = $_.Exception.Message
+                }
+
+                $nextAttempt = [DateTime]::UtcNow.AddMilliseconds($retryMilliseconds)
+                $retryMilliseconds = [Math]::Min(2000, $retryMilliseconds * 2)
             }
         }
+
+        Start-Sleep -Milliseconds 100
     }
 
-    if ((Get-LiveSignature) -cne $lastSignature) {
-        Export-LiveCalibration $true | Out-Null
+    $finalFailure = $null
+
+    for ($attempt = 0; $attempt -lt 4; $attempt++) {
+        $pendingSignature = Get-LiveSignature
+
+        if ($pendingSignature -ceq $lastExportedSignature) { break }
+
+        try {
+            Export-LiveCalibration $true | Out-Null
+            $afterExport = Get-LiveSignature
+
+            if ($afterExport -ceq $pendingSignature) {
+                $lastExportedSignature = $pendingSignature
+                $finalFailure = $null
+                break
+            }
+        } catch {
+            $finalFailure = $_.Exception
+            Write-Warning "Final Character calibration export attempt $($attempt + 1) failed: $($finalFailure.Message)"
+        }
+
+        Start-Sleep -Milliseconds ([Math]::Min(1000, 250 * [Math]::Pow(2, $attempt)))
+    }
+
+    if ($null -ne $finalFailure -and (Get-LiveSignature) -cne $lastExportedSignature) {
+        throw "Pending Character calibration was not exported before watcher shutdown: $($finalFailure.Message)"
     }
 }

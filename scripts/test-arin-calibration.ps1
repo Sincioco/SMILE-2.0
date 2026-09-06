@@ -23,7 +23,7 @@ function Clone($Value) {
     return $Value | ConvertTo-Json -Depth 24 | ConvertFrom-Json -AsHashtable -Depth 24
 }
 
-Assert-ProfileAssets
+Assert-CanonicalProfileAssets
 $fixture = Read-Snapshot $snapshotPath
 $before = Get-PathHash $snapshotPath
 $payload = Convert-SnapshotToPayload $fixture

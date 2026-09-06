@@ -1,5 +1,7 @@
 [CmdletBinding()]
-param()
+param(
+    [switch]$ValidateOnly
+)
 
 $ErrorActionPreference = 'Stop'
 $toolRoot = $PSScriptRoot
@@ -98,6 +100,58 @@ foreach ($copy in $copies) {
     if (-not (Test-Path -LiteralPath $copy.Source -PathType Leaf)) {
         throw "Character Viewer build asset is missing: $($copy.Source)"
     }
+}
+
+$audioRoots = @((Join-Path $arinRoot 'Audio'), (Join-Path $dragonRoot 'RedDragonV11\Audio'))
+$fireFiles = @('fire-shape-atlas.png', 'smoke-shape-atlas.png', 'ember-shape.png')
+$lightningFiles = @('lightning-ribbon.png', 'lightning-spark.png', 'thunder.wav')
+
+foreach ($audioRoot in $audioRoots) {
+    if (-not (Test-Path -LiteralPath $audioRoot -PathType Container) -or
+        @(Get-ChildItem -LiteralPath $audioRoot -Filter '*.wav' -File).Count -eq 0) {
+        throw "Character Viewer audio inputs are missing: $audioRoot"
+    }
+}
+
+foreach ($fireFile in $fireFiles) {
+    $source = Join-Path $repositoryRoot "TechnicalAssets\Generation3\Fire\$fireFile"
+
+    if (-not (Test-Path -LiteralPath $source -PathType Leaf)) {
+        throw "Character Viewer fire input is missing: $source"
+    }
+}
+
+foreach ($lightningFile in $lightningFiles) {
+    $source = Join-Path $repositoryRoot "TechnicalAssets\Generation3\Lightning\$lightningFile"
+
+    if (-not (Test-Path -LiteralPath $source -PathType Leaf)) {
+        throw "Character Viewer lightning input is missing: $source"
+    }
+}
+
+foreach ($characterName in @('Arin', 'Orin')) {
+    & {
+        param($CharacterName, $Synchronizer)
+        . $Synchronizer -Character $CharacterName -FunctionsOnly
+        Assert-CanonicalProfileAssets
+        $snapshot = Read-Snapshot $snapshotPath
+        $payload = Convert-SnapshotToPayload $snapshot
+        $roundTrip = Convert-PayloadToSnapshot $payload
+        $appliedKeys = @($snapshot.clips | Where-Object index -ge 0 |
+            ForEach-Object { $_.keyframes }).Count
+
+        if ($roundTrip.totalKeyframes -ne $appliedKeys) {
+            throw 'Packaged calibration lost resolved keyframes during serialization.'
+        }
+    } $characterName (Join-Path $repositoryRoot 'scripts\sync-arin-v5-7-calibration.ps1')
+}
+
+if ($ValidateOnly) {
+    Write-Host 'Character Viewer build prerequisites and canonical identities passed preflight.'
+    return
+}
+
+foreach ($copy in $copies) {
 
     New-Item -ItemType Directory -Force -Path `
         ([IO.Path]::GetDirectoryName($copy.Destination)) | Out-Null
@@ -113,7 +167,6 @@ foreach ($characterName in @('Arin', 'Orin')) {
     & {
         param($CharacterName, $CalibrationDirectory, $Synchronizer)
         . $Synchronizer -Character $CharacterName -FunctionsOnly
-        Assert-ProfileAssets
         $snapshot = Read-Snapshot $snapshotPath
         $payload = Convert-SnapshotToPayload $snapshot
         $roundTrip = Convert-PayloadToSnapshot $payload
@@ -141,7 +194,7 @@ foreach ($characterName in @('Arin', 'Orin')) {
 
 $audioAssets = Join-Path $toolRoot 'Assets\Audio'
 New-Item -ItemType Directory -Path $audioAssets -Force | Out-Null
-foreach ($audioRoot in @((Join-Path $arinRoot 'Audio'), (Join-Path $dragonRoot 'RedDragonV11\Audio'))) {
+foreach ($audioRoot in $audioRoots) {
     foreach ($audioFile in Get-ChildItem -LiteralPath $audioRoot -Filter '*.wav') {
         Copy-Item -LiteralPath $audioFile.FullName -Destination $audioAssets -Force
     }
@@ -149,14 +202,14 @@ foreach ($audioRoot in @((Join-Path $arinRoot 'Audio'), (Join-Path $dragonRoot '
 
 $fireAssets = Join-Path $toolRoot 'Assets\Fire'
 New-Item -ItemType Directory -Path $fireAssets -Force | Out-Null
-foreach ($fireFile in @('fire-shape-atlas.png', 'smoke-shape-atlas.png', 'ember-shape.png')) {
+foreach ($fireFile in $fireFiles) {
     Copy-Item -LiteralPath (Join-Path $repositoryRoot "TechnicalAssets\Generation3\Fire\$fireFile") `
         -Destination (Join-Path $fireAssets $fireFile) -Force
 }
 
 $lightningAssets = Join-Path $toolRoot 'Assets\Lightning'
 New-Item -ItemType Directory -Path $lightningAssets -Force | Out-Null
-foreach ($lightningFile in @('lightning-ribbon.png', 'lightning-spark.png', 'thunder.wav')) {
+foreach ($lightningFile in $lightningFiles) {
     Copy-Item -LiteralPath (Join-Path $repositoryRoot "TechnicalAssets\Generation3\Lightning\$lightningFile") `
         -Destination (Join-Path $lightningAssets $lightningFile) -Force
 }

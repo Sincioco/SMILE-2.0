@@ -18,6 +18,18 @@ $compiler = Join-Path $repositoryRoot 'artifacts\compiler\smilec.exe'
 $project = Join-Path $toolRoot 'Character3DViewer.smileproj'
 $outputRoot = Join-Path $toolRoot "bin\$Configuration"
 
+function Assert-CharacterPublication([string]$PublicationRoot) {
+    $synchronizer = Join-Path $repositoryRoot 'scripts\sync-arin-v5-7-calibration.ps1'
+
+    foreach ($characterName in @('Arin', 'Orin')) {
+        & {
+            param($CharacterName, $Root, $Synchronizer)
+            . $Synchronizer -Character $CharacterName -FunctionsOnly
+            Assert-PublishedProfileAsset $Root
+        } $characterName $PublicationRoot $synchronizer
+    }
+}
+
 if (-not (Test-Path -LiteralPath $compiler -PathType Leaf)) {
     throw "Build SMILE before compiling the Character Viewer/editor: $compiler"
 }
@@ -31,6 +43,7 @@ if ($Target -in @('Native', 'All')) {
     if ($LASTEXITCODE -ne 0) {
         throw 'Character Viewer/editor native compilation failed.'
     }
+    Assert-CharacterPublication $outputRoot
     Write-Host "Built Character Viewer/editor: $output"
 }
 
@@ -71,5 +84,6 @@ if ($Target -in @('Web', 'All')) {
     if ($LASTEXITCODE -ne 0) {
         throw 'Character Viewer/editor Web compilation failed.'
     }
+    Assert-CharacterPublication $webOutput
     Write-Host "Built Character Viewer/editor Web: $webOutput"
 }
