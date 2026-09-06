@@ -7,6 +7,11 @@ These instructions apply to the entire SMILE 2.0 repository.
 - When beginning a new task, state what the task is in a bolded bulleted list.
 - When completing a task, list every remaining task in a bolded bulleted list.
 - When work is interrupted and then resumed, state what task will be resumed in a bolded bulleted list.
+- Use status markers consistently in progress reports: `🟩 COMPLETE` for completed work,
+  `🟨 ACTIVE` for active work, `⬛ NOT STARTED` for work not yet begun, `🟦 UPDATE`
+  for informational updates, and `🟥 ISSUE / FLAG` for problems or capability flags.
+  These markers are the dependable Markdown substitute for foreground/background colors
+  that the Codex chat renderer does not expose.
 
 ## Project identity
 
