@@ -1,0 +1,360 @@
+''' Calibration edit-session coordination across focused Viewer subsystem owners.
+Module Smile.Tools.Character3DViewerCalibrationEditing
+
+Option Explicit
+
+Import Smile.Simple3D.Character3D As Character3D
+Import Smile.Tools.Character3DViewerCalibration As ViewerCalibration
+Import Smile.Tools.Character3DViewerCamera As ViewerCamera
+Import Smile.Tools.Character3DViewerEffects As ViewerEffects
+Import Smile.Tools.Character3DViewerGizmo As ViewerGizmo
+Import Smile.Tools.Character3DViewerUi As ViewerUi
+
+Private Const SHIELD_PART_INDEX = 0
+Private Const WEAPON_PART_INDEX = 1
+
+Public Type OperationResult
+    Applied As Boolean
+    Ready As Boolean
+    FailureStage As Number
+End Type
+
+Private Sub MergeApplication(ByRef Result As OperationResult,
+    Application As ViewerCalibration.ApplicationResult)
+
+    Result.Ready = Application.Ready And Result.Ready
+
+    If (Not Application.Ready And
+        Result.FailureStage = 0) Then
+
+        Result.FailureStage = Application.FailureStage
+
+        If Result.FailureStage = 0 Then
+            Result.FailureStage = 71
+        End If
+
+    End If
+
+End Sub
+
+Public Sub EvaluateCurrent(ByRef Calibration As ViewerCalibration.State,
+    ByRef Actor As Character3D.Actor, Clip As Number, ProfileIndex As Number,
+    Editing As Boolean, Available As Boolean)
+
+    If Not Available Then
+        Return
+    End If
+
+    Call ViewerCalibration.Evaluate(
+        Calibration,
+        Actor,
+        Clip,
+        ViewerCalibration.CurrentAnimationFrame(Actor, Clip),
+        Editing And Calibration.OwnerProfile = ProfileIndex
+    )
+
+End Sub
+
+Public Function ApplyPose(ByRef Calibration As ViewerCalibration.State,
+    ByRef Actor As Character3D.Actor, Clip As Number,
+    SwordWristNode As Number, ShieldWristNode As Number,
+    Available As Boolean, ByRef Effects As ViewerEffects.State) As OperationResult
+
+    Dim Application As ViewerCalibration.ApplicationResult
+    Dim Result As OperationResult
+
+    Result.Applied = True
+    Result.Ready = ViewerCalibration.ApplyWristOffsets(
+        Calibration,
+        Actor,
+        Clip,
+        SwordWristNode,
+        ShieldWristNode,
+        Available
+    )
+    Application = ViewerCalibration.ApplyEquipmentTransforms(
+        Calibration,
+        Actor,
+        Clip,
+        Effects.SwordGlow,
+        Effects.ShieldGlow,
+        Effects.EpicGlowAvailable,
+        Effects.EpicGlowVisible
+    )
+
+    Call MergeApplication(Result, Application)
+
+    If Not Result.Ready And Result.FailureStage = 0 Then
+        Result.FailureStage = 71
+    End If
+
+    Return Result
+
+End Function
+
+Public Function CurrentValue(ByRef Calibration As ViewerCalibration.State,
+    Clip As Number, ByRef Ui As ViewerUi.State) As Number
+
+    Dim Result As Number
+
+    Result = ViewerCalibration.TargetValue(
+        Calibration,
+        Clip,
+        Ui.CalibrationTarget,
+        Ui.CalibrationTransform,
+        Ui.CalibrationAxis
+    )
+
+    Return Result
+
+End Function
+
+Public Sub BeginEdit(ByRef Calibration As ViewerCalibration.State,
+    ByRef Actor As Character3D.Actor, Clip As Number,
+    ByRef Ui As ViewerUi.State, ByRef Camera As ViewerCamera.State,
+    ByRef Effects As ViewerEffects.State)
+
+    If Ui.CalibrationEditing Then
+        Return
+    End If
+
+    Call ViewerUi.BeginCalibrationEdit(
+        Ui,
+        Clip,
+        ViewerCalibration.CurrentAnimationFrame(Actor, Clip),
+        Camera.AutoOrbit
+    )
+    Call ViewerCalibration.CaptureEdit(Calibration, Clip)
+    Call ViewerCamera.SetAutoOrbit(Camera, False)
+    Call ViewerEffects.InvalidateVisualHistory(Effects)
+
+End Sub
+
+Public Function FinishEdit(ByRef Ui As ViewerUi.State,
+    ByRef Gizmo As ViewerGizmo.State, ByRef Camera As ViewerCamera.State,
+    ByRef Effects As ViewerEffects.State) As Boolean
+
+    Dim Result As Boolean
+
+    Gizmo.GripAnchorActive = False
+
+    If Not Ui.CalibrationEditing Then
+        Return Result
+    End If
+
+    Call ViewerUi.FinishCalibrationEdit(Ui)
+    Call ViewerGizmo.FinishDrag(Gizmo)
+    Call ViewerCamera.SetAutoOrbit(
+        Camera, Ui.CalibrationAutoOrbitWasEnabled)
+    Call ViewerEffects.InvalidateVisualHistory(Effects)
+
+    Result = True
+
+    Return Result
+
+End Function
+
+Public Function CancelEdit(ByRef Calibration As ViewerCalibration.State,
+    ByRef Actor As Character3D.Actor, Clip As Number,
+    SwordWristNode As Number, ShieldWristNode As Number,
+    Available As Boolean, ByRef Ui As ViewerUi.State,
+    ByRef Gizmo As ViewerGizmo.State, ByRef Camera As ViewerCamera.State,
+    ByRef Effects As ViewerEffects.State) As OperationResult
+
+    Dim Finished As Boolean
+    Dim Result As OperationResult
+
+    Result.Ready = True
+
+    If Not Ui.CalibrationEditing Then
+        Return Result
+    End If
+
+    Call ViewerCalibration.RestoreEdit(
+        Calibration, Ui.CalibrationEditingClip)
+
+    Result = ApplyPose(
+        Calibration, Actor, Clip, SwordWristNode, ShieldWristNode,
+        Available, Effects)
+    Finished = FinishEdit(Ui, Gizmo, Camera, Effects)
+
+    Return Result
+
+End Function
+
+Public Function SetCurrentValue(ByRef Calibration As ViewerCalibration.State,
+    ByRef Actor As Character3D.Actor, Clip As Number,
+    SwordWristNode As Number, ShieldWristNode As Number,
+    Available As Boolean, ByRef Ui As ViewerUi.State,
+    ByRef Gizmo As ViewerGizmo.State, ByRef Camera As ViewerCamera.State,
+    ByRef Effects As ViewerEffects.State, Value As Number) As OperationResult
+
+    Dim Application As ViewerCalibration.ApplicationResult
+    Dim ClampedValue As Number
+    Dim HoldGrip As Boolean
+    Dim PartIndex As Number
+    Dim PreviousValue As Number
+    Dim Result As OperationResult
+    Dim SocketName As Text
+
+    PreviousValue = CurrentValue(Calibration, Clip, Ui)
+    Gizmo.GripLimit = False
+    HoldGrip = (Gizmo.HoldGrip And
+        Ui.CalibrationTransform = ViewerUi.CALIBRATION_TRANSFORM_ROTATE And
+        Ui.CalibrationTarget >= ViewerUi.CALIBRATION_TARGET_SWORD)
+
+    If HoldGrip Then
+
+        PartIndex = WEAPON_PART_INDEX
+        SocketName = "HandRight"
+
+        If Ui.CalibrationTarget = ViewerUi.CALIBRATION_TARGET_SHIELD Then
+            PartIndex = SHIELD_PART_INDEX
+            SocketName = "HandLeft"
+        End If
+
+        If (Not Gizmo.GripAnchorActive Or
+            Gizmo.GripAnchorTarget <> Ui.CalibrationTarget Or
+            Gizmo.GripAnchorFrame <>
+                ViewerCalibration.CurrentAnimationFrame(Actor, Clip)) Then
+
+            Gizmo.GripAnchor = ViewerCalibration.EquipmentGripThousandths(
+                Actor, PartIndex, SocketName)
+            Gizmo.GripAnchorActive = True
+            Gizmo.GripAnchorTarget = Ui.CalibrationTarget
+            Gizmo.GripAnchorFrame = ViewerCalibration.CurrentAnimationFrame(
+                Actor, Clip)
+            Gizmo.GripBasePosition.X = ViewerCalibration.ChannelValue(
+                Calibration, Clip, 12)
+            Gizmo.GripBasePosition.Y = ViewerCalibration.ChannelValue(
+                Calibration, Clip, 13)
+            Gizmo.GripBasePosition.Z = ViewerCalibration.ChannelValue(
+                Calibration, Clip, 14)
+
+            If PartIndex = SHIELD_PART_INDEX Then
+
+                Gizmo.GripBasePosition.X = ViewerCalibration.ChannelValue(
+                    Calibration, Clip, 15)
+                Gizmo.GripBasePosition.Y = ViewerCalibration.ChannelValue(
+                    Calibration, Clip, 16)
+                Gizmo.GripBasePosition.Z = ViewerCalibration.ChannelValue(
+                    Calibration, Clip, 17)
+
+            End If
+
+        End If
+
+    Else
+        Gizmo.GripAnchorActive = False
+
+    End If
+
+    Call BeginEdit(Calibration, Actor, Clip, Ui, Camera, Effects)
+
+    ClampedValue = Min(
+        ViewerCalibration.MaximumValue(Ui.CalibrationTransform),
+        Max(ViewerCalibration.MinimumValue(Ui.CalibrationTransform), Value)
+    )
+
+    Call ViewerCalibration.SetTargetValue(
+        Calibration,
+        Clip,
+        Ui.CalibrationTarget,
+        Ui.CalibrationTransform,
+        Ui.CalibrationAxis,
+        ClampedValue
+    )
+
+    Calibration.SaveLimitReached = False
+    Ui.CalibrationClearConfirm = False
+
+    Call ViewerCamera.SetAutoOrbit(Camera, False)
+
+    Result = ApplyPose(
+        Calibration, Actor, Clip, SwordWristNode, ShieldWristNode,
+        Available, Effects)
+
+    If HoldGrip Then
+
+        If Not ViewerCalibration.RestoreEquipmentGrip(
+            Calibration,
+            Actor,
+            Clip,
+            PartIndex,
+            SocketName,
+            Gizmo.GripAnchor,
+            Gizmo.GripBasePosition,
+            ViewerCalibration.MaximumValue(
+                ViewerUi.CALIBRATION_TRANSFORM_MOVE),
+            Effects.SwordGlow,
+            Effects.ShieldGlow,
+            Effects.EpicGlowAvailable,
+            Effects.EpicGlowVisible,
+            Application
+        ) Then
+
+            Gizmo.GripLimit = True
+
+            If PartIndex = WEAPON_PART_INDEX Then
+                Call ViewerCalibration.SetChannelValue(
+                    Calibration, Clip, 6 + Ui.CalibrationAxis, PreviousValue)
+            Else
+
+                Call ViewerCalibration.SetChannelValue(
+                    Calibration, Clip, 9 + Ui.CalibrationAxis, PreviousValue)
+            End If
+
+            Application = ViewerCalibration.ApplyEquipmentTransforms(
+                Calibration,
+                Actor,
+                Clip,
+                Effects.SwordGlow,
+                Effects.ShieldGlow,
+                Effects.EpicGlowAvailable,
+                Effects.EpicGlowVisible
+            )
+
+        End If
+
+        Call MergeApplication(Result, Application)
+
+    End If
+
+    Call ViewerEffects.InvalidateVisualHistory(Effects)
+
+    Return Result
+
+End Function
+
+Public Function ResetTarget(ByRef Calibration As ViewerCalibration.State,
+    ByRef Actor As Character3D.Actor, Clip As Number,
+    SwordWristNode As Number, ShieldWristNode As Number,
+    Available As Boolean, ByRef Ui As ViewerUi.State,
+    ByRef Gizmo As ViewerGizmo.State, ByRef Camera As ViewerCamera.State,
+    ByRef Effects As ViewerEffects.State) As OperationResult
+
+    Dim Result As OperationResult
+
+    Gizmo.GripAnchorActive = False
+
+    Call BeginEdit(Calibration, Actor, Clip, Ui, Camera, Effects)
+
+    Call ViewerCalibration.ResetTarget(
+        Calibration, Clip, Ui.CalibrationTarget, Ui.CalibrationTransform)
+
+    Calibration.SaveLimitReached = False
+    Ui.CalibrationClearConfirm = False
+
+    Call ViewerCamera.SetAutoOrbit(Camera, False)
+
+    Result = ApplyPose(
+        Calibration, Actor, Clip, SwordWristNode, ShieldWristNode,
+        Available, Effects)
+
+    Call ViewerEffects.InvalidateVisualHistory(Effects)
+
+    Return Result
+
+End Function
+
+End Module

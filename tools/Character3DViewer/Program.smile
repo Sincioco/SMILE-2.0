@@ -17,6 +17,7 @@ Import Smile.Tools.Character3DViewerPlayback As ViewerPlayback
 Import Smile.Tools.Character3DViewerActors As ViewerActors
 Import Smile.Tools.Character3DViewerCamera As ViewerCamera
 Import Smile.Tools.Character3DViewerCalibration As ViewerCalibration
+Import Smile.Tools.Character3DViewerCalibrationEditing As ViewerCalibrationEditing
 Import Smile.Tools.Character3DViewerInput As ViewerInput
 Import Smile.Tools.Character3DViewerUi As ViewerUi
 Import Smile.Tools.Character3DViewerGizmo As ViewerGizmo
@@ -1169,7 +1170,11 @@ Sub SelectTransformGizmoAxis(Axis As Number)
 
         ViewerUiState.CalibrationAxis = Axis
 
-        Call ViewerGizmo.SelectAxis(ViewerGizmoState, CurrentCalibrationValue())
+        Call ViewerGizmo.SelectAxis(
+            ViewerGizmoState,
+            ViewerCalibrationEditing.CurrentValue(
+                Calibration, Playback.SelectedClip, ViewerUiState)
+        )
 
     Else
         ViewerUiState.CalibrationAxis = Axis
@@ -1193,7 +1198,8 @@ Sub BeginTransformGizmoDrag(PointerOwned As Boolean)
         ViewerGizmoState,
         PointerOwned,
         OpenedEdit,
-        CurrentCalibrationValue()
+        ViewerCalibrationEditing.CurrentValue(
+            Calibration, Playback.SelectedClip, ViewerUiState)
     )
 
 End Sub
@@ -2169,7 +2175,8 @@ Function HandleSharedSliders() As Boolean
 
     If ViewerUiState.CalibrationVisible Or ViewerInputState.SliderDragOwner = 4 Then
 
-        Value = CurrentCalibrationValue()
+        Value = ViewerCalibrationEditing.CurrentValue(
+            Calibration, Playback.SelectedClip, ViewerUiState)
         PreviousValue = Value
 
         If UI.UpdateSlider(ViewerInputState.SliderDragOwner, 4, ViewerUi.CALIBRATION_SLIDER_X, ViewerUi.CALIBRATION_SLIDER_Y,
@@ -2796,17 +2803,13 @@ End Sub
 
 Sub UpdateCalibrationForCurrentFrame()
 
-    If Not CalibrationAvailable Then
-        Return
-    End If
-
-    Call ViewerCalibration.Evaluate(
+    Call ViewerCalibrationEditing.EvaluateCurrent(
         Calibration,
         Character,
         Playback.SelectedClip,
-        ViewerCalibration.CurrentAnimationFrame(
-            Character, Playback.SelectedClip),
-        ViewerUiState.CalibrationEditing And Calibration.OwnerProfile = Session.ProfileIndex
+        Session.ProfileIndex,
+        ViewerUiState.CalibrationEditing,
+        CalibrationAvailable
     )
 
 End Sub
@@ -2936,21 +2939,22 @@ Sub ApplyEquipmentCalibration()
 
 End Sub
 
-Function CurrentCalibrationValue() As Number
+Sub ApplyCalibrationEditingResult(
+    Result As ViewerCalibrationEditing.OperationResult)
 
-    Dim Result As Number
+    Session.Ready = Result.Ready And Session.Ready
 
-    Result = ViewerCalibration.TargetValue(
-        Calibration,
-        Playback.SelectedClip,
-        ViewerUiState.CalibrationTarget,
-        ViewerUiState.CalibrationTransform,
-        ViewerUiState.CalibrationAxis
-    )
+    If Result.Applied And Not Session.Ready Then
 
-    Return Result
+        If Result.FailureStage = 0 Then
+            Result.FailureStage = 71
+        End If
 
-End Function
+        Call ViewerSession.CaptureFailure(Session, Result.FailureStage)
+
+    End If
+
+End Sub
 
 Sub BeginCalibrationEdit()
 
@@ -2959,208 +2963,64 @@ Sub BeginCalibrationEdit()
     End If
 
     Call BeginPartyPreview()
-
-    Call ViewerUi.BeginCalibrationEdit(
-        ViewerUiState,
-        Playback.SelectedClip,
-        ViewerCalibration.CurrentAnimationFrame(
-            Character, Playback.SelectedClip),
-        ViewerCameraState.AutoOrbit
-    )
-
-    Call ViewerCalibration.CaptureEdit(Calibration, Playback.SelectedClip)
-    Call ViewerCamera.SetAutoOrbit(ViewerCameraState, False)
-    Call ViewerEffects.InvalidateVisualHistory(Effects)
+    Call ViewerCalibrationEditing.BeginEdit(
+        Calibration, Character, Playback.SelectedClip,
+        ViewerUiState, ViewerCameraState, Effects)
 
 End Sub
 
 Sub FinishCalibrationEdit()
 
-    ViewerGizmoState.GripAnchorActive = False
+    Dim Finished As Boolean
 
-    If Not ViewerUiState.CalibrationEditing Then
-        Return
+    Finished = ViewerCalibrationEditing.FinishEdit(
+        ViewerUiState, ViewerGizmoState, ViewerCameraState, Effects)
+
+    If Finished Then
+        Session.CharacterSwitchBlocked = False
     End If
-
-    Session.CharacterSwitchBlocked = False
-
-    Call ViewerUi.FinishCalibrationEdit(ViewerUiState)
-    Call ViewerGizmo.FinishDrag(ViewerGizmoState)
-    Call ViewerCamera.SetAutoOrbit(ViewerCameraState, ViewerUiState.CalibrationAutoOrbitWasEnabled)
-
-    Call ViewerEffects.InvalidateVisualHistory(Effects)
 
 End Sub
 
 Sub CancelCalibrationEdit()
 
-    If Not ViewerUiState.CalibrationEditing Then
-        Return
-    End If
+    Dim Result As ViewerCalibrationEditing.OperationResult
 
-    Call ViewerCalibration.RestoreEdit(Calibration, ViewerUiState.CalibrationEditingClip)
-    Call ApplyWristCalibration()
-    Call ApplyEquipmentCalibration()
-    Call FinishCalibrationEdit()
+    Result = ViewerCalibrationEditing.CancelEdit(
+        Calibration, Character, Playback.SelectedClip,
+        SwordWristNode, ShieldWristNode, CalibrationAvailable,
+        ViewerUiState, ViewerGizmoState, ViewerCameraState, Effects)
+
+    Call ApplyCalibrationEditingResult(Result)
+
+    If Result.Applied Then
+        Session.CharacterSwitchBlocked = False
+    End If
 
 End Sub
 
 Sub SetCurrentCalibrationValue(Value As Number)
 
-    Dim ClampedValue As Number
-    Dim HoldGrip As Boolean
-    Dim PartIndex As Number
-    Dim SocketName As Text
-    Dim PreviousValue As Number
+    Dim Result As ViewerCalibrationEditing.OperationResult
 
-    PreviousValue = CurrentCalibrationValue()
-    ViewerGizmoState.GripLimit = False
-
-    HoldGrip = (ViewerGizmoState.HoldGrip And ViewerUiState.CalibrationTransform = ViewerUi.CALIBRATION_TRANSFORM_ROTATE And
-        ViewerUiState.CalibrationTarget >= ViewerUi.CALIBRATION_TARGET_SWORD)
-
-    If HoldGrip Then
-
-        PartIndex = WEAPON_PART_INDEX
-        SocketName = "HandRight"
-
-        If ViewerUiState.CalibrationTarget = ViewerUi.CALIBRATION_TARGET_SHIELD Then
-            PartIndex = SHIELD_PART_INDEX
-            SocketName = "HandLeft"
-        End If
-
-        If (Not ViewerGizmoState.GripAnchorActive Or
-            ViewerGizmoState.GripAnchorTarget <> ViewerUiState.CalibrationTarget Or
-            ViewerGizmoState.GripAnchorFrame <>
-                ViewerCalibration.CurrentAnimationFrame(
-                    Character, Playback.SelectedClip)) Then
-
-            ViewerGizmoState.GripAnchor = ViewerCalibration.EquipmentGripThousandths(
-                Character, PartIndex, SocketName)
-            ViewerGizmoState.GripAnchorActive = True
-            ViewerGizmoState.GripAnchorTarget = ViewerUiState.CalibrationTarget
-            ViewerGizmoState.GripAnchorFrame = ViewerCalibration.CurrentAnimationFrame(
-                Character, Playback.SelectedClip)
-            ViewerGizmoState.GripBasePosition.X = ViewerCalibration.ChannelValue(
-                Calibration, Playback.SelectedClip, 12 + 0)
-            ViewerGizmoState.GripBasePosition.Y = ViewerCalibration.ChannelValue(
-                Calibration, Playback.SelectedClip, 12 + 1)
-            ViewerGizmoState.GripBasePosition.Z = ViewerCalibration.ChannelValue(
-                Calibration, Playback.SelectedClip, 12 + 2)
-
-            If PartIndex = SHIELD_PART_INDEX Then
-
-                ViewerGizmoState.GripBasePosition.X = ViewerCalibration.ChannelValue(
-                    Calibration, Playback.SelectedClip, 15 + 0)
-                ViewerGizmoState.GripBasePosition.Y = ViewerCalibration.ChannelValue(
-                    Calibration, Playback.SelectedClip, 15 + 1)
-                ViewerGizmoState.GripBasePosition.Z = ViewerCalibration.ChannelValue(
-                    Calibration, Playback.SelectedClip, 15 + 2)
-
-            End If
-
-        End If
-
-    Else
-        ViewerGizmoState.GripAnchorActive = False
-
+    If Not ViewerUiState.CalibrationEditing Then
+        Call BeginPartyPreview()
     End If
 
-    Call BeginCalibrationEdit()
+    Result = ViewerCalibrationEditing.SetCurrentValue(
+        Calibration, Character, Playback.SelectedClip,
+        SwordWristNode, ShieldWristNode, CalibrationAvailable,
+        ViewerUiState, ViewerGizmoState, ViewerCameraState, Effects, Value)
 
-    ClampedValue = Min(
-        ViewerCalibration.MaximumValue(ViewerUiState.CalibrationTransform),
-        Max(ViewerCalibration.MinimumValue(ViewerUiState.CalibrationTransform), Value)
-    )
-
-    Call ViewerCalibration.SetTargetValue(
-        Calibration,
-        Playback.SelectedClip,
-        ViewerUiState.CalibrationTarget,
-        ViewerUiState.CalibrationTransform,
-        ViewerUiState.CalibrationAxis,
-        ClampedValue
-    )
-
-    Calibration.SaveLimitReached = False
-    ViewerUiState.CalibrationClearConfirm = False
-
-    Call ViewerCamera.SetAutoOrbit(ViewerCameraState, False)
-
-    Call ApplyWristCalibration()
-    Call ApplyEquipmentCalibration()
-
-    If HoldGrip Then
-
-        If Not RestoreEquipmentGrip(PartIndex, SocketName) Then
-
-            ViewerGizmoState.GripLimit = True
-
-            If PartIndex = WEAPON_PART_INDEX Then
-                Call ViewerCalibration.SetChannelValue(
-                    Calibration, Playback.SelectedClip,
-                    6 + ViewerUiState.CalibrationAxis, PreviousValue)
-            Else
-
-                Call ViewerCalibration.SetChannelValue(
-                    Calibration, Playback.SelectedClip,
-                    9 + ViewerUiState.CalibrationAxis, PreviousValue)
-            End If
-
-            Call ApplyEquipmentCalibration()
-
-        End If
-
-    End If
-
-    Call ViewerEffects.InvalidateVisualHistory(Effects)
+    Call ApplyCalibrationEditingResult(Result)
 
 End Sub
 
-Function RestoreEquipmentGrip(PartIndex As Number, SocketName As Text) As Boolean
-
-    Dim Application As ViewerCalibration.ApplicationResult
-    Dim FailureStage As Number
-    Dim Result As Boolean
-
-    ''' Recalculate from the captured base, never from an already rounded drag sample.
-
-    Result = ViewerCalibration.RestoreEquipmentGrip(
-        Calibration,
-        Character,
-        Playback.SelectedClip,
-        PartIndex,
-        SocketName,
-        ViewerGizmoState.GripAnchor,
-        ViewerGizmoState.GripBasePosition,
-        ViewerCalibration.MaximumValue(ViewerUi.CALIBRATION_TRANSFORM_MOVE),
-        Effects.SwordGlow,
-        Effects.ShieldGlow,
-        Effects.EpicGlowAvailable,
-        Effects.EpicGlowVisible,
-        Application
-    )
-    Session.Ready = Application.Ready And Session.Ready
-
-    If Not Session.Ready Then
-
-        FailureStage = Application.FailureStage
-
-        If FailureStage = 0 Then
-            FailureStage = 71
-        End If
-
-        Call ViewerSession.CaptureFailure(Session, FailureStage)
-
-    End If
-
-    Return Result
-
-End Function
-
 Sub AdjustCalibrationValue(Amount As Number)
 
-    Call SetCurrentCalibrationValue(CurrentCalibrationValue() + Amount)
+    Call SetCurrentCalibrationValue(
+        ViewerCalibrationEditing.CurrentValue(
+            Calibration, Playback.SelectedClip, ViewerUiState) + Amount)
 
 End Sub
 
@@ -3181,26 +3041,18 @@ End Sub
 
 Sub ResetCalibrationTarget()
 
-    ViewerGizmoState.GripAnchorActive = False
+    Dim Result As ViewerCalibrationEditing.OperationResult
 
-    Call BeginCalibrationEdit()
+    If Not ViewerUiState.CalibrationEditing Then
+        Call BeginPartyPreview()
+    End If
 
-    Call ViewerCalibration.ResetTarget(
-        Calibration,
-        Playback.SelectedClip,
-        ViewerUiState.CalibrationTarget,
-        ViewerUiState.CalibrationTransform
-    )
+    Result = ViewerCalibrationEditing.ResetTarget(
+        Calibration, Character, Playback.SelectedClip,
+        SwordWristNode, ShieldWristNode, CalibrationAvailable,
+        ViewerUiState, ViewerGizmoState, ViewerCameraState, Effects)
 
-    Calibration.SaveLimitReached = False
-    ViewerUiState.CalibrationClearConfirm = False
-
-    Call ViewerCamera.SetAutoOrbit(ViewerCameraState, False)
-
-    Call ApplyWristCalibration()
-    Call ApplyEquipmentCalibration()
-
-    Call ViewerEffects.InvalidateVisualHistory(Effects)
+    Call ApplyCalibrationEditingResult(Result)
 
 End Sub
 
@@ -3540,7 +3392,8 @@ Sub DrawInspectorOverlay()
                 ViewerCalibration.CurrentAnimationFrame(
                     Character, Playback.SelectedClip)
             ),
-            CurrentCalibrationValue(),
+            ViewerCalibrationEditing.CurrentValue(
+                Calibration, Playback.SelectedClip, ViewerUiState),
             ViewerCalibration.MinimumValue(ViewerUiState.CalibrationTransform),
             ViewerCalibration.MaximumValue(ViewerUiState.CalibrationTransform),
             ViewerGizmoState.Visible,

@@ -21,6 +21,8 @@ $cameraSourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\ViewerCam
 $playbackSourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\ViewerPlayback.smile'
 $calibrationSourcePath = Join-Path $repositoryRoot `
     'tools\Character3DViewer\ViewerCalibration.smile'
+$calibrationEditingSourcePath = Join-Path $repositoryRoot `
+    'tools\Character3DViewer\ViewerCalibrationEditing.smile'
 $inputSourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\ViewerInput.smile'
 $uiSourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\ViewerUi.smile'
 $gizmoSourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\ViewerGizmo.smile'
@@ -98,6 +100,7 @@ try {
     $cameraSource = Get-Content -LiteralPath $cameraSourcePath -Raw
     $playbackSource = Get-Content -LiteralPath $playbackSourcePath -Raw
     $calibrationSource = Get-Content -LiteralPath $calibrationSourcePath -Raw
+    $calibrationEditingSource = Get-Content -LiteralPath $calibrationEditingSourcePath -Raw
     $inputSource = Get-Content -LiteralPath $inputSourcePath -Raw
     $uiSource = Get-Content -LiteralPath $uiSourcePath -Raw
     $gizmoSource = Get-Content -LiteralPath $gizmoSourcePath -Raw
@@ -115,6 +118,7 @@ try {
         'Import Smile.UI.Controls As UI',
         'Import Smile.Tools.Character3DViewerCamera As ViewerCamera',
         'Import Smile.Tools.Character3DViewerCalibration As ViewerCalibration',
+        'Import Smile.Tools.Character3DViewerCalibrationEditing As ViewerCalibrationEditing',
         'Import Smile.Tools.Character3DViewerInput As ViewerInput',
         'Import Smile.Tools.Character3DViewerUi As ViewerUi',
         'Import Smile.Tools.Character3DViewerGizmo As ViewerGizmo',
@@ -215,6 +219,17 @@ try {
         'Public Function EquipmentGripThousandths(',
         'Public Function RestoreEquipmentGrip(')) {
         Assert-Contains $calibrationSource $contract 'Viewer calibration owner'
+    }
+    foreach ($contract in @(
+        'Public Sub EvaluateCurrent(',
+        'Public Function ApplyPose(',
+        'Public Function CurrentValue(',
+        'Public Sub BeginEdit(',
+        'Public Function FinishEdit(',
+        'Public Function CancelEdit(',
+        'Public Function SetCurrentValue(',
+        'Public Function ResetTarget(')) {
+        Assert-Contains $calibrationEditingSource $contract 'Viewer calibration editing owner'
     }
     foreach ($contract in @(
         'Public Function ClassifyArrow(',
@@ -451,6 +466,13 @@ try {
         -not $viewerSource.Contains('Function RoundedGripOffset(') -and
         -not $viewerSource.Contains('Correction.X = ViewerGizmoState.GripAnchor.X')) `
         'Calibration target mapping and grip-preservation math must remain in ViewerCalibration.'
+    Assert-True (-not $viewerSource.Contains('Function CurrentCalibrationValue(') -and
+        -not $viewerSource.Contains('Function RestoreEquipmentGrip(') -and
+        -not $viewerSource.Contains('ViewerCalibration.SetTargetValue(') -and
+        -not $viewerSource.Contains('ViewerCalibration.ResetTarget(') -and
+        -not $viewerSource.Contains('ViewerCalibration.EquipmentGripThousandths(') -and
+        -not $viewerSource.Contains('ViewerGizmoState.GripBasePosition.')) `
+        'Calibration edit-session implementation must remain in ViewerCalibrationEditing.'
     Assert-True (-not $viewerSource.Contains('Dim TimelineScrubbing As Boolean') -and
         -not $viewerSource.Contains('Dim SliderDragOwner As Number') -and
         -not $viewerSource.Contains('Dim TransformGizmoDragging As Boolean') -and

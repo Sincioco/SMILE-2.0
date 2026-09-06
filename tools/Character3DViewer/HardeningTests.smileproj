@@ -20,6 +20,7 @@
     <SmileSource Include="ViewerCamera.smile" />
     <SmileSource Include="CalibrationJson.smile" />
     <SmileSource Include="ViewerCalibration.smile" />
+    <SmileSource Include="ViewerCalibrationEditing.smile" />
     <SmileSource Include="ViewerInput.smile" />
     <SmileSource Include="ViewerUi.smile" />
     <SmileSource Include="ViewerGizmo.smile" />

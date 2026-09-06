@@ -862,7 +862,8 @@ Sub CheckGizmoVisibility()
     Dim Handled As Boolean
 
     SavedJson = ViewerCalibration.SavedJson(Calibration, Character)
-    OriginalValue = CurrentCalibrationValue()
+    OriginalValue = ViewerCalibrationEditing.CurrentValue(
+        Calibration, Playback.SelectedClip, ViewerUiState)
     PreviewValue = 0
     ViewerUiState.CalibrationVisible = True
 
@@ -878,7 +879,9 @@ Sub CheckGizmoVisibility()
         "Hidden gizmo cannot start an invisible keyboard drag")
     Call CalibrationCheck(Not HandleTransformGizmoPointer(), "Hidden gizmo does not capture the scene")
     Call SetCurrentCalibrationValue(PreviewValue)
-    Call CalibrationCheck(ViewerUiState.CalibrationEditing And CurrentCalibrationValue() = PreviewValue,
+    Call CalibrationCheck(ViewerUiState.CalibrationEditing And
+        ViewerCalibrationEditing.CurrentValue(
+            Calibration, Playback.SelectedClip, ViewerUiState) = PreviewValue,
         "Numeric pose editing works with the gizmo hidden")
     Call ToggleTransformGizmo()
     Call BeginTransformGizmoDrag(False)
@@ -886,11 +889,14 @@ Sub CheckGizmoVisibility()
         "Explicit Show Gizmo enables handles and keyboard drag")
     Call ToggleTransformGizmo()
     Call CalibrationCheck(Not ViewerGizmoState.Visible And Not ViewerGizmoState.Dragging And
-        ViewerUiState.CalibrationEditing And CurrentCalibrationValue() = PreviewValue,
+        ViewerUiState.CalibrationEditing And
+        ViewerCalibrationEditing.CurrentValue(
+            Calibration, Playback.SelectedClip, ViewerUiState) = PreviewValue,
         "Hide ends capture but preserves the unsaved numeric preview")
     Call CalibrationCheck(ViewerCalibration.SavedJson(Calibration, Character) = SavedJson, "Visibility toggle never saves keys")
     Call CancelCalibrationEdit()
-    Call CalibrationCheck(CurrentCalibrationValue() = OriginalValue And
+    Call CalibrationCheck(ViewerCalibrationEditing.CurrentValue(
+        Calibration, Playback.SelectedClip, ViewerUiState) = OriginalValue And
         ViewerCalibration.SavedJson(Calibration, Character) = SavedJson, "Cancel preserves the original saved pose")
     Call ToggleTransformGizmo()
     Call ResetAll()
