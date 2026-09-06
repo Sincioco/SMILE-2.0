@@ -120,13 +120,6 @@ Dim CharacterBounds As Character3D.Bounds3D
 Dim LocalCharacterBounds As Character3D.Bounds3D
 Dim ActiveProfile As CharacterViewer.Profile
 Dim Rendering As ViewerRendering.State
-Dim SocketGizmos[4] As Core.Object3D
-Dim SocketGizmoCount As Number
-Dim SocketGizmosVisible As Boolean
-Dim SocketMarkers As Core.ParticleBatch3D
-Dim SocketMarkerMaterial As Core.Material3D
-Dim SelectedSocket As Number
-Dim ShowAllSocketOrigins As Boolean
 Dim Effects As ViewerEffects.State
 Dim DragonState As ViewerDragon.State
 Dim LightingIndex As Number
@@ -328,8 +321,15 @@ Do
             ViewerCameraState.Live
         ) And Session.Ready
 
-        If SocketGizmosVisible Then
-            Call UpdateSocketGizmos()
+        If Rendering.SocketGizmosVisible Then
+            Session.Ready = ViewerRendering.UpdateSocketGizmos(
+                Rendering,
+                Character,
+                ViewerProfiles.IsPartyCharacter(Session.ProfileIndex),
+                BODY_PART_INDEX,
+                WEAPON_PART_INDEX,
+                SHIELD_PART_INDEX
+            ) And Session.Ready
         End If
 
         If Character3D.IsValid(Character) Then
@@ -349,7 +349,7 @@ Do
             End If
 
             If Rendering.GridVisible Then
-                Session.Ready = DrawStudioGrid() And Session.Ready
+                Session.Ready = ViewerRendering.DrawGrid(Rendering) And Session.Ready
 
                 Call ViewerSession.CaptureFailure(Session, 10)
             End If
@@ -411,8 +411,8 @@ Do
 
             End If
 
-            If SocketGizmosVisible Then
-                Session.Ready = DrawSocketGizmos() And Session.Ready
+            If Rendering.SocketGizmosVisible Then
+                Session.Ready = ViewerRendering.DrawSocketGizmos(Rendering) And Session.Ready
             End If
 
             Session.Ready = Scene3D.EndScene() And Session.Ready
@@ -509,7 +509,9 @@ Sub LoadViewer()
     )
 
     Call CreateBackdrop()
-    Call CreateStudioGrid()
+    Call ViewerRendering.CreateArena(Rendering, ViewerFloorWidth(), ViewerFloorDepth())
+
+    Session.Ready = ViewerRendering.ArenaReady(Rendering) And Session.Ready
 
     Call ViewerSession.CaptureFailure(Session, 34)
 
@@ -564,8 +566,6 @@ Sub LoadViewer()
 
     Call ViewerSession.CaptureFailure(Session, 36)
 
-    SocketGizmosVisible = False
-
     Session.Ready = ViewerDragon.Create(
         DragonState,
         Character,
@@ -574,7 +574,7 @@ Sub LoadViewer()
 
     Call ViewerSession.CaptureFailure(Session, 37)
 
-    Call CreateSocketGizmos()
+    Session.Ready = ViewerRendering.CreateSocketGizmos(Rendering) And Session.Ready
 
     Call ViewerSession.CaptureFailure(Session, 38)
 
@@ -926,30 +926,6 @@ Sub UpdateBattleAudio()
 
 End Sub
 
-Sub CreateStudioGrid()
-
-    Call ViewerRendering.CreateArena(Rendering, ViewerFloorWidth(), ViewerFloorDepth())
-
-    Session.Ready = ViewerRendering.ArenaReady(Rendering) And Session.Ready
-
-End Sub
-
-Function DrawStudioGrid() As Boolean
-
-    Dim Result As Boolean
-
-    Result = ViewerRendering.DrawGrid(Rendering)
-
-    Return Result
-
-End Function
-
-Sub DestroyStudioGrid()
-
-    Call ViewerRendering.DestroyArena(Rendering)
-
-End Sub
-
 Sub CancelInteractionCaptures()
 
     If ViewerGizmoState.Dragging Then
@@ -1080,13 +1056,17 @@ Sub HandleInspectorKeyboard(PressedKey As Number)
 
         Call StepAnimationFrame(1)
 
-    Else If ArrowCommand = ViewerInput.ARROW_PLAIN_LEFT And SocketGizmosVisible Then
+    Else If (ArrowCommand = ViewerInput.ARROW_PLAIN_LEFT And
+        Rendering.SocketGizmosVisible) Then
 
-        Call SelectPreviousSocket()
+        Call ViewerRendering.SelectPreviousSocket(
+            Rendering, Character3D.SocketCount(Character))
 
-    Else If ArrowCommand = ViewerInput.ARROW_PLAIN_RIGHT And SocketGizmosVisible Then
+    Else If (ArrowCommand = ViewerInput.ARROW_PLAIN_RIGHT And
+        Rendering.SocketGizmosVisible) Then
 
-        Call SelectNextSocket()
+        Call ViewerRendering.SelectNextSocket(
+            Rendering, Character3D.SocketCount(Character))
 
     Else If ArrowCommand = ViewerInput.ARROW_PLAIN_LEFT Then
 
@@ -2409,7 +2389,7 @@ Function HandleInspectorPointer() As Boolean
 
     Else If PointerInRectangle(PanelLeft + 108, 18, 50, 34) Then
 
-        Call CycleSocketDisplay()
+        Call ViewerRendering.CycleSocketDisplay(Rendering)
 
     Else If (ViewerProfiles.INCLUDE_DIAGNOSTIC_PROFILES And
         Not Party.Enabled And
@@ -2836,258 +2816,6 @@ Sub UpdateCameraPointer(Blocked As Boolean)
 
 End Sub
 
-Sub CreateSocketGizmos()
-
-    Dim EmptyTexture As Core.Texture3D
-    Dim Index As Number
-    Dim GizmosReady As Boolean
-
-    GizmosReady = True
-    SocketGizmoCount = 4
-    SelectedSocket = 0
-    ShowAllSocketOrigins = False
-    SocketMarkerMaterial = Graphics3D.CreateMaterial3D(
-        EmptyTexture,
-        Graphics3D.MATERIAL_ALPHA_ADDITIVE,
-        120,
-        220,
-        255,
-        75,
-        True,
-        100,
-        50
-    )
-    GizmosReady = SocketMarkerMaterial.Handle <> 0 And GizmosReady
-
-    If SocketMarkerMaterial.Handle <> 0 Then
-        SocketMarkers = Graphics3D.CreateParticleBatch3D(
-            64,
-            SocketMarkerMaterial,
-            Graphics3D.VFX_BILLBOARD_CAMERA,
-            1,
-            1
-        )
-        GizmosReady = SocketMarkers.Handle <> 0 And GizmosReady
-    End If
-
-    For Index = 0 To SocketGizmoCount - 1
-
-        SocketGizmos[Index] = Graphics3D.CreateCube3D(3)
-        GizmosReady = SocketGizmos[Index].Handle <> 0 And GizmosReady
-        GizmosReady = Graphics3D.SetObjectShadowsChecked3D(
-            SocketGizmos[Index],
-            False,
-            False
-        ) And GizmosReady
-
-        If Index = 0 Then
-            Call Graphics3D.SetObjectColor(SocketGizmos[Index], 255, 255, 255)
-        Else If Index = 1 Then
-            Call Graphics3D.SetObjectColor(SocketGizmos[Index], 255, 60, 60)
-        Else If Index = 2 Then
-            Call Graphics3D.SetObjectColor(SocketGizmos[Index], 70, 255, 90)
-        Else
-
-            Call Graphics3D.SetObjectColor(SocketGizmos[Index], 80, 140, 255)
-        End If
-
-    End For
-
-    If Not GizmosReady Then
-        Session.Ready = False
-
-        Call DestroySocketGizmos()
-    End If
-
-End Sub
-
-Sub DestroySocketGizmos()
-
-    Dim Index As Number
-
-    Call Graphics3D.DestroyParticleBatch3D(SocketMarkers)
-    Call Graphics3D.DestroyMaterial3D(SocketMarkerMaterial)
-
-    For Index = 0 To SocketGizmoCount - 1
-        Call Graphics3D.DestroyObject3D(SocketGizmos[Index])
-    End For
-
-    SocketGizmoCount = 0
-    SocketGizmosVisible = False
-    ShowAllSocketOrigins = False
-
-End Sub
-
-Function SocketReferencePart(Name As Text) As Number
-
-    Dim Result As Number
-
-    Result = 0
-
-    If ViewerProfiles.IsPartyCharacter(Session.ProfileIndex) Then
-
-        Result = BODY_PART_INDEX
-
-        If Name = "SwordBase" Or Name = "SwordTip" Then
-            Result = WEAPON_PART_INDEX
-        Else If (Name = "ShieldCenter" Or
-            Name = "ShieldFireLeft" Or
-            Name = "ShieldFireRight" Or
-            Name = "ShieldFireTip") Then
-            Result = SHIELD_PART_INDEX
-        End If
-
-    End If
-
-    Return Result
-
-End Function
-
-Sub UpdateSocketGizmos()
-
-    Dim SocketIndex As Number
-    Dim Name As Text
-    Dim PositionX1000 As Number
-    Dim PositionY1000 As Number
-    Dim PositionZ1000 As Number
-    Dim AxisX1000 As Number
-    Dim AxisY1000 As Number
-    Dim AxisZ1000 As Number
-    Dim AxisLength As Number
-    Dim MatrixProperty As Number
-    Dim Axis As Number
-    Dim SocketCount As Number
-
-    SocketCount = Character3D.SocketCount(Character)
-    Name = Character3D.SocketName(Character, SelectedSocket)
-    PositionX1000 = Character3D.SocketValueThousandths(
-        Character,
-        Name,
-        Graphics3D.ANIMATOR_SOCKET_POSITION_X,
-        SocketReferencePart(Name)
-    )
-    PositionY1000 = Character3D.SocketValueThousandths(
-        Character,
-        Name,
-        Graphics3D.ANIMATOR_SOCKET_POSITION_Y,
-        SocketReferencePart(Name)
-    )
-    PositionZ1000 = Character3D.SocketValueThousandths(
-        Character,
-        Name,
-        Graphics3D.ANIMATOR_SOCKET_POSITION_Z,
-        SocketReferencePart(Name)
-    )
-
-    For Axis = 0 To 3
-
-        AxisX1000 = 0
-        AxisY1000 = 0
-        AxisZ1000 = 0
-
-        If Axis > 0 Then
-
-            MatrixProperty = Graphics3D.ANIMATOR_SOCKET_MATRIX_M11 + (Axis - 1) * 3
-            AxisX1000 = Character3D.SocketValueThousandths(
-                Character,
-                Name,
-                MatrixProperty,
-                SocketReferencePart(Name)
-            )
-            AxisY1000 = Character3D.SocketValueThousandths(
-                Character,
-                Name,
-                MatrixProperty + 1,
-                SocketReferencePart(Name)
-            )
-            AxisZ1000 = Character3D.SocketValueThousandths(
-                Character,
-                Name,
-                MatrixProperty + 2,
-                SocketReferencePart(Name)
-            )
-            AxisLength = Max(1, Max(Abs(AxisX1000), Max(Abs(AxisY1000), Abs(AxisZ1000))))
-            AxisX1000 = AxisX1000 * 8000 / AxisLength
-            AxisY1000 = AxisY1000 * 8000 / AxisLength
-            AxisZ1000 = AxisZ1000 * 8000 / AxisLength
-
-        End If
-
-        Call Graphics3D.SetObjectPosition(
-            SocketGizmos[Axis],
-            (PositionX1000 + AxisX1000) / 1000,
-            (PositionY1000 + AxisY1000) / 1000,
-            (PositionZ1000 + AxisZ1000) / 1000
-        )
-    End For
-
-    If ShowAllSocketOrigins Then
-
-        For SocketIndex = 0 To SocketCount - 1
-
-            Name = Character3D.SocketName(Character, SocketIndex)
-            PositionX1000 = Character3D.SocketValueThousandths(
-                Character,
-                Name,
-                Graphics3D.ANIMATOR_SOCKET_POSITION_X,
-                SocketReferencePart(Name)
-            )
-            PositionY1000 = Character3D.SocketValueThousandths(
-                Character,
-                Name,
-                Graphics3D.ANIMATOR_SOCKET_POSITION_Y,
-                SocketReferencePart(Name)
-            )
-            PositionZ1000 = Character3D.SocketValueThousandths(
-                Character,
-                Name,
-                Graphics3D.ANIMATOR_SOCKET_POSITION_Z,
-                SocketReferencePart(Name)
-            )
-            Session.Ready = Graphics3D.SetParticle3D(
-                SocketMarkers,
-                SocketIndex,
-                PositionX1000 / 1000,
-                PositionY1000 / 1000,
-                PositionZ1000 / 1000,
-                4,
-                0
-            ) And Session.Ready
-            Session.Ready = Graphics3D.SetParticleColor3D(
-                SocketMarkers,
-                SocketIndex,
-                120,
-                220,
-                255,
-                75
-            ) And Session.Ready
-        End For
-
-        Session.Ready = Graphics3D.CommitParticleBatch3D(SocketMarkers, SocketCount) And Session.Ready
-
-    End If
-
-End Sub
-
-Function DrawSocketGizmos() As Boolean
-
-    Dim Result As Boolean
-    Dim Index As Number
-
-    Result = True
-
-    For Index = 0 To SocketGizmoCount - 1
-        Result = Graphics3D.DrawObject3D(SocketGizmos[Index]) And Result
-    End For
-
-    If ShowAllSocketOrigins Then
-        Result = Graphics3D.DrawParticleBatch3D(SocketMarkers) And Result
-    End If
-
-    Return Result
-
-End Function
-
 Sub UpdateOrinStorm()
 
     Dim Target As Core.Vector3
@@ -3114,35 +2842,6 @@ Sub UpdateOrinStorm()
             Timing.CameraElapsed, Effects.EpicGlowVisible, SwordVisible, ShieldVisible,
             Playback.ScenePaused)
     End If
-
-End Sub
-
-Sub CycleSocketDisplay()
-
-    If Not SocketGizmosVisible Then
-        SocketGizmosVisible = True
-        ShowAllSocketOrigins = False
-    Else If Not ShowAllSocketOrigins Then
-        ShowAllSocketOrigins = True
-    Else
-        SocketGizmosVisible = False
-        ShowAllSocketOrigins = False
-    End If
-
-End Sub
-
-Sub SelectPreviousSocket()
-
-    Dim SocketCount As Number
-
-    SocketCount = Character3D.SocketCount(Character)
-    SelectedSocket = (SelectedSocket + SocketCount - 1) Mod SocketCount
-
-End Sub
-
-Sub SelectNextSocket()
-
-    SelectedSocket = (SelectedSocket + 1) Mod Character3D.SocketCount(Character)
 
 End Sub
 
@@ -3225,8 +2924,8 @@ Sub ResetAll()
     LightingIndex = 0
     MaterialInspection = Graphics3D.MATERIAL_INSPECTION_LIT
     Rendering.BackgroundIndex = 3
-    SocketGizmosVisible = False
-    ShowAllSocketOrigins = False
+    Rendering.SocketGizmosVisible = False
+    Rendering.ShowAllSocketOrigins = False
     Rendering.FloorVisible = True
     Rendering.GridVisible = True
     Effects.EpicGlowVisible = ViewerProfiles.EpicGlowVisibleByDefault(Session.ProfileIndex) And Effects.EpicGlowAvailable
@@ -5196,7 +4895,8 @@ Sub DrawInspectorOverlay()
 
         Call DrawButton(PanelLeft, 18, 44, 34, "LIGHT", False)
         Call DrawButton(PanelLeft + 48, 18, 56, 34, "CHANNEL", False)
-        Call DrawButton(PanelLeft + 108, 18, 50, 34, "SOCKET", SocketGizmosVisible)
+        Call DrawButton(PanelLeft + 108, 18, 50, 34, "SOCKET",
+            Rendering.SocketGizmosVisible)
 
         If ViewerProfiles.INCLUDE_DIAGNOSTIC_PROFILES And Not Party.Enabled Then
             Call DrawButton(PanelLeft + 162, 18, 50, 34, "PROFILE", False)
@@ -5949,22 +5649,6 @@ Function ProductionClipStatusLabel() As Text
 
 End Function
 
-Function SocketStatusLabel() As Text
-
-    Dim Result As Text
-
-    If SocketGizmosVisible And ShowAllSocketOrigins Then
-        Result = "All origins"
-    Else If SocketGizmosVisible Then
-        Result = Character3D.SocketName(Character, SelectedSocket)
-    Else
-        Result = "Hidden"
-    End If
-
-    Return Result
-
-End Function
-
 Function PartyRoleLabel() As Text
 
     Dim Result As Text
@@ -6042,8 +5726,8 @@ Sub DestroyViewerResources()
 
     Call DestroyBackdrop()
     Call ViewerEffects.DestroyEpicGlow(Effects)
-    Call DestroySocketGizmos()
-    Call DestroyStudioGrid()
+    Call ViewerRendering.DestroySocketGizmos(Rendering)
+    Call ViewerRendering.DestroyArena(Rendering)
 
     Call Character3D.Destroy(Character)
 
@@ -6740,7 +6424,7 @@ Function HandlePartyPointer() As Boolean
 
     Else If Decision.Action = ViewerParty.POINTER_ACTION_CYCLE_SOCKET Then
 
-        Call CycleSocketDisplay()
+        Call ViewerRendering.CycleSocketDisplay(Rendering)
 
     Else If Decision.Action = ViewerParty.POINTER_ACTION_SPEED_DOWN Then
 

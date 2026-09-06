@@ -1,10 +1,12 @@
-''' Arena, grid and backdrop resources prepared and drawn by one renderer-facing owner.
+''' Arena, backdrop, grid and socket resources prepared and drawn by one renderer-facing owner.
 Module Smile.Tools.Character3DViewerRendering
 
 Option Explicit
 
 Import Smile.Simple3D.Arena3D As Arena3D
+Import Smile.Simple3D.Character3D As Character3D
 Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Graphics3D As Graphics3D
 Import Smile.Simple3D.Scene3D As Scene3D
 Import Smile.Simple3D.StaticBackdrop3D As StaticBackdrop3D
 
@@ -17,6 +19,13 @@ Public Type State
     BackdropTitle As StaticBackdrop3D.Backdrop
     BackdropAvailable As Boolean
     BackdropTextureIndex As Number
+    SocketGizmos[4] As Core.Object3D
+    SocketGizmoCount As Number
+    SocketGizmosVisible As Boolean
+    SocketMarkers As Core.ParticleBatch3D
+    SocketMarkerMaterial As Core.Material3D
+    SelectedSocket As Number
+    ShowAllSocketOrigins As Boolean
 End Type
 
 Public Sub Reset(ByRef Value As State, BackgroundIndex As Number)
@@ -25,6 +34,9 @@ Public Sub Reset(ByRef Value As State, BackgroundIndex As Number)
     Value.GridVisible = True
     Value.BackgroundIndex = BackgroundIndex
     Value.BackdropTextureIndex = -1
+    Value.SocketGizmosVisible = False
+    Value.SelectedSocket = 0
+    Value.ShowAllSocketOrigins = False
 
 End Sub
 
@@ -169,6 +181,301 @@ End Sub
 Public Sub CycleBackground(ByRef Value As State, BackgroundCount As Number)
 
     Value.BackgroundIndex = (Value.BackgroundIndex + 1) Mod BackgroundCount
+
+End Sub
+
+Public Function CreateSocketGizmos(ByRef Value As State) As Boolean
+
+    Dim EmptyTexture As Core.Texture3D
+    Dim Index As Number
+    Dim Result As Boolean
+
+    Result = True
+    Value.SocketGizmoCount = 4
+    Value.SelectedSocket = 0
+    Value.SocketGizmosVisible = False
+    Value.ShowAllSocketOrigins = False
+    Value.SocketMarkerMaterial = Graphics3D.CreateMaterial3D(
+        EmptyTexture,
+        Graphics3D.MATERIAL_ALPHA_ADDITIVE,
+        120,
+        220,
+        255,
+        75,
+        True,
+        100,
+        50
+    )
+    Result = Value.SocketMarkerMaterial.Handle <> 0 And Result
+
+    If Value.SocketMarkerMaterial.Handle <> 0 Then
+        Value.SocketMarkers = Graphics3D.CreateParticleBatch3D(
+            64,
+            Value.SocketMarkerMaterial,
+            Graphics3D.VFX_BILLBOARD_CAMERA,
+            1,
+            1
+        )
+        Result = Value.SocketMarkers.Handle <> 0 And Result
+    End If
+
+    For Index = 0 To Value.SocketGizmoCount - 1
+
+        Value.SocketGizmos[Index] = Graphics3D.CreateCube3D(3)
+        Result = Value.SocketGizmos[Index].Handle <> 0 And Result
+        Result = Graphics3D.SetObjectShadowsChecked3D(
+            Value.SocketGizmos[Index],
+            False,
+            False
+        ) And Result
+
+        If Index = 0 Then
+            Call Graphics3D.SetObjectColor(Value.SocketGizmos[Index], 255, 255, 255)
+        Else If Index = 1 Then
+            Call Graphics3D.SetObjectColor(Value.SocketGizmos[Index], 255, 60, 60)
+        Else If Index = 2 Then
+            Call Graphics3D.SetObjectColor(Value.SocketGizmos[Index], 70, 255, 90)
+        Else
+
+            Call Graphics3D.SetObjectColor(Value.SocketGizmos[Index], 80, 140, 255)
+        End If
+
+    End For
+
+    If Not Result Then
+        Call DestroySocketGizmos(Value)
+    End If
+
+    Return Result
+
+End Function
+
+Public Sub DestroySocketGizmos(ByRef Value As State)
+
+    Dim Index As Number
+
+    Call Graphics3D.DestroyParticleBatch3D(Value.SocketMarkers)
+    Call Graphics3D.DestroyMaterial3D(Value.SocketMarkerMaterial)
+
+    For Index = 0 To Value.SocketGizmoCount - 1
+        Call Graphics3D.DestroyObject3D(Value.SocketGizmos[Index])
+    End For
+
+    Value.SocketGizmoCount = 0
+    Value.SocketGizmosVisible = False
+    Value.ShowAllSocketOrigins = False
+
+End Sub
+
+Public Function SocketReferencePart(PartyCharacter As Boolean, Name As Text,
+    BodyPartIndex As Number, WeaponPartIndex As Number,
+    ShieldPartIndex As Number) As Number
+
+    Dim Result As Number
+
+    Result = 0
+
+    If PartyCharacter Then
+
+        Result = BodyPartIndex
+
+        If Name = "SwordBase" Or Name = "SwordTip" Then
+            Result = WeaponPartIndex
+        Else If (Name = "ShieldCenter" Or
+            Name = "ShieldFireLeft" Or
+            Name = "ShieldFireRight" Or
+            Name = "ShieldFireTip") Then
+            Result = ShieldPartIndex
+        End If
+
+    End If
+
+    Return Result
+
+End Function
+
+Public Function UpdateSocketGizmos(ByRef Value As State,
+    ByRef Actor As Character3D.Actor, PartyCharacter As Boolean,
+    BodyPartIndex As Number, WeaponPartIndex As Number,
+    ShieldPartIndex As Number) As Boolean
+
+    Dim SocketIndex As Number
+    Dim Name As Text
+    Dim PositionX1000 As Number
+    Dim PositionY1000 As Number
+    Dim PositionZ1000 As Number
+    Dim AxisX1000 As Number
+    Dim AxisY1000 As Number
+    Dim AxisZ1000 As Number
+    Dim AxisLength As Number
+    Dim MatrixProperty As Number
+    Dim Axis As Number
+    Dim SocketCount As Number
+    Dim ReferencePart As Number
+    Dim Result As Boolean
+
+    Result = True
+    SocketCount = Character3D.SocketCount(Actor)
+    Name = Character3D.SocketName(Actor, Value.SelectedSocket)
+    ReferencePart = SocketReferencePart(
+        PartyCharacter, Name, BodyPartIndex, WeaponPartIndex, ShieldPartIndex)
+    PositionX1000 = Character3D.SocketValueThousandths(
+        Actor,
+        Name,
+        Graphics3D.ANIMATOR_SOCKET_POSITION_X,
+        ReferencePart
+    )
+    PositionY1000 = Character3D.SocketValueThousandths(
+        Actor,
+        Name,
+        Graphics3D.ANIMATOR_SOCKET_POSITION_Y,
+        ReferencePart
+    )
+    PositionZ1000 = Character3D.SocketValueThousandths(
+        Actor,
+        Name,
+        Graphics3D.ANIMATOR_SOCKET_POSITION_Z,
+        ReferencePart
+    )
+
+    For Axis = 0 To 3
+
+        AxisX1000 = 0
+        AxisY1000 = 0
+        AxisZ1000 = 0
+
+        If Axis > 0 Then
+
+            MatrixProperty = Graphics3D.ANIMATOR_SOCKET_MATRIX_M11 + (Axis - 1) * 3
+            AxisX1000 = Character3D.SocketValueThousandths(
+                Actor,
+                Name,
+                MatrixProperty,
+                ReferencePart
+            )
+            AxisY1000 = Character3D.SocketValueThousandths(
+                Actor,
+                Name,
+                MatrixProperty + 1,
+                ReferencePart
+            )
+            AxisZ1000 = Character3D.SocketValueThousandths(
+                Actor,
+                Name,
+                MatrixProperty + 2,
+                ReferencePart
+            )
+            AxisLength = Max(1,
+                Max(Abs(AxisX1000), Max(Abs(AxisY1000), Abs(AxisZ1000))))
+            AxisX1000 = AxisX1000 * 8000 / AxisLength
+            AxisY1000 = AxisY1000 * 8000 / AxisLength
+            AxisZ1000 = AxisZ1000 * 8000 / AxisLength
+
+        End If
+
+        Call Graphics3D.SetObjectPosition(
+            Value.SocketGizmos[Axis],
+            (PositionX1000 + AxisX1000) / 1000,
+            (PositionY1000 + AxisY1000) / 1000,
+            (PositionZ1000 + AxisZ1000) / 1000
+        )
+    End For
+
+    If Value.ShowAllSocketOrigins Then
+
+        For SocketIndex = 0 To SocketCount - 1
+
+            Name = Character3D.SocketName(Actor, SocketIndex)
+            ReferencePart = SocketReferencePart(
+                PartyCharacter, Name, BodyPartIndex, WeaponPartIndex, ShieldPartIndex)
+            PositionX1000 = Character3D.SocketValueThousandths(
+                Actor,
+                Name,
+                Graphics3D.ANIMATOR_SOCKET_POSITION_X,
+                ReferencePart
+            )
+            PositionY1000 = Character3D.SocketValueThousandths(
+                Actor,
+                Name,
+                Graphics3D.ANIMATOR_SOCKET_POSITION_Y,
+                ReferencePart
+            )
+            PositionZ1000 = Character3D.SocketValueThousandths(
+                Actor,
+                Name,
+                Graphics3D.ANIMATOR_SOCKET_POSITION_Z,
+                ReferencePart
+            )
+            Result = Graphics3D.SetParticle3D(
+                Value.SocketMarkers,
+                SocketIndex,
+                PositionX1000 / 1000,
+                PositionY1000 / 1000,
+                PositionZ1000 / 1000,
+                4,
+                0
+            ) And Result
+            Result = Graphics3D.SetParticleColor3D(
+                Value.SocketMarkers,
+                SocketIndex,
+                120,
+                220,
+                255,
+                75
+            ) And Result
+        End For
+
+        Result = Graphics3D.CommitParticleBatch3D(
+            Value.SocketMarkers, SocketCount) And Result
+
+    End If
+
+    Return Result
+
+End Function
+
+Public Function DrawSocketGizmos(ByRef Value As State) As Boolean
+
+    Dim Result As Boolean
+    Dim Index As Number
+
+    Result = True
+
+    For Index = 0 To Value.SocketGizmoCount - 1
+        Result = Graphics3D.DrawObject3D(Value.SocketGizmos[Index]) And Result
+    End For
+
+    If Value.ShowAllSocketOrigins Then
+        Result = Graphics3D.DrawParticleBatch3D(Value.SocketMarkers) And Result
+    End If
+
+    Return Result
+
+End Function
+
+Public Sub CycleSocketDisplay(ByRef Value As State)
+
+    If Not Value.SocketGizmosVisible Then
+        Value.SocketGizmosVisible = True
+        Value.ShowAllSocketOrigins = False
+    Else If Not Value.ShowAllSocketOrigins Then
+        Value.ShowAllSocketOrigins = True
+    Else
+        Value.SocketGizmosVisible = False
+        Value.ShowAllSocketOrigins = False
+    End If
+
+End Sub
+
+Public Sub SelectPreviousSocket(ByRef Value As State, SocketCount As Number)
+
+    Value.SelectedSocket = (Value.SelectedSocket + SocketCount - 1) Mod SocketCount
+
+End Sub
+
+Public Sub SelectNextSocket(ByRef Value As State, SocketCount As Number)
+
+    Value.SelectedSocket = (Value.SelectedSocket + 1) Mod SocketCount
 
 End Sub
 

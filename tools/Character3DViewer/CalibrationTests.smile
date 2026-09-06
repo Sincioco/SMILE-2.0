@@ -302,9 +302,16 @@ TestPosition = EquipmentGripThousandths(WEAPON_PART_INDEX, "HandRight")
 Call CalibrationCheck(Abs(TestPosition.X - TestAnchor.X) < 1000 And
     Abs(TestPosition.Y - TestAnchor.Y) < 1000 And Abs(TestPosition.Z - TestAnchor.Z) < 1000,
     "Repeated in-place inverse rotations do not accumulate whole-unit drift")
-Call CalibrationCheck(SocketReferencePart("SwordTip") = WEAPON_PART_INDEX, "Sword marker owns equipment transform")
-Call CalibrationCheck(SocketReferencePart("ShieldFireTip") = SHIELD_PART_INDEX, "Shield marker owns equipment transform")
-Call CalibrationCheck(SocketReferencePart("HandRight") = BODY_PART_INDEX, "Hand marker owns wrist transform")
+Call CalibrationCheck(ViewerRendering.SocketReferencePart(
+    True, "SwordTip", BODY_PART_INDEX, WEAPON_PART_INDEX, SHIELD_PART_INDEX) = WEAPON_PART_INDEX,
+    "Sword marker owns equipment transform")
+Call CalibrationCheck(ViewerRendering.SocketReferencePart(
+    True, "ShieldFireTip", BODY_PART_INDEX, WEAPON_PART_INDEX,
+    SHIELD_PART_INDEX) = SHIELD_PART_INDEX,
+    "Shield marker owns equipment transform")
+Call CalibrationCheck(ViewerRendering.SocketReferencePart(
+    True, "HandRight", BODY_PART_INDEX, WEAPON_PART_INDEX, SHIELD_PART_INDEX) = BODY_PART_INDEX,
+    "Hand marker owns wrist transform")
 
 Timing.CameraElapsed = 16
 Effects.FlamePaused = False

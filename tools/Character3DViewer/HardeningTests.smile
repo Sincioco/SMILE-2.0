@@ -550,6 +550,33 @@ Call ViewerRendering.ToggleFloorAndGrid(RenderingState)
 Call ViewerRendering.CycleBackground(RenderingState, 5)
 Call Check(RenderingState.FloorVisible And RenderingState.GridVisible)
 Call Check(RenderingState.BackgroundIndex = 4)
+Call Check(Not RenderingState.SocketGizmosVisible And
+    Not RenderingState.ShowAllSocketOrigins)
+
+Call ViewerRendering.CycleSocketDisplay(RenderingState)
+Call Check(RenderingState.SocketGizmosVisible And
+    Not RenderingState.ShowAllSocketOrigins)
+Call ViewerRendering.CycleSocketDisplay(RenderingState)
+Call Check(RenderingState.SocketGizmosVisible And
+    RenderingState.ShowAllSocketOrigins)
+Call ViewerRendering.CycleSocketDisplay(RenderingState)
+Call Check(Not RenderingState.SocketGizmosVisible And
+    Not RenderingState.ShowAllSocketOrigins)
+
+Call ViewerRendering.SelectNextSocket(RenderingState, 4)
+Call Check(RenderingState.SelectedSocket = 1)
+Call ViewerRendering.SelectPreviousSocket(RenderingState, 4)
+Call Check(RenderingState.SelectedSocket = 0)
+Call ViewerRendering.SelectPreviousSocket(RenderingState, 4)
+Call Check(RenderingState.SelectedSocket = 3)
+Call Check(ViewerRendering.SocketReferencePart(
+    False, "SwordBase", 2, 1, 0) = 0)
+Call Check(ViewerRendering.SocketReferencePart(
+    True, "SwordBase", 2, 1, 0) = 1)
+Call Check(ViewerRendering.SocketReferencePart(
+    True, "ShieldFireTip", 2, 1, 0) = 0)
+Call Check(ViewerRendering.SocketReferencePart(
+    True, "Chest", 2, 1, 0) = 2)
 
 Call CheckRingProjection()
 

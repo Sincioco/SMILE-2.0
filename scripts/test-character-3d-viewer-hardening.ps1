@@ -244,7 +244,13 @@ try {
         'Public Function BeginScene(',
         'Public Function DrawFloor(',
         'Public Function DrawGrid(',
-        'Public Sub DestroyBackdrops(')) {
+        'Public Sub DestroyBackdrops(',
+        'SocketGizmos[4] As Core.Object3D',
+        'Public Function CreateSocketGizmos(',
+        'Public Function UpdateSocketGizmos(',
+        'Public Function DrawSocketGizmos(',
+        'Public Sub DestroySocketGizmos(',
+        'Public Sub CycleSocketDisplay(')) {
         Assert-Contains $renderingSource $contract 'Viewer rendering owner'
     }
     Assert-True (-not $viewerSource.Contains('Dim CalibrationStorage[') -and
@@ -261,6 +267,16 @@ try {
         -not $viewerSource.Contains('Dim SceneVfxClock As') -and
         -not $viewerSource.Contains('Dim Arena As')) `
         'Party, scene VFX and arena resource state must not return to Program.smile.'
+    Assert-True (-not $viewerSource.Contains('Dim SocketGizmos[') -and
+        -not $viewerSource.Contains('Dim SocketMarkers As') -and
+        -not $viewerSource.Contains('Sub CreateSocketGizmos()') -and
+        -not $viewerSource.Contains('Sub UpdateSocketGizmos()') -and
+        -not $viewerSource.Contains('Function DrawSocketGizmos()') -and
+        -not $viewerSource.Contains('Sub DestroySocketGizmos()') -and
+        -not $viewerSource.Contains('Sub CreateStudioGrid()') -and
+        -not $viewerSource.Contains('Function DrawStudioGrid()') -and
+        -not $viewerSource.Contains('Sub DestroyStudioGrid()')) `
+        'Socket and studio-grid state, behavior and lifecycle must remain in ViewerRendering.'
     Assert-True (-not $viewerSource.Contains('Function DrawPartyCompanion()') -and
         -not $viewerSource.Contains('Sub DestroyPartyCompanion()') -and
         -not $viewerSource.Contains('Sub DrawPartyOverlay()') -and
