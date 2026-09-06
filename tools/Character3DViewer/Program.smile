@@ -258,6 +258,10 @@ Dim LightningAnimationPaused As Boolean
 Dim FlamesWerePaused As Boolean
 Dim VisualContinuityEpoch As Number
 Dim EquipmentFireEpoch As Number
+Dim DragonFireEpoch As Number
+Dim DragonFireClip As Text
+Dim DragonFireTime As Number
+Dim DragonFireWasPaused As Boolean
 Dim VisualHistoryDirty As Boolean
 Dim EquipmentFireFirstSample As Boolean
 Dim EquipmentFireFirstError As Number
@@ -1278,10 +1282,26 @@ Sub UpdateDragon()
     Ready = NodeAim3D.Update(DragonHeadAim, Dragon, Target, AnimationUpdateElapsed,
         DragonHeadTracking And (Name = "FireBreath" Or Name = "Fireball" Or Name = "ClawStrike")) And Ready
 
+    ''' Explicit seeks/cuts outrank freeze; normal frozen playback retains its snapshot.
+    ''' Resume from a different action/time rebases impact cues instead of replaying them.
+
+    If (DragonFireEpoch <> VisualContinuityEpoch Or
+        (FlameAnimationPaused And Name <> DragonFireClip) Or
+        (DragonFireWasPaused And Not FlameAnimationPaused And
+            (Name <> DragonFireClip Or Time <> DragonFireTime))) Then
+        Call ClearDragonOwnedEffects()
+    End If
+
+    DragonFireEpoch = VisualContinuityEpoch
+    DragonFireClip = Name
+
     If FlameAnimationPaused Then
+        DragonFireWasPaused = True
         Return
     End If
 
+    DragonFireWasPaused = False
+    DragonFireTime = Time
     Breathe = (DragonVisible And Name = "FireBreath" And Time >= 850 And Time < 3100)
 
     If (Breathe And

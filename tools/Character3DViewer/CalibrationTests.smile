@@ -45,6 +45,7 @@ Call CheckPackagedCalibration()
 Call SelectCharacterTab(2)
 Call CalibrationCheck(Ready And Not ViewerError And PartyReady,
     "Dragon loads both calibrated companions")
+Call CheckDragonFireContinuity()
 Call SelectCharacterTab(3)
 Call CalibrationCheck(Ready And Not ViewerError And PartyReady,
     "Party loads both calibrated heroes")
@@ -449,6 +450,149 @@ Sub CalibrationCheck(Condition As Boolean, Label As Text)
         Print Label
 
     End If
+
+End Sub
+
+Sub CheckDragonFireContinuity()
+
+    Dim ClipIndex As Number
+    Dim PreviousGeneration As Number
+    Dim PreviousAge As Number
+    Dim PreviousCues As Number
+    Dim OtherFire As Fire.FireEmitter
+    Dim OtherPosition As Core.Vector3
+
+    ScenePaused = True
+    AnimationUpdateElapsed = 0
+    CameraElapsed = 16
+    FlameAnimationPaused = False
+    OtherPosition.X = 300
+    OtherFire = Fire.StartAt("TorchFire", OtherPosition, 7319,
+        Fire.QUALITY_MEDIUM, Fire.SIMULATION_AUTO, 2)
+
+    For ClipIndex = 0 To Character3D.ClipCount(Character) - 1
+
+        If Character3D.ClipName(Character, ClipIndex) = "FireBreath" Then
+            Call SelectClip(ClipIndex)
+        End If
+
+    End For
+
+    Ready = Character3D.SetAnimationTime(Character, 1200) And Ready
+
+    For ClipIndex = 0 To 9
+        Call UpdateDragon()
+        Call AdvanceSceneVfx()
+    End For
+
+    Call CalibrationCheck(DragonBreath.Slot <> 0 And Fire.Value(6, DragonBreath) > 0,
+        "Dragon breath has live particles before freezing")
+
+    PreviousGeneration = DragonBreath.Generation
+    PreviousAge = Fire.Value(10, DragonBreath)
+    FlameAnimationPaused = True
+    Camera.Position.X = Camera.Position.X + 40
+
+    Call UpdateDragon()
+    Call AdvanceSceneVfx()
+    Call CalibrationCheck(DragonBreath.Generation = PreviousGeneration And
+        Fire.Value(10, DragonBreath) = PreviousAge, "Frozen dragon retains its permitted snapshot")
+    Call StepAnimationFrame(1)
+    Call UpdateDragon()
+    Call CalibrationCheck(DragonBreath.Slot = 0 And Fire.Value(1, OtherFire) = 1,
+        "Forward frozen Dragon seek clears breath and presence, not another owner")
+
+    FlameAnimationPaused = False
+
+    Call UpdateDragon()
+    Call AdvanceSceneVfx()
+    Call CalibrationCheck(DragonBreath.Slot <> 0 And
+        DragonBreath.Generation <> PreviousGeneration And Fire.Value(10, DragonBreath) <= 16,
+        "Dragon resumes at current pose without stale breath or catch-up")
+
+    FlameAnimationPaused = True
+
+    Call ToggleDragon()
+    Call UpdateDragon()
+    Call CalibrationCheck(Fire.Value(1, OtherFire) = 1,
+        "Hidden frozen Dragon releases every owned Fire emitter")
+    Call ToggleDragon()
+    Call UpdateDragon()
+    Call CalibrationCheck(Fire.Value(1, OtherFire) = 1,
+        "Showing frozen Dragon does not resurrect old Fire")
+
+    FlameAnimationPaused = False
+
+    Call UpdateDragon()
+
+    FlameAnimationPaused = True
+
+    For ClipIndex = 0 To Character3D.ClipCount(Character) - 1
+
+        If Character3D.ClipName(Character, ClipIndex) = "Idle" Then
+            Call SelectClip(ClipIndex)
+        End If
+
+    End For
+
+    Call UpdateDragon()
+    Call CalibrationCheck(Fire.Value(1, OtherFire) = 1,
+        "Frozen Dragon clip cut releases incompatible presence and breath")
+
+    FlameAnimationPaused = False
+
+    For ClipIndex = 0 To Character3D.ClipCount(Character) - 1
+
+        If Character3D.ClipName(Character, ClipIndex) = "Fireball" Then
+            Call SelectClip(ClipIndex)
+        End If
+
+    End For
+
+    Ready = Character3D.SetAnimationTime(Character, 2490) And Ready
+
+    Call UpdateDragon()
+    Call AdvanceSceneVfx()
+
+    PreviousCues = DragonPresence.ImpactCueCount()
+    FlameAnimationPaused = True
+
+    Call UpdateDragon()
+    Call StepAnimationFrame(1)
+    Call UpdateDragon()
+    Call CalibrationCheck(Character3D.AnimationTime(Character) > 2500 And
+        Fire.Value(1, OtherFire) = 1, "Forward frozen seek past impact clears the projectile")
+
+    FlameAnimationPaused = False
+
+    Call UpdateDragon()
+    Call AdvanceSceneVfx()
+    Call UpdateDragon()
+    Call CalibrationCheck(DragonPresence.ImpactCueCount() = PreviousCues,
+        "Resume after forward impact seek never replays the skipped impact cue")
+
+    FlameAnimationPaused = True
+
+    Call SeekFirstAnimationFrame()
+    Call UpdateDragon()
+    Call CalibrationCheck(Fire.Value(1, OtherFire) = 1,
+        "Backward frozen seek also releases the Dragon impact burst")
+
+    FlameAnimationPaused = False
+    Ready = Character3D.SetAnimationTime(Character, 2490) And Ready
+
+    Call UpdateDragon()
+
+    Ready = Character3D.SetAnimationTime(Character, 2533) And Ready
+
+    Call UpdateDragon()
+    Call UpdateDragon()
+    Call CalibrationCheck(DragonPresence.ImpactCueCount() = PreviousCues + 1,
+        "Continuous playback still submits exactly one normal impact cue")
+    Call ClearDragonOwnedEffects()
+
+    Ready = Fire.Destroy(OtherFire) And Ready
+    FlameAnimationPaused = False
 
 End Sub
 

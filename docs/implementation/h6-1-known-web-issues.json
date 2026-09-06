@@ -12,19 +12,19 @@
       "classification": "source-finding",
       "mandatory": true,
       "baseline": "902a7022c895bf97010d979ea578fc5361cdcbf4",
-      "status": "IN-PROGRESS",
+      "status": "FIXED-VERIFIED",
       "phase": "W2",
       "gateCheck": "G03",
       "sourceRefs": [
         "R06"
       ],
-      "reproduction": null,
-      "rootCause": null,
+      "reproduction": "Frozen equipment hide originally left overlays; actual Chrome exposed mesh visibility restored by actor transforms. The expanded native fixture also reproduced three Dragon forward-seek/resume/clip-cut failures.",
+      "rootCause": "Visibility and continuity decisions must precede the family freeze return; Dragon had not consumed the explicit seek identity or rebased skipped impact cues.",
       "fixCommit": "b8fce49701738fcab3c45d7d5cdb343e1e4a9b33",
       "evidenceIds": [
         "docs/implementation/h6-1-hardening-and-web-parity-ledger.md"
       ],
-      "dispositionRationale": "Implemented portions and remaining target-specific proof are separated in the ledger; not a final gate pass."
+      "dispositionRationale": "Retained part visibility in b835628 plus existing equipment lifecycle checks pass native and generated Web. Native/Chrome actual frozen weapon/shield hide clears mesh, Fire and rim. The expanded actual-Viewer fixture now proves populated Dragon breath, frozen age retention, forward/backward seek, clip cut, hide/show, reseed, unaffected second Fire owner and suppressed skipped impact versus exactly one continuous cue. Native and exact-console Web runs pass; visible Chrome Party breath at 1202 ms clears on a frozen step to 1235 ms, resumes correctly, and frozen Dragon hide/show has no stale Fire. Shared family independence, once-per-frame advancement and automatic tails retain their existing passing assertions. No combat/save mutation or audible-device claim is implied."
     },
     {
       "id": "F02",

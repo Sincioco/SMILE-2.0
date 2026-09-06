@@ -22,6 +22,7 @@ Private Dim PreviousTime As Number
 Private Dim Phase As Number
 Private Dim Visible As Boolean
 Private Dim RebaseOnShow As Boolean
+Private Dim ImpactCues As Number
 Private Dim Ok As Boolean
 
 Public Sub Initialize()
@@ -34,8 +35,16 @@ Public Sub Initialize()
     PreviousTime = 0
     Phase = 0
     RebaseOnShow = True
+    ImpactCues = 0
 
 End Sub
+
+''' Counts submitted cosmetic cues, not sound-device playback or combat outcomes.
+Public Function ImpactCueCount() As Number
+
+    Return ImpactCues
+
+End Function
 
 Public Sub Cancel(Light As LightPool3D.Lease)
 
@@ -166,6 +175,7 @@ Public Sub Update(Actor As Character3D.Actor, Clip As Text, Time As Number,
 
                     Play Sound "Assets/Audio/dragon-fireball-impact.wav"
 
+                    ImpactCues = ImpactCues + 1
                 End If
 
             End If

@@ -1094,3 +1094,63 @@ W19 is reconciled with the already pushed cache integration and native/Chrome
 checks above. No new fixed switching-time promise or Mac timing result is added.
 Chrome alone is now the required browser; historical Edge evidence is retained,
 not repeated. These three issue closures are not the entire H6.1 gate.
+
+### F01 — Dragon frozen continuity follow-up — 2026-09-06
+
+Baseline `8457e78c6f5a48e9cc02405a087c9df4e02c3a38`. The existing isolated Viewer
+fixture now also drives the real Dragon tab/procedures. Before the fix it failed
+three assertions: forward frozen seek retained breath/presence; resume reused
+old breath; frozen clip cut retained incompatible effects. Red log:
+`artifacts/temp/h6-1-dragon-continuity-red.log`, native script exit 1.
+
+The Viewer now checks its explicit visual-continuity identity before the Dragon
+freeze return, clears on frozen action changes, and rebases after hidden-time
+animation movement. Existing DragonPresence.Cancel suppresses a newly seeded
+impact cue; unchanged frozen playback keeps its world-space snapshot. There is
+no scene-clock relocation, combat state change, new language syntax or asset edit.
+A bounded DragonPresence.ImpactCueCount diagnostic counts cosmetic submissions,
+not audio hardware playback. Continuous playback still submits exactly one cue.
+
+- `scripts/test-viewer-calibration-native.ps1`: PASS after fix. Final log
+  `h6-1-dragon-continuity-green.log`; isolated identity
+  `smile.tests.viewer-calibration.run-df75f06a89c641ac9964dba2a20d21cf`.
+  Assertions cover populated breath, frozen age/generation, forward/backward
+  seek, clip cut, hide/show, current-pose reseed, one unaffected other emitter,
+  skipped-impact suppression and normal cue submission. Existing Arin rim /
+  equipment freeze, family independence, clock, tails, save/Undo, exact canonical
+  exports and native previous-good backup validation also pass.
+- Generated isolated Web build and
+  `node scripts/run-web-test.js artifacts/web/h6-1/CalibrationImportTests --renderer3d-state --deny-data-key "Viewer Denied Storage Probe" --native-output artifacts/tests/ViewerCalibrationIsolation/native.out --frames 16 --timeout 60000`:
+  PASS exact console. Logs `h6-1-dragon-continuity-web{,-build}.log`.
+  This runner is explicitly the VM layer, not actual browser evidence.
+- Targeted three-source formatter check and `git diff --check`: PASS. A first
+  formatter invocation passed comma-separated paths as one argument and was
+  rejected without edits; the corrected PowerShell array invocation passed.
+- Normal Viewer `Launch.ps1 -Build -SkipWindowActivation` and `Build.ps1 -Target Web`:
+  PASS; logs `h6-1-dragon-continuity-native-build.log` and
+  `h6-1-dragon-continuity-viewer-web-build.log`. One native Viewer relaunched,
+  PID 35488; live canonical keys were not replaced.
+- Actual visible Chrome, normal origin `http://127.0.0.1:8766/`: paused Party
+  active-Dragon Fire Breath at 1202 ms had a clearly populated stream. Freeze
+  retained it; Frame > moved to 1235 ms and immediately cleared breath and mouth
+  presence. Play Fire rebuilt it from the current mouth. Freeze / Dragon Off
+  removed the actor and its fire while Orin remained; Dragon On restored the
+  mesh without stale fire. All reset returned normal demo playback. Captured
+  Chrome warning/error result: `[]`. The first framing attempt used All reset
+  and resumed the demo; it is not counted as a paused test. Final actions above
+  were observed while the explicit paused banner was visible.
+- The new native Party demo was observed and restored to foreground. Native
+  Dragon continuity proof is the real executable fixture, not a claimed manual
+  repetition of the entire Chrome sequence. No new screenshot file or artistic
+  approval is claimed. Tool-only source changes do not alter VSIX payload;
+  the installed 2.0.59 compiler hashes remain those recorded above.
+
+| Final artifact | SHA256 |
+|---|---|
+| Isolated CalibrationTests.exe | `1C98977205CF3543F4A0E0739B26D15E6980158299AD195DEF36767F5A69D6D2` |
+| Viewer Release/Character3DViewer.exe | `CA820C405700DF7287A7645CDBFBC6C46C35C591CE03029A57D93994AAB0276A` |
+| Viewer Release/Web/game.js | `7DC92D3B7D345B75F3D401F6CD271B3FEDCDCD30B96B91F2BBDA743DD6A67C11` |
+
+Together with the prior native/Chrome frozen-equipment observations and the
+passing shared Fire/Lightning lifecycle assertions, this closes F01. H6.1 as
+a whole still needs remaining interaction/lifecycle evidence and final reports.

@@ -204,6 +204,14 @@ down the shield rim; showing the equipment while frozen cannot resurrect the old
 Hiding the dragon clears its breath, mouth/projectile Fire, glow and leased light before any
 freeze return. Normal emission stop still allows accepted world-space tails to age out.
 
+Dragon timeline seeks and explicit clip cuts clear incompatible breath/presence even when
+Fire is frozen. Resuming after the animation moved rebases the current effect without
+replaying skipped fireball impact audio. An unchanged frozen action retains its snapshot;
+ordinary continuous impact playback still produces one cue. The existing isolated Viewer
+fixture checks actual emitters, age/generation, another unaffected owner and cue submissions.
+`DragonPresence.ImpactCueCount()` is a diagnostic of cosmetic cue requests, not audible
+device playback or combat outcomes.
+
 `ActorIsolationTests.smileproj` is the bounded real-render fixture for two instances of the
 current Orin model. It exercises different clips, times, speeds, transforms, fixture-local
 yaw corrections and styles; two independent storm contexts and local-light leases; shared
