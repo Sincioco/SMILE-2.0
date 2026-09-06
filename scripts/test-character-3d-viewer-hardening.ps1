@@ -236,12 +236,17 @@ try {
         'Public Function ClearSelectedClip(',
         'Public Function ClearAll(',
         'Public Function SaveCurrentFrame(',
-        'Public Function UndoLastChange(')) {
+        'Public Function UndoLastChange(',
+        'Public Function SelectGizmoAxis(',
+        'Public Sub BeginGizmoDrag(',
+        'Public Function CancelGizmoDrag(',
+        'Public Function AdjustGizmoValue(')) {
         Assert-Contains $calibrationEditingSource $contract 'Viewer calibration editing owner'
     }
     foreach ($contract in @(
         'Public Function ClassifyArrow(',
         'Public Function ClassifyInspectorKey(',
+        'Public Function ClassifyGizmoKey(',
         'Public Sub CancelCaptures(',
         'Public Function HasPointerCapture(')) {
         Assert-Contains $inputSource $contract 'Viewer input owner'
@@ -391,6 +396,7 @@ try {
         -not $viewerSource.Contains('Function CurrentAnimationFrame(')) `
         'Calibration storage/key transactions and direct queries must not return as coordinator wrappers.'
     foreach ($contract in @(
+        'Public Type PointerDecision',
         'Public Sub BeginDrag(',
         'Public Sub FinishDrag(',
         'Public Sub Hide(',
@@ -398,6 +404,7 @@ try {
         'Public Function AxisAtPointer(',
         'Public Function RingPointerDelta(',
         'Public Function DragValueAmount(',
+        'Public Function ClassifyPointer(',
         'Public Sub Draw(')) {
         Assert-Contains $gizmoSource $contract 'Viewer gizmo owner'
     }
@@ -534,6 +541,12 @@ try {
         -not $viewerSource.Contains('ViewerCalibration.Undo(') -and
         -not $viewerSource.Contains('ViewerCalibration.ImportOrCommit(')) `
         'Calibration command transactions and pose-refresh ordering must remain in ViewerCalibrationEditing.'
+    Assert-True (-not $viewerSource.Contains('Sub AdjustCalibrationValue(') -and
+        -not $viewerSource.Contains('Sub UpdateTransformGizmoFromPointer(') -and
+        -not $viewerSource.Contains('ViewerGizmo.DragValueAmount(') -and
+        -not $viewerSource.Contains('ViewerGizmo.BeginDrag(') -and
+        -not $viewerSource.Contains('ViewerGizmo.SelectAxis(')) `
+        'Transform-gizmo interaction and calibration mutation must remain in their production owners.'
     Assert-True (-not $viewerSource.Contains('Dim TimelineScrubbing As Boolean') -and
         -not $viewerSource.Contains('Dim SliderDragOwner As Number') -and
         -not $viewerSource.Contains('Dim TransformGizmoDragging As Boolean') -and

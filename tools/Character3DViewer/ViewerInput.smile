@@ -35,6 +35,14 @@ Public Const INSPECTOR_KEY_TOGGLE_GRID = 21
 Public Const INSPECTOR_KEY_CYCLE_PROFILE = 22
 Public Const INSPECTOR_KEY_NEXT_CLIP = 23
 Public Const INSPECTOR_KEY_RESTART_CLIP = 24
+Public Const GIZMO_KEY_NONE = 0
+Public Const GIZMO_KEY_CANCEL = 1
+Public Const GIZMO_KEY_AXIS_X = 2
+Public Const GIZMO_KEY_AXIS_Y = 3
+Public Const GIZMO_KEY_AXIS_Z = 4
+Public Const GIZMO_KEY_MOVE = 5
+Public Const GIZMO_KEY_ROTATE = 6
+Public Const GIZMO_KEY_COMMIT = 7
 
 Public Type State
     InterfaceBlocked As Boolean
@@ -176,6 +184,40 @@ Public Function ClassifyInspectorKey(PressedKey As Number,
             Result = INSPECTOR_KEY_RESTART_CLIP
         End If
 
+    End If
+
+    Return Result
+
+End Function
+
+Public Function ClassifyGizmoKey(PressedKey As Number,
+    CalibrationAvailable As Boolean, CalibrationVisible As Boolean,
+    UiVisibility As Number, EquipmentTarget As Boolean,
+    GizmoDragging As Boolean, CalibrationEditing As Boolean) As Number
+
+    Dim Result As Number
+
+    If (Not CalibrationAvailable Or
+        Not CalibrationVisible Or
+        UiVisibility <> 0) Then
+        Return Result
+    End If
+
+    If PressedKey = KEY_ESCAPE Then
+        Result = GIZMO_KEY_CANCEL
+    Else If PressedKey = KEY_X Then
+        Result = GIZMO_KEY_AXIS_X
+    Else If PressedKey = KEY_Y Then
+        Result = GIZMO_KEY_AXIS_Y
+    Else If PressedKey = KEY_Z Then
+        Result = GIZMO_KEY_AXIS_Z
+    Else If PressedKey = KEY_G And EquipmentTarget Then
+        Result = GIZMO_KEY_MOVE
+    Else If PressedKey = KEY_R Or PressedKey = KEY_E Then
+        Result = GIZMO_KEY_ROTATE
+    Else If (PressedKey = KEY_ENTER And
+        (GizmoDragging Or CalibrationEditing)) Then
+        Result = GIZMO_KEY_COMMIT
     End If
 
     Return Result

@@ -91,6 +91,7 @@ Dim InputState As ViewerInput.State
 Dim UiState As ViewerUi.State
 Dim SliderUpdate As ViewerUi.SliderUpdate
 Dim GizmoState As ViewerGizmo.State
+Dim GizmoPointer As ViewerGizmo.PointerDecision
 Dim PartyState As ViewerParty.State
 Dim PartyParticipantUpdate As ViewerParty.ParticipantUpdateResult
 Dim PartyInspectorBinding As ViewerParty.InspectorBindingResult
@@ -306,6 +307,24 @@ Call Check(ViewerInput.ClassifyInspectorKey(
 Call Check(ViewerInput.ClassifyInspectorKey(
     KEY_3, False, False, False, False, 3) =
     ViewerInput.INSPECTOR_KEY_CLIP_3)
+Call Check(ViewerInput.ClassifyGizmoKey(
+    KEY_X, False, True, 0, True, False, False) =
+    ViewerInput.GIZMO_KEY_NONE)
+Call Check(ViewerInput.ClassifyGizmoKey(
+    KEY_X, True, True, 0, False, False, False) =
+    ViewerInput.GIZMO_KEY_AXIS_X)
+Call Check(ViewerInput.ClassifyGizmoKey(
+    KEY_G, True, True, 0, False, False, False) =
+    ViewerInput.GIZMO_KEY_NONE)
+Call Check(ViewerInput.ClassifyGizmoKey(
+    KEY_G, True, True, 0, True, False, False) =
+    ViewerInput.GIZMO_KEY_MOVE)
+Call Check(ViewerInput.ClassifyGizmoKey(
+    KEY_ENTER, True, True, 0, True, False, False) =
+    ViewerInput.GIZMO_KEY_NONE)
+Call Check(ViewerInput.ClassifyGizmoKey(
+    KEY_ENTER, True, True, 0, True, True, False) =
+    ViewerInput.GIZMO_KEY_COMMIT)
 Call Check(ViewerInput.ClassifyArrow(37, 37, 39, 38, 40, False) =
     ViewerInput.ARROW_PLAIN_LEFT)
 Call Check(ViewerInput.ClassifyArrow(38, 37, 39, 38, 40, False) =
@@ -490,6 +509,66 @@ Call ViewerUi.DrawTimeline(
 Call ViewerGizmo.Reset(GizmoState)
 Call Check(Not GizmoState.Visible And Not GizmoState.Dragging)
 
+CalibrationOperation = ViewerCalibrationEditing.SelectGizmoAxis(
+    CalibrationState, PartyPrimary.Actor, 0, -1, -1, False,
+    UiState, GizmoState, CameraState, EffectsState, -1)
+
+Call Check(CalibrationOperation.Ready And Not CalibrationOperation.Applied)
+
+Call ViewerCalibrationEditing.BeginGizmoDrag(
+    CalibrationState, PartyPrimary.Actor, 0,
+    UiState, GizmoState, CameraState, EffectsState, True)
+
+Call Check(Not GizmoState.Dragging)
+
+CalibrationOperation = ViewerCalibrationEditing.CancelGizmoDrag(
+    CalibrationState, PartyPrimary.Actor, 0, -1, -1, False,
+    UiState, GizmoState, CameraState, EffectsState)
+
+Call Check(CalibrationOperation.Ready And Not CalibrationOperation.Applied)
+
+CalibrationOperation = ViewerCalibrationEditing.AdjustGizmoValue(
+    CalibrationState, PartyPrimary.Actor, 0, -1, -1, False,
+    UiState, GizmoState, CameraState, EffectsState, 0, 800, 640)
+
+Call Check(CalibrationOperation.Ready And Not CalibrationOperation.Applied)
+
+GizmoPointer = ViewerGizmo.ClassifyPointer(
+    GizmoState, False, True, 0, False,
+    False, False, False, False, False,
+    0, 0, 0, 0, True, 90, 540, 700,
+    18, 92, 430, 354,
+    ViewerUi.CALIBRATION_TRANSFORM_ROTATE,
+    ViewerUi.CALIBRATION_AXIS_X,
+    GizmoState.Origin, DirectCamera, 800, 640)
+
+Call Check(Not GizmoPointer.Consumed And
+    GizmoPointer.Action = ViewerGizmo.POINTER_ACTION_NONE)
+
+GizmoPointer = ViewerGizmo.ClassifyPointer(
+    GizmoState, True, True, 0, False,
+    True, False, False, False, False,
+    0, 0, 0, 0, True, 90, 540, 700,
+    18, 92, 430, 354,
+    ViewerUi.CALIBRATION_TRANSFORM_ROTATE,
+    ViewerUi.CALIBRATION_AXIS_X,
+    GizmoState.Origin, DirectCamera, 800, 640)
+
+Call Check(GizmoPointer.Consumed And
+    GizmoPointer.Action = ViewerGizmo.POINTER_ACTION_NONE)
+
+GizmoPointer = ViewerGizmo.ClassifyPointer(
+    GizmoState, True, True, 0, False,
+    True, True, False, False, False,
+    0, 0, 0, 0, True, 90, 540, 700,
+    18, 92, 430, 354,
+    ViewerUi.CALIBRATION_TRANSFORM_ROTATE,
+    ViewerUi.CALIBRATION_AXIS_X,
+    GizmoState.Origin, DirectCamera, 800, 640)
+
+Call Check(GizmoPointer.Consumed And
+    GizmoPointer.Action = ViewerGizmo.POINTER_ACTION_TOGGLE)
+
 GizmoState.Visible = True
 GizmoState.Projection.Origin.X = 0
 GizmoState.Projection.Origin.Y = 0
@@ -510,6 +589,45 @@ Call Check(GizmoState.DragRemainder = 0)
 Call ViewerGizmo.BeginDrag(GizmoState, True, True, 27)
 Call Check(GizmoState.Dragging And GizmoState.PointerOwned)
 Call Check(GizmoState.OpenedEdit And GizmoState.DragStartValue = 27)
+
+GizmoPointer = ViewerGizmo.ClassifyPointer(
+    GizmoState, True, True, 0, False,
+    False, False, False, False, True,
+    0, 0, 0, 0, True, 90, 540, 700,
+    18, 92, 430, 354,
+    ViewerUi.CALIBRATION_TRANSFORM_ROTATE,
+    ViewerUi.CALIBRATION_AXIS_X,
+    GizmoState.Origin, DirectCamera, 800, 640)
+
+Call Check(GizmoPointer.Consumed And
+    GizmoPointer.Action = ViewerGizmo.POINTER_ACTION_CANCEL)
+
+GizmoPointer = ViewerGizmo.ClassifyPointer(
+    GizmoState, True, True, 0, False,
+    False, False, False, True, False,
+    0, 0, 0, 0, True, 90, 540, 700,
+    18, 92, 430, 354,
+    ViewerUi.CALIBRATION_TRANSFORM_ROTATE,
+    ViewerUi.CALIBRATION_AXIS_X,
+    GizmoState.Origin, DirectCamera, 800, 640)
+
+Call Check(GizmoPointer.Consumed And
+    GizmoPointer.Action = ViewerGizmo.POINTER_ACTION_UPDATE_AND_FINISH)
+
+GizmoState.PointerOwned = False
+
+GizmoPointer = ViewerGizmo.ClassifyPointer(
+    GizmoState, True, True, 0, False,
+    False, True, False, False, False,
+    0, 0, 0, 0, True, 90, 540, 700,
+    18, 92, 430, 354,
+    ViewerUi.CALIBRATION_TRANSFORM_ROTATE,
+    ViewerUi.CALIBRATION_AXIS_X,
+    GizmoState.Origin, DirectCamera, 800, 640)
+
+Call Check(GizmoPointer.Consumed And
+    GizmoPointer.Action = ViewerGizmo.POINTER_ACTION_FINISH)
+
 Call ViewerGizmo.Hide(GizmoState)
 Call Check(Not GizmoState.Visible And Not GizmoState.Dragging)
 Call Check(ViewerGizmo.AxisAtPointer(

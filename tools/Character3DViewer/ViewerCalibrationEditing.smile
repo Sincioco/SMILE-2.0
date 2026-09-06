@@ -395,6 +395,127 @@ Public Function ResetTarget(ByRef Calibration As ViewerCalibration.State,
 
 End Function
 
+Public Function SelectGizmoAxis(ByRef Calibration As ViewerCalibration.State,
+    ByRef Actor As Character3D.Actor, Clip As Number,
+    SwordWristNode As Number, ShieldWristNode As Number,
+    Available As Boolean, ByRef Ui As ViewerUi.State,
+    ByRef Gizmo As ViewerGizmo.State, ByRef Camera As ViewerCamera.State,
+    ByRef Effects As ViewerEffects.State, Axis As Number) As OperationResult
+
+    Dim Result As OperationResult
+
+    Result.Ready = True
+
+    If Axis < ViewerUi.CALIBRATION_AXIS_X Or Axis > ViewerUi.CALIBRATION_AXIS_Z Then
+        Return Result
+    End If
+
+    If Gizmo.Dragging Then
+
+        Result = SetCurrentValue(
+            Calibration, Actor, Clip, SwordWristNode, ShieldWristNode,
+            Available, Ui, Gizmo, Camera, Effects, Gizmo.DragStartValue)
+        Ui.CalibrationAxis = Axis
+
+        Call ViewerGizmo.SelectAxis(
+            Gizmo, CurrentValue(Calibration, Clip, Ui))
+
+    Else
+        Ui.CalibrationAxis = Axis
+
+    End If
+
+    Return Result
+
+End Function
+
+Public Sub BeginGizmoDrag(ByRef Calibration As ViewerCalibration.State,
+    ByRef Actor As Character3D.Actor, Clip As Number,
+    ByRef Ui As ViewerUi.State, ByRef Gizmo As ViewerGizmo.State,
+    ByRef Camera As ViewerCamera.State, ByRef Effects As ViewerEffects.State,
+    PointerOwned As Boolean)
+
+    Dim OpenedEdit As Boolean
+
+    If Not Gizmo.Visible Then
+        Return
+    End If
+
+    OpenedEdit = Not Ui.CalibrationEditing
+
+    Call BeginEdit(Calibration, Actor, Clip, Ui, Camera, Effects)
+    Call ViewerGizmo.BeginDrag(
+        Gizmo, PointerOwned, OpenedEdit,
+        CurrentValue(Calibration, Clip, Ui))
+
+End Sub
+
+Public Function CancelGizmoDrag(
+    ByRef Calibration As ViewerCalibration.State,
+    ByRef Actor As Character3D.Actor, Clip As Number,
+    SwordWristNode As Number, ShieldWristNode As Number,
+    Available As Boolean, ByRef Ui As ViewerUi.State,
+    ByRef Gizmo As ViewerGizmo.State, ByRef Camera As ViewerCamera.State,
+    ByRef Effects As ViewerEffects.State) As OperationResult
+
+    Dim OpenedEdit As Boolean
+    Dim Result As OperationResult
+
+    Result.Ready = True
+
+    If Not Gizmo.Dragging Then
+        Return Result
+    End If
+
+    OpenedEdit = Gizmo.OpenedEdit
+
+    If OpenedEdit Then
+        Result = CancelEdit(
+            Calibration, Actor, Clip, SwordWristNode, ShieldWristNode,
+            Available, Ui, Gizmo, Camera, Effects)
+    Else
+
+        Result = SetCurrentValue(
+            Calibration, Actor, Clip, SwordWristNode, ShieldWristNode,
+            Available, Ui, Gizmo, Camera, Effects, Gizmo.DragStartValue)
+    End If
+
+    Call ViewerGizmo.FinishDrag(Gizmo)
+
+    Return Result
+
+End Function
+
+Public Function AdjustGizmoValue(
+    ByRef Calibration As ViewerCalibration.State,
+    ByRef Actor As Character3D.Actor, Clip As Number,
+    SwordWristNode As Number, ShieldWristNode As Number,
+    Available As Boolean, ByRef Ui As ViewerUi.State,
+    ByRef Gizmo As ViewerGizmo.State, ByRef Camera As ViewerCamera.State,
+    ByRef Effects As ViewerEffects.State, Amount As Number,
+    WindowWidth As Number, WindowHeight As Number) As OperationResult
+
+    Dim Result As OperationResult
+
+    Result.Ready = True
+
+    If Amount = 0 Then
+        Return Result
+    End If
+
+    Result = SetCurrentValue(
+        Calibration, Actor, Clip, SwordWristNode, ShieldWristNode,
+        Available, Ui, Gizmo, Camera, Effects,
+        CurrentValue(Calibration, Clip, Ui) + Amount)
+
+    Call ViewerGizmo.UpdateProjection(
+        Gizmo, GizmoOrigin(Actor, Ui), Camera.Live,
+        WindowWidth, WindowHeight)
+
+    Return Result
+
+End Function
+
 Private Function ApplyWristPose(ByRef Calibration As ViewerCalibration.State,
     ByRef Actor As Character3D.Actor, Clip As Number,
     SwordWristNode As Number, ShieldWristNode As Number,

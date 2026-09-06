@@ -18,6 +18,14 @@ Private Const HIT_RADIUS = 12
 Private Const MOVE_POINTER_DIVISOR = 3
 Private Const ROTATE_POINTER_DIVISOR = 1000
 
+Public Const POINTER_ACTION_NONE = 0
+Public Const POINTER_ACTION_TOGGLE = 1
+Public Const POINTER_ACTION_CANCEL = 2
+Public Const POINTER_ACTION_UPDATE = 3
+Public Const POINTER_ACTION_UPDATE_AND_FINISH = 4
+Public Const POINTER_ACTION_FINISH = 5
+Public Const POINTER_ACTION_BEGIN_AXIS = 6
+
 Public Type State
     Projection As CharacterViewer.TransformGizmo
     Origin As Core.Vector3
@@ -36,6 +44,13 @@ Public Type State
     GripAnchorTarget As Number
     GripAnchorFrame As Number
     GripLimit As Boolean
+End Type
+
+Public Type PointerDecision
+    Consumed As Boolean
+    Action As Number
+    Axis As Number
+    ValueAmount As Number
 End Type
 
 Public Sub Reset(ByRef Value As State)
@@ -274,6 +289,108 @@ Public Function DragValueAmount(ByRef Value As State,
         Result = CharacterViewer.RetainedPointerDelta(
             Value.DragRemainder, PointerAmount, ROTATE_POINTER_DIVISOR)
     End If
+
+    Return Result
+
+End Function
+
+Public Function ClassifyPointer(ByRef Value As State,
+    CalibrationAvailable As Boolean, CalibrationVisible As Boolean,
+    UiVisibility As Number, ViewerError As Boolean,
+    ToggleButtonContains As Boolean, PrimaryPressed As Boolean,
+    PrimaryHeld As Boolean, PrimaryReleased As Boolean,
+    SecondaryPressed As Boolean, PointerX As Number, PointerY As Number,
+    PointerDeltaX As Number, PointerDeltaY As Number,
+    PointerInside As Boolean, MinimumY As Number, MaximumY As Number,
+    StatusPanelX As Number, PanelX As Number, PanelY As Number,
+    PanelWidth As Number, PanelHeight As Number, Transform As Number,
+    SelectedAxis As Number, Origin As Core.Vector3, Camera As Core.Camera3D,
+    WindowWidth As Number, WindowHeight As Number) As PointerDecision
+
+    Dim Result As PointerDecision
+
+    Result.Axis = -1
+
+    If (Not CalibrationAvailable Or
+        Not CalibrationVisible Or
+        UiVisibility <> 0 Or
+        ViewerError) Then
+        Return Result
+    End If
+
+    If ToggleButtonContains Then
+
+        Result.Consumed = True
+
+        If PrimaryPressed Then
+            Result.Action = POINTER_ACTION_TOGGLE
+        End If
+
+        Return Result
+
+    End If
+
+    If Not Value.Visible Then
+        Return Result
+    End If
+
+    Call UpdateProjection(Value, Origin, Camera, WindowWidth, WindowHeight)
+
+    If Value.Dragging Then
+
+        Result.Consumed = True
+
+        If SecondaryPressed Then
+            Result.Action = POINTER_ACTION_CANCEL
+
+            Return Result
+        End If
+
+        If Value.PointerOwned Then
+
+            If PrimaryReleased Then
+                Result.Action = POINTER_ACTION_UPDATE_AND_FINISH
+            Else If PrimaryHeld Or PrimaryPressed Then
+                Result.Action = POINTER_ACTION_UPDATE
+            End If
+
+        Else If PrimaryPressed Then
+
+            Result.Action = POINTER_ACTION_FINISH
+
+        Else
+            Result.Action = POINTER_ACTION_UPDATE
+
+        End If
+
+        If (Result.Action = POINTER_ACTION_UPDATE Or
+            Result.Action = POINTER_ACTION_UPDATE_AND_FINISH) Then
+            Result.ValueAmount = DragValueAmount(
+                Value, Transform, SelectedAxis,
+                PointerX, PointerY, PointerDeltaX, PointerDeltaY,
+                Camera, WindowWidth, WindowHeight)
+        End If
+
+        Return Result
+
+    End If
+
+    If Not PrimaryPressed Then
+        Return Result
+    End If
+
+    Result.Axis = AxisAtPointer(
+        Value, PointerX, PointerY, PointerInside,
+        MinimumY, MaximumY, StatusPanelX,
+        PanelX, PanelY, PanelWidth, PanelHeight,
+        Transform, SelectedAxis, Camera, WindowWidth, WindowHeight)
+
+    If Result.Axis < 0 Then
+        Return Result
+    End If
+
+    Result.Consumed = True
+    Result.Action = POINTER_ACTION_BEGIN_AXIS
 
     Return Result
 
