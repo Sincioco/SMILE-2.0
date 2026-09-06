@@ -312,6 +312,64 @@ Call Check(ViewerUi.TimelineWidth(1600, 18) = 1294)
 Call Check(ViewerUi.TimelineFrameAtPointer(512, 800, 1000, 30, 31) = 30)
 Call Check(ViewerUi.TimelineKeyframeAtPointer(
     PartyPrimary.Actor, CalibrationState, True, 3, 18, 576, 800, 640) = 0)
+Call Check(ViewerUi.CharacterTabsContain(18, 62))
+Call Check(ViewerUi.CharacterTabAtPointer(104, 62) = 0)
+Call Check(ViewerUi.CharacterTabAtPointer(176, 62) = -1)
+Call Check(ViewerUi.CharacterTabAtPointer(408, 62) = 3)
+Call Check(ViewerUi.TimelineContains(18, 576, 800, 640))
+Call Check(ViewerUi.CalibrationGizmoButtonContains(300, 268))
+Call Check(ViewerUi.TransferActionAtPointer(176, 597, 640, True, 100) =
+    ViewerUi.TRANSFER_ACTION_DOWNLOAD)
+Call Check(ViewerUi.TransferActionAtPointer(18, 597, 640, True, 100) =
+    ViewerUi.TRANSFER_ACTION_IMPORT)
+Call Check(ViewerUi.TransferActionAtPointer(354, 600, 640, True, 100) =
+    ViewerUi.TRANSFER_ACTION_OPEN)
+Call Check(ViewerUi.TransferActionAtPointer(18, 597, 640, False, 100) =
+    ViewerUi.TRANSFER_ACTION_NONE)
+Call Check(ViewerUi.CalibrationPanelContains(18, 92, 0, True, True))
+Call Check(Not ViewerUi.CalibrationPanelContains(18, 92, 1, True, True))
+Call Check(ViewerUi.InspectorBlocksScene(532, 82, 800, 640, 0))
+Call Check(Not ViewerUi.InspectorBlocksScene(500, 100, 800, 640, 0))
+Call Check(ViewerUi.InspectorActionAtPointer(
+    18, 544, 800, 640, 0, False, False,
+    ViewerProfiles.PROFILE_ARIN, False, -1) =
+    ViewerUi.INSPECTOR_ACTION_FIRST_FRAME)
+Call Check(ViewerUi.InspectorActionAtPointer(
+    500, 576, 800, 640, 0, False, False,
+    ViewerProfiles.PROFILE_ARIN, False, 2) =
+    ViewerUi.INSPECTOR_ACTION_KEYFRAME)
+Call Check(ViewerUi.InspectorActionAtPointer(
+    532, 18, 800, 640, 0, False, False,
+    ViewerProfiles.PROFILE_ARIN, False, -1) =
+    ViewerUi.INSPECTOR_ACTION_LIGHTING)
+Call Check(ViewerUi.InspectorActionAtPointer(
+    626, 444, 800, 640, 0, False, False,
+    ViewerProfiles.PROFILE_ARIN, False, -1) =
+    ViewerUi.INSPECTOR_ACTION_SWORD_FIRE)
+Call Check(ViewerUi.InspectorActionAtPointer(
+    626, 444, 800, 640, 0, False, False,
+    ViewerProfiles.PROFILE_ORIN, False, -1) =
+    ViewerUi.INSPECTOR_ACTION_STORM_STYLE)
+Call Check(ViewerUi.InspectorActionAtPointer(
+    706, 444, 800, 640, 0, False, False,
+    ViewerProfiles.PROFILE_DRAGON, False, -1) =
+    ViewerUi.INSPECTOR_ACTION_DRAGON_TARGET)
+Call Check(ViewerUi.InspectorActionAtPointer(
+    544, 470, 800, 640, 0, False, False,
+    ViewerProfiles.PROFILE_ORIN, False, -1) =
+    ViewerUi.INSPECTOR_ACTION_STORM_COMFORT)
+Call Check(ViewerUi.InspectorActionAtPointer(
+    544, 470, 800, 640, 0, False, False,
+    ViewerProfiles.PROFILE_ARIN, True, -1) =
+    ViewerUi.INSPECTOR_ACTION_FLAME_PAUSE)
+Call Check(ViewerUi.InspectorActionAtPointer(
+    544, 352, 800, 640, 0, False, False,
+    ViewerProfiles.PROFILE_ARIN, False, -1) =
+    ViewerUi.INSPECTOR_ACTION_CLIP_BASE)
+Call Check(ViewerUi.InspectorActionAtPointer(
+    532, 18, 800, 640, 1, False, False,
+    ViewerProfiles.PROFILE_ARIN, False, -1) =
+    ViewerUi.INSPECTOR_ACTION_NONE)
 Call Check(ViewerUi.TIMELINE_LEFT = 18 And ViewerUi.TIMELINE_HEIGHT = 18)
 Call Check(ViewerUi.CALIBRATION_PANEL_WIDTH = 430 And
     ViewerUi.CALIBRATION_SLIDER_WIDTH = 360)

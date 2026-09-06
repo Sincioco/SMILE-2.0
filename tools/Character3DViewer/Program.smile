@@ -1239,7 +1239,7 @@ Function HandleTransformGizmoPointer() As Boolean
         Return False
     End If
 
-    If PointerInRectangle(300, 268, 132, 24) Then
+    If ViewerUi.CalibrationGizmoButtonContains(Pointer_X(), Pointer_Y()) Then
 
         If Pointer_Pressed(POINTER_PRIMARY) Then
             Call ToggleTransformGizmo()
@@ -1709,13 +1709,7 @@ End Sub
 Function HandleInterfacePointer() As Boolean
 
     Dim Blocked As Boolean
-    Dim ClipCount As Number
     Dim Index As Number
-    Dim KeyframeIndex As Number
-    Dim Column As Number
-    Dim Row As Number
-    Dim PanelLeft As Number
-    Dim WheelDelta As Number
 
     If (ViewerInputState.TimelineScrubbing Or
         ViewerInputState.TimelineKeyframeDragging Or
@@ -1754,20 +1748,14 @@ Function HandleInterfacePointer() As Boolean
 
     End If
 
-    PanelLeft = ViewerUi.StatusPanelX(Window_Width())
-
-    If PointerInRectangle(18, 62, 404, 26) Then
+    If ViewerUi.CharacterTabsContain(Pointer_X(), Pointer_Y()) Then
 
         If Pointer_Pressed(POINTER_PRIMARY) Then
 
-            If PointerInRectangle(104, 62, 72, 26) Then
-                Call SelectCharacterTab(0)
-            Else If PointerInRectangle(182, 62, 72, 26) Then
-                Call SelectCharacterTab(1)
-            Else If PointerInRectangle(260, 62, 72, 26) Then
-                Call SelectCharacterTab(2)
-            Else If PointerInRectangle(338, 62, 72, 26) Then
-                Call SelectCharacterTab(3)
+            Index = ViewerUi.CharacterTabAtPointer(Pointer_X(), Pointer_Y())
+
+            If Index >= 0 Then
+                Call SelectCharacterTab(Index)
             End If
 
         End If
@@ -1800,16 +1788,11 @@ End Function
 
 Function HandleInspectorPointer() As Boolean
 
-    Dim PanelLeft As Number
+    Dim Action As Number
     Dim Blocked As Boolean
-    Dim WheelDelta As Number
     Dim KeyframeIndex As Number
-    Dim ClipCount As Number
-    Dim Index As Number
-    Dim Column As Number
-    Dim Row As Number
-
-    PanelLeft = ViewerUi.StatusPanelX(Window_Width())
+    Dim TransferAction As Number
+    Dim WheelDelta As Number
 
     If HandleTransformGizmoPointer() Then
         Return True
@@ -1888,12 +1871,8 @@ Function HandleInspectorPointer() As Boolean
 
     End If
 
-    If PointerInRectangle(
-            ViewerUi.TIMELINE_LEFT,
-            Window_Height() - 64,
-            ViewerUi.TimelineWidth(Window_Width(), ViewerUi.TIMELINE_LEFT),
-            ViewerUi.TIMELINE_HEIGHT
-        ) Then
+    If ViewerUi.TimelineContains(
+        Pointer_X(), Pointer_Y(), Window_Width(), Window_Height()) Then
 
         WheelDelta = Pointer_Wheel_Delta()
 
@@ -1913,59 +1892,43 @@ Function HandleInspectorPointer() As Boolean
         Return True
     End If
 
-    If (CalibrationAvailable And
-        PointerInRectangle(ViewerUi.TIMELINE_LEFT + ViewerUi.CALIBRATION_DOWNLOAD_OFFSET,
-            Window_Height() - 43, ViewerUi.CALIBRATION_DOWNLOAD_WIDTH, 18)) Then
+    TransferAction = ViewerUi.TransferActionAtPointer(
+        Pointer_X(),
+        Pointer_Y(),
+        Window_Height(),
+        CalibrationAvailable,
+        Text_Width(Calibration.FileLabel, 9)
+    )
+
+    If TransferAction <> ViewerUi.TRANSFER_ACTION_NONE Then
 
         If Pointer_Pressed(POINTER_PRIMARY) Then
-            Call DownloadSavedCalibrationJson()
+
+            If TransferAction = ViewerUi.TRANSFER_ACTION_DOWNLOAD Then
+                Call DownloadSavedCalibrationJson()
+            Else If TransferAction = ViewerUi.TRANSFER_ACTION_IMPORT Then
+                Call HandleCalibrationImport()
+            Else If TransferAction = ViewerUi.TRANSFER_ACTION_OPEN Then
+                Call OpenSavedCalibrationJson()
+            End If
+
         End If
 
         Return True
 
     End If
 
-    If (CalibrationAvailable And
-        PointerInRectangle(ViewerUi.TIMELINE_LEFT, Window_Height() - 43,
-            ViewerUi.CALIBRATION_IMPORT_WIDTH, 18)) Then
-
-        If Pointer_Pressed(POINTER_PRIMARY) Then
-            Call HandleCalibrationImport()
-        End If
-
-        Return True
-
-    End If
-
-    If (CalibrationAvailable And
-        PointerInRectangle(ViewerUi.TIMELINE_LEFT + ViewerUi.CALIBRATION_FILENAME_OFFSET, Window_Height() - 40,
-            Text_Width(Calibration.FileLabel, 9), 14)) Then
-
-        If Pointer_Pressed(POINTER_PRIMARY) Then
-            Call OpenSavedCalibrationJson()
-        End If
-
-        Return True
-
-    End If
-
-    If (ViewerUiState.Visibility = 0 And
-        CalibrationAvailable And
-        ViewerUiState.CalibrationVisible And
-        PointerInRectangle(
-            ViewerUi.CALIBRATION_PANEL_X,
-            ViewerUi.CALIBRATION_PANEL_Y,
-            ViewerUi.CALIBRATION_PANEL_WIDTH,
-            ViewerUi.CALIBRATION_PANEL_HEIGHT
-        )) Then
+    If ViewerUi.CalibrationPanelContains(
+        Pointer_X(), Pointer_Y(), ViewerUiState.Visibility,
+        CalibrationAvailable, ViewerUiState.CalibrationVisible) Then
         Call HandleCalibrationPanelPointer()
 
         Return True
     End If
 
-    Blocked = (Pointer_Y() < 90 Or
-        Pointer_Y() >= Window_Height() - 100 Or
-        (ViewerUiState.Visibility = 0 And Pointer_X() >= PanelLeft And Pointer_Y() >= 82))
+    Blocked = ViewerUi.InspectorBlocksScene(
+        Pointer_X(), Pointer_Y(), Window_Width(), Window_Height(),
+        ViewerUiState.Visibility)
 
     If Not Pointer_Pressed(POINTER_PRIMARY) Then
         Return Blocked
@@ -1982,89 +1945,84 @@ Function HandleInspectorPointer() As Boolean
         Window_Height()
     )
 
-    If PointerInRectangle(ViewerUi.TIMELINE_LEFT, Window_Height() - 96, 62, 24) Then
+    Action = ViewerUi.InspectorActionAtPointer(
+        Pointer_X(),
+        Pointer_Y(),
+        Window_Width(),
+        Window_Height(),
+        ViewerUiState.Visibility,
+        ViewerProfiles.INCLUDE_DIAGNOSTIC_PROFILES,
+        Party.Enabled,
+        Session.ProfileIndex,
+        Effects.SwordFireReady,
+        KeyframeIndex
+    )
+
+    If Action = ViewerUi.INSPECTOR_ACTION_FIRST_FRAME Then
 
         Call SeekFirstAnimationFrame()
 
-    Else If PointerInRectangle(ViewerUi.TIMELINE_LEFT + 68, Window_Height() - 96, 62, 24) Then
+    Else If Action = ViewerUi.INSPECTOR_ACTION_PREVIOUS_KEY Then
 
         Call SeekCalibrationKeyframe(-1)
 
-    Else If PointerInRectangle(ViewerUi.TIMELINE_LEFT + 136, Window_Height() - 96, 62, 24) Then
+    Else If Action = ViewerUi.INSPECTOR_ACTION_NEXT_KEY Then
 
         Call SeekCalibrationKeyframe(1)
 
-    Else If PointerInRectangle(ViewerUi.TIMELINE_LEFT + 204, Window_Height() - 96, 62, 24) Then
+    Else If Action = ViewerUi.INSPECTOR_ACTION_PREVIOUS_FRAME Then
 
         Call StepAnimationFrame(-1)
 
         ViewerInputState.FrameButtonRepeatDirection = -1
         ViewerInputState.FrameButtonRepeatAt = Timer() + FRAME_BUTTON_REPEAT_MILLISECONDS
 
-    Else If PointerInRectangle(ViewerUi.TIMELINE_LEFT + 272, Window_Height() - 96, 62, 24) Then
+    Else If Action = ViewerUi.INSPECTOR_ACTION_NEXT_FRAME Then
 
         Call StepAnimationFrame(1)
 
         ViewerInputState.FrameButtonRepeatDirection = 1
         ViewerInputState.FrameButtonRepeatAt = Timer() + FRAME_BUTTON_REPEAT_MILLISECONDS
 
-    Else If KeyframeIndex >= 0 Then
+    Else If Action = ViewerUi.INSPECTOR_ACTION_KEYFRAME Then
 
         Call BeginTimelineKeyframeDrag(KeyframeIndex)
 
-    Else If PointerInRectangle(
-        ViewerUi.TIMELINE_LEFT,
-        Window_Height() - 64,
-        ViewerUi.TimelineWidth(Window_Width(), ViewerUi.TIMELINE_LEFT),
-        ViewerUi.TIMELINE_HEIGHT
-    ) Then
+    Else If Action = ViewerUi.INSPECTOR_ACTION_TIMELINE Then
 
         Call ViewerInput.BeginTimelineScrub(ViewerInputState)
 
         Call SeekFromPointer()
 
-    Else If ViewerUiState.Visibility <> 0 Then
-
-        Return Blocked
-
-    Else If PointerInRectangle(PanelLeft, 18, 44, 34) Then
+    Else If Action = ViewerUi.INSPECTOR_ACTION_LIGHTING Then
 
         Call CycleLighting()
 
-    Else If PointerInRectangle(PanelLeft + 48, 18, 56, 34) Then
+    Else If Action = ViewerUi.INSPECTOR_ACTION_MATERIAL Then
 
         Call CycleMaterialInspection()
 
-    Else If PointerInRectangle(PanelLeft + 108, 18, 50, 34) Then
+    Else If Action = ViewerUi.INSPECTOR_ACTION_SOCKET Then
 
         Call ViewerRendering.CycleSocketDisplay(Rendering)
 
-    Else If (ViewerProfiles.INCLUDE_DIAGNOSTIC_PROFILES And
-        Not Party.Enabled And
-        PointerInRectangle(PanelLeft + 162, 18, 50, 34)) Then
+    Else If Action = ViewerUi.INSPECTOR_ACTION_PROFILE Then
 
         Call CycleProfile()
 
-    Else If PointerInRectangle(
-        ViewerUi.GlowButtonX(Window_Width(),
-            ViewerProfiles.INCLUDE_DIAGNOSTIC_PROFILES, Party.Enabled),
-        18,
-        ViewerUi.GlowButtonWidth(
-            ViewerProfiles.INCLUDE_DIAGNOSTIC_PROFILES, Party.Enabled),
-        34
-    ) Then
+    Else If Action = ViewerUi.INSPECTOR_ACTION_GLOW Then
 
         Call ToggleEpicGlow()
 
-    Else If PointerInRectangle(PanelLeft, 56, 72, 22) Then
+    Else If Action = ViewerUi.INSPECTOR_ACTION_DRAGON Then
 
         Call ToggleDragon()
 
-    Else If PointerInRectangle(PanelLeft + 76, 56, 48, 22) Then
+    Else If Action = ViewerUi.INSPECTOR_ACTION_BACKGROUND Then
 
         Call CycleBackground()
 
-    Else If PointerInRectangle(PanelLeft + 128, 56, 36, 22) Then
+    Else If Action = ViewerUi.INSPECTOR_ACTION_CALIBRATION Then
 
         ViewerUiState.CalibrationVisible = CalibrationAvailable And Not ViewerUiState.CalibrationVisible
 
@@ -2076,92 +2034,81 @@ Function HandleInspectorPointer() As Boolean
             Call ViewerInput.CancelCaptures(ViewerInputState)
         End If
 
-    Else If PointerInRectangle(PanelLeft + 168, 56, 40, 22) Then
+    Else If Action = ViewerUi.INSPECTOR_ACTION_SWORD Then
 
         Call ToggleSword()
 
-    Else If PointerInRectangle(PanelLeft + 212, 56, 40, 22) Then
+    Else If Action = ViewerUi.INSPECTOR_ACTION_SHIELD Then
 
         Call ToggleShield()
 
-    Else If PointerInRectangle(PanelLeft + 178, 330, 74, 18) Then
+    Else If Action = ViewerUi.INSPECTOR_ACTION_DEMO Then
 
         Call ToggleDemo()
 
-    Else If PointerInRectangle(PanelLeft + 12, 444, 78, 22) Then
+    Else If Action = ViewerUi.INSPECTOR_ACTION_FLOOR Then
 
         Call ToggleFloorAndGrid()
 
-    Else If PointerInRectangle(PanelLeft + 94, 444, 76, 22) Then
+    Else If Action = ViewerUi.INSPECTOR_ACTION_DRAGON_HEAD Then
 
-        If Session.ProfileIndex = ViewerProfiles.PROFILE_DRAGON Then
-            Call ViewerDragon.ToggleHeadTracking(DragonState)
-        Else If Session.ProfileIndex = ViewerProfiles.PROFILE_ORIN Then
-            Call ViewerEffects.CycleStormStyle(Effects)
-        Else
+        Call ViewerDragon.ToggleHeadTracking(DragonState)
 
-            Call ViewerEffects.ToggleSwordFire(Effects)
+    Else If Action = ViewerUi.INSPECTOR_ACTION_DRAGON_TARGET Then
+
+        If Not Party.Enabled Then
+            Party.DragonCounter = (Party.DragonCounter + 1) Mod 2
         End If
 
-    Else If PointerInRectangle(PanelLeft + 174, 444, 78, 22) Then
+    Else If Action = ViewerUi.INSPECTOR_ACTION_STORM_STYLE Then
 
-        If Session.ProfileIndex = ViewerProfiles.PROFILE_DRAGON Then
+        Call ViewerEffects.CycleStormStyle(Effects)
 
-            If Not Party.Enabled Then
-                Party.DragonCounter = (Party.DragonCounter + 1) Mod 2
-            End If
+    Else If Action = ViewerUi.INSPECTOR_ACTION_SWORD_FIRE Then
 
-        Else If Session.ProfileIndex = ViewerProfiles.PROFILE_ORIN Then
+        Call ViewerEffects.ToggleSwordFire(Effects)
 
-            Call ViewerEffects.CycleStormStyle(Effects)
+    Else If Action = ViewerUi.INSPECTOR_ACTION_SHIELD_FIRE Then
 
-        Else
+        Call ViewerEffects.ToggleShieldFire(Effects)
 
-            Call ViewerEffects.ToggleShieldFire(Effects)
-
-        End If
-
-    Else If (Session.ProfileIndex = ViewerProfiles.PROFILE_ORIN And
-        PointerInRectangle(PanelLeft + 12, 470, 128, 20)) Then
+    Else If Action = ViewerUi.INSPECTOR_ACTION_STORM_COMFORT Then
 
         Call ViewerEffects.CycleStormSceneComfort()
 
-    Else If (Session.ProfileIndex = ViewerProfiles.PROFILE_ORIN And
-        PointerInRectangle(PanelLeft + 144, 470, 108, 20)) Then
+    Else If Action = ViewerUi.INSPECTOR_ACTION_LIGHTNING_PAUSE Then
 
         Call ViewerEffects.ToggleLightningPause(Effects)
 
-    Else If (Effects.SwordFireReady And
-        PointerInRectangle(PanelLeft + 12, 470, 128, 20)) Then
+    Else If Action = ViewerUi.INSPECTOR_ACTION_FLAME_PAUSE Then
 
         Call ViewerEffects.ToggleFlamePause(Effects)
 
-    Else If (Session.ProfileIndex = ViewerProfiles.PROFILE_ARIN And
-        PointerInRectangle(PanelLeft + 144, 470, 108, 20)) Then
+    Else If Action = ViewerUi.INSPECTOR_ACTION_SHIELD_FIRE_STYLE Then
 
         Call ViewerEffects.ToggleShieldFireStyle(Effects)
 
-    Else If PointerInRectangle(PanelLeft + 172, 204, 30, 24) Then
+    Else If Action = ViewerUi.INSPECTOR_ACTION_SPEED_DOWN Then
 
         Call AdjustPlaybackSpeed(-25)
 
-    Else If PointerInRectangle(PanelLeft + 208, 204, 30, 24) Then
+    Else If Action = ViewerUi.INSPECTOR_ACTION_SPEED_UP Then
 
         Call AdjustPlaybackSpeed(25)
 
-    Else If PointerInRectangle(PanelLeft + 12, Window_Height() - 64, 52, 24) Then
+    Else If Action = ViewerUi.INSPECTOR_ACTION_RESET_VIEW Then
 
         Call ResetView()
 
-    Else If PointerInRectangle(PanelLeft + 68, Window_Height() - 64, 74, 24) Then
+    Else If Action = ViewerUi.INSPECTOR_ACTION_RESTART_PRESENTATION Then
 
         Call RestartPresentation()
 
-    Else If PointerInRectangle(PanelLeft + 146, Window_Height() - 64, 40, 24) Then
+    Else If Action = ViewerUi.INSPECTOR_ACTION_RESET_ALL Then
 
         Call ResetAll()
 
-    Else If PointerInRectangle(PanelLeft + 190, Window_Height() - 64, 50, 24) Then
+    Else If Action = ViewerUi.INSPECTOR_ACTION_FIT Then
 
         ViewerCameraState.FitLocked = Not ViewerCameraState.FitLocked
 
@@ -2186,31 +2133,11 @@ Function HandleInspectorPointer() As Boolean
 
         End If
 
+    Else If Action >= ViewerUi.INSPECTOR_ACTION_CLIP_BASE Then
+
+        Call SelectPresentationClip(Action - ViewerUi.INSPECTOR_ACTION_CLIP_BASE)
+
     End If
-
-    If ViewerUiState.Visibility <> 0 Then
-        Return Blocked
-    End If
-
-    ClipCount = ViewerProfiles.ClipCount(Session.ProfileIndex)
-
-    For Index = 0 To ClipCount - 1
-
-        Column = Index Mod ViewerUi.ANIMATION_BUTTON_COLUMN_COUNT
-        Row = Index / ViewerUi.ANIMATION_BUTTON_COLUMN_COUNT
-
-        If PointerInRectangle(
-            ViewerUi.AnimationButtonX(Window_Width()) +
-                Column * (ViewerUi.ANIMATION_BUTTON_WIDTH + ViewerUi.ANIMATION_BUTTON_COLUMN_GAP),
-            ViewerUi.ANIMATION_BUTTON_Y +
-                Row * (ViewerUi.ANIMATION_BUTTON_HEIGHT + ViewerUi.ANIMATION_BUTTON_ROW_GAP),
-            ViewerUi.ANIMATION_BUTTON_WIDTH,
-            ViewerUi.ANIMATION_BUTTON_HEIGHT
-        ) Then
-            Call SelectPresentationClip(Index)
-        End If
-
-    End For
 
     Return Blocked
 
@@ -3784,15 +3711,6 @@ Function SelectedClipLabel() As Text
         PresentationIndexForRuntimeClip(Playback.SelectedClip)
     )
 
-    Return Result
-
-End Function
-
-Function PointerInRectangle(X As Number, Y As Number, Width As Number, Height As Number) As Boolean
-
-    Dim Result As Boolean
-
-    Result = UI.Contains(X, Y, Width, Height)
     Return Result
 
 End Function

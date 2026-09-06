@@ -211,6 +211,14 @@ try {
         'Public Function TimelineFrameAtPointer(',
         'Public Function TimelineKeyframeAtPointer(',
         'Public Function LayoutTooSmall(',
+        'Public Function CharacterTabsContain(',
+        'Public Function CharacterTabAtPointer(',
+        'Public Function TimelineContains(',
+        'Public Function CalibrationGizmoButtonContains(',
+        'Public Function TransferActionAtPointer(',
+        'Public Function CalibrationPanelContains(',
+        'Public Function InspectorBlocksScene(',
+        'Public Function InspectorActionAtPointer(',
         'Public Function CalibrationPointerAction(',
         'Public Function ApplyCalibrationSelection(',
         'Public Sub DrawMinimumSizeNotice(',
@@ -286,6 +294,13 @@ try {
         -not $viewerSource.Contains('"Save Or Cancel The Pose Before Switching"') -and
         -not $viewerSource.Contains('"CHARACTER VIEWER RECOVERY"')) `
         'Inspector chrome, detail, footer/status and recovery drawing must remain in ViewerUi.'
+    Assert-True (-not $viewerSource.Contains('Function PointerInRectangle(') -and
+        -not $viewerSource.Contains('PointerInRectangle(') -and
+        -not $viewerSource.Contains('UI.Contains(') -and
+        -not $viewerSource.Contains('ViewerUi.ANIMATION_BUTTON_COLUMN_COUNT') -and
+        -not $viewerSource.Contains('PanelLeft + 94, 444') -and
+        -not $viewerSource.Contains('PanelLeft + 174, 444')) `
+        'Character tabs, transfers, inspector actions and animation-button hit maps must remain in ViewerUi.'
     foreach ($contract in @(
         'Public Sub BeginDrag(',
         'Public Sub FinishDrag(',

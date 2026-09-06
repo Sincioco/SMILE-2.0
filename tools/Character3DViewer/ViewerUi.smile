@@ -67,6 +67,46 @@ Public Const CALIBRATION_ACTION_HOLD_GRIP = 20
 Public Const CALIBRATION_ACTION_UNDO = 21
 Public Const CALIBRATION_ACTION_DECOUPLE_WEAPON = 22
 Public Const CALIBRATION_ACTION_DECOUPLE_SHIELD = 23
+Public Const TRANSFER_ACTION_NONE = 0
+Public Const TRANSFER_ACTION_DOWNLOAD = 1
+Public Const TRANSFER_ACTION_IMPORT = 2
+Public Const TRANSFER_ACTION_OPEN = 3
+Public Const INSPECTOR_ACTION_NONE = 0
+Public Const INSPECTOR_ACTION_FIRST_FRAME = 1
+Public Const INSPECTOR_ACTION_PREVIOUS_KEY = 2
+Public Const INSPECTOR_ACTION_NEXT_KEY = 3
+Public Const INSPECTOR_ACTION_PREVIOUS_FRAME = 4
+Public Const INSPECTOR_ACTION_NEXT_FRAME = 5
+Public Const INSPECTOR_ACTION_KEYFRAME = 6
+Public Const INSPECTOR_ACTION_TIMELINE = 7
+Public Const INSPECTOR_ACTION_LIGHTING = 8
+Public Const INSPECTOR_ACTION_MATERIAL = 9
+Public Const INSPECTOR_ACTION_SOCKET = 10
+Public Const INSPECTOR_ACTION_PROFILE = 11
+Public Const INSPECTOR_ACTION_GLOW = 12
+Public Const INSPECTOR_ACTION_DRAGON = 13
+Public Const INSPECTOR_ACTION_BACKGROUND = 14
+Public Const INSPECTOR_ACTION_CALIBRATION = 15
+Public Const INSPECTOR_ACTION_SWORD = 16
+Public Const INSPECTOR_ACTION_SHIELD = 17
+Public Const INSPECTOR_ACTION_DEMO = 18
+Public Const INSPECTOR_ACTION_FLOOR = 19
+Public Const INSPECTOR_ACTION_DRAGON_HEAD = 20
+Public Const INSPECTOR_ACTION_DRAGON_TARGET = 21
+Public Const INSPECTOR_ACTION_STORM_STYLE = 22
+Public Const INSPECTOR_ACTION_SWORD_FIRE = 23
+Public Const INSPECTOR_ACTION_SHIELD_FIRE = 24
+Public Const INSPECTOR_ACTION_STORM_COMFORT = 25
+Public Const INSPECTOR_ACTION_LIGHTNING_PAUSE = 26
+Public Const INSPECTOR_ACTION_FLAME_PAUSE = 27
+Public Const INSPECTOR_ACTION_SHIELD_FIRE_STYLE = 28
+Public Const INSPECTOR_ACTION_SPEED_DOWN = 29
+Public Const INSPECTOR_ACTION_SPEED_UP = 30
+Public Const INSPECTOR_ACTION_RESET_VIEW = 31
+Public Const INSPECTOR_ACTION_RESTART_PRESENTATION = 32
+Public Const INSPECTOR_ACTION_RESET_ALL = 33
+Public Const INSPECTOR_ACTION_FIT = 34
+Public Const INSPECTOR_ACTION_CLIP_BASE = 100
 
 Private Const MINIMUM_VIEWER_WIDTH = 800
 Private Const MINIMUM_VIEWER_HEIGHT = 540
@@ -520,6 +560,311 @@ Public Function LayoutTooSmall(WindowWidth As Number, WindowHeight As Number) As
     Dim Result As Boolean
 
     Result = WindowWidth < MINIMUM_VIEWER_WIDTH Or WindowHeight < MINIMUM_VIEWER_HEIGHT
+
+    Return Result
+
+End Function
+
+Public Function CharacterTabsContain(PointerX As Number, PointerY As Number) As Boolean
+
+    Dim Result As Boolean
+
+    Result = InRectangle(PointerX, PointerY, 18, 62, 404, 26)
+
+    Return Result
+
+End Function
+
+Public Function CharacterTabAtPointer(PointerX As Number, PointerY As Number) As Number
+
+    Dim Result As Number
+
+    Result = -1
+
+    If InRectangle(PointerX, PointerY, 104, 62, 72, 26) Then
+        Result = 0
+    Else If InRectangle(PointerX, PointerY, 182, 62, 72, 26) Then
+        Result = 1
+    Else If InRectangle(PointerX, PointerY, 260, 62, 72, 26) Then
+        Result = 2
+    Else If InRectangle(PointerX, PointerY, 338, 62, 72, 26) Then
+        Result = 3
+    End If
+
+    Return Result
+
+End Function
+
+Public Function TimelineContains(PointerX As Number, PointerY As Number,
+    WindowWidth As Number, WindowHeight As Number) As Boolean
+
+    Dim Result As Boolean
+
+    Result = InRectangle(
+        PointerX, PointerY,
+        TIMELINE_LEFT, WindowHeight - 64,
+        TimelineWidth(WindowWidth, TIMELINE_LEFT), TIMELINE_HEIGHT)
+
+    Return Result
+
+End Function
+
+Public Function CalibrationGizmoButtonContains(PointerX As Number,
+    PointerY As Number) As Boolean
+
+    Dim Result As Boolean
+
+    Result = InRectangle(PointerX, PointerY, 300, 268, 132, 24)
+
+    Return Result
+
+End Function
+
+Public Function TransferActionAtPointer(PointerX As Number, PointerY As Number,
+    WindowHeight As Number, CalibrationAvailable As Boolean,
+    FileLabelWidth As Number) As Number
+
+    Dim Result As Number
+
+    Result = TRANSFER_ACTION_NONE
+
+    If Not CalibrationAvailable Then
+        Return Result
+    End If
+
+    If InRectangle(PointerX, PointerY,
+        TIMELINE_LEFT + CALIBRATION_DOWNLOAD_OFFSET, WindowHeight - 43,
+        CALIBRATION_DOWNLOAD_WIDTH, 18) Then
+        Result = TRANSFER_ACTION_DOWNLOAD
+    Else If InRectangle(PointerX, PointerY, TIMELINE_LEFT, WindowHeight - 43,
+        CALIBRATION_IMPORT_WIDTH, 18) Then
+        Result = TRANSFER_ACTION_IMPORT
+    Else If InRectangle(PointerX, PointerY,
+        TIMELINE_LEFT + CALIBRATION_FILENAME_OFFSET, WindowHeight - 40,
+        FileLabelWidth, 14) Then
+        Result = TRANSFER_ACTION_OPEN
+    End If
+
+    Return Result
+
+End Function
+
+Public Function CalibrationPanelContains(PointerX As Number, PointerY As Number,
+    Visibility As Number, CalibrationAvailable As Boolean,
+    CalibrationVisible As Boolean) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Visibility = 0 And CalibrationAvailable And CalibrationVisible
+    Result = Result And InRectangle(
+        PointerX, PointerY,
+        CALIBRATION_PANEL_X, CALIBRATION_PANEL_Y,
+        CALIBRATION_PANEL_WIDTH, CALIBRATION_PANEL_HEIGHT)
+
+    Return Result
+
+End Function
+
+Public Function InspectorBlocksScene(PointerX As Number, PointerY As Number,
+    WindowWidth As Number, WindowHeight As Number, Visibility As Number) As Boolean
+
+    Dim PanelLeft As Number
+    Dim Result As Boolean
+
+    PanelLeft = StatusPanelX(WindowWidth)
+    Result = PointerY < 90 Or PointerY >= WindowHeight - 100
+    Result = Result Or (Visibility = 0 And PointerX >= PanelLeft And PointerY >= 82)
+
+    Return Result
+
+End Function
+
+Public Function InspectorActionAtPointer(
+    PointerX As Number,
+    PointerY As Number,
+    WindowWidth As Number,
+    WindowHeight As Number,
+    Visibility As Number,
+    DiagnosticProfiles As Boolean,
+    PartyEnabled As Boolean,
+    ProfileIndex As Number,
+    SwordFireReady As Boolean,
+    KeyframeIndex As Number
+) As Number
+
+    Dim AnimationIndex As Number
+    Dim PanelLeft As Number
+    Dim Result As Number
+
+    PanelLeft = StatusPanelX(WindowWidth)
+    Result = INSPECTOR_ACTION_NONE
+
+    If InRectangle(PointerX, PointerY, TIMELINE_LEFT, WindowHeight - 96, 62, 24) Then
+
+        Result = INSPECTOR_ACTION_FIRST_FRAME
+
+    Else If InRectangle(PointerX, PointerY,
+        TIMELINE_LEFT + 68, WindowHeight - 96, 62, 24) Then
+
+        Result = INSPECTOR_ACTION_PREVIOUS_KEY
+
+    Else If InRectangle(PointerX, PointerY,
+        TIMELINE_LEFT + 136, WindowHeight - 96, 62, 24) Then
+
+        Result = INSPECTOR_ACTION_NEXT_KEY
+
+    Else If InRectangle(PointerX, PointerY,
+        TIMELINE_LEFT + 204, WindowHeight - 96, 62, 24) Then
+
+        Result = INSPECTOR_ACTION_PREVIOUS_FRAME
+
+    Else If InRectangle(PointerX, PointerY,
+        TIMELINE_LEFT + 272, WindowHeight - 96, 62, 24) Then
+
+        Result = INSPECTOR_ACTION_NEXT_FRAME
+
+    Else If KeyframeIndex >= 0 Then
+
+        Result = INSPECTOR_ACTION_KEYFRAME
+
+    Else If InRectangle(PointerX, PointerY, TIMELINE_LEFT, WindowHeight - 64,
+        TimelineWidth(WindowWidth, TIMELINE_LEFT), TIMELINE_HEIGHT) Then
+
+        Result = INSPECTOR_ACTION_TIMELINE
+
+    Else If Visibility <> 0 Then
+
+        Return Result
+
+    Else If InRectangle(PointerX, PointerY, PanelLeft, 18, 44, 34) Then
+
+        Result = INSPECTOR_ACTION_LIGHTING
+
+    Else If InRectangle(PointerX, PointerY, PanelLeft + 48, 18, 56, 34) Then
+
+        Result = INSPECTOR_ACTION_MATERIAL
+
+    Else If InRectangle(PointerX, PointerY, PanelLeft + 108, 18, 50, 34) Then
+
+        Result = INSPECTOR_ACTION_SOCKET
+
+    Else If (DiagnosticProfiles And
+        Not PartyEnabled And
+        InRectangle(PointerX, PointerY, PanelLeft + 162, 18, 50, 34)) Then
+
+        Result = INSPECTOR_ACTION_PROFILE
+
+    Else If InRectangle(PointerX, PointerY,
+        GlowButtonX(WindowWidth, DiagnosticProfiles, PartyEnabled), 18,
+        GlowButtonWidth(DiagnosticProfiles, PartyEnabled), 34) Then
+
+        Result = INSPECTOR_ACTION_GLOW
+
+    Else If InRectangle(PointerX, PointerY, PanelLeft, 56, 72, 22) Then
+
+        Result = INSPECTOR_ACTION_DRAGON
+
+    Else If InRectangle(PointerX, PointerY, PanelLeft + 76, 56, 48, 22) Then
+
+        Result = INSPECTOR_ACTION_BACKGROUND
+
+    Else If InRectangle(PointerX, PointerY, PanelLeft + 128, 56, 36, 22) Then
+
+        Result = INSPECTOR_ACTION_CALIBRATION
+
+    Else If InRectangle(PointerX, PointerY, PanelLeft + 168, 56, 40, 22) Then
+
+        Result = INSPECTOR_ACTION_SWORD
+
+    Else If InRectangle(PointerX, PointerY, PanelLeft + 212, 56, 40, 22) Then
+
+        Result = INSPECTOR_ACTION_SHIELD
+
+    Else If InRectangle(PointerX, PointerY, PanelLeft + 178, 330, 74, 18) Then
+
+        Result = INSPECTOR_ACTION_DEMO
+
+    Else If InRectangle(PointerX, PointerY, PanelLeft + 12, 444, 78, 22) Then
+
+        Result = INSPECTOR_ACTION_FLOOR
+
+    Else If InRectangle(PointerX, PointerY, PanelLeft + 94, 444, 76, 22) Then
+
+        If ProfileIndex = ViewerProfiles.PROFILE_DRAGON Then
+            Result = INSPECTOR_ACTION_DRAGON_HEAD
+        Else If ProfileIndex = ViewerProfiles.PROFILE_ORIN Then
+            Result = INSPECTOR_ACTION_STORM_STYLE
+        Else
+            Result = INSPECTOR_ACTION_SWORD_FIRE
+        End If
+
+    Else If InRectangle(PointerX, PointerY, PanelLeft + 174, 444, 78, 22) Then
+
+        If ProfileIndex = ViewerProfiles.PROFILE_DRAGON Then
+            Result = INSPECTOR_ACTION_DRAGON_TARGET
+        Else If ProfileIndex = ViewerProfiles.PROFILE_ORIN Then
+            Result = INSPECTOR_ACTION_STORM_STYLE
+        Else
+            Result = INSPECTOR_ACTION_SHIELD_FIRE
+        End If
+
+    Else If (ProfileIndex = ViewerProfiles.PROFILE_ORIN And
+        InRectangle(PointerX, PointerY, PanelLeft + 12, 470, 128, 20)) Then
+
+        Result = INSPECTOR_ACTION_STORM_COMFORT
+
+    Else If (ProfileIndex = ViewerProfiles.PROFILE_ORIN And
+        InRectangle(PointerX, PointerY, PanelLeft + 144, 470, 108, 20)) Then
+
+        Result = INSPECTOR_ACTION_LIGHTNING_PAUSE
+
+    Else If (SwordFireReady And
+        InRectangle(PointerX, PointerY, PanelLeft + 12, 470, 128, 20)) Then
+
+        Result = INSPECTOR_ACTION_FLAME_PAUSE
+
+    Else If (ProfileIndex = ViewerProfiles.PROFILE_ARIN And
+        InRectangle(PointerX, PointerY, PanelLeft + 144, 470, 108, 20)) Then
+
+        Result = INSPECTOR_ACTION_SHIELD_FIRE_STYLE
+
+    Else If InRectangle(PointerX, PointerY, PanelLeft + 172, 204, 30, 24) Then
+
+        Result = INSPECTOR_ACTION_SPEED_DOWN
+
+    Else If InRectangle(PointerX, PointerY, PanelLeft + 208, 204, 30, 24) Then
+
+        Result = INSPECTOR_ACTION_SPEED_UP
+
+    Else If InRectangle(PointerX, PointerY,
+        PanelLeft + 12, WindowHeight - 64, 52, 24) Then
+
+        Result = INSPECTOR_ACTION_RESET_VIEW
+
+    Else If InRectangle(PointerX, PointerY,
+        PanelLeft + 68, WindowHeight - 64, 74, 24) Then
+
+        Result = INSPECTOR_ACTION_RESTART_PRESENTATION
+
+    Else If InRectangle(PointerX, PointerY,
+        PanelLeft + 146, WindowHeight - 64, 40, 24) Then
+
+        Result = INSPECTOR_ACTION_RESET_ALL
+
+    Else If InRectangle(PointerX, PointerY,
+        PanelLeft + 190, WindowHeight - 64, 50, 24) Then
+
+        Result = INSPECTOR_ACTION_FIT
+
+    Else
+        AnimationIndex = AnimationButtonAtPointer(
+            PointerX, PointerY, ProfileIndex, WindowWidth)
+
+        If AnimationIndex >= 0 Then
+            Result = INSPECTOR_ACTION_CLIP_BASE + AnimationIndex
+        End If
+
+    End If
 
     Return Result
 
@@ -1262,6 +1607,47 @@ Private Sub DrawCameraSlider(PanelLeft As Number, Label As Text, Y As Number,
     Draw Number Value At PanelLeft + 226, Y + 2 Size 10 Color CYAN
 
 End Sub
+
+Private Function AnimationButtonAtPointer(PointerX As Number, PointerY As Number,
+    ProfileIndex As Number, WindowWidth As Number) As Number
+
+    Dim ButtonX As Number
+    Dim ButtonY As Number
+    Dim ClipCount As Number
+    Dim Column As Number
+    Dim Index As Number
+    Dim Result As Number
+    Dim Row As Number
+
+    Result = -1
+    ClipCount = ViewerProfiles.ClipCount(ProfileIndex)
+
+    For Index = 0 To ClipCount - 1
+
+        Column = Index Mod ANIMATION_BUTTON_COLUMN_COUNT
+        Row = Index / ANIMATION_BUTTON_COLUMN_COUNT
+        ButtonX = AnimationButtonX(WindowWidth)
+        ButtonX = ButtonX + Column * (ANIMATION_BUTTON_WIDTH + ANIMATION_BUTTON_COLUMN_GAP)
+        ButtonY = ANIMATION_BUTTON_Y
+        ButtonY = ButtonY + Row * (ANIMATION_BUTTON_HEIGHT + ANIMATION_BUTTON_ROW_GAP)
+
+        If InRectangle(
+            PointerX,
+            PointerY,
+            ButtonX,
+            ButtonY,
+            ANIMATION_BUTTON_WIDTH,
+            ANIMATION_BUTTON_HEIGHT
+        ) Then
+            Result = Index
+            Exit For
+        End If
+
+    End For
+
+    Return Result
+
+End Function
 
 Private Function InRectangle(PointerX As Number, PointerY As Number,
     X As Number, Y As Number, Width As Number, Height As Number) As Boolean
