@@ -182,3 +182,20 @@ or fingerprint changed. Resume restores the demo clip/time that preceded preview
 Pose Calibration's Show Gizmo / Hide Gizmo control is shared with Arin. Handles
 default off while numeric editing stays available. Visibility is a transient UI
 choice, not a saved Orin correction or character-package change.
+
+## September 6: live same-model correction and effect proof
+
+`ActorIsolationTests.smile` reuses the current profile's standing baseline and
+applies opposite temporary right-wrist corrections to two independent Orin
+animators sharing one model. Each corrected hammer socket changes while the
+other actor's socket stays exactly unchanged. Those fixture-local values are
+never persisted. Real effect submissions are checked after freeze/hide, resume,
+scene comfort Off and one context's destruction; stale light leases cannot
+disable a replacement lease or the surviving actor.
+
+The native Auto and forced shader-fallback runs pass. Visible Chrome and Edge
+execute the same fixture with GPU trails; a disposable `fallback.html` uses the
+existing shader-failure test hook and reports CPU fallback while the surviving
+actor and lightning still render. The complete assertion output passes on both
+paths. This is focused ownership evidence, not a hardware benchmark or a change
+to canonical animations, equipment, package identity or calibration.

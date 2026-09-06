@@ -57,11 +57,21 @@ try {
     & node --check (Join-Path $webOutput 'smile-runtime.js')
     if ($LASTEXITCODE -ne 0) { throw 'Two-Orin Web runtime syntax check failed.' }
     & node 'scripts\run-web-test.js' $webOutput --expected $expected --timeout 60000 `
-        --renderer3d
+        --renderer3d --frames 8
     if ($LASTEXITCODE -ne 0) { throw 'Two-Orin Web renderer assertions failed.' }
     & node 'scripts\run-web-test.js' $webOutput --expected $expected --timeout 60000 `
-        --renderer3d --force-renderer3d-gpu-particle-shader-failure
+        --renderer3d --frames 8 --force-renderer3d-gpu-particle-shader-failure
     if ($LASTEXITCODE -ne 0) { throw 'Two-Orin Web fallback assertions failed.' }
+
+    # Disposable real-browser entry point; only this page injects a known failure.
+    $indexHtml = [System.IO.File]::ReadAllText((Join-Path $webOutput 'index.html'))
+    $runtimeTag = '<script src="smile-runtime.js'
+    if (-not $indexHtml.Contains($runtimeTag)) { throw 'Browser fallback insertion point missing.' }
+    $fallbackHtml = $indexHtml.Replace($runtimeTag,
+        '<script>globalThis.SMILE_TEST_RENDERER3D_FORCE_GPU_PARTICLE_SHADER_FAILURE = true;</script>' +
+        [Environment]::NewLine + '  ' + $runtimeTag)
+    [System.IO.File]::WriteAllText((Join-Path $webOutput 'fallback.html'), $fallbackHtml,
+        [System.Text.UTF8Encoding]::new($false))
 
     Write-Host 'Character Viewer two-Orin native/Web ownership, fallback, and isolation checks passed.'
 }

@@ -10,6 +10,7 @@
   <ItemGroup>
     <SmileSource Include="ActorIsolationTests.smile" StartupOnly="true" />
     <SmileSource Include="OrinStorm.smile" />
+    <SmileSource Include="Profiles.smile" />
     <Model3DAsset Include="BuildAssets\OrinV13\orin-v1.3-animation-checkpoint.glb"
                   Descriptor="BuildAssets\OrinV13\OrinV13.sm3d.json"
                   LogicalPath="Assets\Generation2\OrinV13\OrinV13.sm3d"
