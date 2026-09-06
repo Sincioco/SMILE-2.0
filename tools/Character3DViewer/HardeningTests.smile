@@ -16,6 +16,9 @@ Import Smile.Tools.Character3DViewerCalibration As ViewerCalibration
 Import Smile.Tools.Character3DViewerInput As ViewerInput
 Import Smile.Tools.Character3DViewerUi As ViewerUi
 Import Smile.Tools.Character3DViewerGizmo As ViewerGizmo
+Import Smile.Tools.Character3DViewerParty As ViewerParty
+Import Smile.Tools.Character3DViewerEffects As ViewerEffects
+Import Smile.Tools.Character3DViewerRendering As ViewerRendering
 Import Smile.Simple3D.Core As Core
 Import Smile.Simple3D.NodeAim3D As NodeAim3D
 Import Smile.Simple3D.Math3D As Math3D
@@ -81,6 +84,12 @@ Dim CalibrationState As ViewerCalibration.State
 Dim InputState As ViewerInput.State
 Dim UiState As ViewerUi.State
 Dim GizmoState As ViewerGizmo.State
+Dim PartyState As ViewerParty.State
+Dim PartyPrimary As ViewerParty.ActorContext
+Dim EffectsState As ViewerEffects.State
+Dim RenderingState As ViewerRendering.State
+Dim FirstApproach As Core.Vector3
+Dim SecondApproach As Core.Vector3
 
 Game Window "Character 3D Viewer Hardening Tests" Size 320 By 240
 
@@ -242,8 +251,7 @@ Call Check(ViewerCalibration.KeyValue(CalibrationState, 3, 0, 12) = 2)
 Call Check(ViewerCalibration.InterpolateChannel(6, 170, -170, 5, 0, 10) = 180)
 Call Check(ViewerCalibration.InterpolateChannel(18, 0, 1, 5, 0, 10) = 0)
 
-Call ViewerInput.Reset(InputState, True)
-Call Check(InputState.WindowActivated)
+Call ViewerInput.Reset(InputState)
 Call Check(ViewerInput.ClassifyArrow(37, 37, 39, 38, 40, True) =
     ViewerInput.ARROW_FRAME_PREVIOUS)
 Call Check(ViewerInput.ClassifyArrow(39, 37, 39, 38, 40, True) =
@@ -255,7 +263,6 @@ Call Check(ViewerInput.ClassifyArrow(38, 37, 39, 38, 40, False) =
 
 Call ViewerInput.BeginTimelineScrub(InputState)
 Call Check(ViewerInput.HasPointerCapture(InputState))
-Call Check(ViewerInput.UpdateActivation(InputState, False))
 Call ViewerInput.CancelCaptures(InputState)
 Call Check(Not ViewerInput.HasPointerCapture(InputState))
 Call ViewerInput.BeginTimelineKeyframeDrag(InputState, 4, 18)
@@ -288,6 +295,77 @@ Call Check(GizmoState.Dragging And GizmoState.PointerOwned)
 Call Check(GizmoState.OpenedEdit And GizmoState.DragStartValue = 27)
 Call ViewerGizmo.Hide(GizmoState)
 Call Check(Not GizmoState.Visible And Not GizmoState.Dragging)
+
+Call ViewerParty.ResetChoreography(PartyState)
+Call Check(PartyState.Turn = 2 And PartyState.DragonOnlyTurn)
+Call Check(PartyState.Stage = -1 And PartyState.FatalTarget = -1)
+
+FormationCenter = Math3D.Vector(-208, 0, -120)
+FirstApproach = Math3D.Vector(-21, 0, -44)
+SecondApproach = Math3D.Vector(-49, 0, 4)
+
+Call ViewerParty.InitializeFormation(PartyState, FormationCenter, 300, 10, 50,
+    FirstApproach, SecondApproach, -55)
+
+FormationFirst = BattleCamera.FormationPosition(FormationCenter, 300, 10, 50, 0, 2)
+FormationLast = BattleCamera.FormationPosition(FormationCenter, 300, 10, 50, 1, 2)
+
+Call Check(PartyState.ParticipantCount = ViewerParty.LIVE_PARTICIPANT_COUNT)
+Call Check(PartyState.First.Home.X = FormationFirst.X)
+Call Check(PartyState.Second.Home.Z = FormationLast.Z)
+Call Check(PartyState.Second.FacingAdjustment = -55)
+
+PartyPrimary.Profile = 7
+PartyPrimary.PresentationState = ViewerParty.STATE_GUARDING
+
+Call Check(ViewerParty.BeginInspectorBinding(PartyState, PartyPrimary, 1))
+Call Check(PartyState.UiBound And PartyState.UiTurn = 1)
+Call Check(ViewerParty.PresentationState(PartyState, 0) = ViewerParty.STATE_GUARDING)
+Call Check(Not ViewerParty.BeginInspectorBinding(PartyState, PartyPrimary, 0))
+Call ViewerParty.EndInspectorBinding(PartyState)
+Call Check(Not PartyState.UiBound And PartyState.UiPrimary.Profile = 7)
+Call ViewerParty.SetPresentationState(PartyState, 1, ViewerParty.STATE_KO)
+Call Check(ViewerParty.PresentationState(PartyState, 1) = ViewerParty.STATE_KO)
+Call Check(ViewerParty.PresentationStateName(ViewerParty.STATE_REVIVING) = "Reviving")
+
+PartyState.DragonCounter = 1
+
+Call ViewerParty.PrepareDragonTurn(PartyState, -1)
+Call Check(PartyState.FatalTarget = -1 And PartyState.HitTarget = 1)
+
+PartyState.Ready = True
+
+Call Check(ViewerParty.AdvanceElapsed(PartyState, 17, True, False))
+Call Check(PartyState.Elapsed = 17)
+Call Check(Not ViewerParty.AdvanceElapsed(PartyState, 17, True, True))
+Call Check(PartyState.Elapsed = 17)
+
+Call SceneVfx3D.Initialize(EffectsState.Clock)
+Call Check(ViewerEffects.AdvanceScene(EffectsState, 16, True, OrbitBase))
+Call Check(Not EffectsState.Clock.FireFrozen And Not EffectsState.Clock.LightningFrozen)
+Call Check(EffectsState.Clock.ElapsedMilliseconds = 16)
+
+EffectsState.FlamePaused = True
+
+Call Check(ViewerEffects.AdvanceScene(EffectsState, 17, True, OrbitBase))
+Call Check(EffectsState.Clock.FireFrozen And Not EffectsState.Clock.LightningFrozen)
+
+EffectsState.FlamePaused = False
+EffectsState.LightningPaused = True
+
+Call Check(ViewerEffects.AdvanceScene(EffectsState, 18, False, OrbitBase))
+Call Check(Not EffectsState.Clock.FireFrozen And EffectsState.Clock.LightningFrozen)
+Call Check(Not ViewerEffects.ShouldFreeze(True, False))
+Call Check(ViewerEffects.ShouldFreeze(False, True))
+
+Call ViewerRendering.Reset(RenderingState, 3)
+Call Check(RenderingState.FloorVisible And RenderingState.GridVisible)
+Call ViewerRendering.ToggleFloorAndGrid(RenderingState)
+Call Check(Not RenderingState.FloorVisible And Not RenderingState.GridVisible)
+Call ViewerRendering.ToggleFloorAndGrid(RenderingState)
+Call ViewerRendering.CycleBackground(RenderingState, 5)
+Call Check(RenderingState.FloorVisible And RenderingState.GridVisible)
+Call Check(RenderingState.BackgroundIndex = 4)
 
 Call CheckRingProjection()
 

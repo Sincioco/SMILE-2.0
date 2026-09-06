@@ -1,0 +1,132 @@
+''' Scene VFX clock ownership, independent family freeze controls and shared effect lifecycle.
+Module Smile.Tools.Character3DViewerEffects
+
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.FireEmitter3D As Fire
+Import Smile.Simple3D.LightningVfx3D As Lightning
+Import Smile.Simple3D.LightPool3D As LightPool3D
+Import Smile.Simple3D.SceneVfx3D As SceneVfx3D
+Import Smile.Tools.OrinStorm As OrinStorm
+Import Smile.Tools.BattleAudio As BattleAudio
+
+Public Type State
+    Clock As SceneVfx3D.Clock
+    FireInitialized As Boolean
+    LightningInitialized As Boolean
+    FlamePaused As Boolean
+    LightningPaused As Boolean
+    FlamesWerePaused As Boolean
+    VisualContinuityEpoch As Number
+    EquipmentFireEpoch As Number
+    DragonFireEpoch As Number
+    DragonFireWasPaused As Boolean
+    VisualHistoryDirty As Boolean
+    EquipmentFireFirstSample As Boolean
+    EquipmentFireFirstError As Number
+    OrinStorm As OrinStorm.Context
+    OrinLight As LightPool3D.Lease
+    DragonLight As LightPool3D.Lease
+    ArinAudio As BattleAudio.CueState
+    DragonAudio As BattleAudio.CueState
+End Type
+
+Public Function PrepareShared(ByRef Value As State) As Boolean
+
+    Dim Result As Boolean
+
+    Value.FireInitialized = False
+    Value.LightningInitialized = False
+    Value.FlamePaused = False
+    Value.LightningPaused = False
+
+    Call SceneVfx3D.Initialize(Value.Clock)
+
+    Result = LightPool3D.Initialize(2, 2)
+    Value.OrinLight = LightPool3D.Acquire()
+    Value.DragonLight = LightPool3D.Acquire()
+    Result = LightPool3D.IsValid(Value.OrinLight) And Result
+    Result = LightPool3D.IsValid(Value.DragonLight) And Result
+
+    Return Result
+
+End Function
+
+Public Function ShouldFreeze(ScenePaused As Boolean, ExplicitlyPaused As Boolean) As Boolean
+
+    Dim Result As Boolean
+
+    ''' Scene pause freezes actors and choreography, not VFX. Each existing VFX
+    ''' toggle remains the only control that freezes its Fire or Lightning family.
+    Result = ExplicitlyPaused
+
+    Return Result
+
+End Function
+
+Public Function AdvanceScene(ByRef Value As State, CameraElapsed As Number,
+    ScenePaused As Boolean, Camera As Core.Camera3D) As Boolean
+
+    Dim FlameFrozen As Boolean
+    Dim LightningFrozen As Boolean
+    Dim Result As Boolean
+
+    FlameFrozen = ShouldFreeze(ScenePaused, Value.FlamePaused)
+    LightningFrozen = ShouldFreeze(ScenePaused, Value.LightningPaused)
+    Result = SceneVfx3D.BeginFrame(Value.Clock, CameraElapsed,
+        FlameFrozen, LightningFrozen)
+    Result = SceneVfx3D.Advance(Value.Clock, Camera,
+        Value.FireInitialized, Value.LightningInitialized) And Result
+
+    Return Result
+
+End Function
+
+Public Sub ToggleFlamePause(ByRef Value As State)
+
+    Value.FlamePaused = Not Value.FlamePaused
+
+End Sub
+
+Public Sub ToggleLightningPause(ByRef Value As State)
+
+    Value.LightningPaused = Not Value.LightningPaused
+
+End Sub
+
+Public Sub InvalidateVisualHistory(ByRef Value As State)
+
+    Value.VisualContinuityEpoch = Min(2147483647, Value.VisualContinuityEpoch + 1)
+    Value.VisualHistoryDirty = True
+
+End Sub
+
+Public Function ShutdownShared(ByRef Value As State) As Boolean
+
+    Dim Result As Boolean
+
+    Result = True
+
+    Call OrinStorm.Shutdown()
+    Call Lightning.Shutdown()
+    Call Fire.Shutdown()
+
+    If LightPool3D.IsValid(Value.OrinLight) Then
+        Result = LightPool3D.Release(Value.OrinLight) And Result
+    End If
+
+    If LightPool3D.IsValid(Value.DragonLight) Then
+        Result = LightPool3D.Release(Value.DragonLight) And Result
+    End If
+
+    Call LightPool3D.Shutdown()
+
+    Value.FireInitialized = False
+    Value.LightningInitialized = False
+
+    Return Result
+
+End Function
+
+End Module

@@ -61,9 +61,12 @@ state. Arin, Orin, Dragon, Party, and inspected-actor identities remain distinct
 | `BaseCamera`, `Camera`, `ViewerFrame`, `CameraControls`, `SmoothZoom`, pointer remainders, calibration orbit anchor and `AutoOrbit*` | `ViewerCamera.State` with `Reset`, `Compose`, `UpdatePointerControls`, `AdvanceZoom`, `AdvanceAutoOrbit`, `UpdateResponsiveFit`, `ApplyCloseUp` and `ApplyCalibrationOrbitAnchor` | Camera interaction state now has one focused owner; `Program.smile` coordinates borrowed profile/bounds and keeps Party shot intent separate for the later Party owner |
 | Calibration key banks, selection/edit/clipboard/Undo buffers, storage envelope and import baseline in `Program.smile` | `ViewerCalibration.State` plus module-private bounded workspaces in `ViewerCalibration.smile` | `Program.smile` now coordinates UI-visible operations only; profile-scoped storage, codec validation, rollback and import confirmation are direct production-module paths |
 | `LoadCalibration`, `SaveCalibration`, raw `CalibrationStorage*`/`CalibrationCandidate*` arrays and in-place key-array edits | `ViewerCalibration.Load`, `Persist`, `PrepareImport`, `CommitImport`, `MoveKey`, `CommitCurrentKey`, `Undo` and focused query operations | Primary/backup recovery, rejected candidates and failed writes preserve the previous valid in-memory and stored revision; tests use disposable identities and buffers |
-| Slider/timeline/repeat capture flags and ad hoc queued arrow checks in `Program.smile` | `ViewerInput.State`, `ClassifyArrow`, capture begin/finish/reset and activation transition detection | Queued Ctrl state is sampled from `Key_Event_Held`; captured release is routed before outside-window return and focus loss clears every input/camera owner |
+| Slider/timeline/repeat capture flags and ad hoc queued arrow checks in `Program.smile` | `ViewerInput.State`, `ClassifyArrow` and capture begin/finish/reset operations | Queued Ctrl state is sampled from `Key_Event_Held`; captured release is routed before outside-window return. The invalid per-frame `Window_Activate()` focus probe was removed because that operation actively foregrounds the native window rather than querying activation. |
 | UI visibility and calibration panel/edit/confirmation fields in `Program.smile` | `ViewerUi.State` with explicit visibility, calibration reset, edit and confirmation transitions | Presentation state is separate from calibration banks and actor resources; pending edits and imports block actor switches without changing their owner |
 | Transform-gizmo projection, pointer ownership, drag remainder and grip state globals in `Program.smile` | `ViewerGizmo.State` with reset/show-hide/begin/finish/select/projection operations | Gizmos remain opt-in; hiding ends handle capture while retaining the unsaved numeric preview for explicit Save or Cancel |
+| Party participants, inspector/preview binding, turn/stage/timing, attack/reaction state and Party camera globals in `Program.smile` | `ViewerParty.State`, two explicit `ParticipantLayout` values and focused reset/formation/binding/elapsed operations | Exactly two live Party participants remain explicit; primary, companion, Dragon and inspector contexts stay distinct, and same-model fallback never aliases actor state |
+| Scene VFX clock, Fire/Lightning pause flags, visual-continuity epochs, light leases and audio-cue state in `Program.smile` | `ViewerEffects.State`, `AdvanceScene`, independent Fire/Lightning toggles, continuity invalidation and shared shutdown | One scene clock advances once per frame; scene pause freezes choreography but not VFX by default, while each existing family toggle freezes only that family |
+| Arena, floor/grid visibility, backdrop handles and backdrop index in `Program.smile` | `ViewerRendering.State` with reset/create/draw/apply/destroy/toggle/cycle operations | Rendering owns renderer resources and presentation selection; it borrows actor/effects snapshots and does not own gameplay, Party or calibration state |
 | `BattleCamera.*` | `BattleCamera.*` | Already focused, retained |
 | `BattleAudio.CueState/CrossedCue` | `BattleAudio.*` | Already focused, retained |
 | `CalibrationJson.*` | `CalibrationJson.*` | Bounded reader retained; no second codec |
@@ -77,10 +80,29 @@ copied or left as dead wrappers.
 
 | Existing proof | Production owner exercised after move | Migration status |
 |---|---|---|
-| `HardeningTests.smile` session/playback/clock/zoom/camera/input/UI/gizmo assertions | `ViewerSession`, `ViewerPlayback`, `ViewerTiming`, `ViewerCamera`, `ViewerInput`, `ViewerUi`, `ViewerGizmo`, `BattleCamera`, shared `CharacterViewer` | New owners are included and called directly; queued modifiers, activation loss, exclusive capture, opt-in hide, camera cancellation, reset, bounds, nudge, zoom, composition, auto-orbit and floor-clearance exercise production code |
-| `CalibrationTests.smile` plus generated isolated project | `ViewerCalibration` and retained `CalibrationJson` | Production calibration ownership is included directly; integration assertions retain the thin `Program.smile` coordinator only where UI/status side effects are part of the contract |
-| `ActorIsolationTests.smile` | `OrinStorm`, `Character3D`, scene VFX ownership | Already direct; retain explicit source list |
+| `HardeningTests.smile` session/playback/clock/zoom/camera/input/UI/gizmo/Party/effects/rendering assertions | `ViewerSession`, `ViewerPlayback`, `ViewerTiming`, `ViewerCamera`, `ViewerInput`, `ViewerUi`, `ViewerGizmo`, `ViewerParty`, `ViewerEffects`, `ViewerRendering`, `BattleCamera`, shared `CharacterViewer` | New owners are included and called directly; queued modifiers, exclusive capture, opt-in hide, camera cancellation, Party formation/binding/timing, independent VFX pause and rendering resource transitions exercise production code |
+| `CalibrationTests.smile` plus generated isolated project | `ViewerCalibration`, `ViewerParty`, `ViewerEffects`, `ViewerRendering` and retained `CalibrationJson` | Production owners are included directly; native/generated-Web tests prove scene pause leaves Fire and Lightning ages advancing by default, while explicit family toggles remain independent |
+| `ActorIsolationTests.smile` | `OrinStorm`, `Character3D` and scene VFX ownership | Native/Web normal and forced-fallback runs retain two independent same-model actor contexts, sockets and lifecycles |
 | PowerShell preservation fixtures | Launcher, synchronizer, canonical/publication validators | Direct production functions; disposable storage/processes only |
+
+## R6 preservation and defect evidence
+
+- Party, effects and rendering moved into focused owners without a shared replacement
+  state monolith. `Program.smile` retains ordering and coordinates borrowed handles.
+- Native and generated-Web hardening pass with exact console parity. The isolated
+  calibration fixture uses a random application identity and validates primary/backup
+  recovery without reading or replacing live Arin/Orin storage.
+- The two-Orin actor-isolation fixture passes normal and forced-fallback native/Web
+  runs. Installed Chrome context loss/restoration advances the live runtime and the
+  supported character-selection recovery action restores rendering without reload.
+- Installed Chrome visibly retains both `Freeze Fire` and `Freeze Lightning` while the
+  scene is paused. Each control independently changes to `Play` when explicitly frozen;
+  both were restored to their default VFX-running state while choreography remained
+  paused.
+- R5 had converted the one-time native `Window_Activate()` operation into a per-frame
+  focus probe. Because that operation actively foregrounds the window, Desktop stole
+  focus from Chrome. R6 removes the probe and dead activation bookkeeping, and the
+  hardening gate rejects its return.
 
 Three short maintenance routes define the desired end state:
 

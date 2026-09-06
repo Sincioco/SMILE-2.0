@@ -23,6 +23,9 @@ $calibrationSourcePath = Join-Path $repositoryRoot `
 $inputSourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\ViewerInput.smile'
 $uiSourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\ViewerUi.smile'
 $gizmoSourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\ViewerGizmo.smile'
+$partySourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\ViewerParty.smile'
+$effectsSourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\ViewerEffects.smile'
+$renderingSourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\ViewerRendering.smile'
 $profileSourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\Profiles.smile'
 $cookedProjectPath = Join-Path $repositoryRoot `
     'tools\Character3DViewer\Character3DViewer.smileproj'
@@ -94,13 +97,15 @@ try {
     $inputSource = Get-Content -LiteralPath $inputSourcePath -Raw
     $uiSource = Get-Content -LiteralPath $uiSourcePath -Raw
     $gizmoSource = Get-Content -LiteralPath $gizmoSourcePath -Raw
+    $partySource = Get-Content -LiteralPath $partySourcePath -Raw
+    $effectsSource = Get-Content -LiteralPath $effectsSourcePath -Raw
+    $renderingSource = Get-Content -LiteralPath $renderingSourcePath -Raw
     $profileSource = Get-Content -LiteralPath $profileSourcePath -Raw
     $adapterSource = Get-Content -LiteralPath $adapterSourcePath -Raw
     # Keep architectural wiring checks here. Current behavior is executed by the
     # isolated native harness below instead of pinning obsolete labels/timers.
     foreach ($contract in @(
         'Import Smile.Simple3D.CharacterViewer As CharacterViewer',
-        'Import Smile.Simple3D.LightPool3D As LightPool3D',
         'Import Smile.Simple3D.SceneVfx3D As SceneVfx3D',
         'Import Smile.UI.Controls As UI',
         'Import Smile.Tools.Character3DViewerCamera As ViewerCamera',
@@ -108,6 +113,9 @@ try {
         'Import Smile.Tools.Character3DViewerInput As ViewerInput',
         'Import Smile.Tools.Character3DViewerUi As ViewerUi',
         'Import Smile.Tools.Character3DViewerGizmo As ViewerGizmo',
+        'Import Smile.Tools.Character3DViewerParty As ViewerParty',
+        'Import Smile.Tools.Character3DViewerEffects As ViewerEffects',
+        'Import Smile.Tools.Character3DViewerRendering As ViewerRendering',
         'CharacterViewer.AutoFit(',
         'ViewerCamera.AdvanceZoom(',
         'ViewerCamera.UpdatePointerControls(',
@@ -122,8 +130,9 @@ try {
         'Sub ToggleSword()',
         'Sub ToggleShield()',
         'Sub ToggleFloorAndGrid()',
-        'SceneVfx3D.Advance(SceneVfxClock, ViewerCameraState.Live,',
-        'OrinLight = LightPool3D.Acquire()',
+        'ViewerEffects.AdvanceScene(',
+        'Call ViewerEffects.ToggleFlamePause(Effects)',
+        'Call ViewerEffects.ToggleLightningPause(Effects)',
         'Playback.ScenePaused = Not Playback.ScenePaused',
         'Const ZOOM_IN_LIMIT = -144',
         'Window_Width()',
@@ -143,7 +152,7 @@ try {
     Assert-True ($timelineCapture -ge 0 -and $outsidePointerReturn -gt $timelineCapture) `
         'Timeline pointer ownership must be handled before an outside-window return.'
     Assert-Contains $viewerSource `
-        'PartyHitTarget = 1) Then' `
+        'Party.HitTarget = 1) Then' `
         'Dragon Party target ownership'
     Assert-Contains $viewerSource `
         'Call ViewerCamera.KeepAboveGround(ViewerCameraState, 0)' `
@@ -169,7 +178,6 @@ try {
     foreach ($contract in @(
         'Public Function ClassifyArrow(',
         'Public Sub CancelCaptures(',
-        'Public Function UpdateActivation(',
         'Public Function HasPointerCapture(')) {
         Assert-Contains $inputSource $contract 'Viewer input owner'
     }
@@ -186,6 +194,28 @@ try {
         'Public Sub UpdateProjection(')) {
         Assert-Contains $gizmoSource $contract 'Viewer gizmo owner'
     }
+    foreach ($contract in @(
+        'Public Type ActorContext',
+        'Public Sub ResetChoreography(',
+        'Public Function BeginInspectorBinding(',
+        'Public Sub InitializeFormation(',
+        'Public Function AdvanceElapsed(')) {
+        Assert-Contains $partySource $contract 'Viewer Party owner'
+    }
+    foreach ($contract in @(
+        'Public Function ShouldFreeze(',
+        'Result = ExplicitlyPaused',
+        'Public Function AdvanceScene(',
+        'Public Function ShutdownShared(')) {
+        Assert-Contains $effectsSource $contract 'Viewer effects owner'
+    }
+    foreach ($contract in @(
+        'Public Function BeginScene(',
+        'Public Function DrawFloor(',
+        'Public Function DrawGrid(',
+        'Public Sub DestroyBackdrops(')) {
+        Assert-Contains $renderingSource $contract 'Viewer rendering owner'
+    }
     Assert-True (-not $viewerSource.Contains('Dim CalibrationStorage[') -and
         -not $viewerSource.Contains('Dim CalibrationKeyframeValues[') -and
         -not $viewerSource.Contains('Dim CalibrationUndoStorage[')) `
@@ -195,6 +225,13 @@ try {
         -not $viewerSource.Contains('Dim TransformGizmoDragging As Boolean') -and
         -not $viewerSource.Contains('Dim CalibrationEditing As Boolean')) `
         'Input, UI and gizmo state must not return to Program.smile.'
+    Assert-True (-not $viewerSource.Contains('Dim PartyElapsed As Number') -and
+        -not $viewerSource.Contains('Dim PartyCompanion As') -and
+        -not $viewerSource.Contains('Dim SceneVfxClock As') -and
+        -not $viewerSource.Contains('Dim Arena As')) `
+        'Party, scene VFX and arena resource state must not return to Program.smile.'
+    Assert-True (-not $viewerSource.Contains('Window_Activate()')) `
+        'The Viewer must not steal foreground by activating its window every frame.'
     Assert-Contains $profileSource `
         'Public Function PartyAttackName(ProfileIndex As Number, AttackCycle As Number) As Text' `
         'Party attack rotation'

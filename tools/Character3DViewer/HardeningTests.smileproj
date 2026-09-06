@@ -20,6 +20,9 @@
     <SmileSource Include="ViewerInput.smile" />
     <SmileSource Include="ViewerUi.smile" />
     <SmileSource Include="ViewerGizmo.smile" />
+    <SmileSource Include="ViewerParty.smile" />
+    <SmileSource Include="ViewerEffects.smile" />
+    <SmileSource Include="ViewerRendering.smile" />
     <SmileProjectReference Include="..\..\libraries\Smile.Simple3D\Smile.Simple3D.smilelibproj" />
   </ItemGroup>
 </SmileProject>

@@ -1,0 +1,250 @@
+''' Party preview choreography, explicit actor identities, inspector binding and camera-shot state.
+Module Smile.Tools.Character3DViewerParty
+
+Option Explicit
+
+Import Smile.Simple3D.Character3D As Character3D
+Import Smile.Simple3D.CharacterViewer As CharacterViewer
+Import Smile.Simple3D.Core As Core
+Import Smile.Tools.BattleCamera As BattleCamera
+
+Public Const STATE_ALIVE = 0
+Public Const STATE_ACTING = 1
+Public Const STATE_GUARDING = 2
+Public Const STATE_HIT = 3
+Public Const STATE_KO = 4
+Public Const STATE_REVIVING = 5
+Public Const LIVE_PARTICIPANT_COUNT = 2
+
+Public Type ActorContext
+    Actor As Character3D.Actor
+    Frame As CharacterViewer.Framing
+    Profile As Number
+    Clip As Number
+    KeyBase As Number
+    WeaponWrist As Number
+    ShieldWrist As Number
+    WeaponGlow As Core.Object3D
+    ShieldGlow As Core.Object3D
+    CalibrationAvailable As Boolean
+    GlowAvailable As Boolean
+    GlowVisible As Boolean
+    PresentationState As Number
+End Type
+
+Public Type ParticipantLayout
+    Home As Core.Vector3
+    Approach As Core.Vector3
+    FacingAdjustment As Number
+End Type
+
+Public Type State
+    Enabled As Boolean
+    Ready As Boolean
+    Companion As ActorContext
+    DragonOpponent As ActorContext
+    UiPrimary As ActorContext
+    UiBound As Boolean
+    UiTurn As Number
+    PreviewActive As Boolean
+    PreviewClip As Number
+    PreviewTime As Number
+    PreviewMode As Number
+    PrimaryPresentationState As Number
+    Elapsed As Number
+    Turn As Number
+    AttackCycle As Number
+    DragonOnlyTurn As Boolean
+    PreviousShotStage As Number
+    FatalTarget As Number
+    FatalStarted As Boolean
+    HitTarget As Number
+    HitResolved As Boolean
+    ParticipantCount As Number
+    First As ParticipantLayout
+    Second As ParticipantLayout
+    Stage As Number
+    DragonCounter As Number
+    DragonReactionPending As Boolean
+    OrbitCamera As Core.Camera3D
+    HeroCamera As Core.Camera3D
+    DragonCamera As Core.Camera3D
+    OrbitPhase1000 As Number
+    ActiveCamera As Number
+    PreviousCamera As Number
+    PreviousCameraTurn As Number
+    ShotPosition1000 As Core.Vector3
+    ShotTarget1000 As Core.Vector3
+    ShotBoss As Core.Vector3
+    ShotBossHead As Core.Vector3
+    ShotMouth As Core.Vector3
+End Type
+
+Public Sub ResetChoreography(ByRef Value As State)
+
+    Value.Elapsed = 0
+    Value.Turn = 2
+    Value.AttackCycle = 0
+    Value.DragonOnlyTurn = True
+    Value.PreviousShotStage = -1
+    Value.FatalTarget = -1
+    Value.FatalStarted = False
+    Value.HitTarget = -1
+    Value.HitResolved = False
+    Value.Stage = -1
+    Value.DragonCounter = 0
+    Value.DragonReactionPending = False
+
+    Call SetPresentationState(Value, 0, STATE_ALIVE)
+    Call SetPresentationState(Value, 1, STATE_ALIVE)
+
+End Sub
+
+Public Sub InitializeFormation(ByRef Value As State, Center As Core.Vector3,
+    Radius As Number, StartAngle As Number, EndAngle As Number,
+    FirstApproach As Core.Vector3, SecondApproach As Core.Vector3,
+    SecondFacingAdjustment As Number)
+
+    Value.ParticipantCount = LIVE_PARTICIPANT_COUNT
+    Value.First.Home = BattleCamera.FormationPosition(Center, Radius,
+        StartAngle, EndAngle, 0, Value.ParticipantCount)
+    Value.Second.Home = BattleCamera.FormationPosition(Center, Radius,
+        StartAngle, EndAngle, 1, Value.ParticipantCount)
+    Value.First.Approach = FirstApproach
+    Value.Second.Approach = SecondApproach
+    Value.First.FacingAdjustment = 0
+    Value.Second.FacingAdjustment = SecondFacingAdjustment
+
+End Sub
+
+Public Function HomePosition(ByRef Value As State, MemberIndex As Number) As Core.Vector3
+
+    Dim Result As Core.Vector3
+
+    Result = Value.First.Home
+
+    If MemberIndex = 1 Then
+        Result = Value.Second.Home
+    End If
+
+    Return Result
+
+End Function
+
+Public Function PresentationState(ByRef Value As State, MemberIndex As Number) As Number
+
+    Dim Result As Number
+
+    Result = Value.PrimaryPresentationState
+
+    If Value.UiBound Then
+        Result = Value.UiPrimary.PresentationState
+    End If
+
+    If MemberIndex = 1 Then
+        Result = Value.Companion.PresentationState
+    End If
+
+    Return Result
+
+End Function
+
+Public Sub SetPresentationState(ByRef Value As State, MemberIndex As Number,
+    Presentation As Number)
+
+    If MemberIndex = 1 Then
+        Value.Companion.PresentationState = Presentation
+    Else
+        Value.PrimaryPresentationState = Presentation
+    End If
+
+End Sub
+
+Public Function PresentationStateName(Presentation As Number) As Text
+
+    If Presentation = STATE_ACTING Then
+        Return "Acting"
+    Else If Presentation = STATE_GUARDING Then
+        Return "Guarding"
+    Else If Presentation = STATE_HIT Then
+        Return "Hit"
+    Else If Presentation = STATE_KO Then
+        Return "KO"
+    Else If Presentation = STATE_REVIVING Then
+        Return "Reviving"
+    End If
+
+    Return "Alive"
+
+End Function
+
+Public Function BeginInspectorBinding(ByRef Value As State, Primary As ActorContext,
+    Turn As Number) As Boolean
+
+    If Value.UiBound Then
+        Return False
+    End If
+
+    Value.UiPrimary = Primary
+    Value.UiTurn = Turn
+    Value.UiBound = True
+
+    Return True
+
+End Function
+
+Public Sub EndInspectorBinding(ByRef Value As State)
+
+    Value.UiBound = False
+
+End Sub
+
+Public Sub CapturePreview(ByRef Value As State, Clip As Number, Time As Number,
+    Mode As Number)
+
+    If Value.PreviewActive Then
+        Return
+    End If
+
+    Value.PreviewClip = Clip
+    Value.PreviewTime = Time
+    Value.PreviewMode = Mode
+    Value.PreviewActive = True
+
+End Sub
+
+Public Sub ClearPreview(ByRef Value As State)
+
+    Value.PreviewActive = False
+
+End Sub
+
+Public Sub PrepareDragonTurn(ByRef Value As State, RolledTarget As Number)
+
+    Value.FatalTarget = RolledTarget
+    Value.FatalStarted = False
+    Value.HitResolved = False
+    Value.HitTarget = Value.FatalTarget
+
+    If Value.HitTarget < 0 Then
+        Value.HitTarget = Value.DragonCounter Mod Max(1, Value.ParticipantCount)
+    End If
+
+End Sub
+
+Public Function AdvanceElapsed(ByRef Value As State, Elapsed As Number,
+    DemoEnabled As Boolean, ScenePaused As Boolean) As Boolean
+
+    If Not Value.Ready Or ScenePaused Then
+        Return False
+    End If
+
+    If DemoEnabled Then
+        Value.Elapsed = Value.Elapsed + Elapsed
+    End If
+
+    Return True
+
+End Function
+
+End Module

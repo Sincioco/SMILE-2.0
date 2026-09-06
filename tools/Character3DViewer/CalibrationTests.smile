@@ -43,11 +43,11 @@ Call CalibrationCheck(Session.Ready And Not Session.ViewerError And Not Calibrat
     "Orin loads with its canonical saved calibration")
 Call CheckPackagedCalibration()
 Call SelectCharacterTab(2)
-Call CalibrationCheck(Session.Ready And Not Session.ViewerError And PartyReady,
+Call CalibrationCheck(Session.Ready And Not Session.ViewerError And Party.Ready,
     "Dragon loads both calibrated companions")
 Call CheckDragonFireContinuity()
 Call SelectCharacterTab(3)
-Call CalibrationCheck(Session.Ready And Not Session.ViewerError And PartyReady,
+Call CalibrationCheck(Session.Ready And Not Session.ViewerError And Party.Ready,
     "Party loads both calibrated heroes")
 Call CheckPartyInspector()
 Call SelectCharacterTab(0)
@@ -129,20 +129,20 @@ Call CalibrationCheck(Character3D.AnimationTime(Character) > 111 And
 
 Call Character3D.Destroy(TestTwin)
 
-Call SetPartyPresentationState(0, PARTY_STATE_HIT)
-Call SetPartyPresentationState(1, PARTY_STATE_KO)
-Call CalibrationCheck(PartyPresentationState(0) = PARTY_STATE_HIT And
-    PartyPresentationState(1) = PARTY_STATE_KO, "Party actor states remain independent")
-Call CalibrationCheck(PartyPresentationStateName(PARTY_STATE_ALIVE) = "Alive" And
-    PartyPresentationStateName(PARTY_STATE_ACTING) = "Acting" And
-    PartyPresentationStateName(PARTY_STATE_GUARDING) = "Guarding" And
-    PartyPresentationStateName(PARTY_STATE_HIT) = "Hit" And
-    PartyPresentationStateName(PARTY_STATE_KO) = "KO" And
-    PartyPresentationStateName(PARTY_STATE_REVIVING) = "Reviving",
+Call SetPartyPresentationState(0, ViewerParty.STATE_HIT)
+Call SetPartyPresentationState(1, ViewerParty.STATE_KO)
+Call CalibrationCheck(PartyPresentationState(0) = ViewerParty.STATE_HIT And
+    PartyPresentationState(1) = ViewerParty.STATE_KO, "Party actor states remain independent")
+Call CalibrationCheck(PartyPresentationStateName(ViewerParty.STATE_ALIVE) = "Alive" And
+    PartyPresentationStateName(ViewerParty.STATE_ACTING) = "Acting" And
+    PartyPresentationStateName(ViewerParty.STATE_GUARDING) = "Guarding" And
+    PartyPresentationStateName(ViewerParty.STATE_HIT) = "Hit" And
+    PartyPresentationStateName(ViewerParty.STATE_KO) = "KO" And
+    PartyPresentationStateName(ViewerParty.STATE_REVIVING) = "Reviving",
     "Party presentation states are explicit")
 
-Call SetPartyPresentationState(0, PARTY_STATE_ALIVE)
-Call SetPartyPresentationState(1, PARTY_STATE_ALIVE)
+Call SetPartyPresentationState(0, ViewerParty.STATE_ALIVE)
+Call SetPartyPresentationState(1, ViewerParty.STATE_ALIVE)
 
 TestFormationFirst = PartyHomePosition(0, 3)
 TestFormationMiddle = PartyHomePosition(1, 3)
@@ -307,7 +307,7 @@ Call CalibrationCheck(SocketReferencePart("ShieldFireTip") = SHIELD_PART_INDEX, 
 Call CalibrationCheck(SocketReferencePart("HandRight") = BODY_PART_INDEX, "Hand marker owns wrist transform")
 
 Timing.CameraElapsed = 16
-FlameAnimationPaused = False
+Effects.FlamePaused = False
 
 Call UpdateEquipmentFire()
 Call AdvanceSceneVfx()
@@ -319,7 +319,7 @@ Call UpdateEquipmentFire()
 Call AdvanceSceneVfx()
 Call CalibrationCheck(Fire.Value(10, SwordFire) > TestFireAge, "Flames animate while scene paused")
 
-FlameAnimationPaused = True
+Effects.FlamePaused = True
 TestFireAge = Fire.Value(10, SwordFire)
 
 Call UpdateEquipmentFire()
@@ -344,24 +344,24 @@ Call AdvanceSceneVfx()
 Call CalibrationCheck(SwordFire.Slot = 0 And Not ArinShieldRim.IsVisible(),
     "Showing equipment while frozen does not resurrect stale effects")
 
-FlameAnimationPaused = False
+Effects.FlamePaused = False
 
 Call UpdateEquipmentFire()
 Call AdvanceSceneVfx()
 Call CalibrationCheck(SwordFire.Slot <> 0 And SwordFire.Generation <> TestFireGeneration,
     "Fire resumes from a new current attachment after a frozen hide")
 
-FlameAnimationPaused = True
+Effects.FlamePaused = True
 
-TestVisualEpoch = VisualContinuityEpoch
+TestVisualEpoch = Effects.VisualContinuityEpoch
 
 Call SeekFirstAnimationFrame()
-Call CalibrationCheck(VisualContinuityEpoch > TestVisualEpoch, "Seek invalidates visual history")
+Call CalibrationCheck(Effects.VisualContinuityEpoch > TestVisualEpoch, "Seek invalidates visual history")
 Call UpdateEquipmentFire()
 Call AdvanceSceneVfx()
 Call CalibrationCheck(Fire.Value(10, SwordFire) = 0, "Seek does not warm up paused flames")
 
-FlameAnimationPaused = False
+Effects.FlamePaused = False
 
 Call UpdateEquipmentFire()
 Call AdvanceSceneVfx()
@@ -369,29 +369,39 @@ Call CalibrationCheck(Fire.Value(10, SwordFire) <= 20, "Flame resume has no catc
 
 SwordFireReady = False
 TestFireAge = Fire.Value(10, SwordFire)
-TestFireAdvanceCount = SceneVfxClock.FireAdvanceCount
+TestFireAdvanceCount = Effects.Clock.FireAdvanceCount
 
 Call UpdateEquipmentFire()
 Call AdvanceSceneVfx()
 Call CalibrationCheck(Fire.Value(10, SwordFire) > TestFireAge,
     "Unavailable equipment component does not stall shared Fire")
-Call CalibrationCheck(SceneVfxClock.FireAdvanceCount = TestFireAdvanceCount + 1,
+Call CalibrationCheck(Effects.Clock.FireAdvanceCount = TestFireAdvanceCount + 1,
     "Shared Fire advances exactly once per scene frame")
 
-SwordFireReady = FireInitialized
+SwordFireReady = Effects.FireInitialized
 
-LightningInitialized = Lightning.Initialize("Assets/Lightning", 8192,
+Effects.LightningInitialized = Lightning.Initialize("Assets/Lightning", 8192,
     Graphics3D.GPU_PARTICLE_SIMULATION_AUTO, 4096)
 TestLightningTarget.X = 40
 TestLightningTarget.Y = 80
 TestLightning = Lightning.StartAt("StoredStorm", TestLightningSource,
     TestLightningTarget, 8647, Lightning.QUALITY_MEDIUM)
 
-Call CalibrationCheck(LightningInitialized And TestLightning.Slot <> 0,
+Call CalibrationCheck(Effects.LightningInitialized And TestLightning.Slot <> 0,
     "Shared Lightning test effect admitted")
 
-FlameAnimationPaused = False
-LightningAnimationPaused = True
+Effects.FlamePaused = False
+Effects.LightningPaused = False
+TestFireAge = Fire.Value(10, SwordFire)
+TestLightningAge = Lightning.Value(Lightning.QUERY_AGE, TestLightning)
+
+Call AdvanceSceneVfx()
+Call CalibrationCheck(Playback.ScenePaused And
+    Fire.Value(10, SwordFire) > TestFireAge And
+    Lightning.Value(Lightning.QUERY_AGE, TestLightning) > TestLightningAge,
+    "Scene pause leaves Fire and Lightning animating by default")
+
+Effects.LightningPaused = True
 TestFireAge = Fire.Value(10, SwordFire)
 TestLightningAge = Lightning.Value(Lightning.QUERY_AGE, TestLightning)
 
@@ -400,8 +410,8 @@ Call CalibrationCheck(Fire.Value(10, SwordFire) > TestFireAge And
     Lightning.Value(Lightning.QUERY_AGE, TestLightning) = TestLightningAge,
     "Frozen Lightning does not stop Fire")
 
-FlameAnimationPaused = True
-LightningAnimationPaused = False
+Effects.FlamePaused = True
+Effects.LightningPaused = False
 TestFireAge = Fire.Value(10, SwordFire)
 TestLightningAge = Lightning.Value(Lightning.QUERY_AGE, TestLightning)
 
@@ -414,9 +424,9 @@ Session.Ready = Lightning.Destroy(TestLightning) And Session.Ready
 
 Call Lightning.Shutdown()
 
-LightningInitialized = False
-FlameAnimationPaused = False
-LightningAnimationPaused = False
+Effects.LightningInitialized = False
+Effects.FlamePaused = False
+Effects.LightningPaused = False
 
 TestFireGeneration = SwordFire.Generation
 
@@ -445,17 +455,17 @@ Do
 
 Loop Until True
 
-FlameAnimationPaused = True
+Effects.FlamePaused = True
 ViewerUiState.CalibrationVisible = True
 DragonVisible = False
-FloorVisible = False
-GridVisible = False
+Rendering.FloorVisible = False
+Rendering.GridVisible = False
 ViewerUiState.Visibility = 2
 
 Call ResetAll()
-Call CalibrationCheck(Not Playback.ScenePaused And Not FlameAnimationPaused And Playback.DemoEnabled, "Reset restores playback defaults")
+Call CalibrationCheck(Not Playback.ScenePaused And Not Effects.FlamePaused And Playback.DemoEnabled, "Reset restores playback defaults")
 Call CalibrationCheck(Not ViewerUiState.CalibrationVisible And ViewerUiState.Visibility = 0, "Reset hides pose panel and restores UI")
-Call CalibrationCheck(DragonVisible And FloorVisible And GridVisible, "Reset restores the arena")
+Call CalibrationCheck(DragonVisible And Rendering.FloorVisible And Rendering.GridVisible, "Reset restores the arena")
 Call CalibrationCheck(ViewerCalibration.KeyCount(Calibration, 3) = 1,
     "Reset preserves saved corrections")
 
@@ -501,7 +511,7 @@ Sub CheckDragonFireContinuity()
     Playback.ScenePaused = True
     Playback.AnimationUpdateElapsed = 0
     Timing.CameraElapsed = 16
-    FlameAnimationPaused = False
+    Effects.FlamePaused = False
     OtherPosition.X = 300
     OtherFire = Fire.StartAt("TorchFire", OtherPosition, 7319,
         Fire.QUALITY_MEDIUM, Fire.SIMULATION_AUTO, 2)
@@ -526,7 +536,7 @@ Sub CheckDragonFireContinuity()
 
     PreviousGeneration = DragonBreath.Generation
     PreviousAge = Fire.Value(10, DragonBreath)
-    FlameAnimationPaused = True
+    Effects.FlamePaused = True
     ViewerCameraState.Live.Position.X = ViewerCameraState.Live.Position.X + 40
 
     Call UpdateDragon()
@@ -538,7 +548,7 @@ Sub CheckDragonFireContinuity()
     Call CalibrationCheck(DragonBreath.Slot = 0 And Fire.Value(1, OtherFire) = 1,
         "Forward frozen Dragon seek clears breath and presence, not another owner")
 
-    FlameAnimationPaused = False
+    Effects.FlamePaused = False
 
     Call UpdateDragon()
     Call AdvanceSceneVfx()
@@ -546,7 +556,7 @@ Sub CheckDragonFireContinuity()
         DragonBreath.Generation <> PreviousGeneration And Fire.Value(10, DragonBreath) <= 16,
         "Dragon resumes at current pose without stale breath or catch-up")
 
-    FlameAnimationPaused = True
+    Effects.FlamePaused = True
 
     Call ToggleDragon()
     Call UpdateDragon()
@@ -557,11 +567,11 @@ Sub CheckDragonFireContinuity()
     Call CalibrationCheck(Fire.Value(1, OtherFire) = 1,
         "Showing frozen Dragon does not resurrect old Fire")
 
-    FlameAnimationPaused = False
+    Effects.FlamePaused = False
 
     Call UpdateDragon()
 
-    FlameAnimationPaused = True
+    Effects.FlamePaused = True
 
     For ClipIndex = 0 To Character3D.ClipCount(Character) - 1
 
@@ -575,7 +585,7 @@ Sub CheckDragonFireContinuity()
     Call CalibrationCheck(Fire.Value(1, OtherFire) = 1,
         "Frozen Dragon clip cut releases incompatible presence and breath")
 
-    FlameAnimationPaused = False
+    Effects.FlamePaused = False
 
     For ClipIndex = 0 To Character3D.ClipCount(Character) - 1
 
@@ -591,7 +601,7 @@ Sub CheckDragonFireContinuity()
     Call AdvanceSceneVfx()
 
     PreviousCues = DragonPresence.ImpactCueCount()
-    FlameAnimationPaused = True
+    Effects.FlamePaused = True
 
     Call UpdateDragon()
     Call StepAnimationFrame(1)
@@ -599,7 +609,7 @@ Sub CheckDragonFireContinuity()
     Call CalibrationCheck(Character3D.AnimationTime(Character) > 2500 And
         Fire.Value(1, OtherFire) = 1, "Forward frozen seek past impact clears the projectile")
 
-    FlameAnimationPaused = False
+    Effects.FlamePaused = False
 
     Call UpdateDragon()
     Call AdvanceSceneVfx()
@@ -607,14 +617,14 @@ Sub CheckDragonFireContinuity()
     Call CalibrationCheck(DragonPresence.ImpactCueCount() = PreviousCues,
         "Resume after forward impact seek never replays the skipped impact cue")
 
-    FlameAnimationPaused = True
+    Effects.FlamePaused = True
 
     Call SeekFirstAnimationFrame()
     Call UpdateDragon()
     Call CalibrationCheck(Fire.Value(1, OtherFire) = 1,
         "Backward frozen seek also releases the Dragon impact burst")
 
-    FlameAnimationPaused = False
+    Effects.FlamePaused = False
     Session.Ready = Character3D.SetAnimationTime(Character, 2490) And Session.Ready
 
     Call UpdateDragon()
@@ -628,7 +638,7 @@ Sub CheckDragonFireContinuity()
     Call ClearDragonOwnedEffects()
 
     Session.Ready = Fire.Destroy(OtherFire) And Session.Ready
-    FlameAnimationPaused = False
+    Effects.FlamePaused = False
 
 End Sub
 
@@ -642,16 +652,16 @@ Sub CheckPartyInspector()
     Dim SavedArinJson As Text
 
     PrimaryHandle = Character.Handle
-    CompanionHandle = PartyCompanion.Actor.Handle
+    CompanionHandle = Party.Companion.Actor.Handle
     SavedArinJson = SavedCalibrationJson()
-    PartyElapsed = 1234
-    PartyStage = 1
-    PartyHitTarget = 1
-    PartyFatalTarget = 0
+    Party.Elapsed = 1234
+    Party.Stage = 1
+    Party.HitTarget = 1
+    Party.FatalTarget = 0
 
     For Owner = 0 To 2
 
-        PartyTurn = Owner
+        Party.Turn = Owner
 
         Call BeginPartyInspector()
 
@@ -661,7 +671,7 @@ Sub CheckPartyInspector()
             OriginalJson = SavedCalibrationJson()
         End If
 
-        Call CalibrationCheck(PartyUiBound And Session.ProfileIndex = Calibration.OwnerProfile,
+        Call CalibrationCheck(Party.UiBound And Session.ProfileIndex = Calibration.OwnerProfile,
             "Party inspector binds the active profile")
         Call CalibrationCheck(CalibrationAvailable = (Owner < 2),
             "Only the two calibrated heroes expose Pose")
@@ -680,14 +690,14 @@ Sub CheckPartyInspector()
         Session.Ready = Character3D.SetAnimationTime(Character, 333) And Session.Ready
 
         Call SeekFirstAnimationFrame()
-        Call CalibrationCheck(Playback.ScenePaused And PartyPreviewActive And
+        Call CalibrationCheck(Playback.ScenePaused And Party.PreviewActive And
             Character3D.AnimationTime(Character) = 0,
             "Party timeline pauses and seeks the active actor")
         Call EndPartyInspector()
         Call AdvancePartyDemo()
         Call CalibrationCheck(Character.Handle = PrimaryHandle And
-            PartyCompanion.Actor.Handle = CompanionHandle And PartyElapsed = 1234 And
-            PartyStage = 1 And PartyHitTarget = 1 And PartyFatalTarget = 0,
+            Party.Companion.Actor.Handle = CompanionHandle And Party.Elapsed = 1234 And
+            Party.Stage = 1 And Party.HitTarget = 1 And Party.FatalTarget = 0,
             "Inspector restores scene ownership and paused demo state stays unchanged")
         Call BeginPartyInspector()
 
@@ -703,7 +713,7 @@ Sub CheckPartyInspector()
             Call HandleKeyboard(KEY_ENTER)
             Call BeginPartyInspector()
             Call CalibrationCheck(Not ViewerGizmoState.Dragging And ViewerUiState.CalibrationEditing And
-                PartyElapsed = 1234 And Playback.ScenePaused,
+                Party.Elapsed = 1234 And Playback.ScenePaused,
                 "Party Enter confirms gizmo preview without restarting the battle")
             Call CancelCalibrationEdit()
             Call BeginCalibrationEdit()
@@ -722,13 +732,13 @@ Sub CheckPartyInspector()
         End If
 
         Call ToggleScenePause()
-        Call CalibrationCheck(Not Playback.ScenePaused And Not PartyPreviewActive And
+        Call CalibrationCheck(Not Playback.ScenePaused And Not Party.PreviewActive And
             Playback.SelectedClip = SavedClip And Character3D.AnimationTime(Character) = 333,
             "Resume restores the exact demo clip and time after scrubbing")
         Call EndPartyInspector()
     End For
 
-    PartyTurn = 0
+    Party.Turn = 0
 
     Call BeginPartyInspector()
     Call CalibrationCheck(SavedCalibrationJson() = SavedArinJson,

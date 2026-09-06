@@ -1,0 +1,175 @@
+''' Arena, grid and backdrop resources prepared and drawn by one renderer-facing owner.
+Module Smile.Tools.Character3DViewerRendering
+
+Option Explicit
+
+Import Smile.Simple3D.Arena3D As Arena3D
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Scene3D As Scene3D
+Import Smile.Simple3D.StaticBackdrop3D As StaticBackdrop3D
+
+Public Type State
+    Arena As Arena3D.ArenaFloor
+    FloorVisible As Boolean
+    GridVisible As Boolean
+    BackgroundIndex As Number
+    BackdropLandscape As StaticBackdrop3D.Backdrop
+    BackdropTitle As StaticBackdrop3D.Backdrop
+    BackdropAvailable As Boolean
+    BackdropTextureIndex As Number
+End Type
+
+Public Sub Reset(ByRef Value As State, BackgroundIndex As Number)
+
+    Value.FloorVisible = True
+    Value.GridVisible = True
+    Value.BackgroundIndex = BackgroundIndex
+    Value.BackdropTextureIndex = -1
+
+End Sub
+
+Public Sub CreateArena(ByRef Value As State, Width As Number, Depth As Number)
+
+    Value.Arena = Arena3D.Create(Width, Depth, 24, 150, 255)
+
+End Sub
+
+Public Function ArenaReady(ByRef Value As State) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Value.Arena.Ready
+
+    Return Result
+
+End Function
+
+Public Function DrawFloor(ByRef Value As State) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Arena3D.Draw(Value.Arena, True, False)
+
+    Return Result
+
+End Function
+
+Public Function DrawGrid(ByRef Value As State) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Arena3D.Draw(Value.Arena, False, True)
+
+    Return Result
+
+End Function
+
+Public Sub DestroyArena(ByRef Value As State)
+
+    Call Arena3D.Destroy(Value.Arena)
+
+End Sub
+
+Public Sub CreateBackdrops(ByRef Value As State, LandscapePath As Text,
+    TitlePath As Text)
+
+    Dim BackdropReady As Boolean
+
+    Value.BackdropAvailable = False
+    Value.BackdropTextureIndex = -1
+    Value.BackdropLandscape = StaticBackdrop3D.Create(LandscapePath)
+    Value.BackdropTitle = StaticBackdrop3D.Create(TitlePath)
+    BackdropReady = Value.BackdropLandscape.Ready
+    BackdropReady = Value.BackdropTitle.Ready And BackdropReady
+
+    If Not BackdropReady Then
+        Call DestroyBackdrops(Value)
+
+        Return
+    End If
+
+    Value.BackdropAvailable = True
+
+End Sub
+
+Public Function ApplyBackdrop(ByRef Value As State) As Boolean
+
+    Dim Result As Boolean
+
+    Result = True
+
+    If Value.BackdropTextureIndex = Value.BackgroundIndex Then
+        Return True
+    End If
+
+    If Value.BackdropAvailable And Value.BackgroundIndex = 3 Then
+        Result = StaticBackdrop3D.SetActive(Value.BackdropLandscape)
+    Else If Value.BackdropAvailable And Value.BackgroundIndex = 4 Then
+        Result = StaticBackdrop3D.SetActive(Value.BackdropTitle)
+    Else
+        Result = StaticBackdrop3D.ClearActive()
+    End If
+
+    If Result Then
+        Value.BackdropTextureIndex = Value.BackgroundIndex
+    End If
+
+    Return Result
+
+End Function
+
+Public Function BeginScene(ByRef Value As State, Camera As Core.Camera3D) As Boolean
+
+    Dim Result As Boolean
+
+    Result = ApplyBackdrop(Value)
+
+    If Not Result Then
+        Return False
+    End If
+
+    If Value.BackgroundIndex = 1 Then
+        Result = Scene3D.Begin(Camera, 0, 96, 32)
+    Else If Value.BackgroundIndex = 2 Then
+        Result = Scene3D.Begin(Camera, 62, 20, 96)
+    Else
+        Result = Scene3D.Begin(Camera, 0, 0, 0)
+    End If
+
+    Return Result
+
+End Function
+
+Public Sub DestroyBackdrops(ByRef Value As State)
+
+    Dim BackdropCleared As Boolean
+
+    BackdropCleared = StaticBackdrop3D.ClearActive()
+
+    Call StaticBackdrop3D.Destroy(Value.BackdropLandscape)
+    Call StaticBackdrop3D.Destroy(Value.BackdropTitle)
+
+    Value.BackdropAvailable = False
+    Value.BackdropTextureIndex = -1
+
+End Sub
+
+Public Sub ToggleFloorAndGrid(ByRef Value As State)
+
+    If Value.FloorVisible Or Value.GridVisible Then
+        Value.FloorVisible = False
+        Value.GridVisible = False
+    Else
+        Value.FloorVisible = True
+        Value.GridVisible = True
+    End If
+
+End Sub
+
+Public Sub CycleBackground(ByRef Value As State, BackgroundCount As Number)
+
+    Value.BackgroundIndex = (Value.BackgroundIndex + 1) Mod BackgroundCount
+
+End Sub
+
+End Module

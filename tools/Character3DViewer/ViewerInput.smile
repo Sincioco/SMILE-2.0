@@ -12,7 +12,6 @@ Public Const ARROW_PLAIN_UP = 5
 Public Const ARROW_PLAIN_DOWN = 6
 
 Public Type State
-    WindowActivated As Boolean
     InterfaceBlocked As Boolean
     SliderDragOwner As Number
     TimelineScrubbing As Boolean
@@ -24,25 +23,13 @@ Public Type State
     FrameButtonRepeatAt As Number
 End Type
 
-Public Sub Reset(ByRef Value As State, Activated As Boolean)
+Public Sub Reset(ByRef Value As State)
 
-    Value.WindowActivated = Activated
     Value.InterfaceBlocked = False
 
     Call CancelCaptures(Value)
 
 End Sub
-
-Public Function UpdateActivation(ByRef Value As State, Activated As Boolean) As Boolean
-
-    Dim LostFocus As Boolean
-
-    LostFocus = Value.WindowActivated And Not Activated
-    Value.WindowActivated = Activated
-
-    Return LostFocus
-
-End Function
 
 Public Function ClassifyArrow(PressedKey As Number, LeftKey As Number,
     RightKey As Number, UpKey As Number, DownKey As Number,

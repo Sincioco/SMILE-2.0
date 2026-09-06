@@ -5,11 +5,8 @@ Option Explicit
 Import Smile.Simple3D.Character3D As Character3D
 Import Smile.Simple3D.CharacterViewer As CharacterViewer
 Import Smile.UI.Controls As UI
-Import Smile.Simple3D.Arena3D As Arena3D
-Import Smile.Simple3D.StaticBackdrop3D As StaticBackdrop3D
 Import Smile.Simple3D.FireEmitter3D As Fire
 Import Smile.Simple3D.LightningVfx3D As Lightning
-Import Smile.Simple3D.LightPool3D As LightPool3D
 Import Smile.Simple3D.SceneVfx3D As SceneVfx3D
 Import Smile.Simple3D.Core As Core
 Import Smile.Simple3D.Graphics3D As Graphics3D
@@ -30,6 +27,9 @@ Import Smile.Tools.Character3DViewerCalibration As ViewerCalibration
 Import Smile.Tools.Character3DViewerInput As ViewerInput
 Import Smile.Tools.Character3DViewerUi As ViewerUi
 Import Smile.Tools.Character3DViewerGizmo As ViewerGizmo
+Import Smile.Tools.Character3DViewerParty As ViewerParty
+Import Smile.Tools.Character3DViewerEffects As ViewerEffects
+Import Smile.Tools.Character3DViewerRendering As ViewerRendering
 
 Const ANIMATION_CYCLE_MILLISECONDS = 5000
 Const ANIMATION_BUTTON_Y = 352
@@ -130,70 +130,15 @@ Const CAMERA_SLIDER_ZOOM = 3
 Const BACKGROUND_COUNT = 5
 Const BACKDROP_LANDSCAPE_PATH = "Assets\Backgrounds\SinStarLandscape.png"
 Const BACKDROP_TITLE_PATH = "Assets\Backgrounds\SinStarTitleWithLogo.png"
-Const PARTY_STATE_ALIVE = 0
-Const PARTY_STATE_ACTING = 1
-Const PARTY_STATE_GUARDING = 2
-Const PARTY_STATE_HIT = 3
-Const PARTY_STATE_KO = 4
-Const PARTY_STATE_REVIVING = 5
-Const PARTY_FORMATION_MEMBER_CAPACITY = 3
 Const PARTY_FORMATION_RADIUS = 300
 Const PARTY_FORMATION_START_ANGLE = 10
 Const PARTY_FORMATION_END_ANGLE = 50
-
-Type ViewerActorContext
-    Actor As Character3D.Actor
-    Frame As CharacterViewer.Framing
-    Profile As Number
-    Clip As Number
-    KeyBase As Number
-    WeaponWrist As Number
-    ShieldWrist As Number
-    WeaponGlow As Core.Object3D
-    ShieldGlow As Core.Object3D
-    CalibrationAvailable As Boolean
-    GlowAvailable As Boolean
-    GlowVisible As Boolean
-    PresentationState As Number
-End Type
-
-Type PartyParticipantLayout
-    Home As Core.Vector3
-    Approach As Core.Vector3
-    FacingAdjustment As Number
-End Type
-
-Dim DragonOpponent As ViewerActorContext
-Dim PartyMode As Boolean
-Dim PartyCompanion As ViewerActorContext
-Dim PartyElapsed As Number
-Dim PartyTurn As Number
-Dim PartyAttackCycle As Number
-Dim PartyDragonOnlyTurn As Boolean
-Dim PartyPreviousShotStage As Number
-Dim PartyFatalTarget As Number
-Dim PartyFatalStarted As Boolean
-Dim PartyHitTarget As Number
-Dim PartyHitResolved As Boolean
-Dim PartyParticipants[PARTY_FORMATION_MEMBER_CAPACITY] As PartyParticipantLayout
-Dim PartyParticipantCount As Number
-Dim PartyStage As Number
-Dim PartyReady As Boolean
-Dim PartyUiBound As Boolean
-Dim PartyUiPrimary As ViewerActorContext
-Dim PartyUiTurn As Number
-Dim PartyPreviewActive As Boolean
-Dim PartyPreviewClip As Number
-Dim PartyPreviewTime As Number
-Dim PartyPreviewMode As Number
-Dim PresentationState As Number
+Dim Party As ViewerParty.State
 Dim Character As Character3D.Actor
 Dim CharacterBounds As Character3D.Bounds3D
 Dim LocalCharacterBounds As Character3D.Bounds3D
 Dim ActiveProfile As CharacterViewer.Profile
-Dim Arena As Arena3D.ArenaFloor
-Dim FloorVisible As Boolean
-Dim GridVisible As Boolean
+Dim Rendering As ViewerRendering.State
 Dim SocketGizmos[4] As Core.Object3D
 Dim SocketGizmoCount As Number
 Dim SocketGizmosVisible As Boolean
@@ -223,18 +168,9 @@ Dim ShieldFlameStyle As Boolean
 Dim ShieldFireFailed As Boolean
 Dim ShieldFireClip As Number
 Dim ShieldFireTime As Number
-Dim FlameAnimationPaused As Boolean
-Dim LightningAnimationPaused As Boolean
-Dim FlamesWerePaused As Boolean
-Dim VisualContinuityEpoch As Number
-Dim EquipmentFireEpoch As Number
-Dim DragonFireEpoch As Number
 Dim DragonFireClip As Text
 Dim DragonFireTime As Number
-Dim DragonFireWasPaused As Boolean
-Dim VisualHistoryDirty As Boolean
-Dim EquipmentFireFirstSample As Boolean
-Dim EquipmentFireFirstError As Number
+Dim Effects As ViewerEffects.State
 Dim SwordTrail As Core.ParticleBatch3D
 Dim ShieldTrail As Core.ParticleBatch3D
 Dim SwordTrailPoints[EQUIPMENT_TRAIL_POINT_COUNT] As Core.Vector3
@@ -255,39 +191,12 @@ Dim Calibration As ViewerCalibration.State
 Dim ViewerInputState As ViewerInput.State
 Dim ViewerUiState As ViewerUi.State
 Dim ViewerGizmoState As ViewerGizmo.State
-Dim PartyOrbitCamera As Core.Camera3D
-Dim PartyHeroCamera As Core.Camera3D
-Dim PartyDragonCamera As Core.Camera3D
-Dim PartyOrbitPhase1000 As Number
-Dim PartyActiveCamera As Number
-Dim PartyPreviousCamera As Number
-Dim PartyPreviousCameraTurn As Number
-Dim PartyShotPosition1000 As Core.Vector3
-Dim PartyShotTarget1000 As Core.Vector3
-Dim PartyShotBoss As Core.Vector3
-Dim PartyShotBossHead As Core.Vector3
-Dim PartyShotMouth As Core.Vector3
-Dim ArinAudio As BattleAudio.CueState
-Dim DragonAudio As BattleAudio.CueState
-Dim BackgroundIndex As Number
-Dim BackdropLandscapeTexture As StaticBackdrop3D.Backdrop
-Dim BackdropTitleTexture As StaticBackdrop3D.Backdrop
-Dim BackdropAvailable As Boolean
-Dim BackdropTextureIndex As Number
 Dim Dragon As Character3D.Actor
 Dim DragonHeadAim As NodeAim3D.Constraint
 Dim DragonHeadTracking As Boolean
 Dim DragonClip As Text
-Dim DragonCounter As Number
 Dim DragonBreath As Fire.FireEmitter
-Dim FireInitialized As Boolean
-Dim LightningInitialized As Boolean
-Dim SceneVfxClock As SceneVfx3D.Clock
-Dim OrinStormContext As OrinStorm.Context
-Dim OrinLight As LightPool3D.Lease
-Dim DragonLight As LightPool3D.Lease
 Dim DragonFireFailed As Boolean
-Dim DragonReactionPending As Boolean
 Dim DragonAvailable As Boolean
 Dim DragonVisible As Boolean
 Dim SwordVisible As Boolean
@@ -301,31 +210,23 @@ Game Window "SMILE 2.0 - 3D Viewer, Animation Editor" Size 1600 By 640
 Call Graphics3D.ResetRenderer3D()
 
 Session.SelectedCharacterTab = 3
-PartyMode = True
+Party.Enabled = True
 Session.ProfileIndex = ViewerProfiles.PROFILE_ARIN
-BackgroundIndex = 3
 
 Call ViewerPlayback.Reset(Playback, 100)
-Call ViewerInput.Reset(ViewerInputState, Window_Activate())
+Call ViewerInput.Reset(ViewerInputState)
 Call ViewerUi.Reset(ViewerUiState)
 Call ViewerGizmo.Reset(ViewerGizmoState)
+Call ViewerRendering.Reset(Rendering, 3)
 
 Call LoadViewer()
 Call ViewerSession.CaptureFailure(Session, 20)
-
-Session.WindowActivated = ViewerInputState.WindowActivated
 
 Session.Running = True
 
 Call ViewerTiming.Start(Timing, Timer())
 
 Do
-
-    If ViewerInput.UpdateActivation(ViewerInputState, Window_Activate()) Then
-        Call CancelInteractionCaptures()
-    End If
-
-    Session.WindowActivated = ViewerInputState.WindowActivated
 
     Get Key Key
 
@@ -363,7 +264,7 @@ Do
 
         Call ViewerPlayback.ResolveAnimationElapsed(Playback, Timing.AnimationElapsed)
 
-        If PartyMode Then
+        If Party.Enabled Then
             Call AdvancePartyDemo()
         End If
 
@@ -389,10 +290,10 @@ Do
         If Not Playback.ScenePaused Then
             Session.Ready = ViewerCamera.AdvanceAutoOrbit(
                 ViewerCameraState,
-                PartyOrbitPhase1000,
+                Party.OrbitPhase1000,
                 Timing.CameraElapsed,
                 ARENA_ORBIT_DEGREES_PER_SECOND,
-                PartyMode
+                Party.Enabled
             ) And Session.Ready
 
             Call ViewerSession.CaptureFailure(Session, 6)
@@ -413,7 +314,7 @@ Do
         )
 
         Call ViewerCamera.Compose(
-            ViewerCameraState, PartyMode And ViewerCameraState.AutoOrbit)
+            ViewerCameraState, Party.Enabled And ViewerCameraState.AutoOrbit)
 
         Call ViewerCamera.ApplyCloseUp(ViewerCameraState, CLOSE_UP_ZOOM_START,
             ZOOM_IN_LIMIT, CLOSE_UP_MINIMUM_DISTANCE_1000)
@@ -436,7 +337,7 @@ Do
 
         Call UpdateEquipmentFire()
 
-        If PartyMode Or Session.DragonInspection Then
+        If Party.Enabled Or Session.DragonInspection Then
             Call UpdatePartyCompanion()
         End If
 
@@ -447,7 +348,7 @@ Do
         Call UpdateDragon()
         Call ApplyPartyAttackCamera()
 
-        If FloorVisible Then
+        If Rendering.FloorVisible Then
             Call ViewerCamera.KeepAboveGround(ViewerCameraState, 0)
         End If
 
@@ -469,13 +370,13 @@ Do
 
         If Session.Ready Then
 
-            If FloorVisible Then
-                Session.Ready = Arena3D.Draw(Arena, True, False)
+            If Rendering.FloorVisible Then
+                Session.Ready = ViewerRendering.DrawFloor(Rendering)
 
                 Call ViewerSession.CaptureFailure(Session, 9)
             End If
 
-            If GridVisible Then
+            If Rendering.GridVisible Then
                 Session.Ready = DrawStudioGrid() And Session.Ready
 
                 Call ViewerSession.CaptureFailure(Session, 10)
@@ -489,7 +390,7 @@ Do
 
             If EpicGlowVisible Then
 
-                If ((Not PartyMode Or PartyPresentationState(0) <> PARTY_STATE_KO) And
+                If ((Not Party.Enabled Or PartyPresentationState(0) <> ViewerParty.STATE_KO) And
                     Not DrawEquipmentGlow()) Then
                     EpicGlowVisible = False
                 End If
@@ -498,7 +399,7 @@ Do
 
             Session.Ready = Character3D.Draw(Character) And Session.Ready
 
-            If (PartyMode Or Session.DragonInspection) And PartyReady Then
+            If (Party.Enabled Or Session.DragonInspection) And Party.Ready Then
                 Session.Ready = DrawPartyCompanion() And Session.Ready
             End If
 
@@ -516,9 +417,9 @@ Do
             End If
 
             Call DrawShieldFire()
-            Call OrinStorm.Draw(OrinStormContext)
+            Call OrinStorm.Draw(Effects.OrinStorm)
 
-            Session.Ready = SceneVfx3D.DrawLightning(LightningInitialized) And Session.Ready
+            Session.Ready = SceneVfx3D.DrawLightning(Effects.LightningInitialized) And Session.Ready
 
             Call DragonPresence.Draw()
 
@@ -550,7 +451,7 @@ Do
 
     End If
 
-    Call OrinStorm.DrawFlash(OrinStormContext)
+    Call OrinStorm.DrawFlash(Effects.OrinStorm)
     Call DrawViewerOverlay()
 
     Show Screen
@@ -566,8 +467,8 @@ Sub LoadViewer()
     Session.Ready = Scene3D.SetQuality(Scene3D.QUALITY_HIGH)
     Session.Ready = Character3D.SetUnusedAssetCacheLimit(3) And Session.Ready
 
-    PartyUiBound = False
-    PartyPreviewActive = False
+    Call ViewerParty.EndInspectorBinding(Party)
+    Call ViewerParty.ClearPreview(Party)
 
     ActiveProfile = ViewerProfiles.ProfileAt(Session.ProfileIndex)
     Calibration.KeyBase = 0
@@ -633,8 +534,8 @@ Sub LoadViewer()
 
     Call ViewerSession.CaptureFailure(Session, 34)
 
-    FloorVisible = True
-    GridVisible = True
+    Rendering.FloorVisible = True
+    Rendering.GridVisible = True
     ViewerCameraState.FitLocked = True
     ViewerCameraState.LastFitWidth = Window_Width()
     ViewerCameraState.LastFitHeight = Window_Height()
@@ -714,30 +615,20 @@ Sub LoadViewer()
 
     SwordFireVisible = True
     ShieldFireVisible = True
-    FlameAnimationPaused = False
-    LightningAnimationPaused = False
     ShieldFireFailed = False
     SwordFireFailed = False
     SwordFireReady = False
 
-    FireInitialized = False
-    LightningInitialized = False
-
-    Call SceneVfx3D.Initialize(SceneVfxClock)
-
-    Session.Ready = LightPool3D.Initialize(2, 2) And Session.Ready
-    OrinLight = LightPool3D.Acquire()
-    DragonLight = LightPool3D.Acquire()
-    Session.Ready = LightPool3D.IsValid(OrinLight) And LightPool3D.IsValid(DragonLight) And Session.Ready
+    Session.Ready = ViewerEffects.PrepareShared(Effects) And Session.Ready
 
     If DragonAvailable Then
-        FireInitialized = Fire.Initialize("Assets/Fire")
+        Effects.FireInitialized = Fire.Initialize("Assets/Fire")
 
         Call DragonPresence.Initialize()
     End If
 
     If CalibrationAvailable And Session.ProfileIndex = ViewerProfiles.PROFILE_ARIN Then
-        SwordFireReady = FireInitialized
+        SwordFireReady = Effects.FireInitialized
         SwordFireFailed = Not SwordFireReady
     End If
 
@@ -746,7 +637,7 @@ Sub LoadViewer()
         SwordFireReady = Graphics3D.ConfigureDistortion3D(1, 2) And SwordFireReady
     End If
 
-    If PartyMode Then
+    If Party.Enabled Then
         Call CreatePartyCompanion()
     End If
 
@@ -754,26 +645,26 @@ Sub LoadViewer()
 
         Call CreatePartyCompanion(ViewerProfiles.PROFILE_ARIN)
 
-        DragonOpponent = PartyCompanion
+        Party.DragonOpponent = Party.Companion
 
         Call CreatePartyCompanion()
         Call PositionDragonOpponents()
 
-        SwordFireReady = FireInitialized
+        SwordFireReady = Effects.FireInitialized
 
     End If
 
-    If (PartyMode Or
+    If (Party.Enabled Or
         Session.DragonInspection Or
         Session.ProfileIndex = ViewerProfiles.PROFILE_ORIN) Then
 
-        LightningInitialized = Lightning.Initialize("Assets/Lightning", 8192,
+        Effects.LightningInitialized = Lightning.Initialize("Assets/Lightning", 8192,
             Graphics3D.GPU_PARTICLE_SIMULATION_AUTO, 4096)
 
-        Call OrinStorm.Prepare(LightningInitialized)
+        Call OrinStorm.Prepare(Effects.LightningInitialized)
 
-        OrinStormContext = OrinStorm.Create()
-        Session.Ready = LightningInitialized And OrinStorm.IsValid(OrinStormContext) And Session.Ready
+        Effects.OrinStorm = OrinStorm.Create()
+        Session.Ready = Effects.LightningInitialized And OrinStorm.IsValid(Effects.OrinStorm) And Session.Ready
 
     End If
 
@@ -1015,7 +906,7 @@ Sub ClearDragonOwnedEffects()
         Ok = Fire.Destroy(DragonBreath)
     End If
 
-    Call DragonPresence.Cancel(DragonLight)
+    Call DragonPresence.Cancel(Effects.DragonLight)
 
 End Sub
 
@@ -1044,7 +935,7 @@ Sub UpdateDragon()
 
     Name = "Idle"
 
-    If PartyMode And Playback.ScenePaused Then
+    If Party.Enabled And Playback.ScenePaused Then
 
         Name = DragonClip
 
@@ -1052,23 +943,23 @@ Sub UpdateDragon()
 
         Name = SelectedClipName()
 
-    Else If PartyMode And PartyTurn = 2 Then
+    Else If Party.Enabled And Party.Turn = 2 Then
 
-        If DragonCounter Mod 3 = 0 Then
+        If Party.DragonCounter Mod 3 = 0 Then
             Name = "FireBreath"
-        Else If DragonCounter Mod 3 = 1 Then
+        Else If Party.DragonCounter Mod 3 = 1 Then
             Name = "ClawStrike"
         Else
             Name = "Fireball"
         End If
 
-    Else If (PartyMode And
-        DragonReactionPending And
-        PartyStage = 1 And
-        PartyElapsed >= 1300 + PartyAttackDuration() * 64 / 100) Then
+    Else If (Party.Enabled And
+        Party.DragonReactionPending And
+        Party.Stage = 1 And
+        Party.Elapsed >= 1300 + PartyAttackDuration() * 64 / 100) Then
 
         Name = "Hit"
-        DragonReactionPending = False
+        Party.DragonReactionPending = False
 
     Else If DragonClip = "Hit" And Character3D.AnimationTime(Dragon) < 800 Then
 
@@ -1120,17 +1011,17 @@ Sub UpdateDragon()
 
     If Session.DragonInspection Then
 
-        Target = Character3D.SocketPosition(DragonOpponent.Actor, "Chest", BODY_PART_INDEX)
+        Target = Character3D.SocketPosition(Party.DragonOpponent.Actor, "Chest", BODY_PART_INDEX)
 
-        If PartyReady And DragonCounter Mod 2 = 1 Then
-            Target = Character3D.SocketPosition(PartyCompanion.Actor, "Chest", BODY_PART_INDEX)
+        If Party.Ready And Party.DragonCounter Mod 2 = 1 Then
+            Target = Character3D.SocketPosition(Party.Companion.Actor, "Chest", BODY_PART_INDEX)
         End If
 
-    Else If (PartyMode And
-        PartyReady And
-        PartyHitTarget = 1) Then
+    Else If (Party.Enabled And
+        Party.Ready And
+        Party.HitTarget = 1) Then
 
-        Target = Character3D.SocketPosition(PartyCompanion.Actor, "Chest", BODY_PART_INDEX)
+        Target = Character3D.SocketPosition(Party.Companion.Actor, "Chest", BODY_PART_INDEX)
 
     Else
         Target = Character3D.SocketPosition(Character, "Chest", BODY_PART_INDEX)
@@ -1144,27 +1035,27 @@ Sub UpdateDragon()
     ''' Explicit seeks/cuts outrank freeze; normal frozen playback retains its snapshot.
     ''' Resume from a different action/time rebases impact cues instead of replaying them.
 
-    If (DragonFireEpoch <> VisualContinuityEpoch Or
-        (FlameAnimationPaused And Name <> DragonFireClip) Or
-        (DragonFireWasPaused And Not FlameAnimationPaused And
+    If (Effects.DragonFireEpoch <> Effects.VisualContinuityEpoch Or
+        (Effects.FlamePaused And Name <> DragonFireClip) Or
+        (Effects.DragonFireWasPaused And Not Effects.FlamePaused And
             (Name <> DragonFireClip Or Time <> DragonFireTime))) Then
         Call ClearDragonOwnedEffects()
     End If
 
-    DragonFireEpoch = VisualContinuityEpoch
+    Effects.DragonFireEpoch = Effects.VisualContinuityEpoch
     DragonFireClip = Name
 
-    If FlameAnimationPaused Then
-        DragonFireWasPaused = True
+    If Effects.FlamePaused Then
+        Effects.DragonFireWasPaused = True
         Return
     End If
 
-    DragonFireWasPaused = False
+    Effects.DragonFireWasPaused = False
     DragonFireTime = Time
     Breathe = (DragonVisible And Name = "FireBreath" And Time >= 850 And Time < 3100)
 
     If (Breathe And
-        FireInitialized And
+        Effects.FireInitialized And
         Not DragonFireFailed) Then
 
         Mouth = Character3D.SocketPosition(Dragon, "Mouth")
@@ -1197,7 +1088,7 @@ Sub UpdateDragon()
     End If
 
     Call DragonPresence.Update(Dragon, Name, Time, Target,
-        DragonVisible And FireInitialized, DragonLight)
+        DragonVisible And Effects.FireInitialized, Effects.DragonLight)
 
 End Sub
 
@@ -1222,7 +1113,7 @@ Sub UpdateBattleAudio()
 
     Audible = Not Playback.ScenePaused And Not ViewerUiState.CalibrationEditing
 
-    If BattleAudio.CrossedCue(ArinAudio, Name,
+    If BattleAudio.CrossedCue(Effects.ArinAudio, Name,
         Character3D.AnimationTime(Character), CueTime, Audible) Then
 
         If Name = "SwordAttack" Then
@@ -1249,7 +1140,7 @@ Sub UpdateBattleAudio()
         CueTime = 200
     End If
 
-    If BattleAudio.CrossedCue(DragonAudio, DragonClip,
+    If BattleAudio.CrossedCue(Effects.DragonAudio, DragonClip,
         Character3D.AnimationTime(Dragon), CueTime, Audible And DragonVisible) Then
 
         If DragonClip = "FireBreath" Then
@@ -1268,8 +1159,9 @@ End Sub
 
 Sub CreateStudioGrid()
 
-    Arena = Arena3D.Create(ViewerFloorWidth(), ViewerFloorDepth(), 24, 150, 255)
-    Session.Ready = Arena.Ready And Session.Ready
+    Call ViewerRendering.CreateArena(Rendering, ViewerFloorWidth(), ViewerFloorDepth())
+
+    Session.Ready = ViewerRendering.ArenaReady(Rendering) And Session.Ready
 
 End Sub
 
@@ -1277,14 +1169,15 @@ Function DrawStudioGrid() As Boolean
 
     Dim Result As Boolean
 
-    Result = Arena3D.Draw(Arena, False, True)
+    Result = ViewerRendering.DrawGrid(Rendering)
+
     Return Result
 
 End Function
 
 Sub DestroyStudioGrid()
 
-    Call Arena3D.Destroy(Arena)
+    Call ViewerRendering.DestroyArena(Rendering)
 
 End Sub
 
@@ -1316,7 +1209,7 @@ End Sub
 
 Sub HandleKeyboard(PressedKey As Number)
 
-    If (PartyMode And
+    If (Party.Enabled And
         (PressedKey = KEY_4 Or
         (PressedKey = KEY_ENTER And Not ViewerUiState.CalibrationEditing And Not ViewerGizmoState.Dragging))) Then
 
@@ -1385,7 +1278,7 @@ Sub HandleInspectorKeyboard(PressedKey As Number)
         Return
     End If
 
-    If PartyMode Then
+    If Party.Enabled Then
 
         If (PressedKey = KEY_1 Or
             PressedKey = KEY_2 Or
@@ -1478,7 +1371,7 @@ Sub HandleInspectorKeyboard(PressedKey As Number)
 
     Else If PressedKey = KEY_G Then
 
-        GridVisible = Not GridVisible
+        Rendering.GridVisible = Not Rendering.GridVisible
 
     Else If PressedKey = KEY_4 Then
 
@@ -1926,7 +1819,7 @@ End Function
 
 Sub ToggleScenePause()
 
-    If PartyMode And Playback.ScenePaused Then
+    If Party.Enabled And Playback.ScenePaused Then
 
         If ViewerUiState.CalibrationEditing Then
             Session.CharacterSwitchBlocked = True
@@ -1943,7 +1836,7 @@ End Sub
 
 Sub ToggleDemo()
 
-    If PartyMode Then
+    If Party.Enabled Then
         Call ToggleScenePause()
 
         Return
@@ -1958,7 +1851,7 @@ End Sub
 
 Sub CycleBackground()
 
-    BackgroundIndex = (BackgroundIndex + 1) Mod BACKGROUND_COUNT
+    Call ViewerRendering.CycleBackground(Rendering, BACKGROUND_COUNT)
 
 End Sub
 
@@ -1978,7 +1871,7 @@ End Sub
 
 Sub ToggleSword()
 
-    If PartyUiBound Then
+    If Party.UiBound Then
 
         Call EndPartyInspector()
         Call ToggleSword()
@@ -1991,8 +1884,8 @@ Sub ToggleSword()
     If Session.DragonInspection Then
 
         SwordVisible = Not SwordVisible
-        Session.Ready = Character3D.SetPartVisible(DragonOpponent.Actor, WEAPON_PART_INDEX, SwordVisible) And Session.Ready
-        Session.Ready = Character3D.SetPartVisible(PartyCompanion.Actor, WEAPON_PART_INDEX, SwordVisible) And Session.Ready
+        Session.Ready = Character3D.SetPartVisible(Party.DragonOpponent.Actor, WEAPON_PART_INDEX, SwordVisible) And Session.Ready
+        Session.Ready = Character3D.SetPartVisible(Party.Companion.Actor, WEAPON_PART_INDEX, SwordVisible) And Session.Ready
 
         If Not SwordVisible Then
             Call HideSwordEffects()
@@ -2011,8 +1904,8 @@ Sub ToggleSword()
             SwordVisible
         ) And Session.Ready
 
-        If PartyMode And PartyReady Then
-            Session.Ready = Character3D.SetPartVisible(PartyCompanion.Actor, WEAPON_PART_INDEX, SwordVisible) And Session.Ready
+        If Party.Enabled And Party.Ready Then
+            Session.Ready = Character3D.SetPartVisible(Party.Companion.Actor, WEAPON_PART_INDEX, SwordVisible) And Session.Ready
         End If
 
         If Not SwordVisible Then
@@ -2025,7 +1918,7 @@ End Sub
 
 Sub ToggleShield()
 
-    If PartyUiBound Then
+    If Party.UiBound Then
 
         Call EndPartyInspector()
         Call ToggleShield()
@@ -2038,8 +1931,8 @@ Sub ToggleShield()
     If Session.DragonInspection Then
 
         ShieldVisible = Not ShieldVisible
-        Session.Ready = Character3D.SetPartVisible(DragonOpponent.Actor, SHIELD_PART_INDEX, ShieldVisible) And Session.Ready
-        Session.Ready = Character3D.SetPartVisible(PartyCompanion.Actor, SHIELD_PART_INDEX, ShieldVisible) And Session.Ready
+        Session.Ready = Character3D.SetPartVisible(Party.DragonOpponent.Actor, SHIELD_PART_INDEX, ShieldVisible) And Session.Ready
+        Session.Ready = Character3D.SetPartVisible(Party.Companion.Actor, SHIELD_PART_INDEX, ShieldVisible) And Session.Ready
 
         If Not ShieldVisible Then
             Call HideShieldEffects()
@@ -2058,8 +1951,8 @@ Sub ToggleShield()
             ShieldVisible
         ) And Session.Ready
 
-        If PartyMode And PartyReady Then
-            Session.Ready = Character3D.SetPartVisible(PartyCompanion.Actor, SHIELD_PART_INDEX, ShieldVisible) And Session.Ready
+        If Party.Enabled And Party.Ready Then
+            Session.Ready = Character3D.SetPartVisible(Party.Companion.Actor, SHIELD_PART_INDEX, ShieldVisible) And Session.Ready
         End If
 
         If Not ShieldVisible Then
@@ -2074,19 +1967,7 @@ Function BeginViewerScene() As Boolean
 
     Dim Result As Boolean
 
-    Result = ApplyBackdrop()
-
-    If Not Result Then
-        Return False
-    End If
-
-    If BackgroundIndex = 1 Then
-        Result = Scene3D.Begin(ViewerCameraState.Live, 0, 96, 32)
-    Else If BackgroundIndex = 2 Then
-        Result = Scene3D.Begin(ViewerCameraState.Live, 62, 20, 96)
-    Else
-        Result = Scene3D.Begin(ViewerCameraState.Live, 0, 0, 0)
-    End If
+    Result = ViewerRendering.BeginScene(Rendering, ViewerCameraState.Live)
 
     Return Result
 
@@ -2094,22 +1975,11 @@ End Function
 
 Sub CreateBackdrop()
 
-    Dim BackdropReady As Boolean
-
-    BackdropAvailable = False
-    BackdropTextureIndex = -1
-    BackdropLandscapeTexture = StaticBackdrop3D.Create(BACKDROP_LANDSCAPE_PATH)
-    BackdropTitleTexture = StaticBackdrop3D.Create(BACKDROP_TITLE_PATH)
-    BackdropReady = BackdropLandscapeTexture.Ready
-    BackdropReady = BackdropTitleTexture.Ready And BackdropReady
-
-    If Not BackdropReady Then
-        Call DestroyBackdrop()
-
-        Return
-    End If
-
-    BackdropAvailable = BackdropReady
+    Call ViewerRendering.CreateBackdrops(
+        Rendering,
+        BACKDROP_LANDSCAPE_PATH,
+        BACKDROP_TITLE_PATH
+    )
 
 End Sub
 
@@ -2117,23 +1987,7 @@ Function ApplyBackdrop() As Boolean
 
     Dim Result As Boolean
 
-    Result = True
-
-    If BackdropTextureIndex = BackgroundIndex Then
-        Return True
-    End If
-
-    If BackdropAvailable And BackgroundIndex = 3 Then
-        Result = StaticBackdrop3D.SetActive(BackdropLandscapeTexture)
-    Else If BackdropAvailable And BackgroundIndex = 4 Then
-        Result = StaticBackdrop3D.SetActive(BackdropTitleTexture)
-    Else
-        Result = StaticBackdrop3D.ClearActive()
-    End If
-
-    If Result Then
-        BackdropTextureIndex = BackgroundIndex
-    End If
+    Result = ViewerRendering.ApplyBackdrop(Rendering)
 
     Return Result
 
@@ -2141,27 +1995,13 @@ End Function
 
 Sub DestroyBackdrop()
 
-    Dim BackdropCleared As Boolean
-
-    BackdropCleared = StaticBackdrop3D.ClearActive()
-
-    Call StaticBackdrop3D.Destroy(BackdropLandscapeTexture)
-    Call StaticBackdrop3D.Destroy(BackdropTitleTexture)
-
-    BackdropAvailable = False
-    BackdropTextureIndex = -1
+    Call ViewerRendering.DestroyBackdrops(Rendering)
 
 End Sub
 
 Sub ToggleFloorAndGrid()
 
-    If FloorVisible Or GridVisible Then
-        FloorVisible = False
-        GridVisible = False
-    Else
-        FloorVisible = True
-        GridVisible = True
-    End If
+    Call ViewerRendering.ToggleFloorAndGrid(Rendering)
 
 End Sub
 
@@ -2169,8 +2009,8 @@ Sub ToggleEpicGlow()
 
     If Session.DragonInspection Then
 
-        DragonOpponent.GlowVisible = Not DragonOpponent.GlowVisible
-        PartyCompanion.GlowVisible = DragonOpponent.GlowVisible
+        Party.DragonOpponent.GlowVisible = Not Party.DragonOpponent.GlowVisible
+        Party.Companion.GlowVisible = Party.DragonOpponent.GlowVisible
         Return
 
     End If
@@ -2205,7 +2045,7 @@ End Sub
 
 Sub CycleProfile()
 
-    If Not ViewerProfiles.INCLUDE_DIAGNOSTIC_PROFILES Or PartyMode Then
+    If Not ViewerProfiles.INCLUDE_DIAGNOSTIC_PROFILES Or Party.Enabled Then
         Return
     End If
 
@@ -2216,7 +2056,7 @@ Sub CycleProfile()
 
     Call DestroyViewerResources()
 
-    PartyMode = False
+    Party.Enabled = False
     Session.DragonInspection = False
     Session.SelectedCharacterTab = 0
     Session.ProfileIndex = ViewerProfiles.NextProfile(Session.ProfileIndex)
@@ -2262,43 +2102,43 @@ Sub ApplyPartyAttackCamera()
     Dim ShotSide As Number
     Dim StableAnchor As Core.Vector3
 
-    PartyOrbitCamera = ViewerCameraState.Live
-    PartyActiveCamera = 1
+    Party.OrbitCamera = ViewerCameraState.Live
+    Party.ActiveCamera = 1
 
-    If (Not PartyMode Or
-        Not PartyReady Or
+    If (Not Party.Enabled Or
+        Not Party.Ready Or
         Not DragonAvailable Or
         Not ViewerCameraState.AutoOrbit Or
         Not DragonVisible) Then
-        PartyPreviousCamera = 1
+        Party.PreviousCamera = 1
         Return
     End If
 
-    BattleShot = PartyStage <= 1
+    BattleShot = Party.Stage <= 1
 
-    If PartyTurn = 2 Then
-        BattleShot = PartyElapsed < 3000
+    If Party.Turn = 2 Then
+        BattleShot = Party.Elapsed < 3000
     End If
 
     If Not BattleShot Then
-        PartyPreviousCamera = 1
+        Party.PreviousCamera = 1
         Return
     End If
 
     ''' Actor homes/travel are stable. Bone bobbing and KO must not drive the camera.
     Hero = Math3D.Vector(ViewerCameraState.Frame.PositionX, ViewerCameraState.Frame.PositionY + 68, ViewerCameraState.Frame.PositionZ)
 
-    If PartyTurn = 1 Then
-        Hero = Math3D.Vector(PartyCompanion.Frame.PositionX,
-            PartyCompanion.Frame.PositionY + 80, PartyCompanion.Frame.PositionZ)
+    If Party.Turn = 1 Then
+        Hero = Math3D.Vector(Party.Companion.Frame.PositionX,
+            Party.Companion.Frame.PositionY + 80, Party.Companion.Frame.PositionZ)
     End If
 
     WaistHeight = Hero.Y - 32
 
-    If PartyTurn = 2 Then
+    If Party.Turn = 2 Then
 
-        OtherHero = Math3D.Vector(PartyCompanion.Frame.PositionX,
-            PartyCompanion.Frame.PositionY + 80, PartyCompanion.Frame.PositionZ)
+        OtherHero = Math3D.Vector(Party.Companion.Frame.PositionX,
+            Party.Companion.Frame.PositionY + 80, Party.Companion.Frame.PositionZ)
         WaistHeight = Min(Hero.Y, OtherHero.Y) - 32
         Hero.X = (Hero.X + OtherHero.X) / 2
         Hero.Y = (Hero.Y + OtherHero.Y) / 2
@@ -2308,29 +2148,29 @@ Sub ApplyPartyAttackCamera()
 
     ''' Frame the boss at the cut; breathing, recoil and head aim do not shake the lens.
 
-    If PartyPreviousCamera = 1 Or PartyTurn <> PartyPreviousCameraTurn Then
+    If Party.PreviousCamera = 1 Or Party.Turn <> Party.PreviousCameraTurn Then
 
         StableAnchor = Math3D.Vector(
             DRAGON_POSITION_X, DRAGON_CAMERA_CHEST_HEIGHT, DRAGON_POSITION_Z)
-        PartyShotBoss = BattleCamera.BoundedAnchor(
+        Party.ShotBoss = BattleCamera.BoundedAnchor(
             Character3D.SocketPosition(Dragon, "Chest"), StableAnchor,
             DRAGON_CAMERA_ANCHOR_MAXIMUM_DELTA)
         StableAnchor.Y = DRAGON_CAMERA_HEAD_HEIGHT
-        PartyShotBossHead = BattleCamera.BoundedAnchor(
+        Party.ShotBossHead = BattleCamera.BoundedAnchor(
             Character3D.SocketPosition(Dragon, "Head"), StableAnchor,
             DRAGON_CAMERA_ANCHOR_MAXIMUM_DELTA)
         StableAnchor.Y = DRAGON_CAMERA_MOUTH_HEIGHT
-        PartyShotMouth = BattleCamera.BoundedAnchor(
+        Party.ShotMouth = BattleCamera.BoundedAnchor(
             Character3D.SocketPosition(Dragon, "Mouth"), StableAnchor,
             DRAGON_CAMERA_ANCHOR_MAXIMUM_DELTA)
 
     End If
 
-    Boss = PartyShotBoss
-    BossHead = PartyShotBossHead
-    BossChargeShot = (PartyTurn = 2 And
-        (PartyElapsed * Playback.PlaybackSpeed / 100 < 650 Or
-        (DragonCounter Mod 3 = 2 And PartyElapsed * Playback.PlaybackSpeed / 100 < 1750)))
+    Boss = Party.ShotBoss
+    BossHead = Party.ShotBossHead
+    BossChargeShot = (Party.Turn = 2 And
+        (Party.Elapsed * Playback.PlaybackSpeed / 100 < 650 Or
+        (Party.DragonCounter Mod 3 = 2 And Party.Elapsed * Playback.PlaybackSpeed / 100 < 1750)))
     DeltaX = Hero.X - Boss.X
     DeltaZ = Hero.Z - Boss.Z
     Distance = Max(1, Math3D.Distance(Hero, Boss))
@@ -2339,48 +2179,48 @@ Sub ApplyPartyAttackCamera()
     Height = 55
     ShotSide = -1
 
-    If PartyTurn = 1 Then
+    If Party.Turn = 1 Then
         ShotSide = 1
     End If
 
-    If PartyElapsed < 650 Then
+    If Party.Elapsed < 650 Then
 
         Along = -45
         Across = 190
         Height = 10
 
-    Else If PartyStage = 0 And PartyTurn <> 2 Then
+    Else If Party.Stage = 0 And Party.Turn <> 2 Then
 
         Along = 160
         Across = 85
         Height = 65
 
     Else
-        Impact1000 = Min(1000, Max(0, PartyElapsed - 1300) * 1000 / Max(1, PartyAttackDuration()))
+        Impact1000 = Min(1000, Max(0, Party.Elapsed - 1300) * 1000 / Max(1, PartyAttackDuration()))
         Along = 150 - Impact1000 * 35 / 1000
         Across = 120
 
     End If
 
-    If PartyElapsed >= 650 Then
+    If Party.Elapsed >= 650 Then
         Height = WaistHeight - Hero.Y
     End If
 
-    If PartyTurn = 2 And PartyElapsed >= 650 Then
+    If Party.Turn = 2 And Party.Elapsed >= 650 Then
         Along = 170
         Across = 65
     End If
 
     Across = Across * ShotSide
 
-    Desired = PartyOrbitCamera
+    Desired = Party.OrbitCamera
     Desired.UpDirection.X = 0
     Desired.UpDirection.Y = Core.FIXED_ONE
     Desired.UpDirection.Z = 0
     Desired.Target.X = (Hero.X + Boss.X) / 2
     Desired.Target.Y = Max(Hero.Y + 12, BossHead.Y - 35)
 
-    If PartyElapsed >= 650 Then
+    If Party.Elapsed >= 650 Then
         Desired.Target.Y = (WaistHeight + BossHead.Y) / 2
     End If
 
@@ -2389,7 +2229,7 @@ Sub ApplyPartyAttackCamera()
     Desired.Position.Y = Hero.Y + Height
     Desired.Position.Z = Hero.Z + DeltaZ * Along / Distance + DeltaX * Across / Distance
 
-    If PartyTurn = 2 Then
+    If Party.Turn = 2 Then
 
         Desired.Position.X = Desired.Position.X + (Desired.Position.X - Desired.Target.X) * 15 / 100
         Desired.Position.Y = Desired.Position.Y + (Desired.Position.Y - Desired.Target.Y) * 15 / 100
@@ -2399,63 +2239,63 @@ Sub ApplyPartyAttackCamera()
 
     ''' The orbit stays live. The two battle cameras have independent poses and cut directly.
 
-    Mouth = PartyShotMouth
-    PartyDragonCamera = Desired
-    PartyDragonCamera.Position.X = BossHead.X - DeltaX * 120 / Distance - DeltaZ * 90 / Distance
-    PartyDragonCamera.Position.Y = BossHead.Y + 20
-    PartyDragonCamera.Position.Z = BossHead.Z - DeltaZ * 120 / Distance + DeltaX * 90 / Distance
-    PartyDragonCamera.Target.X = (Mouth.X * 3 + Hero.X) / 4
-    PartyDragonCamera.Target.Y = (Mouth.Y * 3 + Hero.Y) / 4
-    PartyDragonCamera.Target.Z = (Mouth.Z * 3 + Hero.Z) / 4
+    Mouth = Party.ShotMouth
+    Party.DragonCamera = Desired
+    Party.DragonCamera.Position.X = BossHead.X - DeltaX * 120 / Distance - DeltaZ * 90 / Distance
+    Party.DragonCamera.Position.Y = BossHead.Y + 20
+    Party.DragonCamera.Position.Z = BossHead.Z - DeltaZ * 120 / Distance + DeltaX * 90 / Distance
+    Party.DragonCamera.Target.X = (Mouth.X * 3 + Hero.X) / 4
+    Party.DragonCamera.Target.Y = (Mouth.Y * 3 + Hero.Y) / 4
+    Party.DragonCamera.Target.Z = (Mouth.Z * 3 + Hero.Z) / 4
 
-    If (PartyPreviousCamera <> 2 Or
-        PartyTurn <> PartyPreviousCameraTurn Or
-        PartyStage <> PartyPreviousShotStage) Then
+    If (Party.PreviousCamera <> 2 Or
+        Party.Turn <> Party.PreviousCameraTurn Or
+        Party.Stage <> Party.PreviousShotStage) Then
 
-        PartyShotPosition1000.X = Desired.Position.X * 1000
-        PartyShotPosition1000.Y = Desired.Position.Y * 1000
-        PartyShotPosition1000.Z = Desired.Position.Z * 1000
-        PartyShotTarget1000.X = Desired.Target.X * 1000
-        PartyShotTarget1000.Y = Desired.Target.Y * 1000
-        PartyShotTarget1000.Z = Desired.Target.Z * 1000
+        Party.ShotPosition1000.X = Desired.Position.X * 1000
+        Party.ShotPosition1000.Y = Desired.Position.Y * 1000
+        Party.ShotPosition1000.Z = Desired.Position.Z * 1000
+        Party.ShotTarget1000.X = Desired.Target.X * 1000
+        Party.ShotTarget1000.Y = Desired.Target.Y * 1000
+        Party.ShotTarget1000.Z = Desired.Target.Z * 1000
 
     End If
 
-    PartyShotPosition1000.X = PartyShotPosition1000.X + (Desired.Position.X * 1000 - PartyShotPosition1000.X) * Timing.CameraElapsed / (320 + Timing.CameraElapsed)
-    PartyShotPosition1000.Y = PartyShotPosition1000.Y + (Desired.Position.Y * 1000 - PartyShotPosition1000.Y) * Timing.CameraElapsed / (320 + Timing.CameraElapsed)
-    PartyShotPosition1000.Z = PartyShotPosition1000.Z + (Desired.Position.Z * 1000 - PartyShotPosition1000.Z) * Timing.CameraElapsed / (320 + Timing.CameraElapsed)
-    PartyShotTarget1000.X = PartyShotTarget1000.X + (Desired.Target.X * 1000 - PartyShotTarget1000.X) * Timing.CameraElapsed / (180 + Timing.CameraElapsed)
-    PartyShotTarget1000.Y = PartyShotTarget1000.Y + (Desired.Target.Y * 1000 - PartyShotTarget1000.Y) * Timing.CameraElapsed / (180 + Timing.CameraElapsed)
-    PartyShotTarget1000.Z = PartyShotTarget1000.Z + (Desired.Target.Z * 1000 - PartyShotTarget1000.Z) * Timing.CameraElapsed / (180 + Timing.CameraElapsed)
-    PartyHeroCamera = Desired
-    PartyHeroCamera.Position.X = PartyShotPosition1000.X / 1000
-    PartyHeroCamera.Position.Y = PartyShotPosition1000.Y / 1000
-    PartyHeroCamera.Position.Z = PartyShotPosition1000.Z / 1000
-    PartyHeroCamera.Target.X = PartyShotTarget1000.X / 1000
-    PartyHeroCamera.Target.Y = PartyShotTarget1000.Y / 1000
-    PartyHeroCamera.Target.Z = PartyShotTarget1000.Z / 1000
+    Party.ShotPosition1000.X = Party.ShotPosition1000.X + (Desired.Position.X * 1000 - Party.ShotPosition1000.X) * Timing.CameraElapsed / (320 + Timing.CameraElapsed)
+    Party.ShotPosition1000.Y = Party.ShotPosition1000.Y + (Desired.Position.Y * 1000 - Party.ShotPosition1000.Y) * Timing.CameraElapsed / (320 + Timing.CameraElapsed)
+    Party.ShotPosition1000.Z = Party.ShotPosition1000.Z + (Desired.Position.Z * 1000 - Party.ShotPosition1000.Z) * Timing.CameraElapsed / (320 + Timing.CameraElapsed)
+    Party.ShotTarget1000.X = Party.ShotTarget1000.X + (Desired.Target.X * 1000 - Party.ShotTarget1000.X) * Timing.CameraElapsed / (180 + Timing.CameraElapsed)
+    Party.ShotTarget1000.Y = Party.ShotTarget1000.Y + (Desired.Target.Y * 1000 - Party.ShotTarget1000.Y) * Timing.CameraElapsed / (180 + Timing.CameraElapsed)
+    Party.ShotTarget1000.Z = Party.ShotTarget1000.Z + (Desired.Target.Z * 1000 - Party.ShotTarget1000.Z) * Timing.CameraElapsed / (180 + Timing.CameraElapsed)
+    Party.HeroCamera = Desired
+    Party.HeroCamera.Position.X = Party.ShotPosition1000.X / 1000
+    Party.HeroCamera.Position.Y = Party.ShotPosition1000.Y / 1000
+    Party.HeroCamera.Position.Z = Party.ShotPosition1000.Z / 1000
+    Party.HeroCamera.Target.X = Party.ShotTarget1000.X / 1000
+    Party.HeroCamera.Target.Y = Party.ShotTarget1000.Y / 1000
+    Party.HeroCamera.Target.Z = Party.ShotTarget1000.Z / 1000
 
     ''' Clear both armored silhouettes after smoothing, including a shield held out in front.
     Hero = Math3D.Vector(ViewerCameraState.Frame.PositionX, ViewerCameraState.Frame.PositionY, ViewerCameraState.Frame.PositionZ)
-    OtherHero = Math3D.Vector(PartyCompanion.Frame.PositionX, PartyCompanion.Frame.PositionY, PartyCompanion.Frame.PositionZ)
+    OtherHero = Math3D.Vector(Party.Companion.Frame.PositionX, Party.Companion.Frame.PositionY, Party.Companion.Frame.PositionZ)
 
-    Call BattleCamera.KeepOutsideActor(PartyHeroCamera, Hero, 100)
-    Call BattleCamera.KeepOutsideActor(PartyHeroCamera, OtherHero, 115)
+    Call BattleCamera.KeepOutsideActor(Party.HeroCamera, Hero, 100)
+    Call BattleCamera.KeepOutsideActor(Party.HeroCamera, OtherHero, 115)
 
-    PartyHeroCamera.Position.Y = Max(24, PartyHeroCamera.Position.Y)
-    PartyDragonCamera.Position.Y = Max(24, PartyDragonCamera.Position.Y)
+    Party.HeroCamera.Position.Y = Max(24, Party.HeroCamera.Position.Y)
+    Party.DragonCamera.Position.Y = Max(24, Party.DragonCamera.Position.Y)
 
-    ViewerCameraState.Live = PartyHeroCamera
-    PartyActiveCamera = 2
+    ViewerCameraState.Live = Party.HeroCamera
+    Party.ActiveCamera = 2
 
     If BossChargeShot Then
-        ViewerCameraState.Live = PartyDragonCamera
-        PartyActiveCamera = 3
+        ViewerCameraState.Live = Party.DragonCamera
+        Party.ActiveCamera = 3
     End If
 
-    PartyPreviousCamera = PartyActiveCamera
-    PartyPreviousCameraTurn = PartyTurn
-    PartyPreviousShotStage = PartyStage
+    Party.PreviousCamera = Party.ActiveCamera
+    Party.PreviousCameraTurn = Party.Turn
+    Party.PreviousShotStage = Party.Stage
 
 End Sub
 
@@ -2464,7 +2304,7 @@ Sub AdvanceAnimationSequence()
     Dim ClipCount As Number
     Dim CurrentAnimationTime As Number
 
-    If Not Playback.DemoEnabled Or PartyMode Then
+    If Not Playback.DemoEnabled Or Party.Enabled Then
         Return
     End If
 
@@ -2526,7 +2366,7 @@ Function HandleInterfacePointer() As Boolean
 
         If Pointer_Pressed(POINTER_SECONDARY) Then
 
-            If PartyMode Then
+            If Party.Enabled Then
                 Call ResetPartyInspector()
             Else If Session.ViewerError Then
                 Call RetryViewer()
@@ -2565,7 +2405,7 @@ Function HandleInterfacePointer() As Boolean
 
     End If
 
-    If PartyMode Then
+    If Party.Enabled Then
 
         If HandlePartyPointer() Then
             Return True
@@ -2820,7 +2660,7 @@ Function HandleInspectorPointer() As Boolean
         Call CycleSocketDisplay()
 
     Else If (ViewerProfiles.INCLUDE_DIAGNOSTIC_PROFILES And
-        Not PartyMode And
+        Not Party.Enabled And
         PointerInRectangle(PanelLeft + 162, 18, 50, 34)) Then
 
         Call CycleProfile()
@@ -2873,7 +2713,7 @@ Function HandleInspectorPointer() As Boolean
 
         Else If Session.ProfileIndex = ViewerProfiles.PROFILE_ORIN Then
 
-            Call OrinStorm.CycleStyle(OrinStormContext)
+            Call OrinStorm.CycleStyle(Effects.OrinStorm)
 
         Else
             SwordFireVisible = Not SwordFireVisible
@@ -2888,13 +2728,13 @@ Function HandleInspectorPointer() As Boolean
 
         If Session.ProfileIndex = ViewerProfiles.PROFILE_DRAGON Then
 
-            If Not PartyMode Then
-                DragonCounter = (DragonCounter + 1) Mod 2
+            If Not Party.Enabled Then
+                Party.DragonCounter = (Party.DragonCounter + 1) Mod 2
             End If
 
         Else If Session.ProfileIndex = ViewerProfiles.PROFILE_ORIN Then
 
-            Call OrinStorm.CycleStyle(OrinStormContext)
+            Call OrinStorm.CycleStyle(Effects.OrinStorm)
 
         Else
             ShieldFireVisible = Not ShieldFireVisible
@@ -2913,12 +2753,12 @@ Function HandleInspectorPointer() As Boolean
     Else If (Session.ProfileIndex = ViewerProfiles.PROFILE_ORIN And
         PointerInRectangle(PanelLeft + 144, 470, 108, 20)) Then
 
-        LightningAnimationPaused = Not LightningAnimationPaused
+        Call ViewerEffects.ToggleLightningPause(Effects)
 
     Else If (SwordFireReady And
         PointerInRectangle(PanelLeft + 12, 470, 128, 20)) Then
 
-        FlameAnimationPaused = Not FlameAnimationPaused
+        Call ViewerEffects.ToggleFlamePause(Effects)
 
     Else If (Session.ProfileIndex = ViewerProfiles.PROFILE_ARIN And
         PointerInRectangle(PanelLeft + 144, 470, 108, 20)) Then
@@ -3216,7 +3056,7 @@ Sub UpdateCameraPointer(Blocked As Boolean)
     PointerDeltaX = Pointer_Delta_X()
     PointerDeltaY = Pointer_Delta_Y()
 
-    ViewerCameraState.CalibrationOrbitActive = OrbitActive And ViewerUiState.CalibrationVisible And Not PartyMode
+    ViewerCameraState.CalibrationOrbitActive = OrbitActive And ViewerUiState.CalibrationVisible And Not Party.Enabled
 
     If OrbitPressed And ViewerCameraState.CalibrationOrbitActive Then
         Call ViewerCamera.BeginCalibrationOrbitAnchor(
@@ -3635,9 +3475,7 @@ End Sub
 ''' Its object matrix includes move/pivot edits and its wrist-decoupling policy.
 Sub InvalidateVisualHistory()
 
-    ''' Saturating serial plus a dirty bit stays safe even at the serial limit.
-    VisualContinuityEpoch = Min(2147483647, VisualContinuityEpoch + 1)
-    VisualHistoryDirty = True
+    Call ViewerEffects.InvalidateVisualHistory(Effects)
 
 End Sub
 
@@ -3647,7 +3485,7 @@ Sub UpdateEquipmentFire()
         Return
     End If
 
-    If PartyMode And PartyPresentationState(0) = PARTY_STATE_KO Then
+    If Party.Enabled And PartyPresentationState(0) = ViewerParty.STATE_KO Then
         Call ClearEquipmentFire()
 
         Return
@@ -3665,9 +3503,9 @@ Sub UpdateEquipmentFire()
         Call ClearShieldFire()
     End If
 
-    EquipmentFireFirstSample = VisualHistoryDirty Or EquipmentFireEpoch <> VisualContinuityEpoch
+    Effects.EquipmentFireFirstSample = Effects.VisualHistoryDirty Or Effects.EquipmentFireEpoch <> Effects.VisualContinuityEpoch
 
-    If EquipmentFireFirstSample Then
+    If Effects.EquipmentFireFirstSample Then
 
         Call ClearEquipmentFire()
 
@@ -3675,13 +3513,13 @@ Sub UpdateEquipmentFire()
             Call ResetEpicGlowTrails()
         End If
 
-        EquipmentFireEpoch = VisualContinuityEpoch
-        VisualHistoryDirty = False
+        Effects.EquipmentFireEpoch = Effects.VisualContinuityEpoch
+        Effects.VisualHistoryDirty = False
 
     End If
 
-    If FlameAnimationPaused Then
-        FlamesWerePaused = True
+    If Effects.FlamePaused Then
+        Effects.FlamesWerePaused = True
         Return
     End If
 
@@ -3694,7 +3532,7 @@ Sub UpdateEquipmentFire()
     Call UpdateSwordFire()
     Call UpdateShieldFire()
 
-    FlamesWerePaused = FlameAnimationPaused
+    Effects.FlamesWerePaused = Effects.FlamePaused
 
     Call RecordOptionalFireFailure()
 
@@ -3711,41 +3549,43 @@ Sub UpdateOrinStorm()
 
     Target = Character3D.SocketPosition(Dragon, "Chest")
 
-    If (PartyMode Or Session.DragonInspection) And PartyReady Then
-        Clip = Character3D.ClipName(PartyCompanion.Actor, PartyCompanion.Clip)
+    If (Party.Enabled Or Session.DragonInspection) And Party.Ready Then
+        Clip = Character3D.ClipName(Party.Companion.Actor, Party.Companion.Clip)
 
-        Call OrinStorm.Update(OrinStormContext, PartyCompanion.Actor, Clip, Target,
+        Call OrinStorm.Update(Effects.OrinStorm, Party.Companion.Actor, Clip, Target,
             ViewerCameraState.Live, Timing.CameraElapsed,
-            PartyCompanion.GlowVisible And (EpicGlowVisible Or Session.DragonInspection) And
-                PartyPresentationState(1) <> PARTY_STATE_KO,
-            SwordVisible, ShieldVisible, LightningAnimationPaused, Playback.ScenePaused, OrinLight)
+            Party.Companion.GlowVisible And (EpicGlowVisible Or Session.DragonInspection) And
+                PartyPresentationState(1) <> ViewerParty.STATE_KO,
+            SwordVisible, ShieldVisible, Effects.LightningPaused, Playback.ScenePaused, Effects.OrinLight)
     Else If Session.ProfileIndex = ViewerProfiles.PROFILE_ORIN Then
         Clip = Character3D.ClipName(Character, Playback.SelectedClip)
 
-        Call OrinStorm.Update(OrinStormContext, Character, Clip, Target, ViewerCameraState.Live,
+        Call OrinStorm.Update(Effects.OrinStorm, Character, Clip, Target, ViewerCameraState.Live,
             Timing.CameraElapsed, EpicGlowVisible, SwordVisible, ShieldVisible,
-            LightningAnimationPaused, Playback.ScenePaused, OrinLight)
+            Effects.LightningPaused, Playback.ScenePaused, Effects.OrinLight)
     End If
 
 End Sub
 
 Sub AdvanceSceneVfx()
 
-    Session.Ready = SceneVfx3D.BeginFrame(SceneVfxClock, Timing.CameraElapsed,
-        FlameAnimationPaused, LightningAnimationPaused) And Session.Ready
-    Session.Ready = SceneVfx3D.Advance(SceneVfxClock, ViewerCameraState.Live,
-        FireInitialized, LightningInitialized) And Session.Ready
+    Session.Ready = ViewerEffects.AdvanceScene(
+        Effects,
+        Timing.CameraElapsed,
+        Playback.ScenePaused,
+        ViewerCameraState.Live
+    ) And Session.Ready
 
 End Sub
 
 Sub RecordOptionalFireFailure()
 
-    If EquipmentFireFirstError = 0 And (SwordFireFailed Or ShieldFireFailed) Then
+    If Effects.EquipmentFireFirstError = 0 And (SwordFireFailed Or ShieldFireFailed) Then
 
-        EquipmentFireFirstError = Fire.Value(12, SwordFire)
+        Effects.EquipmentFireFirstError = Fire.Value(12, SwordFire)
 
-        If EquipmentFireFirstError = 0 Then
-            EquipmentFireFirstError = Fire.ERROR_RENDERER
+        If Effects.EquipmentFireFirstError = 0 Then
+            Effects.EquipmentFireFirstError = Fire.ERROR_RENDERER
         End If
 
     End If
@@ -3838,9 +3678,9 @@ Sub UpdateSwordFire()
     If (Time < SwordFireTime Or
         Playback.SelectedClip <> SwordFireClip Or
         Playback.ScenePaused Or
-        FlameAnimationPaused Or
-        FlamesWerePaused Or
-        EquipmentFireFirstSample) Then
+        Effects.FlamePaused Or
+        Effects.FlamesWerePaused Or
+        Effects.EquipmentFireFirstSample) Then
         Inheritance = 0
     End If
 
@@ -3960,9 +3800,9 @@ Sub UpdateShieldFire()
         If (Time < ShieldFireTime Or
             Playback.SelectedClip <> ShieldFireClip Or
             Playback.ScenePaused Or
-            FlameAnimationPaused Or
-            FlamesWerePaused Or
-            EquipmentFireFirstSample) Then
+            Effects.FlamePaused Or
+            Effects.FlamesWerePaused Or
+            Effects.EquipmentFireFirstSample) Then
             Call Fire.SetSourceVelocityInheritance(ShieldFire[Index], 0)
         End If
 
@@ -4306,7 +4146,7 @@ End Sub
 
 Sub AdjustPlaybackSpeed(Amount As Number)
 
-    If PartyMode And PartyPreviewActive Then
+    If Party.Enabled And Party.PreviewActive Then
         Call ViewerCalibration.SetTransferMessage(
             Calibration, "Resume Or Reset Before Changing Demo Speed")
 
@@ -4316,7 +4156,7 @@ Sub AdjustPlaybackSpeed(Amount As Number)
     Call ViewerPlayback.AdjustSpeed(Playback, ActiveProfile.MinimumPlaybackSpeed,
         ActiveProfile.MaximumPlaybackSpeed, Amount)
 
-    If PartyMode Then
+    If Party.Enabled Then
         Call ResetPartyDemo()
     Else
 
@@ -4327,7 +4167,7 @@ End Sub
 
 Sub RestartPresentation()
 
-    If PartyMode And PartyReady Then
+    If Party.Enabled And Party.Ready Then
         Call ResetPartyInspector()
 
         Return
@@ -4346,8 +4186,8 @@ End Sub
 
 Sub ResetView()
 
-    PartyPreviousCamera = 0
-    PartyOrbitPhase1000 = 0
+    Party.PreviousCamera = 0
+    Party.OrbitPhase1000 = 0
 
     Call ViewerCamera.Reset(
         ViewerCameraState,
@@ -4362,7 +4202,7 @@ End Sub
 
 Sub ResetAll()
 
-    If PartyUiBound Then
+    If Party.UiBound Then
 
         Call CancelCalibrationEdit()
         Call RestorePartyPreview()
@@ -4370,7 +4210,7 @@ Sub ResetAll()
 
     End If
 
-    PartyPreviewActive = False
+    Call ViewerParty.ClearPreview(Party)
 
     If ViewerUiState.CalibrationEditing Then
         Call CancelCalibrationEdit()
@@ -4378,20 +4218,20 @@ Sub ResetAll()
 
     Playback.PlaybackSpeed = ActiveProfile.DefaultPlaybackSpeed
     Playback.ScenePaused = False
-    FlameAnimationPaused = False
-    LightningAnimationPaused = False
+    Effects.FlamePaused = False
+    Effects.LightningPaused = False
     SwordFireFailed = False
     ShieldFireFailed = False
-    EquipmentFireFirstError = 0
+    Effects.EquipmentFireFirstError = 0
     Playback.DemoEnabled = True
     ViewerCameraState.FitLocked = True
     LightingIndex = 0
     MaterialInspection = Graphics3D.MATERIAL_INSPECTION_LIT
-    BackgroundIndex = 3
+    Rendering.BackgroundIndex = 3
     SocketGizmosVisible = False
     ShowAllSocketOrigins = False
-    FloorVisible = True
-    GridVisible = True
+    Rendering.FloorVisible = True
+    Rendering.GridVisible = True
     EpicGlowVisible = ViewerProfiles.EpicGlowVisibleByDefault(Session.ProfileIndex) And EpicGlowAvailable
     DragonVisible = DragonAvailable
     SwordVisible = True
@@ -4415,7 +4255,7 @@ Sub ResetAll()
 
     Session.Ready = Graphics3D.SetMaterialInspection3D(MaterialInspection) And Session.Ready
 
-    If PartyMode And PartyReady Then
+    If Party.Enabled And Party.Ready Then
 
         Call ResetPartyDemo()
         Call ResetView()
@@ -4517,7 +4357,7 @@ Sub SelectClip(Index As Number)
     Playback.SelectedClip = Index
     Playback.AnimationCycleElapsed = 0
 
-    If Not PartyMode Then
+    If Not Party.Enabled Then
         Playback.DemoEnabled = False
     End If
 
@@ -4993,7 +4833,7 @@ Sub HandleCalibrationImport()
 
     Playback.ScenePaused = True
 
-    If Not PartyMode Then
+    If Not Party.Enabled Then
         Playback.DemoEnabled = False
     End If
 
@@ -5955,7 +5795,7 @@ Sub PlaySelectedClip(Optional RetainFireTails As Boolean = False)
         ViewerPlayback.ClipMode(Session.ProfileIndex, SelectedClipName()),
         Playback.PlaybackSpeed
     ) And Session.Ready
-    ArinAudio.Clip = ""
+    Effects.ArinAudio.Clip = ""
     Playback.AnimationCycleElapsed = 0
     Playback.DemoCompletedLoops = 0
     Playback.DemoPreviousAnimationTime = Character3D.AnimationTime(Character)
@@ -6094,7 +5934,7 @@ Function GlowButtonX() As Number
 
     Result = StatusPanelX() + 162
 
-    If ViewerProfiles.INCLUDE_DIAGNOSTIC_PROFILES And Not PartyMode Then
+    If ViewerProfiles.INCLUDE_DIAGNOSTIC_PROFILES And Not Party.Enabled Then
         Result = StatusPanelX() + 216
     End If
 
@@ -6108,7 +5948,7 @@ Function GlowButtonWidth() As Number
 
     Result = 90
 
-    If ViewerProfiles.INCLUDE_DIAGNOSTIC_PROFILES And Not PartyMode Then
+    If ViewerProfiles.INCLUDE_DIAGNOSTIC_PROFILES And Not Party.Enabled Then
         Result = 36
     End If
 
@@ -6394,7 +6234,7 @@ Sub DrawInspectorOverlay()
 
     Draw Text "SMILE 2.0 - 3D Viewer, Animation Editor" At 18, 10 Size 22 Color WHITE
 
-    If PartyMode Then
+    If Party.Enabled Then
         Subtitle = "Sin Star I  •  Arin And Orin  •  Party Battle Preview"
     End If
 
@@ -6406,7 +6246,7 @@ Sub DrawInspectorOverlay()
     Call DrawButton(260, 62, 72, 26, "Dragon", Session.SelectedCharacterTab = 2)
     Call DrawButton(338, 62, 72, 26, "Party", Session.SelectedCharacterTab = 3)
 
-    If PartyMode And Not ViewerUiState.CalibrationVisible Then
+    If Party.Enabled And Not ViewerUiState.CalibrationVisible Then
         Call DrawPartyOverlay()
     End If
 
@@ -6416,13 +6256,13 @@ Sub DrawInspectorOverlay()
         Call DrawButton(PanelLeft + 48, 18, 56, 34, "CHANNEL", False)
         Call DrawButton(PanelLeft + 108, 18, 50, 34, "SOCKET", SocketGizmosVisible)
 
-        If ViewerProfiles.INCLUDE_DIAGNOSTIC_PROFILES And Not PartyMode Then
+        If ViewerProfiles.INCLUDE_DIAGNOSTIC_PROFILES And Not Party.Enabled Then
             Call DrawButton(PanelLeft + 162, 18, 50, 34, "PROFILE", False)
         End If
 
         Call DrawButton(GlowButtonX(), 18, GlowButtonWidth(), 34, "GLOW", EpicGlowVisible)
         Call DrawButton(PanelLeft, 56, 72, 22, DragonLabel(), DragonVisible)
-        Call DrawButton(PanelLeft + 76, 56, 48, 22, BackgroundLabel(), BackgroundIndex > 0)
+        Call DrawButton(PanelLeft + 76, 56, 48, 22, BackgroundLabel(), Rendering.BackgroundIndex > 0)
 
         If CalibrationAvailable Then
             Call DrawButton(PanelLeft + 128, 56, 36, 22, "Pose", ViewerUiState.CalibrationVisible)
@@ -6442,7 +6282,7 @@ Sub DrawInspectorOverlay()
         Call DrawButton(PanelLeft + 178, 330, 74, 18, DemoLabel(), Playback.DemoEnabled)
 
         Call DrawAnimationButtons()
-        Call DrawButton(PanelLeft + 12, 444, 78, 22, "Floor/Grid", FloorVisible Or GridVisible)
+        Call DrawButton(PanelLeft + 12, 444, 78, 22, "Floor/Grid", Rendering.FloorVisible Or Rendering.GridVisible)
 
         If Session.ProfileIndex = ViewerProfiles.PROFILE_ARIN Then
 
@@ -6452,18 +6292,18 @@ Sub DrawInspectorOverlay()
         Else If Session.ProfileIndex = ViewerProfiles.PROFILE_ORIN Then
 
             Call DrawButton(PanelLeft + 94, 444, 158, 22,
-                OrinStorm.StyleName(OrinStormContext), True)
+                OrinStorm.StyleName(Effects.OrinStorm), True)
             Call DrawButton(PanelLeft + 12, 470, 128, 20,
                 OrinStorm.SceneComfortName(), True)
             Call DrawButton(PanelLeft + 144, 470, 108, 20,
-                VfxPlaybackLabel("Lightning", LightningAnimationPaused), LightningAnimationPaused)
+                VfxPlaybackLabel("Lightning", Effects.LightningPaused), Effects.LightningPaused)
 
         Else If Session.ProfileIndex = ViewerProfiles.PROFILE_DRAGON Then
 
             Call DrawButton(PanelLeft + 94, 444, 76, 22, "Head Aim", DragonHeadTracking)
 
-            If ((PartyMode And PartyHitTarget = 0) Or
-                (Not PartyMode And DragonCounter Mod 2 = 0)) Then
+            If ((Party.Enabled And Party.HitTarget = 0) Or
+                (Not Party.Enabled And Party.DragonCounter Mod 2 = 0)) Then
                 Call DrawButton(PanelLeft + 174, 444, 78, 22, "At Arin", True)
             Else
 
@@ -6473,7 +6313,7 @@ Sub DrawInspectorOverlay()
         End If
 
         If SwordFireReady And Session.ProfileIndex = ViewerProfiles.PROFILE_ARIN Then
-            Call DrawButton(PanelLeft + 12, 470, 128, 20, FlamePlaybackLabel(), Not FlameAnimationPaused)
+            Call DrawButton(PanelLeft + 12, 470, 128, 20, FlamePlaybackLabel(), Not Effects.FlamePaused)
 
             Call DrawButton(PanelLeft + 144, 470, 108, 20, ShieldFireStyleLabel(), Not ShieldFlameStyle)
         End If
@@ -6529,7 +6369,7 @@ Sub DrawInspectorOverlay()
 
     Else If ViewerUiState.CalibrationEditing Then
 
-        If PartyMode Then
+        If Party.Enabled Then
             Draw Text "Pose Edit Active - Save Or Cancel Before Resuming" At 18, 42 Size 12 Color YELLOW
         Else If Playback.ScenePaused Then
             Draw Text "Pose Edit Active - Space To Resume" At 18, 42 Size 12 Color YELLOW
@@ -6792,7 +6632,7 @@ Function FlamePlaybackLabel() As Text
 
     Dim Result As Text
 
-    If FlameAnimationPaused Then
+    If Effects.FlamePaused Then
         Result = "Play Flames"
     Else
         Result = "Pause Flames"
@@ -6966,13 +6806,13 @@ Function BackgroundLabel() As Text
 
     Dim Result As Text
 
-    If BackgroundIndex = 1 Then
+    If Rendering.BackgroundIndex = 1 Then
         Result = "BG GREEN"
-    Else If BackgroundIndex = 2 Then
+    Else If Rendering.BackgroundIndex = 2 Then
         Result = "BG PURPLE"
-    Else If BackgroundIndex = 3 Then
+    Else If Rendering.BackgroundIndex = 3 Then
         Result = "BG SCENE"
-    Else If BackgroundIndex = 4 Then
+    Else If Rendering.BackgroundIndex = 4 Then
         Result = "BG LOGO"
     Else
         Result = "BG BLACK"
@@ -7067,15 +6907,15 @@ Function AnimationSecondsRemaining() As Number
     Dim RemainingMilliseconds As Number
     Dim Result As Number
 
-    If PartyMode Then
+    If Party.Enabled Then
 
         RequiredMilliseconds = PartyAttackDuration() + 4000
 
-        If PartyTurn = 2 Then
+        If Party.Turn = 2 Then
             RequiredMilliseconds = DragonTurnDuration()
         End If
 
-        RemainingMilliseconds = Max(0, RequiredMilliseconds - PartyElapsed)
+        RemainingMilliseconds = Max(0, RequiredMilliseconds - Party.Elapsed)
         Result = (RemainingMilliseconds + 999) / 1000
 
     Else If Playback.DemoEnabled Then
@@ -7113,9 +6953,9 @@ Function DemoLabel() As Text
 
     Dim Result As Text
 
-    If PartyMode And Playback.ScenePaused Then
+    If Party.Enabled And Playback.ScenePaused Then
         Result = "RESUME"
-    Else If PartyMode Then
+    Else If Party.Enabled Then
         Result = "PAUSE"
     Else If Playback.DemoEnabled Then
         Result = "DEMO ON"
@@ -7131,7 +6971,7 @@ Function DemoStatusLabel() As Text
 
     Dim Result As Text
 
-    If PartyMode And Playback.ScenePaused Then
+    If Party.Enabled And Playback.ScenePaused Then
         Result = "Paused"
     Else If Playback.DemoEnabled Then
         Result = "On"
@@ -7252,24 +7092,13 @@ Sub DestroyViewerResources()
     Dim Index As Number
 
     Call DestroyPartyCompanion()
-    Call Graphics3D.DestroyObject3D(DragonOpponent.WeaponGlow)
-    Call Graphics3D.DestroyObject3D(DragonOpponent.ShieldGlow)
-    Call Character3D.Destroy(DragonOpponent.Actor)
+    Call Graphics3D.DestroyObject3D(Party.DragonOpponent.WeaponGlow)
+    Call Graphics3D.DestroyObject3D(Party.DragonOpponent.ShieldGlow)
+    Call Character3D.Destroy(Party.DragonOpponent.Actor)
     Call DestroyDragon()
     Call DragonPresence.Shutdown()
-    Call OrinStorm.Shutdown()
-    Call Lightning.Shutdown()
-    Call Fire.Shutdown()
 
-    If LightPool3D.IsValid(OrinLight) Then
-        Session.Ready = LightPool3D.Release(OrinLight) And Session.Ready
-    End If
-
-    If LightPool3D.IsValid(DragonLight) Then
-        Session.Ready = LightPool3D.Release(DragonLight) And Session.Ready
-    End If
-
-    Call LightPool3D.Shutdown()
+    Session.Ready = ViewerEffects.ShutdownShared(Effects) And Session.Ready
 
     SwordFire.Slot = 0
     SwordFireReady = False
@@ -7291,7 +7120,7 @@ Sub SelectCharacterTab(Index As Number)
 
     If (Index = Session.SelectedCharacterTab And
         Not Session.ViewerError And
-        (PartyMode Or Session.DragonInspection Or ViewerProfiles.IsPartyCharacter(Session.ProfileIndex))) Then
+        (Party.Enabled Or Session.DragonInspection Or ViewerProfiles.IsPartyCharacter(Session.ProfileIndex))) Then
         Return
     End If
 
@@ -7310,7 +7139,7 @@ Sub SelectCharacterTab(Index As Number)
     Call DestroyViewerResources()
 
     Session.SelectedCharacterTab = Index
-    PartyMode = Index = 3
+    Party.Enabled = Index = 3
     Session.DragonInspection = Index = 2
     Session.ProfileIndex = ViewerProfiles.PROFILE_ARIN
 
@@ -7329,9 +7158,9 @@ Sub SelectCharacterTab(Index As Number)
 
 End Sub
 
-Function CaptureActorContext() As ViewerActorContext
+Function CaptureActorContext() As ViewerParty.ActorContext
 
-    Dim Result As ViewerActorContext
+    Dim Result As ViewerParty.ActorContext
 
     Result.Actor = Character
     Result.Frame = ViewerCameraState.Frame
@@ -7345,13 +7174,13 @@ Function CaptureActorContext() As ViewerActorContext
     Result.CalibrationAvailable = CalibrationAvailable
     Result.GlowAvailable = EpicGlowAvailable
     Result.GlowVisible = EpicGlowVisible
-    Result.PresentationState = PresentationState
+    Result.PresentationState = Party.PrimaryPresentationState
 
     Return Result
 
 End Function
 
-Sub UseActorContext(Context As ViewerActorContext)
+Sub UseActorContext(Context As ViewerParty.ActorContext)
 
     Character = Context.Actor
     ViewerCameraState.Frame = Context.Frame
@@ -7366,7 +7195,7 @@ Sub UseActorContext(Context As ViewerActorContext)
     CalibrationAvailable = Context.CalibrationAvailable
     EpicGlowAvailable = Context.GlowAvailable
     EpicGlowVisible = Context.GlowVisible
-    PresentationState = Context.PresentationState
+    Party.PrimaryPresentationState = Context.PresentationState
 
 End Sub
 
@@ -7375,22 +7204,26 @@ Sub BeginPartyInspector()
     Dim Index As Number
     Dim WasVisible As Boolean
 
-    If (Not PartyMode Or
-        Not PartyReady Or
+    If (Not Party.Enabled Or
+        Not Party.Ready Or
         Session.ViewerError Or
-        PartyUiBound) Then
+        Party.UiBound) Then
         Return
     End If
 
-    PartyUiPrimary = CaptureActorContext()
-    PartyUiTurn = PartyTurn
-    PartyUiBound = True
+    If Not ViewerParty.BeginInspectorBinding(
+        Party,
+        CaptureActorContext(),
+        Party.Turn
+    ) Then
+        Return
+    End If
 
-    If PartyUiTurn = 1 Then
+    If Party.UiTurn = 1 Then
 
-        Call UseActorContext(PartyCompanion)
+        Call UseActorContext(Party.Companion)
 
-    Else If PartyUiTurn = 2 Then
+    Else If Party.UiTurn = 2 Then
 
         Character = Dragon
         Session.ProfileIndex = ViewerProfiles.PROFILE_DRAGON
@@ -7428,26 +7261,26 @@ End Sub
 
 Sub EndPartyInspector()
 
-    If Not PartyUiBound Then
+    If Not Party.UiBound Then
         Return
     End If
 
-    If PartyUiTurn = 1 Then
+    If Party.UiTurn = 1 Then
 
-        PartyCompanion = CaptureActorContext()
+        Party.Companion = CaptureActorContext()
 
-        Call UseActorContext(PartyUiPrimary)
+        Call UseActorContext(Party.UiPrimary)
 
-    Else If PartyUiTurn = 2 Then
+    Else If Party.UiTurn = 2 Then
 
         Dragon = Character
         DragonClip = SelectedClipName()
 
-        Call UseActorContext(PartyUiPrimary)
+        Call UseActorContext(Party.UiPrimary)
 
     End If
 
-    PartyUiBound = False
+    Call ViewerParty.EndInspectorBinding(Party)
 
 End Sub
 
@@ -7455,28 +7288,31 @@ Sub BeginPartyPreview()
 
     Dim Name As Text
 
-    If Not PartyUiBound Then
+    If Not Party.UiBound Then
         Return
     End If
 
-    If Not PartyPreviewActive Then
+    If Not Party.PreviewActive Then
 
-        PartyPreviewClip = Playback.SelectedClip
-        PartyPreviewTime = Character3D.AnimationTime(Character)
-        PartyPreviewMode = Graphics3D.ANIMATION_LOOP
+        Party.PreviewMode = Graphics3D.ANIMATION_LOOP
         Name = SelectedClipName()
 
-        If ((PartyUiTurn = 2 And Name <> "Idle") Or
+        If ((Party.UiTurn = 2 And Name <> "Idle") Or
             Name = "SwordAttack" Or
             Name = "SwordAttack2" Or
             Name = "JumpAttack" Or
             Name = "ThorAttack" Or
             Name = "Hit" Or
             ViewerProfiles.HoldsFinalPose(Session.ProfileIndex, Name)) Then
-            PartyPreviewMode = Graphics3D.ANIMATION_ONCE
+            Party.PreviewMode = Graphics3D.ANIMATION_ONCE
         End If
 
-        PartyPreviewActive = True
+        Call ViewerParty.CapturePreview(
+            Party,
+            Playback.SelectedClip,
+            Character3D.AnimationTime(Character),
+            Party.PreviewMode
+        )
 
     End If
 
@@ -7486,15 +7322,17 @@ End Sub
 
 Sub RestorePartyPreview()
 
-    If Not PartyPreviewActive Or Not PartyUiBound Then
+    If Not Party.PreviewActive Or Not Party.UiBound Then
         Return
     End If
 
-    Playback.SelectedClip = PartyPreviewClip
+    Playback.SelectedClip = Party.PreviewClip
     Session.Ready = Character3D.PlayMode(Character, SelectedClipName(),
-        PartyPreviewMode, Playback.PlaybackSpeed) And Session.Ready
-    Session.Ready = Character3D.SetAnimationTime(Character, PartyPreviewTime) And Session.Ready
-    PartyPreviewActive = False
+        Party.PreviewMode, Playback.PlaybackSpeed) And Session.Ready
+    Session.Ready = Character3D.SetAnimationTime(Character, Party.PreviewTime) And Session.Ready
+
+    Call ViewerParty.ClearPreview(Party)
+
     ViewerUiState.CalibrationVisible = False
 
     Call ViewerInput.CancelCaptures(ViewerInputState)
@@ -7522,7 +7360,7 @@ End Sub
 
 Sub CreatePartyCompanion(Optional CompanionIndex As Number = ViewerProfiles.PROFILE_ORIN)
 
-    Dim Primary As ViewerActorContext
+    Dim Primary As ViewerParty.ActorContext
     Dim CompanionProfile As CharacterViewer.Profile
     Dim CompanionBounds As Character3D.Bounds3D
     Dim CompanionModel As Core.Model3D
@@ -7534,13 +7372,13 @@ Sub CreatePartyCompanion(Optional CompanionIndex As Number = ViewerProfiles.PROF
     Character = Character3D.LoadWithPolicy(
         CompanionProfile.AssetPath, Character3D.CHARACTER_LOAD_REQUIRE_PBR
     )
-    PartyReady = Character3D.IsValid(Character)
+    Party.Ready = Character3D.IsValid(Character)
 
-    If PartyReady Then
+    If Party.Ready Then
 
         CompanionBounds = Character3D.LocalBounds(Character)
         ViewerCameraState.Frame = CharacterViewer.AutoFit(CompanionProfile, CompanionBounds)
-        PartyReady = ViewerCameraState.Frame.Valid
+        Party.Ready = ViewerCameraState.Frame.Valid
         Session.Ready = Character3D.SetScale(Character, ViewerCameraState.Frame.ScalePercent) And Session.Ready
         Session.Ready = Character3D.SetShadows(Character, True, True) And Session.Ready
         Calibration.KeyBase = 0
@@ -7551,7 +7389,7 @@ Sub CreatePartyCompanion(Optional CompanionIndex As Number = ViewerProfiles.PROF
 
         Call ConfigureCalibration()
 
-        PartyReady = CalibrationAvailable And Not Calibration.StorageRejected And PartyReady
+        Party.Ready = CalibrationAvailable And Not Calibration.StorageRejected And Party.Ready
         CompanionModel.Handle = Character3D.ModelHandle(Character)
         CompanionAnimator.Handle = Character3D.AnimatorHandle(Character)
 
@@ -7587,7 +7425,7 @@ Sub CreatePartyCompanion(Optional CompanionIndex As Number = ViewerProfiles.PROF
 
         Call PlayPartyClip(Character, "Idle", Playback.SelectedClip)
 
-        PartyCompanion = CaptureActorContext()
+        Party.Companion = CaptureActorContext()
 
     End If
 
@@ -7597,11 +7435,11 @@ Sub CreatePartyCompanion(Optional CompanionIndex As Number = ViewerProfiles.PROF
         Call ConfigureCalibration()
     End If
 
-    If PartyMode Then
+    If Party.Enabled Then
         Call ResetPartyDemo()
     End If
 
-    Session.Ready = PartyReady And Session.Ready
+    Session.Ready = Party.Ready And Session.Ready
 
 End Sub
 
@@ -7610,35 +7448,35 @@ Sub PositionDragonOpponents()
     Dim Home As Core.Vector3
 
     Home = PartyHomePosition(0, 2)
-    DragonOpponent.Frame.PositionX = Home.X
-    DragonOpponent.Frame.PositionZ = Home.Z
+    Party.DragonOpponent.Frame.PositionX = Home.X
+    Party.DragonOpponent.Frame.PositionZ = Home.Z
     Home = PartyHomePosition(1, 2)
-    PartyCompanion.Frame.PositionX = Home.X
-    PartyCompanion.Frame.PositionZ = Home.Z
-    Session.Ready = Character3D.Place(DragonOpponent.Actor, DragonOpponent.Frame.PositionX,
-        DragonOpponent.Frame.PositionY, DragonOpponent.Frame.PositionZ) And Session.Ready
-    Session.Ready = Character3D.Place(PartyCompanion.Actor, PartyCompanion.Frame.PositionX,
-        PartyCompanion.Frame.PositionY, PartyCompanion.Frame.PositionZ) And Session.Ready
-    Session.Ready = FaceDragon(DragonOpponent.Actor, 0) And Session.Ready
-    Session.Ready = FaceDragon(PartyCompanion.Actor, ORIN_ARENA_YAW_ADJUSTMENT) And Session.Ready
+    Party.Companion.Frame.PositionX = Home.X
+    Party.Companion.Frame.PositionZ = Home.Z
+    Session.Ready = Character3D.Place(Party.DragonOpponent.Actor, Party.DragonOpponent.Frame.PositionX,
+        Party.DragonOpponent.Frame.PositionY, Party.DragonOpponent.Frame.PositionZ) And Session.Ready
+    Session.Ready = Character3D.Place(Party.Companion.Actor, Party.Companion.Frame.PositionX,
+        Party.Companion.Frame.PositionY, Party.Companion.Frame.PositionZ) And Session.Ready
+    Session.Ready = FaceDragon(Party.DragonOpponent.Actor, 0) And Session.Ready
+    Session.Ready = FaceDragon(Party.Companion.Actor, ORIN_ARENA_YAW_ADJUSTMENT) And Session.Ready
 
 End Sub
 
 Sub UpdateDragonOpponent()
 
-    Dim SavedCompanion As ViewerActorContext
-    Dim Primary As ViewerActorContext
+    Dim SavedCompanion As ViewerParty.ActorContext
+    Dim Primary As ViewerParty.ActorContext
 
-    SavedCompanion = PartyCompanion
-    PartyCompanion = DragonOpponent
+    SavedCompanion = Party.Companion
+    Party.Companion = Party.DragonOpponent
 
     Call UpdatePartyCompanion()
 
-    DragonOpponent = PartyCompanion
-    PartyCompanion = SavedCompanion
+    Party.DragonOpponent = Party.Companion
+    Party.Companion = SavedCompanion
     Primary = CaptureActorContext()
 
-    Call UseActorContext(DragonOpponent)
+    Call UseActorContext(Party.DragonOpponent)
     Call UpdateEquipmentFire()
     Call UseActorContext(Primary)
 
@@ -7646,13 +7484,13 @@ End Sub
 
 Function DrawDragonOpponent() As Boolean
 
-    Dim SavedCompanion As ViewerActorContext
+    Dim SavedCompanion As ViewerParty.ActorContext
     Dim Result As Boolean
 
-    SavedCompanion = PartyCompanion
-    PartyCompanion = DragonOpponent
+    SavedCompanion = Party.Companion
+    Party.Companion = Party.DragonOpponent
     Result = DrawPartyCompanion()
-    PartyCompanion = SavedCompanion
+    Party.Companion = SavedCompanion
 
     Return Result
 
@@ -7677,15 +7515,7 @@ Function PartyPresentationState(MemberIndex As Number) As Number
 
     Dim Result As Number
 
-    Result = PresentationState
-
-    If PartyUiBound Then
-        Result = PartyUiPrimary.PresentationState
-    End If
-
-    If MemberIndex = 1 Then
-        Result = PartyCompanion.PresentationState
-    End If
+    Result = ViewerParty.PresentationState(Party, MemberIndex)
 
     Return Result
 
@@ -7693,43 +7523,43 @@ End Function
 
 Sub SetPartyPresentationState(MemberIndex As Number, State As Number)
 
-    If MemberIndex = 1 Then
-        PartyCompanion.PresentationState = State
-    Else
-        PresentationState = State
-    End If
+    Call ViewerParty.SetPresentationState(Party, MemberIndex, State)
 
 End Sub
 
 Function PartyPresentationStateName(State As Number) As Text
 
-    If State = PARTY_STATE_ACTING Then
-        Return "Acting"
-    Else If State = PARTY_STATE_GUARDING Then
-        Return "Guarding"
-    Else If State = PARTY_STATE_HIT Then
-        Return "Hit"
-    Else If State = PARTY_STATE_KO Then
-        Return "KO"
-    Else If State = PARTY_STATE_REVIVING Then
-        Return "Reviving"
-    End If
+    Dim Result As Text
 
-    Return "Alive"
+    Result = ViewerParty.PresentationStateName(State)
+
+    Return Result
 
 End Function
 
 Sub InitializePartyFormation()
 
-    PartyParticipantCount = 2
-    PartyParticipants[0].Home = PartyHomePosition(0, PartyParticipantCount)
-    PartyParticipants[1].Home = PartyHomePosition(1, PartyParticipantCount)
-    PartyParticipants[0].Approach.X = -21
-    PartyParticipants[0].Approach.Z = -44
-    PartyParticipants[1].Approach.X = -49
-    PartyParticipants[1].Approach.Z = 4
-    PartyParticipants[0].FacingAdjustment = 0
-    PartyParticipants[1].FacingAdjustment = ORIN_ARENA_YAW_ADJUSTMENT
+    Dim Center As Core.Vector3
+    Dim FirstApproach As Core.Vector3
+    Dim SecondApproach As Core.Vector3
+
+    Center.X = DRAGON_POSITION_X
+    Center.Z = DRAGON_POSITION_Z
+    FirstApproach.X = -21
+    FirstApproach.Z = -44
+    SecondApproach.X = -49
+    SecondApproach.Z = 4
+
+    Call ViewerParty.InitializeFormation(
+        Party,
+        Center,
+        PARTY_FORMATION_RADIUS,
+        PARTY_FORMATION_START_ANGLE,
+        PARTY_FORMATION_END_ANGLE,
+        FirstApproach,
+        SecondApproach,
+        ORIN_ARENA_YAW_ADJUSTMENT
+    )
 
     ''' Only one hero approaches at a time; animated full-model bounds must not move these shots.
 
@@ -7737,42 +7567,27 @@ End Sub
 
 Sub ResetPartyDemo()
 
-    PartyElapsed = 0
-    PartyTurn = 2
-    PartyAttackCycle = 0
-    PartyDragonOnlyTurn = True
-    PartyFatalTarget = -1
-    PartyFatalStarted = False
-    PartyHitTarget = -1
-    PartyHitResolved = False
-    DragonCounter = 0
-    PartyStage = -1
-    DragonReactionPending = False
     Playback.DemoEnabled = True
     ViewerUiState.CalibrationVisible = False
 
-    Call SetPartyPresentationState(0, PARTY_STATE_ALIVE)
-    Call SetPartyPresentationState(1, PARTY_STATE_ALIVE)
+    Call ViewerParty.ResetChoreography(Party)
     Call InitializePartyFormation()
     Call PreparePartyDragonTurn()
 
-    If PartyReady Then
-        Session.Ready = Character3D.SetPartVisible(PartyCompanion.Actor, WEAPON_PART_INDEX, SwordVisible) And Session.Ready
-        Session.Ready = Character3D.SetPartVisible(PartyCompanion.Actor, SHIELD_PART_INDEX, ShieldVisible) And Session.Ready
+    If Party.Ready Then
+        Session.Ready = Character3D.SetPartVisible(Party.Companion.Actor, WEAPON_PART_INDEX, SwordVisible) And Session.Ready
+        Session.Ready = Character3D.SetPartVisible(Party.Companion.Actor, SHIELD_PART_INDEX, ShieldVisible) And Session.Ready
     End If
 
 End Sub
 
 Sub PreparePartyDragonTurn()
 
-    Random PartyFatalTarget From -1 To 1
-    PartyFatalStarted = False
-    PartyHitResolved = False
-    PartyHitTarget = PartyFatalTarget
+    Dim RolledTarget As Number
 
-    If PartyHitTarget < 0 Then
-        PartyHitTarget = DragonCounter Mod PartyParticipantCount
-    End If
+    Random RolledTarget From -1 To 1
+
+    Call ViewerParty.PrepareDragonTurn(Party, RolledTarget)
 
 End Sub
 
@@ -7784,11 +7599,11 @@ Function PartyAttackDuration() As Number
     Dim Result As Number
 
     Actor = Character
-    Name = ViewerProfiles.PartyAttackName(ViewerProfiles.PROFILE_ARIN, PartyAttackCycle)
+    Name = ViewerProfiles.PartyAttackName(ViewerProfiles.PROFILE_ARIN, Party.AttackCycle)
 
-    If PartyTurn = 1 Then
-        Actor = PartyCompanion.Actor
-        Name = ViewerProfiles.PartyAttackName(ViewerProfiles.PROFILE_ORIN, PartyAttackCycle)
+    If Party.Turn = 1 Then
+        Actor = Party.Companion.Actor
+        Name = ViewerProfiles.PartyAttackName(ViewerProfiles.PROFILE_ORIN, Party.AttackCycle)
     End If
 
     Result = 1200
@@ -7813,8 +7628,8 @@ Sub PlayPartyClip(ByRef Actor As Character3D.Actor, Name As Text, ByRef Clip As 
     Dim HoldGuard As Boolean
 
     Mode = Graphics3D.ANIMATION_LOOP
-    HoldGuard = (Actor.Handle = PartyCompanion.Actor.Handle And
-        ViewerProfiles.HoldsFinalPose(PartyCompanion.Profile, Name))
+    HoldGuard = (Actor.Handle = Party.Companion.Actor.Handle And
+        ViewerProfiles.HoldsFinalPose(Party.Companion.Profile, Name))
     HoldGuard = HoldGuard Or Name = "Death"
 
     If (Name = "SwordAttack" Or
@@ -7854,15 +7669,16 @@ Sub AdvancePartyDemo()
     Dim Approach As Core.Vector3
     Dim TravelOffset As Number
 
-    If Not PartyReady Or Playback.ScenePaused Then
+    If Not ViewerParty.AdvanceElapsed(
+        Party,
+        Playback.AnimationUpdateElapsed,
+        Playback.DemoEnabled,
+        Playback.ScenePaused
+    ) Then
         Return
     End If
 
-    If Playback.DemoEnabled Then
-        PartyElapsed = PartyElapsed + Playback.AnimationUpdateElapsed
-    End If
-
-    If PartyTurn = 2 Then
+    If Party.Turn = 2 Then
         Call AdvanceDragonTurn()
 
         Return
@@ -7870,141 +7686,141 @@ Sub AdvancePartyDemo()
 
     AttackDuration = PartyAttackDuration()
 
-    If PartyElapsed >= AttackDuration + 4000 Then
+    If Party.Elapsed >= AttackDuration + 4000 Then
 
-        PartyElapsed = 0
-        PartyTurn = (PartyTurn + 1) Mod 3
-        PartyStage = -1
+        Party.Elapsed = 0
+        Party.Turn = (Party.Turn + 1) Mod 3
+        Party.Stage = -1
 
-        If PartyTurn = 2 Then
-            PartyDragonOnlyTurn = False
+        If Party.Turn = 2 Then
+            Party.DragonOnlyTurn = False
 
             Call PreparePartyDragonTurn()
         End If
 
     End If
 
-    If PartyTurn = 2 Then
+    If Party.Turn = 2 Then
         Call AdvanceDragonTurn()
 
         Return
     End If
 
     Stage = 0
-    Travel1000 = Min(1000, Max(0, PartyElapsed - 650) * 1000 / 650)
+    Travel1000 = Min(1000, Max(0, Party.Elapsed - 650) * 1000 / 650)
     Name = "Walk"
 
-    If PartyTurn = 1 Then
+    If Party.Turn = 1 Then
         Name = "Run"
     End If
 
-    If PartyElapsed >= AttackDuration + 2000 Then
+    If Party.Elapsed >= AttackDuration + 2000 Then
 
         Stage = 3
         Travel1000 = 0
         Name = "Idle"
 
-    Else If PartyElapsed >= AttackDuration + 1300 Then
+    Else If Party.Elapsed >= AttackDuration + 1300 Then
 
         Stage = 2
-        Travel1000 = Max(0, 1000 - (PartyElapsed - AttackDuration - 1300) * 1000 / 700)
+        Travel1000 = Max(0, 1000 - (Party.Elapsed - AttackDuration - 1300) * 1000 / 700)
         Name = "Walk"
 
-        If PartyTurn = 1 Then
+        If Party.Turn = 1 Then
             Name = "Run"
         End If
 
-    Else If PartyElapsed >= 1300 Then
+    Else If Party.Elapsed >= 1300 Then
 
         Stage = 1
         Travel1000 = 1000
-        Name = ViewerProfiles.PartyAttackName(ViewerProfiles.PROFILE_ARIN, PartyAttackCycle)
+        Name = ViewerProfiles.PartyAttackName(ViewerProfiles.PROFILE_ARIN, Party.AttackCycle)
 
-        If PartyTurn = 1 Then
-            Name = ViewerProfiles.PartyAttackName(ViewerProfiles.PROFILE_ORIN, PartyAttackCycle)
+        If Party.Turn = 1 Then
+            Name = ViewerProfiles.PartyAttackName(ViewerProfiles.PROFILE_ORIN, Party.AttackCycle)
         End If
 
     End If
 
-    If PartyElapsed < 650 Then
+    If Party.Elapsed < 650 Then
         Stage = -2
         Name = "Idle"
     End If
 
-    If Stage <> PartyStage Then
+    If Stage <> Party.Stage Then
 
-        DragonReactionPending = Stage = 1
+        Party.DragonReactionPending = Stage = 1
 
-        If PartyTurn = 0 Then
+        If Party.Turn = 0 Then
 
-            If PartyPresentationState(0) = PARTY_STATE_KO Then
-                Call SetPartyPresentationState(0, PARTY_STATE_REVIVING)
+            If PartyPresentationState(0) = ViewerParty.STATE_KO Then
+                Call SetPartyPresentationState(0, ViewerParty.STATE_REVIVING)
             Else If Stage = 3 Then
-                Call SetPartyPresentationState(0, PARTY_STATE_ALIVE)
+                Call SetPartyPresentationState(0, ViewerParty.STATE_ALIVE)
             Else If Stage >= 0 Then
-                Call SetPartyPresentationState(0, PARTY_STATE_ACTING)
+                Call SetPartyPresentationState(0, ViewerParty.STATE_ACTING)
             End If
 
             Call PlayPartyClip(Character, Name, Playback.SelectedClip)
 
-            If PartyPresentationState(1) <> PARTY_STATE_KO Then
-                Call SetPartyPresentationState(1, PARTY_STATE_GUARDING)
-                Call PlayPartyClip(PartyCompanion.Actor, "Defend", PartyCompanion.Clip)
+            If PartyPresentationState(1) <> ViewerParty.STATE_KO Then
+                Call SetPartyPresentationState(1, ViewerParty.STATE_GUARDING)
+                Call PlayPartyClip(Party.Companion.Actor, "Defend", Party.Companion.Clip)
             End If
 
         Else
 
-            If PartyPresentationState(1) = PARTY_STATE_KO Then
-                Call SetPartyPresentationState(1, PARTY_STATE_REVIVING)
+            If PartyPresentationState(1) = ViewerParty.STATE_KO Then
+                Call SetPartyPresentationState(1, ViewerParty.STATE_REVIVING)
             Else If Stage = 3 Then
-                Call SetPartyPresentationState(1, PARTY_STATE_ALIVE)
+                Call SetPartyPresentationState(1, ViewerParty.STATE_ALIVE)
             Else If Stage >= 0 Then
-                Call SetPartyPresentationState(1, PARTY_STATE_ACTING)
+                Call SetPartyPresentationState(1, ViewerParty.STATE_ACTING)
             End If
 
-            If PartyPresentationState(0) <> PARTY_STATE_KO Then
-                Call SetPartyPresentationState(0, PARTY_STATE_GUARDING)
+            If PartyPresentationState(0) <> ViewerParty.STATE_KO Then
+                Call SetPartyPresentationState(0, ViewerParty.STATE_GUARDING)
                 Call PlayPartyClip(Character, "Defend", Playback.SelectedClip)
             End If
 
-            Call PlayPartyClip(PartyCompanion.Actor, Name, PartyCompanion.Clip)
+            Call PlayPartyClip(Party.Companion.Actor, Name, Party.Companion.Clip)
 
         End If
 
-        PartyStage = Stage
+        Party.Stage = Stage
 
     End If
 
-    Home = PartyParticipants[0].Home
+    Home = Party.First.Home
     ViewerCameraState.Frame.PositionX = Home.X
     ViewerCameraState.Frame.PositionZ = Home.Z
-    Home = PartyParticipants[1].Home
-    PartyCompanion.Frame.PositionX = Home.X
-    PartyCompanion.Frame.PositionZ = Home.Z
+    Home = Party.Second.Home
+    Party.Companion.Frame.PositionX = Home.X
+    Party.Companion.Frame.PositionZ = Home.Z
 
-    If PartyTurn = 0 Then
+    If Party.Turn = 0 Then
 
-        Approach = PartyParticipants[0].Approach
+        Approach = Party.First.Approach
         TravelOffset = Approach.X - ViewerCameraState.Frame.PositionX
         ViewerCameraState.Frame.PositionX = ViewerCameraState.Frame.PositionX + TravelOffset * Travel1000 / 1000
         TravelOffset = Approach.Z - ViewerCameraState.Frame.PositionZ
         ViewerCameraState.Frame.PositionZ = ViewerCameraState.Frame.PositionZ + TravelOffset * Travel1000 / 1000
 
     Else
-        Approach = PartyParticipants[1].Approach
-        TravelOffset = Approach.X - PartyCompanion.Frame.PositionX
-        PartyCompanion.Frame.PositionX = PartyCompanion.Frame.PositionX + TravelOffset * Travel1000 / 1000
-        TravelOffset = Approach.Z - PartyCompanion.Frame.PositionZ
-        PartyCompanion.Frame.PositionZ = PartyCompanion.Frame.PositionZ + TravelOffset * Travel1000 / 1000
+        Approach = Party.Second.Approach
+        TravelOffset = Approach.X - Party.Companion.Frame.PositionX
+        Party.Companion.Frame.PositionX = Party.Companion.Frame.PositionX + TravelOffset * Travel1000 / 1000
+        TravelOffset = Approach.Z - Party.Companion.Frame.PositionZ
+        Party.Companion.Frame.PositionZ = Party.Companion.Frame.PositionZ + TravelOffset * Travel1000 / 1000
 
     End If
 
     Session.Ready = Character3D.Place(Character, ViewerCameraState.Frame.PositionX, ViewerCameraState.Frame.PositionY, ViewerCameraState.Frame.PositionZ) And Session.Ready
-    Session.Ready = Character3D.Place(PartyCompanion.Actor,
-        PartyCompanion.Frame.PositionX, PartyCompanion.Frame.PositionY, PartyCompanion.Frame.PositionZ) And Session.Ready
-    Session.Ready = FaceDragon(Character, PartyParticipants[0].FacingAdjustment) And Session.Ready
-    Session.Ready = FaceDragon(PartyCompanion.Actor,
-        PartyParticipants[1].FacingAdjustment) And Session.Ready
+    Session.Ready = Character3D.Place(Party.Companion.Actor,
+        Party.Companion.Frame.PositionX, Party.Companion.Frame.PositionY, Party.Companion.Frame.PositionZ) And Session.Ready
+    Session.Ready = FaceDragon(Character, Party.First.FacingAdjustment) And Session.Ready
+    Session.Ready = FaceDragon(Party.Companion.Actor,
+        Party.Second.FacingAdjustment) And Session.Ready
 
 End Sub
 
@@ -8017,37 +7833,37 @@ Sub AdvanceDragonTurn()
     Dim ImpactTime As Number
 
     Duration = DragonTurnDuration()
-    ActionTime = PartyElapsed * Playback.PlaybackSpeed / 100
+    ActionTime = Party.Elapsed * Playback.PlaybackSpeed / 100
     ImpactTime = DragonImpactTime()
 
-    If PartyFatalTarget >= 0 Then
+    If Party.FatalTarget >= 0 Then
         Duration = Max(Duration, (ImpactTime + 4300) * 100 / Max(25, Playback.PlaybackSpeed))
     End If
 
-    If PartyElapsed >= Duration Then
+    If Party.Elapsed >= Duration Then
 
-        PartyElapsed = 0
-        PartyStage = -1
-        DragonCounter = DragonCounter + 1
+        Party.Elapsed = 0
+        Party.Stage = -1
+        Party.DragonCounter = Party.DragonCounter + 1
 
-        If PartyDragonOnlyTurn Then
+        If Party.DragonOnlyTurn Then
 
-            PartyDragonOnlyTurn = False
-            PartyTurn = 0
+            Party.DragonOnlyTurn = False
+            Party.Turn = 0
 
         Else
 
-            PartyAttackCycle = PartyAttackCycle + 1
+            Party.AttackCycle = Party.AttackCycle + 1
 
-            If DragonCounter Mod 3 = 0 Then
+            If Party.DragonCounter Mod 3 = 0 Then
 
-                PartyDragonOnlyTurn = True
-                PartyTurn = 2
+                Party.DragonOnlyTurn = True
+                Party.Turn = 2
 
                 Call PreparePartyDragonTurn()
 
             Else
-                PartyTurn = 0
+                Party.Turn = 0
 
             End If
 
@@ -8057,81 +7873,81 @@ Sub AdvanceDragonTurn()
 
     End If
 
-    If PartyStage <> 0 Then
+    If Party.Stage <> 0 Then
 
-        If PartyPresentationState(0) <> PARTY_STATE_KO Then
-            Call SetPartyPresentationState(0, PARTY_STATE_GUARDING)
+        If PartyPresentationState(0) <> ViewerParty.STATE_KO Then
+            Call SetPartyPresentationState(0, ViewerParty.STATE_GUARDING)
             Call PlayPartyClip(Character, "Defend", Playback.SelectedClip)
         End If
 
-        If PartyPresentationState(1) <> PARTY_STATE_KO Then
-            Call SetPartyPresentationState(1, PARTY_STATE_GUARDING)
-            Call PlayPartyClip(PartyCompanion.Actor, "Defend", PartyCompanion.Clip)
+        If PartyPresentationState(1) <> ViewerParty.STATE_KO Then
+            Call SetPartyPresentationState(1, ViewerParty.STATE_GUARDING)
+            Call PlayPartyClip(Party.Companion.Actor, "Defend", Party.Companion.Clip)
         End If
 
-        PartyStage = 0
+        Party.Stage = 0
 
     End If
 
-    If ActionTime >= ImpactTime And Not PartyFatalStarted Then
+    If ActionTime >= ImpactTime And Not Party.FatalStarted Then
 
-        PartyFatalStarted = True
+        Party.FatalStarted = True
 
-        Call SetPartyPresentationState(PartyHitTarget, PARTY_STATE_HIT)
+        Call SetPartyPresentationState(Party.HitTarget, ViewerParty.STATE_HIT)
 
-        If PartyHitTarget = 0 Then
+        If Party.HitTarget = 0 Then
             Call PlayPartyClip(Character, "Hit", Playback.SelectedClip)
         Else
 
-            Call PlayPartyClip(PartyCompanion.Actor, "Hit", PartyCompanion.Clip)
+            Call PlayPartyClip(Party.Companion.Actor, "Hit", Party.Companion.Clip)
         End If
 
     End If
 
-    If (PartyFatalStarted And
-        Not PartyHitResolved And
+    If (Party.FatalStarted And
+        Not Party.HitResolved And
         ActionTime >= ImpactTime + 350) Then
 
-        PartyHitResolved = True
+        Party.HitResolved = True
 
-        If PartyFatalTarget >= 0 Then
+        If Party.FatalTarget >= 0 Then
 
-            Call SetPartyPresentationState(PartyFatalTarget, PARTY_STATE_KO)
+            Call SetPartyPresentationState(Party.FatalTarget, ViewerParty.STATE_KO)
 
-            If PartyFatalTarget = 0 Then
+            If Party.FatalTarget = 0 Then
             Call PlayPartyClip(Character, "Death", Playback.SelectedClip)
             Else
 
-                Call PlayPartyClip(PartyCompanion.Actor, "Death", PartyCompanion.Clip)
+                Call PlayPartyClip(Party.Companion.Actor, "Death", Party.Companion.Clip)
             End If
 
         Else
 
-            Call SetPartyPresentationState(PartyHitTarget, PARTY_STATE_GUARDING)
+            Call SetPartyPresentationState(Party.HitTarget, ViewerParty.STATE_GUARDING)
 
-            If PartyHitTarget = 0 Then
+            If Party.HitTarget = 0 Then
                 Call PlayPartyClip(Character, "Defend", Playback.SelectedClip)
             Else
 
-                Call PlayPartyClip(PartyCompanion.Actor, "Defend", PartyCompanion.Clip)
+                Call PlayPartyClip(Party.Companion.Actor, "Defend", Party.Companion.Clip)
             End If
 
         End If
 
     End If
 
-    Home = PartyParticipants[0].Home
+    Home = Party.First.Home
     ViewerCameraState.Frame.PositionX = Home.X
     ViewerCameraState.Frame.PositionZ = Home.Z
-    Home = PartyParticipants[1].Home
-    PartyCompanion.Frame.PositionX = Home.X
-    PartyCompanion.Frame.PositionZ = Home.Z
+    Home = Party.Second.Home
+    Party.Companion.Frame.PositionX = Home.X
+    Party.Companion.Frame.PositionZ = Home.Z
     Session.Ready = Character3D.Place(Character, ViewerCameraState.Frame.PositionX, ViewerCameraState.Frame.PositionY, ViewerCameraState.Frame.PositionZ) And Session.Ready
-    Session.Ready = Character3D.Place(PartyCompanion.Actor,
-        PartyCompanion.Frame.PositionX, PartyCompanion.Frame.PositionY, PartyCompanion.Frame.PositionZ) And Session.Ready
-    Session.Ready = FaceDragon(Character, PartyParticipants[0].FacingAdjustment) And Session.Ready
-    Session.Ready = FaceDragon(PartyCompanion.Actor,
-        PartyParticipants[1].FacingAdjustment) And Session.Ready
+    Session.Ready = Character3D.Place(Party.Companion.Actor,
+        Party.Companion.Frame.PositionX, Party.Companion.Frame.PositionY, Party.Companion.Frame.PositionZ) And Session.Ready
+    Session.Ready = FaceDragon(Character, Party.First.FacingAdjustment) And Session.Ready
+    Session.Ready = FaceDragon(Party.Companion.Actor,
+        Party.Second.FacingAdjustment) And Session.Ready
 
 End Sub
 
@@ -8141,9 +7957,9 @@ Function DragonTurnDuration() As Number
 
     Result = 4500
 
-    If DragonCounter Mod 3 = 1 Then
+    If Party.DragonCounter Mod 3 = 1 Then
         Result = 2800
-    Else If DragonCounter Mod 3 = 2 Then
+    Else If Party.DragonCounter Mod 3 = 2 Then
         Result = 5400
     End If
 
@@ -8155,9 +7971,9 @@ End Function
 
 Function DragonImpactTime() As Number
 
-    If DragonCounter Mod 3 = 2 Then
+    If Party.DragonCounter Mod 3 = 2 Then
         Return 2500
-    Else If DragonCounter Mod 3 = 1 Then
+    Else If Party.DragonCounter Mod 3 = 1 Then
         Return 1000
     End If
 
@@ -8186,17 +8002,17 @@ End Sub
 
 Sub UpdatePartyCompanion()
 
-    Dim Primary As ViewerActorContext
+    Dim Primary As ViewerParty.ActorContext
     Dim Center As Core.Vector3
     Dim Tip As Core.Vector3
 
-    If Not PartyReady Then
+    If Not Party.Ready Then
         Return
     End If
 
     Primary = CaptureActorContext()
 
-    Call UseActorContext(PartyCompanion)
+    Call UseActorContext(Party.Companion)
 
     Session.Ready = Character3D.Update(Character, Playback.AnimationUpdateElapsed) And Session.Ready
 
@@ -8220,7 +8036,7 @@ Sub UpdatePartyCompanion()
 
     Call ApplyEquipmentCalibration()
 
-    PartyCompanion = CaptureActorContext()
+    Party.Companion = CaptureActorContext()
 
     Call UseActorContext(Primary)
 
@@ -8230,15 +8046,15 @@ Function DrawPartyCompanion() As Boolean
 
     Dim Result As Boolean
 
-    Result = Character3D.Draw(PartyCompanion.Actor)
+    Result = Character3D.Draw(Party.Companion.Actor)
 
-    If (PartyCompanion.GlowVisible And
-        PartyCompanion.GlowAvailable And
-        (Not PartyMode Or PartyPresentationState(1) <> PARTY_STATE_KO) And
+    If (Party.Companion.GlowVisible And
+        Party.Companion.GlowAvailable And
+        (Not Party.Enabled Or PartyPresentationState(1) <> ViewerParty.STATE_KO) And
         (EpicGlowVisible Or Session.DragonInspection)) Then
 
         If SwordVisible Then
-            Result = Graphics3D.DrawObject3D(PartyCompanion.WeaponGlow) And Result
+            Result = Graphics3D.DrawObject3D(Party.Companion.WeaponGlow) And Result
         End If
 
     End If
@@ -8249,11 +8065,11 @@ End Function
 
 Sub DestroyPartyCompanion()
 
-    Call Graphics3D.DestroyObject3D(PartyCompanion.WeaponGlow)
-    Call Graphics3D.DestroyObject3D(PartyCompanion.ShieldGlow)
-    Call Character3D.Destroy(PartyCompanion.Actor)
+    Call Graphics3D.DestroyObject3D(Party.Companion.WeaponGlow)
+    Call Graphics3D.DestroyObject3D(Party.Companion.ShieldGlow)
+    Call Character3D.Destroy(Party.Companion.Actor)
 
-    PartyReady = False
+    Party.Ready = False
 
 End Sub
 
@@ -8356,11 +8172,11 @@ Function HandlePartyPointer() As Boolean
 
     Else If Window_Height() >= 580 And PointerInRectangle(Left + 12, 410, 108, 24) Then
 
-        FlameAnimationPaused = Not FlameAnimationPaused
+        Call ViewerEffects.ToggleFlamePause(Effects)
 
     Else If Window_Height() >= 580 And PointerInRectangle(Left + 128, 410, 108, 24) Then
 
-        LightningAnimationPaused = Not LightningAnimationPaused
+        Call ViewerEffects.ToggleLightningPause(Effects)
 
     Else If Window_Height() >= 580 And PointerInRectangle(Left + 12, 440, 224, 22) Then
 
@@ -8381,33 +8197,33 @@ Sub DrawPartyOverlay()
     Left = 12
     Acting = "Arin"
 
-    If PartyTurn = 1 Then
+    If Party.Turn = 1 Then
         Acting = "Orin"
-    Else If PartyTurn = 2 Then
+    Else If Party.Turn = 2 Then
         Acting = "Dragon"
     End If
 
     AttackSequence = "Sword Attack"
 
-    If PartyTurn = 0 And PartyAttackCycle Mod 2 = 1 Then
+    If Party.Turn = 0 And Party.AttackCycle Mod 2 = 1 Then
 
         AttackSequence = "Sword Attack 2"
 
-    Else If PartyTurn = 1 Then
+    Else If Party.Turn = 1 Then
 
-        If PartyAttackCycle Mod 3 = 0 Then
+        If Party.AttackCycle Mod 3 = 0 Then
             AttackSequence = "Sword Attack"
-        Else If PartyAttackCycle Mod 3 = 1 Then
+        Else If Party.AttackCycle Mod 3 = 1 Then
             AttackSequence = "Jump Attack"
         Else
             AttackSequence = "Thor Attack"
         End If
 
-    Else If PartyTurn = 2 Then
+    Else If Party.Turn = 2 Then
 
-        If DragonCounter Mod 3 = 0 Then
+        If Party.DragonCounter Mod 3 = 0 Then
             AttackSequence = "Fire Breath"
-        Else If DragonCounter Mod 3 = 1 Then
+        Else If Party.DragonCounter Mod 3 = 1 Then
             AttackSequence = "Claw Strike"
         Else
             AttackSequence = "Fireball"
@@ -8421,8 +8237,8 @@ Sub DrawPartyOverlay()
         Call DrawButton(Left, 104, 76, 30, "Dragon", DragonVisible)
         Call DrawButton(Left + 82, 104, 76, 30, "Weapon", SwordVisible)
         Call DrawButton(Left + 164, 104, 76, 30, "Shield", ShieldVisible)
-        Call DrawButton(Left, 140, 76, 22, "Floor/Grid", FloorVisible Or GridVisible)
-        Call DrawButton(Left + 82, 140, 76, 22, "Backdrop", BackgroundIndex > 0)
+        Call DrawButton(Left, 140, 76, 22, "Floor/Grid", Rendering.FloorVisible Or Rendering.GridVisible)
+        Call DrawButton(Left + 82, 140, 76, 22, "Backdrop", Rendering.BackgroundIndex > 0)
         Call DrawButton(Left + 164, 140, 76, 22, "Glow", EpicGlowVisible)
 
         Draw Text "Party / Enemy" At Left + 16, 178 Size 20 Color WHITE
@@ -8430,7 +8246,7 @@ Sub DrawPartyOverlay()
         Draw Text "Orin  •  Tank" At Left + 16, 238 Size 15 Color WHITE
         Draw Text Acting + "'s Turn" At Left + 16, 272 Size 16 Color YELLOW
 
-        If PartyStage = 1 Or PartyTurn = 2 Then
+        If Party.Stage = 1 Or Party.Turn = 2 Then
             Draw Text "Attack: " + AttackSequence At Left + 16, 296 Size 13 Color CYAN
         End If
 
@@ -8443,26 +8259,26 @@ Sub DrawPartyOverlay()
             Draw Text "VFX Playback" At Left + 16, 394 Size 12 Color WHITE
 
         Call DrawButton(Left + 12, 410, 108, 24,
-            VfxPlaybackLabel("Fire", FlameAnimationPaused), FlameAnimationPaused)
+            VfxPlaybackLabel("Fire", Effects.FlamePaused), Effects.FlamePaused)
         Call DrawButton(Left + 128, 410, 108, 24,
-            VfxPlaybackLabel("Lightning", LightningAnimationPaused), LightningAnimationPaused)
+            VfxPlaybackLabel("Lightning", Effects.LightningPaused), Effects.LightningPaused)
         Call DrawButton(Left + 12, 440, 224, 22, "Arin Shield: " + ShieldFireStyleLabel(), Not ShieldFlameStyle)
 
         End If
 
         If Window_Height() >= 740 Then
 
-            If PartyPresentationState(0) = PARTY_STATE_KO Then
+            If PartyPresentationState(0) = ViewerParty.STATE_KO Then
                 Draw Text "Arin KO - Revives On His Turn" At Left + 16, 470 Size 12 Color YELLOW
-            Else If PartyPresentationState(1) = PARTY_STATE_KO Then
+            Else If PartyPresentationState(1) = ViewerParty.STATE_KO Then
                 Draw Text "Orin KO - Revives On His Turn" At Left + 16, 470 Size 12 Color YELLOW
             Else
                 Draw Text "Arin " + PartyPresentationStateName(PartyPresentationState(0)) + " / Orin " + PartyPresentationStateName(PartyPresentationState(1)) At Left + 16, 470 Size 12 Color LIGHT_GRAY
             End If
 
-            Draw Text OrinStorm.Caption(OrinStormContext) At Left + 16, 488 Size 12 Color CYAN
+            Draw Text OrinStorm.Caption(Effects.OrinStorm) At Left + 16, 488 Size 12 Color CYAN
             Draw Text "Camera" At Left + 16, 528 Size 12 Color LIGHT_GRAY
-            Draw Number PartyActiveCamera At Left + 80, 528 Size 12 Color CYAN
+            Draw Number Party.ActiveCamera At Left + 80, 528 Size 12 Color CYAN
 
             Call DrawPartyCameraDetails(Left + 16, 548)
 

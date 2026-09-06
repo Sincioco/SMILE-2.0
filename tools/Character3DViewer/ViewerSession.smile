@@ -14,7 +14,6 @@ Public Type State
     Ready As Boolean
     Running As Boolean
     ViewerError As Boolean
-    WindowActivated As Boolean
     FirstViewerError As Number
     FirstRendererError As Number
     FirstFailureStage As Number
