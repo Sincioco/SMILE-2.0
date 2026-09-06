@@ -491,7 +491,7 @@ Sub CheckDragonFireContinuity()
     PreviousGeneration = DragonBreath.Generation
     PreviousAge = Fire.Value(10, DragonBreath)
     FlameAnimationPaused = True
-    Camera.Position.X = Camera.Position.X + 40
+    ViewerCameraState.Live.Position.X = ViewerCameraState.Live.Position.X + 40
 
     Call UpdateDragon()
     Call AdvanceSceneVfx()

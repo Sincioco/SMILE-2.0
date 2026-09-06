@@ -5,21 +5,22 @@
   "reviewedSha": "5bfd4f96ee838ca1b6b255c28c4117b0e0a5ec7b",
   "previousInspectionSha": "909fd6acf8eb80e370a88ea4f024583faffaa33e",
   "status": "IN-PROGRESS",
-  "currentStage": "R2-application-session-playback",
+  "currentStage": "R3-camera-transform-ownership",
   "completedStages": [
     "R0-preservation-hardening",
-    "R1-source-map-and-test-boundaries"
+    "R1-source-map-and-test-boundaries",
+    "R2-application-session-playback"
   ],
   "implementationCommits": [
     "0a61c0a85e300af4d14f94f17271bf209122fa86",
-    "7195f96f67a2e01c562766ad44050607f8a41bc7"
+    "7195f96f67a2e01c562766ad44050607f8a41bc7",
+    "cad5eec022d1f603f5b89301aed4898e355ab567"
   ],
   "preservedCalibration": {
     "arinJsonSha256": "C05C87BF0A92B373DB7ECD1CB304F4446B851E7AFEA836E8BB05D058B1B20F0B",
     "orinJsonSha256": "13AE135FDA40302CB5A4B0146D7103A2ED5346AAEEBB3852AF6DD3C397F5D293"
   },
   "nextStages": [
-    "R3-camera-transform-ownership",
     "R4-calibration-file-transactions",
     "R5-input-ui-gizmo",
     "R6-party-effects-render-lifecycle",

@@ -13,7 +13,6 @@ Import Smile.Simple3D.LightPool3D As LightPool3D
 Import Smile.Simple3D.SceneVfx3D As SceneVfx3D
 Import Smile.Simple3D.Core As Core
 Import Smile.Simple3D.Graphics3D As Graphics3D
-Import Smile.Simple3D.Interaction As Interaction
 Import Smile.Simple3D.Math3D As Math3D
 Import Smile.Simple3D.FixedMath As Fixed
 Import Smile.Simple3D.NodeAim3D As NodeAim3D
@@ -28,6 +27,7 @@ Import Smile.Tools.CalibrationJson As CalibrationJson
 Import Smile.Tools.Character3DViewerTiming As ViewerTiming
 Import Smile.Tools.Character3DViewerSession As ViewerSession
 Import Smile.Tools.Character3DViewerPlayback As ViewerPlayback
+Import Smile.Tools.Character3DViewerCamera As ViewerCamera
 
 Const ANIMATION_CYCLE_MILLISECONDS = 5000
 Const ANIMATION_BUTTON_Y = 352
@@ -203,15 +203,10 @@ Dim CalibrationJsonOffset As Number
 Dim CalibrationJsonValid As Boolean
 Dim CalibrationDataKey As Text
 Dim CalibrationClipBase As Number
-Dim BaseCamera As Core.Camera3D
-Dim Camera As Core.Camera3D
-Dim CameraControls As Core.CameraControl3D
 Dim Character As Character3D.Actor
 Dim CharacterBounds As Character3D.Bounds3D
 Dim LocalCharacterBounds As Character3D.Bounds3D
 Dim ActiveProfile As CharacterViewer.Profile
-Dim ViewerFrame As CharacterViewer.Framing
-Dim SmoothZoom As CharacterViewer.ZoomState
 Dim Arena As Arena3D.ArenaFloor
 Dim FloorVisible As Boolean
 Dim GridVisible As Boolean
@@ -278,25 +273,11 @@ Dim UiVisibility As Number
 Dim LightingIndex As Number
 Dim MaterialInspection As Number
 Dim Key As Number
-Dim FitLocked As Boolean
-Dim LastFitWidth As Number
-Dim LastFitHeight As Number
 Dim FrameRate As ViewerTiming.FrameRateState
 Dim Timing As ViewerTiming.ClockState
 Dim Session As ViewerSession.State
 Dim Playback As ViewerPlayback.State
-Dim PanPointerRemainderX As Number
-Dim PanPointerRemainderY As Number
-Dim OrbitPointerRemainderX As Number
-Dim OrbitPointerRemainderY As Number
-Dim CalibrationOrbitActive As Boolean
-Dim CalibrationOrbitAnchor As Core.Vector3
-Dim CalibrationOrbitOffset As Core.Vector3
-Dim CalibrationOrbitCursorX As Number
-Dim CalibrationOrbitCursorY As Number
-Dim CalibrationOrbitDepth As Number
-Dim AutoOrbit As Boolean
-Dim AutoOrbitYaw1000 As Number
+Dim ViewerCameraState As ViewerCamera.State
 Dim PartyOrbitCamera As Core.Camera3D
 Dim PartyHeroCamera As Core.Camera3D
 Dim PartyDragonCamera As Core.Camera3D
@@ -478,26 +459,44 @@ Do
 
         End If
 
-        Call AdvanceSmoothZoom()
+        Session.Ready = ViewerCamera.AdvanceZoom(
+            ViewerCameraState, Timing.CameraElapsed) And Session.Ready
 
         Call ViewerSession.CaptureFailure(Session, 5)
 
         If Not Playback.ScenePaused Then
-            Call AdvanceAutoOrbit()
+            Session.Ready = ViewerCamera.AdvanceAutoOrbit(
+                ViewerCameraState,
+                PartyOrbitPhase1000,
+                Timing.CameraElapsed,
+                ARENA_ORBIT_DEGREES_PER_SECOND,
+                PartyMode
+            ) And Session.Ready
 
             Call ViewerSession.CaptureFailure(Session, 6)
         End If
 
-        Call UpdateResponsiveFit()
+        Call ViewerCamera.UpdateResponsiveFit(
+            ViewerCameraState,
+            ActiveProfile,
+            LocalCharacterBounds,
+            Window_Width(),
+            Window_Height(),
+            Max(1, Window_Width() - 284),
+            DragonAvailable,
+            ARENA_CAMERA_CENTER_X,
+            ARENA_CAMERA_CENTER_Z,
+            ARENA_CAMERA_DISTANCE,
+            ARENA_CAMERA_HEIGHT
+        )
 
-        If PartyMode And AutoOrbit Then
-            Camera = BattleCamera.Orbit(BaseCamera, CameraControls, AutoOrbitYaw1000)
-        Else
-            Camera = Interaction.ApplyScreenSpaceCameraControls(BaseCamera, CameraControls)
-        End If
+        Call ViewerCamera.Compose(
+            ViewerCameraState, PartyMode And ViewerCameraState.AutoOrbit)
 
-        Call ApplyCloseUpZoom()
-        Call ApplyCalibrationOrbitAnchor()
+        Call ViewerCamera.ApplyCloseUp(ViewerCameraState, CLOSE_UP_ZOOM_START,
+            ZOOM_IN_LIMIT, CLOSE_UP_MINIMUM_DISTANCE_1000)
+        Call ViewerCamera.ApplyCalibrationOrbitAnchor(
+            ViewerCameraState, Window_Width(), Window_Height())
 
         If EpicGlowVisible Then
 
@@ -527,7 +526,7 @@ Do
         Call ApplyPartyAttackCamera()
 
         If FloorVisible Then
-            Call CharacterViewer.KeepCameraAboveGround(Camera, 0)
+            Call ViewerCamera.KeepAboveGround(ViewerCameraState, 0)
         End If
 
         Call UpdateBattleAudio()
@@ -684,43 +683,35 @@ Sub LoadViewer()
     Call ViewerSession.CaptureFailure(Session, 32)
 
     LocalCharacterBounds = Character3D.LocalBounds(Character)
-    BaseCamera = Graphics3D.DefaultCamera()
-    ViewerFrame = CharacterViewer.AutoFit(
+    ViewerCameraState.Base = Graphics3D.DefaultCamera()
+    ViewerCameraState.Frame = CharacterViewer.AutoFit(
         ActiveProfile,
         LocalCharacterBounds,
         Max(1, Window_Width() - 284),
         Max(1, Window_Height()),
-        BaseCamera.FovDegrees
+        ViewerCameraState.Base.FovDegrees
     )
-    Session.Ready = ViewerFrame.Valid And Session.Ready
+    Session.Ready = ViewerCameraState.Frame.Valid And Session.Ready
 
     If Session.DragonInspection Then
 
-        ViewerFrame.ScalePercent = DRAGON_SCALE_PERCENT
-        ViewerFrame.PositionX = DRAGON_POSITION_X
-        ViewerFrame.PositionY = 0
-        ViewerFrame.PositionZ = DRAGON_POSITION_Z
+        ViewerCameraState.Frame.ScalePercent = DRAGON_SCALE_PERCENT
+        ViewerCameraState.Frame.PositionX = DRAGON_POSITION_X
+        ViewerCameraState.Frame.PositionY = 0
+        ViewerCameraState.Frame.PositionZ = DRAGON_POSITION_Z
 
     End If
 
     Call ViewerSession.CaptureFailure(Session, 33)
 
-    BaseCamera.Position.X = 0
-    BaseCamera.Position.Y = ViewerFrame.CameraY
-    BaseCamera.Position.Z = ViewerFrame.CameraZ
-    BaseCamera.Target.X = 0
-    BaseCamera.Target.Y = ViewerFrame.TargetY
-    BaseCamera.Target.Z = 0
-
-    If DragonAvailable Then
-
-        BaseCamera.Position.X = ARENA_CAMERA_CENTER_X
-        BaseCamera.Position.Y = ViewerFrame.TargetY + ARENA_CAMERA_HEIGHT
-        BaseCamera.Position.Z = ARENA_CAMERA_CENTER_Z - ARENA_CAMERA_DISTANCE
-        BaseCamera.Target.X = ARENA_CAMERA_CENTER_X
-        BaseCamera.Target.Z = ARENA_CAMERA_CENTER_Z
-
-    End If
+    Call ViewerCamera.SetBaseFromFrame(
+        ViewerCameraState,
+        DragonAvailable,
+        ARENA_CAMERA_CENTER_X,
+        ARENA_CAMERA_CENTER_Z,
+        ARENA_CAMERA_DISTANCE,
+        ARENA_CAMERA_HEIGHT
+    )
 
     Call CreateBackdrop()
     Call CreateStudioGrid()
@@ -729,40 +720,34 @@ Sub LoadViewer()
 
     FloorVisible = True
     GridVisible = True
-    FitLocked = True
-    LastFitWidth = Window_Width()
-    LastFitHeight = Window_Height()
+    ViewerCameraState.FitLocked = True
+    ViewerCameraState.LastFitWidth = Window_Width()
+    ViewerCameraState.LastFitHeight = Window_Height()
 
-    Call Interaction.ResetCameraControls(CameraControls)
-    Call CharacterViewer.InitializeZoom(
-        SmoothZoom,
-        DefaultZoomDegrees(),
-        ZOOM_IN_LIMIT,
-        ZOOM_OUT_LIMIT,
-        96000
-    )
+    Call ViewerCamera.Reset(ViewerCameraState, 0, DefaultZoomDegrees(),
+        ZOOM_IN_LIMIT, ZOOM_OUT_LIMIT, 96000)
 
     Session.Ready = Scene3D.SetQuality(Scene3D.QUALITY_HIGH)
 
     If DragonAvailable Then
         Session.Ready = Scene3D.SetShadowArea(
             DRAGON_POSITION_X / 2,
-            ViewerFrame.TargetY,
+            ViewerCameraState.Frame.TargetY,
             DRAGON_POSITION_Z / 2,
             ARENA_FLOOR_WIDTH,
             ARENA_FLOOR_DEPTH,
-            ViewerFrame.ShadowNear,
+            ViewerCameraState.Frame.ShadowNear,
             ARENA_FLOOR_DEPTH
         ) And Session.Ready
     Else
         Session.Ready = Scene3D.SetShadowArea(
             0,
-            ViewerFrame.TargetY,
+            ViewerCameraState.Frame.TargetY,
             0,
-            ViewerFrame.ShadowWidth,
-            ViewerFrame.ShadowDepth,
-            ViewerFrame.ShadowNear,
-            ViewerFrame.ShadowFar
+            ViewerCameraState.Frame.ShadowWidth,
+            ViewerCameraState.Frame.ShadowDepth,
+            ViewerCameraState.Frame.ShadowNear,
+            ViewerCameraState.Frame.ShadowFar
         ) And Session.Ready
     End If
 
@@ -770,12 +755,12 @@ Sub LoadViewer()
 
     Call ApplyLighting()
 
-    Session.Ready = Character3D.SetScale(Character, ViewerFrame.ScalePercent) And Session.Ready
+    Session.Ready = Character3D.SetScale(Character, ViewerCameraState.Frame.ScalePercent) And Session.Ready
     Session.Ready = Character3D.Place(
         Character,
-        ViewerFrame.PositionX,
-        ViewerFrame.PositionY,
-        ViewerFrame.PositionZ
+        ViewerCameraState.Frame.PositionX,
+        ViewerCameraState.Frame.PositionY,
+        ViewerCameraState.Frame.PositionZ
     ) And Session.Ready
 
     Call ApplyArenaFacing()
@@ -916,7 +901,7 @@ Function ViewerFloorWidth() As Number
 
     Dim Result As Number
 
-    Result = ViewerFrame.FloorWidth
+    Result = ViewerCameraState.Frame.FloorWidth
 
     If DragonAvailable Then
         Result = Max(Result, ARENA_FLOOR_WIDTH)
@@ -930,7 +915,7 @@ Function ViewerFloorDepth() As Number
 
     Dim Result As Number
 
-    Result = ViewerFrame.FloorDepth
+    Result = ViewerCameraState.Frame.FloorDepth
 
     If DragonAvailable Then
         Result = Max(Result, ARENA_FLOOR_DEPTH)
@@ -1032,12 +1017,12 @@ Sub ApplyCharacterPresentationOffset()
         SelectedClipName(),
         CurrentAnimationFrame()
     )
-    OffsetY = Offset1000 * ViewerFrame.ScalePercent / 100000
+    OffsetY = Offset1000 * ViewerCameraState.Frame.ScalePercent / 100000
     Session.Ready = Character3D.Place(
         Character,
-        ViewerFrame.PositionX,
-        ViewerFrame.PositionY + OffsetY,
-        ViewerFrame.PositionZ
+        ViewerCameraState.Frame.PositionX,
+        ViewerCameraState.Frame.PositionY + OffsetY,
+        ViewerCameraState.Frame.PositionZ
     ) And Session.Ready
 
 End Sub
@@ -1493,23 +1478,28 @@ Sub HandleInspectorKeyboard(PressedKey As Number)
 
     Else If PressedKey = KEY_LEFT Then
 
-        Call NudgeOrbit(-5, 0)
+        Session.Ready = ViewerCamera.NudgeOrbit(
+            ViewerCameraState, -5, 0) And Session.Ready
 
     Else If PressedKey = KEY_RIGHT Then
 
-        Call NudgeOrbit(5, 0)
+        Session.Ready = ViewerCamera.NudgeOrbit(
+            ViewerCameraState, 5, 0) And Session.Ready
 
     Else If PressedKey = KEY_UP Then
 
-        Call NudgeOrbit(0, -5)
+        Session.Ready = ViewerCamera.NudgeOrbit(
+            ViewerCameraState, 0, -5) And Session.Ready
 
     Else If PressedKey = KEY_DOWN Then
 
-        Call NudgeOrbit(0, 5)
+        Session.Ready = ViewerCamera.NudgeOrbit(
+            ViewerCameraState, 0, 5) And Session.Ready
 
     Else If PressedKey = KEY_A Then
 
-        Call NudgePan(5, 0)
+        Session.Ready = ViewerCamera.NudgePan(
+            ViewerCameraState, 5, 0) And Session.Ready
 
     Else If PressedKey = KEY_1 And Character3D.ClipCount(Character) > 0 Then
 
@@ -1534,7 +1524,7 @@ Sub HandleInspectorKeyboard(PressedKey As Number)
 
     Else If PressedKey = KEY_O Then
 
-        Call ToggleAutoOrbit()
+        Call ViewerCamera.ToggleAutoOrbit(ViewerCameraState)
 
     Else If PressedKey = KEY_G Then
 
@@ -1837,7 +1827,7 @@ Function TransformGizmoAxisAtPointer() As Number
             Pointer_Y(),
             CalibrationAxis,
             TransformGizmoWorldSize,
-            Camera,
+            ViewerCameraState.Live,
             Window_Width(),
             Window_Height(),
             TRANSFORM_GIZMO_RING_SEGMENTS,
@@ -1911,10 +1901,10 @@ Function TransformGizmoRingPointerDelta(PointerX As Number, PointerY As Number,
 
         StartPoint = CharacterViewer.ProjectTransformRingPoint(TransformGizmoOrigin,
             CalibrationAxis, Segment, TRANSFORM_GIZMO_RING_SEGMENTS,
-            TransformGizmoWorldSize, Camera, Window_Width(), Window_Height())
+            TransformGizmoWorldSize, ViewerCameraState.Live, Window_Width(), Window_Height())
         EndPoint = CharacterViewer.ProjectTransformRingPoint(TransformGizmoOrigin,
             CalibrationAxis, Segment + 1, TRANSFORM_GIZMO_RING_SEGMENTS,
-            TransformGizmoWorldSize, Camera, Window_Width(), Window_Height())
+            TransformGizmoWorldSize, ViewerCameraState.Live, Window_Width(), Window_Height())
         AxisX = EndPoint.X - StartPoint.X
         AxisY = EndPoint.Y - StartPoint.Y
         LengthSquared = AxisX * AxisX + AxisY * AxisY
@@ -1958,14 +1948,14 @@ Sub UpdateTransformGizmo()
 
     TransformGizmoOrigin = CurrentTransformGizmoOrigin()
     OriginProjection = CharacterViewer.ProjectViewerPoint(TransformGizmoOrigin,
-        Camera, Window_Width(), Window_Height())
-    FocalLength = (Window_Height() * Fixed.CosFixed(Camera.FovDegrees / 2) /
-        (2 * Max(1, Fixed.SinFixed(Camera.FovDegrees / 2))))
+        ViewerCameraState.Live, Window_Width(), Window_Height())
+    FocalLength = (Window_Height() * Fixed.CosFixed(ViewerCameraState.Live.FovDegrees / 2) /
+        (2 * Max(1, Fixed.SinFixed(ViewerCameraState.Live.FovDegrees / 2))))
     TransformGizmoWorldSize = Min(1000, Max(1, OriginProjection.Depth * 80 / Max(1, FocalLength)))
     TransformGizmo = CharacterViewer.ProjectTransformGizmo(
         TransformGizmoOrigin,
         TransformGizmoWorldSize,
-        Camera,
+        ViewerCameraState.Live,
         Window_Width(),
         Window_Height()
     )
@@ -2159,11 +2149,11 @@ Function BeginViewerScene() As Boolean
     End If
 
     If BackgroundIndex = 1 Then
-        Result = Scene3D.Begin(Camera, 0, 96, 32)
+        Result = Scene3D.Begin(ViewerCameraState.Live, 0, 96, 32)
     Else If BackgroundIndex = 2 Then
-        Result = Scene3D.Begin(Camera, 62, 20, 96)
+        Result = Scene3D.Begin(ViewerCameraState.Live, 62, 20, 96)
     Else
-        Result = Scene3D.Begin(Camera, 0, 0, 0)
+        Result = Scene3D.Begin(ViewerCameraState.Live, 0, 0, 0)
     End If
 
     Return Result
@@ -2319,36 +2309,6 @@ Sub CycleMaterialInspection()
 
 End Sub
 
-Sub ToggleAutoOrbit()
-
-    AutoOrbit = Not AutoOrbit
-    AutoOrbitYaw1000 = CameraControls.OrbitYaw * 1000
-
-    If Not AutoOrbit Then
-        Call RecordCameraInteraction()
-    End If
-
-End Sub
-
-Sub AdvanceAutoOrbit()
-
-    If AutoOrbit Then
-
-        If PartyMode Then
-            Session.Ready = CharacterViewer.AdvanceOrbitYaw1000(
-                PartyOrbitPhase1000, Timing.CameraElapsed, ARENA_ORBIT_DEGREES_PER_SECOND) And Session.Ready
-            AutoOrbitYaw1000 = BattleCamera.FrontArcYaw1000(PartyOrbitPhase1000)
-        Else
-            Session.Ready = CharacterViewer.AdvanceOrbitYaw1000(
-                AutoOrbitYaw1000, Timing.CameraElapsed, ARENA_ORBIT_DEGREES_PER_SECOND) And Session.Ready
-        End If
-
-        CameraControls.OrbitYaw = AutoOrbitYaw1000 / 1000
-
-    End If
-
-End Sub
-
 Sub ApplyPartyAttackCamera()
 
     Dim Hero As Core.Vector3
@@ -2370,13 +2330,13 @@ Sub ApplyPartyAttackCamera()
     Dim ShotSide As Number
     Dim StableAnchor As Core.Vector3
 
-    PartyOrbitCamera = Camera
+    PartyOrbitCamera = ViewerCameraState.Live
     PartyActiveCamera = 1
 
     If (Not PartyMode Or
         Not PartyReady Or
         Not DragonAvailable Or
-        Not AutoOrbit Or
+        Not ViewerCameraState.AutoOrbit Or
         Not DragonVisible) Then
         PartyPreviousCamera = 1
         Return
@@ -2394,7 +2354,7 @@ Sub ApplyPartyAttackCamera()
     End If
 
     ''' Actor homes/travel are stable. Bone bobbing and KO must not drive the camera.
-    Hero = Math3D.Vector(ViewerFrame.PositionX, ViewerFrame.PositionY + 68, ViewerFrame.PositionZ)
+    Hero = Math3D.Vector(ViewerCameraState.Frame.PositionX, ViewerCameraState.Frame.PositionY + 68, ViewerCameraState.Frame.PositionZ)
 
     If PartyTurn = 1 Then
         Hero = Math3D.Vector(PartyCompanion.Frame.PositionX,
@@ -2544,7 +2504,7 @@ Sub ApplyPartyAttackCamera()
     PartyHeroCamera.Target.Z = PartyShotTarget1000.Z / 1000
 
     ''' Clear both armored silhouettes after smoothing, including a shield held out in front.
-    Hero = Math3D.Vector(ViewerFrame.PositionX, ViewerFrame.PositionY, ViewerFrame.PositionZ)
+    Hero = Math3D.Vector(ViewerCameraState.Frame.PositionX, ViewerCameraState.Frame.PositionY, ViewerCameraState.Frame.PositionZ)
     OtherHero = Math3D.Vector(PartyCompanion.Frame.PositionX, PartyCompanion.Frame.PositionY, PartyCompanion.Frame.PositionZ)
 
     Call BattleCamera.KeepOutsideActor(PartyHeroCamera, Hero, 100)
@@ -2553,11 +2513,11 @@ Sub ApplyPartyAttackCamera()
     PartyHeroCamera.Position.Y = Max(24, PartyHeroCamera.Position.Y)
     PartyDragonCamera.Position.Y = Max(24, PartyDragonCamera.Position.Y)
 
-    Camera = PartyHeroCamera
+    ViewerCameraState.Live = PartyHeroCamera
     PartyActiveCamera = 2
 
     If BossChargeShot Then
-        Camera = PartyDragonCamera
+        ViewerCameraState.Live = PartyDragonCamera
         PartyActiveCamera = 3
     End If
 
@@ -3051,14 +3011,26 @@ Function HandleInspectorPointer() As Boolean
 
     Else If PointerInRectangle(PanelLeft + 190, Window_Height() - 64, 50, 24) Then
 
-        FitLocked = Not FitLocked
+        ViewerCameraState.FitLocked = Not ViewerCameraState.FitLocked
 
-        If FitLocked Then
+        If ViewerCameraState.FitLocked Then
 
-            LastFitWidth = -1
-            LastFitHeight = -1
+            ViewerCameraState.LastFitWidth = -1
+            ViewerCameraState.LastFitHeight = -1
 
-            Call UpdateResponsiveFit()
+            Call ViewerCamera.UpdateResponsiveFit(
+                ViewerCameraState,
+                ActiveProfile,
+                LocalCharacterBounds,
+                Window_Width(),
+                Window_Height(),
+                Max(1, Window_Width() - 284),
+                DragonAvailable,
+                ARENA_CAMERA_CENTER_X,
+                ARENA_CAMERA_CENTER_Z,
+                ARENA_CAMERA_DISTANCE,
+                ARENA_CAMERA_HEIGHT
+            )
 
         End If
 
@@ -3101,33 +3073,30 @@ Function HandleSharedSliders() As Boolean
     End If
 
     PanelLeft = StatusPanelX()
-    Value = CameraControls.OrbitYaw
+    Value = ViewerCameraState.Controls.OrbitYaw
 
     If UI.UpdateSlider(SliderDragOwner, 1, PanelLeft + 76, Window_Height() - 142,
         CAMERA_SLIDER_WIDTH, CAMERA_SLIDER_HEIGHT, -180, 180, 1, Value) Then
+        Call ViewerCamera.SetHorizontalOrbit(ViewerCameraState, Value)
 
-        CameraControls.OrbitYaw = Value
-        AutoOrbit = False
         Return True
-
     End If
 
-    Value = CameraControls.OrbitPitch
+    Value = ViewerCameraState.Controls.OrbitPitch
 
     If UI.UpdateSlider(SliderDragOwner, 2, PanelLeft + 76, Window_Height() - 116,
         CAMERA_SLIDER_WIDTH, CAMERA_SLIDER_HEIGHT, -180, 180, 1, Value) Then
+        Call ViewerCamera.SetVerticalOrbit(ViewerCameraState, Value)
 
-        CameraControls.OrbitPitch = Value
-        AutoOrbit = False
         Return True
-
     End If
 
-    Value = CharacterViewer.ZoomTargetDegrees(SmoothZoom)
+    Value = CharacterViewer.ZoomTargetDegrees(ViewerCameraState.Zoom)
 
     If UI.UpdateSlider(SliderDragOwner, 3, PanelLeft + 76, Window_Height() - 90,
         CAMERA_SLIDER_WIDTH, CAMERA_SLIDER_HEIGHT, ZOOM_IN_LIMIT, ZOOM_OUT_LIMIT, -1, Value) Then
-        SmoothZoom.Target1000 = Value * 1000
+        Call ViewerCamera.SetZoomTarget(ViewerCameraState, Value)
+
         Return True
     End If
 
@@ -3293,67 +3262,34 @@ Sub UpdateCameraPointer(Blocked As Boolean)
     Dim WheelDelta As Number
     Dim PointerDeltaX As Number
     Dim PointerDeltaY As Number
-    Dim OrbitDeltaX As Number
-    Dim OrbitDeltaY As Number
-    Dim PanDeltaX As Number
-    Dim PanDeltaY As Number
 
     OrbitPressed = (Not Blocked And
         (Pointer_Pressed(POINTER_MIDDLE) Or
-        (Pointer_Held(POINTER_MIDDLE) And Not CameraControls.Orbiting)))
+        (Pointer_Held(POINTER_MIDDLE) And Not ViewerCameraState.Controls.Orbiting)))
     OrbitHeld = Pointer_Held(POINTER_MIDDLE)
     OrbitReleased = Pointer_Released(POINTER_MIDDLE)
     OrbitActive = (OrbitPressed Or
-        (CameraControls.Orbiting And (OrbitHeld Or OrbitReleased)))
+        (ViewerCameraState.Controls.Orbiting And (OrbitHeld Or OrbitReleased)))
     PanPressed = (Not Blocked And
         (Pointer_Pressed(POINTER_PRIMARY) Or
-        (Pointer_Held(POINTER_PRIMARY) And Not CameraControls.Panning)))
+        (Pointer_Held(POINTER_PRIMARY) And Not ViewerCameraState.Controls.Panning)))
     PanHeld = Pointer_Held(POINTER_PRIMARY)
     PanReleased = Pointer_Released(POINTER_PRIMARY)
     PanActive = (PanPressed Or
-        (CameraControls.Panning And (PanHeld Or PanReleased)))
+        (ViewerCameraState.Controls.Panning And (PanHeld Or PanReleased)))
     PointerDeltaX = Pointer_Delta_X()
     PointerDeltaY = Pointer_Delta_Y()
 
-    If OrbitPressed Then
-        OrbitPointerRemainderX = 0
-        OrbitPointerRemainderY = 0
-    End If
+    ViewerCameraState.CalibrationOrbitActive = OrbitActive And CalibrationVisible And Not PartyMode
 
-    CalibrationOrbitActive = OrbitActive And CalibrationVisible And Not PartyMode
-
-    If OrbitPressed And CalibrationOrbitActive Then
-        Call BeginCalibrationOrbitAnchor()
-    End If
-
-    If OrbitActive Then
-        OrbitDeltaX = CharacterViewer.RetainedPointerDelta(
-            OrbitPointerRemainderX,
-            PointerDeltaX,
-            ORBIT_POINTER_DIVISOR
-        )
-        OrbitDeltaY = CharacterViewer.RetainedPointerDelta(
-            OrbitPointerRemainderY,
-            PointerDeltaY,
-            ORBIT_POINTER_DIVISOR
-        )
-    End If
-
-    If PanPressed Then
-        PanPointerRemainderX = 0
-        PanPointerRemainderY = 0
-    End If
-
-    If PanActive Then
-        PanDeltaX = CharacterViewer.RetainedPointerDelta(
-            PanPointerRemainderX,
-            PointerDeltaX,
-            PAN_POINTER_DIVISOR
-        )
-        PanDeltaY = CharacterViewer.RetainedPointerDelta(
-            PanPointerRemainderY,
-            PointerDeltaY,
-            PAN_POINTER_DIVISOR
+    If OrbitPressed And ViewerCameraState.CalibrationOrbitActive Then
+        Call ViewerCamera.BeginCalibrationOrbitAnchor(
+            ViewerCameraState,
+            CurrentTransformGizmoOrigin(),
+            Pointer_X(),
+            Pointer_Y(),
+            Window_Width(),
+            Window_Height()
         )
     End If
 
@@ -3362,94 +3298,24 @@ Sub UpdateCameraPointer(Blocked As Boolean)
     End If
 
     If WheelDelta <> 0 Then
-        Call AdjustZoomTarget(WheelDelta)
+        Call ViewerCamera.AdjustZoomTarget(ViewerCameraState, WheelDelta, 8)
     End If
 
-    Session.Ready = Interaction.UpdateOrbitControls(
-        CameraControls,
+    Session.Ready = ViewerCamera.UpdatePointerControls(
+        ViewerCameraState,
         OrbitPressed,
         OrbitHeld,
         OrbitReleased,
-        0,
-        0
-    ) And Session.Ready
-    Session.Ready = Interaction.UpdatePanZoomControls(
-        CameraControls,
+        OrbitActive,
         PanPressed,
         PanHeld,
         PanReleased,
-        0,
-        0,
-        0
+        PanActive,
+        PointerDeltaX,
+        PointerDeltaY,
+        ORBIT_POINTER_DIVISOR,
+        PAN_POINTER_DIVISOR
     ) And Session.Ready
-
-    If OrbitActive Then
-
-        Call RecordCameraInteraction()
-
-        CameraControls.OrbitYaw = CameraControls.OrbitYaw + OrbitDeltaX
-        CameraControls.OrbitPitch = CameraControls.OrbitPitch + OrbitDeltaY
-
-    End If
-
-    If PanActive Then
-
-        Call RecordCameraInteraction()
-
-        CameraControls.PanX = CameraControls.PanX - PanDeltaX
-        CameraControls.PanY = CameraControls.PanY + PanDeltaY
-
-    End If
-
-    Call ClampCameraControls()
-
-    If PanReleased Then
-        PanPointerRemainderX = 0
-        PanPointerRemainderY = 0
-    End If
-
-    If OrbitReleased Then
-        OrbitPointerRemainderX = 0
-        OrbitPointerRemainderY = 0
-    End If
-
-End Sub
-
-Sub BeginCalibrationOrbitAnchor()
-
-    Dim Origin As Core.Vector3
-    Dim Projected As Core.ProjectedPoint3D
-
-    Origin = CurrentTransformGizmoOrigin()
-    Projected = CharacterViewer.ProjectViewerPoint(Origin, Camera, Window_Width(), Window_Height())
-    CalibrationOrbitDepth = Projected.Depth
-
-    If Not Projected.Visible Then
-        CalibrationOrbitDepth = Max(Camera.NearPlane + 1, Math3D.Distance(Camera.Position, Camera.Target))
-    End If
-
-    CalibrationOrbitCursorX = Pointer_X()
-    CalibrationOrbitCursorY = Pointer_Y()
-    CalibrationOrbitAnchor = CharacterViewer.CursorPointAtDepth(Camera,
-        CalibrationOrbitCursorX, CalibrationOrbitCursorY, CalibrationOrbitDepth,
-        Window_Width(), Window_Height())
-
-End Sub
-
-Sub ApplyCalibrationOrbitAnchor()
-
-    Dim Unshifted As Core.Camera3D
-
-    Unshifted = Camera
-    Camera.Position = Math3D.Add(Camera.Position, CalibrationOrbitOffset)
-    Camera.Target = Math3D.Add(Camera.Target, CalibrationOrbitOffset)
-
-    If CalibrationOrbitActive Then
-        Camera = CharacterViewer.KeepCursorAnchor(Camera, CalibrationOrbitAnchor,
-            CalibrationOrbitCursorX, CalibrationOrbitCursorY, CalibrationOrbitDepth,
-            Window_Width(), Window_Height())
-        CalibrationOrbitOffset = Math3D.Subtract(Camera.Position, Unshifted.Position)
-    End If
 
 End Sub
 
@@ -3913,14 +3779,14 @@ Sub UpdateOrinStorm()
         Clip = Character3D.ClipName(PartyCompanion.Actor, PartyCompanion.Clip)
 
         Call OrinStorm.Update(OrinStormContext, PartyCompanion.Actor, Clip, Target,
-            Camera, Timing.CameraElapsed,
+            ViewerCameraState.Live, Timing.CameraElapsed,
             PartyCompanion.GlowVisible And (EpicGlowVisible Or Session.DragonInspection) And
                 PartyPresentationState(1) <> PARTY_STATE_KO,
             SwordVisible, ShieldVisible, LightningAnimationPaused, Playback.ScenePaused, OrinLight)
     Else If Session.ProfileIndex = ViewerProfiles.PROFILE_ORIN Then
         Clip = Character3D.ClipName(Character, Playback.SelectedClip)
 
-        Call OrinStorm.Update(OrinStormContext, Character, Clip, Target, Camera,
+        Call OrinStorm.Update(OrinStormContext, Character, Clip, Target, ViewerCameraState.Live,
             Timing.CameraElapsed, EpicGlowVisible, SwordVisible, ShieldVisible,
             LightningAnimationPaused, Playback.ScenePaused, OrinLight)
     End If
@@ -3931,7 +3797,7 @@ Sub AdvanceSceneVfx()
 
     Session.Ready = SceneVfx3D.BeginFrame(SceneVfxClock, Timing.CameraElapsed,
         FlameAnimationPaused, LightningAnimationPaused) And Session.Ready
-    Session.Ready = SceneVfx3D.Advance(SceneVfxClock, Camera,
+    Session.Ready = SceneVfx3D.Advance(SceneVfxClock, ViewerCameraState.Live,
         FireInitialized, LightningInitialized) And Session.Ready
 
 End Sub
@@ -4081,7 +3947,7 @@ Sub UpdateShieldFire()
         If (ShieldFireVisible And
             ShieldVisible And
             EpicGlowVisible) Then
-            Call ArinShieldRim.Update(Character, Camera, Timing.CameraElapsed)
+            Call ArinShieldRim.Update(Character, ViewerCameraState.Live, Timing.CameraElapsed)
         Else
 
             Call ArinShieldRim.Shutdown()
@@ -4251,11 +4117,11 @@ Function UpdateEquipmentGlow(
     ActorPosition.X = Character3D.PositionX(Character)
     ActorPosition.Y = Character3D.PositionY(Character)
     ActorPosition.Z = Character3D.PositionZ(Character)
-    ScaleDelta = Max(2, ViewerFrame.ScalePercent / EQUIPMENT_GLOW_SCALE_DIVISOR)
-    OutlineScale = ViewerFrame.ScalePercent + ScaleDelta
-    PositionX = (Center.X - ActorPosition.X) * ScaleDelta / ViewerFrame.ScalePercent
-    PositionY = (Center.Y - ActorPosition.Y) * ScaleDelta / ViewerFrame.ScalePercent
-    PositionZ = (Center.Z - ActorPosition.Z) * ScaleDelta / ViewerFrame.ScalePercent
+    ScaleDelta = Max(2, ViewerCameraState.Frame.ScalePercent / EQUIPMENT_GLOW_SCALE_DIVISOR)
+    OutlineScale = ViewerCameraState.Frame.ScalePercent + ScaleDelta
+    PositionX = (Center.X - ActorPosition.X) * ScaleDelta / ViewerCameraState.Frame.ScalePercent
+    PositionY = (Center.Y - ActorPosition.Y) * ScaleDelta / ViewerCameraState.Frame.ScalePercent
+    PositionZ = (Center.Z - ActorPosition.Z) * ScaleDelta / ViewerCameraState.Frame.ScalePercent
     PositionX = ActorPosition.X - PositionX
     PositionY = ActorPosition.Y - PositionY
     PositionZ = ActorPosition.Z - PositionZ
@@ -4521,128 +4387,6 @@ Sub AdjustPlaybackSpeed(Amount As Number)
 
 End Sub
 
-Sub ClampCameraControls()
-
-    CameraControls.PanX = Min(ViewerFrame.PanXLimit,
-        Max(0 - ViewerFrame.PanXLimit, CameraControls.PanX))
-    CameraControls.PanY = Min(ViewerFrame.PanYLimit,
-        Max(0 - ViewerFrame.PanYLimit, CameraControls.PanY))
-
-End Sub
-
-Sub NudgeOrbit(DeltaX As Number, DeltaY As Number)
-
-    Call RecordCameraInteraction()
-
-    Session.Ready = Interaction.UpdateOrbitControls(
-        CameraControls,
-        True,
-        True,
-        True,
-        DeltaX,
-        DeltaY
-    ) And Session.Ready
-
-    Call ClampCameraControls()
-
-End Sub
-
-Sub NudgePan(DeltaX As Number, DeltaY As Number)
-
-    Call RecordCameraInteraction()
-
-    Session.Ready = Interaction.UpdatePanZoomControls(
-        CameraControls,
-        True,
-        True,
-        True,
-        DeltaX,
-        DeltaY,
-        0
-    ) And Session.Ready
-
-    Call ClampCameraControls()
-
-End Sub
-
-Sub NudgeZoom(WheelDelta As Number)
-
-    Call AdjustZoomTarget(WheelDelta)
-
-End Sub
-
-Sub AdjustZoomTarget(WheelDelta As Number)
-
-    Call CharacterViewer.AdjustZoomTarget(SmoothZoom, WheelDelta, 8)
-
-End Sub
-
-Sub AdvanceSmoothZoom()
-
-    Session.Ready = CharacterViewer.AdvanceZoom(SmoothZoom, Timing.CameraElapsed) And Session.Ready
-    CameraControls.Zoom = CharacterViewer.ZoomDegrees(SmoothZoom)
-
-End Sub
-
-Sub ApplyCloseUpZoom()
-
-    Dim Progress1000 As Number
-    Dim Distance1000 As Number
-
-    If SmoothZoom.Current1000 >= CLOSE_UP_ZOOM_START * 1000 Then
-        Return
-    End If
-
-    ''' Continue past the lens limit by moving toward the current (panned) anchor.
-    ''' Recompose from the base camera every frame; never accumulate camera drift.
-    Progress1000 = ((CLOSE_UP_ZOOM_START * 1000 - SmoothZoom.Current1000) /
-        (CLOSE_UP_ZOOM_START - ZOOM_IN_LIMIT))
-    Progress1000 = Min(1000, Max(0, Progress1000))
-    Distance1000 = 1000 - Progress1000 * (1000 - CLOSE_UP_MINIMUM_DISTANCE_1000) / 1000
-    Camera.Position.X = (Camera.Target.X +
-        (Camera.Position.X - Camera.Target.X) * Distance1000 / 1000)
-    Camera.Position.Y = (Camera.Target.Y +
-        (Camera.Position.Y - Camera.Target.Y) * Distance1000 / 1000)
-    Camera.Position.Z = (Camera.Target.Z +
-        (Camera.Position.Z - Camera.Target.Z) * Distance1000 / 1000)
-
-End Sub
-
-Sub UpdateResponsiveFit()
-
-    If Not FitLocked Then
-        Return
-    End If
-
-    If Window_Width() = LastFitWidth And Window_Height() = LastFitHeight Then
-        Return
-    End If
-
-    LastFitWidth = Window_Width()
-    LastFitHeight = Window_Height()
-    ViewerFrame = CharacterViewer.AutoFit(
-        ActiveProfile,
-        LocalCharacterBounds,
-        Max(1, Window_Width() - 284),
-        Max(1, Window_Height()),
-        BaseCamera.FovDegrees + CharacterViewer.ZoomDegrees(SmoothZoom)
-    )
-    BaseCamera.Position.Y = ViewerFrame.CameraY
-    BaseCamera.Position.Z = ViewerFrame.CameraZ
-    BaseCamera.Target.Y = ViewerFrame.TargetY
-
-    If DragonAvailable Then
-
-        BaseCamera.Position.X = ARENA_CAMERA_CENTER_X
-        BaseCamera.Position.Y = ViewerFrame.TargetY + ARENA_CAMERA_HEIGHT
-        BaseCamera.Position.Z = ARENA_CAMERA_CENTER_Z - ARENA_CAMERA_DISTANCE
-        BaseCamera.Target.X = ARENA_CAMERA_CENTER_X
-        BaseCamera.Target.Z = ARENA_CAMERA_CENTER_Z
-
-    End If
-
-End Sub
-
 Sub RestartPresentation()
 
     If PartyMode And PartyReady Then
@@ -4653,8 +4397,8 @@ Sub RestartPresentation()
 
     Call ResetView()
 
-    AutoOrbit = True
-    AutoOrbitYaw1000 = CameraControls.OrbitYaw * 1000
+    Call ViewerCamera.StartAutoOrbit(ViewerCameraState)
+
     Playback.AnimationCycleElapsed = 0
     Playback.SelectedClip = RuntimeClipForPresentationIndex(0)
 
@@ -4664,22 +4408,12 @@ End Sub
 
 Sub ResetView()
 
-    Call Interaction.ResetCameraControls(CameraControls)
-
-    CameraControls.OrbitYaw = InitialViewerOrbitYaw()
     PartyPreviousCamera = 0
     PartyOrbitPhase1000 = 0
-    CalibrationOrbitActive = False
-    CalibrationOrbitOffset.X = 0
-    CalibrationOrbitOffset.Y = 0
-    CalibrationOrbitOffset.Z = 0
-    PanPointerRemainderX = 0
-    PanPointerRemainderY = 0
-    OrbitPointerRemainderX = 0
-    OrbitPointerRemainderY = 0
 
-    Call CharacterViewer.InitializeZoom(
-        SmoothZoom,
+    Call ViewerCamera.Reset(
+        ViewerCameraState,
+        InitialViewerOrbitYaw(),
         DefaultZoomDegrees(),
         ZOOM_IN_LIMIT,
         ZOOM_OUT_LIMIT,
@@ -4713,7 +4447,7 @@ Sub ResetAll()
     ShieldFireFailed = False
     EquipmentFireFirstError = 0
     Playback.DemoEnabled = True
-    FitLocked = True
+    ViewerCameraState.FitLocked = True
     LightingIndex = 0
     MaterialInspection = Graphics3D.MATERIAL_INSPECTION_LIT
     BackgroundIndex = 3
@@ -4750,7 +4484,7 @@ Sub ResetAll()
         Call ResetPartyDemo()
         Call ResetView()
 
-        AutoOrbit = True
+        Call ViewerCamera.SetAutoOrbit(ViewerCameraState, True)
 
     Else
 
@@ -4836,12 +4570,6 @@ Sub HideShieldEffects()
     If ShieldTrail.Handle <> 0 Then
         Ok = Graphics3D.CommitParticleBatch3D(ShieldTrail, 0)
     End If
-
-End Sub
-
-Sub RecordCameraInteraction()
-
-    AutoOrbit = False
 
 End Sub
 
@@ -5269,68 +4997,6 @@ Sub FinishTimelineKeyframeDrag()
     Call SaveCalibrationKeyframes()
     Call UpdateCalibrationForCurrentFrame()
     Call ApplyWristCalibration()
-
-End Sub
-
-Sub SetHorizontalOrbitFromPointer()
-
-    Dim Value As Number
-
-    Value = ((Pointer_X() - StatusPanelX() - 76) * 360 / CAMERA_SLIDER_WIDTH) - 180
-    CameraControls.OrbitYaw = Min(180, Max(-180, Value))
-    AutoOrbit = False
-
-End Sub
-
-Sub AdjustHorizontalOrbit(Amount As Number)
-
-    CameraControls.OrbitYaw = Min(180, Max(-180, CameraControls.OrbitYaw + Amount))
-    AutoOrbit = False
-
-End Sub
-
-Sub SetVerticalOrbitFromPointer()
-
-    Dim Value As Number
-
-    Value = ((Pointer_X() - StatusPanelX() - 76) * 360 / CAMERA_SLIDER_WIDTH) - 180
-    CameraControls.OrbitPitch = Min(180, Max(-180, Value))
-    AutoOrbit = False
-
-End Sub
-
-Sub AdjustVerticalOrbit(Amount As Number)
-
-    CameraControls.OrbitPitch = Min(180, Max(-180, CameraControls.OrbitPitch + Amount))
-    AutoOrbit = False
-
-End Sub
-
-Sub SetZoomFromPointer()
-
-    Dim Value As Number
-
-    Value = ((Pointer_X() - StatusPanelX() - 76) *
-        (ZOOM_OUT_LIMIT - ZOOM_IN_LIMIT) /
-        CAMERA_SLIDER_WIDTH) + ZOOM_IN_LIMIT
-    Value = Min(ZOOM_OUT_LIMIT, Max(ZOOM_IN_LIMIT, Value))
-    SmoothZoom.Current1000 = Value * 1000
-    SmoothZoom.Target1000 = SmoothZoom.Current1000
-    SmoothZoom.AdvanceRemainder = 0
-    CameraControls.Zoom = Value
-
-End Sub
-
-Sub AdjustPreciseZoom(WheelDelta As Number)
-
-    Dim Value As Number
-
-    Value = CharacterViewer.ZoomTargetDegrees(SmoothZoom) - WheelDelta
-    Value = Min(ZOOM_OUT_LIMIT, Max(ZOOM_IN_LIMIT, Value))
-    SmoothZoom.Current1000 = Value * 1000
-    SmoothZoom.Target1000 = SmoothZoom.Current1000
-    SmoothZoom.AdvanceRemainder = 0
-    CameraControls.Zoom = Value
 
 End Sub
 
@@ -7220,7 +6886,7 @@ Sub BeginCalibrationEdit()
     CalibrationEditingFrame = CurrentAnimationFrame()
     SwordDecoupledBeforeEdit = SwordDecoupled[CalibrationClipBase + Playback.SelectedClip]
     ShieldDecoupledBeforeEdit = ShieldDecoupled[CalibrationClipBase + Playback.SelectedClip]
-    CalibrationAutoOrbitWasEnabled = AutoOrbit
+    CalibrationAutoOrbitWasEnabled = ViewerCameraState.AutoOrbit
     CalibrationSavedBeforeEdit = CalibrationSaved
 
     For Axis = 0 To CALIBRATION_AXIS_COUNT - 1
@@ -7233,7 +6899,7 @@ Sub BeginCalibrationEdit()
         ShieldPositionCalibrationBeforeEdit[Axis] = ShieldPositionCalibration[CalibrationClipBase + Playback.SelectedClip, Axis]
     End For
 
-    AutoOrbit = False
+    Call ViewerCamera.SetAutoOrbit(ViewerCameraState, False)
 
     Call InvalidateVisualHistory()
 
@@ -7253,7 +6919,8 @@ Sub FinishCalibrationEdit()
     TransformGizmoOpenedEdit = False
     TransformGizmoDragRemainder = 0
     Session.CharacterSwitchBlocked = False
-    AutoOrbit = CalibrationAutoOrbitWasEnabled
+
+    Call ViewerCamera.SetAutoOrbit(ViewerCameraState, CalibrationAutoOrbitWasEnabled)
 
     Call InvalidateVisualHistory()
 
@@ -7367,7 +7034,8 @@ Sub SetCurrentCalibrationValue(Value As Number)
 
     CalibrationSaveLimitReached = False
     CalibrationClearConfirm = False
-    AutoOrbit = False
+
+    Call ViewerCamera.SetAutoOrbit(ViewerCameraState, False)
 
     Call ApplyWristCalibration()
     Call ApplyEquipmentCalibration()
@@ -7562,7 +7230,8 @@ Sub ResetCalibrationTarget()
 
     CalibrationSaveLimitReached = False
     CalibrationClearConfirm = False
-    AutoOrbit = False
+
+    Call ViewerCamera.SetAutoOrbit(ViewerCameraState, False)
 
     Call ApplyWristCalibration()
     Call ApplyEquipmentCalibration()
@@ -8096,7 +7765,7 @@ Sub DrawTransformGizmoRotate()
             0,
             TRANSFORM_GIZMO_RING_SEGMENTS,
             TransformGizmoWorldSize,
-            Camera,
+            ViewerCameraState.Live,
             Window_Width(),
             Window_Height()
         )
@@ -8109,7 +7778,7 @@ Sub DrawTransformGizmoRotate()
                 Segment,
                 TRANSFORM_GIZMO_RING_SEGMENTS,
                 TransformGizmoWorldSize,
-                Camera,
+                ViewerCameraState.Live,
                 Window_Width(),
                 Window_Height()
             )
@@ -8289,7 +7958,7 @@ Sub DrawInspectorOverlay()
         Call DrawButton(PanelLeft + 12, Window_Height() - 64, 52, 24, "VIEW", False)
         Call DrawButton(PanelLeft + 68, Window_Height() - 64, 74, 24, "PRESENT", False)
         Call DrawButton(PanelLeft + 146, Window_Height() - 64, 40, 24, "ALL", False)
-        Call DrawButton(PanelLeft + 190, Window_Height() - 64, 50, 24, "FIT", FitLocked)
+        Call DrawButton(PanelLeft + 190, Window_Height() - 64, 50, 24, "FIT", ViewerCameraState.FitLocked)
 
     End If
 
@@ -8383,7 +8052,7 @@ Sub DrawCharacterStatusSummary(PanelLeft As Number)
         Draw Number AnimationSecondsRemaining() At PanelLeft + 172, 284 Size 12 Color WHITE
         Draw Text "seconds" At PanelLeft + 192, 284 Size 11 Color LIGHT_GRAY
         Draw Text "Zoom / FPS" At PanelText, 306 Size 12 Color LIGHT_GRAY
-        Draw Number CharacterViewer.ZoomDegrees(SmoothZoom) At PanelLeft + 116, 306 Size 12 Color CYAN
+        Draw Number CharacterViewer.ZoomDegrees(ViewerCameraState.Zoom) At PanelLeft + 116, 306 Size 12 Color CYAN
         Draw Text "level" At PanelLeft + 146, 306 Size 11 Color LIGHT_GRAY
         Draw Number ViewerTiming.FramesPerSecond(FrameRate) At PanelLeft + 190, 306 Size 12 Color GREEN
         Draw Text "fps" At PanelLeft + 216, 306 Size 11 Color LIGHT_GRAY
@@ -8395,21 +8064,21 @@ Sub DrawCameraControls()
     Call DrawCameraSlider(
         "H Orbit",
         Window_Height() - 142,
-        CameraControls.OrbitYaw,
+        ViewerCameraState.Controls.OrbitYaw,
         -180,
         180
     )
     Call DrawCameraSlider(
         "V Orbit",
         Window_Height() - 116,
-        CameraControls.OrbitPitch,
+        ViewerCameraState.Controls.OrbitPitch,
         -180,
         180
     )
     Call DrawCameraSlider(
         "Zoom",
         Window_Height() - 90,
-        CharacterViewer.ZoomDegrees(SmoothZoom),
+        CharacterViewer.ZoomDegrees(ViewerCameraState.Zoom),
         ZOOM_IN_LIMIT,
         ZOOM_OUT_LIMIT
     )
@@ -9012,7 +8681,7 @@ Function AutoOrbitLabel() As Text
 
     Dim Result As Text
 
-    If AutoOrbit Then
+    If ViewerCameraState.AutoOrbit Then
         Result = "On"
     Else
         Result = "Off"
@@ -9126,7 +8795,7 @@ Function CaptureActorContext() As ViewerActorContext
     Dim Result As ViewerActorContext
 
     Result.Actor = Character
-    Result.Frame = ViewerFrame
+    Result.Frame = ViewerCameraState.Frame
     Result.Profile = Session.ProfileIndex
     Result.Clip = Playback.SelectedClip
     Result.KeyBase = CalibrationClipBase
@@ -9146,7 +8815,7 @@ End Function
 Sub UseActorContext(Context As ViewerActorContext)
 
     Character = Context.Actor
-    ViewerFrame = Context.Frame
+    ViewerCameraState.Frame = Context.Frame
     Session.ProfileIndex = Context.Profile
     ActiveProfile = ViewerProfiles.ProfileAt(Session.ProfileIndex)
     Playback.SelectedClip = Context.Clip
@@ -9332,9 +9001,9 @@ Sub CreatePartyCompanion(Optional CompanionIndex As Number = ViewerProfiles.PROF
     If PartyReady Then
 
         CompanionBounds = Character3D.LocalBounds(Character)
-        ViewerFrame = CharacterViewer.AutoFit(CompanionProfile, CompanionBounds)
-        PartyReady = ViewerFrame.Valid
-        Session.Ready = Character3D.SetScale(Character, ViewerFrame.ScalePercent) And Session.Ready
+        ViewerCameraState.Frame = CharacterViewer.AutoFit(CompanionProfile, CompanionBounds)
+        PartyReady = ViewerCameraState.Frame.Valid
+        Session.Ready = Character3D.SetScale(Character, ViewerCameraState.Frame.ScalePercent) And Session.Ready
         Session.Ready = Character3D.SetShadows(Character, True, True) And Session.Ready
         CalibrationClipBase = 0
 
@@ -9775,8 +9444,8 @@ Sub AdvancePartyDemo()
     End If
 
     Home = PartyParticipants[0].Home
-    ViewerFrame.PositionX = Home.X
-    ViewerFrame.PositionZ = Home.Z
+    ViewerCameraState.Frame.PositionX = Home.X
+    ViewerCameraState.Frame.PositionZ = Home.Z
     Home = PartyParticipants[1].Home
     PartyCompanion.Frame.PositionX = Home.X
     PartyCompanion.Frame.PositionZ = Home.Z
@@ -9784,10 +9453,10 @@ Sub AdvancePartyDemo()
     If PartyTurn = 0 Then
 
         Approach = PartyParticipants[0].Approach
-        TravelOffset = Approach.X - ViewerFrame.PositionX
-        ViewerFrame.PositionX = ViewerFrame.PositionX + TravelOffset * Travel1000 / 1000
-        TravelOffset = Approach.Z - ViewerFrame.PositionZ
-        ViewerFrame.PositionZ = ViewerFrame.PositionZ + TravelOffset * Travel1000 / 1000
+        TravelOffset = Approach.X - ViewerCameraState.Frame.PositionX
+        ViewerCameraState.Frame.PositionX = ViewerCameraState.Frame.PositionX + TravelOffset * Travel1000 / 1000
+        TravelOffset = Approach.Z - ViewerCameraState.Frame.PositionZ
+        ViewerCameraState.Frame.PositionZ = ViewerCameraState.Frame.PositionZ + TravelOffset * Travel1000 / 1000
 
     Else
         Approach = PartyParticipants[1].Approach
@@ -9798,7 +9467,7 @@ Sub AdvancePartyDemo()
 
     End If
 
-    Session.Ready = Character3D.Place(Character, ViewerFrame.PositionX, ViewerFrame.PositionY, ViewerFrame.PositionZ) And Session.Ready
+    Session.Ready = Character3D.Place(Character, ViewerCameraState.Frame.PositionX, ViewerCameraState.Frame.PositionY, ViewerCameraState.Frame.PositionZ) And Session.Ready
     Session.Ready = Character3D.Place(PartyCompanion.Actor,
         PartyCompanion.Frame.PositionX, PartyCompanion.Frame.PositionY, PartyCompanion.Frame.PositionZ) And Session.Ready
     Session.Ready = FaceDragon(Character, PartyParticipants[0].FacingAdjustment) And Session.Ready
@@ -9920,12 +9589,12 @@ Sub AdvanceDragonTurn()
     End If
 
     Home = PartyParticipants[0].Home
-    ViewerFrame.PositionX = Home.X
-    ViewerFrame.PositionZ = Home.Z
+    ViewerCameraState.Frame.PositionX = Home.X
+    ViewerCameraState.Frame.PositionZ = Home.Z
     Home = PartyParticipants[1].Home
     PartyCompanion.Frame.PositionX = Home.X
     PartyCompanion.Frame.PositionZ = Home.Z
-    Session.Ready = Character3D.Place(Character, ViewerFrame.PositionX, ViewerFrame.PositionY, ViewerFrame.PositionZ) And Session.Ready
+    Session.Ready = Character3D.Place(Character, ViewerCameraState.Frame.PositionX, ViewerCameraState.Frame.PositionY, ViewerCameraState.Frame.PositionZ) And Session.Ready
     Session.Ready = Character3D.Place(PartyCompanion.Actor,
         PartyCompanion.Frame.PositionX, PartyCompanion.Frame.PositionY, PartyCompanion.Frame.PositionZ) And Session.Ready
     Session.Ready = FaceDragon(Character, PartyParticipants[0].FacingAdjustment) And Session.Ready
@@ -10147,7 +9816,7 @@ Function HandlePartyPointer() As Boolean
 
     Else If PointerInRectangle(Left + 128, 324, 108, 28) Then
 
-        Call ToggleAutoOrbit()
+        Call ViewerCamera.ToggleAutoOrbit(ViewerCameraState)
 
     Else If PointerInRectangle(Left + 12, 360, 224, 28) Then
 
@@ -10234,7 +9903,7 @@ Sub DrawPartyOverlay()
         End If
 
         Call DrawButton(Left + 12, 324, 108, 28, "Pause", Playback.ScenePaused)
-        Call DrawButton(Left + 128, 324, 108, 28, "Orbit", AutoOrbit)
+        Call DrawButton(Left + 128, 324, 108, 28, "Orbit", ViewerCameraState.AutoOrbit)
         Call DrawButton(Left + 12, 360, 224, 28, "Restart Battle Demo", False)
 
         If Window_Height() >= 580 Then
@@ -10283,20 +9952,20 @@ Sub DrawPartyCameraDetails(X As Number, Y As Number)
 
     Dim Angles As Core.Vector3
 
-    Angles = BattleCamera.ViewAngles(Camera)
+    Angles = BattleCamera.ViewAngles(ViewerCameraState.Live)
     Draw Text "Pos XYZ" At X, Y Size 11 Color LIGHT_GRAY
-    Draw Number Camera.Position.X At X + 74, Y Size 11 Color CYAN
-    Draw Number Camera.Position.Y At X + 124, Y Size 11 Color CYAN
-    Draw Number Camera.Position.Z At X + 174, Y Size 11 Color CYAN
+    Draw Number ViewerCameraState.Live.Position.X At X + 74, Y Size 11 Color CYAN
+    Draw Number ViewerCameraState.Live.Position.Y At X + 124, Y Size 11 Color CYAN
+    Draw Number ViewerCameraState.Live.Position.Z At X + 174, Y Size 11 Color CYAN
     Draw Text "Aim XYZ" At X, Y + 14 Size 11 Color LIGHT_GRAY
-    Draw Number Camera.Target.X At X + 74, Y + 14 Size 11 Color CYAN
-    Draw Number Camera.Target.Y At X + 124, Y + 14 Size 11 Color CYAN
-    Draw Number Camera.Target.Z At X + 174, Y + 14 Size 11 Color CYAN
+    Draw Number ViewerCameraState.Live.Target.X At X + 74, Y + 14 Size 11 Color CYAN
+    Draw Number ViewerCameraState.Live.Target.Y At X + 124, Y + 14 Size 11 Color CYAN
+    Draw Number ViewerCameraState.Live.Target.Z At X + 174, Y + 14 Size 11 Color CYAN
     Draw Text "Yaw / Pitch" At X, Y + 28 Size 11 Color LIGHT_GRAY
     Draw Number Angles.Y At X + 100, Y + 28 Size 11 Color CYAN
     Draw Number Angles.X At X + 158, Y + 28 Size 11 Color CYAN
     Draw Text "FOV / Dist" At X, Y + 42 Size 11 Color LIGHT_GRAY
-    Draw Number Camera.FovDegrees At X + 100, Y + 42 Size 11 Color CYAN
-    Draw Number Math3D.Distance(Camera.Position, Camera.Target) At X + 158, Y + 42 Size 11 Color CYAN
+    Draw Number ViewerCameraState.Live.FovDegrees At X + 100, Y + 42 Size 11 Color CYAN
+    Draw Number Math3D.Distance(ViewerCameraState.Live.Position, ViewerCameraState.Live.Target) At X + 158, Y + 42 Size 11 Color CYAN
 
 End Sub

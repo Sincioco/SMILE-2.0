@@ -17,6 +17,7 @@ $identityPath = Join-Path $repositoryRoot `
 $referencePath = Join-Path $repositoryRoot `
     'games\Dragonfall\SourceAssets\Arin\paladin-reference-images.json'
 $viewerSourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\Program.smile'
+$cameraSourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\ViewerCamera.smile'
 $profileSourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\Profiles.smile'
 $cookedProjectPath = Join-Path $repositoryRoot `
     'tools\Character3DViewer\Character3DViewer.smileproj'
@@ -83,6 +84,7 @@ try {
         'The fused prototype mesh must not imply modular equipment.'
 
     $viewerSource = Get-Content -LiteralPath $viewerSourcePath -Raw
+    $cameraSource = Get-Content -LiteralPath $cameraSourcePath -Raw
     $profileSource = Get-Content -LiteralPath $profileSourcePath -Raw
     $adapterSource = Get-Content -LiteralPath $adapterSourcePath -Raw
     # Keep architectural wiring checks here. Current behavior is executed by the
@@ -92,9 +94,10 @@ try {
         'Import Smile.Simple3D.LightPool3D As LightPool3D',
         'Import Smile.Simple3D.SceneVfx3D As SceneVfx3D',
         'Import Smile.UI.Controls As UI',
+        'Import Smile.Tools.Character3DViewerCamera As ViewerCamera',
         'CharacterViewer.AutoFit(',
-        'CharacterViewer.AdvanceZoom(',
-        'CharacterViewer.RetainedPointerDelta(',
+        'ViewerCamera.AdvanceZoom(',
+        'ViewerCamera.UpdatePointerControls(',
         'If Pointer_Pressed(POINTER_SECONDARY) Then',
         'Call ResetAll()',
         'Call ToggleScenePause()',
@@ -106,7 +109,7 @@ try {
         'Sub ToggleSword()',
         'Sub ToggleShield()',
         'Sub ToggleFloorAndGrid()',
-        'SceneVfx3D.Advance(SceneVfxClock, Camera,',
+        'SceneVfx3D.Advance(SceneVfxClock, ViewerCameraState.Live,',
         'OrinLight = LightPool3D.Acquire()',
         'Playback.ScenePaused = Not Playback.ScenePaused',
         'Const ZOOM_IN_LIMIT = -144',
@@ -130,8 +133,16 @@ try {
         'PartyHitTarget = 1) Then' `
         'Dragon Party target ownership'
     Assert-Contains $viewerSource `
-        'Call CharacterViewer.KeepCameraAboveGround(Camera, 0)' `
+        'Call ViewerCamera.KeepAboveGround(ViewerCameraState, 0)' `
         'Solid-floor camera comfort'
+    foreach ($contract in @(
+        'CharacterViewer.RetainedPointerDelta(',
+        'CharacterViewer.AdvanceZoom(',
+        'BattleCamera.Orbit(',
+        'CharacterViewer.KeepCursorAnchor(',
+        'Public Sub UpdateResponsiveFit(')) {
+        Assert-Contains $cameraSource $contract 'Viewer camera owner'
+    }
     Assert-Contains $profileSource `
         'Public Function PartyAttackName(ProfileIndex As Number, AttackCycle As Number) As Text' `
         'Party attack rotation'

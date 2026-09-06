@@ -14,6 +14,7 @@
     <SmileSource Include="ViewerTiming.smile" />
     <SmileSource Include="ViewerSession.smile" />
     <SmileSource Include="ViewerPlayback.smile" />
+    <SmileSource Include="ViewerCamera.smile" />
     <SmileProjectReference Include="..\..\libraries\Smile.Simple3D\Smile.Simple3D.smilelibproj" />
   </ItemGroup>
 </SmileProject>

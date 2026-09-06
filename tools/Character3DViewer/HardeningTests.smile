@@ -4,12 +4,14 @@ Import Smile.Tools.Character3DViewerProfiles As ViewerProfiles
 Import Smile.Simple3D.Character3D As Character3D
 Import Smile.Simple3D.CharacterViewer As CharacterViewer
 Import Smile.Simple3D.Graphics3D As Graphics3D
+Import Smile.Simple3D.Interaction As Interaction
 Import Smile.Tools.OrinStorm As OrinStorm
 Import Smile.Tools.BattleAudio As BattleAudio
 Import Smile.Tools.BattleCamera As BattleCamera
 Import Smile.Tools.Character3DViewerTiming As ViewerTiming
 Import Smile.Tools.Character3DViewerSession As ViewerSession
 Import Smile.Tools.Character3DViewerPlayback As ViewerPlayback
+Import Smile.Tools.Character3DViewerCamera As ViewerCamera
 Import Smile.Simple3D.Core As Core
 Import Smile.Simple3D.NodeAim3D As NodeAim3D
 Import Smile.Simple3D.Math3D As Math3D
@@ -66,6 +68,11 @@ Dim FrameRate As ViewerTiming.FrameRateState
 Dim RuntimeClock As ViewerTiming.ClockState
 Dim SessionState As ViewerSession.State
 Dim PlaybackState As ViewerPlayback.State
+Dim CameraState As ViewerCamera.State
+Dim DirectControls As Core.CameraControl3D
+Dim DirectZoom As CharacterViewer.ZoomState
+Dim DirectCamera As Core.Camera3D
+Dim CameraPhase1000 As Number
 
 Game Window "Character 3D Viewer Hardening Tests" Size 320 By 240
 
@@ -124,6 +131,68 @@ Call ViewerSession.CaptureFailure(SessionState, 78)
 Call Check(SessionState.FirstFailureStage = 77)
 Call ViewerSession.RecordError(SessionState)
 Call Check(SessionState.ViewerError)
+
+Call ViewerCamera.Reset(CameraState, 0, -16, -144, 36, 96000)
+Call Interaction.ResetCameraControls(DirectControls)
+Call CharacterViewer.InitializeZoom(DirectZoom, -16, -144, 36, 96000)
+Call Check(CameraState.Controls.OrbitYaw = DirectControls.OrbitYaw)
+Call Check(CameraState.Zoom.Current1000 = DirectZoom.Current1000)
+
+CameraState.Frame.PanXLimit = 10
+CameraState.Frame.PanYLimit = 8
+CameraState.AutoOrbit = True
+TestResult = Interaction.UpdateOrbitControls(DirectControls, True, True, True, -5, 2)
+
+Call Check(ViewerCamera.NudgeOrbit(CameraState, -5, 2))
+Call Check(CameraState.Controls.OrbitYaw = DirectControls.OrbitYaw)
+Call Check(CameraState.Controls.OrbitPitch = DirectControls.OrbitPitch)
+Call Check(Not CameraState.AutoOrbit)
+
+TestResult = Interaction.UpdatePanZoomControls(
+    DirectControls, True, True, True, -20, 20, 0)
+DirectControls.PanX = Min(10, Max(-10, DirectControls.PanX))
+DirectControls.PanY = Min(8, Max(-8, DirectControls.PanY))
+
+Call Check(ViewerCamera.NudgePan(CameraState, -20, 20))
+Call Check(CameraState.Controls.PanX = DirectControls.PanX)
+Call Check(CameraState.Controls.PanY = DirectControls.PanY)
+
+Call CharacterViewer.AdjustZoomTarget(DirectZoom, -2, 8)
+Call ViewerCamera.AdjustZoomTarget(CameraState, -2, 8)
+Call Check(CharacterViewer.AdvanceZoom(DirectZoom, 33))
+Call Check(ViewerCamera.AdvanceZoom(CameraState, 33))
+Call Check(CameraState.Zoom.Current1000 = DirectZoom.Current1000)
+Call Check(CameraState.Zoom.Target1000 = DirectZoom.Target1000)
+Call Check(CameraState.Controls.Zoom = CharacterViewer.ZoomDegrees(DirectZoom))
+
+CameraState.Base = Graphics3D.DefaultCamera()
+DirectCamera = Interaction.ApplyScreenSpaceCameraControls(
+    CameraState.Base, CameraState.Controls)
+
+Call ViewerCamera.Compose(CameraState, False)
+Call Check(CameraState.Live.Position.X = DirectCamera.Position.X)
+Call Check(CameraState.Live.Position.Y = DirectCamera.Position.Y)
+Call Check(CameraState.Live.Position.Z = DirectCamera.Position.Z)
+Call Check(CameraState.Live.Target.X = DirectCamera.Target.X)
+Call Check(CameraState.Live.Target.Y = DirectCamera.Target.Y)
+Call Check(CameraState.Live.Target.Z = DirectCamera.Target.Z)
+
+Call ViewerCamera.SetHorizontalOrbit(CameraState, 500)
+Call ViewerCamera.SetVerticalOrbit(CameraState, -500)
+Call Check(CameraState.Controls.OrbitYaw = 180)
+Call Check(CameraState.Controls.OrbitPitch = -180)
+Call ViewerCamera.SetZoom(CameraState, -200, -144, 36)
+Call Check(CharacterViewer.ZoomDegrees(CameraState.Zoom) = -144)
+Call ViewerCamera.StartAutoOrbit(CameraState)
+Call Check(ViewerCamera.AdvanceAutoOrbit(CameraState, CameraPhase1000, 250, 12, False))
+Call Check(CameraState.AutoOrbitYaw1000 = 183000)
+Call Check(CameraState.Controls.OrbitYaw = 183)
+
+CameraState.Live.Position.Y = -40
+CameraState.Live.Target.Y = 65
+
+Call ViewerCamera.KeepAboveGround(CameraState, 0)
+Call Check(CameraState.Live.Position.Y = 0 And CameraState.Live.Target.Y = 65)
 
 Call CheckRingProjection()
 
