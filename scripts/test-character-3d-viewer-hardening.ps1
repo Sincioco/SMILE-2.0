@@ -420,6 +420,7 @@ try {
         'Public Sub ConsumeDragonReaction(',
         'Public Function UpdateDragon(',
         'Public Function UpdateDragonOpponent(',
+        'Public Sub UpdateOrinStorm(',
         'Public Function PlaceDragonInspectionParticipants(',
         'Public Sub ApplyAttackCamera(',
         'Public Function ClassifyPointer(',
@@ -461,6 +462,8 @@ try {
         'Public Sub DrawEquipmentFire(',
         'Public Function DrawScene(',
         'Public Sub ResetPlaybackControls(',
+        'Public Sub ResetArinAudio(',
+        'Public Sub UpdateArinAudio(',
         'Public Function ShutdownShared(')) {
         Assert-Contains $effectsSource $contract 'Viewer effects owner'
     }
@@ -601,6 +604,12 @@ try {
         -not $viewerSource.Contains('Sub ApplyLighting(') -and
         -not $viewerSource.Contains('Sub CycleMaterialInspection(')) `
         'Lighting and material-inspection state and behavior must remain in ViewerRendering.'
+    Assert-True (-not $viewerSource.Contains('Import Smile.Tools.BattleAudio As BattleAudio') -and
+        -not $viewerSource.Contains('BattleAudio.CrossedCue(') -and
+        -not $viewerSource.Contains('Play Sound "Assets/Audio/arin-') -and
+        -not $viewerSource.Contains('Effects.ArinAudio.Clip =') -and
+        -not $viewerSource.Contains('ViewerEffects.UpdateStorm(')) `
+        'Arin cue behavior and Orin storm actor routing must remain in effects and Party owners.'
     Assert-True (-not $viewerSource.Contains('Dim SocketGizmos[') -and
         -not $viewerSource.Contains('Dim SocketMarkers As') -and
         -not $viewerSource.Contains('Sub CreateSocketGizmos()') -and

@@ -989,6 +989,26 @@ Call Check(Not EffectsState.FlamePaused And Not EffectsState.LightningPaused)
 Call Check(Not EffectsState.SwordFireFailed And Not EffectsState.ShieldFireFailed)
 Call Check(EffectsState.EquipmentFireFirstError = 0)
 
+EffectsState.ArinAudio.Clip = "SwordAttack"
+
+Call ViewerEffects.ResetArinAudio(EffectsState)
+
+Call Check(EffectsState.ArinAudio.Clip = "")
+Call ViewerParty.UpdateOrinStorm(
+    PartyState,
+    DragonState,
+    EffectsState,
+    PartyPrimary.Actor,
+    ViewerProfiles.PROFILE_ORIN,
+    0,
+    False,
+    DirectCamera,
+    16,
+    True,
+    True,
+    False
+)
+
 Call ViewerDragon.SetAvailable(DragonState, True)
 Call Check(DragonState.Available And DragonState.Visible)
 

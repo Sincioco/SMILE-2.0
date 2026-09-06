@@ -8,7 +8,6 @@ Import Smile.Simple3D.Core As Core
 Import Smile.Simple3D.Graphics3D As Graphics3D
 Import Smile.Simple3D.Scene3D As Scene3D
 Import Smile.Tools.Character3DViewerProfiles As ViewerProfiles
-Import Smile.Tools.BattleAudio As BattleAudio
 Import Smile.Tools.BattleCamera As BattleCamera
 Import Smile.Tools.Character3DViewerTiming As ViewerTiming
 Import Smile.Tools.Character3DViewerSession As ViewerSession
@@ -668,39 +667,15 @@ End Sub
 
 Sub UpdateBattleAudio()
 
-    Dim Name As Text
-    Dim CueTime As Number
     Dim Audible As Boolean
+    Dim Name As Text
 
     Name = ViewerPlayback.SelectedClipName(Character, Playback)
-    CueTime = -1
-
-    If Session.ProfileIndex = ViewerProfiles.PROFILE_ARIN Then
-
-        If Name = "SwordAttack" Then
-            CueTime = 280
-        Else If Name = "SwordAttack2" Then
-            CueTime = 160
-        End If
-
-    End If
-
     Audible = Not Playback.ScenePaused And Not ViewerUiState.CalibrationEditing
 
-    If BattleAudio.CrossedCue(Effects.ArinAudio, Name,
-        Character3D.AnimationTime(Character), CueTime, Audible) Then
-
-        If Name = "SwordAttack" Then
-
-            Play Sound "Assets/Audio/arin-flame-slash.wav"
-
-        Else
-
-            Play Sound "Assets/Audio/arin-flame-crosscut.wav"
-
-        End If
-
-    End If
+    Call ViewerEffects.UpdateArinAudio(
+        Effects, Session.ProfileIndex, Name,
+        Character3D.AnimationTime(Character), Audible)
 
     Call ViewerDragon.UpdateAudio(DragonState, Audible)
 
@@ -2089,32 +2064,12 @@ End Sub
 
 Sub UpdateOrinStorm()
 
-    Dim Target As Core.Vector3
-    Dim Clip As Text
-
-    If Not ViewerDragon.IsValid(DragonState) Then
-        Return
-    End If
-
-    Target = Character3D.SocketPosition(DragonState.Actor, "Chest")
-
-    If (Party.Enabled Or Session.DragonInspection) And Party.Ready Then
-        Clip = Character3D.ClipName(Party.Companion.Actor, Party.Companion.Clip)
-
-        Call ViewerEffects.UpdateStorm(Effects, Party.Companion.Actor, Clip, Target,
-            ViewerCameraState.Live, Timing.CameraElapsed,
-            Party.Companion.GlowVisible And (Effects.EpicGlowVisible Or Session.DragonInspection) And
-                ViewerParty.PresentationState(Party, 1) <> ViewerParty.STATE_KO,
-            Equipment.SwordVisible, Equipment.ShieldVisible,
-            Playback.ScenePaused)
-    Else If Session.ProfileIndex = ViewerProfiles.PROFILE_ORIN Then
-        Clip = Character3D.ClipName(Character, Playback.SelectedClip)
-
-        Call ViewerEffects.UpdateStorm(Effects, Character, Clip, Target, ViewerCameraState.Live,
-            Timing.CameraElapsed, Effects.EpicGlowVisible,
-            Equipment.SwordVisible, Equipment.ShieldVisible,
-            Playback.ScenePaused)
-    End If
+    Call ViewerParty.UpdateOrinStorm(
+        Party, DragonState, Effects, Character,
+        Session.ProfileIndex, Playback.SelectedClip,
+        Session.DragonInspection, ViewerCameraState.Live,
+        Timing.CameraElapsed, Equipment.SwordVisible,
+        Equipment.ShieldVisible, Playback.ScenePaused)
 
 End Sub
 
@@ -2780,7 +2735,8 @@ Sub PlaySelectedClip(Optional RetainFireTails As Boolean = False)
 
     Session.Ready = ViewerPlayback.StartSelectedClip(
         Playback, Character, Session.ProfileIndex) And Session.Ready
-    Effects.ArinAudio.Clip = ""
+
+    Call ViewerEffects.ResetArinAudio(Effects)
 
     Call UpdateCalibrationForCurrentFrame()
     Call ApplyWristCalibration()

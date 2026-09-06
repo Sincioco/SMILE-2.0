@@ -227,6 +227,46 @@ Public Sub ResetPlaybackControls(ByRef Value As State)
 
 End Sub
 
+Public Sub ResetArinAudio(ByRef Value As State)
+
+    Value.ArinAudio.Clip = ""
+
+End Sub
+
+Public Sub UpdateArinAudio(ByRef Value As State, ProfileIndex As Number,
+    ClipName As Text, AnimationTime As Number, Audible As Boolean)
+
+    Dim CueTime As Number
+
+    CueTime = -1
+
+    If ProfileIndex = ViewerProfiles.PROFILE_ARIN Then
+
+        If ClipName = "SwordAttack" Then
+            CueTime = 280
+        Else If ClipName = "SwordAttack2" Then
+            CueTime = 160
+        End If
+
+    End If
+
+    If BattleAudio.CrossedCue(
+        Value.ArinAudio, ClipName, AnimationTime, CueTime, Audible) Then
+
+        If ClipName = "SwordAttack" Then
+
+            Play Sound "Assets/Audio/arin-flame-slash.wav"
+
+        Else
+
+            Play Sound "Assets/Audio/arin-flame-crosscut.wav"
+
+        End If
+
+    End If
+
+End Sub
+
 Public Sub CycleStormStyle(ByRef Value As State)
 
     Call OrinStorm.CycleStyle(Value.OrinStorm)

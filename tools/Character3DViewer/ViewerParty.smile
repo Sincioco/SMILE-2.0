@@ -853,6 +853,50 @@ Public Function UpdateDragonOpponent(ByRef Value As State,
 
 End Function
 
+Public Sub UpdateOrinStorm(ByRef Value As State,
+    ByRef Dragon As ViewerDragon.State, ByRef Effects As ViewerEffects.State,
+    ByRef PrimaryActor As Character3D.Actor, PrimaryProfile As Number,
+    PrimaryClip As Number, DragonInspection As Boolean,
+    Camera As Core.Camera3D, CameraElapsed As Number,
+    SwordVisible As Boolean, ShieldVisible As Boolean,
+    ScenePaused As Boolean)
+
+    Dim ClipName As Text
+    Dim GlowVisible As Boolean
+    Dim Target As Core.Vector3
+
+    If Not ViewerDragon.IsValid(Dragon) Then
+        Return
+    End If
+
+    Target = Character3D.SocketPosition(Dragon.Actor, "Chest")
+
+    If (Value.Enabled Or DragonInspection) And Value.Ready Then
+
+        ClipName = Character3D.ClipName(
+            Value.Companion.Actor, Value.Companion.Clip)
+        GlowVisible = (Value.Companion.GlowVisible And
+            (Effects.EpicGlowVisible Or DragonInspection) And
+            PresentationState(Value, 1) <> STATE_KO)
+
+        Call ViewerEffects.UpdateStorm(
+            Effects, Value.Companion.Actor, ClipName, Target,
+            Camera, CameraElapsed, GlowVisible,
+            SwordVisible, ShieldVisible, ScenePaused)
+
+    Else If PrimaryProfile = ViewerProfiles.PROFILE_ORIN Then
+
+        ClipName = Character3D.ClipName(PrimaryActor, PrimaryClip)
+
+        Call ViewerEffects.UpdateStorm(
+            Effects, PrimaryActor, ClipName, Target,
+            Camera, CameraElapsed, Effects.EpicGlowVisible,
+            SwordVisible, ShieldVisible, ScenePaused)
+
+    End If
+
+End Sub
+
 Public Function DragonReactionRequested(ByRef Value As State,
     AttackDurationMilliseconds As Number) As Boolean
 
