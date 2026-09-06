@@ -25,6 +25,11 @@ These instructions apply to the entire SMILE 2.0 repository.
 - Never use Markdown completed-task checkboxes or strikethrough for completed work. Keep
   every completed task clearly visible with a green `✅` checkmark. Use `📋` for pending
   work and `🔄` for active work. Use these symbols semantically rather than decoratively.
+- Before every new status report, implementation summary, progress summary, final status
+  report, or major status update, place a Markdown horizontal rule (`---`) on its own
+  line immediately before the report's first heading. Use one boundary per report; do
+  not add extra horizontal rules inside a single report unless it contains another
+  distinct substantial report.
 
 ## Project identity
 
