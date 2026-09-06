@@ -416,6 +416,9 @@ try {
         'Public Sub Apply(',
         'Public Function LoadContext(',
         'Public Function FaceToward(',
+        'Public Function ValidateProfile(',
+        'Public Function ArenaYawAdjustment(',
+        'Public Function ApplyArenaFacing(',
         'Public Function ApplyPresentationOffset(',
         'Public Sub Destroy(')) {
         Assert-Contains $actorsSource $contract 'Viewer actor owner'
@@ -455,8 +458,14 @@ try {
         'Public Function UpdateSocketGizmos(',
         'Public Function DrawSocketGizmos(',
         'Public Sub DestroySocketGizmos(',
-        'Public Sub CycleSocketDisplay(')) {
+        'Public Sub CycleSocketDisplay(',
+        'Public Function ArenaFloorExtent(')) {
         Assert-Contains $renderingSource $contract 'Viewer rendering owner'
+    }
+    foreach ($contract in @(
+        'Public Function InitialOrbitYaw(',
+        'Public Function DefaultZoomDegrees(')) {
+        Assert-Contains $cameraSource $contract 'Viewer camera policy owner'
     }
     Assert-True (-not $viewerSource.Contains('Dim CalibrationStorage[') -and
         -not $viewerSource.Contains('Dim CalibrationKeyframeValues[') -and
@@ -517,6 +526,14 @@ try {
         -not $viewerSource.Contains('ViewerParty.AdvanceChoreography(') -and
         -not $viewerSource.Contains('ViewerParty.ApplyFrame(')) `
         'Party reset/formation and per-frame demo behavior must remain in ViewerParty.'
+    Assert-True (-not $viewerSource.Contains('Function ValidateLoadedProfile(') -and
+        -not $viewerSource.Contains('Function ViewerFloorWidth(') -and
+        -not $viewerSource.Contains('Function ViewerFloorDepth(') -and
+        -not $viewerSource.Contains('Function InitialViewerOrbitYaw(') -and
+        -not $viewerSource.Contains('Function DefaultZoomDegrees(') -and
+        -not $viewerSource.Contains('Sub ApplyArenaFacing(') -and
+        -not $viewerSource.Contains('Function CharacterArenaYawAdjustment(')) `
+        'Profile validation, arena facing, floor extent and camera defaults must remain in focused owners.'
     Assert-True (-not $viewerSource.Contains('Dim SocketGizmos[') -and
         -not $viewerSource.Contains('Dim SocketMarkers As') -and
         -not $viewerSource.Contains('Sub CreateSocketGizmos()') -and

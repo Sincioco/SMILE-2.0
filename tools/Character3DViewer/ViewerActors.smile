@@ -151,6 +151,74 @@ Public Function FaceToward(ByRef Value As Character3D.Actor,
 
 End Function
 
+Public Function ValidateProfile(ByRef Value As Character3D.Actor,
+    ProfileIndex As Number, Profile As CharacterViewer.Profile) As Boolean
+
+    Dim Index As Number
+    Dim Result As Boolean
+
+    Result = Character3D.IsValid(Value)
+    Result = Character3D.ClipCount(Value) = Profile.ExpectedClipCount And Result
+    Result = Character3D.SocketCount(Value) = Profile.ExpectedSocketCount And Result
+
+    For Index = 0 To ViewerProfiles.ClipCount(ProfileIndex) - 1
+        Result = Character3D.HasClip(
+            Value,
+            ViewerProfiles.ClipName(ProfileIndex, Index)
+        ) And Result
+    End For
+
+    For Index = 0 To ViewerProfiles.SocketCount(ProfileIndex) - 1
+        Result = Character3D.HasSocket(
+            Value,
+            ViewerProfiles.SocketName(ProfileIndex, Index)
+        ) And Result
+    End For
+
+    Return Result
+
+End Function
+
+Public Function ArenaYawAdjustment(ProfileIndex As Number,
+    OrinAdjustment As Number) As Number
+
+    Dim Result As Number
+
+    If ProfileIndex = ViewerProfiles.PROFILE_ORIN Then
+        Result = OrinAdjustment
+    End If
+
+    Return Result
+
+End Function
+
+Public Function ApplyArenaFacing(ByRef Value As Character3D.Actor,
+    ProfileIndex As Number, DragonInspection As Boolean,
+    DragonAvailable As Boolean, DragonX As Number, DragonY As Number,
+    DragonZ As Number, DragonRotationY As Number,
+    ModelForwardYawOffset As Number, OrinAdjustment As Number) As Boolean
+
+    Dim Result As Boolean
+
+    If DragonInspection Then
+        Result = Character3D.Rotate(Value, 0, DragonRotationY, 0)
+    Else If DragonAvailable Then
+        Result = FaceToward(
+            Value,
+            DragonX,
+            DragonY,
+            DragonZ,
+            ModelForwardYawOffset,
+            ArenaYawAdjustment(ProfileIndex, OrinAdjustment)
+        )
+    Else
+        Result = Character3D.Rotate(Value, 0, 0, 0)
+    End If
+
+    Return Result
+
+End Function
+
 Public Function ApplyPresentationOffset(ByRef Value As Character3D.Actor,
     ProfileIndex As Number, Clip As Number,
     Frame As CharacterViewer.Framing) As Boolean

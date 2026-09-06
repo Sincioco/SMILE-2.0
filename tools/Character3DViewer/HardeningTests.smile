@@ -617,6 +617,34 @@ Call Check(ViewerParty.ApplyFrame(
     PartyPrimary.Clip, 100, -208, 0, -120, 180))
 Call Check(Not ViewerActors.FaceToward(
     PartyPrimary.Actor, -208, 0, -120, 180, 0))
+Call Check(ViewerActors.ArenaYawAdjustment(
+    ViewerProfiles.PROFILE_ARIN, -55) = 0)
+Call Check(ViewerActors.ArenaYawAdjustment(
+    ViewerProfiles.PROFILE_ORIN, -55) = -55)
+
+Profile = ViewerProfiles.ProfileAt(ViewerProfiles.PROFILE_DRAGON)
+
+Call Check(Not ViewerActors.ValidateProfile(
+    PartyPrimary.Actor, ViewerProfiles.PROFILE_DRAGON, Profile))
+Call Check(Not ViewerActors.ApplyArenaFacing(
+    PartyPrimary.Actor,
+    ViewerProfiles.PROFILE_ARIN,
+    False,
+    True,
+    -208,
+    0,
+    -120,
+    240,
+    180,
+    -55
+))
+Call Check(ViewerCamera.InitialOrbitYaw(False, 25, 0) = 25)
+Call Check(ViewerCamera.InitialOrbitYaw(True, 25, 0) = 0)
+Call Check(ViewerCamera.DefaultZoomDegrees(False, -16, -15) = -16)
+Call Check(ViewerCamera.DefaultZoomDegrees(True, -16, -15) = -15)
+Call Check(ViewerRendering.ArenaFloorExtent(240, False, 1000) = 240)
+Call Check(ViewerRendering.ArenaFloorExtent(240, True, 1000) = 1000)
+Call Check(ViewerRendering.ArenaFloorExtent(1200, True, 1000) = 1200)
 Call Check(ViewerActors.ApplyPresentationOffset(
     PartyPrimary.Actor, ViewerProfiles.PROFILE_DRAGON, 0, Frame))
 Call Check(ViewerCalibration.ApplyWristOffsets(

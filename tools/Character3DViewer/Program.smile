@@ -453,7 +453,8 @@ Sub LoadViewer()
 
     Call ViewerSession.CaptureFailure(Session, 31)
 
-    Session.Ready = ValidateLoadedProfile() And Session.Ready
+    Session.Ready = ViewerActors.ValidateProfile(
+        Character, Session.ProfileIndex, ActiveProfile) And Session.Ready
 
     Call ViewerSession.CaptureFailure(Session, 32)
 
@@ -489,7 +490,19 @@ Sub LoadViewer()
     )
 
     Call CreateBackdrop()
-    Call ViewerRendering.CreateArena(Rendering, ViewerFloorWidth(), ViewerFloorDepth())
+    Call ViewerRendering.CreateArena(
+        Rendering,
+        ViewerRendering.ArenaFloorExtent(
+            ViewerCameraState.Frame.FloorWidth,
+            DragonState.Available,
+            ARENA_FLOOR_WIDTH
+        ),
+        ViewerRendering.ArenaFloorExtent(
+            ViewerCameraState.Frame.FloorDepth,
+            DragonState.Available,
+            ARENA_FLOOR_DEPTH
+        )
+    )
 
     Session.Ready = ViewerRendering.ArenaReady(Rendering) And Session.Ready
 
@@ -501,7 +514,14 @@ Sub LoadViewer()
     ViewerCameraState.LastFitWidth = Window_Width()
     ViewerCameraState.LastFitHeight = Window_Height()
 
-    Call ViewerCamera.Reset(ViewerCameraState, 0, DefaultZoomDegrees(),
+    Call ViewerCamera.Reset(
+        ViewerCameraState,
+        0,
+        ViewerCamera.DefaultZoomDegrees(
+            DragonState.Available,
+            DEFAULT_ZOOM_DEGREES,
+            ARENA_DEFAULT_ZOOM_DEGREES
+        ),
         ZOOM_IN_LIMIT, ZOOM_OUT_LIMIT, 96000)
 
     Session.Ready = Scene3D.SetQuality(Scene3D.QUALITY_HIGH)
@@ -540,7 +560,18 @@ Sub LoadViewer()
         ViewerCameraState.Frame.PositionZ
     ) And Session.Ready
 
-    Call ApplyArenaFacing()
+    Session.Ready = ViewerActors.ApplyArenaFacing(
+        Character,
+        Session.ProfileIndex,
+        Session.DragonInspection,
+        DragonState.Available,
+        ViewerDragon.PositionX(),
+        0,
+        ViewerDragon.PositionZ(),
+        ViewerDragon.RotationY(),
+        CHARACTER_MODEL_FORWARD_YAW_OFFSET,
+        ORIN_ARENA_YAW_ADJUSTMENT
+    ) And Session.Ready
 
     Session.Ready = Character3D.SetShadows(Character, True, True) And Session.Ready
 
@@ -647,125 +678,6 @@ Sub LoadViewer()
     End If
 
 End Sub
-
-Function ValidateLoadedProfile() As Boolean
-
-    Dim Result As Boolean
-    Dim Index As Number
-
-    Result = Character3D.IsValid(Character)
-    Result = Character3D.ClipCount(Character) = ActiveProfile.ExpectedClipCount And Result
-    Result = Character3D.SocketCount(Character) = ActiveProfile.ExpectedSocketCount And Result
-
-    For Index = 0 To ViewerProfiles.ClipCount(Session.ProfileIndex) - 1
-        Result = Character3D.HasClip(
-            Character,
-            ViewerProfiles.ClipName(Session.ProfileIndex, Index)
-        ) And Result
-    End For
-
-    For Index = 0 To ViewerProfiles.SocketCount(Session.ProfileIndex) - 1
-        Result = Character3D.HasSocket(
-            Character,
-            ViewerProfiles.SocketName(Session.ProfileIndex, Index)
-        ) And Result
-    End For
-
-    Return Result
-
-End Function
-
-Function ViewerFloorWidth() As Number
-
-    Dim Result As Number
-
-    Result = ViewerCameraState.Frame.FloorWidth
-
-    If DragonState.Available Then
-        Result = Max(Result, ARENA_FLOOR_WIDTH)
-    End If
-
-    Return Result
-
-End Function
-
-Function ViewerFloorDepth() As Number
-
-    Dim Result As Number
-
-    Result = ViewerCameraState.Frame.FloorDepth
-
-    If DragonState.Available Then
-        Result = Max(Result, ARENA_FLOOR_DEPTH)
-    End If
-
-    Return Result
-
-End Function
-
-Function InitialViewerOrbitYaw() As Number
-
-    Dim Result As Number
-
-    If DragonState.Available Then
-        Result = ARENA_INITIAL_ORBIT_YAW
-    Else
-        Result = ViewerProfiles.InitialOrbitYaw(Session.ProfileIndex)
-    End If
-
-    Return Result
-
-End Function
-
-Function DefaultZoomDegrees() As Number
-
-    Dim Result As Number
-
-    If DragonState.Available Then
-        Result = ARENA_DEFAULT_ZOOM_DEGREES
-    Else
-        Result = DEFAULT_ZOOM_DEGREES
-    End If
-
-    Return Result
-
-End Function
-
-Sub ApplyArenaFacing()
-
-    If Session.DragonInspection Then
-        Session.Ready = Character3D.Rotate(
-            Character,
-            0,
-            ViewerDragon.RotationY(),
-            0
-        ) And Session.Ready
-    Else If DragonState.Available Then
-        Session.Ready = ViewerActors.FaceToward(
-            Character,
-            ViewerDragon.PositionX(),
-            0,
-            ViewerDragon.PositionZ(),
-            CHARACTER_MODEL_FORWARD_YAW_OFFSET,
-            CharacterArenaYawAdjustment()
-        ) And Session.Ready
-    Else
-        Session.Ready = Character3D.Rotate(Character, 0, 0, 0) And Session.Ready
-    End If
-
-End Sub
-
-Function CharacterArenaYawAdjustment() As Number
-
-    Dim Result As Number
-
-    If Session.ProfileIndex = ViewerProfiles.PROFILE_ORIN Then
-        Result = ORIN_ARENA_YAW_ADJUSTMENT
-    End If
-
-    Return Result
-
-End Function
 
 Sub UpdateDragon()
 
@@ -2403,8 +2315,16 @@ Sub ResetView()
 
     Call ViewerCamera.Reset(
         ViewerCameraState,
-        InitialViewerOrbitYaw(),
-        DefaultZoomDegrees(),
+        ViewerCamera.InitialOrbitYaw(
+            DragonState.Available,
+            ViewerProfiles.InitialOrbitYaw(Session.ProfileIndex),
+            ARENA_INITIAL_ORBIT_YAW
+        ),
+        ViewerCamera.DefaultZoomDegrees(
+            DragonState.Available,
+            DEFAULT_ZOOM_DEGREES,
+            ARENA_DEFAULT_ZOOM_DEGREES
+        ),
         ZOOM_IN_LIMIT,
         ZOOM_OUT_LIMIT,
         96000
@@ -2454,7 +2374,19 @@ Sub ResetAll()
     Call ViewerCamera.CancelPointerControls(ViewerCameraState)
 
     Call ApplyLighting()
-    Call ApplyArenaFacing()
+
+    Session.Ready = ViewerActors.ApplyArenaFacing(
+        Character,
+        Session.ProfileIndex,
+        Session.DragonInspection,
+        DragonState.Available,
+        ViewerDragon.PositionX(),
+        0,
+        ViewerDragon.PositionZ(),
+        ViewerDragon.RotationY(),
+        CHARACTER_MODEL_FORWARD_YAW_OFFSET,
+        ORIN_ARENA_YAW_ADJUSTMENT
+    ) And Session.Ready
 
     If CalibrationAvailable Then
         Session.Ready = Character3D.SetPartVisible(Character, WEAPON_PART_INDEX, True) And Session.Ready

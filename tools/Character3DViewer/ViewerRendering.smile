@@ -479,4 +479,19 @@ Public Sub SelectNextSocket(ByRef Value As State, SocketCount As Number)
 
 End Sub
 
+Public Function ArenaFloorExtent(CharacterExtent As Number,
+    DragonAvailable As Boolean, MinimumArenaExtent As Number) As Number
+
+    Dim Result As Number
+
+    Result = CharacterExtent
+
+    If DragonAvailable Then
+        Result = Max(Result, MinimumArenaExtent)
+    End If
+
+    Return Result
+
+End Function
+
 End Module

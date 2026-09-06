@@ -483,4 +483,34 @@ Public Sub KeepAboveGround(ByRef Value As State, FloorHeight As Number)
 
 End Sub
 
+Public Function InitialOrbitYaw(DragonAvailable As Boolean,
+    ProfileOrbitYaw As Number, ArenaOrbitYaw As Number) As Number
+
+    Dim Result As Number
+
+    Result = ProfileOrbitYaw
+
+    If DragonAvailable Then
+        Result = ArenaOrbitYaw
+    End If
+
+    Return Result
+
+End Function
+
+Public Function DefaultZoomDegrees(DragonAvailable As Boolean,
+    CharacterZoomDegrees As Number, ArenaZoomDegrees As Number) As Number
+
+    Dim Result As Number
+
+    Result = CharacterZoomDegrees
+
+    If DragonAvailable Then
+        Result = ArenaZoomDegrees
+    End If
+
+    Return Result
+
+End Function
+
 End Module
