@@ -436,6 +436,83 @@ Public Function TimelineWidth(WindowWidth As Number, TimelineLeft As Number) As 
 
 End Function
 
+Public Function TimelineFrameAtPointer(PointerX As Number, WindowWidth As Number,
+    Duration As Number, SampleRate As Number, SampleCount As Number) As Number
+
+    Dim Result As Number
+    Dim TargetTime As Number
+
+    TargetTime = (PointerX - TIMELINE_LEFT) * Duration
+    TargetTime = TargetTime / Max(1, TimelineWidth(WindowWidth, TIMELINE_LEFT))
+    TargetTime = Max(0, Min(Duration, TargetTime))
+    Result = (TargetTime * Max(1, SampleRate) + 500) / 1000
+    Result = Min(SampleCount - 1, Max(0, Result))
+
+    Return Result
+
+End Function
+
+Public Function TimelineKeyframeAtPointer(
+    ByRef Actor As Character3D.Actor,
+    ByRef Calibration As ViewerCalibration.State,
+    CalibrationAvailable As Boolean,
+    SelectedClip As Number,
+    PointerX As Number,
+    PointerY As Number,
+    WindowWidth As Number,
+    WindowHeight As Number
+) As Number
+
+    Dim Duration As Number
+    Dim Index As Number
+    Dim KeyframeTime As Number
+    Dim MarkerX As Number
+    Dim Result As Number
+    Dim TimelineY As Number
+    Dim Width As Number
+
+    Result = -1
+
+    If Not CalibrationAvailable Then
+        Return Result
+    End If
+
+    TimelineY = WindowHeight - 64
+    Width = TimelineWidth(WindowWidth, TIMELINE_LEFT)
+
+    If Not InRectangle(
+        PointerX,
+        PointerY,
+        TIMELINE_LEFT,
+        TimelineY - TIMELINE_KEYFRAME_HIT_RADIUS,
+        Width,
+        TIMELINE_HEIGHT + TIMELINE_KEYFRAME_HIT_RADIUS * 2
+    ) Then
+        Return Result
+    End If
+
+    Duration = Max(1, Character3D.ClipDuration(Actor, SelectedClip))
+
+    For Index = 0 To ViewerCalibration.KeyCount(Calibration, SelectedClip) - 1
+
+        KeyframeTime = ViewerCalibration.FrameTimeMilliseconds(
+            Actor,
+            SelectedClip,
+            ViewerCalibration.KeyFrame(Calibration, SelectedClip, Index)
+        )
+        MarkerX = TIMELINE_LEFT + KeyframeTime * Width / Duration
+
+        If Abs(PointerX - MarkerX) <= TIMELINE_KEYFRAME_HIT_RADIUS Then
+            Result = Index
+            Exit For
+        End If
+
+    End For
+
+    Return Result
+
+End Function
+
 Public Function LayoutTooSmall(WindowWidth As Number, WindowHeight As Number) As Boolean
 
     Dim Result As Boolean

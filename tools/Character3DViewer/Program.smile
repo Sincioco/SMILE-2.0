@@ -876,7 +876,8 @@ Sub CancelInteractionCaptures()
     If ViewerInputState.TimelineKeyframeDragging Then
         Session.Ready = Character3D.SetAnimationTime(
             Character,
-            CalibrationFrameTimeMilliseconds(
+            ViewerCalibration.FrameTimeMilliseconds(
+                Character,
                 Playback.SelectedClip,
                 ViewerInputState.TimelineDraggedOriginalFrame
             )
@@ -1972,7 +1973,16 @@ Function HandleInspectorPointer() As Boolean
         Return Blocked
     End If
 
-    KeyframeIndex = TimelineKeyframeAtPointer()
+    KeyframeIndex = ViewerUi.TimelineKeyframeAtPointer(
+        Character,
+        Calibration,
+        CalibrationAvailable,
+        Playback.SelectedClip,
+        Pointer_X(),
+        Pointer_Y(),
+        Window_Width(),
+        Window_Height()
+    )
 
     If PointerInRectangle(ViewerUi.TIMELINE_LEFT, Window_Height() - 96, 62, 24) Then
 
@@ -2769,7 +2779,8 @@ Sub SeekCalibrationKeyframe(Direction As Number)
     End If
 
     TargetFrame = ViewerCalibration.KeyFrame(Calibration, Playback.SelectedClip, CandidateIndex)
-    TargetTime = CalibrationFrameTimeMilliseconds(Playback.SelectedClip, TargetFrame)
+    TargetTime = ViewerCalibration.FrameTimeMilliseconds(
+        Character, Playback.SelectedClip, TargetFrame)
     Session.Ready = Character3D.SetAnimationTime(Character, TargetTime) And Session.Ready
 
     Call ViewerEffects.InvalidateVisualHistory(Effects)
@@ -2860,73 +2871,6 @@ Sub SeekFromPointer()
 
 End Sub
 
-Function TimelineFrameFromPointer() As Number
-
-    Dim Duration As Number
-    Dim Result As Number
-    Dim SampleRate As Number
-    Dim TargetTime As Number
-
-    Duration = Character3D.ClipDuration(Character, Playback.SelectedClip)
-    TargetTime = (Pointer_X() - ViewerUi.TIMELINE_LEFT) * Duration / Max(1, ViewerUi.TimelineWidth(Window_Width(), ViewerUi.TIMELINE_LEFT))
-    TargetTime = Max(0, Min(Duration, TargetTime))
-    SampleRate = Max(1, Character3D.ClipSampleRate(Character, Playback.SelectedClip))
-    Result = (TargetTime * SampleRate + 500) / 1000
-    Result = Min(Character3D.ClipSampleCount(Character, Playback.SelectedClip) - 1, Max(0, Result))
-
-    Return Result
-
-End Function
-
-Function TimelineKeyframeAtPointer() As Number
-
-    Dim Duration As Number
-    Dim Index As Number
-    Dim KeyframeTime As Number
-    Dim MarkerX As Number
-    Dim Result As Number
-    Dim TimelineY As Number
-    Dim Width As Number
-
-    Result = -1
-
-    If Not CalibrationAvailable Then
-        Return Result
-    End If
-
-    TimelineY = Window_Height() - 64
-
-    If Not PointerInRectangle(
-        ViewerUi.TIMELINE_LEFT,
-        TimelineY - ViewerUi.TIMELINE_KEYFRAME_HIT_RADIUS,
-        ViewerUi.TimelineWidth(Window_Width(), ViewerUi.TIMELINE_LEFT),
-        ViewerUi.TIMELINE_HEIGHT + ViewerUi.TIMELINE_KEYFRAME_HIT_RADIUS * 2
-    ) Then
-        Return Result
-    End If
-
-    Duration = Max(1, Character3D.ClipDuration(Character, Playback.SelectedClip))
-    Width = ViewerUi.TimelineWidth(Window_Width(), ViewerUi.TIMELINE_LEFT)
-
-    For Index = 0 To ViewerCalibration.KeyCount(Calibration, Playback.SelectedClip) - 1
-
-        KeyframeTime = CalibrationFrameTimeMilliseconds(
-            Playback.SelectedClip,
-            ViewerCalibration.KeyFrame(Calibration, Playback.SelectedClip, Index)
-        )
-        MarkerX = ViewerUi.TIMELINE_LEFT + KeyframeTime * Width / Duration
-
-        If Abs(Pointer_X() - MarkerX) <= ViewerUi.TIMELINE_KEYFRAME_HIT_RADIUS Then
-            Result = Index
-            Exit For
-        End If
-
-    End For
-
-    Return Result
-
-End Function
-
 Sub BeginTimelineKeyframeDrag(KeyframeIndex As Number)
 
     Call BeginPartyPreview()
@@ -2946,14 +2890,21 @@ Sub UpdateTimelineKeyframeDrag()
     Dim TargetFrame As Number
     Dim TargetTime As Number
 
-    TargetFrame = TimelineFrameFromPointer()
+    TargetFrame = ViewerUi.TimelineFrameAtPointer(
+        Pointer_X(),
+        Window_Width(),
+        Character3D.ClipDuration(Character, Playback.SelectedClip),
+        Character3D.ClipSampleRate(Character, Playback.SelectedClip),
+        Character3D.ClipSampleCount(Character, Playback.SelectedClip)
+    )
     ExistingKeyframe = CalibrationKeyframeIndex(Playback.SelectedClip, TargetFrame)
 
     If ExistingKeyframe < 0 Or ExistingKeyframe = ViewerInputState.TimelineDraggedKeyframe Then
         ViewerInputState.TimelineDraggedTargetFrame = TargetFrame
     End If
 
-    TargetTime = CalibrationFrameTimeMilliseconds(Playback.SelectedClip, ViewerInputState.TimelineDraggedTargetFrame)
+    TargetTime = ViewerCalibration.FrameTimeMilliseconds(
+        Character, Playback.SelectedClip, ViewerInputState.TimelineDraggedTargetFrame)
     Session.Ready = Character3D.SetAnimationTime(Character, TargetTime) And Session.Ready
 
     Call ViewerEffects.InvalidateVisualHistory(Effects)
@@ -3210,16 +3161,6 @@ Function CurrentAnimationFrame() As Number
     Dim Result As Number
 
     Result = ViewerCalibration.CurrentAnimationFrame(Character, Playback.SelectedClip)
-
-    Return Result
-
-End Function
-
-Function CalibrationFrameTimeMilliseconds(Clip As Number, FrameValue As Number) As Number
-
-    Dim Result As Number
-
-    Result = ViewerCalibration.FrameTimeMilliseconds(Character, Clip, FrameValue)
 
     Return Result
 

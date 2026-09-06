@@ -309,6 +309,9 @@ Call Check(ViewerUi.AnimationButtonX(1600) = 1344)
 Call Check(ViewerUi.GlowButtonX(1600, True, False) = 1548)
 Call Check(ViewerUi.GlowButtonWidth(True, False) = 36)
 Call Check(ViewerUi.TimelineWidth(1600, 18) = 1294)
+Call Check(ViewerUi.TimelineFrameAtPointer(512, 800, 1000, 30, 31) = 30)
+Call Check(ViewerUi.TimelineKeyframeAtPointer(
+    PartyPrimary.Actor, CalibrationState, True, 3, 18, 576, 800, 640) = 0)
 Call Check(ViewerUi.TIMELINE_LEFT = 18 And ViewerUi.TIMELINE_HEIGHT = 18)
 Call Check(ViewerUi.CALIBRATION_PANEL_WIDTH = 430 And
     ViewerUi.CALIBRATION_SLIDER_WIDTH = 360)
