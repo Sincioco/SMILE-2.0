@@ -203,6 +203,7 @@ try {
         'Public Function BeginInspectorBinding(',
         'Public Sub InitializeFormation(',
         'Public Function AdvanceElapsed(',
+        'Public Sub ApplyAttackCamera(',
         'Public Function ClassifyPointer(',
         'Public Function DrawCompanion(',
         'Public Sub DrawOverlay(',
@@ -280,8 +281,9 @@ try {
     Assert-True (-not $viewerSource.Contains('Function DrawPartyCompanion()') -and
         -not $viewerSource.Contains('Sub DestroyPartyCompanion()') -and
         -not $viewerSource.Contains('Sub DrawPartyOverlay()') -and
-        -not $viewerSource.Contains('Sub DrawPartyCameraDetails(')) `
-        'Party drawing, overlay presentation and participant lifecycle must remain in ViewerParty.'
+        -not $viewerSource.Contains('Sub DrawPartyCameraDetails(') -and
+        -not $viewerSource.Contains('Sub ApplyPartyAttackCamera()')) `
+        'Party cameras, drawing, overlay presentation and participant lifecycle must remain in ViewerParty.'
     Assert-True (-not $viewerSource.Contains('Dim ShieldFire[') -and
         -not $viewerSource.Contains('Dim ShieldFirePoints[') -and
         -not $viewerSource.Contains('Dim SwordTrailPoints[') -and

@@ -465,6 +465,92 @@ Call Check(PartyState.FatalStarted And
     ViewerParty.PresentationState(PartyState, 0) = ViewerParty.STATE_HIT)
 Call Check(PartyActions.FirstClipRequested And PartyActions.FirstClip = "Hit")
 
+Call ViewerParty.ResetChoreography(PartyState)
+
+PartyState.Enabled = True
+PartyState.Ready = True
+PartyState.Turn = 0
+PartyState.Stage = 1
+PartyState.Elapsed = 1400
+PartyState.PreviousCamera = 2
+PartyState.PreviousCameraTurn = 0
+PartyState.PreviousShotStage = 1
+PartyState.ShotBoss = Math3D.Vector(-208, 70, -120)
+PartyState.ShotBossHead = Math3D.Vector(-208, 115, -120)
+PartyState.ShotMouth = Math3D.Vector(-208, 100, -120)
+PartyState.Companion.Frame.PositionX = -45
+PartyState.Companion.Frame.PositionY = 0
+PartyState.Companion.Frame.PositionZ = 35
+Frame.PositionX = -20
+Frame.PositionY = 0
+Frame.PositionZ = -40
+OrbitBase = Graphics3D.DefaultCamera()
+
+Call ViewerParty.ApplyAttackCamera(
+    PartyState,
+    OrbitBase,
+    Frame,
+    PartyPrimary.Actor,
+    True,
+    True,
+    True,
+    100,
+    16,
+    1200,
+    -208,
+    -120
+)
+
+Call Check(PartyState.ActiveCamera = 2 And PartyState.PreviousCamera = 2)
+Call Check(OrbitBase.Position.X = PartyState.HeroCamera.Position.X And
+    OrbitBase.Target.Z = PartyState.HeroCamera.Target.Z)
+Call Check(OrbitBase.UpDirection.Y = Core.FIXED_ONE And
+    OrbitBase.Position.Y >= 24)
+
+PartyState.Turn = 2
+PartyState.Stage = 0
+PartyState.Elapsed = 100
+PartyState.DragonCounter = 2
+PartyState.PreviousCameraTurn = 2
+PartyState.PreviousShotStage = 0
+
+Call ViewerParty.ApplyAttackCamera(
+    PartyState,
+    OrbitBase,
+    Frame,
+    PartyPrimary.Actor,
+    True,
+    True,
+    True,
+    100,
+    16,
+    1200,
+    -208,
+    -120
+)
+
+Call Check(PartyState.ActiveCamera = 3 And
+    OrbitBase.Position.X = PartyState.DragonCamera.Position.X)
+
+PartyState.Enabled = False
+
+Call ViewerParty.ApplyAttackCamera(
+    PartyState,
+    OrbitBase,
+    Frame,
+    PartyPrimary.Actor,
+    True,
+    True,
+    True,
+    100,
+    16,
+    1200,
+    -208,
+    -120
+)
+
+Call Check(PartyState.ActiveCamera = 1 And PartyState.PreviousCamera = 1)
+
 Call SceneVfx3D.Initialize(EffectsState.Clock)
 Call Check(ViewerEffects.AdvanceScene(EffectsState, 16, True, OrbitBase))
 Call Check(Not EffectsState.Clock.FireFrozen And Not EffectsState.Clock.LightningFrozen)

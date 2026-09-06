@@ -13,6 +13,11 @@ Import Smile.Tools.BattleCamera As BattleCamera
 Import Smile.Tools.Character3DViewerActors As ViewerActors
 Import Smile.Tools.Character3DViewerProfiles As ViewerProfiles
 
+Private Const DRAGON_CAMERA_CHEST_HEIGHT = 70
+Private Const DRAGON_CAMERA_HEAD_HEIGHT = 115
+Private Const DRAGON_CAMERA_MOUTH_HEIGHT = 100
+Private Const DRAGON_CAMERA_ANCHOR_MAXIMUM_DELTA = 500
+
 Public Const STATE_ALIVE = 0
 Public Const STATE_ACTING = 1
 Public Const STATE_GUARDING = 2
@@ -740,6 +745,237 @@ Public Function AdvanceChoreography(ByRef Value As State,
     Return Actions
 
 End Function
+
+Public Sub ApplyAttackCamera(
+    ByRef Value As State,
+    ByRef LiveCamera As Core.Camera3D,
+    PrimaryFrame As CharacterViewer.Framing,
+    DragonActor As Character3D.Actor,
+    DragonAvailable As Boolean,
+    DragonVisible As Boolean,
+    AutoOrbit As Boolean,
+    PlaybackSpeed As Number,
+    CameraElapsed As Number,
+    AttackMilliseconds As Number,
+    DragonPositionX As Number,
+    DragonPositionZ As Number
+)
+
+    Dim Hero As Core.Vector3
+    Dim OtherHero As Core.Vector3
+    Dim WaistHeight As Number
+    Dim Boss As Core.Vector3
+    Dim BossHead As Core.Vector3
+    Dim Mouth As Core.Vector3
+    Dim Desired As Core.Camera3D
+    Dim Distance As Number
+    Dim DeltaX As Number
+    Dim DeltaZ As Number
+    Dim Along As Number
+    Dim Across As Number
+    Dim Height As Number
+    Dim Impact1000 As Number
+    Dim BattleShot As Boolean
+    Dim BossChargeShot As Boolean
+    Dim ShotSide As Number
+    Dim StableAnchor As Core.Vector3
+
+    Value.OrbitCamera = LiveCamera
+    Value.ActiveCamera = 1
+
+    If (Not Value.Enabled Or
+        Not Value.Ready Or
+        Not DragonAvailable Or
+        Not AutoOrbit Or
+        Not DragonVisible) Then
+        Value.PreviousCamera = 1
+        Return
+    End If
+
+    BattleShot = Value.Stage <= 1
+
+    If Value.Turn = 2 Then
+        BattleShot = Value.Elapsed < 3000
+    End If
+
+    If Not BattleShot Then
+        Value.PreviousCamera = 1
+        Return
+    End If
+
+    ''' Actor homes/travel are stable. Bone bobbing and KO must not drive the camera.
+    Hero = Math3D.Vector(PrimaryFrame.PositionX, PrimaryFrame.PositionY + 68, PrimaryFrame.PositionZ)
+
+    If Value.Turn = 1 Then
+        Hero = Math3D.Vector(Value.Companion.Frame.PositionX,
+            Value.Companion.Frame.PositionY + 80, Value.Companion.Frame.PositionZ)
+    End If
+
+    WaistHeight = Hero.Y - 32
+
+    If Value.Turn = 2 Then
+
+        OtherHero = Math3D.Vector(Value.Companion.Frame.PositionX,
+            Value.Companion.Frame.PositionY + 80, Value.Companion.Frame.PositionZ)
+        WaistHeight = Min(Hero.Y, OtherHero.Y) - 32
+        Hero.X = (Hero.X + OtherHero.X) / 2
+        Hero.Y = (Hero.Y + OtherHero.Y) / 2
+        Hero.Z = (Hero.Z + OtherHero.Z) / 2
+
+    End If
+
+    ''' Frame the boss at the cut; breathing, recoil and head aim do not shake the lens.
+
+    If Value.PreviousCamera = 1 Or Value.Turn <> Value.PreviousCameraTurn Then
+
+        StableAnchor = Math3D.Vector(
+            DragonPositionX, DRAGON_CAMERA_CHEST_HEIGHT, DragonPositionZ)
+        Value.ShotBoss = BattleCamera.BoundedAnchor(
+            Character3D.SocketPosition(DragonActor, "Chest"), StableAnchor,
+            DRAGON_CAMERA_ANCHOR_MAXIMUM_DELTA)
+        StableAnchor.Y = DRAGON_CAMERA_HEAD_HEIGHT
+        Value.ShotBossHead = BattleCamera.BoundedAnchor(
+            Character3D.SocketPosition(DragonActor, "Head"), StableAnchor,
+            DRAGON_CAMERA_ANCHOR_MAXIMUM_DELTA)
+        StableAnchor.Y = DRAGON_CAMERA_MOUTH_HEIGHT
+        Value.ShotMouth = BattleCamera.BoundedAnchor(
+            Character3D.SocketPosition(DragonActor, "Mouth"), StableAnchor,
+            DRAGON_CAMERA_ANCHOR_MAXIMUM_DELTA)
+
+    End If
+
+    Boss = Value.ShotBoss
+    BossHead = Value.ShotBossHead
+    BossChargeShot = (Value.Turn = 2 And
+        (Value.Elapsed * PlaybackSpeed / 100 < 650 Or
+        (Value.DragonCounter Mod 3 = 2 And Value.Elapsed * PlaybackSpeed / 100 < 1750)))
+    DeltaX = Hero.X - Boss.X
+    DeltaZ = Hero.Z - Boss.Z
+    Distance = Max(1, Math3D.Distance(Hero, Boss))
+    Along = 150
+    Across = 120
+    Height = 55
+    ShotSide = -1
+
+    If Value.Turn = 1 Then
+        ShotSide = 1
+    End If
+
+    If Value.Elapsed < 650 Then
+
+        Along = -45
+        Across = 190
+        Height = 10
+
+    Else If Value.Stage = 0 And Value.Turn <> 2 Then
+
+        Along = 160
+        Across = 85
+        Height = 65
+
+    Else
+        Impact1000 = Min(1000, Max(0, Value.Elapsed - 1300) * 1000 / Max(1, AttackMilliseconds))
+        Along = 150 - Impact1000 * 35 / 1000
+        Across = 120
+
+    End If
+
+    If Value.Elapsed >= 650 Then
+        Height = WaistHeight - Hero.Y
+    End If
+
+    If Value.Turn = 2 And Value.Elapsed >= 650 Then
+        Along = 170
+        Across = 65
+    End If
+
+    Across = Across * ShotSide
+
+    Desired = Value.OrbitCamera
+    Desired.UpDirection.X = 0
+    Desired.UpDirection.Y = Core.FIXED_ONE
+    Desired.UpDirection.Z = 0
+    Desired.Target.X = (Hero.X + Boss.X) / 2
+    Desired.Target.Y = Max(Hero.Y + 12, BossHead.Y - 35)
+
+    If Value.Elapsed >= 650 Then
+        Desired.Target.Y = (WaistHeight + BossHead.Y) / 2
+    End If
+
+    Desired.Target.Z = (Hero.Z + Boss.Z) / 2
+    Desired.Position.X = Hero.X + DeltaX * Along / Distance - DeltaZ * Across / Distance
+    Desired.Position.Y = Hero.Y + Height
+    Desired.Position.Z = Hero.Z + DeltaZ * Along / Distance + DeltaX * Across / Distance
+
+    If Value.Turn = 2 Then
+
+        Desired.Position.X = Desired.Position.X + (Desired.Position.X - Desired.Target.X) * 15 / 100
+        Desired.Position.Y = Desired.Position.Y + (Desired.Position.Y - Desired.Target.Y) * 15 / 100
+        Desired.Position.Z = Desired.Position.Z + (Desired.Position.Z - Desired.Target.Z) * 15 / 100
+
+    End If
+
+    ''' The orbit stays live. The two battle cameras have independent poses and cut directly.
+
+    Mouth = Value.ShotMouth
+    Value.DragonCamera = Desired
+    Value.DragonCamera.Position.X = BossHead.X - DeltaX * 120 / Distance - DeltaZ * 90 / Distance
+    Value.DragonCamera.Position.Y = BossHead.Y + 20
+    Value.DragonCamera.Position.Z = BossHead.Z - DeltaZ * 120 / Distance + DeltaX * 90 / Distance
+    Value.DragonCamera.Target.X = (Mouth.X * 3 + Hero.X) / 4
+    Value.DragonCamera.Target.Y = (Mouth.Y * 3 + Hero.Y) / 4
+    Value.DragonCamera.Target.Z = (Mouth.Z * 3 + Hero.Z) / 4
+
+    If (Value.PreviousCamera <> 2 Or
+        Value.Turn <> Value.PreviousCameraTurn Or
+        Value.Stage <> Value.PreviousShotStage) Then
+
+        Value.ShotPosition1000.X = Desired.Position.X * 1000
+        Value.ShotPosition1000.Y = Desired.Position.Y * 1000
+        Value.ShotPosition1000.Z = Desired.Position.Z * 1000
+        Value.ShotTarget1000.X = Desired.Target.X * 1000
+        Value.ShotTarget1000.Y = Desired.Target.Y * 1000
+        Value.ShotTarget1000.Z = Desired.Target.Z * 1000
+
+    End If
+
+    Value.ShotPosition1000.X = Value.ShotPosition1000.X + (Desired.Position.X * 1000 - Value.ShotPosition1000.X) * CameraElapsed / (320 + CameraElapsed)
+    Value.ShotPosition1000.Y = Value.ShotPosition1000.Y + (Desired.Position.Y * 1000 - Value.ShotPosition1000.Y) * CameraElapsed / (320 + CameraElapsed)
+    Value.ShotPosition1000.Z = Value.ShotPosition1000.Z + (Desired.Position.Z * 1000 - Value.ShotPosition1000.Z) * CameraElapsed / (320 + CameraElapsed)
+    Value.ShotTarget1000.X = Value.ShotTarget1000.X + (Desired.Target.X * 1000 - Value.ShotTarget1000.X) * CameraElapsed / (180 + CameraElapsed)
+    Value.ShotTarget1000.Y = Value.ShotTarget1000.Y + (Desired.Target.Y * 1000 - Value.ShotTarget1000.Y) * CameraElapsed / (180 + CameraElapsed)
+    Value.ShotTarget1000.Z = Value.ShotTarget1000.Z + (Desired.Target.Z * 1000 - Value.ShotTarget1000.Z) * CameraElapsed / (180 + CameraElapsed)
+    Value.HeroCamera = Desired
+    Value.HeroCamera.Position.X = Value.ShotPosition1000.X / 1000
+    Value.HeroCamera.Position.Y = Value.ShotPosition1000.Y / 1000
+    Value.HeroCamera.Position.Z = Value.ShotPosition1000.Z / 1000
+    Value.HeroCamera.Target.X = Value.ShotTarget1000.X / 1000
+    Value.HeroCamera.Target.Y = Value.ShotTarget1000.Y / 1000
+    Value.HeroCamera.Target.Z = Value.ShotTarget1000.Z / 1000
+
+    ''' Clear both armored silhouettes after smoothing, including a shield held out in front.
+    Hero = Math3D.Vector(PrimaryFrame.PositionX, PrimaryFrame.PositionY, PrimaryFrame.PositionZ)
+    OtherHero = Math3D.Vector(Value.Companion.Frame.PositionX, Value.Companion.Frame.PositionY, Value.Companion.Frame.PositionZ)
+
+    Call BattleCamera.KeepOutsideActor(Value.HeroCamera, Hero, 100)
+    Call BattleCamera.KeepOutsideActor(Value.HeroCamera, OtherHero, 115)
+
+    Value.HeroCamera.Position.Y = Max(24, Value.HeroCamera.Position.Y)
+    Value.DragonCamera.Position.Y = Max(24, Value.DragonCamera.Position.Y)
+
+    LiveCamera = Value.HeroCamera
+    Value.ActiveCamera = 2
+
+    If BossChargeShot Then
+        LiveCamera = Value.DragonCamera
+        Value.ActiveCamera = 3
+    End If
+
+    Value.PreviousCamera = Value.ActiveCamera
+    Value.PreviousCameraTurn = Value.Turn
+    Value.PreviousShotStage = Value.Stage
+
+End Sub
 
 Public Function ClassifyPointer(
     PointerX As Number,

@@ -70,10 +70,6 @@ Const ARENA_CAMERA_CENTER_Z = -45
 Const ARENA_DEFAULT_ZOOM_DEGREES = -15
 Const ARENA_FLOOR_WIDTH = 1000
 Const ARENA_FLOOR_DEPTH = 1000
-Const DRAGON_CAMERA_CHEST_HEIGHT = 70
-Const DRAGON_CAMERA_HEAD_HEIGHT = 115
-Const DRAGON_CAMERA_MOUTH_HEIGHT = 100
-Const DRAGON_CAMERA_ANCHOR_MAXIMUM_DELTA = 500
 Const CALIBRATION_MAX_CLIPS = ViewerCalibration.MAX_CLIPS
 Const CALIBRATION_CHANNEL_COUNT = ViewerCalibration.CHANNEL_COUNT
 Const CALIBRATION_TARGET_SWORD_WRIST = 0
@@ -285,7 +281,8 @@ Do
             Effects,
             Character,
             Session.ProfileIndex,
-            Party.Enabled And PartyPresentationState(0) = ViewerParty.STATE_KO,
+            Party.Enabled And
+                ViewerParty.PresentationState(Party, 0) = ViewerParty.STATE_KO,
             SwordVisible,
             ShieldVisible,
             ViewerUiState.CalibrationEditing,
@@ -305,7 +302,20 @@ Do
         End If
 
         Call UpdateDragon()
-        Call ApplyPartyAttackCamera()
+        Call ViewerParty.ApplyAttackCamera(
+            Party,
+            ViewerCameraState.Live,
+            ViewerCameraState.Frame,
+            DragonState.Actor,
+            DragonState.Available,
+            DragonState.Visible,
+            ViewerCameraState.AutoOrbit,
+            Playback.PlaybackSpeed,
+            Timing.CameraElapsed,
+            PartyAttackDuration(),
+            ViewerDragon.PositionX(),
+            ViewerDragon.PositionZ()
+        )
 
         If Rendering.FloorVisible Then
             Call ViewerCamera.KeepAboveGround(ViewerCameraState, 0)
@@ -362,7 +372,8 @@ Do
 
             If Effects.EpicGlowVisible Then
 
-                If ((Not Party.Enabled Or PartyPresentationState(0) <> ViewerParty.STATE_KO) And
+                If ((Not Party.Enabled Or
+                    ViewerParty.PresentationState(Party, 0) <> ViewerParty.STATE_KO) And
                     Not ViewerEffects.DrawEquipmentGlow(
                         Effects,
                         Session.ProfileIndex,
@@ -1813,224 +1824,6 @@ Sub CycleMaterialInspection()
 
 End Sub
 
-Sub ApplyPartyAttackCamera()
-
-    Dim Hero As Core.Vector3
-    Dim OtherHero As Core.Vector3
-    Dim WaistHeight As Number
-    Dim Boss As Core.Vector3
-    Dim BossHead As Core.Vector3
-    Dim Mouth As Core.Vector3
-    Dim Desired As Core.Camera3D
-    Dim Distance As Number
-    Dim DeltaX As Number
-    Dim DeltaZ As Number
-    Dim Along As Number
-    Dim Across As Number
-    Dim Height As Number
-    Dim Impact1000 As Number
-    Dim BattleShot As Boolean
-    Dim BossChargeShot As Boolean
-    Dim ShotSide As Number
-    Dim StableAnchor As Core.Vector3
-
-    Party.OrbitCamera = ViewerCameraState.Live
-    Party.ActiveCamera = 1
-
-    If (Not Party.Enabled Or
-        Not Party.Ready Or
-        Not DragonState.Available Or
-        Not ViewerCameraState.AutoOrbit Or
-        Not DragonState.Visible) Then
-        Party.PreviousCamera = 1
-        Return
-    End If
-
-    BattleShot = Party.Stage <= 1
-
-    If Party.Turn = 2 Then
-        BattleShot = Party.Elapsed < 3000
-    End If
-
-    If Not BattleShot Then
-        Party.PreviousCamera = 1
-        Return
-    End If
-
-    ''' Actor homes/travel are stable. Bone bobbing and KO must not drive the camera.
-    Hero = Math3D.Vector(ViewerCameraState.Frame.PositionX, ViewerCameraState.Frame.PositionY + 68, ViewerCameraState.Frame.PositionZ)
-
-    If Party.Turn = 1 Then
-        Hero = Math3D.Vector(Party.Companion.Frame.PositionX,
-            Party.Companion.Frame.PositionY + 80, Party.Companion.Frame.PositionZ)
-    End If
-
-    WaistHeight = Hero.Y - 32
-
-    If Party.Turn = 2 Then
-
-        OtherHero = Math3D.Vector(Party.Companion.Frame.PositionX,
-            Party.Companion.Frame.PositionY + 80, Party.Companion.Frame.PositionZ)
-        WaistHeight = Min(Hero.Y, OtherHero.Y) - 32
-        Hero.X = (Hero.X + OtherHero.X) / 2
-        Hero.Y = (Hero.Y + OtherHero.Y) / 2
-        Hero.Z = (Hero.Z + OtherHero.Z) / 2
-
-    End If
-
-    ''' Frame the boss at the cut; breathing, recoil and head aim do not shake the lens.
-
-    If Party.PreviousCamera = 1 Or Party.Turn <> Party.PreviousCameraTurn Then
-
-        StableAnchor = Math3D.Vector(
-            ViewerDragon.PositionX(), DRAGON_CAMERA_CHEST_HEIGHT, ViewerDragon.PositionZ())
-        Party.ShotBoss = BattleCamera.BoundedAnchor(
-            Character3D.SocketPosition(DragonState.Actor, "Chest"), StableAnchor,
-            DRAGON_CAMERA_ANCHOR_MAXIMUM_DELTA)
-        StableAnchor.Y = DRAGON_CAMERA_HEAD_HEIGHT
-        Party.ShotBossHead = BattleCamera.BoundedAnchor(
-            Character3D.SocketPosition(DragonState.Actor, "Head"), StableAnchor,
-            DRAGON_CAMERA_ANCHOR_MAXIMUM_DELTA)
-        StableAnchor.Y = DRAGON_CAMERA_MOUTH_HEIGHT
-        Party.ShotMouth = BattleCamera.BoundedAnchor(
-            Character3D.SocketPosition(DragonState.Actor, "Mouth"), StableAnchor,
-            DRAGON_CAMERA_ANCHOR_MAXIMUM_DELTA)
-
-    End If
-
-    Boss = Party.ShotBoss
-    BossHead = Party.ShotBossHead
-    BossChargeShot = (Party.Turn = 2 And
-        (Party.Elapsed * Playback.PlaybackSpeed / 100 < 650 Or
-        (Party.DragonCounter Mod 3 = 2 And Party.Elapsed * Playback.PlaybackSpeed / 100 < 1750)))
-    DeltaX = Hero.X - Boss.X
-    DeltaZ = Hero.Z - Boss.Z
-    Distance = Max(1, Math3D.Distance(Hero, Boss))
-    Along = 150
-    Across = 120
-    Height = 55
-    ShotSide = -1
-
-    If Party.Turn = 1 Then
-        ShotSide = 1
-    End If
-
-    If Party.Elapsed < 650 Then
-
-        Along = -45
-        Across = 190
-        Height = 10
-
-    Else If Party.Stage = 0 And Party.Turn <> 2 Then
-
-        Along = 160
-        Across = 85
-        Height = 65
-
-    Else
-        Impact1000 = Min(1000, Max(0, Party.Elapsed - 1300) * 1000 / Max(1, PartyAttackDuration()))
-        Along = 150 - Impact1000 * 35 / 1000
-        Across = 120
-
-    End If
-
-    If Party.Elapsed >= 650 Then
-        Height = WaistHeight - Hero.Y
-    End If
-
-    If Party.Turn = 2 And Party.Elapsed >= 650 Then
-        Along = 170
-        Across = 65
-    End If
-
-    Across = Across * ShotSide
-
-    Desired = Party.OrbitCamera
-    Desired.UpDirection.X = 0
-    Desired.UpDirection.Y = Core.FIXED_ONE
-    Desired.UpDirection.Z = 0
-    Desired.Target.X = (Hero.X + Boss.X) / 2
-    Desired.Target.Y = Max(Hero.Y + 12, BossHead.Y - 35)
-
-    If Party.Elapsed >= 650 Then
-        Desired.Target.Y = (WaistHeight + BossHead.Y) / 2
-    End If
-
-    Desired.Target.Z = (Hero.Z + Boss.Z) / 2
-    Desired.Position.X = Hero.X + DeltaX * Along / Distance - DeltaZ * Across / Distance
-    Desired.Position.Y = Hero.Y + Height
-    Desired.Position.Z = Hero.Z + DeltaZ * Along / Distance + DeltaX * Across / Distance
-
-    If Party.Turn = 2 Then
-
-        Desired.Position.X = Desired.Position.X + (Desired.Position.X - Desired.Target.X) * 15 / 100
-        Desired.Position.Y = Desired.Position.Y + (Desired.Position.Y - Desired.Target.Y) * 15 / 100
-        Desired.Position.Z = Desired.Position.Z + (Desired.Position.Z - Desired.Target.Z) * 15 / 100
-
-    End If
-
-    ''' The orbit stays live. The two battle cameras have independent poses and cut directly.
-
-    Mouth = Party.ShotMouth
-    Party.DragonCamera = Desired
-    Party.DragonCamera.Position.X = BossHead.X - DeltaX * 120 / Distance - DeltaZ * 90 / Distance
-    Party.DragonCamera.Position.Y = BossHead.Y + 20
-    Party.DragonCamera.Position.Z = BossHead.Z - DeltaZ * 120 / Distance + DeltaX * 90 / Distance
-    Party.DragonCamera.Target.X = (Mouth.X * 3 + Hero.X) / 4
-    Party.DragonCamera.Target.Y = (Mouth.Y * 3 + Hero.Y) / 4
-    Party.DragonCamera.Target.Z = (Mouth.Z * 3 + Hero.Z) / 4
-
-    If (Party.PreviousCamera <> 2 Or
-        Party.Turn <> Party.PreviousCameraTurn Or
-        Party.Stage <> Party.PreviousShotStage) Then
-
-        Party.ShotPosition1000.X = Desired.Position.X * 1000
-        Party.ShotPosition1000.Y = Desired.Position.Y * 1000
-        Party.ShotPosition1000.Z = Desired.Position.Z * 1000
-        Party.ShotTarget1000.X = Desired.Target.X * 1000
-        Party.ShotTarget1000.Y = Desired.Target.Y * 1000
-        Party.ShotTarget1000.Z = Desired.Target.Z * 1000
-
-    End If
-
-    Party.ShotPosition1000.X = Party.ShotPosition1000.X + (Desired.Position.X * 1000 - Party.ShotPosition1000.X) * Timing.CameraElapsed / (320 + Timing.CameraElapsed)
-    Party.ShotPosition1000.Y = Party.ShotPosition1000.Y + (Desired.Position.Y * 1000 - Party.ShotPosition1000.Y) * Timing.CameraElapsed / (320 + Timing.CameraElapsed)
-    Party.ShotPosition1000.Z = Party.ShotPosition1000.Z + (Desired.Position.Z * 1000 - Party.ShotPosition1000.Z) * Timing.CameraElapsed / (320 + Timing.CameraElapsed)
-    Party.ShotTarget1000.X = Party.ShotTarget1000.X + (Desired.Target.X * 1000 - Party.ShotTarget1000.X) * Timing.CameraElapsed / (180 + Timing.CameraElapsed)
-    Party.ShotTarget1000.Y = Party.ShotTarget1000.Y + (Desired.Target.Y * 1000 - Party.ShotTarget1000.Y) * Timing.CameraElapsed / (180 + Timing.CameraElapsed)
-    Party.ShotTarget1000.Z = Party.ShotTarget1000.Z + (Desired.Target.Z * 1000 - Party.ShotTarget1000.Z) * Timing.CameraElapsed / (180 + Timing.CameraElapsed)
-    Party.HeroCamera = Desired
-    Party.HeroCamera.Position.X = Party.ShotPosition1000.X / 1000
-    Party.HeroCamera.Position.Y = Party.ShotPosition1000.Y / 1000
-    Party.HeroCamera.Position.Z = Party.ShotPosition1000.Z / 1000
-    Party.HeroCamera.Target.X = Party.ShotTarget1000.X / 1000
-    Party.HeroCamera.Target.Y = Party.ShotTarget1000.Y / 1000
-    Party.HeroCamera.Target.Z = Party.ShotTarget1000.Z / 1000
-
-    ''' Clear both armored silhouettes after smoothing, including a shield held out in front.
-    Hero = Math3D.Vector(ViewerCameraState.Frame.PositionX, ViewerCameraState.Frame.PositionY, ViewerCameraState.Frame.PositionZ)
-    OtherHero = Math3D.Vector(Party.Companion.Frame.PositionX, Party.Companion.Frame.PositionY, Party.Companion.Frame.PositionZ)
-
-    Call BattleCamera.KeepOutsideActor(Party.HeroCamera, Hero, 100)
-    Call BattleCamera.KeepOutsideActor(Party.HeroCamera, OtherHero, 115)
-
-    Party.HeroCamera.Position.Y = Max(24, Party.HeroCamera.Position.Y)
-    Party.DragonCamera.Position.Y = Max(24, Party.DragonCamera.Position.Y)
-
-    ViewerCameraState.Live = Party.HeroCamera
-    Party.ActiveCamera = 2
-
-    If BossChargeShot Then
-        ViewerCameraState.Live = Party.DragonCamera
-        Party.ActiveCamera = 3
-    End If
-
-    Party.PreviousCamera = Party.ActiveCamera
-    Party.PreviousCameraTurn = Party.Turn
-    Party.PreviousShotStage = Party.Stage
-
-End Sub
-
 Sub AdvanceAnimationSequence()
 
     Dim ClipCount As Number
@@ -2833,7 +2626,7 @@ Sub UpdateOrinStorm()
         Call ViewerEffects.UpdateStorm(Effects, Party.Companion.Actor, Clip, Target,
             ViewerCameraState.Live, Timing.CameraElapsed,
             Party.Companion.GlowVisible And (Effects.EpicGlowVisible Or Session.DragonInspection) And
-                PartyPresentationState(1) <> ViewerParty.STATE_KO,
+                ViewerParty.PresentationState(Party, 1) <> ViewerParty.STATE_KO,
             SwordVisible, ShieldVisible, Playback.ScenePaused)
     Else If Session.ProfileIndex = ViewerProfiles.PROFILE_ORIN Then
         Clip = Character3D.ClipName(Character, Playback.SelectedClip)
@@ -6141,32 +5934,6 @@ Function PartyHomePosition(MemberIndex As Number, MemberCount As Number) As Core
     Result = ViewerParty.FormationPosition(Center, PARTY_FORMATION_RADIUS,
         PARTY_FORMATION_START_ANGLE, PARTY_FORMATION_END_ANGLE,
         MemberIndex, MemberCount)
-
-    Return Result
-
-End Function
-
-Function PartyPresentationState(MemberIndex As Number) As Number
-
-    Dim Result As Number
-
-    Result = ViewerParty.PresentationState(Party, MemberIndex)
-
-    Return Result
-
-End Function
-
-Sub SetPartyPresentationState(MemberIndex As Number, State As Number)
-
-    Call ViewerParty.SetPresentationState(Party, MemberIndex, State)
-
-End Sub
-
-Function PartyPresentationStateName(State As Number) As Text
-
-    Dim Result As Text
-
-    Result = ViewerParty.PresentationStateName(State)
 
     Return Result
 
