@@ -454,6 +454,21 @@ Call ViewerGizmo.Reset(GizmoState)
 Call Check(Not GizmoState.Visible And Not GizmoState.Dragging)
 
 GizmoState.Visible = True
+GizmoState.Projection.Origin.X = 0
+GizmoState.Projection.Origin.Y = 0
+GizmoState.Projection.XAxis.X = 30
+GizmoState.Projection.XAxis.Y = 0
+
+Call Check(ViewerGizmo.DragValueAmount(
+    GizmoState, ViewerUi.CALIBRATION_TRANSFORM_MOVE,
+    ViewerUi.CALIBRATION_AXIS_X, 0, 0, 1, 0,
+    DirectCamera, 800, 640) = 0)
+Call Check(GizmoState.DragRemainder = 1)
+Call Check(ViewerGizmo.DragValueAmount(
+    GizmoState, ViewerUi.CALIBRATION_TRANSFORM_MOVE,
+    ViewerUi.CALIBRATION_AXIS_X, 0, 0, 2, 0,
+    DirectCamera, 800, 640) = 1)
+Call Check(GizmoState.DragRemainder = 0)
 
 Call ViewerGizmo.BeginDrag(GizmoState, True, True, 27)
 Call Check(GizmoState.Dragging And GizmoState.PointerOwned)

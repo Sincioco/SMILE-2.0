@@ -4,6 +4,8 @@ Module Smile.Tools.Character3DViewerCalibrationEditing
 Option Explicit
 
 Import Smile.Simple3D.Character3D As Character3D
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Graphics3D As Graphics3D
 Import Smile.Tools.Character3DViewerCalibration As ViewerCalibration
 Import Smile.Tools.Character3DViewerCamera As ViewerCamera
 Import Smile.Tools.Character3DViewerEffects As ViewerEffects
@@ -12,6 +14,7 @@ Import Smile.Tools.Character3DViewerUi As ViewerUi
 
 Private Const SHIELD_PART_INDEX = 0
 Private Const WEAPON_PART_INDEX = 1
+Private Const BODY_PART_INDEX = 2
 
 Public Type OperationResult
     Applied As Boolean
@@ -104,6 +107,40 @@ Public Function CurrentValue(ByRef Calibration As ViewerCalibration.State,
         Ui.CalibrationTransform,
         Ui.CalibrationAxis
     )
+
+    Return Result
+
+End Function
+
+Public Function GizmoOrigin(ByRef Actor As Character3D.Actor,
+    ByRef Ui As ViewerUi.State) As Core.Vector3
+
+    Dim PartIndex As Number
+    Dim Result As Core.Vector3
+    Dim SocketName As Text
+
+    PartIndex = BODY_PART_INDEX
+    SocketName = "HandRight"
+
+    If Ui.CalibrationTarget = ViewerUi.CALIBRATION_TARGET_SHIELD_WRIST Then
+        SocketName = "HandLeft"
+    Else If Ui.CalibrationTarget = ViewerUi.CALIBRATION_TARGET_SWORD Then
+        PartIndex = WEAPON_PART_INDEX
+        SocketName = "SwordBase"
+    Else If Ui.CalibrationTarget = ViewerUi.CALIBRATION_TARGET_SHIELD Then
+        PartIndex = SHIELD_PART_INDEX
+        SocketName = "ShieldCenter"
+    End If
+
+    Result.X = Character3D.SocketValueThousandths(
+        Actor, SocketName,
+        Graphics3D.ANIMATOR_SOCKET_POSITION_X, PartIndex) / 1000
+    Result.Y = Character3D.SocketValueThousandths(
+        Actor, SocketName,
+        Graphics3D.ANIMATOR_SOCKET_POSITION_Y, PartIndex) / 1000
+    Result.Z = Character3D.SocketValueThousandths(
+        Actor, SocketName,
+        Graphics3D.ANIMATOR_SOCKET_POSITION_Z, PartIndex) / 1000
 
     Return Result
 

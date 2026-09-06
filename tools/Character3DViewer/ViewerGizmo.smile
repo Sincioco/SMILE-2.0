@@ -15,6 +15,8 @@ Private Const TRANSFORM_ROTATE = 0
 Private Const TRANSFORM_MOVE = 1
 Private Const RING_SEGMENTS = 128
 Private Const HIT_RADIUS = 12
+Private Const MOVE_POINTER_DIVISOR = 3
+Private Const ROTATE_POINTER_DIVISOR = 1000
 
 Public Type State
     Projection As CharacterViewer.TransformGizmo
@@ -243,6 +245,34 @@ Public Function RingPointerDelta(ByRef Value As State, SelectedAxis As Number,
 
     If SelectedAxis = AXIS_Y Then
         Result = 0 - Result
+    End If
+
+    Return Result
+
+End Function
+
+Public Function DragValueAmount(ByRef Value As State,
+    Transform As Number, SelectedAxis As Number,
+    PointerX As Number, PointerY As Number,
+    DeltaX As Number, DeltaY As Number,
+    Camera As Core.Camera3D, WindowWidth As Number,
+    WindowHeight As Number) As Number
+
+    Dim PointerAmount As Number
+    Dim Result As Number
+
+    If Transform = TRANSFORM_MOVE Then
+        PointerAmount = CharacterViewer.TransformGizmoAxisPointerDelta(
+            Value.Projection, SelectedAxis, DeltaX, DeltaY)
+        Result = CharacterViewer.RetainedPointerDelta(
+            Value.DragRemainder, PointerAmount, MOVE_POINTER_DIVISOR)
+    Else
+
+        PointerAmount = RingPointerDelta(
+            Value, SelectedAxis, PointerX, PointerY,
+            DeltaX, DeltaY, Camera, WindowWidth, WindowHeight)
+        Result = CharacterViewer.RetainedPointerDelta(
+            Value.DragRemainder, PointerAmount, ROTATE_POINTER_DIVISOR)
     End If
 
     Return Result

@@ -53,8 +53,6 @@ Const ARENA_DEFAULT_ZOOM_DEGREES = -15
 Const ARENA_FLOOR_WIDTH = 1000
 Const ARENA_FLOOR_DEPTH = 1000
 Const CALIBRATION_MAX_CLIPS = ViewerCalibration.MAX_CLIPS
-Const TRANSFORM_GIZMO_MOVE_DIVISOR = 3
-Const TRANSFORM_GIZMO_ROTATE_DIVISOR = 1000
 Const BACKGROUND_COUNT = 5
 Const BACKDROP_LANDSCAPE_PATH = "Assets\Backgrounds\SinStarLandscape.png"
 Const BACKDROP_TITLE_PATH = "Assets\Backgrounds\SinStarTitleWithLogo.png"
@@ -1376,41 +1374,20 @@ End Function
 
 Sub UpdateTransformGizmoFromPointer()
 
-    Dim PointerAmount As Number
     Dim ValueAmount As Number
 
-    If ViewerUiState.CalibrationTransform = ViewerUi.CALIBRATION_TRANSFORM_MOVE Then
-        PointerAmount = CharacterViewer.TransformGizmoAxisPointerDelta(
-            ViewerGizmoState.Projection,
-            ViewerUiState.CalibrationAxis,
-            Pointer_Delta_X(),
-            Pointer_Delta_Y()
-        )
-        ValueAmount = CharacterViewer.RetainedPointerDelta(
-            ViewerGizmoState.DragRemainder,
-            PointerAmount,
-            TRANSFORM_GIZMO_MOVE_DIVISOR
-        )
-    Else
-
-        PointerAmount = ViewerGizmo.RingPointerDelta(
-            ViewerGizmoState,
-            ViewerUiState.CalibrationAxis,
-            Pointer_X(),
-            Pointer_Y(),
-            Pointer_Delta_X(),
-            Pointer_Delta_Y(),
-            ViewerCameraState.Live,
-            Window_Width(),
-            Window_Height()
-        )
-
-        ValueAmount = CharacterViewer.RetainedPointerDelta(
-            ViewerGizmoState.DragRemainder,
-            PointerAmount,
-            TRANSFORM_GIZMO_ROTATE_DIVISOR
-        )
-    End If
+    ValueAmount = ViewerGizmo.DragValueAmount(
+        ViewerGizmoState,
+        ViewerUiState.CalibrationTransform,
+        ViewerUiState.CalibrationAxis,
+        Pointer_X(),
+        Pointer_Y(),
+        Pointer_Delta_X(),
+        Pointer_Delta_Y(),
+        ViewerCameraState.Live,
+        Window_Width(),
+        Window_Height()
+    )
 
     If ValueAmount <> 0 Then
         Call AdjustCalibrationValue(ValueAmount)
@@ -1423,43 +1400,13 @@ Sub UpdateTransformGizmo()
 
     Call ViewerGizmo.UpdateProjection(
         ViewerGizmoState,
-        CurrentTransformGizmoOrigin(),
+        ViewerCalibrationEditing.GizmoOrigin(Character, ViewerUiState),
         ViewerCameraState.Live,
         Window_Width(),
         Window_Height()
     )
 
 End Sub
-
-Function CurrentTransformGizmoOrigin() As Core.Vector3
-
-    Dim Result As Core.Vector3
-    Dim SocketName As Text
-    Dim PartIndex As Number
-
-    PartIndex = BODY_PART_INDEX
-    SocketName = "HandRight"
-
-    If ViewerUiState.CalibrationTarget = ViewerUi.CALIBRATION_TARGET_SHIELD_WRIST Then
-        SocketName = "HandLeft"
-    Else If ViewerUiState.CalibrationTarget = ViewerUi.CALIBRATION_TARGET_SWORD Then
-        PartIndex = WEAPON_PART_INDEX
-        SocketName = "SwordBase"
-    Else If ViewerUiState.CalibrationTarget = ViewerUi.CALIBRATION_TARGET_SHIELD Then
-        PartIndex = SHIELD_PART_INDEX
-        SocketName = "ShieldCenter"
-    End If
-
-    Result.X = Character3D.SocketValueThousandths(Character, SocketName,
-        Graphics3D.ANIMATOR_SOCKET_POSITION_X, PartIndex) / 1000
-    Result.Y = Character3D.SocketValueThousandths(Character, SocketName,
-        Graphics3D.ANIMATOR_SOCKET_POSITION_Y, PartIndex) / 1000
-    Result.Z = Character3D.SocketValueThousandths(Character, SocketName,
-        Graphics3D.ANIMATOR_SOCKET_POSITION_Z, PartIndex) / 1000
-
-    Return Result
-
-End Function
 
 Sub ToggleScenePause()
 
@@ -2372,7 +2319,8 @@ Sub UpdateCameraPointer(Blocked As Boolean)
     If OrbitPressed And ViewerCameraState.CalibrationOrbitActive Then
         Call ViewerCamera.BeginCalibrationOrbitAnchor(
             ViewerCameraState,
-            CurrentTransformGizmoOrigin(),
+            ViewerCalibrationEditing.GizmoOrigin(
+                Character, ViewerUiState),
             Pointer_X(),
             Pointer_Y(),
             Window_Width(),

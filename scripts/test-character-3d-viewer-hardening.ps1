@@ -224,6 +224,7 @@ try {
         'Public Sub EvaluateCurrent(',
         'Public Function ApplyPose(',
         'Public Function CurrentValue(',
+        'Public Function GizmoOrigin(',
         'Public Sub BeginEdit(',
         'Public Function FinishEdit(',
         'Public Function CancelEdit(',
@@ -382,6 +383,7 @@ try {
         'Public Sub UpdateProjection(',
         'Public Function AxisAtPointer(',
         'Public Function RingPointerDelta(',
+        'Public Function DragValueAmount(',
         'Public Sub Draw(')) {
         Assert-Contains $gizmoSource $contract 'Viewer gizmo owner'
     }
@@ -480,6 +482,11 @@ try {
         -not $viewerSource.Contains('Dim CalibrationEditing As Boolean')) `
         'Input, UI and gizmo state must not return to Program.smile.'
     Assert-True (-not $viewerSource.Contains('Function TransformGizmoAxisAtPointer(') -and
+        -not $viewerSource.Contains('Function CurrentTransformGizmoOrigin(') -and
+        -not $viewerSource.Contains('CharacterViewer.TransformGizmoAxisPointerDelta(') -and
+        -not $viewerSource.Contains('ViewerGizmo.RingPointerDelta(') -and
+        -not $viewerSource.Contains('Const TRANSFORM_GIZMO_MOVE_DIVISOR =') -and
+        -not $viewerSource.Contains('Const TRANSFORM_GIZMO_ROTATE_DIVISOR =') -and
         -not $viewerSource.Contains('Function TransformGizmoRingPointerDelta(') -and
         -not $viewerSource.Contains('Sub DrawTransformGizmo(') -and
         -not $viewerSource.Contains('Sub DrawTransformGizmoMove(') -and
