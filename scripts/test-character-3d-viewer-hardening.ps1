@@ -23,6 +23,8 @@ $calibrationSourcePath = Join-Path $repositoryRoot `
     'tools\Character3DViewer\ViewerCalibration.smile'
 $calibrationEditingSourcePath = Join-Path $repositoryRoot `
     'tools\Character3DViewer\ViewerCalibrationEditing.smile'
+$calibrationControlsSourcePath = Join-Path $repositoryRoot `
+    'tools\Character3DViewer\ViewerCalibrationControls.smile'
 $inputSourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\ViewerInput.smile'
 $timelineEditingSourcePath = Join-Path $repositoryRoot `
     'tools\Character3DViewer\ViewerTimelineEditing.smile'
@@ -103,6 +105,7 @@ try {
     $playbackSource = Get-Content -LiteralPath $playbackSourcePath -Raw
     $calibrationSource = Get-Content -LiteralPath $calibrationSourcePath -Raw
     $calibrationEditingSource = Get-Content -LiteralPath $calibrationEditingSourcePath -Raw
+    $calibrationControlsSource = Get-Content -LiteralPath $calibrationControlsSourcePath -Raw
     $inputSource = Get-Content -LiteralPath $inputSourcePath -Raw
     $timelineEditingSource = Get-Content -LiteralPath $timelineEditingSourcePath -Raw
     $uiSource = Get-Content -LiteralPath $uiSourcePath -Raw
@@ -121,6 +124,7 @@ try {
         'Import Smile.Tools.Character3DViewerCamera As ViewerCamera',
         'Import Smile.Tools.Character3DViewerCalibration As ViewerCalibration',
         'Import Smile.Tools.Character3DViewerCalibrationEditing As ViewerCalibrationEditing',
+        'Import Smile.Tools.Character3DViewerCalibrationControls As ViewerCalibrationControls',
         'Import Smile.Tools.Character3DViewerInput As ViewerInput',
         'Import Smile.Tools.Character3DViewerTimelineEditing As ViewerTimelineEditing',
         'Import Smile.Tools.Character3DViewerUi As ViewerUi',
@@ -246,6 +250,15 @@ try {
         'Public Function CancelGizmoDrag(',
         'Public Function AdjustGizmoValue(')) {
         Assert-Contains $calibrationEditingSource $contract 'Viewer calibration editing owner'
+    }
+    foreach ($contract in @(
+        'Public Function ActionAtPointer(',
+        'Public Function RequiresPartyPreview(',
+        'Private Function ApplyNavigation(',
+        'Private Function ApplyKeyCommand(',
+        'Private Function ApplyLocalCommand(',
+        'Public Function ApplyPointerAction(')) {
+        Assert-Contains $calibrationControlsSource $contract 'Viewer calibration controls owner'
     }
     foreach ($contract in @(
         'Public Function ClassifyArrow(',
@@ -557,6 +570,19 @@ try {
         -not $viewerSource.Contains('ViewerCalibration.Undo(') -and
         -not $viewerSource.Contains('ViewerCalibration.ImportOrCommit(')) `
         'Calibration command transactions and pose-refresh ordering must remain in ViewerCalibrationEditing.'
+    Assert-True (-not $viewerSource.Contains('ViewerUi.ApplyCalibrationSelection(') -and
+        -not $viewerSource.Contains('ViewerUi.CALIBRATION_ACTION_HOLD_GRIP') -and
+        -not $viewerSource.Contains('Sub DeleteCurrentCalibrationKeyframe(') -and
+        -not $viewerSource.Contains('Sub CopyCurrentCalibrationKeyframe(') -and
+        -not $viewerSource.Contains('Sub ReloadCurrentCalibrationKeyframe(') -and
+        -not $viewerSource.Contains('Sub PasteCalibrationKeyframe(') -and
+        -not $viewerSource.Contains('Sub ResetCalibrationTarget(') -and
+        -not $viewerSource.Contains('Sub ClearSelectedClipCalibration(') -and
+        -not $viewerSource.Contains('Sub ClearAllCalibration(') -and
+        -not $viewerSource.Contains('Sub UndoLastCalibrationChange(') -and
+        -not $viewerSource.Contains('Sub FinishCalibrationEdit(') -and
+        -not $viewerSource.Contains('Sub SetCalibrationFromPointer(')) `
+        'Calibration panel command routing and dead wrappers must not return to Program.smile.'
     Assert-True (-not $viewerSource.Contains('Sub AdjustCalibrationValue(') -and
         -not $viewerSource.Contains('Sub UpdateTransformGizmoFromPointer(') -and
         -not $viewerSource.Contains('ViewerGizmo.DragValueAmount(') -and

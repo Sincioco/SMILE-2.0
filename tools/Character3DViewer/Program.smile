@@ -16,6 +16,7 @@ Import Smile.Tools.Character3DViewerActors As ViewerActors
 Import Smile.Tools.Character3DViewerCamera As ViewerCamera
 Import Smile.Tools.Character3DViewerCalibration As ViewerCalibration
 Import Smile.Tools.Character3DViewerCalibrationEditing As ViewerCalibrationEditing
+Import Smile.Tools.Character3DViewerCalibrationControls As ViewerCalibrationControls
 Import Smile.Tools.Character3DViewerInput As ViewerInput
 Import Smile.Tools.Character3DViewerTimelineEditing As ViewerTimelineEditing
 Import Smile.Tools.Character3DViewerUi As ViewerUi
@@ -1807,111 +1808,36 @@ End Function
 Sub HandleCalibrationPanelPointer()
 
     Dim Action As Number
+    Dim Result As ViewerCalibrationEditing.OperationResult
 
-    Action = ViewerUi.CalibrationPointerAction(
+    Action = ViewerCalibrationControls.ActionAtPointer(
         Pointer_X(),
         Pointer_Y(),
         Pointer_Pressed(POINTER_PRIMARY),
         ViewerUiState.CalibrationTarget
     )
 
-    If ViewerUi.ApplyCalibrationSelection(ViewerUiState, Action) Then
-
-        If (Action = ViewerUi.CALIBRATION_ACTION_WEAPON Or
-            Action = ViewerUi.CALIBRATION_ACTION_SHIELD) Then
-            ViewerGizmoState.GripAnchorActive = False
-        End If
-
-        Return
-
+    If ViewerCalibrationControls.RequiresPartyPreview(
+        Action, ViewerUiState.CalibrationEditing) Then
+        Call BeginPartyPreview()
     End If
 
-    If Action = ViewerUi.CALIBRATION_ACTION_PREVIOUS_KEY Then
+    Result = ViewerCalibrationControls.ApplyPointerAction(
+        Action,
+        Calibration,
+        Character,
+        Playback,
+        Session.ProfileIndex,
+        SwordWristNode,
+        ShieldWristNode,
+        CalibrationAvailable,
+        ViewerUiState,
+        ViewerGizmoState,
+        ViewerCameraState,
+        Effects
+    )
 
-        Call SeekCalibrationKeyframe(-1)
-
-    Else If Action = ViewerUi.CALIBRATION_ACTION_NEXT_KEY Then
-
-        Call SeekCalibrationKeyframe(1)
-
-    Else If Action = ViewerUi.CALIBRATION_ACTION_RESET Then
-
-        Call ResetCalibrationTarget()
-
-    Else If Action = ViewerUi.CALIBRATION_ACTION_SAVE Then
-
-        Call SaveCalibrationFrame()
-
-    Else If Action = ViewerUi.CALIBRATION_ACTION_CANCEL Then
-
-        Call CancelCalibrationEdit()
-
-    Else If Action = ViewerUi.CALIBRATION_ACTION_CLEAR Then
-
-        If ViewerUiState.CalibrationClearConfirm Then
-            Call ClearSelectedClipCalibration()
-        Else
-
-            Call ViewerUi.BeginClearConfirmation(ViewerUiState)
-        End If
-
-    Else If Action = ViewerUi.CALIBRATION_ACTION_COPY Then
-
-        If Not ViewerUiState.CalibrationEditing Then
-            Call CopyCurrentCalibrationKeyframe()
-        End If
-
-    Else If Action = ViewerUi.CALIBRATION_ACTION_PASTE Then
-
-        If Not ViewerUiState.CalibrationEditing Then
-            Call PasteCalibrationKeyframe()
-        End If
-
-    Else If Action = ViewerUi.CALIBRATION_ACTION_DELETE Then
-
-        If Not ViewerUiState.CalibrationEditing Then
-            Call DeleteCurrentCalibrationKeyframe()
-        End If
-
-    Else If Action = ViewerUi.CALIBRATION_ACTION_RELOAD Then
-
-        Call ReloadCurrentCalibrationKeyframe()
-
-    Else If Action = ViewerUi.CALIBRATION_ACTION_HOLD_GRIP Then
-
-        ViewerGizmoState.HoldGrip = Not ViewerGizmoState.HoldGrip
-
-        Call ViewerEffects.InvalidateVisualHistory(Effects)
-
-        ViewerGizmoState.GripAnchorActive = False
-
-    Else If Action = ViewerUi.CALIBRATION_ACTION_UNDO Then
-
-        Call UndoLastCalibrationChange()
-
-    Else If Action = ViewerUi.CALIBRATION_ACTION_DECOUPLE_WEAPON Then
-
-        Call BeginCalibrationEdit()
-        Call ViewerCalibration.SetChannelValue(
-            Calibration,
-            Playback.SelectedClip,
-            18,
-            1 - ViewerCalibration.ChannelValue(
-                Calibration, Playback.SelectedClip, 18)
-        )
-
-    Else If Action = ViewerUi.CALIBRATION_ACTION_DECOUPLE_SHIELD Then
-
-        Call BeginCalibrationEdit()
-        Call ViewerCalibration.SetChannelValue(
-            Calibration,
-            Playback.SelectedClip,
-            19,
-            1 - ViewerCalibration.ChannelValue(
-                Calibration, Playback.SelectedClip, 19)
-        )
-
-    End If
+    Call ApplyCalibrationEditingResult(Result)
 
 End Sub
 
@@ -2331,50 +2257,6 @@ Sub UpdateCalibrationForCurrentFrame()
 
 End Sub
 
-Sub DeleteCurrentCalibrationKeyframe()
-
-    Dim Result As ViewerCalibrationEditing.OperationResult
-
-    Result = ViewerCalibrationEditing.DeleteCurrentKey(
-        Calibration, Character, Playback.SelectedClip, Session.ProfileIndex,
-        SwordWristNode, ShieldWristNode, CalibrationAvailable,
-        ViewerUiState, Effects)
-    Session.Ready = Result.Ready And Session.Ready
-
-End Sub
-
-Sub CopyCurrentCalibrationKeyframe()
-
-    Call ViewerCalibrationEditing.CopyCurrentKey(
-        Calibration, Character, Playback.SelectedClip)
-
-End Sub
-
-Sub ReloadCurrentCalibrationKeyframe()
-
-    Dim Result As ViewerCalibrationEditing.OperationResult
-
-    Result = ViewerCalibrationEditing.ReloadCurrentKey(
-        Calibration, Character, Playback.SelectedClip,
-        SwordWristNode, ShieldWristNode, CalibrationAvailable,
-        ViewerUiState, ViewerGizmoState, ViewerCameraState, Effects)
-
-    Call ApplyCalibrationEditingResult(Result)
-
-End Sub
-
-Sub PasteCalibrationKeyframe()
-
-    Dim Result As ViewerCalibrationEditing.OperationResult
-
-    Result = ViewerCalibrationEditing.PasteCurrentKey(
-        Calibration, Character, Playback.SelectedClip, Session.ProfileIndex,
-        SwordWristNode, ShieldWristNode, CalibrationAvailable,
-        ViewerUiState, Effects)
-    Session.Ready = Result.Ready And Session.Ready
-
-End Sub
-
 Sub ApplyWristCalibration()
 
     Session.Ready = ViewerCalibration.ApplyWristOffsets(
@@ -2461,19 +2343,6 @@ Sub BeginCalibrationEdit()
 
 End Sub
 
-Sub FinishCalibrationEdit()
-
-    Dim Finished As Boolean
-
-    Finished = ViewerCalibrationEditing.FinishEdit(
-        ViewerUiState, ViewerGizmoState, ViewerCameraState, Effects)
-
-    If Finished Then
-        Session.CharacterSwitchBlocked = False
-    End If
-
-End Sub
-
 Sub CancelCalibrationEdit()
 
     Dim Result As ViewerCalibrationEditing.OperationResult
@@ -2504,64 +2373,6 @@ Sub SetCurrentCalibrationValue(Value As Number)
 
 End Sub
 
-Sub SetCalibrationFromPointer()
-
-    Dim MaximumValue As Number
-    Dim MinimumValue As Number
-    Dim Value As Number
-
-    MaximumValue = ViewerCalibration.MaximumValue(ViewerUiState.CalibrationTransform)
-    MinimumValue = ViewerCalibration.MinimumValue(ViewerUiState.CalibrationTransform)
-    Value = ViewerUi.CalibrationValueAtPointer(
-        Pointer_X(), MinimumValue, MaximumValue)
-
-    Call SetCurrentCalibrationValue(Value)
-
-End Sub
-
-Sub ResetCalibrationTarget()
-
-    Dim Result As ViewerCalibrationEditing.OperationResult
-
-    If Not ViewerUiState.CalibrationEditing Then
-        Call BeginPartyPreview()
-    End If
-
-    Result = ViewerCalibrationEditing.ResetTarget(
-        Calibration, Character, Playback.SelectedClip,
-        SwordWristNode, ShieldWristNode, CalibrationAvailable,
-        ViewerUiState, ViewerGizmoState, ViewerCameraState, Effects)
-
-    Call ApplyCalibrationEditingResult(Result)
-
-End Sub
-
-Sub ClearSelectedClipCalibration()
-
-    Dim Result As ViewerCalibrationEditing.OperationResult
-
-    Result = ViewerCalibrationEditing.ClearSelectedClip(
-        Calibration, Character, Playback.SelectedClip,
-        SwordWristNode, ShieldWristNode, CalibrationAvailable,
-        ViewerUiState, ViewerGizmoState, ViewerCameraState, Effects)
-
-    Call ApplyCalibrationEditingResult(Result)
-
-End Sub
-
-Sub ClearAllCalibration()
-
-    Dim Result As ViewerCalibrationEditing.OperationResult
-
-    Result = ViewerCalibrationEditing.ClearAll(
-        Calibration, Character, Playback.SelectedClip,
-        SwordWristNode, ShieldWristNode, CalibrationAvailable,
-        ViewerUiState, ViewerGizmoState, ViewerCameraState, Effects)
-
-    Call ApplyCalibrationEditingResult(Result)
-
-End Sub
-
 Sub SaveCalibrationFrame()
 
     Dim Result As ViewerCalibrationEditing.OperationResult
@@ -2576,19 +2387,6 @@ Sub SaveCalibrationFrame()
 
     Result = ViewerCalibrationEditing.SaveCurrentFrame(
         Calibration, Character, Playback.SelectedClip,
-        ViewerUiState, ViewerGizmoState, ViewerCameraState, Effects)
-
-    Call ApplyCalibrationEditingResult(Result)
-
-End Sub
-
-Sub UndoLastCalibrationChange()
-
-    Dim Result As ViewerCalibrationEditing.OperationResult
-
-    Result = ViewerCalibrationEditing.UndoLastChange(
-        Calibration, Character, Playback.SelectedClip, Session.ProfileIndex,
-        SwordWristNode, ShieldWristNode, CalibrationAvailable,
         ViewerUiState, ViewerGizmoState, ViewerCameraState, Effects)
 
     Call ApplyCalibrationEditingResult(Result)

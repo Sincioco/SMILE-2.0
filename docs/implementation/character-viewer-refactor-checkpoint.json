@@ -48,7 +48,7 @@
   ],
   "currentExtractionCommitRange": {
     "first": "9a616ef35adae9b0c5bbc864ecf689bbd6fc1aed",
-    "lastCommittedBeforeCurrentCheckpoint": "e4c99fc911589a24966790293011382f0650c192"
+    "lastCommittedBeforeCurrentCheckpoint": "42c6ceb7938f2a32fe3214ebe1d5f4b8f6212b85"
   },
   "programMetrics": {
     "initialAudit": {
@@ -68,11 +68,11 @@
       "sha256": "17853B7B210061F9D46D70913AABA39C4F798503F69C2E8CCA4D8511646AC670"
     },
     "current": {
-      "checkpoint": "inspector-and-timeline-gesture-workflow",
-      "baseCommit": "5d6e33b3ae53f6817f00ae23fef59f08cf351a09",
-      "lines": 3385,
-      "procedures": 91,
-      "sha256": "34AD9681E8F2700935DBD8ECF790086DEB33A55A0B03E1A65E53849D345DDC52"
+      "checkpoint": "calibration-panel-command-workflow",
+      "baseCommit": "42c6ceb7938f2a32fe3214ebe1d5f4b8f6212b85",
+      "lines": 3183,
+      "procedures": 81,
+      "sha256": "86DD57B6A877C2A08BAF324931BD23858A674F013DA17D6A54007A8D896F58A5"
     }
   },
   "substantialResponsibilitiesMovedFromProgram": [
@@ -85,7 +85,8 @@
     "playback timeline behavior, timeline math and calibration/timeline drawing",
     "transform-gizmo geometry, interaction state and production drawing",
     "presentation audio, storm routing, shared sliders and inspector key policy",
-    "frame-repeat and timeline capture transitions plus timeline seek, drag, duplicate-key and persistence workflow"
+    "frame-repeat and timeline capture transitions plus timeline seek, drag, duplicate-key and persistence workflow",
+    "calibration-panel selection, navigation, clear confirmation, key command, Hold Grip and decouple routing"
   ],
   "currentDestinationOwners": [
     "ViewerActors",
@@ -95,6 +96,7 @@
     "ViewerActors.EquipmentVisibility",
     "ViewerRendering",
     "ViewerCalibration",
+    "ViewerCalibrationControls",
     "ViewerTimelineEditing",
     "ViewerGizmo",
     "ViewerUi"
@@ -104,7 +106,7 @@
     "Party inspector calibration adaptation and Party pointer action dispatch",
     "broad inspector and keyboard action dispatch plus slider and gizmo priority ordering",
     "reset orchestration and cross-owner overlay/gizmo composition",
-    "narrow calibration command and edit adapters",
+    "narrow Party-preview, frame-order calibration-application and session-result adapters",
     "thin UpdateDragon, UpdateBattleAudio and UpdateOrinStorm frame-order adapters"
   ],
   "preservedCalibration": {
@@ -124,7 +126,9 @@
     "frame-repeat timing and cancellation moved with capture state to ViewerInput",
     "timeline scrub and keyframe-drag transitions moved with capture state to ViewerInput",
     "timeline pointer seek, adjacent-key navigation, duplicate-key rejection, drag playback, persistence and pose refresh moved to ViewerTimelineEditing",
-    "Program.smile reduced from 3448 lines and 91 procedures to 3385 lines and 91 procedures without formatting compression"
+    "calibration-panel selection, navigation, clear confirmation, key commands, Hold Grip and decouple routing moved to ViewerCalibrationControls",
+    "ten one-command calibration wrappers were deleted and the isolated fixture now calls the production command owner",
+    "Program.smile reduced from 3385 lines and 91 procedures to 3183 lines and 81 procedures without formatting compression"
   ],
   "validation": [
     "PASS: 308 shared compiler/language tests",
@@ -143,7 +147,8 @@
     "PASS: inspector/gesture extraction native and generated-Web hardening with exact console parity",
     "PASS: post-extraction 42 isolated calibration checks and 58 native graphics, pointer-input and audio-focus checks",
     "PASS: post-extraction Release Desktop Viewer build with 46 published assets",
-    "PASS: post-extraction Release Full Web Viewer build with 35 published assets"
+    "PASS: post-extraction Release Full Web Viewer build with 35 published assets",
+    "PASS: calibration-panel command extraction 42-check native/generated-Web isolation and 58-check native/generated-Web hardening gate with exact console parity"
   ],
   "pendingValidation": [
     "final Character Viewer native and installed-Chrome acceptance after remaining extractions"

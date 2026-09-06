@@ -15,6 +15,7 @@ Import Smile.Tools.Character3DViewerActors As ViewerActors
 Import Smile.Tools.Character3DViewerCamera As ViewerCamera
 Import Smile.Tools.Character3DViewerCalibration As ViewerCalibration
 Import Smile.Tools.Character3DViewerCalibrationEditing As ViewerCalibrationEditing
+Import Smile.Tools.Character3DViewerCalibrationControls As ViewerCalibrationControls
 Import Smile.Tools.Character3DViewerInput As ViewerInput
 Import Smile.Tools.Character3DViewerTimelineEditing As ViewerTimelineEditing
 Import Smile.Tools.Character3DViewerUi As ViewerUi
@@ -522,6 +523,59 @@ Call Check(UiState.CalibrationTarget = ViewerUi.CALIBRATION_TARGET_SWORD)
 Call Check(ViewerUi.ApplyCalibrationSelection(
     UiState, ViewerUi.CALIBRATION_ACTION_AXIS_Z))
 Call Check(UiState.CalibrationAxis = ViewerUi.CALIBRATION_AXIS_Z)
+
+Call Check(ViewerCalibrationControls.RequiresPartyPreview(
+    ViewerUi.CALIBRATION_ACTION_PREVIOUS_KEY, True))
+Call Check(ViewerCalibrationControls.RequiresPartyPreview(
+    ViewerUi.CALIBRATION_ACTION_RESET, False))
+Call Check(Not ViewerCalibrationControls.RequiresPartyPreview(
+    ViewerUi.CALIBRATION_ACTION_RESET, True))
+Call Check(Not ViewerCalibrationControls.RequiresPartyPreview(
+    ViewerUi.CALIBRATION_ACTION_COPY, False))
+
+GizmoState.GripAnchorActive = True
+CalibrationOperation = ViewerCalibrationControls.ApplyPointerAction(
+    ViewerUi.CALIBRATION_ACTION_WEAPON,
+    CalibrationState, PartyPrimary.Actor, PlaybackState, 0,
+    -1, -1, False, UiState, GizmoState, CameraState, EffectsState)
+
+Call Check(CalibrationOperation.Ready)
+Call Check(UiState.CalibrationTarget = ViewerUi.CALIBRATION_TARGET_SWORD)
+Call Check(Not GizmoState.GripAnchorActive)
+
+Call ViewerUi.ClearConfirmation(UiState)
+
+CalibrationOperation = ViewerCalibrationControls.ApplyPointerAction(
+    ViewerUi.CALIBRATION_ACTION_CLEAR,
+    CalibrationState, PartyPrimary.Actor, PlaybackState, 0,
+    -1, -1, False, UiState, GizmoState, CameraState, EffectsState)
+
+Call Check(CalibrationOperation.Ready And UiState.CalibrationClearConfirm)
+
+GizmoState.HoldGrip = False
+GizmoState.GripAnchorActive = True
+CalibrationOperation = ViewerCalibrationControls.ApplyPointerAction(
+    ViewerUi.CALIBRATION_ACTION_HOLD_GRIP,
+    CalibrationState, PartyPrimary.Actor, PlaybackState, 0,
+    -1, -1, False, UiState, GizmoState, CameraState, EffectsState)
+
+Call Check(CalibrationOperation.Ready And GizmoState.HoldGrip)
+Call Check(Not GizmoState.GripAnchorActive And EffectsState.VisualHistoryDirty)
+
+PlaybackState.ScenePaused = False
+CalibrationOperation = ViewerCalibrationControls.ApplyPointerAction(
+    ViewerUi.CALIBRATION_ACTION_NEXT_KEY,
+    CalibrationState, PartyPrimary.Actor, PlaybackState, 0,
+    -1, -1, False, UiState, GizmoState, CameraState, EffectsState)
+
+Call Check(CalibrationOperation.Ready And PlaybackState.ScenePaused)
+
+Call ViewerUi.Reset(UiState)
+Call ViewerGizmo.Reset(GizmoState)
+Call ViewerPlayback.Reset(PlaybackState, 100)
+
+EffectsState.VisualHistoryDirty = False
+EffectsState.VisualContinuityEpoch = 0
 
 Call ViewerUi.DrawMinimumSizeNotice(800, 640)
 Call ViewerUi.DrawHeader("Arin", "Paladin", False, 0, 800)

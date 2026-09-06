@@ -5,6 +5,7 @@ Dim TestIndex As Number
 Dim TestSavedCount As Number
 Dim TestTransactionResult As Boolean
 Dim TestCalibrationTransaction As ViewerCalibration.TransactionResult
+Dim TestCalibrationOperation As ViewerCalibrationEditing.OperationResult
 Dim TestPartyUpdate As ViewerParty.ParticipantUpdateResult
 Dim TestFireAge As Number
 Dim TestFireGeneration As Number
@@ -280,7 +281,7 @@ TestTransactionResult = ViewerCalibration.Persist(
     Calibration, Character, Playback.SelectedClip,
     ViewerUiState.CalibrationEditing)
 
-Call UndoLastCalibrationChange()
+Call ApplyCalibrationControlForTest(ViewerUi.CALIBRATION_ACTION_UNDO)
 Call CalibrationCheck(ViewerCalibration.KeyCount(Calibration, 3) = 0,
     "Undo also restores a never-saved empty track")
 
@@ -358,7 +359,7 @@ TestSavedJson = ViewerCalibration.SavedJson(Calibration, Character)
 TestUndoCount = Calibration.UndoCount
 Calibration.DataKey = "Viewer Denied Storage Probe"
 
-Call UndoLastCalibrationChange()
+Call ApplyCalibrationControlForTest(ViewerUi.CALIBRATION_ACTION_UNDO)
 Call CalibrationCheck(Calibration.WriteFailed And Not Calibration.StorageRejected,
     "Failed undo remains recoverable")
 Call CalibrationCheck(ViewerCalibration.SavedJson(Calibration, Character) = TestSavedJson And
@@ -381,14 +382,14 @@ Call CancelCalibrationEdit()
 
 Calibration.DataKey = TestDataKey
 
-Call UndoLastCalibrationChange()
+Call ApplyCalibrationControlForTest(ViewerUi.CALIBRATION_ACTION_UNDO)
 Call CalibrationCheck(ViewerCalibration.KeyCount(Calibration, 3) = 1, "Undo insertion")
 Call CalibrationCheck(ViewerCalibration.KeyValue(Calibration, 3, 0, 12) = 2,
     "Undo preserves all channels")
-Call ClearSelectedClipCalibration()
+Call ApplyCalibrationControlForTest(ViewerUi.CALIBRATION_ACTION_CLEAR)
 Call CalibrationCheck(ViewerCalibration.KeyCount(Calibration, 3) = 0,
     "Selected clip cleared")
-Call UndoLastCalibrationChange()
+Call ApplyCalibrationControlForTest(ViewerUi.CALIBRATION_ACTION_UNDO)
 Call CalibrationCheck(ViewerCalibration.KeyCount(Calibration, 3) = 1,
     "Undo selected clip delete")
 
@@ -416,10 +417,10 @@ For TestIndex = 1 To 6
 
     Call SetCurrentCalibrationValue(45)
     Call SaveCalibrationFrame()
-    Call ReloadCurrentCalibrationKeyframe()
+    Call ApplyCalibrationControlForTest(ViewerUi.CALIBRATION_ACTION_RELOAD)
     Call SetCurrentCalibrationValue(0)
     Call SaveCalibrationFrame()
-    Call ReloadCurrentCalibrationKeyframe()
+    Call ApplyCalibrationControlForTest(ViewerUi.CALIBRATION_ACTION_RELOAD)
 End For
 
 TestPosition = ViewerCalibration.EquipmentGripThousandths(
@@ -629,6 +630,31 @@ Sub CalibrationCheck(Condition As Boolean, Label As Text)
         Print Label
 
     End If
+
+End Sub
+
+Sub ApplyCalibrationControlForTest(Action As Number)
+
+    If Action = ViewerUi.CALIBRATION_ACTION_CLEAR Then
+        ViewerUiState.CalibrationClearConfirm = True
+    End If
+
+    TestCalibrationOperation = ViewerCalibrationControls.ApplyPointerAction(
+        Action,
+        Calibration,
+        Character,
+        Playback,
+        Session.ProfileIndex,
+        SwordWristNode,
+        ShieldWristNode,
+        CalibrationAvailable,
+        ViewerUiState,
+        ViewerGizmoState,
+        ViewerCameraState,
+        Effects
+    )
+
+    Call ApplyCalibrationEditingResult(TestCalibrationOperation)
 
 End Sub
 
@@ -856,7 +882,7 @@ Sub CheckPartyInspector()
             Call BeginPartyInspector()
             Call CalibrationCheck(Not Calibration.WriteFailed And Not ViewerUiState.CalibrationEditing,
                 "Party Enter saves the active hero pose without restarting the battle")
-            Call UndoLastCalibrationChange()
+            Call ApplyCalibrationControlForTest(ViewerUi.CALIBRATION_ACTION_UNDO)
             Call CalibrationCheck(ViewerCalibration.SavedJson(Calibration, Character) = OriginalJson,
                 "Party Undo restores every saved key of only the active hero")
             Call ToggleTransformGizmo()
@@ -1120,7 +1146,7 @@ Sub CheckCalibrationImport(Original As Text)
         Calibration, Character, Playback.SelectedClip,
         ViewerUiState.CalibrationEditing),
         "Confirmed import replaces saved track")
-    Call UndoLastCalibrationChange()
+    Call ApplyCalibrationControlForTest(ViewerUi.CALIBRATION_ACTION_UNDO)
     Call CalibrationCheck(ViewerCalibration.SavedJson(Calibration, Character) = Original, "Undo import restores complete snapshot")
 
     Calibration.UndoCount = 0

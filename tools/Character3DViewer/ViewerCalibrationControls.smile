@@ -1,0 +1,300 @@
+''' Calibration-panel command routing without Party, session, rendering or application state.
+Module Smile.Tools.Character3DViewerCalibrationControls
+
+Option Explicit
+
+Import Smile.Simple3D.Character3D As Character3D
+Import Smile.Tools.Character3DViewerCalibration As ViewerCalibration
+Import Smile.Tools.Character3DViewerCalibrationEditing As ViewerCalibrationEditing
+Import Smile.Tools.Character3DViewerCamera As ViewerCamera
+Import Smile.Tools.Character3DViewerEffects As ViewerEffects
+Import Smile.Tools.Character3DViewerGizmo As ViewerGizmo
+Import Smile.Tools.Character3DViewerPlayback As ViewerPlayback
+Import Smile.Tools.Character3DViewerTimelineEditing As ViewerTimelineEditing
+Import Smile.Tools.Character3DViewerUi As ViewerUi
+
+Private Sub MergeOperation(
+    ByRef Result As ViewerCalibrationEditing.OperationResult,
+    NextResult As ViewerCalibrationEditing.OperationResult)
+
+    Result.Applied = Result.Applied Or NextResult.Applied
+    Result.Persisted = Result.Persisted Or NextResult.Persisted
+    Result.Finished = Result.Finished Or NextResult.Finished
+    Result.Ready = Result.Ready And NextResult.Ready
+
+    If Result.FailureStage = 0 Then
+        Result.FailureStage = NextResult.FailureStage
+    End If
+
+End Sub
+
+Public Function ActionAtPointer(PointerX As Number, PointerY As Number,
+    PrimaryPressed As Boolean, CurrentTarget As Number) As Number
+
+    Dim Action As Number
+
+    Action = ViewerUi.CalibrationPointerAction(
+        PointerX, PointerY, PrimaryPressed, CurrentTarget)
+
+    Return Action
+
+End Function
+
+Public Function RequiresPartyPreview(Action As Number,
+    Editing As Boolean) As Boolean
+
+    Dim Required As Boolean
+
+    Required = (Action = ViewerUi.CALIBRATION_ACTION_PREVIOUS_KEY Or
+        Action = ViewerUi.CALIBRATION_ACTION_NEXT_KEY Or
+        Action = ViewerUi.CALIBRATION_ACTION_DECOUPLE_WEAPON Or
+        Action = ViewerUi.CALIBRATION_ACTION_DECOUPLE_SHIELD Or
+        (Not Editing And
+        (Action = ViewerUi.CALIBRATION_ACTION_RESET Or
+        Action = ViewerUi.CALIBRATION_ACTION_SAVE)))
+
+    Return Required
+
+End Function
+
+Private Function ApplyNavigation(
+    ByRef Result As ViewerCalibrationEditing.OperationResult,
+    Action As Number, ByRef Calibration As ViewerCalibration.State,
+    ByRef Actor As Character3D.Actor, ByRef Playback As ViewerPlayback.State,
+    ProfileIndex As Number, SwordWristNode As Number,
+    ShieldWristNode As Number, Available As Boolean,
+    ByRef Ui As ViewerUi.State, ByRef Gizmo As ViewerGizmo.State,
+    ByRef Camera As ViewerCamera.State,
+    ByRef Effects As ViewerEffects.State) As Boolean
+
+    Dim Direction As Number
+    Dim EditResult As ViewerCalibrationEditing.OperationResult
+
+    If (Action <> ViewerUi.CALIBRATION_ACTION_PREVIOUS_KEY And
+        Action <> ViewerUi.CALIBRATION_ACTION_NEXT_KEY) Then
+        Return False
+    End If
+
+    Playback.ScenePaused = True
+
+    If Not Available Then
+        Return True
+    End If
+
+    If Ui.CalibrationEditing Then
+        EditResult = ViewerCalibrationEditing.CancelEdit(
+            Calibration, Actor, Playback.SelectedClip,
+            SwordWristNode, ShieldWristNode, Available,
+            Ui, Gizmo, Camera, Effects)
+
+        Call MergeOperation(Result, EditResult)
+    End If
+
+    Direction = -1
+
+    If Action = ViewerUi.CALIBRATION_ACTION_NEXT_KEY Then
+        Direction = 1
+    End If
+
+    Result.Ready = ViewerTimelineEditing.SeekAdjacentKey(
+        Calibration,
+        Actor,
+        Playback.SelectedClip,
+        Direction,
+        ProfileIndex,
+        SwordWristNode,
+        ShieldWristNode,
+        Available,
+        Ui.CalibrationEditing,
+        Effects
+    ) And Result.Ready
+
+    Return True
+
+End Function
+
+Private Function ApplyKeyCommand(
+    ByRef Result As ViewerCalibrationEditing.OperationResult,
+    Action As Number, ByRef Calibration As ViewerCalibration.State,
+    ByRef Actor As Character3D.Actor, ByRef Playback As ViewerPlayback.State,
+    ProfileIndex As Number, SwordWristNode As Number,
+    ShieldWristNode As Number, Available As Boolean,
+    ByRef Ui As ViewerUi.State, ByRef Gizmo As ViewerGizmo.State,
+    ByRef Camera As ViewerCamera.State,
+    ByRef Effects As ViewerEffects.State) As Boolean
+
+    If Action = ViewerUi.CALIBRATION_ACTION_RESET Then
+
+        Result = ViewerCalibrationEditing.ResetTarget(
+            Calibration, Actor, Playback.SelectedClip,
+            SwordWristNode, ShieldWristNode, Available,
+            Ui, Gizmo, Camera, Effects)
+
+    Else If Action = ViewerUi.CALIBRATION_ACTION_SAVE Then
+
+        Result = ViewerCalibrationEditing.SaveCurrentFrame(
+            Calibration, Actor, Playback.SelectedClip,
+            Ui, Gizmo, Camera, Effects)
+
+    Else If Action = ViewerUi.CALIBRATION_ACTION_CANCEL Then
+
+        Result = ViewerCalibrationEditing.CancelEdit(
+            Calibration, Actor, Playback.SelectedClip,
+            SwordWristNode, ShieldWristNode, Available,
+            Ui, Gizmo, Camera, Effects)
+
+    Else If Action = ViewerUi.CALIBRATION_ACTION_CLEAR Then
+
+        If Ui.CalibrationClearConfirm Then
+            Result = ViewerCalibrationEditing.ClearSelectedClip(
+                Calibration, Actor, Playback.SelectedClip,
+                SwordWristNode, ShieldWristNode, Available,
+                Ui, Gizmo, Camera, Effects)
+        Else
+
+            Call ViewerUi.BeginClearConfirmation(Ui)
+        End If
+
+    Else If Action = ViewerUi.CALIBRATION_ACTION_COPY Then
+
+        If Not Ui.CalibrationEditing Then
+            Call ViewerCalibrationEditing.CopyCurrentKey(
+                Calibration, Actor, Playback.SelectedClip)
+        End If
+
+    Else If Action = ViewerUi.CALIBRATION_ACTION_PASTE Then
+
+        If Not Ui.CalibrationEditing Then
+            Result = ViewerCalibrationEditing.PasteCurrentKey(
+                Calibration, Actor, Playback.SelectedClip, ProfileIndex,
+                SwordWristNode, ShieldWristNode, Available, Ui, Effects)
+        End If
+
+    Else If Action = ViewerUi.CALIBRATION_ACTION_DELETE Then
+
+        If Not Ui.CalibrationEditing Then
+            Result = ViewerCalibrationEditing.DeleteCurrentKey(
+                Calibration, Actor, Playback.SelectedClip, ProfileIndex,
+                SwordWristNode, ShieldWristNode, Available, Ui, Effects)
+        End If
+
+    Else If Action = ViewerUi.CALIBRATION_ACTION_RELOAD Then
+
+        Result = ViewerCalibrationEditing.ReloadCurrentKey(
+            Calibration, Actor, Playback.SelectedClip,
+            SwordWristNode, ShieldWristNode, Available,
+            Ui, Gizmo, Camera, Effects)
+
+    Else If Action = ViewerUi.CALIBRATION_ACTION_UNDO Then
+
+        Result = ViewerCalibrationEditing.UndoLastChange(
+            Calibration, Actor, Playback.SelectedClip, ProfileIndex,
+            SwordWristNode, ShieldWristNode, Available,
+            Ui, Gizmo, Camera, Effects)
+
+    Else
+        Return False
+
+    End If
+
+    Return True
+
+End Function
+
+Private Function ApplyLocalCommand(
+    ByRef Result As ViewerCalibrationEditing.OperationResult,
+    Action As Number, ByRef Calibration As ViewerCalibration.State,
+    ByRef Actor As Character3D.Actor, ByRef Playback As ViewerPlayback.State,
+    ByRef Ui As ViewerUi.State, ByRef Gizmo As ViewerGizmo.State,
+    ByRef Camera As ViewerCamera.State,
+    ByRef Effects As ViewerEffects.State) As Boolean
+
+    Dim Channel As Number
+
+    If Action = ViewerUi.CALIBRATION_ACTION_HOLD_GRIP Then
+
+        Gizmo.HoldGrip = Not Gizmo.HoldGrip
+        Gizmo.GripAnchorActive = False
+
+        Call ViewerEffects.InvalidateVisualHistory(Effects)
+
+    Else If (Action = ViewerUi.CALIBRATION_ACTION_DECOUPLE_WEAPON Or
+        Action = ViewerUi.CALIBRATION_ACTION_DECOUPLE_SHIELD) Then
+
+        Call ViewerCalibrationEditing.BeginEdit(
+            Calibration, Actor, Playback.SelectedClip, Ui, Camera, Effects)
+
+        Channel = 18
+
+        If Action = ViewerUi.CALIBRATION_ACTION_DECOUPLE_SHIELD Then
+            Channel = 19
+        End If
+
+        Call ViewerCalibration.SetChannelValue(
+            Calibration,
+            Playback.SelectedClip,
+            Channel,
+            1 - ViewerCalibration.ChannelValue(
+                Calibration, Playback.SelectedClip, Channel)
+        )
+
+        Result.Applied = True
+
+    Else
+        Return False
+
+    End If
+
+    Return True
+
+End Function
+
+Public Function ApplyPointerAction(Action As Number,
+    ByRef Calibration As ViewerCalibration.State,
+    ByRef Actor As Character3D.Actor, ByRef Playback As ViewerPlayback.State,
+    ProfileIndex As Number, SwordWristNode As Number,
+    ShieldWristNode As Number, Available As Boolean,
+    ByRef Ui As ViewerUi.State, ByRef Gizmo As ViewerGizmo.State,
+    ByRef Camera As ViewerCamera.State,
+    ByRef Effects As ViewerEffects.State) As ViewerCalibrationEditing.OperationResult
+
+    Dim Result As ViewerCalibrationEditing.OperationResult
+
+    Result.Ready = True
+
+    If ViewerUi.ApplyCalibrationSelection(Ui, Action) Then
+
+        If (Action = ViewerUi.CALIBRATION_ACTION_WEAPON Or
+            Action = ViewerUi.CALIBRATION_ACTION_SHIELD) Then
+            Gizmo.GripAnchorActive = False
+        End If
+
+        Return Result
+
+    End If
+
+    If ApplyNavigation(
+        Result, Action, Calibration, Actor, Playback, ProfileIndex,
+        SwordWristNode, ShieldWristNode, Available,
+        Ui, Gizmo, Camera, Effects) Then
+        Return Result
+    End If
+
+    If ApplyKeyCommand(
+        Result, Action, Calibration, Actor, Playback, ProfileIndex,
+        SwordWristNode, ShieldWristNode, Available,
+        Ui, Gizmo, Camera, Effects) Then
+        Return Result
+    End If
+
+    If ApplyLocalCommand(
+        Result, Action, Calibration, Actor, Playback,
+        Ui, Gizmo, Camera, Effects) Then
+        Return Result
+    End If
+
+    Return Result
+
+End Function
+
+End Module
