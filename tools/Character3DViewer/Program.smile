@@ -75,8 +75,7 @@ Dim Calibration As ViewerCalibration.State
 Dim ViewerInputState As ViewerInput.State
 Dim ViewerUiState As ViewerUi.State
 Dim ViewerGizmoState As ViewerGizmo.State
-Dim SwordVisible As Boolean
-Dim ShieldVisible As Boolean
+Dim Equipment As ViewerActors.EquipmentVisibility
 Dim CalibrationAvailable As Boolean
 Dim SwordWristNode As Number
 Dim ShieldWristNode As Number
@@ -211,8 +210,8 @@ Do
                 ViewerCameraState.Frame.ScalePercent,
                 Playback.AnimationUpdateElapsed,
                 ViewerPlayback.SelectedClipName(Character, Playback),
-                SwordVisible,
-                ShieldVisible,
+                Equipment.SwordVisible,
+                Equipment.ShieldVisible,
                 ViewerCalibration.ChannelValue(
                     Calibration, Playback.SelectedClip, 18) <> 0,
                 ViewerCalibration.ChannelValue(
@@ -235,8 +234,8 @@ Do
             Session.ProfileIndex,
             Party.Enabled And
                 ViewerParty.PresentationState(Party, 0) = ViewerParty.STATE_KO,
-            SwordVisible,
-            ShieldVisible,
+            Equipment.SwordVisible,
+            Equipment.ShieldVisible,
             ViewerUiState.CalibrationEditing,
             Playback.ScenePaused,
             Playback.SelectedClip,
@@ -335,8 +334,8 @@ Do
                     Not ViewerEffects.DrawEquipmentGlow(
                         Effects,
                         Session.ProfileIndex,
-                        SwordVisible,
-                        ShieldVisible
+                        Equipment.SwordVisible,
+                        Equipment.ShieldVisible
                     )) Then
                     Effects.EpicGlowVisible = False
                 End If
@@ -351,7 +350,7 @@ Do
                     Party.Enabled,
                     Session.DragonInspection,
                     Effects.EpicGlowVisible,
-                    SwordVisible
+                    Equipment.SwordVisible
                 ) And Session.Ready
             End If
 
@@ -361,13 +360,14 @@ Do
                     Party.Enabled,
                     Session.DragonInspection,
                     Effects.EpicGlowVisible,
-                    SwordVisible
+                    Equipment.SwordVisible
                 ) And Session.Ready
             End If
 
             Call ViewerSession.CaptureFailure(Session, 12)
 
-            Call ViewerEffects.DrawEquipmentFire(Effects, SwordVisible, ShieldVisible)
+            Call ViewerEffects.DrawEquipmentFire(
+                Effects, Equipment.SwordVisible, Equipment.ShieldVisible)
 
             Session.Ready = ViewerEffects.DrawScene(Effects) And Session.Ready
 
@@ -378,8 +378,8 @@ Do
                 If Not ViewerEffects.DrawEpicGlow(
                     Effects,
                     Session.ProfileIndex,
-                    SwordVisible,
-                    ShieldVisible
+                    Equipment.SwordVisible,
+                    Equipment.ShieldVisible
                 ) Then
                     Effects.EpicGlowVisible = False
                 End If
@@ -433,8 +433,8 @@ Sub LoadViewer()
         ViewerProfiles.IsPartyCharacter(Session.ProfileIndex) Or Session.DragonInspection
     )
 
-    SwordVisible = True
-    ShieldVisible = True
+    Call ViewerActors.ResetEquipmentVisibility(Equipment)
+
     Session.Ready = CharacterViewer.ValidateProfile(ActiveProfile) And Session.Ready
     Session.Ready = Window_Title(ViewerTitle()) And Session.Ready
 
@@ -1247,37 +1247,23 @@ Sub ToggleSword()
 
     End If
 
-    If Session.DragonInspection Then
-
-        SwordVisible = Not SwordVisible
-        Session.Ready = Character3D.SetPartVisible(Party.DragonOpponent.Actor, WEAPON_PART_INDEX, SwordVisible) And Session.Ready
-        Session.Ready = Character3D.SetPartVisible(Party.Companion.Actor, WEAPON_PART_INDEX, SwordVisible) And Session.Ready
-
-        If Not SwordVisible Then
-            Call ViewerEffects.HideSwordEffects(Effects)
-        End If
-
+    If Not Session.DragonInspection And Not CalibrationAvailable Then
         Return
-
     End If
 
-    If CalibrationAvailable Then
+    Call ViewerActors.ToggleSwordVisibility(Equipment)
 
-        SwordVisible = Not SwordVisible
-        Session.Ready = Character3D.SetPartVisible(
-            Character,
-            WEAPON_PART_INDEX,
-            SwordVisible
-        ) And Session.Ready
+    Session.Ready = ViewerParty.ApplyEquipmentVisibility(
+        Party,
+        Character,
+        CalibrationAvailable,
+        Session.DragonInspection,
+        WEAPON_PART_INDEX,
+        Equipment.SwordVisible
+    ) And Session.Ready
 
-        If Party.Enabled And Party.Ready Then
-            Session.Ready = Character3D.SetPartVisible(Party.Companion.Actor, WEAPON_PART_INDEX, SwordVisible) And Session.Ready
-        End If
-
-        If Not SwordVisible Then
-            Call ViewerEffects.HideSwordEffects(Effects)
-        End If
-
+    If Not Equipment.SwordVisible Then
+        Call ViewerEffects.HideSwordEffects(Effects)
     End If
 
 End Sub
@@ -1294,37 +1280,23 @@ Sub ToggleShield()
 
     End If
 
-    If Session.DragonInspection Then
-
-        ShieldVisible = Not ShieldVisible
-        Session.Ready = Character3D.SetPartVisible(Party.DragonOpponent.Actor, SHIELD_PART_INDEX, ShieldVisible) And Session.Ready
-        Session.Ready = Character3D.SetPartVisible(Party.Companion.Actor, SHIELD_PART_INDEX, ShieldVisible) And Session.Ready
-
-        If Not ShieldVisible Then
-            Call ViewerEffects.HideShieldEffects(Effects)
-        End If
-
+    If Not Session.DragonInspection And Not CalibrationAvailable Then
         Return
-
     End If
 
-    If CalibrationAvailable Then
+    Call ViewerActors.ToggleShieldVisibility(Equipment)
 
-        ShieldVisible = Not ShieldVisible
-        Session.Ready = Character3D.SetPartVisible(
-            Character,
-            SHIELD_PART_INDEX,
-            ShieldVisible
-        ) And Session.Ready
+    Session.Ready = ViewerParty.ApplyEquipmentVisibility(
+        Party,
+        Character,
+        CalibrationAvailable,
+        Session.DragonInspection,
+        SHIELD_PART_INDEX,
+        Equipment.ShieldVisible
+    ) And Session.Ready
 
-        If Party.Enabled And Party.Ready Then
-            Session.Ready = Character3D.SetPartVisible(Party.Companion.Actor, SHIELD_PART_INDEX, ShieldVisible) And Session.Ready
-        End If
-
-        If Not ShieldVisible Then
-            Call ViewerEffects.HideShieldEffects(Effects)
-        End If
-
+    If Not Equipment.ShieldVisible Then
+        Call ViewerEffects.HideShieldEffects(Effects)
     End If
 
 End Sub
@@ -2133,12 +2105,14 @@ Sub UpdateOrinStorm()
             ViewerCameraState.Live, Timing.CameraElapsed,
             Party.Companion.GlowVisible And (Effects.EpicGlowVisible Or Session.DragonInspection) And
                 ViewerParty.PresentationState(Party, 1) <> ViewerParty.STATE_KO,
-            SwordVisible, ShieldVisible, Playback.ScenePaused)
+            Equipment.SwordVisible, Equipment.ShieldVisible,
+            Playback.ScenePaused)
     Else If Session.ProfileIndex = ViewerProfiles.PROFILE_ORIN Then
         Clip = Character3D.ClipName(Character, Playback.SelectedClip)
 
         Call ViewerEffects.UpdateStorm(Effects, Character, Clip, Target, ViewerCameraState.Live,
-            Timing.CameraElapsed, Effects.EpicGlowVisible, SwordVisible, ShieldVisible,
+            Timing.CameraElapsed, Effects.EpicGlowVisible,
+            Equipment.SwordVisible, Equipment.ShieldVisible,
             Playback.ScenePaused)
     End If
 
@@ -2236,8 +2210,7 @@ Sub ResetAll()
 
     Call ViewerDragon.ResetVisibility(DragonState)
 
-    SwordVisible = True
-    ShieldVisible = True
+    Call ViewerActors.ResetEquipmentVisibility(Equipment)
 
     Call ViewerEffects.ResetPlaybackControls(Effects)
 
@@ -2262,8 +2235,8 @@ Sub ResetAll()
     ) And Session.Ready
 
     If CalibrationAvailable Then
-        Session.Ready = Character3D.SetPartVisible(Character, WEAPON_PART_INDEX, True) And Session.Ready
-        Session.Ready = Character3D.SetPartVisible(Character, SHIELD_PART_INDEX, True) And Session.Ready
+        Session.Ready = ViewerActors.ApplyEquipmentVisibility(
+            Character, Equipment) And Session.Ready
     End If
 
     Session.Ready = ViewerRendering.ApplyMaterialInspection(Rendering) And Session.Ready
@@ -2958,8 +2931,8 @@ Sub DrawInspectorOverlay()
             ViewerUiState.Visibility,
             Window_Height(),
             DragonState.Visible,
-            SwordVisible,
-            ShieldVisible,
+            Equipment.SwordVisible,
+            Equipment.ShieldVisible,
             Rendering.FloorVisible Or Rendering.GridVisible,
             Rendering.BackgroundIndex > 0,
             Effects.EpicGlowVisible,
@@ -2995,8 +2968,8 @@ Sub DrawInspectorOverlay()
             Rendering.BackgroundIndex > 0,
             CalibrationAvailable,
             ViewerUiState.CalibrationVisible,
-            SwordVisible,
-            ShieldVisible
+            Equipment.SwordVisible,
+            Equipment.ShieldVisible
         )
 
         Call ViewerUi.DrawCharacterStatusSummary(
@@ -3440,8 +3413,8 @@ Sub UpdateDragonOpponent()
         Effects,
         Playback.AnimationUpdateElapsed,
         ViewerUiState.CalibrationEditing,
-        SwordVisible,
-        ShieldVisible,
+        Equipment.SwordVisible,
+        Equipment.ShieldVisible,
         Playback.ScenePaused,
         ViewerPlayback.ClipLabel(
             Party.DragonOpponent.Actor,
@@ -3486,8 +3459,8 @@ Sub ResetPartyDemo()
         FirstApproach,
         SecondApproach,
         ORIN_ARENA_YAW_ADJUSTMENT,
-        SwordVisible,
-        ShieldVisible
+        Equipment.SwordVisible,
+        Equipment.ShieldVisible
     ) And Session.Ready
 
 End Sub

@@ -94,6 +94,7 @@ Dim PartyState As ViewerParty.State
 Dim PartyParticipantUpdate As ViewerParty.ParticipantUpdateResult
 Dim PartyInspectorBinding As ViewerParty.InspectorBindingResult
 Dim PartyPrimary As ViewerActors.Context
+Dim EquipmentVisibility As ViewerActors.EquipmentVisibility
 Dim PartyActions As ViewerParty.FrameActions
 Dim EmptyPartyActions As ViewerParty.FrameActions
 Dim PartyPointer As ViewerParty.PointerDecision
@@ -694,6 +695,31 @@ Call Check(Not ViewerActors.PreparePrimaryPresentation(
     240,
     180,
     -55
+))
+Call ViewerActors.ResetEquipmentVisibility(EquipmentVisibility)
+Call Check(EquipmentVisibility.SwordVisible And
+    EquipmentVisibility.ShieldVisible)
+Call ViewerActors.ToggleSwordVisibility(EquipmentVisibility)
+Call ViewerActors.ToggleShieldVisibility(EquipmentVisibility)
+Call Check(Not EquipmentVisibility.SwordVisible And
+    Not EquipmentVisibility.ShieldVisible)
+Call Check(Not ViewerActors.ApplyEquipmentVisibility(
+    PartyPrimary.Actor, EquipmentVisibility))
+Call Check(ViewerParty.ApplyEquipmentVisibility(
+    PartyState,
+    PartyPrimary.Actor,
+    False,
+    False,
+    1,
+    False
+))
+Call Check(Not ViewerParty.ApplyEquipmentVisibility(
+    PartyState,
+    PartyPrimary.Actor,
+    False,
+    True,
+    1,
+    False
 ))
 Call Check(ViewerCamera.InitialOrbitYaw(False, 25, 0) = 25)
 Call Check(ViewerCamera.InitialOrbitYaw(True, 25, 0) = 0)

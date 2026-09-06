@@ -9,6 +9,9 @@ Import Smile.Simple3D.Core As Core
 Import Smile.Simple3D.Graphics3D As Graphics3D
 Import Smile.Tools.Character3DViewerProfiles As ViewerProfiles
 
+Private Const SHIELD_PART_INDEX = 0
+Private Const WEAPON_PART_INDEX = 1
+
 Public Type Context
     Actor As Character3D.Actor
     Frame As CharacterViewer.Framing
@@ -25,6 +28,44 @@ Public Type Context
     PresentationState As Number
     Ready As Boolean
 End Type
+
+Public Type EquipmentVisibility
+    SwordVisible As Boolean
+    ShieldVisible As Boolean
+End Type
+
+Public Sub ResetEquipmentVisibility(ByRef Value As EquipmentVisibility)
+
+    Value.SwordVisible = True
+    Value.ShieldVisible = True
+
+End Sub
+
+Public Sub ToggleSwordVisibility(ByRef Value As EquipmentVisibility)
+
+    Value.SwordVisible = Not Value.SwordVisible
+
+End Sub
+
+Public Sub ToggleShieldVisibility(ByRef Value As EquipmentVisibility)
+
+    Value.ShieldVisible = Not Value.ShieldVisible
+
+End Sub
+
+Public Function ApplyEquipmentVisibility(ByRef Actor As Character3D.Actor,
+    Value As EquipmentVisibility) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Character3D.SetPartVisible(
+        Actor, WEAPON_PART_INDEX, Value.SwordVisible)
+    Result = Character3D.SetPartVisible(
+        Actor, SHIELD_PART_INDEX, Value.ShieldVisible) And Result
+
+    Return Result
+
+End Function
 
 Public Function LoadPrimary(Profile As CharacterViewer.Profile) As Character3D.Actor
 

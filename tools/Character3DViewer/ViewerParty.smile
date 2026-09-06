@@ -192,6 +192,41 @@ Public Function ResetDemo(ByRef Value As State, Center As Core.Vector3,
 
 End Function
 
+Public Function ApplyEquipmentVisibility(ByRef Value As State,
+    ByRef PrimaryActor As Character3D.Actor, CalibrationAvailable As Boolean,
+    DragonInspection As Boolean, PartIndex As Number,
+    Visible As Boolean) As Boolean
+
+    Dim Result As Boolean
+
+    Result = True
+
+    If DragonInspection Then
+
+        Result = Character3D.SetPartVisible(
+            Value.DragonOpponent.Actor, PartIndex, Visible)
+        Result = Character3D.SetPartVisible(
+            Value.Companion.Actor, PartIndex, Visible) And Result
+
+        Return Result
+
+    End If
+
+    If Not CalibrationAvailable Then
+        Return Result
+    End If
+
+    Result = Character3D.SetPartVisible(PrimaryActor, PartIndex, Visible)
+
+    If Value.Enabled And Value.Ready Then
+        Result = Character3D.SetPartVisible(
+            Value.Companion.Actor, PartIndex, Visible) And Result
+    End If
+
+    Return Result
+
+End Function
+
 Public Function HomePosition(ByRef Value As State, MemberIndex As Number) As Core.Vector3
 
     Dim Result As Core.Vector3

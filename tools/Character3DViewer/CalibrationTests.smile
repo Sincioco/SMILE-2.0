@@ -50,6 +50,16 @@ Call SelectCharacterTab(2)
 Call CalibrationCheck(Session.Ready And Not Session.ViewerError And Party.Ready,
     "Dragon loads both calibrated companions")
 Call CheckDragonFireContinuity()
+Call ToggleSword()
+Call ToggleShield()
+Call CalibrationCheck(Session.Ready And Not Equipment.SwordVisible And
+    Not Equipment.ShieldVisible,
+    "Dragon inspection applies hidden equipment intent to both opponents")
+Call ToggleSword()
+Call ToggleShield()
+Call CalibrationCheck(Session.Ready And Equipment.SwordVisible And
+    Equipment.ShieldVisible,
+    "Dragon inspection restores equipment visibility for both opponents")
 Call SelectCharacterTab(3)
 Call CalibrationCheck(Session.Ready And Not Session.ViewerError And Party.Ready,
     "Party loads both calibrated heroes")
@@ -59,6 +69,16 @@ Call CalibrationCheck(
     Calibration.KeyBase = 0 And
     Session.ProfileIndex = ViewerProfiles.PROFILE_ARIN,
     "Party owner creates the calibrated companion without replacing primary context")
+Call ToggleSword()
+Call ToggleShield()
+Call CalibrationCheck(Session.Ready And Not Equipment.SwordVisible And
+    Not Equipment.ShieldVisible,
+    "Party mode applies hidden equipment intent to both calibrated heroes")
+Call ToggleSword()
+Call ToggleShield()
+Call CalibrationCheck(Session.Ready And Equipment.SwordVisible And
+    Equipment.ShieldVisible,
+    "Party mode restores equipment visibility for both calibrated heroes")
 
 TestIndex = Calibration.KeyBase
 TestPartyUpdate = ViewerParty.UpdateCompanion(
@@ -440,8 +460,8 @@ Call AdvanceTestSceneVfx()
 Call CalibrationCheck(Fire.Value(10, Effects.SwordFire) = TestFireAge, "Paused flame clock stays frozen")
 
 TestFireGeneration = Effects.SwordFire.Generation
-SwordVisible = False
-ShieldVisible = False
+Equipment.SwordVisible = False
+Equipment.ShieldVisible = False
 
 Call UpdateTestEquipmentFire()
 Call AdvanceTestSceneVfx()
@@ -449,8 +469,8 @@ Call CalibrationCheck(Effects.SwordFire.Slot = 0, "Hidden sword destroys frozen 
 Call CalibrationCheck(Not ArinShieldRim.IsVisible(),
     "Hidden shield clears the frozen ember outline immediately")
 
-SwordVisible = True
-ShieldVisible = True
+Equipment.SwordVisible = True
+Equipment.ShieldVisible = True
 
 Call UpdateTestEquipmentFire()
 Call AdvanceTestSceneVfx()
@@ -1115,8 +1135,8 @@ Sub UpdateTestEquipmentFire()
         Session.ProfileIndex,
         Party.Enabled And
             ViewerParty.PresentationState(Party, 0) = ViewerParty.STATE_KO,
-        SwordVisible,
-        ShieldVisible,
+        Equipment.SwordVisible,
+        Equipment.ShieldVisible,
         ViewerUiState.CalibrationEditing,
         Playback.ScenePaused,
         Playback.SelectedClip,

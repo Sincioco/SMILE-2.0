@@ -395,6 +395,7 @@ try {
     foreach ($contract in @(
         'Public Sub ResetChoreography(',
         'Public Function ResetDemo(',
+        'Public Function ApplyEquipmentVisibility(',
         'Public Function BeginInspectorBinding(',
         'Public Function BeginInspectorSelection(',
         'Public Function EndInspectorSelection(',
@@ -421,6 +422,11 @@ try {
     }
     foreach ($contract in @(
         'Public Type Context',
+        'Public Type EquipmentVisibility',
+        'Public Sub ResetEquipmentVisibility(',
+        'Public Sub ToggleSwordVisibility(',
+        'Public Sub ToggleShieldVisibility(',
+        'Public Function ApplyEquipmentVisibility(',
         'Public Function Capture(',
         'Public Sub Apply(',
         'Public Function LoadContext(',
@@ -534,6 +540,10 @@ try {
         -not $viewerSource.Contains('Dim SceneVfxClock As') -and
         -not $viewerSource.Contains('Dim Arena As')) `
         'Party, scene VFX and arena resource state must not return to Program.smile.'
+    Assert-True (-not $viewerSource.Contains('Dim SwordVisible As Boolean') -and
+        -not $viewerSource.Contains('Dim ShieldVisible As Boolean') -and
+        -not $viewerSource.Contains('Character3D.SetPartVisible(')) `
+        'Equipment visibility state and actor propagation must remain in the actor and Party owners.'
     Assert-True (-not $viewerSource.Contains('Sub CreatePartyCompanion(') -and
         -not $viewerSource.Contains('ViewerActors.LoadContext(') -and
         -not $viewerSource.Contains('Call UseActorContext(Companion)')) `
