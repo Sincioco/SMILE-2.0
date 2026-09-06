@@ -455,6 +455,11 @@ try {
     }
     foreach ($contract in @(
         'Public Function BeginScene(',
+        'Public Sub ResetControls(',
+        'Public Function ApplyLighting(',
+        'Public Function CycleLighting(',
+        'Public Function ResetMaterialInspection(',
+        'Public Function CycleMaterialInspection(',
         'Public Function DrawFloor(',
         'Public Function DrawGrid(',
         'Public Sub DestroyBackdrops(',
@@ -548,6 +553,12 @@ try {
         -not $viewerSource.Contains('Sub ApplyArenaFacing(') -and
         -not $viewerSource.Contains('Function CharacterArenaYawAdjustment(')) `
         'Profile validation, arena facing, floor extent and camera defaults must remain in focused owners.'
+    Assert-True (-not $viewerSource.Contains('Dim LightingIndex As Number') -and
+        -not $viewerSource.Contains('Dim MaterialInspection As Number') -and
+        -not $viewerSource.Contains('Sub CycleLighting(') -and
+        -not $viewerSource.Contains('Sub ApplyLighting(') -and
+        -not $viewerSource.Contains('Sub CycleMaterialInspection(')) `
+        'Lighting and material-inspection state and behavior must remain in ViewerRendering.'
     Assert-True (-not $viewerSource.Contains('Dim SocketGizmos[') -and
         -not $viewerSource.Contains('Dim SocketMarkers As') -and
         -not $viewerSource.Contains('Sub CreateSocketGizmos()') -and

@@ -15,6 +15,8 @@ Public Type State
     FloorVisible As Boolean
     GridVisible As Boolean
     BackgroundIndex As Number
+    LightingIndex As Number
+    MaterialInspection As Number
     BackdropLandscape As StaticBackdrop3D.Backdrop
     BackdropTitle As StaticBackdrop3D.Backdrop
     BackdropAvailable As Boolean
@@ -30,15 +32,103 @@ End Type
 
 Public Sub Reset(ByRef Value As State, BackgroundIndex As Number)
 
+    Call ResetControls(Value, BackgroundIndex)
+
+    Value.BackdropTextureIndex = -1
+    Value.SelectedSocket = 0
+
+End Sub
+
+Public Sub ResetControls(ByRef Value As State, BackgroundIndex As Number)
+
     Value.FloorVisible = True
     Value.GridVisible = True
     Value.BackgroundIndex = BackgroundIndex
-    Value.BackdropTextureIndex = -1
+    Value.LightingIndex = 0
+    Value.MaterialInspection = Graphics3D.MATERIAL_INSPECTION_LIT
     Value.SocketGizmosVisible = False
-    Value.SelectedSocket = 0
     Value.ShowAllSocketOrigins = False
 
 End Sub
+
+Public Function ApplyLighting(ByRef Value As State) As Boolean
+
+    Dim Result As Boolean
+
+    Result = True
+
+    If Value.LightingIndex = 0 Then
+
+        Result = Graphics3D.ClearAdditionalLights3DChecked() And Result
+        Result = Graphics3D.SetAmbientLight3D(255, 255, 255, 68) And Result
+        Result = Graphics3D.SetDirectionalLight3D(
+            -35, -80, 25, 255, 248, 235, 220) And Result
+        Result = Graphics3D.SetPointLight3D(
+            0, -80, 120, -30, 170, 205, 255, 260, 360) And Result
+        Result = Graphics3D.SetPointLight3D(
+            1, 80, 80, 0, 255, 205, 145, 180, 300) And Result
+
+        Call Scene3D.UseCustomLighting()
+
+    Else If Value.LightingIndex = 1 Then
+
+        Result = Scene3D.UseLighting("CharacterStudio") And Result
+
+    Else If Value.LightingIndex = 2 Then
+
+        Result = Scene3D.UseLighting("Daylight") And Result
+
+    Else
+        Result = Scene3D.UseLighting("Moonlight") And Result
+
+    End If
+
+    Return Result
+
+End Function
+
+Public Function CycleLighting(ByRef Value As State) As Boolean
+
+    Dim Result As Boolean
+
+    Value.LightingIndex = (Value.LightingIndex + 1) Mod 4
+    Result = ApplyLighting(Value)
+
+    Return Result
+
+End Function
+
+Public Function ApplyMaterialInspection(ByRef Value As State) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Graphics3D.SetMaterialInspection3D(Value.MaterialInspection)
+
+    Return Result
+
+End Function
+
+Public Function ResetMaterialInspection(ByRef Value As State) As Boolean
+
+    Dim Result As Boolean
+
+    Value.MaterialInspection = Graphics3D.MATERIAL_INSPECTION_LIT
+    Result = ApplyMaterialInspection(Value)
+
+    Return Result
+
+End Function
+
+Public Function CycleMaterialInspection(ByRef Value As State) As Boolean
+
+    Dim Result As Boolean
+
+    Value.MaterialInspection = (Value.MaterialInspection + 1) Mod 7
+    Result = ApplyMaterialInspection(Value)
+
+    Return Result
+
+End Function
 
 Public Sub CreateArena(ByRef Value As State, Width As Number, Depth As Number)
 

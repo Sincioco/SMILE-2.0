@@ -67,8 +67,6 @@ Dim ActiveProfile As CharacterViewer.Profile
 Dim Rendering As ViewerRendering.State
 Dim Effects As ViewerEffects.State
 Dim DragonState As ViewerDragon.State
-Dim LightingIndex As Number
-Dim MaterialInspection As Number
 Dim Key As Number
 Dim FrameRate As ViewerTiming.FrameRateState
 Dim Timing As ViewerTiming.ClockState
@@ -550,7 +548,7 @@ Sub LoadViewer()
 
     Call ViewerSession.CaptureFailure(Session, 35)
 
-    Call ApplyLighting()
+    Session.Ready = ViewerRendering.ApplyLighting(Rendering) And Session.Ready
 
     Session.Ready = Character3D.SetScale(Character, ViewerCameraState.Frame.ScalePercent) And Session.Ready
     Session.Ready = Character3D.Place(
@@ -598,8 +596,7 @@ Sub LoadViewer()
     Call ViewerSession.CaptureFailure(Session, 40)
 
     Playback.PlaybackSpeed = ActiveProfile.DefaultPlaybackSpeed
-    MaterialInspection = Graphics3D.MATERIAL_INSPECTION_LIT
-    Session.Ready = Graphics3D.SetMaterialInspection3D(MaterialInspection) And Session.Ready
+    Session.Ready = ViewerRendering.ResetMaterialInspection(Rendering) And Session.Ready
 
     Call ViewerSession.CaptureFailure(Session, 41)
 
@@ -1460,13 +1457,6 @@ Sub CycleProfile()
 
 End Sub
 
-Sub CycleMaterialInspection()
-
-    MaterialInspection = (MaterialInspection + 1) Mod 7
-    Session.Ready = Graphics3D.SetMaterialInspection3D(MaterialInspection) And Session.Ready
-
-End Sub
-
 Sub AdvanceAnimationSequence()
 
     If Party.Enabled Then
@@ -1771,11 +1761,11 @@ Function HandleInspectorPointer() As Boolean
 
     Else If Action = ViewerUi.INSPECTOR_ACTION_LIGHTING Then
 
-        Call CycleLighting()
+        Session.Ready = ViewerRendering.CycleLighting(Rendering) And Session.Ready
 
     Else If Action = ViewerUi.INSPECTOR_ACTION_MATERIAL Then
 
-        Call CycleMaterialInspection()
+        Session.Ready = ViewerRendering.CycleMaterialInspection(Rendering) And Session.Ready
 
     Else If Action = ViewerUi.INSPECTOR_ACTION_SOCKET Then
 
@@ -2280,13 +2270,9 @@ Sub ResetAll()
     Playback.ScenePaused = False
     Playback.DemoEnabled = True
     ViewerCameraState.FitLocked = True
-    LightingIndex = 0
-    MaterialInspection = Graphics3D.MATERIAL_INSPECTION_LIT
-    Rendering.BackgroundIndex = 3
-    Rendering.SocketGizmosVisible = False
-    Rendering.ShowAllSocketOrigins = False
-    Rendering.FloorVisible = True
-    Rendering.GridVisible = True
+
+    Call ViewerRendering.ResetControls(Rendering, 3)
+
     Effects.EpicGlowVisible = ViewerProfiles.EpicGlowVisibleByDefault(Session.ProfileIndex) And Effects.EpicGlowAvailable
 
     Call ViewerDragon.ResetVisibility(DragonState)
@@ -2301,7 +2287,7 @@ Sub ResetAll()
     Call ViewerGizmo.Hide(ViewerGizmoState)
     Call ViewerCamera.CancelPointerControls(ViewerCameraState)
 
-    Call ApplyLighting()
+    Session.Ready = ViewerRendering.ApplyLighting(Rendering) And Session.Ready
 
     Session.Ready = ViewerActors.ApplyArenaFacing(
         Character,
@@ -2321,7 +2307,7 @@ Sub ResetAll()
         Session.Ready = Character3D.SetPartVisible(Character, SHIELD_PART_INDEX, True) And Session.Ready
     End If
 
-    Session.Ready = Graphics3D.SetMaterialInspection3D(MaterialInspection) And Session.Ready
+    Session.Ready = ViewerRendering.ApplyMaterialInspection(Rendering) And Session.Ready
 
     If Party.Enabled And Party.Ready Then
 
@@ -2516,41 +2502,6 @@ Sub FinishTimelineKeyframeDrag()
 
     Call UpdateCalibrationForCurrentFrame()
     Call ApplyWristCalibration()
-
-End Sub
-
-Sub CycleLighting()
-
-    LightingIndex = (LightingIndex + 1) Mod 4
-
-    Call ApplyLighting()
-
-End Sub
-
-Sub ApplyLighting()
-
-    If LightingIndex = 0 Then
-
-        Session.Ready = Graphics3D.ClearAdditionalLights3DChecked() And Session.Ready
-        Session.Ready = Graphics3D.SetAmbientLight3D(255, 255, 255, 68) And Session.Ready
-        Session.Ready = Graphics3D.SetDirectionalLight3D(-35, -80, 25, 255, 248, 235, 220) And Session.Ready
-        Session.Ready = Graphics3D.SetPointLight3D(0, -80, 120, -30, 170, 205, 255, 260, 360) And Session.Ready
-        Session.Ready = Graphics3D.SetPointLight3D(1, 80, 80, 0, 255, 205, 145, 180, 300) And Session.Ready
-
-        Call Scene3D.UseCustomLighting()
-
-    Else If LightingIndex = 1 Then
-
-        Session.Ready = Scene3D.UseLighting("CharacterStudio") And Session.Ready
-
-    Else If LightingIndex = 2 Then
-
-        Session.Ready = Scene3D.UseLighting("Daylight") And Session.Ready
-
-    Else
-        Session.Ready = Scene3D.UseLighting("Moonlight") And Session.Ready
-
-    End If
 
 End Sub
 
@@ -3097,7 +3048,7 @@ Sub DrawInspectorOverlay()
                 Character, Playback, Session.ProfileIndex),
             ActiveProfile.CandidateVersion,
             Playback.PlaybackSpeed,
-            MaterialInspection,
+            Rendering.MaterialInspection,
             Graphics3D.DrawCallCount3D(),
             Graphics3D.SubmittedTriangleCount3D(),
             ViewerUi.DemoStatusLabel(
