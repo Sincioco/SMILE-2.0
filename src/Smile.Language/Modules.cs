@@ -1087,8 +1087,10 @@ internal sealed class ModuleProcessor
         switch (member)
         {
             case RecordFieldDeclarationSyntax field:
-                return new RecordFieldDeclarationSyntax(field.VisibilityKeyword, field.Identifier, field.AsKeyword,
-                    LowerTypeToken(field.TypeToken, tree, module)!);
+                return new RecordFieldDeclarationSyntax(field.VisibilityKeyword, field.Identifier,
+                    field.OpenBracket,
+                    field.Sizes.Select(size => LowerExpression(size, tree, module, null)).ToArray(),
+                    field.CloseBracket, field.AsKeyword, LowerTypeToken(field.TypeToken, tree, module)!);
             case TypeRoutineDeclarationSyntax routine:
             {
                 var locals = CollectRoutineLocals(routine.Declaration, module);

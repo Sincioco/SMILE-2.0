@@ -263,22 +263,32 @@ internal sealed class Parser
                     continue;
                 }
                 var field = MatchIdentifier();
+                SyntaxToken? openBracket = null;
+                SyntaxToken? closeBracket = null;
+                IReadOnlyList<ExpressionSyntax> sizes = Array.Empty<ExpressionSyntax>();
+                if (Current.Kind == SyntaxKind.OpenBracketToken)
+                {
+                    openBracket = NextToken();
+                    sizes = ParseExpressionList(SyntaxKind.CloseBracketToken);
+                    closeBracket = MatchToken(SyntaxKind.CloseBracketToken);
+                }
                 if (Current.Kind != SyntaxKind.AsKeyword)
                 {
-                    var unsupported = Current.Kind is SyntaxKind.OpenBracketToken or SyntaxKind.EqualsToken;
-                    _diagnostics.Report(unsupported ? "SML3403" : "SML3402", Current.Span, unsupported
-                        ? "Record fields cannot be arrays and cannot have initializers."
-                        : $"Field '{field.Text}' requires As and a field type.");
+                    _diagnostics.Report(Current.Kind == SyntaxKind.EqualsToken ? "SML3403" : "SML3402",
+                        Current.Span, Current.Kind == SyntaxKind.EqualsToken
+                            ? "Type fields cannot have initializers."
+                            : $"Field '{field.Text}' requires As and a field type.");
                     SynchronizeLine();
                     continue;
                 }
                 var asKeyword = MatchToken(SyntaxKind.AsKeyword);
                 var fieldType = MatchTypeToken();
-                members.Add(new RecordFieldDeclarationSyntax(visibility, field, asKeyword, fieldType));
+                members.Add(new RecordFieldDeclarationSyntax(visibility, field, openBracket, sizes, closeBracket,
+                    asKeyword, fieldType));
                 if (!IsLineEnd(Current.Kind))
                 {
                     _diagnostics.Report("SML3403", Current.Span,
-                        "Record fields cannot be arrays and cannot have initializers.");
+                        "Type fields cannot have initializers.");
                     SynchronizeLine();
                     continue;
                 }

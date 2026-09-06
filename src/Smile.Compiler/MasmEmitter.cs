@@ -2872,11 +2872,16 @@ internal sealed class MasmEmitter
         {
             if (!field.Type.RequiresCleanup)
                 continue;
-            Line("    mov rax, QWORD PTR [rbp-8]");
-            Line($"    lea rcx, [rax{Offset(field.Offset)}]");
-            Line(field.Type is RecordTypeSymbol nested
-                ? $"    call {RecordClear(nested)}"
-                : field.Type == SmileType.Text ? "    call smile_text_clear" : "    call smile_image_clear");
+            var elementSize = Math.Max(8, field.Type.Size);
+            for (var index = field.ElementCount - 1; index >= 0; index--)
+            {
+                var elementOffset = field.Offset + index * elementSize;
+                Line("    mov rax, QWORD PTR [rbp-8]");
+                Line($"    lea rcx, [rax{Offset(elementOffset)}]");
+                Line(field.Type is RecordTypeSymbol nested
+                    ? $"    call {RecordClear(nested)}"
+                    : field.Type == SmileType.Text ? "    call smile_text_clear" : "    call smile_image_clear");
+            }
         }
         Line("    mov rax, QWORD PTR [rbp-8]");
         Line("    mov rsp, rbp");
@@ -2895,40 +2900,45 @@ internal sealed class MasmEmitter
         Line("    mov QWORD PTR [rbp-16], rdx");
         foreach (var field in record.Fields)
         {
-            if (field.Type is RecordTypeSymbol nested)
+            var elementSize = Math.Max(8, field.Type.Size);
+            for (var index = 0; index < field.ElementCount; index++)
             {
-                Line("    mov rax, QWORD PTR [rbp-8]");
-                Line($"    lea rcx, [rax{Offset(field.Offset)}]");
-                Line("    mov rax, QWORD PTR [rbp-16]");
-                Line($"    lea rdx, [rax{Offset(field.Offset)}]");
-                Line($"    call {RecordCopy(nested)}");
-            }
-            else if (field.Type == SmileType.Text)
-            {
-                Line("    mov rax, QWORD PTR [rbp-16]");
-                Line($"    mov rcx, QWORD PTR [rax{Offset(field.Offset)}]");
-                Line("    call smile_text_retain");
-                Line("    mov rdx, rax");
-                Line("    mov rax, QWORD PTR [rbp-8]");
-                Line($"    lea rcx, [rax{Offset(field.Offset)}]");
-                Line("    call smile_text_move_assign");
-            }
-            else if (field.Type == SmileType.Image)
-            {
-                Line("    mov rax, QWORD PTR [rbp-16]");
-                Line($"    mov rcx, QWORD PTR [rax{Offset(field.Offset)}]");
-                Line("    call smile_image_retain");
-                Line("    mov rdx, rax");
-                Line("    mov rax, QWORD PTR [rbp-8]");
-                Line($"    lea rcx, [rax{Offset(field.Offset)}]");
-                Line("    call smile_image_move_assign");
-            }
-            else
-            {
-                Line("    mov rax, QWORD PTR [rbp-16]");
-                Line($"    mov rdx, QWORD PTR [rax{Offset(field.Offset)}]");
-                Line("    mov rax, QWORD PTR [rbp-8]");
-                Line($"    mov QWORD PTR [rax{Offset(field.Offset)}], rdx");
+                var elementOffset = field.Offset + index * elementSize;
+                if (field.Type is RecordTypeSymbol nested)
+                {
+                    Line("    mov rax, QWORD PTR [rbp-8]");
+                    Line($"    lea rcx, [rax{Offset(elementOffset)}]");
+                    Line("    mov rax, QWORD PTR [rbp-16]");
+                    Line($"    lea rdx, [rax{Offset(elementOffset)}]");
+                    Line($"    call {RecordCopy(nested)}");
+                }
+                else if (field.Type == SmileType.Text)
+                {
+                    Line("    mov rax, QWORD PTR [rbp-16]");
+                    Line($"    mov rcx, QWORD PTR [rax{Offset(elementOffset)}]");
+                    Line("    call smile_text_retain");
+                    Line("    mov rdx, rax");
+                    Line("    mov rax, QWORD PTR [rbp-8]");
+                    Line($"    lea rcx, [rax{Offset(elementOffset)}]");
+                    Line("    call smile_text_move_assign");
+                }
+                else if (field.Type == SmileType.Image)
+                {
+                    Line("    mov rax, QWORD PTR [rbp-16]");
+                    Line($"    mov rcx, QWORD PTR [rax{Offset(elementOffset)}]");
+                    Line("    call smile_image_retain");
+                    Line("    mov rdx, rax");
+                    Line("    mov rax, QWORD PTR [rbp-8]");
+                    Line($"    lea rcx, [rax{Offset(elementOffset)}]");
+                    Line("    call smile_image_move_assign");
+                }
+                else
+                {
+                    Line("    mov rax, QWORD PTR [rbp-16]");
+                    Line($"    mov rdx, QWORD PTR [rax{Offset(elementOffset)}]");
+                    Line("    mov rax, QWORD PTR [rbp-8]");
+                    Line($"    mov QWORD PTR [rax{Offset(elementOffset)}], rdx");
+                }
             }
         }
         Line("    mov rax, QWORD PTR [rbp-8]");

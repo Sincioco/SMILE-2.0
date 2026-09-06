@@ -1160,10 +1160,16 @@ public static class SmileLibraryPackage
     private static string FieldJson(RecordFieldSymbol field,
         SmileCompilationDependencyContext dependencyContext, IReadOnlyDictionary<string, string> sourceIds)
     {
-        return new StringBuilder("{\"name\": \"").Append(JsonEscape(field.Name))
-            .Append("\", \"visibility\": \"Public\", \"type\": ")
-            .Append(TypeReferenceJson(field.Type, dependencyContext))
-            .Append(", \"ordinal\": ").Append(field.Ordinal.ToString(CultureInfo.InvariantCulture))
+        var builder = new StringBuilder("{\"name\": \"").Append(JsonEscape(field.Name))
+            .Append("\", \"visibility\": \"Public\", ")
+            .Append(field.IsArray ? "\"elementType\": " : "\"type\": ")
+            .Append(TypeReferenceJson(field.Type, dependencyContext));
+        if (field.IsArray)
+            builder.Append(", \"rank\": ").Append(field.ArrayRank.ToString(CultureInfo.InvariantCulture))
+                .Append(", \"dimensions\": [")
+                .Append(string.Join(", ", field.Dimensions.Select(dimension =>
+                    dimension.ToString(CultureInfo.InvariantCulture)))).Append(']');
+        return builder.Append(", \"ordinal\": ").Append(field.Ordinal.ToString(CultureInfo.InvariantCulture))
             .Append(", \"offset\": ").Append(field.Offset.ToString(CultureInfo.InvariantCulture))
             .Append(", \"location\": ").Append(LocationJson(field.Source, field.DeclarationSpan, sourceIds))
             .Append('}').ToString();

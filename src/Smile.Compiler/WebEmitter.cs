@@ -126,21 +126,51 @@ internal sealed class WebEmitter
         {
             var name = _recordNames[type];
             var defaults = string.Join(", ", type.Fields.Select(field =>
-                $"{Json(FieldKey(field))}: {DefaultValue(field.Type)}"));
+                $"{Json(FieldKey(field))}: {RecordFieldDefault(field)}"));
             var copies = string.Join(", ", type.Fields.Select(field =>
-                $"{Json(FieldKey(field))}: {CloneValue(field.Type, $"value[{Json(FieldKey(field))}]")}"));
+                $"{Json(FieldKey(field))}: {RecordFieldClone(field, $"value[{Json(FieldKey(field))}]")}"));
             Line($"function {name}_default() {{ return {{ {defaults} }}; }}");
             Line($"function {name}_clone(value) {{ return {{ {copies} }}; }}");
-            var clears = string.Join(" ", type.Fields.Where(field => field.Type.RequiresCleanup).Select(field =>
-                field.Type is RecordTypeSymbol nested
-                    ? $"{_recordNames[nested]}_clear(value[{Json(FieldKey(field))}]);"
-                    : field.Type == SmileType.Image
-                        ? $"smile.imageRelease(value[{Json(FieldKey(field))}]); value[{Json(FieldKey(field))}] = null;"
-                        : string.Empty));
+            var clears = string.Join(" ", type.Fields.Where(field => field.Type.RequiresCleanup)
+                .Select(RecordFieldClear));
             Line($"function {name}_clear(value) {{ if (!value) return; {clears} }}");
         }
         if (_recordNames.Count != 0)
             Line();
+    }
+
+    private string RecordFieldDefault(RecordFieldSymbol field)
+    {
+        if (!field.IsArray)
+            return DefaultValue(field.Type);
+        var initial = field.Type is RecordTypeSymbol
+            ? $"() => {DefaultValue(field.Type)}" : DefaultValue(field.Type);
+        return $"smile.array([{string.Join(", ", field.Dimensions)}], {initial})";
+    }
+
+    private string RecordFieldClone(RecordFieldSymbol field, string value)
+    {
+        if (!field.IsArray)
+            return CloneValue(field.Type, value);
+        var item = CloneValue(field.Type, "item");
+        return $"{{ dimensions: [{string.Join(", ", field.Dimensions)}], " +
+               $"data: {value}.data.map(item => {item}) }}";
+    }
+
+    private string RecordFieldClear(RecordFieldSymbol field)
+    {
+        var value = $"value[{Json(FieldKey(field))}]";
+        if (!field.IsArray)
+            return field.Type is RecordTypeSymbol nested
+                ? $"{_recordNames[nested]}_clear({value});"
+                : field.Type == SmileType.Image
+                    ? $"smile.imageRelease({value}); value[{Json(FieldKey(field))}] = null;"
+                    : string.Empty;
+        if (field.Type is RecordTypeSymbol arrayRecord)
+            return $"for (const item of {value}.data) {_recordNames[arrayRecord]}_clear(item);";
+        if (field.Type == SmileType.Image)
+            return $"for (const item of {value}.data) smile.imageRelease(item); {value}.data.fill(null);";
+        return string.Empty;
     }
 
     private void EmitClassHelpers()
@@ -458,7 +488,8 @@ internal sealed class WebEmitter
             Line($"}} finally {{ if ({reference}) {reference}.release(); " +
                  $"if (!{transferred}) {_recordNames[cleanupRecord]}_clear({value}); }}");
         }
-        else if (_analysis.SemanticModel.TryGetClassLocationOwner(assignment.Target.Location, out _))
+        else if (assignment.Target.Location is IndexedExpressionSyntax ||
+                 _analysis.SemanticModel.TryGetClassLocationOwner(assignment.Target.Location, out _))
         {
             var reference = Temporary("target");
             Line($"const {reference} = {Reference(assignment.Target.Location)};");

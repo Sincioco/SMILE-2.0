@@ -4423,6 +4423,114 @@ Run("Record types bind nominal identities nested fields arrays and deterministic
     Equal(8, actor.Fields.Single(field => field.Name == "Position").Offset);
 });
 
+Run("Type fields support fixed arrays through syntax semantics layouts and both emitters", () =>
+{
+    const string source = "Option Explicit\nConst ROWS = 2\nType Point\nX As Number\nEnd Type\nType Bag\nLabels[2] As Text\nPoints[2] As Point\nValues[ROWS, 3] As Number\nImages[2] As Image\nEnd Type\nDim First As Bag\nDim Second As Bag\nFirst.Labels[0] = \"A\"\nFirst.Points[1].X = 7\nFirst.Values[1, 2] = 9\nSecond = First\nCall SetNumber(Second.Values[0, 1], 5)\nPrint Second.Labels[0]\nPrint Second.Points[1].X\nPrint Second.Values[1, 2]\nSub SetNumber(ByRef Value As Number, NewValue As Number)\nValue = NewValue\nEnd Sub\n";
+    var analysis = Analyze(source);
+    if (analysis.HasErrors)
+        throw new InvalidOperationException(string.Join(" | ", analysis.Diagnostics.Select(diagnostic =>
+            diagnostic.Code + ": " + diagnostic.Message)));
+
+    var bag = analysis.SemanticModel.Types["Bag"];
+    Equal(96, bag.Size);
+    var labels = bag.Fields.Single(field => field.Name == "Labels");
+    var points = bag.Fields.Single(field => field.Name == "Points");
+    var values = bag.Fields.Single(field => field.Name == "Values");
+    var images = bag.Fields.Single(field => field.Name == "Images");
+    Equal(true, labels.IsArray);
+    Equal("2", string.Join(",", labels.Dimensions));
+    Equal(0, labels.Offset);
+    Equal("2", string.Join(",", points.Dimensions));
+    Equal(16, points.Offset);
+    Equal("2,3", string.Join(",", values.Dimensions));
+    Equal(32, values.Offset);
+    Equal("2", string.Join(",", images.Dimensions));
+    Equal(80, images.Offset);
+    Equal(true, bag.ContainsOwnedImage);
+
+    var assignments = analysis.BoundSyntaxTree.Root.Statements.OfType<AssignmentStatementSyntax>().ToArray();
+    var labelIndex = (IndexedExpressionSyntax)assignments[0].Target.Location;
+    var pointIndex = (IndexedExpressionSyntax)((FieldAccessExpressionSyntax)assignments[1].Target.Location).Receiver;
+    var valueIndex = (IndexedExpressionSyntax)assignments[2].Target.Location;
+    Equal(true, analysis.SemanticModel.TryGetInstanceField(labelIndex, out var boundLabels));
+    Equal(true, ReferenceEquals(labels, boundLabels));
+    Equal(true, analysis.SemanticModel.TryGetInstanceField(pointIndex, out var boundPoints));
+    Equal(true, ReferenceEquals(points, boundPoints));
+    Equal(true, analysis.SemanticModel.TryGetInstanceField(valueIndex, out var boundValues));
+    Equal(true, ReferenceEquals(values, boundValues));
+
+    var native = new MasmEmitter(analysis, SmileGraphicsBackend.Auto, true, false).Emit();
+    var nativeCopyStart = native.IndexOf("record_1_bag_copy PROC", StringComparison.Ordinal);
+    var nativeCopyEnd = native.IndexOf("record_1_bag_copy ENDP", nativeCopyStart, StringComparison.Ordinal);
+    var nativeCopy = native[nativeCopyStart..nativeCopyEnd];
+    Equal(2, nativeCopy.Split("call smile_text_retain", StringSplitOptions.None).Length - 1);
+    Equal(2, nativeCopy.Split("call record_0_point_copy", StringSplitOptions.None).Length - 1);
+    Equal(2, nativeCopy.Split("call smile_image_retain", StringSplitOptions.None).Length - 1);
+
+    var web = new WebEmitter(analysis).Emit();
+    Equal(true, web.Contains("smile.array([2], \"\")", StringComparison.Ordinal));
+    Equal(true, web.Contains("smile.array([2], () => record_0_point_default())", StringComparison.Ordinal));
+    Equal(true, web.Contains("smile.array([2, 3], 0)", StringComparison.Ordinal));
+    Equal(true, web.Contains(".data.map(item => record_0_point_clone(item))", StringComparison.Ordinal));
+    Equal(true, web.Contains(".data.map(item => smile.imageRetain(item))", StringComparison.Ordinal));
+    Equal(true, web.Contains("for (const item of value[\"__smile_r1_f3\"].data) smile.imageRelease(item);",
+        StringComparison.Ordinal));
+    Equal(false, web.Split('\n').Any(line => line.TrimStart().StartsWith("smile.get(",
+        StringComparison.Ordinal) && line.Contains(" = ", StringComparison.Ordinal)));
+});
+
+Run("Type fixed-array fields retain bounded diagnostics and indexed-field rules", () =>
+{
+    Equal(true, HasDiagnostic(Analyze("Type Bag\nValues[] As Number\nEnd Type\n"), "SML3403"));
+    Equal(true, HasDiagnostic(Analyze("Type Bag\nValues[1, 2, 3] As Number\nEnd Type\n"), "SML3403"));
+    Equal(true, HasDiagnostic(Analyze("Type Bag\nValues[0] As Number\nEnd Type\n"), "SML3403"));
+    Equal(true, HasDiagnostic(Analyze("Type Bag\nValues[True] As Number\nEnd Type\n"), "SML3403"));
+    Equal(true, HasDiagnostic(Analyze("Type Bag\nValues[2] As Number = 1\nEnd Type\n"), "SML3403"));
+    Equal(true, HasDiagnostic(Analyze("Type Bag\nValues[2] As Number\nEnd Type\nDim Value As Bag\nPrint Value.Values\n"),
+        "SML3009"));
+    Equal(true, HasDiagnostic(Analyze("Type Bag\nValues[2, 2] As Number\nEnd Type\nDim Value As Bag\nPrint Value.Values[0]\n"),
+        "SML3014"));
+});
+
+Run("Type fixed-array fields publish deterministic library metadata", () =>
+{
+    var root = Path.Combine(Path.GetTempPath(), "SmileFixedArrayRecordPackage-" + Guid.NewGuid().ToString("N"));
+    Directory.CreateDirectory(root);
+    try
+    {
+        var projectPath = Path.Combine(root, "FixedArray.smilelibproj");
+        File.WriteAllText(projectPath,
+            "<SmileProject Version=\"1.0\"><PropertyGroup><ProjectKind>Library</ProjectKind>" +
+            "<LibraryName>Fixed.Array.Proof</LibraryName><Version>1.0.0</Version>" +
+            "<OutputName>FixedArray</OutputName></PropertyGroup><ItemGroup>" +
+            "<SmileSource Include=\"Types.smile\" /></ItemGroup></SmileProject>");
+        File.WriteAllText(Path.Combine(root, "Types.smile"),
+            "Module Fixed.Array.Proof\nPublic Type Bag\nValues[2, 3] As Number\nEnd Type\nEnd Module\n");
+        var compilation = SmileProjectCompilation.Load(projectPath, Path.Combine(root, "cache"));
+        var analysis = SmileLanguage.Analyze(compilation.Sources, SmileCompilationKind.Library,
+            compilation.DependencyContext);
+        Equal(false, analysis.HasErrors);
+        var package = Path.Combine(root, "FixedArray.smilelib");
+        SmileLibraryPackage.Write(package, compilation.Graph.Root, analysis);
+        using var archive = System.IO.Compression.ZipFile.OpenRead(package);
+        using var reader = new StreamReader(archive.GetEntry("api/public-symbols.json")!.Open());
+        using var document = System.Text.Json.JsonDocument.Parse(reader.ReadToEnd());
+        var type = document.RootElement.GetProperty("modules")[0].GetProperty("members")[0];
+        var field = type.GetProperty("fields")[0];
+        Equal("name|visibility|elementType|rank|dimensions|ordinal|offset|location",
+            string.Join("|", field.EnumerateObject().Select(property => property.Name)));
+        Equal(2, field.GetProperty("rank").GetInt32());
+        Equal("2,3", string.Join(",", field.GetProperty("dimensions").EnumerateArray()
+            .Select(dimension => dimension.GetInt32())));
+        Equal(0, field.GetProperty("offset").GetInt32());
+        _ = SmileLibraryPackage.Read(package, Path.Combine(root, "read-cache"));
+    }
+    finally
+    {
+        Directory.Delete(root, true);
+    }
+});
+
 Run("With binds explicit nested syntax over writable record locations", () =>
 {
     const string source = "Option Explicit\nType Position\nX As Number\nY As Number\nEnd Type\nType Actor\nName As Text\nPosition As Position\nEnd Type\nDim Hero As Actor\nDim Party[2] As Actor\nWith Hero\n.Name = \"A\"\nWith .Position\n.X = .X + 1\nCall SetNumber(.Y, 2)\nEnd With\nEnd With\nWith Party[Pick()]\n.Name = Hero.Name\nEnd With\nFunction Pick() As Number\nReturn 1\nEnd Function\nSub SetNumber(ByRef Value As Number, NewValue As Number)\nValue = NewValue\nEnd Sub\n";
@@ -5687,10 +5795,10 @@ Run("VSIX templates render localized identity metadata within the aligned header
     var border = gameTemplate.Split('\n')[0].TrimEnd('\r');
     var rendered = gameTemplate.Replace("$smileuser$", "Sin".PadRight(69), StringComparison.Ordinal)
         .Replace("$smiledate$", "August 15, 2026".PadRight(69), StringComparison.Ordinal)
-        .Replace("$smileversion$", "2.0.59", StringComparison.Ordinal);
+        .Replace("$smileversion$", "2.0.60", StringComparison.Ordinal);
     var header = rendered.Split('\n').Take(9).Select(line => line.TrimEnd('\r')).ToArray();
     Equal("' Programmed By: " + "Sin".PadRight(69) + "Version: 0.0.1", header[3]);
-    Equal("' Programmed Date: " + "August 15, 2026".PadRight(69) + "SMILE: 2.0.59", header[4]);
+    Equal("' Programmed Date: " + "August 15, 2026".PadRight(69) + "SMILE: 2.0.60", header[4]);
     Equal(header[3].IndexOf("Version:", StringComparison.Ordinal) + "Version".Length,
         header[4].IndexOf("SMILE:", StringComparison.Ordinal) + "SMILE".Length);
     Equal(true, header.All(line => line.Length <= border.Length));
@@ -5703,14 +5811,14 @@ Run("VSIX templates render localized identity metadata within the aligned header
     foreach (var manifest in new[] { gameManifest, consoleManifest })
     {
         Equal(true, manifest.Contains("SmileProjectTemplateWizard", StringComparison.Ordinal));
-        Equal(true, manifest.Contains("Version=2.0.59.0", StringComparison.Ordinal));
+        Equal(true, manifest.Contains("Version=2.0.60.0", StringComparison.Ordinal));
     }
     foreach (var applicationProject in new[] { gameProject, consoleProject })
         Equal(true, applicationProject.Contains("<ApplicationId>$smileapplicationid$</ApplicationId>", StringComparison.Ordinal));
     Equal(false, libraryProject.Contains("ApplicationId", StringComparison.Ordinal));
     Equal(true, wizard.Contains("\"smile.app.a\" + Guid.NewGuid().ToString(\"N\")", StringComparison.Ordinal));
     Equal(true, wizard.Contains("ToString(\"D\", CultureInfo.CurrentCulture)", StringComparison.Ordinal));
-    Equal(true, project.Contains("<Version>2.0.59</Version>", StringComparison.Ordinal));
+    Equal(true, project.Contains("<Version>2.0.60</Version>", StringComparison.Ordinal));
     Equal(true, vsixManifest.Contains("Type=\"Microsoft.VisualStudio.Assembly\"", StringComparison.Ordinal));
 });
 

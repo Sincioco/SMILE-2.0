@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -31,23 +32,37 @@ public abstract class TypeMemberDeclarationSyntax : SyntaxNode
 public sealed class RecordFieldDeclarationSyntax : TypeMemberDeclarationSyntax
 {
     public RecordFieldDeclarationSyntax(SyntaxToken identifier, SyntaxToken asKeyword, SyntaxToken typeToken)
-        : this(null, identifier, asKeyword, typeToken)
+        : this(null, identifier, null, Array.Empty<ExpressionSyntax>(), null, asKeyword, typeToken)
     {
     }
 
     public RecordFieldDeclarationSyntax(SyntaxToken? visibilityKeyword, SyntaxToken identifier,
         SyntaxToken asKeyword, SyntaxToken typeToken)
+        : this(visibilityKeyword, identifier, null, Array.Empty<ExpressionSyntax>(), null, asKeyword, typeToken)
+    {
+    }
+
+    public RecordFieldDeclarationSyntax(SyntaxToken? visibilityKeyword, SyntaxToken identifier,
+        SyntaxToken? openBracket, IReadOnlyList<ExpressionSyntax> sizes, SyntaxToken? closeBracket,
+        SyntaxToken asKeyword, SyntaxToken typeToken)
     {
         VisibilityKeyword = visibilityKeyword;
         Identifier = identifier;
+        OpenBracket = openBracket;
+        Sizes = sizes;
+        CloseBracket = closeBracket;
         AsKeyword = asKeyword;
         TypeToken = typeToken;
     }
 
     public SyntaxToken? VisibilityKeyword { get; }
     public override SyntaxToken Identifier { get; }
+    public SyntaxToken? OpenBracket { get; }
+    public IReadOnlyList<ExpressionSyntax> Sizes { get; }
+    public SyntaxToken? CloseBracket { get; }
     public SyntaxToken AsKeyword { get; }
     public SyntaxToken TypeToken { get; }
+    public bool IsArray => OpenBracket != null;
     public override ModuleVisibility Visibility => ModuleVisibility.Public;
     public override TextSpan Span => TextSpan.FromBounds(VisibilityKeyword?.Span.Start ?? Identifier.Span.Start,
         TypeToken.Span.End);

@@ -126,35 +126,39 @@ public interface IInstanceFieldSymbol : ITypeMemberSymbol
 
 public sealed class RecordFieldSymbol : IInstanceFieldSymbol
 {
-    internal RecordFieldSymbol(string name, SyntaxToken typeToken, RecordTypeSymbol containingType,
-        SourceText source, TextSpan declarationSpan, int ordinal)
+    internal RecordFieldSymbol(RecordFieldDeclarationSyntax declaration, RecordTypeSymbol containingType,
+        SourceText source, int ordinal, IReadOnlyList<int> dimensions)
     {
-        Name = name;
-        TypeToken = typeToken;
+        Declaration = declaration;
         RecordType = containingType;
         Source = source;
-        DeclarationSpan = declarationSpan;
         Ordinal = ordinal;
+        Dimensions = dimensions;
         Type = SmileType.Error;
+        long count = 1;
+        foreach (var dimension in dimensions)
+            count *= dimension;
+        ElementCount = dimensions.Count == 0 ? 1 : (int)Math.Min(count, int.MaxValue);
     }
 
-    public string Name { get; }
+    public string Name => Declaration.Identifier.Text;
     public SmileTypeMemberKind MemberKind => SmileTypeMemberKind.Field;
     public NominalTypeSymbol ContainingType => RecordType;
     public RecordTypeSymbol RecordType { get; }
     public ModuleVisibility Visibility => ModuleVisibility.Public;
     public string ProviderIdentity => RecordType.ProviderIdentity;
     public string RuntimeIdentity => RecordType.RuntimeIdentity + "::field::" + Name;
-    public SyntaxToken TypeToken { get; }
+    public RecordFieldDeclarationSyntax Declaration { get; }
+    public SyntaxToken TypeToken => Declaration.TypeToken;
     public SmileType Type { get; internal set; }
     public int Ordinal { get; }
     public int Offset { get; internal set; }
-    public IReadOnlyList<int> Dimensions => Array.Empty<int>();
-    public bool IsArray => false;
-    public int ArrayRank => 0;
-    public int ElementCount => 1;
+    public IReadOnlyList<int> Dimensions { get; }
+    public bool IsArray => Dimensions.Count != 0;
+    public int ArrayRank => Dimensions.Count;
+    public int ElementCount { get; }
     public SourceText Source { get; }
-    public TextSpan DeclarationSpan { get; }
+    public TextSpan DeclarationSpan => Declaration.Identifier.Span;
     public SourceLocation DeclarationLocation => new(Source, DeclarationSpan);
 }
 
@@ -1503,8 +1507,9 @@ internal sealed class SemanticAnalyzer
                 {
                     case RecordFieldDeclarationSyntax declaration:
                     {
-                        var field = new RecordFieldSymbol(declaration.Identifier.Text, declaration.TypeToken,
-                            record, _currentSource, declaration.Identifier.Span, fieldOrdinal++);
+                        var dimensions = BindRecordFieldDimensions(declaration);
+                        var field = new RecordFieldSymbol(declaration, record, _currentSource,
+                            fieldOrdinal++, dimensions);
                         if (!record.AddField(field))
                         {
                             if (record.TryGetMember(declaration.Identifier.Text, out var existing) &&
@@ -1611,14 +1616,17 @@ internal sealed class SemanticAnalyzer
             if (field.Type is RecordTypeSymbol nested)
                 LayoutRecord(nested, states, stack);
             var aligned = Align(offset, field.Type.Alignment);
-            if (aligned > int.MaxValue - Math.Max(8, field.Type.Size))
+            var elementSize = Math.Max(8, field.Type.Size);
+            var fieldSize = (long)elementSize * field.ElementCount;
+            if (aligned > int.MaxValue - fieldSize)
             {
                 _diagnostics.Report(field.Source, "SML3411", field.DeclarationSpan,
                     $"Record layout for Type '{record.Name}' exceeds the supported size.");
                 aligned = 0;
+                fieldSize = 0;
             }
             field.Offset = (int)aligned;
-            offset = field.Offset + Math.Max(8, field.Type.Size);
+            offset = aligned + fieldSize;
             containsText |= field.Type.ContainsOwnedText;
             containsImage |= field.Type.ContainsOwnedImage;
         }
@@ -1745,34 +1753,43 @@ internal sealed class SemanticAnalyzer
         }
     }
 
-    private IReadOnlyList<int> BindClassFieldDimensions(ClassFieldDeclarationSyntax declaration)
+    private IReadOnlyList<int> BindRecordFieldDimensions(RecordFieldDeclarationSyntax declaration) =>
+        BindFixedFieldDimensions(declaration.IsArray, declaration.Sizes, declaration.Span,
+            "SML3403", "Type");
+
+    private IReadOnlyList<int> BindClassFieldDimensions(ClassFieldDeclarationSyntax declaration) =>
+        BindFixedFieldDimensions(declaration.IsArray, declaration.Sizes, declaration.Span,
+            "SML3452", "Class");
+
+    private IReadOnlyList<int> BindFixedFieldDimensions(bool isArray, IReadOnlyList<ExpressionSyntax> sizes,
+        TextSpan declarationSpan, string diagnosticCode, string ownerKind)
     {
-        if (!declaration.IsArray)
+        if (!isArray)
             return Array.Empty<int>();
         var dimensions = new List<int>();
         var valid = true;
-        if (declaration.Sizes.Count is < 1 or > 2)
+        if (sizes.Count is < 1 or > 2)
         {
-            Report("SML3452", declaration.Span,
-                "Class field arrays require one or two fixed dimensions.");
+            Report(diagnosticCode, declarationSpan,
+                $"{ownerKind} field arrays require one or two fixed dimensions.");
             return dimensions;
         }
         long total = 1;
-        foreach (var sizeExpression in declaration.Sizes)
+        foreach (var sizeExpression in sizes)
         {
             if (!TryEvaluateConstant(sizeExpression, out var constantValue, out var type) ||
                 type != SmileType.Number || constantValue is not long value || value <= 0 || value > int.MaxValue)
             {
-                Report("SML3452", sizeExpression.Span,
-                    "Class field array dimensions must be positive compile-time Number expressions.");
+                Report(diagnosticCode, sizeExpression.Span,
+                    $"{ownerKind} field array dimensions must be positive compile-time Number expressions.");
                 value = 1;
                 valid = false;
             }
             total *= value;
             if (total > int.MaxValue)
             {
-                Report("SML3452", declaration.Span,
-                    "Class field array storage exceeds the supported size.");
+                Report(diagnosticCode, declarationSpan,
+                    $"{ownerKind} field array storage exceeds the supported size.");
                 valid = false;
             }
             dimensions.Add((int)Math.Min(value, int.MaxValue));

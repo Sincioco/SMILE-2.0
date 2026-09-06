@@ -114,7 +114,7 @@ Declaration parentheses do not make the rest of SMILE free-form. Placing `(` on 
 
 ## Record types
 
-`Type Name` ... `End Type` declares a nominal value type. A project-global type is shared across physical sources. A type directly inside a module is private by default and may be marked `Public` or `Private`. Fields use `FieldName As Type`; field types may be built-in, another visible record type, or an imported public type such as `Models.Actor`. Fields cannot be arrays and cannot have initializers.
+`Type Name` ... `End Type` declares a nominal value type. A project-global type is shared across physical sources. A type directly inside a module is private by default and may be marked `Public` or `Private`. Fields use `FieldName As Type` or the fixed-array form `FieldName[Count] As Type`; one- and two-dimensional fixed arrays accept positive compile-time `Number` expressions. Field element types may be built-in, another visible record type, or an imported public type such as `Models.Actor`. Fields cannot have initializers.
 
 ```smile
 Type Point2D
@@ -125,6 +125,7 @@ End Type
 Type Actor
     Name As Text
     Position As Point2D
+    Waypoints[4] As Point2D
     Active As Boolean
 End Type
 
@@ -135,7 +136,7 @@ Party[0] = Hero
 Print Party[0].Position.X
 ```
 
-Record identity is exact and nominal: separately declared types with identical fields are not interchangeable. Records default each field recursively, use deep value-copy assignment, preserve safe self-assignment, and allow nested field locations and fixed one- or two-dimensional arrays. `ByVal` receives an independent deep copy. `ByRef` may target a record variable, record array element, nested record field, or scalar field. Functions may return records, including recursively and with 0, 1, 4, 5, 8, or 16 explicit parameters.
+Record identity is exact and nominal: separately declared types with identical fields are not interchangeable. Records default each field and fixed-array element recursively, use deep value-copy assignment, preserve safe self-assignment, and allow nested field locations plus fixed one- or two-dimensional arrays both as fields and as declared variables. `ByVal` receives an independent deep copy. `ByRef` may target a record variable, record array element, nested record field, fixed-array field element, or scalar field. Functions may return records, including recursively and with 0, 1, 4, 5, 8, or 16 explicit parameters.
 
 Native records use deterministic inline 8-byte-aligned layouts and generated initialize, clear, and deep-copy helpers. Record results use a hidden caller-owned return buffer; invocation-local result temporaries keep recursive calls reentrant and release nested `Text` exactly once. Web records use fresh default objects and deep clones so assignment, arrays, `ByVal`, `ByRef`, and returns do not leak JavaScript object aliases. Generated JavaScript stores fields under deterministic private keys derived from the bound record-field symbol and ordinal, never under source spelling. Fields such as `__proto__`, `constructor`, `prototype`, `toString`, and `valueOf` therefore behave like ordinary SMILE fields while IntelliSense and package metadata continue to show their original names.
 
