@@ -59,6 +59,8 @@ state. Arin, Orin, Dragon, Party, and inspected-actor identities remain distinct
 | `SelectedClip`, speed, pause/demo counters and helper calculations | `ViewerPlayback.State`, `ResolveAnimationElapsed`, `AdjustSpeed`, `ClipMode`, `Demo*` | Playback state is explicit; actor/profile handles are borrowed for queries and never retained |
 | `Ready`, `ViewerError`, first error/stage, tab/profile and resource epoch | `ViewerSession.State`, `ResetFailure`, `RecordError`, `CaptureFailure` | First-failure retention and explicit retry reset preserved; stage capture remains adjacent to the coordinator stage |
 | `BaseCamera`, `Camera`, `ViewerFrame`, `CameraControls`, `SmoothZoom`, pointer remainders, calibration orbit anchor and `AutoOrbit*` | `ViewerCamera.State` with `Reset`, `Compose`, `UpdatePointerControls`, `AdvanceZoom`, `AdvanceAutoOrbit`, `UpdateResponsiveFit`, `ApplyCloseUp` and `ApplyCalibrationOrbitAnchor` | Camera interaction state now has one focused owner; `Program.smile` coordinates borrowed profile/bounds and keeps Party shot intent separate for the later Party owner |
+| Calibration key banks, selection/edit/clipboard/Undo buffers, storage envelope and import baseline in `Program.smile` | `ViewerCalibration.State` plus module-private bounded workspaces in `ViewerCalibration.smile` | `Program.smile` now coordinates UI-visible operations only; profile-scoped storage, codec validation, rollback and import confirmation are direct production-module paths |
+| `LoadCalibration`, `SaveCalibration`, raw `CalibrationStorage*`/`CalibrationCandidate*` arrays and in-place key-array edits | `ViewerCalibration.Load`, `Persist`, `PrepareImport`, `CommitImport`, `MoveKey`, `CommitCurrentKey`, `Undo` and focused query operations | Primary/backup recovery, rejected candidates and failed writes preserve the previous valid in-memory and stored revision; tests use disposable identities and buffers |
 | `BattleCamera.*` | `BattleCamera.*` | Already focused, retained |
 | `BattleAudio.CueState/CrossedCue` | `BattleAudio.*` | Already focused, retained |
 | `CalibrationJson.*` | `CalibrationJson.*` | Bounded reader retained; no second codec |
@@ -73,7 +75,7 @@ copied or left as dead wrappers.
 | Existing proof | Production owner exercised after move | Migration status |
 |---|---|---|
 | `HardeningTests.smile` session/playback/clock/zoom/camera assertions | `ViewerSession`, `ViewerPlayback`, `ViewerTiming`, `ViewerCamera`, `BattleCamera`, shared `CharacterViewer` | New owners are included and called directly; camera reset, bounds, nudge, zoom, composition, auto-orbit and floor-clearance checks exercise production code |
-| `CalibrationTests.smile` plus generated isolated project | Calibration, actor binding, Party/effects owners | Temporarily still uses bounded startup assembly; final project will include production modules directly |
+| `CalibrationTests.smile` plus generated isolated project | `ViewerCalibration` and retained `CalibrationJson` | Production calibration ownership is included directly; integration assertions retain the thin `Program.smile` coordinator only where UI/status side effects are part of the contract |
 | `ActorIsolationTests.smile` | `OrinStorm`, `Character3D`, scene VFX ownership | Already direct; retain explicit source list |
 | PowerShell preservation fixtures | Launcher, synchronizer, canonical/publication validators | Direct production functions; disposable storage/processes only |
 

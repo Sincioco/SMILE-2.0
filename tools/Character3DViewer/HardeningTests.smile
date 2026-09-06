@@ -12,6 +12,7 @@ Import Smile.Tools.Character3DViewerTiming As ViewerTiming
 Import Smile.Tools.Character3DViewerSession As ViewerSession
 Import Smile.Tools.Character3DViewerPlayback As ViewerPlayback
 Import Smile.Tools.Character3DViewerCamera As ViewerCamera
+Import Smile.Tools.Character3DViewerCalibration As ViewerCalibration
 Import Smile.Simple3D.Core As Core
 Import Smile.Simple3D.NodeAim3D As NodeAim3D
 Import Smile.Simple3D.Math3D As Math3D
@@ -73,6 +74,7 @@ Dim DirectControls As Core.CameraControl3D
 Dim DirectZoom As CharacterViewer.ZoomState
 Dim DirectCamera As Core.Camera3D
 Dim CameraPhase1000 As Number
+Dim CalibrationState As ViewerCalibration.State
 
 Game Window "Character 3D Viewer Hardening Tests" Size 320 By 240
 
@@ -193,6 +195,37 @@ CameraState.Live.Target.Y = 65
 
 Call ViewerCamera.KeepAboveGround(CameraState, 0)
 Call Check(CameraState.Live.Position.Y = 0 And CameraState.Live.Target.Y = 65)
+
+CalibrationState.KeyBase = 0
+
+Call ViewerCalibration.ResetBank(CalibrationState)
+Call ViewerCalibration.SetChannelValue(CalibrationState, 3, 12, 2)
+Call Check(ViewerCalibration.StoreKey(CalibrationState, 3, 0))
+Call Check(ViewerCalibration.KeyCount(CalibrationState, 3) = 1)
+Call Check(ViewerCalibration.KeyValue(CalibrationState, 3, 0, 12) = 2)
+Call ViewerCalibration.SetChannelValue(CalibrationState, 3, 12, 7)
+Call Check(ViewerCalibration.StoreKey(CalibrationState, 3, 10))
+Call Check(ViewerCalibration.MoveKey(CalibrationState, 3, 1, 12))
+Call Check(ViewerCalibration.KeyFrame(CalibrationState, 3, 1) = 12)
+Call Check(ViewerCalibration.KeyValue(CalibrationState, 3, 1, 12) = 7)
+
+Call ViewerCalibration.CaptureEdit(CalibrationState, 3)
+Call ViewerCalibration.SetChannelValue(CalibrationState, 3, 12, 9)
+Call ViewerCalibration.RestoreEdit(CalibrationState, 3)
+Call Check(ViewerCalibration.ChannelValue(CalibrationState, 3, 12) = 7)
+
+CalibrationState.KeyBase = ViewerCalibration.MAX_CLIPS
+
+Call ViewerCalibration.ResetBank(CalibrationState)
+Call ViewerCalibration.SetChannelValue(CalibrationState, 3, 12, 19)
+Call Check(ViewerCalibration.StoreKey(CalibrationState, 3, 0))
+Call Check(ViewerCalibration.KeyValue(CalibrationState, 3, 0, 12) = 19)
+
+CalibrationState.KeyBase = 0
+
+Call Check(ViewerCalibration.KeyValue(CalibrationState, 3, 0, 12) = 2)
+Call Check(ViewerCalibration.InterpolateChannel(6, 170, -170, 5, 0, 10) = 180)
+Call Check(ViewerCalibration.InterpolateChannel(18, 0, 1, 5, 0, 10) = 0)
 
 Call CheckRingProjection()
 

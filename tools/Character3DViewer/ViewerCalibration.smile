@@ -1,0 +1,1843 @@
+''' Character calibration workspace, key banks and serialized persistence transaction owner.
+Module Smile.Tools.Character3DViewerCalibration
+
+Option Explicit
+
+Import Smile.Simple3D.Character3D As Character3D
+Import Smile.Tools.Character3DViewerProfiles As ViewerProfiles
+Import Smile.Tools.CalibrationJson As CalibrationJson
+
+Public Const MAX_CLIPS = 64
+Public Const MAX_KEYFRAMES = 256
+Public Const CHANNEL_COUNT = 20
+Public Const AXIS_COUNT = 3
+
+Private Const TOTAL_CLIPS = 128
+Private Const VALUES_PER_CLIP = 5120
+Private Const STORAGE_CAPACITY = 700000
+Private Const STORAGE_VERSION = 3
+Private Const METADATA_CAPACITY = 2048
+
+Public Type State
+    OwnerProfile As Number
+    KeyBase As Number
+    ProfileFingerprint As Text
+    DataKey As Text
+    FilePath As Text
+    FileLabel As Text
+    TransferMessage As Text
+    ImportPending As Boolean
+    ImportBaseline As Text
+    JsonMetadata As Text
+    StorageCount As Number
+    StorageRejected As Boolean
+    PersistenceStatus As Number
+    WriteFailed As Boolean
+    UndoCount As Number
+    UndoApplying As Boolean
+    Saved As Boolean
+    SavedClip As Number
+    SavedTime As Number
+    SavedFrame As Number
+    SaveLimitReached As Boolean
+    ClipboardAvailable As Boolean
+    EditSavedBefore As Boolean
+End Type
+
+Private Dim SwordWrist[TOTAL_CLIPS, AXIS_COUNT] As Number
+Private Dim ShieldWrist[TOTAL_CLIPS, AXIS_COUNT] As Number
+Private Dim SwordRotation[TOTAL_CLIPS, AXIS_COUNT] As Number
+Private Dim ShieldRotation[TOTAL_CLIPS, AXIS_COUNT] As Number
+Private Dim SwordPosition[TOTAL_CLIPS, AXIS_COUNT] As Number
+Private Dim ShieldPosition[TOTAL_CLIPS, AXIS_COUNT] As Number
+Private Dim SwordDecoupled[TOTAL_CLIPS] As Number
+Private Dim ShieldDecoupled[TOTAL_CLIPS] As Number
+Private Dim KeyCounts[TOTAL_CLIPS] As Number
+Private Dim KeyFrames[TOTAL_CLIPS, MAX_KEYFRAMES] As Number
+Private Dim KeyValues[TOTAL_CLIPS, VALUES_PER_CLIP] As Number
+Private Dim Storage[STORAGE_CAPACITY] As Number
+Private Dim PreviousStorage[STORAGE_CAPACITY] As Number
+Private Dim UndoStorage[STORAGE_CAPACITY] As Number
+Private Dim ClipboardValues[CHANNEL_COUNT] As Number
+Private Dim EditValues[CHANNEL_COUNT] As Number
+Private Dim MovedKeyValues[CHANNEL_COUNT] As Number
+Private Dim FailedPreview[CHANNEL_COUNT] As Number
+Private Dim MetadataBytes[METADATA_CAPACITY] As Number
+Private Dim JsonOffset As Number
+Private Dim JsonValid As Boolean
+
+Public Sub Configure(ByRef Value As State, ProfileIndex As Number, KeyBase As Number,
+    Available As Boolean, ByRef Actor As Character3D.Actor)
+
+    Value.OwnerProfile = ProfileIndex
+    Value.KeyBase = KeyBase
+    Value.ProfileFingerprint = ViewerProfiles.CalibrationFingerprint(ProfileIndex)
+    Value.DataKey = ViewerProfiles.CalibrationKey(ProfileIndex)
+    Value.FilePath = ViewerProfiles.CalibrationFile(ProfileIndex)
+    Value.FileLabel = ViewerProfiles.CalibrationJsonName(ProfileIndex)
+    Value.TransferMessage = "Saved Keys: " + Value.FileLabel
+    Value.ImportPending = False
+    Value.ImportBaseline = ""
+    Value.StorageCount = 0
+    Value.StorageRejected = False
+    Value.PersistenceStatus = DATA_STATUS_OK
+    Value.WriteFailed = False
+    Value.UndoCount = 0
+    Value.UndoApplying = False
+    Value.SaveLimitReached = False
+    Value.ClipboardAvailable = False
+
+    If Available Then
+
+        Call ResetBank(Value)
+        Call LoadSaved(Value, Actor)
+
+        If Value.StorageCount = 0 And Not Value.StorageRejected Then
+
+            If Not Persist(Value, Actor, 0, False, False) Then
+                Return
+            End If
+
+        End If
+
+    End If
+
+End Sub
+
+Public Sub CancelPendingImport(ByRef Value As State)
+
+    Value.ImportPending = False
+    Value.ImportBaseline = ""
+
+End Sub
+
+Public Sub SetTransferMessage(ByRef Value As State, Message As Text)
+
+    Value.TransferMessage = Message
+
+End Sub
+
+Public Function KeyCount(ByRef Value As State, Clip As Number) As Number
+
+    Dim Result As Number
+
+    Result = KeyCounts[Value.KeyBase + Clip]
+
+    Return Result
+
+End Function
+
+Public Function KeyFrame(ByRef Value As State, Clip As Number, Index As Number) As Number
+
+    Dim Result As Number
+
+    Result = KeyFrames[Value.KeyBase + Clip, Index]
+
+    Return Result
+
+End Function
+
+Public Function ChannelValue(ByRef Value As State, Clip As Number, Channel As Number) As Number
+
+    Dim Axis As Number
+    Dim Result As Number
+
+    Axis = Channel Mod AXIS_COUNT
+
+    If Channel < 3 Then
+        Result = SwordWrist[Value.KeyBase + Clip, Axis]
+    Else If Channel < 6 Then
+        Result = ShieldWrist[Value.KeyBase + Clip, Axis]
+    Else If Channel < 9 Then
+        Result = SwordRotation[Value.KeyBase + Clip, Axis]
+    Else If Channel < 12 Then
+        Result = ShieldRotation[Value.KeyBase + Clip, Axis]
+    Else If Channel < 15 Then
+        Result = SwordPosition[Value.KeyBase + Clip, Axis]
+    Else If Channel < 18 Then
+        Result = ShieldPosition[Value.KeyBase + Clip, Axis]
+    Else If Channel = 18 Then
+        Result = SwordDecoupled[Value.KeyBase + Clip]
+    Else
+        Result = ShieldDecoupled[Value.KeyBase + Clip]
+    End If
+
+    Return Result
+
+End Function
+
+Public Sub SetChannelValue(ByRef Value As State, Clip As Number, Channel As Number,
+    ChannelValue As Number)
+
+    Dim Axis As Number
+
+    Axis = Channel Mod AXIS_COUNT
+
+    If Channel < 3 Then
+        SwordWrist[Value.KeyBase + Clip, Axis] = ChannelValue
+    Else If Channel < 6 Then
+        ShieldWrist[Value.KeyBase + Clip, Axis] = ChannelValue
+    Else If Channel < 9 Then
+        SwordRotation[Value.KeyBase + Clip, Axis] = ChannelValue
+    Else If Channel < 12 Then
+        ShieldRotation[Value.KeyBase + Clip, Axis] = ChannelValue
+    Else If Channel < 15 Then
+        SwordPosition[Value.KeyBase + Clip, Axis] = ChannelValue
+    Else If Channel < 18 Then
+        ShieldPosition[Value.KeyBase + Clip, Axis] = ChannelValue
+    Else If Channel = 18 Then
+        SwordDecoupled[Value.KeyBase + Clip] = ChannelValue
+    Else
+        ShieldDecoupled[Value.KeyBase + Clip] = ChannelValue
+    End If
+
+End Sub
+
+Public Function KeyValue(ByRef Value As State, Clip As Number, KeyIndex As Number,
+    Channel As Number) As Number
+
+    Dim Result As Number
+
+    Result = KeyValues[Value.KeyBase + Clip, KeyIndex * CHANNEL_COUNT + Channel]
+
+    Return Result
+
+End Function
+
+Public Function KeyIndex(ByRef Value As State, Clip As Number, FrameValue As Number) As Number
+
+    Dim Index As Number
+    Dim Result As Number
+
+    Result = -1
+
+    For Index = 0 To KeyCounts[Value.KeyBase + Clip] - 1
+
+        If KeyFrames[Value.KeyBase + Clip, Index] = FrameValue Then
+            Result = Index
+            Exit For
+        End If
+
+    End For
+
+    Return Result
+
+End Function
+
+Public Function StoreKey(ByRef Value As State, Clip As Number, FrameValue As Number) As Boolean
+
+    Dim Channel As Number
+    Dim Index As Number
+    Dim CurrentKeyCount As Number
+    Dim Position As Number
+    Dim Result As Boolean
+    Dim Shift As Number
+
+    CurrentKeyCount = KeyCounts[Value.KeyBase + Clip]
+    Position = CurrentKeyCount
+
+    For Index = 0 To CurrentKeyCount - 1
+
+        If KeyFrames[Value.KeyBase + Clip, Index] >= FrameValue Then
+            Position = Index
+            Exit For
+        End If
+
+    End For
+
+    If Position < CurrentKeyCount And KeyFrames[Value.KeyBase + Clip, Position] = FrameValue Then
+
+        Result = True
+
+    Else If CurrentKeyCount >= MAX_KEYFRAMES Then
+
+        Return False
+
+    Else
+
+        For Shift = CurrentKeyCount Down To Position + 1
+
+            KeyFrames[Value.KeyBase + Clip, Shift] = KeyFrames[Value.KeyBase + Clip, Shift - 1]
+
+            For Channel = 0 To CHANNEL_COUNT - 1
+                KeyValues[Value.KeyBase + Clip, Shift * CHANNEL_COUNT + Channel] = KeyValues[Value.KeyBase + Clip, (Shift - 1) * CHANNEL_COUNT + Channel]
+            End For
+        End For
+
+        KeyFrames[Value.KeyBase + Clip, Position] = FrameValue
+        KeyCounts[Value.KeyBase + Clip] = CurrentKeyCount + 1
+        Result = True
+
+    End If
+
+    For Channel = 0 To CHANNEL_COUNT - 1
+        KeyValues[Value.KeyBase + Clip, Position * CHANNEL_COUNT + Channel] = ChannelValue(Value, Clip, Channel)
+    End For
+
+    Return Result
+
+End Function
+
+Public Function CommitCurrentKey(ByRef Value As State, ByRef Actor As Character3D.Actor,
+    Clip As Number, FrameValue As Number, Editing As Boolean) As Boolean
+
+    Dim Result As Boolean
+
+    Value.SavedClip = Clip
+    Value.SavedFrame = FrameValue
+    Value.SavedTime = FrameTimeMilliseconds(Actor, Clip, FrameValue)
+    Value.SaveLimitReached = Not StoreKey(Value, Clip, FrameValue)
+
+    If Value.SaveLimitReached Then
+        Return False
+    End If
+
+    Value.Saved = True
+    Result = Persist(Value, Actor, Clip, Editing)
+
+    Return Result
+
+End Function
+
+Public Function DeleteKey(ByRef Value As State, Clip As Number, FrameValue As Number) As Boolean
+
+    Dim Channel As Number
+    Dim Index As Number
+    Dim CurrentKeyCount As Number
+    Dim Shift As Number
+
+    Index = KeyIndex(Value, Clip, FrameValue)
+
+    If Index < 0 Then
+        Return False
+    End If
+
+    CurrentKeyCount = KeyCounts[Value.KeyBase + Clip]
+
+    For Shift = Index To CurrentKeyCount - 2
+
+        KeyFrames[Value.KeyBase + Clip, Shift] = KeyFrames[Value.KeyBase + Clip, Shift + 1]
+
+        For Channel = 0 To CHANNEL_COUNT - 1
+            KeyValues[Value.KeyBase + Clip, Shift * CHANNEL_COUNT + Channel] = KeyValues[Value.KeyBase + Clip, (Shift + 1) * CHANNEL_COUNT + Channel]
+        End For
+    End For
+
+    KeyCounts[Value.KeyBase + Clip] = CurrentKeyCount - 1
+
+    Return True
+
+End Function
+
+Public Function MoveKey(ByRef Value As State, Clip As Number, Index As Number,
+    TargetFrame As Number) As Boolean
+
+    Dim Channel As Number
+    Dim CurrentKeyCount As Number
+    Dim Position As Number
+    Dim RemainingCount As Number
+    Dim Shift As Number
+
+    If Index < 0 Or Index >= KeyCounts[Value.KeyBase + Clip] Then
+        Return False
+    End If
+
+    If KeyIndex(Value, Clip, TargetFrame) >= 0 Then
+        Return False
+    End If
+
+    For Channel = 0 To CHANNEL_COUNT - 1
+        MovedKeyValues[Channel] = KeyValues[Value.KeyBase + Clip, Index * CHANNEL_COUNT + Channel]
+    End For
+
+    CurrentKeyCount = KeyCounts[Value.KeyBase + Clip]
+    RemainingCount = CurrentKeyCount - 1
+
+    For Shift = Index To RemainingCount - 1
+
+        KeyFrames[Value.KeyBase + Clip, Shift] = KeyFrames[Value.KeyBase + Clip, Shift + 1]
+
+        For Channel = 0 To CHANNEL_COUNT - 1
+            KeyValues[Value.KeyBase + Clip, Shift * CHANNEL_COUNT + Channel] = KeyValues[Value.KeyBase + Clip, (Shift + 1) * CHANNEL_COUNT + Channel]
+        End For
+    End For
+
+    Position = RemainingCount
+
+    For Shift = 0 To RemainingCount - 1
+
+        If KeyFrames[Value.KeyBase + Clip, Shift] >= TargetFrame Then
+            Position = Shift
+            Exit For
+        End If
+
+    End For
+
+    For Shift = RemainingCount Down To Position + 1
+
+        KeyFrames[Value.KeyBase + Clip, Shift] = KeyFrames[Value.KeyBase + Clip, Shift - 1]
+
+        For Channel = 0 To CHANNEL_COUNT - 1
+            KeyValues[Value.KeyBase + Clip, Shift * CHANNEL_COUNT + Channel] = KeyValues[Value.KeyBase + Clip, (Shift - 1) * CHANNEL_COUNT + Channel]
+        End For
+    End For
+
+    KeyFrames[Value.KeyBase + Clip, Position] = TargetFrame
+
+    For Channel = 0 To CHANNEL_COUNT - 1
+        KeyValues[Value.KeyBase + Clip, Position * CHANNEL_COUNT + Channel] = MovedKeyValues[Channel]
+    End For
+
+    Return True
+
+End Function
+
+Public Sub CopyKey(ByRef Value As State, Clip As Number, FrameValue As Number)
+
+    Dim Channel As Number
+    Dim Index As Number
+
+    Index = KeyIndex(Value, Clip, FrameValue)
+
+    If Index < 0 Then
+        Return
+    End If
+
+    For Channel = 0 To CHANNEL_COUNT - 1
+        ClipboardValues[Channel] = KeyValues[Value.KeyBase + Clip, Index * CHANNEL_COUNT + Channel]
+    End For
+
+    Value.ClipboardAvailable = True
+
+End Sub
+
+Public Function PasteClipboard(ByRef Value As State, Clip As Number) As Boolean
+
+    Dim Channel As Number
+
+    If Not Value.ClipboardAvailable Then
+        Return False
+    End If
+
+    For Channel = 0 To CHANNEL_COUNT - 1
+        Call SetChannelValue(Value, Clip, Channel, ClipboardValues[Channel])
+    End For
+
+    Return True
+
+End Function
+
+Public Sub CaptureEdit(ByRef Value As State, Clip As Number)
+
+    Dim Channel As Number
+
+    For Channel = 0 To CHANNEL_COUNT - 1
+        EditValues[Channel] = ChannelValue(Value, Clip, Channel)
+    End For
+
+    Value.EditSavedBefore = Value.Saved
+
+End Sub
+
+Public Sub RestoreEdit(ByRef Value As State, Clip As Number)
+
+    Dim Channel As Number
+
+    For Channel = 0 To CHANNEL_COUNT - 1
+        Call SetChannelValue(Value, Clip, Channel, EditValues[Channel])
+    End For
+
+    Value.Saved = Value.EditSavedBefore
+
+End Sub
+
+Public Sub ResetBank(ByRef Value As State)
+
+    Dim Axis As Number
+    Dim Clip As Number
+
+    For Clip = 0 To MAX_CLIPS - 1
+
+        KeyCounts[Value.KeyBase + Clip] = 0
+        SwordDecoupled[Value.KeyBase + Clip] = 0
+        ShieldDecoupled[Value.KeyBase + Clip] = 0
+
+        For Axis = 0 To AXIS_COUNT - 1
+
+            SwordWrist[Value.KeyBase + Clip, Axis] = 0
+            ShieldWrist[Value.KeyBase + Clip, Axis] = 0
+            SwordRotation[Value.KeyBase + Clip, Axis] = 0
+            ShieldRotation[Value.KeyBase + Clip, Axis] = 0
+            SwordPosition[Value.KeyBase + Clip, Axis] = 0
+            ShieldPosition[Value.KeyBase + Clip, Axis] = 0
+        End For
+    End For
+
+    Value.Saved = False
+    Value.SavedClip = 0
+    Value.SavedTime = 0
+    Value.SavedFrame = 0
+
+End Sub
+
+Public Sub ClearClip(ByRef Value As State, Clip As Number)
+
+    Dim Axis As Number
+
+    For Axis = 0 To AXIS_COUNT - 1
+
+        SwordWrist[Value.KeyBase + Clip, Axis] = 0
+        ShieldWrist[Value.KeyBase + Clip, Axis] = 0
+        SwordRotation[Value.KeyBase + Clip, Axis] = 0
+        ShieldRotation[Value.KeyBase + Clip, Axis] = 0
+        SwordPosition[Value.KeyBase + Clip, Axis] = 0
+        ShieldPosition[Value.KeyBase + Clip, Axis] = 0
+    End For
+
+    KeyCounts[Value.KeyBase + Clip] = 0
+    SwordDecoupled[Value.KeyBase + Clip] = 0
+    ShieldDecoupled[Value.KeyBase + Clip] = 0
+
+End Sub
+
+Public Function InterpolateChannel(Channel As Number, StartValue As Number,
+    EndValue As Number, CurrentFrame As Number, StartFrame As Number,
+    EndFrame As Number) As Number
+
+    Dim Delta As Number
+    Dim Result As Number
+
+    If StartFrame = EndFrame Then
+        Return StartValue
+    End If
+
+    If CurrentFrame = EndFrame Then
+        Return EndValue
+    End If
+
+    If Channel >= 18 Then
+        Return StartValue
+    End If
+
+    Delta = EndValue - StartValue
+
+    If Channel < 12 Then
+
+        If Delta > 180 Then
+            Delta = Delta - 360
+        Else If Delta < -180 Then
+            Delta = Delta + 360
+        End If
+
+    End If
+
+    Result = StartValue + Delta * (CurrentFrame - StartFrame) / (EndFrame - StartFrame)
+
+    If Channel < 12 Then
+
+        If Result > 180 Then
+            Result = Result - 360
+        Else If Result < -180 Then
+            Result = Result + 360
+        End If
+
+    End If
+
+    Return Result
+
+End Function
+
+Public Sub Evaluate(ByRef Value As State, ByRef Actor As Character3D.Actor,
+    Clip As Number, CurrentFrame As Number, EditingCurrentOwner As Boolean)
+
+    Dim Channel As Number
+    Dim EndFrame As Number
+    Dim EndKeyframe As Number
+    Dim EndValue As Number
+    Dim FrameCount As Number
+    Dim Index As Number
+    Dim CurrentKeyCount As Number
+    Dim ResultValue As Number
+    Dim StartFrame As Number
+    Dim StartKeyframe As Number
+    Dim StartValue As Number
+
+    If EditingCurrentOwner Then
+        Return
+    End If
+
+    CurrentKeyCount = KeyCounts[Value.KeyBase + Clip]
+
+    If CurrentKeyCount = 0 Then
+
+        For Channel = 0 To CHANNEL_COUNT - 1
+            Call SetChannelValue(Value, Clip, Channel, 0)
+        End For
+
+        Return
+
+    End If
+
+    FrameCount = Max(1, Character3D.ClipSampleCount(Actor, Clip))
+    StartKeyframe = 0
+    EndKeyframe = 0
+
+    If CurrentKeyCount = 1 Then
+
+        StartKeyframe = 0
+        EndKeyframe = 0
+
+    Else If CurrentFrame < KeyFrames[Value.KeyBase + Clip, 0] Then
+
+        StartKeyframe = CurrentKeyCount - 1
+        EndKeyframe = 0
+        CurrentFrame = CurrentFrame + FrameCount
+
+    Else If CurrentFrame > KeyFrames[Value.KeyBase + Clip, CurrentKeyCount - 1] Then
+
+        StartKeyframe = CurrentKeyCount - 1
+        EndKeyframe = 0
+
+    Else If CurrentFrame = KeyFrames[Value.KeyBase + Clip, CurrentKeyCount - 1] Then
+
+        StartKeyframe = CurrentKeyCount - 1
+        EndKeyframe = CurrentKeyCount - 1
+
+    Else If CurrentFrame > KeyFrames[Value.KeyBase + Clip, 0] Then
+
+        For Index = 1 To CurrentKeyCount - 1
+
+            If CurrentFrame <= KeyFrames[Value.KeyBase + Clip, Index] Then
+
+                StartKeyframe = Index - 1
+                EndKeyframe = Index
+                Exit For
+
+            End If
+
+        End For
+
+    End If
+
+    StartFrame = KeyFrames[Value.KeyBase + Clip, StartKeyframe]
+    EndFrame = KeyFrames[Value.KeyBase + Clip, EndKeyframe]
+
+    If (StartKeyframe = CurrentKeyCount - 1 And
+        EndKeyframe = 0 And
+        CurrentKeyCount > 1) Then
+        EndFrame = EndFrame + FrameCount
+    End If
+
+    For Channel = 0 To CHANNEL_COUNT - 1
+
+        StartValue = KeyValues[Value.KeyBase + Clip, StartKeyframe * CHANNEL_COUNT + Channel]
+        EndValue = KeyValues[Value.KeyBase + Clip, EndKeyframe * CHANNEL_COUNT + Channel]
+        ResultValue = InterpolateChannel(Channel, StartValue, EndValue, CurrentFrame,
+            StartFrame, EndFrame)
+
+        Call SetChannelValue(Value, Clip, Channel, ResultValue)
+    End For
+
+End Sub
+
+Public Function FrameTimeMilliseconds(ByRef Actor As Character3D.Actor, Clip As Number,
+    FrameValue As Number) As Number
+
+    Dim Result As Number
+    Dim SampleRate As Number
+
+    SampleRate = Max(1, Character3D.ClipSampleRate(Actor, Clip))
+    Result = (FrameValue * 1000 + SampleRate / 2) / SampleRate
+
+    Return Result
+
+End Function
+
+Private Sub LoadSaved(ByRef Value As State, ByRef Actor As Character3D.Actor)
+
+    Dim DefaultAsset As Text
+    Dim LoadedCount As Number
+    Dim SavedValue As Number
+    Dim LegacyVersion As Number
+    Dim PersistenceStatus As Number
+    Dim StorageKey As Text
+    Dim LegacySavedClip As Number
+    Dim LegacySavedTime As Number
+    Dim LegacySavedFrame As Number
+
+    StorageKey = Value.DataKey
+
+    Load Data StorageKey Into Storage Count LoadedCount Status PersistenceStatus
+
+    Value.PersistenceStatus = PersistenceStatus
+
+    If (Value.PersistenceStatus <> DATA_STATUS_OK And
+        Value.PersistenceStatus <> DATA_STATUS_MISSING And
+        Value.PersistenceStatus <> DATA_STATUS_RECOVERED) Then
+
+        Value.StorageRejected = True
+        Value.TransferMessage = "Storage Unavailable Or Invalid; Saved Data Not Replaced"
+
+        Return
+
+    End If
+
+    If Value.PersistenceStatus = DATA_STATUS_RECOVERED Then
+        Value.TransferMessage = "Recovered Last-Good Backup; Primary Not Changed"
+    End If
+
+    If LoadedCount = 0 Then
+
+        If Value.OwnerProfile = ViewerProfiles.PROFILE_ARIN Then
+            Load LegacyVersion From "CharacterViewerCalibrationVersion" Default 0
+        End If
+
+        ''' Existing working copies, including the legacy Arin save, always win.
+
+        If LegacyVersion <> 2 Then
+
+            DefaultAsset = ViewerProfiles.CalibrationAsset(Value.OwnerProfile)
+
+            If DefaultAsset <> "" Then
+
+                Load Text File DefaultAsset Into Storage Count LoadedCount
+
+                If LoadedCount = 0 Then
+                    Value.StorageRejected = True
+                    Return
+                End If
+
+            End If
+
+        End If
+
+    End If
+
+    If LoadedCount > 0 Then
+
+        If Decode(Value, Actor, LoadedCount) Then
+            Value.StorageCount = LoadedCount
+            Return
+        End If
+
+        Call ResetBank(Value)
+
+        Value.StorageRejected = True
+
+        Return
+
+    End If
+
+    If Value.OwnerProfile <> ViewerProfiles.PROFILE_ARIN Then
+        Return
+    End If
+
+    Load LegacyVersion From "CharacterViewerCalibrationVersion" Default 0
+
+    If LegacyVersion <> 2 Then
+        Return
+    End If
+
+    Load LegacySavedClip From "CharacterViewerCalibrationClip" Default 0
+    Load LegacySavedTime From "CharacterViewerCalibrationTime" Default 0
+    Load LegacySavedFrame From "CharacterViewerCalibrationFrame" Default 0
+
+    Value.SavedClip = LegacySavedClip
+    Value.SavedTime = LegacySavedTime
+    Value.SavedFrame = LegacySavedFrame
+
+    If Value.SavedClip < 0 Or Value.SavedClip >= Character3D.ClipCount(Actor) Then
+        Return
+    End If
+
+    Load SavedValue From "CharacterViewerSwordWristX" Default 0
+    SwordWrist[Value.KeyBase + Value.SavedClip, 0] = SavedValue
+    Load SavedValue From "CharacterViewerSwordWristY" Default 0
+    SwordWrist[Value.KeyBase + Value.SavedClip, 1] = SavedValue
+    Load SavedValue From "CharacterViewerSwordWristZ" Default 0
+    SwordWrist[Value.KeyBase + Value.SavedClip, 2] = SavedValue
+    Load SavedValue From "CharacterViewerShieldWristX" Default 0
+    ShieldWrist[Value.KeyBase + Value.SavedClip, 0] = SavedValue
+    Load SavedValue From "CharacterViewerShieldWristY" Default 0
+    ShieldWrist[Value.KeyBase + Value.SavedClip, 1] = SavedValue
+    Load SavedValue From "CharacterViewerShieldWristZ" Default 0
+    ShieldWrist[Value.KeyBase + Value.SavedClip, 2] = SavedValue
+    Load SavedValue From "CharacterViewerSwordX" Default 0
+    SwordRotation[Value.KeyBase + Value.SavedClip, 0] = SavedValue
+    Load SavedValue From "CharacterViewerSwordY" Default 0
+    SwordRotation[Value.KeyBase + Value.SavedClip, 1] = SavedValue
+    Load SavedValue From "CharacterViewerSwordZ" Default 0
+    SwordRotation[Value.KeyBase + Value.SavedClip, 2] = SavedValue
+    Load SavedValue From "CharacterViewerShieldX" Default 0
+    ShieldRotation[Value.KeyBase + Value.SavedClip, 0] = SavedValue
+    Load SavedValue From "CharacterViewerShieldY" Default 0
+    ShieldRotation[Value.KeyBase + Value.SavedClip, 1] = SavedValue
+    Load SavedValue From "CharacterViewerShieldZ" Default 0
+    ShieldRotation[Value.KeyBase + Value.SavedClip, 2] = SavedValue
+    Load SavedValue From "CharacterViewerSwordPositionX" Default 0
+    SwordPosition[Value.KeyBase + Value.SavedClip, 0] = SavedValue
+    Load SavedValue From "CharacterViewerSwordPositionY" Default 0
+    SwordPosition[Value.KeyBase + Value.SavedClip, 1] = SavedValue
+    Load SavedValue From "CharacterViewerSwordPositionZ" Default 0
+    SwordPosition[Value.KeyBase + Value.SavedClip, 2] = SavedValue
+    Load SavedValue From "CharacterViewerShieldPositionX" Default 0
+    ShieldPosition[Value.KeyBase + Value.SavedClip, 0] = SavedValue
+    Load SavedValue From "CharacterViewerShieldPositionY" Default 0
+    ShieldPosition[Value.KeyBase + Value.SavedClip, 1] = SavedValue
+    Load SavedValue From "CharacterViewerShieldPositionZ" Default 0
+    ShieldPosition[Value.KeyBase + Value.SavedClip, 2] = SavedValue
+    Value.Saved = True
+
+    If Not StoreKey(Value, Value.SavedClip, Value.SavedFrame) Then
+        Return
+    End If
+
+    If Not Persist(Value, Actor, Value.SavedClip, False, True) Then
+        Return
+    End If
+
+End Sub
+
+Private Function LegacyClipName(Index As Number) As Text
+
+    Dim Result As Text
+
+    If Index = 0 Then
+        Result = "BlockImpact"
+    Else If Index = 1 Then
+        Result = "Defend"
+    Else If Index = 2 Then
+        Result = "Hit"
+    Else If Index = 3 Then
+        Result = "Idle"
+    Else If Index = 4 Then
+        Result = "Run"
+    Else If Index = 5 Then
+        Result = "SwordAttack"
+    Else If Index = 6 Then
+        Result = "SwordAttack2"
+    Else If Index = 7 Then
+        Result = "Walk"
+    End If
+
+    Return Result
+
+End Function
+
+Private Function Decode(ByRef Value As State, ByRef Actor As Character3D.Actor,
+    LoadedCount As Number) As Boolean
+
+    Dim Channel As Number
+    Dim Clip As Number
+    Dim EncodedValue As Number
+    Dim FrameValue As Number
+    Dim Index As Number
+    Dim Keyframe As Number
+    Dim KeyframeCount As Number
+    Dim Result As Boolean
+    Dim StoredClipCount As Number
+    Dim StoredChannels As Number
+    Dim StoredClip As Number
+    Dim NameLength As Number
+    Dim NameOffset As Number
+    Dim NameIndex As Number
+    Dim Candidate As Number
+    Dim Matches As Boolean
+    Dim Name As Text
+    Dim SeenClips[MAX_CLIPS] As Number
+    Dim SavedRecord As Number
+    Dim PreviousFrame As Number
+
+    Result = False
+
+    If LoadedCount < 10 Then
+        Return False
+    End If
+
+    If (Storage[0] <> 83 Or
+        Storage[1] <> 77 Or
+        Storage[2] <> 75 Or
+        Storage[3] <> 70 Or
+        (Storage[4] <> 2 And
+        Storage[4] <> STORAGE_VERSION)) Then
+        Return False
+    End If
+
+    If Value.OwnerProfile = ViewerProfiles.PROFILE_ORIN And Storage[4] <> 3 Then
+        Return False
+    End If
+
+    StoredClipCount = Storage[5]
+    StoredChannels = 18
+
+    If Storage[4] >= 2 Then
+        StoredChannels = CHANNEL_COUNT
+    End If
+
+    If (StoredClipCount < 0 Or
+        StoredClipCount > MAX_CLIPS Or
+        StoredClipCount > Character3D.ClipCount(Actor) Or
+        Storage[6] < 0 Or
+        Storage[6] > 1) Then
+        Return False
+    End If
+
+    Value.Saved = Storage[6] <> 0
+    SavedRecord = Storage[7]
+    Value.SavedClip = -1
+    Value.SavedFrame = Storage[8] + Storage[9] * 256
+    Index = 10
+
+    If Storage[4] = 3 Then
+
+        If LoadedCount < 74 Then
+            Return False
+        End If
+
+        For NameIndex = 0 To 63
+
+            If Storage[10 + NameIndex] <> Text_Code_At(Value.ProfileFingerprint, NameIndex) Then
+                Return False
+            End If
+
+        End For
+
+        Index = 74
+
+    End If
+
+    For StoredClip = 0 To StoredClipCount - 1
+
+        Clip = -1
+
+        If Storage[4] = 3 Then
+
+            If Index >= LoadedCount Then
+                Return False
+            End If
+
+            NameLength = Storage[Index]
+            Index = Index + 1
+            NameOffset = Index
+            Index = Index + NameLength
+
+            If (NameLength < 1 Or
+                NameLength > 128 Or
+                Index > LoadedCount) Then
+                Return False
+            End If
+
+            For Candidate = 0 To Character3D.ClipCount(Actor) - 1
+
+                Name = Character3D.ClipName(Actor, Candidate)
+                Matches = Text_Length(Name) = NameLength
+
+                If Matches Then
+
+                    For NameIndex = 0 To NameLength - 1
+
+                        If Storage[NameOffset + NameIndex] <> Text_Code_At(Name, NameIndex) Then
+                            Matches = False
+                        End If
+
+                    End For
+
+                End If
+
+                If Matches Then
+                    Clip = Candidate
+                End If
+
+            End For
+
+        Else
+
+            Name = LegacyClipName(StoredClip)
+
+            For Candidate = 0 To Character3D.ClipCount(Actor) - 1
+
+                If Character3D.ClipName(Actor, Candidate) = Name Then
+                    Clip = Candidate
+                End If
+
+            End For
+
+        End If
+
+        If Clip < 0 Or SeenClips[Clip] <> 0 Then
+            Return False
+        End If
+
+        SeenClips[Clip] = 1
+
+        If SavedRecord = StoredClip Then
+            Value.SavedClip = Clip
+        End If
+
+        If Index + 1 >= LoadedCount Then
+            Return False
+        End If
+
+        KeyframeCount = Storage[Index] + Storage[Index + 1] * 256
+        Index = Index + 2
+
+        If (KeyframeCount < 0 Or
+            KeyframeCount > MAX_KEYFRAMES Or
+            Index + KeyframeCount * (2 + StoredChannels * 2) > LoadedCount) Then
+            Return False
+        End If
+
+        KeyCounts[Value.KeyBase + Clip] = KeyframeCount
+        PreviousFrame = -1
+
+        For Keyframe = 0 To KeyframeCount - 1
+
+            FrameValue = Storage[Index] + Storage[Index + 1] * 256
+            Index = Index + 2
+
+            If (FrameValue <= PreviousFrame Or
+                FrameValue >= Character3D.ClipSampleCount(Actor, Clip)) Then
+                Return False
+            End If
+
+            KeyFrames[Value.KeyBase + Clip, Keyframe] = FrameValue
+            PreviousFrame = FrameValue
+            KeyValues[Value.KeyBase + Clip, Keyframe * CHANNEL_COUNT + 18] = 0
+            KeyValues[Value.KeyBase + Clip, Keyframe * CHANNEL_COUNT + 19] = 0
+
+            For Channel = 0 To StoredChannels - 1
+
+                EncodedValue = Storage[Index] + Storage[Index + 1] * 256
+                Index = Index + 2
+
+                If EncodedValue < 0 Or EncodedValue > 360 Then
+                    Return False
+                End If
+
+                If Channel >= 18 And (EncodedValue < 180 Or EncodedValue > 181) Then
+                    Return False
+                End If
+
+                If (Channel >= 12 And
+                    Channel < 18 And
+                    (EncodedValue < 80 Or EncodedValue > 280)) Then
+                    Return False
+                End If
+
+                KeyValues[Value.KeyBase + Clip, Keyframe * CHANNEL_COUNT + Channel] = EncodedValue - 180
+            End For
+        End For
+    End For
+
+    If Index <> LoadedCount Then
+        Return False
+    End If
+
+    If Value.Saved And Value.SavedClip < 0 Then
+        Return False
+    End If
+
+    If Value.Saved Then
+
+        If KeyIndex(Value, Value.SavedClip, Value.SavedFrame) < 0 Then
+            Return False
+        End If
+
+        Value.SavedTime = FrameTimeMilliseconds(Actor, Value.SavedClip, Value.SavedFrame)
+
+    Else
+
+        Call RefreshSaved(Value, Actor)
+
+    End If
+
+    Result = True
+
+    Return Result
+
+End Function
+
+Public Sub RefreshSaved(ByRef Value As State, ByRef Actor As Character3D.Actor)
+
+    Dim Clip As Number
+
+    Value.Saved = False
+    Value.SavedClip = 0
+    Value.SavedFrame = 0
+    Value.SavedTime = 0
+
+    For Clip = 0 To Character3D.ClipCount(Actor) - 1
+
+        If KeyCounts[Value.KeyBase + Clip] > 0 And Not Value.Saved Then
+
+            Value.Saved = True
+            Value.SavedClip = Clip
+            Value.SavedFrame = KeyFrames[Value.KeyBase + Clip, KeyCounts[Value.KeyBase + Clip] - 1]
+            Value.SavedTime = FrameTimeMilliseconds(Actor, Value.SavedClip, Value.SavedFrame)
+
+        End If
+
+    End For
+
+End Sub
+
+Public Function Persist(ByRef Value As State, ByRef Actor As Character3D.Actor,
+    CurrentClip As Number, Editing As Boolean, Optional Persist As Boolean = True) As Boolean
+
+    Dim Channel As Number
+    Dim Clip As Number
+    Dim EncodedValue As Number
+    Dim FrameValue As Number
+    Dim Keyframe As Number
+    Dim KeyframeCount As Number
+    Dim StorageCount As Number
+    Dim LegacyVersion As Number
+    Dim Index As Number
+    Dim Name As Text
+    Dim PreviousCount As Number
+    Dim PersistenceStatus As Number
+    Dim StorageKey As Text
+
+    Value.WriteFailed = False
+
+    If Value.StorageRejected Then
+        Return False
+    End If
+
+    PreviousCount = Value.StorageCount
+
+    For Index = 0 To PreviousCount - 1
+        PreviousStorage[Index] = Storage[Index]
+    End For
+
+    For Channel = 0 To CHANNEL_COUNT - 1
+        FailedPreview[Channel] = ChannelValue(Value, CurrentClip, Channel)
+    End For
+
+    Storage[0] = 83
+    Storage[1] = 77
+    Storage[2] = 75
+    Storage[3] = 70
+    Storage[4] = STORAGE_VERSION
+    Storage[5] = Character3D.ClipCount(Actor)
+
+    If Value.Saved Then
+        Storage[6] = 1
+    Else
+        Storage[6] = 0
+    End If
+
+    Storage[7] = Value.SavedClip
+    Storage[8] = Value.SavedFrame Mod 256
+    Storage[9] = Value.SavedFrame / 256
+
+    For Index = 0 To 63
+        Storage[10 + Index] = Text_Code_At(Value.ProfileFingerprint, Index)
+    End For
+
+    StorageCount = 74
+
+    For Clip = 0 To Character3D.ClipCount(Actor) - 1
+
+        Name = Character3D.ClipName(Actor, Clip)
+        Storage[StorageCount] = Text_Length(Name)
+        StorageCount = StorageCount + 1
+
+        For Index = 0 To Text_Length(Name) - 1
+            Storage[StorageCount] = Text_Code_At(Name, Index)
+            StorageCount = StorageCount + 1
+        End For
+
+        KeyframeCount = KeyCounts[Value.KeyBase + Clip]
+        Storage[StorageCount] = KeyframeCount Mod 256
+        Storage[StorageCount + 1] = KeyframeCount / 256
+        StorageCount = StorageCount + 2
+
+        For Keyframe = 0 To KeyframeCount - 1
+
+            FrameValue = KeyFrames[Value.KeyBase + Clip, Keyframe]
+            Storage[StorageCount] = FrameValue Mod 256
+            Storage[StorageCount + 1] = FrameValue / 256
+            StorageCount = StorageCount + 2
+
+            For Channel = 0 To CHANNEL_COUNT - 1
+                EncodedValue = KeyValues[Value.KeyBase + Clip, Keyframe * CHANNEL_COUNT + Channel] + 180
+                Storage[StorageCount] = EncodedValue Mod 256
+                Storage[StorageCount + 1] = EncodedValue / 256
+                StorageCount = StorageCount + 2
+            End For
+        End For
+    End For
+
+    If Not Decode(Value, Actor, StorageCount) Then
+
+        Value.PersistenceStatus = DATA_STATUS_INVALID
+
+        Call RestoreFailedWrite(Value, Actor, CurrentClip, Editing, PreviousCount)
+
+        Return False
+
+    End If
+
+    If Persist Then
+
+        StorageKey = Value.DataKey
+
+        Save Data Storage Count StorageCount To StorageKey Status PersistenceStatus
+
+        Value.PersistenceStatus = PersistenceStatus
+
+        If Value.PersistenceStatus <> DATA_STATUS_OK Then
+            Call RestoreFailedWrite(Value, Actor, CurrentClip, Editing, PreviousCount)
+
+            Return False
+        End If
+
+        If Not Value.UndoApplying Then
+
+            Value.UndoCount = PreviousCount
+
+            For Index = 0 To PreviousCount - 1
+                UndoStorage[Index] = PreviousStorage[Index]
+            End For
+
+        End If
+
+        Value.TransferMessage = "Saved Locally; JSON Download Contains Saved Keys"
+        LegacyVersion = 3
+
+        If Value.OwnerProfile = ViewerProfiles.PROFILE_ARIN Then
+            Save LegacyVersion To "CharacterViewerCalibrationVersion"
+        End If
+
+    End If
+
+    Value.StorageCount = StorageCount
+
+    Return True
+
+End Function
+
+Private Sub RestoreFailedWrite(ByRef Value As State, ByRef Actor As Character3D.Actor,
+    CurrentClip As Number, Editing As Boolean, PreviousCount As Number)
+
+    Dim Index As Number
+
+    Call ResetBank(Value)
+
+    Value.StorageCount = PreviousCount
+
+    For Index = 0 To PreviousCount - 1
+        Storage[Index] = PreviousStorage[Index]
+    End For
+
+    If PreviousCount > 0 Then
+
+        If Not Decode(Value, Actor, PreviousCount) Then
+            Value.StorageRejected = True
+        End If
+
+    End If
+
+    Call Evaluate(Value, Actor, CurrentClip, CurrentAnimationFrame(Actor, CurrentClip), False)
+
+    If Editing Then
+
+        For Index = 0 To CHANNEL_COUNT - 1
+            Call SetChannelValue(Value, CurrentClip, Index, FailedPreview[Index])
+        End For
+
+    End If
+
+    Value.WriteFailed = True
+    Value.TransferMessage = "Save Failed; Previous Saved Keys Kept"
+
+End Sub
+
+Public Function CurrentAnimationFrame(ByRef Actor As Character3D.Actor, Clip As Number) As Number
+
+    Dim Result As Number
+    Dim SampleRate As Number
+
+    SampleRate = Max(1, Character3D.ClipSampleRate(Actor, Clip))
+    Result = (Character3D.AnimationTime(Actor) * SampleRate + 500) / 1000
+    Result = Min(Character3D.ClipSampleCount(Actor, Clip) - 1, Max(0, Result))
+
+    Return Result
+
+End Function
+
+Private Function Ascii(Value As Number) As Text
+
+    Dim Result As Text
+
+    Result = ""
+
+    If Value >= 32 And Value <= 126 Then
+        Result = Text_Slice(" !""#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~", Value - 32, 1)
+    End If
+
+    Return Result
+
+End Function
+
+Public Function AsciiCharacter(Value As Number) As Text
+
+    Dim Result As Text
+
+    Result = Ascii(Value)
+
+    Return Result
+
+End Function
+
+Private Function JsonNumber(Value As Number) As Text
+
+    Dim Result As Text
+    Dim Negative As Boolean
+    Dim Digit As Number
+
+    Result = ""
+    Negative = Value < 0
+    Value = Abs(Value)
+
+    Do
+
+        Digit = Value Mod 10
+        Result = Text_Slice("0123456789", Digit, 1) + Result
+        Value = Value / 10
+
+    Loop Until Value = 0
+
+    If Negative Then
+        Result = "-" + Result
+    End If
+
+    Return Result
+
+End Function
+
+Public Function NumberText(Value As Number) As Text
+
+    Dim Result As Text
+
+    Result = JsonNumber(Value)
+
+    Return Result
+
+End Function
+
+Private Function JsonReadByte(ByRef Value As State) As Number
+
+    Dim Result As Number
+
+    Result = 0
+
+    If JsonOffset < 0 Or JsonOffset >= Value.StorageCount Then
+        JsonValid = False
+        Return Result
+    End If
+
+    Result = Storage[JsonOffset]
+    JsonOffset = JsonOffset + 1
+
+    If Result < 0 Or Result > 255 Then
+        JsonValid = False
+        Result = 0
+    End If
+
+    Return Result
+
+End Function
+
+Private Function JsonReadWord(ByRef Value As State) As Number
+
+    Dim Result As Number
+    Dim Upper As Number
+
+    Result = JsonReadByte(Value)
+    Upper = JsonReadByte(Value)
+    Result = Result + Upper * 256
+
+    Return Result
+
+End Function
+
+Private Function JsonTriplet(ByRef Value As State) As Text
+
+    Dim Result As Text
+    Dim NumberValue As Number
+    Dim Axis As Number
+
+    Result = "["
+
+    For Axis = 0 To 2
+
+        If Axis > 0 Then
+            Result = Result + ","
+        End If
+
+        NumberValue = JsonReadWord(Value) - 180
+        Result = Result + JsonNumber(NumberValue)
+    End For
+
+    Result = Result + "]"
+
+    Return Result
+
+End Function
+
+Public Function SavedJson(ByRef Value As State, ByRef Actor As Character3D.Actor) As Text
+
+    Dim Asset As Text
+    Dim MetadataCount As Number
+    Dim Index As Number
+    Dim Clip As Number
+    Dim RuntimeClip As Number
+    Dim Candidate As Number
+    Dim ClipCount As Number
+    Dim NameLength As Number
+    Dim ClipName As Text
+    Dim Metadata As Text
+    Dim Clips As Text
+    Dim Keys As Text
+    Dim Key As Number
+    Dim CurrentKeyCount As Number
+    Dim TotalKeys As Number
+    Dim Frame As Number
+    Dim SavedKey As Text
+    Dim SavedClip As Number
+    Dim SavedFrame As Number
+    Dim SwordWristValue As Text
+    Dim ShieldWristValue As Text
+    Dim SwordRotationValue As Text
+    Dim ShieldRotationValue As Text
+    Dim SwordPositionValue As Text
+    Dim ShieldPositionValue As Text
+    Dim SwordFree As Text
+    Dim ShieldFree As Text
+    Dim Result As Text
+
+    Asset = ViewerProfiles.CalibrationMetadataAsset(Value.OwnerProfile)
+
+    Load Text File Asset Into MetadataBytes Count MetadataCount
+
+    If MetadataCount <= 2 Or MetadataCount >= METADATA_CAPACITY Then
+        Return ""
+    End If
+
+    Metadata = ""
+
+    For Index = 0 To MetadataCount - 1
+
+        If MetadataBytes[Index] < 32 Or MetadataBytes[Index] > 126 Then
+            Return ""
+        End If
+
+        Metadata = Metadata + Ascii(MetadataBytes[Index])
+    End For
+
+    Value.JsonMetadata = Metadata
+
+    If (Value.StorageCount < 74 Or
+        Storage[0] <> 83 Or
+        Storage[1] <> 77 Or
+        Storage[2] <> 75 Or
+        Storage[3] <> 70 Or
+        Storage[4] <> STORAGE_VERSION) Then
+        Return ""
+    End If
+
+    For Index = 0 To 63
+
+        If Storage[10 + Index] <> Text_Code_At(Value.ProfileFingerprint, Index) Then
+            Return ""
+        End If
+
+    End For
+
+    ClipCount = Storage[5]
+
+    If ClipCount < 1 Or ClipCount > MAX_CLIPS Then
+        Return ""
+    End If
+
+    SavedClip = Storage[7]
+    SavedFrame = Storage[8] + Storage[9] * 256
+    JsonOffset = 74
+    JsonValid = True
+    SavedKey = "null"
+    Clips = "["
+
+    For Clip = 0 To ClipCount - 1
+
+        NameLength = JsonReadByte(Value)
+
+        If NameLength < 1 Or NameLength > 128 Then
+            Return ""
+        End If
+
+        ClipName = ""
+
+        For Index = 1 To NameLength
+            ClipName = ClipName + Ascii(JsonReadByte(Value))
+        End For
+
+        RuntimeClip = -1
+
+        For Candidate = 0 To Character3D.ClipCount(Actor) - 1
+
+            If ClipName = Character3D.ClipName(Actor, Candidate) Then
+                RuntimeClip = Candidate
+            End If
+
+        End For
+
+        If RuntimeClip < 0 Then
+            Return ""
+        End If
+
+        CurrentKeyCount = JsonReadWord(Value)
+
+        If CurrentKeyCount > MAX_KEYFRAMES Then
+            Return ""
+        End If
+
+        Keys = "["
+
+        For Key = 0 To CurrentKeyCount - 1
+
+            Frame = JsonReadWord(Value)
+            SwordWristValue = JsonTriplet(Value)
+            ShieldWristValue = JsonTriplet(Value)
+            SwordRotationValue = JsonTriplet(Value)
+            ShieldRotationValue = JsonTriplet(Value)
+            SwordPositionValue = JsonTriplet(Value)
+            ShieldPositionValue = JsonTriplet(Value)
+            SwordFree = "false"
+            ShieldFree = "false"
+
+            If JsonReadWord(Value) = 181 Then
+                SwordFree = "true"
+            End If
+
+            If JsonReadWord(Value) = 181 Then
+                ShieldFree = "true"
+            End If
+
+            If Key > 0 Then
+                Keys = Keys + ","
+            End If
+
+            Keys = (Keys + "{""frame"":" + JsonNumber(Frame) +
+                ",""swordWrist"":{""rotation"":" + SwordWristValue + "}" +
+                ",""shieldWrist"":{""rotation"":" + ShieldWristValue + "}" +
+                ",""sword"":{""decoupled"":" + SwordFree + ",""rotation"":" + SwordRotationValue +
+                ",""position"":" + SwordPositionValue + "}" +
+                ",""shield"":{""decoupled"":" + ShieldFree + ",""rotation"":" + ShieldRotationValue +
+                ",""position"":" + ShieldPositionValue + "}}")
+
+            If (Storage[6] = 1 And
+                Clip = SavedClip And
+                Frame = SavedFrame) Then
+                SavedKey = ("{""clipIndex"":" + JsonNumber(RuntimeClip) +
+                    ",""clipName"":""" + ClipName + """,""frame"":" + JsonNumber(Frame) + "}")
+            End If
+
+        End For
+
+        If Clip > 0 Then
+            Clips = Clips + ","
+        End If
+
+        Clips = (Clips + "{""index"":" + JsonNumber(RuntimeClip) +
+            ",""name"":""" + ClipName + """,""keyframes"":" + Keys + "]}")
+        TotalKeys = TotalKeys + CurrentKeyCount
+    End For
+
+    If Not JsonValid Or JsonOffset <> Value.StorageCount Then
+        Return ""
+    End If
+
+    Result = (Text_Slice(Metadata, 0, MetadataCount - 1) +
+        ",""savedKeyframe"":" + SavedKey + ",""totalKeyframes"":" + JsonNumber(TotalKeys) +
+        ",""clips"":" + Clips + "]}")
+
+    Return Result
+
+End Function
+
+Public Sub OpenOrDownload(ByRef Value As State, ByRef Actor As Character3D.Actor)
+
+    If File_Reveal(Value.FilePath) Then
+        Return
+    End If
+
+    Call Download(Value, Actor)
+
+End Sub
+
+Public Sub Download(ByRef Value As State, ByRef Actor As Character3D.Actor)
+
+    Dim Contents As Text
+    Dim Exported As Boolean
+
+    Contents = SavedJson(Value, Actor)
+
+    If Contents = "" Then
+        Value.TransferMessage = "Saved JSON Unavailable"
+        Return
+    End If
+
+    Exported = File_Export(Value.FileLabel, Contents)
+
+    If Exported Then
+        Value.TransferMessage = "Download Requested (Saved Keys Only)"
+    Else
+        Value.TransferMessage = "Download Canceled Or Unavailable"
+    End If
+
+End Sub
+
+Public Function PrepareImport(ByRef Value As State, ByRef Actor As Character3D.Actor,
+    Contents As Text, Editing As Boolean) As Boolean
+
+    Dim SavedSnapshot As Text
+
+    Call CancelPendingImport(Value)
+
+    If Editing Or Value.StorageRejected Then
+        Return False
+    End If
+
+    SavedSnapshot = SavedJson(Value, Actor)
+
+    If SavedSnapshot = "" Then
+        Value.TransferMessage = "Current Saved Snapshot Unavailable"
+        Return False
+    End If
+
+    If Not CalibrationJson.Decode(Contents, Value.JsonMetadata,
+        Value.ProfileFingerprint, Actor) Then
+        Value.TransferMessage = "Import Rejected: Schema, Identity Or Pose Data"
+        Return False
+    End If
+
+    Value.ImportBaseline = SavedSnapshot
+    Value.ImportPending = True
+    Value.TransferMessage = "Validated; Replace All Keys? Undo Is Available"
+
+    Return True
+
+End Function
+
+Public Function CommitImport(ByRef Value As State, ByRef Actor As Character3D.Actor,
+    CurrentClip As Number, Editing As Boolean) As Boolean
+
+    Dim PreviousCount As Number
+    Dim Index As Number
+    Dim CandidateCount As Number
+
+    If (Not Value.ImportPending Or
+        Editing Or
+        Value.StorageRejected) Then
+        Return False
+    End If
+
+    Value.ImportPending = False
+
+    If SavedJson(Value, Actor) <> Value.ImportBaseline Then
+
+        Value.TransferMessage = "Saved Keys Changed; Choose Import Again"
+        Value.ImportBaseline = ""
+        Return False
+
+    End If
+
+    Value.ImportBaseline = ""
+    PreviousCount = Value.StorageCount
+    CandidateCount = CalibrationJson.ByteCount()
+
+    For Index = 0 To PreviousCount - 1
+        PreviousStorage[Index] = Storage[Index]
+    End For
+
+    For Index = 0 To CandidateCount - 1
+        Storage[Index] = CalibrationJson.ByteAt(Index)
+    End For
+
+    Call ResetBank(Value)
+
+    If Not Decode(Value, Actor, CandidateCount) Then
+
+        Value.PersistenceStatus = DATA_STATUS_INVALID
+
+        Call RestoreFailedWrite(Value, Actor, CurrentClip, Editing, PreviousCount)
+
+        Return False
+
+    End If
+
+    For Index = 0 To PreviousCount - 1
+        Storage[Index] = PreviousStorage[Index]
+    End For
+
+    If Not Persist(Value, Actor, CurrentClip, Editing) Then
+        Return False
+    End If
+
+    Call Evaluate(Value, Actor, CurrentClip, CurrentAnimationFrame(Actor, CurrentClip), False)
+
+    Value.TransferMessage = "Imported Saved Keys; Undo Last Change To Restore"
+
+    Return True
+
+End Function
+
+Public Function ImportOrCommit(ByRef Value As State, ByRef Actor As Character3D.Actor,
+    CurrentClip As Number, Editing As Boolean) As Boolean
+
+    Dim Contents As Text
+    Dim Result As Boolean
+
+    If Editing Then
+        Value.TransferMessage = "Save Or Cancel Your Pose Edit First"
+        Return False
+    End If
+
+    If Value.StorageRejected Then
+        Value.TransferMessage = "Resolve Rejected Storage Before Import"
+        Return False
+    End If
+
+    If Value.ImportPending Then
+        Result = CommitImport(Value, Actor, CurrentClip, Editing)
+        Return Result
+    End If
+
+    Contents = File_Import()
+
+    If Contents = "" Then
+        Value.TransferMessage = "Import Canceled, Empty Or Unavailable"
+        Return False
+    End If
+
+    Result = PrepareImport(Value, Actor, Contents, Editing)
+
+    Return Result
+
+End Function
+
+Public Function Undo(ByRef Value As State, ByRef Actor As Character3D.Actor,
+    CurrentClip As Number) As Boolean
+
+    Dim Index As Number
+    Dim PreviousCount As Number
+
+    If Value.UndoCount <= 0 Or Value.StorageRejected Then
+        Return False
+    End If
+
+    PreviousCount = Value.StorageCount
+
+    Call ResetBank(Value)
+
+    For Index = 0 To PreviousCount - 1
+        PreviousStorage[Index] = Storage[Index]
+    End For
+
+    For Index = 0 To Value.UndoCount - 1
+        Storage[Index] = UndoStorage[Index]
+    End For
+
+    If Not Decode(Value, Actor, Value.UndoCount) Then
+
+        Value.PersistenceStatus = DATA_STATUS_INVALID
+
+        Call RestoreFailedWrite(Value, Actor, CurrentClip, False, PreviousCount)
+
+        Return False
+
+    End If
+
+    For Index = 0 To PreviousCount - 1
+        Storage[Index] = PreviousStorage[Index]
+    End For
+
+    Value.UndoApplying = True
+
+    If Not Persist(Value, Actor, CurrentClip, False) Then
+        Value.UndoApplying = False
+        Return False
+    End If
+
+    Value.UndoApplying = False
+    Value.UndoCount = 0
+
+    Call Evaluate(Value, Actor, CurrentClip, CurrentAnimationFrame(Actor, CurrentClip), False)
+
+    Return True
+
+End Function
+
+Public Sub Reload(ByRef Value As State, ByRef Actor As Character3D.Actor)
+
+    Call ResetBank(Value)
+
+    Value.StorageCount = 0
+    Value.StorageRejected = False
+    Value.PersistenceStatus = DATA_STATUS_OK
+    Value.WriteFailed = False
+
+    Call LoadSaved(Value, Actor)
+
+End Sub
+
+Public Function StorageByte(Index As Number) As Number
+
+    Dim Result As Number
+
+    Result = Storage[Index]
+
+    Return Result
+
+End Function
+
+Public Sub SetStorageByte(Index As Number, ByteValue As Number)
+
+    Storage[Index] = ByteValue
+
+End Sub
+
+Public Function ValidateStorage(ByRef Value As State, ByRef Actor As Character3D.Actor,
+    StorageCount As Number) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Decode(Value, Actor, StorageCount)
+
+    Return Result
+
+End Function
+
+Public Function CandidateByteCount() As Number
+
+    Dim Result As Number
+
+    Result = CalibrationJson.ByteCount()
+
+    Return Result
+
+End Function
+
+Public Function CandidateByteAt(Index As Number) As Number
+
+    Dim Result As Number
+
+    Result = CalibrationJson.ByteAt(Index)
+
+    Return Result
+
+End Function
+
+End Module

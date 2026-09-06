@@ -18,6 +18,8 @@ $referencePath = Join-Path $repositoryRoot `
     'games\Dragonfall\SourceAssets\Arin\paladin-reference-images.json'
 $viewerSourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\Program.smile'
 $cameraSourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\ViewerCamera.smile'
+$calibrationSourcePath = Join-Path $repositoryRoot `
+    'tools\Character3DViewer\ViewerCalibration.smile'
 $profileSourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\Profiles.smile'
 $cookedProjectPath = Join-Path $repositoryRoot `
     'tools\Character3DViewer\Character3DViewer.smileproj'
@@ -85,6 +87,7 @@ try {
 
     $viewerSource = Get-Content -LiteralPath $viewerSourcePath -Raw
     $cameraSource = Get-Content -LiteralPath $cameraSourcePath -Raw
+    $calibrationSource = Get-Content -LiteralPath $calibrationSourcePath -Raw
     $profileSource = Get-Content -LiteralPath $profileSourcePath -Raw
     $adapterSource = Get-Content -LiteralPath $adapterSourcePath -Raw
     # Keep architectural wiring checks here. Current behavior is executed by the
@@ -95,6 +98,7 @@ try {
         'Import Smile.Simple3D.SceneVfx3D As SceneVfx3D',
         'Import Smile.UI.Controls As UI',
         'Import Smile.Tools.Character3DViewerCamera As ViewerCamera',
+        'Import Smile.Tools.Character3DViewerCalibration As ViewerCalibration',
         'CharacterViewer.AutoFit(',
         'ViewerCamera.AdvanceZoom(',
         'ViewerCamera.UpdatePointerControls(',
@@ -104,7 +108,7 @@ try {
         'Call StepAnimationFrame(-1)',
         'Call StepAnimationFrame(1)',
         'Const FRAME_BUTTON_REPEAT_MILLISECONDS = 300',
-        'Const CALIBRATION_MAX_KEYFRAMES = 256',
+        'Const CALIBRATION_MAX_CLIPS = ViewerCalibration.MAX_CLIPS',
         'Sub ToggleDragon()',
         'Sub ToggleSword()',
         'Sub ToggleShield()',
@@ -143,6 +147,20 @@ try {
         'Public Sub UpdateResponsiveFit(')) {
         Assert-Contains $cameraSource $contract 'Viewer camera owner'
     }
+    foreach ($contract in @(
+        'Private Dim Storage[STORAGE_CAPACITY] As Number',
+        'Private Dim PreviousStorage[STORAGE_CAPACITY] As Number',
+        'Private Dim UndoStorage[STORAGE_CAPACITY] As Number',
+        'Public Function CommitImport(',
+        'Public Function Persist(',
+        'Public Function Undo(',
+        'Public Sub Evaluate(')) {
+        Assert-Contains $calibrationSource $contract 'Viewer calibration owner'
+    }
+    Assert-True (-not $viewerSource.Contains('Dim CalibrationStorage[') -and
+        -not $viewerSource.Contains('Dim CalibrationKeyframeValues[') -and
+        -not $viewerSource.Contains('Dim CalibrationUndoStorage[')) `
+        'Calibration banks and transaction buffers must not return to Program.smile.'
     Assert-Contains $profileSource `
         'Public Function PartyAttackName(ProfileIndex As Number, AttackCycle As Number) As Text' `
         'Party attack rotation'

@@ -33,13 +33,13 @@ Session.ProfileIndex = ViewerProfiles.PROFILE_ARIN
 
 Call LoadViewer()
 Call CalibrationCheck(Session.Ready And Not Session.ViewerError, "Load profile")
-Call CalibrationCheck(Not CalibrationStorageRejected, "Accept current Arin saved calibration")
+Call CalibrationCheck(Not Calibration.StorageRejected, "Accept current Arin saved calibration")
 Call CheckGizmoVisibility()
 Call CheckPackagedCalibration()
 Call CalibrationCheck(Character3D.SocketCount(Character) = ActiveProfile.ExpectedSocketCount,
     "Profile socket contract")
 Call SelectCharacterTab(1)
-Call CalibrationCheck(Session.Ready And Not Session.ViewerError And Not CalibrationStorageRejected,
+Call CalibrationCheck(Session.Ready And Not Session.ViewerError And Not Calibration.StorageRejected,
     "Orin loads with its canonical saved calibration")
 Call CheckPackagedCalibration()
 Call SelectCharacterTab(2)
@@ -51,16 +51,16 @@ Call CalibrationCheck(Session.Ready And Not Session.ViewerError And PartyReady,
     "Party loads both calibrated heroes")
 Call CheckPartyInspector()
 Call SelectCharacterTab(0)
-Call CalibrationCheck(Session.Ready And Not Session.ViewerError And Not CalibrationStorageRejected,
+Call CalibrationCheck(Session.Ready And Not Session.ViewerError And Not Calibration.StorageRejected,
     "Return to Arin after Dragon and Party")
 
 ''' The remaining editing checks start from an empty isolated track.
 
 Call ClearCalibrationMemory()
 
-CalibrationSaved = False
-CalibrationStorageCount = 0
-CalibrationUndoCount = 0
+Calibration.Saved = False
+Calibration.StorageCount = 0
+Calibration.UndoCount = 0
 
 Call SaveCalibrationKeyframes(False)
 Call RestartPresentation()
@@ -152,99 +152,124 @@ CalibrationAxis = CALIBRATION_AXIS_X
 
 Call PlaySelectedClip()
 
-SwordPositionCalibration[3, 0] = 2
-CalibrationSaved = True
-CalibrationSavedClip = 3
-CalibrationSavedFrame = 0
+Call SetCalibrationChannelValue(3, 12, 2)
+
+Calibration.Saved = True
+Calibration.SavedClip = 3
+Calibration.SavedFrame = 0
 
 Call CalibrationCheck(StoreCalibrationKeyframe(3, 0), "Store first key")
 
-CalibrationClipBase = CALIBRATION_MAX_CLIPS
+Calibration.KeyBase = CALIBRATION_MAX_CLIPS
 
 Call ClearCalibrationMemory()
 
-SwordPositionCalibration[CalibrationClipBase + 3, 0] = 19
+Call SetCalibrationChannelValue(3, 12, 19)
 
 Call CalibrationCheck(StoreCalibrationKeyframe(3, 0), "Second character stores its own frame")
-Call CalibrationCheck(CalibrationKeyframeValues[3, 12] = 2, "Second character does not modify Arin's frame")
-Call CalibrationCheck(CalibrationKeyframeValues[CalibrationClipBase + 3, 12] = 19, "Same clip and frame retain distinct values")
-Call ClearCalibrationMemory()
-Call CalibrationCheck(CalibrationKeyframeCounts[3] = 1, "Clearing another character preserves Arin")
 
-CalibrationClipBase = 0
-CalibrationSaved = True
-CalibrationSavedClip = 3
-CalibrationSavedFrame = 0
+Calibration.KeyBase = 0
+
+Call CalibrationCheck(ViewerCalibration.KeyValue(Calibration, 3, 0, 12) = 2,
+    "Second character does not modify Arin's frame")
+
+Calibration.KeyBase = CALIBRATION_MAX_CLIPS
+
+Call CalibrationCheck(ViewerCalibration.KeyValue(Calibration, 3, 0, 12) = 19,
+    "Same clip and frame retain distinct values")
+Call ClearCalibrationMemory()
+
+Calibration.KeyBase = 0
+
+Call CalibrationCheck(ViewerCalibration.KeyCount(Calibration, 3) = 1,
+    "Clearing another character preserves Arin")
+
+Calibration.Saved = True
+Calibration.SavedClip = 3
+Calibration.SavedFrame = 0
 
 Call SaveCalibrationKeyframes()
 Call UndoLastCalibrationChange()
-Call CalibrationCheck(CalibrationKeyframeCounts[3] = 0, "Undo also restores a never-saved empty track")
+Call CalibrationCheck(ViewerCalibration.KeyCount(Calibration, 3) = 0,
+    "Undo also restores a never-saved empty track")
 
-CalibrationSaved = True
-CalibrationSavedClip = 3
-CalibrationSavedFrame = 0
-SwordPositionCalibration[3, 0] = 2
+Calibration.Saved = True
+Calibration.SavedClip = 3
+Calibration.SavedFrame = 0
+
+Call SetCalibrationChannelValue(3, 12, 2)
 
 Call CalibrationCheck(StoreCalibrationKeyframe(3, 0), "Restore first key")
 Call SaveCalibrationKeyframes()
 
-SwordPositionCalibration[3, 0] = 7
+Call SetCalibrationChannelValue(3, 12, 7)
 
-Call LoadSavedCalibration()
-Call CalibrationCheck(CalibrationKeyframeCounts[3] = 1 And
-    CalibrationKeyframeValues[3, 12] = 2, "Saved edits take precedence over packaged defaults")
+Call ViewerCalibration.Reload(Calibration, Character)
+Call CalibrationCheck(ViewerCalibration.KeyCount(Calibration, 3) = 1 And
+    ViewerCalibration.KeyValue(Calibration, 3, 0, 12) = 2,
+    "Saved edits take precedence over packaged defaults")
 
-SwordPositionCalibration[3, 0] = 7
+Call SetCalibrationChannelValue(3, 12, 7)
 
 Call CalibrationCheck(StoreCalibrationKeyframe(3, 10), "Store second key")
 Call SaveCalibrationKeyframes()
-Call CalibrationCheck(CalibrationKeyframeValues[3, 12] = 2, "Second key cannot modify first")
-Call CalibrationCheck(CalibrationKeyframeValues[3, 32] = 7, "Second key stores full move channels")
+Call CalibrationCheck(ViewerCalibration.KeyValue(Calibration, 3, 0, 12) = 2,
+    "Second key cannot modify first")
+Call CalibrationCheck(ViewerCalibration.KeyValue(Calibration, 3, 1, 12) = 7,
+    "Second key stores full move channels")
 
 ''' Failed Save/Undo must retain both the last saved bytes and the undo opportunity.
-TestDataKey = CalibrationDataKey
+TestDataKey = Calibration.DataKey
 TestSavedJson = SavedCalibrationJson()
-TestUndoCount = CalibrationUndoCount
-CalibrationDataKey = "Viewer Denied Storage Probe"
+TestUndoCount = Calibration.UndoCount
+Calibration.DataKey = "Viewer Denied Storage Probe"
 
 Call UndoLastCalibrationChange()
-Call CalibrationCheck(CalibrationWriteFailed And Not CalibrationStorageRejected,
+Call CalibrationCheck(Calibration.WriteFailed And Not Calibration.StorageRejected,
     "Failed undo remains recoverable")
 Call CalibrationCheck(SavedCalibrationJson() = TestSavedJson And
-    CalibrationUndoCount = TestUndoCount, "Failed undo keeps saved JSON and undo")
-Call CalibrationCheck(CalibrationKeyframeCounts[3] = 2 And
-    CalibrationKeyframeValues[3, 32] = 7, "Failed undo restores complete key track")
+    Calibration.UndoCount = TestUndoCount, "Failed undo keeps saved JSON and undo")
+Call CalibrationCheck(ViewerCalibration.KeyCount(Calibration, 3) = 2 And
+    ViewerCalibration.KeyValue(Calibration, 3, 1, 12) = 7,
+    "Failed undo restores complete key track")
 Call BeginCalibrationEdit()
 
-SwordPositionCalibration[3, 0] = 9
+Call SetCalibrationChannelValue(3, 12, 9)
 
 Call SaveCalibrationFrame()
-Call CalibrationCheck(CalibrationWriteFailed And CalibrationEditing,
+Call CalibrationCheck(Calibration.WriteFailed And CalibrationEditing,
     "Failed Save Frame keeps edit open for retry or cancel")
 Call CalibrationCheck(SavedCalibrationJson() = TestSavedJson,
     "Failed Save Frame does not become downloadable saved JSON")
-Call CalibrationCheck(SwordPositionCalibration[3, 0] = 9,
+Call CalibrationCheck(CalibrationChannelValue(3, 12) = 9,
     "Failed Save Frame retains the temporary preview adjustment")
 Call CancelCalibrationEdit()
 
-CalibrationDataKey = TestDataKey
+Calibration.DataKey = TestDataKey
 
 Call UndoLastCalibrationChange()
-Call CalibrationCheck(CalibrationKeyframeCounts[3] = 1, "Undo insertion")
-Call CalibrationCheck(CalibrationKeyframeValues[3, 12] = 2, "Undo preserves all channels")
+Call CalibrationCheck(ViewerCalibration.KeyCount(Calibration, 3) = 1, "Undo insertion")
+Call CalibrationCheck(ViewerCalibration.KeyValue(Calibration, 3, 0, 12) = 2,
+    "Undo preserves all channels")
 Call ClearSelectedClipCalibration()
-Call CalibrationCheck(CalibrationKeyframeCounts[3] = 0, "Selected clip cleared")
+Call CalibrationCheck(ViewerCalibration.KeyCount(Calibration, 3) = 0,
+    "Selected clip cleared")
 Call UndoLastCalibrationChange()
-Call CalibrationCheck(CalibrationKeyframeCounts[3] = 1, "Undo selected clip delete")
+Call CalibrationCheck(ViewerCalibration.KeyCount(Calibration, 3) = 1,
+    "Undo selected clip delete")
 
-TestSavedCount = CalibrationStorageCount
-CalibrationStorage[10] = 0
+TestSavedCount = Calibration.StorageCount
 
-Call CalibrationCheck(Not DecodeCalibrationStorage(TestSavedCount), "Reject profile fingerprint")
+Call ViewerCalibration.SetStorageByte(10, 0)
 
-CalibrationStorage[10] = Text_Code_At(CalibrationProfileFingerprint, 0)
+Call CalibrationCheck(Not ViewerCalibration.ValidateStorage(
+    Calibration, Character, TestSavedCount), "Reject profile fingerprint")
 
-Call CalibrationCheck(DecodeCalibrationStorage(TestSavedCount), "Decode all named clips")
+Call ViewerCalibration.SetStorageByte(
+    10, Text_Code_At(Calibration.ProfileFingerprint, 0))
+
+Call CalibrationCheck(ViewerCalibration.ValidateStorage(
+    Calibration, Character, TestSavedCount), "Decode all named clips")
 Call ApplyWristCalibration()
 Call ApplyEquipmentCalibration()
 
@@ -421,7 +446,8 @@ Call ResetAll()
 Call CalibrationCheck(Not Playback.ScenePaused And Not FlameAnimationPaused And Playback.DemoEnabled, "Reset restores playback defaults")
 Call CalibrationCheck(Not CalibrationVisible And UiVisibility = 0, "Reset hides pose panel and restores UI")
 Call CalibrationCheck(DragonVisible And FloorVisible And GridVisible, "Reset restores the arena")
-Call CalibrationCheck(CalibrationKeyframeCounts[3] = 1, "Reset preserves saved corrections")
+Call CalibrationCheck(ViewerCalibration.KeyCount(Calibration, 3) = 1,
+    "Reset preserves saved corrections")
 
 UiVisibility = 0
 
@@ -625,15 +651,15 @@ Sub CheckPartyInspector()
             OriginalJson = SavedCalibrationJson()
         End If
 
-        Call CalibrationCheck(PartyUiBound And Session.ProfileIndex = CalibrationOwnerProfile,
+        Call CalibrationCheck(PartyUiBound And Session.ProfileIndex = Calibration.OwnerProfile,
             "Party inspector binds the active profile")
         Call CalibrationCheck(CalibrationAvailable = (Owner < 2),
             "Only the two calibrated heroes expose Pose")
 
         If Owner = 1 Then
             Call CalibrationCheck(Character.Handle = CompanionHandle And
-                CalibrationClipBase = CALIBRATION_MAX_CLIPS And
-                CalibrationDataKey = ViewerProfiles.CalibrationKey(ViewerProfiles.PROFILE_ORIN),
+                Calibration.KeyBase = CALIBRATION_MAX_CLIPS And
+                Calibration.DataKey = ViewerProfiles.CalibrationKey(ViewerProfiles.PROFILE_ORIN),
                 "Orin inspector owns Orin actor, key range and save identity")
         Else If Owner = 2 Then
             Call CalibrationCheck(Character.Handle = Dragon.Handle,
@@ -675,7 +701,7 @@ Sub CheckPartyInspector()
             Call EndPartyInspector()
             Call HandleKeyboard(KEY_ENTER)
             Call BeginPartyInspector()
-            Call CalibrationCheck(Not CalibrationWriteFailed And Not CalibrationEditing,
+            Call CalibrationCheck(Not Calibration.WriteFailed And Not CalibrationEditing,
                 "Party Enter saves the active hero pose without restarting the battle")
             Call UndoLastCalibrationChange()
             Call CalibrationCheck(SavedCalibrationJson() = OriginalJson,
@@ -754,27 +780,28 @@ Sub CheckPackagedCalibration()
 
     Call CalibrationCheck(Text_Length(JsonSnapshot) > 0, "Saved JSON export is available")
 
-    TestSavedCount = CalibrationStorageCount
-    OriginalKey = CalibrationDataKey
+    TestSavedCount = Calibration.StorageCount
+    OriginalKey = Calibration.DataKey
 
     For TestIndex = 0 To TestSavedCount - 1
-        CalibrationUndoStorage[TestIndex] = CalibrationStorage[TestIndex]
+        TestImportFixtureBytes[TestIndex] = ViewerCalibration.StorageByte(TestIndex)
     End For
 
-    CalibrationDataKey = "ViewerCalibrationTests.MissingPackagedSeed"
+    Calibration.DataKey = "ViewerCalibrationTests.MissingPackagedSeed"
 
     Call ClearCalibrationMemory()
-    Call LoadSavedCalibration()
-    Call CalibrationCheck(Not CalibrationStorageRejected And
-        CalibrationStorageCount = TestSavedCount, "Fresh storage loads packaged calibration")
+    Call ViewerCalibration.Reload(Calibration, Character)
+    Call CalibrationCheck(Not Calibration.StorageRejected And
+        Calibration.StorageCount = TestSavedCount, "Fresh storage loads packaged calibration")
 
     For TestIndex = 0 To TestSavedCount - 1
-        Call CalibrationCheck(CalibrationStorage[TestIndex] = CalibrationUndoStorage[TestIndex],
+        Call CalibrationCheck(ViewerCalibration.StorageByte(TestIndex) =
+            TestImportFixtureBytes[TestIndex],
             "Packaged calibration preserves every canonical byte")
     End For
 
-    CalibrationDataKey = OriginalKey
-    CalibrationUndoCount = 0
+    Calibration.DataKey = OriginalKey
+    Calibration.UndoCount = 0
 
     Call CheckCalibrationImport(JsonSnapshot)
 
@@ -793,7 +820,7 @@ Function ReadImportFixture(Name As Text) As Text
     For Index = 0 To Loaded - 1
 
         If TestImportFixtureBytes[Index] >= 32 Then
-            Result = Result + CalibrationAscii(TestImportFixtureBytes[Index])
+            Result = Result + ViewerCalibration.AsciiCharacter(TestImportFixtureBytes[Index])
         End If
 
     End For
@@ -812,11 +839,12 @@ Sub CheckCalibrationImport(Original As Text)
     Dim Accepted As Boolean
 
     Call CalibrationCheck(PrepareCalibrationImport(Original), "Accept shared saved JSON")
-    Call CalibrationCheck(CalibrationJson.ByteCount() = CalibrationStorageCount,
+    Call CalibrationCheck(ViewerCalibration.CandidateByteCount() = Calibration.StorageCount,
         "Shared import reproduces the complete saved payload")
 
-    For Index = 0 To CalibrationStorageCount - 1
-        Call CalibrationCheck(CalibrationJson.ByteAt(Index) = CalibrationStorage[Index],
+    For Index = 0 To Calibration.StorageCount - 1
+        Call CalibrationCheck(ViewerCalibration.CandidateByteAt(Index) =
+            ViewerCalibration.StorageByte(Index),
             "Shared JSON import preserves every saved payload byte")
     End For
 
@@ -838,10 +866,11 @@ Sub CheckCalibrationImport(Original As Text)
 
         For Index = 0 To TEST_IMPORT_REJECTION_COUNT - 1
 
-            Candidate = ReadImportFixture("reject-" + CalibrationJsonNumber(Index) + ".json")
+            Candidate = ReadImportFixture(
+                "reject-" + ViewerCalibration.NumberText(Index) + ".json")
 
             Call CalibrationCheck(Not PrepareCalibrationImport(Candidate),
-                "Reject malformed snapshot " + CalibrationJsonNumber(Index))
+                "Reject malformed snapshot " + ViewerCalibration.NumberText(Index))
             Call CalibrationCheck(SavedCalibrationJson() = Original,
                 "Rejected JSON leaves saved bytes unchanged")
         End For
@@ -874,26 +903,26 @@ Sub CheckCalibrationImport(Original As Text)
 
     End If
 
-    EmptySnapshot = (Text_Slice(CalibrationJsonMetadata, 0, Text_Length(CalibrationJsonMetadata) - 1) +
+    EmptySnapshot = (Text_Slice(Calibration.JsonMetadata, 0, Text_Length(Calibration.JsonMetadata) - 1) +
         ",""savedKeyframe"":null,""totalKeyframes"":0,""clips"":[]}")
 
     Call CalibrationCheck(PrepareCalibrationImport(EmptySnapshot), "Validate deliberate empty replacement")
     Call CalibrationCheck(SavedCalibrationJson() = Original, "Validation alone does not replace keys")
 
-    SavedKey = CalibrationDataKey
-    SavedUndoCount = CalibrationUndoCount
-    CalibrationDataKey = "Viewer Denied Storage Probe"
+    SavedKey = Calibration.DataKey
+    SavedUndoCount = Calibration.UndoCount
+    Calibration.DataKey = "Viewer Denied Storage Probe"
     Accepted = CommitCalibrationImport()
 
-    Call CalibrationCheck(Not Accepted And CalibrationWriteFailed, "Import reports failed persistent write")
-    Call CalibrationCheck(SavedCalibrationJson() = Original And CalibrationUndoCount = SavedUndoCount,
+    Call CalibrationCheck(Not Accepted And Calibration.WriteFailed, "Import reports failed persistent write")
+    Call CalibrationCheck(SavedCalibrationJson() = Original And Calibration.UndoCount = SavedUndoCount,
         "Failed import preserves saved track and undo")
 
-    CalibrationDataKey = SavedKey
+    Calibration.DataKey = SavedKey
 
     Call CalibrationCheck(PrepareCalibrationImport(EmptySnapshot), "Prepare before concurrent saved edit")
 
-    CalibrationImportBaseline = "Changed Since Validation"
+    Calibration.ImportBaseline = "Changed Since Validation"
 
     Call CalibrationCheck(Not CommitCalibrationImport(), "Refuse replacement after baseline changes")
     Call CalibrationCheck(SavedCalibrationJson() = Original, "Changed baseline leaves current keys intact")
@@ -902,6 +931,6 @@ Sub CheckCalibrationImport(Original As Text)
     Call UndoLastCalibrationChange()
     Call CalibrationCheck(SavedCalibrationJson() = Original, "Undo import restores complete snapshot")
 
-    CalibrationUndoCount = 0
+    Calibration.UndoCount = 0
 
 End Sub
