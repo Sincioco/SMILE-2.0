@@ -82,7 +82,7 @@ public sealed class SmileProjectSourceSet
 {
     private SmileProjectSourceSet(string projectPath, SmileProjectKind projectKind, string startupFile,
         string libraryName, string version, string outputName, string? applicationId,
-        bool rememberWindowPlacement, bool responsiveWindow,
+        bool rememberWindowPlacement, bool responsiveWindow, string? webLoadingAuthor, string? webLoadingLogoPath,
         IReadOnlyList<SmileProjectSourceItem> items, IReadOnlyList<SmileProjectSourceItem> compilationSources,
         IReadOnlyList<SmileProjectReferenceItem> references, SmileProjectAssetManifest assetManifest,
         SmileProjectModel3DAssetSet model3DAssets)
@@ -97,6 +97,8 @@ public sealed class SmileProjectSourceSet
         ApplicationId = applicationId;
         RememberWindowPlacement = rememberWindowPlacement;
         ResponsiveWindow = responsiveWindow;
+        WebLoadingAuthor = webLoadingAuthor;
+        WebLoadingLogoPath = webLoadingLogoPath;
         Items = items;
         CompilationSources = compilationSources;
         StartupSource = projectKind == SmileProjectKind.Library ? null : compilationSources[0];
@@ -117,6 +119,8 @@ public sealed class SmileProjectSourceSet
     public string EffectiveApplicationId => ApplicationId ?? OutputName;
     public bool RememberWindowPlacement { get; }
     public bool ResponsiveWindow { get; }
+    public string? WebLoadingAuthor { get; }
+    public string? WebLoadingLogoPath { get; }
     public bool IsLibrary => ProjectKind == SmileProjectKind.Library;
     public SmileProjectSourceItem? StartupSource { get; }
     public IReadOnlyList<SmileProjectSourceItem> Items { get; }
@@ -269,6 +273,43 @@ public sealed class SmileProjectSourceSet
                     "ResponsiveWindow is available only to Game projects.", fullProjectPath, line, column);
         }
 
+        var authorElements = propertyGroups.SelectMany(group =>
+            group.Elements().Where(element => element.Name.LocalName == "WebLoadingAuthor")).ToArray();
+        string? webLoadingAuthor = null;
+        if (authorElements.Length != 0)
+        {
+            var element = authorElements.Length > 1 ? authorElements[1] : authorElements[0];
+            var location = (IXmlLineInfo)element;
+            webLoadingAuthor = element.Value.Trim();
+            if (authorElements.Length > 1 || projectKind == SmileProjectKind.Library ||
+                element.HasElements || webLoadingAuthor.Length is < 1 or > 128 ||
+                webLoadingAuthor.Any(char.IsControl))
+                throw new SmileProjectDiagnosticException("SML3811",
+                    "WebLoadingAuthor must be declared at most once in an application project, as 1 through 128 characters on one line.",
+                    fullProjectPath, location.HasLineInfo() ? location.LineNumber : 1,
+                    location.HasLineInfo() ? location.LinePosition : 1);
+        }
+
+        var logoElements = propertyGroups.SelectMany(group =>
+            group.Elements().Where(element => element.Name.LocalName == "WebLoadingLogo")).ToArray();
+        string? webLoadingLogoPath = null;
+        if (logoElements.Length != 0)
+        {
+            var element = logoElements.Length > 1 ? logoElements[1] : logoElements[0];
+            var location = (IXmlLineInfo)element;
+            var value = element.Value.Trim();
+            if (logoElements.Length > 1 || projectKind == SmileProjectKind.Library || element.HasElements ||
+                value.Length is < 1 or > 512 || value.Any(char.IsControl) ||
+                value.IndexOfAny(new[] { ':', '*', '?', '<', '>', '"', '|' }) >= 0 ||
+                value.StartsWith("/") || value.StartsWith("\\") ||
+                !string.Equals(Path.GetExtension(value), ".png", StringComparison.OrdinalIgnoreCase))
+                throw new SmileProjectDiagnosticException("SML3812",
+                    "WebLoadingLogo must be declared at most once in an application project, as a project-relative PNG file path.",
+                    fullProjectPath, location.HasLineInfo() ? location.LineNumber : 1,
+                    location.HasLineInfo() ? location.LinePosition : 1);
+            webLoadingLogoPath = Path.GetFullPath(Path.Combine(projectDirectory, value));
+        }
+
         var startupFile = properties?.Elements().FirstOrDefault(element => element.Name.LocalName == "StartupFile")?.Value.Trim();
         if (projectKind != SmileProjectKind.Library && string.IsNullOrWhiteSpace(startupFile))
             startupFile = "Program.smile";
@@ -348,7 +389,7 @@ public sealed class SmileProjectSourceSet
         var assetManifest = SmileProjectAssetResolver.Resolve(fullProjectPath, projectKind, root);
         var model3DAssets = SmileProjectModel3DAssetResolver.Resolve(fullProjectPath, projectKind, root);
         return new SmileProjectSourceSet(fullProjectPath, projectKind, startupFile ?? string.Empty,
-            libraryName, version, outputName!, applicationId, rememberWindowPlacement, responsiveWindow,
+            libraryName, version, outputName!, applicationId, rememberWindowPlacement, responsiveWindow, webLoadingAuthor, webLoadingLogoPath,
             items, compilationSources, references, assetManifest,
             model3DAssets);
     }

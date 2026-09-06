@@ -685,7 +685,19 @@ Run("Web output writer creates deterministic static files", () =>
             Equal(true, html.Contains($"aria-label=\"Gamepad {control} button\"", StringComparison.Ordinal));
         foreach (var removedControl in new[] { "one", "two", "three", "four" })
             Equal(false, html.Contains($"data-smile-control=\"{removedControl}\"", StringComparison.Ordinal));
-        Equal(8, html.Split(new[] { "type=\"button\"" }, StringSplitOptions.None).Length - 1);
+        Equal(9, html.Split(new[] { "type=\"button\"" }, StringSplitOptions.None).Length - 1);
+        Equal(true, html.Contains("id=\"smile-fullscreen\"", StringComparison.Ordinal));
+        Equal(true, html.Contains("Created in SMILE 2.0", StringComparison.Ordinal));
+        Equal(true, html.Contains("https://github.com/sincioco/smile-2.0", StringComparison.Ordinal));
+        foreach (var link in new[] { "mailto:louiery@gmail.com", "https://github.com/Sincioco",
+            "https://facebook.com/louiery.sincioco", "https://linkedin.com/in/louierysincioco",
+            "https://youtube.com/@TheSincioco", "https://tiktok.com/@sincioco",
+            "https://github.com/sincioco/smile-2.0" })
+            Equal(true, html.Contains($"href=\"{link}\" target=\"_blank\" rel=\"noopener noreferrer\"", StringComparison.Ordinal));
+        Equal(true, html.Contains("Copyright(c) 2026. All rights reserved. Programmed by: Louiery R. Sincioco (Sin)", StringComparison.Ordinal));
+        Equal(false, html.Contains("Created by", StringComparison.Ordinal));
+        Equal(true, html.IndexOf("id=\"smile-loading\"", StringComparison.Ordinal) <
+            html.IndexOf("<script src=", StringComparison.Ordinal));
         Equal(4, html.Split(new[] { "<span aria-hidden=\"true\"></span>" }, StringSplitOptions.None).Length - 1);
         Equal(false, html.Contains("▲", StringComparison.Ordinal));
         Equal(false, html.Contains("◀", StringComparison.Ordinal));
@@ -716,6 +728,14 @@ Run("Web output writer creates deterministic static files", () =>
         Equal(true, runtime.Contains("renderer3DObjects.size>=1024", StringComparison.Ordinal));
         Equal(true, runtime.Contains("back.drawImage(renderer3DCanvas", StringComparison.Ordinal));
         Equal(false, runtime.Contains("userAgent", StringComparison.Ordinal));
+        WebOutputWriter.Write(directory, new WebEmitter(analysis, webLoadingAuthor: "Sin & <Guest>",
+            webLoadingLogo: "Assets/Branding/WebLoadingLogo.png"));
+        var creditedHtml = File.ReadAllText(Path.Combine(directory, "index.html"));
+        Equal(true, creditedHtml.Contains("Created by Sin &amp; &lt;Guest&gt;", StringComparison.Ordinal));
+        Equal(false, creditedHtml.Contains(buildVersion, StringComparison.Ordinal));
+        Equal(true, creditedHtml.Contains("src=\"Assets/Branding/WebLoadingLogo.png?v=", StringComparison.Ordinal));
+        Equal(true, creditedHtml.IndexOf("<h1", StringComparison.Ordinal) < creditedHtml.IndexOf("<img", StringComparison.Ordinal));
+        Equal(true, creditedHtml.IndexOf("<img", StringComparison.Ordinal) < creditedHtml.IndexOf("<progress", StringComparison.Ordinal));
     }
     finally
     {
@@ -5172,6 +5192,45 @@ Run("ResponsiveWindow is an opt-in Game project policy", () =>
     var normalAssembly = new MasmEmitter(analysis, SmileGraphicsBackend.DirectX, true, false).Emit();
     Equal(true, responsiveAssembly.Contains("call smile_window_responsive_configure", StringComparison.Ordinal));
     Equal(false, normalAssembly.Contains("smile_window_responsive_configure", StringComparison.Ordinal));
+});
+
+Run("WebLoadingAuthor is optional escaped application publication metadata", () =>
+{
+    SmileProjectSourceSet AuthorProject(string properties) => ProjectSources(
+        "<SmileProject><PropertyGroup><ProjectKind>Game</ProjectKind>" + properties +
+        "</PropertyGroup><ItemGroup><SmileSource Include=\"Program.smile\" /></ItemGroup></SmileProject>");
+    Equal(null, AuthorProject("").WebLoadingAuthor);
+    Equal("Louiery R. Sincioco (Sin)", AuthorProject(
+        "<WebLoadingAuthor>Louiery R. Sincioco (Sin)</WebLoadingAuthor>").WebLoadingAuthor);
+    Equal("Sin & 臺灣", AuthorProject("<WebLoadingAuthor>Sin &amp; 臺灣</WebLoadingAuthor>").WebLoadingAuthor);
+    foreach (var invalid in new[] { "", "<b>Sin</b>", "Sin\nGuest", new string('x', 129) })
+        ThrowsProjectDiagnostic(() => AuthorProject($"<WebLoadingAuthor>{invalid}</WebLoadingAuthor>"), "SML3811");
+    ThrowsProjectDiagnostic(() => AuthorProject(
+        "<WebLoadingAuthor>Sin</WebLoadingAuthor></PropertyGroup><PropertyGroup>" +
+        "<WebLoadingAuthor>Guest</WebLoadingAuthor>"), "SML3811");
+    ThrowsProjectDiagnostic(() => ProjectSources(
+        "<SmileProject><PropertyGroup><ProjectKind>Library</ProjectKind>" +
+        "<LibraryName>Example</LibraryName><Version>1.0.0</Version>" +
+        "<WebLoadingAuthor>Sin</WebLoadingAuthor></PropertyGroup>" +
+        "<ItemGroup><SmileSource Include=\"Program.smile\" /></ItemGroup></SmileProject>"), "SML3811");
+});
+
+Run("WebLoadingLogo validates optional project-relative PNG publication", () =>
+{
+    SmileProjectSourceSet LogoProject(string properties) => ProjectSources(
+        "<SmileProject><PropertyGroup><ProjectKind>Game</ProjectKind>" + properties +
+        "</PropertyGroup><ItemGroup><SmileSource Include=\"Program.smile\" /></ItemGroup></SmileProject>");
+    Equal(null, LogoProject("").WebLoadingLogoPath);
+    Equal(true, LogoProject("<WebLoadingLogo>../Branding/Logo.png</WebLoadingLogo>")
+        .WebLoadingLogoPath!.EndsWith(Path.Combine("Branding", "Logo.png"), StringComparison.Ordinal));
+    foreach (var invalid in new[] { "", "D:\\Logo.png", "/Logo.png", "\\\\host\\Logo.png", "*.png",
+        "<b>Logo.png</b>", "Logo\n.png", "Logo.jpg" })
+        ThrowsProjectDiagnostic(() => LogoProject($"<WebLoadingLogo>{invalid}</WebLoadingLogo>"), "SML3812");
+    ThrowsProjectDiagnostic(() => LogoProject("<WebLoadingLogo>A.png</WebLoadingLogo>" +
+        "<WebLoadingLogo>B.png</WebLoadingLogo>"), "SML3812");
+    var missing = LogoProject("<WebLoadingLogo>Missing.png</WebLoadingLogo>");
+    Equal(0, Model3DAssetBuildPipeline.Prepare(missing).Manifest.Items.Count);
+    ThrowsProjectDiagnostic(() => Model3DAssetBuildPipeline.Prepare(missing, includeWebLoadingLogo: true), "SML3813");
 });
 
 Run("ApplicationId CLI parses and rejects conflicting project overrides", () =>

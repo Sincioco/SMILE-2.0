@@ -52,7 +52,8 @@ internal sealed class CompilerDriver
                 return 0;
             }
 
-            var buildAssets = input.Project == null ? null : Model3DAssetBuildPipeline.Prepare(input.Project);
+            var buildAssets = input.Project == null ? null : Model3DAssetBuildPipeline.Prepare(input.Project,
+                includeWebLoadingLogo: options.Target == SmileCompilationTarget.Web);
 
             if (options.Target == SmileCompilationTarget.Web)
             {
@@ -76,7 +77,9 @@ internal sealed class CompilerDriver
 
                     WebOutputWriter.Write(webStagingDirectory, new WebEmitter(analysis, appIdentity,
                         buildAssets?.AssetPaths,
-                        responsiveWindow: input.Project?.ResponsiveWindow == true),
+                        responsiveWindow: input.Project?.ResponsiveWindow == true,
+                        webLoadingAuthor: input.Project?.WebLoadingAuthor,
+                        webLoadingLogo: input.Project?.WebLoadingLogoPath == null ? null : Model3DAssetBuildPipeline.WebLoadingLogoLogicalPath),
                         _testHooks?.AfterWebStagedFile);
                     var currentPaths = new List<string>(WebOutputWriter.ManagedFileNames);
                     if (input.Project != null)

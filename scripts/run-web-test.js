@@ -29,6 +29,7 @@ let verifyPhase5Submenus = false;
 let verifyPhase5SubmenuViewport = false;
 let verifyMobileControls = false;
 let verifyFileTransfer = false;
+let verifyStartupLoading = false;
 let verifyDataStatus = false;
 let deniedDataKey = null;
 let verifyRenderer3D = false;
@@ -57,6 +58,7 @@ while (args.length !== 0) {
     if (option === "--phase5-submenu-viewport") { verifyPhase5SubmenuViewport = true; continue; }
     if (option === "--mobile-controls") { verifyMobileControls = true; continue; }
     if (option === "--file-transfer") { verifyFileTransfer = true; continue; }
+    if (option === "--startup-loading") { verifyStartupLoading = true; continue; }
     if (option === "--data-status") { verifyDataStatus = true; continue; }
     if (option === "--renderer3d") { verifyRenderer3D = true; continue; }
     // Model/calibration console fixtures need the GL double but do not present a 3D frame.
@@ -168,12 +170,17 @@ function createMobileControlsHost(options = {}) {
     };
     const canvas = createMobileEventTarget({ hidden: true, width: 960, height: 540 });
     canvas.getContext = () => drawing;
-    canvas.focus = () => {};
+    canvas.focus = () => { host.document.activeElement = canvas; };
     canvas.getBoundingClientRect = () => ({ left: 100, top: 50, right: 1060, bottom: 590, width: 960, height: 540 });
     const consoleElement = createMobileEventTarget({ hidden: true, textContent: "", scrollTop: 0, scrollHeight: 0 });
     const errorElement = createMobileEventTarget({ hidden: true, textContent: "" });
     const shellElement = createMobileEventTarget();
-    shellElement.requestFullscreen = async () => {};
+    let fullScreenRequests = 0;
+    shellElement.requestFullscreen = async () => {
+        fullScreenRequests += 1;
+        host.document.fullscreenElement = shellElement;
+    };
+    const fullScreenButton = createMobileEventTarget({ hidden: true, textContent: "Full Screen" });
     const names = ["up", "down", "left", "right", "a", "b", "x", "y"];
     const buttons = new Map(names.map(name => {
         const button = createMobileEventTarget({ dataset: { smileControl: name } });
@@ -189,8 +196,10 @@ function createMobileControlsHost(options = {}) {
         : [];
     const elements = new Map([
         ["smile-canvas", canvas], ["smile-console", consoleElement], ["smile-error", errorElement],
-        ["smile-shell", shellElement], ["smile-controls", controls]
+        ["smile-shell", shellElement], ["smile-controls", controls], ["smile-fullscreen", fullScreenButton]
     ]);
+    for (const id of ["smile-loading", "smile-loading-status", "smile-loading-detail", "smile-loading-progress"])
+        elements.set(id, createMobileEventTarget({ textContent: "" }));
     let audioPlays = 0;
     let audioPauses = 0;
     const transferElements = [];
@@ -217,7 +226,7 @@ function createMobileControlsHost(options = {}) {
             },
             addEventListener: (type, listener) => add(documentListeners, type, listener),
             hasFocus: () => !host.document.hidden,
-            exitFullscreen: async () => {}
+            exitFullscreen: async () => { host.document.fullscreenElement = null; }
         },
         navigator: { maxTouchPoints: options.maxTouchPoints || 0 },
         location: { search: options.search || "" },
@@ -251,6 +260,8 @@ function createMobileControlsHost(options = {}) {
         requestAnimationFrame: callback => setImmediate(() => callback(0))
     };
     host.window = host;
+    host.document.activeElement = canvas;
+    consoleElement.focus = () => { host.document.activeElement = consoleElement; };
     const context = vm.createContext(host);
     vm.runInContext(fs.readFileSync(runtimePath, "utf8"), context, { filename: runtimePath });
     const dispatchWindow = (type, event = {}) => dispatch(windowListeners, host, type, event);
@@ -264,7 +275,7 @@ function createMobileControlsHost(options = {}) {
         return event;
     };
     const keyboard = (type, code, extras = {}) => dispatchWindow(type, {
-        code, repeat: false, ctrlKey: false, altKey: false, metaKey: false, ...extras
+        target: canvas, code, repeat: false, ctrlKey: false, altKey: false, metaKey: false, ...extras
     });
     const canvasPointer = (type, pointerId, clientX, clientY, pointerType = "mouse", button = 0) =>
         canvas.dispatch(type, { pointerId, clientX, clientY, pointerType, button });
@@ -272,6 +283,7 @@ function createMobileControlsHost(options = {}) {
     return {
         host, canvas, controls, buttons, unknownButton, errorElement,
         transferElements, transferUrls, downloads,
+        fullScreenButton, fullScreenRequests: () => fullScreenRequests,
         dispatchWindow, dispatchDocument, dispatchOrientation, pointer, keyboard, canvasPointer, canvasWheel,
         audioPlays: () => audioPlays, audioPauses: () => audioPauses
     };
@@ -305,6 +317,95 @@ async function runMobileControlsTests() {
     desktop.keyboard("keyup", "ArrowUp");
     mobileEqual(desktop.host.smile.keyHeld(10), 0, "desktop keyboard release");
     mobileEqual(desktop.host.smile.mediaDiagnostics().virtualControlsMode, "auto", "Desktop Auto diagnostics mode");
+
+    const editable = createMobileEventTarget({ tagName: "INPUT" });
+    desktop.host.document.activeElement = editable;
+    desktop.host.smile.gameWindow("Focus ownership", 960, 540);
+    mobileEqual(desktop.host.document.activeElement, editable, "Game Window does not steal an input's focus");
+    mobileEqual(desktop.keyboard("keydown", "KeyW", { target: editable }).defaultPrevented, false,
+        "text input keeps its default keyboard behavior");
+    mobileEqual(desktop.host.smile.keyHeld(1), 0, "text input does not create a held game key");
+    mobileEqual(desktop.host.smile.getKey(), 0, "text input does not enter the game queue");
+    desktop.canvasPointer("pointerdown", 80, 300, 200);
+    mobileEqual(desktop.host.document.activeElement, desktop.canvas, "canvas press claims keyboard focus");
+    desktop.canvasPointer("pointerup", 80, 300, 200);
+    for (const [code, modifiers] of [
+        ["KeyL", { ctrlKey: true }], ["KeyR", { ctrlKey: true }],
+        ["KeyW", { ctrlKey: true }], ["KeyS", { metaKey: true }],
+        ["ArrowLeft", { altKey: true }], ["Tab", { shiftKey: true }],
+        ["F5", {}], ["F11", {}], ["F12", {}], ["ShiftLeft", {}],
+        ["KeyW", { isComposing: true }], ["Space", { target: editable }]
+    ]) {
+        mobileEqual(desktop.keyboard("keydown", code, modifiers).defaultPrevented, false,
+            `${code} browser, text or composition event remains unclaimed`);
+        mobileEqual(desktop.host.smile.getKey(), 0, `${code} does not enter the game queue`);
+        mobileEqual(desktop.host.smile.mediaDiagnostics().activeInputSourceCount, 0,
+            `${code} does not create a held game action`);
+    }
+    desktop.keyboard("keydown", "ControlLeft", { ctrlKey: true });
+    mobileEqual(desktop.host.smile.keyHeld(33), 1, "Control remains available for Viewer frame navigation");
+    mobileEqual(desktop.host.smile.getKey(), 0, "Control alone is a modifier, not a queued action");
+    for (const [code, value] of [["ArrowLeft", 12], ["ArrowRight", 13]]) {
+        mobileEqual(desktop.keyboard("keydown", code, { ctrlKey: true }).defaultPrevented, true,
+            `${code} frame navigation belongs to the focused canvas`);
+        mobileEqual(desktop.host.smile.getKey(), value, `${code} queues the frame-navigation action`);
+        mobileEqual(desktop.keyboard("keydown", code, { ctrlKey: true, repeat: true }).defaultPrevented, true,
+            `${code} held repeat still suppresses canvas scrolling`);
+        mobileEqual(desktop.host.smile.getKey(), 0, `${code} repeat does not duplicate queued actions`);
+        desktop.keyboard("keyup", code, { ctrlKey: true });
+    }
+    desktop.keyboard("keyup", "ControlLeft");
+    desktop.keyboard("keydown", "KeyW");
+    desktop.canvas.dispatch("blur");
+    mobileEqual(desktop.host.smile.keyHeld(1), 0, "leaving canvas clears held keyboard state");
+    mobileEqual(desktop.host.smile.getKey(), 0, "leaving canvas clears queued keyboard state");
+    desktop.host.document.hidden = true;
+    desktop.keyboard("keydown", "Space");
+    mobileEqual(desktop.host.smile.getKey(), 0, "hidden document cannot queue a game key");
+    desktop.host.document.hidden = false;
+    desktop.dispatchWindow("blur");
+    desktop.keyboard("keydown", "Space");
+    mobileEqual(desktop.host.smile.getKey(), 0, "inactive window cannot queue a game key");
+    desktop.dispatchWindow("focus");
+
+    const consoleHost = createMobileControlsHost();
+    const consoleSurface = consoleHost.host.document.getElementById("smile-console");
+    consoleHost.host.smile.print(["Console focus"], false);
+    mobileEqual(consoleHost.host.document.activeElement, consoleSurface, "console output claims initial program focus");
+    consoleHost.keyboard("keydown", "Enter", { target: consoleSurface });
+    mobileEqual(consoleHost.host.smile.getKey(), 14, "console Get Key still receives focused input");
+    consoleSurface.dispatch("blur");
+    mobileEqual(consoleHost.host.smile.keyHeld(14), 0, "console blur clears held keyboard state");
+    consoleHost.host.document.activeElement = editable;
+    consoleHost.host.smile.print(["More output"], false);
+    mobileEqual(consoleHost.host.document.activeElement, editable, "later console output does not steal text focus");
+    consoleSurface.dispatch("click");
+    consoleHost.host.smile.gameWindow("Return to graphics", 960, 540);
+    mobileEqual(consoleHost.host.document.activeElement, consoleHost.canvas, "graphics regains program focus from console");
+
+    mobileEqual(desktop.fullScreenRequests(), 0, "fullscreen is never entered automatically");
+    desktop.host.document.activeElement = desktop.fullScreenButton;
+    desktop.keyboard("keydown", "Enter", { target: desktop.fullScreenButton });
+    mobileEqual(desktop.host.smile.getKey(), 0, "fullscreen button activation is not a game action");
+    desktop.fullScreenButton.dispatch("click");
+    desktop.dispatchDocument("fullscreenchange");
+    mobileEqual(desktop.fullScreenRequests(), 1, "accessible fullscreen button makes a user-initiated request");
+    mobileEqual(desktop.fullScreenButton.textContent, "Exit Full Screen", "fullscreen label follows actual state");
+    mobileEqual(desktop.fullScreenButton.getAttribute("aria-pressed"), "true", "fullscreen accessible state follows entry");
+    desktop.fullScreenButton.dispatch("click");
+    desktop.dispatchDocument("fullscreenchange");
+    mobileEqual(desktop.fullScreenButton.getAttribute("aria-pressed"), "false", "fullscreen accessible state follows exit");
+    desktop.host.document.activeElement = desktop.canvas;
+    mobileEqual(desktop.keyboard("keydown", "Enter", { altKey: true }).defaultPrevented, true,
+        "Alt+Enter remains the focused program fullscreen shortcut");
+    mobileEqual(desktop.fullScreenRequests(), 2, "Alt+Enter makes one fullscreen request");
+    mobileEqual(desktop.host.smile.keyHeld(14), 0, "Alt+Enter does not leak an Enter action");
+    desktop.keyboard("keydown", "Enter", { altKey: true, repeat: true });
+    mobileEqual(desktop.fullScreenRequests(), 2, "fullscreen key repeat does not toggle repeatedly");
+    desktop.host.document.fullscreenElement = null;
+    desktop.host.document.fullscreenEnabled = false;
+    desktop.dispatchDocument("fullscreenchange");
+    mobileEqual(desktop.fullScreenButton.hidden, true, "unsupported fullscreen does not expose an inert button");
 
     desktop.canvasPointer("pointermove", 1, 580, 320);
     mobileEqual(desktop.host.smile.pointerX(), 480, "canvas pointer maps center X to logical pixels");
@@ -415,9 +516,13 @@ async function runMobileControlsTests() {
 
     controls.pointer("up", "pointerdown", 110, "touch", 0);
     controls.pointer("a", "pointerdown", 111, "touch", 0);
+    mobileAssert(JSON.stringify(drainKeys(controls.host.smile)) === JSON.stringify([10, 23]), "multi-touch queue order");
+    controls.keyboard("keydown", "KeyW");
+    controls.canvas.dispatch("blur");
+    mobileEqual(controls.host.smile.keyHeld(1), 0, "canvas blur releases keyboard ownership independently");
     mobileEqual(controls.host.smile.keyHeld(10), 1, "multi-touch direction held");
     mobileEqual(controls.host.smile.keyHeld(23), 1, "multi-touch action held");
-    mobileAssert(JSON.stringify(drainKeys(controls.host.smile)) === JSON.stringify([10, 23]), "multi-touch queue order");
+    mobileEqual(controls.host.smile.getKey(), 0, "canvas blur clears pending actions without releasing touch owners");
     controls.pointer("up", "pointerup", 110, "touch", 0);
     mobileEqual(controls.host.smile.keyHeld(23), 1, "releasing direction preserves action");
     controls.pointer("a", "pointerup", 111, "touch", 0);
@@ -538,6 +643,105 @@ async function runMobileControlsTests() {
     mobileEqual(failure.controls.hidden, true, "runtime failure hides controls");
     mobileEqual(failure.host.__smileWeb.status, "error", "runtime failure status");
     mobileEqual(failure.errorElement.hidden, false, "runtime failure displays the error panel");
+}
+
+async function runStartupLoadingTests() {
+    const env = createMobileControlsHost();
+    const runtime = env.host.smile;
+    const loader = env.host.document.getElementById("smile-loading");
+    const status = env.host.document.getElementById("smile-loading-status");
+    const detail = env.host.document.getElementById("smile-loading-detail");
+    let completeDownload, downloads = 0;
+    env.host.fetch = async () => {
+        downloads += 1;
+        return { ok: true, arrayBuffer: () => new Promise(resolve => { completeDownload = resolve; }) };
+    };
+    env.host.Image = class {
+        constructor() { this.width = this.height = 4; }
+        set src(value) { setImmediate(() => this.onload()); }
+    };
+    runtime.configure("smile.tests.loading.disposable", ["Assets/Logo.png"]);
+    runtime.gameWindow("Loading", 960, 540);
+    const pending = runtime.loadImage("Assets/Logo.png");
+    await new Promise(resolve => setImmediate(resolve));
+    mobileEqual(loader.hidden, false, "loader remains visible while download is pending");
+    mobileAssert(status.textContent.includes("1 downloading"), "loading count describes real outstanding work");
+    mobileEqual(detail.textContent, "Assets/Logo.png", "loader reports logical filename, not a host drive path");
+    completeDownload(new Uint8Array([137, 80, 78, 71]).buffer);
+    const first = await pending;
+    mobileAssert(status.textContent.includes("1 assets ready"), "completed asset count");
+    mobileEqual(env.transferUrls.size, 0, "image object URL released after decode");
+    runtime.imageRelease(first);
+    const second = await runtime.loadImage("Assets/Logo.png");
+    mobileEqual(downloads, 1, "repeat load reuses encoded bytes after last decoded owner released");
+    mobileEqual(runtime.mediaDiagnostics().assetDownloadCacheHits, 1, "repeat download cache hit counted");
+    runtime.imageRelease(second);
+    await runtime.showScreen();
+    mobileEqual(loader.hidden, true, "first presented frame dismisses loader");
+    runtime.mediaShutdown();
+    mobileEqual(runtime.mediaDiagnostics().assetDownloadCacheBytes, 0, "shutdown clears encoded cache");
+    mobileEqual(runtime.mediaDiagnostics().imageReferenceCount, 0, "shutdown leaves no image owners");
+
+    const decodeFailure = createMobileControlsHost();
+    let decodeAttempts = 0;
+    decodeFailure.host.fetch = async () => {
+        decodeAttempts += 1;
+        return { ok: true, arrayBuffer: async () => new Uint8Array([1]).buffer };
+    };
+    decodeFailure.host.Image = class {
+        set src(value) { setImmediate(() => this.onerror()); }
+    };
+    for (let index = 0; index < 2; index += 1) {
+        try { await decodeFailure.host.smile.loadImage("Assets/Invalid.png"); } catch (_) { }
+    }
+    mobileEqual(decodeAttempts, 2, "decode failure discards encoded cache so retry can recover");
+    mobileEqual(decodeFailure.transferUrls.size, 0, "failed decode releases object URL");
+
+    const late = createMobileControlsHost();
+    let finishLate;
+    late.host.fetch = async () => ({ ok: true,
+        arrayBuffer: () => new Promise(resolve => { finishLate = resolve; }) });
+    const lateDownload = late.host.smile.loadImage("Assets/Late.png").catch(() => null);
+    await new Promise(resolve => setImmediate(resolve));
+    late.host.smile.mediaShutdown();
+    finishLate(new Uint8Array([1]).buffer);
+    await lateDownload;
+    mobileEqual(late.host.smile.mediaDiagnostics().assetDownloadCacheBytes, 0,
+        "late download cannot repopulate a shut-down cache");
+
+    const bounded = createMobileControlsHost();
+    bounded.host.fetch = async () => ({ ok: true,
+        arrayBuffer: async () => new Uint8Array([1]).buffer });
+    bounded.host.Image = env.host.Image;
+    const entryLimit = bounded.host.smile.mediaDiagnostics().maximumAssetDownloadCacheEntries;
+    mobileEqual(entryLimit, 256, "encoded cache entry bound");
+    for (let index = 0; index <= entryLimit; index += 1) {
+        const loaded = await bounded.host.smile.loadImage(`Assets/Entry${index}.png`);
+        bounded.host.smile.imageRelease(loaded);
+    }
+    mobileEqual(bounded.host.smile.mediaDiagnostics().assetDownloadCacheCount, entryLimit,
+        "encoded cache evicts oldest entries at its bound");
+    const evicted = await bounded.host.smile.loadImage("Assets/Entry0.png");
+    mobileEqual(bounded.host.smile.mediaDiagnostics().assetDownloadCount, entryLimit + 2,
+        "evicted encoded entry downloads again");
+    bounded.host.smile.imageRelease(evicted);
+    bounded.host.smile.mediaShutdown();
+
+    const failed = createMobileControlsHost();
+    let attempts = 0;
+    failed.host.fetch = async () => { attempts += 1; return { ok: false, status: 404 }; };
+    for (let index = 0; index < 2; index += 1) {
+        try { await failed.host.smile.loadImage("Assets/Missing.png"); } catch (_) { }
+    }
+    mobileEqual(attempts, 2, "failed downloads are retryable, not cached");
+    failed.host.smile.run(() => { throw new Error("Test startup failure"); });
+    await new Promise(resolve => setImmediate(resolve));
+    mobileEqual(failed.host.document.getElementById("smile-loading").hidden, true, "failure uncovers error panel");
+    mobileEqual(failed.errorElement.hidden, false, "startup error is visible");
+    const consoleHost = createMobileControlsHost();
+    consoleHost.host.smile.print(["Ready"], false);
+    mobileEqual(consoleHost.host.document.getElementById("smile-loading").hidden, true, "console output dismisses loader");
+    process.stdout.write("Web startup loader and encoded asset reuse checks passed.\n");
 }
 
 async function runFileTransferTests() {
@@ -662,6 +866,8 @@ function runDataStatusTests() {
 
 if (verifyDataStatus) {
     try { runDataStatusTests(); } catch (error) { fail(error.stack || error.message); }
+} else if (verifyStartupLoading) {
+    runStartupLoadingTests().catch(error => fail(error.stack || String(error)));
 } else if (verifyFileTransfer) {
     runFileTransferTests().then(() => process.exit(0)).catch(error => fail(error.stack || error.message));
 } else if (verifyMobileControls) {
@@ -831,7 +1037,8 @@ function canvas(name = "offscreen") {
 }
 
 const visibleCanvas = canvas("visible");
-const consoleElement = { hidden: true, textContent: "", scrollTop: 0, scrollHeight: 0 };
+const consoleElement = { hidden: true, textContent: "", scrollTop: 0, scrollHeight: 0,
+    addEventListener() {}, focus() { host.document.activeElement = consoleElement; } };
 const errorElement = { hidden: true, textContent: "" };
 const shellElement = { requestFullscreen: async () => {} };
 const elements = new Map([
@@ -840,10 +1047,14 @@ const elements = new Map([
 ]);
 
 const hostConsoleErrors = [];
+const testAssetSources = new WeakMap();
+const testImageUrls = new Map();
+let nextTestImageUrl = 0;
 const host = {
     console: { log: () => {}, warn: () => {}, error: error => hostConsoleErrors.push(String(error)) },
     document: {
         title: "", hidden: false, fullscreenElement: null,
+        activeElement: visibleCanvas,
         getElementById: id => elements.get(id) || null,
         createElement: tag => {
             if (tag !== "canvas") return {};
@@ -892,7 +1103,7 @@ const host = {
         constructor() { imageConstructions += 1; this.naturalWidth = this.width = 1920; this.naturalHeight = this.height = 1080; }
         set src(value) {
             this._src = value;
-            const normalized = String(value).replace(/\\/g, "/");
+            const normalized = String(testImageUrls.get(value)?.logical || value).replace(/\\/g, "/");
             if (normalized.endsWith("/Background.png")) {
                 this.naturalWidth = this.width = verifyPhase5Ui ? 1920 : 2304;
                 this.naturalHeight = this.height = verifyPhase5Ui ? 1080 : 1296;
@@ -924,10 +1135,18 @@ const host = {
         try {
             const bytes = fs.readFileSync(candidate);
             const payload = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
+            testAssetSources.set(payload, relative);
             return { ok: true, arrayBuffer: async () => payload };
         } catch (_) {
             return { ok: false, arrayBuffer: async () => new ArrayBuffer(0) };
         }
+    },
+    Blob: class extends Blob {
+        constructor(parts, options) { super(parts, options); this.logical = testAssetSources.get(parts[0]); }
+    },
+    URL: {
+        createObjectURL(blob) { const url = `blob:smile-test-${++nextTestImageUrl}`; testImageUrls.set(url, blob); return url; },
+        revokeObjectURL(url) { testImageUrls.delete(url); }
     },
     btoa: value => Buffer.from(value, "binary").toString("base64"),
     atob: value => Buffer.from(value, "base64").toString("binary"),
@@ -1018,6 +1237,7 @@ if (verifyPhase4Audio) {
     };
 }
 host.window = host;
+visibleCanvas.focus = () => { host.document.activeElement = visibleCanvas; };
 if (forceRenderer3DPbrFailure) host.SMILE_TEST_RENDERER3D_FORCE_PBR_FAILURE = true;
 if (forceRenderer3DHdrFailure) host.SMILE_TEST_RENDERER3D_FORCE_HDR_FAILURE = true;
 if (forceRenderer3DShadowFailure) host.SMILE_TEST_RENDERER3D_FORCE_SHADOW_FAILURE = true;

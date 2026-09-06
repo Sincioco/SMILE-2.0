@@ -429,3 +429,268 @@ browser saves. No remote website publication was performed. The Labs' live tabs
 are user-requested outputs, not a claim that every H6.1 browser test has passed.
 Next: resume strict atomic JSON import and the remaining W0-W6 work listed above.
 The stream must remain live until all approved work genuinely completes.
+
+## September 6: W12/W14 snapshot import implementation (in validation)
+
+Source parent: `909fd6acf8eb80e370a88ea4f024583faffaa33e`, main/origin/main
+aligned and clean before this work. This entry is a checkpoint, not a final gate.
+
+- Added the bounded, tool-local `CalibrationJson.smile` reader using existing
+  SMILE syntax and Character3D metadata. It produces a candidate SMKF payload but
+  does not mutate actors or storage. The Viewer validates first, asks for a second
+  Replace Keys confirmation, checks the saved baseline, and uses the existing
+  save/rollback/Undo transaction. It pauses movement and refuses to discard an
+  active unsaved edit. Profile changes cancel pending confirmation.
+- Strict checks include exact metadata, named/unique clips, complete 20-channel
+  keys, integer/vector/flag/frame bounds, saved-frame references, counts, duplicate
+  and unknown fields, malformed/trailing data and the 8 MiB input bound. Printable
+  ASCII identity strings allow equivalent JSON escapes. Current schema only;
+  rejected working storage is not silently replaced or migrated.
+- The first draft compile exposed unsupported pre-test loop syntax and reserved
+  identifier names; corrected the source to existing Do/Loop Until syntax. No
+  language extension was added. An oversized *test-local* fixture array exceeded
+  the native stack; moved that fixture buffer to shared test storage. Subsequent
+  failed byte-order assertions were corrected to preserve the packaged-byte check
+  before import and compare the full normalized post-Undo snapshots by name.
+- `scripts/test-viewer-calibration-native.ps1`: PASS, including 42 malformed JSON
+  cases, both current canonical snapshots, reordered properties/clips/index hints,
+  cross-character rejection, oversized input, validation without writes, changed
+  baseline rejection, actual denied persistence and successful replacement/Undo.
+  Both final JSON snapshots match canonical normalization and native serialization;
+  native primary and backup checksum/profile checks pass. Latest disposable app:
+  `smile.tests.viewer-calibration.run-a3e73f19f1084e589f24e3a80aed922b`.
+- Published that same isolated project to
+  `artifacts/web/h6-1/CalibrationImportTests`; `node scripts/run-web-test.js
+  artifacts/web/h6-1/CalibrationImportTests --renderer3d-state --deny-data-key
+  "Viewer Denied Storage Probe" --native-output
+  artifacts/tests/ViewerCalibrationIsolation/native.out --timeout 60000`: PASS,
+  exact console parity. This is VM/state evidence, not real file-selection proof.
+- Exported both live snapshots unchanged and made exact backups at
+  `artifacts/temp/codex-handoff/h6-1-json-import-resume-909fd6a/{Arin,Orin}`.
+  Arin JSON remains `C05C87BF0A92B373DB7ECD1CB304F4446B851E7AFEA836E8BB05D058B1B20F0B`;
+  Orin remains `13AE135FDA40302CB5A4B0146D7103A2ED5346AAEEBB3852AF6DD3C397F5D293`.
+- Built a separate interactive native/Web Viewer with disposable application
+  `smile.tests.viewer-import-ui.run-582f047e9ad44dd29175fbeb5a15be5b`. Native opened
+  and the Import JSON button showed the real UTF-8 picker. Overlapping keyboard
+  input was observed; requested an idle-input interval before continuing UI tests.
+  No native or browser file-selection acceptance is claimed at this checkpoint.
+
+Next: complete actual native/browser import, refresh/reopen and Undo checks;
+rebuild normal Viewer outputs, finish milestone validation and commit/push. The
+remaining MSAA, input/fullscreen, audio/lifecycle/mobile, integrated multi-actor,
+wider smoke, deployment ZIP and final H6.1 gate remain unfinished. No E0 or Double.
+
+## September 6: resumed Party inspector, transfer UI and publication cleanup
+
+Current source parent is `1747003`, main/origin/main 0/0 at resumption. This is
+ongoing work, not a gate pass. Sin requested automatic resumption after input,
+completion of existing prerequisites first, then a separate reusable Visual
+Studio **Web - Optimized** platform and builds of all three tools. Keep normal
+Web full fidelity; the lossless-only constraint still applies. That new platform
+is authorized but has not been implemented. No Battle Scene Editor or Double.
+
+- Strict transfer UI now uses Import Key Frames and Download Key Frames to the
+  left of the JSON filename. Earlier actual isolated native picker selection and
+  replacement succeeded. Actual Chrome downloaded the canonical 24-key snapshot,
+  imported it, deliberately replaced only disposable browser test storage with
+  an empty snapshot, and Undo restored all 24 keys. Downloaded restored data was
+  compared with all canonical channels and identities. Distinct imported-state
+  refresh/reopen evidence remains pending. No live native keys were replaced.
+- Party now binds the shared inspector temporarily to its active actor; scene
+  advancement stays outside the UI binding. Hero pose storage remains separate;
+  Dragon exposes timeline controls only. Native isolated tests passed before the
+  final Enter-key/layout/gizmo follow-ups; those changes are being retested.
+- White headers were built for all three tools. One native Viewer was relaunched
+  and its Party 0-Frame pause and Arin Pose panel were observed. The local Web
+  Viewer displayed the shared Party timeline. These are bounded observations,
+  not final native/Web UI acceptance.
+- Both live exports still match the preserved Arin 24-key and Orin zero-key
+  hashes recorded above. The new build script removes only obsolete Web
+  diagnostic assets through the existing managed publisher; native diagnostics
+  and canonical textures remain intact. Profile and its shortcut are disabled
+  in the generated Web policy, not removed from Desktop.
+- Before cleanup, Release/Web contains 51 files / 145,107,194 bytes. A recoverable
+  complete copy is `artifacts/temp/codex-handoff/viewer-web-before-profile-cleanup-1747003.zip`,
+  SHA-256 `2BD74794D03412007040A615B6A1EDB3714FFC62778CE1D27C6A826182F7D1C6`.
+  No texture transcoding or resizing has been performed.
+
+Next: compile/fix the final Party/gizmo changes, focused native and generated-Web
+tests, visible UI validation, managed publication/hash comparison, documentation
+and coherent milestone commit/push; then resume the outstanding H6.1 checks.
+
+### Follow-up validation and Blender-reference correction
+
+- `test-viewer-calibration-native.ps1` passed with disposable identity
+  `smile.tests.viewer-calibration.run-21fddd25144f4b3e8ecd03c295f5ba62`, including
+  Party Enter confirming a gizmo preview and then saving the correct active hero
+  without resetting the battle. The same generated test project ran on Web with
+  `--renderer3d-state --deny-data-key "Viewer Denied Storage Probe"` and exact
+  `--native-output` parity. Logs: `artifacts/temp/h6-1-party-gizmo-{native,web-test}.log`.
+- Release and Debug Viewer Native/Web builds passed. Release/Web is now 39 files,
+  102,106,251 bytes versus 145,107,194 before cleanup (about 41.0 MiB saved).
+  Twelve obsolete diagnostic assets were removed from generated output; all 21
+  retained PNG hashes are unchanged. All 51 pre-cleanup ZIP entries were checked
+  against their baseline hashes. Native still publishes its 46 assets; Web 34.
+- The native hardening wrapper passed including generated-Web console parity,
+  calibration isolation and 58 graphics/pointer/audio checks. Actual native Party
+  Dragon 0-Frame and drag-scrub remained paused with unchanged camera diagnostics;
+  Dragon Pose was disabled. Arin and Orin individual tabs loaded afterward.
+  A native Arin Run frame-0 ring preview changed wrist X from 68 to 90 degrees;
+  Escape restored 68 without Save. No user aesthetic acceptance is claimed.
+- Sin rejected the thick ring appearance as jagged and asked for a closer Blender
+  match. Inspected installed Blender 5.2.1's default cube Move/Rotate tools without
+  opening or editing character files, then minimized Blender and foregrounded the
+  Viewer at Sin's request. Premature whole-world rounding in shared ring projection
+  was identified. The new camera-relative thousandths projection passes 128-point
+  analytic native/Web checks to within one pixel, in the normal hardening wrapper
+  (`artifacts/temp/h6-1-smooth-gizmo-hardening.log`). No Double was added.
+- Follow-up styling now uses 128 ring segments, approximately constant screen
+  size, round joins and subdued rear segments. This newer styling is NOT visually
+  validated yet. Outer-ring view rotation, plane handles and full Blender behavior
+  must not be claimed from the current axis-only implementation.
+- Sin is using desktop mouse/keyboard. No UI inputs, activation, relaunches or
+  interactive tests until Sin finishes. Background source work and compile-only
+  checks continue. Latest source compiles to a separate test executable without
+  replacing the running Viewer; completion is checked separately.
+
+Open: finish gizmo/transfer/Party visible validation and documentation, milestone
+commit/push, remaining H6.1 gate evidence, then the newly authorized lossless Web
+Optimized platform and all three optimized publications. No final gate update yet.
+
+### W11 focused keyboard ownership — 2026-09-06 continuation
+
+- Sin finished using the keyboard/mouse and subsequently opened the Web Viewer
+  himself. An attempted Windows browser observation was stopped by the Computer
+  Use tool because it could not determine the browser URL confidently; an earlier
+  attempt reported physical Escape. Sin attributes stray Escape to his KVM.
+  No safety stop was disabled or bypassed, and neither attempt proves browser
+  acceptance. Background edits/VM checks resumed after his follow-up.
+- Shared generated Web input now records keys only on the focused canvas or
+  console. Browser modifier shortcuts, function keys, text-input targets,
+  composition and Shift+Tab remain unclaimed. Ctrl+Left/Right still support Viewer
+  frame navigation; Control alone is held state rather than a queued action.
+  Repeat does not create duplicate queued actions. Surface blur clears keyboard
+  state without releasing independent virtual-controller owners.
+- Added a generated, keyboard-focus-revealed Full Screen button, reached through
+  Shift+Tab from the canvas. It uses the existing user-gesture fullscreen path,
+  follows actual browser state and is hidden when unsupported. Alt+Enter remains
+  available. Initial console/graphics focus transitions preserve external input
+  focus. No new SMILE syntax or Double type was added.
+- `dotnet publish src/Smile.Compiler/Smile.Compiler.csproj -c Release -r win-x64
+  --self-contained false -o artifacts/compiler` passed, followed by compilation
+  of `examples/Phase3ATextGame/Phase3ATextGame.smileproj` to
+  `artifacts/web/h6-1/KeyboardFocus`. `run-web-test.js` passed `--mobile-controls`,
+  `--file-transfer`, `--data-status` and dynamic Draw Text parity. These tests run
+  generated JavaScript in the repository VM host, not an actual browser.
+  Compiler/build/input logs: `artifacts/temp/h6-1-keyboard-focus-*.log`.
+- The latest smoother Viewer source had already compiled successfully to
+  `artifacts/tests/CharacterViewerSmoothGizmo.exe`; it has not yet been launched.
+  W11 remains IN-PROGRESS pending actual Chrome/Edge checks and VSIX refresh.
+  The running Viewer and its saved calibration were not replaced in this step.
+
+### Loader, quality-tier authorization and user Mac observation — 2026-09-06
+
+- Sin requested an immediate Web startup loader with the program title, large
+  centered official logo, progress below it, creator credits and the Snake
+  tutorial copyright/footer. Links must open a new tab. The repository link is
+  retained separately. The unchanged canonical logo is now under `assets/branding`;
+  Sin explicitly authorized a compressed Web loader derivative.
+- Sin superseded the earlier lossless-only optimized-profile constraint: keep
+  normal Web full fidelity and later add Web - Optimized Low, Medium and High.
+  Low prioritizes small functionality-test downloads, Medium balances size and
+  fidelity, High retains more detail while still being compressed. Nine optimized
+  publications (three tools times three tiers) are pending after existing work.
+  No canonical/native textures may be degraded. No measured savings claimed yet.
+- Sin reports that the deployed Character Viewer looks good on his Mac and gives
+  it a visual pass. This is user-observed acceptance of that deployed version,
+  not an agent-run Mac test or acceptance of unbuilt loader/gizmo changes.
+- Sin reports long frozen tab transitions in Chrome on PC and Mac. Source review
+  confirms `SelectCharacterTab` tears down scene resources and calls `LoadViewer`;
+  Web model loading uses `cache: "no-store"` and zero-reference image entries are
+  discarded. Repeated visits therefore recreate resources and can redownload
+  models. This is a recorded performance issue, not fixed by a startup overlay.
+  Actual deployed timings and an ownership-safe caching fix remain pending.
+
+### Shared Desktop/Web tab cache and branded loader validation — 2026-09-06
+
+Source parent remains `1747003bddfb1188921084ac60bc3fc235232b54`; main and
+origin/main were 0/0 at this checkpoint. Existing dirty work is preserved. This
+entry supersedes the preceding cache-fix-pending note, not the unfinished H6.1 gate.
+
+- Sin explicitly requested the same optimization on Desktop. The new shared
+  `Character3D.SetUnusedAssetCacheLimit` API defaults to zero; the Viewer opts into
+  three unused immutable assets. Tab switches still destroy per-instance actor,
+  animator/pose and scene VFX state. Compatible geometry, prepared materials,
+  textures and animation source data are reused, with bounded eviction, a single
+  admission retry after unused eviction, shutdown cleanup and epoch invalidation.
+  Quality is selected before loading so first/subsequent tabs use the same key.
+- Both targets present a loading notice before teardown. Web additionally keeps
+  encoded model/image downloads in a page-local 128 MiB/256-entry LRU. This does
+  not retain combat state, saves or decoded owners. Invalid decoded images/models
+  are removed, failed downloads are retryable, shutdown clears retained bytes,
+  and late requests cannot refill a shut-down cache. First visits still incur
+  loading; repeated switches are not promised to be instant.
+- All three tool projects use the optional shared `WebLoadingAuthor` and
+  `WebLoadingLogo` project metadata. The generated startup page has the title,
+  prominent centered logo, activity bar, actual file readiness/pending detail,
+  creator credits and the requested Snake footer/new-tab links. The activity bar
+  is deliberately indeterminate, not a fabricated whole-download percentage.
+  Script/runtime failures show recovery information. Native publication ignores
+  the Web-only logo. No SMILE grammar or Double type was added.
+- Canonical branding PNG is unchanged: 1,747,311 bytes, SHA-256
+  `43D695C36FAB50849ADD26330E2D857F18C60BFBA91AF0EAA0D02127E0009AC9`.
+  The authorized 768x512 Web derivative is 427,320 bytes, SHA-256
+  `494F2B7A8476EA58702DEF84105ADEB52D77BCE3AA209A85A5507ECF5371A374`.
+  No character textures were resized or recompressed.
+- Corrected `Launch.ps1` to match the repository executable, including renamed
+  running compiler outputs, rather than a title that can also match Chrome.
+  Relaunch did not close the browser. One native Viewer (PID 44004 at observation)
+  is running; the native Viewer was restored to the foreground after Web checks.
+
+Actual validation (logs under ignored `artifacts/temp`):
+
+| Command/check | Result/evidence |
+| --- | --- |
+| `dotnet publish src/Smile.Compiler/Smile.Compiler.csproj -c Release -r win-x64 --self-contained false -o artifacts/compiler` | PASS; `h6-1-loader-compiler-publish.log`. |
+| `dotnet run --project src/Smile.Tests/Smile.Tests.csproj -c Release` | 299 PASS on final runtime source; `h6-1-loader-cache-final-language-tests.log`. Synthetic negative-test diagnostics are expected. |
+| `scripts/test-smile-formatter.ps1` | 13 PASS; `h6-1-loader-formatter-tests.log`. |
+| `scripts/format-smile-style.ps1 -Check -FormatLongIf` | Final 385-file check PASS; `h6-1-loader-cache-final-format.log`. |
+| `scripts/test-character3d.ps1` | Native and generated-Web normal/PBR-fallback PASS; `h6-1-tab-cache-character3d.log`. Reuse keeps the model handle but creates a fresh animator, frame zero and clean pose; limit/profile eviction and shutdown also pass. |
+| `tools/Character3DViewer/Build.ps1 -Configuration Release -Target All` | PASS; `h6-1-loader-cache-viewer-build.log`; native executable and Release/Web with 35 published assets. |
+| Fire and Lightning `Build.ps1 -Configuration Release -Target Web` | PASS; `h6-1-loader-{fire,lightning}-build.log`. |
+| `node scripts/run-web-test.js artifacts/web/h6-1/KeyboardFocus --startup-loading` | PASS; actual generated-runtime VM activity/cache/decode-failure/late-completion/entry-eviction tests, `h6-1-loader-cache-final-startup.log`. |
+| Same fixed-canvas fixture with `--mobile-controls` and `--data-status` (separate invocations) | PASS; `h6-1-loader-cache-final-input.log` and `h6-1-loader-cache-final-web-tests.log`. A combined flags invocation selects Data tests only; it is not counted as all modes. |
+| `node scripts/run-web-test.js tools/Character3DViewer/bin/Release/Web --file-transfer` | PASS; `h6-1-loader-cache-final-transfer.log`. |
+| Native visible Party → Arin → Orin → Dragon → Party | All scenes rendered, no recovery error; Party demo resumed. This is functional evidence, not a stopwatch benchmark. |
+| Visible Chrome four-tab cycle on current local build | All scenes rendered and Party demo continued; browser warning/error log query returned `[]`. No quantitative speedup or new Mac check claimed. |
+| Visible Chrome startup/footer | Logo/activity/credits/footer rendered. A disposable local server delayed one model by six seconds to keep the unmodified loader visible. Clicking GitHub opened a separate `https://github.com/Sincioco` tab. Popup closed, Viewer returned to normal `127.0.0.1:8766`, temporary server stopped. Mail-handler/social services were not each opened. |
+| `scripts/install-vsix.cmd` | Rebuilt/installed/verified 2.0.59; `h6-1-loader-cache-vsix-install.log`. Installed extension DLL SHA-256 `B8A9A3A623528A4331144379C84A612C4BCB855B3DA9AB492974C444A3CCAEAE`; artifact `artifacts/vsix/Smile.VisualStudio.vsix` SHA-256 `8F93BC1EC1BD7D31021E22BFCE73A222C9B9516A064A6C947064354AA1841D39`. |
+| Installed compiler/language payload | Matches built `smilec.dll` SHA-256 `90D7D9CCBD782035A3273DB127F2E46B9ED5B06162DC71907768980949E323B2` and `Smile.Language.dll` `026D9DA0C4E6244B759BE9D608EDA6EC761E03518B57613385CBCD9F5FD38475`. |
+| `scripts/test-character-3d-viewer-hardening.ps1` | PASS on final Viewer/cache source, including isolated calibration, exact generated-Web hardening console and 58 native graphics/input/audio checks; `h6-1-loader-cache-final-viewer-hardening.log`. |
+| Current isolated Viewer native/Web snapshot fixture | Native PASS, then Web compile and `run-web-test.js artifacts/web/h6-1/CalibrationImportTests --renderer3d-state --deny-data-key "Viewer Denied Storage Probe" --native-output artifacts/tests/ViewerCalibrationIsolation/native.out --frames 16 --timeout 60000` PASS, exact console; `h6-1-loader-cache-final-calibration{,-web}.log`. |
+
+An initial `--mobile-controls` run against the responsive Viewer fixture failed
+its fixed-960-canvas expectation (480 versus 640). Recompiling the intended fixed
+`Phase3ATextGame` fixture and running that mode passed; this is a fixture-selection
+correction, not a claimed pointer bug fix. Draft compile errors from reserved
+`Count` and guessed drawing syntax were corrected to existing supported SMILE
+syntax before the successful builds above.
+
+The final isolated snapshot fixture now remaps its optional Web logo path when
+copying the project. Its first Web run used the VM's default three-frame limit;
+new tab-loading notices reached that limit before the final success line. Both
+JSON outputs matched exactly, and rerunning with the bounded 16-frame allowance
+completed all assertions and matched the native console. Reusing the disposable
+output directory with a new ApplicationId emitted SML3605 (old publication
+manifest identity ignored); it did not alter live Viewer publication or storage.
+
+Both live calibration exports still match the Arin 24-key and Orin zero-key JSON
+hashes recorded earlier. No historical checkpoint was restored and no calibration
+was changed by tab checks. The user-reported Mac visual pass applies only to his
+deployed build. No website upload has been performed by Codex.
+
+Unfinished: commit/push validated milestones, distinct imported-state refresh/
+reopen, latest gizmo interaction/remaining native and real Chrome/Edge parity
+checks, W10 MSAA, audio/lifecycle/mobile and integrated same-model VFX evidence,
+wider normal smoke, final report/gate/portable evidence package; then the nine
+Web Optimized Low/Medium/High outputs. H6.1 remains incomplete. No E0 or Double.

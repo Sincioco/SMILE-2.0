@@ -28,12 +28,15 @@ internal sealed class WebEmitter
     private int _temporaryId;
 
     public WebEmitter(SmileAnalysisResult analysis, string? appIdentity = null,
-        IReadOnlyList<string>? assetPaths = null, bool responsiveWindow = false)
+        IReadOnlyList<string>? assetPaths = null, bool responsiveWindow = false, string? webLoadingAuthor = null,
+        string? webLoadingLogo = null)
     {
         _analysis = analysis;
         _appIdentity = string.IsNullOrWhiteSpace(appIdentity) ? "Program" : appIdentity;
         _assetPaths = assetPaths ?? Array.Empty<string>();
         ResponsiveWindow = responsiveWindow;
+        WebLoadingAuthor = webLoadingAuthor;
+        WebLoadingLogo = webLoadingLogo;
         _currentSource = analysis.BoundSyntaxTree.Source;
         AssignNames();
         var gameWindow = analysis.BoundSyntaxTree.Root.Statements.OfType<GameWindowStatementSyntax>().FirstOrDefault();
@@ -42,6 +45,8 @@ internal sealed class WebEmitter
 
     public string Title { get; }
     public bool ResponsiveWindow { get; }
+    public string? WebLoadingAuthor { get; }
+    public string? WebLoadingLogo { get; }
 
     public string Emit()
     {

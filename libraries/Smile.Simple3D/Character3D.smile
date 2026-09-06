@@ -106,6 +106,8 @@ Private Dim AssetFallbackMaterials[16] As Core.Material3D
 Private Dim AssetUsesPbr[16] As Boolean
 Private Dim AssetUsesFallback[16] As Boolean
 Private Dim AssetPendingRelease[16] As Boolean
+Private Dim AssetIdleAge[16] As Number
+Private Dim UnusedAssetCacheLimit As Number
 
 Private Dim ErrorValue As Number
 Private Dim RendererErrorValue As Number
@@ -290,6 +292,7 @@ Private Sub ClearAssetStorage(Slot As Number)
     AssetUsesPbr[Slot] = False
     AssetUsesFallback[Slot] = False
     AssetPendingRelease[Slot] = False
+    AssetIdleAge[Slot] = 0
 
 End Sub
 
@@ -817,13 +820,83 @@ Private Function CreateAsset(
 
 End Function
 
+Private Sub TrimUnusedAssetCache(Limit As Number)
+
+    Dim Slot As Number
+    Dim UnusedCount As Number
+    Dim Oldest As Number
+
+    Do
+
+        UnusedCount = 0
+        Oldest = -1
+
+        For Slot = 0 To CHARACTER3D_MAX_ASSETS - 1
+
+            If (AssetUsed[Slot] And
+                AssetReferences[Slot] = 0 And
+                AssetIdleAge[Slot] > 0) Then
+
+                UnusedCount = UnusedCount + 1
+
+                If Oldest < 0 Then
+                    Oldest = Slot
+                Else If AssetIdleAge[Slot] > AssetIdleAge[Oldest] Then
+                    Oldest = Slot
+                End If
+
+            End If
+
+        End For
+
+        If UnusedCount <= Limit Then
+            Return
+        End If
+
+        AssetIdleAge[Oldest] = 0
+
+        Call ReleaseAssetIfUnused(Oldest)
+
+    Loop
+
+End Sub
+
+''' Optionally retains a bounded number of unused immutable assets for scene switching.
+''' Zero (the default) releases the last owner's resources immediately. Actors are never retained.
+Public Function SetUnusedAssetCacheLimit(Limit As Number) As Boolean
+
+    Dim Result As Boolean
+
+    Call ClearError()
+
+    If Limit < 0 Or Limit > CHARACTER3D_MAX_ASSETS Then
+        ErrorValue = CHARACTER_ERROR_INVALID_ARGUMENT
+        Return False
+    End If
+
+    If Not SynchronizeRendererEpoch() Then
+        Return False
+    End If
+
+    UnusedAssetCacheLimit = Limit
+
+    Call TrimUnusedAssetCache(Limit)
+
+    Result = PendingReleaseAssetCount() = 0
+
+    Return Result
+
+End Function
+
 Private Sub DestroyActorSlot(Slot As Number)
 
     Dim AssetSlot As Number
     Dim PartIndex As Number
     Dim Destroyed As Boolean
+    Dim Retainable As Boolean
 
     AssetSlot = ActorAssetSlot[Slot]
+    Retainable = True
 
     For PartIndex = 0 To ActorPartCounts[Slot] - 1
 
@@ -832,6 +905,8 @@ Private Sub DestroyActorSlot(Slot As Number)
             Destroyed = Graphics3D.TryDestroyObjectInstance3D(ActorParts[Slot, PartIndex])
 
             If Not Destroyed Then
+                Retainable = False
+
                 Call RecordCleanupFailure(Graphics3D.LastError())
             End If
 
@@ -844,6 +919,8 @@ Private Sub DestroyActorSlot(Slot As Number)
         Destroyed = Graphics3D.TryDestroyAnimator3D(ActorAnimators[Slot])
 
         If Not Destroyed Then
+            Retainable = False
+
             Call RecordCleanupFailure(Graphics3D.LastError())
         End If
 
@@ -854,9 +931,31 @@ Private Sub DestroyActorSlot(Slot As Number)
     If (AssetSlot >= 0 And
         AssetSlot < CHARACTER3D_MAX_ASSETS And
         AssetUsed[AssetSlot]) Then
+
         AssetReferences[AssetSlot] = Max(0, AssetReferences[AssetSlot] - 1)
 
-        Call ReleaseAssetIfUnused(AssetSlot)
+        If (UnusedAssetCacheLimit > 0 And
+            AssetReferences[AssetSlot] = 0 And
+            Retainable) Then
+
+            For PartIndex = 0 To CHARACTER3D_MAX_ASSETS - 1
+
+                If AssetIdleAge[PartIndex] > 0 Then
+                    AssetIdleAge[PartIndex] = Min(CHARACTER3D_MAX_ASSETS, AssetIdleAge[PartIndex] + 1)
+                End If
+
+            End For
+
+            AssetIdleAge[AssetSlot] = 1
+
+            Call TrimUnusedAssetCache(UnusedAssetCacheLimit)
+
+        Else
+
+            Call ReleaseAssetIfUnused(AssetSlot)
+
+        End If
+
     End If
 
 End Sub
@@ -1166,10 +1265,17 @@ Public Function LoadWithPolicy(Path As Text, Policy As Number) As Actor
         FallbackValue = CHARACTER_FALLBACK_SIMPLE
     End If
 
+    If AssetSlot < 0 And UnusedAssetCacheLimit > 0 Then
+        Call TrimUnusedAssetCache(0)
+
+        AssetSlot = CreateAsset(Path, ProfileKey, Variant, CapabilityError)
+    End If
+
     If AssetSlot < 0 Then
         Return Result
     End If
 
+    AssetIdleAge[AssetSlot] = 0
     Model = AssetModels[AssetSlot]
 
     If (Model.PartCount <= 0 Or
@@ -1339,6 +1445,8 @@ End Sub
 Public Sub Shutdown()
 
     Dim Slot As Number
+
+    UnusedAssetCacheLimit = 0
 
     If Not SynchronizeRendererEpoch() Then
         Return

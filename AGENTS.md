@@ -13,6 +13,10 @@ These instructions apply to the entire SMILE 2.0 repository.
 - Web compilation and execution is priority 2.
 - Both targets consume the same shared language, semantic model, and compiler front end.
 
+## Current official branding
+
+- The current official SMILE 2.0 logo is `assets\branding\smile-2.0-logo.png`, designated by Sin on September 6, 2026. Use this canonical source for new branding. Preserve it when making optimized deployment copies; the original tutorial copy may remain for compatibility.
+
 ## Permanent future 3D direction
 
 SMILE must evolve incrementally from the current SMILE 2.0 compiler and runtime into a language/runtime capable of modern 3D games, including a Final Fantasy VII-style cinematic 3D RPG battle system. A future SMILE 3.0 name may mark mature first-class 3D support, but it must remain an evolution of SMILE 2.0 rather than a replacement compiler or from-scratch rewrite.

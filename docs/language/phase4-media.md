@@ -19,6 +19,31 @@ Loaded PNGs retain their original dimensions and per-pixel alpha. Repeated loads
 
 On both targets, an Image expression produces one owned value. Assignment, `ByVal`, and `Return` transfer that owner; `ByRef` aliases the storage location. `Image_Width`, `Image_Height`, `Image_Loaded`, and `Draw Image` consume expression temporaries. Record copies retain owned fields exactly once, while record-return temporaries transfer without an extra clone.
 
+## Web startup and reusable downloads
+
+Generated Web pages display a startup loader before the runtime and program
+scripts execute. It shows actual outstanding asset paths and completed-file
+counts with an indeterminate activity bar: this is not a whole-download byte
+percentage, because programs may discover more assets while loading. The first
+presented frame or console output dismisses it. Runtime failure exposes the
+error panel; a failed script download reports a reload/connection message.
+
+Application project properties `WebLoadingAuthor` (one-line text, 1–128 characters)
+and `WebLoadingLogo` (project-relative PNG path) optionally add creator credits
+and a logo. Metadata is validated in the shared project model and HTML-escaped.
+The PNG is published as `Assets/Branding/WebLoadingLogo.png` using the existing
+transactional asset publisher. Missing files, invalid PNG signatures and files
+larger than 8 MiB block Web compilation; image decoding remains browser-owned.
+Native builds do not publish this Web-only asset. The loader's SMILE copyright
+and links identify the language/platform, not the application's copyright owner.
+
+The Web runtime retains up to 128 MiB / 256 entries of encoded model/image
+downloads in page-local least-recently-used storage. This avoids another network
+request after decoded owners are released; it does not retain actors, poses,
+materials or save data. Files are fetched fresh on their first request in a new
+page, failed downloads are not cached, and shutdown releases retained bytes.
+No service worker, persistent browser cache or extra preloading download is added.
+
 ## Drawing
 
 Full-image drawing uses the original image as its source:
@@ -59,6 +84,22 @@ The controller uses eight real accessible buttons with restrained translucent ou
 Each Web compilation places a deterministic content version in `index.html` and appends it to the generated CSS and JavaScript URLs. The page requests a no-store freshness check on initial display and browser page restoration; when the deployed build marker changes, it reloads through a versioned page URL while preserving existing query options. Generated no-cache metadata also asks static hosts not to retain `index.html`. The first deployment from an older compiler may still require one manual refresh because an already-cached old page cannot contain the new freshness logic. Server `Cache-Control` response headers remain authoritative and should allow `index.html` to revalidate.
 
 The standard profile does not infer arbitrary custom or same-device multiplayer keyboard layouts. Such games need a future explicit profile or game-declared mapping; the runtime does not duplicate aliases or branch on game names.
+
+Web keyboard input belongs to the focused program canvas (or focused console for
+console programs). Clicking the canvas claims focus. Typing in another HTML
+control, composing text, browser/OS modifier shortcuts and function keys do not
+enter `Get Key` or create held game actions. Ctrl+Left/Right remain available to
+canvas programs for frame navigation; Control is held state, not a queued action
+by itself. Repeated keydown events do not duplicate queued actions. Leaving the
+program surface clears queued/held keyboard input without taking ownership away
+from independently held virtual-controller buttons.
+
+`Shift+Tab` leaves the canvas and focuses the generated Full Screen button,
+which becomes visible on keyboard focus; Enter activates it. Alt+Enter also
+toggles fullscreen while the program surface has focus. The button follows the
+browser's actual fullscreen state and is hidden when fullscreen is unsupported.
+Browser F11 and other reserved shortcuts remain browser-owned. No fullscreen
+request is made on load or by a timer.
 
 ## Game-canvas pointer input
 

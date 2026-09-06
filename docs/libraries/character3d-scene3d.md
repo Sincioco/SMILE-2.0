@@ -28,7 +28,20 @@ Updated = Character3D.SetScale(Hero, 20000)
 Updated = Character3D.PlayAnimation(Hero, "Idle", True)
 ```
 
-The first load creates one cached model, one animator, and one object per model part. A second actor loaded from the exact same path, asset profile, and actual PBR/simple variant shares the model but owns independent playback and part objects. Request policy controls admission, not identity. Destroying the last actor immediately releases the cache entry unless an external dependent refuses model cleanup; `RetryPendingReleases` completes that bounded pending release later.
+The first load creates one cached model, one animator, and one object per model part. A second actor loaded from the exact same path, asset profile, and actual PBR/simple variant shares the model but owns independent playback and part objects. Request policy controls admission, not identity. By default, destroying the last actor immediately releases the cache entry unless an external dependent refuses model cleanup; `RetryPendingReleases` completes that bounded pending release later.
+
+For frequent scene/tab switches, the optional shared API
+`Character3D.SetUnusedAssetCacheLimit(Limit As Number) As Boolean` retains up to
+`Limit` unused model assets (0–16; default 0). It retains geometry, prepared
+materials/textures and source animation data, never actor objects, animator
+playback or pose corrections. A compatible reload creates fresh independent
+actor state from that asset. Older unused entries are evicted over the limit;
+an asset-admission failure purges unused entries before one retry. Setting zero
+purges the unused cache; `Shutdown` releases it and restores the zero default.
+Renderer reset invalidates retained handles through the existing epoch check.
+This trades bounded retained asset memory for faster repeat loads on both native
+and Web. The Character Viewer chooses three unused entries. See
+`examples/Character3DTests/Program.smile` for compiled reuse/isolation checks.
 
 Use exact clip names:
 

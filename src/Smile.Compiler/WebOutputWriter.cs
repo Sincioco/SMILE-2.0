@@ -17,9 +17,10 @@ internal static class WebOutputWriter
     {
         var game = emitter.Emit();
         var runtime = RuntimeFor(emitter.ResponsiveWindow);
-        var buildVersion = BuildVersion(emitter.Title, game, runtime);
+        var buildVersion = BuildVersion(emitter.Title, game, runtime, emitter.WebLoadingAuthor, emitter.WebLoadingLogo);
         Directory.CreateDirectory(outputDirectory);
-        File.WriteAllText(Path.Combine(outputDirectory, "index.html"), Index(emitter.Title, buildVersion), Utf8WithoutBom);
+        File.WriteAllText(Path.Combine(outputDirectory, "index.html"), Index(emitter.Title, buildVersion,
+            emitter.WebLoadingAuthor, emitter.WebLoadingLogo), Utf8WithoutBom);
         afterFileWrite?.Invoke("index.html");
         File.WriteAllText(Path.Combine(outputDirectory, "smile-runtime.js"), runtime, Utf8WithoutBom);
         afterFileWrite?.Invoke("smile-runtime.js");
@@ -29,9 +30,9 @@ internal static class WebOutputWriter
         afterFileWrite?.Invoke("smile.css");
     }
 
-    private static string BuildVersion(string title, string game, string runtime)
+    private static string BuildVersion(string title, string game, string runtime, string? author, string? logo)
     {
-        var unversionedIndex = Index(title, string.Empty);
+        var unversionedIndex = Index(title, string.Empty, author, logo);
         var content = string.Join('\0', unversionedIndex, runtime, game, Style);
         var hash = SHA256.HashData(Encoding.UTF8.GetBytes(content));
         return Convert.ToHexString(hash)[..16].ToLowerInvariant();
@@ -42,7 +43,7 @@ internal static class WebOutputWriter
             "const responsiveWindowEnabled = true;", StringComparison.Ordinal)
         : Runtime;
 
-    private static string Index(string title, string buildVersion) => $$"""
+    private static string Index(string title, string buildVersion, string? author, string? logo) => $$"""
         <!doctype html>
         <html lang="en">
         <head>
@@ -57,8 +58,29 @@ internal static class WebOutputWriter
         </head>
         <body>
           <main id="smile-shell">
+            <section id="smile-loading" aria-label="Loading program"
+                     style="position:fixed;inset:0;z-index:25;display:flex;flex-direction:column;align-items:center;overflow:auto;text-align:center;padding:24px 20px max(20px,env(safe-area-inset-bottom,0px));color:#f4f7fc;background:radial-gradient(ellipse at 50% 36%,#172d48,#08101e 72%);font-family:Segoe UI,Arial,sans-serif">
+              <div style="width:min(760px,100%);margin:auto 0;padding:16px 0 28px;flex-shrink:0">
+                <h1 style="font-size:clamp(20px,3vw,32px);font-weight:600;margin:0 0 20px">{{WebUtility.HtmlEncode(title)}}</h1>
+                {{(string.IsNullOrWhiteSpace(logo) ? string.Empty : $"<img id=\"smile-loading-logo\" src=\"{WebUtility.HtmlEncode(logo)}?v={buildVersion}\" alt=\"SMILE 2.0\" fetchpriority=\"high\" style=\"display:block;width:min(480px,80vw);height:min(38vh,400px);object-fit:contain;margin:0 auto 24px\">")}}
+                <progress id="smile-loading-progress" aria-label="Loading assets" style="width:min(440px,80vw);height:12px;accent-color:#eec746"></progress>
+                <div role="status" aria-live="polite" aria-atomic="true">
+                  <p id="smile-loading-status" style="margin:14px 0 8px">Starting program…</p>
+                  <p id="smile-loading-detail" style="font-size:13px;min-height:2.6em;color:#abbcd3;overflow-wrap:anywhere;margin:0 0 22px">Preparing the Web runtime. Large assets may take a moment.</p>
+                </div>
+                <p style="font-size:18px;margin:0 0 6px">Created in SMILE 2.0</p>
+                {{(string.IsNullOrWhiteSpace(author) ? string.Empty : $"<p style=\"font-size:15px;margin:0\">Created by {WebUtility.HtmlEncode(author)}</p>")}}
+                <noscript>JavaScript is required to run this SMILE program.</noscript>
+              </div>
+              <footer aria-label="SMILE 2.0 copyright and links" style="flex-shrink:0;max-width:1200px;font-size:12px;line-height:1.8;color:#9ca9be">
+                <div>SMILE 2.0 — Simple Modern and Intuitive Language for Everyone. Copyright(c) 2026. All rights reserved. Programmed by: Louiery R. Sincioco (Sin) | <a href="mailto:louiery@gmail.com" target="_blank" rel="noopener noreferrer" style="color:inherit">louiery@gmail.com</a></div>
+                <div><a href="https://github.com/Sincioco" target="_blank" rel="noopener noreferrer" style="color:inherit">github.com/Sincioco</a> | <a href="https://facebook.com/louiery.sincioco" target="_blank" rel="noopener noreferrer" style="color:inherit">facebook.com/louiery.sincioco</a> | <a href="https://linkedin.com/in/louierysincioco" target="_blank" rel="noopener noreferrer" style="color:inherit">linkedin.com/in/louierysincioco</a> | <a href="https://youtube.com/@TheSincioco" target="_blank" rel="noopener noreferrer" style="color:inherit">youtube.com/@TheSincioco</a> | <a href="https://tiktok.com/@sincioco" target="_blank" rel="noopener noreferrer" style="color:inherit">tiktok.com/@sincioco</a></div>
+                <div><a href="https://github.com/sincioco/smile-2.0" target="_blank" rel="noopener noreferrer" style="color:inherit">github.com/sincioco/smile-2.0</a></div>
+              </footer>
+            </section>
+            <button id="smile-fullscreen" type="button" hidden aria-controls="smile-shell" aria-pressed="false">Full Screen</button>
             <canvas id="smile-canvas" width="960" height="540" tabindex="0" aria-label="{{WebUtility.HtmlEncode(title)}}"></canvas>
-            <pre id="smile-console" hidden aria-live="polite"></pre>
+            <pre id="smile-console" hidden tabindex="0" aria-live="polite"></pre>
             <pre id="smile-error" hidden></pre>
             <section id="smile-controls" hidden aria-hidden="true" aria-label="Game controls">
               <div class="smile-dpad" aria-label="Directional controls">
@@ -75,6 +97,19 @@ internal static class WebOutputWriter
               </div>
             </section>
           </main>
+          <script>
+            window.addEventListener("error", event => {
+              const loader = document.getElementById("smile-loading");
+              if (!loader || loader.hidden) return;
+              const script = event.target && event.target.tagName === "SCRIPT";
+              if (!script && !event.error) return;
+              document.getElementById("smile-loading-status").textContent = "Unable to start the program";
+              document.getElementById("smile-loading-detail").textContent = script
+                ? "A program file could not be downloaded. Check your connection and reload this page."
+                : "A startup error occurred. Reload this page or report the browser console error.";
+              document.getElementById("smile-loading-progress").hidden = true;
+            }, true);
+          </script>
           <script src="smile-runtime.js?v={{buildVersion}}"></script>
           <script src="game.js?v={{buildVersion}}"></script>
         </body>
@@ -89,6 +124,11 @@ internal static class WebOutputWriter
         #smile-shell { position: relative; width: 100vw; width: 100dvw; height: 100vh; height: 100dvh; display: grid; place-items: center; background: #05070c; }
         #smile-canvas { display: block; max-width: 100vw; max-width: 100dvw; max-height: 100vh; max-height: 100dvh; width: auto; height: auto; aspect-ratio: 16 / 9; background: #000; outline: none; touch-action: none; }
         #smile-canvas:focus-visible { box-shadow: inset 0 0 0 2px #46e6ff; }
+        #smile-loading[hidden] { display: none !important; }
+        #smile-loading a:hover { color: #fff !important; }
+        #smile-loading a:focus-visible { outline: 2px solid #eec746; outline-offset: 3px; }
+        #smile-fullscreen { position: absolute; z-index: 30; top: 8px; left: 50%; transform: translate(-50%, -150%); padding: 8px 14px; border: 2px solid #fff; border-radius: 4px; color: #fff; background: #14263a; font: 600 16px "Segoe UI", sans-serif; }
+        #smile-fullscreen:focus { transform: translate(-50%, 0); outline: 2px solid #46e6ff; outline-offset: 2px; }
         #smile-console { width: min(72rem, 100vw); height: 100vh; margin: 0; padding: 1rem; overflow: auto; color: #f2f4f8; background: #05070c; font: 16px/1.4 Consolas, monospace; white-space: pre-wrap; }
         #smile-error { position: absolute; z-index: 20; left: 1rem; right: 1rem; bottom: 1rem; max-height: 35vh; overflow: auto; margin: 0; padding: 1rem; color: #fff; background: #761b25; border: 1px solid #ff8794; white-space: pre-wrap; }
         #smile-controls[hidden] { display: none; }
@@ -167,6 +207,93 @@ internal static class WebOutputWriter
             const consoleOutput = document.getElementById("smile-console");
             const errorPanel = document.getElementById("smile-error");
             const shell = document.getElementById("smile-shell");
+            const fullScreenButton = document.getElementById("smile-fullscreen");
+            const loadingScreen = document.getElementById("smile-loading");
+            const loadingStatus = document.getElementById("smile-loading-status");
+            const loadingDetail = document.getElementById("smile-loading-detail");
+            const startupAssets = new Map();
+            // Encoded immutable model/image data only: no actor, animator, material or save state.
+            // A page reload starts a fresh cache, so rebuilding at the same URL cannot retain old data.
+            const assetDownloadCache = new Map();
+            const MAX_ASSET_DOWNLOAD_CACHE_BYTES = 128 * 1024 * 1024;
+            const MAX_ASSET_DOWNLOAD_CACHE_ENTRIES = 256;
+            let assetDownloadCacheBytes = 0;
+            let assetDownloadCacheHits = 0;
+            let assetDownloadCount = 0;
+            let startupPresented = false;
+
+            function updateStartupLoading() {
+                if (startupPresented || !loadingScreen) return;
+                const entries = Array.from(startupAssets.entries());
+                const ready = entries.filter(([, state]) => state === "ready").length;
+                const pending = entries.filter(([, state]) => state === "loading");
+                const failed = entries.filter(([, state]) => state === "failed").length;
+                if (loadingStatus) loadingStatus.textContent = pending.length
+                    ? `Loading assets — ${ready} ready, ${pending.length} downloading or decoding`
+                    : `Preparing scene — ${ready} assets ready${failed ? `, ${failed} failed` : ""}`;
+                if (loadingDetail) loadingDetail.textContent = pending.length
+                    ? pending[pending.length - 1][0]
+                    : (failed ? "An asset failed to load; the program is checking recovery." : "Preparing the first frame…");
+            }
+
+            function startupAsset(path, state) {
+                if (startupPresented || !loadingScreen) return;
+                startupAssets.set(path, state);
+                updateStartupLoading();
+            }
+
+            function finishStartupLoading() {
+                startupPresented = true;
+                startupAssets.clear();
+                if (loadingScreen) { loadingScreen.hidden = true; loadingScreen.style.display = "none"; }
+            }
+
+            function forgetAssetDownload(logical) {
+                if (!assetDownloadCache.has(logical)) return;
+                assetDownloadCacheBytes -= assetDownloadCache.get(logical).byteLength;
+                assetDownloadCache.delete(logical);
+            }
+
+            async function fetchAssetBytes(path, options, retain = false) {
+                const logical = logicalPath(path);
+                if (retain && assetDownloadCache.has(logical)) {
+                    const cached = assetDownloadCache.get(logical);
+                    assetDownloadCache.delete(logical);
+                    assetDownloadCache.set(logical, cached);
+                    assetDownloadCacheHits += 1;
+                    startupAsset(logical, "ready");
+                    return cached;
+                }
+                startupAsset(logical, "loading");
+                try {
+                    assetDownloadCount += 1;
+                    const response = await fetch(logical, options);
+                    if (!response.ok) throw new Error(`Asset download failed (${response.status}): ${logical}`);
+                    const bytes = await response.arrayBuffer();
+                    if (mediaStopped) throw STOP;
+                    if (retain && bytes.byteLength <= MAX_ASSET_DOWNLOAD_CACHE_BYTES) {
+                        // Concurrent callers can finish the same path; replace rather than double-count it.
+                        if (assetDownloadCache.has(logical)) {
+                            assetDownloadCacheBytes -= assetDownloadCache.get(logical).byteLength;
+                            assetDownloadCache.delete(logical);
+                        }
+                        while (assetDownloadCache.size &&
+                            (assetDownloadCacheBytes + bytes.byteLength > MAX_ASSET_DOWNLOAD_CACHE_BYTES ||
+                             assetDownloadCache.size >= MAX_ASSET_DOWNLOAD_CACHE_ENTRIES)) {
+                            const oldest = assetDownloadCache.keys().next().value;
+                            assetDownloadCacheBytes -= assetDownloadCache.get(oldest).byteLength;
+                            assetDownloadCache.delete(oldest);
+                        }
+                        assetDownloadCache.set(logical, bytes);
+                        assetDownloadCacheBytes += bytes.byteLength;
+                    }
+                    startupAsset(logical, "ready");
+                    return bytes;
+                } catch (error) {
+                    startupAsset(logical, "failed");
+                    throw error;
+                }
+            }
             const virtualControls = document.getElementById("smile-controls");
             const virtualControlButtons = virtualControls
                 ? Array.from(virtualControls.querySelectorAll("button[data-smile-control]"))
@@ -617,6 +744,7 @@ internal static class WebOutputWriter
                 }
                 event.preventDefault();
                 userInteracted = true;
+                canvas.focus({ preventScroll: true });
                 syncMusic();
             }
 
@@ -903,6 +1031,9 @@ internal static class WebOutputWriter
                 consoleOutput.hidden = true;
                 updateVirtualControlsVisibility();
                 resizeCanvas();
+                if (!document.activeElement || document.activeElement === document.body ||
+                    document.activeElement === consoleOutput)
+                    canvas.focus({ preventScroll: true });
             }
 
             function restoreBackState() {
@@ -2006,16 +2137,15 @@ internal static class WebOutputWriter
                 if (renderer3DModels.size >= 64) { renderer3DLastError = 25; return 0; }
                 let buffer;
                 try {
-                    const response = await fetch(logicalPath(path), { cache: "no-store" });
-                    if (!response.ok) { renderer3DLastError = 26; return 0; }
-                    buffer = await response.arrayBuffer();
+                    buffer = await fetchAssetBytes(path, { cache: "no-store" }, true);
                 } catch (_) { renderer3DLastError = 26; return 0; }
                 if (!(buffer instanceof ArrayBuffer) || buffer.byteLength < 32 || buffer.byteLength > 16*1024*1024) {
+                    forgetAssetDownload(logicalPath(path));
                     renderer3DLastError = 24; return 0;
                 }
                 const view = new DataView(buffer), version=buffer.byteLength>=6?view.getUint16(4,true):0;
                 const descriptor=version===1?renderer3DParseModelV1(buffer):version===2?renderer3DParseModelV2(buffer):null;
-                if(!descriptor){renderer3DLastError=24;return 0;}
+                if(!descriptor){forgetAssetDownload(logicalPath(path));renderer3DLastError=24;return 0;}
                 if(renderer3DMeshes.size+descriptor.parts.length>128){renderer3DLastError=3;return 0;}
                 const modelHandle=renderer3DHandle(),meshHandles=[];
                 const rollback=()=>{
@@ -3098,19 +3228,30 @@ internal static class WebOutputWriter
                 let entry = imageCache.get(logical);
                 if (!entry) {
                     entry = { logical, refs: 0, resource: null, width: 0, height: 0, promise: null, disposed: false };
+                    startupAsset(logical, "loading");
                     imageDecodeCount += 1;
-                    entry.promise = new Promise((resolve, reject) => {
+                    entry.promise = (async () => {
+                        const bytes = await fetchAssetBytes(logical, { cache: "no-store" }, true);
+                        startupAsset(logical, "loading");
+                        const url = URL.createObjectURL(new Blob([bytes]));
+                        try { return await new Promise((resolve, reject) => {
                         const resource = new Image();
                         resource.onload = () => {
                             entry.resource = resource;
                             entry.width = safe(resource.naturalWidth || resource.width);
                             entry.height = safe(resource.naturalHeight || resource.height);
                             if (entry.width <= 0 || entry.height <= 0) reject(new Error(`Load Image decoded invalid dimensions: ${logical}`));
-                            else resolve(entry);
+                            else { startupAsset(logical, "ready"); resolve(entry); }
                         };
                         resource.onerror = () => reject(new Error(`Load Image failed: ${logical}`));
-                        resource.src = logical;
-                    }).catch(error => { if (entry.refs === 0) imageCache.delete(logical); throw error; });
+                        resource.src = url;
+                        }); } finally { URL.revokeObjectURL(url); }
+                    })().catch(error => {
+                        forgetAssetDownload(logical);
+                        startupAsset(logical, "failed");
+                        if (entry.refs === 0) imageCache.delete(logical);
+                        throw error;
+                    });
                     imageCache.set(logical, entry);
                 } else imageCacheHitCount += 1;
                 await entry.promise;
@@ -3259,12 +3400,17 @@ internal static class WebOutputWriter
             }
 
             function print(items, suppressNewLine) {
+                const switchToConsole = consoleOutput.hidden;
                 canvas.hidden = true;
                 consoleOutput.hidden = false;
                 consoleText += items.map(item => String(item)).join("");
                 if (!suppressNewLine) consoleText += "\n";
                 consoleOutput.textContent = consoleText;
                 consoleOutput.scrollTop = consoleOutput.scrollHeight;
+                finishStartupLoading();
+                if (switchToConsole && (!document.activeElement ||
+                    document.activeElement === document.body || document.activeElement === canvas))
+                    consoleOutput.focus({ preventScroll: true });
             }
 
             function clearScreen() {
@@ -3281,6 +3427,7 @@ internal static class WebOutputWriter
                 if (closed) endProgram();
                 visible.clearRect(0, 0, logicalWidth, logicalHeight);
                 visible.drawImage(backCanvas, 0, 0, logicalWidth, logicalHeight);
+                finishStartupLoading();
                 window.__smileWeb.frameCount += 1;
                 pointerDeltaXValue = 0;
                 pointerDeltaYValue = 0;
@@ -3334,28 +3481,58 @@ internal static class WebOutputWriter
             async function toggleFullScreen() {
                 try {
                     if (document.fullscreenElement) await document.exitFullscreen();
-                    else await document.getElementById("smile-shell").requestFullscreen();
+                    else await shell.requestFullscreen();
                 } catch (_) { }
             }
 
+            function updateFullScreenControl() {
+                if (!fullScreenButton) return;
+                fullScreenButton.hidden = typeof shell.requestFullscreen !== "function" ||
+                    document.fullscreenEnabled === false;
+                const isFullScreen = document.fullscreenElement === shell;
+                fullScreenButton.textContent = isFullScreen ? "Exit Full Screen" : "Full Screen";
+                fullScreenButton.setAttribute("aria-pressed", String(isFullScreen));
+            }
+
+            if (fullScreenButton) fullScreenButton.addEventListener("click", () => { void toggleFullScreen(); });
+            updateFullScreenControl();
+
             window.addEventListener("keydown", event => {
+                // Only the focused program surface owns keys. Do not record browser
+                // accelerators or input in another control as held game actions.
+                const surface = canvas.hidden ? consoleOutput : canvas;
+                if (closed || surface.hidden || !active || document.hidden ||
+                    document.activeElement !== surface ||
+                    (event.target && event.target !== surface && event.target !== document.body) ||
+                    event.isComposing || event.metaKey) return;
+                if (event.altKey) {
+                    if (event.code === "Enter" && !event.ctrlKey && !event.repeat) {
+                        event.preventDefault();
+                        void toggleFullScreen();
+                    }
+                    return;
+                }
+                const controlKey = event.code === "ControlLeft" || event.code === "ControlRight";
+                const frameNavigation = event.ctrlKey &&
+                    (event.code === "ArrowLeft" || event.code === "ArrowRight");
+                if (event.ctrlKey && !controlKey && !frameNavigation) return;
+                if (/^(Shift|Meta)(Left|Right)$/.test(event.code) || /^F\d{1,2}$/.test(event.code)) return;
+                // Shift+Tab remains the keyboard route out of the canvas.
+                if (event.shiftKey && event.code === "Tab") return;
                 userInteracted = true;
                 const key = mapKey(event);
                 const newlyPressed = pressInput(`keyboard:${event.code}`, key, false);
                 syncMusic();
-                if (event.altKey && event.code === "Enter") {
-                    event.preventDefault();
-                    void toggleFullScreen();
-                    return;
-                }
-                if (event.repeat || event.ctrlKey || event.altKey || event.metaKey) return;
-                if (controlledKey(event)) event.preventDefault();
-                if (newlyPressed) enqueueKey(key);
+                if (!controlKey && controlledKey(event)) event.preventDefault();
+                if (newlyPressed && !event.repeat && !controlKey) enqueueKey(key);
             });
 
             window.addEventListener("keyup", event => { releaseInput(`keyboard:${event.code}`); });
 
             canvas.addEventListener("click", () => { userInteracted = true; canvas.focus(); syncMusic(); });
+            canvas.addEventListener("blur", () => { keys.length = 0; releaseInputsByPrefix("keyboard:"); });
+            consoleOutput.addEventListener("click", () => { consoleOutput.focus(); });
+            consoleOutput.addEventListener("blur", () => { keys.length = 0; releaseInputsByPrefix("keyboard:"); });
             canvas.addEventListener("contextmenu", event => event.preventDefault());
             canvas.addEventListener("pointerdown", handleCanvasPointerDown);
             canvas.addEventListener("pointermove", handleCanvasPointerMove);
@@ -3373,7 +3550,7 @@ internal static class WebOutputWriter
                 releaseVirtualPointers();
                 resizeCanvas();
             });
-            document.addEventListener("fullscreenchange", resizeCanvas);
+            document.addEventListener("fullscreenchange", () => { resizeCanvas(); updateFullScreenControl(); });
             window.addEventListener("focus", () => {
                 active = !document.hidden;
                 if (active) checkForWebUpdate();
@@ -3430,9 +3607,7 @@ internal static class WebOutputWriter
                     const AudioContextType = window.AudioContext || window.webkitAudioContext;
                     if (!AudioContextType) return { logical, buffer: null };
                     if (!audioContext) audioContext = new AudioContextType();
-                    const response = await fetch(logical);
-                    if (!response.ok) throw new Error(`Play Sound failed: ${logical}`);
-                    const bytes = await response.arrayBuffer();
+                    const bytes = await fetchAssetBytes(logical);
                     const buffer = await audioContext.decodeAudioData(bytes.slice(0));
                     return { logical, buffer };
                 })();
@@ -3601,9 +3776,7 @@ internal static class WebOutputWriter
                 if (!target || !Array.isArray(target.data)) throw new Error("Load Text File requires a one-dimensional array.");
                 target.data.fill(0);
                 try {
-                    const response = await fetch(logicalPath(path), { cache: "no-store" });
-                    if (!response.ok) return 0;
-                    const bytes = new Uint8Array(await response.arrayBuffer());
+                    const bytes = new Uint8Array(await fetchAssetBytes(path, { cache: "no-store" }));
                     let source = 0;
                     if (bytes.length >= 3 && bytes[0] === 0xef && bytes[1] === 0xbb && bytes[2] === 0xbf) source = 3;
                     const count = Math.min(target.data.length, bytes.length - source);
@@ -3776,6 +3949,10 @@ internal static class WebOutputWriter
                     imageReferenceCount: references,
                     classLiveCount: classLiveObjects,
                     imageDecodeCount, imageCacheHitCount,
+                    assetDownloadCount, assetDownloadCacheHits, assetDownloadCacheBytes,
+                    assetDownloadCacheCount: assetDownloadCache.size,
+                    maximumAssetDownloadCacheBytes: MAX_ASSET_DOWNLOAD_CACHE_BYTES,
+                    maximumAssetDownloadCacheEntries: MAX_ASSET_DOWNLOAD_CACHE_ENTRIES,
                     shutdownImageCacheEntries, shutdownImageReferences,
                     sfxActiveCount: sfxChannels.filter(Boolean).length,
                     sfxCacheCount: sfxCache.size,
@@ -3808,6 +3985,8 @@ internal static class WebOutputWriter
                     entry.disposed = true;
                 }
                 imageCache.clear();
+                assetDownloadCache.clear();
+                assetDownloadCacheBytes = 0;
                 stopSound();
                 stopMusic();
                 sfxCache.clear();
@@ -3820,6 +3999,7 @@ internal static class WebOutputWriter
             function endProgram() { closed = true; throw STOP; }
 
             function finish() {
+                finishStartupLoading();
                 closed = true;
                 keys.length = 0;
                 releaseAllInputs();
@@ -3830,6 +4010,7 @@ internal static class WebOutputWriter
 
             function fail(error) {
                 if (error === STOP) { finish(); return; }
+                finishStartupLoading();
                 closed = true;
                 keys.length = 0;
                 releaseAllInputs();

@@ -548,6 +548,8 @@ Call Check(Not Character3D.IsValid(Stale))
 Call Character3D.Shutdown()
 Call Graphics3D.ResetRenderer3D()
 
+Call CheckUnusedAssetCache()
+
 If Failures = 0 Then
     Print "Character3D and Scene3D tests passed"
 Else
@@ -631,6 +633,70 @@ Sub CheckRotationParity(ByRef Value As Character3D.Actor)
 
     Call Check(Character3D.SetScale(Value, 120))
     Call Check(Character3D.Place(Value, -1, 0, 0))
+
+End Sub
+
+Sub CheckUnusedAssetCache()
+
+    Dim Actor As Character3D.Actor
+    Dim NextActor As Character3D.Actor
+    Dim Model As Number
+    Dim OldAnimator As Number
+    Dim OldSocket As Core.Vector3
+    Dim NewSocket As Core.Vector3
+
+    Call Character3D.Shutdown()
+    Call Check(Scene3D.SetQuality(Scene3D.QUALITY_LOW))
+    Call Check(Not Character3D.SetUnusedAssetCacheLimit(-1))
+    Call Check(Not Character3D.SetUnusedAssetCacheLimit(17))
+    Call Check(Character3D.SetUnusedAssetCacheLimit(1))
+
+    Actor = Character3D.LoadActor("Assets\AnimationArticulated.sm3d")
+    Model = Character3D.ModelHandle(Actor)
+    OldAnimator = Character3D.AnimatorHandle(Actor)
+
+    Call Check(Model > 0)
+    Call Check(Character3D.PlayMode(Actor, "Idle", Graphics3D.ANIMATION_LOOP, 100))
+
+    OldSocket = Character3D.SocketPosition(Actor, "HandTip")
+
+    Call Check(Character3D.SetNodeRotationOffset(Actor, 0, 0, 30, 0))
+    Call Check(Character3D.SetAnimationTime(Actor, 300))
+    Call Character3D.Destroy(Actor)
+    Call Check(Character3D.LiveActorCount() = 0)
+    Call Check(Character3D.CachedAssetCount() = 1)
+    Call Check(Graphics3D.LiveAnimatorCount3D() = 0)
+
+    NextActor = Character3D.LoadActor("Assets\AnimationArticulated.sm3d")
+
+    Call Check(Character3D.ModelHandle(NextActor) = Model)
+    Call Check(Character3D.AnimatorHandle(NextActor) <> OldAnimator)
+    Call Check(Character3D.AssetReferenceCount(NextActor) = 1)
+    Call Check(Character3D.PlayMode(NextActor, "Idle", Graphics3D.ANIMATION_LOOP, 100))
+    Call Check(Character3D.AnimationTime(NextActor) = 0)
+
+    NewSocket = Character3D.SocketPosition(NextActor, "HandTip")
+
+    Call Check(NewSocket.X = OldSocket.X And NewSocket.Y = OldSocket.Y And NewSocket.Z = OldSocket.Z)
+    Call Character3D.Destroy(NextActor)
+    Call Check(Scene3D.SetQuality(Scene3D.QUALITY_MEDIUM))
+
+    NextActor = Character3D.LoadActor("Assets\AnimationArticulated.sm3d")
+
+    Call Check(Character3D.ModelHandle(NextActor) <> Model)
+    Call Character3D.Destroy(NextActor)
+    Call Check(Character3D.CachedAssetCount() = 1)
+    Call Check(Not Graphics3D.ModelHandleValid3D(Model))
+    Call Check(Character3D.SetUnusedAssetCacheLimit(0))
+    Call Check(Character3D.CachedAssetCount() = 0)
+    Call Check(Character3D.SetUnusedAssetCacheLimit(1))
+
+    Actor = Character3D.LoadActor("Assets\AnimationArticulated.sm3d")
+
+    Call Character3D.Destroy(Actor)
+    Call Character3D.Shutdown()
+    Call Check(Character3D.CachedAssetCount() = 0)
+    Call Check(Graphics3D.LiveModelCount3D() = 0)
 
 End Sub
 

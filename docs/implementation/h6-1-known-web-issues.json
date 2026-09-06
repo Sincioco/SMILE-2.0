@@ -324,7 +324,7 @@
       "classification": "execution-or-source-audit",
       "mandatory": true,
       "baseline": "0768860e59e60c6231e0992f23b34a3a62c48483",
-      "status": "OPEN",
+      "status": "IN-PROGRESS",
       "phase": "W5",
       "gateCheck": "G08",
       "sourceRefs": [
@@ -336,7 +336,7 @@
       "evidenceIds": [
         "docs/implementation/h6-1-hardening-and-web-parity-ledger.md"
       ],
-      "dispositionRationale": "Reproduce focused canvas versus text/control/browser shortcut cases, then fix shared Web input glue."
+      "dispositionRationale": "Shared Web glue now gates keyboard ownership by focused program surface, preserves browser/text shortcuts, clears held keys on surface blur and provides a focus-revealed Full Screen button. Focused generated-runtime VM checks pass, including Ctrl+Arrow navigation, repeat, console transitions, touch-owner isolation and fullscreen state. Actual Chrome/Edge interaction and installed VSIX validation remain required; not closed by VM evidence alone."
     },
     {
       "id": "W12",
@@ -457,6 +457,28 @@
         "docs/implementation/h6-1-hardening-and-web-parity-ledger.md"
       ],
       "dispositionRationale": "Focused native/Web normal and PBR fallback tests pass; visible Edge poses corrected. Sin reported Arin looks good and stopped further screenshot comparisons."
+    },
+    {
+      "id": "W19",
+      "title": "Repeated Viewer tab switches reload reusable character assets",
+      "classification": "user-reported-and-source-confirmed",
+      "mandatory": true,
+      "baseline": "1747003bddfb1188921084ac60bc3fc235232b54",
+      "status": "IN-PROGRESS",
+      "phase": "W5",
+      "gateCheck": "G08",
+      "sourceRefs": [
+        "tools/Character3DViewer/Program.smile:SelectCharacterTab",
+        "libraries/Smile.Simple3D/Character3D.smile:LoadWithPolicy",
+        "src/Smile.Compiler/WebOutputWriter.cs:fetchAssetBytes"
+      ],
+      "reproduction": "Sin observed long frozen switches in deployed Chrome on PC and Mac; shared source destroyed last actor assets and Web fetched model bytes again.",
+      "rootCause": "Scene teardown also released reusable model resources; encoded Web model/image bytes were not retained after their last decoded owner.",
+      "fixCommit": null,
+      "evidenceIds": [
+        "docs/implementation/h6-1-hardening-and-web-parity-ledger.md"
+      ],
+      "dispositionRationale": "Implemented bounded optional immutable asset retention in shared Character3D and page-local encoded Web reuse. Native and generated-Web ownership tests and real native/Chrome four-tab switching pass. Working-copy changes are awaiting milestone commit; new deployed/Mac timing acceptance is not claimed. First visits still load and actor/VFX instances are intentionally recreated."
     },
     {
       "id": "W18",
