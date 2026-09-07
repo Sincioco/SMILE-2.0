@@ -11,6 +11,11 @@ These instructions apply to the entire SMILE 2.0 repository.
 - When beginning a new task, state what the task is in a bolded bulleted list.
 - When completing a task, list every remaining task in a bolded bulleted list.
 - When work is interrupted and then resumed, state what task will be resumed in a bolded bulleted list.
+- Every status report must include a dedicated `On Hold` section listing every task Sin
+  has explicitly paused until further direction. Do not omit the section while any held
+  task exists.
+- Report a task's actual work state. Merely recording, deferring, or acknowledging a
+  task does not complete it, and an on-hold task must never receive a completed checkmark.
 - Use clear Markdown formatting and these visual status indicators consistently in progress
   updates, implementation reports, summaries, and final responses:
   - `✅ Completed` for work successfully implemented and validated;
@@ -25,7 +30,8 @@ These instructions apply to the entire SMILE 2.0 repository.
   - `🎯 Objective` for the current goal or intended outcome;
   - `🏗️ Architecture` for architecture or design work and decisions;
   - `📦 Commit` for commit-related information;
-  - `🚧 Blocked` for work that cannot proceed because of a dependency or unresolved issue.
+  - `🚧 Blocked` for work that cannot proceed because of a dependency or unresolved issue;
+  - `⏸️ On Hold` for work Sin has explicitly deferred until further direction.
 - Never use Markdown completed-task checkboxes or strikethrough for completed work. Keep
   every completed task clearly visible with a green `✅` checkmark. Use `📋` for pending
   work and `🔄` for active work. Use these symbols semantically rather than decoratively.
@@ -41,6 +47,16 @@ These instructions apply to the entire SMILE 2.0 repository.
 - In final status reports, separate completed work, validation, issues, remaining work
   and commit evidence. If any known issue or required check remains, report it under the
   appropriate issue, fixing, remaining or blocked status and do not claim full completion.
+
+### Current on-hold tasks
+
+- Semantic-inspection CLI.
+- Battle Scene Editor.
+- Subject-first syntax.
+- Reflective Battle Floors.
+- Character Viewer Desktop sound-effects investigation and fix; the reported Desktop
+  failure versus working Web behavior must be recorded as outstanding work, but not
+  investigated or fixed until Sin gives further direction.
 
 ## Project identity
 
