@@ -48,7 +48,7 @@
   ],
   "currentExtractionCommitRange": {
     "first": "9a616ef35adae9b0c5bbc864ecf689bbd6fc1aed",
-    "lastCommittedBeforeCurrentCheckpoint": "b6f4d524385325b02dc6619a56a5b47a6f7eb716"
+    "lastCommittedBeforeCurrentCheckpoint": "8ca158fd85c4606bc95dc78759eeeb748ddc0b3d"
   },
   "programMetrics": {
     "initialAudit": {
@@ -68,11 +68,11 @@
       "sha256": "17853B7B210061F9D46D70913AABA39C4F798503F69C2E8CCA4D8511646AC670"
     },
     "current": {
-      "checkpoint": "actor-presentation-command-workflow-ownership",
-      "baseCommit": "b6f4d524385325b02dc6619a56a5b47a6f7eb716",
-      "lines": 2786,
-      "procedures": 67,
-      "sha256": "C73C6E51322FC219A72014484F7846EC2A5BD04FFB63F67BB7CC5E0D1C606D10"
+      "checkpoint": "playback-state-lifecycle-ownership",
+      "baseCommit": "8ca158fd85c4606bc95dc78759eeeb748ddc0b3d",
+      "lines": 2782,
+      "procedures": 66,
+      "sha256": "11CB5CE8A408C35C0D3EA3DFDB124AEDE316F2E9E2174D05EDEE02A33E206A13"
     }
   },
   "substantialResponsibilitiesMovedFromProgram": [
@@ -93,7 +93,8 @@
     "Party rendering, VFX and camera presentation commands plus cross-input Dragon visibility routing",
     "gizmo keyboard and pointer command execution plus explicit Party-preview requirements",
     "frame stepping, first-frame seek, adjacent-key navigation, pointer seek and keyframe-drag start command execution",
-    "sword and shield visibility commands, participant propagation, hidden-effect cleanup and Dragon-inspection glow synchronization"
+    "sword and shield visibility commands, participant propagation, hidden-effect cleanup and Dragon-inspection glow synchronization",
+    "load, pause, demo, speed, restart, reset, calibration, character-switch, Party-preview and selected-event playback state lifecycle"
   ],
   "currentDestinationOwners": [
     "ViewerActors",
@@ -107,12 +108,13 @@
     "ViewerInspectorCommands",
     "ViewerInspectorPresentation",
     "ViewerTimelineEditing",
+    "ViewerPlayback",
     "ViewerGizmo",
     "ViewerUi"
   ],
   "substantialResponsibilitiesStillInProgram": [
     "startup, retry and character-tab orchestration",
-    "Party inspector calibration adaptation and cross-owner Party reset and playback pointer actions",
+    "Party inspector calibration adaptation and cross-owner Party reset and pointer responses",
     "broad inspector and keyboard action dispatch plus slider and gizmo priority ordering",
     "reset orchestration and cross-owner scene, Party and gizmo ordering",
     "narrow Party-preview, frame-order calibration-application and session-result adapters",
@@ -156,7 +158,12 @@
     "Program.smile reduced from 2890 lines and 73 procedures to 2848 lines and 69 procedures without formatting compression",
     "sword and shield visibility, participant propagation, hidden-effect cleanup and Dragon-inspection glow synchronization route through ViewerInspectorCommands to their state owners",
     "three presentation-control procedures were replaced by one primary-context and session-result adapter",
-    "Program.smile reduced from 2848 lines and 69 procedures to 2786 lines and 67 procedures without formatting compression"
+    "Program.smile reduced from 2848 lines and 69 procedures to 2786 lines and 67 procedures without formatting compression",
+    "all remaining direct Playback field mutation moved into ViewerPlayback lifecycle operations without Party, session, UI or application state",
+    "demo-toggle and speed-change policy now return narrow Party response decisions from ViewerPlayback",
+    "the dead ToggleDemo coordinator wrapper was deleted",
+    "Program.smile reduced from 2786 lines and 67 procedures to 2782 lines and 66 procedures without formatting compression",
+    "ViewerPlayback was explicitly reviewed at 511 lines and 32 procedures as one cohesive eight-field owner below the 800-line absolute ceiling"
   ],
   "validation": [
     "PASS: 308 shared compiler/language tests",
@@ -209,13 +216,19 @@
     "PASS: post-actor-presentation 42-check isolated calibration integration and 58 native graphics, pointer-input and audio-focus checks",
     "PASS: actor-presentation command-workflow Release Desktop Viewer build with 46 published assets",
     "PASS: actor-presentation command-workflow Release Full Web Viewer build with 35 published assets",
-    "PASS: post-actor-presentation repository style check for 405 SMILE files"
+    "PASS: post-actor-presentation repository style check for 405 SMILE files",
+    "PASS: playback state/lifecycle native and generated-Web hardening with exact console parity and direct lifecycle, demo-toggle and speed-gating assertions",
+    "PASS: playback state/lifecycle isolated real-actor restart and selected-event refresh integration with disposable calibration storage",
+    "PASS: playback state/lifecycle Release Desktop Viewer build with 46 published assets",
+    "PASS: playback state/lifecycle Release Full Web Viewer build with 35 published assets",
+    "PASS: playback checkpoint launcher, primary/backup recovery, stale-output and preservation fixtures using disposable data and processes",
+    "PASS: post-playback repository style check for 405 SMILE files"
   ],
   "pendingValidation": [
     "final Character Viewer native and installed-Chrome acceptance after remaining extractions"
   ],
   "blockers": [],
-  "nextConcreteAction": "Move the remaining playback and reset command behavior out of the broad inspector and Party pointer dispatch without introducing whole-application state.",
+  "nextConcreteAction": "Resume the remaining-responsibility inventory with startup, retry and character-tab lifecycle orchestration while preserving the visible frame order and focused owner boundaries.",
   "nextStages": [
     "R7.5-input-inspector-calibration-reset-ownership",
     "R7.5-startup-session-and-overlay-coordination",

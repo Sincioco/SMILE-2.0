@@ -19,6 +19,11 @@ Public Type State
     AnimationUpdateElapsed As Number
 End Type
 
+Public Type SpeedAdjustmentResult
+    Blocked As Boolean
+    ResetPartyDemo As Boolean
+End Type
+
 Public Sub Reset(ByRef Value As State, DefaultPlaybackSpeed As Number)
 
     Value.SelectedClip = 0
@@ -30,6 +35,106 @@ Public Sub Reset(ByRef Value As State, DefaultPlaybackSpeed As Number)
     Value.DemoPreviousAnimationTime = 0
     Value.ScenePaused = False
     Value.AnimationUpdateElapsed = 0
+
+End Sub
+
+Public Sub UseDefaultSpeed(ByRef Value As State, DefaultPlaybackSpeed As Number)
+
+    Value.PlaybackSpeed = DefaultPlaybackSpeed
+
+End Sub
+
+Public Sub TogglePause(ByRef Value As State)
+
+    Value.ScenePaused = Not Value.ScenePaused
+
+End Sub
+
+Public Function ApplyDemoToggle(ByRef Value As State,
+    PartyEnabled As Boolean) As Boolean
+
+    Dim ToggleScenePause As Boolean
+
+    ToggleScenePause = PartyEnabled
+
+    If Not PartyEnabled Then
+        Value.DemoEnabled = Not Value.DemoEnabled
+        Value.AnimationCycleElapsed = 0
+    End If
+
+    Return ToggleScenePause
+
+End Function
+
+Public Function AdjustSpeedForContext(ByRef Value As State,
+    MinimumSpeed As Number, MaximumSpeed As Number, Amount As Number,
+    PartyEnabled As Boolean, PartyPreviewActive As Boolean) As SpeedAdjustmentResult
+
+    Dim Result As SpeedAdjustmentResult
+
+    If PartyEnabled And PartyPreviewActive Then
+        Result.Blocked = True
+
+        Return Result
+    End If
+
+    Call AdjustSpeed(Value, MinimumSpeed, MaximumSpeed, Amount)
+
+    Result.ResetPartyDemo = PartyEnabled
+
+    Return Result
+
+End Function
+
+Public Sub RestartPresentation(ByRef Value As State,
+    ByRef Actor As Character3D.Actor, ProfileIndex As Number)
+
+    Value.AnimationCycleElapsed = 0
+    Value.SelectedClip = RuntimeClipForPresentationIndex(Actor, ProfileIndex, 0)
+
+End Sub
+
+Public Sub ResetControls(ByRef Value As State, DefaultPlaybackSpeed As Number)
+
+    Value.PlaybackSpeed = DefaultPlaybackSpeed
+    Value.ScenePaused = False
+    Value.DemoEnabled = True
+
+End Sub
+
+Public Sub PauseForCalibration(ByRef Value As State, PartyEnabled As Boolean)
+
+    Value.ScenePaused = True
+
+    If Not PartyEnabled Then
+        Value.DemoEnabled = False
+    End If
+
+End Sub
+
+Public Sub PrepareCharacterSwitch(ByRef Value As State)
+
+    Value.DemoEnabled = True
+    Value.ScenePaused = False
+
+End Sub
+
+Public Sub PauseForPartyPreview(ByRef Value As State)
+
+    Value.ScenePaused = True
+
+End Sub
+
+Public Sub EnablePartyDemo(ByRef Value As State)
+
+    Value.DemoEnabled = True
+
+End Sub
+
+Public Sub RefreshSelectedTimelineEvent(ByRef Value As State,
+    ByRef Actor As Character3D.Actor)
+
+    Value.SelectedTimelineEvent = FirstClipEvent(Actor, Value.SelectedClip)
 
 End Sub
 

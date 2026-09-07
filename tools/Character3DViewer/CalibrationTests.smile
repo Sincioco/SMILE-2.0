@@ -152,6 +152,25 @@ Call CalibrationCheck(ViewerPlayback.SelectedClipName(Character, Playback) =
     "Playback owner resolves the selected runtime clip name")
 
 Playback.AnimationCycleElapsed = 123
+Playback.SelectedClip = ViewerPlayback.RuntimeClipForPresentationIndex(
+    Character, Session.ProfileIndex, 1)
+
+Call ViewerPlayback.RestartPresentation(
+    Playback, Character, Session.ProfileIndex)
+
+Call CalibrationCheck(Playback.AnimationCycleElapsed = 0 And
+    ViewerPlayback.PresentationIndexForRuntimeClip(
+        Character, Session.ProfileIndex, Playback.SelectedClip) = 0,
+    "Playback owner restarts the first presentation clip")
+
+Playback.SelectedTimelineEvent = -1
+
+Call ViewerPlayback.RefreshSelectedTimelineEvent(Playback, Character)
+Call CalibrationCheck(Playback.SelectedTimelineEvent =
+    ViewerPlayback.FirstClipEvent(Character, Playback.SelectedClip),
+    "Playback owner refreshes the selected clip event")
+
+Playback.AnimationCycleElapsed = 123
 Playback.DemoCompletedLoops = 2
 TestTransactionResult = ViewerPlayback.StartSelectedClip(
     Playback, Character, Session.ProfileIndex)

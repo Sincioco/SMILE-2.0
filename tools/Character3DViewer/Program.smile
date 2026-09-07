@@ -572,7 +572,9 @@ Sub LoadViewer()
 
     Call ViewerSession.CaptureFailure(Session, 40)
 
-    Playback.PlaybackSpeed = ActiveProfile.DefaultPlaybackSpeed
+    Call ViewerPlayback.UseDefaultSpeed(
+        Playback, ActiveProfile.DefaultPlaybackSpeed)
+
     Session.Ready = ViewerRendering.ResetMaterialInspection(Rendering) And Session.Ready
 
     Call ViewerSession.CaptureFailure(Session, 41)
@@ -973,22 +975,7 @@ Sub ToggleScenePause()
 
     End If
 
-    Playback.ScenePaused = Not Playback.ScenePaused
-
-End Sub
-
-Sub ToggleDemo()
-
-    If Party.Enabled Then
-        Call ToggleScenePause()
-
-        Return
-    End If
-
-    Playback.DemoEnabled = Not Playback.DemoEnabled
-    Playback.AnimationCycleElapsed = 0
-
-    Call PlaySelectedClip()
+    Call ViewerPlayback.TogglePause(Playback)
 
 End Sub
 
@@ -1433,7 +1420,12 @@ Function HandleInspectorPointer() As Boolean
 
     Else If Action = ViewerUi.INSPECTOR_ACTION_DEMO Then
 
-        Call ToggleDemo()
+        If ViewerPlayback.ApplyDemoToggle(Playback, Party.Enabled) Then
+            Call ToggleScenePause()
+        Else
+
+            Call PlaySelectedClip()
+        End If
 
     Else If Action = ViewerUi.INSPECTOR_ACTION_DRAGON_HEAD Then
 
@@ -1662,17 +1654,25 @@ End Sub
 
 Sub AdjustPlaybackSpeed(Amount As Number)
 
-    If Party.Enabled And Party.PreviewActive Then
+    Dim Result As ViewerPlayback.SpeedAdjustmentResult
+
+    Result = ViewerPlayback.AdjustSpeedForContext(
+        Playback,
+        ActiveProfile.MinimumPlaybackSpeed,
+        ActiveProfile.MaximumPlaybackSpeed,
+        Amount,
+        Party.Enabled,
+        Party.PreviewActive
+    )
+
+    If Result.Blocked Then
         Call ViewerCalibration.SetTransferMessage(
             Calibration, "Resume Or Reset Before Changing Demo Speed")
 
         Return
     End If
 
-    Call ViewerPlayback.AdjustSpeed(Playback, ActiveProfile.MinimumPlaybackSpeed,
-        ActiveProfile.MaximumPlaybackSpeed, Amount)
-
-    If Party.Enabled Then
+    If Result.ResetPartyDemo Then
         Call ResetPartyDemo()
     Else
 
@@ -1693,9 +1693,8 @@ Sub RestartPresentation()
 
     Call ViewerCamera.StartAutoOrbit(ViewerCameraState)
 
-    Playback.AnimationCycleElapsed = 0
-    Playback.SelectedClip = ViewerPlayback.RuntimeClipForPresentationIndex(
-        Character, Session.ProfileIndex, 0)
+    Call ViewerPlayback.RestartPresentation(
+        Playback, Character, Session.ProfileIndex)
 
     Call PlaySelectedClip()
 
@@ -1741,9 +1740,9 @@ Sub ResetAll()
         Call CancelCalibrationEdit()
     End If
 
-    Playback.PlaybackSpeed = ActiveProfile.DefaultPlaybackSpeed
-    Playback.ScenePaused = False
-    Playback.DemoEnabled = True
+    Call ViewerPlayback.ResetControls(
+        Playback, ActiveProfile.DefaultPlaybackSpeed)
+
     ViewerCameraState.FitLocked = True
 
     Call ViewerRendering.ResetControls(Rendering, 3)
@@ -1913,11 +1912,7 @@ Sub HandleCalibrationImport()
 
     Call BeginPartyPreview()
 
-    Playback.ScenePaused = True
-
-    If Not Party.Enabled Then
-        Playback.DemoEnabled = False
-    End If
+    Call ViewerPlayback.PauseForCalibration(Playback, Party.Enabled)
 
     Result = ViewerCalibrationEditing.ImportOrCommit(
         Calibration, Character, Playback.SelectedClip, Session.ProfileIndex,
@@ -2405,8 +2400,7 @@ Sub SelectCharacterTab(Index As Number)
 
     Call ViewerSession.ResetFailure(Session)
 
-    Playback.DemoEnabled = True
-    Playback.ScenePaused = False
+    Call ViewerPlayback.PrepareCharacterSwitch(Playback)
 
     Call LoadViewer()
 
@@ -2493,8 +2487,9 @@ Sub BeginPartyInspector()
         Call ConfigureCalibration()
 
         ViewerUiState.CalibrationVisible = WasVisible And CalibrationAvailable
-        Playback.SelectedTimelineEvent = ViewerPlayback.FirstClipEvent(
-            Character, Playback.SelectedClip)
+
+        Call ViewerPlayback.RefreshSelectedTimelineEvent(
+            Playback, Character)
 
     End If
 
@@ -2527,7 +2522,7 @@ Sub BeginPartyPreview()
         Session.ProfileIndex
     )
 
-    Playback.ScenePaused = True
+    Call ViewerPlayback.PauseForPartyPreview(Playback)
 
 End Sub
 
@@ -2623,7 +2618,8 @@ Sub ResetPartyDemo()
     Dim FirstApproach As Core.Vector3
     Dim SecondApproach As Core.Vector3
 
-    Playback.DemoEnabled = True
+    Call ViewerPlayback.EnablePartyDemo(Playback)
+
     ViewerUiState.CalibrationVisible = False
     Center.X = ViewerDragon.PositionX()
     Center.Z = ViewerDragon.PositionZ()

@@ -152,7 +152,7 @@ try {
         'Const CALIBRATION_MAX_CLIPS = ViewerCalibration.MAX_CLIPS',
         'Function ApplyActorPresentationCommand(',
         'ViewerEffects.AdvanceScene(',
-        'Playback.ScenePaused = Not Playback.ScenePaused',
+        'ViewerPlayback.TogglePause(Playback)',
         'Const ZOOM_IN_LIMIT = -144',
         'Window_Width()',
         'Window_Height()',
@@ -186,6 +186,18 @@ try {
         Assert-Contains $cameraSource $contract 'Viewer camera owner'
     }
     foreach ($contract in @(
+        'Public Type SpeedAdjustmentResult',
+        'Public Sub UseDefaultSpeed(',
+        'Public Sub TogglePause(',
+        'Public Function ApplyDemoToggle(',
+        'Public Function AdjustSpeedForContext(',
+        'Public Sub RestartPresentation(',
+        'Public Sub ResetControls(',
+        'Public Sub PauseForCalibration(',
+        'Public Sub PrepareCharacterSwitch(',
+        'Public Sub PauseForPartyPreview(',
+        'Public Sub EnablePartyDemo(',
+        'Public Sub RefreshSelectedTimelineEvent(',
         'Public Sub SelectClip(',
         'Public Function RuntimeClipForPresentationIndex(',
         'Public Function PresentationIndexForRuntimeClip(',
@@ -202,6 +214,11 @@ try {
         'Public Function DemoSecondsRemaining(')) {
         Assert-Contains $playbackSource $contract 'Viewer playback owner'
     }
+    Assert-True (-not [regex]::IsMatch(
+            $viewerSource, '(?m)^\s*Playback\.[A-Za-z0-9_]+\s*=')) `
+        'Playback state mutation must remain in ViewerPlayback.'
+    Assert-True (-not $viewerSource.Contains('Sub ToggleDemo()')) `
+        'The deleted demo-toggle pass-through wrapper must not return to Program.smile.'
     foreach ($contract in @(
         'Private Dim Storage[STORAGE_CAPACITY] As Number',
         'Private Dim PreviousStorage[STORAGE_CAPACITY] As Number',

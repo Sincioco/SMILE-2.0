@@ -82,6 +82,7 @@ Dim FrameRate As ViewerTiming.FrameRateState
 Dim RuntimeClock As ViewerTiming.ClockState
 Dim SessionState As ViewerSession.State
 Dim PlaybackState As ViewerPlayback.State
+Dim SpeedAdjustment As ViewerPlayback.SpeedAdjustmentResult
 Dim CameraState As ViewerCamera.State
 Dim DirectControls As Core.CameraControl3D
 Dim DirectZoom As CharacterViewer.ZoomState
@@ -140,7 +141,55 @@ Call Check(PlaybackState.PlaybackSpeed = 100)
 Call Check(PlaybackState.DemoEnabled)
 Call Check(Not PlaybackState.ScenePaused)
 
-PlaybackState.ScenePaused = True
+Call ViewerPlayback.UseDefaultSpeed(PlaybackState, 125)
+Call Check(PlaybackState.PlaybackSpeed = 125)
+Call ViewerPlayback.TogglePause(PlaybackState)
+Call Check(PlaybackState.ScenePaused)
+Call ViewerPlayback.TogglePause(PlaybackState)
+Call Check(Not PlaybackState.ScenePaused)
+
+PlaybackState.AnimationCycleElapsed = 90
+
+Call Check(Not ViewerPlayback.ApplyDemoToggle(PlaybackState, False))
+Call Check(Not PlaybackState.DemoEnabled And
+    PlaybackState.AnimationCycleElapsed = 0)
+
+PlaybackState.AnimationCycleElapsed = 90
+
+Call Check(ViewerPlayback.ApplyDemoToggle(PlaybackState, True))
+Call Check(Not PlaybackState.DemoEnabled And
+    PlaybackState.AnimationCycleElapsed = 90)
+
+Call ViewerPlayback.Reset(PlaybackState, 100)
+
+SpeedAdjustment = ViewerPlayback.AdjustSpeedForContext(
+    PlaybackState, 25, 200, 50, True, True)
+
+Call Check(SpeedAdjustment.Blocked And
+    Not SpeedAdjustment.ResetPartyDemo And PlaybackState.PlaybackSpeed = 100)
+
+SpeedAdjustment = ViewerPlayback.AdjustSpeedForContext(
+    PlaybackState, 25, 200, 50, True, False)
+
+Call Check(Not SpeedAdjustment.Blocked And
+    SpeedAdjustment.ResetPartyDemo And PlaybackState.PlaybackSpeed = 150)
+
+Call ViewerPlayback.PauseForCalibration(PlaybackState, False)
+Call Check(PlaybackState.ScenePaused And Not PlaybackState.DemoEnabled)
+Call ViewerPlayback.PrepareCharacterSwitch(PlaybackState)
+Call Check(Not PlaybackState.ScenePaused And PlaybackState.DemoEnabled)
+Call ViewerPlayback.PauseForCalibration(PlaybackState, True)
+Call Check(PlaybackState.ScenePaused And PlaybackState.DemoEnabled)
+Call ViewerPlayback.ResetControls(PlaybackState, 75)
+Call Check(PlaybackState.PlaybackSpeed = 75 And
+    Not PlaybackState.ScenePaused And PlaybackState.DemoEnabled)
+Call ViewerPlayback.PauseForPartyPreview(PlaybackState)
+Call Check(PlaybackState.ScenePaused)
+
+PlaybackState.DemoEnabled = False
+
+Call ViewerPlayback.EnablePartyDemo(PlaybackState)
+Call Check(PlaybackState.DemoEnabled)
 
 Call ViewerPlayback.ResolveAnimationElapsed(PlaybackState, 16)
 Call Check(PlaybackState.AnimationUpdateElapsed = 0)
