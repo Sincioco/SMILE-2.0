@@ -125,6 +125,10 @@ Dim DragonState As ViewerDragon.State
 Dim RenderingState As ViewerRendering.State
 Dim InspectorOperation As ViewerInspectorCommands.OperationResult
 Dim InspectorPointerAction As ViewerInspectorCommands.PointerActionResult
+Dim InspectorIdentityView As ViewerInspectorPresentation.IdentityView
+Dim InspectorStatusView As ViewerInspectorPresentation.StatusView
+Dim InspectorEffectsView As ViewerInspectorPresentation.EffectsView
+Dim InspectorWorkspaceView As ViewerInspectorPresentation.WorkspaceView
 Dim FirstApproach As Core.Vector3
 Dim SecondApproach As Core.Vector3
 
@@ -962,24 +966,54 @@ EffectsState.VisualHistoryDirty = False
 EffectsState.VisualContinuityEpoch = 0
 
 Call ViewerUi.DrawMinimumSizeNotice(800, 640)
-Call ViewerInspectorPresentation.DrawIdentityAndToolbar(
-    0, "Arin", "Paladin", False, 0, 800, 640,
-    False, True, True, "DRAGON ON", True, "BG LOGO", True,
-    True, True, True, True)
-Call ViewerInspectorPresentation.DrawIdentityAndToolbar(
-    1, "Arin", "Paladin", True, 3, 1200, 640,
-    False, False, True, "DRAGON ON", True, "BG LOGO", True,
-    True, False, True, True)
-Call ViewerInspectorPresentation.DrawStatusAndAnimation(
-    800, 650, ViewerProfiles.PROFILE_ARIN,
-    "Arin", "Paladin", "Idle", "v5.7", 100,
-    Graphics3D.MATERIAL_INSPECTION_LIT, 1, 2, "Off", 0, -16, 60, 0,
-    1000, 30, 31, 2, 12, 4, 8, False, False, True)
-Call ViewerInspectorPresentation.DrawEffectsAndCamera(
-    800, 640, ViewerProfiles.PROFILE_ARIN,
-    True, True, True, "Storm", "Comfort", "Freeze Lightning", False,
-    True, True, True, "Pause Flames", True, "Shield Fire", False,
-    0, 0, -16, -144, 36, True)
+
+Profile = ViewerProfiles.ProfileAt(ViewerProfiles.PROFILE_ARIN)
+
+Call ViewerSession.SelectCharacterTab(SessionState, 0)
+Call ViewerParty.SetEnabled(PartyState, False)
+Call ViewerUi.Reset(UiState)
+
+InspectorIdentityView = ViewerInspectorPresentation.CaptureIdentity(
+    UiState, Profile, PartyState, SessionState, RenderingState, EffectsState,
+    DragonState, EquipmentVisibility, False, 800, 640)
+
+Call CheckNamed(InspectorIdentityView.DisplayName = "Arin" And
+    InspectorIdentityView.PartyRole = "Paladin" And
+    InspectorIdentityView.WindowWidth = 800,
+    "Inspector presentation captures identity display values")
+
+Call ViewerInspectorPresentation.DrawIdentityAndToolbar(InspectorIdentityView)
+
+InspectorIdentityView.Visibility = 1
+InspectorIdentityView.PartyEnabled = True
+InspectorIdentityView.SelectedCharacterTab = 3
+InspectorIdentityView.WindowWidth = 1200
+
+Call ViewerInspectorPresentation.DrawIdentityAndToolbar(InspectorIdentityView)
+
+InspectorStatusView = ViewerInspectorPresentation.CaptureStatus(
+    PartyPrimary.Actor, Profile, PartyState, SessionState, RenderingState,
+    PlaybackState, CameraState, FrameRate, 800, 650, 16000)
+
+Call CheckNamed(InspectorStatusView.ProfileIndex = ViewerProfiles.PROFILE_ARIN And
+    InspectorStatusView.DisplayName = "Arin",
+    "Inspector presentation captures status display values")
+
+Call ViewerInspectorPresentation.DrawStatusAndAnimation(InspectorStatusView)
+
+InspectorEffectsView = ViewerInspectorPresentation.CaptureEffects(
+    SessionState, RenderingState, EffectsState, DragonState, PartyState,
+    CameraState, 800, 640, -144, 36)
+
+Call ViewerInspectorPresentation.DrawEffectsAndCamera(InspectorEffectsView)
+
+InspectorWorkspaceView = ViewerInspectorPresentation.CaptureWorkspace(
+    UiState, PartyPrimary.Actor, CalibrationState, PlaybackState, GizmoState,
+    SessionState, PartyState, False, 800, 640)
+
+Call ViewerInspectorPresentation.DrawWorkspace(
+    UiState, PartyPrimary.Actor, CalibrationState, InputState,
+    InspectorWorkspaceView)
 Call ViewerUi.DrawProfileEffectControls(
     800, ViewerProfiles.PROFILE_ORIN, True, False, False,
     "Storm", "Comfort", "Freeze Lightning", False,

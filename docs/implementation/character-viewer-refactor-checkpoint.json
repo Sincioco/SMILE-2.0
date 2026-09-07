@@ -48,7 +48,7 @@
   ],
   "currentExtractionCommitRange": {
     "first": "9a616ef35adae9b0c5bbc864ecf689bbd6fc1aed",
-    "lastCommittedBeforeCurrentCheckpoint": "b3a4c8509cf15bc5cc6abacd4aa65a538c767f1b"
+    "lastCommittedBeforeCurrentCheckpoint": "38e2831531261f5befed634f3bbfd0ea5805a0c6"
   },
   "programMetrics": {
     "initialAudit": {
@@ -68,11 +68,11 @@
       "sha256": "17853B7B210061F9D46D70913AABA39C4F798503F69C2E8CCA4D8511646AC670"
     },
     "current": {
-      "checkpoint": "whole-viewer-reset-lifecycle",
-      "baseCommit": "b3a4c8509cf15bc5cc6abacd4aa65a538c767f1b",
-      "lines": 2149,
-      "procedures": 56,
-      "sha256": "209518AD26FFBF5BD537D77257B30639E41187E0EEF5A8080130AC592B6DC68B"
+      "checkpoint": "inspector-display-capture",
+      "baseCommit": "38e2831531261f5befed634f3bbfd0ea5805a0c6",
+      "lines": 2037,
+      "procedures": 55,
+      "sha256": "CF642946698E8F74964FC0751B8517D4EE2E212E0A606DFF4605316747A6CAF9"
     }
   },
   "substantialResponsibilitiesMovedFromProgram": [
@@ -100,7 +100,8 @@
     "ordered primary/scene/effect/participant load stages, retry/profile/tab preparation, selected-clip start, calibration setup, Party-demo reset and resource shutdown",
     "general inspector pointer calibration/demo/Dragon/camera actions plus typed profile/speed/reset/restart/clip response policy",
     "camera pointer press/hold/release derivation, calibration-orbit activation, wheel admission and retained orbit/pan transitions",
-    "whole-Viewer playback/camera/rendering/VFX/Dragon/equipment/UI/input/gizmo reset, presentation reapplication and Party-versus-single restart lifecycle"
+    "whole-Viewer playback/camera/rendering/VFX/Dragon/equipment/UI/input/gizmo reset, presentation reapplication and Party-versus-single restart lifecycle",
+    "scalar inspector display capture plus Party-versus-single remaining-time, selected-event, calibration, VFX and camera presentation queries"
   ],
   "currentDestinationOwners": [
     "ViewerActors",
@@ -124,6 +125,7 @@
     "thin startup, retry, shutdown and character-tab UI/capture triggers into the stateless lifecycle owner",
     "Party inspector context/calibration adaptation and Party pointer response execution",
     "non-timeline inspector runtime sampling and typed response execution plus keyboard action dispatch and interface, slider and gizmo priority ordering",
+    "explicit scene, Party, gizmo and inspector presentation-group draw ordering",
     "narrow Party-preview, frame-order calibration-application and session-result adapters",
     "thin UpdateDragon, UpdateBattleAudio and UpdateOrinStorm frame-order adapters"
   ],
@@ -200,7 +202,11 @@
     "playback, camera, rendering, VFX, Dragon, equipment, UI, input and gizmo reset phases moved into stateless ViewerLifecycle",
     "presentation reapplication and Party-versus-single restart completion now execute in the lifecycle owner with explicit state borrows",
     "ResetAll reduced from 74 lines to 23 lines and retains only the context-sensitive Party/calibration edit exit prelude",
-    "Program.smile reduced from 2200 lines and 56 procedures to 2149 lines and 56 procedures without formatting compression"
+    "Program.smile reduced from 2200 lines and 56 procedures to 2149 lines and 56 procedures without formatting compression",
+    "four scalar-only inspector display views now capture identity, status, effects and workspace values in ViewerInspectorPresentation without retaining application state or resource handles",
+    "DrawInspectorOverlay reduced from 171 lines to 77 lines while preserving explicit scene, Party, gizmo and presentation-group order",
+    "the redundant AnimationSecondsRemaining procedure was deleted after its Party-versus-single query moved into the presentation capture owner",
+    "Program.smile reduced from 2149 lines and 56 procedures to 2037 lines and 55 procedures without formatting compression"
   ],
   "validation": [
     "PASS: 308 shared compiler/language tests",
@@ -300,13 +306,19 @@
     "PASS: whole-Viewer reset Release Desktop Viewer build with 46 published assets",
     "PASS: whole-Viewer reset Release Full Web Viewer build with 35 published assets",
     "PASS: whole-Viewer reset launcher, primary/backup recovery, stale-output and preservation fixtures using disposable data and processes",
-    "PASS: whole-Viewer reset tracked 406-file repository style check"
+    "PASS: whole-Viewer reset tracked 406-file repository style check",
+    "PASS: inspector display-capture native and generated-Web hardening with exact console parity and direct identity, status, effect, workspace and Party countdown assertions",
+    "PASS: inspector display-capture isolated real-asset and calibration integration using disposable storage",
+    "PASS: inspector display-capture Release Desktop Viewer build with 46 published assets",
+    "PASS: inspector display-capture Release Full Web Viewer build with 35 published assets",
+    "PASS: inspector display-capture launcher, primary/backup recovery, stale-output and preservation fixtures using disposable data and processes",
+    "PASS: inspector display-capture tracked 406-file repository style check"
   ],
   "pendingValidation": [
     "final Character Viewer native and installed-Chrome acceptance after remaining extractions"
   ],
   "blockers": [],
-  "nextConcreteAction": "Move the remaining inspector overlay value assembly into a bounded read-only presentation contract while preserving explicit gizmo, Party and UI draw order without expanding ViewerUi into an application owner.",
+  "nextConcreteAction": "Audit and move the remaining general inspector keyboard response dispatch into a bounded command contract while preserving runtime key sampling, gizmo-first priority and visible whole-Viewer execution in Program.smile.",
   "nextStages": [
     "R7.5-input-inspector-calibration-reset-ownership",
     "R7.5-startup-session-and-overlay-coordination",

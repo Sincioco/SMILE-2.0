@@ -395,6 +395,14 @@ try {
         Assert-Contains $inspectorCommandsSource $contract 'Viewer inspector command owner'
     }
     foreach ($contract in @(
+        'Public Type IdentityView',
+        'Public Type StatusView',
+        'Public Type EffectsView',
+        'Public Type WorkspaceView',
+        'Public Function CaptureIdentity(',
+        'Public Function CaptureStatus(',
+        'Public Function CaptureEffects(',
+        'Public Function CaptureWorkspace(',
         'Public Sub DrawIdentityAndToolbar(',
         'Public Sub DrawStatusAndAnimation(',
         'Public Sub DrawEffectsAndCamera(',
@@ -848,12 +856,20 @@ try {
     Assert-Contains $partySource 'Public Sub ToggleDragonInspectionGlow(' `
         'Viewer Party glow-state owner'
     $inspectorDrawStart = $viewerSource.IndexOf('Sub DrawInspectorOverlay()')
-    $inspectorDrawEnd = $viewerSource.IndexOf('Function AnimationSecondsRemaining()')
+    $inspectorDrawEnd = $viewerSource.IndexOf('Sub DestroyViewer()')
     Assert-True ($inspectorDrawStart -ge 0 -and $inspectorDrawEnd -gt $inspectorDrawStart) `
         'Inspector presentation ownership boundaries must remain discoverable.'
     $inspectorDrawSource = $viewerSource.Substring(
         $inspectorDrawStart, $inspectorDrawEnd - $inspectorDrawStart)
     Assert-True ($inspectorDrawSource.Contains(
+            'ViewerInspectorPresentation.CaptureIdentity(') -and
+        $inspectorDrawSource.Contains(
+            'ViewerInspectorPresentation.CaptureStatus(') -and
+        $inspectorDrawSource.Contains(
+            'ViewerInspectorPresentation.CaptureEffects(') -and
+        $inspectorDrawSource.Contains(
+            'ViewerInspectorPresentation.CaptureWorkspace(') -and
+        $inspectorDrawSource.Contains(
             'ViewerInspectorPresentation.DrawIdentityAndToolbar(') -and
         $inspectorDrawSource.Contains(
             'ViewerInspectorPresentation.DrawStatusAndAnimation(') -and
@@ -866,8 +882,11 @@ try {
         -not $inspectorDrawSource.Contains('ViewerUi.DrawProfileEffectControls(') -and
         -not $inspectorDrawSource.Contains('ViewerUi.DrawTimeline(') -and
         -not $inspectorDrawSource.Contains('ViewerUi.DrawCalibrationPanel(') -and
-        -not $inspectorDrawSource.Contains('ViewerUi.DrawRecoveryOverlay(')) `
-        'Inspector panel/workspace composition must remain in its presentation owner.'
+        -not $inspectorDrawSource.Contains('ViewerUi.DrawRecoveryOverlay(') -and
+        -not $inspectorDrawSource.Contains('Character3D.ClipDuration(') -and
+        -not $inspectorDrawSource.Contains('ViewerCalibration.CurrentAnimationFrame(') -and
+        -not $viewerSource.Contains('Function AnimationSecondsRemaining()')) `
+        'Inspector display capture and panel/workspace composition must remain in its presentation owner.'
     Assert-True (-not $viewerSource.Contains('Sub AdjustCalibrationValue(') -and
         -not $viewerSource.Contains('Sub UpdateTransformGizmoFromPointer(') -and
         -not $viewerSource.Contains('Sub SelectTransformGizmoAxis(') -and
