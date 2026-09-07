@@ -23,7 +23,7 @@ This is the single compact checkpoint for the continuation authorized by
 | 1 | Restore native Desktop Character Viewer sound effects without changing Web cues | Completed and pushed in `a3b645d` |
 | 2 | Correct the underlying NU1503 restore/build warning without suppression | Completed and pushed in `bac36a2` |
 | 3 | Reassess the 1,851-line `Program.smile` for useful responsibility extraction | Completed; evidence-based no-change decision |
-| 4 | Reconcile and continue only approved, implementation-ready suspended work | Pending |
+| 4 | Reconcile and continue only approved, implementation-ready suspended work | Completed; Reflective Battle Ground Floor is the only supplied implementation handoff |
 | 5 | Execute `C:\Users\louie\Downloads\Implement Reflective Battle Ground Floor.txt` after the ordered continuation work | Queued by Sin |
 
 ## Desktop sound-effects milestone
@@ -118,9 +118,26 @@ monolith. No source change was made merely to reduce the line count.
 The fresh full repository smoke and installed VSIX validation recorded above cover
 the unchanged Viewer entry point and its current native/Web compiler paths.
 
+## Approved-work reconciliation
+
+- Semantic-inspection CLI remains approved future work, but no task-specific ZIP or
+  Markdown handoff was supplied. The existing asset-pipeline plan describes semantic
+  inspection outcomes, not an implementation-ready CLI milestone. It was not started.
+- Battle Scene Editor E0-E12 remains unstarted. The hardened repository and README
+  explicitly require a fresh specification, and the Character Viewer is not the
+  Editor. No fresh Editor package was supplied, so it was not started.
+- Subject-first syntax remains approved future work. No implementation handoff was
+  supplied, so it was not started.
+- Reflective Battle Ground Floor now has the explicit task-specific instruction file
+  `C:\Users\louie\Downloads\Implement Reflective Battle Ground Floor.txt` supplied
+  by Sin. It is the only reconciled item ready to proceed after priorities 1-3.
+
+Clearing the temporary On Hold list did not turn unsupplied proposals into active
+implementation tasks. This reconciliation preserves their actual pending state while
+following Sin's instruction-file gate.
+
 ## Next action
 
-Reconcile the previously suspended approved queue against current tracked evidence
-and the instruction-file requirement. Do not redo completed work or advance a future
-proposal without a supplied implementation handoff. Then execute Sin's supplied
-Reflective Battle Ground Floor instructions.
+Read and execute the exact Reflective Battle Ground Floor instruction file supplied
+by Sin. Preserve the completed continuation milestones and do not substitute a
+different historical package.
