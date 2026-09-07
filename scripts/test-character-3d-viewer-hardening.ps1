@@ -28,6 +28,8 @@ $calibrationControlsSourcePath = Join-Path $repositoryRoot `
 $inputSourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\ViewerInput.smile'
 $inspectorCommandsSourcePath = Join-Path $repositoryRoot `
     'tools\Character3DViewer\ViewerInspectorCommands.smile'
+$inspectorPresentationSourcePath = Join-Path $repositoryRoot `
+    'tools\Character3DViewer\ViewerInspectorPresentation.smile'
 $timelineEditingSourcePath = Join-Path $repositoryRoot `
     'tools\Character3DViewer\ViewerTimelineEditing.smile'
 $uiSourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\ViewerUi.smile'
@@ -110,6 +112,7 @@ try {
     $calibrationControlsSource = Get-Content -LiteralPath $calibrationControlsSourcePath -Raw
     $inputSource = Get-Content -LiteralPath $inputSourcePath -Raw
     $inspectorCommandsSource = Get-Content -LiteralPath $inspectorCommandsSourcePath -Raw
+    $inspectorPresentationSource = Get-Content -LiteralPath $inspectorPresentationSourcePath -Raw
     $timelineEditingSource = Get-Content -LiteralPath $timelineEditingSourcePath -Raw
     $uiSource = Get-Content -LiteralPath $uiSourcePath -Raw
     $gizmoSource = Get-Content -LiteralPath $gizmoSourcePath -Raw
@@ -130,6 +133,7 @@ try {
         'Import Smile.Tools.Character3DViewerCalibrationControls As ViewerCalibrationControls',
         'Import Smile.Tools.Character3DViewerInput As ViewerInput',
         'Import Smile.Tools.Character3DViewerInspectorCommands As ViewerInspectorCommands',
+        'Import Smile.Tools.Character3DViewerInspectorPresentation As ViewerInspectorPresentation',
         'Import Smile.Tools.Character3DViewerTimelineEditing As ViewerTimelineEditing',
         'Import Smile.Tools.Character3DViewerUi As ViewerUi',
         'Import Smile.Tools.Character3DViewerGizmo As ViewerGizmo',
@@ -277,6 +281,17 @@ try {
         'ViewerEffects.ToggleLightningPause(Effects)',
         'ViewerEffects.ToggleFlamePause(Effects)')) {
         Assert-Contains $inspectorCommandsSource $contract 'Viewer inspector command owner'
+    }
+    foreach ($contract in @(
+        'Public Sub DrawIdentityAndToolbar(',
+        'Public Sub DrawStatusAndAnimation(',
+        'Public Sub DrawEffectsAndCamera(',
+        'Public Sub DrawWorkspace(',
+        'Call ViewerUi.DrawTimeline(',
+        'Call ViewerUi.DrawCalibrationPanel(',
+        'Call ViewerUi.DrawRecoveryOverlay(')) {
+        Assert-Contains $inspectorPresentationSource $contract `
+            'Viewer inspector presentation owner'
     }
     foreach ($contract in @(
         'Public Function ClassifyArrow(',
@@ -458,6 +473,8 @@ try {
     foreach ($contract in @(
         'Public Sub ResetChoreography(',
         'Public Function ResetDemo(',
+        'Public Function DragonTargetsPrimary(',
+        'Public Function PresentationSecondsRemaining(',
         'Public Function ApplyEquipmentVisibility(',
         'Public Function BeginInspectorBinding(',
         'Public Function BeginInspectorSelection(',
@@ -637,6 +654,27 @@ try {
     Assert-True ($viewerSource.Contains('ViewerCamera.ToggleResponsiveFit(') -and
         -not $viewerSource.Contains('ViewerCameraState.FitLocked = Not')) `
         'Responsive-fit transition behavior must remain with camera state.'
+    $inspectorDrawStart = $viewerSource.IndexOf('Sub DrawInspectorOverlay()')
+    $viewerTitleStart = $viewerSource.IndexOf('Function ViewerTitle()')
+    Assert-True ($inspectorDrawStart -ge 0 -and $viewerTitleStart -gt $inspectorDrawStart) `
+        'Inspector presentation ownership boundaries must remain discoverable.'
+    $inspectorDrawSource = $viewerSource.Substring(
+        $inspectorDrawStart, $viewerTitleStart - $inspectorDrawStart)
+    Assert-True ($inspectorDrawSource.Contains(
+            'ViewerInspectorPresentation.DrawIdentityAndToolbar(') -and
+        $inspectorDrawSource.Contains(
+            'ViewerInspectorPresentation.DrawStatusAndAnimation(') -and
+        $inspectorDrawSource.Contains(
+            'ViewerInspectorPresentation.DrawEffectsAndCamera(') -and
+        $inspectorDrawSource.Contains(
+            'ViewerInspectorPresentation.DrawWorkspace(') -and
+        -not $inspectorDrawSource.Contains('ViewerUi.DrawInspectorToolbar(') -and
+        -not $inspectorDrawSource.Contains('ViewerUi.DrawCharacterStatusSummary(') -and
+        -not $inspectorDrawSource.Contains('ViewerUi.DrawProfileEffectControls(') -and
+        -not $inspectorDrawSource.Contains('ViewerUi.DrawTimeline(') -and
+        -not $inspectorDrawSource.Contains('ViewerUi.DrawCalibrationPanel(') -and
+        -not $inspectorDrawSource.Contains('ViewerUi.DrawRecoveryOverlay(')) `
+        'Inspector panel/workspace composition must remain in its presentation owner.'
     Assert-True (-not $viewerSource.Contains('Sub AdjustCalibrationValue(') -and
         -not $viewerSource.Contains('Sub UpdateTransformGizmoFromPointer(') -and
         -not $viewerSource.Contains('ViewerGizmo.DragValueAmount(') -and

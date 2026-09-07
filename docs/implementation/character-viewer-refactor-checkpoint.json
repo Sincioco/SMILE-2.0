@@ -48,7 +48,7 @@
   ],
   "currentExtractionCommitRange": {
     "first": "9a616ef35adae9b0c5bbc864ecf689bbd6fc1aed",
-    "lastCommittedBeforeCurrentCheckpoint": "e077b4dc61fd4ad920125e4e6a76869eeaf6c09b"
+    "lastCommittedBeforeCurrentCheckpoint": "c2fece1c9ed5e401cc5d9e51de9e5b8b2a373597"
   },
   "programMetrics": {
     "initialAudit": {
@@ -68,11 +68,11 @@
       "sha256": "17853B7B210061F9D46D70913AABA39C4F798503F69C2E8CCA4D8511646AC670"
     },
     "current": {
-      "checkpoint": "inspector-keyboard-navigation-camera-fit",
-      "baseCommit": "e077b4dc61fd4ad920125e4e6a76869eeaf6c09b",
-      "lines": 3101,
+      "checkpoint": "inspector-overlay-composition-party-presentation-queries",
+      "baseCommit": "c2fece1c9ed5e401cc5d9e51de9e5b8b2a373597",
+      "lines": 3040,
       "procedures": 81,
-      "sha256": "7244E046769969AB933035F94FED64E7C858690F171ACD10C398F08DD1CDEFDF"
+      "sha256": "D40B243D0366DD4FEA5714F2BDCF7DD0029C37ECD3B7F8E3544D00DFB298E015"
     }
   },
   "substantialResponsibilitiesMovedFromProgram": [
@@ -88,7 +88,8 @@
     "frame-repeat and timeline capture transitions plus timeline seek, drag, duplicate-key and persistence workflow",
     "calibration-panel selection, navigation, clear confirmation, key command, Hold Grip and decouple routing",
     "inspector rendering and VFX action mapping with explicit owner readiness",
-    "keyboard rendering and camera navigation routing plus responsive-fit state transitions"
+    "keyboard rendering and camera navigation routing plus responsive-fit state transitions",
+    "four ordered inspector presentation groups plus Party-owned target-label and remaining-time queries"
   ],
   "currentDestinationOwners": [
     "ViewerActors",
@@ -100,6 +101,7 @@
     "ViewerCalibration",
     "ViewerCalibrationControls",
     "ViewerInspectorCommands",
+    "ViewerInspectorPresentation",
     "ViewerTimelineEditing",
     "ViewerGizmo",
     "ViewerUi"
@@ -108,7 +110,7 @@
     "startup, retry and character-tab orchestration",
     "Party inspector calibration adaptation and Party pointer action dispatch",
     "broad inspector and keyboard action dispatch plus slider and gizmo priority ordering",
-    "reset orchestration and cross-owner overlay/gizmo composition",
+    "reset orchestration and cross-owner scene, Party and gizmo ordering",
     "narrow Party-preview, frame-order calibration-application and session-result adapters",
     "thin UpdateDragon, UpdateBattleAudio and UpdateOrinStorm frame-order adapters"
   ],
@@ -134,7 +136,10 @@
     "inspector lighting, material, socket, background, floor/grid and seven VFX action routes moved through ViewerInspectorCommands with rendering/effect state retained by those owners",
     "keyboard floor/background/socket/grid and orbit/pan/auto-orbit action routes moved through ViewerInspectorCommands",
     "responsive-fit toggle and immediate recomposition moved with ViewerCamera.State",
-    "Program.smile reduced from 3146 lines and 81 procedures to 3101 lines and 81 procedures without formatting compression"
+    "Program.smile reduced from 3146 lines and 81 procedures to 3101 lines and 81 procedures without formatting compression",
+    "identity/toolbar, status/animation, effects/camera and workspace presentation groups moved into ViewerInspectorPresentation without application state",
+    "Dragon target-label policy and Party presentation countdown moved with Party state into ViewerParty",
+    "Program.smile reduced from 3101 lines and 81 procedures to 3040 lines and 81 procedures without formatting compression"
   ],
   "validation": [
     "PASS: 308 shared compiler/language tests",
@@ -162,7 +167,12 @@
     "PASS: corrected focused native keyboard/camera assertions, including established x3 orbit sensitivity and responsive-fit recomposition",
     "PASS: keyboard-navigation/camera-fit checkpoint native/generated-Web hardening with exact console parity",
     "PASS: keyboard-navigation/camera-fit checkpoint Release Desktop 46-asset and Full Web 35-asset builds",
-    "PASS: post-extraction repository style check for 404 SMILE files"
+    "PASS: post-extraction repository style check for 404 SMILE files",
+    "PASS: inspector-overlay composition native/generated-Web hardening with exact console parity, direct presentation-owner assertions and Party query checks",
+    "PASS: post-overlay-extraction 42 isolated calibration checks and 58 native graphics, pointer-input and audio-focus checks",
+    "PASS: inspector-overlay composition Release Desktop Viewer build with 46 published assets",
+    "PASS: inspector-overlay composition Release Full Web Viewer build with 35 published assets",
+    "PASS: post-overlay-extraction repository style check for 404 tracked SMILE files and explicit new-owner style check"
   ],
   "pendingValidation": [
     "final Character Viewer native and installed-Chrome acceptance after remaining extractions"

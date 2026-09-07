@@ -19,6 +19,7 @@ Import Smile.Tools.Character3DViewerCalibrationEditing As ViewerCalibrationEditi
 Import Smile.Tools.Character3DViewerCalibrationControls As ViewerCalibrationControls
 Import Smile.Tools.Character3DViewerInput As ViewerInput
 Import Smile.Tools.Character3DViewerInspectorCommands As ViewerInspectorCommands
+Import Smile.Tools.Character3DViewerInspectorPresentation As ViewerInspectorPresentation
 Import Smile.Tools.Character3DViewerTimelineEditing As ViewerTimelineEditing
 Import Smile.Tools.Character3DViewerUi As ViewerUi
 Import Smile.Tools.Character3DViewerGizmo As ViewerGizmo
@@ -2383,13 +2384,10 @@ End Sub
 Sub DrawInspectorOverlay()
 
     Dim DragonTargetsArin As Boolean
-    Dim PanelLeft As Number
 
     If ViewerUiState.Visibility = 2 Then
         Return
     End If
-
-    PanelLeft = ViewerUi.StatusPanelX(Window_Width())
 
     If ViewerUi.LayoutTooSmall(Window_Width(), Window_Height()) Then
         Call ViewerUi.DrawMinimumSizeNotice(Window_Width(), Window_Height())
@@ -2397,12 +2395,26 @@ Sub DrawInspectorOverlay()
         Return
     End If
 
-    Call ViewerUi.DrawHeader(
+    Call ViewerInspectorPresentation.DrawIdentityAndToolbar(
+        ViewerUiState.Visibility,
         ActiveProfile.DisplayName,
         ActiveProfile.PartyRole,
         Party.Enabled,
         Session.SelectedCharacterTab,
-        Window_Width()
+        Window_Width(),
+        Window_Height(),
+        ViewerProfiles.INCLUDE_DIAGNOSTIC_PROFILES,
+        Rendering.SocketGizmosVisible,
+        Effects.EpicGlowVisible,
+        ViewerUi.DragonLabel(Session.DragonInspection,
+            DragonState.Available, DragonState.Visible),
+        DragonState.Visible,
+        ViewerUi.BackgroundLabel(Rendering.BackgroundIndex),
+        Rendering.BackgroundIndex > 0,
+        CalibrationAvailable,
+        ViewerUiState.CalibrationVisible,
+        Equipment.SwordVisible,
+        Equipment.ShieldVisible
     )
 
     If Party.Enabled And Not ViewerUiState.CalibrationVisible Then
@@ -2434,26 +2446,10 @@ Sub DrawInspectorOverlay()
 
     If ViewerUiState.Visibility = 0 Then
 
-        Call ViewerUi.DrawInspectorToolbar(
+        Call ViewerInspectorPresentation.DrawStatusAndAnimation(
             Window_Width(),
             Window_Height(),
-            ViewerProfiles.INCLUDE_DIAGNOSTIC_PROFILES,
-            Party.Enabled,
-            Rendering.SocketGizmosVisible,
-            Effects.EpicGlowVisible,
-            ViewerUi.DragonLabel(Session.DragonInspection,
-                DragonState.Available, DragonState.Visible),
-            DragonState.Visible,
-            ViewerUi.BackgroundLabel(Rendering.BackgroundIndex),
-            Rendering.BackgroundIndex > 0,
-            CalibrationAvailable,
-            ViewerUiState.CalibrationVisible,
-            Equipment.SwordVisible,
-            Equipment.ShieldVisible
-        )
-
-        Call ViewerUi.DrawCharacterStatusSummary(
-            PanelLeft,
+            Session.ProfileIndex,
             ActiveProfile.DisplayName,
             ActiveProfile.PartyRole,
             ViewerPlayback.SelectedClipLabel(
@@ -2467,27 +2463,26 @@ Sub DrawInspectorOverlay()
                 Party.Enabled, Playback.ScenePaused, Playback.DemoEnabled),
             AnimationSecondsRemaining(),
             CharacterViewer.ZoomDegrees(ViewerCameraState.Zoom),
-            ViewerTiming.FramesPerSecond(FrameRate)
-        )
-
-        Call ViewerUi.DrawDemoControl(
-            PanelLeft, Party.Enabled, Playback.ScenePaused, Playback.DemoEnabled)
-
-        Call ViewerUi.DrawAnimationButtons(
-            Session.ProfileIndex,
+            ViewerTiming.FramesPerSecond(FrameRate),
             ViewerPlayback.PresentationIndexForRuntimeClip(
                 Character, Session.ProfileIndex, Playback.SelectedClip),
-            Window_Width()
+            Character3D.ClipDuration(Character, Playback.SelectedClip),
+            Character3D.ClipSampleRate(Character, Playback.SelectedClip),
+            Character3D.ClipSampleCount(Character, Playback.SelectedClip),
+            Character3D.ClipEventCount(Character, Playback.SelectedClip),
+            Character3D.ClipCount(Character),
+            Character3D.SocketCount(Character),
+            Character3D.EventCount(Character),
+            Party.Enabled,
+            Playback.ScenePaused,
+            Playback.DemoEnabled
         )
 
-        DragonTargetsArin = Not Party.Enabled And Party.DragonCounter Mod 2 = 0
+        DragonTargetsArin = ViewerParty.DragonTargetsPrimary(Party)
 
-        If Party.Enabled Then
-            DragonTargetsArin = Party.HitTarget = 0
-        End If
-
-        Call ViewerUi.DrawProfileEffectControls(
+        Call ViewerInspectorPresentation.DrawEffectsAndCamera(
             Window_Width(),
+            Window_Height(),
             Session.ProfileIndex,
             Rendering.FloorVisible Or Rendering.GridVisible,
             Effects.SwordFireVisible,
@@ -2502,93 +2497,53 @@ Sub DrawInspectorOverlay()
             ViewerUi.PlaybackLabel("Flames", Effects.FlamePaused, "Pause"),
             Not Effects.FlamePaused,
             ViewerEffects.ShieldFireStyleLabel(Effects),
-            Effects.ShieldFlameStyle
-        )
-
-        Call ViewerUi.DrawAnimationDetails(
-            PanelLeft,
-            Window_Height(),
-            Character3D.ClipDuration(Character, Playback.SelectedClip),
-            Character3D.ClipSampleRate(Character, Playback.SelectedClip),
-            Character3D.ClipSampleCount(Character, Playback.SelectedClip),
-            Character3D.ClipEventCount(Character, Playback.SelectedClip),
-            Character3D.ClipCount(Character),
-            Character3D.SocketCount(Character),
-            Character3D.EventCount(Character)
-        )
-
-        Call ViewerUi.DrawCameraControls(
-            PanelLeft,
-            Window_Height(),
+            Effects.ShieldFlameStyle,
             ViewerCameraState.Controls.OrbitYaw,
             ViewerCameraState.Controls.OrbitPitch,
             CharacterViewer.ZoomDegrees(ViewerCameraState.Zoom),
             ZOOM_IN_LIMIT,
-            ZOOM_OUT_LIMIT
+            ZOOM_OUT_LIMIT,
+            ViewerCameraState.FitLocked
         )
-
-        Call ViewerUi.DrawViewControls(
-            Window_Width(), Window_Height(), ViewerCameraState.FitLocked)
 
     End If
 
-    Call ViewerUi.DrawTimeline(
+    Call ViewerInspectorPresentation.DrawWorkspace(
+        ViewerUiState,
         Character,
         Calibration,
         ViewerInputState,
         Playback.SelectedClip,
         ViewerPlayback.SelectedClipName(Character, Playback),
+        ViewerPlayback.SelectedClipLabel(
+            Character, Playback, Session.ProfileIndex),
         Playback.SelectedTimelineEvent,
         CalibrationAvailable,
         Window_Width(),
-        Window_Height()
-    )
-
-    If (ViewerUiState.Visibility = 0 And
-        CalibrationAvailable And
-        ViewerUiState.CalibrationVisible) Then
-        Call ViewerUi.DrawCalibrationPanel(
-            ViewerUiState,
+        Window_Height(),
+        ViewerCalibration.CurrentAnimationFrame(
+            Character, Playback.SelectedClip),
+        ViewerCalibration.KeyIndex(
             Calibration,
             Playback.SelectedClip,
-            ViewerPlayback.SelectedClipLabel(
-                Character, Playback, Session.ProfileIndex),
-            ViewerPlayback.SelectedClipName(Character, Playback),
             ViewerCalibration.CurrentAnimationFrame(
-                Character, Playback.SelectedClip),
-            ViewerCalibration.KeyIndex(
-                Calibration,
-                Playback.SelectedClip,
-                ViewerCalibration.CurrentAnimationFrame(
-                    Character, Playback.SelectedClip)
-            ),
-            ViewerCalibrationEditing.CurrentValue(
-                Calibration, Playback.SelectedClip, ViewerUiState),
-            ViewerCalibration.MinimumValue(ViewerUiState.CalibrationTransform),
-            ViewerCalibration.MaximumValue(ViewerUiState.CalibrationTransform),
-            ViewerGizmoState.Visible,
-            ViewerGizmoState.HoldGrip,
-            ViewerGizmoState.GripLimit,
-            Playback.ScenePaused,
-            ViewerCalibration.ChannelValue(
-                Calibration, Playback.SelectedClip, 18) <> 0,
-            ViewerCalibration.ChannelValue(
-                Calibration, Playback.SelectedClip, 19) <> 0
-        )
-    End If
-
-    Call ViewerUi.DrawFooterMessage(
-        Window_Width(), Window_Height(), CalibrationAvailable,
-        Calibration.TransferMessage)
-    Call ViewerUi.DrawPauseStatus(
-        PanelLeft,
-        ViewerUiState.CalibrationEditing,
+                Character, Playback.SelectedClip)
+        ),
+        ViewerCalibrationEditing.CurrentValue(
+            Calibration, Playback.SelectedClip, ViewerUiState),
+        ViewerCalibration.MinimumValue(ViewerUiState.CalibrationTransform),
+        ViewerCalibration.MaximumValue(ViewerUiState.CalibrationTransform),
+        ViewerGizmoState.Visible,
+        ViewerGizmoState.HoldGrip,
+        ViewerGizmoState.GripLimit,
         Playback.ScenePaused,
+        ViewerCalibration.ChannelValue(
+            Calibration, Playback.SelectedClip, 18) <> 0,
+        ViewerCalibration.ChannelValue(
+            Calibration, Playback.SelectedClip, 19) <> 0,
+        Calibration.TransferMessage,
         Session.CharacterSwitchBlocked,
-        Party.Enabled
-    )
-    Call ViewerUi.DrawRecoveryOverlay(
-        ViewerUiState.Visibility,
+        Party.Enabled,
         Session.ViewerError,
         Session.FirstViewerError,
         Session.FirstRendererError,
@@ -2609,32 +2564,16 @@ End Function
 
 Function AnimationSecondsRemaining() As Number
 
-    Dim RequiredMilliseconds As Number
-    Dim RemainingMilliseconds As Number
     Dim Result As Number
 
     If Party.Enabled Then
-
-        RequiredMilliseconds = ViewerParty.AttackDuration(
-            Party,
-            Character,
-            Party.Companion.Actor,
-            Playback.PlaybackSpeed
-        ) + 4000
-
-        If Party.Turn = 2 Then
-            RequiredMilliseconds = ViewerParty.DragonTurnDuration(
-                Party, Playback.PlaybackSpeed)
-        End If
-
-        RemainingMilliseconds = Max(0, RequiredMilliseconds - Party.Elapsed)
-        Result = (RemainingMilliseconds + 999) / 1000
-
+        Result = ViewerParty.PresentationSecondsRemaining(
+            Party, Character, Party.Companion.Actor,
+            Playback.PlaybackSpeed)
     Else
         Result = ViewerPlayback.DemoSecondsRemaining(
             Playback, Character, Session.ProfileIndex,
             ANIMATION_CYCLE_MILLISECONDS)
-
     End If
 
     Return Result

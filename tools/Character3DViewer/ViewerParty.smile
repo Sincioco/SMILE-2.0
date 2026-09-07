@@ -1091,6 +1091,42 @@ Public Function DragonTurnDuration(ByRef Value As State,
 
 End Function
 
+Public Function DragonTargetsPrimary(ByRef Value As State) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Value.DragonCounter Mod 2 = 0
+
+    If Value.Enabled Then
+        Result = Value.HitTarget = 0
+    End If
+
+    Return Result
+
+End Function
+
+Public Function PresentationSecondsRemaining(ByRef Value As State,
+    Primary As Character3D.Actor, Companion As Character3D.Actor,
+    PlaybackSpeed As Number) As Number
+
+    Dim RequiredMilliseconds As Number
+    Dim RemainingMilliseconds As Number
+    Dim Result As Number
+
+    RequiredMilliseconds = AttackDuration(
+        Value, Primary, Companion, PlaybackSpeed) + 4000
+
+    If Value.Turn = 2 Then
+        RequiredMilliseconds = DragonTurnDuration(Value, PlaybackSpeed)
+    End If
+
+    RemainingMilliseconds = Max(0, RequiredMilliseconds - Value.Elapsed)
+    Result = (RemainingMilliseconds + 999) / 1000
+
+    Return Result
+
+End Function
+
 Public Function DragonImpactTime(ByRef Value As State) As Number
 
     If Value.DragonCounter Mod 3 = 2 Then

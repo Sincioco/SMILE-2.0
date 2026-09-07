@@ -1,0 +1,224 @@
+''' Inspector composition from explicit presentation values without application state.
+Module Smile.Tools.Character3DViewerInspectorPresentation
+
+Option Explicit
+
+Import Smile.Simple3D.Character3D As Character3D
+Import Smile.Tools.Character3DViewerCalibration As ViewerCalibration
+Import Smile.Tools.Character3DViewerInput As ViewerInput
+Import Smile.Tools.Character3DViewerUi As ViewerUi
+
+Public Sub DrawIdentityAndToolbar(Visibility As Number,
+    DisplayName As Text, PartyRole As Text, PartyEnabled As Boolean,
+    SelectedCharacterTab As Number, WindowWidth As Number,
+    WindowHeight As Number, DiagnosticProfiles As Boolean,
+    SocketGizmosVisible As Boolean, EpicGlowVisible As Boolean,
+    DragonControlLabel As Text, DragonVisible As Boolean,
+    BackgroundControlLabel As Text, BackgroundVisible As Boolean,
+    CalibrationAvailable As Boolean, CalibrationVisible As Boolean,
+    SwordVisible As Boolean, ShieldVisible As Boolean)
+
+    Call ViewerUi.DrawHeader(
+        DisplayName,
+        PartyRole,
+        PartyEnabled,
+        SelectedCharacterTab,
+        WindowWidth
+    )
+
+    If Visibility = 0 Then
+        Call ViewerUi.DrawInspectorToolbar(
+            WindowWidth,
+            WindowHeight,
+            DiagnosticProfiles,
+            PartyEnabled,
+            SocketGizmosVisible,
+            EpicGlowVisible,
+            DragonControlLabel,
+            DragonVisible,
+            BackgroundControlLabel,
+            BackgroundVisible,
+            CalibrationAvailable,
+            CalibrationVisible,
+            SwordVisible,
+            ShieldVisible
+        )
+    End If
+
+End Sub
+
+Public Sub DrawStatusAndAnimation(WindowWidth As Number,
+    WindowHeight As Number, ProfileIndex As Number,
+    DisplayName As Text, PartyRole As Text, SelectedClipLabel As Text,
+    CandidateVersion As Text, PlaybackSpeed As Number,
+    MaterialInspection As Number, DrawCallCount As Number,
+    TriangleCount As Number, DemoStatus As Text,
+    SecondsRemaining As Number, ZoomDegrees As Number,
+    FramesPerSecond As Number, SelectedPresentationIndex As Number,
+    ClipDuration As Number, ClipSampleRate As Number,
+    ClipSampleCount As Number, ClipEventCount As Number,
+    ModelClipCount As Number, ModelSocketCount As Number,
+    ModelEventCount As Number, PartyEnabled As Boolean,
+    ScenePaused As Boolean, DemoEnabled As Boolean)
+
+    Dim PanelLeft As Number
+
+    PanelLeft = ViewerUi.StatusPanelX(WindowWidth)
+
+    Call ViewerUi.DrawCharacterStatusSummary(
+        PanelLeft,
+        DisplayName,
+        PartyRole,
+        SelectedClipLabel,
+        CandidateVersion,
+        PlaybackSpeed,
+        MaterialInspection,
+        DrawCallCount,
+        TriangleCount,
+        DemoStatus,
+        SecondsRemaining,
+        ZoomDegrees,
+        FramesPerSecond
+    )
+    Call ViewerUi.DrawDemoControl(
+        PanelLeft, PartyEnabled, ScenePaused, DemoEnabled)
+    Call ViewerUi.DrawAnimationButtons(
+        ProfileIndex, SelectedPresentationIndex, WindowWidth)
+    Call ViewerUi.DrawAnimationDetails(
+        PanelLeft,
+        WindowHeight,
+        ClipDuration,
+        ClipSampleRate,
+        ClipSampleCount,
+        ClipEventCount,
+        ModelClipCount,
+        ModelSocketCount,
+        ModelEventCount
+    )
+
+End Sub
+
+Public Sub DrawEffectsAndCamera(WindowWidth As Number,
+    WindowHeight As Number, ProfileIndex As Number,
+    FloorOrGridVisible As Boolean, SwordFireVisible As Boolean,
+    ShieldFireVisible As Boolean, StormStyleLabel As Text,
+    StormComfortLabel As Text, LightningPlaybackLabel As Text,
+    LightningPaused As Boolean, DragonHeadTracking As Boolean,
+    DragonTargetsArin As Boolean, SwordFireReady As Boolean,
+    FlamePlaybackLabel As Text, FlamePlaying As Boolean,
+    ShieldFireStyleLabel As Text, ShieldFlameStyle As Boolean,
+    HorizontalOrbit As Number, VerticalOrbit As Number,
+    ZoomDegrees As Number, ZoomInLimit As Number,
+    ZoomOutLimit As Number, FitLocked As Boolean)
+
+    Dim PanelLeft As Number
+
+    PanelLeft = ViewerUi.StatusPanelX(WindowWidth)
+
+    Call ViewerUi.DrawProfileEffectControls(
+        WindowWidth,
+        ProfileIndex,
+        FloorOrGridVisible,
+        SwordFireVisible,
+        ShieldFireVisible,
+        StormStyleLabel,
+        StormComfortLabel,
+        LightningPlaybackLabel,
+        LightningPaused,
+        DragonHeadTracking,
+        DragonTargetsArin,
+        SwordFireReady,
+        FlamePlaybackLabel,
+        FlamePlaying,
+        ShieldFireStyleLabel,
+        ShieldFlameStyle
+    )
+    Call ViewerUi.DrawCameraControls(
+        PanelLeft,
+        WindowHeight,
+        HorizontalOrbit,
+        VerticalOrbit,
+        ZoomDegrees,
+        ZoomInLimit,
+        ZoomOutLimit
+    )
+    Call ViewerUi.DrawViewControls(WindowWidth, WindowHeight, FitLocked)
+
+End Sub
+
+Public Sub DrawWorkspace(ByRef Ui As ViewerUi.State,
+    ByRef Actor As Character3D.Actor,
+    ByRef Calibration As ViewerCalibration.State,
+    ByRef Input As ViewerInput.State, SelectedClip As Number,
+    SelectedClipName As Text, SelectedClipLabel As Text,
+    SelectedTimelineEvent As Number, CalibrationAvailable As Boolean,
+    WindowWidth As Number, WindowHeight As Number,
+    CurrentFrame As Number, CurrentKeyframe As Number,
+    CurrentValue As Number, MinimumValue As Number,
+    MaximumValue As Number, GizmoVisible As Boolean,
+    HoldGrip As Boolean, GripLimit As Boolean,
+    ScenePaused As Boolean, WeaponDecoupled As Boolean,
+    ShieldDecoupled As Boolean, TransferMessage As Text,
+    CharacterSwitchBlocked As Boolean, PartyEnabled As Boolean,
+    ViewerError As Boolean, FirstViewerError As Number,
+    FirstRendererError As Number, FirstFailureStage As Number)
+
+    Dim PanelLeft As Number
+
+    PanelLeft = ViewerUi.StatusPanelX(WindowWidth)
+
+    Call ViewerUi.DrawTimeline(
+        Actor,
+        Calibration,
+        Input,
+        SelectedClip,
+        SelectedClipName,
+        SelectedTimelineEvent,
+        CalibrationAvailable,
+        WindowWidth,
+        WindowHeight
+    )
+
+    If (Ui.Visibility = 0 And
+        CalibrationAvailable And
+        Ui.CalibrationVisible) Then
+        Call ViewerUi.DrawCalibrationPanel(
+            Ui,
+            Calibration,
+            SelectedClip,
+            SelectedClipLabel,
+            SelectedClipName,
+            CurrentFrame,
+            CurrentKeyframe,
+            CurrentValue,
+            MinimumValue,
+            MaximumValue,
+            GizmoVisible,
+            HoldGrip,
+            GripLimit,
+            ScenePaused,
+            WeaponDecoupled,
+            ShieldDecoupled
+        )
+    End If
+
+    Call ViewerUi.DrawFooterMessage(
+        WindowWidth, WindowHeight, CalibrationAvailable, TransferMessage)
+    Call ViewerUi.DrawPauseStatus(
+        PanelLeft,
+        Ui.CalibrationEditing,
+        ScenePaused,
+        CharacterSwitchBlocked,
+        PartyEnabled
+    )
+    Call ViewerUi.DrawRecoveryOverlay(
+        Ui.Visibility,
+        ViewerError,
+        FirstViewerError,
+        FirstRendererError,
+        FirstFailureStage
+    )
+
+End Sub
+
+End Module

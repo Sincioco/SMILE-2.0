@@ -36,6 +36,7 @@ $viewerSources = @(
     'ViewerCalibrationControls.smile',
     'ViewerInput.smile',
     'ViewerInspectorCommands.smile',
+    'ViewerInspectorPresentation.smile',
     'ViewerTimelineEditing.smile',
     'ViewerUi.smile',
     'ViewerGizmo.smile',
