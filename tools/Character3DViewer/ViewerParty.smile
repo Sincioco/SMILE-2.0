@@ -14,6 +14,7 @@ Import Smile.Tools.Character3DViewerActors As ViewerActors
 Import Smile.Tools.Character3DViewerCalibration As ViewerCalibration
 Import Smile.Tools.Character3DViewerEffects As ViewerEffects
 Import Smile.Tools.Character3DViewerDragon As ViewerDragon
+Import Smile.Tools.Character3DViewerPlayback As ViewerPlayback
 Import Smile.Tools.Character3DViewerProfiles As ViewerProfiles
 
 Private Const DRAGON_CAMERA_CHEST_HEIGHT = 70
@@ -138,6 +139,13 @@ End Type
 Public Type PointerDecision
     Consumed As Boolean
     Action As Number
+End Type
+
+Public Type PointerResponse
+    ResetView As Boolean
+    ResetInspector As Boolean
+    SpeedDelta As Number
+    TogglePause As Boolean
 End Type
 
 Public Type ParticipantUpdateResult
@@ -345,12 +353,21 @@ End Sub
 
 Public Function BeginInspectorSelection(ByRef Value As State,
     Primary As ViewerActors.Context, PartyTurn As Number,
-    ByRef Dragon As ViewerDragon.State) As InspectorBindingResult
+    ByRef Dragon As ViewerDragon.State,
+    ViewerError As Boolean) As InspectorBindingResult
 
     Dim Index As Number
     Dim Result As InspectorBindingResult
 
     Result.Context = Primary
+
+    If (Not Value.Enabled Or
+        Not Value.Ready Or
+        ViewerError Or
+        Value.UiBound) Then
+        Return Result
+    End If
+
     Result.Bound = BeginInspectorBinding(Value, Primary, PartyTurn)
 
     If Not Result.Bound Then
@@ -465,6 +482,19 @@ Public Sub BeginPreview(ByRef Value As State, ByRef Actor As Character3D.Actor,
     Mode = ResolvePreviewMode(Value.UiTurn, ProfileIndex, Name)
 
     Call CapturePreview(Value, Clip, Character3D.AnimationTime(Actor), Mode)
+
+End Sub
+
+Public Sub BeginPreviewSession(ByRef Value As State,
+    ByRef Actor As Character3D.Actor, ByRef Playback As ViewerPlayback.State,
+    ProfileIndex As Number)
+
+    If Not Value.UiBound Then
+        Return
+    End If
+
+    Call BeginPreview(Value, Actor, Playback.SelectedClip, ProfileIndex)
+    Call ViewerPlayback.PauseForPartyPreview(Playback)
 
 End Sub
 
@@ -1878,6 +1908,27 @@ Public Function ClassifyPointer(
     Else If (WindowHeight >= 580 And
         InRectangle(PointerX, PointerY, Left + 12, 440, 224, 22)) Then
         Result.Action = POINTER_ACTION_TOGGLE_SHIELD_STYLE
+    End If
+
+    Return Result
+
+End Function
+
+Public Function PointerResponseForAction(Action As Number) As PointerResponse
+
+    Dim Result As PointerResponse
+
+    If Action = POINTER_ACTION_RESET_VIEW Then
+        Result.ResetView = True
+    Else If (Action = POINTER_ACTION_RESET_INSPECTOR Or
+        Action = POINTER_ACTION_RESTART) Then
+        Result.ResetInspector = True
+    Else If Action = POINTER_ACTION_SPEED_DOWN Then
+        Result.SpeedDelta = -25
+    Else If Action = POINTER_ACTION_SPEED_UP Then
+        Result.SpeedDelta = 25
+    Else If Action = POINTER_ACTION_TOGGLE_PAUSE Then
+        Result.TogglePause = True
     End If
 
     Return Result

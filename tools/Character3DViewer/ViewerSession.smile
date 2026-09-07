@@ -6,6 +6,9 @@ Option Explicit
 Import Smile.Simple3D.Character3D As Character3D
 Import Smile.Simple3D.Graphics3D As Graphics3D
 Import Smile.Simple3D.Scene3D As Scene3D
+Import Smile.Tools.Character3DViewerCalibration As ViewerCalibration
+Import Smile.Tools.Character3DViewerCalibrationEditing As ViewerCalibrationEditing
+Import Smile.Tools.Character3DViewerParty As ViewerParty
 Import Smile.Tools.Character3DViewerProfiles As ViewerProfiles
 
 Public Type State
@@ -161,6 +164,60 @@ Public Sub CaptureFailure(ByRef Value As State, Stage As Number)
 
     If Value.FirstRendererError = 0 Then
         Value.FirstRendererError = Graphics3D.LastError()
+    End If
+
+End Sub
+
+Public Sub ApplyCalibrationOperation(ByRef Value As State,
+    Result As ViewerCalibrationEditing.OperationResult)
+
+    Value.Ready = Result.Ready And Value.Ready
+
+    Call CaptureOperationFailure(
+        Value, Result.Applied, Result.FailureStage, 0)
+
+    If Result.Finished Then
+        Call ClearCharacterSwitchBlock(Value)
+    End If
+
+End Sub
+
+Public Sub ApplyCalibrationResult(ByRef Value As State,
+    Result As ViewerCalibration.ApplicationResult)
+
+    Value.Ready = Result.Ready And Value.Ready
+
+    Call CaptureOperationFailure(Value, True, Result.FailureStage, 71)
+
+End Sub
+
+Public Sub ApplyParticipantUpdate(ByRef Value As State,
+    Result As ViewerParty.ParticipantUpdateResult)
+
+    Value.Ready = Result.Ready And Value.Ready
+
+    Call CaptureOperationFailure(
+        Value, Result.Updated, Result.FailureStage, 71)
+
+End Sub
+
+Private Sub CaptureOperationFailure(ByRef Value As State,
+    Attempted As Boolean, FailureStage As Number, DefaultStage As Number)
+
+    Dim Stage As Number
+
+    If Not Attempted Or Value.Ready Then
+        Return
+    End If
+
+    Stage = FailureStage
+
+    If Stage = 0 Then
+        Stage = DefaultStage
+    End If
+
+    If Stage <> 0 Then
+        Call CaptureFailure(Value, Stage)
     End If
 
 End Sub

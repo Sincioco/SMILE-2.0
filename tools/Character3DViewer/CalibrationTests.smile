@@ -700,7 +700,7 @@ Sub ApplyCalibrationControlForTest(Action As Number)
         Effects
     )
 
-    Call ApplyCalibrationEditingResult(TestCalibrationOperation)
+    Call ViewerSession.ApplyCalibrationOperation(Session, TestCalibrationOperation)
 
 End Sub
 

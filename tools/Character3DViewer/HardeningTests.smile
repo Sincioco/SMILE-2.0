@@ -91,6 +91,7 @@ Dim CameraPhase1000 As Number
 Dim CalibrationState As ViewerCalibration.State
 Dim CalibrationConfigurationState As ViewerCalibration.State
 Dim CalibrationConfiguration As ViewerCalibration.ConfigurationResult
+Dim CalibrationApplication As ViewerCalibration.ApplicationResult
 Dim CalibrationOperation As ViewerCalibrationEditing.OperationResult
 Dim InputState As ViewerInput.State
 Dim PointerGesture As ViewerInput.PointerGestureUpdate
@@ -107,6 +108,7 @@ Dim EquipmentVisibility As ViewerActors.EquipmentVisibility
 Dim PartyActions As ViewerParty.FrameActions
 Dim EmptyPartyActions As ViewerParty.FrameActions
 Dim PartyPointer As ViewerParty.PointerDecision
+Dim PartyResponse As ViewerParty.PointerResponse
 Dim EffectsState As ViewerEffects.State
 Dim DragonState As ViewerDragon.State
 Dim RenderingState As ViewerRendering.State
@@ -254,6 +256,45 @@ Call CheckNamed(SessionState.SelectedCharacterTab = 2 And
 Call ViewerSession.CaptureResourceEpoch(SessionState)
 Call CheckNamed(SessionState.ViewerEpoch = Graphics3D.ResourceEpoch3D(),
     "Session captures resource epoch")
+
+CalibrationOperation.Ready = False
+CalibrationOperation.Applied = True
+CalibrationOperation.FailureStage = 73
+
+Call ViewerSession.ResetFailure(SessionState)
+Call ViewerSession.ApplyCalibrationOperation(SessionState, CalibrationOperation)
+Call CheckNamed(Not SessionState.Ready And SessionState.FirstFailureStage = 73,
+    "Session adapts calibration operation failure")
+
+Call ViewerSession.ResetFailure(SessionState)
+Call ViewerSession.BlockCharacterSwitch(SessionState)
+
+CalibrationOperation.Ready = True
+CalibrationOperation.Applied = False
+CalibrationOperation.FailureStage = 0
+CalibrationOperation.Finished = True
+
+Call ViewerSession.ApplyCalibrationOperation(SessionState, CalibrationOperation)
+Call CheckNamed(SessionState.Ready And Not SessionState.CharacterSwitchBlocked,
+    "Session applies completed calibration lifecycle")
+
+Call ViewerSession.ResetFailure(SessionState)
+
+PartyParticipantUpdate.Updated = True
+PartyParticipantUpdate.Ready = False
+PartyParticipantUpdate.FailureStage = 0
+
+Call ViewerSession.ApplyParticipantUpdate(SessionState, PartyParticipantUpdate)
+Call CheckNamed(Not SessionState.Ready And SessionState.FirstFailureStage = 71,
+    "Session applies default participant failure stage")
+
+CalibrationApplication.Ready = False
+CalibrationApplication.FailureStage = 74
+
+Call ViewerSession.ResetFailure(SessionState)
+Call ViewerSession.ApplyCalibrationResult(SessionState, CalibrationApplication)
+Call CheckNamed(Not SessionState.Ready And SessionState.FirstFailureStage = 74,
+    "Session adapts calibration application failure")
 Call ViewerParty.SetEnabled(PartyState, True)
 Call CheckNamed(PartyState.Enabled, "Party owner enables Party")
 Call ViewerParty.SetEnabled(PartyState, False)
@@ -1057,6 +1098,25 @@ PartyPointer = ViewerParty.ClassifyPointer(
 Call Check(PartyPointer.Consumed And
     PartyPointer.Action = ViewerParty.POINTER_ACTION_NONE)
 
+PartyResponse = ViewerParty.PointerResponseForAction(
+    ViewerParty.POINTER_ACTION_SPEED_DOWN)
+
+Call CheckNamed(PartyResponse.SpeedDelta = -25 And
+    Not PartyResponse.ResetView And Not PartyResponse.ResetInspector And
+    Not PartyResponse.TogglePause, "Party owner maps speed response")
+
+PartyResponse = ViewerParty.PointerResponseForAction(
+    ViewerParty.POINTER_ACTION_RESTART)
+
+Call CheckNamed(PartyResponse.ResetInspector And PartyResponse.SpeedDelta = 0,
+    "Party owner maps restart response")
+
+PartyResponse = ViewerParty.PointerResponseForAction(
+    ViewerParty.POINTER_ACTION_TOGGLE_PAUSE)
+
+Call CheckNamed(PartyResponse.TogglePause,
+    "Party owner maps pause response")
+
 Call ViewerRendering.Reset(RenderingState, 3)
 Call ViewerEffects.ResetPlaybackControls(EffectsState)
 Call ViewerCamera.SetAutoOrbit(CameraState, False)
@@ -1231,8 +1291,10 @@ Call ViewerParty.EndInspectorBinding(PartyState)
 Call Check(Not PartyState.UiBound And PartyState.UiPrimary.Profile = 7)
 
 PartyState.Companion = PartyPrimary
+PartyState.Enabled = True
+PartyState.Ready = True
 PartyInspectorBinding = ViewerParty.BeginInspectorSelection(
-    PartyState, PartyPrimary, 1, DragonState)
+    PartyState, PartyPrimary, 1, DragonState, False)
 
 Call Check(PartyInspectorBinding.Bound)
 Call Check(PartyInspectorBinding.Context.Profile = 7)
@@ -1246,7 +1308,7 @@ Call Check(PartyPrimary.Profile = 7 And Not PartyState.UiBound)
 
 DragonState.Clip = "Idle"
 PartyInspectorBinding = ViewerParty.BeginInspectorSelection(
-    PartyState, PartyPrimary, 2, DragonState)
+    PartyState, PartyPrimary, 2, DragonState, False)
 
 Call Check(PartyInspectorBinding.Bound)
 Call Check(PartyInspectorBinding.Context.Profile = ViewerProfiles.PROFILE_DRAGON)
@@ -1255,6 +1317,31 @@ Call Check(PartyInspectorBinding.Context.WeaponWrist = -1 And
     PartyInspectorBinding.Context.ShieldWrist = -1)
 
 Call ViewerParty.EndInspectorBinding(PartyState)
+
+PartyInspectorBinding = ViewerParty.BeginInspectorSelection(
+    PartyState, PartyPrimary, 1, DragonState, True)
+
+Call CheckNamed(Not PartyInspectorBinding.Bound,
+    "Party owner blocks inspector selection during viewer error")
+
+PlaybackState.ScenePaused = False
+PartyState.UiBound = False
+
+Call ViewerParty.BeginPreviewSession(
+    PartyState, PartyPrimary.Actor, PlaybackState, PartyPrimary.Profile)
+Call CheckNamed(Not PlaybackState.ScenePaused,
+    "Party preview session requires inspector binding")
+
+PartyState.UiBound = True
+PartyState.PreviewActive = True
+
+Call ViewerParty.BeginPreviewSession(
+    PartyState, PartyPrimary.Actor, PlaybackState, PartyPrimary.Profile)
+Call CheckNamed(PlaybackState.ScenePaused,
+    "Party preview session pauses bound playback")
+
+PartyState.UiBound = False
+PartyState.PreviewActive = False
 
 Call ViewerParty.SetPresentationState(PartyState, 1, ViewerParty.STATE_KO)
 Call Check(ViewerParty.PresentationState(PartyState, 1) = ViewerParty.STATE_KO)

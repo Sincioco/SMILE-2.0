@@ -198,7 +198,10 @@ try {
         'Public Sub ContinueRunning(',
         'Public Sub BlockCharacterSwitch(',
         'Public Sub ClearCharacterSwitchBlock(',
-        'Public Sub CaptureResourceEpoch(')) {
+        'Public Sub CaptureResourceEpoch(',
+        'Public Sub ApplyCalibrationOperation(',
+        'Public Sub ApplyCalibrationResult(',
+        'Public Sub ApplyParticipantUpdate(')) {
         Assert-Contains $sessionSource $contract 'Viewer session owner'
     }
     Assert-True (-not $viewerSource.Contains('Session.SelectedCharacterTab =') -and
@@ -541,6 +544,7 @@ try {
         'Public Function EndInspectorSelection(',
         'Public Sub SetEnabled(',
         'Public Sub BeginPreview(',
+        'Public Sub BeginPreviewSession(',
         'Public Function RestorePreview(',
         'Public Sub InitializeFormation(',
         'Public Function AdvanceElapsed(',
@@ -556,6 +560,7 @@ try {
         'Public Function PlaceDragonInspectionParticipants(',
         'Public Sub ApplyAttackCamera(',
         'Public Function ClassifyPointer(',
+        'Public Function PointerResponseForAction(',
         'Public Function DrawCompanion(',
         'Public Function DrawDragonOpponent(',
         'Public Sub DrawOverlay(',
@@ -868,6 +873,14 @@ try {
         -not $viewerSource.Contains('Dim SceneVfxClock As') -and
         -not $viewerSource.Contains('Dim Arena As')) `
         'Party, scene VFX and arena resource state must not return to Program.smile.'
+    Assert-True (-not $viewerSource.Contains('Sub BeginPartyPreview()') -and
+        -not $viewerSource.Contains('Sub ApplyCalibrationEditingResult(') -and
+        -not $viewerSource.Contains('Sub CapturePartyParticipantFailure(') -and
+        $viewerSource.Contains('ViewerParty.BeginPreviewSession(') -and
+        $viewerSource.Contains('ViewerSession.ApplyCalibrationOperation(') -and
+        $viewerSource.Contains('ViewerSession.ApplyParticipantUpdate(') -and
+        $viewerSource.Contains('ViewerParty.PointerResponseForAction(')) `
+        'Party preview/response and typed session-result policy must remain in their owners.'
     Assert-True (-not $viewerSource.Contains('Party.PreviousCamera =') -and
         -not $viewerSource.Contains('Party.OrbitPhase1000 =') -and
         -not $viewerSource.Contains('Party.DragonCounter =') -and

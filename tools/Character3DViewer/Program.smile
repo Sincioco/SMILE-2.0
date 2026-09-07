@@ -844,7 +844,7 @@ Function HandleTransformGizmoKeyboard(PressedKey As Number) As Boolean
     If ViewerCalibrationControls.GizmoKeyRequiresPartyPreview(
         Action, ViewerGizmoState.Visible, ViewerUiState.CalibrationEditing,
         ViewerGizmoState.Dragging, Calibration.StorageRejected) Then
-        Call BeginPartyPreview()
+        Call ViewerParty.BeginPreviewSession(Party, Character, Playback, Session.ProfileIndex)
     End If
 
     Result = ViewerCalibrationControls.ApplyGizmoKeyboardAction(
@@ -853,7 +853,7 @@ Function HandleTransformGizmoKeyboard(PressedKey As Number) As Boolean
         SwordWristNode, ShieldWristNode, CalibrationAvailable,
         ViewerUiState, ViewerGizmoState, ViewerCameraState, Effects)
 
-    Call ApplyCalibrationEditingResult(Result)
+    Call ViewerSession.ApplyCalibrationOperation(Session, Result)
 
     Return True
 
@@ -916,7 +916,7 @@ Function HandleTransformGizmoPointer() As Boolean
     If ViewerCalibrationControls.GizmoPointerRequiresPartyPreview(
         Decision.Action, ViewerGizmoState.Visible,
         ViewerUiState.CalibrationEditing) Then
-        Call BeginPartyPreview()
+        Call ViewerParty.BeginPreviewSession(Party, Character, Playback, Session.ProfileIndex)
     End If
 
     Result = ViewerCalibrationControls.ApplyGizmoPointerAction(
@@ -926,7 +926,7 @@ Function HandleTransformGizmoPointer() As Boolean
         ViewerUiState, ViewerGizmoState, ViewerCameraState, Effects,
         Window_Width(), Window_Height())
 
-    Call ApplyCalibrationEditingResult(Result)
+    Call ViewerSession.ApplyCalibrationOperation(Session, Result)
 
     ReturnValue = Decision.Consumed
 
@@ -1327,7 +1327,8 @@ Function HandleInspectorPointer() As Boolean
 
         If ViewerUi.ToggleCalibrationPanel(
             ViewerUiState, CalibrationAvailable) Then
-            Call BeginPartyPreview()
+            Call ViewerParty.BeginPreviewSession(
+                Party, Character, Playback, Session.ProfileIndex)
         Else
 
             Call ViewerGizmo.Hide(ViewerGizmoState)
@@ -1462,7 +1463,7 @@ Sub HandleCalibrationPanelPointer()
 
     If ViewerCalibrationControls.RequiresPartyPreview(
         Action, ViewerUiState.CalibrationEditing) Then
-        Call BeginPartyPreview()
+        Call ViewerParty.BeginPreviewSession(Party, Character, Playback, Session.ProfileIndex)
     End If
 
     Result = ViewerCalibrationControls.ApplyPointerAction(
@@ -1480,7 +1481,7 @@ Sub HandleCalibrationPanelPointer()
         Effects
     )
 
-    Call ApplyCalibrationEditingResult(Result)
+    Call ViewerSession.ApplyCalibrationOperation(Session, Result)
 
 End Sub
 
@@ -1713,7 +1714,7 @@ End Sub
 
 Sub SelectClip(Index As Number)
 
-    Call BeginPartyPreview()
+    Call ViewerParty.BeginPreviewSession(Party, Character, Playback, Session.ProfileIndex)
     Call CancelCalibrationEdit()
 
     Call ViewerPlayback.SelectClip(Playback, Index, Party.Enabled)
@@ -1745,7 +1746,7 @@ Sub ApplyTimelineCommand(Command As Number, Value As Number)
         Call ViewerInput.BeginTimelineScrub(ViewerInputState)
     End If
 
-    Call BeginPartyPreview()
+    Call ViewerParty.BeginPreviewSession(Party, Character, Playback, Session.ProfileIndex)
 
     Result = ViewerTimelineEditing.ApplyCommand(
         Command, Value, ViewerInputState, Calibration,
@@ -1754,7 +1755,7 @@ Sub ApplyTimelineCommand(Command As Number, Value As Number)
         ViewerUiState, ViewerGizmoState, ViewerCameraState, Effects,
         Pointer_X(), Window_Width())
 
-    Call ApplyCalibrationEditingResult(Result)
+    Call ViewerSession.ApplyCalibrationOperation(Session, Result)
 
 End Sub
 
@@ -1789,7 +1790,7 @@ Sub FinishTimelineKeyframeDrag()
         Effects
     )
 
-    Call ApplyCalibrationEditingResult(Result)
+    Call ViewerSession.ApplyCalibrationOperation(Session, Result)
 
 End Sub
 
@@ -1823,7 +1824,7 @@ Sub HandleCalibrationImport()
 
     Dim Result As ViewerCalibrationEditing.OperationResult
 
-    Call BeginPartyPreview()
+    Call ViewerParty.BeginPreviewSession(Party, Character, Playback, Session.ProfileIndex)
 
     Call ViewerPlayback.PauseForCalibration(Playback, Party.Enabled)
 
@@ -1832,7 +1833,7 @@ Sub HandleCalibrationImport()
         SwordWristNode, ShieldWristNode, CalibrationAvailable,
         ViewerUiState, Effects)
 
-    Call ApplyCalibrationEditingResult(Result)
+    Call ViewerSession.ApplyCalibrationOperation(Session, Result)
 
 End Sub
 
@@ -1878,7 +1879,6 @@ End Sub
 Sub ApplyEquipmentCalibration()
 
     Dim Application As ViewerCalibration.ApplicationResult
-    Dim FailureStage As Number
 
     Application = ViewerCalibration.ApplyEquipmentTransforms(
         Calibration,
@@ -1889,36 +1889,8 @@ Sub ApplyEquipmentCalibration()
         Effects.EpicGlowAvailable,
         Effects.EpicGlowVisible
     )
-    Session.Ready = Application.Ready And Session.Ready
 
-    If Not Session.Ready Then
-
-        FailureStage = Application.FailureStage
-
-        If FailureStage = 0 Then
-            FailureStage = 71
-        End If
-
-        Call ViewerSession.CaptureFailure(Session, FailureStage)
-
-    End If
-
-End Sub
-
-Sub ApplyCalibrationEditingResult(
-    Result As ViewerCalibrationEditing.OperationResult)
-
-    Session.Ready = Result.Ready And Session.Ready
-
-    If (Result.Applied And
-        Not Session.Ready And
-        Result.FailureStage <> 0) Then
-        Call ViewerSession.CaptureFailure(Session, Result.FailureStage)
-    End If
-
-    If Result.Finished Then
-        Call ViewerSession.ClearCharacterSwitchBlock(Session)
-    End If
+    Call ViewerSession.ApplyCalibrationResult(Session, Application)
 
 End Sub
 
@@ -1928,7 +1900,7 @@ Sub BeginCalibrationEdit()
         Return
     End If
 
-    Call BeginPartyPreview()
+    Call ViewerParty.BeginPreviewSession(Party, Character, Playback, Session.ProfileIndex)
     Call ViewerCalibrationEditing.BeginEdit(
         Calibration, Character, Playback.SelectedClip,
         ViewerUiState, ViewerCameraState, Effects)
@@ -1944,7 +1916,7 @@ Sub CancelCalibrationEdit()
         SwordWristNode, ShieldWristNode, CalibrationAvailable,
         ViewerUiState, ViewerGizmoState, ViewerCameraState, Effects)
 
-    Call ApplyCalibrationEditingResult(Result)
+    Call ViewerSession.ApplyCalibrationOperation(Session, Result)
 
 End Sub
 
@@ -1953,7 +1925,7 @@ Sub SetCurrentCalibrationValue(Value As Number)
     Dim Result As ViewerCalibrationEditing.OperationResult
 
     If Not ViewerUiState.CalibrationEditing Then
-        Call BeginPartyPreview()
+        Call ViewerParty.BeginPreviewSession(Party, Character, Playback, Session.ProfileIndex)
     End If
 
     Result = ViewerCalibrationEditing.SetCurrentValue(
@@ -1961,7 +1933,7 @@ Sub SetCurrentCalibrationValue(Value As Number)
         SwordWristNode, ShieldWristNode, CalibrationAvailable,
         ViewerUiState, ViewerGizmoState, ViewerCameraState, Effects, Value)
 
-    Call ApplyCalibrationEditingResult(Result)
+    Call ViewerSession.ApplyCalibrationOperation(Session, Result)
 
 End Sub
 
@@ -1974,14 +1946,14 @@ Sub SaveCalibrationFrame()
     End If
 
     If Not ViewerUiState.CalibrationEditing Then
-        Call BeginPartyPreview()
+        Call ViewerParty.BeginPreviewSession(Party, Character, Playback, Session.ProfileIndex)
     End If
 
     Result = ViewerCalibrationEditing.SaveCurrentFrame(
         Calibration, Character, Playback.SelectedClip,
         ViewerUiState, ViewerGizmoState, ViewerCameraState, Effects)
 
-    Call ApplyCalibrationEditingResult(Result)
+    Call ViewerSession.ApplyCalibrationOperation(Session, Result)
 
 End Sub
 
@@ -2363,18 +2335,12 @@ Sub BeginPartyInspector()
     Dim Binding As ViewerParty.InspectorBindingResult
     Dim WasVisible As Boolean
 
-    If (Not Party.Enabled Or
-        Not Party.Ready Or
-        Session.ViewerError Or
-        Party.UiBound) Then
-        Return
-    End If
-
     Binding = ViewerParty.BeginInspectorSelection(
         Party,
         CaptureActorContext(),
         Party.Turn,
-        DragonState
+        DragonState,
+        Session.ViewerError
     )
 
     If Not Binding.Bound Then
@@ -2412,23 +2378,6 @@ Sub EndPartyInspector()
         CaptureActorContext(),
         DragonState
     ))
-
-End Sub
-
-Sub BeginPartyPreview()
-
-    If Not Party.UiBound Then
-        Return
-    End If
-
-    Call ViewerParty.BeginPreview(
-        Party,
-        Character,
-        Playback.SelectedClip,
-        Session.ProfileIndex
-    )
-
-    Call ViewerPlayback.PauseForPartyPreview(Playback)
 
 End Sub
 
@@ -2510,11 +2459,7 @@ Sub UpdateDragonOpponent()
         Timing.CameraElapsed
     )
 
-    Session.Ready = Update.Ready And Session.Ready
-
-    If Update.Updated And Not Session.Ready Then
-        Call CapturePartyParticipantFailure(Update.FailureStage)
-    End If
+    Call ViewerSession.ApplyParticipantUpdate(Session, Update)
 
 End Sub
 
@@ -2586,21 +2531,8 @@ Sub UpdatePartyCompanion()
         Playback.AnimationUpdateElapsed,
         ViewerUiState.CalibrationEditing
     )
-    Session.Ready = Update.Ready And Session.Ready
 
-    If Update.Updated And Not Session.Ready Then
-        Call CapturePartyParticipantFailure(Update.FailureStage)
-    End If
-
-End Sub
-
-Sub CapturePartyParticipantFailure(FailureStage As Number)
-
-    If FailureStage = 0 Then
-        FailureStage = 71
-    End If
-
-    Call ViewerSession.CaptureFailure(Session, FailureStage)
+    Call ViewerSession.ApplyParticipantUpdate(Session, Update)
 
 End Sub
 
@@ -2611,6 +2543,7 @@ Function HandlePartyPointer() As Boolean
     Dim CapturesActive As Boolean
     Dim Decision As ViewerParty.PointerDecision
     Dim InspectorResult As ViewerInspectorCommands.OperationResult
+    Dim Response As ViewerParty.PointerResponse
 
     CapturesActive = ViewerInput.HasInterfaceCapture(
         ViewerInputState, ViewerGizmoState.Dragging)
@@ -2652,31 +2585,25 @@ Function HandlePartyPointer() As Boolean
         Return ReturnValue
     End If
 
-    If Decision.Action = ViewerParty.POINTER_ACTION_RESET_VIEW Then
+    Response = ViewerParty.PointerResponseForAction(Decision.Action)
+
+    If Response.ResetView Then
 
         Call ResetView()
 
-    Else If Decision.Action = ViewerParty.POINTER_ACTION_RESET_INSPECTOR Then
+    Else If Response.ResetInspector Then
 
         Call ResetPartyInspector()
 
-    Else If Decision.Action = ViewerParty.POINTER_ACTION_SPEED_DOWN Then
+    Else If Response.SpeedDelta <> 0 Then
 
-        Call AdjustPlaybackSpeed(-25)
+        Call AdjustPlaybackSpeed(Response.SpeedDelta)
 
-    Else If Decision.Action = ViewerParty.POINTER_ACTION_SPEED_UP Then
-
-        Call AdjustPlaybackSpeed(25)
-
-    Else If Decision.Action = ViewerParty.POINTER_ACTION_TOGGLE_PAUSE Then
+    Else If Response.TogglePause Then
 
         Call BeginPartyInspector()
         Call ToggleScenePause()
         Call EndPartyInspector()
-
-    Else If Decision.Action = ViewerParty.POINTER_ACTION_RESTART Then
-
-        Call ResetPartyInspector()
 
     End If
 
