@@ -2925,7 +2925,7 @@ internal sealed class MasmEmitter
         Line($"{prefix}_clear PROC");
         Line("    push rbp");
         Line("    mov rbp, rsp");
-        Line("    sub rsp, 48");
+        Line("    sub rsp, 64");
         Line("    mov QWORD PTR [rbp-8], rcx");
         foreach (var field in record.Fields)
         {
@@ -2970,7 +2970,7 @@ internal sealed class MasmEmitter
         Line($"    je {done}");
         Line("    push rbp");
         Line("    mov rbp, rsp");
-        Line("    sub rsp, 48");
+        Line("    sub rsp, 64");
         Line("    mov QWORD PTR [rbp-8], rcx");
         Line("    mov QWORD PTR [rbp-16], rdx");
         foreach (var field in record.Fields)
