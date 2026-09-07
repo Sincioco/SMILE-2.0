@@ -264,14 +264,23 @@ moved into `ViewerCalibration`. Four dead scene/backdrop wrappers were deleted. 
 still exposes the ordered subsystem stages and adjacent failure captures, but no longer
 implements those owner-local policies. Shadow configuration now combines its result with
 prior session readiness instead of overwriting an earlier failure.
+The inspector timeline/owner-state checkpoint then moved timeline-button interpretation
+from the broad pointer dispatcher into `ViewerTimelineEditing`. That focused owner returns
+a command, value and optional repeat direction; `Program.smile` retains runtime timing and
+the visible command-then-repeat order. Calibration panel visibility and confirmation now
+mutate through `ViewerUi`; Party camera tracking, Dragon inspection target selection and
+participant promotion now mutate through `ViewerParty`; and failed/default epic-glow
+visibility now mutates through `ViewerEffects`. No new application state or controller was
+introduced. Non-timeline inspector commands, Party pointer responses and cross-owner reset
+ordering remain explicit coordinator work.
 The bounded stage must not
 introduce a whole-application state record or a replacement `ViewerApplication`
 module.
 
 | Still implemented in `Program.smile` | Current evidence | Intended focused owner |
 |---|---|---|
-| Party transitions, companion lifecycle and inspector binding | `ViewerParty.CreateCompanion`, `ResetDemo`, `AdvanceDemo`, lower-level choreography/frame operations, `UpdateDragon`, `BeginInspectorSelection`, `EndInspectorSelection`, `ApplyAttackCamera`, participant update/placement/drawing, preview operations, pointer classification, overlay drawing, glow synchronization and destruction own their implementations. `ViewerActors` owns actor loading/facing/equipment intent and `ViewerEffects` owns shared and borrowed glow resources plus hidden-equipment cleanup. `ViewerInspectorCommands` routes owner-local Party and actor presentation actions. `Program.smile` retains cross-owner calibration reconfiguration, narrow session-readiness adaptation and Party reset/pointer response ordering. | `ViewerParty.smile`, `ViewerActors.smile`, `ViewerDragon.smile`, `ViewerEffects.smile` and bounded `ViewerInspectorCommands.smile`, with cross-owner adaptation remaining in the coordinator |
-| Inspector, calibration panel, timeline, camera controls, buttons and overlays | `ViewerCalibration` owns stored calibration evaluation, wrist-socket discovery/availability, edit bounds, key navigation/mutation/persistence transactions, wrist/equipment transform application, target/channel mapping/reset and inverse grip preservation. `ViewerCalibrationEditing` owns current evaluation/value access plus edit begin/finish/cancel, value/reset, grip correction and transform-application sequencing. `ViewerCalibrationControls` owns calibration-panel selection, navigation, clear confirmation and command routing. `ViewerInspectorCommands` owns bounded rendering/VFX, actor-presentation and keyboard-navigation command maps. `ViewerPlayback` owns clip mapping/labels/events, all playback-state mutation, load/reset/calibration/preview/switch lifecycle, frame/time seeking and demo advancement. `ViewerInput` owns inspector key policy/capture fields and detailed active-gesture transitions; `ViewerTimelineEditing` owns frame/seek command execution plus timeline seek/drag/duplicate-key/persistence workflow; `ViewerUi` owns live label/layout policy, shared slider control execution, focused panel drawing, calibration/timeline/general inspector hit classification and raw presentation leaves. `ViewerInspectorPresentation` owns their four ordered presentation groups without retaining application state. Remaining cross-owner Party/session/UI response dispatch stays in `Program.smile`; `DrawInspectorOverlay` gathers explicit owner values and preserves cross-owner Party/gizmo ordering. | Focused calibration/playback/input/UI owners plus `ViewerInspectorCommands.smile` for bounded commands and `ViewerInspectorPresentation.smile` for explicit composition |
+| Party transitions, companion lifecycle and inspector binding | `ViewerParty.CreateCompanion`, `ResetDemo`, `AdvanceDemo`, lower-level choreography/frame operations, `UpdateDragon`, `BeginInspectorSelection`, `EndInspectorSelection`, `ApplyAttackCamera`, participant update/placement/drawing, preview operations, pointer classification, overlay drawing, glow synchronization, camera-tracking reset, inspection-target selection, participant promotion and destruction own their implementations. `ViewerActors` owns actor loading/facing/equipment intent and `ViewerEffects` owns shared and borrowed glow resources plus hidden-equipment cleanup. `ViewerInspectorCommands` routes owner-local Party and actor presentation actions. `Program.smile` retains cross-owner calibration reconfiguration, narrow session-readiness adaptation and Party reset/pointer response ordering. | `ViewerParty.smile`, `ViewerActors.smile`, `ViewerDragon.smile`, `ViewerEffects.smile` and bounded `ViewerInspectorCommands.smile`, with cross-owner adaptation remaining in the coordinator |
+| Inspector, calibration panel, timeline, camera controls, buttons and overlays | `ViewerCalibration` owns stored calibration evaluation, wrist-socket discovery/availability, edit bounds, key navigation/mutation/persistence transactions, wrist/equipment transform application, target/channel mapping/reset and inverse grip preservation. `ViewerCalibrationEditing` owns current evaluation/value access plus edit begin/finish/cancel, value/reset, grip correction and transform-application sequencing. `ViewerCalibrationControls` owns calibration-panel selection, navigation, clear confirmation and command routing. `ViewerInspectorCommands` owns bounded rendering/VFX, actor-presentation and keyboard-navigation command maps. `ViewerPlayback` owns clip mapping/labels/events, all playback-state mutation, load/reset/calibration/preview/switch lifecycle, frame/time seeking and demo advancement. `ViewerInput` owns inspector key policy/capture fields and detailed active-gesture transitions; `ViewerTimelineEditing` owns timeline-button interpretation, frame/seek command execution plus timeline seek/drag/duplicate-key/persistence workflow; `ViewerUi` owns UI state transitions, live label/layout policy, shared slider control execution, focused panel drawing, calibration/timeline/general inspector hit classification and raw presentation leaves. `ViewerInspectorPresentation` owns their four ordered presentation groups without retaining application state. Remaining non-timeline cross-owner Party/session/UI response dispatch stays in `Program.smile`; `DrawInspectorOverlay` gathers explicit owner values and preserves cross-owner Party/gizmo ordering. | Focused calibration/playback/input/UI owners plus `ViewerInspectorCommands.smile` for bounded commands and `ViewerInspectorPresentation.smile` for explicit composition |
 | Transform-gizmo command coordination | `ViewerGizmo` owns projection, hit testing, axis/ring pointer projection, retained fractional value conversion, hover state and complete axis/ring drawing. `ViewerCalibrationEditing` owns target-to-socket origin selection plus calibration edit lifecycle, bounded mutations and grip preservation. `ViewerCalibrationControls` owns keyboard/pointer action execution and preview policy. `Program.smile` retains runtime sampling, priority order, Party-preview entry and typed session-result adaptation. | `ViewerInput.smile`, `ViewerGizmo.smile`, `ViewerCalibrationEditing.smile` and `ViewerCalibrationControls.smile`, with only runtime/cross-owner adaptation in the coordinator |
 | General rendering and overlay composition | Socket resources, studio-grid wrappers, lighting/material state and their apply/cycle behavior reside in `ViewerRendering`; labels, responsive geometry, status/camera/animation controls, calibration panel, timeline, inspector chrome, footer/status and recovery drawing reside in `ViewerUi`; four ordered groups reside in `ViewerInspectorPresentation`. `DrawViewerOverlay` and `DrawInspectorOverlay` retain only cross-owner scene/Party/gizmo ordering and explicit presentation-value assembly in `Program.smile`. | `ViewerRendering.smile` for scene resources and renderer modes; `ViewerUi.smile` for presentation leaves; `ViewerInspectorPresentation.smile` for bounded composition |
 | Load/retry/switch/destroy orchestration mixed with resource implementation | `ViewerSession` owns tab/profile selection, diagnostic cycling, running/close state, switch blocking and resource epoch; `ViewerParty` owns enablement; `ViewerRendering` owns renderer quality/cache/shadow/arena visibility; `ViewerCamera` owns loaded-layout state; `ViewerCalibration` owns profile-bank selection; and `ViewerActors` owns loaded actor validation/facing. `LoadViewer`, `RetryViewer`, `SelectCharacterTab`, `DestroyViewerResources` and ordered cross-owner stages remain in `Program.smile`. | thin `Program.smile` coordinator plus focused session/actor/render/effect owners |
@@ -333,6 +342,7 @@ and its focused production tests exercise the destination owner.
 | Actor-presentation command-workflow move | 2,786 | 67 | From the 2,848-line/69-procedure timeline-command checkpoint, sword/shield intent, participant visibility propagation, hidden-effect cleanup and Dragon-inspection glow synchronization moved through `ViewerInspectorCommands` to their actor/Party/effect state owners. `ToggleSword`, `ToggleShield` and `ToggleEpicGlow` were replaced by one thin primary-context/session adapter, reducing `Program.smile` by 62 lines and two procedures without compression. Direct source-domain/no-op/glow assertions, isolated real-actor equipment integration, native/generated-Web exact parity and static implementation guards cover the move. |
 | Playback state/lifecycle move | 2,782 | 66 | From the 2,786-line/67-procedure actor-presentation checkpoint, every remaining direct `Playback` field mutation moved with the state into `ViewerPlayback`. Demo-toggle and speed-change policy return narrow Party-response decisions without borrowing Party, session, UI, rendering or application state. The dead `ToggleDemo` wrapper was deleted; cross-owner response ordering remains visible. Direct state operations, real-actor restart/event refresh, static no-mutation guards, isolated calibration integration and native/generated-Web exact parity cover the move. |
 | Startup/session load-state move | 2,715 | 62 | From the 2,782-line/66-procedure playback checkpoint, session identity/running/switch/epoch transitions, Party enablement, renderer load/shadow/arena-visibility policy, camera loaded-layout state and calibration-bank selection moved to existing focused owners. `BeginViewerScene`, `CreateBackdrop`, unused `ApplyBackdrop` and `DestroyBackdrop` wrappers were deleted. `LoadViewer` shrank from 239 to 223 lines and retains ordered cross-owner stages/failure captures. Direct owner assertions, real tab/profile/Party loads, native/generated-Web parity, Release builds and disposable preservation tests cover the move. The second quality call can no longer clear an earlier readiness failure. |
+| Inspector timeline/owner-state move | 2,687 | 62 | From the 2,715-line/62-procedure startup/session checkpoint, timeline-button interpretation and repeat intent moved into `ViewerTimelineEditing`; calibration visibility/confirmation, Party camera/target/promotion and epic-glow failure/default mutations moved into their state owners. `HandleInspectorPointer` shrank from 300 to 273 lines and `HandlePartyPointer` from 83 to 81 by removing redundant return state. No false procedure reduction or whitespace compression is claimed. Direct owner assertions, static no-mutation guards, native/generated-Web parity, Release builds and disposable preservation tests cover the move. |
 
 The separate fixed-array hardening gate did not move Viewer responsibility or change
 the 3,448-line/91-procedure transform-gizmo checkpoint metrics. It added immediate
@@ -341,11 +351,11 @@ projection cleanup and bounded native record-helper loops, then exercised those
 compiler/runtime changes with disposable native and Web fixtures. R7.5 subsequently
 resumed with the inspector/gesture and calibration-panel command moves above.
 
-Substantial implementation still in `Program.smile` after the startup/session load-state
+Substantial implementation still in `Program.smile` after the inspector timeline/owner-state
 checkpoint is intentionally explicit: ordered load/retry/tab-switch orchestration; Party
 inspector calibration adaptation and cross-owner Party reset/pointer responses;
-the broad inspector/
-keyboard command dispatchers plus slider/gizmo sampling and priority ordering; reset orchestration;
+the non-timeline inspector and keyboard command dispatchers plus slider/gizmo sampling and
+priority ordering; reset orchestration;
 and cross-owner scene, Party and gizmo ordering. Inspector presentation-leaf grouping
 and Party-owned label/countdown/rendering/effect/camera command policy no longer remain
 there. The retained calibration adapters enter/restore Party preview, request
@@ -354,10 +364,10 @@ an explicit operation result to first-failure session state. Calibration panel s
 navigation, clear confirmation and persistent
 command dispatch no longer remain there; their implementation is in
 `ViewerCalibrationControls` and the ten one-command coordinator wrappers are deleted.
-Frame stepping, first-frame seek, adjacent-key navigation, pointer seek and keyframe-drag
-start now execute in `ViewerTimelineEditing`; one coordinator adapter retains only
-runtime pointer/window sampling, scrub capture, Party-preview entry and session-result
-adaptation.
+Timeline-button interpretation, frame stepping, first-frame seek, adjacent-key navigation,
+pointer seek and keyframe-drag start now execute in `ViewerTimelineEditing`; one coordinator
+adapter retains only runtime pointer/window sampling, scrub capture, Party-preview entry
+and session-result adaptation.
 Sword/shield visibility and glow command execution now route through
 `ViewerInspectorCommands` to the focused state owners. Its one coordinator adapter only
 restores/rebinds Party inspection around equipment changes and adapts readiness.
@@ -371,14 +381,14 @@ frame-order call adapter; actor/target routing is in `ViewerParty` and storm sim
 is in `ViewerEffects.UpdateStorm`.
 
 `Program.smile` remains a documented temporary exception to the 500-line entry-point
-ceiling at 2,715 lines/62 procedures. Its next concrete reductions are the 300-line
-inspector command dispatcher, 83-line Party pointer dispatcher and 223-line load
+ceiling at 2,687 lines/62 procedures. Its next concrete reductions are the 273-line
+inspector command dispatcher, 81-line Party pointer dispatcher and 223-line load
 orchestration. The retained 170-line `DrawInspectorOverlay` gathers explicit values and
 preserves Party/gizmo ordering; its four substantial presentation groups now live in
 `ViewerInspectorPresentation`, which is 224 lines/4 procedures.
 `ViewerInspectorCommands` is 288 lines/6 procedures,
 `ViewerCalibrationControls` is 464 lines/11 procedures,
-`ViewerInput` is 389 lines/13 procedures and `ViewerTimelineEditing` is 270 lines/6
+`ViewerInput` is 389 lines/13 procedures and `ViewerTimelineEditing` is 330 lines/7
 procedures, all below the applicable 500-line review threshold. `ViewerPlayback` is
 511 lines/32 procedures and was explicitly reviewed at the threshold: it remains one
 cohesive owner for eight playback fields, clip/event queries and playback lifecycle,
@@ -392,11 +402,11 @@ The existing over-ceiling owners remain explicit temporary exceptions:
 `ViewerCalibration` is 2,477 lines/72 procedures because its checksummed storage schema,
 fixed workspaces and transaction rollback must remain one source of truth;
 `ViewerCalibrationEditing` is 814/24 because it owns one edit/application transaction;
-`ViewerEffects` is 1,364/52 because shared Fire, Lightning, glow, lease and continuity
-lifecycle must not be split from its state; and `ViewerUi` is 1,807/59 because shared
+`ViewerEffects` is 1,377/54 because shared Fire, Lightning, glow, lease and continuity
+lifecycle must not be split from its state; and `ViewerUi` is 1,833/62 because shared
 geometry, hit maps and rendering must not diverge. These are focused owners, not an
 application-state replacement, but their exceptions remain subject to the final audit.
-`ViewerParty` remains a justified temporary exception at 2,110 lines/53 procedures: it
+`ViewerParty` remains a justified temporary exception at 2,131 lines/56 procedures: it
 owns one Party scene's participant, preview, choreography, camera, presentation and
 destruction lifecycle, and the enablement transition added here belongs with that state.
 The final responsibility audit must identify a cohesive lifecycle boundary before

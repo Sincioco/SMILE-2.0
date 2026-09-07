@@ -94,6 +94,7 @@ Dim CalibrationConfiguration As ViewerCalibration.ConfigurationResult
 Dim CalibrationOperation As ViewerCalibrationEditing.OperationResult
 Dim InputState As ViewerInput.State
 Dim PointerGesture As ViewerInput.PointerGestureUpdate
+Dim TimelineRequest As ViewerTimelineEditing.CommandRequest
 Dim UiState As ViewerUi.State
 Dim SliderUpdate As ViewerUi.SliderUpdate
 Dim GizmoState As ViewerGizmo.State
@@ -257,6 +258,31 @@ Call ViewerParty.SetEnabled(PartyState, True)
 Call CheckNamed(PartyState.Enabled, "Party owner enables Party")
 Call ViewerParty.SetEnabled(PartyState, False)
 Call CheckNamed(Not PartyState.Enabled, "Party owner disables Party")
+
+PartyState.PreviousCamera = 4
+PartyState.OrbitPhase1000 = 700
+
+Call ViewerParty.ResetCameraTracking(PartyState)
+
+Call CheckNamed(PartyState.PreviousCamera = 0 And PartyState.OrbitPhase1000 = 0,
+    "Party owner resets camera tracking")
+
+PartyState.DragonCounter = 0
+
+Call ViewerParty.CycleDragonInspectionTarget(PartyState)
+Call CheckNamed(PartyState.DragonCounter = 1,
+    "Party owner cycles inspection target")
+Call ViewerParty.SetEnabled(PartyState, True)
+Call ViewerParty.CycleDragonInspectionTarget(PartyState)
+Call CheckNamed(PartyState.DragonCounter = 1,
+    "Party owner preserves live choreography target")
+Call ViewerParty.SetEnabled(PartyState, False)
+
+PartyState.Companion.Profile = 17
+
+Call ViewerParty.PromoteCompanionToDragonOpponent(PartyState)
+Call CheckNamed(PartyState.DragonOpponent.Profile = 17,
+    "Party owner promotes companion context")
 Call ViewerCalibration.SelectProfileBank(
     CalibrationState, ViewerProfiles.PROFILE_ORIN)
 Call CheckNamed(CalibrationState.KeyBase = ViewerCalibration.MAX_CLIPS,
@@ -507,6 +533,27 @@ Call Check(Not ViewerTimelineEditing.AcceptDragTarget(InputState, 21, 3))
 Call Check(InputState.TimelineDraggedTargetFrame = 20)
 Call Check(ViewerTimelineEditing.AcceptDragTarget(InputState, 21, 4))
 
+TimelineRequest = ViewerTimelineEditing.InspectorCommand(
+    ViewerUi.INSPECTOR_ACTION_NEXT_FRAME, 0)
+
+Call CheckNamed(TimelineRequest.Handled And
+    TimelineRequest.Command = ViewerTimelineEditing.COMMAND_STEP_FRAME And
+    TimelineRequest.Value = 1 And TimelineRequest.RepeatDirection = 1,
+    "Timeline owner maps repeating frame command")
+
+TimelineRequest = ViewerTimelineEditing.InspectorCommand(
+    ViewerUi.INSPECTOR_ACTION_KEYFRAME, 7)
+
+Call CheckNamed(TimelineRequest.Handled And
+    TimelineRequest.Command = ViewerTimelineEditing.COMMAND_BEGIN_KEYFRAME_DRAG And
+    TimelineRequest.Value = 7 And TimelineRequest.RepeatDirection = 0,
+    "Timeline owner maps keyframe drag command")
+
+TimelineRequest = ViewerTimelineEditing.InspectorCommand(999, 7)
+
+Call CheckNamed(Not TimelineRequest.Handled,
+    "Timeline owner ignores unrelated inspector command")
+
 PointerGesture = ViewerInput.UpdateBeforeSliders(
     InputState, 0, 300, False, False, False)
 
@@ -542,6 +589,17 @@ Call Check(Not SliderUpdate.Consumed)
 Call Check(SliderUpdate.Action = ViewerUi.SLIDER_ACTION_NONE)
 
 Call ViewerUi.ResetCalibration(UiState, 0, 1, 0)
+Call CheckNamed(ViewerUi.ToggleCalibrationPanel(UiState, True) And
+    UiState.CalibrationVisible, "UI owner opens available calibration")
+Call CheckNamed(Not ViewerUi.ToggleCalibrationPanel(UiState, True) And
+    Not UiState.CalibrationVisible, "UI owner closes calibration")
+Call ViewerUi.SetCalibrationVisible(UiState, True, False)
+Call CheckNamed(Not UiState.CalibrationVisible,
+    "UI owner blocks unavailable calibration")
+Call ViewerUi.SetCalibrationVisible(UiState, True, True)
+Call ViewerUi.HideCalibration(UiState)
+Call CheckNamed(Not UiState.CalibrationVisible,
+    "UI owner hides calibration")
 Call ViewerUi.CycleVisibility(UiState)
 Call Check(UiState.Visibility = 1)
 Call ViewerUi.BeginCalibrationEdit(UiState, 3, 14, True)
@@ -1576,6 +1634,21 @@ EffectsState.LightningPaused = True
 EffectsState.SwordFireFailed = True
 EffectsState.ShieldFireFailed = True
 EffectsState.EquipmentFireFirstError = 12
+
+EffectsState.EpicGlowAvailable = True
+
+Call ViewerEffects.ResetEpicGlowVisibility(EffectsState, True)
+Call CheckNamed(EffectsState.EpicGlowVisible,
+    "Effects owner restores available default glow")
+Call ViewerEffects.HideEpicGlow(EffectsState)
+Call CheckNamed(Not EffectsState.EpicGlowVisible,
+    "Effects owner hides failed glow")
+
+EffectsState.EpicGlowAvailable = False
+
+Call ViewerEffects.ResetEpicGlowVisibility(EffectsState, True)
+Call CheckNamed(Not EffectsState.EpicGlowVisible,
+    "Effects owner rejects unavailable default glow")
 
 Call ViewerEffects.ResetPlaybackControls(EffectsState)
 Call Check(Not EffectsState.FlamePaused And Not EffectsState.LightningPaused)

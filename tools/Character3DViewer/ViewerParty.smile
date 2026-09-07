@@ -104,6 +104,27 @@ Public Sub SetEnabled(ByRef Value As State, Enabled As Boolean)
 
 End Sub
 
+Public Sub ResetCameraTracking(ByRef Value As State)
+
+    Value.PreviousCamera = 0
+    Value.OrbitPhase1000 = 0
+
+End Sub
+
+Public Sub CycleDragonInspectionTarget(ByRef Value As State)
+
+    If Not Value.Enabled Then
+        Value.DragonCounter = (Value.DragonCounter + 1) Mod 2
+    End If
+
+End Sub
+
+Public Sub PromoteCompanionToDragonOpponent(ByRef Value As State)
+
+    Value.DragonOpponent = Value.Companion
+
+End Sub
+
 Public Type FrameActions
     FirstClip As Text
     SecondClip As Text

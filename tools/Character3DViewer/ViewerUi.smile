@@ -287,6 +287,32 @@ Public Sub CycleVisibility(ByRef Value As State)
 
 End Sub
 
+Public Function ToggleCalibrationPanel(ByRef Value As State,
+    Available As Boolean) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    Value.CalibrationVisible = Available And Not Value.CalibrationVisible
+
+    ReturnValue = Value.CalibrationVisible
+
+    Return ReturnValue
+
+End Function
+
+Public Sub SetCalibrationVisible(ByRef Value As State, Visible As Boolean,
+    Available As Boolean)
+
+    Value.CalibrationVisible = Visible And Available
+
+End Sub
+
+Public Sub HideCalibration(ByRef Value As State)
+
+    Value.CalibrationVisible = False
+
+End Sub
+
 Public Sub BeginCalibrationEdit(ByRef Value As State, Clip As Number,
     Frame As Number, AutoOrbitEnabled As Boolean)
 

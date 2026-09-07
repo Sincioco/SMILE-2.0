@@ -219,7 +219,7 @@ Do
                 ViewerCalibration.ChannelValue(
                     Calibration, Playback.SelectedClip, 19) <> 0
             ) Then
-                Effects.EpicGlowVisible = False
+                Call ViewerEffects.HideEpicGlow(Effects)
             End If
 
         End If
@@ -340,7 +340,7 @@ Do
                         Equipment.SwordVisible,
                         Equipment.ShieldVisible
                     )) Then
-                    Effects.EpicGlowVisible = False
+                    Call ViewerEffects.HideEpicGlow(Effects)
                 End If
 
             End If
@@ -384,7 +384,7 @@ Do
                     Equipment.SwordVisible,
                     Equipment.ShieldVisible
                 ) Then
-                    Effects.EpicGlowVisible = False
+                    Call ViewerEffects.HideEpicGlow(Effects)
                 End If
 
             End If
@@ -608,7 +608,7 @@ Sub LoadViewer()
             Playback.PlaybackSpeed
         ) And Session.Ready
 
-        Party.DragonOpponent = Party.Companion
+        Call ViewerParty.PromoteCompanionToDragonOpponent(Party)
 
         Session.Ready = ViewerParty.CreateCompanion(
             Party,
@@ -1130,6 +1130,7 @@ Function HandleInspectorPointer() As Boolean
     Dim Gesture As ViewerInput.PointerGestureUpdate
     Dim InspectorResult As ViewerInspectorCommands.OperationResult
     Dim KeyframeIndex As Number
+    Dim TimelineCommand As ViewerTimelineEditing.CommandRequest
     Dim TransferAction As Number
     Dim WheelDelta As Number
 
@@ -1300,58 +1301,32 @@ Function HandleInspectorPointer() As Boolean
         Return Blocked
     End If
 
-    If Action = ViewerUi.INSPECTOR_ACTION_FIRST_FRAME Then
+    TimelineCommand = ViewerTimelineEditing.InspectorCommand(
+        Action, KeyframeIndex)
 
-        Call ApplyTimelineCommand(
-            ViewerTimelineEditing.COMMAND_SEEK_FIRST_FRAME, 0)
+    If TimelineCommand.Handled Then
 
-    Else If Action = ViewerUi.INSPECTOR_ACTION_PREVIOUS_KEY Then
+        Call ApplyTimelineCommand(TimelineCommand.Command, TimelineCommand.Value)
 
-        Call ApplyTimelineCommand(
-            ViewerTimelineEditing.COMMAND_SEEK_ADJACENT_KEY, -1)
+        If TimelineCommand.RepeatDirection <> 0 Then
+            Call ViewerInput.BeginFrameRepeat(
+                ViewerInputState,
+                TimelineCommand.RepeatDirection,
+                Timer() + FRAME_BUTTON_REPEAT_MILLISECONDS)
+        End If
 
-    Else If Action = ViewerUi.INSPECTOR_ACTION_NEXT_KEY Then
+        Return Blocked
 
-        Call ApplyTimelineCommand(
-            ViewerTimelineEditing.COMMAND_SEEK_ADJACENT_KEY, 1)
+    End If
 
-    Else If Action = ViewerUi.INSPECTOR_ACTION_PREVIOUS_FRAME Then
-
-        Call ApplyTimelineCommand(
-            ViewerTimelineEditing.COMMAND_STEP_FRAME, -1)
-
-        Call ViewerInput.BeginFrameRepeat(
-            ViewerInputState, -1,
-            Timer() + FRAME_BUTTON_REPEAT_MILLISECONDS)
-
-    Else If Action = ViewerUi.INSPECTOR_ACTION_NEXT_FRAME Then
-
-        Call ApplyTimelineCommand(
-            ViewerTimelineEditing.COMMAND_STEP_FRAME, 1)
-
-        Call ViewerInput.BeginFrameRepeat(
-            ViewerInputState, 1,
-            Timer() + FRAME_BUTTON_REPEAT_MILLISECONDS)
-
-    Else If Action = ViewerUi.INSPECTOR_ACTION_KEYFRAME Then
-
-        Call ApplyTimelineCommand(
-            ViewerTimelineEditing.COMMAND_BEGIN_KEYFRAME_DRAG, KeyframeIndex)
-
-    Else If Action = ViewerUi.INSPECTOR_ACTION_TIMELINE Then
-
-        Call ApplyTimelineCommand(
-            ViewerTimelineEditing.COMMAND_SEEK_POINTER, 0)
-
-    Else If Action = ViewerUi.INSPECTOR_ACTION_PROFILE Then
+    If Action = ViewerUi.INSPECTOR_ACTION_PROFILE Then
 
         Call CycleProfile()
 
     Else If Action = ViewerUi.INSPECTOR_ACTION_CALIBRATION Then
 
-        ViewerUiState.CalibrationVisible = CalibrationAvailable And Not ViewerUiState.CalibrationVisible
-
-        If ViewerUiState.CalibrationVisible Then
+        If ViewerUi.ToggleCalibrationPanel(
+            ViewerUiState, CalibrationAvailable) Then
             Call BeginPartyPreview()
         Else
 
@@ -1374,9 +1349,7 @@ Function HandleInspectorPointer() As Boolean
 
     Else If Action = ViewerUi.INSPECTOR_ACTION_DRAGON_TARGET Then
 
-        If Not Party.Enabled Then
-            Party.DragonCounter = (Party.DragonCounter + 1) Mod 2
-        End If
+        Call ViewerParty.CycleDragonInspectionTarget(Party)
 
     Else If Action = ViewerUi.INSPECTOR_ACTION_SPEED_DOWN Then
 
@@ -1643,8 +1616,7 @@ End Sub
 
 Sub ResetView()
 
-    Party.PreviousCamera = 0
-    Party.OrbitPhase1000 = 0
+    Call ViewerParty.ResetCameraTracking(Party)
 
     Call ViewerCamera.Reset(
         ViewerCameraState,
@@ -1688,7 +1660,8 @@ Sub ResetAll()
 
     Call ViewerRendering.ResetControls(Rendering, 3)
 
-    Effects.EpicGlowVisible = ViewerProfiles.EpicGlowVisibleByDefault(Session.ProfileIndex) And Effects.EpicGlowAvailable
+    Call ViewerEffects.ResetEpicGlowVisibility(
+        Effects, ViewerProfiles.EpicGlowVisibleByDefault(Session.ProfileIndex))
 
     Call ViewerDragon.ResetVisibility(DragonState)
 
@@ -1745,8 +1718,7 @@ Sub SelectClip(Index As Number)
 
     Call ViewerPlayback.SelectClip(Playback, Index, Party.Enabled)
 
-    ViewerUiState.CalibrationClearConfirm = False
-    ViewerUiState.CalibrationClearAllStage = 0
+    Call ViewerUi.ClearConfirmation(ViewerUiState)
 
     Call PlaySelectedClip()
 
@@ -2419,7 +2391,8 @@ Sub BeginPartyInspector()
 
         Call ConfigureCalibration()
 
-        ViewerUiState.CalibrationVisible = WasVisible And CalibrationAvailable
+        Call ViewerUi.SetCalibrationVisible(
+            ViewerUiState, WasVisible, CalibrationAvailable)
 
         Call ViewerPlayback.RefreshSelectedTimelineEvent(
             Playback, Character)
@@ -2472,7 +2445,7 @@ Sub RestorePartyPreview()
         Playback.PlaybackSpeed
     ) And Session.Ready
 
-    ViewerUiState.CalibrationVisible = False
+    Call ViewerUi.HideCalibration(ViewerUiState)
 
     Call ViewerInput.CancelCaptures(ViewerInputState)
 
@@ -2553,7 +2526,8 @@ Sub ResetPartyDemo()
 
     Call ViewerPlayback.EnablePartyDemo(Playback)
 
-    ViewerUiState.CalibrationVisible = False
+    Call ViewerUi.HideCalibration(ViewerUiState)
+
     Center.X = ViewerDragon.PositionX()
     Center.Z = ViewerDragon.PositionZ()
     FirstApproach.X = -21
@@ -2632,8 +2606,6 @@ End Sub
 
 Function HandlePartyPointer() As Boolean
 
-    Dim ReturnValue2 As Boolean
-
     Dim ReturnValue As Boolean
 
     Dim CapturesActive As Boolean
@@ -2666,18 +2638,18 @@ Function HandlePartyPointer() As Boolean
 
         Session.Ready = InspectorResult.Ready And Session.Ready
 
-        ReturnValue2 = Decision.Consumed
+        ReturnValue = Decision.Consumed
 
-        Return ReturnValue2
+        Return ReturnValue
 
     End If
 
     If ApplyActorPresentationCommand(
         Decision.Action,
         ViewerInspectorCommands.ACTOR_ACTION_SOURCE_PARTY_POINTER) Then
-        ReturnValue2 = Decision.Consumed
+        ReturnValue = Decision.Consumed
 
-        Return ReturnValue2
+        Return ReturnValue
     End If
 
     If Decision.Action = ViewerParty.POINTER_ACTION_RESET_VIEW Then

@@ -149,6 +149,7 @@ try {
         'Call ResetAll()',
         'Call ToggleScenePause()',
         'Call ApplyTimelineCommand(',
+        'ViewerTimelineEditing.InspectorCommand(',
         'ViewerTimelineEditing.ApplyCommand(',
         'Const FRAME_BUTTON_REPEAT_MILLISECONDS = 300',
         'Const CALIBRATION_MAX_CLIPS = ViewerCalibration.MAX_CLIPS',
@@ -867,6 +868,15 @@ try {
         -not $viewerSource.Contains('Dim SceneVfxClock As') -and
         -not $viewerSource.Contains('Dim Arena As')) `
         'Party, scene VFX and arena resource state must not return to Program.smile.'
+    Assert-True (-not $viewerSource.Contains('Party.PreviousCamera =') -and
+        -not $viewerSource.Contains('Party.OrbitPhase1000 =') -and
+        -not $viewerSource.Contains('Party.DragonCounter =') -and
+        -not $viewerSource.Contains('Party.DragonOpponent =') -and
+        -not $viewerSource.Contains('ViewerUiState.CalibrationVisible =') -and
+        -not $viewerSource.Contains('ViewerUiState.CalibrationClearConfirm =') -and
+        -not $viewerSource.Contains('ViewerUiState.CalibrationClearAllStage =') -and
+        -not $viewerSource.Contains('Effects.EpicGlowVisible =')) `
+        'Party, UI and effect owner state must not be mutated directly by Program.smile.'
     Assert-True (-not $viewerSource.Contains('Dim SwordVisible As Boolean') -and
         -not $viewerSource.Contains('Dim ShieldVisible As Boolean') -and
         -not $viewerSource.Contains('Character3D.SetPartVisible(')) `

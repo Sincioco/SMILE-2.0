@@ -227,6 +227,19 @@ Public Sub ResetPlaybackControls(ByRef Value As State)
 
 End Sub
 
+Public Sub ResetEpicGlowVisibility(ByRef Value As State,
+    VisibleByDefault As Boolean)
+
+    Value.EpicGlowVisible = VisibleByDefault And Value.EpicGlowAvailable
+
+End Sub
+
+Public Sub HideEpicGlow(ByRef Value As State)
+
+    Value.EpicGlowVisible = False
+
+End Sub
+
 Public Sub ResetArinAudio(ByRef Value As State)
 
     Value.ArinAudio.Clip = ""

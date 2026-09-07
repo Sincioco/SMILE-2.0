@@ -19,6 +19,66 @@ Public Const COMMAND_SEEK_ADJACENT_KEY = 3
 Public Const COMMAND_SEEK_POINTER = 4
 Public Const COMMAND_BEGIN_KEYFRAME_DRAG = 5
 
+Public Type CommandRequest
+    Handled As Boolean
+    Command As Number
+    Value As Number
+    RepeatDirection As Number
+End Type
+
+Public Function InspectorCommand(Action As Number,
+    KeyframeIndex As Number) As CommandRequest
+
+    Dim Result As CommandRequest
+
+    If Action = ViewerUi.INSPECTOR_ACTION_FIRST_FRAME Then
+
+        Result.Handled = True
+        Result.Command = COMMAND_SEEK_FIRST_FRAME
+
+    Else If Action = ViewerUi.INSPECTOR_ACTION_PREVIOUS_KEY Then
+
+        Result.Handled = True
+        Result.Command = COMMAND_SEEK_ADJACENT_KEY
+        Result.Value = -1
+
+    Else If Action = ViewerUi.INSPECTOR_ACTION_NEXT_KEY Then
+
+        Result.Handled = True
+        Result.Command = COMMAND_SEEK_ADJACENT_KEY
+        Result.Value = 1
+
+    Else If Action = ViewerUi.INSPECTOR_ACTION_PREVIOUS_FRAME Then
+
+        Result.Handled = True
+        Result.Command = COMMAND_STEP_FRAME
+        Result.Value = -1
+        Result.RepeatDirection = -1
+
+    Else If Action = ViewerUi.INSPECTOR_ACTION_NEXT_FRAME Then
+
+        Result.Handled = True
+        Result.Command = COMMAND_STEP_FRAME
+        Result.Value = 1
+        Result.RepeatDirection = 1
+
+    Else If Action = ViewerUi.INSPECTOR_ACTION_KEYFRAME Then
+
+        Result.Handled = True
+        Result.Command = COMMAND_BEGIN_KEYFRAME_DRAG
+        Result.Value = KeyframeIndex
+
+    Else If Action = ViewerUi.INSPECTOR_ACTION_TIMELINE Then
+
+        Result.Handled = True
+        Result.Command = COMMAND_SEEK_POINTER
+
+    End If
+
+    Return Result
+
+End Function
+
 Public Function ApplyCommand(Command As Number, Value As Number,
     ByRef Input As ViewerInput.State,
     ByRef Calibration As ViewerCalibration.State,
