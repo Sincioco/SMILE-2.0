@@ -13,6 +13,7 @@ Import Smile.Tools.Character3DViewerGizmo As ViewerGizmo
 Import Smile.Tools.Character3DViewerInput As ViewerInput
 Import Smile.Tools.Character3DViewerParty As ViewerParty
 Import Smile.Tools.Character3DViewerPlayback As ViewerPlayback
+Import Smile.Tools.Character3DViewerProfiles As ViewerProfiles
 Import Smile.Tools.Character3DViewerRendering As ViewerRendering
 Import Smile.Tools.Character3DViewerUi As ViewerUi
 
@@ -20,15 +21,17 @@ Public Const ACTOR_ACTION_SOURCE_INSPECTOR_POINTER = 1
 Public Const ACTOR_ACTION_SOURCE_INSPECTOR_KEYBOARD = 2
 Public Const ACTOR_ACTION_SOURCE_PARTY_POINTER = 3
 
-Public Const POINTER_COMMAND_NONE = 0
-Public Const POINTER_COMMAND_CYCLE_PROFILE = 1
-Public Const POINTER_COMMAND_TOGGLE_SCENE_PAUSE = 2
-Public Const POINTER_COMMAND_PLAY_SELECTED_CLIP = 3
-Public Const POINTER_COMMAND_ADJUST_SPEED = 4
-Public Const POINTER_COMMAND_RESET_VIEW = 5
-Public Const POINTER_COMMAND_RESTART_PRESENTATION = 6
-Public Const POINTER_COMMAND_RESET_ALL = 7
-Public Const POINTER_COMMAND_SELECT_CLIP = 8
+Public Const APPLICATION_COMMAND_NONE = 0
+Public Const APPLICATION_COMMAND_CYCLE_PROFILE = 1
+Public Const APPLICATION_COMMAND_TOGGLE_SCENE_PAUSE = 2
+Public Const APPLICATION_COMMAND_PLAY_SELECTED_CLIP = 3
+Public Const APPLICATION_COMMAND_ADJUST_SPEED = 4
+Public Const APPLICATION_COMMAND_RESET_VIEW = 5
+Public Const APPLICATION_COMMAND_RESTART_PRESENTATION = 6
+Public Const APPLICATION_COMMAND_RESET_ALL = 7
+Public Const APPLICATION_COMMAND_SELECT_CLIP = 8
+Public Const APPLICATION_COMMAND_STEP_FRAME = 9
+Public Const APPLICATION_COMMAND_RETRY_VIEWER = 10
 
 Private Const ACTOR_COMMAND_NONE = 0
 Private Const ACTOR_COMMAND_SWORD = 1
@@ -40,7 +43,7 @@ Public Type OperationResult
     Ready As Boolean
 End Type
 
-Public Type PointerActionResult
+Public Type ApplicationCommandResult
     Handled As Boolean
     Command As Number
     Value As Number
@@ -55,13 +58,14 @@ Public Function ApplyGeneralPointerAction(Action As Number,
     CalibrationAvailable As Boolean, WindowWidth As Number,
     WindowHeight As Number, ContentWidth As Number,
     ArenaCameraCenterX As Number, ArenaCameraCenterZ As Number,
-    ArenaCameraDistance As Number, ArenaCameraHeight As Number) As PointerActionResult
+    ArenaCameraDistance As Number,
+    ArenaCameraHeight As Number) As ApplicationCommandResult
 
-    Dim Result As PointerActionResult
+    Dim Result As ApplicationCommandResult
 
     If Action = ViewerUi.INSPECTOR_ACTION_PROFILE Then
 
-        Result.Command = POINTER_COMMAND_CYCLE_PROFILE
+        Result.Command = APPLICATION_COMMAND_CYCLE_PROFILE
 
     Else If Action = ViewerUi.INSPECTOR_ACTION_CALIBRATION Then
 
@@ -77,10 +81,10 @@ Public Function ApplyGeneralPointerAction(Action As Number,
     Else If Action = ViewerUi.INSPECTOR_ACTION_DEMO Then
 
         If ViewerPlayback.ApplyDemoToggle(Playback, Party.Enabled) Then
-            Result.Command = POINTER_COMMAND_TOGGLE_SCENE_PAUSE
+            Result.Command = APPLICATION_COMMAND_TOGGLE_SCENE_PAUSE
         Else
 
-            Result.Command = POINTER_COMMAND_PLAY_SELECTED_CLIP
+            Result.Command = APPLICATION_COMMAND_PLAY_SELECTED_CLIP
         End If
 
     Else If Action = ViewerUi.INSPECTOR_ACTION_DRAGON_HEAD Then
@@ -93,25 +97,25 @@ Public Function ApplyGeneralPointerAction(Action As Number,
 
     Else If Action = ViewerUi.INSPECTOR_ACTION_SPEED_DOWN Then
 
-        Result.Command = POINTER_COMMAND_ADJUST_SPEED
+        Result.Command = APPLICATION_COMMAND_ADJUST_SPEED
         Result.Value = -25
 
     Else If Action = ViewerUi.INSPECTOR_ACTION_SPEED_UP Then
 
-        Result.Command = POINTER_COMMAND_ADJUST_SPEED
+        Result.Command = APPLICATION_COMMAND_ADJUST_SPEED
         Result.Value = 25
 
     Else If Action = ViewerUi.INSPECTOR_ACTION_RESET_VIEW Then
 
-        Result.Command = POINTER_COMMAND_RESET_VIEW
+        Result.Command = APPLICATION_COMMAND_RESET_VIEW
 
     Else If Action = ViewerUi.INSPECTOR_ACTION_RESTART_PRESENTATION Then
 
-        Result.Command = POINTER_COMMAND_RESTART_PRESENTATION
+        Result.Command = APPLICATION_COMMAND_RESTART_PRESENTATION
 
     Else If Action = ViewerUi.INSPECTOR_ACTION_RESET_ALL Then
 
-        Result.Command = POINTER_COMMAND_RESET_ALL
+        Result.Command = APPLICATION_COMMAND_RESET_ALL
 
     Else If Action = ViewerUi.INSPECTOR_ACTION_FIT Then
 
@@ -122,8 +126,81 @@ Public Function ApplyGeneralPointerAction(Action As Number,
 
     Else If Action >= ViewerUi.INSPECTOR_ACTION_CLIP_BASE Then
 
-        Result.Command = POINTER_COMMAND_SELECT_CLIP
+        Result.Command = APPLICATION_COMMAND_SELECT_CLIP
         Result.Value = Action - ViewerUi.INSPECTOR_ACTION_CLIP_BASE
+
+    Else
+        Return Result
+
+    End If
+
+    Result.Handled = True
+
+    Return Result
+
+End Function
+
+Public Function ApplicationCommandForKeyboardAction(Action As Number,
+    ByRef Character As Character3D.Actor, ProfileIndex As Number,
+    SelectedClip As Number,
+    ViewerError As Boolean) As ApplicationCommandResult
+
+    Dim ClipCount As Number
+    Dim CurrentPresentationIndex As Number
+    Dim Result As ApplicationCommandResult
+
+    If Action = ViewerInput.INSPECTOR_KEY_TOGGLE_PAUSE Then
+
+        Result.Command = APPLICATION_COMMAND_TOGGLE_SCENE_PAUSE
+
+    Else If Action = ViewerInput.INSPECTOR_KEY_FRAME_PREVIOUS Then
+
+        Result.Command = APPLICATION_COMMAND_STEP_FRAME
+        Result.Value = -1
+
+    Else If Action = ViewerInput.INSPECTOR_KEY_FRAME_NEXT Then
+
+        Result.Command = APPLICATION_COMMAND_STEP_FRAME
+        Result.Value = 1
+
+    Else If Action = ViewerInput.INSPECTOR_KEY_CLIP_1 Then
+
+        Result.Command = APPLICATION_COMMAND_SELECT_CLIP
+        Result.Value = 0
+
+    Else If Action = ViewerInput.INSPECTOR_KEY_CLIP_2 Then
+
+        Result.Command = APPLICATION_COMMAND_SELECT_CLIP
+        Result.Value = 1
+
+    Else If Action = ViewerInput.INSPECTOR_KEY_CLIP_3 Then
+
+        Result.Command = APPLICATION_COMMAND_SELECT_CLIP
+        Result.Value = 2
+
+    Else If Action = ViewerInput.INSPECTOR_KEY_RESET Then
+
+        If ViewerError Then
+            Result.Command = APPLICATION_COMMAND_RETRY_VIEWER
+        Else
+            Result.Command = APPLICATION_COMMAND_RESET_ALL
+        End If
+
+    Else If Action = ViewerInput.INSPECTOR_KEY_CYCLE_PROFILE Then
+
+        Result.Command = APPLICATION_COMMAND_CYCLE_PROFILE
+
+    Else If Action = ViewerInput.INSPECTOR_KEY_NEXT_CLIP Then
+
+        CurrentPresentationIndex = ViewerPlayback.PresentationIndexForRuntimeClip(
+            Character, ProfileIndex, SelectedClip)
+        ClipCount = ViewerProfiles.ClipCount(ProfileIndex)
+        Result.Command = APPLICATION_COMMAND_SELECT_CLIP
+        Result.Value = (CurrentPresentationIndex + 1) Mod ClipCount
+
+    Else If Action = ViewerInput.INSPECTOR_KEY_RESTART_CLIP Then
+
+        Result.Command = APPLICATION_COMMAND_PLAY_SELECTED_CLIP
 
     Else
         Return Result

@@ -520,6 +520,7 @@ End Sub
 Sub HandleInspectorKeyboard(PressedKey As Number)
 
     Dim Action As Number
+    Dim ApplicationCommand As ViewerInspectorCommands.ApplicationCommandResult
     Dim InspectorResult As ViewerInspectorCommands.OperationResult
 
     If PressedKey = KEY_BACKTICK Then
@@ -566,57 +567,39 @@ Sub HandleInspectorKeyboard(PressedKey As Number)
         Return
     End If
 
-    If Action = ViewerInput.INSPECTOR_KEY_TOGGLE_PAUSE Then
+    ApplicationCommand = ViewerInspectorCommands.ApplicationCommandForKeyboardAction(
+        Action, Character, Session.ProfileIndex, Playback.SelectedClip,
+        Session.ViewerError)
 
-        Call ToggleScenePause()
+    If ApplicationCommand.Handled Then
+        Call ApplyInspectorApplicationCommand(
+            ApplicationCommand.Command, ApplicationCommand.Value)
+    End If
 
-    Else If Action = ViewerInput.INSPECTOR_KEY_FRAME_PREVIOUS Then
+End Sub
 
-        Call ApplyTimelineCommand(
-            ViewerTimelineEditing.COMMAND_STEP_FRAME, -1)
+Sub ApplyInspectorApplicationCommand(Command As Number, Value As Number)
 
-    Else If Action = ViewerInput.INSPECTOR_KEY_FRAME_NEXT Then
-
-        Call ApplyTimelineCommand(
-            ViewerTimelineEditing.COMMAND_STEP_FRAME, 1)
-
-    Else If Action = ViewerInput.INSPECTOR_KEY_CLIP_1 Then
-
-        Call SelectPresentationClip(0)
-
-    Else If Action = ViewerInput.INSPECTOR_KEY_CLIP_2 Then
-
-        Call SelectPresentationClip(1)
-
-    Else If Action = ViewerInput.INSPECTOR_KEY_CLIP_3 Then
-
-        Call SelectPresentationClip(2)
-
-    Else If Action = ViewerInput.INSPECTOR_KEY_RESET Then
-
-        If Session.ViewerError Then
-            Call RetryViewer()
-        Else
-
-            Call ResetAll()
-        End If
-
-    Else If Action = ViewerInput.INSPECTOR_KEY_CYCLE_PROFILE Then
-
+    If Command = ViewerInspectorCommands.APPLICATION_COMMAND_CYCLE_PROFILE Then
         Call CycleProfile()
-
-    Else If Action = ViewerInput.INSPECTOR_KEY_NEXT_CLIP Then
-
-        Call SelectPresentationClip(
-            (ViewerPlayback.PresentationIndexForRuntimeClip(
-                Character, Session.ProfileIndex, Playback.SelectedClip) + 1) Mod
-                ViewerProfiles.ClipCount(Session.ProfileIndex)
-        )
-
-    Else If Action = ViewerInput.INSPECTOR_KEY_RESTART_CLIP Then
-
+    Else If Command = ViewerInspectorCommands.APPLICATION_COMMAND_TOGGLE_SCENE_PAUSE Then
+        Call ToggleScenePause()
+    Else If Command = ViewerInspectorCommands.APPLICATION_COMMAND_PLAY_SELECTED_CLIP Then
         Call PlaySelectedClip()
-
+    Else If Command = ViewerInspectorCommands.APPLICATION_COMMAND_ADJUST_SPEED Then
+        Call AdjustPlaybackSpeed(Value)
+    Else If Command = ViewerInspectorCommands.APPLICATION_COMMAND_RESET_VIEW Then
+        Call ResetView()
+    Else If Command = ViewerInspectorCommands.APPLICATION_COMMAND_RESTART_PRESENTATION Then
+        Call RestartPresentation()
+    Else If Command = ViewerInspectorCommands.APPLICATION_COMMAND_RESET_ALL Then
+        Call ResetAll()
+    Else If Command = ViewerInspectorCommands.APPLICATION_COMMAND_SELECT_CLIP Then
+        Call SelectPresentationClip(Value)
+    Else If Command = ViewerInspectorCommands.APPLICATION_COMMAND_STEP_FRAME Then
+        Call ApplyTimelineCommand(ViewerTimelineEditing.COMMAND_STEP_FRAME, Value)
+    Else If Command = ViewerInspectorCommands.APPLICATION_COMMAND_RETRY_VIEWER Then
+        Call RetryViewer()
     End If
 
 End Sub
@@ -919,7 +902,7 @@ Function HandleInspectorPointer() As Boolean
     Dim Gesture As ViewerInput.PointerGestureUpdate
     Dim InspectorResult As ViewerInspectorCommands.OperationResult
     Dim KeyframeIndex As Number
-    Dim PointerResult As ViewerInspectorCommands.PointerActionResult
+    Dim PointerResult As ViewerInspectorCommands.ApplicationCommandResult
     Dim TimelineCommand As ViewerTimelineEditing.CommandRequest
     Dim TransferAction As Number
     Dim WheelDelta As Number
@@ -1117,22 +1100,9 @@ Function HandleInspectorPointer() As Boolean
         ARENA_CAMERA_CENTER_X, ARENA_CAMERA_CENTER_Z,
         ARENA_CAMERA_DISTANCE, ARENA_CAMERA_HEIGHT)
 
-    If PointerResult.Command = ViewerInspectorCommands.POINTER_COMMAND_CYCLE_PROFILE Then
-        Call CycleProfile()
-    Else If PointerResult.Command = ViewerInspectorCommands.POINTER_COMMAND_TOGGLE_SCENE_PAUSE Then
-        Call ToggleScenePause()
-    Else If PointerResult.Command = ViewerInspectorCommands.POINTER_COMMAND_PLAY_SELECTED_CLIP Then
-        Call PlaySelectedClip()
-    Else If PointerResult.Command = ViewerInspectorCommands.POINTER_COMMAND_ADJUST_SPEED Then
-        Call AdjustPlaybackSpeed(PointerResult.Value)
-    Else If PointerResult.Command = ViewerInspectorCommands.POINTER_COMMAND_RESET_VIEW Then
-        Call ResetView()
-    Else If PointerResult.Command = ViewerInspectorCommands.POINTER_COMMAND_RESTART_PRESENTATION Then
-        Call RestartPresentation()
-    Else If PointerResult.Command = ViewerInspectorCommands.POINTER_COMMAND_RESET_ALL Then
-        Call ResetAll()
-    Else If PointerResult.Command = ViewerInspectorCommands.POINTER_COMMAND_SELECT_CLIP Then
-        Call SelectPresentationClip(PointerResult.Value)
+    If PointerResult.Handled Then
+        Call ApplyInspectorApplicationCommand(
+            PointerResult.Command, PointerResult.Value)
     End If
 
     Return Blocked

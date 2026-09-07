@@ -362,12 +362,17 @@ try {
     }
     foreach ($contract in @(
         'Public Type OperationResult',
-        'Public Type PointerActionResult',
+        'Public Type ApplicationCommandResult',
+        'Public Const APPLICATION_COMMAND_TOGGLE_SCENE_PAUSE = 2',
+        'Public Const APPLICATION_COMMAND_SELECT_CLIP = 8',
+        'Public Const APPLICATION_COMMAND_STEP_FRAME = 9',
+        'Public Const APPLICATION_COMMAND_RETRY_VIEWER = 10',
         'Public Const ACTOR_ACTION_SOURCE_INSPECTOR_POINTER = 1',
         'Public Const ACTOR_ACTION_SOURCE_INSPECTOR_KEYBOARD = 2',
         'Public Const ACTOR_ACTION_SOURCE_PARTY_POINTER = 3',
         'Public Function ActorPresentationRequiresPrimaryActor(',
         'Public Function ApplyGeneralPointerAction(',
+        'Public Function ApplicationCommandForKeyboardAction(',
         'Public Function ApplyActorPresentationAction(',
         'Public Function ApplyPresentationAction(',
         'Public Function ApplyPartyPresentationAction(',
@@ -804,22 +809,44 @@ try {
         -not $inspectorPointerSource.Contains('ViewerCamera.ToggleResponsiveFit(')) `
         'Inspector state-local and response command routing must remain in its focused owner.'
     $inspectorKeyboardStart = $viewerSource.IndexOf('Sub HandleInspectorKeyboard(')
-    $gizmoKeyboardStart = $viewerSource.IndexOf('Function HandleTransformGizmoKeyboard(')
+    $applicationCommandStart = $viewerSource.IndexOf(
+        'Sub ApplyInspectorApplicationCommand(')
     Assert-True ($inspectorKeyboardStart -ge 0 -and
-        $gizmoKeyboardStart -gt $inspectorKeyboardStart) `
+        $applicationCommandStart -gt $inspectorKeyboardStart) `
         'Inspector keyboard ownership boundaries must remain discoverable.'
     $inspectorKeyboardSource = $viewerSource.Substring(
-        $inspectorKeyboardStart, $gizmoKeyboardStart - $inspectorKeyboardStart)
+        $inspectorKeyboardStart,
+        $applicationCommandStart - $inspectorKeyboardStart)
     Assert-True ($inspectorKeyboardSource.Contains(
             'ViewerInspectorCommands.ApplyKeyboardNavigationAction(') -and
         $inspectorKeyboardSource.Contains(
             'ViewerInspectorCommands.ACTOR_ACTION_SOURCE_INSPECTOR_KEYBOARD') -and
+        $inspectorKeyboardSource.Contains(
+            'ViewerInspectorCommands.ApplicationCommandForKeyboardAction(') -and
+        $inspectorKeyboardSource.Contains(
+            'Call ApplyInspectorApplicationCommand(') -and
         -not $inspectorKeyboardSource.Contains('ViewerCamera.NudgeOrbit(') -and
         -not $inspectorKeyboardSource.Contains('ViewerCamera.NudgePan(') -and
         -not $inspectorKeyboardSource.Contains('ViewerRendering.SelectPreviousSocket(') -and
         -not $inspectorKeyboardSource.Contains('ViewerRendering.SelectNextSocket(') -and
-        -not $inspectorKeyboardSource.Contains('Rendering.GridVisible = Not')) `
-        'Inspector keyboard camera and rendering routing must remain in its focused owner.'
+        -not $inspectorKeyboardSource.Contains('Rendering.GridVisible = Not') -and
+        -not $inspectorKeyboardSource.Contains(
+            'ViewerInput.INSPECTOR_KEY_FRAME_PREVIOUS') -and
+        -not $inspectorKeyboardSource.Contains(
+            'ViewerInput.INSPECTOR_KEY_NEXT_CLIP') -and
+        -not $inspectorKeyboardSource.Contains('Call ToggleScenePause()') -and
+        -not $inspectorKeyboardSource.Contains('Call SelectPresentationClip(')) `
+        'Inspector keyboard owner-local and application-command policy must remain extracted.'
+    $gizmoKeyboardStart = $viewerSource.IndexOf('Function HandleTransformGizmoKeyboard(')
+    Assert-True ($gizmoKeyboardStart -gt $applicationCommandStart) `
+        'Shared inspector application-command boundary must remain discoverable.'
+    $applicationCommandSource = $viewerSource.Substring(
+        $applicationCommandStart, $gizmoKeyboardStart - $applicationCommandStart)
+    Assert-True ($applicationCommandSource.Contains(
+            'APPLICATION_COMMAND_TOGGLE_SCENE_PAUSE') -and
+        $applicationCommandSource.Contains('APPLICATION_COMMAND_STEP_FRAME') -and
+        $applicationCommandSource.Contains('APPLICATION_COMMAND_RETRY_VIEWER')) `
+        'Program must retain one visible cross-owner application-command executor.'
     Assert-True ($inspectorCommandsSource.Contains('ViewerCamera.ToggleResponsiveFit(') -and
         -not $viewerSource.Contains('ViewerCamera.ToggleResponsiveFit(') -and
         -not $viewerSource.Contains('ViewerCameraState.FitLocked = Not')) `

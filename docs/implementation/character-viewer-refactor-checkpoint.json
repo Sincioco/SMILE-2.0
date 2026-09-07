@@ -48,7 +48,7 @@
   ],
   "currentExtractionCommitRange": {
     "first": "9a616ef35adae9b0c5bbc864ecf689bbd6fc1aed",
-    "lastCommittedBeforeCurrentCheckpoint": "38e2831531261f5befed634f3bbfd0ea5805a0c6"
+    "lastCommittedBeforeCurrentCheckpoint": "cc59cbbc194cbd3d290cbf726666d0d0f0edf3a4"
   },
   "programMetrics": {
     "initialAudit": {
@@ -68,11 +68,11 @@
       "sha256": "17853B7B210061F9D46D70913AABA39C4F798503F69C2E8CCA4D8511646AC670"
     },
     "current": {
-      "checkpoint": "inspector-display-capture",
-      "baseCommit": "38e2831531261f5befed634f3bbfd0ea5805a0c6",
-      "lines": 2037,
-      "procedures": 55,
-      "sha256": "CF642946698E8F74964FC0751B8517D4EE2E212E0A606DFF4605316747A6CAF9"
+      "checkpoint": "inspector-keyboard-application-command",
+      "baseCommit": "cc59cbbc194cbd3d290cbf726666d0d0f0edf3a4",
+      "lines": 2007,
+      "procedures": 56,
+      "sha256": "FE53047CE0DC8514CA243ACDA2D70FF15F09637B60890437536456BB51C38ED2"
     }
   },
   "substantialResponsibilitiesMovedFromProgram": [
@@ -101,7 +101,8 @@
     "general inspector pointer calibration/demo/Dragon/camera actions plus typed profile/speed/reset/restart/clip response policy",
     "camera pointer press/hold/release derivation, calibration-orbit activation, wheel admission and retained orbit/pan transitions",
     "whole-Viewer playback/camera/rendering/VFX/Dragon/equipment/UI/input/gizmo reset, presentation reapplication and Party-versus-single restart lifecycle",
-    "scalar inspector display capture plus Party-versus-single remaining-time, selected-event, calibration, VFX and camera presentation queries"
+    "scalar inspector display capture plus Party-versus-single remaining-time, selected-event, calibration, VFX and camera presentation queries",
+    "keyboard pause, frame, clip, recovery and profile application-command policy plus next-presentation selection"
   ],
   "currentDestinationOwners": [
     "ViewerActors",
@@ -124,7 +125,8 @@
   "substantialResponsibilitiesStillInProgram": [
     "thin startup, retry, shutdown and character-tab UI/capture triggers into the stateless lifecycle owner",
     "Party inspector context/calibration adaptation and Party pointer response execution",
-    "non-timeline inspector runtime sampling and typed response execution plus keyboard action dispatch and interface, slider and gizmo priority ordering",
+    "non-timeline inspector runtime sampling plus interface, slider and gizmo priority ordering",
+    "one visible typed whole-Viewer application-command executor shared by keyboard and pointer paths",
     "explicit scene, Party, gizmo and inspector presentation-group draw ordering",
     "narrow Party-preview, frame-order calibration-application and session-result adapters",
     "thin UpdateDragon, UpdateBattleAudio and UpdateOrinStorm frame-order adapters"
@@ -206,7 +208,11 @@
     "four scalar-only inspector display views now capture identity, status, effects and workspace values in ViewerInspectorPresentation without retaining application state or resource handles",
     "DrawInspectorOverlay reduced from 171 lines to 77 lines while preserving explicit scene, Party, gizmo and presentation-group order",
     "the redundant AnimationSecondsRemaining procedure was deleted after its Party-versus-single query moved into the presentation capture owner",
-    "Program.smile reduced from 2149 lines and 56 procedures to 2037 lines and 55 procedures without formatting compression"
+    "Program.smile reduced from 2149 lines and 56 procedures to 2037 lines and 55 procedures without formatting compression",
+    "keyboard pause, frame, clip, recovery, profile and next-presentation response policy moved into one typed ViewerInspectorCommands application-command result",
+    "HandleInspectorKeyboard reduced from 104 lines to 60 lines and HandleInspectorPointer from 227 lines to 213 lines by sharing one visible 25-line cross-owner executor",
+    "PointerActionResult and pointer-only command names were replaced rather than retained as duplicate aliases after keyboard and pointer paths began sharing the contract",
+    "Program.smile reduced from 2037 lines and 55 procedures to 2007 lines and 56 procedures without formatting compression; the added procedure is the shared executor"
   ],
   "validation": [
     "PASS: 308 shared compiler/language tests",
@@ -312,13 +318,19 @@
     "PASS: inspector display-capture Release Desktop Viewer build with 46 published assets",
     "PASS: inspector display-capture Release Full Web Viewer build with 35 published assets",
     "PASS: inspector display-capture launcher, primary/backup recovery, stale-output and preservation fixtures using disposable data and processes",
-    "PASS: inspector display-capture tracked 406-file repository style check"
+    "PASS: inspector display-capture tracked 406-file repository style check",
+    "PASS: keyboard application-command native and generated-Web hardening with exact console parity and direct pause/frame/clip/recovery/no-op/real-Arin next-clip assertions",
+    "PASS: keyboard application-command isolated real-asset and calibration integration using disposable storage",
+    "PASS: keyboard application-command Release Desktop Viewer build with 46 published assets",
+    "PASS: keyboard application-command Release Full Web Viewer build with 35 published assets",
+    "PASS: keyboard application-command launcher, primary/backup recovery, stale-output and preservation fixtures using disposable data and processes",
+    "PASS: keyboard application-command tracked 406-file repository style check"
   ],
   "pendingValidation": [
     "final Character Viewer native and installed-Chrome acceptance after remaining extractions"
   ],
   "blockers": [],
-  "nextConcreteAction": "Audit and move the remaining general inspector keyboard response dispatch into a bounded command contract while preserving runtime key sampling, gizmo-first priority and visible whole-Viewer execution in Program.smile.",
+  "nextConcreteAction": "Audit the remaining 213-line inspector pointer coordinator and move any cohesive transfer or gesture behavior with its state while preserving explicit timeline-first runtime sampling and cross-owner priority.",
   "nextStages": [
     "R7.5-input-inspector-calibration-reset-ownership",
     "R7.5-startup-session-and-overlay-coordination",

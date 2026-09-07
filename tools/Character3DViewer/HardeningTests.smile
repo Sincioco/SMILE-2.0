@@ -124,7 +124,7 @@ Dim EffectsState As ViewerEffects.State
 Dim DragonState As ViewerDragon.State
 Dim RenderingState As ViewerRendering.State
 Dim InspectorOperation As ViewerInspectorCommands.OperationResult
-Dim InspectorPointerAction As ViewerInspectorCommands.PointerActionResult
+Dim InspectorApplicationCommand As ViewerInspectorCommands.ApplicationCommandResult
 Dim InspectorIdentityView As ViewerInspectorPresentation.IdentityView
 Dim InspectorStatusView As ViewerInspectorPresentation.StatusView
 Dim InspectorEffectsView As ViewerInspectorPresentation.EffectsView
@@ -647,6 +647,52 @@ Call Check(ViewerInput.ClassifyInspectorKey(
 Call Check(ViewerInput.ClassifyInspectorKey(
     KEY_3, False, False, False, False, 3) =
     ViewerInput.INSPECTOR_KEY_CLIP_3)
+
+InspectorApplicationCommand = ViewerInspectorCommands.ApplicationCommandForKeyboardAction(
+        ViewerInput.INSPECTOR_KEY_TOGGLE_PAUSE,
+        LifecycleCharacter, ViewerProfiles.PROFILE_ARIN, 0, False)
+
+Call CheckNamed(InspectorApplicationCommand.Handled And
+    InspectorApplicationCommand.Command =
+        ViewerInspectorCommands.APPLICATION_COMMAND_TOGGLE_SCENE_PAUSE,
+    "Keyboard application owner maps pause")
+
+InspectorApplicationCommand = ViewerInspectorCommands.ApplicationCommandForKeyboardAction(
+        ViewerInput.INSPECTOR_KEY_FRAME_PREVIOUS,
+        LifecycleCharacter, ViewerProfiles.PROFILE_ARIN, 0, False)
+
+Call CheckNamed(InspectorApplicationCommand.Handled And
+    InspectorApplicationCommand.Command =
+        ViewerInspectorCommands.APPLICATION_COMMAND_STEP_FRAME And
+    InspectorApplicationCommand.Value = -1,
+    "Keyboard application owner preserves previous-frame direction")
+
+InspectorApplicationCommand = ViewerInspectorCommands.ApplicationCommandForKeyboardAction(
+        ViewerInput.INSPECTOR_KEY_CLIP_3,
+        LifecycleCharacter, ViewerProfiles.PROFILE_ARIN, 0, False)
+
+Call CheckNamed(InspectorApplicationCommand.Handled And
+    InspectorApplicationCommand.Command =
+        ViewerInspectorCommands.APPLICATION_COMMAND_SELECT_CLIP And
+    InspectorApplicationCommand.Value = 2,
+    "Keyboard application owner maps the third presentation clip")
+
+InspectorApplicationCommand = ViewerInspectorCommands.ApplicationCommandForKeyboardAction(
+        ViewerInput.INSPECTOR_KEY_RESET,
+        LifecycleCharacter, ViewerProfiles.PROFILE_ARIN, 0, True)
+
+Call CheckNamed(InspectorApplicationCommand.Handled And
+    InspectorApplicationCommand.Command =
+        ViewerInspectorCommands.APPLICATION_COMMAND_RETRY_VIEWER,
+    "Keyboard application owner preserves error recovery")
+
+InspectorApplicationCommand = ViewerInspectorCommands.ApplicationCommandForKeyboardAction(
+        ViewerInput.INSPECTOR_KEY_NONE,
+        LifecycleCharacter, ViewerProfiles.PROFILE_ARIN, 0, False)
+
+Call CheckNamed(Not InspectorApplicationCommand.Handled,
+    "Keyboard application owner leaves unrelated actions unhandled")
+
 Call Check(ViewerInput.ClassifyGizmoKey(
     KEY_X, False, True, 0, True, False, False) =
     ViewerInput.GIZMO_KEY_NONE)
@@ -1844,63 +1890,75 @@ Call ViewerParty.SetEnabled(PartyState, False)
 Profile = ViewerProfiles.ProfileAt(ViewerProfiles.PROFILE_ARIN)
 DragonState.HeadTracking = False
 
-InspectorPointerAction = ViewerInspectorCommands.ApplyGeneralPointerAction(
+InspectorApplicationCommand = ViewerInspectorCommands.ApplicationCommandForKeyboardAction(
+        ViewerInput.INSPECTOR_KEY_NEXT_CLIP,
+        PartyPrimary.Actor, ViewerProfiles.PROFILE_ARIN,
+        PlaybackState.SelectedClip, False)
+
+Call CheckNamed(InspectorApplicationCommand.Handled And
+    InspectorApplicationCommand.Command =
+        ViewerInspectorCommands.APPLICATION_COMMAND_SELECT_CLIP And
+    InspectorApplicationCommand.Value = 1,
+    "Keyboard application owner advances the real Arin presentation clip")
+
+InspectorApplicationCommand = ViewerInspectorCommands.ApplyGeneralPointerAction(
     ViewerUi.INSPECTOR_ACTION_CALIBRATION,
     PartyState, PartyPrimary.Actor, PlaybackState, UiState, GizmoState,
     InputState, CameraState, Profile, DragonState,
     ViewerProfiles.PROFILE_ARIN, True, 1600, 640, 1316,
     -70, -45, 480, 180)
 
-Call CheckNamed(InspectorPointerAction.Handled And
-    InspectorPointerAction.Command = ViewerInspectorCommands.POINTER_COMMAND_NONE And
+Call CheckNamed(InspectorApplicationCommand.Handled And
+    InspectorApplicationCommand.Command =
+        ViewerInspectorCommands.APPLICATION_COMMAND_NONE And
     UiState.CalibrationVisible,
     "Inspector pointer owner opens calibration through UI state")
 
-InspectorPointerAction = ViewerInspectorCommands.ApplyGeneralPointerAction(
+InspectorApplicationCommand = ViewerInspectorCommands.ApplyGeneralPointerAction(
     ViewerUi.INSPECTOR_ACTION_DEMO,
     PartyState, PartyPrimary.Actor, PlaybackState, UiState, GizmoState,
     InputState, CameraState, Profile, DragonState,
     ViewerProfiles.PROFILE_ARIN, True, 1600, 640, 1316,
     -70, -45, 480, 180)
 
-Call CheckNamed(InspectorPointerAction.Handled And
-    InspectorPointerAction.Command =
-        ViewerInspectorCommands.POINTER_COMMAND_PLAY_SELECTED_CLIP And
+Call CheckNamed(InspectorApplicationCommand.Handled And
+    InspectorApplicationCommand.Command =
+        ViewerInspectorCommands.APPLICATION_COMMAND_PLAY_SELECTED_CLIP And
     Not PlaybackState.DemoEnabled,
     "Inspector pointer owner applies demo state and requests clip restart")
 
-InspectorPointerAction = ViewerInspectorCommands.ApplyGeneralPointerAction(
+InspectorApplicationCommand = ViewerInspectorCommands.ApplyGeneralPointerAction(
     ViewerUi.INSPECTOR_ACTION_DRAGON_HEAD,
     PartyState, PartyPrimary.Actor, PlaybackState, UiState, GizmoState,
     InputState, CameraState, Profile, DragonState,
     ViewerProfiles.PROFILE_ARIN, True, 1600, 640, 1316,
     -70, -45, 480, 180)
 
-Call CheckNamed(InspectorPointerAction.Handled And DragonState.HeadTracking,
+Call CheckNamed(InspectorApplicationCommand.Handled And DragonState.HeadTracking,
     "Inspector pointer owner mutates Dragon head tracking with Dragon state")
 
-InspectorPointerAction = ViewerInspectorCommands.ApplyGeneralPointerAction(
+InspectorApplicationCommand = ViewerInspectorCommands.ApplyGeneralPointerAction(
     ViewerUi.INSPECTOR_ACTION_SPEED_UP,
     PartyState, PartyPrimary.Actor, PlaybackState, UiState, GizmoState,
     InputState, CameraState, Profile, DragonState,
     ViewerProfiles.PROFILE_ARIN, True, 1600, 640, 1316,
     -70, -45, 480, 180)
 
-Call CheckNamed(InspectorPointerAction.Command =
-    ViewerInspectorCommands.POINTER_COMMAND_ADJUST_SPEED And
-    InspectorPointerAction.Value = 25,
+Call CheckNamed(InspectorApplicationCommand.Command =
+    ViewerInspectorCommands.APPLICATION_COMMAND_ADJUST_SPEED And
+    InspectorApplicationCommand.Value = 25,
     "Inspector pointer owner returns the speed response value")
 
-InspectorPointerAction = ViewerInspectorCommands.ApplyGeneralPointerAction(
+InspectorApplicationCommand = ViewerInspectorCommands.ApplyGeneralPointerAction(
     ViewerUi.INSPECTOR_ACTION_CLIP_BASE + 3,
     PartyState, PartyPrimary.Actor, PlaybackState, UiState, GizmoState,
     InputState, CameraState, Profile, DragonState,
     ViewerProfiles.PROFILE_ARIN, True, 1600, 640, 1316,
     -70, -45, 480, 180)
 
-Call CheckNamed(InspectorPointerAction.Command =
-    ViewerInspectorCommands.POINTER_COMMAND_SELECT_CLIP And
-    InspectorPointerAction.Value = 3,
+Call CheckNamed(InspectorApplicationCommand.Command =
+    ViewerInspectorCommands.APPLICATION_COMMAND_SELECT_CLIP And
+    InspectorApplicationCommand.Value = 3,
     "Inspector pointer owner returns the selected presentation clip")
 
 InspectorOperation = ViewerInspectorCommands.ApplyPresentationAction(
