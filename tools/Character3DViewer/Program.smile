@@ -11,6 +11,7 @@ Import Smile.Tools.Character3DViewerProfiles As ViewerProfiles
 Import Smile.Tools.BattleCamera As BattleCamera
 Import Smile.Tools.Character3DViewerTiming As ViewerTiming
 Import Smile.Tools.Character3DViewerSession As ViewerSession
+Import Smile.Tools.Character3DViewerLifecycle As ViewerLifecycle
 Import Smile.Tools.Character3DViewerPlayback As ViewerPlayback
 Import Smile.Tools.Character3DViewerActors As ViewerActors
 Import Smile.Tools.Character3DViewerCamera As ViewerCamera
@@ -72,6 +73,7 @@ Dim Key As Number
 Dim FrameRate As ViewerTiming.FrameRateState
 Dim Timing As ViewerTiming.ClockState
 Dim Session As ViewerSession.State
+Dim LifecycleSettings As ViewerLifecycle.Configuration
 Dim Playback As ViewerPlayback.State
 Dim ViewerCameraState As ViewerCamera.State
 Dim Calibration As ViewerCalibration.State
@@ -418,224 +420,21 @@ Call DestroyViewer()
 
 Sub LoadViewer()
 
-    Session.Ready = ViewerRendering.PrepareAssetLoading(3)
-
-    Call ViewerParty.EndInspectorBinding(Party)
-    Call ViewerParty.ClearPreview(Party)
-
-    ActiveProfile = ViewerProfiles.ProfileAt(Session.ProfileIndex)
-
-    Call ViewerCalibration.SelectProfileBank(
-        Calibration, Session.ProfileIndex)
-
-    Call ViewerDragon.SetAvailable(
-        DragonState,
-        ViewerProfiles.IsPartyCharacter(Session.ProfileIndex) Or Session.DragonInspection
-    )
-
-    Call ViewerActors.ResetEquipmentVisibility(Equipment)
-
-    Session.Ready = CharacterViewer.ValidateProfile(ActiveProfile) And Session.Ready
-    Session.Ready = Window_Title(ViewerTitle()) And Session.Ready
-
-    Call ViewerSession.CaptureFailure(Session, 30)
-
-    Character = ViewerActors.LoadPrimary(ActiveProfile)
-    Session.Ready = Character3D.IsValid(Character) And Session.Ready
-
-    Call ViewerSession.CaptureFailure(Session, 31)
-
-    Session.Ready = ViewerActors.ValidateProfile(
-        Character, Session.ProfileIndex, ActiveProfile) And Session.Ready
-
-    Call ViewerSession.CaptureFailure(Session, 32)
-
-    Session.Ready = ViewerCamera.ConfigureFraming(
-        ViewerCameraState,
-        ActiveProfile,
-        Character,
-        Max(1, Window_Width() - 284),
-        Max(1, Window_Height()),
-        Session.DragonInspection,
-        ViewerDragon.ScalePercent(),
-        ViewerDragon.PositionX(),
-        0,
-        ViewerDragon.PositionZ(),
-        DragonState.Available,
-        ARENA_CAMERA_CENTER_X,
-        ARENA_CAMERA_CENTER_Z,
-        ARENA_CAMERA_DISTANCE,
-        ARENA_CAMERA_HEIGHT
-    ) And Session.Ready
-
-    Call ViewerSession.CaptureFailure(Session, 33)
-
-    Call ViewerRendering.CreateBackdrops(
-        Rendering,
-        BACKDROP_LANDSCAPE_PATH,
-        BACKDROP_TITLE_PATH
-    )
-
-    Call ViewerRendering.CreateArena(
-        Rendering,
-        ViewerRendering.ArenaFloorExtent(
-            ViewerCameraState.Frame.FloorWidth,
-            DragonState.Available,
-            ARENA_FLOOR_WIDTH
-        ),
-        ViewerRendering.ArenaFloorExtent(
-            ViewerCameraState.Frame.FloorDepth,
-            DragonState.Available,
-            ARENA_FLOOR_DEPTH
-        )
-    )
-
-    Session.Ready = ViewerRendering.ArenaReady(Rendering) And Session.Ready
-
-    Call ViewerSession.CaptureFailure(Session, 34)
-
-    Call ViewerCamera.BeginLoadedLayout(
-        ViewerCameraState, Window_Width(), Window_Height())
-
-    Call ViewerCamera.Reset(
-        ViewerCameraState,
-        0,
-        ViewerCamera.DefaultZoomDegrees(
-            DragonState.Available,
-            DEFAULT_ZOOM_DEGREES,
-            ARENA_DEFAULT_ZOOM_DEGREES
-        ),
-        ZOOM_IN_LIMIT, ZOOM_OUT_LIMIT, 96000)
-
-    Session.Ready = ViewerRendering.ConfigureShadowArea(
-        ViewerCameraState.Frame,
-        DragonState.Available,
-        ViewerDragon.PositionX(),
-        ViewerDragon.PositionZ(),
-        ARENA_FLOOR_WIDTH,
-        ARENA_FLOOR_DEPTH
-    ) And Session.Ready
-
-    Call ViewerSession.CaptureFailure(Session, 35)
-
-    Session.Ready = ViewerRendering.ApplyLighting(Rendering) And Session.Ready
-
-    Session.Ready = ViewerActors.PreparePrimaryPresentation(
-        Character,
-        ViewerCameraState.Frame,
-        Session.ProfileIndex,
-        Session.DragonInspection,
-        DragonState.Available,
-        ViewerDragon.PositionX(),
-        0,
-        ViewerDragon.PositionZ(),
-        ViewerDragon.RotationY(),
-        CHARACTER_MODEL_FORWARD_YAW_OFFSET,
-        ORIN_ARENA_YAW_ADJUSTMENT
-    ) And Session.Ready
-
-    Call ViewerSession.CaptureFailure(Session, 36)
-
-    Session.Ready = ViewerDragon.Create(
-        DragonState,
-        Character,
-        Session.DragonInspection
-    ) And Session.Ready
-
-    Call ViewerSession.CaptureFailure(Session, 37)
-
-    Session.Ready = ViewerRendering.CreateSocketGizmos(Rendering) And Session.Ready
-
-    Call ViewerSession.CaptureFailure(Session, 38)
-
-    Call ViewerEffects.CreateEpicGlow(Effects, Session.ProfileIndex, Character)
-
-    Call ViewerSession.CaptureFailure(Session, 39)
-
-    Call ConfigureCalibration()
-
-    Call ViewerSession.CaptureFailure(Session, 40)
-
-    Call ViewerPlayback.UseDefaultSpeed(
-        Playback, ActiveProfile.DefaultPlaybackSpeed)
-
-    Session.Ready = ViewerRendering.ResetMaterialInspection(Rendering) And Session.Ready
-
-    Call ViewerSession.CaptureFailure(Session, 41)
-
-    Call RestartPresentation()
-
-    Call ViewerSession.CaptureFailure(Session, 42)
-
-    Call ViewerEffects.ResetEquipmentDefaults(Effects)
-
-    Session.Ready = ViewerEffects.PrepareShared(Effects) And Session.Ready
-
-    Call ViewerEffects.PrepareFire(
-        Effects,
-        DragonState.Available,
-        CalibrationAvailable And Session.ProfileIndex = ViewerProfiles.PROFILE_ARIN
-    )
-
-    If DragonState.Available Then
-        Call ViewerDragon.InitializeEffects()
-    End If
-
-    If Party.Enabled Then
-
-        Session.Ready = ViewerParty.CreateCompanion(
-            Party,
-            Calibration,
-            Effects,
-            ViewerProfiles.PROFILE_ORIN,
-            CALIBRATION_MAX_CLIPS,
-            Playback.PlaybackSpeed
-        ) And Session.Ready
-
-        Call ConfigureCalibration()
-        Call ResetPartyDemo()
-
-    End If
-
-    If Session.DragonInspection Then
-
-        Session.Ready = ViewerParty.CreateCompanion(
-            Party,
-            Calibration,
-            Effects,
-            ViewerProfiles.PROFILE_ARIN,
-            0,
-            Playback.PlaybackSpeed
-        ) And Session.Ready
-
-        Call ViewerParty.PromoteCompanionToDragonOpponent(Party)
-
-        Session.Ready = ViewerParty.CreateCompanion(
-            Party,
-            Calibration,
-            Effects,
-            ViewerProfiles.PROFILE_ORIN,
-            CALIBRATION_MAX_CLIPS,
-            Playback.PlaybackSpeed
-        ) And Session.Ready
-
-        Call PositionDragonOpponents()
-
-        Call ViewerEffects.EnableSwordFire(Effects)
-
-    End If
-
-    If (Party.Enabled Or
-        Session.DragonInspection Or
-        Session.ProfileIndex = ViewerProfiles.PROFILE_ORIN) Then
-        Session.Ready = ViewerEffects.PrepareLightning(Effects) And Session.Ready
-    End If
-
-    Call ViewerSession.CaptureResourceEpoch(Session)
-
-    If Not Session.Ready Then
-        Call ViewerSession.RecordError(Session)
-    End If
+    Call ViewerLifecycle.Configure(
+        LifecycleSettings, 3, BACKDROP_LANDSCAPE_PATH, BACKDROP_TITLE_PATH,
+        DEFAULT_ZOOM_DEGREES, ZOOM_IN_LIMIT, ZOOM_OUT_LIMIT,
+        ARENA_INITIAL_ORBIT_YAW, ARENA_DEFAULT_ZOOM_DEGREES,
+        ARENA_FLOOR_WIDTH, ARENA_FLOOR_DEPTH,
+        ARENA_CAMERA_CENTER_X, ARENA_CAMERA_CENTER_Z,
+        ARENA_CAMERA_DISTANCE, ARENA_CAMERA_HEIGHT,
+        CHARACTER_MODEL_FORWARD_YAW_OFFSET, ORIN_ARENA_YAW_ADJUSTMENT,
+        CALIBRATION_MAX_CLIPS, PARTY_FORMATION_RADIUS,
+        PARTY_FORMATION_START_ANGLE, PARTY_FORMATION_END_ANGLE)
+    Call ViewerLifecycle.LoadViewer(
+        Session, Party, Character, ActiveProfile, Rendering, Effects,
+        DragonState, Playback, ViewerCameraState, Calibration,
+        ViewerUiState, ViewerGizmoState, Equipment, CalibrationAvailable,
+        SwordWristNode, ShieldWristNode, LifecycleSettings)
 
 End Sub
 
@@ -998,13 +797,8 @@ End Function
 
 Sub RetryViewer()
 
-    Call DestroyViewerResources()
-    Call Character3D.Shutdown()
-    Call Scene3D.Shutdown()
-    Call Graphics3D.ResetRenderer3D()
-
-    Call ViewerSession.ResetFailure(Session)
-
+    Call ViewerLifecycle.PrepareRetry(
+        Session, Party, Character, Rendering, Effects, DragonState)
     Call LoadViewer()
 
 End Sub
@@ -1021,13 +815,8 @@ Sub CycleProfile()
         Return
     End If
 
-    Call DestroyViewerResources()
-
-    Call ViewerParty.SetEnabled(Party, False)
-    Call ViewerSession.CycleProfile(Session)
-
-    Call ViewerSession.ResetFailure(Session)
-
+    Call ViewerLifecycle.PrepareProfileCycle(
+        Session, Party, Character, Rendering, Effects, DragonState)
     Call LoadViewer()
 
 End Sub
@@ -1617,24 +1406,8 @@ End Sub
 
 Sub ResetView()
 
-    Call ViewerParty.ResetCameraTracking(Party)
-
-    Call ViewerCamera.Reset(
-        ViewerCameraState,
-        ViewerCamera.InitialOrbitYaw(
-            DragonState.Available,
-            ViewerProfiles.InitialOrbitYaw(Session.ProfileIndex),
-            ARENA_INITIAL_ORBIT_YAW
-        ),
-        ViewerCamera.DefaultZoomDegrees(
-            DragonState.Available,
-            DEFAULT_ZOOM_DEGREES,
-            ARENA_DEFAULT_ZOOM_DEGREES
-        ),
-        ZOOM_IN_LIMIT,
-        ZOOM_OUT_LIMIT,
-        96000
-    )
+    Call ViewerLifecycle.ResetView(
+        Session, Party, DragonState, ViewerCameraState, LifecycleSettings)
 
 End Sub
 
@@ -1796,27 +1569,9 @@ End Sub
 
 Sub ConfigureCalibration()
 
-    Dim Configuration As ViewerCalibration.ConfigurationResult
-
-    Call ViewerSession.ClearCharacterSwitchBlock(Session)
-
-    Call ViewerUi.ResetCalibration(
-        ViewerUiState,
-        ViewerUi.CALIBRATION_TARGET_SWORD_WRIST,
-        ViewerUi.CALIBRATION_AXIS_X,
-        ViewerUi.CALIBRATION_TRANSFORM_ROTATE
-    )
-    Call ViewerGizmo.Reset(ViewerGizmoState)
-
-    Configuration = ViewerCalibration.ConfigureForActor(
-        Calibration,
-        Session.ProfileIndex,
-        Calibration.KeyBase,
-        Character
-    )
-    CalibrationAvailable = Configuration.Available
-    SwordWristNode = Configuration.SwordWristNode
-    ShieldWristNode = Configuration.ShieldWristNode
+    Call ViewerLifecycle.ConfigureCalibration(
+        Session, Character, Calibration, ViewerUiState, ViewerGizmoState,
+        CalibrationAvailable, SwordWristNode, ShieldWristNode)
 
 End Sub
 
@@ -1959,24 +1714,10 @@ End Sub
 
 Sub PlaySelectedClip(Optional RetainFireTails As Boolean = False)
 
-    ''' Explicit editor navigation is a cut, not a corrected-pose cross-fade.
-    ''' Automatic demo changes keep existing fire but never inherit across the cut.
-
-    If Not RetainFireTails Then
-    Call ViewerEffects.InvalidateVisualHistory(Effects)
-    End If
-
-    Session.Ready = ViewerPlayback.StartSelectedClip(
-        Playback, Character, Session.ProfileIndex) And Session.Ready
-
-    Call ViewerEffects.ResetArinAudio(Effects)
-
-    Call UpdateCalibrationForCurrentFrame()
-    Call ApplyWristCalibration()
-
-    If Effects.EpicGlowAvailable Then
-        Call ViewerEffects.ResetEpicGlowTrails(Effects, Character)
-    End If
+    Call ViewerLifecycle.StartSelectedClip(
+        Session, Character, Playback, Calibration, Effects,
+        CalibrationAvailable, SwordWristNode, ShieldWristNode,
+        ViewerUiState.CalibrationEditing, RetainFireTails)
 
 End Sub
 
@@ -2197,16 +1938,6 @@ Sub DrawInspectorOverlay()
 
 End Sub
 
-Function ViewerTitle() As Text
-
-    Dim Result As Text
-
-    Result = "SMILE 2.0 - 3D Viewer, Animation Editor - " + ViewerProfiles.ModelFileName(Session.ProfileIndex)
-
-    Return Result
-
-End Function
-
 Function AnimationSecondsRemaining() As Number
 
     Dim Result As Number
@@ -2227,26 +1958,8 @@ End Function
 
 Sub DestroyViewer()
 
-    Call DestroyViewerResources()
-    Call Character3D.Shutdown()
-    Call Scene3D.Shutdown()
-    Call Graphics3D.ResetRenderer3D()
-
-End Sub
-
-Sub DestroyViewerResources()
-
-    Call ViewerParty.DestroyParticipants(Party)
-    Call ViewerDragon.Shutdown(DragonState, Effects.DragonLight)
-
-    Session.Ready = ViewerEffects.ShutdownShared(Effects) And Session.Ready
-
-    Call ViewerRendering.DestroyBackdrops(Rendering)
-    Call ViewerEffects.DestroyEpicGlow(Effects)
-    Call ViewerRendering.DestroySocketGizmos(Rendering)
-    Call ViewerRendering.DestroyArena(Rendering)
-
-    Call Character3D.Destroy(Character)
+    Call ViewerLifecycle.Shutdown(
+        Session, Party, Character, Rendering, Effects, DragonState)
 
 End Sub
 
@@ -2270,15 +1983,9 @@ Sub SelectCharacterTab(Index As Number)
     Draw Text "Loading Selected Character..." At 312, 132 Size 16 Color WHITE
     Show Screen
 
-    Call DestroyViewerResources()
-
-    Call ViewerSession.SelectCharacterTab(Session, Index)
-    Call ViewerParty.SetEnabled(Party, Index = 3)
-
-    Call ViewerSession.ResetFailure(Session)
-
-    Call ViewerPlayback.PrepareCharacterSwitch(Playback)
-
+    Call ViewerLifecycle.PrepareCharacterSwitch(
+        Session, Party, Character, Rendering, Effects,
+        DragonState, Playback, Index)
     Call LoadViewer()
 
 End Sub
@@ -2419,24 +2126,6 @@ Sub ResetPartyInspector()
 
 End Sub
 
-Sub PositionDragonOpponents()
-
-    Dim Center As Core.Vector3
-
-    Center.X = ViewerDragon.PositionX()
-    Center.Z = ViewerDragon.PositionZ()
-    Session.Ready = ViewerParty.PlaceDragonInspectionParticipants(
-        Party,
-        Center,
-        PARTY_FORMATION_RADIUS,
-        PARTY_FORMATION_START_ANGLE,
-        PARTY_FORMATION_END_ANGLE,
-        CHARACTER_MODEL_FORWARD_YAW_OFFSET,
-        ORIN_ARENA_YAW_ADJUSTMENT
-    ) And Session.Ready
-
-End Sub
-
 Sub UpdateDragonOpponent()
 
     Dim Update As ViewerParty.ParticipantUpdateResult
@@ -2465,35 +2154,8 @@ End Sub
 
 Sub ResetPartyDemo()
 
-    Dim Center As Core.Vector3
-    Dim FirstApproach As Core.Vector3
-    Dim SecondApproach As Core.Vector3
-
-    Call ViewerPlayback.EnablePartyDemo(Playback)
-
-    Call ViewerUi.HideCalibration(ViewerUiState)
-
-    Center.X = ViewerDragon.PositionX()
-    Center.Z = ViewerDragon.PositionZ()
-    FirstApproach.X = -21
-    FirstApproach.Z = -44
-    SecondApproach.X = -49
-    SecondApproach.Z = 4
-
-    ''' Only one hero approaches at a time; animated full-model bounds must not move these shots.
-
-    Session.Ready = ViewerParty.ResetDemo(
-        Party,
-        Center,
-        PARTY_FORMATION_RADIUS,
-        PARTY_FORMATION_START_ANGLE,
-        PARTY_FORMATION_END_ANGLE,
-        FirstApproach,
-        SecondApproach,
-        ORIN_ARENA_YAW_ADJUSTMENT,
-        Equipment.SwordVisible,
-        Equipment.ShieldVisible
-    ) And Session.Ready
+    Call ViewerLifecycle.ResetPartyDemo(
+        Session, Party, Playback, ViewerUiState, Equipment, LifecycleSettings)
 
 End Sub
 

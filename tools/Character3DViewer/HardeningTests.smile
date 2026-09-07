@@ -10,6 +10,7 @@ Import Smile.Tools.BattleAudio As BattleAudio
 Import Smile.Tools.BattleCamera As BattleCamera
 Import Smile.Tools.Character3DViewerTiming As ViewerTiming
 Import Smile.Tools.Character3DViewerSession As ViewerSession
+Import Smile.Tools.Character3DViewerLifecycle As ViewerLifecycle
 Import Smile.Tools.Character3DViewerPlayback As ViewerPlayback
 Import Smile.Tools.Character3DViewerActors As ViewerActors
 Import Smile.Tools.Character3DViewerCamera As ViewerCamera
@@ -81,6 +82,14 @@ Dim GroundCamera As Core.Camera3D
 Dim FrameRate As ViewerTiming.FrameRateState
 Dim RuntimeClock As ViewerTiming.ClockState
 Dim SessionState As ViewerSession.State
+Dim LifecycleConfiguration As ViewerLifecycle.Configuration
+Dim LifecycleSession As ViewerSession.State
+Dim LifecycleParty As ViewerParty.State
+Dim LifecycleCharacter As Character3D.Actor
+Dim LifecycleRendering As ViewerRendering.State
+Dim LifecycleEffects As ViewerEffects.State
+Dim LifecycleDragon As ViewerDragon.State
+Dim LifecyclePlayback As ViewerPlayback.State
 Dim PlaybackState As ViewerPlayback.State
 Dim SpeedAdjustment As ViewerPlayback.SpeedAdjustmentResult
 Dim CameraState As ViewerCamera.State
@@ -336,6 +345,47 @@ Call CheckNamed(CalibrationState.KeyBase = 0,
 Call ViewerSession.ResetFailure(SessionState)
 Call Check(SessionState.Ready)
 Call Check(Not SessionState.ViewerError)
+
+Call ViewerLifecycle.Configure(
+    LifecycleConfiguration, 3, "landscape", "title",
+    -16, -144, 36, 0, -15, 1000, 1000,
+    -70, -45, 480, 180, 180, -55,
+    ViewerCalibration.MAX_CLIPS, 300, 10, 50)
+Call CheckNamed(
+    LifecycleConfiguration.UnusedAssetCacheLimit = 3 And
+    LifecycleConfiguration.CharacterModelForwardYawOffset = 180 And
+    LifecycleConfiguration.PartyFormationEndAngle = 50,
+    "Lifecycle owner captures immutable Viewer configuration")
+
+Call ViewerSession.ResetFailure(LifecycleSession)
+Call ViewerSession.SelectCharacterTab(LifecycleSession, 3)
+Call ViewerParty.SetEnabled(LifecycleParty, True)
+Call ViewerPlayback.Reset(LifecyclePlayback, 100)
+Call ViewerPlayback.TogglePause(LifecyclePlayback)
+Call ViewerLifecycle.PrepareCharacterSwitch(
+    LifecycleSession, LifecycleParty, LifecycleCharacter,
+    LifecycleRendering, LifecycleEffects, LifecycleDragon,
+    LifecyclePlayback, 1)
+Call CheckNamed(
+    LifecycleSession.SelectedCharacterTab = 1 And
+    LifecycleSession.ProfileIndex = ViewerProfiles.PROFILE_ORIN And
+    Not LifecycleSession.DragonInspection And
+    Not LifecycleParty.Enabled And
+    LifecycleSession.Ready And
+    Not LifecycleSession.ViewerError And
+    LifecyclePlayback.DemoEnabled And
+    Not LifecyclePlayback.ScenePaused,
+    "Lifecycle owner prepares a clean character switch")
+
+Call ViewerLifecycle.PrepareProfileCycle(
+    LifecycleSession, LifecycleParty, LifecycleCharacter,
+    LifecycleRendering, LifecycleEffects, LifecycleDragon)
+Call CheckNamed(
+    LifecycleSession.SelectedCharacterTab = 2 And
+    LifecycleSession.ProfileIndex = ViewerProfiles.PROFILE_DRAGON And
+    LifecycleSession.DragonInspection And
+    LifecycleSession.Ready And Not LifecycleParty.Enabled,
+    "Lifecycle owner prepares a diagnostic profile cycle")
 
 SessionState.Ready = False
 

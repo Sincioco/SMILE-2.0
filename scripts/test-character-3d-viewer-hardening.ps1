@@ -20,6 +20,7 @@ $viewerSourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\Program.s
 $cameraSourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\ViewerCamera.smile'
 $playbackSourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\ViewerPlayback.smile'
 $sessionSourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\ViewerSession.smile'
+$lifecycleSourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\ViewerLifecycle.smile'
 $calibrationSourcePath = Join-Path $repositoryRoot `
     'tools\Character3DViewer\ViewerCalibration.smile'
 $calibrationEditingSourcePath = Join-Path $repositoryRoot `
@@ -109,6 +110,7 @@ try {
     $cameraSource = Get-Content -LiteralPath $cameraSourcePath -Raw
     $playbackSource = Get-Content -LiteralPath $playbackSourcePath -Raw
     $sessionSource = Get-Content -LiteralPath $sessionSourcePath -Raw
+    $lifecycleSource = Get-Content -LiteralPath $lifecycleSourcePath -Raw
     $calibrationSource = Get-Content -LiteralPath $calibrationSourcePath -Raw
     $calibrationEditingSource = Get-Content -LiteralPath $calibrationEditingSourcePath -Raw
     $calibrationControlsSource = Get-Content -LiteralPath $calibrationControlsSourcePath -Raw
@@ -130,6 +132,7 @@ try {
     foreach ($contract in @(
         'Import Smile.Simple3D.CharacterViewer As CharacterViewer',
         'Import Smile.Tools.Character3DViewerCamera As ViewerCamera',
+        'Import Smile.Tools.Character3DViewerLifecycle As ViewerLifecycle',
         'Import Smile.Tools.Character3DViewerCalibration As ViewerCalibration',
         'Import Smile.Tools.Character3DViewerCalibrationEditing As ViewerCalibrationEditing',
         'Import Smile.Tools.Character3DViewerCalibrationControls As ViewerCalibrationControls',
@@ -159,7 +162,7 @@ try {
         'Const ZOOM_IN_LIMIT = -144',
         'Window_Width()',
         'Window_Height()',
-        'Session.Ready = Window_Title(ViewerTitle()) And Session.Ready')) {
+        'Call ViewerLifecycle.LoadViewer(')) {
         Assert-Contains $viewerSource $contract 'Character 3D Viewer'
     }
     Assert-True (-not $viewerSource.Contains('IDLE_RESET_MILLISECONDS') -and
@@ -204,6 +207,26 @@ try {
         'Public Sub ApplyParticipantUpdate(')) {
         Assert-Contains $sessionSource $contract 'Viewer session owner'
     }
+    foreach ($contract in @(
+        'Public Type Configuration',
+        'Public Sub LoadViewer(',
+        'Private Sub BeginAssetLoad(',
+        'Private Sub CreateSceneResources(',
+        'Private Sub PrepareEditingAndPresentation(',
+        'Private Sub CreateParticipants(',
+        'Public Sub PrepareRetry(',
+        'Public Sub PrepareProfileCycle(',
+        'Public Sub PrepareCharacterSwitch(',
+        'Public Sub Shutdown(',
+        'Public Sub ReleaseResources(')) {
+        Assert-Contains $lifecycleSource $contract 'Viewer lifecycle owner'
+    }
+    Assert-True (-not $viewerSource.Contains('Sub DestroyViewerResources()') -and
+        -not $viewerSource.Contains('ViewerRendering.PrepareAssetLoading(') -and
+        -not $viewerSource.Contains('Character = ViewerActors.LoadPrimary(') -and
+        -not $viewerSource.Contains('ViewerParty.DestroyParticipants(') -and
+        -not $viewerSource.Contains('Window_Title(')) `
+        'Ordered load, switch and resource teardown implementation must remain in ViewerLifecycle.'
     Assert-True (-not $viewerSource.Contains('Session.SelectedCharacterTab =') -and
         -not $viewerSource.Contains('Session.DragonInspection =') -and
         -not $viewerSource.Contains('Session.Running =') -and
@@ -772,11 +795,11 @@ try {
     Assert-Contains $partySource 'Public Sub ToggleDragonInspectionGlow(' `
         'Viewer Party glow-state owner'
     $inspectorDrawStart = $viewerSource.IndexOf('Sub DrawInspectorOverlay()')
-    $viewerTitleStart = $viewerSource.IndexOf('Function ViewerTitle()')
-    Assert-True ($inspectorDrawStart -ge 0 -and $viewerTitleStart -gt $inspectorDrawStart) `
+    $inspectorDrawEnd = $viewerSource.IndexOf('Function AnimationSecondsRemaining()')
+    Assert-True ($inspectorDrawStart -ge 0 -and $inspectorDrawEnd -gt $inspectorDrawStart) `
         'Inspector presentation ownership boundaries must remain discoverable.'
     $inspectorDrawSource = $viewerSource.Substring(
-        $inspectorDrawStart, $viewerTitleStart - $inspectorDrawStart)
+        $inspectorDrawStart, $inspectorDrawEnd - $inspectorDrawStart)
     Assert-True ($inspectorDrawSource.Contains(
             'ViewerInspectorPresentation.DrawIdentityAndToolbar(') -and
         $inspectorDrawSource.Contains(

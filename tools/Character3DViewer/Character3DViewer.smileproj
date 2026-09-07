@@ -22,6 +22,7 @@
     <SmileSource Include="CalibrationJson.smile" />
     <SmileSource Include="ViewerTiming.smile" />
     <SmileSource Include="ViewerSession.smile" />
+    <SmileSource Include="ViewerLifecycle.smile" />
     <SmileSource Include="ViewerPlayback.smile" />
     <SmileSource Include="ViewerActors.smile" />
     <SmileSource Include="ViewerCamera.smile" />
