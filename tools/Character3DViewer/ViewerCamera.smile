@@ -35,6 +35,26 @@ Public Type State
     AutoOrbitYaw1000 As Number
 End Type
 
+Public Type PointerInput
+    Blocked As Boolean
+    OrbitPressed As Boolean
+    OrbitHeld As Boolean
+    OrbitReleased As Boolean
+    PanPressed As Boolean
+    PanHeld As Boolean
+    PanReleased As Boolean
+    WheelDelta As Number
+    PointerX As Number
+    PointerY As Number
+    PointerDeltaX As Number
+    PointerDeltaY As Number
+    WindowWidth As Number
+    WindowHeight As Number
+    CalibrationVisible As Boolean
+    PartyEnabled As Boolean
+    CalibrationOrigin As Core.Vector3
+End Type
+
 Public Function ConfigureFraming(ByRef Value As State,
     Profile As CharacterViewer.Profile, ByRef Actor As Character3D.Actor,
     ContentWidth As Number, ContentHeight As Number,
@@ -247,6 +267,104 @@ Public Function UpdatePointerControls(ByRef Value As State,
         Value.OrbitPointerRemainderX = 0
         Value.OrbitPointerRemainderY = 0
     End If
+
+    Return Result
+
+End Function
+
+Public Function CreatePointerInput(Blocked As Boolean,
+    OrbitPressed As Boolean, OrbitHeld As Boolean, OrbitReleased As Boolean,
+    PanPressed As Boolean, PanHeld As Boolean, PanReleased As Boolean,
+    PointerX As Number, PointerY As Number,
+    PointerDeltaX As Number, PointerDeltaY As Number,
+    WindowWidth As Number, WindowHeight As Number,
+    CalibrationVisible As Boolean, PartyEnabled As Boolean) As PointerInput
+
+    Dim Result As PointerInput
+
+    Result.Blocked = Blocked
+    Result.OrbitPressed = OrbitPressed
+    Result.OrbitHeld = OrbitHeld
+    Result.OrbitReleased = OrbitReleased
+    Result.PanPressed = PanPressed
+    Result.PanHeld = PanHeld
+    Result.PanReleased = PanReleased
+    Result.PointerX = PointerX
+    Result.PointerY = PointerY
+    Result.PointerDeltaX = PointerDeltaX
+    Result.PointerDeltaY = PointerDeltaY
+    Result.WindowWidth = WindowWidth
+    Result.WindowHeight = WindowHeight
+    Result.CalibrationVisible = CalibrationVisible
+    Result.PartyEnabled = PartyEnabled
+
+    Return Result
+
+End Function
+
+Public Function PointerRequiresCalibrationOrigin(ByRef Value As State,
+    Input As PointerInput) As Boolean
+
+    Dim BeginOrbit As Boolean
+    Dim Result As Boolean
+
+    BeginOrbit = (Not Input.Blocked And
+        (Input.OrbitPressed Or
+        (Input.OrbitHeld And Not Value.Controls.Orbiting)))
+    Result = (BeginOrbit And Input.CalibrationVisible And Not Input.PartyEnabled)
+
+    Return Result
+
+End Function
+
+Public Function UpdatePointerInteraction(ByRef Value As State,
+    Input As PointerInput, OrbitDivisor As Number, PanDivisor As Number,
+    ZoomStepDegrees As Number) As Boolean
+
+    Dim BeginOrbit As Boolean
+    Dim BeginPan As Boolean
+    Dim OrbitActive As Boolean
+    Dim PanActive As Boolean
+    Dim Result As Boolean
+
+    BeginOrbit = (Not Input.Blocked And
+        (Input.OrbitPressed Or
+        (Input.OrbitHeld And Not Value.Controls.Orbiting)))
+    OrbitActive = (BeginOrbit Or
+        (Value.Controls.Orbiting And (Input.OrbitHeld Or Input.OrbitReleased)))
+    BeginPan = (Not Input.Blocked And
+        (Input.PanPressed Or
+        (Input.PanHeld And Not Value.Controls.Panning)))
+    PanActive = (BeginPan Or
+        (Value.Controls.Panning And (Input.PanHeld Or Input.PanReleased)))
+    Value.CalibrationOrbitActive = (OrbitActive And
+        Input.CalibrationVisible And Not Input.PartyEnabled)
+
+    If BeginOrbit And Value.CalibrationOrbitActive Then
+        Call BeginCalibrationOrbitAnchor(
+            Value, Input.CalibrationOrigin, Input.PointerX, Input.PointerY,
+            Input.WindowWidth, Input.WindowHeight)
+    End If
+
+    If Not Input.Blocked And Input.WheelDelta <> 0 Then
+        Call AdjustZoomTarget(Value, Input.WheelDelta, ZoomStepDegrees)
+    End If
+
+    Result = UpdatePointerControls(
+        Value,
+        BeginOrbit,
+        Input.OrbitHeld,
+        Input.OrbitReleased,
+        OrbitActive,
+        BeginPan,
+        Input.PanHeld,
+        Input.PanReleased,
+        PanActive,
+        Input.PointerDeltaX,
+        Input.PointerDeltaY,
+        OrbitDivisor,
+        PanDivisor
+    )
 
     Return Result
 

@@ -93,9 +93,11 @@ Dim LifecyclePlayback As ViewerPlayback.State
 Dim PlaybackState As ViewerPlayback.State
 Dim SpeedAdjustment As ViewerPlayback.SpeedAdjustmentResult
 Dim CameraState As ViewerCamera.State
+Dim CameraPointer As ViewerCamera.PointerInput
 Dim DirectControls As Core.CameraControl3D
 Dim DirectZoom As CharacterViewer.ZoomState
 Dim DirectCamera As Core.Camera3D
+Dim CameraZoomTarget As Number
 Dim CameraPhase1000 As Number
 Dim CalibrationState As ViewerCalibration.State
 Dim CalibrationConfigurationState As ViewerCalibration.State
@@ -475,6 +477,49 @@ CameraState.OrbitPointerRemainderY = -2
 Call ViewerCamera.CancelPointerControls(CameraState)
 Call Check(Not CameraState.Controls.Orbiting And Not CameraState.Controls.Panning)
 Call Check(CameraState.PanPointerRemainderX = 0 And CameraState.OrbitPointerRemainderY = 0)
+
+Call ViewerCamera.Reset(CameraState, 0, -16, -144, 36, 96000)
+
+CameraState.Live = Graphics3D.DefaultCamera()
+CameraState.Frame.PanXLimit = 10
+CameraState.Frame.PanYLimit = 8
+CameraState.AutoOrbit = True
+CameraPointer = ViewerCamera.CreatePointerInput(
+    False, True, True, False, False, False, False,
+    400, 300, 6, -3, 800, 640, True, False)
+CameraPointer.CalibrationOrigin.X = 1
+CameraPointer.CalibrationOrigin.Y = 2
+CameraPointer.CalibrationOrigin.Z = 3
+
+Call CheckNamed(
+    ViewerCamera.PointerRequiresCalibrationOrigin(CameraState, CameraPointer),
+    "Camera pointer owner requests a calibration orbit origin")
+Call CheckNamed(
+    ViewerCamera.UpdatePointerInteraction(CameraState, CameraPointer, 3, 3, 8),
+    "Camera pointer owner applies an active calibration orbit")
+Call CheckNamed(CameraState.CalibrationOrbitActive And
+    CameraState.Controls.Orbiting And Not CameraState.AutoOrbit,
+    "Camera pointer owner retains orbit lifecycle with camera state")
+
+Call ViewerCamera.CancelPointerControls(CameraState)
+
+CameraZoomTarget = CameraState.Zoom.Target1000
+CameraPointer = ViewerCamera.CreatePointerInput(
+    True, True, True, False, True, True, False,
+    400, 300, 6, -3, 800, 640, True, False)
+CameraPointer.WheelDelta = -1
+
+Call CheckNamed(
+    Not ViewerCamera.PointerRequiresCalibrationOrigin(CameraState, CameraPointer),
+    "Blocked camera input does not request a calibration orbit origin")
+Call CheckNamed(
+    ViewerCamera.UpdatePointerInteraction(CameraState, CameraPointer, 3, 3, 8),
+    "Camera pointer owner accepts a blocked input snapshot")
+Call CheckNamed(Not CameraState.Controls.Orbiting And
+    Not CameraState.Controls.Panning And
+    Not CameraState.CalibrationOrbitActive And
+    CameraState.Zoom.Target1000 = CameraZoomTarget,
+    "Blocked camera input cannot begin controls or change zoom")
 
 CameraState.Controls.OrbitYaw = 0
 InspectorOperation = ViewerInspectorCommands.ApplyKeyboardNavigationAction(

@@ -147,7 +147,7 @@ try {
         'Import Smile.Tools.Character3DViewerDragon As ViewerDragon',
         'Import Smile.Tools.Character3DViewerRendering As ViewerRendering',
         'ViewerCamera.AdvanceZoom(',
-        'ViewerCamera.UpdatePointerControls(',
+        'ViewerCamera.UpdatePointerInteraction(',
         'If Pointer_Pressed(POINTER_SECONDARY) Then',
         'Call ResetAll()',
         'Call ToggleScenePause()',
@@ -176,6 +176,23 @@ try {
         'If Not Pointer_Inside() Then', $timelineCapture, [System.StringComparison]::Ordinal)
     Assert-True ($timelineCapture -ge 0 -and $outsidePointerReturn -gt $timelineCapture) `
         'Timeline pointer ownership must be handled before an outside-window return.'
+    $cameraPointerStart = $viewerSource.IndexOf('Sub UpdateCameraPointer(')
+    $orinStormStart = $viewerSource.IndexOf('Sub UpdateOrinStorm(')
+    Assert-True ($cameraPointerStart -ge 0 -and $orinStormStart -gt $cameraPointerStart) `
+        'Camera pointer adapter boundaries must remain readable.'
+    $cameraPointerSource = $viewerSource.Substring(
+        $cameraPointerStart, $orinStormStart - $cameraPointerStart)
+    Assert-True ($cameraPointerSource.Contains('Pointer_Pressed(POINTER_MIDDLE)') -and
+        $cameraPointerSource.Contains('Pointer_Pressed(POINTER_PRIMARY)') -and
+        $cameraPointerSource.Contains('Pointer_Wheel_Delta()') -and
+        $cameraPointerSource.Contains('ViewerCamera.UpdatePointerInteraction(') -and
+        -not $cameraPointerSource.Contains('ViewerCameraState.Controls.Orbiting') -and
+        -not $cameraPointerSource.Contains('ViewerCameraState.Controls.Panning') -and
+        -not $cameraPointerSource.Contains('ViewerCameraState.CalibrationOrbitActive =') -and
+        -not $cameraPointerSource.Contains('ViewerCamera.AdjustZoomTarget(') -and
+        -not $cameraPointerSource.Contains('ViewerCamera.UpdatePointerControls(') -and
+        -not $cameraPointerSource.Contains('ViewerCamera.BeginCalibrationOrbitAnchor(')) `
+        'Camera transition behavior must remain with camera state while runtime sampling stays in Program.'
     Assert-Contains $partySource `
         'Value.HitTarget = 1) Then' `
         'Dragon Party target ownership'
@@ -187,6 +204,10 @@ try {
         'CharacterViewer.AdvanceZoom(',
         'BattleCamera.Orbit(',
         'CharacterViewer.KeepCursorAnchor(',
+        'Public Type PointerInput',
+        'Public Function CreatePointerInput(',
+        'Public Function PointerRequiresCalibrationOrigin(',
+        'Public Function UpdatePointerInteraction(',
         'Public Sub BeginLoadedLayout(',
         'Public Sub LockResponsiveFit(',
         'Public Sub UpdateResponsiveFit(',

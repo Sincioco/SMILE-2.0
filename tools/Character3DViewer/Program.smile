@@ -1229,71 +1229,42 @@ End Sub
 
 Sub UpdateCameraPointer(Blocked As Boolean)
 
-    Dim OrbitPressed As Boolean
-    Dim OrbitHeld As Boolean
-    Dim OrbitReleased As Boolean
-    Dim OrbitActive As Boolean
-    Dim PanPressed As Boolean
-    Dim PanHeld As Boolean
-    Dim PanReleased As Boolean
-    Dim PanActive As Boolean
-    Dim WheelDelta As Number
-    Dim PointerDeltaX As Number
-    Dim PointerDeltaY As Number
+    Dim CameraInput As ViewerCamera.PointerInput
 
-    OrbitPressed = (Not Blocked And
-        (Pointer_Pressed(POINTER_MIDDLE) Or
-        (Pointer_Held(POINTER_MIDDLE) And Not ViewerCameraState.Controls.Orbiting)))
-    OrbitHeld = Pointer_Held(POINTER_MIDDLE)
-    OrbitReleased = Pointer_Released(POINTER_MIDDLE)
-    OrbitActive = (OrbitPressed Or
-        (ViewerCameraState.Controls.Orbiting And (OrbitHeld Or OrbitReleased)))
-    PanPressed = (Not Blocked And
-        (Pointer_Pressed(POINTER_PRIMARY) Or
-        (Pointer_Held(POINTER_PRIMARY) And Not ViewerCameraState.Controls.Panning)))
-    PanHeld = Pointer_Held(POINTER_PRIMARY)
-    PanReleased = Pointer_Released(POINTER_PRIMARY)
-    PanActive = (PanPressed Or
-        (ViewerCameraState.Controls.Panning And (PanHeld Or PanReleased)))
-    PointerDeltaX = Pointer_Delta_X()
-    PointerDeltaY = Pointer_Delta_Y()
-
-    ViewerCameraState.CalibrationOrbitActive = OrbitActive And ViewerUiState.CalibrationVisible And Not Party.Enabled
-
-    If OrbitPressed And ViewerCameraState.CalibrationOrbitActive Then
-        Call ViewerCamera.BeginCalibrationOrbitAnchor(
-            ViewerCameraState,
-            ViewerCalibrationEditing.GizmoOrigin(
-                Character, ViewerUiState),
-            Pointer_X(),
-            Pointer_Y(),
-            Window_Width(),
-            Window_Height()
-        )
-    End If
+    CameraInput = ViewerCamera.CreatePointerInput(
+        Blocked,
+        Pointer_Pressed(POINTER_MIDDLE),
+        Pointer_Held(POINTER_MIDDLE),
+        Pointer_Released(POINTER_MIDDLE),
+        Pointer_Pressed(POINTER_PRIMARY),
+        Pointer_Held(POINTER_PRIMARY),
+        Pointer_Released(POINTER_PRIMARY),
+        Pointer_X(),
+        Pointer_Y(),
+        Pointer_Delta_X(),
+        Pointer_Delta_Y(),
+        Window_Width(),
+        Window_Height(),
+        ViewerUiState.CalibrationVisible,
+        Party.Enabled
+    )
 
     If Not Blocked Then
-        WheelDelta = Pointer_Wheel_Delta()
+        CameraInput.WheelDelta = Pointer_Wheel_Delta()
     End If
 
-    If WheelDelta <> 0 Then
-        Call ViewerCamera.AdjustZoomTarget(ViewerCameraState, WheelDelta, 8)
+    If ViewerCamera.PointerRequiresCalibrationOrigin(
+        ViewerCameraState, CameraInput) Then
+        CameraInput.CalibrationOrigin = ViewerCalibrationEditing.GizmoOrigin(
+            Character, ViewerUiState)
     End If
 
-    Session.Ready = ViewerCamera.UpdatePointerControls(
+    Session.Ready = ViewerCamera.UpdatePointerInteraction(
         ViewerCameraState,
-        OrbitPressed,
-        OrbitHeld,
-        OrbitReleased,
-        OrbitActive,
-        PanPressed,
-        PanHeld,
-        PanReleased,
-        PanActive,
-        PointerDeltaX,
-        PointerDeltaY,
+        CameraInput,
         ORBIT_POINTER_DIVISOR,
-        PAN_POINTER_DIVISOR
+        PAN_POINTER_DIVISOR,
+        8
     ) And Session.Ready
 
 End Sub

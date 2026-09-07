@@ -48,7 +48,7 @@
   ],
   "currentExtractionCommitRange": {
     "first": "9a616ef35adae9b0c5bbc864ecf689bbd6fc1aed",
-    "lastCommittedBeforeCurrentCheckpoint": "edd69f201e053ce4fc2b24e25bdfe8a3bfc37855"
+    "lastCommittedBeforeCurrentCheckpoint": "bda23e3538274c9a1f3c573cc490ad97cee70e97"
   },
   "programMetrics": {
     "initialAudit": {
@@ -68,11 +68,11 @@
       "sha256": "17853B7B210061F9D46D70913AABA39C4F798503F69C2E8CCA4D8511646AC670"
     },
     "current": {
-      "checkpoint": "general-inspector-pointer-actions",
-      "baseCommit": "edd69f201e053ce4fc2b24e25bdfe8a3bfc37855",
-      "lines": 2229,
+      "checkpoint": "camera-pointer-transitions",
+      "baseCommit": "bda23e3538274c9a1f3c573cc490ad97cee70e97",
+      "lines": 2200,
       "procedures": 56,
-      "sha256": "2BFD8B646D18DBCCB0CD44D225AEAC993EBE76DEACD191645C9B6DDF2F9F86AE"
+      "sha256": "900405A7076ED1083FFC050619021224EBC8AF704C8B749D9336F89A8A08D079"
     }
   },
   "substantialResponsibilitiesMovedFromProgram": [
@@ -98,13 +98,15 @@
     "session tab/profile/running/switch/epoch transitions, Party enablement, renderer load/shadow/arena visibility, camera loaded layout and calibration profile-bank selection",
     "Party preview-start/playback-pause lifecycle and pointer-response policy plus typed session readiness/failure adaptation",
     "ordered primary/scene/effect/participant load stages, retry/profile/tab preparation, selected-clip start, calibration setup, Party-demo reset and resource shutdown",
-    "general inspector pointer calibration/demo/Dragon/camera actions plus typed profile/speed/reset/restart/clip response policy"
+    "general inspector pointer calibration/demo/Dragon/camera actions plus typed profile/speed/reset/restart/clip response policy",
+    "camera pointer press/hold/release derivation, calibration-orbit activation, wheel admission and retained orbit/pan transitions"
   ],
   "currentDestinationOwners": [
     "ViewerActors",
     "ViewerParty",
     "ViewerDragon",
     "ViewerEffects",
+    "ViewerCamera",
     "ViewerActors.EquipmentVisibility",
     "ViewerRendering",
     "ViewerCalibration",
@@ -120,7 +122,7 @@
   "substantialResponsibilitiesStillInProgram": [
     "thin startup, retry, shutdown and character-tab UI/capture triggers into the stateless lifecycle owner",
     "Party inspector context/calibration adaptation and Party pointer response execution",
-    "non-timeline inspector runtime sampling and typed response execution plus keyboard action dispatch and interface, slider, gizmo and camera priority ordering",
+    "non-timeline inspector runtime sampling and typed response execution plus keyboard action dispatch and interface, slider and gizmo priority ordering",
     "reset orchestration and cross-owner scene, Party and gizmo ordering",
     "narrow Party-preview, frame-order calibration-application and session-result adapters",
     "thin UpdateDragon, UpdateBattleAudio and UpdateOrinStorm frame-order adapters"
@@ -189,7 +191,12 @@
     "calibration-panel visibility/preview, demo mutation, Dragon head/target and responsive-fit pointer actions moved into ViewerInspectorCommands",
     "profile, speed, reset, restart and clip pointer actions now return a typed command/value for visible whole-Viewer execution",
     "HandleInspectorPointer reduced from 274 lines to 227 lines while preserving timeline-first runtime sampling and priority",
-    "Program.smile reduced from 2276 lines and 56 procedures to 2229 lines and 56 procedures without formatting compression"
+    "Program.smile reduced from 2276 lines and 56 procedures to 2229 lines and 56 procedures without formatting compression",
+    "camera pointer transition derivation, calibration-orbit activation, wheel admission and retained orbit/pan application moved with ViewerCamera.State",
+    "a camera-only PointerInput snapshot keeps runtime values explicit without retaining whole-Viewer state",
+    "UpdateCameraPointer reduced from 71 lines to 42 lines while preserving one runtime sample and interface-before-camera frame order",
+    "Program.smile reduced from 2229 lines and 56 procedures to 2200 lines and 56 procedures without formatting compression",
+    "Party/interface pointer review retained their runtime sampling and cross-owner response execution as justified coordinators because their classification and state-local policy already reside in focused owners"
   ],
   "validation": [
     "PASS: 308 shared compiler/language tests",
@@ -277,13 +284,19 @@
     "PASS: general inspector-pointer Release Desktop Viewer build with 46 published assets",
     "PASS: general inspector-pointer Release Full Web Viewer build with 35 published assets",
     "PASS: general inspector-pointer launcher, primary/backup recovery, stale-output and preservation fixtures using disposable data and processes",
-    "PASS: general inspector-pointer tracked 406-file repository style check"
+    "PASS: general inspector-pointer tracked 406-file repository style check",
+    "PASS: camera pointer-transition native and generated-Web hardening with exact console parity and direct active-calibration-orbit plus blocked-input assertions",
+    "PASS: camera pointer-transition isolated real-asset and calibration integration using disposable storage",
+    "PASS: camera pointer-transition Release Desktop Viewer build with 46 published assets",
+    "PASS: camera pointer-transition Release Full Web Viewer build with 35 published assets",
+    "PASS: camera pointer-transition launcher, primary/backup recovery, stale-output and preservation fixtures using disposable data and processes",
+    "PASS: camera pointer-transition tracked 406-file repository style check"
   ],
   "pendingValidation": [
     "final Character Viewer native and installed-Chrome acceptance after remaining extractions"
   ],
   "blockers": [],
-  "nextConcreteAction": "Move the remaining Party and interface pointer response policy into bounded existing owners while preserving runtime sampling, inspector-before-Party-before-camera priority and whole-Viewer execution order in Program.smile.",
+  "nextConcreteAction": "Move cohesive reset lifecycle implementation into the existing lifecycle and state owners while keeping cross-owner reset order visible and avoiding a whole-Viewer state record.",
   "nextStages": [
     "R7.5-input-inspector-calibration-reset-ownership",
     "R7.5-startup-session-and-overlay-coordination",
