@@ -97,6 +97,10 @@ try {
         'Native append-only reflection ABI'
     Assert-Contains $graphicsSource 'Private Const COMMAND_CONFIGURE_REFLECTIONS = 133' `
         'SMILE reflection ABI'
+    Assert-Contains $graphicsSource 'REFLECTION_QUERY_EFFECTIVE_FLOOR_HEIGHT = 18' `
+        'SMILE effective reflection-plane diagnostic'
+    Assert-Contains $graphicsSource 'REFLECTION_QUERY_TARGET_FORMAT = 19' `
+        'SMILE reflection-format diagnostic'
     Assert-Contains $webWriter 'case 133:return renderer3DReflectionConfigure(a,b,c,d,e,f);' `
         'Web reflection ABI'
     Assert-Contains $webWriter 'case 134:object=renderer3DObjects.get(a);' `
@@ -126,13 +130,23 @@ try {
 
     Assert-Contains $nativeSource 'smile_reflection_pass3d = 1' `
         'Native reflected-view pass'
+    Assert-Contains $nativeSource 'reflection.m[5] = -1.0f' `
+        'Native improper plane-reflection transform'
+    Assert-Contains $nativeSource 'smile_3d_multiply(reflection, result)' `
+        'Native row-vector reflection/view composition'
     Assert-Contains $nativeSource 'smile_front_cull_raster_state3d' `
         'Native reflection winding reversal'
     Assert-Contains $webOwner 'renderer3DReflection.pass = true' `
         'Web reflected-view pass'
     Assert-Contains $webWriter `
-        'gl.cullFace(front!==renderer3DReflection.pass?gl.FRONT:gl.BACK)' `
-        'Web reflection winding reversal'
+        'gl.cullFace(front===renderer3DReflection.pass?gl.FRONT:gl.BACK)' `
+        'Web Direct3D-parity reflection winding reversal'
+    Assert-Contains $webWriter 'output[4]=-columnY0' `
+        'Web improper plane-reflection transform'
+    Assert-Contains $webOwner 'renderer3DReflectionResolveReceiver()' `
+        'Web immutable receiver-plane resolution'
+    Assert-Contains $nativeSource 'smile_3d_resolve_reflection_receiver' `
+        'Native immutable receiver-plane resolution'
     Assert-Contains $nativeOwner 'longest > 2048' `
         'Native bounded reflection target'
     Assert-Contains $webOwner 'longest > 2048' `
@@ -141,6 +155,12 @@ try {
         'Native failed-allocation retry cache'
     Assert-Contains $webOwner 'failedRevision' `
         'Web failed-allocation retry cache'
+    Assert-Contains $webOwner 'format === 2 ? gl.RGBA16F : gl.RGBA8' `
+        'Web effective HDR reflection format'
+    Assert-Contains $webOwner 'renderer3DReflection.failedFormat === format' `
+        'Web format-aware failed-allocation cache'
+    Assert-Contains $webOwner 'format === 2 ? 12 : 8' `
+        'Web reflection target byte accounting'
 
     Assert-Contains $nativeSource `
         'smile_reflections_softness_percent() / 100.0f' `
@@ -200,6 +220,8 @@ try {
         throw 'Sin Star I preview imports or copies a Character Viewer owner.'
     }
 
+    # Supplemental scalar sanity only; compiled production-path diagnostics below
+    # provide the discriminating view/projection and receiver-plane regression.
     $floorHeight = 7.0
     $pointY = 31.0
     $mirroredY = Mirror-Y $pointY $floorHeight
@@ -275,7 +297,7 @@ try {
         throw 'Character Viewer reflection integration assertions failed.'
     }
 
-    Write-Host ('Renderer3D native/Web reflection state, eligibility, ownership, ' +
+    Write-Host ('Renderer3D native/Web reflection projection, receiver plane, HDR target, ' +
         'fallback, retry, Viewer, and Sin Star I integration tests passed.')
 }
 finally {

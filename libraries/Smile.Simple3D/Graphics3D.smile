@@ -161,6 +161,7 @@ Public Const REFLECTION_FALLBACK_NO_RECEIVER = 2
 Public Const REFLECTION_FALLBACK_CAMERA_BELOW_FLOOR = 3
 Public Const REFLECTION_FALLBACK_ALLOCATION_FAILED = 4
 Public Const REFLECTION_FALLBACK_RENDER_FAILED = 5
+Public Const REFLECTION_FALLBACK_UNSUPPORTED_RECEIVER = 6
 Public Const REFLECTION_QUERY_REQUESTED = 1
 Public Const REFLECTION_QUERY_EFFECTIVE = 2
 Public Const REFLECTION_QUERY_FALLBACK_REASON = 3
@@ -178,6 +179,12 @@ Public Const REFLECTION_QUERY_SOFTNESS = 14
 Public Const REFLECTION_QUERY_SCALE = 15
 Public Const REFLECTION_QUERY_FLOOR_HEIGHT = 16
 Public Const REFLECTION_QUERY_BACKDROP = 17
+Public Const REFLECTION_QUERY_EFFECTIVE_FLOOR_HEIGHT = 18
+Public Const REFLECTION_QUERY_TARGET_FORMAT = 19
+Public Const REFLECTION_QUERY_RECEIVER_SAMPLE_ERROR = 20
+Public Const REFLECTION_TARGET_FORMAT_NONE = 0
+Public Const REFLECTION_TARGET_FORMAT_LDR = 1
+Public Const REFLECTION_TARGET_FORMAT_HDR = 2
 
 Private Const ANIMATOR_QUERY_DESTINATION_CLIP = 1
 Private Const ANIMATOR_QUERY_TIME_REMAINDER = 2
@@ -4043,6 +4050,8 @@ Public Sub SetObjectShadows3D(
 End Sub
 
 ''' Configures one bounded horizontal planar reflection for future frames.
+''' A negative FloorHeight resolves the horizontal plane from the immutable
+''' receiver submission each frame. An explicit height must match that receiver.
 Public Function ConfigureReflections3D(
     Enabled As Boolean,
     StrengthPercent As Number,
@@ -4111,6 +4120,9 @@ Public Sub SetObjectReflectionMode3D(ByRef Object As Core.Object3D, Mode As Numb
 End Sub
 
 ''' Reads one planar-reflection diagnostic for the most recently completed frame.
+''' FLOOR_HEIGHT is the requested policy; EFFECTIVE_FLOOR_HEIGHT is the resolved
+''' frame plane. TARGET_FORMAT returns NONE, LDR, or HDR. RECEIVER_SAMPLE_ERROR is
+''' the maximum production receiver-coordinate difference in millionths.
 Public Function ReflectionValue3D(Property As Number) As Number
 
     Dim Result As Number

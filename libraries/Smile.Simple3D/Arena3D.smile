@@ -60,9 +60,9 @@ Public Function Create(Width As Number, Depth As Number,
 
     Result.Epoch = Graphics3D.ResourceEpoch3D()
     Result.ReflectionsEnabled = Reflective
-    Result.ReflectionStrengthPercent = 45
-    Result.ReflectionSoftnessPercent = 35
-    Result.ReflectionScalePercent = 50
+    Result.ReflectionStrengthPercent = 85
+    Result.ReflectionSoftnessPercent = 5
+    Result.ReflectionScalePercent = 100
     Result.FloorHeight = -1
     Result.Floor = Graphics3D.CreatePlane3D(Width, Depth)
 

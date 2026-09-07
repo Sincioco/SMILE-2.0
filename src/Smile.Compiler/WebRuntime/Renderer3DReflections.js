@@ -4,12 +4,14 @@
             const renderer3DReflectionFallbackCameraBelowFloor = 3;
             const renderer3DReflectionFallbackAllocationFailed = 4;
             const renderer3DReflectionFallbackRenderFailed = 5;
+            const renderer3DReflectionFallbackUnsupportedReceiver = 6;
             const renderer3DReflection = {
                 requested: false,
                 strength: 45,
                 softness: 35,
                 scale: 50,
                 floorHeight: -1,
+                effectiveFloorHeight: 0,
                 includeBackdrop: true,
                 effective: false,
                 fallbackReason: renderer3DReflectionFallbackDisabled,
@@ -21,12 +23,15 @@
                 failedRevision: 0,
                 failedWidth: 0,
                 failedHeight: 0,
+                failedFormat: 0,
                 forcedFailureConsumed: false,
                 targetBytes: 0,
                 captures: 0,
                 draws: 0,
                 triangles: 0,
                 compositions: 0,
+                receiverSampleError: 0,
+                targetFormat: 0,
                 pass: false,
                 texture: null,
                 framebuffer: null,
@@ -35,7 +40,9 @@
                     position: new Float32Array(3),
                     target: new Float32Array(3),
                     up: new Float32Array(3)
-                }
+                },
+                sampleMainMvp: new Float32Array(16),
+                sampleReflectedMvp: new Float32Array(16)
             };
 
             function renderer3DReflectionDeleteResources() {
@@ -50,6 +57,7 @@
                 renderer3DReflection.depth = null;
                 renderer3DReflection.width = 0;
                 renderer3DReflection.height = 0;
+                renderer3DReflection.targetFormat = 0;
                 renderer3DReflection.targetBytes = 0;
                 renderer3DReflection.appliedRevision = 0;
             }
@@ -87,6 +95,10 @@
             }
 
             function renderer3DReflectionBeginFrame() {
+                renderer3DReflection.effectiveFloorHeight =
+                    renderer3DReflection.floorHeight >= 0
+                        ? renderer3DReflection.floorHeight
+                        : 0;
                 renderer3DReflection.effective = false;
                 renderer3DReflection.fallbackReason = renderer3DReflection.requested
                     ? renderer3DReflectionFallbackNoReceiver
@@ -95,6 +107,7 @@
                 renderer3DReflection.draws = 0;
                 renderer3DReflection.triangles = 0;
                 renderer3DReflection.compositions = 0;
+                renderer3DReflection.receiverSampleError = 0;
                 renderer3DReflection.pass = false;
             }
 
@@ -102,13 +115,15 @@
                 const gl = renderer3DGl;
                 let width = Math.max(1, Math.floor(backingWidth * renderer3DReflection.scale / 100));
                 let height = Math.max(1, Math.floor(backingHeight * renderer3DReflection.scale / 100));
+                const format = renderer3DHdrEffective ? 2 : 1;
                 const longest = Math.max(width, height);
                 if (longest > 2048) {
                     width = Math.max(1, Math.floor(width * 2048 / longest));
                     height = Math.max(1, Math.floor(height * 2048 / longest));
                 }
                 if (renderer3DReflection.texture && renderer3DReflection.width === width &&
-                    renderer3DReflection.height === height) {
+                    renderer3DReflection.height === height &&
+                    renderer3DReflection.targetFormat === format) {
                     renderer3DReflection.appliedRevision =
                         renderer3DReflection.configurationRevision;
                     renderer3DReflection.effective = true;
@@ -118,7 +133,8 @@
                 if (renderer3DReflection.failedRevision ===
                         renderer3DReflection.configurationRevision &&
                     renderer3DReflection.failedWidth === width &&
-                    renderer3DReflection.failedHeight === height) {
+                    renderer3DReflection.failedHeight === height &&
+                    renderer3DReflection.failedFormat === format) {
                     renderer3DReflection.effective = false;
                     renderer3DReflection.fallbackReason =
                         renderer3DReflectionFallbackAllocationFailed;
@@ -128,12 +144,15 @@
                 const failThisAttempt = !!forcedFailure &&
                     !(String(forcedFailure).toLowerCase() === "once" &&
                         renderer3DReflection.forcedFailureConsumed);
-                if (!gl || failThisAttempt) {
+                const hdrSupported = format !== 2 || (gl &&
+                    gl.getExtension("EXT_color_buffer_float"));
+                if (!gl || !hdrSupported || failThisAttempt) {
                     if (failThisAttempt) renderer3DReflection.forcedFailureConsumed = true;
                     renderer3DReflection.failedRevision =
                         renderer3DReflection.configurationRevision;
                     renderer3DReflection.failedWidth = width;
                     renderer3DReflection.failedHeight = height;
+                    renderer3DReflection.failedFormat = format;
                     renderer3DReflection.effective = false;
                     renderer3DReflection.fallbackReason =
                         renderer3DReflectionFallbackAllocationFailed;
@@ -145,12 +164,18 @@
                 let complete = !!(texture && framebuffer && depth);
                 if (complete) {
                     gl.bindTexture(gl.TEXTURE_2D, texture);
-                    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-                    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+                    const filter = format === 2 &&
+                        !gl.getExtension("OES_texture_float_linear")
+                        ? gl.NEAREST
+                        : gl.LINEAR;
+                    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, filter);
+                    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, filter);
                     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
                     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-                    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, width, height, 0,
-                        gl.RGBA, gl.UNSIGNED_BYTE, null);
+                    gl.texImage2D(gl.TEXTURE_2D, 0,
+                        format === 2 ? gl.RGBA16F : gl.RGBA8,
+                        width, height, 0, gl.RGBA,
+                        format === 2 ? gl.HALF_FLOAT : gl.UNSIGNED_BYTE, null);
                     gl.bindRenderbuffer(gl.RENDERBUFFER, depth);
                     gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT24, width, height);
                     gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
@@ -171,6 +196,7 @@
                         renderer3DReflection.configurationRevision;
                     renderer3DReflection.failedWidth = width;
                     renderer3DReflection.failedHeight = height;
+                    renderer3DReflection.failedFormat = format;
                     renderer3DReflection.effective = false;
                     renderer3DReflection.fallbackReason =
                         renderer3DReflectionFallbackAllocationFailed;
@@ -182,11 +208,13 @@
                 renderer3DReflection.depth = depth;
                 renderer3DReflection.width = width;
                 renderer3DReflection.height = height;
-                renderer3DReflection.targetBytes = width * height * 8;
+                renderer3DReflection.targetFormat = format;
+                renderer3DReflection.targetBytes = width * height * (format === 2 ? 12 : 8);
                 renderer3DReflection.appliedRevision = renderer3DReflection.configurationRevision;
                 renderer3DReflection.failedRevision = 0;
                 renderer3DReflection.failedWidth = 0;
                 renderer3DReflection.failedHeight = 0;
+                renderer3DReflection.failedFormat = 0;
                 renderer3DReflection.resourceGeneration += 1;
                 if (renderer3DReflection.resourceGeneration > 2147483647)
                     renderer3DReflection.resourceGeneration = 1;
@@ -199,10 +227,10 @@
                 if (!renderer3DReflection.pass) return renderer3DCamera;
                 const values = renderer3DReflection.camera;
                 values.position[0] = renderer3DCamera.position[0];
-                values.position[1] = 2 * renderer3DReflection.floorHeight - renderer3DCamera.position[1];
+                values.position[1] = 2 * renderer3DReflection.effectiveFloorHeight - renderer3DCamera.position[1];
                 values.position[2] = renderer3DCamera.position[2];
                 values.target[0] = renderer3DCamera.target[0];
-                values.target[1] = 2 * renderer3DReflection.floorHeight - renderer3DCamera.target[1];
+                values.target[1] = 2 * renderer3DReflection.effectiveFloorHeight - renderer3DCamera.target[1];
                 values.target[2] = renderer3DCamera.target[2];
                 values.up[0] = renderer3DCamera.up[0];
                 values.up[1] = -renderer3DCamera.up[1];
@@ -219,7 +247,7 @@
                     renderer3DReflectionObjectMode(object) === 2;
                 gl.uniform4f(program.reflectionSettings,
                     renderer3DReflection.pass ? 1 : 0,
-                    renderer3DReflection.floorHeight,
+                    renderer3DReflection.effectiveFloorHeight,
                     receiver ? renderer3DReflection.strength / 100 : 0,
                     renderer3DReflection.softness / 100);
                 gl.uniform2f(program.reflectionViewport, backingWidth, backingHeight);
@@ -274,23 +302,111 @@
                 return found ? Math.max(0, Math.min(.95, seam)) : .5;
             }
 
-            function renderer3DRenderReflectionPass() {
-                if (!renderer3DReflection.requested) return true;
+            function renderer3DReflectionReceiverSampleError(receiver) {
+                const mesh = receiver ? renderer3DMeshes.get(receiver.mesh) : null;
+                if (!mesh || !mesh.vertices) return 0;
+                renderer3DModelInto(renderer3DModelScratch, receiver);
+                renderer3DProjectionInto(renderer3DProjectionScratch,
+                    backingWidth / backingHeight);
+                const previousPass = renderer3DReflection.pass;
+                renderer3DReflection.pass = false;
+                renderer3DViewInto(renderer3DViewScratch);
+                renderer3DMultiplyInto(renderer3DMatrixScratchA,
+                    renderer3DViewScratch, renderer3DModelScratch);
+                renderer3DMultiplyInto(renderer3DReflection.sampleMainMvp,
+                    renderer3DProjectionScratch, renderer3DMatrixScratchA);
+                renderer3DReflection.pass = true;
+                renderer3DViewInto(renderer3DViewScratch);
+                renderer3DMultiplyInto(renderer3DMatrixScratchA,
+                    renderer3DViewScratch, renderer3DModelScratch);
+                renderer3DMultiplyInto(renderer3DReflection.sampleReflectedMvp,
+                    renderer3DProjectionScratch, renderer3DMatrixScratchA);
+                renderer3DReflection.pass = previousPass;
+                let maximumError = 0;
+                for (let index = 0; index < mesh.vertexCount; index += 1) {
+                    const offset = index * 20;
+                    const x = mesh.vertices[offset];
+                    const y = mesh.vertices[offset + 1];
+                    const z = mesh.vertices[offset + 2];
+                    const main = renderer3DReflection.sampleMainMvp;
+                    const reflected = renderer3DReflection.sampleReflectedMvp;
+                    const mainW = main[3] * x + main[7] * y + main[11] * z + main[15];
+                    const reflectedW = reflected[3] * x + reflected[7] * y +
+                        reflected[11] * z + reflected[15];
+                    if (mainW <= .0001 || reflectedW <= .0001) continue;
+                    const xError = Math.abs(.5 * ((main[0] * x + main[4] * y +
+                        main[8] * z + main[12]) / mainW -
+                        (reflected[0] * x + reflected[4] * y + reflected[8] * z +
+                            reflected[12]) / reflectedW));
+                    const yError = Math.abs(.5 * ((main[1] * x + main[5] * y +
+                        main[9] * z + main[13]) / mainW -
+                        (reflected[1] * x + reflected[5] * y + reflected[9] * z +
+                            reflected[13]) / reflectedW));
+                    maximumError = Math.max(maximumError, xError, yError);
+                }
+                return Math.round(maximumError * 1000000);
+            }
+
+            function renderer3DReflectionReceiverPlane(receiver) {
+                const mesh = receiver ? renderer3DMeshes.get(receiver.mesh) : null;
+                if (!mesh || !mesh.vertices || mesh.vertexCount < 3 || receiver.animator)
+                    return null;
+                renderer3DModelInto(renderer3DModelScratch, receiver);
+                let minimumY = 0;
+                let maximumY = 0;
+                for (let index = 0; index < mesh.vertexCount; index += 1) {
+                    const offset = index * 20;
+                    const worldY = mesh.vertices[offset] * renderer3DModelScratch[1] +
+                        mesh.vertices[offset + 1] * renderer3DModelScratch[5] +
+                        mesh.vertices[offset + 2] * renderer3DModelScratch[9] +
+                        renderer3DModelScratch[13];
+                    if (!Number.isFinite(worldY)) return null;
+                    if (index === 0 || worldY < minimumY) minimumY = worldY;
+                    if (index === 0 || worldY > maximumY) maximumY = worldY;
+                }
+                if (maximumY - minimumY > .01) return null;
+                return (minimumY + maximumY) * .5;
+            }
+
+            function renderer3DReflectionResolveReceiver() {
                 let receiver = null;
+                let effectiveHeight = renderer3DReflection.floorHeight;
+                const automatic = effectiveHeight < 0;
+                let resolved = false;
                 for (let index = 0; index < renderer3DSubmissionCount; index += 1) {
                     const object = renderer3DSubmissionObjects[index];
-                    if (object.kind === renderer3DSubmissionObject &&
-                        renderer3DReflectionObjectMode(object) === 2 &&
-                        renderer3DSubmissionIsOpaque(object)) {
-                        receiver = object;
-                        break;
-                    }
+                    if (object.kind !== renderer3DSubmissionObject ||
+                        renderer3DReflectionObjectMode(object) !== 2 ||
+                        !renderer3DSubmissionIsOpaque(object)) continue;
+                    if (!receiver) receiver = object;
+                    const receiverHeight = renderer3DReflectionReceiverPlane(object);
+                    if (receiverHeight === null) return false;
+                    if (automatic && !resolved) {
+                        effectiveHeight = receiverHeight;
+                        resolved = true;
+                    } else if (Math.abs(receiverHeight - effectiveHeight) > .01) return false;
                 }
-                if (!receiver) {
+                if (!receiver) return null;
+                renderer3DReflection.effectiveFloorHeight = effectiveHeight;
+                return receiver;
+            }
+
+            function renderer3DRenderReflectionPass() {
+                if (!renderer3DReflection.requested) return true;
+                const receiver = renderer3DReflectionResolveReceiver();
+                if (receiver === null) {
                     renderer3DReflection.fallbackReason = renderer3DReflectionFallbackNoReceiver;
                     return true;
                 }
-                if (renderer3DCamera.position[1] <= renderer3DReflection.floorHeight + .01) {
+                if (receiver === false) {
+                    renderer3DReflection.fallbackReason =
+                        renderer3DReflectionFallbackUnsupportedReceiver;
+                    return true;
+                }
+                renderer3DReflection.receiverSampleError =
+                    renderer3DReflectionReceiverSampleError(receiver);
+                if (renderer3DCamera.position[1] <=
+                        renderer3DReflection.effectiveFloorHeight + .01) {
                     renderer3DReflection.fallbackReason =
                         renderer3DReflectionFallbackCameraBelowFloor;
                     return true;
@@ -377,6 +493,9 @@
                 if (index === 15) return renderer3DReflection.scale;
                 if (index === 16) return Math.round(renderer3DReflection.floorHeight);
                 if (index === 17) return renderer3DReflection.includeBackdrop ? 1 : 0;
+                if (index === 18) return Math.round(renderer3DReflection.effectiveFloorHeight);
+                if (index === 19) return renderer3DReflection.targetFormat;
+                if (index === 20) return renderer3DReflection.receiverSampleError;
                 renderer3DLastError = 50;
                 return 0;
             }
@@ -387,11 +506,13 @@
                 renderer3DReflection.depth = null;
                 renderer3DReflection.width = 0;
                 renderer3DReflection.height = 0;
+                renderer3DReflection.targetFormat = 0;
                 renderer3DReflection.targetBytes = 0;
                 renderer3DReflection.appliedRevision = 0;
                 renderer3DReflection.failedRevision = 0;
                 renderer3DReflection.failedWidth = 0;
                 renderer3DReflection.failedHeight = 0;
+                renderer3DReflection.failedFormat = 0;
                 renderer3DReflection.effective = false;
                 renderer3DReflection.pass = false;
             }

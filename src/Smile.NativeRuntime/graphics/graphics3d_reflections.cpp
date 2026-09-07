@@ -19,7 +19,8 @@ struct SmileReflectionState3D
     int strength_percent;
     int softness_percent;
     int scale_percent;
-    float floor_height;
+    float requested_floor_height;
+    float effective_floor_height;
     int include_backdrop;
     int effective;
     int fallback_reason;
@@ -34,6 +35,7 @@ struct SmileReflectionState3D
     long long draw_count;
     long long triangle_count;
     long long composition_count;
+    long long receiver_sample_error_millionths;
     ID3D11Texture2D* color_texture;
     ID3D11RenderTargetView* color_view;
     ID3D11ShaderResourceView* shader_view;
@@ -47,12 +49,22 @@ struct SmileReflectionState3D
     int forced_failure_consumed;
 };
 
-static SmileReflectionState3D smile_reflections3d = {
-    0, 45, 35, 50, -1.0f, 1, 0,
-    SMILE_3D_REFLECTION_FALLBACK_DISABLED,
-    0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-};
+static SmileReflectionState3D smile_reflections_initial_state(void)
+{
+    SmileReflectionState3D state = {};
+    state.strength_percent = 45;
+    state.softness_percent = 35;
+    state.scale_percent = 50;
+    state.requested_floor_height = -1.0f;
+    state.include_backdrop = 1;
+    state.fallback_reason = SMILE_3D_REFLECTION_FALLBACK_DISABLED;
+    state.configuration_revision = 1;
+    state.resource_generation = 1;
+    return state;
+}
+
+static SmileReflectionState3D smile_reflections3d =
+    smile_reflections_initial_state();
 
 static void smile_reflections_release_resources(void)
 {
@@ -84,14 +96,14 @@ int smile_reflections_configure(int enabled, int strength_percent,
         smile_reflections3d.strength_percent == strength_percent &&
         smile_reflections3d.softness_percent == softness_percent &&
         smile_reflections3d.scale_percent == scale_percent &&
-        smile_reflections3d.floor_height == floor_height &&
+        smile_reflections3d.requested_floor_height == floor_height &&
         smile_reflections3d.include_backdrop == include_backdrop)
         return 1;
     smile_reflections3d.requested = enabled;
     smile_reflections3d.strength_percent = strength_percent;
     smile_reflections3d.softness_percent = softness_percent;
     smile_reflections3d.scale_percent = scale_percent;
-    smile_reflections3d.floor_height = floor_height;
+    smile_reflections3d.requested_floor_height = floor_height;
     smile_reflections3d.include_backdrop = include_backdrop;
     smile_reflections3d.configuration_revision++;
     if (smile_reflections3d.configuration_revision <= 0)
@@ -127,7 +139,17 @@ int smile_reflections_scale_percent(void)
 
 float smile_reflections_floor_height(void)
 {
-    return smile_reflections3d.floor_height;
+    return smile_reflections3d.effective_floor_height;
+}
+
+float smile_reflections_requested_floor_height(void)
+{
+    return smile_reflections3d.requested_floor_height;
+}
+
+void smile_reflections_resolve_floor_height(float floor_height)
+{
+    smile_reflections3d.effective_floor_height = floor_height;
 }
 
 int smile_reflections_include_backdrop(void)
@@ -137,6 +159,10 @@ int smile_reflections_include_backdrop(void)
 
 void smile_reflections_begin_frame(void)
 {
+    smile_reflections3d.effective_floor_height =
+        smile_reflections3d.requested_floor_height >= 0.0f
+            ? smile_reflections3d.requested_floor_height
+            : 0.0f;
     smile_reflections3d.effective = 0;
     smile_reflections3d.fallback_reason = smile_reflections3d.requested
         ? SMILE_3D_REFLECTION_FALLBACK_NO_RECEIVER
@@ -145,6 +171,7 @@ void smile_reflections_begin_frame(void)
     smile_reflections3d.draw_count = 0;
     smile_reflections3d.triangle_count = 0;
     smile_reflections3d.composition_count = 0;
+    smile_reflections3d.receiver_sample_error_millionths = 0;
 }
 
 void smile_reflections_skip(int reason)
@@ -334,6 +361,11 @@ void smile_reflections_record_composition(void)
     smile_reflections3d.composition_count++;
 }
 
+void smile_reflections_record_receiver_sample_error(long long millionths)
+{
+    smile_reflections3d.receiver_sample_error_millionths = millionths;
+}
+
 long long smile_reflections_value(int index)
 {
     if (index == 1) return smile_reflections3d.requested;
@@ -351,8 +383,14 @@ long long smile_reflections_value(int index)
     if (index == 13) return smile_reflections3d.strength_percent;
     if (index == 14) return smile_reflections3d.softness_percent;
     if (index == 15) return smile_reflections3d.scale_percent;
-    if (index == 16) return (long long)llroundf(smile_reflections3d.floor_height);
+    if (index == 16)
+        return (long long)llroundf(smile_reflections3d.requested_floor_height);
     if (index == 17) return smile_reflections3d.include_backdrop;
+    if (index == 18)
+        return (long long)llroundf(smile_reflections3d.effective_floor_height);
+    if (index == 19) return smile_reflections3d.hdr ? 2 :
+        (smile_reflections3d.color_texture != 0 ? 1 : 0);
+    if (index == 20) return smile_reflections3d.receiver_sample_error_millionths;
     return 0;
 }
 
@@ -376,7 +414,8 @@ void smile_reflections_reset(void)
     smile_reflections3d.strength_percent = 45;
     smile_reflections3d.softness_percent = 35;
     smile_reflections3d.scale_percent = 50;
-    smile_reflections3d.floor_height = -1.0f;
+    smile_reflections3d.requested_floor_height = -1.0f;
+    smile_reflections3d.effective_floor_height = 0.0f;
     smile_reflections3d.include_backdrop = 1;
     smile_reflections3d.forced_failure_consumed = 0;
     smile_reflections3d.configuration_revision++;

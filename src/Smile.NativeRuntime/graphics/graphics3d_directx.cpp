@@ -4712,19 +4712,9 @@ static void smile_3d_promote_pending_camera(void)
 
 static SmileMatrix3D smile_3d_view(void)
 {
-    float position[3];
-    float target[3];
-    float up[3];
-    float floor_height = smile_reflections_floor_height();
-    memcpy(position, smile_camera_position3d, sizeof(position));
-    memcpy(target, smile_camera_target3d, sizeof(target));
-    memcpy(up, smile_camera_up3d, sizeof(up));
-    if (smile_reflection_pass3d)
-    {
-        position[1] = 2.0f * floor_height - position[1];
-        target[1] = 2.0f * floor_height - target[1];
-        up[1] = -up[1];
-    }
+    const float* position = smile_camera_position3d;
+    const float* target = smile_camera_target3d;
+    const float* up = smile_camera_up3d;
     float zx = target[0] - position[0];
     float zy = target[1] - position[1];
     float zz = target[2] - position[2];
@@ -4741,6 +4731,13 @@ static SmileMatrix3D smile_3d_view(void)
     result.m[12] = -(xx * position[0] + xy * position[1] + xz * position[2]);
     result.m[13] = -(yx * position[0] + yy * position[1] + yz * position[2]);
     result.m[14] = -(zx * position[0] + zy * position[1] + zz * position[2]);
+    if (smile_reflection_pass3d)
+    {
+        SmileMatrix3D reflection = smile_3d_identity();
+        reflection.m[5] = -1.0f;
+        reflection.m[13] = 2.0f * smile_reflections_floor_height();
+        result = smile_3d_multiply(reflection, result);
+    }
     return result;
 }
 
@@ -7471,6 +7468,116 @@ static float smile_3d_receiver_backdrop_seam(const SmileSubmission3D* receiver)
     return seam;
 }
 
+static int smile_3d_receiver_plane(const SmileSubmission3D* receiver,
+    float* floor_height)
+{
+    SmileMesh3D* mesh;
+    SmileMatrix3D model;
+    float minimum_y = 0.0f;
+    float maximum_y = 0.0f;
+    if (receiver == 0 || floor_height == 0 || receiver->animation_mode != 0)
+        return 0;
+    mesh = smile_3d_mesh(receiver->mesh_handle);
+    if (mesh == 0 || mesh->vertices == 0 || mesh->vertex_count < 3) return 0;
+    model = smile_3d_model(&receiver->object);
+    for (unsigned int index = 0; index < mesh->vertex_count; ++index)
+    {
+        const SmileVertex3D* vertex = &mesh->vertices[index];
+        float world_y = vertex->x * model.m[1] + vertex->y * model.m[5] +
+            vertex->z * model.m[9] + model.m[13];
+        if (!isfinite(world_y)) return 0;
+        if (index == 0 || world_y < minimum_y) minimum_y = world_y;
+        if (index == 0 || world_y > maximum_y) maximum_y = world_y;
+    }
+    if (maximum_y - minimum_y > 0.01f) return 0;
+    *floor_height = (minimum_y + maximum_y) * 0.5f;
+    return 1;
+}
+
+static int smile_3d_resolve_reflection_receiver(
+    const SmileSubmission3D** receiver)
+{
+    const SmileSubmission3D* first_receiver = 0;
+    float effective_height = smile_reflections_requested_floor_height();
+    int automatic = effective_height < 0.0f;
+    int resolved = 0;
+    for (unsigned int index = 0; index < smile_frame_submission_count3d; ++index)
+    {
+        const SmileSubmission3D* submission = &smile_frame_submissions3d[index];
+        float receiver_height;
+        if (!(submission->kind == SMILE_3D_SUBMISSION_OBJECT &&
+            submission->object.reflection_mode == 2 &&
+            smile_3d_submission_is_opaque(submission)))
+            continue;
+        if (first_receiver == 0) first_receiver = submission;
+        if (!smile_3d_receiver_plane(submission, &receiver_height)) return 0;
+        if (automatic && !resolved)
+        {
+            effective_height = receiver_height;
+            resolved = 1;
+        }
+        else if (fabsf(receiver_height - effective_height) > 0.01f)
+            return 0;
+    }
+    if (first_receiver == 0) return 2;
+    smile_reflections_resolve_floor_height(effective_height);
+    *receiver = first_receiver;
+    return 1;
+}
+
+static long long smile_3d_receiver_sample_error(const SmileSubmission3D* receiver)
+{
+    SmileMesh3D* mesh;
+    SmileMatrix3D model, projection, main_view, reflected_view;
+    SmileMatrix3D main_mvp, reflected_mvp;
+    float aspect;
+    float maximum_error = 0.0f;
+    int previous_pass;
+    if (receiver == 0) return 0;
+    mesh = smile_3d_mesh(receiver->mesh_handle);
+    if (mesh == 0 || mesh->vertices == 0) return 0;
+    model = smile_3d_model(&receiver->object);
+    aspect = (float)smile_graphics_directx_viewport_width() /
+        (float)smile_graphics_directx_viewport_height();
+    projection = smile_3d_projection(aspect > 0.0f ? aspect : 1.0f);
+    previous_pass = smile_reflection_pass3d;
+    smile_reflection_pass3d = 0;
+    main_view = smile_3d_view();
+    smile_reflection_pass3d = 1;
+    reflected_view = smile_3d_view();
+    smile_reflection_pass3d = previous_pass;
+    main_mvp = smile_3d_multiply(smile_3d_multiply(model, main_view), projection);
+    reflected_mvp = smile_3d_multiply(
+        smile_3d_multiply(model, reflected_view), projection);
+    for (unsigned int index = 0; index < mesh->vertex_count; ++index)
+    {
+        const SmileVertex3D* vertex = &mesh->vertices[index];
+        float main_x = vertex->x * main_mvp.m[0] + vertex->y * main_mvp.m[4] +
+            vertex->z * main_mvp.m[8] + main_mvp.m[12];
+        float main_y = vertex->x * main_mvp.m[1] + vertex->y * main_mvp.m[5] +
+            vertex->z * main_mvp.m[9] + main_mvp.m[13];
+        float main_w = vertex->x * main_mvp.m[3] + vertex->y * main_mvp.m[7] +
+            vertex->z * main_mvp.m[11] + main_mvp.m[15];
+        float reflected_x = vertex->x * reflected_mvp.m[0] +
+            vertex->y * reflected_mvp.m[4] + vertex->z * reflected_mvp.m[8] +
+            reflected_mvp.m[12];
+        float reflected_y = vertex->x * reflected_mvp.m[1] +
+            vertex->y * reflected_mvp.m[5] + vertex->z * reflected_mvp.m[9] +
+            reflected_mvp.m[13];
+        float reflected_w = vertex->x * reflected_mvp.m[3] +
+            vertex->y * reflected_mvp.m[7] + vertex->z * reflected_mvp.m[11] +
+            reflected_mvp.m[15];
+        float x_error;
+        float y_error;
+        if (main_w <= 0.0001f || reflected_w <= 0.0001f) continue;
+        x_error = fabsf(0.5f * (main_x / main_w - reflected_x / reflected_w));
+        y_error = fabsf(0.5f * (main_y / main_w - reflected_y / reflected_w));
+        if (x_error > maximum_error) maximum_error = x_error;
+        if (y_error > maximum_error) maximum_error = y_error;
+    }
+    return (long long)llroundf(maximum_error * 1000000.0f);
+}
+
 static int smile_3d_draw_backdrop(ID3D11DeviceContext* context,
     ID3D11RenderTargetView* target, const D3D11_VIEWPORT* viewport,
     int mirrored, float receiver_seam)
@@ -8141,24 +8248,22 @@ static int smile_3d_render_reflection_pass(void)
     float backdrop_seam = 0.5f;
     long long post_draw_count;
     const SmileSubmission3D* receiver = 0;
+    int receiver_result;
     int success = 1;
     if (!smile_reflections_requested()) return 1;
-    for (unsigned int index = 0; index < smile_frame_submission_count3d; ++index)
-    {
-        const SmileSubmission3D* submission = &smile_frame_submissions3d[index];
-        if (submission->kind == SMILE_3D_SUBMISSION_OBJECT &&
-            submission->object.reflection_mode == 2 &&
-            smile_3d_submission_is_opaque(submission))
-        {
-            receiver = submission;
-            break;
-        }
-    }
-    if (receiver == 0)
+    receiver_result = smile_3d_resolve_reflection_receiver(&receiver);
+    if (receiver_result == 2)
     {
         smile_reflections_skip(SMILE_3D_REFLECTION_FALLBACK_NO_RECEIVER);
         return 1;
     }
+    if (receiver_result == 0)
+    {
+        smile_reflections_skip(SMILE_3D_REFLECTION_FALLBACK_UNSUPPORTED_RECEIVER);
+        return 1;
+    }
+    smile_reflections_record_receiver_sample_error(
+        smile_3d_receiver_sample_error(receiver));
     if (smile_camera_position3d[1] <= smile_reflections_floor_height() + 0.01f)
     {
         smile_reflections_skip(SMILE_3D_REFLECTION_FALLBACK_CAMERA_BELOW_FLOOR);
@@ -10191,7 +10296,7 @@ extern "C" long long smile_renderer3d_command(long long command,
             object->reflection_mode = (unsigned char)b;
             return 1;
         case SMILE_3D_REFLECTION_VALUE:
-            if (a < 1 || a > 17)
+            if (a < 1 || a > 20)
             { smile_last_error3d = 50; return 0; }
             return smile_reflections_value((int)a);
         case SMILE_3D_SET_MODEL_NODE_ROTATION_OFFSET:
