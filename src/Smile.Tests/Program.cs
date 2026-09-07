@@ -3900,6 +3900,22 @@ Run("Multiline parenthesized expressions preserve native and Web emitter parity"
         .Contains("smile_print_number", StringComparison.Ordinal));
     Equal(true, new WebEmitter(analysis).Emit().Contains("smile.print", StringComparison.Ordinal));
 });
+Run("Native Boolean operators short-circuit like Web", () =>
+{
+    const string source = "Option Explicit\nDim Result As Boolean\nResult = False And Probe()\nResult = True Or Probe()\nFunction Probe() As Boolean\nReturn True\nEnd Function\n";
+    var analysis = Analyze(source);
+    Equal(false, analysis.HasErrors);
+
+    var native = new MasmEmitter(analysis, SmileGraphicsBackend.Auto, true, false).Emit();
+    Equal(true, native.Contains("logical_and_false", StringComparison.Ordinal));
+    Equal(true, native.Contains("logical_or_true", StringComparison.Ordinal));
+    Equal(false, native.Contains("    and rax, rcx", StringComparison.Ordinal));
+    Equal(false, native.Contains("    or rax, rcx", StringComparison.Ordinal));
+
+    var web = new WebEmitter(analysis).Emit();
+    Equal(true, web.Contains("&&", StringComparison.Ordinal));
+    Equal(true, web.Contains("||", StringComparison.Ordinal));
+});
 Run("Newlines remain significant outside parenthesized expression contexts", () =>
 {
     var invalidSources = new[]

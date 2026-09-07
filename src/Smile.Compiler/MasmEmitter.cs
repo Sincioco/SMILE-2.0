@@ -2375,6 +2375,12 @@ internal sealed class MasmEmitter
 
     private void EmitBinary(BinaryExpressionSyntax binary)
     {
+        if (binary.OperatorToken.Kind is SyntaxKind.AndKeyword or SyntaxKind.OrKeyword)
+        {
+            EmitLogical(binary);
+            return;
+        }
+
         EmitExpression(binary.Left);
         PushRax();
         EmitExpression(binary.Right);
@@ -2408,8 +2414,6 @@ internal sealed class MasmEmitter
                 Line("    idiv rcx");
                 Line("    mov rax, rdx");
                 break;
-            case SyntaxKind.AndKeyword: Line("    and rax, rcx"); break;
-            case SyntaxKind.OrKeyword: Line("    or rax, rcx"); break;
             case SyntaxKind.EqualsToken: EmitComparison("sete"); break;
             case SyntaxKind.NotEqualsToken: EmitComparison("setne"); break;
             case SyntaxKind.LessToken: EmitComparison("setl"); break;
@@ -2417,6 +2421,29 @@ internal sealed class MasmEmitter
             case SyntaxKind.LessOrEqualsToken: EmitComparison("setle"); break;
             case SyntaxKind.GreaterOrEqualsToken: EmitComparison("setge"); break;
         }
+    }
+
+    private void EmitLogical(BinaryExpressionSyntax binary)
+    {
+        var shortCircuit = NewLabel(binary.OperatorToken.Kind == SyntaxKind.AndKeyword
+            ? "logical_and_false"
+            : "logical_or_true");
+        var done = NewLabel("logical_done");
+        EmitExpression(binary.Left);
+        Line("    cmp rax, 0");
+        Line(binary.OperatorToken.Kind == SyntaxKind.AndKeyword
+            ? $"    je {shortCircuit}"
+            : $"    jne {shortCircuit}");
+        EmitExpression(binary.Right);
+        Line("    cmp rax, 0");
+        Line("    setne al");
+        Line("    movzx rax, al");
+        Line($"    jmp {done}");
+        Line($"{shortCircuit}:");
+        Line(binary.OperatorToken.Kind == SyntaxKind.AndKeyword
+            ? "    xor rax, rax"
+            : "    mov rax, 1");
+        Line($"{done}:");
     }
 
     private void EmitIdentity(IdentityExpressionSyntax identity)

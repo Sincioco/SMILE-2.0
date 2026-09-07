@@ -21,7 +21,7 @@ This is the single compact checkpoint for the continuation authorized by
 | Order | Milestone | State |
 | --- | --- | --- |
 | 1 | Restore native Desktop Character Viewer sound effects without changing Web cues | Completed and pushed in `a3b645d` |
-| 2 | Correct the underlying NU1503 restore/build warning without suppression | In progress |
+| 2 | Correct the underlying NU1503 restore/build warning without suppression | Completed and pushed in `bac36a2` |
 | 3 | Reassess the 1,851-line `Program.smile` for useful responsibility extraction | Pending |
 | 4 | Reconcile and continue only approved, implementation-ready suspended work | Pending |
 | 5 | Execute `C:\Users\louie\Downloads\Implement Reflective Battle Ground Floor.txt` after the ordered continuation work | Queued by Sin |
@@ -56,8 +56,51 @@ balances the apartment lifetime.
   slash and one crosscut `playSound` call, publishes both WAV files, and both
   generated JavaScript files pass `node --check`.
 
+## NU1503 milestone
+
+### Root cause and correction
+
+The repository build script used `dotnet restore` on a mixed managed and native
+Visual Studio solution. The .NET restore host cannot evaluate the C++
+`Smile.NativeRuntime.vcxproj`, so it skipped that valid project and emitted NU1503.
+`scripts/build.cmd` now uses Visual Studio MSBuild for the solution restore. That
+host owns both project systems, restores the managed graph, evaluates the native
+project without a warning, and does not suppress any diagnostic.
+
+### Evidence
+
+- Direct Visual Studio MSBuild restore completed without NU1503.
+- The normal full build and VSIX packaging path completed without NU1503.
+- The correction was committed and pushed separately as `bac36a2`.
+
+## Full-smoke regression follow-through
+
+The ordinary full smoke exposed two stale assumptions after earlier checked-array
+work. The Phase 3B invalid fixture still used a fixed-size record-array field that
+is now valid language syntax; it now tests an actually invalid unsized field and
+retains SML3403 coverage. More importantly, native `And` and `Or` still evaluated
+both operands while generated Web JavaScript already short-circuited. Existing
+shared SMILE guard expressions therefore reached sentinel array index `-1` only on
+native builds. The MASM emitter now evaluates logical operators left-to-right,
+skips the right operand when its result cannot affect the expression, and
+normalizes the result to Boolean `0` or `1`.
+
+### Evidence
+
+- Focused native and Web fixture produced the identical result
+  `False,0,True,0`, proving the skipped operand did not run.
+- Managed compiler suite: 309 checks passed, including new native/Web emitter
+  assertions for `And` and `Or`.
+- Full repository smoke passed: 13 formatter tests, 421 tracked SMILE style
+  checks, and all native/Web language phases, libraries, games, and VSIX payload
+  checks completed successfully.
+- The refreshed installed VSIX is version `2.0.60`, assembly version `2.0.60.0`,
+  with SHA-256
+  `6AA1C8B6B9CF8BDF7594AF7FD4173CE288F81E0C47EB1138C8F2F9C2757070C6`.
+
 ## Next action
 
-Reproduce NU1503 from the normal build/restore path, identify the invalid restore
-input, correct its underlying project/configuration ownership, validate the warning is
-gone without suppression, then commit and push that correction separately.
+Commit and push the native logical-operator regression follow-through, then review
+the remaining Character Viewer `Program.smile` responsibilities against the
+completed refactor ownership map. Extract only a cohesive responsibility with a
+clearer dependency boundary; otherwise record an evidence-based no-change decision.
