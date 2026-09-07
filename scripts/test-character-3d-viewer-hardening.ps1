@@ -150,13 +150,9 @@ try {
         'Call StepAnimationFrame(1)',
         'Const FRAME_BUTTON_REPEAT_MILLISECONDS = 300',
         'Const CALIBRATION_MAX_CLIPS = ViewerCalibration.MAX_CLIPS',
-        'Sub ToggleDragon()',
         'Sub ToggleSword()',
         'Sub ToggleShield()',
-        'Sub ToggleFloorAndGrid()',
         'ViewerEffects.AdvanceScene(',
-        'Call ViewerEffects.ToggleFlamePause(Effects)',
-        'Call ViewerEffects.ToggleLightningPause(Effects)',
         'Playback.ScenePaused = Not Playback.ScenePaused',
         'Const ZOOM_IN_LIMIT = -144',
         'Window_Width()',
@@ -272,6 +268,7 @@ try {
     foreach ($contract in @(
         'Public Type OperationResult',
         'Public Function ApplyPresentationAction(',
+        'Public Function ApplyPartyPresentationAction(',
         'Public Function ApplyKeyboardNavigationAction(',
         'ViewerRendering.CycleLighting(Rendering)',
         'ViewerRendering.CycleMaterialInspection(Rendering)',
@@ -279,7 +276,8 @@ try {
         'ViewerRendering.CycleBackground(Rendering, BackgroundCount)',
         'ViewerRendering.ToggleFloorAndGrid(Rendering)',
         'ViewerEffects.ToggleLightningPause(Effects)',
-        'ViewerEffects.ToggleFlamePause(Effects)')) {
+        'ViewerEffects.ToggleFlamePause(Effects)',
+        'ViewerDragon.ToggleVisible(Dragon, Effects.DragonLight)')) {
         Assert-Contains $inspectorCommandsSource $contract 'Viewer inspector command owner'
     }
     foreach ($contract in @(
@@ -654,6 +652,24 @@ try {
     Assert-True ($viewerSource.Contains('ViewerCamera.ToggleResponsiveFit(') -and
         -not $viewerSource.Contains('ViewerCameraState.FitLocked = Not')) `
         'Responsive-fit transition behavior must remain with camera state.'
+    $partyPointerStart = $viewerSource.IndexOf('Function HandlePartyPointer() As Boolean')
+    Assert-True ($partyPointerStart -ge 0) `
+        'Party pointer ownership boundary must remain discoverable.'
+    $partyPointerSource = $viewerSource.Substring($partyPointerStart)
+    Assert-True ($partyPointerSource.Contains(
+            'ViewerInspectorCommands.ApplyPartyPresentationAction(') -and
+        -not $partyPointerSource.Contains('ViewerRendering.CycleSocketDisplay(') -and
+        -not $partyPointerSource.Contains('ViewerRendering.ToggleFloorAndGrid(') -and
+        -not $partyPointerSource.Contains('ViewerRendering.CycleBackground(') -and
+        -not $partyPointerSource.Contains('ViewerCamera.ToggleAutoOrbit(') -and
+        -not $partyPointerSource.Contains('ViewerEffects.ToggleFlamePause(') -and
+        -not $partyPointerSource.Contains('ViewerEffects.ToggleLightningPause(') -and
+        -not $partyPointerSource.Contains('ViewerEffects.ToggleShieldFireStyle(')) `
+        'Party rendering, VFX and camera commands must remain in the focused command owner.'
+    Assert-True (-not $viewerSource.Contains('Sub CycleBackground()') -and
+        -not $viewerSource.Contains('Sub ToggleFloorAndGrid()') -and
+        -not $viewerSource.Contains('Sub ToggleDragon()')) `
+        'Deleted presentation pass-through wrappers must not return to Program.smile.'
     $inspectorDrawStart = $viewerSource.IndexOf('Sub DrawInspectorOverlay()')
     $viewerTitleStart = $viewerSource.IndexOf('Function ViewerTitle()')
     Assert-True ($inspectorDrawStart -ge 0 -and $viewerTitleStart -gt $inspectorDrawStart) `

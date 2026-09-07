@@ -262,7 +262,7 @@ Call Check(CameraState.PanPointerRemainderX = 0 And CameraState.OrbitPointerRema
 CameraState.Controls.OrbitYaw = 0
 InspectorOperation = ViewerInspectorCommands.ApplyKeyboardNavigationAction(
     ViewerInput.INSPECTOR_KEY_ORBIT_LEFT,
-    RenderingState, 5, 4, CameraState)
+    RenderingState, 5, 4, CameraState, EffectsState, DragonState)
 
 Call CheckNamed(InspectorOperation.Handled And InspectorOperation.Ready,
     "Keyboard camera command handled")
@@ -271,14 +271,14 @@ Call CheckNamed(CameraState.Controls.OrbitYaw = -15,
 
 InspectorOperation = ViewerInspectorCommands.ApplyKeyboardNavigationAction(
     ViewerInput.INSPECTOR_KEY_TOGGLE_GRID,
-    RenderingState, 5, 4, CameraState)
+    RenderingState, 5, 4, CameraState, EffectsState, DragonState)
 
 Call CheckNamed(InspectorOperation.Handled And RenderingState.GridVisible,
     "Keyboard rendering command toggles grid")
 
 InspectorOperation = ViewerInspectorCommands.ApplyKeyboardNavigationAction(
     ViewerInput.INSPECTOR_KEY_NONE,
-    RenderingState, 5, 4, CameraState)
+    RenderingState, 5, 4, CameraState, EffectsState, DragonState)
 
 Call CheckNamed(Not InspectorOperation.Handled And InspectorOperation.Ready,
     "Unknown keyboard command remains ready no-op")
@@ -849,6 +849,80 @@ PartyPointer = ViewerParty.ClassifyPointer(
 Call Check(PartyPointer.Consumed And
     PartyPointer.Action = ViewerParty.POINTER_ACTION_NONE)
 
+Call ViewerRendering.Reset(RenderingState, 3)
+Call ViewerEffects.ResetPlaybackControls(EffectsState)
+Call ViewerCamera.SetAutoOrbit(CameraState, False)
+
+If EffectsState.ShieldFlameStyle Then
+    Call ViewerEffects.ToggleShieldFireStyle(EffectsState)
+End If
+
+InspectorOperation = ViewerInspectorCommands.ApplyPartyPresentationAction(
+    ViewerParty.POINTER_ACTION_CYCLE_SOCKET,
+    RenderingState, 5, EffectsState, CameraState, DragonState)
+
+Call CheckNamed(InspectorOperation.Handled And InspectorOperation.Ready,
+    "Party socket action handled")
+Call CheckNamed(RenderingState.SocketGizmosVisible,
+    "Party socket action changes rendering state")
+
+InspectorOperation = ViewerInspectorCommands.ApplyPartyPresentationAction(
+    ViewerParty.POINTER_ACTION_TOGGLE_FLOOR,
+    RenderingState, 5, EffectsState, CameraState, DragonState)
+
+Call CheckNamed(Not RenderingState.FloorVisible And Not RenderingState.GridVisible,
+    "Party floor action changes rendering state")
+
+InspectorOperation = ViewerInspectorCommands.ApplyPartyPresentationAction(
+    ViewerParty.POINTER_ACTION_CYCLE_BACKGROUND,
+    RenderingState, 5, EffectsState, CameraState, DragonState)
+
+Call CheckNamed(RenderingState.BackgroundIndex = 4,
+    "Party background action changes rendering state")
+
+InspectorOperation = ViewerInspectorCommands.ApplyPartyPresentationAction(
+    ViewerParty.POINTER_ACTION_TOGGLE_ORBIT,
+    RenderingState, 5, EffectsState, CameraState, DragonState)
+
+Call CheckNamed(CameraState.AutoOrbit,
+    "Party orbit action changes camera state")
+
+InspectorOperation = ViewerInspectorCommands.ApplyPartyPresentationAction(
+    ViewerParty.POINTER_ACTION_TOGGLE_FIRE,
+    RenderingState, 5, EffectsState, CameraState, DragonState)
+
+Call CheckNamed(EffectsState.FlamePaused,
+    "Party Fire action changes independent VFX state")
+
+InspectorOperation = ViewerInspectorCommands.ApplyPartyPresentationAction(
+    ViewerParty.POINTER_ACTION_TOGGLE_LIGHTNING,
+    RenderingState, 5, EffectsState, CameraState, DragonState)
+
+Call CheckNamed(EffectsState.LightningPaused,
+    "Party Lightning action changes independent VFX state")
+
+InspectorOperation = ViewerInspectorCommands.ApplyPartyPresentationAction(
+    ViewerParty.POINTER_ACTION_TOGGLE_SHIELD_STYLE,
+    RenderingState, 5, EffectsState, CameraState, DragonState)
+
+Call CheckNamed(EffectsState.ShieldFlameStyle,
+    "Party shield style action changes VFX state")
+
+InspectorOperation = ViewerInspectorCommands.ApplyPartyPresentationAction(
+    ViewerParty.POINTER_ACTION_SPEED_UP,
+    RenderingState, 5, EffectsState, CameraState, DragonState)
+
+Call CheckNamed(Not InspectorOperation.Handled And InspectorOperation.Ready,
+    "Cross-owner Party action remains unhandled")
+
+Call ViewerRendering.Reset(RenderingState, 3)
+Call ViewerEffects.ResetPlaybackControls(EffectsState)
+Call ViewerCamera.SetAutoOrbit(CameraState, False)
+
+If EffectsState.ShieldFlameStyle Then
+    Call ViewerEffects.ToggleShieldFireStyle(EffectsState)
+End If
+
 FormationCenter = Math3D.Vector(-208, 0, -120)
 FirstApproach = Math3D.Vector(-21, 0, -44)
 SecondApproach = Math3D.Vector(-49, 0, 4)
@@ -1239,14 +1313,14 @@ Call Check(ViewerEffects.ShouldFreeze(False, True))
 
 InspectorOperation = ViewerInspectorCommands.ApplyPresentationAction(
     ViewerUi.INSPECTOR_ACTION_LIGHTNING_PAUSE,
-    RenderingState, 5, EffectsState)
+    RenderingState, 5, EffectsState, DragonState)
 
 Call Check(InspectorOperation.Handled And InspectorOperation.Ready)
 Call Check(Not EffectsState.LightningPaused)
 
 InspectorOperation = ViewerInspectorCommands.ApplyPresentationAction(
     ViewerUi.INSPECTOR_ACTION_FLAME_PAUSE,
-    RenderingState, 5, EffectsState)
+    RenderingState, 5, EffectsState, DragonState)
 
 Call Check(InspectorOperation.Handled And EffectsState.FlamePaused)
 
@@ -1255,33 +1329,33 @@ Call Check(EffectsState.SwordFireVisible And EffectsState.ShieldFireVisible)
 
 InspectorOperation = ViewerInspectorCommands.ApplyPresentationAction(
     ViewerUi.INSPECTOR_ACTION_SWORD_FIRE,
-    RenderingState, 5, EffectsState)
+    RenderingState, 5, EffectsState, DragonState)
 
 Call Check(InspectorOperation.Handled)
 Call Check(Not EffectsState.SwordFireVisible)
 
 InspectorOperation = ViewerInspectorCommands.ApplyPresentationAction(
     ViewerUi.INSPECTOR_ACTION_SWORD_FIRE,
-    RenderingState, 5, EffectsState)
+    RenderingState, 5, EffectsState, DragonState)
 
 Call Check(EffectsState.SwordFireVisible)
 
 InspectorOperation = ViewerInspectorCommands.ApplyPresentationAction(
     ViewerUi.INSPECTOR_ACTION_SHIELD_FIRE,
-    RenderingState, 5, EffectsState)
+    RenderingState, 5, EffectsState, DragonState)
 
 Call Check(Not EffectsState.ShieldFireVisible)
 
 InspectorOperation = ViewerInspectorCommands.ApplyPresentationAction(
     ViewerUi.INSPECTOR_ACTION_SHIELD_FIRE,
-    RenderingState, 5, EffectsState)
+    RenderingState, 5, EffectsState, DragonState)
 
 Call Check(EffectsState.ShieldFireVisible)
 Call Check(ViewerEffects.ShieldFireStyleLabel(EffectsState) = "Ember Outline")
 
 InspectorOperation = ViewerInspectorCommands.ApplyPresentationAction(
     ViewerUi.INSPECTOR_ACTION_SHIELD_FIRE_STYLE,
-    RenderingState, 5, EffectsState)
+    RenderingState, 5, EffectsState, DragonState)
 
 Call Check(EffectsState.ShieldFlameStyle)
 Call Check(ViewerEffects.ShieldFireStyleLabel(EffectsState) = "Flames")
@@ -1326,6 +1400,27 @@ Call ViewerParty.UpdateOrinStorm(
 Call ViewerDragon.SetAvailable(DragonState, True)
 Call Check(DragonState.Available And DragonState.Visible)
 
+InspectorOperation = ViewerInspectorCommands.ApplyPresentationAction(
+    ViewerUi.INSPECTOR_ACTION_DRAGON,
+    RenderingState, 5, EffectsState, DragonState)
+
+Call CheckNamed(InspectorOperation.Handled And Not DragonState.Visible,
+    "Inspector Dragon action changes Dragon-owned visibility")
+
+InspectorOperation = ViewerInspectorCommands.ApplyPartyPresentationAction(
+    ViewerParty.POINTER_ACTION_TOGGLE_DRAGON,
+    RenderingState, 5, EffectsState, CameraState, DragonState)
+
+Call CheckNamed(InspectorOperation.Handled And DragonState.Visible,
+    "Party Dragon action changes Dragon-owned visibility")
+
+InspectorOperation = ViewerInspectorCommands.ApplyKeyboardNavigationAction(
+    ViewerInput.INSPECTOR_KEY_TOGGLE_DRAGON,
+    RenderingState, 5, 4, CameraState, EffectsState, DragonState)
+
+Call CheckNamed(InspectorOperation.Handled And Not DragonState.Visible,
+    "Keyboard Dragon action changes Dragon-owned visibility")
+
 DragonState.Clip = "ClawStrike"
 
 Call Check(ViewerDragon.DesiredClip(
@@ -1358,20 +1453,20 @@ Call Check(ViewerRendering.ApplyLighting(RenderingState))
 
 InspectorOperation = ViewerInspectorCommands.ApplyPresentationAction(
     ViewerUi.INSPECTOR_ACTION_NONE,
-    RenderingState, 5, EffectsState)
+    RenderingState, 5, EffectsState, DragonState)
 
 Call Check(Not InspectorOperation.Handled And InspectorOperation.Ready)
 
 InspectorOperation = ViewerInspectorCommands.ApplyPresentationAction(
     ViewerUi.INSPECTOR_ACTION_LIGHTING,
-    RenderingState, 5, EffectsState)
+    RenderingState, 5, EffectsState, DragonState)
 
 Call Check(InspectorOperation.Handled And InspectorOperation.Ready)
 Call Check(RenderingState.LightingIndex = 1)
 
 InspectorOperation = ViewerInspectorCommands.ApplyPresentationAction(
     ViewerUi.INSPECTOR_ACTION_MATERIAL,
-    RenderingState, 5, EffectsState)
+    RenderingState, 5, EffectsState, DragonState)
 
 Call Check(InspectorOperation.Handled And InspectorOperation.Ready)
 Call Check(RenderingState.MaterialInspection =
@@ -1381,23 +1476,23 @@ Call Check(RenderingState.MaterialInspection = Graphics3D.MATERIAL_INSPECTION_LI
 
 InspectorOperation = ViewerInspectorCommands.ApplyPresentationAction(
     ViewerUi.INSPECTOR_ACTION_FLOOR,
-    RenderingState, 5, EffectsState)
+    RenderingState, 5, EffectsState, DragonState)
 
 Call Check(Not RenderingState.FloorVisible And Not RenderingState.GridVisible)
 
 InspectorOperation = ViewerInspectorCommands.ApplyPresentationAction(
     ViewerUi.INSPECTOR_ACTION_FLOOR,
-    RenderingState, 5, EffectsState)
+    RenderingState, 5, EffectsState, DragonState)
 InspectorOperation = ViewerInspectorCommands.ApplyPresentationAction(
     ViewerUi.INSPECTOR_ACTION_BACKGROUND,
-    RenderingState, 5, EffectsState)
+    RenderingState, 5, EffectsState, DragonState)
 
 Call Check(RenderingState.FloorVisible And RenderingState.GridVisible)
 Call Check(RenderingState.BackgroundIndex = 4)
 
 InspectorOperation = ViewerInspectorCommands.ApplyPresentationAction(
     ViewerUi.INSPECTOR_ACTION_SOCKET,
-    RenderingState, 5, EffectsState)
+    RenderingState, 5, EffectsState, DragonState)
 
 Call Check(InspectorOperation.Handled And RenderingState.SocketGizmosVisible)
 Call ViewerRendering.CycleSocketDisplay(RenderingState)

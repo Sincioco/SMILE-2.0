@@ -5,7 +5,9 @@ Option Explicit
 
 Import Smile.Tools.Character3DViewerEffects As ViewerEffects
 Import Smile.Tools.Character3DViewerCamera As ViewerCamera
+Import Smile.Tools.Character3DViewerDragon As ViewerDragon
 Import Smile.Tools.Character3DViewerInput As ViewerInput
+Import Smile.Tools.Character3DViewerParty As ViewerParty
 Import Smile.Tools.Character3DViewerRendering As ViewerRendering
 Import Smile.Tools.Character3DViewerUi As ViewerUi
 
@@ -16,7 +18,8 @@ End Type
 
 Public Function ApplyPresentationAction(Action As Number,
     ByRef Rendering As ViewerRendering.State, BackgroundCount As Number,
-    ByRef Effects As ViewerEffects.State) As OperationResult
+    ByRef Effects As ViewerEffects.State,
+    ByRef Dragon As ViewerDragon.State) As OperationResult
 
     Dim Result As OperationResult
 
@@ -46,6 +49,44 @@ Public Function ApplyPresentationAction(Action As Number,
         Call ViewerEffects.ToggleFlamePause(Effects)
     Else If Action = ViewerUi.INSPECTOR_ACTION_SHIELD_FIRE_STYLE Then
         Call ViewerEffects.ToggleShieldFireStyle(Effects)
+    Else If Action = ViewerUi.INSPECTOR_ACTION_DRAGON Then
+        Call ViewerDragon.ToggleVisible(Dragon, Effects.DragonLight)
+    Else
+        Return Result
+    End If
+
+    Result.Handled = True
+
+    Return Result
+
+End Function
+
+Public Function ApplyPartyPresentationAction(Action As Number,
+    ByRef Rendering As ViewerRendering.State, BackgroundCount As Number,
+    ByRef Effects As ViewerEffects.State,
+    ByRef Camera As ViewerCamera.State,
+    ByRef Dragon As ViewerDragon.State) As OperationResult
+
+    Dim Result As OperationResult
+
+    Result.Ready = True
+
+    If Action = ViewerParty.POINTER_ACTION_CYCLE_SOCKET Then
+        Call ViewerRendering.CycleSocketDisplay(Rendering)
+    Else If Action = ViewerParty.POINTER_ACTION_TOGGLE_FLOOR Then
+        Call ViewerRendering.ToggleFloorAndGrid(Rendering)
+    Else If Action = ViewerParty.POINTER_ACTION_CYCLE_BACKGROUND Then
+        Call ViewerRendering.CycleBackground(Rendering, BackgroundCount)
+    Else If Action = ViewerParty.POINTER_ACTION_TOGGLE_ORBIT Then
+        Call ViewerCamera.ToggleAutoOrbit(Camera)
+    Else If Action = ViewerParty.POINTER_ACTION_TOGGLE_FIRE Then
+        Call ViewerEffects.ToggleFlamePause(Effects)
+    Else If Action = ViewerParty.POINTER_ACTION_TOGGLE_LIGHTNING Then
+        Call ViewerEffects.ToggleLightningPause(Effects)
+    Else If Action = ViewerParty.POINTER_ACTION_TOGGLE_SHIELD_STYLE Then
+        Call ViewerEffects.ToggleShieldFireStyle(Effects)
+    Else If Action = ViewerParty.POINTER_ACTION_TOGGLE_DRAGON Then
+        Call ViewerDragon.ToggleVisible(Dragon, Effects.DragonLight)
     Else
         Return Result
     End If
@@ -59,7 +100,9 @@ End Function
 Public Function ApplyKeyboardNavigationAction(Action As Number,
     ByRef Rendering As ViewerRendering.State, BackgroundCount As Number,
     SocketCount As Number,
-    ByRef Camera As ViewerCamera.State) As OperationResult
+    ByRef Camera As ViewerCamera.State,
+    ByRef Effects As ViewerEffects.State,
+    ByRef Dragon As ViewerDragon.State) As OperationResult
 
     Dim Result As OperationResult
 
@@ -87,6 +130,8 @@ Public Function ApplyKeyboardNavigationAction(Action As Number,
         Call ViewerCamera.ToggleAutoOrbit(Camera)
     Else If Action = ViewerInput.INSPECTOR_KEY_TOGGLE_GRID Then
         Call ViewerRendering.ToggleGrid(Rendering)
+    Else If Action = ViewerInput.INSPECTOR_KEY_TOGGLE_DRAGON Then
+        Call ViewerDragon.ToggleVisible(Dragon, Effects.DragonLight)
     Else
         Return Result
     End If

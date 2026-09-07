@@ -717,11 +717,11 @@ Sub CheckDragonFireContinuity()
 
     Effects.FlamePaused = True
 
-    Call ToggleDragon()
+    Call ViewerDragon.ToggleVisible(DragonState, Effects.DragonLight)
     Call UpdateDragon()
     Call CalibrationCheck(Fire.Value(1, OtherFire) = 1,
         "Hidden frozen Dragon releases every owned Fire emitter")
-    Call ToggleDragon()
+    Call ViewerDragon.ToggleVisible(DragonState, Effects.DragonLight)
     Call UpdateDragon()
     Call CalibrationCheck(Fire.Value(1, OtherFire) = 1,
         "Showing frozen Dragon does not resurrect old Fire")
