@@ -114,6 +114,7 @@ Public Sub Enter()
     Bounds = Character3D.WorldBounds(Arin, 0)
 
     If Bounds.Valid Then
+
         FootLeft = Character3D.SocketPosition(Arin, "FootLeft")
         FootRight = Character3D.SocketPosition(Arin, "FootRight")
         Focus = Character3D.SocketPosition(Arin, "Chest")
@@ -122,8 +123,10 @@ Public Sub Enter()
         GroundingOffset = 0 - Min(FootLeft.Y, FootRight.Y)
         Ready = Character3D.Place(
             Arin, ActorX, GroundingOffset, ActorZ) And Ready
+
     Else
         Ready = False
+
     End If
 
     Ready = Graphics3D.ClearAdditionalLights3DChecked() And Ready
@@ -174,8 +177,11 @@ Public Sub Update(Key As Number)
         CameraControls, Not PointerOverControl, True, True)
 
     If Interaction.CameraControlsDragging(CameraControls) Then
+
         AutoOrbit = False
+
     Else If AutoOrbit Then
+
         AutoOrbitYaw1000 = AutoOrbitYaw1000 + ElapsedMilliseconds * 18
 
         If AutoOrbitYaw1000 >= 360000 Then
@@ -183,9 +189,11 @@ Public Sub Update(Key As Number)
         End If
 
         CameraControls.OrbitYaw = AutoOrbitYaw1000 / 1000
+
     Else
         CameraReady = Interaction.AdvanceCameraControls(
             CameraControls, 1) And CameraReady
+
     End If
 
     Camera = Interaction.ApplyCameraControls(BaseCamera, CameraControls)
@@ -272,11 +280,11 @@ Private Function ReflectionLabel() As Text
     If (ReflectionsEnabled And
         (FallbackReason = Graphics3D.REFLECTION_FALLBACK_ALLOCATION_FAILED Or
             FallbackReason = Graphics3D.REFLECTION_FALLBACK_RENDER_FAILED)) Then
-        Result = "Floor Reflections: Unavailable"
+        Result = "Battle Floor: Unavailable"
     Else If ReflectionsEnabled Then
-        Result = "Floor Reflections: On"
+        Result = "Battle Floor: Reflective"
     Else
-        Result = "Floor Reflections: Off"
+        Result = "Battle Floor: Original"
     End If
 
     Return Result

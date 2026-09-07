@@ -33,11 +33,16 @@ The optional planar-reflection request is applied by `ViewerRendering` through s
 `Arena3D.ConfigureForFrame` immediately before the scene begins. The native/Web
 Renderer3D owners replay the already accepted opaque/masked object snapshots under the
 mirrored camera during `End3D`; application code does not draw or update an actor twice.
-The arena floor is the receiver, the grid and socket gizmos are excluded, and VFX stay
-outside the reflection pass. `ViewerInspectorCommands` and `ViewerParty` provide distinct
-typed UI actions that both call `ViewerRendering.ToggleFloorReflections`. The requested
-preference lives only in `ViewerRendering.State`; `ViewerInspectorPresentation` derives
-the On/Off/Unavailable label from it plus shared renderer diagnostics.
+The arena floor is the receiver. The flat screen-fixed backdrop is mapped from only the
+region visible above the topmost projected receiver edge, preventing floor-covered image
+content from being exposed as if it were new 3D scenery. Eligible 3D objects still use the
+mirrored camera. The grid is excluded from capture and drawn above both the reflective and
+original matte floor. Legacy simple-material meshes remain double-sided so the grid's
+established winding renders on native and Web. Socket gizmos and VFX stay outside the
+reflection pass. `ViewerInspectorCommands` and `ViewerParty` provide distinct typed UI
+actions that both call `ViewerRendering.ToggleFloorReflections`. The requested preference
+lives only in `ViewerRendering.State`; `ViewerInspectorPresentation` derives the
+Reflective/Original/Unavailable label from it plus shared renderer diagnostics.
 
 ## R7.5 responsibility-completion audit
 

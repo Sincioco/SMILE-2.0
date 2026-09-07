@@ -84,7 +84,7 @@ Off path and fallback behavior directly testable on both targets.
   receiver compositions for that frame.
 - Missing receiver, below-plane camera, allocation failure, and render failure are
   explicit fail-soft outcomes. The main scene continues normally and the UI can
-  report `Floor Reflections: Unavailable`.
+  report `Battle Floor: Unavailable`.
 - A failed allocation is cached for the current configuration and viewport instead
   of being retried every frame. A new configuration boundary, including Off then
   On, permits a bounded retry.
@@ -94,13 +94,21 @@ Off path and fallback behavior directly testable on both targets.
 
 ## Character Viewer behavior
 
-- Individual and Party views default to `Floor Reflections: On`.
-- The visible control and `R` key switch between On and Off; Party pointer routing
-  consumes the click so it cannot leak into camera or other controls.
+- Individual and Party views default to `Battle Floor: Reflective`.
+- The visible control and `R` key switch between `Battle Floor: Reflective` and
+  `Battle Floor: Original`; Party pointer routing consumes the click so it cannot
+  leak into camera or other controls.
 - `Unavailable` is reserved for a requested reflection whose optional target or
   pass failed. The floor remains usable and matte.
-- Backdrop, grid, HUD, inspector, socket helpers, transform gizmos, and VFX retain
-  their established ownership and are not reflected.
+- Reflective mode mirrors eligible characters and equipment with the real mirrored
+  camera. Because the backdrop is a flat screen-fixed image rather than 3D geometry,
+  its reflection is bounded by the topmost projected receiver edge and samples only
+  the image region visible above that edge; floor-covered backdrop pixels cannot be
+  revealed in the reflection. The original grid is excluded from the capture and
+  drawn above the receiver in both floor modes. HUD, inspector, socket helpers,
+  transform gizmos, and VFX retain their established ownership and are not reflected.
+- The animation diagnostics begin below the floor toggle and are suppressed at
+  compact heights where they would overlap lower controls.
 - Reset restores the documented default. Live character calibration remains
   canonical and was not changed by this milestone.
 

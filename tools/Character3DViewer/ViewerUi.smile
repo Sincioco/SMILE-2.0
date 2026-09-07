@@ -116,8 +116,8 @@ Public Const SLIDER_ACTION_CALIBRATION = 4
 
 Private Const MINIMUM_VIEWER_WIDTH = 800
 Private Const MINIMUM_VIEWER_HEIGHT = 540
-Private Const ANIMATION_DETAILS_Y = 494
-Private Const ANIMATION_DETAILS_MINIMUM_HEIGHT = 650
+Private Const ANIMATION_DETAILS_Y = 530
+Private Const ANIMATION_DETAILS_MINIMUM_HEIGHT = 780
 
 Public Type State
     Visibility As Number
@@ -584,11 +584,11 @@ Public Function FloorReflectionLabel(Enabled As Boolean,
     If (Enabled And
         (FallbackReason = Graphics3D.REFLECTION_FALLBACK_ALLOCATION_FAILED Or
             FallbackReason = Graphics3D.REFLECTION_FALLBACK_RENDER_FAILED)) Then
-        Result = "Floor Reflections: Unavailable"
+        Result = "Battle Floor: Unavailable"
     Else If Enabled Then
-        Result = "Floor Reflections: On"
+        Result = "Battle Floor: Reflective"
     Else
-        Result = "Floor Reflections: Off"
+        Result = "Battle Floor: Original"
     End If
 
     Return Result

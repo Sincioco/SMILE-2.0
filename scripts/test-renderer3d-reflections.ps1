@@ -55,6 +55,13 @@ function Mirror-Y([double]$Value, [double]$FloorHeight) {
     return 2.0 * $FloorHeight - $Value
 }
 
+function Backdrop-SourceY([double]$DisplayY, [double]$ReceiverSeam) {
+    $span = [Math]::Max(1.0 - $ReceiverSeam, 0.0001)
+    return [Math]::Max(0.0,
+        [Math]::Min($ReceiverSeam,
+            $ReceiverSeam * (1.0 - $DisplayY) / $span))
+}
+
 if (-not (Test-Path -LiteralPath $compiler -PathType Leaf)) {
     throw 'Build SMILE before running the Renderer3D reflection gate.'
 }
@@ -144,15 +151,40 @@ try {
         'Native bounded reflection filtering'
     Assert-Contains $webWriter 'texture(reflectionTexture' `
         'Web bounded reflection filtering'
-    Assert-Contains $nativeSource 'smile_3d_draw_backdrop(context, target, &viewport)' `
-        'Native screen-fixed backdrop capture'
+    Assert-Contains $nativeSource `
+        'smile_3d_receiver_backdrop_seam(receiver)' `
+        'Native receiver-bounded backdrop capture'
     Assert-Contains $webOwner 'renderer3DPostPass(renderer3DReflection.framebuffer' `
         'Web screen-fixed backdrop capture'
+    Assert-Contains $webOwner 'renderer3DReflectionBackdropSeam(receiver)' `
+        'Web receiver-bounded backdrop capture'
+    Assert-Contains $webOwner '0, 0, 1, backdropSeam, 0);' `
+        'Web receiver seam delivery'
+    Assert-Contains $nativeSource 'backdropUv' `
+        'Native reflected backdrop orientation'
+    Assert-Contains $webWriter 'backdropUv' `
+        'Web reflected backdrop orientation'
+    Assert-Contains $nativeSource 'seam*(1-uv.y)' `
+        'Native visible-backdrop sampling bound'
+    Assert-Contains $nativeSource 'mirrored && receiver_seam <= 0.0f' `
+        'Native fully occluded backdrop suppression'
+    Assert-Contains $webWriter 'seam*(1.0-displayY)' `
+        'Web visible-backdrop sampling bound'
+    Assert-Contains $webOwner 'else if (backdropSeam > 0)' `
+        'Web fully occluded backdrop suppression'
+    Assert-Contains $nativeSource 'smile_3d_set_object_raster(context, object, 1);' `
+        'Native legacy simple-material grid culling'
+    Assert-Contains $webWriter 'renderer3DApplyCull(object,true);' `
+        'Web legacy simple-material grid culling'
 
-    Assert-Contains $viewerUi 'Floor Reflections: On' 'Viewer reflection label'
-    Assert-Contains $viewerUi 'Floor Reflections: Off' 'Viewer reflection label'
-    Assert-Contains $viewerUi 'Floor Reflections: Unavailable' `
+    Assert-Contains $viewerUi 'Battle Floor: Reflective' 'Viewer reflection label'
+    Assert-Contains $viewerUi 'Battle Floor: Original' 'Viewer reflection label'
+    Assert-Contains $viewerUi 'Battle Floor: Unavailable' `
         'Viewer fallback label'
+    Assert-Contains $viewerUi 'Private Const ANIMATION_DETAILS_Y = 530' `
+        'Viewer reflection control and animation-details separation'
+    Assert-Contains $viewerUi 'Private Const ANIMATION_DETAILS_MINIMUM_HEIGHT = 780' `
+        'Viewer compact-height animation-details suppression'
     Assert-Contains $viewerParty 'Result.Consumed = True' `
         'Party reflection control ownership'
     Assert-Contains $gamePreview 'Import Smile.Simple3D.Arena3D As Arena3D' `
@@ -180,6 +212,14 @@ try {
     Assert-Near ([Math]::Abs($pointY - $floorHeight)) `
         ([Math]::Abs($mirroredY - $floorHeight)) 0.0000001 `
         'Receiver-point distance symmetry'
+    $receiverSeam = 0.42
+    Assert-Near (Backdrop-SourceY $receiverSeam $receiverSeam) `
+        $receiverSeam 0.0000001 'Backdrop seam continuity'
+    Assert-Near (Backdrop-SourceY 1.0 $receiverSeam) 0.0 0.0000001 `
+        'Backdrop bottom samples the visible image top'
+    if ((Backdrop-SourceY 0.75 $receiverSeam) -gt $receiverSeam) {
+        throw 'Reflected backdrop sampled a floor-covered source row.'
+    }
 
     & $compiler --project $testProject --target windows-x64 `
         --configuration $Configuration --graphics DirectX -o $nativeOutput

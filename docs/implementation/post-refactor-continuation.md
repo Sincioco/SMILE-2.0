@@ -24,7 +24,7 @@ This is the single compact checkpoint for the continuation authorized by
 | 2 | Correct the underlying NU1503 restore/build warning without suppression | Completed and pushed in `bac36a2` |
 | 3 | Reassess the 1,851-line `Program.smile` for useful responsibility extraction | Completed; evidence-based no-change decision |
 | 4 | Reconcile and continue only approved, implementation-ready suspended work | Completed; Reflective Battle Ground Floor is the only supplied implementation handoff |
-| 5 | Execute the supplied Reflective Battle Ground Floor handoff after the ordered continuation work | Completed; tracked in `docs/implementation/reflective-battle-floor.md` |
+| 5 | Execute the supplied Reflective Battle Ground Floor handoff after the ordered continuation work | Completed and corrected after native/Web visual acceptance; tracked in `docs/implementation/reflective-battle-floor.md` |
 
 ## Desktop sound-effects milestone
 
@@ -142,3 +142,25 @@ The supplied Reflective Battle Ground Floor task is implemented and validated in
 `docs/implementation/reflective-battle-floor.md`. No additional task from this
 continuation is implementation-ready without a new task-specific ZIP or Markdown
 handoff from Sin.
+
+## Reflective-floor acceptance corrections
+
+Visual acceptance after the initial `61a64c4` delivery found three presentation
+regressions. The reflection refactor had applied default back-face culling to legacy
+simple-material geometry, hiding the established grid. The first backdrop attempt
+also flipped the whole flat image around screen center, which exposed artwork that
+the floor covered in the direct view. Finally, the new floor control shared the
+animation-diagnostics row.
+
+The native and Web owners now preserve the legacy double-sided simple-material path,
+derive a conservative backdrop source boundary from the topmost projected receiver
+edge, and map only the visible image region above that boundary into the floor.
+Eligible 3D characters and equipment still use the mirrored-camera pass. The UI
+explicitly switches between `Battle Floor: Reflective` and `Battle Floor: Original`,
+and animation diagnostics begin on a separate row with compact-height suppression.
+
+Focused native/Web reflection and Viewer hardening gates passed. Release native and
+Web publications for Character Viewer and Sin Star I rebuilt successfully. Visible
+native and installed-Chrome checks retained the grid, kept floor-covered backdrop
+pixels out of the reflection, preserved the floor-mode toggle, and showed separated
+control and diagnostic rows. Arin and Orin calibration hashes remained unchanged.

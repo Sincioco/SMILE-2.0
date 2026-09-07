@@ -243,15 +243,46 @@
                 return object.reflectionMode !== undefined ? object.reflectionMode : 1;
             }
 
+            function renderer3DReflectionBackdropSeam(receiver) {
+                const mesh = receiver ? renderer3DMeshes.get(receiver.mesh) : null;
+                if (!mesh || !mesh.vertices) return .5;
+                renderer3DModelInto(renderer3DModelScratch, receiver);
+                renderer3DViewInto(renderer3DViewScratch);
+                renderer3DProjectionInto(renderer3DProjectionScratch,
+                    backingWidth / backingHeight);
+                renderer3DMultiplyInto(renderer3DMatrixScratchA,
+                    renderer3DViewScratch, renderer3DModelScratch);
+                renderer3DMultiplyInto(renderer3DMvpScratch,
+                    renderer3DProjectionScratch, renderer3DMatrixScratchA);
+                let seam = 1;
+                let found = false;
+                for (let index = 0; index < mesh.vertexCount; index += 1) {
+                    const offset = index * 20;
+                    const x = mesh.vertices[offset];
+                    const y = mesh.vertices[offset + 1];
+                    const z = mesh.vertices[offset + 2];
+                    const clipY = renderer3DMvpScratch[1] * x +
+                        renderer3DMvpScratch[5] * y + renderer3DMvpScratch[9] * z +
+                        renderer3DMvpScratch[13];
+                    const clipW = renderer3DMvpScratch[3] * x +
+                        renderer3DMvpScratch[7] * y + renderer3DMvpScratch[11] * z +
+                        renderer3DMvpScratch[15];
+                    if (clipW <= .0001) continue;
+                    seam = Math.min(seam, .5 - .5 * clipY / clipW);
+                    found = true;
+                }
+                return found ? Math.max(0, Math.min(.95, seam)) : .5;
+            }
+
             function renderer3DRenderReflectionPass() {
                 if (!renderer3DReflection.requested) return true;
-                let receiver = false;
+                let receiver = null;
                 for (let index = 0; index < renderer3DSubmissionCount; index += 1) {
                     const object = renderer3DSubmissionObjects[index];
                     if (object.kind === renderer3DSubmissionObject &&
                         renderer3DReflectionObjectMode(object) === 2 &&
                         renderer3DSubmissionIsOpaque(object)) {
-                        receiver = true;
+                        receiver = object;
                         break;
                     }
                 }
@@ -287,6 +318,7 @@
                     1);
                 gl.clearDepth(1);
                 gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+                const backdropSeam = renderer3DReflectionBackdropSeam(receiver);
                 renderer3DReflection.pass = true;
                 let success = true;
                 const postDrawCount = renderer3DPostDrawCount;
@@ -294,9 +326,10 @@
                     const texture = renderer3DTextures.get(renderer3DBackdropTexture);
                     if (!texture || !renderer3DPostProgram || !renderer3DUploadTexture(texture))
                         success = false;
-                    else renderer3DPostPass(renderer3DReflection.framebuffer,
+                    else if (backdropSeam > 0) renderer3DPostPass(renderer3DReflection.framebuffer,
                         renderer3DReflection.width, renderer3DReflection.height,
-                        texture.gpu, null, renderer3DHdrEffective ? 6 : 7, 0, 0, 0, 0, 0);
+                        texture.gpu, null, renderer3DHdrEffective ? 6 : 7,
+                        0, 0, 1, backdropSeam, 0);
                     renderer3DPostDrawCount = postDrawCount;
                     gl.bindFramebuffer(gl.FRAMEBUFFER, renderer3DReflection.framebuffer);
                     gl.viewport(0, 0, renderer3DReflection.width, renderer3DReflection.height);

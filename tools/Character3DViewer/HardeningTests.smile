@@ -909,11 +909,11 @@ Call Check(ViewerUi.MaterialInspectionLabel(Graphics3D.MATERIAL_INSPECTION_NORMA
 Call Check(ViewerUi.DemoLabel(True, True, False) = "RESUME")
 Call Check(ViewerUi.DemoStatusLabel(False, False, True) = "On")
 Call Check(ViewerUi.PartyRoleLabel("") = "Technical")
-Call Check(ViewerUi.FloorReflectionLabel(True) = "Floor Reflections: On")
-Call Check(ViewerUi.FloorReflectionLabel(False) = "Floor Reflections: Off")
+Call Check(ViewerUi.FloorReflectionLabel(True) = "Battle Floor: Reflective")
+Call Check(ViewerUi.FloorReflectionLabel(False) = "Battle Floor: Original")
 Call Check(ViewerUi.FloorReflectionLabel(True,
     Graphics3D.REFLECTION_FALLBACK_ALLOCATION_FAILED) =
-    "Floor Reflections: Unavailable")
+    "Battle Floor: Unavailable")
 Call Check(ViewerUi.StatusPanelX(1600) = 1332)
 Call Check(ViewerUi.AnimationButtonX(1600) = 1344)
 Call Check(ViewerUi.GlowButtonX(1600, True, False) = 1548)

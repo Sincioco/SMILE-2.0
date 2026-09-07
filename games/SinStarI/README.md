@@ -25,8 +25,8 @@ than enum arithmetic.
 - Town: arrows/WASD move; 1 and 2 switch the visible character.
 - Town 2: arrows/WASD take manual control; hold Space to run as Character 1;
   Enter starts or pauses the edge tour; 1 and 2 switch characters.
-- Battle Arena Preview: click `Floor Reflections: On / Off` or press R to toggle
-  the shared polished floor; left-drag pans, middle-drag orbits, the wheel zooms,
+- Battle Arena Preview: click `Battle Floor: Reflective / Original` or press R to
+  toggle the shared floor; left-drag pans, middle-drag orbits, the wheel zooms,
   O toggles the default smooth auto-orbit, and Escape returns to the title.
 
 Title music plays only while the title is active. Opening a scene stops it, and

@@ -24,6 +24,7 @@ If Failures = 0 Then
 
 Else
     Print "Renderer3D reflection tests failed: "; Failures
+
 End If
 
 Sub RunReflectionTests()
