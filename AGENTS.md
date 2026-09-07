@@ -50,13 +50,7 @@ These instructions apply to the entire SMILE 2.0 repository.
 
 ### Current on-hold tasks
 
-- Semantic-inspection CLI.
-- Battle Scene Editor.
-- Subject-first syntax.
-- Reflective Battle Floors.
-- Character Viewer Desktop sound-effects investigation and fix; the reported Desktop
-  failure versus working Web behavior must be recorded as outstanding work, but not
-  investigated or fixed until Sin gives further direction.
+- None.
 
 ## Project identity
 

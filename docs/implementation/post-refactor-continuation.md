@@ -20,8 +20,8 @@ This is the single compact checkpoint for the continuation authorized by
 
 | Order | Milestone | State |
 | --- | --- | --- |
-| 1 | Restore native Desktop Character Viewer sound effects without changing Web cues | In progress: fixed and validated; commit/push pending |
-| 2 | Correct the underlying NU1503 restore/build warning without suppression | Pending |
+| 1 | Restore native Desktop Character Viewer sound effects without changing Web cues | Completed and pushed in `a3b645d` |
+| 2 | Correct the underlying NU1503 restore/build warning without suppression | In progress |
 | 3 | Reassess the 1,851-line `Program.smile` for useful responsibility extraction | Pending |
 | 4 | Reconcile and continue only approved, implementation-ready suspended work | Pending |
 | 5 | Execute `C:\Users\louie\Downloads\Implement Reflective Battle Ground Floor.txt` after the ordered continuation work | Queued by Sin |
@@ -45,7 +45,7 @@ and unwinds that reference if XAudio2 or its mastering voice cannot initialize.
 The focused native test rejects `CO_E_NOTINITIALIZED` and verifies shutdown
 balances the apartment lifetime.
 
-### Evidence before milestone commit
+### Evidence
 
 - Native text/runtime fixture: 46 checks passed, including actual WAV completion
   and balanced COM shutdown.
@@ -58,6 +58,6 @@ balances the apartment lifetime.
 
 ## Next action
 
-Run the focused Character Viewer hardening gate, export both canonical calibration
-sources, commit and push the sound fix as the first milestone, then begin NU1503
-diagnosis. Do not start a later milestone before that push succeeds.
+Reproduce NU1503 from the normal build/restore path, identify the invalid restore
+input, correct its underlying project/configuration ownership, validate the warning is
+gone without suppression, then commit and push that correction separately.
