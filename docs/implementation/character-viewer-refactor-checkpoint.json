@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "checkpointIdentity": "character-viewer-refactor-current-2026-09-07-r3",
+  "checkpointIdentity": "character-viewer-refactor-current-2026-09-07-r4",
   "packageEvidence": {
     "refactorPackage": {
       "packageIdentity": "smile-2.0-character-viewer-refactor-first",
@@ -18,19 +18,19 @@
     }
   },
   "status": {
-    "viewerRefactor": "IN-PROGRESS",
+    "viewerRefactor": "COMPLETE",
     "viewerResponsibilityExtraction": "COMPLETE-WITH-DOCUMENTED-ENTRY-POINT-EXCEPTION",
     "fixedArrayHardeningMilestone": "COMPLETE",
     "checkpointRepairC01": "COMPLETE",
-    "blocked": true
+    "blocked": false
   },
-  "currentStage": "R8-native-manual-interaction-confirmation",
+  "currentStage": "R8-verified-refactor-delivery",
   "sourceIdentity": {
-    "currentHeadAtAudit": "4e1642da828b2f95865dc96b9076c784d12c2720",
-    "originMainAtAudit": "4e1642da828b2f95865dc96b9076c784d12c2720",
+    "currentHeadAtAudit": "1f58910220d5287ea6cb76061c763f61849be7dd",
+    "originMainAtAudit": "1f58910220d5287ea6cb76061c763f61849be7dd",
     "latestViewerImplementationCommit": "f1b235586ff73db0f6b683d8d961ecdc7f2fe93e",
     "latestHardeningIntegrationCommit": "a068b4820790b91bbaf0f94811b4f8a65ffb2567",
-    "workingTreeAtAudit": "clean before this final-gate documentation update"
+    "workingTreeAtAudit": "clean before the final acceptance-status documentation update"
   },
   "historicalAnchors": {
     "reviewedRefactorBase": "5bfd4f96ee838ca1b6b255c28c4117b0e0a5ec7b",
@@ -168,7 +168,7 @@
     "PASS: installed Chrome 152.0.7977.77 on the exact Release Full Web output; Arin/Orin/Dragon/Party, three-level UI, visible import/download, independent VFX freeze/restore while paused, paused-frame VFX advancement, pan/zoom/reset, opt-in gizmo and zero warning/error logs",
     "PASS: installed Chrome real WEBGL_lose_context loss/restoration on the current Release Viewer; runtime remained running, the context restored and Party rendering returned without a page reload",
     "PASS: exact Release Desktop executable visibly launched through Launch.ps1 -SkipWindowActivation, remained responsive and did not cover Chrome as a topmost window",
-    "BLOCKED: this Codex UI session exposes Chrome but no native-app input API, so a current exact-executable Desktop pause/tab/camera/gizmo interaction still requires a short user confirmation"
+    "PASS: current exact-executable Desktop interaction accepted by Sin on September 7, 2026: Desktop Viewer seems to be working as expected"
   ],
   "preservation": {
     "arinKeyframes": 24,
@@ -180,10 +180,9 @@
     "scenePauseVfx": "Fire and Lightning advance by default while scene playback is paused; each family toggle freezes only that family"
   },
   "openIssues": [
-    "Program.smile is an explicit 1,851-line entry-point exception; every substantial retained coordinator is documented above and in ARCHITECTURE.md",
-    "the overall Viewer refactor cannot be marked complete until the running rebuilt Desktop executable receives and visibly responds to the bounded pause/tab/camera/gizmo interaction check"
+    "Program.smile is an accepted 1,851-line entry-point exception; every substantial retained coordinator is documented above and in ARCHITECTURE.md"
   ],
-  "nextConcreteAction": "In the visible Release Desktop Viewer, confirm Space pause/resume, Arin/Orin/Dragon/Party tabs, one pan or orbit plus wheel in/out and right-click reset, and Pose Show Gizmo/Hide Gizmo; then mark this gate complete, commit/push the report and stop.",
+  "nextConcreteAction": "STOP after committing and pushing this final acceptance update; do not begin Double or any deferred task.",
   "deferred": [
     "Double",
     "fractional renderer APIs",

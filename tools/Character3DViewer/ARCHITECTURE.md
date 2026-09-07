@@ -457,9 +457,11 @@ implementation in the coordinator. Moving the retained input, Party-binding or o
 chains wholesale would merely hide the same cross-owner application order in a replacement
 application/UI module. Two production-dead calibration test boundaries were found and
 deleted; the isolated fixture now calls the production calibration owners directly. The
-entry point contains no unreferenced procedure after that cleanup. This is an architectural
-disposition, not final acceptance: native and installed-Chrome interaction evidence remains
-required before the refactor can be declared complete.
+entry point contains no unreferenced procedure after that cleanup. Current native and
+installed-Chrome evidence now accompanies this architectural disposition, and Sin accepted
+the visible rebuilt Release Desktop Viewer as working as expected on September 7, 2026.
+The Character Viewer refactor gate is therefore complete with the documented entry-point
+exception.
 
 `Program.smile` remains a documented temporary exception to the 500-line entry-point
 ceiling at 1,851 lines/51 procedures. The substantial retained coordinators are the

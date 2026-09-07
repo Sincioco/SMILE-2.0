@@ -1,4 +1,4 @@
-Overall status: BLOCKED
+Overall status: COMPLETE
 
 ---
 
@@ -33,7 +33,7 @@ artifacts and installed Chrome. It does not restart or replace historical H6.1 e
 | Latest addendum review anchor | `d5b7d9ec804a1561d2fab928fd78f69eba38d73e` |
 | Latest Viewer implementation | `f1b235586ff73db0f6b683d8d961ecdc7f2fe93e` |
 | Fixed-array integration | `a068b4820790b91bbaf0f94811b4f8a65ffb2567` |
-| Pre-report current HEAD/origin | `4e1642da828b2f95865dc96b9076c784d12c2720` |
+| Gate-checkpoint HEAD/origin | `1f58910220d5287ea6cb76061c763f61849be7dd` |
 | `Program.smile` SHA-256 | `9951954FC0DB49FBB1C33A68A29D11EB506E9A9AD8BBD4643045B73A39044E33` |
 | Compact checkpoint | `docs/implementation/character-viewer-refactor-checkpoint.json`, identity `character-viewer-refactor-current-2026-09-07-r3` |
 
@@ -123,7 +123,7 @@ state, and their APIs borrow narrow explicit subsystem values rather than a shar
 | RPG integration | ✅ PASS — DirectX, GDI and Web exact parity after invalid-handle follow-through |
 | Full repository smoke | ✅ PASS at `a068b48`, including formatter and 406 tracked SMILE files |
 | Installed Chrome | ✅ PASS — Chrome `152.0.7977.77`, current Full Web output, no warning/error logs |
-| Exact Desktop UI interaction | 🚧 BLOCKED — rebuilt executable is visible/running, but the current Codex UI channel exposes Chrome only |
+| Exact Desktop UI interaction | ✅ PASS — Sin accepted the visible rebuilt Release Viewer on September 7, 2026: “Desktop Viewer seems to be working as expected” |
 
 ### Installed-Chrome Results
 
@@ -183,7 +183,7 @@ identity; no output was renamed or relocated.
 | Watcher could lose a pending/newer revision or hide final failure | ✅ Fixed; newest revision wins after retry and bounded persistent failure is reported nonzero |
 | Stale generated publication could pass | ✅ Fixed; selected profile asset fingerprint is validated after publication |
 | Scene pause stopped all VFX | ✅ Fixed/preserved; Fire and Lightning run by default and freeze independently |
-| Direct native UI control unavailable in this session | 🚧 Evidence limitation, not a product failure; exact Desktop interaction confirmation remains required |
+| Direct native UI control unavailable in this session | ✅ Closed by Sin's current manual observation of the exact visible rebuilt Release Viewer |
 | Initial `program.js` inventory assumption | ⚠️ Validation-command error only; corrected to the actual `game.js`; no artifact changed |
 | Temporary wrapper cleanup command was policy-blocked | ⚠️ Tooling-only; copy was removed with the patch mechanism and Full Web returned to 40 files |
 
@@ -211,18 +211,15 @@ python -m http.server 8766 --bind 127.0.0.1 --directory tools/Character3DViewer/
 Open `http://127.0.0.1:8766/` in installed Chrome. The current acceptance used one Viewer
 tab and did not run a redundant Edge/Firefox pass.
 
-## 🚧 Required Completion Check
+## ✅ Completion
 
-The gate cannot yet claim overall completion because the acceptance contract requires
-current native launch interactions. In the already visible rebuilt Release Desktop Viewer:
+Sin confirmed the current visible rebuilt Release Desktop Viewer works as expected. That
+manual observation closes the native-interaction evidence item which the Codex UI channel
+could not directly automate. Together with the exact executable launch, native production-
+module gates, installed-Chrome interaction, publication checks and preservation hashes,
+the Character Viewer refactor gate is complete.
 
-1. Press Space twice and confirm pause/resume.
-2. Select Arin, Orin, Dragon and Party.
-3. Perform one pan or orbit, wheel in/out and right-click reset.
-4. Open Pose, show the gizmo, then hide it.
-
-No save/import/export action is required. After confirmation, update this gate/checkpoint
-to `COMPLETE`, commit/push the report, and stop.
+No Double or deferred phase is authorized to start from this completion record.
 
 ## 📋 Deferred Work
 
