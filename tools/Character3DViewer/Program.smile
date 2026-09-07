@@ -1345,67 +1345,16 @@ Sub ResetAll()
 
     End If
 
-    Call ViewerParty.ClearPreview(Party)
-
     If ViewerUiState.CalibrationEditing Then
         Call CancelCalibrationEdit()
     End If
 
-    Call ViewerPlayback.ResetControls(
-        Playback, ActiveProfile.DefaultPlaybackSpeed)
-
-    Call ViewerCamera.LockResponsiveFit(ViewerCameraState)
-
-    Call ViewerRendering.ResetControls(Rendering, 3)
-
-    Call ViewerEffects.ResetEpicGlowVisibility(
-        Effects, ViewerProfiles.EpicGlowVisibleByDefault(Session.ProfileIndex))
-
-    Call ViewerDragon.ResetVisibility(DragonState)
-
-    Call ViewerActors.ResetEquipmentVisibility(Equipment)
-
-    Call ViewerEffects.ResetPlaybackControls(Effects)
-
-    Call ViewerUi.Reset(ViewerUiState)
-    Call ViewerInput.CancelCaptures(ViewerInputState)
-    Call ViewerGizmo.Hide(ViewerGizmoState)
-    Call ViewerCamera.CancelPointerControls(ViewerCameraState)
-
-    Session.Ready = ViewerRendering.ApplyLighting(Rendering) And Session.Ready
-
-    Session.Ready = ViewerActors.ApplyArenaFacing(
-        Character,
-        Session.ProfileIndex,
-        Session.DragonInspection,
-        DragonState.Available,
-        ViewerDragon.PositionX(),
-        0,
-        ViewerDragon.PositionZ(),
-        ViewerDragon.RotationY(),
-        CHARACTER_MODEL_FORWARD_YAW_OFFSET,
-        ORIN_ARENA_YAW_ADJUSTMENT
-    ) And Session.Ready
-
-    If CalibrationAvailable Then
-        Session.Ready = ViewerActors.ApplyEquipmentVisibility(
-            Character, Equipment) And Session.Ready
-    End If
-
-    Session.Ready = ViewerRendering.ApplyMaterialInspection(Rendering) And Session.Ready
-
-    If Party.Enabled And Party.Ready Then
-
-        Call ResetPartyDemo()
-        Call ResetView()
-
-        Call ViewerCamera.SetAutoOrbit(ViewerCameraState, True)
-
-    Else
-
-        Call RestartPresentation()
-
-    End If
+    Call ViewerLifecycle.ResetAll(
+        Session, Party, Character, Rendering, Effects, DragonState,
+        Playback, ViewerCameraState, Calibration, ViewerUiState,
+        ViewerInputState, ViewerGizmoState, Equipment,
+        CalibrationAvailable, SwordWristNode, ShieldWristNode,
+        ActiveProfile.DefaultPlaybackSpeed, LifecycleSettings)
 
 End Sub
 

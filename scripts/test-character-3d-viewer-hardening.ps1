@@ -238,6 +238,10 @@ try {
         'Public Sub PrepareRetry(',
         'Public Sub PrepareProfileCycle(',
         'Public Sub PrepareCharacterSwitch(',
+        'Public Sub ResetAll(',
+        'Private Sub ResetControlOwners(',
+        'Private Sub ReapplyResetPresentation(',
+        'Private Sub CompleteReset(',
         'Public Sub Shutdown(',
         'Public Sub ReleaseResources(')) {
         Assert-Contains $lifecycleSource $contract 'Viewer lifecycle owner'
@@ -701,6 +705,19 @@ try {
         -not $viewerSource.Contains('Function ApplyBackdrop(') -and
         -not $viewerSource.Contains('Sub DestroyBackdrop(')) `
         'Load-time renderer, camera and calibration lifecycle must remain in focused owners.'
+    $resetAllStart = $viewerSource.IndexOf('Sub ResetAll()')
+    $selectClipStart = $viewerSource.IndexOf('Sub SelectClip(')
+    Assert-True ($resetAllStart -ge 0 -and $selectClipStart -gt $resetAllStart) `
+        'Reset adapter boundaries must remain readable.'
+    $resetAllSource = $viewerSource.Substring(
+        $resetAllStart, $selectClipStart - $resetAllStart)
+    Assert-True ($resetAllSource.Contains('ViewerLifecycle.ResetAll(') -and
+        -not $resetAllSource.Contains('ViewerPlayback.ResetControls(') -and
+        -not $resetAllSource.Contains('ViewerRendering.ResetControls(') -and
+        -not $resetAllSource.Contains('ViewerEffects.ResetPlaybackControls(') -and
+        -not $resetAllSource.Contains('ViewerActors.ApplyArenaFacing(') -and
+        -not $resetAllSource.Contains('ViewerRendering.ApplyMaterialInspection(')) `
+        'Whole-Viewer reset lifecycle must remain in ViewerLifecycle.'
     foreach ($contract in @(
         'Public Function ConfigureFraming(',
         'CharacterViewer.AutoFit(',

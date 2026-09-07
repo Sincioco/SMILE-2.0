@@ -15,6 +15,7 @@ Import Smile.Tools.Character3DViewerCamera As ViewerCamera
 Import Smile.Tools.Character3DViewerDragon As ViewerDragon
 Import Smile.Tools.Character3DViewerEffects As ViewerEffects
 Import Smile.Tools.Character3DViewerGizmo As ViewerGizmo
+Import Smile.Tools.Character3DViewerInput As ViewerInput
 Import Smile.Tools.Character3DViewerParty As ViewerParty
 Import Smile.Tools.Character3DViewerPlayback As ViewerPlayback
 Import Smile.Tools.Character3DViewerProfiles As ViewerProfiles
@@ -361,6 +362,32 @@ Public Sub ResetView(ByRef Session As ViewerSession.State,
 
 End Sub
 
+Public Sub ResetAll(ByRef Session As ViewerSession.State,
+    ByRef Party As ViewerParty.State, ByRef Character As Character3D.Actor,
+    ByRef Rendering As ViewerRendering.State, ByRef Effects As ViewerEffects.State,
+    ByRef Dragon As ViewerDragon.State, ByRef Playback As ViewerPlayback.State,
+    ByRef Camera As ViewerCamera.State, ByRef Calibration As ViewerCalibration.State,
+    ByRef Ui As ViewerUi.State, ByRef InputState As ViewerInput.State,
+    ByRef Gizmo As ViewerGizmo.State,
+    ByRef Equipment As ViewerActors.EquipmentVisibility,
+    CalibrationAvailable As Boolean, SwordWristNode As Number,
+    ShieldWristNode As Number, DefaultPlaybackSpeed As Number,
+    Settings As Configuration)
+
+    Call ViewerParty.ClearPreview(Party)
+    Call ResetControlOwners(
+        Session, Playback, Camera, Rendering, Effects, Dragon,
+        Ui, InputState, Gizmo, Equipment, DefaultPlaybackSpeed)
+    Call ReapplyResetPresentation(
+        Session, Character, Rendering, Dragon, Equipment,
+        CalibrationAvailable, Settings)
+    Call CompleteReset(
+        Session, Party, Character, Effects, Dragon, Playback, Camera,
+        Calibration, Ui, Equipment, CalibrationAvailable,
+        SwordWristNode, ShieldWristNode, Settings)
+
+End Sub
+
 Public Sub StartSelectedClip(ByRef Session As ViewerSession.State,
     ByRef Character As Character3D.Actor, ByRef Playback As ViewerPlayback.State,
     ByRef Calibration As ViewerCalibration.State, ByRef Effects As ViewerEffects.State,
@@ -485,6 +512,78 @@ Public Sub ReleaseResources(ByRef Session As ViewerSession.State,
     Call ViewerRendering.DestroySocketGizmos(Rendering)
     Call ViewerRendering.DestroyArena(Rendering)
     Call Character3D.Destroy(Character)
+
+End Sub
+
+Private Sub ResetControlOwners(ByRef Session As ViewerSession.State,
+    ByRef Playback As ViewerPlayback.State, ByRef Camera As ViewerCamera.State,
+    ByRef Rendering As ViewerRendering.State, ByRef Effects As ViewerEffects.State,
+    ByRef Dragon As ViewerDragon.State, ByRef Ui As ViewerUi.State,
+    ByRef InputState As ViewerInput.State, ByRef Gizmo As ViewerGizmo.State,
+    ByRef Equipment As ViewerActors.EquipmentVisibility,
+    DefaultPlaybackSpeed As Number)
+
+    Call ViewerPlayback.ResetControls(Playback, DefaultPlaybackSpeed)
+    Call ViewerCamera.LockResponsiveFit(Camera)
+    Call ViewerRendering.ResetControls(Rendering, 3)
+    Call ViewerEffects.ResetEpicGlowVisibility(
+        Effects, ViewerProfiles.EpicGlowVisibleByDefault(Session.ProfileIndex))
+    Call ViewerDragon.ResetVisibility(Dragon)
+    Call ViewerActors.ResetEquipmentVisibility(Equipment)
+    Call ViewerEffects.ResetPlaybackControls(Effects)
+    Call ViewerUi.Reset(Ui)
+    Call ViewerInput.CancelCaptures(InputState)
+    Call ViewerGizmo.Hide(Gizmo)
+    Call ViewerCamera.CancelPointerControls(Camera)
+
+End Sub
+
+Private Sub ReapplyResetPresentation(ByRef Session As ViewerSession.State,
+    ByRef Character As Character3D.Actor, ByRef Rendering As ViewerRendering.State,
+    ByRef Dragon As ViewerDragon.State,
+    Equipment As ViewerActors.EquipmentVisibility,
+    CalibrationAvailable As Boolean, Settings As Configuration)
+
+    Session.Ready = ViewerRendering.ApplyLighting(Rendering) And Session.Ready
+    Session.Ready = ViewerActors.ApplyArenaFacing(
+        Character, Session.ProfileIndex, Session.DragonInspection,
+        Dragon.Available, ViewerDragon.PositionX(), 0,
+        ViewerDragon.PositionZ(), ViewerDragon.RotationY(),
+        Settings.CharacterModelForwardYawOffset,
+        Settings.OrinArenaYawAdjustment) And Session.Ready
+
+    If CalibrationAvailable Then
+        Session.Ready = ViewerActors.ApplyEquipmentVisibility(
+            Character, Equipment) And Session.Ready
+    End If
+
+    Session.Ready = ViewerRendering.ApplyMaterialInspection(Rendering) And Session.Ready
+
+End Sub
+
+Private Sub CompleteReset(ByRef Session As ViewerSession.State,
+    ByRef Party As ViewerParty.State, ByRef Character As Character3D.Actor,
+    ByRef Effects As ViewerEffects.State, ByRef Dragon As ViewerDragon.State,
+    ByRef Playback As ViewerPlayback.State, ByRef Camera As ViewerCamera.State,
+    ByRef Calibration As ViewerCalibration.State, ByRef Ui As ViewerUi.State,
+    Equipment As ViewerActors.EquipmentVisibility,
+    CalibrationAvailable As Boolean, SwordWristNode As Number,
+    ShieldWristNode As Number, Settings As Configuration)
+
+    If Party.Enabled And Party.Ready Then
+
+        Call ResetPartyDemo(Session, Party, Playback, Ui, Equipment, Settings)
+        Call ResetView(Session, Party, Dragon, Camera, Settings)
+        Call ViewerCamera.SetAutoOrbit(Camera, True)
+
+    Else
+
+        Call RestartSingleActorPresentation(
+            Session, Party, Character, Effects, Dragon, Playback, Camera,
+            Calibration, CalibrationAvailable, SwordWristNode, ShieldWristNode,
+            Settings)
+
+    End If
 
 End Sub
 

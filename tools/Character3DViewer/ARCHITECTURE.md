@@ -305,6 +305,13 @@ shrinks from 71 to 42 lines. The adjacent Party/interface audit confirms their h
 classification and response policy already reside in `ViewerParty` and command owners;
 their remaining runtime sampling and cross-owner execution order are genuine coordinator
 work rather than subsystem implementation to relocate.
+The whole-Viewer reset checkpoint then moved playback, camera, rendering, VFX, Dragon,
+equipment, UI, input and gizmo reset phases plus presentation reapplication and the
+Party-versus-single restart branch into stateless `ViewerLifecycle`. The coordinator keeps
+only the necessary prelude that cancels an active calibration edit and restores/exits a
+temporary Party inspection context before the owner resets the primary scene. `ResetAll`
+shrinks from 74 to 23 lines, while the lifecycle owner borrows explicit subsystem states,
+retains none and keeps every routine at or below 60 lines.
 The bounded stage must not
 introduce a whole-application state record or a replacement `ViewerApplication`
 module.
@@ -316,7 +323,7 @@ module.
 | Transform-gizmo command coordination | `ViewerGizmo` owns projection, hit testing, axis/ring pointer projection, retained fractional value conversion, hover state and complete axis/ring drawing. `ViewerCalibrationEditing` owns target-to-socket origin selection plus calibration edit lifecycle, bounded mutations and grip preservation. `ViewerCalibrationControls` owns keyboard/pointer action execution and preview policy. `Program.smile` retains runtime sampling, priority order, Party-preview entry and typed session-result adaptation. | `ViewerInput.smile`, `ViewerGizmo.smile`, `ViewerCalibrationEditing.smile` and `ViewerCalibrationControls.smile`, with only runtime/cross-owner adaptation in the coordinator |
 | Camera pointer transitions | `ViewerCamera.PointerInput` is a camera-only raw-input snapshot. `ViewerCamera.UpdatePointerInteraction` owns button lifecycle derivation, calibration-orbit state, wheel admission and retained orbit/pan application. `Program.smile` retains one runtime sample, conditional calibration-origin evaluation and session-readiness adaptation after interface ownership. | `ViewerCamera.smile`, with a 42-line runtime adapter in the coordinator |
 | General rendering and overlay composition | Socket resources, studio-grid wrappers, lighting/material state and their apply/cycle behavior reside in `ViewerRendering`; labels, responsive geometry, status/camera/animation controls, calibration panel, timeline, inspector chrome, footer/status and recovery drawing reside in `ViewerUi`; four ordered groups reside in `ViewerInspectorPresentation`. `DrawViewerOverlay` and `DrawInspectorOverlay` retain only cross-owner scene/Party/gizmo ordering and explicit presentation-value assembly in `Program.smile`. | `ViewerRendering.smile` for scene resources and renderer modes; `ViewerUi.smile` for presentation leaves; `ViewerInspectorPresentation.smile` for bounded composition |
-| Lifecycle triggers and UI/capture boundaries | `ViewerLifecycle.LoadViewer` owns four readable ordered phases for primary assets, scene resources, editing/presentation and Party/Dragon participants; it also owns retry reinitialization, profile/tab transition preparation, selected-clip lifecycle and resource release. `Program.smile` retains thin startup/retry/shutdown calls plus edit/import switch eligibility, interaction cancellation and the immediate loading notice because those are runtime UI boundaries. `DestroyViewerResources` and the load implementation no longer remain there. | stateless `ViewerLifecycle.smile` borrowing the existing session/actor/render/effect/Party/calibration owners, with thin runtime triggers in `Program.smile` |
+| Lifecycle triggers and UI/capture boundaries | `ViewerLifecycle.LoadViewer` owns four readable ordered phases for primary assets, scene resources, editing/presentation and Party/Dragon participants; it also owns whole-Viewer reset phases, retry reinitialization, profile/tab transition preparation, selected-clip lifecycle and resource release. `Program.smile` retains thin startup/retry/shutdown calls, the context-sensitive reset prelude, edit/import switch eligibility, interaction cancellation and the immediate loading notice because those are runtime UI boundaries. `DestroyViewerResources` and the load/reset implementation no longer remain there. | stateless `ViewerLifecycle.smile` borrowing the existing session/actor/render/effect/Party/calibration/UI/input owners, with thin runtime triggers in `Program.smile` |
 
 The ownership and symbol maps below describe the required destination. A row is not
 completion evidence until the implementation no longer remains in `Program.smile`
@@ -380,6 +387,7 @@ and its focused production tests exercise the destination owner.
 | Stateless lifecycle-coordinator move | 2,276 | 56 | From the 2,614-line/59-procedure Party-preview checkpoint, the 223-line load sequence, retry/profile/tab transition implementation, resource teardown, selected-clip start, calibration setup and Party-demo load reset moved into `ViewerLifecycle`. `DestroyViewerResources`, `ViewerTitle` and the duplicate Dragon-opponent placement routine were deleted. The 523-line/18-procedure owner has no retained application state and no routine over 60 lines. Direct transition assertions, real Arin/Orin/Dragon/Party isolation, static implementation-absence guards, native/generated-Web exact parity, Release Desktop/Full Web publication and disposable preservation checks cover the move. |
 | General inspector-pointer action move | 2,229 | 56 | From the 2,276-line/56-procedure lifecycle checkpoint, calibration open/close, demo mutation, Dragon head/target changes and responsive-fit execution moved with their state-owner calls into `ViewerInspectorCommands`; the same owner now returns typed profile/speed/reset/restart/clip response commands. `HandleInspectorPointer` shrank from 274 to 227 lines without compression. Direct owner assertions cover state mutation and response values; full native/generated-Web, publication and preservation evidence is recorded when this checkpoint is finalized. |
 | Camera pointer-transition move | 2,200 | 56 | From the 2,229-line/56-procedure inspector-pointer checkpoint, press/hold/release derivation, calibration-orbit activation, wheel admission and retained orbit/pan updates moved with camera state into `ViewerCamera`. `UpdateCameraPointer` shrank from 71 to 42 lines and still visibly samples the runtime after interface ownership. Direct active-orbit and blocked-input assertions, exact native/generated-Web parity, Release publications and disposable preservation checks cover the move. The Party/interface audit retained only their genuine runtime/cross-owner coordinators. |
+| Whole-Viewer reset lifecycle move | 2,149 | 56 | From the 2,200-line/56-procedure camera checkpoint, subsystem control reset, presentation reapplication and Party-versus-single restart completion moved into stateless `ViewerLifecycle`. `ResetAll` shrank from 74 to 23 lines and retains only active Party/calibration context exit before the lifecycle call. Direct owner reset assertions, exact native/generated-Web parity, Release publications and disposable preservation checks cover the move. |
 
 The separate fixed-array hardening gate did not move Viewer responsibility or change
 the 3,448-line/91-procedure transform-gizmo checkpoint metrics. It added immediate
@@ -388,11 +396,11 @@ projection cleanup and bounded native record-helper loops, then exercised those
 compiler/runtime changes with disposable native and Web fixtures. R7.5 subsequently
 resumed with the inspector/gesture and calibration-panel command moves above.
 
-Substantial implementation still in `Program.smile` after the camera pointer-transition
+Substantial implementation still in `Program.smile` after the whole-Viewer reset
 checkpoint is intentionally explicit: Party inspector context/calibration adaptation and
 Party pointer-response execution; the non-timeline inspector and keyboard command
 dispatchers plus interface/slider/gizmo runtime sampling and priority ordering;
-reset orchestration; and cross-owner scene, Party and gizmo ordering. Inspector
+and cross-owner scene, Party and gizmo drawing/order. Inspector
 presentation-leaf grouping
 and Party-owned label/countdown/rendering/effect/camera command policy no longer remain
 there. The retained calibration adapters enter/restore Party preview, request
@@ -418,14 +426,13 @@ frame-order call adapter; actor/target routing is in `ViewerParty` and storm sim
 is in `ViewerEffects.UpdateStorm`.
 
 `Program.smile` remains a documented temporary exception to the 500-line entry-point
-ceiling at 2,200 lines/56 procedures. The substantial routines still requiring ownership
+ceiling at 2,149 lines/56 procedures. The substantial routines still requiring ownership
 judgment are the 227-line inspector pointer dispatcher, 171-line inspector overlay,
 104-line inspector keyboard dispatcher, 77-line interface pointer coordinator, 76-line
-Party pointer response coordinator, 75-line gizmo pointer adapter, 74-line reset
-orchestration. The retained `DrawInspectorOverlay`
+Party pointer response coordinator and 75-line gizmo pointer adapter. The retained `DrawInspectorOverlay`
 gathers explicit values and preserves Party/gizmo ordering; its four substantial
 presentation groups now live in `ViewerInspectorPresentation`, which is 224 lines/4
-procedures. `ViewerLifecycle` is 523 lines/18 procedures and is explicitly reviewed above
+procedures. `ViewerLifecycle` is 622 lines/22 procedures and is explicitly reviewed above
 the 500-line threshold: it owns one stateless create/reset/release transition boundary,
 borrows explicit subsystem states, retains no whole-Viewer context and has no procedure
 above the 60-line review threshold.
@@ -466,16 +473,17 @@ Every retained `Program.smile` routine above the 60-line review threshold is exp
 | `HandleInterfacePointer` | 77 | Preserves timeline release, outside-window capture recovery and inspector-before-Party-before-camera pointer ownership. Its branches call focused hit, session, Party and inspector owners; the Party/interface audit found no state-local implementation to move without hiding required frame priority in a generic application controller. |
 | `HandlePartyPointer` | 76 | Samples runtime geometry once, applies Party-owned typed decisions and preserves presentation, primary-actor adaptation and reset/speed/pause response order. The Party/interface audit found the state-local classification, response and mutation policy already in focused owners; this remains a justified cross-owner coordinator. |
 | `HandleTransformGizmoPointer` | 75 | Samples runtime pointer coordinates/buttons, enters Party preview when requested and adapts the calibration operation result. Geometry and mutation already reside in focused owners; the sampling adapter remains pending review. |
-| `ResetAll` | 74 | Coordinates reset operations across playback, camera, rendering, effects, UI, input, gizmo, actors and Party without owning their state. This cross-owner reset lifecycle remains pending. |
 
 `UpdateCameraPointer` is now a 42-line below-threshold adapter: it samples runtime input,
 conditionally obtains the calibration origin and applies the camera owner's readiness.
+`ResetAll` is now a 23-line below-threshold adapter: it exits any temporary inspected-
+actor edit context before invoking the stateless lifecycle owner.
 
 ## Ownership target map
 
 | Responsibility | Baseline owner | Intended refactor owner | Owned mutable state | Public operations and borrowed dependencies | Lifetime / focused proof |
 |---|---|---|---|---|---|
-| Startup and failure/session lifecycle | `Program.smile` | `ViewerSession.smile`, stateless `ViewerLifecycle.smile` and thin `Program.smile` triggers | Running/readiness, first error/stage, resource epoch, tab/profile and scene mode remain in session state; lifecycle retains only immutable configuration | Session selects/skips/cycles profiles, starts/closes, blocks/clears switches and records failure; lifecycle borrows renderer and subsystem owners for ordered load/retry/switch/shutdown; Program retains startup and runtime UI/capture triggers | One application session; direct transition assertions, real-asset isolated loads, native launch, reload and disposable failure fixtures |
+| Startup and failure/session lifecycle | `Program.smile` | `ViewerSession.smile`, stateless `ViewerLifecycle.smile` and thin `Program.smile` triggers | Running/readiness, first error/stage, resource epoch, tab/profile and scene mode remain in session state; lifecycle retains only immutable configuration | Session selects/skips/cycles profiles, starts/closes, blocks/clears switches and records failure; lifecycle borrows renderer and subsystem owners for ordered load/reset/retry/switch/shutdown; Program retains startup, context-sensitive reset prelude and runtime UI/capture triggers | One application session; direct transition/reset assertions, real-asset isolated loads, native launch, reload and disposable failure fixtures |
 | Frame clocks and playback sequence | `Program.smile` plus `CharacterViewer.ClockState` | `ViewerTiming.smile` and `ViewerPlayback.smile` | Frame-rate and clamped clocks; selection, speed, pause/demo sequence | Start/advance/reset/query, clip mapping/labels/events, frame/time seek, clip mode and demo target/countdown; borrows current actor/profile only per call | Session; direct native state assertions plus real-actor playback fixture |
 | Actor/inspector binding | `Program.smile` (`ViewerActorContext`, `PartyUi*`, `CalibrationOwnerProfile`) | `ViewerActors.smile` owns `Context`, generic actor load/update/draw/destroy, loaded profile validation, arena-facing policy and shared equipment-visibility intent; `ViewerParty.smile` owns companion creation, inspector target selection/capture, participant visibility propagation and preview state/mode/restore | Primary/inspected actor identity, equipment visibility, Party participants and temporary preview binding | Participant creation combines actor, calibration and glow owners through explicit borrowed state; startup/reset pass explicit Dragon/profile constants to actor-facing policy; Party applies weapon/shield intent to explicitly borrowed actors; the coordinator applies Party-returned contexts and reconfigures calibration only when the borrowed owner changes | Scene/preview; direct context/selection/capture/preview/policy/visibility assertions plus integrated Party/Dragon load, hide/restore and isolation fixtures |
 | Camera and transforms | `Program.smile`, `BattleCamera.smile`, shared `Interaction` | `ViewerCamera.smile`, bounded key routing in `ViewerInspectorCommands.smile` and retained `BattleCamera.smile` math | `ViewerCamera.State`: base/live camera, frame, persistent local actor bounds, controls, zoom target, fractional pointer remainder, orbit anchor and auto-orbit; `PointerInput` is an ephemeral camera-only sample | Configure primary framing, reset/compose/nudge/drag/advance/apply/query, derive pointer transitions, admit wheel zoom, preserve calibration orbit, toggle/recompose responsive fit and select character-versus-arena orbit/zoom defaults; borrows the current actor and framing profile during configuration without retaining either | Scene; direct integer-output/default-policy/key-routing/fit-toggle/active-orbit/blocked-input assertions plus real actor loads and native/installed-Chrome controls |

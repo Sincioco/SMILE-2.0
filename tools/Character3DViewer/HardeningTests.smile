@@ -361,6 +361,50 @@ Call CheckNamed(
     "Lifecycle owner captures immutable Viewer configuration")
 
 Call ViewerSession.ResetFailure(LifecycleSession)
+Call ViewerParty.SetEnabled(LifecycleParty, False)
+
+LifecycleParty.PreviewActive = True
+LifecyclePlayback.PlaybackSpeed = 175
+LifecyclePlayback.ScenePaused = True
+LifecyclePlayback.DemoEnabled = False
+CameraState.FitLocked = False
+CameraState.AutoOrbit = False
+CameraState.Controls.Orbiting = True
+CameraState.Controls.Panning = True
+LifecycleRendering.FloorVisible = False
+LifecycleRendering.GridVisible = False
+LifecycleRendering.BackgroundIndex = 1
+LifecycleEffects.FlamePaused = True
+LifecycleEffects.LightningPaused = True
+UiState.CalibrationVisible = True
+InputState.TimelineScrubbing = True
+GizmoState.Visible = True
+EquipmentVisibility.SwordVisible = False
+EquipmentVisibility.ShieldVisible = False
+
+Call ViewerLifecycle.ResetAll(
+    LifecycleSession, LifecycleParty, LifecycleCharacter,
+    LifecycleRendering, LifecycleEffects, LifecycleDragon,
+    LifecyclePlayback, CameraState, CalibrationState, UiState,
+    InputState, GizmoState, EquipmentVisibility,
+    False, -1, -1, 125, LifecycleConfiguration)
+Call CheckNamed(Not LifecycleParty.PreviewActive And
+    LifecyclePlayback.PlaybackSpeed = 125 And
+    Not LifecyclePlayback.ScenePaused And LifecyclePlayback.DemoEnabled,
+    "Lifecycle reset restores Party preview and playback controls")
+Call CheckNamed(CameraState.FitLocked And CameraState.AutoOrbit And
+    Not CameraState.Controls.Orbiting And Not CameraState.Controls.Panning,
+    "Lifecycle reset restores responsive camera controls")
+Call CheckNamed(LifecycleRendering.FloorVisible And
+    LifecycleRendering.GridVisible And LifecycleRendering.BackgroundIndex = 3 And
+    Not LifecycleEffects.FlamePaused And Not LifecycleEffects.LightningPaused,
+    "Lifecycle reset restores rendering and independent VFX defaults")
+Call CheckNamed(Not UiState.CalibrationVisible And
+    Not InputState.TimelineScrubbing And Not GizmoState.Visible And
+    EquipmentVisibility.SwordVisible And EquipmentVisibility.ShieldVisible,
+    "Lifecycle reset restores UI, input, gizmo and equipment owners")
+
+Call ViewerSession.ResetFailure(LifecycleSession)
 Call ViewerSession.SelectCharacterTab(LifecycleSession, 3)
 Call ViewerParty.SetEnabled(LifecycleParty, True)
 Call ViewerPlayback.Reset(LifecyclePlayback, 100)
