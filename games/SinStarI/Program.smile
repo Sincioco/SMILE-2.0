@@ -4,6 +4,7 @@ Import SinStarI.TitleScreen As TitleScreen
 Import SinStarI.TownScreen As TownScreen
 Import SinStarI.Town2Screen As Town2Screen
 Import SinStarI.CharacterScreen As CharacterScreen
+Import SinStarI.BattleArenaPreview As BattleArenaPreview
 
 Dim Mode As TitleScreen.TitleAction
 Dim PendingAction As TitleScreen.TitleAction
@@ -20,6 +21,7 @@ Call TitleScreen.Initialize()
 Call TownScreen.Initialize()
 Call Town2Screen.Initialize()
 Call CharacterScreen.Initialize()
+Call BattleArenaPreview.Initialize()
 
 Do
     Get Key PressedKey
@@ -46,6 +48,8 @@ Do
         Call Town2Screen.Draw()
     Else If Mode = TitleScreen.TitleAction.Character Then
         Call CharacterScreen.Draw()
+    Else If Mode = TitleScreen.TitleAction.Battle Then
+        Call BattleArenaPreview.Draw()
     Else
 
         Call DrawScene()
@@ -57,6 +61,7 @@ Do
 Loop Until Game_Closed() = True
 
 Call CharacterScreen.Shutdown()
+Call BattleArenaPreview.Shutdown()
 Call Town2Screen.Shutdown()
 Call TownScreen.Shutdown()
 Call TitleScreen.Shutdown()
@@ -89,6 +94,8 @@ Sub OpenScene(SceneId As TitleScreen.TitleAction)
         Call Town2Screen.Enter()
     Else If SceneId = TitleScreen.TitleAction.Character Then
         Call CharacterScreen.Enter()
+    Else If SceneId = TitleScreen.TitleAction.Battle Then
+        Call BattleArenaPreview.Enter()
     End If
 
 End Sub
@@ -103,6 +110,8 @@ Sub HandleScene(Key As Number)
             Call Town2Screen.Shutdown()
         Else If Mode = TitleScreen.TitleAction.Character Then
             Call CharacterScreen.Shutdown()
+        Else If Mode = TitleScreen.TitleAction.Battle Then
+            Call BattleArenaPreview.Shutdown()
         End If
 
         Mode = TitleScreen.TitleAction.None
@@ -119,6 +128,8 @@ Sub HandleScene(Key As Number)
         Call Town2Screen.Update(Key)
     Else If Mode = TitleScreen.TitleAction.Character Then
         Call CharacterScreen.Update(Key)
+    Else If Mode = TitleScreen.TitleAction.Battle Then
+        Call BattleArenaPreview.Update(Key)
     End If
 
 End Sub

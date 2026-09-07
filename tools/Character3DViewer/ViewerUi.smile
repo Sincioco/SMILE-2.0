@@ -106,6 +106,7 @@ Public Const INSPECTOR_ACTION_RESET_VIEW = 31
 Public Const INSPECTOR_ACTION_RESTART_PRESENTATION = 32
 Public Const INSPECTOR_ACTION_RESET_ALL = 33
 Public Const INSPECTOR_ACTION_FIT = 34
+Public Const INSPECTOR_ACTION_FLOOR_REFLECTIONS = 35
 Public Const INSPECTOR_ACTION_CLIP_BASE = 100
 Public Const SLIDER_ACTION_NONE = 0
 Public Const SLIDER_ACTION_HORIZONTAL_ORBIT = 1
@@ -575,6 +576,25 @@ Public Function PartyRoleLabel(Role As Text) As Text
 
 End Function
 
+Public Function FloorReflectionLabel(Enabled As Boolean,
+    Optional FallbackReason As Number = 0) As Text
+
+    Dim Result As Text
+
+    If (Enabled And
+        (FallbackReason = Graphics3D.REFLECTION_FALLBACK_ALLOCATION_FAILED Or
+            FallbackReason = Graphics3D.REFLECTION_FALLBACK_RENDER_FAILED)) Then
+        Result = "Floor Reflections: Unavailable"
+    Else If Enabled Then
+        Result = "Floor Reflections: On"
+    Else
+        Result = "Floor Reflections: Off"
+    End If
+
+    Return Result
+
+End Function
+
 Public Function StatusPanelX(WindowWidth As Number) As Number
 
     Dim Result As Number
@@ -985,6 +1005,10 @@ Public Function InspectorActionAtPointer(
 
         Result = INSPECTOR_ACTION_SHIELD_FIRE_STYLE
 
+    Else If InRectangle(PointerX, PointerY, PanelLeft + 12, 496, 240, 22) Then
+
+        Result = INSPECTOR_ACTION_FLOOR_REFLECTIONS
+
     Else If InRectangle(PointerX, PointerY, PanelLeft + 172, 204, 30, 24) Then
 
         Result = INSPECTOR_ACTION_SPEED_DOWN
@@ -1242,6 +1266,8 @@ Public Sub DrawProfileEffectControls(
     WindowWidth As Number,
     ProfileIndex As Number,
     FloorOrGridVisible As Boolean,
+    FloorReflectionsEnabled As Boolean,
+    FloorReflectionFallback As Number,
     SwordFireVisible As Boolean,
     ShieldFireVisible As Boolean,
     StormStyleLabel As Text,
@@ -1294,6 +1320,15 @@ Public Sub DrawProfileEffectControls(
         Call UI.DrawButton(PanelLeft + 144, 470, 108, 20,
             ShieldFireStyleLabel, Not ShieldFlameStyle)
     End If
+
+    Call UI.DrawButton(
+        PanelLeft + 12,
+        496,
+        240,
+        22,
+        FloorReflectionLabel(FloorReflectionsEnabled, FloorReflectionFallback),
+        FloorReflectionsEnabled
+    )
 
 End Sub
 

@@ -8,6 +8,7 @@
 #include <stdint.h>
 #include <string.h>
 #include "graphics3d.h"
+#include "graphics3d_reflections.h"
 #include "graphics_common.h"
 #include "graphics_directx.h"
 #include "image_resource.h"
@@ -150,6 +151,7 @@ struct SmileObject3D
     unsigned char receives_shadow;
     unsigned char cull_mode;
     unsigned char ignore_node_offsets;
+    unsigned char reflection_mode;
     long long mesh_handle;
     long long material_handle;
     long long default_material_handle;
@@ -558,6 +560,8 @@ struct SmileConstants3D
     float shadow[4];
     float output[4];
     float shadow_light[4];
+    float reflection[4];
+    float reflection_viewport[4];
     SmileMatrix3D bones[SMILE_3D_MAX_BONES];
 };
 
@@ -583,6 +587,8 @@ struct SmilePbrConstants3D
     SmileMatrix3D shadow_mvp;
     float shadow[4];
     float output[4];
+    float reflection[4];
+    float reflection_viewport[4];
     SmileMatrix3D bones[SMILE_3D_MAX_BONES];
 };
 
@@ -764,6 +770,7 @@ static long long smile_shadow_palette_upload_count3d;
 static long long smile_post_draw_count3d;
 static long long smile_resolve_count3d;
 static int smile_multipass_active3d;
+static int smile_reflection_pass3d;
 static int smile_post_requested3d;
 static int smile_hdr_requested3d;
 static int smile_bloom_requested3d;
@@ -935,6 +942,7 @@ static int smile_3d_prepare_model_pbr(long long model_handle,
     long long filter, long long wrap, long long anisotropy);
 static int smile_3d_prepare_m5_resources(void);
 static int smile_3d_draw_immediate(long long handle);
+static int smile_3d_submission_is_opaque(const SmileSubmission3D* submission);
 static int smile_3d_render_shadow_pass(void);
 static int smile_3d_run_post_processing(void);
 
@@ -3311,6 +3319,7 @@ static long long smile_3d_create_object_with_material(long long mesh_handle,
     object->active = 1; object->visible = 1;
     object->casts_shadow = 1; object->receives_shadow = 1;
     object->cull_mode = 0;
+    object->reflection_mode = 1;
     object->mesh_handle = mesh_handle;
     object->material_handle = default_material_handle;
     object->default_material_handle = default_material_handle;
@@ -4702,22 +4711,35 @@ static void smile_3d_promote_pending_camera(void)
 
 static SmileMatrix3D smile_3d_view(void)
 {
-    float zx = smile_camera_target3d[0] - smile_camera_position3d[0];
-    float zy = smile_camera_target3d[1] - smile_camera_position3d[1];
-    float zz = smile_camera_target3d[2] - smile_camera_position3d[2];
+    float position[3];
+    float target[3];
+    float up[3];
+    float floor_height = smile_reflections_floor_height();
+    memcpy(position, smile_camera_position3d, sizeof(position));
+    memcpy(target, smile_camera_target3d, sizeof(target));
+    memcpy(up, smile_camera_up3d, sizeof(up));
+    if (smile_reflection_pass3d)
+    {
+        position[1] = 2.0f * floor_height - position[1];
+        target[1] = 2.0f * floor_height - target[1];
+        up[1] = -up[1];
+    }
+    float zx = target[0] - position[0];
+    float zy = target[1] - position[1];
+    float zz = target[2] - position[2];
     float xx, xy, xz, yx, yy, yz;
     SmileMatrix3D result = smile_3d_identity();
     smile_3d_normalize(&zx, &zy, &zz);
-    smile_3d_cross(smile_camera_up3d[0], smile_camera_up3d[1], smile_camera_up3d[2],
+    smile_3d_cross(up[0], up[1], up[2],
         zx, zy, zz, &xx, &xy, &xz);
     smile_3d_normalize(&xx, &xy, &xz);
     smile_3d_cross(zx, zy, zz, xx, xy, xz, &yx, &yy, &yz);
     result.m[0] = xx; result.m[1] = yx; result.m[2] = zx;
     result.m[4] = xy; result.m[5] = yy; result.m[6] = zy;
     result.m[8] = xz; result.m[9] = yz; result.m[10] = zz;
-    result.m[12] = -(xx * smile_camera_position3d[0] + xy * smile_camera_position3d[1] + xz * smile_camera_position3d[2]);
-    result.m[13] = -(yx * smile_camera_position3d[0] + yy * smile_camera_position3d[1] + yz * smile_camera_position3d[2]);
-    result.m[14] = -(zx * smile_camera_position3d[0] + zy * smile_camera_position3d[1] + zz * smile_camera_position3d[2]);
+    result.m[12] = -(xx * position[0] + xy * position[1] + xz * position[2]);
+    result.m[13] = -(yx * position[0] + yy * position[1] + yz * position[2]);
+    result.m[14] = -(zx * position[0] + zy * position[1] + zz * position[2]);
     return result;
 }
 
@@ -4731,6 +4753,46 @@ static SmileMatrix3D smile_3d_projection(float aspect)
     result.m[11] = 1.0f;
     result.m[14] = -smile_camera_near3d * smile_camera_far3d / (smile_camera_far3d - smile_camera_near3d);
     return result;
+}
+
+static void smile_3d_active_camera_position(float output[3])
+{
+    memcpy(output, smile_camera_position3d, sizeof(smile_camera_position3d));
+    if (smile_reflection_pass3d)
+        output[1] = 2.0f * smile_reflections_floor_height() - output[1];
+}
+
+static void smile_3d_set_reflection_constants(const SmileObject3D* object,
+    float reflection[4], float viewport[4])
+{
+    reflection[0] = smile_reflection_pass3d ? 1.0f : 0.0f;
+    reflection[1] = smile_reflections_floor_height();
+    reflection[2] = !smile_reflection_pass3d && object->reflection_mode == 2 &&
+        smile_reflections_effective()
+        ? (float)smile_reflections_strength_percent() / 100.0f
+        : 0.0f;
+    reflection[3] = (float)smile_reflections_softness_percent() / 100.0f;
+    viewport[0] = (float)smile_graphics_directx_viewport_x();
+    viewport[1] = (float)smile_graphics_directx_viewport_y();
+    viewport[2] = (float)smile_graphics_directx_viewport_width();
+    viewport[3] = (float)smile_graphics_directx_viewport_height();
+}
+
+static void smile_3d_set_object_raster(ID3D11DeviceContext* context,
+    const SmileObject3D* object, int double_sided)
+{
+    int cull_mode = object->cull_mode;
+    if (cull_mode == 1 || (cull_mode == 0 && double_sided))
+    {
+        context->RSSetState(smile_raster_state3d);
+        return;
+    }
+    if (cull_mode == 0 || cull_mode == 2)
+        context->RSSetState(smile_reflection_pass3d
+            ? smile_front_cull_raster_state3d : smile_cull_raster_state3d);
+    else
+        context->RSSetState(smile_reflection_pass3d
+            ? smile_cull_raster_state3d : smile_front_cull_raster_state3d);
 }
 
 static HRESULT smile_3d_compile(ID3D11Device* device, const char* source, const char* entry,
@@ -4917,7 +4979,7 @@ static int smile_3d_ensure_gpu_particle_resources(SmileGpuParticleSystem3D* syst
 static int smile_3d_create_pipeline(void)
 {
     static const char* vertex_source =
-        "cbuffer C:register(b0){row_major float4x4 model;row_major float4x4 mvp;float4 tint;float4 material;float4 animation;row_major float4x4 shadowMvp;float4 shadow;float4 output;float4 shadowLight;row_major float4x4 bones[32];}"
+        "cbuffer C:register(b0){row_major float4x4 model;row_major float4x4 mvp;float4 tint;float4 material;float4 animation;row_major float4x4 shadowMvp;float4 shadow;float4 output;float4 shadowLight;float4 reflection;float4 reflectionViewport;row_major float4x4 bones[32];}"
         "cbuffer B:register(b1){row_major float4x4 modelBones[128];}"
         "struct I{float3 p:POSITION;float3 n:NORMAL;float2 uv:TEXCOORD0;float4 j:BLENDINDICES;float4 w:BLENDWEIGHT;};"
         "struct O{float4 p:SV_POSITION;float3 n:NORMAL;float2 uv:TEXCOORD0;float3 world:TEXCOORD1;float4 sp:TEXCOORD2;};"
@@ -4926,21 +4988,22 @@ static int smile_3d_create_pipeline(void)
         "else s=bones[(uint)i.j.x]*i.w.x+bones[(uint)i.j.y]*i.w.y+bones[(uint)i.j.z]*i.w.z+bones[(uint)i.j.w]*i.w.w;"
         "p=mul(p,s);n=mul(float4(n,0),s).xyz;}float4 world=mul(p,model);o.p=mul(p,mvp);o.n=normalize(mul(float4(n,0),model).xyz);o.uv=i.uv;o.world=world.xyz;o.sp=mul(p,shadowMvp);return o;}";
     static const char* pixel_source =
-        "cbuffer C:register(b0){row_major float4x4 model;row_major float4x4 mvp;float4 tint;float4 material;float4 animation;row_major float4x4 shadowMvp;float4 shadow;float4 output;float4 shadowLight;row_major float4x4 bones[32];}"
-        "Texture2D baseTexture:register(t0);SamplerState baseSampler:register(s0);Texture2D shadowMap:register(t5);SamplerComparisonState shadowSampler:register(s5);"
+        "cbuffer C:register(b0){row_major float4x4 model;row_major float4x4 mvp;float4 tint;float4 material;float4 animation;row_major float4x4 shadowMvp;float4 shadow;float4 output;float4 shadowLight;float4 reflection;float4 reflectionViewport;row_major float4x4 bones[32];}"
+        "Texture2D baseTexture:register(t0);SamplerState baseSampler:register(s0);Texture2D reflectionTexture:register(t4);SamplerState reflectionSampler:register(s4);Texture2D shadowMap:register(t5);SamplerComparisonState shadowSampler:register(s5);"
         "float ShadowValue(float4 p,float3 world,float3 n){if(shadow.x<.5||p.w<=0)return 1;float3 q=p.xyz/p.w;float2 uv=float2(q.x*.5+.5,-q.y*.5+.5);if(any(uv<0)||any(uv>1)||q.z<0||q.z>1)return 1;float3 L=shadowLight.w>1.5?normalize(shadowLight.xyz-world):normalize(shadowLight.xyz);float bias=output.y+output.z*(1-saturate(dot(normalize(n),L)));float sum=0;[unroll]for(int y=-1;y<=1;++y)[unroll]for(int x=-1;x<=1;++x)sum+=shadowMap.SampleCmpLevelZero(shadowSampler,uv+float2(x,y)*shadow.z,q.z-bias);return sum/9;}"
         "float3 ToLinear(float3 c){return lerp(c/12.92,pow((c+.055)/1.055,2.4),step(.04045,c));}"
-        "float4 main(float4 p:SV_POSITION,float3 n:NORMAL,float2 uv:TEXCOORD0,float3 world:TEXCOORD1,float4 sp:TEXCOORD2):SV_TARGET{"
+        "float4 main(float4 p:SV_POSITION,float3 n:NORMAL,float2 uv:TEXCOORD0,float3 world:TEXCOORD1,float4 sp:TEXCOORD2):SV_TARGET{if(reflection.x>.5&&world.y<reflection.y+.01)discard;"
         "float4 base=tint;if(material.x>.5){float4 sample=baseTexture.Sample(baseSampler,uv);"
         "if(sample.a>.0001)sample.rgb/=sample.a;base*=sample;}if(material.w>=0&&base.a<material.w)discard;"
         "float l=.28+.72*max(0,dot(normalize(n),normalize(float3(-.35,.8,-.45))))*ShadowValue(sp,world,n);"
-        "float light=material.y>.5?1:l+material.z;float3 color=base.rgb*light;return output.x>.5?float4(max(ToLinear(color),0),base.a):float4(color,base.a);}";
+        "float light=material.y>.5?1:l+material.z;float3 color=base.rgb*light;float3 finalColor=output.x>.5?max(ToLinear(color),0):color;"
+        "if(reflection.z>.0001){uint rw,rh;reflectionTexture.GetDimensions(rw,rh);float2 screenUv=saturate((p.xy-reflectionViewport.xy)/reflectionViewport.zw);float2 texel=float2(1.0/max((float)rw,1),1.0/max((float)rh,1))*reflection.w*2;float3 reflected=reflectionTexture.Sample(reflectionSampler,screenUv).rgb*.4;reflected+=(reflectionTexture.Sample(reflectionSampler,screenUv+float2(texel.x,0)).rgb+reflectionTexture.Sample(reflectionSampler,screenUv-float2(texel.x,0)).rgb+reflectionTexture.Sample(reflectionSampler,screenUv+float2(0,texel.y)).rgb+reflectionTexture.Sample(reflectionSampler,screenUv-float2(0,texel.y)).rgb)*.15;finalColor=lerp(finalColor,reflected,reflection.z);}return float4(finalColor,base.a);}";
     static const char* pbr_vertex_source =
         "cbuffer P:register(b0){row_major float4x4 model;row_major float4x4 mvp;row_major float4x4 normalMatrix;"
         "float4 objectColor;float4 baseFactor;float4 surfaceFactors;float4 emissiveAlpha;float4 textureFlags;"
         "float4 cameraPosition;float4 ambientLight;float4 directionalDirection;float4 directionalColor;"
         "float4 localPositionType[4];float4 localDirectionRange[4];float4 localColorIntensity[4];float4 localCone[4];"
-        "float4 animation;row_major float4x4 shadowMvp;float4 shadow;float4 output;row_major float4x4 bones[32];}"
+        "float4 animation;row_major float4x4 shadowMvp;float4 shadow;float4 output;float4 reflection;float4 reflectionViewport;row_major float4x4 bones[32];}"
         "cbuffer B:register(b1){row_major float4x4 modelBones[128];}"
         "struct I{float3 p:POSITION;float3 n:NORMAL;float2 uv:TEXCOORD0;float4 j:BLENDINDICES;float4 w:BLENDWEIGHT;float4 t:TANGENT;};"
         "struct O{float4 p:SV_POSITION;float3 world:TEXCOORD1;float3 n:NORMAL;float4 t:TANGENT;float2 uv:TEXCOORD0;float4 sp:TEXCOORD2;};"
@@ -4956,9 +5019,9 @@ static int smile_3d_create_pipeline(void)
         "float4 objectColor;float4 baseFactor;float4 surfaceFactors;float4 emissiveAlpha;float4 textureFlags;"
         "float4 cameraPosition;float4 ambientLight;float4 directionalDirection;float4 directionalColor;"
         "float4 localPositionType[4];float4 localDirectionRange[4];float4 localColorIntensity[4];float4 localCone[4];"
-        "float4 animation;row_major float4x4 shadowMvp;float4 shadow;float4 output;row_major float4x4 bones[32];}"
+        "float4 animation;row_major float4x4 shadowMvp;float4 shadow;float4 output;float4 reflection;float4 reflectionViewport;row_major float4x4 bones[32];}"
         "Texture2D baseTexture:register(t0);Texture2D normalMap:register(t1);Texture2D ormTexture:register(t2);Texture2D emissiveTexture:register(t3);"
-        "SamplerState baseSampler:register(s0);SamplerState normalSampler:register(s1);SamplerState ormSampler:register(s2);SamplerState emissiveSampler:register(s3);Texture2D shadowMap:register(t5);SamplerComparisonState shadowSampler:register(s5);"
+        "SamplerState baseSampler:register(s0);SamplerState normalSampler:register(s1);SamplerState ormSampler:register(s2);SamplerState emissiveSampler:register(s3);Texture2D reflectionTexture:register(t4);SamplerState reflectionSampler:register(s4);Texture2D shadowMap:register(t5);SamplerComparisonState shadowSampler:register(s5);"
         "static const float PI=3.14159265359;"
         "float3 F(float3 f0,float v){return f0+(1-f0)*pow(1-v,5);}"
         "float D(float nh,float r){float a=r*r;float a2=a*a;float q=nh*nh*(a2-1)+1;return a2/max(PI*q*q,.0001);}"
@@ -4970,7 +5033,7 @@ static int smile_3d_create_pipeline(void)
         "return (kd*base/PI+spec)*radiance*nl;}"
         "float ShadowValue(float4 p,float3 N,float3 L){if(shadow.x<.5||p.w<=0)return 1;float3 q=p.xyz/p.w;float2 uv=float2(q.x*.5+.5,-q.y*.5+.5);if(any(uv<0)||any(uv>1)||q.z<0||q.z>1)return 1;float bias=output.y+output.z*(1-saturate(dot(N,L)));float sum=0;[unroll]for(int y=-1;y<=1;++y)[unroll]for(int x=-1;x<=1;++x)sum+=shadowMap.SampleCmpLevelZero(shadowSampler,uv+float2(x,y)*shadow.w,q.z-bias);return sum/9;}"
         "float3 ApplyLdrOutputTransfer(float3 c){float3 low=c*12.92;float3 high=1.055*pow(max(c,0),1.0/2.4)-.055;return lerp(low,high,step(.0031308,c));}"
-        "float4 main(float4 p:SV_POSITION,float3 world:TEXCOORD1,float3 inputNormal:NORMAL,float4 inputTangent:TANGENT,float2 uv:TEXCOORD0,float4 sp:TEXCOORD2,bool front:SV_IsFrontFace):SV_TARGET{"
+        "float4 main(float4 p:SV_POSITION,float3 world:TEXCOORD1,float3 inputNormal:NORMAL,float4 inputTangent:TANGENT,float2 uv:TEXCOORD0,float4 sp:TEXCOORD2,bool front:SV_IsFrontFace):SV_TARGET{if(reflection.x>.5&&world.y<reflection.y+.01)discard;"
         "float4 sampled=textureFlags.x>.5?baseTexture.Sample(baseSampler,uv):float4(1,1,1,1);float4 base=baseFactor*objectColor*sampled;"
         "if(emissiveAlpha.w>=0&&base.a<emissiveAlpha.w)discard;float3 N=normalize(inputNormal);if(!front)N=-N;"
         "float3 T=normalize(inputTangent.xyz-N*dot(N,inputTangent.xyz));float3 B=normalize(cross(N,T)*inputTangent.w);"
@@ -4987,7 +5050,7 @@ static int smile_3d_create_pipeline(void)
         "float3 emissive=emissiveAlpha.rgb*(textureFlags.w>.5?emissiveTexture.Sample(emissiveSampler,uv).rgb:float3(1,1,1));"
         "float3 finalColor=max(color+emissive,0);if(output.w>.5){if(output.w<1.5)finalColor=base.rgb;else if(output.w<2.5)finalColor=N*.5+.5;"
         "else if(output.w<3.5)finalColor=rough.xxx;else if(output.w<4.5)finalColor=metal.xxx;else if(output.w<5.5)finalColor=ao.xxx;else finalColor=emissive;}"
-        "return output.x>.5?float4(finalColor,base.a):float4(saturate(ApplyLdrOutputTransfer(finalColor)),base.a);}";
+        "float3 outputColor=output.x>.5?finalColor:saturate(ApplyLdrOutputTransfer(finalColor));if(reflection.z>.0001){uint rw,rh;reflectionTexture.GetDimensions(rw,rh);float2 screenUv=saturate((p.xy-reflectionViewport.xy)/reflectionViewport.zw);float2 texel=float2(1.0/max((float)rw,1),1.0/max((float)rh,1))*reflection.w*2;float3 reflected=reflectionTexture.Sample(reflectionSampler,screenUv).rgb*.4;reflected+=(reflectionTexture.Sample(reflectionSampler,screenUv+float2(texel.x,0)).rgb+reflectionTexture.Sample(reflectionSampler,screenUv-float2(texel.x,0)).rgb+reflectionTexture.Sample(reflectionSampler,screenUv+float2(0,texel.y)).rgb+reflectionTexture.Sample(reflectionSampler,screenUv-float2(0,texel.y)).rgb)*.15;outputColor=lerp(outputColor,reflected,reflection.z);}return float4(outputColor,base.a);}";
     static const char* shadow_vertex_source =
         "cbuffer S:register(b0){row_major float4x4 mvp;float4 alpha;float4 animation;row_major float4x4 bones[32];}"
         "cbuffer B:register(b1){row_major float4x4 modelBones[128];}"
@@ -7041,7 +7104,7 @@ static int smile_3d_prepare_m5_resources(void)
         smile_m5_fallback_flags3d |= SMILE_3D_M5_FALLBACK_MSAA_REDUCED;
     smile_multipass_active3d = smile_shadow_effective3d || smile_hdr_effective3d ||
         smile_soft_depth_effective3d != SMILE_3D_SOFT_DEPTH_OFF ||
-        smile_distortion_requested3d;
+        smile_distortion_requested3d || smile_reflections_requested();
     smile_m5_target_bytes3d = smile_shadow_bytes3d + smile_scene_bytes3d +
         smile_bloom_bytes3d + smile_soft_depth_bytes3d + smile_distortion_bytes3d;
     return 1;
@@ -7511,6 +7574,8 @@ static int smile_3d_begin(long long red, long long green, long long blue)
     smile_distortion_emitter_count3d = 0;
     smile_distortion_maximum_strength3d = 0;
     smile_rendering_distortion_vectors3d = 0;
+    smile_reflection_pass3d = 0;
+    smile_reflections_begin_frame();
     if (!smile_3d_draw_backdrop(context, target, &viewport))
     {
         smile_graphics_directx_resume_2d();
@@ -7532,6 +7597,7 @@ static int smile_3d_draw_pbr(const SmileSubmission3D* submission)
     ID3D11DeviceContext* context = (ID3D11DeviceContext*)smile_graphics_directx_context();
     SmilePbrConstants3D constants = {};
     SmileMatrix3D view, projection;
+    float active_camera[3];
     UINT stride = sizeof(SmileVertex3D), offset = 0;
     float aspect;
     if (context == 0 || !smile_pbr_shader_available3d || smile_pbr_vertex_shader3d == 0 ||
@@ -7571,6 +7637,8 @@ static int smile_3d_draw_pbr(const SmileSubmission3D* submission)
     constants.output[1] = smile_shadow_bias3d;
     constants.output[2] = smile_shadow_normal_bias3d;
     constants.output[3] = (float)smile_material_inspection3d;
+    smile_3d_set_reflection_constants(
+        object, constants.reflection, constants.reflection_viewport);
     memcpy(constants.object_color, object->color, sizeof(constants.object_color));
     memcpy(constants.base_factor, material->color, sizeof(constants.base_factor));
     constants.surface_factors[0] = material->metallic;
@@ -7581,7 +7649,8 @@ static int smile_3d_draw_pbr(const SmileSubmission3D* submission)
     constants.emissive_alpha[3] = material->alpha_mode == 1 ? material->cutoff : -1.0f;
     for (int semantic = 0; semantic < 4; ++semantic)
         constants.texture_flags[semantic] = textures[semantic] == 0 ? 0.0f : 1.0f;
-    memcpy(constants.camera_position, smile_camera_position3d, sizeof(smile_camera_position3d));
+    smile_3d_active_camera_position(active_camera);
+    memcpy(constants.camera_position, active_camera, sizeof(active_camera));
     memcpy(constants.ambient, smile_ambient_color3d, sizeof(smile_ambient_color3d));
     constants.ambient[3] = smile_ambient_intensity3d;
     memcpy(constants.directional_direction, smile_directional_light3d.direction,
@@ -7611,10 +7680,7 @@ static int smile_3d_draw_pbr(const SmileSubmission3D* submission)
     context->UpdateSubresource(smile_pbr_constant_buffer3d, 0, 0, &constants, 0, 0);
     context->OMSetBlendState(material->alpha_mode == 2 ? smile_blend_state3d : 0, 0, 0xffffffff);
     context->OMSetDepthStencilState(material->alpha_mode == 2 ? smile_depth_read_state3d : smile_depth_state3d, 0);
-    if (submission->object.cull_mode == 1) context->RSSetState(smile_raster_state3d);
-    else if (submission->object.cull_mode == 2) context->RSSetState(smile_cull_raster_state3d);
-    else if (submission->object.cull_mode == 3) context->RSSetState(smile_front_cull_raster_state3d);
-    else context->RSSetState(material->double_sided ? smile_raster_state3d : smile_cull_raster_state3d);
+    smile_3d_set_object_raster(context, object, material->double_sided);
     context->IASetInputLayout(smile_pbr_input_layout3d);
     context->IASetVertexBuffers(0, 1, &mesh->vertex_buffer, &stride, &offset);
     context->IASetIndexBuffer(mesh->index_buffer, DXGI_FORMAT_R32_UINT, 0);
@@ -7625,13 +7691,26 @@ static int smile_3d_draw_pbr(const SmileSubmission3D* submission)
     if (!smile_3d_upload_palette_snapshot(context, submission, 0)) return 0;
     context->PSSetShaderResources(0, 4, views);
     context->PSSetSamplers(0, 4, samplers);
+    ID3D11ShaderResourceView* reflection_view =
+        object->reflection_mode == 2 ? smile_reflections_shader_view() : 0;
+    ID3D11SamplerState* reflection_sampler =
+        object->reflection_mode == 2 ? smile_reflections_sampler() : 0;
+    context->PSSetShaderResources(4, 1, &reflection_view);
+    context->PSSetSamplers(4, 1, &reflection_sampler);
     context->PSSetShaderResources(5, 1, &smile_shadow_shader_view3d);
     context->PSSetSamplers(5, 1, &smile_shadow_sampler3d);
     context->DrawIndexed(mesh->index_count, 0, 0);
-    smile_draw_call_count3d++;
-    smile_submitted_triangle_count3d += mesh->index_count / 3;
-    smile_pbr_draw_count3d++;
-    smile_pbr_triangle_count3d += mesh->index_count / 3;
+    if (smile_reflection_pass3d)
+        smile_reflections_complete_capture(1, mesh->index_count / 3);
+    else
+    {
+        smile_draw_call_count3d++;
+        smile_submitted_triangle_count3d += mesh->index_count / 3;
+        smile_pbr_draw_count3d++;
+        smile_pbr_triangle_count3d += mesh->index_count / 3;
+        if (object->reflection_mode == 2 && smile_reflections_effective())
+            smile_reflections_record_composition();
+    }
     return 1;
 }
 
@@ -7940,6 +8019,8 @@ static int smile_3d_draw_submission(const SmileSubmission3D* submission)
     constants.output[0] = smile_hdr_effective3d ? 1.0f : 0.0f;
     constants.output[1] = smile_shadow_bias3d;
     constants.output[2] = smile_shadow_normal_bias3d;
+    smile_3d_set_reflection_constants(
+        object, constants.reflection, constants.reflection_viewport);
     if (smile_shadow_caster3d == 2)
     {
         memcpy(constants.shadow_light, smile_local_lights3d[smile_shadow_slot3d].position,
@@ -7966,7 +8047,8 @@ static int smile_3d_draw_submission(const SmileSubmission3D* submission)
             ? smile_3d_identity() : smile_frame_palettes3d[submission->palette_index].bones[bone];
     alpha_mode = material == 0 ? (constants.color[3] < 0.999f ? 2 : 0) : material->alpha_mode;
     context->UpdateSubresource(smile_constant_buffer3d, 0, 0, &constants, 0, 0);
-    context->RSSetState(smile_raster_state3d);
+    smile_3d_set_object_raster(
+        context, object, material != 0 ? material->double_sided : 1);
     context->IASetInputLayout(smile_input_layout3d);
     context->VSSetShader(smile_vertex_shader3d, 0, 0);
     context->PSSetShader(smile_pixel_shader3d, 0, 0);
@@ -7986,12 +8068,111 @@ static int smile_3d_draw_submission(const SmileSubmission3D* submission)
     context->IASetIndexBuffer(mesh->index_buffer, DXGI_FORMAT_R32_UINT, 0);
     context->PSSetShaderResources(0, 1, &texture_view);
     context->PSSetSamplers(0, 1, &texture_sampler);
+    ID3D11ShaderResourceView* reflection_view =
+        object->reflection_mode == 2 ? smile_reflections_shader_view() : 0;
+    ID3D11SamplerState* reflection_sampler =
+        object->reflection_mode == 2 ? smile_reflections_sampler() : 0;
+    context->PSSetShaderResources(4, 1, &reflection_view);
+    context->PSSetSamplers(4, 1, &reflection_sampler);
     context->PSSetShaderResources(5, 1, &smile_shadow_shader_view3d);
     context->PSSetSamplers(5, 1, &smile_shadow_sampler3d);
     context->DrawIndexed(mesh->index_count, 0, 0);
-    smile_draw_call_count3d++;
-    smile_submitted_triangle_count3d += mesh->index_count / 3;
-    smile_simple_draw_count3d++;
+    if (smile_reflection_pass3d)
+        smile_reflections_complete_capture(1, mesh->index_count / 3);
+    else
+    {
+        smile_draw_call_count3d++;
+        smile_submitted_triangle_count3d += mesh->index_count / 3;
+        smile_simple_draw_count3d++;
+        if (object->reflection_mode == 2 && smile_reflections_effective())
+            smile_reflections_record_composition();
+    }
+    return 1;
+}
+
+static int smile_3d_render_reflection_pass(void)
+{
+    ID3D11Device* device;
+    ID3D11DeviceContext* context;
+    ID3D11RenderTargetView* target;
+    ID3D11ShaderResourceView* empty_view = 0;
+    D3D11_VIEWPORT viewport = {};
+    float clear[4];
+    long long post_draw_count;
+    int receiver_present = 0;
+    int success = 1;
+    if (!smile_reflections_requested()) return 1;
+    for (unsigned int index = 0; index < smile_frame_submission_count3d; ++index)
+    {
+        const SmileSubmission3D* submission = &smile_frame_submissions3d[index];
+        if (submission->kind == SMILE_3D_SUBMISSION_OBJECT &&
+            submission->object.reflection_mode == 2 &&
+            smile_3d_submission_is_opaque(submission))
+        {
+            receiver_present = 1;
+            break;
+        }
+    }
+    if (!receiver_present)
+    {
+        smile_reflections_skip(SMILE_3D_REFLECTION_FALLBACK_NO_RECEIVER);
+        return 1;
+    }
+    if (smile_camera_position3d[1] <= smile_reflections_floor_height() + 0.01f)
+    {
+        smile_reflections_skip(SMILE_3D_REFLECTION_FALLBACK_CAMERA_BELOW_FLOOR);
+        return 1;
+    }
+    device = (ID3D11Device*)smile_graphics_directx_device();
+    context = (ID3D11DeviceContext*)smile_graphics_directx_context();
+    if (context == 0 || !smile_reflections_prepare(device,
+            (int)smile_graphics_directx_viewport_width(),
+            (int)smile_graphics_directx_viewport_height(), smile_hdr_effective3d))
+        return 1;
+    target = smile_reflections_target();
+    context->PSSetShaderResources(4, 1, &empty_view);
+    context->OMSetRenderTargets(1, &target, smile_reflections_depth());
+    context->OMSetDepthStencilState(smile_depth_state3d, 0);
+    context->OMSetBlendState(0, 0, 0xffffffff);
+    viewport.Width = (FLOAT)smile_reflections_width();
+    viewport.Height = (FLOAT)smile_reflections_height();
+    viewport.MinDepth = 0.0f;
+    viewport.MaxDepth = 1.0f;
+    context->RSSetViewports(1, &viewport);
+    memcpy(clear, smile_frame_clear3d, sizeof(clear));
+    if (smile_hdr_effective3d)
+        for (int component = 0; component < 3; ++component)
+            clear[component] = clear[component] <= 0.04045f
+                ? clear[component] / 12.92f
+                : powf((clear[component] + 0.055f) / 1.055f, 2.4f);
+    context->ClearRenderTargetView(target, clear);
+    context->ClearDepthStencilView(smile_reflections_depth(),
+        D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
+    smile_reflection_pass3d = 1;
+    post_draw_count = smile_post_draw_count3d;
+    if (smile_reflections_include_backdrop())
+        success = smile_3d_draw_backdrop(context, target, &viewport);
+    smile_post_draw_count3d = post_draw_count;
+    if (success)
+        for (unsigned int index = 0; index < smile_frame_submission_count3d; ++index)
+        {
+            const SmileSubmission3D* submission = &smile_frame_submissions3d[index];
+            if (submission->kind != SMILE_3D_SUBMISSION_OBJECT ||
+                submission->object.reflection_mode != 1 ||
+                !smile_3d_submission_is_opaque(submission))
+                continue;
+            if (!smile_3d_draw_submission(submission))
+            {
+                success = 0;
+                break;
+            }
+        }
+    smile_reflection_pass3d = 0;
+    context->OMSetRenderTargets(0, 0, 0);
+    if (!success)
+        smile_reflections_skip(SMILE_3D_REFLECTION_FALLBACK_RENDER_FAILED);
+    else
+        smile_reflections_complete_capture(0, 0);
     return 1;
 }
 
@@ -8530,6 +8711,7 @@ static int smile_3d_end(void)
         ID3D11RenderTargetView* target;
         D3D11_VIEWPORT viewport = {};
         success = smile_3d_render_shadow_pass();
+        if (success) success = smile_3d_render_reflection_pass();
         target = smile_color_view3d != 0
             ? smile_color_view3d
             : (ID3D11RenderTargetView*)smile_graphics_directx_render_target();
@@ -8645,6 +8827,7 @@ extern "C" void smile_graphics3d_on_device_lost(void)
 {
     int index;
     SmileM5TargetState3D targets;
+    smile_reflections_on_device_lost();
     smile_3d_release_submissions(0, smile_frame_submission_count3d);
     smile_3d_release_gpu_particle_frame_systems();
     smile_frame_submission_count3d = 0;
@@ -9254,6 +9437,7 @@ static void smile_3d_reset(void)
     for (index = 0; index < SMILE_3D_MAX_MESHES; ++index)
         if (smile_meshes3d[index].active) smile_3d_delete_mesh(&smile_meshes3d[index]);
     smile_graphics3d_on_device_lost();
+    smile_reflections_reset();
     smile_last_error3d = 0;
     smile_draw_call_count3d = 0;
     smile_submitted_triangle_count3d = 0;
@@ -9949,6 +10133,24 @@ extern "C" long long smile_renderer3d_command(long long command,
             { smile_last_error3d = 5; return 0; }
             object->ignore_node_offsets = b == 0;
             return 1;
+        case SMILE_3D_CONFIGURE_REFLECTIONS:
+            if (smile_frame_active3d || a < 0 || a > 1 || b < 0 || b > 100 ||
+                c < 0 || c > 100 || d < 25 || d > 100 || e < -1000000 ||
+                e > 1000000 || f < 0 || f > 1 ||
+                !smile_reflections_configure((int)a, (int)b, (int)c, (int)d,
+                    (float)e, (int)f))
+            { smile_last_error3d = 50; return 0; }
+            return 1;
+        case SMILE_3D_SET_OBJECT_REFLECTION_MODE:
+            object = smile_3d_object(a);
+            if (smile_frame_active3d || object == 0 || b < 0 || b > 2)
+            { smile_last_error3d = 50; return 0; }
+            object->reflection_mode = (unsigned char)b;
+            return 1;
+        case SMILE_3D_REFLECTION_VALUE:
+            if (a < 1 || a > 17)
+            { smile_last_error3d = 50; return 0; }
+            return smile_reflections_value((int)a);
         case SMILE_3D_SET_MODEL_NODE_ROTATION_OFFSET:
             animator = smile_3d_animator(a);
             model = animator == 0 ? 0 : smile_3d_model_resource(animator->model_handle);

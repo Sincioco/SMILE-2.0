@@ -77,6 +77,8 @@ Public Type EffectsView
     WindowHeight As Number
     ProfileIndex As Number
     FloorOrGridVisible As Boolean
+    FloorReflectionsEnabled As Boolean
+    FloorReflectionFallback As Number
     SwordFireVisible As Boolean
     ShieldFireVisible As Boolean
     StormStyleLabel As Text
@@ -227,6 +229,9 @@ Public Function CaptureEffects(ByRef Session As ViewerSession.State,
     Result.WindowHeight = WindowHeight
     Result.ProfileIndex = Session.ProfileIndex
     Result.FloorOrGridVisible = Rendering.FloorVisible Or Rendering.GridVisible
+    Result.FloorReflectionsEnabled = Rendering.FloorReflectionsEnabled
+    Result.FloorReflectionFallback = Graphics3D.ReflectionValue3D(
+        Graphics3D.REFLECTION_QUERY_FALLBACK_REASON)
     Result.SwordFireVisible = Effects.SwordFireVisible
     Result.ShieldFireVisible = Effects.ShieldFireVisible
     Result.StormStyleLabel = ViewerEffects.StormStyleName(Effects)
@@ -378,6 +383,8 @@ Public Sub DrawEffectsAndCamera(Value As EffectsView)
         Value.WindowWidth,
         Value.ProfileIndex,
         Value.FloorOrGridVisible,
+        Value.FloorReflectionsEnabled,
+        Value.FloorReflectionFallback,
         Value.SwordFireVisible,
         Value.ShieldFireVisible,
         Value.StormStyleLabel,

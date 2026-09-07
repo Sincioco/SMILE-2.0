@@ -7,6 +7,8 @@ not change live `Key_Held` behavior or any saved calibration.
 
 Native-first reusable inspection and lightweight pose-correction tool. Party is the launch default. The Character tabs select Arin, Orin, Dragon, or the Party arena. Desktop Profile retains Arin v5.6, the earlier prototype, and the technical fixture for diagnostics. Web publication omits that control, its shortcut and the obsolete diagnostic assets. H6.1 is retained historical PASS evidence; the current refactor uses its own gate tied to current code. This is not the future Battle Scene Editor.
 
+The Viewer explicitly enables the shared polished planar floor on native Desktop and Web. The visible `Floor Reflections: On / Off` button is available in each character inspector and in the default Party panel beside the floor/environment controls. It preserves floor/grid visibility, calibration, playback, camera, background, and character selection; full presentation reset restores the session default On. Hiding the floor suppresses the receiver work without changing the preference. An optional graphics allocation/render failure keeps the matte scene usable and reports `Floor Reflections: Unavailable` rather than claiming the effect is active.
+
 Dragon inspection uses the same clip buttons, timeline/frame stepping, playback speed, demo, lighting/material channels, sockets, pan/orbit/zoom and reset as the hero tabs. Both heroes remain in the arena with their own assets and saved corrections. Head Aim constrains only the head joint; At Arin/At Orin selects its target. The current Pose Calibration targets remain humanoid wrists and equipment, so they do not apply to Dragon. Dragon VFX and hero equipment visibility remain independent. Pose is disabled for Dragon, including its turn in Party.
 
 Party members start on a 300-unit front arc with 40 degrees between its endpoints. The placement function distributes any supplied member count over that arc. The two current attack destinations remain in front of the Dragon; approach and retreat interpolate from each member's own home position. Battle cameras sample this frame's actor/Dragon poses.
@@ -28,8 +30,8 @@ Startup/session/playback, camera, calibration, input/UI/gizmo, Party, effects, a
 rendering behavior now lives with its corresponding `Viewer*.smile` production
 owner and focused tests, not merely in extracted state records. The remaining
 above-threshold procedures are documented runtime-sampling and cross-owner ordering
-coordinators. This remains an explicit entry-point size exception pending final
-native and installed-Chrome acceptance; do not hide those ordered calls in a shared
+coordinators. The 1,851-line entry point received its evidence-based final review and
+remains an accepted explicit size exception; do not hide those ordered calls in a shared
 replacement application/controller module or recreate owner state in `Program.smile`.
 
 The completed refactor checkpoint is

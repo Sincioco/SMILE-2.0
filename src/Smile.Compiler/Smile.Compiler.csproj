@@ -3,6 +3,8 @@
   <ItemGroup>
     <ProjectReference Include="..\Smile.AssetTool\Smile.AssetTool.csproj" />
     <ProjectReference Include="..\Smile.Language\Smile.Language.csproj" />
+    <EmbeddedResource Include="WebRuntime\Renderer3DReflections.js"
+                      LogicalName="Smile.Compiler.WebRuntime.Renderer3DReflections.js" />
   </ItemGroup>
 
   <PropertyGroup>

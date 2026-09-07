@@ -34,6 +34,9 @@ if errorlevel 1 exit /b %errorlevel%
 powershell -NoProfile -ExecutionPolicy Bypass -File "%SMILE_ROOT%\scripts\test-renderer3d-post-processing.ps1"
 if errorlevel 1 exit /b %errorlevel%
 
+powershell -NoProfile -ExecutionPolicy Bypass -File "%SMILE_ROOT%\scripts\test-renderer3d-reflections.ps1"
+if errorlevel 1 exit /b %errorlevel%
+
 powershell -NoProfile -ExecutionPolicy Bypass -File "%SMILE_ROOT%\scripts\test-renderer3d-soft-particles.ps1"
 if errorlevel 1 exit /b %errorlevel%
 powershell -NoProfile -ExecutionPolicy Bypass -File "%SMILE_ROOT%\scripts\test-renderer3d-distortion.ps1"

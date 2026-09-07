@@ -909,6 +909,11 @@ Call Check(ViewerUi.MaterialInspectionLabel(Graphics3D.MATERIAL_INSPECTION_NORMA
 Call Check(ViewerUi.DemoLabel(True, True, False) = "RESUME")
 Call Check(ViewerUi.DemoStatusLabel(False, False, True) = "On")
 Call Check(ViewerUi.PartyRoleLabel("") = "Technical")
+Call Check(ViewerUi.FloorReflectionLabel(True) = "Floor Reflections: On")
+Call Check(ViewerUi.FloorReflectionLabel(False) = "Floor Reflections: Off")
+Call Check(ViewerUi.FloorReflectionLabel(True,
+    Graphics3D.REFLECTION_FALLBACK_ALLOCATION_FAILED) =
+    "Floor Reflections: Unavailable")
 Call Check(ViewerUi.StatusPanelX(1600) = 1332)
 Call Check(ViewerUi.AnimationButtonX(1600) = 1344)
 Call Check(ViewerUi.GlowButtonX(1600, True, False) = 1548)
@@ -967,6 +972,14 @@ Call Check(ViewerUi.InspectorActionAtPointer(
     544, 470, 800, 640, 0, False, False,
     ViewerProfiles.PROFILE_ARIN, True, -1) =
     ViewerUi.INSPECTOR_ACTION_FLAME_PAUSE)
+Call Check(ViewerUi.InspectorActionAtPointer(
+    600, 500, 800, 640, 0, False, False,
+    ViewerProfiles.PROFILE_ARIN, False, -1) =
+    ViewerUi.INSPECTOR_ACTION_FLOOR_REFLECTIONS)
+Call Check(ViewerUi.InspectorActionAtPointer(
+    600, 500, 800, 640, 1, False, False,
+    ViewerProfiles.PROFILE_ARIN, False, -1) =
+    ViewerUi.INSPECTOR_ACTION_NONE)
 Call Check(ViewerUi.InspectorActionAtPointer(
     544, 352, 800, 640, 0, False, False,
     ViewerProfiles.PROFILE_ARIN, False, -1) =
@@ -1115,11 +1128,11 @@ Call ViewerInspectorPresentation.DrawWorkspace(
     UiState, PartyPrimary.Actor, CalibrationState, InputState,
     InspectorWorkspaceView)
 Call ViewerUi.DrawProfileEffectControls(
-    800, ViewerProfiles.PROFILE_ORIN, True, False, False,
+    800, ViewerProfiles.PROFILE_ORIN, True, True, 0, False, False,
     "Storm", "Comfort", "Freeze Lightning", False,
     False, False, False, "Pause Flames", True, "Shield Fire", False)
 Call ViewerUi.DrawProfileEffectControls(
-    800, ViewerProfiles.PROFILE_DRAGON, True, False, False,
+    800, ViewerProfiles.PROFILE_DRAGON, True, True, 0, False, False,
     "Storm", "Comfort", "Freeze Lightning", False,
     True, False, False, "Pause Flames", True, "Shield Fire", False)
 Call ViewerUi.DrawFooterMessage(800, 640, True,
@@ -1370,6 +1383,18 @@ PartyPointer = ViewerParty.ClassifyPointer(
     30, 415, True, False, 0, False, False, 579, 1000, 1200, 40)
 
 Call Check(PartyPointer.Consumed And
+    PartyPointer.Action = ViewerParty.POINTER_ACTION_NONE)
+
+PartyPointer = ViewerParty.ClassifyPointer(
+    1100, 500, True, False, 0, False, False, 640, 1000, 1200, 40)
+
+Call Check(PartyPointer.Consumed And
+    PartyPointer.Action = ViewerParty.POINTER_ACTION_TOGGLE_FLOOR_REFLECTIONS)
+
+PartyPointer = ViewerParty.ClassifyPointer(
+    1100, 500, True, False, 1, False, False, 640, 1000, 1200, 40)
+
+Call Check(Not PartyPointer.Consumed And
     PartyPointer.Action = ViewerParty.POINTER_ACTION_NONE)
 
 PartyResponse = ViewerParty.PointerResponseForAction(
@@ -2165,7 +2190,8 @@ Call ViewerDragon.ResetVisibility(DragonState)
 Call Check(DragonState.Visible)
 
 Call ViewerRendering.Reset(RenderingState, 3)
-Call Check(RenderingState.FloorVisible And RenderingState.GridVisible)
+Call Check(RenderingState.FloorVisible And RenderingState.GridVisible And
+    RenderingState.FloorReflectionsEnabled)
 Call Check(RenderingState.LightingIndex = 0)
 Call Check(RenderingState.MaterialInspection = Graphics3D.MATERIAL_INSPECTION_LIT)
 
@@ -2222,6 +2248,20 @@ Call Check(RenderingState.MaterialInspection =
     (Graphics3D.MATERIAL_INSPECTION_LIT + 1) Mod 7)
 Call Check(ViewerRendering.ResetMaterialInspection(RenderingState))
 Call Check(RenderingState.MaterialInspection = Graphics3D.MATERIAL_INSPECTION_LIT)
+
+InspectorOperation = ViewerInspectorCommands.ApplyPresentationAction(
+    ViewerUi.INSPECTOR_ACTION_FLOOR_REFLECTIONS,
+    RenderingState, 5, EffectsState, DragonState)
+
+Call Check(InspectorOperation.Handled And InspectorOperation.Ready And
+    Not RenderingState.FloorReflectionsEnabled)
+
+InspectorOperation = ViewerInspectorCommands.ApplyPartyPresentationAction(
+    ViewerParty.POINTER_ACTION_TOGGLE_FLOOR_REFLECTIONS,
+    RenderingState, 5, EffectsState, CameraState, DragonState)
+
+Call Check(InspectorOperation.Handled And InspectorOperation.Ready And
+    RenderingState.FloorReflectionsEnabled)
 
 InspectorOperation = ViewerInspectorCommands.ApplyPresentationAction(
     ViewerUi.INSPECTOR_ACTION_FLOOR,

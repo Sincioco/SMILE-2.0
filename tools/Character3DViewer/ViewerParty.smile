@@ -50,6 +50,7 @@ Public Const POINTER_ACTION_RESTART = 14
 Public Const POINTER_ACTION_TOGGLE_FIRE = 15
 Public Const POINTER_ACTION_TOGGLE_LIGHTNING = 16
 Public Const POINTER_ACTION_TOGGLE_SHIELD_STYLE = 17
+Public Const POINTER_ACTION_TOGGLE_FLOOR_REFLECTIONS = 18
 
 Public Type ParticipantLayout
     Home As Core.Vector3
@@ -1879,6 +1880,10 @@ Public Function ClassifyPointer(
     Else If InRectangle(PointerX, PointerY,
         StatusPanelX + 208, 204, 30, 24) Then
         Result.Action = POINTER_ACTION_SPEED_UP
+    Else If InRectangle(PointerX, PointerY,
+        StatusPanelX + 12, 496, 240, 22) Then
+        Result.Action = POINTER_ACTION_TOGGLE_FLOOR_REFLECTIONS
+        Result.Consumed = True
     Else If Not Result.Consumed Then
         Return Result
     Else If InRectangle(PointerX, PointerY, Left, 104, 76, 30) Then

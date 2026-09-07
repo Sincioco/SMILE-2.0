@@ -24,7 +24,7 @@ This is the single compact checkpoint for the continuation authorized by
 | 2 | Correct the underlying NU1503 restore/build warning without suppression | Completed and pushed in `bac36a2` |
 | 3 | Reassess the 1,851-line `Program.smile` for useful responsibility extraction | Completed; evidence-based no-change decision |
 | 4 | Reconcile and continue only approved, implementation-ready suspended work | Completed; Reflective Battle Ground Floor is the only supplied implementation handoff |
-| 5 | Execute `C:\Users\louie\Downloads\Implement Reflective Battle Ground Floor.txt` after the ordered continuation work | Queued by Sin |
+| 5 | Execute the supplied Reflective Battle Ground Floor handoff after the ordered continuation work | Completed; tracked in `docs/implementation/reflective-battle-floor.md` |
 
 ## Desktop sound-effects milestone
 
@@ -136,8 +136,9 @@ Clearing the temporary On Hold list did not turn unsupplied proposals into activ
 implementation tasks. This reconciliation preserves their actual pending state while
 following Sin's instruction-file gate.
 
-## Next action
+## Continuation disposition
 
-Read and execute the exact Reflective Battle Ground Floor instruction file supplied
-by Sin. Preserve the completed continuation milestones and do not substitute a
-different historical package.
+The supplied Reflective Battle Ground Floor task is implemented and validated in
+`docs/implementation/reflective-battle-floor.md`. No additional task from this
+continuation is implementation-ready without a new task-specific ZIP or Markdown
+handoff from Sin.

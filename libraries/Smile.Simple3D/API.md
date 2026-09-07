@@ -10,7 +10,7 @@ True-3D types:
 - `Matrix4`: `M11` through `M44`, scaled by `FIXED_ONE`.
 - `Camera3D`: position, target, explicit up direction, projection fields, near/far planes, FOV, and the legacy wireframe viewport fields. `Graphics3D.DefaultCamera()` supplies world-up; `Interaction.ApplyCameraControls` rotates position and up together for continuous 360-degree vertical orbit.
 - `CameraControl3D`: composable pan, wheel-zoom, middle-drag orbit, and return-spring state.
-- `Object3D`: validated object/mesh handles plus mirrored position, rotation, scale, color, opacity, and visibility values.
+- `Object3D`: validated object/mesh handles plus mirrored position, rotation, scale, color, opacity, visibility, and planar-reflection role values.
 - `Texture3D`: dimensions, usage, requested filter/wrap/anisotropy, effective anisotropy, and mip count.
 - `Material3D`: simple/PBR kind, texture bindings, alpha/culling state, and mirrored factors.
 - `Model3D`: validated model handle plus part, material, format-version, vertex, index, metadata texture-reference, geometry/PBR readiness, PBR failure, model-owned PBR resource counts, and imported animation/bone/clip/socket/byte counts.
@@ -151,6 +151,15 @@ M5 shadows and post-processing:
 - Submission groups reserve conservatively, reject nesting and stale tokens with Renderer3D error 52, and publish only on commit. An open group at `End3DChecked` is rolled back, releases its references, and fails the end with error 52. Queue/palette overflow remains error 51. Mesh mutation or recommit while a snapshot is in flight is refused with error 53.
 - `M5_FALLBACK_*` is an independent bit field: shadow resolution `1`, shadow disabled `2`, HDR unavailable `4`, MSAA reduced `8`, bloom resolution reduced `16`, bloom disabled `32`, tone mapping disabled `64`, and direct LDR `128`.
 
+Horizontal planar reflections:
+
+- `ConfigureReflections3D(Enabled, StrengthPercent, SoftnessPercent, CaptureScalePercent, FloorHeight, IncludeBackdrop)` configures one optional horizontal receiver outside an active frame. Strength and softness are `0`-`100`, scale is `25`-`100`, and invalid requests preserve the previous valid configuration.
+- `SetObjectReflectionModeChecked3D(ByRef Object, Mode)` assigns `OBJECT_REFLECTION_EXCLUDED`, `OBJECT_REFLECTION_ELIGIBLE`, or `OBJECT_REFLECTION_RECEIVER`; `SetObjectReflectionMode3D` is the compatibility subroutine wrapper. Ordinary objects default to eligible. The receiver, grid, socket/debug objects, and VFX are excluded from the mirrored source pass.
+- `ReflectionValue3D(Property)` reports requested/effective state, fallback reason, target dimensions and bytes, draw/triangle/capture/composition counts, configuration/resource generations, and applied tuning through the public `REFLECTION_QUERY_*` constants. Fallback reasons distinguish Disabled, no receiver, camera below the plane, allocation failure, and render failure.
+- The native and Web renderers reuse immutable accepted frame submissions for one mirrored-camera pass. Opaque and alpha-masked simple/PBR objects participate; alpha-blended effects do not. No actor, animation, event, audio, or VFX update is repeated.
+- Capture defaults to the caller's requested scale, preserves viewport aspect, and caps its longest edge at 2048 pixels. Mild softness uses a bounded five-tap receiver filter. A valid allocation/render failure leaves the ordinary matte scene usable and caches failure until an explicit configuration boundary such as Off/On.
+- Reflections independently require deferred replay. When reflections, shadows, HDR, and bloom are all Off, the existing direct-LDR path remains available. Reset, device/context loss, resize replacement, and teardown release or invalidate reflection resources with the normal renderer lifecycle.
+
 Transforms and appearance:
 
 - `SetObjectPosition` and `MoveObject`
@@ -255,9 +264,9 @@ Bounded additive joint aiming uses the existing animated socket matrices and nod
 
 ## `Smile.Simple3D.Arena3D`
 
-`Create(Width, Depth, RedValue, GreenValue, BlueValue, Optional TileSize = 40, Optional LineThickness = 2) As ArenaFloor` creates a black floor plus one emissive grid mesh. All dimensions are integer world units. `ArenaFloor.Ready` reports success; `LineCount` reports the actual interior strips. Both Character Viewer and Fire Lab use the same geometry/material recipe (blue versus orange). Arin's arena remains 1000 by 1000 when the dragon is hidden.
+`Create(Width, Depth, RedValue, GreenValue, BlueValue, Optional TileSize = 40, Optional LineThickness = 2, Optional Reflective = False) As ArenaFloor` creates a black floor plus one emissive grid mesh. Generic arenas remain matte unless they explicitly opt in. The polished preset requests 45% strength, 35% softness, a 50% capture, the established Y=-1 floor plane, and backdrop inclusion. All dimensions are integer world units. `ArenaFloor.Ready` reports success; `LineCount` reports the actual interior strips. Both Character Viewer and Fire Lab use the same geometry/material recipe (blue versus orange). Arin's arena remains 1000 by 1000 when the dragon is hidden.
 
-`Draw(ByRef ArenaFloor, ShowFloor, ShowGrid) As Boolean` supports independent visibility. `Destroy(ByRef ArenaFloor)` releases both meshes/objects and the grid material, is repeat-safe, and ignores stale resources after a renderer reset. Create/destroy are rejected while a 3D frame is active. Create rejects dimensions outside 40..100000, tile size below 2, thickness outside 1..TileSize-1, and more than 512 requested tiles on either axis. Partial creation rolls back; no per-frame allocation or per-line draw calls.
+`SetReflectionsEnabled(ByRef ArenaFloor, Enabled)` preserves the arena's requested preference. `ConfigureForFrame(ByRef ArenaFloor, ShowFloor)` applies it before `Begin3D` and suppresses reflection work while the floor receiver is hidden. `Draw(ByRef ArenaFloor, ShowFloor, ShowGrid) As Boolean` supports independent visibility. `Destroy(ByRef ArenaFloor)` releases both meshes/objects and the grid material, is repeat-safe, and ignores stale resources after a renderer reset. Create/destroy are rejected while a 3D frame is active. Create rejects dimensions outside 40..100000, tile size below 2, thickness outside 1..TileSize-1, and more than 512 requested tiles on either axis. Partial creation rolls back; no per-frame allocation or per-line draw calls.
 
 Camera settings are separate: `Interaction.ResetCameraControls` initializes manual offsets and `CharacterViewer.AdvanceOrbitYaw1000(ByRef Angle1000, ElapsedMilliseconds, DegreesPerSecond)` provides smooth horizontal auto-orbit. Applications select a starting yaw/pitch, target, distance, and whether automatic motion is enabled. The arena does not own a camera or timer.
 

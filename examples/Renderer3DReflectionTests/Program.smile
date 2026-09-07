@@ -1,0 +1,227 @@
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Graphics3D As Graphics3D
+
+Dim Failures As Number
+Dim ForcedFailureObserved As Boolean
+
+Game Window "Renderer3D Reflection Tests" Size 320 By 240
+
+Do
+
+    Call RunReflectionTests()
+
+Loop Until True
+
+If Failures = 0 Then
+
+    If ForcedFailureObserved Then
+        Print "Renderer3D reflection retry tests passed"
+    Else
+        Print "Renderer3D reflection tests passed"
+    End If
+
+Else
+    Print "Renderer3D reflection tests failed: "; Failures
+End If
+
+Sub RunReflectionTests()
+
+    Dim Camera As Core.Camera3D
+    Dim ConfigurationRevision As Number
+    Dim Excluded As Core.Object3D
+    Dim FallbackReason As Number
+    Dim FirstGeneration As Number
+    Dim Floor As Core.Object3D
+    Dim Source As Core.Object3D
+
+    Call Graphics3D.ResetRenderer3D()
+
+    Camera = Graphics3D.DefaultCamera()
+    Floor = Graphics3D.CreatePlane3D(180, 140)
+    Source = Graphics3D.CreateCube3D(24)
+    Excluded = Graphics3D.CreateCube3D(12)
+
+    Call Graphics3D.SetObjectPosition(Floor, 0, -1, 0)
+    Call Graphics3D.SetObjectPosition(Source, 0, 20, 0)
+    Call Graphics3D.SetObjectPosition(Excluded, 40, 8, 0)
+    Call Graphics3D.SetObjectReflectionMode3D(
+        Floor, Graphics3D.OBJECT_REFLECTION_RECEIVER)
+    Call Graphics3D.SetObjectReflectionMode3D(
+        Excluded, Graphics3D.OBJECT_REFLECTION_EXCLUDED)
+
+    Call Check(Floor.ReflectionMode = Graphics3D.OBJECT_REFLECTION_RECEIVER)
+    Call Check(Source.ReflectionMode = Graphics3D.OBJECT_REFLECTION_ELIGIBLE)
+    Call Check(Excluded.ReflectionMode = Graphics3D.OBJECT_REFLECTION_EXCLUDED)
+    Call Check(Graphics3D.ConfigureShadows3D(
+        False, Graphics3D.SHADOW_CASTER_DIRECTIONAL, 0, 1024, 500, 600))
+    Call Check(Graphics3D.ConfigurePostProcessing3D(
+        False, False, False, 100, 1200, 80, 4, 0, 1))
+    Call Check(Graphics3D.ConfigureReflections3D(True, 45, 35, 50, -1, True))
+    Call Check(Graphics3D.ReflectionValue3D(
+        Graphics3D.REFLECTION_QUERY_REQUESTED) = 1)
+    Call Check(Graphics3D.ReflectionValue3D(
+        Graphics3D.REFLECTION_QUERY_STRENGTH) = 45)
+    Call Check(Graphics3D.ReflectionValue3D(
+        Graphics3D.REFLECTION_QUERY_SOFTNESS) = 35)
+    Call Check(Graphics3D.ReflectionValue3D(
+        Graphics3D.REFLECTION_QUERY_SCALE) = 50)
+
+    ConfigurationRevision = Graphics3D.ReflectionValue3D(
+        Graphics3D.REFLECTION_QUERY_CONFIGURATION_REVISION)
+
+    Call Check(Not Graphics3D.ConfigureReflections3D(True, 45, 35, 10, -1, True))
+    Call Check(Graphics3D.ReflectionValue3D(
+        Graphics3D.REFLECTION_QUERY_CONFIGURATION_REVISION) = ConfigurationRevision)
+    Call Check(Graphics3D.ReflectionValue3D(
+        Graphics3D.REFLECTION_QUERY_SCALE) = 50)
+
+    Call DrawReflectionFrame(Camera, Floor, Source, Excluded)
+
+    FallbackReason = Graphics3D.ReflectionValue3D(
+        Graphics3D.REFLECTION_QUERY_FALLBACK_REASON)
+    ForcedFailureObserved = FallbackReason = Graphics3D.REFLECTION_FALLBACK_ALLOCATION_FAILED
+
+    If ForcedFailureObserved Then
+
+        Call Check(Graphics3D.ReflectionValue3D(
+            Graphics3D.REFLECTION_QUERY_EFFECTIVE) = 0)
+        Call Check(Graphics3D.ReflectionValue3D(
+            Graphics3D.REFLECTION_QUERY_CAPTURES) = 0)
+        Call Check(Graphics3D.ReflectionValue3D(
+            Graphics3D.REFLECTION_QUERY_DRAWS) = 0)
+        Call Check(Graphics3D.ReflectionValue3D(
+            Graphics3D.REFLECTION_QUERY_COMPOSITIONS) = 0)
+
+        FirstGeneration = Graphics3D.ReflectionValue3D(
+            Graphics3D.REFLECTION_QUERY_RESOURCE_GENERATION)
+
+        Call DrawReflectionFrame(Camera, Floor, Source, Excluded)
+        Call Check(Graphics3D.ReflectionValue3D(
+            Graphics3D.REFLECTION_QUERY_FALLBACK_REASON) =
+            Graphics3D.REFLECTION_FALLBACK_ALLOCATION_FAILED)
+        Call Check(Graphics3D.ReflectionValue3D(
+            Graphics3D.REFLECTION_QUERY_RESOURCE_GENERATION) = FirstGeneration)
+        Call Check(Graphics3D.ConfigureReflections3D(False, 45, 35, 50, -1, True))
+        Call Check(Graphics3D.ConfigureReflections3D(True, 45, 35, 50, -1, True))
+
+        Call DrawReflectionFrame(Camera, Floor, Source, Excluded)
+
+    End If
+
+    Call Check(Graphics3D.ReflectionValue3D(
+        Graphics3D.REFLECTION_QUERY_EFFECTIVE) = 1)
+    Call Check(Graphics3D.ReflectionValue3D(
+        Graphics3D.REFLECTION_QUERY_FALLBACK_REASON) =
+        Graphics3D.REFLECTION_FALLBACK_NONE)
+    Call Check(Graphics3D.ReflectionValue3D(
+        Graphics3D.REFLECTION_QUERY_CAPTURES) = 1)
+    Call Check(Graphics3D.ReflectionValue3D(
+        Graphics3D.REFLECTION_QUERY_DRAWS) = 1)
+    Call Check(Graphics3D.ReflectionValue3D(
+        Graphics3D.REFLECTION_QUERY_TRIANGLES) = 12)
+    Call Check(Graphics3D.ReflectionValue3D(
+        Graphics3D.REFLECTION_QUERY_COMPOSITIONS) = 1)
+    Call Check(Graphics3D.ReflectionValue3D(
+        Graphics3D.REFLECTION_QUERY_WIDTH) > 0)
+    Call Check(Graphics3D.ReflectionValue3D(
+        Graphics3D.REFLECTION_QUERY_HEIGHT) > 0)
+    Call Check(Graphics3D.ReflectionValue3D(
+        Graphics3D.REFLECTION_QUERY_TARGET_BYTES) > 0)
+    Call Check(Graphics3D.M5Value3D(
+        Graphics3D.M5_QUERY_LOGICAL_SUBMISSIONS, 0) = 3)
+    Call Check(Graphics3D.M5Value3D(
+        Graphics3D.M5_QUERY_PHYSICAL_SUBMISSIONS, 0) = 3)
+    Call Check(Graphics3D.DrawCallCount3D() = 3)
+    Call Check(Graphics3D.M5Value3D(
+        Graphics3D.M5_QUERY_MULTIPASS_ACTIVE, 0) = 1)
+
+    FirstGeneration = Graphics3D.ReflectionValue3D(
+        Graphics3D.REFLECTION_QUERY_RESOURCE_GENERATION)
+
+    Call DrawReflectionFrame(Camera, Floor, Source, Excluded)
+    Call Check(Graphics3D.ReflectionValue3D(
+        Graphics3D.REFLECTION_QUERY_RESOURCE_GENERATION) = FirstGeneration)
+
+    Call Check(Graphics3D.ConfigureReflections3D(False, 45, 35, 50, -1, True))
+    Call DrawReflectionFrame(Camera, Floor, Source, Excluded)
+    Call Check(Graphics3D.ReflectionValue3D(
+        Graphics3D.REFLECTION_QUERY_REQUESTED) = 0)
+    Call Check(Graphics3D.ReflectionValue3D(
+        Graphics3D.REFLECTION_QUERY_EFFECTIVE) = 0)
+    Call Check(Graphics3D.ReflectionValue3D(
+        Graphics3D.REFLECTION_QUERY_FALLBACK_REASON) =
+        Graphics3D.REFLECTION_FALLBACK_DISABLED)
+    Call Check(Graphics3D.ReflectionValue3D(
+        Graphics3D.REFLECTION_QUERY_CAPTURES) = 0)
+    Call Check(Graphics3D.ReflectionValue3D(
+        Graphics3D.REFLECTION_QUERY_DRAWS) = 0)
+    Call Check(Graphics3D.ReflectionValue3D(
+        Graphics3D.REFLECTION_QUERY_COMPOSITIONS) = 0)
+    Call Check(Graphics3D.M5Value3D(
+        Graphics3D.M5_QUERY_MULTIPASS_ACTIVE, 0) = 0)
+
+    Call Check(Graphics3D.ConfigureReflections3D(True, 45, 35, 50, -1, True))
+    Call DrawWithoutReceiver(Camera, Source, Excluded)
+    Call Check(Graphics3D.ReflectionValue3D(
+        Graphics3D.REFLECTION_QUERY_FALLBACK_REASON) =
+        Graphics3D.REFLECTION_FALLBACK_NO_RECEIVER)
+    Call Check(Graphics3D.ReflectionValue3D(
+        Graphics3D.REFLECTION_QUERY_CAPTURES) = 0)
+
+    Camera.Position.Y = -2
+    Camera.Target.Y = -3
+
+    Call DrawReflectionFrame(Camera, Floor, Source, Excluded)
+    Call Check(Graphics3D.ReflectionValue3D(
+        Graphics3D.REFLECTION_QUERY_FALLBACK_REASON) =
+        Graphics3D.REFLECTION_FALLBACK_CAMERA_BELOW_FLOOR)
+    Call Check(Graphics3D.ReflectionValue3D(
+        Graphics3D.REFLECTION_QUERY_CAPTURES) = 0)
+
+    Call Graphics3D.DestroyObject3D(Excluded)
+    Call Graphics3D.DestroyObject3D(Source)
+    Call Graphics3D.DestroyObject3D(Floor)
+    Call Graphics3D.ResetRenderer3D()
+
+    Call Check(Graphics3D.ReflectionValue3D(
+        Graphics3D.REFLECTION_QUERY_REQUESTED) = 0)
+    Call Check(Graphics3D.ReflectionValue3D(
+        Graphics3D.REFLECTION_QUERY_TARGET_BYTES) = 0)
+
+End Sub
+
+Sub DrawReflectionFrame(Camera As Core.Camera3D, Floor As Core.Object3D,
+    Source As Core.Object3D, Excluded As Core.Object3D)
+
+    Call Check(Graphics3D.Begin3D(Camera, 2, 4, 8))
+    Call Check(Graphics3D.DrawObject3D(Floor))
+    Call Check(Graphics3D.DrawObject3D(Source))
+    Call Check(Graphics3D.SetObjectPositionChecked3D(Source, 8, 20, 0))
+    Call Check(Not Graphics3D.SetObjectReflectionModeChecked3D(
+        Source, Graphics3D.OBJECT_REFLECTION_EXCLUDED))
+    Call Check(Graphics3D.DrawObject3D(Excluded))
+    Call Check(Graphics3D.End3DChecked())
+
+    Call Graphics3D.SetObjectPosition(Source, 0, 20, 0)
+
+End Sub
+
+Sub DrawWithoutReceiver(Camera As Core.Camera3D, Source As Core.Object3D,
+    Excluded As Core.Object3D)
+
+    Call Check(Graphics3D.Begin3D(Camera, 2, 4, 8))
+    Call Check(Graphics3D.DrawObject3D(Source))
+    Call Check(Graphics3D.DrawObject3D(Excluded))
+    Call Check(Graphics3D.End3DChecked())
+
+End Sub
+
+Sub Check(Condition As Boolean)
+
+    If Not Condition Then
+        Failures = Failures + 1
+    End If
+
+End Sub

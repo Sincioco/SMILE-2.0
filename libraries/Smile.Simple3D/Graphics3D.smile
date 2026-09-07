@@ -137,6 +137,9 @@ Private Const COMMAND_SET_OBJECT_NODE_OFFSETS = 132
 Private Const COMMAND_SET_OBJECT_PIVOT_ROTATION = 129
 Private Const COMMAND_SET_OBJECT_CULL_MODE = 130
 Private Const COMMAND_SET_BACKDROP_TEXTURE = 131
+Private Const COMMAND_CONFIGURE_REFLECTIONS = 133
+Private Const COMMAND_SET_OBJECT_REFLECTION_MODE = 134
+Private Const COMMAND_REFLECTION_VALUE = 135
 
 Public Const MATERIAL_INSPECTION_LIT = 0
 Public Const MATERIAL_INSPECTION_BASE_COLOR = 1
@@ -149,6 +152,32 @@ Public Const OBJECT_CULL_DEFAULT = 0
 Public Const OBJECT_CULL_NONE = 1
 Public Const OBJECT_CULL_BACK = 2
 Public Const OBJECT_CULL_FRONT = 3
+Public Const OBJECT_REFLECTION_EXCLUDED = 0
+Public Const OBJECT_REFLECTION_ELIGIBLE = 1
+Public Const OBJECT_REFLECTION_RECEIVER = 2
+Public Const REFLECTION_FALLBACK_NONE = 0
+Public Const REFLECTION_FALLBACK_DISABLED = 1
+Public Const REFLECTION_FALLBACK_NO_RECEIVER = 2
+Public Const REFLECTION_FALLBACK_CAMERA_BELOW_FLOOR = 3
+Public Const REFLECTION_FALLBACK_ALLOCATION_FAILED = 4
+Public Const REFLECTION_FALLBACK_RENDER_FAILED = 5
+Public Const REFLECTION_QUERY_REQUESTED = 1
+Public Const REFLECTION_QUERY_EFFECTIVE = 2
+Public Const REFLECTION_QUERY_FALLBACK_REASON = 3
+Public Const REFLECTION_QUERY_WIDTH = 4
+Public Const REFLECTION_QUERY_HEIGHT = 5
+Public Const REFLECTION_QUERY_DRAWS = 6
+Public Const REFLECTION_QUERY_TRIANGLES = 7
+Public Const REFLECTION_QUERY_CAPTURES = 8
+Public Const REFLECTION_QUERY_COMPOSITIONS = 9
+Public Const REFLECTION_QUERY_CONFIGURATION_REVISION = 10
+Public Const REFLECTION_QUERY_RESOURCE_GENERATION = 11
+Public Const REFLECTION_QUERY_TARGET_BYTES = 12
+Public Const REFLECTION_QUERY_STRENGTH = 13
+Public Const REFLECTION_QUERY_SOFTNESS = 14
+Public Const REFLECTION_QUERY_SCALE = 15
+Public Const REFLECTION_QUERY_FLOOR_HEIGHT = 16
+Public Const REFLECTION_QUERY_BACKDROP = 17
 
 Private Const ANIMATOR_QUERY_DESTINATION_CLIP = 1
 Private Const ANIMATOR_QUERY_TIME_REMAINDER = 2
@@ -1325,6 +1354,7 @@ Public Function CreateModelPart3D(Model As Core.Model3D, PartIndex As Number) As
         Result.Visible = True
         Result.CastsShadow = True
         Result.ReceivesShadow = True
+        Result.ReflectionMode = OBJECT_REFLECTION_ELIGIBLE
 
     End If
 
@@ -4012,6 +4042,85 @@ Public Sub SetObjectShadows3D(
 
 End Sub
 
+''' Configures one bounded horizontal planar reflection for future frames.
+Public Function ConfigureReflections3D(
+    Enabled As Boolean,
+    StrengthPercent As Number,
+    SoftnessPercent As Number,
+    ScalePercent As Number,
+    FloorHeight As Number,
+    IncludeBackdrop As Boolean
+) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(
+        COMMAND_CONFIGURE_REFLECTIONS,
+        BooleanNumber(Enabled),
+        StrengthPercent,
+        SoftnessPercent,
+        ScalePercent,
+        FloorHeight,
+        BooleanNumber(IncludeBackdrop),
+        0,
+        0,
+        0,
+        0
+    ) <> 0
+
+    Return Result
+
+End Function
+
+''' Assigns whether an object is excluded, reflected, or the planar receiver.
+Public Function SetObjectReflectionModeChecked3D(
+    ByRef Object As Core.Object3D,
+    Mode As Number
+) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(
+        COMMAND_SET_OBJECT_REFLECTION_MODE,
+        Object.Handle,
+        Mode,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+    ) <> 0
+
+    If Result Then
+        Object.ReflectionMode = Mode
+    End If
+
+    Return Result
+
+End Function
+
+Public Sub SetObjectReflectionMode3D(ByRef Object As Core.Object3D, Mode As Number)
+
+    Dim Applied As Boolean
+
+    Applied = SetObjectReflectionModeChecked3D(Object, Mode)
+
+End Sub
+
+''' Reads one planar-reflection diagnostic for the most recently completed frame.
+Public Function ReflectionValue3D(Property As Number) As Number
+
+    Dim Result As Number
+
+    Result = Dispatch(COMMAND_REFLECTION_VALUE, Property, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+
+    Return Result
+
+End Function
+
 ''' Reads one M5 renderer diagnostic. Index is normally zero or an object handle.
 Public Function M5Value3D(Property As Number, Index As Number) As Number
 
@@ -4080,6 +4189,7 @@ Private Function CreatePrimitiveObject(
     Result.Visible = True
     Result.CastsShadow = True
     Result.ReceivesShadow = True
+    Result.ReflectionMode = OBJECT_REFLECTION_ELIGIBLE
     Return Result
 
 End Function
@@ -4302,6 +4412,7 @@ Public Function CreateObjectFromMesh3D(MeshHandle As Number) As Core.Object3D
         Result.Visible = True
         Result.CastsShadow = True
         Result.ReceivesShadow = True
+        Result.ReflectionMode = OBJECT_REFLECTION_ELIGIBLE
 
     End If
 

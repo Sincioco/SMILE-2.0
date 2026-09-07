@@ -100,6 +100,7 @@ Public Type Object3D
     Visible As Boolean
     CastsShadow As Boolean
     ReceivesShadow As Boolean
+    ReflectionMode As Number
 End Type
 
 ''' A generation-safe GPU texture sourced from a declared PNG Image asset.

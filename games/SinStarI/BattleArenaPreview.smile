@@ -1,0 +1,307 @@
+''' Bounded reflective-floor preview for the current Sin Star I battle placeholder.
+Module SinStarI.BattleArenaPreview
+
+Option Explicit
+
+Import Smile.Simple3D.Arena3D As Arena3D
+Import Smile.Simple3D.Character3D As Character3D
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Graphics3D As Graphics3D
+Import Smile.Simple3D.Interaction As Interaction
+Import Smile.Simple3D.Scene3D As Scene3D
+Import Smile.Simple3D.StaticBackdrop3D As StaticBackdrop3D
+
+Private Const REFLECTION_BUTTON_X = 32
+Private Const REFLECTION_BUTTON_Y = 90
+Private Const REFLECTION_BUTTON_WIDTH = 244
+Private Const REFLECTION_BUTTON_HEIGHT = 34
+Private Const MAX_FRAME_MILLISECONDS = 50
+
+Private Dim Arena As Arena3D.ArenaFloor
+Private Dim Arin As Character3D.Actor
+Private Dim Backdrop As StaticBackdrop3D.Backdrop
+Private Dim BaseCamera As Core.Camera3D
+Private Dim Camera As Core.Camera3D
+Private Dim CameraControls As Core.CameraControl3D
+Private Dim Ready As Boolean
+Private Dim Active As Boolean
+Private Dim AutoOrbit As Boolean
+Private Dim AutoOrbitYaw1000 As Number
+Private Dim ReflectionsEnabled As Boolean
+Private Dim PreviousTime As Number
+
+Public Sub Initialize()
+
+    Active = False
+    Ready = False
+    AutoOrbit = True
+    AutoOrbitYaw1000 = 0
+    ReflectionsEnabled = True
+
+End Sub
+
+Public Sub Enter()
+
+    Dim Bounds As Character3D.Bounds3D
+    Dim ActorX As Number
+    Dim ActorZ As Number
+    Dim CacheReady As Boolean
+    Dim FootLeft As Core.Vector3
+    Dim FootRight As Core.Vector3
+    Dim Focus As Core.Vector3
+    Dim GroundingOffset As Number
+
+    If Active Then
+        Call Shutdown()
+    End If
+
+    Call Graphics3D.ResetRenderer3D()
+
+    ReflectionsEnabled = True
+    Ready = True
+    CacheReady = Character3D.SetUnusedAssetCacheLimit(0)
+
+    If Not CacheReady Then
+        CacheReady = Character3D.SetUnusedAssetCacheLimit(0)
+    End If
+
+    Ready = CacheReady And Ready
+    Camera = Graphics3D.DefaultCamera()
+    Camera.Position.X = -10
+    Camera.Position.Y = 82
+    Camera.Position.Z = -240
+    Camera.Target.X = -80
+    Camera.Target.Y = 40
+    Camera.Target.Z = 20
+    Camera.FovDegrees = 46
+    Camera.NearPlane = 1
+    Camera.FarPlane = 4000
+    BaseCamera = Camera
+
+    Call Interaction.ResetCameraControls(CameraControls)
+
+    AutoOrbit = True
+    AutoOrbitYaw1000 = 0
+    Arena = Arena3D.Create(560, 420, 24, 150, 255, 40, 2, True)
+    Ready = Arena.Ready And Ready
+    Backdrop = StaticBackdrop3D.Create("Assets\Sin Star - Title Screen - Background.png")
+    Ready = Backdrop.Ready And Ready
+
+    If Backdrop.Ready Then
+        Ready = StaticBackdrop3D.SetActive(Backdrop) And Ready
+    End If
+
+    Arin = Character3D.LoadWithPolicy(
+        "Assets\BattlePreview\ArinV57.sm3d",
+        Character3D.CHARACTER_LOAD_REQUIRE_PBR
+    )
+    Ready = Character3D.IsValid(Arin) And Ready
+    Ready = Character3D.SetScale(Arin, 10000) And Ready
+    Ready = Character3D.Place(Arin, -80, 0, 20) And Ready
+    Ready = Character3D.Rotate(Arin, 0, 0, 0) And Ready
+    Ready = Character3D.SetRootMotion(
+        Arin,
+        Character3D.ROOT_MOTION_IGNORE
+    ) And Ready
+    Ready = Character3D.SetShadows(Arin, True, True) And Ready
+    Ready = Character3D.PlayMode(
+        Arin,
+        "Idle",
+        Graphics3D.ANIMATION_LOOP,
+        100
+    ) And Ready
+    Ready = Character3D.Update(Arin, 0) And Ready
+    Bounds = Character3D.WorldBounds(Arin, 0)
+
+    If Bounds.Valid Then
+        FootLeft = Character3D.SocketPosition(Arin, "FootLeft")
+        FootRight = Character3D.SocketPosition(Arin, "FootRight")
+        Focus = Character3D.SocketPosition(Arin, "Chest")
+        ActorX = -80 + (-80 - Focus.X)
+        ActorZ = 20 + (20 - Focus.Z)
+        GroundingOffset = 0 - Min(FootLeft.Y, FootRight.Y)
+        Ready = Character3D.Place(
+            Arin, ActorX, GroundingOffset, ActorZ) And Ready
+    Else
+        Ready = False
+    End If
+
+    Ready = Graphics3D.ClearAdditionalLights3DChecked() And Ready
+    Ready = Graphics3D.SetAmbientLight3D(210, 225, 255, 48) And Ready
+    Ready = Graphics3D.SetDirectionalLight3D(
+        -35, -80, 25, 255, 245, 225, 220) And Ready
+
+    Call Scene3D.UseCustomLighting()
+
+    PreviousTime = Timer()
+    Active = True
+
+End Sub
+
+Public Sub Update(Key As Number)
+
+    Dim CameraReady As Boolean
+    Dim CurrentTime As Number
+    Dim ElapsedMilliseconds As Number
+    Dim PointerOverControl As Boolean
+
+    If Not Active Then
+        Return
+    End If
+
+    If Key = KEY_R Then
+        ReflectionsEnabled = Not ReflectionsEnabled
+    Else If Key = KEY_O Then
+        AutoOrbit = Not AutoOrbit
+    End If
+
+    PointerOverControl = PointerInReflectionButton()
+
+    If (Pointer_Inside() And
+        Pointer_Pressed(POINTER_PRIMARY) And
+        PointerOverControl) Then
+        ReflectionsEnabled = Not ReflectionsEnabled
+    End If
+
+    CurrentTime = Timer()
+    ElapsedMilliseconds = Min(
+        MAX_FRAME_MILLISECONDS,
+        Max(0, CurrentTime - PreviousTime)
+    )
+    PreviousTime = CurrentTime
+    Ready = Character3D.Update(Arin, ElapsedMilliseconds) And Ready
+    CameraReady = Interaction.UpdateCameraControlsFromPointer(
+        CameraControls, Not PointerOverControl, True, True)
+
+    If Interaction.CameraControlsDragging(CameraControls) Then
+        AutoOrbit = False
+    Else If AutoOrbit Then
+        AutoOrbitYaw1000 = AutoOrbitYaw1000 + ElapsedMilliseconds * 18
+
+        If AutoOrbitYaw1000 >= 360000 Then
+            AutoOrbitYaw1000 = AutoOrbitYaw1000 - 360000
+        End If
+
+        CameraControls.OrbitYaw = AutoOrbitYaw1000 / 1000
+    Else
+        CameraReady = Interaction.AdvanceCameraControls(
+            CameraControls, 1) And CameraReady
+    End If
+
+    Camera = Interaction.ApplyCameraControls(BaseCamera, CameraControls)
+    Ready = CameraReady And Ready
+
+End Sub
+
+Public Sub Draw()
+
+    Dim FrameReady As Boolean
+
+    If Not Active Or Not Ready Then
+
+        Clear Rgb(5, 9, 18)
+        Draw Text "Battle Arena Preview could not load." At 32, 32 Size 24 Color YELLOW
+        Draw Text "Press ESC to return to the main menu." At 32, 674 Size 18 Color WHITE
+
+        Return
+
+    End If
+
+    Call Arena3D.SetReflectionsEnabled(Arena, ReflectionsEnabled)
+
+    FrameReady = Arena3D.ConfigureForFrame(Arena, True)
+    FrameReady = Scene3D.Begin(Camera, 5, 9, 18) And FrameReady
+
+    If FrameReady Then
+
+        FrameReady = Arena3D.Draw(Arena, True, True)
+        FrameReady = Character3D.Draw(Arin) And FrameReady
+        FrameReady = Scene3D.EndScene() And FrameReady
+
+    End If
+
+    Ready = FrameReady And Ready
+
+    Call DrawOverlay()
+
+End Sub
+
+Public Sub Shutdown()
+
+    Dim Cleared As Boolean
+
+    If Not Active Then
+        Return
+    End If
+
+    Cleared = StaticBackdrop3D.ClearActive()
+
+    Call StaticBackdrop3D.Destroy(Backdrop)
+    Call Arena3D.Destroy(Arena)
+    Call Character3D.Destroy(Arin)
+    Call Character3D.Shutdown()
+    Call Scene3D.Shutdown()
+    Call Graphics3D.ResetRenderer3D()
+
+    Active = False
+    Ready = False
+
+End Sub
+
+Private Function PointerInReflectionButton() As Boolean
+
+    Dim Result As Boolean
+
+    Result = (Pointer_X() >= REFLECTION_BUTTON_X And
+        Pointer_X() < REFLECTION_BUTTON_X + REFLECTION_BUTTON_WIDTH And
+        Pointer_Y() >= REFLECTION_BUTTON_Y And
+        Pointer_Y() < REFLECTION_BUTTON_Y + REFLECTION_BUTTON_HEIGHT)
+
+    Return Result
+
+End Function
+
+Private Function ReflectionLabel() As Text
+
+    Dim FallbackReason As Number
+    Dim Result As Text
+
+    FallbackReason = Graphics3D.ReflectionValue3D(
+        Graphics3D.REFLECTION_QUERY_FALLBACK_REASON)
+
+    If (ReflectionsEnabled And
+        (FallbackReason = Graphics3D.REFLECTION_FALLBACK_ALLOCATION_FAILED Or
+            FallbackReason = Graphics3D.REFLECTION_FALLBACK_RENDER_FAILED)) Then
+        Result = "Floor Reflections: Unavailable"
+    Else If ReflectionsEnabled Then
+        Result = "Floor Reflections: On"
+    Else
+        Result = "Floor Reflections: Off"
+    End If
+
+    Return Result
+
+End Function
+
+Private Sub DrawOverlay()
+
+    Dim ButtonColor As Number
+
+    ButtonColor = Rgb(18, 104, 136)
+
+    Fill Rectangle 18, 18, 360, 154, Rgb(7, 17, 30) Opacity 88
+    Draw Text "Battle Arena Preview" At 32, 32 Size 24 Color WHITE
+
+    If Not ReflectionsEnabled Then
+        ButtonColor = Rgb(28, 45, 66)
+    End If
+
+    Fill Rectangle REFLECTION_BUTTON_X, REFLECTION_BUTTON_Y, REFLECTION_BUTTON_WIDTH, REFLECTION_BUTTON_HEIGHT, ButtonColor Opacity 94
+    Draw Text ReflectionLabel() At REFLECTION_BUTTON_X + 12, REFLECTION_BUTTON_Y + 9 Size 13 Color WHITE
+    Draw Text "Click or press R to toggle" At 32, 130 Size 10 Color LIGHT_GRAY
+    Draw Text "LMB pan • MMB orbit • Wheel zoom • O auto orbit" At 32, 154 Size 10 Color LIGHT_GRAY
+    Draw Text "Press ESC to return to the main menu" At 32, 674 Size 18 Color WHITE
+
+End Sub
+
+End Module

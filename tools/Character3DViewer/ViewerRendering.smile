@@ -19,6 +19,7 @@ Public Type State
     Arena As Arena3D.ArenaFloor
     FloorVisible As Boolean
     GridVisible As Boolean
+    FloorReflectionsEnabled As Boolean
     BackgroundIndex As Number
     LightingIndex As Number
     MaterialInspection As Number
@@ -53,6 +54,7 @@ Public Sub ResetControls(ByRef Value As State, BackgroundIndex As Number)
 
     Value.FloorVisible = True
     Value.GridVisible = True
+    Value.FloorReflectionsEnabled = True
     Value.BackgroundIndex = BackgroundIndex
     Value.LightingIndex = 0
     Value.MaterialInspection = Graphics3D.MATERIAL_INSPECTION_LIT
@@ -189,9 +191,10 @@ End Function
 
 Public Sub CreateArena(ByRef Value As State, Width As Number, Depth As Number)
 
-    Value.Arena = Arena3D.Create(Width, Depth, 24, 150, 255)
+    Value.Arena = Arena3D.Create(Width, Depth, 24, 150, 255, 40, 2, True)
     Value.FloorVisible = True
     Value.GridVisible = True
+    Value.FloorReflectionsEnabled = True
 
 End Sub
 
@@ -282,6 +285,15 @@ End Function
 Public Function BeginScene(ByRef Value As State, Camera As Core.Camera3D) As Boolean
 
     Dim Result As Boolean
+
+    Result = Arena3D.ConfigureForFrame(
+        Value.Arena,
+        Value.FloorVisible And Value.FloorReflectionsEnabled
+    )
+
+    If Not Result Then
+        Return False
+    End If
 
     Result = ApplyBackdrop(Value)
 
@@ -460,6 +472,12 @@ Public Sub ToggleGrid(ByRef Value As State)
 
 End Sub
 
+Public Sub ToggleFloorReflections(ByRef Value As State)
+
+    Value.FloorReflectionsEnabled = Not Value.FloorReflectionsEnabled
+
+End Sub
+
 Public Sub CycleBackground(ByRef Value As State, BackgroundCount As Number)
 
     Value.BackgroundIndex = (Value.BackgroundIndex + 1) Mod BackgroundCount
@@ -509,6 +527,10 @@ Public Function CreateSocketGizmos(ByRef Value As State) As Boolean
             Value.SocketGizmos[Index],
             False,
             False
+        ) And Result
+        Result = Graphics3D.SetObjectReflectionModeChecked3D(
+            Value.SocketGizmos[Index],
+            Graphics3D.OBJECT_REFLECTION_EXCLUDED
         ) And Result
 
         If Index = 0 Then

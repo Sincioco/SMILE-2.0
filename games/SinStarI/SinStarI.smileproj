@@ -14,7 +14,16 @@
     <SmileSource Include="TileSets\Town2Tileset.smile" />
     <SmileSource Include="Town2Screen.smile" />
     <SmileSource Include="CharacterScreen.smile" />
+    <SmileSource Include="BattleArenaPreview.smile" />
+    <Model3DAsset Include="SourceAssets\Characters\Paladin\ArinV57\arin-v5.7-idle-equipment-checkpoint.glb"
+                  Descriptor="SourceAssets\Characters\Paladin\ArinV57\ArinV57.sm3d.json"
+                  LogicalPath="Assets\BattlePreview\ArinV57.sm3d"
+                  TextureOutputDirectory="Assets\BattlePreview\Textures"
+                  Profile="Character"
+                  Identity="sin-star-i.character-1.paladin"
+                  ProductionState="Prototype" />
     <SmileProjectReference Include="..\..\libraries\Smile.Game\Smile.Game.smilelibproj" />
+    <SmileProjectReference Include="..\..\libraries\Smile.Simple3D\Smile.Simple3D.smilelibproj" />
     <Asset Include="Assets\**\*.png" />
     <Asset Include="Assets\*.mp3" />
     <Asset Include="Maps\**\*.smilemap" />
