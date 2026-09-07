@@ -87,9 +87,8 @@ Game Window "SMILE 2.0 - 3D Viewer, Animation Editor" Size 1600 By 640
 
 Call Graphics3D.ResetRenderer3D()
 
-Session.SelectedCharacterTab = 3
-Party.Enabled = True
-Session.ProfileIndex = ViewerProfiles.PROFILE_ARIN
+Call ViewerSession.SelectCharacterTab(Session, 3)
+Call ViewerParty.SetEnabled(Party, True)
 
 Call ViewerPlayback.Reset(Playback, 100)
 Call ViewerInput.Reset(ViewerInputState)
@@ -100,7 +99,7 @@ Call ViewerRendering.Reset(Rendering, 3)
 Call LoadViewer()
 Call ViewerSession.CaptureFailure(Session, 20)
 
-Session.Running = True
+Call ViewerSession.Start(Session)
 
 Call ViewerTiming.Start(Timing, Timer())
 
@@ -306,7 +305,8 @@ Do
             CharacterBounds = Character3D.WorldBounds(Character, ActiveProfile.AnimationMargin)
         End If
 
-        Session.Ready = BeginViewerScene() And Session.Ready
+        Session.Ready = ViewerRendering.BeginScene(
+            Rendering, ViewerCameraState.Live) And Session.Ready
 
         Call ViewerSession.CaptureFailure(Session, 8)
 
@@ -410,7 +410,7 @@ Do
 
     Show Screen
 
-    Session.Running = Session.Running And Not Game_Closed()
+    Call ViewerSession.ContinueRunning(Session, Game_Closed())
 
 Loop Until Not Session.Running
 
@@ -418,18 +418,15 @@ Call DestroyViewer()
 
 Sub LoadViewer()
 
-    Session.Ready = Scene3D.SetQuality(Scene3D.QUALITY_HIGH)
-    Session.Ready = Character3D.SetUnusedAssetCacheLimit(3) And Session.Ready
+    Session.Ready = ViewerRendering.PrepareAssetLoading(3)
 
     Call ViewerParty.EndInspectorBinding(Party)
     Call ViewerParty.ClearPreview(Party)
 
     ActiveProfile = ViewerProfiles.ProfileAt(Session.ProfileIndex)
-    Calibration.KeyBase = 0
 
-    If Session.ProfileIndex = ViewerProfiles.PROFILE_ORIN Then
-        Calibration.KeyBase = CALIBRATION_MAX_CLIPS
-    End If
+    Call ViewerCalibration.SelectProfileBank(
+        Calibration, Session.ProfileIndex)
 
     Call ViewerDragon.SetAvailable(
         DragonState,
@@ -473,7 +470,12 @@ Sub LoadViewer()
 
     Call ViewerSession.CaptureFailure(Session, 33)
 
-    Call CreateBackdrop()
+    Call ViewerRendering.CreateBackdrops(
+        Rendering,
+        BACKDROP_LANDSCAPE_PATH,
+        BACKDROP_TITLE_PATH
+    )
+
     Call ViewerRendering.CreateArena(
         Rendering,
         ViewerRendering.ArenaFloorExtent(
@@ -492,11 +494,8 @@ Sub LoadViewer()
 
     Call ViewerSession.CaptureFailure(Session, 34)
 
-    Rendering.FloorVisible = True
-    Rendering.GridVisible = True
-    ViewerCameraState.FitLocked = True
-    ViewerCameraState.LastFitWidth = Window_Width()
-    ViewerCameraState.LastFitHeight = Window_Height()
+    Call ViewerCamera.BeginLoadedLayout(
+        ViewerCameraState, Window_Width(), Window_Height())
 
     Call ViewerCamera.Reset(
         ViewerCameraState,
@@ -508,29 +507,14 @@ Sub LoadViewer()
         ),
         ZOOM_IN_LIMIT, ZOOM_OUT_LIMIT, 96000)
 
-    Session.Ready = Scene3D.SetQuality(Scene3D.QUALITY_HIGH)
-
-    If DragonState.Available Then
-        Session.Ready = Scene3D.SetShadowArea(
-            ViewerDragon.PositionX() / 2,
-            ViewerCameraState.Frame.TargetY,
-            ViewerDragon.PositionZ() / 2,
-            ARENA_FLOOR_WIDTH,
-            ARENA_FLOOR_DEPTH,
-            ViewerCameraState.Frame.ShadowNear,
-            ARENA_FLOOR_DEPTH
-        ) And Session.Ready
-    Else
-        Session.Ready = Scene3D.SetShadowArea(
-            0,
-            ViewerCameraState.Frame.TargetY,
-            0,
-            ViewerCameraState.Frame.ShadowWidth,
-            ViewerCameraState.Frame.ShadowDepth,
-            ViewerCameraState.Frame.ShadowNear,
-            ViewerCameraState.Frame.ShadowFar
-        ) And Session.Ready
-    End If
+    Session.Ready = ViewerRendering.ConfigureShadowArea(
+        ViewerCameraState.Frame,
+        DragonState.Available,
+        ViewerDragon.PositionX(),
+        ViewerDragon.PositionZ(),
+        ARENA_FLOOR_WIDTH,
+        ARENA_FLOOR_DEPTH
+    ) And Session.Ready
 
     Call ViewerSession.CaptureFailure(Session, 35)
 
@@ -647,7 +631,7 @@ Sub LoadViewer()
         Session.Ready = ViewerEffects.PrepareLightning(Effects) And Session.Ready
     End If
 
-    Session.ViewerEpoch = Graphics3D.ResourceEpoch3D()
+    Call ViewerSession.CaptureResourceEpoch(Session)
 
     If Not Session.Ready Then
         Call ViewerSession.RecordError(Session)
@@ -967,7 +951,8 @@ Sub ToggleScenePause()
     If Party.Enabled And Playback.ScenePaused Then
 
         If ViewerUiState.CalibrationEditing Then
-            Session.CharacterSwitchBlocked = True
+            Call ViewerSession.BlockCharacterSwitch(Session)
+
             Return
         End If
 
@@ -1011,42 +996,6 @@ Function ApplyActorPresentationCommand(
 
 End Function
 
-Function BeginViewerScene() As Boolean
-
-    Dim Result As Boolean
-
-    Result = ViewerRendering.BeginScene(Rendering, ViewerCameraState.Live)
-
-    Return Result
-
-End Function
-
-Sub CreateBackdrop()
-
-    Call ViewerRendering.CreateBackdrops(
-        Rendering,
-        BACKDROP_LANDSCAPE_PATH,
-        BACKDROP_TITLE_PATH
-    )
-
-End Sub
-
-Function ApplyBackdrop() As Boolean
-
-    Dim Result As Boolean
-
-    Result = ViewerRendering.ApplyBackdrop(Rendering)
-
-    Return Result
-
-End Function
-
-Sub DestroyBackdrop()
-
-    Call ViewerRendering.DestroyBackdrops(Rendering)
-
-End Sub
-
 Sub RetryViewer()
 
     Call DestroyViewerResources()
@@ -1067,23 +1016,15 @@ Sub CycleProfile()
     End If
 
     If ViewerUiState.CalibrationEditing Then
-        Session.CharacterSwitchBlocked = True
+        Call ViewerSession.BlockCharacterSwitch(Session)
+
         Return
     End If
 
     Call DestroyViewerResources()
 
-    Party.Enabled = False
-    Session.DragonInspection = False
-    Session.SelectedCharacterTab = 0
-    Session.ProfileIndex = ViewerProfiles.NextProfile(Session.ProfileIndex)
-
-    If Session.ProfileIndex = ViewerProfiles.PROFILE_ORIN Then
-        Session.SelectedCharacterTab = 1
-    Else If Session.ProfileIndex = ViewerProfiles.PROFILE_DRAGON Then
-        Session.SelectedCharacterTab = 2
-        Session.DragonInspection = True
-    End If
+    Call ViewerParty.SetEnabled(Party, False)
+    Call ViewerSession.CycleProfile(Session)
 
     Call ViewerSession.ResetFailure(Session)
 
@@ -1743,7 +1684,7 @@ Sub ResetAll()
     Call ViewerPlayback.ResetControls(
         Playback, ActiveProfile.DefaultPlaybackSpeed)
 
-    ViewerCameraState.FitLocked = True
+    Call ViewerCamera.LockResponsiveFit(ViewerCameraState)
 
     Call ViewerRendering.ResetControls(Rendering, 3)
 
@@ -1884,7 +1825,7 @@ Sub ConfigureCalibration()
 
     Dim Configuration As ViewerCalibration.ConfigurationResult
 
-    Session.CharacterSwitchBlocked = False
+    Call ViewerSession.ClearCharacterSwitchBlock(Session)
 
     Call ViewerUi.ResetCalibration(
         ViewerUiState,
@@ -2004,7 +1945,7 @@ Sub ApplyCalibrationEditingResult(
     End If
 
     If Result.Finished Then
-        Session.CharacterSwitchBlocked = False
+        Call ViewerSession.ClearCharacterSwitchBlock(Session)
     End If
 
 End Sub
@@ -2356,7 +2297,7 @@ Sub DestroyViewerResources()
 
     Session.Ready = ViewerEffects.ShutdownShared(Effects) And Session.Ready
 
-    Call DestroyBackdrop()
+    Call ViewerRendering.DestroyBackdrops(Rendering)
     Call ViewerEffects.DestroyEpicGlow(Effects)
     Call ViewerRendering.DestroySocketGizmos(Rendering)
     Call ViewerRendering.DestroyArena(Rendering)
@@ -2367,15 +2308,15 @@ End Sub
 
 Sub SelectCharacterTab(Index As Number)
 
-    If (Index = Session.SelectedCharacterTab And
-        Not Session.ViewerError And
-        (Party.Enabled Or Session.DragonInspection Or ViewerProfiles.IsPartyCharacter(Session.ProfileIndex))) Then
+    If Not ViewerSession.ShouldSelectCharacterTab(
+        Session, Index, Party.Enabled) Then
         Return
     End If
 
     If (ViewerUiState.CalibrationEditing Or
         Calibration.ImportPending) Then
-        Session.CharacterSwitchBlocked = True
+        Call ViewerSession.BlockCharacterSwitch(Session)
+
         Return
     End If
 
@@ -2387,16 +2328,8 @@ Sub SelectCharacterTab(Index As Number)
 
     Call DestroyViewerResources()
 
-    Session.SelectedCharacterTab = Index
-    Party.Enabled = Index = 3
-    Session.DragonInspection = Index = 2
-    Session.ProfileIndex = ViewerProfiles.PROFILE_ARIN
-
-    If Index = 1 Then
-        Session.ProfileIndex = ViewerProfiles.PROFILE_ORIN
-    Else If Index = 2 Then
-        Session.ProfileIndex = ViewerProfiles.PROFILE_DRAGON
-    End If
+    Call ViewerSession.SelectCharacterTab(Session, Index)
+    Call ViewerParty.SetEnabled(Party, Index = 3)
 
     Call ViewerSession.ResetFailure(Session)
 

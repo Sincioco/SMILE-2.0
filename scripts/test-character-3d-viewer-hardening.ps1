@@ -19,6 +19,7 @@ $referencePath = Join-Path $repositoryRoot `
 $viewerSourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\Program.smile'
 $cameraSourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\ViewerCamera.smile'
 $playbackSourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\ViewerPlayback.smile'
+$sessionSourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\ViewerSession.smile'
 $calibrationSourcePath = Join-Path $repositoryRoot `
     'tools\Character3DViewer\ViewerCalibration.smile'
 $calibrationEditingSourcePath = Join-Path $repositoryRoot `
@@ -107,6 +108,7 @@ try {
     $viewerSource = Get-Content -LiteralPath $viewerSourcePath -Raw
     $cameraSource = Get-Content -LiteralPath $cameraSourcePath -Raw
     $playbackSource = Get-Content -LiteralPath $playbackSourcePath -Raw
+    $sessionSource = Get-Content -LiteralPath $sessionSourcePath -Raw
     $calibrationSource = Get-Content -LiteralPath $calibrationSourcePath -Raw
     $calibrationEditingSource = Get-Content -LiteralPath $calibrationEditingSourcePath -Raw
     $calibrationControlsSource = Get-Content -LiteralPath $calibrationControlsSourcePath -Raw
@@ -181,10 +183,30 @@ try {
         'CharacterViewer.AdvanceZoom(',
         'BattleCamera.Orbit(',
         'CharacterViewer.KeepCursorAnchor(',
+        'Public Sub BeginLoadedLayout(',
+        'Public Sub LockResponsiveFit(',
         'Public Sub UpdateResponsiveFit(',
         'Public Sub ToggleResponsiveFit(')) {
         Assert-Contains $cameraSource $contract 'Viewer camera owner'
     }
+    foreach ($contract in @(
+        'Public Sub SelectCharacterTab(',
+        'Public Function ShouldSelectCharacterTab(',
+        'Public Sub CycleProfile(',
+        'Public Sub Start(',
+        'Public Sub ContinueRunning(',
+        'Public Sub BlockCharacterSwitch(',
+        'Public Sub ClearCharacterSwitchBlock(',
+        'Public Sub CaptureResourceEpoch(')) {
+        Assert-Contains $sessionSource $contract 'Viewer session owner'
+    }
+    Assert-True (-not $viewerSource.Contains('Session.SelectedCharacterTab =') -and
+        -not $viewerSource.Contains('Session.DragonInspection =') -and
+        -not $viewerSource.Contains('Session.Running =') -and
+        -not $viewerSource.Contains('Session.CharacterSwitchBlocked =') -and
+        -not $viewerSource.Contains('Session.ViewerEpoch =') -and
+        -not $viewerSource.Contains('Party.Enabled =')) `
+        'Session identity/lifecycle and Party enablement must remain with their state owners.'
     foreach ($contract in @(
         'Public Type SpeedAdjustmentResult',
         'Public Sub UseDefaultSpeed(',
@@ -227,6 +249,7 @@ try {
         'Public Function Persist(',
         'Public Function Undo(',
         'Public Function ConfigureForActor(',
+        'Public Sub SelectProfileBank(',
         'Public Function MinimumValue(',
         'Public Function MaximumValue(',
         'Public Function AdjacentKeyFrame(',
@@ -515,6 +538,7 @@ try {
         'Public Function BeginInspectorBinding(',
         'Public Function BeginInspectorSelection(',
         'Public Function EndInspectorSelection(',
+        'Public Sub SetEnabled(',
         'Public Sub BeginPreview(',
         'Public Function RestorePreview(',
         'Public Sub InitializeFormation(',
@@ -586,6 +610,8 @@ try {
     }
     foreach ($contract in @(
         'Public Function BeginScene(',
+        'Public Function PrepareAssetLoading(',
+        'Public Function ConfigureShadowArea(',
         'Public Sub ResetControls(',
         'Public Function ApplyLighting(',
         'Public Function CycleLighting(',
@@ -604,6 +630,20 @@ try {
         'Public Function ArenaFloorExtent(')) {
         Assert-Contains $renderingSource $contract 'Viewer rendering owner'
     }
+    Assert-True (-not $viewerSource.Contains('Character3D.SetUnusedAssetCacheLimit(') -and
+        -not $viewerSource.Contains('Scene3D.SetShadowArea(') -and
+        -not $viewerSource.Contains('Scene3D.SetQuality(') -and
+        -not $viewerSource.Contains('Rendering.FloorVisible =') -and
+        -not $viewerSource.Contains('Rendering.GridVisible =') -and
+        -not $viewerSource.Contains('ViewerCameraState.FitLocked =') -and
+        -not $viewerSource.Contains('ViewerCameraState.LastFitWidth =') -and
+        -not $viewerSource.Contains('ViewerCameraState.LastFitHeight =') -and
+        -not $viewerSource.Contains('Calibration.KeyBase =') -and
+        -not $viewerSource.Contains('Function BeginViewerScene(') -and
+        -not $viewerSource.Contains('Sub CreateBackdrop(') -and
+        -not $viewerSource.Contains('Function ApplyBackdrop(') -and
+        -not $viewerSource.Contains('Sub DestroyBackdrop(')) `
+        'Load-time renderer, camera and calibration lifecycle must remain in focused owners.'
     foreach ($contract in @(
         'Public Function ConfigureFraming(',
         'CharacterViewer.AutoFit(',

@@ -92,6 +92,16 @@ Private Dim MetadataBytes[METADATA_CAPACITY] As Number
 Private Dim JsonOffset As Number
 Private Dim JsonValid As Boolean
 
+Public Sub SelectProfileBank(ByRef Value As State, ProfileIndex As Number)
+
+    Value.KeyBase = 0
+
+    If ProfileIndex = ViewerProfiles.PROFILE_ORIN Then
+        Value.KeyBase = MAX_CLIPS
+    End If
+
+End Sub
+
 Public Sub Configure(ByRef Value As State, ProfileIndex As Number, KeyBase As Number,
     Available As Boolean, ByRef Actor As Character3D.Actor)
 

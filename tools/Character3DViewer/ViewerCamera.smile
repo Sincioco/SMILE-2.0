@@ -106,6 +106,21 @@ Public Sub Reset(ByRef Value As State, InitialOrbitYaw As Number,
 
 End Sub
 
+Public Sub BeginLoadedLayout(ByRef Value As State,
+    WindowWidth As Number, WindowHeight As Number)
+
+    Value.FitLocked = True
+    Value.LastFitWidth = WindowWidth
+    Value.LastFitHeight = WindowHeight
+
+End Sub
+
+Public Sub LockResponsiveFit(ByRef Value As State)
+
+    Value.FitLocked = True
+
+End Sub
+
 Public Sub SetBaseFromFrame(ByRef Value As State, DragonAvailable As Boolean,
     ArenaCenterX As Number, ArenaCenterZ As Number, ArenaDistance As Number,
     ArenaHeight As Number)

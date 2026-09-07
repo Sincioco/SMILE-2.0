@@ -225,6 +225,47 @@ Call Check(ViewerCalibrationEditing.CurrentValue(
 Call Check(Not ViewerCalibrationEditing.FinishEdit(
     UiState, GizmoState, CameraState, EffectsState))
 
+Call ViewerSession.SelectCharacterTab(SessionState, 3)
+Call CheckNamed(SessionState.SelectedCharacterTab = 3 And
+    SessionState.ProfileIndex = ViewerProfiles.PROFILE_ARIN And
+    Not SessionState.DragonInspection, "Session selects Party tab identity")
+Call CheckNamed(Not ViewerSession.ShouldSelectCharacterTab(
+    SessionState, 3, True), "Session skips unchanged Party tab")
+Call CheckNamed(ViewerSession.ShouldSelectCharacterTab(
+    SessionState, 1, True), "Session accepts changed tab")
+Call ViewerSession.Start(SessionState)
+Call ViewerSession.ContinueRunning(SessionState, False)
+Call CheckNamed(SessionState.Running, "Session continues while window is open")
+Call ViewerSession.ContinueRunning(SessionState, True)
+Call CheckNamed(Not SessionState.Running, "Session stops when window closes")
+Call ViewerSession.BlockCharacterSwitch(SessionState)
+Call CheckNamed(SessionState.CharacterSwitchBlocked, "Session blocks character switch")
+Call ViewerSession.ClearCharacterSwitchBlock(SessionState)
+Call CheckNamed(Not SessionState.CharacterSwitchBlocked, "Session clears character switch block")
+Call ViewerSession.SelectCharacterTab(SessionState, 1)
+Call CheckNamed(SessionState.SelectedCharacterTab = 1 And
+    SessionState.ProfileIndex = ViewerProfiles.PROFILE_ORIN And
+    Not SessionState.DragonInspection, "Session selects Orin identity")
+Call ViewerSession.CycleProfile(SessionState)
+Call CheckNamed(SessionState.SelectedCharacterTab = 2 And
+    SessionState.ProfileIndex = ViewerProfiles.PROFILE_DRAGON And
+    SessionState.DragonInspection, "Session cycles to Dragon identity")
+Call ViewerSession.CaptureResourceEpoch(SessionState)
+Call CheckNamed(SessionState.ViewerEpoch = Graphics3D.ResourceEpoch3D(),
+    "Session captures resource epoch")
+Call ViewerParty.SetEnabled(PartyState, True)
+Call CheckNamed(PartyState.Enabled, "Party owner enables Party")
+Call ViewerParty.SetEnabled(PartyState, False)
+Call CheckNamed(Not PartyState.Enabled, "Party owner disables Party")
+Call ViewerCalibration.SelectProfileBank(
+    CalibrationState, ViewerProfiles.PROFILE_ORIN)
+Call CheckNamed(CalibrationState.KeyBase = ViewerCalibration.MAX_CLIPS,
+    "Calibration owner selects Orin bank")
+Call ViewerCalibration.SelectProfileBank(
+    CalibrationState, ViewerProfiles.PROFILE_ARIN)
+Call CheckNamed(CalibrationState.KeyBase = 0,
+    "Calibration owner selects Arin bank")
+
 Call ViewerSession.ResetFailure(SessionState)
 Call Check(SessionState.Ready)
 Call Check(Not SessionState.ViewerError)
@@ -238,6 +279,15 @@ Call ViewerSession.RecordError(SessionState)
 Call Check(SessionState.ViewerError)
 
 Call ViewerCamera.Reset(CameraState, 0, -16, -144, 36, 96000)
+Call ViewerCamera.BeginLoadedLayout(CameraState, 800, 640)
+Call CheckNamed(CameraState.FitLocked And
+    CameraState.LastFitWidth = 800 And CameraState.LastFitHeight = 640,
+    "Camera owner captures loaded layout")
+
+CameraState.FitLocked = False
+
+Call ViewerCamera.LockResponsiveFit(CameraState)
+Call CheckNamed(CameraState.FitLocked, "Camera owner locks responsive fit")
 Call Interaction.ResetCameraControls(DirectControls)
 Call CharacterViewer.InitializeZoom(DirectZoom, -16, -144, 36, 96000)
 Call Check(CameraState.Controls.OrbitYaw = DirectControls.OrbitYaw)
@@ -1604,6 +1654,26 @@ Call ViewerRendering.Reset(RenderingState, 3)
 Call Check(RenderingState.FloorVisible And RenderingState.GridVisible)
 Call Check(RenderingState.LightingIndex = 0)
 Call Check(RenderingState.MaterialInspection = Graphics3D.MATERIAL_INSPECTION_LIT)
+
+Frame.ShadowWidth = 1000
+Frame.ShadowDepth = 1000
+Frame.ShadowNear = 1
+Frame.ShadowFar = 1000
+
+Call CheckNamed(ViewerRendering.PrepareAssetLoading(3),
+    "Rendering owner prepares asset loading")
+Call CheckNamed(ViewerRendering.ConfigureShadowArea(
+    Frame, False, 0, 0, 1000, 1000),
+    "Rendering owner configures shadow area")
+
+Call ViewerRendering.CreateArena(RenderingState, 100, 100)
+
+Call CheckNamed(ViewerRendering.ArenaReady(RenderingState) And
+    RenderingState.FloorVisible And RenderingState.GridVisible,
+    "Rendering owner creates visible arena")
+
+Call ViewerRendering.DestroyArena(RenderingState)
+
 Call Check(ViewerRendering.ApplyLighting(RenderingState))
 
 InspectorOperation = ViewerInspectorCommands.ApplyPresentationAction(

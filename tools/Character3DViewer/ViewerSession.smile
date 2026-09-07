@@ -6,6 +6,7 @@ Option Explicit
 Import Smile.Simple3D.Character3D As Character3D
 Import Smile.Simple3D.Graphics3D As Graphics3D
 Import Smile.Simple3D.Scene3D As Scene3D
+Import Smile.Tools.Character3DViewerProfiles As ViewerProfiles
 
 Public Type State
     SelectedCharacterTab As Number
@@ -20,6 +21,84 @@ Public Type State
     ViewerEpoch As Number
     ProfileIndex As Number
 End Type
+
+Public Sub SelectCharacterTab(ByRef Value As State, Index As Number)
+
+    Value.SelectedCharacterTab = Index
+    Value.DragonInspection = Index = 2
+    Value.ProfileIndex = ViewerProfiles.PROFILE_ARIN
+
+    If Index = 1 Then
+        Value.ProfileIndex = ViewerProfiles.PROFILE_ORIN
+    Else If Index = 2 Then
+        Value.ProfileIndex = ViewerProfiles.PROFILE_DRAGON
+    End If
+
+End Sub
+
+Public Function ShouldSelectCharacterTab(ByRef Value As State,
+    Index As Number, PartyEnabled As Boolean) As Boolean
+
+    Dim Result As Boolean
+
+    Result = True
+
+    If (Index = Value.SelectedCharacterTab And
+        Not Value.ViewerError And
+        (PartyEnabled Or
+        Value.DragonInspection Or
+        ViewerProfiles.IsPartyCharacter(Value.ProfileIndex))) Then
+        Result = False
+    End If
+
+    Return Result
+
+End Function
+
+Public Sub CycleProfile(ByRef Value As State)
+
+    Value.DragonInspection = False
+    Value.SelectedCharacterTab = 0
+    Value.ProfileIndex = ViewerProfiles.NextProfile(Value.ProfileIndex)
+
+    If Value.ProfileIndex = ViewerProfiles.PROFILE_ORIN Then
+        Value.SelectedCharacterTab = 1
+    Else If Value.ProfileIndex = ViewerProfiles.PROFILE_DRAGON Then
+        Value.SelectedCharacterTab = 2
+        Value.DragonInspection = True
+    End If
+
+End Sub
+
+Public Sub Start(ByRef Value As State)
+
+    Value.Running = True
+
+End Sub
+
+Public Sub ContinueRunning(ByRef Value As State, Closed As Boolean)
+
+    Value.Running = Value.Running And Not Closed
+
+End Sub
+
+Public Sub BlockCharacterSwitch(ByRef Value As State)
+
+    Value.CharacterSwitchBlocked = True
+
+End Sub
+
+Public Sub ClearCharacterSwitchBlock(ByRef Value As State)
+
+    Value.CharacterSwitchBlocked = False
+
+End Sub
+
+Public Sub CaptureResourceEpoch(ByRef Value As State)
+
+    Value.ViewerEpoch = Graphics3D.ResourceEpoch3D()
+
+End Sub
 
 Public Sub ResetFailure(ByRef Value As State)
 

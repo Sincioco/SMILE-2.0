@@ -5,6 +5,7 @@ Option Explicit
 
 Import Smile.Simple3D.Arena3D As Arena3D
 Import Smile.Simple3D.Character3D As Character3D
+Import Smile.Simple3D.CharacterViewer As CharacterViewer
 Import Smile.Simple3D.Core As Core
 Import Smile.Simple3D.Graphics3D As Graphics3D
 Import Smile.Simple3D.Scene3D As Scene3D
@@ -50,6 +51,53 @@ Public Sub ResetControls(ByRef Value As State, BackgroundIndex As Number)
     Value.ShowAllSocketOrigins = False
 
 End Sub
+
+Public Function PrepareAssetLoading(UnusedAssetCacheLimit As Number) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Scene3D.SetQuality(Scene3D.QUALITY_HIGH)
+    Result = Character3D.SetUnusedAssetCacheLimit(
+        UnusedAssetCacheLimit) And Result
+
+    Return Result
+
+End Function
+
+Public Function ConfigureShadowArea(Frame As CharacterViewer.Framing,
+    DragonAvailable As Boolean, DragonX As Number, DragonZ As Number,
+    ArenaWidth As Number, ArenaDepth As Number) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Scene3D.SetQuality(Scene3D.QUALITY_HIGH)
+
+    If DragonAvailable Then
+        Result = Scene3D.SetShadowArea(
+            DragonX / 2,
+            Frame.TargetY,
+            DragonZ / 2,
+            ArenaWidth,
+            ArenaDepth,
+            Frame.ShadowNear,
+            ArenaDepth
+        ) And Result
+    Else
+
+        Result = Scene3D.SetShadowArea(
+            0,
+            Frame.TargetY,
+            0,
+            Frame.ShadowWidth,
+            Frame.ShadowDepth,
+            Frame.ShadowNear,
+            Frame.ShadowFar
+        ) And Result
+    End If
+
+    Return Result
+
+End Function
 
 Public Function ApplyLighting(ByRef Value As State) As Boolean
 
@@ -133,6 +181,8 @@ End Function
 Public Sub CreateArena(ByRef Value As State, Width As Number, Depth As Number)
 
     Value.Arena = Arena3D.Create(Width, Depth, 24, 150, 255)
+    Value.FloorVisible = True
+    Value.GridVisible = True
 
 End Sub
 

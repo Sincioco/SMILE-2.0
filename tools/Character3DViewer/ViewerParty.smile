@@ -98,6 +98,12 @@ Public Type State
     ShotMouth As Core.Vector3
 End Type
 
+Public Sub SetEnabled(ByRef Value As State, Enabled As Boolean)
+
+    Value.Enabled = Enabled
+
+End Sub
+
 Public Type FrameActions
     FirstClip As Text
     SecondClip As Text
