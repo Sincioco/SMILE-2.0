@@ -1408,6 +1408,13 @@ const started = Date.now();
         if (expectedRuntimeError === null) fail(runtimeError);
         if (!runtimeError.includes(expectedRuntimeError))
             fail(`runtime error did not contain ${JSON.stringify(expectedRuntimeError)}: ${runtimeError}`);
+        // H03: a correct eventual error must not hide extra index/argument side effects.
+        if (expectedPath !== null) {
+            const expectedFailureOutput = normalizeNewlines(readUtf8Strict(expectedPath, false));
+            const actualFailureOutput = normalizeNewlines(consoleElement.textContent);
+            if (actualFailureOutput !== expectedFailureOutput)
+                fail(`failure console output differed\nEXPECTED: ${JSON.stringify(expectedFailureOutput)}\nACTUAL: ${JSON.stringify(actualFailureOutput)}`);
+        }
         const failureDiagnostics = host.smile.mediaDiagnostics();
         if (failureDiagnostics.classLiveCount !== 0 || host.smile.classLiveCount() !== 0)
             fail(`SMILE Class ownership leaked on runtime failure: ${JSON.stringify(failureDiagnostics)}`);

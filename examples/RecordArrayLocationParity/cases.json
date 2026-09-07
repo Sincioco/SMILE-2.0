@@ -1,0 +1,156 @@
+[
+  {
+    "name": "RootReplacement",
+    "expected": [
+      "7",
+      "1"
+    ],
+    "error": null,
+    "nativeError": null,
+    "chrome": true
+  },
+  {
+    "name": "NestedAndForwarded",
+    "expected": [
+      "8",
+      "8"
+    ],
+    "error": null,
+    "nativeError": null,
+    "chrome": false
+  },
+  {
+    "name": "ClassIdentity",
+    "expected": [
+      "23",
+      "10",
+      "True"
+    ],
+    "error": null,
+    "nativeError": null,
+    "chrome": true
+  },
+  {
+    "name": "ValueCopyAndOrder",
+    "expected": [
+      "11",
+      "17",
+      "Original",
+      "123"
+    ],
+    "error": null,
+    "nativeError": null,
+    "chrome": false
+  },
+  {
+    "name": "FieldRead",
+    "expected": [
+      "Before",
+      "First"
+    ],
+    "error": "SMILE Web array index -1 is outside dimension 1.",
+    "nativeError": "SMILE runtime error: Array index -1 is outside dimension 1 (size 2).",
+    "chrome": false
+  },
+  {
+    "name": "FieldWrite",
+    "expected": [
+      "Before",
+      "First"
+    ],
+    "error": "SMILE Web array index -1 is outside dimension 1.",
+    "nativeError": "SMILE runtime error: Array index -1 is outside dimension 1 (size 2).",
+    "chrome": false
+  },
+  {
+    "name": "FieldByRef",
+    "expected": [
+      "Before",
+      "First"
+    ],
+    "error": "SMILE Web array index -1 is outside dimension 1.",
+    "nativeError": "SMILE runtime error: Array index -1 is outside dimension 1 (size 2).",
+    "chrome": true
+  },
+  {
+    "name": "StandaloneRead",
+    "expected": [
+      "Before",
+      "First"
+    ],
+    "error": "SMILE Web array index -1 is outside dimension 1.",
+    "nativeError": "SMILE runtime error: Array index -1 is outside dimension 1 (size 2).",
+    "chrome": false
+  },
+  {
+    "name": "StandaloneWrite",
+    "expected": [
+      "Before",
+      "First"
+    ],
+    "error": "SMILE Web array index -1 is outside dimension 1.",
+    "nativeError": "SMILE runtime error: Array index -1 is outside dimension 1 (size 2).",
+    "chrome": false
+  },
+  {
+    "name": "StandaloneByRef",
+    "expected": [
+      "Before",
+      "First"
+    ],
+    "error": "SMILE Web array index -1 is outside dimension 1.",
+    "nativeError": "SMILE runtime error: Array index -1 is outside dimension 1 (size 2).",
+    "chrome": false
+  },
+  {
+    "name": "ClassByRef",
+    "expected": [
+      "Before",
+      "First"
+    ],
+    "error": "SMILE Web array index -1 is outside dimension 1.",
+    "nativeError": "SMILE runtime error: Array index -1 is outside dimension 1 (size 2).",
+    "chrome": false
+  },
+  {
+    "name": "ClassRead",
+    "expected": [
+      "Before",
+      "First"
+    ],
+    "error": "SMILE Web array index -1 is outside dimension 1.",
+    "nativeError": "SMILE runtime error: Array index -1 is outside dimension 1 (size 2).",
+    "chrome": false
+  },
+  {
+    "name": "NestedOuter",
+    "expected": [
+      "Before",
+      "First"
+    ],
+    "error": "SMILE Web array index 2 is outside dimension 1.",
+    "nativeError": "SMILE runtime error: Array index 2 is outside dimension 1 (size 2).",
+    "chrome": false
+  },
+  {
+    "name": "SecondDimension",
+    "expected": [
+      "Before",
+      "First",
+      "Second"
+    ],
+    "error": "SMILE Web array index 3 is outside dimension 2.",
+    "nativeError": "SMILE runtime error: Array index 3 is outside dimension 2 (size 3).",
+    "chrome": false
+  },
+  {
+    "name": "ReturnedOwnerFailure",
+    "expected": [
+      "Before",
+      "First"
+    ],
+    "error": "SMILE Web array index -1 is outside dimension 1.",
+    "nativeError": "SMILE runtime error: Array index -1 is outside dimension 1 (size 2).",
+    "chrome": false
+  }
+]

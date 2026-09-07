@@ -1,0 +1,50 @@
+Option Explicit
+
+Type Bag
+
+    Values[2] As Number
+
+End Type
+
+Type Envelope
+
+    Items[2] As Bag
+
+End Type
+
+Dim Shared As Envelope
+Dim Replacement As Envelope
+
+Replacement.Items[1].Values[1] = 10
+
+Call Forward(Shared)
+
+Print Shared.Items[1].Values[1]
+
+With Shared.Items[1]
+
+    Call SetValue(.Values[1], ReplaceOwner())
+
+End With
+
+Print Shared.Items[1].Values[1]
+
+Sub Forward(ByRef Owner As Envelope)
+
+    Call SetValue(Owner.Items[1].Values[1], ReplaceOwner())
+
+End Sub
+
+Sub SetValue(ByRef Value As Number, Incoming As Number)
+
+    Value = Incoming
+
+End Sub
+
+Function ReplaceOwner() As Number
+
+    Shared = Replacement
+
+    Return 8
+
+End Function

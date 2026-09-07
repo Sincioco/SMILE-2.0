@@ -52,6 +52,7 @@ internal sealed class WebEmitter
     {
         Line("\"use strict\";");
         Line();
+        EmitCheckedIndexHelper();
         EmitRecordHelpers();
         EmitClassHelpers();
         EmitGlobalDeclarations();
@@ -822,7 +823,7 @@ internal sealed class WebEmitter
                 var meValue = ReadVariable(_currentRoutine.Receiver);
                 return _currentRoutine.Receiver.Type.IsClass ? $"smile.classRetain({meValue})" : meValue;
             case ArrayAccessExpressionSyntax array:
-                var arrayValue = $"smile.get({_variableNames[ResolveVariable(array.Identifier)]}, [{Arguments(array.Indices)}])";
+                var arrayValue = $"smile.get({_variableNames[ResolveVariable(array.Identifier)]}, [{CheckedIndices(array.Indices, ResolveVariable(array.Identifier).ArrayDimensions)}])";
                 return _analysis.SemanticModel.GetType(array) == SmileType.Image
                     ? $"smile.imageRetain({arrayValue})" : arrayValue;
             case IndexedExpressionSyntax indexed:
@@ -1006,6 +1007,30 @@ internal sealed class WebEmitter
     }
 
     private string Arguments(IEnumerable<ExpressionSyntax> arguments) => string.Join(", ", arguments.Select(Expression));
+
+    // Validate one evaluated dimension before evaluating the next. Native does the same.
+    private void EmitCheckedIndexHelper()
+    {
+        Line("function smileCheckedIndex(value, size, dimension) {");
+        Line("    value = smile.safe(value);");
+        Line("    if (value < 0 || value >= size)");
+        Line("        throw new Error(`SMILE Web array index ${value} is outside dimension ${dimension}.`);");
+        Line("    return value;");
+        Line("}");
+        Line();
+    }
+
+    private string CheckedIndex(ExpressionSyntax expression, int size, int dimension) =>
+        $"smileCheckedIndex({Expression(expression)}, " +
+        $"{size.ToString(CultureInfo.InvariantCulture)}, {dimension.ToString(CultureInfo.InvariantCulture)})";
+
+    private string CheckedIndices(IReadOnlyList<ExpressionSyntax> indices, IReadOnlyList<int> dimensions)
+    {
+        if (indices.Count != dimensions.Count)
+            throw new InvalidOperationException("Bound Web array rank mismatch.");
+        return string.Join(", ", indices.Select((index, ordinal) =>
+            CheckedIndex(index, dimensions[ordinal], ordinal + 1)));
+    }
 
     private string PrintItem(ExpressionSyntax expression) =>
         _analysis.SemanticModel.GetType(expression) == SmileType.Boolean
@@ -1266,7 +1291,7 @@ internal sealed class WebEmitter
         if (expression is ArrayAccessExpressionSyntax array)
         {
             var symbol = ResolveVariable(array.Identifier);
-            return $"smile.refArray({_variableNames[symbol]}, [{Arguments(array.Indices)}])";
+            return $"smile.refArray({_variableNames[symbol]}, [{CheckedIndices(array.Indices, ResolveVariable(array.Identifier).ArrayDimensions)}])";
         }
         if (expression is FieldAccessExpressionSyntax field)
         {
@@ -1276,7 +1301,7 @@ internal sealed class WebEmitter
             return MemberReference(Reference(field.Receiver), key);
         }
         if (expression is IndexedExpressionSyntax indexed)
-            return IndexedReference(Reference(indexed.Receiver), indexed.Indices);
+            return IndexedReference(Reference(indexed.Receiver), indexed.Indices, RequireInstanceField(indexed).Dimensions);
         if (expression is LeadingMemberAccessExpressionSyntax leading)
         {
             if (!_analysis.SemanticModel.TryGetWithMember(leading, out var binding) ||
@@ -1291,15 +1316,15 @@ internal sealed class WebEmitter
     private string ClassOwnedReference(ExpressionSyntax expression, BoundClassLocationOwner owner)
     {
         var root = Temporary("class_owner");
-        var indexExpressions = new List<ExpressionSyntax>();
+        var indexExpressions = new List<(ExpressionSyntax Expression, int Size, int Dimension)>();
         CollectIndices(expression, owner.RootExpression, indexExpressions);
-        var indexNames = indexExpressions.ToDictionary(index => index, _ => Temporary("index"));
+        var indexNames = indexExpressions.ToDictionary(index => index.Expression, _ => Temporary("index"));
         var builder = new StringBuilder();
         builder.Append("await (async () => { const ").Append(root).Append(" = smile.classRequire(")
             .Append(Expression(owner.RootExpression)).Append("); try { ");
         foreach (var index in indexExpressions)
-            builder.Append("const ").Append(indexNames[index]).Append(" = smile.safe(")
-                .Append(Expression(index)).Append("); ");
+            builder.Append("const ").Append(indexNames[index.Expression]).Append(" = ")
+                .Append(CheckedIndex(index.Expression, index.Size, index.Dimension)).Append("; ");
         var access = ClassLocationAccess(expression, owner.RootExpression, root, indexNames);
         var setter = ClassLocationSetter(expression, owner.RootExpression, root, indexNames);
         if (indexExpressions.Count != 0)
@@ -1310,7 +1335,7 @@ internal sealed class WebEmitter
         return builder.ToString();
 
         void CollectIndices(ExpressionSyntax current, ExpressionSyntax rootExpression,
-            ICollection<ExpressionSyntax> indices)
+            ICollection<(ExpressionSyntax Expression, int Size, int Dimension)> indices)
         {
             if (ReferenceEquals(current, rootExpression))
                 return;
@@ -1324,8 +1349,9 @@ internal sealed class WebEmitter
                     break;
                 case IndexedExpressionSyntax indexed:
                     CollectIndices(indexed.Receiver, rootExpression, indices);
-                    foreach (var index in indexed.Indices)
-                        indices.Add(index);
+                    var dimensions = RequireInstanceField(indexed).Dimensions;
+                    for (var ordinal = 0; ordinal < indexed.Indices.Count; ordinal++)
+                        indices.Add((indexed.Indices[ordinal], dimensions[ordinal], ordinal + 1));
                     break;
             }
         }
@@ -1369,7 +1395,8 @@ internal sealed class WebEmitter
             ? field
             : throw new InvalidOperationException("Web location does not have a bound instance field.");
 
-    private string IndexedReference(string receiverReference, IReadOnlyList<ExpressionSyntax> indices)
+    private string IndexedReference(string receiverReference, IReadOnlyList<ExpressionSyntax> indices,
+        IReadOnlyList<int> dimensions)
     {
         var target = Temporary("indexed_target");
         var array = Temporary("indexed_array");
@@ -1378,13 +1405,15 @@ internal sealed class WebEmitter
         builder.Append("await (async () => { const ").Append(target).Append(" = ")
             .Append(receiverReference).Append("; try { ");
         for (var index = 0; index < indices.Count; index++)
-            builder.Append("const ").Append(indexNames[index]).Append(" = smile.safe(")
-                .Append(Expression(indices[index])).Append("); ");
+            builder.Append("const ").Append(indexNames[index]).Append(" = ")
+                .Append(CheckedIndex(indices[index], dimensions[index], index + 1)).Append("; ");
         var values = string.Join(", ", indexNames);
+        // The snapshot validates capture. The closures retain the language location,
+        // not this array object, because value-record assignment can replace that object.
         builder.Append("const ").Append(array).Append(" = ").Append(target).Append(".get(); ")
             .Append("smile.get(").Append(array).Append(", [").Append(values).Append("]); ")
-            .Append("return { get: () => smile.get(").Append(array).Append(", [")
-            .Append(values).Append("]), set: value => smile.set(").Append(array)
+            .Append("return { get: () => smile.get(").Append(target).Append(".get(), [")
+            .Append(values).Append("]), set: value => smile.set(").Append(target).Append(".get()")
             .Append(", [").Append(values).Append("], value), release: () => ")
             .Append(target).Append(".release() }; } catch (error) { ").Append(target)
             .Append(".release(); throw error; } })()");
@@ -1480,7 +1509,7 @@ internal sealed class WebEmitter
                 $"[{Json(FieldKey(RequireInstanceField(field)))}]",
             IndexedExpressionSyntax indexed =>
                 $"smile.get({RecordLocationAccess(indexed.Receiver, rootExpression, rootName)}, " +
-                $"[{Arguments(indexed.Indices)}])",
+                $"[{CheckedIndices(indexed.Indices, RequireInstanceField(indexed).Dimensions)}])",
             _ => throw new InvalidOperationException("Unsupported owned-record Web location.")
         };
     }
@@ -1494,7 +1523,7 @@ internal sealed class WebEmitter
         if (target.Location is NameExpressionSyntax name)
             return WriteVariable(ResolveVariable(name.Identifier), value);
         if (target.Location is ArrayAccessExpressionSyntax array)
-            return $"smile.set({_variableNames[ResolveVariable(array.Identifier)]}, [{Arguments(array.Indices)}], {value})";
+            return $"smile.set({_variableNames[ResolveVariable(array.Identifier)]}, [{CheckedIndices(array.Indices, ResolveVariable(array.Identifier).ArrayDimensions)}], {value})";
         return $"{Location(target.Location)} = {value}";
     }
 
@@ -1541,12 +1570,12 @@ internal sealed class WebEmitter
         if (expression is NameExpressionSyntax name)
             return ReadVariable(ResolveVariable(name.Identifier));
         if (expression is ArrayAccessExpressionSyntax array)
-            return $"smile.get({_variableNames[ResolveVariable(array.Identifier)]}, [{Arguments(array.Indices)}])";
+            return $"smile.get({_variableNames[ResolveVariable(array.Identifier)]}, [{CheckedIndices(array.Indices, ResolveVariable(array.Identifier).ArrayDimensions)}])";
         if (expression is FieldAccessExpressionSyntax field &&
             _analysis.SemanticModel.TryGetInstanceField(field, out var fieldSymbol))
             return $"({Expression(field.Receiver)})[{Json(FieldKey(fieldSymbol))}]";
         if (expression is IndexedExpressionSyntax indexed)
-            return $"smile.get({Location(indexed.Receiver)}, [{Arguments(indexed.Indices)}])";
+            return $"smile.get({Location(indexed.Receiver)}, [{CheckedIndices(indexed.Indices, RequireInstanceField(indexed).Dimensions)}])";
         if (expression is ParenthesizedExpressionSyntax parenthesized)
             return Location(parenthesized.Expression);
         if (expression is LeadingMemberAccessExpressionSyntax leading)

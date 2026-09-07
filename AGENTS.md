@@ -1,5 +1,9 @@
 # SMILE 2.0 Repository Instructions for Codex
 
+### Record-array hardening task precedence
+
+Before acting on old H01/H02/H03 instructions, read `docs/implementation/record-array-h01-h03-closure.md` and its evidence JSON. A verified closure supersedes the old interrupted task; reopen only for new regression evidence or a source change that invalidates the recorded checks. Do not recreate the removed H01 test.
+
 These instructions apply to the entire SMILE 2.0 repository.
 
 ## Permanent task progress reporting

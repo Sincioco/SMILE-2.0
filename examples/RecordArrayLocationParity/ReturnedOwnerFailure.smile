@@ -1,0 +1,44 @@
+Option Explicit
+
+Game Window "H23 Ownership Probe" Size 320 By 180
+
+Type Bag
+
+    Values[2, 3] As Number
+    Images[2] As Image
+
+End Type
+
+Print "Before"
+Print MakeBag().Values[FirstIndex(), SecondIndex()]
+Print "After"
+
+Function MakeBag() As Bag
+
+    Dim Result As Bag
+
+    Load Image Result.Images[0] From "Assets\Proof.png"
+
+    Return Result
+
+End Function
+
+Function FirstIndex() As Number
+
+    Print "First"
+
+    Dim Result As Number
+
+    Result = -1
+
+    Return Result
+
+End Function
+
+Function SecondIndex() As Number
+
+    Print "Second"
+
+    Return 0
+
+End Function

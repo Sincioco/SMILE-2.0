@@ -1,0 +1,61 @@
+Option Explicit
+
+Type Bag
+
+    Values[2, 3] As Number
+
+End Type
+
+Type Envelope
+
+    Items[2] As Bag
+
+End Type
+
+Class Box
+
+    Public Values[2, 3] As Number
+
+End Class
+
+Dim Shared As Bag
+Dim Nested As Envelope
+Dim Standalone[2, 3] As Number
+Dim Owner As New Box()
+
+Print "Before"
+
+Call SetValue(Shared.Values[FirstIndex(), SecondIndex()], LaterValue())
+
+Print "After"
+
+Function FirstIndex() As Number
+
+    Print "First"
+
+    Return 0
+
+End Function
+
+Function SecondIndex() As Number
+
+    Print "Second"
+
+    Return 3
+
+End Function
+
+Function LaterValue() As Number
+
+    Print "Later"
+
+    Return 7
+
+End Function
+
+Sub SetValue(ByRef Value As Number, Incoming As Number)
+
+    Print "Body"
+    Value = Incoming
+
+End Sub

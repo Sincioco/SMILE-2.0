@@ -1,0 +1,62 @@
+Option Explicit
+
+Type Bag
+
+    Values[2, 3] As Number
+    Labels[2] As Text
+
+End Type
+
+Dim FirstBag As Bag
+Dim CopyBag As Bag
+Dim Calls As Number
+
+FirstBag.Values[1, 2] = 11
+FirstBag.Labels[0] = "Original"
+CopyBag = FirstBag
+CopyBag = CopyBag
+
+Call ChangeCopy(CopyBag)
+Call SetValue(CopyBag.Values[Row(), Column()], NextValue())
+
+Print FirstBag.Values[1, 2]
+Print CopyBag.Values[1, 2]
+Print CopyBag.Labels[0]
+Print Calls
+
+Sub ChangeCopy(Value As Bag)
+
+    Value.Values[1, 2] = 99
+    Value.Labels[0] = "Changed"
+
+End Sub
+
+Sub SetValue(ByRef Value As Number, Incoming As Number)
+
+    Value = Incoming
+
+End Sub
+
+Function Row() As Number
+
+    Calls = Calls * 10 + 1
+
+    Return 1
+
+End Function
+
+Function Column() As Number
+
+    Calls = Calls * 10 + 2
+
+    Return 2
+
+End Function
+
+Function NextValue() As Number
+
+    Calls = Calls * 10 + 3
+
+    Return 17
+
+End Function

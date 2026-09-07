@@ -1,0 +1,41 @@
+Option Explicit
+
+Type Bag
+
+    Values[2] As Number
+
+End Type
+
+Dim Shared As Bag
+Dim Replacement As Bag
+Dim IndexCalls As Number
+
+Shared.Values[0] = 1
+Replacement.Values[0] = 10
+
+Call SetValue(Shared.Values[Choose()], ReplaceOwner())
+
+Print Shared.Values[0]
+Print IndexCalls
+
+Sub SetValue(ByRef Value As Number, Incoming As Number)
+
+    Value = Incoming
+
+End Sub
+
+Function Choose() As Number
+
+    IndexCalls = IndexCalls + 1
+
+    Return 0
+
+End Function
+
+Function ReplaceOwner() As Number
+
+    Shared = Replacement
+
+    Return 7
+
+End Function

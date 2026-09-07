@@ -1,0 +1,35 @@
+Option Explicit
+
+Class Box
+
+    Public Values[2] As Number
+
+End Class
+
+Dim FirstBox As New Box()
+Dim NextBox As New Box()
+Dim ActiveBox As Box
+
+FirstBox.Values[0] = 1
+NextBox.Values[0] = 10
+ActiveBox = FirstBox
+
+Call SetValue(ActiveBox.Values[0], ReplaceOwner())
+
+Print FirstBox.Values[0]
+Print NextBox.Values[0]
+Print ActiveBox Is NextBox
+
+Sub SetValue(ByRef Value As Number, Incoming As Number)
+
+    Value = Incoming
+
+End Sub
+
+Function ReplaceOwner() As Number
+
+    ActiveBox = NextBox
+
+    Return 23
+
+End Function
