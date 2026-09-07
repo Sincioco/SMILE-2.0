@@ -919,6 +919,7 @@ Function HandleInspectorPointer() As Boolean
     Dim Gesture As ViewerInput.PointerGestureUpdate
     Dim InspectorResult As ViewerInspectorCommands.OperationResult
     Dim KeyframeIndex As Number
+    Dim PointerResult As ViewerInspectorCommands.PointerActionResult
     Dim TimelineCommand As ViewerTimelineEditing.CommandRequest
     Dim TransferAction As Number
     Dim WheelDelta As Number
@@ -1108,78 +1109,30 @@ Function HandleInspectorPointer() As Boolean
 
     End If
 
-    If Action = ViewerUi.INSPECTOR_ACTION_PROFILE Then
+    PointerResult = ViewerInspectorCommands.ApplyGeneralPointerAction(
+        Action, Party, Character, Playback, ViewerUiState, ViewerGizmoState,
+        ViewerInputState, ViewerCameraState, ActiveProfile, DragonState,
+        Session.ProfileIndex, CalibrationAvailable,
+        Window_Width(), Window_Height(), Max(1, Window_Width() - 284),
+        ARENA_CAMERA_CENTER_X, ARENA_CAMERA_CENTER_Z,
+        ARENA_CAMERA_DISTANCE, ARENA_CAMERA_HEIGHT)
 
+    If PointerResult.Command = ViewerInspectorCommands.POINTER_COMMAND_CYCLE_PROFILE Then
         Call CycleProfile()
-
-    Else If Action = ViewerUi.INSPECTOR_ACTION_CALIBRATION Then
-
-        If ViewerUi.ToggleCalibrationPanel(
-            ViewerUiState, CalibrationAvailable) Then
-            Call ViewerParty.BeginPreviewSession(
-                Party, Character, Playback, Session.ProfileIndex)
-        Else
-
-            Call ViewerGizmo.Hide(ViewerGizmoState)
-            Call ViewerInput.CancelCaptures(ViewerInputState)
-        End If
-
-    Else If Action = ViewerUi.INSPECTOR_ACTION_DEMO Then
-
-        If ViewerPlayback.ApplyDemoToggle(Playback, Party.Enabled) Then
-            Call ToggleScenePause()
-        Else
-
-            Call PlaySelectedClip()
-        End If
-
-    Else If Action = ViewerUi.INSPECTOR_ACTION_DRAGON_HEAD Then
-
-        Call ViewerDragon.ToggleHeadTracking(DragonState)
-
-    Else If Action = ViewerUi.INSPECTOR_ACTION_DRAGON_TARGET Then
-
-        Call ViewerParty.CycleDragonInspectionTarget(Party)
-
-    Else If Action = ViewerUi.INSPECTOR_ACTION_SPEED_DOWN Then
-
-        Call AdjustPlaybackSpeed(-25)
-
-    Else If Action = ViewerUi.INSPECTOR_ACTION_SPEED_UP Then
-
-        Call AdjustPlaybackSpeed(25)
-
-    Else If Action = ViewerUi.INSPECTOR_ACTION_RESET_VIEW Then
-
+    Else If PointerResult.Command = ViewerInspectorCommands.POINTER_COMMAND_TOGGLE_SCENE_PAUSE Then
+        Call ToggleScenePause()
+    Else If PointerResult.Command = ViewerInspectorCommands.POINTER_COMMAND_PLAY_SELECTED_CLIP Then
+        Call PlaySelectedClip()
+    Else If PointerResult.Command = ViewerInspectorCommands.POINTER_COMMAND_ADJUST_SPEED Then
+        Call AdjustPlaybackSpeed(PointerResult.Value)
+    Else If PointerResult.Command = ViewerInspectorCommands.POINTER_COMMAND_RESET_VIEW Then
         Call ResetView()
-
-    Else If Action = ViewerUi.INSPECTOR_ACTION_RESTART_PRESENTATION Then
-
+    Else If PointerResult.Command = ViewerInspectorCommands.POINTER_COMMAND_RESTART_PRESENTATION Then
         Call RestartPresentation()
-
-    Else If Action = ViewerUi.INSPECTOR_ACTION_RESET_ALL Then
-
+    Else If PointerResult.Command = ViewerInspectorCommands.POINTER_COMMAND_RESET_ALL Then
         Call ResetAll()
-
-    Else If Action = ViewerUi.INSPECTOR_ACTION_FIT Then
-
-        Call ViewerCamera.ToggleResponsiveFit(
-            ViewerCameraState,
-            ActiveProfile,
-            Window_Width(),
-            Window_Height(),
-            Max(1, Window_Width() - 284),
-            DragonState.Available,
-            ARENA_CAMERA_CENTER_X,
-            ARENA_CAMERA_CENTER_Z,
-            ARENA_CAMERA_DISTANCE,
-            ARENA_CAMERA_HEIGHT
-        )
-
-    Else If Action >= ViewerUi.INSPECTOR_ACTION_CLIP_BASE Then
-
-        Call SelectPresentationClip(Action - ViewerUi.INSPECTOR_ACTION_CLIP_BASE)
-
+    Else If PointerResult.Command = ViewerInspectorCommands.POINTER_COMMAND_SELECT_CLIP Then
+        Call SelectPresentationClip(PointerResult.Value)
     End If
 
     Return Blocked

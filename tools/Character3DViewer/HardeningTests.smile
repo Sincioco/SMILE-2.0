@@ -122,6 +122,7 @@ Dim EffectsState As ViewerEffects.State
 Dim DragonState As ViewerDragon.State
 Dim RenderingState As ViewerRendering.State
 Dim InspectorOperation As ViewerInspectorCommands.OperationResult
+Dim InspectorPointerAction As ViewerInspectorCommands.PointerActionResult
 Dim FirstApproach As Core.Vector3
 Dim SecondApproach As Core.Vector3
 
@@ -1710,6 +1711,74 @@ Call Check(ViewerEffects.AdvanceScene(EffectsState, 18, False, OrbitBase))
 Call Check(Not EffectsState.Clock.FireFrozen And EffectsState.Clock.LightningFrozen)
 Call Check(Not ViewerEffects.ShouldFreeze(True, False))
 Call Check(ViewerEffects.ShouldFreeze(False, True))
+
+Call ViewerUi.Reset(UiState)
+Call ViewerInput.Reset(InputState)
+Call ViewerGizmo.Reset(GizmoState)
+Call ViewerPlayback.Reset(PlaybackState, 100)
+Call ViewerParty.SetEnabled(PartyState, False)
+
+Profile = ViewerProfiles.ProfileAt(ViewerProfiles.PROFILE_ARIN)
+DragonState.HeadTracking = False
+
+InspectorPointerAction = ViewerInspectorCommands.ApplyGeneralPointerAction(
+    ViewerUi.INSPECTOR_ACTION_CALIBRATION,
+    PartyState, PartyPrimary.Actor, PlaybackState, UiState, GizmoState,
+    InputState, CameraState, Profile, DragonState,
+    ViewerProfiles.PROFILE_ARIN, True, 1600, 640, 1316,
+    -70, -45, 480, 180)
+
+Call CheckNamed(InspectorPointerAction.Handled And
+    InspectorPointerAction.Command = ViewerInspectorCommands.POINTER_COMMAND_NONE And
+    UiState.CalibrationVisible,
+    "Inspector pointer owner opens calibration through UI state")
+
+InspectorPointerAction = ViewerInspectorCommands.ApplyGeneralPointerAction(
+    ViewerUi.INSPECTOR_ACTION_DEMO,
+    PartyState, PartyPrimary.Actor, PlaybackState, UiState, GizmoState,
+    InputState, CameraState, Profile, DragonState,
+    ViewerProfiles.PROFILE_ARIN, True, 1600, 640, 1316,
+    -70, -45, 480, 180)
+
+Call CheckNamed(InspectorPointerAction.Handled And
+    InspectorPointerAction.Command =
+        ViewerInspectorCommands.POINTER_COMMAND_PLAY_SELECTED_CLIP And
+    Not PlaybackState.DemoEnabled,
+    "Inspector pointer owner applies demo state and requests clip restart")
+
+InspectorPointerAction = ViewerInspectorCommands.ApplyGeneralPointerAction(
+    ViewerUi.INSPECTOR_ACTION_DRAGON_HEAD,
+    PartyState, PartyPrimary.Actor, PlaybackState, UiState, GizmoState,
+    InputState, CameraState, Profile, DragonState,
+    ViewerProfiles.PROFILE_ARIN, True, 1600, 640, 1316,
+    -70, -45, 480, 180)
+
+Call CheckNamed(InspectorPointerAction.Handled And DragonState.HeadTracking,
+    "Inspector pointer owner mutates Dragon head tracking with Dragon state")
+
+InspectorPointerAction = ViewerInspectorCommands.ApplyGeneralPointerAction(
+    ViewerUi.INSPECTOR_ACTION_SPEED_UP,
+    PartyState, PartyPrimary.Actor, PlaybackState, UiState, GizmoState,
+    InputState, CameraState, Profile, DragonState,
+    ViewerProfiles.PROFILE_ARIN, True, 1600, 640, 1316,
+    -70, -45, 480, 180)
+
+Call CheckNamed(InspectorPointerAction.Command =
+    ViewerInspectorCommands.POINTER_COMMAND_ADJUST_SPEED And
+    InspectorPointerAction.Value = 25,
+    "Inspector pointer owner returns the speed response value")
+
+InspectorPointerAction = ViewerInspectorCommands.ApplyGeneralPointerAction(
+    ViewerUi.INSPECTOR_ACTION_CLIP_BASE + 3,
+    PartyState, PartyPrimary.Actor, PlaybackState, UiState, GizmoState,
+    InputState, CameraState, Profile, DragonState,
+    ViewerProfiles.PROFILE_ARIN, True, 1600, 640, 1316,
+    -70, -45, 480, 180)
+
+Call CheckNamed(InspectorPointerAction.Command =
+    ViewerInspectorCommands.POINTER_COMMAND_SELECT_CLIP And
+    InspectorPointerAction.Value = 3,
+    "Inspector pointer owner returns the selected presentation clip")
 
 InspectorOperation = ViewerInspectorCommands.ApplyPresentationAction(
     ViewerUi.INSPECTOR_ACTION_LIGHTNING_PAUSE,

@@ -337,10 +337,12 @@ try {
     }
     foreach ($contract in @(
         'Public Type OperationResult',
+        'Public Type PointerActionResult',
         'Public Const ACTOR_ACTION_SOURCE_INSPECTOR_POINTER = 1',
         'Public Const ACTOR_ACTION_SOURCE_INSPECTOR_KEYBOARD = 2',
         'Public Const ACTOR_ACTION_SOURCE_PARTY_POINTER = 3',
         'Public Function ActorPresentationRequiresPrimaryActor(',
+        'Public Function ApplyGeneralPointerAction(',
         'Public Function ApplyActorPresentationAction(',
         'Public Function ApplyPresentationAction(',
         'Public Function ApplyPartyPresentationAction(',
@@ -359,7 +361,12 @@ try {
         'ViewerEffects.HideSwordEffects(Effects)',
         'ViewerEffects.HideShieldEffects(Effects)',
         'ViewerEffects.ToggleEpicGlow(Effects, Actor)',
-        'ViewerDragon.ToggleVisible(Dragon, Effects.DragonLight)')) {
+        'ViewerDragon.ToggleVisible(Dragon, Effects.DragonLight)',
+        'ViewerUi.ToggleCalibrationPanel(Ui, CalibrationAvailable)',
+        'ViewerPlayback.ApplyDemoToggle(Playback, Party.Enabled)',
+        'ViewerDragon.ToggleHeadTracking(Dragon)',
+        'ViewerParty.CycleDragonInspectionTarget(Party)',
+        'ViewerCamera.ToggleResponsiveFit(')) {
         Assert-Contains $inspectorCommandsSource $contract 'Viewer inspector command owner'
     }
     foreach ($contract in @(
@@ -733,6 +740,8 @@ try {
     Assert-True ($inspectorPointerSource.Contains(
             'ViewerInspectorCommands.ApplyPresentationAction(') -and
         $inspectorPointerSource.Contains(
+            'ViewerInspectorCommands.ApplyGeneralPointerAction(') -and
+        $inspectorPointerSource.Contains(
             'ViewerInspectorCommands.ACTOR_ACTION_SOURCE_INSPECTOR_POINTER') -and
         -not $inspectorPointerSource.Contains('ViewerRendering.CycleLighting(') -and
         -not $inspectorPointerSource.Contains('ViewerRendering.CycleMaterialInspection(') -and
@@ -741,8 +750,13 @@ try {
         -not $inspectorPointerSource.Contains('ViewerEffects.ToggleSwordFire(') -and
         -not $inspectorPointerSource.Contains('ViewerEffects.ToggleShieldFire(') -and
         -not $inspectorPointerSource.Contains('ViewerEffects.ToggleLightningPause(') -and
-        -not $inspectorPointerSource.Contains('ViewerEffects.ToggleFlamePause(')) `
-        'Inspector rendering and VFX command routing must remain in its focused owner.'
+        -not $inspectorPointerSource.Contains('ViewerEffects.ToggleFlamePause(') -and
+        -not $inspectorPointerSource.Contains('ViewerUi.ToggleCalibrationPanel(') -and
+        -not $inspectorPointerSource.Contains('ViewerPlayback.ApplyDemoToggle(') -and
+        -not $inspectorPointerSource.Contains('ViewerDragon.ToggleHeadTracking(') -and
+        -not $inspectorPointerSource.Contains('ViewerParty.CycleDragonInspectionTarget(') -and
+        -not $inspectorPointerSource.Contains('ViewerCamera.ToggleResponsiveFit(')) `
+        'Inspector state-local and response command routing must remain in its focused owner.'
     $inspectorKeyboardStart = $viewerSource.IndexOf('Sub HandleInspectorKeyboard(')
     $gizmoKeyboardStart = $viewerSource.IndexOf('Function HandleTransformGizmoKeyboard(')
     Assert-True ($inspectorKeyboardStart -ge 0 -and
@@ -760,7 +774,8 @@ try {
         -not $inspectorKeyboardSource.Contains('ViewerRendering.SelectNextSocket(') -and
         -not $inspectorKeyboardSource.Contains('Rendering.GridVisible = Not')) `
         'Inspector keyboard camera and rendering routing must remain in its focused owner.'
-    Assert-True ($viewerSource.Contains('ViewerCamera.ToggleResponsiveFit(') -and
+    Assert-True ($inspectorCommandsSource.Contains('ViewerCamera.ToggleResponsiveFit(') -and
+        -not $viewerSource.Contains('ViewerCamera.ToggleResponsiveFit(') -and
         -not $viewerSource.Contains('ViewerCameraState.FitLocked = Not')) `
         'Responsive-fit transition behavior must remain with camera state.'
     $partyPointerStart = $viewerSource.IndexOf('Function HandlePartyPointer() As Boolean')

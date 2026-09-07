@@ -4,18 +4,31 @@ Module Smile.Tools.Character3DViewerInspectorCommands
 Option Explicit
 
 Import Smile.Simple3D.Character3D As Character3D
+Import Smile.Simple3D.CharacterViewer As CharacterViewer
 Import Smile.Tools.Character3DViewerActors As ViewerActors
 Import Smile.Tools.Character3DViewerEffects As ViewerEffects
 Import Smile.Tools.Character3DViewerCamera As ViewerCamera
 Import Smile.Tools.Character3DViewerDragon As ViewerDragon
+Import Smile.Tools.Character3DViewerGizmo As ViewerGizmo
 Import Smile.Tools.Character3DViewerInput As ViewerInput
 Import Smile.Tools.Character3DViewerParty As ViewerParty
+Import Smile.Tools.Character3DViewerPlayback As ViewerPlayback
 Import Smile.Tools.Character3DViewerRendering As ViewerRendering
 Import Smile.Tools.Character3DViewerUi As ViewerUi
 
 Public Const ACTOR_ACTION_SOURCE_INSPECTOR_POINTER = 1
 Public Const ACTOR_ACTION_SOURCE_INSPECTOR_KEYBOARD = 2
 Public Const ACTOR_ACTION_SOURCE_PARTY_POINTER = 3
+
+Public Const POINTER_COMMAND_NONE = 0
+Public Const POINTER_COMMAND_CYCLE_PROFILE = 1
+Public Const POINTER_COMMAND_TOGGLE_SCENE_PAUSE = 2
+Public Const POINTER_COMMAND_PLAY_SELECTED_CLIP = 3
+Public Const POINTER_COMMAND_ADJUST_SPEED = 4
+Public Const POINTER_COMMAND_RESET_VIEW = 5
+Public Const POINTER_COMMAND_RESTART_PRESENTATION = 6
+Public Const POINTER_COMMAND_RESET_ALL = 7
+Public Const POINTER_COMMAND_SELECT_CLIP = 8
 
 Private Const ACTOR_COMMAND_NONE = 0
 Private Const ACTOR_COMMAND_SWORD = 1
@@ -26,6 +39,102 @@ Public Type OperationResult
     Handled As Boolean
     Ready As Boolean
 End Type
+
+Public Type PointerActionResult
+    Handled As Boolean
+    Command As Number
+    Value As Number
+End Type
+
+Public Function ApplyGeneralPointerAction(Action As Number,
+    ByRef Party As ViewerParty.State, ByRef Character As Character3D.Actor,
+    ByRef Playback As ViewerPlayback.State, ByRef Ui As ViewerUi.State,
+    ByRef Gizmo As ViewerGizmo.State, ByRef InputState As ViewerInput.State,
+    ByRef Camera As ViewerCamera.State, ActiveProfile As CharacterViewer.Profile,
+    ByRef Dragon As ViewerDragon.State, ProfileIndex As Number,
+    CalibrationAvailable As Boolean, WindowWidth As Number,
+    WindowHeight As Number, ContentWidth As Number,
+    ArenaCameraCenterX As Number, ArenaCameraCenterZ As Number,
+    ArenaCameraDistance As Number, ArenaCameraHeight As Number) As PointerActionResult
+
+    Dim Result As PointerActionResult
+
+    If Action = ViewerUi.INSPECTOR_ACTION_PROFILE Then
+
+        Result.Command = POINTER_COMMAND_CYCLE_PROFILE
+
+    Else If Action = ViewerUi.INSPECTOR_ACTION_CALIBRATION Then
+
+        If ViewerUi.ToggleCalibrationPanel(Ui, CalibrationAvailable) Then
+            Call ViewerParty.BeginPreviewSession(
+                Party, Character, Playback, ProfileIndex)
+        Else
+
+            Call ViewerGizmo.Hide(Gizmo)
+            Call ViewerInput.CancelCaptures(InputState)
+        End If
+
+    Else If Action = ViewerUi.INSPECTOR_ACTION_DEMO Then
+
+        If ViewerPlayback.ApplyDemoToggle(Playback, Party.Enabled) Then
+            Result.Command = POINTER_COMMAND_TOGGLE_SCENE_PAUSE
+        Else
+
+            Result.Command = POINTER_COMMAND_PLAY_SELECTED_CLIP
+        End If
+
+    Else If Action = ViewerUi.INSPECTOR_ACTION_DRAGON_HEAD Then
+
+        Call ViewerDragon.ToggleHeadTracking(Dragon)
+
+    Else If Action = ViewerUi.INSPECTOR_ACTION_DRAGON_TARGET Then
+
+        Call ViewerParty.CycleDragonInspectionTarget(Party)
+
+    Else If Action = ViewerUi.INSPECTOR_ACTION_SPEED_DOWN Then
+
+        Result.Command = POINTER_COMMAND_ADJUST_SPEED
+        Result.Value = -25
+
+    Else If Action = ViewerUi.INSPECTOR_ACTION_SPEED_UP Then
+
+        Result.Command = POINTER_COMMAND_ADJUST_SPEED
+        Result.Value = 25
+
+    Else If Action = ViewerUi.INSPECTOR_ACTION_RESET_VIEW Then
+
+        Result.Command = POINTER_COMMAND_RESET_VIEW
+
+    Else If Action = ViewerUi.INSPECTOR_ACTION_RESTART_PRESENTATION Then
+
+        Result.Command = POINTER_COMMAND_RESTART_PRESENTATION
+
+    Else If Action = ViewerUi.INSPECTOR_ACTION_RESET_ALL Then
+
+        Result.Command = POINTER_COMMAND_RESET_ALL
+
+    Else If Action = ViewerUi.INSPECTOR_ACTION_FIT Then
+
+        Call ViewerCamera.ToggleResponsiveFit(
+            Camera, ActiveProfile, WindowWidth, WindowHeight, ContentWidth,
+            Dragon.Available, ArenaCameraCenterX, ArenaCameraCenterZ,
+            ArenaCameraDistance, ArenaCameraHeight)
+
+    Else If Action >= ViewerUi.INSPECTOR_ACTION_CLIP_BASE Then
+
+        Result.Command = POINTER_COMMAND_SELECT_CLIP
+        Result.Value = Action - ViewerUi.INSPECTOR_ACTION_CLIP_BASE
+
+    Else
+        Return Result
+
+    End If
+
+    Result.Handled = True
+
+    Return Result
+
+End Function
 
 Public Function ActorPresentationRequiresPrimaryActor(
     Action As Number, ActionSource As Number) As Boolean
