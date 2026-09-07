@@ -216,8 +216,12 @@ Private Function MenuFacadeRuntimeHandle(Value As Menu) As Number
 
     Slot = MenuFacadeSlot(Value)
 
-    If Slot >= 0 And MenuUsed[Slot] Then
-        ReturnValue = MenuGeneration[Slot] * 100 + Slot + 1
+    If Slot >= 0 Then
+
+        If MenuUsed[Slot] Then
+            ReturnValue = MenuGeneration[Slot] * 100 + Slot + 1
+        End If
+
     End If
 
     Return ReturnValue
@@ -485,8 +489,12 @@ Private Function MenuHandleAddItem(Handle As Number, Label As Text, UserValue As
 
     Slot = MenuSlotFromHandle(Handle)
 
-    If (Slot < 0 Or
-        MenuItemCount[Slot] >= Core.UI_MAX_MENU_ITEMS Or
+    If Slot < 0 Then
+        ReturnValue = -1
+        Return ReturnValue
+    End If
+
+    If (MenuItemCount[Slot] >= Core.UI_MAX_MENU_ITEMS Or
         Text_Length(Label) > Core.UI_MAX_MENU_ITEM_SCALARS) Then
         ReturnValue = -1
         Return ReturnValue
@@ -520,8 +528,11 @@ Private Function MenuHandleSetItemLabel(Handle As Number, Index As Number, Label
 
     Slot = MenuSlotFromHandle(Handle)
 
-    If (Slot < 0 Or
-        Index < 0 Or
+    If Slot < 0 Then
+        Return False
+    End If
+
+    If (Index < 0 Or
         Index >= MenuItemCount[Slot] Or
         Text_Length(Label) > Core.UI_MAX_MENU_ITEM_SCALARS) Then
         Return False
@@ -580,15 +591,20 @@ Private Function MenuHandleSetItemEnabled(Handle As Number, Index As Number, Ena
 
     Slot = MenuSlotFromHandle(Handle)
 
-    If (Slot < 0 Or
-        Index < 0 Or
+    If Slot < 0 Then
+        Return False
+    End If
+
+    If (Index < 0 Or
         Index >= MenuItemCount[Slot]) Then
         Return False
     End If
 
     ItemEnabled[Slot, Index] = Enabled
 
-    If MenuSelected[Slot] < 0 Or Not ItemEnabled[Slot, MenuSelected[Slot]] Then
+    If MenuSelected[Slot] < 0 Then
+        MenuSelected[Slot] = FirstEnabled(Slot)
+    Else If Not ItemEnabled[Slot, MenuSelected[Slot]] Then
         MenuSelected[Slot] = FirstEnabled(Slot)
     End If
 
@@ -609,8 +625,11 @@ Private Function MenuHandleSetItemValue(Handle As Number, Index As Number, UserV
 
     Slot = MenuSlotFromHandle(Handle)
 
-    If (Slot < 0 Or
-        Index < 0 Or
+    If Slot < 0 Then
+        Return False
+    End If
+
+    If (Index < 0 Or
         Index >= MenuItemCount[Slot]) Then
         Return False
     End If
@@ -631,8 +650,11 @@ Private Function MenuHandleSetItemHasSubmenu(Handle As Number, Index As Number, 
 
     Slot = MenuSlotFromHandle(Handle)
 
-    If (Slot < 0 Or
-        Index < 0 Or
+    If Slot < 0 Then
+        Return False
+    End If
+
+    If (Index < 0 Or
         Index >= MenuItemCount[Slot]) Then
         Return False
     End If
@@ -653,8 +675,11 @@ Private Function MenuHandleItemHasSubmenu(Handle As Number, Index As Number) As 
 
     Slot = MenuSlotFromHandle(Handle)
 
-    If (Slot < 0 Or
-        Index < 0 Or
+    If Slot < 0 Then
+        Return False
+    End If
+
+    If (Index < 0 Or
         Index >= MenuItemCount[Slot]) Then
         Return False
     End If
@@ -734,7 +759,12 @@ Private Function MenuHandleSelectedValue(Handle As Number) As Number
 
     Slot = MenuSlotFromHandle(Handle)
 
-    If Slot < 0 Or MenuSelected[Slot] < 0 Then
+    If Slot < 0 Then
+        ReturnValue = 0
+        Return ReturnValue
+    End If
+
+    If MenuSelected[Slot] < 0 Then
         ReturnValue = 0
         Return ReturnValue
     End If
@@ -880,10 +910,15 @@ Private Function MenuHandleSetSelectedIndex(Handle As Number, Index As Number) A
 
     Slot = MenuSlotFromHandle(Handle)
 
-    If (Slot < 0 Or
-        Index < 0 Or
-        Index >= MenuItemCount[Slot] Or
-        Not ItemEnabled[Slot, Index]) Then
+    If Slot < 0 Then
+        Return False
+    End If
+
+    If Index < 0 Or Index >= MenuItemCount[Slot] Then
+        Return False
+    End If
+
+    If Not ItemEnabled[Slot, Index] Then
         Return False
     End If
 
@@ -985,9 +1020,13 @@ Private Function MenuHandleHandleKey(Handle As Number, Key As Number) As Number
 
     If Key = KEY_ENTER Or Key = KEY_SPACE Then
 
-        If MenuSelected[Slot] >= 0 And ItemEnabled[Slot, MenuSelected[Slot]] Then
-            ReturnValue = Core.UI_EVENT_ACCEPTED
-            Return ReturnValue
+        If MenuSelected[Slot] >= 0 Then
+
+            If ItemEnabled[Slot, MenuSelected[Slot]] Then
+                ReturnValue = Core.UI_EVENT_ACCEPTED
+                Return ReturnValue
+            End If
+
         End If
 
         ReturnValue = Core.UI_EVENT_NONE
@@ -1444,8 +1483,11 @@ Private Sub MenuHandleDrawFocused(Handle As Number, Focused As Boolean)
 
     Slot = MenuSlotFromHandle(Handle)
 
-    If (Slot < 0 Or
-        MenuWidth[Slot] <= 0 Or
+    If Slot < 0 Then
+        Return
+    End If
+
+    If (MenuWidth[Slot] <= 0 Or
         MenuHeight[Slot] <= 0) Then
         Return
     End If

@@ -664,19 +664,35 @@ End Function
 ''' Sets the active scene; zero clears it and nonzero IDs must be defined.
 Public Function SetCurrentScene(StateHandle As Number, SceneId As Number) As Boolean
 
+    Dim ControlledIndex As Number
     Dim Slot As Number
 
     Slot = StateSlot(StateHandle)
 
-    If (Slot < 0 Or
-        (SceneId <> 0 And SceneIndex(StateHandle, SceneId) < 0)) Then
+    If Slot < 0 Then
         Return False
     End If
 
-    If (SceneId <> 0 And
-        ControlledActorIds[Slot] <> 0 And
-        ActorSceneIds[Slot, ActorIndex(StateHandle, ControlledActorIds[Slot])] <> SceneId) Then
-        Return False
+    If SceneId <> 0 Then
+
+        If SceneIndex(StateHandle, SceneId) < 0 Then
+            Return False
+        End If
+
+        If ControlledActorIds[Slot] <> 0 Then
+
+            ControlledIndex = ActorIndex(StateHandle, ControlledActorIds[Slot])
+
+            If ControlledIndex < 0 Then
+                Return False
+            End If
+
+            If ActorSceneIds[Slot, ControlledIndex] <> SceneId Then
+                Return False
+            End If
+
+        End If
+
     End If
 
     CurrentSceneIds[Slot] = SceneId
@@ -706,19 +722,31 @@ End Function
 ''' Selects the controlled actor; zero clears it and nonzero IDs must be defined.
 Public Function SetControlledActor(StateHandle As Number, ActorId As Number) As Boolean
 
+    Dim ActorIndexValue As Number
     Dim Slot As Number
 
     Slot = StateSlot(StateHandle)
 
-    If (Slot < 0 Or
-        (ActorId <> 0 And ActorIndex(StateHandle, ActorId) < 0)) Then
+    If Slot < 0 Then
         Return False
     End If
 
-    If (ActorId <> 0 And
-        CurrentSceneIds[Slot] <> 0 And
-        ActorSceneIds[Slot, ActorIndex(StateHandle, ActorId)] <> CurrentSceneIds[Slot]) Then
-        Return False
+    If ActorId <> 0 Then
+
+        ActorIndexValue = ActorIndex(StateHandle, ActorId)
+
+        If ActorIndexValue < 0 Then
+            Return False
+        End If
+
+        If CurrentSceneIds[Slot] <> 0 Then
+
+            If ActorSceneIds[Slot, ActorIndexValue] <> CurrentSceneIds[Slot] Then
+                Return False
+            End If
+
+        End If
+
     End If
 
     ControlledActorIds[Slot] = ActorId

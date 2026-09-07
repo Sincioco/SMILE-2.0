@@ -142,6 +142,7 @@ internal sealed class MasmEmitter
     private bool _usesKeyHeld;
     private bool _usesKeyEventHeld;
     private bool _usesMusic;
+    private bool _usesArrayIndexFailure;
     private int _dynamicStackSlots;
     private int _clipDepth;
     private RoutineSymbol? _collectRoutine;
@@ -366,6 +367,8 @@ internal sealed class MasmEmitter
 
         EmitStagedCleanupHelper();
         EmitActiveFrameCleanupHelper();
+        if (_usesArrayIndexFailure)
+            EmitArrayIndexFailureTerminationHelper();
 
         foreach (var record in OrderedRecordTypes())
             EmitRecordHelpers(record);
@@ -2726,6 +2729,7 @@ internal sealed class MasmEmitter
 
     private void EmitRequireArrayIndex(int dimension, int dimensionOrdinal)
     {
+        _usesArrayIndexFailure = true;
         var valid = NewLabel("array_index_valid");
         var invalid = NewLabel("array_index_invalid");
         Line("    cmp rax, 0");
@@ -2738,8 +2742,19 @@ internal sealed class MasmEmitter
         Line($"    mov r8, {dimension.ToString(CultureInfo.InvariantCulture)}");
         CallAligned("smile_array_index_failure_report");
         EmitPopClipsTo(0);
-        EmitTermination(4);
+        CallAligned("smile_array_index_failure_terminate");
         Line($"{valid}:");
+    }
+
+    private void EmitArrayIndexFailureTerminationHelper()
+    {
+        Line();
+        Line("smile_array_index_failure_terminate PROC");
+        Line("    push rbp");
+        Line("    mov rbp, rsp");
+        Line("    sub rsp, 32");
+        EmitTermination(4);
+        Line("smile_array_index_failure_terminate ENDP");
     }
 
     private void EmitTermination(int exitCode)

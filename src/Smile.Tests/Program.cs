@@ -4489,6 +4489,9 @@ Run("Fixed-array indexing validates every native dimension and captures Web ByRe
     var native = new MasmEmitter(analysis, SmileGraphicsBackend.Auto, true, false).Emit();
     Equal(true, native.Contains("EXTERN smile_array_index_failure_report:PROC", StringComparison.Ordinal));
     Equal(true, native.Split("call smile_array_index_failure_report", StringSplitOptions.None).Length - 1 >= 8);
+    Equal(true, native.Split("call smile_array_index_failure_terminate", StringSplitOptions.None).Length - 1 >= 8);
+    Equal(1, native.Split("smile_array_index_failure_terminate PROC", StringSplitOptions.None).Length - 1);
+    Equal(1, native.Split("call smile_cleanup_active_frames", StringSplitOptions.None).Length - 1);
     Equal(true, native.Contains("SMILE runtime error", StringComparison.Ordinal) == false);
 
     var web = new WebEmitter(analysis).Emit();

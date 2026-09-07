@@ -180,13 +180,17 @@ State = RPG.Create()
 
 Call RecordInitialization(State > 0)
 
-Call InitializeProjection()
-Call InitializeAnimations()
-Call InitializeFirstPersonMaps()
-Call InitializeStyles()
-Call InitializeMenus()
-Call InitializeDefinitions()
-Call LoadTopDownMaps()
+If InitializationSucceeded Then
+
+    Call InitializeProjection()
+    Call InitializeAnimations()
+    Call InitializeFirstPersonMaps()
+    Call InitializeStyles()
+    Call InitializeMenus()
+    Call InitializeDefinitions()
+    Call LoadTopDownMaps()
+
+End If
 
 If InitializationSucceeded Then
     Result = DungeonWorkflow.StartNewGame(State, SCENE_FP_1, 8)
