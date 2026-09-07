@@ -217,7 +217,12 @@ Playback.ScenePaused = False
 Call ApplyTimelineCommand(
     ViewerTimelineEditing.COMMAND_SEEK_ADJACENT_KEY, 1)
 Call CalibrationCheck(Playback.ScenePaused, "Next key pauses even without saved keys")
-Call ToggleScenePause()
+
+Session.Ready = ViewerLifecycle.ToggleScenePause(
+    Session, Party, Character, Playback, Session.ProfileIndex,
+    ViewerUiState, ViewerInputState, Calibration,
+    CalibrationAvailable, Effects) And Session.Ready
+
 Call CalibrationCheck(Not Playback.ScenePaused, "Space-style toggle resumes after navigation")
 
 TestTwin = Character3D.LoadWithPolicy(ActiveProfile.AssetPath,
@@ -944,7 +949,11 @@ Sub CheckPartyInspector()
 
         End If
 
-        Call ToggleScenePause()
+        Session.Ready = ViewerLifecycle.ToggleScenePause(
+            Session, Party, Character, Playback, Session.ProfileIndex,
+            ViewerUiState, ViewerInputState, Calibration,
+            CalibrationAvailable, Effects) And Session.Ready
+
         Call CalibrationCheck(Not Playback.ScenePaused And Not Party.PreviewActive And
             Playback.SelectedClip = SavedClip And Character3D.AnimationTime(Character) = 333,
             "Resume restores the exact demo clip and time after scrubbing")

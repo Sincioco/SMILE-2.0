@@ -470,33 +470,6 @@ Sub UpdateBattleAudio()
 
 End Sub
 
-Sub CancelInteractionCaptures()
-
-    If ViewerGizmoState.Dragging Then
-        Call ViewerGizmo.FinishDrag(ViewerGizmoState)
-    End If
-
-    If ViewerInputState.TimelineKeyframeDragging Then
-        Session.Ready = Character3D.SetAnimationTime(
-            Character,
-            ViewerCalibration.FrameTimeMilliseconds(
-                Character,
-                Playback.SelectedClip,
-                ViewerInputState.TimelineDraggedOriginalFrame
-            )
-        ) And Session.Ready
-    End If
-
-    If (ViewerInputState.TimelineScrubbing Or
-        ViewerInputState.TimelineKeyframeDragging) Then
-        Call RestorePartyPreview()
-    End If
-
-    Call ViewerInput.CancelCaptures(ViewerInputState)
-    Call ViewerCamera.CancelPointerControls(ViewerCameraState)
-
-End Sub
-
 Sub HandleKeyboard(PressedKey As Number)
 
     If (Party.Enabled And
@@ -526,7 +499,12 @@ Sub HandleInspectorKeyboard(PressedKey As Number)
     If PressedKey = KEY_BACKTICK Then
 
         Call ViewerUi.CycleVisibility(ViewerUiState)
-        Call CancelInteractionCaptures()
+
+        Session.Ready = ViewerLifecycle.CancelInteractionCaptures(
+            Party, Character, Playback, Session.ProfileIndex,
+            ViewerUiState, ViewerInputState, ViewerGizmoState,
+            ViewerCameraState, Calibration, CalibrationAvailable,
+            Effects) And Session.Ready
 
         Return
 
@@ -583,7 +561,10 @@ Sub ApplyInspectorApplicationCommand(Command As Number, Value As Number)
     If Command = ViewerInspectorCommands.APPLICATION_COMMAND_CYCLE_PROFILE Then
         Call CycleProfile()
     Else If Command = ViewerInspectorCommands.APPLICATION_COMMAND_TOGGLE_SCENE_PAUSE Then
-        Call ToggleScenePause()
+        Session.Ready = ViewerLifecycle.ToggleScenePause(
+            Session, Party, Character, Playback, Session.ProfileIndex,
+            ViewerUiState, ViewerInputState, Calibration,
+            CalibrationAvailable, Effects) And Session.Ready
     Else If Command = ViewerInspectorCommands.APPLICATION_COMMAND_PLAY_SELECTED_CLIP Then
         Call PlaySelectedClip()
     Else If Command = ViewerInspectorCommands.APPLICATION_COMMAND_ADJUST_SPEED Then
@@ -725,24 +706,6 @@ Sub UpdateTransformGizmo()
         Window_Width(),
         Window_Height()
     )
-
-End Sub
-
-Sub ToggleScenePause()
-
-    If Party.Enabled And Playback.ScenePaused Then
-
-        If ViewerUiState.CalibrationEditing Then
-            Call ViewerSession.BlockCharacterSwitch(Session)
-
-            Return
-        End If
-
-        Call RestorePartyPreview()
-
-    End If
-
-    Call ViewerPlayback.TogglePause(Playback)
 
 End Sub
 
@@ -1310,7 +1273,12 @@ Sub ResetAll()
     If Party.UiBound Then
 
         Call CancelCalibrationEdit()
-        Call RestorePartyPreview()
+
+        Session.Ready = ViewerLifecycle.RestorePartyPreview(
+            Party, Character, Playback, Session.ProfileIndex,
+            ViewerUiState, ViewerInputState, Calibration,
+            CalibrationAvailable, Effects) And Session.Ready
+
         Call EndPartyInspector()
 
     End If
@@ -1708,7 +1676,11 @@ Sub SelectCharacterTab(Index As Number)
         Return
     End If
 
-    Call CancelInteractionCaptures()
+    Session.Ready = ViewerLifecycle.CancelInteractionCaptures(
+        Party, Character, Playback, Session.ProfileIndex,
+        ViewerUiState, ViewerInputState, ViewerGizmoState,
+        ViewerCameraState, Calibration, CalibrationAvailable,
+        Effects) And Session.Ready
 
     Fill Rectangle 300, 120, Max(240, Window_Width() - 600), 44, Rgb(8, 16, 30)
     Draw Text "Loading Selected Character..." At 312, 132 Size 16 Color WHITE
@@ -1819,33 +1791,16 @@ Sub EndPartyInspector()
 
 End Sub
 
-Sub RestorePartyPreview()
-
-    If Not Party.PreviewActive Or Not Party.UiBound Then
-        Return
-    End If
-
-    Session.Ready = ViewerParty.RestorePreview(
-        Party,
-        Character,
-        Playback.SelectedClip,
-        Playback.PlaybackSpeed
-    ) And Session.Ready
-
-    Call ViewerUi.HideCalibration(ViewerUiState)
-
-    Call ViewerInput.CancelCaptures(ViewerInputState)
-
-    Call UpdateCalibrationForCurrentFrame()
-    Call ViewerEffects.InvalidateVisualHistory(Effects)
-
-End Sub
-
 Sub ResetPartyInspector()
 
     Call BeginPartyInspector()
     Call CancelCalibrationEdit()
-    Call RestorePartyPreview()
+
+    Session.Ready = ViewerLifecycle.RestorePartyPreview(
+        Party, Character, Playback, Session.ProfileIndex,
+        ViewerUiState, ViewerInputState, Calibration,
+        CalibrationAvailable, Effects) And Session.Ready
+
     Call EndPartyInspector()
 
     If Session.ViewerError Then
@@ -1995,7 +1950,12 @@ Function HandlePartyPointer() As Boolean
     Else If Response.TogglePause Then
 
         Call BeginPartyInspector()
-        Call ToggleScenePause()
+
+        Session.Ready = ViewerLifecycle.ToggleScenePause(
+            Session, Party, Character, Playback, Session.ProfileIndex,
+            ViewerUiState, ViewerInputState, Calibration,
+            CalibrationAvailable, Effects) And Session.Ready
+
         Call EndPartyInspector()
 
     End If

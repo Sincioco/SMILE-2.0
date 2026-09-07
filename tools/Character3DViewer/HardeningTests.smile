@@ -364,6 +364,59 @@ Call CheckNamed(
     LifecycleConfiguration.PartyFormationEndAngle = 50,
     "Lifecycle owner captures immutable Viewer configuration")
 
+Call ViewerPlayback.Reset(LifecyclePlayback, 100)
+Call ViewerParty.SetEnabled(LifecycleParty, False)
+
+TestResult = ViewerLifecycle.ToggleScenePause(
+    LifecycleSession, LifecycleParty, LifecycleCharacter,
+    LifecyclePlayback, ViewerProfiles.PROFILE_ARIN,
+    UiState, InputState, CalibrationState, False, LifecycleEffects)
+
+Call CheckNamed(TestResult And LifecyclePlayback.ScenePaused,
+    "Lifecycle owner toggles single-character scene pause")
+
+Call ViewerParty.SetEnabled(LifecycleParty, True)
+Call ViewerSession.ClearCharacterSwitchBlock(LifecycleSession)
+
+UiState.CalibrationEditing = True
+
+TestResult = ViewerLifecycle.ToggleScenePause(
+    LifecycleSession, LifecycleParty, LifecycleCharacter,
+    LifecyclePlayback, ViewerProfiles.PROFILE_ARIN,
+    UiState, InputState, CalibrationState, False, LifecycleEffects)
+
+Call CheckNamed(TestResult And LifecyclePlayback.ScenePaused And
+    LifecycleSession.CharacterSwitchBlocked,
+    "Lifecycle owner blocks Party resume during calibration editing")
+
+UiState.CalibrationEditing = False
+UiState.CalibrationVisible = True
+LifecycleParty.PreviewActive = False
+LifecycleParty.UiBound = False
+
+TestResult = ViewerLifecycle.RestorePartyPreview(
+    LifecycleParty, LifecycleCharacter, LifecyclePlayback,
+    ViewerProfiles.PROFILE_ARIN, UiState, InputState,
+    CalibrationState, False, LifecycleEffects)
+
+Call CheckNamed(TestResult And UiState.CalibrationVisible,
+    "Lifecycle owner leaves inactive Party preview state unchanged")
+
+GizmoState.Dragging = True
+InputState.TimelineScrubbing = False
+InputState.TimelineKeyframeDragging = False
+CameraState.Controls.Orbiting = True
+CameraState.Controls.Panning = True
+
+TestResult = ViewerLifecycle.CancelInteractionCaptures(
+    LifecycleParty, LifecycleCharacter, LifecyclePlayback,
+    ViewerProfiles.PROFILE_ARIN, UiState, InputState, GizmoState,
+    CameraState, CalibrationState, False, LifecycleEffects)
+
+Call CheckNamed(TestResult And Not GizmoState.Dragging And
+    Not CameraState.Controls.Orbiting And Not CameraState.Controls.Panning,
+    "Lifecycle owner cancels gizmo and camera interaction captures")
+
 Call ViewerSession.ResetFailure(LifecycleSession)
 Call ViewerParty.SetEnabled(LifecycleParty, False)
 

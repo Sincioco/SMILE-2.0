@@ -48,7 +48,7 @@
   ],
   "currentExtractionCommitRange": {
     "first": "9a616ef35adae9b0c5bbc864ecf689bbd6fc1aed",
-    "lastCommittedBeforeCurrentCheckpoint": "cc59cbbc194cbd3d290cbf726666d0d0f0edf3a4"
+    "lastCommittedBeforeCurrentCheckpoint": "af03c8dc4b99df344f38332f570ff6050843d3d1"
   },
   "programMetrics": {
     "initialAudit": {
@@ -68,11 +68,11 @@
       "sha256": "17853B7B210061F9D46D70913AABA39C4F798503F69C2E8CCA4D8511646AC670"
     },
     "current": {
-      "checkpoint": "inspector-keyboard-application-command",
-      "baseCommit": "cc59cbbc194cbd3d290cbf726666d0d0f0edf3a4",
-      "lines": 2007,
-      "procedures": 56,
-      "sha256": "FE53047CE0DC8514CA243ACDA2D70FF15F09637B60890437536456BB51C38ED2"
+      "checkpoint": "interaction-cancellation-party-preview-lifecycle",
+      "baseCommit": "af03c8dc4b99df344f38332f570ff6050843d3d1",
+      "lines": 1967,
+      "procedures": 53,
+      "sha256": "D3BD799931568D408E9A327791076788624FB752CAF13EE55CB68689D6E8B3C4"
     }
   },
   "substantialResponsibilitiesMovedFromProgram": [
@@ -102,7 +102,8 @@
     "camera pointer press/hold/release derivation, calibration-orbit activation, wheel admission and retained orbit/pan transitions",
     "whole-Viewer playback/camera/rendering/VFX/Dragon/equipment/UI/input/gizmo reset, presentation reapplication and Party-versus-single restart lifecycle",
     "scalar inspector display capture plus Party-versus-single remaining-time, selected-event, calibration, VFX and camera presentation queries",
-    "keyboard pause, frame, clip, recovery and profile application-command policy plus next-presentation selection"
+    "keyboard pause, frame, clip, recovery and profile application-command policy plus next-presentation selection",
+    "gizmo, camera and timeline capture cancellation plus Party-preview restoration, calibration refresh, VFX history invalidation and Party resume gating"
   ],
   "currentDestinationOwners": [
     "ViewerActors",
@@ -128,7 +129,7 @@
     "non-timeline inspector runtime sampling plus interface, slider and gizmo priority ordering",
     "one visible typed whole-Viewer application-command executor shared by keyboard and pointer paths",
     "explicit scene, Party, gizmo and inspector presentation-group draw ordering",
-    "narrow Party-preview, frame-order calibration-application and session-result adapters",
+    "narrow Party-preview entry, frame-order calibration-application and session-result adapters",
     "thin UpdateDragon, UpdateBattleAudio and UpdateOrinStorm frame-order adapters"
   ],
   "preservedCalibration": {
@@ -212,7 +213,12 @@
     "keyboard pause, frame, clip, recovery, profile and next-presentation response policy moved into one typed ViewerInspectorCommands application-command result",
     "HandleInspectorKeyboard reduced from 104 lines to 60 lines and HandleInspectorPointer from 227 lines to 213 lines by sharing one visible 25-line cross-owner executor",
     "PointerActionResult and pointer-only command names were replaced rather than retained as duplicate aliases after keyboard and pointer paths began sharing the contract",
-    "Program.smile reduced from 2037 lines and 55 procedures to 2007 lines and 56 procedures without formatting compression; the added procedure is the shared executor"
+    "Program.smile reduced from 2037 lines and 55 procedures to 2007 lines and 56 procedures without formatting compression; the added procedure is the shared executor",
+    "gizmo, camera and timeline capture cancellation moved into stateless ViewerLifecycle with explicit borrowed state",
+    "Party-preview restoration now keeps playback resume, calibration refresh, capture release and VFX visual-history invalidation in one lifecycle operation",
+    "scene-pause resume gating and calibration-edit switch blocking moved into ViewerLifecycle while scene pause still leaves VFX advancing by default",
+    "CancelInteractionCaptures, RestorePartyPreview and ToggleScenePause were deleted rather than retained as aliases",
+    "Program.smile reduced from 2007 lines and 56 procedures to 1967 lines and 53 procedures without formatting compression"
   ],
   "validation": [
     "PASS: 308 shared compiler/language tests",
@@ -324,13 +330,19 @@
     "PASS: keyboard application-command Release Desktop Viewer build with 46 published assets",
     "PASS: keyboard application-command Release Full Web Viewer build with 35 published assets",
     "PASS: keyboard application-command launcher, primary/backup recovery, stale-output and preservation fixtures using disposable data and processes",
-    "PASS: keyboard application-command tracked 406-file repository style check"
+    "PASS: keyboard application-command tracked 406-file repository style check",
+    "PASS: interaction-cancellation/Party-preview lifecycle native and generated-Web hardening with exact console parity and direct pause/block/no-preview/capture assertions",
+    "PASS: interaction-cancellation/Party-preview lifecycle isolated real-actor Party resume and calibration integration using disposable storage",
+    "PASS: interaction-cancellation/Party-preview lifecycle Release Desktop Viewer build with 46 published assets",
+    "PASS: interaction-cancellation/Party-preview lifecycle Release Full Web Viewer build with 35 published assets",
+    "PASS: interaction-cancellation/Party-preview lifecycle launcher, primary/backup recovery, stale-output and preservation fixtures using disposable data and processes",
+    "PASS: interaction-cancellation/Party-preview lifecycle tracked 406-file repository style check"
   ],
   "pendingValidation": [
     "final Character Viewer native and installed-Chrome acceptance after remaining extractions"
   ],
   "blockers": [],
-  "nextConcreteAction": "Audit the remaining 213-line inspector pointer coordinator and move any cohesive transfer or gesture behavior with its state while preserving explicit timeline-first runtime sampling and cross-owner priority.",
+  "nextConcreteAction": "Audit Party inspector context/calibration adaptation and the thin Party, Dragon, audio and storm frame adapters for the next cohesive owner-level lifecycle move without hiding required frame order.",
   "nextStages": [
     "R7.5-input-inspector-calibration-reset-ownership",
     "R7.5-startup-session-and-overlay-coordination",

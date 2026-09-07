@@ -362,6 +362,112 @@ Public Sub ResetView(ByRef Session As ViewerSession.State,
 
 End Sub
 
+Public Function RestorePartyPreview(ByRef Party As ViewerParty.State,
+    ByRef Character As Character3D.Actor,
+    ByRef Playback As ViewerPlayback.State, ProfileIndex As Number,
+    ByRef Ui As ViewerUi.State, ByRef InputState As ViewerInput.State,
+    ByRef Calibration As ViewerCalibration.State,
+    CalibrationAvailable As Boolean,
+    ByRef Effects As ViewerEffects.State) As Boolean
+
+    Dim Result As Boolean
+
+    Result = True
+
+    If Not Party.PreviewActive Or Not Party.UiBound Then
+        Return Result
+    End If
+
+    Result = ViewerParty.RestorePreview(
+        Party, Character, Playback.SelectedClip, Playback.PlaybackSpeed)
+
+    Call ViewerUi.HideCalibration(Ui)
+    Call ViewerInput.CancelCaptures(InputState)
+    Call ViewerCalibrationEditing.EvaluateCurrent(
+        Calibration, Character, Playback.SelectedClip, ProfileIndex,
+        Ui.CalibrationEditing, CalibrationAvailable)
+    Call ViewerEffects.InvalidateVisualHistory(Effects)
+
+    Return Result
+
+End Function
+
+Public Function CancelInteractionCaptures(
+    ByRef Party As ViewerParty.State,
+    ByRef Character As Character3D.Actor,
+    ByRef Playback As ViewerPlayback.State, ProfileIndex As Number,
+    ByRef Ui As ViewerUi.State, ByRef InputState As ViewerInput.State,
+    ByRef Gizmo As ViewerGizmo.State, ByRef Camera As ViewerCamera.State,
+    ByRef Calibration As ViewerCalibration.State,
+    CalibrationAvailable As Boolean,
+    ByRef Effects As ViewerEffects.State) As Boolean
+
+    Dim Result As Boolean
+
+    Result = True
+
+    If Gizmo.Dragging Then
+        Call ViewerGizmo.FinishDrag(Gizmo)
+    End If
+
+    If InputState.TimelineKeyframeDragging Then
+        Result = Character3D.SetAnimationTime(
+            Character,
+            ViewerCalibration.FrameTimeMilliseconds(
+                Character,
+                Playback.SelectedClip,
+                InputState.TimelineDraggedOriginalFrame
+            )
+        )
+    End If
+
+    If (InputState.TimelineScrubbing Or
+        InputState.TimelineKeyframeDragging) Then
+        Result = RestorePartyPreview(
+            Party, Character, Playback, ProfileIndex, Ui, InputState,
+            Calibration, CalibrationAvailable, Effects) And Result
+    End If
+
+    Call ViewerInput.CancelCaptures(InputState)
+    Call ViewerCamera.CancelPointerControls(Camera)
+
+    Return Result
+
+End Function
+
+Public Function ToggleScenePause(ByRef Session As ViewerSession.State,
+    ByRef Party As ViewerParty.State,
+    ByRef Character As Character3D.Actor,
+    ByRef Playback As ViewerPlayback.State, ProfileIndex As Number,
+    ByRef Ui As ViewerUi.State, ByRef InputState As ViewerInput.State,
+    ByRef Calibration As ViewerCalibration.State,
+    CalibrationAvailable As Boolean,
+    ByRef Effects As ViewerEffects.State) As Boolean
+
+    Dim Result As Boolean
+
+    Result = True
+
+    If Party.Enabled And Playback.ScenePaused Then
+
+        If Ui.CalibrationEditing Then
+            Call ViewerSession.BlockCharacterSwitch(Session)
+
+            Return Result
+        End If
+
+        Result = RestorePartyPreview(
+            Party, Character, Playback, ProfileIndex, Ui, InputState,
+            Calibration, CalibrationAvailable, Effects)
+
+    End If
+
+    Call ViewerPlayback.TogglePause(Playback)
+
+    Return Result
+
+End Function
+
 Public Sub ResetAll(ByRef Session As ViewerSession.State,
     ByRef Party As ViewerParty.State, ByRef Character As Character3D.Actor,
     ByRef Rendering As ViewerRendering.State, ByRef Effects As ViewerEffects.State,

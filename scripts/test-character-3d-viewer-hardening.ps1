@@ -150,7 +150,7 @@ try {
         'ViewerCamera.UpdatePointerInteraction(',
         'If Pointer_Pressed(POINTER_SECONDARY) Then',
         'Call ResetAll()',
-        'Call ToggleScenePause()',
+        'ViewerLifecycle.ToggleScenePause(',
         'Call ApplyTimelineCommand(',
         'ViewerTimelineEditing.InspectorCommand(',
         'ViewerTimelineEditing.ApplyCommand(',
@@ -158,7 +158,6 @@ try {
         'Const CALIBRATION_MAX_CLIPS = ViewerCalibration.MAX_CLIPS',
         'Function ApplyActorPresentationCommand(',
         'ViewerEffects.AdvanceScene(',
-        'ViewerPlayback.TogglePause(Playback)',
         'Const ZOOM_IN_LIMIT = -144',
         'Window_Width()',
         'Window_Height()',
@@ -238,6 +237,10 @@ try {
         'Public Sub PrepareRetry(',
         'Public Sub PrepareProfileCycle(',
         'Public Sub PrepareCharacterSwitch(',
+        'Public Function RestorePartyPreview(',
+        'Public Function CancelInteractionCaptures(',
+        'Public Function ToggleScenePause(',
+        'Call ViewerPlayback.TogglePause(Playback)',
         'Public Sub ResetAll(',
         'Private Sub ResetControlOwners(',
         'Private Sub ReapplyResetPresentation(',
@@ -252,6 +255,15 @@ try {
         -not $viewerSource.Contains('ViewerParty.DestroyParticipants(') -and
         -not $viewerSource.Contains('Window_Title(')) `
         'Ordered load, switch and resource teardown implementation must remain in ViewerLifecycle.'
+    Assert-True ($viewerSource.Contains(
+            'ViewerLifecycle.CancelInteractionCaptures(') -and
+        $viewerSource.Contains('ViewerLifecycle.RestorePartyPreview(') -and
+        $viewerSource.Contains('ViewerLifecycle.ToggleScenePause(') -and
+        -not $viewerSource.Contains('Sub CancelInteractionCaptures()') -and
+        -not $viewerSource.Contains('Sub RestorePartyPreview()') -and
+        -not $viewerSource.Contains('Sub ToggleScenePause()') -and
+        -not $viewerSource.Contains('ViewerGizmo.FinishDrag(')) `
+        'Interaction cancellation, Party preview restoration and pause lifecycle must remain extracted.'
     Assert-True (-not $viewerSource.Contains('Session.SelectedCharacterTab =') -and
         -not $viewerSource.Contains('Session.DragonInspection =') -and
         -not $viewerSource.Contains('Session.Running =') -and
