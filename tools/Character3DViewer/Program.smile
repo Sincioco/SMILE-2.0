@@ -1377,19 +1377,6 @@ Sub ApplyEquipmentCalibration()
 
 End Sub
 
-Sub BeginCalibrationEdit()
-
-    If ViewerUiState.CalibrationEditing Then
-        Return
-    End If
-
-    Call ViewerParty.BeginPreviewSession(Party, Character, Playback, Session.ProfileIndex)
-    Call ViewerCalibrationEditing.BeginEdit(
-        Calibration, Character, Playback.SelectedClip,
-        ViewerUiState, ViewerCameraState, Effects)
-
-End Sub
-
 Sub CancelCalibrationEdit()
 
     Dim Result As ViewerCalibrationEditing.OperationResult
@@ -1415,26 +1402,6 @@ Sub SetCurrentCalibrationValue(Value As Number)
         Calibration, Character, Playback.SelectedClip,
         SwordWristNode, ShieldWristNode, CalibrationAvailable,
         ViewerUiState, ViewerGizmoState, ViewerCameraState, Effects, Value)
-
-    Call ViewerSession.ApplyCalibrationOperation(Session, Result)
-
-End Sub
-
-Sub SaveCalibrationFrame()
-
-    Dim Result As ViewerCalibrationEditing.OperationResult
-
-    If Calibration.StorageRejected Then
-        Return
-    End If
-
-    If Not ViewerUiState.CalibrationEditing Then
-        Call ViewerParty.BeginPreviewSession(Party, Character, Playback, Session.ProfileIndex)
-    End If
-
-    Result = ViewerCalibrationEditing.SaveCurrentFrame(
-        Calibration, Character, Playback.SelectedClip,
-        ViewerUiState, ViewerGizmoState, ViewerCameraState, Effects)
 
     Call ViewerSession.ApplyCalibrationOperation(Session, Result)
 

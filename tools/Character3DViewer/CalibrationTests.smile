@@ -417,11 +417,14 @@ Call CalibrationCheck(ViewerCalibration.SavedJson(Calibration, Character) = Test
 Call CalibrationCheck(ViewerCalibration.KeyCount(Calibration, 3) = 2 And
     ViewerCalibration.KeyValue(Calibration, 3, 1, 12) = 7,
     "Failed undo restores complete key track")
-Call BeginCalibrationEdit()
+Call ViewerParty.BeginPreviewSession(Party, Character, Playback, Session.ProfileIndex)
+Call ViewerCalibrationEditing.BeginEdit(
+    Calibration, Character, Playback.SelectedClip,
+    ViewerUiState, ViewerCameraState, Effects)
 
 Call ViewerCalibration.SetChannelValue(Calibration, 3, 12, 9)
 
-Call SaveCalibrationFrame()
+Call ApplyCalibrationControlForTest(ViewerUi.CALIBRATION_ACTION_SAVE)
 Call CalibrationCheck(Calibration.WriteFailed And ViewerUiState.CalibrationEditing,
     "Failed Save Frame keeps edit open for retry or cancel")
 Call CalibrationCheck(ViewerCalibration.SavedJson(Calibration, Character) = TestSavedJson,
@@ -466,10 +469,10 @@ TestAnchor = ViewerCalibration.EquipmentGripThousandths(
 For TestIndex = 1 To 6
 
     Call SetCurrentCalibrationValue(45)
-    Call SaveCalibrationFrame()
+    Call ApplyCalibrationControlForTest(ViewerUi.CALIBRATION_ACTION_SAVE)
     Call ApplyCalibrationControlForTest(ViewerUi.CALIBRATION_ACTION_RELOAD)
     Call SetCurrentCalibrationValue(0)
-    Call SaveCalibrationFrame()
+    Call ApplyCalibrationControlForTest(ViewerUi.CALIBRATION_ACTION_SAVE)
     Call ApplyCalibrationControlForTest(ViewerUi.CALIBRATION_ACTION_RELOAD)
 End For
 
@@ -934,7 +937,11 @@ Sub CheckPartyInspector()
                 Party.Elapsed = 1234 And Playback.ScenePaused,
                 "Party Enter confirms gizmo preview without restarting the battle")
             Call CancelCalibrationEdit()
-            Call BeginCalibrationEdit()
+            Call ViewerParty.BeginPreviewSession(
+                Party, Character, Playback, Session.ProfileIndex)
+            Call ViewerCalibrationEditing.BeginEdit(
+                Calibration, Character, Playback.SelectedClip,
+                ViewerUiState, ViewerCameraState, Effects)
             Call SetCurrentCalibrationValue(11)
             Call EndPartyInspector()
             Call HandleKeyboard(KEY_ENTER)

@@ -48,7 +48,7 @@
   ],
   "currentExtractionCommitRange": {
     "first": "9a616ef35adae9b0c5bbc864ecf689bbd6fc1aed",
-    "lastCommittedBeforeCurrentCheckpoint": "b4d46656c341f6076bde1d58cdb6a124d239cfce"
+    "lastCommittedBeforeCurrentCheckpoint": "15a3ab5428d47fea308c0282c337bf28bbea26c1"
   },
   "programMetrics": {
     "initialAudit": {
@@ -68,11 +68,11 @@
       "sha256": "17853B7B210061F9D46D70913AABA39C4F798503F69C2E8CCA4D8511646AC670"
     },
     "current": {
-      "checkpoint": "scene-render-transaction",
-      "baseCommit": "b4d46656c341f6076bde1d58cdb6a124d239cfce",
-      "lines": 1884,
-      "procedures": 53,
-      "sha256": "DADC256663B3986D07C08534A85EAB187A8F56D31576863E5A87ED880CB679C6"
+      "checkpoint": "final-remaining-responsibility-audit",
+      "baseCommit": "15a3ab5428d47fea308c0282c337bf28bbea26c1",
+      "lines": 1851,
+      "procedures": 51,
+      "sha256": "9951954FC0DB49FBB1C33A68A29D11EB506E9A9AD8BBD4643045B73A39044E33"
     }
   },
   "substantialResponsibilitiesMovedFromProgram": [
@@ -223,7 +223,11 @@
     "scene begin, environment, primary or Party participants, Dragon, shared effects, socket gizmos and end-scene implementation moved into ViewerRendering.DrawFrame with a typed first-failure FrameResult",
     "Program.smile removed its Scene3D import and direct actor, Party, Dragon, effect, socket and scene-end drawing calls while retaining visible top-level frame and overlay order",
     "ViewerRendering.UpdateSocketGizmos reduced from 139 to 77 lines by extracting position and origin-marker operations inside the same state owner without duplicate implementation",
-    "Program.smile reduced from 1967 lines and 53 procedures to 1884 lines and 53 procedures without formatting compression; ViewerRendering is 779 lines and 37 procedures with a 77-line maximum routine"
+    "Program.smile reduced from 1967 lines and 53 procedures to 1884 lines and 53 procedures without formatting compression; ViewerRendering is 779 lines and 37 procedures with a 77-line maximum routine",
+    "the final remaining-responsibility audit found BeginCalibrationEdit and SaveCalibrationFrame were production-dead test boundaries; both were deleted instead of retained as wrappers",
+    "CalibrationTests now enters ViewerCalibrationEditing and saves through ViewerCalibrationControls directly while preserving failed-write, repeated-grip and Party confirmation assertions",
+    "every remaining Program.smile procedure is reached by the production entry point or another retained coordinator; the six routines above 60 lines were re-audited as explicit runtime or cross-owner ordering",
+    "Program.smile reduced from 1884 lines and 53 procedures to 1851 lines and 51 procedures without formatting compression or relocated application-controller code"
   ],
   "validation": [
     "PASS: 308 shared compiler/language tests",
@@ -346,13 +350,19 @@
     "PASS: scene-render transaction Release Desktop Viewer build with 46 published assets",
     "PASS: scene-render transaction Release Full Web Viewer build with 35 published assets",
     "PASS: scene-render transaction primary/backup recovery and preservation fixtures using disposable data and processes",
-    "PASS: scene-render transaction tracked 406-file repository style check"
+    "PASS: scene-render transaction tracked 406-file repository style check",
+    "PASS: final responsibility-audit native and generated-Web hardening with exact console parity and static rejection of the two deleted test boundaries",
+    "PASS: final responsibility-audit isolated real-asset calibration with direct production-owner Save/edit coverage and live storage untouched",
+    "PASS: final responsibility-audit Release Desktop Viewer build with 46 published assets and visible relaunch",
+    "PASS: final responsibility-audit Release Full Web Viewer build with 35 published assets",
+    "PASS: final responsibility-audit primary/backup recovery and preservation fixtures using disposable data and processes",
+    "PASS: final responsibility-audit tracked 406-file repository style check"
   ],
   "pendingValidation": [
     "final Character Viewer native and installed-Chrome acceptance after remaining extractions"
   ],
   "blockers": [],
-  "nextConcreteAction": "Audit Party inspector context/calibration adaptation and every remaining substantial Program.smile routine for the next cohesive owner-level move without hiding required frame or input priority.",
+  "nextConcreteAction": "Run final native and installed-Chrome interaction acceptance, publish Low/Medium/High alongside the already rebuilt Full output, and record final delivery evidence without beginning deferred work.",
   "nextStages": [
     "R7.5-input-inspector-calibration-reset-ownership",
     "R7.5-startup-session-and-overlay-coordination",

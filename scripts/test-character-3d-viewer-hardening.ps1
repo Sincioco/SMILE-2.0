@@ -829,7 +829,9 @@ try {
         -not $viewerSource.Contains('Sub ClearAllCalibration(') -and
         -not $viewerSource.Contains('Sub UndoLastCalibrationChange(') -and
         -not $viewerSource.Contains('Sub FinishCalibrationEdit(') -and
-        -not $viewerSource.Contains('Sub SetCalibrationFromPointer(')) `
+        -not $viewerSource.Contains('Sub SetCalibrationFromPointer(') -and
+        -not $viewerSource.Contains('Sub BeginCalibrationEdit(') -and
+        -not $viewerSource.Contains('Sub SaveCalibrationFrame(')) `
         'Calibration panel command routing and dead wrappers must not return to Program.smile.'
     $inspectorPointerStart = $viewerSource.IndexOf('Function HandleInspectorPointer() As Boolean')
     $sharedSliderStart = $viewerSource.IndexOf('Function HandleSharedSliders() As Boolean')
