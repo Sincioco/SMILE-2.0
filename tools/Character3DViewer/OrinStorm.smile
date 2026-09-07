@@ -923,8 +923,11 @@ Public Sub DrawFlash(Value As Context)
 
     Slot = RawSlot(Value)
 
-    If (Slot >= 0 And
-        EngineAvailable And
+    If Slot < 0 Then
+        Return
+    End If
+
+    If (EngineAvailable And
         RenderVisible[Slot] And
         SceneComfort <> SCENE_COMFORT_OFF And
         FlashOpacities[Slot] > 0) Then
@@ -1061,8 +1064,11 @@ Public Sub Draw(Value As Context)
 
     Slot = RawSlot(Value)
 
-    If (Slot >= 0 And
-        EngineAvailable And
+    If Slot < 0 Then
+        Return
+    End If
+
+    If (EngineAvailable And
         RenderVisible[Slot] And
         WeaponRenderVisible[Slot]) Then
 
@@ -1171,7 +1177,11 @@ Public Function TrailParticleCount(Value As Context) As Number
 
     Slot = RawSlot(Value)
 
-    If Slot < 0 Or HammerTrails[Slot].Handle = 0 Then
+    If Slot < 0 Then
+        Return 0
+    End If
+
+    If HammerTrails[Slot].Handle = 0 Then
         Return 0
     End If
 
@@ -1244,7 +1254,11 @@ Public Function RenderVisibility(Value As Context) As Number
 
     Slot = RawSlot(Value)
 
-    If Slot < 0 Or Not RenderVisible[Slot] Then
+    If Slot < 0 Then
+        Return 0
+    End If
+
+    If Not RenderVisible[Slot] Then
         Return 0
     End If
 

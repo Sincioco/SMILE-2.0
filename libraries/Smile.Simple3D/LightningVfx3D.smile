@@ -1161,9 +1161,13 @@ Public Function StartAt(
 
     End For
 
-    If (Index < 0 Or
-        Index >= MAX_EFFECTS Or
-        Items[Index].Active) Then
+    If Index < 0 Or Index >= MAX_EFFECTS Then
+        ErrorValue = ERROR_CAPACITY
+
+        Return Result
+    End If
+
+    If Items[Index].Active Then
         ErrorValue = ERROR_CAPACITY
 
         Return Result
