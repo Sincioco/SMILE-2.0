@@ -268,6 +268,12 @@ Public Sub ToggleFloorAndGrid(ByRef Value As State)
 
 End Sub
 
+Public Sub ToggleGrid(ByRef Value As State)
+
+    Value.GridVisible = Not Value.GridVisible
+
+End Sub
+
 Public Sub CycleBackground(ByRef Value As State, BackgroundCount As Number)
 
     Value.BackgroundIndex = (Value.BackgroundIndex + 1) Mod BackgroundCount

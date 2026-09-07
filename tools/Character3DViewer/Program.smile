@@ -734,6 +734,7 @@ End Sub
 Sub HandleInspectorKeyboard(PressedKey As Number)
 
     Dim Action As Number
+    Dim InspectorResult As ViewerInspectorCommands.OperationResult
 
     If PressedKey = KEY_BACKTICK Then
 
@@ -757,13 +758,23 @@ Sub HandleInspectorKeyboard(PressedKey As Number)
         Character3D.ClipCount(Character)
     )
 
+    InspectorResult = ViewerInspectorCommands.ApplyKeyboardNavigationAction(
+        Action,
+        Rendering,
+        BACKGROUND_COUNT,
+        Character3D.SocketCount(Character),
+        ViewerCameraState
+    )
+
+    If InspectorResult.Handled Then
+        Session.Ready = InspectorResult.Ready And Session.Ready
+
+        Return
+    End If
+
     If Action = ViewerInput.INSPECTOR_KEY_TOGGLE_PAUSE Then
 
         Call ToggleScenePause()
-
-    Else If Action = ViewerInput.INSPECTOR_KEY_TOGGLE_FLOOR Then
-
-        Call ToggleFloorAndGrid()
 
     Else If Action = ViewerInput.INSPECTOR_KEY_TOGGLE_DRAGON Then
 
@@ -777,10 +788,6 @@ Sub HandleInspectorKeyboard(PressedKey As Number)
 
         Call ToggleShield()
 
-    Else If Action = ViewerInput.INSPECTOR_KEY_CYCLE_BACKGROUND Then
-
-        Call CycleBackground()
-
     Else If Action = ViewerInput.INSPECTOR_KEY_FRAME_PREVIOUS Then
 
         Call StepAnimationFrame(-1)
@@ -788,41 +795,6 @@ Sub HandleInspectorKeyboard(PressedKey As Number)
     Else If Action = ViewerInput.INSPECTOR_KEY_FRAME_NEXT Then
 
         Call StepAnimationFrame(1)
-
-    Else If Action = ViewerInput.INSPECTOR_KEY_SOCKET_PREVIOUS Then
-
-        Call ViewerRendering.SelectPreviousSocket(
-            Rendering, Character3D.SocketCount(Character))
-
-    Else If Action = ViewerInput.INSPECTOR_KEY_SOCKET_NEXT Then
-
-        Call ViewerRendering.SelectNextSocket(
-            Rendering, Character3D.SocketCount(Character))
-
-    Else If Action = ViewerInput.INSPECTOR_KEY_ORBIT_LEFT Then
-
-        Session.Ready = ViewerCamera.NudgeOrbit(
-            ViewerCameraState, -5, 0) And Session.Ready
-
-    Else If Action = ViewerInput.INSPECTOR_KEY_ORBIT_RIGHT Then
-
-        Session.Ready = ViewerCamera.NudgeOrbit(
-            ViewerCameraState, 5, 0) And Session.Ready
-
-    Else If Action = ViewerInput.INSPECTOR_KEY_ORBIT_UP Then
-
-        Session.Ready = ViewerCamera.NudgeOrbit(
-            ViewerCameraState, 0, -5) And Session.Ready
-
-    Else If Action = ViewerInput.INSPECTOR_KEY_ORBIT_DOWN Then
-
-        Session.Ready = ViewerCamera.NudgeOrbit(
-            ViewerCameraState, 0, 5) And Session.Ready
-
-    Else If Action = ViewerInput.INSPECTOR_KEY_PAN Then
-
-        Session.Ready = ViewerCamera.NudgePan(
-            ViewerCameraState, 5, 0) And Session.Ready
 
     Else If Action = ViewerInput.INSPECTOR_KEY_CLIP_1 Then
 
@@ -844,14 +816,6 @@ Sub HandleInspectorKeyboard(PressedKey As Number)
 
             Call ResetAll()
         End If
-
-    Else If Action = ViewerInput.INSPECTOR_KEY_TOGGLE_ORBIT Then
-
-        Call ViewerCamera.ToggleAutoOrbit(ViewerCameraState)
-
-    Else If Action = ViewerInput.INSPECTOR_KEY_TOGGLE_GRID Then
-
-        Rendering.GridVisible = Not Rendering.GridVisible
 
     Else If Action = ViewerInput.INSPECTOR_KEY_CYCLE_PROFILE Then
 
@@ -1684,27 +1648,18 @@ Function HandleInspectorPointer() As Boolean
 
     Else If Action = ViewerUi.INSPECTOR_ACTION_FIT Then
 
-        ViewerCameraState.FitLocked = Not ViewerCameraState.FitLocked
-
-        If ViewerCameraState.FitLocked Then
-
-            ViewerCameraState.LastFitWidth = -1
-            ViewerCameraState.LastFitHeight = -1
-
-            Call ViewerCamera.UpdateResponsiveFit(
-                ViewerCameraState,
-                ActiveProfile,
-                Window_Width(),
-                Window_Height(),
-                Max(1, Window_Width() - 284),
-                DragonState.Available,
-                ARENA_CAMERA_CENTER_X,
-                ARENA_CAMERA_CENTER_Z,
-                ARENA_CAMERA_DISTANCE,
-                ARENA_CAMERA_HEIGHT
-            )
-
-        End If
+        Call ViewerCamera.ToggleResponsiveFit(
+            ViewerCameraState,
+            ActiveProfile,
+            Window_Width(),
+            Window_Height(),
+            Max(1, Window_Width() - 284),
+            DragonState.Available,
+            ARENA_CAMERA_CENTER_X,
+            ARENA_CAMERA_CENTER_Z,
+            ARENA_CAMERA_DISTANCE,
+            ARENA_CAMERA_HEIGHT
+        )
 
     Else If Action >= ViewerUi.INSPECTOR_ACTION_CLIP_BASE Then
 

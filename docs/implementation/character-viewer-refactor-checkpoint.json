@@ -48,7 +48,7 @@
   ],
   "currentExtractionCommitRange": {
     "first": "9a616ef35adae9b0c5bbc864ecf689bbd6fc1aed",
-    "lastCommittedBeforeCurrentCheckpoint": "7647dc24d0b2b04ef053c7374da88230a0ca812c"
+    "lastCommittedBeforeCurrentCheckpoint": "e077b4dc61fd4ad920125e4e6a76869eeaf6c09b"
   },
   "programMetrics": {
     "initialAudit": {
@@ -68,11 +68,11 @@
       "sha256": "17853B7B210061F9D46D70913AABA39C4F798503F69C2E8CCA4D8511646AC670"
     },
     "current": {
-      "checkpoint": "inspector-rendering-vfx-command-workflow",
-      "baseCommit": "7647dc24d0b2b04ef053c7374da88230a0ca812c",
-      "lines": 3146,
+      "checkpoint": "inspector-keyboard-navigation-camera-fit",
+      "baseCommit": "e077b4dc61fd4ad920125e4e6a76869eeaf6c09b",
+      "lines": 3101,
       "procedures": 81,
-      "sha256": "F54B86BDF07316EC880D01476EE45D7CA457F7E060F6C011F61BD33EEC9B2D2E"
+      "sha256": "7244E046769969AB933035F94FED64E7C858690F171ACD10C398F08DD1CDEFDF"
     }
   },
   "substantialResponsibilitiesMovedFromProgram": [
@@ -87,7 +87,8 @@
     "presentation audio, storm routing, shared sliders and inspector key policy",
     "frame-repeat and timeline capture transitions plus timeline seek, drag, duplicate-key and persistence workflow",
     "calibration-panel selection, navigation, clear confirmation, key command, Hold Grip and decouple routing",
-    "inspector rendering and VFX action mapping with explicit owner readiness"
+    "inspector rendering and VFX action mapping with explicit owner readiness",
+    "keyboard rendering and camera navigation routing plus responsive-fit state transitions"
   ],
   "currentDestinationOwners": [
     "ViewerActors",
@@ -131,7 +132,9 @@
     "calibration-panel selection, navigation, clear confirmation, key commands, Hold Grip and decouple routing moved to ViewerCalibrationControls",
     "ten one-command calibration wrappers were deleted and the isolated fixture now calls the production command owner",
     "inspector lighting, material, socket, background, floor/grid and seven VFX action routes moved through ViewerInspectorCommands with rendering/effect state retained by those owners",
-    "Program.smile reduced from 3183 lines and 81 procedures to 3146 lines and 81 procedures without formatting compression"
+    "keyboard floor/background/socket/grid and orbit/pan/auto-orbit action routes moved through ViewerInspectorCommands",
+    "responsive-fit toggle and immediate recomposition moved with ViewerCamera.State",
+    "Program.smile reduced from 3146 lines and 81 procedures to 3101 lines and 81 procedures without formatting compression"
   ],
   "validation": [
     "PASS: 308 shared compiler/language tests",
@@ -155,7 +158,11 @@
     "PASS: inspector rendering/VFX command extraction native/generated-Web hardening with direct no-op, readiness, rendering-state and independent VFX-toggle assertions",
     "PASS: inspector rendering/VFX extraction Release Desktop Viewer build with 46 published assets",
     "PASS: inspector rendering/VFX extraction Release Full Web Viewer build with 35 published assets",
-    "PASS: post-extraction repository style check for 403 SMILE files"
+    "PASS: post-extraction repository style check for 403 SMILE files",
+    "PASS: corrected focused native keyboard/camera assertions, including established x3 orbit sensitivity and responsive-fit recomposition",
+    "PASS: keyboard-navigation/camera-fit checkpoint native/generated-Web hardening with exact console parity",
+    "PASS: keyboard-navigation/camera-fit checkpoint Release Desktop 46-asset and Full Web 35-asset builds",
+    "PASS: post-extraction repository style check for 404 SMILE files"
   ],
   "pendingValidation": [
     "final Character Viewer native and installed-Chrome acceptance after remaining extractions"

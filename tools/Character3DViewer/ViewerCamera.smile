@@ -423,6 +423,36 @@ Public Sub UpdateResponsiveFit(ByRef Value As State, Profile As CharacterViewer.
 
 End Sub
 
+Public Sub ToggleResponsiveFit(ByRef Value As State,
+    Profile As CharacterViewer.Profile, WindowWidth As Number,
+    WindowHeight As Number, ContentWidth As Number,
+    DragonAvailable As Boolean, ArenaCenterX As Number,
+    ArenaCenterZ As Number, ArenaDistance As Number, ArenaHeight As Number)
+
+    Value.FitLocked = Not Value.FitLocked
+
+    If Not Value.FitLocked Then
+        Return
+    End If
+
+    Value.LastFitWidth = -1
+    Value.LastFitHeight = -1
+
+    Call UpdateResponsiveFit(
+        Value,
+        Profile,
+        WindowWidth,
+        WindowHeight,
+        ContentWidth,
+        DragonAvailable,
+        ArenaCenterX,
+        ArenaCenterZ,
+        ArenaDistance,
+        ArenaHeight
+    )
+
+End Sub
+
 Public Sub BeginCalibrationOrbitAnchor(ByRef Value As State, Origin As Core.Vector3,
     PointerX As Number, PointerY As Number, WindowWidth As Number,
     WindowHeight As Number)

@@ -182,7 +182,8 @@ try {
         'CharacterViewer.AdvanceZoom(',
         'BattleCamera.Orbit(',
         'CharacterViewer.KeepCursorAnchor(',
-        'Public Sub UpdateResponsiveFit(')) {
+        'Public Sub UpdateResponsiveFit(',
+        'Public Sub ToggleResponsiveFit(')) {
         Assert-Contains $cameraSource $contract 'Viewer camera owner'
     }
     foreach ($contract in @(
@@ -267,6 +268,7 @@ try {
     foreach ($contract in @(
         'Public Type OperationResult',
         'Public Function ApplyPresentationAction(',
+        'Public Function ApplyKeyboardNavigationAction(',
         'ViewerRendering.CycleLighting(Rendering)',
         'ViewerRendering.CycleMaterialInspection(Rendering)',
         'ViewerRendering.CycleSocketDisplay(Rendering)',
@@ -545,6 +547,7 @@ try {
         'Public Function DrawSocketGizmos(',
         'Public Sub DestroySocketGizmos(',
         'Public Sub CycleSocketDisplay(',
+        'Public Sub ToggleGrid(',
         'Public Function ArenaFloorExtent(')) {
         Assert-Contains $renderingSource $contract 'Viewer rendering owner'
     }
@@ -616,6 +619,24 @@ try {
         -not $inspectorPointerSource.Contains('ViewerEffects.ToggleLightningPause(') -and
         -not $inspectorPointerSource.Contains('ViewerEffects.ToggleFlamePause(')) `
         'Inspector rendering and VFX command routing must remain in its focused owner.'
+    $inspectorKeyboardStart = $viewerSource.IndexOf('Sub HandleInspectorKeyboard(')
+    $gizmoKeyboardStart = $viewerSource.IndexOf('Function HandleTransformGizmoKeyboard(')
+    Assert-True ($inspectorKeyboardStart -ge 0 -and
+        $gizmoKeyboardStart -gt $inspectorKeyboardStart) `
+        'Inspector keyboard ownership boundaries must remain discoverable.'
+    $inspectorKeyboardSource = $viewerSource.Substring(
+        $inspectorKeyboardStart, $gizmoKeyboardStart - $inspectorKeyboardStart)
+    Assert-True ($inspectorKeyboardSource.Contains(
+            'ViewerInspectorCommands.ApplyKeyboardNavigationAction(') -and
+        -not $inspectorKeyboardSource.Contains('ViewerCamera.NudgeOrbit(') -and
+        -not $inspectorKeyboardSource.Contains('ViewerCamera.NudgePan(') -and
+        -not $inspectorKeyboardSource.Contains('ViewerRendering.SelectPreviousSocket(') -and
+        -not $inspectorKeyboardSource.Contains('ViewerRendering.SelectNextSocket(') -and
+        -not $inspectorKeyboardSource.Contains('Rendering.GridVisible = Not')) `
+        'Inspector keyboard camera and rendering routing must remain in its focused owner.'
+    Assert-True ($viewerSource.Contains('ViewerCamera.ToggleResponsiveFit(') -and
+        -not $viewerSource.Contains('ViewerCameraState.FitLocked = Not')) `
+        'Responsive-fit transition behavior must remain with camera state.'
     Assert-True (-not $viewerSource.Contains('Sub AdjustCalibrationValue(') -and
         -not $viewerSource.Contains('Sub UpdateTransformGizmoFromPointer(') -and
         -not $viewerSource.Contains('ViewerGizmo.DragValueAmount(') -and

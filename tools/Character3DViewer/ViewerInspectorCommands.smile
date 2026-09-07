@@ -4,6 +4,8 @@ Module Smile.Tools.Character3DViewerInspectorCommands
 Option Explicit
 
 Import Smile.Tools.Character3DViewerEffects As ViewerEffects
+Import Smile.Tools.Character3DViewerCamera As ViewerCamera
+Import Smile.Tools.Character3DViewerInput As ViewerInput
 Import Smile.Tools.Character3DViewerRendering As ViewerRendering
 Import Smile.Tools.Character3DViewerUi As ViewerUi
 
@@ -44,6 +46,47 @@ Public Function ApplyPresentationAction(Action As Number,
         Call ViewerEffects.ToggleFlamePause(Effects)
     Else If Action = ViewerUi.INSPECTOR_ACTION_SHIELD_FIRE_STYLE Then
         Call ViewerEffects.ToggleShieldFireStyle(Effects)
+    Else
+        Return Result
+    End If
+
+    Result.Handled = True
+
+    Return Result
+
+End Function
+
+Public Function ApplyKeyboardNavigationAction(Action As Number,
+    ByRef Rendering As ViewerRendering.State, BackgroundCount As Number,
+    SocketCount As Number,
+    ByRef Camera As ViewerCamera.State) As OperationResult
+
+    Dim Result As OperationResult
+
+    Result.Ready = True
+
+    If Action = ViewerInput.INSPECTOR_KEY_TOGGLE_FLOOR Then
+        Call ViewerRendering.ToggleFloorAndGrid(Rendering)
+    Else If Action = ViewerInput.INSPECTOR_KEY_CYCLE_BACKGROUND Then
+        Call ViewerRendering.CycleBackground(Rendering, BackgroundCount)
+    Else If Action = ViewerInput.INSPECTOR_KEY_SOCKET_PREVIOUS Then
+        Call ViewerRendering.SelectPreviousSocket(Rendering, SocketCount)
+    Else If Action = ViewerInput.INSPECTOR_KEY_SOCKET_NEXT Then
+        Call ViewerRendering.SelectNextSocket(Rendering, SocketCount)
+    Else If Action = ViewerInput.INSPECTOR_KEY_ORBIT_LEFT Then
+        Result.Ready = ViewerCamera.NudgeOrbit(Camera, -5, 0)
+    Else If Action = ViewerInput.INSPECTOR_KEY_ORBIT_RIGHT Then
+        Result.Ready = ViewerCamera.NudgeOrbit(Camera, 5, 0)
+    Else If Action = ViewerInput.INSPECTOR_KEY_ORBIT_UP Then
+        Result.Ready = ViewerCamera.NudgeOrbit(Camera, 0, -5)
+    Else If Action = ViewerInput.INSPECTOR_KEY_ORBIT_DOWN Then
+        Result.Ready = ViewerCamera.NudgeOrbit(Camera, 0, 5)
+    Else If Action = ViewerInput.INSPECTOR_KEY_PAN Then
+        Result.Ready = ViewerCamera.NudgePan(Camera, 5, 0)
+    Else If Action = ViewerInput.INSPECTOR_KEY_TOGGLE_ORBIT Then
+        Call ViewerCamera.ToggleAutoOrbit(Camera)
+    Else If Action = ViewerInput.INSPECTOR_KEY_TOGGLE_GRID Then
+        Call ViewerRendering.ToggleGrid(Rendering)
     Else
         Return Result
     End If

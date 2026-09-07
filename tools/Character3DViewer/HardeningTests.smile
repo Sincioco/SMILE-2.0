@@ -258,6 +258,30 @@ Call ViewerCamera.CancelPointerControls(CameraState)
 Call Check(Not CameraState.Controls.Orbiting And Not CameraState.Controls.Panning)
 Call Check(CameraState.PanPointerRemainderX = 0 And CameraState.OrbitPointerRemainderY = 0)
 
+CameraState.Controls.OrbitYaw = 0
+InspectorOperation = ViewerInspectorCommands.ApplyKeyboardNavigationAction(
+    ViewerInput.INSPECTOR_KEY_ORBIT_LEFT,
+    RenderingState, 5, 4, CameraState)
+
+Call CheckNamed(InspectorOperation.Handled And InspectorOperation.Ready,
+    "Keyboard camera command handled")
+Call CheckNamed(CameraState.Controls.OrbitYaw = -15,
+    "Keyboard camera command applies left orbit")
+
+InspectorOperation = ViewerInspectorCommands.ApplyKeyboardNavigationAction(
+    ViewerInput.INSPECTOR_KEY_TOGGLE_GRID,
+    RenderingState, 5, 4, CameraState)
+
+Call CheckNamed(InspectorOperation.Handled And RenderingState.GridVisible,
+    "Keyboard rendering command toggles grid")
+
+InspectorOperation = ViewerInspectorCommands.ApplyKeyboardNavigationAction(
+    ViewerInput.INSPECTOR_KEY_NONE,
+    RenderingState, 5, 4, CameraState)
+
+Call CheckNamed(Not InspectorOperation.Handled And InspectorOperation.Ready,
+    "Unknown keyboard command remains ready no-op")
+
 CalibrationState.KeyBase = 0
 
 Call ViewerCalibration.ResetBank(CalibrationState)
@@ -1698,6 +1722,23 @@ Bounds.Center.Y = 500
 Bounds.Size.X = 500
 Bounds.Size.Y = 1000
 Bounds.Size.Z = 300
+
+CameraState.LocalBounds = Bounds
+CameraState.FitLocked = True
+
+Call ViewerCamera.ToggleResponsiveFit(
+    CameraState, Profile, 800, 640, 516,
+    False, 0, 0, 1200, 180)
+
+Call CheckNamed(Not CameraState.FitLocked, "Responsive fit toggles off")
+
+Call ViewerCamera.ToggleResponsiveFit(
+    CameraState, Profile, 800, 640, 516,
+    False, 0, 0, 1200, 180)
+
+Call CheckNamed(CameraState.FitLocked And CameraState.LastFitWidth = 800 And
+    CameraState.LastFitHeight = 640, "Responsive fit toggles on and recomputes")
+
 Frame = CharacterViewer.AutoFit(Profile, Bounds)
 
 Call Check(Frame.Valid)
@@ -1857,5 +1898,15 @@ Sub Check(Condition As Boolean)
     If Not Condition Then
         Failures = Failures + 1
     End If
+
+End Sub
+
+Sub CheckNamed(Condition As Boolean, Label As Text)
+
+    If Not Condition Then
+        Print "FAIL: "; Label
+    End If
+
+    Call Check(Condition)
 
 End Sub
