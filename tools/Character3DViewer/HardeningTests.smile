@@ -123,6 +123,7 @@ Dim PartyResponse As ViewerParty.PointerResponse
 Dim EffectsState As ViewerEffects.State
 Dim DragonState As ViewerDragon.State
 Dim RenderingState As ViewerRendering.State
+Dim RenderingFrameResult As ViewerRendering.FrameResult
 Dim InspectorOperation As ViewerInspectorCommands.OperationResult
 Dim InspectorApplicationCommand As ViewerInspectorCommands.ApplicationCommandResult
 Dim InspectorIdentityView As ViewerInspectorPresentation.IdentityView
@@ -2184,6 +2185,16 @@ Call ViewerRendering.CreateArena(RenderingState, 100, 100)
 Call CheckNamed(ViewerRendering.ArenaReady(RenderingState) And
     RenderingState.FloorVisible And RenderingState.GridVisible,
     "Rendering owner creates visible arena")
+
+RenderingFrameResult.Ready = True
+
+Call ViewerRendering.CaptureFrameResult(RenderingFrameResult, True, 8)
+Call ViewerRendering.CaptureFrameResult(RenderingFrameResult, False, 12)
+Call ViewerRendering.CaptureFrameResult(RenderingFrameResult, False, 13)
+
+Call CheckNamed(Not RenderingFrameResult.Ready And
+    RenderingFrameResult.FailureStage = 12,
+    "Rendering owner preserves the first scene failure stage")
 
 Call ViewerRendering.DestroyArena(RenderingState)
 

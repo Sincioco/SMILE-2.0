@@ -10,6 +10,10 @@ Import Smile.Simple3D.Core As Core
 Import Smile.Simple3D.Graphics3D As Graphics3D
 Import Smile.Simple3D.Scene3D As Scene3D
 Import Smile.Simple3D.StaticBackdrop3D As StaticBackdrop3D
+Import Smile.Tools.Character3DViewerActors As ViewerActors
+Import Smile.Tools.Character3DViewerDragon As ViewerDragon
+Import Smile.Tools.Character3DViewerEffects As ViewerEffects
+Import Smile.Tools.Character3DViewerParty As ViewerParty
 
 Public Type State
     Arena As Arena3D.ArenaFloor
@@ -29,6 +33,11 @@ Public Type State
     SocketMarkerMaterial As Core.Material3D
     SelectedSocket As Number
     ShowAllSocketOrigins As Boolean
+End Type
+
+Public Type FrameResult
+    Ready As Boolean
+    FailureStage As Number
 End Type
 
 Public Sub Reset(ByRef Value As State, BackgroundIndex As Number)
@@ -292,6 +301,133 @@ Public Function BeginScene(ByRef Value As State, Camera As Core.Camera3D) As Boo
 
 End Function
 
+Public Sub CaptureFrameResult(ByRef Result As FrameResult,
+    OperationReady As Boolean, FailureStage As Number)
+
+    If Not OperationReady And Result.FailureStage = 0 Then
+        Result.FailureStage = FailureStage
+    End If
+
+    Result.Ready = OperationReady And Result.Ready
+
+End Sub
+
+Private Sub DrawEnvironment(ByRef Result As FrameResult,
+    ByRef Value As State, ByRef Dragon As ViewerDragon.State,
+    DragonInspection As Boolean)
+
+    If Value.FloorVisible Then
+        Call CaptureFrameResult(Result, DrawFloor(Value), 9)
+    End If
+
+    If Value.GridVisible Then
+        Call CaptureFrameResult(Result, DrawGrid(Value), 10)
+    End If
+
+    If Dragon.Visible And Not DragonInspection Then
+        Call CaptureFrameResult(Result, ViewerDragon.Draw(Dragon), 11)
+    End If
+
+End Sub
+
+Private Sub DrawParticipants(ByRef Result As FrameResult,
+    ByRef Character As Character3D.Actor,
+    ByRef Party As ViewerParty.State, DragonInspection As Boolean,
+    ByRef Effects As ViewerEffects.State, ProfileIndex As Number,
+    ByRef Equipment As ViewerActors.EquipmentVisibility)
+
+    If Effects.EpicGlowVisible Then
+
+        If ((Not Party.Enabled Or
+            ViewerParty.PresentationState(Party, 0) <> ViewerParty.STATE_KO) And
+            Not ViewerEffects.DrawEquipmentGlow(
+                Effects, ProfileIndex,
+                Equipment.SwordVisible, Equipment.ShieldVisible)) Then
+            Call ViewerEffects.HideEpicGlow(Effects)
+        End If
+
+    End If
+
+    Call CaptureFrameResult(Result, Character3D.Draw(Character), 12)
+
+    If (Party.Enabled Or DragonInspection) And Party.Ready Then
+        Call CaptureFrameResult(
+            Result,
+            ViewerParty.DrawCompanion(
+                Party, Party.Enabled, DragonInspection,
+                Effects.EpicGlowVisible, Equipment.SwordVisible),
+            12)
+    End If
+
+    If DragonInspection Then
+        Call CaptureFrameResult(
+            Result,
+            ViewerParty.DrawDragonOpponent(
+                Party, Party.Enabled, DragonInspection,
+                Effects.EpicGlowVisible, Equipment.SwordVisible),
+            12)
+    End If
+
+End Sub
+
+Private Sub DrawEffectsAndGizmos(ByRef Result As FrameResult,
+    ByRef Value As State, ByRef Effects As ViewerEffects.State,
+    ByRef Dragon As ViewerDragon.State, ProfileIndex As Number,
+    ByRef Equipment As ViewerActors.EquipmentVisibility)
+
+    Call ViewerEffects.DrawEquipmentFire(
+        Effects, Equipment.SwordVisible, Equipment.ShieldVisible)
+
+    Call CaptureFrameResult(Result, ViewerEffects.DrawScene(Effects), 13)
+
+    Call ViewerDragon.DrawEffects(Dragon)
+
+    If Effects.EpicGlowVisible Then
+
+        If Not ViewerEffects.DrawEpicGlow(
+            Effects, ProfileIndex,
+            Equipment.SwordVisible, Equipment.ShieldVisible) Then
+            Call ViewerEffects.HideEpicGlow(Effects)
+        End If
+
+    End If
+
+    If Value.SocketGizmosVisible Then
+        Call CaptureFrameResult(Result, DrawSocketGizmos(Value), 13)
+    End If
+
+    Call CaptureFrameResult(Result, Scene3D.EndScene(), 13)
+
+End Sub
+
+Public Function DrawFrame(ByRef Value As State, Camera As Core.Camera3D,
+    ReadyBeforeDraw As Boolean, ByRef Character As Character3D.Actor,
+    ByRef Party As ViewerParty.State, DragonInspection As Boolean,
+    ByRef Dragon As ViewerDragon.State,
+    ByRef Effects As ViewerEffects.State, ProfileIndex As Number,
+    ByRef Equipment As ViewerActors.EquipmentVisibility) As FrameResult
+
+    Dim Result As FrameResult
+
+    Result.Ready = ReadyBeforeDraw
+
+    Call CaptureFrameResult(Result, BeginScene(Value, Camera), 8)
+
+    If Result.Ready Then
+
+        Call DrawEnvironment(Result, Value, Dragon, DragonInspection)
+        Call DrawParticipants(
+            Result, Character, Party, DragonInspection,
+            Effects, ProfileIndex, Equipment)
+        Call DrawEffectsAndGizmos(
+            Result, Value, Effects, Dragon, ProfileIndex, Equipment)
+
+    End If
+
+    Return Result
+
+End Function
+
 Public Sub DestroyBackdrops(ByRef Value As State)
 
     Dim BackdropCleared As Boolean
@@ -440,16 +576,75 @@ Public Function SocketReferencePart(PartyCharacter As Boolean, Name As Text,
 
 End Function
 
+Private Function SocketPositionThousandths(
+    ByRef Actor As Character3D.Actor, Name As Text,
+    ReferencePart As Number) As Core.Vector3
+
+    Dim Result As Core.Vector3
+
+    Result.X = Character3D.SocketValueThousandths(
+        Actor, Name, Graphics3D.ANIMATOR_SOCKET_POSITION_X, ReferencePart)
+    Result.Y = Character3D.SocketValueThousandths(
+        Actor, Name, Graphics3D.ANIMATOR_SOCKET_POSITION_Y, ReferencePart)
+    Result.Z = Character3D.SocketValueThousandths(
+        Actor, Name, Graphics3D.ANIMATOR_SOCKET_POSITION_Z, ReferencePart)
+
+    Return Result
+
+End Function
+
+Private Function UpdateSocketOriginMarkers(ByRef Value As State,
+    ByRef Actor As Character3D.Actor, PartyCharacter As Boolean,
+    BodyPartIndex As Number, WeaponPartIndex As Number,
+    ShieldPartIndex As Number, SocketCount As Number) As Boolean
+
+    Dim SocketIndex As Number
+    Dim Name As Text
+    Dim Position As Core.Vector3
+    Dim ReferencePart As Number
+    Dim Result As Boolean
+
+    Result = True
+
+    For SocketIndex = 0 To SocketCount - 1
+
+        Name = Character3D.SocketName(Actor, SocketIndex)
+        ReferencePart = SocketReferencePart(
+            PartyCharacter, Name, BodyPartIndex, WeaponPartIndex, ShieldPartIndex)
+        Position = SocketPositionThousandths(Actor, Name, ReferencePart)
+        Result = Graphics3D.SetParticle3D(
+            Value.SocketMarkers,
+            SocketIndex,
+            Position.X / 1000,
+            Position.Y / 1000,
+            Position.Z / 1000,
+            4,
+            0
+        ) And Result
+        Result = Graphics3D.SetParticleColor3D(
+            Value.SocketMarkers,
+            SocketIndex,
+            120,
+            220,
+            255,
+            75
+        ) And Result
+    End For
+
+    Result = Graphics3D.CommitParticleBatch3D(
+        Value.SocketMarkers, SocketCount) And Result
+
+    Return Result
+
+End Function
+
 Public Function UpdateSocketGizmos(ByRef Value As State,
     ByRef Actor As Character3D.Actor, PartyCharacter As Boolean,
     BodyPartIndex As Number, WeaponPartIndex As Number,
     ShieldPartIndex As Number) As Boolean
 
-    Dim SocketIndex As Number
     Dim Name As Text
-    Dim PositionX1000 As Number
-    Dim PositionY1000 As Number
-    Dim PositionZ1000 As Number
+    Dim Position As Core.Vector3
     Dim AxisX1000 As Number
     Dim AxisY1000 As Number
     Dim AxisZ1000 As Number
@@ -465,24 +660,7 @@ Public Function UpdateSocketGizmos(ByRef Value As State,
     Name = Character3D.SocketName(Actor, Value.SelectedSocket)
     ReferencePart = SocketReferencePart(
         PartyCharacter, Name, BodyPartIndex, WeaponPartIndex, ShieldPartIndex)
-    PositionX1000 = Character3D.SocketValueThousandths(
-        Actor,
-        Name,
-        Graphics3D.ANIMATOR_SOCKET_POSITION_X,
-        ReferencePart
-    )
-    PositionY1000 = Character3D.SocketValueThousandths(
-        Actor,
-        Name,
-        Graphics3D.ANIMATOR_SOCKET_POSITION_Y,
-        ReferencePart
-    )
-    PositionZ1000 = Character3D.SocketValueThousandths(
-        Actor,
-        Name,
-        Graphics3D.ANIMATOR_SOCKET_POSITION_Z,
-        ReferencePart
-    )
+    Position = SocketPositionThousandths(Actor, Name, ReferencePart)
 
     For Axis = 0 To 3
 
@@ -521,59 +699,17 @@ Public Function UpdateSocketGizmos(ByRef Value As State,
 
         Call Graphics3D.SetObjectPosition(
             Value.SocketGizmos[Axis],
-            (PositionX1000 + AxisX1000) / 1000,
-            (PositionY1000 + AxisY1000) / 1000,
-            (PositionZ1000 + AxisZ1000) / 1000
+            (Position.X + AxisX1000) / 1000,
+            (Position.Y + AxisY1000) / 1000,
+            (Position.Z + AxisZ1000) / 1000
         )
     End For
 
     If Value.ShowAllSocketOrigins Then
-
-        For SocketIndex = 0 To SocketCount - 1
-
-            Name = Character3D.SocketName(Actor, SocketIndex)
-            ReferencePart = SocketReferencePart(
-                PartyCharacter, Name, BodyPartIndex, WeaponPartIndex, ShieldPartIndex)
-            PositionX1000 = Character3D.SocketValueThousandths(
-                Actor,
-                Name,
-                Graphics3D.ANIMATOR_SOCKET_POSITION_X,
-                ReferencePart
-            )
-            PositionY1000 = Character3D.SocketValueThousandths(
-                Actor,
-                Name,
-                Graphics3D.ANIMATOR_SOCKET_POSITION_Y,
-                ReferencePart
-            )
-            PositionZ1000 = Character3D.SocketValueThousandths(
-                Actor,
-                Name,
-                Graphics3D.ANIMATOR_SOCKET_POSITION_Z,
-                ReferencePart
-            )
-            Result = Graphics3D.SetParticle3D(
-                Value.SocketMarkers,
-                SocketIndex,
-                PositionX1000 / 1000,
-                PositionY1000 / 1000,
-                PositionZ1000 / 1000,
-                4,
-                0
-            ) And Result
-            Result = Graphics3D.SetParticleColor3D(
-                Value.SocketMarkers,
-                SocketIndex,
-                120,
-                220,
-                255,
-                75
-            ) And Result
-        End For
-
-        Result = Graphics3D.CommitParticleBatch3D(
-            Value.SocketMarkers, SocketCount) And Result
-
+        Result = UpdateSocketOriginMarkers(
+            Value, Actor, PartyCharacter,
+            BodyPartIndex, WeaponPartIndex, ShieldPartIndex,
+            SocketCount) And Result
     End If
 
     Return Result

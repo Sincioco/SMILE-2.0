@@ -695,7 +695,19 @@ try {
         Assert-Contains $viewerDragonSource $contract 'Viewer Dragon owner'
     }
     foreach ($contract in @(
+        'Public Type FrameResult',
         'Public Function BeginScene(',
+        'Public Function DrawFrame(',
+        'Public Sub CaptureFrameResult(',
+        'Private Sub DrawEnvironment(',
+        'Private Sub DrawParticipants(',
+        'Private Sub DrawEffectsAndGizmos(',
+        'Call CaptureFrameResult(Result, DrawFloor(Value), 9)',
+        'Call CaptureFrameResult(Result, DrawGrid(Value), 10)',
+        'Call CaptureFrameResult(Result, ViewerDragon.Draw(Dragon), 11)',
+        'Call CaptureFrameResult(Result, Character3D.Draw(Character), 12)',
+        'Call CaptureFrameResult(Result, ViewerEffects.DrawScene(Effects), 13)',
+        'Call CaptureFrameResult(Result, Scene3D.EndScene(), 13)',
         'Public Function PrepareAssetLoading(',
         'Public Function ConfigureShadowArea(',
         'Public Sub ResetControls(',
@@ -708,6 +720,8 @@ try {
         'Public Sub DestroyBackdrops(',
         'SocketGizmos[4] As Core.Object3D',
         'Public Function CreateSocketGizmos(',
+        'Private Function SocketPositionThousandths(',
+        'Private Function UpdateSocketOriginMarkers(',
         'Public Function UpdateSocketGizmos(',
         'Public Function DrawSocketGizmos(',
         'Public Sub DestroySocketGizmos(',
@@ -716,6 +730,21 @@ try {
         'Public Function ArenaFloorExtent(')) {
         Assert-Contains $renderingSource $contract 'Viewer rendering owner'
     }
+    $drawFrameStart = $renderingSource.IndexOf('Public Function DrawFrame(')
+    $destroyBackdropsStart = $renderingSource.IndexOf(
+        'Public Sub DestroyBackdrops(', $drawFrameStart)
+    Assert-True ($drawFrameStart -ge 0 -and
+        $destroyBackdropsStart -gt $drawFrameStart) `
+        'Scene draw transaction boundaries must remain discoverable.'
+    $drawFrameSource = $renderingSource.Substring(
+        $drawFrameStart, $destroyBackdropsStart - $drawFrameStart)
+    $drawEnvironmentCall = $drawFrameSource.IndexOf('Call DrawEnvironment(')
+    $drawParticipantsCall = $drawFrameSource.IndexOf('Call DrawParticipants(')
+    $drawEffectsCall = $drawFrameSource.IndexOf('Call DrawEffectsAndGizmos(')
+    Assert-True ($drawEnvironmentCall -ge 0 -and
+        $drawParticipantsCall -gt $drawEnvironmentCall -and
+        $drawEffectsCall -gt $drawParticipantsCall) `
+        'Scene drawing must preserve environment, participant and effects/gizmo order.'
     Assert-True (-not $viewerSource.Contains('Character3D.SetUnusedAssetCacheLimit(') -and
         -not $viewerSource.Contains('Scene3D.SetShadowArea(') -and
         -not $viewerSource.Contains('Scene3D.SetQuality(') -and
@@ -730,6 +759,14 @@ try {
         -not $viewerSource.Contains('Function ApplyBackdrop(') -and
         -not $viewerSource.Contains('Sub DestroyBackdrop(')) `
         'Load-time renderer, camera and calibration lifecycle must remain in focused owners.'
+    Assert-True ($viewerSource.Contains('ViewerRendering.DrawFrame(') -and
+        -not $viewerSource.Contains('Character3D.Draw(Character)') -and
+        -not $viewerSource.Contains('ViewerParty.DrawCompanion(') -and
+        -not $viewerSource.Contains('ViewerParty.DrawDragonOpponent(') -and
+        -not $viewerSource.Contains('ViewerEffects.DrawScene(') -and
+        -not $viewerSource.Contains('ViewerDragon.DrawEffects(') -and
+        -not $viewerSource.Contains('Scene3D.EndScene()')) `
+        'Ordered scene rendering and first-failure staging must remain in ViewerRendering.'
     $resetAllStart = $viewerSource.IndexOf('Sub ResetAll()')
     $selectClipStart = $viewerSource.IndexOf('Sub SelectClip(')
     Assert-True ($resetAllStart -ge 0 -and $selectClipStart -gt $resetAllStart) `

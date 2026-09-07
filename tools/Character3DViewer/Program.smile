@@ -6,7 +6,6 @@ Import Smile.Simple3D.Character3D As Character3D
 Import Smile.Simple3D.CharacterViewer As CharacterViewer
 Import Smile.Simple3D.Core As Core
 Import Smile.Simple3D.Graphics3D As Graphics3D
-Import Smile.Simple3D.Scene3D As Scene3D
 Import Smile.Tools.Character3DViewerProfiles As ViewerProfiles
 Import Smile.Tools.BattleCamera As BattleCamera
 Import Smile.Tools.Character3DViewerTiming As ViewerTiming
@@ -67,6 +66,7 @@ Dim Character As Character3D.Actor
 Dim CharacterBounds As Character3D.Bounds3D
 Dim ActiveProfile As CharacterViewer.Profile
 Dim Rendering As ViewerRendering.State
+Dim FrameDrawResult As ViewerRendering.FrameResult
 Dim Effects As ViewerEffects.State
 Dim DragonState As ViewerDragon.State
 Dim Key As Number
@@ -307,98 +307,15 @@ Do
             CharacterBounds = Character3D.WorldBounds(Character, ActiveProfile.AnimationMargin)
         End If
 
-        Session.Ready = ViewerRendering.BeginScene(
-            Rendering, ViewerCameraState.Live) And Session.Ready
+        FrameDrawResult = ViewerRendering.DrawFrame(
+            Rendering, ViewerCameraState.Live, Session.Ready,
+            Character, Party, Session.DragonInspection, DragonState,
+            Effects, Session.ProfileIndex, Equipment)
+        Session.Ready = FrameDrawResult.Ready
 
-        Call ViewerSession.CaptureFailure(Session, 8)
-
-        If Session.Ready Then
-
-            If Rendering.FloorVisible Then
-                Session.Ready = ViewerRendering.DrawFloor(Rendering)
-
-                Call ViewerSession.CaptureFailure(Session, 9)
-            End If
-
-            If Rendering.GridVisible Then
-                Session.Ready = ViewerRendering.DrawGrid(Rendering) And Session.Ready
-
-                Call ViewerSession.CaptureFailure(Session, 10)
-            End If
-
-            If DragonState.Visible And Not Session.DragonInspection Then
-                Session.Ready = ViewerDragon.Draw(DragonState) And Session.Ready
-
-                Call ViewerSession.CaptureFailure(Session, 11)
-            End If
-
-            If Effects.EpicGlowVisible Then
-
-                If ((Not Party.Enabled Or
-                    ViewerParty.PresentationState(Party, 0) <> ViewerParty.STATE_KO) And
-                    Not ViewerEffects.DrawEquipmentGlow(
-                        Effects,
-                        Session.ProfileIndex,
-                        Equipment.SwordVisible,
-                        Equipment.ShieldVisible
-                    )) Then
-                    Call ViewerEffects.HideEpicGlow(Effects)
-                End If
-
-            End If
-
-            Session.Ready = Character3D.Draw(Character) And Session.Ready
-
-            If (Party.Enabled Or Session.DragonInspection) And Party.Ready Then
-                Session.Ready = ViewerParty.DrawCompanion(
-                    Party,
-                    Party.Enabled,
-                    Session.DragonInspection,
-                    Effects.EpicGlowVisible,
-                    Equipment.SwordVisible
-                ) And Session.Ready
-            End If
-
-            If Session.DragonInspection Then
-                Session.Ready = ViewerParty.DrawDragonOpponent(
-                    Party,
-                    Party.Enabled,
-                    Session.DragonInspection,
-                    Effects.EpicGlowVisible,
-                    Equipment.SwordVisible
-                ) And Session.Ready
-            End If
-
-            Call ViewerSession.CaptureFailure(Session, 12)
-
-            Call ViewerEffects.DrawEquipmentFire(
-                Effects, Equipment.SwordVisible, Equipment.ShieldVisible)
-
-            Session.Ready = ViewerEffects.DrawScene(Effects) And Session.Ready
-
-            Call ViewerDragon.DrawEffects(DragonState)
-
-            If Effects.EpicGlowVisible Then
-
-                If Not ViewerEffects.DrawEpicGlow(
-                    Effects,
-                    Session.ProfileIndex,
-                    Equipment.SwordVisible,
-                    Equipment.ShieldVisible
-                ) Then
-                    Call ViewerEffects.HideEpicGlow(Effects)
-                End If
-
-            End If
-
-            If Rendering.SocketGizmosVisible Then
-                Session.Ready = ViewerRendering.DrawSocketGizmos(Rendering) And Session.Ready
-            End If
-
-            Session.Ready = Scene3D.EndScene() And Session.Ready
-
-            Call ViewerSession.CaptureFailure(Session, 13)
-
+        If FrameDrawResult.FailureStage <> 0 Then
+            Call ViewerSession.CaptureFailure(
+                Session, FrameDrawResult.FailureStage)
         End If
 
         If Not Session.Ready Then

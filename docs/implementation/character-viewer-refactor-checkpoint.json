@@ -48,7 +48,7 @@
   ],
   "currentExtractionCommitRange": {
     "first": "9a616ef35adae9b0c5bbc864ecf689bbd6fc1aed",
-    "lastCommittedBeforeCurrentCheckpoint": "af03c8dc4b99df344f38332f570ff6050843d3d1"
+    "lastCommittedBeforeCurrentCheckpoint": "b4d46656c341f6076bde1d58cdb6a124d239cfce"
   },
   "programMetrics": {
     "initialAudit": {
@@ -68,11 +68,11 @@
       "sha256": "17853B7B210061F9D46D70913AABA39C4F798503F69C2E8CCA4D8511646AC670"
     },
     "current": {
-      "checkpoint": "interaction-cancellation-party-preview-lifecycle",
-      "baseCommit": "af03c8dc4b99df344f38332f570ff6050843d3d1",
-      "lines": 1967,
+      "checkpoint": "scene-render-transaction",
+      "baseCommit": "b4d46656c341f6076bde1d58cdb6a124d239cfce",
+      "lines": 1884,
       "procedures": 53,
-      "sha256": "D3BD799931568D408E9A327791076788624FB752CAF13EE55CB68689D6E8B3C4"
+      "sha256": "DADC256663B3986D07C08534A85EAB187A8F56D31576863E5A87ED880CB679C6"
     }
   },
   "substantialResponsibilitiesMovedFromProgram": [
@@ -103,7 +103,8 @@
     "whole-Viewer playback/camera/rendering/VFX/Dragon/equipment/UI/input/gizmo reset, presentation reapplication and Party-versus-single restart lifecycle",
     "scalar inspector display capture plus Party-versus-single remaining-time, selected-event, calibration, VFX and camera presentation queries",
     "keyboard pause, frame, clip, recovery and profile application-command policy plus next-presentation selection",
-    "gizmo, camera and timeline capture cancellation plus Party-preview restoration, calibration refresh, VFX history invalidation and Party resume gating"
+    "gizmo, camera and timeline capture cancellation plus Party-preview restoration, calibration refresh, VFX history invalidation and Party resume gating",
+    "ordered scene begin, environment, primary or Party participants, Dragon, shared effects, socket gizmos and scene-end transaction plus first rendering failure-stage capture"
   ],
   "currentDestinationOwners": [
     "ViewerActors",
@@ -128,7 +129,7 @@
     "Party inspector context/calibration adaptation and Party pointer response execution",
     "non-timeline inspector runtime sampling plus interface, slider and gizmo priority ordering",
     "one visible typed whole-Viewer application-command executor shared by keyboard and pointer paths",
-    "explicit scene, Party, gizmo and inspector presentation-group draw ordering",
+    "explicit top-level update, scene, overlay and presentation ordering",
     "narrow Party-preview entry, frame-order calibration-application and session-result adapters",
     "thin UpdateDragon, UpdateBattleAudio and UpdateOrinStorm frame-order adapters"
   ],
@@ -218,7 +219,11 @@
     "Party-preview restoration now keeps playback resume, calibration refresh, capture release and VFX visual-history invalidation in one lifecycle operation",
     "scene-pause resume gating and calibration-edit switch blocking moved into ViewerLifecycle while scene pause still leaves VFX advancing by default",
     "CancelInteractionCaptures, RestorePartyPreview and ToggleScenePause were deleted rather than retained as aliases",
-    "Program.smile reduced from 2007 lines and 56 procedures to 1967 lines and 53 procedures without formatting compression"
+    "Program.smile reduced from 2007 lines and 56 procedures to 1967 lines and 53 procedures without formatting compression",
+    "scene begin, environment, primary or Party participants, Dragon, shared effects, socket gizmos and end-scene implementation moved into ViewerRendering.DrawFrame with a typed first-failure FrameResult",
+    "Program.smile removed its Scene3D import and direct actor, Party, Dragon, effect, socket and scene-end drawing calls while retaining visible top-level frame and overlay order",
+    "ViewerRendering.UpdateSocketGizmos reduced from 139 to 77 lines by extracting position and origin-marker operations inside the same state owner without duplicate implementation",
+    "Program.smile reduced from 1967 lines and 53 procedures to 1884 lines and 53 procedures without formatting compression; ViewerRendering is 779 lines and 37 procedures with a 77-line maximum routine"
   ],
   "validation": [
     "PASS: 308 shared compiler/language tests",
@@ -336,13 +341,18 @@
     "PASS: interaction-cancellation/Party-preview lifecycle Release Desktop Viewer build with 46 published assets",
     "PASS: interaction-cancellation/Party-preview lifecycle Release Full Web Viewer build with 35 published assets",
     "PASS: interaction-cancellation/Party-preview lifecycle launcher, primary/backup recovery, stale-output and preservation fixtures using disposable data and processes",
-    "PASS: interaction-cancellation/Party-preview lifecycle tracked 406-file repository style check"
+    "PASS: interaction-cancellation/Party-preview lifecycle tracked 406-file repository style check",
+    "PASS: scene-render transaction native and generated-Web hardening with exact console parity, direct typed first-failure result assertions and static phase-order/Program-absence guards",
+    "PASS: scene-render transaction Release Desktop Viewer build with 46 published assets",
+    "PASS: scene-render transaction Release Full Web Viewer build with 35 published assets",
+    "PASS: scene-render transaction primary/backup recovery and preservation fixtures using disposable data and processes",
+    "PASS: scene-render transaction tracked 406-file repository style check"
   ],
   "pendingValidation": [
     "final Character Viewer native and installed-Chrome acceptance after remaining extractions"
   ],
   "blockers": [],
-  "nextConcreteAction": "Audit Party inspector context/calibration adaptation and the thin Party, Dragon, audio and storm frame adapters for the next cohesive owner-level lifecycle move without hiding required frame order.",
+  "nextConcreteAction": "Audit Party inspector context/calibration adaptation and every remaining substantial Program.smile routine for the next cohesive owner-level move without hiding required frame or input priority.",
   "nextStages": [
     "R7.5-input-inspector-calibration-reset-ownership",
     "R7.5-startup-session-and-overlay-coordination",
