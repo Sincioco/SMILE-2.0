@@ -1,8 +1,10 @@
-''' Focused inspector routing for rendering and VFX commands that own their state.
+''' Focused inspector routing for presentation commands that borrow their state owners.
 Module Smile.Tools.Character3DViewerInspectorCommands
 
 Option Explicit
 
+Import Smile.Simple3D.Character3D As Character3D
+Import Smile.Tools.Character3DViewerActors As ViewerActors
 Import Smile.Tools.Character3DViewerEffects As ViewerEffects
 Import Smile.Tools.Character3DViewerCamera As ViewerCamera
 Import Smile.Tools.Character3DViewerDragon As ViewerDragon
@@ -11,10 +13,110 @@ Import Smile.Tools.Character3DViewerParty As ViewerParty
 Import Smile.Tools.Character3DViewerRendering As ViewerRendering
 Import Smile.Tools.Character3DViewerUi As ViewerUi
 
+Public Const ACTOR_ACTION_SOURCE_INSPECTOR_POINTER = 1
+Public Const ACTOR_ACTION_SOURCE_INSPECTOR_KEYBOARD = 2
+Public Const ACTOR_ACTION_SOURCE_PARTY_POINTER = 3
+
+Private Const ACTOR_COMMAND_NONE = 0
+Private Const ACTOR_COMMAND_SWORD = 1
+Private Const ACTOR_COMMAND_SHIELD = 2
+Private Const ACTOR_COMMAND_GLOW = 3
+
 Public Type OperationResult
     Handled As Boolean
     Ready As Boolean
 End Type
+
+Public Function ActorPresentationRequiresPrimaryActor(
+    Action As Number, ActionSource As Number) As Boolean
+
+    Dim Command As Number
+    Dim Result As Boolean
+
+    Command = ActorPresentationCommand(Action, ActionSource)
+    Result = (Command = ACTOR_COMMAND_SWORD Or
+        Command = ACTOR_COMMAND_SHIELD)
+
+    Return Result
+
+End Function
+
+Public Function ApplyActorPresentationAction(
+    Action As Number, ActionSource As Number,
+    ByRef Equipment As ViewerActors.EquipmentVisibility,
+    ByRef Party As ViewerParty.State,
+    ByRef Actor As Character3D.Actor,
+    CalibrationAvailable As Boolean,
+    DragonInspection As Boolean,
+    WeaponPartIndex As Number,
+    ShieldPartIndex As Number,
+    ByRef Effects As ViewerEffects.State) As OperationResult
+
+    Dim Command As Number
+    Dim PartIndex As Number
+    Dim Result As OperationResult
+    Dim Visible As Boolean
+
+    Result.Ready = True
+    Command = ActorPresentationCommand(Action, ActionSource)
+
+    If Command = ACTOR_COMMAND_NONE Then
+        Return Result
+    End If
+
+    Result.Handled = True
+
+    If Command = ACTOR_COMMAND_GLOW Then
+
+        If DragonInspection Then
+            Call ViewerParty.ToggleDragonInspectionGlow(Party)
+        Else
+
+            Call ViewerEffects.ToggleEpicGlow(Effects, Actor)
+        End If
+
+        Return Result
+
+    End If
+
+    If Not DragonInspection And Not CalibrationAvailable Then
+        Return Result
+    End If
+
+    If Command = ACTOR_COMMAND_SWORD Then
+
+        Call ViewerActors.ToggleSwordVisibility(Equipment)
+
+        PartIndex = WeaponPartIndex
+        Visible = Equipment.SwordVisible
+
+    Else
+
+        Call ViewerActors.ToggleShieldVisibility(Equipment)
+
+        PartIndex = ShieldPartIndex
+        Visible = Equipment.ShieldVisible
+
+    End If
+
+    Result.Ready = ViewerParty.ApplyEquipmentVisibility(
+        Party, Actor, CalibrationAvailable, DragonInspection,
+        PartIndex, Visible)
+
+    If Not Visible Then
+
+        If Command = ACTOR_COMMAND_SWORD Then
+            Call ViewerEffects.HideSwordEffects(Effects)
+        Else
+
+            Call ViewerEffects.HideShieldEffects(Effects)
+        End If
+
+    End If
+
+    Return Result
+
+End Function
 
 Public Function ApplyPresentationAction(Action As Number,
     ByRef Rendering As ViewerRendering.State, BackgroundCount As Number,
@@ -137,6 +239,47 @@ Public Function ApplyKeyboardNavigationAction(Action As Number,
     End If
 
     Result.Handled = True
+
+    Return Result
+
+End Function
+
+Private Function ActorPresentationCommand(
+    Action As Number, ActionSource As Number) As Number
+
+    Dim Result As Number
+
+    Result = ACTOR_COMMAND_NONE
+
+    If ActionSource = ACTOR_ACTION_SOURCE_PARTY_POINTER Then
+
+        If Action = ViewerParty.POINTER_ACTION_TOGGLE_SWORD Then
+            Result = ACTOR_COMMAND_SWORD
+        Else If Action = ViewerParty.POINTER_ACTION_TOGGLE_SHIELD Then
+            Result = ACTOR_COMMAND_SHIELD
+        Else If Action = ViewerParty.POINTER_ACTION_TOGGLE_GLOW Then
+            Result = ACTOR_COMMAND_GLOW
+        End If
+
+    Else If ActionSource = ACTOR_ACTION_SOURCE_INSPECTOR_KEYBOARD Then
+
+        If Action = ViewerInput.INSPECTOR_KEY_TOGGLE_SWORD Then
+            Result = ACTOR_COMMAND_SWORD
+        Else If Action = ViewerInput.INSPECTOR_KEY_TOGGLE_SHIELD Then
+            Result = ACTOR_COMMAND_SHIELD
+        End If
+
+    Else If ActionSource = ACTOR_ACTION_SOURCE_INSPECTOR_POINTER Then
+
+        If Action = ViewerUi.INSPECTOR_ACTION_SWORD Then
+            Result = ACTOR_COMMAND_SWORD
+        Else If Action = ViewerUi.INSPECTOR_ACTION_SHIELD Then
+            Result = ACTOR_COMMAND_SHIELD
+        Else If Action = ViewerUi.INSPECTOR_ACTION_GLOW Then
+            Result = ACTOR_COMMAND_GLOW
+        End If
+
+    End If
 
     Return Result
 

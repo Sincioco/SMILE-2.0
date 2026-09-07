@@ -775,17 +775,15 @@ Sub HandleInspectorKeyboard(PressedKey As Number)
         Return
     End If
 
+    If ApplyActorPresentationCommand(
+        Action,
+        ViewerInspectorCommands.ACTOR_ACTION_SOURCE_INSPECTOR_KEYBOARD) Then
+        Return
+    End If
+
     If Action = ViewerInput.INSPECTOR_KEY_TOGGLE_PAUSE Then
 
         Call ToggleScenePause()
-
-    Else If Action = ViewerInput.INSPECTOR_KEY_TOGGLE_SWORD Then
-
-        Call ToggleSword()
-
-    Else If Action = ViewerInput.INSPECTOR_KEY_TOGGLE_SHIELD Then
-
-        Call ToggleShield()
 
     Else If Action = ViewerInput.INSPECTOR_KEY_FRAME_PREVIOUS Then
 
@@ -994,71 +992,37 @@ Sub ToggleDemo()
 
 End Sub
 
-Sub ToggleSword()
+Function ApplyActorPresentationCommand(
+    Action As Number, ActionSource As Number) As Boolean
 
-    If Party.UiBound Then
+    Dim ReturnValue As Boolean
 
+    Dim Result As ViewerInspectorCommands.OperationResult
+    Dim RestoreInspector As Boolean
+
+    RestoreInspector = (Party.UiBound And
+        ViewerInspectorCommands.ActorPresentationRequiresPrimaryActor(
+            Action, ActionSource))
+
+    If RestoreInspector Then
         Call EndPartyInspector()
-        Call ToggleSword()
+    End If
+
+    Result = ViewerInspectorCommands.ApplyActorPresentationAction(
+        Action, ActionSource, Equipment, Party, Character,
+        CalibrationAvailable, Session.DragonInspection,
+        WEAPON_PART_INDEX, SHIELD_PART_INDEX, Effects)
+    Session.Ready = Result.Ready And Session.Ready
+
+    If RestoreInspector Then
         Call BeginPartyInspector()
-
-        Return
-
     End If
 
-    If Not Session.DragonInspection And Not CalibrationAvailable Then
-        Return
-    End If
+    ReturnValue = Result.Handled
 
-    Call ViewerActors.ToggleSwordVisibility(Equipment)
+    Return ReturnValue
 
-    Session.Ready = ViewerParty.ApplyEquipmentVisibility(
-        Party,
-        Character,
-        CalibrationAvailable,
-        Session.DragonInspection,
-        WEAPON_PART_INDEX,
-        Equipment.SwordVisible
-    ) And Session.Ready
-
-    If Not Equipment.SwordVisible Then
-        Call ViewerEffects.HideSwordEffects(Effects)
-    End If
-
-End Sub
-
-Sub ToggleShield()
-
-    If Party.UiBound Then
-
-        Call EndPartyInspector()
-        Call ToggleShield()
-        Call BeginPartyInspector()
-
-        Return
-
-    End If
-
-    If Not Session.DragonInspection And Not CalibrationAvailable Then
-        Return
-    End If
-
-    Call ViewerActors.ToggleShieldVisibility(Equipment)
-
-    Session.Ready = ViewerParty.ApplyEquipmentVisibility(
-        Party,
-        Character,
-        CalibrationAvailable,
-        Session.DragonInspection,
-        SHIELD_PART_INDEX,
-        Equipment.ShieldVisible
-    ) And Session.Ready
-
-    If Not Equipment.ShieldVisible Then
-        Call ViewerEffects.HideShieldEffects(Effects)
-    End If
-
-End Sub
+End Function
 
 Function BeginViewerScene() As Boolean
 
@@ -1093,22 +1057,6 @@ End Function
 Sub DestroyBackdrop()
 
     Call ViewerRendering.DestroyBackdrops(Rendering)
-
-End Sub
-
-Sub ToggleEpicGlow()
-
-    If Session.DragonInspection Then
-
-        Party.DragonOpponent.GlowVisible = Not Party.DragonOpponent.GlowVisible
-        Party.Companion.GlowVisible = Party.DragonOpponent.GlowVisible
-        Return
-
-    End If
-
-    If Effects.EpicGlowAvailable Then
-        Call ViewerEffects.ToggleEpicGlow(Effects, Character)
-    End If
 
 End Sub
 
@@ -1418,6 +1366,12 @@ Function HandleInspectorPointer() As Boolean
         Return Blocked
     End If
 
+    If ApplyActorPresentationCommand(
+        Action,
+        ViewerInspectorCommands.ACTOR_ACTION_SOURCE_INSPECTOR_POINTER) Then
+        Return Blocked
+    End If
+
     If Action = ViewerUi.INSPECTOR_ACTION_FIRST_FRAME Then
 
         Call ApplyTimelineCommand(
@@ -1465,10 +1419,6 @@ Function HandleInspectorPointer() As Boolean
 
         Call CycleProfile()
 
-    Else If Action = ViewerUi.INSPECTOR_ACTION_GLOW Then
-
-        Call ToggleEpicGlow()
-
     Else If Action = ViewerUi.INSPECTOR_ACTION_CALIBRATION Then
 
         ViewerUiState.CalibrationVisible = CalibrationAvailable And Not ViewerUiState.CalibrationVisible
@@ -1480,14 +1430,6 @@ Function HandleInspectorPointer() As Boolean
             Call ViewerGizmo.Hide(ViewerGizmoState)
             Call ViewerInput.CancelCaptures(ViewerInputState)
         End If
-
-    Else If Action = ViewerUi.INSPECTOR_ACTION_SWORD Then
-
-        Call ToggleSword()
-
-    Else If Action = ViewerUi.INSPECTOR_ACTION_SHIELD Then
-
-        Call ToggleShield()
 
     Else If Action = ViewerUi.INSPECTOR_ACTION_DEMO Then
 
@@ -2801,6 +2743,14 @@ Function HandlePartyPointer() As Boolean
 
     End If
 
+    If ApplyActorPresentationCommand(
+        Decision.Action,
+        ViewerInspectorCommands.ACTOR_ACTION_SOURCE_PARTY_POINTER) Then
+        ReturnValue2 = Decision.Consumed
+
+        Return ReturnValue2
+    End If
+
     If Decision.Action = ViewerParty.POINTER_ACTION_RESET_VIEW Then
 
         Call ResetView()
@@ -2809,10 +2759,6 @@ Function HandlePartyPointer() As Boolean
 
         Call ResetPartyInspector()
 
-    Else If Decision.Action = ViewerParty.POINTER_ACTION_TOGGLE_GLOW Then
-
-        Call ToggleEpicGlow()
-
     Else If Decision.Action = ViewerParty.POINTER_ACTION_SPEED_DOWN Then
 
         Call AdjustPlaybackSpeed(-25)
@@ -2820,14 +2766,6 @@ Function HandlePartyPointer() As Boolean
     Else If Decision.Action = ViewerParty.POINTER_ACTION_SPEED_UP Then
 
         Call AdjustPlaybackSpeed(25)
-
-    Else If Decision.Action = ViewerParty.POINTER_ACTION_TOGGLE_SWORD Then
-
-        Call ToggleSword()
-
-    Else If Decision.Action = ViewerParty.POINTER_ACTION_TOGGLE_SHIELD Then
-
-        Call ToggleShield()
 
     Else If Decision.Action = ViewerParty.POINTER_ACTION_TOGGLE_PAUSE Then
 

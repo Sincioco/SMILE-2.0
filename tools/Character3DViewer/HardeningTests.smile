@@ -966,6 +966,61 @@ InspectorOperation = ViewerInspectorCommands.ApplyPartyPresentationAction(
 Call CheckNamed(Not InspectorOperation.Handled And InspectorOperation.Ready,
     "Cross-owner Party action remains unhandled")
 
+Call ViewerActors.ResetEquipmentVisibility(EquipmentVisibility)
+Call Check(ViewerInspectorCommands.ActorPresentationRequiresPrimaryActor(
+    ViewerUi.INSPECTOR_ACTION_SWORD,
+    ViewerInspectorCommands.ACTOR_ACTION_SOURCE_INSPECTOR_POINTER))
+Call Check(ViewerInspectorCommands.ActorPresentationRequiresPrimaryActor(
+    ViewerParty.POINTER_ACTION_TOGGLE_SHIELD,
+    ViewerInspectorCommands.ACTOR_ACTION_SOURCE_PARTY_POINTER))
+Call Check(ViewerInspectorCommands.ActorPresentationRequiresPrimaryActor(
+    ViewerInput.INSPECTOR_KEY_TOGGLE_SWORD,
+    ViewerInspectorCommands.ACTOR_ACTION_SOURCE_INSPECTOR_KEYBOARD))
+Call Check(Not ViewerInspectorCommands.ActorPresentationRequiresPrimaryActor(
+    ViewerUi.INSPECTOR_ACTION_GLOW,
+    ViewerInspectorCommands.ACTOR_ACTION_SOURCE_INSPECTOR_POINTER))
+
+InspectorOperation = ViewerInspectorCommands.ApplyActorPresentationAction(
+    ViewerUi.INSPECTOR_ACTION_SWORD,
+    ViewerInspectorCommands.ACTOR_ACTION_SOURCE_INSPECTOR_POINTER,
+    EquipmentVisibility, PartyState, PartyPrimary.Actor,
+    False, False, 1, 0, EffectsState)
+
+Call CheckNamed(InspectorOperation.Handled And InspectorOperation.Ready And
+    EquipmentVisibility.SwordVisible,
+    "Unavailable equipment command is a handled no-op")
+
+PartyState.DragonOpponent.GlowVisible = False
+PartyState.Companion.GlowVisible = False
+InspectorOperation = ViewerInspectorCommands.ApplyActorPresentationAction(
+    ViewerUi.INSPECTOR_ACTION_GLOW,
+    ViewerInspectorCommands.ACTOR_ACTION_SOURCE_INSPECTOR_POINTER,
+    EquipmentVisibility, PartyState, PartyPrimary.Actor,
+    False, True, 1, 0, EffectsState)
+
+Call CheckNamed(InspectorOperation.Handled And InspectorOperation.Ready And
+    PartyState.DragonOpponent.GlowVisible And PartyState.Companion.GlowVisible,
+    "Dragon inspection glow command updates both opponents")
+
+InspectorOperation = ViewerInspectorCommands.ApplyActorPresentationAction(
+    ViewerParty.POINTER_ACTION_TOGGLE_GLOW,
+    ViewerInspectorCommands.ACTOR_ACTION_SOURCE_PARTY_POINTER,
+    EquipmentVisibility, PartyState, PartyPrimary.Actor,
+    False, True, 1, 0, EffectsState)
+
+Call CheckNamed(InspectorOperation.Handled And
+    Not PartyState.DragonOpponent.GlowVisible And Not PartyState.Companion.GlowVisible,
+    "Party glow command uses the same actor presentation owner")
+
+InspectorOperation = ViewerInspectorCommands.ApplyActorPresentationAction(
+    ViewerParty.POINTER_ACTION_SPEED_UP,
+    ViewerInspectorCommands.ACTOR_ACTION_SOURCE_PARTY_POINTER,
+    EquipmentVisibility, PartyState, PartyPrimary.Actor,
+    False, False, 1, 0, EffectsState)
+
+Call CheckNamed(Not InspectorOperation.Handled And InspectorOperation.Ready,
+    "Unknown actor presentation command remains ready no-op")
+
 Call ViewerRendering.Reset(RenderingState, 3)
 Call ViewerEffects.ResetPlaybackControls(EffectsState)
 Call ViewerCamera.SetAutoOrbit(CameraState, False)

@@ -150,8 +150,7 @@ try {
         'ViewerTimelineEditing.ApplyCommand(',
         'Const FRAME_BUTTON_REPEAT_MILLISECONDS = 300',
         'Const CALIBRATION_MAX_CLIPS = ViewerCalibration.MAX_CLIPS',
-        'Sub ToggleSword()',
-        'Sub ToggleShield()',
+        'Function ApplyActorPresentationCommand(',
         'ViewerEffects.AdvanceScene(',
         'Playback.ScenePaused = Not Playback.ScenePaused',
         'Const ZOOM_IN_LIMIT = -144',
@@ -271,6 +270,11 @@ try {
     }
     foreach ($contract in @(
         'Public Type OperationResult',
+        'Public Const ACTOR_ACTION_SOURCE_INSPECTOR_POINTER = 1',
+        'Public Const ACTOR_ACTION_SOURCE_INSPECTOR_KEYBOARD = 2',
+        'Public Const ACTOR_ACTION_SOURCE_PARTY_POINTER = 3',
+        'Public Function ActorPresentationRequiresPrimaryActor(',
+        'Public Function ApplyActorPresentationAction(',
         'Public Function ApplyPresentationAction(',
         'Public Function ApplyPartyPresentationAction(',
         'Public Function ApplyKeyboardNavigationAction(',
@@ -281,6 +285,13 @@ try {
         'ViewerRendering.ToggleFloorAndGrid(Rendering)',
         'ViewerEffects.ToggleLightningPause(Effects)',
         'ViewerEffects.ToggleFlamePause(Effects)',
+        'ViewerActors.ToggleSwordVisibility(Equipment)',
+        'ViewerActors.ToggleShieldVisibility(Equipment)',
+        'ViewerParty.ApplyEquipmentVisibility(',
+        'ViewerParty.ToggleDragonInspectionGlow(Party)',
+        'ViewerEffects.HideSwordEffects(Effects)',
+        'ViewerEffects.HideShieldEffects(Effects)',
+        'ViewerEffects.ToggleEpicGlow(Effects, Actor)',
         'ViewerDragon.ToggleVisible(Dragon, Effects.DragonLight)')) {
         Assert-Contains $inspectorCommandsSource $contract 'Viewer inspector command owner'
     }
@@ -635,6 +646,8 @@ try {
         $inspectorPointerStart, $sharedSliderStart - $inspectorPointerStart)
     Assert-True ($inspectorPointerSource.Contains(
             'ViewerInspectorCommands.ApplyPresentationAction(') -and
+        $inspectorPointerSource.Contains(
+            'ViewerInspectorCommands.ACTOR_ACTION_SOURCE_INSPECTOR_POINTER') -and
         -not $inspectorPointerSource.Contains('ViewerRendering.CycleLighting(') -and
         -not $inspectorPointerSource.Contains('ViewerRendering.CycleMaterialInspection(') -and
         -not $inspectorPointerSource.Contains('ViewerRendering.CycleSocketDisplay(') -and
@@ -653,6 +666,8 @@ try {
         $inspectorKeyboardStart, $gizmoKeyboardStart - $inspectorKeyboardStart)
     Assert-True ($inspectorKeyboardSource.Contains(
             'ViewerInspectorCommands.ApplyKeyboardNavigationAction(') -and
+        $inspectorKeyboardSource.Contains(
+            'ViewerInspectorCommands.ACTOR_ACTION_SOURCE_INSPECTOR_KEYBOARD') -and
         -not $inspectorKeyboardSource.Contains('ViewerCamera.NudgeOrbit(') -and
         -not $inspectorKeyboardSource.Contains('ViewerCamera.NudgePan(') -and
         -not $inspectorKeyboardSource.Contains('ViewerRendering.SelectPreviousSocket(') -and
@@ -668,6 +683,8 @@ try {
     $partyPointerSource = $viewerSource.Substring($partyPointerStart)
     Assert-True ($partyPointerSource.Contains(
             'ViewerInspectorCommands.ApplyPartyPresentationAction(') -and
+        $partyPointerSource.Contains(
+            'ViewerInspectorCommands.ACTOR_ACTION_SOURCE_PARTY_POINTER') -and
         -not $partyPointerSource.Contains('ViewerRendering.CycleSocketDisplay(') -and
         -not $partyPointerSource.Contains('ViewerRendering.ToggleFloorAndGrid(') -and
         -not $partyPointerSource.Contains('ViewerRendering.CycleBackground(') -and
@@ -678,8 +695,19 @@ try {
         'Party rendering, VFX and camera commands must remain in the focused command owner.'
     Assert-True (-not $viewerSource.Contains('Sub CycleBackground()') -and
         -not $viewerSource.Contains('Sub ToggleFloorAndGrid()') -and
-        -not $viewerSource.Contains('Sub ToggleDragon()')) `
+        -not $viewerSource.Contains('Sub ToggleDragon()') -and
+        -not $viewerSource.Contains('Sub ToggleSword()') -and
+        -not $viewerSource.Contains('Sub ToggleShield()') -and
+        -not $viewerSource.Contains('Sub ToggleEpicGlow()') -and
+        -not $viewerSource.Contains('ViewerActors.ToggleSwordVisibility(') -and
+        -not $viewerSource.Contains('ViewerActors.ToggleShieldVisibility(') -and
+        -not $viewerSource.Contains('ViewerParty.ApplyEquipmentVisibility(') -and
+        -not $viewerSource.Contains('ViewerEffects.HideSwordEffects(') -and
+        -not $viewerSource.Contains('ViewerEffects.HideShieldEffects(') -and
+        -not $viewerSource.Contains('Party.DragonOpponent.GlowVisible = Not')) `
         'Deleted presentation pass-through wrappers must not return to Program.smile.'
+    Assert-Contains $partySource 'Public Sub ToggleDragonInspectionGlow(' `
+        'Viewer Party glow-state owner'
     $inspectorDrawStart = $viewerSource.IndexOf('Sub DrawInspectorOverlay()')
     $viewerTitleStart = $viewerSource.IndexOf('Function ViewerTitle()')
     Assert-True ($inspectorDrawStart -ge 0 -and $viewerTitleStart -gt $inspectorDrawStart) `

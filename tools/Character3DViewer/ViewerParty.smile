@@ -227,6 +227,13 @@ Public Function ApplyEquipmentVisibility(ByRef Value As State,
 
 End Function
 
+Public Sub ToggleDragonInspectionGlow(ByRef Value As State)
+
+    Value.DragonOpponent.GlowVisible = Not Value.DragonOpponent.GlowVisible
+    Value.Companion.GlowVisible = Value.DragonOpponent.GlowVisible
+
+End Sub
+
 Public Function HomePosition(ByRef Value As State, MemberIndex As Number) As Core.Vector3
 
     Dim Result As Core.Vector3

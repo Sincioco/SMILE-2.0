@@ -51,13 +51,25 @@ Call SelectCharacterTab(2)
 Call CalibrationCheck(Session.Ready And Not Session.ViewerError And Party.Ready,
     "Dragon loads both calibrated companions")
 Call CheckDragonFireContinuity()
-Call ToggleSword()
-Call ToggleShield()
+
+TestTransactionResult = ApplyActorPresentationCommand(
+    ViewerUi.INSPECTOR_ACTION_SWORD,
+    ViewerInspectorCommands.ACTOR_ACTION_SOURCE_INSPECTOR_POINTER)
+TestTransactionResult = ApplyActorPresentationCommand(
+    ViewerUi.INSPECTOR_ACTION_SHIELD,
+    ViewerInspectorCommands.ACTOR_ACTION_SOURCE_INSPECTOR_POINTER) And TestTransactionResult
+
 Call CalibrationCheck(Session.Ready And Not Equipment.SwordVisible And
     Not Equipment.ShieldVisible,
     "Dragon inspection applies hidden equipment intent to both opponents")
-Call ToggleSword()
-Call ToggleShield()
+
+TestTransactionResult = ApplyActorPresentationCommand(
+    ViewerUi.INSPECTOR_ACTION_SWORD,
+    ViewerInspectorCommands.ACTOR_ACTION_SOURCE_INSPECTOR_POINTER)
+TestTransactionResult = ApplyActorPresentationCommand(
+    ViewerUi.INSPECTOR_ACTION_SHIELD,
+    ViewerInspectorCommands.ACTOR_ACTION_SOURCE_INSPECTOR_POINTER) And TestTransactionResult
+
 Call CalibrationCheck(Session.Ready And Equipment.SwordVisible And
     Equipment.ShieldVisible,
     "Dragon inspection restores equipment visibility for both opponents")
@@ -70,13 +82,25 @@ Call CalibrationCheck(
     Calibration.KeyBase = 0 And
     Session.ProfileIndex = ViewerProfiles.PROFILE_ARIN,
     "Party owner creates the calibrated companion without replacing primary context")
-Call ToggleSword()
-Call ToggleShield()
+
+TestTransactionResult = ApplyActorPresentationCommand(
+    ViewerUi.INSPECTOR_ACTION_SWORD,
+    ViewerInspectorCommands.ACTOR_ACTION_SOURCE_INSPECTOR_POINTER)
+TestTransactionResult = ApplyActorPresentationCommand(
+    ViewerUi.INSPECTOR_ACTION_SHIELD,
+    ViewerInspectorCommands.ACTOR_ACTION_SOURCE_INSPECTOR_POINTER) And TestTransactionResult
+
 Call CalibrationCheck(Session.Ready And Not Equipment.SwordVisible And
     Not Equipment.ShieldVisible,
     "Party mode applies hidden equipment intent to both calibrated heroes")
-Call ToggleSword()
-Call ToggleShield()
+
+TestTransactionResult = ApplyActorPresentationCommand(
+    ViewerUi.INSPECTOR_ACTION_SWORD,
+    ViewerInspectorCommands.ACTOR_ACTION_SOURCE_INSPECTOR_POINTER)
+TestTransactionResult = ApplyActorPresentationCommand(
+    ViewerUi.INSPECTOR_ACTION_SHIELD,
+    ViewerInspectorCommands.ACTOR_ACTION_SOURCE_INSPECTOR_POINTER) And TestTransactionResult
+
 Call CalibrationCheck(Session.Ready And Equipment.SwordVisible And
     Equipment.ShieldVisible,
     "Party mode restores equipment visibility for both calibrated heroes")

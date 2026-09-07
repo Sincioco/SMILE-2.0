@@ -48,7 +48,7 @@
   ],
   "currentExtractionCommitRange": {
     "first": "9a616ef35adae9b0c5bbc864ecf689bbd6fc1aed",
-    "lastCommittedBeforeCurrentCheckpoint": "e105449f19553a7a9f982513fc17d03d4d5a53f7"
+    "lastCommittedBeforeCurrentCheckpoint": "b6f4d524385325b02dc6619a56a5b47a6f7eb716"
   },
   "programMetrics": {
     "initialAudit": {
@@ -68,11 +68,11 @@
       "sha256": "17853B7B210061F9D46D70913AABA39C4F798503F69C2E8CCA4D8511646AC670"
     },
     "current": {
-      "checkpoint": "playback-timeline-command-workflow-ownership",
-      "baseCommit": "e105449f19553a7a9f982513fc17d03d4d5a53f7",
-      "lines": 2848,
-      "procedures": 69,
-      "sha256": "B4EC280380DD80E08992CF5FD9CE8DE4FDE752DF7D1C213EE147E87364922274"
+      "checkpoint": "actor-presentation-command-workflow-ownership",
+      "baseCommit": "b6f4d524385325b02dc6619a56a5b47a6f7eb716",
+      "lines": 2786,
+      "procedures": 67,
+      "sha256": "C73C6E51322FC219A72014484F7846EC2A5BD04FFB63F67BB7CC5E0D1C606D10"
     }
   },
   "substantialResponsibilitiesMovedFromProgram": [
@@ -92,7 +92,8 @@
     "four ordered inspector presentation groups plus Party-owned target-label and remaining-time queries",
     "Party rendering, VFX and camera presentation commands plus cross-input Dragon visibility routing",
     "gizmo keyboard and pointer command execution plus explicit Party-preview requirements",
-    "frame stepping, first-frame seek, adjacent-key navigation, pointer seek and keyframe-drag start command execution"
+    "frame stepping, first-frame seek, adjacent-key navigation, pointer seek and keyframe-drag start command execution",
+    "sword and shield visibility commands, participant propagation, hidden-effect cleanup and Dragon-inspection glow synchronization"
   ],
   "currentDestinationOwners": [
     "ViewerActors",
@@ -111,7 +112,7 @@
   ],
   "substantialResponsibilitiesStillInProgram": [
     "startup, retry and character-tab orchestration",
-    "Party inspector calibration adaptation and cross-owner Party reset, equipment, playback and glow pointer actions",
+    "Party inspector calibration adaptation and cross-owner Party reset and playback pointer actions",
     "broad inspector and keyboard action dispatch plus slider and gizmo priority ordering",
     "reset orchestration and cross-owner scene, Party and gizmo ordering",
     "narrow Party-preview, frame-order calibration-application and session-result adapters",
@@ -152,7 +153,10 @@
     "Program.smile reduced from 3001 lines and 78 procedures to 2890 lines and 73 procedures without formatting compression",
     "frame stepping, first-frame seek, adjacent-key navigation, pointer seek and keyframe-drag start moved into ViewerTimelineEditing with explicit owner borrows",
     "four command-specific procedures were deleted and the fifth became one thin runtime, Party-preview and session-result adapter",
-    "Program.smile reduced from 2890 lines and 73 procedures to 2848 lines and 69 procedures without formatting compression"
+    "Program.smile reduced from 2890 lines and 73 procedures to 2848 lines and 69 procedures without formatting compression",
+    "sword and shield visibility, participant propagation, hidden-effect cleanup and Dragon-inspection glow synchronization route through ViewerInspectorCommands to their state owners",
+    "three presentation-control procedures were replaced by one primary-context and session-result adapter",
+    "Program.smile reduced from 2848 lines and 69 procedures to 2786 lines and 67 procedures without formatting compression"
   ],
   "validation": [
     "PASS: 308 shared compiler/language tests",
@@ -200,13 +204,18 @@
     "PASS: post-timeline-command 42-check isolated calibration integration and 58 native graphics, pointer-input and audio-focus checks",
     "PASS: playback/timeline command-workflow Release Desktop Viewer build with 46 published assets",
     "PASS: playback/timeline command-workflow Release Full Web Viewer build with 35 published assets",
-    "PASS: post-timeline-command repository style check for 405 SMILE files"
+    "PASS: post-timeline-command repository style check for 405 SMILE files",
+    "PASS: actor-presentation command-workflow native/generated-Web hardening with exact console parity and direct source-domain, no-op and Dragon-glow assertions",
+    "PASS: post-actor-presentation 42-check isolated calibration integration and 58 native graphics, pointer-input and audio-focus checks",
+    "PASS: actor-presentation command-workflow Release Desktop Viewer build with 46 published assets",
+    "PASS: actor-presentation command-workflow Release Full Web Viewer build with 35 published assets",
+    "PASS: post-actor-presentation repository style check for 405 SMILE files"
   ],
   "pendingValidation": [
     "final Character Viewer native and installed-Chrome acceptance after remaining extractions"
   ],
   "blockers": [],
-  "nextConcreteAction": "Move the broad inspector and Party pointer command dispatch into focused owner operations without introducing whole-application state.",
+  "nextConcreteAction": "Move the remaining playback and reset command behavior out of the broad inspector and Party pointer dispatch without introducing whole-application state.",
   "nextStages": [
     "R7.5-input-inspector-calibration-reset-ownership",
     "R7.5-startup-session-and-overlay-coordination",
