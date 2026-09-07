@@ -262,7 +262,11 @@ try {
         'Private Function ApplyNavigation(',
         'Private Function ApplyKeyCommand(',
         'Private Function ApplyLocalCommand(',
-        'Public Function ApplyPointerAction(')) {
+        'Public Function ApplyPointerAction(',
+        'Public Function GizmoPointerRequiresPartyPreview(',
+        'Public Function ApplyGizmoPointerAction(',
+        'Public Function GizmoKeyRequiresPartyPreview(',
+        'Public Function ApplyGizmoKeyboardAction(')) {
         Assert-Contains $calibrationControlsSource $contract 'Viewer calibration controls owner'
     }
     foreach ($contract in @(
@@ -693,10 +697,39 @@ try {
         'Inspector panel/workspace composition must remain in its presentation owner.'
     Assert-True (-not $viewerSource.Contains('Sub AdjustCalibrationValue(') -and
         -not $viewerSource.Contains('Sub UpdateTransformGizmoFromPointer(') -and
+        -not $viewerSource.Contains('Sub SelectTransformGizmoAxis(') -and
+        -not $viewerSource.Contains('Sub BeginTransformGizmoDrag(') -and
+        -not $viewerSource.Contains('Sub ToggleTransformGizmo(') -and
+        -not $viewerSource.Contains('Sub FinishTransformGizmoDrag(') -and
+        -not $viewerSource.Contains('Sub CancelTransformGizmoDrag(') -and
         -not $viewerSource.Contains('ViewerGizmo.DragValueAmount(') -and
         -not $viewerSource.Contains('ViewerGizmo.BeginDrag(') -and
         -not $viewerSource.Contains('ViewerGizmo.SelectAxis(')) `
         'Transform-gizmo interaction and calibration mutation must remain in their production owners.'
+    $gizmoKeyboardStart = $viewerSource.IndexOf('Function HandleTransformGizmoKeyboard(')
+    $gizmoPointerStart = $viewerSource.IndexOf('Function HandleTransformGizmoPointer(')
+    $gizmoUpdateStart = $viewerSource.IndexOf('Sub UpdateTransformGizmo()')
+    Assert-True ($gizmoKeyboardStart -ge 0 -and
+        $gizmoPointerStart -gt $gizmoKeyboardStart -and
+        $gizmoUpdateStart -gt $gizmoPointerStart) `
+        'Gizmo command ownership boundaries must remain discoverable.'
+    $gizmoKeyboardSource = $viewerSource.Substring(
+        $gizmoKeyboardStart, $gizmoPointerStart - $gizmoKeyboardStart)
+    $gizmoPointerSource = $viewerSource.Substring(
+        $gizmoPointerStart, $gizmoUpdateStart - $gizmoPointerStart)
+    Assert-True ($gizmoKeyboardSource.Contains(
+            'ViewerCalibrationControls.ApplyGizmoKeyboardAction(') -and
+        -not $gizmoKeyboardSource.Contains('ViewerCalibrationEditing.CancelEdit(') -and
+        -not $gizmoKeyboardSource.Contains('ViewerCalibrationEditing.CancelGizmoDrag(') -and
+        -not $gizmoKeyboardSource.Contains('ViewerCalibrationEditing.SelectGizmoAxis(') -and
+        -not $gizmoKeyboardSource.Contains('ViewerCalibrationEditing.BeginGizmoDrag(') -and
+        -not $gizmoKeyboardSource.Contains('ViewerCalibrationEditing.SaveCurrentFrame(')) `
+        'Gizmo keyboard command execution must remain in the calibration controls owner.'
+    Assert-True ($gizmoPointerSource.Contains(
+            'ViewerCalibrationControls.ApplyGizmoPointerAction(') -and
+        -not $gizmoPointerSource.Contains('ViewerCalibrationEditing.AdjustGizmoValue(') -and
+        -not $gizmoPointerSource.Contains('ViewerGizmo.FinishDrag(')) `
+        'Gizmo pointer command execution must remain in the calibration controls owner.'
     Assert-True (-not $viewerSource.Contains('Dim TimelineScrubbing As Boolean') -and
         -not $viewerSource.Contains('Dim SliderDragOwner As Number') -and
         -not $viewerSource.Contains('Dim TransformGizmoDragging As Boolean') -and

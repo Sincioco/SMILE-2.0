@@ -688,7 +688,7 @@ End Sub
 Sub CancelInteractionCaptures()
 
     If ViewerGizmoState.Dragging Then
-        Call FinishTransformGizmoDrag()
+        Call ViewerGizmo.FinishDrag(ViewerGizmoState)
     End If
 
     If ViewerInputState.TimelineKeyframeDragging Then
@@ -839,6 +839,7 @@ End Sub
 Function HandleTransformGizmoKeyboard(PressedKey As Number) As Boolean
 
     Dim Action As Number
+    Dim Result As ViewerCalibrationEditing.OperationResult
 
     Action = ViewerInput.ClassifyGizmoKey(
         PressedKey,
@@ -854,109 +855,23 @@ Function HandleTransformGizmoKeyboard(PressedKey As Number) As Boolean
         Return False
     End If
 
-    If Action = ViewerInput.GIZMO_KEY_CANCEL Then
-
-        If ViewerGizmoState.Dragging Then
-            Call CancelTransformGizmoDrag()
-        Else If ViewerUiState.CalibrationEditing Then
-            Call CancelCalibrationEdit()
-        End If
-
-    Else If Action = ViewerInput.GIZMO_KEY_AXIS_X Then
-
-        Call SelectTransformGizmoAxis(ViewerUi.CALIBRATION_AXIS_X)
-
-    Else If Action = ViewerInput.GIZMO_KEY_AXIS_Y Then
-
-        Call SelectTransformGizmoAxis(ViewerUi.CALIBRATION_AXIS_Y)
-
-    Else If Action = ViewerInput.GIZMO_KEY_AXIS_Z Then
-
-        Call SelectTransformGizmoAxis(ViewerUi.CALIBRATION_AXIS_Z)
-
-    Else If Action = ViewerInput.GIZMO_KEY_MOVE Then
-
-        ViewerUiState.CalibrationTransform = ViewerUi.CALIBRATION_TRANSFORM_MOVE
-
-        Call BeginTransformGizmoDrag(False)
-
-    Else If Action = ViewerInput.GIZMO_KEY_ROTATE Then
-
-        ViewerUiState.CalibrationTransform = ViewerUi.CALIBRATION_TRANSFORM_ROTATE
-
-        Call BeginTransformGizmoDrag(False)
-
-    Else If Action = ViewerInput.GIZMO_KEY_COMMIT Then
-
-        If ViewerGizmoState.Dragging Then
-            Call FinishTransformGizmoDrag()
-        Else
-
-            Call SaveCalibrationFrame()
-        End If
-
-    End If
-
-    Return True
-
-End Function
-
-Sub SelectTransformGizmoAxis(Axis As Number)
-
-    Dim Result As ViewerCalibrationEditing.OperationResult
-
-    Result = ViewerCalibrationEditing.SelectGizmoAxis(
-        Calibration, Character, Playback.SelectedClip,
-        SwordWristNode, ShieldWristNode, CalibrationAvailable,
-        ViewerUiState, ViewerGizmoState, ViewerCameraState, Effects, Axis)
-
-    Call ApplyCalibrationEditingResult(Result)
-
-End Sub
-
-Sub BeginTransformGizmoDrag(PointerOwned As Boolean)
-
-    If Not ViewerGizmoState.Visible Then
-        Return
-    End If
-
-    If Not ViewerUiState.CalibrationEditing Then
+    If ViewerCalibrationControls.GizmoKeyRequiresPartyPreview(
+        Action, ViewerGizmoState.Visible, ViewerUiState.CalibrationEditing,
+        ViewerGizmoState.Dragging, Calibration.StorageRejected) Then
         Call BeginPartyPreview()
     End If
 
-    Call ViewerCalibrationEditing.BeginGizmoDrag(
-        Calibration, Character, Playback.SelectedClip,
-        ViewerUiState, ViewerGizmoState, ViewerCameraState,
-        Effects, PointerOwned)
-
-End Sub
-
-Sub ToggleTransformGizmo()
-
-    ' Hiding the handles keeps the current unsaved numeric preview, without saving it.
-
-    Call ViewerGizmo.Toggle(ViewerGizmoState)
-
-End Sub
-
-Sub FinishTransformGizmoDrag()
-
-    Call ViewerGizmo.FinishDrag(ViewerGizmoState)
-
-End Sub
-
-Sub CancelTransformGizmoDrag()
-
-    Dim Result As ViewerCalibrationEditing.OperationResult
-
-    Result = ViewerCalibrationEditing.CancelGizmoDrag(
+    Result = ViewerCalibrationControls.ApplyGizmoKeyboardAction(
+        Action,
         Calibration, Character, Playback.SelectedClip,
         SwordWristNode, ShieldWristNode, CalibrationAvailable,
         ViewerUiState, ViewerGizmoState, ViewerCameraState, Effects)
 
     Call ApplyCalibrationEditingResult(Result)
 
-End Sub
+    Return True
+
+End Function
 
 Function HandleTransformGizmoPointer() As Boolean
 
@@ -1012,46 +927,20 @@ Function HandleTransformGizmoPointer() As Boolean
         Window_Height()
     )
 
-    If Decision.Action = ViewerGizmo.POINTER_ACTION_TOGGLE Then
-
-        Call ToggleTransformGizmo()
-
-    Else If Decision.Action = ViewerGizmo.POINTER_ACTION_CANCEL Then
-
-        Call CancelTransformGizmoDrag()
-
-    Else If (Decision.Action = ViewerGizmo.POINTER_ACTION_UPDATE Or
-        Decision.Action = ViewerGizmo.POINTER_ACTION_UPDATE_AND_FINISH) Then
-
-        Result = ViewerCalibrationEditing.AdjustGizmoValue(
-            Calibration, Character, Playback.SelectedClip,
-            SwordWristNode, ShieldWristNode, CalibrationAvailable,
-            ViewerUiState, ViewerGizmoState, ViewerCameraState, Effects,
-            Decision.ValueAmount, Window_Width(), Window_Height())
-
-        Call ApplyCalibrationEditingResult(Result)
-
-        If Decision.Action = ViewerGizmo.POINTER_ACTION_UPDATE_AND_FINISH Then
-            Call FinishTransformGizmoDrag()
-        End If
-
-    Else If Decision.Action = ViewerGizmo.POINTER_ACTION_FINISH Then
-
-        Call FinishTransformGizmoDrag()
-
-    Else If Decision.Action = ViewerGizmo.POINTER_ACTION_BEGIN_AXIS Then
-
-        Call SelectTransformGizmoAxis(Decision.Axis)
-        Call BeginTransformGizmoDrag(True)
-
-        ' A quick click can deliver press and release in one rendered frame.
-        ' End its pointer capture now; do not leave a phantom drag for the next frame.
-
-        If Pointer_Released(POINTER_PRIMARY) Then
-            Call FinishTransformGizmoDrag()
-        End If
-
+    If ViewerCalibrationControls.GizmoPointerRequiresPartyPreview(
+        Decision.Action, ViewerGizmoState.Visible,
+        ViewerUiState.CalibrationEditing) Then
+        Call BeginPartyPreview()
     End If
+
+    Result = ViewerCalibrationControls.ApplyGizmoPointerAction(
+        Decision, Pointer_Released(POINTER_PRIMARY),
+        Calibration, Character, Playback.SelectedClip,
+        SwordWristNode, ShieldWristNode, CalibrationAvailable,
+        ViewerUiState, ViewerGizmoState, ViewerCameraState, Effects,
+        Window_Width(), Window_Height())
+
+    Call ApplyCalibrationEditingResult(Result)
 
     ReturnValue = Decision.Consumed
 

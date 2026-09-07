@@ -647,6 +647,38 @@ Call ViewerUi.DrawTimeline(
 
 Call ViewerGizmo.Reset(GizmoState)
 Call Check(Not GizmoState.Visible And Not GizmoState.Dragging)
+Call Check(ViewerCalibrationControls.GizmoPointerRequiresPartyPreview(
+    ViewerGizmo.POINTER_ACTION_BEGIN_AXIS, True, False))
+Call Check(Not ViewerCalibrationControls.GizmoPointerRequiresPartyPreview(
+    ViewerGizmo.POINTER_ACTION_BEGIN_AXIS, False, False))
+Call Check(ViewerCalibrationControls.GizmoKeyRequiresPartyPreview(
+    ViewerInput.GIZMO_KEY_MOVE, True, False, False, False))
+Call Check(Not ViewerCalibrationControls.GizmoKeyRequiresPartyPreview(
+    ViewerInput.GIZMO_KEY_MOVE, False, False, False, False))
+
+GizmoPointer.Action = ViewerGizmo.POINTER_ACTION_TOGGLE
+CalibrationOperation = ViewerCalibrationControls.ApplyGizmoPointerAction(
+    GizmoPointer, False, CalibrationState, PartyPrimary.Actor, 0,
+    -1, -1, False, UiState, GizmoState, CameraState, EffectsState,
+    800, 640)
+
+Call Check(CalibrationOperation.Ready And GizmoState.Visible)
+
+GizmoPointer.Action = ViewerGizmo.POINTER_ACTION_TOGGLE
+CalibrationOperation = ViewerCalibrationControls.ApplyGizmoPointerAction(
+    GizmoPointer, False, CalibrationState, PartyPrimary.Actor, 0,
+    -1, -1, False, UiState, GizmoState, CameraState, EffectsState,
+    800, 640)
+
+Call Check(CalibrationOperation.Ready And Not GizmoState.Visible)
+
+CalibrationOperation = ViewerCalibrationControls.ApplyGizmoKeyboardAction(
+    ViewerInput.GIZMO_KEY_AXIS_Z,
+    CalibrationState, PartyPrimary.Actor, 0,
+    -1, -1, False, UiState, GizmoState, CameraState, EffectsState)
+
+Call Check(CalibrationOperation.Ready And
+    UiState.CalibrationAxis = ViewerUi.CALIBRATION_AXIS_Z)
 
 CalibrationOperation = ViewerCalibrationEditing.SelectGizmoAxis(
     CalibrationState, PartyPrimary.Actor, 0, -1, -1, False,

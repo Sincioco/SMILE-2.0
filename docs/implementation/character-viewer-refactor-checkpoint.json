@@ -48,7 +48,7 @@
   ],
   "currentExtractionCommitRange": {
     "first": "9a616ef35adae9b0c5bbc864ecf689bbd6fc1aed",
-    "lastCommittedBeforeCurrentCheckpoint": "ea8833bdc40a1f7a870ff5f387eba9dc3c2dade4"
+    "lastCommittedBeforeCurrentCheckpoint": "1bb0fd6a1742c7510ccf05c2d3c7364b7c04bbf6"
   },
   "programMetrics": {
     "initialAudit": {
@@ -68,11 +68,11 @@
       "sha256": "17853B7B210061F9D46D70913AABA39C4F798503F69C2E8CCA4D8511646AC670"
     },
     "current": {
-      "checkpoint": "party-presentation-command-dragon-visibility-routing",
-      "baseCommit": "ea8833bdc40a1f7a870ff5f387eba9dc3c2dade4",
-      "lines": 3001,
-      "procedures": 78,
-      "sha256": "AEDEEC8E9DD3484CACBBEDA62CCB0BC77EE06F91EA64DDE6F37CAECBBA92F056"
+      "checkpoint": "gizmo-command-workflow-ownership",
+      "baseCommit": "1bb0fd6a1742c7510ccf05c2d3c7364b7c04bbf6",
+      "lines": 2890,
+      "procedures": 73,
+      "sha256": "BF661D6BAFCC7A10A066A50D9F970F3720A8E55F0294E3A33454E3AD8283DED6"
     }
   },
   "substantialResponsibilitiesMovedFromProgram": [
@@ -90,7 +90,8 @@
     "inspector rendering and VFX action mapping with explicit owner readiness",
     "keyboard rendering and camera navigation routing plus responsive-fit state transitions",
     "four ordered inspector presentation groups plus Party-owned target-label and remaining-time queries",
-    "Party rendering, VFX and camera presentation commands plus cross-input Dragon visibility routing"
+    "Party rendering, VFX and camera presentation commands plus cross-input Dragon visibility routing",
+    "gizmo keyboard and pointer command execution plus explicit Party-preview requirements"
   ],
   "currentDestinationOwners": [
     "ViewerActors",
@@ -144,7 +145,10 @@
     "seven Party rendering, effect and camera presentation routes moved through ViewerInspectorCommands with their state retained by focused owners",
     "Dragon visibility for inspector pointer, Party pointer and keyboard routes moved through ViewerInspectorCommands and ViewerDragon",
     "three dead presentation pass-through wrappers were deleted and calibration isolation now calls ViewerDragon directly",
-    "Program.smile reduced from 3040 lines and 81 procedures to 3001 lines and 78 procedures without formatting compression"
+    "Program.smile reduced from 3040 lines and 81 procedures to 3001 lines and 78 procedures without formatting compression",
+    "gizmo keyboard and pointer command execution moved into ViewerCalibrationControls without Party, session, rendering or application state",
+    "five gizmo coordinator helpers were deleted and calibration integration now invokes production owners",
+    "Program.smile reduced from 3001 lines and 78 procedures to 2890 lines and 73 procedures without formatting compression"
   ],
   "validation": [
     "PASS: 308 shared compiler/language tests",
@@ -182,7 +186,12 @@
     "PASS: post-command-extraction 42 isolated calibration checks and 58 native graphics, pointer-input and audio-focus checks",
     "PASS: Party presentation-command Release Desktop Viewer build with 46 published assets",
     "PASS: Party presentation-command Release Full Web Viewer build with 35 published assets",
-    "PASS: post-command-extraction repository style check for 405 SMILE files"
+    "PASS: post-command-extraction repository style check for 405 SMILE files",
+    "PASS: gizmo command-workflow native/generated-Web hardening with exact console parity and direct production-owner assertions",
+    "PASS: post-gizmo-command 42-check isolated calibration integration and 58 native graphics, pointer-input and audio-focus checks",
+    "PASS: gizmo command-workflow Release Desktop Viewer build with 46 published assets",
+    "PASS: gizmo command-workflow Release Full Web Viewer build with 35 published assets",
+    "PASS: post-gizmo-command repository style check for 405 SMILE files"
   ],
   "pendingValidation": [
     "final Character Viewer native and installed-Chrome acceptance after remaining extractions"

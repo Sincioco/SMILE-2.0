@@ -803,6 +803,7 @@ End Sub
 
 Sub CheckPartyInspector()
 
+    Dim Handled As Boolean
     Dim Owner As Number
     Dim PrimaryHandle As Number
     Dim CompanionHandle As Number
@@ -864,9 +865,12 @@ Sub CheckPartyInspector()
 
             ViewerUiState.CalibrationVisible = True
 
-            Call ToggleTransformGizmo()
+            Call ViewerGizmo.Toggle(ViewerGizmoState)
             Call CalibrationCheck(ViewerGizmoState.Visible, "Party hero explicitly enables the gizmo")
-            Call BeginTransformGizmoDrag(False)
+
+            Handled = HandleTransformGizmoKeyboard(KEY_R)
+
+            Call CalibrationCheck(Handled, "Party hero gizmo keyboard command is handled")
             Call SetCurrentCalibrationValue(9)
             Call EndPartyInspector()
             Call HandleKeyboard(KEY_ENTER)
@@ -885,7 +889,7 @@ Sub CheckPartyInspector()
             Call ApplyCalibrationControlForTest(ViewerUi.CALIBRATION_ACTION_UNDO)
             Call CalibrationCheck(ViewerCalibration.SavedJson(Calibration, Character) = OriginalJson,
                 "Party Undo restores every saved key of only the active hero")
-            Call ToggleTransformGizmo()
+            Call ViewerGizmo.Toggle(ViewerGizmoState)
             Call CalibrationCheck(Not ViewerGizmoState.Visible, "Party hero can hide the gizmo")
 
         End If
@@ -935,11 +939,13 @@ Sub CheckGizmoVisibility()
         ViewerCalibrationEditing.CurrentValue(
             Calibration, Playback.SelectedClip, ViewerUiState) = PreviewValue,
         "Numeric pose editing works with the gizmo hidden")
-    Call ToggleTransformGizmo()
-    Call BeginTransformGizmoDrag(False)
+    Call ViewerGizmo.Toggle(ViewerGizmoState)
+
+    Handled = HandleTransformGizmoKeyboard(KEY_R)
+
     Call CalibrationCheck(ViewerGizmoState.Visible And ViewerGizmoState.Dragging,
         "Explicit Show Gizmo enables handles and keyboard drag")
-    Call ToggleTransformGizmo()
+    Call ViewerGizmo.Toggle(ViewerGizmoState)
     Call CalibrationCheck(Not ViewerGizmoState.Visible And Not ViewerGizmoState.Dragging And
         ViewerUiState.CalibrationEditing And
         ViewerCalibrationEditing.CurrentValue(
@@ -950,7 +956,7 @@ Sub CheckGizmoVisibility()
     Call CalibrationCheck(ViewerCalibrationEditing.CurrentValue(
         Calibration, Playback.SelectedClip, ViewerUiState) = OriginalValue And
         ViewerCalibration.SavedJson(Calibration, Character) = SavedJson, "Cancel preserves the original saved pose")
-    Call ToggleTransformGizmo()
+    Call ViewerGizmo.Toggle(ViewerGizmoState)
     Call ResetAll()
     Call CalibrationCheck(Not ViewerGizmoState.Visible, "Full reset restores hidden gizmo default")
 

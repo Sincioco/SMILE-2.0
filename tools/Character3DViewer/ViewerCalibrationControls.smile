@@ -1,4 +1,4 @@
-''' Calibration-panel command routing without Party, session, rendering or application state.
+''' Calibration and gizmo command routing without Party, session, rendering or application state.
 Module Smile.Tools.Character3DViewerCalibrationControls
 
 Option Explicit
@@ -9,6 +9,7 @@ Import Smile.Tools.Character3DViewerCalibrationEditing As ViewerCalibrationEditi
 Import Smile.Tools.Character3DViewerCamera As ViewerCamera
 Import Smile.Tools.Character3DViewerEffects As ViewerEffects
 Import Smile.Tools.Character3DViewerGizmo As ViewerGizmo
+Import Smile.Tools.Character3DViewerInput As ViewerInput
 Import Smile.Tools.Character3DViewerPlayback As ViewerPlayback
 Import Smile.Tools.Character3DViewerTimelineEditing As ViewerTimelineEditing
 Import Smile.Tools.Character3DViewerUi As ViewerUi
@@ -291,6 +292,169 @@ Public Function ApplyPointerAction(Action As Number,
         Result, Action, Calibration, Actor, Playback,
         Ui, Gizmo, Camera, Effects) Then
         Return Result
+    End If
+
+    Return Result
+
+End Function
+
+Public Function GizmoPointerRequiresPartyPreview(Action As Number,
+    GizmoVisible As Boolean, Editing As Boolean) As Boolean
+
+    Dim Required As Boolean
+
+    Required = (Action = ViewerGizmo.POINTER_ACTION_BEGIN_AXIS And
+        GizmoVisible And Not Editing)
+
+    Return Required
+
+End Function
+
+Public Function ApplyGizmoPointerAction(
+    Decision As ViewerGizmo.PointerDecision, PrimaryReleased As Boolean,
+    ByRef Calibration As ViewerCalibration.State,
+    ByRef Actor As Character3D.Actor, Clip As Number,
+    SwordWristNode As Number, ShieldWristNode As Number,
+    Available As Boolean, ByRef Ui As ViewerUi.State,
+    ByRef Gizmo As ViewerGizmo.State, ByRef Camera As ViewerCamera.State,
+    ByRef Effects As ViewerEffects.State,
+    WindowWidth As Number,
+    WindowHeight As Number) As ViewerCalibrationEditing.OperationResult
+
+    Dim Result As ViewerCalibrationEditing.OperationResult
+
+    Result.Ready = True
+
+    If Decision.Action = ViewerGizmo.POINTER_ACTION_TOGGLE Then
+
+        Call ViewerGizmo.Toggle(Gizmo)
+
+    Else If Decision.Action = ViewerGizmo.POINTER_ACTION_CANCEL Then
+
+        Result = ViewerCalibrationEditing.CancelGizmoDrag(
+            Calibration, Actor, Clip, SwordWristNode, ShieldWristNode,
+            Available, Ui, Gizmo, Camera, Effects)
+
+    Else If (Decision.Action = ViewerGizmo.POINTER_ACTION_UPDATE Or
+        Decision.Action = ViewerGizmo.POINTER_ACTION_UPDATE_AND_FINISH) Then
+
+        Result = ViewerCalibrationEditing.AdjustGizmoValue(
+            Calibration, Actor, Clip, SwordWristNode, ShieldWristNode,
+            Available, Ui, Gizmo, Camera, Effects,
+            Decision.ValueAmount, WindowWidth, WindowHeight)
+
+        If Decision.Action = ViewerGizmo.POINTER_ACTION_UPDATE_AND_FINISH Then
+            Call ViewerGizmo.FinishDrag(Gizmo)
+        End If
+
+    Else If Decision.Action = ViewerGizmo.POINTER_ACTION_FINISH Then
+
+        Call ViewerGizmo.FinishDrag(Gizmo)
+
+    Else If Decision.Action = ViewerGizmo.POINTER_ACTION_BEGIN_AXIS Then
+
+        Result = ViewerCalibrationEditing.SelectGizmoAxis(
+            Calibration, Actor, Clip, SwordWristNode, ShieldWristNode,
+            Available, Ui, Gizmo, Camera, Effects, Decision.Axis)
+
+        Call ViewerCalibrationEditing.BeginGizmoDrag(
+            Calibration, Actor, Clip, Ui, Gizmo, Camera, Effects, True)
+
+        ' A quick click can deliver press and release in one rendered frame.
+        ' End its pointer capture now; do not leave a phantom drag for the next frame.
+
+        If PrimaryReleased Then
+            Call ViewerGizmo.FinishDrag(Gizmo)
+        End If
+
+    End If
+
+    Return Result
+
+End Function
+
+Public Function GizmoKeyRequiresPartyPreview(Action As Number,
+    GizmoVisible As Boolean, Editing As Boolean,
+    Dragging As Boolean, StorageRejected As Boolean) As Boolean
+
+    Dim Required As Boolean
+
+    Required = ((GizmoVisible And Not Editing And
+        (Action = ViewerInput.GIZMO_KEY_MOVE Or
+        Action = ViewerInput.GIZMO_KEY_ROTATE)) Or
+        (Action = ViewerInput.GIZMO_KEY_COMMIT And
+        Not Dragging And Not StorageRejected And Not Editing))
+
+    Return Required
+
+End Function
+
+Public Function ApplyGizmoKeyboardAction(Action As Number,
+    ByRef Calibration As ViewerCalibration.State,
+    ByRef Actor As Character3D.Actor, Clip As Number,
+    SwordWristNode As Number, ShieldWristNode As Number,
+    Available As Boolean, ByRef Ui As ViewerUi.State,
+    ByRef Gizmo As ViewerGizmo.State, ByRef Camera As ViewerCamera.State,
+    ByRef Effects As ViewerEffects.State) As ViewerCalibrationEditing.OperationResult
+
+    Dim Result As ViewerCalibrationEditing.OperationResult
+
+    Result.Ready = True
+
+    If Action = ViewerInput.GIZMO_KEY_CANCEL Then
+
+        If Gizmo.Dragging Then
+            Result = ViewerCalibrationEditing.CancelGizmoDrag(
+                Calibration, Actor, Clip, SwordWristNode, ShieldWristNode,
+                Available, Ui, Gizmo, Camera, Effects)
+        Else If Ui.CalibrationEditing Then
+            Result = ViewerCalibrationEditing.CancelEdit(
+                Calibration, Actor, Clip, SwordWristNode, ShieldWristNode,
+                Available, Ui, Gizmo, Camera, Effects)
+        End If
+
+    Else If Action = ViewerInput.GIZMO_KEY_AXIS_X Then
+
+        Result = ViewerCalibrationEditing.SelectGizmoAxis(
+            Calibration, Actor, Clip, SwordWristNode, ShieldWristNode,
+            Available, Ui, Gizmo, Camera, Effects,
+            ViewerUi.CALIBRATION_AXIS_X)
+
+    Else If Action = ViewerInput.GIZMO_KEY_AXIS_Y Then
+
+        Result = ViewerCalibrationEditing.SelectGizmoAxis(
+            Calibration, Actor, Clip, SwordWristNode, ShieldWristNode,
+            Available, Ui, Gizmo, Camera, Effects,
+            ViewerUi.CALIBRATION_AXIS_Y)
+
+    Else If Action = ViewerInput.GIZMO_KEY_AXIS_Z Then
+
+        Result = ViewerCalibrationEditing.SelectGizmoAxis(
+            Calibration, Actor, Clip, SwordWristNode, ShieldWristNode,
+            Available, Ui, Gizmo, Camera, Effects,
+            ViewerUi.CALIBRATION_AXIS_Z)
+
+    Else If (Action = ViewerInput.GIZMO_KEY_MOVE Or
+        Action = ViewerInput.GIZMO_KEY_ROTATE) Then
+
+        If Action = ViewerInput.GIZMO_KEY_MOVE Then
+            Ui.CalibrationTransform = ViewerUi.CALIBRATION_TRANSFORM_MOVE
+        Else
+            Ui.CalibrationTransform = ViewerUi.CALIBRATION_TRANSFORM_ROTATE
+        End If
+
+        Call ViewerCalibrationEditing.BeginGizmoDrag(
+            Calibration, Actor, Clip, Ui, Gizmo, Camera, Effects, False)
+
+    Else If Action = ViewerInput.GIZMO_KEY_COMMIT Then
+
+        If Gizmo.Dragging Then
+            Call ViewerGizmo.FinishDrag(Gizmo)
+        Else
+            Result = ViewerCalibrationEditing.SaveCurrentFrame(
+                Calibration, Actor, Clip, Ui, Gizmo, Camera, Effects)
+        End If
+
     End If
 
     Return Result
