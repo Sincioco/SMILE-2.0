@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "checkpointIdentity": "character-viewer-refactor-current-2026-09-07-r2",
+  "checkpointIdentity": "character-viewer-refactor-current-2026-09-07-r3",
   "packageEvidence": {
     "refactorPackage": {
       "packageIdentity": "smile-2.0-character-viewer-refactor-first",
@@ -22,15 +22,15 @@
     "viewerResponsibilityExtraction": "COMPLETE-WITH-DOCUMENTED-ENTRY-POINT-EXCEPTION",
     "fixedArrayHardeningMilestone": "COMPLETE",
     "checkpointRepairC01": "COMPLETE",
-    "blocked": false
+    "blocked": true
   },
-  "currentStage": "R8-native-chrome-refactor-acceptance",
+  "currentStage": "R8-native-manual-interaction-confirmation",
   "sourceIdentity": {
-    "currentHeadAtAudit": "a068b4820790b91bbaf0f94811b4f8a65ffb2567",
-    "originMainAtAudit": "a068b4820790b91bbaf0f94811b4f8a65ffb2567",
+    "currentHeadAtAudit": "4e1642da828b2f95865dc96b9076c784d12c2720",
+    "originMainAtAudit": "4e1642da828b2f95865dc96b9076c784d12c2720",
     "latestViewerImplementationCommit": "f1b235586ff73db0f6b683d8d961ecdc7f2fe93e",
     "latestHardeningIntegrationCommit": "a068b4820790b91bbaf0f94811b4f8a65ffb2567",
-    "workingTreeAtAudit": "documentation changes only after a clean source audit"
+    "workingTreeAtAudit": "clean before this final-gate documentation update"
   },
   "historicalAnchors": {
     "reviewedRefactorBase": "5bfd4f96ee838ca1b6b255c28c4117b0e0a5ec7b",
@@ -153,7 +153,7 @@
     { "owner": "ViewerDragon", "lines": 494, "procedures": 21 },
     { "owner": "ViewerRendering", "lines": 779, "procedures": 37 }
   ],
-  "validationSelection": "Compiler/runtime code changed, so one focused fixed-array gate, the affected packaged RPG integration, and one full repository smoke run were required. NativeOnly was not followed by a duplicate full Viewer hardening run on an identical artifact.",
+  "validationSelection": "Compiler/runtime code changed, so one focused fixed-array gate, the affected packaged RPG integration, and one full repository smoke run were required. Final Viewer evidence adds one current preservation run, one native/generated-Web hardening run, one actor-isolation run, rebuilt publication profiles and installed-Chrome interaction without a redundant Edge or Firefox pass.",
   "currentValidation": [
     "PASS at a068b48 source: 308 shared compiler/language tests and repository build",
     "PASS: scripts/test-fixed-array-hardening.ps1 native/Web F01-F03 fixtures with disposable data and zero leaked Image resources",
@@ -161,8 +161,14 @@
     "PASS: scripts/smoke-test.cmd, including formatter, 406-file style check, Viewer hardening, calibration recovery, rendering, RPG and native/Web integration",
     "PASS: VSIX 2.0.60 installed in Visual Studio instance 91f001b5; installed Smile.VisualStudio.dll assembly 2.0.60.0 SHA256 36DAD13853A62FDCD6FB7B84E85C2A73161A14B480D185FBAA17C7D6DDF23E33",
     "PASS: current Program responsibility and reachability audit; no additional cohesive single-subsystem implementation remains in Program",
-    "PENDING: final rebuilt Viewer native interaction and installed-Chrome exact-artifact acceptance",
-    "PENDING: final Release Full/Low/Medium/High Web publication verification"
+    "PASS: Debug native and Full Web rebuild; Release native plus Full/Low/Medium/High Web rebuild, each Web manifest retaining 35 declared assets",
+    "PASS: scripts/test-character-viewer-preservation.ps1 with disposable storage/process identities; launcher shutdown, primary/backup recovery, watcher retry/newest revision, persistent failure and stale-publication rejection",
+    "PASS: scripts/test-character-3d-viewer-hardening.ps1 -Configuration Release; native calibration isolation, generated-Web exact console parity and 58 native graphics/pointer/audio checks",
+    "PASS: scripts/test-character-3d-viewer-actor-isolation.ps1 -Configuration Release; native/Web normal and forced GPU-particle fallback two-Orin isolation",
+    "PASS: installed Chrome 152.0.7977.77 on the exact Release Full Web output; Arin/Orin/Dragon/Party, three-level UI, visible import/download, independent VFX freeze/restore while paused, paused-frame VFX advancement, pan/zoom/reset, opt-in gizmo and zero warning/error logs",
+    "PASS: installed Chrome real WEBGL_lose_context loss/restoration on the current Release Viewer; runtime remained running, the context restored and Party rendering returned without a page reload",
+    "PASS: exact Release Desktop executable visibly launched through Launch.ps1 -SkipWindowActivation, remained responsive and did not cover Chrome as a topmost window",
+    "BLOCKED: this Codex UI session exposes Chrome but no native-app input API, so a current exact-executable Desktop pause/tab/camera/gizmo interaction still requires a short user confirmation"
   ],
   "preservation": {
     "arinKeyframes": 24,
@@ -175,9 +181,9 @@
   },
   "openIssues": [
     "Program.smile is an explicit 1,851-line entry-point exception; every substantial retained coordinator is documented above and in ARCHITECTURE.md",
-    "overall Viewer refactor cannot be marked complete until the final current native and installed-Chrome interaction matrix and all publication profiles pass"
+    "the overall Viewer refactor cannot be marked complete until the running rebuilt Desktop executable receives and visibly responds to the bounded pause/tab/camera/gizmo interaction check"
   ],
-  "nextConcreteAction": "Rebuild current Release Desktop and Full/Low/Medium/High Web publications, launch the Desktop Viewer visibly without topmost behavior, then run the final native and installed-Chrome acceptance matrix against those exact artifacts.",
+  "nextConcreteAction": "In the visible Release Desktop Viewer, confirm Space pause/resume, Arin/Orin/Dragon/Party tabs, one pan or orbit plus wheel in/out and right-click reset, and Pose Show Gizmo/Hide Gizmo; then mark this gate complete, commit/push the report and stop.",
   "deferred": [
     "Double",
     "fractional renderer APIs",

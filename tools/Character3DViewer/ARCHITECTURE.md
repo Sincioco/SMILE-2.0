@@ -499,8 +499,8 @@ application-state replacement, but their exceptions remain subject to the final 
 `ViewerParty` remains a justified temporary exception at 2,182 lines/58 procedures: it
 owns one Party scene's participant, preview, choreography, camera, presentation and
 destruction lifecycle, and the enablement transition added here belongs with that state.
-The final responsibility audit must identify a cohesive lifecycle boundary before
-splitting it; size alone does not justify copying Party state across another module.
+The final responsibility audit found no additional cohesive lifecycle boundary to move;
+size alone does not justify copying Party state across another module.
 
 Every retained `Program.smile` routine above the 60-line review threshold is explicit:
 
@@ -591,9 +591,10 @@ copied or left as dead wrappers.
   and participant destruction now also reside in `ViewerParty`. Party cameras,
   preview behavior and frame-command application have since moved; generic facing and
   borrowed companion-glow operations reside in their actor/effects owners. `Program.smile`
-  still contains substantial inspector selection and Party command dispatch; companion
-  creation/calibration/glow/playback and calibrated participant update reside in
-  `ViewerParty`. Transform-gizmo hit testing, retained drag math and drawing
+  retains substantial-length cross-owner inspector and Party dispatch, but no state-local
+  selection or Party command implementation; companion creation/calibration/glow/playback
+  and calibrated participant update reside in `ViewerParty`. Transform-gizmo hit testing,
+  retained drag math and drawing
   reside in `ViewerGizmo`; calibration edit lifecycle, bounded mutation, transform
   application ordering and grip preservation reside in `ViewerCalibrationEditing`.
   Only runtime pointer/keyboard sampling, the visible shared application-command executor,
@@ -603,8 +604,9 @@ copied or left as dead wrappers.
   calibration fixture uses a random application identity and validates primary/backup
   recovery without reading or replacing live Arin/Orin storage.
 - The two-Orin actor-isolation fixture passes normal and forced-fallback native/Web
-  runs. Installed Chrome context loss/restoration advances the live runtime and the
-  supported character-selection recovery action restores rendering without reload.
+  runs. On the final current Release publication, installed Chrome context loss/restoration
+  leaves the runtime running and rendering returns without reload; the supported
+  character-selection recovery policy remains covered rather than being replaced.
 - Installed Chrome visibly retains both `Freeze Fire` and `Freeze Lightning` while the
   scene is paused. Each control independently changes to `Play` when explicitly frozen;
   both were restored to their default VFX-running state while choreography remained
