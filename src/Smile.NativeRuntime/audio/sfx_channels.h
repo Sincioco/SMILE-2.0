@@ -19,6 +19,7 @@ int smile_sfx_cache_count(void);
 long long smile_sfx_decode_count(void);
 long long smile_sfx_cache_hit_count(void);
 long long smile_sfx_completion_count(void);
+long long smile_sfx_last_result(void);
 
 #ifdef __cplusplus
 }

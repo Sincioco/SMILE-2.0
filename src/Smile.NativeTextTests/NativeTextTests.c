@@ -1,5 +1,6 @@
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+#include <objbase.h>
 #include <stdio.h>
 #include <wchar.h>
 #include "image_resource.h"
@@ -259,7 +260,8 @@ int main(void)
     check(smile_sfx_active_count() == 0, "out-of-range channel stop requests are harmless");
     {
         long long completions = smile_sfx_completion_count();
-        if (smile_sfx_play(tone_one_path, 3))
+        int played = smile_sfx_play(tone_one_path, 3);
+        if (played)
         {
             check(smile_sfx_active_count() == 1, "started native WAV occupies exactly one channel");
             Sleep(750);
@@ -268,10 +270,19 @@ int main(void)
                 "normal-pump SFX reaping frees a naturally completed channel on the main thread");
         }
         else
+        {
+            check((HRESULT)smile_sfx_last_result() != CO_E_NOTINITIALIZED,
+                "native WAV playback initializes COM before creating XAudio2");
             check(smile_sfx_active_count() == 0 && smile_sfx_completion_count() == completions,
                 "an unavailable XAudio2 endpoint leaves all native channels clean");
+        }
     }
     smile_sfx_shutdown();
+    {
+        HRESULT initialized = CoInitializeEx(0, COINIT_MULTITHREADED);
+        check(initialized == S_OK, "native WAV shutdown balances its COM apartment lifetime");
+        if (SUCCEEDED(initialized)) CoUninitialize();
+    }
     smile_sfx_shutdown();
     smile_media_shutdown();
 

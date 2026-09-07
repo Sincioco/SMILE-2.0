@@ -16,6 +16,7 @@ struct SmileWavCacheEntry
 static SRWLOCK smile_sfx_lock = SRWLOCK_INIT;
 static IXAudio2* smile_sfx_engine;
 static IXAudio2MasteringVoice* smile_sfx_master;
+static int smile_sfx_owns_apartment;
 struct SmileSfxChannelState
 {
     IXAudio2SourceVoice* voice;
@@ -27,6 +28,7 @@ static SmileWavCacheEntry* smile_sfx_cache;
 static volatile LONG64 smile_sfx_decodes;
 static volatile LONG64 smile_sfx_cache_hits;
 static volatile LONG64 smile_sfx_completions;
+static volatile LONG64 smile_sfx_last_hresult;
 
 class SmileSfxVoiceCallback : public IXAudio2VoiceCallback
 {
@@ -152,13 +154,30 @@ done:
 static int smile_sfx_initialize(void)
 {
     int channel;
+    HRESULT initialized;
+    HRESULT result;
     if (smile_sfx_engine != 0) return 1;
     for (channel = 0; channel < 16; ++channel) smile_sfx_callbacks[channel].channel = channel;
-    if (FAILED(XAudio2Create(&smile_sfx_engine, 0, XAUDIO2_DEFAULT_PROCESSOR))) return 0;
-    if (FAILED(smile_sfx_engine->CreateMasteringVoice(&smile_sfx_master)))
+    initialized = CoInitializeEx(0, COINIT_MULTITHREADED);
+    InterlockedExchange64(&smile_sfx_last_hresult, initialized);
+    if (FAILED(initialized) && initialized != RPC_E_CHANGED_MODE) return 0;
+    smile_sfx_owns_apartment = SUCCEEDED(initialized);
+    result = XAudio2Create(&smile_sfx_engine, 0, XAUDIO2_DEFAULT_PROCESSOR);
+    InterlockedExchange64(&smile_sfx_last_hresult, result);
+    if (FAILED(result))
+    {
+        if (smile_sfx_owns_apartment) CoUninitialize();
+        smile_sfx_owns_apartment = 0;
+        return 0;
+    }
+    result = smile_sfx_engine->CreateMasteringVoice(&smile_sfx_master);
+    InterlockedExchange64(&smile_sfx_last_hresult, result);
+    if (FAILED(result))
     {
         smile_sfx_engine->Release();
         smile_sfx_engine = 0;
+        if (smile_sfx_owns_apartment) CoUninitialize();
+        smile_sfx_owns_apartment = 0;
         return 0;
     }
     return 1;
@@ -203,7 +222,12 @@ extern "C" int smile_sfx_play(const WCHAR* path, int channel)
     smile_sfx_reap_locked();
     if (!smile_sfx_initialize()) { ReleaseSRWLockExclusive(&smile_sfx_lock); return 0; }
     entry = smile_sfx_find_or_decode(path);
-    if (entry == 0) { ReleaseSRWLockExclusive(&smile_sfx_lock); return 0; }
+    if (entry == 0)
+    {
+        InterlockedExchange64(&smile_sfx_last_hresult, HRESULT_FROM_WIN32(ERROR_FILE_INVALID));
+        ReleaseSRWLockExclusive(&smile_sfx_lock);
+        return 0;
+    }
     smile_sfx_invalidate_locked(channel);
     result = smile_sfx_engine->CreateSourceVoice(&smile_sfx_channels[channel].voice,
         entry->format, 0, XAUDIO2_DEFAULT_FREQ_RATIO, &smile_sfx_callbacks[channel]);
@@ -214,6 +238,7 @@ extern "C" int smile_sfx_play(const WCHAR* path, int channel)
     buffer.pContext = (void*)(uintptr_t)smile_sfx_channels[channel].generation;
     if (SUCCEEDED(result)) result = smile_sfx_channels[channel].voice->SubmitSourceBuffer(&buffer);
     if (SUCCEEDED(result)) result = smile_sfx_channels[channel].voice->Start(0);
+    InterlockedExchange64(&smile_sfx_last_hresult, result);
     if (FAILED(result) && smile_sfx_channels[channel].voice != 0)
     {
         smile_sfx_channels[channel].voice->DestroyVoice();
@@ -272,6 +297,7 @@ extern "C" int smile_sfx_cache_count(void)
 extern "C" long long smile_sfx_decode_count(void) { return smile_sfx_decodes; }
 extern "C" long long smile_sfx_cache_hit_count(void) { return smile_sfx_cache_hits; }
 extern "C" long long smile_sfx_completion_count(void) { return smile_sfx_completions; }
+extern "C" long long smile_sfx_last_result(void) { return smile_sfx_last_hresult; }
 
 extern "C" void smile_sfx_shutdown(void)
 {
@@ -284,6 +310,8 @@ extern "C" void smile_sfx_shutdown(void)
     smile_sfx_master = 0;
     if (smile_sfx_engine != 0) smile_sfx_engine->Release();
     smile_sfx_engine = 0;
+    if (smile_sfx_owns_apartment) CoUninitialize();
+    smile_sfx_owns_apartment = 0;
     for (entry = smile_sfx_cache; entry != 0; entry = next)
     {
         next = entry->next;

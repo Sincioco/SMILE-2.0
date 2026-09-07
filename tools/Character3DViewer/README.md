@@ -32,8 +32,10 @@ coordinators. This remains an explicit entry-point size exception pending final
 native and installed-Chrome acceptance; do not hide those ordered calls in a shared
 replacement application/controller module or recreate owner state in `Program.smile`.
 
-The one compact current checkpoint is
-`docs\implementation\character-viewer-refactor-checkpoint.json`. The H6.1 records are
+The completed refactor checkpoint is
+`docs\implementation\character-viewer-refactor-checkpoint.json`. Current work after
+that refactor is tracked in the compact
+`docs\implementation\post-refactor-continuation.md` checkpoint. The H6.1 records are
 historical evidence, not an active milestone. Character-specific corrections also
 require the applicable ArinV57 or OrinV13 creation-and-repair journey.
 
