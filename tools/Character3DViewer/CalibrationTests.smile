@@ -165,12 +165,14 @@ Call CalibrationCheck(Playback.ScenePaused And Character3D.AnimationTime(Charact
 
 Playback.ScenePaused = False
 
-Call SeekCalibrationKeyframe(-1)
+Call ApplyTimelineCommand(
+    ViewerTimelineEditing.COMMAND_SEEK_ADJACENT_KEY, -1)
 Call CalibrationCheck(Playback.ScenePaused, "Previous key pauses even without saved keys")
 
 Playback.ScenePaused = False
 
-Call SeekCalibrationKeyframe(1)
+Call ApplyTimelineCommand(
+    ViewerTimelineEditing.COMMAND_SEEK_ADJACENT_KEY, 1)
 Call CalibrationCheck(Playback.ScenePaused, "Next key pauses even without saved keys")
 Call ToggleScenePause()
 Call CalibrationCheck(Not Playback.ScenePaused, "Space-style toggle resumes after navigation")
@@ -489,7 +491,8 @@ Effects.FlamePaused = True
 
 TestVisualEpoch = Effects.VisualContinuityEpoch
 
-Call SeekFirstAnimationFrame()
+Call ApplyTimelineCommand(
+    ViewerTimelineEditing.COMMAND_SEEK_FIRST_FRAME, 0)
 Call CalibrationCheck(Effects.VisualContinuityEpoch > TestVisualEpoch, "Seek invalidates visual history")
 Call UpdateTestEquipmentFire()
 Call AdvanceTestSceneVfx()
@@ -702,7 +705,8 @@ Sub CheckDragonFireContinuity()
     Call AdvanceTestSceneVfx()
     Call CalibrationCheck(DragonState.Breath.Generation = PreviousGeneration And
         Fire.Value(10, DragonState.Breath) = PreviousAge, "Frozen dragon retains its permitted snapshot")
-    Call StepAnimationFrame(1)
+    Call ApplyTimelineCommand(
+        ViewerTimelineEditing.COMMAND_STEP_FRAME, 1)
     Call UpdateDragon()
     Call CalibrationCheck(DragonState.Breath.Slot = 0 And Fire.Value(1, OtherFire) = 1,
         "Forward frozen Dragon seek clears breath and presence, not another owner")
@@ -763,7 +767,8 @@ Sub CheckDragonFireContinuity()
     Effects.FlamePaused = True
 
     Call UpdateDragon()
-    Call StepAnimationFrame(1)
+    Call ApplyTimelineCommand(
+        ViewerTimelineEditing.COMMAND_STEP_FRAME, 1)
     Call UpdateDragon()
     Call CalibrationCheck(Character3D.AnimationTime(Character) > 2500 And
         Fire.Value(1, OtherFire) = 1, "Forward frozen seek past impact clears the projectile")
@@ -778,7 +783,8 @@ Sub CheckDragonFireContinuity()
 
     Effects.FlamePaused = True
 
-    Call SeekFirstAnimationFrame()
+    Call ApplyTimelineCommand(
+        ViewerTimelineEditing.COMMAND_SEEK_FIRST_FRAME, 0)
     Call UpdateDragon()
     Call CalibrationCheck(Fire.Value(1, OtherFire) = 1,
         "Backward frozen seek also releases the Dragon impact burst")
@@ -849,7 +855,8 @@ Sub CheckPartyInspector()
         SavedClip = Playback.SelectedClip
         Session.Ready = Character3D.SetAnimationTime(Character, 333) And Session.Ready
 
-        Call SeekFirstAnimationFrame()
+        Call ApplyTimelineCommand(
+            ViewerTimelineEditing.COMMAND_SEEK_FIRST_FRAME, 0)
         Call CalibrationCheck(Playback.ScenePaused And Party.PreviewActive And
             Character3D.AnimationTime(Character) = 0,
             "Party timeline pauses and seeks the active actor")

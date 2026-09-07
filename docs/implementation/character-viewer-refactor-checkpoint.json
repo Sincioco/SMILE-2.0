@@ -48,7 +48,7 @@
   ],
   "currentExtractionCommitRange": {
     "first": "9a616ef35adae9b0c5bbc864ecf689bbd6fc1aed",
-    "lastCommittedBeforeCurrentCheckpoint": "1bb0fd6a1742c7510ccf05c2d3c7364b7c04bbf6"
+    "lastCommittedBeforeCurrentCheckpoint": "e105449f19553a7a9f982513fc17d03d4d5a53f7"
   },
   "programMetrics": {
     "initialAudit": {
@@ -68,11 +68,11 @@
       "sha256": "17853B7B210061F9D46D70913AABA39C4F798503F69C2E8CCA4D8511646AC670"
     },
     "current": {
-      "checkpoint": "gizmo-command-workflow-ownership",
-      "baseCommit": "1bb0fd6a1742c7510ccf05c2d3c7364b7c04bbf6",
-      "lines": 2890,
-      "procedures": 73,
-      "sha256": "BF661D6BAFCC7A10A066A50D9F970F3720A8E55F0294E3A33454E3AD8283DED6"
+      "checkpoint": "playback-timeline-command-workflow-ownership",
+      "baseCommit": "e105449f19553a7a9f982513fc17d03d4d5a53f7",
+      "lines": 2848,
+      "procedures": 69,
+      "sha256": "B4EC280380DD80E08992CF5FD9CE8DE4FDE752DF7D1C213EE147E87364922274"
     }
   },
   "substantialResponsibilitiesMovedFromProgram": [
@@ -91,7 +91,8 @@
     "keyboard rendering and camera navigation routing plus responsive-fit state transitions",
     "four ordered inspector presentation groups plus Party-owned target-label and remaining-time queries",
     "Party rendering, VFX and camera presentation commands plus cross-input Dragon visibility routing",
-    "gizmo keyboard and pointer command execution plus explicit Party-preview requirements"
+    "gizmo keyboard and pointer command execution plus explicit Party-preview requirements",
+    "frame stepping, first-frame seek, adjacent-key navigation, pointer seek and keyframe-drag start command execution"
   ],
   "currentDestinationOwners": [
     "ViewerActors",
@@ -148,7 +149,10 @@
     "Program.smile reduced from 3040 lines and 81 procedures to 3001 lines and 78 procedures without formatting compression",
     "gizmo keyboard and pointer command execution moved into ViewerCalibrationControls without Party, session, rendering or application state",
     "five gizmo coordinator helpers were deleted and calibration integration now invokes production owners",
-    "Program.smile reduced from 3001 lines and 78 procedures to 2890 lines and 73 procedures without formatting compression"
+    "Program.smile reduced from 3001 lines and 78 procedures to 2890 lines and 73 procedures without formatting compression",
+    "frame stepping, first-frame seek, adjacent-key navigation, pointer seek and keyframe-drag start moved into ViewerTimelineEditing with explicit owner borrows",
+    "four command-specific procedures were deleted and the fifth became one thin runtime, Party-preview and session-result adapter",
+    "Program.smile reduced from 2890 lines and 73 procedures to 2848 lines and 69 procedures without formatting compression"
   ],
   "validation": [
     "PASS: 308 shared compiler/language tests",
@@ -191,7 +195,12 @@
     "PASS: post-gizmo-command 42-check isolated calibration integration and 58 native graphics, pointer-input and audio-focus checks",
     "PASS: gizmo command-workflow Release Desktop Viewer build with 46 published assets",
     "PASS: gizmo command-workflow Release Full Web Viewer build with 35 published assets",
-    "PASS: post-gizmo-command repository style check for 405 SMILE files"
+    "PASS: post-gizmo-command repository style check for 405 SMILE files",
+    "PASS: playback/timeline command-workflow native/generated-Web hardening with exact console parity and direct command/no-op owner assertions",
+    "PASS: post-timeline-command 42-check isolated calibration integration and 58 native graphics, pointer-input and audio-focus checks",
+    "PASS: playback/timeline command-workflow Release Desktop Viewer build with 46 published assets",
+    "PASS: playback/timeline command-workflow Release Full Web Viewer build with 35 published assets",
+    "PASS: post-timeline-command repository style check for 405 SMILE files"
   ],
   "pendingValidation": [
     "final Character Viewer native and installed-Chrome acceptance after remaining extractions"

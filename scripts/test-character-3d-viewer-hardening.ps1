@@ -146,8 +146,8 @@ try {
         'If Pointer_Pressed(POINTER_SECONDARY) Then',
         'Call ResetAll()',
         'Call ToggleScenePause()',
-        'Call StepAnimationFrame(-1)',
-        'Call StepAnimationFrame(1)',
+        'Call ApplyTimelineCommand(',
+        'ViewerTimelineEditing.ApplyCommand(',
         'Const FRAME_BUTTON_REPEAT_MILLISECONDS = 300',
         'Const CALIBRATION_MAX_CLIPS = ViewerCalibration.MAX_CLIPS',
         'Sub ToggleSword()',
@@ -308,6 +308,12 @@ try {
         Assert-Contains $inputSource $contract 'Viewer input owner'
     }
     foreach ($contract in @(
+        'Public Const COMMAND_STEP_FRAME = 1',
+        'Public Const COMMAND_SEEK_FIRST_FRAME = 2',
+        'Public Const COMMAND_SEEK_ADJACENT_KEY = 3',
+        'Public Const COMMAND_SEEK_POINTER = 4',
+        'Public Const COMMAND_BEGIN_KEYFRAME_DRAG = 5',
+        'Public Function ApplyCommand(',
         'Public Function SeekFromPointer(',
         'Public Function SeekAdjacentKey(',
         'Public Function AcceptDragTarget(',
@@ -747,6 +753,17 @@ try {
         -not $viewerSource.Contains('ViewerUi.TimelineFrameAtPointer(') -and
         -not $viewerSource.Contains('ViewerCalibration.AdjacentKeyFrame(')) `
         'Detailed frame-repeat and timeline gesture behavior must remain in its production owners.'
+    Assert-True (-not $viewerSource.Contains('Sub StepAnimationFrame(') -and
+        -not $viewerSource.Contains('Sub SeekFirstAnimationFrame(') -and
+        -not $viewerSource.Contains('Sub SeekCalibrationKeyframe(') -and
+        -not $viewerSource.Contains('Sub SeekFromPointer(') -and
+        -not $viewerSource.Contains('Sub BeginTimelineKeyframeDrag(') -and
+        -not $viewerSource.Contains('ViewerPlayback.StepFrame(') -and
+        -not $viewerSource.Contains('ViewerPlayback.SeekFirstFrame(') -and
+        -not $viewerSource.Contains('ViewerTimelineEditing.SeekAdjacentKey(') -and
+        -not $viewerSource.Contains('ViewerTimelineEditing.SeekFromPointer(') -and
+        -not $viewerSource.Contains('ViewerInput.BeginTimelineKeyframeDrag(')) `
+        'Timeline command execution and deleted wrappers must remain in ViewerTimelineEditing.'
     Assert-True (-not $viewerSource.Contains('Function TransformGizmoAxisAtPointer(') -and
         -not $viewerSource.Contains('Function CurrentTransformGizmoOrigin(') -and
         -not $viewerSource.Contains('CharacterViewer.TransformGizmoAxisPointerDelta(') -and

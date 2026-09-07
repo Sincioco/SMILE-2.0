@@ -789,11 +789,13 @@ Sub HandleInspectorKeyboard(PressedKey As Number)
 
     Else If Action = ViewerInput.INSPECTOR_KEY_FRAME_PREVIOUS Then
 
-        Call StepAnimationFrame(-1)
+        Call ApplyTimelineCommand(
+            ViewerTimelineEditing.COMMAND_STEP_FRAME, -1)
 
     Else If Action = ViewerInput.INSPECTOR_KEY_FRAME_NEXT Then
 
-        Call StepAnimationFrame(1)
+        Call ApplyTimelineCommand(
+            ViewerTimelineEditing.COMMAND_STEP_FRAME, 1)
 
     Else If Action = ViewerInput.INSPECTOR_KEY_CLIP_1 Then
 
@@ -1269,7 +1271,8 @@ Function HandleInspectorPointer() As Boolean
     )
 
     If Gesture.Action = ViewerInput.POINTER_GESTURE_STEP_FRAME Then
-        Call StepAnimationFrame(Gesture.Value)
+        Call ApplyTimelineCommand(
+            ViewerTimelineEditing.COMMAND_STEP_FRAME, Gesture.Value)
     Else If Gesture.Action = ViewerInput.POINTER_GESTURE_UPDATE_KEYFRAME Then
         Call UpdateTimelineKeyframeDrag()
     Else If Gesture.Action = ViewerInput.POINTER_GESTURE_FINISH_KEYFRAME Then
@@ -1292,7 +1295,8 @@ Function HandleInspectorPointer() As Boolean
     )
 
     If Gesture.Action = ViewerInput.POINTER_GESTURE_SEEK_TIMELINE Then
-        Call SeekFromPointer()
+        Call ApplyTimelineCommand(
+            ViewerTimelineEditing.COMMAND_SEEK_POINTER, 0)
     End If
 
     If Gesture.Consumed Then
@@ -1322,9 +1326,11 @@ Function HandleInspectorPointer() As Boolean
         WheelDelta = Pointer_Wheel_Delta()
 
         If WheelDelta > 0 Then
-            Call StepAnimationFrame(1)
+            Call ApplyTimelineCommand(
+                ViewerTimelineEditing.COMMAND_STEP_FRAME, 1)
         Else If WheelDelta < 0 Then
-            Call StepAnimationFrame(-1)
+            Call ApplyTimelineCommand(
+                ViewerTimelineEditing.COMMAND_STEP_FRAME, -1)
         End If
 
         If WheelDelta <> 0 Then
@@ -1414,19 +1420,23 @@ Function HandleInspectorPointer() As Boolean
 
     If Action = ViewerUi.INSPECTOR_ACTION_FIRST_FRAME Then
 
-        Call SeekFirstAnimationFrame()
+        Call ApplyTimelineCommand(
+            ViewerTimelineEditing.COMMAND_SEEK_FIRST_FRAME, 0)
 
     Else If Action = ViewerUi.INSPECTOR_ACTION_PREVIOUS_KEY Then
 
-        Call SeekCalibrationKeyframe(-1)
+        Call ApplyTimelineCommand(
+            ViewerTimelineEditing.COMMAND_SEEK_ADJACENT_KEY, -1)
 
     Else If Action = ViewerUi.INSPECTOR_ACTION_NEXT_KEY Then
 
-        Call SeekCalibrationKeyframe(1)
+        Call ApplyTimelineCommand(
+            ViewerTimelineEditing.COMMAND_SEEK_ADJACENT_KEY, 1)
 
     Else If Action = ViewerUi.INSPECTOR_ACTION_PREVIOUS_FRAME Then
 
-        Call StepAnimationFrame(-1)
+        Call ApplyTimelineCommand(
+            ViewerTimelineEditing.COMMAND_STEP_FRAME, -1)
 
         Call ViewerInput.BeginFrameRepeat(
             ViewerInputState, -1,
@@ -1434,7 +1444,8 @@ Function HandleInspectorPointer() As Boolean
 
     Else If Action = ViewerUi.INSPECTOR_ACTION_NEXT_FRAME Then
 
-        Call StepAnimationFrame(1)
+        Call ApplyTimelineCommand(
+            ViewerTimelineEditing.COMMAND_STEP_FRAME, 1)
 
         Call ViewerInput.BeginFrameRepeat(
             ViewerInputState, 1,
@@ -1442,13 +1453,13 @@ Function HandleInspectorPointer() As Boolean
 
     Else If Action = ViewerUi.INSPECTOR_ACTION_KEYFRAME Then
 
-        Call BeginTimelineKeyframeDrag(KeyframeIndex)
+        Call ApplyTimelineCommand(
+            ViewerTimelineEditing.COMMAND_BEGIN_KEYFRAME_DRAG, KeyframeIndex)
 
     Else If Action = ViewerUi.INSPECTOR_ACTION_TIMELINE Then
 
-        Call ViewerInput.BeginTimelineScrub(ViewerInputState)
-
-        Call SeekFromPointer()
+        Call ApplyTimelineCommand(
+            ViewerTimelineEditing.COMMAND_SEEK_POINTER, 0)
 
     Else If Action = ViewerUi.INSPECTOR_ACTION_PROFILE Then
 
@@ -1872,77 +1883,24 @@ Sub SelectPresentationClip(Index As Number)
 
 End Sub
 
-Sub StepAnimationFrame(Direction As Number)
+Sub ApplyTimelineCommand(Command As Number, Value As Number)
 
-    Call BeginPartyPreview()
-    Call CancelCalibrationEdit()
+    Dim Result As ViewerCalibrationEditing.OperationResult
 
-    Session.Ready = ViewerPlayback.StepFrame(
-        Playback, Character, Direction) And Session.Ready
-
-    Call ViewerEffects.InvalidateVisualHistory(Effects)
-
-End Sub
-
-Sub SeekFirstAnimationFrame()
-
-    Call BeginPartyPreview()
-    Call CancelCalibrationEdit()
-
-    Session.Ready = ViewerPlayback.SeekFirstFrame(
-        Playback, Character) And Session.Ready
-
-    Call ViewerEffects.InvalidateVisualHistory(Effects)
-
-End Sub
-
-Sub SeekCalibrationKeyframe(Direction As Number)
-
-    ''' Navigation pauses even when this clip has no saved keys to visit.
-
-    Call BeginPartyPreview()
-
-    Playback.ScenePaused = True
-
-    If ViewerUiState.CalibrationEditing Then
-        Call CancelCalibrationEdit()
+    If Command = ViewerTimelineEditing.COMMAND_SEEK_POINTER Then
+        Call ViewerInput.BeginTimelineScrub(ViewerInputState)
     End If
 
-    Session.Ready = ViewerTimelineEditing.SeekAdjacentKey(
-        Calibration,
-        Character,
-        Playback.SelectedClip,
-        Direction,
-        Session.ProfileIndex,
-        SwordWristNode,
-        ShieldWristNode,
-        CalibrationAvailable,
-        ViewerUiState.CalibrationEditing,
-        Effects
-    ) And Session.Ready
-
-End Sub
-
-Sub SeekFromPointer()
-
     Call BeginPartyPreview()
-    Call CancelCalibrationEdit()
 
-    Session.Ready = ViewerTimelineEditing.SeekFromPointer(
-        Playback, Character, Pointer_X(), Window_Width(), Effects) And Session.Ready
+    Result = ViewerTimelineEditing.ApplyCommand(
+        Command, Value, ViewerInputState, Calibration,
+        Character, Playback, Session.ProfileIndex,
+        SwordWristNode, ShieldWristNode, CalibrationAvailable,
+        ViewerUiState, ViewerGizmoState, ViewerCameraState, Effects,
+        Pointer_X(), Window_Width())
 
-End Sub
-
-Sub BeginTimelineKeyframeDrag(KeyframeIndex As Number)
-
-    Call BeginPartyPreview()
-    Call ViewerInput.BeginTimelineKeyframeDrag(
-        ViewerInputState,
-        KeyframeIndex,
-        ViewerCalibration.KeyFrame(Calibration, Playback.SelectedClip, KeyframeIndex)
-    )
-
-    Call UpdateTimelineKeyframeDrag()
+    Call ApplyCalibrationEditingResult(Result)
 
 End Sub
 

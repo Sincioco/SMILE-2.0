@@ -601,6 +601,25 @@ Call ViewerUi.Reset(UiState)
 Call ViewerGizmo.Reset(GizmoState)
 Call ViewerPlayback.Reset(PlaybackState, 100)
 
+PlaybackState.ScenePaused = False
+CalibrationOperation = ViewerTimelineEditing.ApplyCommand(
+    ViewerTimelineEditing.COMMAND_SEEK_ADJACENT_KEY, 1,
+    InputState, CalibrationState, PartyPrimary.Actor, PlaybackState,
+    0, -1, -1, False, UiState, GizmoState, CameraState,
+    EffectsState, 0, 800)
+
+Call Check(CalibrationOperation.Ready And PlaybackState.ScenePaused)
+
+PlaybackState.ScenePaused = False
+CalibrationOperation = ViewerTimelineEditing.ApplyCommand(
+    999, 0,
+    InputState, CalibrationState, PartyPrimary.Actor, PlaybackState,
+    0, -1, -1, False, UiState, GizmoState, CameraState,
+    EffectsState, 0, 800)
+
+Call Check(CalibrationOperation.Ready And
+    Not CalibrationOperation.Applied And Not PlaybackState.ScenePaused)
+
 EffectsState.VisualHistoryDirty = False
 EffectsState.VisualContinuityEpoch = 0
 

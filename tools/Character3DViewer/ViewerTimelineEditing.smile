@@ -6,10 +6,97 @@ Option Explicit
 Import Smile.Simple3D.Character3D As Character3D
 Import Smile.Tools.Character3DViewerCalibration As ViewerCalibration
 Import Smile.Tools.Character3DViewerCalibrationEditing As ViewerCalibrationEditing
+Import Smile.Tools.Character3DViewerCamera As ViewerCamera
 Import Smile.Tools.Character3DViewerEffects As ViewerEffects
+Import Smile.Tools.Character3DViewerGizmo As ViewerGizmo
 Import Smile.Tools.Character3DViewerInput As ViewerInput
 Import Smile.Tools.Character3DViewerPlayback As ViewerPlayback
 Import Smile.Tools.Character3DViewerUi As ViewerUi
+
+Public Const COMMAND_STEP_FRAME = 1
+Public Const COMMAND_SEEK_FIRST_FRAME = 2
+Public Const COMMAND_SEEK_ADJACENT_KEY = 3
+Public Const COMMAND_SEEK_POINTER = 4
+Public Const COMMAND_BEGIN_KEYFRAME_DRAG = 5
+
+Public Function ApplyCommand(Command As Number, Value As Number,
+    ByRef Input As ViewerInput.State,
+    ByRef Calibration As ViewerCalibration.State,
+    ByRef Actor As Character3D.Actor,
+    ByRef Playback As ViewerPlayback.State,
+    ProfileIndex As Number, SwordWristNode As Number,
+    ShieldWristNode As Number, Available As Boolean,
+    ByRef Ui As ViewerUi.State, ByRef Gizmo As ViewerGizmo.State,
+    ByRef Camera As ViewerCamera.State,
+    ByRef Effects As ViewerEffects.State,
+    PointerX As Number,
+    WindowWidth As Number) As ViewerCalibrationEditing.OperationResult
+
+    Dim Result As ViewerCalibrationEditing.OperationResult
+
+    Result.Ready = True
+
+    If Command = COMMAND_STEP_FRAME Then
+
+        Result = ViewerCalibrationEditing.CancelEdit(
+            Calibration, Actor, Playback.SelectedClip,
+            SwordWristNode, ShieldWristNode, Available,
+            Ui, Gizmo, Camera, Effects)
+        Result.Ready = ViewerPlayback.StepFrame(
+            Playback, Actor, Value) And Result.Ready
+
+        Call ViewerEffects.InvalidateVisualHistory(Effects)
+
+    Else If Command = COMMAND_SEEK_FIRST_FRAME Then
+
+        Result = ViewerCalibrationEditing.CancelEdit(
+            Calibration, Actor, Playback.SelectedClip,
+            SwordWristNode, ShieldWristNode, Available,
+            Ui, Gizmo, Camera, Effects)
+        Result.Ready = ViewerPlayback.SeekFirstFrame(
+            Playback, Actor) And Result.Ready
+
+        Call ViewerEffects.InvalidateVisualHistory(Effects)
+
+    Else If Command = COMMAND_SEEK_ADJACENT_KEY Then
+
+        Playback.ScenePaused = True
+        Result = ViewerCalibrationEditing.CancelEdit(
+            Calibration, Actor, Playback.SelectedClip,
+            SwordWristNode, ShieldWristNode, Available,
+            Ui, Gizmo, Camera, Effects)
+        Result.Ready = SeekAdjacentKey(
+            Calibration, Actor, Playback.SelectedClip, Value,
+            ProfileIndex, SwordWristNode, ShieldWristNode,
+            Available, Ui.CalibrationEditing, Effects) And Result.Ready
+
+    Else If Command = COMMAND_SEEK_POINTER Then
+
+        Result = ViewerCalibrationEditing.CancelEdit(
+            Calibration, Actor, Playback.SelectedClip,
+            SwordWristNode, ShieldWristNode, Available,
+            Ui, Gizmo, Camera, Effects)
+        Result.Ready = SeekFromPointer(
+            Playback, Actor, PointerX, WindowWidth, Effects) And Result.Ready
+
+    Else If Command = COMMAND_BEGIN_KEYFRAME_DRAG Then
+
+        Call ViewerInput.BeginTimelineKeyframeDrag(
+            Input,
+            Value,
+            ViewerCalibration.KeyFrame(
+                Calibration, Playback.SelectedClip, Value)
+        )
+
+        Result.Ready = UpdateKeyframeDrag(
+            Input, Calibration, Actor, Playback.SelectedClip,
+            PointerX, WindowWidth, Effects)
+
+    End If
+
+    Return Result
+
+End Function
 
 Public Function SeekFromPointer(ByRef Playback As ViewerPlayback.State,
     ByRef Actor As Character3D.Actor, PointerX As Number,
