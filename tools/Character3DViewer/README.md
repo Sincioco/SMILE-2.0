@@ -21,15 +21,16 @@ The editor source and build/launch entry points belong here. Sin Star I owns the
 ## Maintainer routing
 
 Start with `ARCHITECTURE.md` for the current ownership and test map. `Program.smile`
-is intended to become the thin ordered coordinator. The R7.5 audit records that it
-is not yet thin: at the audit baseline it contains 8,319 lines and 233 procedures,
-including substantial subsystem implementation that must still move. Extracted
-startup/session/playback, camera, calibration, input/UI/gizmo, Party, effects, and
-rendering state lives with the corresponding `Viewer*.smile` production modules;
-retained focused helpers continue to own audio, Dragon presence, Orin storm,
-profiles, and bounded calibration JSON. Do not recreate those fields in
-`Program.smile`, mistake state extraction for a completed responsibility move, or
-gather them into a shared replacement state.
+is the ordered coordinator. The R7.5 audit baseline was 8,319 lines and 233
+procedures, with substantial subsystem implementation still present. The completed
+ownership moves reduce the current entry point to 1,851 lines and 51 procedures.
+Startup/session/playback, camera, calibration, input/UI/gizmo, Party, effects, and
+rendering behavior now lives with its corresponding `Viewer*.smile` production
+owner and focused tests, not merely in extracted state records. The remaining
+above-threshold procedures are documented runtime-sampling and cross-owner ordering
+coordinators. This remains an explicit entry-point size exception pending final
+native and installed-Chrome acceptance; do not hide those ordered calls in a shared
+replacement application/controller module or recreate owner state in `Program.smile`.
 
 The one compact current checkpoint is
 `docs\implementation\character-viewer-refactor-checkpoint.json`. The H6.1 records are

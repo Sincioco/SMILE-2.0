@@ -405,11 +405,17 @@ and its focused production tests exercise the destination owner.
 The separate fixed-array hardening gate did not move Viewer responsibility or change
 the 3,448-line/91-procedure transform-gizmo checkpoint metrics. It added immediate
 per-dimension native bounds checks, Web `ByRef` capture validation, returned-record
-projection cleanup and bounded native record-helper loops, then exercised those
-compiler/runtime changes with disposable native and Web fixtures. R7.5 subsequently
-resumed with the inspector/gesture and calibration-panel command moves above.
+projection cleanup and bounded native record-helper loops. A later integration check
+found that repeating complete cleanup at every native index site could exhaust the
+compiler on a large RPG consumer; commit `a068b48` replaces that expansion with one
+shared non-returning cleanup helper. Actual compiled Image-owning returned function
+and property record arrays retain the selected value and release sibling resources,
+including invalid-index cleanup. Disposable native/Web fixtures, the packaged RPG
+consumer and the full repository smoke suite pass against that implementation. R7.5
+subsequently resumed with the inspector/gesture and calibration-panel command moves
+above.
 
-Substantial implementation still in `Program.smile` after the scene-render transaction
+Substantial coordination retained in `Program.smile` after the scene-render transaction
 checkpoint is intentionally explicit: Party inspector context/calibration adaptation and
 Party pointer-response execution; the non-timeline inspector and keyboard command
 sampling plus interface/slider/gizmo runtime sampling and priority ordering;
