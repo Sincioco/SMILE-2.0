@@ -480,8 +480,12 @@ native runtime `0A221352DDED29F358BDEAFE740CE85018159773F7A7D9FDC4B72A2633627A21
 Arin's 24-key and Orin's zero-key canonical hashes remain the recorded 7A3E7BC8 /
 13AE135F values. No model, descriptor, game project or Program.smile change.
 Local Full Web output is current; no public-site upload is claimed.
-Next action: publish this validated milestone, then fulfill Sin's explicit request
-to end YouTube Live and take Meld Studio offline. STOP after those confirmations.
+Published normally as `a807326efb7d1c6e23cc3936da57c39a4da551c5`; remote main
+was read back at that hash and the worktree was clean. At Sin's explicit request,
+YouTube Live was ended and visually confirmed as "Stream Finished" / "Offline".
+Meld Studio was taken offline and its "Go live" button replaced "Go offline";
+the live timer and output bitrate disappeared. No stream configuration was changed.
+Next action: STOP. No outstanding work in this follow-up; held features remain held.
 
 ## On Hold
 
