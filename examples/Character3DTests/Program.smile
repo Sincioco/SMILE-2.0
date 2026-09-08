@@ -5,6 +5,7 @@ Import Smile.Simple3D.Graphics3D As Graphics3D
 Import Smile.Simple3D.Scene3D As Scene3D
 Import Smile.Simple3D.Character3D As Character3D
 Import Smile.Simple3D.Math3D As Math3D
+Import Smile.Tests.CharacterPrecision As PrecisionChecks
 
 Dim Camera As Core.Camera3D
 Dim First As Character3D.Actor
@@ -567,6 +568,8 @@ Call Character3D.Shutdown()
 Call Graphics3D.ResetRenderer3D()
 
 Call CheckUnusedAssetCache()
+
+Failures = Failures + PrecisionChecks.Run()
 
 If Failures = 0 Then
     Print "Character3D and Scene3D tests passed"

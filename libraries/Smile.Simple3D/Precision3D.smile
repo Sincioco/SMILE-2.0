@@ -1,0 +1,259 @@
+''' Fractional values borrow the existing renderer resources; they own no handles.
+Module Smile.Simple3D.Precision3D
+
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Graphics3D As Graphics3D
+
+Private Const COMMAND_CAMERA = 1
+Private Const COMMAND_TRANSFORM = 2
+Private Const COMMAND_POSITION = 3
+Private Const COMMAND_ROTATION = 4
+Private Const COMMAND_SCALE = 5
+Private Const QUERY_CAMERA = 1
+Private Const QUERY_OBJECT = 2
+Private Const QUERY_SOCKET = 3
+Private Const QUERY_REFLECTION = 4
+Private Const QUERY_SUBMITTED = 5
+
+''' World units, or degrees when used as an Euler rotation.
+Public Type Vector3
+    X As Double
+    Y As Double
+    Z As Double
+End Type
+
+''' Perspective camera; the renderer keeps the accepted complete transaction.
+Public Type Camera3D
+    Position As Vector3
+    Target As Vector3
+    UpDirection As Vector3
+    FovDegrees As Double
+    NearPlane As Double
+    FarPlane As Double
+End Type
+
+''' Non-owning transform applied to an existing Core.Object3D.
+Public Type Transform3D
+    Position As Vector3
+    Rotation As Vector3
+    ScalePercent As Vector3
+End Type
+
+Public Function Vector(X As Double, Y As Double, Z As Double) As Vector3
+
+    Dim Result As Vector3
+
+    Result.X = X
+    Result.Y = Y
+    Result.Z = Z
+
+    Return Result
+
+End Function
+
+Public Function FromVector(Value As Core.Vector3) As Vector3
+
+    Dim Result As Vector3
+
+    Result = Vector(ToDouble(Value.X), ToDouble(Value.Y), ToDouble(Value.Z))
+
+    Return Result
+
+End Function
+
+Public Function FromCamera(Value As Core.Camera3D) As Camera3D
+
+    Dim Result As Camera3D
+
+    Result.Position = FromVector(Value.Position)
+    Result.Target = FromVector(Value.Target)
+    Result.UpDirection = FromVector(Value.UpDirection)
+    Result.FovDegrees = ToDouble(Value.FovDegrees)
+    Result.NearPlane = ToDouble(Value.NearPlane)
+    Result.FarPlane = ToDouble(Value.FarPlane)
+
+    If (Result.UpDirection.X = 0.0 And
+        Result.UpDirection.Y = 0.0 And
+        Result.UpDirection.Z = 0.0) Then
+
+        If (Abs(Result.Target.X - Result.Position.X) <= 0.0001 And
+            Abs(Result.Target.Z - Result.Position.Z) <= 0.0001) Then
+            Result.UpDirection.X = 1.0
+        Else
+            Result.UpDirection.Y = 1.0
+        End If
+
+    End If
+
+    Return Result
+
+End Function
+
+Public Function SetCamera(Value As Camera3D) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Renderer3DDouble(COMMAND_CAMERA, 0,
+        Value.Position.X, Value.Position.Y, Value.Position.Z,
+        Value.Target.X, Value.Target.Y, Value.Target.Z,
+        Value.UpDirection.X, Value.UpDirection.Y, Value.UpDirection.Z,
+        Value.FovDegrees, Value.NearPlane, Value.FarPlane) <> 0
+
+    Return Result
+
+End Function
+
+Public Function SetTransform(Object As Core.Object3D, Value As Transform3D) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Renderer3DDouble(COMMAND_TRANSFORM, Object.Handle,
+        Value.Position.X, Value.Position.Y, Value.Position.Z,
+        Value.Rotation.X, Value.Rotation.Y, Value.Rotation.Z,
+        Value.ScalePercent.X, Value.ScalePercent.Y, Value.ScalePercent.Z,
+        0.0, 0.0, 0.0) <> 0
+
+    Return Result
+
+End Function
+
+Public Function SetPosition(Object As Core.Object3D, X As Double, Y As Double, Z As Double) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Renderer3DDouble(COMMAND_POSITION, Object.Handle, X, Y, Z,
+        0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0) <> 0
+
+    Return Result
+
+End Function
+
+Public Function SetRotation(Object As Core.Object3D, X As Double, Y As Double, Z As Double) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Renderer3DDouble(COMMAND_ROTATION, Object.Handle, X, Y, Z,
+        0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0) <> 0
+
+    Return Result
+
+End Function
+
+Public Function SetScale(Object As Core.Object3D, X As Double, Y As Double, Z As Double) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Renderer3DDouble(COMMAND_SCALE, Object.Handle, X, Y, Z,
+        0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0) <> 0
+
+    Return Result
+
+End Function
+
+Private Function TryVector(Command As Number, Resource As Number, Index As Number,
+    FirstComponent As Number, ByRef Result As Vector3) As Boolean
+
+    Dim Candidate As Vector3
+
+    Candidate.X = Renderer3DDoubleValue(Command, Resource, Index, FirstComponent)
+
+    If Graphics3D.LastError() <> 0 Then
+        Return False
+    End If
+
+    Candidate.Y = Renderer3DDoubleValue(Command, Resource, Index, FirstComponent + 1)
+
+    If Graphics3D.LastError() <> 0 Then
+        Return False
+    End If
+
+    Candidate.Z = Renderer3DDoubleValue(Command, Resource, Index, FirstComponent + 2)
+
+    If Graphics3D.LastError() <> 0 Then
+        Return False
+    End If
+
+    Result = Candidate
+
+    Return True
+
+End Function
+
+Public Function AcceptedCamera() As Camera3D
+
+    Dim Result As Camera3D
+    Dim Valid As Boolean
+
+    Valid = TryVector(QUERY_CAMERA, 0, 0, 0, Result.Position)
+    Valid = TryVector(QUERY_CAMERA, 0, 0, 3, Result.Target)
+    Valid = TryVector(QUERY_CAMERA, 0, 0, 6, Result.UpDirection)
+    Result.FovDegrees = Renderer3DDoubleValue(QUERY_CAMERA, 0, 0, 9)
+    Result.NearPlane = Renderer3DDoubleValue(QUERY_CAMERA, 0, 0, 10)
+    Result.FarPlane = Renderer3DDoubleValue(QUERY_CAMERA, 0, 0, 11)
+
+    Return Result
+
+End Function
+
+Public Function TryTransform(Object As Core.Object3D, ByRef Result As Transform3D) As Boolean
+
+    Dim Candidate As Transform3D
+
+    If Not TryVector(QUERY_OBJECT, Object.Handle, 0, 0, Candidate.Position) Then
+        Return False
+    End If
+
+    If Not TryVector(QUERY_OBJECT, Object.Handle, 0, 3, Candidate.Rotation) Then
+        Return False
+    End If
+
+    If Not TryVector(QUERY_OBJECT, Object.Handle, 0, 6, Candidate.ScalePercent) Then
+        Return False
+    End If
+
+    Result = Candidate
+
+    Return True
+
+End Function
+
+Public Function TrySocketPosition(Object As Core.Object3D, SocketIndex As Number,
+    IgnoreNodeOffsets As Boolean, ByRef Result As Vector3) As Boolean
+
+    Dim Valid As Boolean
+    Dim Component As Number
+
+    If IgnoreNodeOffsets Then
+        Component = 3
+    End If
+
+    Valid = TryVector(QUERY_SOCKET, Object.Handle, SocketIndex, Component, Result)
+
+    Return Valid
+
+End Function
+
+Public Function TrySubmittedPosition(Object As Core.Object3D, SubmissionIndex As Number,
+    ByRef Result As Vector3) As Boolean
+
+    Dim Valid As Boolean
+
+    Valid = TryVector(QUERY_SUBMITTED, Object.Handle, SubmissionIndex, 0, Result)
+
+    Return Valid
+
+End Function
+
+Public Function ReflectionPlane() As Double
+
+    Dim Result As Double
+
+    Result = Renderer3DDoubleValue(QUERY_REFLECTION, 0, 0, 0)
+
+    Return Result
+
+End Function
+
+End Module

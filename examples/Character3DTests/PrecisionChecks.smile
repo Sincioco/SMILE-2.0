@@ -1,0 +1,112 @@
+''' Fractional checks reuse the accepted articulated fixture and production actor owner.
+Module Smile.Tests.CharacterPrecision
+
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Character3D As Character3D
+Import Smile.Simple3D.Graphics3D As Graphics3D
+Import Smile.Simple3D.Precision3D As Precision3D
+Import Smile.Simple3D.Scene3D As Scene3D
+
+Private Dim Failures As Number
+Private Dim CheckIndex As Number
+
+Private Sub Check(Valid As Boolean)
+
+    CheckIndex = CheckIndex + 1
+
+    If Not Valid Then
+        Failures = Failures + 1
+        Print "Failed character precision check "; CheckIndex
+    End If
+
+End Sub
+
+Public Function Run() As Number
+
+    Dim First As Character3D.Actor
+    Dim Second As Character3D.Actor
+    Dim Part As Core.Object3D
+    Dim Equipment As Core.Object3D
+    Dim Position As Precision3D.Vector3
+    Dim Before As Precision3D.Vector3
+    Dim Socket As Precision3D.Vector3
+    Dim Captured As Precision3D.Vector3
+    Dim Transform As Precision3D.Transform3D
+    Dim BoundsBefore As Character3D.PreciseBounds3D
+    Dim BoundsAfter As Character3D.PreciseBounds3D
+    Dim Camera As Precision3D.Camera3D
+    Dim Index As Number
+
+    Failures = 0
+    CheckIndex = 0
+    First = Character3D.LoadActor("Assets\AnimationArticulated.sm3d")
+    Second = Character3D.LoadActor("Assets\AnimationArticulated.sm3d")
+    Equipment = Graphics3D.CreateCube3D(1)
+
+    Call Check(Character3D.IsValid(First) And Character3D.IsValid(Second))
+    Call Check(Character3D.PartCount(First) > 1)
+    Call Check(Character3D.TrySocketPositionPrecise(First, "HandTip", 0, False, Before))
+
+    BoundsBefore = Character3D.WorldBoundsPrecise(First)
+
+    Call Check(Character3D.PlacePrecise(First, 0.25, -0.75, 0.5))
+    Call Check(Character3D.TryPosition(First, Position))
+    Call Check(Position.X = 0.25 And Position.Y = -0.75 And Position.Z = 0.5)
+    Call Check(Character3D.TrySocketPositionPrecise(First, "HandTip", 0, False, Socket))
+    Call Check(Abs(Socket.X - Before.X - 0.25) < 0.0002)
+    Call Check(Abs(Socket.Y - Before.Y + 0.75) < 0.0002)
+    Call Check(Abs(Socket.Z - Before.Z - 0.5) < 0.0002)
+    Call Check(Precision3D.SetPosition(Equipment, Socket.X, Socket.Y, Socket.Z))
+    Call Check(Precision3D.TryTransform(Equipment, Transform))
+    Call Check(Abs(Transform.Position.X - Socket.X) < 0.0002)
+    Call Check(Abs(Transform.Position.Y - Socket.Y) < 0.0002)
+    Call Check(Abs(Transform.Position.Z - Socket.Z) < 0.0002)
+
+    BoundsAfter = Character3D.WorldBoundsPrecise(First, 0.125)
+
+    Call Check(BoundsBefore.Valid And BoundsAfter.Valid)
+    Call Check(Abs(BoundsAfter.Center.X - BoundsBefore.Center.X - 0.25) < 1e-10)
+    Call Check(Abs(BoundsAfter.Minimum.Y - BoundsBefore.Minimum.Y + 0.875) < 1e-10)
+    Call Check(Character3D.RotatePrecise(First, 0.0, 0.125, 0.0))
+    Call Check(Not Character3D.PlacePrecise(First, 1000000.25, 0.0, 0.0))
+
+    For Index = 0 To Character3D.PartCount(First) - 1
+        Part.Handle = Character3D.PartObjectHandle(First, Index)
+
+        Call Check(Precision3D.TryTransform(Part, Transform))
+        Call Check(Transform.Position.X = 0.25 And Transform.Position.Y = -0.75)
+        Call Check(Transform.Rotation.Y = 0.125)
+    End For
+
+    Call Check(Character3D.TryPosition(Second, Position))
+    Call Check(Position.X = 0.0 And Position.Y = 0.0 And Position.Z = 0.0)
+    Call Check(Character3D.TrySocketPositionPrecise(First, "HandTip", 0, False, Socket))
+    Call Check(Precision3D.SetPosition(Equipment, Socket.X, Socket.Y, Socket.Z))
+
+    Camera = Precision3D.FromCamera(Graphics3D.DefaultCamera())
+
+    Call Check(Scene3D.BeginPrecise(Camera, 20, 20, 28))
+    Call Check(Character3D.Draw(First))
+    Call Check(Graphics3D.DrawObject3D(Equipment))
+    Call Check(Precision3D.TrySubmittedPosition(Equipment, Character3D.PartCount(First), Captured))
+    Call Check(Abs(Captured.X - Socket.X) < 0.0002 And Abs(Captured.Y - Socket.Y) < 0.0002)
+    Call Check(Scene3D.EndScene())
+
+    Show Screen
+
+    Call Check(Character3D.LookAtPrecise(First, 0.5, -0.75, 100.5))
+    Call Check(Character3D.TryRotation(First, Position))
+    Call Check(Position.Y > 0.14 And Position.Y < 0.15)
+    Call Character3D.Destroy(First)
+    Call Character3D.Destroy(Second)
+    Call Graphics3D.DestroyObject3D(Equipment)
+    Call Character3D.Shutdown()
+    Call Check(Character3D.LiveActorCount() = 0)
+
+    Return Failures
+
+End Function
+
+End Module

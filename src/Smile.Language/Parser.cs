@@ -1837,12 +1837,12 @@ internal sealed class Parser
     private static bool IsContextualIdentifier(SyntaxKind kind) =>
         kind is SyntaxKind.WindowKeyword or SyntaxKind.SizeKeyword or SyntaxKind.DrawKeyword or SyntaxKind.LineKeyword or
             SyntaxKind.TextKeyword or SyntaxKind.LeftKeyword or SyntaxKind.RightKeyword or SyntaxKind.SetKeyword or
-            SyntaxKind.PropertyKeyword or SyntaxKind.DoubleKeyword || DoubleSemantics.IsIntrinsic(kind) ||
+            SyntaxKind.PropertyKeyword or SyntaxKind.DoubleKeyword || (DoubleSemantics.IsIntrinsic(kind) || Renderer3DPrecisionSemantics.IsIntrinsic(kind)) ||
         kind >= SyntaxKind.UnloadKeyword && kind <= SyntaxKind.ChannelKeyword;
 
     private static bool IsIdentifierLike(SyntaxKind kind) =>
         kind is SyntaxKind.IdentifierToken or SyntaxKind.KeyKeyword or SyntaxKind.DoubleKeyword ||
-        DoubleSemantics.IsIntrinsic(kind) || IsContextualIdentifier(kind);
+        (DoubleSemantics.IsIntrinsic(kind) || Renderer3DPrecisionSemantics.IsIntrinsic(kind)) || IsContextualIdentifier(kind);
 
     private static bool IsParameterStart(SyntaxKind kind) =>
         kind is SyntaxKind.OptionalKeyword or SyntaxKind.ByRefKeyword or SyntaxKind.ByValKeyword ||

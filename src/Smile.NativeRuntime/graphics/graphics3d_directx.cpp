@@ -6212,8 +6212,8 @@ static long long smile_3d_take_model_event(SmileAnimator3D* animator, const char
     return 0;
 }
 
-static long long smile_3d_model_socket_value(SmileAnimator3D* animator,
-    long long socket_index, long long property, long long object_handle, long long ignore_offsets)
+static int smile_3d_model_socket_matrix(SmileAnimator3D* animator,
+    long long socket_index, long long object_handle, long long ignore_offsets, SmileMatrix3D* output)
 {
     SmileModel3D* model = animator == 0 ? 0 : smile_3d_model_resource(animator->model_handle);
     if (animator == 0 || !animator->model_animation || model == 0 || socket_index < 0 ||
@@ -6240,6 +6240,15 @@ static long long smile_3d_model_socket_value(SmileAnimator3D* animator,
             value = smile_3d_multiply(local, animator->base_node_global[node]);
         value = smile_3d_multiply(value, smile_3d_model(object));
     }
+    *output = value;
+    return 1;
+}
+
+static long long smile_3d_model_socket_value(SmileAnimator3D* animator,
+    long long socket_index, long long property, long long object_handle, long long ignore_offsets)
+{
+    SmileMatrix3D value;
+    if (!smile_3d_model_socket_matrix(animator, socket_index, object_handle, ignore_offsets, &value)) return 0;
     if (property >= 1 && property <= 3)
         return (long long)llroundf(value.m[11 + property] * 1000.0f);
     if (property >= 4 && property <= 12)
@@ -9665,6 +9674,8 @@ static void smile_3d_reset(void)
     if (smile_resource_epoch3d <= 0 || smile_resource_epoch3d > 2147483647)
         smile_resource_epoch3d = 1;
 }
+
+#include "graphics3d_precision.inl"
 
 extern "C" long long smile_renderer3d_command(long long command,
     long long a, long long b, long long c, long long d, long long e,

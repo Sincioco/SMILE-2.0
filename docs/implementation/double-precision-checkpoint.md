@@ -17,8 +17,8 @@
 | Phase | State | Owner and dependency | Structural completion |
 |---|---|---|---|
 | P0 | Completed and pushed, `9f33ad9` | ViewerUi, BattleArenaPreview; existing fallback queries. Web Renderer3DReflections; existing parent HDR state | Both production label policies handle unsupported receivers; RGBA16F uses core LINEAR filtering with renderability/retry checks retained |
-| D1 | Validated; publication is the containing commit | Smile.Language/DoubleSemantics; MasmDoubleEmitter/numeric runtime; WebEmitter/Double.js; package schema 7; shared completion and native debug types | Distinct binary64 arithmetic/storage/calls/errors, packages and tooling on both targets; 317 shared tests; actual native, Web and Chrome execution |
-| D2 | Pending D1 | Existing renderer and actor ownership; fractional typed bridge/shared math | Pending actual fractional submission/query path |
+| D1 | Completed and pushed, `40c183d` | Smile.Language/DoubleSemantics; MasmDoubleEmitter/numeric runtime; WebEmitter/Double.js; package schema 7; shared completion and native debug types | Distinct binary64 arithmetic/storage/calls/errors, packages and tooling on both targets; 317 shared tests; actual native, Web and Chrome execution |
+| D2 | Completed; publication commit contains this checkpoint | Existing renderer and actor ownership; fractional typed bridge/shared math | Complete typed camera/object/query path, same Scene3D lifecycle, authoritative Double actor transforms, precise sockets/bounds, shared math; native/Web and ordinary actor regression gates pass |
 | D3 | Pending D2 | Viewer camera/Party, Sin Star I preview, shared curve slice | Pending selective adoption without rounding to old integer arguments |
 | D4 | Pending D3 | Integration, documentation, publication and installed VSIX verification | Pending final delivery |
 
@@ -112,11 +112,59 @@ D4 payload boundary; no current Double or installation completion is claimed.
 | `artifacts/web/DoubleTests/game.js` | `103B99C1D166A7BD1788646E3B42ACB303CD6880FE18B5BA54D79F6251DA2A15` |
 | `examples/DoubleTests/bin/Debug/Smile.Double.Proof.smilelib` | `B8AE5586E9682C290770B415D17EFE15F6A9D1A81E8D550F2FCA2653DA4BA282` |
 
+## D2 evidence and limits
+
+- Type/unit/owner map and dispatch table: `docs/libraries/precision3d-boundary.md`.
+  `Precision3D` owns non-owning typed values/bridge wrappers; `PrecisionMath3D`
+  owns binary64 vector/Euler/lerp/cubic math. Scene3D retains frame ownership.
+  Character3D retains its existing 32-actor multipart transaction/rollback pool;
+  only six continuous arrays change to Double world units/degrees. Authored
+  bounds/root millith units convert explicitly; legacy query facades stay integral.
+- `scripts/test-precision3d.ps1`: native DirectX and generated Web exact pass
+  (`artifacts/temp/d2-precision-gate.log`). Source 0.25 translation and 0.125-degree
+  rotation read back exactly at the runtime boundary; accepted camera FOV 55.125,
+  near 0.125 and far 10000.5 are exact. Rotated camera position is within 2e-4.
+  Captured X stays 0.25 after live X changes to 7.5. Effective automatic planes
+  are exactly 7.25 and -0.75. Invalid camera and float-underflow scale preserve
+  prior accepted state. Cubic midpoint/endpoints and equal elapsed-ms partitions pass.
+- `scripts/test-character3d.ps1`: native and Web normal/forced-PBR-fallback
+  passes, plus both Lab builds (`d2-character-gate.log`). Ordinary cache, ownership,
+  partial failure/rollback, root motion, events and stale-generation checks remain.
+  The same articulated asset now also proves multipart (0.25,-0.75,0.5) placement,
+  0.125-degree yaw, rejected out-of-range placement preserving all parts,
+  independent second actor, precise bounds and actual socket/equipment capture
+  within 2e-4; static bounds center translation agrees within 1e-10.
+- 318 shared tests pass (`d2-shared-tests.log`), including Game Window capability,
+  exact Number identities/selectors, mandatory Double payloads and typed query
+  results. All eight changed/new SMILE sources pass focused formatting checks.
+  Native runtime and compiler rebuilds pass. Final scale-underflow rejection was
+  rechecked with the precise fixture; unchanged actor/ownership evidence is reused.
+- Fixed during D2: float narrowing could collapse an extremely small positive
+  scale to zero; both backends now reject it atomically. Tiny unusable camera
+  vectors are rejected before float normalization. No assets/calibration/live
+  storage or production coordinator changes; no Doctor/H01/RF reinvestigation.
+- These are native/generated-Web runtime assertions, not a claimed D3 manual
+  Viewer interaction pass. Production adoption, installed-Chrome interaction,
+  final integration and VSIX installation are still required.
+
+| D2 source/artifact | SHA-256 at validation |
+|---|---|
+| `src/Smile.NativeRuntime/graphics/graphics3d_precision.inl` | `788AC975E850DBA3B623B5F04039856AF5209F224431E5041C0BF52C41696C83` |
+| `src/Smile.Compiler/WebRuntime/Renderer3DPrecision.js` | `B72D9C3813CAD1B41CCE81476DED2CED684FBBF89A06AC3BD079DB1DEC9F7332` |
+| `libraries/Smile.Simple3D/Character3D.smile` | `4BDE7102D252CD4E7B2A29C6F91BD7F9539F8E664521752D1653AD9089B6D526` |
+| `artifacts/compiler/smilec.dll` | `E46B2ED5B2075EF58EAC7E34653F4207E992B4522C22E41669EE0547591C5868` |
+| `artifacts/compiler/Smile.NativeRuntime.lib` | `F1533BE62A14953728CC99F7FEC9AF2F678781F974096815865B39BB61667D68` |
+| `artifacts/tests/Precision3DTests.exe` | `B2E10EBFE542FCE4698F9BC338AE6F43E54045757C40151F5F12C177AB3F4260` |
+| `artifacts/web/Precision3DTests/game.js` | `95E7E17E08CC5FF1F2F518637A16C78C593F990B0305DDEC787435B9023259A6` |
+| `artifacts/tests/Character3DTests.exe` | `815504070B73E82C8D040B086ED11A0F2A7204029BBF5B4605CC4FFCC0C12F43` |
+| `artifacts/web/Character3DTests/game.js` | `3800D22ACB1F078307D000C44ECB2DC084E882C251F932766A9DEEA892A2C31B` |
+
 ## Next action
 
-Publish validated D1, then read document 05 and implement the typed fractional
-renderer/actor/query bridge and shared math through the existing owners.
-No further Double authorization is required. Complete D1–D4 before stopping.
+Continue document 06: migrate the actual Viewer camera/fit/anchor/Party routes,
+Sin Star I preview camera and a bounded shared cubic visual slice. Documents 05
+and 06 are read; read 07 before D4. No further Double authorization is required.
+Complete D3–D4, publication and required installation before stopping.
 
 ## On Hold
 

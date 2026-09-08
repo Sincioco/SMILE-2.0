@@ -1176,7 +1176,7 @@ internal sealed class ModuleProcessor
     private SyntaxToken ReferenceToken(SyntaxToken token, SyntaxTree tree, ModuleSymbol? module,
         HashSet<string>? locals)
     {
-        if (DoubleSemantics.IsIntrinsic(token.Kind))
+        if (DoubleSemantics.IsIntrinsic(token.Kind) || Renderer3DPrecisionSemantics.IsIntrinsic(token.Kind))
         {
             if (locals != null && locals.Contains(token.Text))
                 return SemanticToken(token, token.Text);

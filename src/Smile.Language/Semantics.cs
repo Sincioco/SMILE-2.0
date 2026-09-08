@@ -2334,6 +2334,8 @@ internal sealed class SemanticAnalyzer
             case CallExpressionSyntax call when DoubleSemantics.IsIntrinsic(call.Identifier.Kind) &&
                 _routines.TryGetValue(call.Identifier.Text, out var numericNamedRoutine):
                 return numericNamedRoutine.ReturnType;
+            case CallExpressionSyntax call when Renderer3DPrecisionSemantics.IsIntrinsic(call.Identifier.Kind):
+                return Renderer3DPrecisionSemantics.ResultType(call.Identifier.Kind);
             case CallExpressionSyntax call when DoubleSemantics.IsIntrinsic(call.Identifier.Kind):
                 return DoubleSemantics.ResultType(call.Identifier.Kind);
             case CallExpressionSyntax call when DoubleSemantics.IsPolymorphic(call.Identifier.Kind) &&
@@ -2522,6 +2524,8 @@ internal sealed class SemanticAnalyzer
             case CallExpressionSyntax call when DoubleSemantics.IsIntrinsic(call.Identifier.Kind) &&
                 _routines.TryGetValue(call.Identifier.Text, out var numericNamedRoutine):
                 return numericNamedRoutine.ReturnType;
+            case CallExpressionSyntax call when Renderer3DPrecisionSemantics.IsIntrinsic(call.Identifier.Kind):
+                return Renderer3DPrecisionSemantics.ResultType(call.Identifier.Kind);
             case CallExpressionSyntax call when DoubleSemantics.IsIntrinsic(call.Identifier.Kind):
                 return DoubleSemantics.ResultType(call.Identifier.Kind);
             case CallExpressionSyntax call when DoubleSemantics.IsPolymorphic(call.Identifier.Kind) && call.Arguments.Count > 0:
@@ -4179,6 +4183,17 @@ internal sealed class SemanticAnalyzer
         {
             Report("SML3021", identifier.Span, $"Unknown built-in function '{identifier.Text}'.");
             return SmileType.Error;
+        }
+        if (Renderer3DPrecisionSemantics.IsIntrinsic(identifier.Kind))
+        {
+            RequireGameWindow(identifier.Span, $"Built-in '{identifier.Text}'");
+            var count = Renderer3DPrecisionSemantics.Parameters(identifier.Kind).Count;
+            if (arguments.Count != count)
+                Report("SML3016", identifier.Span, $"Built-in '{identifier.Text}' expects {count} argument(s).");
+            for (var index = 0; index < arguments.Count; index++)
+                RequireType(arguments[index], Renderer3DPrecisionSemantics.ArgumentType(identifier.Kind, index),
+                    "SML3801", $"Built-in '{identifier.Text}' requires exact typed arguments; use explicit conversion.");
+            return Renderer3DPrecisionSemantics.ResultType(identifier.Kind);
         }
         if (DoubleSemantics.IsIntrinsic(identifier.Kind) || DoubleSemantics.IsPolymorphic(identifier.Kind))
         {

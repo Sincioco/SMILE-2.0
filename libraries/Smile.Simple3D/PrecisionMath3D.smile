@@ -1,0 +1,185 @@
+''' Small shared binary64 geometry and bounded curve evaluator.
+Module Smile.Simple3D.PrecisionMath3D
+
+Option Explicit
+
+Import Smile.Simple3D.Precision3D As Precision3D
+
+Public Const PI = 3.141592653589793
+
+Public Function Add(LeftValue As Precision3D.Vector3, RightValue As Precision3D.Vector3) As Precision3D.Vector3
+
+    Dim Result As Precision3D.Vector3
+
+    Result = Precision3D.Vector(LeftValue.X + RightValue.X,
+        LeftValue.Y + RightValue.Y, LeftValue.Z + RightValue.Z)
+
+    Return Result
+
+End Function
+
+Public Function Subtract(LeftValue As Precision3D.Vector3, RightValue As Precision3D.Vector3) As Precision3D.Vector3
+
+    Dim Result As Precision3D.Vector3
+
+    Result = Precision3D.Vector(LeftValue.X - RightValue.X,
+        LeftValue.Y - RightValue.Y, LeftValue.Z - RightValue.Z)
+
+    Return Result
+
+End Function
+
+Public Function Scale(Value As Precision3D.Vector3, Factor As Double) As Precision3D.Vector3
+
+    Dim Result As Precision3D.Vector3
+
+    Result = Precision3D.Vector(Value.X * Factor, Value.Y * Factor, Value.Z * Factor)
+
+    Return Result
+
+End Function
+
+Public Function Dot(LeftValue As Precision3D.Vector3, RightValue As Precision3D.Vector3) As Double
+
+    Dim Result As Double
+
+    Result = LeftValue.X * RightValue.X + LeftValue.Y * RightValue.Y + LeftValue.Z * RightValue.Z
+
+    Return Result
+
+End Function
+
+Public Function Cross(LeftValue As Precision3D.Vector3, RightValue As Precision3D.Vector3) As Precision3D.Vector3
+
+    Dim Result As Precision3D.Vector3
+
+    Result = Precision3D.Vector(LeftValue.Y * RightValue.Z - LeftValue.Z * RightValue.Y,
+        LeftValue.Z * RightValue.X - LeftValue.X * RightValue.Z,
+        LeftValue.X * RightValue.Y - LeftValue.Y * RightValue.X)
+
+    Return Result
+
+End Function
+
+''' Scale first to avoid overflow; components below 1e-12 world units are unusable.
+Public Function TryNormalize(Value As Precision3D.Vector3, ByRef Result As Precision3D.Vector3) As Boolean
+
+    Dim Largest As Double
+    Dim Candidate As Precision3D.Vector3
+    Dim Length As Double
+
+    Largest = Max(Abs(Value.X), Max(Abs(Value.Y), Abs(Value.Z)))
+
+    If Largest <= 1e-12 Then
+        Return False
+    End If
+
+    Candidate = Precision3D.Vector(Value.X / Largest, Value.Y / Largest, Value.Z / Largest)
+    Length = Sqrt(Dot(Candidate, Candidate))
+    Result = Scale(Candidate, 1.0 / Length)
+
+    Return True
+
+End Function
+
+Public Function Radians(Degrees As Double) As Double
+
+    Dim Result As Double
+
+    Result = Degrees * (PI / 180.0)
+
+    Return Result
+
+End Function
+
+Public Function Degrees(RadiansValue As Double) As Double
+
+    Dim Result As Double
+
+    Result = RadiansValue * (180.0 / PI)
+
+    Return Result
+
+End Function
+
+Public Function WrapDegrees(Value As Double) As Double
+
+    Dim Result As Double
+
+    Result = Value - Floor(Value / 360.0) * 360.0
+
+    Return Result
+
+End Function
+
+''' Same X then Y then Z Euler order as the permanent renderer.
+Public Function Rotate(Value As Precision3D.Vector3, Rotation As Precision3D.Vector3) As Precision3D.Vector3
+
+    Dim Result As Precision3D.Vector3
+    Dim AfterX As Precision3D.Vector3
+    Dim AfterY As Precision3D.Vector3
+    Dim Angle As Double
+
+    Angle = Radians(Rotation.X)
+    AfterX = Precision3D.Vector(Value.X, Value.Y * Cos(Angle) - Value.Z * Sin(Angle),
+        Value.Y * Sin(Angle) + Value.Z * Cos(Angle))
+    Angle = Radians(Rotation.Y)
+    AfterY = Precision3D.Vector(AfterX.X * Cos(Angle) + AfterX.Z * Sin(Angle), AfterX.Y,
+        -AfterX.X * Sin(Angle) + AfterX.Z * Cos(Angle))
+    Angle = Radians(Rotation.Z)
+    Result = Precision3D.Vector(AfterY.X * Cos(Angle) - AfterY.Y * Sin(Angle),
+        AfterY.X * Sin(Angle) + AfterY.Y * Cos(Angle), AfterY.Z)
+
+    Return Result
+
+End Function
+
+Public Function Lerp(Start As Precision3D.Vector3, Finish As Precision3D.Vector3,
+    Progress As Double) As Precision3D.Vector3
+
+    Dim Result As Precision3D.Vector3
+    Dim Amount As Double
+
+    Amount = Clamp(Progress, 0.0, 1.0)
+
+    If Amount = 0.0 Then
+        Return Start
+    Else If Amount = 1.0 Then
+        Return Finish
+    End If
+
+    Result = Add(Scale(Start, 1.0 - Amount), Scale(Finish, Amount))
+
+    Return Result
+
+End Function
+
+''' De Casteljau; finite progress clamps to [0,1], with exact endpoints.
+Public Function Cubic(Control0 As Precision3D.Vector3, Control1 As Precision3D.Vector3,
+    Control2 As Precision3D.Vector3, Control3 As Precision3D.Vector3,
+    Progress As Double) As Precision3D.Vector3
+
+    Dim First As Precision3D.Vector3
+    Dim Second As Precision3D.Vector3
+    Dim Third As Precision3D.Vector3
+    Dim Result As Precision3D.Vector3
+    Dim Amount As Double
+
+    Amount = Clamp(Progress, 0.0, 1.0)
+
+    If Amount = 0.0 Then
+        Return Control0
+    Else If Amount = 1.0 Then
+        Return Control3
+    End If
+
+    First = Lerp(Control0, Control1, Amount)
+    Second = Lerp(Control1, Control2, Amount)
+    Third = Lerp(Control2, Control3, Amount)
+    Result = Lerp(Lerp(First, Second, Amount), Lerp(Second, Third, Amount), Amount)
+
+    Return Result
+
+End Function
+
+End Module

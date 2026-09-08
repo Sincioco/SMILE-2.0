@@ -15,6 +15,8 @@
     <SmileSource Include="Interaction.smile" />
     <SmileSource Include="CharacterViewer.smile" />
     <SmileSource Include="Graphics3D.smile" />
+    <SmileSource Include="Precision3D.smile" />
+    <SmileSource Include="PrecisionMath3D.smile" />
     <SmileSource Include="Scene3D.smile" />
     <SmileSource Include="Character3D.smile" />
     <SmileSource Include="NodeAim3D.smile" />

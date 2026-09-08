@@ -4866,6 +4866,17 @@ Public Function Begin3D(
 
 End Function
 
+Public Function BeginAcceptedCamera3D(RedValue As Number, GreenValue As Number,
+    BlueValue As Number) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(COMMAND_BEGIN, RedValue, GreenValue, BlueValue, 0, 0, 0, 0, 0, 0, 0) <> 0
+
+    Return Result
+
+End Function
+
 ''' Creates a bounded instanced particle batch backed by an existing alpha or additive material.
 Public Function CreateParticleBatch3D(
     Capacity As Number,

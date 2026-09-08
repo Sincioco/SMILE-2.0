@@ -4,6 +4,8 @@ Module Smile.Simple3D.Character3D
 Option Explicit
 
 Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Precision3D As Precision3D
+Import Smile.Simple3D.PrecisionMath3D As PrecisionMath3D
 Import Smile.Simple3D.FixedMath As Fixed
 Import Smile.Simple3D.Graphics3D As Graphics3D
 Import Smile.Simple3D.Scene3D As Scene3D
@@ -74,6 +76,17 @@ Public Type Bounds3D
     Valid As Boolean
 End Type
 
+''' Non-owning world-space AABB evaluated from the authoritative actor transform.
+Public Type PreciseBounds3D
+    Minimum As Precision3D.Vector3
+    Maximum As Precision3D.Vector3
+    Center As Precision3D.Vector3
+    Size As Precision3D.Vector3
+    Radius As Double
+    AnimationMargin As Double
+    Valid As Boolean
+End Type
+
 Private Dim ActorUsed[32] As Boolean
 Private Dim ActorGeneration[32] As Number
 Private Dim ActorAssetSlot[32] As Number
@@ -81,12 +94,12 @@ Private Dim ActorPartCounts[32] As Number
 Private Dim ActorParts[32, 16] As Core.Object3D
 Private Dim ActorPartVisible[32, 16] As Boolean
 Private Dim ActorAnimators[32] As Core.Animator3D
-Private Dim ActorPositionX1000[32] As Number
-Private Dim ActorPositionY1000[32] As Number
-Private Dim ActorPositionZ1000[32] As Number
-Private Dim ActorRotationX1000[32] As Number
-Private Dim ActorRotationY1000[32] As Number
-Private Dim ActorRotationZ1000[32] As Number
+Private Dim ActorPositionX[32] As Double
+Private Dim ActorPositionY[32] As Double
+Private Dim ActorPositionZ[32] As Double
+Private Dim ActorRotationX[32] As Double
+Private Dim ActorRotationY[32] As Double
+Private Dim ActorRotationZ[32] As Double
 Private Dim ActorScalePercent[32] As Number
 Private Dim ActorVisible[32] As Boolean
 Private Dim ActorCastsShadow[32] As Boolean
@@ -264,12 +277,12 @@ Private Sub ClearActorStorage(Slot As Number)
     ActorAssetSlot[Slot] = -1
     ActorPartCounts[Slot] = 0
     ActorAnimators[Slot] = EmptyAnimator
-    ActorPositionX1000[Slot] = 0
-    ActorPositionY1000[Slot] = 0
-    ActorPositionZ1000[Slot] = 0
-    ActorRotationX1000[Slot] = 0
-    ActorRotationY1000[Slot] = 0
-    ActorRotationZ1000[Slot] = 0
+    ActorPositionX[Slot] = 0.0
+    ActorPositionY[Slot] = 0.0
+    ActorPositionZ[Slot] = 0.0
+    ActorRotationX[Slot] = 0.0
+    ActorRotationY[Slot] = 0.0
+    ActorRotationZ[Slot] = 0.0
     ActorScalePercent[Slot] = 0
     ActorVisible[Slot] = False
     ActorCastsShadow[Slot] = False
@@ -964,52 +977,26 @@ End Sub
 
 Private Function ApplyTransformSnapshot(
     Slot As Number,
-    PositionX1000 As Number,
-    PositionY1000 As Number,
-    PositionZ1000 As Number,
-    RotationX1000 As Number,
-    RotationY1000 As Number,
-    RotationZ1000 As Number,
+    PositionX As Double,
+    PositionY As Double,
+    PositionZ As Double,
+    RotationX As Double,
+    RotationY As Double,
+    RotationZ As Double,
     ScalePercent As Number,
     Visible As Boolean
 ) As Boolean
 
     Dim PartIndex As Number
-    Dim X As Number
-    Dim Y As Number
-    Dim Z As Number
-    Dim RotationX As Number
-    Dim RotationY As Number
-    Dim RotationZ As Number
+    Dim Transform As Precision3D.Transform3D
 
-    X = RoundedThousandths(PositionX1000)
-    Y = RoundedThousandths(PositionY1000)
-    Z = RoundedThousandths(PositionZ1000)
-    RotationX = RoundedThousandths(RotationX1000)
-    RotationY = RoundedThousandths(RotationY1000)
-    RotationZ = RoundedThousandths(RotationZ1000)
+    Transform.Position = Precision3D.Vector(PositionX, PositionY, PositionZ)
+    Transform.Rotation = Precision3D.Vector(RotationX, RotationY, RotationZ)
+    Transform.ScalePercent = Precision3D.Vector(ToDouble(ScalePercent), ToDouble(ScalePercent), ToDouble(ScalePercent))
 
     For PartIndex = 0 To ActorPartCounts[Slot] - 1
 
-        If Not Graphics3D.SetObjectPositionChecked3D(ActorParts[Slot, PartIndex], X, Y, Z) Then
-            Return False
-        End If
-
-        If Not Graphics3D.SetObjectRotationChecked3D(
-            ActorParts[Slot, PartIndex],
-            RotationX,
-            RotationY,
-            RotationZ
-        ) Then
-            Return False
-        End If
-
-        If Not Graphics3D.SetObjectScaleChecked3D(
-            ActorParts[Slot, PartIndex],
-            ScalePercent,
-            ScalePercent,
-            ScalePercent
-        ) Then
+        If Not Precision3D.SetTransform(ActorParts[Slot, PartIndex], Transform) Then
             Return False
         End If
 
@@ -1026,12 +1013,12 @@ End Function
 
 Private Function ApplyTransformTransaction(
     Slot As Number,
-    PositionX1000 As Number,
-    PositionY1000 As Number,
-    PositionZ1000 As Number,
-    RotationX1000 As Number,
-    RotationY1000 As Number,
-    RotationZ1000 As Number,
+    PositionX As Double,
+    PositionY As Double,
+    PositionZ As Double,
+    RotationX As Double,
+    RotationY As Double,
+    RotationZ As Double,
     ScalePercent As Number,
     Visible As Boolean
 ) As Boolean
@@ -1042,12 +1029,12 @@ Private Function ApplyTransformTransaction(
 
     Applied = ApplyTransformSnapshot(
         Slot,
-        PositionX1000,
-        PositionY1000,
-        PositionZ1000,
-        RotationX1000,
-        RotationY1000,
-        RotationZ1000,
+        PositionX,
+        PositionY,
+        PositionZ,
+        RotationX,
+        RotationY,
+        RotationZ,
         ScalePercent,
         Visible
     )
@@ -1057,12 +1044,12 @@ Private Function ApplyTransformTransaction(
         PrimaryRendererError = Graphics3D.LastError()
         Restored = ApplyTransformSnapshot(
             Slot,
-            ActorPositionX1000[Slot],
-            ActorPositionY1000[Slot],
-            ActorPositionZ1000[Slot],
-            ActorRotationX1000[Slot],
-            ActorRotationY1000[Slot],
-            ActorRotationZ1000[Slot],
+            ActorPositionX[Slot],
+            ActorPositionY[Slot],
+            ActorPositionZ[Slot],
+            ActorRotationX[Slot],
+            ActorRotationY[Slot],
+            ActorRotationZ[Slot],
             ActorScalePercent[Slot],
             ActorVisible[Slot]
         )
@@ -1084,12 +1071,12 @@ Private Function ApplyTransformTransaction(
 
     End If
 
-    ActorPositionX1000[Slot] = PositionX1000
-    ActorPositionY1000[Slot] = PositionY1000
-    ActorPositionZ1000[Slot] = PositionZ1000
-    ActorRotationX1000[Slot] = RotationX1000
-    ActorRotationY1000[Slot] = RotationY1000
-    ActorRotationZ1000[Slot] = RotationZ1000
+    ActorPositionX[Slot] = PositionX
+    ActorPositionY[Slot] = PositionY
+    ActorPositionZ[Slot] = PositionZ
+    ActorRotationX[Slot] = RotationX
+    ActorRotationY[Slot] = RotationY
+    ActorRotationZ[Slot] = RotationZ
     ActorScalePercent[Slot] = ScalePercent
     ActorVisible[Slot] = Visible
 
@@ -1483,6 +1470,16 @@ End Sub
 
 Public Function Place(ByRef Value As Actor, X As Number, Y As Number, Z As Number) As Boolean
 
+    Dim Result As Boolean
+
+    Result = PlacePrecise(Value, ToDouble(X), ToDouble(Y), ToDouble(Z))
+
+    Return Result
+
+End Function
+
+Public Function PlacePrecise(ByRef Value As Actor, X As Double, Y As Double, Z As Double) As Boolean
+
     Dim ReturnValue As Boolean
 
     Dim Slot As Number
@@ -1493,12 +1490,12 @@ Public Function Place(ByRef Value As Actor, X As Number, Y As Number, Z As Numbe
         Return False
     End If
 
-    If (X < -CHARACTER_MAX_WORLD_POSITION Or
-        X > CHARACTER_MAX_WORLD_POSITION Or
-        Y < -CHARACTER_MAX_WORLD_POSITION Or
-        Y > CHARACTER_MAX_WORLD_POSITION Or
-        Z < -CHARACTER_MAX_WORLD_POSITION Or
-        Z > CHARACTER_MAX_WORLD_POSITION) Then
+    If (X < -ToDouble(CHARACTER_MAX_WORLD_POSITION) Or
+        X > ToDouble(CHARACTER_MAX_WORLD_POSITION) Or
+        Y < -ToDouble(CHARACTER_MAX_WORLD_POSITION) Or
+        Y > ToDouble(CHARACTER_MAX_WORLD_POSITION) Or
+        Z < -ToDouble(CHARACTER_MAX_WORLD_POSITION) Or
+        Z > ToDouble(CHARACTER_MAX_WORLD_POSITION)) Then
         Call SetActorFailure(Slot, CHARACTER_ERROR_INVALID_ARGUMENT, 0)
 
         Return False
@@ -1506,12 +1503,12 @@ Public Function Place(ByRef Value As Actor, X As Number, Y As Number, Z As Numbe
 
     ReturnValue = ApplyTransformTransaction(
         Slot,
-        X * 1000,
-        Y * 1000,
-        Z * 1000,
-        ActorRotationX1000[Slot],
-        ActorRotationY1000[Slot],
-        ActorRotationZ1000[Slot],
+        X,
+        Y,
+        Z,
+        ActorRotationX[Slot],
+        ActorRotationY[Slot],
+        ActorRotationZ[Slot],
         ActorScalePercent[Slot],
         ActorVisible[Slot]
     )
@@ -1522,6 +1519,16 @@ End Function
 
 Public Function Rotate(ByRef Value As Actor, X As Number, Y As Number, Z As Number) As Boolean
 
+    Dim Result As Boolean
+
+    Result = RotatePrecise(Value, ToDouble(X), ToDouble(Y), ToDouble(Z))
+
+    Return Result
+
+End Function
+
+Public Function RotatePrecise(ByRef Value As Actor, X As Double, Y As Double, Z As Double) As Boolean
+
     Dim ReturnValue As Boolean
 
     Dim Slot As Number
@@ -1532,12 +1539,12 @@ Public Function Rotate(ByRef Value As Actor, X As Number, Y As Number, Z As Numb
         Return False
     End If
 
-    If (X < -CHARACTER_MAX_ROTATION_INPUT Or
-        X > CHARACTER_MAX_ROTATION_INPUT Or
-        Y < -CHARACTER_MAX_ROTATION_INPUT Or
-        Y > CHARACTER_MAX_ROTATION_INPUT Or
-        Z < -CHARACTER_MAX_ROTATION_INPUT Or
-        Z > CHARACTER_MAX_ROTATION_INPUT) Then
+    If (X < -ToDouble(CHARACTER_MAX_ROTATION_INPUT) Or
+        X > ToDouble(CHARACTER_MAX_ROTATION_INPUT) Or
+        Y < -ToDouble(CHARACTER_MAX_ROTATION_INPUT) Or
+        Y > ToDouble(CHARACTER_MAX_ROTATION_INPUT) Or
+        Z < -ToDouble(CHARACTER_MAX_ROTATION_INPUT) Or
+        Z > ToDouble(CHARACTER_MAX_ROTATION_INPUT)) Then
         Call SetActorFailure(Slot, CHARACTER_ERROR_INVALID_ARGUMENT, 0)
 
         Return False
@@ -1545,12 +1552,12 @@ Public Function Rotate(ByRef Value As Actor, X As Number, Y As Number, Z As Numb
 
     ReturnValue = ApplyTransformTransaction(
         Slot,
-        ActorPositionX1000[Slot],
-        ActorPositionY1000[Slot],
-        ActorPositionZ1000[Slot],
-        Fixed.WrapDegrees(X) * 1000,
-        Fixed.WrapDegrees(Y) * 1000,
-        Fixed.WrapDegrees(Z) * 1000,
+        ActorPositionX[Slot],
+        ActorPositionY[Slot],
+        ActorPositionZ[Slot],
+        PrecisionMath3D.WrapDegrees(X),
+        PrecisionMath3D.WrapDegrees(Y),
+        PrecisionMath3D.WrapDegrees(Z),
         ActorScalePercent[Slot],
         ActorVisible[Slot]
     )
@@ -1579,12 +1586,12 @@ Public Function SetScale(ByRef Value As Actor, Percent As Number) As Boolean
 
     ReturnValue = ApplyTransformTransaction(
         Slot,
-        ActorPositionX1000[Slot],
-        ActorPositionY1000[Slot],
-        ActorPositionZ1000[Slot],
-        ActorRotationX1000[Slot],
-        ActorRotationY1000[Slot],
-        ActorRotationZ1000[Slot],
+        ActorPositionX[Slot],
+        ActorPositionY[Slot],
+        ActorPositionZ[Slot],
+        ActorRotationX[Slot],
+        ActorRotationY[Slot],
+        ActorRotationZ[Slot],
         Percent,
         ActorVisible[Slot]
     )
@@ -1607,12 +1614,12 @@ Public Function SetVisible(ByRef Value As Actor, Visible As Boolean) As Boolean
 
     ReturnValue = ApplyTransformTransaction(
         Slot,
-        ActorPositionX1000[Slot],
-        ActorPositionY1000[Slot],
-        ActorPositionZ1000[Slot],
-        ActorRotationX1000[Slot],
-        ActorRotationY1000[Slot],
-        ActorRotationZ1000[Slot],
+        ActorPositionX[Slot],
+        ActorPositionY[Slot],
+        ActorPositionZ[Slot],
+        ActorRotationX[Slot],
+        ActorRotationY[Slot],
+        ActorRotationZ[Slot],
         ActorScalePercent[Slot],
         Visible
     )
@@ -1707,8 +1714,8 @@ Public Function LookAt(ByRef Value As Actor, X As Number, Y As Number, Z As Numb
         Return False
     End If
 
-    DeltaX = X - RoundedThousandths(ActorPositionX1000[Slot])
-    DeltaZ = Z - RoundedThousandths(ActorPositionZ1000[Slot])
+    DeltaX = X - RoundedWorld(ActorPositionX[Slot])
+    DeltaZ = Z - RoundedWorld(ActorPositionZ[Slot])
 
     If DeltaX = 0 And DeltaZ = 0 Then
         Call SetActorFailure(Slot, CHARACTER_ERROR_INVALID_ARGUMENT, 0)
@@ -1731,17 +1738,58 @@ Public Function LookAt(ByRef Value As Actor, X As Number, Y As Number, Z As Numb
 
     ReturnValue = ApplyTransformTransaction(
         Slot,
-        ActorPositionX1000[Slot],
-        ActorPositionY1000[Slot],
-        ActorPositionZ1000[Slot],
-        ActorRotationX1000[Slot],
-        Fixed.WrapDegrees(BestAngle) * 1000,
-        ActorRotationZ1000[Slot],
+        ActorPositionX[Slot],
+        ActorPositionY[Slot],
+        ActorPositionZ[Slot],
+        ActorRotationX[Slot],
+        ToDouble(Fixed.WrapDegrees(BestAngle)),
+        ActorRotationZ[Slot],
         ActorScalePercent[Slot],
         ActorVisible[Slot]
     )
 
     Return ReturnValue
+
+End Function
+
+''' Fractional world-space yaw; keeps the actor's pitch, roll and ownership.
+Public Function LookAtPrecise(ByRef Value As Actor, X As Double, Y As Double, Z As Double) As Boolean
+
+    Dim Slot As Number
+    Dim DeltaX As Double
+    Dim DeltaZ As Double
+    Dim Yaw As Double
+    Dim Result As Boolean
+
+    Slot = ActorSlot(Value)
+
+    If Slot < 0 Then
+        Return False
+    End If
+
+    If (Abs(X) > ToDouble(CHARACTER_MAX_WORLD_POSITION) Or
+        Abs(Y) > ToDouble(CHARACTER_MAX_WORLD_POSITION) Or
+        Abs(Z) > ToDouble(CHARACTER_MAX_WORLD_POSITION)) Then
+        Call SetActorFailure(Slot, CHARACTER_ERROR_INVALID_ARGUMENT, 0)
+
+        Return False
+    End If
+
+    DeltaX = X - ActorPositionX[Slot]
+    DeltaZ = Z - ActorPositionZ[Slot]
+
+    If DeltaX = 0.0 And DeltaZ = 0.0 Then
+        Call SetActorFailure(Slot, CHARACTER_ERROR_INVALID_ARGUMENT, 0)
+
+        Return False
+    End If
+
+    Yaw = PrecisionMath3D.WrapDegrees(PrecisionMath3D.Degrees(Atan2(DeltaX, DeltaZ)))
+    Result = ApplyTransformTransaction(Slot, ActorPositionX[Slot], ActorPositionY[Slot],
+        ActorPositionZ[Slot], ActorRotationX[Slot], Yaw, ActorRotationZ[Slot],
+        ActorScalePercent[Slot], ActorVisible[Slot])
+
+    Return Result
 
 End Function
 
@@ -1873,15 +1921,15 @@ Public Function Update(ByRef Value As Actor, ElapsedMilliseconds As Number) As B
     Dim Slot As Number
     Dim Result As Boolean
     Dim Delta As Core.RootMotionDelta3D
-    Dim Sine As Number
-    Dim Cosine As Number
-    Dim WorldX As Number
-    Dim WorldZ As Number
-    Dim CandidateX As Number
-    Dim CandidateY As Number
-    Dim CandidateZ As Number
-    Dim CandidateYaw As Number
-    Dim YawDegrees As Number
+    Dim Sine As Double
+    Dim Cosine As Double
+    Dim WorldX As Double
+    Dim WorldZ As Double
+    Dim CandidateX As Double
+    Dim CandidateY As Double
+    Dim CandidateZ As Double
+    Dim CandidateYaw As Double
+    Dim YawDegrees As Double
 
     Slot = ActorSlot(Value)
 
@@ -1911,26 +1959,22 @@ Public Function Update(ByRef Value As Actor, ElapsedMilliseconds As Number) As B
 
         Delta = Graphics3D.TakeAnimatorRootDelta3D(ActorAnimators[Slot])
         ActorLastRootDelta[Slot] = Delta
-        YawDegrees = RoundedThousandths(ActorRotationY1000[Slot])
-        Sine = Fixed.SinFixed(YawDegrees)
-        Cosine = Fixed.CosFixed(YawDegrees)
-        WorldX = (Delta.X * Cosine + Delta.Z * Sine) / Core.FIXED_ONE
-        WorldZ = (-Delta.X * Sine + Delta.Z * Cosine) / Core.FIXED_ONE
-        CandidateX = ActorPositionX1000[Slot] + WorldX
-        CandidateY = ActorPositionY1000[Slot] + Delta.Y
-        CandidateZ = ActorPositionZ1000[Slot] + WorldZ
-        CandidateYaw = (ActorRotationY1000[Slot] + Delta.Yaw) Mod 360000
+        YawDegrees = PrecisionMath3D.Radians(ActorRotationY[Slot])
+        Sine = Sin(YawDegrees)
+        Cosine = Cos(YawDegrees)
+        WorldX = (ToDouble(Delta.X) * Cosine + ToDouble(Delta.Z) * Sine) / 1000.0
+        WorldZ = (-ToDouble(Delta.X) * Sine + ToDouble(Delta.Z) * Cosine) / 1000.0
+        CandidateX = ActorPositionX[Slot] + WorldX
+        CandidateY = ActorPositionY[Slot] + ToDouble(Delta.Y) / 1000.0
+        CandidateZ = ActorPositionZ[Slot] + WorldZ
+        CandidateYaw = PrecisionMath3D.WrapDegrees(ActorRotationY[Slot] + ToDouble(Delta.Yaw) / 1000.0)
 
-        If CandidateYaw < 0 Then
-            CandidateYaw = CandidateYaw + 360000
-        End If
-
-        If (CandidateX < -CHARACTER_MAX_WORLD_POSITION * 1000 Or
-            CandidateX > CHARACTER_MAX_WORLD_POSITION * 1000 Or
-            CandidateY < -CHARACTER_MAX_WORLD_POSITION * 1000 Or
-            CandidateY > CHARACTER_MAX_WORLD_POSITION * 1000 Or
-            CandidateZ < -CHARACTER_MAX_WORLD_POSITION * 1000 Or
-            CandidateZ > CHARACTER_MAX_WORLD_POSITION * 1000) Then
+        If (CandidateX < -ToDouble(CHARACTER_MAX_WORLD_POSITION) Or
+            CandidateX > ToDouble(CHARACTER_MAX_WORLD_POSITION) Or
+            CandidateY < -ToDouble(CHARACTER_MAX_WORLD_POSITION) Or
+            CandidateY > ToDouble(CHARACTER_MAX_WORLD_POSITION) Or
+            CandidateZ < -ToDouble(CHARACTER_MAX_WORLD_POSITION) Or
+            CandidateZ > ToDouble(CHARACTER_MAX_WORLD_POSITION)) Then
             Call SetActorFailure(Slot, CHARACTER_ERROR_INVALID_ARGUMENT, 0)
 
             Return False
@@ -1941,9 +1985,9 @@ Public Function Update(ByRef Value As Actor, ElapsedMilliseconds As Number) As B
             CandidateX,
             CandidateY,
             CandidateZ,
-            ActorRotationX1000[Slot],
+            ActorRotationX[Slot],
             CandidateYaw,
-            ActorRotationZ1000[Slot],
+            ActorRotationZ[Slot],
             ActorScalePercent[Slot],
             ActorVisible[Slot]
         )
@@ -2273,6 +2317,45 @@ Public Function HasClip(Value As Actor, Name As Text) As Boolean
     End If
 
     Return Result
+
+End Function
+
+Public Function TrySocketPositionPrecise(Value As Actor, Name As Text,
+    ReferencePartIndex As Number, IgnoreNodeOffsets As Boolean,
+    ByRef Result As Precision3D.Vector3) As Boolean
+
+    Dim Slot As Number
+    Dim SocketIndex As Number
+    Dim Valid As Boolean
+
+    Slot = ActorSlot(Value)
+
+    If Slot < 0 Then
+        Return False
+    End If
+
+    If ReferencePartIndex < 0 Or ReferencePartIndex >= ActorPartCounts[Slot] Then
+        Call SetActorFailure(Slot, CHARACTER_ERROR_INVALID_PART, 0)
+
+        Return False
+    End If
+
+    SocketIndex = Graphics3D.ModelSocketIndex3D(AssetModels[ActorAssetSlot[Slot]], Name)
+
+    If SocketIndex < 0 Then
+        Call SetActorFailure(Slot, CHARACTER_ERROR_SOCKET_NOT_FOUND, Graphics3D.LastError())
+
+        Return False
+    End If
+
+    Valid = Precision3D.TrySocketPosition(ActorParts[Slot, ReferencePartIndex],
+        SocketIndex, IgnoreNodeOffsets, Result)
+
+    If Not Valid Then
+        Call SetActorFailure(Slot, CHARACTER_ERROR_SOCKET_NOT_FOUND, Graphics3D.LastError())
+    End If
+
+    Return Valid
 
 End Function
 
@@ -2712,11 +2795,11 @@ Public Function SetPartPositionOffset(
         Return False
     End If
 
-    Result = Graphics3D.SetObjectPositionChecked3D(
+    Result = Precision3D.SetPosition(
         ActorParts[Slot, PartIndex],
-        RoundedThousandths(ActorPositionX1000[Slot]) + X,
-        RoundedThousandths(ActorPositionY1000[Slot]) + Y,
-        RoundedThousandths(ActorPositionZ1000[Slot]) + Z
+        ActorPositionX[Slot] + ToDouble(X),
+        ActorPositionY[Slot] + ToDouble(Y),
+        ActorPositionZ[Slot] + ToDouble(Z)
     )
 
     If Result Then
@@ -3236,6 +3319,52 @@ Public Function AnimationResidentBytes(Value As Actor) As Number
 
 End Function
 
+Private Function RoundedWorld(Value As Double) As Number
+
+    Dim Result As Number
+
+    If Value < 0.0 Then
+        Result = ToNumber(Value - 0.5)
+    Else
+        Result = ToNumber(Value + 0.5)
+    End If
+
+    Return Result
+
+End Function
+
+Public Function TryPosition(Value As Actor, ByRef Result As Precision3D.Vector3) As Boolean
+
+    Dim Slot As Number
+
+    Slot = ActorSlot(Value)
+
+    If Slot < 0 Then
+        Return False
+    End If
+
+    Result = Precision3D.Vector(ActorPositionX[Slot], ActorPositionY[Slot], ActorPositionZ[Slot])
+
+    Return True
+
+End Function
+
+Public Function TryRotation(Value As Actor, ByRef Result As Precision3D.Vector3) As Boolean
+
+    Dim Slot As Number
+
+    Slot = ActorSlot(Value)
+
+    If Slot < 0 Then
+        Return False
+    End If
+
+    Result = Precision3D.Vector(ActorRotationX[Slot], ActorRotationY[Slot], ActorRotationZ[Slot])
+
+    Return True
+
+End Function
+
 Public Function PositionX(Value As Actor) As Number
 
     Dim ReturnValue As Number
@@ -3248,7 +3377,7 @@ Public Function PositionX(Value As Actor) As Number
         Return 0
     End If
 
-    ReturnValue = RoundedThousandths(ActorPositionX1000[Slot])
+    ReturnValue = RoundedWorld(ActorPositionX[Slot])
 
     Return ReturnValue
 
@@ -3266,7 +3395,7 @@ Public Function PositionY(Value As Actor) As Number
         Return 0
     End If
 
-    ReturnValue = RoundedThousandths(ActorPositionY1000[Slot])
+    ReturnValue = RoundedWorld(ActorPositionY[Slot])
 
     Return ReturnValue
 
@@ -3284,7 +3413,7 @@ Public Function PositionZ(Value As Actor) As Number
         Return 0
     End If
 
-    ReturnValue = RoundedThousandths(ActorPositionZ1000[Slot])
+    ReturnValue = RoundedWorld(ActorPositionZ[Slot])
 
     Return ReturnValue
 
@@ -3302,7 +3431,7 @@ Public Function RotationY(Value As Actor) As Number
         Return 0
     End If
 
-    ReturnValue = RoundedThousandths(ActorRotationY1000[Slot])
+    ReturnValue = RoundedWorld(ActorRotationY[Slot])
 
     Return ReturnValue
 
@@ -3442,9 +3571,9 @@ Public Function WorldBounds(
         Return Result
     End If
 
-    Rotation.X = RoundedThousandths(ActorRotationX1000[Slot])
-    Rotation.Y = RoundedThousandths(ActorRotationY1000[Slot])
-    Rotation.Z = RoundedThousandths(ActorRotationZ1000[Slot])
+    Rotation.X = RoundedWorld(ActorRotationX[Slot])
+    Rotation.Y = RoundedWorld(ActorRotationY[Slot])
+    Rotation.Z = RoundedWorld(ActorRotationZ[Slot])
 
     For Corner = 0 To 7
 
@@ -3470,9 +3599,9 @@ Public Function WorldBounds(
         Point.Y = Point.Y * ActorScalePercent[Slot] / 100
         Point.Z = Point.Z * ActorScalePercent[Slot] / 100
         Point = Fixed.Rotate(Point, Rotation)
-        Point.X = Point.X + ActorPositionX1000[Slot]
-        Point.Y = Point.Y + ActorPositionY1000[Slot]
-        Point.Z = Point.Z + ActorPositionZ1000[Slot]
+        Point.X = Point.X + RoundedWorld(ActorPositionX[Slot] * 1000.0)
+        Point.Y = Point.Y + RoundedWorld(ActorPositionY[Slot] * 1000.0)
+        Point.Z = Point.Z + RoundedWorld(ActorPositionZ[Slot] * 1000.0)
 
         If Corner = 0 Then
 
@@ -3507,6 +3636,103 @@ Public Function WorldBounds(
     Result.Size.Z = Result.Maximum.Z - Result.Minimum.Z
     Result.Radius = BoundsRadiusThousandths(Result)
     Result.AnimationMargin = Margin1000
+    Result.Valid = True
+
+    Call ClearActorError(Slot)
+
+    Return Result
+
+End Function
+
+''' Static authored bounds retain their source millith-unit resolution; all world math is Double.
+Public Function WorldBoundsPrecise(Value As Actor,
+    Optional AnimationMargin As Double = 0.0) As PreciseBounds3D
+
+    Dim Result As PreciseBounds3D
+    Dim LocalValue As Bounds3D
+    Dim LocalPoint As Core.Vector3
+    Dim Point As Precision3D.Vector3
+    Dim Rotation As Precision3D.Vector3
+    Dim Position As Precision3D.Vector3
+    Dim Margin As Precision3D.Vector3
+    Dim HalfSize As Precision3D.Vector3
+    Dim Scale As Double
+    Dim Slot As Number
+    Dim Corner As Number
+
+    Slot = ActorSlot(Value)
+
+    If Slot < 0 Then
+        Return Result
+    End If
+
+    If AnimationMargin < 0.0 Or AnimationMargin > ToDouble(CHARACTER_MAX_WORLD_POSITION) Then
+        Call SetActorFailure(Slot, CHARACTER_ERROR_BOUNDS, 0)
+
+        Return Result
+    End If
+
+    LocalValue = LocalBounds(Value)
+
+    If Not LocalValue.Valid Then
+        Call SetActorFailure(Slot, CHARACTER_ERROR_BOUNDS, Graphics3D.LastError())
+
+        Return Result
+    End If
+
+    Rotation = Precision3D.Vector(ActorRotationX[Slot], ActorRotationY[Slot], ActorRotationZ[Slot])
+    Position = Precision3D.Vector(ActorPositionX[Slot], ActorPositionY[Slot], ActorPositionZ[Slot])
+    Scale = ToDouble(ActorScalePercent[Slot]) / 100000.0
+
+    For Corner = 0 To 7
+
+        If Corner Mod 2 = 0 Then
+            LocalPoint.X = LocalValue.Minimum.X
+        Else
+            LocalPoint.X = LocalValue.Maximum.X
+        End If
+
+        If (Corner / 2) Mod 2 = 0 Then
+            LocalPoint.Y = LocalValue.Minimum.Y
+        Else
+            LocalPoint.Y = LocalValue.Maximum.Y
+        End If
+
+        If (Corner / 4) Mod 2 = 0 Then
+            LocalPoint.Z = LocalValue.Minimum.Z
+        Else
+            LocalPoint.Z = LocalValue.Maximum.Z
+        End If
+
+        Point = PrecisionMath3D.Scale(Precision3D.FromVector(LocalPoint), Scale)
+        Point = PrecisionMath3D.Add(PrecisionMath3D.Rotate(Point, Rotation), Position)
+
+        If Corner = 0 Then
+
+            Result.Minimum = Point
+            Result.Maximum = Point
+
+        Else
+
+            Result.Minimum.X = Min(Result.Minimum.X, Point.X)
+            Result.Minimum.Y = Min(Result.Minimum.Y, Point.Y)
+            Result.Minimum.Z = Min(Result.Minimum.Z, Point.Z)
+            Result.Maximum.X = Max(Result.Maximum.X, Point.X)
+            Result.Maximum.Y = Max(Result.Maximum.Y, Point.Y)
+            Result.Maximum.Z = Max(Result.Maximum.Z, Point.Z)
+
+        End If
+
+    End For
+
+    Margin = Precision3D.Vector(AnimationMargin, AnimationMargin, AnimationMargin)
+    Result.Minimum = PrecisionMath3D.Subtract(Result.Minimum, Margin)
+    Result.Maximum = PrecisionMath3D.Add(Result.Maximum, Margin)
+    Result.Center = PrecisionMath3D.Scale(PrecisionMath3D.Add(Result.Minimum, Result.Maximum), 0.5)
+    Result.Size = PrecisionMath3D.Subtract(Result.Maximum, Result.Minimum)
+    HalfSize = PrecisionMath3D.Scale(Result.Size, 0.5)
+    Result.Radius = Sqrt(PrecisionMath3D.Dot(HalfSize, HalfSize))
+    Result.AnimationMargin = AnimationMargin
     Result.Valid = True
 
     Call ClearActorError(Slot)

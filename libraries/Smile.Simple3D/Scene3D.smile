@@ -5,6 +5,7 @@ Option Explicit
 
 Import Smile.Simple3D.Core As Core
 Import Smile.Simple3D.Graphics3D As Graphics3D
+Import Smile.Simple3D.Precision3D As Precision3D
 
 Public Const QUALITY_AUTO = 0
 Public Const QUALITY_LOW = 1
@@ -1325,15 +1326,7 @@ Public Sub UseCustomLighting()
 
 End Sub
 
-''' Applies lighting and opens one balanced Graphics3D frame.
-Public Function Begin(
-    Camera As Core.Camera3D,
-    ClearRed As Number,
-    ClearGreen As Number,
-    ClearBlue As Number
-) As Boolean
-
-    Dim Result As Boolean
+Private Function PrepareFrame() As Boolean
 
     Call EnsureInitialized()
 
@@ -1362,7 +1355,11 @@ Public Function Begin(
         Return False
     End If
 
-    Result = Graphics3D.Begin3D(Camera, ClearRed, ClearGreen, ClearBlue)
+    Return True
+
+End Function
+
+Private Function CompleteBegin(Result As Boolean) As Boolean
 
     If Not Result Then
 
@@ -1389,6 +1386,45 @@ Public Function Begin(
     RendererErrorValue = 0
 
     Return True
+
+End Function
+
+''' Applies lighting and opens one balanced Graphics3D frame.
+Public Function Begin(Camera As Core.Camera3D, ClearRed As Number,
+    ClearGreen As Number, ClearBlue As Number) As Boolean
+
+    Dim Result As Boolean
+
+    If Not PrepareFrame() Then
+        Return False
+    End If
+
+    Result = Graphics3D.Begin3D(Camera, ClearRed, ClearGreen, ClearBlue)
+    Result = CompleteBegin(Result)
+
+    Return Result
+
+End Function
+
+''' Uses the same scene transaction without an intervening integer camera setter.
+Public Function BeginPrecise(Camera As Precision3D.Camera3D, ClearRed As Number,
+    ClearGreen As Number, ClearBlue As Number) As Boolean
+
+    Dim Result As Boolean
+
+    If Not PrepareFrame() Then
+        Return False
+    End If
+
+    Result = Precision3D.SetCamera(Camera)
+
+    If Result Then
+        Result = Graphics3D.BeginAcceptedCamera3D(ClearRed, ClearGreen, ClearBlue)
+    End If
+
+    Result = CompleteBegin(Result)
+
+    Return Result
 
 End Function
 

@@ -259,6 +259,8 @@ public enum SyntaxKind
     RoundKeyword,
     TextFromDoubleKeyword,
     TextToDoubleKeyword,
+    Renderer3DDoubleKeyword,
+    Renderer3DDoubleValueKeyword,
 }
 
 public static class SyntaxFacts
@@ -361,6 +363,8 @@ public static class SyntaxFacts
         ["Text_Length"] = SyntaxKind.TextLengthKeyword,
         ["Text_Code_At"] = SyntaxKind.TextCodeAtKeyword,
         ["Text_Slice"] = SyntaxKind.TextSliceKeyword,
+        ["Renderer3DDouble"] = SyntaxKind.Renderer3DDoubleKeyword,
+        ["Renderer3DDoubleValue"] = SyntaxKind.Renderer3DDoubleValueKeyword,
         ["Renderer3D"] = SyntaxKind.Renderer3DKeyword,
         ["Renderer3DImage"] = SyntaxKind.Renderer3DImageKeyword,
         ["Renderer3DText"] = SyntaxKind.Renderer3DTextKeyword,
@@ -528,13 +532,13 @@ public static class SyntaxFacts
 
     public static bool IsKeyword(SyntaxKind kind) =>
         (kind >= SyntaxKind.DimKeyword && kind <= SyntaxKind.OptionalKeyword) ||
-        (kind >= SyntaxKind.ImageKeyword && kind <= SyntaxKind.ChannelKeyword) || kind == SyntaxKind.DoubleKeyword || DoubleSemantics.IsIntrinsic(kind);
+        (kind >= SyntaxKind.ImageKeyword && kind <= SyntaxKind.ChannelKeyword) || kind == SyntaxKind.DoubleKeyword || (DoubleSemantics.IsIntrinsic(kind) || Renderer3DPrecisionSemantics.IsIntrinsic(kind));
 
     public static bool IsBuiltInConstant(SyntaxKind kind) =>
         kind >= SyntaxKind.NoneKeyword && kind <= SyntaxKind.DataStatusTooLargeKeyword || kind == SyntaxKind.DownKeyword;
 
     public static bool IsBuiltInFunction(SyntaxKind kind) =>
-        kind >= SyntaxKind.TimerKeyword && kind <= SyntaxKind.Renderer3DTextValueKeyword || DoubleSemantics.IsIntrinsic(kind);
+        kind >= SyntaxKind.TimerKeyword && kind <= SyntaxKind.Renderer3DTextValueKeyword || (DoubleSemantics.IsIntrinsic(kind) || Renderer3DPrecisionSemantics.IsIntrinsic(kind));
 
     public static IReadOnlyList<string> GetBuiltInFunctionParameters(SyntaxKind kind)
     {
@@ -557,6 +561,7 @@ public static class SyntaxFacts
             SyntaxKind.TextLengthKeyword => TextParameter,
             SyntaxKind.TextCodeAtKeyword => TextIndexParameters,
             SyntaxKind.TextSliceKeyword => TextSliceParameters,
+            _ when Renderer3DPrecisionSemantics.IsIntrinsic(kind) => Renderer3DPrecisionSemantics.Parameters(kind),
             SyntaxKind.Renderer3DKeyword => Renderer3DParameters,
             SyntaxKind.Renderer3DImageKeyword => Renderer3DImageParameters,
             SyntaxKind.Renderer3DTextKeyword => Renderer3DTextParameters,

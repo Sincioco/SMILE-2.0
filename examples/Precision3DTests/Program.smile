@@ -1,0 +1,191 @@
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Graphics3D As Graphics3D
+Import Smile.Simple3D.Precision3D As Precision3D
+Import Smile.Simple3D.PrecisionMath3D As Math3D
+Import Smile.Simple3D.Scene3D As Scene3D
+
+Dim Failures As Number
+Dim CheckCount As Number
+
+Game Window "SMILE Double Precision Tests" Size 640 By 480
+
+Do
+
+    Call RunTests()
+
+Loop Until True
+
+If Failures = 0 Then
+    Print "Precision3D tests passed"
+Else
+    Print "Precision3D failures: "; Failures
+End If
+
+Sub Check(Valid As Boolean)
+
+    CheckCount = CheckCount + 1
+
+    If Not Valid Then
+        Failures = Failures + 1
+        Print "Failed precision check "; CheckCount
+    End If
+
+End Sub
+
+Sub RunTests()
+
+    Dim Camera As Precision3D.Camera3D
+    Dim Accepted As Precision3D.Camera3D
+    Dim Invalid As Precision3D.Camera3D
+    Dim Source As Core.Object3D
+    Dim Stale As Core.Object3D
+    Dim Receiver As Core.Object3D
+    Dim Transform As Precision3D.Transform3D
+    Dim Readback As Precision3D.Transform3D
+    Dim Captured As Precision3D.Vector3
+    Dim Rotated As Precision3D.Vector3
+    Dim Rotation As Precision3D.Vector3
+    Dim Result As Precision3D.Vector3
+    Dim Control0 As Precision3D.Vector3
+    Dim Control1 As Precision3D.Vector3
+    Dim Control2 As Precision3D.Vector3
+    Dim Control3 As Precision3D.Vector3
+    Dim ElapsedFirst As Number
+    Dim ElapsedSecond As Number
+    Dim FirstPosition As Precision3D.Vector3
+    Dim SecondPosition As Precision3D.Vector3
+
+    Call Graphics3D.ResetRenderer3D()
+    Call Scene3D.ResetState()
+
+    Camera = Precision3D.FromCamera(Graphics3D.DefaultCamera())
+    Rotation.Y = 0.125
+    Rotated = Math3D.Rotate(Camera.Position, Rotation)
+
+    Call Check(Abs(Rotated.X - Camera.Position.X) > 0.125)
+
+    Camera.Position = Rotated
+    Camera.Position.Y = Camera.Position.Y + 0.25
+    Camera.FovDegrees = 55.125
+    Camera.NearPlane = 0.125
+    Camera.FarPlane = 10000.5
+
+    Call Check(Precision3D.SetCamera(Camera))
+
+    Accepted = Precision3D.AcceptedCamera()
+
+    Call Check(Abs(Accepted.Position.X - Camera.Position.X) < 0.0002)
+    Call Check(Accepted.Position.Y = Camera.Position.Y)
+    Call Check(Accepted.FovDegrees = 55.125)
+    Call Check(Accepted.NearPlane = 0.125)
+    Call Check(Accepted.FarPlane = 10000.5)
+
+    Invalid = Camera
+    Invalid.Target = Camera.Position
+
+    Call Check(Not Precision3D.SetCamera(Invalid))
+
+    Invalid = Precision3D.AcceptedCamera()
+
+    Call Check(Invalid.Position.X = Accepted.Position.X)
+    Call Check(Invalid.Target.X = Accepted.Target.X)
+
+    Invalid = Camera
+    Invalid.UpDirection = Math3D.Subtract(Camera.Target, Camera.Position)
+
+    Call Check(Not Precision3D.SetCamera(Invalid))
+
+    Invalid = Camera
+    Invalid.FarPlane = Invalid.NearPlane
+
+    Call Check(Not Precision3D.SetCamera(Invalid))
+
+    Invalid = Precision3D.AcceptedCamera()
+
+    Call Check(Invalid.FarPlane = Accepted.FarPlane)
+
+    Source = Graphics3D.CreateCube3D(24)
+    Receiver = Graphics3D.CreatePlane3D(180, 140)
+    Transform.Position = Precision3D.Vector(0.25, 20.25, 0.5)
+    Transform.Rotation.Y = 0.125
+    Transform.ScalePercent = Precision3D.Vector(100.0, 100.0, 100.0)
+
+    Call Check(Precision3D.SetTransform(Source, Transform))
+    Call Check(Precision3D.TryTransform(Source, Readback))
+    Call Check(Readback.Position.X = 0.25)
+    Call Check(Readback.Rotation.Y = 0.125)
+    Call Check(Not Precision3D.SetScale(Source, 1e-300, 100.0, 100.0))
+    Call Check(Precision3D.TryTransform(Source, Readback))
+    Call Check(Readback.ScalePercent.X = 100.0)
+    Call Check(Precision3D.SetPosition(Receiver, 0.0, 7.25, 0.0))
+    Call Graphics3D.SetObjectReflectionMode3D(Receiver, Graphics3D.OBJECT_REFLECTION_RECEIVER)
+    Call Check(Graphics3D.ConfigureReflections3D(True, 45, 35, 50, -1, True))
+    Call Check(Scene3D.BeginPrecise(Camera, 18, 20, 28))
+    Call Check(Not Precision3D.SetCamera(Camera))
+    Call Check(Graphics3D.DrawObject3D(Receiver))
+    Call Check(Graphics3D.DrawObject3D(Source))
+    Call Check(Precision3D.SetPosition(Source, 7.5, 20.25, 0.5))
+    Call Check(Precision3D.TrySubmittedPosition(Source, 1, Captured))
+    Call Check(Captured.X = 0.25)
+    Call Check(Precision3D.TryTransform(Source, Readback))
+    Call Check(Readback.Position.X = 7.5)
+    Call Check(Scene3D.EndScene())
+
+    Show Screen
+
+    Call Check(Precision3D.ReflectionPlane() = 7.25)
+    Call Check(Graphics3D.ReflectionValue3D(Graphics3D.REFLECTION_QUERY_EFFECTIVE) = 1)
+    Call Check(Precision3D.SetPosition(Receiver, 0.0, -0.75, 0.0))
+    Call Check(Scene3D.BeginPrecise(Camera, 18, 20, 28))
+    Call Check(Graphics3D.DrawObject3D(Receiver))
+    Call Check(Graphics3D.DrawObject3D(Source))
+    Call Check(Scene3D.EndScene())
+
+    Show Screen
+
+    Call Check(Precision3D.ReflectionPlane() = -0.75)
+
+    Control0 = Precision3D.Vector(0.0, 0.0, 0.0)
+    Control1 = Precision3D.Vector(0.0, 2.0, 0.0)
+    Control2 = Precision3D.Vector(2.0, 2.0, 0.0)
+    Control3 = Precision3D.Vector(2.0, 0.0, 0.0)
+    Result = Math3D.Cubic(Control0, Control1, Control2, Control3, 0.5)
+
+    Call Check(Result.X = 1.0 And Result.Y = 1.5)
+
+    Result = Math3D.Cubic(Control0, Control1, Control2, Control3, -0.25)
+
+    Call Check(Result.X = Control0.X And Result.Y = Control0.Y)
+
+    Result = Math3D.Cubic(Control0, Control1, Control2, Control3, 1.25)
+
+    Call Check(Result.X = Control3.X And Result.Y = Control3.Y)
+
+    Result = Math3D.Cubic(Control1, Control1, Control1, Control1, 0.375)
+
+    Call Check(Abs(Result.X - Control1.X) < 1e-10 And Abs(Result.Y - Control1.Y) < 1e-10)
+    Call Check(Not Math3D.TryNormalize(Control0, Result))
+
+    ElapsedFirst = 100 + 60
+    ElapsedSecond = 40 + 40 + 80
+    FirstPosition = Math3D.Cubic(Control0, Control1, Control2, Control3, ToDouble(ElapsedFirst) / 1000.0)
+    SecondPosition = Math3D.Cubic(Control0, Control1, Control2, Control3, ToDouble(ElapsedSecond) / 1000.0)
+
+    Call Check(Abs(FirstPosition.X - SecondPosition.X) < 1e-9)
+    Call Check(Abs(FirstPosition.Y - SecondPosition.Y) < 1e-9)
+
+    Stale = Source
+
+    Call Graphics3D.DestroyObject3D(Source)
+
+    Readback.Position.X = 123.25
+
+    Call Check(Not Precision3D.TryTransform(Stale, Readback))
+    Call Check(Readback.Position.X = 123.25)
+    Call Check(Graphics3D.LastError() <> 0)
+    Call Graphics3D.DestroyObject3D(Receiver)
+    Call Graphics3D.ResetRenderer3D()
+
+End Sub

@@ -6,6 +6,7 @@ using Smile.Language;
 Environment.CurrentDirectory = RepositoryTestContext.FindRepositoryRoot();
 var tests = new TestContext();
 DoubleTests.Register(tests);
+Renderer3DPrecisionTests.Register(tests);
 
 Run("Missing GraphicsBackend defaults to Auto", () =>
 {

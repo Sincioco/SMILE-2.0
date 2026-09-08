@@ -277,6 +277,8 @@ internal sealed class MasmEmitter
         Line("EXTERN smile_draw_line:PROC");
         Line("EXTERN smile_draw_text:PROC");
         Line("EXTERN smile_draw_number:PROC");
+        Line("EXTERN smile_renderer3d_double:PROC");
+        Line("EXTERN smile_renderer3d_double_value:PROC");
         Line("EXTERN smile_renderer3d_command:PROC");
         Line("EXTERN smile_renderer3d_image_command:PROC");
         Line("EXTERN smile_renderer3d_text_command:PROC");
@@ -1288,7 +1290,7 @@ internal sealed class MasmEmitter
         PushRax();
     }
 
-    private void EmitNativeCall(string name, int argumentCount)
+    private void EmitNativeCall(string name, int argumentCount, IReadOnlyList<SmileType>? argumentTypes = null)
     {
         var outerSlots = _dynamicStackSlots - argumentCount;
         var stackArguments = Math.Max(0, argumentCount - 4);
@@ -1307,7 +1309,10 @@ internal sealed class MasmEmitter
         {
             var sourceOffset = callAreaBytes + (argumentCount - 1 - index) * 8;
             var register = index switch { 0 => "rcx", 1 => "rdx", 2 => "r8", _ => "r9" };
-            Line($"    mov {register}, QWORD PTR [rsp+{sourceOffset}]");
+            if (argumentTypes != null && argumentTypes[index] == SmileType.Double)
+                Line($"    movsd xmm{index}, QWORD PTR [rsp+{sourceOffset}]");
+            else
+                Line($"    mov {register}, QWORD PTR [rsp+{sourceOffset}]");
         }
         Line($"    call {name}");
         Line($"    add rsp, {callAreaBytes + argumentCount * 8}");
@@ -1896,6 +1901,19 @@ internal sealed class MasmEmitter
                 EmitExpression(call.Arguments[2].Expression);
                 PushRax();
                 EmitNativeCall("smile_text_slice", 3);
+                break;
+            case SyntaxKind.Renderer3DDoubleKeyword:
+            case SyntaxKind.Renderer3DDoubleValueKeyword:
+                foreach (var argument in call.Arguments)
+                {
+                    EmitExpression(argument.Expression);
+                    PushRax();
+                }
+                EmitNativeCall(call.Identifier.Kind == SyntaxKind.Renderer3DDoubleKeyword
+                    ? "smile_renderer3d_double" : "smile_renderer3d_double_value", call.Arguments.Count,
+                    call.Arguments.Select(argument => _analysis.SemanticModel.GetType(argument.Expression)).ToArray());
+                if (call.Identifier.Kind == SyntaxKind.Renderer3DDoubleValueKeyword)
+                    Line("    movq rax, xmm0");
                 break;
             case SyntaxKind.Renderer3DKeyword:
             case SyntaxKind.Renderer3DImageKeyword:
