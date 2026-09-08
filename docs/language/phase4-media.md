@@ -38,11 +38,14 @@ keyboard focus. The first graphical frame is submitted before dismissal; console
 input/termination also honor the minimum without adding text to stdout. Program
 termination/cancellation does not keep an orphan splash alive.
 
-Web shows two distinct measures: overall startup remains indeterminate until
-the first frame/output is ready, while the current asset shows received bytes
+Web shows two distinct measures: the top bar begins with an indeterminate
+left-right animation, then shows ready files out of known load files. Model
+texture dependencies join the total before their sequential downloads begin;
+newly discovered dependencies can increase the total. Unused published files
+are excluded, repeated paths count once, and failed/decoding files are not ready.
+This is file-count progress, not elapsed-time progress or an ETA. The current asset shows received bytes
 and a percentage only for a reliable uncompressed `Content-Length`. Compressed,
-unknown-length and decoding phases are labeled explicitly. File counts describe
-discovered assets, not an invented final total or ETA. Graphical status `Print`
+unknown-length and decoding phases are labeled explicitly. Graphical status `Print`
 calls cannot hide the loader before its first frame. Errors still reach the
 runtime error panel after the minimum; a missing logo/script stays visible with
 a reload/connection message.

@@ -717,7 +717,7 @@ async function runStartupLoadingTests() {
         constructor() { this.width = this.height = 4; }
         set src(value) { setImmediate(() => this.onload()); }
     };
-    runtime.configure("smile.tests.loading.disposable", ["Assets/Logo.png"]);
+    runtime.configure("smile.tests.loading.disposable", ["Assets/Logo.png", "Assets/Unused.png"]);
     runtime.gameWindow("Loading", 960, 540);
     const pending = runtime.loadImage("Assets/Logo.png");
     await new Promise(resolve => setImmediate(resolve));
@@ -726,12 +726,14 @@ async function runStartupLoadingTests() {
     mobileAssert(env.host.document.getElementById("smile-loading-transfer-text").textContent.includes("Assets/Logo.png"), "loader reports logical filename, not a host drive path");
     completeDownload(new Uint8Array([137, 80, 78, 71]).buffer);
     const first = await pending;
-    mobileAssert(status.textContent.includes("1 assets ready"), "completed asset count");
+    mobileAssert(status.textContent.includes("1 / 1 ready"), "ready file count excludes unused published files");
     mobileEqual(env.transferUrls.size, 0, "image object URL released after decode");
     runtime.imageRelease(first);
     const second = await runtime.loadImage("Assets/Logo.png");
     mobileEqual(downloads, 1, "repeat load reuses encoded bytes after last decoded owner released");
     mobileEqual(runtime.mediaDiagnostics().assetDownloadCacheHits, 1, "repeat download cache hit counted");
+    mobileEqual(env.host.document.getElementById("smile-loading-progress").max, 1, "cache hits do not duplicate the file total");
+    mobileEqual(env.host.document.getElementById("smile-loading-progress").value, 1, "cached file is ready after decode");
     runtime.imageRelease(second);
     await runtime.showScreen();
     mobileEqual(loader.hidden, true, "first presented frame dismisses loader");

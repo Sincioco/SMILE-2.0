@@ -7,8 +7,10 @@ Sin explicitly released this milestone. Double and H01/H02/H03 remain closed.
 ## Current state
 
 Complete: implementation, required validation, native/Full Web Viewer delivery,
-VSIX installation and source publication. Published normally to origin/main as
-`36cc0adf951bfa75c450e32ffdcc77cd1baadb82`.
+VSIX installation and source publication. Initial delivery was published normally
+as `36cc0adf951bfa75c450e32ffdcc77cd1baadb82`. Sin's subsequent file-count request
+extends the Web top bar; implementation, focused validation and refreshed delivery
+are complete in the commit containing this checkpoint update.
 
 ## Owners and behavior
 
@@ -23,7 +25,11 @@ VSIX installation and source publication. Published normally to origin/main as
 - `WebOutputWriter` publishes mandatory `smile-logo.png` transactionally and
   includes `WebRuntime/Startup.js` before the runtime/program scripts. Logo decode
   and a presentation boundary precede execution; background-tab time is excluded.
-  Overall preparation stays indeterminate until ready. Current-asset progress
+  The top bar starts indeterminate, then counts ready files out of known load
+  files. The existing model preparation owner registers its texture dependencies
+  before sequential downloads. New dependencies may increase the total; unused
+  published files are excluded and repeated paths count once. Queued, decoding
+  and failed files do not advance the ready count. Current-asset progress
   uses streamed response bytes and reliable uncompressed Content-Length only;
   unknown/compressed sizes and decoding have explicit labels. Existing bounded
   encoded download cache and failure recovery remain in their original owner.
@@ -34,6 +40,23 @@ VSIX installation and source publication. Published normally to origin/main as
 
 ## Validation and delivery evidence
 
+- File-count follow-up: `startup-files-tests.log` passes initial animation,
+  known/queued/new dependencies, decoding/failure accounting, cache deduplication,
+  unused publication exclusion, unchanged byte progress and visible-duration
+  checks. `startup-files-managed.log`: all 320 managed tests pass.
+  `startup-files-pbr.log`: the affected Web PBR ownership/error/parity gate passes.
+  No SMILE or native runtime source changed; earlier formatter, native and normal
+  smoke evidence below remains valid and was not rerun unnecessarily.
+- `startup-files-build.log` / `startup-files-viewer-web.log`: compiler/VSIX and
+  Full Web Viewer rebuilt; all character model cooks were cache hits. Chrome tool
+  capture `startup-files-chrome.png` shows **4 / 7 files ready** above an independent
+  **2,095,410 / 9,496,365 bytes (22%)** transfer. The Viewer then opens and pauses
+  normally (`startup-files-viewer-ready.png`). This is tool observation.
+- `startup-files-vsix-install.log`: refreshed VSIX 2.0.61 installed under
+  `C:/Users/louie/AppData/Local/Microsoft/VisualStudio/18.0_91f001b5/Extensions/hk2dzi31.rsq`;
+  all 35 installed payload hashes verified. No Visual Studio window was closed.
+  `startup-files-installed-compiler.log` checks the actual installed compiler's
+  generated loader against the focused presentation/file-count contract.
 - `artifacts/temp/startup-managed-final.log`: all **320 managed tests** passed.
   Checks include deterministic supplied artifact metadata, authoritative version,
   mandatory logo bytes and asset-name collision rejection preserving prior output.
@@ -75,20 +98,20 @@ VSIX installation and source publication. Published normally to origin/main as
   zero keys (`13AE135FDA40302CB5A4B0146D7103A2ED5346AAEEBB3852AF6DD3C397F5D293`).
   No canonical character asset or calibration changed. Sin Star I remains closed.
 
-Final artifact SHA256:
+Current artifact SHA256 (prior native Viewer retained; new Web/VSIX delivery):
 
 | Artifact | SHA256 |
 | --- | --- |
 | Native Viewer | `55CDBBF5E1B179226089BE956952AC7D37C251E877BCCFFC7C0776826A7ECE75` |
-| Full Web index | `35B231EC8863BF4CC06B135E49D666C14CEFAD2ABDF173891404E669A8F0D849` |
+| Full Web index | `35D8218D26EEEF9BB647CFBDD062361946E7F8C7C2C6EC8A46DD532C64459506` |
 | Full Web game.js | `5549CD3761E13E638E7A276723476920B255A7E735D3973D6335058C3B119A9B` |
-| Full Web runtime | `F3C8236965358E7F327B10573E31355BD57437E4BE75103D2C734D12226C1E99` |
-| Installed VSIX artifact | `0491A280E62EACECA14C83280B94FA377FF5782B3C48A642E371A55FD95EDE7E` |
-| Bundled native runtime | `734818A95C21775CAEA999F869713B83713107B34493BE0F351408E8B41799EA` |
+| Full Web runtime | `440A381267AAC36C3CD33A2EC10151BA69555E07C4A6D2348C0AA96150AD6943` |
+| Installed VSIX artifact | `BD3520B267C5A3A3533FCCA20FD16E265D482691FCDA9D32CED58820E5BFA817` |
+| Bundled native runtime (same source rebuilt by delivery script) | `9C619E48CCE31F1AF59B659284057A74A9ABC8C68A89725B0FD637778C2D53D7` |
 
 The Viewer's generated gameplay JavaScript is unchanged from the previous VFX
-milestone. Its validated outputs are reused after the final compiler-only
-publication-collision guard, which does not change these generated programs.
+milestone. The file-count follow-up changes only the shared Web startup/runtime
+presentation and its model dependency accounting, tests and documentation.
 
 ## Compatibility and limits
 

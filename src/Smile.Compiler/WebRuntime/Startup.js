@@ -10,6 +10,7 @@ window.smileStartup = (() => {
     const transfer = document.getElementById("smile-loading-transfer");
     const transferText = document.getElementById("smile-loading-transfer-text");
     let visibleMs = 0, visibleSince = null, ready = false, presented = false;
+    let knownFiles = 0;
     let resolvePainted, resolveFinished;
     const painted = new Promise(resolve => { resolvePainted = resolve; });
     const finished = new Promise(resolve => { resolveFinished = resolve; });
@@ -45,8 +46,10 @@ window.smileStartup = (() => {
         ready = true;
         status.textContent = "Ready";
         detail.textContent = "Opening the program…";
-        overall.max = 1;
-        overall.value = 1;
+        if (!knownFiles) {
+            overall.max = 1;
+            overall.value = 1;
+        }
         transfer.hidden = true;
         transferText.textContent = "Startup preparation complete.";
         void painted.then(() => {
@@ -68,11 +71,18 @@ window.smileStartup = (() => {
         const complete = entries.filter(([, item]) => item.state === "ready").length;
         const failed = entries.filter(([, item]) => item.state === "failed").length;
         const pending = entries.filter(([, item]) => item.state === "loading" || item.state === "decoding");
-        overall.removeAttribute("value"); // Future loads/scene setup are not known yet.
-        status.textContent = `Overall: Preparing program — ${complete} assets ready${failed ? `, ${failed} failed` : ""}`;
+        knownFiles = entries.length;
+        if (knownFiles) {
+            overall.max = knownFiles;
+            overall.value = complete;
+            status.textContent = `Files: ${complete} / ${knownFiles} ready${failed ? `, ${failed} failed` : ""}`;
+        } else {
+            overall.removeAttribute("value");
+            status.textContent = "Identifying files to load…";
+        }
         detail.textContent = pending.length
-            ? `${pending.length} asset${pending.length === 1 ? "" : "s"} downloading or decoding. Overall duration is not yet known.`
-            : "Preparing the scene. Overall duration is not yet known.";
+            ? `${pending.length} asset${pending.length === 1 ? "" : "s"} downloading or decoding. File total grows as dependencies are identified.`
+            : "Preparing the scene. File total includes known load dependencies.";
         const current = pending[pending.length - 1];
         transfer.hidden = !current;
         if (!current) {

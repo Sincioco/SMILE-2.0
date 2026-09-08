@@ -60,16 +60,40 @@ function fixture() {
     assert.equal(slow.element("").hidden, true, "long loading adds no unconditional extra second");
 
     const progress = fixture();
-    progress.host.smileStartup.update(new Map([["Assets/Model.sm3d", { state: "loading", received: 512, total: 2048 }]]));
-    assert.equal(progress.element("-progress").value, undefined, "overall startup has no invented denominator");
+    progress.host.smileStartup.update(new Map());
+    assert.equal(progress.element("-progress").value, undefined, "initial discovery keeps the left-right animation");
+    const files = new Map([
+        ["Assets/Model.sm3d", { state: "ready" }],
+        ["Assets/Texture.png", { state: "loading", received: 512, total: 2048 }],
+        ["Assets/Normal.png", { state: "queued" }]
+    ]);
+    progress.host.smileStartup.update(files);
+    assert.equal(progress.element("-progress").value, 1, "only ready files advance the top bar");
+    assert.equal(progress.element("-progress").max, 3, "known queued dependencies are included before downloading");
+    assert.match(progress.element("-status").textContent, /1 \/ 3 ready/);
     assert.equal(progress.element("-transfer").value, 512);
     assert.equal(progress.element("-transfer").max, 2048);
     assert.match(progress.element("-transfer-text").textContent, /25%/);
-    progress.host.smileStartup.update(new Map([["Assets/Compressed.sm3d", { state: "loading", received: 5000, total: 0 }]]));
+    files.set("Assets/Texture.png", { state: "decoding" });
+    progress.host.smileStartup.update(files);
+    assert.equal(progress.element("-progress").value, 1, "decoding is not ready");
     assert.equal(progress.element("-transfer").value, undefined);
-    assert.match(progress.element("-transfer-text").textContent, /total size unknown/);
+    files.set("Assets/Texture.png", { state: "ready" });
+    files.set("Assets/Normal.png", { state: "failed" });
+    files.set("Assets/Later.png", { state: "queued" });
+    progress.host.smileStartup.update(files);
+    assert.equal(progress.element("-progress").value, 2);
+    assert.equal(progress.element("-progress").max, 4, "newly discovered files extend the known total");
+    assert.match(progress.element("-status").textContent, /2 \/ 4 ready, 1 failed/);
+    progress.host.smileStartup.finish();
+    assert.equal(progress.element("-progress").value, 2, "opening after recovery does not mark failed or unstarted files ready");
+    assert.equal(progress.element("-progress").max, 4);
+    const unknown = fixture();
+    unknown.host.smileStartup.update(new Map([["Assets/Compressed.sm3d", { state: "loading", received: 5000, total: 0 }]]));
+    assert.equal(unknown.element("-transfer").value, undefined);
+    assert.match(unknown.element("-transfer-text").textContent, /total size unknown/);
     const missing = fixture(); missing.rejectDecode(new Error("missing")); await missing.frame(0);
     assert.equal(missing.element("").hidden, false);
     assert.match(missing.element("-status").textContent, /Unable to load/);
-    console.log("PASS: decoded/presented minimum, background exclusion, slow-load overlap, byte/unknown progress, missing logo.");
+    console.log("PASS: decoded/presented minimum, background exclusion, slow-load overlap, known file counts, byte/unknown progress, missing logo.");
 })().catch(error => { console.error(error); process.exitCode = 1; });

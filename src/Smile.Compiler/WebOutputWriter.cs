@@ -110,7 +110,7 @@ internal static class WebOutputWriter
               <div style="width:min(760px,100%);margin:auto 0;padding:16px 0 28px;flex-shrink:0">
                 <h1 style="font-size:clamp(20px,3vw,32px);font-weight:600;margin:0 0 20px">{{WebUtility.HtmlEncode(title)}}</h1>
                 <img id="smile-loading-logo" src="smile-logo.png?v={{buildVersion}}" alt="SMILE 2.0" fetchpriority="high" style="display:block;width:min(480px,80vw);height:min(34vh,360px);object-fit:contain;margin:0 auto 24px">
-                <progress id="smile-loading-progress" aria-label="Overall startup preparation" style="width:min(440px,80vw);height:12px;accent-color:#eec746"></progress>
+                <progress id="smile-loading-progress" aria-label="Startup files ready" style="width:min(440px,80vw);height:12px;accent-color:#eec746"></progress>
                 <div role="status" aria-live="polite" aria-atomic="true">
                   <p id="smile-loading-status" style="margin:14px 0 8px">Starting program…</p>
                   <p id="smile-loading-detail" style="font-size:13px;min-height:2.6em;color:#abbcd3;overflow-wrap:anywhere;margin:0 0 22px">Preparing the Web runtime. Large assets may take a moment.</p>
@@ -281,6 +281,15 @@ internal static class WebOutputWriter
             function startupAsset(path, state, received = 0, total = 0) {
                 if (startupPresented) return;
                 startupAssets.set(path, { state, received, total });
+                updateStartupLoading();
+            }
+
+            function queueStartupAssets(paths) {
+                if (startupPresented) return;
+                for (const path of paths) {
+                    const logical = logicalPath(path);
+                    if (!startupAssets.has(logical)) startupAssets.set(logical, { state: "queued" });
+                }
                 updateStartupLoading();
             }
 
@@ -2317,6 +2326,9 @@ internal static class WebOutputWriter
                     for(const handle of ownedTextures){const texture=renderer3DTextures.get(handle);if(texture){renderer3DDeleteTextureGpu(texture);imageRelease(texture.image);}renderer3DTextures.delete(handle);}
                 };
                 try{
+                    // Count the model's known dependencies before its sequential texture downloads.
+                    // Publication-only and lazy assets are not a startup load plan.
+                    queueStartupAssets(unique.map(identity=>identity.path));
                     for(const identity of unique){
                         pendingImage=await loadImage(identity.path);
                         const handle=renderer3DCreatePbrTexture(pendingImage,identity.usage,filter,wrap,anisotropy);
