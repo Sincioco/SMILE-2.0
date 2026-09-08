@@ -279,7 +279,7 @@ try {
         throw 'Renderer3D reflection Web runtime JavaScript syntax validation failed.'
     }
     & node.exe 'scripts\run-web-test.js' $webOutput --expected $expectedNormal `
-        --timeout 60000 --renderer3d
+        --timeout 60000 --renderer3d --reflection-half-float-filter
     if ($LASTEXITCODE -ne 0) {
         throw 'Renderer3D reflection Web normal assertions failed.'
     }

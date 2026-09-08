@@ -583,7 +583,8 @@ Public Function FloorReflectionLabel(Enabled As Boolean,
 
     If (Enabled And
         (FallbackReason = Graphics3D.REFLECTION_FALLBACK_ALLOCATION_FAILED Or
-            FallbackReason = Graphics3D.REFLECTION_FALLBACK_RENDER_FAILED)) Then
+            FallbackReason = Graphics3D.REFLECTION_FALLBACK_RENDER_FAILED Or
+            FallbackReason = Graphics3D.REFLECTION_FALLBACK_UNSUPPORTED_RECEIVER)) Then
         Result = "Battle Floor: Unavailable"
     Else If Enabled Then
         Result = "Battle Floor: Reflective"

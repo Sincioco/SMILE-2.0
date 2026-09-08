@@ -28,6 +28,7 @@
     <SmileSource Include="ViewerInspectorPresentation.smile" />
     <SmileSource Include="ViewerTimelineEditing.smile" />
     <SmileSource Include="ViewerUi.smile" />
+    <SmileSource Include="..\..\games\SinStarI\BattleArenaPreview.smile" />
     <SmileSource Include="ViewerGizmo.smile" />
     <SmileSource Include="ViewerParty.smile" />
     <SmileSource Include="ViewerEffects.smile" />

@@ -33,6 +33,7 @@ Import Smile.Simple3D.Math3D As Math3D
 Import Smile.Simple3D.FixedMath As Fixed
 Import Smile.Simple3D.LightPool3D As LightPool3D
 Import Smile.Simple3D.SceneVfx3D As SceneVfx3D
+Import SinStarI.BattleArenaPreview As BattleArenaPreview
 
 Dim Alternating As CharacterViewer.ZoomState
 Dim Bounds As Character3D.Bounds3D
@@ -914,6 +915,20 @@ Call Check(ViewerUi.FloorReflectionLabel(False) = "Battle Floor: Original")
 Call Check(ViewerUi.FloorReflectionLabel(True,
     Graphics3D.REFLECTION_FALLBACK_ALLOCATION_FAILED) =
     "Battle Floor: Unavailable")
+Call Check(ViewerUi.FloorReflectionLabel(True,
+    Graphics3D.REFLECTION_FALLBACK_UNSUPPORTED_RECEIVER) = "Battle Floor: Unavailable")
+Call Check(ViewerUi.FloorReflectionLabel(False,
+    Graphics3D.REFLECTION_FALLBACK_UNSUPPORTED_RECEIVER) = "Battle Floor: Original")
+Call Check(BattleArenaPreview.ReflectionLabel(True,
+    Graphics3D.REFLECTION_FALLBACK_UNSUPPORTED_RECEIVER) = "Battle Floor: Unavailable")
+Call Check(BattleArenaPreview.ReflectionLabel(False,
+    Graphics3D.REFLECTION_FALLBACK_UNSUPPORTED_RECEIVER) = "Battle Floor: Original")
+Call Check(BattleArenaPreview.ReflectionLabel(True,
+    Graphics3D.REFLECTION_FALLBACK_ALLOCATION_FAILED) = "Battle Floor: Unavailable")
+Call Check(BattleArenaPreview.ReflectionLabel(True,
+    Graphics3D.REFLECTION_FALLBACK_RENDER_FAILED) = "Battle Floor: Unavailable")
+Call Check(BattleArenaPreview.ReflectionLabel(True,
+    Graphics3D.REFLECTION_FALLBACK_NONE) = "Battle Floor: Reflective")
 Call Check(ViewerUi.StatusPanelX(1600) = 1332)
 Call Check(ViewerUi.AnimationButtonX(1600) = 1344)
 Call Check(ViewerUi.GlowButtonX(1600, True, False) = 1548)

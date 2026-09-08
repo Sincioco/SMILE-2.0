@@ -269,19 +269,16 @@ Private Function PointerInReflectionButton() As Boolean
 
 End Function
 
-Private Function ReflectionLabel() As Text
+Public Function ReflectionLabel(Enabled As Boolean, FallbackReason As Number) As Text
 
-    Dim FallbackReason As Number
     Dim Result As Text
 
-    FallbackReason = Graphics3D.ReflectionValue3D(
-        Graphics3D.REFLECTION_QUERY_FALLBACK_REASON)
-
-    If (ReflectionsEnabled And
+    If (Enabled And
         (FallbackReason = Graphics3D.REFLECTION_FALLBACK_ALLOCATION_FAILED Or
-            FallbackReason = Graphics3D.REFLECTION_FALLBACK_RENDER_FAILED)) Then
+            FallbackReason = Graphics3D.REFLECTION_FALLBACK_RENDER_FAILED Or
+            FallbackReason = Graphics3D.REFLECTION_FALLBACK_UNSUPPORTED_RECEIVER)) Then
         Result = "Battle Floor: Unavailable"
-    Else If ReflectionsEnabled Then
+    Else If Enabled Then
         Result = "Battle Floor: Reflective"
     Else
         Result = "Battle Floor: Original"
@@ -294,6 +291,7 @@ End Function
 Private Sub DrawOverlay()
 
     Dim ButtonColor As Number
+    Dim FloorLabel As Text
 
     ButtonColor = Rgb(18, 104, 136)
 
@@ -305,7 +303,9 @@ Private Sub DrawOverlay()
     End If
 
     Fill Rectangle REFLECTION_BUTTON_X, REFLECTION_BUTTON_Y, REFLECTION_BUTTON_WIDTH, REFLECTION_BUTTON_HEIGHT, ButtonColor Opacity 94
-    Draw Text ReflectionLabel() At REFLECTION_BUTTON_X + 12, REFLECTION_BUTTON_Y + 9 Size 13 Color WHITE
+    FloorLabel = ReflectionLabel(ReflectionsEnabled,
+        Graphics3D.ReflectionValue3D(Graphics3D.REFLECTION_QUERY_FALLBACK_REASON))
+    Draw Text FloorLabel At REFLECTION_BUTTON_X + 12, REFLECTION_BUTTON_Y + 9 Size 13 Color WHITE
     Draw Text "Click or press R to toggle" At 32, 130 Size 10 Color LIGHT_GRAY
     Draw Text "LMB pan • MMB orbit • Wheel zoom • O auto orbit" At 32, 154 Size 10 Color LIGHT_GRAY
     Draw Text "Press ESC to return to the main menu" At 32, 674 Size 18 Color WHITE

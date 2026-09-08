@@ -45,6 +45,8 @@ let forceRenderer3DShadowFailure = false;
 let forceRenderer3DSoftDepthFailure = false;
 let forceRenderer3DDistortionFailure = false;
 let forceRenderer3DReflectionFailureOnce = false;
+let verifyReflectionHalfFloatFilter = false;
+let reflectionHalfFloatAllocations = 0;
 let verifyNeonCyclesInput = false;
 while (args.length !== 0) {
     const option = args.shift();
@@ -87,6 +89,7 @@ while (args.length !== 0) {
     if (option === "--force-renderer3d-soft-depth-failure") { forceRenderer3DSoftDepthFailure = true; continue; }
     if (option === "--force-renderer3d-distortion-failure") { forceRenderer3DDistortionFailure = true; continue; }
     if (option === "--force-renderer3d-reflection-failure-once") { forceRenderer3DReflectionFailureOnce = true; continue; }
+    if (option === "--reflection-half-float-filter") { verifyReflectionHalfFloatFilter = true; continue; }
     if (option === "--neon-cycles-input") { verifyNeonCyclesInput = true; continue; }
     const value = args.shift();
     if (value === undefined) fail(`missing value for ${option}`);
@@ -1035,8 +1038,20 @@ function contextWebGL2() {
         bufferSubData: () => { renderer3DBufferUploads += 1; }, deleteBuffer: noop,
         createTexture: () => ({}), bindTexture: (_target, value) => { texture = value; }, deleteTexture: noop, activeTexture: noop,
         pixelStorei: noop,
-        texImage2D: (_target, _level, format, width, height) => { if (texture) Object.assign(texture, { format, width, height, samples: 0 }); },
-        texSubImage2D: noop, texParameteri: noop, texParameterf: noop,
+        texImage2D: (_target, _level, format, width, height, _border, _external, type) => {
+            if (texture) Object.assign(texture, { format, width, height, samples: 0 });
+            // Observe calls from the production allocator; unrelated HDR targets
+            // have separate sampling policies and are outside this assertion.
+            if (verifyReflectionHalfFloatFilter && format === 0x881a &&
+                new Error().stack.includes("renderer3DReflectionEnsureResources")) {
+                if (type !== 0x140b || texture[0x2801] !== 0x2601 || texture[0x2800] !== 0x2601)
+                    fail("RGBA16F reflection must use HALF_FLOAT and LINEAR without float-linear extension");
+                reflectionHalfFloatAllocations++;
+            }
+        },
+        texSubImage2D: noop,
+        texParameteri: (_target, parameter, value) => { if (texture) texture[parameter] = value; },
+        texParameterf: noop,
         generateMipmap: noop, getError: () => 0,
         getExtension: name => name.includes("texture_filter_anisotropic")
             ? { MAX_TEXTURE_MAX_ANISOTROPY_EXT: 0x84ff, TEXTURE_MAX_ANISOTROPY_EXT: 0x84fe }
@@ -1948,6 +1963,8 @@ const started = Date.now();
             fail(`Phase 5.1 Web console reported errors: ${hostConsoleErrors.join("\n")}`);
     }
 
+    if (verifyReflectionHalfFloatFilter && reflectionHalfFloatAllocations === 0)
+        fail("No production half-float reflection allocation was checked");
     process.stdout.write(`Web execution passed: ${webDirectory}`);
     if (expectedPath !== null || nativeOutputPath !== null) process.stdout.write(" (exact console parity)");
     if (expectedDrawText !== null) process.stdout.write(" (dynamic Draw Text parity)");

@@ -97,8 +97,9 @@ zero-work Off path and fallback behavior directly testable on both targets.
 
 - Native HDR reflection capture uses `R16G16B16A16_FLOAT`. Web uses
   `RGBA16F`/`HALF_FLOAT` when `EXT_color_buffer_float` is available, with
-  `OES_texture_float_linear` when supported and a valid nearest-filter fallback
-  otherwise. The direct LDR path uses `RGBA8`.
+  core WebGL2 half-float linear filtering, independent of the 32-bit
+  `OES_texture_float_linear` extension. The direct LDR path uses `RGBA8` and
+  linear filtering. Renderability and framebuffer completeness remain required.
 - The target follows viewport and quality scale but is capped at 2,048 pixels on
   its longest side. Strength and five-tap softness are independently controlled.
 - Turning reflections Off performs zero reflection captures, reflected draws, or

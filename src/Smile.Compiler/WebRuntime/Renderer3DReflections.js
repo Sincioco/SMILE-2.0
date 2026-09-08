@@ -164,10 +164,9 @@
                 let complete = !!(texture && framebuffer && depth);
                 if (complete) {
                     gl.bindTexture(gl.TEXTURE_2D, texture);
-                    const filter = format === 2 &&
-                        !gl.getExtension("OES_texture_float_linear")
-                        ? gl.NEAREST
-                        : gl.LINEAR;
+                    // WebGL2 includes half-float linear filtering in core. The
+                    // float-linear extension applies to 32-bit float textures.
+                    const filter = gl.LINEAR;
                     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, filter);
                     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, filter);
                     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
