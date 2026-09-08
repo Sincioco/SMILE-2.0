@@ -6398,7 +6398,7 @@ Run("Failed project asset staging preserves prior native and Web publications", 
     finally { Directory.Delete(directory, true); }
 });
 
-Run("Native Debug C uses deterministic ASCII identifiers while retaining safe aliases", () =>
+Run("Native Debug C uses deterministic safe parameter names at source breakpoints", () =>
 {
     const string longName = "ThisIdentifierIsDeliberatelyLongEnoughToProveThereIsNoTruncationCollision";
     var path = Path.Combine(Path.GetTempPath(), "SMILE 除錯 path", "來源.smile");
@@ -6411,8 +6411,8 @@ Run("Native Debug C uses deterministic ASCII identifiers while retaining safe al
     var first = CompilerDriver.BuildDebugSource(emitter.DebugSites);
     var second = CompilerDriver.BuildDebugSource(emitter.DebugSites);
     Equal(first, second);
-    Equal(true, first.Contains("smile_debug_v0", StringComparison.Ordinal));
-    Equal(true, first.Contains("MixedCase = smile_debug_v", StringComparison.Ordinal));
+    Equal(true, first.Contains("long long MixedCase", StringComparison.Ordinal));
+    Equal(false, first.Contains("MixedCase = smile_debug_v", StringComparison.Ordinal));
     Equal(false, first.Contains("long long auto", StringComparison.Ordinal));
     Equal(false, first.Contains(" Café", StringComparison.Ordinal));
     Equal(false, first.Contains(" 變數", StringComparison.Ordinal));

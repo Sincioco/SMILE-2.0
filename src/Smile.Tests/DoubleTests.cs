@@ -102,10 +102,10 @@ internal static class DoubleTests
             var emitter = new MasmEmitter(analysis, SmileGraphicsBackend.Auto, true, true);
             emitter.Emit();
             var source = CompilerDriver.BuildDebugSource(emitter.DebugSites);
-            Require(source.Contains("double Value ="), "Scalar debug type");
-            Require(source.Contains("const double* Values ="), "Array debug type");
+            Require(source.Contains("(double Value, const double* Values,"), "Named scalar/array debug parameters");
             Require(source.Contains("double Field_Values[2]"), "Nested field debug type");
             Require(!source.Contains("const void* Points"), "Record array debug type");
+            Require(!source.Contains("Value = smile_debug_v"), "No uninitialized alias at the source breakpoint");
         });
         tests.Run("Double Select Case stays same-type", () =>
         {

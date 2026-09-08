@@ -415,31 +415,31 @@ internal sealed class CompilerDriver
                 ? "void"
                 : string.Join(", ", site.Variables.Select((symbol, ordinal) =>
                     DebugParameterDeclaration(symbol, ordinal)));
-            var aliases = string.Concat(site.Variables.Select((symbol, ordinal) =>
-                DebugAliasDeclaration(symbol, ordinal)));
+            // Named parameters are available at function entry. Local aliases
+            // would still be uninitialized at the mapped SMILE breakpoint.
             builder.Append("#line ").Append(site.Line).Append(" \"").Append(escapedPath).Append("\"\n")
                 .Append("__declspec(noinline) void ").Append(site.HelperName)
-                .Append('(').Append(parameters).Append(") {").Append(aliases)
-                .Append(" smile_debug_counter++; }\n");
+                .Append('(').Append(parameters).Append(") { smile_debug_counter++; }\n");
         }
         return builder.ToString();
     }
 
     private static string DebugParameterDeclaration(VariableSymbol symbol, int ordinal) =>
-        DebugParameterType(symbol) + " smile_debug_v" + ordinal;
+        DebugParameterType(symbol) + " " +
+        (IsSafeDebugParameterName(symbol.Name) ? symbol.Name : "smile_debug_v" + ordinal);
 
     private static string DebugParameterType(VariableSymbol symbol)
     {
         if (symbol.Type.IsRecord || symbol.Type.IsClass)
-            return "const " + NativeDebugTypes.Name(symbol.Type) + (symbol.IsArray && symbol.Type.IsClass ? "* const*" : "*");
+            return "const struct " + NativeDebugTypes.Name(symbol.Type) + (symbol.IsArray && symbol.Type.IsClass ? "* const*" : "*");
         var type = symbol.IsArray
             ? symbol.Type.Kind switch
             {
                 SmileTypeKind.Number => "const long long*",
                 SmileTypeKind.Double => "const double*",
                 SmileTypeKind.Enum => "const long long*",
-                SmileTypeKind.Boolean => "const SmileDebugBoolean*",
-                SmileTypeKind.Text => "const SmileDebugText* const*",
+                SmileTypeKind.Boolean => "const enum SmileDebugBoolean*",
+                SmileTypeKind.Text => "const struct SmileDebugText* const*",
                 _ => "const void*"
             }
             : symbol.Type.Kind switch
@@ -447,22 +447,14 @@ internal sealed class CompilerDriver
                 SmileTypeKind.Number => "long long",
                 SmileTypeKind.Double => "double",
                 SmileTypeKind.Enum => "long long",
-                SmileTypeKind.Boolean => "SmileDebugBoolean",
+                SmileTypeKind.Boolean => "enum SmileDebugBoolean",
                 SmileTypeKind.Text => "const char*",
                 _ => "const void*"
             };
         return type;
     }
 
-    private static string DebugAliasDeclaration(VariableSymbol symbol, int ordinal)
-    {
-        if (!IsSafeDebugAlias(symbol.Name))
-            return string.Empty;
-        return " " + DebugParameterType(symbol) + " " + symbol.Name + " = smile_debug_v" + ordinal +
-               "; (void)" + symbol.Name + ";";
-    }
-
-    private static bool IsSafeDebugAlias(string name)
+    private static bool IsSafeDebugParameterName(string name)
     {
         if (string.IsNullOrEmpty(name) || !(name[0] is >= 'A' and <= 'Z' or >= 'a' and <= 'z' or '_') ||
             name.Skip(1).Any(character => !(character is >= 'A' and <= 'Z' or >= 'a' and <= 'z' or >= '0' and <= '9' or '_')))

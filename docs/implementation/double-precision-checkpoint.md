@@ -20,11 +20,11 @@
 | D1 | Implemented and pushed `40c183d`; final integration repairs included below | Shared DoubleSemantics, native MasmDoubleEmitter/numeric runtime, Web Double.js, package schema 7, shared editor/debug facts |
 | D2 | Validated and pushed `c310b7a` | Precision3D/PrecisionMath3D; same renderer translation unit, Scene3D lifecycle and Character3D actor pool |
 | D3 | Implementation pushed `761b7a2`; native/Web focused gates pass; full interaction acceptance pending | PrecisionCamera3D, ViewerCamera/Party/Actors/calibration/effects, Sin Star I preview, shared curve slice |
-| D4 | Automated integration/install and source publication validated at `761b7a2`; manual acceptance pending | Final compiler/runtime/VSIX 2.0.61, native/Web deliveries; manual acceptance remains open |
+| D4 | Automated integration/install and desktop acceptance repairs validated; human interaction/audio acceptance remains open | Final compiler/runtime/VSIX 2.0.61; shared Web post shader and native debug snapshots |
 
-Source milestone `761b7a2fb906a5fa19b548bbd77390da0bdaf765` was pushed normally to
-origin/main and read back at that exact hash. The following checkpoint-only commit
-records this publication; no payload was rebuilt after installation.
+Source milestone `761b7a2fb906a5fa19b548bbd77390da0bdaf765` and checkpoint `8d946c8`
+were pushed normally to origin/main. This acceptance milestone adds the two repairs
+below and refreshes their affected payloads; it preserves all earlier source work.
 
 Detailed unchanged P0/D1/D2 evidence, including historical source/artifact hashes,
 remains in this same file's committed versions at `9f33ad9`, `40c183d` and `c310b7a`
@@ -57,7 +57,7 @@ one current checkpoint, not a replacement investigation or parallel ledger.
   is claimed. Legacy integer APIs remain supported through their existing owners.
 - The accepted Program coordinator changes by six added/five removed lines; no
   line-count refactor or replacement context. Relative to the reviewed baseline:
-  32 new files = 11 focused production files, 18 test/script/project/expected-output
+  33 new files = 11 focused production files, 19 test/script/project/expected-output
   files, three documents. Production additions are two semantic owners, four
   compiler/Web/debug owners, two native files and three precise SMILE modules.
   No new dependency/framework/renderer/pool; accepted coordinator size exceptions
@@ -98,6 +98,27 @@ one current checkpoint, not a replacement investigation or parallel ledger.
 - Test-only corrections: the Web Party harness now updates StartupFile with its
   replacement source; current-owner assertions name the precise camera; package
   assertions expect schema 7; all template/version checks match VSIX 2.0.61.
+- Desktop acceptance found a separate pre-existing Web scene-copy inversion:
+  post mode 4 sampled framebuffer content with image-backdrop UVs. The same shader
+  owner now uses framebuffer UVs for scene copies, preserving imported backdrop
+  modes 6/7. Actual installed Chrome GPU pixels passed 3/4 before (scene copy failed) and 4/4 after
+  (`scripts/prepare-web-post-orientation-check.ps1`, generated ignored HTML at
+  `artifacts/web/PostOrientationCheck/index.html`). Mode 4 bottom/top are red/blue;
+  HDR presentation also preserves orientation, image modes reverse rows; GL error 0.
+  The repaired Viewer is visibly upright with correct floor contact and fixed backdrop.
+  Normal native/Web post-processing regression: `d4-web-orientation-post-gate.log`.
+  Viewer, Sin Star I and curve Web outputs rebuilt; logs `d4-web-orientation-*.log`.
+- Actual VS Watch exposed uninitialized named snapshot aliases at helper entry.
+  `CompilerDriver.BuildDebugSource` now gives safe source names directly to native
+  parameters, with explicit struct/enum tags protecting debug type names. No alias
+  assignment or extra generated-C step is required. Final artifact breakpoint at
+  `examples/DoubleTests/Program.smile:124`: PositionX 0.002, Tiny 4.940656458412e-324,
+  Values[0] 0.375, record Field_Values double[2] {0.375,0}, class field {0.625,0}.
+  F10 reaches SMILE Check line 168 and retains values. This verifies stepping through
+  SMILE source; it does not claim that helper-based F10 skips a SMILE routine call.
+  Final shared suite: 319 (`d4-debug-final-shared.log`); native identifier compile/run
+  yields 15; debug Double run prints 0.002/pass and zero Class/Text resources
+  (`d4-debug-identifiers-final.log`, `d4-debug-final-{compile,run}.log`).
 
 ## Final automated integration and installed delivery
 
@@ -117,8 +138,10 @@ one current checkpoint, not a replacement investigation or parallel ledger.
 - VSIX 2.0.61 installed with the repository installer `--skip-build`, without
   `/shutdownprocesses`; preflight requires VS already closed. Verification compares
   35 actual installed compiler/shared-language/runtime/template payload hashes with
-  archive entries (`d4-vsix-install.log`). Installed root:
-  `C:/Users/louie/AppData/Local/Microsoft/VisualStudio/18.0_91f001b5/Extensions/0ka1rcc4.qlq`.
+  archive entries. Final acceptance rebuild/install logs:
+  `d4-debug-final-build.log`, `d4-debug-final-vsix-install.log`. Installed root:
+  `C:/Users/louie/AppData/Local/Microsoft/VisualStudio/18.0_91f001b5/Extensions/1zp0dvff.zi5`.
+  The current payload hashes are listed below.
   The source SMILE library packages remain repository-built, not newly bundled
   source libraries invented for the VSIX.
 - Both live calibration exports preserve 24 Arin keys / zero Orin keys. Canonical
@@ -128,14 +151,19 @@ one current checkpoint, not a replacement investigation or parallel ledger.
 
 | Final source/artifact | SHA-256 |
 |---|---|
+| `src/Smile.Compiler/CompilerDriver.cs` | `EDFD361D15BA877ACDADA9CF88DAC378D88C3C6160D3F9086BF5684DF805D67A` |
+| `src/Smile.Compiler/WebOutputWriter.cs` | `AD480E7BC7ED0F462D79D6065800063E4F9985C461E8D8863A5617C1396C4DA1` |
+| `tools/Character3DViewer/bin/Release/Web/smile-runtime.js` | `6BD2F34B614D430E873B3F89E9931B4F4693E22ED5BF3DE9192F51D6F2EEF63F` |
+| `artifacts/tests/DoubleTestsFinalDebug.exe` | `E6CF3FD3C05408D0C7CFB14AF716BC6D7CF972A16BDE284B4F38A23B33E2EC79` |
+| `artifacts/tests/DoubleTestsFinalDebug.pdb` | `F669F2F0C7430751605DA031C0ED724FB8866349221FF39449CFCAEBB7F7B69E` |
 | `src/Smile.Compiler/NativeDebugTypes.cs` | `E285D4496E12E4750051221633A67EDC3669438BCFFA8745701232AB9714F938` |
 | `src/Smile.Compiler/WebEmitter.cs` | `6CC67498F856443CFCB9DB03BE3C46AA14DF081F583E5835FD372AD95CE02488` |
 | `libraries/Smile.Simple3D/PrecisionCamera3D.smile` | `7800374693918BF83FA7A6BC7F90DA2B2430F25097A3853A6161F1B5D10FD43E` |
 | `tools/Character3DViewer/CalibrationTests.smile` | `AF2992AAC1CCFE6865E0252208A5820CF91C28D8C32A8CF68D77D7426429E792` |
-| `artifacts/compiler/smilec.dll` | `C2F13EC000B421A2D74F021E5FBA5C502BDD23F4399C7522F9D670C8043D0F6F` |
-| `artifacts/compiler/Smile.Language.dll` | `82E562298FE9763944A139F18D8E998C6F87CAE666D42D6F4124AC8BA91D0206` |
-| `artifacts/compiler/Smile.NativeRuntime.lib` | `49F1917075B7945B78E77180EAA150DE993B9B6C46A232DFAF059E12AAC86CEE` |
-| `artifacts/vsix/Smile.VisualStudio.vsix` | `7E8E5C016E5F6C77649F9D828B0E3B56CC90721B3FDB521239C98B11D4D2BD38` |
+| `artifacts/compiler/smilec.dll` | `A548D7CD73A08DB10845EA36268A63683CC4258D939329207F46F87FABDB311F` |
+| `artifacts/compiler/Smile.Language.dll` | `3E2D01D9A9AD7DEFEEBBFAD04557322955A7C4CF683F49A45E2D43681F84E6E5` |
+| `artifacts/compiler/Smile.NativeRuntime.lib` | `ACE79086D0C5D9E01262B3EB9591FA04D4BA8023A5431452DBE7B3B9743CDA75` |
+| `artifacts/vsix/Smile.VisualStudio.vsix` | `F23D7F9668ED5234242D503A4B0912F481926F644485EB29BE626D3E3BD68486` |
 | `tools/Character3DViewer/bin/Release/Character3DViewer.exe` | `AA1EE1BDC2A91D8AEA447BADBABDBC0770CD9CF6A81893F1217AAB5187D59027` |
 | `tools/Character3DViewer/bin/Release/Web/game.js` | `6EF95474B02C837C6795D6959F62E5B5E555F4CE5CDBE44201999AD9336B54F3` |
 | `artifacts/games/SinStarI/SinStarI.exe` | `B507E3A5C4955C05157613996D28F40655549A7C8ACED1E31101EA3E1ABDC4C3` |
@@ -146,29 +174,35 @@ one current checkpoint, not a replacement investigation or parallel ledger.
 
 ## Open acceptance and next action
 
-Chrome visibly renders the Viewer/Party/Arin, attached effects, backdrop and floor;
-the Demo toggle works. The shared curve renders its moving cube/floor. Sin Star I
-opens Battle from its real title menu, responds to pan/wheel zoom and R switches
-Reflective to Original. These observations are partial, not a complete manual pass.
+Native Windows control is available through the installed computer-use tool. Sin's
+Any App setting was already correct; the earlier browser-only tool limitation was
+not a missing permission. No further settings toggle or Double authorization is needed.
 
-The Viewer reports 0–1 FPS and some brief input is missed. A disposable probe
-observed ~1000-ms RAF gaps despite visible/focused state and three long tasks
-(max 559 ms including startup), with no browser warning/error logs. Callback
-resolver timing is not total rendering cost. Scheduling/foreground behavior is
-suspected, not proven. Probe removed; scope/result: `d3-frame-probe-scope.txt`.
+- Final native Viewer launched through Launch.ps1 after both calibration exports;
+  the old Viewer closed gracefully, with live data preserved. Actual Arin/Orin tabs,
+  Party turns/dragon effects, Space pause, D toggle, timeline scrub, floor modes,
+  fixed backdrop, equipment/contact, small horizontal/vertical and larger diagonal
+  pans, wheel in/out, H/V camera sliders and right-click reset were exercised.
+  Native curve visibly moves its cube above the floor and exits normally.
+- Native Sin Star I opened Battle through its real title, rendered grounded Arin
+  and reflection, accepted small/large pans, wheel in/out and R floor toggle, then
+  Escape returned to the title. Task-owned preview/debug windows closed normally;
+  unrelated unsaved Blender and Notepad++ work was preserved.
+- Bringing the real Chrome window/tab to the foreground resolved the reported
+  0–1 FPS state (observed 61, then about 102–120 FPS). No rendering performance
+  repair was needed for that state. Chrome Viewer pan/zoom, H/V sliders, tabs/Party,
+  Space/D, scrub and reset respond. The corrected Web scene/floor is upright.
+  Chrome Sin Star I and shared curve visual evidence remains valid.
+- Remaining: one human slow/moderate horizontal/vertical middle-button orbit and
+  pan smoothness pass on native/Chrome Viewer and preview, plus audible Party SFX.
+  The tool exposes left drags without duration/button control and no audio feed;
+  small/large drags, slider orbit and audio assertions do not prove these checks.
+  The SFX question is pending, not a pass. Native Watch/type/source stepping is
+  verified; mouse-hover presentation remains unobserved (no exposed hover action).
 
-Native app APIs are disabled in the current tool session. Sin granted desktop
-control permission; enabling Settings > Computer use > Any App was requested.
-The pre-existing native Viewer (PID 29908, started 07:30) was preserved; its running
-image is not claimed to be the new build. Next: obtain native/foreground control,
-preserve any unsaved preview, launch the final Viewer through Launch.ps1, and finish
-one combined slow/moderate horizontal/vertical orbit and pan, zoom in/out, reset,
-keyboard/tab/Party approach/return, pause/scrub, attachment/ground/floor/backdrop and
-audible SFX check on native/Chrome. Complete the native curve visual and installed
-VS Double breakpoint/hover check. Do not claim full acceptance while these remain.
-Reuse passing automated/install evidence unless a source/dependency actually changes.
-The implementation is published; finish only these open checks and their evidence;
-no further Double authorization is needed and no unrelated feature should start.
+Next action: obtain only those human interaction/audio/hover observations and record
+them here. Preserve source/artifact evidence and reuse passing smoke/install results;
+do not repeat unchanged builds or installation. No unrelated feature should start.
 
 ## On Hold
 
