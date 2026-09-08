@@ -6,8 +6,9 @@ Sin explicitly released this milestone. Double and H01/H02/H03 remain closed.
 
 ## Current state
 
-Implementation, required validation, native/Full Web Viewer delivery and VSIX
-installation are complete. Source commit/push is the remaining publication step.
+Complete: implementation, required validation, native/Full Web Viewer delivery,
+VSIX installation and source publication. Published normally to origin/main as
+`36cc0adf951bfa75c450e32ffdcc77cd1baadb82`.
 
 ## Owners and behavior
 
@@ -105,8 +106,8 @@ builds, and no DRM/obfuscation. No public-site upload is implied by local public
 
 ## Next action
 
-Commit and push the validated milestone, record publication, then stop. No required
-startup observations remain pending. No general gameplay reacceptance is claimed.
+STOP. No required startup observations or implementation work remain pending.
+No general gameplay reacceptance is claimed. Held features remain held.
 
 ## On Hold
 
