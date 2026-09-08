@@ -22,6 +22,7 @@ Public Type State
     FloorVisible As Boolean
     GridVisible As Boolean
     FloorReflectionsEnabled As Boolean
+    VfxReflectionsEnabled As Boolean
     BackgroundIndex As Number
     LightingIndex As Number
     MaterialInspection As Number
@@ -57,6 +58,7 @@ Public Sub ResetControls(ByRef Value As State, BackgroundIndex As Number)
     Value.FloorVisible = True
     Value.GridVisible = True
     Value.FloorReflectionsEnabled = True
+    Value.VfxReflectionsEnabled = True
     Value.BackgroundIndex = BackgroundIndex
     Value.LightingIndex = 0
     Value.MaterialInspection = Graphics3D.MATERIAL_INSPECTION_LIT
@@ -197,6 +199,7 @@ Public Sub CreateArena(ByRef Value As State, Width As Number, Depth As Number)
     Value.FloorVisible = True
     Value.GridVisible = True
     Value.FloorReflectionsEnabled = True
+    Value.VfxReflectionsEnabled = True
 
 End Sub
 
@@ -290,7 +293,8 @@ Public Function BeginScene(ByRef Value As State, Camera As Precision3D.Camera3D)
 
     Result = Arena3D.ConfigureForFrame(
         Value.Arena,
-        Value.FloorVisible And Value.FloorReflectionsEnabled
+        Value.FloorVisible And Value.FloorReflectionsEnabled,
+        Value.VfxReflectionsEnabled
     )
 
     If Not Result Then
@@ -471,6 +475,12 @@ End Sub
 Public Sub ToggleGrid(ByRef Value As State)
 
     Value.GridVisible = Not Value.GridVisible
+
+End Sub
+
+Public Sub ToggleVfxReflections(ByRef Value As State)
+
+    Value.VfxReflectionsEnabled = Not Value.VfxReflectionsEnabled
 
 End Sub
 

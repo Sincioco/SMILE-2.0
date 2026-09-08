@@ -63,17 +63,25 @@ Viewer/renderer error is retained until explicit retry or reload.
 The optional planar-reflection request is applied by `ViewerRendering` through shared
 `Arena3D.ConfigureForFrame` immediately before the scene begins. The native/Web
 Renderer3D owners replay the already accepted opaque/masked object snapshots under the
-mirrored camera during `End3D`; application code does not draw or update an actor twice.
+mirrored camera during `End3D`, followed by eligible transparent meshes and committed
+CPU/GPU particles and ribbons when VFX reflections are enabled. Application code does
+not draw or update an actor twice; capture never advances simulation or consumes new
+effect admission. Reflected draws have separate diagnostics from main-scene draws.
 The arena floor is the receiver. The flat screen-fixed backdrop is mapped from only the
 region visible above the topmost projected receiver edge, preventing floor-covered image
 content from being exposed as if it were new 3D scenery. Eligible 3D objects still use the
 mirrored camera. The grid is excluded from capture and drawn above both the reflective and
 original matte floor. Legacy simple-material meshes remain double-sided so the grid's
-established winding renders on native and Web. Socket gizmos and VFX stay outside the
-reflection pass. `ViewerInspectorCommands` and `ViewerParty` provide distinct typed UI
-actions that both call `ViewerRendering.ToggleFloorReflections`. The requested preference
-lives only in `ViewerRendering.State`; `ViewerInspectorPresentation` derives the
-Reflective/Original/Unavailable label from it plus shared renderer diagnostics.
+established winding renders on native and Web. Excluded gizmos and heat distortion stay
+outside capture. Reflected effects use the reflection target's depth and floor clipping;
+the backdrop must restore that target's depth attachment, including when the main target
+uses a different resolution or MSAA count. Main-camera soft-intersection depth is not
+sampled during reflection. `ViewerInspectorCommands` and `ViewerParty` provide typed UI
+actions calling `ViewerRendering.ToggleFloorReflections` and `ToggleVfxReflections`.
+Both default-on session preferences live only in `ViewerRendering.State`;
+`ViewerInspectorPresentation` projects them and derives the Reflective/Original/Unavailable
+floor label from shared renderer diagnostics. Generic Arena3D/Graphics3D callers retain
+the compatible opaque-only default unless they explicitly request IncludeVfx.
 
 ## R7.5 responsibility-completion audit
 
@@ -585,7 +593,7 @@ actor edit context before invoking the stateless lifecycle owner.
 | Party choreography | `Program.smile` | `ViewerParty.smile` | Participants, turn/stage/timing, guard/hit/KO/revive, Dragon reaction/target choice, preview state, stable shot anchors and Party cameras | Reset/advance/apply actor and Dragon commands/camera/draw/destroy/bind and restore preview; borrows explicit actor, Dragon, playback and effect snapshots | Party scene; timing, reaction boundaries/consumption, preview mode/restore, frame application, Dragon target/update integration, camera selection/continuity, same-model isolation and inspector fixtures |
 | Effects/audio | `Program.smile`, `OrinStorm.smile`, `DragonPresence.smile`, `BattleAudio.smile` | `ViewerEffects.smile` plus retained focused modules; `ViewerParty.smile` selects the Orin presentation actor/target; `ViewerInspectorCommands.smile` maps inspector actions | Equipment emitters, trails, leases, scene clocks, Arin cue state and visual-continuity epochs; the Dragon owner retains its own cue state and borrows its scene light lease | Create/update/advance-once/draw/invalidate/destroy, Arin cue update/reset and Party Orin routing; inspector commands borrow effect state without copying it; borrows final actor transforms | Scene; direct control/state/inspector assertions plus frozen-cut/skipped-cue/storm/lease cleanup tests |
 | Dragon actor/presentation | `Program.smile`, `DragonPresence.smile`, `BattleAudio.smile` | `ViewerDragon.smile` with retained focused presence/audio modules; `ViewerParty.smile` owns Party target/reaction integration | Dragon actor, ownership flag, clip, head aim, breath, continuity epoch, visibility and cue state; Party owns its reaction/target state | Create/update/draw/toggle/destroy; borrows the Party-selected target, shared Fire readiness/light lease and visual epoch | Scene; pure clip/travel/reaction assertions plus native frozen seek/cut/hide/resume and cue tests |
-| Rendering and overlay composition | `Program.smile` | `ViewerRendering.smile` for the scene transaction, scene resources, planar-reflection preference, lighting/material modes and Dragon-aware floor extent policy; `ViewerInspectorCommands.smile` plus `ViewerParty.smile` for the distinct inspector/Party action maps; `ViewerUi.smile` for editor leaves; `ViewerInspectorPresentation.smile` for bounded composition | `ViewerRendering.State` owns arena/backdrop/grid/socket render resources including the fixed socket-object array plus the single requested reflection preference and lighting/material mode; its ephemeral `FrameResult` carries only readiness and the first failure stage; UI retains transient layout state; the presentation owner retains no state | Reset/apply/cycle renderer modes, toggle shared arena reflections, create/update/draw/destroy scene resources, resolve explicit character/arena extents and execute configure/begin/environment/participants/effects/socket/end order; inspector and Party commands borrow rendering state and return readiness; presentation composition receives explicit scalar values plus the shared fallback reason | Scene; direct mode/extent/socket/reflection selection/part-routing/frame-result/inspector/Party/presentation assertions, static phase-order guards, dedicated native/Web reflection diagnostics and actual Chrome toggle checks |
+| Rendering and overlay composition | `Program.smile` | `ViewerRendering.smile` for the scene transaction, scene resources, floor/VFX reflection preferences, lighting/material modes and Dragon-aware floor extent policy; `ViewerInspectorCommands.smile` plus `ViewerParty.smile` for the distinct inspector/Party action maps; `ViewerUi.smile` for editor leaves; `ViewerInspectorPresentation.smile` for bounded composition | `ViewerRendering.State` owns arena/backdrop/grid/socket render resources including the fixed socket-object array plus both requested reflection preferences and lighting/material mode; its ephemeral `FrameResult` carries only readiness and the first failure stage; UI retains transient layout state; the presentation owner retains no state | Reset/apply/cycle renderer modes, toggle shared arena and VFX reflections, create/update/draw/destroy scene resources, resolve explicit character/arena extents and execute configure/begin/environment/participants/effects/socket/end order; inspector and Party commands borrow rendering state and return readiness; presentation composition receives explicit scalar values plus the shared fallback reason | Scene; direct mode/extent/socket/reflection selection/part-routing/frame-result/inspector/Party/presentation assertions, static phase-order guards, dedicated native/Web reflection diagnostics and actual native/Chrome toggle and occlusion checks |
 | Build/publication | `Build.ps1`, `Prepare-BuildAssets.ps1`, explicit projects | same scripts with explicit module inventory | Disposable staging/publications only | Canonical preflight, compile, selected-output validation | Build; Release/Debug and Full/Low/Medium/High manifests |
 
 Immutable `Character3D` cache entries are shared resources. Actor pose, equipment

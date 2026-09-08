@@ -101,7 +101,7 @@ try {
         'SMILE effective reflection-plane diagnostic'
     Assert-Contains $graphicsSource 'REFLECTION_QUERY_TARGET_FORMAT = 19' `
         'SMILE reflection-format diagnostic'
-    Assert-Contains $webWriter 'case 133:return renderer3DReflectionConfigure(a,b,c,d,e,f);' `
+    Assert-Contains $webWriter 'case 133:return renderer3DReflectionConfigure(a,b,c,d,e,f,g);' `
         'Web reflection ABI'
     Assert-Contains $webWriter 'case 134:object=renderer3DObjects.get(a);' `
         'Web reflection eligibility ABI'
@@ -188,6 +188,15 @@ try {
         'Native visible-backdrop sampling bound'
     Assert-Contains $nativeSource 'mirrored && receiver_seam <= 0.0f' `
         'Native fully occluded backdrop suppression'
+    # A fullscreen backdrop temporarily detaches depth. Restoring the main-scene
+    # depth to a half-size/single-sample reflection silently loses occlusion on
+    # Direct3D. Keep this guard scoped to the actual backdrop owner; draw counters
+    # alone cannot detect the resulting glow through hands, legs, and equipment.
+    $nativeBackdrop = [regex]::Match($nativeSource,
+        '(?s)static int smile_3d_draw_backdrop\([^;]*?\)\r?\n\{.*?\r?\n\}').Value
+    Assert-Contains $nativeBackdrop `
+        'mirrored ? smile_reflections_depth() : smile_depth_view3d' `
+        'Native backdrop restores the matching reflection/main depth attachment'
     Assert-Contains $webWriter 'seam*(1.0-displayY)' `
         'Web visible-backdrop sampling bound'
     Assert-Contains $webOwner 'else if (backdropSeam > 0)' `
@@ -201,7 +210,7 @@ try {
     Assert-Contains $viewerUi 'Battle Floor: Original' 'Viewer reflection label'
     Assert-Contains $viewerUi 'Battle Floor: Unavailable' `
         'Viewer fallback label'
-    Assert-Contains $viewerUi 'Private Const ANIMATION_DETAILS_Y = 530' `
+    Assert-Contains $viewerUi 'Private Const ANIMATION_DETAILS_Y = 584' `
         'Viewer reflection control and animation-details separation'
     Assert-Contains $viewerUi 'Private Const ANIMATION_DETAILS_MINIMUM_HEIGHT = 780' `
         'Viewer compact-height animation-details suppression'

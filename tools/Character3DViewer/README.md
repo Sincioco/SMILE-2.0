@@ -9,6 +9,18 @@ Native-first reusable inspection and lightweight pose-correction tool. Party is 
 
 The Viewer explicitly enables the shared polished planar floor on native Desktop and Web. The visible `Battle Floor: Reflective / Original` button is available in each character inspector and in the default Party panel beside the floor/environment controls. Reflective mode mirrors eligible characters and equipment beneath the original grid. It also maps only the screen-fixed background region visible above the projected floor edge, so the reflection cannot reveal artwork hidden behind the floor. Original mode keeps the established matte black floor and grid. The toggle preserves calibration, playback, camera, background, and character selection; full presentation reset restores the session default Reflective mode. Hiding the floor suppresses the receiver work without changing the preference. An optional graphics allocation/render failure keeps the original matte scene usable and reports `Battle Floor: Unavailable` rather than claiming the effect is active. Animation diagnostics are placed below the floor control and are hidden at compact window heights where they would collide with lower controls.
 
+`VFX Reflections: On / Off` is a separate, default-on session control in the character
+and Party panels. It mirrors eligible glow meshes, committed particles and trails
+through the same renderer and frozen actor pose. Turning it off preserves the
+character/equipment reflection and the actual scene's effects. Original floor mode
+or hiding the floor suppresses all reflection capture while retaining this preference.
+Reset restores both reflection preferences to On. Reflected effects use the floor's
+existing strength/softness and its own depth buffer, so hands, legs and other opaque
+geometry occlude their glow. This applies to all characters and effect families.
+Heat distortion is excluded; reflected particles use hardware depth clipping rather
+than the main camera's soft-intersection depth texture. Transparent effects retain
+submission order. No extra simulation, pose update or calibration channel is created.
+
 Dragon inspection uses the same clip buttons, timeline/frame stepping, playback speed, demo, lighting/material channels, sockets, pan/orbit/zoom and reset as the hero tabs. Both heroes remain in the arena with their own assets and saved corrections. Head Aim constrains only the head joint; At Arin/At Orin selects its target. The current Pose Calibration targets remain humanoid wrists and equipment, so they do not apply to Dragon. Dragon VFX and hero equipment visibility remain independent. Pose is disabled for Dragon, including its turn in Party.
 
 Party members start on a 300-unit front arc with 40 degrees between its endpoints. The placement function distributes any supplied member count over that arc. The two current attack destinations remain in front of the Dragon; approach and retreat interpolate from each member's own home position. Battle cameras sample this frame's actor/Dragon poses.

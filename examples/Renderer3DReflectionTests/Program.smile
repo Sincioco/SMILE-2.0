@@ -12,6 +12,13 @@ Do
 
     Call RunReflectionTests()
 
+    ' The forced allocation-failure run is covered by RunReflectionTests.
+    ' Resetting for the VFX fixture deliberately re-arms that injection.
+
+    If Not ForcedFailureObserved Then
+        Call RunVfxReflectionTests()
+    End If
+
 Loop Until True
 
 If Failures = 0 Then
@@ -385,6 +392,97 @@ Sub DrawWithoutReceiver(Camera As Core.Camera3D, Source As Core.Object3D,
     Call Check(Graphics3D.DrawObject3D(Source))
     Call Check(Graphics3D.DrawObject3D(Excluded))
     Call Check(Graphics3D.End3DChecked())
+
+End Sub
+
+Sub RunVfxReflectionTests()
+
+    Dim Camera As Core.Camera3D
+    Dim Floor As Core.Object3D
+    Dim Glow As Core.Object3D
+    Dim EmptyTexture As Core.Texture3D
+    Dim Material As Core.Material3D
+    Dim Particle As Core.ParticleBatch3D
+    Dim Ribbon As Core.RibbonBatch3D
+    Dim System As Core.GpuParticleSystem3D
+    Dim Pass As Number
+    Dim Dispatches As Number
+    Dim Generation As Number
+
+    Call Graphics3D.ResetRenderer3D()
+
+    Camera = Graphics3D.DefaultCamera()
+    Camera.Position.Y = 60
+    Camera.Position.Z = -100
+    Camera.Target.Y = 0
+    Floor = Graphics3D.CreatePlane3D(180, 140)
+    Glow = Graphics3D.CreateCube3D(12)
+    Material = Graphics3D.CreateEffectMaterial3D(
+        EmptyTexture, Graphics3D.MATERIAL_ALPHA_ADDITIVE, 150)
+    Particle = Graphics3D.CreateParticleBatch3D(
+        2, Material, Graphics3D.VFX_BILLBOARD_CAMERA, 1, 1)
+    Ribbon = Graphics3D.CreateRibbonBatch3D(2, Material)
+    System = Graphics3D.CreateGpuParticleSystem3D(
+        4, Material, Graphics3D.GPU_PARTICLE_SIMULATION_AUTO, 10)
+
+    Call Check(Floor.Handle <> 0 And Glow.Handle <> 0 And Material.Handle <> 0)
+    Call Check(Particle.Handle <> 0 And Ribbon.Handle <> 0 And System.Handle <> 0)
+    Call Graphics3D.SetObjectReflectionMode3D(Floor, Graphics3D.OBJECT_REFLECTION_RECEIVER)
+    Call Graphics3D.SetObjectPosition(Glow, -30, 20, 0)
+    Call Check(Graphics3D.SetObjectMaterial3D(Glow, Material))
+    Call Check(Graphics3D.SetParticle3D(Particle, 0, -10, 20, 0, 10, 0, 0))
+    Call Check(Graphics3D.CommitParticleBatch3D(Particle, 1))
+    Call Check(Graphics3D.SetRibbonPoint3D(Ribbon, 0, 5, 10, 0, 10, 10, 0, 0))
+    Call Check(Graphics3D.SetRibbonPoint3D(Ribbon, 1, 5, 30, 0, 10, 30, 0, 1000))
+    Call Check(Graphics3D.CommitRibbonBatch3D(Ribbon, 2))
+    Call Check(Graphics3D.SetGpuParticleSpawnKinematics3D(System, 0, 30, 20, 0, 0, 0, 0))
+    Call Check(Graphics3D.SetGpuParticleSpawnVisual3D(System, 0, 1000, 10, 10, 0, 0, 900, 800))
+    Call Check(Graphics3D.CommitGpuParticleSpawn3D(System, 0, 1, 123))
+    Call Check(Graphics3D.AdvanceGpuParticleSystem3D(System, 10))
+
+    Dispatches = Graphics3D.GpuParticleValue3D(Graphics3D.GPU_PARTICLE_QUERY_DISPATCHES)
+
+    ' Off, On, Off: capture reuses the same committed effects and GPU state.
+
+    For Pass = 0 To 2
+
+        Call Check(Graphics3D.ConfigureReflections3D(True, 85, 5, 100, -1, False, Pass = 1))
+        Call Check(Graphics3D.ReflectionValue3D(Graphics3D.REFLECTION_QUERY_INCLUDE_VFX) =
+            Pass Mod 2)
+        Call Check(Graphics3D.Begin3D(Camera, 2, 4, 8))
+        Call Check(Graphics3D.DrawObject3D(Floor))
+        Call Check(Graphics3D.DrawObject3D(Glow))
+        Call Check(Graphics3D.DrawParticleBatch3D(Particle))
+        Call Check(Graphics3D.DrawRibbonBatch3D(Ribbon))
+        Call Check(Graphics3D.DrawGpuParticleSystem3D(System))
+        Call Check(Graphics3D.End3DChecked())
+        Call Check(Graphics3D.ReflectionValue3D(Graphics3D.REFLECTION_QUERY_EFFECTIVE) = 1)
+        Call Check(Graphics3D.ReflectionValue3D(Graphics3D.REFLECTION_QUERY_DRAWS) =
+            (Pass Mod 2) * 4)
+        Call Check(Graphics3D.DrawCallCount3D() = 5)
+        Call Check(Graphics3D.VfxValue3D(Graphics3D.VFX_QUERY_DRAW_CALLS) = 3)
+        Call Check(Graphics3D.M5Value3D(Graphics3D.M5_QUERY_LOGICAL_SUBMISSIONS, 0) = 5)
+        Call Check(Graphics3D.GpuParticleValue3D(Graphics3D.GPU_PARTICLE_QUERY_DISPATCHES) =
+            Dispatches)
+
+        If Pass = 0 Then
+            Generation = Graphics3D.ReflectionValue3D(Graphics3D.REFLECTION_QUERY_RESOURCE_GENERATION)
+        Else
+
+            Call Check(Graphics3D.ReflectionValue3D(
+                Graphics3D.REFLECTION_QUERY_RESOURCE_GENERATION) = Generation)
+        End If
+
+    End For
+
+    Call Graphics3D.DestroyGpuParticleSystem3D(System)
+    Call Graphics3D.DestroyParticleBatch3D(Particle)
+    Call Graphics3D.DestroyRibbonBatch3D(Ribbon)
+    Call Graphics3D.DestroyObject3D(Glow)
+    Call Graphics3D.DestroyObject3D(Floor)
+    Call Graphics3D.DestroyMaterial3D(Material)
+    Call Graphics3D.ResetRenderer3D()
+    Call Check(Graphics3D.ReflectionValue3D(Graphics3D.REFLECTION_QUERY_INCLUDE_VFX) = 0)
 
 End Sub
 

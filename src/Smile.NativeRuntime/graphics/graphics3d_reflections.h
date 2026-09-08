@@ -16,7 +16,7 @@ enum SmileReflectionFallback3D
 
 int smile_reflections_configure(int enabled, int strength_percent,
     int softness_percent, int scale_percent, float floor_height,
-    int include_backdrop);
+    int include_backdrop, int include_vfx);
 int smile_reflections_requested(void);
 int smile_reflections_strength_percent(void);
 int smile_reflections_softness_percent(void);
@@ -25,6 +25,7 @@ float smile_reflections_floor_height(void);
 float smile_reflections_requested_floor_height(void);
 void smile_reflections_resolve_floor_height(float floor_height);
 int smile_reflections_include_backdrop(void);
+int smile_reflections_include_vfx(void);
 void smile_reflections_begin_frame(void);
 void smile_reflections_skip(int reason);
 int smile_reflections_prepare(ID3D11Device* device, int width, int height, int hdr);

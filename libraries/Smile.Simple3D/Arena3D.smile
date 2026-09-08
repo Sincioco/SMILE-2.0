@@ -132,7 +132,8 @@ End Function
 ''' Applies this arena's optional reflection request before the scene begins.
 Public Function ConfigureForFrame(
     ByRef Value As ArenaFloor,
-    ShowFloor As Boolean
+    ShowFloor As Boolean,
+    Optional IncludeVfx As Boolean = False
 ) As Boolean
 
     Dim Enabled As Boolean
@@ -149,7 +150,8 @@ Public Function ConfigureForFrame(
         Value.ReflectionSoftnessPercent,
         Value.ReflectionScalePercent,
         Value.FloorHeight,
-        True
+        True,
+        IncludeVfx
     )
 
     Return Result

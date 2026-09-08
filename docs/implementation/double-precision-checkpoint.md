@@ -326,94 +326,82 @@ Focused VFX validation and delivery:
   The task-owned Sin Star I preview closed normally at his request so it no longer
   obstructs the stream; Character Viewer returned to the foreground.
 
-## Current VFX extension (validated, publication milestone)
+## Published equipment VFX milestone
 
-Sin requested three switchable Orin equipment styles and independent 0–200%
-weapon/shield intensity controls for both characters. Original Lightning remains;
-Blue Flame uses Arin's shared fire preset with a blue-white palette. Sin accepted
-the blue flame appearance and then requested 40% more weapon flame: its baseline
-is now 140 (70% of Arin's 200), with the separate shield baseline unchanged; Neon Arcs uses closed outer contours plus short travelling
-edge arcs without star particles. The controls are session presentation settings,
-not saved pose/calibration channels. Program.smile remains unchanged.
+`f5f4186` published the reusable equipment styles, intensity controls, stronger
+blue-white hammer flame and Sin's authored Arin Defend pose before floor work.
+Orin retains Original Lightning, Blue Flame and Neon Arcs; both characters have
+independent weapon/shield intensity controls. Blue weapon baseline is 140, 40%
+above its prior 100 and 70% of Arin's 200. Shared contour sampling follows caller-
+supplied equipment outlines, not an assumed sword axis. No renderer, actor pool,
+calibration identity, model or animation was replaced; Program.smile is unchanged.
+Detailed owners, source fixes, native/Web tests, installation hashes and screenshots
+are preserved in this same checkpoint at `f5f4186`. Their unchanged evidence is reused.
 
-Owners: ViewerUi/InspectorCommands/InspectorPresentation for controls;
-ViewerEffects and the existing per-actor OrinStorm contexts for preferences and
-attachment lifetime; shared Precision3D/Character3D socket-local contour transform,
-FireEmitter3D contour sampling/palette and LightningVfx3D contour/edge paths.
-Native/Web expose the existing socket matrix basis without millith rounding.
-Fire has seven admitted emitter slots (Arin 4, Orin 2, Dragon 1), inside unchanged
-renderer particle capacities, with the existing CPU fallback. No new renderer.
+## Arena VFX reflections — validated delivery
 
-Orin's eight-point head outline is canonical presentation data in
-`OrinV13/OrinEquipmentContours.smile`, generated from the accepted rigid head
-vertices by `scripts/update-orin-lightning-sockets.py`. It uses the existing
-SwordBase socket and the normal GLB-to-SM3D Z conversion. The first visual run
-exposed a missed Z conversion in the generated data; corrected at that asset
-boundary, with an actual authored HammerHead-vs-transformed-point regression.
-The descriptor, model, cooked asset and live calibration fingerprints stay intact.
-An attempted descriptor socket addition was rejected by the calibration guard and
-withdrawn before delivery; no calibration migration or asset replacement occurred.
+Sin re-authorized floor VFX reflections after the equipment milestone and requested
+a separate default-on toggle. Shared Graphics3D/Arena3D now accept optional IncludeVfx
+(default False for existing callers). ViewerRendering explicitly enables it and owns
+the session preference; InspectorCommands/Party route typed actions, Ui renders the
+button, and InspectorPresentation projects state without retaining another copy.
+Original floor mode and hidden floors suppress capture without losing the preference.
 
-Focused native/Web fire tests passed (`vfx-contour-fire-tests.log`). Final native
-and Full Web Viewer builds pass (`vfx-native-final.log`, `vfx-web-final.log`),
-including the requested 40% stronger weapon baseline. Edge regression passes on
-both targets (`vfx-arcs-final.log`); actual two-actor style/forced-fallback coverage
-passes (`vfx-styles-isolation-final.log`). Intensity command/bounds checks pass
-native and Web (`vfx-intensity-focused.log`, `vfx-intensity-web-final.log`). One Web
-harness invocation incorrectly required indexed 3D draws from the UI-only fixture;
-rerunning with its normal options passed. This was a test invocation error.
+The existing native/Web reflection owners replay accepted transparent mesh snapshots,
+committed CPU/GPU particles and ribbons after opaque geometry under the mirrored camera.
+They reuse the same pose, simulation state, resources and admission; no actor update or
+GPU simulation dispatch repeats. Reflection draw diagnostics stay separate from main
+scene counts. Effects clip to the receiver plane and depth-test against reflected opaque
+geometry. Heat distortion is excluded; main-camera soft-intersection depth is not reused
+in the mirrored camera. Transparent effects retain the existing submission order.
 
-The affected compiler/runtime/VSIX was rebuilt and installed once:
-`vfx-contour-runtime-build.log`, `vfx-styles-vsix-install.log`; VSIX 2.0.61,
-35 installed payload hashes matched at
-`C:/Users/louie/AppData/Local/Microsoft/VisualStudio/18.0_91f001b5/Extensions/gfvm2n5h.50a`.
-Subsequent edits affect source libraries/Viewer, not those installed payloads.
-Do not repeat installation for these unchanged artifacts.
+Sin reported a white, washed-out native hammer reflection and shield/weapon outlines
+appearing through legs/hands and stronger than the real equipment. Reproduced on native
+Neon Idle, H -111 / V 59 / zoom 2. The shared native backdrop pass restored main-scene
+depth onto the reflection target. Different target size/sample count invalidated that
+attachment, removing occlusion and accumulating hidden additive glow surfaces. The
+backdrop now restores the reflection target's own depth when mirrored. No Orin-specific
+brightness adjustment or asset workaround was introduced. Web already restores its
+reflection framebuffer correctly. Fixed native/Chrome inspection preserves metal/grip
+detail and the hand/leg overlap; reflected effects use the normal floor strength.
 
-Sin explicitly accepted native Arin shield flames and Orin's blue flame appearance
-before the additional 40% request. The stronger native flame was tool-observed and
-captured at `artifacts/temp/vfx-closeout-evidence/native-blue-white-stronger.jpg`.
-Chrome recovery completed after Sin explicitly requested a full restart: all Chrome
-processes exited normally, Chrome restarted, and the final local tab was brought
-to the foreground. Final native/Chrome inspection exercised all three styles,
-50%/100% controls, preserved material detail, and visible blue motion trails.
-Chrome Arin Defend frame zero uses the authored correction and modest shield flames.
-Screenshots in `artifacts/temp/vfx-closeout-evidence/`: `native-blue-final.jpg`,
-`native-neon-arcs-final.jpg`, `chrome-blue-white-stronger.png`,
-`chrome-neon-arcs-final.png`, `chrome-original-lightning-retained.png`,
-`chrome-blue-trail-final.png`, `chrome-arin-defend-authored.png`.
-These are tool observations, not new human approvals of every style. The explicit
-human observations still outstanding in the table above remain pending.
-
-Final Neon inspection exposed oversized short-arc ribbons and overlapping closed
-joins. Shared LightningVfx3D now shares corner samples/wraps the closing tangent,
-uses fractional narrow contour widths, and gives short arcs four distinct bends.
-Its main-target query consumes the actual built endpoint index; the focused test
-caught the old independently recomputed index after changing segment density.
-Final native/Web regression: `vfx-edge-detail-tests.log`; native/Full Web builds:
-`vfx-edge-detail-build.log`; 432-source formatting plus final changed/untracked
-source check: `vfx-final-format-check.log`, `vfx-final-changed-format.log`.
-The initial compile rejected integer zero at the new private Double-width boundary;
-explicit Double zero corrected it. No language conversion rule was weakened.
-
-Limits: outlines are caller-supplied ordered equipment contours, not automatic
-camera-dependent silhouette extraction. Occlusion and the existing bloom/material
-limits affect visible arcs and peak brightness. Equipment selection does not replace
-the existing attack-discharge presets, audio or timing. The Full Web directory is
-updated locally for publication; no upload to sincioco.com is claimed.
+Evidence (logs beneath `artifacts/temp`, screenshots in `vfx-closeout-evidence`):
+- `vfx-reflections-final-tests.log`: clean native/Web normal/retry reflection gate,
+  actual compiled Off/On/Off mesh/CPU/ribbon/GPU replay checks, unchanged simulation
+  dispatch/resource generation/main counts, Viewer default/toggle/Party routing and
+  58 native graphics/pointer/audio-focus checks. The backdrop depth-restore source
+  guard supplements actual visual evidence; draw counters alone do not prove occlusion.
+- `vfx-reflections-depth-build.log`, `vfx-reflections-depth-viewer-build.log`:
+  corrected native compiler/runtime/VSIX and Viewer builds pass. Full Web remains valid
+  from `vfx-reflections-viewer-build.log`; the later correction changed native code only.
+  `vfx-reflections-format-check.log`: 433 tracked SMILE sources pass. Earlier build/test
+  attempts exposed missing forward declarations and a required test UI argument; both
+  were corrected. The first depth source-guard regex was corrected before the final pass.
+- Native before: `native-reflected-hammer-washout.jpg`; matching fixed view:
+  `native-floor-depth-fixed.jpg`. Enlarged fixed On/Off pair:
+  `native-floor-neon-{on,off}.jpg`; blue flame: `native-floor-blue-on.jpg`.
+  Foreground Chrome: `chrome-floor-neon-{on,off}.png`, `chrome-floor-blue-on.png`;
+  Arin flame On/Off pair: `chrome-floor-vfx-{on,off}.png`. These are tool observations,
+  not additional human acceptance. The explicit outstanding observations above remain.
+- `vfx-reflections-depth-vsix-install.log`: final VSIX 2.0.61 installed; all 35 bundled
+  payload hashes match, including the corrected native runtime. Installed root:
+  `C:/Users/louie/AppData/Local/Microsoft/VisualStudio/18.0_91f001b5/Extensions/iamzxrcj.q5i`.
+  No user Visual Studio window was closed. Reuse this installation for documentation edits.
 
 Final artifact SHA-256:
-- `tools\Character3DViewer\bin\Release\Character3DViewer.exe`: `C31F9BA418BB42CB8DF8DA5DFFE5FA634C1DF57E38852A633B81187CEB36AE0A`
-- `tools\Character3DViewer\bin\Release\Web\index.html`: `AD2C598021B348040573540F958FF51C46D075CCAE5B2CAB938A827A3BB92896`
-- `artifacts\vsix\Smile.VisualStudio.vsix`: `16F4C5A4EB266326FDE75AFB02B4C4534EF60AD0947C320C66709502652C7E03`
+- Native Viewer: `5DFF54A31FCDB714DF9AE6BB4EC514C7FE426B041E68EFCCCF65CA8B082A8F0C`
+- Full Web index.html: `389E7A71A5EEF5E7CE413B4921C78D45BCB61C96551E2DD7C1ABCF3F46A51CB8`
+- VSIX: `B1C56E81390EEB1F8178F65FF376620F25268870CC101AF371C75CFB593DD976`
+- Native runtime library: `9121BD3489CDE6F10E58D2CDD4DDA6531723F4B0FD90AAD16484C91E1EA9372C`
 
 Both final live-save exports retain Arin's 24-key SHA and Orin's zero-key SHA listed
-above. Program.smile, model/animation/descriptor assets and calibration identities
-remain unchanged. This milestone includes Sin's requested authored Arin pose.
+above. Models, animations, descriptors and Program.smile remain unchanged. Local Full
+Web output is updated; no upload to sincioco.com is claimed. Sin Star I stays closed
+when not needed for its remaining human preview check. No unrelated suspended work.
 
-Next action: commit/push this validated equipment-VFX and authored-pose milestone,
-then implement Sin's re-authorized VFX floor reflection through the existing
-renderer with a separate default-on toggle. No unrelated suspended work.
+Next action: commit/push the validated shared reflection milestone, then collect only
+the outstanding native/Chrome preview gestures and installed Double hover observations
+one short check at a time. Full Double acceptance remains pending those observations.
 
 ## On Hold
 

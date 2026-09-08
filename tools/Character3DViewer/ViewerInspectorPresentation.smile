@@ -81,6 +81,7 @@ Public Type EffectsView
     ProfileIndex As Number
     FloorOrGridVisible As Boolean
     FloorReflectionsEnabled As Boolean
+    VfxReflectionsEnabled As Boolean
     FloorReflectionFallback As Number
     SwordFireVisible As Boolean
     ShieldFireVisible As Boolean
@@ -233,6 +234,7 @@ Public Function CaptureEffects(ByRef Session As ViewerSession.State,
     Result.ProfileIndex = Session.ProfileIndex
     Result.FloorOrGridVisible = Rendering.FloorVisible Or Rendering.GridVisible
     Result.FloorReflectionsEnabled = Rendering.FloorReflectionsEnabled
+    Result.VfxReflectionsEnabled = Rendering.VfxReflectionsEnabled
     Result.FloorReflectionFallback = Graphics3D.ReflectionValue3D(
         Graphics3D.REFLECTION_QUERY_FALLBACK_REASON)
     Result.SwordFireVisible = Effects.SwordFireVisible
@@ -396,6 +398,7 @@ Public Sub DrawEffectsAndCamera(Value As EffectsView)
         Value.ProfileIndex,
         Value.FloorOrGridVisible,
         Value.FloorReflectionsEnabled,
+        Value.VfxReflectionsEnabled,
         Value.FloorReflectionFallback,
         Value.SwordFireVisible,
         Value.ShieldFireVisible,

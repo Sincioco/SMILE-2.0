@@ -182,6 +182,7 @@ Public Const REFLECTION_QUERY_BACKDROP = 17
 Public Const REFLECTION_QUERY_EFFECTIVE_FLOOR_HEIGHT = 18
 Public Const REFLECTION_QUERY_TARGET_FORMAT = 19
 Public Const REFLECTION_QUERY_RECEIVER_SAMPLE_ERROR = 20
+Public Const REFLECTION_QUERY_INCLUDE_VFX = 21
 Public Const REFLECTION_TARGET_FORMAT_NONE = 0
 Public Const REFLECTION_TARGET_FORMAT_LDR = 1
 Public Const REFLECTION_TARGET_FORMAT_HDR = 2
@@ -4051,6 +4052,8 @@ Public Sub SetObjectShadows3D(
 End Sub
 
 ''' Configures one bounded horizontal planar reflection for future frames.
+''' IncludeVfx adds transparent meshes, committed particles and ribbons to the same capture.
+''' Reflected effects use hardware depth and floor clipping; heat distortion is excluded.
 ''' A negative FloorHeight resolves the horizontal plane from the immutable
 ''' receiver submission each frame. An explicit height must match that receiver.
 Public Function ConfigureReflections3D(
@@ -4059,7 +4062,8 @@ Public Function ConfigureReflections3D(
     SoftnessPercent As Number,
     ScalePercent As Number,
     FloorHeight As Number,
-    IncludeBackdrop As Boolean
+    IncludeBackdrop As Boolean,
+    Optional IncludeVfx As Boolean = False
 ) As Boolean
 
     Dim Result As Boolean
@@ -4072,7 +4076,7 @@ Public Function ConfigureReflections3D(
         ScalePercent,
         FloorHeight,
         BooleanNumber(IncludeBackdrop),
-        0,
+        BooleanNumber(IncludeVfx),
         0,
         0,
         0

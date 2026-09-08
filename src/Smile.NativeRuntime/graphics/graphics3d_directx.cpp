@@ -542,6 +542,7 @@ struct SmileVfxConstants3D
     float target[4];
     float distortion[4];
     float fire_render[4];
+    float reflection_clip[4];
 };
 
 struct SmileDepthConstants3D
@@ -945,6 +946,8 @@ static int smile_3d_prepare_model_pbr(long long model_handle,
 static int smile_3d_prepare_m5_resources(void);
 static int smile_3d_draw_immediate(long long handle);
 static int smile_3d_submission_is_opaque(const SmileSubmission3D* submission);
+static int smile_3d_submission_is_distortion(const SmileSubmission3D* submission);
+static int smile_3d_gpu_particle_is_distortion(const SmileGpuParticleSystem3D* system);
 static int smile_3d_render_shadow_pass(void);
 static int smile_3d_run_post_processing(void);
 
@@ -4820,17 +4823,17 @@ static int smile_3d_create_gpu_particle_pipeline(void)
         "struct Particle{float4 positionAge;float4 velocityLifetime;float4 sizeRotationAngular;float4 thermalDensityNoise;uint4 seedFlagsGradientFrame;};"
         "cbuffer V:register(b0){row_major float4x4 vp;float4 cameraRight;float4 cameraUp;float4 atlasOutput;float4 material;float4 softDepth;float4 target;float4 distortion;float4 fireRender;}"
         "StructuredBuffer<Particle> particleState:register(t7);"
-        "struct I{float2 corner:POSITION;float2 uv:TEXCOORD0;};struct O{float4 p:SV_POSITION;float2 uv:TEXCOORD0;float4 color:COLOR0;};"
+        "struct I{float2 corner:POSITION;float2 uv:TEXCOORD0;};struct O{float4 p:SV_POSITION;float2 uv:TEXCOORD0;float4 color:COLOR0;float worldY:TEXCOORD1;};"
         "float3 ThermalColor(float t){if(t<.25)return lerp(float3(.16,.005,0),float3(.95,.1,.005),t*4);"
         "if(t<.55)return lerp(float3(.95,.1,.005),float3(1,.55,.03),(t-.25)/.3);"
         "if(t<.8)return lerp(float3(1,.55,.03),float3(1,.92,.3),(t-.55)/.25);return lerp(float3(1,.92,.3),float3(1,1,.96),(t-.8)*5);}"
-        "O main(I i,uint id:SV_InstanceID){O o;Particle state=particleState[id];if(state.seedFlagsGradientFrame.y==0){o.p=float4(-2,-2,2,1);o.uv=0;o.color=0;return o;}"
+        "O main(I i,uint id:SV_InstanceID){O o;Particle state=particleState[id];if(state.seedFlagsGradientFrame.y==0){o.p=float4(-2,-2,2,1);o.uv=0;o.color=0;o.worldY=0;return o;}"
         "float life=max(state.velocityLifetime.w,1);float ratio=saturate(state.positionAge.w/life);float size=lerp(state.sizeRotationAngular.x,state.sizeRotationAngular.y,ratio);"
         "float angle=radians(state.sizeRotationAngular.z);float c=cos(angle),s=sin(angle);float2 q=float2(i.corner.x*c-i.corner.y*s,i.corner.x*s+i.corner.y*c)*size;"
         "float3 right=cameraRight.xyz,up=cameraUp.xyz;"
         "if(fireRender.y>.5){float3 forward=cross(cameraRight.xyz,cameraUp.xyz);up=fireRender.y<1.5?float3(0,1,0):state.velocityLifetime.xyz;"
         "up-=forward*dot(up,forward);float n=length(up);if(n>.0001){up/=n;right=cross(up,forward);q=i.corner*size;q.y*=fireRender.y<1.5?1.7:clamp(length(state.velocityLifetime.xyz)/max(size,1)*.04,1,4);}else up=cameraUp.xyz;}"
-        "float3 world=state.positionAge.xyz+right*q.x+up*q.y;o.p=mul(float4(world,1),vp);"
+        "float3 world=state.positionAge.xyz+right*q.x+up*q.y;o.p=mul(float4(world,1),vp);o.worldY=world.y;"
         "uint columns=(uint)max(fireRender.z,1),rows=(uint)max(fireRender.w,1);uint frame=state.seedFlagsGradientFrame.x%(columns*rows);"
         "o.uv=(float2(frame%columns,frame/columns)+i.uv)/float2(columns,rows);"
         "float temperature=saturate(state.thermalDensityNoise.x),density=saturate(state.thermalDensityNoise.y);"
@@ -5085,18 +5088,18 @@ static int smile_3d_create_pipeline(void)
     static const char* particle_vertex_source =
         "cbuffer V:register(b0){row_major float4x4 vp;float4 cameraRight;float4 cameraUp;float4 atlasOutput;float4 material;}"
         "struct I{float2 corner:POSITION;float2 uv:TEXCOORD0;float4 positionSize:TEXCOORD1;float4 color:COLOR0;float4 rotationUv:TEXCOORD2;};"
-        "struct O{float4 p:SV_POSITION;float2 uv:TEXCOORD0;float4 color:COLOR0;};"
-        "O main(I i){O o;float c=cos(i.rotationUv.x),s=sin(i.rotationUv.x);float2 q=float2(i.corner.x*c-i.corner.y*s,i.corner.x*s+i.corner.y*c)*i.positionSize.w;float3 world=i.positionSize.xyz+cameraRight.xyz*q.x+cameraUp.xyz*q.y;o.p=mul(float4(world,1),vp);o.uv=i.rotationUv.yz+i.uv*atlasOutput.xy;o.color=i.color;return o;}";
+        "struct O{float4 p:SV_POSITION;float2 uv:TEXCOORD0;float4 color:COLOR0;float worldY:TEXCOORD1;};"
+        "O main(I i){O o;float c=cos(i.rotationUv.x),s=sin(i.rotationUv.x);float2 q=float2(i.corner.x*c-i.corner.y*s,i.corner.x*s+i.corner.y*c)*i.positionSize.w;float3 world=i.positionSize.xyz+cameraRight.xyz*q.x+cameraUp.xyz*q.y;o.p=mul(float4(world,1),vp);o.worldY=world.y;o.uv=i.rotationUv.yz+i.uv*atlasOutput.xy;o.color=i.color;return o;}";
     static const char* ribbon_vertex_source =
         "cbuffer V:register(b0){row_major float4x4 vp;float4 cameraRight;float4 cameraUp;float4 atlasOutput;float4 material;}"
-        "struct I{float3 p:POSITION;float2 uv:TEXCOORD0;float4 color:COLOR0;};struct O{float4 p:SV_POSITION;float2 uv:TEXCOORD0;float4 color:COLOR0;};"
-        "O main(I i){O o;o.p=mul(float4(i.p,1),vp);o.uv=i.uv;o.color=i.color;return o;}";
+        "struct I{float3 p:POSITION;float2 uv:TEXCOORD0;float4 color:COLOR0;};struct O{float4 p:SV_POSITION;float2 uv:TEXCOORD0;float4 color:COLOR0;float worldY:TEXCOORD1;};"
+        "O main(I i){O o;o.p=mul(float4(i.p,1),vp);o.worldY=i.p.y;o.uv=i.uv;o.color=i.color;return o;}";
     static const char* vfx_pixel_source =
-        "cbuffer V:register(b0){row_major float4x4 vp;float4 cameraRight;float4 cameraUp;float4 atlasOutput;float4 material;float4 softDepth;float4 target;float4 distortion;}"
+        "cbuffer V:register(b0){row_major float4x4 vp;float4 cameraRight;float4 cameraUp;float4 atlasOutput;float4 material;float4 softDepth;float4 target;float4 distortion;float4 fireRender;float4 reflectionClip;}"
         "Texture2D effectTexture:register(t0);SamplerState effectSampler:register(s0);Texture2D sceneDepthTexture:register(t6);SamplerState sceneDepthSampler:register(s6);"
         "float3 ToLinear(float3 c){return lerp(c/12.92,pow((c+.055)/1.055,2.4),step(.04045,c));}"
         "float Linear(float z){return softDepth.z*softDepth.w/max(softDepth.w-z*(softDepth.w-softDepth.z),.000001);}"
-        "float4 main(float4 p:SV_POSITION,float2 uv:TEXCOORD0,float4 color:COLOR0):SV_TARGET{float4 sampled=atlasOutput.w>.5?effectTexture.Sample(effectSampler,uv):float4(1,1,1,1);if(sampled.a>.0001)sampled.rgb/=sampled.a;float4 base=color*material*sampled;if(softDepth.x>.5){float2 screenUv=p.xy/target.xy;float scene=sceneDepthTexture.SampleLevel(sceneDepthSampler,screenUv,0).r;float distance=max(scene-Linear(p.z),0);base.a*=saturate(distance/max(softDepth.y,.0001));}if(distortion.x>.5){float wave=.65+.35*sin((uv.x+uv.y)*max(distortion.z,.01)*6.283185+distortion.w);float2 flow=float2(target.z,target.w);float flowLength=max(length(flow),.0001);return float4(flow/flowLength*distortion.y*base.a*wave,0,base.a);}float3 rgb=atlasOutput.z>.5?ToLinear(saturate(base.rgb))*max(cameraRight.w,1):saturate(base.rgb*max(cameraRight.w,1));return float4(rgb,base.a);}";
+        "float4 main(float4 p:SV_POSITION,float2 uv:TEXCOORD0,float4 color:COLOR0,float worldY:TEXCOORD1):SV_TARGET{if(reflectionClip.x>.5&&worldY<reflectionClip.y+.01)discard;float4 sampled=atlasOutput.w>.5?effectTexture.Sample(effectSampler,uv):float4(1,1,1,1);if(sampled.a>.0001)sampled.rgb/=sampled.a;float4 base=color*material*sampled;if(softDepth.x>.5){float2 screenUv=p.xy/target.xy;float scene=sceneDepthTexture.SampleLevel(sceneDepthSampler,screenUv,0).r;float distance=max(scene-Linear(p.z),0);base.a*=saturate(distance/max(softDepth.y,.0001));}if(distortion.x>.5){float wave=.65+.35*sin((uv.x+uv.y)*max(distortion.z,.01)*6.283185+distortion.w);float2 flow=float2(target.z,target.w);float flowLength=max(length(flow),.0001);return float4(flow/flowLength*distortion.y*base.a*wave,0,base.a);}float3 rgb=atlasOutput.z>.5?ToLinear(saturate(base.rgb))*max(cameraRight.w,1):saturate(base.rgb*max(cameraRight.w,1));return float4(rgb,base.a);}";
     ID3D11Device* device = (ID3D11Device*)smile_graphics_directx_device();
     ID3DBlob* vs = 0;
     ID3DBlob* ps = 0;
@@ -7631,7 +7634,10 @@ static int smile_3d_draw_backdrop(ID3D11DeviceContext* context,
     context->PSSetSamplers(0, 1, &smile_post_sampler3d);
     context->Draw(3, 0);
     context->PSSetShaderResources(0, 1, &no_view);
-    context->OMSetRenderTargets(1, &target, smile_depth_view3d);
+    // A mirrored backdrop belongs to the reflection target, whose size and MSAA
+    // count can differ from the main scene. Restore its own depth attachment.
+    context->OMSetRenderTargets(1, &target,
+        mirrored ? smile_reflections_depth() : smile_depth_view3d);
     context->OMSetDepthStencilState(smile_depth_state3d, 0);
     context->OMSetBlendState(0, 0, 0xffffffff);
     context->RSSetState(smile_raster_state3d);
@@ -7918,7 +7924,11 @@ static int smile_3d_draw_vfx_submission(const SmileSubmission3D* submission)
     constants.atlas_output[2] = smile_hdr_effective3d ? 1.0f : 0.0f;
     constants.atlas_output[3] = texture == 0 ? 0.0f : 1.0f;
     memcpy(constants.material, material->color, sizeof(constants.material));
-    soft_depth_enabled = material->soft_depth_mode != SMILE_3D_SOFT_DEPTH_MATERIAL_OFF &&
+    constants.reflection_clip[0] = smile_reflection_pass3d ? 1.0f : 0.0f;
+    constants.reflection_clip[1] = smile_reflections_floor_height();
+    // The main-camera depth texture is not valid in the reflected view.
+    soft_depth_enabled = !smile_reflection_pass3d &&
+        material->soft_depth_mode != SMILE_3D_SOFT_DEPTH_MATERIAL_OFF &&
         smile_soft_depth_effective3d != SMILE_3D_SOFT_DEPTH_OFF &&
         smile_linear_depth_shader_view3d != 0;
     constants.soft_depth[0] = soft_depth_enabled ? 1.0f : 0.0f;
@@ -7988,10 +7998,15 @@ static int smile_3d_draw_vfx_submission(const SmileSubmission3D* submission)
             DXGI_FORMAT_R16_UINT, 0);
         context->VSSetShader(smile_particle_vertex_shader3d, 0, 0);
         context->DrawIndexedInstanced(6, batch->count, 0, 0, 0);
-        smile_vfx_particle_draw_count3d++;
-        smile_vfx_particle_triangle_count3d += (long long)batch->count * 2;
-        smile_vfx_triangle_count3d += (long long)batch->count * 2;
-        smile_submitted_triangle_count3d += (long long)batch->count * 2;
+        if (smile_reflection_pass3d)
+            smile_reflections_complete_capture(1, (long long)batch->count * 2);
+        else
+        {
+            smile_vfx_particle_draw_count3d++;
+            smile_vfx_particle_triangle_count3d += (long long)batch->count * 2;
+            smile_vfx_triangle_count3d += (long long)batch->count * 2;
+            smile_submitted_triangle_count3d += (long long)batch->count * 2;
+        }
     }
     else if (submission->kind == SMILE_3D_SUBMISSION_RIBBON_BATCH)
     {
@@ -8009,17 +8024,25 @@ static int smile_3d_draw_vfx_submission(const SmileSubmission3D* submission)
         context->IASetIndexBuffer(0, DXGI_FORMAT_UNKNOWN, 0);
         context->VSSetShader(smile_ribbon_vertex_shader3d, 0, 0);
         context->Draw(batch->count * 2, 0);
-        smile_vfx_ribbon_draw_count3d++;
-        smile_vfx_ribbon_triangle_count3d += batch->count < 2 ? 0 : (long long)batch->count * 2 - 2;
-        smile_vfx_triangle_count3d += batch->count < 2 ? 0 : (long long)batch->count * 2 - 2;
-        smile_submitted_triangle_count3d += batch->count < 2 ? 0 :
-            (long long)batch->count * 2 - 2;
+        if (smile_reflection_pass3d)
+            smile_reflections_complete_capture(1, batch->count < 2 ? 0 : (long long)batch->count * 2 - 2);
+        else
+        {
+            smile_vfx_ribbon_draw_count3d++;
+            smile_vfx_ribbon_triangle_count3d += batch->count < 2 ? 0 : (long long)batch->count * 2 - 2;
+            smile_vfx_triangle_count3d += batch->count < 2 ? 0 : (long long)batch->count * 2 - 2;
+            smile_submitted_triangle_count3d += batch->count < 2 ? 0 :
+                (long long)batch->count * 2 - 2;
+        }
     }
     else
     { smile_last_error3d = 54; return 0; }
-    smile_draw_call_count3d++;
-    smile_vfx_draw_count3d++;
-    if (soft_depth_enabled) smile_soft_particle_draw_count3d++;
+    if (!smile_reflection_pass3d)
+    {
+        smile_draw_call_count3d++;
+        smile_vfx_draw_count3d++;
+        if (soft_depth_enabled) smile_soft_particle_draw_count3d++;
+    }
     return 1;
 }
 
@@ -8078,7 +8101,11 @@ static int smile_3d_draw_gpu_particle_system(SmileGpuParticleSystem3D* system)
     constants.fire_render[2] = system->fire.render[3];
     constants.fire_render[3] = system->fire.time[1];
     memcpy(constants.material, material->color, sizeof(constants.material));
-    soft_depth_enabled = material->soft_depth_mode != SMILE_3D_SOFT_DEPTH_MATERIAL_OFF &&
+    constants.reflection_clip[0] = smile_reflection_pass3d ? 1.0f : 0.0f;
+    constants.reflection_clip[1] = smile_reflections_floor_height();
+    // The main-camera depth texture is not valid in the reflected view.
+    soft_depth_enabled = !smile_reflection_pass3d &&
+        material->soft_depth_mode != SMILE_3D_SOFT_DEPTH_MATERIAL_OFF &&
         smile_soft_depth_effective3d != SMILE_3D_SOFT_DEPTH_OFF &&
         smile_linear_depth_shader_view3d != 0;
     constants.soft_depth[0] = soft_depth_enabled ? 1.0f : 0.0f;
@@ -8128,14 +8155,19 @@ static int smile_3d_draw_gpu_particle_system(SmileGpuParticleSystem3D* system)
     context->PSSetSamplers(6, 1, &soft_depth_sampler);
     context->DrawIndexedInstanced(6, system->capacity, 0, 0, 0);
     context->VSSetShaderResources(7, 1, &no_view);
-    smile_gpu_particle_render_draw_count3d++;
-    smile_draw_call_count3d++;
-    smile_vfx_draw_count3d++;
-    smile_vfx_particle_draw_count3d++;
-    smile_vfx_particle_triangle_count3d += (long long)system->capacity * 2;
-    smile_vfx_triangle_count3d += (long long)system->capacity * 2;
-    smile_submitted_triangle_count3d += (long long)system->capacity * 2;
-    if (soft_depth_enabled) smile_soft_particle_draw_count3d++;
+    if (smile_reflection_pass3d)
+        smile_reflections_complete_capture(1, (long long)system->capacity * 2);
+    else
+    {
+        smile_gpu_particle_render_draw_count3d++;
+        smile_draw_call_count3d++;
+        smile_vfx_draw_count3d++;
+        smile_vfx_particle_draw_count3d++;
+        smile_vfx_particle_triangle_count3d += (long long)system->capacity * 2;
+        smile_vfx_triangle_count3d += (long long)system->capacity * 2;
+        smile_submitted_triangle_count3d += (long long)system->capacity * 2;
+        if (soft_depth_enabled) smile_soft_particle_draw_count3d++;
+    }
     return 1;
 }
 
@@ -8332,6 +8364,28 @@ static int smile_3d_render_reflection_pass(void)
                 break;
             }
         }
+    if (success && smile_reflections_include_vfx())
+    {
+        // Replay immutable transparent submissions in the existing scene order.
+        for (unsigned int index = 0; index < smile_frame_submission_count3d; ++index)
+        {
+            const SmileSubmission3D* submission = &smile_frame_submissions3d[index];
+            if (smile_3d_submission_is_opaque(submission) ||
+                smile_3d_submission_is_distortion(submission) ||
+                (submission->kind == SMILE_3D_SUBMISSION_OBJECT &&
+                    submission->object.reflection_mode != 1)) continue;
+            if (!smile_3d_draw_submission(submission))
+            { success = 0; break; }
+        }
+        for (unsigned int index = 0; success &&
+            index < smile_gpu_particle_frame_count3d; ++index)
+        {
+            SmileGpuParticleSystem3D* system = smile_3d_gpu_particle_system(
+                smile_gpu_particle_frame_handles3d[index]);
+            if (system != 0 && !smile_3d_gpu_particle_is_distortion(system) &&
+                !smile_3d_draw_gpu_particle_system(system)) success = 0;
+        }
+    }
     smile_reflection_pass3d = 0;
     context->OMSetRenderTargets(0, 0, 0);
     if (!success)
@@ -10305,9 +10359,9 @@ extern "C" long long smile_renderer3d_command(long long command,
         case SMILE_3D_CONFIGURE_REFLECTIONS:
             if (smile_frame_active3d || a < 0 || a > 1 || b < 0 || b > 100 ||
                 c < 0 || c > 100 || d < 25 || d > 100 || e < -1000000 ||
-                e > 1000000 || f < 0 || f > 1 ||
+                e > 1000000 || f < 0 || f > 1 || g < 0 || g > 1 ||
                 !smile_reflections_configure((int)a, (int)b, (int)c, (int)d,
-                    (float)e, (int)f))
+                    (float)e, (int)f, (int)g))
             { smile_last_error3d = 50; return 0; }
             return 1;
         case SMILE_3D_SET_OBJECT_REFLECTION_MODE:
@@ -10317,7 +10371,7 @@ extern "C" long long smile_renderer3d_command(long long command,
             object->reflection_mode = (unsigned char)b;
             return 1;
         case SMILE_3D_REFLECTION_VALUE:
-            if (a < 1 || a > 20)
+            if (a < 1 || a > 21)
             { smile_last_error3d = 50; return 0; }
             return smile_reflections_value((int)a);
         case SMILE_3D_SET_MODEL_NODE_ROTATION_OFFSET:

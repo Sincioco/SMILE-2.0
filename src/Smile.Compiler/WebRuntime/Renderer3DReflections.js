@@ -13,6 +13,7 @@
                 floorHeight: -1,
                 effectiveFloorHeight: 0,
                 includeBackdrop: true,
+                includeVfx: false,
                 effective: false,
                 fallbackReason: renderer3DReflectionFallbackDisabled,
                 width: 0,
@@ -63,11 +64,12 @@
             }
 
             function renderer3DReflectionConfigure(enabled, strength, softness, scale, floorHeight,
-                includeBackdrop) {
+                includeBackdrop, includeVfx) {
                 if (renderer3DFrameActive || (enabled !== 0 && enabled !== 1) || strength < 0 ||
                     strength > 100 || softness < 0 || softness > 100 || scale < 25 || scale > 100 ||
                     floorHeight < -1000000 || floorHeight > 1000000 ||
-                    (includeBackdrop !== 0 && includeBackdrop !== 1)) {
+                    (includeBackdrop !== 0 && includeBackdrop !== 1) ||
+                    (includeVfx !== 0 && includeVfx !== 1)) {
                     renderer3DLastError = 50;
                     return 0;
                 }
@@ -77,13 +79,15 @@
                     renderer3DReflection.softness === softness &&
                     renderer3DReflection.scale === scale &&
                     renderer3DReflection.floorHeight === floorHeight &&
-                    renderer3DReflection.includeBackdrop === (includeBackdrop !== 0)) return 1;
+                    renderer3DReflection.includeBackdrop === (includeBackdrop !== 0) &&
+                    renderer3DReflection.includeVfx === (includeVfx !== 0)) return 1;
                 renderer3DReflection.requested = requested;
                 renderer3DReflection.strength = strength;
                 renderer3DReflection.softness = softness;
                 renderer3DReflection.scale = scale;
                 renderer3DReflection.floorHeight = floorHeight;
                 renderer3DReflection.includeBackdrop = includeBackdrop !== 0;
+                renderer3DReflection.includeVfx = includeVfx !== 0;
                 renderer3DReflection.configurationRevision += 1;
                 if (renderer3DReflection.configurationRevision > 2147483647)
                     renderer3DReflection.configurationRevision = 1;
@@ -464,6 +468,18 @@
                         }
                     }
                 }
+                if (success && renderer3DReflection.includeVfx) {
+                    // Reuse committed effects in scene order without advancing simulation.
+                    for (let index = 0; index < renderer3DSubmissionCount; index += 1) {
+                        const object = renderer3DSubmissionObjects[index];
+                        if (renderer3DSubmissionIsOpaque(object) ||
+                            renderer3DSubmissionIsDistortion(object) ||
+                            (object.kind === renderer3DSubmissionObject &&
+                                renderer3DReflectionObjectMode(object) !== 1)) continue;
+                        if (!renderer3DDrawImmediate(0, object)) { success = false; break; }
+                    }
+                    if (success) success = renderer3DDrawQueuedGpuParticles(false) !== 0;
+                }
                 renderer3DReflection.pass = false;
                 gl.bindFramebuffer(gl.FRAMEBUFFER, null);
                 if (success) renderer3DReflection.captures = 1;
@@ -495,6 +511,7 @@
                 if (index === 18) return Math.round(renderer3DReflection.effectiveFloorHeight);
                 if (index === 19) return renderer3DReflection.targetFormat;
                 if (index === 20) return renderer3DReflection.receiverSampleError;
+                if (index === 21) return renderer3DReflection.includeVfx ? 1 : 0;
                 renderer3DLastError = 50;
                 return 0;
             }
@@ -524,6 +541,7 @@
                 renderer3DReflection.scale = 50;
                 renderer3DReflection.floorHeight = -1;
                 renderer3DReflection.includeBackdrop = true;
+                renderer3DReflection.includeVfx = false;
                 renderer3DReflection.forcedFailureConsumed = false;
                 renderer3DReflection.configurationRevision += 1;
                 if (renderer3DReflection.configurationRevision > 2147483647)

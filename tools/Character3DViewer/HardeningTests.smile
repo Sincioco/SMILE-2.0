@@ -989,6 +989,10 @@ Call Check(ViewerUi.InspectorActionAtPointer(
     ViewerProfiles.PROFILE_ARIN, True, -1) =
     ViewerUi.INSPECTOR_ACTION_FLAME_PAUSE)
 Call Check(ViewerUi.InspectorActionAtPointer(
+    600, 550, 800, 640, 0, False, False,
+    ViewerProfiles.PROFILE_ARIN, False, -1) =
+    ViewerUi.INSPECTOR_ACTION_VFX_REFLECTIONS)
+Call Check(ViewerUi.InspectorActionAtPointer(
     600, 500, 800, 640, 0, False, False,
     ViewerProfiles.PROFILE_ARIN, False, -1) =
     ViewerUi.INSPECTOR_ACTION_FLOOR_REFLECTIONS)
@@ -1144,11 +1148,11 @@ Call ViewerInspectorPresentation.DrawWorkspace(
     UiState, PartyPrimary.Actor, CalibrationState, InputState,
     InspectorWorkspaceView)
 Call ViewerUi.DrawProfileEffectControls(
-    800, ViewerProfiles.PROFILE_ORIN, True, True, 0, False, False,
+    800, ViewerProfiles.PROFILE_ORIN, True, True, True, 0, False, False,
     "Storm", "Comfort", "Freeze Lightning", False,
     False, False, False, "Pause Flames", True, "Shield Fire", False)
 Call ViewerUi.DrawProfileEffectControls(
-    800, ViewerProfiles.PROFILE_DRAGON, True, True, 0, False, False,
+    800, ViewerProfiles.PROFILE_DRAGON, True, True, True, 0, False, False,
     "Storm", "Comfort", "Freeze Lightning", False,
     True, False, False, "Pause Flames", True, "Shield Fire", False)
 Call ViewerUi.DrawFooterMessage(800, 640, True,
@@ -2295,6 +2299,28 @@ InspectorOperation = ViewerInspectorCommands.ApplyPartyPresentationAction(
 
 Call Check(InspectorOperation.Handled And InspectorOperation.Ready And
     RenderingState.FloorReflectionsEnabled)
+
+Call Check(RenderingState.VfxReflectionsEnabled)
+
+InspectorOperation = ViewerInspectorCommands.ApplyPresentationAction(
+    ViewerUi.INSPECTOR_ACTION_VFX_REFLECTIONS,
+    RenderingState, 5, EffectsState, DragonState)
+
+Call Check(InspectorOperation.Handled And InspectorOperation.Ready And
+    Not RenderingState.VfxReflectionsEnabled And RenderingState.FloorReflectionsEnabled)
+
+InspectorOperation = ViewerInspectorCommands.ApplyPartyPresentationAction(
+    ViewerParty.POINTER_ACTION_TOGGLE_VFX_REFLECTIONS,
+    RenderingState, 5, EffectsState, CameraState, DragonState)
+
+Call Check(InspectorOperation.Handled And InspectorOperation.Ready And
+    RenderingState.VfxReflectionsEnabled And RenderingState.FloorReflectionsEnabled)
+
+PartyPointer = ViewerParty.ClassifyPointer(
+    1100, 550, True, False, 0, False, False, 640, 1000, 1200, 40)
+
+Call Check(PartyPointer.Consumed And
+    PartyPointer.Action = ViewerParty.POINTER_ACTION_TOGGLE_VFX_REFLECTIONS)
 
 InspectorOperation = ViewerInspectorCommands.ApplyPresentationAction(
     ViewerUi.INSPECTOR_ACTION_FLOOR,

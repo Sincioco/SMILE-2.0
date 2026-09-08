@@ -109,6 +109,7 @@ Public Const INSPECTOR_ACTION_FIT = 34
 Public Const INSPECTOR_ACTION_FLOOR_REFLECTIONS = 35
 Public Const INSPECTOR_ACTION_STORM_EQUIPMENT = 36
 Public Const INSPECTOR_ACTION_STORM_PAUSE = 37
+Public Const INSPECTOR_ACTION_VFX_REFLECTIONS = 38
 Public Const INSPECTOR_ACTION_INTENSITY_BASE = 40
 Public Const INSPECTOR_ACTION_CLIP_BASE = 100
 Public Const SLIDER_ACTION_NONE = 0
@@ -119,7 +120,7 @@ Public Const SLIDER_ACTION_CALIBRATION = 4
 
 Private Const MINIMUM_VIEWER_WIDTH = 800
 Private Const MINIMUM_VIEWER_HEIGHT = 540
-Private Const ANIMATION_DETAILS_Y = 558
+Private Const ANIMATION_DETAILS_Y = 584
 Private Const ANIMATION_DETAILS_MINIMUM_HEIGHT = 780
 
 Public Type State
@@ -1019,6 +1020,10 @@ Public Function InspectorActionAtPointer(
 
         Result = INSPECTOR_ACTION_STORM_EQUIPMENT
 
+    Else If InRectangle(PointerX, PointerY, PanelLeft + 12, 548, 240, 22) Then
+
+        Result = INSPECTOR_ACTION_VFX_REFLECTIONS
+
     Else If InRectangle(PointerX, PointerY, PanelLeft + 12, 496, 240, 22) Then
 
         Result = INSPECTOR_ACTION_FLOOR_REFLECTIONS
@@ -1281,6 +1286,7 @@ Public Sub DrawProfileEffectControls(
     ProfileIndex As Number,
     FloorOrGridVisible As Boolean,
     FloorReflectionsEnabled As Boolean,
+    VfxReflectionsEnabled As Boolean,
     FloorReflectionFallback As Number,
     SwordFireVisible As Boolean,
     ShieldFireVisible As Boolean,
@@ -1351,6 +1357,13 @@ Public Sub DrawProfileEffectControls(
         FloorReflectionLabel(FloorReflectionsEnabled, FloorReflectionFallback),
         FloorReflectionsEnabled
     )
+
+    If VfxReflectionsEnabled Then
+        Call UI.DrawButton(PanelLeft + 12, 548, 240, 22, "VFX Reflections: On", True)
+    Else
+
+        Call UI.DrawButton(PanelLeft + 12, 548, 240, 22, "VFX Reflections: Off", False)
+    End If
 
 End Sub
 
