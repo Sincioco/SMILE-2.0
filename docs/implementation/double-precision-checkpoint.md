@@ -19,8 +19,12 @@
 | P0 | Validated and pushed `9f33ad9` before Double | ViewerUi/preview labels; existing Web reflection allocation/filter owner |
 | D1 | Implemented and pushed `40c183d`; final integration repairs included below | Shared DoubleSemantics, native MasmDoubleEmitter/numeric runtime, Web Double.js, package schema 7, shared editor/debug facts |
 | D2 | Validated and pushed `c310b7a` | Precision3D/PrecisionMath3D; same renderer translation unit, Scene3D lifecycle and Character3D actor pool |
-| D3 | Implemented; native/Web focused gates pass; full interaction acceptance pending | PrecisionCamera3D, ViewerCamera/Party/Actors/calibration/effects, Sin Star I preview, shared curve slice |
-| D4 | Automated integration and installation validated; publication pending | Final compiler/runtime/VSIX 2.0.61, native/Web deliveries; manual acceptance remains open |
+| D3 | Implementation pushed `761b7a2`; native/Web focused gates pass; full interaction acceptance pending | PrecisionCamera3D, ViewerCamera/Party/Actors/calibration/effects, Sin Star I preview, shared curve slice |
+| D4 | Automated integration/install and source publication validated at `761b7a2`; manual acceptance pending | Final compiler/runtime/VSIX 2.0.61, native/Web deliveries; manual acceptance remains open |
+
+Source milestone `761b7a2fb906a5fa19b548bbd77390da0bdaf765` was pushed normally to
+origin/main and read back at that exact hash. The following checkpoint-only commit
+records this publication; no payload was rebuilt after installation.
 
 Detailed unchanged P0/D1/D2 evidence, including historical source/artifact hashes,
 remains in this same file's committed versions at `9f33ad9`, `40c183d` and `c310b7a`
@@ -163,7 +167,7 @@ keyboard/tab/Party approach/return, pause/scrub, attachment/ground/floor/backdro
 audible SFX check on native/Chrome. Complete the native curve visual and installed
 VS Double breakpoint/hover check. Do not claim full acceptance while these remain.
 Reuse passing automated/install evidence unless a source/dependency actually changes.
-Publish this validated implementation/checkpoint, then finish only these open checks;
+The implementation is published; finish only these open checks and their evidence;
 no further Double authorization is needed and no unrelated feature should start.
 
 ## On Hold
