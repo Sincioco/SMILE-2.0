@@ -215,3 +215,57 @@ round-trips their existing serialization. The real Party approach/return asserti
 also reaches actual owned render submissions on native and Web. These are focused
 runtime checks; the final interactive delivery state and source/artifact evidence are
 recorded in `docs/implementation/double-precision-checkpoint.md`.
+
+## September 8: enemy-centered ground discharge and shared lightning outline
+
+Sin requested that Thor Attack strike farther ahead toward the enemy. The existing
+Party owner already supplies the actual Dragon chest target, but `OrinStorm` had
+centered the ground discharge on the hammer's X/Z. It now latches the target X/Z
+at release and retains floor Y = 3.0. Charging remains at the hammer; release
+timing, per-context ownership, sound cues and the existing ground-arc radius stay
+unchanged. Released ground arcs do not follow later target motion.
+
+Sin subsequently identified that a white surface coating washed out the hammer.
+The reusable Lightning equipment appearance now uses a front-culled expanded
+outline, retaining the underlying metal and grip details. `ViewerProfiles` selects
+this style; `ViewerEffects.ConfigureEquipmentGlow` and `UpdateEquipmentGlow` apply
+it to any primary actor or Party companion without an Orin-specific rendering path.
+The Fire surface style remains available independently. The existing calibration
+fixture checks both styles on Orin and Arin under fractional placement and three
+calibrated poses. No character-specific glow offset is required.
+Sin accepted the restored native material/outline, then requested stronger epic
+lightning and a trail. The previous sparse attack-only trail moved into shared
+`LightningVfx3D.WeaponTrail`; it now emits a denser edge corona and fading motion
+trail. Orin supplies his calibrated SwordBase/SwordTip span; the shared operation
+knows no model,
+socket name, character identity or attack sequence. Other callers supply their own
+precise edge points. Existing actor ownership, hide/freeze and capacity fallback
+checks still pass on native/Web; the native attack capture shows the trailing arc
+while the metal and grip remain visible.
+Canonical model, animations, grounding and the zero-key calibration snapshot are
+unchanged. Current visual and delivery evidence is in the Double checkpoint.
+
+## September 8: three styles and reusable weapon outlines
+
+Sin asked to preserve the original Lightning appearance while comparing Blue
+Flame and Neon Arcs. Blue Flame uses Arin's shared fire family, blue/cyan/hot
+white, emitted around the measured hammer-head perimeter with a world-space
+trail and faint shield-edge flames. Sin accepted the native blue appearance,
+then requested 40% stronger hammer flames: its baseline is now 140 versus Arin's
+200 (70% of Arin), with the shield unchanged. Neon Arcs uses a stronger closed
+neon rim plus short travelling arcs on outer edges, without star particles.
+The original Lightning style and its star trail remain selectable.
+
+Weapon and Shield intensity controls independently scale each character's
+baseline from 0–200%. They are session presentation preferences, not pose keys.
+The asset-local perimeter belongs in OrinEquipmentContours.smile; other weapons
+author their own contour for the same Fire/Lightning operations. The generator
+reads the accepted rigid head vertices and converts glTF Z to cooked SM3D Z
+before applying the existing SwordBase socket matrix. Omitting this conversion
+visibly detached the initial test flame; the corrected path is checked against
+the actual authored HammerHead socket under an independently calibrated actor.
+
+Do not add sockets to this accepted descriptor merely for VFX presentation:
+descriptor changes invalidate its live calibration fingerprint. The current
+separate contour data leaves the 21 sockets, model, cooked asset, animation,
+grounding and calibration identity untouched. No historical Doctor/repair replay.

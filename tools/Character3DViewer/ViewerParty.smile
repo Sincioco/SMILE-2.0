@@ -754,7 +754,8 @@ Public Function CreateCompanion(ByRef Value As State,
                 Companion.Actor,
                 Effects.EpicGlowMaterial,
                 Companion.WeaponGlow,
-                Companion.ShieldGlow
+                Companion.ShieldGlow,
+                ViewerProfiles.EquipmentGlowStyle(ProfileIndex)
             )
             Companion.GlowVisible = Companion.GlowAvailable
 
@@ -851,7 +852,10 @@ Public Function UpdateCompanion(ByRef Value As State,
             ViewerCalibration.ChannelValue(
                 Calibration, Value.Companion.Clip, 18) <> 0,
             ViewerCalibration.ChannelValue(
-                Calibration, Value.Companion.Clip, 19) <> 0
+                Calibration, Value.Companion.Clip, 19) <> 0,
+            ViewerProfiles.EquipmentGlowStyle(Value.Companion.Profile),
+            ViewerEffects.Intensity(Effects, Value.Companion.Profile, False),
+            ViewerEffects.Intensity(Effects, Value.Companion.Profile, True)
         ) And Result.Ready
     End If
 

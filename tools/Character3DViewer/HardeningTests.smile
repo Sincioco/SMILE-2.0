@@ -2096,14 +2096,31 @@ InspectorOperation = ViewerInspectorCommands.ApplyPresentationAction(
     RenderingState, 5, EffectsState, DragonState)
 
 Call Check(EffectsState.ShieldFireVisible)
-Call Check(ViewerEffects.ShieldFireStyleLabel(EffectsState) = "Ember Outline")
+Call Check(ViewerEffects.ShieldFireStyleLabel(EffectsState) = "Flames")
 
 InspectorOperation = ViewerInspectorCommands.ApplyPresentationAction(
     ViewerUi.INSPECTOR_ACTION_SHIELD_FIRE_STYLE,
     RenderingState, 5, EffectsState, DragonState)
 
-Call Check(EffectsState.ShieldFlameStyle)
-Call Check(ViewerEffects.ShieldFireStyleLabel(EffectsState) = "Flames")
+Call Check(Not EffectsState.ShieldFlameStyle)
+Call Check(ViewerEffects.ShieldFireStyleLabel(EffectsState) = "Ember Outline")
+
+InspectorOperation = ViewerInspectorCommands.ApplyPresentationAction(
+    ViewerUi.INSPECTOR_ACTION_INTENSITY_BASE + 5,
+    RenderingState, 5, EffectsState, DragonState)
+
+Call Check(InspectorOperation.Handled)
+Call Check(ViewerEffects.Intensity(EffectsState, ViewerProfiles.PROFILE_ORIN, False) = 110)
+Call Check(ViewerEffects.Intensity(EffectsState, ViewerProfiles.PROFILE_ORIN, True) = 100)
+Call Check(ViewerEffects.Intensity(EffectsState, ViewerProfiles.PROFILE_ARIN, False) = 100)
+
+InspectorOperation = ViewerInspectorCommands.ApplyPresentationAction(
+    ViewerUi.INSPECTOR_ACTION_INTENSITY_BASE + 4,
+    RenderingState, 5, EffectsState, DragonState)
+
+Call Check(ViewerEffects.Intensity(EffectsState, ViewerProfiles.PROFILE_ORIN, False) = 100)
+
+Call TestEquipmentIntensityBounds()
 
 EffectsState.ShieldFirePoints[1].X = 73.0
 
@@ -2815,6 +2832,34 @@ Sub CheckRingProjection()
         Call Check(Point.Visible And Point.Depth = 200)
         Call Check(Abs(Point.X - ExpectedX) <= 1 And Abs(Point.Y - ExpectedY) <= 1)
     End For
+
+End Sub
+
+Sub TestEquipmentIntensityBounds()
+
+    Dim Value As ViewerEffects.State
+    Dim Index As Number
+    Dim Target As Number
+
+    Call ViewerEffects.ResetEquipmentDefaults(Value)
+
+    For Target = 0 To 3
+
+        For Index = 0 To 24
+            Call ViewerEffects.AdjustIntensity(Value, Target, False)
+        End For
+
+        Call Check(Value.EquipmentIntensity[Target] = 0)
+
+        For Index = 0 To 24
+            Call ViewerEffects.AdjustIntensity(Value, Target, True)
+        End For
+
+        Call Check(Value.EquipmentIntensity[Target] = 200)
+    End For
+
+    Call ViewerEffects.ResetEquipmentDefaults(Value)
+    Call Check(Value.EquipmentIntensity[0] = 200 And Value.EquipmentIntensity[3] = 200)
 
 End Sub
 

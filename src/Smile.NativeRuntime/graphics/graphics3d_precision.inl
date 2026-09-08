@@ -147,13 +147,18 @@ extern "C" double smile_renderer3d_double_value(long long command, long long res
         const SmileObject3D* object = smile_3d_object(resource);
         if (object != 0) return smile_3d_precision_object_component(object, (int)component);
     }
-    if (command == 3 && component >= 0 && component < 6)
+    if (command == 3 && component >= 0 && component < 24)
     {
         const SmileObject3D* object = smile_3d_object(resource);
         SmileMatrix3D socket;
+        const bool ignore_offsets = (component >= 3 && component < 6) || component >= 15;
         if (object != 0 && smile_3d_model_socket_matrix(smile_3d_animator(object->animator_handle),
-            index, resource, component >= 3 ? 1 : 0, &socket))
-            return socket.m[12 + component % 3];
+            index, resource, ignore_offsets ? 1 : 0, &socket))
+        {
+            if (component < 6) return socket.m[12 + component % 3];
+            static const int basis_fields[] = {0, 1, 2, 4, 5, 6, 8, 9, 10};
+            return socket.m[basis_fields[(component - 6) % 9]];
+        }
         smile_last_error3d = 48;
         return 0.0;
     }

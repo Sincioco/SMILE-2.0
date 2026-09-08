@@ -14,7 +14,10 @@ Public Const QUALITY_HIGH = 3
 Public Const SIMULATION_CPU = 1
 Public Const SIMULATION_GPU = 2
 Public Const SIMULATION_AUTO = 3
-Public Const MAX_EMITTERS = 6
+Public Const MAX_EMITTERS = 7
+Public Const PALETTE_FIRE = 0
+Public Const PALETTE_BLUE_WHITE = 1
+Public Const QUERY_PALETTE = 18
 Public Const ERROR_NONE = 0
 Public Const ERROR_INITIALIZATION = 1
 Public Const ERROR_CAPACITY = 2
@@ -49,6 +52,8 @@ Private Type EmitterState
     Remainder As Number
     Radius As Number
     Intensity As Number
+    Palette As Number
+    Contour As Precision3D.Contour3D
     Turbulence As Number
     Source As Precision3D.Vector3
     Tip As Precision3D.Vector3
@@ -88,12 +93,12 @@ End Type
 Private Dim Ready As Boolean
 Private Dim ErrorValue As Number
 Private Dim Epoch As Number
-Private Dim Items[6] As EmitterState
-Private Dim Systems[30] As Core.GpuParticleSystem3D
-Private Dim Batches[24] As Core.ParticleBatch3D
-Private Dim Particles[2304] As CpuParticle
-Private Dim NextSlot[30] As Number
-Private Dim SpawnRemainder[30] As Number
+Private Dim Items[7] As EmitterState
+Private Dim Systems[35] As Core.GpuParticleSystem3D
+Private Dim Batches[28] As Core.ParticleBatch3D
+Private Dim Particles[2688] As CpuParticle
+Private Dim NextSlot[35] As Number
+Private Dim SpawnRemainder[35] As Number
 Private Dim Textures[3] As Core.Texture3D
 Private Dim Materials[5] As Core.Material3D
 Private Dim AssetDirectory As Text
@@ -400,6 +405,12 @@ Private Function ConfigureLayer(Index As Number, Layer As Number) As Boolean
         Alignment = 0
     End If
 
+    If (Items[Index].Palette = PALETTE_BLUE_WHITE And
+        Layer <> 2 And
+        Layer <> 4) Then
+        Shader = Graphics3D.GPU_PARTICLE_SHADER_THERMAL_BLUE
+    End If
+
     Ok = Graphics3D.SetGpuParticleForces3D(Systems[Key], 0, Gravity, 0,
         Items[Index].Wind.X, Items[Index].Wind.Y, Items[Index].Wind.Z, Buoyancy, Drag)
     Ok = Graphics3D.SetGpuParticleTurbulence3D(Systems[Key],
@@ -418,6 +429,8 @@ End Function
 ''' Keep old wakes inside the bound while a moving source travels away from them.
 Private Sub TrackSourceBounds(Index As Number)
 
+    Dim PointIndex As Number
+
     If Items[Index].Age / 2000 > Items[Index].BoundsBucket Then
 
         Items[Index].BoundsBucket = Items[Index].Age / 2000
@@ -434,6 +447,16 @@ Private Sub TrackSourceBounds(Index As Number)
     Items[Index].BoundsMaximum.X = Max(Items[Index].BoundsMaximum.X, Max(Items[Index].Source.X, Items[Index].Tip.X))
     Items[Index].BoundsMaximum.Y = Max(Items[Index].BoundsMaximum.Y, Max(Items[Index].Source.Y, Items[Index].Tip.Y))
     Items[Index].BoundsMaximum.Z = Max(Items[Index].BoundsMaximum.Z, Max(Items[Index].Source.Z, Items[Index].Tip.Z))
+
+    For PointIndex = 0 To Items[Index].Contour.PointCount - 1
+
+        Items[Index].BoundsMinimum.X = Min(Items[Index].BoundsMinimum.X, Items[Index].Contour.Points[PointIndex].X)
+        Items[Index].BoundsMinimum.Y = Min(Items[Index].BoundsMinimum.Y, Items[Index].Contour.Points[PointIndex].Y)
+        Items[Index].BoundsMinimum.Z = Min(Items[Index].BoundsMinimum.Z, Items[Index].Contour.Points[PointIndex].Z)
+        Items[Index].BoundsMaximum.X = Max(Items[Index].BoundsMaximum.X, Items[Index].Contour.Points[PointIndex].X)
+        Items[Index].BoundsMaximum.Y = Max(Items[Index].BoundsMaximum.Y, Items[Index].Contour.Points[PointIndex].Y)
+        Items[Index].BoundsMaximum.Z = Max(Items[Index].BoundsMaximum.Z, Items[Index].Contour.Points[PointIndex].Z)
+    End For
 
 End Sub
 
@@ -686,6 +709,8 @@ Public Function StartAtPrecise(Name As Text, Position As Precision3D.Vector3, Se
     Items[Index].Remainder = 0
     Items[Index].Radius = Radius
     Items[Index].Intensity = 100
+    Items[Index].Palette = PALETTE_FIRE
+    Items[Index].Contour.PointCount = 0
     Items[Index].Turbulence = 100
     Items[Index].Attachment = 0
     Items[Index].Inheritance = 30
@@ -787,6 +812,36 @@ Public Function SetSegmentPrecise(Value As FireEmitter, Base As Precision3D.Vect
 
     Items[Index].Source = Base
     Items[Index].Tip = Tip
+    Items[Index].Contour.PointCount = 0
+
+    Return True
+
+End Function
+
+''' Commits an entire outline before spawning; live particles retain their world positions.
+Public Function SetContourPrecise(Value As FireEmitter, Contour As Precision3D.Contour3D) As Boolean
+
+    Dim Index As Number
+    Dim Length As Double
+
+    Length = Precision3D.ContourLength(Contour)
+
+    If (Not Valid(Value) Or
+        Length < 4.0 Or
+        Length > 10000.0) Then
+        ErrorValue = ERROR_SOURCE
+        Return False
+    End If
+
+    Index = Value.Slot - 1
+
+    If Not Mutable(Index) Then
+        Return False
+    End If
+
+    Items[Index].Contour = Contour
+    Items[Index].Source = Contour.Points[0]
+    Items[Index].Tip = Contour.Points[Contour.PointCount / 2]
 
     Return True
 
@@ -816,6 +871,7 @@ Public Function SetPositionPrecise(Value As FireEmitter, Position As Precision3D
 
     Items[Value.Slot - 1].Source = Position
     Items[Value.Slot - 1].Tip = Position
+    Items[Value.Slot - 1].Contour.PointCount = 0
 
     Return True
 
@@ -987,6 +1043,44 @@ Public Sub SetEnabled(Value As FireEmitter, Enabled As Boolean)
 
 End Sub
 
+''' A per-emitter thermal palette shared by native GPU, Web GPU and CPU fallback.
+Public Function SetPalette(Value As FireEmitter, Palette As Number) As Boolean
+
+    Dim Index As Number
+    Dim Layer As Number
+    Dim Ok As Boolean
+
+    If (Not Valid(Value) Or
+        Palette < PALETTE_FIRE Or
+        Palette > PALETTE_BLUE_WHITE) Then
+        Return False
+    End If
+
+    Index = Value.Slot - 1
+
+    If Not Mutable(Index) Then
+        Return False
+    End If
+
+    If Items[Index].Palette = Palette Then
+        Return True
+    End If
+
+    Items[Index].Palette = Palette
+    Ok = True
+
+    If Items[Index].Backend = SIMULATION_GPU Then
+
+        For Layer = 0 To 4
+            Ok = ConfigureLayer(Index, Layer) And Ok
+        End For
+
+    End If
+
+    Return Ok
+
+End Function
+
 Public Sub StopEmitter(Value As FireEmitter)
 
     Call SetEnabled(Value, False)
@@ -998,7 +1092,7 @@ Public Sub SetIntensity(Value As FireEmitter, Percent As Number)
     If Valid(Value) Then
 
         If Mutable(Value.Slot - 1) Then
-            Items[Value.Slot - 1].Intensity = Clamp(Percent, 0, 200)
+            Items[Value.Slot - 1].Intensity = Clamp(Percent, 0, 400)
         End If
 
     End If
@@ -1042,6 +1136,11 @@ Private Sub Spawn(Index As Number, Layer As Number)
     Position.X = Items[Index].Source.X + (Items[Index].Tip.X - Items[Index].Source.X) * ToDouble(Fraction) / 1000.0
     Position.Y = Items[Index].Source.Y + (Items[Index].Tip.Y - Items[Index].Source.Y) * ToDouble(Fraction) / 1000.0
     Position.Z = Items[Index].Source.Z + (Items[Index].Tip.Z - Items[Index].Source.Z) * ToDouble(Fraction) / 1000.0
+
+    If Items[Index].Contour.PointCount > 0 Then
+        Ok = Precision3D.TryContourPoint(Items[Index].Contour, ToDouble(Fraction) / 1000.0, Position)
+    End If
+
     Position.X = Position.X + ToDouble(RandomValue(Index, Radius) - Radius / 2)
     Position.Z = Position.Z + ToDouble(RandomValue(Index, Radius) - Radius / 2)
     Velocity.X = ToDouble(Items[Index].Direction.X + RandomValue(Index, Radius * 2) - Radius)
@@ -1264,6 +1363,7 @@ Private Sub CommitCpu(Index As Number, Layer As Number)
     Dim RedValue As Number
     Dim GreenValue As Number
     Dim BlueValue As Number
+    Dim SwapValue As Number
     Dim Size As Number
     Dim Ok As Boolean
 
@@ -1290,6 +1390,14 @@ Private Sub CommitCpu(Index As Number, Layer As Number)
                 GreenValue = 56
                 BlueValue = 52
                 Fade = Fade / 2
+
+            End If
+
+            If Items[Index].Palette = PALETTE_BLUE_WHITE And Layer <> 2 Then
+
+                SwapValue = RedValue
+                RedValue = BlueValue
+                BlueValue = SwapValue
 
             End If
 
@@ -1707,7 +1815,11 @@ Public Function Value(Query As Number, Emitter As FireEmitter) As Number
 
     Index = Emitter.Slot - 1
 
-    If Query = 2 Then
+    If Query = QUERY_PALETTE Then
+        ReturnValue = Items[Index].Palette
+
+        Return ReturnValue
+    Else If Query = 2 Then
         ReturnValue = Items[Index].Quality
 
         Return ReturnValue

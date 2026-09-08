@@ -687,6 +687,7 @@ static ID3D11RenderTargetView* smile_bloom_view_b3d;
 static ID3D11ShaderResourceView* smile_bloom_shader_b3d;
 static ID3D11DepthStencilState* smile_depth_state3d;
 static ID3D11DepthStencilState* smile_depth_read_state3d;
+static ID3D11DepthStencilState* smile_additive_depth_read_state3d;
 static ID3D11RasterizerState* smile_raster_state3d;
 static ID3D11RasterizerState* smile_cull_raster_state3d;
 static ID3D11RasterizerState* smile_front_cull_raster_state3d;
@@ -4835,6 +4836,7 @@ static int smile_3d_create_gpu_particle_pipeline(void)
         "float temperature=saturate(state.thermalDensityNoise.x),density=saturate(state.thermalDensityNoise.y);"
         "float3 color=fireRender.x>.5?ThermalColor(temperature):float3(1,lerp(.25,.85,temperature),.08);"
         "if(fireRender.x>1.5&&fireRender.x<2.5)color=float3(.24,.22,.2);"
+        "if(fireRender.x>3.5)color=color.bgr;"
         "float fade=(1-ratio);if(fireRender.x>.5)fade*=saturate(state.positionAge.w/60);"
         "o.color=float4(color,density*fade);return o;}";
     ID3D11Device* device = (ID3D11Device*)smile_graphics_directx_device();
@@ -5152,6 +5154,11 @@ static int smile_3d_create_pipeline(void)
         depth_read.DepthFunc = D3D11_COMPARISON_LESS;
         if (SUCCEEDED(result))
             result = device->CreateDepthStencilState(&depth_read, &smile_depth_read_state3d);
+        // Additive mesh coatings may share the opaque surface exactly. Keep
+        // depth writes disabled and still reject geometry behind that surface.
+        depth_read.DepthFunc = D3D11_COMPARISON_LESS_EQUAL;
+        if (SUCCEEDED(result))
+            result = device->CreateDepthStencilState(&depth_read, &smile_additive_depth_read_state3d);
         raster.FillMode = D3D11_FILL_SOLID;
         raster.CullMode = D3D11_CULL_NONE;
         raster.DepthClipEnable = TRUE;
@@ -8217,7 +8224,8 @@ static int smile_3d_draw_submission(const SmileSubmission3D* submission)
         0xffffffff
     );
     context->OMSetDepthStencilState(
-        alpha_mode == 2 || alpha_mode == 3 ? smile_depth_read_state3d : smile_depth_state3d,
+        alpha_mode == 3 ? smile_additive_depth_read_state3d :
+            alpha_mode == 2 ? smile_depth_read_state3d : smile_depth_state3d,
         0
     );
     context->IASetVertexBuffers(0, 1, &mesh->vertex_buffer, &stride, &offset);
@@ -9042,6 +9050,7 @@ extern "C" void smile_graphics3d_on_device_lost(void)
     smile_3d_release(smile_front_cull_raster_state3d);
     smile_3d_release(smile_cull_raster_state3d); smile_3d_release(smile_raster_state3d);
     smile_3d_release(smile_depth_read_state3d); smile_3d_release(smile_depth_state3d);
+    smile_3d_release(smile_additive_depth_read_state3d);
     smile_3d_release(smile_pbr_constant_buffer3d); smile_3d_release(smile_pbr_input_layout3d);
     smile_3d_release(smile_pbr_pixel_shader3d); smile_3d_release(smile_pbr_vertex_shader3d);
     smile_3d_release(smile_model_palette_buffer3d);
@@ -9536,7 +9545,7 @@ static long long smile_3d_gpu_particle_system_command(long long operation,
         }
         if (operation == 15)
         {
-            valid = c >= 0 && c <= 3 && d >= 0 && d <= 2 && e >= 1 && e <= 8 && f >= 1 && f <= 8;
+            valid = c >= 0 && c <= 4 && d >= 0 && d <= 2 && e >= 1 && e <= 8 && f >= 1 && f <= 8;
             next.render[1]=(float)c; next.render[2]=(float)d;
             next.render[3]=(float)e; next.time[1]=(float)f;
         }

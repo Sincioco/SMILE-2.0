@@ -32,6 +32,96 @@ Public Type Vector3
     Z As Double
 End Type
 
+''' A closed caller-owned outline, used by fire emission and travelling edge arcs.
+Public Type Contour3D
+    PointCount As Number
+    Points[16] As Vector3
+End Type
+
+Public Function ContourLength(ByRef Value As Contour3D) As Double
+
+    Dim Index As Number
+    Dim NextIndex As Number
+    Dim Delta As Vector3
+    Dim Length As Double
+    Dim Result As Double
+
+    If Value.PointCount < 3 Or Value.PointCount > 16 Then
+        Return 0.0
+    End If
+
+    For Index = 0 To Value.PointCount - 1
+
+        If (Abs(Value.Points[Index].X) > 1000000.0 Or
+            Abs(Value.Points[Index].Y) > 1000000.0 Or
+            Abs(Value.Points[Index].Z) > 1000000.0) Then
+            Return 0.0
+        End If
+
+        NextIndex = (Index + 1) Mod Value.PointCount
+        Delta.X = Value.Points[NextIndex].X - Value.Points[Index].X
+        Delta.Y = Value.Points[NextIndex].Y - Value.Points[Index].Y
+        Delta.Z = Value.Points[NextIndex].Z - Value.Points[Index].Z
+        Length = Sqrt(Delta.X * Delta.X + Delta.Y * Delta.Y + Delta.Z * Delta.Z)
+
+        If Length < 0.001 Then
+            Return 0.0
+        End If
+
+        Result = Result + Length
+    End For
+
+    Return Result
+
+End Function
+
+''' Arc-length sampling stays on individual edges, including the closing edge.
+Public Function TryContourPoint(ByRef Value As Contour3D, Fraction As Double,
+    ByRef Point As Vector3) As Boolean
+
+    Dim Index As Number
+    Dim NextIndex As Number
+    Dim Delta As Vector3
+    Dim Length As Double
+    Dim Distance As Double
+    Dim Along As Double
+
+    Length = ContourLength(Value)
+
+    If (Length <= 0.0 Or
+        Fraction < 0.0 Or
+        Fraction > 1.0) Then
+        Return False
+    End If
+
+    Distance = Length * Fraction
+
+    For Index = 0 To Value.PointCount - 1
+
+        NextIndex = (Index + 1) Mod Value.PointCount
+        Delta.X = Value.Points[NextIndex].X - Value.Points[Index].X
+        Delta.Y = Value.Points[NextIndex].Y - Value.Points[Index].Y
+        Delta.Z = Value.Points[NextIndex].Z - Value.Points[Index].Z
+        Length = Sqrt(Delta.X * Delta.X + Delta.Y * Delta.Y + Delta.Z * Delta.Z)
+
+        If Distance <= Length Or Index = Value.PointCount - 1 Then
+
+            Along = Min(1.0, Distance / Length)
+            Point.X = Value.Points[Index].X + Delta.X * Along
+            Point.Y = Value.Points[Index].Y + Delta.Y * Along
+            Point.Z = Value.Points[Index].Z + Delta.Z * Along
+
+            Return True
+
+        End If
+
+        Distance = Distance - Length
+    End For
+
+    Return False
+
+End Function
+
 ''' Perspective camera; the renderer keeps the accepted complete transaction.
 Public Type Camera3D
     Position As Vector3
@@ -370,6 +460,49 @@ Public Function TrySocketPosition(Object As Core.Object3D, SocketIndex As Number
     Valid = TryVector(QUERY_SOCKET, Object.Handle, SocketIndex, Component, Result)
 
     Return Valid
+
+End Function
+
+''' Transforms cooked SM3D socket-local points with the same calibrated matrix as the mesh.
+Public Function TrySocketContour(Object As Core.Object3D, SocketIndex As Number,
+    LocalContour As Contour3D, ByRef WorldContour As Contour3D) As Boolean
+
+    Dim Candidate As Contour3D
+    Dim Origin As Vector3
+    Dim Basis[9] As Double
+    Dim Index As Number
+    Dim Valid As Boolean
+
+    If ContourLength(LocalContour) <= 0.0 Then
+        Return False
+    End If
+
+    Valid = TrySocketPosition(Object, SocketIndex, False, Origin)
+
+    For Index = 0 To 8
+        Basis[Index] = Renderer3DDoubleValue(QUERY_SOCKET, Object.Handle, SocketIndex, 6 + Index)
+        Valid = Graphics3D.LastError() = 0 And Valid
+    End For
+
+    If Not Valid Then
+        Return False
+    End If
+
+    Candidate.PointCount = LocalContour.PointCount
+
+    For Index = 0 To LocalContour.PointCount - 1
+
+        Candidate.Points[Index].X = (Origin.X + LocalContour.Points[Index].X * Basis[0] +
+            LocalContour.Points[Index].Y * Basis[3] + LocalContour.Points[Index].Z * Basis[6])
+        Candidate.Points[Index].Y = (Origin.Y + LocalContour.Points[Index].X * Basis[1] +
+            LocalContour.Points[Index].Y * Basis[4] + LocalContour.Points[Index].Z * Basis[7])
+        Candidate.Points[Index].Z = (Origin.Z + LocalContour.Points[Index].X * Basis[2] +
+            LocalContour.Points[Index].Y * Basis[5] + LocalContour.Points[Index].Z * Basis[8])
+    End For
+
+    WorldContour = Candidate
+
+    Return True
 
 End Function
 

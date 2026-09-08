@@ -43,7 +43,7 @@ The typed family has its own command namespace, without changing legacy IDs:
 | Mutation | 2000000 + Slot | Existing GPU particle spawn staging, Slot 0–32767: XYZ, velocity XYZ in world units/second |
 | Query | 1 | Accepted camera, component 0–11 |
 | Query | 2 | Live object transform, component 0–8 (scale in percent) |
-| Query | 3 | Actual object/animator socket, Index is socket index; components 0–2 position or 3–5 position ignoring additive node offsets |
+| Query | 3 | Actual object/animator socket, Index is socket index; components 0–2 position or 3–5 position ignoring additive node offsets; 6–14 matrix basis (X/Y/Z columns), 15–23 basis ignoring node offsets |
 | Query | 4 | Effective plane component 0, requested plane component 1 |
 | Query | 5 | Captured object transform, Index is submission slot, component 0–8 |
 | Query | 6 | Staged ribbon point, Index is point index; components 0–2 left and 3–5 right |

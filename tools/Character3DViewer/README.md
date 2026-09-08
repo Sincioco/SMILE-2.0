@@ -22,6 +22,56 @@ The editor source and build/launch entry points belong here. Sin Star I owns the
 
 ## Maintainer routing
 
+### Equipment VFX controls
+
+Orin's **VFX** button cycles **Blue Flame → Neon Arcs → Lightning**. Blue Flame
+is the startup selection: Arin's shared fire family in blue/cyan/hot white, at
+70% of Arin's sword emission rate (Sin requested 40% more than the initial
+half-strength experiment). It surrounds the hammer head's measured outline
+and leaves a world-space trail during motion; the shield adds faint edge flames.
+Neon Arcs keeps a stronger closed neon outline with short travelling edge arcs
+on both pieces of equipment, without star particles. Lightning preserves the
+earlier appearance and star trail for comparison. Attack selection and discharge
+timing remain independent of this appearance button.
+
+Both hero panels have separate **Weapon** and **Shield** intensity minus/plus
+controls, from 0% to 200% in 10% steps. 100% is each style's intended baseline,
+not an absolute brightness unit. Changes affect attached glow and emission;
+renderer capacity and opacity limits still apply at high settings. Preferences
+survive character-tab changes during this session and do not write pose saves.
+Freeze Flames/Lightning follows Orin's selected effect family.
+
+Weapon outlines are caller-owned `Precision3D.Contour3D` data, transformed through
+the existing calibrated Character3D socket and sampled by shared fire/lightning
+operations. Orin's package supplies his head contour; another weapon supplies its
+own outline. There is no hammer-shape branch in the renderer or effect library.
+
+Equipment glow uses shared appearance styles selected by
+`ViewerProfiles.EquipmentGlowStyle`. Fire keeps the bright gold surface coating;
+Lightning uses a front-culled expanded weapon outline so the metal and grip remain
+visible. `ViewerEffects.ConfigureEquipmentGlow` applies either style to both the
+primary actor and Party companions. Another character selects the Lightning style
+without a new rendering branch. The shield retains its front-culled outline.
+`UpdateEquipmentGlow` defaults to exact geometry, animation and calibrated transform
+for surface coatings; only outline callers request expansion. Native/Web additive
+mesh depth accepts matching surface fragments while preserving foreground occlusion.
+Do not add character-specific scale/position offsets to hide blade/guard intersections.
+The material contract is documented in `docs/architecture/renderer3d-materials.md`.
+
+The shared `LightningVfx3D.WeaponTrail` provides a denser corona at two supplied
+weapon edges and a short fading world-space trail during movement. `OrinStorm`
+only supplies its calibrated attachment points and existing visibility/freeze
+controls. Another character can use the same operation with its own points.
+No new renderer, character asset, effect pool reservation or attack timing is needed.
+Arin's shield defaults to Flames: its ember rim remains visible, with three small
+LineFire emitters whose combined emission rate is about 10% of the sword's.
+The small flames leave short wisps with zero inherited launch velocity. The
+Ember Outline option still removes those flames without changing the saved pose.
+
+Orin's ground discharge now centers on the enemy target at floor height, latched
+when the attack enters release. Charge effects remain attached to the hammer;
+the existing ground-arc radius, attack timing and Party target selection are unchanged.
+
 Camera pan/orbit/zoom and Party approach/return now retain Double fractions through
 the same renderer and Character3D actors. Current-pose camera anchors, equipment
 and attached effects use precise world coordinates. The controls, actor scale,

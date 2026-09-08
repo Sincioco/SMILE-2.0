@@ -210,6 +210,9 @@ Game Window "SMILE Party Precision Tests" Size 640 By 480
 Session.ProfileIndex = ViewerProfiles.PROFILE_ARIN
 
 Call LoadViewer()
+Call CheckEquipmentGlowAlignment()
+Call SelectCharacterTab(1)
+Call CheckEquipmentGlowAlignment()
 Call SelectCharacterTab(2)
 Call CalibrationCheck(Session.Ready And Not Session.ViewerError And Party.Ready,
     "Web production actors load")
@@ -238,6 +241,7 @@ End If
     if ($LASTEXITCODE -ne 0) { throw 'Web Party precision compile failed.' }
     $webExpected = Join-Path $testRoot 'party-precision.expected.txt'
     [IO.File]::WriteAllText($webExpected, "Viewer Party precision passed`n", $encoding)
-    & node (Join-Path $PSScriptRoot 'run-web-test.js') $webOutput --renderer3d-state --expected $webExpected --timeout 60000
+    # Profile loading presents startup frames before the final assertions print.
+    & node (Join-Path $PSScriptRoot 'run-web-test.js') $webOutput --renderer3d-state --expected $webExpected --frames 8 --timeout 60000
     if ($LASTEXITCODE -ne 0) { throw 'Web Party precision assertions failed.' }
 }

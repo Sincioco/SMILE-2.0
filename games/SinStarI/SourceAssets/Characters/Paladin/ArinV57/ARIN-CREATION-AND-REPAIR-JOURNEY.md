@@ -883,3 +883,47 @@ round-trips their existing serialization. The real Party approach/return asserti
 also reaches actual owned render submissions on native and Web. These are focused
 runtime checks; the final interactive delivery state and source/artifact evidence are
 recorded in `docs/implementation/double-precision-checkpoint.md`.
+
+## September 8: shared equipment surface glow correction
+
+The brighter sword coating exposed a straight cut above the guard after precise
+placement. Turning Sword Fire off left the cut; turning Glow off removed it.
+The enlarged duplicate weapon mesh intersected the concave blade/guard geometry.
+This was not a texture defect or a reason to change Arin's model or saved pose.
+
+The shared Viewer equipment owner now keeps surface coatings on the exact weapon
+geometry, palette and calibrated transform. Native/Web additive mesh depth admits
+equal surface fragments without depth writes; closer opaque geometry still occludes
+the coating. Bright gold and thermal fire remain. Only front-culled outline shells
+request enlargement. The same default applies to other characters, with no Arin
+identity check or corrective offset. The existing calibration fixture checks both
+Arin and Orin at fractional placements across Idle, SwordAttack and Defend poses.
+Canonical model, animation and descriptor are unchanged by this correction.
+The fixture also applies the shared Lightning outline style to Arin's sword, proving
+the style does not depend on Orin's identity. Visual and delivery evidence belongs
+to the current Double checkpoint.
+
+Sin separately saved a new Defend frame-0 pose during closeout and explicitly asked
+to include it in the commit and Web publication. The accepted 24-key snapshot now
+decouples that key's sword, with rotation `[5, 83, 13]` and position `[-3, 0, 0]`.
+Its SHA-256 is `7A3E7BC823CF544FA0136920A9D0752BF7DE585C0891B9073E688B1F783B3F67`.
+This is Sin's authored pose, not a calibration workaround for the glow defect.
+Packaged native/Web defaults were refreshed from it; exact-byte calibration
+round-trip checks pass. Existing browser working saves retain their normal precedence.
+
+Sin also requested a faint flaming shield, approximately 10% of the sword's flame
+strength. Flames is now the default: retain the existing ember rim and add the
+three existing LineFire edge emitters at intensity 7 each versus the sword's 200.
+The small-radius flames retain short world-space wisps with no inherited launch
+velocity. Native Defend frame zero visibly retains the shield surface and modest
+flames above its rim; the sword remains substantially stronger. The Ember Outline
+option and family freeze/hide controls remain available.
+
+## September 8: intensity controls and accepted shield flames
+
+Sin accepted the native faint shield flames. The Viewer now exposes independent
+Weapon and Shield intensity controls (0–200%, 10% steps), with 100% preserving
+the accepted baseline. These settings affect presentation only and survive tab
+switches for the current session; they do not alter any saved pose channel.
+Sin's authored Defend frame-0 correction remains in the 24-key canonical JSON
+and generated native/Web defaults. Existing browser working saves remain intact.

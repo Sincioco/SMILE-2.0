@@ -11,6 +11,7 @@ Game Window "Renderer3D M7E-C GPU Particle Common Tests" Size 320 By 240
 Do
 
     Call RunTests()
+    Call TestDefaultThermalBounds()
 
 Loop Until True
 
@@ -325,6 +326,36 @@ Sub RunTests()
     Call Check(Graphics3D.GpuParticleValue3D(Graphics3D.GPU_PARTICLE_QUERY_CPU_UPLOAD_BYTES) =
         45056)
 
+    Call Graphics3D.ResetRenderer3D()
+
+End Sub
+
+Sub TestDefaultThermalBounds()
+
+    Dim Texture As Core.Texture3D
+    Dim Material As Core.Material3D
+    Dim Particles As Core.GpuParticleSystem3D
+
+    Material = Graphics3D.CreateEffectMaterial3D(Texture, Graphics3D.MATERIAL_ALPHA_ADDITIVE)
+    Particles = Graphics3D.CreateGpuParticleSystem3D(1, Material,
+        Graphics3D.GPU_PARTICLE_SIMULATION_CPU_DETERMINISTIC, 10)
+
+    ''' Selecting thermal rendering must preserve world-space particles without extra setup.
+
+    Call Check(Graphics3D.SetGpuParticleRender3D(Particles,
+        Graphics3D.GPU_PARTICLE_SHADER_THERMAL, 0))
+    Call Check(Graphics3D.SetGpuParticleSpawnKinematics3D(Particles, 0,
+        -200, 100, 300, 100, 100, 0))
+    Call Check(Graphics3D.SetGpuParticleSpawnVisual3D(Particles, 0,
+        1000, 10, 5, 0, 0, 950, 650))
+    Call Check(Graphics3D.CommitGpuParticleSpawn3D(Particles, 0, 1, 1))
+    Call Check(Graphics3D.AdvanceGpuParticleSystem3D(Particles, 10))
+    Call Check(Graphics3D.GpuParticleValue3D(
+        Graphics3D.GPU_PARTICLE_QUERY_CPU_VISIBLE, Particles.Handle, 0) = 1)
+    Call Check(Graphics3D.GpuParticleValue3D(
+        Graphics3D.GPU_PARTICLE_QUERY_CPU_X_MILLI, Particles.Handle, 0) = -199000)
+    Call Check(Graphics3D.GpuParticleValue3D(
+        Graphics3D.GPU_PARTICLE_QUERY_CPU_Y_MILLI, Particles.Handle, 0) = 101000)
     Call Graphics3D.ResetRenderer3D()
 
 End Sub

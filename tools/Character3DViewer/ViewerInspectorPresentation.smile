@@ -73,6 +73,9 @@ Public Type StatusView
 End Type
 
 Public Type EffectsView
+    WeaponIntensity As Number
+    ShieldIntensity As Number
+    StormEquipmentLabel As Text
     WindowWidth As Number
     WindowHeight As Number
     ProfileIndex As Number
@@ -235,10 +238,19 @@ Public Function CaptureEffects(ByRef Session As ViewerSession.State,
     Result.SwordFireVisible = Effects.SwordFireVisible
     Result.ShieldFireVisible = Effects.ShieldFireVisible
     Result.StormStyleLabel = ViewerEffects.StormStyleName(Effects)
+    Result.StormEquipmentLabel = ViewerEffects.StormEquipmentName(Effects)
+    Result.WeaponIntensity = ViewerEffects.Intensity(Effects, Session.ProfileIndex, False)
+    Result.ShieldIntensity = ViewerEffects.Intensity(Effects, Session.ProfileIndex, True)
     Result.StormComfortLabel = ViewerEffects.StormSceneComfortName()
     Result.LightningPlaybackLabel = ViewerUi.PlaybackLabel(
         "Lightning", Effects.LightningPaused, "Freeze")
     Result.LightningPaused = Effects.LightningPaused
+
+    If ViewerEffects.StormUsesFire(Effects) Then
+        Result.LightningPlaybackLabel = ViewerUi.PlaybackLabel("Flames", Effects.FlamePaused, "Freeze")
+        Result.LightningPaused = Effects.FlamePaused
+    End If
+
     Result.DragonHeadTracking = Dragon.HeadTracking
     Result.DragonTargetsArin = ViewerParty.DragonTargetsPrimary(Party)
     Result.SwordFireReady = Effects.SwordFireReady
@@ -397,7 +409,10 @@ Public Sub DrawEffectsAndCamera(Value As EffectsView)
         Value.FlamePlaybackLabel,
         Value.FlamePlaying,
         Value.ShieldFireStyleLabel,
-        Value.ShieldFlameStyle
+        Value.ShieldFlameStyle,
+        Value.StormEquipmentLabel,
+        Value.WeaponIntensity,
+        Value.ShieldIntensity
     )
     Call ViewerUi.DrawCameraControls(
         PanelLeft,

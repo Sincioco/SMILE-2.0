@@ -111,10 +111,11 @@ function renderer3DDoubleValue(command, resource, index, component) {
     }
     if (command === 10 && index === 0 && resource >= 0 && resource < 4 && component >= 0 && component < 3)
         return renderer3DLocalPositionType[resource * 4 + component];
-    if (command === 3 && component >= 0 && component < 6) {
+    if (command === 3 && component >= 0 && component < 24) {
         const object = renderer3DObjects.get(resource);
         if (object) return renderer3DModelSocketValue(renderer3DAnimators.get(object.animator), index,
-            component % 3 + 1, resource, component >= 3 ? 1 : 0, true);
+            component < 6 ? component % 3 + 1 : (component - 6) % 9 + 4,
+            resource, component >= 3 && component < 6 || component >= 15 ? 1 : 0, true);
         renderer3DLastError = 48; return 0;
     }
     if (command === 4 && resource === 0 && index === 0 && component >= 0 && component < 2)

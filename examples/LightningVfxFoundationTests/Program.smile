@@ -3,6 +3,7 @@ Option Explicit
 Import Smile.Simple3D.Core As Core
 Import Smile.Simple3D.Graphics3D As Graphics3D
 Import Smile.Simple3D.LightningVfx3D As Lightning
+Import Smile.Simple3D.Precision3D As Precision3D
 
 Dim Checks As Number
 Dim Failures As Number
@@ -34,6 +35,9 @@ Sub RunTests()
     Dim FirstChecksum As Number
     Dim Initialized As Boolean
     Dim Index As Number
+    Dim FirstTrail As Lightning.WeaponTrail
+    Dim SecondTrail As Lightning.WeaponTrail
+    Dim TrailCount As Number
 
     Call Graphics3D.ResetRenderer3D()
 
@@ -61,6 +65,47 @@ Sub RunTests()
     Call Check(Graphics3D.LiveMaterialCount3D() = 4)
     Call Check(Graphics3D.LiveRibbonBatchCount3D() = 3)
     Call Check(Graphics3D.LiveParticleBatchCount3D() = 1)
+
+    FirstTrail = Lightning.CreateWeaponTrail()
+    SecondTrail = Lightning.CreateWeaponTrail()
+
+    Call Check(FirstTrail.Particles.Handle <> 0 And SecondTrail.Particles.Handle <> 0)
+    Call Check(FirstTrail.Particles.Handle <> SecondTrail.Particles.Handle)
+    Call Check(Lightning.UpdateWeaponTrail(FirstTrail,
+        Precision3D.Vector(-20.375, 60.125, 0.625),
+        Precision3D.Vector(20.375, 60.125, 0.625), 30, False, False))
+    Call Check(Lightning.UpdateWeaponTrail(SecondTrail,
+        Precision3D.Vector(80.375, 20.125, 0.625),
+        Precision3D.Vector(80.375, 100.125, 0.625), 30, False, False))
+    Call Check(Graphics3D.Begin3D(Camera, 0, 0, 0))
+    Call Check(Graphics3D.DrawGpuParticleSystem3D(FirstTrail.Particles))
+    Call Check(Graphics3D.DrawGpuParticleSystem3D(SecondTrail.Particles))
+    Call Check(Graphics3D.End3DChecked())
+
+    ''' Noise wrap must not reset the per-slot spawn generation.
+    FirstTrail.Serial = 99999
+    FirstTrail.Cursor = 0
+
+    Call Check(Lightning.UpdateWeaponTrail(FirstTrail,
+        Precision3D.Vector(-20.375, 60.125, 0.625),
+        Precision3D.Vector(20.375, 60.125, 0.625), 6, False, False))
+    Call Check(Graphics3D.GpuParticleValue3D(
+        Graphics3D.GPU_PARTICLE_QUERY_SLOT_SERIAL, FirstTrail.Particles.Handle, 1) = 2)
+
+    TrailCount = Graphics3D.GpuParticleValue3D(
+        Graphics3D.GPU_PARTICLE_QUERY_RESOURCE_ACTIVE, SecondTrail.Particles.Handle)
+
+    Call Check(TrailCount > 0)
+    Call Check(Lightning.UpdateWeaponTrail(SecondTrail,
+        Precision3D.Vector(280.375, 20.125, 0.625),
+        Precision3D.Vector(280.375, 100.125, 0.625), 100, False, True))
+    Call Check(Graphics3D.GpuParticleValue3D(
+        Graphics3D.GPU_PARTICLE_QUERY_RESOURCE_ACTIVE, SecondTrail.Particles.Handle) = TrailCount)
+    Call Lightning.DestroyWeaponTrail(FirstTrail)
+    Call Check(FirstTrail.Particles.Handle = 0)
+    Call Check(Graphics3D.GpuParticleValue3D(
+        Graphics3D.GPU_PARTICLE_QUERY_RESOURCE_ACTIVE, SecondTrail.Particles.Handle) = TrailCount)
+    Call Lightning.DestroyWeaponTrail(SecondTrail)
 
     Invalid = Lightning.StartAt("Unknown", Source, Target, 1)
 
@@ -176,7 +221,7 @@ Sub RunTests()
     Call Check(Not Lightning.IsActive(Pool[0]))
 
     Call Check(Lightning.Initialize("Assets/Lightning"))
-
+    Call TestEdgeContours(Camera)
     Call Lightning.Shutdown()
     Call Check(Lightning.Initialize("Assets/Lightning", 16384, Graphics3D.GPU_PARTICLE_SIMULATION_AUTO, 8192))
 
@@ -202,6 +247,40 @@ Sub RunTests()
     Call Lightning.Shutdown()
     Call Check(Graphics3D.LiveTextureCount3D() = 0)
     Call Check(Graphics3D.LiveMaterialCount3D() = 0)
+
+End Sub
+
+Sub TestEdgeContours(Camera As Core.Camera3D)
+
+    Dim Contour As Precision3D.Contour3D
+    Dim Effect As Lightning.LightningEffect
+
+    Contour.PointCount = 3
+    Contour.Points[0] = Precision3D.Vector(0.25, 30.125, 0.625)
+    Contour.Points[1] = Precision3D.Vector(40.25, 30.125, 0.625)
+    Contour.Points[2] = Precision3D.Vector(20.25, 70.125, 0.625)
+    Effect = Lightning.StartAtPrecise("StoredStorm", Contour.Points[0], Contour.Points[1], 52)
+
+    Call Check(Lightning.SetContourPrecise(Effect, Contour, 2, 900))
+    Call Check(Lightning.Value(Lightning.QUERY_CHAIN_TARGETS, Effect) = 2)
+    Call Check(Lightning.SetTravellingEdgePrecise(Effect, Contour, 0, 1000))
+    Call Check(Lightning.Value(Lightning.QUERY_CHAIN_TARGETS, Effect) = 0)
+    Call Check(Lightning.Value(Lightning.QUERY_MAIN_TARGET_X, Effect) = 10)
+    Call Check(Lightning.SetContourPrecise(Effect, Contour, 2, 900))
+    Call Check(Lightning.Update(50, Camera))
+    Call Check(Lightning.Value(Lightning.QUERY_PARTICLES, Effect) = 0)
+    Call Check(Graphics3D.Begin3D(Camera, 0, 0, 0))
+    Call Check(Lightning.DrawAll())
+    Call Check(Not Lightning.SetTravellingEdgePrecise(Effect, Contour, 260, 1000))
+    Call Check(Lightning.Value(Lightning.QUERY_LAST_ERROR, Effect) = Lightning.ERROR_IN_FLIGHT)
+    Call Check(Graphics3D.End3DChecked())
+
+    Contour.PointCount = 2
+
+    Call Check(Not Lightning.SetContourPrecise(Effect, Contour, 2, 900))
+    Call Check(Lightning.Value(Lightning.QUERY_LAST_ERROR, Effect) = Lightning.ERROR_INVALID_POSITION)
+    Call Check(Lightning.Value(Lightning.QUERY_CHAIN_TARGETS, Effect) = 2)
+    Call Check(Lightning.Destroy(Effect))
 
 End Sub
 

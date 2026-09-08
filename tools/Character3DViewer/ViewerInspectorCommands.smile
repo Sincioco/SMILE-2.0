@@ -327,6 +327,14 @@ Public Function ApplyPresentationAction(Action As Number,
         Call ViewerRendering.ToggleFloorReflections(Rendering)
     Else If Action = ViewerUi.INSPECTOR_ACTION_STORM_STYLE Then
         Call ViewerEffects.CycleStormStyle(Effects)
+    Else If Action = ViewerUi.INSPECTOR_ACTION_STORM_EQUIPMENT Then
+        Call ViewerEffects.CycleStormEquipment(Effects)
+    Else If Action = ViewerUi.INSPECTOR_ACTION_STORM_PAUSE Then
+        Call ViewerEffects.ToggleStormPause(Effects)
+    Else If (Action >= ViewerUi.INSPECTOR_ACTION_INTENSITY_BASE And
+        Action < ViewerUi.INSPECTOR_ACTION_INTENSITY_BASE + 8) Then
+        Call ViewerEffects.AdjustIntensity(Effects,
+            (Action - ViewerUi.INSPECTOR_ACTION_INTENSITY_BASE) / 2, Action Mod 2 = 1)
     Else If Action = ViewerUi.INSPECTOR_ACTION_SWORD_FIRE Then
         Call ViewerEffects.ToggleSwordFire(Effects)
     Else If Action = ViewerUi.INSPECTOR_ACTION_SHIELD_FIRE Then

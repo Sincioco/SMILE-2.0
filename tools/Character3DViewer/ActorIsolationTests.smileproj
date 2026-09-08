@@ -10,6 +10,7 @@
   <ItemGroup>
     <SmileSource Include="ActorIsolationTests.smile" StartupOnly="true" />
     <SmileSource Include="OrinStorm.smile" />
+    <SmileSource Include="..\..\games\SinStarI\SourceAssets\Characters\Tank\OrinV13\OrinEquipmentContours.smile" />
     <SmileSource Include="Profiles.smile" />
     <Model3DAsset Include="BuildAssets\OrinV13\orin-v1.3-animation-checkpoint.glb"
                   Descriptor="BuildAssets\OrinV13\OrinV13.sm3d.json"
@@ -21,6 +22,9 @@
     <Asset Include="Assets\Lightning\lightning-ribbon.png" />
     <Asset Include="Assets\Lightning\lightning-spark.png" />
     <Asset Include="Assets\Lightning\thunder.wav" />
+    <Asset Include="Assets\Fire\fire-shape-atlas.png" />
+    <Asset Include="Assets\Fire\smoke-shape-atlas.png" />
+    <Asset Include="Assets\Fire\ember-shape.png" />
     <SmileProjectReference Include="..\..\libraries\Smile.Simple3D\Smile.Simple3D.smilelibproj" />
   </ItemGroup>
 </SmileProject>

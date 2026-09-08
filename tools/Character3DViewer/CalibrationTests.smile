@@ -38,6 +38,7 @@ Session.ProfileIndex = ViewerProfiles.PROFILE_ARIN
 
 Call LoadViewer()
 Call CalibrationCheck(Session.Ready And Not Session.ViewerError, "Load profile")
+Call CheckEquipmentGlowAlignment()
 Call CalibrationCheck(Not Calibration.StorageRejected, "Accept current Arin saved calibration")
 Call CheckGizmoVisibility()
 Call CheckPackagedCalibration()
@@ -46,6 +47,7 @@ Call CalibrationCheck(Character3D.SocketCount(Character) = ActiveProfile.Expecte
 Call SelectCharacterTab(1)
 Call CalibrationCheck(Session.Ready And Not Session.ViewerError And Not Calibration.StorageRejected,
     "Orin loads with its canonical saved calibration")
+Call CheckEquipmentGlowAlignment()
 Call CheckPackagedCalibration()
 Call SelectCharacterTab(2)
 Call CalibrationCheck(Session.Ready And Not Session.ViewerError And Party.Ready,
@@ -974,6 +976,126 @@ Sub CheckPartyInspector()
     Call CalibrationCheck(ViewerCalibration.SavedJson(Calibration, Character) = SavedArinJson,
         "Companion and Dragon inspection never change Arin's saved keys")
     Call EndPartyInspector()
+
+End Sub
+
+Sub CheckEquipmentGlowAlignment()
+
+    Dim Model As Core.Model3D
+    Dim OriginalPosition As Precision3D.Vector3
+    Dim BladePoint As Precision3D.Vector3
+    Dim GlowPoint As Precision3D.Vector3
+    Dim BasePoint As Precision3D.Vector3
+    Dim TipPoint As Precision3D.Vector3
+    Dim Center As Precision3D.Vector3
+    Dim BaseGlow As Precision3D.Vector3
+    Dim TipGlow As Precision3D.Vector3
+    Dim SurfaceSpan As Double
+    Dim OutlineSpan As Double
+    Dim Socket As Number
+    Dim Pose As Number
+    Dim SocketName As Text
+    Dim ClipName As Text
+    Dim Ready As Boolean
+
+    Ready = Character3D.TryPosition(Character, OriginalPosition)
+    Model.Handle = Character3D.ModelHandle(Character)
+
+    For Pose = 0 To 2
+
+        If Pose = 0 Then
+            ClipName = "Idle"
+        Else If Pose = 1 Then
+            ClipName = "SwordAttack"
+        Else
+            ClipName = "Defend"
+        End If
+
+        Call SelectClip(Graphics3D.ModelClipIndex3D(Model, ClipName))
+
+        Ready = Character3D.SetAnimationTime(Character, 166 + Pose * 133) And Ready
+        Ready = Character3D.PlacePrecise(Character, OriginalPosition.X + 0.375,
+            OriginalPosition.Y + 0.125, OriginalPosition.Z + 0.625) And Ready
+
+        Call UpdateCalibrationForCurrentFrame()
+        Call ApplyWristCalibration()
+        Call ApplyEquipmentCoupling()
+
+        Ready = ViewerEffects.UpdateEpicGlow(Effects, Character, Session.ProfileIndex,
+            ViewerCameraState.Frame.ScalePercent, 0, ClipName, True, True,
+            ViewerCalibration.ChannelValue(Calibration, Playback.SelectedClip, 18) <> 0,
+            ViewerCalibration.ChannelValue(Calibration, Playback.SelectedClip, 19) <> 0) And Ready
+
+        ''' Exercise both shared styles on each real model, independent of its selected profile style.
+        Ready = ViewerEffects.ConfigureEquipmentGlow(Effects.SwordGlow,
+            Effects.ShieldGlow, ViewerProfiles.EQUIPMENT_GLOW_FIRE) And Ready
+        Ready = ViewerEffects.UpdateEquipmentGlow(Character, Effects.SwordGlow,
+            OriginalPosition, ViewerCameraState.Frame.ScalePercent) And Ready
+
+        Call ApplyEquipmentCalibration()
+
+        For Socket = 0 To 2
+
+            If Socket = 0 Then
+                SocketName = "HandRight"
+            Else If Socket = 1 Then
+                SocketName = "SwordBase"
+            Else
+                SocketName = "SwordTip"
+            End If
+
+            Ready = Character3D.TrySocketPositionPrecise(Character, SocketName, 1,
+                False, BladePoint) And Ready
+            Ready = Precision3D.TrySocketPosition(Effects.SwordGlow,
+                Graphics3D.ModelSocketIndex3D(Model, SocketName),
+                False, GlowPoint) And Ready
+
+            Call CalibrationCheck(Ready And Abs(BladePoint.X - GlowPoint.X) < 0.001 And
+                Abs(BladePoint.Y - GlowPoint.Y) < 0.001 And
+                Abs(BladePoint.Z - GlowPoint.Z) < 0.001,
+                "Surface coating matches calibrated equipment at fractional placement")
+
+            If Socket = 1 Then
+                BasePoint = BladePoint
+            Else If Socket = 2 Then
+                TipPoint = BladePoint
+            End If
+
+        End For
+
+        Center.X = (BasePoint.X + TipPoint.X) / 2.0
+        Center.Y = (BasePoint.Y + TipPoint.Y) / 2.0
+        Center.Z = (BasePoint.Z + TipPoint.Z) / 2.0
+        Ready = ViewerEffects.ConfigureEquipmentGlow(Effects.SwordGlow,
+            Effects.ShieldGlow, ViewerProfiles.EQUIPMENT_GLOW_LIGHTNING) And Ready
+        Ready = ViewerEffects.UpdateEquipmentGlow(Character, Effects.SwordGlow,
+            Center, ViewerCameraState.Frame.ScalePercent, True) And Ready
+
+        Call ApplyEquipmentCalibration()
+
+        Ready = Precision3D.TrySocketPosition(Effects.SwordGlow,
+            Graphics3D.ModelSocketIndex3D(Model, "SwordBase"), False, BaseGlow) And Ready
+        Ready = Precision3D.TrySocketPosition(Effects.SwordGlow,
+            Graphics3D.ModelSocketIndex3D(Model, "SwordTip"), False, TipGlow) And Ready
+        SurfaceSpan = (TipPoint.X - BasePoint.X) * (TipPoint.X - BasePoint.X)
+        SurfaceSpan = SurfaceSpan + (TipPoint.Y - BasePoint.Y) * (TipPoint.Y - BasePoint.Y)
+        SurfaceSpan = SurfaceSpan + (TipPoint.Z - BasePoint.Z) * (TipPoint.Z - BasePoint.Z)
+        OutlineSpan = (TipGlow.X - BaseGlow.X) * (TipGlow.X - BaseGlow.X)
+        OutlineSpan = OutlineSpan + (TipGlow.Y - BaseGlow.Y) * (TipGlow.Y - BaseGlow.Y)
+        OutlineSpan = OutlineSpan + (TipGlow.Z - BaseGlow.Z) * (TipGlow.Z - BaseGlow.Z)
+
+        Call CalibrationCheck(Ready And OutlineSpan > SurfaceSpan And
+            OutlineSpan < SurfaceSpan * 1.1,
+            "Lightning outline expands the same calibrated equipment on either character")
+    End For
+
+    Ready = Character3D.PlacePrecise(Character, OriginalPosition.X,
+        OriginalPosition.Y, OriginalPosition.Z) And Ready
+    Ready = ViewerEffects.ConfigureEquipmentGlow(Effects.SwordGlow, Effects.ShieldGlow,
+        ViewerProfiles.EquipmentGlowStyle(Session.ProfileIndex)) And Ready
+
+    Call SelectClip(0)
+    Call CalibrationCheck(Ready, "Glow alignment fixture restores actor placement")
 
 End Sub
 

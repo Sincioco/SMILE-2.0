@@ -146,3 +146,17 @@ and equipment remain unchanged.
 before/after hashes. The grounding report now measures JumpAttack at 30 Hz: the
 authored airborne launch remains visible and every impact/recovery sample measures
 at the same +0.003 model-unit sole height as Idle before the shared baseline.
+
+## Equipment appearance variants
+
+The Viewer retains Lightning and adds Blue Flame and Neon Arcs, selected by its
+VFX button. Blue Flame uses the shared fire family around the actual hammer-head
+outline; its default is 70% of Arin's sword emission following Sin's requested
+40% increase to the first experiment. The shield remains faint. Neon Arcs adds
+short travelling outer-edge bolts without stars. Weapon and Shield controls
+scale their own baseline from 0–200% for this session.
+
+OrinEquipmentContours.smile contains measured presentation geometry relative to
+the existing SwordBase socket in cooked SM3D coordinates. The socket generator
+owns its GLB-to-SM3D conversion. It neither modifies the model nor changes saved
+calibration fingerprints. Runtime contour operations are shared across weapons.

@@ -1,0 +1,26 @@
+''' Rigid head perimeter in cooked SM3D socket-local coordinates, relative to SwordBase.
+Module Smile.Assets.OrinV13Equipment
+
+Option Explicit
+
+Import Smile.Simple3D.Precision3D As Precision3D
+
+Public Function WeaponOutline() As Precision3D.Contour3D
+
+    Dim Result As Precision3D.Contour3D
+
+    Result.PointCount = 8
+    Result.Points[0] = Precision3D.Vector(0.15234375, -0.01043914, -0.25583267)
+    Result.Points[1] = Precision3D.Vector(0.13522302, -0.09440460, -0.22134193)
+    Result.Points[2] = Precision3D.Vector(0.09021898, -0.17507689, -0.21212527)
+    Result.Points[3] = Precision3D.Vector(0.06941041, -0.18716758, -0.20667961)
+    Result.Points[4] = Precision3D.Vector(0.03368193, -0.17719313, -0.29848081)
+    Result.Points[5] = Precision3D.Vector(0.03221348, -0.16423130, -0.30808526)
+    Result.Points[6] = Precision3D.Vector(0.09487277, -0.04442955, -0.33095801)
+    Result.Points[7] = Precision3D.Vector(0.12867969, -0.01229547, -0.30645683)
+
+    Return Result
+
+End Function
+
+End Module

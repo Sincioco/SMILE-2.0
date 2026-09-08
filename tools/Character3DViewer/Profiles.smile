@@ -12,6 +12,8 @@ Public Const PROFILE_TECHNICAL_ARTICULATED = 3
 Public Const PROFILE_ORIN = 4
 Public Const PROFILE_DRAGON = 5
 Public Const INCLUDE_DIAGNOSTIC_PROFILES = True
+Public Const EQUIPMENT_GLOW_FIRE = 0
+Public Const EQUIPMENT_GLOW_LIGHTNING = 1
 
 Public Function NextProfile(Current As Number) As Number
 
@@ -334,6 +336,20 @@ Public Function ClipName(ProfileIndex As Number, ClipIndex As Number) As Text
             Result = "RootMove"
         End If
 
+    End If
+
+    Return Result
+
+End Function
+
+Public Function EquipmentGlowStyle(ProfileIndex As Number) As Number
+
+    Dim Result As Number
+
+    Result = EQUIPMENT_GLOW_FIRE
+
+    If ProfileIndex = PROFILE_ORIN Then
+        Result = EQUIPMENT_GLOW_LIGHTNING
     End If
 
     Return Result

@@ -17,7 +17,8 @@ Private Dim Names[8] As Text
 Private Dim Clock As Number
 Private Dim Visible As Boolean
 
-Public Sub Update(Actor As Character3D.Actor, Camera As Precision3D.Camera3D, Elapsed As Number)
+Public Sub Update(Actor As Character3D.Actor, Camera As Precision3D.Camera3D, Elapsed As Number,
+    Optional Intensity As Number = 100)
 
     Dim Index As Number
     Dim Layer As Number
@@ -61,7 +62,7 @@ Public Sub Update(Actor As Character3D.Actor, Camera As Precision3D.Camera3D, El
     For Layer = 0 To 2
 
         Width = 1 + Layer * Layer
-        Opacity = 85 - Layer * 32
+        Opacity = Min(100, (85 - Layer * 32) * Max(0, Min(200, Intensity)) / 100)
 
         For Index = 0 To 8
 

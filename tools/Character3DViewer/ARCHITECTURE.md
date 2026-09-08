@@ -25,6 +25,19 @@ The shared precision and VFX fixtures cover camera acceptance, fractional stagin
 immutable capture and invalid writes. See `docs/libraries/precision3d-boundary.md`
 for units, exact narrowing points and retained Number compatibility.
 
+Equipment appearance is selected by `ViewerProfiles.EquipmentGlowStyle`, then
+applied by `ViewerEffects.ConfigureEquipmentGlow` for primary and borrowed Party
+equipment. Fire uses an aligned surface coating; Lightning uses a front-culled
+expanded outline. `UpdateEquipmentGlow` owns that transform policy and
+`ViewerCalibration` still applies the actor's saved equipment corrections.
+`CalibrationTests.CheckEquipmentGlowAlignment` exercises both styles on both real
+character models, across three calibrated poses and fractional actor placement.
+No character identity or special offset is needed in the shared rendering operation.
+`LightningVfx3D.WeaponTrail` owns bounded corona/trail emission from caller-supplied
+precise edge points. The existing Orin storm contexts own its lifecycle and forward
+hide/freeze/discontinuity decisions. Foundation tests cover independent arbitrary
+segments; the real two-actor fixture covers ownership and native/Web GPU fallback.
+
 The coordinator retains this dependency order:
 
 1. Read queued keyboard input, route commands, then route UI pointer ownership before
@@ -659,3 +672,27 @@ Three short maintenance routes define the desired end state:
   isolated storage fixture; UI consumes only the resulting status/Undo state.
 - Party timing: `ViewerParty` stage transition and actor snapshots, then
   `ViewerEffects` once-per-scene advancement; rendering only consumes snapshots.
+
+## Selectable equipment presentation
+
+- ViewerUi owns the three-style action and 0–200% Weapon/Shield controls;
+  InspectorCommands changes ViewerEffects' four session intensity values and
+  selected Orin style. InspectorPresentation only captures labels/values.
+- ViewerEffects routes the same preferences to the primary actor and Party;
+  OrinStorm contexts own two optional fire emitters and four idle neon effects.
+  Style transitions destroy only that context's old attached resources. Charge
+  and release retain their existing target/event/audio owners; returning to Blue
+  Flame idle explicitly clears charge ribbons.
+- Shared FireEmitter3D owns contour sampling, palette and world-space trails;
+  LightningVfx3D owns closed outlines and short travelling arcs. SceneVfx3D still
+  advances each family once. Precision3D borrows the existing socket matrix basis;
+  Character3D retains the same actor/part pools and calibrated transforms.
+- OrinV13/OrinEquipmentContours.smile is canonical measured presentation data,
+  linked into Viewer and focused fixtures. It is separate from the accepted
+  descriptor/cooked asset, preserving calibration fingerprints. The generator
+  explicitly matches the cooker's Z conversion.
+- Focused gates: FireEmitterTests (palette/contour/admission), Lightning foundation
+  (closed triangle/edge transition/no sparks/in-flight), ActorIsolationTests
+  (two actual actors, authored socket alignment, three styles, charge cleanup,
+  independent release and native/Web forced fallback), HardeningTests (command
+  routing and intensity bounds). Program.smile's coordinator is unchanged.

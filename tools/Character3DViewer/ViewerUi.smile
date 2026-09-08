@@ -107,6 +107,9 @@ Public Const INSPECTOR_ACTION_RESTART_PRESENTATION = 32
 Public Const INSPECTOR_ACTION_RESET_ALL = 33
 Public Const INSPECTOR_ACTION_FIT = 34
 Public Const INSPECTOR_ACTION_FLOOR_REFLECTIONS = 35
+Public Const INSPECTOR_ACTION_STORM_EQUIPMENT = 36
+Public Const INSPECTOR_ACTION_STORM_PAUSE = 37
+Public Const INSPECTOR_ACTION_INTENSITY_BASE = 40
 Public Const INSPECTOR_ACTION_CLIP_BASE = 100
 Public Const SLIDER_ACTION_NONE = 0
 Public Const SLIDER_ACTION_HORIZONTAL_ORBIT = 1
@@ -116,7 +119,7 @@ Public Const SLIDER_ACTION_CALIBRATION = 4
 
 Private Const MINIMUM_VIEWER_WIDTH = 800
 Private Const MINIMUM_VIEWER_HEIGHT = 540
-Private Const ANIMATION_DETAILS_Y = 530
+Private Const ANIMATION_DETAILS_Y = 558
 Private Const ANIMATION_DETAILS_MINIMUM_HEIGHT = 780
 
 Public Type State
@@ -962,6 +965,11 @@ Public Function InspectorActionAtPointer(
 
         Result = INSPECTOR_ACTION_DEMO
 
+    Else If ((ProfileIndex = ViewerProfiles.PROFILE_ARIN Or ProfileIndex = ViewerProfiles.PROFILE_ORIN) And
+        InRectangle(PointerX, PointerY, PanelLeft + 12, 422, 240, 18)) Then
+
+        Result = IntensityActionAtPointer(PointerX - PanelLeft, ProfileIndex)
+
     Else If InRectangle(PointerX, PointerY, PanelLeft + 12, 444, 78, 22) Then
 
         Result = INSPECTOR_ACTION_FLOOR
@@ -994,7 +1002,7 @@ Public Function InspectorActionAtPointer(
     Else If (ProfileIndex = ViewerProfiles.PROFILE_ORIN And
         InRectangle(PointerX, PointerY, PanelLeft + 144, 470, 108, 20)) Then
 
-        Result = INSPECTOR_ACTION_LIGHTNING_PAUSE
+        Result = INSPECTOR_ACTION_STORM_PAUSE
 
     Else If (SwordFireReady And
         InRectangle(PointerX, PointerY, PanelLeft + 12, 470, 128, 20)) Then
@@ -1005,6 +1013,11 @@ Public Function InspectorActionAtPointer(
         InRectangle(PointerX, PointerY, PanelLeft + 144, 470, 108, 20)) Then
 
         Result = INSPECTOR_ACTION_SHIELD_FIRE_STYLE
+
+    Else If (ProfileIndex = ViewerProfiles.PROFILE_ORIN And
+        InRectangle(PointerX, PointerY, PanelLeft + 12, 522, 240, 22)) Then
+
+        Result = INSPECTOR_ACTION_STORM_EQUIPMENT
 
     Else If InRectangle(PointerX, PointerY, PanelLeft + 12, 496, 240, 22) Then
 
@@ -1281,12 +1294,19 @@ Public Sub DrawProfileEffectControls(
     FlamePlaybackLabel As Text,
     FlamePlaying As Boolean,
     ShieldFireStyleLabel As Text,
-    ShieldFlameStyle As Boolean
+    ShieldFlameStyle As Boolean,
+    Optional StormEquipmentLabel As Text = "VFX: Lightning",
+    Optional WeaponIntensity As Number = 100,
+    Optional ShieldIntensity As Number = 100
 )
 
     Dim PanelLeft As Number
 
     PanelLeft = StatusPanelX(WindowWidth)
+
+    If ProfileIndex = ViewerProfiles.PROFILE_ARIN Or ProfileIndex = ViewerProfiles.PROFILE_ORIN Then
+        Call DrawIntensityControls(PanelLeft, WeaponIntensity, ShieldIntensity)
+    End If
 
     Call UI.DrawButton(PanelLeft + 12, 444, 78, 22, "Floor/Grid", FloorOrGridVisible)
 
@@ -1297,6 +1317,7 @@ Public Sub DrawProfileEffectControls(
 
     Else If ProfileIndex = ViewerProfiles.PROFILE_ORIN Then
 
+        Call UI.DrawButton(PanelLeft + 12, 522, 240, 22, StormEquipmentLabel, True)
         Call UI.DrawButton(PanelLeft + 94, 444, 158, 22, StormStyleLabel, True)
         Call UI.DrawButton(PanelLeft + 12, 470, 128, 20, StormComfortLabel, True)
         Call UI.DrawButton(PanelLeft + 144, 470, 108, 20,
@@ -1865,5 +1886,47 @@ Private Function InRectangle(PointerX As Number, PointerY As Number,
     Return Result
 
 End Function
+
+Private Function IntensityActionAtPointer(PanelX As Number, Profile As Number) As Number
+
+    Dim Result As Number
+    Dim Base As Number
+
+    Base = INSPECTOR_ACTION_INTENSITY_BASE
+
+    If Profile = ViewerProfiles.PROFILE_ORIN Then
+        Base = Base + 4
+    End If
+
+    If PanelX >= 12 And PanelX < 30 Then
+        Result = Base
+    Else If PanelX >= 110 And PanelX < 128 Then
+        Result = Base + 1
+    Else If PanelX >= 136 And PanelX < 154 Then
+        Result = Base + 2
+    Else If PanelX >= 234 And PanelX < 252 Then
+        Result = Base + 3
+    End If
+
+    Return Result
+
+End Function
+
+Private Sub DrawIntensityControls(PanelLeft As Number, Weapon As Number, Shield As Number)
+
+    Dim WeaponLabel As Text
+    Dim ShieldLabel As Text
+
+    WeaponLabel = "Weapon " + ViewerCalibration.NumberText(Weapon) + "%"
+    ShieldLabel = "Shield " + ViewerCalibration.NumberText(Shield) + "%"
+
+    Call UI.DrawButton(PanelLeft + 12, 422, 18, 18, "-", False)
+    Call UI.DrawButton(PanelLeft + 30, 422, 80, 18, WeaponLabel, True)
+    Call UI.DrawButton(PanelLeft + 110, 422, 18, 18, "+", False)
+    Call UI.DrawButton(PanelLeft + 136, 422, 18, 18, "-", False)
+    Call UI.DrawButton(PanelLeft + 154, 422, 80, 18, ShieldLabel, True)
+    Call UI.DrawButton(PanelLeft + 234, 422, 18, 18, "+", False)
+
+End Sub
 
 End Module

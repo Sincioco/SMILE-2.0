@@ -95,3 +95,46 @@ The keyword-shaped handoff names `Load`, `Play`, `Stop`, and `End` are reserved 
 Character3D transform changes are transactional across every model part. World position is bounded to +/-1,000,000, rotation input is bounded and normalized to 0-359 degrees, and scale is 1-25,000 percent. The extended scale range lets meter-scale imported characters use a larger integer-world scene for smooth camera motion and match established world-scale actors. Advanced part/model/animator handles are borrowed read-only values; destroying them deliberately is treated as external tampering and quarantines only the affected actor or asset.
 
 Low quality keeps the exact direct-LDR renderer and disables M5 shadow/bloom work. Medium enables a 1024 shadow, HDR tone mapping, and quarter-resolution bloom. High enables a 2048 shadow and half-resolution two-cycle bloom. `Scene3D.FallbackFlags()` reports independent effective downgrades, while `Character3D.SetShadows` applies cast/receive policy to every actor part transactionally. See [Renderer3DPostProcessingLab](../../examples/Renderer3DPostProcessingLab/README.md) for the native/Web controls and live M5 diagnostics.
+# Lightning weapon corona and trail
+
+`LightningVfx3D.CreateWeaponTrail` creates a caller-owned `WeaponTrail` using the
+existing shared spark material and renderer particle admission. Call
+`UpdateWeaponTrail(Trail, StartPoint, EndPoint, Elapsed, MotionPaused, Paused)` with
+two precise weapon-edge points. It has no character, socket, animation or target
+identity dependency. The points determine particle size within bounded limits;
+time-based corona emission and swept motion samples leave a fading world-space trail.
+Motion pause rebases attachment history while the aura continues. Effect pause
+freezes emission/aging; callers clear `HasPrevious` after a seek or other discontinuity.
+Draw `Trail.Particles` with `Graphics3D.DrawGpuParticleSystem3D`. Destroy the trail
+with `DestroyWeaponTrail` on hide/release and before `LightningVfx3D.Shutdown`.
+Each trail retains the existing 1,024-particle limit and Auto simulation fallback;
+it creates no renderer, scene clock or global actor ownership.
+
+## Closed equipment outlines and blue-white fire
+
+`Precision3D.Contour3D` is caller-owned data: 3–16 ordered points including an
+implicit closing edge. `ContourLength` validates bounded, nonzero edges;
+`TryContourPoint` samples by arc length and never crosses the enclosed face.
+`Character3D.TrySocketContourPrecise` transforms cooked SM3D socket-local points
+through the existing calibrated part/animator matrix. Convert external glTF Z
+coordinates at the asset boundary, just as the normal cooker does. The existing
+pose and model are not rewritten. Final GPU matrix precision remains float32.
+
+`FireEmitter3D.SetContourPrecise` copies a valid 4–10,000-unit perimeter before
+emission. Moving the contour leaves existing particles in world space, producing
+a trail. SetSegment/SetPosition clear contour mode. `SetPalette` selects Fire
+or BlueWhite, defaulting to Fire; both native/Web thermal shaders and the CPU
+fallback use the same palette choice. All mutations reject in-flight changes.
+Intensity is clamped to 0–400; seven admitted emitters share the unchanged
+renderer limits. The current scene uses four Arin, two Orin and one Dragon slot.
+Capacity pressure still follows the normal CPU fallback/drop policy; intensity
+is an emission setting rather than a promise of unlimited particles.
+
+`LightningVfx3D.SetContourPrecise` draws up to eight closed edge points with no
+branches, jitter or sparks. `SetTravellingEdgePrecise` creates a short jagged arc
+just outside one edge span; it clears previous chain targets and emits no star
+particles. Contours share corner vertices and wrap the closing tangent. Short arcs
+use four segments and fractional ribbon widths so they stay distinct from the rim.
+Small displacement retains fractions, and zero jitter remains zero through every
+subdivision. Both use the same existing ribbon renderer and caller-owned effect.
+No character or weapon type is encoded in these shared operations.

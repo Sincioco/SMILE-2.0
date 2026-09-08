@@ -81,6 +81,46 @@ head_projection = (head - head_center) @ head_axis
 for name, point in [('HammerHead', head_center), ('HammerLeft', head_center + head_axis * head_projection.min()),
                     ('HammerRight', head_center + head_axis * head_projection.max())]:
     descriptor['sockets'][name] = {'node': 'R_Hand', 'translation': np.round(point, 8).tolist()}
+# The reusable renderer consumes WeaponRim points, never a hammer-specific shape.
+# This package authors that contour from the actual rigid hammer-head vertices.
+weapon_projected = (head - head_center) @ head_axes[:2].T
+weapon_order = sorted(range(len(head)), key=lambda i: tuple(weapon_projected[i]))
+
+
+def weapon_cross(a, b, c):
+    u, v = weapon_projected[b] - weapon_projected[a], weapon_projected[c] - weapon_projected[a]
+    return u[0] * v[1] - u[1] * v[0]
+
+
+weapon_halves = []
+for sequence in (weapon_order, weapon_order[::-1]):
+    half = []
+    for i in sequence:
+        while len(half) >= 2 and weapon_cross(half[-2], half[-1], i) <= 0:
+            half.pop()
+        half.append(i)
+    weapon_halves.append(half[:-1])
+weapon_hull = weapon_halves[0] + weapon_halves[1]
+while len(weapon_hull) > 8:
+    remove = min(range(len(weapon_hull)), key=lambda i: abs(weapon_cross(
+        weapon_hull[i - 1], weapon_hull[i], weapon_hull[(i + 1) % len(weapon_hull)])))
+    weapon_hull.pop(remove)
+assert len(weapon_hull) == 8, 'Review the authored weapon perimeter if its topology changes.'
+lines = [
+    "''' Rigid head perimeter in cooked SM3D socket-local coordinates, relative to SwordBase.",
+    'Module Smile.Assets.OrinV13Equipment', '', 'Option Explicit', '',
+    'Import Smile.Simple3D.Precision3D As Precision3D', '',
+    'Public Function WeaponOutline() As Precision3D.Contour3D', '',
+    '    Dim Result As Precision3D.Contour3D', '', '    Result.PointCount = 8']
+for i, vertex in enumerate(weapon_hull):
+    point = head[vertex] - grip
+    # Match Sm3dAnimationV2.ToAnimationTranslation at the asset boundary.
+    point[2] = -point[2]
+    values = ', '.join(f'{value:.8f}' for value in point)
+    lines.append(f'    Result.Points[{i}] = Precision3D.Vector({values})')
+lines += ['', '    Return Result', '', 'End Function', '', 'End Module', '']
+(PACKAGE / 'OrinEquipmentContours.smile').write_text('\n'.join(lines))
+
 descriptor_path.write_text(json.dumps(descriptor, indent=2) + '\n')
 print(json.dumps({'socketCount': len(descriptor['sockets']), 'rim': [shield[i].tolist() for i in hull],
                   'head': head_center.tolist()}, indent=2))

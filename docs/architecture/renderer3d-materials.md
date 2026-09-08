@@ -38,6 +38,21 @@ Blend submission order is caller order. Draw opaque and masked objects first, th
 
 PBR and simple materials use separate built-in shader pipelines but share objects, meshes, camera, depth, animation palettes, and frame lifecycle. Imported M3 animation uses the same four joint/weight influences in both pipelines: Direct3D reads the 128-matrix b1 palette and WebGL2 fetches the shared RGBA32F 4-by-128 palette texture. Palette uploads are cached by animator/revision. PBR shader creation has a cached not-attempted/available/unavailable state and is attempted at most once per graphics-device/context generation. A PBR compile failure sets stable Renderer3D error 44 and leaves the simple pipeline available without per-frame retries. Reset or device/context restoration starts a new generation; retained image/material/model metadata lazily recreates GPU objects.
 
+## Additive mesh surface coatings
+
+Simple materials using `MATERIAL_ALPHA_ADDITIVE` read depth with less-or-equal
+comparison on native and Web, without writing depth. Submit the opaque equipment
+first, then its coating with identical mesh, animation palette, node corrections
+and transform. Equal surface fragments can add light; fragments behind the opaque
+surface remain occluded. Web restores strict less-than comparison after the draw.
+Ordinary opaque, masked and alpha-blended meshes retain their existing depth rules.
+
+Do not enlarge a complete weapon mesh to create a surface coating: scaling around
+a center can intersect concave blade/guard shapes and expose a hard cross-section.
+An expanded, front-culled silhouette outline is a separate use of the same material
+system. This contract is independent of character identity and uses the existing
+renderer, object ownership and float32 GPU precision.
+
 ## M5 linear color and shadow contract
 
 Direct LDR preserves the pre-M5 simple and PBR output exactly. When HDR is effective, both pipelines write unclamped linear color to the float scene target. The final pass applies exposure, the fitted ACES equation `clamp((x * (2.51x + 0.03)) / (x * (2.43x + 0.59) + 0.14), 0, 1)`, and one sRGB encode. Renderer2D is drawn afterward and is never tone mapped or bloomed.

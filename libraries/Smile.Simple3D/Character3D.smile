@@ -2359,6 +2359,43 @@ Public Function TrySocketPositionPrecise(Value As Actor, Name As Text,
 
 End Function
 
+Public Function TrySocketContourPrecise(Value As Actor, Name As Text,
+    ReferencePartIndex As Number, LocalContour As Precision3D.Contour3D,
+    ByRef WorldContour As Precision3D.Contour3D) As Boolean
+
+    Dim Slot As Number
+    Dim SocketIndex As Number
+    Dim Valid As Boolean
+
+    Slot = ActorSlot(Value)
+
+    If Slot < 0 Then
+        Return False
+    End If
+
+    If ReferencePartIndex < 0 Or ReferencePartIndex >= ActorPartCounts[Slot] Then
+        Call SetActorFailure(Slot, CHARACTER_ERROR_INVALID_PART, 0)
+
+        Return False
+    End If
+
+    SocketIndex = Graphics3D.ModelSocketIndex3D(AssetModels[ActorAssetSlot[Slot]], Name)
+
+    If SocketIndex < 0 Then
+        Return False
+    End If
+
+    Valid = Precision3D.TrySocketContour(ActorParts[Slot, ReferencePartIndex], SocketIndex,
+        LocalContour, WorldContour)
+
+    If Not Valid Then
+        Call SetActorFailure(Slot, CHARACTER_ERROR_SOCKET_NOT_FOUND, Graphics3D.LastError())
+    End If
+
+    Return Valid
+
+End Function
+
 Public Function SocketPosition(
     Value As Actor,
     Name As Text,

@@ -15,6 +15,7 @@
     <SmileSource Include="Program.smile" StartupOnly="true" />
     <SmileSource Include="Profiles.smile" />
     <SmileSource Include="OrinStorm.smile" />
+    <SmileSource Include="..\..\games\SinStarI\SourceAssets\Characters\Tank\OrinV13\OrinEquipmentContours.smile" />
     <SmileSource Include="ArinShieldRim.smile" />
     <SmileSource Include="BattleAudio.smile" />
     <SmileSource Include="BattleCamera.smile" />

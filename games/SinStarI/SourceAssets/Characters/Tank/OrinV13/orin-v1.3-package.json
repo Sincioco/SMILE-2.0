@@ -50,7 +50,17 @@
     "chargeRange": [
       0,
       1000
-    ]
+    ],
+    "equipmentStyles": [
+      "Lightning",
+      "Blue Flame",
+      "Neon Arcs"
+    ],
+    "defaultEquipmentStyle": "Blue Flame",
+    "weaponContour": "OrinEquipmentContours.smile",
+    "contourCoordinates": "Cooked SM3D socket-local, relative to existing SwordBase; glTF Z converted by generator",
+    "blueFlameWeaponPercentOfArin": 70,
+    "intensityControls": "Independent weapon/shield 0-200 percent of style baseline; session only"
   },
   "workflowHandoff": "ORIN-CREATION-AND-REPAIR-JOURNEY.md",
   "build": {

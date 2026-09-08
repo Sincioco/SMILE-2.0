@@ -14,8 +14,8 @@
     "socketNamesSha256": "5f2c3a617f331afff81f49310abba9c3570f8c80f505a34396f9d99412cf1871"
   },
   "savedKeyframe": {
-    "clipIndex": 1,
-    "clipName": "Death",
+    "clipIndex": 2,
+    "clipName": "Defend",
     "frame": 0
   },
   "totalKeyframes": 24,
@@ -139,15 +139,15 @@
             ]
           },
           "sword": {
-            "decoupled": false,
+            "decoupled": true,
             "rotation": [
-              0,
-              -37,
-              115
+              5,
+              84,
+              19
             ],
             "position": [
-              5,
               -2,
+              0,
               0
             ]
           },
