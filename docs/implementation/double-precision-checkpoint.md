@@ -2,6 +2,16 @@
 
 ## Authority and reconciled baseline
 
+- Current closeout: `smile-2.0-double-closeout-review`, revision 1; numbered documents
+  00–03 read in order. Archive SHA-256
+  `5E47D16DDBD3CD5F984F685A19928A13D3227CE8B62D7517D068C86E7428EDE9`;
+  identity, reviewed commit and all eight manifest lengths/hashes verified before
+  safe extraction under `C:/Users/louie/Downloads/smile-double-closeout-review-verified`.
+  Reconciled once for closeout: clean main, HEAD = fetched origin/main =
+  `d84ffdc489839ca77cda5bcba73281e366a63e1a`; reviewed `6ef99c5` is an ancestor.
+  Newer `8a308f9`/`d84ffdc` change only this checkpoint. Preserve their human acceptance
+  evidence; the explicit target-by-target checklist below supersedes their broad
+  completion disposition. No implementation or refactor phase is restarted.
 - Package `smile-2.0-hardening-then-double`, revision 1; documents 00–07 read in order.
 - Downloads archive `2026-09-08-0837-smile-2.0-hardening-then-double.zip`:
   SHA-256 `4C9D7986DF6962DFE58F7D65ED4182688DC82D142141753E1CD5610EF74132BB`.
@@ -19,8 +29,8 @@
 | P0 | Validated and pushed `9f33ad9` before Double | ViewerUi/preview labels; existing Web reflection allocation/filter owner |
 | D1 | Implemented and pushed `40c183d`; final integration repairs included below | Shared DoubleSemantics, native MasmDoubleEmitter/numeric runtime, Web Double.js, package schema 7, shared editor/debug facts |
 | D2 | Validated and pushed `c310b7a` | Precision3D/PrecisionMath3D; same renderer translation unit, Scene3D lifecycle and Character3D actor pool |
-| D3 | Implementation pushed `761b7a2`; focused gates pass; Sin accepted desktop and Web after testing both | PrecisionCamera3D, ViewerCamera/Party/Actors/calibration/effects, Sin Star I preview, shared curve slice |
-| D4 | Complete: delivery/repairs validated and pushed `6ef99c5`; Sin accepted desktop/Web and confirmed audible native Party SFX | Final compiler/runtime/VSIX 2.0.61; shared Web post shader and native debug snapshots |
+| D3 | Implementation pushed `761b7a2`; focused gates and general user acceptance retained; explicit camera observations below pending | PrecisionCamera3D, ViewerCamera/Party/Actors/calibration/effects, Sin Star I preview, shared curve slice |
+| D4 | Delivery/repairs validated and pushed `6ef99c5`; native SFX accepted; explicit Chrome SFX and hover observations below pending | Final compiler/runtime/VSIX 2.0.61; shared Web post shader and native debug snapshots |
 
 Source milestone `761b7a2fb906a5fa19b548bbd77390da0bdaf765`, checkpoint `8d946c8`,
 and acceptance repairs `6ef99c58b6149b7d98263e0436b5db62cc8c2d03` were pushed
@@ -28,7 +38,7 @@ normally to origin/main and read back. The repairs below refresh their affected
 payloads and preserve all earlier source work. This acceptance update changes only
 the checkpoint; unchanged source/artifact, smoke and installed-payload evidence is reused.
 Desktop/Web acceptance was published as `8a308f92ddb1404552e5450958000e78185257e2`.
-The subsequent explicit audio confirmation below closes the last required gate.
+The subsequent explicit audio confirmation below closes the native audible-SFX gate.
 
 Detailed unchanged P0/D1/D2 evidence, including historical source/artifact hashes,
 remains in this same file's committed versions at `9f33ad9`, `40c183d` and `c310b7a`
@@ -176,7 +186,7 @@ one current checkpoint, not a replacement investigation or parallel ledger.
 | `artifacts/web/PrecisionCurve3D/game.js` | `74162DEA9B6FB34426F87A7F65715AF7089692A2068704BDDEA660A954308173` |
 | `libraries/Smile.Simple3D/bin/Release/Smile.Simple3D.smilelib` | `6FAFC366640420ACB866BB4F181CBE13D8036E5D2068685B584FB3FE1C0DC107` |
 
-## User acceptance and completion
+## Closeout acceptance and next action
 
 Native Windows control is available through the installed computer-use tool. Sin's
 Any App setting was already correct; the earlier browser-only tool limitation was
@@ -198,18 +208,38 @@ not a missing permission. No further settings toggle or Double authorization is 
   Space/D, scrub and reset respond. The corrected Web scene/floor is upright.
   Chrome Sin Star I and shared curve visual evidence remains valid.
 - Sin subsequently confirmed: "I've tested both the desktop and web version and
-  they both look good to me". Record this as user acceptance of desktop/Web visuals
-  and interaction; the pending visual acceptance is closed.
-- The tooling gate is covered by shared Quick Info/editor tests and actual VS typed
-  Watch/source stepping. A separate mouse-hover observation is not claimed.
+  they both look good to me". Preserve this general desktop/Web acceptance; it does
+  not itemize the closeout package's precise camera gestures or hover observations.
+- Shared Quick Info/editor tests and actual VS typed Watch/source stepping remain
+  valid evidence. They are not relabeled as mouse-hover or paused DataTip observations.
 - Sin also answered the focused desktop Party attack/impact SFX question:
   "Yes, the sound effects are audible". This is the human audible evidence required
   by document 07, separate from successful audio initialization and visual acceptance.
 
-P0 and D1–D4 are complete: implementation, selected production adoption, validation,
-publication, required VSIX installation and user acceptance are recorded above.
-Remaining work in this package: none. Next action: STOP as instructed. Preserve the
-unchanged build/test/install evidence and do not start unrelated or held features.
+Closeout C01: root task routing now links this checkpoint and the precise boundary,
+retains the completed refactor prerequisite, and preserves held features. Documentation
+only: scoped diff/link checks; no source/asset/calibration/build/install changes.
+
+Current capability discovery: native Windows control works. Its documented drag has
+no button/duration option, and the tool has no hover action or audio feed. Installed
+Chrome is available. No settings change is requested; Sin will supply the unavailable
+observations one short check at a time while the applicable app is foreground.
+
+| Required observation | State / evidence source |
+|---|---|
+| Native Viewer: slow/moderate horizontal/vertical middle orbit and pan; release/reset | NOT OBSERVED in that explicit form; pending human result |
+| Foreground Chrome Viewer: same gestures/release/reset | NOT OBSERVED in that explicit form; pending human result |
+| Native Sin Star I Battle preview: same gestures/release | NOT OBSERVED in that explicit form; pending human result |
+| Foreground Chrome Battle preview: same gestures/release | NOT OBSERVED in that explicit form; pending human result |
+| Native Viewer Party attack/impact SFX | PASS — Sin explicitly confirmed audibility above; reuse unchanged artifact |
+| Foreground Chrome Viewer Party SFX | NOT OBSERVED — prior audible reply named the desktop target |
+| Installed VS Double scalar/array/field hover | NOT OBSERVED — static Quick Info and paused debugger DataTip must be distinguished |
+
+Next action after publishing C01: verify the specific unchanged application/extension
+identities once, then guide the native Viewer camera check and request Sin's result.
+Reuse prior numeric/rendering/build/smoke/VSIX evidence; no new production defect is
+identified. Close D3/D4 only after the required observations and any triggered fixes
+pass, then STOP. Do not start unrelated or held features.
 
 ## On Hold
 
