@@ -29,8 +29,8 @@
 | P0 | Validated and pushed `9f33ad9` before Double | ViewerUi/preview labels; existing Web reflection allocation/filter owner |
 | D1 | Implemented and pushed `40c183d`; final integration repairs included below | Shared DoubleSemantics, native MasmDoubleEmitter/numeric runtime, Web Double.js, package schema 7, shared editor/debug facts |
 | D2 | Validated and pushed `c310b7a` | Precision3D/PrecisionMath3D; same renderer translation unit, Scene3D lifecycle and Character3D actor pool |
-| D3 | Implementation pushed `761b7a2`; focused gates and general user acceptance retained; explicit camera observations below pending | PrecisionCamera3D, ViewerCamera/Party/Actors/calibration/effects, Sin Star I preview, shared curve slice |
-| D4 | Delivery/repairs validated and pushed `6ef99c5`; native/Chrome SFX accepted; preview gestures and hover observations below pending | Final compiler/runtime/VSIX 2.0.61; shared Web post shader and native debug snapshots |
+| D3 | Implementation pushed `761b7a2`; focused gates retained; all native/Chrome Viewer and preview camera observations below accepted by Sin | PrecisionCamera3D, ViewerCamera/Party/Actors/calibration/effects, Sin Star I preview, shared curve slice |
+| D4 | Delivery/repairs validated and pushed `6ef99c5`; all required native/Chrome gesture/SFX and installed VS hover observations below accepted by Sin | Final compiler/runtime/VSIX 2.0.61; shared Web post shader and native debug snapshots |
 
 Source milestone `761b7a2fb906a5fa19b548bbd77390da0bdaf765`, checkpoint `8d946c8`,
 and acceptance repairs `6ef99c58b6149b7d98263e0436b5db62cc8c2d03` were pushed
@@ -165,7 +165,7 @@ one current checkpoint, not a replacement investigation or parallel ledger.
   Models, descriptors and animations are unchanged. Sin separately authored the new
   Defend frame-0 sword correction; it remains integral and is included in native/Web defaults.
 
-| Current source/artifact (unchanged evidence retained) | SHA-256 |
+| Retained Double/earlier VFX source/artifact (later milestones below supersede changed entries) | SHA-256 |
 |---|---|
 | `tools/Character3DViewer/ViewerEffects.smile` | `B234833F0566389E79066822E5C4DA64D7A9399C0F0BB106D1AA960283022076` |
 | `tools/Character3DViewer/OrinStorm.smile` | `05A9E46FEDFD3084552CF569CF68B1AEBC4A983BDFFED474D511394391BE64AF` |
@@ -234,11 +234,25 @@ observations one short check at a time while the applicable app is foreground.
 |---|---|
 | Native Viewer: slow/moderate horizontal/vertical middle orbit and pan; release/reset | PASS — Sin answered the explicit native check: "Yes, all pass" |
 | Foreground Chrome Viewer: same gestures/release/reset | PASS — Sin answered the explicit slow/moderate horizontal/vertical middle-orbit, left-pan, release and right-reset check: "Yes, all pass" |
-| Native Sin Star I Battle preview: same gestures/release | NOT OBSERVED in that explicit form; pending human result |
-| Foreground Chrome Battle preview: same gestures/release | NOT OBSERVED in that explicit form; pending human result |
+| Native Sin Star I Battle preview: same gestures/release | PASS — Sin answered the explicit slow/moderate horizontal/vertical middle orbit and left-pan check: "Yes, all pass"; the preview's intentional smooth return after release was clarified |
+| Foreground Chrome Battle preview: same gestures/release | PASS — Sin selected the real Sin Star I tab and answered the explicit slow/moderate horizontal/vertical middle orbit, left-pan and smooth return check: "Yes, all pass" |
 | Native Viewer Party attack/impact SFX | PASS — Sin explicitly confirmed audibility above; audio code/cues unchanged by the bounded VFX fix |
 | Foreground Chrome Viewer Party SFX | PASS — Sin answered the focused foreground Chrome attack/impact audio check: "Yes, both are audible" |
-| Installed VS Double scalar/array/field hover | NOT OBSERVED — static Quick Info and paused debugger DataTip must be distinguished |
+| Installed VS static Quick Info: Double scalar/array | PASS — Sin hovered PositionX at line 71 and Values at line 56 in examples/DoubleTests/Program.smile and confirmed both correct Double types; tool capture also shows Dim PositionX As Double |
+| Installed VS static Quick Info: record/class Double fields | PASS — Sin hovered Values in Original.Values[0] / FirstBox.Values[0] at lines 99–100 and confirmed both Double arrays |
+| Installed VS paused debugger DataTip: Double array/record/class field values | PASS — paused at line 102, Sin's final corrected observation confirms Values[0] = 0.375, Original.Values[0] = 0.375 and FirstBox.Values[0] = 0.625 at lines 98–100 |
+| Installed VS paused debugger DataTip: Double scalar value | PASS — after requesting the question again because of a misclick, Sin explicitly reconfirmed: "Yes, PositionX shows 0.002" at line 71 while paused |
+
+Final hover acceptance uses the unchanged DoubleTestsFinalDebug EXE/PDB hashes above
+and the current 35-payload-verified VSIX installation listed in the floor milestone.
+Sin briefly reported all three array/field values as 0.375, then corrected that report:
+the observed values were 0.375 / 0.375 / 0.625. His final correction supersedes the
+provisional failure; no new defect or production patch is claimed from that report.
+Actual tool captures `vfx-closeout-evidence/vs-double-static-scalar.jpg` and
+`vs-double-paused-array.jpg` supplement his observations; they do not independently
+prove all three field values. No property getter was requested or evaluated for hover.
+All required D3/D4 human observations are accepted as of September 9, 2026. This checkpoint update
+changes documentation only; reuse the validated builds, smoke and installed payloads.
 
 Closeout C01 published as `7b82468`; the listed unchanged application/extension
 identities were verified once. Sin then requested two bounded Viewer VFX corrections:
@@ -321,8 +335,8 @@ Focused VFX validation and delivery:
   reported a missing foreground process ID, but worked again on the final native
   Viewer. No settings toggle or permission workaround. Human audio/gesture/hover
   observations remain distinct from tool rendering checks.
-- Sin went outside and requested autonomous progress. Native/Chrome preview gestures
-  and VS hover remain pending; no more human checks are requested while he is away.
+- At that milestone Sin went outside and requested autonomous progress. Native/Chrome
+  preview gestures and VS hover were pending; no human checks were requested while away.
   The task-owned Sin Star I preview closed normally at his request so it no longer
   obstructs the stream; Character Viewer returned to the foreground.
 
@@ -338,7 +352,7 @@ calibration identity, model or animation was replaced; Program.smile is unchange
 Detailed owners, source fixes, native/Web tests, installation hashes and screenshots
 are preserved in this same checkpoint at `f5f4186`. Their unchanged evidence is reused.
 
-## Arena VFX reflections — validated delivery
+## Arena VFX reflections — published `c7f8f07`
 
 Sin re-authorized floor VFX reflections after the equipment milestone and requested
 a separate default-on toggle. Shared Graphics3D/Arena3D now accept optional IncludeVfx
@@ -382,7 +396,7 @@ Evidence (logs beneath `artifacts/temp`, screenshots in `vfx-closeout-evidence`)
   `native-floor-neon-{on,off}.jpg`; blue flame: `native-floor-blue-on.jpg`.
   Foreground Chrome: `chrome-floor-neon-{on,off}.png`, `chrome-floor-blue-on.png`;
   Arin flame On/Off pair: `chrome-floor-vfx-{on,off}.png`. These are tool observations,
-  not additional human acceptance. The explicit outstanding observations above remain.
+  not additional human acceptance. The separate human observations are recorded above.
 - `vfx-reflections-depth-vsix-install.log`: final VSIX 2.0.61 installed; all 35 bundled
   payload hashes match, including the corrected native runtime. Installed root:
   `C:/Users/louie/AppData/Local/Microsoft/VisualStudio/18.0_91f001b5/Extensions/iamzxrcj.q5i`.
@@ -396,14 +410,23 @@ Final artifact SHA-256:
 
 Both final live-save exports retain Arin's 24-key SHA and Orin's zero-key SHA listed
 above. Models, animations, descriptors and Program.smile remain unchanged. Local Full
-Web output is updated; no upload to sincioco.com is claimed. Sin Star I stays closed
-when not needed for its remaining human preview check. No unrelated suspended work.
+Web output is updated; no upload to sincioco.com is claimed. Sin Star I's native preview
+and Chrome tab closed normally after the accepted gesture checks. No unrelated suspended work.
+Sin subsequently asked to leave Sin Star I's towns, battle scenes and in-game character
+viewer alone because he may redo them. No new game edits/builds are planned; only the
+existing artifacts were reused for the completed preview acceptance observations.
 
-Next action: commit/push the validated shared reflection milestone, then collect only
-the outstanding native/Chrome preview gestures and installed Double hover observations
-one short check at a time. Full Double acceptance remains pending those observations.
+The validated milestone was pushed normally and remote main read back as
+`c7f8f07c5c760668bcfe41e3cf72dac45081fd7c`. Both save exports remained unchanged.
+The reused native preview and Web game.js match the recorded B507E3A5 / DB34B6E2
+artifact hashes above; no rebuild was needed for their accepted checks.
+Closeout disposition: all required observations and authorized implementation/delivery
+work are complete. No new runtime patch, rebuild or installation accompanies this
+documentation-only acceptance update. Next action after publication: STOP; any new
+feature requires a separate task decision.
 
 ## On Hold
 
 Loader/splash enhancements, semantic-inspection CLI, Battle Scene Editor,
-subject-first syntax and unrelated suspended features remain deferred.
+subject-first syntax, SMILE 1.0 changes, further Sin Star I updates and unrelated suspended features
+remain deferred.
