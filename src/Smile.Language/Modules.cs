@@ -1146,7 +1146,7 @@ internal sealed class ModuleProcessor
 
     private SyntaxToken? LowerTypeToken(SyntaxToken? token, SyntaxTree tree, ModuleSymbol? module)
     {
-        if (token == null || token.Kind is SyntaxKind.NumberKeyword or SyntaxKind.BooleanKeyword or SyntaxKind.TextKeyword or SyntaxKind.ImageKeyword)
+        if (token == null || token.Kind is SyntaxKind.DoubleKeyword or SyntaxKind.NumberKeyword or SyntaxKind.BooleanKeyword or SyntaxKind.TextKeyword or SyntaxKind.ImageKeyword)
             return token;
         if (string.IsNullOrWhiteSpace(token.Text))
             return token;
@@ -1176,6 +1176,13 @@ internal sealed class ModuleProcessor
     private SyntaxToken ReferenceToken(SyntaxToken token, SyntaxTree tree, ModuleSymbol? module,
         HashSet<string>? locals)
     {
+        if (DoubleSemantics.IsIntrinsic(token.Kind))
+        {
+            if (locals != null && locals.Contains(token.Text))
+                return SemanticToken(token, token.Text);
+            if (module != null && module.Members.TryGetValue(token.Text, out var numericMember))
+                return SemanticToken(token, numericMember.SemanticName);
+        }
         if (SyntaxFacts.IsBuiltInFunction(token.Kind) || SyntaxFacts.IsBuiltInConstant(token.Kind))
             return token;
         if (locals != null && locals.Contains(token.Text))

@@ -1,0 +1,42 @@
+Module Smile.Double.Proof
+
+Option Explicit
+
+Public Const STEP_VALUE = 0.125
+
+Public Type Point
+
+    Values[2] As Double
+    Label As Text
+
+    Public Function Shift(Value As Double, Optional Bias As Double = -0.0) As Double
+
+        Dim Result As Double
+
+        Result = Me.Values[0] + Value + Bias
+
+        Return Result
+
+    End Function
+
+End Type
+
+Public Function CreatePoint(Value As Double, Index As Number, Extra As Double,
+    Label As Text, Last As Double) As Point
+
+    Dim Result As Point
+
+    Result.Values[Index] = Value + Extra + Last
+    Result.Label = Label
+
+    Return Result
+
+End Function
+
+Public Function DefaultZero(Optional Value As Double = -0.0) As Double
+
+    Return Value
+
+End Function
+
+End Module

@@ -93,7 +93,7 @@ public static class SmileCompletionService
         if (afterAs)
         {
             var types = new Dictionary<string, SmileCompletion>(StringComparer.OrdinalIgnoreCase);
-            foreach (var name in new[] { "Boolean", "Image", "Number", "Text" })
+            foreach (var name in new[] { "Boolean", "Double", "Image", "Number", "Text" })
                 types[name] = new SmileCompletion(name, name == "Image"
                     ? "SMILE opaque loaded 2D image resource"
                     : $"SMILE built-in type {name}", SmileCompletionKind.Type);
@@ -342,6 +342,7 @@ public static class SmileCompletionService
                 var parameters = string.Join(", ", SyntaxFacts.GetBuiltInFunctionParameters(kind));
                 var description = kind switch
                 {
+                    _ when DoubleSemantics.IsIntrinsic(kind) || DoubleSemantics.IsPolymorphic(kind) => DoubleSemantics.Signature(kind),
                     SyntaxKind.TextLengthKeyword => "Text_Length(Value As Text) As Number - Unicode scalar count",
                     SyntaxKind.TextCodeAtKeyword => "Text_Code_At(Value As Text, Index As Number) As Number - zero-based Unicode scalar value",
                     SyntaxKind.TextSliceKeyword => "Text_Slice(Value As Text, Start As Number, Count As Number) As Text - Unicode scalar slice",

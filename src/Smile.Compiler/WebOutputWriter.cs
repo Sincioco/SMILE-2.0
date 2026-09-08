@@ -51,8 +51,17 @@ internal static class WebOutputWriter
             ? Runtime.Replace("const responsiveWindowEnabled = false;",
                 "const responsiveWindowEnabled = true;", StringComparison.Ordinal)
             : Runtime;
+        runtime = runtime.Replace("/* SMILE_DOUBLE */", DoubleRuntimeSource(), StringComparison.Ordinal);
         return runtime.Replace(ReflectionRuntimeMarker, ReflectionRuntimeSource(),
             StringComparison.Ordinal);
+    }
+
+    private static string DoubleRuntimeSource()
+    {
+        using var stream = typeof(WebOutputWriter).Assembly.GetManifestResourceStream("Smile.Compiler.WebRuntime.Double.js")
+            ?? throw new InvalidOperationException("Missing binary64 runtime resource.");
+        using var reader = new StreamReader(stream, Encoding.UTF8, true);
+        return reader.ReadToEnd();
     }
 
     private static string ReflectionRuntimeSource()
@@ -912,6 +921,8 @@ internal static class WebOutputWriter
                     throw new Error(`SMILE Web Number is outside the safe integer range: ${value}`);
                 return value;
             }
+
+            /* SMILE_DOUBLE */
 
             function operands(left, right) {
                 return [safe(left), safe(right)];
@@ -4125,6 +4136,7 @@ internal static class WebOutputWriter
             }
 
             return {
+                doubleMath, toDouble, toNumber, textFromDouble, textToDouble,
                 safe, add, sub, mul, div, mod, neg, isTrue, booleanText, abs, min, max, timer, rgb, random,
                 array, get, set, ref, refArray, invalidRef, classCreate, classRequire, classRetain, classRelease,
                 classMoveAssign, classOwnedRef, classLiveCount, configure, gameWindow, clear, fillRectangle, fillRectangleOpacity, drawRectangle,

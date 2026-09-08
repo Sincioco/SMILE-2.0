@@ -244,6 +244,21 @@ public enum SyntaxKind
     DataStatusUnavailableKeyword,
     DataStatusCorruptKeyword,
     DataStatusTooLargeKeyword,
+    DoubleToken,
+    DoubleKeyword,
+    ToDoubleKeyword,
+    ToNumberKeyword,
+    ClampKeyword,
+    SqrtKeyword,
+    SinKeyword,
+    CosKeyword,
+    Atan2Keyword,
+    FloorKeyword,
+    CeilingKeyword,
+    TruncateKeyword,
+    RoundKeyword,
+    TextFromDoubleKeyword,
+    TextToDoubleKeyword,
 }
 
 public static class SyntaxFacts
@@ -364,6 +379,21 @@ public static class SyntaxFacts
         ["Line"] = SyntaxKind.LineKeyword,
         ["Text"] = SyntaxKind.TextKeyword,
         ["Number"] = SyntaxKind.NumberKeyword,
+        ["Double"] = SyntaxKind.DoubleKeyword,
+        ["ToDouble"] = SyntaxKind.ToDoubleKeyword,
+        ["ToNumber"] = SyntaxKind.ToNumberKeyword,
+        ["Clamp"] = SyntaxKind.ClampKeyword,
+        ["Sqrt"] = SyntaxKind.SqrtKeyword,
+        ["Sin"] = SyntaxKind.SinKeyword,
+        ["Cos"] = SyntaxKind.CosKeyword,
+        ["Atan2"] = SyntaxKind.Atan2Keyword,
+        ["Floor"] = SyntaxKind.FloorKeyword,
+        ["Ceiling"] = SyntaxKind.CeilingKeyword,
+        ["Truncate"] = SyntaxKind.TruncateKeyword,
+        ["Round"] = SyntaxKind.RoundKeyword,
+        ["Text_From_Double"] = SyntaxKind.TextFromDoubleKeyword,
+        ["Text_To_Double"] = SyntaxKind.TextToDoubleKeyword,
+
         ["At"] = SyntaxKind.AtKeyword,
         ["Color"] = SyntaxKind.ColorKeyword,
         ["Centered"] = SyntaxKind.CenteredKeyword,
@@ -498,16 +528,17 @@ public static class SyntaxFacts
 
     public static bool IsKeyword(SyntaxKind kind) =>
         (kind >= SyntaxKind.DimKeyword && kind <= SyntaxKind.OptionalKeyword) ||
-        (kind >= SyntaxKind.ImageKeyword && kind <= SyntaxKind.ChannelKeyword);
+        (kind >= SyntaxKind.ImageKeyword && kind <= SyntaxKind.ChannelKeyword) || kind == SyntaxKind.DoubleKeyword || DoubleSemantics.IsIntrinsic(kind);
 
     public static bool IsBuiltInConstant(SyntaxKind kind) =>
         kind >= SyntaxKind.NoneKeyword && kind <= SyntaxKind.DataStatusTooLargeKeyword || kind == SyntaxKind.DownKeyword;
 
     public static bool IsBuiltInFunction(SyntaxKind kind) =>
-        kind >= SyntaxKind.TimerKeyword && kind <= SyntaxKind.Renderer3DTextValueKeyword;
+        kind >= SyntaxKind.TimerKeyword && kind <= SyntaxKind.Renderer3DTextValueKeyword || DoubleSemantics.IsIntrinsic(kind);
 
     public static IReadOnlyList<string> GetBuiltInFunctionParameters(SyntaxKind kind)
     {
+        if (DoubleSemantics.IsIntrinsic(kind)) return DoubleSemantics.Parameters(kind);
         return kind switch
         {
             SyntaxKind.TimerKeyword or SyntaxKind.GameClosedKeyword or SyntaxKind.WindowWidthKeyword or
@@ -544,6 +575,7 @@ public static class SyntaxFacts
             SyntaxKind.NewLineToken => "newline",
             SyntaxKind.IdentifierToken => "identifier",
             SyntaxKind.NumberToken => "number",
+            SyntaxKind.DoubleToken => "Double literal",
             SyntaxKind.StringToken => "text literal",
             SyntaxKind.PlusToken => "+",
             SyntaxKind.MinusToken => "-",
@@ -580,7 +612,7 @@ public static class SyntaxFacts
     }
 
     public static int GetUnaryPrecedence(SyntaxKind kind) =>
-        kind == SyntaxKind.MinusToken || kind == SyntaxKind.NotKeyword ? 8 : 0;
+        kind is SyntaxKind.MinusToken or SyntaxKind.PlusToken or SyntaxKind.NotKeyword ? 8 : 0;
 
     public static int GetBinaryPrecedence(SyntaxKind kind)
     {

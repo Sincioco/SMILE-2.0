@@ -136,7 +136,7 @@ internal sealed class SmileClassifier : IClassifier
         {
             SyntaxKind.StringToken => TokenClassification.String,
             SyntaxKind.CommentToken => TokenClassification.Comment,
-            SyntaxKind.NumberToken => TokenClassification.Number,
+            SyntaxKind.NumberToken or SyntaxKind.DoubleToken => TokenClassification.Number,
             SyntaxKind.IdentifierToken => TokenClassification.Identifier,
             SyntaxKind.PlusToken or SyntaxKind.MinusToken or SyntaxKind.StarToken or SyntaxKind.SlashToken or SyntaxKind.CommaToken or
                 SyntaxKind.EqualsToken or SyntaxKind.NotEqualsToken or

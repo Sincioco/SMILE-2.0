@@ -1,8 +1,9 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
     <ProjectReference Include="..\Smile.AssetTool\Smile.AssetTool.csproj" />
     <ProjectReference Include="..\Smile.Language\Smile.Language.csproj" />
+    <EmbeddedResource Include="WebRuntime\Double.js" LogicalName="Smile.Compiler.WebRuntime.Double.js" />
     <EmbeddedResource Include="WebRuntime\Renderer3DReflections.js"
                       LogicalName="Smile.Compiler.WebRuntime.Renderer3DReflections.js" />
   </ItemGroup>

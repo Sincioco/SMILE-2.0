@@ -816,6 +816,16 @@ static SmileText* smile_text_allocate(long long length)
     return text;
 }
 
+void* smile_text_from_utf8(const char* bytes, long long length)
+{
+    SmileText* text = smile_text_allocate(length);
+    if (text != 0) smile_copy_bytes(text->bytes, bytes, (SIZE_T)length);
+    return text;
+}
+
+const char* smile_text_utf8(void* text) { return smile_text_bytes((SmileText*)text); }
+long long smile_text_byte_length(void* text) { return smile_text_length((SmileText*)text); }
+
 static int smile_utf8_scalar(const char* bytes, long long length, long long* offset, unsigned int* scalar)
 {
     const unsigned char* input = (const unsigned char*)bytes;

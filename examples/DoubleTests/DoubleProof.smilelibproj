@@ -1,0 +1,11 @@
+<SmileProject Version="1.0">
+  <PropertyGroup>
+    <ProjectKind>Library</ProjectKind>
+    <LibraryName>Smile.Double.Proof</LibraryName>
+    <Version>1.0.0</Version>
+    <OutputName>Smile.Double.Proof</OutputName>
+  </PropertyGroup>
+  <ItemGroup>
+    <SmileSource Include="Numeric.smile" />
+  </ItemGroup>
+</SmileProject>

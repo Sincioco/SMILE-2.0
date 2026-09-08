@@ -1579,7 +1579,7 @@ internal sealed class Parser
             var token = NextToken();
             return new LiteralExpressionSyntax(token, SyntaxFacts.GetBuiltInConstantValue(token.Kind));
         }
-        if (Current.Kind == SyntaxKind.NumberToken)
+        if (Current.Kind is SyntaxKind.NumberToken or SyntaxKind.DoubleToken)
         {
             var token = NextToken();
             return new LiteralExpressionSyntax(token, token.Value ?? 0L);
@@ -1837,11 +1837,12 @@ internal sealed class Parser
     private static bool IsContextualIdentifier(SyntaxKind kind) =>
         kind is SyntaxKind.WindowKeyword or SyntaxKind.SizeKeyword or SyntaxKind.DrawKeyword or SyntaxKind.LineKeyword or
             SyntaxKind.TextKeyword or SyntaxKind.LeftKeyword or SyntaxKind.RightKeyword or SyntaxKind.SetKeyword or
-            SyntaxKind.PropertyKeyword ||
+            SyntaxKind.PropertyKeyword or SyntaxKind.DoubleKeyword || DoubleSemantics.IsIntrinsic(kind) ||
         kind >= SyntaxKind.UnloadKeyword && kind <= SyntaxKind.ChannelKeyword;
 
     private static bool IsIdentifierLike(SyntaxKind kind) =>
-        kind is SyntaxKind.IdentifierToken or SyntaxKind.KeyKeyword || IsContextualIdentifier(kind);
+        kind is SyntaxKind.IdentifierToken or SyntaxKind.KeyKeyword or SyntaxKind.DoubleKeyword ||
+        DoubleSemantics.IsIntrinsic(kind) || IsContextualIdentifier(kind);
 
     private static bool IsParameterStart(SyntaxKind kind) =>
         kind is SyntaxKind.OptionalKeyword or SyntaxKind.ByRefKeyword or SyntaxKind.ByValKeyword ||
@@ -1850,7 +1851,7 @@ internal sealed class Parser
     private SyntaxToken MatchTypeToken()
     {
         SkipDeclarationNewLines();
-        if (Current.Kind is SyntaxKind.NumberKeyword or SyntaxKind.BooleanKeyword or SyntaxKind.TextKeyword or SyntaxKind.ImageKeyword or
+        if (Current.Kind is SyntaxKind.DoubleKeyword or SyntaxKind.NumberKeyword or SyntaxKind.BooleanKeyword or SyntaxKind.TextKeyword or SyntaxKind.ImageKeyword or
             SyntaxKind.IdentifierToken)
         {
             var first = NextToken();

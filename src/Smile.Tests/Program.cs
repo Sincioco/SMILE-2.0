@@ -5,6 +5,7 @@ using Smile.Language;
 
 Environment.CurrentDirectory = RepositoryTestContext.FindRepositoryRoot();
 var tests = new TestContext();
+DoubleTests.Register(tests);
 
 Run("Missing GraphicsBackend defaults to Auto", () =>
 {
@@ -1903,8 +1904,8 @@ Run("Reference editing refresh projection immediately and never deletes the targ
     }
     finally { Directory.Delete(directory, true); }
 });
-Run("Library package schema contract is formatVersion 6", () =>
-    Equal(6, SmileLibraryPackage.CurrentFormatVersion));
+Run("Library package schema contract is formatVersion 7", () =>
+    Equal(7, SmileLibraryPackage.CurrentFormatVersion));
 Run("Library packages are deterministic and reload through authoritative analysis", () =>
 {
     var directory = Path.Combine(Path.GetTempPath(), "SmilePackageTests-" + Guid.NewGuid().ToString("N"));
@@ -1940,7 +1941,7 @@ Run("Library packages are deterministic and reload through authoritative analysi
             using (var manifestReader = new StreamReader(archive.GetEntry("manifest.json")!.Open()))
             using (var manifest = System.Text.Json.JsonDocument.Parse(manifestReader.ReadToEnd()))
             {
-                Equal(6, manifest.RootElement.GetProperty("formatVersion").GetInt32());
+                Equal(7, manifest.RootElement.GetProperty("formatVersion").GetInt32());
                 Equal("Example.Tools@1.0.0", manifest.RootElement.GetProperty("provider").GetString());
                 Equal("src/Code/Tools.smile", manifest.RootElement.GetProperty("sources")[0].GetString());
                 Equal("src/Other/Tools.smile", manifest.RootElement.GetProperty("sources")[1].GetString());
@@ -1951,7 +1952,7 @@ Run("Library packages are deterministic and reload through authoritative analysi
             Equal(true, api.Contains("Double", StringComparison.Ordinal));
             Equal(false, api.Contains("Hidden", StringComparison.Ordinal));
             using var document = System.Text.Json.JsonDocument.Parse(api);
-            Equal(6, document.RootElement.GetProperty("formatVersion").GetInt32());
+            Equal(7, document.RootElement.GetProperty("formatVersion").GetInt32());
             Equal("Example.Tools@1.0.0", document.RootElement.GetProperty("library")
                 .GetProperty("provider").GetString());
             var module = document.RootElement.GetProperty("modules")[0];
@@ -1973,7 +1974,7 @@ Run("Library packages are deterministic and reload through authoritative analysi
     }
     finally { Directory.Delete(directory, true); }
 });
-Run("FormatVersion 6 preserves enum metadata and project package consumer parity", () =>
+Run("FormatVersion 7 preserves enum metadata and project package consumer parity", () =>
 {
     var directory = Path.Combine(Path.GetTempPath(), "SmileEnumPackageTests-" + Guid.NewGuid().ToString("N"));
     var libraryDirectory = Path.Combine(directory, "Library");
@@ -2020,7 +2021,7 @@ Run("FormatVersion 6 preserves enum metadata and project package consumer parity
         using (var document = System.Text.Json.JsonDocument.Parse(apiText))
         {
             var root = document.RootElement;
-            Equal(6, root.GetProperty("formatVersion").GetInt32());
+            Equal(7, root.GetProperty("formatVersion").GetInt32());
             Equal("Example.EnumLibrary@1.0.0", root.GetProperty("library").GetProperty("provider").GetString());
             var module = root.GetProperty("modules")[0];
             Equal("src/Enums.smile", module.GetProperty("sources")[0].GetString());
@@ -2093,7 +2094,7 @@ Run("FormatVersion 6 preserves enum metadata and project package consumer parity
     }
     finally { Directory.Delete(directory, true); }
 });
-Run("FormatVersion 6 preserves Optional defaults and named-call project package parity", () =>
+Run("FormatVersion 7 preserves Optional defaults and named-call project package parity", () =>
 {
     var directory = Path.Combine(Path.GetTempPath(), "SmileOptionalPackageTests-" + Guid.NewGuid().ToString("N"));
     var fixtureDirectory = Path.GetFullPath("examples/LightweightOopCalls");
@@ -2822,7 +2823,7 @@ Run("FormatVersion 6 preserves Optional defaults and named-call project package 
     }
     finally { Directory.Delete(directory, true); }
 });
-Run("FormatVersion 6 rejects the dedicated malformed and tampered package matrix", () =>
+Run("FormatVersion 7 rejects the dedicated malformed and tampered package matrix", () =>
 {
     var directory = Path.Combine(Path.GetTempPath(), "SmileFormat6TamperTests-" + Guid.NewGuid().ToString("N"));
     Directory.CreateDirectory(directory);
@@ -2893,7 +2894,7 @@ Run("FormatVersion 6 rejects the dedicated malformed and tampered package matrix
 
         var unsupported = Path.Combine(directory, "unsupported-format.smilelib");
         File.Copy(baseline, unsupported);
-        RewriteManifest(unsupported, text => ReplaceOnce(text, "\"formatVersion\": 6", "\"formatVersion\": 5"));
+        RewriteManifest(unsupported, text => ReplaceOnce(text, "\"formatVersion\": 7", "\"formatVersion\": 5"));
         ThrowsContains(() => SmileLibraryPackage.Read(unsupported, Path.Combine(directory, "unsupported-cache")),
             "no longer supported");
 
@@ -4027,7 +4028,7 @@ Run("Web emitter uses JavaScript Text values and ByRef references", () =>
     Equal(true, javascript.Contains(".set(", StringComparison.Ordinal));
     Equal(true, javascript.Contains("\"A\"", StringComparison.Ordinal));
 });
-Run("FormatVersion 6 packages contain deterministic typed public API metadata", () =>
+Run("FormatVersion 7 packages contain deterministic typed public API metadata", () =>
 {
     var directory = Path.Combine(Path.GetTempPath(), "SmilePhase3APackageTests-" + Guid.NewGuid().ToString("N"));
     Directory.CreateDirectory(directory);
@@ -4046,7 +4047,7 @@ Run("FormatVersion 6 packages contain deterministic typed public API metadata", 
         using (var archive = System.IO.Compression.ZipFile.OpenRead(first))
         {
             using var manifestReader = new StreamReader(archive.GetEntry("manifest.json")!.Open());
-            Equal(true, manifestReader.ReadToEnd().Contains("\"formatVersion\": 6", StringComparison.Ordinal));
+            Equal(true, manifestReader.ReadToEnd().Contains("\"formatVersion\": 7", StringComparison.Ordinal));
             using var apiReader = new StreamReader(archive.GetEntry("api/public-symbols.json")!.Open());
             var api = apiReader.ReadToEnd();
             Equal(true, api.Contains("\"type\": {\"kind\": \"primitive\", \"name\": \"Text\"}",
@@ -4058,27 +4059,27 @@ Run("FormatVersion 6 packages contain deterministic typed public API metadata", 
             Equal(true, api.Contains("\"optional\": false, \"default\": null", StringComparison.Ordinal));
             Equal(false, api.Contains("Hidden", StringComparison.Ordinal));
         }
-        for (var formatVersion = 1; formatVersion <= 5; formatVersion++)
+        for (var formatVersion = 1; formatVersion <= 6; formatVersion++)
         {
             var legacy = Path.Combine(directory, $"legacy-{formatVersion}.smilelib");
             File.Copy(first, legacy);
-            RewriteManifest(legacy, manifest => manifest.Replace("\"formatVersion\": 6",
+            RewriteManifest(legacy, manifest => manifest.Replace("\"formatVersion\": 7",
                 $"\"formatVersion\": {formatVersion}", StringComparison.Ordinal));
             ThrowsContains(() => SmileLibraryPackage.ReadIdentity(legacy), "no longer supported");
             var diagnostic = ThrowsProjectDiagnostic(() => SmileLibraryProviderResolver.LoadPackages(
                 new[] { legacy }, Path.Combine(directory, $"legacy-cache-{formatVersion}")), "SML3206");
             Equal(true, diagnostic.Message.Contains("rebuild", StringComparison.OrdinalIgnoreCase));
-            Equal(true, diagnostic.Message.Contains("expected formatVersion 6", StringComparison.Ordinal));
+            Equal(true, diagnostic.Message.Contains("expected formatVersion 7", StringComparison.Ordinal));
         }
         var unknown = Path.Combine(directory, "unknown.smilelib");
         File.Copy(first, unknown);
-        RewriteManifest(unknown, manifest => manifest.Replace("\"formatVersion\": 6",
-            "\"formatVersion\": 7", StringComparison.Ordinal));
-        ThrowsContains(() => SmileLibraryPackage.ReadIdentity(unknown), "expected 6");
+        RewriteManifest(unknown, manifest => manifest.Replace("\"formatVersion\": 7",
+            "\"formatVersion\": 8", StringComparison.Ordinal));
+        ThrowsContains(() => SmileLibraryPackage.ReadIdentity(unknown), "expected 7");
     }
     finally { Directory.Delete(directory, true); }
 });
-Run("FormatVersion 6 packages preserve direct and transitive Game Window capabilities", () =>
+Run("FormatVersion 7 packages preserve direct and transitive Game Window capabilities", () =>
 {
     var directory = Path.Combine(Path.GetTempPath(), "SmilePhase5CapabilityPackageTests-" + Guid.NewGuid().ToString("N"));
     Directory.CreateDirectory(directory);
@@ -4117,11 +4118,11 @@ Run("Typed completion descriptions include parameter modes and returns", () =>
     Equal("Function Join(First As Text, Second As Text) As Text",
         completions.Single(item => item.DisplayText == "Join").Description);
     const string typedDeclaration = "Dim Name As ";
-    Equal("Boolean|Image|Number|Text", string.Join("|", SmileCompletionService
+    Equal("Boolean|Double|Image|Number|Text", string.Join("|", SmileCompletionService
         .GetCompletions(Analyze(typedDeclaration), typedDeclaration.Length).Select(item => item.DisplayText)));
 });
 
-Run("FormatVersion 6 public API metadata preserves Image signatures", () =>
+Run("FormatVersion 7 public API metadata preserves Image signatures", () =>
 {
     var root = Path.Combine(Path.GetTempPath(), "SmilePhase4ImagePackageTests-" + Guid.NewGuid().ToString("N"));
     Directory.CreateDirectory(root);
@@ -4905,7 +4906,7 @@ Run("Record completion separates type value alias and indexed-field contexts", (
         .GetCompletions(importedFields, importedFieldSource.Length).Select(item => item.DisplayText)));
 });
 
-Run("FormatVersion 6 public API uses logical provider identities deterministically", () =>
+Run("FormatVersion 7 public API uses logical provider identities deterministically", () =>
 {
     var root = Path.Combine(Path.GetTempPath(), "SmileP3B1ProviderTests-" + Guid.NewGuid().ToString("N"));
     var firstRoot = Path.Combine(root, "checkout-a");

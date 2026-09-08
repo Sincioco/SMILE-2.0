@@ -1,0 +1,12 @@
+<SmileProject Version="1.0">
+  <PropertyGroup>
+    <ProjectKind>Console</ProjectKind>
+    <StartupFile>PackageConsumer.smile</StartupFile>
+    <OutputName>DoublePackageConsumer</OutputName>
+    <ApplicationId>smile.tests.double.package</ApplicationId>
+  </PropertyGroup>
+  <ItemGroup>
+    <SmileSource Include="PackageConsumer.smile" StartupOnly="true" />
+    <SmileProjectReference Include="DoubleProof.smilelibproj" />
+  </ItemGroup>
+</SmileProject>

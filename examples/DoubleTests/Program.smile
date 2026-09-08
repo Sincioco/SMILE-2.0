@@ -1,0 +1,257 @@
+Option Explicit
+
+Type Sample
+
+    Values[2] As Double
+    Name As Text
+
+    Public Function Offset(Value As Double, Optional Extra As Double = -0.0) As Double
+
+        Dim Result As Double
+
+        Result = Me.Values[0] + Value + Extra
+
+        Return Result
+
+    End Function
+
+End Type
+
+Type Envelope
+
+    Items[2] As Sample
+
+End Type
+
+Class Box
+
+    Public Values[2] As Double
+
+    Public Property Value As Double
+
+        Get
+
+            Dim ReturnValue As Double
+
+            ReturnValue = Me.Values[0]
+
+            Return ReturnValue
+
+        End Get
+
+        Set
+
+            Me.Values[0] = Value
+
+        End Set
+
+    End Property
+
+End Class
+
+Dim PositionX As Double
+Dim Speed As Double
+Dim ElapsedMilliseconds As Number
+Dim ElapsedSeconds As Double
+Dim Values[2] As Double
+Dim Original As Sample
+Dim Copied As Sample
+Dim Nested As Envelope
+Dim NestedCopy As Envelope
+Dim FirstBox As New Box()
+Dim SecondBox As New Box()
+Dim Trace As Number
+Dim Failures As Number
+Dim CheckCount As Number
+Dim Tiny As Double
+
+Const FRACTION = 1.0 / 8.0
+Const NEGATIVE_ZERO = -0.0
+
+PositionX = 0.0
+Speed = FRACTION
+ElapsedMilliseconds = 16
+ElapsedSeconds = ToDouble(ElapsedMilliseconds) / 1000.0
+PositionX = PositionX + Speed * ElapsedSeconds
+
+Call Check(Abs(PositionX - 0.002) < 1e-12)
+Call Check(1 / 2 = 0)
+Call Check(ToDouble(1 / 2) = 0.0)
+Call Check(ToDouble(1) / 2.0 = 0.5)
+Call Check(Values[1] = 0.0)
+Call Check(Text_From_Double(NEGATIVE_ZERO) = "-0.0")
+Call Check(NEGATIVE_ZERO = 0.0)
+Call Check(ToNumber(-1.75) = -1)
+Call Check(ToNumber(1.75) = 1)
+Call Check(ToNumber(-0.0) = 0)
+
+Values[0] = 0.125
+Original.Values[0] = Values[0]
+Original.Name = "Retained"
+Copied = Original
+Copied.Values[0] = 0.625
+Nested.Items[1] = Original
+NestedCopy = Nested
+FirstBox.Value = Original.Offset(0.25)
+SecondBox.Value = 8.125
+
+Call AddQuarter(Values[0])
+Call AddQuarter(Original.Values[0])
+Call AddQuarter(FirstBox.Values[0])
+Call AddQuarter(Nested.Items[1].Values[0])
+Call Check(Nested.Items[1].Values[0] = 0.375)
+Call Check(NestedCopy.Items[1].Values[0] = 0.125)
+Call Check(NestedCopy.Items[1].Name = "Retained")
+Call Check(Values[0] = 0.375)
+Call Check(Original.Values[0] = 0.375)
+Call Check(Copied.Values[0] = 0.625)
+Call Check(Copied.Name = "Retained")
+Call Check(FirstBox.Value = 0.625)
+Call Check(SecondBox.Value = 8.125)
+Call Check(Zero() = 0.125)
+Call Check(One(0.125) = 0.25)
+Call Check(Four(0.125, 3, "Four", True) = 3.125)
+Call Check(Five(0.125, 1, 0.25, 2, 0.5) = 3.875)
+Call Check(Eight(0.125, 0.25, 0.5, 1.0, 2.0, 4.0, 8.0, 16.0) = 31.875)
+Call Check(Sixteen(0.125, 0.25, 0.5, 1.0, 2.0, 4.0, 8.0, 16.0,
+    0.125, 0.25, 0.5, 1.0, 2.0, 4.0, 8.0, 16.0) = 63.75)
+Call Check(Five(Value5:=Mark(1), Value3:=Mark(2), Value1:=Mark(3), Value4:=4, Value2:=5) = 9.75)
+Call Check(Trace = 123)
+Call Check(Text_From_Double(WithDefault()) = "-0.0")
+
+Tiny = Text_To_Double("4.9406564584124654e-324")
+
+Call Check(Tiny > 0.0)
+Call Check(Tiny * 1.0 = Tiny)
+Call Check(Text_To_Double(Text_From_Double(Tiny)) = Tiny)
+Call Check(Text_To_Double(Text_From_Double(1e300)) = 1e300)
+Call Check(Text_From_Double(Text_To_Double(" -0.0 ")) = "-0.0")
+Call Check(Abs(Sin(0.5) - 0.479425538604203) < 1e-14)
+Call Check(Abs(Cos(0.5) - 0.8775825618903728) < 1e-14)
+Call Check(Sqrt(0.25) = 0.5)
+Call Check(Atan2(0.0, 0.0) = 0.0)
+Call Check(Text_From_Double(Atan2(-0.0, 0.0)) = "-0.0")
+Call Check(Clamp(0.25, 0.5, 1.0) = 0.5)
+Call Check(Min(0.25, 0.5) = 0.25)
+Call Check(Max(0.25, 0.5) = 0.5)
+Call Check(Floor(-1.25) = -2.0)
+Call Check(Ceiling(-1.25) = -1.0)
+Call Check(Truncate(-1.25) = -1.0)
+Call Check(Round(2.5) = 2.0)
+Call Check(Round(3.5) = 4.0)
+Call Check(Round(-2.5) = -2.0)
+Call Check(Text_From_Double(Round(-0.5)) = "-0.0")
+Call Check(Text_From_Double(Min(-0.0, 0.0)) = "-0.0")
+Call Check(Text_From_Double(Max(-0.0, 0.0)) = "-0.0")
+Call Check(Text_From_Double(Clamp(-0.0, 0.0, 1.0)) = "-0.0")
+
+Select Case -0.0
+    Case 0.0
+
+        Call Check(True)
+
+    Case Else
+
+        Call Check(False)
+
+End Select
+
+If Failures = 0 Then
+    Print PositionX
+    Print "Double tests passed"
+Else
+    Print "Double failures: "; Failures
+End If
+
+Sub Check(Valid As Boolean)
+
+    CheckCount = CheckCount + 1
+
+    If Not Valid Then
+        Failures = Failures + 1
+        Print "Failed Double check "; CheckCount
+    End If
+
+End Sub
+
+Sub AddQuarter(ByRef Value As Double)
+
+    Value = Value + 0.25
+
+End Sub
+
+Function Zero() As Double
+
+    Return 0.125
+
+End Function
+
+Function One(Value1 As Double) As Double
+
+    Dim Result As Double
+
+    Result = Value1 + Zero()
+
+    Return Result
+
+End Function
+
+Function Four(Value1 As Double, Value2 As Number, Value3 As Text, Value4 As Boolean) As Double
+
+    Dim Result As Double
+
+    Call Check(Value3 = "Four" And Value4)
+
+    Result = Value1 + ToDouble(Value2)
+
+    Return Result
+
+End Function
+
+Function Five(Value1 As Double, Value2 As Number, Value3 As Double, Value4 As Number, Value5 As Double) As Double
+
+    Dim Result As Double
+
+    Result = Value1 + ToDouble(Value2) + Value3 + ToDouble(Value4) + Value5
+
+    Return Result
+
+End Function
+
+Function Eight(Value1 As Double, Value2 As Double, Value3 As Double, Value4 As Double,
+    Value5 As Double, Value6 As Double, Value7 As Double, Value8 As Double) As Double
+
+    Dim Result As Double
+
+    Result = Value1 + Value2 + Value3 + Value4 + Value5 + Value6 + Value7 + Value8
+
+    Return Result
+
+End Function
+
+Function Sixteen(Value1 As Double, Value2 As Double, Value3 As Double, Value4 As Double,
+    Value5 As Double, Value6 As Double, Value7 As Double, Value8 As Double,
+    Value9 As Double, Value10 As Double, Value11 As Double, Value12 As Double,
+    Value13 As Double, Value14 As Double, Value15 As Double, Value16 As Double) As Double
+
+    Dim Result As Double
+
+    Result = Eight(Value1, Value2, Value3, Value4, Value5, Value6, Value7, Value8) + Eight(Value9, Value10, Value11, Value12, Value13, Value14, Value15, Value16)
+
+    Return Result
+
+End Function
+
+Function Mark(Value As Number) As Double
+
+    Trace = Trace * 10 + Value
+
+    Return 0.25
+
+End Function
+
+Function WithDefault(Optional Value As Double = -0.0) As Double
+
+    Return Value
+
+End Function

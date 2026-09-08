@@ -407,6 +407,7 @@ internal sealed class CompilerDriver
             "typedef enum SmileDebugBoolean { False = 0, True = 1 } SmileDebugBoolean;\n" +
             "typedef struct SmileDebugText { long long references; long long length; char bytes[1]; } SmileDebugText;\n" +
             "static volatile unsigned char smile_debug_counter;\n");
+        builder.Append(NativeDebugTypes.Declarations(sites.SelectMany(site => site.Variables).Select(symbol => symbol.Type)));
         foreach (var site in sites)
         {
             var escapedPath = site.Source.FilePath.Replace("\\", "\\\\").Replace("\"", "\\\"");
@@ -429,10 +430,13 @@ internal sealed class CompilerDriver
 
     private static string DebugParameterType(VariableSymbol symbol)
     {
+        if (symbol.Type.IsRecord || symbol.Type.IsClass)
+            return "const " + NativeDebugTypes.Name(symbol.Type) + (symbol.IsArray && symbol.Type.IsClass ? "* const*" : "*");
         var type = symbol.IsArray
             ? symbol.Type.Kind switch
             {
                 SmileTypeKind.Number => "const long long*",
+                SmileTypeKind.Double => "const double*",
                 SmileTypeKind.Enum => "const long long*",
                 SmileTypeKind.Boolean => "const SmileDebugBoolean*",
                 SmileTypeKind.Text => "const SmileDebugText* const*",
@@ -441,6 +445,7 @@ internal sealed class CompilerDriver
             : symbol.Type.Kind switch
             {
                 SmileTypeKind.Number => "long long",
+                SmileTypeKind.Double => "double",
                 SmileTypeKind.Enum => "long long",
                 SmileTypeKind.Boolean => "SmileDebugBoolean",
                 SmileTypeKind.Text => "const char*",

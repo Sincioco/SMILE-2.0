@@ -279,6 +279,10 @@ internal sealed class WebEmitter
 
     private string InitialValue(VariableSymbol symbol)
     {
+        if (symbol.IsConstant && symbol.Type == SmileType.Number && symbol.ConstantValue is long integer &&
+            integer is > MaxSafeInteger or < -MaxSafeInteger)
+            throw new WebTargetException(symbol.Source, "SML5102", symbol.DeclarationSpan,
+                "Web target Number constants must be within JavaScript's safe integer range.");
         if (symbol.IsArray)
             return symbol.Type is RecordTypeSymbol
                 ? $"smile.array([{string.Join(", ", symbol.ArrayDimensions)}], () => {DefaultValue(symbol.Type)})"
@@ -797,6 +801,8 @@ internal sealed class WebEmitter
     {
         switch (expression)
         {
+            case LiteralExpressionSyntax literal when literal.Value is double floating:
+                return DoubleSemantics.Format(floating);
             case LiteralExpressionSyntax literal when literal.Value is long number:
                 if (number is > MaxSafeInteger or < -MaxSafeInteger)
                     throw new WebTargetException(_currentSource, "SML5102", literal.Span, "Web target Number literals must be within JavaScript's safe integer range.");
@@ -848,6 +854,10 @@ internal sealed class WebEmitter
                     : leadingType.IsClass ? $"smile.classRetain({leadingValue})" : leadingValue;
             case ParenthesizedExpressionSyntax parenthesized:
                 return $"({Expression(parenthesized.Expression)})";
+            case UnaryExpressionSyntax unary when unary.OperatorToken.Kind == SyntaxKind.PlusToken:
+                return Expression(unary.Operand);
+            case UnaryExpressionSyntax unary when _analysis.SemanticModel.GetType(unary) == SmileType.Double:
+                return $"(-({Expression(unary.Operand)}))";
             case UnaryExpressionSyntax unary:
                 return unary.OperatorToken.Kind switch
                 {
@@ -940,6 +950,8 @@ internal sealed class WebEmitter
     {
         var left = Expression(binary.Left);
         var right = Expression(binary.Right);
+        if (_analysis.SemanticModel.GetType(binary) == SmileType.Double)
+            return $"smile.doubleMath({DoubleSemantics.OperationCode(binary.OperatorToken.Kind)}, {left}, {right})";
         return binary.OperatorToken.Kind switch
         {
             SyntaxKind.PlusToken when _analysis.SemanticModel.GetType(binary) == SmileType.Text => $"(({left}) + ({right}))",
@@ -962,7 +974,23 @@ internal sealed class WebEmitter
 
     private string Call(CallExpressionSyntax call)
     {
+        if (DoubleSemantics.IsIntrinsic(call.Identifier.Kind) && _analysis.SemanticModel.TryGetBoundCall(call, out _))
+            return RoutineCall(call, call.Identifier);
         var arguments = Arguments(call.Arguments.Select(argument => argument.Expression));
+        if (DoubleSemantics.IsIntrinsic(call.Identifier.Kind) ||
+            DoubleSemantics.IsPolymorphic(call.Identifier.Kind) && _analysis.SemanticModel.GetType(call) == SmileType.Double)
+        {
+            var operation = DoubleSemantics.OperationCode(call.Identifier.Kind);
+            if (operation != 0) return $"smile.doubleMath({operation}, {arguments})";
+            return call.Identifier.Kind switch
+            {
+                SyntaxKind.ToDoubleKeyword => $"smile.toDouble({arguments})",
+                SyntaxKind.ToNumberKeyword => $"smile.toNumber({arguments})",
+                SyntaxKind.TextFromDoubleKeyword => $"smile.textFromDouble({arguments})",
+                SyntaxKind.TextToDoubleKeyword => $"smile.textToDouble({arguments})",
+                _ => throw UnsupportedExpression(call, call.Identifier.Text)
+            };
+        }
         return call.Identifier.Kind switch
         {
             SyntaxKind.TimerKeyword => "smile.timer()",
@@ -1035,7 +1063,8 @@ internal sealed class WebEmitter
     private string PrintItem(ExpressionSyntax expression) =>
         _analysis.SemanticModel.GetType(expression) == SmileType.Boolean
             ? $"smile.booleanText({Expression(expression)})"
-            : Expression(expression);
+            : _analysis.SemanticModel.GetType(expression) == SmileType.Double
+                ? $"smile.textFromDouble({Expression(expression)})" : Expression(expression);
 
     private string ReadVariable(SyntaxToken identifier) => ReadVariable(ResolveVariable(identifier));
 
@@ -1435,7 +1464,7 @@ internal sealed class WebEmitter
         ? "null"
         : type == SmileType.Text
         ? "\"\""
-        : type == SmileType.Boolean ? "false" : "0";
+        : type == SmileType.Boolean ? "false" : type == SmileType.Double ? "0.0" : "0";
 
     private string CloneValue(SmileType type, string value) => type is RecordTypeSymbol record
         ? $"{_recordNames[record]}_clone({value})"
@@ -1596,6 +1625,7 @@ internal sealed class WebEmitter
     {
         string text => Json(text),
         bool boolean => boolean ? "true" : "false",
+        double floating => DoubleSemantics.Format(floating),
         long number when type.IsEnum => EnumValue(number),
         long number => number.ToString(CultureInfo.InvariantCulture),
         _ => "0"

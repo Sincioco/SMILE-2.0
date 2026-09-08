@@ -74,6 +74,10 @@
     <ClCompile Include="graphics\image_resource.cpp" />
     <ClCompile Include="input\pointer_state.c" />
     <ClCompile Include="runtime.c" />
+    <ClCompile Include="numeric\double.cpp">
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <FloatingPointModel>Strict</FloatingPointModel>
+    </ClCompile>
     <ClCompile Include="audio\audio_focus_state.c" />
     <ClCompile Include="audio\music_mediaplayer.cpp">
       <ExceptionHandling>Sync</ExceptionHandling>

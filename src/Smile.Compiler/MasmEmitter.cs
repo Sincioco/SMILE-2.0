@@ -130,6 +130,7 @@ internal sealed class MasmEmitter
     private readonly Stack<MasmLoopContext> _forExitLabels = new();
     private readonly Stack<MasmLoopContext> _doExitLabels = new();
     private readonly List<MasmCleanupAction> _activeCleanups = new();
+    private readonly Dictionary<ExpressionSyntax, TextLiteral> _doubleErrorSites = new();
     private readonly List<MasmDebugSite> _debugSites = new();
     private readonly Dictionary<StatementSyntax, MasmDebugSite> _debugSitesByStatement = new();
     private SourceText _currentSource = null!;
@@ -190,6 +191,15 @@ internal sealed class MasmEmitter
         Line("EXTERN ExitProcess:PROC");
         Line("EXTERN smile_print_text:PROC");
         Line("EXTERN smile_print_number:PROC");
+        Line("EXTERN smile_double_status:PROC");
+        Line("EXTERN smile_double_report:PROC");
+        Line("EXTERN smile_double_math:PROC");
+        Line("EXTERN smile_to_double:PROC");
+        Line("EXTERN smile_to_number:PROC");
+        Line("EXTERN smile_print_double:PROC");
+        Line("EXTERN smile_text_from_double:PROC");
+        Line("EXTERN smile_text_to_double:PROC");
+
         Line("EXTERN smile_print_boolean:PROC");
         Line("EXTERN smile_print_newline:PROC");
         Line("EXTERN smile_text_retain:PROC");
@@ -320,6 +330,11 @@ internal sealed class MasmEmitter
             Line($"{literal.Label} LABEL BYTE");
             EmitBytes(literal.Bytes, terminate: false);
         }
+        foreach (var site in _doubleErrorSites.Values)
+        {
+            Line($"{site.Label} LABEL BYTE");
+            EmitBytes(site.Bytes, terminate: false);
+        }
         Line("smile_app_identity LABEL BYTE");
         EmitBytes(_appIdentityBytes, terminate: false);
         Line("smile_asset_manifest LABEL BYTE");
@@ -365,6 +380,13 @@ internal sealed class MasmEmitter
         foreach (var routine in OrderedRoutines())
             EmitRoutine(routine);
 
+        if (_doubleErrorSites.Count > 0)
+        {
+            Line("smile_double_terminate PROC");
+            Line("    push rbp"); Line("    mov rbp, rsp"); Line("    sub rsp, 32");
+            EmitTermination(5);
+            Line("smile_double_terminate ENDP");
+        }
         EmitStagedCleanupHelper();
         EmitActiveFrameCleanupHelper();
         if (_usesArrayIndexFailure)
@@ -575,6 +597,14 @@ internal sealed class MasmEmitter
 
     private void CollectExpression(ExpressionSyntax? expression)
     {
+        if (expression != null && !_doubleErrorSites.ContainsKey(expression) &&
+            (_analysis.SemanticModel.GetType(expression) == SmileType.Double ||
+             expression is CallExpressionSyntax numeric && DoubleSemantics.IsIntrinsic(numeric.Identifier.Kind)))
+        {
+            var location = new SourceLocation(_currentSource, expression.Span);
+            _doubleErrorSites[expression] = new TextLiteral($"double_site_{_doubleErrorSites.Count}",
+                Encoding.UTF8.GetBytes($"{location.FilePath}({location.Line},{location.Column}): error SML3802: "));
+        }
         switch (expression)
         {
             case LiteralExpressionSyntax literal when literal.Value is string text:
@@ -1376,6 +1406,8 @@ internal sealed class MasmEmitter
                 continue;
             }
             EmitExpression(item);
+            if (_analysis.SemanticModel.GetType(item) == SmileType.Double)
+            { Line("    movq xmm0, rax"); CallAligned("smile_print_double"); continue; }
             Line("    mov rcx, rax");
             CallAligned(_analysis.SemanticModel.GetType(item) == SmileType.Boolean
                 ? "smile_print_boolean"
@@ -1521,7 +1553,12 @@ internal sealed class MasmEmitter
             }
             else
             {
-                Line($"    cmp {TemporaryMemory(value)}, rax");
+                if (value.Type == SmileType.Double)
+                {
+                    Line("    movq xmm0, rax");
+                    Line($"    ucomisd xmm0, {TemporaryMemory(value)}");
+                }
+                else Line($"    cmp {TemporaryMemory(value)}, rax");
                 Line($"    jne {nextLabel}");
             }
             EmitStatements(clause.Statements);
@@ -1542,6 +1579,9 @@ internal sealed class MasmEmitter
     {
         switch (expression)
         {
+            case LiteralExpressionSyntax literal when literal.Value is double floating:
+                Line($"    mov rax, {QwordImmediate(BitConverter.DoubleToInt64Bits(floating))}");
+                break;
             case LiteralExpressionSyntax literal when literal.Value is bool boolean:
                 Line($"    mov rax, {(boolean ? 1 : 0)}");
                 break;
@@ -1661,7 +1701,13 @@ internal sealed class MasmEmitter
                 break;
             case UnaryExpressionSyntax unary:
                 EmitExpression(unary.Operand);
-                Line(unary.OperatorToken.Kind == SyntaxKind.MinusToken ? "    neg rax" : "    xor rax, 1");
+                if (unary.OperatorToken.Kind == SyntaxKind.MinusToken)
+                {
+                    if (_analysis.SemanticModel.GetType(unary) == SmileType.Double)
+                    { Line("    mov rcx, 8000000000000000h"); Line("    xor rax, rcx"); }
+                    else Line("    neg rax");
+                }
+                else if (unary.OperatorToken.Kind == SyntaxKind.NotKeyword) Line("    xor rax, 1");
                 break;
             case BinaryExpressionSyntax binary:
                 EmitBinary(binary);
@@ -1688,6 +1734,17 @@ internal sealed class MasmEmitter
 
     private void EmitCallExpression(CallExpressionSyntax call)
     {
+        if (DoubleSemantics.IsIntrinsic(call.Identifier.Kind) && _analysis.SemanticModel.TryGetBoundCall(call, out _))
+        {
+            EmitRoutineCall(call, _recordCallResults.TryGetValue(call, out var numericNamedResult) ? numericNamedResult : null);
+            return;
+        }
+        if (DoubleSemantics.IsIntrinsic(call.Identifier.Kind) ||
+            DoubleSemantics.IsPolymorphic(call.Identifier.Kind) && _analysis.SemanticModel.GetType(call) == SmileType.Double)
+        {
+            MasmDoubleEmitter.Intrinsic(call, Line, EmitExpression, PushRax, PopRax, CallAligned, EmitDoubleCheck);
+            return;
+        }
         switch (call.Identifier.Kind)
         {
             case SyntaxKind.AbsKeyword:
@@ -2144,6 +2201,7 @@ internal sealed class MasmEmitter
         }
         var value = parameter.DefaultValue switch
         {
+            double floating => BitConverter.DoubleToInt64Bits(floating),
             long number => number,
             bool boolean => boolean ? 1L : 0L,
             _ => 0L
@@ -2373,6 +2431,22 @@ internal sealed class MasmEmitter
         PopRax();
     }
 
+    private void EmitDoubleCheck(ExpressionSyntax expression)
+    {
+        var ok = NewLabel("double_valid");
+        PushRax();
+        CallAligned("smile_double_status");
+        Line("    test eax, eax");
+        PopRax();
+        Line($"    jz {ok}");
+        var site = _doubleErrorSites[expression];
+        Line($"    lea rcx, {site.Label}");
+        Line($"    mov rdx, {site.Bytes.Length}");
+        CallAligned("smile_double_report");
+        CallAligned("smile_double_terminate");
+        Line($"{ok}:");
+    }
+
     private void EmitBinary(BinaryExpressionSyntax binary)
     {
         if (binary.OperatorToken.Kind is SyntaxKind.AndKeyword or SyntaxKind.OrKeyword)
@@ -2386,6 +2460,11 @@ internal sealed class MasmEmitter
         EmitExpression(binary.Right);
         Line("    mov rcx, rax");
         PopRax();
+        if (_analysis.SemanticModel.GetType(binary.Left) == SmileType.Double)
+        {
+            MasmDoubleEmitter.Binary(binary, Line, CallAligned, EmitDoubleCheck);
+            return;
+        }
         if (_analysis.SemanticModel.GetType(binary.Left) == SmileType.Text)
         {
             Line("    mov rdx, rcx");
@@ -2508,6 +2587,7 @@ internal sealed class MasmEmitter
             }
             var value = symbol.ConstantValue switch
             {
+                double floating => BitConverter.DoubleToInt64Bits(floating),
                 long number => number,
                 bool boolean => boolean ? 1L : 0L,
                 _ => 0L
@@ -2602,14 +2682,15 @@ internal sealed class MasmEmitter
         for (var index = 0; index < site.Variables.Count; index++)
         {
             EmitDebugValue(site.Variables[index]);
-            switch (index)
-            {
-                case 0: Line("    mov rcx, rax"); break;
-                case 1: Line("    mov rdx, rax"); break;
-                case 2: Line("    mov r8, rax"); break;
-                case 3: Line("    mov r9, rax"); break;
-                default: Line($"    mov QWORD PTR [rsp+{32 + (index - 4) * 8}], rax"); break;
-            }
+            Line($"    mov QWORD PTR [rsp+{index * 8}], rax");
+        }
+        for (var index = 0; index < Math.Min(4, site.Variables.Count); index++)
+        {
+            var symbol = site.Variables[index];
+            if (symbol.Type == SmileType.Double && !symbol.IsArray)
+                Line($"    movsd xmm{index}, QWORD PTR [rsp+{index * 8}]");
+            else
+                Line($"    mov {new[] { "rcx", "rdx", "r8", "r9" }[index]}, QWORD PTR [rsp+{index * 8}]");
         }
 
         Line($"    call {site.HelperName}");
@@ -2628,6 +2709,7 @@ internal sealed class MasmEmitter
             {
                 var value = symbol.ConstantValue switch
                 {
+                    double floating => BitConverter.DoubleToInt64Bits(floating),
                     long number => number,
                     bool boolean => boolean ? 1L : 0L,
                     _ => 0L

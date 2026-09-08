@@ -14,7 +14,8 @@ public enum SmileTypeKind
     Image,
     Enum,
     Record,
-    Class
+    Class,
+    Double
 }
 
 public class SmileType
@@ -44,6 +45,7 @@ public class SmileType
     public static SmileType Error { get; } = new(SmileTypeKind.Error, "ERROR");
     public static SmileType Nothing { get; } = new(SmileTypeKind.Nothing, "Nothing");
     public static SmileType Number { get; } = new(SmileTypeKind.Number, "Number");
+    public static SmileType Double { get; } = new(SmileTypeKind.Double, "Double");
     public static SmileType Boolean { get; } = new(SmileTypeKind.Boolean, "Boolean");
     public static SmileType Text { get; } = new(SmileTypeKind.Text, "Text");
     public static SmileType Image { get; } = new(SmileTypeKind.Image, "Image");
@@ -2074,7 +2076,7 @@ internal sealed class SemanticAnalyzer
                     !parameter.HasDeclaredType || parameter.Type == SmileType.Error)
                     continue;
 
-                if (parameter.Type != SmileType.Number && parameter.Type != SmileType.Boolean &&
+                if (parameter.Type != SmileType.Double && parameter.Type != SmileType.Number && parameter.Type != SmileType.Boolean &&
                     parameter.Type != SmileType.Text && !parameter.Type.IsEnum)
                 {
                     Report("SML3431", expression.Span,
@@ -2110,7 +2112,7 @@ internal sealed class SemanticAnalyzer
             case ParenthesizedExpressionSyntax parenthesized:
                 return TryEvaluateOptionalDefault(parenthesized.Expression, out value, out type, out enumMember);
             case UnaryExpressionSyntax { OperatorToken.Kind: SyntaxKind.MinusToken,
-                Operand: LiteralExpressionSyntax { Value: long } }:
+                Operand: LiteralExpressionSyntax { Value: long or double } }:
                 return TryEvaluateConstant(expression, out value, out type, out enumMember);
             default:
                 value = 0L;
@@ -2283,7 +2285,7 @@ internal sealed class SemanticAnalyzer
         switch (expression)
         {
             case LiteralExpressionSyntax literal:
-                return literal.Value is bool ? SmileType.Boolean : literal.Value is string ? SmileType.Text : SmileType.Number;
+                return DoubleSemantics.LiteralType(literal.Value);
             case NothingExpressionSyntax:
                 return SmileType.Nothing;
             case NewExpressionSyntax creation:
@@ -2319,7 +2321,7 @@ internal sealed class SemanticAnalyzer
             case ParenthesizedExpressionSyntax parenthesized:
                 return InferImplicitGlobalType(parenthesized.Expression);
             case UnaryExpressionSyntax unary:
-                return unary.OperatorToken.Kind == SyntaxKind.NotKeyword ? SmileType.Boolean : SmileType.Number;
+                return unary.OperatorToken.Kind == SyntaxKind.NotKeyword ? SmileType.Boolean : InferImplicitGlobalType(unary.Operand);
             case BinaryExpressionSyntax binary when binary.OperatorToken.Kind is SyntaxKind.EqualsToken or SyntaxKind.NotEqualsToken or
                 SyntaxKind.LessToken or SyntaxKind.GreaterToken or SyntaxKind.LessOrEqualsToken or SyntaxKind.GreaterOrEqualsToken or
                 SyntaxKind.AndKeyword or SyntaxKind.OrKeyword:
@@ -2327,6 +2329,16 @@ internal sealed class SemanticAnalyzer
             case BinaryExpressionSyntax binary when binary.OperatorToken.Kind == SyntaxKind.PlusToken &&
                 InferImplicitGlobalType(binary.Left) == SmileType.Text && InferImplicitGlobalType(binary.Right) == SmileType.Text:
                 return SmileType.Text;
+            case BinaryExpressionSyntax binary when InferImplicitGlobalType(binary.Left) == SmileType.Double:
+                return SmileType.Double;
+            case CallExpressionSyntax call when DoubleSemantics.IsIntrinsic(call.Identifier.Kind) &&
+                _routines.TryGetValue(call.Identifier.Text, out var numericNamedRoutine):
+                return numericNamedRoutine.ReturnType;
+            case CallExpressionSyntax call when DoubleSemantics.IsIntrinsic(call.Identifier.Kind):
+                return DoubleSemantics.ResultType(call.Identifier.Kind);
+            case CallExpressionSyntax call when DoubleSemantics.IsPolymorphic(call.Identifier.Kind) &&
+                call.Arguments.Count > 0 && InferImplicitGlobalType(call.Arguments[0].Expression) == SmileType.Double:
+                return SmileType.Double;
             case CallExpressionSyntax call when SyntaxFacts.IsBuiltInFunction(call.Identifier.Kind):
                 return call.Identifier.Kind == SyntaxKind.TextSliceKeyword ? SmileType.Text
                     : IsBooleanBuiltIn(call.Identifier.Kind)
@@ -2432,7 +2444,7 @@ internal sealed class SemanticAnalyzer
         switch (expression)
         {
             case LiteralExpressionSyntax literal:
-                return literal.Value is bool ? SmileType.Boolean : literal.Value is string ? SmileType.Text : SmileType.Number;
+                return DoubleSemantics.LiteralType(literal.Value);
             case NothingExpressionSyntax:
                 return SmileType.Nothing;
             case NewExpressionSyntax creation:
@@ -2494,7 +2506,7 @@ internal sealed class SemanticAnalyzer
             case ParenthesizedExpressionSyntax parenthesized:
                 return InferLegacyExpressionType(parenthesized.Expression, routine, locals, withTypes);
             case UnaryExpressionSyntax unary:
-                return unary.OperatorToken.Kind == SyntaxKind.NotKeyword ? SmileType.Boolean : SmileType.Number;
+                return unary.OperatorToken.Kind == SyntaxKind.NotKeyword ? SmileType.Boolean : InferLegacyExpressionType(unary.Operand, routine, locals, withTypes);
             case BinaryExpressionSyntax binary:
                 if (binary.OperatorToken.Kind is SyntaxKind.EqualsToken or SyntaxKind.NotEqualsToken or SyntaxKind.LessToken or
                     SyntaxKind.GreaterToken or SyntaxKind.LessOrEqualsToken or SyntaxKind.GreaterOrEqualsToken or
@@ -2502,11 +2514,18 @@ internal sealed class SemanticAnalyzer
                 if (binary.OperatorToken.Kind == SyntaxKind.PlusToken &&
                     InferLegacyExpressionType(binary.Left, routine, locals, withTypes) == SmileType.Text &&
                     InferLegacyExpressionType(binary.Right, routine, locals, withTypes) == SmileType.Text) return SmileType.Text;
-                return SmileType.Number;
+                return InferLegacyExpressionType(binary.Left, routine, locals, withTypes);
             case IdentityExpressionSyntax:
                 return SmileType.Boolean;
             case CallExpressionSyntax call when call.Identifier.Kind == SyntaxKind.TextSliceKeyword:
                 return SmileType.Text;
+            case CallExpressionSyntax call when DoubleSemantics.IsIntrinsic(call.Identifier.Kind) &&
+                _routines.TryGetValue(call.Identifier.Text, out var numericNamedRoutine):
+                return numericNamedRoutine.ReturnType;
+            case CallExpressionSyntax call when DoubleSemantics.IsIntrinsic(call.Identifier.Kind):
+                return DoubleSemantics.ResultType(call.Identifier.Kind);
+            case CallExpressionSyntax call when DoubleSemantics.IsPolymorphic(call.Identifier.Kind) && call.Arguments.Count > 0:
+                return InferLegacyExpressionType(call.Arguments[0].Expression, routine, locals, withTypes);
             case CallExpressionSyntax call when IsBooleanBuiltIn(call.Identifier.Kind):
                 return SmileType.Boolean;
             case CallExpressionSyntax call when _routines.TryGetValue(call.Identifier.Text, out var called):
@@ -3459,7 +3478,8 @@ internal sealed class SemanticAnalyzer
             var type = AnalyzeExpression(item);
             if (type.IsRecord)
                 Report("SML3407", item.Span, "Print does not support whole record values.");
-            else if (type != SmileType.Error && type != SmileType.Text && type != SmileType.Number && type != SmileType.Boolean)
+            else if (type != SmileType.Error && type != SmileType.Text && type != SmileType.Number &&
+                type != SmileType.Double && type != SmileType.Boolean)
                 Report("SML3011", item.Span, "Invalid Print item.");
         }
     }
@@ -3494,10 +3514,10 @@ internal sealed class SemanticAnalyzer
         var selectorType = AnalyzeExpression(select.Expression);
         if (selectorType.IsRecord)
             Report("SML3407", select.Expression.Span, "Select Case does not support whole record values.");
-        else if (selectorType != SmileType.Number && selectorType != SmileType.Boolean &&
+        else if (selectorType != SmileType.Double && selectorType != SmileType.Number && selectorType != SmileType.Boolean &&
             selectorType != SmileType.Text && !selectorType.IsEnum && selectorType != SmileType.Error)
             Report("SML3304", select.Expression.Span,
-                "Select Case expression must be Number, Boolean, Text, or Enum.");
+                "Select Case expression must be Number, Double, Boolean, Text, or Enum.");
         var values = new HashSet<string>(StringComparer.Ordinal);
         var sawElse = false;
         foreach (var clause in select.Cases)
@@ -3517,7 +3537,8 @@ internal sealed class SemanticAnalyzer
                     Report("SML3013", clause.Value.Span, "Case value must be a compile-time scalar expression.");
                 else if (!values.Add((selectorType is NominalTypeSymbol nominal
                         ? nominal.RuntimeIdentity : selectorType.Name) + ":" +
-                    Convert.ToString(value, System.Globalization.CultureInfo.InvariantCulture)))
+                    (value is double floating ? DoubleSemantics.Format(floating == 0.0 ? 0.0 : floating)
+                        : Convert.ToString(value, System.Globalization.CultureInfo.InvariantCulture))))
                     Report("SML3019", clause.Value.Span, $"Duplicate Case value '{value}'.");
             }
             AnalyzeStatements(clause.Statements, false);
@@ -3585,7 +3606,7 @@ internal sealed class SemanticAnalyzer
         switch (expression)
         {
             case LiteralExpressionSyntax literal:
-                result = literal.Value is bool ? SmileType.Boolean : literal.Value is string ? SmileType.Text : SmileType.Number;
+                result = DoubleSemantics.LiteralType(literal.Value);
                 break;
             case NothingExpressionSyntax:
                 result = SmileType.Nothing;
@@ -3805,7 +3826,8 @@ internal sealed class SemanticAnalyzer
     private SmileType AnalyzeCall(SyntaxNode callSyntax, SyntaxToken identifier,
         IReadOnlyList<ArgumentSyntax> arguments, bool requireFunction)
     {
-        if (SyntaxFacts.IsBuiltInFunction(identifier.Kind))
+        if (SyntaxFacts.IsBuiltInFunction(identifier.Kind) &&
+            !(DoubleSemantics.IsIntrinsic(identifier.Kind) && _routines.ContainsKey(identifier.Text)))
         {
             foreach (var argument in arguments.Where(argument => argument.IsNamed))
                 Report("SML3433", argument.Name!.Span,
@@ -4158,6 +4180,21 @@ internal sealed class SemanticAnalyzer
             Report("SML3021", identifier.Span, $"Unknown built-in function '{identifier.Text}'.");
             return SmileType.Error;
         }
+        if (DoubleSemantics.IsIntrinsic(identifier.Kind) || DoubleSemantics.IsPolymorphic(identifier.Kind))
+        {
+            var types = arguments.Select(AnalyzeExpression).ToArray();
+            var required = DoubleSemantics.IsIntrinsic(identifier.Kind)
+                ? DoubleSemantics.ArgumentType(identifier.Kind)
+                : types.Length > 0 && types[0] == SmileType.Double ? SmileType.Double : SmileType.Number;
+            var arity = SyntaxFacts.GetBuiltInFunctionParameters(identifier.Kind).Count;
+            if (arguments.Count != arity)
+                Report("SML3016", identifier.Span, $"Built-in '{identifier.Text}' expects {arity} argument(s).");
+            for (var index = 0; index < types.Length; index++)
+                if (types[index] != required && types[index] != SmileType.Error)
+                    Report("SML3801", arguments[index].Span,
+                        $"Built-in '{identifier.Text}' requires {required.Name}; use an explicit conversion.");
+            return DoubleSemantics.IsIntrinsic(identifier.Kind) ? DoubleSemantics.ResultType(identifier.Kind) : required;
+        }
         var expected = SyntaxFacts.GetBuiltInFunctionParameters(identifier.Kind).Count;
         if (identifier.Kind is SyntaxKind.GameClosedKeyword or SyntaxKind.WindowWidthKeyword or
             SyntaxKind.WindowHeightKeyword or SyntaxKind.WindowTitleKeyword or SyntaxKind.WindowActivateKeyword or
@@ -4303,7 +4340,8 @@ internal sealed class SemanticAnalyzer
     private SmileType AnalyzeUnary(UnaryExpressionSyntax unary)
     {
         var operandType = AnalyzeExpression(unary.Operand);
-        var required = unary.OperatorToken.Kind == SyntaxKind.NotKeyword ? SmileType.Boolean : SmileType.Number;
+        var required = unary.OperatorToken.Kind == SyntaxKind.NotKeyword ? SmileType.Boolean
+            : operandType == SmileType.Double ? SmileType.Double : SmileType.Number;
         if (operandType != SmileType.Error && operandType != required)
         {
             Report("SML3003", unary.Span, $"Operator '{unary.OperatorToken.Text}' requires {TypeName(required)}.");
@@ -4318,6 +4356,16 @@ internal sealed class SemanticAnalyzer
         var rightType = AnalyzeExpression(binary.Right);
         if (leftType == SmileType.Error || rightType == SmileType.Error)
             return SmileType.Error;
+        if (leftType == SmileType.Double || rightType == SmileType.Double)
+        {
+            var kind = binary.OperatorToken.Kind;
+            if (leftType == SmileType.Double && rightType == SmileType.Double &&
+                (DoubleSemantics.IsArithmetic(kind) || DoubleSemantics.IsComparison(kind)))
+                return DoubleSemantics.IsComparison(kind) ? SmileType.Boolean : SmileType.Double;
+            Report("SML3801", binary.Span,
+                "Double requires same-type arithmetic/comparison operands. Use explicit ToDouble or ToNumber; Mod remains Number-only.");
+            return SmileType.Error;
+        }
         if (leftType.IsEnum || rightType.IsEnum)
         {
             if (binary.OperatorToken.Kind is SyntaxKind.EqualsToken or SyntaxKind.NotEqualsToken &&
@@ -4453,6 +4501,8 @@ internal sealed class SemanticAnalyzer
         enumMember = null;
         switch (expression)
         {
+            case LiteralExpressionSyntax literal when literal.Value is double floating:
+                value = floating; type = SmileType.Double; return true;
             case LiteralExpressionSyntax literal when literal.Value is long number:
                 value = number; type = SmileType.Number; return true;
             case LiteralExpressionSyntax literal when literal.Value is bool boolean:
@@ -4479,6 +4529,12 @@ internal sealed class SemanticAnalyzer
             case ParenthesizedExpressionSyntax parenthesized:
                 return TryEvaluateConstant(parenthesized.Expression, out value, out type, out enumMember);
             case UnaryExpressionSyntax unary when TryEvaluateConstant(unary.Operand, out var operand, out var operandType):
+                if (operandType == SmileType.Double && operand is double floatingOperand &&
+                    unary.OperatorToken.Kind is SyntaxKind.MinusToken or SyntaxKind.PlusToken)
+                { value = unary.OperatorToken.Kind == SyntaxKind.MinusToken ? -floatingOperand : floatingOperand;
+                    type = SmileType.Double; return true; }
+                if (unary.OperatorToken.Kind == SyntaxKind.PlusToken && operandType == SmileType.Number)
+                { value = operand; type = operandType; return true; }
                 if (unary.OperatorToken.Kind == SyntaxKind.MinusToken && operandType == SmileType.Number && operand is long numberOperand)
                 { value = -numberOperand; type = SmileType.Number; return true; }
                 if (unary.OperatorToken.Kind == SyntaxKind.NotKeyword && operandType == SmileType.Boolean && operand is bool booleanOperand)
@@ -4489,6 +4545,22 @@ internal sealed class SemanticAnalyzer
                 TryEvaluateConstant(binary.Right, out var right, out var rightType):
                 if (TryEvaluateBinary(binary.OperatorToken.Kind, left, right, leftType, rightType, out value, out type))
                     return true;
+                break;
+            case CallExpressionSyntax numericCall when DoubleSemantics.IsIntrinsic(numericCall.Identifier.Kind) &&
+                !_routines.ContainsKey(numericCall.Identifier.Text) ||
+                DoubleSemantics.IsPolymorphic(numericCall.Identifier.Kind) && numericCall.Arguments.Count > 0 &&
+                TryEvaluateConstant(numericCall.Arguments[0].Expression, out var firstNumeric, out _) && firstNumeric is double:
+                var numericValues = new List<object>();
+                foreach (var argument in numericCall.Arguments)
+                {
+                    if (!TryEvaluateConstant(argument.Expression, out var argumentValue, out _))
+                    { value = 0.0; type = SmileType.Error; return false; }
+                    numericValues.Add(argumentValue);
+                }
+                if (numericValues.Count == SyntaxFacts.GetBuiltInFunctionParameters(numericCall.Identifier.Kind).Count &&
+                    DoubleSemantics.TryIntrinsic(numericCall.Identifier.Kind, numericValues, out value))
+                { type = DoubleSemantics.LiteralType(value); return true; }
+                Report("SML3802", numericCall.Span, "Double constant has an invalid domain, conversion or nonfinite result.");
                 break;
             case CallExpressionSyntax call when call.Identifier.Kind == SyntaxKind.AbsKeyword && call.Arguments.Count == 1 &&
                 TryEvaluateConstant(call.Arguments[0].Expression, out var absObject, out var absType) && absType == SmileType.Number &&
@@ -4518,6 +4590,12 @@ internal sealed class SemanticAnalyzer
     {
         value = 0L;
         type = SmileType.Error;
+        if (leftType == SmileType.Double && rightType == SmileType.Double && left is double a && right is double b)
+        {
+            var valid = DoubleSemantics.TryBinary(kind, a, b, out value);
+            type = DoubleSemantics.IsComparison(kind) ? SmileType.Boolean : SmileType.Double;
+            return valid;
+        }
         if (kind is SyntaxKind.PlusToken or SyntaxKind.MinusToken or SyntaxKind.StarToken or SyntaxKind.SlashToken or SyntaxKind.ModKeyword)
         {
             if (kind == SyntaxKind.PlusToken && leftType == SmileType.Text && rightType == SmileType.Text &&
@@ -4647,7 +4725,8 @@ internal sealed class SemanticAnalyzer
         if (token.Text.StartsWith("__smile_missing_", StringComparison.Ordinal) ||
             token.Text.StartsWith("__smile_private_", StringComparison.Ordinal))
             return SmileType.Error;
-        var type = token.Kind == SyntaxKind.NumberKeyword ? SmileType.Number
+        var type = token.Kind == SyntaxKind.DoubleKeyword ? SmileType.Double
+            : token.Kind == SyntaxKind.NumberKeyword ? SmileType.Number
             : token.Kind == SyntaxKind.BooleanKeyword ? SmileType.Boolean
             : token.Kind == SyntaxKind.TextKeyword ? SmileType.Text
             : token.Kind == SyntaxKind.ImageKeyword ? SmileType.Image

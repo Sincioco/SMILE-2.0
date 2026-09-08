@@ -77,7 +77,28 @@ internal sealed class Lexer
             while (char.IsDigit(Current))
                 _position++;
 
+            var fractional = false;
+            if (Current == '.' && char.IsDigit(Peek(1)))
+            {
+                fractional = true;
+                _position++;
+                while (char.IsDigit(Current)) _position++;
+            }
+            if (Current is 'e' or 'E')
+            {
+                fractional = true;
+                _position++;
+                if (Current is '+' or '-') _position++;
+                while (char.IsDigit(Current)) _position++;
+            }
             var text = _source.Substring(start, _position - start);
+            if (fractional)
+            {
+                if (!DoubleSemantics.TryParse(text, out var floating))
+                    _diagnostics.Report("SML3800", new TextSpan(start, text.Length),
+                        "Double literal must be a finite decimal with complete fraction and exponent digits.");
+                return new SyntaxToken(SyntaxKind.DoubleToken, start, text, floating);
+            }
             if (!long.TryParse(text, NumberStyles.None, CultureInfo.InvariantCulture, out var value))
             {
                 _diagnostics.Report("SML1003", new TextSpan(start, text.Length), "Number literal is outside the signed 64-bit range.");

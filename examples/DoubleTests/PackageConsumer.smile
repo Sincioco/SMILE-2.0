@@ -1,0 +1,23 @@
+Option Explicit
+
+Import Smile.Double.Proof As Numeric
+
+Dim Point As Numeric.Point
+Dim Copy As Numeric.Point
+
+Point = Numeric.CreatePoint(Numeric.STEP_VALUE, 0, 0.25, "Owned", 0.5)
+Copy = Point
+
+Call Shift(Copy.Values[0])
+
+Print Point.Values[0] = 0.875
+Print Copy.Values[0] = 1.125
+Print Copy.Label = "Owned"
+Print Point.Shift(0.125) = 1.0
+Print Text_From_Double(Numeric.DefaultZero()) = "-0.0"
+
+Sub Shift(ByRef Value As Double)
+
+    Value = Value + 0.25
+
+End Sub

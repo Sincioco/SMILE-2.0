@@ -272,6 +272,7 @@ public static class SmileSymbolDisplayService
         {
             string text => "\"" + text.Replace("\"", "\"\"") + "\"",
             bool boolean => boolean ? "True" : "False",
+            double floating => DoubleSemantics.Format(floating),
             long number => number.ToString(System.Globalization.CultureInfo.InvariantCulture),
             _ => string.Empty
         };

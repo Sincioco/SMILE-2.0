@@ -229,7 +229,7 @@ internal sealed class SmileLibraryResourcePolicy
 
 public static class SmileLibraryPackage
 {
-    public const int CurrentFormatVersion = 6;
+    public const int CurrentFormatVersion = 7;
     internal const string ResourceLimitDiagnosticCode = "SML3210";
     internal const string OutputLockDiagnosticCode = "SML3211";
     private static readonly DateTimeOffset DeterministicTimestamp =
@@ -522,7 +522,7 @@ public static class SmileLibraryPackage
         var provider = libraryName + "@" + libraryVersion;
         var orderedModules = modules.OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
             .ThenBy(item => item.Name, StringComparer.Ordinal).ToArray();
-        var builder = new StringBuilder("{\n  \"formatVersion\": 6,\n  \"library\": {\"name\": \"")
+        var builder = new StringBuilder("{\n  \"formatVersion\": 7,\n  \"library\": {\"name\": \"")
             .Append(JsonEscape(libraryName)).Append("\", \"version\": \"")
             .Append(JsonEscape(libraryVersion)).Append("\", \"provider\": \"")
             .Append(JsonEscape(provider)).Append("\"},\n  \"modules\": [");
@@ -649,7 +649,7 @@ public static class SmileLibraryPackage
             .ThenBy(item => item.Name, StringComparer.Ordinal).ThenBy(item => item.Version, StringComparer.Ordinal)
             .Select(item => "    {\"name\": \"" + JsonEscape(item.Name) + "\", \"version\": \"" +
                             JsonEscape(item.Version) + "\"}"));
-        return "{\n  \"formatVersion\": 6,\n  \"name\": \"" + JsonEscape(project.LibraryName) +
+        return "{\n  \"formatVersion\": 7,\n  \"name\": \"" + JsonEscape(project.LibraryName) +
                "\",\n  \"version\": \"" + JsonEscape(project.Version) +
                "\",\n  \"provider\": \"" + JsonEscape(project.LibraryName + "@" + project.Version) +
                "\",\n  \"modules\": [" + moduleJson +
@@ -683,9 +683,9 @@ public static class SmileLibraryPackage
     private static SmileLibraryIdentity ParseIdentity(PackageManifest manifest)
     {
         if (manifest.FormatVersion != CurrentFormatVersion)
-            throw new InvalidDataException(manifest.FormatVersion is >= 1 and <= 5
-                ? $"SMILE library formatVersion {manifest.FormatVersion} is no longer supported; rebuild the library with the current SMILE compiler (expected formatVersion 6)."
-                : $"Unsupported SMILE library formatVersion {manifest.FormatVersion}; expected 6. Rebuild the library with the current SMILE compiler.");
+            throw new InvalidDataException(manifest.FormatVersion is >= 1 and <= 6
+                ? $"SMILE library formatVersion {manifest.FormatVersion} is no longer supported; rebuild the library with the current SMILE compiler (expected formatVersion 7)."
+                : $"Unsupported SMILE library formatVersion {manifest.FormatVersion}; expected 7. Rebuild the library with the current SMILE compiler.");
         var name = RequiredValue(manifest.Name, "name");
         var version = RequiredValue(manifest.Version, "version");
         ValidateExactVersion(version, $"library '{name}'");
@@ -1004,6 +1004,7 @@ public static class SmileLibraryPackage
     {
         string text => "\"" + JsonEscape(text) + "\"",
         bool boolean => boolean ? "true" : "false",
+        double floating => "\"" + DoubleSemantics.Format(floating) + "\"",
         long number => number.ToString(CultureInfo.InvariantCulture),
         _ => throw new InvalidDataException($"Unsupported SMILE constant value type '{value.GetType().Name}'.")
     };
@@ -1094,6 +1095,8 @@ public static class SmileLibraryPackage
                    enumValue.ToString(CultureInfo.InvariantCulture) + "}";
         }
 
+        if (parameter.Type == SmileType.Double && parameter.DefaultValue is double floating)
+            return "{\"kind\": \"double\", \"value\": \"" + DoubleSemantics.Format(floating) + "\"}";
         if (parameter.Type == SmileType.Number && parameter.DefaultValue is long number)
             return "{\"kind\": \"number\", \"value\": " +
                    number.ToString(CultureInfo.InvariantCulture) + "}";

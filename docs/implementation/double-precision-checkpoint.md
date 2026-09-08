@@ -16,8 +16,8 @@
 
 | Phase | State | Owner and dependency | Structural completion |
 |---|---|---|---|
-| P0 | Validated; publication is the containing commit | ViewerUi, BattleArenaPreview; existing fallback queries. Web Renderer3DReflections; existing parent HDR state | Both production label policies handle unsupported receivers; RGBA16F uses core LINEAR filtering with renderability/retry checks retained |
-| D1 | Next, authorized | Smile.Language; typed native/Web emitters/runtime; packages/editor/debug | Pending distinct binary64 semantics, storage, calls and tooling on both targets |
+| P0 | Completed and pushed, `9f33ad9` | ViewerUi, BattleArenaPreview; existing fallback queries. Web Renderer3DReflections; existing parent HDR state | Both production label policies handle unsupported receivers; RGBA16F uses core LINEAR filtering with renderability/retry checks retained |
+| D1 | Validated; publication is the containing commit | Smile.Language/DoubleSemantics; MasmDoubleEmitter/numeric runtime; WebEmitter/Double.js; package schema 7; shared completion and native debug types | Distinct binary64 arithmetic/storage/calls/errors, packages and tooling on both targets; 317 shared tests; actual native, Web and Chrome execution |
 | D2 | Pending D1 | Existing renderer and actor ownership; fractional typed bridge/shared math | Pending actual fractional submission/query path |
 | D3 | Pending D2 | Viewer camera/Party, Sin Star I preview, shared curve slice | Pending selective adoption without rounding to old integer arguments |
 | D4 | Pending D3 | Integration, documentation, publication and installed VSIX verification | Pending final delivery |
@@ -64,9 +64,58 @@ Local logs: `artifacts/temp/p0-compiler-build.log`, `p0-reflections.log`,
 `Program.smile` were not changed. VSIX rebuild/install is reserved for the integrated
 D4 payload boundary; no current Double or installation completion is claimed.
 
+## D1 evidence and limits
+
+- Contract and support matrix: `docs/language/double.md`. Token/type tags are appended;
+  Number and Enum keep their integral rules. Native internal eight-byte call payloads
+  use typed floating adapters at external ABI boundaries; Web uses the same runtime.
+- `scripts/test-double.ps1` passed native/generated-Web success, source-project and
+  package-file parity, deterministic package hashes, 15 explicit numeric/text failure
+  cases and target-specific bounds. Failure cases carry a Class with nested Double
+  array/Image state and local/global Text; all native live counts return zero and
+  Web ownership diagnostics pass. Earlier side-effect output is preserved and no
+  post-failure write/output occurs. Logs: `artifacts/temp/d1-focused-final.log`,
+  detailed run `artifacts/temp/double/run-3344955aaaf64ee5b3f0cc88c23ce78f`.
+- Later Print acceptance, duplicate-zero Select diagnostics, Optional Quick Info
+  display and contextual intrinsic-name inference corrections were validated by
+  317 shared tests (`d1-shared-tests.log`) and the rebuilt native/generated-Web
+  fixture (`artifacts/tests/DoubleTests.exe`, `artifacts/web/DoubleTests`). The source
+  fixture prints `0.002` and `Double tests passed`. Unchanged failure/package
+  evidence above is reused; no redundant full-smoke/VSIX installation was run.
+- Actual `--debug --keep-temp` compilation and execution pass; generated C/PDB
+  retains Double scalars, arrays and nested aggregate views with source paths.
+  Shared tests check typed views, navigation, Optional signed-zero signatures and
+  Double return temporaries. This is compiled debug evidence, not a claimed manual
+  Visual Studio breakpoint session. Integrated VSIX rebuild/install remains D4.
+- Installed Chrome tab 35136093 ran the actual generated program at local port
+  8771. DOM output verified `0.002\nDouble tests passed\n`; earlier AX screenshot
+  obtained. A later automatic screenshot timed out; DOM execution was still verified.
+- Formatter: all 13 focused integration tests passed; repository-wide
+  `-Check -FormatLongIf` passed for 423 tracked files, plus explicit formatting of
+  the three new Double sources. Logs: `d1-formatter-tests.log`, `d1-repository-style.log`.
+- Corrected defects: native MINSD/MAXSD tie lowering lost negative zero despite
+  `/fp:strict`; explicit tie operand order fixes it. Also fixed Print type admission,
+  signed-zero/adjacent-value Select duplicate identity, new contextual-name inference,
+  Optional signature display and Web folded Number constant range checking.
+  Initial harness invocations needed `--project`/`--target library`, a Type-owned
+  Image field and a parenthesized PowerShell case name; failed attempts are not passes.
+- No canonical assets, live saves, calibration, Viewer coordinator or closed H/RF
+  investigation was changed. D2–D4 and final installation/publication remain pending.
+
+| D1 source/artifact | SHA-256 at validation |
+|---|---|
+| `src/Smile.Language/DoubleSemantics.cs` | `08BBB3A81D7191C5C41C51744C544AF8930E4A214105420F5A55C01E1C01733F` |
+| `src/Smile.NativeRuntime/numeric/double.cpp` | `281D02ACE6C9EFD96B9473E0944F32FA9EE8094607DE72DC0B6FC52C8D22BEC6` |
+| `artifacts/compiler/smilec.dll` | `2E6FDF0C01D8B382B0C033C70FE0722EC484A4E6EEAD0A503F33E74D796FF44D` |
+| `artifacts/compiler/Smile.NativeRuntime.lib` | `913697963ADD07FF3D62FE4812B3A68D15CDB75F909AEB957D1346682DD0D971` |
+| `artifacts/tests/DoubleTests.exe` | `DDBE8E83CD029D970CC18C196F7002FC863A5E71E016698FB04F0E97FD723C8A` |
+| `artifacts/web/DoubleTests/game.js` | `103B99C1D166A7BD1788646E3B42ACB303CD6880FE18B5BA54D79F6251DA2A15` |
+| `examples/DoubleTests/bin/Debug/Smile.Double.Proof.smilelib` | `B8AE5586E9682C290770B415D17EFE15F6A9D1A81E8D550F2FCA2653DA4BA282` |
+
 ## Next action
 
-Publish validated P0, then implement D1 using documents 03 and 04 (read).
+Publish validated D1, then read document 05 and implement the typed fractional
+renderer/actor/query bridge and shared math through the existing owners.
 No further Double authorization is required. Complete D1–D4 before stopping.
 
 ## On Hold
