@@ -209,7 +209,7 @@ try {
         'Party reflection control ownership'
     Assert-Contains $gamePreview 'Import Smile.Simple3D.Arena3D As Arena3D' `
         'Sin Star I shared arena reuse'
-    Assert-Contains $gamePreview 'Import Smile.Simple3D.Interaction As Interaction' `
+    Assert-Contains $gamePreview 'Import Smile.Simple3D.PrecisionCamera3D As Interaction' `
         'Sin Star I shared camera reuse'
     Assert-Contains $gamePreview 'Character3D.PlayMode(' `
         'Sin Star I live animated actor'

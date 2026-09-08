@@ -7,6 +7,7 @@ Import Smile.Simple3D.Core As Core
 Import Smile.Simple3D.Character3D As Character3D
 Import Smile.Simple3D.Graphics3D As Graphics3D
 Import Smile.Simple3D.Precision3D As Precision3D
+Import Smile.Simple3D.PrecisionMath3D As Math3D
 Import Smile.Simple3D.Scene3D As Scene3D
 
 Private Dim Failures As Number
@@ -37,6 +38,9 @@ Public Function Run() As Number
     Dim BoundsBefore As Character3D.PreciseBounds3D
     Dim BoundsAfter As Character3D.PreciseBounds3D
     Dim Camera As Precision3D.Camera3D
+    Dim Pivot As Precision3D.Vector3
+    Dim Rotation As Precision3D.Vector3
+    Dim Expected As Precision3D.Vector3
     Dim Index As Number
 
     Failures = 0
@@ -84,6 +88,24 @@ Public Function Run() As Number
     Call Check(Position.X = 0.0 And Position.Y = 0.0 And Position.Z = 0.0)
     Call Check(Character3D.TrySocketPositionPrecise(First, "HandTip", 0, False, Socket))
     Call Check(Precision3D.SetPosition(Equipment, Socket.X, Socket.Y, Socket.Z))
+
+    Pivot = Precision3D.Vector(0.125, -0.375, 0.25)
+    Rotation = Precision3D.Vector(0.0, 0.0, 0.125)
+    Expected = Math3D.Add(Pivot, Math3D.Rotate(Math3D.Subtract(Socket, Pivot), Rotation))
+
+    Call Check(Character3D.SetPartPivotRotationPrecise(First, 0, Pivot, Rotation))
+    Call Check(Character3D.TrySocketPositionPrecise(First, "HandTip", 0, False, Before))
+    Call Check(Abs(Before.X - Expected.X) < 0.0002 And Abs(Before.Y - Expected.Y) < 0.0002)
+
+    Rotation.Z = 361.0
+
+    Call Check(Not Character3D.SetPartPivotRotationPrecise(First, 0, Pivot, Rotation))
+    Call Check(Character3D.TrySocketPositionPrecise(First, "HandTip", 0, False, Position))
+    Call Check(Position.X = Before.X And Position.Y = Before.Y)
+
+    Rotation.Z = 0.0
+
+    Call Check(Character3D.SetPartPivotRotationPrecise(First, 0, Pivot, Rotation))
 
     Camera = Precision3D.FromCamera(Graphics3D.DefaultCamera())
 

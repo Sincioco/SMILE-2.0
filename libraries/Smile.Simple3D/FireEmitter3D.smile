@@ -4,6 +4,7 @@ Module Smile.Simple3D.FireEmitter3D
 Option Explicit
 
 Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Precision3D As Precision3D
 Import Smile.Simple3D.Graphics3D As Graphics3D
 Import Smile.Simple3D.Character3D As Character3D
 
@@ -49,12 +50,12 @@ Private Type EmitterState
     Radius As Number
     Intensity As Number
     Turbulence As Number
-    Source As Core.Vector3
-    Tip As Core.Vector3
-    Previous As Core.Vector3
-    PreviousTip As Core.Vector3
-    Velocity As Core.Vector3
-    TipVelocity As Core.Vector3
+    Source As Precision3D.Vector3
+    Tip As Precision3D.Vector3
+    Previous As Precision3D.Vector3
+    PreviousTip As Precision3D.Vector3
+    Velocity As Precision3D.Vector3
+    TipVelocity As Precision3D.Vector3
     Wind As Core.Vector3
     Direction As Core.Vector3
     Actor As Character3D.Actor
@@ -68,17 +69,17 @@ Private Type EmitterState
     Finished As Boolean
     DebugLayer As Number
     BoundsBucket As Number
-    BoundsMinimum As Core.Vector3
-    BoundsMaximum As Core.Vector3
-    PreviousBoundsMinimum As Core.Vector3
-    PreviousBoundsMaximum As Core.Vector3
+    BoundsMinimum As Precision3D.Vector3
+    BoundsMaximum As Precision3D.Vector3
+    PreviousBoundsMinimum As Precision3D.Vector3
+    PreviousBoundsMaximum As Precision3D.Vector3
 End Type
 
 Private Type CpuParticle
     Age As Number
     Lifetime As Number
-    Position As Core.Vector3
-    Velocity As Core.Vector3
+    Position As Precision3D.Vector3
+    Velocity As Precision3D.Vector3
     Size As Number
     Frame As Number
     Rotation As Number
@@ -250,13 +251,13 @@ Private Function PresetId(Name As Text) As Number
 
 End Function
 
-Private Function PositionValid(Position As Core.Vector3) As Boolean
+Private Function PositionValid(Position As Precision3D.Vector3) As Boolean
 
     Dim Result As Boolean
 
-    Result = (Position.X >= -900000 And Position.X <= 900000 And
-        Position.Y >= -900000 And Position.Y <= 900000 And
-        Position.Z >= -900000 And Position.Z <= 900000)
+    Result = (Position.X >= -900000.0 And Position.X <= 900000.0 And
+        Position.Y >= -900000.0 And Position.Y <= 900000.0 And
+        Position.Z >= -900000.0 And Position.Z <= 900000.0)
 
     Return Result
 
@@ -448,12 +449,12 @@ Private Function ApplyLayerBounds(Index As Number, Layer As Number) As Boolean
     ''' Speed cap is 35 radii/sec, lifetime <= 1.65 sec, plus sprite growth,
     ''' initial directed velocity and bounded inherited source velocity.
     Margin = Items[Index].Radius * 100 + DirectionSpeed * 2 + 3200
-    Minimum.X = Max(-1000000, Min(Items[Index].BoundsMinimum.X, Items[Index].PreviousBoundsMinimum.X) - Margin)
-    Minimum.Y = Max(-1000000, Min(Items[Index].BoundsMinimum.Y, Items[Index].PreviousBoundsMinimum.Y) - Margin)
-    Minimum.Z = Max(-1000000, Min(Items[Index].BoundsMinimum.Z, Items[Index].PreviousBoundsMinimum.Z) - Margin)
-    Maximum.X = Min(1000000, Max(Items[Index].BoundsMaximum.X, Items[Index].PreviousBoundsMaximum.X) + Margin)
-    Maximum.Y = Min(1000000, Max(Items[Index].BoundsMaximum.Y, Items[Index].PreviousBoundsMaximum.Y) + Margin)
-    Maximum.Z = Min(1000000, Max(Items[Index].BoundsMaximum.Z, Items[Index].PreviousBoundsMaximum.Z) + Margin)
+    Minimum.X = ToNumber(Floor(Max(-1000000.0, Min(Items[Index].BoundsMinimum.X, Items[Index].PreviousBoundsMinimum.X) - ToDouble(Margin))))
+    Minimum.Y = ToNumber(Floor(Max(-1000000.0, Min(Items[Index].BoundsMinimum.Y, Items[Index].PreviousBoundsMinimum.Y) - ToDouble(Margin))))
+    Minimum.Z = ToNumber(Floor(Max(-1000000.0, Min(Items[Index].BoundsMinimum.Z, Items[Index].PreviousBoundsMinimum.Z) - ToDouble(Margin))))
+    Maximum.X = ToNumber(Ceiling(Min(1000000.0, Max(Items[Index].BoundsMaximum.X, Items[Index].PreviousBoundsMaximum.X) + ToDouble(Margin))))
+    Maximum.Y = ToNumber(Ceiling(Min(1000000.0, Max(Items[Index].BoundsMaximum.Y, Items[Index].PreviousBoundsMaximum.Y) + ToDouble(Margin))))
+    Maximum.Z = ToNumber(Ceiling(Min(1000000.0, Max(Items[Index].BoundsMaximum.Z, Items[Index].PreviousBoundsMaximum.Z) + ToDouble(Margin))))
     Result = Graphics3D.SetGpuParticleBounds3D(Systems[Index * 5 + Layer], Minimum, Maximum)
 
     Return Result
@@ -604,6 +605,19 @@ Public Function StartAt(Name As Text, Position As Core.Vector3, Seed As Number,
     Optional Radius As Number = 20) As FireEmitter
 
     Dim Result As FireEmitter
+
+    Result = StartAtPrecise(Name, Precision3D.FromVector(Position), Seed, Quality, Simulation, Radius)
+
+    Return Result
+
+End Function
+
+Public Function StartAtPrecise(Name As Text, Position As Precision3D.Vector3, Seed As Number,
+    Optional Quality As Number = QUALITY_HIGH,
+    Optional Simulation As Number = SIMULATION_AUTO,
+    Optional Radius As Number = 20) As FireEmitter
+
+    Dim Result As FireEmitter
     Dim Index As Number
     Dim ParticleIndex As Number
     Dim Preset As Number
@@ -656,9 +670,9 @@ Public Function StartAt(Name As Text, Position As Core.Vector3, Seed As Number,
     Items[Index].Tip = Position
     Items[Index].Previous = Position
     Items[Index].PreviousTip = Position
-    Items[Index].Velocity.X = 0
-    Items[Index].Velocity.Y = 0
-    Items[Index].Velocity.Z = 0
+    Items[Index].Velocity.X = 0.0
+    Items[Index].Velocity.Y = 0.0
+    Items[Index].Velocity.Z = 0.0
     Items[Index].TipVelocity = Items[Index].Velocity
     Items[Index].Wind.X = 0
     Items[Index].Wind.Y = 0
@@ -737,8 +751,18 @@ End Function
 
 Public Function SetSegment(Value As FireEmitter, Base As Core.Vector3, Tip As Core.Vector3) As Boolean
 
+    Dim Result As Boolean
+
+    Result = SetSegmentPrecise(Value, Precision3D.FromVector(Base), Precision3D.FromVector(Tip))
+
+    Return Result
+
+End Function
+
+Public Function SetSegmentPrecise(Value As FireEmitter, Base As Precision3D.Vector3, Tip As Precision3D.Vector3) As Boolean
+
     Dim Index As Number
-    Dim LengthSquared As Number
+    Dim LengthSquared As Double
 
     If (Not Valid(Value) Or
         Not PositionValid(Base) Or
@@ -756,7 +780,7 @@ Public Function SetSegment(Value As FireEmitter, Base As Core.Vector3, Tip As Co
     LengthSquared = ((Tip.X - Base.X) * (Tip.X - Base.X) +
         (Tip.Y - Base.Y) * (Tip.Y - Base.Y) + (Tip.Z - Base.Z) * (Tip.Z - Base.Z))
 
-    If LengthSquared < 16 Or LengthSquared > 100000000 Then
+    If LengthSquared < 16.0 Or LengthSquared > 100000000.0 Then
         ErrorValue = ERROR_SOURCE
         Return False
     End If
@@ -770,6 +794,16 @@ End Function
 
 ''' Moves a point or cone source without moving already-emitted world-space particles.
 Public Function SetPosition(Value As FireEmitter, Position As Core.Vector3) As Boolean
+
+    Dim Result As Boolean
+
+    Result = SetPositionPrecise(Value, Precision3D.FromVector(Position))
+
+    Return Result
+
+End Function
+
+Public Function SetPositionPrecise(Value As FireEmitter, Position As Precision3D.Vector3) As Boolean
 
     If Not Valid(Value) Or Not PositionValid(Position) Then
         ErrorValue = ERROR_SOURCE
@@ -793,9 +827,9 @@ Public Function StartOnSegment(Name As Text, Actor As Character3D.Actor,
     Optional Simulation As Number = SIMULATION_AUTO) As FireEmitter
 
     Dim Result As FireEmitter
-    Dim Base As Core.Vector3
-    Dim Tip As Core.Vector3
-    Dim LengthSquared As Number
+    Dim Base As Precision3D.Vector3
+    Dim Tip As Precision3D.Vector3
+    Dim LengthSquared As Double
     Dim Radius As Number
     Dim Ok As Boolean
 
@@ -806,12 +840,18 @@ Public Function StartOnSegment(Name As Text, Actor As Character3D.Actor,
         Return Result
     End If
 
-    Base = Character3D.SocketPosition(Actor, BaseSocket)
-    Tip = Character3D.SocketPosition(Actor, TipSocket)
+    Ok = Character3D.TrySocketPositionPrecise(Actor, BaseSocket, 0, False, Base)
+    Ok = Character3D.TrySocketPositionPrecise(Actor, TipSocket, 0, False, Tip) And Ok
+
+    If Not Ok Then
+        ErrorValue = ERROR_SOURCE
+        Return Result
+    End If
+
     LengthSquared = ((Tip.X - Base.X) * (Tip.X - Base.X) +
         (Tip.Y - Base.Y) * (Tip.Y - Base.Y) + (Tip.Z - Base.Z) * (Tip.Z - Base.Z))
 
-    If LengthSquared < 16 Or LengthSquared > 100000000 Then
+    If LengthSquared < 16.0 Or LengthSquared > 100000000.0 Then
         ErrorValue = ERROR_SOURCE
         Return Result
     End If
@@ -820,7 +860,7 @@ Public Function StartOnSegment(Name As Text, Actor As Character3D.Actor,
 
     Do
 
-        If Radius * Radius * 144 >= LengthSquared Then
+        If ToDouble(Radius * Radius * 144) >= LengthSquared Then
             Exit Do
         End If
 
@@ -828,7 +868,7 @@ Public Function StartOnSegment(Name As Text, Actor As Character3D.Actor,
 
     Loop
 
-    Result = StartAt(Name, Base, Seed, Quality, Simulation, Radius)
+    Result = StartAtPrecise(Name, Base, Seed, Quality, Simulation, Radius)
 
     If Result.Slot <> 0 Then
 
@@ -836,7 +876,7 @@ Public Function StartOnSegment(Name As Text, Actor As Character3D.Actor,
         Items[Result.Slot - 1].BaseSocket = BaseSocket
         Items[Result.Slot - 1].TipSocket = TipSocket
         Items[Result.Slot - 1].Attachment = 1
-        Ok = SetSegment(Result, Base, Tip)
+        Ok = SetSegmentPrecise(Result, Base, Tip)
 
     End If
 
@@ -984,8 +1024,8 @@ Private Sub Spawn(Index As Number, Layer As Number)
     Dim Flat As Number
     Dim Radius As Number
     Dim Fraction As Number
-    Dim Position As Core.Vector3
-    Dim Velocity As Core.Vector3
+    Dim Position As Precision3D.Vector3
+    Dim Velocity As Precision3D.Vector3
     Dim Lifetime As Number
     Dim Size As Number
     Dim EndSize As Number
@@ -999,20 +1039,20 @@ Private Sub Spawn(Index As Number, Layer As Number)
     Radius = Items[Index].Radius
     Slot = NextSlot[Key]
     Fraction = (Items[Index].Serial * 137 + RandomValue(Index, 137)) Mod 1000
-    Position.X = Items[Index].Source.X + (Items[Index].Tip.X - Items[Index].Source.X) * Fraction / 1000
-    Position.Y = Items[Index].Source.Y + (Items[Index].Tip.Y - Items[Index].Source.Y) * Fraction / 1000
-    Position.Z = Items[Index].Source.Z + (Items[Index].Tip.Z - Items[Index].Source.Z) * Fraction / 1000
-    Position.X = Position.X + RandomValue(Index, Radius) - Radius / 2
-    Position.Z = Position.Z + RandomValue(Index, Radius) - Radius / 2
-    Velocity.X = Items[Index].Direction.X + RandomValue(Index, Radius * 2) - Radius
-    Velocity.Y = Items[Index].Direction.Y + RandomValue(Index, Radius * 2)
-    Velocity.Z = Items[Index].Direction.Z + RandomValue(Index, Radius * 2) - Radius
-    Velocity.X = Velocity.X + (Items[Index].Velocity.X * (1000 - Fraction) +
-        Items[Index].TipVelocity.X * Fraction) * Items[Index].Inheritance / 100000
-    Velocity.Y = Velocity.Y + (Items[Index].Velocity.Y * (1000 - Fraction) +
-        Items[Index].TipVelocity.Y * Fraction) * Items[Index].Inheritance / 100000
-    Velocity.Z = Velocity.Z + (Items[Index].Velocity.Z * (1000 - Fraction) +
-        Items[Index].TipVelocity.Z * Fraction) * Items[Index].Inheritance / 100000
+    Position.X = Items[Index].Source.X + (Items[Index].Tip.X - Items[Index].Source.X) * ToDouble(Fraction) / 1000.0
+    Position.Y = Items[Index].Source.Y + (Items[Index].Tip.Y - Items[Index].Source.Y) * ToDouble(Fraction) / 1000.0
+    Position.Z = Items[Index].Source.Z + (Items[Index].Tip.Z - Items[Index].Source.Z) * ToDouble(Fraction) / 1000.0
+    Position.X = Position.X + ToDouble(RandomValue(Index, Radius) - Radius / 2)
+    Position.Z = Position.Z + ToDouble(RandomValue(Index, Radius) - Radius / 2)
+    Velocity.X = ToDouble(Items[Index].Direction.X + RandomValue(Index, Radius * 2) - Radius)
+    Velocity.Y = ToDouble(Items[Index].Direction.Y + RandomValue(Index, Radius * 2))
+    Velocity.Z = ToDouble(Items[Index].Direction.Z + RandomValue(Index, Radius * 2) - Radius)
+    Velocity.X = Velocity.X + (Items[Index].Velocity.X * ToDouble(1000 - Fraction) +
+        Items[Index].TipVelocity.X * ToDouble(Fraction)) * ToDouble(Items[Index].Inheritance) / 100000.0
+    Velocity.Y = Velocity.Y + (Items[Index].Velocity.Y * ToDouble(1000 - Fraction) +
+        Items[Index].TipVelocity.Y * ToDouble(Fraction)) * ToDouble(Items[Index].Inheritance) / 100000.0
+    Velocity.Z = Velocity.Z + (Items[Index].Velocity.Z * ToDouble(1000 - Fraction) +
+        Items[Index].TipVelocity.Z * ToDouble(Fraction)) * ToDouble(Items[Index].Inheritance) / 100000.0
     Lifetime = 500 + RandomValue(Index, 350)
     Size = Radius
     Temperature = 970
@@ -1036,9 +1076,9 @@ Private Sub Spawn(Index As Number, Layer As Number)
 
         Size = 1 + RandomValue(Index, Max(1, Radius / 9))
         Lifetime = 350 + RandomValue(Index, 1300)
-        Velocity.X = Velocity.X + RandomValue(Index, Radius * 8) - Radius * 4
-        Velocity.Y = Radius * 2 + RandomValue(Index, Radius * 14)
-        Velocity.Z = Velocity.Z + RandomValue(Index, Radius * 8) - Radius * 4
+        Velocity.X = Velocity.X + ToDouble(RandomValue(Index, Radius * 8) - Radius * 4)
+        Velocity.Y = ToDouble(Radius * 2 + RandomValue(Index, Radius * 14))
+        Velocity.Z = Velocity.Z + ToDouble(RandomValue(Index, Radius * 8) - Radius * 4)
         Temperature = 550 + RandomValue(Index, 451)
         Density = 350 + RandomValue(Index, 500)
 
@@ -1050,9 +1090,9 @@ Private Sub Spawn(Index As Number, Layer As Number)
         Size = Radius * 2
         Lifetime = 180
         Density = 650
-        Velocity.X = 0
-        Velocity.Y = 0
-        Velocity.Z = 0
+        Velocity.X = 0.0
+        Velocity.Y = 0.0
+        Velocity.Z = 0.0
 
     End If
 
@@ -1062,9 +1102,9 @@ Private Sub Spawn(Index As Number, Layer As Number)
 
             ''' Short-lived overlapping round cores grow into a hot ball before release.
             Position = Items[Index].Source
-            Velocity.X = 0
-            Velocity.Y = 0
-            Velocity.Z = 0
+            Velocity.X = 0.0
+            Velocity.Y = 0.0
+            Velocity.Z = 0.0
             Size = Max(2, Radius * (350 + Items[Index].Age * Items[Index].Age / 160) / 1000)
             Lifetime = 160
             Temperature = 1000
@@ -1077,9 +1117,9 @@ Private Sub Spawn(Index As Number, Layer As Number)
 
         Else
 
-            Velocity.X = RandomValue(Index, Radius * 48) - Radius * 24
-            Velocity.Y = RandomValue(Index, Radius * 40) - Radius * 16
-            Velocity.Z = RandomValue(Index, Radius * 48) - Radius * 24
+            Velocity.X = ToDouble(RandomValue(Index, Radius * 48) - Radius * 24)
+            Velocity.Y = ToDouble(RandomValue(Index, Radius * 40) - Radius * 16)
+            Velocity.Z = ToDouble(RandomValue(Index, Radius * 48) - Radius * 24)
 
             If Layer = 0 Then
                 Size = Radius * 4
@@ -1120,8 +1160,7 @@ Private Sub Spawn(Index As Number, Layer As Number)
             Return
         End If
 
-        Ok = Graphics3D.SetGpuParticleSpawnKinematics3D(Systems[Key], Slot,
-            Position.X, Position.Y, Position.Z, Velocity.X, Velocity.Y, Velocity.Z)
+        Ok = Precision3D.SetGpuParticleSpawnKinematics(Systems[Key], Slot, Position, Velocity)
         Ok = Graphics3D.SetGpuParticleSpawnVisual3D(Systems[Key], Slot, Lifetime,
             Size, EndSize, Rotation, AngularVelocity, Temperature, Density) And Ok
         Ok = Graphics3D.CommitGpuParticleSpawn3D(Systems[Key], Slot, Items[Index].Serial, Items[Index].Seed) And Ok
@@ -1134,12 +1173,12 @@ Private Sub Spawn(Index As Number, Layer As Number)
 
         If Ok Then
 
-            Particles[Flat].Position.X = Position.X * 1000
-            Particles[Flat].Position.Y = Position.Y * 1000
-            Particles[Flat].Position.Z = Position.Z * 1000
-            Particles[Flat].Velocity.X = Velocity.X * 1000
-            Particles[Flat].Velocity.Y = Velocity.Y * 1000
-            Particles[Flat].Velocity.Z = Velocity.Z * 1000
+            Particles[Flat].Position.X = Position.X * 1000.0
+            Particles[Flat].Position.Y = Position.Y * 1000.0
+            Particles[Flat].Position.Z = Position.Z * 1000.0
+            Particles[Flat].Velocity.X = Velocity.X * 1000.0
+            Particles[Flat].Velocity.Y = Velocity.Y * 1000.0
+            Particles[Flat].Velocity.Z = Velocity.Z * 1000.0
             Particles[Flat].Lifetime = Lifetime
             Particles[Flat].Age = 0
             Particles[Flat].Size = Size
@@ -1168,8 +1207,8 @@ Private Sub StepCpu(Index As Number, Layer As Number)
     Dim Slot As Number
     Dim Flat As Number
     Dim Gravity As Number
-    Dim SpeedBound As Number
-    Dim SpeedLimit As Number
+    Dim SpeedBound As Double
+    Dim SpeedLimit As Double
 
     Gravity = Items[Index].Radius * 2
 
@@ -1184,12 +1223,12 @@ Private Sub StepCpu(Index As Number, Layer As Number)
         If Particles[Flat].Lifetime > 0 Then
 
             Particles[Flat].Age = Particles[Flat].Age + 10
-            Particles[Flat].Velocity.X = (Particles[Flat].Velocity.X + Items[Index].Wind.X * 10) * 993 / 1000
-            Particles[Flat].Velocity.Y = (Particles[Flat].Velocity.Y + (Items[Index].Wind.Y + Gravity) * 10) * 993 / 1000
-            Particles[Flat].Velocity.Z = (Particles[Flat].Velocity.Z + Items[Index].Wind.Z * 10) * 993 / 1000
+            Particles[Flat].Velocity.X = (Particles[Flat].Velocity.X + ToDouble(Items[Index].Wind.X * 10)) * 993.0 / 1000.0
+            Particles[Flat].Velocity.Y = (Particles[Flat].Velocity.Y + ToDouble((Items[Index].Wind.Y + Gravity) * 10)) * 993.0 / 1000.0
+            Particles[Flat].Velocity.Z = (Particles[Flat].Velocity.Z + ToDouble(Items[Index].Wind.Z * 10)) * 993.0 / 1000.0
             SpeedBound = (Abs(Particles[Flat].Velocity.X) + Abs(Particles[Flat].Velocity.Y) +
                 Abs(Particles[Flat].Velocity.Z))
-            SpeedLimit = Items[Index].Radius * 35000
+            SpeedLimit = ToDouble(Items[Index].Radius * 35000)
 
             If SpeedBound > SpeedLimit Then
 
@@ -1199,14 +1238,14 @@ Private Sub StepCpu(Index As Number, Layer As Number)
 
             End If
 
-            Particles[Flat].Position.X = Particles[Flat].Position.X + Particles[Flat].Velocity.X / 100
-            Particles[Flat].Position.Y = Particles[Flat].Position.Y + Particles[Flat].Velocity.Y / 100
-            Particles[Flat].Position.Z = Particles[Flat].Position.Z + Particles[Flat].Velocity.Z / 100
+            Particles[Flat].Position.X = Particles[Flat].Position.X + Particles[Flat].Velocity.X / 100.0
+            Particles[Flat].Position.Y = Particles[Flat].Position.Y + Particles[Flat].Velocity.Y / 100.0
+            Particles[Flat].Position.Z = Particles[Flat].Position.Z + Particles[Flat].Velocity.Z / 100.0
 
             If (Particles[Flat].Age >= Particles[Flat].Lifetime Or
-                Abs(Particles[Flat].Position.X) > 1000000000 Or
-                Abs(Particles[Flat].Position.Y) > 1000000000 Or
-                Abs(Particles[Flat].Position.Z) > 1000000000) Then
+                Abs(Particles[Flat].Position.X) > 1000000000.0 Or
+                Abs(Particles[Flat].Position.Y) > 1000000000.0 Or
+                Abs(Particles[Flat].Position.Z) > 1000000000.0) Then
                 Particles[Flat].Lifetime = 0
             End If
 
@@ -1254,11 +1293,10 @@ Private Sub CommitCpu(Index As Number, Layer As Number)
 
             End If
 
-            Ok = Graphics3D.SetParticle3D(Batches[Index * 4 + Layer], ParticleCount,
-                Particles[Flat].Position.X / 1000, Particles[Flat].Position.Y / 1000,
-                Particles[Flat].Position.Z / 1000,
-                Size,
-                Particles[Flat].Rotation, Particles[Flat].Frame)
+            Ok = Precision3D.SetParticle(Batches[Index * 4 + Layer], ParticleCount,
+                Precision3D.Vector(Particles[Flat].Position.X / 1000.0,
+                    Particles[Flat].Position.Y / 1000.0, Particles[Flat].Position.Z / 1000.0),
+                ToDouble(Size), ToDouble(Particles[Flat].Rotation), Particles[Flat].Frame)
             Ok = Graphics3D.SetParticleColor3D(Batches[Index * 4 + Layer], ParticleCount,
                 RedValue, GreenValue, BlueValue, Fade * 65 / 100) And Ok
             ParticleCount = ParticleCount + 1
@@ -1279,11 +1317,12 @@ Public Sub Update(ElapsedMilliseconds As Number)
     Dim Rate As Number
     Dim Accepted As Number
     Dim Ok As Boolean
-    Dim Source As Core.Vector3
+    Dim Source As Precision3D.Vector3
+    Dim Tip As Precision3D.Vector3
     Dim Value As FireEmitter
     Dim Lost As Boolean
-    Dim Travel As Number
-    Dim TipTravel As Number
+    Dim Travel As Double
+    Dim TipTravel As Double
 
     If Not Ready Then
         Return
@@ -1318,9 +1357,12 @@ Public Sub Update(ElapsedMilliseconds As Number)
 
                     Value.Slot = Index + 1
                     Value.Generation = Items[Index].Generation
-                    Ok = SetSegment(Value,
-                        Character3D.SocketPosition(Items[Index].Actor, Items[Index].BaseSocket),
-                        Character3D.SocketPosition(Items[Index].Actor, Items[Index].TipSocket))
+                    Ok = Character3D.TrySocketPositionPrecise(Items[Index].Actor, Items[Index].BaseSocket, 0, False, Source)
+                    Ok = Character3D.TrySocketPositionPrecise(Items[Index].Actor, Items[Index].TipSocket, 0, False, Tip) And Ok
+
+                    If Ok Then
+                        Ok = SetSegmentPrecise(Value, Source, Tip)
+                    End If
 
                     If Not Ok Then
                         Items[Index].Enabled = False
@@ -1339,12 +1381,12 @@ Public Sub Update(ElapsedMilliseconds As Number)
 
             If Accepted > 0 Then
 
-                Items[Index].Velocity.X = Clamp((Source.X - Items[Index].Previous.X) * 1000 / Accepted, -2000, 2000)
-                Items[Index].Velocity.Y = Clamp((Source.Y - Items[Index].Previous.Y) * 1000 / Accepted, -2000, 2000)
-                Items[Index].Velocity.Z = Clamp((Source.Z - Items[Index].Previous.Z) * 1000 / Accepted, -2000, 2000)
-                Items[Index].TipVelocity.X = Clamp((Items[Index].Tip.X - Items[Index].PreviousTip.X) * 1000 / Accepted, -2000, 2000)
-                Items[Index].TipVelocity.Y = Clamp((Items[Index].Tip.Y - Items[Index].PreviousTip.Y) * 1000 / Accepted, -2000, 2000)
-                Items[Index].TipVelocity.Z = Clamp((Items[Index].Tip.Z - Items[Index].PreviousTip.Z) * 1000 / Accepted, -2000, 2000)
+                Items[Index].Velocity.X = Max(-2000.0, Min(2000.0, (Source.X - Items[Index].Previous.X) * 1000.0 / ToDouble(Accepted)))
+                Items[Index].Velocity.Y = Max(-2000.0, Min(2000.0, (Source.Y - Items[Index].Previous.Y) * 1000.0 / ToDouble(Accepted)))
+                Items[Index].Velocity.Z = Max(-2000.0, Min(2000.0, (Source.Z - Items[Index].Previous.Z) * 1000.0 / ToDouble(Accepted)))
+                Items[Index].TipVelocity.X = Max(-2000.0, Min(2000.0, (Items[Index].Tip.X - Items[Index].PreviousTip.X) * 1000.0 / ToDouble(Accepted)))
+                Items[Index].TipVelocity.Y = Max(-2000.0, Min(2000.0, (Items[Index].Tip.Y - Items[Index].PreviousTip.Y) * 1000.0 / ToDouble(Accepted)))
+                Items[Index].TipVelocity.Z = Max(-2000.0, Min(2000.0, (Items[Index].Tip.Z - Items[Index].PreviousTip.Z) * 1000.0 / ToDouble(Accepted)))
                 Travel = ((Source.X - Items[Index].Previous.X) * (Source.X - Items[Index].Previous.X) +
                     (Source.Y - Items[Index].Previous.Y) * (Source.Y - Items[Index].Previous.Y) +
                     (Source.Z - Items[Index].Previous.Z) * (Source.Z - Items[Index].Previous.Z))
@@ -1352,11 +1394,11 @@ Public Sub Update(ElapsedMilliseconds As Number)
                     (Items[Index].Tip.Y - Items[Index].PreviousTip.Y) * (Items[Index].Tip.Y - Items[Index].PreviousTip.Y) +
                     (Items[Index].Tip.Z - Items[Index].PreviousTip.Z) * (Items[Index].Tip.Z - Items[Index].PreviousTip.Z))
 
-                If Max(Travel, TipTravel) > Items[Index].Radius * Items[Index].Radius * 400 Then
+                If Max(Travel, TipTravel) > ToDouble(Items[Index].Radius * Items[Index].Radius * 400) Then
 
-                    Items[Index].Velocity.X = 0
-                    Items[Index].Velocity.Y = 0
-                    Items[Index].Velocity.Z = 0
+                    Items[Index].Velocity.X = 0.0
+                    Items[Index].Velocity.Y = 0.0
+                    Items[Index].Velocity.Z = 0.0
                     Items[Index].TipVelocity = Items[Index].Velocity
 
                 End If
@@ -1751,12 +1793,26 @@ End Function
 Public Function LightPosition(Value As FireEmitter) As Core.Vector3
 
     Dim Result As Core.Vector3
+    Dim Position As Precision3D.Vector3
+
+    Position = LightPositionPrecise(Value)
+    Result.X = ToNumber(Round(Position.X))
+    Result.Y = ToNumber(Round(Position.Y))
+    Result.Z = ToNumber(Round(Position.Z))
+
+    Return Result
+
+End Function
+
+Public Function LightPositionPrecise(Value As FireEmitter) As Precision3D.Vector3
+
+    Dim Result As Precision3D.Vector3
 
     If Valid(Value) Then
 
-        Result.X = (Items[Value.Slot - 1].Source.X + Items[Value.Slot - 1].Tip.X) / 2
-        Result.Y = (Items[Value.Slot - 1].Source.Y + Items[Value.Slot - 1].Tip.Y) / 2
-        Result.Z = (Items[Value.Slot - 1].Source.Z + Items[Value.Slot - 1].Tip.Z) / 2
+        Result.X = (Items[Value.Slot - 1].Source.X + Items[Value.Slot - 1].Tip.X) / 2.0
+        Result.Y = (Items[Value.Slot - 1].Source.Y + Items[Value.Slot - 1].Tip.Y) / 2.0
+        Result.Z = (Items[Value.Slot - 1].Source.Z + Items[Value.Slot - 1].Tip.Z) / 2.0
 
     End If
 

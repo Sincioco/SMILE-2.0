@@ -2713,6 +2713,42 @@ Public Function SetPartPivotRotation(
 End Function
 
 ''' Rotates one character part around a fixed-thousandths world-space pivot.
+''' Precise world-space pivot and degrees, on the same actor-owned part.
+Public Function SetPartPivotRotationPrecise(
+    ByRef Value As Actor,
+    PartIndex As Number,
+    Pivot As Precision3D.Vector3,
+    Rotation As Precision3D.Vector3
+) As Boolean
+
+    Dim Result As Boolean
+    Dim Slot As Number
+
+    Slot = ActorSlot(Value)
+
+    If Slot < 0 Then
+        Return False
+    End If
+
+    If PartIndex < 0 Or PartIndex >= ActorPartCounts[Slot] Then
+        Call SetActorFailure(Slot, CHARACTER_ERROR_INVALID_PART, 0)
+
+        Return False
+    End If
+
+    Result = Precision3D.SetPivotRotation(ActorParts[Slot, PartIndex], Pivot, Rotation)
+
+    If Result Then
+        Call ClearActorError(Slot)
+    Else
+
+        Call SetActorFailure(Slot, CHARACTER_ERROR_INVALID_ARGUMENT, Graphics3D.LastError())
+    End If
+
+    Return Result
+
+End Function
+
 Public Function SetPartPivotRotationThousandths(
     ByRef Value As Actor,
     PartIndex As Number,

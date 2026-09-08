@@ -5,6 +5,7 @@ Option Explicit
 Import Smile.Simple3D.Character3D As Character3D
 Import Smile.Simple3D.CharacterViewer As CharacterViewer
 Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Precision3D As Precision3D
 Import Smile.Simple3D.Graphics3D As Graphics3D
 Import Smile.Tools.Character3DViewerProfiles As ViewerProfiles
 Import Smile.Tools.BattleCamera As BattleCamera
@@ -175,7 +176,7 @@ Do
         If Not Playback.ScenePaused Then
             Session.Ready = ViewerCamera.AdvanceAutoOrbit(
                 ViewerCameraState,
-                Party.OrbitPhase1000,
+                Party.OrbitPhase,
                 Timing.CameraElapsed,
                 ARENA_ORBIT_DEGREES_PER_SECOND,
                 Party.Enabled
@@ -545,7 +546,7 @@ Function HandleTransformGizmoPointer() As Boolean
 
     Dim Decision As ViewerGizmo.PointerDecision
     Dim GizmoButtonContains As Boolean
-    Dim Origin As Core.Vector3
+    Dim Origin As Precision3D.Vector3
     Dim Result As ViewerCalibrationEditing.OperationResult
 
     GizmoButtonContains = ViewerUi.CalibrationGizmoButtonContains(
@@ -1000,9 +1001,9 @@ Function HandleSharedSliders() As Boolean
         ViewerUiState.Visibility,
         ViewerUi.StatusPanelX(Window_Width()),
         Window_Height(),
-        ViewerCameraState.Controls.OrbitYaw,
-        ViewerCameraState.Controls.OrbitPitch,
-        CharacterViewer.ZoomTargetDegrees(ViewerCameraState.Zoom),
+        ToNumber(Round(ViewerCameraState.Controls.OrbitYaw)),
+        ToNumber(Round(ViewerCameraState.Controls.OrbitPitch)),
+        ToNumber(Round(ViewerCameraState.Zoom.Target)),
         ZOOM_IN_LIMIT,
         ZOOM_OUT_LIMIT
     )

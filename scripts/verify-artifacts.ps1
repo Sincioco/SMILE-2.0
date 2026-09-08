@@ -118,7 +118,7 @@ function Assert-PackageLocation {
         [string]::Join("`n", $propertyNames) -cne "source`nline`ncolumn`nlength" -or
         $DeclaredSources -cnotcontains $Location.source -or
         $Location.line -lt 1 -or $Location.column -lt 1 -or $Location.length -lt 1) {
-        throw "$Description has an invalid format-6 source location."
+        throw "$Description has an invalid format-7 source location."
     }
 }
 
@@ -131,7 +131,7 @@ function Assert-PackageParameter {
         [string]::IsNullOrWhiteSpace($Parameter.name) -or
         $Parameter.mode -notin @('ByVal', 'ByRef') -or $Parameter.optional -isnot [bool] -or
         $Parameter.ordinal -ne $ExpectedOrdinal) {
-        throw "$Description does not use the canonical format-6 parameter shape."
+        throw "$Description does not use the canonical format-7 parameter shape."
     }
     Assert-PackageLocation $Parameter.location $DeclaredSources $Description
 
@@ -187,7 +187,7 @@ function Assert-PackageAccessor {
     if ([string]::Join("`n", $propertyNames) -cne "identity`nrequiresGameWindow`nlocation" -or
         $Accessor.identity -cne $ExpectedIdentity -or
         $Accessor.requiresGameWindow -isnot [bool]) {
-        throw "$Description does not use the canonical format-6 accessor shape."
+        throw "$Description does not use the canonical format-7 accessor shape."
     }
     Assert-PackageLocation $Accessor.location $DeclaredSources $Description
 }
@@ -243,11 +243,11 @@ function Assert-SmileLibraryPackage {
         $manifest = $manifestText | ConvertFrom-Json
         $api = $apiText | ConvertFrom-Json
         $expectedProvider = "$ExpectedName@$ExpectedVersion"
-        if ($manifest.formatVersion -ne 6 -or $api.formatVersion -ne 6 -or
+        if ($manifest.formatVersion -ne 7 -or $api.formatVersion -ne 7 -or
             $manifest.name -cne $ExpectedName -or $manifest.version -cne $ExpectedVersion -or
             $manifest.provider -cne $expectedProvider -or $api.library.name -cne $ExpectedName -or
             $api.library.version -cne $ExpectedVersion -or $api.library.provider -cne $expectedProvider) {
-            throw "$RelativePath has incorrect format-6 library identity metadata."
+            throw "$RelativePath has incorrect format-7 library identity metadata."
         }
         $declaredSources = [string[]]@($manifest.sources)
         if (@($manifest.modules).Count -ne $ExpectedModuleCount -or
@@ -322,7 +322,7 @@ function Assert-SmileLibraryPackage {
                         $member.visibility -cne 'Public' -or $member.provider -cne $expectedProvider -or
                         $member.size -ne 8 -or $member.alignment -ne 8 -or
                         $member.PSObject.Properties.Name -ccontains 'instanceSize') {
-                        throw "$RelativePath Class '$($member.name)' has invalid format-6 metadata."
+                        throw "$RelativePath Class '$($member.name)' has invalid format-7 metadata."
                     }
                     $fieldOrdinal = 0
                     foreach ($field in @($member.fields | Where-Object { $null -ne $_ })) {
@@ -383,7 +383,7 @@ function Assert-SmileLibraryPackage {
                                 $nestedMember.identity -cne ($member.identity + '::member::' + $nestedMember.name) -or
                                 $null -ne $nestedMember.returnType -or
                                 $nestedMember.requiresGameWindow -isnot [bool]) {
-                                throw "$RelativePath instance Sub '$($member.name).$($nestedMember.name)' has invalid format-6 metadata."
+                                throw "$RelativePath instance Sub '$($member.name).$($nestedMember.name)' has invalid format-7 metadata."
                             }
                             $nestedParameterOrdinal = 0
                             foreach ($parameter in @($nestedMember.parameters | Where-Object { $null -ne $_ })) {
@@ -400,7 +400,7 @@ function Assert-SmileLibraryPackage {
                                 $nestedMember.identity -cne ($member.identity + '::member::' + $nestedMember.name) -or
                                 $null -eq $nestedMember.returnType -or
                                 $nestedMember.requiresGameWindow -isnot [bool]) {
-                                throw "$RelativePath instance Function '$($member.name).$($nestedMember.name)' has invalid format-6 metadata."
+                                throw "$RelativePath instance Function '$($member.name).$($nestedMember.name)' has invalid format-7 metadata."
                             }
                             $nestedParameterOrdinal = 0
                             foreach ($parameter in @($nestedMember.parameters | Where-Object { $null -ne $_ })) {
@@ -417,7 +417,7 @@ function Assert-SmileLibraryPackage {
                                 $nestedMember.identity -cne ($member.identity + '::property::' + $nestedMember.name) -or
                                 $null -eq $nestedMember.type -or
                                 ($null -eq $nestedMember.get -and $null -eq $nestedMember.set)) {
-                                throw "$RelativePath instance Property '$($member.name).$($nestedMember.name)' has invalid format-6 metadata."
+                                throw "$RelativePath instance Property '$($member.name).$($nestedMember.name)' has invalid format-7 metadata."
                             }
                             if ($null -ne $nestedMember.get) {
                                 Assert-PackageAccessor $nestedMember.get ($nestedMember.identity + '::get') `
@@ -435,7 +435,7 @@ function Assert-SmileLibraryPackage {
                 }
             }
         }
-        Write-Host "Format-6 SMILE library verified: $RelativePath"
+        Write-Host "Format-7 SMILE library verified: $RelativePath"
     }
     finally {
         $archive.Dispose()
@@ -948,7 +948,7 @@ try {
             throw "$templateName does not contain all generated identity tokens."
         }
         if ($templateText -notmatch 'SmileProjectTemplateWizard' -or
-        $templateText -notmatch 'Version=2\.0\.60\.0') {
+        $templateText -notmatch 'Version=2\.0\.61\.0') {
             throw "$templateName does not invoke the synchronized template wizard."
         }
     }
@@ -992,11 +992,11 @@ try {
     $manifestReader = [System.IO.StreamReader]::new($manifestEntry.Open())
     try { $vsixManifest = $manifestReader.ReadToEnd() }
     finally { $manifestReader.Dispose() }
-    if ($vsixManifest -notmatch 'Version="2\.0\.60"') {
-        throw 'VSIX identity version is not 2.0.60.'
+    if ($vsixManifest -notmatch 'Version="2\.0\.61"') {
+        throw 'VSIX identity version is not 2.0.61.'
     }
     if ($vsixManifest -notmatch 'Type="Microsoft\.VisualStudio\.Assembly"' -or
-        $vsixManifest -notmatch 'AssemblyName="Smile\.VisualStudio, Version=2\.0\.60\.0, Culture=neutral, PublicKeyToken=null"') {
+        $vsixManifest -notmatch 'AssemblyName="Smile\.VisualStudio, Version=2\.0\.61\.0, Culture=neutral, PublicKeyToken=null"') {
         throw 'VSIX does not register the template wizard assembly.'
     }
     if ($vsixManifest -notmatch 'Type="Microsoft\.VisualStudio\.VsPackage" Path="Smile\.LanguageConfiguration\.pkgdef"') {
@@ -1010,11 +1010,11 @@ Write-Host 'VSIX compiler, shared-language, and project-template payload verifie
 $visualStudioDll = Require-File 'src\Smile.VisualStudio\bin\Release\net472\Smile.VisualStudio.dll'
 $versionInfo = [Diagnostics.FileVersionInfo]::GetVersionInfo($visualStudioDll)
 $assemblyVersion = [Reflection.AssemblyName]::GetAssemblyName($visualStudioDll).Version.ToString()
-if ($versionInfo.FileVersion -ne '2.0.60.0' -or $versionInfo.ProductVersion -notlike '2.0.60*' -or
-    $assemblyVersion -ne '2.0.60.0') {
+if ($versionInfo.FileVersion -ne '2.0.61.0' -or $versionInfo.ProductVersion -notlike '2.0.61*' -or
+    $assemblyVersion -ne '2.0.61.0') {
     throw "Visual Studio DLL versions differ: file=$($versionInfo.FileVersion), product=$($versionInfo.ProductVersion), assembly=$assemblyVersion."
 }
-Write-Host 'VSIX identity, assembly, file, and product versions are synchronized at 2.0.60.'
+Write-Host 'VSIX identity, assembly, file, and product versions are synchronized at 2.0.61.'
 
 $scaleCases = @(
     @{ Width = 960; Height = 540; ExpectedWidth = 960; ExpectedHeight = 540; X = 0; Y = 0 },

@@ -6,7 +6,9 @@ param(
 
     [string]$BuiltDllPath,
 
-    [string]$ManifestPath
+    [string]$ManifestPath,
+
+    [string]$BuiltVsixPath
 )
 
 $ErrorActionPreference = 'Stop'
@@ -119,3 +121,34 @@ Write-Output "Verified SMILE VSIX $($installedIdentity.Version)."
 Write-Output "Installed DLL: $installedDll"
 Write-Output "Assembly version: $installedAssemblyVersion"
 Write-Output "SHA256: $installedHash"
+
+if ($BuiltVsixPath) {
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    $installedRoot = [IO.Path]::GetFullPath($installedManifest.DirectoryName) + [IO.Path]::DirectorySeparatorChar
+    $archive = [IO.Compression.ZipFile]::OpenRead([IO.Path]::GetFullPath($BuiltVsixPath))
+    $verifiedPayloads = 0
+    try {
+        foreach ($entry in $archive.Entries) {
+            $name = $entry.FullName.Replace('\', '/')
+            if ($name.EndsWith('/') -or $name -notmatch '^(Compiler/|ProjectTemplates/|ItemTemplates/|Smile\.(Language|VisualStudio)\.dll$|smile-language-configuration\.json$|Smile\.LanguageConfiguration\.pkgdef$)') { continue }
+            $installedPayload = [IO.Path]::GetFullPath((Join-Path $installedRoot $name))
+            if (-not $installedPayload.StartsWith($installedRoot, [StringComparison]::OrdinalIgnoreCase)) {
+                throw "VSIX payload escapes its installation directory: $name"
+            }
+            if (-not (Test-Path -LiteralPath $installedPayload -PathType Leaf)) {
+                throw "Installed VSIX payload is missing: $name"
+            }
+            $stream = $entry.Open()
+            $algorithm = [Security.Cryptography.SHA256]::Create()
+            try { $entryHash = [BitConverter]::ToString($algorithm.ComputeHash($stream)).Replace('-', '') }
+            finally { $algorithm.Dispose(); $stream.Dispose() }
+            if ((Get-Sha256 $installedPayload) -cne $entryHash) {
+                throw "Installed VSIX payload differs from the built archive: $name"
+            }
+            $verifiedPayloads++
+        }
+        if ($verifiedPayloads -lt 4) { throw 'VSIX did not contain the expected compiler, language and template payloads.' }
+    }
+    finally { $archive.Dispose() }
+    Write-Output "Verified $verifiedPayloads installed compiler, language, library and template payload hashes against the built VSIX."
+}

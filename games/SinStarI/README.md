@@ -18,6 +18,11 @@ than enum arithmetic.
 
 ## Controls
 
+The Battle Arena Preview uses the shared precise camera controller and the existing
+renderer/actor owners. Pan, orbit, zoom and auto-orbit retain fractional world units
+and degrees until GPU float32 acceptance. Imported asset scale, actor grounding
+rules, IDs, scene transitions and saved calibration remain unchanged.
+
 - Title: Up/Down or W/S selects an item; Enter or Space opens it.
 - Every scene: Escape returns to the title and restarts title music.
 - Character: 1-4 or Tab selects the manual preview; arrows/WASD move; Space

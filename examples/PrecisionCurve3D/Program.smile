@@ -1,0 +1,68 @@
+''' SMILE 2.0 shared cubic curve: continuous world values with integer elapsed time.
+
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Graphics3D As Graphics3D
+Import Smile.Simple3D.Precision3D As Precision3D
+Import Smile.Simple3D.PrecisionMath3D As Math3D
+Import Smile.Simple3D.Scene3D As Scene3D
+
+Dim Camera As Precision3D.Camera3D
+Dim Marker As Core.Object3D
+Dim Floor As Core.Object3D
+Dim Point As Precision3D.Vector3
+Dim Control0 As Precision3D.Vector3
+Dim Control1 As Precision3D.Vector3
+Dim Control2 As Precision3D.Vector3
+Dim Control3 As Precision3D.Vector3
+Dim Progress As Double
+Dim Started As Number
+Dim Elapsed As Number
+Dim Ready As Boolean
+Dim Key As Number
+
+Game Window "SMILE 2.0 - Shared Double Cubic Curve" Size 960 By 640
+
+Camera = Precision3D.FromCamera(Graphics3D.DefaultCamera())
+Camera.Position = Precision3D.Vector(0.0, 170.0, -420.0)
+Camera.Target = Precision3D.Vector(0.0, 75.0, 0.0)
+Marker = Graphics3D.CreateCube3D(12)
+Floor = Graphics3D.CreatePlane3D(380, 180)
+Control0 = Precision3D.Vector(-160.0, 20.0, 0.0)
+Control1 = Precision3D.Vector(-160.0, 160.0, 0.0)
+Control2 = Precision3D.Vector(160.0, 160.0, 0.0)
+Control3 = Precision3D.Vector(160.0, 20.0, 0.0)
+Started = Timer()
+
+Do
+
+    Get Key Key
+    Elapsed = (Timer() - Started) Mod 12000
+    Progress = ToDouble(Elapsed) / 6000.0
+
+    If Progress > 1.0 Then
+        Progress = 2.0 - Progress
+    End If
+
+    Point = Math3D.Cubic(Control0, Control1, Control2, Control3, Progress)
+    Ready = Precision3D.SetPosition(Marker, Point.X, Point.Y, Point.Z)
+    Ready = Scene3D.BeginPrecise(Camera, 18, 24, 38) And Ready
+
+    If Ready Then
+
+        Ready = Graphics3D.DrawObject3D(Floor)
+        Ready = Graphics3D.DrawObject3D(Marker) And Ready
+        Ready = Scene3D.EndScene() And Ready
+
+    End If
+
+    Draw Text "Shared Double Cubic Curve" At 24, 20 Size 26 Color WHITE
+    Draw Text "Six Seconds Each Way - Esc To Close" At 24, 56 Size 18 Color WHITE
+    Show Screen
+
+Loop Until Key = KEY_ESCAPE Or Game_Closed() Or Not Ready
+
+Call Graphics3D.DestroyObject3D(Marker)
+Call Graphics3D.DestroyObject3D(Floor)
+Call Graphics3D.ResetRenderer3D()

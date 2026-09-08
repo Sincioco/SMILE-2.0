@@ -7,6 +7,24 @@ story; subsystem state must not be gathered into a replacement god object.
 
 ## Preserved frame order
 
+The approved Double phase extends these owners without changing their frame order
+or the accepted coordinator structure. `ViewerCamera` uses shared
+`PrecisionCamera3D` controls and `Precision3D.Camera3D`; `ViewerParty` evaluates
+continuous approach/return positions, while `ViewerActors` places the same
+Character3D actors. `ViewerCalibration` and `ViewerGizmo` consume actual precise
+socket/transform queries and retain integral saved channels. `ViewerEffects`,
+`ArinShieldRim`, `OrinStorm`, FireEmitter3D and LightningVfx3D pass fractional
+attachments/particles through the existing renderer's typed bridge. `ViewerRendering`
+calls `Scene3D.BeginPrecise`. No new actor pool or renderer owns these values.
+
+The current Double work is tracked only in
+`docs/implementation/double-precision-checkpoint.md`. `CalibrationTests` contains
+the real Party approach/return submission and elapsed-partition assertion;
+`test-viewer-calibration-native.ps1 -IncludeWebPrecision` also runs it on Web.
+The shared precision and VFX fixtures cover camera acceptance, fractional staging,
+immutable capture and invalid writes. See `docs/libraries/precision3d-boundary.md`
+for units, exact narrowing points and retained Number compatibility.
+
 The coordinator retains this dependency order:
 
 1. Read queued keyboard input, route commands, then route UI pointer ownership before

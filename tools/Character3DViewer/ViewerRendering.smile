@@ -6,7 +6,9 @@ Option Explicit
 Import Smile.Simple3D.Arena3D As Arena3D
 Import Smile.Simple3D.Character3D As Character3D
 Import Smile.Simple3D.CharacterViewer As CharacterViewer
+Import Smile.Simple3D.PrecisionCamera3D As PrecisionCamera
 Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Precision3D As Precision3D
 Import Smile.Simple3D.Graphics3D As Graphics3D
 Import Smile.Simple3D.Scene3D As Scene3D
 Import Smile.Simple3D.StaticBackdrop3D As StaticBackdrop3D
@@ -75,7 +77,7 @@ Public Function PrepareAssetLoading(UnusedAssetCacheLimit As Number) As Boolean
 
 End Function
 
-Public Function ConfigureShadowArea(Frame As CharacterViewer.Framing,
+Public Function ConfigureShadowArea(Frame As PrecisionCamera.Framing,
     DragonAvailable As Boolean, DragonX As Number, DragonZ As Number,
     ArenaWidth As Number, ArenaDepth As Number) As Boolean
 
@@ -86,7 +88,7 @@ Public Function ConfigureShadowArea(Frame As CharacterViewer.Framing,
     If DragonAvailable Then
         Result = Scene3D.SetShadowArea(
             DragonX / 2,
-            Frame.TargetY,
+            ToNumber(Round(Frame.TargetY)),
             DragonZ / 2,
             ArenaWidth,
             ArenaDepth,
@@ -97,7 +99,7 @@ Public Function ConfigureShadowArea(Frame As CharacterViewer.Framing,
 
         Result = Scene3D.SetShadowArea(
             0,
-            Frame.TargetY,
+            ToNumber(Round(Frame.TargetY)),
             0,
             Frame.ShadowWidth,
             Frame.ShadowDepth,
@@ -282,7 +284,7 @@ Public Function ApplyBackdrop(ByRef Value As State) As Boolean
 
 End Function
 
-Public Function BeginScene(ByRef Value As State, Camera As Core.Camera3D) As Boolean
+Public Function BeginScene(ByRef Value As State, Camera As Precision3D.Camera3D) As Boolean
 
     Dim Result As Boolean
 
@@ -302,11 +304,11 @@ Public Function BeginScene(ByRef Value As State, Camera As Core.Camera3D) As Boo
     End If
 
     If Value.BackgroundIndex = 1 Then
-        Result = Scene3D.Begin(Camera, 0, 96, 32)
+        Result = Scene3D.BeginPrecise(Camera, 0, 96, 32)
     Else If Value.BackgroundIndex = 2 Then
-        Result = Scene3D.Begin(Camera, 62, 20, 96)
+        Result = Scene3D.BeginPrecise(Camera, 62, 20, 96)
     Else
-        Result = Scene3D.Begin(Camera, 0, 0, 0)
+        Result = Scene3D.BeginPrecise(Camera, 0, 0, 0)
     End If
 
     Return Result
@@ -412,7 +414,7 @@ Private Sub DrawEffectsAndGizmos(ByRef Result As FrameResult,
 
 End Sub
 
-Public Function DrawFrame(ByRef Value As State, Camera As Core.Camera3D,
+Public Function DrawFrame(ByRef Value As State, Camera As Precision3D.Camera3D,
     ReadyBeforeDraw As Boolean, ByRef Character As Character3D.Actor,
     ByRef Party As ViewerParty.State, DragonInspection As Boolean,
     ByRef Dragon As ViewerDragon.State,
@@ -598,23 +600,6 @@ Public Function SocketReferencePart(PartyCharacter As Boolean, Name As Text,
 
 End Function
 
-Private Function SocketPositionThousandths(
-    ByRef Actor As Character3D.Actor, Name As Text,
-    ReferencePart As Number) As Core.Vector3
-
-    Dim Result As Core.Vector3
-
-    Result.X = Character3D.SocketValueThousandths(
-        Actor, Name, Graphics3D.ANIMATOR_SOCKET_POSITION_X, ReferencePart)
-    Result.Y = Character3D.SocketValueThousandths(
-        Actor, Name, Graphics3D.ANIMATOR_SOCKET_POSITION_Y, ReferencePart)
-    Result.Z = Character3D.SocketValueThousandths(
-        Actor, Name, Graphics3D.ANIMATOR_SOCKET_POSITION_Z, ReferencePart)
-
-    Return Result
-
-End Function
-
 Private Function UpdateSocketOriginMarkers(ByRef Value As State,
     ByRef Actor As Character3D.Actor, PartyCharacter As Boolean,
     BodyPartIndex As Number, WeaponPartIndex As Number,
@@ -622,7 +607,7 @@ Private Function UpdateSocketOriginMarkers(ByRef Value As State,
 
     Dim SocketIndex As Number
     Dim Name As Text
-    Dim Position As Core.Vector3
+    Dim Position As Precision3D.Vector3
     Dim ReferencePart As Number
     Dim Result As Boolean
 
@@ -633,16 +618,13 @@ Private Function UpdateSocketOriginMarkers(ByRef Value As State,
         Name = Character3D.SocketName(Actor, SocketIndex)
         ReferencePart = SocketReferencePart(
             PartyCharacter, Name, BodyPartIndex, WeaponPartIndex, ShieldPartIndex)
-        Position = SocketPositionThousandths(Actor, Name, ReferencePart)
-        Result = Graphics3D.SetParticle3D(
-            Value.SocketMarkers,
-            SocketIndex,
-            Position.X / 1000,
-            Position.Y / 1000,
-            Position.Z / 1000,
-            4,
-            0
-        ) And Result
+
+        If Not Character3D.TrySocketPositionPrecise(Actor, Name, ReferencePart, False, Position) Then
+            Return False
+        End If
+
+        Result = Precision3D.SetParticle(Value.SocketMarkers, SocketIndex,
+            Position, 4.0, 0.0, 0) And Result
         Result = Graphics3D.SetParticleColor3D(
             Value.SocketMarkers,
             SocketIndex,
@@ -666,7 +648,7 @@ Public Function UpdateSocketGizmos(ByRef Value As State,
     ShieldPartIndex As Number) As Boolean
 
     Dim Name As Text
-    Dim Position As Core.Vector3
+    Dim Position As Precision3D.Vector3
     Dim AxisX1000 As Number
     Dim AxisY1000 As Number
     Dim AxisZ1000 As Number
@@ -682,7 +664,10 @@ Public Function UpdateSocketGizmos(ByRef Value As State,
     Name = Character3D.SocketName(Actor, Value.SelectedSocket)
     ReferencePart = SocketReferencePart(
         PartyCharacter, Name, BodyPartIndex, WeaponPartIndex, ShieldPartIndex)
-    Position = SocketPositionThousandths(Actor, Name, ReferencePart)
+
+    If Not Character3D.TrySocketPositionPrecise(Actor, Name, ReferencePart, False, Position) Then
+            Return False
+        End If
 
     For Axis = 0 To 3
 
@@ -719,12 +704,10 @@ Public Function UpdateSocketGizmos(ByRef Value As State,
 
         End If
 
-        Call Graphics3D.SetObjectPosition(
-            Value.SocketGizmos[Axis],
-            (Position.X + AxisX1000) / 1000,
-            (Position.Y + AxisY1000) / 1000,
-            (Position.Z + AxisZ1000) / 1000
-        )
+        Result = Precision3D.SetPosition(Value.SocketGizmos[Axis],
+            Position.X + ToDouble(AxisX1000) / 1000.0,
+            Position.Y + ToDouble(AxisY1000) / 1000.0,
+            Position.Z + ToDouble(AxisZ1000) / 1000.0) And Result
     End For
 
     If Value.ShowAllSocketOrigins Then

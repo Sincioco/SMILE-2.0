@@ -5,6 +5,8 @@ Option Explicit
 
 Import Smile.Simple3D.Character3D As Character3D
 Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Precision3D As Precision3D
+Import Smile.Simple3D.PrecisionMath3D As PreciseMath
 Import Smile.Simple3D.Graphics3D As Graphics3D
 Import Smile.Simple3D.Math3D As Math3D
 Import Smile.Tools.Character3DViewerProfiles As ViewerProfiles
@@ -1038,6 +1040,33 @@ Private Sub CaptureApplicationFailure(ByRef Result As ApplicationResult,
 
 End Sub
 
+Private Function ApplyGlowTransform(ByRef Value As State, Clip As Number,
+    Glow As Core.Object3D, Pivot As Precision3D.Vector3,
+    PositionChannel As Number, RotationChannel As Number) As Boolean
+
+    Dim Transform As Precision3D.Transform3D
+    Dim Rotation As Precision3D.Vector3
+    Dim Result As Boolean
+
+    Result = Precision3D.TryTransform(Glow, Transform)
+
+    If Not Result Then
+        Return False
+    End If
+
+    Rotation = Precision3D.Vector(ToDouble(ChannelValue(Value, Clip, RotationChannel)),
+        ToDouble(ChannelValue(Value, Clip, RotationChannel + 1)),
+        ToDouble(ChannelValue(Value, Clip, RotationChannel + 2)))
+    Result = Precision3D.SetPosition(Glow,
+        Transform.Position.X + ToDouble(ChannelValue(Value, Clip, PositionChannel)),
+        Transform.Position.Y + ToDouble(ChannelValue(Value, Clip, PositionChannel + 1)),
+        Transform.Position.Z + ToDouble(ChannelValue(Value, Clip, PositionChannel + 2)))
+    Result = Precision3D.SetPivotRotation(Glow, Pivot, Rotation) And Result
+
+    Return Result
+
+End Function
+
 Public Function ApplyEquipmentTransforms(ByRef Value As State,
     ByRef Actor As Character3D.Actor, Clip As Number,
     ByRef SwordGlow As Core.Object3D, ByRef ShieldGlow As Core.Object3D,
@@ -1046,34 +1075,23 @@ Public Function ApplyEquipmentTransforms(ByRef Value As State,
     Dim GlowReady As Boolean
     Dim OperationReady As Boolean
     Dim Result As ApplicationResult
-    Dim ShieldPivotX1000 As Number
-    Dim ShieldPivotY1000 As Number
-    Dim ShieldPivotZ1000 As Number
-    Dim SwordPivotX1000 As Number
-    Dim SwordPivotY1000 As Number
-    Dim SwordPivotZ1000 As Number
+    Dim SwordPivot As Precision3D.Vector3
+    Dim ShieldPivot As Precision3D.Vector3
+    Dim Rotation As Precision3D.Vector3
 
     Result.Ready = ApplyEquipmentCoupling(
         Value, Actor, Clip, SwordGlow, ShieldGlow, GlowAvailable)
     Result.FailureStage = 0
-    SwordPivotX1000 = Character3D.SocketValueThousandths(
-        Actor, "HandRight", Graphics3D.ANIMATOR_SOCKET_POSITION_X,
-        BODY_PART_INDEX)
-    SwordPivotY1000 = Character3D.SocketValueThousandths(
-        Actor, "HandRight", Graphics3D.ANIMATOR_SOCKET_POSITION_Y,
-        BODY_PART_INDEX)
-    SwordPivotZ1000 = Character3D.SocketValueThousandths(
-        Actor, "HandRight", Graphics3D.ANIMATOR_SOCKET_POSITION_Z,
-        BODY_PART_INDEX)
-    ShieldPivotX1000 = Character3D.SocketValueThousandths(
-        Actor, "HandLeft", Graphics3D.ANIMATOR_SOCKET_POSITION_X,
-        BODY_PART_INDEX)
-    ShieldPivotY1000 = Character3D.SocketValueThousandths(
-        Actor, "HandLeft", Graphics3D.ANIMATOR_SOCKET_POSITION_Y,
-        BODY_PART_INDEX)
-    ShieldPivotZ1000 = Character3D.SocketValueThousandths(
-        Actor, "HandLeft", Graphics3D.ANIMATOR_SOCKET_POSITION_Z,
-        BODY_PART_INDEX)
+    OperationReady = Character3D.TrySocketPositionPrecise(
+        Actor, "HandRight", BODY_PART_INDEX, False, SwordPivot)
+
+    Call CaptureApplicationFailure(Result, OperationReady, 73)
+
+    OperationReady = Character3D.TrySocketPositionPrecise(
+        Actor, "HandLeft", BODY_PART_INDEX, False, ShieldPivot)
+
+    Call CaptureApplicationFailure(Result, OperationReady, 74)
+
     OperationReady = Character3D.SetPartPositionOffset(
         Actor,
         WEAPON_PART_INDEX,
@@ -1094,69 +1112,55 @@ Public Function ApplyEquipmentTransforms(ByRef Value As State,
 
     Call CaptureApplicationFailure(Result, OperationReady, 72)
 
-    OperationReady = Character3D.SetPartPivotRotationThousandths(
-        Actor,
-        WEAPON_PART_INDEX,
-        SwordPivotX1000,
-        SwordPivotY1000,
-        SwordPivotZ1000,
-        ChannelValue(Value, Clip, 6),
-        ChannelValue(Value, Clip, 7),
-        ChannelValue(Value, Clip, 8)
-    )
+    Rotation = Precision3D.Vector(ToDouble(ChannelValue(Value, Clip, 6)),
+        ToDouble(ChannelValue(Value, Clip, 7)), ToDouble(ChannelValue(Value, Clip, 8)))
+    OperationReady = Character3D.SetPartPivotRotationPrecise(
+        Actor, WEAPON_PART_INDEX, SwordPivot, Rotation)
 
     Call CaptureApplicationFailure(Result, OperationReady, 73)
 
-    OperationReady = Character3D.SetPartPivotRotationThousandths(
-        Actor,
-        SHIELD_PART_INDEX,
-        ShieldPivotX1000,
-        ShieldPivotY1000,
-        ShieldPivotZ1000,
-        ChannelValue(Value, Clip, 9),
-        ChannelValue(Value, Clip, 10),
-        ChannelValue(Value, Clip, 11)
-    )
+    Rotation = Precision3D.Vector(ToDouble(ChannelValue(Value, Clip, 9)),
+        ToDouble(ChannelValue(Value, Clip, 10)), ToDouble(ChannelValue(Value, Clip, 11)))
+    OperationReady = Character3D.SetPartPivotRotationPrecise(
+        Actor, SHIELD_PART_INDEX, ShieldPivot, Rotation)
 
     Call CaptureApplicationFailure(Result, OperationReady, 74)
 
     If GlowVisible Then
 
-        GlowReady = Graphics3D.SetObjectPositionChecked3D(
-            SwordGlow,
-            SwordGlow.Position.X + ChannelValue(Value, Clip, 12),
-            SwordGlow.Position.Y + ChannelValue(Value, Clip, 13),
-            SwordGlow.Position.Z + ChannelValue(Value, Clip, 14)
-        )
-        GlowReady = Graphics3D.SetObjectPositionChecked3D(
-            ShieldGlow,
-            ShieldGlow.Position.X + ChannelValue(Value, Clip, 15),
-            ShieldGlow.Position.Y + ChannelValue(Value, Clip, 16),
-            ShieldGlow.Position.Z + ChannelValue(Value, Clip, 17)
-        ) And GlowReady
-        GlowReady = Graphics3D.SetObjectPivotRotationThousandths3D(
-            SwordGlow,
-            SwordPivotX1000,
-            SwordPivotY1000,
-            SwordPivotZ1000,
-            ChannelValue(Value, Clip, 6),
-            ChannelValue(Value, Clip, 7),
-            ChannelValue(Value, Clip, 8)
-        ) And GlowReady
-        GlowReady = Graphics3D.SetObjectPivotRotationThousandths3D(
-            ShieldGlow,
-            ShieldPivotX1000,
-            ShieldPivotY1000,
-            ShieldPivotZ1000,
-            ChannelValue(Value, Clip, 9),
-            ChannelValue(Value, Clip, 10),
-            ChannelValue(Value, Clip, 11)
-        ) And GlowReady
+        GlowReady = ApplyGlowTransform(Value, Clip, SwordGlow, SwordPivot, 12, 6)
+        GlowReady = ApplyGlowTransform(Value, Clip, ShieldGlow, ShieldPivot, 15, 9) And GlowReady
 
         If Not GlowReady Then
             GlowVisible = False
         End If
 
+    End If
+
+    Return Result
+
+End Function
+
+Public Function EquipmentGripPosition(ByRef Actor As Character3D.Actor,
+    PartIndex As Number, SocketName As Text) As Precision3D.Vector3
+
+    Dim Result As Precision3D.Vector3
+    Dim Valid As Boolean
+
+    Valid = Character3D.TrySocketPositionPrecise(Actor, SocketName, PartIndex, False, Result)
+
+    Return Result
+
+End Function
+
+Private Function RoundedGripWorld(Value As Double) As Number
+
+    Dim Result As Number
+
+    If Value < 0.0 Then
+        Result = ToNumber(Value - 0.5)
+    Else
+        Result = ToNumber(Value + 0.5)
     End If
 
     Return Result
@@ -1206,18 +1210,17 @@ End Sub
 
 Public Function RestoreEquipmentGrip(ByRef Value As State,
     ByRef Actor As Character3D.Actor, Clip As Number,
-    PartIndex As Number, SocketName As Text, GripAnchor As Core.Vector3,
+    PartIndex As Number, SocketName As Text, GripAnchor As Precision3D.Vector3,
     GripBasePosition As Core.Vector3, MaximumPosition As Number,
     ByRef SwordGlow As Core.Object3D, ByRef ShieldGlow As Core.Object3D,
     GlowAvailable As Boolean, ByRef GlowVisible As Boolean,
     ByRef Application As ApplicationResult) As Boolean
 
     Dim Angles As Core.Vector3
-    Dim Correction As Core.Vector3
-    Dim Inverse As Core.Matrix4
+    Dim Correction As Precision3D.Vector3
     Dim NextApplication As ApplicationResult
     Dim NextPosition As Core.Vector3
-    Dim Position As Core.Vector3
+    Dim Position As Precision3D.Vector3
     Dim PositionChannel As Number
     Dim RotationChannel As Number
 
@@ -1235,7 +1238,7 @@ Public Function RestoreEquipmentGrip(ByRef Value As State,
 
     Application = ApplyEquipmentTransforms(Value, Actor, Clip,
         SwordGlow, ShieldGlow, GlowAvailable, GlowVisible)
-    Position = EquipmentGripThousandths(Actor, PartIndex, SocketName)
+    Position = EquipmentGripPosition(Actor, PartIndex, SocketName)
     Correction.X = GripAnchor.X - Position.X
     Correction.Y = GripAnchor.Y - Position.Y
     Correction.Z = GripAnchor.Z - Position.Z
@@ -1244,16 +1247,15 @@ Public Function RestoreEquipmentGrip(ByRef Value As State,
     Angles.Z = ChannelValue(Value, Clip, RotationChannel + 2)
 
     ''' Part translation precedes the XYZ pivot rotation; undo Z, Y, X for compensation.
-    Inverse = Math3D.Multiply(
-        Math3D.RotationZ(-Angles.Z), Math3D.RotationY(-Angles.Y))
-    Inverse = Math3D.Multiply(Inverse, Math3D.RotationX(-Angles.X))
-    Correction = Math3D.TransformPoint(Correction, Inverse)
+    Correction = PreciseMath.Rotate(Correction, Precision3D.Vector(0.0, 0.0, -ToDouble(Angles.Z)))
+    Correction = PreciseMath.Rotate(Correction, Precision3D.Vector(0.0, -ToDouble(Angles.Y), 0.0))
+    Correction = PreciseMath.Rotate(Correction, Precision3D.Vector(-ToDouble(Angles.X), 0.0, 0.0))
     NextPosition.X = ChannelValue(Value, Clip, PositionChannel)
     NextPosition.Y = ChannelValue(Value, Clip, PositionChannel + 1)
     NextPosition.Z = ChannelValue(Value, Clip, PositionChannel + 2)
-    NextPosition.X = NextPosition.X + RoundedGripOffset(Correction.X)
-    NextPosition.Y = NextPosition.Y + RoundedGripOffset(Correction.Y)
-    NextPosition.Z = NextPosition.Z + RoundedGripOffset(Correction.Z)
+    NextPosition.X = NextPosition.X + RoundedGripWorld(Correction.X)
+    NextPosition.Y = NextPosition.Y + RoundedGripWorld(Correction.Y)
+    NextPosition.Z = NextPosition.Z + RoundedGripWorld(Correction.Z)
 
     If (Abs(NextPosition.X) > MaximumPosition Or
         Abs(NextPosition.Y) > MaximumPosition Or

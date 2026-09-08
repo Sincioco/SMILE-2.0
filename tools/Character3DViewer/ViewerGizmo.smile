@@ -4,6 +4,8 @@ Module Smile.Tools.Character3DViewerGizmo
 Option Explicit
 
 Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Precision3D As Precision3D
+Import Smile.Simple3D.PrecisionCamera3D As PrecisionCamera
 Import Smile.Simple3D.CharacterViewer As CharacterViewer
 Import Smile.Simple3D.FixedMath As Fixed
 Import Smile.Simple3D.Math3D As Math3D
@@ -28,7 +30,7 @@ Public Const POINTER_ACTION_BEGIN_AXIS = 6
 
 Public Type State
     Projection As CharacterViewer.TransformGizmo
-    Origin As Core.Vector3
+    Origin As Precision3D.Vector3
     WorldSize As Number
     Visible As Boolean
     Dragging As Boolean
@@ -38,7 +40,7 @@ Public Type State
     DragStartValue As Number
     DragRemainder As Number
     HoldGrip As Boolean
-    GripAnchor As Core.Vector3
+    GripAnchor As Precision3D.Vector3
     GripBasePosition As Core.Vector3
     GripAnchorActive As Boolean
     GripAnchorTarget As Number
@@ -122,19 +124,17 @@ Public Sub SelectAxis(ByRef Value As State, CurrentValue As Number)
 
 End Sub
 
-Public Sub UpdateProjection(ByRef Value As State, Origin As Core.Vector3,
-    Camera As Core.Camera3D, WindowWidth As Number, WindowHeight As Number)
+Public Sub UpdateProjection(ByRef Value As State, Origin As Precision3D.Vector3,
+    Camera As Precision3D.Camera3D, WindowWidth As Number, WindowHeight As Number)
 
-    Dim FocalLength As Number
-    Dim OriginProjection As Core.ProjectedPoint3D
+    Dim OriginProjection As PrecisionCamera.ProjectedPoint
 
     Value.Origin = Origin
-    OriginProjection = CharacterViewer.ProjectViewerPoint(
+    OriginProjection = PrecisionCamera.ProjectViewerPoint(
         Value.Origin, Camera, WindowWidth, WindowHeight)
-    FocalLength = (WindowHeight * Fixed.CosFixed(Camera.FovDegrees / 2) /
-        (2 * Max(1, Fixed.SinFixed(Camera.FovDegrees / 2))))
-    Value.WorldSize = Min(1000, Max(1, OriginProjection.Depth * 80 / Max(1, FocalLength)))
-    Value.Projection = CharacterViewer.ProjectTransformGizmo(
+    Value.WorldSize = ToNumber(Clamp(PrecisionCamera.WorldSizeForPixels(80,
+        OriginProjection.Depth, Camera.FovDegrees, WindowHeight), 1.0, 1000.0))
+    Value.Projection = PrecisionCamera.ProjectTransformGizmo(
         Value.Origin,
         Value.WorldSize,
         Camera,
@@ -149,7 +149,7 @@ Public Function AxisAtPointer(ByRef Value As State,
     MinimumY As Number, MaximumY As Number, StatusPanelX As Number,
     PanelX As Number, PanelY As Number, PanelWidth As Number,
     PanelHeight As Number, Transform As Number, SelectedAxis As Number,
-    Camera As Core.Camera3D, WindowWidth As Number,
+    Camera As Precision3D.Camera3D, WindowWidth As Number,
     WindowHeight As Number) As Number
 
     Dim InCalibrationPanel As Boolean
@@ -179,7 +179,7 @@ Public Function AxisAtPointer(ByRef Value As State,
             HIT_RADIUS
         )
     Else
-        Result = CharacterViewer.TransformGizmoRotationAxisAtPointer(
+        Result = PrecisionCamera.TransformGizmoRotationAxisAtPointer(
             Value.Origin,
             PointerX,
             PointerY,
@@ -202,7 +202,7 @@ End Function
 ''' segments are skipped instead of amplifying tiny motions.
 Public Function RingPointerDelta(ByRef Value As State, SelectedAxis As Number,
     PointerX As Number, PointerY As Number, DeltaX As Number, DeltaY As Number,
-    Camera As Core.Camera3D, WindowWidth As Number,
+    Camera As Precision3D.Camera3D, WindowWidth As Number,
     WindowHeight As Number) As Number
 
     Dim Segment As Number
@@ -223,10 +223,10 @@ Public Function RingPointerDelta(ByRef Value As State, SelectedAxis As Number,
 
     For Segment = 0 To RING_SEGMENTS - 1
 
-        StartPoint = CharacterViewer.ProjectTransformRingPoint(
+        StartPoint = PrecisionCamera.ProjectTransformRingPoint(
             Value.Origin, SelectedAxis, Segment, RING_SEGMENTS,
             Value.WorldSize, Camera, WindowWidth, WindowHeight)
-        EndPoint = CharacterViewer.ProjectTransformRingPoint(
+        EndPoint = PrecisionCamera.ProjectTransformRingPoint(
             Value.Origin, SelectedAxis, Segment + 1, RING_SEGMENTS,
             Value.WorldSize, Camera, WindowWidth, WindowHeight)
         AxisX = EndPoint.X - StartPoint.X
@@ -270,7 +270,7 @@ Public Function DragValueAmount(ByRef Value As State,
     Transform As Number, SelectedAxis As Number,
     PointerX As Number, PointerY As Number,
     DeltaX As Number, DeltaY As Number,
-    Camera As Core.Camera3D, WindowWidth As Number,
+    Camera As Precision3D.Camera3D, WindowWidth As Number,
     WindowHeight As Number) As Number
 
     Dim PointerAmount As Number
@@ -304,7 +304,7 @@ Public Function ClassifyPointer(ByRef Value As State,
     PointerInside As Boolean, MinimumY As Number, MaximumY As Number,
     StatusPanelX As Number, PanelX As Number, PanelY As Number,
     PanelWidth As Number, PanelHeight As Number, Transform As Number,
-    SelectedAxis As Number, Origin As Core.Vector3, Camera As Core.Camera3D,
+    SelectedAxis As Number, Origin As Precision3D.Vector3, Camera As Precision3D.Camera3D,
     WindowWidth As Number, WindowHeight As Number) As PointerDecision
 
     Dim Result As PointerDecision
@@ -543,7 +543,7 @@ Private Sub DrawMove(ByRef Value As State, SelectedAxis As Number)
 End Sub
 
 Private Sub DrawRotate(ByRef Value As State, SelectedAxis As Number,
-    Camera As Core.Camera3D, WindowWidth As Number, WindowHeight As Number)
+    Camera As Precision3D.Camera3D, WindowWidth As Number, WindowHeight As Number)
 
     Dim Axis As Number
     Dim Segment As Number
@@ -558,13 +558,13 @@ Private Sub DrawRotate(ByRef Value As State, SelectedAxis As Number,
 
         Selected = Axis = SelectedAxis Or Axis = Value.HoverAxis
         ColorValue = AxisColor(Value, Axis, Selected)
-        StartPoint = CharacterViewer.ProjectTransformRingPoint(
+        StartPoint = PrecisionCamera.ProjectTransformRingPoint(
             Value.Origin, Axis, 0, RING_SEGMENTS, Value.WorldSize,
             Camera, WindowWidth, WindowHeight)
 
         For Segment = 1 To RING_SEGMENTS
 
-            EndPoint = CharacterViewer.ProjectTransformRingPoint(
+            EndPoint = PrecisionCamera.ProjectTransformRingPoint(
                 Value.Origin, Axis, Segment, RING_SEGMENTS, Value.WorldSize,
                 Camera, WindowWidth, WindowHeight)
 
@@ -595,7 +595,7 @@ Private Sub DrawRotate(ByRef Value As State, SelectedAxis As Number,
 End Sub
 
 Public Sub Draw(ByRef Value As State, Transform As Number,
-    SelectedAxis As Number, Camera As Core.Camera3D,
+    SelectedAxis As Number, Camera As Precision3D.Camera3D,
     WindowWidth As Number, WindowHeight As Number)
 
     If Not Value.Visible Or Not Value.Projection.Visible Then

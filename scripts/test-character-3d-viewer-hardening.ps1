@@ -199,10 +199,10 @@ try {
         'Call ViewerCamera.KeepAboveGround(ViewerCameraState, 0)' `
         'Solid-floor camera comfort'
     foreach ($contract in @(
-        'CharacterViewer.RetainedPointerDelta(',
-        'CharacterViewer.AdvanceZoom(',
-        'BattleCamera.Orbit(',
-        'CharacterViewer.KeepCursorAnchor(',
+        'ToDouble(PointerDeltaX) / ToDouble(OrbitDivisor)',
+        'PrecisionCamera.AdvanceZoom(',
+        'PrecisionCamera.ApplyScreenSpaceCameraControls(',
+        'PrecisionCamera.KeepCursorAnchor(',
         'Public Type PointerInput',
         'Public Function CreatePointerInput(',
         'Public Function PointerRequiresCalibrationOrigin(',
@@ -720,7 +720,7 @@ try {
         'Public Sub DestroyBackdrops(',
         'SocketGizmos[4] As Core.Object3D',
         'Public Function CreateSocketGizmos(',
-        'Private Function SocketPositionThousandths(',
+        'Character3D.TrySocketPositionPrecise(',
         'Private Function UpdateSocketOriginMarkers(',
         'Public Function UpdateSocketGizmos(',
         'Public Function DrawSocketGizmos(',
@@ -782,7 +782,7 @@ try {
         'Whole-Viewer reset lifecycle must remain in ViewerLifecycle.'
     foreach ($contract in @(
         'Public Function ConfigureFraming(',
-        'CharacterViewer.AutoFit(',
+        'PrecisionCamera.AutoFit(',
         'Public Function InitialOrbitYaw(',
         'Public Function DefaultZoomDegrees(')) {
         Assert-Contains $cameraSource $contract 'Viewer camera policy owner'
@@ -1089,7 +1089,7 @@ try {
     Assert-True (-not $viewerSource.Contains('Function ValidateLoadedProfile(') -and
         -not $viewerSource.Contains('Character3D.LoadWithPolicy(') -and
         -not $viewerSource.Contains('Character3D.LocalBounds(') -and
-        -not $viewerSource.Contains('CharacterViewer.AutoFit(') -and
+        -not $viewerSource.Contains('PrecisionCamera.AutoFit(') -and
         -not $viewerSource.Contains('Character3D.SetScale(') -and
         -not $viewerSource.Contains('Character3D.SetShadows(') -and
         -not $viewerSource.Contains('Function ViewerFloorWidth(') -and

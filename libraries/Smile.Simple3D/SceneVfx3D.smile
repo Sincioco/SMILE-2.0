@@ -4,6 +4,7 @@ Module Smile.Simple3D.SceneVfx3D
 Option Explicit
 
 Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Precision3D As Precision3D
 Import Smile.Simple3D.FireEmitter3D As Fire
 Import Smile.Simple3D.LightningVfx3D As Lightning
 
@@ -62,6 +63,17 @@ Public Function Advance(ByRef Value As Clock, Camera As Core.Camera3D,
 
     Dim Result As Boolean
 
+    Result = AdvancePrecise(Value, Precision3D.FromCamera(Camera), FireAvailable, LightningAvailable)
+
+    Return Result
+
+End Function
+
+Public Function AdvancePrecise(ByRef Value As Clock, Camera As Precision3D.Camera3D,
+    FireAvailable As Boolean, LightningAvailable As Boolean) As Boolean
+
+    Dim Result As Boolean
+
     If Not Value.Ready Or Value.FrameIdentity = Value.LastAdvancedFrame Then
         Value.DuplicateAdvanceCount = Value.DuplicateAdvanceCount + 1
         Return False
@@ -79,10 +91,10 @@ Public Function Advance(ByRef Value As Clock, Camera As Core.Camera3D,
     If LightningAvailable Then
 
         If Value.LightningFrozen Then
-            Result = Lightning.Update(0, Camera) And Result
+            Result = Lightning.UpdatePrecise(0, Camera) And Result
             Value.LightningRestageCount = Value.LightningRestageCount + 1
         Else
-            Result = Lightning.Update(Value.ElapsedMilliseconds, Camera) And Result
+            Result = Lightning.UpdatePrecise(Value.ElapsedMilliseconds, Camera) And Result
             Value.LightningAdvanceCount = Value.LightningAdvanceCount + 1
         End If
 

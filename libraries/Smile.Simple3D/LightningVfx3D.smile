@@ -4,6 +4,8 @@ Module Smile.Simple3D.LightningVfx3D
 Option Explicit
 
 Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Precision3D As Precision3D
+Import Smile.Simple3D.PrecisionMath3D As PreciseMath
 Import Smile.Simple3D.Graphics3D As Graphics3D
 Import Smile.Simple3D.Math3D As Math3D
 Import Smile.Simple3D.FixedMath As Fixed
@@ -93,8 +95,8 @@ Private Type LightningState
     FlashRequest As Number
     ShakeRequest As Number
     AudioRequest As Number
-    Source As Core.Vector3
-    Target As Core.Vector3
+    Source As Precision3D.Vector3
+    Target As Precision3D.Vector3
     MainTargetPoint As Number
 End Type
 
@@ -113,14 +115,14 @@ Private Dim SpawnSerial As Number
 Private Dim SpawnCursor As Number
 Private Dim BuildDelay As Number
 Private Dim Items[8] As LightningState
-Private Dim PathX[8, 1022] As Number
-Private Dim PathY[8, 1022] As Number
-Private Dim PathZ[8, 1022] As Number
+Private Dim PathX[8, 1022] As Double
+Private Dim PathY[8, 1022] As Double
+Private Dim PathZ[8, 1022] As Double
 Private Dim PathWidth1000[8, 1022] As Number
 Private Dim PathDelay[8, 1022] As Number
-Private Dim ChainX[8, 8] As Number
-Private Dim ChainY[8, 8] As Number
-Private Dim ChainZ[8, 8] As Number
+Private Dim ChainX[8, 8] As Double
+Private Dim ChainY[8, 8] As Double
+Private Dim ChainZ[8, 8] As Double
 Private Dim RibbonTexture As Core.Texture3D
 Private Dim SparkTexture As Core.Texture3D
 Private Dim HaloMaterial As Core.Material3D
@@ -133,34 +135,37 @@ Private Dim CoreRibbon As Core.RibbonBatch3D
 Private Dim SparkBatch As Core.ParticleBatch3D
 Private Dim GpuSparks As Core.GpuParticleSystem3D
 
-Private Function UnitCross(First As Core.Vector3, Second As Core.Vector3) As Core.Vector3
+Private Function UnitVector(Value As Precision3D.Vector3) As Precision3D.Vector3
 
-    Dim Result As Core.Vector3
-    Dim FirstUnit As Core.Vector3
-    Dim SecondUnit As Core.Vector3
+    Dim Result As Precision3D.Vector3
+    Dim Valid As Boolean
 
-    FirstUnit = Math3D.Normalize(First)
-    SecondUnit = Math3D.Normalize(Second)
-    Result = Math3D.Cross(FirstUnit, SecondUnit)
-    Result.X = Result.X / Core.FIXED_ONE
-    Result.Y = Result.Y / Core.FIXED_ONE
-    Result.Z = Result.Z / Core.FIXED_ONE
-    Result = Math3D.Normalize(Result)
+    Valid = PreciseMath.TryNormalize(Value, Result)
 
     Return Result
 
 End Function
 
-Private Function PositionValid(Position As Core.Vector3) As Boolean
+Private Function UnitCross(First As Precision3D.Vector3, Second As Precision3D.Vector3) As Precision3D.Vector3
+
+    Dim Result As Precision3D.Vector3
+
+    Result = UnitVector(PreciseMath.Cross(UnitVector(First), UnitVector(Second)))
+
+    Return Result
+
+End Function
+
+Private Function PositionValid(Position As Precision3D.Vector3) As Boolean
 
     Dim Result As Boolean
 
-    Result = (Position.X >= -1000000 And
-        Position.X <= 1000000 And
-        Position.Y >= -1000000 And
-        Position.Y <= 1000000 And
-        Position.Z >= -1000000 And
-        Position.Z <= 1000000)
+    Result = (Position.X >= -1000000.0 And
+        Position.X <= 1000000.0 And
+        Position.Y >= -1000000.0 And
+        Position.Y <= 1000000.0 And
+        Position.Z >= -1000000.0 And
+        Position.Z <= 1000000.0)
 
     Return Result
 
@@ -294,7 +299,7 @@ End Function
 
 Private Function AppendPoint(
     Index As Number,
-    Position As Core.Vector3,
+    Position As Precision3D.Vector3,
     Width1000 As Number
 ) As Boolean
 
@@ -319,9 +324,9 @@ Private Function AppendPoint(
 
 End Function
 
-Private Function AppendBreak(Index As Number, Position As Core.Vector3) As Boolean
+Private Function AppendBreak(Index As Number, Position As Precision3D.Vector3) As Boolean
 
-    Dim Previous As Core.Vector3
+    Dim Previous As Precision3D.Vector3
     Dim Result As Boolean
 
     If Items[Index].PointCount <= 0 Then
@@ -340,25 +345,25 @@ End Function
 
 Private Function AppendBoltPath(
     Index As Number,
-    StartPosition As Core.Vector3,
-    EndPosition As Core.Vector3,
+    StartPosition As Precision3D.Vector3,
+    EndPosition As Precision3D.Vector3,
     Segments As Number,
     Amplitude As Number,
     Salt As Number,
     AddBreak As Boolean
 ) As Boolean
 
-    Dim Direction As Core.Vector3
-    Dim Reference As Core.Vector3
-    Dim Side As Core.Vector3
-    Dim UpVector As Core.Vector3
-    Dim Position As Core.Vector3
+    Dim Direction As Precision3D.Vector3
+    Dim Reference As Precision3D.Vector3
+    Dim Side As Precision3D.Vector3
+    Dim UpVector As Precision3D.Vector3
+    Dim Position As Precision3D.Vector3
     Dim StepIndex As Number
     Dim NoiseSide As Number
     Dim NoiseUp As Number
     Dim OffsetSide As Number
     Dim OffsetUp As Number
-    Dim Samples[257] As Core.Vector3
+    Dim Samples[257] As Precision3D.Vector3
     Dim StackLow[32] As Number
     Dim StackHigh[32] As Number
     Dim StackAmplitude[32] As Number
@@ -373,12 +378,12 @@ Private Function AppendBoltPath(
         Return False
     End If
 
-    Direction = Math3D.Normalize(Math3D.Subtract(EndPosition, StartPosition))
-    Reference.Y = Core.FIXED_ONE
+    Direction = UnitVector(PreciseMath.Subtract(EndPosition, StartPosition))
+    Reference.Y = 1.0
 
-    If Abs(Direction.Y) > Core.FIXED_ONE * 9 / 10 Then
-        Reference.X = Core.FIXED_ONE
-        Reference.Y = 0
+    If Abs(Direction.Y) > 0.9 Then
+        Reference.X = 1.0
+        Reference.Y = 0.0
     End If
 
     Side = UnitCross(Direction, Reference)
@@ -405,19 +410,19 @@ Private Function AppendBoltPath(
 
         If MiddleIndex > LowIndex Then
 
-            Position.X = (Samples[LowIndex].X + Samples[HighIndex].X) / 2
-            Position.Y = (Samples[LowIndex].Y + Samples[HighIndex].Y) / 2
-            Position.Z = (Samples[LowIndex].Z + Samples[HighIndex].Z) / 2
+            Position.X = (Samples[LowIndex].X + Samples[HighIndex].X) / 2.0
+            Position.Y = (Samples[LowIndex].Y + Samples[HighIndex].Y) / 2.0
+            Position.Z = (Samples[LowIndex].Z + Samples[HighIndex].Z) / 2.0
             NoiseSide = HashValue(Items[Index].Seed, Salt + MiddleIndex * 2) Mod 2001 - 1000
             NoiseUp = HashValue(Items[Index].Seed, Salt + MiddleIndex * 2 + 1) Mod 2001 - 1000
             OffsetSide = NoiseSide * LocalAmplitude / 1000
             OffsetUp = NoiseUp * LocalAmplitude / 1000
-            Position.X = Position.X + Side.X * OffsetSide / Core.FIXED_ONE
-            Position.Y = Position.Y + Side.Y * OffsetSide / Core.FIXED_ONE
-            Position.Z = Position.Z + Side.Z * OffsetSide / Core.FIXED_ONE
-            Position.X = Position.X + UpVector.X * OffsetUp / Core.FIXED_ONE
-            Position.Y = Position.Y + UpVector.Y * OffsetUp / Core.FIXED_ONE
-            Position.Z = Position.Z + UpVector.Z * OffsetUp / Core.FIXED_ONE
+            Position.X = Position.X + Side.X * ToDouble(OffsetSide)
+            Position.Y = Position.Y + Side.Y * ToDouble(OffsetSide)
+            Position.Z = Position.Z + Side.Z * ToDouble(OffsetSide)
+            Position.X = Position.X + UpVector.X * ToDouble(OffsetUp)
+            Position.Y = Position.Y + UpVector.Y * ToDouble(OffsetUp)
+            Position.Z = Position.Z + UpVector.Z * ToDouble(OffsetUp)
             Samples[MiddleIndex] = Position
             StackLow[StackSize] = LowIndex
             StackHigh[StackSize] = MiddleIndex
@@ -442,15 +447,15 @@ End Function
 
 Private Sub BuildEffect(Index As Number)
 
-    Dim StartPosition As Core.Vector3
-    Dim EndPosition As Core.Vector3
-    Dim BranchStart As Core.Vector3
-    Dim BranchEnd As Core.Vector3
-    Dim Direction As Core.Vector3
-    Dim Reference As Core.Vector3
-    Dim Side As Core.Vector3
-    Dim UpVector As Core.Vector3
-    Dim Distance As Number
+    Dim StartPosition As Precision3D.Vector3
+    Dim EndPosition As Precision3D.Vector3
+    Dim BranchStart As Precision3D.Vector3
+    Dim BranchEnd As Precision3D.Vector3
+    Dim Direction As Precision3D.Vector3
+    Dim Reference As Precision3D.Vector3
+    Dim Side As Precision3D.Vector3
+    Dim UpVector As Precision3D.Vector3
+    Dim Distance As Double
     Dim Amplitude As Number
     Dim Segments As Number
     Dim Branches As Number
@@ -467,9 +472,9 @@ Private Sub BuildEffect(Index As Number)
     BuildDelay = 0
     StartPosition = Items[Index].Source
     EndPosition = Items[Index].Target
-    Distance = Math3D.Distance(StartPosition, EndPosition)
+    Distance = PreciseMath.Distance(StartPosition, EndPosition)
     Segments = SegmentCount(Items[Index].Quality)
-    Amplitude = Max(Items[Index].Width * 3, Distance / 5) * Items[Index].PathJitter1000 / 1000
+    Amplitude = Max(Items[Index].Width * 3, ToNumber(Distance / 5.0)) * Items[Index].PathJitter1000 / 1000
 
     If Items[Index].ChainCount > 0 Then
         Segments = Max(2, Segments / (Items[Index].ChainCount + 1))
@@ -496,13 +501,13 @@ Private Sub BuildEffect(Index As Number)
             Amplitude, 2000 + Hop * 313 + Items[Index].TopologyBucket * 101, True) And Result
     End For
 
-    Direction = Math3D.Normalize(Math3D.Subtract(Items[Index].Target, Items[Index].Source))
+    Direction = UnitVector(PreciseMath.Subtract(Items[Index].Target, Items[Index].Source))
     BuildDelay = 0
-    Reference.Y = Core.FIXED_ONE
+    Reference.Y = 1.0
 
-    If Abs(Direction.Y) > Core.FIXED_ONE * 9 / 10 Then
-        Reference.X = Core.FIXED_ONE
-        Reference.Y = 0
+    If Abs(Direction.Y) > 0.9 Then
+        Reference.X = 1.0
+        Reference.Y = 0.0
     End If
 
     Side = UnitCross(Direction, Reference)
@@ -522,15 +527,15 @@ Private Sub BuildEffect(Index As Number)
         BranchStart.Y = PathY[Index, MainPoint]
         BranchStart.Z = PathZ[Index, MainPoint]
         BranchEnd = BranchStart
-        BranchEnd.X = BranchEnd.X + Direction.X * Distance / 5 / Core.FIXED_ONE
-        BranchEnd.Y = BranchEnd.Y + Direction.Y * Distance / 5 / Core.FIXED_ONE
-        BranchEnd.Z = BranchEnd.Z + Direction.Z * Distance / 5 / Core.FIXED_ONE
-        BranchEnd.X = BranchEnd.X + Side.X * Distance * (HashValue(Items[Index].Seed, Branch * 97) Mod 2001 - 1000) / 2400 / Core.FIXED_ONE
-        BranchEnd.Y = BranchEnd.Y + Side.Y * Distance * (HashValue(Items[Index].Seed, Branch * 97) Mod 2001 - 1000) / 2400 / Core.FIXED_ONE
-        BranchEnd.Z = BranchEnd.Z + Side.Z * Distance * (HashValue(Items[Index].Seed, Branch * 97) Mod 2001 - 1000) / 2400 / Core.FIXED_ONE
-        BranchEnd.X = BranchEnd.X + UpVector.X * Distance / 10 / Core.FIXED_ONE
-        BranchEnd.Y = BranchEnd.Y + UpVector.Y * Distance / 10 / Core.FIXED_ONE
-        BranchEnd.Z = BranchEnd.Z + UpVector.Z * Distance / 10 / Core.FIXED_ONE
+        BranchEnd.X = BranchEnd.X + Direction.X * Distance / 5.0
+        BranchEnd.Y = BranchEnd.Y + Direction.Y * Distance / 5.0
+        BranchEnd.Z = BranchEnd.Z + Direction.Z * Distance / 5.0
+        BranchEnd.X = BranchEnd.X + Side.X * Distance * ToDouble(HashValue(Items[Index].Seed, Branch * 97) Mod 2001 - 1000) / 2400.0
+        BranchEnd.Y = BranchEnd.Y + Side.Y * Distance * ToDouble(HashValue(Items[Index].Seed, Branch * 97) Mod 2001 - 1000) / 2400.0
+        BranchEnd.Z = BranchEnd.Z + Side.Z * Distance * ToDouble(HashValue(Items[Index].Seed, Branch * 97) Mod 2001 - 1000) / 2400.0
+        BranchEnd.X = BranchEnd.X + UpVector.X * Distance / 10.0
+        BranchEnd.Y = BranchEnd.Y + UpVector.Y * Distance / 10.0
+        BranchEnd.Z = BranchEnd.Z + UpVector.Z * Distance / 10.0
 
         If Items[Index].Preset = 7 Then
             BranchEnd.Y = Items[Index].Target.Y
@@ -554,8 +559,8 @@ Private Sub BuildEffect(Index As Number)
 
     For MainPoint = 0 To Items[Index].PointCount - 1
         Items[Index].TopologyChecksum = (Items[Index].TopologyChecksum * 31 +
-            PathX[Index, MainPoint] * 3 + PathY[Index, MainPoint] * 5 +
-            PathZ[Index, MainPoint] * 7 + PathWidth1000[Index, MainPoint]) Mod 2147483647
+            ToNumber(PathX[Index, MainPoint]) * 3 + ToNumber(PathY[Index, MainPoint]) * 5 +
+            ToNumber(PathZ[Index, MainPoint]) * 7 + PathWidth1000[Index, MainPoint]) Mod 2147483647
     End For
 
 End Sub
@@ -565,7 +570,7 @@ Private Function StagePoint(
     OutputIndex As Number,
     EffectIndex As Number,
     PointIndex As Number,
-    Camera As Core.Camera3D,
+    Camera As Precision3D.Camera3D,
     Width As Number,
     RedValue As Number,
     GreenValue As Number,
@@ -573,12 +578,15 @@ Private Function StagePoint(
     Opacity As Number
 ) As Boolean
 
-    Dim Center As Core.Vector3
-    Dim Previous As Core.Vector3
-    Dim Following As Core.Vector3
-    Dim Tangent As Core.Vector3
-    Dim ToCamera As Core.Vector3
-    Dim Side As Core.Vector3
+    Dim Center As Precision3D.Vector3
+    Dim Previous As Precision3D.Vector3
+    Dim Following As Precision3D.Vector3
+    Dim Tangent As Precision3D.Vector3
+    Dim ToCamera As Precision3D.Vector3
+    Dim Side As Precision3D.Vector3
+    Dim WorldCenter As Precision3D.Vector3
+    Dim WidthOffset As Precision3D.Vector3
+    Dim Normalized As Boolean
     Dim HalfWidth As Number
     Dim LeaderEnd As Number
     Dim StreamerStart As Number
@@ -606,12 +614,14 @@ Private Function StagePoint(
 
     End If
 
-    Tangent = Math3D.Subtract(Following, Previous)
-    ToCamera = Math3D.Subtract(Camera.Position, Center)
-    Side = UnitCross(Tangent, ToCamera)
+    Tangent = PreciseMath.Subtract(Following, Previous)
+    WorldCenter = Center
+    ToCamera = PreciseMath.Subtract(Camera.Position, WorldCenter)
+    Normalized = PreciseMath.TryNormalize(
+        PreciseMath.Cross(Tangent, ToCamera), Side)
 
-    If Math3D.Length(Side) = 0 Then
-        Side.X = Core.FIXED_ONE
+    If Not Normalized Then
+        Side = Precision3D.Vector(1.0, 0.0, 0.0)
     End If
 
     HalfWidth = Width * PathWidth1000[EffectIndex, PointIndex] / 1000
@@ -641,17 +651,10 @@ Private Function StagePoint(
 
     End If
 
-    Result = Graphics3D.SetRibbonPoint3D(
-        Ribbon,
-        OutputIndex,
-        Center.X - Side.X * HalfWidth / Core.FIXED_ONE,
-        Center.Y - Side.Y * HalfWidth / Core.FIXED_ONE,
-        Center.Z - Side.Z * HalfWidth / Core.FIXED_ONE,
-        Center.X + Side.X * HalfWidth / Core.FIXED_ONE,
-        Center.Y + Side.Y * HalfWidth / Core.FIXED_ONE,
-        Center.Z + Side.Z * HalfWidth / Core.FIXED_ONE,
-        500
-    )
+    WidthOffset = PreciseMath.Scale(Side, ToDouble(HalfWidth))
+    Result = Precision3D.SetRibbonPoint(Ribbon, OutputIndex,
+        PreciseMath.Subtract(WorldCenter, WidthOffset),
+        PreciseMath.Add(WorldCenter, WidthOffset), 0.5)
     Result = Graphics3D.SetRibbonPointColor3D(
         Ribbon,
         OutputIndex,
@@ -702,7 +705,7 @@ End Function
 
 Private Function StageLayer(
     ByRef Ribbon As Core.RibbonBatch3D,
-    Camera As Core.Camera3D,
+    Camera As Precision3D.Camera3D,
     WidthMultiplier As Number,
     RedValue As Number,
     GreenValue As Number,
@@ -787,7 +790,7 @@ Private Function StageSparks() As Boolean
 
     Dim EffectIndex As Number
     Dim OutputIndex As Number
-    Dim Position As Core.Vector3
+    Dim Position As Precision3D.Vector3
     Dim Opacity As Number
     Dim Result As Boolean
 
@@ -802,16 +805,9 @@ Private Function StageSparks() As Boolean
 
             Position = Items[EffectIndex].Target
             Opacity = EffectOpacity(EffectIndex) / 10
-            Result = Graphics3D.SetParticle3D(
-                SparkBatch,
-                OutputIndex,
-                Position.X,
-                Position.Y,
-                Position.Z,
-                Max(2, Items[EffectIndex].Width * 5),
-                Items[EffectIndex].Age * 3 Mod 360,
-                0
-            ) And Result
+            Result = Precision3D.SetParticle(SparkBatch, OutputIndex, Position,
+                ToDouble(Max(2, Items[EffectIndex].Width * 5)),
+                ToDouble(Items[EffectIndex].Age * 3 Mod 360), 0) And Result
             Result = Graphics3D.SetParticleColor3D(
                 SparkBatch,
                 OutputIndex,
@@ -832,7 +828,7 @@ Private Function StageSparks() As Boolean
 
 End Function
 
-Private Function StageAll(Camera As Core.Camera3D) As Boolean
+Private Function StageAll(Camera As Precision3D.Camera3D) As Boolean
 
     Dim Result As Boolean
 
@@ -856,7 +852,7 @@ Private Function EmitSparks(Index As Number) As Boolean
     Dim Particle As Number
     Dim Slot As Number
     Dim Noise As Number
-    Dim Position As Core.Vector3
+    Dim Position As Precision3D.Vector3
     Dim VelocityRange As Number
     Dim Lifetime As Number
     Dim Result As Boolean
@@ -893,17 +889,18 @@ Private Function EmitSparks(Index As Number) As Boolean
         If Items[Index].Preset = 4 Then
 
             Position.X = (Items[Index].Source.X +
-                (Items[Index].Target.X - Items[Index].Source.X) * Particle / Max(1, SpawnCount - 1))
+                (Items[Index].Target.X - Items[Index].Source.X) * ToDouble(Particle) / ToDouble(Max(1, SpawnCount - 1)))
             Position.Y = (Items[Index].Source.Y +
-                (Items[Index].Target.Y - Items[Index].Source.Y) * Particle / Max(1, SpawnCount - 1))
+                (Items[Index].Target.Y - Items[Index].Source.Y) * ToDouble(Particle) / ToDouble(Max(1, SpawnCount - 1)))
             Position.Z = (Items[Index].Source.Z +
-                (Items[Index].Target.Z - Items[Index].Source.Z) * Particle / Max(1, SpawnCount - 1))
+                (Items[Index].Target.Z - Items[Index].Source.Z) * ToDouble(Particle) / ToDouble(Max(1, SpawnCount - 1)))
 
         End If
 
-        Result = Graphics3D.SetGpuParticleSpawnKinematics3D(GpuSparks, Slot,
-            Position.X, Position.Y, Position.Z,
-            Noise Mod (VelocityRange * 2 + 1) - VelocityRange, Noise / 441 Mod (VelocityRange * 2), Noise / 19321 Mod (VelocityRange * 2 + 1) - VelocityRange) And Result
+        Result = Precision3D.SetGpuParticleSpawnKinematics(GpuSparks, Slot, Position,
+            Precision3D.Vector(ToDouble(Noise Mod (VelocityRange * 2 + 1) - VelocityRange),
+                ToDouble(Noise / 441 Mod (VelocityRange * 2)),
+                ToDouble(Noise / 19321 Mod (VelocityRange * 2 + 1) - VelocityRange))) And Result
         Result = Graphics3D.SetGpuParticleSpawnVisual3D(GpuSparks, Slot,
             Lifetime + Noise Mod Lifetime, 1 + Noise Mod 3, 1, Noise Mod 360, 90, 1000, 800) And Result
         Result = Graphics3D.CommitGpuParticleSpawn3D(GpuSparks, Slot,
@@ -1111,10 +1108,21 @@ Public Function Initialize(
 End Function
 
 ''' Starts a caller-owned point-to-point visual. It never selects targets or applies damage.
-Public Function StartAt(
+Public Function StartAt(Preset As Text, Source As Core.Vector3, Target As Core.Vector3, Seed As Number,
+    Optional Quality As Number = QUALITY_AUTO) As LightningEffect
+
+    Dim Result As LightningEffect
+
+    Result = StartAtPrecise(Preset, Precision3D.FromVector(Source), Precision3D.FromVector(Target), Seed, Quality)
+
+    Return Result
+
+End Function
+
+Public Function StartAtPrecise(
     Preset As Text,
-    Source As Core.Vector3,
-    Target As Core.Vector3,
+    Source As Precision3D.Vector3,
+    Target As Precision3D.Vector3,
     Seed As Number,
     Optional Quality As Number = QUALITY_AUTO
 ) As LightningEffect
@@ -1145,7 +1153,7 @@ Public Function StartAt(
 
     If (Not PositionValid(Source) Or
         Not PositionValid(Target) Or
-        Math3D.Distance(Source, Target) <= 0) Then
+        PreciseMath.Distance(Source, Target) <= 0.0) Then
         ErrorValue = ERROR_INVALID_POSITION
 
         Return Result
@@ -1257,10 +1265,20 @@ Public Function StartAt(
 
 End Function
 
-Public Function SetEndpoints(
+Public Function SetEndpoints(Value As LightningEffect, Source As Core.Vector3, Target As Core.Vector3) As Boolean
+
+    Dim Result As Boolean
+
+    Result = SetEndpointsPrecise(Value, Precision3D.FromVector(Source), Precision3D.FromVector(Target))
+
+    Return Result
+
+End Function
+
+Public Function SetEndpointsPrecise(
     Value As LightningEffect,
-    Source As Core.Vector3,
-    Target As Core.Vector3
+    Source As Precision3D.Vector3,
+    Target As Precision3D.Vector3
 ) As Boolean
 
     Dim Index As Number
@@ -1279,7 +1297,7 @@ Public Function SetEndpoints(
 
     If (Not PositionValid(Source) Or
         Not PositionValid(Target) Or
-        Math3D.Distance(Source, Target) <= 0) Then
+        PreciseMath.Distance(Source, Target) <= 0.0) Then
         ErrorValue = ERROR_INVALID_POSITION
 
         Return False
@@ -1298,6 +1316,16 @@ Public Function SetEndpoints(
 End Function
 
 Public Function AddChainTarget(Value As LightningEffect, Target As Core.Vector3) As Boolean
+
+    Dim Result As Boolean
+
+    Result = AddChainTargetPrecise(Value, Precision3D.FromVector(Target))
+
+    Return Result
+
+End Function
+
+Public Function AddChainTargetPrecise(Value As LightningEffect, Target As Precision3D.Vector3) As Boolean
 
     Dim ChainIndex As Number
     Dim Index As Number
@@ -1344,6 +1372,16 @@ End Function
 
 ''' Reposition an existing chain point after resolving an animated attachment.
 Public Function SetChainTarget(Value As LightningEffect, ChainIndex As Number, Target As Core.Vector3) As Boolean
+
+    Dim Result As Boolean
+
+    Result = SetChainTargetPrecise(Value, ChainIndex, Precision3D.FromVector(Target))
+
+    Return Result
+
+End Function
+
+Public Function SetChainTargetPrecise(Value As LightningEffect, ChainIndex As Number, Target As Precision3D.Vector3) As Boolean
 
     Dim Index As Number
 
@@ -1602,6 +1640,16 @@ End Function
 
 ''' Advances all active effects in bounded fixed 10 ms steps and restages camera-facing edges.
 Public Function Update(ElapsedMilliseconds As Number, Camera As Core.Camera3D) As Boolean
+
+    Dim Result As Boolean
+
+    Result = UpdatePrecise(ElapsedMilliseconds, Precision3D.FromCamera(Camera))
+
+    Return Result
+
+End Function
+
+Public Function UpdatePrecise(ElapsedMilliseconds As Number, Camera As Precision3D.Camera3D) As Boolean
 
     Dim Index As Number
     Dim StepIndex As Number
@@ -1917,15 +1965,15 @@ Public Function Value(Query As Number, Effect As LightningEffect) As Number
 
     Else If Query = QUERY_FIRST_X Then
 
-        Result = PathX[Index, 0]
+        Result = ToNumber(Round(PathX[Index, 0]))
 
     Else If Query = QUERY_FIRST_Y Then
 
-        Result = PathY[Index, 0]
+        Result = ToNumber(Round(PathY[Index, 0]))
 
     Else If Query = QUERY_FIRST_Z Then
 
-        Result = PathZ[Index, 0]
+        Result = ToNumber(Round(PathZ[Index, 0]))
 
     Else If (Query = QUERY_MAIN_TARGET_X Or
         Query = QUERY_MAIN_TARGET_Y Or
@@ -1938,11 +1986,11 @@ Public Function Value(Query As Number, Effect As LightningEffect) As Number
         End If
 
         If Query = QUERY_MAIN_TARGET_X Then
-            Result = PathX[Index, TargetPoint]
+            Result = ToNumber(Round(PathX[Index, TargetPoint]))
         Else If Query = QUERY_MAIN_TARGET_Y Then
-            Result = PathY[Index, TargetPoint]
+            Result = ToNumber(Round(PathY[Index, TargetPoint]))
         Else
-            Result = PathZ[Index, TargetPoint]
+            Result = ToNumber(Round(PathZ[Index, TargetPoint]))
         End If
 
     End If

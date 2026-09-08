@@ -1901,8 +1901,8 @@ static long long smile_3d_create_gpu_particle_system(unsigned int capacity,
 }
 
 static int smile_3d_stage_gpu_particle_kinematics(SmileGpuParticleSystem3D* system,
-    long long slot, long long x, long long y, long long z,
-    long long velocity_x, long long velocity_y, long long velocity_z)
+    long long slot, double x, double y, double z,
+    double velocity_x, double velocity_y, double velocity_z)
 {
     SmileGpuParticleState3D* state;
     if (slot < 0 || slot >= system->capacity ||
@@ -2825,8 +2825,8 @@ static int smile_3d_set_directional(long long x, long long y, long long z,
     return 1;
 }
 
-static int smile_3d_set_local_light(long long slot, long long type, long long x, long long y,
-    long long z, long long red, long long green, long long blue, long long intensity, long long range)
+static int smile_3d_set_local_light(long long slot, long long type, double x, double y,
+    double z, long long red, long long green, long long blue, long long intensity, long long range)
 {
     SmileLocalLight3D* light;
     if (slot < 0 || slot >= SMILE_3D_MAX_LOCAL_LIGHTS || type < 0 || type > 2)
@@ -9487,7 +9487,8 @@ static long long smile_3d_gpu_particle_system_command(long long operation,
         return 0;
     }
     if (operation == 2)
-        return smile_3d_stage_gpu_particle_kinematics(system, c, d, e, f, g, h, i);
+        return smile_3d_stage_gpu_particle_kinematics(system, c, (double)d, (double)e,
+            (double)f, (double)g, (double)h, (double)i);
     if (operation == 3)
         return smile_3d_stage_gpu_particle_visual(system, c, d, e, f, g, h, i, j);
     if (operation == 4) return smile_3d_commit_gpu_particle_spawn(system, c, d, e);
@@ -10028,7 +10029,7 @@ extern "C" long long smile_renderer3d_command(long long command,
         case SMILE_3D_SET_DIRECTIONAL_LIGHT:
             return smile_3d_set_directional(a, b, c, d, e, f, g);
         case SMILE_3D_SET_LOCAL_LIGHT:
-            return smile_3d_set_local_light(a, b, c, d, e, f, g, h, i, j);
+            return smile_3d_set_local_light(a, b, (double)c, (double)d, (double)e, f, g, h, i, j);
         case SMILE_3D_SET_SPOT_CONE: return smile_3d_set_spot_cone(a, b, c, d, e, f);
         case SMILE_3D_PBR_TEXTURE_VALUE: return smile_3d_pbr_texture_value(texture = smile_3d_texture(a), b);
         case SMILE_3D_PBR_MATERIAL_VALUE: return smile_3d_pbr_material_value(material = smile_3d_material(a), b);

@@ -1,5 +1,5 @@
 [CmdletBinding()]
-param()
+param([switch]$IncludeWebPrecision)
 
 $ErrorActionPreference = 'Stop'
 $repositoryRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
@@ -7,6 +7,7 @@ $toolRoot = Join-Path $repositoryRoot 'tools\Character3DViewer'
 $testRoot = Join-Path $repositoryRoot 'artifacts\tests\ViewerCalibrationIsolation'
 $null = New-Item -ItemType Directory -Path $testRoot -Force
 $viewerSource = Get-Content -LiteralPath (Join-Path $toolRoot 'Program.smile') -Raw
+$viewerSource = $viewerSource.Replace("`r`n", "`n")
 $testStartup = Get-Content -LiteralPath (Join-Path $toolRoot 'CalibrationTests.smile') -Raw
 $profileConstants = foreach ($characterName in @('Arin', 'Orin')) {
     $fingerprint = & {
@@ -26,6 +27,8 @@ $testPrefix = $testPrefix.Replace(
     "Import Smile.Simple3D.FireEmitter3D As Fire`n" +
         "Import Smile.Simple3D.LightningVfx3D As Lightning`n" +
         "Import Smile.Simple3D.Math3D As Math3D`n" +
+        "Import Smile.Simple3D.Scene3D As Scene3D`n" +
+        "Import Smile.Simple3D.PrecisionCamera3D As PrecisionCamera`n" +
         "Import Smile.Tools.ArinShieldRim As ArinShieldRim`n" +
         "Import Smile.Tools.DragonPresence As DragonPresence`n" +
         "Import Smile.Simple3D.Core As Core`n")
@@ -197,3 +200,44 @@ foreach ($savedPath in @($nativeDataPath, "$nativeDataPath.bak")) {
     }
 }
 Write-Host 'Native Save Data and its previous-good backup both passed checksum/profile validation.'
+
+if ($IncludeWebPrecision) {
+    # Run the same production Party assertion on Web without importing native saves.
+    # The full native editing/storage fixture above remains the calibration gate.
+    $webStartup = @'
+Game Window "SMILE Party Precision Tests" Size 640 By 480
+
+Session.ProfileIndex = ViewerProfiles.PROFILE_ARIN
+
+Call LoadViewer()
+Call SelectCharacterTab(2)
+Call CalibrationCheck(Session.Ready And Not Session.ViewerError And Party.Ready,
+    "Web production actors load")
+Call CheckFractionalPartySubmission()
+Call DestroyViewer()
+
+If TestFailures = 0 Then
+    Print "Viewer Party precision passed"
+Else
+    Print "Viewer Party precision failed"
+End If
+
+'@
+    $webStart = $testSource.IndexOf('Game Window "')
+    $webHelpers = $testSource.IndexOf('Sub CalibrationCheck(')
+    if ($webStart -lt 0 -or $webHelpers -le $webStart) { throw 'Party precision fixture boundaries changed.' }
+    $webSource = $testSource.Substring(0, $webStart) + $webStartup + $testSource.Substring($webHelpers)
+    [IO.File]::WriteAllText((Join-Path $testRoot 'ProgramWeb.smile'), $webSource, $encoding)
+    $project.SmileProject.ItemGroup.SmileSource | Where-Object Include -eq 'Program.smile' |
+        ForEach-Object { $_.SetAttribute('Include', 'ProgramWeb.smile') }
+    $project.SmileProject.PropertyGroup.StartupFile = 'ProgramWeb.smile'
+    $webProject = Join-Path $testRoot 'PartyPrecision.smileproj'
+    $project.Save($webProject)
+    $webOutput = Join-Path $testRoot 'WebPrecision'
+    & $compiler --project $webProject --target web --configuration Release --output-dir $webOutput
+    if ($LASTEXITCODE -ne 0) { throw 'Web Party precision compile failed.' }
+    $webExpected = Join-Path $testRoot 'party-precision.expected.txt'
+    [IO.File]::WriteAllText($webExpected, "Viewer Party precision passed`n", $encoding)
+    & node (Join-Path $PSScriptRoot 'run-web-test.js') $webOutput --renderer3d-state --expected $webExpected --timeout 60000
+    if ($LASTEXITCODE -ne 0) { throw 'Web Party precision assertions failed.' }
+}

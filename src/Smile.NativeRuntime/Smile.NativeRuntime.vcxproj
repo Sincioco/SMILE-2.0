@@ -77,6 +77,8 @@
     <ClCompile Include="numeric\double.cpp">
       <LanguageStandard>stdcpp17</LanguageStandard>
       <FloatingPointModel>Strict</FloatingPointModel>
+      <!-- std::string/charconv must share the final link's DLL CRT with music_mediaplayer. -->
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
     </ClCompile>
     <ClCompile Include="audio\audio_focus_state.c" />
     <ClCompile Include="audio\music_mediaplayer.cpp">

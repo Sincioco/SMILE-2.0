@@ -5,7 +5,10 @@ Option Explicit
 
 Import Smile.Simple3D.Character3D As Character3D
 Import Smile.Simple3D.CharacterViewer As CharacterViewer
+Import Smile.Simple3D.PrecisionCamera3D As PrecisionCamera
 Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Precision3D As Precision3D
+Import Smile.Simple3D.PrecisionMath3D As PreciseMath
 Import Smile.Simple3D.Graphics3D As Graphics3D
 Import Smile.Simple3D.Math3D As Math3D
 Import Smile.UI.Controls As UI
@@ -86,18 +89,18 @@ Public Type State
     Stage As Number
     DragonCounter As Number
     DragonReactionPending As Boolean
-    OrbitCamera As Core.Camera3D
-    HeroCamera As Core.Camera3D
-    DragonCamera As Core.Camera3D
-    OrbitPhase1000 As Number
+    OrbitCamera As Precision3D.Camera3D
+    HeroCamera As Precision3D.Camera3D
+    DragonCamera As Precision3D.Camera3D
+    OrbitPhase As Double
     ActiveCamera As Number
     PreviousCamera As Number
     PreviousCameraTurn As Number
-    ShotPosition1000 As Core.Vector3
-    ShotTarget1000 As Core.Vector3
-    ShotBoss As Core.Vector3
-    ShotBossHead As Core.Vector3
-    ShotMouth As Core.Vector3
+    ShotPosition As Precision3D.Vector3
+    ShotTarget As Precision3D.Vector3
+    ShotBoss As Precision3D.Vector3
+    ShotBossHead As Precision3D.Vector3
+    ShotMouth As Precision3D.Vector3
 End Type
 
 Public Sub SetEnabled(ByRef Value As State, Enabled As Boolean)
@@ -109,7 +112,7 @@ End Sub
 Public Sub ResetCameraTracking(ByRef Value As State)
 
     Value.PreviousCamera = 0
-    Value.OrbitPhase1000 = 0
+    Value.OrbitPhase = 0.0
 
 End Sub
 
@@ -133,8 +136,8 @@ Public Type FrameActions
     FirstClipRequested As Boolean
     SecondClipRequested As Boolean
     PositionsAvailable As Boolean
-    FirstPosition As Core.Vector3
-    SecondPosition As Core.Vector3
+    FirstPosition As Precision3D.Vector3
+    SecondPosition As Precision3D.Vector3
 End Type
 
 Public Type PointerDecision
@@ -650,7 +653,7 @@ End Function
 
 Public Function ApplyFrame(ByRef Value As State, Actions As FrameActions,
     ByRef FirstActor As Character3D.Actor,
-    ByRef FirstFrame As CharacterViewer.Framing,
+    ByRef FirstFrame As PrecisionCamera.Framing,
     ByRef FirstClip As Number, PlaybackSpeed As Number,
     TargetX As Number, TargetY As Number, TargetZ As Number,
     ModelForwardYawOffset As Number) As Boolean
@@ -679,9 +682,9 @@ Public Function ApplyFrame(ByRef Value As State, Actions As FrameActions,
     FirstFrame.PositionZ = Actions.FirstPosition.Z
     Value.Companion.Frame.PositionX = Actions.SecondPosition.X
     Value.Companion.Frame.PositionZ = Actions.SecondPosition.Z
-    Result = Character3D.Place(FirstActor, FirstFrame.PositionX,
+    Result = Character3D.PlacePrecise(FirstActor, FirstFrame.PositionX,
         FirstFrame.PositionY, FirstFrame.PositionZ) And Result
-    Result = Character3D.Place(Value.Companion.Actor,
+    Result = Character3D.PlacePrecise(Value.Companion.Actor,
         Value.Companion.Frame.PositionX, Value.Companion.Frame.PositionY,
         Value.Companion.Frame.PositionZ) And Result
     Result = ViewerActors.FaceToward(FirstActor, TargetX, TargetY, TargetZ,
@@ -886,7 +889,7 @@ Public Function UpdateDragonOpponent(ByRef Value As State,
     ByRef Effects As ViewerEffects.State, AnimationElapsed As Number,
     CalibrationEditing As Boolean, SwordVisible As Boolean,
     ShieldVisible As Boolean, ScenePaused As Boolean,
-    SelectedClipLabel As Text, Camera As Core.Camera3D,
+    SelectedClipLabel As Text, Camera As Precision3D.Camera3D,
     CameraElapsed As Number) As ParticipantUpdateResult
 
     Dim Result As ParticipantUpdateResult
@@ -922,19 +925,21 @@ Public Sub UpdateOrinStorm(ByRef Value As State,
     ByRef Dragon As ViewerDragon.State, ByRef Effects As ViewerEffects.State,
     ByRef PrimaryActor As Character3D.Actor, PrimaryProfile As Number,
     PrimaryClip As Number, DragonInspection As Boolean,
-    Camera As Core.Camera3D, CameraElapsed As Number,
+    Camera As Precision3D.Camera3D, CameraElapsed As Number,
     SwordVisible As Boolean, ShieldVisible As Boolean,
     ScenePaused As Boolean)
 
     Dim ClipName As Text
     Dim GlowVisible As Boolean
-    Dim Target As Core.Vector3
+    Dim Target As Precision3D.Vector3
 
     If Not ViewerDragon.IsValid(Dragon) Then
         Return
     End If
 
-    Target = Character3D.SocketPosition(Dragon.Actor, "Chest")
+    If Not Character3D.TrySocketPositionPrecise(Dragon.Actor, "Chest", 0, False, Target) Then
+        Return
+    End If
 
     If (Value.Enabled Or DragonInspection) And Value.Ready Then
 
@@ -1098,19 +1103,19 @@ Public Function PlaceDragonInspectionParticipants(ByRef Value As State,
 
     Home = FormationPosition(
         Center, Radius, StartAngle, EndAngle, 0, 2)
-    Value.DragonOpponent.Frame.PositionX = Home.X
-    Value.DragonOpponent.Frame.PositionZ = Home.Z
+    Value.DragonOpponent.Frame.PositionX = ToDouble(Home.X)
+    Value.DragonOpponent.Frame.PositionZ = ToDouble(Home.Z)
     Home = FormationPosition(
         Center, Radius, StartAngle, EndAngle, 1, 2)
-    Value.Companion.Frame.PositionX = Home.X
-    Value.Companion.Frame.PositionZ = Home.Z
-    Result = Character3D.Place(
+    Value.Companion.Frame.PositionX = ToDouble(Home.X)
+    Value.Companion.Frame.PositionZ = ToDouble(Home.Z)
+    Result = Character3D.PlacePrecise(
         Value.DragonOpponent.Actor,
         Value.DragonOpponent.Frame.PositionX,
         Value.DragonOpponent.Frame.PositionY,
         Value.DragonOpponent.Frame.PositionZ
     )
-    Result = Character3D.Place(
+    Result = Character3D.PlacePrecise(
         Value.Companion.Actor,
         Value.Companion.Frame.PositionX,
         Value.Companion.Frame.PositionY,
@@ -1253,31 +1258,18 @@ Public Function WillPrepareDragonTurn(ByRef Value As State,
 
 End Function
 
-Private Sub SetPositions(ByRef Value As State, Travel1000 As Number,
+Private Sub SetPositions(ByRef Value As State, Progress As Double,
     ByRef Actions As FrameActions)
 
-    Dim TravelOffset As Number
-
-    Actions.FirstPosition = Value.First.Home
-    Actions.SecondPosition = Value.Second.Home
+    Actions.FirstPosition = Precision3D.FromVector(Value.First.Home)
+    Actions.SecondPosition = Precision3D.FromVector(Value.Second.Home)
 
     If Value.Turn = 0 Then
-
-        TravelOffset = Value.First.Approach.X - Actions.FirstPosition.X
-        Actions.FirstPosition.X = (Actions.FirstPosition.X +
-            TravelOffset * Travel1000 / 1000)
-        TravelOffset = Value.First.Approach.Z - Actions.FirstPosition.Z
-        Actions.FirstPosition.Z = (Actions.FirstPosition.Z +
-            TravelOffset * Travel1000 / 1000)
-
+        Actions.FirstPosition = PreciseMath.Lerp(Actions.FirstPosition,
+            Precision3D.FromVector(Value.First.Approach), Progress)
     Else
-        TravelOffset = Value.Second.Approach.X - Actions.SecondPosition.X
-        Actions.SecondPosition.X = (Actions.SecondPosition.X +
-            TravelOffset * Travel1000 / 1000)
-        TravelOffset = Value.Second.Approach.Z - Actions.SecondPosition.Z
-        Actions.SecondPosition.Z = (Actions.SecondPosition.Z +
-            TravelOffset * Travel1000 / 1000)
-
+        Actions.SecondPosition = PreciseMath.Lerp(Actions.SecondPosition,
+            Precision3D.FromVector(Value.Second.Approach), Progress)
     End If
 
     Actions.PositionsAvailable = True
@@ -1402,7 +1394,7 @@ Private Function AdvanceDragonTurn(ByRef Value As State,
 
     End If
 
-    Call SetPositions(Value, 0, Actions)
+    Call SetPositions(Value, 0.0, Actions)
 
     Return Actions
 
@@ -1416,7 +1408,7 @@ Public Function AdvanceChoreography(ByRef Value As State,
     Dim Actions As FrameActions
     Dim Name As Text
     Dim Stage As Number
-    Dim Travel1000 As Number
+    Dim Progress As Double
 
     If Not AdvanceElapsed(Value, Elapsed, DemoEnabled, ScenePaused) Then
         Return Actions
@@ -1449,7 +1441,7 @@ Public Function AdvanceChoreography(ByRef Value As State,
     End If
 
     Stage = 0
-    Travel1000 = Min(1000, Max(0, Value.Elapsed - 650) * 1000 / 650)
+    Progress = Clamp(ToDouble(Max(0, Value.Elapsed - 650)) / 650.0, 0.0, 1.0)
     Name = "Walk"
 
     If Value.Turn = 1 Then
@@ -1459,14 +1451,14 @@ Public Function AdvanceChoreography(ByRef Value As State,
     If Value.Elapsed >= AttackMilliseconds + 2000 Then
 
         Stage = 3
-        Travel1000 = 0
+        Progress = 0.0
         Name = "Idle"
 
     Else If Value.Elapsed >= AttackMilliseconds + 1300 Then
 
         Stage = 2
-        Travel1000 = Max(0, 1000 -
-            (Value.Elapsed - AttackMilliseconds - 1300) * 1000 / 700)
+        Progress = Max(0.0, 1.0 -
+            ToDouble(Value.Elapsed - AttackMilliseconds - 1300) / 700.0)
         Name = "Walk"
 
         If Value.Turn = 1 Then
@@ -1476,7 +1468,7 @@ Public Function AdvanceChoreography(ByRef Value As State,
     Else If Value.Elapsed >= 1300 Then
 
         Stage = 1
-        Travel1000 = 1000
+        Progress = 1.0
         Name = ViewerProfiles.PartyAttackName(ViewerProfiles.PROFILE_ARIN,
             Value.AttackCycle)
 
@@ -1546,7 +1538,7 @@ Public Function AdvanceChoreography(ByRef Value As State,
 
     End If
 
-    Call SetPositions(Value, Travel1000, Actions)
+    Call SetPositions(Value, Progress, Actions)
 
     Return Actions
 
@@ -1556,7 +1548,7 @@ Public Function AdvanceDemo(ByRef Value As State,
     AnimationElapsed As Number, DemoEnabled As Boolean,
     ScenePaused As Boolean, PlaybackSpeed As Number,
     ByRef PrimaryActor As Character3D.Actor,
-    ByRef PrimaryFrame As CharacterViewer.Framing,
+    ByRef PrimaryFrame As PrecisionCamera.Framing,
     ByRef PrimaryClip As Number,
     TargetX As Number, TargetY As Number, TargetZ As Number,
     ModelForwardYawOffset As Number) As Boolean
@@ -1588,10 +1580,23 @@ Public Function AdvanceDemo(ByRef Value As State,
 
 End Function
 
+Private Function CameraSocket(Actor As Character3D.Actor, Name As Text,
+    Fallback As Precision3D.Vector3) As Precision3D.Vector3
+
+    Dim Result As Precision3D.Vector3
+    Dim Valid As Boolean
+
+    Result = Fallback
+    Valid = Character3D.TrySocketPositionPrecise(Actor, Name, 0, False, Result)
+
+    Return Result
+
+End Function
+
 Public Sub ApplyAttackCamera(
     ByRef Value As State,
-    ByRef LiveCamera As Core.Camera3D,
-    PrimaryFrame As CharacterViewer.Framing,
+    ByRef LiveCamera As Precision3D.Camera3D,
+    PrimaryFrame As PrecisionCamera.Framing,
     DragonActor As Character3D.Actor,
     DragonAvailable As Boolean,
     DragonVisible As Boolean,
@@ -1603,24 +1608,24 @@ Public Sub ApplyAttackCamera(
     DragonPositionZ As Number
 )
 
-    Dim Hero As Core.Vector3
-    Dim OtherHero As Core.Vector3
-    Dim WaistHeight As Number
-    Dim Boss As Core.Vector3
-    Dim BossHead As Core.Vector3
-    Dim Mouth As Core.Vector3
-    Dim Desired As Core.Camera3D
-    Dim Distance As Number
-    Dim DeltaX As Number
-    Dim DeltaZ As Number
-    Dim Along As Number
-    Dim Across As Number
-    Dim Height As Number
-    Dim Impact1000 As Number
+    Dim Hero As Precision3D.Vector3
+    Dim OtherHero As Precision3D.Vector3
+    Dim WaistHeight As Double
+    Dim Boss As Precision3D.Vector3
+    Dim BossHead As Precision3D.Vector3
+    Dim Mouth As Precision3D.Vector3
+    Dim Desired As Precision3D.Camera3D
+    Dim Distance As Double
+    Dim DeltaX As Double
+    Dim DeltaZ As Double
+    Dim Along As Double
+    Dim Across As Double
+    Dim Height As Double
+    Dim Impact1000 As Double
     Dim BattleShot As Boolean
     Dim BossChargeShot As Boolean
     Dim ShotSide As Number
-    Dim StableAnchor As Core.Vector3
+    Dim StableAnchor As Precision3D.Vector3
 
     Value.OrbitCamera = LiveCamera
     Value.ActiveCamera = 1
@@ -1646,23 +1651,23 @@ Public Sub ApplyAttackCamera(
     End If
 
     ''' Actor homes/travel are stable. Bone bobbing and KO must not drive the camera.
-    Hero = Math3D.Vector(PrimaryFrame.PositionX, PrimaryFrame.PositionY + 68, PrimaryFrame.PositionZ)
+    Hero = Precision3D.Vector(PrimaryFrame.PositionX, PrimaryFrame.PositionY + 68.0, PrimaryFrame.PositionZ)
 
     If Value.Turn = 1 Then
-        Hero = Math3D.Vector(Value.Companion.Frame.PositionX,
-            Value.Companion.Frame.PositionY + 80, Value.Companion.Frame.PositionZ)
+        Hero = Precision3D.Vector(Value.Companion.Frame.PositionX,
+            Value.Companion.Frame.PositionY + 80.0, Value.Companion.Frame.PositionZ)
     End If
 
-    WaistHeight = Hero.Y - 32
+    WaistHeight = Hero.Y - 32.0
 
     If Value.Turn = 2 Then
 
-        OtherHero = Math3D.Vector(Value.Companion.Frame.PositionX,
-            Value.Companion.Frame.PositionY + 80, Value.Companion.Frame.PositionZ)
-        WaistHeight = Min(Hero.Y, OtherHero.Y) - 32
-        Hero.X = (Hero.X + OtherHero.X) / 2
-        Hero.Y = (Hero.Y + OtherHero.Y) / 2
-        Hero.Z = (Hero.Z + OtherHero.Z) / 2
+        OtherHero = Precision3D.Vector(Value.Companion.Frame.PositionX,
+            Value.Companion.Frame.PositionY + 80.0, Value.Companion.Frame.PositionZ)
+        WaistHeight = Min(Hero.Y, OtherHero.Y) - 32.0
+        Hero.X = (Hero.X + OtherHero.X) / 2.0
+        Hero.Y = (Hero.Y + OtherHero.Y) / 2.0
+        Hero.Z = (Hero.Z + OtherHero.Z) / 2.0
 
     End If
 
@@ -1670,18 +1675,18 @@ Public Sub ApplyAttackCamera(
 
     If Value.PreviousCamera = 1 Or Value.Turn <> Value.PreviousCameraTurn Then
 
-        StableAnchor = Math3D.Vector(
-            DragonPositionX, DRAGON_CAMERA_CHEST_HEIGHT, DragonPositionZ)
-        Value.ShotBoss = BattleCamera.BoundedAnchor(
-            Character3D.SocketPosition(DragonActor, "Chest"), StableAnchor,
+        StableAnchor = Precision3D.Vector(
+            ToDouble(DragonPositionX), ToDouble(DRAGON_CAMERA_CHEST_HEIGHT), ToDouble(DragonPositionZ))
+        Value.ShotBoss = BattleCamera.BoundedAnchorPrecise(
+            CameraSocket(DragonActor, "Chest", StableAnchor), StableAnchor,
             DRAGON_CAMERA_ANCHOR_MAXIMUM_DELTA)
-        StableAnchor.Y = DRAGON_CAMERA_HEAD_HEIGHT
-        Value.ShotBossHead = BattleCamera.BoundedAnchor(
-            Character3D.SocketPosition(DragonActor, "Head"), StableAnchor,
+        StableAnchor.Y = ToDouble(DRAGON_CAMERA_HEAD_HEIGHT)
+        Value.ShotBossHead = BattleCamera.BoundedAnchorPrecise(
+            CameraSocket(DragonActor, "Head", StableAnchor), StableAnchor,
             DRAGON_CAMERA_ANCHOR_MAXIMUM_DELTA)
-        StableAnchor.Y = DRAGON_CAMERA_MOUTH_HEIGHT
-        Value.ShotMouth = BattleCamera.BoundedAnchor(
-            Character3D.SocketPosition(DragonActor, "Mouth"), StableAnchor,
+        StableAnchor.Y = ToDouble(DRAGON_CAMERA_MOUTH_HEIGHT)
+        Value.ShotMouth = BattleCamera.BoundedAnchorPrecise(
+            CameraSocket(DragonActor, "Mouth", StableAnchor), StableAnchor,
             DRAGON_CAMERA_ANCHOR_MAXIMUM_DELTA)
 
     End If
@@ -1693,10 +1698,10 @@ Public Sub ApplyAttackCamera(
         (Value.DragonCounter Mod 3 = 2 And Value.Elapsed * PlaybackSpeed / 100 < 1750)))
     DeltaX = Hero.X - Boss.X
     DeltaZ = Hero.Z - Boss.Z
-    Distance = Max(1, Math3D.Distance(Hero, Boss))
-    Along = 150
-    Across = 120
-    Height = 55
+    Distance = Max(1.0, PreciseMath.Distance(Hero, Boss))
+    Along = 150.0
+    Across = 120.0
+    Height = 55.0
     ShotSide = -1
 
     If Value.Turn = 1 Then
@@ -1705,20 +1710,20 @@ Public Sub ApplyAttackCamera(
 
     If Value.Elapsed < 650 Then
 
-        Along = -45
-        Across = 190
-        Height = 10
+        Along = -45.0
+        Across = 190.0
+        Height = 10.0
 
     Else If Value.Stage = 0 And Value.Turn <> 2 Then
 
-        Along = 160
-        Across = 85
-        Height = 65
+        Along = 160.0
+        Across = 85.0
+        Height = 65.0
 
     Else
-        Impact1000 = Min(1000, Max(0, Value.Elapsed - 1300) * 1000 / Max(1, AttackMilliseconds))
-        Along = 150 - Impact1000 * 35 / 1000
-        Across = 120
+        Impact1000 = Clamp(ToDouble(Max(0, Value.Elapsed - 1300)) / ToDouble(Max(1, AttackMilliseconds)), 0.0, 1.0)
+        Along = 150.0 - Impact1000 * 35.0
+        Across = 120.0
 
     End If
 
@@ -1727,33 +1732,33 @@ Public Sub ApplyAttackCamera(
     End If
 
     If Value.Turn = 2 And Value.Elapsed >= 650 Then
-        Along = 170
-        Across = 65
+        Along = 170.0
+        Across = 65.0
     End If
 
-    Across = Across * ShotSide
+    Across = Across * ToDouble(ShotSide)
 
     Desired = Value.OrbitCamera
-    Desired.UpDirection.X = 0
-    Desired.UpDirection.Y = Core.FIXED_ONE
-    Desired.UpDirection.Z = 0
-    Desired.Target.X = (Hero.X + Boss.X) / 2
-    Desired.Target.Y = Max(Hero.Y + 12, BossHead.Y - 35)
+    Desired.UpDirection.X = 0.0
+    Desired.UpDirection.Y = 1.0
+    Desired.UpDirection.Z = 0.0
+    Desired.Target.X = (Hero.X + Boss.X) / 2.0
+    Desired.Target.Y = Max(Hero.Y + 12.0, BossHead.Y - 35.0)
 
     If Value.Elapsed >= 650 Then
-        Desired.Target.Y = (WaistHeight + BossHead.Y) / 2
+        Desired.Target.Y = (WaistHeight + BossHead.Y) / 2.0
     End If
 
-    Desired.Target.Z = (Hero.Z + Boss.Z) / 2
+    Desired.Target.Z = (Hero.Z + Boss.Z) / 2.0
     Desired.Position.X = Hero.X + DeltaX * Along / Distance - DeltaZ * Across / Distance
     Desired.Position.Y = Hero.Y + Height
     Desired.Position.Z = Hero.Z + DeltaZ * Along / Distance + DeltaX * Across / Distance
 
     If Value.Turn = 2 Then
 
-        Desired.Position.X = Desired.Position.X + (Desired.Position.X - Desired.Target.X) * 15 / 100
-        Desired.Position.Y = Desired.Position.Y + (Desired.Position.Y - Desired.Target.Y) * 15 / 100
-        Desired.Position.Z = Desired.Position.Z + (Desired.Position.Z - Desired.Target.Z) * 15 / 100
+        Desired.Position.X = Desired.Position.X + (Desired.Position.X - Desired.Target.X) * 15.0 / 100.0
+        Desired.Position.Y = Desired.Position.Y + (Desired.Position.Y - Desired.Target.Y) * 15.0 / 100.0
+        Desired.Position.Z = Desired.Position.Z + (Desired.Position.Z - Desired.Target.Z) * 15.0 / 100.0
 
     End If
 
@@ -1761,49 +1766,49 @@ Public Sub ApplyAttackCamera(
 
     Mouth = Value.ShotMouth
     Value.DragonCamera = Desired
-    Value.DragonCamera.Position.X = BossHead.X - DeltaX * 120 / Distance - DeltaZ * 90 / Distance
-    Value.DragonCamera.Position.Y = BossHead.Y + 20
-    Value.DragonCamera.Position.Z = BossHead.Z - DeltaZ * 120 / Distance + DeltaX * 90 / Distance
-    Value.DragonCamera.Target.X = (Mouth.X * 3 + Hero.X) / 4
-    Value.DragonCamera.Target.Y = (Mouth.Y * 3 + Hero.Y) / 4
-    Value.DragonCamera.Target.Z = (Mouth.Z * 3 + Hero.Z) / 4
+    Value.DragonCamera.Position.X = BossHead.X - DeltaX * 120.0 / Distance - DeltaZ * 90.0 / Distance
+    Value.DragonCamera.Position.Y = BossHead.Y + 20.0
+    Value.DragonCamera.Position.Z = BossHead.Z - DeltaZ * 120.0 / Distance + DeltaX * 90.0 / Distance
+    Value.DragonCamera.Target.X = (Mouth.X * 3.0 + Hero.X) / 4.0
+    Value.DragonCamera.Target.Y = (Mouth.Y * 3.0 + Hero.Y) / 4.0
+    Value.DragonCamera.Target.Z = (Mouth.Z * 3.0 + Hero.Z) / 4.0
 
     If (Value.PreviousCamera <> 2 Or
         Value.Turn <> Value.PreviousCameraTurn Or
         Value.Stage <> Value.PreviousShotStage) Then
 
-        Value.ShotPosition1000.X = Desired.Position.X * 1000
-        Value.ShotPosition1000.Y = Desired.Position.Y * 1000
-        Value.ShotPosition1000.Z = Desired.Position.Z * 1000
-        Value.ShotTarget1000.X = Desired.Target.X * 1000
-        Value.ShotTarget1000.Y = Desired.Target.Y * 1000
-        Value.ShotTarget1000.Z = Desired.Target.Z * 1000
+        Value.ShotPosition.X = Desired.Position.X
+        Value.ShotPosition.Y = Desired.Position.Y
+        Value.ShotPosition.Z = Desired.Position.Z
+        Value.ShotTarget.X = Desired.Target.X
+        Value.ShotTarget.Y = Desired.Target.Y
+        Value.ShotTarget.Z = Desired.Target.Z
 
     End If
 
-    Value.ShotPosition1000.X = Value.ShotPosition1000.X + (Desired.Position.X * 1000 - Value.ShotPosition1000.X) * CameraElapsed / (320 + CameraElapsed)
-    Value.ShotPosition1000.Y = Value.ShotPosition1000.Y + (Desired.Position.Y * 1000 - Value.ShotPosition1000.Y) * CameraElapsed / (320 + CameraElapsed)
-    Value.ShotPosition1000.Z = Value.ShotPosition1000.Z + (Desired.Position.Z * 1000 - Value.ShotPosition1000.Z) * CameraElapsed / (320 + CameraElapsed)
-    Value.ShotTarget1000.X = Value.ShotTarget1000.X + (Desired.Target.X * 1000 - Value.ShotTarget1000.X) * CameraElapsed / (180 + CameraElapsed)
-    Value.ShotTarget1000.Y = Value.ShotTarget1000.Y + (Desired.Target.Y * 1000 - Value.ShotTarget1000.Y) * CameraElapsed / (180 + CameraElapsed)
-    Value.ShotTarget1000.Z = Value.ShotTarget1000.Z + (Desired.Target.Z * 1000 - Value.ShotTarget1000.Z) * CameraElapsed / (180 + CameraElapsed)
+    Value.ShotPosition.X = Value.ShotPosition.X + (Desired.Position.X - Value.ShotPosition.X) * ToDouble(CameraElapsed) / (320.0 + ToDouble(CameraElapsed))
+    Value.ShotPosition.Y = Value.ShotPosition.Y + (Desired.Position.Y - Value.ShotPosition.Y) * ToDouble(CameraElapsed) / (320.0 + ToDouble(CameraElapsed))
+    Value.ShotPosition.Z = Value.ShotPosition.Z + (Desired.Position.Z - Value.ShotPosition.Z) * ToDouble(CameraElapsed) / (320.0 + ToDouble(CameraElapsed))
+    Value.ShotTarget.X = Value.ShotTarget.X + (Desired.Target.X - Value.ShotTarget.X) * ToDouble(CameraElapsed) / (180.0 + ToDouble(CameraElapsed))
+    Value.ShotTarget.Y = Value.ShotTarget.Y + (Desired.Target.Y - Value.ShotTarget.Y) * ToDouble(CameraElapsed) / (180.0 + ToDouble(CameraElapsed))
+    Value.ShotTarget.Z = Value.ShotTarget.Z + (Desired.Target.Z - Value.ShotTarget.Z) * ToDouble(CameraElapsed) / (180.0 + ToDouble(CameraElapsed))
     Value.HeroCamera = Desired
-    Value.HeroCamera.Position.X = Value.ShotPosition1000.X / 1000
-    Value.HeroCamera.Position.Y = Value.ShotPosition1000.Y / 1000
-    Value.HeroCamera.Position.Z = Value.ShotPosition1000.Z / 1000
-    Value.HeroCamera.Target.X = Value.ShotTarget1000.X / 1000
-    Value.HeroCamera.Target.Y = Value.ShotTarget1000.Y / 1000
-    Value.HeroCamera.Target.Z = Value.ShotTarget1000.Z / 1000
+    Value.HeroCamera.Position.X = Value.ShotPosition.X
+    Value.HeroCamera.Position.Y = Value.ShotPosition.Y
+    Value.HeroCamera.Position.Z = Value.ShotPosition.Z
+    Value.HeroCamera.Target.X = Value.ShotTarget.X
+    Value.HeroCamera.Target.Y = Value.ShotTarget.Y
+    Value.HeroCamera.Target.Z = Value.ShotTarget.Z
 
     ''' Clear both armored silhouettes after smoothing, including a shield held out in front.
-    Hero = Math3D.Vector(PrimaryFrame.PositionX, PrimaryFrame.PositionY, PrimaryFrame.PositionZ)
-    OtherHero = Math3D.Vector(Value.Companion.Frame.PositionX, Value.Companion.Frame.PositionY, Value.Companion.Frame.PositionZ)
+    Hero = Precision3D.Vector(PrimaryFrame.PositionX, PrimaryFrame.PositionY, PrimaryFrame.PositionZ)
+    OtherHero = Precision3D.Vector(Value.Companion.Frame.PositionX, Value.Companion.Frame.PositionY, Value.Companion.Frame.PositionZ)
 
-    Call BattleCamera.KeepOutsideActor(Value.HeroCamera, Hero, 100)
-    Call BattleCamera.KeepOutsideActor(Value.HeroCamera, OtherHero, 115)
+    Call BattleCamera.KeepOutsideActorPrecise(Value.HeroCamera, Hero, 100.0)
+    Call BattleCamera.KeepOutsideActorPrecise(Value.HeroCamera, OtherHero, 115.0)
 
-    Value.HeroCamera.Position.Y = Max(24, Value.HeroCamera.Position.Y)
-    Value.DragonCamera.Position.Y = Max(24, Value.DragonCamera.Position.Y)
+    Value.HeroCamera.Position.Y = Max(24.0, Value.HeroCamera.Position.Y)
+    Value.DragonCamera.Position.Y = Max(24.0, Value.DragonCamera.Position.Y)
 
     LiveCamera = Value.HeroCamera
     Value.ActiveCamera = 2
@@ -2072,7 +2077,7 @@ Public Sub DrawOverlay(
     FramesPerSecond As Number,
     ViewerError As Boolean,
     FirstFailureStage As Number,
-    Camera As Core.Camera3D
+    Camera As Precision3D.Camera3D
 )
 
     Dim Left As Number
@@ -2162,25 +2167,25 @@ Public Sub DrawOverlay(
 
 End Sub
 
-Private Sub DrawCameraDetails(Camera As Core.Camera3D, X As Number, Y As Number)
+Private Sub DrawCameraDetails(Camera As Precision3D.Camera3D, X As Number, Y As Number)
 
-    Dim Angles As Core.Vector3
+    Dim Angles As Precision3D.Vector3
 
-    Angles = BattleCamera.ViewAngles(Camera)
+    Angles = BattleCamera.ViewAnglesPrecise(Camera)
     Draw Text "Pos XYZ" At X, Y Size 11 Color LIGHT_GRAY
-    Draw Number Camera.Position.X At X + 74, Y Size 11 Color CYAN
-    Draw Number Camera.Position.Y At X + 124, Y Size 11 Color CYAN
-    Draw Number Camera.Position.Z At X + 174, Y Size 11 Color CYAN
+    Draw Number ToNumber(Round(Camera.Position.X)) At X + 74, Y Size 11 Color CYAN
+    Draw Number ToNumber(Round(Camera.Position.Y)) At X + 124, Y Size 11 Color CYAN
+    Draw Number ToNumber(Round(Camera.Position.Z)) At X + 174, Y Size 11 Color CYAN
     Draw Text "Aim XYZ" At X, Y + 14 Size 11 Color LIGHT_GRAY
-    Draw Number Camera.Target.X At X + 74, Y + 14 Size 11 Color CYAN
-    Draw Number Camera.Target.Y At X + 124, Y + 14 Size 11 Color CYAN
-    Draw Number Camera.Target.Z At X + 174, Y + 14 Size 11 Color CYAN
+    Draw Number ToNumber(Round(Camera.Target.X)) At X + 74, Y + 14 Size 11 Color CYAN
+    Draw Number ToNumber(Round(Camera.Target.Y)) At X + 124, Y + 14 Size 11 Color CYAN
+    Draw Number ToNumber(Round(Camera.Target.Z)) At X + 174, Y + 14 Size 11 Color CYAN
     Draw Text "Yaw / Pitch" At X, Y + 28 Size 11 Color LIGHT_GRAY
-    Draw Number Angles.Y At X + 100, Y + 28 Size 11 Color CYAN
-    Draw Number Angles.X At X + 158, Y + 28 Size 11 Color CYAN
+    Draw Number ToNumber(Round(Angles.Y)) At X + 100, Y + 28 Size 11 Color CYAN
+    Draw Number ToNumber(Round(Angles.X)) At X + 158, Y + 28 Size 11 Color CYAN
     Draw Text "FOV / Dist" At X, Y + 42 Size 11 Color LIGHT_GRAY
-    Draw Number Camera.FovDegrees At X + 100, Y + 42 Size 11 Color CYAN
-    Draw Number Math3D.Distance(Camera.Position, Camera.Target) At X + 158, Y + 42 Size 11 Color CYAN
+    Draw Number ToNumber(Round(Camera.FovDegrees)) At X + 100, Y + 42 Size 11 Color CYAN
+    Draw Number ToNumber(Round(PreciseMath.Distance(Camera.Position, Camera.Target))) At X + 158, Y + 42 Size 11 Color CYAN
 
 End Sub
 

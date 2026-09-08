@@ -5,6 +5,8 @@ Option Explicit
 
 Import Smile.Simple3D.Character3D As Character3D
 Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Precision3D As Precision3D
+Import Smile.Simple3D.PrecisionMath3D As PreciseMath
 Import Smile.Simple3D.FireEmitter3D As Fire
 Import Smile.Simple3D.Graphics3D As Graphics3D
 Import Smile.Simple3D.LightningVfx3D As Lightning
@@ -58,10 +60,10 @@ Public Type State
     SwordFireFailed As Boolean
     SwordFireClip As Number
     SwordFireTime As Number
-    SwordFireBase As Core.Vector3
-    SwordFireTip As Core.Vector3
+    SwordFireBase As Precision3D.Vector3
+    SwordFireTip As Precision3D.Vector3
     ShieldFire[3] As Fire.FireEmitter
-    ShieldFirePoints[3] As Core.Vector3
+    ShieldFirePoints[3] As Precision3D.Vector3
     ShieldFireVisible As Boolean
     ShieldFlameStyle As Boolean
     ShieldFireFailed As Boolean
@@ -69,8 +71,8 @@ Public Type State
     ShieldFireTime As Number
     SwordTrail As Core.ParticleBatch3D
     ShieldTrail As Core.ParticleBatch3D
-    SwordTrailPoints[TRAIL_POINT_COUNT] As Core.Vector3
-    ShieldTrailPoints[TRAIL_POINT_COUNT] As Core.Vector3
+    SwordTrailPoints[TRAIL_POINT_COUNT] As Precision3D.Vector3
+    ShieldTrailPoints[TRAIL_POINT_COUNT] As Precision3D.Vector3
     EquipmentTrailElapsed As Number
     EquipmentTrailAnimationTime As Number
     SwordTrailActive As Boolean
@@ -164,7 +166,7 @@ Public Function ShouldFreeze(ScenePaused As Boolean, ExplicitlyPaused As Boolean
 End Function
 
 Public Function AdvanceScene(ByRef Value As State, CameraElapsed As Number,
-    ScenePaused As Boolean, Camera As Core.Camera3D) As Boolean
+    ScenePaused As Boolean, Camera As Precision3D.Camera3D) As Boolean
 
     Dim FlameFrozen As Boolean
     Dim LightningFrozen As Boolean
@@ -174,7 +176,7 @@ Public Function AdvanceScene(ByRef Value As State, CameraElapsed As Number,
     LightningFrozen = ShouldFreeze(ScenePaused, Value.LightningPaused)
     Result = SceneVfx3D.BeginFrame(Value.Clock, CameraElapsed,
         FlameFrozen, LightningFrozen)
-    Result = SceneVfx3D.Advance(Value.Clock, Camera,
+    Result = SceneVfx3D.AdvancePrecise(Value.Clock, Camera,
         Value.FireInitialized, Value.LightningInitialized) And Result
 
     Return Result
@@ -520,7 +522,7 @@ Public Sub UpdateEquipmentFire(
     ScenePaused As Boolean,
     SelectedClip As Number,
     SelectedClipLabel As Text,
-    Camera As Core.Camera3D,
+    Camera As Precision3D.Camera3D,
     CameraElapsed As Number
 )
 
@@ -587,8 +589,8 @@ Public Sub UpdateStorm(
     ByRef Value As State,
     ByRef Actor As Character3D.Actor,
     Clip As Text,
-    Target As Core.Vector3,
-    Camera As Core.Camera3D,
+    Target As Precision3D.Vector3,
+    Camera As Precision3D.Camera3D,
     CameraElapsed As Number,
     GlowVisible As Boolean,
     SwordVisible As Boolean,
@@ -659,10 +661,10 @@ Private Sub UpdateSwordFire(
     SelectedClipLabel As Text
 )
 
-    Dim Base As Core.Vector3
-    Dim Tip As Core.Vector3
-    Dim Delta As Core.Vector3
-    Dim Length As Number
+    Dim Base As Precision3D.Vector3
+    Dim Tip As Precision3D.Vector3
+    Dim Delta As Precision3D.Vector3
+    Dim Length As Double
     Dim Time As Number
     Dim Restart As Boolean
     Dim Ok As Boolean
@@ -686,15 +688,21 @@ Private Sub UpdateSwordFire(
 
     End If
 
-    Base = Character3D.SocketPosition(Actor, "SwordBase", WEAPON_PART_INDEX)
-    Tip = Character3D.SocketPosition(Actor, "SwordTip", WEAPON_PART_INDEX)
+    Ok = Character3D.TrySocketPositionPrecise(Actor, "SwordBase", WEAPON_PART_INDEX, False, Base)
+    Ok = Character3D.TrySocketPositionPrecise(Actor, "SwordTip", WEAPON_PART_INDEX, False, Tip) And Ok
+
+    If Not Ok Then
+        Value.SwordFireFailed = True
+        Return
+    End If
+
     Delta.X = Tip.X - Base.X
     Delta.Y = Tip.Y - Base.Y
     Delta.Z = Tip.Z - Base.Z
-    Length = Math3D.Length(Delta)
+    Length = PreciseMath.Length(Delta)
     Time = Character3D.AnimationTime(Actor)
 
-    If Length < 4 Or Length > 10000 Then
+    If Length < 4.0 Or Length > 10000.0 Then
         Value.SwordFireFailed = True
         Return
     End If
@@ -714,18 +722,18 @@ Private Sub UpdateSwordFire(
 
     If Value.SwordFire.Slot = 0 Then
 
-        Value.SwordFire = Fire.StartAt("PaladinFlameBlade", Base, 5701,
-            Fire.QUALITY_HIGH, Fire.SIMULATION_AUTO, Max(2, Length / 12))
+        Value.SwordFire = Fire.StartAtPrecise("PaladinFlameBlade", Base, 5701,
+            Fire.QUALITY_HIGH, Fire.SIMULATION_AUTO, Max(2, ToNumber(Ceiling(Length / 12.0))))
         Value.SwordFireFailed = Value.SwordFire.Slot = 0
 
         If Value.SwordFireFailed Then
             Return
         End If
 
-        Ok = Fire.SetSegment(Value.SwordFire, Base, Tip)
+        Ok = Fire.SetSegmentPrecise(Value.SwordFire, Base, Tip)
 
     Else
-        Ok = Fire.SetSegment(Value.SwordFire, Base, Tip)
+        Ok = Fire.SetSegmentPrecise(Value.SwordFire, Base, Tip)
 
     End If
 
@@ -767,11 +775,11 @@ Private Sub UpdateShieldFire(
     CalibrationEditing As Boolean,
     ScenePaused As Boolean,
     SelectedClip As Number,
-    Camera As Core.Camera3D,
+    Camera As Precision3D.Camera3D,
     CameraElapsed As Number
 )
 
-    Dim Points[3] As Core.Vector3
+    Dim Points[3] As Precision3D.Vector3
     Dim Index As Number
     Dim NextIndex As Number
     Dim Time As Number
@@ -835,9 +843,15 @@ Private Sub UpdateShieldFire(
 
     End If
 
-    Points[0] = Character3D.SocketPosition(Actor, "ShieldFireLeft", SHIELD_PART_INDEX)
-    Points[1] = Character3D.SocketPosition(Actor, "ShieldFireRight", SHIELD_PART_INDEX)
-    Points[2] = Character3D.SocketPosition(Actor, "ShieldFireTip", SHIELD_PART_INDEX)
+    Ok = Character3D.TrySocketPositionPrecise(Actor, "ShieldFireLeft", SHIELD_PART_INDEX, False, Points[0])
+    Ok = Character3D.TrySocketPositionPrecise(Actor, "ShieldFireRight", SHIELD_PART_INDEX, False, Points[1]) And Ok
+    Ok = Character3D.TrySocketPositionPrecise(Actor, "ShieldFireTip", SHIELD_PART_INDEX, False, Points[2]) And Ok
+
+    If Not Ok Then
+        Value.ShieldFireFailed = True
+        Return
+    End If
+
     Time = Character3D.AnimationTime(Actor)
     Restart = False
 
@@ -860,13 +874,13 @@ Private Sub UpdateShieldFire(
         End If
 
         If Value.ShieldFire[Index].Slot = 0 Then
-            Value.ShieldFire[Index] = Fire.StartAt("LineFire", Points[Index], 5710 + Index,
+            Value.ShieldFire[Index] = Fire.StartAtPrecise("LineFire", Points[Index], 5710 + Index,
                 Fire.QUALITY_HIGH, Fire.SIMULATION_AUTO, 3)
             Ok = Value.ShieldFire[Index].Slot <> 0 And Ok
         End If
 
         NextIndex = (Index + 1) Mod 3
-        Ok = Fire.SetSegment(Value.ShieldFire[Index], Points[Index], Points[NextIndex]) And Ok
+        Ok = Fire.SetSegmentPrecise(Value.ShieldFire[Index], Points[Index], Points[NextIndex]) And Ok
 
         Call Fire.SetIntensity(Value.ShieldFire[Index], 75)
         Call Fire.SetSourceVelocityInheritance(Value.ShieldFire[Index], 10)
@@ -935,18 +949,27 @@ Public Function UpdateEpicGlow(
     ShieldCoupled As Boolean
 ) As Boolean
 
-    Dim SwordBase As Core.Vector3
-    Dim SwordCenter As Core.Vector3
-    Dim SwordTip As Core.Vector3
-    Dim ShieldCenter As Core.Vector3
+    Dim SwordBase As Precision3D.Vector3
+    Dim SwordCenter As Precision3D.Vector3
+    Dim SwordTip As Precision3D.Vector3
+    Dim ShieldCenter As Precision3D.Vector3
     Dim Result As Boolean
 
-    SwordBase = Character3D.SocketPosition(Actor, "SwordBase", BODY_PART_INDEX, SwordCoupled)
-    SwordTip = Character3D.SocketPosition(Actor, "SwordTip", BODY_PART_INDEX, SwordCoupled)
-    ShieldCenter = Character3D.SocketPosition(Actor, "ShieldCenter", BODY_PART_INDEX, ShieldCoupled)
-    SwordCenter.X = (SwordBase.X + SwordTip.X) / 2
-    SwordCenter.Y = (SwordBase.Y + SwordTip.Y) / 2
-    SwordCenter.Z = (SwordBase.Z + SwordTip.Z) / 2
+    If Not Character3D.TrySocketPositionPrecise(Actor, "SwordBase", BODY_PART_INDEX, SwordCoupled, SwordBase) Then
+        Return False
+    End If
+
+    If Not Character3D.TrySocketPositionPrecise(Actor, "SwordTip", BODY_PART_INDEX, SwordCoupled, SwordTip) Then
+        Return False
+    End If
+
+    If Not Character3D.TrySocketPositionPrecise(Actor, "ShieldCenter", BODY_PART_INDEX, ShieldCoupled, ShieldCenter) Then
+        Return False
+    End If
+
+    SwordCenter.X = (SwordBase.X + SwordTip.X) / 2.0
+    SwordCenter.Y = (SwordBase.Y + SwordTip.Y) / 2.0
+    SwordCenter.Z = (SwordBase.Z + SwordTip.Z) / 2.0
 
     If ProfileIndex = ViewerProfiles.PROFILE_ARIN Then
         Call UpdateEpicGlowTrailState(Value, Actor, SwordTip, ShieldCenter,
@@ -965,40 +988,32 @@ End Function
 Public Function UpdateEquipmentGlow(
     ByRef Actor As Character3D.Actor,
     ByRef GlowObject As Core.Object3D,
-    Center As Core.Vector3,
+    Center As Precision3D.Vector3,
     ScalePercent As Number
 ) As Boolean
 
     Dim OutlineScale As Number
-    Dim RotationY As Number
     Dim ScaleDelta As Number
-    Dim PositionX As Number
-    Dim PositionY As Number
-    Dim PositionZ As Number
-    Dim ActorPosition As Core.Vector3
+    Dim ActorPosition As Precision3D.Vector3
+    Dim Transform As Precision3D.Transform3D
     Dim Result As Boolean
 
-    ActorPosition.X = Character3D.PositionX(Actor)
-    ActorPosition.Y = Character3D.PositionY(Actor)
-    ActorPosition.Z = Character3D.PositionZ(Actor)
+    If Not Character3D.TryPosition(Actor, ActorPosition) Then
+        Return False
+    End If
+
+    If Not Character3D.TryRotation(Actor, Transform.Rotation) Then
+        Return False
+    End If
+
     ScaleDelta = Max(2, ScalePercent / GLOW_SCALE_DIVISOR)
     OutlineScale = ScalePercent + ScaleDelta
-    PositionX = (Center.X - ActorPosition.X) * ScaleDelta / ScalePercent
-    PositionY = (Center.Y - ActorPosition.Y) * ScaleDelta / ScalePercent
-    PositionZ = (Center.Z - ActorPosition.Z) * ScaleDelta / ScalePercent
-    PositionX = ActorPosition.X - PositionX
-    PositionY = ActorPosition.Y - PositionY
-    PositionZ = ActorPosition.Z - PositionZ
-    RotationY = Character3D.RotationY(Actor)
-
-    Result = Graphics3D.SetObjectPositionChecked3D(GlowObject, PositionX, PositionY, PositionZ)
-    Result = Graphics3D.SetObjectRotationChecked3D(GlowObject, 0, RotationY, 0) And Result
-    Result = Graphics3D.SetObjectScaleChecked3D(
-        GlowObject,
-        OutlineScale,
-        OutlineScale,
-        OutlineScale
-    ) And Result
+    Transform.Position = PreciseMath.Subtract(ActorPosition,
+        PreciseMath.Scale(PreciseMath.Subtract(Center, ActorPosition),
+            ToDouble(ScaleDelta) / ToDouble(ScalePercent)))
+    Transform.ScalePercent = Precision3D.Vector(ToDouble(OutlineScale),
+        ToDouble(OutlineScale), ToDouble(OutlineScale))
+    Result = Precision3D.SetTransform(GlowObject, Transform)
 
     Return Result
 
@@ -1009,21 +1024,27 @@ Public Function UpdateBorrowedEpicGlow(ByRef Actor As Character3D.Actor,
     ScalePercent As Number, SwordCoupled As Boolean,
     ShieldCoupled As Boolean) As Boolean
 
-    Dim SwordBase As Core.Vector3
-    Dim SwordCenter As Core.Vector3
-    Dim SwordTip As Core.Vector3
-    Dim ShieldCenter As Core.Vector3
+    Dim SwordBase As Precision3D.Vector3
+    Dim SwordCenter As Precision3D.Vector3
+    Dim SwordTip As Precision3D.Vector3
+    Dim ShieldCenter As Precision3D.Vector3
     Dim Result As Boolean
 
-    SwordBase = Character3D.SocketPosition(
-        Actor, "SwordBase", BODY_PART_INDEX, SwordCoupled)
-    SwordTip = Character3D.SocketPosition(
-        Actor, "SwordTip", BODY_PART_INDEX, SwordCoupled)
-    ShieldCenter = Character3D.SocketPosition(
-        Actor, "ShieldCenter", BODY_PART_INDEX, ShieldCoupled)
-    SwordCenter.X = (SwordBase.X + SwordTip.X) / 2
-    SwordCenter.Y = (SwordBase.Y + SwordTip.Y) / 2
-    SwordCenter.Z = (SwordBase.Z + SwordTip.Z) / 2
+    If Not Character3D.TrySocketPositionPrecise(Actor, "SwordBase", BODY_PART_INDEX, SwordCoupled, SwordBase) Then
+        Return False
+    End If
+
+    If Not Character3D.TrySocketPositionPrecise(Actor, "SwordTip", BODY_PART_INDEX, SwordCoupled, SwordTip) Then
+        Return False
+    End If
+
+    If Not Character3D.TrySocketPositionPrecise(Actor, "ShieldCenter", BODY_PART_INDEX, ShieldCoupled, ShieldCenter) Then
+        Return False
+    End If
+
+    SwordCenter.X = (SwordBase.X + SwordTip.X) / 2.0
+    SwordCenter.Y = (SwordBase.Y + SwordTip.Y) / 2.0
+    SwordCenter.Z = (SwordBase.Z + SwordTip.Z) / 2.0
     Result = UpdateEquipmentGlow(Actor, SwordGlow, SwordCenter, ScalePercent)
     Result = UpdateEquipmentGlow(
         Actor, ShieldGlow, ShieldCenter, ScalePercent) And Result
@@ -1055,11 +1076,16 @@ End Function
 
 Public Sub ResetEpicGlowTrails(ByRef Value As State, ByRef Actor As Character3D.Actor)
 
-    Dim SwordTip As Core.Vector3
-    Dim ShieldCenter As Core.Vector3
+    Dim SwordTip As Precision3D.Vector3
+    Dim ShieldCenter As Precision3D.Vector3
 
-    SwordTip = Character3D.SocketPosition(Actor, "SwordTip", BODY_PART_INDEX)
-    ShieldCenter = Character3D.SocketPosition(Actor, "ShieldCenter", BODY_PART_INDEX)
+    If Not Character3D.TrySocketPositionPrecise(Actor, "SwordTip", BODY_PART_INDEX, False, SwordTip) Then
+        Return
+    End If
+
+    If Not Character3D.TrySocketPositionPrecise(Actor, "ShieldCenter", BODY_PART_INDEX, False, ShieldCenter) Then
+        Return
+    End If
 
     Call SeedEpicGlowTrails(Value, SwordTip, ShieldCenter)
 
@@ -1069,8 +1095,8 @@ Public Sub ResetEpicGlowTrails(ByRef Value As State, ByRef Actor As Character3D.
 
 End Sub
 
-Private Sub SeedEpicGlowTrails(ByRef Value As State, SwordTip As Core.Vector3,
-    ShieldCenter As Core.Vector3)
+Private Sub SeedEpicGlowTrails(ByRef Value As State, SwordTip As Precision3D.Vector3,
+    ShieldCenter As Precision3D.Vector3)
 
     Dim Index As Number
 
@@ -1086,8 +1112,8 @@ End Sub
 Private Sub UpdateEpicGlowTrailState(
     ByRef Value As State,
     ByRef Actor As Character3D.Actor,
-    SwordTip As Core.Vector3,
-    ShieldCenter As Core.Vector3,
+    SwordTip As Precision3D.Vector3,
+    ShieldCenter As Precision3D.Vector3,
     SelectedClipName As Text,
     SwordVisible As Boolean,
     ShieldVisible As Boolean
@@ -1119,8 +1145,8 @@ Private Sub UpdateEpicGlowTrailState(
 
 End Sub
 
-Private Sub AdvanceEpicGlowTrails(ByRef Value As State, SwordTip As Core.Vector3,
-    ShieldCenter As Core.Vector3, AnimationElapsed As Number)
+Private Sub AdvanceEpicGlowTrails(ByRef Value As State, SwordTip As Precision3D.Vector3,
+    ShieldCenter As Precision3D.Vector3, AnimationElapsed As Number)
 
     Dim Index As Number
 
@@ -1158,16 +1184,8 @@ Private Function UpdateEpicGlowTrailBatches(ByRef Value As State) As Boolean
 
         Opacity = Index * 7
         ParticleSize = Max(1, SWORD_TRAIL_PARTICLE_SIZE - 1 + Index / 2)
-        Result = Graphics3D.SetParticle3D(
-            Value.SwordTrail,
-            Index,
-            Value.SwordTrailPoints[Index].X,
-            Value.SwordTrailPoints[Index].Y,
-            Value.SwordTrailPoints[Index].Z,
-            ParticleSize,
-            0,
-            4 + Index Mod 4
-        ) And Result
+        Result = Precision3D.SetParticle(Value.SwordTrail, Index,
+            Value.SwordTrailPoints[Index], ToDouble(ParticleSize), 0.0, 4 + Index Mod 4) And Result
         Result = Graphics3D.SetParticleColor3D(
             Value.SwordTrail,
             Index,
@@ -1177,16 +1195,8 @@ Private Function UpdateEpicGlowTrailBatches(ByRef Value As State) As Boolean
             Opacity
         ) And Result
         ParticleSize = Max(1, SHIELD_TRAIL_PARTICLE_SIZE - 1 + Index / 2)
-        Result = Graphics3D.SetParticle3D(
-            Value.ShieldTrail,
-            Index,
-            Value.ShieldTrailPoints[Index].X,
-            Value.ShieldTrailPoints[Index].Y,
-            Value.ShieldTrailPoints[Index].Z,
-            ParticleSize,
-            0,
-            Index Mod 4
-        ) And Result
+        Result = Precision3D.SetParticle(Value.ShieldTrail, Index,
+            Value.ShieldTrailPoints[Index], ToDouble(ParticleSize), 0.0, Index Mod 4) And Result
         Result = Graphics3D.SetParticleColor3D(
             Value.ShieldTrail,
             Index,

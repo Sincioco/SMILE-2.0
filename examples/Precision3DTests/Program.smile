@@ -4,6 +4,7 @@ Import Smile.Simple3D.Core As Core
 Import Smile.Simple3D.Graphics3D As Graphics3D
 Import Smile.Simple3D.Precision3D As Precision3D
 Import Smile.Simple3D.PrecisionMath3D As Math3D
+Import Smile.Simple3D.PrecisionCamera3D As Camera3D
 Import Smile.Simple3D.Scene3D As Scene3D
 
 Dim Failures As Number
@@ -56,6 +57,9 @@ Sub RunTests()
     Dim ElapsedSecond As Number
     Dim FirstPosition As Precision3D.Vector3
     Dim SecondPosition As Precision3D.Vector3
+    Dim Controls As Camera3D.Controls
+    Dim Composed As Precision3D.Camera3D
+    Dim Projected As Camera3D.ProjectedPoint
 
     Call Graphics3D.ResetRenderer3D()
     Call Scene3D.ResetState()
@@ -105,6 +109,25 @@ Sub RunTests()
     Invalid = Precision3D.AcceptedCamera()
 
     Call Check(Invalid.FarPlane = Accepted.FarPlane)
+
+    Controls.OrbitYaw = 0.125
+    Controls.PanX = 0.25
+    Controls.Zoom = 0.125
+    Composed = Camera3D.ApplyScreenSpaceCameraControls(Camera, Controls)
+
+    Call Check(Composed.FovDegrees = Camera.FovDegrees + 0.125)
+    Call Check(Abs(Composed.Position.X - Camera.Position.X) > 0.125)
+    Call Check(Precision3D.SetCamera(Composed))
+
+    Accepted = Precision3D.AcceptedCamera()
+
+    Call Check(Abs(Accepted.Position.X - Composed.Position.X) < 0.0002)
+
+    Result = Camera3D.CursorPointAtDepth(Composed, 210, 190, 125.25, 640, 480)
+    Projected = Camera3D.ProjectViewerPoint(Result, Composed, 640, 480)
+
+    Call Check(Projected.Visible)
+    Call Check(Abs(Projected.X - 210.0) < 1e-10 And Abs(Projected.Y - 190.0) < 1e-10)
 
     Source = Graphics3D.CreateCube3D(24)
     Receiver = Graphics3D.CreatePlane3D(180, 140)

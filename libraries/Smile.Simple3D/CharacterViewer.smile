@@ -604,7 +604,7 @@ Public Function ProjectTransformRingPoint(
 
 End Function
 
-Private Function PointerNearSegment(
+Public Function PointerNearSegment(
     PointerX As Number,
     PointerY As Number,
     StartX As Number,

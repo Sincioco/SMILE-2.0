@@ -4,6 +4,8 @@ Module Smile.Tools.OrinStorm
 Option Explicit
 
 Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Precision3D As Precision3D
+Import Smile.Simple3D.PrecisionMath3D As PreciseMath
 Import Smile.Simple3D.Character3D As Character3D
 Import Smile.Simple3D.Graphics3D As Graphics3D
 Import Smile.Simple3D.LightningVfx3D As Lightning
@@ -55,7 +57,7 @@ Private Dim RenderVisible[4] As Boolean
 Private Dim WeaponRenderVisible[4] As Boolean
 Private Dim FrozenRebase[4] As Boolean
 Private Dim HammerTrails[4] As Core.GpuParticleSystem3D
-Private Dim TrailPrevious[4] As Core.Vector3
+Private Dim TrailPrevious[4] As Precision3D.Vector3
 Private Dim TrailHasPrevious[4] As Boolean
 Private Dim TrailCursors[4] As Number
 Private Dim TrailSerials[4] As Number
@@ -66,7 +68,7 @@ Private Dim EffectiveEffects[4] As Number
 Private Dim RequestedQualities[4] As Number
 Private Dim EffectiveQualities[4] As Number
 Private Dim FallbackCauses[4] As Number
-Private Dim ImpactGrounds[4] As Core.Vector3
+Private Dim ImpactGrounds[4] As Precision3D.Vector3
 Private Dim RimNames[8] As Text
 Private Dim TrailTexture As Core.Texture3D
 Private Dim TrailMaterial As Core.Material3D
@@ -369,8 +371,8 @@ Public Sub Shutdown()
 
 End Sub
 
-Private Sub Attach(Slot As Number, Index As Number, Source As Core.Vector3,
-    Target As Core.Vector3, Preset As Text, Width As Number, Power As Number,
+Private Sub Attach(Slot As Number, Index As Number, Source As Precision3D.Vector3,
+    Target As Precision3D.Vector3, Preset As Text, Width As Number, Power As Number,
     Branches As Number)
 
     Dim EffectQuality As Number
@@ -385,7 +387,7 @@ Private Sub Attach(Slot As Number, Index As Number, Source As Core.Vector3,
         Return
     End If
 
-    If Math3D.Distance(Source, Target) < 1 Then
+    If PreciseMath.Distance(Source, Target) < 1.0 Then
         Return
     End If
 
@@ -405,7 +407,7 @@ Private Sub Attach(Slot As Number, Index As Number, Source As Core.Vector3,
 
     If Effects[Slot, Index].Slot = 0 Then
 
-        Effects[Slot, Index] = Lightning.StartAt(Preset, Source, Target,
+        Effects[Slot, Index] = Lightning.StartAtPrecise(Preset, Source, Target,
             1307 + Slot * 997 + Index * 137, EffectQuality)
 
         If Effects[Slot, Index].Slot = 0 Then
@@ -427,36 +429,36 @@ Private Sub Attach(Slot As Number, Index As Number, Source As Core.Vector3,
 
     EffectiveQualities[Slot] = Max(EffectiveQualities[Slot], EffectQuality)
 
-    WorkResult = Lightning.SetEndpoints(Effects[Slot, Index], Source, Target)
+    WorkResult = Lightning.SetEndpointsPrecise(Effects[Slot, Index], Source, Target)
     WorkResult = Lightning.SetStyle(Effects[Slot, Index], Width, Power) And WorkResult
 
 End Sub
 
-Private Sub UpdateHammerTrail(Slot As Number, Position As Core.Vector3,
+Private Sub UpdateHammerTrail(Slot As Number, Position As Precision3D.Vector3,
     Elapsed As Number, Attacking As Boolean, Visible As Boolean,
     MotionPaused As Boolean, Paused As Boolean)
 
-    Dim DistanceValue As Number
+    Dim DistanceValue As Double
     Dim Index As Number
     Dim Noise As Number
-    Dim Point As Core.Vector3
+    Dim Point As Precision3D.Vector3
     Dim SparkCount As Number
     Dim Step As Number
-    Dim Velocity As Core.Vector3
+    Dim Velocity As Precision3D.Vector3
 
     If HammerTrails[Slot].Handle = 0 Then
         Return
     End If
 
     Step = Min(100, Max(0, Elapsed))
-    DistanceValue = Math3D.Distance(TrailPrevious[Slot], Position)
+    DistanceValue = PreciseMath.Distance(TrailPrevious[Slot], Position)
 
     If (Not TrailHasPrevious[Slot] Or
         Not Visible Or
         MotionPaused Or
-        DistanceValue > 100) Then
+        DistanceValue > 100.0) Then
         TrailPrevious[Slot] = Position
-        DistanceValue = 0
+        DistanceValue = 0.0
     End If
 
     If (Visible And
@@ -465,24 +467,25 @@ Private Sub UpdateHammerTrail(Slot As Number, Position As Core.Vector3,
         Not Paused And
         Step > 0) Then
 
-        SparkCount = Min(32, Max(1, Step / 8) + DistanceValue / 2)
-        Velocity.X = (Position.X - TrailPrevious[Slot].X) * 180 / Step
-        Velocity.Y = (Position.Y - TrailPrevious[Slot].Y) * 180 / Step
-        Velocity.Z = (Position.Z - TrailPrevious[Slot].Z) * 180 / Step
+        SparkCount = Min(32, Max(1, Step / 8) + ToNumber(DistanceValue / 2.0))
+        Velocity.X = (Position.X - TrailPrevious[Slot].X) * 180.0 / ToDouble(Step)
+        Velocity.Y = (Position.Y - TrailPrevious[Slot].Y) * 180.0 / ToDouble(Step)
+        Velocity.Z = (Position.Z - TrailPrevious[Slot].Z) * 180.0 / ToDouble(Step)
 
         For Index = 0 To SparkCount - 1
 
             TrailSerials[Slot] = TrailSerials[Slot] + 1
             Noise = (TrailSerials[Slot] * 7919) Mod 104729
-            Point.X = TrailPrevious[Slot].X + (Position.X - TrailPrevious[Slot].X) * (Index + 1) / SparkCount
-            Point.Y = TrailPrevious[Slot].Y + (Position.Y - TrailPrevious[Slot].Y) * (Index + 1) / SparkCount
-            Point.Z = TrailPrevious[Slot].Z + (Position.Z - TrailPrevious[Slot].Z) * (Index + 1) / SparkCount
+            Point.X = TrailPrevious[Slot].X + (Position.X - TrailPrevious[Slot].X) * ToDouble(Index + 1) / ToDouble(SparkCount)
+            Point.Y = TrailPrevious[Slot].Y + (Position.Y - TrailPrevious[Slot].Y) * ToDouble(Index + 1) / ToDouble(SparkCount)
+            Point.Z = TrailPrevious[Slot].Z + (Position.Z - TrailPrevious[Slot].Z) * ToDouble(Index + 1) / ToDouble(SparkCount)
             WorkResult = Graphics3D.KillGpuParticleSlot3D(HammerTrails[Slot],
                 TrailCursors[Slot])
-            WorkResult = Graphics3D.SetGpuParticleSpawnKinematics3D(HammerTrails[Slot],
-                TrailCursors[Slot], Point.X, Point.Y, Point.Z,
-                Velocity.X + Noise Mod 41 - 20, Velocity.Y + Noise / 41 Mod 50,
-                Velocity.Z + Noise / 2050 Mod 41 - 20) And WorkResult
+            WorkResult = Precision3D.SetGpuParticleSpawnKinematics(HammerTrails[Slot],
+                TrailCursors[Slot], Point, Precision3D.Vector(
+                    Velocity.X + ToDouble(Noise Mod 41 - 20),
+                    Velocity.Y + ToDouble(Noise / 41 Mod 50),
+                    Velocity.Z + ToDouble(Noise / 2050 Mod 41 - 20))) And WorkResult
             WorkResult = Graphics3D.SetGpuParticleSpawnVisual3D(HammerTrails[Slot],
                 TrailCursors[Slot], 650 + Noise Mod 400, 1 + Noise Mod 2, 1,
                 Noise Mod 360, 85, 1000, 800) And WorkResult
@@ -504,11 +507,11 @@ End Sub
 
 Private Sub UpdateRim(Slot As Number, Actor As Character3D.Actor, Visible As Boolean)
 
-    Dim FirstPoint As Core.Vector3
+    Dim FirstPoint As Precision3D.Vector3
     Dim Index As Number
     Dim Name As Text
-    Dim Point As Core.Vector3
-    Dim SecondPoint As Core.Vector3
+    Dim Point As Precision3D.Vector3
+    Dim SecondPoint As Precision3D.Vector3
 
     If Not Visible Then
         Call ClearEffect(Slot, 0)
@@ -520,12 +523,19 @@ Private Sub UpdateRim(Slot As Number, Actor As Character3D.Actor, Visible As Boo
         Return
     End If
 
-    FirstPoint = Character3D.SocketPosition(Actor, "ShieldRim0", 0)
-    SecondPoint = Character3D.SocketPosition(Actor, "ShieldRim1", 0)
+    If Not Character3D.TrySocketPositionPrecise(Actor, "ShieldRim0", 0, False, FirstPoint) Then
+        FirstErrors[Slot] = Lightning.ERROR_INVALID_POSITION
+            Return
+        End If
+
+    If Not Character3D.TrySocketPositionPrecise(Actor, "ShieldRim1", 0, False, SecondPoint) Then
+        FirstErrors[Slot] = Lightning.ERROR_INVALID_POSITION
+            Return
+        End If
 
     If Effects[Slot, 0].Slot = 0 Then
 
-        Effects[Slot, 0] = Lightning.StartAt("StoredStorm", FirstPoint, SecondPoint,
+        Effects[Slot, 0] = Lightning.StartAtPrecise("StoredStorm", FirstPoint, SecondPoint,
             1300 + Slot * 997, Lightning.QUALITY_MEDIUM)
 
         If Effects[Slot, 0].Slot = 0 Then
@@ -546,24 +556,36 @@ Private Sub UpdateRim(Slot As Number, Actor As Character3D.Actor, Visible As Boo
         WorkResult = Lightning.SetSparkIntensity(Effects[Slot, 0], 15) And WorkResult
 
         For Index = 2 To 7
+
             Name = RimNames[Index]
-            Point = Character3D.SocketPosition(Actor, Name, 0)
-            WorkResult = Lightning.AddChainTarget(Effects[Slot, 0], Point) And WorkResult
+
+            If Not Character3D.TrySocketPositionPrecise(Actor, Name, 0, False, Point) Then
+                FirstErrors[Slot] = Lightning.ERROR_INVALID_POSITION
+            Return
+        End If
+
+            WorkResult = Lightning.AddChainTargetPrecise(Effects[Slot, 0], Point) And WorkResult
         End For
 
-        WorkResult = Lightning.AddChainTarget(Effects[Slot, 0], FirstPoint) And WorkResult
+        WorkResult = Lightning.AddChainTargetPrecise(Effects[Slot, 0], FirstPoint) And WorkResult
 
     Else
 
-        WorkResult = Lightning.SetEndpoints(Effects[Slot, 0], FirstPoint, SecondPoint)
+        WorkResult = Lightning.SetEndpointsPrecise(Effects[Slot, 0], FirstPoint, SecondPoint)
 
         For Index = 2 To 7
+
             Name = RimNames[Index]
-            Point = Character3D.SocketPosition(Actor, Name, 0)
-            WorkResult = Lightning.SetChainTarget(Effects[Slot, 0], Index - 2, Point) And WorkResult
+
+            If Not Character3D.TrySocketPositionPrecise(Actor, Name, 0, False, Point) Then
+                FirstErrors[Slot] = Lightning.ERROR_INVALID_POSITION
+            Return
+        End If
+
+            WorkResult = Lightning.SetChainTargetPrecise(Effects[Slot, 0], Index - 2, Point) And WorkResult
         End For
 
-        WorkResult = Lightning.SetChainTarget(Effects[Slot, 0], 6, FirstPoint) And WorkResult
+        WorkResult = Lightning.SetChainTargetPrecise(Effects[Slot, 0], 6, FirstPoint) And WorkResult
 
     End If
 
@@ -572,7 +594,7 @@ Private Sub UpdateRim(Slot As Number, Actor As Character3D.Actor, Visible As Boo
 End Sub
 
 Public Sub Update(Value As Context, Actor As Character3D.Actor, Clip As Text,
-    Target As Core.Vector3, ByRef Camera As Core.Camera3D, Elapsed As Number,
+    Target As Precision3D.Vector3, ByRef Camera As Precision3D.Camera3D, Elapsed As Number,
     Enabled As Boolean, WeaponVisible As Boolean, ShieldVisible As Boolean,
     Paused As Boolean, MotionPaused As Boolean, Light As LightPool3D.Lease)
 
@@ -580,13 +602,13 @@ Public Sub Update(Value As Context, Actor As Character3D.Actor, Clip As Text,
     Dim Charge As Boolean
     Dim Duration As Number
     Dim Events As Number
-    Dim Head As Core.Vector3
+    Dim Head As Precision3D.Vector3
     Dim Index As Number
-    Dim LeftPoint As Core.Vector3
+    Dim LeftPoint As Precision3D.Vector3
     Dim Power As Number
     Dim Progress As Number
     Dim Release As Boolean
-    Dim RightPoint As Core.Vector3
+    Dim RightPoint As Precision3D.Vector3
     Dim Slot As Number
     Dim Time As Number
 
@@ -737,9 +759,20 @@ Public Sub Update(Value As Context, Actor As Character3D.Actor, Clip As Text,
         Call UpdateRim(Slot, Actor, ShieldVisible)
     End If
 
-    Head = Character3D.SocketPosition(Actor, "HammerHead", 1)
-    LeftPoint = Character3D.SocketPosition(Actor, "HammerLeft", 1)
-    RightPoint = Character3D.SocketPosition(Actor, "HammerRight", 1)
+    If Not Character3D.TrySocketPositionPrecise(Actor, "HammerHead", 1, False, Head) Then
+        FirstErrors[Slot] = Lightning.ERROR_INVALID_POSITION
+            Return
+        End If
+
+    If Not Character3D.TrySocketPositionPrecise(Actor, "HammerLeft", 1, False, LeftPoint) Then
+        FirstErrors[Slot] = Lightning.ERROR_INVALID_POSITION
+            Return
+        End If
+
+    If Not Character3D.TrySocketPositionPrecise(Actor, "HammerRight", 1, False, RightPoint) Then
+        FirstErrors[Slot] = Lightning.ERROR_INVALID_POSITION
+            Return
+        End If
 
     If WeaponVisible Then
         Call CreateHammerTrail(Slot)
@@ -754,8 +787,8 @@ Public Sub Update(Value As Context, Actor As Character3D.Actor, Clip As Text,
 
         If Not Charge And Not Release Then
 
-            LeftPoint.Y = LeftPoint.Y + 3
-            RightPoint.Y = RightPoint.Y + 3
+            LeftPoint.Y = LeftPoint.Y + 3.0
+            RightPoint.Y = RightPoint.Y + 3.0
 
             Call Attach(Slot, 2, RightPoint, LeftPoint, "StoredStorm", 1, Power, 1)
 
@@ -796,12 +829,12 @@ Public Sub Update(Value As Context, Actor As Character3D.Actor, Clip As Text,
 
     If SceneComfort <> SCENE_COMFORT_OFF And ImpactShakes[Slot] > 0 Then
         ''' A short decaying impact only, never the continuous camera or ordinary slash.
-        Camera.Position.X = Camera.Position.X + Fixed.SinFixed(ImpactShakes[Slot] * 4) * ImpactShakes[Slot] / (Core.FIXED_ONE * SceneComfort * 50)
-        Camera.Position.Y = Max(24, Camera.Position.Y + Fixed.SinFixed(ImpactShakes[Slot] * 5) * ImpactShakes[Slot] / (Core.FIXED_ONE * SceneComfort * 85))
+        Camera.Position.X = Camera.Position.X + ToDouble(Fixed.SinFixed(ImpactShakes[Slot] * 4) * ImpactShakes[Slot]) / ToDouble(Core.FIXED_ONE * SceneComfort * 50)
+        Camera.Position.Y = Max(24.0, Camera.Position.Y + ToDouble(Fixed.SinFixed(ImpactShakes[Slot] * 5) * ImpactShakes[Slot]) / ToDouble(Core.FIXED_ONE * SceneComfort * 85))
     End If
 
     If WeaponVisible Then
-        WorkResult = LightPool3D.SetPoint(Light, Head.X, Head.Y, Head.Z,
+        WorkResult = LightPool3D.SetPointPrecise(Light, Head,
             150, 190, 255, Power / 5, 130)
     Else
         WorkResult = LightPool3D.Disable(Light)
@@ -817,15 +850,15 @@ Public Sub Update(Value As Context, Actor As Character3D.Actor, Clip As Text,
 
 End Sub
 
-Private Sub UpdateBattleEffects(Slot As Number, Head As Core.Vector3,
-    Target As Core.Vector3, Charging As Boolean, Releasing As Boolean)
+Private Sub UpdateBattleEffects(Slot As Number, Head As Precision3D.Vector3,
+    Target As Precision3D.Vector3, Charging As Boolean, Releasing As Boolean)
 
     Dim Angle As Number
-    Dim EndPoint As Core.Vector3
+    Dim EndPoint As Precision3D.Vector3
     Dim Index As Number
     Dim NextPhase As Number
-    Dim Opposite As Core.Vector3
-    Dim Sky As Core.Vector3
+    Dim Opposite As Precision3D.Vector3
+    Dim Sky As Precision3D.Vector3
 
     If Charging Then
         NextPhase = 1
@@ -840,7 +873,7 @@ Private Sub UpdateBattleEffects(Slot As Number, Head As Core.Vector3,
         End For
 
         ImpactGrounds[Slot] = Head
-        ImpactGrounds[Slot].Y = 3
+        ImpactGrounds[Slot].Y = 3.0
         AttackPhases[Slot] = NextPhase
 
     End If
@@ -853,9 +886,9 @@ Private Sub UpdateBattleEffects(Slot As Number, Head As Core.Vector3,
 
             Angle = (Index - 3) * 90
             Sky = Head
-            Sky.X = Sky.X + Fixed.SinFixed(Angle) * 220 / Core.FIXED_ONE
-            Sky.Y = Sky.Y + 400
-            Sky.Z = Sky.Z + Fixed.CosFixed(Angle) * 220 / Core.FIXED_ONE
+            Sky.X = Sky.X + ToDouble(Fixed.SinFixed(Angle) * 220 / Core.FIXED_ONE)
+            Sky.Y = Sky.Y + 400.0
+            Sky.Z = Sky.Z + ToDouble(Fixed.CosFixed(Angle) * 220 / Core.FIXED_ONE)
 
             Call Attach(Slot, Index, Sky, Head, "SkyStrike", 3, 1000, 24)
         End For
@@ -868,11 +901,11 @@ Private Sub UpdateBattleEffects(Slot As Number, Head As Core.Vector3,
 
             Angle = (Index - 3) * 45
             EndPoint = ImpactGrounds[Slot]
-            EndPoint.X = EndPoint.X + Fixed.SinFixed(Angle) * 250 / Core.FIXED_ONE
-            EndPoint.Z = EndPoint.Z + Fixed.CosFixed(Angle) * 250 / Core.FIXED_ONE
+            EndPoint.X = EndPoint.X + ToDouble(Fixed.SinFixed(Angle) * 250 / Core.FIXED_ONE)
+            EndPoint.Z = EndPoint.Z + ToDouble(Fixed.CosFixed(Angle) * 250 / Core.FIXED_ONE)
             Opposite = ImpactGrounds[Slot]
-            Opposite.X = Opposite.X - Fixed.SinFixed(Angle) * 250 / Core.FIXED_ONE
-            Opposite.Z = Opposite.Z - Fixed.CosFixed(Angle) * 250 / Core.FIXED_ONE
+            Opposite.X = Opposite.X - ToDouble(Fixed.SinFixed(Angle) * 250 / Core.FIXED_ONE)
+            Opposite.Z = Opposite.Z - ToDouble(Fixed.CosFixed(Angle) * 250 / Core.FIXED_ONE)
 
             If AttackStyles[Slot] = 1 Then
 
@@ -885,8 +918,8 @@ Private Sub UpdateBattleEffects(Slot As Number, Head As Core.Vector3,
             Else If AttackStyles[Slot] = 3 Then
 
                 Sky = Target
-                Sky.Y = Sky.Y + 400
-                Sky.X = Sky.X + (Index - 4) * 80
+                Sky.Y = Sky.Y + 400.0
+                Sky.X = Sky.X + ToDouble((Index - 4) * 80)
 
                 Call Attach(Slot, Index, Sky, EndPoint, "SkyStrike", 3, 1000, 24)
 
@@ -899,9 +932,9 @@ Private Sub UpdateBattleEffects(Slot As Number, Head As Core.Vector3,
 
                     If Lightning.Value(Lightning.QUERY_CHAIN_TARGETS,
                         Effects[Slot, Index]) = 0 Then
-                        WorkResult = Lightning.AddChainTarget(Effects[Slot, Index],
+                        WorkResult = Lightning.AddChainTargetPrecise(Effects[Slot, Index],
                             ImpactGrounds[Slot])
-                        WorkResult = Lightning.AddChainTarget(Effects[Slot, Index],
+                        WorkResult = Lightning.AddChainTargetPrecise(Effects[Slot, Index],
                             Opposite) And WorkResult
                     End If
 
@@ -1100,6 +1133,8 @@ End Function
 
 Public Function LastError(Value As Context) As Number
 
+    Dim ReturnValue2 As Number
+
     Dim ReturnValue As Number
 
     Dim Slot As Number
@@ -1107,7 +1142,9 @@ Public Function LastError(Value As Context) As Number
     Slot = RawSlot(Value)
 
     If Slot < 0 Then
-        Return Lightning.ERROR_INVALID_EFFECT
+        ReturnValue2 = Lightning.ERROR_INVALID_EFFECT
+
+        Return ReturnValue2
     End If
 
     ReturnValue = FirstErrors[Slot]

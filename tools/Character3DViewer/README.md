@@ -22,6 +22,15 @@ The editor source and build/launch entry points belong here. Sin Star I owns the
 
 ## Maintainer routing
 
+Camera pan/orbit/zoom and Party approach/return now retain Double fractions through
+the same renderer and Character3D actors. Current-pose camera anchors, equipment
+and attached effects use precise world coordinates. The controls, actor scale,
+sequence timing, IDs and saved integral calibration channels keep their established
+meaning. The GPU still uses float32; this improves continuous authoring and motion
+without increasing shader or depth-buffer precision. See
+`docs/libraries/precision3d-boundary.md` and the compact
+`docs/implementation/double-precision-checkpoint.md` for limits and validation state.
+
 Start with `ARCHITECTURE.md` for the current ownership and test map. `Program.smile`
 is the ordered coordinator. The R7.5 audit baseline was 8,319 lines and 233
 procedures, with substantial subsystem implementation still present. The completed

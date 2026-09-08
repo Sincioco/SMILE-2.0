@@ -60,6 +60,21 @@ internal static class DoubleTests
                     "Return Value\nEnd Function\nEnd Module\n", "Math.smile") });
             Require(!analysis.HasErrors, string.Join("; ", analysis.Diagnostics.Select(d => d.Message)));
         });
+        tests.Run("Web Number constant bounds preserve compile-time Enum definitions", () =>
+        {
+            const string declarations = "Const MINIMUM = -9223372036854775807 - 1\n" +
+                "Enum State\nMinimum = MINIMUM\nEnd Enum\n";
+            var source = new WebEmitter(Valid(declarations + "Print State.Minimum = State.Minimum\n")).Emit();
+            Require(source.Contains("-9223372036854775808n"), "Exact Enum BigInt value");
+            foreach (var program in new[] { declarations + "Print MINIMUM\n",
+                "Const OUTSIDE = ToNumber(9007199254740992.0)\nPrint OUTSIDE\n" })
+            {
+                var rejected = false;
+                try { new WebEmitter(Valid(program)).Emit(); }
+                catch (WebTargetException) { rejected = true; }
+                Require(rejected, "Runtime Number constant must remain in Web safe range");
+            }
+        });
         tests.Run("Double formatter and completion consume shared type facts", () =>
         {
             const string source = "Function Fraction(Value As Double) As Double\nReturn Value / 2.0\nEnd Function\n";

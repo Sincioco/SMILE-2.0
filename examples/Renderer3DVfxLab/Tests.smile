@@ -5,6 +5,7 @@ Import Smile.Simple3D.Character3D As Character3D
 Import Smile.Simple3D.Effects3D As Effects3D
 Import Smile.Simple3D.Graphics3D As Graphics3D
 Import Smile.Simple3D.Scene3D As Scene3D
+Import Smile.Simple3D.Precision3D As Precision3D
 
 Dim Failures As Number
 Dim Checks As Number
@@ -53,6 +54,7 @@ Sub RunTests()
     Call Check(Atlas.Handle <> 0)
     Call Check(AlphaMaterial.Handle <> 0)
     Call Check(AdditiveMaterial.Handle <> 0)
+    Call CheckPreciseBatches(AdditiveMaterial)
     Call Check(Graphics3D.LiveObjectCount3D() = 0)
     Call Check(Graphics3D.VfxValue3D(Graphics3D.VFX_QUERY_MAX_PARTICLE_BATCHES) = 32)
     Call Check(Graphics3D.VfxValue3D(Graphics3D.VFX_QUERY_MAX_RIBBON_BATCHES) = 16)
@@ -589,6 +591,76 @@ Function PartitionStateHash(
     Return HashValue
 
 End Function
+
+Sub CheckPreciseBatches(Material As Core.Material3D)
+
+    Dim Particle As Core.ParticleBatch3D
+    Dim Ribbon As Core.RibbonBatch3D
+    Dim Position As Precision3D.Vector3
+    Dim LeftPoint As Precision3D.Vector3
+    Dim RightPoint As Precision3D.Vector3
+    Dim Camera As Precision3D.Camera3D
+    Dim System As Core.GpuParticleSystem3D
+    Dim Velocity As Precision3D.Vector3
+
+    Particle = Graphics3D.CreateParticleBatch3D(2, Material, Graphics3D.VFX_BILLBOARD_CAMERA, 4, 4)
+    Ribbon = Graphics3D.CreateRibbonBatch3D(2, Material)
+    Position = Precision3D.Vector(0.25, 20.25, 50.5)
+    LeftPoint = Precision3D.Vector(-1.25, 10.25, 50.5)
+    RightPoint = Precision3D.Vector(1.75, 10.25, 50.5)
+    Velocity = Precision3D.Vector(0.125, 0.25, -0.375)
+    System = Graphics3D.CreateGpuParticleSystem3D(4, Material,
+        Graphics3D.GPU_PARTICLE_SIMULATION_CPU_DETERMINISTIC)
+
+    Call Check(Precision3D.SetGpuParticleSpawnKinematics(System, 0, Position, Velocity))
+    Call Check(Renderer3DDoubleValue(9, System.Handle, 0, 0) = 0.25)
+    Call Check(Renderer3DDoubleValue(9, System.Handle, 0, 5) = -0.375)
+    Call Check(Not Precision3D.SetGpuParticleSpawnKinematics(System, 4, Position, Velocity))
+    Call Check(Precision3D.SetPointLight(0, Position, 150, 190, 255, 100, 130))
+    Call Check(Renderer3DDoubleValue(10, 0, 0, 1) = 20.25)
+    Call Check(Not Precision3D.SetPointLight(0, Position, 256, 190, 255, 100, 130))
+    Call Check(Renderer3DDoubleValue(10, 0, 0, 1) = 20.25)
+    Call Check(Graphics3D.SetGpuParticleSpawnVisual3D(System, 0, 1000, 4, 4, 0, 0, 1000, 800))
+    Call Check(Graphics3D.CommitGpuParticleSpawn3D(System, 0, 1, 1))
+
+    Call Check(Precision3D.SetParticle(Particle, 0, Position, 4.125, 0.125, 5))
+    Call Check(Precision3D.SetRibbonPoint(Ribbon, 0, LeftPoint, RightPoint, 0.125))
+
+    LeftPoint.Y = 24.75
+    RightPoint.Y = 24.75
+
+    Call Check(Precision3D.SetRibbonPoint(Ribbon, 1, LeftPoint, RightPoint, 0.875))
+    Call Check(Not Precision3D.SetRibbonPoint(Ribbon, -1, LeftPoint, RightPoint, 0.5))
+    Call Check(Precision3D.TryRibbonPoint(Ribbon, 1, LeftPoint, RightPoint))
+    Call Check(LeftPoint.X = -1.25 And LeftPoint.Y = 24.75 And RightPoint.X = 1.75)
+    Call Check(Not Precision3D.SetParticle(Particle, 0, Position, 4.125, 0.125, 256))
+    Call Check(Precision3D.TryParticlePosition(Particle, 0, False, Position))
+    Call Check(Position.X = 0.25 And Position.Y = 20.25 And Position.Z = 50.5)
+    Call Check(Graphics3D.CommitParticleBatch3D(Particle, 1))
+    Call Check(Graphics3D.CommitRibbonBatch3D(Ribbon, 2))
+
+    Position.X = 7.5
+
+    Call Check(Precision3D.SetParticle(Particle, 0, Position, 4.125, 0.125, 5))
+    Call Check(Precision3D.TryParticlePosition(Particle, 0, True, Position))
+    Call Check(Position.X = 0.25)
+
+    Camera = Precision3D.FromCamera(Graphics3D.DefaultCamera())
+
+    Call Check(Scene3D.BeginPrecise(Camera, 4, 8, 18))
+    Call Check(Graphics3D.DrawParticleBatch3D(Particle))
+    Call Check(Graphics3D.DrawRibbonBatch3D(Ribbon))
+    Call Check(Graphics3D.DrawGpuParticleSystem3D(System))
+    Call Check(Not Precision3D.SetGpuParticleSpawnKinematics(System, 0, Position, Velocity))
+    Call Check(Scene3D.EndScene())
+
+    Show Screen
+
+    Call Graphics3D.DestroyParticleBatch3D(Particle)
+    Call Graphics3D.DestroyRibbonBatch3D(Ribbon)
+    Call Graphics3D.DestroyGpuParticleSystem3D(System)
+
+End Sub
 
 Sub Check(Condition As Boolean)
 

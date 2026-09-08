@@ -1883,8 +1883,10 @@ internal static class WebOutputWriter
                 renderer3DDirectionalDirection[0]=x/length;renderer3DDirectionalDirection[1]=y/length;renderer3DDirectionalDirection[2]=z/length;
                 renderer3DDirectionalDirection[3]=intensity===0?0:1;renderer3DDirectionalColor[0]=red/255;renderer3DDirectionalColor[1]=green/255;
                 renderer3DDirectionalColor[2]=blue/255;renderer3DDirectionalColor[3]=intensity/1000;return true;}
-            function renderer3DSetLocalLight(slot,type,x,y,z,red,green,blue,intensity,range){[slot,type,x,y,z,red,green,blue,intensity,range]=
-                    [slot,type,x,y,z,red,green,blue,intensity,range].map(safe);if(slot<0||slot>=4||type<0||type>2){renderer3DLastError=43;return false;}
+            function renderer3DSetLocalLight(slot,type,x,y,z,red,green,blue,intensity,range,precise=false){
+                [slot,type,red,green,blue,intensity,range].forEach(safe);
+                if(!precise)[x,y,z].forEach(safe);
+                if(slot<0||slot>=4||type<0||type>2){renderer3DLastError=43;return false;}
                 const offset=slot*4;if(type===0){renderer3DLocalPositionType.fill(0,offset,offset+4);renderer3DLocalDirectionRange.fill(0,offset,offset+4);
                     renderer3DLocalColorIntensity.fill(0,offset,offset+4);renderer3DLocalCone.fill(0,offset,offset+4);return true;}
                 if([x,y,z].some(value=>value< -1000000||value>1000000)||[red,green,blue].some(value=>value<0||value>255)||

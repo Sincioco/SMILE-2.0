@@ -199,3 +199,19 @@ existing shader-failure test hook and reports CPU fallback while the surviving
 actor and lightning still render. The complete assertion output passes on both
 paths. This is focused ownership evidence, not a hardware benchmark or a change
 to canonical animations, equipment, package identity or calibration.
+
+## September 8: precise runtime placement with unchanged calibration
+
+The approved Double adoption keeps continuous Viewer/Party transforms, current-pose
+socket anchors, equipment pivots and attached effects fractional through the existing
+Character3D and renderer owners. GPU float32 acceptance remains the final rendering
+precision limit. Saved wrist/equipment channel values, authored model scale, grounding
+corrections, clip names, asset identities and animation sources remain integral and
+unchanged. Do not copy another character's grounding numbers or bake runtime fractions
+into the canonical model to reproduce this work.
+
+The isolated native Viewer fixture still exports both character snapshots exactly and
+round-trips their existing serialization. The real Party approach/return assertion
+also reaches actual owned render submissions on native and Web. These are focused
+runtime checks; the final interactive delivery state and source/artifact evidence are
+recorded in `docs/implementation/double-precision-checkpoint.md`.

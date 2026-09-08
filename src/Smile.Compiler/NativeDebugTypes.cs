@@ -25,6 +25,9 @@ internal static class NativeDebugTypes
         foreach (var type in ordered) output.Append($"typedef struct {Name(type)} {Name(type)};\n");
         foreach (var type in ordered)
         {
+            // Fieldless classes are opaque pointer targets. C rejects an empty
+            // struct body; keep its forward declaration without inventing storage.
+            if (type is ClassTypeSymbol { InstanceSize: 0 }) continue;
             output.Append($"struct {Name(type)} {{\n");
             var offset = 0;
             foreach (var field in Fields(type).OrderBy(field => field.Offset))

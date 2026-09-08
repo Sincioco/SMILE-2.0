@@ -1,10 +1,10 @@
 # Fractional 3D boundary and ownership
 
-Recorded before D2 edits against D1 commit `40c183d`. D2 is active; this map is
-the implementation contract, not validation evidence. See the single
+Established before D2 edits against D1 commit `40c183d`, then updated for D3
+production adoption. This map describes the implemented boundary; see the single
 [Double checkpoint](../implementation/double-precision-checkpoint.md) for state.
 
-| Route | Current type/unit and owner | Selected change / exact narrowing point |
+| Route | Reviewed baseline type/unit and owner | Implemented change / exact narrowing point |
 |---|---|---|
 | Camera authoring | ViewerCamera Base/Live Core.Camera3D, Number world units/degrees; CharacterViewer/Interaction Number control values | Precision3D camera/vector values and a focused shared continuous controller; retain UI extents and input identities |
 | Camera acceptance | Graphics3D.Begin3D sends commands 10 and 123 as Number; native pending/accepted float arrays; Web camera object | Complete typed 12-Double transaction into the same accepted state; validate before acceptance, including after float narrowing |
@@ -36,11 +36,20 @@ The typed family has its own command namespace, without changing legacy IDs:
 | Mutation | 1 | Complete camera: position XYZ, target XYZ, up XYZ, FOV, near, far |
 | Mutation | 2 | Complete object: position XYZ, rotation XYZ, scale XYZ percent; remaining slots zero |
 | Mutation | 3 / 4 / 5 | Object position / rotation / scale XYZ, remaining slots zero |
+| Mutation | 6 | Object pivot XYZ in world units, followed by XYZ rotation in degrees |
+| Mutation | 7 | Existing point-light slot: XYZ, integral RGB components, intensity percent and range; style fields are validated before explicit conversion |
+| Mutation | 10000 + Index | Existing ribbon point, Index 0–8191: left XYZ, right XYZ, U in 0–1 |
+| Mutation | 20000 + AtlasFrame × 4096 + Index | Existing particle instance, Index 0–4095 and AtlasFrame 0–255: XYZ, size, rotation degrees |
+| Mutation | 2000000 + Slot | Existing GPU particle spawn staging, Slot 0–32767: XYZ, velocity XYZ in world units/second |
 | Query | 1 | Accepted camera, component 0–11 |
 | Query | 2 | Live object transform, component 0–8 (scale in percent) |
 | Query | 3 | Actual object/animator socket, Index is socket index; components 0–2 position or 3–5 position ignoring additive node offsets |
 | Query | 4 | Effective plane component 0, requested plane component 1 |
 | Query | 5 | Captured object transform, Index is submission slot, component 0–8 |
+| Query | 6 | Staged ribbon point, Index is point index; components 0–2 left and 3–5 right |
+| Query | 7 / 8 | Staged / committed particle instance position, Index is instance index; components 0–2 |
+| Query | 9 | GPU particle staging, Index is slot; components 0–2 position and 3–5 velocity |
+| Query | 10 | Existing point-light slot position; components 0–2 |
 
 Typed calls clear LastError on success and set the existing renderer error on
 failure. Query wrappers return Boolean and write a ByRef result only after status
@@ -62,3 +71,32 @@ For bounded coordinates within 1000, the initial upload budget is 2e-4 world uni
 quarter units are exact there. Near one million, float32 spacing is about 0.0625;
 Double authoring does not change shaders, authored animation precision or z-buffer
 precision. No origin-rebasing feature is included.
+
+## Production adoption and compatibility
+
+`PrecisionCamera3D` owns shared continuous pan, orbit, bounded eased zoom,
+auto-fit, projection and cursor anchoring. ViewerCamera and Sin Star I's
+BattleArenaPreview supply their own scene sensitivity and framing. UI pixel
+coordinates, pointer identities and elapsed milliseconds remain Number; conversion
+occurs before continuous motion math. Integer labels do not feed camera acceptance.
+
+ViewerParty retains its sequence, event order, 650-ms approach and 700-ms return.
+It evaluates Double progress from the actual integer elapsed time, passes precise
+positions through ViewerActors/Character3D, and submits the same owned render parts.
+Current-pose sockets, equipment pivots, glow, fire, lightning and Orin trails use
+the typed path. FireEmitter3D and LightningVfx3D retain their existing pools,
+seeds, admission budgets, integer clocks, ages and event counters. Their legacy
+Number entry points explicitly adapt to the same precise owners. Culling bounds,
+density counts, atlas selectors and checksum display remain integral.
+
+The shared cubic visual example is `examples/PrecisionCurve3D`; its 6-second
+forward/return traversal uses the same clamped de Casteljau evaluator covered by
+the precision fixture. It is a visual slice, not a spline editor or framework.
+
+Authored scale percentages, millith-unit model bounds and saved calibration channels
+retain their current meaning. Saved wrist/equipment corrections narrow explicitly
+only when committing an integral channel value. No asset is rescaled or rebaked.
+Legacy Core vectors and queries keep their Number contracts. Existing source using
+them remains valid; new continuous code uses explicit ToDouble/ToNumber boundaries.
+All `.smilelib` dependencies must be rebuilt as format 7 after the Double compiler
+upgrade; format 1–6 packages receive the explicit rebuild diagnostic.

@@ -4,6 +4,7 @@ Module Smile.Simple3D.LightPool3D
 Option Explicit
 
 Import Smile.Simple3D.Graphics3D As Graphics3D
+Import Smile.Simple3D.Precision3D As Precision3D
 
 Public Const MAX_LEASES = 4
 Public Const ERROR_NONE = 0
@@ -163,6 +164,32 @@ Public Function SetPoint(Value As Lease, X As Number, Y As Number, Z As Number,
     End If
 
     Result = Graphics3D.SetPointLight3D(RendererIndex, X, Y, Z,
+        RedValue, GreenValue, BlueValue, Intensity, Range)
+
+    If Result Then
+        ErrorValue = ERROR_NONE
+    Else
+        ErrorValue = ERROR_RENDERER
+    End If
+
+    Return Result
+
+End Function
+
+Public Function SetPointPrecise(Value As Lease, Position As Precision3D.Vector3,
+    RedValue As Number, GreenValue As Number, BlueValue As Number, Intensity As Number,
+    Range As Number) As Boolean
+
+    Dim RendererIndex As Number
+    Dim Result As Boolean
+
+    RendererIndex = RendererSlot(Value)
+
+    If RendererIndex < 0 Then
+        Return False
+    End If
+
+    Result = Precision3D.SetPointLight(RendererIndex, Position,
         RedValue, GreenValue, BlueValue, Intensity, Range)
 
     If Result Then

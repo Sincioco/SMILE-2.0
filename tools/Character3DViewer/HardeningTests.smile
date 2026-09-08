@@ -3,6 +3,7 @@ Option Explicit
 Import Smile.Tools.Character3DViewerProfiles As ViewerProfiles
 Import Smile.Simple3D.Character3D As Character3D
 Import Smile.Simple3D.CharacterViewer As CharacterViewer
+Import Smile.Simple3D.PrecisionCamera3D As PrecisionCamera
 Import Smile.Simple3D.Graphics3D As Graphics3D
 Import Smile.Simple3D.Interaction As Interaction
 Import Smile.Tools.OrinStorm As OrinStorm
@@ -28,6 +29,7 @@ Import Smile.Tools.Character3DViewerEffects As ViewerEffects
 Import Smile.Tools.Character3DViewerDragon As ViewerDragon
 Import Smile.Tools.Character3DViewerRendering As ViewerRendering
 Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Precision3D As Precision3D
 Import Smile.Simple3D.NodeAim3D As NodeAim3D
 Import Smile.Simple3D.Math3D As Math3D
 Import Smile.Simple3D.FixedMath As Fixed
@@ -37,7 +39,7 @@ Import SinStarI.BattleArenaPreview As BattleArenaPreview
 
 Dim Alternating As CharacterViewer.ZoomState
 Dim Bounds As Character3D.Bounds3D
-Dim Frame As CharacterViewer.Framing
+Dim Frame As PrecisionCamera.Framing
 Dim Profile As CharacterViewer.Profile
 Dim Remainder As Number
 Dim Step30 As CharacterViewer.ZoomState
@@ -54,6 +56,7 @@ Dim Charge As OrinStorm.ChargeState
 Dim Events As Number
 Dim AudioCue As BattleAudio.CueState
 Dim OrbitBase As Core.Camera3D
+Dim PreciseOrbitBase As Precision3D.Camera3D
 Dim OrbitControls As Core.CameraControl3D
 Dim OrbitFirst As Core.Camera3D
 Dim OrbitNext As Core.Camera3D
@@ -95,11 +98,11 @@ Dim PlaybackState As ViewerPlayback.State
 Dim SpeedAdjustment As ViewerPlayback.SpeedAdjustmentResult
 Dim CameraState As ViewerCamera.State
 Dim CameraPointer As ViewerCamera.PointerInput
-Dim DirectControls As Core.CameraControl3D
-Dim DirectZoom As CharacterViewer.ZoomState
-Dim DirectCamera As Core.Camera3D
-Dim CameraZoomTarget As Number
-Dim CameraPhase1000 As Number
+Dim DirectControls As PrecisionCamera.Controls
+Dim DirectZoom As PrecisionCamera.ZoomState
+Dim DirectCamera As Precision3D.Camera3D
+Dim CameraZoomTarget As Double
+Dim CameraPhase1000 As Double
 Dim CalibrationState As ViewerCalibration.State
 Dim CalibrationConfigurationState As ViewerCalibration.State
 Dim CalibrationConfiguration As ViewerCalibration.ConfigurationResult
@@ -319,11 +322,11 @@ Call ViewerParty.SetEnabled(PartyState, False)
 Call CheckNamed(Not PartyState.Enabled, "Party owner disables Party")
 
 PartyState.PreviousCamera = 4
-PartyState.OrbitPhase1000 = 700
+PartyState.OrbitPhase = 0.7
 
 Call ViewerParty.ResetCameraTracking(PartyState)
 
-Call CheckNamed(PartyState.PreviousCamera = 0 And PartyState.OrbitPhase1000 = 0,
+Call CheckNamed(PartyState.PreviousCamera = 0 And PartyState.OrbitPhase = 0.0,
     "Party owner resets camera tracking")
 
 PartyState.DragonCounter = 0
@@ -511,40 +514,40 @@ CameraState.FitLocked = False
 
 Call ViewerCamera.LockResponsiveFit(CameraState)
 Call CheckNamed(CameraState.FitLocked, "Camera owner locks responsive fit")
-Call Interaction.ResetCameraControls(DirectControls)
-Call CharacterViewer.InitializeZoom(DirectZoom, -16, -144, 36, 96000)
+Call PrecisionCamera.ResetCameraControls(DirectControls)
+Call PrecisionCamera.InitializeZoom(DirectZoom, -16, -144, 36, 96000)
 Call Check(CameraState.Controls.OrbitYaw = DirectControls.OrbitYaw)
-Call Check(CameraState.Zoom.Current1000 = DirectZoom.Current1000)
+Call Check(CameraState.Zoom.Current = DirectZoom.Current)
 
-CameraState.Frame.PanXLimit = 10
-CameraState.Frame.PanYLimit = 8
+CameraState.Frame.PanXLimit = 10.0
+CameraState.Frame.PanYLimit = 8.0
 CameraState.AutoOrbit = True
-TestResult = Interaction.UpdateOrbitControls(DirectControls, True, True, True, -5, 2)
+TestResult = PrecisionCamera.UpdateOrbitControls(DirectControls, True, True, True, -5, 2)
 
 Call Check(ViewerCamera.NudgeOrbit(CameraState, -5, 2))
 Call Check(CameraState.Controls.OrbitYaw = DirectControls.OrbitYaw)
 Call Check(CameraState.Controls.OrbitPitch = DirectControls.OrbitPitch)
 Call Check(Not CameraState.AutoOrbit)
 
-TestResult = Interaction.UpdatePanZoomControls(
+TestResult = PrecisionCamera.UpdatePanZoomControls(
     DirectControls, True, True, True, -20, 20, 0)
-DirectControls.PanX = Min(10, Max(-10, DirectControls.PanX))
-DirectControls.PanY = Min(8, Max(-8, DirectControls.PanY))
+DirectControls.PanX = Min(10.0, Max(-10.0, DirectControls.PanX))
+DirectControls.PanY = Min(8.0, Max(-8.0, DirectControls.PanY))
 
 Call Check(ViewerCamera.NudgePan(CameraState, -20, 20))
 Call Check(CameraState.Controls.PanX = DirectControls.PanX)
 Call Check(CameraState.Controls.PanY = DirectControls.PanY)
 
-Call CharacterViewer.AdjustZoomTarget(DirectZoom, -2, 8)
+Call PrecisionCamera.AdjustZoomTarget(DirectZoom, -2, 8)
 Call ViewerCamera.AdjustZoomTarget(CameraState, -2, 8)
-Call Check(CharacterViewer.AdvanceZoom(DirectZoom, 33))
+Call Check(PrecisionCamera.AdvanceZoom(DirectZoom, 33))
 Call Check(ViewerCamera.AdvanceZoom(CameraState, 33))
-Call Check(CameraState.Zoom.Current1000 = DirectZoom.Current1000)
-Call Check(CameraState.Zoom.Target1000 = DirectZoom.Target1000)
-Call Check(CameraState.Controls.Zoom = CharacterViewer.ZoomDegrees(DirectZoom))
+Call Check(CameraState.Zoom.Current = DirectZoom.Current)
+Call Check(CameraState.Zoom.Target = DirectZoom.Target)
+Call Check(CameraState.Controls.Zoom = DirectZoom.Current)
 
-CameraState.Base = Graphics3D.DefaultCamera()
-DirectCamera = Interaction.ApplyScreenSpaceCameraControls(
+CameraState.Base = Precision3D.FromCamera(Graphics3D.DefaultCamera())
+DirectCamera = PrecisionCamera.ApplyScreenSpaceCameraControls(
     CameraState.Base, CameraState.Controls)
 
 Call ViewerCamera.Compose(CameraState, False)
@@ -557,42 +560,40 @@ Call Check(CameraState.Live.Target.Z = DirectCamera.Target.Z)
 
 Call ViewerCamera.SetHorizontalOrbit(CameraState, 500)
 Call ViewerCamera.SetVerticalOrbit(CameraState, -500)
-Call Check(CameraState.Controls.OrbitYaw = 180)
-Call Check(CameraState.Controls.OrbitPitch = -180)
+Call Check(CameraState.Controls.OrbitYaw = 180.0)
+Call Check(CameraState.Controls.OrbitPitch = -180.0)
 Call ViewerCamera.SetZoom(CameraState, -200, -144, 36)
-Call Check(CharacterViewer.ZoomDegrees(CameraState.Zoom) = -144)
+Call Check(CameraState.Zoom.Current = -144.0)
 Call ViewerCamera.StartAutoOrbit(CameraState)
 Call Check(ViewerCamera.AdvanceAutoOrbit(CameraState, CameraPhase1000, 250, 12, False))
-Call Check(CameraState.AutoOrbitYaw1000 = 183000)
-Call Check(CameraState.Controls.OrbitYaw = 183)
+Call Check(CameraState.AutoOrbitYaw = 183.0)
+Call Check(CameraState.Controls.OrbitYaw = 183.0)
 
-CameraState.Live.Position.Y = -40
-CameraState.Live.Target.Y = 65
+CameraState.Live.Position.Y = -40.0
+CameraState.Live.Target.Y = 65.0
 
 Call ViewerCamera.KeepAboveGround(CameraState, 0)
-Call Check(CameraState.Live.Position.Y = 0 And CameraState.Live.Target.Y = 65)
+Call Check(CameraState.Live.Position.Y = 0.0 And CameraState.Live.Target.Y = 65.0)
 
 CameraState.Controls.Orbiting = True
 CameraState.Controls.Panning = True
-CameraState.PanPointerRemainderX = 2
-CameraState.OrbitPointerRemainderY = -2
 
 Call ViewerCamera.CancelPointerControls(CameraState)
 Call Check(Not CameraState.Controls.Orbiting And Not CameraState.Controls.Panning)
-Call Check(CameraState.PanPointerRemainderX = 0 And CameraState.OrbitPointerRemainderY = 0)
+Call Check(Not CameraState.CalibrationOrbitActive)
 
 Call ViewerCamera.Reset(CameraState, 0, -16, -144, 36, 96000)
 
-CameraState.Live = Graphics3D.DefaultCamera()
-CameraState.Frame.PanXLimit = 10
-CameraState.Frame.PanYLimit = 8
+CameraState.Live = Precision3D.FromCamera(Graphics3D.DefaultCamera())
+CameraState.Frame.PanXLimit = 10.0
+CameraState.Frame.PanYLimit = 8.0
 CameraState.AutoOrbit = True
 CameraPointer = ViewerCamera.CreatePointerInput(
     False, True, True, False, False, False, False,
     400, 300, 6, -3, 800, 640, True, False)
-CameraPointer.CalibrationOrigin.X = 1
-CameraPointer.CalibrationOrigin.Y = 2
-CameraPointer.CalibrationOrigin.Z = 3
+CameraPointer.CalibrationOrigin.X = 1.0
+CameraPointer.CalibrationOrigin.Y = 2.0
+CameraPointer.CalibrationOrigin.Z = 3.0
 
 Call CheckNamed(
     ViewerCamera.PointerRequiresCalibrationOrigin(CameraState, CameraPointer),
@@ -606,7 +607,7 @@ Call CheckNamed(CameraState.CalibrationOrbitActive And
 
 Call ViewerCamera.CancelPointerControls(CameraState)
 
-CameraZoomTarget = CameraState.Zoom.Target1000
+CameraZoomTarget = CameraState.Zoom.Target
 CameraPointer = ViewerCamera.CreatePointerInput(
     True, True, True, False, True, True, False,
     400, 300, 6, -3, 800, 640, True, False)
@@ -621,17 +622,17 @@ Call CheckNamed(
 Call CheckNamed(Not CameraState.Controls.Orbiting And
     Not CameraState.Controls.Panning And
     Not CameraState.CalibrationOrbitActive And
-    CameraState.Zoom.Target1000 = CameraZoomTarget,
+    CameraState.Zoom.Target = CameraZoomTarget,
     "Blocked camera input cannot begin controls or change zoom")
 
-CameraState.Controls.OrbitYaw = 0
+CameraState.Controls.OrbitYaw = 0.0
 InspectorOperation = ViewerInspectorCommands.ApplyKeyboardNavigationAction(
     ViewerInput.INSPECTOR_KEY_ORBIT_LEFT,
     RenderingState, 5, 4, CameraState, EffectsState, DragonState)
 
 Call CheckNamed(InspectorOperation.Handled And InspectorOperation.Ready,
     "Keyboard camera command handled")
-Call CheckNamed(CameraState.Controls.OrbitYaw = -15,
+Call CheckNamed(CameraState.Controls.OrbitYaw = -15.0,
     "Keyboard camera command applies left orbit")
 
 InspectorOperation = ViewerInspectorCommands.ApplyKeyboardNavigationAction(
@@ -1828,7 +1829,7 @@ Call Check(PartyState.Elapsed = 100 And PartyState.Stage = -2)
 Call Check(PartyActions.FirstClipRequested And PartyActions.FirstClip = "Idle")
 Call Check(PartyActions.SecondClipRequested And PartyActions.SecondClip = "Defend")
 Call Check(PartyActions.PositionsAvailable And
-    PartyActions.FirstPosition.X = PartyState.First.Home.X)
+    PartyActions.FirstPosition.X = ToDouble(PartyState.First.Home.X))
 
 PartyState.Elapsed = 1299
 PartyState.Stage = 0
@@ -1838,8 +1839,8 @@ PartyActions = ViewerParty.AdvanceChoreography(
 Call Check(PartyState.Stage = 1 And PartyState.DragonReactionPending)
 Call Check(ViewerParty.PresentationState(PartyState, 0) = ViewerParty.STATE_ACTING)
 Call Check(PartyActions.FirstClip = "SwordAttack")
-Call Check(PartyActions.FirstPosition.X = PartyState.First.Approach.X And
-    PartyActions.FirstPosition.Z = PartyState.First.Approach.Z)
+Call Check(PartyActions.FirstPosition.X = ToDouble(PartyState.First.Approach.X) And
+    PartyActions.FirstPosition.Z = ToDouble(PartyState.First.Approach.Z))
 
 PartyState.Turn = 1
 PartyState.Elapsed = 5199
@@ -1881,20 +1882,20 @@ PartyState.Elapsed = 1400
 PartyState.PreviousCamera = 2
 PartyState.PreviousCameraTurn = 0
 PartyState.PreviousShotStage = 1
-PartyState.ShotBoss = Math3D.Vector(-208, 70, -120)
-PartyState.ShotBossHead = Math3D.Vector(-208, 115, -120)
-PartyState.ShotMouth = Math3D.Vector(-208, 100, -120)
-PartyState.Companion.Frame.PositionX = -45
-PartyState.Companion.Frame.PositionY = 0
-PartyState.Companion.Frame.PositionZ = 35
-Frame.PositionX = -20
-Frame.PositionY = 0
-Frame.PositionZ = -40
-OrbitBase = Graphics3D.DefaultCamera()
+PartyState.ShotBoss = Precision3D.Vector(-208.0, 70.0, -120.0)
+PartyState.ShotBossHead = Precision3D.Vector(-208.0, 115.0, -120.0)
+PartyState.ShotMouth = Precision3D.Vector(-208.0, 100.0, -120.0)
+PartyState.Companion.Frame.PositionX = -45.0
+PartyState.Companion.Frame.PositionY = 0.0
+PartyState.Companion.Frame.PositionZ = 35.0
+Frame.PositionX = -20.0
+Frame.PositionY = 0.0
+Frame.PositionZ = -40.0
+PreciseOrbitBase = Precision3D.FromCamera(Graphics3D.DefaultCamera())
 
 Call ViewerParty.ApplyAttackCamera(
     PartyState,
-    OrbitBase,
+    PreciseOrbitBase,
     Frame,
     PartyPrimary.Actor,
     True,
@@ -1908,10 +1909,10 @@ Call ViewerParty.ApplyAttackCamera(
 )
 
 Call Check(PartyState.ActiveCamera = 2 And PartyState.PreviousCamera = 2)
-Call Check(OrbitBase.Position.X = PartyState.HeroCamera.Position.X And
-    OrbitBase.Target.Z = PartyState.HeroCamera.Target.Z)
-Call Check(OrbitBase.UpDirection.Y = Core.FIXED_ONE And
-    OrbitBase.Position.Y >= 24)
+Call Check(PreciseOrbitBase.Position.X = PartyState.HeroCamera.Position.X And
+    PreciseOrbitBase.Target.Z = PartyState.HeroCamera.Target.Z)
+Call Check(PreciseOrbitBase.UpDirection.Y = 1.0 And
+    PreciseOrbitBase.Position.Y >= 24.0)
 
 PartyState.Turn = 2
 PartyState.Stage = 0
@@ -1922,7 +1923,7 @@ PartyState.PreviousShotStage = 0
 
 Call ViewerParty.ApplyAttackCamera(
     PartyState,
-    OrbitBase,
+    PreciseOrbitBase,
     Frame,
     PartyPrimary.Actor,
     True,
@@ -1936,13 +1937,13 @@ Call ViewerParty.ApplyAttackCamera(
 )
 
 Call Check(PartyState.ActiveCamera = 3 And
-    OrbitBase.Position.X = PartyState.DragonCamera.Position.X)
+    PreciseOrbitBase.Position.X = PartyState.DragonCamera.Position.X)
 
 PartyState.Enabled = False
 
 Call ViewerParty.ApplyAttackCamera(
     PartyState,
-    OrbitBase,
+    PreciseOrbitBase,
     Frame,
     PartyPrimary.Actor,
     True,
@@ -1958,19 +1959,19 @@ Call ViewerParty.ApplyAttackCamera(
 Call Check(PartyState.ActiveCamera = 1 And PartyState.PreviousCamera = 1)
 
 Call SceneVfx3D.Initialize(EffectsState.Clock)
-Call Check(ViewerEffects.AdvanceScene(EffectsState, 16, True, OrbitBase))
+Call Check(ViewerEffects.AdvanceScene(EffectsState, 16, True, PreciseOrbitBase))
 Call Check(Not EffectsState.Clock.FireFrozen And Not EffectsState.Clock.LightningFrozen)
 Call Check(EffectsState.Clock.ElapsedMilliseconds = 16)
 
 EffectsState.FlamePaused = True
 
-Call Check(ViewerEffects.AdvanceScene(EffectsState, 17, True, OrbitBase))
+Call Check(ViewerEffects.AdvanceScene(EffectsState, 17, True, PreciseOrbitBase))
 Call Check(EffectsState.Clock.FireFrozen And Not EffectsState.Clock.LightningFrozen)
 
 EffectsState.FlamePaused = False
 EffectsState.LightningPaused = True
 
-Call Check(ViewerEffects.AdvanceScene(EffectsState, 18, False, OrbitBase))
+Call Check(ViewerEffects.AdvanceScene(EffectsState, 18, False, PreciseOrbitBase))
 Call Check(Not EffectsState.Clock.FireFrozen And EffectsState.Clock.LightningFrozen)
 Call Check(Not ViewerEffects.ShouldFreeze(True, False))
 Call Check(ViewerEffects.ShouldFreeze(False, True))
@@ -2104,9 +2105,9 @@ InspectorOperation = ViewerInspectorCommands.ApplyPresentationAction(
 Call Check(EffectsState.ShieldFlameStyle)
 Call Check(ViewerEffects.ShieldFireStyleLabel(EffectsState) = "Flames")
 
-EffectsState.ShieldFirePoints[1].X = 73
+EffectsState.ShieldFirePoints[1].X = 73.0
 
-Call Check(EffectsState.ShieldFirePoints[1].X = 73)
+Call Check(EffectsState.ShieldFirePoints[1].X = 73.0)
 Call ViewerEffects.InvalidateVisualHistory(EffectsState)
 Call Check(EffectsState.VisualHistoryDirty And EffectsState.VisualContinuityEpoch = 1)
 
@@ -2663,26 +2664,26 @@ Call ViewerCamera.ToggleResponsiveFit(
 Call CheckNamed(CameraState.FitLocked And CameraState.LastFitWidth = 800 And
     CameraState.LastFitHeight = 640, "Responsive fit toggles on and recomputes")
 
-Frame = CharacterViewer.AutoFit(Profile, Bounds)
+Frame = PrecisionCamera.AutoFit(Profile, Bounds)
 
 Call Check(Frame.Valid)
 Call Check(Frame.ScalePercent = 10000)
-Call Check(Frame.PositionY = 0)
-Call Check(Frame.TargetY > 0)
-Call Check(Frame.CameraZ < 0)
+Call Check(Frame.PositionY = 0.0)
+Call Check(Frame.TargetY > 0.0)
+Call Check(Frame.CameraZ < 0.0)
 Call Check(Frame.FloorWidth >= 400)
 Call Check(Frame.FloorDepth >= 320)
-Call Check(Frame.PanXLimit >= 40)
+Call Check(Frame.PanXLimit >= 40.0)
 Call Check(Frame.ShadowFar >= 400)
 
 Bounds.Size.Y = 20000000
-Frame = CharacterViewer.AutoFit(Profile, Bounds)
+Frame = PrecisionCamera.AutoFit(Profile, Bounds)
 
 Call Check(Frame.Valid)
 Call Check(Frame.ScalePercent = 1)
 
 Bounds.Size.Y = 0
-Frame = CharacterViewer.AutoFit(Profile, Bounds)
+Frame = PrecisionCamera.AutoFit(Profile, Bounds)
 
 Call Check(Not Frame.Valid)
 

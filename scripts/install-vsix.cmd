@@ -5,8 +5,10 @@ for %%I in ("%~dp0..") do set "SMILE_ROOT=%%~fI"
 set "VSWHERE=%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe"
 set "SMILE_EXTENSION_ID=Smile.VisualStudio.2.0"
 
+if /i "%~1"=="--skip-build" goto build_complete
 call "%~dp0build.cmd"
 if errorlevel 1 exit /b %errorlevel%
+:build_complete
 
 if not exist "%VSWHERE%" (
     echo error: vswhere.exe was not found.
@@ -44,11 +46,13 @@ if not exist "%SMILE_VSIX%" (
 if not exist "%SMILE_ROOT%\artifacts\temp" mkdir "%SMILE_ROOT%\artifacts\temp"
 
 echo Refreshing %SMILE_EXTENSION_ID% in Visual Studio instance %SMILE_VS_INSTANCE%.
-echo Visual Studio may close automatically. Save open work before running this script.
+echo Visual Studio must already be closed. This script never closes user windows.
+powershell -NoProfile -Command "if (Get-Process devenv -ErrorAction SilentlyContinue) { Write-Error 'Save your work and close Visual Studio before installing the VSIX.'; exit 1 }"
+if errorlevel 1 exit /b 2
 echo.
 echo [1/3] Removing the installed SMILE extension.
 echo Visual Studio's installer will show its own progress window.
-"%VSIX_INSTALLER%" /quiet /shutdownprocesses /instanceIds:%SMILE_VS_INSTANCE% /uninstall:%SMILE_EXTENSION_ID% /logFile:"%SMILE_ROOT%\artifacts\temp\vsix-uninstall.log"
+"%VSIX_INSTALLER%" /quiet /instanceIds:%SMILE_VS_INSTANCE% /uninstall:%SMILE_EXTENSION_ID% /logFile:"%SMILE_ROOT%\artifacts\temp\vsix-uninstall.log"
 if errorlevel 1 echo Existing SMILE extension was not installed or could not be removed; continuing with forced installation.
 
 echo.
@@ -59,14 +63,14 @@ if errorlevel 1 exit /b %errorlevel%
 echo.
 echo [3/3] Installing the newly built SMILE extension.
 echo Visual Studio's installer will show its own progress window.
-"%VSIX_INSTALLER%" /quiet /shutdownprocesses /force /instanceIds:%SMILE_VS_INSTANCE% /logFile:"%SMILE_ROOT%\artifacts\temp\vsix-install.log" "%SMILE_VSIX%"
+"%VSIX_INSTALLER%" /quiet /force /instanceIds:%SMILE_VS_INSTANCE% /logFile:"%SMILE_ROOT%\artifacts\temp\vsix-install.log" "%SMILE_VSIX%"
 if errorlevel 1 (
     echo error: The new SMILE extension could not be installed.
     echo See "%SMILE_ROOT%\artifacts\temp\vsix-install.log" for details.
     exit /b 2
 )
 
-powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0verify-vsix-install.ps1" -InstanceId "%SMILE_VS_INSTANCE%" -BuiltDllPath "%SMILE_VSIX_DLL%" -ManifestPath "%SMILE_VSIX_MANIFEST%"
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0verify-vsix-install.ps1" -InstanceId "%SMILE_VS_INSTANCE%" -BuiltDllPath "%SMILE_VSIX_DLL%" -ManifestPath "%SMILE_VSIX_MANIFEST%" -BuiltVsixPath "%SMILE_VSIX%"
 if errorlevel 1 exit /b %errorlevel%
 
 echo Installed the newly built SMILE extension automatically:

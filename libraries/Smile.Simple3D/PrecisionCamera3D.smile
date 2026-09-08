@@ -1,0 +1,662 @@
+''' Shared continuous camera composition; input identities and viewport pixels stay integral.
+Module Smile.Simple3D.PrecisionCamera3D
+
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Character3D As Character3D
+Import Smile.Simple3D.CharacterViewer As CharacterViewer
+Import Smile.Simple3D.Precision3D As Precision3D
+Import Smile.Simple3D.PrecisionMath3D As Math3D
+
+Public Type Controls
+    PanX As Double
+    PanY As Double
+    Zoom As Double
+    ZoomTarget As Double
+    OrbitYaw As Double
+    OrbitPitch As Double
+    ReturnSteps As Number
+    Panning As Boolean
+    Orbiting As Boolean
+End Type
+
+Public Type ZoomState
+    Current As Double
+    Target As Double
+    RatePerSecond As Double
+    Minimum As Double
+    Maximum As Double
+End Type
+
+''' Actor scale and renderer allocation extents keep their accepted integer contracts.
+Public Type Framing
+    ScalePercent As Number
+    PositionX As Double
+    PositionY As Double
+    PositionZ As Double
+    TargetY As Double
+    CameraY As Double
+    CameraZ As Double
+    FloorWidth As Number
+    FloorDepth As Number
+    PanXLimit As Double
+    PanYLimit As Double
+    ShadowWidth As Number
+    ShadowDepth As Number
+    ShadowNear As Number
+    ShadowFar As Number
+    FittedWidth As Double
+    FittedHeight As Double
+    Valid As Boolean
+End Type
+
+Public Type ProjectedPoint
+    X As Double
+    Y As Double
+    Depth As Double
+    Visible As Boolean
+End Type
+
+Public Sub ResetCameraControls(ByRef Value As Controls)
+
+    Dim Empty As Controls
+
+    Value = Empty
+
+End Sub
+
+Public Function NormalizeAngle(Value As Double) As Double
+
+    Dim Result As Double
+
+    Result = Math3D.WrapDegrees(Value + 180.0) - 180.0
+
+    Return Result
+
+End Function
+
+Public Function UpdateOrbitControls(ByRef Value As Controls,
+    Pressed As Boolean, Held As Boolean, Released As Boolean,
+    DeltaX As Number, DeltaY As Number) As Boolean
+
+    If Abs(DeltaX) > 10000 Or Abs(DeltaY) > 10000 Then
+        Return False
+    End If
+
+    If Pressed Then
+        Value.Orbiting = True
+        Value.ReturnSteps = 12
+    End If
+
+    If (Value.Orbiting And
+        Not Held And
+        Not Pressed) Then
+        Value.Orbiting = False
+        Value.ReturnSteps = 12
+    End If
+
+    If Value.Orbiting And Held Then
+
+        Value.OrbitYaw = Value.OrbitYaw + ToDouble(DeltaX) * 3.0
+        Value.OrbitPitch = Value.OrbitPitch + ToDouble(DeltaY) * 2.0
+        Value.ReturnSteps = 12
+
+    End If
+
+    If Released Then
+
+        Value.Orbiting = False
+        Value.OrbitYaw = NormalizeAngle(Value.OrbitYaw)
+        Value.OrbitPitch = NormalizeAngle(Value.OrbitPitch)
+        Value.ReturnSteps = 12
+
+    End If
+
+    Return True
+
+End Function
+
+Public Function UpdatePanZoomControls(ByRef Value As Controls,
+    Pressed As Boolean, Held As Boolean, Released As Boolean,
+    DeltaX As Number, DeltaY As Number, WheelDelta As Number) As Boolean
+
+    If (Abs(DeltaX) > 10000 Or
+        Abs(DeltaY) > 10000 Or
+        Abs(WheelDelta) > 1000) Then
+        Return False
+    End If
+
+    If Pressed Then
+        Value.Panning = True
+        Value.ReturnSteps = 12
+    End If
+
+    If (Value.Panning And
+        Not Held And
+        Not Pressed) Then
+        Value.Panning = False
+        Value.ReturnSteps = 12
+    End If
+
+    If Value.Panning And Held Then
+
+        Value.PanX = Clamp(Value.PanX - ToDouble(DeltaX) * 2.0, -360.0, 360.0)
+        Value.PanY = Clamp(Value.PanY + ToDouble(DeltaY) * 2.0, -220.0, 220.0)
+        Value.ReturnSteps = 12
+
+    End If
+
+    If Released Then
+        Value.Panning = False
+        Value.ReturnSteps = 12
+    End If
+
+    If WheelDelta <> 0 Then
+        Value.ZoomTarget = Clamp(Value.ZoomTarget - ToDouble(WheelDelta) * 4.0, -24.0, 36.0)
+        Value.ReturnSteps = Max(Value.ReturnSteps, 45)
+    End If
+
+    Return True
+
+End Function
+
+Public Function UpdateCameraControlsFromPointer(ByRef Value As Controls,
+    AllowPanStart As Boolean, AllowOrbitStart As Boolean, AllowWheel As Boolean) As Boolean
+
+    Dim Wheel As Number
+    Dim Result As Boolean
+
+    If AllowWheel Then
+        Wheel = Pointer_Wheel_Delta()
+    End If
+
+    Result = UpdatePanZoomControls(Value, AllowPanStart And Pointer_Pressed(POINTER_PRIMARY),
+        Pointer_Held(POINTER_PRIMARY), Pointer_Released(POINTER_PRIMARY),
+        Pointer_Delta_X(), Pointer_Delta_Y(), Wheel)
+    Result = UpdateOrbitControls(Value, AllowOrbitStart And Pointer_Pressed(POINTER_MIDDLE),
+        Pointer_Held(POINTER_MIDDLE), Pointer_Released(POINTER_MIDDLE),
+        Pointer_Delta_X(), Pointer_Delta_Y()) And Result
+
+    Return Result
+
+End Function
+
+Public Function CameraControlsDragging(ByRef Value As Controls) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Value.Panning Or Value.Orbiting
+
+    Return Result
+
+End Function
+
+''' Preserves the existing discrete hold policy; zoom always advances by elapsed milliseconds.
+Public Function AdvanceCameraControls(ByRef Value As Controls, ElapsedMilliseconds As Number,
+    ReturnToBase As Boolean) As Boolean
+
+    Dim Amount As Double
+    Dim Advance As Double
+
+    If ElapsedMilliseconds < 0 Or ElapsedMilliseconds > 1000 Then
+        Return False
+    End If
+
+    If ReturnToBase And Not CameraControlsDragging(Value) Then
+
+        If Value.ReturnSteps > 0 Then
+
+            Value.ReturnSteps = Value.ReturnSteps - 1
+
+        Else
+
+            Amount = 1.0 / (1.0 + ToDouble(ElapsedMilliseconds) * 0.008)
+            Value.PanX = Value.PanX * Amount
+            Value.PanY = Value.PanY * Amount
+            Value.OrbitYaw = Value.OrbitYaw * Amount
+            Value.OrbitPitch = Value.OrbitPitch * Amount
+            Value.ZoomTarget = Value.ZoomTarget * Amount
+
+        End If
+
+    End If
+
+    Advance = ToDouble(ElapsedMilliseconds) * 0.024
+    Value.Zoom = Value.Zoom + Clamp(Value.ZoomTarget - Value.Zoom, -Advance, Advance)
+
+    Return True
+
+End Function
+
+Public Function ApplyCameraControls(BaseCamera As Precision3D.Camera3D,
+    Value As Controls, Optional ScreenSpace As Boolean = False) As Precision3D.Camera3D
+
+    Dim Result As Precision3D.Camera3D
+    Dim Rotation As Precision3D.Vector3
+    Dim Offset As Precision3D.Vector3
+    Dim RightValue As Precision3D.Vector3
+    Dim UpValue As Precision3D.Vector3
+    Dim Forward As Precision3D.Vector3
+    Dim Pan As Precision3D.Vector3
+    Dim Valid As Boolean
+
+    Result = BaseCamera
+    Rotation = Precision3D.Vector(-Value.OrbitPitch, -Value.OrbitYaw, 0.0)
+    Offset = Math3D.Rotate(Math3D.Subtract(BaseCamera.Position, BaseCamera.Target), Rotation)
+    UpValue = Math3D.Rotate(BaseCamera.UpDirection, Rotation)
+    Pan = Precision3D.Vector(Value.PanX, Value.PanY, 0.0)
+
+    If ScreenSpace Then
+
+        RightValue = Math3D.Rotate(Precision3D.Vector(1.0, 0.0, 0.0), Rotation)
+        Valid = Math3D.TryNormalize(Math3D.Scale(Offset, -1.0), Forward)
+        Valid = Math3D.TryNormalize(Math3D.Cross(Forward, RightValue), UpValue) And Valid
+
+        If Not Valid Then
+            Return BaseCamera
+        End If
+
+        Pan = Math3D.Add(Math3D.Scale(RightValue, Value.PanX), Math3D.Scale(UpValue, Value.PanY))
+
+    End If
+
+    Result.Target = Math3D.Add(BaseCamera.Target, Pan)
+    Result.Position = Math3D.Add(Result.Target, Offset)
+    Result.UpDirection = UpValue
+    Result.FovDegrees = Clamp(BaseCamera.FovDegrees + Value.Zoom, 18.0, 120.0)
+
+    Return Result
+
+End Function
+
+Public Function ApplyScreenSpaceCameraControls(BaseCamera As Precision3D.Camera3D,
+    Value As Controls) As Precision3D.Camera3D
+
+    Dim Result As Precision3D.Camera3D
+
+    Result = ApplyCameraControls(BaseCamera, Value, True)
+
+    Return Result
+
+End Function
+
+Private Function FocalRatio(FovDegrees As Double) As Double
+
+    Dim HalfFov As Double
+    Dim Result As Double
+
+    HalfFov = Math3D.Radians(FovDegrees * 0.5)
+    Result = Cos(HalfFov) / (2.0 * Sin(HalfFov))
+
+    Return Result
+
+End Function
+
+Public Function AutoFit(Value As CharacterViewer.Profile, Bounds As Character3D.Bounds3D,
+    Optional ViewportWidth As Number = 0, Optional ViewportHeight As Number = 0,
+    Optional FovDegrees As Double = 55.0) As Framing
+
+    Dim Result As Framing
+    Dim Scale As Double
+    Dim PaddedHeight As Double
+    Dim PaddedWidth As Double
+    Dim Distance As Double
+    Dim ProjectionRatio As Double
+    Dim Aspect As Double
+
+    If (Not CharacterViewer.ValidateProfile(Value) Or
+        Not Bounds.Valid Or
+        Bounds.Size.Y <= 0) Then
+        Return Result
+    End If
+
+    Result.ScalePercent = Min(10000, Max(1, Value.DesiredWorldHeight * 100000 / Bounds.Size.Y))
+    Scale = ToDouble(Result.ScalePercent) / 100000.0
+    Result.PositionX = -ToDouble(Bounds.Center.X) * Scale
+    Result.PositionY = -ToDouble(Bounds.Minimum.Y) * Scale + ToDouble(Value.GroundOffset)
+    Result.PositionZ = -ToDouble(Bounds.Center.Z) * Scale
+    Result.FittedHeight = ToDouble(Bounds.Size.Y) * Scale
+    Result.FittedWidth = ToDouble(Max(Bounds.Size.X, Bounds.Size.Z)) * Scale
+    PaddedHeight = Result.FittedHeight * (1.0 + ToDouble(Value.MarginPercent) / 100.0)
+    PaddedWidth = Result.FittedWidth * (1.0 + ToDouble(Value.MarginPercent) / 100.0)
+    Result.TargetY = Result.FittedHeight * 0.5
+    Result.CameraY = Result.TargetY
+    Distance = PaddedHeight * 1.5
+
+    If ViewportWidth > 0 And ViewportHeight > 0 Then
+
+        ProjectionRatio = FocalRatio(Clamp(FovDegrees, 10.0, 160.0))
+        Aspect = ToDouble(ViewportWidth) / ToDouble(ViewportHeight)
+        Distance = Max(Distance, Max(PaddedHeight * ProjectionRatio, PaddedWidth * ProjectionRatio / Aspect))
+
+    End If
+
+    Result.CameraZ = -Distance
+    Result.FloorWidth = ToNumber(Ceiling(Max(400.0, PaddedHeight * 4.0)))
+    Result.FloorDepth = ToNumber(Ceiling(Max(320.0, PaddedHeight * 3.0)))
+    Result.PanXLimit = Max(40.0, PaddedHeight * 0.5)
+    Result.PanYLimit = Max(30.0, PaddedHeight / 3.0)
+    Result.ShadowWidth = ToNumber(Ceiling(Max(200.0, PaddedHeight * 2.0)))
+    Result.ShadowDepth = ToNumber(Ceiling(Max(160.0, PaddedHeight * 1.5)))
+    Result.ShadowNear = 1
+    Result.ShadowFar = ToNumber(Ceiling(Max(400.0, PaddedHeight * 3.0)))
+    Result.Valid = True
+
+    Return Result
+
+End Function
+
+Public Sub InitializeZoom(ByRef Value As ZoomState, CurrentDegrees As Number,
+    MinimumDegrees As Number, MaximumDegrees As Number, RatePerSecond1000 As Number)
+
+    Value.Minimum = ToDouble(MinimumDegrees)
+    Value.Maximum = ToDouble(MaximumDegrees)
+    Value.Current = Clamp(ToDouble(CurrentDegrees), Value.Minimum, Value.Maximum)
+    Value.Target = Value.Current
+    Value.RatePerSecond = ToDouble(Min(360000, Max(1000, RatePerSecond1000))) / 1000.0
+
+End Sub
+
+Public Sub AdjustZoomTarget(ByRef Value As ZoomState, WheelDelta As Number, StepDegrees As Number)
+
+    Value.Target = Clamp(Value.Target - ToDouble(WheelDelta) * ToDouble(StepDegrees), Value.Minimum, Value.Maximum)
+
+End Sub
+
+Public Function AdvanceZoom(ByRef Value As ZoomState, ElapsedMilliseconds As Number) As Boolean
+
+    Dim Advance As Double
+
+    If ElapsedMilliseconds < 0 Or ElapsedMilliseconds > 1000 Then
+        Return False
+    End If
+
+    Advance = Value.RatePerSecond * ToDouble(ElapsedMilliseconds) / 1000.0
+    Value.Current = Value.Current + Clamp(Value.Target - Value.Current, -Advance, Advance)
+
+    Return True
+
+End Function
+
+Private Function Basis(Camera As Precision3D.Camera3D, ByRef Forward As Precision3D.Vector3,
+    ByRef RightValue As Precision3D.Vector3, ByRef UpValue As Precision3D.Vector3) As Boolean
+
+    Dim Valid As Boolean
+
+    Valid = Math3D.TryNormalize(Math3D.Subtract(Camera.Target, Camera.Position), Forward)
+    Valid = Math3D.TryNormalize(Math3D.Cross(Camera.UpDirection, Forward), RightValue) And Valid
+    Valid = Math3D.TryNormalize(Math3D.Cross(Forward, RightValue), UpValue) And Valid
+
+    Return Valid
+
+End Function
+
+Public Function ProjectViewerPoint(Point As Precision3D.Vector3, Camera As Precision3D.Camera3D,
+    ViewWidth As Number, ViewHeight As Number) As ProjectedPoint
+
+    Dim Result As ProjectedPoint
+    Dim Forward As Precision3D.Vector3
+    Dim RightValue As Precision3D.Vector3
+    Dim UpValue As Precision3D.Vector3
+    Dim Relative As Precision3D.Vector3
+    Dim FocalLength As Double
+
+    If (ViewWidth < 40 Or
+        ViewHeight < 40 Or
+        Camera.FovDegrees <= 0.0 Or
+        Camera.FovDegrees >= 180.0) Then
+        Return Result
+    End If
+
+    If Not Basis(Camera, Forward, RightValue, UpValue) Then
+        Return Result
+    End If
+
+    Relative = Math3D.Subtract(Point, Camera.Position)
+    Result.Depth = Math3D.Dot(Relative, Forward)
+
+    If Result.Depth < Camera.NearPlane Then
+        Return Result
+    End If
+
+    FocalLength = ToDouble(ViewHeight) * FocalRatio(Camera.FovDegrees)
+    Result.X = ToDouble(ViewWidth) * 0.5 + Math3D.Dot(Relative, RightValue) * FocalLength / Result.Depth
+    Result.Y = ToDouble(ViewHeight) * 0.5 - Math3D.Dot(Relative, UpValue) * FocalLength / Result.Depth
+    Result.Visible = True
+
+    Return Result
+
+End Function
+
+Public Function CursorPointAtDepth(Camera As Precision3D.Camera3D,
+    CursorX As Number, CursorY As Number, Depth As Double,
+    ViewWidth As Number, ViewHeight As Number) As Precision3D.Vector3
+
+    Dim Result As Precision3D.Vector3
+    Dim Forward As Precision3D.Vector3
+    Dim RightValue As Precision3D.Vector3
+    Dim UpValue As Precision3D.Vector3
+    Dim FocalLength As Double
+    Dim Horizontal As Double
+    Dim Vertical As Double
+
+    Result = Camera.Target
+
+    If (ViewWidth < 40 Or
+        ViewHeight < 40 Or
+        Camera.FovDegrees <= 0.0 Or
+        Camera.FovDegrees >= 180.0 Or
+        Depth < Camera.NearPlane) Then
+        Return Result
+    End If
+
+    If Not Basis(Camera, Forward, RightValue, UpValue) Then
+        Return Result
+    End If
+
+    FocalLength = ToDouble(ViewHeight) * FocalRatio(Camera.FovDegrees)
+    Horizontal = (ToDouble(CursorX) - ToDouble(ViewWidth) * 0.5) * Depth / FocalLength
+    Vertical = (ToDouble(ViewHeight) * 0.5 - ToDouble(CursorY)) * Depth / FocalLength
+    Result = Math3D.Add(Camera.Position, Math3D.Add(Math3D.Scale(Forward, Depth),
+        Math3D.Add(Math3D.Scale(RightValue, Horizontal), Math3D.Scale(UpValue, Vertical))))
+
+    Return Result
+
+End Function
+
+Public Function KeepCursorAnchor(Camera As Precision3D.Camera3D,
+    Anchor As Precision3D.Vector3, CursorX As Number, CursorY As Number, Depth As Double,
+    ViewWidth As Number, ViewHeight As Number) As Precision3D.Camera3D
+
+    Dim Result As Precision3D.Camera3D
+    Dim Translation As Precision3D.Vector3
+
+    Result = Camera
+    Translation = Math3D.Subtract(Anchor,
+        CursorPointAtDepth(Camera, CursorX, CursorY, Depth, ViewWidth, ViewHeight))
+    Result.Position = Math3D.Add(Result.Position, Translation)
+    Result.Target = Math3D.Add(Result.Target, Translation)
+
+    Return Result
+
+End Function
+
+''' Whole logical pixels are a display boundary; the camera/world inputs stay continuous.
+Public Function ProjectPixel(Point As Precision3D.Vector3, Camera As Precision3D.Camera3D,
+    ViewWidth As Number, ViewHeight As Number) As Core.ProjectedPoint3D
+
+    Dim Projected As ProjectedPoint
+    Dim Result As Core.ProjectedPoint3D
+
+    Projected = ProjectViewerPoint(Point, Camera, ViewWidth, ViewHeight)
+
+    If Projected.Visible Then
+
+        Result.X = ToNumber(Round(Projected.X))
+        Result.Y = ToNumber(Round(Projected.Y))
+        Result.Depth = ToNumber(Round(Projected.Depth))
+        Result.Visible = True
+
+    End If
+
+    Return Result
+
+End Function
+
+Public Function WorldSizeForPixels(Pixels As Number, Depth As Double,
+    FovDegrees As Double, ViewHeight As Number) As Double
+
+    Dim Result As Double
+
+    If (ViewHeight > 0 And
+        FovDegrees > 0.0 And
+        FovDegrees < 180.0) Then
+        Result = ToDouble(Pixels) * Depth / (ToDouble(ViewHeight) * FocalRatio(FovDegrees))
+    End If
+
+    Return Result
+
+End Function
+
+Public Function ProjectTransformGizmo(Origin As Precision3D.Vector3, WorldSize As Number,
+    Camera As Precision3D.Camera3D, ViewWidth As Number, ViewHeight As Number) As CharacterViewer.TransformGizmo
+
+    Dim Result As CharacterViewer.TransformGizmo
+    Dim Size As Double
+
+    Size = ToDouble(Min(1000, Max(1, WorldSize)))
+    Result.Origin = ProjectPixel(Origin, Camera, ViewWidth, ViewHeight)
+    Result.XAxis = ProjectPixel(Math3D.Add(Origin, Precision3D.Vector(Size, 0.0, 0.0)),
+        Camera, ViewWidth, ViewHeight)
+    Result.YAxis = ProjectPixel(Math3D.Add(Origin, Precision3D.Vector(0.0, Size, 0.0)),
+        Camera, ViewWidth, ViewHeight)
+    Result.ZAxis = ProjectPixel(Math3D.Add(Origin, Precision3D.Vector(0.0, 0.0, Size)),
+        Camera, ViewWidth, ViewHeight)
+    Result.Visible = Result.Origin.Visible And Result.XAxis.Visible And Result.YAxis.Visible And Result.ZAxis.Visible
+
+    Return Result
+
+End Function
+
+Public Function ProjectTransformRingPoint(Origin As Precision3D.Vector3,
+    Axis As Number, Segment As Number, SegmentCount As Number, WorldRadius As Number,
+    Camera As Precision3D.Camera3D, ViewWidth As Number, ViewHeight As Number) As Core.ProjectedPoint3D
+
+    Dim Point As Precision3D.Vector3
+    Dim Angle As Double
+    Dim FirstOffset As Double
+    Dim SecondOffset As Double
+    Dim Result As Core.ProjectedPoint3D
+
+    If SegmentCount < 8 Or SegmentCount > 128 Then
+        Return Result
+    End If
+
+    Angle = ToDouble(Segment Mod SegmentCount) * Math3D.PI * 2.0 / ToDouble(SegmentCount)
+    FirstOffset = ToDouble(Min(1000, Max(1, WorldRadius))) * Cos(Angle)
+    SecondOffset = ToDouble(Min(1000, Max(1, WorldRadius))) * Sin(Angle)
+    Point = Origin
+
+    If Axis = 0 Then
+        Point.Y = Point.Y + FirstOffset
+        Point.Z = Point.Z + SecondOffset
+    Else If Axis = 1 Then
+        Point.X = Point.X + FirstOffset
+        Point.Z = Point.Z + SecondOffset
+    Else
+        Point.X = Point.X + FirstOffset
+        Point.Y = Point.Y + SecondOffset
+    End If
+
+    Result = ProjectPixel(Point, Camera, ViewWidth, ViewHeight)
+
+    Return Result
+
+End Function
+
+Public Sub KeepCameraAboveGround(ByRef Camera As Precision3D.Camera3D, MinimumY As Double)
+
+    Camera.Position.Y = Max(Camera.Position.Y, MinimumY)
+
+End Sub
+
+Private Function RotationAxisHit(
+    Origin As Precision3D.Vector3,
+    Axis As Number,
+    PointerX As Number,
+    PointerY As Number,
+    WorldRadius As Number,
+    Camera As Precision3D.Camera3D,
+    ViewWidth As Number,
+    ViewHeight As Number,
+    SegmentCount As Number,
+    HitRadius As Number
+) As Boolean
+
+    Dim Segment As Number
+    Dim StartPoint As Core.ProjectedPoint3D
+    Dim EndPoint As Core.ProjectedPoint3D
+
+    For Segment = 0 To SegmentCount - 1
+
+        StartPoint = ProjectTransformRingPoint(Origin, Axis, Segment,
+            SegmentCount, WorldRadius, Camera, ViewWidth, ViewHeight)
+        EndPoint = ProjectTransformRingPoint(Origin, Axis, Segment + 1,
+            SegmentCount, WorldRadius, Camera, ViewWidth, ViewHeight)
+
+        If (StartPoint.Visible And
+            EndPoint.Visible And
+            CharacterViewer.PointerNearSegment(PointerX, PointerY, StartPoint.X, StartPoint.Y,
+                EndPoint.X, EndPoint.Y, HitRadius)) Then
+            Return True
+        End If
+
+    End For
+
+    Return False
+
+End Function
+
+''' Returns the clicked rotation ring, preferring the currently selected axis.
+Public Function TransformGizmoRotationAxisAtPointer(
+    Origin As Precision3D.Vector3,
+    PointerX As Number,
+    PointerY As Number,
+    PreferredAxis As Number,
+    WorldRadius As Number,
+    Camera As Precision3D.Camera3D,
+    ViewWidth As Number,
+    ViewHeight As Number,
+    Optional SegmentCount As Number = 32,
+    Optional HitRadius As Number = 7
+) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Axis As Number
+
+    If (PreferredAxis >= 0 And
+        PreferredAxis <= 2 And
+        RotationAxisHit(Origin, PreferredAxis, PointerX, PointerY,
+            WorldRadius, Camera, ViewWidth, ViewHeight, SegmentCount, HitRadius)) Then
+        Return PreferredAxis
+    End If
+
+    For Axis = 0 To 2
+
+        If (Axis <> PreferredAxis And
+            RotationAxisHit(Origin, Axis, PointerX, PointerY,
+                WorldRadius, Camera, ViewWidth, ViewHeight, SegmentCount, HitRadius)) Then
+            Return Axis
+        End If
+
+    End For
+
+    ReturnValue = -1
+
+    Return ReturnValue
+
+End Function
+
+End Module

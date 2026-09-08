@@ -279,10 +279,6 @@ internal sealed class WebEmitter
 
     private string InitialValue(VariableSymbol symbol)
     {
-        if (symbol.IsConstant && symbol.Type == SmileType.Number && symbol.ConstantValue is long integer &&
-            integer is > MaxSafeInteger or < -MaxSafeInteger)
-            throw new WebTargetException(symbol.Source, "SML5102", symbol.DeclarationSpan,
-                "Web target Number constants must be within JavaScript's safe integer range.");
         if (symbol.IsArray)
             return symbol.Type is RecordTypeSymbol
                 ? $"smile.array([{string.Join(", ", symbol.ArrayDimensions)}], () => {DefaultValue(symbol.Type)})"
@@ -1070,9 +1066,19 @@ internal sealed class WebEmitter
 
     private string ReadVariable(SyntaxToken identifier) => ReadVariable(ResolveVariable(identifier));
 
-    private string ReadVariable(VariableSymbol symbol) => symbol.ParameterMode == ParameterPassingMode.ByRef
-        ? _variableNames[symbol] + ".get()"
-        : _variableNames[symbol];
+    private string ReadVariable(VariableSymbol symbol)
+    {
+        // Wide compile-time Number constants may define exact Enum values.
+        // Enforce the Web Number range when read as a runtime Number, not merely
+        // when declaring an otherwise compile-time-only constant.
+        if (symbol.IsConstant && symbol.Type == SmileType.Number && symbol.ConstantValue is long integer &&
+            integer is > MaxSafeInteger or < -MaxSafeInteger)
+            throw new WebTargetException(symbol.Source, "SML5102", symbol.DeclarationSpan,
+                "Web target Number constants must be within JavaScript's safe integer range.");
+        return symbol.ParameterMode == ParameterPassingMode.ByRef
+            ? _variableNames[symbol] + ".get()"
+            : _variableNames[symbol];
+    }
 
     private string WriteVariable(SyntaxToken identifier, string value) =>
         WriteVariable(ResolveVariable(identifier), value);

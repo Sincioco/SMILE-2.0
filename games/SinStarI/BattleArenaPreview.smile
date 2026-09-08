@@ -7,7 +7,9 @@ Import Smile.Simple3D.Arena3D As Arena3D
 Import Smile.Simple3D.Character3D As Character3D
 Import Smile.Simple3D.Core As Core
 Import Smile.Simple3D.Graphics3D As Graphics3D
-Import Smile.Simple3D.Interaction As Interaction
+Import Smile.Simple3D.PrecisionCamera3D As Interaction
+Import Smile.Simple3D.Precision3D As Precision3D
+Import Smile.Simple3D.PrecisionMath3D As Math3D
 Import Smile.Simple3D.Scene3D As Scene3D
 Import Smile.Simple3D.StaticBackdrop3D As StaticBackdrop3D
 
@@ -20,13 +22,13 @@ Private Const MAX_FRAME_MILLISECONDS = 50
 Private Dim Arena As Arena3D.ArenaFloor
 Private Dim Arin As Character3D.Actor
 Private Dim Backdrop As StaticBackdrop3D.Backdrop
-Private Dim BaseCamera As Core.Camera3D
-Private Dim Camera As Core.Camera3D
-Private Dim CameraControls As Core.CameraControl3D
+Private Dim BaseCamera As Precision3D.Camera3D
+Private Dim Camera As Precision3D.Camera3D
+Private Dim CameraControls As Interaction.Controls
 Private Dim Ready As Boolean
 Private Dim Active As Boolean
 Private Dim AutoOrbit As Boolean
-Private Dim AutoOrbitYaw1000 As Number
+Private Dim AutoOrbitYaw As Double
 Private Dim ReflectionsEnabled As Boolean
 Private Dim PreviousTime As Number
 
@@ -35,21 +37,21 @@ Public Sub Initialize()
     Active = False
     Ready = False
     AutoOrbit = True
-    AutoOrbitYaw1000 = 0
+    AutoOrbitYaw = 0.0
     ReflectionsEnabled = True
 
 End Sub
 
 Public Sub Enter()
 
-    Dim Bounds As Character3D.Bounds3D
-    Dim ActorX As Number
-    Dim ActorZ As Number
+    Dim Bounds As Character3D.PreciseBounds3D
+    Dim ActorX As Double
+    Dim ActorZ As Double
     Dim CacheReady As Boolean
-    Dim FootLeft As Core.Vector3
-    Dim FootRight As Core.Vector3
-    Dim Focus As Core.Vector3
-    Dim GroundingOffset As Number
+    Dim FootLeft As Precision3D.Vector3
+    Dim FootRight As Precision3D.Vector3
+    Dim Focus As Precision3D.Vector3
+    Dim GroundingOffset As Double
 
     If Active Then
         Call Shutdown()
@@ -66,22 +68,22 @@ Public Sub Enter()
     End If
 
     Ready = CacheReady And Ready
-    Camera = Graphics3D.DefaultCamera()
-    Camera.Position.X = -10
-    Camera.Position.Y = 82
-    Camera.Position.Z = -240
-    Camera.Target.X = -80
-    Camera.Target.Y = 40
-    Camera.Target.Z = 20
-    Camera.FovDegrees = 46
-    Camera.NearPlane = 1
-    Camera.FarPlane = 4000
+    Camera = Precision3D.FromCamera(Graphics3D.DefaultCamera())
+    Camera.Position.X = -10.0
+    Camera.Position.Y = 82.0
+    Camera.Position.Z = -240.0
+    Camera.Target.X = -80.0
+    Camera.Target.Y = 40.0
+    Camera.Target.Z = 20.0
+    Camera.FovDegrees = 46.0
+    Camera.NearPlane = 1.0
+    Camera.FarPlane = 4000.0
     BaseCamera = Camera
 
     Call Interaction.ResetCameraControls(CameraControls)
 
     AutoOrbit = True
-    AutoOrbitYaw1000 = 0
+    AutoOrbitYaw = 0.0
     Arena = Arena3D.Create(560, 420, 24, 150, 255, 40, 2, True)
     Ready = Arena.Ready And Ready
     Backdrop = StaticBackdrop3D.Create("Assets\Sin Star - Title Screen - Background.png")
@@ -111,17 +113,17 @@ Public Sub Enter()
         100
     ) And Ready
     Ready = Character3D.Update(Arin, 0) And Ready
-    Bounds = Character3D.WorldBounds(Arin, 0)
+    Bounds = Character3D.WorldBoundsPrecise(Arin)
 
     If Bounds.Valid Then
 
-        FootLeft = Character3D.SocketPosition(Arin, "FootLeft")
-        FootRight = Character3D.SocketPosition(Arin, "FootRight")
-        Focus = Character3D.SocketPosition(Arin, "Chest")
-        ActorX = -80 + (-80 - Focus.X)
-        ActorZ = 20 + (20 - Focus.Z)
-        GroundingOffset = 0 - Min(FootLeft.Y, FootRight.Y)
-        Ready = Character3D.Place(
+        Ready = Character3D.TrySocketPositionPrecise(Arin, "FootLeft", 0, False, FootLeft) And Ready
+        Ready = Character3D.TrySocketPositionPrecise(Arin, "FootRight", 0, False, FootRight) And Ready
+        Ready = Character3D.TrySocketPositionPrecise(Arin, "Chest", 0, False, Focus) And Ready
+        ActorX = -80.0 + (-80.0 - Focus.X)
+        ActorZ = 20.0 + (20.0 - Focus.Z)
+        GroundingOffset = 0.0 - Min(FootLeft.Y, FootRight.Y)
+        Ready = Character3D.PlacePrecise(
             Arin, ActorX, GroundingOffset, ActorZ) And Ready
 
     Else
@@ -177,25 +179,16 @@ Public Sub Update(Key As Number)
         CameraControls, Not PointerOverControl, True, True)
 
     If Interaction.CameraControlsDragging(CameraControls) Then
-
         AutoOrbit = False
-
     Else If AutoOrbit Then
+        AutoOrbitYaw = Math3D.WrapDegrees(
+            AutoOrbitYaw + ToDouble(ElapsedMilliseconds) * 18.0 / 1000.0)
 
-        AutoOrbitYaw1000 = AutoOrbitYaw1000 + ElapsedMilliseconds * 18
-
-        If AutoOrbitYaw1000 >= 360000 Then
-            AutoOrbitYaw1000 = AutoOrbitYaw1000 - 360000
-        End If
-
-        CameraControls.OrbitYaw = AutoOrbitYaw1000 / 1000
-
-    Else
-        CameraReady = Interaction.AdvanceCameraControls(
-            CameraControls, 1) And CameraReady
-
+        CameraControls.OrbitYaw = AutoOrbitYaw
     End If
 
+    CameraReady = Interaction.AdvanceCameraControls(
+        CameraControls, ElapsedMilliseconds, Not AutoOrbit) And CameraReady
     Camera = Interaction.ApplyCameraControls(BaseCamera, CameraControls)
     Ready = CameraReady And Ready
 
@@ -218,7 +211,7 @@ Public Sub Draw()
     Call Arena3D.SetReflectionsEnabled(Arena, ReflectionsEnabled)
 
     FrameReady = Arena3D.ConfigureForFrame(Arena, True)
-    FrameReady = Scene3D.Begin(Camera, 5, 9, 18) And FrameReady
+    FrameReady = Scene3D.BeginPrecise(Camera, 5, 9, 18) And FrameReady
 
     If FrameReady Then
 

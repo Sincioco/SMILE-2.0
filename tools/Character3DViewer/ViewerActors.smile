@@ -5,7 +5,9 @@ Option Explicit
 
 Import Smile.Simple3D.Character3D As Character3D
 Import Smile.Simple3D.CharacterViewer As CharacterViewer
+Import Smile.Simple3D.PrecisionCamera3D As PrecisionCamera
 Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Precision3D As Precision3D
 Import Smile.Simple3D.Graphics3D As Graphics3D
 Import Smile.Tools.Character3DViewerProfiles As ViewerProfiles
 
@@ -14,7 +16,7 @@ Private Const WEAPON_PART_INDEX = 1
 
 Public Type Context
     Actor As Character3D.Actor
-    Frame As CharacterViewer.Framing
+    Frame As PrecisionCamera.Framing
     Profile As Number
     Clip As Number
     KeyBase As Number
@@ -81,7 +83,7 @@ Public Function LoadPrimary(Profile As CharacterViewer.Profile) As Character3D.A
 End Function
 
 Public Function PreparePrimaryPresentation(ByRef Value As Character3D.Actor,
-    Frame As CharacterViewer.Framing, ProfileIndex As Number,
+    Frame As PrecisionCamera.Framing, ProfileIndex As Number,
     DragonInspection As Boolean, DragonAvailable As Boolean,
     DragonX As Number, DragonY As Number, DragonZ As Number,
     DragonRotationY As Number, ModelForwardYawOffset As Number,
@@ -90,7 +92,7 @@ Public Function PreparePrimaryPresentation(ByRef Value As Character3D.Actor,
     Dim Result As Boolean
 
     Result = Character3D.SetScale(Value, Frame.ScalePercent)
-    Result = Character3D.Place(
+    Result = Character3D.PlacePrecise(
         Value,
         Frame.PositionX,
         Frame.PositionY,
@@ -115,7 +117,7 @@ Public Function PreparePrimaryPresentation(ByRef Value As Character3D.Actor,
 End Function
 
 Public Function Capture(Actor As Character3D.Actor,
-    Frame As CharacterViewer.Framing, Profile As Number, Clip As Number,
+    Frame As PrecisionCamera.Framing, Profile As Number, Clip As Number,
     KeyBase As Number, WeaponWrist As Number, ShieldWrist As Number,
     WeaponGlow As Core.Object3D, ShieldGlow As Core.Object3D,
     CalibrationAvailable As Boolean, GlowAvailable As Boolean,
@@ -143,7 +145,7 @@ Public Function Capture(Actor As Character3D.Actor,
 End Function
 
 Public Sub Apply(Value As Context, ByRef Actor As Character3D.Actor,
-    ByRef Frame As CharacterViewer.Framing, ByRef Profile As Number,
+    ByRef Frame As PrecisionCamera.Framing, ByRef Profile As Number,
     ByRef Clip As Number, ByRef KeyBase As Number, ByRef WeaponWrist As Number,
     ByRef ShieldWrist As Number, ByRef WeaponGlow As Core.Object3D,
     ByRef ShieldGlow As Core.Object3D, ByRef CalibrationAvailable As Boolean,
@@ -186,7 +188,7 @@ Public Function LoadContext(ProfileIndex As Number, KeyBase As Number) As Contex
     End If
 
     Bounds = Character3D.LocalBounds(Result.Actor)
-    Result.Frame = CharacterViewer.AutoFit(Profile, Bounds)
+    Result.Frame = PrecisionCamera.AutoFit(Profile, Bounds)
     Result.Ready = Result.Frame.Valid
     Result.Ready = Character3D.SetScale(
         Result.Actor, Result.Frame.ScalePercent) And Result.Ready
@@ -221,16 +223,16 @@ Public Function FaceToward(ByRef Value As Character3D.Actor,
     TargetX As Number, TargetY As Number, TargetZ As Number,
     ModelForwardYawOffset As Number, YawAdjustment As Number) As Boolean
 
-    Dim FacingYaw As Number
+    Dim Facing As Precision3D.Vector3
     Dim Result As Boolean
 
-    Result = Character3D.LookAt(Value, TargetX, TargetY, TargetZ)
+    Result = Character3D.LookAtPrecise(Value, ToDouble(TargetX), ToDouble(TargetY), ToDouble(TargetZ))
 
     If Result Then
 
-        FacingYaw = Character3D.RotationY(Value) + ModelForwardYawOffset
-        FacingYaw = FacingYaw + YawAdjustment
-        Result = Character3D.Rotate(Value, 0, FacingYaw, 0)
+        Result = Character3D.TryRotation(Value, Facing)
+        Facing.Y = Facing.Y + ToDouble(ModelForwardYawOffset) + ToDouble(YawAdjustment)
+        Result = Character3D.RotatePrecise(Value, 0.0, Facing.Y, 0.0) And Result
 
     End If
 
@@ -308,11 +310,11 @@ End Function
 
 Public Function ApplyPresentationOffset(ByRef Value As Character3D.Actor,
     ProfileIndex As Number, Clip As Number,
-    Frame As CharacterViewer.Framing) As Boolean
+    Frame As PrecisionCamera.Framing) As Boolean
 
     Dim AnimationFrame As Number
     Dim Offset1000 As Number
-    Dim OffsetY As Number
+    Dim OffsetY As Double
     Dim Result As Boolean
     Dim SampleRate As Number
 
@@ -332,8 +334,8 @@ Public Function ApplyPresentationOffset(ByRef Value As Character3D.Actor,
         Character3D.ClipSampleCount(Value, Clip) - 1, Max(0, AnimationFrame))
     Offset1000 = ViewerProfiles.ClipVerticalOffset1000(
         ProfileIndex, Character3D.ClipName(Value, Clip), AnimationFrame)
-    OffsetY = Offset1000 * Frame.ScalePercent / 100000
-    Result = Character3D.Place(Value, Frame.PositionX,
+    OffsetY = ToDouble(Offset1000) * ToDouble(Frame.ScalePercent) / 100000.0
+    Result = Character3D.PlacePrecise(Value, Frame.PositionX,
         Frame.PositionY + OffsetY, Frame.PositionZ)
 
     Return Result

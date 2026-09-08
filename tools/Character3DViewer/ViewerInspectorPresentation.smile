@@ -197,7 +197,7 @@ Public Function CaptureStatus(ByRef Actor As Character3D.Actor,
             Playback, Actor, Session.ProfileIndex, AnimationCycleMilliseconds)
     End If
 
-    Result.ZoomDegrees = CharacterViewer.ZoomDegrees(Camera.Zoom)
+    Result.ZoomDegrees = ToNumber(Round(Camera.Zoom.Current))
     Result.FramesPerSecond = ViewerTiming.FramesPerSecond(FrameRate)
     Result.SelectedPresentationIndex = ViewerPlayback.PresentationIndexForRuntimeClip(
         Actor, Session.ProfileIndex, Playback.SelectedClip)
@@ -247,9 +247,9 @@ Public Function CaptureEffects(ByRef Session As ViewerSession.State,
     Result.FlamePlaying = Not Effects.FlamePaused
     Result.ShieldFireStyleLabel = ViewerEffects.ShieldFireStyleLabel(Effects)
     Result.ShieldFlameStyle = Effects.ShieldFlameStyle
-    Result.HorizontalOrbit = Camera.Controls.OrbitYaw
-    Result.VerticalOrbit = Camera.Controls.OrbitPitch
-    Result.ZoomDegrees = CharacterViewer.ZoomDegrees(Camera.Zoom)
+    Result.HorizontalOrbit = ToNumber(Round(Camera.Controls.OrbitYaw))
+    Result.VerticalOrbit = ToNumber(Round(Camera.Controls.OrbitPitch))
+    Result.ZoomDegrees = ToNumber(Round(Camera.Zoom.Current))
     Result.ZoomInLimit = ZoomInLimit
     Result.ZoomOutLimit = ZoomOutLimit
     Result.FitLocked = Camera.FitLocked

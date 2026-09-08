@@ -11,11 +11,19 @@ Private Const COMMAND_TRANSFORM = 2
 Private Const COMMAND_POSITION = 3
 Private Const COMMAND_ROTATION = 4
 Private Const COMMAND_SCALE = 5
+Private Const COMMAND_PIVOT = 6
+Private Const COMMAND_POINT_LIGHT = 7
+Private Const COMMAND_RIBBON_POINT_BASE = 10000
+Private Const COMMAND_PARTICLE_BASE = 20000
+Private Const COMMAND_GPU_SPAWN_BASE = 2000000
 Private Const QUERY_CAMERA = 1
 Private Const QUERY_OBJECT = 2
 Private Const QUERY_SOCKET = 3
 Private Const QUERY_REFLECTION = 4
 Private Const QUERY_SUBMITTED = 5
+Private Const QUERY_RIBBON_POINT = 6
+Private Const QUERY_PARTICLE = 7
+Private Const QUERY_COMMITTED_PARTICLE = 8
 
 ''' World units, or degrees when used as an Euler rotation.
 Public Type Vector3
@@ -86,6 +94,136 @@ Public Function FromCamera(Value As Core.Camera3D) As Camera3D
         End If
 
     End If
+
+    Return Result
+
+End Function
+
+Public Function SetPivotRotation(Object As Core.Object3D, Pivot As Vector3,
+    Rotation As Vector3) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Renderer3DDouble(COMMAND_PIVOT, Object.Handle, Pivot.X, Pivot.Y, Pivot.Z,
+        Rotation.X, Rotation.Y, Rotation.Z, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0) <> 0
+
+    Return Result
+
+End Function
+
+''' Index travels in the integral command selector; texture U is normalized [0,1].
+Public Function SetRibbonPoint(Batch As Core.RibbonBatch3D, Index As Number,
+    LeftPoint As Vector3, RightPoint As Vector3, TextureU As Double) As Boolean
+
+    Dim Result As Boolean
+    Dim Command As Number
+
+    Command = COMMAND_RIBBON_POINT_BASE
+
+    If Index < 0 Or Index >= 8192 Then
+        Command = COMMAND_RIBBON_POINT_BASE - 1
+    Else
+        Command = Command + Index
+    End If
+
+    Result = Renderer3DDouble(Command, Batch.Handle, LeftPoint.X, LeftPoint.Y, LeftPoint.Z,
+        RightPoint.X, RightPoint.Y, RightPoint.Z, TextureU, 0.0, 0.0, 0.0, 0.0, 0.0) <> 0
+
+    Return Result
+
+End Function
+
+''' Particle and atlas indices stay Number; the existing batch owns staging and capture.
+Public Function SetParticle(Batch As Core.ParticleBatch3D, Index As Number,
+    Position As Vector3, Size As Double, RotationDegrees As Double, AtlasFrame As Number) As Boolean
+
+    Dim Command As Number
+    Dim Result As Boolean
+
+    Command = COMMAND_PARTICLE_BASE - 1
+
+    If (Index >= 0 And
+        Index < 4096 And
+        AtlasFrame >= 0 And
+        AtlasFrame < 256) Then
+        Command = COMMAND_PARTICLE_BASE + AtlasFrame * 4096 + Index
+    End If
+
+    Result = Renderer3DDouble(Command, Batch.Handle, Position.X, Position.Y, Position.Z,
+        Size, RotationDegrees, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0) <> 0
+
+    Return Result
+
+End Function
+
+''' The existing GPU system owns slots, spawn serials, staging and in-flight protection.
+Public Function SetGpuParticleSpawnKinematics(System As Core.GpuParticleSystem3D, Slot As Number,
+    Position As Vector3, Velocity As Vector3) As Boolean
+
+    Dim Command As Number
+    Dim Result As Boolean
+
+    Command = COMMAND_GPU_SPAWN_BASE - 1
+
+    If Slot >= 0 And Slot < 32768 Then
+        Command = COMMAND_GPU_SPAWN_BASE + Slot
+    End If
+
+    Result = Renderer3DDouble(Command, System.Handle, Position.X, Position.Y, Position.Z,
+        Velocity.X, Velocity.Y, Velocity.Z, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0) <> 0
+
+    Return Result
+
+End Function
+
+Public Function TryRibbonPoint(Batch As Core.RibbonBatch3D, Index As Number,
+    ByRef LeftPoint As Vector3, ByRef RightPoint As Vector3) As Boolean
+
+    Dim LeftCandidate As Vector3
+    Dim RightCandidate As Vector3
+
+    If Not TryVector(QUERY_RIBBON_POINT, Batch.Handle, Index, 0, LeftCandidate) Then
+        Return False
+    End If
+
+    If Not TryVector(QUERY_RIBBON_POINT, Batch.Handle, Index, 3, RightCandidate) Then
+        Return False
+    End If
+
+    LeftPoint = LeftCandidate
+    RightPoint = RightCandidate
+
+    Return True
+
+End Function
+
+Public Function TryParticlePosition(Batch As Core.ParticleBatch3D, Index As Number,
+    Committed As Boolean, ByRef Result As Vector3) As Boolean
+
+    Dim Query As Number
+    Dim Valid As Boolean
+
+    Query = QUERY_PARTICLE
+
+    If Committed Then
+        Query = QUERY_COMMITTED_PARTICLE
+    End If
+
+    Valid = TryVector(Query, Batch.Handle, Index, 0, Result)
+
+    Return Valid
+
+End Function
+
+Public Function SetPointLight(Slot As Number, Position As Vector3,
+    RedValue As Number, GreenValue As Number, BlueValue As Number,
+    IntensityPercent As Number, Range As Number) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Renderer3DDouble(COMMAND_POINT_LIGHT, Slot, Position.X, Position.Y, Position.Z,
+        ToDouble(RedValue), ToDouble(GreenValue), ToDouble(BlueValue),
+        ToDouble(IntensityPercent), ToDouble(Range), 0.0, 0.0, 0.0, 0.0) <> 0
 
     Return Result
 

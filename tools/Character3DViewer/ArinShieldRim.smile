@@ -6,28 +6,31 @@ Option Explicit
 Import Smile.Simple3D.Core As Core
 Import Smile.Simple3D.Graphics3D As Graphics3D
 Import Smile.Simple3D.Character3D As Character3D
-Import Smile.Simple3D.Math3D As Math3D
+Import Smile.Simple3D.PrecisionMath3D As Math3D
+Import Smile.Simple3D.Precision3D As Precision3D
 
 Private Dim Texture As Core.Texture3D
 Private Dim Material As Core.Material3D
 Private Dim Ribbons[3] As Core.RibbonBatch3D
-Private Dim Points[8] As Core.Vector3
+Private Dim Points[8] As Precision3D.Vector3
 Private Dim Names[8] As Text
 Private Dim Clock As Number
 Private Dim Visible As Boolean
 
-Public Sub Update(Actor As Character3D.Actor, Camera As Core.Camera3D, Elapsed As Number)
+Public Sub Update(Actor As Character3D.Actor, Camera As Precision3D.Camera3D, Elapsed As Number)
 
     Dim Index As Number
     Dim Layer As Number
     Dim PointIndex As Number
-    Dim Side As Core.Vector3
-    Dim Tangent As Core.Vector3
-    Dim View As Core.Vector3
-    Dim Center As Core.Vector3
+    Dim Side As Precision3D.Vector3
+    Dim Tangent As Precision3D.Vector3
+    Dim View As Precision3D.Vector3
+    Dim Center As Precision3D.Vector3
     Dim Width As Number
     Dim Opacity As Number
     Dim Ok As Boolean
+    Dim Normalized As Boolean
+    Dim WidthOffset As Precision3D.Vector3
 
     If Material.Handle = 0 Then
 
@@ -52,7 +55,7 @@ Public Sub Update(Actor As Character3D.Actor, Camera As Core.Camera3D, Elapsed A
     Ok = Material.Handle <> 0
 
     For Index = 0 To 7
-        Points[Index] = Character3D.SocketPosition(Actor, Names[Index], 0)
+        Ok = Character3D.TrySocketPositionPrecise(Actor, Names[Index], 0, False, Points[Index]) And Ok
     End For
 
     For Layer = 0 To 2
@@ -66,20 +69,15 @@ Public Sub Update(Actor As Character3D.Actor, Camera As Core.Camera3D, Elapsed A
             Center = Points[PointIndex]
             Tangent = Math3D.Subtract(Points[(PointIndex + 1) Mod 8], Points[(PointIndex + 7) Mod 8])
             View = Math3D.Subtract(Camera.Position, Center)
-            Tangent = Math3D.Normalize(Tangent)
-            View = Math3D.Normalize(View)
-            Side = Math3D.Cross(Tangent, View)
-            Side.X = Side.X / Core.FIXED_ONE
-            Side.Y = Side.Y / Core.FIXED_ONE
-            Side.Z = Side.Z / Core.FIXED_ONE
-            Side = Math3D.Normalize(Side)
-            Ok = Graphics3D.SetRibbonPoint3D(Ribbons[Layer], Index,
-                Center.X - Side.X * Width / Core.FIXED_ONE,
-                Center.Y - Side.Y * Width / Core.FIXED_ONE,
-                Center.Z - Side.Z * Width / Core.FIXED_ONE,
-                Center.X + Side.X * Width / Core.FIXED_ONE,
-                Center.Y + Side.Y * Width / Core.FIXED_ONE,
-                Center.Z + Side.Z * Width / Core.FIXED_ONE, 500) And Ok
+            Normalized = Math3D.TryNormalize(Math3D.Cross(Tangent, View), Side)
+
+            If Not Normalized Then
+                Side = Precision3D.Vector(1.0, 0.0, 0.0)
+            End If
+
+            WidthOffset = Math3D.Scale(Side, ToDouble(Width))
+            Ok = Precision3D.SetRibbonPoint(Ribbons[Layer], Index,
+                Math3D.Subtract(Center, WidthOffset), Math3D.Add(Center, WidthOffset), 0.5) And Ok
             Ok = Graphics3D.SetRibbonPointColor3D(Ribbons[Layer], Index,
                 255, 105 + (Clock / 80 + PointIndex * 11) Mod 40, 12, Opacity) And Ok
         End For
@@ -95,6 +93,8 @@ Public Sub Draw()
 
     Dim Layer As Number
     Dim Ok As Boolean
+    Dim Normalized As Boolean
+    Dim WidthOffset As Precision3D.Vector3
 
     If Not Visible Then
         Return

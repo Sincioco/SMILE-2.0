@@ -50,6 +50,7 @@ Call CheckPackagedCalibration()
 Call SelectCharacterTab(2)
 Call CalibrationCheck(Session.Ready And Not Session.ViewerError And Party.Ready,
     "Dragon loads both calibrated companions")
+Call CheckFractionalPartySubmission()
 Call CheckDragonFireContinuity()
 
 TestTransactionResult = ApplyActorPresentationCommand(
@@ -750,7 +751,7 @@ Sub CheckDragonFireContinuity()
     PreviousGeneration = DragonState.Breath.Generation
     PreviousAge = Fire.Value(10, DragonState.Breath)
     Effects.FlamePaused = True
-    ViewerCameraState.Live.Position.X = ViewerCameraState.Live.Position.X + 40
+    ViewerCameraState.Live.Position.X = ViewerCameraState.Live.Position.X + 40.0
 
     Call UpdateDragon()
     Call AdvanceTestSceneVfx()
@@ -973,6 +974,97 @@ Sub CheckPartyInspector()
     Call CalibrationCheck(ViewerCalibration.SavedJson(Calibration, Character) = SavedArinJson,
         "Companion and Dragon inspection never change Arin's saved keys")
     Call EndPartyInspector()
+
+End Sub
+
+Sub CheckFractionalPartySubmission()
+
+    Dim Trial As ViewerParty.State
+    Dim Partitioned As ViewerParty.State
+    Dim Actions As ViewerParty.FrameActions
+    Dim OtherActions As ViewerParty.FrameActions
+    Dim FirstFrame As PrecisionCamera.Framing
+    Dim FirstActor As Character3D.Actor
+    Dim FirstClip As Number
+    Dim FirstPosition As Precision3D.Vector3
+    Dim SecondPosition As Precision3D.Vector3
+    Dim FirstRotation As Precision3D.Vector3
+    Dim SecondRotation As Precision3D.Vector3
+    Dim Captured As Precision3D.Vector3
+    Dim Part As Core.Object3D
+    Dim Camera As Precision3D.Camera3D
+    Dim Expected As Double
+    Dim Ready As Boolean
+
+    Trial = Party
+    Trial.Enabled = True
+    Trial.Ready = True
+    Trial.Turn = 0
+    Trial.Stage = 0
+    Trial.Elapsed = 650
+    Trial.First.Home = Math3D.Vector(0, 0, 0)
+    Trial.First.Approach = Math3D.Vector(1, 0, 1)
+    Partitioned = Trial
+    Actions = ViewerParty.AdvanceChoreography(Trial, 163, True, False, 1200, 100, -1)
+    OtherActions = ViewerParty.AdvanceChoreography(Partitioned, 100, True, False, 1200, 100, -1)
+    OtherActions = ViewerParty.AdvanceChoreography(Partitioned, 63, True, False, 1200, 100, -1)
+    Expected = 163.0 / 650.0
+
+    Call CalibrationCheck(Abs(Actions.FirstPosition.X - Expected) < 1e-12 And
+        Actions.FirstPosition.X = OtherActions.FirstPosition.X And
+        Trial.Stage = Partitioned.Stage And Trial.Elapsed = Partitioned.Elapsed,
+        "Party approach retains fractions and equal elapsed partitions")
+
+    FirstActor = Party.DragonOpponent.Actor
+    FirstFrame = Party.DragonOpponent.Frame
+    FirstClip = Party.DragonOpponent.Clip
+    Ready = Character3D.TryPosition(FirstActor, FirstPosition)
+    Ready = Character3D.TryPosition(Trial.Companion.Actor, SecondPosition) And Ready
+    Ready = Character3D.TryRotation(FirstActor, FirstRotation) And Ready
+    Ready = Character3D.TryRotation(Trial.Companion.Actor, SecondRotation) And Ready
+
+    Call CalibrationCheck(Ready, "Fractional Party proof uses both live actor owners")
+    Call CalibrationCheck(ViewerParty.ApplyFrame(Trial, Actions, FirstActor, FirstFrame,
+        FirstClip, 100, -208, 70, -120, 180), "Party applies fractional approach")
+
+    Camera = Precision3D.FromCamera(Graphics3D.DefaultCamera())
+    Part.Handle = Character3D.PartObjectHandle(FirstActor, 0)
+
+    Call CalibrationCheck(Scene3D.BeginPrecise(Camera, 8, 12, 20), "Begin fractional Party capture")
+    Call CalibrationCheck(Character3D.Draw(FirstActor), "Submit the actual Party actor")
+    Call CalibrationCheck(Precision3D.TrySubmittedPosition(Part, 0, Captured) And
+        Abs(Captured.X - Expected) < 0.000001,
+        "Party fraction survives actual renderer capture")
+    Call CalibrationCheck(Scene3D.EndScene(), "End fractional Party capture")
+
+    Show Screen
+
+    Trial.Elapsed = 2500
+    Trial.Stage = 2
+    Actions = ViewerParty.AdvanceChoreography(Trial, 163, True, False, 1200, 100, -1)
+    Expected = 1.0 - 163.0 / 700.0
+
+    Call CalibrationCheck(Abs(Actions.FirstPosition.X - Expected) < 1e-12,
+        "Party return retains its fractional interpolation")
+    Call CalibrationCheck(ViewerParty.ApplyFrame(Trial, Actions, FirstActor, FirstFrame,
+        FirstClip, 100, -208, 70, -120, 180), "Party applies fractional return")
+    Call CalibrationCheck(Scene3D.BeginPrecise(Camera, 8, 12, 20), "Begin Party return capture")
+    Call CalibrationCheck(Character3D.Draw(FirstActor), "Submit Party return")
+    Call CalibrationCheck(Precision3D.TrySubmittedPosition(Part, 0, Captured) And
+        Abs(Captured.X - Expected) < 0.000001,
+        "Return fraction survives actual renderer capture")
+    Call CalibrationCheck(Scene3D.EndScene(), "End Party return capture")
+
+    Show Screen
+
+    Ready = Character3D.PlacePrecise(FirstActor, FirstPosition.X, FirstPosition.Y, FirstPosition.Z)
+    Ready = Character3D.PlacePrecise(Trial.Companion.Actor,
+        SecondPosition.X, SecondPosition.Y, SecondPosition.Z) And Ready
+    Ready = Character3D.RotatePrecise(FirstActor, FirstRotation.X, FirstRotation.Y, FirstRotation.Z) And Ready
+    Ready = Character3D.RotatePrecise(Trial.Companion.Actor,
+        SecondRotation.X, SecondRotation.Y, SecondRotation.Z) And Ready
+
+    Call CalibrationCheck(Ready, "Restore both actor transforms without touching calibration")
 
 End Sub
 

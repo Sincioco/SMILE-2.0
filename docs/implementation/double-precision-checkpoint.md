@@ -1,172 +1,172 @@
-# Double precision implementation checkpoint
+# Double implementation checkpoint
 
-## Authority and baseline
+## Authority and reconciled baseline
 
-- Package: `smile-2.0-hardening-then-double`, revision 1; documents 00–07.
-- Archive: `C:\Users\louie\Downloads\2026-09-08-0837-smile-2.0-hardening-then-double.zip`.
-  SHA-256: `4C9D7986DF6962DFE58F7D65ED4182688DC82D142141753E1CD5610EF74132BB`.
-  Identity, reviewed commit and all 11 payload hashes verified before safe extraction to
-  `C:\Users\louie\Downloads\smile-hardening-double-verified` (fresh destination).
-- Starting HEAD and fetched origin/main: `af37b2402ca02b50069fc6bc91eb9872200427fc`,
-  branch `main`, clean worktree, no divergence or newer work to reconcile.
-- H01/H02/H03 closure and paired evidence read; closed. RF01–RF03 and the accepted
-  Viewer coordinator remain preserved. No Doctor or retired test run/recreated.
+- Package `smile-2.0-hardening-then-double`, revision 1; documents 00–07 read in order.
+- Downloads archive `2026-09-08-0837-smile-2.0-hardening-then-double.zip`:
+  SHA-256 `4C9D7986DF6962DFE58F7D65ED4182688DC82D142141753E1CD5610EF74132BB`.
+  Identity and all 11 manifest lengths/hashes verified before safe extraction to
+  `C:/Users/louie/Downloads/smile-hardening-double-verified`.
+- Reconciled once: clean `main`, HEAD = fetched origin/main = reviewed
+  `af37b2402ca02b50069fc6bc91eb9872200427fc`. No newer work was discarded.
+- H01/H02/H03 remain closed; RF01–RF03 ordinary regressions preserved. No Doctor,
+  retired H01 test, parallel agent, asset rebake, force push or user-window closure.
 
-## Current state and owners
+## State, owners and publication
 
-| Phase | State | Owner and dependency | Structural completion |
-|---|---|---|---|
-| P0 | Completed and pushed, `9f33ad9` | ViewerUi, BattleArenaPreview; existing fallback queries. Web Renderer3DReflections; existing parent HDR state | Both production label policies handle unsupported receivers; RGBA16F uses core LINEAR filtering with renderability/retry checks retained |
-| D1 | Completed and pushed, `40c183d` | Smile.Language/DoubleSemantics; MasmDoubleEmitter/numeric runtime; WebEmitter/Double.js; package schema 7; shared completion and native debug types | Distinct binary64 arithmetic/storage/calls/errors, packages and tooling on both targets; 317 shared tests; actual native, Web and Chrome execution |
-| D2 | Completed; publication commit contains this checkpoint | Existing renderer and actor ownership; fractional typed bridge/shared math | Complete typed camera/object/query path, same Scene3D lifecycle, authoritative Double actor transforms, precise sockets/bounds, shared math; native/Web and ordinary actor regression gates pass |
-| D3 | Pending D2 | Viewer camera/Party, Sin Star I preview, shared curve slice | Pending selective adoption without rounding to old integer arguments |
-| D4 | Pending D3 | Integration, documentation, publication and installed VSIX verification | Pending final delivery |
+| Phase | Actual state | Owners / dependencies |
+|---|---|---|
+| P0 | Validated and pushed `9f33ad9` before Double | ViewerUi/preview labels; existing Web reflection allocation/filter owner |
+| D1 | Implemented and pushed `40c183d`; final integration repairs included below | Shared DoubleSemantics, native MasmDoubleEmitter/numeric runtime, Web Double.js, package schema 7, shared editor/debug facts |
+| D2 | Validated and pushed `c310b7a` | Precision3D/PrecisionMath3D; same renderer translation unit, Scene3D lifecycle and Character3D actor pool |
+| D3 | Implemented; native/Web focused gates pass; full interaction acceptance pending | PrecisionCamera3D, ViewerCamera/Party/Actors/calibration/effects, Sin Star I preview, shared curve slice |
+| D4 | Automated integration and installation validated; publication pending | Final compiler/runtime/VSIX 2.0.61, native/Web deliveries; manual acceptance remains open |
 
-## P0 evidence
+Detailed unchanged P0/D1/D2 evidence, including historical source/artifact hashes,
+remains in this same file's committed versions at `9f33ad9`, `40c183d` and `c310b7a`
+(`git show <commit>:docs/implementation/double-precision-checkpoint.md`). This is
+one current checkpoint, not a replacement investigation or parallel ledger.
 
-- Compiler: `dotnet publish src/Smile.Compiler/Smile.Compiler.csproj -c Release -r win-x64 --self-contained false -o artifacts/compiler` passed.
-- Focused formatting: `scripts/format-smile-style.ps1 -Files` on the three changed
-  SMILE files with `-FormatLongIf`, zero changes required; `git diff --check` passed.
-- `scripts/test-renderer3d-reflections.ps1`: native normal/retry and generated-Web
-  normal/retry passed, including production unsupported-receiver matte fallback,
-  translated planes and LDR/HDR/LDR transitions. The generated-Web normal run also
-  observed production RGBA16F/HALF_FLOAT allocation with LINEAR min/mag filters in
-  a context providing EXT_color_buffer_float but no OES_texture_float_linear.
-- Its Viewer subgate initially exposed an invalid new Draw Text continuation;
-  corrected using a named label value. `scripts/test-character-3d-viewer-hardening.ps1`
-  then passed independently on native/Web, with direct On/Off fallback-6 assertions
-  against both real label owners, isolated calibration preservation/round trips,
-  and 58 native graphics/pointer/audio checks. No need to repeat the unchanged
-  reflection subgates after the presentation-only syntax correction.
-- Installed Chrome ran the generated reflection fixture to its exact passing result.
-  An ignored copy under `artifacts/temp/p0-chrome` masked only float-linear support
-  and read the actual reflection framebuffer: format 2 (RGBA16F), 700x525,
-  min/mag 9729 (LINEAR), floatLinear false, GL error 0, RGB peak 0.72216796875.
-  No warning/error console logs. Screenshot obtained through Chrome accessibility
-  capture after the first screenshot request timed out. This fixture's RGB peak
-  does not independently repeat the historical >1 HDR probe; that unchanged
-  rendering evidence remains in `reflective-battle-floor.md`.
-- Validation corrections: the first formatter CLI list was passed as one path;
-  corrected to a PowerShell array. The first new filter assertion also caught
-  unrelated HDR textures; corrected to observe the production reflection caller.
-  Neither failed attempt is counted as passing evidence.
+## Structural completion and boundaries
 
-| Source/artifact | SHA-256 at P0 validation |
+- Double is binary64; Number remains integral. Shared binding/folding, native/Web
+  checked arithmetic, eight-byte storage/calls, explicit ToDouble/ToNumber, strict
+  text, Optional/named/ByRef, records/classes, diagnostics, formatter and debugger
+  views are implemented. Internal GP/stack scalar transport and typed external XMM
+  ABI are documented in `docs/language/double.md`. Packages rebuild as format 7.
+- Precision3D mutations/queries borrow existing renderer camera, objects, sockets,
+  immutable submissions, ribbon/particle staging, GPU spawn slots and light leases.
+  Character3D retains one actor pool and transactional placement/rollback. The
+  continuous actor position/rotation arrays are authoritative Double values.
+- PrecisionCamera3D owns shared pan/orbit/zoom/framing/projection/anchors. Viewer
+  and preview use their own scene sensitivity. ViewerParty evaluates actual integer
+  elapsed time over unchanged 650-ms approach / 700-ms return; events, clips, IDs,
+  handles, topology/noise order, integer ages/seeds/budgets and saved channels remain.
+- Current-pose equipment pivots, glow, socket markers, Arin rim, Orin storm, fire
+  and lightning pass fractions to the same renderer. Authored millith data and
+  scales convert explicitly; culling allocation, pixel UI, density and saved
+  calibration channel writes are deliberate integer boundaries. Full protocol,
+  units and ownership: `docs/libraries/precision3d-boundary.md`.
+- GPU float32 remains the final rendering boundary. Within 1000 world units, the
+  tested upload budget is 2e-4; quarter units are exact. Near one million, spacing
+  is about 0.0625. No improved z-buffer/source-animation precision or origin rebasing
+  is claimed. Legacy integer APIs remain supported through their existing owners.
+- The accepted Program coordinator changes by six added/five removed lines; no
+  line-count refactor or replacement context. Relative to the reviewed baseline:
+  32 new files = 11 focused production files, 18 test/script/project/expected-output
+  files, three documents. Production additions are two semantic owners, four
+  compiler/Web/debug owners, two native files and three precise SMILE modules.
+  No new dependency/framework/renderer/pool; accepted coordinator size exceptions
+  remain. The curve visual adds only its source and project.
+
+## Focused evidence and repaired defects
+
+- P0 native/Web reflection normal/retry and both label owners passed. Installed
+  Chrome observed actual RGBA16F/HALF_FLOAT with LINEAR min/mag (9729), no
+  OES_texture_float_linear, GL error 0. Renderability failure still fails soft.
+- D1 actual native/Web teaching sample prints 0.002. Numeric/storage/call/package
+  parity and 15 checked-error cases pass with zero live Class/Image/Text resources.
+  Final CRT recheck: `d3-double-crt-gate.log`, numeric run
+  `artifacts/temp/double/run-ab3612dbdc3d4495af32acf4b719b53a`.
+- D2 shared/native/Web fixtures prove translation 0.25, yaw 0.125 degrees, camera
+  FOV 55.125, near 0.125, far 10000.5, captured X unchanged after a live transform
+  write, and reflection planes 7.25/-0.75. Failed camera/scale writes preserve state.
+  Cubic midpoint (1,1.5,0), exact endpoints and equal elapsed partitions pass.
+- D3 camera native/Web: `d3-camera-precision-gate.log`; normal/fallback Character3D
+  pivot paths: `d3-character-pivot-gate.log`, `d3-character-web-fixed.log`.
+  Lightning foundation: `d3-lightning-gate.log`; Viewer hardening native/Web,
+  isolated calibration and 58 native graphics/pointer/audio checks:
+  `d3-hardening-gate.log`. These audio assertions do not claim audibility.
+- Actual `CalibrationTests.CheckFractionalPartySubmission` verifies both existing
+  owned actors at 163 ms of approach and return, their captured render submissions,
+  and 100+63-ms equivalence within 1e-12 before upload / 1e-6 at capture.
+  Native: `d3-party-native-web-gate.log`; Web: `d3-party-web-gate.log`.
+  The optional harness route is `test-viewer-calibration-native.ps1 -IncludeWebPrecision`.
+- Typed ribbon/particle/GPU staging/light and invalid/in-flight writes pass native
+  and Web (`d3-vfx-precision-gate.log`). Staged versus committed particle positions
+  remain distinct. Focused style passes 29 changed/new sources (`d3-format-final.log`).
+- Fixed during integration: Web pivot arrays needed existing-owner initialization;
+  new Web branches needed complete payload destructuring; precise Party up is unit
+  1.0; Double's native translation unit now matches music's DLL CRT. Fieldless
+  classes use opaque debug C forward declarations. Web Number bounds now apply to
+  runtime constant reads, preserving wide compile-time Enum definitions. Ordinary
+  native OOP debug/source/package and Enum parity gates validate these repairs.
+- Test-only corrections: the Web Party harness now updates StartupFile with its
+  replacement source; current-owner assertions name the precise camera; package
+  assertions expect schema 7; all template/version checks match VSIX 2.0.61.
+
+## Final automated integration and installed delivery
+
+- The normal smoke was run with explicit `--skip-doctor` and continued only from
+  failed steps after focused repairs. No identical full rerun after success:
+  `d4-smoke.log` (build/shared/formatter/HDR), `d4-smoke-continue.log` (reflection
+  through debug OOP), `d4-smoke-debug-continue.log` (OOP through Enum), and
+  `d4-smoke-enum-continue.log` (remaining normal suites/game builds). The final
+  verifier's stale version assertion was corrected; `d4-final-artifacts.log` passes.
+- Final shared suite: 319 tests (`d4-shared-final.log`). Formatter integration:
+  13 tests; repository style: 430 tracked files, plus the explicit new-source check.
+  `d4-final-build.log` passes with no NU1503. Expected negative diagnostics count
+  only where their owning gate checked exact output and cleanup.
+- Final Viewer native + Full Web: `d4-viewer-final-build.log`, 46 / 35 assets,
+  existing model cache hits. Final Sin Star I and curve native/Web builds:
+  `d4-preview-{native,web}-final.log`, `d4-curve-{native,web}-final.log`.
+- VSIX 2.0.61 installed with the repository installer `--skip-build`, without
+  `/shutdownprocesses`; preflight requires VS already closed. Verification compares
+  35 actual installed compiler/shared-language/runtime/template payload hashes with
+  archive entries (`d4-vsix-install.log`). Installed root:
+  `C:/Users/louie/AppData/Local/Microsoft/VisualStudio/18.0_91f001b5/Extensions/0ka1rcc4.qlq`.
+  The source SMILE library packages remain repository-built, not newly bundled
+  source libraries invented for the VSIX.
+- Both live calibration exports preserve 24 Arin keys / zero Orin keys. Canonical
+  JSON SHA-256: Arin `C05C87BF0A92B373DB7ECD1CB304F4446B851E7AFEA836E8BB05D058B1B20F0B`,
+  Orin `13AE135FDA40302CB5A4B0146D7103A2ED5346AAEEBB3852AF6DD3C397F5D293`.
+  No model, descriptor, animation or canonical calibration content changed.
+
+| Final source/artifact | SHA-256 |
 |---|---|
-| `src/Smile.Compiler/WebRuntime/Renderer3DReflections.js` | `764313F715DC11BDC250619699994DAB6F81FB8F0EA3BF58651F0BE78464A095` |
-| `tools/Character3DViewer/ViewerUi.smile` | `28F8EF7F07CA0B0397B3502EC00712AC77CF628FEC29446402176B4A66658D8E` |
-| `games/SinStarI/BattleArenaPreview.smile` | `A142EB3FAF38BB8A4CD9FE5D3E85AD107CBA9CA93B15D44B64FE9E2B973A1612` |
-| `artifacts/compiler/smilec.dll` | `EFF5E720173DE0824221E3EC3D5AFE2CF50B63BD7D7D9B88B4130982FAA86267` |
-| `artifacts/web/Renderer3DReflectionTests/smile-runtime.js` | `20F2417749D984C420877E8F01F553DBE75A2361D5F9EAF4E223C24256267EE0` |
+| `src/Smile.Compiler/NativeDebugTypes.cs` | `E285D4496E12E4750051221633A67EDC3669438BCFFA8745701232AB9714F938` |
+| `src/Smile.Compiler/WebEmitter.cs` | `6CC67498F856443CFCB9DB03BE3C46AA14DF081F583E5835FD372AD95CE02488` |
+| `libraries/Smile.Simple3D/PrecisionCamera3D.smile` | `7800374693918BF83FA7A6BC7F90DA2B2430F25097A3853A6161F1B5D10FD43E` |
+| `tools/Character3DViewer/CalibrationTests.smile` | `AF2992AAC1CCFE6865E0252208A5820CF91C28D8C32A8CF68D77D7426429E792` |
+| `artifacts/compiler/smilec.dll` | `C2F13EC000B421A2D74F021E5FBA5C502BDD23F4399C7522F9D670C8043D0F6F` |
+| `artifacts/compiler/Smile.Language.dll` | `82E562298FE9763944A139F18D8E998C6F87CAE666D42D6F4124AC8BA91D0206` |
+| `artifacts/compiler/Smile.NativeRuntime.lib` | `49F1917075B7945B78E77180EAA150DE993B9B6C46A232DFAF059E12AAC86CEE` |
+| `artifacts/vsix/Smile.VisualStudio.vsix` | `7E8E5C016E5F6C77649F9D828B0E3B56CC90721B3FDB521239C98B11D4D2BD38` |
+| `tools/Character3DViewer/bin/Release/Character3DViewer.exe` | `AA1EE1BDC2A91D8AEA447BADBABDBC0770CD9CF6A81893F1217AAB5187D59027` |
+| `tools/Character3DViewer/bin/Release/Web/game.js` | `6EF95474B02C837C6795D6959F62E5B5E555F4CE5CDBE44201999AD9336B54F3` |
+| `artifacts/games/SinStarI/SinStarI.exe` | `B507E3A5C4955C05157613996D28F40655549A7C8ACED1E31101EA3E1ABDC4C3` |
+| `artifacts/web/SinStarI/game.js` | `DB34B6E2EC5309D8CB906DBE3E84284A06F9C3565BEF19E1730E96B1A84B0679` |
+| `artifacts/examples/PrecisionCurve3D.exe` | `C2E01EC356F5F27C6BCDC60E36DDBE0F6367A18D8C31F38C46BF8DF489DB8E1F` |
+| `artifacts/web/PrecisionCurve3D/game.js` | `74162DEA9B6FB34426F87A7F65715AF7089692A2068704BDDEA660A954308173` |
+| `libraries/Smile.Simple3D/bin/Release/Smile.Simple3D.smilelib` | `6FAFC366640420ACB866BB4F181CBE13D8036E5D2068685B584FB3FE1C0DC107` |
 
-Local logs: `artifacts/temp/p0-compiler-build.log`, `p0-reflections.log`,
-`p0-viewer.log`. Production assets, calibration JSON, live storage, IDs and
-`Program.smile` were not changed. VSIX rebuild/install is reserved for the integrated
-D4 payload boundary; no current Double or installation completion is claimed.
+## Open acceptance and next action
 
-## D1 evidence and limits
+Chrome visibly renders the Viewer/Party/Arin, attached effects, backdrop and floor;
+the Demo toggle works. The shared curve renders its moving cube/floor. Sin Star I
+opens Battle from its real title menu, responds to pan/wheel zoom and R switches
+Reflective to Original. These observations are partial, not a complete manual pass.
 
-- Contract and support matrix: `docs/language/double.md`. Token/type tags are appended;
-  Number and Enum keep their integral rules. Native internal eight-byte call payloads
-  use typed floating adapters at external ABI boundaries; Web uses the same runtime.
-- `scripts/test-double.ps1` passed native/generated-Web success, source-project and
-  package-file parity, deterministic package hashes, 15 explicit numeric/text failure
-  cases and target-specific bounds. Failure cases carry a Class with nested Double
-  array/Image state and local/global Text; all native live counts return zero and
-  Web ownership diagnostics pass. Earlier side-effect output is preserved and no
-  post-failure write/output occurs. Logs: `artifacts/temp/d1-focused-final.log`,
-  detailed run `artifacts/temp/double/run-3344955aaaf64ee5b3f0cc88c23ce78f`.
-- Later Print acceptance, duplicate-zero Select diagnostics, Optional Quick Info
-  display and contextual intrinsic-name inference corrections were validated by
-  317 shared tests (`d1-shared-tests.log`) and the rebuilt native/generated-Web
-  fixture (`artifacts/tests/DoubleTests.exe`, `artifacts/web/DoubleTests`). The source
-  fixture prints `0.002` and `Double tests passed`. Unchanged failure/package
-  evidence above is reused; no redundant full-smoke/VSIX installation was run.
-- Actual `--debug --keep-temp` compilation and execution pass; generated C/PDB
-  retains Double scalars, arrays and nested aggregate views with source paths.
-  Shared tests check typed views, navigation, Optional signed-zero signatures and
-  Double return temporaries. This is compiled debug evidence, not a claimed manual
-  Visual Studio breakpoint session. Integrated VSIX rebuild/install remains D4.
-- Installed Chrome tab 35136093 ran the actual generated program at local port
-  8771. DOM output verified `0.002\nDouble tests passed\n`; earlier AX screenshot
-  obtained. A later automatic screenshot timed out; DOM execution was still verified.
-- Formatter: all 13 focused integration tests passed; repository-wide
-  `-Check -FormatLongIf` passed for 423 tracked files, plus explicit formatting of
-  the three new Double sources. Logs: `d1-formatter-tests.log`, `d1-repository-style.log`.
-- Corrected defects: native MINSD/MAXSD tie lowering lost negative zero despite
-  `/fp:strict`; explicit tie operand order fixes it. Also fixed Print type admission,
-  signed-zero/adjacent-value Select duplicate identity, new contextual-name inference,
-  Optional signature display and Web folded Number constant range checking.
-  Initial harness invocations needed `--project`/`--target library`, a Type-owned
-  Image field and a parenthesized PowerShell case name; failed attempts are not passes.
-- No canonical assets, live saves, calibration, Viewer coordinator or closed H/RF
-  investigation was changed. D2–D4 and final installation/publication remain pending.
+The Viewer reports 0–1 FPS and some brief input is missed. A disposable probe
+observed ~1000-ms RAF gaps despite visible/focused state and three long tasks
+(max 559 ms including startup), with no browser warning/error logs. Callback
+resolver timing is not total rendering cost. Scheduling/foreground behavior is
+suspected, not proven. Probe removed; scope/result: `d3-frame-probe-scope.txt`.
 
-| D1 source/artifact | SHA-256 at validation |
-|---|---|
-| `src/Smile.Language/DoubleSemantics.cs` | `08BBB3A81D7191C5C41C51744C544AF8930E4A214105420F5A55C01E1C01733F` |
-| `src/Smile.NativeRuntime/numeric/double.cpp` | `281D02ACE6C9EFD96B9473E0944F32FA9EE8094607DE72DC0B6FC52C8D22BEC6` |
-| `artifacts/compiler/smilec.dll` | `2E6FDF0C01D8B382B0C033C70FE0722EC484A4E6EEAD0A503F33E74D796FF44D` |
-| `artifacts/compiler/Smile.NativeRuntime.lib` | `913697963ADD07FF3D62FE4812B3A68D15CDB75F909AEB957D1346682DD0D971` |
-| `artifacts/tests/DoubleTests.exe` | `DDBE8E83CD029D970CC18C196F7002FC863A5E71E016698FB04F0E97FD723C8A` |
-| `artifacts/web/DoubleTests/game.js` | `103B99C1D166A7BD1788646E3B42ACB303CD6880FE18B5BA54D79F6251DA2A15` |
-| `examples/DoubleTests/bin/Debug/Smile.Double.Proof.smilelib` | `B8AE5586E9682C290770B415D17EFE15F6A9D1A81E8D550F2FCA2653DA4BA282` |
-
-## D2 evidence and limits
-
-- Type/unit/owner map and dispatch table: `docs/libraries/precision3d-boundary.md`.
-  `Precision3D` owns non-owning typed values/bridge wrappers; `PrecisionMath3D`
-  owns binary64 vector/Euler/lerp/cubic math. Scene3D retains frame ownership.
-  Character3D retains its existing 32-actor multipart transaction/rollback pool;
-  only six continuous arrays change to Double world units/degrees. Authored
-  bounds/root millith units convert explicitly; legacy query facades stay integral.
-- `scripts/test-precision3d.ps1`: native DirectX and generated Web exact pass
-  (`artifacts/temp/d2-precision-gate.log`). Source 0.25 translation and 0.125-degree
-  rotation read back exactly at the runtime boundary; accepted camera FOV 55.125,
-  near 0.125 and far 10000.5 are exact. Rotated camera position is within 2e-4.
-  Captured X stays 0.25 after live X changes to 7.5. Effective automatic planes
-  are exactly 7.25 and -0.75. Invalid camera and float-underflow scale preserve
-  prior accepted state. Cubic midpoint/endpoints and equal elapsed-ms partitions pass.
-- `scripts/test-character3d.ps1`: native and Web normal/forced-PBR-fallback
-  passes, plus both Lab builds (`d2-character-gate.log`). Ordinary cache, ownership,
-  partial failure/rollback, root motion, events and stale-generation checks remain.
-  The same articulated asset now also proves multipart (0.25,-0.75,0.5) placement,
-  0.125-degree yaw, rejected out-of-range placement preserving all parts,
-  independent second actor, precise bounds and actual socket/equipment capture
-  within 2e-4; static bounds center translation agrees within 1e-10.
-- 318 shared tests pass (`d2-shared-tests.log`), including Game Window capability,
-  exact Number identities/selectors, mandatory Double payloads and typed query
-  results. All eight changed/new SMILE sources pass focused formatting checks.
-  Native runtime and compiler rebuilds pass. Final scale-underflow rejection was
-  rechecked with the precise fixture; unchanged actor/ownership evidence is reused.
-- Fixed during D2: float narrowing could collapse an extremely small positive
-  scale to zero; both backends now reject it atomically. Tiny unusable camera
-  vectors are rejected before float normalization. No assets/calibration/live
-  storage or production coordinator changes; no Doctor/H01/RF reinvestigation.
-- These are native/generated-Web runtime assertions, not a claimed D3 manual
-  Viewer interaction pass. Production adoption, installed-Chrome interaction,
-  final integration and VSIX installation are still required.
-
-| D2 source/artifact | SHA-256 at validation |
-|---|---|
-| `src/Smile.NativeRuntime/graphics/graphics3d_precision.inl` | `788AC975E850DBA3B623B5F04039856AF5209F224431E5041C0BF52C41696C83` |
-| `src/Smile.Compiler/WebRuntime/Renderer3DPrecision.js` | `B72D9C3813CAD1B41CCE81476DED2CED684FBBF89A06AC3BD079DB1DEC9F7332` |
-| `libraries/Smile.Simple3D/Character3D.smile` | `4BDE7102D252CD4E7B2A29C6F91BD7F9539F8E664521752D1653AD9089B6D526` |
-| `artifacts/compiler/smilec.dll` | `E46B2ED5B2075EF58EAC7E34653F4207E992B4522C22E41669EE0547591C5868` |
-| `artifacts/compiler/Smile.NativeRuntime.lib` | `F1533BE62A14953728CC99F7FEC9AF2F678781F974096815865B39BB61667D68` |
-| `artifacts/tests/Precision3DTests.exe` | `B2E10EBFE542FCE4698F9BC338AE6F43E54045757C40151F5F12C177AB3F4260` |
-| `artifacts/web/Precision3DTests/game.js` | `95E7E17E08CC5FF1F2F518637A16C78C593F990B0305DDEC787435B9023259A6` |
-| `artifacts/tests/Character3DTests.exe` | `815504070B73E82C8D040B086ED11A0F2A7204029BBF5B4605CC4FFCC0C12F43` |
-| `artifacts/web/Character3DTests/game.js` | `3800D22ACB1F078307D000C44ECB2DC084E882C251F932766A9DEEA892A2C31B` |
-
-## Next action
-
-Continue document 06: migrate the actual Viewer camera/fit/anchor/Party routes,
-Sin Star I preview camera and a bounded shared cubic visual slice. Documents 05
-and 06 are read; read 07 before D4. No further Double authorization is required.
-Complete D3–D4, publication and required installation before stopping.
+Native app APIs are disabled in the current tool session. Sin granted desktop
+control permission; enabling Settings > Computer use > Any App was requested.
+The pre-existing native Viewer (PID 29908, started 07:30) was preserved; its running
+image is not claimed to be the new build. Next: obtain native/foreground control,
+preserve any unsaved preview, launch the final Viewer through Launch.ps1, and finish
+one combined slow/moderate horizontal/vertical orbit and pan, zoom in/out, reset,
+keyboard/tab/Party approach/return, pause/scrub, attachment/ground/floor/backdrop and
+audible SFX check on native/Chrome. Complete the native curve visual and installed
+VS Double breakpoint/hover check. Do not claim full acceptance while these remain.
+Reuse passing automated/install evidence unless a source/dependency actually changes.
+Publish this validated implementation/checkpoint, then finish only these open checks;
+no further Double authorization is needed and no unrelated feature should start.
 
 ## On Hold
 
-Battle Scene Editor, semantic-inspection CLI, loader/splash enhancements,
+Loader/splash enhancements, semantic-inspection CLI, Battle Scene Editor,
 subject-first syntax and unrelated suspended features remain deferred.

@@ -1,4 +1,4 @@
-''' Viewer interaction camera state and Number-based transforms, independent from UI and persistence.
+''' Viewer interaction camera state and Double transforms, independent from UI and persistence.
 Module Smile.Tools.Character3DViewerCamera
 
 Option Explicit
@@ -6,33 +6,29 @@ Option Explicit
 Import Smile.Simple3D.Core As Core
 Import Smile.Simple3D.Character3D As Character3D
 Import Smile.Simple3D.CharacterViewer As CharacterViewer
+Import Smile.Simple3D.PrecisionCamera3D As PrecisionCamera
 Import Smile.Simple3D.Graphics3D As Graphics3D
-Import Smile.Simple3D.Interaction As Interaction
-Import Smile.Simple3D.Math3D As Math3D
-Import Smile.Tools.BattleCamera As BattleCamera
+Import Smile.Simple3D.Precision3D As Precision3D
+Import Smile.Simple3D.PrecisionMath3D As Math3D
 
 Public Type State
-    Base As Core.Camera3D
-    Live As Core.Camera3D
-    Controls As Core.CameraControl3D
-    Frame As CharacterViewer.Framing
+    Base As Precision3D.Camera3D
+    Live As Precision3D.Camera3D
+    Controls As PrecisionCamera.Controls
+    Frame As PrecisionCamera.Framing
     LocalBounds As Character3D.Bounds3D
-    Zoom As CharacterViewer.ZoomState
+    Zoom As PrecisionCamera.ZoomState
     FitLocked As Boolean
     LastFitWidth As Number
     LastFitHeight As Number
-    PanPointerRemainderX As Number
-    PanPointerRemainderY As Number
-    OrbitPointerRemainderX As Number
-    OrbitPointerRemainderY As Number
     CalibrationOrbitActive As Boolean
-    CalibrationOrbitAnchor As Core.Vector3
-    CalibrationOrbitOffset As Core.Vector3
+    CalibrationOrbitAnchor As Precision3D.Vector3
+    CalibrationOrbitOffset As Precision3D.Vector3
     CalibrationOrbitCursorX As Number
     CalibrationOrbitCursorY As Number
-    CalibrationOrbitDepth As Number
+    CalibrationOrbitDepth As Double
     AutoOrbit As Boolean
-    AutoOrbitYaw1000 As Number
+    AutoOrbitYaw As Double
 End Type
 
 Public Type PointerInput
@@ -52,7 +48,7 @@ Public Type PointerInput
     WindowHeight As Number
     CalibrationVisible As Boolean
     PartyEnabled As Boolean
-    CalibrationOrigin As Core.Vector3
+    CalibrationOrigin As Precision3D.Vector3
 End Type
 
 Public Function ConfigureFraming(ByRef Value As State,
@@ -66,9 +62,9 @@ Public Function ConfigureFraming(ByRef Value As State,
 
     Dim Result As Boolean
 
-    Value.Base = Graphics3D.DefaultCamera()
+    Value.Base = Precision3D.FromCamera(Graphics3D.DefaultCamera())
     Value.LocalBounds = Character3D.LocalBounds(Actor)
-    Value.Frame = CharacterViewer.AutoFit(
+    Value.Frame = PrecisionCamera.AutoFit(
         Profile,
         Value.LocalBounds,
         ContentWidth,
@@ -79,9 +75,9 @@ Public Function ConfigureFraming(ByRef Value As State,
     If DragonInspection Then
 
         Value.Frame.ScalePercent = DragonScalePercent
-        Value.Frame.PositionX = DragonX
-        Value.Frame.PositionY = DragonY
-        Value.Frame.PositionZ = DragonZ
+        Value.Frame.PositionX = ToDouble(DragonX)
+        Value.Frame.PositionY = ToDouble(DragonY)
+        Value.Frame.PositionZ = ToDouble(DragonZ)
 
     End If
 
@@ -104,19 +100,15 @@ Public Sub Reset(ByRef Value As State, InitialOrbitYaw As Number,
     DefaultZoomDegrees As Number, ZoomInLimit As Number, ZoomOutLimit As Number,
     ZoomRatePerSecond1000 As Number)
 
-    Call Interaction.ResetCameraControls(Value.Controls)
+    Call PrecisionCamera.ResetCameraControls(Value.Controls)
 
-    Value.Controls.OrbitYaw = InitialOrbitYaw
+    Value.Controls.OrbitYaw = ToDouble(InitialOrbitYaw)
     Value.CalibrationOrbitActive = False
-    Value.CalibrationOrbitOffset.X = 0
-    Value.CalibrationOrbitOffset.Y = 0
-    Value.CalibrationOrbitOffset.Z = 0
-    Value.PanPointerRemainderX = 0
-    Value.PanPointerRemainderY = 0
-    Value.OrbitPointerRemainderX = 0
-    Value.OrbitPointerRemainderY = 0
+    Value.CalibrationOrbitOffset.X = 0.0
+    Value.CalibrationOrbitOffset.Y = 0.0
+    Value.CalibrationOrbitOffset.Z = 0.0
 
-    Call CharacterViewer.InitializeZoom(
+    Call PrecisionCamera.InitializeZoom(
         Value.Zoom,
         DefaultZoomDegrees,
         ZoomInLimit,
@@ -145,20 +137,20 @@ Public Sub SetBaseFromFrame(ByRef Value As State, DragonAvailable As Boolean,
     ArenaCenterX As Number, ArenaCenterZ As Number, ArenaDistance As Number,
     ArenaHeight As Number)
 
-    Value.Base.Position.X = 0
+    Value.Base.Position.X = 0.0
     Value.Base.Position.Y = Value.Frame.CameraY
     Value.Base.Position.Z = Value.Frame.CameraZ
-    Value.Base.Target.X = 0
+    Value.Base.Target.X = 0.0
     Value.Base.Target.Y = Value.Frame.TargetY
-    Value.Base.Target.Z = 0
+    Value.Base.Target.Z = 0.0
 
     If DragonAvailable Then
 
-        Value.Base.Position.X = ArenaCenterX
-        Value.Base.Position.Y = Value.Frame.TargetY + ArenaHeight
-        Value.Base.Position.Z = ArenaCenterZ - ArenaDistance
-        Value.Base.Target.X = ArenaCenterX
-        Value.Base.Target.Z = ArenaCenterZ
+        Value.Base.Position.X = ToDouble(ArenaCenterX)
+        Value.Base.Position.Y = Value.Frame.TargetY + ToDouble(ArenaHeight)
+        Value.Base.Position.Z = ToDouble(ArenaCenterZ) - ToDouble(ArenaDistance)
+        Value.Base.Target.X = ToDouble(ArenaCenterX)
+        Value.Base.Target.Z = ToDouble(ArenaCenterZ)
 
     End If
 
@@ -166,11 +158,7 @@ End Sub
 
 Public Sub Compose(ByRef Value As State, FractionalAutoOrbit As Boolean)
 
-    If FractionalAutoOrbit Then
-        Value.Live = BattleCamera.Orbit(Value.Base, Value.Controls, Value.AutoOrbitYaw1000)
-    Else
-        Value.Live = Interaction.ApplyScreenSpaceCameraControls(Value.Base, Value.Controls)
-    End If
+    Value.Live = PrecisionCamera.ApplyScreenSpaceCameraControls(Value.Base, Value.Controls)
 
 End Sub
 
@@ -180,49 +168,27 @@ Public Function UpdatePointerControls(ByRef Value As State,
     PanReleased As Boolean, PanActive As Boolean, PointerDeltaX As Number,
     PointerDeltaY As Number, OrbitDivisor As Number, PanDivisor As Number) As Boolean
 
-    Dim OrbitDeltaX As Number
-    Dim OrbitDeltaY As Number
-    Dim PanDeltaX As Number
-    Dim PanDeltaY As Number
+    Dim OrbitDeltaX As Double
+    Dim OrbitDeltaY As Double
+    Dim PanDeltaX As Double
+    Dim PanDeltaY As Double
     Dim Result As Boolean
 
-    If OrbitPressed Then
-        Value.OrbitPointerRemainderX = 0
-        Value.OrbitPointerRemainderY = 0
+    If OrbitDivisor <= 0 Or PanDivisor <= 0 Then
+        Return False
     End If
 
     If OrbitActive Then
-        OrbitDeltaX = CharacterViewer.RetainedPointerDelta(
-            Value.OrbitPointerRemainderX,
-            PointerDeltaX,
-            OrbitDivisor
-        )
-        OrbitDeltaY = CharacterViewer.RetainedPointerDelta(
-            Value.OrbitPointerRemainderY,
-            PointerDeltaY,
-            OrbitDivisor
-        )
-    End If
-
-    If PanPressed Then
-        Value.PanPointerRemainderX = 0
-        Value.PanPointerRemainderY = 0
+        OrbitDeltaX = ToDouble(PointerDeltaX) / ToDouble(OrbitDivisor)
+        OrbitDeltaY = ToDouble(PointerDeltaY) / ToDouble(OrbitDivisor)
     End If
 
     If PanActive Then
-        PanDeltaX = CharacterViewer.RetainedPointerDelta(
-            Value.PanPointerRemainderX,
-            PointerDeltaX,
-            PanDivisor
-        )
-        PanDeltaY = CharacterViewer.RetainedPointerDelta(
-            Value.PanPointerRemainderY,
-            PointerDeltaY,
-            PanDivisor
-        )
+        PanDeltaX = ToDouble(PointerDeltaX) / ToDouble(PanDivisor)
+        PanDeltaY = ToDouble(PointerDeltaY) / ToDouble(PanDivisor)
     End If
 
-    Result = Interaction.UpdateOrbitControls(
+    Result = PrecisionCamera.UpdateOrbitControls(
         Value.Controls,
         OrbitPressed,
         OrbitHeld,
@@ -230,7 +196,7 @@ Public Function UpdatePointerControls(ByRef Value As State,
         0,
         0
     )
-    Result = Interaction.UpdatePanZoomControls(
+    Result = PrecisionCamera.UpdatePanZoomControls(
         Value.Controls,
         PanPressed,
         PanHeld,
@@ -257,16 +223,6 @@ Public Function UpdatePointerControls(ByRef Value As State,
     End If
 
     Call ClampControls(Value)
-
-    If PanReleased Then
-        Value.PanPointerRemainderX = 0
-        Value.PanPointerRemainderY = 0
-    End If
-
-    If OrbitReleased Then
-        Value.OrbitPointerRemainderX = 0
-        Value.OrbitPointerRemainderY = 0
-    End If
 
     Return Result
 
@@ -373,9 +329,9 @@ End Function
 Public Sub ClampControls(ByRef Value As State)
 
     Value.Controls.PanX = Min(Value.Frame.PanXLimit,
-        Max(0 - Value.Frame.PanXLimit, Value.Controls.PanX))
+        Max(0.0 - Value.Frame.PanXLimit, Value.Controls.PanX))
     Value.Controls.PanY = Min(Value.Frame.PanYLimit,
-        Max(0 - Value.Frame.PanYLimit, Value.Controls.PanY))
+        Max(0.0 - Value.Frame.PanYLimit, Value.Controls.PanY))
 
 End Sub
 
@@ -384,10 +340,6 @@ Public Sub CancelPointerControls(ByRef Value As State)
     Value.Controls.Orbiting = False
     Value.Controls.Panning = False
     Value.CalibrationOrbitActive = False
-    Value.PanPointerRemainderX = 0
-    Value.PanPointerRemainderY = 0
-    Value.OrbitPointerRemainderX = 0
-    Value.OrbitPointerRemainderY = 0
 
 End Sub
 
@@ -397,7 +349,7 @@ Public Function NudgeOrbit(ByRef Value As State, DeltaX As Number,
     Dim Result As Boolean
 
     Value.AutoOrbit = False
-    Result = Interaction.UpdateOrbitControls(
+    Result = PrecisionCamera.UpdateOrbitControls(
         Value.Controls,
         True,
         True,
@@ -418,7 +370,7 @@ Public Function NudgePan(ByRef Value As State, DeltaX As Number,
     Dim Result As Boolean
 
     Value.AutoOrbit = False
-    Result = Interaction.UpdatePanZoomControls(
+    Result = PrecisionCamera.UpdatePanZoomControls(
         Value.Controls,
         True,
         True,
@@ -437,7 +389,7 @@ End Function
 Public Sub ToggleAutoOrbit(ByRef Value As State)
 
     Value.AutoOrbit = Not Value.AutoOrbit
-    Value.AutoOrbitYaw1000 = Value.Controls.OrbitYaw * 1000
+    Value.AutoOrbitYaw = Value.Controls.OrbitYaw
 
 End Sub
 
@@ -450,47 +402,49 @@ End Sub
 Public Sub StartAutoOrbit(ByRef Value As State)
 
     Value.AutoOrbit = True
-    Value.AutoOrbitYaw1000 = Value.Controls.OrbitYaw * 1000
+    Value.AutoOrbitYaw = Value.Controls.OrbitYaw
 
 End Sub
 
-Public Function AdvanceAutoOrbit(ByRef Value As State, ByRef PartyPhase1000 As Number,
+Public Function AdvanceAutoOrbit(ByRef Value As State, ByRef PartyPhase As Double,
     ElapsedMilliseconds As Number, DegreesPerSecond As Number,
     PartyMode As Boolean) As Boolean
 
-    Dim Result As Boolean
+    Dim Advance As Double
 
-    Result = True
+    If ElapsedMilliseconds < 0 Or ElapsedMilliseconds > 1000 Then
+        Return False
+    End If
 
     If Value.AutoOrbit Then
 
+        Advance = ToDouble(ElapsedMilliseconds) * ToDouble(DegreesPerSecond) / 1000.0
+
         If PartyMode Then
-            Result = CharacterViewer.AdvanceOrbitYaw1000(
-                PartyPhase1000, ElapsedMilliseconds, DegreesPerSecond)
-            Value.AutoOrbitYaw1000 = BattleCamera.FrontArcYaw1000(PartyPhase1000)
+            PartyPhase = Math3D.WrapDegrees(PartyPhase + Advance)
+            Value.AutoOrbitYaw = 120.0 + Sin(Math3D.Radians(PartyPhase)) * 55.0
         Else
-            Result = CharacterViewer.AdvanceOrbitYaw1000(
-                Value.AutoOrbitYaw1000, ElapsedMilliseconds, DegreesPerSecond)
+            Value.AutoOrbitYaw = Math3D.WrapDegrees(Value.AutoOrbitYaw + Advance)
         End If
 
-        Value.Controls.OrbitYaw = Value.AutoOrbitYaw1000 / 1000
+        Value.Controls.OrbitYaw = Value.AutoOrbitYaw
 
     End If
 
-    Return Result
+    Return True
 
 End Function
 
 Public Sub AdjustZoomTarget(ByRef Value As State, WheelDelta As Number,
     StepDegrees As Number)
 
-    Call CharacterViewer.AdjustZoomTarget(Value.Zoom, WheelDelta, StepDegrees)
+    Call PrecisionCamera.AdjustZoomTarget(Value.Zoom, WheelDelta, StepDegrees)
 
 End Sub
 
 Public Sub SetZoomTarget(ByRef Value As State, Degrees As Number)
 
-    Value.Zoom.Target1000 = Degrees * 1000
+    Value.Zoom.Target = ToDouble(Degrees)
 
 End Sub
 
@@ -498,8 +452,8 @@ Public Function AdvanceZoom(ByRef Value As State, ElapsedMilliseconds As Number)
 
     Dim Result As Boolean
 
-    Result = CharacterViewer.AdvanceZoom(Value.Zoom, ElapsedMilliseconds)
-    Value.Controls.Zoom = CharacterViewer.ZoomDegrees(Value.Zoom)
+    Result = PrecisionCamera.AdvanceZoom(Value.Zoom, ElapsedMilliseconds)
+    Value.Controls.Zoom = Value.Zoom.Current
 
     Return Result
 
@@ -508,23 +462,18 @@ End Function
 Public Sub ApplyCloseUp(ByRef Value As State, CloseUpStart As Number,
     ZoomInLimit As Number, MinimumDistance1000 As Number)
 
-    Dim Progress1000 As Number
-    Dim Distance1000 As Number
+    Dim Progress As Double
+    Dim Distance As Double
 
-    If Value.Zoom.Current1000 >= CloseUpStart * 1000 Then
+    If Value.Zoom.Current >= ToDouble(CloseUpStart) Or CloseUpStart <= ZoomInLimit Then
         Return
     End If
 
-    Progress1000 = ((CloseUpStart * 1000 - Value.Zoom.Current1000) /
-        (CloseUpStart - ZoomInLimit))
-    Progress1000 = Min(1000, Max(0, Progress1000))
-    Distance1000 = 1000 - Progress1000 * (1000 - MinimumDistance1000) / 1000
-    Value.Live.Position.X = (Value.Live.Target.X +
-        (Value.Live.Position.X - Value.Live.Target.X) * Distance1000 / 1000)
-    Value.Live.Position.Y = (Value.Live.Target.Y +
-        (Value.Live.Position.Y - Value.Live.Target.Y) * Distance1000 / 1000)
-    Value.Live.Position.Z = (Value.Live.Target.Z +
-        (Value.Live.Position.Z - Value.Live.Target.Z) * Distance1000 / 1000)
+    Progress = Clamp((ToDouble(CloseUpStart) - Value.Zoom.Current) /
+        ToDouble(CloseUpStart - ZoomInLimit), 0.0, 1.0)
+    Distance = 1.0 - Progress * (1.0 - ToDouble(MinimumDistance1000) / 1000.0)
+    Value.Live.Position = Math3D.Add(Value.Live.Target,
+        Math3D.Scale(Math3D.Subtract(Value.Live.Position, Value.Live.Target), Distance))
 
 End Sub
 
@@ -543,12 +492,12 @@ Public Sub UpdateResponsiveFit(ByRef Value As State, Profile As CharacterViewer.
 
     Value.LastFitWidth = WindowWidth
     Value.LastFitHeight = WindowHeight
-    Value.Frame = CharacterViewer.AutoFit(
+    Value.Frame = PrecisionCamera.AutoFit(
         Profile,
         Value.LocalBounds,
         ContentWidth,
         Max(1, WindowHeight),
-        Value.Base.FovDegrees + CharacterViewer.ZoomDegrees(Value.Zoom)
+        Value.Base.FovDegrees + Value.Zoom.Current
     )
 
     Call SetBaseFromFrame(Value, DragonAvailable, ArenaCenterX, ArenaCenterZ,
@@ -586,24 +535,25 @@ Public Sub ToggleResponsiveFit(ByRef Value As State,
 
 End Sub
 
-Public Sub BeginCalibrationOrbitAnchor(ByRef Value As State, Origin As Core.Vector3,
+Public Sub BeginCalibrationOrbitAnchor(ByRef Value As State, Origin As Precision3D.Vector3,
     PointerX As Number, PointerY As Number, WindowWidth As Number,
     WindowHeight As Number)
 
-    Dim Projected As Core.ProjectedPoint3D
+    Dim Projected As PrecisionCamera.ProjectedPoint
 
-    Projected = CharacterViewer.ProjectViewerPoint(
+    Projected = PrecisionCamera.ProjectViewerPoint(
         Origin, Value.Live, WindowWidth, WindowHeight)
     Value.CalibrationOrbitDepth = Projected.Depth
 
     If Not Projected.Visible Then
-        Value.CalibrationOrbitDepth = Max(Value.Live.NearPlane + 1,
-            Math3D.Distance(Value.Live.Position, Value.Live.Target))
+        Value.CalibrationOrbitDepth = Max(Value.Live.NearPlane + 1.0,
+            Sqrt(Math3D.Dot(Math3D.Subtract(Value.Live.Position, Value.Live.Target),
+                Math3D.Subtract(Value.Live.Position, Value.Live.Target))))
     End If
 
     Value.CalibrationOrbitCursorX = PointerX
     Value.CalibrationOrbitCursorY = PointerY
-    Value.CalibrationOrbitAnchor = CharacterViewer.CursorPointAtDepth(
+    Value.CalibrationOrbitAnchor = PrecisionCamera.CursorPointAtDepth(
         Value.Live,
         Value.CalibrationOrbitCursorX,
         Value.CalibrationOrbitCursorY,
@@ -617,14 +567,14 @@ End Sub
 Public Sub ApplyCalibrationOrbitAnchor(ByRef Value As State, WindowWidth As Number,
     WindowHeight As Number)
 
-    Dim Unshifted As Core.Camera3D
+    Dim Unshifted As Precision3D.Camera3D
 
     Unshifted = Value.Live
     Value.Live.Position = Math3D.Add(Value.Live.Position, Value.CalibrationOrbitOffset)
     Value.Live.Target = Math3D.Add(Value.Live.Target, Value.CalibrationOrbitOffset)
 
     If Value.CalibrationOrbitActive Then
-        Value.Live = CharacterViewer.KeepCursorAnchor(
+        Value.Live = PrecisionCamera.KeepCursorAnchor(
             Value.Live,
             Value.CalibrationOrbitAnchor,
             Value.CalibrationOrbitCursorX,
@@ -641,27 +591,29 @@ End Sub
 
 Public Sub SetHorizontalOrbit(ByRef Value As State, OrbitYaw As Number)
 
-    Value.Controls.OrbitYaw = Min(180, Max(-180, OrbitYaw))
+    Value.Controls.OrbitYaw = Clamp(ToDouble(OrbitYaw), -180.0, 180.0)
     Value.AutoOrbit = False
 
 End Sub
 
 Public Sub AdjustHorizontalOrbit(ByRef Value As State, Amount As Number)
 
-    Call SetHorizontalOrbit(Value, Value.Controls.OrbitYaw + Amount)
+    Value.Controls.OrbitYaw = Clamp(Value.Controls.OrbitYaw + ToDouble(Amount), -180.0, 180.0)
+    Value.AutoOrbit = False
 
 End Sub
 
 Public Sub SetVerticalOrbit(ByRef Value As State, OrbitPitch As Number)
 
-    Value.Controls.OrbitPitch = Min(180, Max(-180, OrbitPitch))
+    Value.Controls.OrbitPitch = Clamp(ToDouble(OrbitPitch), -180.0, 180.0)
     Value.AutoOrbit = False
 
 End Sub
 
 Public Sub AdjustVerticalOrbit(ByRef Value As State, Amount As Number)
 
-    Call SetVerticalOrbit(Value, Value.Controls.OrbitPitch + Amount)
+    Value.Controls.OrbitPitch = Clamp(Value.Controls.OrbitPitch + ToDouble(Amount), -180.0, 180.0)
+    Value.AutoOrbit = False
 
 End Sub
 
@@ -669,27 +621,23 @@ Public Sub SetZoom(ByRef Value As State, Degrees As Number,
     ZoomInLimit As Number, ZoomOutLimit As Number)
 
     Degrees = Min(ZoomOutLimit, Max(ZoomInLimit, Degrees))
-    Value.Zoom.Current1000 = Degrees * 1000
-    Value.Zoom.Target1000 = Value.Zoom.Current1000
-    Value.Zoom.AdvanceRemainder = 0
-    Value.Controls.Zoom = Degrees
+    Value.Zoom.Current = ToDouble(Degrees)
+    Value.Zoom.Target = Value.Zoom.Current
+    Value.Controls.Zoom = ToDouble(Degrees)
 
 End Sub
 
 Public Sub AdjustPreciseZoom(ByRef Value As State, WheelDelta As Number,
     ZoomInLimit As Number, ZoomOutLimit As Number)
 
-    Dim Degrees As Number
-
-    Degrees = CharacterViewer.ZoomTargetDegrees(Value.Zoom) - WheelDelta
-
-    Call SetZoom(Value, Degrees, ZoomInLimit, ZoomOutLimit)
+    Value.Zoom.Target = Clamp(Value.Zoom.Target - ToDouble(WheelDelta),
+        ToDouble(ZoomInLimit), ToDouble(ZoomOutLimit))
 
 End Sub
 
 Public Sub KeepAboveGround(ByRef Value As State, FloorHeight As Number)
 
-    Call CharacterViewer.KeepCameraAboveGround(Value.Live, FloorHeight)
+    Call PrecisionCamera.KeepCameraAboveGround(Value.Live, ToDouble(FloorHeight))
 
 End Sub
 

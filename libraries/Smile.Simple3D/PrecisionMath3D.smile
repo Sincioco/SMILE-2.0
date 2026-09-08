@@ -49,6 +49,26 @@ Public Function Dot(LeftValue As Precision3D.Vector3, RightValue As Precision3D.
 
 End Function
 
+Public Function Length(Value As Precision3D.Vector3) As Double
+
+    Dim Result As Double
+
+    Result = Sqrt(Dot(Value, Value))
+
+    Return Result
+
+End Function
+
+Public Function Distance(LeftValue As Precision3D.Vector3, RightValue As Precision3D.Vector3) As Double
+
+    Dim Result As Double
+
+    Result = Length(Subtract(LeftValue, RightValue))
+
+    Return Result
+
+End Function
+
 Public Function Cross(LeftValue As Precision3D.Vector3, RightValue As Precision3D.Vector3) As Precision3D.Vector3
 
     Dim Result As Precision3D.Vector3

@@ -7,6 +7,8 @@ Import Smile.Simple3D.Core As Core
 Import Smile.Simple3D.Interaction As Interaction
 Import Smile.Simple3D.FixedMath As Fixed
 Import Smile.Simple3D.Math3D As Math3D
+Import Smile.Simple3D.Precision3D As Precision3D
+Import Smile.Simple3D.PrecisionMath3D As PreciseMath
 
 ''' Rejects a transient animated socket that escapes its actor's stable scene envelope.
 Public Function BoundedAnchor(Candidate As Core.Vector3, Fallback As Core.Vector3,
@@ -158,6 +160,69 @@ Public Function Orbit(Base As Core.Camera3D, Controls As Core.CameraControl3D,
     First.UpDirection.Z = First.UpDirection.Z + (Second.UpDirection.Z - First.UpDirection.Z) * Fraction / 1000
 
     Return First
+
+End Function
+
+Public Function BoundedAnchorPrecise(Candidate As Precision3D.Vector3,
+    Fallback As Precision3D.Vector3, MaximumDelta As Number) As Precision3D.Vector3
+
+    Dim Result As Precision3D.Vector3
+
+    Result = Candidate
+
+    If (MaximumDelta < 0 Or
+        Abs(Candidate.X - Fallback.X) > ToDouble(MaximumDelta) Or
+        Abs(Candidate.Y - Fallback.Y) > ToDouble(MaximumDelta) Or
+        Abs(Candidate.Z - Fallback.Z) > ToDouble(MaximumDelta)) Then
+        Result = Fallback
+    End If
+
+    Return Result
+
+End Function
+
+Public Sub KeepOutsideActorPrecise(ByRef Camera As Precision3D.Camera3D,
+    Center As Precision3D.Vector3, Radius As Double)
+
+    Dim Offset As Precision3D.Vector3
+    Dim Distance As Double
+
+    Offset = PreciseMath.Subtract(Camera.Position, Center)
+    Offset.Y = 0.0
+    Distance = PreciseMath.Length(Offset)
+
+    If Distance >= Radius Then
+        Return
+    End If
+
+    If Distance = 0.0 Then
+        Offset.X = 1.0
+        Distance = 1.0
+    End If
+
+    Camera.Position.X = Center.X + Offset.X * Radius / Distance
+    Camera.Position.Z = Center.Z + Offset.Z * Radius / Distance
+
+End Sub
+
+Public Function ViewAnglesPrecise(Camera As Precision3D.Camera3D) As Precision3D.Vector3
+
+    Dim Direction As Precision3D.Vector3
+    Dim Result As Precision3D.Vector3
+    Dim Horizontal As Double
+
+    Direction = PreciseMath.Subtract(Camera.Target, Camera.Position)
+    Horizontal = Sqrt(Direction.X * Direction.X + Direction.Z * Direction.Z)
+
+    If Horizontal > 0.0 Then
+        Result.Y = PreciseMath.Degrees(Atan2(Direction.X, Direction.Z))
+    End If
+
+    If Horizontal > 0.0 Or Direction.Y <> 0.0 Then
+        Result.X = PreciseMath.Degrees(Atan2(Direction.Y, Horizontal))
+    End If
+
+    Return Result
 
 End Function
 
