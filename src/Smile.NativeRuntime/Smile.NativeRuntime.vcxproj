@@ -74,6 +74,9 @@
     <ClCompile Include="graphics\image_resource.cpp" />
     <ClCompile Include="input\pointer_state.c" />
     <ClCompile Include="runtime.c" />
+    <ClCompile Include="startup\startup.cpp">
+      <AdditionalIncludeDirectories>$(IntDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
     <ClCompile Include="numeric\double.cpp">
       <LanguageStandard>stdcpp17</LanguageStandard>
       <FloatingPointModel>Strict</FloatingPointModel>
@@ -95,6 +98,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="graphics\graphics_backend.h" />
+    <ClInclude Include="startup\startup.h" />
     <ClInclude Include="graphics\graphics_common.h" />
     <ClInclude Include="graphics\graphics_diagnostics.h" />
     <ClInclude Include="graphics\graphics_directx.h" />
@@ -112,4 +116,9 @@
     <ClInclude Include="audio\sfx_channels.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <Target Name="GenerateStartupLogo" BeforeTargets="ClCompile"
+          Inputs="$(ProjectDir)..\..\assets\branding\smile-2.0-logo-web.png;$(ProjectDir)..\..\scripts\generate-startup-logo.ps1"
+          Outputs="$(IntDir)startup_logo.generated.h">
+    <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(ProjectDir)..\..\scripts\generate-startup-logo.ps1&quot; -OutputPath &quot;$(IntDir)startup_logo.generated.h&quot;" />
+  </Target>
 </Project>

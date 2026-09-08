@@ -8,24 +8,27 @@ internal static class WebOutputWriter
 {
     private static readonly UTF8Encoding Utf8WithoutBom = new(false);
     internal static readonly IReadOnlyList<string> ManagedFileNames =
-        new[] { "index.html", "smile-runtime.js", "game.js", "smile.css" };
+        new[] { "index.html", "smile-runtime.js", "game.js", "smile.css", "smile-logo.png" };
 
     public static void Write(string outputDirectory, WebEmitter emitter)
         => Write(outputDirectory, emitter, null);
 
     internal static void Write(string outputDirectory, WebEmitter emitter, Action<string>? afterFileWrite,
-        IReadOnlyDictionary<string, int[]>? optimizedImageSizes = null)
+        IReadOnlyDictionary<string, int[]>? optimizedImageSizes = null, StartupBuildMetadata? metadata = null)
     {
+        metadata ??= StartupBuildMetadata.Create();
         var game = emitter.Emit();
         var runtime = RuntimeFor(emitter.ResponsiveWindow);
+        if (emitter.HasGameWindow)
+            runtime = runtime.Replace("const startupHasWindow = false;", "const startupHasWindow = true;", StringComparison.Ordinal);
         if (optimizedImageSizes?.Count > 0)
             runtime = runtime.Replace("const optimizedImageSizes = {};",
                 "const optimizedImageSizes = " + System.Text.Json.JsonSerializer.Serialize(optimizedImageSizes) + ";",
                 StringComparison.Ordinal);
-        var buildVersion = BuildVersion(emitter.Title, game, runtime, emitter.WebLoadingAuthor, emitter.WebLoadingLogo);
+        var buildVersion = BuildVersion(emitter.Title, game, runtime, emitter.WebLoadingAuthor, emitter.WebLoadingLogo, metadata);
         Directory.CreateDirectory(outputDirectory);
         File.WriteAllText(Path.Combine(outputDirectory, "index.html"), Index(emitter.Title, buildVersion,
-            emitter.WebLoadingAuthor, emitter.WebLoadingLogo), Utf8WithoutBom);
+            emitter.WebLoadingAuthor, emitter.WebLoadingLogo, metadata), Utf8WithoutBom);
         afterFileWrite?.Invoke("index.html");
         File.WriteAllText(Path.Combine(outputDirectory, "smile-runtime.js"), runtime, Utf8WithoutBom);
         afterFileWrite?.Invoke("smile-runtime.js");
@@ -33,11 +36,13 @@ internal static class WebOutputWriter
         afterFileWrite?.Invoke("game.js");
         File.WriteAllText(Path.Combine(outputDirectory, "smile.css"), Style, Utf8WithoutBom);
         afterFileWrite?.Invoke("smile.css");
+        File.WriteAllBytes(Path.Combine(outputDirectory, "smile-logo.png"), StartupBuildMetadata.LogoBytes());
+        afterFileWrite?.Invoke("smile-logo.png");
     }
 
-    private static string BuildVersion(string title, string game, string runtime, string? author, string? logo)
+    private static string BuildVersion(string title, string game, string runtime, string? author, string? logo, StartupBuildMetadata metadata)
     {
-        var unversionedIndex = Index(title, string.Empty, author, logo);
+        var unversionedIndex = Index(title, string.Empty, author, logo, metadata);
         var content = string.Join('\0', unversionedIndex, runtime, game, Style);
         var hash = SHA256.HashData(Encoding.UTF8.GetBytes(content));
         return Convert.ToHexString(hash)[..16].ToLowerInvariant();
@@ -77,7 +82,15 @@ internal static class WebOutputWriter
         return reader.ReadToEnd();
     }
 
-    private static string Index(string title, string buildVersion, string? author, string? logo) => $$"""
+    private static string StartupRuntimeSource()
+    {
+        using var stream = typeof(WebOutputWriter).Assembly.GetManifestResourceStream("Smile.Compiler.WebRuntime.Startup.js")
+            ?? throw new InvalidOperationException("Missing Web startup resource.");
+        using var reader = new StreamReader(stream, Encoding.UTF8, true);
+        return reader.ReadToEnd();
+    }
+
+    private static string Index(string title, string buildVersion, string? author, string? logo, StartupBuildMetadata metadata) => $$"""
         <!doctype html>
         <html lang="en">
         <head>
@@ -96,14 +109,17 @@ internal static class WebOutputWriter
                      style="position:fixed;inset:0;z-index:25;display:flex;flex-direction:column;align-items:center;overflow:auto;text-align:center;padding:24px 20px max(20px,env(safe-area-inset-bottom,0px));color:#f4f7fc;background:radial-gradient(ellipse at 50% 36%,#172d48,#08101e 72%);font-family:Segoe UI,Arial,sans-serif">
               <div style="width:min(760px,100%);margin:auto 0;padding:16px 0 28px;flex-shrink:0">
                 <h1 style="font-size:clamp(20px,3vw,32px);font-weight:600;margin:0 0 20px">{{WebUtility.HtmlEncode(title)}}</h1>
-                {{(string.IsNullOrWhiteSpace(logo) ? string.Empty : $"<img id=\"smile-loading-logo\" src=\"{WebUtility.HtmlEncode(logo)}?v={buildVersion}\" alt=\"SMILE 2.0\" fetchpriority=\"high\" style=\"display:block;width:min(480px,80vw);height:min(38vh,400px);object-fit:contain;margin:0 auto 24px\">")}}
-                <progress id="smile-loading-progress" aria-label="Loading assets" style="width:min(440px,80vw);height:12px;accent-color:#eec746"></progress>
+                <img id="smile-loading-logo" src="smile-logo.png?v={{buildVersion}}" alt="SMILE 2.0" fetchpriority="high" style="display:block;width:min(480px,80vw);height:min(34vh,360px);object-fit:contain;margin:0 auto 24px">
+                <progress id="smile-loading-progress" aria-label="Overall startup preparation" style="width:min(440px,80vw);height:12px;accent-color:#eec746"></progress>
                 <div role="status" aria-live="polite" aria-atomic="true">
                   <p id="smile-loading-status" style="margin:14px 0 8px">Starting program…</p>
                   <p id="smile-loading-detail" style="font-size:13px;min-height:2.6em;color:#abbcd3;overflow-wrap:anywhere;margin:0 0 22px">Preparing the Web runtime. Large assets may take a moment.</p>
                 </div>
+                <progress id="smile-loading-transfer" hidden aria-label="Current asset download" style="width:min(440px,80vw);height:8px;accent-color:#72cde4"></progress>
+                <p id="smile-loading-transfer-text" style="font-size:12px;color:#abbcd3;overflow-wrap:anywhere;min-height:2.6em">Waiting for asset requests.</p>
                 <p style="font-size:18px;margin:0 0 6px">Created in SMILE 2.0</p>
                 {{(string.IsNullOrWhiteSpace(author) ? string.Empty : $"<p style=\"font-size:15px;margin:0\">Created by {WebUtility.HtmlEncode(author)}</p>")}}
+                <p id="smile-build-metadata" style="font-size:12px;color:#abbcd3;margin:10px 0 0">{{WebUtility.HtmlEncode(metadata.Display)}}</p>
                 <noscript>JavaScript is required to run this SMILE program.</noscript>
               </div>
               <footer aria-label="SMILE 2.0 copyright and links" style="flex-shrink:0;max-width:1200px;font-size:12px;line-height:1.8;color:#9ca9be">
@@ -132,6 +148,7 @@ internal static class WebOutputWriter
             </section>
           </main>
           <script>
+            {{StartupRuntimeSource()}}
             window.addEventListener("error", event => {
               const loader = document.getElementById("smile-loading");
               if (!loader || loader.hidden) return;
@@ -246,6 +263,7 @@ internal static class WebOutputWriter
             const loadingStatus = document.getElementById("smile-loading-status");
             const loadingDetail = document.getElementById("smile-loading-detail");
             const startupAssets = new Map();
+            const startupHasWindow = false;
             // Encoded immutable model/image data only: no actor, animator, material or save state.
             // A page reload starts a fresh cache, so rebuilding at the same URL cannot retain old data.
             const assetDownloadCache = new Map();
@@ -257,29 +275,48 @@ internal static class WebOutputWriter
             let startupPresented = false;
 
             function updateStartupLoading() {
-                if (startupPresented || !loadingScreen) return;
-                const entries = Array.from(startupAssets.entries());
-                const ready = entries.filter(([, state]) => state === "ready").length;
-                const pending = entries.filter(([, state]) => state === "loading");
-                const failed = entries.filter(([, state]) => state === "failed").length;
-                if (loadingStatus) loadingStatus.textContent = pending.length
-                    ? `Loading assets — ${ready} ready, ${pending.length} downloading or decoding`
-                    : `Preparing scene — ${ready} assets ready${failed ? `, ${failed} failed` : ""}`;
-                if (loadingDetail) loadingDetail.textContent = pending.length
-                    ? pending[pending.length - 1][0]
-                    : (failed ? "An asset failed to load; the program is checking recovery." : "Preparing the first frame…");
+                window.smileStartup.update(startupAssets);
             }
 
-            function startupAsset(path, state) {
-                if (startupPresented || !loadingScreen) return;
-                startupAssets.set(path, state);
+            function startupAsset(path, state, received = 0, total = 0) {
+                if (startupPresented) return;
+                startupAssets.set(path, { state, received, total });
                 updateStartupLoading();
             }
 
+            let startupFinishPromise;
             function finishStartupLoading() {
-                startupPresented = true;
-                startupAssets.clear();
-                if (loadingScreen) { loadingScreen.hidden = true; loadingScreen.style.display = "none"; }
+                if (!startupFinishPromise) startupFinishPromise = window.smileStartup.finish().then(() => {
+                    startupPresented = true;
+                    startupAssets.clear();
+                });
+                return startupFinishPromise;
+            }
+
+            async function startupResponseBytes(response, logical) {
+                if (startupPresented || !response.body || !response.body.getReader) return response.arrayBuffer();
+                // Fetch exposes decoded bytes. Content-Length describes encoded bytes when compressed.
+                const encoding = response.headers.get("Content-Encoding");
+                const length = Number(response.headers.get("Content-Length"));
+                let total = (!encoding || encoding === "identity") && Number.isSafeInteger(length) && length > 0 ? length : 0;
+                const reader = response.body.getReader();
+                const chunks = [];
+                let received = 0;
+                try {
+                    while (true) {
+                        const part = await reader.read();
+                        if (part.done) break;
+                        if (mediaStopped) { await reader.cancel(); throw STOP; }
+                        chunks.push(part.value);
+                        received += part.value.byteLength;
+                        if (received > total) total = 0;
+                        startupAsset(logical, "loading", received, total);
+                    }
+                } finally { reader.releaseLock(); }
+                const bytes = new Uint8Array(received);
+                let offset = 0;
+                for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }
+                return bytes.buffer;
             }
 
             function forgetAssetDownload(logical) {
@@ -303,7 +340,7 @@ internal static class WebOutputWriter
                     assetDownloadCount += 1;
                     const response = await fetch(logical, options);
                     if (!response.ok) throw new Error(`Asset download failed (${response.status}): ${logical}`);
-                    const bytes = await response.arrayBuffer();
+                    const bytes = await startupResponseBytes(response, logical);
                     if (mediaStopped) throw STOP;
                     if (retain && bytes.byteLength <= MAX_ASSET_DOWNLOAD_CACHE_BYTES) {
                         // Concurrent callers can finish the same path; replace rather than double-count it.
@@ -3344,7 +3381,7 @@ internal static class WebOutputWriter
                     imageDecodeCount += 1;
                     entry.promise = (async () => {
                         const bytes = await fetchAssetBytes(logical, { cache: "no-store" }, true);
-                        startupAsset(logical, "loading");
+                        startupAsset(logical, "decoding");
                         const url = URL.createObjectURL(new Blob([bytes]));
                         try { return await new Promise((resolve, reject) => {
                         const resource = new Image();
@@ -3528,7 +3565,7 @@ internal static class WebOutputWriter
                 if (!suppressNewLine) consoleText += "\n";
                 consoleOutput.textContent = consoleText;
                 consoleOutput.scrollTop = consoleOutput.scrollHeight;
-                finishStartupLoading();
+                if (!startupHasWindow) void finishStartupLoading();
                 if (switchToConsole && (!document.activeElement ||
                     document.activeElement === document.body || document.activeElement === canvas))
                     consoleOutput.focus({ preventScroll: true });
@@ -3544,11 +3581,11 @@ internal static class WebOutputWriter
                 return new Promise(resolve => setTimeout(resolve, Math.max(0, duration)));
             }
 
-            function showScreen() {
+            async function showScreen() {
                 if (closed) endProgram();
                 visible.clearRect(0, 0, logicalWidth, logicalHeight);
                 visible.drawImage(backCanvas, 0, 0, logicalWidth, logicalHeight);
-                finishStartupLoading();
+                await finishStartupLoading();
                 window.__smileWeb.frameCount += 1;
                 pointerDeltaXValue = 0;
                 pointerDeltaYValue = 0;
@@ -4124,8 +4161,8 @@ internal static class WebOutputWriter
 
             function endProgram() { closed = true; throw STOP; }
 
-            function finish() {
-                finishStartupLoading();
+            async function finish() {
+                await finishStartupLoading();
                 closed = true;
                 keys.length = 0;
                 releaseAllInputs();
@@ -4134,9 +4171,9 @@ internal static class WebOutputWriter
                 window.__smileWeb.status = "stopped";
             }
 
-            function fail(error) {
-                if (error === STOP) { finish(); return; }
-                finishStartupLoading();
+            async function fail(error) {
+                if (error === STOP) { await finish(); return; }
+                await finishStartupLoading();
                 closed = true;
                 keys.length = 0;
                 releaseAllInputs();
@@ -4151,7 +4188,7 @@ internal static class WebOutputWriter
 
             function run(main) {
                 window.__smileWeb.status = "running";
-                Promise.resolve().then(main).then(finish).catch(fail);
+                window.smileStartup.painted.then(() => { updateStartupLoading(); return main(); }).then(finish).catch(fail);
             }
 
             return {

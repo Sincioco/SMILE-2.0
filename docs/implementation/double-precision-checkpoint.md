@@ -489,6 +489,10 @@ Next action: STOP. No outstanding work in this follow-up; held features remain h
 
 ## On Hold
 
-Loader/splash enhancements, semantic-inspection CLI, Battle Scene Editor,
+Semantic-inspection CLI, Battle Scene Editor,
 subject-first syntax, SMILE 1.0 changes, further Sin Star I updates and unrelated suspended features
 remain deferred.
+
+Sin explicitly released loader/splash enhancements on September 9, 2026. That
+separate milestone follows [its own checkpoint](startup-presentation-checkpoint.md);
+the accepted Double implementation and human observations remain closed.

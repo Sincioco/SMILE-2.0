@@ -19,6 +19,7 @@
 #include "audio/audio_focus.h"
 #include "audio/audio_focus_state.h"
 #include "audio/sfx_channels.h"
+#include "startup/startup.h"
 
 #define SMILE_KEY_NONE 0
 #define SMILE_KEY_W 1
@@ -1285,6 +1286,7 @@ long long smile_get_key(void)
     else
     {
         HANDLE input = GetStdHandle(STD_INPUT_HANDLE);
+        smile_startup_ready();
         DWORD file_type = GetFileType(input);
         if (file_type == FILE_TYPE_CHAR)
         {
@@ -1761,6 +1763,7 @@ void smile_game_open(const char* title, long long title_length, long long width,
     }
     ShowWindow(smile_window, show_command);
     UpdateWindow(smile_window);
+    smile_startup_attach(smile_window);
 }
 
 static void smile_pump_messages(void)
@@ -1791,6 +1794,7 @@ void smile_show_screen(void)
     if (smile_window == 0)
         return;
     smile_graphics_present();
+    smile_startup_ready();
     diagnostics_ready = smile_frame_clock_end_present(&smile_frame_clock);
     if (diagnostics_ready && smile_graphics_diagnostics_enabled())
     {
@@ -2355,6 +2359,7 @@ int smile_resolve_asset_path_utf8(const char* path, long long length, WCHAR* res
     WCHAR* slash;
     int base_length;
     int path_length;
+    smile_startup_status(path, length);
     if (!smile_canonical_asset_path(path, length, canonical, (int)sizeof(canonical))) return 0;
     wide = smile_utf8_to_wide(canonical, (long long)lstrlenA(canonical));
     if (resolved_path == 0 || capacity <= 0 || wide == 0)
@@ -2878,6 +2883,7 @@ void smile_save_data_value(const long long* source, long long capacity, long lon
 
 void smile_media_shutdown(void)
 {
+    smile_startup_ready();
     smile_window_save_placement();
     smile_sfx_shutdown();
     smile_image_resource_shutdown();

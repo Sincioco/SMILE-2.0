@@ -19,23 +19,53 @@ Loaded PNGs retain their original dimensions and per-pixel alpha. Repeated loads
 
 On both targets, an Image expression produces one owned value. Assignment, `ByVal`, and `Return` transfer that owner; `ByRef` aliases the storage location. `Image_Width`, `Image_Height`, `Image_Loaded`, and `Draw Image` consume expression temporaries. Record copies retain owned fields exactly once, while record-return temporaries transfer without an extra clone.
 
-## Web startup and reusable downloads
+## Native/Web startup and reusable downloads
 
-Generated Web pages display a startup loader before the runtime and program
-scripts execute. It shows actual outstanding asset paths and completed-file
-counts with an indeterminate activity bar: this is not a whole-download byte
-percentage, because programs may discover more assets while loading. The first
-presented frame or console output dismisses it. Runtime failure exposes the
-error panel; a failed script download reports a reload/connection message.
+Every newly compiled SMILE executable and Web program automatically includes
+the official branded startup presentation. No import, source statement or build
+option enables/disables it. The approved 768×512 derivative is embedded in the
+native runtime and published as `smile-logo.png` on Web; the canonical original
+is unchanged. Native and Web keep it visible for at least one second, overlapping
+real preparation. Fast/cached programs wait only the remaining interval; longer
+loading does not add an unconditional extra second. Native begins timing after
+painting/flushing the logo; Web waits for logo decode and a browser presentation
+boundary, excluding background-tab time. Hidden/minimized windows and physical
+occlusion have platform limits; this does not prove a human looked at the logo.
 
-Application project properties `WebLoadingAuthor` (one-line text, 1–128 characters)
-and `WebLoadingLogo` (project-relative PNG path) optionally add creator credits
-and a logo. Metadata is validated in the shared project model and HTML-escaped.
+The native splash has an independent UI thread so asset preparation can proceed
+on the original program thread. It does not create another renderer or take
+keyboard focus. The first graphical frame is submitted before dismissal; console
+input/termination also honor the minimum without adding text to stdout. Program
+termination/cancellation does not keep an orphan splash alive.
+
+Web shows two distinct measures: overall startup remains indeterminate until
+the first frame/output is ready, while the current asset shows received bytes
+and a percentage only for a reliable uncompressed `Content-Length`. Compressed,
+unknown-length and decoding phases are labeled explicitly. File counts describe
+discovered assets, not an invented final total or ETA. Graphical status `Print`
+calls cannot hide the loader before its first frame. Errors still reach the
+runtime error panel after the minimum; a missing logo/script stays visible with
+a reload/connection message.
+
+Application project property `WebLoadingAuthor` (one-line text, 1–128 characters)
+adds application creator credits on both targets; its existing property name is
+retained for compatibility. Metadata is validated in the shared project model
+and HTML-escaped. `WebLoadingLogo` (project-relative PNG path) remains accepted
+and published for older projects, but cannot replace the mandatory official logo.
 The PNG is published as `Assets/Branding/WebLoadingLogo.png` using the existing
 transactional asset publisher. Missing files, invalid PNG signatures and files
 larger than 8 MiB block Web compilation; image decoding remains browser-owned.
 Native builds do not publish this Web-only asset. The loader's SMILE copyright
 and links identify the language/platform, not the application's copyright owner.
+
+The compiler stamps the generated artifact with its actual compilation time
+(`yyyy-MM-dd HH:mm:ss ±HH:mm`) and the product version embedded from the VSIX
+manifest when the compiler was built. These do not come from the program's launch
+clock. A rebuild changes the Web publication identity; a reload does not change
+the artifact's timestamp. Existing executables/publications require recompilation
+to adopt this behavior. Libraries have no executable startup presentation.
+Generated files/compiler sources remain editable; branding is a standard build
+contract, not tamper protection.
 
 The Web runtime retains up to 128 MiB / 256 entries of encoded model/image
 downloads in page-local least-recently-used storage. This avoids another network

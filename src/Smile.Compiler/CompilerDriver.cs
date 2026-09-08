@@ -57,6 +57,10 @@ internal sealed class CompilerDriver
 
             if (options.Target == SmileCompilationTarget.Web)
             {
+                var reservedAsset = buildAssets?.AssetPaths.FirstOrDefault(path =>
+                    WebOutputWriter.ManagedFileNames.Contains(path, StringComparer.OrdinalIgnoreCase));
+                if (reservedAsset != null)
+                    throw new InvalidDataException($"Web asset '{reservedAsset}' conflicts with a compiler-owned output file. Rename the project asset.");
                 var outputDirectory = Path.GetFullPath(options.OutputDirectory!);
                 using var outputLock = OutputPublicationLock.Acquire(outputDirectory,
                     _testHooks?.OutputLockTimeout);
@@ -154,7 +158,8 @@ internal sealed class CompilerDriver
                     options.EmitDebugInformation, appIdentity,
                     buildAssets?.AssetPaths,
                     rememberWindowPlacement: input.Project?.RememberWindowPlacement == true,
-                    responsiveWindow: input.Project?.ResponsiveWindow == true);
+                    responsiveWindow: input.Project?.ResponsiveWindow == true,
+                    startupAuthor: input.Project?.WebLoadingAuthor);
                 File.WriteAllText(assemblyPath, emitter.Emit());
                 _testHooks?.AfterAssemblyEmission?.Invoke(intermediates);
                 if (options.EmitDebugInformation)

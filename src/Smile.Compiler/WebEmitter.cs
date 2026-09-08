@@ -44,6 +44,7 @@ internal sealed class WebEmitter
     }
 
     public string Title { get; }
+    public bool HasGameWindow => _analysis.BoundSyntaxTree.Root.Statements.OfType<GameWindowStatementSyntax>().Any();
     public bool ResponsiveWindow { get; }
     public string? WebLoadingAuthor { get; }
     public string? WebLoadingLogo { get; }

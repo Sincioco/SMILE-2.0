@@ -204,6 +204,12 @@ targets:
 - Web - Optimized Medium
 - Web - Optimized High
 
+Newly compiled native and Web programs include the official SMILE startup logo,
+creator credits, and the artifact's compilation timestamp/version. The logo stays
+visible for at least one second while loading proceeds. Web distinguishes overall
+preparation from the current asset's actual download progress. No source changes
+or optional imports are required. See [startup behavior and compatibility](docs/language/phase4-media.md#nativeweb-startup-and-reusable-downloads).
+
 For deeper implementation and language material, start with the
 [language documentation](docs/language/README.md) and the milestone reports
 under `docs/implementation`.

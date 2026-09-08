@@ -93,6 +93,8 @@ internal sealed class MasmEmitter
     private readonly byte[] _assetManifestBytes;
     private readonly bool _rememberWindowPlacement;
     private readonly bool _responsiveWindow;
+    private readonly string? _startupAuthor;
+    private readonly StartupBuildMetadata _startupBuild;
     private readonly StringBuilder _builder = new();
     private readonly Dictionary<VariableSymbol, string> _symbolLabels = new();
     private readonly Dictionary<RoutineSymbol, string> _routineLabels = new();
@@ -151,7 +153,8 @@ internal sealed class MasmEmitter
     public MasmEmitter(SmileAnalysisResult analysis, SmileGraphicsBackend graphicsBackend,
         bool vSync, bool emitDebugInformation, string? appIdentity = null,
         IReadOnlyList<string>? assetPaths = null, bool rememberWindowPlacement = false,
-        bool responsiveWindow = false)
+        bool responsiveWindow = false, string? startupAuthor = null,
+        StartupBuildMetadata? startupBuild = null)
     {
         _analysis = analysis;
         _graphicsBackend = graphicsBackend;
@@ -161,6 +164,8 @@ internal sealed class MasmEmitter
         _assetManifestBytes = Encoding.UTF8.GetBytes(string.Join("\n", assetPaths ?? Array.Empty<string>()));
         _rememberWindowPlacement = rememberWindowPlacement;
         _responsiveWindow = responsiveWindow;
+        _startupAuthor = startupAuthor;
+        _startupBuild = startupBuild ?? StartupBuildMetadata.Create();
     }
 
     public bool UsesMusic => _usesMusic;
@@ -310,6 +315,7 @@ internal sealed class MasmEmitter
         Line("EXTERN smile_save_data_checked:PROC");
         Line("EXTERN smile_media_shutdown:PROC");
         Line("EXTERN smile_media_configure:PROC");
+        Line("EXTERN smile_startup_begin:PROC");
         foreach (var site in _debugSites)
             Line($"EXTERN {site.HelperName}:PROC");
         Line();
@@ -341,6 +347,14 @@ internal sealed class MasmEmitter
         EmitBytes(_appIdentityBytes, terminate: false);
         Line("smile_asset_manifest LABEL BYTE");
         EmitBytes(_assetManifestBytes, terminate: false);
+        var startupTitle = _analysis.BoundSyntaxTree.Root.Statements.OfType<GameWindowStatementSyntax>()
+            .FirstOrDefault()?.Title.Value as string ?? Path.GetFileNameWithoutExtension(_analysis.BoundSyntaxTree.Source.FilePath);
+        Line("smile_startup_title LABEL BYTE");
+        EmitBytes(Encoding.UTF8.GetBytes(string.IsNullOrWhiteSpace(startupTitle) ? "SMILE 2.0 Program" : startupTitle), terminate: true);
+        Line("smile_startup_author LABEL BYTE");
+        EmitBytes(Encoding.UTF8.GetBytes(_startupAuthor ?? string.Empty), terminate: true);
+        Line("smile_startup_build LABEL BYTE");
+        EmitBytes(Encoding.UTF8.GetBytes(_startupBuild.Display), terminate: true);
 
         Line();
         Line(".code");
@@ -353,6 +367,10 @@ internal sealed class MasmEmitter
         Line("    lea r8, smile_asset_manifest");
         Line($"    mov r9, {_assetManifestBytes.Length.ToString(CultureInfo.InvariantCulture)}");
         CallAligned("smile_media_configure");
+        Line("    lea rcx, smile_startup_title");
+        Line("    lea rdx, smile_startup_author");
+        Line("    lea r8, smile_startup_build");
+        CallAligned("smile_startup_begin");
         Line($"    mov rcx, {(int)_graphicsBackend}");
         Line($"    mov rdx, {(_vSync ? 1 : 0)}");
         CallAligned("smile_graphics_configure");

@@ -50,7 +50,8 @@ These instructions apply to the entire SMILE 2.0 repository.
 
 ### Current on-hold tasks
 
-- None.
+- Further Sin Star I game updates, Battle Scene Editor, semantic-inspection CLI,
+  subject-first syntax, SMILE 1.0 changes and unrelated suspended features.
 
 ## Project identity
 
@@ -83,7 +84,7 @@ These instructions apply to the entire SMILE 2.0 repository.
 - Web progress must distinguish overall loading from the current asset download. Use real byte progress when reliable totals exist, and clearly label unknown-size/indeterminate phases rather than inventing percentages or ETAs.
 - Keep startup presentation reusable in the shared SMILE library/runtime where practical, but include and enforce it automatically through the standard compiler/runtime. It must not depend on an optional user import/call, and standard generated programs must not expose a source-level or build-setting opt-out from the branded one-second minimum. Editable compiler sources/generated output are not tamper-proof; do not claim otherwise or introduce DRM/obfuscation to imply that guarantee.
 - Sin explicitly accepts the limitation that someone can modify generated Web files to remove branding after compilation. Enforce the standard build contract; do not expand this task into anti-tampering work.
-- As of this instruction, the shared Web loader exists; the new progress/metadata/minimum-duration behavior and shared native splash are queued implementation requirements, not claims of completed runtime support. Implement them after the requested README rewrite, following the earlier hardening and optimized-Web milestones.
+- The shared native/Web startup presentation now implements the progress, artifact metadata and one-second minimum. Follow `docs/implementation/startup-presentation-checkpoint.md` for current source, validation and delivery evidence. Existing executables/Web publications need recompilation to adopt it.
 
 ## Permanent future 3D direction
 
@@ -140,7 +141,7 @@ The SMILE 2.0 - 3D Viewer, Animation Editor is allowed to evolve into a lightwei
   production adoption are published. Follow the [current Double checkpoint](docs/implementation/double-precision-checkpoint.md)
   for D3/D4 human interaction, audio and hover acceptance; implementation alone does
   not close any remaining observation. Do not restart P0/D1/D2/D3 or the accepted
-  Viewer refactor from an older handoff. Loader/splash enhancements, the semantic-inspection
+  Viewer refactor from an older handoff. The semantic-inspection
   CLI, Battle Scene Editor and subject-first syntax still require their own approved phase.
 
 ### Permanent smooth 3D camera interaction rule

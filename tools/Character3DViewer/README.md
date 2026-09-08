@@ -1,5 +1,12 @@
 # SMILE 2.0 - 3D Viewer, Animation Editor
 
+Standard native and Web builds now include the shared mandatory SMILE startup
+presentation. It overlaps asset preparation with a one-second visible logo
+minimum, shows creator credits and the artifact's compilation time/version, and
+reports Web asset bytes separately from overall preparation. No Viewer source
+initialization or optional import is required. See the
+[startup checkpoint](../../docs/implementation/startup-presentation-checkpoint.md).
+
 Ctrl+Left/Right step the timeline using the queued press's modifier snapshot on
 Desktop and Web. Quick taps remain frame steps even after Control is released;
 plain arrows still orbit. This uses the shared `Key_Event_Held` built-in and does

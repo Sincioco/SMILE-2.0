@@ -730,14 +730,24 @@ Run("Native and Web emitters lower a dynamic Load Text File path", () =>
         .Contains("call smile_load_text_file", StringComparison.Ordinal));
     Equal(true, new WebEmitter(analysis).Emit().Contains("await smile.loadTextFile(", StringComparison.Ordinal));
 });
-Run("Web output writer creates deterministic static files", () =>
+Run("Web output writer stamps mandatory branding and artifact metadata", () =>
 {
     var directory = Path.Combine(Path.GetTempPath(), "smile-web-output-test-" + Guid.NewGuid().ToString("N"));
     try
     {
-        var expectedNames = new[] { "index.html", "smile-runtime.js", "game.js", "smile.css" };
+        var expectedNames = new[] { "index.html", "smile-runtime.js", "game.js", "smile.css", "smile-logo.png" };
         var analysis = Analyze("Game Window \"Test\"\nShow Screen\nEnd Program\n");
-        WebOutputWriter.Write(directory, new WebEmitter(analysis));
+        var metadata = new StartupBuildMetadata("2.0.61", new DateTimeOffset(2026, 9, 9, 1, 2, 3, TimeSpan.FromHours(8)));
+        WebOutputWriter.Write(directory, new WebEmitter(analysis), null, metadata: metadata);
+        var firstIndex = File.ReadAllText(Path.Combine(directory, "index.html"));
+        WebOutputWriter.Write(directory, new WebEmitter(analysis), null, metadata: metadata);
+        Equal(firstIndex, File.ReadAllText(Path.Combine(directory, "index.html")));
+        Equal(true, firstIndex.Contains("Compiled 2026-09-09 01:02:03 +08:00 | SMILE 2.0.61", StringComparison.Ordinal));
+        Equal(true, File.ReadAllBytes(Path.Combine(directory, "smile-logo.png")).SequenceEqual(
+            File.ReadAllBytes("assets/branding/smile-2.0-logo-web.png")));
+        var product = XDocument.Load("src/Smile.VisualStudio/source.extension.vsixmanifest")
+            .Descendants().Single(element => element.Name.LocalName == "Identity");
+        Equal((string?)product.Attribute("Version"), StartupBuildMetadata.Create().Version);
         Equal(true, WebOutputWriter.ManagedFileNames.SequenceEqual(expectedNames));
         Equal(expectedNames.Length, Directory.EnumerateFiles(directory).Count());
         foreach (var name in expectedNames)
@@ -813,7 +823,7 @@ Run("Web output writer creates deterministic static files", () =>
         var creditedHtml = File.ReadAllText(Path.Combine(directory, "index.html"));
         Equal(true, creditedHtml.Contains("Created by Sin &amp; &lt;Guest&gt;", StringComparison.Ordinal));
         Equal(false, creditedHtml.Contains(buildVersion, StringComparison.Ordinal));
-        Equal(true, creditedHtml.Contains("src=\"Assets/Branding/WebLoadingLogo.png?v=", StringComparison.Ordinal));
+        Equal(true, creditedHtml.Contains("src=\"smile-logo.png?v=", StringComparison.Ordinal));
         Equal(true, creditedHtml.IndexOf("<h1", StringComparison.Ordinal) < creditedHtml.IndexOf("<img", StringComparison.Ordinal));
         Equal(true, creditedHtml.IndexOf("<img", StringComparison.Ordinal) < creditedHtml.IndexOf("<progress", StringComparison.Ordinal));
     }
@@ -6318,6 +6328,27 @@ Run("Failed staged Web generation preserves the complete prior publication", () 
             Equal("last-known-good-" + file, File.ReadAllText(Path.Combine(output, file)));
         Equal("unrelated", File.ReadAllText(Path.Combine(output, "sentinel.txt")));
         Equal(0, Directory.EnumerateDirectories(directory, ".Web.smile-staging-*").Count());
+    }
+    finally { Directory.Delete(directory, true); }
+});
+
+Run("Mandatory Web startup assets cannot replace a project's declared file", () =>
+{
+    var directory = Path.Combine(Path.GetTempPath(), "SmileStartupCollision-" + Guid.NewGuid().ToString("N"));
+    Directory.CreateDirectory(directory);
+    try
+    {
+        File.WriteAllText(Path.Combine(directory, "Program.smile"), "Print 1\n");
+        File.WriteAllText(Path.Combine(directory, "smile-logo.png"), "User asset");
+        var project = Path.Combine(directory, "Collision.smileproj");
+        File.WriteAllText(project, "<SmileProject><PropertyGroup><StartupFile>Program.smile</StartupFile></PropertyGroup>" +
+            "<ItemGroup><Asset Include=\"smile-logo.png\" /></ItemGroup></SmileProject>");
+        var output = Path.Combine(directory, "Web");
+        Directory.CreateDirectory(output);
+        File.WriteAllText(Path.Combine(output, "index.html"), "Prior publication");
+        Equal(1, new CompilerDriver().Run(new[] { "--project", project, "--target", "web", "--output-dir", output }));
+        Equal("Prior publication", File.ReadAllText(Path.Combine(output, "index.html")));
+        Equal("User asset", File.ReadAllText(Path.Combine(directory, "smile-logo.png")));
     }
     finally { Directory.Delete(directory, true); }
 });

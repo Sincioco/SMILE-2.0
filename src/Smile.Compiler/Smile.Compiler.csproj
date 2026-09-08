@@ -1,6 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
+    <EmbeddedResource Include="..\..\assets\branding\smile-2.0-logo-web.png" LogicalName="Smile.Compiler.StartupLogo.png" />
+    <EmbeddedResource Include="..\Smile.VisualStudio\source.extension.vsixmanifest" LogicalName="Smile.Compiler.ProductManifest.xml" />
+    <EmbeddedResource Include="WebRuntime\Startup.js" LogicalName="Smile.Compiler.WebRuntime.Startup.js" />
     <ProjectReference Include="..\Smile.AssetTool\Smile.AssetTool.csproj" />
     <ProjectReference Include="..\Smile.Language\Smile.Language.csproj" />
     <EmbeddedResource Include="WebRuntime\Renderer3DPrecision.js" LogicalName="Smile.Compiler.WebRuntime.Renderer3DPrecision.js" />

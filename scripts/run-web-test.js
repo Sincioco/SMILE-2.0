@@ -162,6 +162,27 @@ function createMobileEventTarget(initial = {}) {
     return target;
 }
 
+function installStartupFixture(host, context) {
+    const originalGet = host.document.getElementById.bind(host.document);
+    const elements = new Map();
+    host.document.getElementById = id => {
+        const existing = originalGet(id);
+        if (existing) return existing;
+        if (!id.startsWith("smile-loading")) return null;
+        if (!elements.has(id)) elements.set(id, createMobileEventTarget({ hidden: false, textContent: "" }));
+        return elements.get(id);
+    };
+    host.document.getElementById("smile-loading-logo").decode = async () => {};
+    for (const id of ["smile-loading-progress", "smile-loading-transfer"])
+        host.document.getElementById(id).removeAttribute = function(name) { delete this[name]; };
+    // Isolate the loader clock from gameplay simulation. The focused startup test uses controlled frames.
+    host.__startupFixtureNow = 0;
+    host.__startupFixtureFrame = callback => queueMicrotask(() => callback(host.__startupFixtureNow += 1000));
+    const html = fs.readFileSync(path.join(webDirectory, "index.html"), "utf8");
+    const script = html.match(/<script>\s*([\s\S]*?)<\/script>/)[1];
+    vm.runInContext(`(function(requestAnimationFrame, performance) { ${script} })(__startupFixtureFrame, { now: () => __startupFixtureNow });`, context);
+}
+
 function createMobileControlsHost(options = {}) {
     const windowListeners = new Map();
     const documentListeners = new Map();
@@ -278,6 +299,7 @@ function createMobileControlsHost(options = {}) {
     host.document.activeElement = canvas;
     consoleElement.focus = () => { host.document.activeElement = consoleElement; };
     const context = vm.createContext(host);
+    installStartupFixture(host, context);
     vm.runInContext(fs.readFileSync(runtimePath, "utf8"), context, { filename: runtimePath });
     const dispatchWindow = (type, event = {}) => dispatch(windowListeners, host, type, event);
     const dispatchDocument = (type, event = {}) => dispatch(documentListeners, host.document, type, event);
@@ -700,8 +722,8 @@ async function runStartupLoadingTests() {
     const pending = runtime.loadImage("Assets/Logo.png");
     await new Promise(resolve => setImmediate(resolve));
     mobileEqual(loader.hidden, false, "loader remains visible while download is pending");
-    mobileAssert(status.textContent.includes("1 downloading"), "loading count describes real outstanding work");
-    mobileEqual(detail.textContent, "Assets/Logo.png", "loader reports logical filename, not a host drive path");
+    mobileAssert(detail.textContent.includes("1 asset downloading"), "loading count describes real outstanding work");
+    mobileAssert(env.host.document.getElementById("smile-loading-transfer-text").textContent.includes("Assets/Logo.png"), "loader reports logical filename, not a host drive path");
     completeDownload(new Uint8Array([137, 80, 78, 71]).buffer);
     const first = await pending;
     mobileAssert(status.textContent.includes("1 assets ready"), "completed asset count");
@@ -716,6 +738,33 @@ async function runStartupLoadingTests() {
     runtime.mediaShutdown();
     mobileEqual(runtime.mediaDiagnostics().assetDownloadCacheBytes, 0, "shutdown clears encoded cache");
     mobileEqual(runtime.mediaDiagnostics().imageReferenceCount, 0, "shutdown leaves no image owners");
+
+    for (const encoding of [null, "gzip"]) {
+        const streamed = createMobileControlsHost();
+        streamed.host.Image = env.host.Image;
+        let completeStream, reads = 0, released = false;
+        streamed.host.fetch = async () => ({ ok: true,
+            headers: { get: name => name === "Content-Encoding" ? encoding : "2048" },
+            body: { getReader: () => ({
+                async read() {
+                    if (++reads === 1) return { done: false, value: new Uint8Array(512) };
+                    if (reads === 2) { await new Promise(resolve => { completeStream = resolve; }); return { done: false, value: new Uint8Array(1536) }; }
+                    return { done: true };
+                },
+                releaseLock() { released = true; }, async cancel() {}
+            }) }
+        });
+        const loading = streamed.host.smile.loadImage("Assets/Stream.png");
+        await new Promise(resolve => setImmediate(resolve));
+        const progress = streamed.host.document.getElementById("smile-loading-transfer");
+        mobileEqual(progress.value, encoding ? undefined : 512, "only uncompressed reliable byte totals are determinate");
+        if (!encoding) mobileEqual(progress.max, 2048, "stream progress uses the response byte total");
+        completeStream();
+        const handle = await loading;
+        streamed.host.smile.imageRelease(handle);
+        mobileEqual(released, true, "stream reader lock released after download");
+        streamed.host.smile.mediaShutdown();
+    }
 
     const decodeFailure = createMobileControlsHost();
     let decodeAttempts = 0;
@@ -775,7 +824,11 @@ async function runStartupLoadingTests() {
     mobileEqual(failed.errorElement.hidden, false, "startup error is visible");
     const consoleHost = createMobileControlsHost();
     consoleHost.host.smile.print(["Ready"], false);
-    mobileEqual(consoleHost.host.document.getElementById("smile-loading").hidden, true, "console output dismisses loader");
+    await new Promise(resolve => setImmediate(resolve));
+    const graphicalStartup = fs.readFileSync(runtimePath, "utf8").includes("const startupHasWindow = true;");
+    mobileEqual(consoleHost.host.document.getElementById("smile-loading").hidden, !graphicalStartup,
+        "status printing cannot dismiss a graphical loader before its first frame");
+    if (graphicalStartup) await consoleHost.host.smile.showScreen();
     process.stdout.write("Web startup loader and encoded asset reuse checks passed.\n");
 }
 
@@ -1382,21 +1435,22 @@ if (forceRenderer3DReflectionFailureOnce) host.SMILE_TEST_RENDERER3D_FORCE_REFLE
 
 const context = vm.createContext(host);
 try {
+    installStartupFixture(host, context);
     vm.runInContext(fs.readFileSync(runtimePath, "utf8"), context, { filename: runtimePath });
     vm.runInContext(fs.readFileSync(gamePath, "utf8"), context, { filename: gamePath });
     if (verifyPhase4Media || verifyPhase4Audio) {
         // run() queues main in a microtask. Send the gesture after Game Window
         // has made the program surface visible, as required by focus ownership.
-        queueMicrotask(() => dispatch(windowListeners, "keydown", {
+        host.smileStartup.painted.then(() => queueMicrotask(() => dispatch(windowListeners, "keydown", {
             code: "KeyX", repeat: false, ctrlKey: false, altKey: false, metaKey: false,
             preventDefault: () => {}
-        }));
+        })));
     }
     if (verifyPhase4Audio) {
-        queueMicrotask(() => {
+        host.smileStartup.painted.then(() => queueMicrotask(() => {
             host.smile.playSound("Assets/ToneOne.wav", 5);
             host.smile.playSound("Assets/ToneTwo.wav", 5);
-        });
+        }));
     }
 } catch (error) {
     fail(error && error.stack ? error.stack : String(error));
