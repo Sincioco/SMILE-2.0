@@ -43,7 +43,7 @@ Sub TestSharedBudget()
 
     Dim OtherEffects[28] As Core.GpuParticleSystem3D
     Dim FullSlots[4] As Core.GpuParticleSystem3D
-    Dim OtherBatches[29] As Core.ParticleBatch3D
+    Dim OtherBatches[64] As Core.ParticleBatch3D
     Dim Material As Core.Material3D
     Dim Texture As Core.Texture3D
     Dim Position As Core.Vector3
@@ -51,6 +51,7 @@ Sub TestSharedBudget()
     Dim Index As Number
     Dim SystemCapacity As Number
     Dim SystemCount As Number
+    Dim BatchCount As Number
 
     Call Graphics3D.ResetRenderer3D()
 
@@ -76,7 +77,9 @@ Sub TestSharedBudget()
     Call Check(Graphics3D.GpuParticleValue3D(Graphics3D.GPU_PARTICLE_QUERY_LIVE_SYSTEMS) = 28)
     Call Check(Fire.Destroy(Emitter))
 
-    For Index = 0 To 28
+    BatchCount = Graphics3D.VfxValue3D(Graphics3D.VFX_QUERY_MAX_PARTICLE_BATCHES) - 3
+
+    For Index = 0 To BatchCount - 1
         OtherBatches[Index] = Graphics3D.CreateParticleBatch3D(1, Material, Graphics3D.VFX_BILLBOARD_CAMERA, 1, 1)
 
         Call Check(OtherBatches[Index].Handle <> 0)
@@ -85,10 +88,10 @@ Sub TestSharedBudget()
     Emitter = Fire.StartAt("TorchFire", Position, 601)
 
     Call Check(Emitter.Slot = 0)
-    Call Check(Graphics3D.LiveParticleBatchCount3D() = 29)
+    Call Check(Graphics3D.LiveParticleBatchCount3D() = BatchCount)
     Call Check(Graphics3D.GpuParticleValue3D(Graphics3D.GPU_PARTICLE_QUERY_LIVE_SYSTEMS) = 28)
 
-    For Index = 0 To 28
+    For Index = 0 To BatchCount - 1
         Call Graphics3D.DestroyParticleBatch3D(OtherBatches[Index])
     End For
 
@@ -224,7 +227,7 @@ End Sub
 
 Sub RunTests()
 
-    Dim Emitters[7] As Fire.FireEmitter
+    Dim Emitters[Fire.MAX_EMITTERS] As Fire.FireEmitter
     Dim Contour As Precision3D.Contour3D
     Dim Sample As Precision3D.Vector3
     Dim Empty As Fire.FireEmitter
@@ -342,7 +345,8 @@ Sub RunTests()
     If Graphics3D.GpuParticleValue3D(Graphics3D.GPU_PARTICLE_QUERY_NATIVE_THERMAL) <> 0 Then
 
         Call Check(Fire.Value(3, Emitters[5]) = Fire.SIMULATION_GPU)
-    Call Check(Fire.Value(3, Emitters[6]) = Fire.SIMULATION_CPU)
+        Call Check(Fire.Value(3, Emitters[6]) = Fire.SIMULATION_CPU)
+        Call Check(Fire.Value(3, Emitters[Fire.MAX_EMITTERS - 1]) = Fire.SIMULATION_CPU)
         Call Check(Graphics3D.GpuParticleValue3D(Graphics3D.GPU_PARTICLE_QUERY_LIVE_SYSTEMS) = 30)
 
     Else
@@ -354,6 +358,8 @@ Sub RunTests()
     For Tick = 1 To 20
         Call Fire.Update(100)
     End For
+
+    Call Check(Fire.Value(6, Emitters[Fire.MAX_EMITTERS - 1]) > 0)
 
     For Index = 0 To Fire.MAX_EMITTERS - 1
         Call Fire.StopEmitter(Emitters[Index])

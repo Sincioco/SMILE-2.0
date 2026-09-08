@@ -125,8 +125,15 @@ emission. Moving the contour leaves existing particles in world space, producing
 a trail. SetSegment/SetPosition clear contour mode. `SetPalette` selects Fire
 or BlueWhite, defaulting to Fire; both native/Web thermal shaders and the CPU
 fallback use the same palette choice. All mutations reject in-flight changes.
-Intensity is clamped to 0–400; seven admitted emitters share the unchanged
-renderer limits. The current scene uses four Arin, two Orin and one Dragon slot.
+Intensity is clamped to 0–400; twelve admitted emitters share the renderer pools.
+Both backends allow 64 CPU particle batches, so all twelve emitters can use their
+four-batch fallback (48 batches, at most 4,608 staged particles). The shared staged
+particle ceiling remains 8,192 and the GPU system ceiling remains 32; other effect
+families consume these same resources. The current battle uses four Arin and two
+Orin equipment emitters, plus separate Dragon mouth-heat and attack emitters.
+Reflections replay accepted
+particles and allocate no additional emitters. Future characters with particle effects
+need a complete scene budget and fallback check; outline meshes do not use Fire slots.
 Capacity pressure still follows the normal CPU fallback/drop policy; intensity
 is an emission setting rather than a promise of unlimited particles.
 

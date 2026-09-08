@@ -37,9 +37,9 @@ The editor source and build/launch entry points belong here. Sin Star I owns the
 ### Equipment VFX controls
 
 Orin's **VFX** button cycles **Blue Flame → Neon Arcs → Lightning**. Blue Flame
-is the startup selection: Arin's shared fire family in blue/cyan/hot white, at
-70% of Arin's sword emission rate (Sin requested 40% more than the initial
-half-strength experiment). It surrounds the hammer head's measured outline
+is the startup selection: Arin's shared fire family in blue/cyan/hot white, now
+at the same emission intensity as Arin's sword (200 at the panel's 100% setting).
+It surrounds the hammer head's measured outline
 and leaves a world-space trail during motion; the shield adds faint edge flames.
 Neon Arcs keeps a stronger closed neon outline with short travelling edge arcs
 on both pieces of equipment, without star particles. Lightning preserves the
@@ -52,6 +52,17 @@ not an absolute brightness unit. Changes affect attached glow and emission;
 renderer capacity and opacity limits still apply at high settings. Preferences
 survive character-tab changes during this session and do not write pose saves.
 Freeze Flames/Lightning follows Orin's selected effect family.
+
+The shared fire pool admits twelve emitters. Dragon inspection/Party needs eight:
+Arin's sword and three shield edges, Orin's hammer and shield, Dragon mouth heat,
+and the active breath/projectile. Both native and Web also support all twelve in
+CPU fallback through 64 shared particle batches, retaining the 8,192-particle
+ceiling. Four remaining fire slots can accommodate two more weapon/shield pairs;
+new characters still need complete scene admission checks for their actual effects.
+Floor reflections replay existing submissions and consume no extra emitters.
+ViewerDragon retries temporary pool pressure and clears failed admission on an
+explicit effect reset. The production-actor budget/retry test is part of the
+native calibration gate and its Web precision subset.
 
 Weapon outlines are caller-owned `Precision3D.Contour3D` data, transformed through
 the existing calibrated Character3D socket and sampled by shared fire/lightning

@@ -425,6 +425,64 @@ work are complete. No new runtime patch, rebuild or installation accompanies thi
 documentation-only acceptance update. Next action after publication: STOP; any new
 feature requires a separate task decision.
 
+## September 9 post-closeout: Dragon breath and shared fire capacity
+
+Double acceptance above remains complete and published in `c06e462`. Sin then
+reported missing Dragon breath on native and Web, requested Orin's blue flame
+match Arin's intensity, and approved a twelve-emitter scene budget. These are
+bounded Viewer/shared-VFX follow-ups, not a reopened Double or Sin Star I phase.
+
+The old seven-slot FireEmitter3D pool was exhausted by Arin's four equipment
+emitters, Orin's two and Dragon mouth heat. Breath/projectile admission needed an
+eighth. FireEmitter3D now derives storage from MAX_EMITTERS=12; native and Web
+permit 64 shared CPU particle batches so twelve four-batch fallbacks fit. The
+8,192 staged-particle and 32 GPU-system ceilings are unchanged. Reflections replay
+accepted submissions and allocate no emitters. Four spare Fire slots are headroom,
+not proof that unbuilt characters/effects meet all resource or frame-time budgets.
+ViewerDragon retries transient capacity rejection and clears its failed state on
+explicit cleanup. OrinStorm's existing Blue Flame parameter is now 200 at 100%
+UI, matching Arin; contour, palette, other styles, controls and shield remain intact.
+
+Validation (logs under `artifacts/temp`):
+- `dragon-fire-contract-check.log`: native/Web twelve admissions, thirteenth
+  rejection, last-emitter particles, shared-pressure rollback and complete teardown.
+  `dragon-fire-native-fallback.log`: same native contract with GPU shader creation
+  forced to fail; all twelve use the existing CPU fallback.
+- `dragon-fire-batches.log`: native/Web M6 batch/query/queue/lifecycle, 1,024-instance,
+  HDR/direct-LDR checks pass with the shared 64-batch ceiling.
+- `dragon-fire-viewer-contract.log`: isolated native calibration/Dragon continuity
+  and Web production-actor subset pass, including all eight real scene emitters,
+  forced full-pool rejection/recovery and actual recovered-breath draw submission.
+  Test setup was corrected to invoke the existing Orin update and switch away/back
+  for cleanup; same-tab selection intentionally does nothing. The initial multiline
+  assignment lacked parentheses and was corrected before these passing runs.
+  The Web fixture safely ignored an old publication manifest from a prior temporary
+  application identity (SML3605); normal Viewer publication had no such warning.
+- `dragon-fire-format-check.log`: all six changed SMILE sources pass. Final whitespace
+  normalization changed no semantics; numeric evidence is reused. Final native/Web
+  Viewer builds are in `dragon-fire-{native,web}-viewer-build-final.log`.
+- Tool observations: `vfx-closeout-evidence/chrome-dragon-breath-before.png` lacks
+  the plume at 1592 ms; `chrome-dragon-breath-after.png` shows it at the same pose.
+  `native-dragon-breath-after.jpg` shows breath aimed at Orin at 1586 ms. Both include
+  floor reflection. `native-orin-matched-flame.jpg` and `chrome-orin-matched-flame.png`
+  retain hammer metal/grip detail at 100%. These are tool observations, not new human
+  acceptance. Captures precede final whitespace-only normalization; Web output is
+  byte-identical. Existing Double, reflection, asset and calibration evidence remains valid.
+- `dragon-fire-vsix-install.log`: installed VSIX 2.0.61 and verified all 35 payload
+  hashes in `Extensions/dodz1klk.udk`. The completed task-owned debug solution was
+  saved under artifacts/tests and Visual Studio closed normally before installation.
+
+Final SHA-256: native Viewer `A068B46965369F17857B7203CEC3EE8FE536880A709FEE6EB05C159B302C7E6A`;
+Full Web index `9D341782D900630870B9D763C862D624421305CACCA853E59E62574EF3D2371C`;
+Web game.js `5549CD3761E13E638E7A276723476920B255A7E735D3973D6335058C3B119A9B`;
+VSIX `2FA2D0B5DDAE613595B299ED336550241E566A52F2040DD13896443B7F7C7347`;
+native runtime `0A221352DDED29F358BDEAFE740CE85018159773F7A7D9FDC4B72A2633627A21`.
+Arin's 24-key and Orin's zero-key canonical hashes remain the recorded 7A3E7BC8 /
+13AE135F values. No model, descriptor, game project or Program.smile change.
+Local Full Web output is current; no public-site upload is claimed.
+Next action: publish this validated milestone, then fulfill Sin's explicit request
+to end YouTube Live and take Meld Studio offline. STOP after those confirmations.
+
 ## On Hold
 
 Loader/splash enhancements, semantic-inspection CLI, Battle Scene Editor,

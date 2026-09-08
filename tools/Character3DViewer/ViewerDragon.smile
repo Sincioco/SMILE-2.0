@@ -180,6 +180,10 @@ Public Sub ClearOwnedEffects(ByRef Value As State, Light As LightPool3D.Lease)
         Ok = Fire.Destroy(Value.Breath)
     End If
 
+    If Value.Breath.Slot = 0 Then
+        Value.FireFailed = False
+    End If
+
     Call DragonPresence.Cancel(Light)
 
 End Sub
@@ -394,7 +398,9 @@ Public Function Update(
                 Fire.SIMULATION_AUTO,
                 6
             )
-            Value.FireFailed = Value.Breath.Slot = 0
+            ''' Temporary scene pressure can recover without reloading the actor.
+            Value.FireFailed = (Value.Breath.Slot = 0 And
+                Fire.Value(12, Value.Breath) <> Fire.ERROR_CAPACITY)
         End If
 
         If Value.Breath.Slot <> 0 Then

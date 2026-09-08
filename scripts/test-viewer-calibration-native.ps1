@@ -217,6 +217,7 @@ Call SelectCharacterTab(2)
 Call CalibrationCheck(Session.Ready And Not Session.ViewerError And Party.Ready,
     "Web production actors load")
 Call CheckFractionalPartySubmission()
+Call CheckDragonBattleFireBudget()
 Call DestroyViewer()
 
 If TestFailures = 0 Then

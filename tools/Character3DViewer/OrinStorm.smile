@@ -962,7 +962,7 @@ Public Sub UpdateEquipmentFire(Value As Context, Actor As Character3D.Actor,
 
         Prefix = "WeaponRim"
         Visible = WeaponVisible And WeaponIntensity > 0
-        Intensity = WeaponIntensity * 140 / 100
+        Intensity = WeaponIntensity * 2
         Radius = 3
 
         If Index = 1 Then

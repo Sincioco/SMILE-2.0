@@ -53,6 +53,9 @@ Call SelectCharacterTab(2)
 Call CalibrationCheck(Session.Ready And Not Session.ViewerError And Party.Ready,
     "Dragon loads both calibrated companions")
 Call CheckFractionalPartySubmission()
+Call CheckDragonBattleFireBudget()
+Call SelectCharacterTab(1)
+Call SelectCharacterTab(2)
 Call CheckDragonFireContinuity()
 
 TestTransactionResult = ApplyActorPresentationCommand(
@@ -712,6 +715,82 @@ Sub ApplyCalibrationControlForTest(Action As Number)
     )
 
     Call ViewerSession.ApplyCalibrationOperation(Session, TestCalibrationOperation)
+
+End Sub
+
+Sub CheckDragonBattleFireBudget()
+
+    Dim ClipIndex As Number
+    Dim Frame As Number
+    Dim Blockers[Fire.MAX_EMITTERS] As Fire.FireEmitter
+    Dim Index As Number
+    Dim Empty As Fire.FireEmitter
+    Dim Position As Core.Vector3
+    Dim Camera As Core.Camera3D
+
+    Playback.ScenePaused = True
+    Playback.AnimationUpdateElapsed = 0
+    Timing.CameraElapsed = 16
+    Effects.FlamePaused = False
+
+    For ClipIndex = 0 To Character3D.ClipCount(Character) - 1
+
+        If Character3D.ClipName(Character, ClipIndex) = "FireBreath" Then
+            Call SelectClip(ClipIndex)
+        End If
+
+    End For
+
+    Session.Ready = Character3D.SetAnimationTime(Character, 0) And Session.Ready
+
+    For Frame = 0 To 1
+
+        Call UpdatePartyCompanion()
+        Call UpdateDragonOpponent()
+        Call UpdateOrinStorm()
+        Call UpdateDragon()
+        Call AdvanceTestSceneVfx()
+    End For
+
+    Call CalibrationCheck(Fire.Value(1, Empty) = 7,
+        "Both heroes' six equipment emitters coexist with Dragon mouth heat")
+
+    For Index = 0 To Fire.MAX_EMITTERS - 8
+        Blockers[Index] = Fire.StartAt("TorchFire", Position, 7321 + Index)
+
+        Call CalibrationCheck(Blockers[Index].Slot <> 0, "Remaining shared slots admit fire")
+    End For
+
+    Session.Ready = Character3D.SetAnimationTime(Character, 1200) And Session.Ready
+
+    Call UpdateDragon()
+    Call CalibrationCheck(DragonState.Breath.Slot = 0 And Not DragonState.FireFailed,
+        "Temporary full-pool breath rejection remains retryable")
+
+    For Index = 0 To Fire.MAX_EMITTERS - 8
+        Session.Ready = Fire.Destroy(Blockers[Index]) And Session.Ready
+    End For
+
+    For Frame = 0 To 9
+
+        Call UpdatePartyCompanion()
+        Call UpdateDragonOpponent()
+        Call UpdateOrinStorm()
+        Call UpdateDragon()
+        Call AdvanceTestSceneVfx()
+    End For
+
+    Call CalibrationCheck(Fire.Value(1, Empty) = 8 And
+        DragonState.Breath.Slot <> 0 And Fire.Value(6, DragonState.Breath) > 0,
+        "Dragon breath recovers alongside every hero flame and mouth heat")
+
+    Camera = Graphics3D.DefaultCamera()
+
+    Call CalibrationCheck(Graphics3D.Begin3D(Camera, 0, 0, 0), "Begin breath submission")
+    Call CalibrationCheck(Fire.Draw(DragonState.Breath), "Submit recovered breath particles")
+    Call CalibrationCheck(Graphics3D.End3DChecked(), "Complete breath submission")
+
+    Show Screen
 
 End Sub
 

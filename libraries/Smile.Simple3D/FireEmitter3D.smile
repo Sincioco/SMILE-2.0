@@ -14,7 +14,7 @@ Public Const QUALITY_HIGH = 3
 Public Const SIMULATION_CPU = 1
 Public Const SIMULATION_GPU = 2
 Public Const SIMULATION_AUTO = 3
-Public Const MAX_EMITTERS = 7
+Public Const MAX_EMITTERS = 12
 Public Const PALETTE_FIRE = 0
 Public Const PALETTE_BLUE_WHITE = 1
 Public Const QUERY_PALETTE = 18
@@ -93,12 +93,12 @@ End Type
 Private Dim Ready As Boolean
 Private Dim ErrorValue As Number
 Private Dim Epoch As Number
-Private Dim Items[7] As EmitterState
-Private Dim Systems[35] As Core.GpuParticleSystem3D
-Private Dim Batches[28] As Core.ParticleBatch3D
-Private Dim Particles[2688] As CpuParticle
-Private Dim NextSlot[35] As Number
-Private Dim SpawnRemainder[35] As Number
+Private Dim Items[MAX_EMITTERS] As EmitterState
+Private Dim Systems[MAX_EMITTERS * 5] As Core.GpuParticleSystem3D
+Private Dim Batches[MAX_EMITTERS * 4] As Core.ParticleBatch3D
+Private Dim Particles[MAX_EMITTERS * 384] As CpuParticle
+Private Dim NextSlot[MAX_EMITTERS * 5] As Number
+Private Dim SpawnRemainder[MAX_EMITTERS * 5] As Number
 Private Dim Textures[3] As Core.Texture3D
 Private Dim Materials[5] As Core.Material3D
 Private Dim AssetDirectory As Text

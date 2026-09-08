@@ -269,3 +269,13 @@ Do not add sockets to this accepted descriptor merely for VFX presentation:
 descriptor changes invalidate its live calibration fingerprint. The current
 separate contour data leaves the 21 sockets, model, cooked asset, animation,
 grounding and calibration identity untouched. No historical Doctor/repair replay.
+
+## September 9: match Arin's flame intensity
+
+Sin's final request supersedes the earlier 140 baseline and intermediate 40%
+increase: Blue Flame now uses intensity 200 at the panel's 100%, matching Arin's
+sword. The same 0–200% controls still scale it; palette, hammer-head contour,
+world-space trail, faint shield flames and other two styles remain unchanged.
+This is an appearance parameter in the existing owner, not a new hammer-specific
+emitter. Native/Chrome inspection retains visible head metal and grip detail.
+Canonical model, descriptors, grounding and the zero-key calibration are unchanged.
