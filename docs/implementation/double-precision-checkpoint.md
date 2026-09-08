@@ -19,12 +19,14 @@
 | P0 | Validated and pushed `9f33ad9` before Double | ViewerUi/preview labels; existing Web reflection allocation/filter owner |
 | D1 | Implemented and pushed `40c183d`; final integration repairs included below | Shared DoubleSemantics, native MasmDoubleEmitter/numeric runtime, Web Double.js, package schema 7, shared editor/debug facts |
 | D2 | Validated and pushed `c310b7a` | Precision3D/PrecisionMath3D; same renderer translation unit, Scene3D lifecycle and Character3D actor pool |
-| D3 | Implementation pushed `761b7a2`; native/Web focused gates pass; full interaction acceptance pending | PrecisionCamera3D, ViewerCamera/Party/Actors/calibration/effects, Sin Star I preview, shared curve slice |
-| D4 | Automated integration/install and desktop acceptance repairs validated; human interaction/audio acceptance remains open | Final compiler/runtime/VSIX 2.0.61; shared Web post shader and native debug snapshots |
+| D3 | Implementation pushed `761b7a2`; focused gates pass; Sin accepted desktop and Web after testing both | PrecisionCamera3D, ViewerCamera/Party/Actors/calibration/effects, Sin Star I preview, shared curve slice |
+| D4 | Delivery and acceptance repairs validated/pushed `6ef99c5`; desktop/Web accepted; audible SFX confirmation pending | Final compiler/runtime/VSIX 2.0.61; shared Web post shader and native debug snapshots |
 
-Source milestone `761b7a2fb906a5fa19b548bbd77390da0bdaf765` and checkpoint `8d946c8`
-were pushed normally to origin/main. This acceptance milestone adds the two repairs
-below and refreshes their affected payloads; it preserves all earlier source work.
+Source milestone `761b7a2fb906a5fa19b548bbd77390da0bdaf765`, checkpoint `8d946c8`,
+and acceptance repairs `6ef99c58b6149b7d98263e0436b5db62cc8c2d03` were pushed
+normally to origin/main and read back. The repairs below refresh their affected
+payloads and preserve all earlier source work. This acceptance update changes only
+the checkpoint; unchanged source/artifact, smoke and installed-payload evidence is reused.
 
 Detailed unchanged P0/D1/D2 evidence, including historical source/artifact hashes,
 remains in this same file's committed versions at `9f33ad9`, `40c183d` and `c310b7a`
@@ -172,7 +174,7 @@ one current checkpoint, not a replacement investigation or parallel ledger.
 | `artifacts/web/PrecisionCurve3D/game.js` | `74162DEA9B6FB34426F87A7F65715AF7089692A2068704BDDEA660A954308173` |
 | `libraries/Smile.Simple3D/bin/Release/Smile.Simple3D.smilelib` | `6FAFC366640420ACB866BB4F181CBE13D8036E5D2068685B584FB3FE1C0DC107` |
 
-## Open acceptance and next action
+## User acceptance and remaining check
 
 Native Windows control is available through the installed computer-use tool. Sin's
 Any App setting was already correct; the earlier browser-only tool limitation was
@@ -193,16 +195,17 @@ not a missing permission. No further settings toggle or Double authorization is 
   repair was needed for that state. Chrome Viewer pan/zoom, H/V sliders, tabs/Party,
   Space/D, scrub and reset respond. The corrected Web scene/floor is upright.
   Chrome Sin Star I and shared curve visual evidence remains valid.
-- Remaining: one human slow/moderate horizontal/vertical middle-button orbit and
-  pan smoothness pass on native/Chrome Viewer and preview, plus audible Party SFX.
-  The tool exposes left drags without duration/button control and no audio feed;
-  small/large drags, slider orbit and audio assertions do not prove these checks.
-  The SFX question is pending, not a pass. Native Watch/type/source stepping is
-  verified; mouse-hover presentation remains unobserved (no exposed hover action).
+- Sin subsequently confirmed: "I've tested both the desktop and web version and
+  they both look good to me". Record this as user acceptance of desktop/Web visuals
+  and interaction; the pending visual acceptance is closed.
+- The tooling gate is covered by shared Quick Info/editor tests and actual VS typed
+  Watch/source stepping. A separate mouse-hover observation is not claimed.
+- Remaining: explicit audible Party attack/impact SFX confirmation for document 07's
+  audio gate. The visual acceptance above does not state an audible result. The
+  question is pending; successful audio initialization is not substituted for hearing.
 
-Next action: obtain only those human interaction/audio/hover observations and record
-them here. Preserve source/artifact evidence and reuse passing smoke/install results;
-do not repeat unchanged builds or installation. No unrelated feature should start.
+Next action: record the audible SFX result and close D4 if it passes. Reuse unchanged
+build/test/install evidence. Stop after this acceptance; no unrelated feature should start.
 
 ## On Hold
 
