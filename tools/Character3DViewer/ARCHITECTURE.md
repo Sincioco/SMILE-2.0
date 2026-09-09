@@ -71,6 +71,12 @@ aligned. `BattleAudio.CrossedCue` drives original Unity sounds on channels 1/3 a
 Lab thunder on channel 2; pause, seek and clip changes use its existing semantics.
 The optional private audio wildcard is staged by `Prepare-UnityAssets.ps1` and
 excluded by `Build.ps1 -PublicRoster`. No licensed audio is tracked in Git.
+`ViewerDragon.UpdateVraxAudio` similarly shares the original Unity growl/swoosh/
+death cue policy between `ViewerEffects.State.VraxAudio` for standalone inspection
+and `ViewerDragon.State.VraxAudio` for the Party opponent. Its channels 4/5 and
+caller state are independent of hero channels. The existing playback clock and
+`BattleAudio.CrossedCue` handle speed, seek and one-shot triggering; pause and
+teardown stop these channels. No new audio engine or scene clock was introduced.
 
 Tab selection calls `Window_Loading()` before the existing lifecycle teardown.
 The shared native/Web startup owners reopen their existing presentation with

@@ -47,6 +47,12 @@ Public Type AttackEffects
     LightningWasPaused As Boolean
 End Type
 
+Public Type VraxAudioState
+    Voice As BattleAudio.CueState
+    Swoosh As BattleAudio.CueState
+    Audible As Boolean
+End Type
+
 Public Type State
     Actor As Character3D.Actor
     UseVrax As Boolean
@@ -65,6 +71,7 @@ Public Type State
     FireEpoch As Number
     FireWasPaused As Boolean
     Audio As BattleAudio.CueState
+    VraxAudio As VraxAudioState
 End Type
 
 Public Sub SetAvailable(ByRef Value As State, Available As Boolean)
@@ -259,6 +266,7 @@ End Sub
 
 Public Sub Destroy(ByRef Value As State, Light As LightPool3D.Lease)
 
+    Call ClearVraxAudio(Value.VraxAudio)
     Call ClearOwnedEffects(Value, Light)
 
     If Value.OwnsActor Then
@@ -542,6 +550,13 @@ Public Sub UpdateAudio(ByRef Value As State, Audible As Boolean)
         Return
     End If
 
+    If Value.UseVrax Then
+        Call UpdateVraxAudio(Value.VraxAudio, Value.Clip,
+            Character3D.AnimationTime(Value.Actor), Audible And Value.Visible)
+
+        Return
+    End If
+
     CueTime = -1
 
     If Value.Clip = "FireBreath" Then
@@ -569,6 +584,67 @@ Public Sub UpdateAudio(ByRef Value As State, Audible As Boolean)
         End If
 
     End If
+
+End Sub
+
+''' Original Unity Sound14/Sound13 attack cues and Sound15 death vocalization.
+Public Sub UpdateVraxAudio(ByRef Value As VraxAudioState, Name As Text,
+    Time As Number, Audible As Boolean)
+
+    Dim VoiceTime As Number
+    Dim SwooshTime As Number
+
+    If Value.Audible And Not Audible Then
+        Stop Sound On Channel 4
+        Stop Sound On Channel 5
+    End If
+
+    Value.Audible = Audible
+    VoiceTime = -1
+    SwooshTime = -1
+
+    If (Name = "Attack" Or
+        Name = "Attack2" Or
+        Name = "Attack3" Or
+        Name = "Attack4" Or
+        Name = "Attack5" Or
+        Name = "Attack6") Then
+        VoiceTime = 0
+        SwooshTime = 200
+    Else If Name = "Death" Or Name = "Death2" Then
+        VoiceTime = 0
+    End If
+
+    If BattleAudio.CrossedCue(Value.Voice, Name, Time, VoiceTime, Audible) Then
+
+        If Name = "Death" Or Name = "Death2" Then
+
+            Play Sound "Assets/Audio/vrax-death.wav" On Channel 4
+
+        Else
+
+            Play Sound "Assets/Audio/vrax-growl.wav" On Channel 4
+
+        End If
+
+    End If
+
+    If BattleAudio.CrossedCue(Value.Swoosh, Name, Time, SwooshTime, Audible) Then
+
+        Play Sound "Assets/Audio/vrax-swoosh.wav" On Channel 5
+
+    End If
+
+End Sub
+
+Public Sub ClearVraxAudio(ByRef Value As VraxAudioState)
+
+    Dim Empty As VraxAudioState
+
+    Stop Sound On Channel 4
+    Stop Sound On Channel 5
+
+    Value = Empty
 
 End Sub
 

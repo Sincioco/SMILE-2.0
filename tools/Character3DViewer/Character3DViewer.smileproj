@@ -112,6 +112,7 @@
     <Asset Include="Assets\Lightning\thunder.wav" />
     <Asset Include="Assets\Audio\arin-flame-slash.wav" />
     <Asset Include="Assets\Audio\zara-*.wav" />
+    <Asset Include="Assets\Audio\vrax-*.wav" />
     <Asset Include="Assets\Audio\arin-flame-crosscut.wav" />
     <Asset Include="Assets\Audio\dragon-fire-breath.wav" />
     <Asset Include="Assets\Audio\dragon-claw-strike.wav" />

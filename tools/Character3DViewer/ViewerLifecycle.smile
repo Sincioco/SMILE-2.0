@@ -527,7 +527,7 @@ Public Sub StartSelectedClip(ByRef Session As ViewerSession.State,
     Session.Ready = ViewerPlayback.StartSelectedClip(
         Playback, Character, Session.ProfileIndex) And Session.Ready
 
-    Call ViewerEffects.ResetArinAudio(Effects)
+    Call ViewerEffects.ResetAudio(Effects)
     Call ViewerCalibrationEditing.EvaluateCurrent(
         Calibration, Character, Playback.SelectedClip, Session.ProfileIndex,
         CalibrationEditing, CalibrationAvailable)

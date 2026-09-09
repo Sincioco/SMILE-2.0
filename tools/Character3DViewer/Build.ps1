@@ -178,7 +178,8 @@ if ($Target -in @('Web', 'All')) {
         'Assets\Generation2\RedDragon\RedDragon.sm3d')
     $currentModels += $unityLogicalPaths
     foreach ($item in @($webProject.SmileProject.ItemGroup.ChildNodes)) {
-        if ($PublicRoster -and $item.Name -eq 'Asset' -and $item.Include -eq 'Assets\Audio\zara-*.wav') {
+        if ($PublicRoster -and $item.Name -eq 'Asset' -and
+            $item.Include -in @('Assets\Audio\zara-*.wav', 'Assets\Audio\vrax-*.wav')) {
             $null = $item.ParentNode.RemoveChild($item)
             continue
         }

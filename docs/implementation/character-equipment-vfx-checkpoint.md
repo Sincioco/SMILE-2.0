@@ -1,5 +1,42 @@
 # Valor and Zara equipment VFX — September 9, 2026
 
+## September 10 follow-up: Vrax Original Audio
+
+The original Unity controller and BattleSystem scene resolve Sound13/14/15 to
+the swoosh, growl and death vocalization. VraxV1 now owns their import recipe,
+source GUID/checksum manifest, private originals and three PCM16 stereo 44100 Hz
+runtime copies. Attack through Attack6 play growl at clip start and swoosh at
+200 ms; Death/Death2 use the original death voice. No Hit sound was defined by
+the original controller. No model, animation, VFX or Unity project changes.
+
+`ViewerDragon.UpdateVraxAudio` serves standalone and Party callers with separate
+state and channels 4/5. Pause/hidden opponent and teardown stop the new channels;
+clip-time cue handling preserves speed and silent seek semantics. PublicRoster
+excludes the private audio wildcards. Original assets are not tracked publicly.
+
+Native and normal Chrome Web builds pass; focused formatting passes four changed
+SMILE sources. Native standalone/Party playback was inspected. Chrome measured
+standalone cues at 12/202 ms and Party cues at 16/201 ms, and verified all three
+nonzero decoded AudioBuffers, separate channels, pause stops and no page errors.
+An initial browser test interceptor missed the generated script's cache query;
+correcting that test-only URL match resolved its ReferenceError. There was no
+production runtime error. Audio output/mix remains subject to Sin's preference.
+The separate PublicRoster Web build also passes (35 published assets), with no
+Zara or Vrax private audio files in its output.
+
+Local native delivery: `artifacts/deliverables/Character3DViewer-VraxAudio-2026-09-10`
+(112 files verified, including technical textures). Executable SHA-256:
+`0c759fa3023c91c009c9496a9bbfe7d65810ba5d1cf4c9cc02d4ce44dd5ba5dc`.
+Web delivery: `artifacts/deliverables/Character3DViewer-VraxAudio-Web-2026-09-10.zip`
+(105 entries byte-compared, 199452966 bytes), SHA-256:
+`3efa0d7c8f5c691230157c311c0c86ba004e3de2c22f54dc57e5df25b3861490`.
+These are local licensed-roster deliveries, not a public website deployment.
+
+The reversible Dragon retarget experiment was separately validated and pushed
+as `ca7e9fe8f68f373b09f9b04ad5dac8a4bdfc2db3`. Its Trial/Original launcher and
+unchanged original Dragon backup remain under RedDragonV12VraxTrial. The original
+snapshot's missing technical-texture defect was repaired and verified there.
+
 ## September 10 delivery: Party cinematics, Zara effects/audio and tab loading
 
 This entry supersedes the earlier presentation descriptions below. Work began

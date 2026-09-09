@@ -1,0 +1,54 @@
+{
+  "sourceProject": "Knights of Bits and Bytes",
+  "scene": "Assets/Scenes/BattleSystem.unity",
+  "script": "Assets/Characters/Sci-Fi Beast01/SciFiBeast01.cs",
+  "scriptSha256": "496c9ae9b2f8d3ee5f25c3427570cb959618fcd7cea80f851fc3db9e528031f5",
+  "sources": [
+    {
+      "slot": 13,
+      "guid": "8b1823ff1959a4b4389c021099eb8ede",
+      "unityAsset": "Assets/!Music and Sound FX/Universal Sound FX/WEAPONS/Melee/Blunt/BLUNT_Swing_01_mono.wav",
+      "packageOriginal": "Private/Audio/Originals/BLUNT_Swing_01_mono.wav",
+      "sha256": "cf26000b9afd09f1dd829848928b9467ca851d77a17591ffb9c28aaefaf1e05d",
+      "cueMilliseconds": 200
+    },
+    {
+      "slot": 14,
+      "guid": "6d3c25f429387564a92cd1316594c9e3",
+      "unityAsset": "Assets/!Music and Sound FX/Sci Fi Weapons/Support Material/Vocalisation/CREAMnstr_Beast Vocalisation_08.wav",
+      "packageOriginal": "Private/Audio/Originals/CREAMnstr_Beast Vocalisation_08.wav",
+      "sha256": "fc189d030d8403e72d0ee316fe46efe792993e0c325a690dd95757299e03ca66",
+      "cueMilliseconds": 0
+    },
+    {
+      "slot": 15,
+      "guid": "0df75d15b2dc5314d8d0f66b389dea89",
+      "unityAsset": "Assets/!Music and Sound FX/Sci Fi Weapons/Support Material/Vocalisation/CREAMnstr_Beast Vocalisation_09.wav",
+      "packageOriginal": "Private/Audio/Originals/CREAMnstr_Beast Vocalisation_09.wav",
+      "sha256": "4c18ed468f19557ffc87658cf39e637f1280c919e5e1fcef372a14069f851ce6",
+      "cueMilliseconds": 0
+    }
+  ],
+  "outputs": [
+    {
+      "path": "Private/Audio/vrax-swoosh.wav",
+      "viewerPath": "Assets/Audio/vrax-swoosh.wav",
+      "sha256": "ea50043bdcfc816f91db1023fa4fe71ea5a492deec7952de9d9dc66db2445a48",
+      "unitySoundSlot": 13
+    },
+    {
+      "path": "Private/Audio/vrax-growl.wav",
+      "viewerPath": "Assets/Audio/vrax-growl.wav",
+      "sha256": "db3f31adf6f2a865865247a46fa1707707e979b7d815a67608c9fcdfce3cbc5a",
+      "unitySoundSlot": 14
+    },
+    {
+      "path": "Private/Audio/vrax-death.wav",
+      "viewerPath": "Assets/Audio/vrax-death.wav",
+      "sha256": "00c747c95b6f07f47f6a3a5eee1728298c7fecfaf835d264041f1d1793c616de",
+      "unitySoundSlot": 15
+    }
+  ],
+  "conversion": "Original bytes preserved; playback copies are PCM16 stereo 44100 Hz, with no gain, pitch or waveform remix.",
+  "runtime": "Attack through Attack6: growl at clip start, swoosh at 200 ms; Death and Death2: death vocalization at clip start. Separate channels 4 and 5. Clip time follows playback speed; the Unity project is unchanged."
+}

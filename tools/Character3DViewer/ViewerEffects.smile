@@ -47,6 +47,7 @@ Public Type State
     ZaraAttacks As ZaraAttackEffects
     ProfileIndex As Number
     VraxAttacks As ViewerDragon.AttackEffects
+    VraxAudio As ViewerDragon.VraxAudioState
     ShieldRim As ArinShieldRim.Context
     WeaponRim As ArinShieldRim.Context
     IntensityInitialized As Boolean
@@ -381,9 +382,11 @@ Public Sub HideEpicGlow(ByRef Value As State)
 
 End Sub
 
-Public Sub ResetArinAudio(ByRef Value As State)
+Public Sub ResetAudio(ByRef Value As State)
 
     Value.ArinAudio.Clip = ""
+    Value.VraxAudio.Voice.Clip = ""
+    Value.VraxAudio.Swoosh.Clip = ""
 
 End Sub
 
@@ -559,6 +562,7 @@ End Sub
 
 Public Sub DestroyEpicGlow(ByRef Value As State)
 
+    Call ViewerDragon.ClearVraxAudio(Value.VraxAudio)
     Call ViewerDragon.ClearVraxAttacks(Value.VraxAttacks)
     Call ClearEquipmentFire(Value)
 

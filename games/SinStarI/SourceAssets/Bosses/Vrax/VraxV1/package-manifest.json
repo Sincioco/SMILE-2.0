@@ -366,5 +366,25 @@
     "owner": "tools/Character3DViewer/ViewerDragon.smile",
     "checkpoint": "docs/implementation/character-equipment-vfx-checkpoint.md",
     "modelAndAnimationsUnchanged": true
-  }
+  },
+  "audio": [
+    {
+      "path": "Private/Audio/vrax-swoosh.wav",
+      "viewerPath": "Assets/Audio/vrax-swoosh.wav",
+      "sha256": "ea50043bdcfc816f91db1023fa4fe71ea5a492deec7952de9d9dc66db2445a48",
+      "unitySoundSlot": 13
+    },
+    {
+      "path": "Private/Audio/vrax-growl.wav",
+      "viewerPath": "Assets/Audio/vrax-growl.wav",
+      "sha256": "db3f31adf6f2a865865247a46fa1707707e979b7d815a67608c9fcdfce3cbc5a",
+      "unitySoundSlot": 14
+    },
+    {
+      "path": "Private/Audio/vrax-death.wav",
+      "viewerPath": "Assets/Audio/vrax-death.wav",
+      "sha256": "00c747c95b6f07f47f6a3a5eee1728298c7fecfaf835d264041f1d1793c616de",
+      "unitySoundSlot": 15
+    }
+  ]
 }

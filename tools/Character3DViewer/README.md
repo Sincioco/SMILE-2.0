@@ -28,6 +28,14 @@ discharge/impact sounds use separate channels from the existing Lab thunder.
 Weapon/Glow visibility, family freeze, clip changes and teardown retain their
 existing ownership. Unity visual effects were not imported.
 
+Vrax now uses his original Unity growl at attack start and swoosh at 200 ms of
+clip time, plus his original death vocalization. Standalone and Party Vrax share
+the same cue policy on channels 4/5, separate from the hero sounds. Pause and tab
+teardown stop those channels. Source files and provenance are preserved in the
+VraxV1 package; the normal local build includes them and PublicRoster omits them.
+The [Dragon animation trial](../../games/SinStarI/SourceAssets/Bosses/RedDragon/RedDragonV12VraxTrial/README.md)
+has its own Trial/Original launcher and does not replace the default Dragon.
+
 Standard native and Web builds now include the shared mandatory SMILE startup
 presentation. It overlaps asset preparation with a one-second visible logo
 minimum, shows creator credits and the artifact's compilation time/version, and

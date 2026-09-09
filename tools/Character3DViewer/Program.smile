@@ -393,6 +393,11 @@ Sub UpdateBattleAudio()
 
     Call ViewerDragon.UpdateAudio(DragonState, Audible)
 
+    If Session.ProfileIndex = ViewerProfiles.PROFILE_VRAX Then
+        Call ViewerDragon.UpdateVraxAudio(Effects.VraxAudio, Name,
+            Character3D.AnimationTime(Character), Audible)
+    End If
+
 End Sub
 
 Sub HandleKeyboard(PressedKey As Number)

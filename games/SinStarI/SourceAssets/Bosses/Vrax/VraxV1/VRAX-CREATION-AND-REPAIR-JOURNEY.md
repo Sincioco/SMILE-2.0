@@ -1,5 +1,35 @@
 # Vrax V1 Creation And Repair Journey
 
+## September 10: Original Unity Audio
+
+The original `SciFiBeast01.cs` controller plays Sound14 at attack start,
+Sound13 after 0.2 seconds, and Sound15 on death. Scene AudioSource references
+resolve these to Beast Vocalisation 08, Blunt Swing 01 and Beast Vocalisation 09.
+`unity-audio-import.json` records the source GUIDs, original checksums and runtime
+copies. `Import-UnityAudio.ps1` repeats that read-only import from the installed
+Unity project, preserving original bytes under `Private/Audio/Originals` and
+producing PCM16 stereo 44100 Hz copies. No waveform remix or VFX import occurs.
+
+Standalone and Party Vrax call `ViewerDragon.UpdateVraxAudio`, with independent
+caller-owned cue state. Attack through Attack6 trigger voice on channel 4 at clip
+start and swoosh on channel 5 at 200 ms of clip time. Death and Death2 use the
+original death voice on channel 4. The controller did not define a separate Hit
+sound, so none was invented. Playback rate changes cue timing through the existing
+clip clock, while sample pitch stays original. Pause/hidden boss stops the new
+channels; scrubbing consumes cues without delayed catch-up. Teardown stops them
+and resets state. Audio does not depend on VFX visibility.
+
+The normal project stages checksummed audio alongside the permanent private
+roster. Public-roster Web builds omit the Vrax and Zara audio wildcards. The
+licensed files remain ignored in Git; models, materials, all 24 animations,
+grounding, sockets and accepted scale are unchanged.
+
+Native and Web builds passed. Native standalone/Party playback was launched and
+inspected. Chrome verified growl/swoosh/death AudioBuffer starts with nonzero
+samples, separate channels, attack cues near 0/200 ms, pause stops and Party
+playback, with no page errors. This is playback validation, not a subjective
+listening or mix approval. The prior Dragon trial and Original restore stay separate.
+
 ## September 10: Party movement and complete clips
 
 Party Vrax keeps the standalone boss rate of 100 and plays each selected attack
