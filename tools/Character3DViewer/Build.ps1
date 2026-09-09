@@ -5,10 +5,14 @@ param(
     [ValidateSet('Native', 'Web', 'All')]
     [string]$Target = 'All',
     [ValidateSet('Full', 'Low', 'Medium', 'High')]
-    [string]$WebQuality = 'Full'
+    [string]$WebQuality = 'Full',
+    [switch]$PublicRoster
 )
 
 $ErrorActionPreference = 'Stop'
+if ($PublicRoster -and $Target -ne 'Web') {
+    throw 'Public roster publication requires -Target Web.'
+}
 if ($WebQuality -ne 'Full' -and $Target -ne 'Web') {
     throw 'Optimized profiles require -Target Web; normal native/Web output is preserved.'
 }
@@ -125,7 +129,10 @@ if (-not (Test-Path -LiteralPath $compiler -PathType Leaf)) {
 Assert-ViewerSourceInventory $nativeProject 'Profiles.smile' 'Character Viewer project'
 
 & (Join-Path $toolRoot 'Prepare-BuildAssets.ps1')
-$unityAssets = @(& (Join-Path $toolRoot 'Prepare-UnityAssets.ps1'))
+$unityAssets = @()
+if (-not $PublicRoster) {
+    $unityAssets = @(& (Join-Path $toolRoot 'Prepare-UnityAssets.ps1'))
+}
 $unityLogicalPaths = @($unityAssets | ForEach-Object { $_.LogicalPath })
 if ($unityAssets.Count -gt 0) {
     $profileRoot = Join-Path $toolRoot 'BuildAssets\ViewerLocal'
@@ -170,6 +177,7 @@ if ($Target -in @('Native', 'All')) {
 
 if ($Target -in @('Web', 'All')) {
     $webFolder = if ($WebQuality -eq 'Full') { 'Web' } else { "Web - Optimized $WebQuality" }
+    if ($PublicRoster) { $webFolder += ' - Public' }
     $webOutput = Join-Path $outputRoot $webFolder
     # Keep source ownership and native diagnostics intact. Generate only the
     # Web publication's profile policy and project asset list. Quality profiles

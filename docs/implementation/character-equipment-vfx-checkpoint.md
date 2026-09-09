@@ -1,5 +1,47 @@
 # Valor and Zara equipment VFX — September 9, 2026
 
+## Public small-screen notice delivery — September 9, 2026
+
+Sin supplied `http://sincioco.com/smile/character3dviewer/`. The existing Azure
+publication's index matched the HTTP response byte for byte. Its old build
+`9d92ccfd666eca49` reproduced the blocking notice in Chrome at 844 by 390.
+
+`Build.ps1 -Configuration Release -Target Web -PublicRoster` now explicitly selects
+the original public Arin/Orin/Dragon roster even on the development machine with
+private Unity packages installed. It writes to `Web - Public`, preserving the
+normal native and private-roster Web outputs. This is a build-owner selection;
+no generated program, coordinator, character asset or calibration was edited.
+
+The build passes with 35 public assets. All 41 live files were backed up and
+compared: 38, including every character/texture/calibration asset, are byte-identical.
+Only `game.js`, `smile-runtime.js` and `index.html` changed. The new public build
+is `38405a79e1f708d8`, compiled September 9 at 14:40:25 +08:00 with SMILE 2.0.61.
+The native/private Web executable hashes still match the Vrax delivery below.
+
+The three changed files were staged and checked over FTPS, installed with the
+index last, and verified by SHA-256 through the public HTTP URL at
+14:49:06 +08:00. The first Python FTPS upload timed out during TLS shutdown;
+reconnection proved that staged file complete, and the installed curl client
+finished the transfer with certificate verification enabled. The failed attempt
+did not modify the live files. Local rollback copies remain available.
+
+Published SHA-256:
+
+- `game.js`: `5a5a3c954463cbbd0128e9ff015c4378743b5b5b9059086a7cd3df1d9dcd313d`
+- `smile-runtime.js`: `001f939db3e8ef34dd6b98c5ddff1b055fdbfd273446acb035fd5dd03ac13f19`
+- `index.html`: `2699476bea74265ceb49cf132106c6a81606b2d396a556bc175c55ef9ba8454a`
+
+Local Chrome inspection confirms Continue removes the notice and reveals the
+running public Party scene. Earlier ignored clicks came from an unfocused Chrome
+window; bringing Chrome forward resolved the automation issue without a code change.
+On the live URL, Chrome at 844 by 390 shows Continue and clicking it removes
+the overlay while Party playback continues. Dismissal remains after resizing to
+390 by 844. A fresh portrait reload also shows Continue; activating it removes
+the notice. Both layouts report no console errors. Physical iPhone/Safari
+observation remains unperformed. Evidence and the rollback copy are under
+`artifacts/temp/viewer-mobile-publication`. No private roster assets were uploaded,
+and no unchanged native, smoke or VSIX build/install was repeated for this delivery.
+
 ## Vrax attack follow-up — September 9, 2026
 
 Sin explicitly requested mouth fire and arm lightning after the completed
@@ -52,10 +94,10 @@ not suppressed or treated as product passes. No emitted program files were patch
 Native Viewer SHA-256: `139B3590C1328EF427DD3B9B7ADAF15B1F4868CCE79306509DC1B9171AB2388E`.
 Full Web game.js SHA-256: `B0D71510BFD305522298508DFBBAFA30D0B3B8183654E742AC34B0D368121C1C`.
 
-The earlier small-screen Continue fix is committed/pushed as `35e9dba`. Its physical
-iPhone check and update of the existing public website remain pending the complete
-page URL requested from Sin. The local private-roster Web output is not approved
-for public asset redistribution and has not been uploaded.
+The earlier small-screen Continue fix is committed/pushed as `35e9dba`; its public
+website delivery follows above. The physical iPhone check remains unperformed.
+The local private-roster Web output is not approved for public asset redistribution
+and has not been uploaded.
 
 On hold: other VFX/Loader phases, further Sin Star I game work, Battle Scene Editor,
 semantic CLI, subject-first syntax, SMILE 1.0 and unrelated suspended features.

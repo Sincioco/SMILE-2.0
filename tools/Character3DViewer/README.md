@@ -197,6 +197,12 @@ default. Low, Medium, and High require `-Target Web -WebQuality <quality>` and w
 only to their named optimized directory, so the four Web publications do not
 overwrite one another.
 
+For the public website, use `Build.ps1 -Target Web -PublicRoster`. This explicitly
+excludes the private Unity roster even when its packages are installed locally,
+and writes to `bin\Release\Web - Public` (or the selected optimized folder with
+` - Public` appended). It preserves the normal local-roster output. Publish only
+this complete public folder; do not upload the private local Web bundle.
+
 The Viewer Web build generates an ignored publication project and profile policy
 containing the current Arin, Orin and Dragon models, plus the complete optional
 private Valor/Zara/Vrax roster when present. Private builds remain local. The normal asset
