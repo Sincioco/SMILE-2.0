@@ -50,8 +50,8 @@ These instructions apply to the entire SMILE 2.0 repository.
 
 ### Current on-hold tasks
 
-- Further Sin Star I game updates, Battle Scene Editor, semantic-inspection CLI,
-  subject-first syntax, SMILE 1.0 changes and unrelated suspended features.
+- None. Sin explicitly cleared the on-hold list. Clearing the list does not
+  authorize starting a new feature phase without a current request.
 
 ## Project identity
 

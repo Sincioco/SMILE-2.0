@@ -40,6 +40,7 @@ Call LoadViewer()
 Call CalibrationCheck(Session.Ready And Not Session.ViewerError, "Load profile")
 Call CheckEquipmentRimRecovery()
 Call CheckVraxAttackEffects()
+Call CheckZaraAttackEffects()
 Call CheckEquipmentGlowAlignment()
 Call CalibrationCheck(Not Calibration.StorageRejected, "Accept current Arin saved calibration")
 Call CheckGizmoVisibility()
@@ -1364,14 +1365,14 @@ Sub CheckFractionalPartySubmission()
     Trial.Ready = True
     Trial.Turn = 0
     Trial.Stage = 0
-    Trial.Elapsed = ViewerParty.HERO_APPROACH_DELAY_MILLISECONDS
+    Trial.Elapsed = 650
     Trial.First.Home = Math3D.Vector(0, 0, 0)
     Trial.First.Approach = Math3D.Vector(1, 0, 1)
     Partitioned = Trial
     Actions = ViewerParty.AdvanceChoreography(Trial, 163, True, False, 1200, 100, -1)
     OtherActions = ViewerParty.AdvanceChoreography(Partitioned, 100, True, False, 1200, 100, -1)
     OtherActions = ViewerParty.AdvanceChoreography(Partitioned, 63, True, False, 1200, 100, -1)
-    Expected = 163.0 / 300.0
+    Expected = 163.0 / 650.0
 
     Call CalibrationCheck(ViewerParty.HERO_APPROACH_DELAY_MILLISECONDS = 250 And
         ViewerParty.HERO_APPROACH_DURATION_MILLISECONDS = 300 And
@@ -1406,7 +1407,7 @@ Sub CheckFractionalPartySubmission()
 
     Show Screen
 
-    Trial.Elapsed = 1200 + ViewerParty.HERO_ATTACK_START_MILLISECONDS
+    Trial.Elapsed = 1200 + 1300
     Trial.Stage = 2
     Actions = ViewerParty.AdvanceChoreography(Trial, 163, True, False, 1200, 100, -1)
     Expected = 1.0 - 163.0 / 700.0
@@ -1835,5 +1836,87 @@ Sub AdvanceTestSceneVfx()
         Playback.ScenePaused,
         ViewerCameraState.Live
     ) And Session.Ready
+
+End Sub
+
+Sub CheckZaraAttackEffects()
+
+    Dim Trial As ViewerEffects.ZaraAttackEffects
+    Dim Independent As ViewerEffects.ZaraAttackEffects
+    Dim Base As Precision3D.Vector3
+    Dim Tip As Precision3D.Vector3
+    Dim Target As Precision3D.Vector3
+    Dim Original As Lightning.LightningEffect
+    Dim EmptyFire As Fire.FireEmitter
+    Dim BaselineFire As Number
+    Dim Index As Number
+
+    Base = Precision3D.Vector(10.25, 60.5, 0.75)
+    Tip = Precision3D.Vector(110.25, 90.5, 0.75)
+    Target = Precision3D.Vector(0.0, 0.0, 0.0)
+    BaselineFire = Fire.Value(1, EmptyFire)
+
+    Call CalibrationCheck(ViewerEffects.ZaraAttackActive("SwordAttack", 300, 1000) And
+        ViewerEffects.ZaraAttackActive("attack6", 700, 1000) And
+        Not ViewerEffects.ZaraAttackActive("BlockImpact", 700, 1000) And
+        Not ViewerEffects.ZaraAttackActive("SwordAttack", 1000, 1000),
+        "Zara effects follow attack clips and exclude guard/completion")
+    Call ViewerEffects.UpdateZaraAttackPoints(Independent, "SwordAttack2", 100, 1000,
+        Base, Tip, Target, True, True, False, 1)
+    Call ViewerEffects.UpdateZaraAttackPoints(Trial, "SwordAttack", 249, 1000,
+        Base, Tip, Target, True, True, False, 1)
+    Call CalibrationCheck(Trial.BladeArc.Slot <> 0 And Trial.Storm[0].Slot = 0 And
+        Lightning.Value(Lightning.QUERY_PALETTE, Trial.BladeArc) = Lightning.PALETTE_RED_WHITE,
+        "Zara charges with red-white weapon lightning before impact")
+
+    Original = Trial.BladeArc
+    Tip.X = 120.75
+
+    Call ViewerEffects.UpdateZaraAttackPoints(Trial, "SwordAttack", 250, 1000,
+        Base, Tip, Target, True, True, True, 1)
+    Call CalibrationCheck(Lightning.Value(Lightning.QUERY_MAIN_TARGET_X,
+        Trial.BladeArc) = 110 And Trial.Storm[0].Slot = 0,
+        "Zara freeze preserves the current charge without starting a storm")
+    Call ViewerEffects.UpdateZaraAttackPoints(Trial, "SwordAttack", 251, 1000,
+        Base, Tip, Target, True, True, False, 1)
+    Call CalibrationCheck(Not Lightning.IsActive(Original) And
+        Lightning.IsActive(Independent.BladeArc), "Zara resume preserves independent owners")
+
+    For Index = 0 To 3
+
+        Call CalibrationCheck(Lightning.IsActive(Trial.Storm[Index]) And
+            Lightning.Value(Lightning.QUERY_PRESET, Trial.Storm[Index]) = 8 And
+            Lightning.Value(Lightning.QUERY_QUALITY, Trial.Storm[Index]) = Lightning.QUALITY_ULTRA And
+            Lightning.Value(Lightning.QUERY_PALETTE, Trial.Storm[Index]) = Lightning.PALETTE_RED_WHITE,
+            "Zara admits four red-white Ultra StormCrown strikes")
+    End For
+
+    Call CalibrationCheck(Lightning.Value(Lightning.QUERY_FIRST_Y, Trial.Storm[0]) = 540 And
+        Lightning.Value(Lightning.QUERY_MAIN_TARGET_Y, Trial.Storm[0]) = 12,
+        "SwordAttack uses Lightning Lab Godstorm Ultra sky-ring layout")
+
+    Original = Trial.Storm[0]
+
+    Call ViewerEffects.UpdateZaraAttackPoints(Trial, "SwordAttack2", 700, 1000,
+        Base, Tip, Target, True, True, False, 1)
+    Call CalibrationCheck(Not Lightning.IsActive(Original) And
+        Lightning.Value(Lightning.QUERY_PRESET, Trial.Storm[0]) = 2 And
+        Lightning.Value(Lightning.QUERY_FIRST_Y, Trial.Storm[0]) = 540 And
+        Lightning.Value(Lightning.QUERY_MAIN_TARGET_Y, Trial.Storm[0]) = 12,
+        "SwordAttack2 uses Lightning Lab Forked Judgment SkyStrike layout")
+    Call ViewerEffects.UpdateZaraAttackPoints(Trial, "SwordAttack2", 100, 1000,
+        Base, Tip, Target, True, True, True, 1)
+    Call CalibrationCheck(Trial.BladeArc.Slot = 0 And Trial.Storm[0].Slot = 0,
+        "Zara backward seek clears stale storms even while frozen")
+    Call ViewerEffects.UpdateZaraAttackPoints(Trial, "SwordAttack2", 700, 1000,
+        Base, Tip, Target, True, True, False, 1)
+    Call ViewerEffects.UpdateZaraAttackPoints(Trial, "SwordAttack2", 700, 1000,
+        Base, Tip, Target, False, True, True, 2)
+    Call CalibrationCheck(Trial.BladeArc.Slot = 0 And Trial.Storm[0].Slot = 0 And
+        Lightning.IsActive(Independent.BladeArc), "Zara hide clears only her owned lightning")
+    Call ViewerEffects.ClearZaraAttacks(Independent)
+    Call CalibrationCheck(Fire.Value(1, EmptyFire) = BaselineFire And
+        Lightning.Value(Lightning.QUERY_LIVE_EFFECTS, Trial.BladeArc) = 0,
+        "Zara cleanup restores shared budgets without allocating fire")
 
 End Sub

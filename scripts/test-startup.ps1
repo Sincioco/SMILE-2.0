@@ -33,6 +33,15 @@ int main(int argc, char**) {
         painted - start, ready - painted, closed - ready, closed - start);
     if (closed - start < 1000) return 1;
     if (argc > 1 && closed - ready >= 1000) return 2;
+    for (int cycle = 0; cycle < 2; ++cycle) {
+        smile_startup_resume(0);
+        ULONGLONG repainted = GetTickCount64();
+        smile_startup_resume(0);
+        smile_startup_ready();
+        ULONGLONG reclosed = GetTickCount64();
+        printf("reload=%d; visible=%llu ms\n", cycle, reclosed - repainted);
+        if (reclosed - repainted < 1000) return 3;
+    }
     return 0;
 }
 '@
@@ -61,3 +70,31 @@ if ($LASTEXITCODE -ne 0) { throw 'Native startup console compilation failed.' }
 $output = & (Join-Path $target 'Console.exe')
 if ($LASTEXITCODE -ne 0 -or $output -ne 'Startup console output preserved.') { throw 'Startup changed console output.' }
 Write-Host 'PASS: native visible minimum/overlap, embedded logo, custom-entry console, Web startup and download contracts.'
+
+# The public operation is emitted normally on both targets; never patch emitted programs.
+$reload = @'
+Game Window "Reload Contract"
+
+Dim Shown As Boolean
+Dim CycleIndex As Number
+
+Show Screen
+
+For CycleIndex = 1 To 2
+    Shown = Window_Loading()
+    Show Screen
+End For
+
+Print "Reload contract complete."
+End Program
+'@
+[IO.File]::WriteAllText($source, $reload, $utf8)
+& $compiler $source -o (Join-Path $target 'Reload.exe')
+if ($LASTEXITCODE -ne 0) { throw 'Native reload compilation failed.' }
+$output = & (Join-Path $PSScriptRoot 'run-bounded-test.cmd') 20 (Join-Path $target 'Reload.exe')
+if ($LASTEXITCODE -ne 0 -or $output -ne 'Reload contract complete.') { throw 'Native reload execution failed.' }
+& $compiler $source --target web --output-dir (Join-Path $target 'ReloadWeb')
+if ($LASTEXITCODE -ne 0) { throw 'Web reload compilation failed.' }
+& node (Join-Path $PSScriptRoot 'run-web-test.js') (Join-Path $target 'ReloadWeb') --frames 8
+if ($LASTEXITCODE -ne 0) { throw 'Web reload execution failed.' }
+Write-Host 'PASS: repeated Window_Loading calls execute through generated native/Web programs.'

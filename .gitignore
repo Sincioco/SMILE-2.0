@@ -12,3 +12,5 @@ artifacts/
 *.vsix
 *.vsixmanifest.user
 
+# Disposable mirrors of Zara's locally licensed Unity attack audio.
+tools/Character3DViewer/Assets/Audio/zara-*.wav

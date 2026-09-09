@@ -26,6 +26,17 @@ foreach ($definition in $definitions) {
         Copy-Item -LiteralPath $source -Destination (Join-Path $staging "$name-v1-animation-set.glb") -Force
         Copy-Item -LiteralPath (Join-Path $package "${name}V1.sm3d.json") -Destination $staging -Force
     }
+    foreach ($audio in @($manifest.audio)) {
+        if ($null -eq $audio) { continue }
+        $audioSource = Join-Path $package $audio.path
+        if (-not (Test-Path -LiteralPath $audioSource -PathType Leaf) -or
+            (Get-FileHash -LiteralPath $audioSource -Algorithm SHA256).Hash -ine $audio.sha256) {
+            throw "$name audio does not match its canonical package checksum: $($audio.path)"
+        }
+        if (-not $ValidateOnly) {
+            Copy-Item -LiteralPath $audioSource -Destination (Join-Path $PSScriptRoot $audio.viewerPath) -Force
+        }
+    }
     [pscustomobject]@{
         Name = $name
         Include = "BuildAssets\${name}V1\$name-v1-animation-set.glb"

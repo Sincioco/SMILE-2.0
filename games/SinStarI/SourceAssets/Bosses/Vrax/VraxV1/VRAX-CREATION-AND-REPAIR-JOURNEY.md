@@ -1,5 +1,29 @@
 # Vrax V1 Creation And Repair Journey
 
+## September 10: Party movement and complete clips
+
+Party Vrax keeps the standalone boss rate of 100 and plays each selected attack
+through its actual duration. His Hit reaction also completes instead of being
+overwritten on the next choreography step. The party has independent rates and
+cycles defenders through Arin, Orin and Zara; Valor is temporarily hidden there.
+
+The boss's 650-ms close-up leads to an 800-ms Run approach, with a 260-unit
+standoff from the selected defender. Body facing, a bounded head-node aim and
+the existing fire/arm-lightning target follow that defender. The camera holds
+Beat 3 for the whole attack, skips Beat 3a, then shows the frontal aftermath and
+800-ms return. Camera 2 follows Camera 1's continuous orbit direction and rate,
+except the later reference-driven Vrax Beats 3/4: their camera is planted behind
+the defender, 55 units above the floor, with a fixed 26-degree lens. Its position
+does not follow Vrax forward/backward or orbit; only the look-at target follows
+his attack/return. The low frontal shot retains the defender's full back view
+and emphasizes Vrax's size and mouth-fire/arm-lightning effects.
+Party Dragon retains its separate historical placement/camera policy.
+
+The Web PBR face-normal orientation was corrected to agree with the native mesh
+winding, including the reflection pass. This repairs metallic lighting without
+adding lights, draw calls, textures or a quality/performance downgrade. It does
+not alter the model, materials, clips, sockets, grounding or accepted scale.
+
 This package owns the validated local Unity character import. Native and Chrome
 inspection, full clip inventory and measured floor-contact validation are recorded
 in the Unity import checkpoint. Original files and full-weight sources are preserved.

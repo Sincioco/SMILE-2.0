@@ -1,0 +1,68 @@
+{
+  "sourceProject": "Knights of Bits and Bytes",
+  "scene": "Assets/Scenes/BattleSystem.unity",
+  "script": "Assets/Characters/Zara/ZaraScript.cs",
+  "firstTwoAttacks": "Both use Sound10 at the original half-second cue; Viewer synchronizes it to the 25-percent visual strike.",
+  "sources": [
+    {
+      "slot": 9,
+      "guid": "0641cb79b504b3545a78d49beb572380",
+      "volume": 1.0,
+      "unityAsset": "Assets/!Music and Sound FX/Universal Sound FX/WEAPONS/SciFi/Blasters_Complex/BLASTER_Complex_Wave_Distortion_stereo.wav",
+      "packageOriginal": "Private/Audio/Originals/BLASTER_Complex_Wave_Distortion_stereo.wav",
+      "sha256": "c2a17fef3a1a9d5a3ee611865920a404aee5874413fdddde4c27541b7bf96ff3"
+    },
+    {
+      "slot": 10,
+      "guid": "906804271a5b0bb498a96d785120b318",
+      "volume": 1.0,
+      "unityAsset": "Assets/!Music and Sound FX/Universal Sound FX/WEAPONS/SciFi/Blasters_Complex/BLASTER_Complex_Fire_Trigger_Digital_Discharge_stereo.wav",
+      "packageOriginal": "Private/Audio/Originals/BLASTER_Complex_Fire_Trigger_Digital_Discharge_stereo.wav",
+      "sha256": "590df5ce2d49560cb0d2200b8a13fcdf69f3803ba6e2ab6b14c7095d528d543c"
+    },
+    {
+      "slot": 11,
+      "guid": "85c0a650f549d0446a72b80ff7432e75",
+      "volume": 1.0,
+      "unityAsset": "Assets/!Music and Sound FX/Sci Fi Weapons/Explosions/DSGNMisc_Anticipate Explosion_04.wav",
+      "packageOriginal": "Private/Audio/Originals/DSGNMisc_Anticipate Explosion_04.wav",
+      "sha256": "6822d384affaf876b0cf9d83628fe4efb550e71fb3df5951be2350e42146934f"
+    },
+    {
+      "slot": 12,
+      "guid": "9fa116542f22c004fa32551642dfaf74",
+      "volume": 1.0,
+      "unityAsset": "Assets/!Music and Sound FX/Sci Fi Weapons/Explosions/DSGNMisc_Anticipate Explosion_05.wav",
+      "packageOriginal": "Private/Audio/Originals/DSGNMisc_Anticipate Explosion_05.wav",
+      "sha256": "0d5175280a92bc06876d0c47bff14f1e71950949eefb92e27c7b611f02f3fde6"
+    }
+  ],
+  "outputs": [
+    {
+      "path": "Private/Audio/zara-heavy.wav",
+      "viewerPath": "Assets/Audio/zara-heavy.wav",
+      "sha256": "4f90e117ab73b35f7d0ba137c3577fe7b68815d75b659f1e5dbe9d444be62f90",
+      "unitySoundSlot": 9
+    },
+    {
+      "path": "Private/Audio/zara-attack.wav",
+      "viewerPath": "Assets/Audio/zara-attack.wav",
+      "sha256": "da038358eb84d23525b6c1ad7d0df6fa71f5c3613c20c87b5b8999b521550145",
+      "unitySoundSlot": 10
+    },
+    {
+      "path": "Private/Audio/zara-impact.wav",
+      "viewerPath": "Assets/Audio/zara-impact.wav",
+      "sha256": "0aa358b5a0d50d1ab1c7ae015ffbdd6583b074565782bf3d8e463c8ca71ce7be",
+      "unitySoundSlot": 11
+    },
+    {
+      "path": "Private/Audio/zara-burst.wav",
+      "viewerPath": "Assets/Audio/zara-burst.wav",
+      "sha256": "8af34850f541e1d653b26ca1fccfe5a0e69d958b38ceaaf71a00f62b3846057c",
+      "unitySoundSlot": 12
+    }
+  ],
+  "conversion": "Original audio preserved; playback copies use PCM16 stereo 44100 Hz. No new visual effects or sound remix.",
+  "runtimeLayers": "Original discharge on channel 1; existing Lightning Lab thunder on channel 2; original later-attack impact on channel 3. Runtime cue follows the 25-percent animation boundary; no waveform remix."
+}

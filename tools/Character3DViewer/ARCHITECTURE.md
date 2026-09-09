@@ -3,15 +3,17 @@
 The local Unity import extends existing owners: `Profiles` supplies Valor, Zara
 and Vrax identities, clips, scale policy and measured grounding; `ViewerActors`
 applies transforms; `ViewerParty` owns two additional contexts, shared Party
-choreography and the five hero camera phases; `ViewerDragon` owns the selected Party
+choreography and independent Dragon/Vrax camera policies; `ViewerDragon` owns the selected Party
 opponent while preserving Dragon
 inspection. `Profiles.HasBattleOpponent` admits the four hero tabs without changing
 inspection policy; `Profiles.UsesVraxOpponent` selects Vrax only for Valor/Zara and
 supplies their doubled arena-camera distance. `ViewerLifecycle` applies those
 policies before the shared actor/camera owners create the scene. `Profiles` also
 distinguishes the shared `Party Dragon` and `Party Vrax` routes; `ViewerUi` owns
-their eight-tab presentation. `Party Vrax` scales the shared Party playback setting
-through Vrax's profile defaults so his boss animation matches his individual tab.
+their eight-tab presentation. `ViewerParty.ActorPlaybackSpeed` owns independent
+Party Vrax rates: Arin/Orin 150, Zara/Vrax 100. The Party panel routes each pair
+of speed buttons to that actor, and the existing inspector borrows/restores its
+rate through `ViewerPlayback`. Clip timing and VFX consume the same actor rate.
 `Build.ps1` and
 `Prepare-UnityAssets.ps1` validate and stage the permanent locally licensed roster
 into ignored project-local cooking inputs. No parallel actor pool
@@ -32,6 +34,42 @@ before publishing it to its caller. Failed candidates are released locally; the
 same caller can retry on its next normal update. The isolated calibration fixture
 proves native/generated-Web capacity recovery and independent owners without
 private roster assets or pool changes.
+
+`ViewerEffects.ZaraAttackEffects` owns Zara's weapon charge and four crimson
+strikes, using Godstorm Ultra/Forked Judgment layouts from Lightning Lab.
+Primary and Party instances call the same socket/clip-time controller, with no
+extra scene clock. Canonical Zara sockets cover the entire weapon silhouette.
+The existing native/generated-Web calibration fixture checks attack windows,
+independent owners, freeze/resume, cuts and cleanup using synthetic attachments.
+`ViewerParty.PARTY_VALOR_VISIBLE` temporarily removes Valor from Party Vrax's
+rendering, effects, formation count and turn order without removing his package
+or tab. Party Dragon uses the pre-Vrax shots; Party Vrax uses the requested close-up
+and tracking sequence, then the later low frontal attack/impact/recovery composition.
+The hero and boss align on the viewing axis so the hero stays fully visible and
+Vrax dominates the frame. Logical impact timing is retained without the old wide cut.
+The hero attack cut stores the complete camera pose/lens, choosing the horizontal
+orbit angle behind the selected hero around the established arena target.
+Impact/recovery reuse that pose unchanged, following Sin's final fixed-shot request.
+The Vrax intro rotates position and up direction together around the vertical axis,
+then settles into continuous slow revolutions. `ViewerCamera.AdvanceAutoOrbit`
+supplies the shared phase; `ViewerParty.OrbitBattleShot` rotates each retained
+battle composition at the same rate and direction. Vrax has close-up, moving
+rear approach, complete-attack and frontal aftermath shots, without Beat 3a.
+His Beats 3/4 use Sin's later planted-camera exception: a low fixed position
+behind the selected defender, with a constant lens and a look-at target following
+Vrax. There is no dolly or orbital translation during those two beats.
+`VraxPosition` supplies both the actor and follow camera; body/head/effects aim at
+the selected defender. The historical Dragon camera path remains independent.
+Zara's shared 25-percent hit policy keeps her storm, camera and boss reaction
+aligned. `BattleAudio.CrossedCue` drives original Unity sounds on channels 1/3 and
+Lab thunder on channel 2; pause, seek and clip changes use its existing semantics.
+The optional private audio wildcard is staged by `Prepare-UnityAssets.ps1` and
+excluded by `Build.ps1 -PublicRoster`. No licensed audio is tracked in Git.
+
+Tab selection calls `Window_Loading()` before the existing lifecycle teardown.
+The shared native/Web startup owners reopen their existing presentation with
+the artifact's original metadata. The first new `Show Screen` completes the
+loading interval. No Viewer-local splash renderer or loading loop is introduced.
 
 Vrax attack effects remain in `ViewerDragon.AttackEffects`. The primary
 `ViewerEffects.State` and Party's `ViewerDragon.State` each own a separate context.

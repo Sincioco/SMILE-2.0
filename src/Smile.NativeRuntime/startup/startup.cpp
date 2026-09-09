@@ -12,6 +12,8 @@
 // No static C++ constructors: SMILE executables use a custom entry point.
 static HANDLE startup_thread, startup_painted;
 static HWND startup_window;
+static HWND startup_owner;
+static bool startup_reloading;
 static SRWLOCK startup_lock = SRWLOCK_INIT;
 static WCHAR startup_title[512], startup_author[256], startup_build[256], startup_detail[1024];
 static Gdiplus::Bitmap* startup_logo;
@@ -138,7 +140,9 @@ static LRESULT CALLBACK startup_proc(HWND window, UINT message, WPARAM wparam, L
             if (PtInRect(&startup_links[i], point)) ShellExecuteW(window, L"open", startup_urls[i], 0, 0, SW_SHOWNORMAL);
         return 0;
     }
-    case WM_CLOSE: ExitProcess(0); // Closing this program's startup window cancels its launch.
+    case WM_CLOSE:
+        if (startup_reloading) return 0; // A loading overlay must not terminate an existing editor.
+        ExitProcess(0); // Closing this program's initial startup window cancels its launch.
     case WM_DESTROY: PostQuitMessage(0); return 0;
     }
     return DefWindowProcW(window, message, wparam, lparam);
@@ -174,7 +178,7 @@ static DWORD WINAPI startup_run(void*)
     type.lpszClassName = L"SMILE20StartupWindow";
     RegisterClassW(&type);
     MONITORINFO monitor = { sizeof(monitor) };
-    GetMonitorInfoW(MonitorFromWindow(GetForegroundWindow(), MONITOR_DEFAULTTONEAREST), &monitor);
+    GetMonitorInfoW(MonitorFromWindow(startup_owner ? startup_owner : GetForegroundWindow(), MONITOR_DEFAULTTONEAREST), &monitor);
     const RECT area = monitor.rcWork;
     int height = MulDiv(650, (int)GetDpiForSystem(), 96);
     if (height > area.bottom - area.top - 40) height = area.bottom - area.top - 40;
@@ -182,7 +186,7 @@ static DWORD WINAPI startup_run(void*)
     const int width = height;
     startup_window = CreateWindowExW(WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE, type.lpszClassName, startup_title,
         WS_POPUP | WS_BORDER, area.left + (area.right - area.left - width) / 2,
-        area.top + (area.bottom - area.top - height) / 2, width, height, 0, 0, type.hInstance, 0);
+        area.top + (area.bottom - area.top - height) / 2, width, height, startup_owner, 0, type.hInstance, 0);
     if (!startup_window) ExitProcess(2);
     ShowWindow(startup_window, SW_SHOWNOACTIVATE);
     UpdateWindow(startup_window);
@@ -198,6 +202,16 @@ static DWORD WINAPI startup_run(void*)
     return 0;
 }
 
+static void startup_start_thread()
+{
+    startup_ready_requested = 0;
+    startup_last_tick = startup_visible_ms = 0;
+    startup_painted = CreateEventW(0, TRUE, FALSE, 0);
+    startup_thread = CreateThread(0, 0, startup_run, 0, 0, 0);
+    if (!startup_painted || !startup_thread) ExitProcess(2);
+    WaitForSingleObject(startup_painted, INFINITE);
+}
+
 extern "C" void smile_startup_begin(const char* title, const char* author, const char* build)
 {
     startup_utf8(title, -1, startup_title, 512);
@@ -207,14 +221,22 @@ extern "C" void smile_startup_begin(const char* title, const char* author, const
         startup_utf8(author, -1, startup_author + 11, 245);
     }
     lstrcpyW(startup_detail, L"Initializing the runtime. Startup duration is not yet known.");
-    startup_painted = CreateEventW(0, TRUE, FALSE, 0);
-    startup_thread = CreateThread(0, 0, startup_run, 0, 0, 0);
-    if (!startup_painted || !startup_thread) ExitProcess(2);
-    WaitForSingleObject(startup_painted, INFINITE);
+    startup_start_thread();
+}
+
+extern "C" void smile_startup_resume(HWND owner)
+{
+    if (startup_thread) return; // Repeated calls share the current visible interval.
+    startup_owner = owner;
+    startup_reloading = true;
+    lstrcpyW(startup_detail, L"Loading the next scene. Preparation duration is not yet known.");
+    // The original generated title, author and build stamp remain authoritative.
+    startup_start_thread();
 }
 
 extern "C" void smile_startup_attach(HWND owner)
 {
+    startup_owner = owner;
     if (startup_window) {
         AcquireSRWLockExclusive(&startup_lock);
         lstrcpyW(startup_detail, L"Preparing the first frame. Startup duration is not yet known.");

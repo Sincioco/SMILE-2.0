@@ -45,6 +45,21 @@ function fixture() {
     await fast.frame(1);
     assert.equal(fast.element("").hidden, true);
 
+    for (let cycle = 0; cycle < 2; cycle++) {
+        const repaint = fast.host.smileStartup.begin();
+        assert.equal(fast.element("").hidden, false, "tab loading reopens the same presentation");
+        assert.equal(fast.element("-progress").value, undefined, "each loading cycle starts indeterminate");
+        assert.equal(fast.host.smileStartup.begin(), repaint, "nested show calls do not restart the interval");
+        await fast.frame(0); await fast.frame(16); await fast.frame(16); await repaint;
+        fast.host.smileStartup.update(new Map([["Cached.sm3d", { state: "ready" }]]));
+        assert.equal(fast.element("-progress").value, 1);
+        fast.host.smileStartup.finish();
+        await fast.frame(999);
+        assert.equal(fast.element("").hidden, false, "cached switches get their own visible minimum");
+        await fast.frame(1);
+        assert.equal(fast.element("").hidden, true);
+    }
+
     const hidden = fixture();
     hidden.decoded(); await hidden.frame(0); await hidden.frame(16); await hidden.frame(16);
     hidden.host.smileStartup.finish();

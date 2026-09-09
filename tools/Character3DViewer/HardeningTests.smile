@@ -30,6 +30,7 @@ Import Smile.Tools.Character3DViewerDragon As ViewerDragon
 Import Smile.Tools.Character3DViewerRendering As ViewerRendering
 Import Smile.Simple3D.Core As Core
 Import Smile.Simple3D.Precision3D As Precision3D
+Import Smile.Simple3D.PrecisionMath3D As PreciseMath
 Import Smile.Simple3D.NodeAim3D As NodeAim3D
 Import Smile.Simple3D.Math3D As Math3D
 Import Smile.Simple3D.FixedMath As Fixed
@@ -57,6 +58,9 @@ Dim Events As Number
 Dim AudioCue As BattleAudio.CueState
 Dim OrbitBase As Core.Camera3D
 Dim PreciseOrbitBase As Precision3D.Camera3D
+Dim VraxTestPosition As Precision3D.Vector3
+Dim VraxCameraAnchor As Precision3D.Vector3
+Dim HeroCameraAim As Precision3D.Vector3
 Dim OrbitControls As Core.CameraControl3D
 Dim OrbitFirst As Core.Camera3D
 Dim OrbitNext As Core.Camera3D
@@ -270,8 +274,8 @@ Call CheckNamed(
     "Session selects the Party Dragon tab identity")
 Call ViewerSession.SelectCharacterTab(
     SessionState, ViewerProfiles.CHARACTER_TAB_PARTY_VRAX)
-Call CheckNamed(Not ViewerSession.ShouldSelectCharacterTab(
-    SessionState, 3, True), "Session skips unchanged Party tab")
+Call CheckNamed(ViewerSession.ShouldSelectCharacterTab(
+    SessionState, 3, True), "Session restarts the selected Party tab")
 Call CheckNamed(ViewerSession.ShouldSelectCharacterTab(
     SessionState, 1, True), "Session accepts changed tab")
 Call ViewerSession.Start(SessionState)
@@ -591,6 +595,16 @@ Call ViewerCamera.StartAutoOrbit(CameraState)
 Call Check(ViewerCamera.AdvanceAutoOrbit(CameraState, CameraPhase1000, 250, 12, False))
 Call Check(CameraState.AutoOrbitYaw = 183.0)
 Call Check(CameraState.Controls.OrbitYaw = 183.0)
+
+CameraPhase1000 = 179.0
+
+Call Check(ViewerCamera.AdvanceAutoOrbit(CameraState, CameraPhase1000, 250, 12, True, True))
+Call Check(CameraPhase1000 = 182.0 And CameraState.AutoOrbitYaw = 302.0)
+
+CameraPhase1000 = 359.0
+
+Call Check(ViewerCamera.AdvanceAutoOrbit(CameraState, CameraPhase1000, 250, 12, True, True))
+Call Check(CameraPhase1000 = 2.0 And CameraState.AutoOrbitYaw = 122.0)
 
 CameraState.Live.Position.Y = -40.0
 CameraState.Live.Target.Y = 65.0
@@ -1198,7 +1212,7 @@ Call ViewerParty.SetEnabled(PartyState, True)
 Call ViewerParty.SelectUnityRoster(PartyState, True)
 
 PartyState.UiTurn = 2
-PlaybackState.PlaybackSpeed = 200
+PlaybackState.PlaybackSpeed = 100
 InspectorStatusView = ViewerInspectorPresentation.CaptureStatus(
     PartyPrimary.Actor, Profile, PartyState, SessionState, RenderingState,
     PlaybackState, CameraState, FrameRate, 800, 650, 16000)
@@ -1430,8 +1444,8 @@ PartyState.Turn = 0
 PartyState.Elapsed = 0
 
 Call CheckNamed(ViewerParty.PresentationSecondsRemaining(
-    PartyState, PartyPrimary.Actor, PartyState.Companion.Actor, 100) = 5,
-    "Accelerated hero turn reports its remaining seconds")
+    PartyState, PartyPrimary.Actor, PartyState.Companion.Actor, 100) = 6,
+    "Restored Dragon hero turn reports its remaining seconds")
 
 PartyState.Turn = 2
 PartyState.DragonCounter = 0
@@ -1439,6 +1453,15 @@ PartyState.DragonCounter = 0
 Call CheckNamed(ViewerParty.PresentationSecondsRemaining(
     PartyState, PartyPrimary.Actor, PartyState.Companion.Actor, 100) = 5,
     "Dragon turn reports its remaining seconds")
+
+PartyState.UnityRoster = True
+PartyState.BossAttackDuration = 2000
+
+Call CheckNamed(ViewerParty.PresentationSecondsRemaining(
+    PartyState, PartyPrimary.Actor, PartyState.Companion.Actor, 100) = 6,
+    "Vrax countdown includes preparation, approach, actual attack and recovery")
+
+PartyState.UnityRoster = False
 
 PartyState.Enabled = False
 PartyState.Turn = 0
@@ -1886,15 +1909,15 @@ Call Check(PartyState.Elapsed = 17)
 PartyState.Enabled = True
 PartyState.DragonReactionPending = True
 PartyState.Stage = 1
-PartyState.Elapsed = ViewerParty.HERO_ATTACK_START_MILLISECONDS + 639
+PartyState.Elapsed = 1300 + 639
 
 Call CheckNamed(Not ViewerParty.DragonReactionRequested(PartyState, 1000),
     "Dragon reaction waits for the attack impact threshold")
 
-PartyState.Elapsed = ViewerParty.HERO_ATTACK_START_MILLISECONDS + 640
+PartyState.Elapsed = 1300 + 640
 
 Call CheckNamed(ViewerParty.DragonReactionRequested(PartyState, 1000),
-    "Dragon reaction begins at the accelerated impact threshold")
+    "Dragon reaction begins at the original impact threshold")
 
 Call ViewerParty.ConsumeDragonReaction(PartyState, True, "Idle")
 Call Check(PartyState.DragonReactionPending)
@@ -1915,25 +1938,25 @@ Call Check(PartyActions.SecondClipRequested And PartyActions.SecondClip = "Defen
 Call Check(PartyActions.PositionsAvailable And
     PartyActions.FirstPosition.X = ToDouble(PartyState.First.Home.X))
 
-PartyState.Elapsed = ViewerParty.HERO_ATTACK_START_MILLISECONDS - 1
+PartyState.Elapsed = 1299
 PartyState.Stage = 0
 PartyActions = ViewerParty.AdvanceChoreography(
     PartyState, 1, True, False, 1200, 100, -1)
 
 Call CheckNamed(PartyState.Stage = 1 And PartyState.DragonReactionPending,
-    "Hero attack begins after the accelerated approach")
+    "Dragon hero attack begins after the original approach")
 Call Check(ViewerParty.PresentationState(PartyState, 0) = ViewerParty.STATE_ACTING)
 Call Check(PartyActions.FirstClip = "SwordAttack")
 Call Check(PartyActions.FirstPosition.X = ToDouble(PartyState.First.Approach.X) And
     PartyActions.FirstPosition.Z = ToDouble(PartyState.First.Approach.Z))
 
 PartyState.Turn = 1
-PartyState.Elapsed = 4449
+PartyState.Elapsed = 5199
 PartyState.Stage = 3
 
 Call CheckNamed(ViewerParty.WillPrepareDragonTurn(
     PartyState, 1, True, False, 1200, 100),
-    "Dragon turn follows the shortened hero turn")
+    "Dragon turn follows the original hero turn")
 
 Call ViewerParty.ResetChoreography(PartyState)
 
@@ -1981,21 +2004,41 @@ Call CheckNamed(ViewerParty.HeroCameraBeat(0, 1318, 1200) =
     "Party camera Beat 3a begins when the hit registers")
 Call CheckNamed(ViewerParty.HeroCameraBeat(0, 1749, 1200) =
     ViewerParty.HERO_CAMERA_BEAT_IMPACT,
-    "Party camera Beat 3a holds the wide boss orbit through the attack")
+    "Party impact phase lasts through the remainder of the attack")
 Call CheckNamed(ViewerParty.HeroCameraBeat(0, 1750, 1200) =
     ViewerParty.HERO_CAMERA_BEAT_AFTERMATH,
     "Party camera Beat 4 begins after the attack clip")
 Call CheckNamed(ViewerParty.HeroCameraBeat(2, 100, 1200) = 0,
     "Boss turns remain outside the four hero camera beats")
-Call CheckNamed(ViewerParty.VraxPlaybackSpeed(200) = 100 And
-    ViewerParty.VraxPlaybackSpeed(100) = 50 And
+Call CheckNamed(ViewerParty.VraxPlaybackSpeed(200) = 200 And
+    ViewerParty.VraxPlaybackSpeed(100) = 100 And
     ViewerParty.VraxPlaybackSpeed(25) = 25,
-    "Party Vrax uses the Vrax tab playback speed")
+    "Vrax accepts its own bounded playback speed")
 
 PartyState.Enabled = True
 PartyState.Ready = True
 PartyState.UnityRoster = True
 PartyState.Turn = 0
+
+Call CheckNamed(ViewerParty.ActorPlaybackSpeed(PartyState, 0, 100) = 150 And
+    ViewerParty.ActorPlaybackSpeed(PartyState, 1, 100) = 150 And
+    ViewerParty.ActorPlaybackSpeed(PartyState, 2, 200) = 100 And
+    ViewerParty.ActorPlaybackSpeed(PartyState, 5, 200) = 100,
+    "Party Vrax defaults Arin and Orin to 150, Zara and Vrax to 100")
+Call ViewerParty.AdjustActorSpeed(PartyState, 1, 25)
+Call CheckNamed(ViewerParty.ActorPlaybackSpeed(PartyState, 1, 100) = 175 And
+    ViewerParty.ActorPlaybackSpeed(PartyState, 0, 100) = 150 And
+    ViewerParty.ActorPlaybackSpeed(PartyState, 2, 100) = 100,
+    "Changing Orin's speed leaves the other actors independent")
+Call ViewerParty.AdjustActorSpeed(PartyState, 1, -25)
+
+PartyPointer = ViewerParty.ClassifyPointer(225, 216, True, False,
+    0, False, False, 960, 1156, 1370, 40, True)
+PartyResponse = ViewerParty.PointerResponseForAction(PartyPointer.Action)
+
+Call CheckNamed(PartyPointer.Consumed And PartyResponse.SpeedTurn = 1 And
+    PartyResponse.SpeedDelta = 25, "Orin's own plus button targets only Orin")
+
 PartyState.Stage = 1
 PartyState.Elapsed = 1400
 PartyState.PreviousCamera = 2
@@ -2007,6 +2050,7 @@ PartyState.ShotMouth = Precision3D.Vector(-208.0, 100.0, -120.0)
 PartyState.Companion.Frame.PositionX = -45.0
 PartyState.Companion.Frame.PositionY = 0.0
 PartyState.Companion.Frame.PositionZ = 35.0
+PartyState.First.Home = Math3D.Vector(100, 0, 70)
 Frame.PositionX = -20.0
 Frame.PositionY = 0.0
 Frame.PositionZ = -40.0
@@ -2034,6 +2078,70 @@ Call Check(PreciseOrbitBase.Position.X = PartyState.HeroCamera.Position.X And
 Call Check(PreciseOrbitBase.UpDirection.Y = 1.0 And
     PreciseOrbitBase.Position.Y >= 24.0)
 
+VraxCameraAnchor = PreciseOrbitBase.Position
+HeroCameraAim = PreciseOrbitBase.Target
+Frame.PositionX = 100.0
+Frame.PositionZ = 70.0
+PartyState.Stage = 2
+PartyState.Elapsed = 1750
+
+Call ViewerParty.ApplyAttackCamera(PartyState, PreciseOrbitBase, Frame,
+    PartyPrimary.Actor, True, True, True, 100, 16, 1200, -208, -120)
+Call CheckNamed(PartyState.ActiveCamera = 2 And
+    PreciseMath.Distance(PreciseOrbitBase.Target, HeroCameraAim) < 0.000001 And
+    PreciseOrbitBase.Position.Y < PreciseOrbitBase.Target.Y,
+    "Party hero recovery holds the chosen low frontal camera angle")
+Call CheckNamed(PreciseMath.Distance(PreciseOrbitBase.Position, VraxCameraAnchor) < 0.000001,
+    "Party hero attack and recovery retain the same planted camera position")
+
+Frame.PositionX = -20.0
+Frame.PositionZ = -40.0
+PartyState.Stage = -1
+PartyState.Elapsed = 0
+PartyState.EstablishRemaining = 2000
+
+Call ViewerParty.ApplyAttackCamera(PartyState, PreciseOrbitBase, Frame,
+    PartyPrimary.Actor, True, True, True, 100, 16, 1200, -208, -120)
+Call CheckNamed(PartyState.ActiveCamera = 1,
+    "Party Vrax establishes the scene using orbit Camera 1")
+Call CheckNamed(ViewerParty.EstablishOrbitDegrees(3000) = 0.0 And
+    ViewerParty.EstablishOrbitDegrees(2000) = 180.0 And
+    ViewerParty.EstablishOrbitDegrees(1000) = 360.0 And
+    ViewerParty.EstablishOrbitDegrees(0) = 360.0,
+    "Establishment completes one revolution in two seconds and holds the normal orbit")
+Call CheckNamed(ViewerParty.EstablishOrbitDegrees(2999) < 0.001 And
+    360.0 - ViewerParty.EstablishOrbitDegrees(1001) < 0.001,
+    "Establishment eases angular velocity into the normal orbit at both boundaries")
+
+''' A pitched camera must carry its up vector around the same horizontal arc.
+PreciseOrbitBase.Position = Precision3D.Vector(0.0, 200.0, -400.0)
+PreciseOrbitBase.Target = Precision3D.Vector(0.0, 0.0, 0.0)
+PreciseOrbitBase.UpDirection = Precision3D.Vector(0.0, 0.894427191, 0.4472135955)
+PartyState.EstablishRemaining = 2500
+
+Call ViewerParty.ApplyAttackCamera(PartyState, PreciseOrbitBase, Frame,
+    PartyPrimary.Actor, True, True, True, 100, 16, 1200, -208, -120)
+Call CheckNamed(PreciseOrbitBase.Position.X > 0.0 And
+    Abs(PreciseOrbitBase.Position.Y - 440.0) < 0.000001 And
+    Abs(PreciseOrbitBase.Target.Y - 110.0) < 0.000001 And
+    PreciseOrbitBase.UpDirection.X < 0.0,
+    "Intro preserves height and pitch while spinning with Camera 1 and rotating its up vector")
+Call CheckNamed(ViewerParty.HeroImpactTime(2033, 5) = 1058 And
+    ViewerParty.HeroCameraBeat(5, 1058, 2033) = ViewerParty.HERO_CAMERA_BEAT_IMPACT,
+    "Zara impact camera and boss reaction use the earlier lightning boundary")
+
+PartyState.EstablishRemaining = 0
+PartyState.Stage = 2
+PartyState.Elapsed = 1750
+
+PartyState.UnityRoster = False
+
+Call ViewerParty.ApplyAttackCamera(PartyState, PreciseOrbitBase, Frame,
+    PartyPrimary.Actor, True, True, True, 100, 16, 1200, -208, -120)
+Call CheckNamed(PartyState.ActiveCamera = 1,
+    "Party Dragon restores the pre-Vrax orbit during recovery")
+
+PartyState.UnityRoster = True
 PartyState.Turn = 2
 PartyState.Stage = 0
 PartyState.Elapsed = 100
@@ -2056,8 +2164,86 @@ Call ViewerParty.ApplyAttackCamera(
     -120
 )
 
-Call Check(PartyState.ActiveCamera = 3 And
-    PreciseOrbitBase.Position.X = PartyState.DragonCamera.Position.X)
+Call CheckNamed(PartyState.ActiveCamera = 2 And
+    PreciseOrbitBase.UpDirection.Y = 1.0 And
+    PartyState.PreviousShotStage = ViewerParty.HERO_CAMERA_BEAT_CLOSE_UP,
+    "Vrax opens on a level close-up in the shared battle camera")
+Call CheckNamed(ViewerParty.VraxCameraBeat(650, 1200) = ViewerParty.HERO_CAMERA_BEAT_APPROACH And
+    ViewerParty.VraxCameraBeat(1450, 1200) = ViewerParty.HERO_CAMERA_BEAT_ATTACK And
+    ViewerParty.VraxCameraBeat(1650, 1200) = ViewerParty.HERO_CAMERA_BEAT_ATTACK And
+    ViewerParty.VraxCameraBeat(2650, 1200) = ViewerParty.HERO_CAMERA_BEAT_AFTERMATH,
+    "Vrax holds the attack shot through impact before complete-clip aftermath")
+
+PartyState.BossAttackDuration = 1200
+PartyState.HitTarget = 1
+PartyState.Second.Home = Math3D.Vector(181, 0, 105)
+PartyState.Elapsed = 650
+VraxTestPosition = ViewerParty.VraxPosition(PartyState)
+
+Call CheckNamed(VraxTestPosition.X = -208.0 And VraxTestPosition.Z = -120.0,
+    "Vrax begins his approach at his arena home")
+
+PartyState.Elapsed = 1450
+VraxTestPosition = ViewerParty.VraxPosition(PartyState)
+
+Call CheckNamed(Abs(PreciseMath.Distance(VraxTestPosition,
+    Precision3D.FromVector(PartyState.Second.Home)) - 260.0) < 0.000001,
+    "Vrax stops directly in front of the selected defender")
+Call ViewerParty.ApplyAttackCamera(PartyState, PreciseOrbitBase, Frame,
+    PartyPrimary.Actor, True, True, True, 100, 16, 1200, -208, -120)
+Call CheckNamed(PreciseOrbitBase.Target.X = VraxTestPosition.X And
+    PreciseOrbitBase.Target.Z = VraxTestPosition.Z And
+    PreciseOrbitBase.Position.Y < PreciseOrbitBase.Target.Y,
+    "Vrax attack centers the boss from a low camera behind the defender")
+
+VraxCameraAnchor = PreciseOrbitBase.Position
+PartyState.Elapsed = 2650
+
+Call ViewerParty.ApplyAttackCamera(PartyState, PreciseOrbitBase, Frame,
+    PartyPrimary.Actor, True, True, True, 100, 16, 1200, -208, -120)
+Call CheckNamed(PreciseOrbitBase.Target.X = VraxTestPosition.X And
+    PreciseOrbitBase.Target.Z = VraxTestPosition.Z And
+    PreciseOrbitBase.Position.Y < PreciseOrbitBase.Target.Y,
+    "Vrax aftermath begins at the attack composition without a focus jump")
+
+PartyState.Elapsed = 3050
+PartyState.OrbitPhase = PartyState.OrbitPhase + 10.0
+VraxTestPosition = ViewerParty.VraxPosition(PartyState)
+
+Call ViewerParty.ApplyAttackCamera(PartyState, PreciseOrbitBase, Frame,
+    PartyPrimary.Actor, True, True, True, 100, 16, 1200, -208, -120)
+Call CheckNamed(PreciseOrbitBase.Target.X = VraxTestPosition.X And
+    PreciseOrbitBase.Target.Z = VraxTestPosition.Z And
+    PreciseOrbitBase.Position.Y < PreciseOrbitBase.Target.Y,
+    "Vrax aftermath follows and centers the retreating boss from a low angle")
+Call CheckNamed(PreciseMath.Distance(PreciseOrbitBase.Position, VraxCameraAnchor) < 0.000001 And
+    PreciseOrbitBase.UpDirection.Y = 1.0,
+    "Vrax attack and aftermath keep the camera planted behind the defender while aiming")
+
+PartyState.Elapsed = 3450
+VraxTestPosition = ViewerParty.VraxPosition(PartyState)
+
+Call CheckNamed(VraxTestPosition.X = -208.0 And VraxTestPosition.Z = -120.0,
+    "Vrax returns home after the full attack")
+
+PartyState.OrbitPhase = 20.0
+PartyState.PreviousCamera = 1
+PreciseOrbitBase.Position = Precision3D.Vector(0.0, 200.0, 400.0)
+PreciseOrbitBase.Target = Precision3D.Vector(0.0, 100.0, 0.0)
+
+Call ViewerParty.OrbitBattleShot(PartyState, PreciseOrbitBase, 1)
+
+PartyState.PreviousCamera = 2
+PartyState.PreviousCameraTurn = PartyState.Turn
+PartyState.PreviousShotStage = 1
+PartyState.OrbitPhase = 23.0
+
+Call ViewerParty.OrbitBattleShot(PartyState, PreciseOrbitBase, 1)
+Call CheckNamed(PreciseOrbitBase.Position.X < 0.0 And
+    PreciseOrbitBase.Position.Y = 200.0 And PreciseOrbitBase.Target.Y = 100.0 And
+    Abs(PreciseMath.Distance(PreciseOrbitBase.Position, PreciseOrbitBase.Target) -
+        412.310562561766) < 0.00001,
+    "Battle orbit preserves framing and height while following Camera 1 direction")
 
 PartyState.Enabled = False
 
@@ -2590,6 +2776,13 @@ Call Check(BattleCamera.FrontArcYaw1000(360000) = BattleCamera.FrontArcYaw1000(0
 Call Check(BattleCamera.FrontArcYaw1000(500) > BattleCamera.FrontArcYaw1000(0))
 Call Check(BattleCamera.FrontArcYaw1000(89900) = BattleCamera.FrontArcYaw1000(90100))
 
+Call ViewerParty.SelectUnityRoster(PartyState, True)
+Call ViewerParty.InitializeFormation(PartyState, FormationCenter, 450, 0, 60,
+    FormationCenter, FormationCenter, 0)
+Call CheckNamed(PartyState.ParticipantCount = 3 And Not ViewerParty.PARTY_VALOR_VISIBLE,
+    "Party Vrax uses three visible heroes while Valor is parked")
+Call ViewerParty.SelectUnityRoster(PartyState, False)
+
 FormationFirst = BattleCamera.FormationPosition(FormationCenter, 450, 0, 60, 0, 3)
 FormationMiddle = BattleCamera.FormationPosition(FormationCenter, 450, 0, 60, 1, 3)
 FormationLast = BattleCamera.FormationPosition(FormationCenter, 450, 0, 60, 2, 3)
@@ -2766,6 +2959,18 @@ Call Check(ViewerProfiles.ArenaCameraDistance(ViewerProfiles.PROFILE_ARIN, 480) 
 Call Check(ViewerProfiles.ArenaCameraDistance(ViewerProfiles.PROFILE_ORIN, 480) = 480)
 Call Check(ViewerProfiles.ArenaCameraDistance(ViewerProfiles.PROFILE_VALOR, 480) = 960)
 Call Check(ViewerProfiles.ArenaCameraDistance(ViewerProfiles.PROFILE_ZARA, 480) = 960)
+
+Profile = ViewerProfiles.ProfileAt(ViewerProfiles.PROFILE_VALOR)
+
+Call Check(Profile.DefaultPlaybackSpeed = 200)
+
+Profile = ViewerProfiles.ProfileAt(ViewerProfiles.PROFILE_ZARA)
+
+Call Check(Profile.DefaultPlaybackSpeed = 200)
+
+Profile = ViewerProfiles.ProfileAt(ViewerProfiles.PROFILE_VRAX)
+
+Call Check(Profile.DefaultPlaybackSpeed = 100)
 Call Check(ViewerProfiles.SocketCount(ViewerProfiles.PROFILE_DRAGON) = 6)
 Call Check(ViewerProfiles.ClipLoops(ViewerProfiles.PROFILE_DRAGON, 0))
 Call Check(Not ViewerProfiles.ClipLoops(ViewerProfiles.PROFILE_DRAGON, 1))

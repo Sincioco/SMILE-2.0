@@ -3,97 +3,102 @@
   "modelSha256": "94f96990aed59cb347dee1d831e19587d21b92ed217a11d630a507cf8c1df67b",
   "weaponPart": 3,
   "shieldPart": null,
-  "method": "Equipment meshes have one full-weight joint. Socket translations use that joint inverse bind matrix and measured bind-model positions; no animation or model data changed.",
+  "method": "Full weapon silhouette measured in its principal plane, including blade, guard and handle. Eight ordered outline anchors and a centerline from grip to actual tip are transformed by the Weapon inverse bind matrix; model and animation bytes unchanged.",
   "attachments": [
     {
       "socket": "SwordBase",
       "bone": "Weapon",
       "bindModelPosition": [
-        0.004046916961669922,
-        0.6046068668365479,
-        -0.29001733660697937
+        -0.17137381434440613,
+        1.7591224908828735,
+        -0.1540943831205368
       ]
     },
     {
       "socket": "SwordTip",
       "bone": "Weapon",
       "bindModelPosition": [
-        0.004046916961669922,
-        1.8676507472991943,
-        -0.29001733660697937
+        0.316947340965271,
+        0.6046068668365479,
+        -0.4661267399787903
       ]
     },
     {
       "socket": "WeaponRim0",
       "bone": "Weapon",
       "bindModelPosition": [
-        0.10168302804231644,
-        1.2647933959960938,
-        -0.2972106635570526
+        0.316947340965271,
+        0.6046068668365479,
+        -0.4661267399787903
       ]
     },
     {
       "socket": "WeaponRim1",
       "bone": "Weapon",
       "bindModelPosition": [
-        0.18205738067626953,
-        1.0495638847351074,
-        -0.3537100851535797
+        -0.164693683385849,
+        1.392019271850586,
+        -0.22599643468856812
       ]
     },
     {
       "socket": "WeaponRim2",
       "bone": "Weapon",
       "bindModelPosition": [
-        0.36422523856163025,
-        0.7815436720848083,
-        -0.43320149183273315
+        -0.3545411229133606,
+        1.8049718141555786,
+        -0.11933400481939316
       ]
     },
     {
       "socket": "WeaponRim3",
       "bone": "Weapon",
       "bindModelPosition": [
-        0.31685203313827515,
-        0.6047965884208679,
-        -0.4669820964336395
+        -0.3045727610588074,
+        1.8596069812774658,
+        -0.12562917172908783
       ]
     },
     {
       "socket": "WeaponRim4",
       "bone": "Weapon",
       "bindModelPosition": [
-        0.20389971137046814,
-        0.7941625714302063,
-        -0.41257190704345703
+        -0.2103411853313446,
+        1.86727774143219,
+        -0.12932799756526947
       ]
     },
     {
       "socket": "WeaponRim5",
       "bone": "Weapon",
       "bindModelPosition": [
-        0.0889366939663887,
-        0.9977615475654602,
-        -0.35479313135147095
+        -0.09430667757987976,
+        1.681520700454712,
+        -0.1828857660293579
       ]
     },
     {
       "socket": "WeaponRim6",
       "bone": "Weapon",
       "bindModelPosition": [
-        -0.07154984772205353,
-        1.2680737972259521,
-        -0.27720803022384644
+        0.01953047513961792,
+        1.4915566444396973,
+        -0.2378605306148529
       ]
     },
     {
       "socket": "WeaponRim7",
       "bone": "Weapon",
       "bindModelPosition": [
-        0.02600279450416565,
-        1.2272754907608032,
-        -0.29707837104797363
+        0.3641148805618286,
+        0.7817628383636475,
+        -0.43419331312179565
       ]
     }
-  ]
+  ],
+  "coverage": {
+    "previousLongitudinalSpan": 0.6632772088050842,
+    "fullLongitudinalSpan": 1.2630438804626465,
+    "rimLongitudinalSpan": 1.262670874595642
+  }
 }

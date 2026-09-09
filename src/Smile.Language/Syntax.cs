@@ -78,6 +78,7 @@ public enum SyntaxKind
     WindowHeightKeyword,
     WindowTitleKeyword,
     WindowActivateKeyword,
+    WindowLoadingKeyword,
     FileRevealKeyword,
     FileExportKeyword,
     FileImportKeyword,
@@ -340,6 +341,7 @@ public static class SyntaxFacts
         ["Window_Height"] = SyntaxKind.WindowHeightKeyword,
         ["Window_Title"] = SyntaxKind.WindowTitleKeyword,
         ["Window_Activate"] = SyntaxKind.WindowActivateKeyword,
+        ["Window_Loading"] = SyntaxKind.WindowLoadingKeyword,
         ["File_Reveal"] = SyntaxKind.FileRevealKeyword,
         ["File_Export"] = SyntaxKind.FileExportKeyword,
         ["File_Import"] = SyntaxKind.FileImportKeyword,
@@ -546,7 +548,7 @@ public static class SyntaxFacts
         return kind switch
         {
             SyntaxKind.TimerKeyword or SyntaxKind.GameClosedKeyword or SyntaxKind.WindowWidthKeyword or
-                SyntaxKind.WindowHeightKeyword or SyntaxKind.WindowActivateKeyword or SyntaxKind.PointerXKeyword or
+                SyntaxKind.WindowHeightKeyword or SyntaxKind.WindowActivateKeyword or SyntaxKind.WindowLoadingKeyword or SyntaxKind.PointerXKeyword or
                 SyntaxKind.PointerYKeyword or SyntaxKind.PointerDeltaXKeyword or SyntaxKind.PointerDeltaYKeyword or
                 SyntaxKind.PointerWheelDeltaKeyword or SyntaxKind.PointerWheelRemainderKeyword or
                 SyntaxKind.PointerInsideKeyword or SyntaxKind.FileImportKeyword => NoParameters,

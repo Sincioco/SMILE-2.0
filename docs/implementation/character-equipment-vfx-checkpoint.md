@@ -1,5 +1,123 @@
 # Valor and Zara equipment VFX — September 9, 2026
 
+## September 10 delivery: Party cinematics, Zara effects/audio and tab loading
+
+This entry supersedes the earlier presentation descriptions below. Work began
+from clean `main` at `746704807cac8a65057cbc43e58a9b83bae81aa5`, matching
+`origin/main`, and stayed with one agent. The completed Double, refactor and
+post-delivery hardening milestones were not reopened.
+
+### Implemented behavior
+
+- Party Vrax has a level horizontal 360-degree intro, eased into continuous slow
+  Camera 1 revolutions. Close-up/tracking battle shots use the same angular rate.
+  Sin's final hero references replace the attack/impact/recovery compositions
+  with a low frontal shot: the full attacking hero aligns with the imposing boss.
+  Impact timing remains intact; Beats 3/3a/4 no longer cut out to the wide orbit.
+  The complete camera pose/lens lock at Beat 3 through Beat 4. The selected hero
+  determines its horizontal angle around the established arena target; distance
+  846, camera height 85, aim height 121 and lens 24 match the final three references.
+  No tracking, pan, orbit or dolly occurs during the hold. Neither actor's authored
+  placement is changed to fit. Pictures from different battles are composition
+  guides, not a motion sequence. This final fixed-shot direction supersedes the
+  earlier requests to turn the hero camera while following the attacker.
+- Vrax's own sequence closes up, follows his Run approach to the selected defender,
+  holds Beat 3 for the complete attack, skips Beat 3a, then shows his return.
+  Sin's final reference changes Beats 3/4 to a low camera planted behind the
+  defender, with a fixed lens/position; only the look direction tracks Vrax.
+  The defender remains in full back view while Vrax and the attack effects dominate.
+  Body/head/fire/lightning aim at the selected defender. Hit reactions finish.
+- Party Vrax hides Valor and balances the remaining three silhouettes around Orin.
+  Independent controls retain Arin/Orin 150 and Zara/Vrax 100. Standalone
+  Valor/Zara remain 200 and Vrax 100. No canceled 200-speed Party change was applied.
+- Party Dragon restores the `c7f8f07` pre-Vrax formation, approach positions,
+  timing and camera path. The two Party policies remain independently owned.
+- Zara's red-tinted white outline covers the complete weapon silhouette.
+  SwordAttack uses Godstorm Ultra; SwordAttack2 uses Forked Judgment. Four
+  crimson strikes preserve shared scene capacity. The 5-percent charge and
+  25-percent strike coordinate effects, reaction and camera timing.
+- Original Unity discharge/impact audio is privately staged alongside existing
+  Lightning Lab thunder on independent channels. Unity visual effects were not
+  imported. The previous Zara appearance remains backed up locally at
+  `artifacts/deliverables/Zara-SMILE-before-Unity-VFX-20260909`.
+- Every tab click restarts that tab using the existing SMILE loading presentation,
+  including cached clicks; the old View label is removed. Shared `Window_Loading()`
+  preserves the canonical logo, original artifact metadata, credits and links,
+  with a fresh one-second visible minimum. Its owners and evidence are in the
+  startup checkpoint. No emitted file was edited.
+- Web PBR now orients its face normal consistently with the native mesh winding,
+  including reflections. This repairs the flat metallic appearance without extra
+  lights, texture samples, draw calls or reduced quality.
+
+### Validation and evidence
+
+Evidence is under ignored `artifacts/temp/zara-attacks`:
+
+- `smoke-delivery.log`: normal `scripts/smoke-test.cmd --skip-doctor` passed,
+  including 323 managed tests, formatter integration/style, startup and the
+  applicable native/Web renderer/game regressions. No Doctor or retired tests ran.
+- `startup-delivery.log`: repeated native visible intervals of 1,000–1,031 ms,
+  slow-load overlap, Web progress/visibility, and actual generated API calls passed.
+- `hardening-final-native.log`, `hardening-final-web.log` and
+  `calibration-delivery.log`: actual Viewer owners, native/Web exact console
+  parity, storage isolation and precision passed. Final shot changes received
+  focused `hardening-low-angle.log` / `hardening-low-angle-web.log` checks.
+- `probe-cameras.log` / `probe-web-delivery.log`: locally licensed actual-model
+  probes cover Zara effects, Vrax full Hit, selected-defender approach/return,
+  independent rates and the historical Dragon camera path. The core shared
+  regressions continue using public/synthetic inputs.
+- `browser-delivery.log`: Chrome tab/repeated-tab splash metadata and all seven
+  links, real audio buffer starts, and short drag/pan/zoom/reset checks passed
+  without page errors. The native tab splash was also visually observed.
+- `native-final-delivery.log` / `web-low-angle.log`: final native and Web Viewer
+  builds use the current source and licensed local roster. Only affected Viewer
+  outputs were rebuilt after the final camera adjustment.
+- `browser-heroes-final.log`: all three heroes retain identical camera positions
+  and look targets through attack/recovery in Chrome, without page errors.
+  The six `hero-frontal-*-attack.png` / `hero-frontal-*-return.png` images were
+  visually reviewed. The first fixture waited only for Walk, but Orin returns
+  with Run; its selector was corrected to require the same hero and either clip.
+  The earlier Vrax three-defender review remains valid for the unchanged boss camera.
+- `vsix-delivery.log`: SMILE 2.0.61 installed with all 35 payload hashes matching.
+  `installed-compiler.log`: the installed compiler built and ran Window_Loading.
+  No repeat VSIX build/install was needed for subsequent Viewer-only framing.
+
+The initial reload test used a reserved identifier and then did not await a GUI
+process; both fixture issues were corrected and its full checks passed. An old
+hardening countdown expected four seconds before the new boss approach was
+included; its expectation was corrected to six and native/Web checks passed.
+A camera capture made while a native input test was running had orbit disabled;
+it was excluded and the visual review was rerun sequentially with Camera 2 asserted.
+
+### Boundaries and delivery
+
+Valor's comparison is recorded in its package journey: normal/metallic maps
+transferred, but Unity's material color/eye smoothness factors differ, and SMILE
+does not yet have Unity's environment-image reflections. Its canonical derivative
+was preserved. Matching-pose/material-only review and reusable environment lighting
+are possible next work, not part of this delivery. No exact Unity/SMILE visual
+parity or physical iPhone/Safari check is claimed.
+
+Arin/Orin calibration exports preserve the authored 24/zero-key snapshots.
+Raw licensed models/audio, private previews, generated cooking mirrors and the
+local old-look backup remain ignored. The normal Web ZIP includes only the
+authorized cooked publication. Public-site upload remains Sin's publication step.
+
+The final desktop executable was launched through `Launch.ps1` with both live
+calibrations preserved and was confirmed responding. A subsequent Desktop UI
+capture reported a physical Escape stop; no final native screenshot is claimed.
+The focused native camera fixture and final Chrome visual review passed.
+
+Delivery artifacts (ignored local outputs):
+
+- `artifacts/deliverables/Character3DViewer-2026-09-10/Character3DViewer.exe`,
+  SHA-256 `269348985df3811b611f08e42196f2148533cd00c348a7be8f63d84af7bfc102`.
+- `artifacts/deliverables/Character3DViewer-Web-2026-09-10.zip`, 199,031,440 bytes,
+  SHA-256 `82961a467fe4fb4f0f239cc6a7e14670d3f8c2dafc8e1287981c9e6f8830de7f`.
+  All 102 archive entries were compared byte-for-byte with the final publication.
+
+Current On Hold: none, following Sin's explicit instruction to clear the list.
+
 ## Permanent roster and battle presentation follow-up — September 9, 2026
 
 Sin confirmed that Valor, Zara and Vrax are purchased characters to remain in the
@@ -234,5 +352,4 @@ added.
 
 ## On Hold
 
-Further Sin Star I game updates, Battle Scene Editor, semantic-inspection CLI,
-subject-first syntax, SMILE 1.0 changes and unrelated suspended features.
+None. Sin cleared the list; historical phases are not automatically restarted.

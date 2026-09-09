@@ -137,6 +137,15 @@ foreach ($entry in $project.SmileProject.ItemGroup.ChildNodes) {
         foreach ($attribute in @('Include','Descriptor')) {
             if (-not $entry.HasAttribute($attribute)) { continue }
             $relative = $entry.GetAttribute($attribute)
+            if ($entry.Name -eq 'Asset' -and [WildcardPattern]::ContainsWildcardCharacters($relative)) {
+                foreach ($assetFile in Get-ChildItem -Path (Join-Path $toolRoot $relative) -File) {
+                    $assetRelative = [IO.Path]::GetRelativePath($toolRoot, $assetFile.FullName)
+                    $assetDestination = Join-Path $testRoot $assetRelative
+                    $null = New-Item -ItemType Directory -Path ([IO.Path]::GetDirectoryName($assetDestination)) -Force
+                    Copy-Item -LiteralPath $assetFile.FullName -Destination $assetDestination -Force
+                }
+                continue
+            }
             $destination = Join-Path $testRoot $relative
             $null = New-Item -ItemType Directory -Path ([IO.Path]::GetDirectoryName($destination)) -Force
             Copy-Item -LiteralPath (Join-Path $toolRoot $relative) -Destination $destination -Force
@@ -212,6 +221,7 @@ Session.ProfileIndex = ViewerProfiles.PROFILE_ARIN
 Call LoadViewer()
 Call CheckEquipmentRimRecovery()
 Call CheckVraxAttackEffects()
+Call CheckZaraAttackEffects()
 Call CheckEquipmentGlowAlignment()
 Call SelectCharacterTab(1)
 Call CheckEquipmentGlowAlignment()

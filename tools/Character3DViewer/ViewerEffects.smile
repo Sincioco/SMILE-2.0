@@ -11,6 +11,7 @@ Import Smile.Simple3D.FireEmitter3D As Fire
 Import Smile.Simple3D.Graphics3D As Graphics3D
 Import Smile.Simple3D.LightningVfx3D As Lightning
 Import Smile.Simple3D.LightPool3D As LightPool3D
+Import Smile.Simple3D.FixedMath As Fixed
 Import Smile.Simple3D.Math3D As Math3D
 Import Smile.Simple3D.SceneVfx3D As SceneVfx3D
 Import Smile.Tools.ArinShieldRim As ArinShieldRim
@@ -32,7 +33,18 @@ Private Const SHIELD_PART_INDEX = 0
 Private Const WEAPON_PART_INDEX = 1
 Private Const BODY_PART_INDEX = 2
 
+Public Type ZaraAttackEffects
+    BladeArc As Lightning.LightningEffect
+    Storm[4] As Lightning.LightningEffect
+    Clip As Text
+    Time As Number
+    Epoch As Number
+    LiveTime As Number
+    WasPaused As Boolean
+End Type
+
 Public Type State
+    ZaraAttacks As ZaraAttackEffects
     ProfileIndex As Number
     VraxAttacks As ViewerDragon.AttackEffects
     ShieldRim As ArinShieldRim.Context
@@ -56,6 +68,9 @@ Public Type State
     OrinLight As LightPool3D.Lease
     DragonLight As LightPool3D.Lease
     ArinAudio As BattleAudio.CueState
+    ZaraAudio As BattleAudio.CueState
+    ZaraImpactAudio As BattleAudio.CueState
+    ZaraThunderAudio As BattleAudio.CueState
     EpicGlowAvailable As Boolean
     EpicGlowVisible As Boolean
     EpicGlowTexture As Core.Texture3D
@@ -507,6 +522,10 @@ Public Sub CreateEpicGlow(ByRef Value As State, ProfileIndex As Number,
             ViewerProfiles.WeaponPart(ProfileIndex), ViewerProfiles.ShieldPart(ProfileIndex))
     End If
 
+    If GlowReady And ProfileIndex = ViewerProfiles.PROFILE_ZARA Then
+        Call Graphics3D.SetObjectColor(Value.SwordGlow, 255, 238, 240)
+    End If
+
     If GlowReady Then
         Value.SwordTrail = Graphics3D.CreateParticleBatch3D(
             TRAIL_POINT_COUNT,
@@ -726,11 +745,17 @@ Public Sub UpdateEquipmentFire(
 
         If Value.EpicGlowVisible And SwordVisible Then
             Call ArinShieldRim.Update(Value.WeaponRim, Actor, Camera, CameraElapsed,
-                100, ViewerProfiles.WeaponPart(ProfileIndex), 2, "WeaponRim")
+                100, ViewerProfiles.WeaponPart(ProfileIndex), 3, "WeaponRim")
         Else
 
             Call ArinShieldRim.Shutdown(Value.WeaponRim)
         End If
+
+        Call UpdateZaraAttacks(Value, Actor, SelectedClipLabel,
+            Value.EpicGlowVisible And SwordVisible And Not PrimaryKnockedOut,
+            Not ScenePaused And Not CalibrationEditing)
+
+        Return
 
     End If
 
@@ -1515,6 +1540,8 @@ End Sub
 
 Public Sub ClearEquipmentFire(ByRef Value As State)
 
+    Call ClearZaraAttacks(Value.ZaraAttacks)
+
     Call ClearSwordFire(Value)
     Call ClearShieldFire(Value)
 
@@ -1570,6 +1597,7 @@ Public Sub HideSwordEffects(ByRef Value As State)
 
     Dim Ok As Boolean
 
+    Call ClearZaraAttacks(Value.ZaraAttacks)
     Call ClearSwordFire(Value)
 
     Value.SwordTrailActive = False
@@ -1627,5 +1655,255 @@ Public Function ShutdownShared(ByRef Value As State) As Boolean
     Return Result
 
 End Function
+
+Public Function ZaraAttackActive(Name As Text, Time As Number, Duration As Number) As Boolean
+
+    Dim Result As Boolean
+
+    Result = (Name = "SwordAttack" Or Name = "SwordAttack2" Or
+        Name = "attack3" Or Name = "attack4" Or Name = "attack5" Or Name = "attack6")
+    Result = Result And Duration > 0 And Time >= Duration / 20 And Time < Duration
+
+    Return Result
+
+End Function
+
+Public Sub ClearZaraAttacks(ByRef Value As ZaraAttackEffects)
+
+    Dim Index As Number
+    Dim Ok As Boolean
+
+    If Value.BladeArc.Slot <> 0 Then
+        Ok = Lightning.Destroy(Value.BladeArc)
+    End If
+
+    For Index = 0 To 3
+
+        If Value.Storm[Index].Slot <> 0 Then
+            Ok = Lightning.Destroy(Value.Storm[Index])
+        End If
+
+    End For
+
+End Sub
+
+Private Sub UpdateZaraAttacks(ByRef Value As State, Actor As Character3D.Actor,
+    Name As Text, Enabled As Boolean, Audible As Boolean)
+
+    Dim Base As Precision3D.Vector3
+    Dim Tip As Precision3D.Vector3
+    Dim Target As Precision3D.Vector3
+    Dim Duration As Number
+    Dim Index As Number
+    Dim Ok As Boolean
+    Dim CueTime As Number
+
+    For Index = 0 To Character3D.ClipCount(Actor) - 1
+
+        If Character3D.ClipName(Actor, Index) = Name Then
+            Duration = Character3D.ClipDuration(Actor, Index)
+        End If
+
+    End For
+
+    Ok = Character3D.TrySocketPositionPrecise(Actor, "SwordBase", 3, False, Base)
+    Ok = Character3D.TrySocketPositionPrecise(Actor, "SwordTip", 3, False, Tip) And Ok
+    Target = Precision3D.Vector(ToDouble(ViewerDragon.PositionX()), 0.0,
+        ToDouble(ViewerDragon.PositionZ()))
+
+    Call UpdateZaraAttackPoints(Value.ZaraAttacks, Name, Character3D.AnimationTime(Actor),
+        Duration, Base, Tip, Target, Enabled And Ok, Value.LightningInitialized,
+        Value.LightningPaused, Value.VisualContinuityEpoch)
+
+    CueTime = -1
+
+    If ZaraAttackActive(Name, Duration / 2, Duration) Then
+        CueTime = Duration * ViewerProfiles.ZARA_ATTACK_HIT_PERCENT / 100
+    End If
+
+    If BattleAudio.CrossedCue(Value.ZaraAudio, Name,
+        Character3D.AnimationTime(Actor), CueTime, Enabled And Audible) Then
+
+        If Name = "attack4" Then
+
+            Play Sound "Assets/Audio/zara-impact.wav" On Channel 1
+
+        Else
+
+            Play Sound "Assets/Audio/zara-attack.wav" On Channel 1
+
+        End If
+
+    End If
+
+    If BattleAudio.CrossedCue(Value.ZaraThunderAudio, Name,
+        Character3D.AnimationTime(Actor), CueTime, Enabled And Audible And
+        Not Value.LightningPaused) Then
+
+        Play Sound "Assets/Lightning/thunder.wav" On Channel 2
+
+    End If
+
+    CueTime = -1
+
+    If Name = "attack3" Then
+        CueTime = Duration * 40 / 100
+    Else If Name = "attack4" Or Name = "attack6" Then
+        CueTime = Duration / 2
+    Else If Name = "attack5" Then
+        CueTime = Duration * ViewerProfiles.ZARA_ATTACK_HIT_PERCENT / 100
+    End If
+
+    If BattleAudio.CrossedCue(Value.ZaraImpactAudio, Name,
+        Character3D.AnimationTime(Actor), CueTime, Enabled And Audible) Then
+
+        If Name = "attack4" Then
+
+            Play Sound "Assets/Audio/zara-burst.wav" On Channel 3
+
+        Else If Name = "attack6" Then
+
+            Play Sound "Assets/Audio/zara-heavy.wav" On Channel 3
+
+        Else
+
+            Play Sound "Assets/Audio/zara-impact.wav" On Channel 3
+
+        End If
+
+    End If
+
+End Sub
+
+''' Lightning Lab Godstorm Ultra and Forked Judgment layouts, with Zara's red palette.
+''' Four Ultra strikes preserve capacity for other Party actors; no global reset.
+Public Sub UpdateZaraAttackPoints(ByRef Value As ZaraAttackEffects, Name As Text,
+    Time As Number, Duration As Number, Base As Precision3D.Vector3,
+    Tip As Precision3D.Vector3, Target As Precision3D.Vector3,
+    Enabled As Boolean, LightningReady As Boolean, Paused As Boolean, Epoch As Number)
+
+    Dim Active As Boolean
+    Dim Ok As Boolean
+    Dim Impact As Boolean
+
+    If (Value.Clip <> Name Or
+        Value.Epoch <> Epoch Or
+        Time < Value.Time Or
+        (Value.WasPaused And Not Paused And Time <> Value.LiveTime)) Then
+        Call ClearZaraAttacks(Value)
+    End If
+
+    Active = Enabled And ZaraAttackActive(Name, Time, Duration)
+    Impact = Active And Time >= Duration * ViewerProfiles.ZARA_ATTACK_HIT_PERCENT / 100
+
+    If Not Active Then
+
+        Call ClearZaraAttacks(Value)
+
+    Else If LightningReady And Not Paused Then
+
+        If Impact Then
+
+            If Value.BladeArc.Slot <> 0 Then
+                Ok = Lightning.Destroy(Value.BladeArc)
+            End If
+
+            Call StartZaraStorm(Value, Name, Tip, Target)
+
+        Else
+
+            If Value.BladeArc.Slot = 0 Then
+                Value.BladeArc = Lightning.StartAtPrecise("WeaponCorona", Base,
+                    Tip, 7351, Lightning.QUALITY_HIGH)
+            End If
+
+            If Value.BladeArc.Slot <> 0 Then
+
+                Ok = Lightning.SetEndpointsPrecise(Value.BladeArc, Base, Tip)
+                Ok = Lightning.SetPalette(Value.BladeArc, Lightning.PALETTE_RED_WHITE) And Ok
+                Ok = Lightning.SetStyle(Value.BladeArc, 3, 650) And Ok
+                Ok = Lightning.SetBranchBudget(Value.BladeArc, 2) And Ok
+                Ok = Lightning.SetSparkIntensity(Value.BladeArc, 10) And Ok
+
+            End If
+
+        End If
+
+    End If
+
+    Value.Clip = Name
+    Value.Time = Time
+    Value.Epoch = Epoch
+    Value.WasPaused = Paused
+
+    If Not Paused Then
+        Value.LiveTime = Time
+    End If
+
+End Sub
+
+Private Sub StartZaraStorm(ByRef Value As ZaraAttackEffects, Name As Text,
+    Tip As Precision3D.Vector3, Target As Precision3D.Vector3)
+
+    Dim Index As Number
+    Dim Angle As Number
+    Dim ArcStorm As Boolean
+    Dim ForkedJudgment As Boolean
+    Dim Preset As Text
+    Dim Source As Precision3D.Vector3
+    Dim Destination As Precision3D.Vector3
+    Dim Ok As Boolean
+
+    ArcStorm = Name = "attack4" Or Name = "attack6"
+    ForkedJudgment = Name = "SwordAttack2"
+    Preset = "StormCrown"
+
+    If ForkedJudgment Then
+        Preset = "SkyStrike"
+    End If
+
+    For Index = 0 To 3
+
+        If Value.Storm[Index].Slot = 0 Then
+
+            Angle = Index * 90
+            Source = Target
+            Source.X = Source.X + ToDouble(Fixed.SinFixed(Angle) * 290 / Core.FIXED_ONE)
+            Source.Y = Source.Y + 540.0
+            Source.Z = Source.Z + ToDouble(Fixed.CosFixed(Angle) * 290 / Core.FIXED_ONE)
+            Destination = Target
+            Destination.X = Destination.X + ToDouble(Fixed.SinFixed(Angle + 30) * 220 / Core.FIXED_ONE)
+            Destination.Y = Destination.Y + 12.0
+            Destination.Z = Destination.Z + ToDouble(Fixed.CosFixed(Angle + 30) * 220 / Core.FIXED_ONE)
+
+            If ArcStorm Then
+
+                Source = Tip
+                Destination = Target
+                Destination.X = Destination.X + ToDouble(Fixed.SinFixed(Angle) * 300 / Core.FIXED_ONE)
+                Destination.Y = Destination.Y + 20.0
+                Destination.Z = Destination.Z + ToDouble(Fixed.CosFixed(Angle) * 300 / Core.FIXED_ONE)
+
+            End If
+
+            Value.Storm[Index] = Lightning.StartAtPrecise(Preset, Source,
+                Destination, 7187 + Index * 197, Lightning.QUALITY_ULTRA)
+
+            If Value.Storm[Index].Slot <> 0 Then
+
+                Ok = Lightning.SetPalette(Value.Storm[Index], Lightning.PALETTE_RED_WHITE)
+                Ok = Lightning.SetSparkIntensity(Value.Storm[Index], 15) And Ok
+
+                If Not ArcStorm And Not ForkedJudgment Then
+                    Ok = Lightning.SetStyle(Value.Storm[Index], 2, 920) And Ok
+                End If
+
+            End If
+
+        End If
+
+    End For
+
+End Sub
 
 End Module

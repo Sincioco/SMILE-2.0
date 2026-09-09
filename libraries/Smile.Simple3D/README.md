@@ -97,6 +97,13 @@ Character3D transform changes are transactional across every model part. World p
 Low quality keeps the exact direct-LDR renderer and disables M5 shadow/bloom work. Medium enables a 1024 shadow, HDR tone mapping, and quarter-resolution bloom. High enables a 2048 shadow and half-resolution two-cycle bloom. `Scene3D.FallbackFlags()` reports independent effective downgrades, while `Character3D.SetShadows` applies cast/receive policy to every actor part transactionally. See [Renderer3DPostProcessingLab](../../examples/Renderer3DPostProcessingLab/README.md) for the native/Web controls and live M5 diagnostics.
 # Lightning weapon corona and trail
 
+`LightningVfx3D.SetPalette(Effect, Palette)` selects `PALETTE_BLUE_WHITE` (the
+unchanged default) or `PALETTE_RED_WHITE` for one effect's ribbon layers and endpoint
+sprite. White thermal sparks keep the Lab's shared simulation. Palettes do not
+change geometry, timing, allocations or other callers. Invalid palettes, stale
+handles and writes during a 3D frame are rejected. `QUERY_PALETTE` reports the
+selected palette; a newly allocated effect always starts blue-white.
+
 `LightningVfx3D.CreateWeaponTrail` creates a caller-owned `WeaponTrail` using the
 existing shared spark material and renderer particle admission. Call
 `UpdateWeaponTrail(Trail, StartPoint, EndPoint, Elapsed, MotionPaused, Paused)` with

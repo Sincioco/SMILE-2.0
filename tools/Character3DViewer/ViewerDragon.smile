@@ -162,6 +162,8 @@ Public Function Create(ByRef Value As State, ByRef BorrowedActor As Character3D.
         Value.Frame.PositionX = ToDouble(POSITION_X)
         Value.Frame.PositionZ = ToDouble(POSITION_Z)
         Value.HeadTracking = False
+        Result = NodeAim3D.Configure(Value.HeadAim, Value.Actor, "VraxMouth",
+            Math3D.Vector(1, 0, 0), Math3D.Vector(0, 30, 35)) And Result
         Result = Character3D.SetScale(Value.Actor, Value.Frame.ScalePercent)
         Result = Character3D.PlacePrecise(Value.Actor, Value.Frame.PositionX,
             Value.Frame.PositionY, Value.Frame.PositionZ) And Result
@@ -588,7 +590,9 @@ Public Function UpdateVraxPreview(ByRef Value As State, Name As Text,
 
         Mode = Graphics3D.ANIMATION_ONCE
 
-        If Name = "Idle" Then
+        If (Name = "Idle" Or
+            Name = "Walk" Or
+            Name = "Run") Then
             Mode = Graphics3D.ANIMATION_LOOP
         End If
 
@@ -668,7 +672,9 @@ End Sub
 
 Public Sub UpdateVraxAttacks(ByRef Value As AttackEffects, Actor As Character3D.Actor,
     Name As Text, Enabled As Boolean, FireReady As Boolean, LightningReady As Boolean,
-    FirePaused As Boolean, LightningPaused As Boolean, Epoch As Number)
+    FirePaused As Boolean, LightningPaused As Boolean, Epoch As Number,
+    Optional UseTarget As Boolean = False, Optional TargetX As Double = 0.0,
+    Optional TargetY As Double = 0.0, Optional TargetZ As Double = 0.0)
 
     Dim Mouth As Precision3D.Vector3
     Dim Aim As Precision3D.Vector3
@@ -711,6 +717,10 @@ Public Sub UpdateVraxAttacks(ByRef Value As AttackEffects, Actor As Character3D.
     Target = PreciseMath.Add(Mouth,
         PreciseMath.Scale(Forward, ToDouble(VRAX_BREATH_REACH)))
     Target.Y = Max(12.0, Target.Y)
+
+    If UseTarget Then
+        Target = Precision3D.Vector(TargetX, TargetY, TargetZ)
+    End If
 
     Call UpdateVraxAttackPoints(Value, Name, Character3D.AnimationTime(Actor), Duration,
         Mouth, LeftArm, RightArm, Target, Ok, FireReady, LightningReady,

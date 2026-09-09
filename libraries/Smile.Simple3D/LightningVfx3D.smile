@@ -20,6 +20,9 @@ Public Const FLASH_STANDARD = 1
 Public Const FLASH_REDUCED = 2
 Public Const FLASH_OFF = 3
 
+Public Const PALETTE_BLUE_WHITE = 0
+Public Const PALETTE_RED_WHITE = 1
+
 Public Const MAX_EFFECTS = 8
 Public Const MAX_CHAIN_TARGETS = 8
 Public Const MAX_POINTS_PER_EFFECT = 1022
@@ -38,6 +41,7 @@ Public Const ERROR_IN_FLIGHT = 6
 Public Const ERROR_RENDERER = 7
 Public Const ERROR_CHAIN_CAPACITY = 8
 Public Const ERROR_INVALID_FLASH_MODE = 9
+Public Const ERROR_INVALID_PALETTE = 10
 
 Public Const QUERY_LIVE_EFFECTS = 1
 Public Const QUERY_ACTIVE_POINTS = 2
@@ -64,6 +68,7 @@ Public Const QUERY_FIRST_Z = 42
 Public Const QUERY_MAIN_TARGET_X = 43
 Public Const QUERY_MAIN_TARGET_Y = 44
 Public Const QUERY_MAIN_TARGET_Z = 45
+Public Const QUERY_PALETTE = 46
 
 Public Type LightningEffect
     Slot As Number
@@ -82,6 +87,7 @@ Public Type WeaponTrail
 End Type
 
 Private Type LightningState
+    Palette As Number
     Active As Boolean
     Enabled As Boolean
     Finished As Boolean
@@ -621,7 +627,17 @@ Private Function StagePoint(
     Dim ClosedPath As Boolean
     Dim LeaderEnd As Number
     Dim StreamerStart As Number
+    Dim OriginalRed As Number
     Dim Result As Boolean
+
+    If Items[EffectIndex].Palette = PALETTE_RED_WHITE Then
+
+        OriginalRed = RedValue
+        RedValue = BlueValue
+        GreenValue = OriginalRed * 90 / 248
+        BlueValue = OriginalRed * 105 / 248
+
+    End If
 
     Center.X = PathX[EffectIndex, PointIndex]
     Center.Y = PathY[EffectIndex, PointIndex]
@@ -840,6 +856,9 @@ Private Function StageSparks() As Boolean
     Dim OutputIndex As Number
     Dim Position As Precision3D.Vector3
     Dim Opacity As Number
+    Dim RedValue As Number
+    Dim GreenValue As Number
+    Dim BlueValue As Number
     Dim Result As Boolean
 
     Result = True
@@ -856,12 +875,24 @@ Private Function StageSparks() As Boolean
             Result = Precision3D.SetParticle(SparkBatch, OutputIndex, Position,
                 ToDouble(Max(2, Items[EffectIndex].Width * 5)),
                 ToDouble(Items[EffectIndex].Age * 3 Mod 360), 0) And Result
+            RedValue = 235
+            GreenValue = 249
+            BlueValue = 255
+
+            If Items[EffectIndex].Palette = PALETTE_RED_WHITE Then
+
+                RedValue = 255
+                GreenValue = 36
+                BlueValue = 48
+
+            End If
+
             Result = Graphics3D.SetParticleColor3D(
                 SparkBatch,
                 OutputIndex,
-                235,
-                249,
-                255,
+                RedValue,
+                GreenValue,
+                BlueValue,
                 Opacity
             ) And Result
             OutputIndex = OutputIndex + 1
@@ -1383,6 +1414,7 @@ Public Function StartAtPrecise(
     Items[Index].BranchLimit = 64
     Items[Index].PathJitter1000 = 1000
     Items[Index].SparkPercent = 100
+    Items[Index].Palette = PALETTE_BLUE_WHITE
     Items[Index].Quality = EffectiveQuality(Quality)
     Items[Index].Seed = Max(1, Abs(Seed))
     Items[Index].Age = 0
@@ -1771,6 +1803,31 @@ Public Function SetStyle(Effect As LightningEffect, Width As Number,
 
 End Function
 
+''' Palette belongs to one effect; existing callers retain the original blue-white colors.
+Public Function SetPalette(Effect As LightningEffect, Palette As Number) As Boolean
+
+    If Not Current(Effect) Then
+        ErrorValue = ERROR_INVALID_EFFECT
+        Return False
+    End If
+
+    If Graphics3D.FrameActive3D() Then
+        ErrorValue = ERROR_IN_FLIGHT
+        Return False
+    End If
+
+    If Palette < PALETTE_BLUE_WHITE Or Palette > PALETTE_RED_WHITE Then
+        ErrorValue = ERROR_INVALID_PALETTE
+        Return False
+    End If
+
+    Items[Effect.Slot - 1].Palette = Palette
+    ErrorValue = ERROR_NONE
+
+    Return True
+
+End Function
+
 Public Function SetBranchBudget(Effect As LightningEffect, BranchLimit As Number) As Boolean
 
     If Not Current(Effect) Or Graphics3D.FrameActive3D() Then
@@ -2118,6 +2175,10 @@ Public Function Value(Query As Number, Effect As LightningEffect) As Number
     If Query = QUERY_PRESET Then
 
         Result = Items[Index].Preset
+
+    Else If Query = QUERY_PALETTE Then
+
+        Result = Items[Index].Palette
 
     Else If Query = QUERY_AGE Then
 

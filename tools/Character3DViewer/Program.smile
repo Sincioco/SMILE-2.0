@@ -180,7 +180,8 @@ Do
                 Party.OrbitPhase,
                 Timing.CameraElapsed,
                 ARENA_ORBIT_DEGREES_PER_SECOND,
-                Party.Enabled
+                Party.Enabled,
+                Party.UnityRoster
             ) And Session.Ready
 
             Call ViewerSession.CaptureFailure(Session, 6)
@@ -1147,7 +1148,7 @@ Sub UpdateOrinStorm()
 
 End Sub
 
-Sub AdjustPlaybackSpeed(Amount As Number)
+Sub AdjustPlaybackSpeed(Amount As Number, Optional SpeedTurn As Number = -1)
 
     Dim Result As ViewerPlayback.SpeedAdjustmentResult
 
@@ -1165,6 +1166,25 @@ Sub AdjustPlaybackSpeed(Amount As Number)
             Calibration, "Resume Or Reset Before Changing Demo Speed")
 
         Return
+    End If
+
+    If Party.Enabled And Party.UnityRoster Then
+
+        If SpeedTurn < 0 Then
+
+            SpeedTurn = Party.Turn
+
+            If Party.UiBound Then
+                SpeedTurn = Party.UiTurn
+            End If
+
+        End If
+
+        Call ViewerParty.AdjustActorSpeed(Party, SpeedTurn, Amount)
+
+        Call ViewerPlayback.UseDefaultSpeed(Playback,
+            ViewerParty.ActorPlaybackSpeed(Party, 0, 150))
+
     End If
 
     If Result.ResetPartyDemo Then
@@ -1584,9 +1604,7 @@ Sub SelectCharacterTab(Index As Number)
         ViewerCameraState, Calibration, CalibrationAvailable,
         Effects) And Session.Ready
 
-    Fill Rectangle 300, 120, Max(240, Window_Width() - 600), 44, Rgb(8, 16, 30)
-    Draw Text "Loading Selected Character..." At 312, 132 Size 16 Color WHITE
-    Show Screen
+    Session.Ready = Window_Loading() And Session.Ready
 
     Call ViewerLifecycle.PrepareCharacterSwitch(
         Session, Party, Character, Rendering, Effects,
@@ -1661,6 +1679,9 @@ Sub BeginPartyInspector()
 
     Call UseActorContext(Binding.Context)
 
+    Call ViewerPlayback.UseDefaultSpeed(Playback,
+        ViewerParty.ActorPlaybackSpeed(Party, Party.UiTurn, Playback.PlaybackSpeed))
+
     If Calibration.OwnerProfile <> Session.ProfileIndex Then
 
         ''' One editing owner at a time. Never carry a pending import, Undo, or
@@ -1690,6 +1711,9 @@ Sub EndPartyInspector()
         CaptureActorContext(),
         DragonState
     ))
+
+    Call ViewerPlayback.UseDefaultSpeed(Playback,
+        ViewerParty.ActorPlaybackSpeed(Party, 0, Playback.PlaybackSpeed))
 
 End Sub
 
@@ -1810,7 +1834,8 @@ Function HandlePartyPointer() As Boolean
         ViewerUi.GlowButtonX(Window_Width(),
             ViewerProfiles.INCLUDE_DIAGNOSTIC_PROFILES, Party.Enabled),
         ViewerUi.GlowButtonWidth(
-            ViewerProfiles.INCLUDE_DIAGNOSTIC_PROFILES, Party.Enabled)
+            ViewerProfiles.INCLUDE_DIAGNOSTIC_PROFILES, Party.Enabled),
+        Party.UnityRoster
     )
 
     InspectorResult = ViewerInspectorCommands.ApplyPartyPresentationAction(
@@ -1847,7 +1872,7 @@ Function HandlePartyPointer() As Boolean
 
     Else If Response.SpeedDelta <> 0 Then
 
-        Call AdjustPlaybackSpeed(Response.SpeedDelta)
+        Call AdjustPlaybackSpeed(Response.SpeedDelta, Response.SpeedTurn)
 
     Else If Response.TogglePause Then
 

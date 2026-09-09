@@ -1,5 +1,30 @@
 # Zara V1 Creation And Repair Journey
 
+## September 10: full weapon contour, red storms and original audio
+
+The descriptor's ten weapon sockets now span 99.97 percent of the measured weapon
+Y extent, covering the handle/guard and full blade. The outline uses a white core
+and red-tinted rim; the source gold emission remains authored. The GLB is unchanged:
+`94f96990aed59cb347dee1d831e19587d21b92ed217a11d630a507cf8c1df67b`.
+
+SwordAttack uses Lightning Lab's Godstorm Ultra layout (four StormCrown strikes);
+SwordAttack2 uses Forked Judgment (four SkyStrike branches). Red-white palette and
+reduced white spark intensity retain Zara's red theme. Charge begins at 5 percent,
+and the storm/contact/audio cue at 25 percent of the actual animation duration.
+Primary and Party contexts share the controller but own independent effects.
+
+Only sound was imported from Unity. `unity-audio-import.json` records source GUIDs,
+relative paths, original hashes and PCM playback copies. Original attacks' digital
+discharge is layered with existing Lightning Lab thunder on separate channels.
+No Unity visual effects, rig re-export or new audio download was used. Source and
+playback audio stay under ignored `Private/Audio`; the standard preparation owner
+stages runtime copies. Public-roster builds exclude them.
+
+The previous SMILE appearance is retained locally in
+`artifacts/deliverables/Zara-SMILE-before-Unity-VFX-20260909`, including sources,
+descriptor and a native/Web preview archive. Current evidence is in the equipment
+VFX checkpoint; earlier equipment descriptions below are historical.
+
 This package owns the validated local Unity character import. Native and Chrome
 inspection, full clip inventory and measured floor-contact validation are recorded
 in the Unity import checkpoint. Original files and full-weight sources are preserved.

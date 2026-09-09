@@ -12,8 +12,8 @@ window.smileStartup = (() => {
     let visibleMs = 0, visibleSince = null, ready = false, presented = false;
     let knownFiles = 0;
     let resolvePainted, resolveFinished;
-    const painted = new Promise(resolve => { resolvePainted = resolve; });
-    const finished = new Promise(resolve => { resolveFinished = resolve; });
+    let painted = new Promise(resolve => { resolvePainted = resolve; });
+    let finished = new Promise(resolve => { resolveFinished = resolve; });
     const nextFrame = () => new Promise(resolve => requestAnimationFrame(resolve));
 
     document.addEventListener("visibilitychange", () => {
@@ -41,6 +41,24 @@ window.smileStartup = (() => {
     }
     void present();
 
+    function begin() {
+        if (!screen.hidden) return painted;
+        visibleMs = 0;
+        visibleSince = null;
+        ready = presented = false;
+        knownFiles = 0;
+        painted = new Promise(resolve => { resolvePainted = resolve; });
+        finished = new Promise(resolve => { resolveFinished = resolve; });
+        status.textContent = "Preparing the next scene…";
+        detail.textContent = "Loading duration is not yet known.";
+        overall.removeAttribute("value");
+        transfer.hidden = true;
+        transferText.textContent = "Identifying files to load…";
+        screen.hidden = false;
+        void present();
+        return painted;
+    }
+
     function finish() {
         if (ready) return finished;
         ready = true;
@@ -57,6 +75,8 @@ window.smileStartup = (() => {
                 const elapsed = visibleMs + (visibleSince === null ? 0 : Math.max(0, now - visibleSince));
                 if (!document.hidden && elapsed >= 1000) {
                     screen.hidden = true;
+                    presented = false;
+                    visibleSince = null;
                     resolveFinished();
                 } else requestAnimationFrame(tick);
             }
@@ -106,5 +126,5 @@ window.smileStartup = (() => {
             transferText.textContent = `Current asset: ${path} — ${bytes.toLocaleString()} bytes received; total size unknown or decoding`;
         }
     }
-    return { painted, finish, update };
+    return { get painted() { return painted; }, begin, finish, update };
 })();

@@ -1,5 +1,26 @@
 # Mandatory startup presentation
 
+## September 10: reuse during scene/tab loading
+
+`Window_Loading()` is a shared, zero-argument Boolean built-in requiring a game
+window. It reopens the existing native/Web splash and returns after presentation
+begins. The next `Show Screen` presents the new frame and honors any remaining
+one-second visible interval. Repeated calls within the same load are idempotent;
+successive loads get fresh visible timing and progress. The compiled title, author,
+timestamp, version, canonical logo and seven footer links are retained.
+
+Native keeps its independent GDI+ owner and closes each thread/event normally.
+Closing a reload overlay cannot terminate an existing editor. Web resets only the
+presentation/progress cycle; immutable encoded-asset caching remains intact.
+The Character Viewer's existing tab selection calls the operation before teardown.
+No generated program is rewritten and mandatory initial startup is unchanged.
+
+`artifacts/temp/zara-attacks/startup-delivery.log` passes repeated native timing
+(1,000–1,031 ms visible), slow-load overlap, Web visibility/progress contracts and
+actual generated native/Web calls. The final smoke and VSIX evidence are recorded
+with the equipment VFX delivery checkpoint. Chrome tab loads, including repeated
+Zara selection, displayed the original build metadata and all links.
+
 September 9, 2026. Baseline `b43ab33c38e3a52853c045e23bb9f593b6ac2f22`;
 HEAD and origin/main matched, worktree clean at reconciliation. One agent.
 Sin explicitly released this milestone. Double and H01/H02/H03 remain closed.

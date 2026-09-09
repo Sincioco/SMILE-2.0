@@ -410,7 +410,7 @@ End Sub
 
 Public Function AdvanceAutoOrbit(ByRef Value As State, ByRef PartyPhase As Double,
     ElapsedMilliseconds As Number, DegreesPerSecond As Number,
-    PartyMode As Boolean) As Boolean
+    PartyMode As Boolean, Optional FullCircle As Boolean = False) As Boolean
 
     Dim Advance As Double
 
@@ -423,10 +423,17 @@ Public Function AdvanceAutoOrbit(ByRef Value As State, ByRef PartyPhase As Doubl
         Advance = ToDouble(ElapsedMilliseconds) * ToDouble(DegreesPerSecond) / 1000.0
 
         If PartyMode Then
+
             PartyPhase = Math3D.WrapDegrees(PartyPhase + Advance)
             Value.AutoOrbitYaw = 120.0 + Sin(Math3D.Radians(PartyPhase)) * 55.0
+
+            If FullCircle Then
+                Value.AutoOrbitYaw = Math3D.WrapDegrees(120.0 + PartyPhase)
+            End If
+
         Else
             Value.AutoOrbitYaw = Math3D.WrapDegrees(Value.AutoOrbitYaw + Advance)
+
         End If
 
         Value.Controls.OrbitYaw = Value.AutoOrbitYaw

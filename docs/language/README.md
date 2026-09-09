@@ -9,6 +9,24 @@ arithmetic, explicit numeric conversions and fractional storage on native and We
 
 ## Modules and imports
 
+`Window_Loading()` returns a `Boolean` and requires `Game Window`. Call it before
+loading another scene to show the standard SMILE logo, credits, links and original
+artifact build stamp again. It returns after visible presentation begins, allowing
+asset loading to overlap the one-second visible minimum. The next `Show Screen`
+submits the new scene and closes the splash after any remaining minimum. Repeated
+calls during one loading interval share that interval. Native and Web use the
+same contract; this operation does not replace or disable mandatory startup.
+
+```smile
+Dim LoadingShown As Boolean
+
+LoadingShown = Window_Loading()
+
+Call LoadNextScene()
+
+Show Screen
+```
+
 `Module dotted.name` ... `End Module` declares a module. Declarations are private unless prefixed with `Public`; `Private` is available when explicit intent helps. A physical source imports a module with `Import dotted.name As Alias`, then accesses exported constants, arrays, functions, subroutines, record types, and enums through that alias. Imports are scoped to that physical source. One module may span files from one provider. Inside a module, an unqualified nominal type must be built in or owned by that same module, including a type declared in another physical module source; external module types require explicit `Alias.Type` qualification. Project-global and ambient sibling-library types never enter a module's unqualified type scope. Duplicate providers, import cycles, private access, unknown members, and module access to consumer globals are diagnosed by the shared binder.
 
 ```smile

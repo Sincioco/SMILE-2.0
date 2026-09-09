@@ -123,6 +123,11 @@ Private Sub BeginAssetLoad(ByRef Session As ViewerSession.State,
     Call ViewerParty.ClearPreview(Party)
 
     ActiveProfile = ViewerProfiles.ProfileAt(Session.ProfileIndex)
+
+    If Session.SelectedCharacterTab = ViewerProfiles.CHARACTER_TAB_PARTY_VRAX Then
+        ActiveProfile.DefaultPlaybackSpeed = ViewerParty.ActorPlaybackSpeed(Party, 0, 150)
+    End If
+
     Dragon.UseVrax = ((Party.Enabled And Party.UnityRosterRequested) Or
         ViewerProfiles.UsesVraxOpponent(Session.ProfileIndex))
 
@@ -369,6 +374,11 @@ Public Sub ResetView(ByRef Session As ViewerSession.State,
             Settings.ArenaDefaultZoomDegrees),
         Settings.ZoomInLimit, Settings.ZoomOutLimit, 96000)
 
+    If Party.Enabled And Party.UnityRoster Then
+        Call ViewerCamera.SetVerticalOrbit(Camera, 17)
+        Call ViewerCamera.SetZoom(Camera, -7, Settings.ZoomInLimit, Settings.ZoomOutLimit)
+    End If
+
 End Sub
 
 Public Function RestorePartyPreview(ByRef Party As ViewerParty.State,
@@ -543,6 +553,19 @@ Public Sub ResetPartyDemo(ByRef Session As ViewerSession.State,
 
     Call ViewerPlayback.EnablePartyDemo(Playback)
     Call ViewerUi.HideCalibration(Ui)
+
+    If Not Party.UnityRoster Then
+
+        Settings.PartyFormationRadius = 300
+        Settings.PartyFormationStartAngle = 10
+        Settings.PartyFormationEndAngle = 50
+
+    Else
+
+        Settings.PartyFormationStartAngle = 15
+        Settings.PartyFormationEndAngle = 45
+
+    End If
 
     Center.X = ViewerDragon.PositionX()
     Center.Z = ViewerDragon.PositionZ()
@@ -729,8 +752,7 @@ Private Sub PositionDragonOpponents(ByRef Session As ViewerSession.State,
     Center.X = ViewerDragon.PositionX()
     Center.Z = ViewerDragon.PositionZ()
     Session.Ready = ViewerParty.PlaceDragonInspectionParticipants(
-        Party, Center, Settings.PartyFormationRadius,
-        Settings.PartyFormationStartAngle, Settings.PartyFormationEndAngle,
+        Party, Center, 300, 10, 50,
         Settings.CharacterModelForwardYawOffset,
         Settings.OrinArenaYawAdjustment) And Session.Ready
 

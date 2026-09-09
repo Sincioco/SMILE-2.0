@@ -74,7 +74,10 @@ Public Sub Update(ByRef Value As Context, Actor As Character3D.Actor, Camera As 
             Ok = Precision3D.SetRibbonPoint(Value.Ribbons[Layer], Index,
                 Math3D.Subtract(Center, WidthOffset), Math3D.Add(Center, WidthOffset), 0.5) And Ok
 
-            If ColorStyle = 2 Then
+            If ColorStyle = 3 Then
+                Ok = Graphics3D.SetRibbonPointColor3D(Value.Ribbons[Layer], Index,
+                    255, 255 - Layer * 45, 255 - Layer * 40, Opacity) And Ok
+            Else If ColorStyle = 2 Then
                 Ok = Graphics3D.SetRibbonPointColor3D(Value.Ribbons[Layer], Index,
                     255, 255, 255, Opacity) And Ok
             Else If ColorStyle = 1 Then

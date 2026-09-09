@@ -198,10 +198,8 @@ Public Function CaptureStatus(ByRef Actor As Character3D.Actor,
     Result.CandidateVersion = Profile.CandidateVersion
     Result.PlaybackSpeed = Playback.PlaybackSpeed
 
-    If (Party.Enabled And
-        Party.UnityRoster And
-        Party.UiTurn = 2) Then
-        Result.PlaybackSpeed = ViewerParty.VraxPlaybackSpeed(Playback.PlaybackSpeed)
+    If Party.Enabled And Party.UnityRoster Then
+        Result.PlaybackSpeed = ViewerParty.ActorPlaybackSpeed(Party, Party.UiTurn, Playback.PlaybackSpeed)
     End If
 
     Result.MaterialInspection = Rendering.MaterialInspection

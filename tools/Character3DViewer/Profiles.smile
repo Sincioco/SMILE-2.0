@@ -6,6 +6,7 @@ Option Explicit
 Import Smile.Simple3D.CharacterViewer As CharacterViewer
 
 Public Const PROFILE_ARIN = 0
+Public Const ZARA_ATTACK_HIT_PERCENT = 25
 Public Const PROFILE_ARIN_V56 = 1
 Public Const PROFILE_ARIN_ORIGINAL = 2
 Public Const PROFILE_TECHNICAL_ARTICULATED = 3
@@ -151,6 +152,7 @@ Public Function ProfileAt(Index As Number) As CharacterViewer.Profile
         Result.ExpectedClipCount = 31
         Result.ExpectedSocketCount = 14
         Result.DesiredWorldHeight = 100
+        Result.DefaultPlaybackSpeed = 200
 
     Else If Index = PROFILE_ZARA Then
 
@@ -163,6 +165,7 @@ Public Function ProfileAt(Index As Number) As CharacterViewer.Profile
         Result.ExpectedClipCount = 26
         Result.ExpectedSocketCount = 10
         Result.DesiredWorldHeight = 100
+        Result.DefaultPlaybackSpeed = 200
 
     Else If Index = PROFILE_VRAX Then
 

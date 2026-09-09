@@ -289,8 +289,8 @@
   "checkpointFiles": [
     {
       "path": "ZaraV1.sm3d.json",
-      "sha256": "3e3165a1f520ff83da67164f3783f39e6e40ea199f68a1f054d56ab132cad276",
-      "bytes": 2845
+      "sha256": "b58c8b915c2181df09e0e95b24cf0fbf56805c47f28ca22973064ef18c0beb5d",
+      "bytes": 2827
     },
     {
       "path": "animation-manifest.json",
@@ -329,8 +329,8 @@
     },
     {
       "path": "equipment-vfx-attachments.json",
-      "sha256": "23c642ba655bef67fbd2cd345509ee68ddc3e1805533b3d1e8c79dd00f8a49b8",
-      "bytes": 2356
+      "sha256": "3b18036c2483705733d72b7b52d56cfbff4a6c4ce2527af4b800d03e9c51ce8f",
+      "bytes": 2594
     },
     {
       "path": "Private/Previews/zara-neon-white-native.jpg",
@@ -351,10 +351,15 @@
       "path": "Private/Previews/party-equipment-web.png",
       "sha256": "2693c5c88b76bc0d84cd497ec052cadbf8be26aa9c821df95c5dbecbb3f81f68",
       "bytes": 285924
+    },
+    {
+      "path": "Private/Previews/zara-forked-delivery.png",
+      "bytes": 2112728,
+      "sha256": "dcdf07d0b279df18ed491e8e6afc52959a918d55874f5a505a04ad910a41cb99"
     }
   ],
   "equipmentVfx": {
-    "appearance": "Neon white blade rim and weapon outline",
+    "appearance": "Full weapon white-core outline with a red tint; crimson Godstorm Ultra and Forked Judgment attack lightning",
     "attachments": "equipment-vfx-attachments.json",
     "socketCount": 10,
     "checkpoint": "docs/implementation/character-equipment-vfx-checkpoint.md",
@@ -363,7 +368,40 @@
       "Private/Previews/zara-neon-white-native.jpg",
       "Private/Previews/zara-neon-white-web.png",
       "Private/Previews/party-equipment-native.jpg",
-      "Private/Previews/party-equipment-web.png"
-    ]
-  }
+      "Private/Previews/party-equipment-web.png",
+      "Private/Previews/zara-forked-delivery.png"
+    ],
+    "attackPresets": {
+      "SwordAttack": "Godstorm Ultra (StormCrown)",
+      "SwordAttack2": "Forked Judgment (SkyStrike)"
+    },
+    "attackCuePercent": 25,
+    "audioManifest": "unity-audio-import.json"
+  },
+  "audio": [
+    {
+      "path": "Private/Audio/zara-heavy.wav",
+      "viewerPath": "Assets/Audio/zara-heavy.wav",
+      "sha256": "4f90e117ab73b35f7d0ba137c3577fe7b68815d75b659f1e5dbe9d444be62f90",
+      "unitySoundSlot": 9
+    },
+    {
+      "path": "Private/Audio/zara-attack.wav",
+      "viewerPath": "Assets/Audio/zara-attack.wav",
+      "sha256": "da038358eb84d23525b6c1ad7d0df6fa71f5c3613c20c87b5b8999b521550145",
+      "unitySoundSlot": 10
+    },
+    {
+      "path": "Private/Audio/zara-impact.wav",
+      "viewerPath": "Assets/Audio/zara-impact.wav",
+      "sha256": "0aa358b5a0d50d1ab1c7ae015ffbdd6583b074565782bf3d8e463c8ca71ce7be",
+      "unitySoundSlot": 11
+    },
+    {
+      "path": "Private/Audio/zara-burst.wav",
+      "viewerPath": "Assets/Audio/zara-burst.wav",
+      "sha256": "8af34850f541e1d653b26ca1fccfe5a0e69d958b38ceaaf71a00f62b3846057c",
+      "unitySoundSlot": 12
+    }
+  ]
 }

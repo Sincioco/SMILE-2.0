@@ -1,5 +1,27 @@
 # Valor V1 Creation And Repair Journey
 
+## September 10: Unity / SMILE material comparison
+
+The original Unity BattleSystem scene was inspected without migration or edits.
+Valor's metallic surfaces show stronger environment reflections there. The source
+material/GLB audit confirms that the exported armor, body, helmet, sword and shield
+retain normal maps and packed metallic/roughness maps. The GLB remains
+`87089404dc88e6fb23d63500808c4d3c115a8a43974bd940444270e42e420dd5`.
+
+Two import differences remain: the Unity armor/equipment `_Color` multiplier is
+0.8 RGB while the derivative uses the default 1.0; eyes have source smoothness 1
+but the no-map fallback roughness is 0.5. These are recorded comparison findings,
+not accepted material changes. A bounded material-only conversion review should
+preserve the original derivative, transfer those factors, and compare matching
+poses/lighting before changing the canonical checksum. Do not rerun rig conversion.
+
+Unity's scene also uses a skybox reflection environment. SMILE currently evaluates
+ambient plus direct PBR lights, without environment-image lighting on armor; the
+planar floor reflection is a separate feature. Exact visual parity therefore needs
+a reusable environment-reflection capability, beyond this comparison request.
+The corrected Web face-normal orientation helps the current exported materials
+without adding GPU work. No Valor asset was edited during this comparison.
+
 This package owns the validated local Unity character import. Native and Chrome
 inspection, full clip inventory and measured floor-contact validation are recorded
 in the Unity import checkpoint. Original files and full-weight sources are preserved.

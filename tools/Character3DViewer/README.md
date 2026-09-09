@@ -3,7 +3,9 @@
 The normal Viewer project permanently includes locally licensed Valor, Zara and
 Vrax packages. Tabs are Arin, Orin, Valor, Zara, Dragon, Vrax, Party Dragon and
 Party Vrax. Party Dragon preserves Arin and Orin against Dragon; Party Vrax uses
-all four heroes against Vrax and remains the launch default. Imported
+Arin, Orin and Zara against Vrax and remains the launch default. Valor is temporarily
+hidden in Party Vrax, including his effects and turns; his individual tab and
+canonical package remain available. Imported
 sets contain 31, 26 and 24 animations, with nine clips per page. Vrax uses twice
 his first preview's transform scale. `Prepare-BuildAssets.ps1` verifies each private
 export checksum and refreshes the ignored project-local cooking mirror.
@@ -16,12 +18,24 @@ Orin, but load Vrax as their opponent. Their normal demo cycles and explicit cli
 buttons drive the selected hero while Vrax remains independently owned and visible.
 Those two encounters double the arena camera distance so the accepted enlarged
 Vrax and the active hero remain visible together.
+Valor and Zara default to playback speed 200; Vrax retains speed 100.
+Zara's white outline has a red tint and covers the full weapon silhouette, including its handle
+and guard. SwordAttack uses Lightning Lab's Godstorm Ultra layout; SwordAttack2
+uses Forked Judgment, both with crimson branches and pale red cores. Four strikes leave
+capacity for the other actors. Weapon charge starts at 5 percent of clip time;
+the storm, hit reaction and impact camera meet at 25 percent. Original Unity
+discharge/impact sounds use separate channels from the existing Lab thunder.
+Weapon/Glow visibility, family freeze, clip changes and teardown retain their
+existing ownership. Unity visual effects were not imported.
 
 Standard native and Web builds now include the shared mandatory SMILE startup
 presentation. It overlaps asset preparation with a one-second visible logo
 minimum, shows creator credits and the artifact's compilation time/version, and
 reports Web asset bytes separately from overall preparation. No Viewer source
-initialization or optional import is required. See the
+initialization or optional import is required for startup. Every tab click also
+calls the shared `Window_Loading()` operation before releasing the old scene;
+the same splash remains until the new frame is presented, including cached switches.
+See the
 [startup checkpoint](../../docs/implementation/startup-presentation-checkpoint.md).
 
 Ctrl+Left/Right step the timeline using the queued press's modifier snapshot on
@@ -47,19 +61,51 @@ submission order. No extra simulation, pose update or calibration channel is cre
 
 Dragon inspection uses the same clip buttons, timeline/frame stepping, playback speed, demo, lighting/material channels, sockets, pan/orbit/zoom and reset as the hero tabs. Both heroes remain in the arena with their own assets and saved corrections. Head Aim constrains only the head joint; At Arin/At Orin selects its target. The current Pose Calibration targets remain humanoid wrists and equipment, so they do not apply to Dragon. Dragon VFX and hero equipment visibility remain independent. Pose is disabled for Dragon, including its turn in Party.
 
-Party members start on a 450-unit front arc with 60 degrees between its endpoints.
-The placement function distributes any supplied member count over that wider arc.
+Party Vrax's three heroes start on a 450-unit front arc from 15 to 45 degrees.
+Zara's home is moved 20 percent toward Orin to balance her narrower silhouette
+against Arin, while Orin remains the center facing Vrax.
+The Party panel has separate minus/plus controls for Arin, Orin, Zara and Vrax.
+Arin and Orin default to 150; Zara and Vrax default to 100. Each setting drives
+that actor's clips, attack duration and impact timing. Changes restart the Party
+presentation and retain the other actors' speeds; Party Dragon keeps its shared
+speed control. Its intro makes one level horizontal
+revolution in two seconds, easing in the same direction as Camera 1, then holds
+the normal slow orbit for one second. Camera 1 defaults to vertical orbit 17 and
+zoom -7, matching the accepted 846-unit reference framing. It continues through
+full 360-degree slow revolutions. Camera 2 retains each battle composition while
+orbiting in the same direction and at the same rate, using Camera 1's phase,
+except the later reference-driven attack/recovery shots described below.
 After a 250-ms close-up, each member reaches the selected boss in 300 ms, attacks,
 and returns to its own home position. The hero shots show the close-up, track the
-approach from behind and frame the full attack. At the established 64-percent hit
-point, Beat 3a cuts to the live wide formation camera, targets the boss and slowly
-orbits across its front so impact VFX remain visible. Beat 4 then shows the aftermath
-from the boss's side/rear. Each shot moves smoothly within its beat.
+approach from behind and frame the full attack. Hero Beats 3, impact 3a and
+recovery 4 now share the requested low frontal view, lining up the full attacking
+hero with the imposing boss. At Beat 3 the full camera pose and lens lock through
+Beat 4, including impact. The selected hero supplies the horizontal orbit angle
+around the established arena target; the 846-unit distance, 85-unit height,
+121-unit aim height and 24-degree lens follow Sin's three reference shots.
+There is no tracking, panning, orbit or forward/backward movement during the hold.
+Impact still registers at 64 percent, or Zara's
+earlier 25-percent boundary, without an intervening wide-orbit cut. Vrax's own turns
+use a 650-ms close-up, an 800-ms Run approach following from behind, a close battle
+shot for the complete attack, then a frontal aftermath while he returns home.
+For these two beats, the camera stays planted low behind the defender. Only its
+look direction follows Vrax; the lens and camera position remain fixed. This
+later requested exception to battle-camera orbit keeps the defender's full back
+view in the foreground while Vrax and his fire/lightning dominate the scene.
+Vrax skips Beat 3a, as requested. His selected defender rotates through Arin, Orin
+and Zara; body facing, head aim, fire and arm lightning target that defender.
+His Hit reaction finishes its clip before returning to Idle.
+These five phases belong to Party Vrax. Party Dragon restores commit `c7f8f07`:
+Arin/Orin only, radius 300, angles 10 to 50, the original approach locations,
+650-ms lead and 650-ms approach, speed 200, and the original camera shots.
+Clicking any tab, including the selected one, restarts its presentation. The
+left-hand View label is removed. Saved pose calibration remains independent.
 
 The Party runtime stores home, approach, bounds-derived clearance and facing metadata in
 participant records. It separates approach lanes when the actors' measured ground-plane
 bounds would overlap. The public formation regression uses a synthetic third participant; local builds
-add the separately packaged Valor and Zara actors.
+retain the separately packaged Valor and Zara actors, with Valor hidden by the
+small `ViewerParty.PARTY_VALOR_VISIBLE` policy.
 
 The editor source and build/launch entry points belong here. Sin Star I owns the self-contained character package at `games\SinStarI\SourceAssets\Characters\Paladin\ArinV57`. Orin owns `games\SinStarI\SourceAssets\Characters\Tank\OrinV13`. Do not edit ignored cooking inputs as canonical character assets.
 
@@ -69,8 +115,9 @@ The editor source and build/launch entry points belong here. Sin Star I owns the
 
 Vrax breathes orange fire and fires blue-white lightning from both arms during
 Attack through Attack6, in his own tab and Party Vrax. Party Vrax cycles all six
-clips and scales the Party playback control to Vrax's own profile rate, so the
-default animation speed matches the Vrax tab.
+clips at the same Party playback setting as the heroes; its default 100 matches
+the Vrax tab. Web PBR now uses the same front-face normal convention as native,
+including reflected geometry, restoring armor highlights without extra render work.
 Four rig-attached sockets follow the final grounded pose at the accepted 20000%
 scale. The expanded mouth stream uses radius 24, intensity 320, a 420-unit reach
 and 900-unit velocity. Effects run from one-sixth to four-fifths of each clip and clear on recovery,

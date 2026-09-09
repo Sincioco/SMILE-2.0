@@ -256,6 +256,9 @@ Run("Window dimensions, title, and activation are live game-window built-ins", (
     Equal(true, Analyze("Print Window_Activate()\n").HasErrors);
     Equal(true, Analyze("Game Window \"Wrong title\"\nPrint Window_Title(123)\n").HasErrors);
     Equal(true, Analyze("Game Window \"Wrong activation\"\nPrint Window_Activate(1)\n").HasErrors);
+    Equal(false, Analyze("Game Window \"Loading\"\nDim Shown As Boolean\nShown = Window_Loading()\nShow Screen\n").HasErrors);
+    Equal(true, Analyze("Print Window_Loading()\n").HasErrors);
+    Equal(true, Analyze("Game Window \"Loading\"\nPrint Window_Loading(1)\n").HasErrors);
     var native = new MasmEmitter(analysis, SmileGraphicsBackend.DirectX, true, false).Emit();
     Equal(true, native.Contains("call smile_window_width", StringComparison.Ordinal));
     Equal(true, native.Contains("call smile_window_height", StringComparison.Ordinal));

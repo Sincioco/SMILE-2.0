@@ -35,7 +35,8 @@ try {
 
     $webSource = Get-Content -LiteralPath $runtimeSource -Raw
     $drawStart = $webSource.IndexOf('function renderer3DDrawPbr', [System.StringComparison]::Ordinal)
-    $drawEnd = $webSource.IndexOf('function renderer3DBegin', $drawStart, [System.StringComparison]::Ordinal)
+    # Stop at the next function: later GPU-particle creation legitimately allocates.
+    $drawEnd = $webSource.IndexOf('function ', $drawStart + 9, [System.StringComparison]::Ordinal)
 
     if ($drawStart -lt 0 -or $drawEnd -le $drawStart) {
         throw 'The Renderer3D Web PBR draw path was not found.'

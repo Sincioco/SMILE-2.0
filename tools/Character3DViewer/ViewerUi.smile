@@ -1252,13 +1252,12 @@ Public Sub DrawHeader(DisplayName As Text, PartyRole As Text,
         Subtitle = "Sin Star I  •  Arin And Orin  •  Party Battle Preview"
 
         If ViewerProfiles.UsesUnityPartyRoster(SelectedCharacterTab) Then
-            Subtitle = "Sin Star I  •  Arin, Orin, Valor And Zara  •  Vrax Battle Preview"
+            Subtitle = "Sin Star I  •  Arin, Orin And Zara  •  Vrax Battle Preview"
         End If
 
     End If
 
     Draw Text Subtitle At 18, 42 Size 13 Color LIGHT_GRAY
-    Draw Text "View" At 18, 68 Size 13 Color WHITE
 
     For Index = 0 To CharacterTabCount() - 1
         TabIndex = CharacterTabIndex(Index)
