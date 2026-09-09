@@ -32,6 +32,12 @@ The harness's reused output directory reported SML3605 for its prior isolated
 application identity; the generated publication was replaced and exact parity passed.
 Final integration, source commit identities and installed-payload delivery are recorded
 with the post-acceptance compiler follow-up in the existing Double checkpoint.
+VFX source milestone `3a1418b` was pushed normally before the compiler hardening.
+The final native/Full Web Viewer builds at `25d80ad` passed brief local Party,
+Valor and Zara checks, including foreground Chrome: visible rims, reflected
+equipment and intact PBR geometry. These observations cover ordinary presentation;
+capacity-exhaustion recovery is proved separately by the production-module fixture.
+Private roster assets and screenshots were not published or committed.
 
 ## Requested appearance
 

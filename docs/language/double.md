@@ -60,7 +60,7 @@ the existing Optional and named argument rules.
 
 Nonfinite results, division by either zero, invalid domains and conversions fail
 with the actual SMILE source location (`SML3902` on native/checked intrinsic
-constant diagnostics; nonconstant constant-expression errors retain their code).
+constant diagnostics; other constant-expression errors retain their existing codes).
 The failing result is checked before destination mutation. Earlier source-order
 effects remain; this is not a transaction over the program. Runtime termination
 uses normal staged-call/frame/global cleanup, including owned fields. Literal

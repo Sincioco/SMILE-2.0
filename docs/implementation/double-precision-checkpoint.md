@@ -12,7 +12,7 @@
 - VFX-01 is validated and pushed in `3a1418b`; actual native/generated-Web
   resource exhaustion, rollback, recovery and independent-caller evidence stays
   in the existing equipment VFX checkpoint. No pool limit or reset changed.
-- H-D01 is implemented and focused-validated, final delivery pending. The actual
+- H-D01 is implemented, validated and delivered. The actual
   standard native Debug build reproduced C2020 for duplicate `Field_Caf_` members.
   `NativeDebugTypes` now reserves literal ASCII names and resolves Unicode names
   by aggregate field ordinal with collision checks; original names remain in
@@ -22,7 +22,7 @@
   uniqueness/repeated-generation/layout checks pass; native Release and `--debug`
   Debug both print `0.125`, `0.25`, `0.5`. Generated files were only inspected,
   never rewritten. No new IDE interaction observation is claimed or required.
-- H-D02 is implemented and focused-validated. A single tracked-source allocation
+- H-D02 is implemented, validated and delivered. A single tracked-source allocation
   inventory found SML3900–SML3902 unused. `DoubleSemantics` now owns those three
   numeric codes; Lexer, numeric/precision binding, intrinsic constant folding and
   the native runtime error prefix consume them. Established ApplicationId
@@ -34,8 +34,39 @@
   checked failure cases. Native failures verify SML3902 with the exact source
   file/line/column, exit 5, expected earlier output and zero live class/image/text
   resources. Generated Web retains its existing error text/location format.
-- Final integration, rebuilt Viewer scene observations and VSIX delivery remain
-  pending. This is a bounded post-acceptance entry, not a new feature phase.
+- Compiler source milestone `25d80adb8554f4ddbf9f36ac7f5d8cefec5f6de1` and VFX
+  milestone `3a1418b0755cb94f0b4dbe067c2307bce5e1661e` were pushed normally to
+  origin/main and read back. Final `cmd /c scripts\smoke-test.cmd --skip-doctor`
+  exited 0: 323 shared tests, 13 formatter integration tests, style checks for all
+  434 tracked SMILE files, applicable native/generated-Web integration, reflection
+  and calibration-isolation gates, and artifact/VSIX payload verification passed.
+  Ordinary negative fixtures retained their expected diagnostics. No Doctor or
+  retired assembly-rewriting test ran. Unchanged gameplay and completed human
+  camera/audio/hover acceptance were not replayed.
+- Native Release and Full Web Viewer outputs rebuilt successfully. Brief native
+  and foreground Chrome Party/Valor/Zara observations confirmed visible rims,
+  reflected equipment and intact PBR geometry; the native Viewer was restored to
+  the foreground. Capacity recovery remains a separate production-module test,
+  not a claim that the browser scene was artificially exhausted. Canonical assets
+  and authored calibration are unchanged; private local roster assets stayed local.
+- The final smoke built VSIX 2.0.61 once; `scripts/install-vsix.cmd --skip-build`
+  then exited 0 with Visual Studio already closed. All **35 installed compiler,
+  language, library and template payload hashes** match the built VSIX. Installed
+  extension: `%LOCALAPPDATA%/Microsoft/VisualStudio/18.0_91f001b5/Extensions/hhbwv4sp.apq`;
+  `Smile.VisualStudio.dll` SHA-256 is
+  `A192A56DC5E1D8259AEB3300B1497C836AF7BBC47FA130DDF43803FB9F6F03D8`.
+  Evidence: `artifacts/temp/post-delivery-hardening-r1/` (`double-focused.log`,
+  `final-smoke.log`, `viewer-*-build*.log`, `final-vsix-install.log`). No required
+  gate remains for this hardening. Further feature/game/editor work stays on hold.
+
+Final affected artifact SHA-256 values (source `25d80ad`; later changes are documentation only):
+
+| Output | SHA-256 |
+|---|---|
+| `artifacts/compiler/smilec.dll` (launched by `smilec.exe`) | `8BDB3E5D3AB96D4DA1D29B3D8C20D2430918B89A56893221343DDFEE44A96C69` |
+| `tools/Character3DViewer/bin/Release/Character3DViewer.exe` | `63E6A446FE18AC6F05180F97ACC7FCF6A34DB03D1CC03B06B4AE466E485EC216` |
+| `tools/Character3DViewer/bin/Release/Web/game.js` | `5001FA39654948C8A72F73091D9DADC14F8B5E3691C92DF2B444387F58FAF55E` |
+| `artifacts/vsix/Smile.VisualStudio.vsix` | `D936133A86DCA9821F00F8091E942201142C54366DDBB4B08A2A5EB54EBCBAC3` |
 
 ## Authority and reconciled baseline
 
