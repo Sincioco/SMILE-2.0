@@ -1,5 +1,11 @@
 # Character Viewer Architecture
 
+The optional [Dragon retarget trial](../../games/SinStarI/SourceAssets/Bosses/RedDragon/RedDragonV12VraxTrial/README.md)
+uses a separate generated project/profile and private preview outputs. It preserves
+the default Dragon package and provides an explicit Original launcher. The existing
+`ViewerUi` animation grid pages every profile with more than nine clips, including
+this 16-clip trial; paging is determined by clip count rather than import origin.
+
 The local Unity import extends existing owners: `Profiles` supplies Valor, Zara
 and Vrax identities, clips, scale policy and measured grounding; `ViewerActors`
 applies transforms; `ViewerParty` owns two additional contexts, shared Party

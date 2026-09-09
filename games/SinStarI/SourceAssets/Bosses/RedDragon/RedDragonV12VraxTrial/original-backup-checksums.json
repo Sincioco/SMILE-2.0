@@ -1,0 +1,97 @@
+[
+  {
+    "path": "animation-refinement-validation.json",
+    "sha256": "16354955948F8661931F8C71C425C2CAF3F625A4EF578C4B8893B0CCE9D0EA7F",
+    "bytes": 1731
+  },
+  {
+    "path": "checksums.json",
+    "sha256": "B712996E37CA1569C33A9899C1AA75356650D8B6FF83CA2827CCDBC81CA38699",
+    "bytes": 2689
+  },
+  {
+    "path": "cyber-dragon-red-all-poses-preview.png",
+    "sha256": "1F8430D426AE7942B06198E4921C12027E9DB3040A0CE08AF377539885C1900B",
+    "bytes": 907447
+  },
+  {
+    "path": "dragon-claw-follow-through.png",
+    "sha256": "19B85FB4803E4C21E07ABA9BC475A2812E2034CF7005D5CD91ACF52213B95135",
+    "bytes": 589535
+  },
+  {
+    "path": "dragon-fire-breath-rig-preview.png",
+    "sha256": "5B052477528AF44024CBA7A5B0662404AF63A5890276C258F8DF224FC8D2230C",
+    "bytes": 833359
+  },
+  {
+    "path": "README.md",
+    "sha256": "8EACD54C0F6C66AF10330052876986A2AC196154FEB728F4373A67F6782B2183",
+    "bytes": 4181
+  },
+  {
+    "path": "red-dragon-v1.1-animated.glb",
+    "sha256": "782BF48A302665930F1F6872B159CEFBCE5FBA7C3272B7E53D2A63ECD842F4E8",
+    "bytes": 2395704
+  },
+  {
+    "path": "red-dragon-v1.1-package.json",
+    "sha256": "1CFFB9135E2BB7A7002B8E50A443379C9AEFD8099F901F006BF31284BEECA855",
+    "bytes": 7401
+  },
+  {
+    "path": "red-dragon-v1.1-rig.blend",
+    "sha256": "A1ED9018629FAB8BDA57DEA110913A0A92078637F776BCCBF6641A7CC6CA2892",
+    "bytes": 2152084
+  },
+  {
+    "path": "red-dragon-v1.1-rig.blend1",
+    "sha256": "F3325A171386F1C253E5D013BE4F10A3E85952F490D2AECEF5D88E1C62FED709",
+    "bytes": 2085332
+  },
+  {
+    "path": "RedDragonV1.0.original.glb",
+    "sha256": "4A90AC7BCD5E0BEA9D0747CBB3E4B3B9379E1DCE2303DBA7797F6D0E72996D88",
+    "bytes": 1994132
+  },
+  {
+    "path": "RedDragonV1.0.static.glb",
+    "sha256": "4909CD165FBA48EE64E73617E4B661DB7D4FA481BC0C9707243077D2C26B96AC",
+    "bytes": 1994584
+  },
+  {
+    "path": "RedDragonV11.sm3d.json",
+    "sha256": "A341DA15B7B97C28DA4B954B2B8F13B72737E2B264074C43EBEDA843035EC724",
+    "bytes": 1291
+  },
+  {
+    "path": "retarget-chains.json",
+    "sha256": "651A9539F7B44DBB7AED0ADAED91193BD82254460714EBCC2DF53D8A000A486F",
+    "bytes": 1322
+  },
+  {
+    "path": "rig-validation.json",
+    "sha256": "52CD78B9BA720D10B889FFE2DC9D0F1CB77734B3730C8D64C0C040464092C72E",
+    "bytes": 5569
+  },
+  {
+    "path": "Audio\\attack-audio.json",
+    "sha256": "D7E6E48D87EFA685AE8A247402E3FFE93D45DD12D1BD6F0FCCC254635E2AD82D",
+    "bytes": 1031
+  },
+  {
+    "path": "Audio\\dragon-claw-strike.wav",
+    "sha256": "A9D6E3B288CEAB55C7DFAB33FDC53AE451CB612C2DC9859F5ED1A9EE9169590F",
+    "bytes": 145574
+  },
+  {
+    "path": "Audio\\dragon-fire-breath.wav",
+    "sha256": "31B176EBE1C8097347BC0DD7E169570848D8EC4D5C0E3A5E133F59CFE3E07A11",
+    "bytes": 273464
+  },
+  {
+    "path": "Audio\\dragon-fireball-impact.wav",
+    "sha256": "CCD65C4375B7F9F9F901331EC2252FB6B0DE8123779CAC9CF0872FCFBD40B9F8",
+    "bytes": 207314
+  }
+]

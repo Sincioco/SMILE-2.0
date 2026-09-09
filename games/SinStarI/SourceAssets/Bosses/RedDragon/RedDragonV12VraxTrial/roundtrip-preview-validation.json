@@ -1,0 +1,125 @@
+{
+  "floorTolerance": 0.005,
+  "frameRate": 30,
+  "allClips": [
+    {
+      "clip": "Vrax_Attack",
+      "sampledFrames": 26,
+      "frameZeroBodyMinimumZ": -2.0138384115853114e-07,
+      "minimumZ": -4.6566128730773926e-07
+    },
+    {
+      "clip": "Vrax_Attack2",
+      "sampledFrames": 26,
+      "frameZeroBodyMinimumZ": -2.0138384115853114e-07,
+      "minimumZ": -2.3283064365386963e-07
+    },
+    {
+      "clip": "Vrax_Attack3",
+      "sampledFrames": 31,
+      "frameZeroBodyMinimumZ": -2.0138384115853114e-07,
+      "minimumZ": -4.2654573917388916e-07
+    },
+    {
+      "clip": "Vrax_Attack4",
+      "sampledFrames": 31,
+      "frameZeroBodyMinimumZ": -2.0138384115853114e-07,
+      "minimumZ": -7.158882908697706e-07
+    },
+    {
+      "clip": "Vrax_Attack5",
+      "sampledFrames": 41,
+      "frameZeroBodyMinimumZ": -2.0138384115853114e-07,
+      "minimumZ": -2.0138384115853114e-07
+    },
+    {
+      "clip": "Vrax_Attack6",
+      "sampledFrames": 31,
+      "frameZeroBodyMinimumZ": -2.0138384115853114e-07,
+      "minimumZ": -1.3798567124467809e-06
+    },
+    {
+      "clip": "Vrax_Hit",
+      "sampledFrames": 31,
+      "frameZeroBodyMinimumZ": -2.0138384115853114e-07,
+      "minimumZ": -1.077074557542801e-06
+    },
+    {
+      "clip": "Vrax_Idle",
+      "sampledFrames": 201,
+      "frameZeroBodyMinimumZ": -2.0138384115853114e-07,
+      "minimumZ": -6.298668449744582e-05
+    },
+    {
+      "clip": "Vrax_Run",
+      "sampledFrames": 21,
+      "frameZeroBodyMinimumZ": -1.5050172805786133e-06,
+      "minimumZ": -1.8030405044555664e-06
+    },
+    {
+      "clip": "Vrax_Walk",
+      "sampledFrames": 29,
+      "frameZeroBodyMinimumZ": -6.705522537231445e-08,
+      "minimumZ": -1.2330710887908936e-06
+    }
+  ],
+  "previews": [
+    {
+      "clip": "Vrax_Idle",
+      "frame": 90,
+      "minZ": 0.0011642985045909882,
+      "bounds": [
+        [
+          -1.004899263381958,
+          0.9981133937835693
+        ],
+        [
+          -0.8326696753501892,
+          0.8293068408966064
+        ],
+        [
+          0.0011642985045909882,
+          0.7062100768089294
+        ]
+      ]
+    },
+    {
+      "clip": "Vrax_Attack",
+      "frame": 11,
+      "minZ": -2.60770320892334e-07,
+      "bounds": [
+        [
+          -0.9403842687606812,
+          1.086920142173767
+        ],
+        [
+          -0.7730322480201721,
+          0.7862148284912109
+        ],
+        [
+          -2.60770320892334e-07,
+          0.8631124496459961
+        ]
+      ]
+    },
+    {
+      "clip": "Vrax_Run",
+      "frame": 9,
+      "minZ": 4.2980536818504333e-07,
+      "bounds": [
+        [
+          -0.8569544553756714,
+          1.0479989051818848
+        ],
+        [
+          -0.841423511505127,
+          0.831831157207489
+        ],
+        [
+          4.2980536818504333e-07,
+          0.8935675621032715
+        ]
+      ]
+    }
+  ]
+}

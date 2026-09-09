@@ -1,0 +1,104 @@
+{
+  "version": 1,
+  "sampleRate": 30,
+  "clips": {
+    "Idle": {
+      "loop": true
+    },
+    "Roar": {
+      "loop": false
+    },
+    "FireBreath": {
+      "loop": false
+    },
+    "ClawStrike": {
+      "loop": false
+    },
+    "Hit": {
+      "loop": false
+    },
+    "Fireball": {
+      "loop": false
+    },
+    "Vrax_Idle": {
+      "loop": true
+    },
+    "Vrax_Walk": {
+      "loop": true
+    },
+    "Vrax_Run": {
+      "loop": true
+    },
+    "Vrax_Hit": {
+      "loop": false
+    },
+    "Vrax_Attack": {
+      "loop": false
+    },
+    "Vrax_Attack2": {
+      "loop": false
+    },
+    "Vrax_Attack3": {
+      "loop": false
+    },
+    "Vrax_Attack4": {
+      "loop": false
+    },
+    "Vrax_Attack5": {
+      "loop": false
+    },
+    "Vrax_Attack6": {
+      "loop": false
+    }
+  },
+  "sockets": {
+    "Root": {
+      "node": "Root",
+      "translation": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    "Chest": {
+      "node": "Chest",
+      "translation": [
+        0.0,
+        0.08875206112861633,
+        0.061017051339149475
+      ]
+    },
+    "Head": {
+      "node": "Head",
+      "translation": [
+        0.0,
+        0.07976281642913818,
+        -0.021769002079963684
+      ]
+    },
+    "Mouth": {
+      "node": "Jaw",
+      "translation": [
+        0.0,
+        0.1016165167093277,
+        -0.030233800411224365
+      ]
+    },
+    "EyeLeft": {
+      "node": "Head",
+      "translation": [
+        -0.03400000184774399,
+        0.06154794991016388,
+        -0.016847878694534302
+      ]
+    },
+    "EyeRight": {
+      "node": "Head",
+      "translation": [
+        0.03400000184774399,
+        0.06154794991016388,
+        -0.016847878694534302
+      ]
+    }
+  }
+}

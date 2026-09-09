@@ -1612,7 +1612,7 @@ Public Sub DrawAnimationButtons(ProfileIndex As Number,
     PageStart = 0
     PageEnd = ClipCount - 1
 
-    If ViewerProfiles.IsUnityCharacter(ProfileIndex) Then
+    If ClipCount > 9 Then
         PageStart = (Max(0, SelectedPresentationIndex) / 9) * 9
         PageEnd = Min(ClipCount - 1, PageStart + 8)
     End If
@@ -1636,7 +1636,7 @@ Public Sub DrawAnimationButtons(ProfileIndex As Number,
         )
     End For
 
-    If ViewerProfiles.IsUnityCharacter(ProfileIndex) Then
+    If ClipCount > 9 Then
         Call UI.DrawButton(AnimationButtonX(WindowWidth), 418, 108, 18, "Previous Page", False)
         Call UI.DrawButton(AnimationButtonX(WindowWidth) + 116, 418, 108, 18, "Next Page", False)
     End If
@@ -1933,7 +1933,7 @@ Private Function AnimationButtonAtPointer(PointerX As Number, PointerY As Number
     PageStart = 0
     PageEnd = ClipCount - 1
 
-    If ViewerProfiles.IsUnityCharacter(ProfileIndex) Then
+    If ClipCount > 9 Then
         PageStart = (Max(0, SelectedPresentationIndex) / 9) * 9
         PageEnd = Min(ClipCount - 1, PageStart + 8)
     End If
@@ -1961,7 +1961,7 @@ Private Function AnimationButtonAtPointer(PointerX As Number, PointerY As Number
 
     End For
 
-    If ViewerProfiles.IsUnityCharacter(ProfileIndex) Then
+    If ClipCount > 9 Then
 
         If InRectangle(PointerX, PointerY, AnimationButtonX(WindowWidth), 418, 108, 18) Then
             Result = Max(0, PageStart - 9)
