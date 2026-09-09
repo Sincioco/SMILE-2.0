@@ -38,20 +38,11 @@ Public Sub Update(ByRef Value As Context, Actor As Character3D.Actor, Camera As 
 
     If Value.Material.Handle = 0 Then
 
-        Value.Texture = Graphics3D.LoadTexture3D("Assets/Lightning/lightning-ribbon.png")
-        Value.Material = Graphics3D.CreateEffectMaterial3D(Value.Texture, Graphics3D.MATERIAL_ALPHA_ADDITIVE, 220)
-        Value.Names[0] = SocketPrefix + "0"
-        Value.Names[1] = SocketPrefix + "1"
-        Value.Names[2] = SocketPrefix + "2"
-        Value.Names[3] = SocketPrefix + "3"
-        Value.Names[4] = SocketPrefix + "4"
-        Value.Names[5] = SocketPrefix + "5"
-        Value.Names[6] = SocketPrefix + "6"
-        Value.Names[7] = SocketPrefix + "7"
+        If Not TryAcquire(Value, SocketPrefix) Then
+            Value.Visible = False
 
-        For Layer = 0 To 2
-            Value.Ribbons[Layer] = Graphics3D.CreateRibbonBatch3D(9, Value.Material)
-        End For
+            Return
+        End If
 
     End If
 
@@ -104,6 +95,51 @@ Public Sub Update(ByRef Value As Context, Actor As Character3D.Actor, Camera As 
 
 End Sub
 
+Private Function TryAcquire(ByRef Value As Context, SocketPrefix As Text) As Boolean
+
+    Dim Candidate As Context
+    Dim Layer As Number
+    Dim Ready As Boolean
+
+    Candidate.Texture = Graphics3D.LoadTexture3D("Assets/Lightning/lightning-ribbon.png")
+
+    If Candidate.Texture.Handle = 0 Then
+        Return False
+    End If
+
+    Candidate.Material = Graphics3D.CreateEffectMaterial3D(
+        Candidate.Texture, Graphics3D.MATERIAL_ALPHA_ADDITIVE, 220)
+    Ready = Candidate.Material.Handle <> 0
+
+    For Layer = 0 To 2
+
+        If Ready Then
+            Candidate.Ribbons[Layer] = Graphics3D.CreateRibbonBatch3D(9, Candidate.Material)
+            Ready = Candidate.Ribbons[Layer].Handle <> 0
+        End If
+
+    End For
+
+    If Not Ready Then
+        Call Shutdown(Candidate)
+
+        Return False
+    End If
+
+    Candidate.Names[0] = SocketPrefix + "0"
+    Candidate.Names[1] = SocketPrefix + "1"
+    Candidate.Names[2] = SocketPrefix + "2"
+    Candidate.Names[3] = SocketPrefix + "3"
+    Candidate.Names[4] = SocketPrefix + "4"
+    Candidate.Names[5] = SocketPrefix + "5"
+    Candidate.Names[6] = SocketPrefix + "6"
+    Candidate.Names[7] = SocketPrefix + "7"
+    Value = Candidate
+
+    Return True
+
+End Function
+
 Public Sub Draw(ByRef Value As Context)
 
     Dim Layer As Number
@@ -133,7 +169,7 @@ Public Sub Shutdown(ByRef Value As Context)
 
     Dim Layer As Number
 
-    For Layer = 0 To 2
+    For Layer = 2 Down To 0
         Call Graphics3D.DestroyRibbonBatch3D(Value.Ribbons[Layer])
     End For
 

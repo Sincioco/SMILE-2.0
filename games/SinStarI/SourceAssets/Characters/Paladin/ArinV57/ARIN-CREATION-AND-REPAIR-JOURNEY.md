@@ -1,5 +1,12 @@
 # Arin: Creation, Import, Animation, and Repair Lessons
 
+September 9 post-delivery VFX-01: equipment-rim acquisition now promotes only a
+complete texture/material/three-ribbon candidate. Capacity rejection rolls back
+the candidate and the same visible context can recover on a later normal update.
+Public Arin native/generated-Web pressure tests preserve independent rims and
+return resources to baseline. No asset, calibration, palette or pool limit changed;
+see the equipment VFX checkpoint for evidence.
+
 Permanent handoff for Sin and future Codex work. Recorded September 5, 2026.
 Repository: `D:\SMILE 2.0`. Character identity: `sin-star-i.character-1.paladin`.
 

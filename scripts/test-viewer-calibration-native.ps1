@@ -210,6 +210,7 @@ Game Window "SMILE Party Precision Tests" Size 640 By 480
 Session.ProfileIndex = ViewerProfiles.PROFILE_ARIN
 
 Call LoadViewer()
+Call CheckEquipmentRimRecovery()
 Call CheckEquipmentGlowAlignment()
 Call SelectCharacterTab(1)
 Call CheckEquipmentGlowAlignment()

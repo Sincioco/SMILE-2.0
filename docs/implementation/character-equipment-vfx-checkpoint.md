@@ -1,5 +1,38 @@
 # Valor and Zara equipment VFX — September 9, 2026
 
+## Post-delivery hardening: VFX-01
+
+Package `smile-2.0-post-delivery-review-hardening`, revision 1, verified against
+clean HEAD and fetched origin/main `6c523b63c8fca0f64f5c606ec555e30adffd4349`.
+All 11 manifest files matched; archive SHA-256
+`dace532fde81ca7d23b26bec0a1c4a2929e0396de29db0c8d144e47f7105c627`.
+No newer source or user edits required reconciliation.
+
+VFX-01 reproduced on native and compiler-generated Web: two available ribbon
+slots left a material and two ribbons stranded, and later freed capacity did not
+repair the same context. Texture exhaustion also admitted dependent resources
+without the required texture. `ArinShieldRim.TryAcquire` now commits only a complete
+texture/material/three-ribbon candidate; failed acquisition releases owned resources
+in reverse dependency order and returns failure. A normal later Update retries.
+An initialized context retains its handles; other callers and pool limits are unchanged.
+
+`CalibrationTests.CheckEquipmentRimRecovery` and its texture-pressure companion
+exercise the real module with public Arin assets through the existing isolated
+native/generated-Web harness. Rollback, same-context recovery, an independent healthy
+rim, six actual ribbon draws, steady handles, hide/restore, repeated shutdown and
+return to starting resource counts pass. Generated Web evidence uses the existing
+renderer-state harness, not browser-pixel observation. The longer sequential recovery
+test intentionally keeps admission, recovery and teardown in one existing test owner;
+the production acquisition helper remains below the 60-logical-line review trigger.
+`Program.smile`, canonical models/calibration, palettes and numeric rules are unchanged.
+
+Focused command: `scripts/test-viewer-calibration-native.ps1 -IncludeWebPrecision`.
+Reproduction and passing logs: `artifacts/temp/post-delivery-hardening-r1/vfx-*`.
+The harness's reused output directory reported SML3605 for its prior isolated
+application identity; the generated publication was replaced and exact parity passed.
+Final integration, source commit identities and installed-payload delivery are recorded
+with the post-acceptance compiler follow-up in the existing Double checkpoint.
+
 ## Requested appearance
 
 Valor retains Arin's sword flame behavior and three faint shield edge emitters,

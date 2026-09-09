@@ -38,6 +38,7 @@ Session.ProfileIndex = ViewerProfiles.PROFILE_ARIN
 
 Call LoadViewer()
 Call CalibrationCheck(Session.Ready And Not Session.ViewerError, "Load profile")
+Call CheckEquipmentRimRecovery()
 Call CheckEquipmentGlowAlignment()
 Call CalibrationCheck(Not Calibration.StorageRejected, "Accept current Arin saved calibration")
 Call CheckGizmoVisibility()
@@ -715,6 +716,164 @@ Sub ApplyCalibrationControlForTest(Action As Number)
     )
 
     Call ViewerSession.ApplyCalibrationOperation(Session, TestCalibrationOperation)
+
+End Sub
+
+Sub CheckEquipmentRimRecovery()
+
+    Dim RimCamera As Precision3D.Camera3D
+    Dim Healthy As ArinShieldRim.Context
+    Dim Trial As ArinShieldRim.Context
+    Dim Original As ArinShieldRim.Context
+    Dim Blockers[16] As Core.RibbonBatch3D
+    Dim BaseTextures As Number
+    Dim BaseMaterials As Number
+    Dim BaseRibbons As Number
+    Dim BlockerCount As Number
+    Dim Index As Number
+
+    RimCamera = Precision3D.FromCamera(Graphics3D.DefaultCamera())
+    BaseTextures = Graphics3D.LiveTextureCount3D()
+    BaseMaterials = Graphics3D.LiveMaterialCount3D()
+    BaseRibbons = Graphics3D.LiveRibbonBatchCount3D()
+
+    Call ArinShieldRim.Update(Healthy, Character, RimCamera, 16)
+    Call CalibrationCheck(Healthy.Visible, "Independent rim is healthy before pressure")
+
+    Original = Healthy
+    BlockerCount = Graphics3D.VfxValue3D(Graphics3D.VFX_QUERY_MAX_RIBBON_BATCHES)
+    BlockerCount = BlockerCount - Graphics3D.LiveRibbonBatchCount3D() - 2
+
+    Call CalibrationCheck(BlockerCount > 0 And BlockerCount <= 16,
+        "Bounded rim fixture leaves exactly two ribbon slots")
+
+    For Index = 0 To BlockerCount - 1
+        Blockers[Index] = Graphics3D.CreateRibbonBatch3D(2, Healthy.Material)
+
+        Call CalibrationCheck(Blockers[Index].Handle <> 0, "Acquire pressure ribbon")
+    End For
+
+    Call ArinShieldRim.Update(Trial, Character, RimCamera, 16, 100, 0, 1)
+    Call CheckEmptyEquipmentRim(Trial)
+    Call CalibrationCheck(Graphics3D.LiveRibbonBatchCount3D() = BaseRibbons + 3 + BlockerCount And
+        Graphics3D.LiveTextureCount3D() = BaseTextures + 1 And
+        Graphics3D.LiveMaterialCount3D() = BaseMaterials + 1,
+        "Failed third ribbon rolls back the complete candidate")
+    Call Graphics3D.DestroyRibbonBatch3D(Blockers[0])
+    Call ArinShieldRim.Update(Trial, Character, RimCamera, 16, 100, 0, 1)
+    Call CalibrationCheck(Trial.Visible, "Same visible context recovers when capacity returns")
+
+    For Index = 0 To 2
+
+        Call CalibrationCheck(Graphics3D.RibbonBatchHandleValid3D(Trial.Ribbons[Index]),
+            "Recovered rim has every required ribbon")
+        Call CalibrationCheck(Healthy.Ribbons[Index].Handle = Original.Ribbons[Index].Handle And
+            Graphics3D.RibbonBatchHandleValid3D(Healthy.Ribbons[Index]),
+            "Independent rim retains its original ribbon")
+    End For
+
+    Call CalibrationCheck(Healthy.Texture.Handle = Original.Texture.Handle And
+        Healthy.Material.Handle = Original.Material.Handle And Healthy.Visible,
+        "Independent texture and material remain intact")
+
+    Original = Trial
+
+    For Index = 0 To 2
+
+        Call ArinShieldRim.Update(Trial, Character, RimCamera, 16, 100, 0, 1)
+        Call CalibrationCheck(Trial.Visible And Trial.Texture.Handle = Original.Texture.Handle And
+            Trial.Material.Handle = Original.Material.Handle And
+            Trial.Ribbons[Index].Handle = Original.Ribbons[Index].Handle,
+            "Steady visible update does not reacquire resources")
+    End For
+
+    Call CalibrationCheck(Scene3D.BeginPrecise(RimCamera, 8, 12, 20),
+        "Begin recovered rim submission")
+    Call ArinShieldRim.Draw(Healthy)
+    Call ArinShieldRim.Draw(Trial)
+    Call CalibrationCheck(Scene3D.EndScene(), "End recovered rim submission")
+    Call CalibrationCheck(Graphics3D.RibbonDrawCount3D() = 6,
+        "Both independent rims submit all three ribbons")
+
+    For Index = 0 To BlockerCount - 1
+        Call Graphics3D.DestroyRibbonBatch3D(Blockers[Index])
+    End For
+
+    Call ArinShieldRim.Shutdown(Trial)
+    Call ArinShieldRim.Shutdown(Trial)
+    Call CheckEmptyEquipmentRim(Trial)
+    Call ArinShieldRim.Update(Trial, Character, RimCamera, 16, 100, 0, 2)
+    Call CalibrationCheck(Trial.Visible, "Hidden rim restores normally")
+    Call ArinShieldRim.Shutdown(Trial)
+    Call ArinShieldRim.Shutdown(Healthy)
+    Call CalibrationCheck(Graphics3D.LiveTextureCount3D() = BaseTextures And
+        Graphics3D.LiveMaterialCount3D() = BaseMaterials And
+        Graphics3D.LiveRibbonBatchCount3D() = BaseRibbons,
+        "Rim teardown returns every resource to its starting baseline")
+    Call CheckEquipmentRimTextureFailure()
+
+End Sub
+
+Sub CheckEquipmentRimTextureFailure()
+
+    Dim Trial As ArinShieldRim.Context
+    Dim Blockers[128] As Core.Texture3D
+    Dim Camera As Precision3D.Camera3D
+    Dim BaseTextures As Number
+    Dim BaseMaterials As Number
+    Dim BaseRibbons As Number
+    Dim BlockerCount As Number
+    Dim Index As Number
+
+    Camera = Precision3D.FromCamera(Graphics3D.DefaultCamera())
+    BaseTextures = Graphics3D.LiveTextureCount3D()
+    BaseMaterials = Graphics3D.LiveMaterialCount3D()
+    BaseRibbons = Graphics3D.LiveRibbonBatchCount3D()
+    BlockerCount = Graphics3D.MaximumTextureCount3D() - BaseTextures
+
+    Call CalibrationCheck(BlockerCount > 0 And BlockerCount <= 128,
+        "Bounded fixture can fill texture capacity")
+
+    For Index = 0 To BlockerCount - 1
+        Blockers[Index] = Graphics3D.LoadTexture3D("Assets/Lightning/lightning-ribbon.png")
+
+        Call CalibrationCheck(Blockers[Index].Handle <> 0, "Acquire pressure texture")
+    End For
+
+    Call ArinShieldRim.Update(Trial, Character, Camera, 16)
+    Call CheckEmptyEquipmentRim(Trial)
+    Call CalibrationCheck(Graphics3D.LiveTextureCount3D() = BaseTextures + BlockerCount And
+        Graphics3D.LiveMaterialCount3D() = BaseMaterials And
+        Graphics3D.LiveRibbonBatchCount3D() = BaseRibbons,
+        "Failed first acquisition leaves no dependent resources")
+    Call Graphics3D.DestroyTexture3D(Blockers[0])
+    Call ArinShieldRim.Update(Trial, Character, Camera, 16)
+    Call CalibrationCheck(Trial.Visible And Trial.Texture.Handle <> 0,
+        "Same rim recovers after texture capacity returns")
+    Call ArinShieldRim.Shutdown(Trial)
+
+    For Index = 0 To BlockerCount - 1
+        Call Graphics3D.DestroyTexture3D(Blockers[Index])
+    End For
+
+    Call CalibrationCheck(Graphics3D.LiveTextureCount3D() = BaseTextures And
+        Graphics3D.LiveMaterialCount3D() = BaseMaterials And
+        Graphics3D.LiveRibbonBatchCount3D() = BaseRibbons,
+        "Texture-pressure fixture returns to its resource baseline")
+
+End Sub
+
+Sub CheckEmptyEquipmentRim(Value As ArinShieldRim.Context)
+
+    Dim Index As Number
+
+    Call CalibrationCheck(Not Value.Visible And Value.Texture.Handle = 0 And
+        Value.Material.Handle = 0, "Failed or hidden rim retains no initialized sentinel")
+
+    For Index = 0 To 2
+        Call CalibrationCheck(Value.Ribbons[Index].Handle = 0,
+            "Failed or hidden rim retains no partial ribbon")
+    End For
 
 End Sub
 

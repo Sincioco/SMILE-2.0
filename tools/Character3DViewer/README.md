@@ -22,7 +22,7 @@ Desktop and Web. Quick taps remain frame steps even after Control is released;
 plain arrows still orbit. This uses the shared `Key_Event_Held` built-in and does
 not change live `Key_Held` behavior or any saved calibration.
 
-Native-first reusable inspection and lightweight pose-correction tool. Party is the launch default. The Character tabs select Arin, Orin, Dragon, or the Party arena. Desktop Profile retains Arin v5.6, the earlier prototype, and the technical fixture for diagnostics. Web publication omits that control, its shortcut and the obsolete diagnostic assets. H6.1 is retained historical PASS evidence; the current refactor uses its own gate tied to current code. This is not the future Battle Scene Editor.
+Native-first reusable inspection and lightweight pose-correction tool. Party is the launch default. The Character tabs select the available roster listed above or the Party arena. Desktop Profile retains Arin v5.6, the earlier prototype, and the technical fixture for diagnostics. Web publication omits that control, its shortcut and the obsolete diagnostic assets. H6.1 is retained historical PASS evidence; the current refactor uses its own gate tied to current code. This is not the future Battle Scene Editor.
 
 The Viewer explicitly enables the shared polished planar floor on native Desktop and Web. The visible `Battle Floor: Reflective / Original` button is available in each character inspector and in the default Party panel beside the floor/environment controls. Reflective mode mirrors eligible characters and equipment beneath the original grid. It also maps only the screen-fixed background region visible above the projected floor edge, so the reflection cannot reveal artwork hidden behind the floor. Original mode keeps the established matte black floor and grid. The toggle preserves calibration, playback, camera, background, and character selection; full presentation reset restores the session default Reflective mode. Hiding the floor suppresses the receiver work without changing the preference. An optional graphics allocation/render failure keeps the original matte scene usable and reports `Battle Floor: Unavailable` rather than claiming the effect is active. Animation diagnostics are placed below the floor control and are hidden at compact window heights where they would collide with lower controls.
 
@@ -40,12 +40,12 @@ submission order. No extra simulation, pose update or calibration channel is cre
 
 Dragon inspection uses the same clip buttons, timeline/frame stepping, playback speed, demo, lighting/material channels, sockets, pan/orbit/zoom and reset as the hero tabs. Both heroes remain in the arena with their own assets and saved corrections. Head Aim constrains only the head joint; At Arin/At Orin selects its target. The current Pose Calibration targets remain humanoid wrists and equipment, so they do not apply to Dragon. Dragon VFX and hero equipment visibility remain independent. Pose is disabled for Dragon, including its turn in Party.
 
-Party members start on a 300-unit front arc with 40 degrees between its endpoints. The placement function distributes any supplied member count over that arc. The two current attack destinations remain in front of the Dragon; approach and retreat interpolate from each member's own home position. Battle cameras sample this frame's actor/Dragon poses.
+Party members start on a 300-unit front arc with 40 degrees between its endpoints. The placement function distributes any supplied member count over that arc. Each member approaches the selected boss from its own home position and returns there after attacking. Battle cameras sample the current actor and boss poses.
 
 The Party runtime stores home, approach, bounds-derived clearance and facing metadata in
 participant records. It separates approach lanes when the actors' measured ground-plane
-bounds would overlap. The shared formation evaluator is covered with a technical third
-participant; no unfinished third hero asset is implied.
+bounds would overlap. The public formation regression uses a synthetic third participant; local builds
+add the separately packaged Valor and Zara actors.
 
 The editor source and build/launch entry points belong here. Sin Star I owns the self-contained character package at `games\SinStarI\SourceAssets\Characters\Paladin\ArinV57`. Orin owns `games\SinStarI\SourceAssets\Characters\Tank\OrinV13`. Do not edit ignored cooking inputs as canonical character assets.
 
@@ -74,19 +74,21 @@ on both pieces of equipment, without star particles. Lightning preserves the
 earlier appearance and star trail for comparison. Attack selection and discharge
 timing remain independent of this appearance button.
 
-Both hero panels have separate **Weapon** and **Shield** intensity minus/plus
+Arin and Orin panels have separate **Weapon** and **Shield** intensity minus/plus
 controls, from 0% to 200% in 10% steps. 100% is each style's intended baseline,
 not an absolute brightness unit. Changes affect attached glow and emission;
 renderer capacity and opacity limits still apply at high settings. Preferences
 survive character-tab changes during this session and do not write pose saves.
 Freeze Flames/Lightning follows Orin's selected effect family.
 
-The shared fire pool admits twelve emitters. Dragon inspection/Party needs eight:
+The shared fire pool admits twelve emitters. The public two-hero/Dragon Party
+and Dragon inspection scenario uses eight:
 Arin's sword and three shield edges, Orin's hammer and shield, Dragon mouth heat,
 and the active breath/projectile. Both native and Web also support all twelve in
 CPU fallback through 64 shared particle batches, retaining the 8,192-particle
-ceiling. Four remaining fire slots can accommodate two more weapon/shield pairs;
-new characters still need complete scene admission checks for their actual effects.
+ceiling. That Dragon scenario leaves four slots. The local four-hero/Vrax scene
+uses ten emitters (Arin four, Orin two, Valor four) and leaves two slots; Zara uses
+ribbons only. New effects require admission checks for the complete active scene.
 Floor reflections replay existing submissions and consume no extra emitters.
 ViewerDragon retries temporary pool pressure and clears failed admission on an
 explicit effect reset. The production-actor budget/retry test is part of the
@@ -183,7 +185,8 @@ only to their named optimized directory, so the four Web publications do not
 overwrite one another.
 
 The Viewer Web build generates an ignored publication project and profile policy
-containing only the current Arin, Orin and Dragon model assets. The normal asset
+containing the current Arin, Orin and Dragon models, plus the complete optional
+private Valor/Zara/Vrax roster when present. Private builds remain local. The normal asset
 publisher removes obsolete managed diagnostic files from that Web output only.
 Textures are neither transcoded nor resized; Desktop diagnostics and canonical
 packages remain intact. Visual Studio's direct project build does not invoke this
@@ -286,35 +289,36 @@ for Save Frame or Cancel inside the editor. Both characters use the same correct
 
 ## Party arena
 
-Party places Arin and Orin together on the arena, facing the dragon. They approach, attack,
-return to formation, and take turns while the other guards. The camera orbits by default.
+Local Party places Arin, Orin, Valor and Zara opposite Vrax; public checkouts
+retain Arin and Orin opposite Dragon. Heroes approach, attack and return to
+formation in turn, while the others idle or guard. The camera orbits by default.
 Camera 1 sweeps a smooth front arc from one side of the boss to the other, using the same
 12-degree-per-second phase rate as the individual tabs and easing at the arc endpoints.
 It keeps advancing while battle cameras are selected. Camera 2 frames the heroes' attack
 and defense beats; rear views sit near waist height and look upward toward the boss.
-Camera 3 looks past the Dragon's head and mouth toward the party during its windup and
-fireball charge. The two battle cameras cut immediately between their independent poses.
-Arin and Orin begin side by side on the dragon's forward centerline, converge on
-two close chest lanes, and stop outside its body before attacking. Orin applies his own -55-degree
+Camera 3 frames the selected boss toward the party; Dragon uses this shot for
+its windup and fireball charge. The two battle cameras cut immediately between their independent poses.
+Participants use their formation homes and bounds-derived approach lanes, stopping
+outside the selected boss before attacking. Orin applies his own -55-degree
 visual yaw correction so his imported hammer stance faces the target. The closer arena camera
 keeps both sides readable while the nearer actor crosses the foreground. The viewer opens
 directly in Party mode. Its controls sit in a dedicated left panel below the shared character
 tabs, and the panel names the active attack while a party member strikes. Orin's Death
 presentation follows a measured ground curve so his falling body settles onto the arena floor.
 Space pauses movement; the usual pan, orbit, eased zoom, keyboard controls and reset remain
-available. Weapon and Shield affect both members. Party uses the same right inspector and
+available. Weapon and Shield affect all current heroes and their attached effects; Zara has no shield. Party uses the same right inspector and
 bottom timeline as the individual tabs, following whichever actor owns the current turn.
 Timeline navigation pauses the scene and previews that actor without advancing the battle.
 Open Pose to edit the active Arin or Orin using that hero's own saved correction track.
 The Pose panel temporarily occupies the Party/Enemy left-panel area; closing it restores
-the Party controls. Dragon permits timeline inspection only. Resume restores the original
+the Party controls. Valor, Zara, Vrax and Dragon permit timeline inspection without pose editing. Resume restores the original
 demo clip/time after preview, without rerolling a target, advancing a turn, or applying any
 combat side effects. Save or cancel an active pose edit before resuming. The existing demo
 choreography remains unchanged; this is not a battle-sequence authoring interface.
-The right status panel follows the current attacker, including Dragon animation details,
+The right status panel follows the current attacker, including the selected boss animation details,
 and reports the actual remaining turn time. Speed changes restart the Party demonstration.
-Arin retains his thermal equipment fire. Orin's hammer glows white with crawling lightning;
-only the shield perimeter receives the aura. His tab offers Thunder Smash, Storm Lance,
+Arin retains his thermal equipment fire. Orin defaults to blue/white flames with a white shield rim and offers the
+Neon Arcs and Lightning appearance alternatives described above. His tab offers Thunder Smash, Storm Lance,
 Chain Arcs and Godstorm styles, with full/reduced/off flash and shake. Reduced is the default.
 The CPU charge controller and calibrated equipment sockets live in `OrinStorm.smile`.
 Each Orin presenter has its own generation-safe context, charge latches, clip/time
@@ -332,7 +336,9 @@ after a normal swing. Hiding its hammer or owner destroys that context's trail i
 including while frozen, without affecting another actor. The slam does not retrigger during
 follow-through. The white glow mesh uses the actor's final grounded transform.
 
-The dragon opens the demonstration, alternating Fire Breath and Claw Strike on its turns.
+In the public two-hero/Dragon demonstration, Dragon opens and alternates Fire
+Breath and Claw Strike. The local Vrax roster instead rotates boss, Arin, Orin,
+Valor and Zara turns using their own imported clips.
 Heroes guard before responding. Arin rotates through both sword attacks; Orin rotates
 through Sword Attack, Jump Attack and Thor Attack. An extra boss-first guard beat occurs
 periodically. This is bounded clip rotation, not a combat AI or randomized hero move picker.

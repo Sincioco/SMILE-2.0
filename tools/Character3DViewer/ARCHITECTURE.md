@@ -18,6 +18,12 @@ the actor's part, socket prefix and color style, so Arin, Valor and Zara never s
 mutable ribbon state. Their sockets are canonical package data. Native mesh draws
 restore triangle-list topology after reflected ribbon draws.
 
+`ArinShieldRim` acquires each complete texture/material/three-ribbon candidate
+before publishing it to its caller. Failed candidates are released locally; the
+same caller can retry on its next normal update. The isolated calibration fixture
+proves native/generated-Web capacity recovery and independent owners without
+private roster assets or pool changes.
+
 This map describes the behavior-preserving refactor that began from reviewed commit
 `5bfd4f96ee838ca1b6b255c28c4117b0e0a5ec7b`. It is a navigation and ownership
 contract, not a new feature specification. `Program.smile` remains the executable
