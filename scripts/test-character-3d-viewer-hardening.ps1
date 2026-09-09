@@ -679,7 +679,7 @@ try {
         'Public Sub DrawEquipmentFire(',
         'Public Function DrawScene(',
         'Public Sub ResetPlaybackControls(',
-        'Public Sub ResetArinAudio(',
+        'Public Sub ResetAudio(',
         'Public Sub UpdateArinAudio(',
         'Public Function ShutdownShared(')) {
         Assert-Contains $effectsSource $contract 'Viewer effects owner'

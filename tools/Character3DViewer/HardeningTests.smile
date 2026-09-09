@@ -2461,10 +2461,14 @@ Call Check(Not EffectsState.SwordFireFailed And Not EffectsState.ShieldFireFaile
 Call Check(EffectsState.EquipmentFireFirstError = 0)
 
 EffectsState.ArinAudio.Clip = "SwordAttack"
+EffectsState.VraxAudio.Voice.Clip = "Attack"
+EffectsState.VraxAudio.Swoosh.Clip = "Attack"
 
-Call ViewerEffects.ResetArinAudio(EffectsState)
+Call ViewerEffects.ResetAudio(EffectsState)
 
 Call Check(EffectsState.ArinAudio.Clip = "")
+Call Check(EffectsState.VraxAudio.Voice.Clip = "")
+Call Check(EffectsState.VraxAudio.Swoosh.Clip = "")
 Call ViewerParty.UpdateOrinStorm(
     PartyState,
     DragonState,
