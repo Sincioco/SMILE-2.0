@@ -59,9 +59,9 @@ Const CALIBRATION_MAX_CLIPS = ViewerCalibration.MAX_CLIPS
 Const BACKGROUND_COUNT = 5
 Const BACKDROP_LANDSCAPE_PATH = "Assets\Backgrounds\SinStarLandscape.png"
 Const BACKDROP_TITLE_PATH = "Assets\Backgrounds\SinStarTitleWithLogo.png"
-Const PARTY_FORMATION_RADIUS = 300
-Const PARTY_FORMATION_START_ANGLE = 10
-Const PARTY_FORMATION_END_ANGLE = 50
+Const PARTY_FORMATION_RADIUS = 450
+Const PARTY_FORMATION_START_ANGLE = 0
+Const PARTY_FORMATION_END_ANGLE = 60
 Dim Party As ViewerParty.State
 Dim Character As Character3D.Actor
 Dim CharacterBounds As Character3D.Bounds3D
@@ -194,7 +194,8 @@ Do
             DragonState.Available,
             ARENA_CAMERA_CENTER_X,
             ARENA_CAMERA_CENTER_Z,
-            ARENA_CAMERA_DISTANCE,
+            ViewerProfiles.ArenaCameraDistance(
+                Session.ProfileIndex, ARENA_CAMERA_DISTANCE),
             ARENA_CAMERA_HEIGHT
         )
 

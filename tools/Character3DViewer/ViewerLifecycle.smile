@@ -123,13 +123,14 @@ Private Sub BeginAssetLoad(ByRef Session As ViewerSession.State,
     Call ViewerParty.ClearPreview(Party)
 
     ActiveProfile = ViewerProfiles.ProfileAt(Session.ProfileIndex)
-    Dragon.UseVrax = Party.Enabled And ViewerProfiles.INCLUDE_UNITY_CHARACTERS
+    Dragon.UseVrax = ((Party.Enabled And ViewerProfiles.INCLUDE_UNITY_CHARACTERS) Or
+        ViewerProfiles.UsesVraxOpponent(Session.ProfileIndex))
 
     Call ViewerCalibration.SelectProfileBank(Calibration, Session.ProfileIndex)
 
     Call ViewerDragon.SetAvailable(
         Dragon,
-        ViewerProfiles.IsPartyCharacter(Session.ProfileIndex) Or Session.DragonInspection
+        ViewerProfiles.HasBattleOpponent(Session.ProfileIndex) Or Session.DragonInspection
     )
 
     Call ViewerActors.ResetEquipmentVisibility(Equipment)
@@ -157,7 +158,9 @@ Private Sub BeginAssetLoad(ByRef Session As ViewerSession.State,
         Session.DragonInspection, ViewerDragon.ScalePercent(),
         ViewerDragon.PositionX(), 0, ViewerDragon.PositionZ(), Dragon.Available,
         Settings.ArenaCameraCenterX, Settings.ArenaCameraCenterZ,
-        Settings.ArenaCameraDistance, Settings.ArenaCameraHeight
+        ViewerProfiles.ArenaCameraDistance(
+            Session.ProfileIndex, Settings.ArenaCameraDistance),
+        Settings.ArenaCameraHeight
     ) And Session.Ready
 
     Call ViewerSession.CaptureFailure(Session, 33)
@@ -312,7 +315,7 @@ Private Sub CreateParticipants(ByRef Session As ViewerSession.State,
 
     If (Party.Enabled Or
         Session.DragonInspection Or
-        Session.ProfileIndex = ViewerProfiles.PROFILE_ORIN Or
+        ViewerProfiles.HasBattleOpponent(Session.ProfileIndex) Or
         Session.ProfileIndex = ViewerProfiles.PROFILE_VRAX) Then
         Session.Ready = ViewerEffects.PrepareLightning(Effects) And Session.Ready
     End If

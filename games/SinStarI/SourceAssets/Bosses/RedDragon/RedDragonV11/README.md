@@ -38,6 +38,13 @@ foot planting, facial controls, collision-driven damage, navigation or flight.
 The rendered preview PNG is a Blender inspection render; the Party screenshot
 under `docs/implementation/screenshots/orin-storm` is native runtime evidence.
 
+## Expanded Fire Breath — September 9, 2026
+
+The Character Viewer keeps the existing Mouth socket, FireBreath clip window and
+single shared fire-emitter lease. Its preview radius is now 16 and intensity 300,
+making the stream and target contact read substantially larger without increasing
+the shared emitter limit or changing the dragon model, rig, texture or animation.
+
 ## September 5 animation refinement
 
 The wing shoulder now leads the elbow and tip with a small left/right timing

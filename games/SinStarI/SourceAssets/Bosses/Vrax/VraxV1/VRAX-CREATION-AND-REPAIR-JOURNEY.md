@@ -49,6 +49,9 @@ grounding corrections must be updated together after any re-export.
 Vrax now uses 20000% scale, twice the first preview capped at 10000%. The same
 profile applies in his tab and Party. Orin effects must not depend on a Vrax Chest
 socket: the Party owner uses current world bounds as the fallback target.
+Valor and Zara's individual Viewer tabs also instantiate this same Vrax package as
+their battle-preview opponent. Their arena camera uses twice the standard opponent
+distance so the accepted 20000% Vrax scale and the active hero remain visible.
 
 ## Mouth Fire And Arm Lightning — September 9, 2026
 
@@ -67,3 +70,11 @@ The model, textures, all 24 animations, grounding corrections and 20000% transfo
 scale are unchanged. The GLB remains SHA-256
 `ec863933e6898fb81672aaa979eada343b3b2eedcdc433a8b2c65bfe7a8a84fb`.
 See the equipment VFX checkpoint for validation and whole-scene budgets.
+
+## Expanded Attack Presentation — September 9, 2026
+
+The same single mouth emitter now uses radius 24 and intensity 320, with a
+420-unit forward endpoint and 900-unit velocity. This makes the emitted stream
+and target contact read substantially larger without adding an emitter, changing
+the twelve-emitter scene budget or altering either arm-lightning lease. The model,
+textures, sockets, animations and grounding remain unchanged.

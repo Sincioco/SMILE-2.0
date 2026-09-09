@@ -904,6 +904,7 @@ Call Check(ViewerUi.CalibrationAxisLabel(1) = "Y")
 Call Check(ViewerUi.CalibrationTransformLabel(1) = "Move")
 Call Check(ViewerUi.CalibrationUnitLabel(0) = "degrees")
 Call Check(ViewerUi.CalibrationResetClipLabel(True) = "Confirm Current Clip?")
+
 Call Check(ViewerUi.CalibrationResetAllLabel(2) = "Really Clear?")
 Call Check(ViewerUi.BackgroundLabel(4) = "BG LOGO")
 Call Check(ViewerUi.DragonLabel(False, True, False) = "DRAGON OFF")
@@ -930,6 +931,7 @@ Call Check(BattleArenaPreview.ReflectionLabel(True,
     Graphics3D.REFLECTION_FALLBACK_RENDER_FAILED) = "Battle Floor: Unavailable")
 Call Check(BattleArenaPreview.ReflectionLabel(True,
     Graphics3D.REFLECTION_FALLBACK_NONE) = "Battle Floor: Reflective")
+
 Call Check(ViewerUi.StatusPanelX(1600) = 1332)
 Call Check(ViewerUi.AnimationButtonX(1600) = 1344)
 Call Check(ViewerUi.GlowButtonX(1600, True, False) = 1548)
@@ -941,7 +943,11 @@ Call Check(ViewerUi.TimelineKeyframeAtPointer(
 Call Check(ViewerUi.CharacterTabsContain(18, 62))
 Call Check(ViewerUi.CharacterTabAtPointer(104, 62) = 0)
 Call Check(ViewerUi.CharacterTabAtPointer(140, 62) = -1)
-Call Check(ViewerUi.CharacterTabAtPointer(262, 62) = 3)
+Call Check(ViewerUi.CharacterTabAtPointer(202, 62) = 4)
+Call Check(ViewerUi.CharacterTabAtPointer(262, 62) = 5)
+Call Check(ViewerUi.CharacterTabAtPointer(322, 62) = 2)
+Call Check(ViewerUi.CharacterTabAtPointer(382, 62) = 6)
+Call Check(ViewerUi.CharacterTabAtPointer(442, 62) = 3)
 Call Check(ViewerUi.TimelineContains(18, 576, 800, 640))
 Call Check(ViewerUi.CalibrationGizmoButtonContains(300, 268))
 Call Check(ViewerUi.TransferActionAtPointer(176, 597, 640, True, 100) =
@@ -964,6 +970,7 @@ Call Check(ViewerUi.InspectorActionAtPointer(
     500, 576, 800, 640, 0, False, False,
     ViewerProfiles.PROFILE_ARIN, False, 2, 0) =
     ViewerUi.INSPECTOR_ACTION_KEYFRAME)
+
 Call Check(ViewerUi.InspectorActionAtPointer(
     532, 18, 800, 640, 0, False, False,
     ViewerProfiles.PROFILE_ARIN, False, -1, 0) =
@@ -980,6 +987,7 @@ Call Check(ViewerUi.InspectorActionAtPointer(
     706, 444, 800, 640, 0, False, False,
     ViewerProfiles.PROFILE_DRAGON, False, -1, 0) =
     ViewerUi.INSPECTOR_ACTION_DRAGON_TARGET)
+
 Call Check(ViewerUi.InspectorActionAtPointer(
     544, 470, 800, 640, 0, False, False,
     ViewerProfiles.PROFILE_ORIN, False, -1, 0) =
@@ -1008,6 +1016,7 @@ Call Check(ViewerUi.InspectorActionAtPointer(
     532, 18, 800, 640, 1, False, False,
     ViewerProfiles.PROFILE_ARIN, False, -1, 0) =
     ViewerUi.INSPECTOR_ACTION_NONE)
+
 Call Check(ViewerUi.TIMELINE_LEFT = 18 And ViewerUi.TIMELINE_HEIGHT = 18)
 Call Check(ViewerUi.CALIBRATION_PANEL_WIDTH = 430 And
     ViewerUi.CALIBRATION_SLIDER_WIDTH = 360)
@@ -1372,14 +1381,16 @@ Call Check(Not ViewerParty.DragonTargetsPrimary(PartyState))
 PartyState.Turn = 0
 PartyState.Elapsed = 0
 
-Call Check(ViewerParty.PresentationSecondsRemaining(
-    PartyState, PartyPrimary.Actor, PartyState.Companion.Actor, 100) = 6)
+Call CheckNamed(ViewerParty.PresentationSecondsRemaining(
+    PartyState, PartyPrimary.Actor, PartyState.Companion.Actor, 100) = 5,
+    "Accelerated hero turn reports its remaining seconds")
 
 PartyState.Turn = 2
 PartyState.DragonCounter = 0
 
-Call Check(ViewerParty.PresentationSecondsRemaining(
-    PartyState, PartyPrimary.Actor, PartyState.Companion.Actor, 100) = 5)
+Call CheckNamed(ViewerParty.PresentationSecondsRemaining(
+    PartyState, PartyPrimary.Actor, PartyState.Companion.Actor, 100) = 5,
+    "Dragon turn reports its remaining seconds")
 
 PartyState.Enabled = False
 PartyState.Turn = 0
@@ -1827,13 +1838,15 @@ Call Check(PartyState.Elapsed = 17)
 PartyState.Enabled = True
 PartyState.DragonReactionPending = True
 PartyState.Stage = 1
-PartyState.Elapsed = 1939
+PartyState.Elapsed = ViewerParty.HERO_ATTACK_START_MILLISECONDS + 639
 
-Call Check(Not ViewerParty.DragonReactionRequested(PartyState, 1000))
+Call CheckNamed(Not ViewerParty.DragonReactionRequested(PartyState, 1000),
+    "Dragon reaction waits for the attack impact threshold")
 
-PartyState.Elapsed = 1940
+PartyState.Elapsed = ViewerParty.HERO_ATTACK_START_MILLISECONDS + 640
 
-Call Check(ViewerParty.DragonReactionRequested(PartyState, 1000))
+Call CheckNamed(ViewerParty.DragonReactionRequested(PartyState, 1000),
+    "Dragon reaction begins at the accelerated impact threshold")
 
 Call ViewerParty.ConsumeDragonReaction(PartyState, True, "Idle")
 Call Check(PartyState.DragonReactionPending)
@@ -1854,23 +1867,25 @@ Call Check(PartyActions.SecondClipRequested And PartyActions.SecondClip = "Defen
 Call Check(PartyActions.PositionsAvailable And
     PartyActions.FirstPosition.X = ToDouble(PartyState.First.Home.X))
 
-PartyState.Elapsed = 1299
+PartyState.Elapsed = ViewerParty.HERO_ATTACK_START_MILLISECONDS - 1
 PartyState.Stage = 0
 PartyActions = ViewerParty.AdvanceChoreography(
     PartyState, 1, True, False, 1200, 100, -1)
 
-Call Check(PartyState.Stage = 1 And PartyState.DragonReactionPending)
+Call CheckNamed(PartyState.Stage = 1 And PartyState.DragonReactionPending,
+    "Hero attack begins after the accelerated approach")
 Call Check(ViewerParty.PresentationState(PartyState, 0) = ViewerParty.STATE_ACTING)
 Call Check(PartyActions.FirstClip = "SwordAttack")
 Call Check(PartyActions.FirstPosition.X = ToDouble(PartyState.First.Approach.X) And
     PartyActions.FirstPosition.Z = ToDouble(PartyState.First.Approach.Z))
 
 PartyState.Turn = 1
-PartyState.Elapsed = 5199
+PartyState.Elapsed = 4449
 PartyState.Stage = 3
 
-Call Check(ViewerParty.WillPrepareDragonTurn(
-    PartyState, 1, True, False, 1200, 100))
+Call CheckNamed(ViewerParty.WillPrepareDragonTurn(
+    PartyState, 1, True, False, 1200, 100),
+    "Dragon turn follows the shortened hero turn")
 
 Call ViewerParty.ResetChoreography(PartyState)
 
@@ -2493,13 +2508,13 @@ Call Check(BattleCamera.FrontArcYaw1000(360000) = BattleCamera.FrontArcYaw1000(0
 Call Check(BattleCamera.FrontArcYaw1000(500) > BattleCamera.FrontArcYaw1000(0))
 Call Check(BattleCamera.FrontArcYaw1000(89900) = BattleCamera.FrontArcYaw1000(90100))
 
-FormationFirst = BattleCamera.FormationPosition(FormationCenter, 300, 10, 50, 0, 3)
-FormationMiddle = BattleCamera.FormationPosition(FormationCenter, 300, 10, 50, 1, 3)
-FormationLast = BattleCamera.FormationPosition(FormationCenter, 300, 10, 50, 2, 3)
+FormationFirst = BattleCamera.FormationPosition(FormationCenter, 450, 0, 60, 0, 3)
+FormationMiddle = BattleCamera.FormationPosition(FormationCenter, 450, 0, 60, 1, 3)
+FormationLast = BattleCamera.FormationPosition(FormationCenter, 450, 0, 60, 2, 3)
 
 Call Check(FormationFirst.X <> FormationMiddle.X And FormationMiddle.X <> FormationLast.X)
-Call Check(Math3D.Distance(FormationFirst, FormationMiddle) > 90)
-Call Check(Math3D.Distance(FormationMiddle, FormationLast) > 90)
+Call Check(Math3D.Distance(FormationFirst, FormationMiddle) > 200)
+Call Check(Math3D.Distance(FormationMiddle, FormationLast) > 200)
 
 StableAnchor = BattleCamera.BoundedAnchor(
     Math3D.Vector(-190, 80, -100), Math3D.Vector(-208, 70, -120), 500)
@@ -2653,7 +2668,22 @@ Call Check(ViewerProfiles.PartyAttackName(ViewerProfiles.PROFILE_ARIN, 1) = "Swo
 Call Check(ViewerProfiles.PartyAttackName(ViewerProfiles.PROFILE_ARIN, 2) = "SwordAttack")
 Call Check(ViewerProfiles.EpicGlowAvailable(ViewerProfiles.PROFILE_ARIN))
 Call Check(ViewerProfiles.EpicGlowVisibleByDefault(ViewerProfiles.PROFILE_ARIN))
-Call Check(ViewerProfiles.ProfileCount() = 6)
+Call Check(ViewerProfiles.INCLUDE_UNITY_CHARACTERS)
+Call Check(ViewerProfiles.ProfileCount() = 9)
+Call Check(ViewerProfiles.HasBattleOpponent(ViewerProfiles.PROFILE_ARIN))
+Call Check(ViewerProfiles.HasBattleOpponent(ViewerProfiles.PROFILE_ORIN))
+Call Check(ViewerProfiles.HasBattleOpponent(ViewerProfiles.PROFILE_VALOR))
+Call Check(ViewerProfiles.HasBattleOpponent(ViewerProfiles.PROFILE_ZARA))
+Call Check(Not ViewerProfiles.HasBattleOpponent(ViewerProfiles.PROFILE_DRAGON))
+Call Check(Not ViewerProfiles.HasBattleOpponent(ViewerProfiles.PROFILE_VRAX))
+Call Check(Not ViewerProfiles.UsesVraxOpponent(ViewerProfiles.PROFILE_ARIN))
+Call Check(Not ViewerProfiles.UsesVraxOpponent(ViewerProfiles.PROFILE_ORIN))
+Call Check(ViewerProfiles.UsesVraxOpponent(ViewerProfiles.PROFILE_VALOR))
+Call Check(ViewerProfiles.UsesVraxOpponent(ViewerProfiles.PROFILE_ZARA))
+Call Check(ViewerProfiles.ArenaCameraDistance(ViewerProfiles.PROFILE_ARIN, 480) = 480)
+Call Check(ViewerProfiles.ArenaCameraDistance(ViewerProfiles.PROFILE_ORIN, 480) = 480)
+Call Check(ViewerProfiles.ArenaCameraDistance(ViewerProfiles.PROFILE_VALOR, 480) = 960)
+Call Check(ViewerProfiles.ArenaCameraDistance(ViewerProfiles.PROFILE_ZARA, 480) = 960)
 Call Check(ViewerProfiles.SocketCount(ViewerProfiles.PROFILE_DRAGON) = 6)
 Call Check(ViewerProfiles.ClipLoops(ViewerProfiles.PROFILE_DRAGON, 0))
 Call Check(Not ViewerProfiles.ClipLoops(ViewerProfiles.PROFILE_DRAGON, 1))

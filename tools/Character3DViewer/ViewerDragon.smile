@@ -27,6 +27,13 @@ Private Const POSITION_Z = -120
 Private Const ROTATION_Y = 240
 Private Const BODY_PART_INDEX = 2
 
+Public Const DRAGON_BREATH_RADIUS = 16
+Public Const DRAGON_BREATH_INTENSITY = 300
+Public Const VRAX_BREATH_RADIUS = 24
+Public Const VRAX_BREATH_INTENSITY = 320
+Private Const VRAX_BREATH_REACH = 420
+Private Const VRAX_BREATH_SPEED = 900
+
 Public Type AttackEffects
     MouthFire As Fire.FireEmitter
     LeftArc As Lightning.LightningEffect
@@ -462,7 +469,7 @@ Public Function Update(
                 3117,
                 Fire.QUALITY_HIGH,
                 Fire.SIMULATION_AUTO,
-                6
+                DRAGON_BREATH_RADIUS
             )
             ''' Temporary scene pressure can recover without reloading the actor.
             Value.FireFailed = (Value.Breath.Slot = 0 And
@@ -479,7 +486,7 @@ Public Function Update(
             Ok = Fire.SetDirection(Value.Breath, Direction) And Ok
             Value.FireFailed = Not Ok
 
-            Call Fire.SetIntensity(Value.Breath, 160)
+            Call Fire.SetIntensity(Value.Breath, DRAGON_BREATH_INTENSITY)
             Call Fire.SetSourceVelocityInheritance(Value.Breath, 0)
 
         End If
@@ -701,7 +708,8 @@ Public Sub UpdateVraxAttacks(ByRef Value As AttackEffects, Actor As Character3D.
     Ok = Character3D.TrySocketPositionPrecise(Actor, "VraxLeftArm", 0, False, LeftArm) And Ok
     Ok = Character3D.TrySocketPositionPrecise(Actor, "VraxRightArm", 0, False, RightArm) And Ok
     Ok = PreciseMath.TryNormalize(PreciseMath.Subtract(Aim, Mouth), Forward) And Ok
-    Target = PreciseMath.Add(Mouth, PreciseMath.Scale(Forward, 300.0))
+    Target = PreciseMath.Add(Mouth,
+        PreciseMath.Scale(Forward, ToDouble(VRAX_BREATH_REACH)))
     Target.Y = Max(12.0, Target.Y)
 
     Call UpdateVraxAttackPoints(Value, Name, Character3D.AnimationTime(Actor), Duration,
@@ -753,19 +761,20 @@ Public Sub UpdateVraxAttackPoints(ByRef Value As AttackEffects, Name As Text,
 
             If Value.MouthFire.Slot = 0 Then
                 Value.MouthFire = Fire.StartAtPrecise("DragonFireBreathPreview",
-                    Mouth, 6117, Fire.QUALITY_HIGH, Fire.SIMULATION_AUTO, 9)
+                    Mouth, 6117, Fire.QUALITY_HIGH, Fire.SIMULATION_AUTO,
+                    VRAX_BREATH_RADIUS)
             End If
 
             If Value.MouthFire.Slot <> 0 Then
 
                 Ok = PreciseMath.TryNormalize(PreciseMath.Subtract(Target, Mouth), Forward)
-                Direction.X = ToNumber(Forward.X * 650.0)
-                Direction.Y = ToNumber(Forward.Y * 650.0)
-                Direction.Z = ToNumber(Forward.Z * 650.0)
+                Direction.X = ToNumber(Forward.X * ToDouble(VRAX_BREATH_SPEED))
+                Direction.Y = ToNumber(Forward.Y * ToDouble(VRAX_BREATH_SPEED))
+                Direction.Z = ToNumber(Forward.Z * ToDouble(VRAX_BREATH_SPEED))
                 Ok = Fire.SetPositionPrecise(Value.MouthFire, Mouth) And Ok
                 Ok = Fire.SetDirection(Value.MouthFire, Direction) And Ok
 
-                Call Fire.SetIntensity(Value.MouthFire, 190)
+                Call Fire.SetIntensity(Value.MouthFire, VRAX_BREATH_INTENSITY)
                 Call Fire.SetSourceVelocityInheritance(Value.MouthFire, 0)
 
                 If Not Ok Then

@@ -4,8 +4,13 @@ The local Unity import extends existing owners: `Profiles` supplies Valor, Zara
 and Vrax identities, clips, scale policy and measured grounding; `ViewerActors`
 applies transforms; `ViewerParty` owns two additional contexts and four-hero
 playback; `ViewerDragon` owns the selected Party opponent while preserving Dragon
-inspection. `ViewerUi` owns seven tabs and clip pages. `Build.ps1` and
-`Prepare-UnityAssets.ps1` stage the optional private roster. No parallel actor pool
+inspection. `Profiles.HasBattleOpponent` admits the four hero tabs without changing
+inspection policy; `Profiles.UsesVraxOpponent` selects Vrax only for Valor/Zara and
+supplies their doubled arena-camera distance. `ViewerLifecycle` applies those
+policies before the shared actor/camera owners create the scene. `ViewerUi` owns
+seven tabs and clip pages. `Build.ps1` and
+`Prepare-UnityAssets.ps1` validate and stage the permanent locally licensed roster
+into ignored project-local cooking inputs. No parallel actor pool
 or coordinator was introduced. Orin's effect target falls back to boss bounds when
 a Chest socket is absent. See the Unity import checkpoint for current evidence.
 

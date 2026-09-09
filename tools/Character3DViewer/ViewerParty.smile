@@ -28,6 +28,16 @@ Private Const SHIELD_PART_INDEX = 0
 Private Const WEAPON_PART_INDEX = 1
 Private Const BODY_PART_INDEX = 2
 
+Public Const HERO_APPROACH_DELAY_MILLISECONDS = 250
+Public Const HERO_APPROACH_DURATION_MILLISECONDS = 300
+Public Const HERO_ATTACK_START_MILLISECONDS = 550
+Public Const HERO_RETURN_DURATION_MILLISECONDS = 700
+Private Const HERO_RETURN_END_MILLISECONDS = 1250
+Private Const PUBLIC_HERO_TURN_TAIL_MILLISECONDS = 3250
+Private Const UNITY_HERO_TURN_TAIL_MILLISECONDS = 2550
+Private Const BOSS_ATTACK_START_MILLISECONDS = 650
+Private Const BOSS_TURN_TAIL_MILLISECONDS = 1650
+
 Public Const STATE_ALIVE = 0
 Public Const STATE_ACTING = 1
 Public Const STATE_GUARDING = 2
@@ -1120,7 +1130,8 @@ Public Function DragonReactionRequested(ByRef Value As State,
     Result = (Value.Enabled And
         Value.DragonReactionPending And
         Value.Stage = 1 And
-        Value.Elapsed >= 1300 + AttackDurationMilliseconds * 64 / 100)
+        Value.Elapsed >= HERO_ATTACK_START_MILLISECONDS +
+            AttackDurationMilliseconds * 64 / 100)
 
     Return Result
 
@@ -1341,7 +1352,8 @@ Public Function PresentationSecondsRemaining(ByRef Value As State,
     Dim Result As Number
 
     RequiredMilliseconds = AttackDuration(
-        Value, Primary, Companion, PlaybackSpeed) + 4000
+        Value, Primary, Companion, PlaybackSpeed)
+    RequiredMilliseconds = RequiredMilliseconds + PUBLIC_HERO_TURN_TAIL_MILLISECONDS
 
     If Value.Turn = 2 Then
         RequiredMilliseconds = DragonTurnDuration(Value, PlaybackSpeed)
@@ -1404,7 +1416,7 @@ Public Function WillPrepareDragonTurn(ByRef Value As State,
     End If
 
     If Value.Turn = 1 Then
-        Result = NextElapsed >= AttackMilliseconds + 4000
+        Result = NextElapsed >= AttackMilliseconds + PUBLIC_HERO_TURN_TAIL_MILLISECONDS
     Else If (Value.Turn = 2 And
         Not Value.DragonOnlyTurn And
         NextElapsed >= EffectiveDragonTurnDuration(Value, PlaybackSpeed)) Then
@@ -1577,7 +1589,7 @@ Public Function AdvanceChoreography(ByRef Value As State,
         Return Actions
     End If
 
-    If Value.Elapsed >= AttackMilliseconds + 4000 Then
+    If Value.Elapsed >= AttackMilliseconds + PUBLIC_HERO_TURN_TAIL_MILLISECONDS Then
 
         Value.Elapsed = 0
         Value.Turn = (Value.Turn + 1) Mod 3
@@ -1598,31 +1610,35 @@ Public Function AdvanceChoreography(ByRef Value As State,
     End If
 
     Stage = 0
-    Progress = Clamp(ToDouble(Max(0, Value.Elapsed - 650)) / 650.0, 0.0, 1.0)
+    Progress = Clamp(ToDouble(Max(0,
+        Value.Elapsed - HERO_APPROACH_DELAY_MILLISECONDS)) /
+        ToDouble(HERO_APPROACH_DURATION_MILLISECONDS), 0.0, 1.0)
     Name = "Walk"
 
     If Value.Turn = 1 Then
         Name = "Run"
     End If
 
-    If Value.Elapsed >= AttackMilliseconds + 2000 Then
+    If Value.Elapsed >= AttackMilliseconds + HERO_RETURN_END_MILLISECONDS Then
 
         Stage = 3
         Progress = 0.0
         Name = "Idle"
 
-    Else If Value.Elapsed >= AttackMilliseconds + 1300 Then
+    Else If Value.Elapsed >= AttackMilliseconds + HERO_ATTACK_START_MILLISECONDS Then
 
         Stage = 2
         Progress = Max(0.0, 1.0 -
-            ToDouble(Value.Elapsed - AttackMilliseconds - 1300) / 700.0)
+            ToDouble(Value.Elapsed - AttackMilliseconds -
+                HERO_ATTACK_START_MILLISECONDS) /
+            ToDouble(HERO_RETURN_DURATION_MILLISECONDS))
         Name = "Walk"
 
         If Value.Turn = 1 Then
             Name = "Run"
         End If
 
-    Else If Value.Elapsed >= 1300 Then
+    Else If Value.Elapsed >= HERO_ATTACK_START_MILLISECONDS Then
 
         Stage = 1
         Progress = 1.0
@@ -1636,7 +1652,7 @@ Public Function AdvanceChoreography(ByRef Value As State,
 
     End If
 
-    If Value.Elapsed < 650 Then
+    If Value.Elapsed < HERO_APPROACH_DELAY_MILLISECONDS Then
         Stage = -2
         Name = "Idle"
     End If
@@ -1793,6 +1809,7 @@ Public Sub ApplyAttackCamera(
     Dim BattleShot As Boolean
     Dim BossChargeShot As Boolean
     Dim ShotSide As Number
+    Dim ActionStart As Number
     Dim StableAnchor As Precision3D.Vector3
 
     Value.OrbitCamera = LiveCamera
@@ -1882,8 +1899,14 @@ Public Sub ApplyAttackCamera(
 
     Boss = Value.ShotBoss
     BossHead = Value.ShotBossHead
+    ActionStart = HERO_ATTACK_START_MILLISECONDS
+
+    If Value.Turn = 2 Then
+        ActionStart = BOSS_ATTACK_START_MILLISECONDS
+    End If
+
     BossChargeShot = (Value.Turn = 2 And
-        (Value.Elapsed * PlaybackSpeed / 100 < 650 Or
+        (Value.Elapsed * PlaybackSpeed / 100 < BOSS_ATTACK_START_MILLISECONDS Or
         (Value.DragonCounter Mod 3 = 2 And Value.Elapsed * PlaybackSpeed / 100 < 1750)))
     DeltaX = Hero.X - Boss.X
     DeltaZ = Hero.Z - Boss.Z
@@ -1897,7 +1920,7 @@ Public Sub ApplyAttackCamera(
         ShotSide = 1
     End If
 
-    If Value.Elapsed < 650 Then
+    If Value.Elapsed < ActionStart Then
 
         Along = -45.0
         Across = 190.0
@@ -1910,17 +1933,18 @@ Public Sub ApplyAttackCamera(
         Height = 65.0
 
     Else
-        Impact1000 = Clamp(ToDouble(Max(0, Value.Elapsed - 1300)) / ToDouble(Max(1, AttackMilliseconds)), 0.0, 1.0)
+        Impact1000 = Clamp(ToDouble(Max(0, Value.Elapsed - ActionStart)) /
+            ToDouble(Max(1, AttackMilliseconds)), 0.0, 1.0)
         Along = 150.0 - Impact1000 * 35.0
         Across = 120.0
 
     End If
 
-    If Value.Elapsed >= 650 Then
+    If Value.Elapsed >= ActionStart Then
         Height = WaistHeight - Hero.Y
     End If
 
-    If Value.Turn = 2 And Value.Elapsed >= 650 Then
+    If Value.Turn = 2 And Value.Elapsed >= ActionStart Then
         Along = 170.0
         Across = 65.0
     End If
@@ -1934,7 +1958,7 @@ Public Sub ApplyAttackCamera(
     Desired.Target.X = (Hero.X + Boss.X) / 2.0
     Desired.Target.Y = Max(Hero.Y + 12.0, BossHead.Y - 35.0)
 
-    If Value.Elapsed >= 650 Then
+    If Value.Elapsed >= ActionStart Then
         Desired.Target.Y = (WaistHeight + BossHead.Y) / 2.0
     End If
 
@@ -2620,10 +2644,10 @@ Private Function AdvanceUnityChoreography(ByRef Value As State,
     End If
 
     AttackMilliseconds = AttackDuration(Value, Primary, Value.Companion.Actor, PlaybackSpeed)
-    Duration = AttackMilliseconds + 3300
+    Duration = AttackMilliseconds + UNITY_HERO_TURN_TAIL_MILLISECONDS
 
     If Value.Turn = 2 Then
-        Duration = AttackMilliseconds + 1650
+        Duration = AttackMilliseconds + BOSS_TURN_TAIL_MILLISECONDS
     End If
 
     If Value.Elapsed >= Duration Then
@@ -2654,33 +2678,38 @@ Private Function AdvanceUnityChoreography(ByRef Value As State,
 
     If Value.Turn = 2 Then
 
-        If Value.Elapsed >= 650 And Value.Elapsed < 650 + AttackMilliseconds Then
+        If (Value.Elapsed >= BOSS_ATTACK_START_MILLISECONDS And
+            Value.Elapsed < BOSS_ATTACK_START_MILLISECONDS + AttackMilliseconds) Then
             Stage = 1
-        Else If Value.Elapsed >= 650 + AttackMilliseconds Then
+        Else If Value.Elapsed >= BOSS_ATTACK_START_MILLISECONDS + AttackMilliseconds Then
             Stage = 3
         End If
 
-    Else If Value.Elapsed >= 2000 + AttackMilliseconds Then
+    Else If Value.Elapsed >= HERO_RETURN_END_MILLISECONDS + AttackMilliseconds Then
 
         Stage = 3
 
-    Else If Value.Elapsed >= 1300 + AttackMilliseconds Then
+    Else If Value.Elapsed >= HERO_ATTACK_START_MILLISECONDS + AttackMilliseconds Then
 
         Stage = 2
         Name = "Walk"
-        Progress = Max(0.0, 1.0 - ToDouble(Value.Elapsed - 1300 - AttackMilliseconds) / 700.0)
+        Progress = Max(0.0, 1.0 - ToDouble(Value.Elapsed -
+            HERO_ATTACK_START_MILLISECONDS - AttackMilliseconds) /
+            ToDouble(HERO_RETURN_DURATION_MILLISECONDS))
 
-    Else If Value.Elapsed >= 1300 Then
+    Else If Value.Elapsed >= HERO_ATTACK_START_MILLISECONDS Then
 
         Stage = 1
         Name = UnityAttackName(Value)
         Progress = 1.0
 
-    Else If Value.Elapsed >= 650 Then
+    Else If Value.Elapsed >= HERO_APPROACH_DELAY_MILLISECONDS Then
 
         Stage = 2
         Name = "Walk"
-        Progress = Clamp(ToDouble(Value.Elapsed - 650) / 650.0, 0.0, 1.0)
+        Progress = Clamp(ToDouble(Value.Elapsed -
+            HERO_APPROACH_DELAY_MILLISECONDS) /
+            ToDouble(HERO_APPROACH_DURATION_MILLISECONDS), 0.0, 1.0)
 
     End If
 

@@ -1,5 +1,23 @@
 # Valor and Zara equipment VFX — September 9, 2026
 
+## Permanent roster and battle presentation follow-up — September 9, 2026
+
+Sin confirmed that Valor, Zara and Vrax are purchased characters to remain in the
+Character 3D Viewer. The checked-in profile policy now enables all three, and the
+normal project declares their ignored `BuildAssets` cooking mirrors. The preparation
+owner verifies each canonical private GLB against its package manifest before
+refreshing that mirror. Normal direct Desktop/Web compilation therefore retains the
+seven Viewer tabs after preparation; raw purchased files remain in ignored `Private`
+folders. `-PublicRoster` remains an explicit compatibility Web build rather than the
+normal roster.
+
+The Party formation moved from a 300-unit/40-degree arc to a 450-unit/60-degree
+arc. A 250-ms lead and 300-ms approach replace the former 650-ms approach before
+each hero attack; the 700-ms return remains. Dragon FireBreath now uses radius 16
+and intensity 300. Vrax keeps one mouth emitter and two arm-lightning leases while
+increasing mouth-fire radius to 24, intensity to 320, reach to 420 and velocity to
+900. No pool limit, model, animation, socket, calibration or shared clock changed.
+
 ## Public small-screen notice delivery — September 9, 2026
 
 Sin supplied `http://sincioco.com/smile/character3dviewer/`. The existing Azure

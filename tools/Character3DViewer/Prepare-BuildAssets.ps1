@@ -1,6 +1,7 @@
 [CmdletBinding()]
 param(
-    [switch]$ValidateOnly
+    [switch]$ValidateOnly,
+    [switch]$SkipUnityRoster
 )
 
 $ErrorActionPreference = 'Stop'
@@ -144,6 +145,10 @@ foreach ($characterName in @('Arin', 'Orin')) {
             throw 'Packaged calibration lost resolved keyframes during serialization.'
         }
     } $characterName (Join-Path $repositoryRoot 'scripts\sync-arin-v5-7-calibration.ps1')
+}
+
+if (-not $SkipUnityRoster) {
+    & (Join-Path $toolRoot 'Prepare-UnityAssets.ps1') -ValidateOnly:$ValidateOnly | Out-Null
 }
 
 if ($ValidateOnly) {

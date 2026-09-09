@@ -2,10 +2,16 @@
 
 ## Implemented Local Roster
 
-The Viewer now has Arin, Orin, Valor, Zara, Dragon, Vrax and Party tabs when the
-complete private Unity packages are present. Party owns four independent hero
+The normal Viewer project permanently declares Arin, Orin, Valor, Zara, Dragon,
+Vrax and Party tabs. The three purchased character exports remain in their complete
+private versioned packages and are checksum-verified into ignored project-local
+cooking mirrors. Party owns four independent hero
 actors and uses Vrax as its opponent. Dragon's tab, package and animations remain
-available. No Sin Star I wave/game implementation changed.
+available. Valor and Zara also use Vrax as the opponent in their individual arena
+previews, while Arin and Orin keep the Dragon. The normal animation demo and clip
+buttons continue to drive the selected hero. A profile-owned 2x camera-distance
+policy frames the enlarged Vrax and hero together. No Sin Star I wave/game
+implementation changed.
 
 | Actor | Package Under games/SinStarI/SourceAssets | Original / Viewer Triangles | Bones | Clips |
 |---|---|---:|---:|---:|
@@ -15,9 +21,10 @@ available. No Sin Star I wave/game implementation changed.
 
 Each package preserves selected-prefab dependencies, FBXs, textures, full-animation
 Blender source and GLB, conversion scripts, checksums, clip manifest and grounding
-evidence. Restricted originals/derivatives are in ignored Private folders. Public
-checkouts without them retain the original roster; partial private rosters fail
-preparation with an actionable error.
+evidence. Restricted originals/derivatives are in ignored Private folders. A normal
+build requires all three licensed exports and fails preparation with an actionable
+error if one is missing. `Build.ps1 -Target Web -PublicRoster` remains an explicit
+compatibility publication for checkouts without those packages.
 
 The inspector presents nine clips per page. Nonlooping actions hold their final
 frame; locomotion and Idle loop. Party cycles Vrax, Arin, Orin, Valor and Zara using
@@ -91,11 +98,13 @@ Detailed local logs are under artifacts/temp/unity-import:
   visually inspected. Inline JPEG progress screenshots were saved.
 - Chrome displayed correct Zara materials, upright Valor, large Vrax and Party;
   clip-page navigation and Zara's Block/settled Death were inspected on localhost.
+- Chrome rendered Valor/Vrax and Zara/Vrax individual attack previews from the
+  rebuilt Web publication with the complete enlarged opponent in frame.
 
 Native/Web Release builds passed in release-roster-build.log. The final native
 executable is tools/Character3DViewer/bin/Release/Character3DViewer.exe; local Web
 output is its sibling Web folder. VSIX output is artifacts/vsix/Smile.VisualStudio.vsix.
-No language syntax was added. The final 433-file formatting check passed. Native
+No language syntax was added. The final 434-file formatting check passed. Native
 and Chrome slow/moderate pan, fine/larger orbit adjustments, wheel zoom in/out,
 keyboard orbit and camera reset were exercised. The native Release launched through
 Launch.ps1 with calibration watchers and was left foreground. Arin's 24 keys and
@@ -113,8 +122,3 @@ Arin/Orin editing and calibration remain independent.
 Private assets have not been publicly deployed or redistributed. Machine operation
 permission does not establish commercial-asset redistribution rights. Public
 repository delivery includes code and package metadata only.
-
-## On Hold
-
-Further Sin Star I game updates, Battle Scene Editor, semantic-inspection CLI,
-subject-first syntax, SMILE 1.0 changes and unrelated suspended features.

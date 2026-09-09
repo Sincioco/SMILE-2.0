@@ -128,41 +128,12 @@ if (-not (Test-Path -LiteralPath $compiler -PathType Leaf)) {
 [xml]$nativeProject = Get-Content -LiteralPath $project -Raw
 Assert-ViewerSourceInventory $nativeProject 'Profiles.smile' 'Character Viewer project'
 
-& (Join-Path $toolRoot 'Prepare-BuildAssets.ps1')
 $unityAssets = @()
 if (-not $PublicRoster) {
     $unityAssets = @(& (Join-Path $toolRoot 'Prepare-UnityAssets.ps1'))
 }
+& (Join-Path $toolRoot 'Prepare-BuildAssets.ps1') -SkipUnityRoster
 $unityLogicalPaths = @($unityAssets | ForEach-Object { $_.LogicalPath })
-if ($unityAssets.Count -gt 0) {
-    $profileRoot = Join-Path $toolRoot 'BuildAssets\ViewerLocal'
-    $null = New-Item -ItemType Directory -Force -Path $profileRoot
-    $profileText = Get-Content -LiteralPath (Join-Path $toolRoot 'Profiles.smile') -Raw
-    $profileText = $profileText.Replace('Public Const INCLUDE_UNITY_CHARACTERS = False',
-        'Public Const INCLUDE_UNITY_CHARACTERS = True')
-    [IO.File]::WriteAllText((Join-Path $profileRoot 'Profiles.smile'),
-        $profileText, [Text.UTF8Encoding]::new($false))
-    foreach ($item in @($nativeProject.SmileProject.ItemGroup.SmileSource)) {
-        if ($item.Include -eq 'Profiles.smile') {
-            $item.SetAttribute('Include', 'BuildAssets\ViewerLocal\Profiles.smile')
-        }
-    }
-    foreach ($asset in $unityAssets) {
-        $item = $nativeProject.CreateElement('Model3DAsset')
-        $item.SetAttribute('Include', $asset.Include)
-        $item.SetAttribute('Descriptor', $asset.Descriptor)
-        $item.SetAttribute('LogicalPath', $asset.LogicalPath)
-        $item.SetAttribute('TextureOutputDirectory', $asset.Textures)
-        $item.SetAttribute('Profile', 'Character')
-        $item.SetAttribute('Identity', ('sin-star-i.' + $asset.Name.ToLowerInvariant() + '.v1'))
-        $item.SetAttribute('ProductionState', 'Prototype')
-        $null = $nativeProject.SmileProject.ItemGroup.AppendChild($item)
-    }
-    Assert-ViewerSourceInventory $nativeProject 'BuildAssets\ViewerLocal\Profiles.smile' `
-        'Character Viewer local roster project'
-    $project = Join-Path $toolRoot 'Character3DViewer.Local.smileproj'
-    $nativeProject.Save($project)
-}
 if ($Target -in @('Native', 'All')) {
     $output = Join-Path $outputRoot 'Character3DViewer.exe'
     New-Item -ItemType Directory -Force -Path $outputRoot | Out-Null
@@ -185,9 +156,13 @@ if ($Target -in @('Web', 'All')) {
     # removes obsolete managed files from this exact configuration's Web folder.
     [xml]$webProject = $nativeProject.OuterXml
     $profileText = Get-Content -LiteralPath (Join-Path $toolRoot 'Profiles.smile') -Raw
-    if ($unityAssets.Count -gt 0) {
-        $profileText = $profileText.Replace('Public Const INCLUDE_UNITY_CHARACTERS = False',
-            'Public Const INCLUDE_UNITY_CHARACTERS = True')
+    $localRosterPolicy = 'Public Const INCLUDE_UNITY_CHARACTERS = True'
+    if ([regex]::Matches($profileText, [regex]::Escape($localRosterPolicy)).Count -ne 1) {
+        throw 'Expected exactly one permanent local-roster publication policy.'
+    }
+    if ($PublicRoster) {
+        $profileText = $profileText.Replace($localRosterPolicy,
+            'Public Const INCLUDE_UNITY_CHARACTERS = False')
     }
     $nativePolicy = 'Public Const INCLUDE_DIAGNOSTIC_PROFILES = True'
     if ([regex]::Matches($profileText, [regex]::Escape($nativePolicy)).Count -ne 1) {
@@ -203,8 +178,7 @@ if ($Target -in @('Web', 'All')) {
         'Assets\Generation2\RedDragon\RedDragon.sm3d')
     $currentModels += $unityLogicalPaths
     foreach ($item in @($webProject.SmileProject.ItemGroup.ChildNodes)) {
-        if ($item.Name -eq 'SmileSource' -and $item.Include -in @(
-            'Profiles.smile', 'BuildAssets\ViewerLocal\Profiles.smile')) {
+        if ($item.Name -eq 'SmileSource' -and $item.Include -eq 'Profiles.smile') {
             $item.SetAttribute('Include', 'BuildAssets\ViewerWeb\Profiles.smile')
         }
         if (($item.Name -eq 'Model3DAsset' -and $item.LogicalPath -notin $currentModels) -or

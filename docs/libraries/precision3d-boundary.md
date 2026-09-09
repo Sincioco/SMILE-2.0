@@ -86,8 +86,8 @@ BattleArenaPreview supply their own scene sensitivity and framing. UI pixel
 coordinates, pointer identities and elapsed milliseconds remain Number; conversion
 occurs before continuous motion math. Integer labels do not feed camera acceptance.
 
-ViewerParty retains its sequence, event order, 650-ms approach and 700-ms return.
-It evaluates Double progress from the actual integer elapsed time, passes precise
+ViewerParty retains its sequence and event order while using a 250-ms lead,
+300-ms approach and 700-ms return. It evaluates Double progress from the actual integer elapsed time, passes precise
 positions through ViewerActors/Character3D, and submits the same owned render parts.
 Current-pose sockets, equipment pivots, glow, fire, lightning and Orin trails use
 the typed path. FireEmitter3D and LightningVfx3D retain their existing pools,

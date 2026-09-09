@@ -126,7 +126,7 @@ one current checkpoint, not a replacement investigation or parallel ledger.
   continuous actor position/rotation arrays are authoritative Double values.
 - PrecisionCamera3D owns shared pan/orbit/zoom/framing/projection/anchors. Viewer
   and preview use their own scene sensitivity. ViewerParty evaluates actual integer
-  elapsed time over unchanged 650-ms approach / 700-ms return; events, clips, IDs,
+  elapsed time over the current 250-ms lead / 300-ms approach / 700-ms return; events, clips, IDs,
   handles, topology/noise order, integer ages/seeds/budgets and saved channels remain.
 - Current-pose equipment pivots, glow, socket markers, Arin rim, Orin storm, fire
   and lightning pass fractions to the same renderer. Authored millith data and

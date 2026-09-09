@@ -1,14 +1,20 @@
 # SMILE 2.0 - 3D Viewer, Animation Editor
 
-Local builds include Valor, Zara and Vrax when their complete private versioned
-packages are present. Tabs are Arin, Orin, Valor, Zara, Dragon, Vrax and Party;
+The normal Viewer project permanently includes locally licensed Valor, Zara and
+Vrax packages. Tabs are Arin, Orin, Valor, Zara, Dragon, Vrax and Party;
 Party uses all four heroes against Vrax. Dragon remains in his own tab. Imported
 sets contain 31, 26 and 24 animations, with nine clips per page. Vrax uses twice
-his first preview's transform scale. Public checkouts retain the original roster.
+his first preview's transform scale. `Prepare-BuildAssets.ps1` verifies each private
+export checksum and refreshes the ignored project-local cooking mirror.
 See the [Unity import checkpoint](../../docs/implementation/unity-character-import-checkpoint.md)
 for packages, conversion/grounding evidence and private publication boundaries.
 Existing calibration editing applies to Arin/Orin. Valor and Zara now have measured
 equipment VFX sockets; their original rigs and pose storage remain independent.
+Valor and Zara's individual tabs use the same arena-preview contract as Arin and
+Orin, but load Vrax as their opponent. Their normal demo cycles and explicit clip
+buttons drive the selected hero while Vrax remains independently owned and visible.
+Those two encounters double the arena camera distance so the accepted enlarged
+Vrax and the active hero remain visible together.
 
 Standard native and Web builds now include the shared mandatory SMILE startup
 presentation. It overlaps asset preparation with a one-second visible logo
@@ -40,7 +46,11 @@ submission order. No extra simulation, pose update or calibration channel is cre
 
 Dragon inspection uses the same clip buttons, timeline/frame stepping, playback speed, demo, lighting/material channels, sockets, pan/orbit/zoom and reset as the hero tabs. Both heroes remain in the arena with their own assets and saved corrections. Head Aim constrains only the head joint; At Arin/At Orin selects its target. The current Pose Calibration targets remain humanoid wrists and equipment, so they do not apply to Dragon. Dragon VFX and hero equipment visibility remain independent. Pose is disabled for Dragon, including its turn in Party.
 
-Party members start on a 300-unit front arc with 40 degrees between its endpoints. The placement function distributes any supplied member count over that arc. Each member approaches the selected boss from its own home position and returns there after attacking. Battle cameras sample the current actor and boss poses.
+Party members start on a 450-unit front arc with 60 degrees between its endpoints.
+The placement function distributes any supplied member count over that wider arc.
+After a 250-ms presentation beat, each member reaches the selected boss in 300 ms,
+attacks, and returns to its own home position. Battle cameras sample the current
+actor and boss poses.
 
 The Party runtime stores home, approach, bounds-derived clearance and facing metadata in
 participant records. It separates approach lanes when the actors' measured ground-plane
@@ -56,7 +66,8 @@ The editor source and build/launch entry points belong here. Sin Star I owns the
 Vrax breathes orange fire and fires blue-white lightning from both arms during
 Attack through Attack6, in his own tab and Party. Party cycles all six clips.
 Four rig-attached sockets follow the final grounded pose at the accepted 20000%
-scale. Effects run from one-sixth to four-fifths of each clip and clear on recovery,
+scale. The expanded mouth stream uses radius 24, intensity 320, a 420-unit reach
+and 900-unit velocity. Effects run from one-sixth to four-fifths of each clip and clear on recovery,
 Idle, Death, hide, tab changes and timeline discontinuities. The existing Party
 fire/lightning freeze controls apply independently. No new combat or damage system
 is involved. See the [VFX checkpoint](../../docs/implementation/character-equipment-vfx-checkpoint.md).
@@ -197,19 +208,21 @@ default. Low, Medium, and High require `-Target Web -WebQuality <quality>` and w
 only to their named optimized directory, so the four Web publications do not
 overwrite one another.
 
-For the public website, use `Build.ps1 -Target Web -PublicRoster`. This explicitly
-excludes the private Unity roster even when its packages are installed locally,
-and writes to `bin\Release\Web - Public` (or the selected optimized folder with
-` - Public` appended). It preserves the normal local-roster output. Publish only
-this complete public folder; do not upload the private local Web bundle.
+The normal `Build.ps1 -Target Web` publication includes the permanent Valor, Zara
+and Vrax roster and is the full upload bundle for an authorized deployment. Use
+`Build.ps1 -Target Web -PublicRoster` only for the compatibility roster that omits
+those locally licensed packages. It writes to `bin\Release\Web - Public` (or the
+selected optimized folder with ` - Public` appended) without overwriting the full
+Web output.
 
 The Viewer Web build generates an ignored publication project and profile policy
-containing the current Arin, Orin and Dragon models, plus the complete optional
-private Valor/Zara/Vrax roster when present. Private builds remain local. The normal asset
-publisher removes obsolete managed diagnostic files from that Web output only.
+containing Arin, Orin, Dragon, Valor, Zara and Vrax. The normal asset publisher
+removes obsolete managed diagnostic files from that Web output only.
 Textures are neither transcoded nor resized; Desktop diagnostics and canonical
 packages remain intact. Visual Studio's direct project build does not invoke this
-tool-specific publication script yet; use `Build.ps1` for the current slim bundle.
+tool-specific publication script; run `Prepare-BuildAssets.ps1` once after changing
+or restoring a licensed package, then direct Desktop or Web compilation uses the
+same permanent roster. Use `Build.ps1` for the current slim Web bundle.
 
 `Launch.ps1` defaults to `bin\Release\Character3DViewer.exe`. Use
 `Launch.ps1 -Configuration Debug` for Debug. `-Build` rebuilds the selected native

@@ -285,9 +285,11 @@ TestFormationLast = ViewerParty.FormationPosition(
     TestFormationCenter, PARTY_FORMATION_RADIUS,
     PARTY_FORMATION_START_ANGLE, PARTY_FORMATION_END_ANGLE, 2, 3)
 
-Call CalibrationCheck(Math3D.Distance(TestFormationFirst, TestFormationMiddle) > 90 And
-    Math3D.Distance(TestFormationMiddle, TestFormationLast) > 90,
-    "Front-arc formation expands to three participants")
+Call CalibrationCheck(Math3D.Distance(TestFormationFirst, TestFormationMiddle) > 200 And
+    Math3D.Distance(TestFormationMiddle, TestFormationLast) > 200,
+    "Wider front-arc formation spaces party members apart")
+Call CalibrationCheck(Math3D.Distance(TestFormationCenter, TestFormationMiddle) > 400,
+    "Party formation begins substantially farther from the boss")
 
 Call ViewerCalibration.ResetBank(Calibration)
 
@@ -1362,15 +1364,19 @@ Sub CheckFractionalPartySubmission()
     Trial.Ready = True
     Trial.Turn = 0
     Trial.Stage = 0
-    Trial.Elapsed = 650
+    Trial.Elapsed = ViewerParty.HERO_APPROACH_DELAY_MILLISECONDS
     Trial.First.Home = Math3D.Vector(0, 0, 0)
     Trial.First.Approach = Math3D.Vector(1, 0, 1)
     Partitioned = Trial
     Actions = ViewerParty.AdvanceChoreography(Trial, 163, True, False, 1200, 100, -1)
     OtherActions = ViewerParty.AdvanceChoreography(Partitioned, 100, True, False, 1200, 100, -1)
     OtherActions = ViewerParty.AdvanceChoreography(Partitioned, 63, True, False, 1200, 100, -1)
-    Expected = 163.0 / 650.0
+    Expected = 163.0 / 300.0
 
+    Call CalibrationCheck(ViewerParty.HERO_APPROACH_DELAY_MILLISECONDS = 250 And
+        ViewerParty.HERO_APPROACH_DURATION_MILLISECONDS = 300 And
+        ViewerParty.HERO_ATTACK_START_MILLISECONDS = 550,
+        "Party uses the accelerated pre-attack approach")
     Call CalibrationCheck(Abs(Actions.FirstPosition.X - Expected) < 1e-12 And
         Actions.FirstPosition.X = OtherActions.FirstPosition.X And
         Trial.Stage = Partitioned.Stage And Trial.Elapsed = Partitioned.Elapsed,
@@ -1400,7 +1406,7 @@ Sub CheckFractionalPartySubmission()
 
     Show Screen
 
-    Trial.Elapsed = 2500
+    Trial.Elapsed = 1200 + ViewerParty.HERO_ATTACK_START_MILLISECONDS
     Trial.Stage = 2
     Actions = ViewerParty.AdvanceChoreography(Trial, 163, True, False, 1200, 100, -1)
     Expected = 1.0 - 163.0 / 700.0
@@ -1724,6 +1730,11 @@ Sub CheckVraxAttackEffects()
     BaselineFire = Fire.Value(1, Trial.MouthFire)
 
     Call CalibrationCheck(Ok, "Vrax uses initialized shared lightning")
+    Call CalibrationCheck(ViewerDragon.DRAGON_BREATH_RADIUS = 16 And
+        ViewerDragon.DRAGON_BREATH_INTENSITY = 300 And
+        ViewerDragon.VRAX_BREATH_RADIUS = 24 And
+        ViewerDragon.VRAX_BREATH_INTENSITY = 320,
+        "Dragon and Vrax use expanded high-intensity breath presets")
     Call CalibrationCheck(Not ViewerDragon.VraxAttackActive("Idle", 400, 1000) And
         Not ViewerDragon.VraxAttackActive("Attack", 100, 1000) And
         Not ViewerDragon.VraxAttackActive("Attack", 800, 1000),

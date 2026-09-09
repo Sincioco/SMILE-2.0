@@ -14,7 +14,7 @@ Public Const PROFILE_DRAGON = 5
 Public Const PROFILE_VALOR = 6
 Public Const PROFILE_ZARA = 7
 Public Const PROFILE_VRAX = 8
-Public Const INCLUDE_UNITY_CHARACTERS = False
+Public Const INCLUDE_UNITY_CHARACTERS = True
 Public Const INCLUDE_DIAGNOSTIC_PROFILES = True
 Public Const EQUIPMENT_GLOW_FIRE = 0
 Public Const EQUIPMENT_GLOW_LIGHTNING = 1
@@ -955,6 +955,41 @@ Public Function IsPartyCharacter(ProfileIndex As Number) As Boolean
     Dim Result As Boolean
 
     Result = ProfileIndex = PROFILE_ARIN Or ProfileIndex = PROFILE_ORIN
+
+    Return Result
+
+End Function
+
+Public Function HasBattleOpponent(ProfileIndex As Number) As Boolean
+
+    Dim Result As Boolean
+
+    Result = IsPartyCharacter(ProfileIndex) Or ProfileIndex = PROFILE_VALOR Or ProfileIndex = PROFILE_ZARA
+
+    Return Result
+
+End Function
+
+Public Function UsesVraxOpponent(ProfileIndex As Number) As Boolean
+
+    Dim Result As Boolean
+
+    Result = (INCLUDE_UNITY_CHARACTERS And
+        (ProfileIndex = PROFILE_VALOR Or ProfileIndex = PROFILE_ZARA))
+
+    Return Result
+
+End Function
+
+Public Function ArenaCameraDistance(ProfileIndex As Number, DefaultDistance As Number) As Number
+
+    Dim Result As Number
+
+    Result = DefaultDistance
+
+    If UsesVraxOpponent(ProfileIndex) Then
+        Result = DefaultDistance * 2
+    End If
 
     Return Result
 
