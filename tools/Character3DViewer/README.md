@@ -203,6 +203,13 @@ application IDs, data keys, fingerprints, or the saved-data location.
 
 ## Inspection
 
+Below 800 × 540 logical units, a small-screen notice offers a touch-sized
+**Continue** button. Dismissing it reveals the running scene and releases camera
+pointer input while keeping the cramped editor panels hidden. The dismissal lasts
+for the current Viewer session, including scene resets and orientation changes.
+The normal editor panels return when the window is large enough; reloading starts
+a new session. The Continue press is consumed so it cannot activate hidden controls.
+
 Automation that already closes the old Viewer normally can pass
 `Launch.ps1 -Build -SkipWindowActivation`, then use its supported native window
 control to foreground the returned process. The normal interactive launch behavior

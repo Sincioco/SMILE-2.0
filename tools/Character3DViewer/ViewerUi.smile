@@ -125,6 +125,7 @@ Private Const ANIMATION_DETAILS_MINIMUM_HEIGHT = 780
 
 Public Type State
     Visibility As Number
+    MinimumSizeNoticeDismissed As Boolean
     CalibrationVisible As Boolean
     CalibrationTarget As Number
     CalibrationAxis As Number
@@ -747,6 +748,32 @@ Public Function LayoutTooSmall(WindowWidth As Number, WindowHeight As Number) As
 
 End Function
 
+Public Function HandleMinimumSizeNotice(ByRef Value As State, WindowWidth As Number,
+    WindowHeight As Number, PointerX As Number, PointerY As Number,
+    PrimaryPressed As Boolean) As Boolean
+
+    Dim Blocked As Boolean
+    Dim ButtonWidth As Number
+    Dim ButtonY As Number
+
+    Blocked = (LayoutTooSmall(WindowWidth, WindowHeight) And
+        Value.Visibility <> 2 And Not Value.MinimumSizeNoticeDismissed)
+    ButtonWidth = Min(220, Max(1, WindowWidth - 32))
+    ButtonY = Max(8, Min(126, WindowHeight - 56))
+
+    If Blocked And PrimaryPressed Then
+
+        If InRectangle(PointerX, PointerY, (WindowWidth - ButtonWidth) / 2,
+            ButtonY, ButtonWidth, 44) Then
+            Value.MinimumSizeNoticeDismissed = True
+        End If
+
+    End If
+
+    Return Blocked
+
+End Function
+
 Public Function CharacterTabsContain(PointerX As Number, PointerY As Number) As Boolean
 
     Dim Result As Boolean
@@ -1179,12 +1206,26 @@ Public Function ApplyCalibrationSelection(ByRef Value As State,
 
 End Function
 
-Public Sub DrawMinimumSizeNotice(WindowWidth As Number, WindowHeight As Number)
+Public Sub DrawMinimumSizeNotice(ByRef Value As State,
+    WindowWidth As Number, WindowHeight As Number)
+
+    Dim ButtonWidth As Number
+    Dim ButtonY As Number
+
+    If Value.MinimumSizeNoticeDismissed Then
+        Return
+    End If
+
+    ButtonWidth = Min(220, Max(1, WindowWidth - 32))
+    ButtonY = Max(8, Min(126, WindowHeight - 56))
 
     Fill Rectangle 0, 0, WindowWidth, WindowHeight, Rgb(4, 9, 24) Opacity 92
-    Draw Text "CHARACTER VIEWER NEEDS MORE ROOM" At 28, 40 Size 22 Color YELLOW
-    Draw Text "Resize to at least 800 by 540 logical units." At 28, 78 Size 15 Color WHITE
-    Draw Text "Right-click still resets the scene." At 28, 108 Size 13 Color LIGHT_GRAY
+    Draw Text "Small Screen" At 28, 28 Size 22 Color YELLOW
+    Draw Text "Editor controls need more room." At 28, 66 Size 13 Color WHITE
+    Draw Text "Continue to view the scene." At 28, 90 Size 13 Color LIGHT_GRAY
+
+    Call UI.DrawButton((WindowWidth - ButtonWidth) / 2, ButtonY,
+        ButtonWidth, 44, "Continue", True)
 
 End Sub
 

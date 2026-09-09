@@ -742,6 +742,15 @@ Function HandleInterfacePointer() As Boolean
 
     End If
 
+    If (ViewerUi.LayoutTooSmall(Window_Width(), Window_Height()) And
+        Not Pointer_Pressed(POINTER_SECONDARY)) Then
+        Blocked = ViewerUi.HandleMinimumSizeNotice(
+            ViewerUiState, Window_Width(), Window_Height(),
+            Pointer_X(), Pointer_Y(), Pointer_Pressed(POINTER_PRIMARY))
+
+        Return Blocked
+    End If
+
     If ViewerUi.CharacterTabsContain(Pointer_X(), Pointer_Y()) Then
 
         If Pointer_Pressed(POINTER_PRIMARY) Then
@@ -1480,7 +1489,8 @@ Sub DrawInspectorOverlay()
     End If
 
     If ViewerUi.LayoutTooSmall(Window_Width(), Window_Height()) Then
-        Call ViewerUi.DrawMinimumSizeNotice(Window_Width(), Window_Height())
+        Call ViewerUi.DrawMinimumSizeNotice(
+            ViewerUiState, Window_Width(), Window_Height())
 
         Return
     End If

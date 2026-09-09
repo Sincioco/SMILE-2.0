@@ -1013,6 +1013,25 @@ Call Check(ViewerUi.CALIBRATION_PANEL_WIDTH = 430 And
     ViewerUi.CALIBRATION_SLIDER_WIDTH = 360)
 Call Check(ViewerUi.LayoutTooSmall(799, 640))
 Call Check(Not ViewerUi.LayoutTooSmall(800, 540))
+
+Call ViewerUi.Reset(UiState)
+
+Call Check(ViewerUi.HandleMinimumSizeNotice(UiState, 390, 300, 5, 5, True))
+Call Check(Not UiState.MinimumSizeNoticeDismissed)
+Call Check(ViewerUi.HandleMinimumSizeNotice(UiState, 390, 300, 195, 145, False))
+Call Check(Not UiState.MinimumSizeNoticeDismissed)
+Call Check(ViewerUi.HandleMinimumSizeNotice(UiState, 390, 300, 195, 145, True))
+Call Check(UiState.MinimumSizeNoticeDismissed)
+Call Check(Not ViewerUi.HandleMinimumSizeNotice(UiState, 390, 300, 195, 145, True))
+
+Call ViewerUi.Reset(UiState)
+
+Call Check(UiState.MinimumSizeNoticeDismissed)
+Call Check(Not ViewerUi.HandleMinimumSizeNotice(UiState, 844, 390, 422, 145, True))
+Call Check(Not ViewerUi.HandleMinimumSizeNotice(UiState, 800, 540, 400, 145, True))
+
+UiState.MinimumSizeNoticeDismissed = False
+
 Call Check(ViewerUi.CalibrationPointerAction(293, 97, True, 0) =
     ViewerUi.CALIBRATION_ACTION_PREVIOUS_KEY)
 Call Check(ViewerUi.CalibrationPointerAction(279, 159, True, 0) =
@@ -1098,7 +1117,7 @@ Call Check(CalibrationOperation.Ready And
 EffectsState.VisualHistoryDirty = False
 EffectsState.VisualContinuityEpoch = 0
 
-Call ViewerUi.DrawMinimumSizeNotice(800, 640)
+Call ViewerUi.DrawMinimumSizeNotice(UiState, 800, 640)
 
 Profile = ViewerProfiles.ProfileAt(ViewerProfiles.PROFILE_ARIN)
 
