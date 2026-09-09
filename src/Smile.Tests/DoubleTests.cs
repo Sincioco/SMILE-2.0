@@ -29,7 +29,7 @@ internal static class DoubleTests
             foreach (var literal in new[] { "1e", "1e+", "1e999" })
             {
                 var analysis = Invalid("Print " + literal + "\nPrint 2\n");
-                Require(analysis.Diagnostics.Any(d => d.Code == "SML3800" && d.Location.Span.Start == 6 &&
+                Require(analysis.Diagnostics.Any(d => d.Code == "SML3900" && d.Location.Span.Start == 6 &&
                     d.Location.Span.Length == literal.Length), "Literal span " + literal);
             }
             Invalid("Print 1.2.3\n");
@@ -46,6 +46,49 @@ internal static class DoubleTests
             foreach (var value in new[] { "1.0 / 0.0", "1e308 * 2.0", "Sqrt(-1.0)",
                 "ToNumber(9223372036854775808.0)", "Clamp(0.0, 2.0, 1.0)", "Text_To_Double(\"1tail\")" })
                 Invalid("Const BAD = " + value + "\n");
+        });
+        tests.Run("Numeric diagnostics preserve messages, source paths and exact spans", () =>
+        {
+            var path = Path.GetFullPath("NumericDiagnostic.smile");
+            foreach (var (source, fragment, code, message) in new[] {
+                ("Print 1.0 + 1\n", "1.0 + 1", "SML3901",
+                    "Double requires same-type arithmetic/comparison operands. Use explicit ToDouble or ToNumber; Mod remains Number-only."),
+                ("Print ToDouble(1.0)\n", "1.0", "SML3901",
+                    "Built-in 'ToDouble' requires Number; use an explicit conversion."),
+                ("Game Window \"Proof\", 100, 100\nPrint Renderer3DDoubleValue(1, 0.0, 0, 0)\n", "0.0", "SML3901",
+                    "Built-in 'Renderer3DDoubleValue' requires exact typed arguments; use explicit conversion."),
+                ("Const BAD = Sqrt(-1.0)\n", "Sqrt(-1.0)", "SML3902",
+                    "Double constant has an invalid domain, conversion or nonfinite result.") })
+            {
+                var analysis = SmileLanguage.Analyze(source, path);
+                Require(analysis.Diagnostics.Any(d => d.Code == code && d.Message == message &&
+                    d.Location.FilePath == path && d.Location.Span.Start == source.IndexOf(fragment, StringComparison.Ordinal) &&
+                    d.Location.Span.Length == fragment.Length), "Numeric diagnostic contract: " + source);
+            }
+        });
+        tests.Run("ApplicationId diagnostic identities remain separate from numeric diagnostics", () =>
+        {
+            var numericCodes = new[] { DoubleSemantics.InvalidLiteralDiagnosticCode,
+                DoubleSemantics.TypeMismatchDiagnosticCode, DoubleSemantics.CheckedFailureDiagnosticCode };
+            Require(numericCodes.SequenceEqual(new[] { "SML3900", "SML3901", "SML3902" }) &&
+                numericCodes.Distinct(StringComparer.Ordinal).Count() == 3 &&
+                !numericCodes.Intersect(new[] { "SML3800", "SML3801", "SML3802" }).Any(),
+                "Distinct numeric ownership without changing ApplicationId identities");
+            var path = Path.GetFullPath("IdentityDiagnostic.smileproj");
+            foreach (var (properties, code, line) in new[] {
+                ("<ApplicationId>Bad.Id</ApplicationId>", "SML3800", 3),
+                ("<ApplicationId>smile.one</ApplicationId>\n<ApplicationId>smile.two</ApplicationId>", "SML3801", 4),
+                ("<ApplicationId>smile.library</ApplicationId>\n<ProjectKind>Library</ProjectKind>" +
+                    "<LibraryName>Proof</LibraryName><Version>1.0.0</Version>", "SML3802", 3) })
+            {
+                SmileProjectDiagnosticException? error = null;
+                try { SmileProjectSourceSet.Parse(path, "<SmileProject>\n<PropertyGroup>\n" + properties +
+                    "\n</PropertyGroup>\n</SmileProject>"); }
+                catch (SmileProjectDiagnosticException exception) { error = exception; }
+                Require(error != null && error.Code == code && error.FilePath == path &&
+                    error.Diagnostic.Line == line && error.Diagnostic.Column == 2,
+                    "Established ApplicationId code and XML location: " + code);
+            }
         });
         tests.Run("Double preserves contextual user routines and scalar names", () =>
         {
@@ -106,6 +149,47 @@ internal static class DoubleTests
             Require(source.Contains("double Field_Values[2]"), "Nested field debug type");
             Require(!source.Contains("const void* Points"), "Record array debug type");
             Require(!source.Contains("Value = smile_debug_v"), "No uninitialized alias at the source breakpoint");
+        });
+        tests.Run("Native Debug aggregate fields preserve distinct Unicode identities", () =>
+        {
+            var fixture = Path.Combine(RepositoryTestContext.FindRepositoryRoot(),
+                "examples", "DoubleTests", "UnicodeDebug.smile");
+            var analysis = Valid(File.ReadAllText(fixture));
+            var emitter = new MasmEmitter(analysis, SmileGraphicsBackend.Auto, true, true);
+            emitter.Emit();
+            var source = CompilerDriver.BuildDebugSource(emitter.DebugSites);
+            var repeated = new MasmEmitter(analysis, SmileGraphicsBackend.Auto, true, true);
+            repeated.Emit();
+            Require(source == CompilerDriver.BuildDebugSource(repeated.DebugSites),
+                "Repeated actual generation is deterministic");
+            var aggregates = System.Text.RegularExpressions.Regex.Matches(source,
+                @"struct SmileDebug_[A-F0-9]+ \{(?<fields>[^}]+)\};");
+            Require(aggregates.Count == 3, "Record, nested record and class views emitted");
+            foreach (System.Text.RegularExpressions.Match aggregate in aggregates)
+            {
+                var fields = System.Text.RegularExpressions.Regex.Matches(
+                    aggregate.Groups["fields"].Value, @"\b(Field_[A-Za-z0-9_]+)(?:\[\d+\])?;")
+                    .Select(match => match.Groups[1].Value).ToArray();
+                Require(fields.Length > 0 && fields.Distinct(StringComparer.Ordinal).Count() == fields.Length,
+                    "Every aggregate C member is unique");
+            }
+            Require(source.Contains("double Field_Caf_;") && source.Contains("double Field_Caf__0;") &&
+                source.Contains("double Field_Caf__0_;") && source.Contains("long long Field_Caf_u00E9;") &&
+                source.Contains("double Field_Plain;"), "Original ASCII member names remain readable");
+            Require(source.Contains("/* SMILE: Café */") && source.Contains("/* SMILE: Cafè */"),
+                "Generated field comments retain the source-name correspondence");
+            var record = (RecordTypeSymbol)analysis.SemanticModel.Symbols["Sample"].Type;
+            Require(record.Fields.Select(field => field.Offset).SequenceEqual(new[] { 0, 8, 16, 24, 32, 40, 48, 96 }),
+                "Record offsets unchanged");
+            Require(record.Size == 112 && record.Fields[6].Dimensions.SequenceEqual(new[] { 2, 3 }),
+                "Nested record size and fixed-array dimensions unchanged");
+            var holder = (ClassTypeSymbol)analysis.SemanticModel.Symbols["Box"].Type;
+            Require(holder.Fields.Select(field => field.Offset).SequenceEqual(new[] { 0, 8, 16, 24, 32, 40 }) &&
+                holder.InstanceSize == 264 && holder.Fields[5].ElementCount == 2,
+                "Class offsets and nested record array layout unchanged");
+            Require(source.Contains("double Field_Values[6];") &&
+                source.Contains(NativeDebugTypes.Name(record) + " Field_Samples[2];"),
+                "Actual C views retain fixed-array element types and extents");
         });
         tests.Run("Double Select Case stays same-type", () =>
         {

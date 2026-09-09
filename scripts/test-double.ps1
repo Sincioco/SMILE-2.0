@@ -15,9 +15,12 @@ function Compile([string[]]$Arguments) {
     if ($LASTEXITCODE -ne 0) { throw "Double compilation failed: $Arguments" }
 }
 
-function Native([string]$Source, [string]$Name, [string]$Expected, [string]$Failure = '') {
+function Native([string]$Source, [string]$Name, [string]$Expected, [string]$Failure = '',
+    [switch]$Debug, [string]$FailureExpression = '') {
     $Exe = Join-Path $Run "$Name.exe"
-    Compile @($Source, '--graphics', 'GDI', '-o', $Exe)
+    $CompilerArguments = @($Source, '--graphics', 'GDI', '-o', $Exe)
+    if ($Debug) { $CompilerArguments += @('--debug', '--configuration', 'Debug', '--keep-temp') }
+    Compile $CompilerArguments
     $Variables = @('SMILE_CLASS_LIFETIME_DIAGNOSTICS', 'SMILE_IMAGE_LIFETIME_DIAGNOSTICS',
         'SMILE_TEXT_LIFETIME_DIAGNOSTICS')
     $Previous = @{}
@@ -44,7 +47,17 @@ function Native([string]$Source, [string]$Name, [string]$Expected, [string]$Fail
     $Text = ($Output -join "`n") + "`n"
     $Diagnostics = "SMILE_CLASS_LIVE=0`nSMILE_IMAGE_LIVE=0`nSMILE_TEXT_LIVE=0`n"
     if ($Failure) {
-        $Pattern = '^' + [regex]::Escape($Expected) + '[^\r\n]+\(\d+,\d+\): error SML3802: ' +
+        $Location = [regex]::Escape([IO.Path]::GetFullPath($Source)) + '\(\d+,\d+\)'
+        if ($FailureExpression) {
+            $SourceText = [IO.File]::ReadAllText($Source)
+            $Start = $SourceText.IndexOf($FailureExpression, [StringComparison]::Ordinal)
+            if ($Start -lt 0) { throw "$Name has no expected failing expression." }
+            $Prefix = $SourceText.Substring(0, $Start)
+            $Line = ($Prefix -split "`n").Count
+            $Column = $Start - $Prefix.LastIndexOf("`n", [StringComparison]::Ordinal)
+            $Location = [regex]::Escape("$([IO.Path]::GetFullPath($Source))($Line,$Column)")
+        }
+        $Pattern = '^' + [regex]::Escape($Expected) + $Location + ': error SML3902: ' +
             [regex]::Escape($Failure) + '\n' + [regex]::Escape($Diagnostics) + '$'
         if ($Text -notmatch $Pattern) { throw "$Name failure output/cleanup differed: $Text" }
     }
@@ -65,6 +78,9 @@ function Web([string]$Source, [string]$Name, [string]$Expected, [string]$Failure
 }
 
 if (-not $SkipSuccess) {
+    $Unicode = Join-Path $Root 'examples/DoubleTests/UnicodeDebug.smile'
+    Native $Unicode 'UnicodeRelease' "0.125`n0.25`n0.5`n"
+    Native $Unicode 'UnicodeDebug' "0.125`n0.25`n0.5`n" -Debug
     $Fixture = Join-Path $Root 'examples/DoubleTests/Program.smile'
     Native $Fixture 'Success' "0.002`nDouble tests passed`n"
     Web $Fixture 'Success' "0.002`nDouble tests passed`n"
@@ -145,7 +161,8 @@ Sub Update(ByRef Destination As Double)
 End Sub
 "@
     [IO.File]::WriteAllText($Source, $Program, $Utf8)
-    Native $Source $Case[0] "Before failure`n" $Case[3]
+    $FailureExpression = if ($Case[0] -like 'Native*') { 'ToNumber(Value)' } else { $Case[2] }
+    Native $Source $Case[0] "Before failure`n" $Case[3] -FailureExpression $FailureExpression
     Web $Source $Case[0] "Before failure`n" $Case[3]
 }
 

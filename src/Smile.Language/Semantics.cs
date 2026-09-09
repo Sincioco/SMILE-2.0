@@ -4192,7 +4192,7 @@ internal sealed class SemanticAnalyzer
                 Report("SML3016", identifier.Span, $"Built-in '{identifier.Text}' expects {count} argument(s).");
             for (var index = 0; index < arguments.Count; index++)
                 RequireType(arguments[index], Renderer3DPrecisionSemantics.ArgumentType(identifier.Kind, index),
-                    "SML3801", $"Built-in '{identifier.Text}' requires exact typed arguments; use explicit conversion.");
+                    DoubleSemantics.TypeMismatchDiagnosticCode, $"Built-in '{identifier.Text}' requires exact typed arguments; use explicit conversion.");
             return Renderer3DPrecisionSemantics.ResultType(identifier.Kind);
         }
         if (DoubleSemantics.IsIntrinsic(identifier.Kind) || DoubleSemantics.IsPolymorphic(identifier.Kind))
@@ -4206,7 +4206,7 @@ internal sealed class SemanticAnalyzer
                 Report("SML3016", identifier.Span, $"Built-in '{identifier.Text}' expects {arity} argument(s).");
             for (var index = 0; index < types.Length; index++)
                 if (types[index] != required && types[index] != SmileType.Error)
-                    Report("SML3801", arguments[index].Span,
+                    Report(DoubleSemantics.TypeMismatchDiagnosticCode, arguments[index].Span,
                         $"Built-in '{identifier.Text}' requires {required.Name}; use an explicit conversion.");
             return DoubleSemantics.IsIntrinsic(identifier.Kind) ? DoubleSemantics.ResultType(identifier.Kind) : required;
         }
@@ -4377,7 +4377,7 @@ internal sealed class SemanticAnalyzer
             if (leftType == SmileType.Double && rightType == SmileType.Double &&
                 (DoubleSemantics.IsArithmetic(kind) || DoubleSemantics.IsComparison(kind)))
                 return DoubleSemantics.IsComparison(kind) ? SmileType.Boolean : SmileType.Double;
-            Report("SML3801", binary.Span,
+            Report(DoubleSemantics.TypeMismatchDiagnosticCode, binary.Span,
                 "Double requires same-type arithmetic/comparison operands. Use explicit ToDouble or ToNumber; Mod remains Number-only.");
             return SmileType.Error;
         }
@@ -4575,7 +4575,7 @@ internal sealed class SemanticAnalyzer
                 if (numericValues.Count == SyntaxFacts.GetBuiltInFunctionParameters(numericCall.Identifier.Kind).Count &&
                     DoubleSemantics.TryIntrinsic(numericCall.Identifier.Kind, numericValues, out value))
                 { type = DoubleSemantics.LiteralType(value); return true; }
-                Report("SML3802", numericCall.Span, "Double constant has an invalid domain, conversion or nonfinite result.");
+                Report(DoubleSemantics.CheckedFailureDiagnosticCode, numericCall.Span, "Double constant has an invalid domain, conversion or nonfinite result.");
                 break;
             case CallExpressionSyntax call when call.Identifier.Kind == SyntaxKind.AbsKeyword && call.Arguments.Count == 1 &&
                 TryEvaluateConstant(call.Arguments[0].Expression, out var absObject, out var absType) && absType == SmileType.Number &&

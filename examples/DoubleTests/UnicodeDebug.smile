@@ -1,0 +1,63 @@
+Option Explicit
+
+Type Leaf
+    Fraction As Double
+    Counter As Number
+End Type
+
+Type Readings
+    Café As Double
+    Cafè As Double
+    Caf_ As Double
+    Caf__0 As Double
+    Caf__0_ As Double
+    Caf_u00E9 As Number
+    Values[2, 3] As Double
+    Child As Leaf
+End Type
+
+Class Holder
+    Public Café As Double
+    Public Cafè As Double
+    Public Caf_ As Double
+    Public Caf__0 As Number
+    Public Plain As Double
+    Public Samples[2] As Readings
+End Class
+
+Dim Sample As Readings
+Dim Box As New Holder()
+
+Sample.Café = 0.125
+Sample.Cafè = 0.25
+Sample.Caf_ = 0.5
+Sample.Caf__0 = 1.0
+Sample.Caf__0_ = 2.0
+Sample.Caf_u00E9 = 3
+Sample.Values[1, 2] = 0.75
+Sample.Child.Fraction = 0.875
+Sample.Child.Counter = 4
+Box.Café = Sample.Café
+Box.Cafè = Sample.Cafè
+Box.Caf_ = Sample.Caf_
+Box.Caf__0 = 5
+Box.Plain = 1.5
+Box.Samples[1] = Sample
+
+If (Box.Café <> 0.125 Or
+    Box.Cafè <> 0.25 Or
+    Box.Caf_ <> 0.5 Or
+    Box.Caf__0 <> 5 Or
+    Box.Plain <> 1.5 Or
+    Box.Samples[1].Caf__0 <> 1.0 Or
+    Box.Samples[1].Caf__0_ <> 2.0 Or
+    Box.Samples[1].Caf_u00E9 <> 3 Or
+    Box.Samples[1].Values[1, 2] <> 0.75 Or
+    Box.Samples[1].Child.Fraction <> 0.875 Or
+    Box.Samples[1].Child.Counter <> 4) Then
+    Print "Unicode debug field values failed"
+End If
+
+Print Sample.Café
+Print Sample.Cafè
+Print Sample.Caf_

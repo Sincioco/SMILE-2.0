@@ -95,7 +95,7 @@ internal sealed class Lexer
             if (fractional)
             {
                 if (!DoubleSemantics.TryParse(text, out var floating))
-                    _diagnostics.Report("SML3800", new TextSpan(start, text.Length),
+                    _diagnostics.Report(DoubleSemantics.InvalidLiteralDiagnosticCode, new TextSpan(start, text.Length),
                         "Double literal must be a finite decimal with complete fraction and exponent digits.");
                 return new SyntaxToken(SyntaxKind.DoubleToken, start, text, floating);
             }

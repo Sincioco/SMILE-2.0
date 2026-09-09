@@ -8,6 +8,11 @@ namespace Smile.Language;
 /// <summary>The shared binary64 contract, independent of backend storage and calling conventions.</summary>
 public static class DoubleSemantics
 {
+    // Numeric diagnostics are separate from the established SML3800-series project identities.
+    public const string InvalidLiteralDiagnosticCode = "SML3900";
+    public const string TypeMismatchDiagnosticCode = "SML3901";
+    public const string CheckedFailureDiagnosticCode = "SML3902";
+
     public static int OperationCode(SyntaxKind kind) => kind switch
     {
         SyntaxKind.PlusToken => 1, SyntaxKind.MinusToken => 2, SyntaxKind.StarToken => 3,

@@ -1,5 +1,42 @@
 # Double implementation checkpoint
 
+## Post-acceptance hardening — September 9, 2026
+
+- Authority: `smile-2.0-post-delivery-review-hardening`, revision 1, documents
+  00–04 in order. Archive SHA-256
+  `DACE532FDE81CA7D23B26BEC0A1C4A2929E0396DE29DB0C8D144E47F7105C627`;
+  identity and all 11 manifest lengths/hashes verified before safe extraction.
+  Reconciled once: clean main, HEAD = fetched origin/main = reviewed
+  `6c523b63c8fca0f64f5c606ec555e30adffd4349`; no newer changes needed merging.
+  Completed Double human acceptance and H01–H03/RF01–RF03 remain closed.
+- VFX-01 is validated and pushed in `3a1418b`; actual native/generated-Web
+  resource exhaustion, rollback, recovery and independent-caller evidence stays
+  in the existing equipment VFX checkpoint. No pool limit or reset changed.
+- H-D01 is implemented and focused-validated, final delivery pending. The actual
+  standard native Debug build reproduced C2020 for duplicate `Field_Caf_` members.
+  `NativeDebugTypes` now reserves literal ASCII names and resolves Unicode names
+  by aggregate field ordinal with collision checks; original names remain in
+  generated C comments. No source identity, layout, ABI or numeric rule changed.
+  The public `UnicodeDebug.smile` fixture covers records/classes, competing
+  suffix-looking names, nested records and fixed arrays. Actual `BuildDebugSource`
+  uniqueness/repeated-generation/layout checks pass; native Release and `--debug`
+  Debug both print `0.125`, `0.25`, `0.5`. Generated files were only inspected,
+  never rewritten. No new IDE interaction observation is claimed or required.
+- H-D02 is implemented and focused-validated. A single tracked-source allocation
+  inventory found SML3900–SML3902 unused. `DoubleSemantics` now owns those three
+  numeric codes; Lexer, numeric/precision binding, intrinsic constant folding and
+  the native runtime error prefix consume them. Established ApplicationId
+  SML3800–SML3802, messages, source spans and Number/Double rules are unchanged.
+  The 12 focused managed Double/debug tests pass, including actual project XML
+  error paths/line/column and distinct numeric ownership. The full existing
+  `test-double.ps1` gate passes native/generated-Web success, source/package
+  consumers, deterministic package output, signed-zero/conversion bounds and 15
+  checked failure cases. Native failures verify SML3902 with the exact source
+  file/line/column, exit 5, expected earlier output and zero live class/image/text
+  resources. Generated Web retains its existing error text/location format.
+- Final integration, rebuilt Viewer scene observations and VSIX delivery remain
+  pending. This is a bounded post-acceptance entry, not a new feature phase.
+
 ## Authority and reconciled baseline
 
 - Current closeout: `smile-2.0-double-closeout-review`, revision 1; numbered documents

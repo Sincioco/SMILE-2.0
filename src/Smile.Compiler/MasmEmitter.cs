@@ -623,7 +623,7 @@ internal sealed class MasmEmitter
         {
             var location = new SourceLocation(_currentSource, expression.Span);
             _doubleErrorSites[expression] = new TextLiteral($"double_site_{_doubleErrorSites.Count}",
-                Encoding.UTF8.GetBytes($"{location.FilePath}({location.Line},{location.Column}): error SML3802: "));
+                Encoding.UTF8.GetBytes($"{location.FilePath}({location.Line},{location.Column}): error {DoubleSemantics.CheckedFailureDiagnosticCode}: "));
         }
         switch (expression)
         {

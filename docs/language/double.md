@@ -59,12 +59,18 @@ adapters. Intrinsics use positional arguments; ordinary routines also support
 the existing Optional and named argument rules.
 
 Nonfinite results, division by either zero, invalid domains and conversions fail
-with the actual SMILE source location (`SML3802` on native/constant diagnostics).
+with the actual SMILE source location (`SML3902` on native/checked intrinsic
+constant diagnostics; nonconstant constant-expression errors retain their code).
 The failing result is checked before destination mutation. Earlier source-order
 effects remain; this is not a transaction over the program. Runtime termination
 uses normal staged-call/frame/global cleanup, including owned fields. Literal
-errors use `SML3800`; mixed numeric expressions use `SML3801`. Existing typed
-assignment, parameter and integral-only diagnostics retain their own codes.
+errors use `SML3900`; mixed numeric expressions and exact numeric/precision
+intrinsic argument errors use `SML3901`. These codes belong to the shared
+`DoubleSemantics` definitions. ApplicationId retains `SML3800` (invalid identity),
+`SML3801` (duplicate identity) and `SML3802` (identity in a library project).
+Existing typed assignment, parameter and integral-only diagnostics retain their
+own codes. Web runtime failures retain their message and source-location format
+without a numeric code prefix.
 
 Native ToNumber accepts the truncated interval `[-2^63, 2^63)`. Web accepts only
 the existing Number safe-integer interval `[-9007199254740991, 9007199254740991]`.
@@ -106,6 +112,12 @@ uses floating registers, never integer arithmetic. Typed external Windows x64
 adapters use XMM registers by argument position and XMM0 for floating returns;
 ByRef is a pointer. Hidden aggregate results/receivers retain the existing internal
 layout. This transport is an implementation detail, not a source-level bit-cast.
+Native debug aggregate members preserve ASCII names as `Field_<name>`. Unicode
+members use an ASCII-safe spelling plus their field ordinal and, when needed,
+additional underscores to avoid every literal or generated member name in that
+aggregate. Generated C comments retain the original SMILE name. These helper
+names are deterministic debugger presentation; source names, offsets, array
+dimensions and executable values remain unchanged.
 The numeric translation unit uses `/fp:strict`, with no new fast-math, contraction,
 reassociation or flush-to-zero setting. Web composes small numeric helpers into
 the same runtime; Number guards and Enum BigInt remain distinct.
