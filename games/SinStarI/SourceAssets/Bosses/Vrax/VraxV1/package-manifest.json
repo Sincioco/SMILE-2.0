@@ -309,13 +309,13 @@
   "validationCheckpoint": "docs/implementation/unity-character-import-checkpoint.md",
   "calibration": {
     "available": false,
-    "reason": "No authored Viewer attachment/calibration sockets; no shared Arin/Orin pose storage."
+    "reason": "No Viewer pose-calibration channels; four VFX sockets do not share Arin/Orin pose storage."
   },
   "checkpointFiles": [
     {
       "path": "VraxV1.sm3d.json",
-      "sha256": "2a9144dd1b1bbe78eb44ae6f0769b40d04498000e2b95307ad811a78a72338f7",
-      "bytes": 1172
+      "sha256": "684c146e67b0478a03a51f18a221c73bc4083b5670a44dc4e1e62aada61c7b4b",
+      "bytes": 1697
     },
     {
       "path": "animation-manifest.json",
@@ -352,5 +352,19 @@
       "sha256": "672799bb9c18b7442b949591957256c6c8f4a262b87c97d448ec1109ee937957",
       "bytes": 330460
     }
-  ]
+  ],
+  "attackVfx": {
+    "sockets": 4,
+    "clips": [
+      "Attack",
+      "Attack2",
+      "Attack3",
+      "Attack4",
+      "Attack5",
+      "Attack6"
+    ],
+    "owner": "tools/Character3DViewer/ViewerDragon.smile",
+    "checkpoint": "docs/implementation/character-equipment-vfx-checkpoint.md",
+    "modelAndAnimationsUnchanged": true
+  }
 }

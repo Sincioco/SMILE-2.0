@@ -149,7 +149,7 @@ Public Function ProfileAt(Index As Number) As CharacterViewer.Profile
         Result.ProductionStatus = "Preview"
         Result.AssetPath = "Assets\Generation2\VraxV1\Vrax.sm3d"
         Result.ExpectedClipCount = 24
-        Result.ExpectedSocketCount = 0
+        Result.ExpectedSocketCount = 4
         Result.DesiredWorldHeight = 460
 
     Else If Index = PROFILE_ARIN_V56 Then
@@ -506,6 +506,22 @@ Public Function PartyAttackName(ProfileIndex As Number, AttackCycle As Number) A
             Result = "SwordAttack"
         Else
             Result = "SwordAttack2"
+        End If
+
+    Else If ProfileIndex = PROFILE_VRAX Then
+
+        If AttackCycle Mod 6 = 0 Then
+            Result = "Attack"
+        Else If AttackCycle Mod 6 = 1 Then
+            Result = "Attack2"
+        Else If AttackCycle Mod 6 = 2 Then
+            Result = "Attack3"
+        Else If AttackCycle Mod 6 = 3 Then
+            Result = "Attack4"
+        Else If AttackCycle Mod 6 = 4 Then
+            Result = "Attack5"
+        Else
+            Result = "Attack6"
         End If
 
     Else If ProfileIndex = PROFILE_ORIN Then

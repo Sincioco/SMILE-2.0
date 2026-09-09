@@ -211,6 +211,7 @@ Session.ProfileIndex = ViewerProfiles.PROFILE_ARIN
 
 Call LoadViewer()
 Call CheckEquipmentRimRecovery()
+Call CheckVraxAttackEffects()
 Call CheckEquipmentGlowAlignment()
 Call SelectCharacterTab(1)
 Call CheckEquipmentGlowAlignment()

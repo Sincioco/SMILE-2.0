@@ -39,6 +39,7 @@ Session.ProfileIndex = ViewerProfiles.PROFILE_ARIN
 Call LoadViewer()
 Call CalibrationCheck(Session.Ready And Not Session.ViewerError, "Load profile")
 Call CheckEquipmentRimRecovery()
+Call CheckVraxAttackEffects()
 Call CheckEquipmentGlowAlignment()
 Call CalibrationCheck(Not Calibration.StorageRejected, "Accept current Arin saved calibration")
 Call CheckGizmoVisibility()
@@ -1695,6 +1696,123 @@ Sub UpdateTestEquipmentFire()
         ViewerCameraState.Live,
         Timing.CameraElapsed
     )
+
+End Sub
+
+Sub CheckVraxAttackEffects()
+
+    Dim Trial As ViewerDragon.AttackEffects
+    Dim Independent As ViewerDragon.AttackEffects
+    Dim HeldFire[12] As Fire.FireEmitter
+    Dim HeldArcs[8] As Lightning.LightningEffect
+    Dim Mouth As Precision3D.Vector3
+    Dim LeftArm As Precision3D.Vector3
+    Dim RightArm As Precision3D.Vector3
+    Dim Target As Precision3D.Vector3
+    Dim Original As Lightning.LightningEffect
+    Dim BaselineFire As Number
+    Dim FireCount As Number
+    Dim ArcCount As Number
+    Dim Index As Number
+    Dim Ok As Boolean
+
+    Ok = ViewerEffects.PrepareLightning(Effects)
+    Mouth = Precision3D.Vector(0.25, 100.5, 0.75)
+    LeftArm = Precision3D.Vector(-60.25, 70.5, 5.75)
+    RightArm = Precision3D.Vector(60.25, 70.5, 5.75)
+    Target = Precision3D.Vector(0.25, 25.5, 300.75)
+    BaselineFire = Fire.Value(1, Trial.MouthFire)
+
+    Call CalibrationCheck(Ok, "Vrax uses initialized shared lightning")
+    Call CalibrationCheck(Not ViewerDragon.VraxAttackActive("Idle", 400, 1000) And
+        Not ViewerDragon.VraxAttackActive("Attack", 100, 1000) And
+        Not ViewerDragon.VraxAttackActive("Attack", 800, 1000),
+        "Vrax suppresses idle, windup and recovery effects")
+
+    For Index = 0 To 5
+        Call CalibrationCheck(ViewerDragon.VraxAttackActive(
+            ViewerProfiles.PartyAttackName(ViewerProfiles.PROFILE_VRAX, Index), 400, 1000),
+            "Vrax cycles six active attack clips")
+    End For
+
+    Call ViewerDragon.UpdateVraxAttackPoints(Independent, "Attack", 400, 1000,
+        Mouth, LeftArm, RightArm, Target, True, True, True, False, False, 1)
+
+    Original = Independent.LeftArc
+
+    Call CalibrationCheck(Independent.MouthFire.Slot <> 0 And
+        Independent.LeftArc.Slot <> 0 And Independent.RightArc.Slot <> 0,
+        "Vrax acquires one mouth emitter and both arm bolts")
+
+    ''' Leave one lightning slot: a partial pair must be rolled back immediately.
+    ArcCount = 7 - Lightning.Value(Lightning.QUERY_LIVE_EFFECTS, Original)
+
+    For Index = 0 To ArcCount - 1
+        HeldArcs[Index] = Lightning.StartAtPrecise("StoredStorm", Mouth, Target, 7000 + Index)
+    End For
+
+    FireCount = 12 - Fire.Value(1, Independent.MouthFire)
+
+    For Index = 0 To FireCount - 1
+        HeldFire[Index] = Fire.StartAtPrecise("LineFire", Mouth, 8000 + Index,
+            Fire.QUALITY_LOW, Fire.SIMULATION_CPU, 3)
+    End For
+
+    Call ViewerDragon.UpdateVraxAttackPoints(Trial, "Attack", 400, 1000,
+        Mouth, LeftArm, RightArm, Target, True, True, True, False, False, 1)
+    Call CalibrationCheck(Trial.MouthFire.Slot = 0 And Trial.LeftArc.Slot = 0 And
+        Trial.RightArc.Slot = 0 And Lightning.Value(Lightning.QUERY_LIVE_EFFECTS, Original) = 7,
+        "Vrax pressure leaves no partial arm pair or failed fire lease")
+
+    Ok = Fire.Destroy(HeldFire[FireCount - 1])
+    Ok = Lightning.Destroy(HeldArcs[ArcCount - 1]) And Ok
+
+    Call ViewerDragon.UpdateVraxAttackPoints(Trial, "Attack", 420, 1000,
+        Mouth, LeftArm, RightArm, Target, True, True, True, False, False, 1)
+    Call CalibrationCheck(Ok And Trial.MouthFire.Slot <> 0 And Trial.LeftArc.Slot <> 0 And
+        Trial.RightArc.Slot <> 0 And Lightning.IsActive(Original),
+        "Vrax retries in place while the independent caller survives")
+
+    Original = Trial.LeftArc
+    Target.X = 80.25
+
+    Call ViewerDragon.UpdateVraxAttackPoints(Trial, "Attack", 450, 1000,
+        Mouth, LeftArm, RightArm, Target, True, True, True, True, True, 1)
+    Call CalibrationCheck(Trial.LeftArc.Generation = Original.Generation And
+        Lightning.Value(Lightning.QUERY_MAIN_TARGET_X, Trial.LeftArc) = 0,
+        "Vrax family freeze retains the current attachment snapshot")
+    Call ViewerDragon.UpdateVraxAttackPoints(Trial, "Attack", 460, 1000,
+        Mouth, LeftArm, RightArm, Target, True, True, True, False, False, 1)
+    Call CalibrationCheck(Not Lightning.IsActive(Original) And
+        Lightning.Value(Lightning.QUERY_MAIN_TARGET_X, Trial.LeftArc) = 80,
+        "Vrax resume rebases moving attachments")
+
+    Call ViewerDragon.UpdateVraxAttackPoints(Trial, "Death", 400, 1000,
+        Mouth, LeftArm, RightArm, Target, True, True, True, False, False, 1)
+    Call CalibrationCheck(Trial.MouthFire.Slot = 0 And Trial.LeftArc.Slot = 0 And
+        Trial.RightArc.Slot = 0, "Vrax death clears every owned effect")
+    Call ViewerDragon.UpdateVraxAttackPoints(Trial, "Attack2", 400, 1000,
+        Mouth, LeftArm, RightArm, Target, True, True, True, False, False, 1)
+    Call ViewerDragon.UpdateVraxAttackPoints(Trial, "Attack2", 400, 1000,
+        Mouth, LeftArm, RightArm, Target, False, True, True, True, True, 2)
+    Call CalibrationCheck(Trial.MouthFire.Slot = 0 And Trial.LeftArc.Slot = 0 And
+        Trial.RightArc.Slot = 0 And Independent.LeftArc.Slot <> 0,
+        "Vrax hide and discontinuity outrank freeze without clearing another caller")
+
+    Call ViewerDragon.ClearVraxAttacks(Trial)
+    Call ViewerDragon.ClearVraxAttacks(Independent)
+
+    For Index = 0 To FireCount - 1
+        Ok = Fire.Destroy(HeldFire[Index])
+    End For
+
+    For Index = 0 To ArcCount - 1
+        Ok = Lightning.Destroy(HeldArcs[Index])
+    End For
+
+    Call CalibrationCheck(Fire.Value(1, Trial.MouthFire) = BaselineFire And
+        Lightning.Value(Lightning.QUERY_LIVE_EFFECTS, Trial.LeftArc) = 0,
+        "Vrax release restores shared budgets")
 
 End Sub
 

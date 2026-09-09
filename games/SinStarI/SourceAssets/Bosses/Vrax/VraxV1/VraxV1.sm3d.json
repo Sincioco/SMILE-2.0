@@ -74,5 +74,39 @@
     "Walk_R": {
       "loop": true
     }
+  },
+  "sockets": {
+    "VraxMouth": {
+      "node": "head",
+      "translation": [
+        34,
+        0,
+        -5
+      ]
+    },
+    "VraxMouthAim": {
+      "node": "head",
+      "translation": [
+        54,
+        0,
+        -5
+      ]
+    },
+    "VraxLeftArm": {
+      "node": "lowerarm_l",
+      "translation": [
+        12,
+        8,
+        0
+      ]
+    },
+    "VraxRightArm": {
+      "node": "lowerarm_r",
+      "translation": [
+        -12,
+        -8,
+        0
+      ]
+    }
   }
 }

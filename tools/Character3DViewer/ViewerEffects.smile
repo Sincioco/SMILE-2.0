@@ -17,6 +17,7 @@ Import Smile.Tools.ArinShieldRim As ArinShieldRim
 Import Smile.Tools.OrinStorm As OrinStorm
 Import Smile.Tools.BattleAudio As BattleAudio
 Import Smile.Tools.Character3DViewerProfiles As ViewerProfiles
+Import Smile.Tools.Character3DViewerDragon As ViewerDragon
 
 Private Const TRAIL_POINT_COUNT = 5
 Private Const TRAIL_SAMPLE_MILLISECONDS = 24
@@ -33,6 +34,7 @@ Private Const BODY_PART_INDEX = 2
 
 Public Type State
     ProfileIndex As Number
+    VraxAttacks As ViewerDragon.AttackEffects
     ShieldRim As ArinShieldRim.Context
     WeaponRim As ArinShieldRim.Context
     IntensityInitialized As Boolean
@@ -538,6 +540,7 @@ End Sub
 
 Public Sub DestroyEpicGlow(ByRef Value As State)
 
+    Call ViewerDragon.ClearVraxAttacks(Value.VraxAttacks)
     Call ClearEquipmentFire(Value)
 
     Call Graphics3D.DestroyObject3D(Value.SwordGlow)
@@ -671,6 +674,15 @@ Public Sub UpdateEquipmentFire(
     CameraElapsed As Number
 )
 
+    If ProfileIndex = ViewerProfiles.PROFILE_VRAX Then
+        Call ViewerDragon.UpdateVraxAttacks(Value.VraxAttacks, Actor,
+            SelectedClipLabel, Not PrimaryKnockedOut,
+            Value.FireInitialized, Value.LightningInitialized,
+            Value.FlamePaused, Value.LightningPaused, Value.VisualContinuityEpoch)
+
+        Return
+    End If
+
     If ProfileIndex = ViewerProfiles.PROFILE_DRAGON Then
         Return
     End If
@@ -769,6 +781,8 @@ End Sub
 
 Public Sub DrawEquipmentFire(ByRef Value As State, SwordVisible As Boolean,
     ShieldVisible As Boolean)
+
+    Call ViewerDragon.DrawVraxAttacks(Value.VraxAttacks)
 
     If SwordVisible And Value.EpicGlowVisible Then
         Call ArinShieldRim.Draw(Value.WeaponRim)

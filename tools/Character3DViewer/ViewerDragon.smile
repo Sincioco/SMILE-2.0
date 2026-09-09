@@ -9,6 +9,9 @@ Import Smile.Simple3D.FireEmitter3D As Fire
 Import Smile.Simple3D.Graphics3D As Graphics3D
 Import Smile.Simple3D.LightPool3D As LightPool3D
 Import Smile.Simple3D.Math3D As Math3D
+Import Smile.Simple3D.Precision3D As Precision3D
+Import Smile.Simple3D.PrecisionMath3D As PreciseMath
+Import Smile.Simple3D.LightningVfx3D As Lightning
 Import Smile.Simple3D.NodeAim3D As NodeAim3D
 Import Smile.Tools.BattleAudio As BattleAudio
 Import Smile.Tools.Character3DViewerProfiles As ViewerProfiles
@@ -24,9 +27,23 @@ Private Const POSITION_Z = -120
 Private Const ROTATION_Y = 240
 Private Const BODY_PART_INDEX = 2
 
+Public Type AttackEffects
+    MouthFire As Fire.FireEmitter
+    LeftArc As Lightning.LightningEffect
+    RightArc As Lightning.LightningEffect
+    Clip As Text
+    Time As Number
+    FireTime As Number
+    LightningTime As Number
+    Epoch As Number
+    FireWasPaused As Boolean
+    LightningWasPaused As Boolean
+End Type
+
 Public Type State
     Actor As Character3D.Actor
     UseVrax As Boolean
+    Attacks As AttackEffects
     Frame As PrecisionCamera.Framing
     HeadAim As NodeAim3D.Constraint
     Clip As Text
@@ -200,6 +217,8 @@ End Function
 Public Sub DrawEffects(ByRef Value As State)
 
     If Value.UseVrax Then
+        Call DrawVraxAttacks(Value.Attacks)
+
         Return
     End If
 
@@ -214,6 +233,8 @@ End Sub
 Public Sub ClearOwnedEffects(ByRef Value As State, Light As LightPool3D.Lease)
 
     Dim Ok As Boolean
+
+    Call ClearVraxAttacks(Value.Attacks)
 
     If Value.Breath.Slot <> 0 Then
         Ok = Fire.Destroy(Value.Breath)
@@ -585,5 +606,229 @@ Public Function UpdateVraxPreview(ByRef Value As State, Name As Text,
     Return Result
 
 End Function
+
+''' Attack windows follow clip time, so speed changes and inspector seeks stay aligned.
+Public Function VraxAttackActive(Name As Text, Time As Number, Duration As Number) As Boolean
+
+    Dim Result As Boolean
+
+    Result = (Name = "Attack" Or Name = "Attack2" Or Name = "Attack3" Or
+        Name = "Attack4" Or Name = "Attack5" Or Name = "Attack6")
+    Result = (Result And Duration > 0 And Time >= Duration / 6 And
+        Time < Duration * 4 / 5)
+
+    Return Result
+
+End Function
+
+Public Sub ClearVraxAttacks(ByRef Value As AttackEffects)
+
+    Dim Ok As Boolean
+
+    If Value.MouthFire.Slot <> 0 Then
+        Ok = Fire.Destroy(Value.MouthFire)
+    End If
+
+    Call ClearVraxLightning(Value)
+
+End Sub
+
+Private Sub ClearVraxLightning(ByRef Value As AttackEffects)
+
+    Dim Ok As Boolean
+
+    If Value.LeftArc.Slot <> 0 Then
+        Ok = Lightning.Destroy(Value.LeftArc)
+    End If
+
+    If Value.RightArc.Slot <> 0 Then
+        Ok = Lightning.Destroy(Value.RightArc)
+    End If
+
+End Sub
+
+Public Sub DrawVraxAttacks(ByRef Value As AttackEffects)
+
+    Dim Ok As Boolean
+
+    If Value.MouthFire.Slot <> 0 Then
+        Ok = Fire.Draw(Value.MouthFire)
+    End If
+
+    ''' Lightning is submitted once by the existing scene-wide draw owner.
+
+End Sub
+
+Public Sub UpdateVraxAttacks(ByRef Value As AttackEffects, Actor As Character3D.Actor,
+    Name As Text, Enabled As Boolean, FireReady As Boolean, LightningReady As Boolean,
+    FirePaused As Boolean, LightningPaused As Boolean, Epoch As Number)
+
+    Dim Mouth As Precision3D.Vector3
+    Dim Aim As Precision3D.Vector3
+    Dim LeftArm As Precision3D.Vector3
+    Dim RightArm As Precision3D.Vector3
+    Dim Forward As Precision3D.Vector3
+    Dim Target As Precision3D.Vector3
+    Dim Duration As Number
+    Dim Index As Number
+    Dim Ok As Boolean
+
+    If Not Enabled Or Not Character3D.IsValid(Actor) Then
+        Call ClearVraxAttacks(Value)
+
+        Return
+    End If
+
+    For Index = 0 To Character3D.ClipCount(Actor) - 1
+
+        If Character3D.ClipName(Actor, Index) = Name Then
+            Duration = Character3D.ClipDuration(Actor, Index)
+        End If
+
+    End For
+
+    If (Not Character3D.HasSocket(Actor, "VraxMouth") Or
+        Not Character3D.HasSocket(Actor, "VraxMouthAim") Or
+        Not Character3D.HasSocket(Actor, "VraxLeftArm") Or
+        Not Character3D.HasSocket(Actor, "VraxRightArm")) Then
+        Call ClearVraxAttacks(Value)
+
+        Return
+    End If
+
+    Ok = Character3D.TrySocketPositionPrecise(Actor, "VraxMouth", 0, False, Mouth)
+    Ok = Character3D.TrySocketPositionPrecise(Actor, "VraxMouthAim", 0, False, Aim) And Ok
+    Ok = Character3D.TrySocketPositionPrecise(Actor, "VraxLeftArm", 0, False, LeftArm) And Ok
+    Ok = Character3D.TrySocketPositionPrecise(Actor, "VraxRightArm", 0, False, RightArm) And Ok
+    Ok = PreciseMath.TryNormalize(PreciseMath.Subtract(Aim, Mouth), Forward) And Ok
+    Target = PreciseMath.Add(Mouth, PreciseMath.Scale(Forward, 300.0))
+    Target.Y = Max(12.0, Target.Y)
+
+    Call UpdateVraxAttackPoints(Value, Name, Character3D.AnimationTime(Actor), Duration,
+        Mouth, LeftArm, RightArm, Target, Ok, FireReady, LightningReady,
+        FirePaused, LightningPaused, Epoch)
+
+End Sub
+
+''' Caller-owned admission; neither caller advances or resets the shared VFX pools.
+Public Sub UpdateVraxAttackPoints(ByRef Value As AttackEffects, Name As Text,
+    Time As Number, Duration As Number, Mouth As Precision3D.Vector3,
+    LeftArm As Precision3D.Vector3, RightArm As Precision3D.Vector3,
+    Target As Precision3D.Vector3, Enabled As Boolean,
+    FireReady As Boolean, LightningReady As Boolean,
+    FirePaused As Boolean, LightningPaused As Boolean, Epoch As Number)
+
+    Dim Forward As Precision3D.Vector3
+    Dim Direction As Core.Vector3
+    Dim Ok As Boolean
+    Dim Active As Boolean
+
+    If (Value.Epoch <> Epoch Or
+        Value.Clip <> Name Or
+        Time < Value.Time) Then
+        Call ClearVraxAttacks(Value)
+    End If
+
+    Active = Enabled And VraxAttackActive(Name, Time, Duration)
+
+    If Not Active Then
+
+        Call ClearVraxAttacks(Value)
+
+    Else
+
+        If (Value.FireWasPaused And
+            Not FirePaused And
+            Time <> Value.FireTime) Then
+            Ok = Fire.Destroy(Value.MouthFire)
+        End If
+
+        If (Value.LightningWasPaused And
+            Not LightningPaused And
+            Time <> Value.LightningTime) Then
+            Call ClearVraxLightning(Value)
+        End If
+
+        If FireReady And Not FirePaused Then
+
+            If Value.MouthFire.Slot = 0 Then
+                Value.MouthFire = Fire.StartAtPrecise("DragonFireBreathPreview",
+                    Mouth, 6117, Fire.QUALITY_HIGH, Fire.SIMULATION_AUTO, 9)
+            End If
+
+            If Value.MouthFire.Slot <> 0 Then
+
+                Ok = PreciseMath.TryNormalize(PreciseMath.Subtract(Target, Mouth), Forward)
+                Direction.X = ToNumber(Forward.X * 650.0)
+                Direction.Y = ToNumber(Forward.Y * 650.0)
+                Direction.Z = ToNumber(Forward.Z * 650.0)
+                Ok = Fire.SetPositionPrecise(Value.MouthFire, Mouth) And Ok
+                Ok = Fire.SetDirection(Value.MouthFire, Direction) And Ok
+
+                Call Fire.SetIntensity(Value.MouthFire, 190)
+                Call Fire.SetSourceVelocityInheritance(Value.MouthFire, 0)
+
+                If Not Ok Then
+                    Ok = Fire.Destroy(Value.MouthFire)
+                End If
+
+            End If
+
+        End If
+
+        If LightningReady And Not LightningPaused Then
+
+            If Value.LeftArc.Slot = 0 Or Value.RightArc.Slot = 0 Then
+
+                Call ClearVraxLightning(Value)
+
+                Value.LeftArc = Lightning.StartAtPrecise("WeaponCorona",
+                    LeftArm, Target, 6217, Lightning.QUALITY_HIGH)
+                Value.RightArc = Lightning.StartAtPrecise("WeaponCorona",
+                    RightArm, Target, 6317, Lightning.QUALITY_HIGH)
+
+                If Value.LeftArc.Slot = 0 Or Value.RightArc.Slot = 0 Then
+                    Call ClearVraxLightning(Value)
+                End If
+
+            End If
+
+            If Value.LeftArc.Slot <> 0 And Value.RightArc.Slot <> 0 Then
+
+                Ok = Lightning.SetEndpointsPrecise(Value.LeftArc, LeftArm, Target)
+                Ok = Lightning.SetEndpointsPrecise(Value.RightArc, RightArm, Target) And Ok
+                Ok = Lightning.SetStyle(Value.LeftArc, 5, 1000) And Ok
+                Ok = Lightning.SetStyle(Value.RightArc, 5, 1000) And Ok
+                Ok = Lightning.SetBranchBudget(Value.LeftArc, 4) And Ok
+                Ok = Lightning.SetBranchBudget(Value.RightArc, 4) And Ok
+                Ok = Lightning.SetSparkIntensity(Value.LeftArc, 25) And Ok
+                Ok = Lightning.SetSparkIntensity(Value.RightArc, 25) And Ok
+
+                If Not Ok Then
+                    Call ClearVraxLightning(Value)
+                End If
+
+            End If
+
+        End If
+
+    End If
+
+    Value.Clip = Name
+    Value.Epoch = Epoch
+    Value.Time = Time
+
+    If Not FirePaused Then
+        Value.FireTime = Time
+    End If
+
+    If Not LightningPaused Then
+        Value.LightningTime = Time
+    End If
+
+    Value.FireWasPaused = FirePaused
+    Value.LightningWasPaused = LightningPaused
+
+End Sub
 
 End Module

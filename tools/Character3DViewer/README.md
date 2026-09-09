@@ -51,6 +51,16 @@ The editor source and build/launch entry points belong here. Sin Star I owns the
 
 ## Maintainer routing
 
+### Vrax attacks
+
+Vrax breathes orange fire and fires blue-white lightning from both arms during
+Attack through Attack6, in his own tab and Party. Party cycles all six clips.
+Four rig-attached sockets follow the final grounded pose at the accepted 20000%
+scale. Effects run from one-sixth to four-fifths of each clip and clear on recovery,
+Idle, Death, hide, tab changes and timeline discontinuities. The existing Party
+fire/lightning freeze controls apply independently. No new combat or damage system
+is involved. See the [VFX checkpoint](../../docs/implementation/character-equipment-vfx-checkpoint.md).
+
 ### Equipment VFX controls
 
 Valor uses the shared sword flame and faint shield flames with Orin's blue/cyan/white
@@ -60,7 +70,8 @@ Both individual tabs and Party use their own weapon parts, bone attachments and
 effect instances. Weapon/Shield hiding clears the corresponding attached effects.
 Valor exposes the same flame freeze and shield style controls as Arin. Party shares
 its existing fire-family freeze and shield-style controls across both flame users.
-The four-hero/Vrax scene uses ten of twelve fire emitters; Zara's rim uses three
+The four-hero/Vrax scene uses ten fire emitters at rest and eleven during Vrax's
+attacks, within the existing twelve-emitter limit. Zara's rim uses three
 ribbon batches and no fire emitters. See the
 [equipment VFX checkpoint](../../docs/implementation/character-equipment-vfx-checkpoint.md).
 
@@ -87,8 +98,10 @@ Arin's sword and three shield edges, Orin's hammer and shield, Dragon mouth heat
 and the active breath/projectile. Both native and Web also support all twelve in
 CPU fallback through 64 shared particle batches, retaining the 8,192-particle
 ceiling. That Dragon scenario leaves four slots. The local four-hero/Vrax scene
-uses ten emitters (Arin four, Orin two, Valor four) and leaves two slots; Zara uses
-ribbons only. New effects require admission checks for the complete active scene.
+uses ten hero emitters (Arin four, Orin two, Valor four) and one Vrax mouth emitter
+during attacks, leaving one slot. Zara uses ribbons only. Vrax borrows two of the
+shared lightning system's eight effect slots; a partially admitted pair is released
+and retried on the next update. New effects require whole-scene admission checks.
 Floor reflections replay existing submissions and consume no extra emitters.
 ViewerDragon retries temporary pool pressure and clears failed admission on an
 explicit effect reset. The production-actor budget/retry test is part of the

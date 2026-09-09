@@ -30,9 +30,10 @@ otherwise these texture atlases are enlarged and cropped despite correct UVs.
 ## Viewer Handoff
 
 The descriptor contains the complete animation set; the inspector exposes nine
-clips per page. No attachment/calibration sockets have been authored, so imported
-equipment stays part of the original animated mesh. Arin/Orin pose saves are not
-used for this character. Source emission textures remain intact.
+clips per page. Four VFX sockets now follow the head and forearm bones; imported
+equipment stays part of the original animated mesh. There are no pose-calibration
+channels, and Arin/Orin pose saves are not used for this character. Source emission
+textures remain intact.
 
 Private/Previews contains native inspection and Party screenshots. The private
 Blender source retains full skin weights; the Viewer derivative keeps the strongest
@@ -48,3 +49,21 @@ grounding corrections must be updated together after any re-export.
 Vrax now uses 20000% scale, twice the first preview capped at 10000%. The same
 profile applies in his tab and Party. Orin effects must not depend on a Vrax Chest
 socket: the Party owner uses current world bounds as the fallback target.
+
+## Mouth Fire And Arm Lightning — September 9, 2026
+
+The canonical descriptor owns VraxMouth/VraxMouthAim on `head`, and VraxLeftArm/
+VraxRightArm on `lowerarm_l`/`lowerarm_r`. The original rig's Root has 0.01 scale;
+socket translations are in bone-local source units, not Viewer world units.
+The two head points establish the animated forward direction. Forearm offsets
+place the bolts outside the arm surfaces. Native and Chrome inspection confirmed
+the fire origin inside the open mouth and both bolts following the arms.
+
+Attack through Attack6 use their own duration, active from one-sixth to four-fifths
+of clip time. `ViewerDragon` owns the effect policy and independent caller state;
+the same operation runs in the individual tab and four-hero Party. Existing shared
+FireEmitter3D and LightningVfx3D resources provide fire and blue-white bolts.
+The model, textures, all 24 animations, grounding corrections and 20000% transform
+scale are unchanged. The GLB remains SHA-256
+`ec863933e6898fb81672aaa979eada343b3b2eedcdc433a8b2c65bfe7a8a84fb`.
+See the equipment VFX checkpoint for validation and whole-scene budgets.

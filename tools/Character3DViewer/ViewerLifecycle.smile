@@ -257,7 +257,8 @@ Private Sub PrepareEditingAndPresentation(ByRef Session As ViewerSession.State,
     Session.Ready = ViewerEffects.PrepareShared(Effects) And Session.Ready
 
     Call ViewerEffects.PrepareFire(
-        Effects, Dragon.Available Or Session.ProfileIndex = ViewerProfiles.PROFILE_VALOR,
+        Effects, Dragon.Available Or Session.ProfileIndex = ViewerProfiles.PROFILE_VALOR Or
+            Session.ProfileIndex = ViewerProfiles.PROFILE_VRAX,
         (CalibrationAvailable And Session.ProfileIndex = ViewerProfiles.PROFILE_ARIN) Or
             Session.ProfileIndex = ViewerProfiles.PROFILE_VALOR)
 
@@ -311,7 +312,8 @@ Private Sub CreateParticipants(ByRef Session As ViewerSession.State,
 
     If (Party.Enabled Or
         Session.DragonInspection Or
-        Session.ProfileIndex = ViewerProfiles.PROFILE_ORIN) Then
+        Session.ProfileIndex = ViewerProfiles.PROFILE_ORIN Or
+        Session.ProfileIndex = ViewerProfiles.PROFILE_VRAX) Then
         Session.Ready = ViewerEffects.PrepareLightning(Effects) And Session.Ready
     End If
 

@@ -1165,9 +1165,15 @@ Public Function UpdateDragon(
     End If
 
     If Value.UnityRoster Then
+
         Result = UpdateUnityBoss(Value, Dragon, PrimaryActor, PlaybackSpeed, AnimationElapsed)
 
+        Call ViewerDragon.UpdateVraxAttacks(Dragon.Attacks, Dragon.Actor, Dragon.Clip,
+            Dragon.Visible, Effects.FireInitialized, Effects.LightningInitialized,
+            Effects.FlamePaused, Effects.LightningPaused, Effects.VisualContinuityEpoch)
+
         Return Result
+
     End If
 
     ReactionRequested = DragonReactionRequested(
@@ -2773,19 +2779,22 @@ Private Function UpdateUnityBoss(ByRef Value As State,
     Dim Index As Number
     Dim Result As Boolean
     Dim AttackMilliseconds As Number
+    Dim AttackName As Text
 
     Name = "Idle"
+    AttackName = ViewerProfiles.PartyAttackName(
+        ViewerProfiles.PROFILE_VRAX, Value.DragonCounter)
 
     For Index = 0 To Character3D.ClipCount(Boss.Actor) - 1
 
-        If Character3D.ClipName(Boss.Actor, Index) = "Attack" Then
+        If Character3D.ClipName(Boss.Actor, Index) = AttackName Then
             Value.BossAttackDuration = Character3D.ClipDuration(Boss.Actor, Index) * 100 / Max(25, PlaybackSpeed)
         End If
 
     End For
 
     If Value.Turn = 2 And Value.Stage = 1 Then
-        Name = "Attack"
+        Name = AttackName
     Else If (Value.Turn <> 2 And
         Value.Stage = 1 And
         Value.Elapsed < 2000) Then

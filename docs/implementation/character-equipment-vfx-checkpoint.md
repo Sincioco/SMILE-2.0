@@ -1,5 +1,65 @@
 # Valor and Zara equipment VFX — September 9, 2026
 
+## Vrax attack follow-up — September 9, 2026
+
+Sin explicitly requested mouth fire and arm lightning after the completed
+post-delivery hardening. This bounded Viewer enhancement follows notice-fix commit
+`35e9dba`; it does not reopen a Loader phase or Sin Star I gameplay work.
+
+`ViewerDragon.AttackEffects` owns one mouth emitter and two arm lightning leases.
+The primary `ViewerEffects.State` and Party boss state own independent contexts.
+Both consume the same final-pose socket queries and clip-time policy. `Profiles`
+cycles Attack through Attack6, and `ViewerParty` uses each selected clip's duration.
+`Program.smile` and the once-per-scene VFX clock/draw ordering are unchanged.
+
+The canonical Vrax descriptor adds four head/forearm sockets. Fire points along
+the animated head's forward direction; blue-white lightning leaves both forearms
+toward the same forward endpoint. These are cosmetic previews, with no combat,
+damage, targeting AI, new sounds or model/animation edits. Timing is one-sixth
+through four-fifths of each attack. Recovery, Idle, Death, hide and tab teardown
+clear owned effects; explicit cuts outrank freeze. Family resume rebases moving
+attachments. Failed fire admission retries normally; a partial arm pair releases
+both candidates and retries without touching other callers.
+
+The full roster uses ten hero fire emitters plus one Vrax mouth emitter during
+attacks: eleven of twelve. The two arm bolts use existing shared lightning slots
+and its existing ribbon batches. No limits, global resets or dependencies changed.
+The public regression uses synthetic points and existing public fixture assets.
+Private licensed model inputs remain local and ignored.
+
+Validation:
+
+- Native calibration isolation passed with `CheckVraxAttackEffects`: six clip names,
+  windup/recovery suppression, actual fire/paired-bolt allocation, capacity rollback,
+  same-context recovery, independent callers, freeze/resume, Death/hide cleanup and
+  restored budgets. The generated Web renderer-state fixture passes the same check.
+- Actual HardeningTests pass on native and generated Web with exact expected output.
+- Native and Full Web Viewer builds pass (103 native / 92 Web published local assets).
+- Native and Chrome visual inspection shows attached mouth fire, both arm bolts,
+  and floor reflections. Chrome attack completion removes the effects.
+- A bounded local production-model fixture passes on native and generated Web. It
+  renders all six attacks in the individual
+  tab and Party, verifies all three effect leases, eleven-emitter admission, hero
+  preservation on boss hide, recovery on show and complete cleanup on leaving Party.
+- Focused six-file SMILE formatting and `git diff --check` pass. No language/runtime
+  or VSIX payload changed; the previously verified 2.0.61 installation is retained.
+
+Evidence is under `artifacts/temp/vrax-attack-vfx`. Early probe setup mistakes
+(passing presentation indexes to the runtime selector, assuming humanoid equipment
+glow on Vrax, and omitting the Web renderer-state harness option) were corrected in
+the disposable test inputs/invocation before recording passing results. They were
+not suppressed or treated as product passes. No emitted program files were patched.
+Native Viewer SHA-256: `139B3590C1328EF427DD3B9B7ADAF15B1F4868CCE79306509DC1B9171AB2388E`.
+Full Web game.js SHA-256: `B0D71510BFD305522298508DFBBAFA30D0B3B8183654E742AC34B0D368121C1C`.
+
+The earlier small-screen Continue fix is committed/pushed as `35e9dba`. Its physical
+iPhone check and update of the existing public website remain pending the complete
+page URL requested from Sin. The local private-roster Web output is not approved
+for public asset redistribution and has not been uploaded.
+
+On hold: other VFX/Loader phases, further Sin Star I game work, Battle Scene Editor,
+semantic CLI, subject-first syntax, SMILE 1.0 and unrelated suspended features.
+
 ## Post-delivery hardening: VFX-01
 
 Package `smile-2.0-post-delivery-review-hardening`, revision 1, verified against

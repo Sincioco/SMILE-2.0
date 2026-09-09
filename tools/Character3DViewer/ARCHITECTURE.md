@@ -24,6 +24,16 @@ same caller can retry on its next normal update. The isolated calibration fixtur
 proves native/generated-Web capacity recovery and independent owners without
 private roster assets or pool changes.
 
+Vrax attack effects remain in `ViewerDragon.AttackEffects`. The primary
+`ViewerEffects.State` and Party's `ViewerDragon.State` each own a separate context.
+Both call the same socket/clip-time update and cleanup operations. `ViewerParty`
+selects the six attack clips through `Profiles.PartyAttackName`; `ViewerLifecycle`
+initializes existing fire/lightning services for Vrax inspection. The scene clock,
+lightning draw and reflection capture remain shared and advance only once per frame.
+No coordinator changes or new pool are needed. `CalibrationTests.CheckVraxAttackEffects`
+tests actual admission/lifecycle operations with synthetic points on native and
+generated Web; the private model is needed only for local attachment inspection.
+
 This map describes the behavior-preserving refactor that began from reviewed commit
 `5bfd4f96ee838ca1b6b255c28c4117b0e0a5ec7b`. It is a navigation and ownership
 contract, not a new feature specification. `Program.smile` remains the executable
