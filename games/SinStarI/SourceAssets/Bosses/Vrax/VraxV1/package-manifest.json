@@ -306,7 +306,7 @@
   },
   "grounding": "grounding-validation.json",
   "skinWeights": "skin-weight-audit.json",
-  "validationCheckpoint": "docs/implementation/unity-character-import-checkpoint.md",
+  "validationCheckpoint": "games/SinStarI/SourceAssets/Bosses/Vrax/VraxV1/VRAX-CREATION-AND-REPAIR-JOURNEY.md",
   "calibration": {
     "available": false,
     "reason": "No Viewer pose-calibration channels; four VFX sockets do not share Arin/Orin pose storage."
@@ -364,7 +364,7 @@
       "Attack6"
     ],
     "owner": "tools/Character3DViewer/ViewerDragon.smile",
-    "checkpoint": "docs/implementation/character-equipment-vfx-checkpoint.md",
+    "checkpoint": "tools/Character3DViewer/ARCHITECTURE.md",
     "modelAndAnimationsUnchanged": true
   },
   "audio": [

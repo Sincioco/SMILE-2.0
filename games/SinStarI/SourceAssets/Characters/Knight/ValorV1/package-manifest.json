@@ -396,7 +396,7 @@
   },
   "grounding": "grounding-validation.json",
   "skinWeights": "skin-weight-audit.json",
-  "validationCheckpoint": "docs/implementation/unity-character-import-checkpoint.md",
+  "validationCheckpoint": "games/SinStarI/SourceAssets/Characters/Knight/ValorV1/VALOR-CREATION-AND-REPAIR-JOURNEY.md",
   "calibration": {
     "available": false,
     "reason": "Equipment VFX sockets are authored; pose editing is not enabled and no Arin/Orin pose storage is shared."
@@ -472,7 +472,7 @@
     "appearance": "Blue/cyan/white sword flames and shield rim/flames",
     "attachments": "equipment-vfx-attachments.json",
     "socketCount": 14,
-    "checkpoint": "docs/implementation/character-equipment-vfx-checkpoint.md",
+    "checkpoint": "tools/Character3DViewer/ARCHITECTURE.md",
     "state": "Validated native and Chrome individual/Party playback",
     "previews": [
       "Private/Previews/valor-blue-white-native.jpg",

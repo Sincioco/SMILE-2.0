@@ -281,7 +281,7 @@
   },
   "grounding": "grounding-validation.json",
   "skinWeights": "skin-weight-audit.json",
-  "validationCheckpoint": "docs/implementation/unity-character-import-checkpoint.md",
+  "validationCheckpoint": "games/SinStarI/SourceAssets/Characters/Warrior/ZaraV1/ZARA-CREATION-AND-REPAIR-JOURNEY.md",
   "calibration": {
     "available": false,
     "reason": "Equipment VFX sockets are authored; pose editing is not enabled and no Arin/Orin pose storage is shared."
@@ -362,7 +362,7 @@
     "appearance": "Full weapon white-core outline with a red tint; crimson Godstorm Ultra and Forked Judgment attack lightning",
     "attachments": "equipment-vfx-attachments.json",
     "socketCount": 10,
-    "checkpoint": "docs/implementation/character-equipment-vfx-checkpoint.md",
+    "checkpoint": "tools/Character3DViewer/ARCHITECTURE.md",
     "state": "Validated native and Chrome individual/Party playback",
     "previews": [
       "Private/Previews/zara-neon-white-native.jpg",

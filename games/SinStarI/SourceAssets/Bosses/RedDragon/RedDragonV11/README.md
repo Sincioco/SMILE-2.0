@@ -59,7 +59,7 @@ foot positions. `dragon-claw-follow-through.png` is a Blender review render.
 Use `-- --output-dir <review-folder>` with the builder for a safe new output.
 
 The rigging research, current chain map, and recommended Blender/Unity/Unreal
-workflow are in `docs/implementation/party-viewer-final-handoff-2026-09-05.md`
+workflow are in `tools/Character3DViewer/README.md`
 and `retarget-chains.json`. The current 24-bone deformation rig remains a
 bounded preview: there is no new IK system, membrane topology repair, or claim
 that unrelated humanoid animations can be directly applied to this dragon.

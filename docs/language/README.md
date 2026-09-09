@@ -730,3 +730,18 @@ RPG Class façade or Enum conversion, no Smile.UI/Smile.Game dependency, and no
 SRPG save-payload revision.
 
 The executable examples are the most precise usage guide: `LanguageBasics.smile`, `StructuredLanguageBasics.smile`, `GraphicsBasics.smile`, `MultiFileBasics`, and the seven projects under `games`. These include Dungeon Star I's external-map parser and quadrilateral-based pseudo-3D renderer, Dungeon Star II's fixed-point DDA raycaster, and Maze Muncher's arc-composed neon maze. Each demo game also includes a complete player-focused `Program-NoDemo.smile` teaching source.
+
+## Record-array locations and ownership
+
+Indexed ByRef arguments capture a writable SMILE location, not an obsolete backing
+JavaScript array. Capture indices once in source order and check each dimension
+before evaluating a later index. Value records follow their captured location;
+Class roots retain the original object identity. Assignments/ByVal copy values,
+and checked failures release owned resources without altering earlier output.
+
+`src/Smile.Language` binds the types/dimensions; native and Web emitters implement
+that same contract. After changing these owners, run the existing
+`node scripts/test-record-array-location-parity.js --repo "D:\SMILE 2.0"` and
+`scripts/test-fixed-array-hardening.ps1`. The real compiled fixtures cover nested,
+forwarded and With locations, single evaluation, copies, bounds, Class identity,
+exact error traces and returned-image cleanup; no assembly rewriting is required.

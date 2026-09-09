@@ -2,7 +2,7 @@
 
 Established before D2 edits against D1 commit `40c183d`, then updated for D3
 production adoption. This map describes the implemented boundary; see the single
-[Double checkpoint](../implementation/double-precision-checkpoint.md) for state.
+[current double contract](../language/double.md) for state.
 
 | Route | Reviewed baseline type/unit and owner | Implemented change / exact narrowing point |
 |---|---|---|

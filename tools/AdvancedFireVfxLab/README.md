@@ -1,5 +1,11 @@
 # Smile 2.0 - Advance Native Fire Lab
 
+The accepted [Studio design](../../docs/architecture/2026-09-09%20-%20SMILE%202.0%20Studio.md)
+places this specialized workflow inside VFX. The current standalone project and
+shared effect modules remain authoritative; generic saved `.smilevfx` authoring
+and Studio hosting are planned.
+
+
 Native Direct3D 11 and WebGL2 thermal-fire demonstration. The complete project lives in `tools/AdvancedFireVfxLab`, beside the Lightning Lab and Character Viewer. Assets are copied from the repository's `TechnicalAssets\Generation3\Fire` and Sin Star I landscape into ignored tool-local inputs; normal project publication includes them with each target.
 
 ## Build and launch
@@ -47,6 +53,6 @@ The floor grid uses a normal orange, opaque, non-emissive material rather than a
 
 ## Limits and validation
 
-Native and capable WebGL2 High use five GPU systems and 1664 slots; Medium halves the slot budget. Six logical emitters and 32 shared GPU systems / 32,768 total slots are available; admission still falls back atomically when a complete layered effect cannot fit. CPU Low has simpler warm particles, not GPU turbulence/heat parity. Reported particle counts are logical schedules, not GPU readbacks. Web thermal forces, turbulence, cooling, bounds, soft depth and localized heat now use the existing transform-feedback path. The complete H6.1 browser workflow gate remains in progress, including Web scene MSAA.
+Native and capable WebGL2 High use five GPU systems and 1664 slots; Medium halves the slot budget. Six logical emitters and 32 shared GPU systems / 32,768 total slots are available; admission still falls back atomically when a complete layered effect cannot fit. CPU Low has simpler warm particles, not GPU turbulence/heat parity. Reported particle counts are logical schedules, not GPU readbacks. Web thermal forces, turbulence, cooling, bounds, soft depth and localized heat now use the existing transform-feedback path. Web scene MSAA and the Chrome High/GPU/fallback workflow are supported; quality remains capability-dependent.
 
-`scripts\test-native-thermal-fire.ps1` checks deterministic assets, CPU dynamics, native GPU lifecycle/recovery/MSAA, high-level ownership, and generated-Web behavior. `FireEmitterTests.smile` checks the shared arena and a successful cross-target static-backdrop lifecycle. Actual Chrome/Edge observations are tracked separately from the VM tests in the H6.1 ledger. Native visual review remains the user's acceptance step.
+`scripts\test-native-thermal-fire.ps1` checks deterministic assets, CPU dynamics, native GPU lifecycle/recovery/MSAA, high-level ownership, and generated-Web behavior. `FireEmitterTests.smile` checks the shared arena and a successful cross-target static-backdrop lifecycle. Actual Chrome has exercised both Labs at High/GPU, forced fallback, context recovery and focus/shutdown. Those observations are distinct from VM checks and do not certify every GPU or artistic preference. Chrome is the routine browser; other browsers need a specific reason.

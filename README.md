@@ -24,8 +24,8 @@ giving up the clarity that makes BASIC-style programming approachable.
 
 ### Real-time character animation and battle presentation
 
-The SMILE 2.0 Character Viewer and Animation Editor brings Arin, Orin, and the
-Red Dragon into one interactive scene. It supports animation playback,
+The SMILE 2.0 Character Viewer and Animation Editor includes Arin, Orin and the
+Red Dragon, plus locally licensed Valor, Zara and Vrax packages. It supports animation playback,
 timeline inspection, pose calibration, equipment and effects, individual
 character views, and a live party-versus-boss demonstration.
 
@@ -105,17 +105,14 @@ The latest milestones moved SMILE decisively toward modern 3D game creation:
   bounded resource behavior.
 - Hardened mouse, keyboard, timeline, orbit, pan, zoom, WebGL recovery, and
   actor-instance isolation across native Windows and Chrome.
-- Reached the prerequisite **PASS-NATIVE-WEB** readiness gate for future battle
-  scene authoring on the current Windows/Chrome baseline.
 - Added full, Low, Medium, and High Web deployment profiles and made Windows
   64-bit the default across the repository's SMILE solutions.
 - Continued expanding a portfolio of complete SMILE games, reusable libraries,
   and Visual Studio tooling—all using the shared language implementation.
 
-The detailed evidence remains available in the
-[Battle Scene prerequisite hardening report](docs/implementation/h6-1-hardening-and-web-parity-report.md)
-and the
-[optimized deployment profiles ledger](docs/implementation/web-optimized-profiles-ledger.md).
+Current behavior, build/publication requirements and validation routes live in the
+[Viewer README](tools/Character3DViewer/README.md) and
+[architecture index](docs/architecture/README.md).
 
 ## Games that prove the language
 
@@ -135,35 +132,49 @@ students and creators use.
 | **Dragonfall** | A fully staged Renderer3D party battle with roles, enemies, a two-phase dragon, cameras, and effects. |
 | **Sin Star I** | The long-term RPG home for Arin, Orin, the Red Dragon, world systems, and the coming cinematic battle workflow. |
 
-## Where SMILE is heading
+## SMILE 2.0 Studio: current status and next action
 
-The next major creative step is a **Battle Scene Editor**: a visual workspace for
-staging characters, enemies, cameras, animation, timing, effects, and cinematic
-battle moments. Its implementation will begin from a fresh specification based
-on the hardened code that exists now—not from a replacement engine.
+The accepted [Studio design](docs/architecture/2026-09-09%20-%20SMILE%202.0%20Studio.md) defines one thin application host with
+Character Viewer, Character Editor, Animation Editor, a general Scene Editor,
+VFX and Audio workspaces. It supersedes battle-only editor plans and separate
+required editor applications. Existing Viewer and labs remain working standalone
+tools until their workflows are hosted through the same implementations.
 
-Alongside that editor, SMILE is preparing a more declarative generation of its
-syntax. Instead of requiring every scene to be expressed as low-level control
-flow, creators will be able to describe *what belongs in a scene* and *how a
-sequence should unfold* in clear, readable language. The editor and syntax are
-intended to reinforce one another: visual authoring for speed, human-readable
-source for ownership, learning, version control, and collaboration.
+The current compiler/runtime supports shared 2D/3D, animation, calibrated equipment,
+Fire/Lightning, audio, persistence, mandatory startup branding and Double precision.
+Studio hosting, general scene documents, reusable saved-effect/audio definitions,
+Water, declarative scene authoring and faithful scene export are **planned**.
+The four accepted extensions are `.smilestudio`, `.smilescene`, `.smilevfx` and
+`.smileaudio`; the design examples are not implemented loader schemas or grammar.
 
-```mermaid
-flowchart LR
-    A[Readable SMILE source] --> B[2D games and UI]
-    A --> C[Native Windows]
-    A --> D[Web publication]
-    C --> E[Shared 3D characters and VFX]
-    D --> E
-    E --> F[Battle Scene Editor]
-    F --> G[Declarative cinematic scenes]
-    G --> H[Complete story-driven 3D RPG experiences]
-```
+| Next work / owner | Dependency and focused acceptance | Completion boundary |
+|---|---|---|
+| First bounded Studio host / existing Viewer lifecycle and input owners | Expose the existing Viewer load/frame/draw/suspend/release seam to one host; test open/close/focus/resize, one supported Arin/Orin edit/save and preserved calibration | One active viewport and one frame loop; original standalone caller uses the same implementation; no copied controller, embedded second window or new engine |
+| Character/animation documents / calibration owners | Explicit shared session, dirty state, save/undo and source-versus-scene ownership | Workspace changes preserve the same edited resource and failed saves preserve valid bytes |
+| Reusable assets and general scenes / shared asset, VFX/audio and scene owners | Validated JSON, project publication, independent instances and bindings; first Fire recipe before new families | Runtime loaders have no Studio dependency; no fixed party/combat requirement |
+| Declarative/export parity / shared language and scene owners | Shared scene semantics; real compiler, both export modes and standalone execution | One machine-readable capability register with generated `scene-feature-parity.md`; missing counterparts explicit |
 
-The long view includes richer scenes, more characters, reusable battle
-direction, cinematic cameras, authored timelines, and modern RPG experiences.
-The constant is SMILE's identity: readable, intentional, and welcoming.
+Readiness: **READY WITH EXPLICIT NON-BLOCKING LIMITATIONS**. The design is registered,
+obsolete instructions are retired, and the affected checks pass. Studio implementation
+has not begun. The existing Viewer coordinator owns its window
+and loop, while ViewerLifecycle already exposes ordered load/release and focused
+owners handle input, rendering and calibration. That real seam makes a hosted Viewer
+workflow the first slice; generic asset loading and Water are not prerequisites.
+The capability register belongs to the shared scene/asset contract owner when the
+first such capability is implemented; no empty green parity table is created now.
+
+Current limits remain explicit: imported Valor/Zara/Vrax rigs do not expose pose
+editing; concurrent calibration saves are not merged; CPU VFX fallback is simpler
+than High/GPU; Dragon's optional retarget trial is an approximation with an Original
+restore option. Further semantic-inspection CLI work requires its own bounded
+specification. These are not blockers for hosting one existing supported workflow.
+
+SMILE 1.0, 2.0 and proposed 3.0 continue with a shared-core direction where practical.
+SMILE 2.0 is authoritative for core evolution; compatibility moves forward and any
+missing legacy text/console capability needs an explicit alignment path. Studio
+and richer 3D evolve the current implementation rather than replacing its engine.
+
+On Hold: None. Clearing a hold does not automatically start unrelated features.
 
 ## Try it
 

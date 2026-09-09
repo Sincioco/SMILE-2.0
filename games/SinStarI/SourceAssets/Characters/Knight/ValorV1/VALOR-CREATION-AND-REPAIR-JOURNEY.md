@@ -77,5 +77,5 @@ has an independent white-core, blue-halo ribbon outline.
 The same per-character effects run in the individual tab and Party, using the
 final grounded transform and the actor’s animator. Hide/reload releases owned
 effects. See equipment-vfx-attachments.json for source-model hashes and measured
-points, and docs/implementation/character-equipment-vfx-checkpoint.md for validation.
+points, and tools/Character3DViewer/ARCHITECTURE.md for current effect ownership and validation routes.
 No model re-export, texture edit, grounding change or shared calibration was needed.

@@ -673,18 +673,11 @@ relative to `D:\SMILE 2.0`:
    Blender transforms, slot handling, matching thresholds, and export options.
 3. `tools/Character3DViewer/README.md`, `Program.smile`, `Profiles.smile` for controls,
    correction order, explicit cuts, precision, and runtime ownership.
-4. `docs/implementation/approved-viewer-thermal-fire-hardening-m7e-g0.md`,
-   `arin-v5-7-calibration-validation.json`, and `m7e-g0-validation-results.json`.
-5. `docs/implementation/screenshots/m7e-g0-approved-viewer-fire-hardening/` for
-   actual PNGs, screenshot index, socket/pose evidence, and phone contact sheet.
-6. Historical context: `paladin-production-acceptance-m7d-b.md`,
-   `paladin-v5-4-viewer-export-hardening-m7c-b1.md`,
-   `model3d-build-cooking-m7c-a.md`, `character-viewer-v5-5-active-handoff.md`,
-   and `m7e-g-equipment-fire-preview.md` under `docs/implementation`.
-
-Older reports contain superseded pause keys, key counts, export options, active
-paths, and unresolved-at-the-time findings. They explain the journey; they do
-not override current code, root instructions, or Sin's latest approval.
+4. `tools/Character3DViewer/ARCHITECTURE.md` for calibrated transform/effect
+   ownership and `scripts/test-viewer-calibration-native.ps1` for isolated checks.
+5. This package's manifests, calibration JSON, source assets and version-specific
+   instructions are the current asset contract. Prior committed experiments remain
+   recoverable through Git; old key counts, paths or pending findings are not defaults.
 
 Maintain this guide as the workflow changes. Record what changed, why it changed,
 which revision it applies to, evidence, and what remains unimplemented. That is
@@ -889,7 +882,7 @@ The isolated native Viewer fixture still exports both character snapshots exactl
 round-trips their existing serialization. The real Party approach/return assertion
 also reaches actual owned render submissions on native and Web. These are focused
 runtime checks; the final interactive delivery state and source/artifact evidence are
-recorded in `docs/implementation/double-precision-checkpoint.md`.
+recorded in `docs/language/double.md`.
 
 ## September 8: shared equipment surface glow correction
 

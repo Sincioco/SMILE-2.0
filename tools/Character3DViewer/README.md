@@ -9,8 +9,12 @@ canonical package remain available. Imported
 sets contain 31, 26 and 24 animations, with nine clips per page. Vrax uses twice
 his first preview's transform scale. `Prepare-BuildAssets.ps1` verifies each private
 export checksum and refreshes the ignored project-local cooking mirror.
-See the [Unity import checkpoint](../../docs/implementation/unity-character-import-checkpoint.md)
-for packages, conversion/grounding evidence and private publication boundaries.
+Canonical packages own conversion, grounding, checksums and private originals:
+[ValorV1](../../games/SinStarI/SourceAssets/Characters/Knight/ValorV1/VALOR-CREATION-AND-REPAIR-JOURNEY.md),
+[ZaraV1](../../games/SinStarI/SourceAssets/Characters/Warrior/ZaraV1/ZARA-CREATION-AND-REPAIR-JOURNEY.md) and
+[VraxV1](../../games/SinStarI/SourceAssets/Bosses/Vrax/VraxV1/VRAX-CREATION-AND-REPAIR-JOURNEY.md).
+Normal builds require all three private exports and diagnose missing prerequisites;
+PublicRoster is an explicit separate compatibility publication.
 Existing calibration editing applies to Arin/Orin. Valor and Zara now have measured
 equipment VFX sockets; their original rigs and pose storage remain independent.
 Valor and Zara's individual tabs use the same arena-preview contract as Arin and
@@ -44,14 +48,14 @@ initialization or optional import is required for startup. Every tab click also
 calls the shared `Window_Loading()` operation before releasing the old scene;
 the same splash remains until the new frame is presented, including cached switches.
 See the
-[startup checkpoint](../../docs/implementation/startup-presentation-checkpoint.md).
+[startup contract](../../docs/architecture/startup-presentation.md).
 
 Ctrl+Left/Right step the timeline using the queued press's modifier snapshot on
 Desktop and Web. Quick taps remain frame steps even after Control is released;
 plain arrows still orbit. This uses the shared `Key_Event_Held` built-in and does
 not change live `Key_Held` behavior or any saved calibration.
 
-Native-first reusable inspection and lightweight pose-correction tool. Party is the launch default. The Character tabs select the available roster listed above or the Party arena. Desktop Profile retains Arin v5.6, the earlier prototype, and the technical fixture for diagnostics. Web publication omits that control, its shortcut and the obsolete diagnostic assets. H6.1 is retained historical PASS evidence; the current refactor uses its own gate tied to current code. This is not the future Battle Scene Editor.
+Native-first reusable inspection and lightweight pose-correction tool. Party is the launch default. The Character tabs select the available roster listed above or the Party arena. Desktop Profile retains Arin v5.6, the earlier prototype, and the technical fixture for diagnostics. Web publication omits that control, its shortcut and the obsolete diagnostic assets. Current ownership and focused checks are in [ARCHITECTURE.md](ARCHITECTURE.md). The accepted [Studio design](../../docs/architecture/2026-09-09%20-%20SMILE%202.0%20Studio.md) governs future hosting; it is not implemented by renaming this tool.
 
 The Viewer explicitly enables the shared polished planar floor on native Desktop and Web. The visible `Battle Floor: Reflective / Original` button is available in each character inspector and in the default Party panel beside the floor/environment controls. Reflective mode mirrors eligible characters and equipment beneath the original grid. It also maps only the screen-fixed background region visible above the projected floor edge, so the reflection cannot reveal artwork hidden behind the floor. Original mode keeps the established matte black floor and grid. The toggle preserves calibration, playback, camera, background, and character selection; full presentation reset restores the session default Reflective mode. Hiding the floor suppresses the receiver work without changing the preference. An optional graphics allocation/render failure keeps the original matte scene usable and reports `Battle Floor: Unavailable` rather than claiming the effect is active. Animation diagnostics are placed below the floor control and are hidden at compact window heights where they would collide with lower controls.
 
@@ -123,7 +127,7 @@ The editor source and build/launch entry points belong here. Sin Star I owns the
 
 Vrax breathes orange fire and fires blue-white lightning from both arms during
 Attack through Attack6, in his own tab and Party Vrax. Party Vrax cycles all six
-clips at the same Party playback setting as the heroes; its default 100 matches
+clips using Vrax's independent playback setting; its default 100 matches
 the Vrax tab. Web PBR now uses the same front-face normal convention as native,
 including reflected geometry, restoring armor highlights without extra render work.
 Four rig-attached sockets follow the final grounded pose at the accepted 20000%
@@ -131,21 +135,21 @@ scale. The expanded mouth stream uses radius 24, intensity 320, a 420-unit reach
 and 900-unit velocity. Effects run from one-sixth to four-fifths of each clip and clear on recovery,
 Idle, Death, hide, tab changes and timeline discontinuities. The existing Party
 fire/lightning freeze controls apply independently. No new combat or damage system
-is involved. See the [VFX checkpoint](../../docs/implementation/character-equipment-vfx-checkpoint.md).
+is involved. See [effect ownership and checks](ARCHITECTURE.md).
 
 ### Equipment VFX controls
 
 Valor uses the shared sword flame and faint shield flames with Orin's blue/cyan/white
-palette, plus a white shield rim with a blue halo. Zara has a pure white blade rim
+palette, plus a white shield rim with a blue halo. Zara has a white-red blade rim
 and skinned equipment outline; her original gold emissive blade material is retained.
 Both individual tabs and Party use their own weapon parts, bone attachments and
 effect instances. Weapon/Shield hiding clears the corresponding attached effects.
 Valor exposes the same flame freeze and shield style controls as Arin. Party shares
 its existing fire-family freeze and shield-style controls across both flame users.
-The four-hero/Vrax scene uses ten fire emitters at rest and eleven during Vrax's
+With Valor shown, the four-hero/Vrax scene uses ten fire emitters at rest and eleven during Vrax's
 attacks, within the existing twelve-emitter limit. Zara's rim uses three
 ribbon batches and no fire emitters. See the
-[equipment VFX checkpoint](../../docs/implementation/character-equipment-vfx-checkpoint.md).
+[effect ownership and checks](ARCHITECTURE.md).
 
 Orin's **VFX** button cycles **Blue Flame → Neon Arcs → Lightning**. Blue Flame
 is the startup selection: Arin's shared fire family in blue/cyan/hot white, now
@@ -217,26 +221,13 @@ sequence timing, IDs and saved integral calibration channels keep their establis
 meaning. The GPU still uses float32; this improves continuous authoring and motion
 without increasing shader or depth-buffer precision. See
 `docs/libraries/precision3d-boundary.md` and the compact
-`docs/implementation/double-precision-checkpoint.md` for limits and validation state.
+`docs/language/double.md` for limits and validation state.
 
-Start with `ARCHITECTURE.md` for the current ownership and test map. `Program.smile`
-is the ordered coordinator. The R7.5 audit baseline was 8,319 lines and 233
-procedures, with substantial subsystem implementation still present. The completed
-ownership moves reduce the current entry point to 1,851 lines and 51 procedures.
-Startup/session/playback, camera, calibration, input/UI/gizmo, Party, effects, and
-rendering behavior now lives with its corresponding `Viewer*.smile` production
-owner and focused tests, not merely in extracted state records. The remaining
-above-threshold procedures are documented runtime-sampling and cross-owner ordering
-coordinators. The 1,851-line entry point received its evidence-based final review and
-remains an accepted explicit size exception; do not hide those ordered calls in a shared
-replacement application/controller module or recreate owner state in `Program.smile`.
-
-The completed refactor checkpoint is
-`docs\implementation\character-viewer-refactor-checkpoint.json`. Current work after
-that refactor is tracked in the compact
-`docs\implementation\post-refactor-continuation.md` checkpoint. The H6.1 records are
-historical evidence, not an active milestone. Character-specific corrections also
-require the applicable ArinV57 or OrinV13 creation-and-repair journey.
+Start with [ARCHITECTURE.md](ARCHITECTURE.md) for current ownership, public
+operations, frame order and focused checks. Program keeps the ordered application
+story and cross-owner input/result adapters; its justified size exception is
+documented there. Subsystems retain their state and behavior. Character-specific
+corrections also require the applicable package's creation-and-repair journey.
 
 ## Build and launch
 
@@ -331,12 +322,11 @@ hardening server on 8765; changing ports changes the browser storage origin.
 To retain browser-authored saves from `http://127.0.0.1:8765`, stop that server
 first and serve this directory on **8765** instead (the URL path may change,
 but host, scheme and port must remain the same). Do not erase either origin's
-storage. The older `artifacts/web/h6-1/Character3DViewer` is test evidence, not the
-normal publishable build. Browser working saves are separate and origin-scoped;
+storage. Browser working saves are separate and origin-scoped;
 rebuilding does not replace them.
 The Windows JSON path/Explorer action belongs to native. Browser JSON import/download,
-primary/backup recovery, MSAA, context restoration, and the H6.1 workflow gate have
-current passing evidence. No automatic browser-to-repository synchronization is claimed.
+primary/backup recovery and MSAA are supported. Context restoration may require
+reselecting a character tab; the operating limits below distinguish tested targets. No automatic browser-to-repository synchronization is claimed.
 
 - Backtick cycles through panels hidden (including Pose Calibration), all UI hidden, then the prior UI restored. Headers, the timeline, and helper text remain after the first tap. Hidden controls cannot intercept the mouse. This does not change panel-open preferences, edits, playback, or the camera. Right-click reset restores the normal UI with Pose Calibration hidden.
 - Space pauses/resumes movement while keeping camera controls active.
@@ -487,22 +477,9 @@ These effects do not modify Arin's models, rig or animation sources. The canonic
 Before changing Arin's import/export, attachments, calibration or effects, read
 `games/SinStarI/SourceAssets/Characters/Paladin/ArinV57/ARIN-CREATION-AND-REPAIR-JOURNEY.md`.
 It distinguishes current behavior from historical experiments and explains the
-Blender-to-SMILE pipeline. The separate free-roam demo remains deferred by Sin.
+Blender-to-SMILE pipeline. The package retains version-specific repair instructions; unrelated game work is outside this tool.
 
-## September 5 mid-development checkpoint
-
-The initial checkpoint used a full orbit and four camera poses. Subsequent visual tuning
-replaces that with the front arc and two independently selected battle cameras described
-above. Close framing and Dragon point-of-view composition remain under visual tuning.
-Arin slash/crosscut and Dragon breath/claw/fireball now have original synthesized
-attack cues. Orin's Block plays once and holds instead of repeatedly restarting.
-Dragon's six-clip preview adds Fireball and stronger wing/arm/hit motion, eye anchors,
-and idle mouth fire. Both effect Labs now live in `tools` beside this Viewer.
-
-See `docs/implementation/party-battle-mid-development-2026-09-05.md` for the precise
-checkpoint scope, validation and remaining requested work. This is not a final release.
-
-### September 5: KO, shield comparison and camera diagnostics
+## Party Dragon reactions and diagnostics
 
 Arin now has Death alongside his existing eight clips. Both heroes play Death
 once and hold the final pose. On a Dragon turn, the whole party guards; randomly
@@ -528,7 +505,7 @@ fall back to stable arena anchors if a sampled socket leaves the scene envelope.
 Below Camera, Party displays rendered position/target XYZ, yaw/pitch, FOV and
 distance, so screenshots contain enough information to diagnose a bad angle.
 
-### Saved JSON download (September 6)
+## Calibration transfer
 
 The filename below the timeline identifies the current character's calibration.
 **Download Key Frames**, beside **Import Key Frames**, exports the current saved JSON snapshot:
@@ -566,7 +543,7 @@ The shared export fixture validates both characters against canonical JSON and
 the desktop binary serializer. An actual Edge Arin download also round-tripped
 byte-for-byte through the native text import/export dialogs in an isolated sample.
 
-### September 5: grounding, capture and saved-profile regression fixes
+### Grounding and capture
 
 Orin's Jump Attack now lands for the kneeling smash/recovery while preserving its
 launch and the accepted other clips. Its canonical package records the surgical Root
@@ -620,3 +597,21 @@ real asset activity/counts, creator credits and the Snake tutorial copyright
 footer with new-tab links. The original branding PNG and full-fidelity character
 textures remain unchanged. The loader does not represent tab-switch or GPU
 preparation time as a false completed-download percentage.
+
+## Operating limits and preservation
+
+Native Windows and Chrome are the routine targets. Real Chrome Viewer and both
+Labs have exercised High/GPU rendering, forced fallback, focus, context recovery
+and shutdown. This is not Firefox/Safari/physical-device or arbitrary-GPU coverage.
+Viewer context restoration can require selecting a character tab and then Party;
+automatic full-scene recovery is not guaranteed. Concurrent saves do not merge.
+
+Publish a complete selected Web folder, including Assets and TechnicalAssets,
+with filename case preserved. Visitors need JavaScript/WebGL2; audio requires
+user activation. Serve HTTP/HTTPS, not file URLs. New host/scheme/port means a new
+save origin. Packaged defaults seed missing storage without overwriting existing
+working keys. Keep private roster publication separate from public distribution.
+
+Orin's storm clouds are light/flash presentation, not volumetric weather; one-boss
+Chain Arcs do not imply multi-enemy combat. Dragon is a preview rig without flight
+or foot-plant IK. Current calibration tools are not a full Blender replacement.

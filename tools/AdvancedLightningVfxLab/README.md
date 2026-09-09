@@ -1,5 +1,11 @@
 # Advanced Lightning Lab
 
+The accepted [Studio design](../../docs/architecture/2026-09-09%20-%20SMILE%202.0%20Studio.md)
+places this specialized workflow inside VFX. The current standalone project and
+shared effect modules remain authoritative; generic saved `.smilevfx` authoring
+and Studio hosting are planned.
+
+
 Build with `tools/AdvancedLightningVfxLab/Build.ps1`, then launch
 `bin/Release/AdvancedLightningVfxLab.exe`. Native Windows remains priority 1.
 The stable application ID preserves window X/Y, width/height and maximized state
@@ -84,5 +90,5 @@ WebGL2 now accepts the same 16,384-slot GPU/Auto spark pool as native, while exp
 CPU-reference pools retain their 8,192 cap and all actors share the 32,768-slot
 ceiling. Visible Edge validation showed backend 2, a 16,384-slot pool and 3,932,160
 GPU bytes, with no console/shader warnings. The module preserves a truthful basic
-fallback. Complete browser workflow acceptance remains in progress under H6.1.
+fallback. Actual Chrome subsequently exercised Ultra/GPU, forced fallback, focus, context recovery and shutdown. VM checks remain separate from visual evidence; this is not a Firefox/Safari or arbitrary-device certification.
 No language syntax or ABI command IDs were added.

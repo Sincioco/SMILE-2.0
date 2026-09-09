@@ -1,8 +1,20 @@
 # SMILE 2.0 Repository Instructions for Codex
 
-### Record-array hardening task precedence
+### Studio direction and current review policy
 
-Before acting on old H01/H02/H03 instructions, read `docs/implementation/record-array-h01-h03-closure.md` and its evidence JSON. A verified closure supersedes the old interrupted task; reopen only for new regression evidence or a source change that invalidates the recorded checks. Do not recreate the removed H01 test.
+The accepted [SMILE 2.0 Studio design](docs/architecture/2026-09-09%20-%20SMILE%202.0%20Studio.md)
+supersedes earlier battle-only editor plans, `.battle`, separate required editor
+applications and conflicting remembered handoffs. Studio is one thin modular host;
+Scene Editor is general-purpose; reusable scenes/VFX/audio remain runtime assets
+independent of Studio. Accepted design is not implemented capability. Consult the
+root README's Studio status for the next bounded slice; do not replay old phase plans.
+
+Review current source, reachable behavior and current contracts. A finding needs a
+present code path/counterexample, symptom or focused test; label unverified concerns.
+Do not resurrect completed work from old plans or require a historic fix certificate.
+Keep useful regression checks and report demonstrated regressions. Retire obsolete
+reports after preserving current rules, operating knowledge and unresolved work in
+their proper owners; Git history is the archive. Do not create closed-bug dossiers.
 
 These instructions apply to the entire SMILE 2.0 repository.
 
@@ -56,8 +68,8 @@ These instructions apply to the entire SMILE 2.0 repository.
 ## Project identity
 
 - `SMILE` stands for **Simple Modern and Intuitive Language for Everyone** and always means **SMILE 2.0**, the new native compiler project.
-- SMILE 2.0 is authoritative; do not maintain a parallel SMILE 1.0 compiler or
-  compatibility implementation unless Sin explicitly requests it. Practical
+- SMILE 2.0 is authoritative for shared-core evolution; do not create a duplicate
+  compiler or compatibility implementation to conceal an alignment gap. Practical
   unchanged-program compatibility and forward-porting of text/console capabilities
   remain goals. Any deliberate incompatibility must have a documented alignment path.
 - Local repository: `D:\SMILE 2.0`
@@ -84,11 +96,11 @@ These instructions apply to the entire SMILE 2.0 repository.
 - Web progress must distinguish overall loading from the current asset download. Use real byte progress when reliable totals exist, and clearly label unknown-size/indeterminate phases rather than inventing percentages or ETAs.
 - Keep startup presentation reusable in the shared SMILE library/runtime where practical, but include and enforce it automatically through the standard compiler/runtime. It must not depend on an optional user import/call, and standard generated programs must not expose a source-level or build-setting opt-out from the branded one-second minimum. Editable compiler sources/generated output are not tamper-proof; do not claim otherwise or introduce DRM/obfuscation to imply that guarantee.
 - Sin explicitly accepts the limitation that someone can modify generated Web files to remove branding after compilation. Enforce the standard build contract; do not expand this task into anti-tampering work.
-- The shared native/Web startup presentation now implements the progress, artifact metadata and one-second minimum. Follow `docs/implementation/startup-presentation-checkpoint.md` for current source, validation and delivery evidence. Existing executables/Web publications need recompilation to adopt it.
+- The shared native/Web startup presentation now implements the progress, artifact metadata and one-second minimum. Follow `docs/architecture/startup-presentation.md` for current behavior, owners and focused tests. Existing executables/Web publications need recompilation to adopt it.
 
 ## Permanent future 3D direction
 
-SMILE must evolve incrementally from the current SMILE 2.0 compiler and runtime into a language/runtime capable of modern 3D games, including a Final Fantasy VII-style cinematic 3D RPG battle system. A future SMILE 3.0 name may mark mature first-class 3D support, but it must remain an evolution of SMILE 2.0 rather than a replacement compiler or from-scratch rewrite.
+SMILE 2.0 evolves incrementally toward modern 3D games, including cinematic RPG battles. SMILE 1.0, 2.0 and proposed 3.0 are continuing products sharing an evolving core where practical. SMILE 2.0 is authoritative for shared-core evolution; unchanged 1.0 programs should align forward into 2.0/3.0 and unchanged 2.0 programs into 3.0. Missing capabilities need an explicit alignment path, not a duplicate compiler. 3.0 is neither the first appearance of 3D nor a from-scratch engine rewrite.
 
 - Preserve SMILE's beginner-friendly programming model and keep backend-specific GPU details internal.
 - Keep the current 2D renderer as a permanent first-class capability for images, text, menus, HUDs, and overlays alongside any future 3D renderer.
@@ -129,20 +141,15 @@ The SMILE 2.0 - 3D Viewer, Animation Editor is allowed to evolve into a lightwei
   `tools\Character3DViewer\ARCHITECTURE.md` for the current owner/public-operation/test
   source map and `tools\Character3DViewer\README.md` for current build, launch, Web
   publication, interaction, and calibration-transfer guidance.
-- Consult `docs\implementation\character-viewer-refactor-checkpoint.json` as the one
-  compact current refactor checkpoint. H6.1 ledgers and reports are retained historical
-  evidence; do not restart that completed milestone or substitute it for the current
-  refactor gate.
 - Before character-specific asset, animation, equipment, grounding, calibration, or VFX
   work, also read that character package's creation-and-repair journey. Arin and Orin
   numeric corrections are version-specific and must not be copied between characters.
 - Apply `docs\SMILE-2.0-Authoritative-Code-Formatting-Conventions.md` to SMILE sources.
-  The refactor-first prerequisite is complete; Double implementation and selected
-  production adoption are published. Follow the [current Double checkpoint](docs/implementation/double-precision-checkpoint.md)
-  for D3/D4 human interaction, audio and hover acceptance; implementation alone does
-  not close any remaining observation. Do not restart P0/D1/D2/D3 or the accepted
-  Viewer refactor from an older handoff. The semantic-inspection
-  CLI, Battle Scene Editor and subject-first syntax still require their own approved phase.
+  Current owner boundaries and justified coordinator exceptions belong in the
+  Viewer architecture document. Double is supported; use `docs/language/double.md`
+  and `docs/libraries/precision3d-boundary.md` for its semantics and production
+  boundary. The shared language remains the only authority for future declarative
+  syntax. Studio's accepted design governs new scene/editor work.
 
 ### Permanent smooth 3D camera interaction rule
 

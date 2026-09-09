@@ -122,8 +122,6 @@ The numeric translation unit uses `/fp:strict`, with no new fast-math, contracti
 reassociation or flush-to-zero setting. Web composes small numeric helpers into
 the same runtime; Number guards and Enum BigInt remain distinct.
 
-Owners and current source/artifact validation evidence are recorded in the
-[Double checkpoint](../implementation/double-precision-checkpoint.md).
 `scripts/test-double.ps1` compiles actual native/Web programs and package consumers,
 checks deterministic output, conversion limits and checked errors with live owned
 resources. No generated assembly is patched by the tests.

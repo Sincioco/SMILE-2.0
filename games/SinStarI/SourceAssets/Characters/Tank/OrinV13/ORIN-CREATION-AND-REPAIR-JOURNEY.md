@@ -214,7 +214,7 @@ The isolated native Viewer fixture still exports both character snapshots exactl
 round-trips their existing serialization. The real Party approach/return assertion
 also reaches actual owned render submissions on native and Web. These are focused
 runtime checks; the final interactive delivery state and source/artifact evidence are
-recorded in `docs/implementation/double-precision-checkpoint.md`.
+recorded in `docs/language/double.md`.
 
 ## September 8: enemy-centered ground discharge and shared lightning outline
 
