@@ -526,7 +526,7 @@ Equipment.ShieldVisible = False
 Call UpdateTestEquipmentFire()
 Call AdvanceTestSceneVfx()
 Call CalibrationCheck(Effects.SwordFire.Slot = 0, "Hidden sword destroys frozen Fire immediately")
-Call CalibrationCheck(Not ArinShieldRim.IsVisible(),
+Call CalibrationCheck(Not ArinShieldRim.IsVisible(Effects.ShieldRim),
     "Hidden shield clears the frozen ember outline immediately")
 
 Equipment.SwordVisible = True
@@ -534,7 +534,7 @@ Equipment.ShieldVisible = True
 
 Call UpdateTestEquipmentFire()
 Call AdvanceTestSceneVfx()
-Call CalibrationCheck(Effects.SwordFire.Slot = 0 And Not ArinShieldRim.IsVisible(),
+Call CalibrationCheck(Effects.SwordFire.Slot = 0 And Not ArinShieldRim.IsVisible(Effects.ShieldRim),
     "Showing equipment while frozen does not resurrect stale effects")
 
 Effects.FlamePaused = False

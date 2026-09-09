@@ -104,12 +104,11 @@ assets have no changes. Repository commit/push evidence is recorded in Git and c
 
 ## Boundaries
 
-Imported rigs have no authored Viewer attachment/calibration sockets yet. Pose
-editing and separate equipment visibility controls remain unavailable for these
-profiles; original equipment is part of the animated import. Source emission maps
-are retained. New bespoke spell/VFX presets were not requested. Existing Arin/Orin
-editing and effects remain available. Imported socket editing is a separate
-capability milestone, not an import/playback blocker.
+Valor/Zara now have measured equipment VFX sockets and separate weapon/shield
+visibility through the shared Viewer. See the [equipment VFX checkpoint](character-equipment-vfx-checkpoint.md)
+for their white/blue appearance and validation. Original equipment remains part
+of each animated import; pose/socket editing is still unavailable for these rigs.
+Arin/Orin editing and calibration remain independent.
 
 Private assets have not been publicly deployed or redistributed. Machine operation
 permission does not establish commercial-asset redistribution rights. Public

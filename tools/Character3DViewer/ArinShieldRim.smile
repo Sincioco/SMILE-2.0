@@ -1,4 +1,4 @@
-''' A quiet ember outline; the original shield flames remain a separate viewer option.
+''' Caller-owned equipment rims; original shield flames remain a separate viewer option.
 Module Smile.Tools.ArinShieldRim
 
 Option Explicit
@@ -9,16 +9,19 @@ Import Smile.Simple3D.Character3D As Character3D
 Import Smile.Simple3D.PrecisionMath3D As Math3D
 Import Smile.Simple3D.Precision3D As Precision3D
 
-Private Dim Texture As Core.Texture3D
-Private Dim Material As Core.Material3D
-Private Dim Ribbons[3] As Core.RibbonBatch3D
-Private Dim Points[8] As Precision3D.Vector3
-Private Dim Names[8] As Text
-Private Dim Clock As Number
-Private Dim Visible As Boolean
+Public Type Context
+    Texture As Core.Texture3D
+    Material As Core.Material3D
+    Ribbons[3] As Core.RibbonBatch3D
+    Points[8] As Precision3D.Vector3
+    Names[8] As Text
+    Clock As Number
+    Visible As Boolean
+End Type
 
-Public Sub Update(Actor As Character3D.Actor, Camera As Precision3D.Camera3D, Elapsed As Number,
-    Optional Intensity As Number = 100)
+Public Sub Update(ByRef Value As Context, Actor As Character3D.Actor, Camera As Precision3D.Camera3D, Elapsed As Number,
+    Optional Intensity As Number = 100, Optional PartIndex As Number = 0,
+    Optional ColorStyle As Number = 0, Optional SocketPrefix As Text = "ShieldRim")
 
     Dim Index As Number
     Dim Layer As Number
@@ -33,30 +36,30 @@ Public Sub Update(Actor As Character3D.Actor, Camera As Precision3D.Camera3D, El
     Dim Normalized As Boolean
     Dim WidthOffset As Precision3D.Vector3
 
-    If Material.Handle = 0 Then
+    If Value.Material.Handle = 0 Then
 
-        Texture = Graphics3D.LoadTexture3D("Assets/Lightning/lightning-ribbon.png")
-        Material = Graphics3D.CreateEffectMaterial3D(Texture, Graphics3D.MATERIAL_ALPHA_ADDITIVE, 220)
-        Names[0] = "ShieldRim0"
-        Names[1] = "ShieldRim1"
-        Names[2] = "ShieldRim2"
-        Names[3] = "ShieldRim3"
-        Names[4] = "ShieldRim4"
-        Names[5] = "ShieldRim5"
-        Names[6] = "ShieldRim6"
-        Names[7] = "ShieldRim7"
+        Value.Texture = Graphics3D.LoadTexture3D("Assets/Lightning/lightning-ribbon.png")
+        Value.Material = Graphics3D.CreateEffectMaterial3D(Value.Texture, Graphics3D.MATERIAL_ALPHA_ADDITIVE, 220)
+        Value.Names[0] = SocketPrefix + "0"
+        Value.Names[1] = SocketPrefix + "1"
+        Value.Names[2] = SocketPrefix + "2"
+        Value.Names[3] = SocketPrefix + "3"
+        Value.Names[4] = SocketPrefix + "4"
+        Value.Names[5] = SocketPrefix + "5"
+        Value.Names[6] = SocketPrefix + "6"
+        Value.Names[7] = SocketPrefix + "7"
 
         For Layer = 0 To 2
-            Ribbons[Layer] = Graphics3D.CreateRibbonBatch3D(9, Material)
+            Value.Ribbons[Layer] = Graphics3D.CreateRibbonBatch3D(9, Value.Material)
         End For
 
     End If
 
-    Clock = (Clock + Elapsed) Mod 120000
-    Ok = Material.Handle <> 0
+    Value.Clock = (Value.Clock + Elapsed) Mod 120000
+    Ok = Value.Material.Handle <> 0
 
     For Index = 0 To 7
-        Ok = Character3D.TrySocketPositionPrecise(Actor, Names[Index], 0, False, Points[Index]) And Ok
+        Ok = Character3D.TrySocketPositionPrecise(Actor, Value.Names[Index], PartIndex, False, Value.Points[Index]) And Ok
     End For
 
     For Layer = 0 To 2
@@ -67,8 +70,8 @@ Public Sub Update(Actor As Character3D.Actor, Camera As Precision3D.Camera3D, El
         For Index = 0 To 8
 
             PointIndex = Index Mod 8
-            Center = Points[PointIndex]
-            Tangent = Math3D.Subtract(Points[(PointIndex + 1) Mod 8], Points[(PointIndex + 7) Mod 8])
+            Center = Value.Points[PointIndex]
+            Tangent = Math3D.Subtract(Value.Points[(PointIndex + 1) Mod 8], Value.Points[(PointIndex + 7) Mod 8])
             View = Math3D.Subtract(Camera.Position, Center)
             Normalized = Math3D.TryNormalize(Math3D.Cross(Tangent, View), Side)
 
@@ -77,54 +80,67 @@ Public Sub Update(Actor As Character3D.Actor, Camera As Precision3D.Camera3D, El
             End If
 
             WidthOffset = Math3D.Scale(Side, ToDouble(Width))
-            Ok = Precision3D.SetRibbonPoint(Ribbons[Layer], Index,
+            Ok = Precision3D.SetRibbonPoint(Value.Ribbons[Layer], Index,
                 Math3D.Subtract(Center, WidthOffset), Math3D.Add(Center, WidthOffset), 0.5) And Ok
-            Ok = Graphics3D.SetRibbonPointColor3D(Ribbons[Layer], Index,
-                255, 105 + (Clock / 80 + PointIndex * 11) Mod 40, 12, Opacity) And Ok
+
+            If ColorStyle = 2 Then
+                Ok = Graphics3D.SetRibbonPointColor3D(Value.Ribbons[Layer], Index,
+                    255, 255, 255, Opacity) And Ok
+            Else If ColorStyle = 1 Then
+                Ok = Graphics3D.SetRibbonPointColor3D(Value.Ribbons[Layer], Index,
+                    255 - Layer * 100, 255 - Layer * 45, 255, Opacity) And Ok
+            Else
+
+                Ok = Graphics3D.SetRibbonPointColor3D(Value.Ribbons[Layer], Index,
+                    255, 105 + (Value.Clock / 80 + PointIndex * 11) Mod 40, 12, Opacity) And Ok
+            End If
+
         End For
 
-        Ok = Graphics3D.CommitRibbonBatch3D(Ribbons[Layer], 9) And Ok
+        Ok = Graphics3D.CommitRibbonBatch3D(Value.Ribbons[Layer], 9) And Ok
     End For
 
-    Visible = Ok
+    Value.Visible = Ok
 
 End Sub
 
-Public Sub Draw()
+Public Sub Draw(ByRef Value As Context)
 
     Dim Layer As Number
     Dim Ok As Boolean
-    Dim Normalized As Boolean
-    Dim WidthOffset As Precision3D.Vector3
 
-    If Not Visible Then
+    If Not Value.Visible Then
         Return
     End If
 
     For Layer = 0 To 2
-        Ok = Graphics3D.DrawRibbonBatch3D(Ribbons[Layer])
+        Ok = Graphics3D.DrawRibbonBatch3D(Value.Ribbons[Layer])
     End For
 
 End Sub
 
-Public Function IsVisible() As Boolean
+Public Function IsVisible(ByRef Value As Context) As Boolean
 
-    Return Visible
+    Dim ReturnValue As Boolean
+
+    ReturnValue = Value.Visible
+
+    Return ReturnValue
 
 End Function
 
-Public Sub Shutdown()
+Public Sub Shutdown(ByRef Value As Context)
 
     Dim Layer As Number
 
     For Layer = 0 To 2
-        Call Graphics3D.DestroyRibbonBatch3D(Ribbons[Layer])
+        Call Graphics3D.DestroyRibbonBatch3D(Value.Ribbons[Layer])
     End For
 
-    Call Graphics3D.DestroyEffectMaterial3D(Material)
-    Call Graphics3D.DestroyTexture3D(Texture)
+    Call Graphics3D.DestroyEffectMaterial3D(Value.Material)
+    Call Graphics3D.DestroyTexture3D(Value.Texture)
 
-    Visible = False
+    Value.Visible = False
 
 End Sub
 

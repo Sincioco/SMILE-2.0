@@ -68,6 +68,8 @@ Public Type State
     Companion As ViewerActors.Context
     Third As ViewerActors.Context
     Fourth As ViewerActors.Context
+    ThirdEffects As ViewerEffects.State
+    FourthEffects As ViewerEffects.State
     ThirdLayout As ParticipantLayout
     FourthLayout As ParticipantLayout
     UnityRoster As Boolean
@@ -264,7 +266,7 @@ End Function
 Public Function ApplyEquipmentVisibility(ByRef Value As State,
     ByRef PrimaryActor As Character3D.Actor, CalibrationAvailable As Boolean,
     DragonInspection As Boolean, PartIndex As Number,
-    Visible As Boolean) As Boolean
+    Visible As Boolean, Optional ProfileIndex As Number = -1) As Boolean
 
     Dim Result As Boolean
 
@@ -281,16 +283,47 @@ Public Function ApplyEquipmentVisibility(ByRef Value As State,
 
     End If
 
-    If Not CalibrationAvailable Then
+    If Not CalibrationAvailable And Not ViewerProfiles.IsEquipmentCharacter(ProfileIndex) Then
         Return Result
     End If
 
-    Result = Character3D.SetPartVisible(PrimaryActor, PartIndex, Visible)
+    Result = ApplyProfileEquipmentPart(PrimaryActor, ProfileIndex, PartIndex, Visible)
 
     If Value.Enabled And Value.Ready Then
+
         Result = Character3D.SetPartVisible(
             Value.Companion.Actor, PartIndex, Visible) And Result
+
+        If Value.UnityRoster Then
+            Result = ApplyProfileEquipmentPart(Value.Third.Actor,
+                Value.Third.Profile, PartIndex, Visible) And Result
+            Result = ApplyProfileEquipmentPart(Value.Fourth.Actor,
+                Value.Fourth.Profile, PartIndex, Visible) And Result
+        End If
+
     End If
+
+    Return Result
+
+End Function
+
+Private Function ApplyProfileEquipmentPart(ByRef Actor As Character3D.Actor,
+    ProfileIndex As Number, PartIndex As Number, Visible As Boolean) As Boolean
+
+    Dim Result As Boolean
+    Dim ActualPart As Number
+
+    ActualPart = ViewerProfiles.WeaponPart(ProfileIndex)
+
+    If PartIndex = SHIELD_PART_INDEX Then
+        ActualPart = ViewerProfiles.ShieldPart(ProfileIndex)
+    End If
+
+    If ActualPart < 0 Then
+        Return True
+    End If
+
+    Result = Character3D.SetPartVisible(Actor, ActualPart, Visible)
 
     Return Result
 
@@ -2241,6 +2274,8 @@ End Function
 
 Public Sub DestroyParticipants(ByRef Value As State)
 
+    Call ViewerEffects.DestroyEpicGlow(Value.ThirdEffects)
+    Call ViewerEffects.DestroyEpicGlow(Value.FourthEffects)
     Call ViewerActors.Destroy(Value.Companion)
     Call ViewerActors.Destroy(Value.DragonOpponent)
     Call ViewerActors.Destroy(Value.Third)
@@ -2401,7 +2436,7 @@ Private Sub DrawCameraDetails(Camera As Precision3D.Camera3D, X As Number, Y As 
 End Sub
 
 Public Function CreateUnityParticipants(ByRef Value As State,
-    PlaybackSpeed As Number) As Boolean
+    PlaybackSpeed As Number, ByRef Effects As ViewerEffects.State) As Boolean
 
     Dim Result As Boolean
 
@@ -2419,7 +2454,97 @@ Public Function CreateUnityParticipants(ByRef Value As State,
         Value.Third.Actor.Handle, Value.Third.Profile, PlaybackSpeed) And Result
     Result = PlayClip(Value.Fourth.Actor, "Idle", Value.Fourth.Clip,
         Value.Fourth.Actor.Handle, Value.Fourth.Profile, PlaybackSpeed) And Result
+
+    Call ViewerEffects.ResetEquipmentDefaults(Value.ThirdEffects)
+    Call ViewerEffects.ResetEquipmentDefaults(Value.FourthEffects)
+    Call ViewerEffects.CreateEpicGlow(Value.ThirdEffects, Value.Third.Profile, Value.Third.Actor)
+    Call ViewerEffects.CreateEpicGlow(Value.FourthEffects, Value.Fourth.Profile, Value.Fourth.Actor)
+
+    Value.ThirdEffects.SwordFireReady = Effects.FireInitialized
+    Result = Value.ThirdEffects.EpicGlowAvailable And Value.FourthEffects.EpicGlowAvailable And Result
     Value.Ready = Value.Ready And Result
+
+    Return Result
+
+End Function
+
+Public Function UpdateUnityEquipment(ByRef Value As State, ByRef Shared As ViewerEffects.State,
+    Visibility As ViewerActors.EquipmentVisibility, Camera As Precision3D.Camera3D,
+    CameraElapsed As Number, AnimationElapsed As Number, ScenePaused As Boolean) As Boolean
+
+    Dim Result As Boolean
+
+    If Not Value.UnityRoster Or Not Value.Ready Then
+        Return True
+    End If
+
+    Result = UpdateMemberEquipment(Value.Third, Value.ThirdEffects, Shared,
+        Visibility, Camera, CameraElapsed, AnimationElapsed, ScenePaused)
+    Result = UpdateMemberEquipment(Value.Fourth, Value.FourthEffects, Shared,
+        Visibility, Camera, CameraElapsed, AnimationElapsed, ScenePaused) And Result
+
+    Return Result
+
+End Function
+
+Private Function UpdateMemberEquipment(ByRef Member As ViewerActors.Context,
+    ByRef Effects As ViewerEffects.State, ByRef Shared As ViewerEffects.State,
+    Visibility As ViewerActors.EquipmentVisibility, Camera As Precision3D.Camera3D,
+    CameraElapsed As Number, AnimationElapsed As Number, ScenePaused As Boolean) As Boolean
+
+    Dim Result As Boolean
+    Dim ClipName As Text
+
+    Effects.FlamePaused = Shared.FlamePaused
+    Effects.VisualContinuityEpoch = Shared.VisualContinuityEpoch
+    Effects.EpicGlowVisible = Shared.EpicGlowVisible And Member.PresentationState <> STATE_KO
+    Effects.SwordFireVisible = Shared.SwordFireVisible And Effects.EpicGlowVisible
+    Effects.ShieldFireVisible = Shared.ShieldFireVisible And Effects.EpicGlowVisible
+    Effects.ShieldFlameStyle = Shared.ShieldFlameStyle
+    ClipName = Character3D.ClipName(Member.Actor, Member.Clip)
+    Result = True
+
+    If Effects.EpicGlowVisible Then
+        Result = ViewerEffects.UpdateEpicGlow(Effects, Member.Actor, Member.Profile,
+            Member.Frame.ScalePercent, AnimationElapsed, ClipName,
+            Visibility.SwordVisible, Visibility.ShieldVisible, False, False)
+    End If
+
+    Call ViewerEffects.UpdateEquipmentFire(Effects, Member.Actor, Member.Profile,
+        Member.PresentationState = STATE_KO, Visibility.SwordVisible, Visibility.ShieldVisible,
+        False, ScenePaused, Member.Clip, ClipName, Camera, CameraElapsed)
+
+    Return Result
+
+End Function
+
+Public Function DrawUnityEquipment(ByRef Value As State,
+    Visibility As ViewerActors.EquipmentVisibility) As Boolean
+
+    Dim Result As Boolean
+
+    If Not Value.UnityRoster Or Not Value.Ready Then
+        Return True
+    End If
+
+    Result = True
+
+    If Value.ThirdEffects.EpicGlowVisible Then
+        Result = ViewerEffects.DrawEquipmentGlow(Value.ThirdEffects, Value.Third.Profile,
+            Visibility.SwordVisible, Visibility.ShieldVisible)
+        Result = ViewerEffects.DrawEpicGlow(Value.ThirdEffects, Value.Third.Profile,
+            Visibility.SwordVisible, Visibility.ShieldVisible) And Result
+    End If
+
+    If Value.FourthEffects.EpicGlowVisible Then
+        Result = ViewerEffects.DrawEquipmentGlow(Value.FourthEffects, Value.Fourth.Profile,
+            Visibility.SwordVisible, Visibility.ShieldVisible) And Result
+    End If
+
+    Call ViewerEffects.DrawEquipmentFire(Value.ThirdEffects,
+        Visibility.SwordVisible, Visibility.ShieldVisible)
+    Call ViewerEffects.DrawEquipmentFire(Value.FourthEffects,
+        Visibility.SwordVisible, Visibility.ShieldVisible)
 
     Return Result
 

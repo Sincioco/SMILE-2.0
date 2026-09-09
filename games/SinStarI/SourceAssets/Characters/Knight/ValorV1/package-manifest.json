@@ -399,13 +399,13 @@
   "validationCheckpoint": "docs/implementation/unity-character-import-checkpoint.md",
   "calibration": {
     "available": false,
-    "reason": "No authored Viewer attachment/calibration sockets; no shared Arin/Orin pose storage."
+    "reason": "Equipment VFX sockets are authored; pose editing is not enabled and no Arin/Orin pose storage is shared."
   },
   "checkpointFiles": [
     {
       "path": "ValorV1.sm3d.json",
-      "sha256": "7060930eca8af797512b2999fb30190c2526be921ab57998c82d9d5218de4325",
-      "bytes": 1526
+      "sha256": "f061f2f2bcb0a72361ab017acb8ee1167eee6695f58e4450c70bb84e00c4ca44",
+      "bytes": 3761
     },
     {
       "path": "animation-manifest.json",
@@ -441,6 +441,44 @@
       "path": "Private/Previews/Valor-native-animation.jpg",
       "sha256": "a69312d3ff8ec5bee48d793d4931fd7880679cd868afb9b43d5d7f27f28e11b4",
       "bytes": 268744
+    },
+    {
+      "path": "equipment-vfx-attachments.json",
+      "sha256": "3a908fea464065895cbfe690466fb2a4e548770f24cb1bd9a4693970666ea328",
+      "bytes": 3234
+    },
+    {
+      "path": "Private/Previews/valor-blue-white-native.jpg",
+      "sha256": "d92e92dc5c2129181cfadb1f3210dfabff4886f80891814c3679ad7aacffc886",
+      "bytes": 269932
+    },
+    {
+      "path": "Private/Previews/valor-blue-white-web.png",
+      "sha256": "e9861c352084a078f657c8afe0dcdf2367f27401c9500c085418784e59b12089",
+      "bytes": 241384
+    },
+    {
+      "path": "Private/Previews/party-equipment-native.jpg",
+      "sha256": "cf3c2bf2640940757f6dd3ca69f511cd5118cf8f301e20dcc27309fff537e236",
+      "bytes": 333812
+    },
+    {
+      "path": "Private/Previews/party-equipment-web.png",
+      "sha256": "2693c5c88b76bc0d84cd497ec052cadbf8be26aa9c821df95c5dbecbb3f81f68",
+      "bytes": 285924
     }
-  ]
+  ],
+  "equipmentVfx": {
+    "appearance": "Blue/cyan/white sword flames and shield rim/flames",
+    "attachments": "equipment-vfx-attachments.json",
+    "socketCount": 14,
+    "checkpoint": "docs/implementation/character-equipment-vfx-checkpoint.md",
+    "state": "Validated native and Chrome individual/Party playback",
+    "previews": [
+      "Private/Previews/valor-blue-white-native.jpg",
+      "Private/Previews/valor-blue-white-web.png",
+      "Private/Previews/party-equipment-native.jpg",
+      "Private/Previews/party-equipment-web.png"
+    ]
+  }
 }

@@ -80,5 +80,87 @@
     "Walk": {
       "loop": true
     }
+  },
+  "sockets": {
+    "SwordBase": {
+      "node": "Weapon",
+      "translation": [
+        23.97081757,
+        -108.50288391,
+        -12.41891289
+      ]
+    },
+    "SwordTip": {
+      "node": "Weapon",
+      "translation": [
+        23.97081184,
+        17.80151749,
+        -12.41890144
+      ]
+    },
+    "WeaponRim0": {
+      "node": "Weapon",
+      "translation": [
+        33.73442841,
+        -42.48422623,
+        -13.13824081
+      ]
+    },
+    "WeaponRim1": {
+      "node": "Weapon",
+      "translation": [
+        41.77186584,
+        -64.00717163,
+        -18.78818703
+      ]
+    },
+    "WeaponRim2": {
+      "node": "Weapon",
+      "translation": [
+        59.98865509,
+        -90.80919647,
+        -26.73733139
+      ]
+    },
+    "WeaponRim3": {
+      "node": "Weapon",
+      "translation": [
+        55.25133133,
+        -108.48390961,
+        -30.1153965
+      ]
+    },
+    "WeaponRim4": {
+      "node": "Weapon",
+      "translation": [
+        43.95609665,
+        -89.54730988,
+        -24.67437363
+      ]
+    },
+    "WeaponRim5": {
+      "node": "Weapon",
+      "translation": [
+        32.45979309,
+        -69.18740845,
+        -18.8964901
+      ]
+    },
+    "WeaponRim6": {
+      "node": "Weapon",
+      "translation": [
+        16.41114044,
+        -42.15618515,
+        -11.1379776
+      ]
+    },
+    "WeaponRim7": {
+      "node": "Weapon",
+      "translation": [
+        26.16640472,
+        -46.23601151,
+        -13.12501144
+      ]
+    }
   }
 }

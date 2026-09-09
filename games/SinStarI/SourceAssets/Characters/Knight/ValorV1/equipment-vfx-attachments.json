@@ -1,0 +1,135 @@
+{
+  "character": "Valor",
+  "modelSha256": "87089404dc88e6fb23d63500808c4d3c115a8a43974bd940444270e42e420dd5",
+  "weaponPart": 10,
+  "shieldPart": 9,
+  "method": "Equipment meshes have one full-weight joint. Socket translations use that joint inverse bind matrix and measured bind-model positions; no animation or model data changed.",
+  "attachments": [
+    {
+      "socket": "SwordBase",
+      "bone": "Sword_Joint1",
+      "bindModelPosition": [
+        -0.8310617804527283,
+        0.9649999737739563,
+        0.09490124136209488
+      ]
+    },
+    {
+      "socket": "SwordTip",
+      "bone": "Sword_Joint1",
+      "bindModelPosition": [
+        -0.8300831317901611,
+        0.15518908202648163,
+        0.0978270173072815
+      ]
+    },
+    {
+      "socket": "ShieldRim0",
+      "bone": "Shield_Joint",
+      "bindModelPosition": [
+        0.8681685328483582,
+        1.1425561904907227,
+        -0.01761610619723797
+      ]
+    },
+    {
+      "socket": "ShieldRim1",
+      "bone": "Shield_Joint",
+      "bindModelPosition": [
+        0.999018132686615,
+        1.0895012617111206,
+        -0.04710879921913147
+      ]
+    },
+    {
+      "socket": "ShieldRim2",
+      "bone": "Shield_Joint",
+      "bindModelPosition": [
+        1.0346994400024414,
+        1.008571743965149,
+        -0.06383910030126572
+      ]
+    },
+    {
+      "socket": "ShieldRim3",
+      "bone": "Shield_Joint",
+      "bindModelPosition": [
+        0.9883391857147217,
+        0.8029553294181824,
+        -0.052697282284498215
+      ]
+    },
+    {
+      "socket": "ShieldRim4",
+      "bone": "Shield_Joint",
+      "bindModelPosition": [
+        0.8674211502075195,
+        0.570053219795227,
+        -0.028576770797371864
+      ]
+    },
+    {
+      "socket": "ShieldRim5",
+      "bone": "Shield_Joint",
+      "bindModelPosition": [
+        0.746504008769989,
+        0.8029553294181824,
+        -0.052697282284498215
+      ]
+    },
+    {
+      "socket": "ShieldRim6",
+      "bone": "Shield_Joint",
+      "bindModelPosition": [
+        0.7039206624031067,
+        1.0085722208023071,
+        -0.06686771661043167
+      ]
+    },
+    {
+      "socket": "ShieldRim7",
+      "bone": "Shield_Joint",
+      "bindModelPosition": [
+        0.7393177151679993,
+        1.0900002717971802,
+        -0.04878726601600647
+      ]
+    },
+    {
+      "socket": "ShieldCenter",
+      "bone": "Shield_Joint",
+      "bindModelPosition": [
+        0.8684954047203064,
+        0.8563559055328369,
+        -0.11606253683567047
+      ]
+    },
+    {
+      "socket": "ShieldFireLeft",
+      "bone": "Shield_Joint",
+      "bindModelPosition": [
+        0.7039206624031067,
+        1.0085722208023071,
+        -0.06686771661043167
+      ]
+    },
+    {
+      "socket": "ShieldFireRight",
+      "bone": "Shield_Joint",
+      "bindModelPosition": [
+        1.0346994400024414,
+        1.008571743965149,
+        -0.06383910030126572
+      ]
+    },
+    {
+      "socket": "ShieldFireTip",
+      "bone": "Shield_Joint",
+      "bindModelPosition": [
+        0.8674211502075195,
+        0.570053219795227,
+        -0.028576770797371864
+      ]
+    }
+  ]
+}

@@ -125,7 +125,7 @@ Public Function ProfileAt(Index As Number) As CharacterViewer.Profile
         Result.ProductionStatus = "Preview"
         Result.AssetPath = "Assets\Generation2\ValorV1\Valor.sm3d"
         Result.ExpectedClipCount = 31
-        Result.ExpectedSocketCount = 0
+        Result.ExpectedSocketCount = 14
         Result.DesiredWorldHeight = 100
 
     Else If Index = PROFILE_ZARA Then
@@ -137,7 +137,7 @@ Public Function ProfileAt(Index As Number) As CharacterViewer.Profile
         Result.ProductionStatus = "Preview"
         Result.AssetPath = "Assets\Generation2\ZaraV1\Zara.sm3d"
         Result.ExpectedClipCount = 26
-        Result.ExpectedSocketCount = 0
+        Result.ExpectedSocketCount = 10
         Result.DesiredWorldHeight = 100
 
     Else If Index = PROFILE_VRAX Then
@@ -265,7 +265,7 @@ Public Function EpicGlowAvailable(ProfileIndex As Number) As Boolean
 
     Dim Result As Boolean
 
-    Result = IsPartyCharacter(ProfileIndex)
+    Result = IsEquipmentCharacter(ProfileIndex)
 
     Return Result
 
@@ -275,7 +275,7 @@ Public Function EpicGlowVisibleByDefault(ProfileIndex As Number) As Boolean
 
     Dim Result As Boolean
 
-    Result = IsPartyCharacter(ProfileIndex)
+    Result = IsEquipmentCharacter(ProfileIndex)
 
     Return Result
 
@@ -411,8 +411,68 @@ Public Function EquipmentGlowStyle(ProfileIndex As Number) As Number
 
     Result = EQUIPMENT_GLOW_FIRE
 
-    If ProfileIndex = PROFILE_ORIN Then
+    If (ProfileIndex = PROFILE_ORIN Or
+        ProfileIndex = PROFILE_ZARA Or
+        ProfileIndex = PROFILE_VALOR) Then
         Result = EQUIPMENT_GLOW_LIGHTNING
+    End If
+
+    Return Result
+
+End Function
+
+Public Function IsEquipmentCharacter(ProfileIndex As Number) As Boolean
+
+    Dim Result As Boolean
+
+    Result = IsPartyCharacter(ProfileIndex) Or ProfileIndex = PROFILE_VALOR Or ProfileIndex = PROFILE_ZARA
+
+    Return Result
+
+End Function
+
+Public Function WeaponPart(ProfileIndex As Number) As Number
+
+    If ProfileIndex = PROFILE_VALOR Then
+        Return 10
+    Else If ProfileIndex = PROFILE_ZARA Then
+        Return 3
+    End If
+
+    Return 1
+
+End Function
+
+Public Function ShieldPart(ProfileIndex As Number) As Number
+
+    Dim ReturnValue As Number
+
+    If ProfileIndex = PROFILE_VALOR Then
+        Return 9
+    Else If ProfileIndex = PROFILE_ZARA Then
+        ReturnValue = -1
+
+        Return ReturnValue
+    End If
+
+    Return 0
+
+End Function
+
+Public Function EquipmentSocketPart(ProfileIndex As Number, Shield As Boolean) As Number
+
+    Dim Result As Number
+
+    Result = 2
+
+    If ProfileIndex = PROFILE_VALOR Or ProfileIndex = PROFILE_ZARA Then
+
+        Result = WeaponPart(ProfileIndex)
+
+        If Shield Then
+            Result = ShieldPart(ProfileIndex)
+        End If
+
     End If
 
     Return Result

@@ -236,7 +236,7 @@ Public Function ApplyActorPresentationAction(
     DragonInspection As Boolean,
     WeaponPartIndex As Number,
     ShieldPartIndex As Number,
-    ByRef Effects As ViewerEffects.State) As OperationResult
+    ByRef Effects As ViewerEffects.State, Optional ProfileIndex As Number = -1) As OperationResult
 
     Dim Command As Number
     Dim PartIndex As Number
@@ -265,7 +265,13 @@ Public Function ApplyActorPresentationAction(
 
     End If
 
-    If Not DragonInspection And Not CalibrationAvailable Then
+    If (Not DragonInspection And
+        Not CalibrationAvailable And
+        Not ViewerProfiles.IsEquipmentCharacter(ProfileIndex)) Then
+        Return Result
+    End If
+
+    If Command = ACTOR_COMMAND_SHIELD And ViewerProfiles.ShieldPart(ProfileIndex) < 0 Then
         Return Result
     End If
 
@@ -287,7 +293,7 @@ Public Function ApplyActorPresentationAction(
 
     Result.Ready = ViewerParty.ApplyEquipmentVisibility(
         Party, Actor, CalibrationAvailable, DragonInspection,
-        PartIndex, Visible)
+        PartIndex, Visible, ProfileIndex)
 
     If Not Visible Then
 

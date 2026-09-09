@@ -95,5 +95,119 @@
     "Walk4": {
       "loop": true
     }
+  },
+  "sockets": {
+    "SwordBase": {
+      "node": "Sword_Joint1",
+      "translation": [
+        -0.09893036,
+        0.29238892,
+        -13.94585609
+      ]
+    },
+    "SwordTip": {
+      "node": "Sword_Joint1",
+      "translation": [
+        -0.00106049,
+        -0.00016689,
+        -94.92694092
+      ]
+    },
+    "ShieldRim0": {
+      "node": "Shield_Joint",
+      "translation": [
+        14.86920929,
+        12.78711319,
+        27.33049011
+      ]
+    },
+    "ShieldRim1": {
+      "node": "Shield_Joint",
+      "translation": [
+        2.72216797,
+        18.75859833,
+        22.34515381
+      ]
+    },
+    "ShieldRim2": {
+      "node": "Shield_Joint",
+      "translation": [
+        -1.37337494,
+        19.60855103,
+        14.37453938
+      ]
+    },
+    "ShieldRim3": {
+      "node": "Shield_Joint",
+      "translation": [
+        2.195755,
+        17.17932892,
+        -6.28642178
+      ]
+    },
+    "ShieldRim4": {
+      "node": "Shield_Joint",
+      "translation": [
+        12.24333191,
+        10.9585762,
+        -29.84087372
+      ]
+    },
+    "ShieldRim5": {
+      "node": "Shield_Joint",
+      "translation": [
+        20.8388176,
+        1.78053665,
+        -6.68179893
+      ]
+    },
+    "ShieldRim6": {
+      "node": "Shield_Joint",
+      "translation": [
+        23.93372345,
+        -1.68718338,
+        13.84430122
+      ]
+    },
+    "ShieldRim7": {
+      "node": "Shield_Joint",
+      "translation": [
+        22.63743591,
+        2.09366226,
+        21.97625923
+      ]
+    },
+    "ShieldCenter": {
+      "node": "Shield_Joint",
+      "translation": [
+        7.5896759,
+        4.75078583,
+        -0.92637563
+      ]
+    },
+    "ShieldFireLeft": {
+      "node": "Shield_Joint",
+      "translation": [
+        23.93372345,
+        -1.68718338,
+        13.84430122
+      ]
+    },
+    "ShieldFireRight": {
+      "node": "Shield_Joint",
+      "translation": [
+        -1.37337494,
+        19.60855103,
+        14.37453938
+      ]
+    },
+    "ShieldFireTip": {
+      "node": "Shield_Joint",
+      "translation": [
+        12.24333191,
+        10.9585762,
+        -29.84087372
+      ]
+    }
   }
 }

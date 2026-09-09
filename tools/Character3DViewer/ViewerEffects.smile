@@ -32,6 +32,9 @@ Private Const WEAPON_PART_INDEX = 1
 Private Const BODY_PART_INDEX = 2
 
 Public Type State
+    ProfileIndex As Number
+    ShieldRim As ArinShieldRim.Context
+    WeaponRim As ArinShieldRim.Context
     IntensityInitialized As Boolean
     EquipmentIntensity[4] As Number
     StormStyleSelected As Boolean
@@ -454,14 +457,17 @@ Public Sub CreateEpicGlow(ByRef Value As State, ProfileIndex As Number,
     ByRef Actor As Character3D.Actor)
 
     Dim EmptyTexture As Core.Texture3D
-    Dim CharacterModel As Core.Model3D
-    Dim CharacterAnimator As Core.Animator3D
     Dim GlowReady As Boolean
 
+    Value.ProfileIndex = ProfileIndex
     Value.EpicGlowAvailable = ViewerProfiles.EpicGlowAvailable(ProfileIndex)
     Value.EpicGlowAvailable = Character3D.HasSocket(Actor, "SwordBase") And Value.EpicGlowAvailable
     Value.EpicGlowAvailable = Character3D.HasSocket(Actor, "SwordTip") And Value.EpicGlowAvailable
-    Value.EpicGlowAvailable = Character3D.HasSocket(Actor, "ShieldCenter") And Value.EpicGlowAvailable
+
+    If ViewerProfiles.ShieldPart(ProfileIndex) >= 0 Then
+        Value.EpicGlowAvailable = Character3D.HasSocket(Actor, "ShieldCenter") And Value.EpicGlowAvailable
+    End If
+
     Value.EpicGlowVisible = ViewerProfiles.EpicGlowVisibleByDefault(ProfileIndex) And Value.EpicGlowAvailable
 
     If Not Value.EpicGlowAvailable Then
@@ -494,24 +500,9 @@ Public Sub CreateEpicGlow(ByRef Value As State, ProfileIndex As Number,
     End If
 
     If GlowReady Then
-
-        CharacterModel.Handle = Character3D.ModelHandle(Actor)
-        CharacterAnimator.Handle = Character3D.AnimatorHandle(Actor)
-        Value.SwordGlow = Graphics3D.CreateModelPart3D(CharacterModel, WEAPON_PART_INDEX)
-        Value.ShieldGlow = Graphics3D.CreateModelPart3D(CharacterModel, SHIELD_PART_INDEX)
-        GlowReady = Value.SwordGlow.Handle <> 0 And Value.ShieldGlow.Handle <> 0
-
-    End If
-
-    If GlowReady Then
-
-        GlowReady = Graphics3D.SetObjectMaterial3D(Value.SwordGlow, Value.EpicGlowMaterial)
-        GlowReady = Graphics3D.SetObjectAnimator3D(Value.SwordGlow, CharacterAnimator) And GlowReady
-        GlowReady = Graphics3D.SetObjectMaterial3D(Value.ShieldGlow, Value.EpicGlowMaterial)
-        GlowReady = Graphics3D.SetObjectAnimator3D(Value.ShieldGlow, CharacterAnimator) And GlowReady
-        GlowReady = ConfigureEquipmentGlow(Value.SwordGlow, Value.ShieldGlow,
-            ViewerProfiles.EquipmentGlowStyle(ProfileIndex)) And GlowReady
-
+        GlowReady = CreateBorrowedEpicGlow(Actor, Value.EpicGlowMaterial,
+            Value.SwordGlow, Value.ShieldGlow, ViewerProfiles.EquipmentGlowStyle(ProfileIndex),
+            ViewerProfiles.WeaponPart(ProfileIndex), ViewerProfiles.ShieldPart(ProfileIndex))
     End If
 
     If GlowReady Then
@@ -547,6 +538,8 @@ End Sub
 
 Public Sub DestroyEpicGlow(ByRef Value As State)
 
+    Call ClearEquipmentFire(Value)
+
     Call Graphics3D.DestroyObject3D(Value.SwordGlow)
     Call Graphics3D.DestroyParticleBatch3D(Value.SwordTrail)
     Call Graphics3D.DestroyParticleBatch3D(Value.ShieldTrail)
@@ -562,7 +555,8 @@ End Sub
 
 Public Function CreateBorrowedEpicGlow(ByRef Actor As Character3D.Actor,
     Material As Core.Material3D, ByRef SwordGlow As Core.Object3D,
-    ByRef ShieldGlow As Core.Object3D, GlowStyle As Number) As Boolean
+    ByRef ShieldGlow As Core.Object3D, GlowStyle As Number,
+    Optional WeaponPart As Number = 1, Optional ShieldPart As Number = 0) As Boolean
 
     Dim Animator As Core.Animator3D
     Dim Model As Core.Model3D
@@ -570,16 +564,24 @@ Public Function CreateBorrowedEpicGlow(ByRef Actor As Character3D.Actor,
 
     Model.Handle = Character3D.ModelHandle(Actor)
     Animator.Handle = Character3D.AnimatorHandle(Actor)
-    SwordGlow = Graphics3D.CreateModelPart3D(Model, WEAPON_PART_INDEX)
-    ShieldGlow = Graphics3D.CreateModelPart3D(Model, SHIELD_PART_INDEX)
-    Result = SwordGlow.Handle <> 0 And ShieldGlow.Handle <> 0
+    SwordGlow = Graphics3D.CreateModelPart3D(Model, WeaponPart)
+    Result = SwordGlow.Handle <> 0
+
+    If ShieldPart >= 0 Then
+        ShieldGlow = Graphics3D.CreateModelPart3D(Model, ShieldPart)
+        Result = ShieldGlow.Handle <> 0 And Result
+    End If
 
     If Result Then
 
         Result = Graphics3D.SetObjectMaterial3D(SwordGlow, Material)
         Result = Graphics3D.SetObjectAnimator3D(SwordGlow, Animator) And Result
-        Result = Graphics3D.SetObjectMaterial3D(ShieldGlow, Material) And Result
-        Result = Graphics3D.SetObjectAnimator3D(ShieldGlow, Animator) And Result
+
+        If ShieldPart >= 0 Then
+            Result = Graphics3D.SetObjectMaterial3D(ShieldGlow, Material) And Result
+            Result = Graphics3D.SetObjectAnimator3D(ShieldGlow, Animator) And Result
+        End If
+
         Result = ConfigureEquipmentGlow(SwordGlow, ShieldGlow, GlowStyle) And Result
 
     End If
@@ -597,25 +599,41 @@ Public Function ConfigureEquipmentGlow(ByRef WeaponGlow As Core.Object3D,
     WeaponCull = Graphics3D.OBJECT_CULL_DEFAULT
 
     Call Graphics3D.SetObjectColor(WeaponGlow, 255, 182, 48)
-    Call Graphics3D.SetObjectColor(ShieldGlow, 255, 196, 64)
+
+    If ShieldGlow.Handle <> 0 Then
+        Call Graphics3D.SetObjectColor(ShieldGlow, 255, 196, 64)
+    End If
 
     If GlowStyle = ViewerProfiles.EQUIPMENT_GLOW_LIGHTNING Then
 
         WeaponCull = Graphics3D.OBJECT_CULL_FRONT
 
         Call Graphics3D.SetObjectColor(WeaponGlow, 255, 255, 255)
-        Call Graphics3D.SetObjectColor(ShieldGlow, 255, 255, 255)
+
+        If ShieldGlow.Handle <> 0 Then
+            Call Graphics3D.SetObjectColor(ShieldGlow, 255, 255, 255)
+        End If
 
     End If
 
     Call Graphics3D.SetObjectOpacity(WeaponGlow, 95)
-    Call Graphics3D.SetObjectOpacity(ShieldGlow, 90)
+
+    If ShieldGlow.Handle <> 0 Then
+        Call Graphics3D.SetObjectOpacity(ShieldGlow, 90)
+    End If
+
     Call Graphics3D.SetObjectShadows3D(WeaponGlow, False, False)
-    Call Graphics3D.SetObjectShadows3D(ShieldGlow, False, False)
+
+    If ShieldGlow.Handle <> 0 Then
+        Call Graphics3D.SetObjectShadows3D(ShieldGlow, False, False)
+    End If
 
     Result = Graphics3D.SetObjectCullMode3D(WeaponGlow, WeaponCull)
-    Result = Graphics3D.SetObjectCullMode3D(ShieldGlow,
-        Graphics3D.OBJECT_CULL_FRONT) And Result
+
+    If ShieldGlow.Handle <> 0 Then
+        Result = Graphics3D.SetObjectCullMode3D(ShieldGlow,
+            Graphics3D.OBJECT_CULL_FRONT) And Result
+    End If
 
     Return Result
 
@@ -657,6 +675,8 @@ Public Sub UpdateEquipmentFire(
         Return
     End If
 
+    Value.ProfileIndex = ProfileIndex
+
     If PrimaryKnockedOut Then
         Call ClearEquipmentFire(Value)
 
@@ -687,6 +707,18 @@ Public Sub UpdateEquipmentFire(
 
         Value.EquipmentFireEpoch = Value.VisualContinuityEpoch
         Value.VisualHistoryDirty = False
+
+    End If
+
+    If ProfileIndex = ViewerProfiles.PROFILE_ZARA Then
+
+        If Value.EpicGlowVisible And SwordVisible Then
+            Call ArinShieldRim.Update(Value.WeaponRim, Actor, Camera, CameraElapsed,
+                100, ViewerProfiles.WeaponPart(ProfileIndex), 2, "WeaponRim")
+        Else
+
+            Call ArinShieldRim.Shutdown(Value.WeaponRim)
+        End If
 
     End If
 
@@ -737,6 +769,10 @@ End Sub
 
 Public Sub DrawEquipmentFire(ByRef Value As State, SwordVisible As Boolean,
     ShieldVisible As Boolean)
+
+    If SwordVisible And Value.EpicGlowVisible Then
+        Call ArinShieldRim.Draw(Value.WeaponRim)
+    End If
 
     If (SwordVisible And
         Value.SwordFireVisible And
@@ -819,8 +855,8 @@ Private Sub UpdateSwordFire(
 
     End If
 
-    Ok = Character3D.TrySocketPositionPrecise(Actor, "SwordBase", WEAPON_PART_INDEX, False, Base)
-    Ok = Character3D.TrySocketPositionPrecise(Actor, "SwordTip", WEAPON_PART_INDEX, False, Tip) And Ok
+    Ok = Character3D.TrySocketPositionPrecise(Actor, "SwordBase", ViewerProfiles.WeaponPart(Value.ProfileIndex), False, Base)
+    Ok = Character3D.TrySocketPositionPrecise(Actor, "SwordTip", ViewerProfiles.WeaponPart(Value.ProfileIndex), False, Tip) And Ok
 
     If Not Ok Then
         Value.SwordFireFailed = True
@@ -888,8 +924,12 @@ Private Sub UpdateSwordFire(
         Inheritance = 0
     End If
 
-    Call Fire.SetIntensity(Value.SwordFire, 2 * Intensity(Value, ViewerProfiles.PROFILE_ARIN, False))
+    Call Fire.SetIntensity(Value.SwordFire, 2 * Intensity(Value, Value.ProfileIndex, False))
     Call Fire.SetSourceVelocityInheritance(Value.SwordFire, Inheritance)
+
+    If Value.ProfileIndex = ViewerProfiles.PROFILE_VALOR Then
+        Ok = Fire.SetPalette(Value.SwordFire, Fire.PALETTE_BLUE_WHITE) And Ok
+    End If
 
     Value.SwordFireFailed = Not Ok
     Value.SwordFireBase = Base
@@ -930,11 +970,12 @@ Private Sub UpdateShieldFire(
         If (Value.ShieldFireVisible And
             ShieldVisible And
             Value.EpicGlowVisible) Then
-            Call ArinShieldRim.Update(Actor, Camera, CameraElapsed,
-                Intensity(Value, ViewerProfiles.PROFILE_ARIN, True))
+            Call ArinShieldRim.Update(Value.ShieldRim, Actor, Camera, CameraElapsed,
+                Intensity(Value, Value.ProfileIndex, True), ViewerProfiles.ShieldPart(Value.ProfileIndex),
+                ViewerProfiles.EquipmentGlowStyle(Value.ProfileIndex))
         Else
 
-            Call ArinShieldRim.Shutdown()
+            Call ArinShieldRim.Shutdown(Value.ShieldRim)
         End If
 
         Return
@@ -944,11 +985,12 @@ Private Sub UpdateShieldFire(
     If (Value.ShieldFireVisible And
         ShieldVisible And
         Value.EpicGlowVisible) Then
-        Call ArinShieldRim.Update(Actor, Camera, CameraElapsed,
-            Intensity(Value, ViewerProfiles.PROFILE_ARIN, True))
+        Call ArinShieldRim.Update(Value.ShieldRim, Actor, Camera, CameraElapsed,
+            Intensity(Value, Value.ProfileIndex, True), ViewerProfiles.ShieldPart(Value.ProfileIndex),
+            ViewerProfiles.EquipmentGlowStyle(Value.ProfileIndex))
     Else
 
-        Call ArinShieldRim.Shutdown()
+        Call ArinShieldRim.Shutdown(Value.ShieldRim)
     End If
 
     If Value.ShieldFireFailed Then
@@ -979,9 +1021,9 @@ Private Sub UpdateShieldFire(
 
     End If
 
-    Ok = Character3D.TrySocketPositionPrecise(Actor, "ShieldFireLeft", SHIELD_PART_INDEX, False, Points[0])
-    Ok = Character3D.TrySocketPositionPrecise(Actor, "ShieldFireRight", SHIELD_PART_INDEX, False, Points[1]) And Ok
-    Ok = Character3D.TrySocketPositionPrecise(Actor, "ShieldFireTip", SHIELD_PART_INDEX, False, Points[2]) And Ok
+    Ok = Character3D.TrySocketPositionPrecise(Actor, "ShieldFireLeft", ViewerProfiles.ShieldPart(Value.ProfileIndex), False, Points[0])
+    Ok = Character3D.TrySocketPositionPrecise(Actor, "ShieldFireRight", ViewerProfiles.ShieldPart(Value.ProfileIndex), False, Points[1]) And Ok
+    Ok = Character3D.TrySocketPositionPrecise(Actor, "ShieldFireTip", ViewerProfiles.ShieldPart(Value.ProfileIndex), False, Points[2]) And Ok
 
     If Not Ok Then
         Value.ShieldFireFailed = True
@@ -1018,9 +1060,13 @@ Private Sub UpdateShieldFire(
         NextIndex = (Index + 1) Mod 3
         Ok = Fire.SetSegmentPrecise(Value.ShieldFire[Index], Points[Index], Points[NextIndex]) And Ok
 
+        If Value.ProfileIndex = ViewerProfiles.PROFILE_VALOR Then
+            Ok = Fire.SetPalette(Value.ShieldFire[Index], Fire.PALETTE_BLUE_WHITE) And Ok
+        End If
+
         ''' Three quiet edge emitters together use about one tenth of the sword's rate.
 
-        Call Fire.SetIntensity(Value.ShieldFire[Index], 7 * Intensity(Value, ViewerProfiles.PROFILE_ARIN, True) / 100)
+        Call Fire.SetIntensity(Value.ShieldFire[Index], 7 * Intensity(Value, Value.ProfileIndex, True) / 100)
         Call Fire.SetSourceVelocityInheritance(Value.ShieldFire[Index], 0)
 
         If (Time < Value.ShieldFireTime Or
@@ -1050,7 +1096,7 @@ Public Sub DrawShieldFire(ByRef Value As State, ShieldVisible As Boolean)
         Return
     End If
 
-    Call ArinShieldRim.Draw()
+    Call ArinShieldRim.Draw(Value.ShieldRim)
 
     If Not Value.ShieldFlameStyle Then
         Return
@@ -1093,34 +1139,47 @@ Public Function UpdateEpicGlow(
     Dim ShieldCenter As Precision3D.Vector3
     Dim Result As Boolean
 
-    If Not Character3D.TrySocketPositionPrecise(Actor, "SwordBase", BODY_PART_INDEX, SwordCoupled, SwordBase) Then
+    If Not Character3D.TrySocketPositionPrecise(Actor, "SwordBase", ViewerProfiles.EquipmentSocketPart(ProfileIndex, False), SwordCoupled, SwordBase) Then
         Return False
     End If
 
-    If Not Character3D.TrySocketPositionPrecise(Actor, "SwordTip", BODY_PART_INDEX, SwordCoupled, SwordTip) Then
+    If Not Character3D.TrySocketPositionPrecise(Actor, "SwordTip", ViewerProfiles.EquipmentSocketPart(ProfileIndex, False), SwordCoupled, SwordTip) Then
         Return False
     End If
 
-    If Not Character3D.TrySocketPositionPrecise(Actor, "ShieldCenter", BODY_PART_INDEX, ShieldCoupled, ShieldCenter) Then
-        Return False
+    If Value.ShieldGlow.Handle <> 0 Then
+
+        If Not Character3D.TrySocketPositionPrecise(Actor, "ShieldCenter",
+            ViewerProfiles.EquipmentSocketPart(ProfileIndex, True), ShieldCoupled, ShieldCenter) Then
+            Return False
+        End If
+
     End If
 
     SwordCenter.X = (SwordBase.X + SwordTip.X) / 2.0
     SwordCenter.Y = (SwordBase.Y + SwordTip.Y) / 2.0
     SwordCenter.Z = (SwordBase.Z + SwordTip.Z) / 2.0
 
-    If ProfileIndex = ViewerProfiles.PROFILE_ARIN Then
+    If (ProfileIndex = ViewerProfiles.PROFILE_ARIN Or
+        ProfileIndex = ViewerProfiles.PROFILE_VALOR) Then
         Call UpdateEpicGlowTrailState(Value, Actor, SwordTip, ShieldCenter,
             SelectedClipName, SwordVisible, ShieldVisible)
         Call AdvanceEpicGlowTrails(Value, SwordTip, ShieldCenter, AnimationElapsed)
     End If
 
     Call Graphics3D.SetObjectOpacity(Value.SwordGlow, 95 * Intensity(Value, ProfileIndex, False) / 100)
-    Call Graphics3D.SetObjectOpacity(Value.ShieldGlow, 90 * Intensity(Value, ProfileIndex, True) / 100)
+
+    If Value.ShieldGlow.Handle <> 0 Then
+        Call Graphics3D.SetObjectOpacity(Value.ShieldGlow, 90 * Intensity(Value, ProfileIndex, True) / 100)
+    End If
 
     Result = UpdateEquipmentGlow(Actor, Value.SwordGlow, SwordCenter, ScalePercent,
         ViewerProfiles.EquipmentGlowStyle(ProfileIndex) = ViewerProfiles.EQUIPMENT_GLOW_LIGHTNING)
-    Result = UpdateEquipmentGlow(Actor, Value.ShieldGlow, ShieldCenter, ScalePercent, True) And Result
+
+    If Value.ShieldGlow.Handle <> 0 Then
+        Result = UpdateEquipmentGlow(Actor, Value.ShieldGlow, ShieldCenter, ScalePercent, True) And Result
+    End If
+
     Result = UpdateEpicGlowTrailBatches(Value) And Result
 
     Return Result
@@ -1196,7 +1255,10 @@ Public Function UpdateBorrowedEpicGlow(ByRef Actor As Character3D.Actor,
     SwordCenter.Z = (SwordBase.Z + SwordTip.Z) / 2.0
 
     Call Graphics3D.SetObjectOpacity(SwordGlow, 95 * WeaponIntensity / 100)
-    Call Graphics3D.SetObjectOpacity(ShieldGlow, 90 * ShieldIntensity / 100)
+
+    If ShieldGlow.Handle <> 0 Then
+        Call Graphics3D.SetObjectOpacity(ShieldGlow, 90 * ShieldIntensity / 100)
+    End If
 
     Result = UpdateEquipmentGlow(Actor, SwordGlow, SwordCenter, ScalePercent,
         GlowStyle = ViewerProfiles.EQUIPMENT_GLOW_LIGHTNING)
@@ -1219,6 +1281,7 @@ Public Function DrawEquipmentGlow(ByRef Value As State, ProfileIndex As Number,
     End If
 
     If (ShieldVisible And
+        Value.ShieldGlow.Handle <> 0 And
         Not Value.SwordFireReady And
         ProfileIndex <> ViewerProfiles.PROFILE_ORIN) Then
         Result = Graphics3D.DrawObject3D(Value.ShieldGlow) And Result
@@ -1233,11 +1296,11 @@ Public Sub ResetEpicGlowTrails(ByRef Value As State, ByRef Actor As Character3D.
     Dim SwordTip As Precision3D.Vector3
     Dim ShieldCenter As Precision3D.Vector3
 
-    If Not Character3D.TrySocketPositionPrecise(Actor, "SwordTip", BODY_PART_INDEX, False, SwordTip) Then
+    If Not Character3D.TrySocketPositionPrecise(Actor, "SwordTip", ViewerProfiles.WeaponPart(Value.ProfileIndex), False, SwordTip) Then
         Return
     End If
 
-    If Not Character3D.TrySocketPositionPrecise(Actor, "ShieldCenter", BODY_PART_INDEX, False, ShieldCenter) Then
+    If Not Character3D.TrySocketPositionPrecise(Actor, "ShieldCenter", ViewerProfiles.ShieldPart(Value.ProfileIndex), False, ShieldCenter) Then
         Return
     End If
 
@@ -1346,7 +1409,7 @@ Private Function UpdateEpicGlowTrailBatches(ByRef Value As State) As Boolean
             72,
             196,
             255,
-            Min(100, Opacity * Intensity(Value, ViewerProfiles.PROFILE_ARIN, False) / 100)
+            Min(100, Opacity * Intensity(Value, Value.ProfileIndex, False) / 100)
         ) And Result
         ParticleSize = Max(1, SHIELD_TRAIL_PARTICLE_SIZE - 1 + Index / 2)
         Result = Precision3D.SetParticle(Value.ShieldTrail, Index,
@@ -1357,8 +1420,14 @@ Private Function UpdateEpicGlowTrailBatches(ByRef Value As State) As Boolean
             255,
             196,
             64,
-            Min(100, Opacity * 3 * Intensity(Value, ViewerProfiles.PROFILE_ARIN, True) / 400)
+            Min(100, Opacity * 3 * Intensity(Value, Value.ProfileIndex, True) / 400)
         ) And Result
+
+        If Value.ProfileIndex = ViewerProfiles.PROFILE_VALOR Then
+            Result = Graphics3D.SetParticleColor3D(Value.ShieldTrail, Index,
+                160, 220, 255, Min(100, Opacity * 3 / 4)) And Result
+        End If
+
     End For
 
     If Value.SwordTrailActive Then
@@ -1390,7 +1459,8 @@ Public Function DrawEpicGlow(ByRef Value As State, ProfileIndex As Number,
 
     Result = True
 
-    If ProfileIndex <> ViewerProfiles.PROFILE_ARIN Then
+    If (ProfileIndex <> ViewerProfiles.PROFILE_ARIN And
+        ProfileIndex <> ViewerProfiles.PROFILE_VALOR) Then
         Return True
     End If
 
@@ -1410,6 +1480,10 @@ Public Function ShieldFireStyleLabel(ByRef Value As State) As Text
 
     If Value.ShieldFlameStyle Then
         Return "Flames"
+    End If
+
+    If Value.ProfileIndex = ViewerProfiles.PROFILE_VALOR Then
+        Return "Blue Outline"
     End If
 
     Return "Ember Outline"
@@ -1436,6 +1510,8 @@ Public Sub ClearSwordFire(ByRef Value As State)
 
     Dim Ok As Boolean
 
+    Call ArinShieldRim.Shutdown(Value.WeaponRim)
+
     If Value.SwordFire.Slot <> 0 Then
         Ok = Fire.Destroy(Value.SwordFire)
     End If
@@ -1447,7 +1523,7 @@ Public Sub ClearShieldFire(ByRef Value As State)
     Dim Index As Number
     Dim Ok As Boolean
 
-    Call ArinShieldRim.Shutdown()
+    Call ArinShieldRim.Shutdown(Value.ShieldRim)
 
     For Index = 0 To 2
 

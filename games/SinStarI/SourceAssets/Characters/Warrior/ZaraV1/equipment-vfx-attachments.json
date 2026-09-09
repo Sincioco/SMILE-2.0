@@ -1,0 +1,99 @@
+{
+  "character": "Zara",
+  "modelSha256": "94f96990aed59cb347dee1d831e19587d21b92ed217a11d630a507cf8c1df67b",
+  "weaponPart": 3,
+  "shieldPart": null,
+  "method": "Equipment meshes have one full-weight joint. Socket translations use that joint inverse bind matrix and measured bind-model positions; no animation or model data changed.",
+  "attachments": [
+    {
+      "socket": "SwordBase",
+      "bone": "Weapon",
+      "bindModelPosition": [
+        0.004046916961669922,
+        0.6046068668365479,
+        -0.29001733660697937
+      ]
+    },
+    {
+      "socket": "SwordTip",
+      "bone": "Weapon",
+      "bindModelPosition": [
+        0.004046916961669922,
+        1.8676507472991943,
+        -0.29001733660697937
+      ]
+    },
+    {
+      "socket": "WeaponRim0",
+      "bone": "Weapon",
+      "bindModelPosition": [
+        0.10168302804231644,
+        1.2647933959960938,
+        -0.2972106635570526
+      ]
+    },
+    {
+      "socket": "WeaponRim1",
+      "bone": "Weapon",
+      "bindModelPosition": [
+        0.18205738067626953,
+        1.0495638847351074,
+        -0.3537100851535797
+      ]
+    },
+    {
+      "socket": "WeaponRim2",
+      "bone": "Weapon",
+      "bindModelPosition": [
+        0.36422523856163025,
+        0.7815436720848083,
+        -0.43320149183273315
+      ]
+    },
+    {
+      "socket": "WeaponRim3",
+      "bone": "Weapon",
+      "bindModelPosition": [
+        0.31685203313827515,
+        0.6047965884208679,
+        -0.4669820964336395
+      ]
+    },
+    {
+      "socket": "WeaponRim4",
+      "bone": "Weapon",
+      "bindModelPosition": [
+        0.20389971137046814,
+        0.7941625714302063,
+        -0.41257190704345703
+      ]
+    },
+    {
+      "socket": "WeaponRim5",
+      "bone": "Weapon",
+      "bindModelPosition": [
+        0.0889366939663887,
+        0.9977615475654602,
+        -0.35479313135147095
+      ]
+    },
+    {
+      "socket": "WeaponRim6",
+      "bone": "Weapon",
+      "bindModelPosition": [
+        -0.07154984772205353,
+        1.2680737972259521,
+        -0.27720803022384644
+      ]
+    },
+    {
+      "socket": "WeaponRim7",
+      "bone": "Weapon",
+      "bindModelPosition": [
+        0.02600279450416565,
+        1.2272754907608032,
+        -0.29707837104797363
+      ]
+    }
+  ]
+}

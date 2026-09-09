@@ -286,6 +286,10 @@ Do
         Call UpdateBattleAudio()
         Call UpdateOrinStorm()
 
+        Session.Ready = ViewerParty.UpdateUnityEquipment(Party, Effects, Equipment,
+            ViewerCameraState.Live, Timing.CameraElapsed,
+            Playback.AnimationUpdateElapsed, Playback.ScenePaused) And Session.Ready
+
         Session.Ready = ViewerEffects.AdvanceScene(
             Effects,
             Timing.CameraElapsed,
@@ -646,7 +650,7 @@ Function ApplyActorPresentationCommand(
     Result = ViewerInspectorCommands.ApplyActorPresentationAction(
         Action, ActionSource, Equipment, Party, Character,
         CalibrationAvailable, Session.DragonInspection,
-        WEAPON_PART_INDEX, SHIELD_PART_INDEX, Effects)
+        WEAPON_PART_INDEX, SHIELD_PART_INDEX, Effects, Session.ProfileIndex)
     Session.Ready = Result.Ready And Session.Ready
 
     If RestoreInspector Then

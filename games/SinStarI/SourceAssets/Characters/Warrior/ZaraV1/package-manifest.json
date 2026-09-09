@@ -284,13 +284,13 @@
   "validationCheckpoint": "docs/implementation/unity-character-import-checkpoint.md",
   "calibration": {
     "available": false,
-    "reason": "No authored Viewer attachment/calibration sockets; no shared Arin/Orin pose storage."
+    "reason": "Equipment VFX sockets are authored; pose editing is not enabled and no Arin/Orin pose storage is shared."
   },
   "checkpointFiles": [
     {
       "path": "ZaraV1.sm3d.json",
-      "sha256": "73c40bbd18911d32c0fb52b288b34ff857f0e8bff9796bc987f3ff0b87d1889b",
-      "bytes": 1289
+      "sha256": "3e3165a1f520ff83da67164f3783f39e6e40ea199f68a1f054d56ab132cad276",
+      "bytes": 2845
     },
     {
       "path": "animation-manifest.json",
@@ -326,6 +326,44 @@
       "path": "Private/Previews/Zara-native-animation.jpg",
       "sha256": "ffd47d406c12f09a77e6fc568a3650dc164424a26973e6beb170b4e10ca2b002",
       "bytes": 263128
+    },
+    {
+      "path": "equipment-vfx-attachments.json",
+      "sha256": "23c642ba655bef67fbd2cd345509ee68ddc3e1805533b3d1e8c79dd00f8a49b8",
+      "bytes": 2356
+    },
+    {
+      "path": "Private/Previews/zara-neon-white-native.jpg",
+      "sha256": "23a43fe0dac64b3ded9b1aa78419132874beedb0b747a5093dc152067f0d0054",
+      "bytes": 260092
+    },
+    {
+      "path": "Private/Previews/zara-neon-white-web.png",
+      "sha256": "e2d39abd5cb0a7e5490702e4f446a6415e750e0b70dfd16691ea6e7f6e3401b8",
+      "bytes": 238729
+    },
+    {
+      "path": "Private/Previews/party-equipment-native.jpg",
+      "sha256": "cf3c2bf2640940757f6dd3ca69f511cd5118cf8f301e20dcc27309fff537e236",
+      "bytes": 333812
+    },
+    {
+      "path": "Private/Previews/party-equipment-web.png",
+      "sha256": "2693c5c88b76bc0d84cd497ec052cadbf8be26aa9c821df95c5dbecbb3f81f68",
+      "bytes": 285924
     }
-  ]
+  ],
+  "equipmentVfx": {
+    "appearance": "Neon white blade rim and weapon outline",
+    "attachments": "equipment-vfx-attachments.json",
+    "socketCount": 10,
+    "checkpoint": "docs/implementation/character-equipment-vfx-checkpoint.md",
+    "state": "Validated native and Chrome individual/Party playback",
+    "previews": [
+      "Private/Previews/zara-neon-white-native.jpg",
+      "Private/Previews/zara-neon-white-web.png",
+      "Private/Previews/party-equipment-native.jpg",
+      "Private/Previews/party-equipment-web.png"
+    ]
+  }
 }

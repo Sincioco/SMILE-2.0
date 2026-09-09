@@ -7,8 +7,8 @@ sets contain 31, 26 and 24 animations, with nine clips per page. Vrax uses twice
 his first preview's transform scale. Public checkouts retain the original roster.
 See the [Unity import checkpoint](../../docs/implementation/unity-character-import-checkpoint.md)
 for packages, conversion/grounding evidence and private publication boundaries.
-Existing calibration editing applies to Arin/Orin; imported attachment/calibration
-sockets have not been authored.
+Existing calibration editing applies to Arin/Orin. Valor and Zara now have measured
+equipment VFX sockets; their original rigs and pose storage remain independent.
 
 Standard native and Web builds now include the shared mandatory SMILE startup
 presentation. It overlaps asset preparation with a one-second visible logo
@@ -52,6 +52,17 @@ The editor source and build/launch entry points belong here. Sin Star I owns the
 ## Maintainer routing
 
 ### Equipment VFX controls
+
+Valor uses the shared sword flame and faint shield flames with Orin's blue/cyan/white
+palette, plus a white shield rim with a blue halo. Zara has a pure white blade rim
+and skinned equipment outline; her original gold emissive blade material is retained.
+Both individual tabs and Party use their own weapon parts, bone attachments and
+effect instances. Weapon/Shield hiding clears the corresponding attached effects.
+Valor exposes the same flame freeze and shield style controls as Arin. Party shares
+its existing fire-family freeze and shield-style controls across both flame users.
+The four-hero/Vrax scene uses ten of twelve fire emitters; Zara's rim uses three
+ribbon batches and no fire emitters. See the
+[equipment VFX checkpoint](../../docs/implementation/character-equipment-vfx-checkpoint.md).
 
 Orin's **VFX** button cycles **Blue Flame → Neon Arcs → Lightning**. Blue Flame
 is the startup selection: Arin's shared fire family in blue/cyan/hot white, now

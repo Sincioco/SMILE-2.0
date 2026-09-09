@@ -8190,6 +8190,9 @@ static int smile_3d_draw_submission(const SmileSubmission3D* submission)
     if (submission->kind != SMILE_3D_SUBMISSION_OBJECT)
         return smile_3d_draw_vfx_submission(submission);
     if (mesh == 0 || !smile_3d_upload(mesh)) return 0;
+    // Reflected ribbons leave triangle-strip topology active. Every mesh draw
+    // owns its triangle-list topology, including the first main-scene PBR draw.
+    context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     if (material != 0)
     {
         if (material->mode == 1) return smile_3d_draw_pbr(submission);

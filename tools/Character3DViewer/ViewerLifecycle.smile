@@ -257,8 +257,9 @@ Private Sub PrepareEditingAndPresentation(ByRef Session As ViewerSession.State,
     Session.Ready = ViewerEffects.PrepareShared(Effects) And Session.Ready
 
     Call ViewerEffects.PrepareFire(
-        Effects, Dragon.Available,
-        CalibrationAvailable And Session.ProfileIndex = ViewerProfiles.PROFILE_ARIN)
+        Effects, Dragon.Available Or Session.ProfileIndex = ViewerProfiles.PROFILE_VALOR,
+        (CalibrationAvailable And Session.ProfileIndex = ViewerProfiles.PROFILE_ARIN) Or
+            Session.ProfileIndex = ViewerProfiles.PROFILE_VALOR)
 
     If Dragon.Available Then
         Call ViewerDragon.InitializeEffects()
@@ -281,7 +282,7 @@ Private Sub CreateParticipants(ByRef Session As ViewerSession.State,
             Party, Calibration, Effects, ViewerProfiles.PROFILE_ORIN,
             Settings.CalibrationMaximumClips, Playback.PlaybackSpeed) And Session.Ready
         Session.Ready = ViewerParty.CreateUnityParticipants(
-            Party, Playback.PlaybackSpeed) And Session.Ready
+            Party, Playback.PlaybackSpeed, Effects) And Session.Ready
 
         Call ConfigureCalibration(
             Session, Character, Calibration, Ui, Gizmo,
@@ -661,9 +662,9 @@ Private Sub ReapplyResetPresentation(ByRef Session As ViewerSession.State,
         Settings.CharacterModelForwardYawOffset,
         Settings.OrinArenaYawAdjustment) And Session.Ready
 
-    If CalibrationAvailable Then
+    If CalibrationAvailable Or ViewerProfiles.IsEquipmentCharacter(Session.ProfileIndex) Then
         Session.Ready = ViewerActors.ApplyEquipmentVisibility(
-            Character, Equipment) And Session.Ready
+            Character, Equipment, Session.ProfileIndex) And Session.Ready
     End If
 
     Session.Ready = ViewerRendering.ApplyMaterialInspection(Rendering) And Session.Ready

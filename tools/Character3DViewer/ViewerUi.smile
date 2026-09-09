@@ -1010,7 +1010,7 @@ Public Function InspectorActionAtPointer(
 
         Result = INSPECTOR_ACTION_FLAME_PAUSE
 
-    Else If (ProfileIndex = ViewerProfiles.PROFILE_ARIN And
+    Else If ((ProfileIndex = ViewerProfiles.PROFILE_ARIN Or ProfileIndex = ViewerProfiles.PROFILE_VALOR) And
         InRectangle(PointerX, PointerY, PanelLeft + 144, 470, 108, 20)) Then
 
         Result = INSPECTOR_ACTION_SHIELD_FIRE_STYLE
@@ -1326,7 +1326,8 @@ Public Sub DrawProfileEffectControls(
 
     Call UI.DrawButton(PanelLeft + 12, 444, 78, 22, "Floor/Grid", FloorOrGridVisible)
 
-    If ProfileIndex = ViewerProfiles.PROFILE_ARIN Then
+    If (ProfileIndex = ViewerProfiles.PROFILE_ARIN Or
+        ProfileIndex = ViewerProfiles.PROFILE_VALOR) Then
 
         Call UI.DrawButton(PanelLeft + 94, 444, 76, 22, "Sword Fire", SwordFireVisible)
         Call UI.DrawButton(PanelLeft + 174, 444, 78, 22, "Shield Fire", ShieldFireVisible)
@@ -1352,7 +1353,8 @@ Public Sub DrawProfileEffectControls(
 
     End If
 
-    If SwordFireReady And ProfileIndex = ViewerProfiles.PROFILE_ARIN Then
+    If (SwordFireReady And
+        (ProfileIndex = ViewerProfiles.PROFILE_ARIN Or ProfileIndex = ViewerProfiles.PROFILE_VALOR)) Then
         Call UI.DrawButton(PanelLeft + 12, 470, 128, 20,
             FlamePlaybackLabel, FlamePlaying)
         Call UI.DrawButton(PanelLeft + 144, 470, 108, 20,

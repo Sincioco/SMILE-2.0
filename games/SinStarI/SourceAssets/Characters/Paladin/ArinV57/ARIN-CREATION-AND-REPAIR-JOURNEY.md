@@ -927,3 +927,12 @@ the accepted baseline. These settings affect presentation only and survive tab
 switches for the current session; they do not alter any saved pose channel.
 Sin's authored Defend frame-0 correction remains in the 24-key canonical JSON
 and generated native/Web defaults. Existing browser working saves remain intact.
+
+## September 9: shared equipment effect ownership
+
+The shield rim now has caller-owned context so Valor and Zara can use separate
+instances. Arin retains his warm palette, flame intensity, sockets and 24-key
+calibration. Native mesh drawing restores triangle-list topology after reflected
+ribbons; this fixes the ribbon-only scene artifact found while adding Zara VFX.
+No Arin package model, descriptor or saved calibration changed. See the shared
+character-equipment-vfx checkpoint for validation.

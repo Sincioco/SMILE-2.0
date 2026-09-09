@@ -30,8 +30,8 @@ otherwise these texture atlases are enlarged and cropped despite correct UVs.
 ## Viewer Handoff
 
 The descriptor contains the complete animation set; the inspector exposes nine
-clips per page. No attachment/calibration sockets have been authored, so imported
-equipment stays part of the original animated mesh. Arin/Orin pose saves are not
+clips per page. Measured equipment VFX sockets are authored for this revision; the equipment
+stays part of the original animated mesh and pose editing remains unavailable. Arin/Orin pose saves are not
 used for this character. Source emission textures remain intact.
 
 Private/Previews contains native inspection and Party screenshots. The private
@@ -44,3 +44,16 @@ there before rerunning. convert_full.py requires the original Unity project for
 GUID/material lookup. Do not rerun the one-shot grounding code generator over an
 already generated Profiles.smile. The canonical descriptor, GLB checksum and
 grounding corrections must be updated together after any re-export.
+
+## September 9: equipment glow
+
+Weapon part 10 and shield part 9 use Sword_Joint1 and Shield_Joint. Fourteen
+sockets follow the measured blade segment and shield perimeter. Sword and faint
+shield flames reuse Arin behavior with Orin blue/cyan/white palette. The shield
+has an independent white-core, blue-halo ribbon outline.
+
+The same per-character effects run in the individual tab and Party, using the
+final grounded transform and the actor’s animator. Hide/reload releases owned
+effects. See equipment-vfx-attachments.json for source-model hashes and measured
+points, and docs/implementation/character-equipment-vfx-checkpoint.md for validation.
+No model re-export, texture edit, grounding change or shared calibration was needed.

@@ -9,6 +9,15 @@ inspection. `ViewerUi` owns seven tabs and clip pages. `Build.ps1` and
 or coordinator was introduced. Orin's effect target falls back to boss bounds when
 a Chest socket is absent. See the Unity import checkpoint for current evidence.
 
+Equipment extensions retain these owners: `Profiles` maps the imported weapon and
+shield parts and glow appearance; `ViewerEffects` uses the same equipment routines
+for primary and Party actors; `ViewerParty` owns independent effect state beside
+Valor/Zara actor contexts. Only the main effect state initializes and advances the
+shared scene clock and fire pool. `ArinShieldRim.Context` is caller-owned and accepts
+the actor's part, socket prefix and color style, so Arin, Valor and Zara never share
+mutable ribbon state. Their sockets are canonical package data. Native mesh draws
+restore triangle-list topology after reflected ribbon draws.
+
 This map describes the behavior-preserving refactor that began from reviewed commit
 `5bfd4f96ee838ca1b6b255c28c4117b0e0a5ec7b`. It is a navigation and ownership
 contract, not a new feature specification. `Program.smile` remains the executable
