@@ -1,8 +1,9 @@
 # SMILE 2.0 - 3D Viewer, Animation Editor
 
 The normal Viewer project permanently includes locally licensed Valor, Zara and
-Vrax packages. Tabs are Arin, Orin, Valor, Zara, Dragon, Vrax and Party;
-Party uses all four heroes against Vrax. Dragon remains in his own tab. Imported
+Vrax packages. Tabs are Arin, Orin, Valor, Zara, Dragon, Vrax, Party Dragon and
+Party Vrax. Party Dragon preserves Arin and Orin against Dragon; Party Vrax uses
+all four heroes against Vrax and remains the launch default. Imported
 sets contain 31, 26 and 24 animations, with nine clips per page. Vrax uses twice
 his first preview's transform scale. `Prepare-BuildAssets.ps1` verifies each private
 export checksum and refreshes the ignored project-local cooking mirror.
@@ -48,9 +49,12 @@ Dragon inspection uses the same clip buttons, timeline/frame stepping, playback 
 
 Party members start on a 450-unit front arc with 60 degrees between its endpoints.
 The placement function distributes any supplied member count over that wider arc.
-After a 250-ms presentation beat, each member reaches the selected boss in 300 ms,
-attacks, and returns to its own home position. Battle cameras sample the current
-actor and boss poses.
+After a 250-ms close-up, each member reaches the selected boss in 300 ms, attacks,
+and returns to its own home position. The hero shots show the close-up, track the
+approach from behind and frame the full attack. At the established 64-percent hit
+point, Beat 3a cuts to the live wide formation camera, targets the boss and slowly
+orbits across its front so impact VFX remain visible. Beat 4 then shows the aftermath
+from the boss's side/rear. Each shot moves smoothly within its beat.
 
 The Party runtime stores home, approach, bounds-derived clearance and facing metadata in
 participant records. It separates approach lanes when the actors' measured ground-plane
@@ -64,7 +68,9 @@ The editor source and build/launch entry points belong here. Sin Star I owns the
 ### Vrax attacks
 
 Vrax breathes orange fire and fires blue-white lightning from both arms during
-Attack through Attack6, in his own tab and Party. Party cycles all six clips.
+Attack through Attack6, in his own tab and Party Vrax. Party Vrax cycles all six
+clips and scales the Party playback control to Vrax's own profile rate, so the
+default animation speed matches the Vrax tab.
 Four rig-attached sockets follow the final grounded pose at the accepted 20000%
 scale. The expanded mouth stream uses radius 24, intensity 320, a 420-unit reach
 and 900-unit velocity. Effects run from one-sixth to four-fifths of each clip and clear on recovery,
@@ -328,15 +334,18 @@ for Save Frame or Cancel inside the editor. Both characters use the same correct
 
 ## Party arena
 
-Local Party places Arin, Orin, Valor and Zara opposite Vrax; public checkouts
-retain Arin and Orin opposite Dragon. Heroes approach, attack and return to
-formation in turn, while the others idle or guard. The camera orbits by default.
+Party Vrax places Arin, Orin, Valor and Zara opposite Vrax. Party Dragon preserves
+Arin and Orin opposite Dragon. Heroes approach, attack and return to formation in
+turn, while the others idle or guard. The camera orbits by default.
 Camera 1 sweeps a smooth front arc from one side of the boss to the other, using the same
 12-degree-per-second phase rate as the individual tabs and easing at the arc endpoints.
-It keeps advancing while battle cameras are selected. Camera 2 frames the heroes' attack
-and defense beats; rear views sit near waist height and look upward toward the boss.
+It keeps advancing while battle cameras are selected. Camera 2 presents five hero
+phases: an attacker close-up, a rear tracking approach, a full-character attack,
+a wide front-orbit impact view and a side/rear aftermath view that includes the boss
+and formation when framing permits.
 Camera 3 frames the selected boss toward the party; Dragon uses this shot for
-its windup and fireball charge. The two battle cameras cut immediately between their independent poses.
+its windup and fireball charge. Beat boundaries cut immediately between independent
+poses, while each active shot eases toward the moving actor.
 Participants use their formation homes and bounds-derived approach lanes, stopping
 outside the selected boss before attacking. Orin applies his own -55-degree
 visual yaw correction so his imported hammer stance faces the target. The closer arena camera

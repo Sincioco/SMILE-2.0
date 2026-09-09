@@ -197,6 +197,13 @@ Public Function CaptureStatus(ByRef Actor As Character3D.Actor,
         Actor, Playback, Session.ProfileIndex)
     Result.CandidateVersion = Profile.CandidateVersion
     Result.PlaybackSpeed = Playback.PlaybackSpeed
+
+    If (Party.Enabled And
+        Party.UnityRoster And
+        Party.UiTurn = 2) Then
+        Result.PlaybackSpeed = ViewerParty.VraxPlaybackSpeed(Playback.PlaybackSpeed)
+    End If
+
     Result.MaterialInspection = Rendering.MaterialInspection
     Result.DrawCallCount = Graphics3D.DrawCallCount3D()
     Result.TriangleCount = Graphics3D.SubmittedTriangleCount3D()

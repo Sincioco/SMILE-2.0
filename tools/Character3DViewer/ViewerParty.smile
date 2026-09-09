@@ -31,12 +31,18 @@ Private Const BODY_PART_INDEX = 2
 Public Const HERO_APPROACH_DELAY_MILLISECONDS = 250
 Public Const HERO_APPROACH_DURATION_MILLISECONDS = 300
 Public Const HERO_ATTACK_START_MILLISECONDS = 550
+Public Const HERO_ATTACK_HIT_PERCENT = 64
 Public Const HERO_RETURN_DURATION_MILLISECONDS = 700
 Private Const HERO_RETURN_END_MILLISECONDS = 1250
 Private Const PUBLIC_HERO_TURN_TAIL_MILLISECONDS = 3250
 Private Const UNITY_HERO_TURN_TAIL_MILLISECONDS = 2550
 Private Const BOSS_ATTACK_START_MILLISECONDS = 650
 Private Const BOSS_TURN_TAIL_MILLISECONDS = 1650
+Public Const HERO_CAMERA_BEAT_CLOSE_UP = 1
+Public Const HERO_CAMERA_BEAT_APPROACH = 2
+Public Const HERO_CAMERA_BEAT_ATTACK = 3
+Public Const HERO_CAMERA_BEAT_IMPACT = 4
+Public Const HERO_CAMERA_BEAT_AFTERMATH = 5
 
 Public Const STATE_ALIVE = 0
 Public Const STATE_ACTING = 1
@@ -83,6 +89,7 @@ Public Type State
     ThirdLayout As ParticipantLayout
     FourthLayout As ParticipantLayout
     UnityRoster As Boolean
+    UnityRosterRequested As Boolean
     BossAttackDuration As Number
     DragonOpponent As ViewerActors.Context
     UiPrimary As ViewerActors.Context
@@ -125,6 +132,13 @@ End Type
 Public Sub SetEnabled(ByRef Value As State, Enabled As Boolean)
 
     Value.Enabled = Enabled
+
+End Sub
+
+Public Sub SelectUnityRoster(ByRef Value As State, Selected As Boolean)
+
+    Value.UnityRosterRequested = Selected And ViewerProfiles.INCLUDE_UNITY_CHARACTERS
+    Value.UnityRoster = Value.UnityRosterRequested
 
 End Sub
 
@@ -1130,8 +1144,7 @@ Public Function DragonReactionRequested(ByRef Value As State,
     Result = (Value.Enabled And
         Value.DragonReactionPending And
         Value.Stage = 1 And
-        Value.Elapsed >= HERO_ATTACK_START_MILLISECONDS +
-            AttackDurationMilliseconds * 64 / 100)
+        Value.Elapsed >= HeroImpactTime(AttackDurationMilliseconds))
 
     Return Result
 
@@ -1777,6 +1790,50 @@ Private Function CameraSocket(Actor As Character3D.Actor, Name As Text,
 
 End Function
 
+Public Function HeroImpactTime(AttackMilliseconds As Number) As Number
+
+    Dim Result As Number
+
+    Result = (HERO_ATTACK_START_MILLISECONDS +
+        AttackMilliseconds * HERO_ATTACK_HIT_PERCENT / 100)
+
+    Return Result
+
+End Function
+
+Public Function HeroCameraBeat(Turn As Number, Elapsed As Number,
+    AttackMilliseconds As Number) As Number
+
+    Dim Result As Number
+
+    Result = 0
+
+    If Turn = 2 Then
+        Return Result
+    End If
+
+    Result = HERO_CAMERA_BEAT_CLOSE_UP
+
+    If Elapsed >= HERO_APPROACH_DELAY_MILLISECONDS Then
+        Result = HERO_CAMERA_BEAT_APPROACH
+    End If
+
+    If Elapsed >= HERO_ATTACK_START_MILLISECONDS Then
+        Result = HERO_CAMERA_BEAT_ATTACK
+    End If
+
+    If Elapsed >= HeroImpactTime(AttackMilliseconds) Then
+        Result = HERO_CAMERA_BEAT_IMPACT
+    End If
+
+    If Elapsed >= HERO_ATTACK_START_MILLISECONDS + AttackMilliseconds Then
+        Result = HERO_CAMERA_BEAT_AFTERMATH
+    End If
+
+    Return Result
+
+End Function
+
 Public Sub ApplyAttackCamera(
     ByRef Value As State,
     ByRef LiveCamera As Precision3D.Camera3D,
@@ -1808,14 +1865,19 @@ Public Sub ApplyAttackCamera(
     Dim Impact1000 As Double
     Dim BattleShot As Boolean
     Dim BossChargeShot As Boolean
+    Dim BossClearance As Double
+    Dim CameraBeat As Number
+    Dim PositionEase As Double
+    Dim SceneScale As Double
     Dim ShotSide As Number
     Dim ActionStart As Number
     Dim StableAnchor As Precision3D.Vector3
+    Dim TargetEase As Double
 
     Value.OrbitCamera = LiveCamera
     Value.ActiveCamera = 1
 
-    ''' Keep the full four-member formation and the enlarged boss in the orbit view.
+    ''' Start from a formation-wide orbit before the five hero camera phases.
 
     If Value.Enabled And Value.UnityRoster Then
 
@@ -1824,9 +1886,6 @@ Public Sub ApplyAttackCamera(
         LiveCamera.Position.Z = LiveCamera.Target.Z + (LiveCamera.Position.Z - LiveCamera.Target.Z) * 1.65
         LiveCamera.Target.Y = LiveCamera.Target.Y + 110.0
         Value.OrbitCamera = LiveCamera
-        Value.PreviousCamera = 1
-
-        Return
 
     End If
 
@@ -1839,7 +1898,7 @@ Public Sub ApplyAttackCamera(
         Return
     End If
 
-    BattleShot = Value.Stage <= 1
+    BattleShot = Value.Turn <> 2
 
     If Value.Turn = 2 Then
         BattleShot = Value.Elapsed < 3000
@@ -1900,9 +1959,18 @@ Public Sub ApplyAttackCamera(
     Boss = Value.ShotBoss
     BossHead = Value.ShotBossHead
     ActionStart = HERO_ATTACK_START_MILLISECONDS
+    CameraBeat = HeroCameraBeat(Value.Turn, Value.Elapsed, AttackMilliseconds)
+    PositionEase = 180.0
+    TargetEase = 120.0
+    SceneScale = 1.0
+
+    If Value.UnityRoster Then
+        SceneScale = 1.35
+    End If
 
     If Value.Turn = 2 Then
         ActionStart = BOSS_ATTACK_START_MILLISECONDS
+        CameraBeat = Value.Stage + 10
     End If
 
     BossChargeShot = (Value.Turn = 2 And
@@ -1920,17 +1988,31 @@ Public Sub ApplyAttackCamera(
         ShotSide = 1
     End If
 
-    If Value.Elapsed < ActionStart Then
+    If Value.Turn <> 2 And CameraBeat = HERO_CAMERA_BEAT_CLOSE_UP Then
 
-        Along = -45.0
-        Across = 190.0
-        Height = 10.0
+        Along = -110.0
+        Across = 48.0
+        Height = 18.0
 
-    Else If Value.Stage = 0 And Value.Turn <> 2 Then
+    Else If Value.Turn <> 2 And CameraBeat = HERO_CAMERA_BEAT_APPROACH Then
 
-        Along = 160.0
-        Across = 85.0
-        Height = 65.0
+        Along = 115.0
+        Across = 28.0
+        Height = 18.0
+        PositionEase = 70.0
+        TargetEase = 70.0
+
+    Else If Value.Turn <> 2 And CameraBeat = HERO_CAMERA_BEAT_ATTACK Then
+
+        Along = 145.0 * SceneScale
+        Across = 100.0 * SceneScale
+        Height = 15.0
+
+    Else If Value.Turn <> 2 And CameraBeat = HERO_CAMERA_BEAT_IMPACT Then
+
+        Along = 220.0 * SceneScale
+        Across = 160.0 * SceneScale
+        Height = 65.0 * SceneScale
 
     Else
         Impact1000 = Clamp(ToDouble(Max(0, Value.Elapsed - ActionStart)) /
@@ -1957,15 +2039,61 @@ Public Sub ApplyAttackCamera(
     Desired.UpDirection.Z = 0.0
     Desired.Target.X = (Hero.X + Boss.X) / 2.0
     Desired.Target.Y = Max(Hero.Y + 12.0, BossHead.Y - 35.0)
+    Desired.Target.Z = (Hero.Z + Boss.Z) / 2.0
 
-    If Value.Elapsed >= ActionStart Then
+    If Value.Turn <> 2 And CameraBeat = HERO_CAMERA_BEAT_CLOSE_UP Then
+
+        Desired.Target = Hero
+
+    Else If Value.Turn <> 2 And CameraBeat = HERO_CAMERA_BEAT_APPROACH Then
+
+        Desired.Target.X = (Hero.X * 3.0 + Boss.X) / 4.0
+        Desired.Target.Y = Hero.Y + 10.0
+        Desired.Target.Z = (Hero.Z * 3.0 + Boss.Z) / 4.0
+
+    Else If Value.Turn <> 2 And CameraBeat = HERO_CAMERA_BEAT_ATTACK Then
+
+        Desired.Target.X = (Hero.X * 4.0 + Boss.X) / 5.0
+        Desired.Target.Y = WaistHeight + 15.0
+        Desired.Target.Z = (Hero.Z * 4.0 + Boss.Z) / 5.0
+
+    Else If Value.Turn <> 2 And CameraBeat = HERO_CAMERA_BEAT_IMPACT Then
+
+        PositionEase = 320.0
+        TargetEase = 220.0
+
+    Else If Value.Turn <> 2 And CameraBeat = HERO_CAMERA_BEAT_AFTERMATH Then
+
         Desired.Target.Y = (WaistHeight + BossHead.Y) / 2.0
+        PositionEase = 260.0
+        TargetEase = 180.0
+
+    Else If Value.Elapsed >= ActionStart Then
+
+        Desired.Target.Y = (WaistHeight + BossHead.Y) / 2.0
+
     End If
 
-    Desired.Target.Z = (Hero.Z + Boss.Z) / 2.0
     Desired.Position.X = Hero.X + DeltaX * Along / Distance - DeltaZ * Across / Distance
     Desired.Position.Y = Hero.Y + Height
     Desired.Position.Z = Hero.Z + DeltaZ * Along / Distance + DeltaX * Across / Distance
+
+    If Value.Turn <> 2 And CameraBeat = HERO_CAMERA_BEAT_IMPACT Then
+
+        Desired = Value.OrbitCamera
+        Desired.Target.X = Boss.X
+        Desired.Target.Y = (Boss.Y + BossHead.Y) / 2.0
+        Desired.Target.Z = Boss.Z
+
+    Else If Value.Turn <> 2 And CameraBeat = HERO_CAMERA_BEAT_AFTERMATH Then
+
+        Along = 160.0 * SceneScale
+        Across = 300.0 * SceneScale * ToDouble(ShotSide)
+        Desired.Position.X = Boss.X - DeltaX * Along / Distance - DeltaZ * Across / Distance
+        Desired.Position.Y = BossHead.Y + 65.0 * SceneScale
+        Desired.Position.Z = Boss.Z - DeltaZ * Along / Distance + DeltaX * Across / Distance
+
+    End If
 
     If Value.Turn = 2 Then
 
@@ -1975,7 +2103,7 @@ Public Sub ApplyAttackCamera(
 
     End If
 
-    ''' The orbit stays live. The two battle cameras have independent poses and cut directly.
+    ''' The orbit stays live. Each battle phase owns its pose and cuts directly.
 
     Mouth = Value.ShotMouth
     Value.DragonCamera = Desired
@@ -1988,7 +2116,7 @@ Public Sub ApplyAttackCamera(
 
     If (Value.PreviousCamera <> 2 Or
         Value.Turn <> Value.PreviousCameraTurn Or
-        Value.Stage <> Value.PreviousShotStage) Then
+        CameraBeat <> Value.PreviousShotStage) Then
 
         Value.ShotPosition.X = Desired.Position.X
         Value.ShotPosition.Y = Desired.Position.Y
@@ -1999,12 +2127,12 @@ Public Sub ApplyAttackCamera(
 
     End If
 
-    Value.ShotPosition.X = Value.ShotPosition.X + (Desired.Position.X - Value.ShotPosition.X) * ToDouble(CameraElapsed) / (320.0 + ToDouble(CameraElapsed))
-    Value.ShotPosition.Y = Value.ShotPosition.Y + (Desired.Position.Y - Value.ShotPosition.Y) * ToDouble(CameraElapsed) / (320.0 + ToDouble(CameraElapsed))
-    Value.ShotPosition.Z = Value.ShotPosition.Z + (Desired.Position.Z - Value.ShotPosition.Z) * ToDouble(CameraElapsed) / (320.0 + ToDouble(CameraElapsed))
-    Value.ShotTarget.X = Value.ShotTarget.X + (Desired.Target.X - Value.ShotTarget.X) * ToDouble(CameraElapsed) / (180.0 + ToDouble(CameraElapsed))
-    Value.ShotTarget.Y = Value.ShotTarget.Y + (Desired.Target.Y - Value.ShotTarget.Y) * ToDouble(CameraElapsed) / (180.0 + ToDouble(CameraElapsed))
-    Value.ShotTarget.Z = Value.ShotTarget.Z + (Desired.Target.Z - Value.ShotTarget.Z) * ToDouble(CameraElapsed) / (180.0 + ToDouble(CameraElapsed))
+    Value.ShotPosition.X = Value.ShotPosition.X + (Desired.Position.X - Value.ShotPosition.X) * ToDouble(CameraElapsed) / (PositionEase + ToDouble(CameraElapsed))
+    Value.ShotPosition.Y = Value.ShotPosition.Y + (Desired.Position.Y - Value.ShotPosition.Y) * ToDouble(CameraElapsed) / (PositionEase + ToDouble(CameraElapsed))
+    Value.ShotPosition.Z = Value.ShotPosition.Z + (Desired.Position.Z - Value.ShotPosition.Z) * ToDouble(CameraElapsed) / (PositionEase + ToDouble(CameraElapsed))
+    Value.ShotTarget.X = Value.ShotTarget.X + (Desired.Target.X - Value.ShotTarget.X) * ToDouble(CameraElapsed) / (TargetEase + ToDouble(CameraElapsed))
+    Value.ShotTarget.Y = Value.ShotTarget.Y + (Desired.Target.Y - Value.ShotTarget.Y) * ToDouble(CameraElapsed) / (TargetEase + ToDouble(CameraElapsed))
+    Value.ShotTarget.Z = Value.ShotTarget.Z + (Desired.Target.Z - Value.ShotTarget.Z) * ToDouble(CameraElapsed) / (TargetEase + ToDouble(CameraElapsed))
     Value.HeroCamera = Desired
     Value.HeroCamera.Position.X = Value.ShotPosition.X
     Value.HeroCamera.Position.Y = Value.ShotPosition.Y
@@ -2032,6 +2160,16 @@ Public Sub ApplyAttackCamera(
 
     End If
 
+    BossClearance = 180.0
+
+    If Value.UnityRoster Then
+        BossClearance = 260.0
+    End If
+
+    If Value.Turn <> 2 And CameraBeat >= HERO_CAMERA_BEAT_ATTACK Then
+        Call BattleCamera.KeepOutsideActorPrecise(Value.HeroCamera, Boss, BossClearance)
+    End If
+
     Value.HeroCamera.Position.Y = Max(24.0, Value.HeroCamera.Position.Y)
     Value.DragonCamera.Position.Y = Max(24.0, Value.DragonCamera.Position.Y)
 
@@ -2045,7 +2183,7 @@ Public Sub ApplyAttackCamera(
 
     Value.PreviousCamera = Value.ActiveCamera
     Value.PreviousCameraTurn = Value.Turn
-    Value.PreviousShotStage = Value.Stage
+    Value.PreviousShotStage = CameraBeat
 
 End Sub
 
@@ -2470,7 +2608,8 @@ Public Function CreateUnityParticipants(ByRef Value As State,
 
     Dim Result As Boolean
 
-    Value.UnityRoster = ViewerProfiles.INCLUDE_UNITY_CHARACTERS
+    Value.UnityRoster = (Value.UnityRosterRequested And
+        ViewerProfiles.INCLUDE_UNITY_CHARACTERS)
 
     If Not Value.UnityRoster Then
         Return True
@@ -2807,17 +2946,23 @@ Private Function UpdateUnityBoss(ByRef Value As State,
     Dim Name As Text
     Dim Index As Number
     Dim Result As Boolean
-    Dim AttackMilliseconds As Number
     Dim AttackName As Text
+    Dim BossAttackMilliseconds As Number
+    Dim BossPlaybackSpeed As Number
+    Dim HeroAttackMilliseconds As Number
 
     Name = "Idle"
+    BossPlaybackSpeed = VraxPlaybackSpeed(PlaybackSpeed)
+    HeroAttackMilliseconds = AttackDuration(
+        Value, Primary, Value.Companion.Actor, PlaybackSpeed)
     AttackName = ViewerProfiles.PartyAttackName(
         ViewerProfiles.PROFILE_VRAX, Value.DragonCounter)
 
     For Index = 0 To Character3D.ClipCount(Boss.Actor) - 1
 
         If Character3D.ClipName(Boss.Actor, Index) = AttackName Then
-            Value.BossAttackDuration = Character3D.ClipDuration(Boss.Actor, Index) * 100 / Max(25, PlaybackSpeed)
+            BossAttackMilliseconds = Character3D.ClipDuration(Boss.Actor, Index) * 100
+            Value.BossAttackDuration = BossAttackMilliseconds / Max(25, BossPlaybackSpeed)
         End If
 
     End For
@@ -2826,7 +2971,7 @@ Private Function UpdateUnityBoss(ByRef Value As State,
         Name = AttackName
     Else If (Value.Turn <> 2 And
         Value.Stage = 1 And
-        Value.Elapsed < 2000) Then
+        Value.Elapsed >= HeroImpactTime(HeroAttackMilliseconds)) Then
         Name = "Hit"
     End If
 
@@ -2834,7 +2979,26 @@ Private Function UpdateUnityBoss(ByRef Value As State,
         Name = Boss.Clip
     End If
 
-    Result = ViewerDragon.UpdateVraxPreview(Boss, Name, PlaybackSpeed, Elapsed)
+    Result = ViewerDragon.UpdateVraxPreview(Boss, Name, BossPlaybackSpeed, Elapsed)
+
+    Return Result
+
+End Function
+
+Public Function VraxPlaybackSpeed(PartyPlaybackSpeed As Number) As Number
+
+    Dim PartyProfile As CharacterViewer.Profile
+    Dim ReferenceSpeed As Number
+    Dim Result As Number
+    Dim VraxProfile As CharacterViewer.Profile
+
+    PartyProfile = ViewerProfiles.ProfileAt(ViewerProfiles.PROFILE_ARIN)
+    VraxProfile = ViewerProfiles.ProfileAt(ViewerProfiles.PROFILE_VRAX)
+    ReferenceSpeed = VraxProfile.DefaultPlaybackSpeed
+    Result = PartyPlaybackSpeed * ReferenceSpeed
+    Result = Result / Max(25, PartyProfile.DefaultPlaybackSpeed)
+    Result = Max(VraxProfile.MinimumPlaybackSpeed,
+        Min(VraxProfile.MaximumPlaybackSpeed, Result))
 
     Return Result
 

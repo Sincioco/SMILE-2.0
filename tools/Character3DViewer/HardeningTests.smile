@@ -253,6 +253,23 @@ Call ViewerSession.SelectCharacterTab(SessionState, 3)
 Call CheckNamed(SessionState.SelectedCharacterTab = 3 And
     SessionState.ProfileIndex = ViewerProfiles.PROFILE_ARIN And
     Not SessionState.DragonInspection, "Session selects Party tab identity")
+Call CheckNamed(ViewerProfiles.IsPartyTab(
+    ViewerProfiles.CHARACTER_TAB_PARTY_DRAGON) And
+    ViewerProfiles.IsPartyTab(ViewerProfiles.CHARACTER_TAB_PARTY_VRAX) And
+    Not ViewerProfiles.UsesUnityPartyRoster(
+        ViewerProfiles.CHARACTER_TAB_PARTY_DRAGON) And
+    ViewerProfiles.UsesUnityPartyRoster(
+        ViewerProfiles.CHARACTER_TAB_PARTY_VRAX),
+    "Profile owner distinguishes Dragon and Vrax Party tabs")
+Call ViewerSession.SelectCharacterTab(
+    SessionState, ViewerProfiles.CHARACTER_TAB_PARTY_DRAGON)
+Call CheckNamed(
+    SessionState.SelectedCharacterTab = ViewerProfiles.CHARACTER_TAB_PARTY_DRAGON And
+    SessionState.ProfileIndex = ViewerProfiles.PROFILE_ARIN And
+    Not SessionState.DragonInspection,
+    "Session selects the Party Dragon tab identity")
+Call ViewerSession.SelectCharacterTab(
+    SessionState, ViewerProfiles.CHARACTER_TAB_PARTY_VRAX)
 Call CheckNamed(Not ViewerSession.ShouldSelectCharacterTab(
     SessionState, 3, True), "Session skips unchanged Party tab")
 Call CheckNamed(ViewerSession.ShouldSelectCharacterTab(
@@ -318,6 +335,12 @@ Call CheckNamed(Not SessionState.Ready And SessionState.FirstFailureStage = 74,
     "Session adapts calibration application failure")
 Call ViewerParty.SetEnabled(PartyState, True)
 Call CheckNamed(PartyState.Enabled, "Party owner enables Party")
+Call ViewerParty.SelectUnityRoster(PartyState, True)
+Call CheckNamed(PartyState.UnityRoster And PartyState.UnityRosterRequested,
+    "Party owner selects the Vrax roster")
+Call ViewerParty.SelectUnityRoster(PartyState, False)
+Call CheckNamed(Not PartyState.UnityRoster And Not PartyState.UnityRosterRequested,
+    "Party owner selects the Dragon roster")
 Call ViewerParty.SetEnabled(PartyState, False)
 Call CheckNamed(Not PartyState.Enabled, "Party owner disables Party")
 
@@ -941,13 +964,24 @@ Call Check(ViewerUi.TimelineFrameAtPointer(512, 800, 1000, 30, 31) = 30)
 Call Check(ViewerUi.TimelineKeyframeAtPointer(
     PartyPrimary.Actor, CalibrationState, True, 3, 18, 576, 800, 640) = 0)
 Call Check(ViewerUi.CharacterTabsContain(18, 62))
-Call Check(ViewerUi.CharacterTabAtPointer(104, 62) = 0)
-Call Check(ViewerUi.CharacterTabAtPointer(140, 62) = -1)
-Call Check(ViewerUi.CharacterTabAtPointer(202, 62) = 4)
-Call Check(ViewerUi.CharacterTabAtPointer(262, 62) = 5)
-Call Check(ViewerUi.CharacterTabAtPointer(322, 62) = 2)
-Call Check(ViewerUi.CharacterTabAtPointer(382, 62) = 6)
-Call Check(ViewerUi.CharacterTabAtPointer(442, 62) = 3)
+Call CheckNamed(ViewerUi.CharacterTabAtPointer(70, 62) = 0,
+    "Character tabs route Arin")
+Call CheckNamed(ViewerUi.CharacterTabAtPointer(103, 62) = -1,
+    "Character tabs preserve the first pointer gap")
+Call CheckNamed(ViewerUi.CharacterTabAtPointer(174, 62) = 4,
+    "Character tabs route Valor")
+Call CheckNamed(ViewerUi.CharacterTabAtPointer(226, 62) = 5,
+    "Character tabs route Zara")
+Call CheckNamed(ViewerUi.CharacterTabAtPointer(278, 62) = 2,
+    "Character tabs route Dragon")
+Call CheckNamed(ViewerUi.CharacterTabAtPointer(330, 62) = 6,
+    "Character tabs route Vrax")
+Call CheckNamed(ViewerUi.CharacterTabAtPointer(380, 62) =
+    ViewerProfiles.CHARACTER_TAB_PARTY_DRAGON,
+    "Character tabs route Party Dragon")
+Call CheckNamed(ViewerUi.CharacterTabAtPointer(462, 62) =
+    ViewerProfiles.CHARACTER_TAB_PARTY_VRAX,
+    "Character tabs route Party Vrax")
 Call Check(ViewerUi.TimelineContains(18, 576, 800, 640))
 Call Check(ViewerUi.CalibrationGizmoButtonContains(300, 268))
 Call Check(ViewerUi.TransferActionAtPointer(176, 597, 640, True, 100) =
@@ -1159,6 +1193,20 @@ InspectorStatusView = ViewerInspectorPresentation.CaptureStatus(
 Call CheckNamed(InspectorStatusView.ProfileIndex = ViewerProfiles.PROFILE_ARIN And
     InspectorStatusView.DisplayName = "Arin",
     "Inspector presentation captures status display values")
+
+Call ViewerParty.SetEnabled(PartyState, True)
+Call ViewerParty.SelectUnityRoster(PartyState, True)
+
+PartyState.UiTurn = 2
+PlaybackState.PlaybackSpeed = 200
+InspectorStatusView = ViewerInspectorPresentation.CaptureStatus(
+    PartyPrimary.Actor, Profile, PartyState, SessionState, RenderingState,
+    PlaybackState, CameraState, FrameRate, 800, 650, 16000)
+
+Call CheckNamed(InspectorStatusView.PlaybackSpeed = 100,
+    "Party status reports Vrax's reference playback speed")
+Call ViewerParty.SelectUnityRoster(PartyState, False)
+Call ViewerParty.SetEnabled(PartyState, False)
 
 Call ViewerInspectorPresentation.DrawStatusAndAnimation(InspectorStatusView)
 
@@ -1912,8 +1960,41 @@ Call Check(PartyActions.FirstClipRequested And PartyActions.FirstClip = "Hit")
 
 Call ViewerParty.ResetChoreography(PartyState)
 
+Call CheckNamed(ViewerParty.HeroCameraBeat(0, 249, 1200) =
+    ViewerParty.HERO_CAMERA_BEAT_CLOSE_UP,
+    "Party camera Beat 1 lasts through the pre-approach close-up")
+Call CheckNamed(ViewerParty.HeroCameraBeat(0, 250, 1200) =
+    ViewerParty.HERO_CAMERA_BEAT_APPROACH,
+    "Party camera Beat 2 begins with the rear approach")
+Call CheckNamed(ViewerParty.HeroCameraBeat(0, 549, 1200) =
+    ViewerParty.HERO_CAMERA_BEAT_APPROACH,
+    "Party camera Beat 2 covers the complete approach")
+Call CheckNamed(ViewerParty.HeroCameraBeat(0, 550, 1200) =
+    ViewerParty.HERO_CAMERA_BEAT_ATTACK,
+    "Party camera Beat 3 begins with the attack")
+Call CheckNamed(ViewerParty.HeroImpactTime(1200) = 1318 And
+    ViewerParty.HeroCameraBeat(0, 1317, 1200) =
+    ViewerParty.HERO_CAMERA_BEAT_ATTACK,
+    "Party camera Beat 3 lasts until the hit registers")
+Call CheckNamed(ViewerParty.HeroCameraBeat(0, 1318, 1200) =
+    ViewerParty.HERO_CAMERA_BEAT_IMPACT,
+    "Party camera Beat 3a begins when the hit registers")
+Call CheckNamed(ViewerParty.HeroCameraBeat(0, 1749, 1200) =
+    ViewerParty.HERO_CAMERA_BEAT_IMPACT,
+    "Party camera Beat 3a holds the wide boss orbit through the attack")
+Call CheckNamed(ViewerParty.HeroCameraBeat(0, 1750, 1200) =
+    ViewerParty.HERO_CAMERA_BEAT_AFTERMATH,
+    "Party camera Beat 4 begins after the attack clip")
+Call CheckNamed(ViewerParty.HeroCameraBeat(2, 100, 1200) = 0,
+    "Boss turns remain outside the four hero camera beats")
+Call CheckNamed(ViewerParty.VraxPlaybackSpeed(200) = 100 And
+    ViewerParty.VraxPlaybackSpeed(100) = 50 And
+    ViewerParty.VraxPlaybackSpeed(25) = 25,
+    "Party Vrax uses the Vrax tab playback speed")
+
 PartyState.Enabled = True
 PartyState.Ready = True
+PartyState.UnityRoster = True
 PartyState.Turn = 0
 PartyState.Stage = 1
 PartyState.Elapsed = 1400
@@ -1946,7 +2027,8 @@ Call ViewerParty.ApplyAttackCamera(
     -120
 )
 
-Call Check(PartyState.ActiveCamera = 2 And PartyState.PreviousCamera = 2)
+Call Check(PartyState.ActiveCamera = 2 And PartyState.PreviousCamera = 2 And
+    PartyState.PreviousShotStage = ViewerParty.HERO_CAMERA_BEAT_IMPACT)
 Call Check(PreciseOrbitBase.Position.X = PartyState.HeroCamera.Position.X And
     PreciseOrbitBase.Target.Z = PartyState.HeroCamera.Target.Z)
 Call Check(PreciseOrbitBase.UpDirection.Y = 1.0 And

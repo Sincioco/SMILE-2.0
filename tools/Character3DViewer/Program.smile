@@ -90,8 +90,9 @@ Game Window "SMILE 2.0 - 3D Viewer, Animation Editor" Size 1600 By 640
 
 Call Graphics3D.ResetRenderer3D()
 
-Call ViewerSession.SelectCharacterTab(Session, 3)
+Call ViewerSession.SelectCharacterTab(Session, ViewerProfiles.CHARACTER_TAB_PARTY_VRAX)
 Call ViewerParty.SetEnabled(Party, True)
+Call ViewerParty.SelectUnityRoster(Party, True)
 
 Call ViewerPlayback.Reset(Playback, 100)
 Call ViewerInput.Reset(ViewerInputState)

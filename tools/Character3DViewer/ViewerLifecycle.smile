@@ -123,7 +123,7 @@ Private Sub BeginAssetLoad(ByRef Session As ViewerSession.State,
     Call ViewerParty.ClearPreview(Party)
 
     ActiveProfile = ViewerProfiles.ProfileAt(Session.ProfileIndex)
-    Dragon.UseVrax = ((Party.Enabled And ViewerProfiles.INCLUDE_UNITY_CHARACTERS) Or
+    Dragon.UseVrax = ((Party.Enabled And Party.UnityRosterRequested) Or
         ViewerProfiles.UsesVraxOpponent(Session.ProfileIndex))
 
     Call ViewerCalibration.SelectProfileBank(Calibration, Session.ProfileIndex)
@@ -594,7 +594,9 @@ Public Sub PrepareCharacterSwitch(ByRef Session As ViewerSession.State,
 
     Call ReleaseResources(Session, Party, Character, Rendering, Effects, Dragon)
     Call ViewerSession.SelectCharacterTab(Session, Index)
-    Call ViewerParty.SetEnabled(Party, Index = 3)
+    Call ViewerParty.SetEnabled(Party, ViewerProfiles.IsPartyTab(Index))
+    Call ViewerParty.SelectUnityRoster(
+        Party, ViewerProfiles.UsesUnityPartyRoster(Index))
     Call ViewerSession.ResetFailure(Session)
     Call ViewerPlayback.PrepareCharacterSwitch(Playback)
 

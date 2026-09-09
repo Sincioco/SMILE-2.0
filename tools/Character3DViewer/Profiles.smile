@@ -14,10 +14,34 @@ Public Const PROFILE_DRAGON = 5
 Public Const PROFILE_VALOR = 6
 Public Const PROFILE_ZARA = 7
 Public Const PROFILE_VRAX = 8
+Public Const CHARACTER_TAB_PARTY_VRAX = 3
+Public Const CHARACTER_TAB_PARTY_DRAGON = 7
 Public Const INCLUDE_UNITY_CHARACTERS = True
 Public Const INCLUDE_DIAGNOSTIC_PROFILES = True
 Public Const EQUIPMENT_GLOW_FIRE = 0
 Public Const EQUIPMENT_GLOW_LIGHTNING = 1
+
+Public Function IsPartyTab(Index As Number) As Boolean
+
+    Dim Result As Boolean
+
+    Result = (Index = CHARACTER_TAB_PARTY_VRAX Or
+        Index = CHARACTER_TAB_PARTY_DRAGON)
+
+    Return Result
+
+End Function
+
+Public Function UsesUnityPartyRoster(Index As Number) As Boolean
+
+    Dim Result As Boolean
+
+    Result = (INCLUDE_UNITY_CHARACTERS And
+        Index = CHARACTER_TAB_PARTY_VRAX)
+
+    Return Result
+
+End Function
 
 Public Function NextProfile(Current As Number) As Number
 
