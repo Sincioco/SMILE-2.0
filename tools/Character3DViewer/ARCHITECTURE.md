@@ -1,5 +1,14 @@
 # Character Viewer Architecture
 
+The local Unity import extends existing owners: `Profiles` supplies Valor, Zara
+and Vrax identities, clips, scale policy and measured grounding; `ViewerActors`
+applies transforms; `ViewerParty` owns two additional contexts and four-hero
+playback; `ViewerDragon` owns the selected Party opponent while preserving Dragon
+inspection. `ViewerUi` owns seven tabs and clip pages. `Build.ps1` and
+`Prepare-UnityAssets.ps1` stage the optional private roster. No parallel actor pool
+or coordinator was introduced. Orin's effect target falls back to boss bounds when
+a Chest socket is absent. See the Unity import checkpoint for current evidence.
+
 This map describes the behavior-preserving refactor that began from reviewed commit
 `5bfd4f96ee838ca1b6b255c28c4117b0e0a5ec7b`. It is a navigation and ownership
 contract, not a new feature specification. `Program.smile` remains the executable

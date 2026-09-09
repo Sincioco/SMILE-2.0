@@ -155,6 +155,17 @@ Public Function CaptureIdentity(ByRef Ui As ViewerUi.State,
     Result.EpicGlowVisible = Effects.EpicGlowVisible
     Result.DragonControlLabel = ViewerUi.DragonLabel(
         Session.DragonInspection, Dragon.Available, Dragon.Visible)
+
+    If Dragon.UseVrax Then
+
+        Result.DragonControlLabel = "Vrax Off"
+
+        If Dragon.Visible Then
+            Result.DragonControlLabel = "Vrax On"
+        End If
+
+    End If
+
     Result.DragonVisible = Dragon.Visible
     Result.BackgroundControlLabel = ViewerUi.BackgroundLabel(Rendering.BackgroundIndex)
     Result.BackgroundVisible = Rendering.BackgroundIndex > 0

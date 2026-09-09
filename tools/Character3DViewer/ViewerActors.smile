@@ -188,7 +188,8 @@ Public Function LoadContext(ProfileIndex As Number, KeyBase As Number) As Contex
     End If
 
     Bounds = Character3D.LocalBounds(Result.Actor)
-    Result.Frame = PrecisionCamera.AutoFit(Profile, Bounds)
+    Result.Frame = PrecisionCamera.AutoFit(Profile, Bounds, 0, 0, 55.0,
+        ViewerProfiles.MaximumFitScale(Profile))
     Result.Ready = Result.Frame.Valid
     Result.Ready = Character3D.SetScale(
         Result.Actor, Result.Frame.ScalePercent) And Result.Ready
@@ -332,6 +333,18 @@ Public Function ApplyPresentationOffset(ByRef Value As Character3D.Actor,
     AnimationFrame = (Character3D.AnimationTime(Value) * SampleRate + 500) / 1000
     AnimationFrame = Min(
         Character3D.ClipSampleCount(Value, Clip) - 1, Max(0, AnimationFrame))
+
+    If ViewerProfiles.IsUnityCharacter(ProfileIndex) Then
+
+        Offset1000 = ViewerProfiles.UnityBodyMinimum1000(
+            ProfileIndex, Character3D.ClipName(Value, Clip), AnimationFrame)
+        OffsetY = -ToDouble(Offset1000) * ToDouble(Frame.ScalePercent) / 100000.0
+        Result = Character3D.PlacePrecise(Value, Frame.PositionX, OffsetY, Frame.PositionZ)
+
+        Return Result
+
+    End If
+
     Offset1000 = ViewerProfiles.ClipVerticalOffset1000(
         ProfileIndex, Character3D.ClipName(Value, Clip), AnimationFrame)
     OffsetY = ToDouble(Offset1000) * ToDouble(Frame.ScalePercent) / 100000.0

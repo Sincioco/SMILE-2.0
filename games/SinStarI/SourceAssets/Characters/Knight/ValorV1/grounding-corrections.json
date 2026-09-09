@@ -1,0 +1,679 @@
+{
+  "sha256": "87089404dc88e6fb23d63500808c4d3c115a8a43974bd940444270e42e420dd5",
+  "bindBodyMinimumY": -0.0035558194262448823,
+  "idleBodyMinimumY": -0.004963372771809037,
+  "sampleRate": 30,
+  "curveSimplificationToleranceMillimeters": 2,
+  "curves": [
+    {
+      "clip": "Attack3",
+      "policy": "Correct initial placement and downward penetration; preserve upward movement",
+      "keysMillimeters": [
+        [
+          0,
+          3
+        ]
+      ]
+    },
+    {
+      "clip": "Attack4",
+      "policy": "Correct initial placement and downward penetration; preserve upward movement",
+      "keysMillimeters": [
+        [
+          0,
+          -5
+        ]
+      ]
+    },
+    {
+      "clip": "Attack5",
+      "policy": "Correct initial placement and downward penetration; preserve upward movement",
+      "keysMillimeters": [
+        [
+          0,
+          -11
+        ]
+      ]
+    },
+    {
+      "clip": "BackWalk1",
+      "policy": "Correct initial placement and downward penetration; preserve upward movement",
+      "keysMillimeters": [
+        [
+          0,
+          -7
+        ]
+      ]
+    },
+    {
+      "clip": "BackWalk2",
+      "policy": "Correct initial placement and downward penetration; preserve upward movement",
+      "keysMillimeters": [
+        [
+          0,
+          -7
+        ]
+      ]
+    },
+    {
+      "clip": "BlockImpact",
+      "policy": "Correct initial placement and downward penetration; preserve upward movement",
+      "keysMillimeters": [
+        [
+          0,
+          -8
+        ],
+        [
+          161,
+          -8
+        ]
+      ]
+    },
+    {
+      "clip": "Death",
+      "policy": "Follow floor contact",
+      "keysMillimeters": [
+        [
+          0,
+          -28
+        ],
+        [
+          57,
+          -28
+        ],
+        [
+          60,
+          -61
+        ],
+        [
+          61,
+          -79
+        ],
+        [
+          62,
+          -92
+        ],
+        [
+          63,
+          -111
+        ],
+        [
+          64,
+          -136
+        ],
+        [
+          65,
+          -154
+        ],
+        [
+          66,
+          -158
+        ],
+        [
+          72,
+          -154
+        ],
+        [
+          74,
+          -156
+        ],
+        [
+          77,
+          -164
+        ],
+        [
+          78,
+          -171
+        ],
+        [
+          79,
+          -183
+        ],
+        [
+          80,
+          -206
+        ],
+        [
+          82,
+          -265
+        ],
+        [
+          83,
+          -289
+        ],
+        [
+          84,
+          -304
+        ],
+        [
+          85,
+          -307
+        ],
+        [
+          86,
+          -297
+        ],
+        [
+          87,
+          -276
+        ],
+        [
+          94,
+          -73
+        ],
+        [
+          95,
+          -61
+        ],
+        [
+          96,
+          -70
+        ],
+        [
+          100,
+          -86
+        ],
+        [
+          106,
+          -88
+        ],
+        [
+          112,
+          -87
+        ],
+        [
+          118,
+          -65
+        ],
+        [
+          120,
+          -66
+        ],
+        [
+          126,
+          -80
+        ],
+        [
+          133,
+          -70
+        ],
+        [
+          166,
+          -74
+        ]
+      ]
+    },
+    {
+      "clip": "Death2",
+      "policy": "Follow floor contact",
+      "keysMillimeters": [
+        [
+          0,
+          -28
+        ],
+        [
+          57,
+          -28
+        ],
+        [
+          60,
+          -61
+        ],
+        [
+          61,
+          -79
+        ],
+        [
+          62,
+          -92
+        ],
+        [
+          63,
+          -111
+        ],
+        [
+          64,
+          -136
+        ],
+        [
+          65,
+          -154
+        ],
+        [
+          66,
+          -158
+        ],
+        [
+          72,
+          -154
+        ],
+        [
+          74,
+          -156
+        ],
+        [
+          77,
+          -164
+        ],
+        [
+          78,
+          -171
+        ],
+        [
+          79,
+          -183
+        ],
+        [
+          80,
+          -206
+        ],
+        [
+          82,
+          -265
+        ],
+        [
+          83,
+          -289
+        ],
+        [
+          84,
+          -304
+        ],
+        [
+          85,
+          -307
+        ],
+        [
+          86,
+          -297
+        ],
+        [
+          87,
+          -276
+        ],
+        [
+          94,
+          -73
+        ],
+        [
+          95,
+          -61
+        ],
+        [
+          96,
+          -70
+        ],
+        [
+          100,
+          -86
+        ],
+        [
+          106,
+          -88
+        ],
+        [
+          112,
+          -87
+        ],
+        [
+          118,
+          -65
+        ],
+        [
+          120,
+          -66
+        ],
+        [
+          126,
+          -80
+        ],
+        [
+          133,
+          -70
+        ],
+        [
+          166,
+          -74
+        ]
+      ]
+    },
+    {
+      "clip": "GetHit2",
+      "policy": "Correct initial placement and downward penetration; preserve upward movement",
+      "keysMillimeters": [
+        [
+          0,
+          -8
+        ],
+        [
+          161,
+          -8
+        ]
+      ]
+    },
+    {
+      "clip": "GetHit2(Shield)",
+      "policy": "Correct initial placement and downward penetration; preserve upward movement",
+      "keysMillimeters": [
+        [
+          0,
+          -8
+        ],
+        [
+          161,
+          -8
+        ]
+      ]
+    },
+    {
+      "clip": "GetHit3",
+      "policy": "Correct initial placement and downward penetration; preserve upward movement",
+      "keysMillimeters": [
+        [
+          0,
+          -8
+        ],
+        [
+          16,
+          -8
+        ],
+        [
+          18,
+          -14
+        ],
+        [
+          31,
+          -14
+        ],
+        [
+          33,
+          -9
+        ],
+        [
+          34,
+          -19
+        ],
+        [
+          36,
+          -21
+        ],
+        [
+          37,
+          -21
+        ],
+        [
+          41,
+          -8
+        ],
+        [
+          43,
+          -8
+        ],
+        [
+          45,
+          -14
+        ],
+        [
+          47,
+          -8
+        ],
+        [
+          161,
+          -8
+        ]
+      ]
+    },
+    {
+      "clip": "GetHit3(Shield)",
+      "policy": "Correct initial placement and downward penetration; preserve upward movement",
+      "keysMillimeters": [
+        [
+          0,
+          -8
+        ],
+        [
+          16,
+          -8
+        ],
+        [
+          18,
+          -14
+        ],
+        [
+          31,
+          -14
+        ],
+        [
+          33,
+          -9
+        ],
+        [
+          34,
+          -19
+        ],
+        [
+          36,
+          -21
+        ],
+        [
+          37,
+          -21
+        ],
+        [
+          41,
+          -8
+        ],
+        [
+          43,
+          -8
+        ],
+        [
+          45,
+          -14
+        ],
+        [
+          47,
+          -8
+        ],
+        [
+          161,
+          -8
+        ]
+      ]
+    },
+    {
+      "clip": "Hit",
+      "policy": "Correct initial placement and downward penetration; preserve upward movement",
+      "keysMillimeters": [
+        [
+          0,
+          -8
+        ],
+        [
+          161,
+          -8
+        ]
+      ]
+    },
+    {
+      "clip": "Idle",
+      "policy": "Correct initial placement and downward penetration; preserve upward movement",
+      "keysMillimeters": [
+        [
+          0,
+          -5
+        ]
+      ]
+    },
+    {
+      "clip": "Idle1",
+      "policy": "Correct initial placement and downward penetration; preserve upward movement",
+      "keysMillimeters": [
+        [
+          0,
+          -5
+        ]
+      ]
+    },
+    {
+      "clip": "Idle2",
+      "policy": "Correct initial placement and downward penetration; preserve upward movement",
+      "keysMillimeters": [
+        [
+          0,
+          -8
+        ]
+      ]
+    },
+    {
+      "clip": "Idle2(Shield)",
+      "policy": "Correct initial placement and downward penetration; preserve upward movement",
+      "keysMillimeters": [
+        [
+          0,
+          -8
+        ]
+      ]
+    },
+    {
+      "clip": "Jump1Begin",
+      "policy": "Preserve authored jump",
+      "keysMillimeters": [
+        [
+          0,
+          -5
+        ]
+      ]
+    },
+    {
+      "clip": "Jump2Landing",
+      "policy": "Preserve authored jump",
+      "keysMillimeters": [
+        [
+          0,
+          -5
+        ]
+      ]
+    },
+    {
+      "clip": "Jump3Loop",
+      "policy": "Preserve authored jump",
+      "keysMillimeters": [
+        [
+          0,
+          -5
+        ]
+      ]
+    },
+    {
+      "clip": "LeftStrafe",
+      "policy": "Correct initial placement and downward penetration; preserve upward movement",
+      "keysMillimeters": [
+        [
+          0,
+          -4
+        ]
+      ]
+    },
+    {
+      "clip": "RightStrafe",
+      "policy": "Correct initial placement and downward penetration; preserve upward movement",
+      "keysMillimeters": [
+        [
+          0,
+          -4
+        ]
+      ]
+    },
+    {
+      "clip": "Run",
+      "policy": "Correct initial placement and downward penetration; preserve upward movement",
+      "keysMillimeters": [
+        [
+          0,
+          -4
+        ]
+      ]
+    },
+    {
+      "clip": "Run2",
+      "policy": "Correct initial placement and downward penetration; preserve upward movement",
+      "keysMillimeters": [
+        [
+          0,
+          -4
+        ]
+      ]
+    },
+    {
+      "clip": "Run3",
+      "policy": "Correct initial placement and downward penetration; preserve upward movement",
+      "keysMillimeters": [
+        [
+          0,
+          -4
+        ]
+      ]
+    },
+    {
+      "clip": "SwordAttack",
+      "policy": "Correct initial placement and downward penetration; preserve upward movement",
+      "keysMillimeters": [
+        [
+          0,
+          -8
+        ]
+      ]
+    },
+    {
+      "clip": "SwordAttack2",
+      "policy": "Correct initial placement and downward penetration; preserve upward movement",
+      "keysMillimeters": [
+        [
+          0,
+          -8
+        ]
+      ]
+    },
+    {
+      "clip": "Walk",
+      "policy": "Correct initial placement and downward penetration; preserve upward movement",
+      "keysMillimeters": [
+        [
+          0,
+          -4
+        ]
+      ]
+    },
+    {
+      "clip": "Walk2",
+      "policy": "Correct initial placement and downward penetration; preserve upward movement",
+      "keysMillimeters": [
+        [
+          0,
+          -4
+        ]
+      ]
+    },
+    {
+      "clip": "Walk3",
+      "policy": "Correct initial placement and downward penetration; preserve upward movement",
+      "keysMillimeters": [
+        [
+          0,
+          -4
+        ]
+      ]
+    },
+    {
+      "clip": "Walk4",
+      "policy": "Correct initial placement and downward penetration; preserve upward movement",
+      "keysMillimeters": [
+        [
+          0,
+          -4
+        ]
+      ]
+    }
+  ]
+}

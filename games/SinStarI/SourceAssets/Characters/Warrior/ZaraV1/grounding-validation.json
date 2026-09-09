@@ -1,0 +1,11 @@
+{
+  "character": "Zara",
+  "sha256": "94f96990aed59cb347dee1d831e19587d21b92ed217a11d630a507cf8c1df67b",
+  "clipsWithFrameZeroChecked": 26,
+  "contactSamplesChecked": 392,
+  "maximumCorrectionErrorMeters": 0.002247372369442481,
+  "bindBodyMinimumMeters": -0.0012312025748124726,
+  "idleBodyMinimumMeters": 0.00022551722811921596,
+  "exclusions": "Equipment and VFX excluded from body floor measurements; intentional jumps preserve authored lift.",
+  "review": "Frame zero of every clip and full Block/Hit/Death floor curves measured. Native and Chrome visual review recorded in checkpoint."
+}

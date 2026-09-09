@@ -1,0 +1,463 @@
+{
+  "name": "Valor",
+  "sha256": "87089404dc88e6fb23d63500808c4d3c115a8a43974bd940444270e42e420dd5",
+  "bytes": 44567084,
+  "parts": [
+    {
+      "node": "Valor_Part_00",
+      "material": "T_Mat_MaleKnight_Armor_Skin1",
+      "triangles": 14425,
+      "vertices": 10018,
+      "body": true
+    },
+    {
+      "node": "Valor_Part_01",
+      "material": "T_Mat_MaleKnight_Body_Skin1",
+      "triangles": 15960,
+      "vertices": 9962,
+      "body": true
+    },
+    {
+      "node": "Valor_Part_02",
+      "material": "T_Mat_MaleKnight_Body_Skin1",
+      "triangles": 972,
+      "vertices": 659,
+      "body": true
+    },
+    {
+      "node": "Valor_Part_02",
+      "material": "T_Mat_MaleKnight_Armor_Skin1",
+      "triangles": 320,
+      "vertices": 178,
+      "body": true
+    },
+    {
+      "node": "Valor_Part_03",
+      "material": "T_Mat_MaleKnight_Eyes",
+      "triangles": 596,
+      "vertices": 1224,
+      "body": true
+    },
+    {
+      "node": "Valor_Part_04",
+      "material": "T_Mat_MaleKnight_Feather",
+      "triangles": 3376,
+      "vertices": 3165,
+      "body": true
+    },
+    {
+      "node": "Valor_Part_05",
+      "material": "T_Mat_MaleKnight_Fur_Skin1",
+      "triangles": 2280,
+      "vertices": 2280,
+      "body": true
+    },
+    {
+      "node": "Valor_Part_06",
+      "material": "T_Mat_MaleKnight_Head",
+      "triangles": 2584,
+      "vertices": 1340,
+      "body": true
+    },
+    {
+      "node": "Valor_Part_07",
+      "material": "T_Mat_MaleKnight_Helmet1_Skin1",
+      "triangles": 5008,
+      "vertices": 3158,
+      "body": true
+    },
+    {
+      "node": "Valor_Part_08",
+      "material": "T_Mat_MaleKnight_Shield2_Skin1",
+      "triangles": 1869,
+      "vertices": 1203,
+      "body": false
+    },
+    {
+      "node": "Valor_Part_09",
+      "material": "T_Mat_MaleKnight_Sword1",
+      "triangles": 1236,
+      "vertices": 814,
+      "body": false
+    }
+  ],
+  "bones": 174,
+  "bindBodyMinimumY": -0.0035558194262448823,
+  "clips": [
+    {
+      "name": "Attack3",
+      "durationSeconds": 5.366666793823242,
+      "bodyFloorSamples": [
+        {
+          "seconds": 0,
+          "minimumY": 0.0032728406435342124
+        }
+      ]
+    },
+    {
+      "name": "Attack4",
+      "durationSeconds": 3.366666555404663,
+      "bodyFloorSamples": [
+        {
+          "seconds": 0,
+          "minimumY": -0.004963755739701304
+        }
+      ]
+    },
+    {
+      "name": "Attack5",
+      "durationSeconds": 3.366666555404663,
+      "bodyFloorSamples": [
+        {
+          "seconds": 0,
+          "minimumY": -0.010836770929158702
+        }
+      ]
+    },
+    {
+      "name": "BackWalk1",
+      "durationSeconds": 5.366666793823242,
+      "bodyFloorSamples": [
+        {
+          "seconds": 0,
+          "minimumY": -0.007273557407086798
+        }
+      ]
+    },
+    {
+      "name": "BackWalk2",
+      "durationSeconds": 5.366666793823242,
+      "bodyFloorSamples": [
+        {
+          "seconds": 0,
+          "minimumY": -0.007273557407086798
+        }
+      ]
+    },
+    {
+      "name": "BlockImpact",
+      "durationSeconds": 5.366666793823242,
+      "bodyFloorSamples": [
+        {
+          "seconds": 0,
+          "minimumY": -0.008129853075223466
+        },
+        {
+          "seconds": 2.683333396911621,
+          "minimumY": -0.00812977372761251
+        },
+        {
+          "seconds": 5.366666793823242,
+          "minimumY": -0.008129853075223466
+        }
+      ]
+    },
+    {
+      "name": "Death",
+      "durationSeconds": 5.5333333015441895,
+      "bodyFloorSamples": [
+        {
+          "seconds": 0,
+          "minimumY": -0.028087063809141197
+        },
+        {
+          "seconds": 2.7666666507720947,
+          "minimumY": -0.28907562606722625
+        },
+        {
+          "seconds": 5.5333333015441895,
+          "minimumY": -0.07445857447096825
+        }
+      ]
+    },
+    {
+      "name": "Death2",
+      "durationSeconds": 5.5333333015441895,
+      "bodyFloorSamples": [
+        {
+          "seconds": 0,
+          "minimumY": -0.028088027590107922
+        },
+        {
+          "seconds": 2.7666666507720947,
+          "minimumY": -0.28907511671102254
+        },
+        {
+          "seconds": 5.5333333015441895,
+          "minimumY": -0.07445821748654158
+        }
+      ]
+    },
+    {
+      "name": "GetHit2",
+      "durationSeconds": 5.366666793823242,
+      "bodyFloorSamples": [
+        {
+          "seconds": 0,
+          "minimumY": -0.008129719392765048
+        },
+        {
+          "seconds": 2.683333396911621,
+          "minimumY": -0.0081296015302534
+        },
+        {
+          "seconds": 5.366666793823242,
+          "minimumY": -0.008129719392765048
+        }
+      ]
+    },
+    {
+      "name": "GetHit2(Shield)",
+      "durationSeconds": 5.366666793823242,
+      "bodyFloorSamples": [
+        {
+          "seconds": 0,
+          "minimumY": -0.008129853075223466
+        },
+        {
+          "seconds": 2.683333396911621,
+          "minimumY": -0.00812977372761251
+        },
+        {
+          "seconds": 5.366666793823242,
+          "minimumY": -0.008129853075223466
+        }
+      ]
+    },
+    {
+      "name": "GetHit3",
+      "durationSeconds": 5.366666793823242,
+      "bodyFloorSamples": [
+        {
+          "seconds": 0,
+          "minimumY": -0.008129932748831972
+        },
+        {
+          "seconds": 2.683333396911621,
+          "minimumY": -0.008129927182530874
+        },
+        {
+          "seconds": 5.366666793823242,
+          "minimumY": -0.008129932748831972
+        }
+      ]
+    },
+    {
+      "name": "GetHit3(Shield)",
+      "durationSeconds": 5.366666793823242,
+      "bodyFloorSamples": [
+        {
+          "seconds": 0,
+          "minimumY": -0.008129853075223466
+        },
+        {
+          "seconds": 2.683333396911621,
+          "minimumY": -0.00812977391304143
+        },
+        {
+          "seconds": 5.366666793823242,
+          "minimumY": -0.008129853075223466
+        }
+      ]
+    },
+    {
+      "name": "Hit",
+      "durationSeconds": 5.366666793823242,
+      "bodyFloorSamples": [
+        {
+          "seconds": 0,
+          "minimumY": -0.008129853075223466
+        },
+        {
+          "seconds": 2.683333396911621,
+          "minimumY": -0.00812977372761251
+        },
+        {
+          "seconds": 5.366666793823242,
+          "minimumY": -0.008129853075223466
+        }
+      ]
+    },
+    {
+      "name": "Idle",
+      "durationSeconds": 4.4666666984558105,
+      "bodyFloorSamples": [
+        {
+          "seconds": 0,
+          "minimumY": -0.004963372771809037
+        }
+      ]
+    },
+    {
+      "name": "Idle1",
+      "durationSeconds": 4.4666666984558105,
+      "bodyFloorSamples": [
+        {
+          "seconds": 0,
+          "minimumY": -0.004963103105406895
+        }
+      ]
+    },
+    {
+      "name": "Idle2",
+      "durationSeconds": 5.366666793823242,
+      "bodyFloorSamples": [
+        {
+          "seconds": 0,
+          "minimumY": -0.008130458787797478
+        }
+      ]
+    },
+    {
+      "name": "Idle2(Shield)",
+      "durationSeconds": 5.366666793823242,
+      "bodyFloorSamples": [
+        {
+          "seconds": 0,
+          "minimumY": -0.008129853075223466
+        }
+      ]
+    },
+    {
+      "name": "Jump1Begin",
+      "durationSeconds": 5.400000095367432,
+      "bodyFloorSamples": [
+        {
+          "seconds": 0,
+          "minimumY": -0.008100218717426983
+        }
+      ]
+    },
+    {
+      "name": "Jump2Landing",
+      "durationSeconds": 5.400000095367432,
+      "bodyFloorSamples": [
+        {
+          "seconds": 0,
+          "minimumY": 0.2917097355634136
+        }
+      ]
+    },
+    {
+      "name": "Jump3Loop",
+      "durationSeconds": 5.400000095367432,
+      "bodyFloorSamples": [
+        {
+          "seconds": 0,
+          "minimumY": 0.29170975614765876
+        }
+      ]
+    },
+    {
+      "name": "LeftStrafe",
+      "durationSeconds": 5.366666793823242,
+      "bodyFloorSamples": [
+        {
+          "seconds": 0,
+          "minimumY": -0.0035557093124163955
+        }
+      ]
+    },
+    {
+      "name": "RightStrafe",
+      "durationSeconds": 5.366666793823242,
+      "bodyFloorSamples": [
+        {
+          "seconds": 0,
+          "minimumY": -0.0035555507106382147
+        }
+      ]
+    },
+    {
+      "name": "Run",
+      "durationSeconds": 0.699999988079071,
+      "bodyFloorSamples": [
+        {
+          "seconds": 0,
+          "minimumY": -0.004004144376858539
+        }
+      ]
+    },
+    {
+      "name": "Run2",
+      "durationSeconds": 1.3666666746139526,
+      "bodyFloorSamples": [
+        {
+          "seconds": 0,
+          "minimumY": -0.004003549653151589
+        }
+      ]
+    },
+    {
+      "name": "Run3",
+      "durationSeconds": 1.3666666746139526,
+      "bodyFloorSamples": [
+        {
+          "seconds": 0,
+          "minimumY": -0.004003865248923721
+        }
+      ]
+    },
+    {
+      "name": "SwordAttack",
+      "durationSeconds": 5.366666793823242,
+      "bodyFloorSamples": [
+        {
+          "seconds": 0,
+          "minimumY": -0.008130059949417765
+        }
+      ]
+    },
+    {
+      "name": "SwordAttack2",
+      "durationSeconds": 6.699999809265137,
+      "bodyFloorSamples": [
+        {
+          "seconds": 0,
+          "minimumY": -0.008128431874409639
+        }
+      ]
+    },
+    {
+      "name": "Walk",
+      "durationSeconds": 5.366666793823242,
+      "bodyFloorSamples": [
+        {
+          "seconds": 0,
+          "minimumY": -0.0035561913569047755
+        }
+      ]
+    },
+    {
+      "name": "Walk2",
+      "durationSeconds": 5.366666793823242,
+      "bodyFloorSamples": [
+        {
+          "seconds": 0,
+          "minimumY": -0.003556275667267719
+        }
+      ]
+    },
+    {
+      "name": "Walk3",
+      "durationSeconds": 5.366666793823242,
+      "bodyFloorSamples": [
+        {
+          "seconds": 0,
+          "minimumY": -0.003556032074299108
+        }
+      ]
+    },
+    {
+      "name": "Walk4",
+      "durationSeconds": 5.366666793823242,
+      "bodyFloorSamples": [
+        {
+          "seconds": 0,
+          "minimumY": -0.0035555123981935535
+        }
+      ]
+    }
+  ],
+  "scaleRepairs": []
+}

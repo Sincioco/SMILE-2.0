@@ -1,0 +1,11 @@
+{
+  "character": "Valor",
+  "sha256": "87089404dc88e6fb23d63500808c4d3c115a8a43974bd940444270e42e420dd5",
+  "clipsWithFrameZeroChecked": 31,
+  "contactSamplesChecked": 1335,
+  "maximumCorrectionErrorMeters": 0.002491842720808088,
+  "bindBodyMinimumMeters": -0.0035558194262448823,
+  "idleBodyMinimumMeters": -0.004963372771809037,
+  "exclusions": "Equipment and VFX excluded from body floor measurements; intentional jumps preserve authored lift.",
+  "review": "Frame zero of every clip and full Block/Hit/Death floor curves measured. Native and Chrome visual review recorded in checkpoint."
+}

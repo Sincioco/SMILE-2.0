@@ -30,6 +30,8 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'The 68-bone animation fixture failed inspection.' }
     & $assetTool inspect (Join-Path $testRoot 'Assets\AnimationActor128.sm3d') | Out-Null
     if ($LASTEXITCODE -ne 0) { throw 'The 128-bone animation fixture failed inspection.' }
+    & $assetTool inspect (Join-Path $testRoot 'Assets\AnimationActor192.sm3d') | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw 'The 192-bone animation fixture failed inspection.' }
 
     foreach ($malformed in @('AnimationPartialGroup.sm3d', 'AnimationBadWeights.sm3d')) {
         $diagnostic = (& $assetTool inspect (Join-Path $testRoot "Assets\$malformed") 2>&1 | Out-String)
@@ -42,9 +44,9 @@ try {
     [System.IO.Directory]::CreateDirectory($temporaryRoot) | Out-Null
     try {
         $rejectedOutput = Join-Path $temporaryRoot 'rejected.sm3d'
-        $boneDiagnostic = (& $assetTool model (Join-Path $testRoot 'Source\AnimationActor129.glb') -o $rejectedOutput 2>&1 | Out-String)
+        $boneDiagnostic = (& $assetTool model (Join-Path $testRoot 'Source\AnimationActor193.glb') -o $rejectedOutput 2>&1 | Out-String)
         if ($LASTEXITCODE -eq 0 -or $boneDiagnostic -notmatch 'SMA1321') {
-            throw 'The 129-bone GLB was not rejected with SMA1321.'
+            throw 'The 193-bone GLB was not rejected with SMA1321.'
         }
 
         $badDescriptor = Join-Path $temporaryRoot 'bad-version.json'
@@ -101,7 +103,7 @@ try {
     & node --check (Join-Path $labWebOutput 'smile-runtime.js')
     if ($LASTEXITCODE -ne 0) { throw 'Renderer3D Animation Lab Web runtime JavaScript syntax validation failed.' }
 
-    Write-Host 'Renderer3D animation-v2 native/Web import, 128-bone, playback, crossfade, event, root-motion, socket, palette, lifecycle, malformed-input, and Animation Lab tests passed.'
+    Write-Host 'Renderer3D animation-v2 native/Web import, 192-bone, playback, crossfade, event, root-motion, socket, palette, lifecycle, malformed-input, and Animation Lab tests passed.'
 }
 finally {
     Pop-Location

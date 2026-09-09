@@ -1,0 +1,9 @@
+{
+  "character": "Valor",
+  "vertices": 54730,
+  "verticesWithMoreThanFourInfluences": 78,
+  "maximumDiscardedWeight": 0.13008159592869276,
+  "meanDiscardedWeight": 4.861762456441676e-05,
+  "percentile95DiscardedWeight": 0.0,
+  "policy": "Retain strongest four skin influences and normalize; originals and full-weight Blender source preserved."
+}

@@ -1,0 +1,9 @@
+{
+  "character": "SciFiBeast",
+  "vertices": 31091,
+  "verticesWithMoreThanFourInfluences": 41,
+  "maximumDiscardedWeight": 0.09813046305346414,
+  "meanDiscardedWeight": 1.5435093217354073e-05,
+  "percentile95DiscardedWeight": 0.0,
+  "policy": "Retain strongest four skin influences and normalize; originals and full-weight Blender source preserved."
+}

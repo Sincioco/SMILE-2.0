@@ -937,7 +937,8 @@ Function HandleInspectorPointer() As Boolean
         Party.Enabled,
         Session.ProfileIndex,
         Effects.SwordFireReady,
-        KeyframeIndex
+        KeyframeIndex,
+        ViewerPlayback.PresentationIndexForRuntimeClip(Character, Session.ProfileIndex, Playback.SelectedClip)
     )
 
     InspectorResult = ViewerInspectorCommands.ApplyPresentationAction(

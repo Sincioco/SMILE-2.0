@@ -1,0 +1,219 @@
+[
+  {
+    "name": "SwordAttack",
+    "source": "Assets\\MaleKnight\\Animations\\@MaleKnight_Attack1.fbx",
+    "frames": 161,
+    "frameRate": 30,
+    "bodyMinimumYFrame0": -0.02358982339501381
+  },
+  {
+    "name": "SwordAttack2",
+    "source": "Assets\\MaleKnight\\Animations\\@MaleKnight_Attack2.fbx",
+    "frames": 201,
+    "frameRate": 30,
+    "bodyMinimumYFrame0": -0.10965417325496674
+  },
+  {
+    "name": "Attack3",
+    "source": "Assets\\MaleKnight\\Animations\\@MaleKnight_Attack3.fbx",
+    "frames": 161,
+    "frameRate": 30,
+    "bodyMinimumYFrame0": -0.21261905133724213
+  },
+  {
+    "name": "Attack4",
+    "source": "Assets\\MaleKnight\\Animations\\@MaleKnight_Attack4.fbx",
+    "frames": 101,
+    "frameRate": 30,
+    "bodyMinimumYFrame0": -0.03155721724033356
+  },
+  {
+    "name": "Attack5",
+    "source": "Assets\\MaleKnight\\Animations\\@MaleKnight_Attack5.fbx",
+    "frames": 101,
+    "frameRate": 30,
+    "bodyMinimumYFrame0": -0.05002424493432045
+  },
+  {
+    "name": "BackWalk1",
+    "source": "Assets\\MaleKnight\\Animations\\@MaleKnight_BackWalk1.fbx",
+    "frames": 161,
+    "frameRate": 30,
+    "bodyMinimumYFrame0": -0.028710508719086647
+  },
+  {
+    "name": "BackWalk2",
+    "source": "Assets\\MaleKnight\\Animations\\@MaleKnight_BackWalk2.fbx",
+    "frames": 161,
+    "frameRate": 30,
+    "bodyMinimumYFrame0": -0.028710508719086647
+  },
+  {
+    "name": "Death",
+    "source": "Assets\\MaleKnight\\Animations\\@MaleKnight_Death1.fbx",
+    "frames": 166,
+    "frameRate": 30,
+    "bodyMinimumYFrame0": -0.02808692865073681
+  },
+  {
+    "name": "Death2",
+    "source": "Assets\\MaleKnight\\Animations\\@MaleKnight_Death2.fbx",
+    "frames": 166,
+    "frameRate": 30,
+    "bodyMinimumYFrame0": -0.028087986633181572
+  },
+  {
+    "name": "BlockImpact",
+    "source": "Assets\\MaleKnight\\Animations\\@MaleKnight_GetHit1(Shield).fbx",
+    "frames": 161,
+    "frameRate": 30,
+    "bodyMinimumYFrame0": -0.023589449003338814
+  },
+  {
+    "name": "Hit",
+    "source": "Assets\\MaleKnight\\Animations\\@MaleKnight_GetHit1.fbx",
+    "frames": 161,
+    "frameRate": 30,
+    "bodyMinimumYFrame0": -0.023589449003338814
+  },
+  {
+    "name": "GetHit2(Shield)",
+    "source": "Assets\\MaleKnight\\Animations\\@MaleKnight_GetHit2(Shield).fbx",
+    "frames": 161,
+    "frameRate": 30,
+    "bodyMinimumYFrame0": -0.023589449003338814
+  },
+  {
+    "name": "GetHit2",
+    "source": "Assets\\MaleKnight\\Animations\\@MaleKnight_GetHit2.fbx",
+    "frames": 161,
+    "frameRate": 30,
+    "bodyMinimumYFrame0": -0.0235892441123724
+  },
+  {
+    "name": "GetHit3(Shield)",
+    "source": "Assets\\MaleKnight\\Animations\\@MaleKnight_GetHit3(Shield).fbx",
+    "frames": 161,
+    "frameRate": 30,
+    "bodyMinimumYFrame0": -0.023589449003338814
+  },
+  {
+    "name": "GetHit3",
+    "source": "Assets\\MaleKnight\\Animations\\@MaleKnight_GetHit3.fbx",
+    "frames": 161,
+    "frameRate": 30,
+    "bodyMinimumYFrame0": -0.023589514195919037
+  },
+  {
+    "name": "Idle",
+    "source": "Assets\\MaleKnight\\Animations\\@MaleKnight_Idle1(Shield).fbx",
+    "frames": 134,
+    "frameRate": 30,
+    "bodyMinimumYFrame0": -0.03155733272433281
+  },
+  {
+    "name": "Idle1",
+    "source": "Assets\\MaleKnight\\Animations\\@MaleKnight_Idle1.fbx",
+    "frames": 134,
+    "frameRate": 30,
+    "bodyMinimumYFrame0": -0.03155719116330147
+  },
+  {
+    "name": "Idle2(Shield)",
+    "source": "Assets\\MaleKnight\\Animations\\@MaleKnight_Idle2(Shield).fbx",
+    "frames": 161,
+    "frameRate": 30,
+    "bodyMinimumYFrame0": -0.023589449003338814
+  },
+  {
+    "name": "Idle2",
+    "source": "Assets\\MaleKnight\\Animations\\@MaleKnight_Idle2.fbx",
+    "frames": 161,
+    "frameRate": 30,
+    "bodyMinimumYFrame0": -0.02358987182378769
+  },
+  {
+    "name": "Jump1Begin",
+    "source": "Assets\\MaleKnight\\Animations\\@MaleKnight_Jump1Begin.fbx",
+    "frames": 162,
+    "frameRate": 30,
+    "bodyMinimumYFrame0": -0.03249083459377289
+  },
+  {
+    "name": "Jump2Landing",
+    "source": "Assets\\MaleKnight\\Animations\\@MaleKnight_Jump2Landing.fbx",
+    "frames": 162,
+    "frameRate": 30,
+    "bodyMinimumYFrame0": 0.10555011034011841
+  },
+  {
+    "name": "Jump3Loop",
+    "source": "Assets\\MaleKnight\\Animations\\@MaleKnight_Jump3Loop.fbx",
+    "frames": 162,
+    "frameRate": 30,
+    "bodyMinimumYFrame0": 0.1055498793721199
+  },
+  {
+    "name": "LeftStrafe",
+    "source": "Assets\\MaleKnight\\Animations\\@MaleKnight_LeftStrafe.fbx",
+    "frames": 161,
+    "frameRate": 30,
+    "bodyMinimumYFrame0": -0.021314488723874092
+  },
+  {
+    "name": "RightStrafe",
+    "source": "Assets\\MaleKnight\\Animations\\@MaleKnight_RightStrafe.fbx",
+    "frames": 161,
+    "frameRate": 30,
+    "bodyMinimumYFrame0": -0.02131432667374611
+  },
+  {
+    "name": "Run",
+    "source": "Assets\\MaleKnight\\Animations\\@MaleKnight_Run1.fbx",
+    "frames": 21,
+    "frameRate": 30,
+    "bodyMinimumYFrame0": -0.06997480243444443
+  },
+  {
+    "name": "Run2",
+    "source": "Assets\\MaleKnight\\Animations\\@MaleKnight_Run2.fbx",
+    "frames": 41,
+    "frameRate": 30,
+    "bodyMinimumYFrame0": -0.069974385201931
+  },
+  {
+    "name": "Run3",
+    "source": "Assets\\MaleKnight\\Animations\\@MaleKnight_Run3.fbx",
+    "frames": 41,
+    "frameRate": 30,
+    "bodyMinimumYFrame0": -0.06997457891702652
+  },
+  {
+    "name": "Walk",
+    "source": "Assets\\MaleKnight\\Animations\\@MaleKnight_Walk1.fbx",
+    "frames": 161,
+    "frameRate": 30,
+    "bodyMinimumYFrame0": -0.01980235055088997
+  },
+  {
+    "name": "Walk2",
+    "source": "Assets\\MaleKnight\\Animations\\@MaleKnight_Walk2.fbx",
+    "frames": 161,
+    "frameRate": 30,
+    "bodyMinimumYFrame0": -0.01980235055088997
+  },
+  {
+    "name": "Walk3",
+    "source": "Assets\\MaleKnight\\Animations\\@MaleKnight_Walk3.fbx",
+    "frames": 161,
+    "frameRate": 30,
+    "bodyMinimumYFrame0": -0.017513668164610863
+  },
+  {
+    "name": "Walk4",
+    "source": "Assets\\MaleKnight\\Animations\\@MaleKnight_Walk4.fbx",
+    "frames": 161,
+    "frameRate": 30,
+    "bodyMinimumYFrame0": -0.017513582482933998
+  }
+]

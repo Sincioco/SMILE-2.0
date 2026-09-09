@@ -21,6 +21,12 @@ Public units remain world units, degrees, percentage scale and X-then-Y-then-Z
 Euler order. Existing Core fixed vectors/matrices and integer APIs remain available.
 No asset scaling/rebaking, second renderer, second owning Object3D or actor pool.
 
+Precise camera AutoFit accepts an optional final MaximumScalePercent argument,
+defaulting to the existing 10000%. It clamps that bound to Character3D's supported
+1–25000% range and derives all framing extents from the resulting actor scale.
+Vrax uses 20000% to double his initial preview; other Viewer profiles keep their
+existing default. Source meshes and shared Double transform ownership are unchanged.
+
 The canonical internal built-ins are `Renderer3DDouble(Command As Number,
 Resource As Number, A As Double, B As Double, C As Double, D As Double,
 E As Double, F As Double, G As Double, H As Double, I As Double, J As Double,

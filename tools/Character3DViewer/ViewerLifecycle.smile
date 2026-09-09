@@ -123,6 +123,7 @@ Private Sub BeginAssetLoad(ByRef Session As ViewerSession.State,
     Call ViewerParty.ClearPreview(Party)
 
     ActiveProfile = ViewerProfiles.ProfileAt(Session.ProfileIndex)
+    Dragon.UseVrax = Party.Enabled And ViewerProfiles.INCLUDE_UNITY_CHARACTERS
 
     Call ViewerCalibration.SelectProfileBank(Calibration, Session.ProfileIndex)
 
@@ -279,6 +280,8 @@ Private Sub CreateParticipants(ByRef Session As ViewerSession.State,
         Session.Ready = ViewerParty.CreateCompanion(
             Party, Calibration, Effects, ViewerProfiles.PROFILE_ORIN,
             Settings.CalibrationMaximumClips, Playback.PlaybackSpeed) And Session.Ready
+        Session.Ready = ViewerParty.CreateUnityParticipants(
+            Party, Playback.PlaybackSpeed) And Session.Ready
 
         Call ConfigureCalibration(
             Session, Character, Calibration, Ui, Gizmo,

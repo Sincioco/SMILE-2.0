@@ -1,0 +1,11 @@
+{
+  "character": "Vrax",
+  "sha256": "ec863933e6898fb81672aaa979eada343b3b2eedcdc433a8b2c65bfe7a8a84fb",
+  "clipsWithFrameZeroChecked": 24,
+  "contactSamplesChecked": 232,
+  "maximumCorrectionErrorMeters": 0.0024790847391023413,
+  "bindBodyMinimumMeters": -0.02523250035907216,
+  "idleBodyMinimumMeters": -0.0323758499208148,
+  "exclusions": "Equipment and VFX excluded from body floor measurements; intentional jumps preserve authored lift.",
+  "review": "Frame zero of every clip and full Block/Hit/Death floor curves measured. Native and Chrome visual review recorded in checkpoint."
+}

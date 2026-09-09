@@ -55,7 +55,7 @@ public sealed class Model3DAssetCookResult
 
 public static class Model3DAssetCooker
 {
-    public const string ConverterVersion = "smile-model3d-cooker-m7c-a-v3";
+    public const string ConverterVersion = "smile-model3d-cooker-m7c-a-v4";
     private const int MaximumSourceBytes = 64 * 1024 * 1024;
     private const int MaximumJsonBytes = 4 * 1024 * 1024;
     private const int MaximumImageBytes = 32 * 1024 * 1024;
@@ -429,7 +429,10 @@ public static class Model3DAssetCooker
             throw new InvalidDataException("SMA1427: decoded texture aggregate exceeds 256 MiB.");
         var result = new Bitmap(decoded.Width, decoded.Height, PixelFormat.Format32bppArgb);
         using var graphics = Graphics.FromImage(result);
-        graphics.DrawImageUnscaled(decoded, 0, 0);
+        // Texture coordinates address pixels; source DPI must not resize or crop the atlas.
+        graphics.CompositingMode = System.Drawing.Drawing2D.CompositingMode.SourceCopy;
+        graphics.DrawImage(decoded, new Rectangle(0, 0, decoded.Width, decoded.Height),
+            0, 0, decoded.Width, decoded.Height, GraphicsUnit.Pixel);
         return result;
         }
     }

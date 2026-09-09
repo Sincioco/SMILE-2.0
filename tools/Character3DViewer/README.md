@@ -1,5 +1,15 @@
 # SMILE 2.0 - 3D Viewer, Animation Editor
 
+Local builds include Valor, Zara and Vrax when their complete private versioned
+packages are present. Tabs are Arin, Orin, Valor, Zara, Dragon, Vrax and Party;
+Party uses all four heroes against Vrax. Dragon remains in his own tab. Imported
+sets contain 31, 26 and 24 animations, with nine clips per page. Vrax uses twice
+his first preview's transform scale. Public checkouts retain the original roster.
+See the [Unity import checkpoint](../../docs/implementation/unity-character-import-checkpoint.md)
+for packages, conversion/grounding evidence and private publication boundaries.
+Existing calibration editing applies to Arin/Orin; imported attachment/calibration
+sockets have not been authored.
+
 Standard native and Web builds now include the shared mandatory SMILE startup
 presentation. It overlaps asset preparation with a one-second visible logo
 minimum, shows creator credits and the artifact's compilation time/version, and

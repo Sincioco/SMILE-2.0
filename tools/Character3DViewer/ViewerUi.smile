@@ -751,7 +751,7 @@ Public Function CharacterTabsContain(PointerX As Number, PointerY As Number) As 
 
     Dim Result As Boolean
 
-    Result = InRectangle(PointerX, PointerY, 18, 62, 404, 26)
+    Result = InRectangle(PointerX, PointerY, 18, 62, 484, 26)
 
     Return Result
 
@@ -760,18 +760,17 @@ End Function
 Public Function CharacterTabAtPointer(PointerX As Number, PointerY As Number) As Number
 
     Dim Result As Number
+    Dim Index As Number
 
     Result = -1
 
-    If InRectangle(PointerX, PointerY, 104, 62, 72, 26) Then
-        Result = 0
-    Else If InRectangle(PointerX, PointerY, 182, 62, 72, 26) Then
-        Result = 1
-    Else If InRectangle(PointerX, PointerY, 260, 62, 72, 26) Then
-        Result = 2
-    Else If InRectangle(PointerX, PointerY, 338, 62, 72, 26) Then
-        Result = 3
-    End If
+    For Index = 0 To CharacterTabCount() - 1
+
+        If InRectangle(PointerX, PointerY, 82 + Index * 60, 62, 56, 26) Then
+            Result = CharacterTabIndex(Index)
+        End If
+
+    End For
 
     Return Result
 
@@ -871,7 +870,8 @@ Public Function InspectorActionAtPointer(
     PartyEnabled As Boolean,
     ProfileIndex As Number,
     SwordFireReady As Boolean,
-    KeyframeIndex As Number
+    KeyframeIndex As Number,
+    SelectedPresentationIndex As Number
 ) As Number
 
     Dim AnimationIndex As Number
@@ -1058,7 +1058,7 @@ Public Function InspectorActionAtPointer(
 
     Else
         AnimationIndex = AnimationButtonAtPointer(
-            PointerX, PointerY, ProfileIndex, WindowWidth)
+            PointerX, PointerY, ProfileIndex, WindowWidth, SelectedPresentationIndex)
 
         If AnimationIndex >= 0 Then
             Result = INSPECTOR_ACTION_CLIP_BASE + AnimationIndex
@@ -1192,6 +1192,8 @@ Public Sub DrawHeader(DisplayName As Text, PartyRole As Text,
     PartyEnabled As Boolean, SelectedCharacterTab As Number, WindowWidth As Number)
 
     Dim Subtitle As Text
+    Dim Index As Number
+    Dim TabIndex As Number
 
     If WindowWidth < 1100 Then
         Subtitle = DisplayName + "  •  "
@@ -1204,16 +1206,24 @@ Public Sub DrawHeader(DisplayName As Text, PartyRole As Text,
     Draw Text "SMILE 2.0 - 3D Viewer, Animation Editor" At 18, 10 Size 22 Color WHITE
 
     If PartyEnabled Then
+
         Subtitle = "Sin Star I  •  Arin And Orin  •  Party Battle Preview"
+
+        If ViewerProfiles.INCLUDE_UNITY_CHARACTERS Then
+            Subtitle = "Sin Star I  •  Arin, Orin, Valor And Zara  •  Vrax Battle Preview"
+        End If
+
     End If
 
     Draw Text Subtitle At 18, 42 Size 13 Color LIGHT_GRAY
-    Draw Text "Character" At 18, 68 Size 13 Color WHITE
+    Draw Text "View" At 18, 68 Size 13 Color WHITE
 
-    Call UI.DrawButton(104, 62, 72, 26, "Arin", SelectedCharacterTab = 0)
-    Call UI.DrawButton(182, 62, 72, 26, "Orin", SelectedCharacterTab = 1)
-    Call UI.DrawButton(260, 62, 72, 26, "Dragon", SelectedCharacterTab = 2)
-    Call UI.DrawButton(338, 62, 72, 26, "Party", SelectedCharacterTab = 3)
+    For Index = 0 To CharacterTabCount() - 1
+        TabIndex = CharacterTabIndex(Index)
+
+        Call UI.DrawButton(82 + Index * 60, 62, 56, 26,
+            CharacterTabLabel(TabIndex), SelectedCharacterTab = TabIndex)
+    End For
 
 End Sub
 
@@ -1549,16 +1559,25 @@ Public Sub DrawAnimationButtons(ProfileIndex As Number,
     Dim ButtonX As Number
     Dim ButtonY As Number
     Dim ClipCount As Number
+    Dim PageStart As Number
+    Dim PageEnd As Number
     Dim Column As Number
     Dim Index As Number
     Dim Row As Number
 
     ClipCount = ViewerProfiles.ClipCount(ProfileIndex)
+    PageStart = 0
+    PageEnd = ClipCount - 1
 
-    For Index = 0 To ClipCount - 1
+    If ViewerProfiles.IsUnityCharacter(ProfileIndex) Then
+        PageStart = (Max(0, SelectedPresentationIndex) / 9) * 9
+        PageEnd = Min(ClipCount - 1, PageStart + 8)
+    End If
 
-        Column = Index Mod ANIMATION_BUTTON_COLUMN_COUNT
-        Row = Index / ANIMATION_BUTTON_COLUMN_COUNT
+    For Index = PageStart To PageEnd
+
+        Column = (Index - PageStart) Mod ANIMATION_BUTTON_COLUMN_COUNT
+        Row = (Index - PageStart) / ANIMATION_BUTTON_COLUMN_COUNT
         ButtonX = AnimationButtonX(WindowWidth)
         ButtonX = ButtonX + Column * (ANIMATION_BUTTON_WIDTH + ANIMATION_BUTTON_COLUMN_GAP)
         ButtonY = ANIMATION_BUTTON_Y
@@ -1573,6 +1592,11 @@ Public Sub DrawAnimationButtons(ProfileIndex As Number,
             Index = SelectedPresentationIndex
         )
     End For
+
+    If ViewerProfiles.IsUnityCharacter(ProfileIndex) Then
+        Call UI.DrawButton(AnimationButtonX(WindowWidth), 418, 108, 18, "Previous Page", False)
+        Call UI.DrawButton(AnimationButtonX(WindowWidth) + 116, 418, 108, 18, "Next Page", False)
+    End If
 
 End Sub
 
@@ -1848,11 +1872,14 @@ Private Sub DrawCameraSlider(PanelLeft As Number, Label As Text, Y As Number,
 End Sub
 
 Private Function AnimationButtonAtPointer(PointerX As Number, PointerY As Number,
-    ProfileIndex As Number, WindowWidth As Number) As Number
+    ProfileIndex As Number, WindowWidth As Number,
+    SelectedPresentationIndex As Number) As Number
 
     Dim ButtonX As Number
     Dim ButtonY As Number
     Dim ClipCount As Number
+    Dim PageStart As Number
+    Dim PageEnd As Number
     Dim Column As Number
     Dim Index As Number
     Dim Result As Number
@@ -1860,11 +1887,18 @@ Private Function AnimationButtonAtPointer(PointerX As Number, PointerY As Number
 
     Result = -1
     ClipCount = ViewerProfiles.ClipCount(ProfileIndex)
+    PageStart = 0
+    PageEnd = ClipCount - 1
 
-    For Index = 0 To ClipCount - 1
+    If ViewerProfiles.IsUnityCharacter(ProfileIndex) Then
+        PageStart = (Max(0, SelectedPresentationIndex) / 9) * 9
+        PageEnd = Min(ClipCount - 1, PageStart + 8)
+    End If
 
-        Column = Index Mod ANIMATION_BUTTON_COLUMN_COUNT
-        Row = Index / ANIMATION_BUTTON_COLUMN_COUNT
+    For Index = PageStart To PageEnd
+
+        Column = (Index - PageStart) Mod ANIMATION_BUTTON_COLUMN_COUNT
+        Row = (Index - PageStart) / ANIMATION_BUTTON_COLUMN_COUNT
         ButtonX = AnimationButtonX(WindowWidth)
         ButtonX = ButtonX + Column * (ANIMATION_BUTTON_WIDTH + ANIMATION_BUTTON_COLUMN_GAP)
         ButtonY = ANIMATION_BUTTON_Y
@@ -1883,6 +1917,16 @@ Private Function AnimationButtonAtPointer(PointerX As Number, PointerY As Number
         End If
 
     End For
+
+    If ViewerProfiles.IsUnityCharacter(ProfileIndex) Then
+
+        If InRectangle(PointerX, PointerY, AnimationButtonX(WindowWidth), 418, 108, 18) Then
+            Result = Max(0, PageStart - 9)
+        Else If InRectangle(PointerX, PointerY, AnimationButtonX(WindowWidth) + 116, 418, 108, 18) Then
+            Result = Min(((ClipCount - 1) / 9) * 9, PageStart + 9)
+        End If
+
+    End If
 
     Return Result
 
@@ -1941,5 +1985,65 @@ Private Sub DrawIntensityControls(PanelLeft As Number, Weapon As Number, Shield 
     Call UI.DrawButton(PanelLeft + 234, 422, 18, 18, "+", False)
 
 End Sub
+
+Private Function CharacterTabCount() As Number
+
+    If ViewerProfiles.INCLUDE_UNITY_CHARACTERS Then
+        Return 7
+    End If
+
+    Return 4
+
+End Function
+
+Private Function CharacterTabIndex(Position As Number) As Number
+
+    Dim Result As Number
+
+    Result = Position
+
+    If ViewerProfiles.INCLUDE_UNITY_CHARACTERS Then
+
+        If Position = 2 Then
+            Result = 4
+        Else If Position = 3 Then
+            Result = 5
+        Else If Position = 4 Then
+            Result = 2
+        Else If Position = 5 Then
+            Result = 6
+        Else If Position = 6 Then
+            Result = 3
+        End If
+
+    End If
+
+    Return Result
+
+End Function
+
+Private Function CharacterTabLabel(Index As Number) As Text
+
+    Dim Result As Text
+
+    If Index = 0 Then
+        Result = "Arin"
+    Else If Index = 1 Then
+        Result = "Orin"
+    Else If Index = 2 Then
+        Result = "Dragon"
+    Else If Index = 3 Then
+        Result = "Party"
+    Else If Index = 4 Then
+        Result = "Valor"
+    Else If Index = 5 Then
+        Result = "Zara"
+    Else If Index = 6 Then
+        Result = "Vrax"
+    End If
+
+    Return Result
+
+End Function
 
 End Module

@@ -1,0 +1,99 @@
+{
+  "version": 1,
+  "sampleRate": 30,
+  "clips": {
+    "SwordAttack": {
+      "loop": false
+    },
+    "SwordAttack2": {
+      "loop": false
+    },
+    "Attack3": {
+      "loop": false
+    },
+    "Attack4": {
+      "loop": false
+    },
+    "Attack5": {
+      "loop": false
+    },
+    "BackWalk1": {
+      "loop": true
+    },
+    "BackWalk2": {
+      "loop": true
+    },
+    "Death": {
+      "loop": false
+    },
+    "Death2": {
+      "loop": false
+    },
+    "BlockImpact": {
+      "loop": false
+    },
+    "Hit": {
+      "loop": false
+    },
+    "GetHit2(Shield)": {
+      "loop": false
+    },
+    "GetHit2": {
+      "loop": false
+    },
+    "GetHit3(Shield)": {
+      "loop": false
+    },
+    "GetHit3": {
+      "loop": false
+    },
+    "Idle": {
+      "loop": true
+    },
+    "Idle1": {
+      "loop": true
+    },
+    "Idle2(Shield)": {
+      "loop": true
+    },
+    "Idle2": {
+      "loop": true
+    },
+    "Jump1Begin": {
+      "loop": false
+    },
+    "Jump2Landing": {
+      "loop": false
+    },
+    "Jump3Loop": {
+      "loop": true
+    },
+    "LeftStrafe": {
+      "loop": true
+    },
+    "RightStrafe": {
+      "loop": true
+    },
+    "Run": {
+      "loop": true
+    },
+    "Run2": {
+      "loop": true
+    },
+    "Run3": {
+      "loop": true
+    },
+    "Walk": {
+      "loop": true
+    },
+    "Walk2": {
+      "loop": true
+    },
+    "Walk3": {
+      "loop": true
+    },
+    "Walk4": {
+      "loop": true
+    }
+  }
+}

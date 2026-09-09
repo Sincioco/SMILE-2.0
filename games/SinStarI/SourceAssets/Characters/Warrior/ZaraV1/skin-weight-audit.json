@@ -1,0 +1,9 @@
+{
+  "character": "Zara",
+  "vertices": 26895,
+  "verticesWithMoreThanFourInfluences": 90,
+  "maximumDiscardedWeight": 0.04834129874303005,
+  "meanDiscardedWeight": 3.8444307883580474e-05,
+  "percentile95DiscardedWeight": 0.0,
+  "policy": "Retain strongest four skin influences and normalize; originals and full-weight Blender source preserved."
+}

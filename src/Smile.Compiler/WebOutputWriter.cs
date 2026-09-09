@@ -659,7 +659,7 @@ internal static class WebOutputWriter
                         emissiveAlpha:new Float32Array(4),textureFlags:new Float32Array(4)}
                 });
                 renderer3DPaletteSnapshots.push({animatorHandle:0,revision:0,production:false,
-                    palette:new Float32Array(128*16)});
+                    palette:new Float32Array(192*16)});
             }
             const renderer3DCamera = {
                 position: [0, 300, -800], target: [0, 0, 0], up: [0, 1, 0], fov: 55, near: 1, far: 10000
@@ -2192,7 +2192,7 @@ internal static class WebOutputWriter
                 const view=new DataView(buffer),u16=offset=>view.getUint16(offset,true),u32=offset=>view.getUint32(offset,true),
                     i32=offset=>view.getInt32(offset,true),f32=offset=>view.getFloat32(offset,true),
                     ids=["NODE","SKIN","SKEL","CLIP","TRAK","AFRM","EVNT","SOCK","ROOT"],
-                    strides=[64,16,80,40,48,4,20,64,24],limits=[256,131072,128,64,16384,4194304,4096,64,64],values=ids.map(id=>chunks.get(id));
+                    strides=[64,16,80,40,48,4,20,64,24],limits=[256,131072,192,64,16384,4194304,4096,64,64],values=ids.map(id=>chunks.get(id));
                 if(values.some((chunk,index)=>!chunk||chunk.flags!==1||chunk.stride!==strides[index]||chunk.count>limits[index]||chunk.length!==chunk.count*chunk.stride)||
                     values[0].count<1||values[1].count!==vertexCount||values[2].count<1||values[3].count<1||values[5].count<1)return null;
                 const finiteArray=(offset,count)=>{const result=new Float32Array(count);for(let index=0;index<count;index+=1){const value=f32(offset+index*4);if(!Number.isFinite(value))return null;result[index]=value;}return result;};
@@ -2247,7 +2247,7 @@ internal static class WebOutputWriter
                     for(let influence=0;influence<4;influence+=1){const joint=u16(offset+influence*2),weight=u16(offset+8+influence*2);if(joint>=bones.length||(weight===0&&joint!==0))return null;
                         joints[vertex*4+influence]=joint;weights[vertex*4+influence]=weight;total+=weight;}if(total!==65535)return null;}
                 const logicalBytes=values.reduce((sum,chunk)=>sum+chunk.length,0),residentBytes=values.reduce((sum,chunk)=>((sum+3)&~3)+chunk.length,0);
-                return {nodes,bones,clips,tracks,frames,events,sockets,roots,joints,weights,bytes:logicalBytes,fileBytes:buffer.byteLength,residentBytes,animatorBytes:16988+nodes.length*220};
+                return {nodes,bones,clips,tracks,frames,events,sockets,roots,joints,weights,bytes:logicalBytes,fileBytes:buffer.byteLength,residentBytes,animatorBytes:25180+nodes.length*220};
             }
 
             async function renderer3DLoadModel(path, preparePbr = true) {
@@ -2454,12 +2454,12 @@ internal static class WebOutputWriter
                     renderer3DMultiplyAt(animator.globals,matrix,animator.scratch,0,animator.rotationScratch,0);
                     if(parent>=0){for(let field=0;field<16;field+=1)animator.scratch[field]=animator.globals[matrix+field];renderer3DMultiplyAt(animator.globals,matrix,animator.globals,parent*16,animator.scratch,0);}}
                 for(let bone=0;bone<animation.bones.length;bone+=1){const value=animation.bones[bone];renderer3DMultiplyAt(animator.palette,bone*16,animator.globals,value.node*16,value.inverse,0);renderer3DMultiplyAt(animator.basePalette,bone*16,animator.baseGlobals,value.node*16,value.inverse,0);}
-                for(let bone=animation.bones.length;bone<128;bone+=1){const offset=bone*16;for(let field=0;field<16;field+=1)animator.basePalette[offset+field]=animator.palette[offset+field]=field%5===0?1:0;}animator.revision=(animator.revision+1)>>>0||1;}
+                for(let bone=animation.bones.length;bone<192;bone+=1){const offset=bone*16;for(let field=0;field<16;field+=1)animator.basePalette[offset+field]=animator.palette[offset+field]=field%5===0?1:0;}animator.revision=(animator.revision+1)>>>0||1;}
             function renderer3DCreateModelAnimator(modelHandle){const model=renderer3DModels.get(modelHandle);if(!model||!model.animation||renderer3DAnimators.size>=128||!renderer3DInitialize()){renderer3DLastError=48;return 0;}
                 const nodes=model.animation.nodes.length,handle=renderer3DHandle(),animator={production:true,model:modelHandle,clipIndex:-1,destinationClip:-1,mode:0,destinationMode:0,time:0,previous:0,destinationTime:0,timeRemainder:0,destinationTimeRemainder:0,speed:100,complete:false,destinationComplete:false,
                     fadeElapsed:0,fadeDuration:0,rootMode:0,rootDelta:new Float32Array(4),eventQueue:new Int32Array(32),eventHead:0,eventCount:0,eventOverflowed:false,droppedEventCount:0,locals:new Float32Array(nodes*10),destinationLocals:new Float32Array(nodes*10),
-                    nodeRotationOffsets:new Float32Array(nodes*3),baseGlobals:new Float32Array(nodes*16),basePalette:new Float32Array(128*16),rotationScratch:new Float32Array(16),
-                    globals:new Float32Array(nodes*16),palette:new Float32Array(128*16),scratch:new Float32Array(16),socketScratch:new Float32Array(48),timeResult:new Uint32Array(3),revision:0,mutableBytes:model.animation.animatorBytes};
+                    nodeRotationOffsets:new Float32Array(nodes*3),baseGlobals:new Float32Array(nodes*16),basePalette:new Float32Array(192*16),rotationScratch:new Float32Array(16),
+                    globals:new Float32Array(nodes*16),palette:new Float32Array(192*16),scratch:new Float32Array(16),socketScratch:new Float32Array(48),timeResult:new Uint32Array(3),revision:0,mutableBytes:model.animation.animatorBytes};
                 animator.rootPrevious=animator.socketScratch.subarray(0,4);animator.rootCurrent=animator.socketScratch.subarray(4,8);animator.rootStart=animator.socketScratch.subarray(8,12);animator.rootEnd=animator.socketScratch.subarray(12,16);animator.rootQuaternion=animator.socketScratch.subarray(16,20);animator.sourceDelta=animator.socketScratch.subarray(20,24);animator.destinationDelta=animator.socketScratch.subarray(24,28);renderer3DAnimators.set(handle,animator);renderer3DUpdateModelPose(animator);return handle;}
             function renderer3DClearModelEvents(animator){animator.eventHead=animator.eventCount=0;animator.eventOverflowed=false;animator.droppedEventCount=0;}
             function renderer3DDropModelEvents(animator,count){if(count<=0)return;animator.eventOverflowed=true;animator.droppedEventCount=Math.min(0xffffffff,animator.droppedEventCount+count);renderer3DLastError=49;}
@@ -2719,8 +2719,8 @@ internal static class WebOutputWriter
                 if(pbr){gl.enableVertexAttribArray(5);gl.vertexAttribPointer(5,4,gl.FLOAT,false,80,64);}else gl.disableVertexAttribArray(5);
                 gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,mesh.indexBuffer);}
             function renderer3DBindModelPalette(handle,animator,program,shadowPass,ignoreOffsets=false){ignoreOffsets=!!(animator&&animator.production&&(ignoreOffsets||animator.ignoreNodeOffsets));const gl=renderer3DGl;if(!animator||!animator.production){gl.uniform1f(program.modelSkinning,0);return true;}
-                if(!renderer3DModelPaletteTexture){renderer3DModelPaletteTexture=gl.createTexture();if(!renderer3DModelPaletteTexture){renderer3DLastError=48;return false;}gl.activeTexture(gl.TEXTURE4);gl.bindTexture(gl.TEXTURE_2D,renderer3DModelPaletteTexture);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.NEAREST);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.NEAREST);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA32F,4,128,0,gl.RGBA,gl.FLOAT,null);}
-                gl.activeTexture(gl.TEXTURE4);gl.bindTexture(gl.TEXTURE_2D,renderer3DModelPaletteTexture);if(renderer3DModelPaletteCachedAnimator!==handle||renderer3DModelPaletteCachedRevision!==animator.revision||renderer3DModelPaletteCachedIgnoreOffsets!==ignoreOffsets){gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false);gl.texSubImage2D(gl.TEXTURE_2D,0,0,0,4,128,gl.RGBA,gl.FLOAT,ignoreOffsets&&animator.basePalette?animator.basePalette:animator.palette);renderer3DModelPaletteCachedAnimator=handle;renderer3DModelPaletteCachedRevision=animator.revision;renderer3DModelPaletteCachedIgnoreOffsets=ignoreOffsets;if(shadowPass)renderer3DShadowPaletteUploadCount+=1;else renderer3DModelPaletteUploadCount+=1;}
+                if(!renderer3DModelPaletteTexture){renderer3DModelPaletteTexture=gl.createTexture();if(!renderer3DModelPaletteTexture){renderer3DLastError=48;return false;}gl.activeTexture(gl.TEXTURE4);gl.bindTexture(gl.TEXTURE_2D,renderer3DModelPaletteTexture);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.NEAREST);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.NEAREST);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA32F,4,192,0,gl.RGBA,gl.FLOAT,null);}
+                gl.activeTexture(gl.TEXTURE4);gl.bindTexture(gl.TEXTURE_2D,renderer3DModelPaletteTexture);if(renderer3DModelPaletteCachedAnimator!==handle||renderer3DModelPaletteCachedRevision!==animator.revision||renderer3DModelPaletteCachedIgnoreOffsets!==ignoreOffsets){gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false);gl.texSubImage2D(gl.TEXTURE_2D,0,0,0,4,192,gl.RGBA,gl.FLOAT,ignoreOffsets&&animator.basePalette?animator.basePalette:animator.palette);renderer3DModelPaletteCachedAnimator=handle;renderer3DModelPaletteCachedRevision=animator.revision;renderer3DModelPaletteCachedIgnoreOffsets=ignoreOffsets;if(shadowPass)renderer3DShadowPaletteUploadCount+=1;else renderer3DModelPaletteUploadCount+=1;}
                 gl.uniform1i(program.modelPalette,4);gl.uniform1f(program.modelSkinning,1);return true;}
 
             function renderer3DPaletteSnapshot(handle,animator,ignoreOffsets=false){if(!animator)return-1;ignoreOffsets=!!(animator.production&&ignoreOffsets);for(let index=0;index<renderer3DPaletteSnapshotCount;index+=1){const snapshot=renderer3DPaletteSnapshots[index];if(snapshot.animatorHandle===handle&&snapshot.revision===animator.revision&&snapshot.production===!!animator.production&&snapshot.ignoreNodeOffsets===ignoreOffsets)return index;}if(renderer3DPaletteSnapshotCount>=renderer3DPaletteSnapshots.length){renderer3DLastError=51;return-2;}const snapshot=renderer3DPaletteSnapshots[renderer3DPaletteSnapshotCount];snapshot.animatorHandle=handle;snapshot.revision=animator.revision;snapshot.production=!!animator.production;snapshot.ignoreNodeOffsets=ignoreOffsets;snapshot.palette.set(ignoreOffsets?animator.basePalette:animator.palette);return renderer3DPaletteSnapshotCount++;}

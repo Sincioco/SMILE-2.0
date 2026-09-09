@@ -1,0 +1,356 @@
+{
+  "character": "Vrax",
+  "version": 1,
+  "state": "Validated local native and Web Viewer import",
+  "sourceProject": "Knights of Bits and Bytes",
+  "scenePrefab": "Assets\\SciFi Beast01\\Prefab\\SciFi Beast01_Skin1.prefab",
+  "publication": "Local assets; source/derivative redistribution not approved",
+  "export": {
+    "path": "Private/Vrax-v1-animation-set.glb",
+    "sha256": "ec863933e6898fb81672aaa979eada343b3b2eedcdc433a8b2c65bfe7a8a84fb",
+    "bytes": 31236704
+  },
+  "originals": [
+    {
+      "path": "Private/Originals/Assets/Characters/Sci-Fi Beast01/SciFi Beast01 Animator Controller.controller",
+      "bytes": 24867,
+      "sha256": "96cb8c17b06a39ffc98cc082c745bc44e4b95d41514b2ab93633a4541741f937"
+    },
+    {
+      "path": "Private/Originals/Assets/Characters/Sci-Fi Beast01/SciFi_Beast01@Attack2.fbx",
+      "bytes": 1987120,
+      "sha256": "30e453cad7fde207d565bf0985597b59bc74692c7ad54f2b439ec131364980e0"
+    },
+    {
+      "path": "Private/Originals/Assets/Characters/Sci-Fi Beast01/SciFi_Beast01@Attack3.fbx",
+      "bytes": 2217008,
+      "sha256": "11b80af1dfa6e9848f74c6f365b9fdf507c9a04f8108b39bb781bde9748b364f"
+    },
+    {
+      "path": "Private/Originals/Assets/Characters/Sci-Fi Beast01/SciFi_Beast01@Attack4.fbx",
+      "bytes": 2077888,
+      "sha256": "03dac39c768adf2f9d7fc501a6ac4e6daf8b19b3e9e41ebbb6b52f78b9d89446"
+    },
+    {
+      "path": "Private/Originals/Assets/Characters/Sci-Fi Beast01/SciFi_Beast01@Attack6.fbx",
+      "bytes": 2069936,
+      "sha256": "34a5fabf8c57049bc21096cd6ea02df68d8cead9707022b7e8c4f8e7e93d312f"
+    },
+    {
+      "path": "Private/Originals/Assets/SciFi Beast01/Animations/SciFi_Beast01@Attack1.fbx",
+      "bytes": 1978352,
+      "sha256": "975693e75e29345ed84dcd4bea9205bd24a7ae96d5dc0c51679d744cbb9e1985"
+    },
+    {
+      "path": "Private/Originals/Assets/SciFi Beast01/Animations/SciFi_Beast01@Attack2.fbx",
+      "bytes": 1987120,
+      "sha256": "30e453cad7fde207d565bf0985597b59bc74692c7ad54f2b439ec131364980e0"
+    },
+    {
+      "path": "Private/Originals/Assets/SciFi Beast01/Animations/SciFi_Beast01@Attack3.fbx",
+      "bytes": 2217008,
+      "sha256": "11b80af1dfa6e9848f74c6f365b9fdf507c9a04f8108b39bb781bde9748b364f"
+    },
+    {
+      "path": "Private/Originals/Assets/SciFi Beast01/Animations/SciFi_Beast01@Attack4.fbx",
+      "bytes": 2077888,
+      "sha256": "03dac39c768adf2f9d7fc501a6ac4e6daf8b19b3e9e41ebbb6b52f78b9d89446"
+    },
+    {
+      "path": "Private/Originals/Assets/SciFi Beast01/Animations/SciFi_Beast01@Attack5.fbx",
+      "bytes": 2299360,
+      "sha256": "f80593d24307321413d64a03eae4f0b28efb674168ec59fa8828b3934c90392e"
+    },
+    {
+      "path": "Private/Originals/Assets/SciFi Beast01/Animations/SciFi_Beast01@Attack6.fbx",
+      "bytes": 2069936,
+      "sha256": "34a5fabf8c57049bc21096cd6ea02df68d8cead9707022b7e8c4f8e7e93d312f"
+    },
+    {
+      "path": "Private/Originals/Assets/SciFi Beast01/Animations/SciFi_Beast01@Death1.fbx",
+      "bytes": 2297120,
+      "sha256": "7a0ba55e6b6b7f73d1ee20cae716f47f9e3dc34c3745b28b5568dd671122143f"
+    },
+    {
+      "path": "Private/Originals/Assets/SciFi Beast01/Animations/SciFi_Beast01@Death2.fbx",
+      "bytes": 2368000,
+      "sha256": "1d542834ed5379cd3af4f4d08e3c736344b8fc0432d8b8d8735f1defe9f37cf8"
+    },
+    {
+      "path": "Private/Originals/Assets/SciFi Beast01/Animations/SciFi_Beast01@GetHit_B.fbx",
+      "bytes": 2078800,
+      "sha256": "6f60b59c363eb07bc7be6154a7d90c0a7f738fd4138d7124849965c58ee55bb0"
+    },
+    {
+      "path": "Private/Originals/Assets/SciFi Beast01/Animations/SciFi_Beast01@GetHit_F.fbx",
+      "bytes": 2078080,
+      "sha256": "b3780527bc1a25debada38e9814fafeae8cf4d2aa76d6c4fc10036877324fd91"
+    },
+    {
+      "path": "Private/Originals/Assets/SciFi Beast01/Animations/SciFi_Beast01@GetHit_L.fbx",
+      "bytes": 2078032,
+      "sha256": "67b29ce9c3ed0c9e144a5e9bc33dc37ae45c1c733944f73f5df854ea3779461b"
+    },
+    {
+      "path": "Private/Originals/Assets/SciFi Beast01/Animations/SciFi_Beast01@GetHit_R.fbx",
+      "bytes": 2077792,
+      "sha256": "f7445df4bb54ac6f4ec8446f2e9a29912498500f04962da7462f42bf24b37fa3"
+    },
+    {
+      "path": "Private/Originals/Assets/SciFi Beast01/Animations/SciFi_Beast01@Idle1.fbx",
+      "bytes": 5449712,
+      "sha256": "03d9bc96547a1f76a0e87c92312c82f702f753c4648aa5656cea9b4085b5232d"
+    },
+    {
+      "path": "Private/Originals/Assets/SciFi Beast01/Animations/SciFi_Beast01@Idle2.fbx",
+      "bytes": 5163184,
+      "sha256": "fa1da8257e34bf888c288f733fa2c5f4f0feba2259cdc6e7c88d73a965110a06"
+    },
+    {
+      "path": "Private/Originals/Assets/SciFi Beast01/Animations/SciFi_Beast01@Jump1.fbx",
+      "bytes": 2046432,
+      "sha256": "eaf236738a2492f2865b712c5761475f892654ce413f1b981425cfa3d7c6f8d4"
+    },
+    {
+      "path": "Private/Originals/Assets/SciFi Beast01/Animations/SciFi_Beast01@RocketLaunch1.fbx",
+      "bytes": 2124128,
+      "sha256": "1fb21f9b49e5f894ab5ce92378890e726a021404d72183213beaebdee368e9ff"
+    },
+    {
+      "path": "Private/Originals/Assets/SciFi Beast01/Animations/SciFi_Beast01@RocketLaunch2.fbx",
+      "bytes": 2310640,
+      "sha256": "6b3840fd1e7f193e09e179daa3e0d5a73d6bc3989b5b079bd1cf2bb2f6dc5b18"
+    },
+    {
+      "path": "Private/Originals/Assets/SciFi Beast01/Animations/SciFi_Beast01@Run1.fbx",
+      "bytes": 1934240,
+      "sha256": "3b070a8b2c0d0f862062c213be8bda6e215362bae334018b2150bb05c22c92f2"
+    },
+    {
+      "path": "Private/Originals/Assets/SciFi Beast01/Animations/SciFi_Beast01@Turn180.fbx",
+      "bytes": 3511072,
+      "sha256": "0c4763c166ad869fb2b38cdd2bcc34cc94cc849d9c87757150b14593dfe93904"
+    },
+    {
+      "path": "Private/Originals/Assets/SciFi Beast01/Animations/SciFi_Beast01@Walk_B.fbx",
+      "bytes": 1916080,
+      "sha256": "7ff9e5af1073bda98ebe63c235d466350c6490e0b0a52bedbee2ea3d49ac9916"
+    },
+    {
+      "path": "Private/Originals/Assets/SciFi Beast01/Animations/SciFi_Beast01@Walk_F.fbx",
+      "bytes": 2135024,
+      "sha256": "b532cd0f932814e964863fb55d6fb670b01de1833b9ff9e09831d1db846b3fcf"
+    },
+    {
+      "path": "Private/Originals/Assets/SciFi Beast01/Animations/SciFi_Beast01@Walk_F2.fbx",
+      "bytes": 1915104,
+      "sha256": "039a53555d256c699130257dc37b59b4608242c58be22384ce87b1f94c3a2ab6"
+    },
+    {
+      "path": "Private/Originals/Assets/SciFi Beast01/Animations/SciFi_Beast01@Walk_L.fbx",
+      "bytes": 1916544,
+      "sha256": "f8cd02aa36b5541d4cefc5bdc84b002a1619a4f9a1e9b5124b4386a5e0de2605"
+    },
+    {
+      "path": "Private/Originals/Assets/SciFi Beast01/Animations/SciFi_Beast01@Walk_R.fbx",
+      "bytes": 1917904,
+      "sha256": "1945d8c37476daa595bdf3a5b590dd790166295b6e52adc053dbcaf1cd611b77"
+    },
+    {
+      "path": "Private/Originals/Assets/SciFi Beast01/Base_mesh/SciFi Beast01_Skin1.fbx",
+      "bytes": 6338608,
+      "sha256": "bf24e668939aa2bd7ec5f9b01dda5a4a6a6a021f802cecc0b110d9c45a7dc0e3"
+    },
+    {
+      "path": "Private/Originals/Assets/SciFi Beast01/Materials/Skin1/T_Mat_SciFi_Beast01_Armor_BaseColor_Skin1.mat",
+      "bytes": 2344,
+      "sha256": "c48192a21181afe9782fc66e92770ebc01fe8d0e8c0167b34e755302e18d5596"
+    },
+    {
+      "path": "Private/Originals/Assets/SciFi Beast01/Materials/Skin1/T_Mat_SciFi_Beast01_Body_BaseColor_Skin1.mat",
+      "bytes": 2343,
+      "sha256": "d77506703f6b909244f6f1bee2b765d180cd034e66e134492475fd174386e4ed"
+    },
+    {
+      "path": "Private/Originals/Assets/SciFi Beast01/Materials/Skin1/T_Mat_SciFi_Beast01_Claws_BaseColor_Skin1.mat",
+      "bytes": 2344,
+      "sha256": "370c224bbc7e769af7e8d353d49ca398236cb05849b16ec2ce01675e48af3eb2"
+    },
+    {
+      "path": "Private/Originals/Assets/SciFi Beast01/Materials/Skin1/T_Mat_SciFi_Beast01_Guns_BaseColor_Skin1.mat",
+      "bytes": 2343,
+      "sha256": "dbcf72ecd70d09c9ef388c1025ee9f8a487c94579c072614f9c4dc8df1fb0bfb"
+    },
+    {
+      "path": "Private/Originals/Assets/SciFi Beast01/Materials/Skin1/T_Mat_SciFi_Beast01_Head_BaseColor_Skin1.mat",
+      "bytes": 2395,
+      "sha256": "0727b8ba85fbc1a512d8509e7b268801a23305a716f481d5a5471546c8b4b0bd"
+    },
+    {
+      "path": "Private/Originals/Assets/SciFi Beast01/Prefab/SciFi Beast01_Skin1.prefab",
+      "bytes": 209773,
+      "sha256": "efb1cc6fc59aca926ffca4bcaa3522599cf17e64510fa2ddb31a1884d5ffd4b0"
+    },
+    {
+      "path": "Private/Originals/Assets/SciFi Beast01/Shaders/StandardTwoSided.shader",
+      "bytes": 12405,
+      "sha256": "965a6ca5bfb122268c3095ae90932eab7f50eef9833ef5495ad87baa2b466ceb"
+    },
+    {
+      "path": "Private/Originals/Assets/SciFi Beast01/Textures/Skin1/T_Mat_SciFi_Beast01_Armor_AO_Skin41.tga",
+      "bytes": 12582956,
+      "sha256": "f342260881fe406a2e0a3ce7efc591df6c8fe035edb2d8cac946d82afcf7bc4b"
+    },
+    {
+      "path": "Private/Originals/Assets/SciFi Beast01/Textures/Skin1/T_Mat_SciFi_Beast01_Armor_BaseColor_Skin1.tga",
+      "bytes": 50331692,
+      "sha256": "1ac1b25b766d51a505744f7aaeef23544a0d8b9d17aa265e4ac6eb08db773d4b"
+    },
+    {
+      "path": "Private/Originals/Assets/SciFi Beast01/Textures/Skin1/T_Mat_SciFi_Beast01_Armor_MetalGloss_Skin1.tga",
+      "bytes": 16777260,
+      "sha256": "18025f33629b7cda78c0f6e46da3621816845ca0fd53fbf5842bdd8f31511bc4"
+    },
+    {
+      "path": "Private/Originals/Assets/SciFi Beast01/Textures/Skin1/T_Mat_SciFi_Beast01_Armor_Normal_Skin1.tga",
+      "bytes": 50331692,
+      "sha256": "865401b91512d49a78bf4af56410767f497b434fa23a8911fb812ff11152490a"
+    },
+    {
+      "path": "Private/Originals/Assets/SciFi Beast01/Textures/Skin1/T_Mat_SciFi_Beast01_Body_AO_Skin41.tga",
+      "bytes": 12582956,
+      "sha256": "1c38bf4e5444551d9a29b5af95c6a7aa5c2ceef0d7db00830a57047a6d567914"
+    },
+    {
+      "path": "Private/Originals/Assets/SciFi Beast01/Textures/Skin1/T_Mat_SciFi_Beast01_Body_BaseColor_Skin1.tga",
+      "bytes": 50331692,
+      "sha256": "bfa91db57c50c1b1c68cdd3d5745c6ed4ae3ec5d98f8437ba4cd2c75d85f178b"
+    },
+    {
+      "path": "Private/Originals/Assets/SciFi Beast01/Textures/Skin1/T_Mat_SciFi_Beast01_Body_MetalGloss_Skin1.tga",
+      "bytes": 16777260,
+      "sha256": "d4049eb9369819a9acb1c76a9b769da889a0db2d14dc91e050e0b8c8845bb448"
+    },
+    {
+      "path": "Private/Originals/Assets/SciFi Beast01/Textures/Skin1/T_Mat_SciFi_Beast01_Body_Normal_Skin1.tga",
+      "bytes": 50331692,
+      "sha256": "6f548fe46e6c337140703768e6dee442ac8c215118c16ccfc265dc691eed65b3"
+    },
+    {
+      "path": "Private/Originals/Assets/SciFi Beast01/Textures/Skin1/T_Mat_SciFi_Beast01_Claws_AO_Skin41.tga",
+      "bytes": 12582956,
+      "sha256": "ca2ebf7262609f7cfb589878644be78fc54a5e6b5b3a2dfc18f6290a05a67179"
+    },
+    {
+      "path": "Private/Originals/Assets/SciFi Beast01/Textures/Skin1/T_Mat_SciFi_Beast01_Claws_BaseColor_Skin1.tga",
+      "bytes": 50331692,
+      "sha256": "14def2c7bb37e4a0cf8d13d146c855db6c6983df645a685079cac67201e62109"
+    },
+    {
+      "path": "Private/Originals/Assets/SciFi Beast01/Textures/Skin1/T_Mat_SciFi_Beast01_Claws_MetalGloss_Skin1.tga",
+      "bytes": 16777260,
+      "sha256": "666394ad4b4ee4d78693c5251acaac3939e0370daa72baa5cd7ee57a1c7d7e5b"
+    },
+    {
+      "path": "Private/Originals/Assets/SciFi Beast01/Textures/Skin1/T_Mat_SciFi_Beast01_Claws_Normal_Skin1.tga",
+      "bytes": 50331692,
+      "sha256": "be261bb61aec0825fde5115e9440c12de1ee94e9cb261dc8dd6f2f55dddfa804"
+    },
+    {
+      "path": "Private/Originals/Assets/SciFi Beast01/Textures/Skin1/T_Mat_SciFi_Beast01_Guns_AO_Skin41.tga",
+      "bytes": 12582956,
+      "sha256": "9eb42968db9a4348ad5a67bf0f6a1133043f552be845cc4aa767fd289a623767"
+    },
+    {
+      "path": "Private/Originals/Assets/SciFi Beast01/Textures/Skin1/T_Mat_SciFi_Beast01_Guns_BaseColor_Skin1.tga",
+      "bytes": 50331692,
+      "sha256": "aaac3d7a87caee9b4655dc7c21db80398afe3b98d73e2bba955843c66af136fa"
+    },
+    {
+      "path": "Private/Originals/Assets/SciFi Beast01/Textures/Skin1/T_Mat_SciFi_Beast01_Guns_MetalGloss_Skin1.tga",
+      "bytes": 16777260,
+      "sha256": "f37a7a7c9860671b7fab1eb5df5fb21c93f3eba2015248acc1cfd233de3ac29d"
+    },
+    {
+      "path": "Private/Originals/Assets/SciFi Beast01/Textures/Skin1/T_Mat_SciFi_Beast01_Guns_Normal_Skin1.tga",
+      "bytes": 50331692,
+      "sha256": "8753d6dbc70ff6a489810770e408301fcf5e83dc42ededa47c01478a8f0f7064"
+    },
+    {
+      "path": "Private/Originals/Assets/SciFi Beast01/Textures/Skin1/T_Mat_SciFi_Beast01_Head_AO_Skin41.tga",
+      "bytes": 12582956,
+      "sha256": "b255576732ee36631de2abf458b88c8e4c6527084dbe3f0aa6a7e6cc44e0410c"
+    },
+    {
+      "path": "Private/Originals/Assets/SciFi Beast01/Textures/Skin1/T_Mat_SciFi_Beast01_Head_BaseColor_Skin1.tga",
+      "bytes": 67108908,
+      "sha256": "e15d2e3ea38dac5ae243d7b0a37ca69a7e2115e06c5b950a95fb22a2f0f50f79"
+    },
+    {
+      "path": "Private/Originals/Assets/SciFi Beast01/Textures/Skin1/T_Mat_SciFi_Beast01_Head_MetalGloss_Skin1.tga",
+      "bytes": 16777260,
+      "sha256": "b15bd35126872c5dfa40488611d48a538edd242d35399eab1114abe1cf9c137d"
+    },
+    {
+      "path": "Private/Originals/Assets/SciFi Beast01/Textures/Skin1/T_Mat_SciFi_Beast01_Head_Normal_Skin1.tga",
+      "bytes": 50331692,
+      "sha256": "a566e26c929ed4d9a0f46a975ccceb0240224e07c1059afc41ad98ecdecdb3dd"
+    }
+  ],
+  "triangles": 55291,
+  "bones": 150,
+  "animationClips": 24,
+  "presentation": {
+    "desiredWorldHeight": 460,
+    "maximumFitScalePercent": 20000
+  },
+  "grounding": "grounding-validation.json",
+  "skinWeights": "skin-weight-audit.json",
+  "validationCheckpoint": "docs/implementation/unity-character-import-checkpoint.md",
+  "calibration": {
+    "available": false,
+    "reason": "No authored Viewer attachment/calibration sockets; no shared Arin/Orin pose storage."
+  },
+  "checkpointFiles": [
+    {
+      "path": "VraxV1.sm3d.json",
+      "sha256": "2a9144dd1b1bbe78eb44ae6f0769b40d04498000e2b95307ad811a78a72338f7",
+      "bytes": 1172
+    },
+    {
+      "path": "animation-manifest.json",
+      "sha256": "3526a1f57cecd098f5571cc57e03877f7d7806202695f12a76514a4b487e7f95",
+      "bytes": 4886
+    },
+    {
+      "path": "grounding-corrections.json",
+      "sha256": "356497a858c6cf50a46cd8c4fc3c66740e2635c7152915b3a5120923f451a073",
+      "bytes": 9223
+    },
+    {
+      "path": "grounding-validation.json",
+      "sha256": "39acc2b0b411515f50081a6e516476fb565a05cab8595065ab6f9d9dd8fb830c",
+      "bytes": 600
+    },
+    {
+      "path": "skin-weight-audit.json",
+      "sha256": "24bc30b65031af512983d00332288a7d5891dd70bdac2aa6f5bc1c215297848f",
+      "bytes": 362
+    },
+    {
+      "path": "Private/Vrax-v1-animation-source.blend",
+      "sha256": "b587daa6c3010c81c60311631ef8263b9d5200dc01cc7fa419592f0b5114477c",
+      "bytes": 19219444
+    },
+    {
+      "path": "Private/Previews/party-vrax-doubled.jpg",
+      "sha256": "ed93a580223ab52485c0d980189097d1db37a525aac0c4960836bf24ef2f37f6",
+      "bytes": 344076
+    },
+    {
+      "path": "Private/Previews/Vrax-native-animation.jpg",
+      "sha256": "672799bb9c18b7442b949591957256c6c8f4a262b87c97d448ec1109ee937957",
+      "bytes": 330460
+    }
+  ]
+}

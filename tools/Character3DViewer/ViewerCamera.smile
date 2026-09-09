@@ -10,6 +10,7 @@ Import Smile.Simple3D.PrecisionCamera3D As PrecisionCamera
 Import Smile.Simple3D.Graphics3D As Graphics3D
 Import Smile.Simple3D.Precision3D As Precision3D
 Import Smile.Simple3D.PrecisionMath3D As Math3D
+Import Smile.Tools.Character3DViewerProfiles As ViewerProfiles
 
 Public Type State
     Base As Precision3D.Camera3D
@@ -69,7 +70,8 @@ Public Function ConfigureFraming(ByRef Value As State,
         Value.LocalBounds,
         ContentWidth,
         ContentHeight,
-        Value.Base.FovDegrees
+        Value.Base.FovDegrees,
+        ViewerProfiles.MaximumFitScale(Profile)
     )
 
     If DragonInspection Then
@@ -497,7 +499,8 @@ Public Sub UpdateResponsiveFit(ByRef Value As State, Profile As CharacterViewer.
         Value.LocalBounds,
         ContentWidth,
         Max(1, WindowHeight),
-        Value.Base.FovDegrees + Value.Zoom.Current
+        Value.Base.FovDegrees + Value.Zoom.Current,
+        ViewerProfiles.MaximumFitScale(Profile)
     )
 
     Call SetBaseFromFrame(Value, DragonAvailable, ArenaCenterX, ArenaCenterZ,

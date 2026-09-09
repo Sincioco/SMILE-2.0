@@ -1,0 +1,335 @@
+{
+  "name": "SciFiBeast",
+  "sha256": "ec863933e6898fb81672aaa979eada343b3b2eedcdc433a8b2c65bfe7a8a84fb",
+  "bytes": 31236704,
+  "parts": [
+    {
+      "node": "SciFiBeast_Part_00",
+      "material": "T_Mat_SciFi_Beast01_Armor_BaseColor_Skin1",
+      "triangles": 14327,
+      "vertices": 10821,
+      "body": true
+    },
+    {
+      "node": "SciFiBeast_Part_01",
+      "material": "T_Mat_SciFi_Beast01_Body_BaseColor_Skin1",
+      "triangles": 14576,
+      "vertices": 10960,
+      "body": true
+    },
+    {
+      "node": "SciFiBeast_Part_02",
+      "material": "T_Mat_SciFi_Beast01_Claws_BaseColor_Skin1",
+      "triangles": 17410,
+      "vertices": 12137,
+      "body": true
+    },
+    {
+      "node": "SciFiBeast_Part_03",
+      "material": "T_Mat_SciFi_Beast01_Guns_BaseColor_Skin1",
+      "triangles": 3004,
+      "vertices": 2995,
+      "body": true
+    },
+    {
+      "node": "SciFiBeast_Part_04",
+      "material": "T_Mat_SciFi_Beast01_Head_BaseColor_Skin1",
+      "triangles": 5974,
+      "vertices": 3950,
+      "body": true
+    }
+  ],
+  "bones": 150,
+  "bindBodyMinimumY": -0.02523250035907216,
+  "clips": [
+    {
+      "name": "Attack",
+      "durationSeconds": 0.8666666746139526,
+      "bodyFloorSamples": [
+        {
+          "seconds": 0,
+          "minimumY": -0.0323758499208148
+        }
+      ]
+    },
+    {
+      "name": "Attack2",
+      "durationSeconds": 0.8666666746139526,
+      "bodyFloorSamples": [
+        {
+          "seconds": 0,
+          "minimumY": -0.0323758499208148
+        }
+      ]
+    },
+    {
+      "name": "Attack3",
+      "durationSeconds": 1.0333333015441895,
+      "bodyFloorSamples": [
+        {
+          "seconds": 0,
+          "minimumY": -0.0323758499208148
+        }
+      ]
+    },
+    {
+      "name": "Attack4",
+      "durationSeconds": 1.0333333015441895,
+      "bodyFloorSamples": [
+        {
+          "seconds": 0,
+          "minimumY": -0.0323758499208148
+        }
+      ]
+    },
+    {
+      "name": "Attack5",
+      "durationSeconds": 1.3666666746139526,
+      "bodyFloorSamples": [
+        {
+          "seconds": 0,
+          "minimumY": -0.032375883878950656
+        }
+      ]
+    },
+    {
+      "name": "Attack6",
+      "durationSeconds": 1.0333333015441895,
+      "bodyFloorSamples": [
+        {
+          "seconds": 0,
+          "minimumY": -0.03237569663281761
+        }
+      ]
+    },
+    {
+      "name": "Death",
+      "durationSeconds": 1.3666666746139526,
+      "bodyFloorSamples": [
+        {
+          "seconds": 0,
+          "minimumY": -0.032375911371449094
+        },
+        {
+          "seconds": 0.6833333373069763,
+          "minimumY": -0.06224723795801268
+        },
+        {
+          "seconds": 1.3666666746139526,
+          "minimumY": -0.025364319690138873
+        }
+      ]
+    },
+    {
+      "name": "Death2",
+      "durationSeconds": 1.3666666746139526,
+      "bodyFloorSamples": [
+        {
+          "seconds": 0,
+          "minimumY": -0.03237515143050535
+        },
+        {
+          "seconds": 0.6833333373069763,
+          "minimumY": -0.8392973359872937
+        },
+        {
+          "seconds": 1.3666666746139526,
+          "minimumY": -0.7058781242555459
+        }
+      ]
+    },
+    {
+      "name": "GetHit_B",
+      "durationSeconds": 1.0333333015441895,
+      "bodyFloorSamples": [
+        {
+          "seconds": 0,
+          "minimumY": -0.0323758499208148
+        },
+        {
+          "seconds": 0.5166666507720947,
+          "minimumY": -0.025503919869409506
+        },
+        {
+          "seconds": 1.0333333015441895,
+          "minimumY": -0.0323758499208148
+        }
+      ]
+    },
+    {
+      "name": "GetHit_L",
+      "durationSeconds": 1.0333333015441895,
+      "bodyFloorSamples": [
+        {
+          "seconds": 0,
+          "minimumY": -0.0323758499208148
+        },
+        {
+          "seconds": 0.5166666507720947,
+          "minimumY": -0.042101003089859805
+        },
+        {
+          "seconds": 1.0333333015441895,
+          "minimumY": -0.0323758499208148
+        }
+      ]
+    },
+    {
+      "name": "GetHit_R",
+      "durationSeconds": 1.0333333015441895,
+      "bodyFloorSamples": [
+        {
+          "seconds": 0,
+          "minimumY": -0.0323758499208148
+        },
+        {
+          "seconds": 0.5166666507720947,
+          "minimumY": -0.04590067396907317
+        },
+        {
+          "seconds": 1.0333333015441895,
+          "minimumY": -0.0323758499208148
+        }
+      ]
+    },
+    {
+      "name": "Hit",
+      "durationSeconds": 1.0333333015441895,
+      "bodyFloorSamples": [
+        {
+          "seconds": 0,
+          "minimumY": -0.0323758499208148
+        },
+        {
+          "seconds": 0.5166666507720947,
+          "minimumY": -0.06023382456385908
+        },
+        {
+          "seconds": 1.0333333015441895,
+          "minimumY": -0.0323758499208148
+        }
+      ]
+    },
+    {
+      "name": "Idle",
+      "durationSeconds": 6.699999809265137,
+      "bodyFloorSamples": [
+        {
+          "seconds": 0,
+          "minimumY": -0.0323758499208148
+        }
+      ]
+    },
+    {
+      "name": "Idle2",
+      "durationSeconds": 6.699999809265137,
+      "bodyFloorSamples": [
+        {
+          "seconds": 0,
+          "minimumY": -0.0323758499208148
+        }
+      ]
+    },
+    {
+      "name": "Jump1",
+      "durationSeconds": 0.8666666746139526,
+      "bodyFloorSamples": [
+        {
+          "seconds": 0,
+          "minimumY": -0.018277179659668238
+        }
+      ]
+    },
+    {
+      "name": "RocketLaunch1",
+      "durationSeconds": 1.0333333015441895,
+      "bodyFloorSamples": [
+        {
+          "seconds": 0,
+          "minimumY": -0.0323758499208148
+        }
+      ]
+    },
+    {
+      "name": "RocketLaunch2",
+      "durationSeconds": 1.3666666746139526,
+      "bodyFloorSamples": [
+        {
+          "seconds": 0,
+          "minimumY": -0.0323758499208148
+        }
+      ]
+    },
+    {
+      "name": "Run",
+      "durationSeconds": 0.699999988079071,
+      "bodyFloorSamples": [
+        {
+          "seconds": 0,
+          "minimumY": -0.01845423157084741
+        }
+      ]
+    },
+    {
+      "name": "Turn180",
+      "durationSeconds": 3.366666555404663,
+      "bodyFloorSamples": [
+        {
+          "seconds": 0,
+          "minimumY": -0.03237571532941154
+        }
+      ]
+    },
+    {
+      "name": "Walk",
+      "durationSeconds": 0.9666666388511658,
+      "bodyFloorSamples": [
+        {
+          "seconds": 0,
+          "minimumY": -0.02522986261608191
+        }
+      ]
+    },
+    {
+      "name": "Walk_B",
+      "durationSeconds": 0.8333333134651184,
+      "bodyFloorSamples": [
+        {
+          "seconds": 0,
+          "minimumY": -0.0252316607408421
+        }
+      ]
+    },
+    {
+      "name": "Walk_F2",
+      "durationSeconds": 0.8333333134651184,
+      "bodyFloorSamples": [
+        {
+          "seconds": 0,
+          "minimumY": -0.02522815813384849
+        }
+      ]
+    },
+    {
+      "name": "Walk_L",
+      "durationSeconds": 0.8333333134651184,
+      "bodyFloorSamples": [
+        {
+          "seconds": 0,
+          "minimumY": -0.025230019285452043
+        }
+      ]
+    },
+    {
+      "name": "Walk_R",
+      "durationSeconds": 0.8333333134651184,
+      "bodyFloorSamples": [
+        {
+          "seconds": 0,
+          "minimumY": -0.02523128579652686
+        }
+      ]
+    }
+  ],
+  "scaleRepairs": []
+}

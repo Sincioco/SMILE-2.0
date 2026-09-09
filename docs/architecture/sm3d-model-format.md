@@ -33,11 +33,11 @@ The converter rejects excessive input before expensive allocation or whole-file 
 |---|---:|
 | Textual glTF JSON | 4 MiB |
 | GLB container | 64 MiB |
-| One declared buffer | 32 MiB |
+| One declared buffer | 64 MiB |
 | Aggregate declared buffers | 64 MiB |
 | Buffers | 16 |
-| Buffer views | 512 |
-| Accessors | 512 |
+| Buffer views | 16,384 |
+| Accessors | 16,384 |
 | Scenes | 16 |
 | Nodes | 4,096 |
 | Meshes | 256 |

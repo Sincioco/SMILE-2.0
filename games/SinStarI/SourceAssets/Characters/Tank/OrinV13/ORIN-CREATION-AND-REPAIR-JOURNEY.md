@@ -279,3 +279,12 @@ world-space trail, faint shield flames and other two styles remain unchanged.
 This is an appearance parameter in the existing owner, not a new hammer-specific
 emitter. Native/Chrome inspection retains visible head metal and grip detail.
 Canonical model, descriptors, grounding and the zero-key calibration are unchanged.
+
+## September 9: Party effects with an imported boss
+
+Adding Vrax exposed a Party update dependency on the Dragon Chest socket. The
+early return suppressed Orin equipment VFX when the boss had no such socket.
+ViewerParty now uses the target actor world-bounds center as a fallback, so
+attached Blue Flame/Neon Arcs/Lightning updates continue. Individual and Party
+effects were checked in native and Chrome views. Do not add Orin sockets or
+change his accepted calibration fingerprint to solve an enemy-target query.

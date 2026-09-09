@@ -1,0 +1,331 @@
+{
+  "character": "Zara",
+  "version": 1,
+  "state": "Validated local native and Web Viewer import",
+  "sourceProject": "Knights of Bits and Bytes",
+  "scenePrefab": "Assets\\CyberJagg5\\Prefab\\Base_Mesh_Skin2.prefab",
+  "publication": "Local assets; source/derivative redistribution not approved",
+  "export": {
+    "path": "Private/Zara-v1-animation-set.glb",
+    "sha256": "94f96990aed59cb347dee1d831e19587d21b92ed217a11d630a507cf8c1df67b",
+    "bytes": 24619332
+  },
+  "originals": [
+    {
+      "path": "Private/Originals/Assets/CyberJagg5/Animations/CyberJagg5@Death1.fbx",
+      "bytes": 1746384,
+      "sha256": "1aa22cd4120b34bff27d5501937bda4be57359262b8745ea51cffbb6f3a741c4"
+    },
+    {
+      "path": "Private/Originals/Assets/CyberJagg5/Animations/CyberJagg5@Death1W.fbx",
+      "bytes": 1737888,
+      "sha256": "e9f92770c39265a3a7f64897bf5172ae558846c6e544af36aea095b610ed76aa"
+    },
+    {
+      "path": "Private/Originals/Assets/CyberJagg5/Animations/CyberJagg5@Death2.fbx",
+      "bytes": 1784656,
+      "sha256": "5bf95e4bdbac27a8e19e2b24d29a853230cecde6103fdfa98d34e219e0d7b8b2"
+    },
+    {
+      "path": "Private/Originals/Assets/CyberJagg5/Animations/CyberJagg5@Death2W.fbx",
+      "bytes": 1766176,
+      "sha256": "4c0948c91703f1bbab2cd9bde4793a12797dcf397984e03e8ff29a8716996db3"
+    },
+    {
+      "path": "Private/Originals/Assets/CyberJagg5/Animations/CyberJagg5@Idle1W.fbx",
+      "bytes": 1679968,
+      "sha256": "148928b107da9b8320f4cbac7e5e95160988013c17d0303e5dfd13f308e37c98"
+    },
+    {
+      "path": "Private/Originals/Assets/CyberJagg5/Animations/CyberJagg5@Rage.fbx",
+      "bytes": 1897536,
+      "sha256": "bd09c480ec0b922a4e59d4627a79f4b9e53732175c0f921a0523c4c71a672cd4"
+    },
+    {
+      "path": "Private/Originals/Assets/CyberJagg5/Animations/CyberJagg5@RageW.fbx",
+      "bytes": 1872400,
+      "sha256": "ca37f0fb6f240b8f05adad5b11704c7f718caf3567d4a55253e68fc5299ca8bb"
+    },
+    {
+      "path": "Private/Originals/Assets/CyberJagg5/Animations/CyberJagg5@Run.fbx",
+      "bytes": 1264752,
+      "sha256": "8565b4f808d2c5514c3f60ce600f49e904da4d938cf9213ffc1d0302c488cb63"
+    },
+    {
+      "path": "Private/Originals/Assets/CyberJagg5/Animations/CyberJagg5@RunW.fbx",
+      "bytes": 1262704,
+      "sha256": "c474dd295e3f0e16c1b3c133e5da1c9655987b4d8fb75beabf90ad5a80375e76"
+    },
+    {
+      "path": "Private/Originals/Assets/CyberJagg5/Animations/CyberJagg5@StrafeLeft.fbx",
+      "bytes": 1339456,
+      "sha256": "326c25a4cf78cd73e1d2b0451889629b4dfbd9d1a258805c1db50da90faf4df3"
+    },
+    {
+      "path": "Private/Originals/Assets/CyberJagg5/Animations/CyberJagg5@StrafeLeftW.fbx",
+      "bytes": 1328080,
+      "sha256": "fb7b51c9cd6b91a70a10d9a2af65b4dbe3c25f4a03793697d20e6409c447d3db"
+    },
+    {
+      "path": "Private/Originals/Assets/CyberJagg5/Animations/CyberJagg5@StrafeRight.fbx",
+      "bytes": 1451328,
+      "sha256": "e01b95d90a7050d7c424abf6e306de411c2898d74c339165383e19933b5f512f"
+    },
+    {
+      "path": "Private/Originals/Assets/CyberJagg5/Animations/CyberJagg5@StrafeRightW.fbx",
+      "bytes": 1454880,
+      "sha256": "9bb2d7d158e00d96210747579d3b6d19b190d6738936072e852144b1f1f8ea2d"
+    },
+    {
+      "path": "Private/Originals/Assets/CyberJagg5/Animations/CyberJagg5@Walk.fbx",
+      "bytes": 1414416,
+      "sha256": "84b10398736be68930580676aa184e7d9a1d1dccb273ef8e0c437a01a2750ccf"
+    },
+    {
+      "path": "Private/Originals/Assets/CyberJagg5/Animations/CyberJagg5@WalkW.fbx",
+      "bytes": 1780768,
+      "sha256": "613234e2836816dfe1a970e221cacf5662793f65f8fbdce310d9be410c42e8d7"
+    },
+    {
+      "path": "Private/Originals/Assets/CyberJagg5/Animations/CyberJagg5@attack1.fbx",
+      "bytes": 1989056,
+      "sha256": "de3dfe2b20777314cd5997ee68b31d96e6c40dd6e1414002a5c86fcd3ed3419b"
+    },
+    {
+      "path": "Private/Originals/Assets/CyberJagg5/Animations/CyberJagg5@attack2.fbx",
+      "bytes": 1739728,
+      "sha256": "673066995510075a80e76530fc9032cc73d2f800d4392cf197b39c58c486adbf"
+    },
+    {
+      "path": "Private/Originals/Assets/CyberJagg5/Animations/CyberJagg5@attack3.fbx",
+      "bytes": 1866864,
+      "sha256": "47df2595c3cef5ef57a966ad9c010a009d6851e57db9f2154936fc660a65a285"
+    },
+    {
+      "path": "Private/Originals/Assets/CyberJagg5/Animations/CyberJagg5@attack4.fbx",
+      "bytes": 1967008,
+      "sha256": "6e795b2931e5e8dcd5881495e531cf422b0ff9abe6db330ccb25c03d1038d3a9"
+    },
+    {
+      "path": "Private/Originals/Assets/CyberJagg5/Animations/CyberJagg5@attack5.fbx",
+      "bytes": 1815664,
+      "sha256": "d01798fd67de74281b59dbab2db0ab963f9f6858d150c4dc16629cb0becd35a7"
+    },
+    {
+      "path": "Private/Originals/Assets/CyberJagg5/Animations/CyberJagg5@attack6.fbx",
+      "bytes": 1845008,
+      "sha256": "381ed5995d97c4cfe1087a66c7dbfc0c405f50d590b68506993dd6852cd1a0e0"
+    },
+    {
+      "path": "Private/Originals/Assets/CyberJagg5/Animations/CyberJagg5@gethit1.fbx",
+      "bytes": 1102688,
+      "sha256": "319ad25ec2e9bd826893bd72b4055988158b005f50a41cd64743db4651103ca3"
+    },
+    {
+      "path": "Private/Originals/Assets/CyberJagg5/Animations/CyberJagg5@gethit2.fbx",
+      "bytes": 1535264,
+      "sha256": "1fa0ed9acb871b8fd69c94070695fb444563a8f4185728a7e98290b1c63ecfd0"
+    },
+    {
+      "path": "Private/Originals/Assets/CyberJagg5/Animations/CyberJagg5@gethit3.fbx",
+      "bytes": 1540144,
+      "sha256": "3e672f71ea3360f4c253d9f123c98aae49b69ebc73e2071c500cf20fd0e65761"
+    },
+    {
+      "path": "Private/Originals/Assets/CyberJagg5/Animations/CyberJagg5@idle2W.fbx",
+      "bytes": 2172448,
+      "sha256": "a9589037aa625ccd04d134568a9e2123d84110a31a9efdae52c70a075bd1dbca"
+    },
+    {
+      "path": "Private/Originals/Assets/CyberJagg5/Animations/CyberJagg5@idle3.fbx",
+      "bytes": 3309600,
+      "sha256": "66650c4a89094b37f5b0a09cc7fb54eb2cfc27798c2d0a6a84f0ca608bbe3124"
+    },
+    {
+      "path": "Private/Originals/Assets/CyberJagg5/Base mesh/Base_Mesh unity.fbx",
+      "bytes": 4824736,
+      "sha256": "396cb97ae91c5fa208fe5210ed9df6a00cde16dda7d4995b60a8ceebca0230fb"
+    },
+    {
+      "path": "Private/Originals/Assets/CyberJagg5/Cyberjagg6 Animator Controller.controller",
+      "bytes": 36819,
+      "sha256": "4020e59c50766e294003503992dd6916f51f42026011bb2c8de7bed5080b4fb4"
+    },
+    {
+      "path": "Private/Originals/Assets/CyberJagg5/Materials/Mat_CyberJagg5_Armor_Skin2.mat",
+      "bytes": 2451,
+      "sha256": "7a7025556e69b779b55825ec21c5c082fee9a483cb88f3b47738ca6b2985449c"
+    },
+    {
+      "path": "Private/Originals/Assets/CyberJagg5/Materials/Mat_CyberJagg5_Helm_Skin2.mat",
+      "bytes": 2445,
+      "sha256": "4396dbc2af94b22ff9e9d66ecdeb35cabc56156fcf52981a298f7d2a74b2ed36"
+    },
+    {
+      "path": "Private/Originals/Assets/CyberJagg5/Materials/Mat_CyberJagg5_Suit_Skin2.mat",
+      "bytes": 2376,
+      "sha256": "09dcc7ab198115b672fe90142c535479f054694fd53582c3d530b37077d94ab1"
+    },
+    {
+      "path": "Private/Originals/Assets/CyberJagg5/Materials/Mat_CyberJagg5_Sword_Skin2.mat",
+      "bytes": 2392,
+      "sha256": "b1fbfaeda4521e3849afd17cfa4f9b26bb416226ec15ed677cc8e08a2453bf0e"
+    },
+    {
+      "path": "Private/Originals/Assets/CyberJagg5/Prefab/Base_Mesh_Skin2.prefab",
+      "bytes": 143475,
+      "sha256": "cd7f7e032e470e00899e53395bb7add509aa353e4014ffb19192b6e15926ba32"
+    },
+    {
+      "path": "Private/Originals/Assets/CyberJagg5/Stand/Standard_Two_Sided .shader",
+      "bytes": 8999,
+      "sha256": "826d5e4b47a8dacad8c4bc8e249f34a1eb73a73123b30b4035928d7c530190c4"
+    },
+    {
+      "path": "Private/Originals/Assets/CyberJagg5/Textures/T_SkinAll_CyberJagg5_Armor_AO.tga",
+      "bytes": 134217772,
+      "sha256": "e64e800f3ecb31c587defd1cd910769658377b5e230878bbc84a344439e1100a"
+    },
+    {
+      "path": "Private/Originals/Assets/CyberJagg5/Textures/T_SkinAll_CyberJagg5_Helm_AO.tga",
+      "bytes": 33554476,
+      "sha256": "fd43746cb30af78321c0881602459a26e474b8ec774545c1aac14b267991f9d6"
+    },
+    {
+      "path": "Private/Originals/Assets/CyberJagg5/Textures/T_SkinAll_CyberJagg5_Suit_AO.tga",
+      "bytes": 67108908,
+      "sha256": "36b6d4078933f6fad96a28789064d8e0188988c01cf9fea0aaae7dd00a6b13fd"
+    },
+    {
+      "path": "Private/Originals/Assets/CyberJagg5/Textures/Texture2/T_Skin2_CyberJagg5_Armor_Albedo.tga",
+      "bytes": 50331666,
+      "sha256": "4d3dc90ef23beefc9412ed6209112761931d7de4c9be912a01d1115ec329e40e"
+    },
+    {
+      "path": "Private/Originals/Assets/CyberJagg5/Textures/Texture2/T_Skin2_CyberJagg5_Armor_Emission.tga",
+      "bytes": 50331666,
+      "sha256": "b7e6f6d11aa73d9b78f071a9a113a6b17ba3778784e713dcc58fd2875f9ee286"
+    },
+    {
+      "path": "Private/Originals/Assets/CyberJagg5/Textures/Texture2/T_Skin2_CyberJagg5_Armor_Normal.tga",
+      "bytes": 50331666,
+      "sha256": "eefa3b8f38a6e67d40e54365c40caf1f49734c0afb693dcc47aa8060b9f1b207"
+    },
+    {
+      "path": "Private/Originals/Assets/CyberJagg5/Textures/Texture2/T_Skin2_CyberJagg5_Armor_metalic_gloss.tga",
+      "bytes": 67108882,
+      "sha256": "d17a1109bdd3e9fecff7bbbdc30867e192c5ccfb6cd3b4fbb1636435c169826d"
+    },
+    {
+      "path": "Private/Originals/Assets/CyberJagg5/Textures/Texture2/T_Skin2_CyberJagg5_Helm_Albedo.tga",
+      "bytes": 50331666,
+      "sha256": "26f4e8353f38f63d710b26de7d5cc9d7530918b5695a41af88a340b20a9d00f4"
+    },
+    {
+      "path": "Private/Originals/Assets/CyberJagg5/Textures/Texture2/T_Skin2_CyberJagg5_Helm_Emission.tga",
+      "bytes": 50331666,
+      "sha256": "7ba92d43ad30ac17b5a1c2c0950c1991eec99ecd79803a2ba575a7225cb5343c"
+    },
+    {
+      "path": "Private/Originals/Assets/CyberJagg5/Textures/Texture2/T_Skin2_CyberJagg5_Helm_Normal.tga",
+      "bytes": 50331666,
+      "sha256": "89a80632b2740378691596c139d93f2da99637077e0591e69f94972552b010e3"
+    },
+    {
+      "path": "Private/Originals/Assets/CyberJagg5/Textures/Texture2/T_Skin2_CyberJagg5_Helm_metalic_gloss.tga",
+      "bytes": 67108882,
+      "sha256": "132174b730686f096942aad04ddcc92b6fabd478ae801cdcf63104fbc6817d13"
+    },
+    {
+      "path": "Private/Originals/Assets/CyberJagg5/Textures/Texture2/T_Skin2_CyberJagg5_Suit_Albedo.tga",
+      "bytes": 50331666,
+      "sha256": "b611efc65e6b5d897857075fd78193ca1785115b1c4afc518c677710f31838f7"
+    },
+    {
+      "path": "Private/Originals/Assets/CyberJagg5/Textures/Texture2/T_Skin2_CyberJagg5_Suit_Normal.tga",
+      "bytes": 50331666,
+      "sha256": "8303c06ac232420826e20e1d392eac054c2244101a8ca954b0f41f53acb87f4c"
+    },
+    {
+      "path": "Private/Originals/Assets/CyberJagg5/Textures/Texture2/T_Skin2_CyberJagg5_Suit_metalic_gloss.tga",
+      "bytes": 67108882,
+      "sha256": "8ad11fd85dc126e12cfdf6dd4b33b76aabfa33bb0214f02e53e1c4869fbc96c0"
+    },
+    {
+      "path": "Private/Originals/Assets/CyberJagg5/Textures/Texture2/T_Skin2_CyberJagg5_Sword_Albedo.tga",
+      "bytes": 50331666,
+      "sha256": "6400a46c0ffd7f1c96bf2b92be7c2c6ab685c5b86800f2edaadfc8b98b5792af"
+    },
+    {
+      "path": "Private/Originals/Assets/CyberJagg5/Textures/Texture2/T_Skin2_CyberJagg5_Sword_Emission.tga",
+      "bytes": 50331666,
+      "sha256": "3cd7e5a234814060961bbbba50e80617725d837544ee9e7464f046c2357bc32e"
+    },
+    {
+      "path": "Private/Originals/Assets/CyberJagg5/Textures/Texture2/T_Skin2_CyberJagg5_Sword_Normal.tga",
+      "bytes": 50331666,
+      "sha256": "e43d68b840affac02254474a5f6f0c80c377cf707ae231578a37ecb90bf7f342"
+    },
+    {
+      "path": "Private/Originals/Assets/CyberJagg5/Textures/Texture2/T_Skin2_CyberJagg5_Sword_metalic_gloss.tga",
+      "bytes": 67108882,
+      "sha256": "7ca19326139f55285f8e0d8c72fe70ba80eb7a7e60796fe5ec07b1cd7e77df14"
+    }
+  ],
+  "triangles": 47810,
+  "bones": 69,
+  "animationClips": 26,
+  "presentation": {
+    "desiredWorldHeight": 100,
+    "maximumFitScalePercent": 10000
+  },
+  "grounding": "grounding-validation.json",
+  "skinWeights": "skin-weight-audit.json",
+  "validationCheckpoint": "docs/implementation/unity-character-import-checkpoint.md",
+  "calibration": {
+    "available": false,
+    "reason": "No authored Viewer attachment/calibration sockets; no shared Arin/Orin pose storage."
+  },
+  "checkpointFiles": [
+    {
+      "path": "ZaraV1.sm3d.json",
+      "sha256": "73c40bbd18911d32c0fb52b288b34ff857f0e8bff9796bc987f3ff0b87d1889b",
+      "bytes": 1289
+    },
+    {
+      "path": "animation-manifest.json",
+      "sha256": "e65b7081cf5af90e25fff1dfe22b0850b00d878b0e401a73f63015e7ea7ac01e",
+      "bytes": 5149
+    },
+    {
+      "path": "grounding-corrections.json",
+      "sha256": "68234a424d0c4984530615f4357a534bfabd32a07c59c6a613022b1da9bf819c",
+      "bytes": 12784
+    },
+    {
+      "path": "grounding-validation.json",
+      "sha256": "dfac2d6f57c359290774ec94d53cfb1e94e7fbd7eb68b45297abcfe865a1f865",
+      "bytes": 604
+    },
+    {
+      "path": "skin-weight-audit.json",
+      "sha256": "04bca15120525ddd01f2250f118c95a2ad93edcd000fa33ed9319cb06ee561cc",
+      "bytes": 356
+    },
+    {
+      "path": "Private/Zara-v1-animation-source.blend",
+      "sha256": "e384526d3f92423ee5d28a160b6057669a9e287e7cf46d5e9cb6e6dd1887fd6e",
+      "bytes": 11774755
+    },
+    {
+      "path": "Private/Previews/party-vrax-doubled.jpg",
+      "sha256": "ed93a580223ab52485c0d980189097d1db37a525aac0c4960836bf24ef2f37f6",
+      "bytes": 344076
+    },
+    {
+      "path": "Private/Previews/Zara-native-animation.jpg",
+      "sha256": "ffd47d406c12f09a77e6fc568a3650dc164424a26973e6beb170b4e10ca2b002",
+      "bytes": 263128
+    }
+  ]
+}

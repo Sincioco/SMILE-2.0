@@ -1,0 +1,170 @@
+[
+  {
+    "name": "Attack",
+    "source": "Assets\\SciFi Beast01\\Animations\\SciFi_Beast01@Attack1.fbx",
+    "frames": 26,
+    "frameRate": 30,
+    "bodyMinimumYFrame0": -0.031776197254657745
+  },
+  {
+    "name": "Attack2",
+    "source": "Assets\\SciFi Beast01\\Animations\\SciFi_Beast01@Attack2.fbx",
+    "frames": 26,
+    "frameRate": 30,
+    "bodyMinimumYFrame0": -0.031776197254657745
+  },
+  {
+    "name": "Attack3",
+    "source": "Assets\\SciFi Beast01\\Animations\\SciFi_Beast01@Attack3.fbx",
+    "frames": 31,
+    "frameRate": 30,
+    "bodyMinimumYFrame0": -0.031776197254657745
+  },
+  {
+    "name": "Attack4",
+    "source": "Assets\\SciFi Beast01\\Animations\\SciFi_Beast01@Attack4.fbx",
+    "frames": 31,
+    "frameRate": 30,
+    "bodyMinimumYFrame0": -0.031776197254657745
+  },
+  {
+    "name": "Attack5",
+    "source": "Assets\\SciFi Beast01\\Animations\\SciFi_Beast01@Attack5.fbx",
+    "frames": 41,
+    "frameRate": 30,
+    "bodyMinimumYFrame0": -0.03177621588110924
+  },
+  {
+    "name": "Attack6",
+    "source": "Assets\\SciFi Beast01\\Animations\\SciFi_Beast01@Attack6.fbx",
+    "frames": 31,
+    "frameRate": 30,
+    "bodyMinimumYFrame0": -0.031776342540979385
+  },
+  {
+    "name": "Death",
+    "source": "Assets\\SciFi Beast01\\Animations\\SciFi_Beast01@Death1.fbx",
+    "frames": 41,
+    "frameRate": 30,
+    "bodyMinimumYFrame0": -0.03177616745233536
+  },
+  {
+    "name": "Death2",
+    "source": "Assets\\SciFi Beast01\\Animations\\SciFi_Beast01@Death2.fbx",
+    "frames": 41,
+    "frameRate": 30,
+    "bodyMinimumYFrame0": -0.03177543357014656
+  },
+  {
+    "name": "GetHit_B",
+    "source": "Assets\\SciFi Beast01\\Animations\\SciFi_Beast01@GetHit_B.fbx",
+    "frames": 31,
+    "frameRate": 30,
+    "bodyMinimumYFrame0": -0.031776197254657745
+  },
+  {
+    "name": "Hit",
+    "source": "Assets\\SciFi Beast01\\Animations\\SciFi_Beast01@GetHit_F.fbx",
+    "frames": 31,
+    "frameRate": 30,
+    "bodyMinimumYFrame0": -0.031776197254657745
+  },
+  {
+    "name": "GetHit_L",
+    "source": "Assets\\SciFi Beast01\\Animations\\SciFi_Beast01@GetHit_L.fbx",
+    "frames": 31,
+    "frameRate": 30,
+    "bodyMinimumYFrame0": -0.031776197254657745
+  },
+  {
+    "name": "GetHit_R",
+    "source": "Assets\\SciFi Beast01\\Animations\\SciFi_Beast01@GetHit_R.fbx",
+    "frames": 31,
+    "frameRate": 30,
+    "bodyMinimumYFrame0": -0.031776197254657745
+  },
+  {
+    "name": "Idle",
+    "source": "Assets\\SciFi Beast01\\Animations\\SciFi_Beast01@Idle1.fbx",
+    "frames": 201,
+    "frameRate": 30,
+    "bodyMinimumYFrame0": -0.031776197254657745
+  },
+  {
+    "name": "Idle2",
+    "source": "Assets\\SciFi Beast01\\Animations\\SciFi_Beast01@Idle2.fbx",
+    "frames": 201,
+    "frameRate": 30,
+    "bodyMinimumYFrame0": -0.031776197254657745
+  },
+  {
+    "name": "Jump1",
+    "source": "Assets\\SciFi Beast01\\Animations\\SciFi_Beast01@Jump1.fbx",
+    "frames": 26,
+    "frameRate": 30,
+    "bodyMinimumYFrame0": -0.018714241683483124
+  },
+  {
+    "name": "RocketLaunch1",
+    "source": "Assets\\SciFi Beast01\\Animations\\SciFi_Beast01@RocketLaunch1.fbx",
+    "frames": 31,
+    "frameRate": 30,
+    "bodyMinimumYFrame0": -0.031776197254657745
+  },
+  {
+    "name": "RocketLaunch2",
+    "source": "Assets\\SciFi Beast01\\Animations\\SciFi_Beast01@RocketLaunch2.fbx",
+    "frames": 41,
+    "frameRate": 30,
+    "bodyMinimumYFrame0": -0.031776197254657745
+  },
+  {
+    "name": "Run",
+    "source": "Assets\\SciFi Beast01\\Animations\\SciFi_Beast01@Run1.fbx",
+    "frames": 21,
+    "frameRate": 30,
+    "bodyMinimumYFrame0": -0.0178556889295578
+  },
+  {
+    "name": "Turn180",
+    "source": "Assets\\SciFi Beast01\\Animations\\SciFi_Beast01@Turn180.fbx",
+    "frames": 101,
+    "frameRate": 30,
+    "bodyMinimumYFrame0": -0.03177627921104431
+  },
+  {
+    "name": "Walk_B",
+    "source": "Assets\\SciFi Beast01\\Animations\\SciFi_Beast01@Walk_B.fbx",
+    "frames": 25,
+    "frameRate": 30,
+    "bodyMinimumYFrame0": -0.025231698527932167
+  },
+  {
+    "name": "Walk",
+    "source": "Assets\\SciFi Beast01\\Animations\\SciFi_Beast01@Walk_F.fbx",
+    "frames": 29,
+    "frameRate": 30,
+    "bodyMinimumYFrame0": -0.02522968500852585
+  },
+  {
+    "name": "Walk_F2",
+    "source": "Assets\\SciFi Beast01\\Animations\\SciFi_Beast01@Walk_F2.fbx",
+    "frames": 25,
+    "frameRate": 30,
+    "bodyMinimumYFrame0": -0.02522834949195385
+  },
+  {
+    "name": "Walk_L",
+    "source": "Assets\\SciFi Beast01\\Animations\\SciFi_Beast01@Walk_L.fbx",
+    "frames": 25,
+    "frameRate": 30,
+    "bodyMinimumYFrame0": -0.025230087339878082
+  },
+  {
+    "name": "Walk_R",
+    "source": "Assets\\SciFi Beast01\\Animations\\SciFi_Beast01@Walk_R.fbx",
+    "frames": 25,
+    "frameRate": 30,
+    "bodyMinimumYFrame0": -0.02523130737245083
+  }
+]

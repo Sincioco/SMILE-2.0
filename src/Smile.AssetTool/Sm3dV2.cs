@@ -11,11 +11,11 @@ internal static partial class Sm3dV2
     private const int MaximumFileBytes = 16 * 1024 * 1024;
     private const int MaximumGltfJsonBytes = 4 * 1024 * 1024;
     private const int MaximumGlbBytes = 64 * 1024 * 1024;
-    private const int MaximumBufferBytes = 32 * 1024 * 1024;
+    private const int MaximumBufferBytes = 64 * 1024 * 1024;
     private const int MaximumAggregateBufferBytes = 64 * 1024 * 1024;
     private const int MaximumBuffers = 16;
-    private const int MaximumBufferViews = 1024;
-    private const int MaximumAccessors = 1024;
+    private const int MaximumBufferViews = 16384;
+    private const int MaximumAccessors = 16384;
     private const int MaximumScenes = 16;
     private const int MaximumNodes = 4096;
     private const int MaximumMeshes = 256;
@@ -32,7 +32,7 @@ internal static partial class Sm3dV2
     private const int MaximumTexturePathBytes = 1024;
     private const int MaximumChunks = 32;
     private const int MaximumAnimationNodes = 256;
-    private const int MaximumAnimationBones = 128;
+    private const int MaximumAnimationBones = 192;
     private const int MaximumAnimationClips = 64;
     private const int MaximumAnimationEventsPerClip = 64;
     private const int MaximumAnimationSockets = 64;

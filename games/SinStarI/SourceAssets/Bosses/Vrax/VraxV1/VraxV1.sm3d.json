@@ -1,0 +1,78 @@
+{
+  "version": 1,
+  "sampleRate": 30,
+  "clips": {
+    "Attack": {
+      "loop": false
+    },
+    "Attack2": {
+      "loop": false
+    },
+    "Attack3": {
+      "loop": false
+    },
+    "Attack4": {
+      "loop": false
+    },
+    "Attack5": {
+      "loop": false
+    },
+    "Attack6": {
+      "loop": false
+    },
+    "Death": {
+      "loop": false
+    },
+    "Death2": {
+      "loop": false
+    },
+    "GetHit_B": {
+      "loop": false
+    },
+    "Hit": {
+      "loop": false
+    },
+    "GetHit_L": {
+      "loop": false
+    },
+    "GetHit_R": {
+      "loop": false
+    },
+    "Idle": {
+      "loop": true
+    },
+    "Idle2": {
+      "loop": true
+    },
+    "Jump1": {
+      "loop": false
+    },
+    "RocketLaunch1": {
+      "loop": false
+    },
+    "RocketLaunch2": {
+      "loop": false
+    },
+    "Run": {
+      "loop": true
+    },
+    "Turn180": {
+      "loop": false
+    },
+    "Walk_B": {
+      "loop": true
+    },
+    "Walk": {
+      "loop": true
+    },
+    "Walk_F2": {
+      "loop": true
+    },
+    "Walk_L": {
+      "loop": true
+    },
+    "Walk_R": {
+      "loop": true
+    }
+  }
+}

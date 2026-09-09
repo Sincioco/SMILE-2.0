@@ -221,10 +221,10 @@ $tableBoundary = Get-Content -LiteralPath (Join-Path $testSource 'M0Triangle.glt
 $baseView = $tableBoundary.bufferViews[0]
 $baseAccessor = $tableBoundary.accessors[0]
 $tableBoundary.bufferViews = @($tableBoundary.bufferViews) + @(
-    for ($index = $tableBoundary.bufferViews.Count; $index -lt 1024; $index++) { $baseView }
+    for ($index = $tableBoundary.bufferViews.Count; $index -lt 16384; $index++) { $baseView }
 )
 $tableBoundary.accessors = @($tableBoundary.accessors) + @(
-    for ($index = $tableBoundary.accessors.Count; $index -lt 1024; $index++) { $baseAccessor }
+    for ($index = $tableBoundary.accessors.Count; $index -lt 16384; $index++) { $baseAccessor }
 )
 $tableBoundaryPath = Join-Path $temporaryRoot 'TableBoundary.gltf'
 [System.IO.File]::WriteAllText(
@@ -233,7 +233,7 @@ $tableBoundaryPath = Join-Path $temporaryRoot 'TableBoundary.gltf'
     [System.Text.UTF8Encoding]::new($false)
 )
 & $assetTool model $tableBoundaryPath --format-version 2 -o (Join-Path $temporaryRoot 'TableBoundary.sm3d')
-if ($LASTEXITCODE -ne 0) { throw 'Exact 1,024 bufferView/accessor conversion failed.' }
+if ($LASTEXITCODE -ne 0) { throw 'Exact 16,384 bufferView/accessor conversion failed.' }
 
 $bufferViewOverflow = Get-Content -LiteralPath $tableBoundaryPath -Raw | ConvertFrom-Json
 $bufferViewOverflow.bufferViews = @($bufferViewOverflow.bufferViews) + @($baseView)
@@ -243,7 +243,7 @@ $bufferViewOverflowPath = Join-Path $temporaryRoot 'BufferViewOverflow.gltf'
     ($bufferViewOverflow | ConvertTo-Json -Depth 20 -Compress),
     [System.Text.UTF8Encoding]::new($false)
 )
-Invoke-ExpectedDiagnostic '1,025 bufferViews' 'SMA1140: bufferViews must be an array of at most 1024 entries.' @(
+Invoke-ExpectedDiagnostic '16,385 bufferViews' 'SMA1140: bufferViews must be an array of at most 16384 entries.' @(
     'model', $bufferViewOverflowPath, '--format-version', '2', '-o', (Join-Path $temporaryRoot 'invalid.sm3d')
 )
 
@@ -255,7 +255,7 @@ $accessorOverflowPath = Join-Path $temporaryRoot 'AccessorOverflow.gltf'
     ($accessorOverflow | ConvertTo-Json -Depth 20 -Compress),
     [System.Text.UTF8Encoding]::new($false)
 )
-Invoke-ExpectedDiagnostic '1,025 accessors' 'SMA1116: glTF requires 1 to 1024 accessors.' @(
+Invoke-ExpectedDiagnostic '16,385 accessors' 'SMA1116: glTF requires 1 to 16384 accessors.' @(
     'model', $accessorOverflowPath, '--format-version', '2', '-o', (Join-Path $temporaryRoot 'invalid.sm3d')
 )
 

@@ -11,6 +11,10 @@ Import Smile.Simple3D.LightPool3D As LightPool3D
 Import Smile.Simple3D.Math3D As Math3D
 Import Smile.Simple3D.NodeAim3D As NodeAim3D
 Import Smile.Tools.BattleAudio As BattleAudio
+Import Smile.Tools.Character3DViewerProfiles As ViewerProfiles
+Import Smile.Tools.Character3DViewerActors As ViewerActors
+Import Smile.Simple3D.PrecisionCamera3D As PrecisionCamera
+Import Smile.Simple3D.CharacterViewer As CharacterViewer
 Import Smile.Tools.DragonPresence As DragonPresence
 
 Private Const ASSET_PATH = "Assets\Generation2\RedDragon\RedDragon.sm3d"
@@ -22,6 +26,8 @@ Private Const BODY_PART_INDEX = 2
 
 Public Type State
     Actor As Character3D.Actor
+    UseVrax As Boolean
+    Frame As PrecisionCamera.Framing
     HeadAim As NodeAim3D.Constraint
     Clip As Text
     HeadTracking As Boolean
@@ -91,11 +97,21 @@ End Sub
 Public Function Create(ByRef Value As State, ByRef BorrowedActor As Character3D.Actor,
     Inspection As Boolean) As Boolean
 
+    Dim Profile As CharacterViewer.Profile
+    Dim Bounds As Character3D.Bounds3D
+    Dim Path As Text
     Dim EmptyLight As LightPool3D.Lease
     Dim Result As Boolean
 
     If Not Value.Available Then
         Return True
+    End If
+
+    Path = ASSET_PATH
+
+    If Value.UseVrax Then
+        Profile = ViewerProfiles.ProfileAt(ViewerProfiles.PROFILE_VRAX)
+        Path = Profile.AssetPath
     End If
 
     Value.OwnsActor = Not Inspection
@@ -104,7 +120,7 @@ Public Function Create(ByRef Value As State, ByRef BorrowedActor As Character3D.
         Value.Actor = BorrowedActor
     Else
         Value.Actor = Character3D.LoadWithPolicy(
-            ASSET_PATH,
+            Path,
             Character3D.CHARACTER_LOAD_REQUIRE_PBR
         )
     End If
@@ -113,6 +129,25 @@ Public Function Create(ByRef Value As State, ByRef BorrowedActor As Character3D.
     Value.FireFailed = False
     Value.Clip = "Idle"
     Value.HeadTracking = True
+
+    If Value.UseVrax And Result Then
+
+        Bounds = Character3D.LocalBounds(Value.Actor)
+        Value.Frame = PrecisionCamera.AutoFit(Profile, Bounds, 0, 0, 55.0,
+            ViewerProfiles.MaximumFitScale(Profile))
+        Value.Frame.PositionX = ToDouble(POSITION_X)
+        Value.Frame.PositionZ = ToDouble(POSITION_Z)
+        Value.HeadTracking = False
+        Result = Character3D.SetScale(Value.Actor, Value.Frame.ScalePercent)
+        Result = Character3D.PlacePrecise(Value.Actor, Value.Frame.PositionX,
+            Value.Frame.PositionY, Value.Frame.PositionZ) And Result
+        Result = Character3D.Rotate(Value.Actor, 0, ROTATION_Y, 0) And Result
+        Result = Character3D.PlayAnimation(Value.Actor, "Idle", True) And Result
+        Result = Character3D.SetShadows(Value.Actor, True, True) And Result
+
+        Return Result
+
+    End If
 
     If Result Then
 
@@ -163,6 +198,10 @@ Public Function Draw(ByRef Value As State) As Boolean
 End Function
 
 Public Sub DrawEffects(ByRef Value As State)
+
+    If Value.UseVrax Then
+        Return
+    End If
 
     Call DragonPresence.Draw()
 
@@ -298,6 +337,12 @@ Public Function Update(
     Dim Result As Boolean
 
     Result = True
+
+    If Value.UseVrax Then
+        Result = UpdateVraxPreview(Value, Name, PlaybackSpeed, AnimationElapsed)
+
+        Return Result
+    End If
 
     If Not IsValid(Value) Then
         Call ClearOwnedEffects(Value, Light)
@@ -496,5 +541,49 @@ Public Sub UpdateAudio(ByRef Value As State, Audible As Boolean)
     End If
 
 End Sub
+
+Public Function UpdateVraxPreview(ByRef Value As State, Name As Text,
+    PlaybackSpeed As Number, Elapsed As Number) As Boolean
+
+    Dim Clip As Number
+    Dim Index As Number
+    Dim Mode As Number
+    Dim Result As Boolean
+
+    Result = True
+
+    If Not IsValid(Value) Or Not Value.Visible Then
+        Return Result
+    End If
+
+    If Name <> Value.Clip Then
+
+        Mode = Graphics3D.ANIMATION_ONCE
+
+        If Name = "Idle" Then
+            Mode = Graphics3D.ANIMATION_LOOP
+        End If
+
+        Result = Character3D.PlayMode(Value.Actor, Name, Mode, PlaybackSpeed)
+        Value.Clip = Name
+
+    End If
+
+    Result = Character3D.Update(Value.Actor, Elapsed) And Result
+
+    For Index = 0 To Character3D.ClipCount(Value.Actor) - 1
+
+        If Character3D.ClipName(Value.Actor, Index) = Value.Clip Then
+            Clip = Index
+        End If
+
+    End For
+
+    Result = ViewerActors.ApplyPresentationOffset(Value.Actor,
+        ViewerProfiles.PROFILE_VRAX, Clip, Value.Frame) And Result
+
+    Return Result
+
+End Function
 
 End Module

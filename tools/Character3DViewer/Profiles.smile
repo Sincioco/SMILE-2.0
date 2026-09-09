@@ -11,6 +11,10 @@ Public Const PROFILE_ARIN_ORIGINAL = 2
 Public Const PROFILE_TECHNICAL_ARTICULATED = 3
 Public Const PROFILE_ORIN = 4
 Public Const PROFILE_DRAGON = 5
+Public Const PROFILE_VALOR = 6
+Public Const PROFILE_ZARA = 7
+Public Const PROFILE_VRAX = 8
+Public Const INCLUDE_UNITY_CHARACTERS = False
 Public Const INCLUDE_DIAGNOSTIC_PROFILES = True
 Public Const EQUIPMENT_GLOW_FIRE = 0
 Public Const EQUIPMENT_GLOW_LIGHTNING = 1
@@ -23,8 +27,14 @@ Public Function NextProfile(Current As Number) As Number
         Result = (Current + 1) Mod ProfileCount()
     Else If Current = PROFILE_ARIN Then
         Result = PROFILE_ORIN
-    Else If Current = PROFILE_ORIN Then
+    Else If Current = PROFILE_ORIN And INCLUDE_UNITY_CHARACTERS Then
+        Result = PROFILE_VALOR
+    Else If Current = PROFILE_VALOR Then
+        Result = PROFILE_ZARA
+    Else If Current = PROFILE_ZARA Or Current = PROFILE_ORIN Then
         Result = PROFILE_DRAGON
+    Else If Current = PROFILE_DRAGON And INCLUDE_UNITY_CHARACTERS Then
+        Result = PROFILE_VRAX
     Else
         Result = PROFILE_ARIN
     End If
@@ -38,13 +48,18 @@ Public Function HoldsFinalPose(ProfileIndex As Number, ClipName As Text) As Bool
     Dim Result As Boolean
 
     Result = ((ProfileIndex = PROFILE_ORIN And ClipName = "Defend") Or
-        (IsPartyCharacter(ProfileIndex) And ClipName = "Death"))
+        (IsPartyCharacter(ProfileIndex) And ClipName = "Death") Or
+        (IsUnityCharacter(ProfileIndex) And Not UnityClipLoops(ClipName)))
 
     Return Result
 
 End Function
 
 Public Function ProfileCount() As Number
+
+    If INCLUDE_UNITY_CHARACTERS Then
+        Return 9
+    End If
 
     Return 6
 
@@ -101,6 +116,42 @@ Public Function ProfileAt(Index As Number) As CharacterViewer.Profile
         Result.ExpectedSocketCount = 6
         Result.DesiredWorldHeight = 250
 
+    Else If Index = PROFILE_VALOR Then
+
+        Result.AssetId = "sin-star-i.character.valor"
+        Result.CandidateVersion = "v1"
+        Result.DisplayName = "Valor"
+        Result.PartyRole = "Knight"
+        Result.ProductionStatus = "Preview"
+        Result.AssetPath = "Assets\Generation2\ValorV1\Valor.sm3d"
+        Result.ExpectedClipCount = 31
+        Result.ExpectedSocketCount = 0
+        Result.DesiredWorldHeight = 100
+
+    Else If Index = PROFILE_ZARA Then
+
+        Result.AssetId = "sin-star-i.character.zara"
+        Result.CandidateVersion = "v1"
+        Result.DisplayName = "Zara"
+        Result.PartyRole = "Warrior"
+        Result.ProductionStatus = "Preview"
+        Result.AssetPath = "Assets\Generation2\ZaraV1\Zara.sm3d"
+        Result.ExpectedClipCount = 26
+        Result.ExpectedSocketCount = 0
+        Result.DesiredWorldHeight = 100
+
+    Else If Index = PROFILE_VRAX Then
+
+        Result.AssetId = "sin-star-i.boss.vrax"
+        Result.CandidateVersion = "v1"
+        Result.DisplayName = "Vrax"
+        Result.PartyRole = "Boss"
+        Result.ProductionStatus = "Preview"
+        Result.AssetPath = "Assets\Generation2\VraxV1\Vrax.sm3d"
+        Result.ExpectedClipCount = 24
+        Result.ExpectedSocketCount = 0
+        Result.DesiredWorldHeight = 460
+
     Else If Index = PROFILE_ARIN_V56 Then
 
         Result.AssetId = "sin-star-i.character-1.paladin"
@@ -150,7 +201,9 @@ Public Function ModelFileName(ProfileIndex As Number) As Text
 
     Dim Result As Text
 
-    If ProfileIndex = PROFILE_ARIN Then
+    If IsUnityCharacter(ProfileIndex) Then
+        Result = UnityName(ProfileIndex) + "-v1-animation-set.glb"
+    Else If ProfileIndex = PROFILE_ARIN Then
         Result = "arin-v5.7-idle-equipment-checkpoint.glb"
     Else If ProfileIndex = PROFILE_ORIN Then
         Result = "orin-v1.3-animation-checkpoint.glb"
@@ -172,7 +225,13 @@ Public Function ClipCount(ProfileIndex As Number) As Number
 
     Dim Result As Number
 
-    If ProfileIndex = PROFILE_DRAGON Then
+    If ProfileIndex = PROFILE_VALOR Then
+        Result = 31
+    Else If ProfileIndex = PROFILE_ZARA Then
+        Result = 26
+    Else If ProfileIndex = PROFILE_VRAX Then
+        Result = 24
+    Else If ProfileIndex = PROFILE_DRAGON Then
         Result = 6
     Else If ProfileIndex = PROFILE_ORIN Then
         Result = 9
@@ -226,7 +285,11 @@ Public Function ClipName(ProfileIndex As Number, ClipIndex As Number) As Text
 
     Dim Result As Text
 
-    If ProfileIndex = PROFILE_DRAGON Then
+    If IsUnityCharacter(ProfileIndex) Then
+
+        Result = UnityClipName(ProfileIndex, ClipIndex)
+
+    Else If ProfileIndex = PROFILE_DRAGON Then
 
         If ClipIndex = 0 Then
             Result = "Idle"
@@ -474,13 +537,25 @@ Public Function ClipLabel(ProfileIndex As Number, ClipIndex As Number) As Text
 
 End Function
 
+Public Function MaximumFitScale(Profile As CharacterViewer.Profile) As Number
+
+    If Profile.AssetId = "sin-star-i.boss.vrax" Then
+        Return 20000
+    End If
+
+    Return 10000
+
+End Function
+
 Public Function ClipLoops(ProfileIndex As Number, ClipIndex As Number) As Boolean
 
     Dim Result As Boolean
 
     Result = True
 
-    If ProfileIndex = PROFILE_DRAGON Then
+    If IsUnityCharacter(ProfileIndex) Then
+        Result = UnityClipLoops(UnityClipName(ProfileIndex, ClipIndex))
+    Else If ProfileIndex = PROFILE_DRAGON Then
         Result = ClipIndex = 0
     Else If ProfileIndex = PROFILE_ORIN Then
         Result = ClipIndex = 0 Or ClipIndex = 8
@@ -873,6 +948,1184 @@ Public Function CalibrationMetadataAsset(ProfileIndex As Number) As Text
 
     If ProfileIndex = PROFILE_ORIN Then
         Result = "Assets/Calibration/orin-v1.3.metadata.json"
+    End If
+
+    Return Result
+
+End Function
+
+Public Function IsUnityCharacter(ProfileIndex As Number) As Boolean
+
+    Dim Result As Boolean
+
+    Result = ProfileIndex >= PROFILE_VALOR And ProfileIndex <= PROFILE_VRAX
+
+    Return Result
+
+End Function
+
+Public Function UnityName(ProfileIndex As Number) As Text
+
+    Dim Result As Text
+
+    If ProfileIndex = PROFILE_VALOR Then
+        Result = "Valor"
+    Else If ProfileIndex = PROFILE_ZARA Then
+        Result = "Zara"
+    Else If ProfileIndex = PROFILE_VRAX Then
+        Result = "Vrax"
+    End If
+
+    Return Result
+
+End Function
+
+Public Function UnityClipLoops(ClipName As Text) As Boolean
+
+    Dim Result As Boolean
+
+    Result = (Text_Slice(ClipName, 0, 4) = "Idle" Or
+        Text_Slice(ClipName, 0, 4) = "Walk" Or
+        Text_Slice(ClipName, 0, 3) = "Run" Or
+        Text_Slice(ClipName, 0, 8) = "BackWalk" Or
+        ClipName = "LeftStrafe" Or ClipName = "RightStrafe" Or
+        ClipName = "Jump3Loop")
+
+    Return Result
+
+End Function
+
+Private Function UnityClipName(ProfileIndex As Number, ClipIndex As Number) As Text
+
+    Dim Result As Text
+
+    If ProfileIndex = PROFILE_VALOR Then
+
+        If ClipIndex = 0 Then
+            Result = "Idle"
+        Else If ClipIndex = 1 Then
+            Result = "SwordAttack"
+        Else If ClipIndex = 2 Then
+            Result = "SwordAttack2"
+        Else If ClipIndex = 3 Then
+            Result = "BlockImpact"
+        Else If ClipIndex = 4 Then
+            Result = "Hit"
+        Else If ClipIndex = 5 Then
+            Result = "Walk"
+        Else If ClipIndex = 6 Then
+            Result = "Run"
+        Else If ClipIndex = 7 Then
+            Result = "Death"
+        Else If ClipIndex = 8 Then
+            Result = "Attack3"
+        Else If ClipIndex = 9 Then
+            Result = "Attack4"
+        Else If ClipIndex = 10 Then
+            Result = "Attack5"
+        Else If ClipIndex = 11 Then
+            Result = "BackWalk1"
+        Else If ClipIndex = 12 Then
+            Result = "BackWalk2"
+        Else If ClipIndex = 13 Then
+            Result = "Death2"
+        Else If ClipIndex = 14 Then
+            Result = "GetHit2"
+        Else If ClipIndex = 15 Then
+            Result = "GetHit2(Shield)"
+        Else If ClipIndex = 16 Then
+            Result = "GetHit3"
+        Else If ClipIndex = 17 Then
+            Result = "GetHit3(Shield)"
+        Else If ClipIndex = 18 Then
+            Result = "Idle1"
+        Else If ClipIndex = 19 Then
+            Result = "Idle2"
+        Else If ClipIndex = 20 Then
+            Result = "Idle2(Shield)"
+        Else If ClipIndex = 21 Then
+            Result = "Jump1Begin"
+        Else If ClipIndex = 22 Then
+            Result = "Jump2Landing"
+        Else If ClipIndex = 23 Then
+            Result = "Jump3Loop"
+        Else If ClipIndex = 24 Then
+            Result = "LeftStrafe"
+        Else If ClipIndex = 25 Then
+            Result = "RightStrafe"
+        Else If ClipIndex = 26 Then
+            Result = "Run2"
+        Else If ClipIndex = 27 Then
+            Result = "Run3"
+        Else If ClipIndex = 28 Then
+            Result = "Walk2"
+        Else If ClipIndex = 29 Then
+            Result = "Walk3"
+        Else If ClipIndex = 30 Then
+            Result = "Walk4"
+        End If
+
+    Else If ProfileIndex = PROFILE_ZARA Then
+
+        If ClipIndex = 0 Then
+            Result = "Idle"
+        Else If ClipIndex = 1 Then
+            Result = "SwordAttack"
+        Else If ClipIndex = 2 Then
+            Result = "SwordAttack2"
+        Else If ClipIndex = 3 Then
+            Result = "BlockImpact"
+        Else If ClipIndex = 4 Then
+            Result = "Hit"
+        Else If ClipIndex = 5 Then
+            Result = "Walk"
+        Else If ClipIndex = 6 Then
+            Result = "Run"
+        Else If ClipIndex = 7 Then
+            Result = "Death"
+        Else If ClipIndex = 8 Then
+            Result = "Death1"
+        Else If ClipIndex = 9 Then
+            Result = "Death2"
+        Else If ClipIndex = 10 Then
+            Result = "Death2W"
+        Else If ClipIndex = 11 Then
+            Result = "Rage"
+        Else If ClipIndex = 12 Then
+            Result = "RageW"
+        Else If ClipIndex = 13 Then
+            Result = "RunUnarmed"
+        Else If ClipIndex = 14 Then
+            Result = "StrafeLeft"
+        Else If ClipIndex = 15 Then
+            Result = "StrafeLeftW"
+        Else If ClipIndex = 16 Then
+            Result = "StrafeRight"
+        Else If ClipIndex = 17 Then
+            Result = "StrafeRightW"
+        Else If ClipIndex = 18 Then
+            Result = "WalkUnarmed"
+        Else If ClipIndex = 19 Then
+            Result = "attack3"
+        Else If ClipIndex = 20 Then
+            Result = "attack4"
+        Else If ClipIndex = 21 Then
+            Result = "attack5"
+        Else If ClipIndex = 22 Then
+            Result = "attack6"
+        Else If ClipIndex = 23 Then
+            Result = "gethit3"
+        Else If ClipIndex = 24 Then
+            Result = "idle2W"
+        Else If ClipIndex = 25 Then
+            Result = "idle3"
+        End If
+
+    Else If ProfileIndex = PROFILE_VRAX Then
+
+        If ClipIndex = 0 Then
+            Result = "Idle"
+        Else If ClipIndex = 1 Then
+            Result = "Attack"
+        Else If ClipIndex = 2 Then
+            Result = "Attack2"
+        Else If ClipIndex = 3 Then
+            Result = "Hit"
+        Else If ClipIndex = 4 Then
+            Result = "Walk"
+        Else If ClipIndex = 5 Then
+            Result = "Run"
+        Else If ClipIndex = 6 Then
+            Result = "Death"
+        Else If ClipIndex = 7 Then
+            Result = "Attack3"
+        Else If ClipIndex = 8 Then
+            Result = "Attack4"
+        Else If ClipIndex = 9 Then
+            Result = "Attack5"
+        Else If ClipIndex = 10 Then
+            Result = "Attack6"
+        Else If ClipIndex = 11 Then
+            Result = "Death2"
+        Else If ClipIndex = 12 Then
+            Result = "GetHit_B"
+        Else If ClipIndex = 13 Then
+            Result = "GetHit_L"
+        Else If ClipIndex = 14 Then
+            Result = "GetHit_R"
+        Else If ClipIndex = 15 Then
+            Result = "Idle2"
+        Else If ClipIndex = 16 Then
+            Result = "Jump1"
+        Else If ClipIndex = 17 Then
+            Result = "RocketLaunch1"
+        Else If ClipIndex = 18 Then
+            Result = "RocketLaunch2"
+        Else If ClipIndex = 19 Then
+            Result = "Turn180"
+        Else If ClipIndex = 20 Then
+            Result = "Walk_B"
+        Else If ClipIndex = 21 Then
+            Result = "Walk_F2"
+        Else If ClipIndex = 22 Then
+            Result = "Walk_L"
+        Else If ClipIndex = 23 Then
+            Result = "Walk_R"
+        End If
+
+    End If
+
+    Return Result
+
+End Function
+
+Public Function UnityBodyMinimum1000(ProfileIndex As Number,
+    ClipName As Text, Frame As Number) As Number
+
+    Dim Result As Number
+
+    If ProfileIndex = PROFILE_VALOR Then
+
+        Result = -5
+
+        If ClipName = "Attack3" Then
+
+            Result = 3
+
+        Else If ClipName = "Attack4" Then
+
+            Result = -5
+
+        Else If ClipName = "Attack5" Then
+
+            Result = -11
+
+        Else If ClipName = "BackWalk1" Then
+
+            Result = -7
+
+        Else If ClipName = "BackWalk2" Then
+
+            Result = -7
+
+        Else If ClipName = "BlockImpact" Then
+
+            Result = -8
+
+        Else If ClipName = "Death" Then
+
+            If Frame < 57 Then
+                Result = -28 + (Max(0, Frame - 0) * (0)) / 57
+            Else If Frame < 60 Then
+                Result = -28 + (Max(0, Frame - 57) * (-33)) / 3
+            Else If Frame < 61 Then
+                Result = -61 + (Max(0, Frame - 60) * (-18)) / 1
+            Else If Frame < 62 Then
+                Result = -79 + (Max(0, Frame - 61) * (-13)) / 1
+            Else If Frame < 63 Then
+                Result = -92 + (Max(0, Frame - 62) * (-19)) / 1
+            Else If Frame < 64 Then
+                Result = -111 + (Max(0, Frame - 63) * (-25)) / 1
+            Else If Frame < 65 Then
+                Result = -136 + (Max(0, Frame - 64) * (-18)) / 1
+            Else If Frame < 66 Then
+                Result = -154 + (Max(0, Frame - 65) * (-4)) / 1
+            Else If Frame < 72 Then
+                Result = -158 + (Max(0, Frame - 66) * (4)) / 6
+            Else If Frame < 74 Then
+                Result = -154 + (Max(0, Frame - 72) * (-2)) / 2
+            Else If Frame < 77 Then
+                Result = -156 + (Max(0, Frame - 74) * (-8)) / 3
+            Else If Frame < 78 Then
+                Result = -164 + (Max(0, Frame - 77) * (-7)) / 1
+            Else If Frame < 79 Then
+                Result = -171 + (Max(0, Frame - 78) * (-12)) / 1
+            Else If Frame < 80 Then
+                Result = -183 + (Max(0, Frame - 79) * (-23)) / 1
+            Else If Frame < 82 Then
+                Result = -206 + (Max(0, Frame - 80) * (-59)) / 2
+            Else If Frame < 83 Then
+                Result = -265 + (Max(0, Frame - 82) * (-24)) / 1
+            Else If Frame < 84 Then
+                Result = -289 + (Max(0, Frame - 83) * (-15)) / 1
+            Else If Frame < 85 Then
+                Result = -304 + (Max(0, Frame - 84) * (-3)) / 1
+            Else If Frame < 86 Then
+                Result = -307 + (Max(0, Frame - 85) * (10)) / 1
+            Else If Frame < 87 Then
+                Result = -297 + (Max(0, Frame - 86) * (21)) / 1
+            Else If Frame < 94 Then
+                Result = -276 + (Max(0, Frame - 87) * (203)) / 7
+            Else If Frame < 95 Then
+                Result = -73 + (Max(0, Frame - 94) * (12)) / 1
+            Else If Frame < 96 Then
+                Result = -61 + (Max(0, Frame - 95) * (-9)) / 1
+            Else If Frame < 100 Then
+                Result = -70 + (Max(0, Frame - 96) * (-16)) / 4
+            Else If Frame < 106 Then
+                Result = -86 + (Max(0, Frame - 100) * (-2)) / 6
+            Else If Frame < 112 Then
+                Result = -88 + (Max(0, Frame - 106) * (1)) / 6
+            Else If Frame < 118 Then
+                Result = -87 + (Max(0, Frame - 112) * (22)) / 6
+            Else If Frame < 120 Then
+                Result = -65 + (Max(0, Frame - 118) * (-1)) / 2
+            Else If Frame < 126 Then
+                Result = -66 + (Max(0, Frame - 120) * (-14)) / 6
+            Else If Frame < 133 Then
+                Result = -80 + (Max(0, Frame - 126) * (10)) / 7
+            Else If Frame < 166 Then
+                Result = -70 + (Max(0, Frame - 133) * (-4)) / 33
+            Else
+                Result = -74
+            End If
+
+        Else If ClipName = "Death2" Then
+
+            If Frame < 57 Then
+                Result = -28 + (Max(0, Frame - 0) * (0)) / 57
+            Else If Frame < 60 Then
+                Result = -28 + (Max(0, Frame - 57) * (-33)) / 3
+            Else If Frame < 61 Then
+                Result = -61 + (Max(0, Frame - 60) * (-18)) / 1
+            Else If Frame < 62 Then
+                Result = -79 + (Max(0, Frame - 61) * (-13)) / 1
+            Else If Frame < 63 Then
+                Result = -92 + (Max(0, Frame - 62) * (-19)) / 1
+            Else If Frame < 64 Then
+                Result = -111 + (Max(0, Frame - 63) * (-25)) / 1
+            Else If Frame < 65 Then
+                Result = -136 + (Max(0, Frame - 64) * (-18)) / 1
+            Else If Frame < 66 Then
+                Result = -154 + (Max(0, Frame - 65) * (-4)) / 1
+            Else If Frame < 72 Then
+                Result = -158 + (Max(0, Frame - 66) * (4)) / 6
+            Else If Frame < 74 Then
+                Result = -154 + (Max(0, Frame - 72) * (-2)) / 2
+            Else If Frame < 77 Then
+                Result = -156 + (Max(0, Frame - 74) * (-8)) / 3
+            Else If Frame < 78 Then
+                Result = -164 + (Max(0, Frame - 77) * (-7)) / 1
+            Else If Frame < 79 Then
+                Result = -171 + (Max(0, Frame - 78) * (-12)) / 1
+            Else If Frame < 80 Then
+                Result = -183 + (Max(0, Frame - 79) * (-23)) / 1
+            Else If Frame < 82 Then
+                Result = -206 + (Max(0, Frame - 80) * (-59)) / 2
+            Else If Frame < 83 Then
+                Result = -265 + (Max(0, Frame - 82) * (-24)) / 1
+            Else If Frame < 84 Then
+                Result = -289 + (Max(0, Frame - 83) * (-15)) / 1
+            Else If Frame < 85 Then
+                Result = -304 + (Max(0, Frame - 84) * (-3)) / 1
+            Else If Frame < 86 Then
+                Result = -307 + (Max(0, Frame - 85) * (10)) / 1
+            Else If Frame < 87 Then
+                Result = -297 + (Max(0, Frame - 86) * (21)) / 1
+            Else If Frame < 94 Then
+                Result = -276 + (Max(0, Frame - 87) * (203)) / 7
+            Else If Frame < 95 Then
+                Result = -73 + (Max(0, Frame - 94) * (12)) / 1
+            Else If Frame < 96 Then
+                Result = -61 + (Max(0, Frame - 95) * (-9)) / 1
+            Else If Frame < 100 Then
+                Result = -70 + (Max(0, Frame - 96) * (-16)) / 4
+            Else If Frame < 106 Then
+                Result = -86 + (Max(0, Frame - 100) * (-2)) / 6
+            Else If Frame < 112 Then
+                Result = -88 + (Max(0, Frame - 106) * (1)) / 6
+            Else If Frame < 118 Then
+                Result = -87 + (Max(0, Frame - 112) * (22)) / 6
+            Else If Frame < 120 Then
+                Result = -65 + (Max(0, Frame - 118) * (-1)) / 2
+            Else If Frame < 126 Then
+                Result = -66 + (Max(0, Frame - 120) * (-14)) / 6
+            Else If Frame < 133 Then
+                Result = -80 + (Max(0, Frame - 126) * (10)) / 7
+            Else If Frame < 166 Then
+                Result = -70 + (Max(0, Frame - 133) * (-4)) / 33
+            Else
+                Result = -74
+            End If
+
+        Else If ClipName = "GetHit2" Then
+
+            Result = -8
+
+        Else If ClipName = "GetHit2(Shield)" Then
+
+            Result = -8
+
+        Else If ClipName = "GetHit3" Then
+
+            If Frame < 16 Then
+                Result = -8 + (Max(0, Frame - 0) * (0)) / 16
+            Else If Frame < 18 Then
+                Result = -8 + (Max(0, Frame - 16) * (-6)) / 2
+            Else If Frame < 31 Then
+                Result = -14 + (Max(0, Frame - 18) * (0)) / 13
+            Else If Frame < 33 Then
+                Result = -14 + (Max(0, Frame - 31) * (5)) / 2
+            Else If Frame < 34 Then
+                Result = -9 + (Max(0, Frame - 33) * (-10)) / 1
+            Else If Frame < 36 Then
+                Result = -19 + (Max(0, Frame - 34) * (-2)) / 2
+            Else If Frame < 37 Then
+                Result = -21 + (Max(0, Frame - 36) * (0)) / 1
+            Else If Frame < 41 Then
+                Result = -21 + (Max(0, Frame - 37) * (13)) / 4
+            Else If Frame < 43 Then
+                Result = -8 + (Max(0, Frame - 41) * (0)) / 2
+            Else If Frame < 45 Then
+                Result = -8 + (Max(0, Frame - 43) * (-6)) / 2
+            Else If Frame < 47 Then
+                Result = -14 + (Max(0, Frame - 45) * (6)) / 2
+            Else If Frame < 161 Then
+                Result = -8 + (Max(0, Frame - 47) * (0)) / 114
+            Else
+                Result = -8
+            End If
+
+        Else If ClipName = "GetHit3(Shield)" Then
+
+            If Frame < 16 Then
+                Result = -8 + (Max(0, Frame - 0) * (0)) / 16
+            Else If Frame < 18 Then
+                Result = -8 + (Max(0, Frame - 16) * (-6)) / 2
+            Else If Frame < 31 Then
+                Result = -14 + (Max(0, Frame - 18) * (0)) / 13
+            Else If Frame < 33 Then
+                Result = -14 + (Max(0, Frame - 31) * (5)) / 2
+            Else If Frame < 34 Then
+                Result = -9 + (Max(0, Frame - 33) * (-10)) / 1
+            Else If Frame < 36 Then
+                Result = -19 + (Max(0, Frame - 34) * (-2)) / 2
+            Else If Frame < 37 Then
+                Result = -21 + (Max(0, Frame - 36) * (0)) / 1
+            Else If Frame < 41 Then
+                Result = -21 + (Max(0, Frame - 37) * (13)) / 4
+            Else If Frame < 43 Then
+                Result = -8 + (Max(0, Frame - 41) * (0)) / 2
+            Else If Frame < 45 Then
+                Result = -8 + (Max(0, Frame - 43) * (-6)) / 2
+            Else If Frame < 47 Then
+                Result = -14 + (Max(0, Frame - 45) * (6)) / 2
+            Else If Frame < 161 Then
+                Result = -8 + (Max(0, Frame - 47) * (0)) / 114
+            Else
+                Result = -8
+            End If
+
+        Else If ClipName = "Hit" Then
+
+            Result = -8
+
+        Else If ClipName = "Idle" Then
+
+            Result = -5
+
+        Else If ClipName = "Idle1" Then
+
+            Result = -5
+
+        Else If ClipName = "Idle2" Then
+
+            Result = -8
+
+        Else If ClipName = "Idle2(Shield)" Then
+
+            Result = -8
+
+        Else If ClipName = "Jump1Begin" Then
+
+            Result = -5
+
+        Else If ClipName = "Jump2Landing" Then
+
+            Result = -5
+
+        Else If ClipName = "Jump3Loop" Then
+
+            Result = -5
+
+        Else If ClipName = "LeftStrafe" Then
+
+            Result = -4
+
+        Else If ClipName = "RightStrafe" Then
+
+            Result = -4
+
+        Else If ClipName = "Run" Then
+
+            Result = -4
+
+        Else If ClipName = "Run2" Then
+
+            Result = -4
+
+        Else If ClipName = "Run3" Then
+
+            Result = -4
+
+        Else If ClipName = "SwordAttack" Then
+
+            Result = -8
+
+        Else If ClipName = "SwordAttack2" Then
+
+            Result = -8
+
+        Else If ClipName = "Walk" Then
+
+            Result = -4
+
+        Else If ClipName = "Walk2" Then
+
+            Result = -4
+
+        Else If ClipName = "Walk3" Then
+
+            Result = -4
+
+        Else If ClipName = "Walk4" Then
+
+            Result = -4
+
+        End If
+
+    Else If ProfileIndex = PROFILE_ZARA Then
+
+        Result = 0
+
+        If ClipName = "attack3" Then
+
+            Result = 32
+
+        Else If ClipName = "attack4" Then
+
+            Result = 1
+
+        Else If ClipName = "attack5" Then
+
+            Result = -10
+
+        Else If ClipName = "attack6" Then
+
+            Result = 1
+
+        Else If ClipName = "BlockImpact" Then
+
+            Result = 15
+
+        Else If ClipName = "Death" Then
+
+            If Frame < 13 Then
+                Result = -10 + (Max(0, Frame - 0) * (-4)) / 13
+            Else If Frame < 18 Then
+                Result = -14 + (Max(0, Frame - 13) * (4)) / 5
+            Else If Frame < 22 Then
+                Result = -10 + (Max(0, Frame - 18) * (-3)) / 4
+            Else If Frame < 31 Then
+                Result = -13 + (Max(0, Frame - 22) * (6)) / 9
+            Else If Frame < 34 Then
+                Result = -7 + (Max(0, Frame - 31) * (-3)) / 3
+            Else If Frame < 36 Then
+                Result = -10 + (Max(0, Frame - 34) * (3)) / 2
+            Else If Frame < 39 Then
+                Result = -7 + (Max(0, Frame - 36) * (-1)) / 3
+            Else If Frame < 41 Then
+                Result = -8 + (Max(0, Frame - 39) * (-5)) / 2
+            Else If Frame < 42 Then
+                Result = -13 + (Max(0, Frame - 41) * (9)) / 1
+            Else If Frame < 43 Then
+                Result = -4 + (Max(0, Frame - 42) * (-12)) / 1
+            Else If Frame < 47 Then
+                Result = -16 + (Max(0, Frame - 43) * (12)) / 4
+            Else If Frame < 49 Then
+                Result = -4 + (Max(0, Frame - 47) * (34)) / 2
+            Else If Frame < 50 Then
+                Result = 30 + (Max(0, Frame - 49) * (-29)) / 1
+            Else If Frame < 51 Then
+                Result = 1 + (Max(0, Frame - 50) * (-10)) / 1
+            Else If Frame < 53 Then
+                Result = -9 + (Max(0, Frame - 51) * (21)) / 2
+            Else If Frame < 54 Then
+                Result = 12 + (Max(0, Frame - 53) * (-7)) / 1
+            Else If Frame < 55 Then
+                Result = 5 + (Max(0, Frame - 54) * (-12)) / 1
+            Else If Frame < 57 Then
+                Result = -7 + (Max(0, Frame - 55) * (3)) / 2
+            Else If Frame < 58 Then
+                Result = -4 + (Max(0, Frame - 57) * (-5)) / 1
+            Else If Frame < 59 Then
+                Result = -9 + (Max(0, Frame - 58) * (-19)) / 1
+            Else If Frame < 60 Then
+                Result = -28 + (Max(0, Frame - 59) * (2)) / 1
+            Else If Frame < 61 Then
+                Result = -26 + (Max(0, Frame - 60) * (21)) / 1
+            Else
+                Result = -5
+            End If
+
+        Else If ClipName = "Death1" Then
+
+            If Frame < 13 Then
+                Result = -10 + (Max(0, Frame - 0) * (-4)) / 13
+            Else If Frame < 18 Then
+                Result = -14 + (Max(0, Frame - 13) * (4)) / 5
+            Else If Frame < 22 Then
+                Result = -10 + (Max(0, Frame - 18) * (-3)) / 4
+            Else If Frame < 31 Then
+                Result = -13 + (Max(0, Frame - 22) * (6)) / 9
+            Else If Frame < 34 Then
+                Result = -7 + (Max(0, Frame - 31) * (-3)) / 3
+            Else If Frame < 36 Then
+                Result = -10 + (Max(0, Frame - 34) * (3)) / 2
+            Else If Frame < 39 Then
+                Result = -7 + (Max(0, Frame - 36) * (-1)) / 3
+            Else If Frame < 41 Then
+                Result = -8 + (Max(0, Frame - 39) * (-5)) / 2
+            Else If Frame < 42 Then
+                Result = -13 + (Max(0, Frame - 41) * (9)) / 1
+            Else If Frame < 43 Then
+                Result = -4 + (Max(0, Frame - 42) * (-12)) / 1
+            Else If Frame < 47 Then
+                Result = -16 + (Max(0, Frame - 43) * (12)) / 4
+            Else If Frame < 48 Then
+                Result = -4 + (Max(0, Frame - 47) * (16)) / 1
+            Else If Frame < 49 Then
+                Result = 12 + (Max(0, Frame - 48) * (-18)) / 1
+            Else If Frame < 50 Then
+                Result = -6 + (Max(0, Frame - 49) * (-5)) / 1
+            Else If Frame < 51 Then
+                Result = -11 + (Max(0, Frame - 50) * (2)) / 1
+            Else If Frame < 53 Then
+                Result = -9 + (Max(0, Frame - 51) * (21)) / 2
+            Else If Frame < 54 Then
+                Result = 12 + (Max(0, Frame - 53) * (-7)) / 1
+            Else If Frame < 55 Then
+                Result = 5 + (Max(0, Frame - 54) * (-12)) / 1
+            Else If Frame < 57 Then
+                Result = -7 + (Max(0, Frame - 55) * (3)) / 2
+            Else If Frame < 58 Then
+                Result = -4 + (Max(0, Frame - 57) * (-5)) / 1
+            Else If Frame < 59 Then
+                Result = -9 + (Max(0, Frame - 58) * (-19)) / 1
+            Else If Frame < 60 Then
+                Result = -28 + (Max(0, Frame - 59) * (2)) / 1
+            Else If Frame < 61 Then
+                Result = -26 + (Max(0, Frame - 60) * (21)) / 1
+            Else
+                Result = -5
+            End If
+
+        Else If ClipName = "Death2" Then
+
+            If Frame < 4 Then
+                Result = -17 + (Max(0, Frame - 0) * (0)) / 4
+            Else If Frame < 6 Then
+                Result = -17 + (Max(0, Frame - 4) * (11)) / 2
+            Else If Frame < 14 Then
+                Result = -6 + (Max(0, Frame - 6) * (1)) / 8
+            Else If Frame < 15 Then
+                Result = -5 + (Max(0, Frame - 14) * (-4)) / 1
+            Else If Frame < 16 Then
+                Result = -9 + (Max(0, Frame - 15) * (-12)) / 1
+            Else If Frame < 17 Then
+                Result = -21 + (Max(0, Frame - 16) * (-7)) / 1
+            Else If Frame < 18 Then
+                Result = -28 + (Max(0, Frame - 17) * (-2)) / 1
+            Else If Frame < 19 Then
+                Result = -30 + (Max(0, Frame - 18) * (5)) / 1
+            Else If Frame < 20 Then
+                Result = -25 + (Max(0, Frame - 19) * (-6)) / 1
+            Else If Frame < 21 Then
+                Result = -31 + (Max(0, Frame - 20) * (-12)) / 1
+            Else If Frame < 22 Then
+                Result = -43 + (Max(0, Frame - 21) * (-2)) / 1
+            Else If Frame < 23 Then
+                Result = -45 + (Max(0, Frame - 22) * (8)) / 1
+            Else If Frame < 24 Then
+                Result = -37 + (Max(0, Frame - 23) * (15)) / 1
+            Else If Frame < 25 Then
+                Result = -22 + (Max(0, Frame - 24) * (4)) / 1
+            Else If Frame < 26 Then
+                Result = -18 + (Max(0, Frame - 25) * (10)) / 1
+            Else If Frame < 27 Then
+                Result = -8 + (Max(0, Frame - 26) * (-68)) / 1
+            Else If Frame < 28 Then
+                Result = -76 + (Max(0, Frame - 27) * (-40)) / 1
+            Else If Frame < 29 Then
+                Result = -116 + (Max(0, Frame - 28) * (36)) / 1
+            Else If Frame < 30 Then
+                Result = -80 + (Max(0, Frame - 29) * (30)) / 1
+            Else If Frame < 31 Then
+                Result = -50 + (Max(0, Frame - 30) * (15)) / 1
+            Else If Frame < 32 Then
+                Result = -35 + (Max(0, Frame - 31) * (-6)) / 1
+            Else If Frame < 33 Then
+                Result = -41 + (Max(0, Frame - 32) * (6)) / 1
+            Else If Frame < 34 Then
+                Result = -35 + (Max(0, Frame - 33) * (19)) / 1
+            Else If Frame < 36 Then
+                Result = -16 + (Max(0, Frame - 34) * (17)) / 2
+            Else If Frame < 37 Then
+                Result = 1 + (Max(0, Frame - 36) * (19)) / 1
+            Else If Frame < 38 Then
+                Result = 20 + (Max(0, Frame - 37) * (10)) / 1
+            Else If Frame < 39 Then
+                Result = 30 + (Max(0, Frame - 38) * (4)) / 1
+            Else If Frame < 40 Then
+                Result = 34 + (Max(0, Frame - 39) * (-34)) / 1
+            Else If Frame < 41 Then
+                Result = 0 + (Max(0, Frame - 40) * (7)) / 1
+            Else If Frame < 43 Then
+                Result = 7 + (Max(0, Frame - 41) * (-1)) / 2
+            Else If Frame < 44 Then
+                Result = 6 + (Max(0, Frame - 43) * (-22)) / 1
+            Else If Frame < 46 Then
+                Result = -16 + (Max(0, Frame - 44) * (-36)) / 2
+            Else If Frame < 47 Then
+                Result = -52 + (Max(0, Frame - 46) * (-1)) / 1
+            Else If Frame < 51 Then
+                Result = -53 + (Max(0, Frame - 47) * (14)) / 4
+            Else If Frame < 54 Then
+                Result = -39 + (Max(0, Frame - 51) * (17)) / 3
+            Else If Frame < 58 Then
+                Result = -22 + (Max(0, Frame - 54) * (-7)) / 4
+            Else If Frame < 63 Then
+                Result = -29 + (Max(0, Frame - 58) * (5)) / 5
+            Else If Frame < 65 Then
+                Result = -24 + (Max(0, Frame - 63) * (-1)) / 2
+            Else
+                Result = -25
+            End If
+
+        Else If ClipName = "Death2W" Then
+
+            If Frame < 4 Then
+                Result = -17 + (Max(0, Frame - 0) * (0)) / 4
+            Else If Frame < 6 Then
+                Result = -17 + (Max(0, Frame - 4) * (11)) / 2
+            Else If Frame < 14 Then
+                Result = -6 + (Max(0, Frame - 6) * (1)) / 8
+            Else If Frame < 15 Then
+                Result = -5 + (Max(0, Frame - 14) * (-4)) / 1
+            Else If Frame < 16 Then
+                Result = -9 + (Max(0, Frame - 15) * (-12)) / 1
+            Else If Frame < 17 Then
+                Result = -21 + (Max(0, Frame - 16) * (-7)) / 1
+            Else If Frame < 18 Then
+                Result = -28 + (Max(0, Frame - 17) * (-2)) / 1
+            Else If Frame < 19 Then
+                Result = -30 + (Max(0, Frame - 18) * (5)) / 1
+            Else If Frame < 20 Then
+                Result = -25 + (Max(0, Frame - 19) * (-6)) / 1
+            Else If Frame < 21 Then
+                Result = -31 + (Max(0, Frame - 20) * (-12)) / 1
+            Else If Frame < 22 Then
+                Result = -43 + (Max(0, Frame - 21) * (-2)) / 1
+            Else If Frame < 23 Then
+                Result = -45 + (Max(0, Frame - 22) * (8)) / 1
+            Else If Frame < 24 Then
+                Result = -37 + (Max(0, Frame - 23) * (15)) / 1
+            Else If Frame < 25 Then
+                Result = -22 + (Max(0, Frame - 24) * (4)) / 1
+            Else If Frame < 26 Then
+                Result = -18 + (Max(0, Frame - 25) * (10)) / 1
+            Else If Frame < 27 Then
+                Result = -8 + (Max(0, Frame - 26) * (-68)) / 1
+            Else If Frame < 28 Then
+                Result = -76 + (Max(0, Frame - 27) * (-40)) / 1
+            Else If Frame < 29 Then
+                Result = -116 + (Max(0, Frame - 28) * (36)) / 1
+            Else If Frame < 30 Then
+                Result = -80 + (Max(0, Frame - 29) * (30)) / 1
+            Else If Frame < 31 Then
+                Result = -50 + (Max(0, Frame - 30) * (15)) / 1
+            Else If Frame < 32 Then
+                Result = -35 + (Max(0, Frame - 31) * (-6)) / 1
+            Else If Frame < 33 Then
+                Result = -41 + (Max(0, Frame - 32) * (6)) / 1
+            Else If Frame < 34 Then
+                Result = -35 + (Max(0, Frame - 33) * (19)) / 1
+            Else If Frame < 35 Then
+                Result = -16 + (Max(0, Frame - 34) * (-14)) / 1
+            Else If Frame < 36 Then
+                Result = -30 + (Max(0, Frame - 35) * (-30)) / 1
+            Else If Frame < 37 Then
+                Result = -60 + (Max(0, Frame - 36) * (22)) / 1
+            Else If Frame < 38 Then
+                Result = -38 + (Max(0, Frame - 37) * (45)) / 1
+            Else If Frame < 39 Then
+                Result = 7 + (Max(0, Frame - 38) * (12)) / 1
+            Else If Frame < 40 Then
+                Result = 19 + (Max(0, Frame - 39) * (-19)) / 1
+            Else If Frame < 41 Then
+                Result = 0 + (Max(0, Frame - 40) * (7)) / 1
+            Else If Frame < 43 Then
+                Result = 7 + (Max(0, Frame - 41) * (-1)) / 2
+            Else If Frame < 44 Then
+                Result = 6 + (Max(0, Frame - 43) * (-22)) / 1
+            Else If Frame < 46 Then
+                Result = -16 + (Max(0, Frame - 44) * (-36)) / 2
+            Else If Frame < 47 Then
+                Result = -52 + (Max(0, Frame - 46) * (-1)) / 1
+            Else If Frame < 51 Then
+                Result = -53 + (Max(0, Frame - 47) * (14)) / 4
+            Else If Frame < 54 Then
+                Result = -39 + (Max(0, Frame - 51) * (17)) / 3
+            Else If Frame < 58 Then
+                Result = -22 + (Max(0, Frame - 54) * (-7)) / 4
+            Else If Frame < 60 Then
+                Result = -29 + (Max(0, Frame - 58) * (1)) / 2
+            Else If Frame < 65 Then
+                Result = -28 + (Max(0, Frame - 60) * (-7)) / 5
+            Else
+                Result = -35
+            End If
+
+        Else If ClipName = "gethit3" Then
+
+            If Frame < 27 Then
+                Result = -13 + (Max(0, Frame - 0) * (0)) / 27
+            Else If Frame < 29 Then
+                Result = -13 + (Max(0, Frame - 27) * (-16)) / 2
+            Else If Frame < 30 Then
+                Result = -29 + (Max(0, Frame - 29) * (4)) / 1
+            Else If Frame < 31 Then
+                Result = -25 + (Max(0, Frame - 30) * (-3)) / 1
+            Else If Frame < 38 Then
+                Result = -28 + (Max(0, Frame - 31) * (0)) / 7
+            Else If Frame < 45 Then
+                Result = -28 + (Max(0, Frame - 38) * (14)) / 7
+            Else If Frame < 47 Then
+                Result = -14 + (Max(0, Frame - 45) * (1)) / 2
+            Else
+                Result = -13
+            End If
+
+        Else If ClipName = "Hit" Then
+
+            Result = 12
+
+        Else If ClipName = "Idle" Then
+
+            Result = 0
+
+        Else If ClipName = "idle2W" Then
+
+            Result = -2
+
+        Else If ClipName = "idle3" Then
+
+            Result = -9
+
+        Else If ClipName = "Rage" Then
+
+            Result = 0
+
+        Else If ClipName = "RageW" Then
+
+            Result = 0
+
+        Else If ClipName = "Run" Then
+
+            Result = 1
+
+        Else If ClipName = "RunUnarmed" Then
+
+            Result = 1
+
+        Else If ClipName = "StrafeLeft" Then
+
+            Result = -3
+
+        Else If ClipName = "StrafeLeftW" Then
+
+            Result = -3
+
+        Else If ClipName = "StrafeRight" Then
+
+            Result = -3
+
+        Else If ClipName = "StrafeRightW" Then
+
+            Result = -3
+
+        Else If ClipName = "SwordAttack" Then
+
+            Result = 32
+
+        Else If ClipName = "SwordAttack2" Then
+
+            Result = 32
+
+        Else If ClipName = "Walk" Then
+
+            Result = 2
+
+        Else If ClipName = "WalkUnarmed" Then
+
+            Result = -6
+
+        End If
+
+    Else If ProfileIndex = PROFILE_VRAX Then
+
+        Result = -32
+
+        If ClipName = "Attack" Then
+
+            Result = -32
+
+        Else If ClipName = "Attack2" Then
+
+            Result = -32
+
+        Else If ClipName = "Attack3" Then
+
+            Result = -32
+
+        Else If ClipName = "Attack4" Then
+
+            Result = -32
+
+        Else If ClipName = "Attack5" Then
+
+            Result = -32
+
+        Else If ClipName = "Attack6" Then
+
+            Result = -32
+
+        Else If ClipName = "Death" Then
+
+            If Frame < 6 Then
+                Result = -32 + (Max(0, Frame - 0) * (-3)) / 6
+            Else If Frame < 7 Then
+                Result = -35 + (Max(0, Frame - 6) * (-14)) / 1
+            Else If Frame < 8 Then
+                Result = -49 + (Max(0, Frame - 7) * (20)) / 1
+            Else If Frame < 11 Then
+                Result = -29 + (Max(0, Frame - 8) * (14)) / 3
+            Else If Frame < 12 Then
+                Result = -15 + (Max(0, Frame - 11) * (-58)) / 1
+            Else If Frame < 14 Then
+                Result = -73 + (Max(0, Frame - 12) * (-3)) / 2
+            Else If Frame < 16 Then
+                Result = -76 + (Max(0, Frame - 14) * (6)) / 2
+            Else If Frame < 17 Then
+                Result = -70 + (Max(0, Frame - 16) * (-10)) / 1
+            Else If Frame < 18 Then
+                Result = -80 + (Max(0, Frame - 17) * (26)) / 1
+            Else If Frame < 19 Then
+                Result = -54 + (Max(0, Frame - 18) * (16)) / 1
+            Else If Frame < 20 Then
+                Result = -38 + (Max(0, Frame - 19) * (-22)) / 1
+            Else If Frame < 21 Then
+                Result = -60 + (Max(0, Frame - 20) * (-5)) / 1
+            Else If Frame < 22 Then
+                Result = -65 + (Max(0, Frame - 21) * (4)) / 1
+            Else If Frame < 25 Then
+                Result = -61 + (Max(0, Frame - 22) * (36)) / 3
+            Else If Frame < 29 Then
+                Result = -25 + (Max(0, Frame - 25) * (0)) / 4
+            Else If Frame < 30 Then
+                Result = -25 + (Max(0, Frame - 29) * (-4)) / 1
+            Else If Frame < 32 Then
+                Result = -29 + (Max(0, Frame - 30) * (4)) / 2
+            Else If Frame < 41 Then
+                Result = -25 + (Max(0, Frame - 32) * (0)) / 9
+            Else
+                Result = -25
+            End If
+
+        Else If ClipName = "Death2" Then
+
+            If Frame < 2 Then
+                Result = -32 + (Max(0, Frame - 0) * (-3)) / 2
+            Else If Frame < 3 Then
+                Result = -35 + (Max(0, Frame - 2) * (-7)) / 1
+            Else If Frame < 5 Then
+                Result = -42 + (Max(0, Frame - 3) * (-22)) / 2
+            Else If Frame < 8 Then
+                Result = -64 + (Max(0, Frame - 5) * (-41)) / 3
+            Else If Frame < 9 Then
+                Result = -105 + (Max(0, Frame - 8) * (-3)) / 1
+            Else If Frame < 10 Then
+                Result = -108 + (Max(0, Frame - 9) * (14)) / 1
+            Else If Frame < 11 Then
+                Result = -94 + (Max(0, Frame - 10) * (25)) / 1
+            Else If Frame < 12 Then
+                Result = -69 + (Max(0, Frame - 11) * (30)) / 1
+            Else If Frame < 13 Then
+                Result = -39 + (Max(0, Frame - 12) * (35)) / 1
+            Else If Frame < 14 Then
+                Result = -4 + (Max(0, Frame - 13) * (29)) / 1
+            Else If Frame < 15 Then
+                Result = 25 + (Max(0, Frame - 14) * (17)) / 1
+            Else If Frame < 16 Then
+                Result = 42 + (Max(0, Frame - 15) * (8)) / 1
+            Else If Frame < 17 Then
+                Result = 50 + (Max(0, Frame - 16) * (-41)) / 1
+            Else If Frame < 18 Then
+                Result = 9 + (Max(0, Frame - 17) * (-178)) / 1
+            Else If Frame < 19 Then
+                Result = -169 + (Max(0, Frame - 18) * (-221)) / 1
+            Else If Frame < 21 Then
+                Result = -390 + (Max(0, Frame - 19) * (-579)) / 2
+            Else If Frame < 22 Then
+                Result = -969 + (Max(0, Frame - 21) * (-164)) / 1
+            Else If Frame < 23 Then
+                Result = -1133 + (Max(0, Frame - 22) * (4)) / 1
+            Else If Frame < 25 Then
+                Result = -1129 + (Max(0, Frame - 23) * (226)) / 2
+            Else If Frame < 26 Then
+                Result = -903 + (Max(0, Frame - 25) * (64)) / 1
+            Else If Frame < 27 Then
+                Result = -839 + (Max(0, Frame - 26) * (45)) / 1
+            Else If Frame < 28 Then
+                Result = -794 + (Max(0, Frame - 27) * (28)) / 1
+            Else If Frame < 29 Then
+                Result = -766 + (Max(0, Frame - 28) * (15)) / 1
+            Else If Frame < 30 Then
+                Result = -751 + (Max(0, Frame - 29) * (6)) / 1
+            Else If Frame < 33 Then
+                Result = -745 + (Max(0, Frame - 30) * (8)) / 3
+            Else If Frame < 39 Then
+                Result = -737 + (Max(0, Frame - 33) * (28)) / 6
+            Else If Frame < 41 Then
+                Result = -709 + (Max(0, Frame - 39) * (3)) / 2
+            Else
+                Result = -706
+            End If
+
+        Else If ClipName = "GetHit_B" Then
+
+            If Frame < 12 Then
+                Result = -32 + (Max(0, Frame - 0) * (0)) / 12
+            Else If Frame < 13 Then
+                Result = -32 + (Max(0, Frame - 12) * (-23)) / 1
+            Else If Frame < 14 Then
+                Result = -55 + (Max(0, Frame - 13) * (9)) / 1
+            Else If Frame < 15 Then
+                Result = -46 + (Max(0, Frame - 14) * (14)) / 1
+            Else If Frame < 18 Then
+                Result = -32 + (Max(0, Frame - 15) * (0)) / 3
+            Else If Frame < 19 Then
+                Result = -32 + (Max(0, Frame - 18) * (-74)) / 1
+            Else If Frame < 20 Then
+                Result = -106 + (Max(0, Frame - 19) * (-22)) / 1
+            Else If Frame < 21 Then
+                Result = -128 + (Max(0, Frame - 20) * (26)) / 1
+            Else If Frame < 22 Then
+                Result = -102 + (Max(0, Frame - 21) * (40)) / 1
+            Else If Frame < 23 Then
+                Result = -62 + (Max(0, Frame - 22) * (30)) / 1
+            Else If Frame < 31 Then
+                Result = -32 + (Max(0, Frame - 23) * (0)) / 8
+            Else
+                Result = -32
+            End If
+
+        Else If ClipName = "GetHit_L" Then
+
+            If Frame < 2 Then
+                Result = -32 + (Max(0, Frame - 0) * (-1)) / 2
+            Else If Frame < 7 Then
+                Result = -33 + (Max(0, Frame - 2) * (-13)) / 5
+            Else If Frame < 31 Then
+                Result = -46 + (Max(0, Frame - 7) * (14)) / 24
+            Else
+                Result = -32
+            End If
+
+        Else If ClipName = "GetHit_R" Then
+
+            If Frame < 2 Then
+                Result = -32 + (Max(0, Frame - 0) * (-1)) / 2
+            Else If Frame < 9 Then
+                Result = -33 + (Max(0, Frame - 2) * (-14)) / 7
+            Else If Frame < 16 Then
+                Result = -47 + (Max(0, Frame - 9) * (1)) / 7
+            Else If Frame < 31 Then
+                Result = -46 + (Max(0, Frame - 16) * (14)) / 15
+            Else
+                Result = -32
+            End If
+
+        Else If ClipName = "Hit" Then
+
+            If Frame < 2 Then
+                Result = -32 + (Max(0, Frame - 0) * (-2)) / 2
+            Else If Frame < 6 Then
+                Result = -34 + (Max(0, Frame - 2) * (-26)) / 4
+            Else If Frame < 8 Then
+                Result = -60 + (Max(0, Frame - 6) * (-7)) / 2
+            Else If Frame < 11 Then
+                Result = -67 + (Max(0, Frame - 8) * (0)) / 3
+            Else If Frame < 15 Then
+                Result = -67 + (Max(0, Frame - 11) * (5)) / 4
+            Else If Frame < 24 Then
+                Result = -62 + (Max(0, Frame - 15) * (24)) / 9
+            Else If Frame < 31 Then
+                Result = -38 + (Max(0, Frame - 24) * (6)) / 7
+            Else
+                Result = -32
+            End If
+
+        Else If ClipName = "Idle" Then
+
+            Result = -32
+
+        Else If ClipName = "Idle2" Then
+
+            Result = -32
+
+        Else If ClipName = "Jump1" Then
+
+            Result = -32
+
+        Else If ClipName = "RocketLaunch1" Then
+
+            Result = -32
+
+        Else If ClipName = "RocketLaunch2" Then
+
+            Result = -32
+
+        Else If ClipName = "Run" Then
+
+            Result = -18
+
+        Else If ClipName = "Turn180" Then
+
+            Result = -32
+
+        Else If ClipName = "Walk" Then
+
+            Result = -25
+
+        Else If ClipName = "Walk_B" Then
+
+            Result = -25
+
+        Else If ClipName = "Walk_F2" Then
+
+            Result = -25
+
+        Else If ClipName = "Walk_L" Then
+
+            Result = -25
+
+        Else If ClipName = "Walk_R" Then
+
+            Result = -25
+
+        End If
+
     End If
 
     Return Result

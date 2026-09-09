@@ -35,6 +35,12 @@ Public Sub SelectCharacterTab(ByRef Value As State, Index As Number)
         Value.ProfileIndex = ViewerProfiles.PROFILE_ORIN
     Else If Index = 2 Then
         Value.ProfileIndex = ViewerProfiles.PROFILE_DRAGON
+    Else If Index = 4 Then
+        Value.ProfileIndex = ViewerProfiles.PROFILE_VALOR
+    Else If Index = 5 Then
+        Value.ProfileIndex = ViewerProfiles.PROFILE_ZARA
+    Else If Index = 6 Then
+        Value.ProfileIndex = ViewerProfiles.PROFILE_VRAX
     End If
 
 End Sub
@@ -50,7 +56,8 @@ Public Function ShouldSelectCharacterTab(ByRef Value As State,
         Not Value.ViewerError And
         (PartyEnabled Or
         Value.DragonInspection Or
-        ViewerProfiles.IsPartyCharacter(Value.ProfileIndex))) Then
+        ViewerProfiles.IsPartyCharacter(Value.ProfileIndex) Or
+        ViewerProfiles.IsUnityCharacter(Value.ProfileIndex))) Then
         Result = False
     End If
 
@@ -69,6 +76,12 @@ Public Sub CycleProfile(ByRef Value As State)
     Else If Value.ProfileIndex = ViewerProfiles.PROFILE_DRAGON Then
         Value.SelectedCharacterTab = 2
         Value.DragonInspection = True
+    Else If Value.ProfileIndex = ViewerProfiles.PROFILE_VALOR Then
+        Value.SelectedCharacterTab = 4
+    Else If Value.ProfileIndex = ViewerProfiles.PROFILE_ZARA Then
+        Value.SelectedCharacterTab = 5
+    Else If Value.ProfileIndex = ViewerProfiles.PROFILE_VRAX Then
+        Value.SelectedCharacterTab = 6
     End If
 
 End Sub

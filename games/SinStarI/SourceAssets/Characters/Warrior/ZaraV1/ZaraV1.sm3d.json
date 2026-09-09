@@ -1,0 +1,84 @@
+{
+  "version": 1,
+  "sampleRate": 30,
+  "clips": {
+    "SwordAttack": {
+      "loop": false
+    },
+    "SwordAttack2": {
+      "loop": false
+    },
+    "attack3": {
+      "loop": false
+    },
+    "attack4": {
+      "loop": false
+    },
+    "attack5": {
+      "loop": false
+    },
+    "attack6": {
+      "loop": false
+    },
+    "Death1": {
+      "loop": false
+    },
+    "Death": {
+      "loop": false
+    },
+    "Death2": {
+      "loop": false
+    },
+    "Death2W": {
+      "loop": false
+    },
+    "Hit": {
+      "loop": false
+    },
+    "BlockImpact": {
+      "loop": false
+    },
+    "gethit3": {
+      "loop": false
+    },
+    "Idle": {
+      "loop": true
+    },
+    "idle2W": {
+      "loop": false
+    },
+    "idle3": {
+      "loop": false
+    },
+    "Rage": {
+      "loop": false
+    },
+    "RageW": {
+      "loop": false
+    },
+    "RunUnarmed": {
+      "loop": true
+    },
+    "Run": {
+      "loop": true
+    },
+    "StrafeLeft": {
+      "loop": false
+    },
+    "StrafeLeftW": {
+      "loop": false
+    },
+    "StrafeRight": {
+      "loop": false
+    },
+    "StrafeRightW": {
+      "loop": false
+    },
+    "WalkUnarmed": {
+      "loop": true
+    },
+    "Walk": {
+      "loop": true
+    }
+  }
+}

@@ -295,7 +295,7 @@ End Function
 
 Public Function AutoFit(Value As CharacterViewer.Profile, Bounds As Character3D.Bounds3D,
     Optional ViewportWidth As Number = 0, Optional ViewportHeight As Number = 0,
-    Optional FovDegrees As Double = 55.0) As Framing
+    Optional FovDegrees As Double = 55.0, Optional MaximumScalePercent As Number = 10000) As Framing
 
     Dim Result As Framing
     Dim Scale As Double
@@ -311,7 +311,8 @@ Public Function AutoFit(Value As CharacterViewer.Profile, Bounds As Character3D.
         Return Result
     End If
 
-    Result.ScalePercent = Min(10000, Max(1, Value.DesiredWorldHeight * 100000 / Bounds.Size.Y))
+    MaximumScalePercent = Min(Character3D.CHARACTER_MAX_SCALE_PERCENT, Max(1, MaximumScalePercent))
+    Result.ScalePercent = Min(MaximumScalePercent, Max(1, Value.DesiredWorldHeight * 100000 / Bounds.Size.Y))
     Scale = ToDouble(Result.ScalePercent) / 100000.0
     Result.PositionX = -ToDouble(Bounds.Center.X) * Scale
     Result.PositionY = -ToDouble(Bounds.Minimum.Y) * Scale + ToDouble(Value.GroundOffset)

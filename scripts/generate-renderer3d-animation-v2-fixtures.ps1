@@ -60,7 +60,8 @@ function New-ActorGlb([int]$BoneCount) {
         $position = Add-Floats ([single[]]@(-0.6, 0.0, 0.0, 0.6, 0.0, 0.0, 0.0, 1.6, 0.0)) 'VEC3' 3 34962
         $normal = Add-Floats ([single[]]@(0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0)) 'VEC3' 3 34962
         $uv = Add-Floats ([single[]]@(0.0, 1.0, 1.0, 1.0, 0.5, 0.0)) 'VEC2' 3 34962
-        $joints = Add-UShorts ([uint16[]]@(0, 0, 0, 0, 0, 0, 0, 0, 67, 0, 0, 0)) 'VEC4' 3 34962
+        $weightedBone = if ($BoneCount -ge 192) { $BoneCount - 1 } else { 67 }
+        $joints = Add-UShorts ([uint16[]]@(0, 0, 0, 0, 0, 0, 0, 0, $weightedBone, 0, 0, 0)) 'VEC4' 3 34962
         $weights = Add-UShorts ([uint16[]]@(65535, 0, 0, 0, 65535, 0, 0, 0, 65535, 0, 0, 0)) 'VEC4' 3 34962 $true
         $indices = Add-UShorts ([uint16[]]@(0, 1, 2)) 'SCALAR' 3 34963
 
@@ -91,7 +92,7 @@ function New-ActorGlb([int]$BoneCount) {
         }
 
         $clipNames = @('Idle', 'Walk', 'Attack', 'Hit', 'Victory')
-        $clipTargets = @(1, 0, [Math]::Min(67, $BoneCount - 1), [Math]::Min(10, $BoneCount - 1), [Math]::Min(20, $BoneCount - 1))
+        $clipTargets = @(1, 0, $weightedBone, [Math]::Min(10, $BoneCount - 1), [Math]::Min(20, $BoneCount - 1))
         $clipPaths = @('translation', 'translation', 'rotation', 'rotation', 'translation')
         $animations = @()
         for ($clip = 0; $clip -lt $clipNames.Count; $clip++) {
@@ -482,6 +483,8 @@ $articulatedDescriptorBytes = $utf8.GetBytes(($articulatedDescriptorObject | Con
 Publish-Bytes (Join-Path $sourceRoot 'AnimationActor68.glb') (New-ActorGlb 68)
 Publish-Bytes (Join-Path $sourceRoot 'AnimationActor128.glb') (New-ActorGlb 128)
 Publish-Bytes (Join-Path $sourceRoot 'AnimationActor129.glb') (New-ActorGlb 129)
+Publish-Bytes (Join-Path $sourceRoot 'AnimationActor192.glb') (New-ActorGlb 192)
+Publish-Bytes (Join-Path $sourceRoot 'AnimationActor193.glb') (New-ActorGlb 193)
 Publish-Bytes (Join-Path $sourceRoot 'AnimationActor68.sm3d.json') $descriptorBytes
 Publish-Bytes (Join-Path $sourceRoot 'AnimationArticulated.glb') (New-ArticulatedActorGlb)
 Publish-Bytes (Join-Path $sourceRoot 'AnimationArticulatedMissingTexture.glb') (New-ArticulatedActorGlb -MissingTexture)
@@ -495,6 +498,8 @@ if (-not $Check) {
     if ($LASTEXITCODE -ne 0) { throw 'The 68-bone animation fixture conversion failed.' }
     & $assetTool model (Join-Path $sourceRoot 'AnimationActor128.glb') -o (Join-Path $assetRoot 'AnimationActor128.sm3d')
     if ($LASTEXITCODE -ne 0) { throw 'The 128-bone animation fixture conversion failed.' }
+    & $assetTool model (Join-Path $sourceRoot 'AnimationActor192.glb') -o (Join-Path $assetRoot 'AnimationActor192.sm3d')
+    if ($LASTEXITCODE -ne 0) { throw 'The 192-bone animation fixture conversion failed.' }
     & $assetTool model (Join-Path $sourceRoot 'AnimationArticulated.glb') --descriptor (Join-Path $sourceRoot 'AnimationArticulated.sm3d.json') -o (Join-Path $assetRoot 'AnimationArticulated.sm3d')
     if ($LASTEXITCODE -ne 0) { throw 'The articulated animation fixture conversion failed.' }
     & $assetTool model (Join-Path $sourceRoot 'AnimationArticulatedMissingTexture.glb') --descriptor (Join-Path $sourceRoot 'AnimationArticulated.sm3d.json') -o (Join-Path $assetRoot 'AnimationArticulatedMissingTexture.sm3d')
@@ -516,18 +521,22 @@ else {
     try {
         $temporary68 = Join-Path $temporaryRoot 'AnimationActor68.sm3d'
         $temporary128 = Join-Path $temporaryRoot 'AnimationActor128.sm3d'
+        $temporary192 = Join-Path $temporaryRoot 'AnimationActor192.sm3d'
         $temporaryArticulated = Join-Path $temporaryRoot 'AnimationArticulated.sm3d'
         $temporaryMissingTexture = Join-Path $temporaryRoot 'AnimationArticulatedMissingTexture.sm3d'
         & $assetTool model (Join-Path $sourceRoot 'AnimationActor68.glb') --descriptor (Join-Path $sourceRoot 'AnimationActor68.sm3d.json') -o $temporary68
         if ($LASTEXITCODE -ne 0) { throw 'The 68-bone deterministic check conversion failed.' }
         & $assetTool model (Join-Path $sourceRoot 'AnimationActor128.glb') -o $temporary128
         if ($LASTEXITCODE -ne 0) { throw 'The 128-bone deterministic check conversion failed.' }
+        & $assetTool model (Join-Path $sourceRoot 'AnimationActor192.glb') -o $temporary192
+        if ($LASTEXITCODE -ne 0) { throw 'The 192-bone deterministic check conversion failed.' }
         & $assetTool model (Join-Path $sourceRoot 'AnimationArticulated.glb') --descriptor (Join-Path $sourceRoot 'AnimationArticulated.sm3d.json') -o $temporaryArticulated
         if ($LASTEXITCODE -ne 0) { throw 'The articulated deterministic check conversion failed.' }
         & $assetTool model (Join-Path $sourceRoot 'AnimationArticulatedMissingTexture.glb') --descriptor (Join-Path $sourceRoot 'AnimationArticulated.sm3d.json') -o $temporaryMissingTexture
         if ($LASTEXITCODE -ne 0) { throw 'The articulated missing-texture deterministic check conversion failed.' }
         Assert-EqualFiles (Join-Path $assetRoot 'AnimationActor68.sm3d') $temporary68
         Assert-EqualFiles (Join-Path $assetRoot 'AnimationActor128.sm3d') $temporary128
+        Assert-EqualFiles (Join-Path $assetRoot 'AnimationActor192.sm3d') $temporary192
         Assert-EqualFiles (Join-Path $assetRoot 'AnimationArticulated.sm3d') $temporaryArticulated
         Assert-EqualFiles (Join-Path $assetRoot 'AnimationArticulatedMissingTexture.sm3d') $temporaryMissingTexture
         Assert-EqualFiles (Join-Path $assetRoot 'AnimationActor68.sm3d') (Join-Path $labAssetRoot 'AnimationActor68.sm3d')

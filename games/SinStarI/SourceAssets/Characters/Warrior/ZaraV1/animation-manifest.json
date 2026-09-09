@@ -1,0 +1,184 @@
+[
+  {
+    "name": "SwordAttack",
+    "source": "Assets\\CyberJagg5\\Animations\\CyberJagg5@attack1.fbx",
+    "frames": 61,
+    "frameRate": 30,
+    "bodyMinimumYFrame0": 0.03229070082306862
+  },
+  {
+    "name": "SwordAttack2",
+    "source": "Assets\\CyberJagg5\\Animations\\CyberJagg5@attack2.fbx",
+    "frames": 61,
+    "frameRate": 30,
+    "bodyMinimumYFrame0": 0.0322902575135231
+  },
+  {
+    "name": "attack3",
+    "source": "Assets\\CyberJagg5\\Animations\\CyberJagg5@attack3.fbx",
+    "frames": 61,
+    "frameRate": 30,
+    "bodyMinimumYFrame0": 0.0322975292801857
+  },
+  {
+    "name": "attack4",
+    "source": "Assets\\CyberJagg5\\Animations\\CyberJagg5@attack4.fbx",
+    "frames": 74,
+    "frameRate": 30,
+    "bodyMinimumYFrame0": 0.001307120081037283
+  },
+  {
+    "name": "attack5",
+    "source": "Assets\\CyberJagg5\\Animations\\CyberJagg5@attack5.fbx",
+    "frames": 56,
+    "frameRate": 30,
+    "bodyMinimumYFrame0": -0.010480866767466068
+  },
+  {
+    "name": "attack6",
+    "source": "Assets\\CyberJagg5\\Animations\\CyberJagg5@attack6.fbx",
+    "frames": 57,
+    "frameRate": 30,
+    "bodyMinimumYFrame0": 0.0008156825206242502
+  },
+  {
+    "name": "Death1",
+    "source": "Assets\\CyberJagg5\\Animations\\CyberJagg5@Death1.fbx",
+    "frames": 61,
+    "frameRate": 30,
+    "bodyMinimumYFrame0": -0.009997622109949589
+  },
+  {
+    "name": "Death",
+    "source": "Assets\\CyberJagg5\\Animations\\CyberJagg5@Death1W.fbx",
+    "frames": 61,
+    "frameRate": 30,
+    "bodyMinimumYFrame0": -0.009997622109949589
+  },
+  {
+    "name": "Death2",
+    "source": "Assets\\CyberJagg5\\Animations\\CyberJagg5@Death2.fbx",
+    "frames": 65,
+    "frameRate": 30,
+    "bodyMinimumYFrame0": -0.017555056139826775
+  },
+  {
+    "name": "Death2W",
+    "source": "Assets\\CyberJagg5\\Animations\\CyberJagg5@Death2W.fbx",
+    "frames": 65,
+    "frameRate": 30,
+    "bodyMinimumYFrame0": -0.017555056139826775
+  },
+  {
+    "name": "Hit",
+    "source": "Assets\\CyberJagg5\\Animations\\CyberJagg5@gethit1.fbx",
+    "frames": 18,
+    "frameRate": 30,
+    "bodyMinimumYFrame0": 0.012039574794471264
+  },
+  {
+    "name": "BlockImpact",
+    "source": "Assets\\CyberJagg5\\Animations\\CyberJagg5@gethit2.fbx",
+    "frames": 45,
+    "frameRate": 30,
+    "bodyMinimumYFrame0": 0.015719782561063766
+  },
+  {
+    "name": "gethit3",
+    "source": "Assets\\CyberJagg5\\Animations\\CyberJagg5@gethit3.fbx",
+    "frames": 47,
+    "frameRate": 30,
+    "bodyMinimumYFrame0": -0.013396892696619034
+  },
+  {
+    "name": "Idle",
+    "source": "Assets\\CyberJagg5\\Animations\\CyberJagg5@Idle1W.fbx",
+    "frames": 49,
+    "frameRate": 30,
+    "bodyMinimumYFrame0": 0.0005181313608773053
+  },
+  {
+    "name": "idle2W",
+    "source": "Assets\\CyberJagg5\\Animations\\CyberJagg5@idle2W.fbx",
+    "frames": 97,
+    "frameRate": 30,
+    "bodyMinimumYFrame0": -0.002039408776909113
+  },
+  {
+    "name": "idle3",
+    "source": "Assets\\CyberJagg5\\Animations\\CyberJagg5@idle3.fbx",
+    "frames": 361,
+    "frameRate": 30,
+    "bodyMinimumYFrame0": -0.009141309186816216
+  },
+  {
+    "name": "Rage",
+    "source": "Assets\\CyberJagg5\\Animations\\CyberJagg5@Rage.fbx",
+    "frames": 58,
+    "frameRate": 30,
+    "bodyMinimumYFrame0": -8.438786608166993e-05
+  },
+  {
+    "name": "RageW",
+    "source": "Assets\\CyberJagg5\\Animations\\CyberJagg5@RageW.fbx",
+    "frames": 58,
+    "frameRate": 30,
+    "bodyMinimumYFrame0": -8.375904144486412e-05
+  },
+  {
+    "name": "RunUnarmed",
+    "source": "Assets\\CyberJagg5\\Animations\\CyberJagg5@Run.fbx",
+    "frames": 21,
+    "frameRate": 30,
+    "bodyMinimumYFrame0": 0.0006775815854780376
+  },
+  {
+    "name": "Run",
+    "source": "Assets\\CyberJagg5\\Animations\\CyberJagg5@RunW.fbx",
+    "frames": 21,
+    "frameRate": 30,
+    "bodyMinimumYFrame0": 0.0006771810003556311
+  },
+  {
+    "name": "StrafeLeft",
+    "source": "Assets\\CyberJagg5\\Animations\\CyberJagg5@StrafeLeft.fbx",
+    "frames": 26,
+    "frameRate": 30,
+    "bodyMinimumYFrame0": -0.003567754989489913
+  },
+  {
+    "name": "StrafeLeftW",
+    "source": "Assets\\CyberJagg5\\Animations\\CyberJagg5@StrafeLeftW.fbx",
+    "frames": 26,
+    "frameRate": 30,
+    "bodyMinimumYFrame0": -0.003568100742995739
+  },
+  {
+    "name": "StrafeRight",
+    "source": "Assets\\CyberJagg5\\Animations\\CyberJagg5@StrafeRight.fbx",
+    "frames": 34,
+    "frameRate": 30,
+    "bodyMinimumYFrame0": -0.0032530936878174543
+  },
+  {
+    "name": "StrafeRightW",
+    "source": "Assets\\CyberJagg5\\Animations\\CyberJagg5@StrafeRightW.fbx",
+    "frames": 34,
+    "frameRate": 30,
+    "bodyMinimumYFrame0": -0.0032531023025512695
+  },
+  {
+    "name": "WalkUnarmed",
+    "source": "Assets\\CyberJagg5\\Animations\\CyberJagg5@Walk.fbx",
+    "frames": 31,
+    "frameRate": 30,
+    "bodyMinimumYFrame0": -0.00583114568144083
+  },
+  {
+    "name": "Walk",
+    "source": "Assets\\CyberJagg5\\Animations\\CyberJagg5@WalkW.fbx",
+    "frames": 52,
+    "frameRate": 30,
+    "bodyMinimumYFrame0": 0.0020927893929183483
+  }
+]

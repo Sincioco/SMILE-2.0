@@ -63,6 +63,62 @@ function Get-AssetHashes([string]$Root) {
     })
 }
 
+function Test-TexturePixelPlacement([int]$Dpi) {
+    Add-Type -AssemblyName System.Drawing
+    $dpiRoot = Join-Path $resolvedTemporaryRoot "dpi-$Dpi"
+    [System.IO.Directory]::CreateDirectory($dpiRoot) | Out-Null
+    $texturePath = Join-Path $dpiRoot 'Atlas.png'
+    $atlas = [System.Drawing.Bitmap]::new(16, 16)
+    try {
+        $atlas.SetResolution($Dpi, $Dpi)
+        for ($y = 0; $y -lt 16; $y++) {
+            for ($x = 0; $x -lt 16; $x++) {
+                $atlas.SetPixel($x, $y, [System.Drawing.Color]::FromArgb(
+                    255, $x * 16 + 7, $y * 16 + 3, (($x + $y) % 16) * 16 + 5))
+            }
+        }
+        $atlas.Save($texturePath, [System.Drawing.Imaging.ImageFormat]::Png)
+        $fixturePath = Join-Path $repositoryRoot 'examples\Renderer3DModelTests\Source\PbrTriangle.gltf'
+        $fixture = Get-Content -LiteralPath $fixturePath -Raw | ConvertFrom-Json
+        $fixture.materials = @(@{
+            name = 'DpiAtlas'
+            pbrMetallicRoughness = @{ baseColorTexture = @{ index = 0 } }
+        })
+        $fixture.textures = @(@{ source = 0 })
+        $fixture.images = @(@{ uri = 'Atlas.png' })
+        $fixture | ConvertTo-Json -Depth 30 | Set-Content -LiteralPath (Join-Path $dpiRoot 'Atlas.gltf')
+        Set-Content -LiteralPath (Join-Path $dpiRoot 'Program.smile') -Value 'Print "DPI Atlas Test"'
+        $dpiProject = Join-Path $dpiRoot 'Dpi.smileproj'
+        Set-Content -LiteralPath $dpiProject -Value @'
+<SmileProject Version="1.0">
+  <PropertyGroup><ProjectKind>Console</ProjectKind><StartupFile>Program.smile</StartupFile></PropertyGroup>
+  <ItemGroup>
+    <SmileSource Include="Program.smile" StartupOnly="true" />
+    <Model3DAsset Include="Atlas.gltf" LogicalPath="Assets\Atlas.sm3d"
+                  TextureOutputDirectory="Assets\Textures" Profile="Static" />
+  </ItemGroup>
+</SmileProject>
+'@
+        $dpiOutput = Join-Path $dpiRoot 'web'
+        $null = Invoke-Compiler @('--project', $dpiProject, '--target', 'web',
+            '--configuration', 'Release', '--output-dir', $dpiOutput) (Join-Path $dpiRoot 'cook.log')
+        $cookedPath = Get-ChildItem -LiteralPath (Join-Path $dpiOutput 'Assets\Textures') -Filter '*.png'
+        $cooked = [System.Drawing.Bitmap]::new($cookedPath.FullName)
+        try {
+            if ($cooked.Width -ne 16 -or $cooked.Height -ne 16) { throw 'Atlas dimensions changed.' }
+            for ($y = 0; $y -lt 16; $y++) {
+                for ($x = 0; $x -lt 16; $x++) {
+                    if ($cooked.GetPixel($x, $y).ToArgb() -ne $atlas.GetPixel($x, $y).ToArgb()) {
+                        throw "$Dpi DPI atlas pixel ($x, $y) was resized, cropped, or changed during cooking."
+                    }
+                }
+            }
+        }
+        finally { $cooked.Dispose() }
+    }
+    finally { $atlas.Dispose() }
+}
+
 if (Test-Path -LiteralPath $resolvedTemporaryRoot) {
     Remove-Item -LiteralPath $resolvedTemporaryRoot -Recurse -Force
 }
@@ -258,7 +314,10 @@ try {
         throw 'Logical-path invalidation did not cook and atomically remove the stale generated model.'
     }
 
-    Write-Host 'Model3DAsset cooking tests passed.'
+    Test-TexturePixelPlacement 72
+    Test-TexturePixelPlacement 144
+
+    Write-Host 'Model3DAsset cooking tests passed, including exact 72/144 DPI atlas pixels.'
     Write-Host "Cold build: COOK in $($coldTimer.ElapsedMilliseconds) ms"
     Write-Host "Second target: CACHE-HIT in $($cacheHitTimer.ElapsedMilliseconds) ms"
     Write-Host 'Corrupt entry: CACHE-RECOVER'

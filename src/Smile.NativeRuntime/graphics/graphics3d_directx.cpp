@@ -32,7 +32,7 @@
 #define SMILE_3D_MAX_BONES 32
 #define SMILE_3D_MAX_ANIMATION_EVENTS 16
 #define SMILE_3D_MAX_MODEL_ANIMATION_NODES 256
-#define SMILE_3D_MAX_MODEL_ANIMATION_BONES 128
+#define SMILE_3D_MAX_MODEL_ANIMATION_BONES 192
 #define SMILE_3D_MAX_MODEL_ANIMATION_CLIPS 64
 #define SMILE_3D_MAX_MODEL_ANIMATION_SOCKETS 64
 #define SMILE_3D_MAX_PENDING_MODEL_EVENTS 32
@@ -4983,7 +4983,7 @@ static int smile_3d_create_pipeline(void)
 {
     static const char* vertex_source =
         "cbuffer C:register(b0){row_major float4x4 model;row_major float4x4 mvp;float4 tint;float4 material;float4 animation;row_major float4x4 shadowMvp;float4 shadow;float4 output;float4 shadowLight;float4 reflection;float4 reflectionViewport;row_major float4x4 bones[32];}"
-        "cbuffer B:register(b1){row_major float4x4 modelBones[128];}"
+        "cbuffer B:register(b1){row_major float4x4 modelBones[192];}"
         "struct I{float3 p:POSITION;float3 n:NORMAL;float2 uv:TEXCOORD0;float4 j:BLENDINDICES;float4 w:BLENDWEIGHT;};"
         "struct O{float4 p:SV_POSITION;float3 n:NORMAL;float2 uv:TEXCOORD0;float3 world:TEXCOORD1;float4 sp:TEXCOORD2;};"
         "O main(I i){O o;float4 p=float4(i.p,1);float3 n=i.n;if(animation.x>.5){float4x4 s;"
@@ -5007,7 +5007,7 @@ static int smile_3d_create_pipeline(void)
         "float4 cameraPosition;float4 ambientLight;float4 directionalDirection;float4 directionalColor;"
         "float4 localPositionType[4];float4 localDirectionRange[4];float4 localColorIntensity[4];float4 localCone[4];"
         "float4 animation;row_major float4x4 shadowMvp;float4 shadow;float4 output;float4 reflection;float4 reflectionViewport;row_major float4x4 bones[32];}"
-        "cbuffer B:register(b1){row_major float4x4 modelBones[128];}"
+        "cbuffer B:register(b1){row_major float4x4 modelBones[192];}"
         "struct I{float3 p:POSITION;float3 n:NORMAL;float2 uv:TEXCOORD0;float4 j:BLENDINDICES;float4 w:BLENDWEIGHT;float4 t:TANGENT;};"
         "struct O{float4 p:SV_POSITION;float3 world:TEXCOORD1;float3 n:NORMAL;float4 t:TANGENT;float2 uv:TEXCOORD0;float4 sp:TEXCOORD2;};"
         "O main(I i){O o;float4 p=float4(i.p,1);float3 n=i.n;float4 t=i.t;if(animation.x>.5){float4x4 s;"
@@ -5056,7 +5056,7 @@ static int smile_3d_create_pipeline(void)
         "float3 outputColor=output.x>.5?finalColor:saturate(ApplyLdrOutputTransfer(finalColor));if(reflection.z>.0001){uint rw,rh;reflectionTexture.GetDimensions(rw,rh);float2 screenUv=saturate((p.xy-reflectionViewport.xy)/reflectionViewport.zw);float2 texel=float2(1.0/max((float)rw,1),1.0/max((float)rh,1))*reflection.w*2;float3 reflected=reflectionTexture.Sample(reflectionSampler,screenUv).rgb*.4;reflected+=(reflectionTexture.Sample(reflectionSampler,screenUv+float2(texel.x,0)).rgb+reflectionTexture.Sample(reflectionSampler,screenUv-float2(texel.x,0)).rgb+reflectionTexture.Sample(reflectionSampler,screenUv+float2(0,texel.y)).rgb+reflectionTexture.Sample(reflectionSampler,screenUv-float2(0,texel.y)).rgb)*.15;outputColor=lerp(outputColor,reflected,reflection.z);}return float4(outputColor,base.a);}";
     static const char* shadow_vertex_source =
         "cbuffer S:register(b0){row_major float4x4 mvp;float4 alpha;float4 animation;row_major float4x4 bones[32];}"
-        "cbuffer B:register(b1){row_major float4x4 modelBones[128];}"
+        "cbuffer B:register(b1){row_major float4x4 modelBones[192];}"
         "struct I{float3 p:POSITION;float3 n:NORMAL;float2 uv:TEXCOORD0;float4 j:BLENDINDICES;float4 w:BLENDWEIGHT;};"
         "struct O{float4 p:SV_POSITION;float2 uv:TEXCOORD0;};"
         "O main(I i){O o;float4 p=float4(i.p,1);if(animation.x>.5){float4x4 s;if(animation.x>1.5)s=modelBones[(uint)i.j.x]*i.w.x+modelBones[(uint)i.j.y]*i.w.y+modelBones[(uint)i.j.z]*i.w.z+modelBones[(uint)i.j.w]*i.w.w;else s=bones[(uint)i.j.x]*i.w.x+bones[(uint)i.j.y]*i.w.y+bones[(uint)i.j.z]*i.w.z+bones[(uint)i.j.w]*i.w.w;p=mul(p,s);}o.p=mul(p,mvp);o.uv=i.uv;return o;}";
