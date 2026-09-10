@@ -47,6 +47,8 @@ reports Web asset bytes separately from overall preparation. No Viewer source
 initialization or optional import is required for startup. Every tab click also
 calls the shared `Window_Loading()` operation before releasing the old scene;
 the same splash remains until the new frame is presented, including cached switches.
+Failed or cancelled splash preparation keeps the previous scene, edit state and
+interaction captures, and displays a retry notice. Click the tab again to retry.
 See the
 [startup contract](../../docs/architecture/startup-presentation.md).
 

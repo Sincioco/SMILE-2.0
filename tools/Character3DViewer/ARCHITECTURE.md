@@ -78,10 +78,19 @@ caller state are independent of hero channels. The existing playback clock and
 `BattleAudio.CrossedCue` handle speed, seek and one-shot triggering; pause and
 teardown stop these channels. No new audio engine or scene clock was introduced.
 
-Tab selection calls `Window_Loading()` before the existing lifecycle teardown.
+Tab selection calls `ViewerLifecycle.BeginCharacterSwitchLoading` before releasing
+interaction captures or invoking the existing lifecycle teardown. Its Boolean result
+guards the switch; a failed presentation only sets `Session.LoadingFailed` for the
+inspector notice and preserves the old session, actor, errors and epoch.
 The shared native/Web startup owners reopen their existing presentation with
 the artifact's original metadata. The first new `Show Screen` completes the
 loading interval. No Viewer-local splash renderer or loading loop is introduced.
+
+`ViewerDragon.Create` keeps all Vrax setup results, including required `VraxMouth`
+aim admission, and sends every failed candidate through the common `Destroy` path.
+Owned actors are released; borrowed actors remain alive while the wrapper clears
+its handle and aim state. `HardeningTests.CheckDragonCreation` uses public skinned
+fixtures for failure, repeated cleanup and a valid retry on native/generated Web.
 
 Vrax attack effects remain in `ViewerDragon.AttackEffects`. The primary
 `ViewerEffects.State` and Party's `ViewerDragon.State` each own a separate context.

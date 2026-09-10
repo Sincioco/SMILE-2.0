@@ -1296,6 +1296,14 @@ try {
     Assert-True (-not (Test-Path -LiteralPath $temporaryPreparation)) `
         'Arin preparation left temporary residue.'
 
+    # Public articulated model, isolated from every canonical/private character package.
+    $aimFixtureRoot = Join-Path $repositoryRoot 'tools\Character3DViewer\BuildAssets\Hardening'
+    [void][IO.Directory]::CreateDirectory($aimFixtureRoot)
+    foreach ($name in @('AnimationArticulated.glb', 'AnimationArticulated.sm3d.json')) {
+        Copy-Item -LiteralPath (Join-Path $repositoryRoot "examples\Renderer3DAnimationV2Tests\Source\$name") `
+            -Destination (Join-Path $aimFixtureRoot $name) -Force
+    }
+
     & $compiler --project $testProject --target windows-x64 --configuration $Configuration `
         --graphics DirectX -o $nativeOutput
     if ($LASTEXITCODE -ne 0) { throw 'Viewer hardening native compilation failed.' }
@@ -1315,7 +1323,7 @@ try {
         if ($LASTEXITCODE -ne 0) { throw 'Viewer hardening Web game syntax failed.' }
         & node --check (Join-Path $webOutput 'smile-runtime.js')
         if ($LASTEXITCODE -ne 0) { throw 'Viewer hardening Web runtime syntax failed.' }
-        & node 'scripts\run-web-test.js' $webOutput --expected $expected --timeout 60000
+        & node 'scripts\run-web-test.js' $webOutput --expected $expected --timeout 60000 --renderer3d-state
         if ($LASTEXITCODE -ne 0) { throw 'Viewer hardening Web assertions failed.' }
 
     }

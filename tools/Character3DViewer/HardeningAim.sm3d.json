@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "sampleRate": 30,
+  "clips": { "Idle": { "loop": true } },
+  "sockets": {
+    "Head": { "node": "Hand" },
+    "VraxMouth": { "node": "Hand" }
+  }
+}

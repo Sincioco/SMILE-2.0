@@ -15,6 +15,7 @@ Public Type State
     SelectedCharacterTab As Number
     DragonInspection As Boolean
     CharacterSwitchBlocked As Boolean
+    LoadingFailed As Boolean
     Ready As Boolean
     Running As Boolean
     ViewerError As Boolean

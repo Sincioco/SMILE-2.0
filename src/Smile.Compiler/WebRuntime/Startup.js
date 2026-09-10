@@ -1,5 +1,5 @@
 // Runs in the loader document before the program/runtime scripts are loaded.
-// A decoded logo plus two animation frames establishes a presentation boundary.
+// Each presentation owns its promises and callbacks; an aborted repeat never opens a new scene.
 window.smileStartup = (() => {
     "use strict";
     const screen = document.getElementById("smile-loading");
@@ -9,84 +9,113 @@ window.smileStartup = (() => {
     const overall = document.getElementById("smile-loading-progress");
     const transfer = document.getElementById("smile-loading-transfer");
     const transferText = document.getElementById("smile-loading-transfer-text");
-    let visibleMs = 0, visibleSince = null, ready = false, presented = false;
-    let knownFiles = 0;
-    let resolvePainted, resolveFinished;
-    let painted = new Promise(resolve => { resolvePainted = resolve; });
-    let finished = new Promise(resolve => { resolveFinished = resolve; });
-    const nextFrame = () => new Promise(resolve => requestAnimationFrame(resolve));
+    const cancelButton = document.getElementById("smile-loading-cancel");
+    let current, knownFiles = 0;
 
-    document.addEventListener("visibilitychange", () => {
-        if (!presented) return;
-        if (visibleSince !== null) visibleMs += Math.max(0, performance.now() - visibleSince);
-        visibleSince = document.hidden ? null : performance.now();
-    });
-
-    async function present() {
-        try {
-            await logo.decode();
-        } catch (_) {
-            status.textContent = "Unable to load the SMILE logo";
-            detail.textContent = "Check your connection and reload this page.";
-            return; // Do not pretend branding was shown or run a broken publication.
-        }
-        // Do not count background-tab time or script/download time as presentation.
-        while (document.hidden) await nextFrame();
-        await nextFrame();
-        await nextFrame();
-        if (document.hidden) { void present(); return; }
-        presented = true;
-        visibleSince = performance.now();
-        resolvePainted();
+    function stopCallbacks(cycle) {
+        clearTimeout(cycle.timeout);
+        for (const id of cycle.frames) cancelAnimationFrame(id);
+        cycle.frames.clear();
     }
-    void present();
+    function settle(cycle, success) {
+        if (cycle.terminal) return;
+        cycle.terminal = true;
+        stopCallbacks(cycle);
+        cycle.resolvePainted(success);
+        cycle.resolveFinished(success);
+        if (cycle !== current) return;
+        cancelButton.hidden = true;
+        if (success || cycle.repeat) screen.hidden = true;
+    }
+    function fail(cycle, reason) {
+        if (cycle !== current || cycle.terminal) return;
+        status.textContent = "Unable to load the SMILE logo";
+        detail.textContent = reason;
+        settle(cycle, false);
+    }
+    function frame(cycle, callback) {
+        const id = requestAnimationFrame(now => {
+            cycle.frames.delete(id);
+            if (cycle === current && !cycle.terminal) callback(now);
+        });
+        cycle.frames.add(id);
+    }
+    function start(repeat) {
+        const cycle = { repeat, terminal: false, ready: false, presented: false,
+            visibleMs: 0, visibleSince: null, frames: new Set() };
+        cycle.painted = new Promise(resolve => { cycle.resolvePainted = resolve; });
+        cycle.finished = new Promise(resolve => { cycle.resolveFinished = resolve; });
+        current = cycle;
+        knownFiles = 0;
+        screen.hidden = false;
+        cancelButton.hidden = !repeat;
+        // A broken decoder must also produce a terminal failure, even if it never rejects.
+        cycle.timeout = setTimeout(() => fail(cycle, "Logo loading timed out. Retry the tab or reload the page."), 30000);
+        Promise.resolve().then(() => logo.decode()).then(() => {
+            if (cycle !== current || cycle.terminal) return;
+            let visibleFrames = 0;
+            function present() {
+                visibleFrames = document.hidden ? 0 : visibleFrames + 1;
+                if (visibleFrames < 2) { frame(cycle, present); return; }
+                cycle.presented = true;
+                cycle.visibleSince = performance.now();
+                clearTimeout(cycle.timeout);
+                cancelButton.hidden = true;
+                cycle.resolvePainted(true);
+            }
+            frame(cycle, present);
+        }).catch(() => fail(cycle, "Logo decoding failed. Retry the tab or reload the page."));
+        return cycle.painted;
+    }
+    document.addEventListener("visibilitychange", () => {
+        const cycle = current;
+        if (!cycle.presented || cycle.terminal) return;
+        if (cycle.visibleSince !== null) cycle.visibleMs += Math.max(0, performance.now() - cycle.visibleSince);
+        cycle.visibleSince = document.hidden ? null : performance.now();
+    });
+    function cancel() {
+        // Once loading was admitted, the caller may be replacing assets: preserve the minimum.
+        if (!current.repeat || current.presented || current.terminal) return false;
+        settle(current, false);
+        return true;
+    }
+    cancelButton.addEventListener("click", cancel);
+    window.addEventListener("pagehide", () => settle(current, false));
+    start(false);
 
     function begin() {
-        if (!screen.hidden) return painted;
-        visibleMs = 0;
-        visibleSince = null;
-        ready = presented = false;
-        knownFiles = 0;
-        painted = new Promise(resolve => { resolvePainted = resolve; });
-        finished = new Promise(resolve => { resolveFinished = resolve; });
+        if (!current.terminal) return current.painted;
         status.textContent = "Preparing the next scene…";
         detail.textContent = "Loading duration is not yet known.";
         overall.removeAttribute("value");
         transfer.hidden = true;
         transferText.textContent = "Identifying files to load…";
-        screen.hidden = false;
-        void present();
-        return painted;
+        return start(true);
     }
 
     function finish() {
-        if (ready) return finished;
-        ready = true;
+        const cycle = current;
+        if (cycle.ready || cycle.terminal) return cycle.finished;
+        cycle.ready = true;
         status.textContent = "Ready";
         detail.textContent = "Opening the program…";
-        if (!knownFiles) {
-            overall.max = 1;
-            overall.value = 1;
-        }
+        if (!knownFiles) { overall.max = 1; overall.value = 1; }
         transfer.hidden = true;
         transferText.textContent = "Startup preparation complete.";
-        void painted.then(() => {
+        void cycle.painted.then(shown => {
+            if (!shown || cycle !== current || cycle.terminal) return;
             function tick(now) {
-                const elapsed = visibleMs + (visibleSince === null ? 0 : Math.max(0, now - visibleSince));
-                if (!document.hidden && elapsed >= 1000) {
-                    screen.hidden = true;
-                    presented = false;
-                    visibleSince = null;
-                    resolveFinished();
-                } else requestAnimationFrame(tick);
+                const elapsed = cycle.visibleMs + (cycle.visibleSince === null ? 0 : Math.max(0, now - cycle.visibleSince));
+                if (!document.hidden && elapsed >= 1000) settle(cycle, true);
+                else frame(cycle, tick);
             }
-            requestAnimationFrame(tick);
+            frame(cycle, tick);
         });
-        return finished;
+        return cycle.finished;
     }
 
     function update(assets) {
-        if (ready) return;
+        if (current.ready || current.terminal) return;
         const entries = Array.from(assets.entries());
         const complete = entries.filter(([, item]) => item.state === "ready").length;
         const failed = entries.filter(([, item]) => item.state === "failed").length;
@@ -103,13 +132,13 @@ window.smileStartup = (() => {
         detail.textContent = pending.length
             ? `${pending.length} asset${pending.length === 1 ? "" : "s"} downloading or decoding. File total grows as dependencies are identified.`
             : "Preparing the scene. File total includes known load dependencies.";
-        const current = pending[pending.length - 1];
-        transfer.hidden = !current;
-        if (!current) {
+        const download = pending[pending.length - 1];
+        transfer.hidden = !download;
+        if (!download) {
             transferText.textContent = failed ? "Some assets failed; the program may report recovery details." : "No active asset download.";
             return;
         }
-        const [path, item] = current;
+        const [path, item] = download;
         if (item.state === "decoding") {
             transfer.removeAttribute("value");
             transferText.textContent = `Current asset: ${path} — download complete; decoding`;
@@ -126,5 +155,5 @@ window.smileStartup = (() => {
             transferText.textContent = `Current asset: ${path} — ${bytes.toLocaleString()} bytes received; total size unknown or decoding`;
         }
     }
-    return { get painted() { return painted; }, begin, finish, update };
+    return { get painted() { return current.painted; }, begin, finish, update, cancel };
 })();

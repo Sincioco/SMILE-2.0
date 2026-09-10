@@ -2,6 +2,23 @@
 
 ## September 10: Original Unity Audio
 
+The importer now preflights the actual controller → game manager → VFX →
+AudioSource → clip GUID chain before changing this package. It stages all three
+originals, converted PCM files and both metadata files, then publishes under a
+package lock only if the destination hashes still match its initial snapshot.
+Changed files have same-volume backups; a failed publish rolls back attempted
+replacements. Identical imports preserve bytes and timestamps. Original filenames
+include identity/hash information when necessary to prevent basename collisions.
+
+If rollback cannot safely complete, the `.import-*` folder retains its `commit.json`
+and backups and blocks a subsequent import. Inspect that journal and compare the
+recorded before/after hashes before recovering files; do not delete recovery data
+or overwrite a concurrent external edit. Normal failures remove only their own
+staging folder. `scripts/test-vrax-audio-import.ps1` exercises the source chain,
+conversion, invalid output, metadata/publish failures, concurrency, rollback and
+idempotence against isolated synthetic data. Normal package validation remains
+`tools/Character3DViewer/Prepare-UnityAssets.ps1 -ValidateOnly`; it does not import.
+
 The original `SciFiBeast01.cs` controller plays Sound14 at attack start,
 Sound13 after 0.2 seconds, and Sound15 on death. Scene AudioSource references
 resolve these to Beast Vocalisation 08, Blunt Swing 01 and Beast Vocalisation 09.

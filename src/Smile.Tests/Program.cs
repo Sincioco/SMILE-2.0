@@ -778,7 +778,8 @@ Run("Web output writer stamps mandatory branding and artifact metadata", () =>
             Equal(true, html.Contains($"aria-label=\"Gamepad {control} button\"", StringComparison.Ordinal));
         foreach (var removedControl in new[] { "one", "two", "three", "four" })
             Equal(false, html.Contains($"data-smile-control=\"{removedControl}\"", StringComparison.Ordinal));
-        Equal(9, html.Split(new[] { "type=\"button\"" }, StringSplitOptions.None).Length - 1);
+        Equal(10, html.Split(new[] { "type=\"button\"" }, StringSplitOptions.None).Length - 1);
+        Equal(true, html.Contains("id=\"smile-loading-cancel\"", StringComparison.Ordinal));
         Equal(true, html.Contains("id=\"smile-fullscreen\"", StringComparison.Ordinal));
         Equal(true, html.Contains("Created in SMILE 2.0", StringComparison.Ordinal));
         Equal(true, html.Contains("https://github.com/sincioco/smile-2.0", StringComparison.Ordinal));
@@ -5909,14 +5910,14 @@ Run("VSIX templates render localized identity metadata within the aligned header
     foreach (var manifest in new[] { gameManifest, consoleManifest })
     {
         Equal(true, manifest.Contains("SmileProjectTemplateWizard", StringComparison.Ordinal));
-        Equal(true, manifest.Contains("Version=2.0.61.0", StringComparison.Ordinal));
+        Equal(true, manifest.Contains("Version=2.0.62.0", StringComparison.Ordinal));
     }
     foreach (var applicationProject in new[] { gameProject, consoleProject })
         Equal(true, applicationProject.Contains("<ApplicationId>$smileapplicationid$</ApplicationId>", StringComparison.Ordinal));
     Equal(false, libraryProject.Contains("ApplicationId", StringComparison.Ordinal));
     Equal(true, wizard.Contains("\"smile.app.a\" + Guid.NewGuid().ToString(\"N\")", StringComparison.Ordinal));
     Equal(true, wizard.Contains("ToString(\"D\", CultureInfo.CurrentCulture)", StringComparison.Ordinal));
-    Equal(true, project.Contains("<Version>2.0.61</Version>", StringComparison.Ordinal));
+    Equal(true, project.Contains("<Version>2.0.62</Version>", StringComparison.Ordinal));
     Equal(true, vsixManifest.Contains("Type=\"Microsoft.VisualStudio.Assembly\"", StringComparison.Ordinal));
 });
 

@@ -18,6 +18,16 @@ static SRWLOCK startup_lock = SRWLOCK_INIT;
 static WCHAR startup_title[512], startup_author[256], startup_build[256], startup_detail[1024];
 static Gdiplus::Bitmap* startup_logo;
 static volatile LONG startup_ready_requested;
+// 0: waiting, 1: visible/admitted, -1: failed, -2: cancelled. One owner joins every cycle.
+static volatile LONG startup_result, startup_cancel_requested;
+#ifdef SMILE_STARTUP_TESTS
+// Only linked into the isolated startup fixture, never into distributed runtime/VSIX files.
+extern "C" int smile_startup_test_fault;
+extern "C" void smile_startup_test_resume();
+#define STARTUP_FAULT(value) (startup_reloading && smile_startup_test_fault == (value))
+#else
+#define STARTUP_FAULT(value) false
+#endif
 static ULONGLONG startup_last_tick, startup_visible_ms;
 static RECT startup_links[7];
 static const WCHAR* startup_urls[] = {
@@ -61,6 +71,14 @@ static void startup_paint(HWND window)
     const int width = client.right, height = client.bottom;
     HDC dc = CreateCompatibleDC(target);
     HBITMAP bitmap = CreateCompatibleBitmap(target, width, height);
+    if (!dc || !bitmap) {
+        if (dc) DeleteDC(dc);
+        if (bitmap) DeleteObject(bitmap);
+        EndPaint(window, &paint);
+        InterlockedExchange(&startup_result, -1);
+        PostMessageW(window, WM_APP + 1, 0, 0);
+        return;
+    }
     HGDIOBJ old = SelectObject(dc, bitmap);
     HBRUSH background = CreateSolidBrush(RGB(8, 16, 30));
     FillRect(dc, &client, background);
@@ -116,6 +134,7 @@ static void startup_paint(HWND window)
         GdiFlush();
         DwmFlush();
         startup_last_tick = GetTickCount64();
+        InterlockedExchange(&startup_result, 1);
         SetEvent(startup_painted);
     }
 }
@@ -141,8 +160,17 @@ static LRESULT CALLBACK startup_proc(HWND window, UINT message, WPARAM wparam, L
         return 0;
     }
     case WM_CLOSE:
-        if (startup_reloading) return 0; // A loading overlay must not terminate an existing editor.
+        if (startup_reloading) {
+            // Cancelling before admission leaves the caller's document intact. After admission,
+            // the normal first-frame/one-second contract must finish before removing the overlay.
+            if (startup_result != 1) {
+                InterlockedExchange(&startup_result, -2);
+                DestroyWindow(window);
+            }
+            return 0;
+        }
         ExitProcess(0); // Closing this program's initial startup window cancels its launch.
+    case WM_APP + 1: DestroyWindow(window); return 0; // Owner closing or preparation timed out.
     case WM_DESTROY: PostQuitMessage(0); return 0;
     }
     return DefWindowProcW(window, message, wparam, lparam);
@@ -151,65 +179,121 @@ static LRESULT CALLBACK startup_proc(HWND window, UINT message, WPARAM wparam, L
 static DWORD WINAPI startup_run(void*)
 {
     SetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
-    CoInitializeEx(0, COINIT_APARTMENTTHREADED);
+    const HRESULT com = CoInitializeEx(0, COINIT_APARTMENTTHREADED);
     Gdiplus::GdiplusStartupInput input;
     ULONG_PTR token = 0;
     IStream* stream = 0;
-    HGLOBAL memory = GlobalAlloc(GMEM_MOVEABLE, sizeof(smile_startup_logo));
-    if (memory) {
+    HGLOBAL memory = 0;
+    bool prepared = false;
+    do {
+        if (FAILED(com) || STARTUP_FAULT(1)) break;
+        if (Gdiplus::GdiplusStartup(&token, &input, 0) != Gdiplus::Ok) break;
+        memory = GlobalAlloc(GMEM_MOVEABLE, sizeof(smile_startup_logo));
+        if (!memory) break;
         void* bytes = GlobalLock(memory);
+        if (!bytes) break;
         CopyMemory(bytes, smile_startup_logo, sizeof(smile_startup_logo));
         GlobalUnlock(memory);
-        if (SUCCEEDED(CreateStreamOnHGlobal(memory, TRUE, &stream))) {
-            memory = 0;
-            if (Gdiplus::GdiplusStartup(&token, &input, 0) == Gdiplus::Ok)
-                startup_logo = Gdiplus::Bitmap::FromStream(stream);
+        if (FAILED(CreateStreamOnHGlobal(memory, TRUE, &stream))) break;
+        memory = 0;
+        startup_logo = Gdiplus::Bitmap::FromStream(stream);
+        if (!startup_logo || startup_logo->GetLastStatus() != Gdiplus::Ok ||
+            !startup_logo->GetWidth() || !startup_logo->GetHeight()) break;
+        if (startup_cancel_requested) break;
+        WNDCLASSW type = {};
+        type.lpfnWndProc = startup_proc;
+        type.hInstance = GetModuleHandleW(0);
+        type.hCursor = LoadCursorW(0, IDC_ARROW);
+        type.lpszClassName = L"SMILE20StartupWindow";
+        if (!RegisterClassW(&type) && GetLastError() != ERROR_CLASS_ALREADY_EXISTS) break;
+        MONITORINFO monitor = { sizeof(monitor) };
+        if (!GetMonitorInfoW(MonitorFromWindow(startup_owner ? startup_owner : GetForegroundWindow(), MONITOR_DEFAULTTONEAREST), &monitor)) break;
+        const RECT area = monitor.rcWork;
+        int height = MulDiv(650, (int)GetDpiForSystem(), 96);
+        if (height > area.bottom - area.top - 40) height = area.bottom - area.top - 40;
+        if (height > area.right - area.left - 40) height = area.right - area.left - 40;
+        if (STARTUP_FAULT(4) || height <= 0) break;
+        startup_window = CreateWindowExW(WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE, type.lpszClassName, startup_title,
+            WS_POPUP | WS_BORDER, area.left + (area.right - area.left - height) / 2,
+            area.top + (area.bottom - area.top - height) / 2, height, height, startup_owner, 0, type.hInstance, 0);
+        if (!startup_window) break;
+        if (STARTUP_FAULT(5) || !SetTimer(startup_window, 1, 50, 0)) break;
+        if (startup_cancel_requested) break;
+        if (STARTUP_FAULT(6)) SendMessageW(startup_window, WM_CLOSE, 0, 0);
+        else {
+            ShowWindow(startup_window, SW_SHOWNOACTIVATE);
+            UpdateWindow(startup_window);
         }
-    }
-    if (memory) GlobalFree(memory);
-    if (!startup_logo || startup_logo->GetLastStatus() != Gdiplus::Ok) {
-        MessageBoxW(0, L"The embedded SMILE startup logo could not be decoded.", L"SMILE 2.0 startup", MB_OK | MB_ICONERROR);
-        ExitProcess(2);
-    }
-    WNDCLASSW type = {};
-    type.lpfnWndProc = startup_proc;
-    type.hInstance = GetModuleHandleW(0);
-    type.hCursor = LoadCursorW(0, IDC_ARROW);
-    type.lpszClassName = L"SMILE20StartupWindow";
-    RegisterClassW(&type);
-    MONITORINFO monitor = { sizeof(monitor) };
-    GetMonitorInfoW(MonitorFromWindow(startup_owner ? startup_owner : GetForegroundWindow(), MONITOR_DEFAULTTONEAREST), &monitor);
-    const RECT area = monitor.rcWork;
-    int height = MulDiv(650, (int)GetDpiForSystem(), 96);
-    if (height > area.bottom - area.top - 40) height = area.bottom - area.top - 40;
-    if (height > area.right - area.left - 40) height = area.right - area.left - 40;
-    const int width = height;
-    startup_window = CreateWindowExW(WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE, type.lpszClassName, startup_title,
-        WS_POPUP | WS_BORDER, area.left + (area.right - area.left - width) / 2,
-        area.top + (area.bottom - area.top - height) / 2, width, height, startup_owner, 0, type.hInstance, 0);
-    if (!startup_window) ExitProcess(2);
-    ShowWindow(startup_window, SW_SHOWNOACTIVATE);
-    UpdateWindow(startup_window);
-    SetTimer(startup_window, 1, 50, 0);
-    MSG message;
-    while (GetMessageW(&message, 0, 0, 0) > 0) { TranslateMessage(&message); DispatchMessageW(&message); }
+        prepared = true;
+        MSG message;
+        int received;
+        while ((received = GetMessageW(&message, 0, 0, 0)) > 0) {
+            TranslateMessage(&message); DispatchMessageW(&message);
+        }
+        if (received < 0) InterlockedExchange(&startup_result, -1);
+    } while (false);
+    if (!prepared && startup_result >= 0) InterlockedExchange(&startup_result, startup_cancel_requested ? -2 : -1);
+    if (startup_window && IsWindow(startup_window)) DestroyWindow(startup_window);
     startup_window = 0;
     delete startup_logo;
     startup_logo = 0;
     if (stream) stream->Release();
+    if (memory) GlobalFree(memory);
     if (token) Gdiplus::GdiplusShutdown(token);
-    CoUninitialize();
+    if (SUCCEEDED(com)) CoUninitialize();
     return 0;
 }
 
-static void startup_start_thread()
+static void startup_release_thread()
 {
-    startup_ready_requested = 0;
+    if (startup_thread) CloseHandle(startup_thread);
+    if (startup_painted) CloseHandle(startup_painted);
+    startup_thread = startup_painted = 0;
+}
+
+static void startup_abort()
+{
+    InterlockedExchange(&startup_cancel_requested, 1);
+    InterlockedExchange(&startup_result, -2);
+    HWND window = startup_window;
+    if (window) PostMessageW(window, WM_APP + 1, 0, 0);
+}
+
+static int startup_start_thread()
+{
+    startup_ready_requested = startup_result = startup_cancel_requested = 0;
     startup_last_tick = startup_visible_ms = 0;
-    startup_painted = CreateEventW(0, TRUE, FALSE, 0);
-    startup_thread = CreateThread(0, 0, startup_run, 0, 0, 0);
-    if (!startup_painted || !startup_thread) ExitProcess(2);
-    WaitForSingleObject(startup_painted, INFINITE);
+    startup_painted = STARTUP_FAULT(2) ? 0 : CreateEventW(0, TRUE, FALSE, 0);
+    if (startup_painted) startup_thread = STARTUP_FAULT(3) ? 0 : CreateThread(0, 0, startup_run, 0, 0, 0);
+    if (!startup_thread) {
+        startup_result = -1;
+        startup_release_thread();
+        return 0;
+    }
+    HANDLE handles[] = { startup_thread, startup_painted };
+    BOOL quit = FALSE;
+    WPARAM quit_code = 0;
+    const ULONGLONG deadline = GetTickCount64() + 30000;
+    for (;;) {
+        DWORD outcome = MsgWaitForMultipleObjects(2, handles, FALSE, 50, QS_ALLINPUT);
+        if (outcome == WAIT_OBJECT_0 || outcome == WAIT_OBJECT_0 + 1) break;
+        if (outcome == WAIT_FAILED || GetTickCount64() >= deadline) { startup_abort(); break; }
+        MSG message;
+        while (PeekMessageW(&message, 0, 0, 0, PM_REMOVE)) {
+            if (message.message == WM_QUIT) { quit = TRUE; quit_code = message.wParam; startup_abort(); continue; }
+            TranslateMessage(&message); DispatchMessageW(&message);
+        }
+        if (quit) break;
+    }
+    const int shown = startup_result == 1 && !quit;
+    if (!shown) {
+        // A failed cycle is never reused. If an OS decoder stalls, retain its ownership until
+        // it exits; do not detach a live thread or let a retry race its static resources.
+        if (WaitForSingleObject(startup_thread, 5000) == WAIT_OBJECT_0) startup_release_thread();
+        OutputDebugStringW(L"SMILE repeat loading failed or was cancelled; the current session was retained.\n");
+    }
+    if (quit) PostQuitMessage((int)quit_code);
+    return shown;
 }
 
 extern "C" void smile_startup_begin(const char* title, const char* author, const char* build)
@@ -221,17 +305,27 @@ extern "C" void smile_startup_begin(const char* title, const char* author, const
         startup_utf8(author, -1, startup_author + 11, 245);
     }
     lstrcpyW(startup_detail, L"Initializing the runtime. Startup duration is not yet known.");
-    startup_start_thread();
+    if (!startup_start_thread()) {
+        MessageBoxW(0, L"The required SMILE startup presentation failed.", L"SMILE 2.0 startup", MB_OK | MB_ICONERROR);
+        ExitProcess(2);
+    }
 }
 
-extern "C" void smile_startup_resume(HWND owner)
+extern "C" int smile_startup_resume(HWND owner)
 {
-    if (startup_thread) return; // Repeated calls share the current visible interval.
+#ifdef SMILE_STARTUP_TESTS
+    smile_startup_test_resume();
+#endif
+    if (startup_thread) {
+        if (startup_result == 1) return 1;
+        if (WaitForSingleObject(startup_thread, 0) != WAIT_OBJECT_0) return 0;
+        startup_release_thread();
+    }
     startup_owner = owner;
     startup_reloading = true;
     lstrcpyW(startup_detail, L"Loading the next scene. Preparation duration is not yet known.");
     // The original generated title, author and build stamp remain authoritative.
-    startup_start_thread();
+    return startup_start_thread();
 }
 
 extern "C" void smile_startup_attach(HWND owner)
@@ -258,19 +352,29 @@ extern "C" void smile_startup_status(const char* path, long long length)
 extern "C" void smile_startup_ready(void)
 {
     if (!startup_thread) return;
+    if (startup_result != 1) {
+        if (WaitForSingleObject(startup_thread, 0) == WAIT_OBJECT_0) startup_release_thread();
+        return;
+    }
     InterlockedExchange(&startup_ready_requested, 1);
     BOOL quit = FALSE;
     WPARAM quit_code = 0;
     // Keep the owning program's queue responsive while only the remaining visible interval elapses.
-    while (MsgWaitForMultipleObjects(1, &startup_thread, FALSE, INFINITE, QS_ALLINPUT) == WAIT_OBJECT_0 + 1) {
+    ULONGLONG closing_deadline = 0;
+    for (;;) {
+        DWORD outcome = MsgWaitForMultipleObjects(1, &startup_thread, FALSE, 50, QS_ALLINPUT);
+        if (outcome == WAIT_OBJECT_0) break;
+        if (outcome == WAIT_FAILED || (closing_deadline && GetTickCount64() >= closing_deadline)) break;
         MSG message;
         while (PeekMessageW(&message, 0, 0, 0, PM_REMOVE)) {
-            if (message.message == WM_QUIT) { quit = TRUE; quit_code = message.wParam; continue; }
+            if (message.message == WM_QUIT) {
+                quit = TRUE; quit_code = message.wParam;
+                startup_abort(); closing_deadline = GetTickCount64() + 5000;
+                continue;
+            }
             TranslateMessage(&message); DispatchMessageW(&message);
         }
     }
-    CloseHandle(startup_thread);
-    CloseHandle(startup_painted);
-    startup_thread = startup_painted = 0;
+    if (WaitForSingleObject(startup_thread, 0) == WAIT_OBJECT_0) startup_release_thread();
     if (quit) PostQuitMessage((int)quit_code);
 }

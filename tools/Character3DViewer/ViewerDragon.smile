@@ -171,18 +171,14 @@ Public Function Create(ByRef Value As State, ByRef BorrowedActor As Character3D.
         Value.HeadTracking = False
         Result = NodeAim3D.Configure(Value.HeadAim, Value.Actor, "VraxMouth",
             Math3D.Vector(1, 0, 0), Math3D.Vector(0, 30, 35)) And Result
-        Result = Character3D.SetScale(Value.Actor, Value.Frame.ScalePercent)
+        Result = Character3D.SetScale(Value.Actor, Value.Frame.ScalePercent) And Result
         Result = Character3D.PlacePrecise(Value.Actor, Value.Frame.PositionX,
             Value.Frame.PositionY, Value.Frame.PositionZ) And Result
         Result = Character3D.Rotate(Value.Actor, 0, ROTATION_Y, 0) And Result
         Result = Character3D.PlayAnimation(Value.Actor, "Idle", True) And Result
         Result = Character3D.SetShadows(Value.Actor, True, True) And Result
 
-        Return Result
-
-    End If
-
-    If Result Then
+    Else If Result Then
 
         Result = Character3D.SetScale(Value.Actor, SCALE_PERCENT) And Result
         Result = Character3D.Place(Value.Actor, POSITION_X, 0, POSITION_Z) And Result
@@ -276,6 +272,7 @@ Public Sub Destroy(ByRef Value As State, Light As LightPool3D.Lease)
     End If
 
     Value.OwnsActor = False
+    Value.HeadAim.Ready = False
 
 End Sub
 

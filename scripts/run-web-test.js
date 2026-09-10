@@ -31,6 +31,7 @@ let verifyMobileControls = false;
 let verifyFileTransfer = false;
 let verifyStartupLoading = false;
 let verifyOptimizedImages = false;
+let startupRepeatFault = "";
 let verifyDataStatus = false;
 let deniedDataKey = null;
 let verifyRenderer3D = false;
@@ -64,6 +65,11 @@ while (args.length !== 0) {
     if (option === "--mobile-controls") { verifyMobileControls = true; continue; }
     if (option === "--file-transfer") { verifyFileTransfer = true; continue; }
     if (option === "--startup-loading") { verifyStartupLoading = true; continue; }
+    if (option === "--startup-repeat-fault") {
+        startupRepeatFault = args.shift();
+        if (!["decode", "cancel"].includes(startupRepeatFault)) fail("Expected decode or cancel startup fault.");
+        continue;
+    }
     if (option === "--optimized-images") { verifyOptimizedImages = true; continue; }
     if (option === "--data-status") { verifyDataStatus = true; continue; }
     if (option === "--renderer3d") { verifyRenderer3D = true; continue; }
@@ -172,15 +178,31 @@ function installStartupFixture(host, context) {
         if (!elements.has(id)) elements.set(id, createMobileEventTarget({ hidden: false, textContent: "" }));
         return elements.get(id);
     };
-    host.document.getElementById("smile-loading-logo").decode = async () => {};
+    let decodeAttempt = 0;
+    host.document.getElementById("smile-loading-logo").decode = () => {
+        if (++decodeAttempt === 2 && startupRepeatFault) {
+            if (startupRepeatFault === "decode") return Promise.reject(new Error("Isolated repeat decode failure"));
+            queueMicrotask(() => host.smileStartup.cancel());
+            return new Promise(() => {});
+        }
+        return Promise.resolve();
+    };
     for (const id of ["smile-loading-progress", "smile-loading-transfer"])
         host.document.getElementById(id).removeAttribute = function(name) { delete this[name]; };
     // Isolate the loader clock from gameplay simulation. The focused startup test uses controlled frames.
     host.__startupFixtureNow = 0;
-    host.__startupFixtureFrame = callback => queueMicrotask(() => callback(host.__startupFixtureNow += 1000));
+    let nextFrameId = 0;
+    const pendingFrames = new Set();
+    host.__startupFixtureFrame = callback => {
+        const id = ++nextFrameId;
+        pendingFrames.add(id);
+        queueMicrotask(() => { if (pendingFrames.delete(id)) callback(host.__startupFixtureNow += 1000); });
+        return id;
+    };
+    host.__startupFixtureCancel = id => pendingFrames.delete(id);
     const html = fs.readFileSync(path.join(webDirectory, "index.html"), "utf8");
     const script = html.match(/<script>\s*([\s\S]*?)<\/script>/)[1];
-    vm.runInContext(`(function(requestAnimationFrame, performance) { ${script} })(__startupFixtureFrame, { now: () => __startupFixtureNow });`, context);
+    vm.runInContext(`(function(requestAnimationFrame, cancelAnimationFrame, performance) { ${script} })(__startupFixtureFrame, __startupFixtureCancel, { now: () => __startupFixtureNow });`, context);
 }
 
 function createMobileControlsHost(options = {}) {

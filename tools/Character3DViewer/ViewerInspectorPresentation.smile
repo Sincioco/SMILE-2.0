@@ -125,6 +125,7 @@ Public Type WorkspaceView
     ShieldDecoupled As Boolean
     TransferMessage As Text
     CharacterSwitchBlocked As Boolean
+    LoadingFailed As Boolean
     PartyEnabled As Boolean
     ViewerError As Boolean
     FirstViewerError As Number
@@ -323,6 +324,7 @@ Public Function CaptureWorkspace(ByRef Ui As ViewerUi.State,
         Calibration, Playback.SelectedClip, 19) <> 0
     Result.TransferMessage = Calibration.TransferMessage
     Result.CharacterSwitchBlocked = Session.CharacterSwitchBlocked
+    Result.LoadingFailed = Session.LoadingFailed
     Result.PartyEnabled = Party.Enabled
     Result.ViewerError = Session.ViewerError
     Result.FirstViewerError = Session.FirstViewerError
@@ -508,6 +510,10 @@ Public Sub DrawWorkspace(ByRef Ui As ViewerUi.State,
         Value.FirstRendererError,
         Value.FirstFailureStage
     )
+
+    If Value.LoadingFailed Then
+        Draw Text "Loading failed or was cancelled. Current session kept; click a tab to retry." At 20, 74 Size 13 Color YELLOW
+    End If
 
 End Sub
 

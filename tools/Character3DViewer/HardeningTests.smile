@@ -3165,11 +3165,76 @@ Call Check(Remainder = -2)
 Call Check(CharacterViewer.RetainedPointerDelta(Remainder, -1, 3) = -1)
 Call Check(Remainder = 0)
 
+Call CheckDragonCreation()
+
 If Failures = 0 Then
     Print "Character 3D Viewer hardening tests passed."
 Else
     Print "Character 3D Viewer hardening tests failed: "; Failures
 End If
+
+Sub CheckDragonCreation()
+
+    Dim Value As ViewerDragon.State
+    Dim Borrowed As Character3D.Actor
+    Dim Light As LightPool3D.Lease
+    Dim Ok As Boolean
+    Dim Baseline As Number
+    Dim Index As Number
+
+    Baseline = Character3D.LiveActorCount()
+    Value.Available = True
+    Value.UseVrax = True
+
+    For Index = 1 To 3
+
+        Ok = ViewerDragon.Create(Value, Borrowed, False)
+
+        Call CheckNamed(Not Ok And Not Value.HeadAim.Ready,
+            "Missing Vrax mouth remains a setup failure")
+        Call CheckNamed(Not Character3D.IsValid(Value.Actor) And Not Value.OwnsActor,
+            "Failed owned creation releases its actor")
+        Call ViewerDragon.Destroy(Value, Light)
+        Call ViewerDragon.Destroy(Value, Light)
+        Call Check(Character3D.LiveActorCount() = Baseline)
+    End For
+
+    Borrowed = Character3D.LoadWithPolicy("Assets\Generation2\VraxV1\Vrax.sm3d",
+        Character3D.CHARACTER_LOAD_REQUIRE_PBR)
+
+    Call CheckNamed(Character3D.IsValid(Borrowed), "Missing-socket fixture is a valid actor")
+
+    Ok = ViewerDragon.Create(Value, Borrowed, True)
+
+    Call Check(Not Ok And Not Value.HeadAim.Ready)
+    Call Check(Character3D.IsValid(Borrowed))
+    Call Check(Character3D.SetScale(Borrowed, 100))
+    Call Check(Character3D.Place(Borrowed, 0, 0, 0))
+    Call Check(Not ViewerDragon.IsValid(Value))
+    Call ViewerDragon.Destroy(Value, Light)
+    Call Check(Character3D.IsValid(Borrowed))
+    Call Character3D.Destroy(Borrowed)
+
+    Value.UseVrax = False
+    Ok = ViewerDragon.Create(Value, Borrowed, False)
+
+    Call CheckNamed(Ok And Value.HeadAim.Ready And Value.OwnsActor,
+        "Owner retries successfully with valid aim metadata")
+    Call ViewerDragon.Destroy(Value, Light)
+    Call Check(Character3D.LiveActorCount() = Baseline)
+
+    Borrowed = Character3D.LoadWithPolicy("Assets\Generation2\RedDragon\RedDragon.sm3d",
+        Character3D.CHARACTER_LOAD_REQUIRE_PBR)
+    Value.UseVrax = True
+    Ok = ViewerDragon.Create(Value, Borrowed, True)
+
+    Call CheckNamed(Ok And Value.HeadAim.Ready, "Valid Vrax aim configuration succeeds")
+    Call ViewerDragon.Destroy(Value, Light)
+    Call Check(Character3D.IsValid(Borrowed))
+    Call Character3D.Destroy(Borrowed)
+    Call Check(Character3D.LiveActorCount() = Baseline)
+
+End Sub
 
 Sub InitializeZoomTest(ByRef Value As CharacterViewer.ZoomState)
 

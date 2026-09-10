@@ -2,13 +2,19 @@
 
 `Window_Loading()` is a shared, zero-argument Boolean built-in requiring a game
 window. It reopens the existing native/Web splash and returns after presentation
-begins. The next `Show Screen` presents the new frame and honors any remaining
+begins. `False` means preparation failed or the repeat was cancelled; callers must
+retain their current scene and edits and may retry. Logo decode/presentation has a
+30-second admission deadline. Initial presentation failure remains fail-closed.
+The next `Show Screen` presents the new frame and honors any remaining
 one-second visible interval. Repeated calls within the same load are idempotent;
 successive loads get fresh visible timing and progress. The compiled title, author,
 timestamp, version, canonical logo and seven footer links are retained.
 
 Native keeps its independent GDI+ owner and closes each thread/event normally.
-Closing a reload overlay cannot terminate an existing editor. Web resets only the
+Closing a reload overlay before admission cancels that attempt without terminating
+the editor. After admission the visible minimum still applies. Web's Cancel Loading
+button has the same boundary. Failed/cancelled cycles settle exactly once; late
+callbacks cannot settle a retry. Web resets only the
 presentation/progress cycle; immutable encoded-asset caching remains intact.
 The Character Viewer's existing tab selection calls the operation before teardown.
 No generated program is rewritten and mandatory initial startup is unchanged.
@@ -57,5 +63,12 @@ builds, and no DRM/obfuscation. No public-site upload is implied by local public
 
 `scripts/test-startup.ps1` covers native visible timing, slow-load overlap, repeated
 loading cycles, generated native/Web calls, metadata and Web progress/visibility.
+Its isolated native fault build checks decode/event/thread/window/timer/cancellation
+failures, preserved owner state, balanced handles and retry. A public-asset fixture
+calls the actual Viewer loading guard through generated native/Web adapters.
+Native fault controls are compiled only into the fixture; they are absent from the
+distributed runtime. Node checks exercise generated logic with mocked browser/GPU
+services; the generated `ViewerGuard/Web/fault-test.html` supports a separate real
+Chrome check of decode failure and the Cancel Loading button.
 Use the normal smoke gate for compiler/runtime integration. Recompiling a tool
 adopts the standard contract without a tool-local splash implementation.

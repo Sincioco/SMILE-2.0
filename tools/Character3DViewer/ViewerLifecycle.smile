@@ -46,6 +46,17 @@ Public Type Configuration
     PartyFormationEndAngle As Number
 End Type
 
+Public Function BeginCharacterSwitchLoading(ByRef Session As ViewerSession.State) As Boolean
+
+    Dim Shown As Boolean
+
+    Shown = Window_Loading()
+    Session.LoadingFailed = Not Shown
+
+    Return Shown
+
+End Function
+
 Public Sub Configure(ByRef Value As Configuration,
     UnusedAssetCacheLimit As Number,
     BackdropLandscapePath As Text, BackdropTitlePath As Text,

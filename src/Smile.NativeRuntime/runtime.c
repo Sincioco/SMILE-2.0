@@ -2001,8 +2001,7 @@ void* smile_file_import(void)
 long long smile_window_loading(void)
 {
     if (smile_window == 0) return 0;
-    smile_startup_resume(smile_window);
-    return 1;
+    return smile_startup_resume(smile_window);
 }
 
 long long smile_window_activate(void)

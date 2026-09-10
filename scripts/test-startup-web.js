@@ -5,7 +5,7 @@ const html = fs.readFileSync(path.join(directory, "index.html"), "utf8");
 const script = html.match(/<script>\s*([\s\S]*?)<\/script>/)[1];
 
 function fixture() {
-    let now = 0, frames = [], decoded, rejectDecode;
+    let now = 0, nextId = 1, frames = new Map(), timers = new Map(), decoded, rejectDecode;
     const events = new Map(), elements = new Map();
     const decode = new Promise((resolve, reject) => { decoded = resolve; rejectDecode = reject; });
     const document = {
@@ -13,21 +13,29 @@ function fixture() {
         addEventListener: (name, listener) => events.set(name, listener),
         getElementById(id) {
             if (!elements.has(id)) elements.set(id, { hidden: false, textContent: "", value: undefined,
-                decode: () => decode, removeAttribute(name) { delete this[name]; } });
+                decode: () => decode, removeAttribute(name) { delete this[name]; },
+                addEventListener(name, listener) { this[name] = listener; } });
             return elements.get(id);
         }
     };
     const host = { document, performance: { now: () => now },
-        requestAnimationFrame: callback => frames.push(callback), addEventListener() {} };
+        requestAnimationFrame(callback) { const id = nextId++; frames.set(id, callback); return id; },
+        cancelAnimationFrame: id => frames.delete(id),
+        setTimeout(callback, delay) { const id = nextId++; timers.set(id, { callback, at: now + delay }); return id; },
+        clearTimeout: id => timers.delete(id),
+        addEventListener: (name, listener) => events.set(name, listener) };
     host.window = host;
     vm.runInNewContext(script, host);
     async function frame(ms) {
         now += ms;
-        const callbacks = frames; frames = [];
-        for (const callback of callbacks) callback(now);
+        const callbacks = frames; frames = new Map();
+        for (const callback of callbacks.values()) callback(now);
+        for (const [id, timer] of timers) if (timer.at <= now) { timers.delete(id); timer.callback(); }
         for (let count = 0; count < 8; count++) await Promise.resolve();
     }
     return { host, frame, decoded, rejectDecode,
+        pending: () => frames.size + timers.size,
+        event: name => events.get(name)(),
         element: id => document.getElementById("smile-loading" + id),
         visibility(hidden) { document.hidden = hidden; events.get("visibilitychange")(); }
     };
@@ -110,5 +118,49 @@ function fixture() {
     const missing = fixture(); missing.rejectDecode(new Error("missing")); await missing.frame(0);
     assert.equal(missing.element("").hidden, false);
     assert.match(missing.element("-status").textContent, /Unable to load/);
-    console.log("PASS: decoded/presented minimum, background exclusion, slow-load overlap, known file counts, byte/unknown progress, missing logo.");
+    assert.equal(await missing.host.smileStartup.painted, false, "initial failure cannot admit main");
+    assert.equal(await missing.host.smileStartup.finish(), false);
+
+    const loader = fast.host.smileStartup;
+    fast.element("-logo").decode = () => Promise.reject(new Error("repeat decode fault"));
+    const rejected = loader.begin();
+    let completions = 0;
+    rejected.then(() => completions++);
+    await fast.frame(0);
+    assert.equal(await rejected, false, "repeat decode failure settles instead of hanging");
+    assert.equal(await loader.finish(), false);
+    assert.equal(fast.element("").hidden, true, "old scene becomes usable again");
+    assert.equal(fast.pending(), 0);
+    assert.equal(completions, 1);
+
+    let staleDecode;
+    fast.element("-logo").decode = () => new Promise(resolve => { staleDecode = resolve; });
+    const cancelled = loader.begin();
+    await fast.frame(0);
+    fast.element("-cancel").click();
+    assert.equal(await cancelled, false);
+    assert.equal(loader.cancel(), false, "cancellation is idempotent");
+    assert.equal(fast.pending(), 0);
+    fast.element("-logo").decode = () => Promise.resolve();
+    const retry = loader.begin();
+    staleDecode();
+    await fast.frame(0); await fast.frame(16); await fast.frame(16);
+    assert.equal(await retry, true, "retry admits a fresh presentation");
+    assert.equal(loader.cancel(), false, "an admitted scene cannot bypass branding");
+    const completion = loader.finish();
+    assert.equal(loader.finish(), completion);
+    await fast.frame(999);
+    assert.equal(fast.element("").hidden, false, "stale completion cannot hide a retry");
+    await fast.frame(1);
+    assert.equal(await completion, true);
+    assert.equal(fast.pending(), 0);
+
+    fast.element("-logo").decode = () => new Promise(() => {});
+    const timeout = loader.begin(); await fast.frame(30000);
+    assert.equal(await timeout, false, "a decoder that never settles has a bounded failure");
+    assert.equal(fast.pending(), 0);
+    const closing = loader.begin(); fast.event("pagehide");
+    assert.equal(await closing, false);
+    assert.equal(fast.pending(), 0);
+    console.log("PASS (Node logic): visible minimum, background exclusion, progress, initial/repeat failure, cancellation, stale callback, timeout and retry.");
 })().catch(error => { console.error(error); process.exitCode = 1; });

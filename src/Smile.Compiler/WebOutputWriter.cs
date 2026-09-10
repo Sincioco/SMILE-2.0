@@ -117,6 +117,7 @@ internal static class WebOutputWriter
                 </div>
                 <progress id="smile-loading-transfer" hidden aria-label="Current asset download" style="width:min(440px,80vw);height:8px;accent-color:#72cde4"></progress>
                 <p id="smile-loading-transfer-text" style="font-size:12px;color:#abbcd3;overflow-wrap:anywhere;min-height:2.6em">Waiting for asset requests.</p>
+                <button id="smile-loading-cancel" hidden type="button">Cancel Loading</button>
                 <p style="font-size:18px;margin:0 0 6px">Created in SMILE 2.0</p>
                 {{(string.IsNullOrWhiteSpace(author) ? string.Empty : $"<p style=\"font-size:15px;margin:0\">Created by {WebUtility.HtmlEncode(author)}</p>")}}
                 <p id="smile-build-metadata" style="font-size:12px;color:#abbcd3;margin:10px 0 0">{{WebUtility.HtmlEncode(metadata.Display)}}</p>
@@ -295,9 +296,12 @@ internal static class WebOutputWriter
 
             let startupFinishPromise;
             function finishStartupLoading() {
-                if (!startupFinishPromise) startupFinishPromise = window.smileStartup.finish().then(() => {
-                    startupPresented = true;
-                    startupAssets.clear();
+                if (!startupFinishPromise) startupFinishPromise = window.smileStartup.finish().then(shown => {
+                    if (shown) {
+                        startupPresented = true;
+                        startupAssets.clear();
+                    }
+                    return shown;
                 });
                 return startupFinishPromise;
             }
@@ -868,12 +872,13 @@ internal static class WebOutputWriter
             function windowActivate() { return false; }
             async function windowLoading() {
                 if (!gameWindowCreated || closed) return false;
+                const shown = await window.smileStartup.begin();
+                if (!shown || closed) return false;
                 if (startupPresented) {
                     startupPresented = false;
                     startupFinishPromise = null;
                     startupAssets.clear();
                 }
-                await window.smileStartup.begin();
                 return true;
             }
             function pointerY() { return pointerYValue; }
@@ -4210,7 +4215,11 @@ internal static class WebOutputWriter
 
             function run(main) {
                 window.__smileWeb.status = "running";
-                window.smileStartup.painted.then(() => { updateStartupLoading(); return main(); }).then(finish).catch(fail);
+                window.smileStartup.painted.then(shown => {
+                    if (!shown) throw new Error("The required SMILE startup presentation failed.");
+                    updateStartupLoading();
+                    return main();
+                }).then(finish).catch(fail);
             }
 
             return {

@@ -16,13 +16,19 @@ asset loading to overlap the one-second visible minimum. The next `Show Screen`
 submits the new scene and closes the splash after any remaining minimum. Repeated
 calls during one loading interval share that interval. Native and Web use the
 same contract; this operation does not replace or disable mandatory startup.
+`False` means loading preparation failed or was cancelled. Keep the old scene
+and edits in that case; another call can retry.
 
 ```smile
 Dim LoadingShown As Boolean
 
 LoadingShown = Window_Loading()
 
-Call LoadNextScene()
+If LoadingShown Then
+
+    Call LoadNextScene()
+
+End If
 
 Show Screen
 ```

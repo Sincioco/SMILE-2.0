@@ -1603,13 +1603,15 @@ Sub SelectCharacterTab(Index As Number)
         Return
     End If
 
+    If Not ViewerLifecycle.BeginCharacterSwitchLoading(Session) Then
+        Return
+    End If
+
     Session.Ready = ViewerLifecycle.CancelInteractionCaptures(
         Party, Character, Playback, Session.ProfileIndex,
         ViewerUiState, ViewerInputState, ViewerGizmoState,
         ViewerCameraState, Calibration, CalibrationAvailable,
         Effects) And Session.Ready
-
-    Session.Ready = Window_Loading() And Session.Ready
 
     Call ViewerLifecycle.PrepareCharacterSwitch(
         Session, Party, Character, Rendering, Effects,

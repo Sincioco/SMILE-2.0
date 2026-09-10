@@ -50,7 +50,7 @@ struct SmileReflectionState3D
     int forced_failure_consumed;
 };
 
-static SmileReflectionState3D smile_reflections_initial_state(void)
+static constexpr SmileReflectionState3D smile_reflections_initial_state(void)
 {
     SmileReflectionState3D state = {};
     state.strength_percent = 45;
