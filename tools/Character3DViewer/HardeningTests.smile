@@ -718,6 +718,18 @@ Call Check(ViewerCalibration.InterpolateChannel(6, 170, -170, 5, 0, 10) = 180)
 Call Check(ViewerCalibration.InterpolateChannel(18, 0, 1, 5, 0, 10) = 0)
 
 Call ViewerInput.Reset(InputState)
+Call CheckNamed(ViewerInput.HostedCommand(0, True, False) =
+    ViewerInput.INSPECTOR_KEY_RESET, "Hosted right-click resets the view")
+Call CheckNamed(ViewerInput.HostedCommand(KEY_R, False, True) =
+    ViewerInput.INSPECTOR_KEY_RESET, "Hosted keyboard reset remains available during pose editing")
+Call CheckNamed(ViewerInput.HostedCommand(KEY_SPACE, True, True) =
+    ViewerInput.INSPECTOR_KEY_RESET, "Right-click reset takes priority over playback")
+Call CheckNamed(ViewerInput.HostedCommand(KEY_SPACE, False, True) =
+    ViewerInput.INSPECTOR_KEY_NONE, "Hosted playback stays guarded during pose editing")
+Call CheckNamed(ViewerInput.HostedCommand(KEY_SPACE, False, False) =
+    ViewerInput.INSPECTOR_KEY_TOGGLE_PAUSE, "Hosted pause remains available without an edit")
+Call CheckNamed(ViewerInput.HostedCommand(0, False, False) =
+    ViewerInput.INSPECTOR_KEY_NONE, "No hosted input leaves the view unchanged")
 Call Check(ViewerInput.ClassifyArrow(37, 37, 39, 38, 40, True) =
     ViewerInput.ARROW_FRAME_PREVIOUS)
 Call Check(ViewerInput.ClassifyArrow(39, 37, 39, 38, 40, True) =

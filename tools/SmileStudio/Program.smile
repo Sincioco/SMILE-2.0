@@ -38,7 +38,9 @@ Do
 
     End If
 
-    If Pointer_Pressed(POINTER_PRIMARY) Or Pointer_Pressed(POINTER_MIDDLE) Then
+    If (Pointer_Pressed(POINTER_PRIMARY) Or
+        Pointer_Pressed(POINTER_MIDDLE) Or
+        Pointer_Pressed(POINTER_SECONDARY)) Then
         Focused = Controls.Contains(Ui.ViewX, Ui.ViewY, Ui.ViewWidth, Ui.ViewHeight)
     End If
 

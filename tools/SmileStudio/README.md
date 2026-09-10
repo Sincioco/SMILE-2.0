@@ -57,7 +57,9 @@ targets and every tab reload.
 - Select a character in the Asset Browser, then a clip in the Inspector. Viewport and Character Editor show the same live
   scene, camera and selection. Selecting a clip pauses it for inspection.
 - Click inside the viewport for camera/keyboard focus. LMB uses the Pan/Orbit toolbar tool, MMB always orbits, the wheel
-  eases zoom, Space toggles pause, R resets the view, and Esc stops the preview.
+  eases zoom, Space toggles pause, right-click or R resets the view, and Esc stops
+  the preview. Right-click inside the viewport takes focus immediately, releases
+  any drag and resets only the inspection view; pending pose edits are preserved.
   Inspector/navigation clicks and pointer exit cancel camera capture.
 - In Character Editor, Arin/Orin expose wrist/equipment rotation target and X/Y/Z
   channel choices, previous/next frame, and one-degree minus/plus controls. Save Frame
@@ -130,11 +132,16 @@ in progress; the next action is the human camera check below, not a new feature 
   Undo without saving over live calibration. Chrome observation confirmed viewport
   pan and keyboard reset, responsive panel layout and no reported console errors.
   Automated geometry checks cover the 1200 x 720 minimum; they are not mouse tests.
+- The hosted right-click omission is corrected: secondary press takes viewport
+  focus, invokes the existing view reset and releases active drags. Native and
+  Chrome UI checks passed reset after pan/Inspector focus and no reset for clicks
+  outside the viewport. Focused native/generated-Web input and session checks
+  passed, including reset with a pending pose. No new VSIX payload was needed.
 - Studio and standalone Viewer Release builds passed for native and Web. Final
-  Studio artifacts: `bin/Release/SmileStudio.exe` SHA-256
-  `A5C113B3BBB466CBF10CD6DDDA53D72439C3B6500FCA4A159780ED024B5E72EC`;
+  Studio artifacts rebuilt for the right-click fix: `bin/Release/SmileStudio.exe` SHA-256
+  `60E482CD8E137C827C4A41C9A53CB875F81712BAB2CCF93A1755C1C686E78458`;
   `bin/Release/Web/game.js` SHA-256
-  `BE9C64829165DA933F27970291FF79CA27DE6BB62777CAEC1BE1965AF5A383E1`.
+  `409B38C627FA7834630A206A7DDEF8CDF8BADCB5936E91E846F187F9F8FA94A3`.
 - Visual Studio loaded the permanent solution, built and launched native Debug,
   hit a source breakpoint and stepped. VSIX 2.0.63 was installed afterward and
   its 35 compiler/language/library/template payload hashes matched the built VSIX.
@@ -144,6 +151,6 @@ in progress; the next action is the human camera check below, not a new feature 
 
 **Pending human observation:** in both hosted native Studio and Chrome Studio,
 try slow and moderate horizontal/vertical MMB orbit, LMB pan, wheel zoom in/out
-and R reset. Confirm smooth motion, clean release and no jump or stuck capture.
+and right-click/R reset. Confirm smooth motion, clean release and no jump or stuck capture.
 The available mouse tool cannot reproduce MMB dragging. These observations are
 not inferred from the standalone Viewer's earlier acceptance or numeric tests.

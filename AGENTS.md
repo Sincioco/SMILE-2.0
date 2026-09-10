@@ -99,6 +99,10 @@ implemented capabilities or authorization to implement the entire product at onc
 
 - Effective immediately, use Chrome as the primary browser for Web development and testing, including the current task set. Sin prioritizes velocity; skip Edge checks that already pass in Chrome and do not routinely include a redundant second Chromium pass.
 - Use Edge only when identifying or solving an Edge-specific issue. Preserve actual historical Edge results without treating them as independent-engine coverage or a standing requirement for future milestones.
+- If browser control cannot verify Chrome's current URL, Sin authorizes closing all
+  Chrome instances, reopening the relevant test page and retrying with fresh window,
+  tab and URL observations. Prefer normal closure. Respect any tool-imposed stop for
+  the current turn; perform recovery when tool access is available again.
 
 ## Current official branding
 

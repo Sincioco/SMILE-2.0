@@ -271,7 +271,7 @@ Public Sub Draw(ByRef Ui As State, Viewer As ViewerWorkflow.Session, Logo As Ima
         End If
 
         Fill Rectangle Ui.ViewX + 6, Ui.TimelineY - 28, Ui.ViewWidth - 12, 20, Rgb(7, 17, 30) Opacity 85
-        Draw Text "LMB Pan/Orbit  |  MMB Orbit  |  Wheel Zoom  |  R Reset" At Ui.ViewX + 14, Ui.TimelineY - 24 Size 10 Color LIGHT_GRAY
+        Draw Text "LMB Pan/Orbit  |  MMB Orbit  |  Wheel Zoom  |  RMB / R Reset" At Ui.ViewX + 14, Ui.TimelineY - 24 Size 10 Color LIGHT_GRAY
 
     End If
 

@@ -50,6 +50,9 @@ Objects = Graphics3D.LiveObjectCount3D()
 Call Viewer.NudgePose(1)
 
 Call Check(Viewer.HasEdits() And Viewer.PoseValue() = Baseline + 1, "Pose preview changed")
+Call Viewer.HostedInput(100, 100, True, KEY_R)
+Call Check(Viewer.HasEdits() And Viewer.PoseValue() = Baseline + 1,
+    "Hosted view reset preserves pending pose edits")
 Call Check(Graphics3D.SetViewport3D(100, 80, Window_Width() - 200, Window_Height() - 160), "Viewport admission")
 Call Check(Not Graphics3D.SetViewport3D(-1, 104, 700, 632), "Invalid viewport rejected")
 

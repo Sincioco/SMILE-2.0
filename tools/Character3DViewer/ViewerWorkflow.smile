@@ -2228,12 +2228,20 @@ Public Class Session
             Return
         End If
 
-        Action = ViewerInput.HostedKeyCommand(PressedKey, Me.HasEdits())
+        Action = ViewerInput.HostedCommand(
+            PressedKey, Pointer_Pressed(POINTER_SECONDARY), Me.HasEdits())
 
         If Action = ViewerInput.INSPECTOR_KEY_TOGGLE_PAUSE Then
+
             Call Me.TogglePlayback()
+
         Else If Action = ViewerInput.INSPECTOR_KEY_RESET Then
+
+            Call Me.ReleaseInput()
             Call Me.ResetView()
+
+            Return
+
         End If
 
         Input = ViewerCamera.CreatePointerInput(False,
