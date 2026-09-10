@@ -1296,13 +1296,9 @@ try {
     Assert-True (-not (Test-Path -LiteralPath $temporaryPreparation)) `
         'Arin preparation left temporary residue.'
 
-    # Public articulated model, isolated from every canonical/private character package.
-    $aimFixtureRoot = Join-Path $repositoryRoot 'tools\Character3DViewer\BuildAssets\Hardening'
-    [void][IO.Directory]::CreateDirectory($aimFixtureRoot)
-    foreach ($name in @('AnimationArticulated.glb', 'AnimationArticulated.sm3d.json')) {
-        Copy-Item -LiteralPath (Join-Path $repositoryRoot "examples\Renderer3DAnimationV2Tests\Source\$name") `
-            -Destination (Join-Path $aimFixtureRoot $name) -Force
-    }
+    # Prepare this consumer directly from canonical public inputs, never another test's mirror.
+    $testProject = & (Join-Path $PSScriptRoot 'prepare-viewer-hardening-fixture.ps1') `
+        -OutputDirectory (Join-Path $repositoryRoot 'artifacts\tests\viewer-hardening-fixture')
 
     & $compiler --project $testProject --target windows-x64 --configuration $Configuration `
         --graphics DirectX -o $nativeOutput

@@ -3,8 +3,12 @@
 `Window_Loading()` is a shared, zero-argument Boolean built-in requiring a game
 window. It reopens the existing native/Web splash and returns after presentation
 begins. `False` means preparation failed or the repeat was cancelled; callers must
-retain their current scene and edits and may retry. Logo decode/presentation has a
-30-second admission deadline. Initial presentation failure remains fail-closed.
+retain their current scene and edits and may retry. Web decoding has a 30-second
+eligible-time deadline, suspended while the page is hidden and ended on successful
+decode. A decoded logo waits for two consecutive visible presentation frames;
+visibility changes restart that frame boundary. Native setup/admission retains its
+30-second bound, excluding a prepared overlay's wait for its minimized owner.
+Initial presentation failure remains fail-closed.
 The next `Show Screen` presents the new frame and honors any remaining
 one-second visible interval. Repeated calls within the same load are idempotent;
 successive loads get fresh visible timing and progress. The compiled title, author,
@@ -64,11 +68,21 @@ builds, and no DRM/obfuscation. No public-site upload is implied by local public
 `scripts/test-startup.ps1` covers native visible timing, slow-load overlap, repeated
 loading cycles, generated native/Web calls, metadata and Web progress/visibility.
 Its isolated native fault build checks decode/event/thread/window/timer/cancellation
-failures, preserved owner state, balanced handles and retry. A public-asset fixture
+failures, preserved owner state, balanced handles and retry. It also exercises real
+owner minimization/restoration beyond a test-only shortened deadline, cancellation
+while minimized and the visible minimum after restore. A public-asset fixture
 calls the actual Viewer loading guard through generated native/Web adapters.
+Startup and Viewer hardening explicitly call `prepare-viewer-hardening-fixture.ps1`
+to stage the tracked public articulated GLB and both descriptor variants into their
+own test projects. Neither consumes `BuildAssets/Hardening` or another test's output;
+stale test inputs are refreshed from canonical sources. The GLB embeds its media.
 Native fault controls are compiled only into the fixture; they are absent from the
 distributed runtime. Node checks exercise generated logic with mocked browser/GPU
 services; the generated `ViewerGuard/Web/fault-test.html` supports a separate real
-Chrome check of decode failure and the Cancel Loading button.
+Chrome check of decode failure and the Cancel Loading button. The generated
+`ReloadWeb/visibility-test.html?mode=initial` (or `repeat`) pauses its test decode
+until the tab is hidden; leave it hidden for at least 31 seconds, then restore it
+and inspect admissions and visible-duration measurements. This additional HTML is
+an isolated test harness; emitted application/runtime scripts remain unchanged.
 Use the normal smoke gate for compiler/runtime integration. Recompiling a tool
 adopts the standard contract without a tool-local splash implementation.

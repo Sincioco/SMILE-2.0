@@ -4,12 +4,12 @@ const directory = path.resolve(process.argv[2]);
 const html = fs.readFileSync(path.join(directory, "index.html"), "utf8");
 const script = html.match(/<script>\s*([\s\S]*?)<\/script>/)[1];
 
-function fixture() {
+function fixture(initiallyHidden = false) {
     let now = 0, nextId = 1, frames = new Map(), timers = new Map(), decoded, rejectDecode;
     const events = new Map(), elements = new Map();
     const decode = new Promise((resolve, reject) => { decoded = resolve; rejectDecode = reject; });
     const document = {
-        hidden: false,
+        hidden: initiallyHidden,
         addEventListener: (name, listener) => events.set(name, listener),
         getElementById(id) {
             if (!elements.has(id)) elements.set(id, { hidden: false, textContent: "", value: undefined,
@@ -28,8 +28,10 @@ function fixture() {
     vm.runInNewContext(script, host);
     async function frame(ms) {
         now += ms;
-        const callbacks = frames; frames = new Map();
-        for (const callback of callbacks.values()) callback(now);
+        if (!document.hidden) {
+            const callbacks = frames; frames = new Map();
+            for (const callback of callbacks.values()) callback(now);
+        }
         for (const [id, timer] of timers) if (timer.at <= now) { timers.delete(id); timer.callback(); }
         for (let count = 0; count < 8; count++) await Promise.resolve();
     }
@@ -81,6 +83,45 @@ function fixture() {
     slow.decoded(); await slow.frame(0); await slow.frame(16); await slow.frame(16);
     await slow.frame(3000); slow.host.smileStartup.finish(); await slow.frame(0); await slow.frame(16);
     assert.equal(slow.element("").hidden, true, "long loading adds no unconditional extra second");
+
+    for (const repeat of [false, true]) {
+        const waiting = fixture(!repeat);
+        waiting.decoded(); await waiting.frame(0);
+        if (repeat) {
+            await waiting.frame(16); await waiting.frame(16);
+            waiting.host.smileStartup.finish(); await waiting.frame(0); await waiting.frame(1000);
+            waiting.visibility(true);
+        }
+        const admission = repeat ? waiting.host.smileStartup.begin() : waiting.host.smileStartup.painted;
+        let shown = "pending";
+        admission.then(value => { shown = value; });
+        await waiting.frame(0); await waiting.frame(31000);
+        assert.equal(shown, "pending", "healthy decoded initial/repeat waits beyond the deadline while hidden");
+        assert.equal(waiting.element("").hidden, false);
+        waiting.visibility(false); await waiting.frame(16);
+        waiting.visibility(true); await waiting.frame(31000);
+        waiting.visibility(false); await waiting.frame(16);
+        assert.equal(shown, "pending", "hiding between the two presentation frames resets that boundary");
+        await waiting.frame(16);
+        assert.equal(await admission, true);
+        waiting.host.smileStartup.finish(); await waiting.frame(999);
+        assert.equal(waiting.element("").hidden, false, "pre-admission hidden time never satisfies branding");
+        await waiting.frame(1);
+        assert.equal(waiting.element("").hidden, true);
+        assert.equal(waiting.pending(), 0);
+    }
+
+    const suspendedDecode = fixture(true);
+    let suspendedResult = "pending";
+    suspendedDecode.host.smileStartup.painted.then(value => { suspendedResult = value; });
+    await suspendedDecode.frame(31000);
+    assert.equal(suspendedResult, "pending", "hidden decode suspension does not consume eligible time");
+    suspendedDecode.visibility(false); await suspendedDecode.frame(10000);
+    suspendedDecode.visibility(true); await suspendedDecode.frame(31000);
+    suspendedDecode.visibility(false); await suspendedDecode.frame(19999);
+    assert.equal(suspendedResult, "pending");
+    await suspendedDecode.frame(1);
+    assert.equal(suspendedResult, false, "a stalled decoder fails after 30 seconds of eligible time");
 
     const progress = fixture();
     progress.host.smileStartup.update(new Map());
@@ -162,5 +203,5 @@ function fixture() {
     const closing = loader.begin(); fast.event("pagehide");
     assert.equal(await closing, false);
     assert.equal(fast.pending(), 0);
-    console.log("PASS (Node logic): visible minimum, background exclusion, progress, initial/repeat failure, cancellation, stale callback, timeout and retry.");
+    console.log("PASS (Node logic): visible minimum, hidden initial/repeat admission, interrupted presentation, eligible decode deadline, progress, failure, cancellation, stale callback and retry.");
 })().catch(error => { console.error(error); process.exitCode = 1; });

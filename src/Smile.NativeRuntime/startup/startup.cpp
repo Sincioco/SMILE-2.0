@@ -19,14 +19,16 @@ static WCHAR startup_title[512], startup_author[256], startup_build[256], startu
 static Gdiplus::Bitmap* startup_logo;
 static volatile LONG startup_ready_requested;
 // 0: waiting, 1: visible/admitted, -1: failed, -2: cancelled. One owner joins every cycle.
-static volatile LONG startup_result, startup_cancel_requested;
+static volatile LONG startup_result, startup_cancel_requested, startup_prepared;
 #ifdef SMILE_STARTUP_TESTS
 // Only linked into the isolated startup fixture, never into distributed runtime/VSIX files.
 extern "C" int smile_startup_test_fault;
 extern "C" void smile_startup_test_resume();
 #define STARTUP_FAULT(value) (startup_reloading && smile_startup_test_fault == (value))
+static const ULONGLONG startup_admission_ms = 500; // Controlled timing in the isolated fixture only.
 #else
 #define STARTUP_FAULT(value) false
+static const ULONGLONG startup_admission_ms = 30000;
 #endif
 static ULONGLONG startup_last_tick, startup_visible_ms;
 static RECT startup_links[7];
@@ -146,9 +148,11 @@ static LRESULT CALLBACK startup_proc(HWND window, UINT message, WPARAM wparam, L
     case WM_ERASEBKGND: return 1;
     case WM_TIMER: {
         const ULONGLONG now = GetTickCount64();
-        if (startup_last_tick && startup_visible(window))
-            startup_visible_ms += now - startup_last_tick;
-        startup_last_tick = startup_visible(window) ? now : 0;
+        if (startup_result == 1) {
+            if (startup_last_tick && startup_visible(window))
+                startup_visible_ms += now - startup_last_tick;
+            startup_last_tick = startup_visible(window) ? now : 0;
+        }
         if (startup_ready_requested && startup_visible_ms >= 1000) DestroyWindow(window);
         else InvalidateRect(window, 0, FALSE);
         return 0;
@@ -219,6 +223,7 @@ static DWORD WINAPI startup_run(void*)
         if (!startup_window) break;
         if (STARTUP_FAULT(5) || !SetTimer(startup_window, 1, 50, 0)) break;
         if (startup_cancel_requested) break;
+        InterlockedExchange(&startup_prepared, 1);
         if (STARTUP_FAULT(6)) SendMessageW(startup_window, WM_CLOSE, 0, 0);
         else {
             ShowWindow(startup_window, SW_SHOWNOACTIVATE);
@@ -261,7 +266,7 @@ static void startup_abort()
 
 static int startup_start_thread()
 {
-    startup_ready_requested = startup_result = startup_cancel_requested = 0;
+    startup_ready_requested = startup_result = startup_cancel_requested = startup_prepared = 0;
     startup_last_tick = startup_visible_ms = 0;
     startup_painted = STARTUP_FAULT(2) ? 0 : CreateEventW(0, TRUE, FALSE, 0);
     if (startup_painted) startup_thread = STARTUP_FAULT(3) ? 0 : CreateThread(0, 0, startup_run, 0, 0, 0);
@@ -273,11 +278,17 @@ static int startup_start_thread()
     HANDLE handles[] = { startup_thread, startup_painted };
     BOOL quit = FALSE;
     WPARAM quit_code = 0;
-    const ULONGLONG deadline = GetTickCount64() + 30000;
+    ULONGLONG last_wait = GetTickCount64(), eligible_wait = 0;
     for (;;) {
         DWORD outcome = MsgWaitForMultipleObjects(2, handles, FALSE, 50, QS_ALLINPUT);
         if (outcome == WAIT_OBJECT_0 || outcome == WAIT_OBJECT_0 + 1) break;
-        if (outcome == WAIT_FAILED || GetTickCount64() >= deadline) { startup_abort(); break; }
+        const ULONGLONG now = GetTickCount64();
+        // Decode/setup still has a bound. A prepared overlay cannot present while
+        // its owner is minimized; keep pumping cancellation/restore without charging it.
+        if (!startup_prepared || !startup_owner || !IsIconic(startup_owner))
+            eligible_wait += now - last_wait;
+        last_wait = now;
+        if (outcome == WAIT_FAILED || eligible_wait >= startup_admission_ms) { startup_abort(); break; }
         MSG message;
         while (PeekMessageW(&message, 0, 0, 0, PM_REMOVE)) {
             if (message.message == WM_QUIT) { quit = TRUE; quit_code = message.wParam; startup_abort(); continue; }

@@ -23,6 +23,22 @@ $native = @'
 #include "startup/startup.h"
 #ifdef SMILE_STARTUP_TESTS
 extern "C" { int smile_startup_test_fault; void smile_startup_test_resume() {} }
+static BOOL CALLBACK cancel_owned_splash(HWND candidate, LPARAM owner) {
+    WCHAR name[64] = {};
+    GetClassNameW(candidate, name, 64);
+    if (GetWindow(candidate, GW_OWNER) == (HWND)owner && lstrcmpW(name, L"SMILE20StartupWindow") == 0)
+        PostMessageW(candidate, WM_CLOSE, 0, 0);
+    return TRUE;
+}
+static void CALLBACK restore_owner(HWND owner, UINT, UINT_PTR timer, DWORD) {
+    KillTimer(owner, timer);
+    ShowWindow(owner, SW_SHOWNOACTIVATE);
+    ShowWindow(owner, SW_RESTORE);
+}
+static void CALLBACK cancel_minimized_reload(HWND owner, UINT, UINT_PTR timer, DWORD) {
+    KillTimer(owner, timer);
+    EnumWindows(cancel_owned_splash, (LPARAM)owner);
+}
 #endif
 int main(int argc, char**) {
     ULONGLONG start = GetTickCount64();
@@ -66,6 +82,22 @@ int main(int argc, char**) {
     smile_startup_test_fault = 0;
     if (!smile_startup_resume(owner)) return 40;
     smile_startup_ready();
+    // The fault-enabled owner uses a 500-ms deadline; retain actual Windows
+    // minimized eligibility for longer than it, then restore through the pumped queue.
+    ShowWindow(owner, SW_MINIMIZE);
+    if (!IsIconic(owner) || !SetTimer(owner, 17, 900, restore_owner)) return 41;
+    ULONGLONG hidden_start = GetTickCount64();
+    if (!smile_startup_resume(owner)) { printf("FAIL: healthy minimized reload timed out before restore.\n"); return 42; }
+    ULONGLONG restored = GetTickCount64();
+    smile_startup_ready();
+    if (restored - hidden_start < 850 || GetTickCount64() - restored < 1000) return 43;
+    ShowWindow(owner, SW_MINIMIZE);
+    if (!SetTimer(owner, 18, 150, cancel_minimized_reload)) return 44;
+    if (smile_startup_resume(owner) || !IsWindow(owner) || GetPropW(owner, L"UnsavedDocument") != (HANDLE)123) return 45;
+    ShowWindow(owner, SW_RESTORE);
+    if (!smile_startup_resume(owner)) return 46;
+    smile_startup_ready();
+    printf("PASS: native minimized pre-admission wait, restore, visible minimum, cancel and retry.\n");
     DestroyWindow(owner);
     printf("PASS: native decode/event/thread/window/timer/cancel faults retain owner and balance handles; retry succeeds.\n");
 #endif
@@ -194,21 +226,15 @@ $guardRoot = Join-Path $target 'ViewerGuard'
 $null = New-Item -ItemType Directory -Force -Path $guardRoot
 [IO.File]::WriteAllText((Join-Path $guardRoot 'Program.smile'), $guard, $utf8)
 $viewerRoot = Join-Path $root 'tools/Character3DViewer'
-[xml]$project = Get-Content -LiteralPath (Join-Path $viewerRoot 'HardeningTests.smileproj') -Raw
+$preparedProject = & (Join-Path $PSScriptRoot 'prepare-viewer-hardening-fixture.ps1') -OutputDirectory $guardRoot
+[xml]$project = Get-Content -LiteralPath $preparedProject -Raw
 $project.SmileProject.PropertyGroup.StartupFile = 'Program.smile'
 $project.SmileProject.PropertyGroup.OutputName = 'ViewerGuard'
 $project.SmileProject.PropertyGroup.ApplicationId = 'smile.tests.viewer-loading-guard'
 foreach ($item in $project.SelectNodes('//*[@Include]')) {
-    if ($item.Name -eq 'Model3DAsset') {
-        foreach ($attribute in @('Include', 'Descriptor')) {
-            $original = [IO.Path]::GetFullPath((Join-Path $viewerRoot $item.GetAttribute($attribute)))
-            $name = [IO.Path]::GetFileName($original)
-            Copy-Item -LiteralPath $original -Destination (Join-Path $guardRoot $name) -Force
-            $item.SetAttribute($attribute, $name)
-        }
-    } elseif ($item.GetAttribute('StartupOnly') -eq 'true') {
+    if ($item.GetAttribute('StartupOnly') -eq 'true') {
         $item.SetAttribute('Include', 'Program.smile')
-    } else { $item.SetAttribute('Include', [IO.Path]::GetFullPath((Join-Path $viewerRoot $item.GetAttribute('Include')))) }
+    }
 }
 $guardProject = Join-Path $guardRoot 'ViewerGuard.smileproj'
 $project.Save($guardProject)
@@ -317,3 +343,104 @@ $loaderEnd = $html.IndexOf('</script>', $html.IndexOf('window.smileStartup =')) 
 $html = $html.Insert($loaderEnd, $observation)
 [IO.File]::WriteAllText((Join-Path $guardWeb 'fault-test.html'), $html, $utf8)
 Write-Host 'Chrome harness: ViewerGuard/Web/fault-test.html?fault=decode (or cancel).'
+
+# Real-browser eligibility fixture: hide this tab when prompted, wait over 30 seconds,
+# then return. Only this extra test page controls decode; emitted programs stay intact.
+$visibilityInjection = @'
+<script>
+(() => {
+    const original = HTMLImageElement.prototype.decode;
+    const mode = new URLSearchParams(location.search).get("mode") || "initial";
+    let attempt = 0, target = mode === "repeat" ? 2 : 1;
+    const evidence = window.__visibilityEvidence = { mode, phase: "Starting", events: [], completions: [], errors: [] };
+    function report() {
+        let output = document.getElementById("test-visibility-evidence");
+        if (!output) {
+            output = document.createElement("pre"); output.id = "test-visibility-evidence";
+            output.style.cssText = "position:fixed;left:8px;top:8px;z-index:99999;background:#08101e;color:white;padding:12px;max-height:45vh;overflow:auto;font:14px monospace";
+            document.body.append(output);
+            const hide = document.createElement("a"); hide.id = "test-background-link";
+            hide.href = "visibility-wait.html"; hide.target = "_blank";
+            hide.textContent = "Background This Test For 31 Seconds";
+            hide.style.cssText = "position:fixed;right:20px;top:20px;z-index:99999;background:#16344d;color:white;padding:18px;font:16px sans-serif";
+            document.body.append(hide);
+        }
+        output.textContent = JSON.stringify(evidence, null, 2);
+    }
+    evidence.report = report;
+    addEventListener("unhandledrejection", event => { evidence.errors.push(String(event.reason)); report(); });
+    document.addEventListener("visibilitychange", () => {
+        evidence.events.push({ hidden: document.hidden, at: performance.now() }); report();
+    });
+    HTMLImageElement.prototype.decode = function() {
+        const decoded = original.call(this);
+        if (this.id !== "smile-loading-logo" || ++attempt !== target) return decoded;
+        return decoded.then(() => new Promise(resolve => {
+            evidence.phase = "Switch to another tab for at least 31 seconds, then return";
+            report();
+            function waitForHidden() {
+                if (!document.hidden) return;
+                document.removeEventListener("visibilitychange", waitForHidden);
+                evidence.decodedHiddenAt = performance.now();
+                evidence.phase = "Decoded successfully; awaiting visible presentation";
+                report(); resolve();
+            }
+            document.addEventListener("visibilitychange", waitForHidden);
+            waitForHidden();
+        }));
+    };
+})();
+</script>
+'@
+$visibilityObservation = @'
+<script>
+(() => {
+    const loader = smileStartup, evidence = __visibilityEvidence;
+    const begin = loader.begin, finish = loader.finish;
+    let paintedAt = 0, visibleSince = null, visibleMs = 0;
+    function admitted(shown) {
+        if (shown) { paintedAt = performance.now(); visibleSince = paintedAt; visibleMs = 0; }
+        evidence.completions.push({ operation: "admission", shown, at: performance.now() }); evidence.report();
+    }
+    document.addEventListener("visibilitychange", () => {
+        const now = performance.now();
+        if (visibleSince !== null) visibleMs += now - visibleSince;
+        visibleSince = !document.hidden && paintedAt ? now : null;
+    });
+    loader.painted.then(admitted);
+    loader.begin = () => { const result = begin(); result.then(admitted); return result; };
+    loader.finish = () => {
+        const result = finish();
+        result.then(shown => {
+            const elapsed = visibleMs + (visibleSince === null ? 0 : performance.now() - visibleSince);
+            evidence.completions.push({ operation: "finish", shown, visibleMs: elapsed });
+            if (evidence.decodedHiddenAt) evidence.phase = "Presentation resumed; inspect successful admissions and visible durations";
+            evidence.report();
+        });
+        return result;
+    };
+})();
+</script>
+'@
+$visibilityWeb = Join-Path $target 'ReloadWeb'
+$visibilityHtml = [IO.File]::ReadAllText((Join-Path $visibilityWeb 'index.html'))
+$visibilityHtml = $visibilityHtml.Insert($visibilityHtml.IndexOf('<script>'), $visibilityInjection)
+$loaderEnd = $visibilityHtml.IndexOf('</script>', $visibilityHtml.IndexOf('window.smileStartup =')) + '</script>'.Length
+$visibilityHtml = $visibilityHtml.Insert($loaderEnd, $visibilityObservation)
+[IO.File]::WriteAllText((Join-Path $visibilityWeb 'visibility-test.html'), $visibilityHtml, $utf8)
+$waitHtml = @'
+<!doctype html><html lang="en"><meta charset="utf-8"><title>SMILE Startup Visibility Wait</title>
+<body style="background:#08101e;color:white;font:20px sans-serif;padding:48px">
+<h1>SMILE Startup Visibility Wait</h1><p id="elapsed">Keep this tab active for 31 seconds.</p>
+<button id="return" disabled onclick="window.close()">Return To Startup Test</button>
+<script>
+const started = performance.now();
+const tick = setInterval(() => {
+    const elapsed = performance.now() - started;
+    document.getElementById("elapsed").textContent = "Time in this tab: " + Math.floor(elapsed / 1000) + " seconds";
+    if (elapsed >= 31000) { document.getElementById("return").disabled = false; clearInterval(tick); }
+}, 250);
+</script></body></html>
+'@
+[IO.File]::WriteAllText((Join-Path $visibilityWeb 'visibility-wait.html'), $waitHtml, $utf8)
+Write-Host 'Chrome visibility harness: ReloadWeb/visibility-test.html?mode=initial (or repeat).'

@@ -40,8 +40,19 @@ window.smileStartup = (() => {
         });
         cycle.frames.add(id);
     }
+    function watchDecode(cycle) {
+        clearTimeout(cycle.timeout);
+        const now = performance.now();
+        if (cycle.decodeSince !== null) cycle.decodeRemaining -= Math.max(0, now - cycle.decodeSince);
+        cycle.decodeSince = null;
+        if (cycle.decoded || cycle.terminal || document.hidden) return;
+        cycle.decodeSince = now;
+        cycle.timeout = setTimeout(() => fail(cycle, "Logo loading timed out. Retry the tab or reload the page."),
+            Math.max(0, cycle.decodeRemaining));
+    }
     function start(repeat) {
         const cycle = { repeat, terminal: false, ready: false, presented: false,
+            decoded: false, decodeRemaining: 30000, decodeSince: null, visibleFrames: 0,
             visibleMs: 0, visibleSince: null, frames: new Set() };
         cycle.painted = new Promise(resolve => { cycle.resolvePainted = resolve; });
         cycle.finished = new Promise(resolve => { cycle.resolveFinished = resolve; });
@@ -49,14 +60,17 @@ window.smileStartup = (() => {
         knownFiles = 0;
         screen.hidden = false;
         cancelButton.hidden = !repeat;
-        // A broken decoder must also produce a terminal failure, even if it never rejects.
-        cycle.timeout = setTimeout(() => fail(cycle, "Logo loading timed out. Retry the tab or reload the page."), 30000);
+        // Charge only eligible decode time. Successful decode ends this deadline;
+        // a healthy image may then wait for visible presentation without failing.
+        watchDecode(cycle);
         Promise.resolve().then(() => logo.decode()).then(() => {
             if (cycle !== current || cycle.terminal) return;
-            let visibleFrames = 0;
+            cycle.decoded = true;
+            cycle.decodeSince = null;
+            clearTimeout(cycle.timeout);
             function present() {
-                visibleFrames = document.hidden ? 0 : visibleFrames + 1;
-                if (visibleFrames < 2) { frame(cycle, present); return; }
+                cycle.visibleFrames = document.hidden ? 0 : cycle.visibleFrames + 1;
+                if (cycle.visibleFrames < 2) { frame(cycle, present); return; }
                 cycle.presented = true;
                 cycle.visibleSince = performance.now();
                 clearTimeout(cycle.timeout);
@@ -69,6 +83,9 @@ window.smileStartup = (() => {
     }
     document.addEventListener("visibilitychange", () => {
         const cycle = current;
+        if (cycle.terminal) return;
+        watchDecode(cycle);
+        if (!cycle.presented) cycle.visibleFrames = 0;
         if (!cycle.presented || cycle.terminal) return;
         if (cycle.visibleSince !== null) cycle.visibleMs += Math.max(0, performance.now() - cycle.visibleSince);
         cycle.visibleSince = document.hidden ? null : performance.now();
