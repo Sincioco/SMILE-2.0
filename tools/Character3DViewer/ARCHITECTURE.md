@@ -1,5 +1,37 @@
 # Character Viewer Architecture
 
+## Party Beat Camera Ownership
+
+`BattleCameraShots` owns actor-independent Double reference frames, motion, linked
+shot interpolation and bounded Save Data serialization. `ViewerBeatSequence` adapts
+the existing Party timing/actors to explicit seek, remembers and restores actor
+clips/times/modes and turn state, resolves Head sockets and performs head/body
+picking with full actor bounds as a fallback. No character-specific pick offsets
+or triangle-picking backend is introduced.
+`ViewerBeatEditor` owns selection, six character identities/four shots each, draft
+and clipboard, one head cuboid per identity, input and the second timeline. The
+existing `ViewerWorkflow.Session` coordinates those operations; it retains the same
+renderer, Party actor instances, calibration owners and main update/draw order.
+`ViewerCamera.ComposeShot` composes input in an arbitrary saved camera's basis;
+`ViewerInput.ClassifyBeatKey` and `ViewerPlayback` own key and pause integration.
+The inspector binds the explicitly selected actor, independently of Party.Turn.
+
+During editing the existing battle is paused and explicitly sampled with zero
+animation elapsed. Scrubbing does not advance logical events, counters or audio.
+Save/Cancel restores the prior turn, actor clip times and camera/playback state.
+Head offsets/sizes auto-save independently of camera drafts; copying a shot cannot
+replace another character's head definition. No asset rebake or new renderer is
+involved. Verified canonical `head` bones are exposed as Head sockets in the
+Valor/Zara/Vrax descriptors; all other socket and placement data is preserved.
+
+`BeatCameraTests` extends the existing hardening fixture with relative-frame motion,
+cross-character copy, connected boundaries, malformed data and real Save Data
+round trips. `CalibrationTests.CheckBeatSequence` seeks existing heroes/Dragon in
+reverse and verifies restored clip names/times. The same fixture runs native and
+generated Web. Visible Viewer checks cover the locally licensed Vrax route.
+The Studio project merely lists the same shared source dependencies; no additional
+Studio workspace or feature phase is introduced by this standalone Viewer slice.
+
 The optional [Dragon retarget trial](../../games/SinStarI/SourceAssets/Bosses/RedDragon/RedDragonV12VraxTrial/README.md)
 uses a separate generated project/profile and private preview outputs. It preserves
 the default Dragon package and provides an explicit Original launcher. The existing

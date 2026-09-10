@@ -20,6 +20,9 @@
     <SmileSource Include="ArinShieldRim.smile" />
     <SmileSource Include="BattleAudio.smile" />
     <SmileSource Include="BattleCamera.smile" />
+    <SmileSource Include="BattleCameraShots.smile" />
+    <SmileSource Include="ViewerBeatSequence.smile" />
+    <SmileSource Include="ViewerBeatEditor.smile" />
     <SmileSource Include="DragonPresence.smile" />
     <SmileSource Include="CalibrationJson.smile" />
     <SmileSource Include="ViewerTiming.smile" />

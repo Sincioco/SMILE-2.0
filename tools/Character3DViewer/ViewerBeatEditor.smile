@@ -1,0 +1,925 @@
+''' Beat-shot selection, drafts and presentation. Party remains the scene/actor owner.
+Module Smile.Tools.ViewerBeatEditor
+
+Option Explicit
+
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.PrecisionMath3D As M
+Import Smile.Simple3D.PrecisionCamera3D As Projection
+Import Smile.Simple3D.Character3D As C
+Import Smile.Tools.BattleCameraShots As Shots
+Import Smile.Tools.ViewerBeatSequence As Sequence
+Import Smile.Tools.Character3DViewerCamera As Camera
+Import Smile.Tools.Character3DViewerParty As Party
+Import Smile.UI.Controls As UI
+Import Smile.Tools.Character3DViewerInput As Input
+
+Public Type State
+    Book[24] As Shots.Shot
+    References[6] As Shots.HeadReference
+    HeadIds[2] As Number
+    CornerX[2, 8] As Number
+    CornerY[2, 8] As Number
+    CornerVisible[2, 8] As Boolean
+    Clipboard As Shots.Shot
+    ClipboardName As Text
+    Selected As Number
+    Beat As Number
+    DisplayBeat As Number
+    Preview As Boolean
+    Editing As Boolean
+    Scrubbing As Boolean
+    Dirty As Boolean
+    Seek As Boolean
+    Reframe As Boolean
+    Elapsed As Number
+    Schedule As Sequence.Timing
+    Draft As Shots.Shot
+    ResetShot As Shots.Shot
+    ResetRequested As Boolean
+    NewEdit As Boolean
+    Camera As Camera.State
+    OriginalCamera As Camera.State
+    Bookmark As Sequence.Bookmark
+    WasPaused As Boolean
+    WasDemo As Boolean
+    DragMarker As Number
+    Marker As Number
+    TimelineDrag As Boolean
+    PickPending As Boolean
+    PickX As Number
+    PickY As Number
+    PickCamera As P.Camera3D
+    DragOrigin As P.Vector3
+    DragDepth As Double
+    DragOffset As P.Vector3
+    HeadActors[2] As C.Actor
+    Heads[2] As P.Vector3
+    BoxX[2] As Number
+    BoxY[2] As Number
+    BoxWidth[2] As Number
+    BoxHeight[2] As Number
+    BoxVisible[2] As Boolean
+    Message As Text
+End Type
+
+Public Function Key(Identity As Number, Beat As Number) As Text
+
+    Dim Result As Text
+
+    Result = "BattleCamera." + Sequence.Name(Identity) + ".Beat" + Digit(Beat + 1)
+
+    Return Result
+
+End Function
+
+Public Sub LoadShots(ByRef Value As State)
+
+    Dim Identity As Number
+    Dim Beat As Number
+    Dim Loaded As Boolean
+
+    Value.DragMarker = -1
+
+    For Identity = 0 To 5
+
+        Loaded = Shots.ReadHead("BattleCamera.Head." + Sequence.Name(Identity), Value.References[Identity])
+
+        For Beat = 0 To 3
+            Loaded = Shots.ReadShot(Key(Identity, Beat), Value.Book[Identity * 4 + Beat])
+        End For
+    End For
+
+End Sub
+
+Public Function Slot(Value As State, Unity As Boolean, Beat As Number) As Number
+
+    Dim Result As Number
+
+    Result = Sequence.Identity(Unity, Value.Selected) * 4 + Beat
+
+    Return Result
+
+End Function
+
+Public Function SelectActor(ByRef Value As State, Selected As Number) As Boolean
+
+    If Value.Preview Then
+        Value.Message = "Save Or Close Preview Before Selecting"
+        Return False
+    End If
+
+    Value.Selected = Selected
+    Value.Message = "Select A Beat To Edit Its Camera"
+
+    Return True
+
+End Function
+
+Public Sub Open(ByRef Value As State, ByRef Scene As Party.State,
+    Primary As C.Actor, Boss As C.Actor, CurrentCamera As Camera.State,
+    Paused As Boolean, Demo As Boolean, Speed As Number, Beat As Number, Edit As Boolean)
+
+    Dim Bounds As C.PreciseBounds3D
+    Dim RetainDraft As Boolean
+
+    If (Value.Editing And
+        Value.Dirty And
+        Beat <> Value.Beat) Then
+        Value.Message = "Save Or Cancel The Current Beat First"
+        Return
+    End If
+
+    If Not Value.Preview Then
+
+        Value.Bookmark = Sequence.Remember(Scene)
+
+        Call Sequence.RememberPoses(Value.Bookmark, Scene, Primary, Boss)
+
+        Value.OriginalCamera = CurrentCamera
+        Value.WasPaused = Paused
+        Value.WasDemo = Demo
+
+    End If
+
+    RetainDraft = Value.Editing And Beat = Value.Beat
+    Value.Beat = Beat
+    Value.Preview = True
+    Value.Editing = Edit
+    Value.Scrubbing = Not Edit
+    Value.NewEdit = Not RetainDraft
+
+    If Not RetainDraft Then
+        Value.Dirty = False
+        Value.Draft = Value.Book[Slot(Value, Scene.UnityRoster, Beat)]
+    End If
+
+    Value.HeadActors[0] = Sequence.Actor(Scene, Primary, Boss, Value.Selected)
+    Value.HeadActors[1] = Sequence.Actor(Scene, Primary, Boss, Sequence.Opponent(Scene, Value.Selected))
+
+    Value.HeadIds[0] = Sequence.Identity(Scene.UnityRoster, Value.Selected)
+    Value.HeadIds[1] = Sequence.Identity(Scene.UnityRoster, Sequence.Opponent(Scene, Value.Selected))
+
+    Call InitializeHead(Value, 0)
+    Call InitializeHead(Value, 1)
+
+    Value.Schedule = Sequence.Times(Scene, Primary, Speed, Value.Selected, 0)
+    Value.Elapsed = Value.Schedule.Start[Beat]
+    Value.Seek = True
+    Value.Reframe = Edit
+    Value.Message = "MMB Orbit; LMB Pan; Wheel Zoom; RMB Reset"
+
+End Sub
+
+Private Function CurrentShot(Value As State, Unity As Boolean, Identity As Number,
+    Beat As Number) As Shots.Shot
+
+    Dim Result As Shots.Shot
+
+    Result = Value.Book[Identity * 4 + Beat]
+
+    If (Value.Editing And
+        Beat = Value.Beat And
+        Identity = Sequence.Identity(Unity, Value.Selected)) Then
+        Result = Value.Draft
+    End If
+
+    Return Result
+
+End Function
+
+Private Function Resolve(Value As Shots.Shot, Attacker As C.Actor, Target As C.Actor,
+    AttackerHead As Shots.HeadReference, TargetHead As Shots.HeadReference,
+    Fallback As P.Camera3D, Progress As Double) As P.Camera3D
+
+    Dim Result As P.Camera3D
+
+    Result = Fallback
+
+    If Value.Saved Then
+        Result = Shots.Resolve(Value, Sequence.Head(Attacker, AttackerHead.Offset),
+            Sequence.Head(Target, TargetHead.Offset), Fallback, Progress)
+    End If
+
+    Return Result
+
+End Function
+
+Public Function PlaybackCamera(Value As State, Unity As Boolean, Turn As Number,
+    Attacker As C.Actor, Target As C.Actor, TargetIdentity As Number, Schedule As Sequence.Timing,
+    Fallback As P.Camera3D) As P.Camera3D
+
+    Dim Identity As Number
+    Dim Current As Shots.Shot
+    Dim Previous As Shots.Shot
+    Dim Following As Shots.Shot
+    Dim Result As P.Camera3D
+    Dim Other As P.Camera3D
+
+    Identity = Sequence.Identity(Unity, Turn)
+    Current = CurrentShot(Value, Unity, Identity, Schedule.Beat)
+
+    If Schedule.Beat > 0 Then
+        Previous = CurrentShot(Value, Unity, Identity, Schedule.Beat - 1)
+    End If
+
+    If Schedule.Beat < 3 Then
+        Following = CurrentShot(Value, Unity, Identity, Schedule.Beat + 1)
+    End If
+
+    Result = Shots.ResolveLinked(Current, Previous, Following,
+        Sequence.Head(Attacker, Value.References[Identity].Offset),
+        Sequence.Head(Target, Value.References[TargetIdentity].Offset), Fallback, Schedule.Progress)
+
+    Return Result
+
+End Function
+
+Public Sub Update(ByRef Value As State, ByRef Scene As Party.State,
+    Primary As C.Actor, Boss As C.Actor, ByRef Live As P.Camera3D,
+    Speed As Number, Elapsed As Number, Width As Number, Height As Number,
+    ApplySaved As Boolean)
+
+    Dim Attacker As C.Actor
+    Dim Target As C.Actor
+    Dim Schedule As Sequence.Timing
+    Dim Ok As Boolean
+    Dim Index As Number
+    Dim Projected As Projection.ProjectedPoint
+    Dim WidthValue As Double
+    Dim HeightValue As Double
+    Dim Focal As Double
+
+    Attacker = Sequence.Actor(Scene, Primary, Boss, Scene.Turn)
+    Target = Sequence.Actor(Scene, Primary, Boss, Sequence.Opponent(Scene, Scene.Turn))
+    Schedule = Sequence.Times(Scene, Primary, Speed, Scene.Turn, Scene.Elapsed)
+
+    If Not Value.Preview Then
+
+        If ApplySaved And Scene.EstablishRemaining = 0 Then
+            Live = PlaybackCamera(Value, Scene.UnityRoster, Scene.Turn, Attacker, Target,
+                Sequence.Identity(Scene.UnityRoster, Sequence.Opponent(Scene, Scene.Turn)), Schedule, Live)
+        End If
+
+        Return
+
+    End If
+
+    Value.Schedule = Schedule
+    Value.DisplayBeat = Schedule.Beat
+    Value.HeadActors[0] = Attacker
+    Value.HeadActors[1] = Target
+    Value.HeadIds[0] = Sequence.Identity(Scene.UnityRoster, Scene.Turn)
+    Value.HeadIds[1] = Sequence.Identity(Scene.UnityRoster, Sequence.Opponent(Scene, Scene.Turn))
+    Value.Heads[0] = Sequence.Head(Attacker, Value.References[Value.HeadIds[0]].Offset)
+    Value.Heads[1] = Sequence.Head(Target, Value.References[Value.HeadIds[1]].Offset)
+
+    If Value.Reframe Then
+
+        If Value.ResetRequested Then
+            Value.Draft = Value.ResetShot
+            Value.ResetRequested = False
+        End If
+
+        If Not Value.Draft.Saved Then
+            Call Shots.Capture(Value.Draft, Live, Value.Heads[0], Value.Heads[1])
+        End If
+
+        If Value.NewEdit Then
+            Value.ResetShot = Value.Draft
+            Value.NewEdit = False
+        End If
+
+        Value.Camera.Base = Shots.Resolve(Value.Draft, Value.Heads[0], Value.Heads[1], Live, 0.0)
+        Value.Camera.Live = Value.Camera.Base
+        Value.Camera.Frame.PanXLimit = 1000.0
+        Value.Camera.Frame.PanYLimit = 1000.0
+
+        Call Camera.Reset(Value.Camera, 0, 0, -100, 100, 120000)
+
+        Value.Reframe = False
+
+    End If
+
+    If Value.Editing And Not Value.Scrubbing Then
+
+        Ok = Camera.AdvanceZoom(Value.Camera, Elapsed)
+
+        Call Camera.ComposeShot(Value.Camera)
+        Call Camera.KeepAboveGround(Value.Camera, 0)
+        Call Shots.Capture(Value.Draft, Value.Camera.Live, Value.Heads[0], Value.Heads[1])
+
+        Live = Value.Camera.Live
+
+    Else
+        Live = PlaybackCamera(Value, Scene.UnityRoster, Scene.Turn, Attacker, Target,
+                Sequence.Identity(Scene.UnityRoster, Sequence.Opponent(Scene, Scene.Turn)), Schedule, Live)
+
+    End If
+
+    Call ProjectHeads(Value, Live, Width, Height)
+
+End Sub
+
+Public Function SaveShot(ByRef Value As State, Unity As Boolean) As Boolean
+
+    If Not Value.Editing Then
+        Return False
+    End If
+
+    If Not Shots.WriteShot(Key(Sequence.Identity(Unity, Value.Selected), Value.Beat), Value.Draft) Then
+        Value.Message = "Save Failed; Draft Retained"
+        Return False
+    End If
+
+    Value.Book[Slot(Value, Unity, Value.Beat)] = Value.Draft
+    Value.Preview = False
+    Value.Editing = False
+    Value.Dirty = False
+    Value.Message = "Camera Saved"
+
+    Return True
+
+End Function
+
+Public Sub Copy(ByRef Value As State, Unity As Boolean)
+
+    Value.Clipboard = Value.Book[Slot(Value, Unity, Value.Beat)]
+
+    If Value.Editing Then
+        Value.Clipboard = Value.Draft
+    End If
+
+    Value.ClipboardName = (Sequence.Name(Sequence.Identity(Unity, Value.Selected)) +
+        " Beat " + Digit(Value.Beat + 1))
+    Value.Message = "Copied " + Value.ClipboardName
+
+End Sub
+
+Public Function Digit(Value As Number) As Text
+
+    Dim Result As Text
+
+    Result = Text_Slice("0123456789", Value, 1)
+
+    Return Result
+
+End Function
+
+Public Sub Paste(ByRef Value As State)
+
+    If Not Value.Editing Or Not Value.Clipboard.Saved Then
+        Value.Message = "Copy A Shot; Select A Destination Beat"
+        Return
+    End If
+
+    Value.Draft = Value.Clipboard
+
+    If Value.Beat = 0 And Value.Draft.Connection = -1 Then
+        Value.Draft.Connection = 0
+    Else If Value.Beat = 3 And Value.Draft.Connection = 1 Then
+        Value.Draft.Connection = 0
+    End If
+
+    Value.Dirty = True
+    Value.Scrubbing = False
+    Value.Reframe = True
+    Value.NewEdit = True
+    Value.Elapsed = Value.Schedule.Start[Value.Beat]
+    Value.Seek = True
+    Value.Message = "Pasted " + Value.ClipboardName + "; Save To Keep"
+
+End Sub
+
+Public Function Contains(X As Number, Y As Number, PanelLeft As Number, Top As Number,
+    Width As Number, Height As Number) As Boolean
+
+    Dim Result As Boolean
+
+    Result = X >= PanelLeft And X < PanelLeft + Width And Y >= Top And Y < Top + Height
+
+    Return Result
+
+End Function
+
+''' Commands 1-4 edit a beat, 5 preview, 6 save, 7 copy, 8 paste, 9 cancel.
+Public Function Pointer(ByRef Value As State, Unity As Boolean, Live As P.Camera3D,
+    Width As Number, Height As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim X As Number
+    Dim Y As Number
+    Dim PanelLeft As Number
+    Dim Index As Number
+    Dim Cursor As P.Vector3
+    Dim Delta As P.Vector3
+    Dim Projected As Projection.ProjectedPoint
+    Dim Amount As Double
+
+    X = Pointer_X()
+    Y = Pointer_Y()
+    PanelLeft = Width - 268
+
+    If Value.DragMarker >= 0 Then
+
+        If Not Pointer_Held(POINTER_PRIMARY) Then
+
+            Call SaveHead(Value, Value.DragMarker)
+
+            Value.DragMarker = -1
+            Return 100
+
+        End If
+
+        Cursor = Projection.CursorPointAtDepth(Live, X, Y, Value.DragDepth, Width, Height)
+        Delta = Sequence.LocalOffset(Value.HeadActors[Value.DragMarker], M.Subtract(Cursor, Value.DragOrigin))
+        Delta = M.Add(Value.DragOffset, Delta)
+
+        If M.Length(Delta) <= 1000.0 Then
+            Value.References[Value.HeadIds[Value.DragMarker]].Offset = Delta
+        End If
+
+        Value.Dirty = True
+
+        Return 100
+
+    End If
+
+    If (Value.Preview And
+        (Value.TimelineDrag Or Contains(X, Y, 18, Height - 138, Width - 306, 32))) Then
+
+        If Pointer_Pressed(POINTER_PRIMARY) Then
+            Value.TimelineDrag = True
+        End If
+
+        If Value.TimelineDrag Then
+
+            Value.Elapsed = Min(Value.Schedule.Start[4] - 1, Max(0,
+                (X - 18) * Value.Schedule.Start[4] / Max(1, Width - 306)))
+            Value.Seek = True
+            Value.Scrubbing = True
+
+        End If
+
+        If Not Pointer_Held(POINTER_PRIMARY) Then
+            Value.TimelineDrag = False
+        End If
+
+        Return 100
+
+    End If
+
+    If Contains(X, Y, PanelLeft, 112, 252, 382) Then
+
+        If Not Pointer_Pressed(POINTER_PRIMARY) Then
+            Return 100
+        End If
+
+        If Contains(X, Y, PanelLeft + 8, 172, 236, 26) Then
+            Return 5
+        End If
+
+        For Index = 0 To 3
+
+            If Contains(X, Y, PanelLeft + 8 + Index * 60, 208, 56, 26) Then
+                ReturnValue = Index + 1
+
+                Return ReturnValue
+            End If
+
+        End For
+
+        For Index = 0 To 3
+
+            If Contains(X, Y, PanelLeft + 8 + Index * 60, 266, 56, 26) Then
+                ReturnValue = Index + 6
+
+                Return ReturnValue
+            End If
+
+        End For
+
+        If Not Value.Editing Then
+            Return 100
+        End If
+
+        If Contains(X, Y, PanelLeft + 8, 302, 236, 26) Then
+
+            Value.Draft.Motion = (Value.Draft.Motion + 1) Mod 5
+            Value.Dirty = True
+
+        Else If Contains(X, Y, PanelLeft + 8, 334, 236, 26) Then
+
+            Value.Draft.Connection = Value.Draft.Connection + 1
+
+            If Value.Draft.Connection > 1 Then
+                Value.Draft.Connection = -1
+            End If
+
+            If ((Value.Beat = 0 And Value.Draft.Connection = -1) Or
+                (Value.Beat = 3 And Value.Draft.Connection = 1)) Then
+                Value.Draft.Connection = 0
+            End If
+
+            Value.Dirty = True
+
+        Else If Contains(X, Y, PanelLeft + 8, 366, 236, 24) Then
+
+            Value.Marker = 1 - Value.Marker
+
+        Else If Contains(X, Y, PanelLeft + 8, 394, 236, 24) Then
+
+            Amount = -2.0
+
+            If X >= PanelLeft + 126 Then
+                Amount = 2.0
+            End If
+
+            If Value.Marker = 0 Then
+                Value.References[Value.HeadIds[0]].Size.X = Clamp(Value.References[Value.HeadIds[0]].Size.X + Amount, 1.0, 1000.0)
+            Else
+                Value.References[Value.HeadIds[1]].Size.X = Clamp(Value.References[Value.HeadIds[1]].Size.X + Amount, 1.0, 1000.0)
+            End If
+
+            Value.Dirty = True
+
+        Else If Contains(X, Y, PanelLeft + 8, 422, 236, 24) Then
+
+            Amount = -2.0
+
+            If X >= PanelLeft + 126 Then
+                Amount = 2.0
+            End If
+
+            If Value.Marker = 0 Then
+                Value.References[Value.HeadIds[0]].Size.Y = Clamp(Value.References[Value.HeadIds[0]].Size.Y + Amount, 1.0, 1000.0)
+            Else
+                Value.References[Value.HeadIds[1]].Size.Y = Clamp(Value.References[Value.HeadIds[1]].Size.Y + Amount, 1.0, 1000.0)
+            End If
+
+            Value.Dirty = True
+
+        Else If Contains(X, Y, PanelLeft + 8, 450, 236, 24) Then
+
+            Amount = -2.0
+
+            If X >= PanelLeft + 126 Then
+                Amount = 2.0
+            End If
+
+            Value.References[Value.HeadIds[Value.Marker]].Size.Z = Clamp(
+                Value.References[Value.HeadIds[Value.Marker]].Size.Z + Amount, 1.0, 1000.0)
+
+        End If
+
+        If Y >= 394 And Y < 474 Then
+            Call SaveHead(Value, Value.Marker)
+        End If
+
+        Return 100
+
+    End If
+
+    If (Value.Editing And
+        Not Value.Scrubbing And
+        Pointer_Pressed(POINTER_PRIMARY)) Then
+
+        For Index = 0 To 1
+
+            If (Value.BoxVisible[Index] And
+                Contains(X, Y, Value.BoxX[Index], Value.BoxY[Index], Value.BoxWidth[Index], Value.BoxHeight[Index])) Then
+
+                Value.DragMarker = Index
+                Value.Marker = Index
+                Projected = Projection.ProjectViewerPoint(Value.Heads[Index], Live, Width, Height)
+                Value.DragDepth = Projected.Depth
+                Value.DragOrigin = Projection.CursorPointAtDepth(Live, X, Y, Projected.Depth, Width, Height)
+                Value.DragOffset = Value.References[Value.HeadIds[0]].Offset
+
+                If Index = 1 Then
+                    Value.DragOffset = Value.References[Value.HeadIds[1]].Offset
+                End If
+
+                Return 100
+
+            End If
+
+        End For
+
+    End If
+
+    Return 0
+
+End Function
+
+Public Function MotionName(Motion As Number) As Text
+
+    If Motion = 1 Then
+        Return "Orbit Left"
+    Else If Motion = 2 Then
+        Return "Orbit Right"
+    Else If Motion = 3 Then
+        Return "Zoom Forward"
+    Else If Motion = 4 Then
+        Return "Zoom Backward"
+    End If
+
+    Return "Stationary"
+
+End Function
+
+Public Function ConnectionName(Connection As Number) As Text
+
+    If Connection = -1 Then
+        Return "From Previous"
+    Else If Connection = 1 Then
+        Return "To Next"
+    End If
+
+    Return "Cut / No Connection"
+
+End Function
+
+Public Sub Draw(Value As State, Unity As Boolean, Width As Number, Height As Number,
+    TargetName As Text, ClipName As Text)
+
+    Dim PanelLeft As Number
+    Dim Index As Number
+    Dim Label As Text
+    Dim Position As Number
+    Dim EndPosition As Number
+    Dim Tint As Number
+
+    PanelLeft = Width - 268
+
+    Fill Rectangle PanelLeft, 112, 252, 382, Rgb(6, 16, 34) Opacity 94
+    Draw Text "BEAT CAMERA: " + Sequence.Name(Sequence.Identity(Unity, Value.Selected)) At PanelLeft + 8, 120 Size 14 Color WHITE
+    Draw Text "Target: " + TargetName At PanelLeft + 8, 142 Size 11 Color CYAN
+    Draw Text "Tab / Click To Select" At PanelLeft + 8, 157 Size 10 Color LIGHT_GRAY
+
+    Call UI.DrawButton(PanelLeft + 8, 172, 236, 26, "Preview Beats", Value.Preview)
+
+    For Index = 0 To 3
+
+        Label = "Beat " + Digit(Index + 1)
+
+        If Value.Book[Slot(Value, Unity, Index)].Saved Then
+            Label = Label + " *"
+        End If
+
+        Call UI.DrawButton(PanelLeft + 8 + Index * 60, 208, 56, 26, Label,
+            Value.Editing And Value.Beat = Index)
+    End For
+
+    Label = "Defaults Until Saved"
+
+    If Value.Editing Then
+        Label = "Editing Beat " + Digit(Value.Beat + 1)
+    Else If Value.Preview Then
+        Label = "Preview Only - Saved Shots Unchanged"
+    End If
+
+    Draw Text Label At PanelLeft + 8, 245 Size 11 Color YELLOW
+
+    Call UI.DrawButton(PanelLeft + 8, 266, 56, 26, "Save", False)
+    Call UI.DrawButton(PanelLeft + 68, 266, 56, 26, "Copy", False)
+    Call UI.DrawButton(PanelLeft + 128, 266, 56, 26, "Paste", False)
+    Call UI.DrawButton(PanelLeft + 188, 266, 56, 26, "Cancel", False)
+
+    If Value.Editing Then
+
+        Call UI.DrawButton(PanelLeft + 8, 302, 236, 26, "Motion: " + MotionName(Value.Draft.Motion), False)
+        Call UI.DrawButton(PanelLeft + 8, 334, 236, 26, "Connect: " + ConnectionName(Value.Draft.Connection), False)
+
+        If Value.Draft.Connection <> 0 Then
+
+            If Not Value.Book[Slot(Value, Unity, Value.Beat + Value.Draft.Connection)].Saved Then
+                Draw Text "Connection Waits For Saved Neighbor" At PanelLeft + 8, 294 Size 9 Color YELLOW
+            End If
+
+        End If
+
+        Label = "Head Box: Attacker"
+
+        If Value.Marker = 1 Then
+            Label = "Head Box: Target"
+        End If
+
+        Call UI.DrawButton(PanelLeft + 8, 366, 236, 24, Label, False)
+        Call UI.DrawButton(PanelLeft + 8, 394, 114, 24, "Width -", False)
+        Call UI.DrawButton(PanelLeft + 130, 394, 114, 24, "Width +", False)
+        Call UI.DrawButton(PanelLeft + 8, 422, 114, 24, "Height -", False)
+        Call UI.DrawButton(PanelLeft + 130, 422, 114, 24, "Height +", False)
+        Call UI.DrawButton(PanelLeft + 8, 450, 114, 24, "Depth -", False)
+        Call UI.DrawButton(PanelLeft + 130, 450, 114, 24, "Depth +", False)
+
+        Draw Text "Head Cuboids Auto-Save Per Character" At PanelLeft + 8, 479 Size 9 Color CYAN
+
+    Else
+        Draw Text "Animation: " + ClipName At PanelLeft + 8, 307 Size 11 Color WHITE
+        Draw Text "Copy A Shot; Select Another Character" At PanelLeft + 8, 335 Size 10 Color LIGHT_GRAY
+        Draw Text "Then Edit A Beat And Paste" At PanelLeft + 8, 353 Size 10 Color LIGHT_GRAY
+
+    End If
+
+    Draw Text Value.Message At 280, 116 Size 11 Color YELLOW
+
+    If Not Value.Preview Then
+        Return
+    End If
+
+    For Index = 0 To 1
+
+        If Value.BoxVisible[Index] Then
+
+            Tint = CYAN
+            Label = "Attacker"
+
+            If Index = 1 Then
+                Tint = YELLOW
+                Label = "Target"
+            End If
+
+            Call DrawHeadEdges(Value, Index, Tint)
+
+            Draw Text Label At Value.BoxX[Index], Value.BoxY[Index] - 16 Size 12 Color Tint
+
+        End If
+
+    End For
+
+    Fill Rectangle 18, Height - 150, Width - 306, 44, Rgb(6, 16, 34) Opacity 94
+
+    For Index = 0 To 3
+
+        Position = 18 + Value.Schedule.Start[Index] * (Width - 306) / Max(1, Value.Schedule.Start[4])
+        EndPosition = 18 + Value.Schedule.Start[Index + 1] * (Width - 306) / Max(1, Value.Schedule.Start[4])
+        Tint = Rgb(30, 62, 85)
+
+        If Index = Value.DisplayBeat Then
+            Tint = Rgb(15, 120, 155)
+        End If
+
+        Fill Rectangle Position, Height - 132, EndPosition - Position - 1, 24, Tint
+        Draw Text "Beat " + Digit(Index + 1) At Position + 3, Height - 127 Size 10 Color WHITE
+    End For
+
+    Position = 18 + Value.Elapsed * (Width - 306) / Max(1, Value.Schedule.Start[4])
+
+    Fill Rectangle Position, Height - 138, 2, 32, YELLOW
+    Draw Text "Beat Sequence - Scrub To Preview; Click A Beat Button To Edit" At 22, Height - 149 Size 10 Color CYAN
+
+End Sub
+
+Private Sub InitializeHead(ByRef Value As State, Index As Number)
+
+    Dim Bounds As C.PreciseBounds3D
+    Dim Size As Double
+
+    If Value.References[Value.HeadIds[Index]].Size.X > 0.0 Then
+        Return
+    End If
+
+    Bounds = C.WorldBoundsPrecise(Value.HeadActors[Index])
+    Size = Max(8.0, Bounds.Size.Y * 0.15)
+    Value.References[Value.HeadIds[Index]].Size = P.Vector(Size, Size, Size)
+
+End Sub
+
+Private Sub SaveHead(ByRef Value As State, Index As Number)
+
+    Dim Identity As Number
+
+    Identity = Value.HeadIds[Index]
+
+    If Shots.WriteHead("BattleCamera.Head." + Sequence.Name(Identity), Value.References[Identity]) Then
+        Value.Message = Sequence.Name(Identity) + " Head Cuboid Saved"
+    Else
+        Value.Message = "Head Save Failed; Adjustment Still In Memory"
+    End If
+
+End Sub
+
+Private Sub ProjectHeads(ByRef Value As State, Live As P.Camera3D, Width As Number, Height As Number)
+
+    Dim Index As Number
+    Dim Corner As Number
+    Dim Point As P.Vector3
+    Dim Rotation As P.Vector3
+    Dim Size As P.Vector3
+    Dim Projected As Projection.ProjectedPoint
+    Dim Ok As Boolean
+    Dim RightEdge As Number
+    Dim Bottom As Number
+
+    For Index = 0 To 1
+
+        Size = Value.References[Value.HeadIds[Index]].Size
+        Ok = C.TryRotation(Value.HeadActors[Index], Rotation)
+        Rotation = P.Vector(0.0, Rotation.Y, 0.0)
+        Value.BoxVisible[Index] = False
+        Value.BoxX[Index] = 1000000
+        Value.BoxY[Index] = 1000000
+        RightEdge = -1000000
+        Bottom = -1000000
+
+        For Corner = 0 To 7
+
+            Point = P.Vector(ToDouble((Corner Mod 2) * 2 - 1) * Size.X * 0.5,
+                ToDouble((Corner / 2 Mod 2) * 2 - 1) * Size.Y * 0.5,
+                ToDouble((Corner / 4 Mod 2) * 2 - 1) * Size.Z * 0.5)
+            Point = M.Add(Value.Heads[Index], M.Rotate(Point, Rotation))
+            Projected = Projection.ProjectViewerPoint(Point, Live, Width, Height)
+            Value.CornerVisible[Index, Corner] = Projected.Visible
+
+            If Projected.Visible Then
+
+                Value.BoxVisible[Index] = True
+                Value.CornerX[Index, Corner] = ToNumber(Projected.X)
+                Value.CornerY[Index, Corner] = ToNumber(Projected.Y)
+                Value.BoxX[Index] = Min(Value.BoxX[Index], Value.CornerX[Index, Corner])
+                Value.BoxY[Index] = Min(Value.BoxY[Index], Value.CornerY[Index, Corner])
+                RightEdge = Max(RightEdge, Value.CornerX[Index, Corner])
+                Bottom = Max(Bottom, Value.CornerY[Index, Corner])
+
+            End If
+
+        End For
+
+        Value.BoxWidth[Index] = Max(12, RightEdge - Value.BoxX[Index])
+        Value.BoxHeight[Index] = Max(12, Bottom - Value.BoxY[Index])
+    End For
+
+End Sub
+
+Private Sub DrawHeadEdges(Value As State, Index As Number, Tint As Number)
+
+    Dim Corner As Number
+    Dim StepValue As Number
+    Dim Axis As Number
+    Dim Other As Number
+
+    For Corner = 0 To 7
+
+        StepValue = 1
+
+        For Axis = 0 To 2
+
+            Other = Corner + StepValue
+
+            If Corner / StepValue Mod 2 = 0 Then
+
+                If Value.CornerVisible[Index, Corner] And Value.CornerVisible[Index, Other] Then
+                    Draw Line Value.CornerX[Index, Corner], Value.CornerY[Index, Corner], Value.CornerX[Index, Other], Value.CornerY[Index, Other], Tint
+                End If
+
+            End If
+
+            StepValue = StepValue * 2
+        End For
+    End For
+
+End Sub
+
+Public Function Keyboard(ByRef Value As State, Unity As Boolean,
+    BossVisible As Boolean, PressedKey As Number) As Boolean
+
+    Dim Command As Number
+    Dim Changed As Boolean
+
+    Command = Input.ClassifyBeatKey(PressedKey)
+
+    If Command = 1 Then
+        Changed = SelectActor(Value, Sequence.NextActor(Unity, Value.Selected, BossVisible))
+        Return True
+    End If
+
+    If Not Value.Preview Then
+        Return False
+    End If
+
+    If Value.Editing And Not Value.Scrubbing Then
+
+        If Command = 2 Then
+            Changed = Camera.NudgeOrbit(Value.Camera, -2, 0)
+        Else If Command = 3 Then
+            Changed = Camera.NudgeOrbit(Value.Camera, 2, 0)
+        Else If Command = 4 Then
+            Changed = Camera.NudgeOrbit(Value.Camera, 0, 2)
+        Else If Command = 5 Then
+            Changed = Camera.NudgeOrbit(Value.Camera, 0, -2)
+        Else If Command = 6 Then
+            Value.Reframe = True
+            Value.ResetRequested = True
+        End If
+
+        Value.Dirty = Value.Dirty Or Changed
+
+    End If
+
+    Return True
+
+End Function
+
+End Module

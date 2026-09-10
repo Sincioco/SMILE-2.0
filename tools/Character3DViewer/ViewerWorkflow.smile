@@ -29,6 +29,8 @@ Import Smile.Tools.Character3DViewerParty As ViewerParty
 Import Smile.Tools.Character3DViewerEffects As ViewerEffects
 Import Smile.Tools.Character3DViewerDragon As ViewerDragon
 Import Smile.Tools.Character3DViewerRendering As ViewerRendering
+Import Smile.Tools.ViewerBeatEditor As BeatEditor
+Import Smile.Tools.ViewerBeatSequence As BeatSequence
 
 Private Const ANIMATION_CYCLE_MILLISECONDS = 5000
 Private Const ORBIT_POINTER_DIVISOR = 1
@@ -67,6 +69,7 @@ Private Const PARTY_FORMATION_END_ANGLE = 60
 Public Class Session
 
     Private Party As ViewerParty.State
+    Private BeatEditing As BeatEditor.State
     Private Character As Character3D.Actor
     Private CharacterBounds As Character3D.Bounds3D
     Private ActiveProfile As CharacterViewer.Profile
@@ -119,6 +122,7 @@ Public Class Session
         Call ViewerSession.Start(Me.Session)
 
         Call ViewerTiming.Start(Me.Timing, Timer())
+        Call BeatEditor.LoadShots(Me.BeatEditing)
 
     End Sub
 
@@ -154,7 +158,21 @@ Public Class Session
             Call ViewerPlayback.ResolveAnimationElapsed(Me.Playback, Me.Timing.AnimationElapsed)
 
             If Me.Party.Enabled Then
-                Call Me.AdvancePartyDemo()
+
+                If Me.BeatEditing.Preview Then
+
+                    Call ViewerPlayback.PauseForPartyPreview(Me.Playback)
+
+                    If Me.BeatEditing.Seek Then
+                        Call Me.SampleBeatSequence()
+                    End If
+
+                Else
+
+                    Call Me.AdvancePartyDemo()
+
+                End If
+
             End If
 
             Me.Session.Ready = Character3D.Update(Me.Character, Me.Playback.AnimationUpdateElapsed) And Me.Session.Ready
@@ -277,7 +295,7 @@ Public Class Session
                 Me.DragonState.Actor,
                 Me.DragonState.Available,
                 Me.DragonState.Visible,
-                Me.ViewerCameraState.AutoOrbit,
+                Me.ViewerCameraState.AutoOrbit Or Me.BeatEditing.Preview,
                 Me.Playback.PlaybackSpeed,
                 Me.Timing.CameraElapsed,
                 ViewerParty.AttackDuration(
@@ -292,6 +310,15 @@ Public Class Session
 
             If Me.Rendering.FloorVisible Then
                 Call ViewerCamera.KeepAboveGround(Me.ViewerCameraState, 0)
+            End If
+
+            If (Me.Party.Enabled And
+                Me.Party.Ready And
+                Me.DragonState.Available) Then
+                Call BeatEditor.Update(Me.BeatEditing, Me.Party, Me.Character,
+                    Me.DragonState.Actor, Me.ViewerCameraState.Live, Me.Playback.PlaybackSpeed,
+                    Me.Timing.CameraElapsed, Me.ViewWidth, Me.ViewHeight,
+                    Me.ViewerCameraState.AutoOrbit)
             End If
 
             Call Me.UpdateBattleAudio()
@@ -444,6 +471,15 @@ Public Class Session
     End Sub
 
     Private Sub HandleKeyboard(PressedKey As Number)
+
+        If Me.Party.Enabled Then
+
+            If BeatEditor.Keyboard(Me.BeatEditing, Me.Party.UnityRoster,
+                Me.DragonState.Visible, PressedKey) Then
+                Return
+            End If
+
+        End If
 
         If (Me.Party.Enabled And
             (PressedKey = KEY_4 Or
@@ -820,6 +856,10 @@ Public Class Session
 
         If Me.Party.Enabled Then
 
+            If Me.HandleBeatPointer() Then
+                Return True
+            End If
+
             If Me.HandlePartyPointer() Then
                 Return True
             End If
@@ -1167,6 +1207,26 @@ Public Class Session
 
         If Not Blocked Then
             CameraInput.WheelDelta = Pointer_Wheel_Delta()
+        End If
+
+        If Me.Party.Enabled And Me.BeatEditing.Preview Then
+
+            If Me.BeatEditing.Editing And Not Me.BeatEditing.Scrubbing Then
+
+                Me.Session.Ready = ViewerCamera.UpdatePointerInteraction(
+                    Me.BeatEditing.Camera, CameraInput, ORBIT_POINTER_DIVISOR,
+                    PAN_POINTER_DIVISOR, 4) And Me.Session.Ready
+
+                If (Me.BeatEditing.Camera.Controls.Orbiting Or
+                    Me.BeatEditing.Camera.Controls.Panning Or
+                    CameraInput.WheelDelta <> 0) Then
+                    Me.BeatEditing.Dirty = True
+                End If
+
+            End If
+
+            Return
+
         End If
 
         If ViewerCamera.PointerRequiresCalibrationOrigin(
@@ -1545,6 +1605,16 @@ Public Class Session
         Call Me.DrawInspectorOverlay()
         Call Me.EndPartyInspector()
 
+        If (Me.Party.Enabled And
+            Me.Party.Ready And
+            Me.ViewerUiState.Visibility <> 2 And
+            Not Me.ViewerUiState.CalibrationVisible) Then
+            Call BeatEditor.Draw(Me.BeatEditing, Me.Party.UnityRoster, Me.ViewWidth, Me.ViewHeight,
+                BeatSequence.Name(BeatSequence.Identity(Me.Party.UnityRoster,
+                    BeatSequence.Opponent(Me.Party, Me.BeatEditing.Selected))),
+                Me.SelectedBeatClipName())
+        End If
+
     End Sub
 
     Private Sub DrawInspectorOverlay()
@@ -1599,7 +1669,8 @@ Public Class Session
             )
         End If
 
-        If Me.ViewerUiState.Visibility = 0 Then
+        If (Me.ViewerUiState.Visibility = 0 And
+            (Not Me.Party.Enabled Or Me.ViewerUiState.CalibrationVisible)) Then
 
             StatusView = ViewerInspectorPresentation.CaptureStatus(
                 Me.Character, Me.ActiveProfile, Me.Party, Me.Session, Me.Rendering, Me.Playback,
@@ -1634,6 +1705,11 @@ Public Class Session
 
     Private Sub SelectCharacterTab(Index As Number)
 
+        If Me.BeatEditing.Preview Then
+            Me.BeatEditing.Message = "Save Or Cancel The Beat Preview First"
+            Return
+        End If
+
         If Not ViewerSession.ShouldSelectCharacterTab(
             Me.Session, Index, Me.Party.Enabled) Then
             Return
@@ -1660,6 +1736,8 @@ Public Class Session
             Me.Session, Me.Party, Me.Character, Me.Rendering, Me.Effects,
             Me.DragonState, Me.Playback, Index)
         Call Me.LoadViewer()
+
+        Me.BeatEditing.Selected = 0
 
     End Sub
 
@@ -1718,7 +1796,7 @@ Public Class Session
         Binding = ViewerParty.BeginInspectorSelection(
             Me.Party,
             Me.CaptureActorContext(),
-            Me.Party.Turn,
+            Me.BeatEditing.Selected,
             Me.DragonState,
             Me.Session.ViewerError
         )
@@ -1820,6 +1898,242 @@ Public Class Session
             Me.Session, Me.Party, Me.Playback, Me.ViewerUiState, Me.Equipment, Me.LifecycleSettings)
 
     End Sub
+
+    Private Sub SampleBeatSequence()
+
+        Me.Session.Ready = BeatSequence.Sample(Me.Party, Me.Character,
+            Me.ViewerCameraState.Frame, Me.Playback.SelectedClip, Me.DragonState,
+            Me.Playback.PlaybackSpeed, Me.BeatEditing.Selected,
+            Me.BeatEditing.Elapsed) And Me.Session.Ready
+
+        Call ViewerParty.ResetCameraTracking(Me.Party)
+
+        Me.BeatEditing.Seek = False
+        Me.Effects.VisualContinuityEpoch = Me.Effects.VisualContinuityEpoch + 1
+
+    End Sub
+
+    Private Sub CloseBeatSequence()
+
+        Dim Saved As BeatSequence.Bookmark
+
+        Saved = Me.BeatEditing.Bookmark
+
+        Call BeatSequence.Restore(Me.Party, Saved)
+
+        Me.Session.Ready = BeatSequence.Sample(Me.Party, Me.Character,
+            Me.ViewerCameraState.Frame, Me.Playback.SelectedClip, Me.DragonState,
+            Me.Playback.PlaybackSpeed, Saved.Turn, Saved.Elapsed, True) And Me.Session.Ready
+
+        Call BeatSequence.Restore(Me.Party, Saved)
+
+        Me.ViewerCameraState = Me.BeatEditing.OriginalCamera
+        Me.Session.Ready = BeatSequence.RestorePoses(Saved, Me.Party,
+            Me.Character, Me.DragonState, Me.Playback.PlaybackSpeed) And Me.Session.Ready
+
+        Call ViewerPlayback.RestoreAfterCameraPreview(Me.Playback,
+            Me.BeatEditing.WasPaused, Me.BeatEditing.WasDemo)
+
+        Me.BeatEditing.Preview = False
+        Me.BeatEditing.Editing = False
+        Me.BeatEditing.Dirty = False
+        Me.BeatEditing.DragMarker = -1
+        Me.BeatEditing.TimelineDrag = False
+        Me.Effects.VisualContinuityEpoch = Me.Effects.VisualContinuityEpoch + 1
+
+    End Sub
+
+    Private Function SelectedBeatClipName() As Text
+
+        Dim Actor As Character3D.Actor
+        Dim Result As Text
+        Dim Index As Number
+
+        Actor = BeatSequence.Actor(Me.Party, Me.Character, Me.DragonState.Actor,
+            Me.BeatEditing.Selected)
+
+        For Index = 0 To Character3D.ClipCount(Actor) - 1
+
+            If Character3D.CurrentClipNameMatches(Actor, Character3D.ClipName(Actor, Index)) Then
+                Result = Character3D.ClipName(Actor, Index)
+                Exit For
+            End If
+
+        End For
+
+        Return Result
+
+    End Function
+
+    Private Function HandleBeatPointer() As Boolean
+
+        Dim Command As Number
+        Dim Result As Boolean
+        Dim Turn As Number
+        Dim Best As Number
+        Dim Distance As Double
+        Dim Closest As Double
+        Dim BroadBest As Number
+        Dim BroadClosest As Double
+        Dim Candidate As Character3D.Actor
+
+        If (Not Me.Party.Ready Or
+            Not Me.DragonState.Available Or
+            Me.ViewerUiState.CalibrationVisible) Then
+            Return False
+        End If
+
+        Command = BeatEditor.Pointer(Me.BeatEditing, Me.Party.UnityRoster,
+            Me.ViewerCameraState.Live, Me.ViewWidth, Me.ViewHeight)
+
+        If Command >= 1 And Command <= 4 Then
+
+            Call BeatEditor.Open(Me.BeatEditing, Me.Party, Me.Character, Me.DragonState.Actor,
+                Me.ViewerCameraState, Me.Playback.ScenePaused, Me.Playback.DemoEnabled,
+                Me.Playback.PlaybackSpeed, Command - 1, True)
+
+        Else If Command = 5 Then
+
+            If Me.BeatEditing.Preview And Me.BeatEditing.Dirty Then
+                Me.BeatEditing.Message = "Save Or Cancel The Current Beat First"
+            Else If Me.BeatEditing.Preview Then
+                Call Me.CloseBeatSequence()
+            Else
+
+                Call BeatEditor.Open(Me.BeatEditing, Me.Party, Me.Character, Me.DragonState.Actor,
+                    Me.ViewerCameraState, Me.Playback.ScenePaused, Me.Playback.DemoEnabled,
+                    Me.Playback.PlaybackSpeed, 0, False)
+            End If
+
+        Else If Command = 6 Then
+
+            If BeatEditor.SaveShot(Me.BeatEditing, Me.Party.UnityRoster) Then
+                Call Me.CloseBeatSequence()
+            End If
+
+        Else If Command = 7 Then
+
+            Call BeatEditor.Copy(Me.BeatEditing, Me.Party.UnityRoster)
+
+        Else If Command = 8 Then
+
+            Call BeatEditor.Paste(Me.BeatEditing)
+
+        Else If Command = 9 And Me.BeatEditing.Preview Then
+
+            Call Me.CloseBeatSequence()
+
+        End If
+
+        If Command <> 0 Then
+            Return True
+        End If
+
+        If Me.BeatEditing.Preview Then
+
+            If Pointer_Pressed(POINTER_SECONDARY) And Me.BeatEditing.Editing Then
+
+                Me.BeatEditing.Reframe = True
+                Me.BeatEditing.ResetRequested = True
+                Me.BeatEditing.Scrubbing = False
+                Me.BeatEditing.Elapsed = Me.BeatEditing.Schedule.Start[Me.BeatEditing.Beat]
+                Me.BeatEditing.Seek = True
+                Return True
+
+            End If
+
+            ''' Preserve existing timeline and Party state while the temporary timeline owns seeking.
+
+            If (Pointer_X() < 272 Or
+                Pointer_Y() > Me.ViewHeight - 104 Or
+                Pointer_X() >= Me.ViewWidth - 276 Or
+                Me.BeatEditing.Scrubbing) Then
+                Return True
+            End If
+
+            Return False
+
+        End If
+
+        If (Pointer_X() >= 272 And
+            Pointer_X() < Me.ViewWidth - 276 And
+            Pointer_Y() > 92 And
+            Pointer_Y() < Me.ViewHeight - 150) Then
+
+            If Pointer_Pressed(POINTER_PRIMARY) Then
+
+                Me.BeatEditing.PickX = Pointer_X()
+                Me.BeatEditing.PickY = Pointer_Y()
+                Me.BeatEditing.PickCamera = Me.ViewerCameraState.Live
+                Me.BeatEditing.PickPending = True
+                Return True
+
+            End If
+
+            If Me.BeatEditing.PickPending And Pointer_Held(POINTER_PRIMARY) Then
+
+                If Abs(Pointer_X() - Me.BeatEditing.PickX) + Abs(Pointer_Y() - Me.BeatEditing.PickY) < 5 Then
+                    Return True
+                End If
+
+                Me.BeatEditing.PickPending = False
+
+            End If
+
+            If Pointer_Released(POINTER_PRIMARY) And Me.BeatEditing.PickPending Then
+
+                Me.BeatEditing.PickPending = False
+
+                If Abs(Pointer_X() - Me.BeatEditing.PickX) + Abs(Pointer_Y() - Me.BeatEditing.PickY) < 5 Then
+
+                    Best = -1
+                    BroadBest = -1
+                    Closest = 1000000.0
+                    BroadClosest = 1000000.0
+                    Turn = 0
+
+                    Do
+
+                        Candidate = BeatSequence.Actor(Me.Party, Me.Character, Me.DragonState.Actor, Turn)
+                        Distance = BeatSequence.HitDistance(Candidate, Me.BeatEditing.PickCamera,
+                            Pointer_X(), Pointer_Y(), Me.ViewWidth, Me.ViewHeight)
+
+                        If Distance >= 0.0 And Distance < Closest Then
+                            Closest = Distance
+                            Best = Turn
+                        End If
+
+                        Distance = BeatSequence.HitDistance(Candidate, Me.BeatEditing.PickCamera,
+                            Pointer_X(), Pointer_Y(), Me.ViewWidth, Me.ViewHeight, False)
+
+                        If Distance >= 0.0 And Distance < BroadClosest Then
+                            BroadClosest = Distance
+                            BroadBest = Turn
+                        End If
+
+                        Turn = BeatSequence.NextActor(Me.Party.UnityRoster, Turn, Me.DragonState.Visible)
+
+                    Loop Until Turn = 0
+
+                    If Best < 0 Then
+                        Best = BroadBest
+                    End If
+
+                    If Best >= 0 Then
+                        Result = BeatEditor.SelectActor(Me.BeatEditing, Best)
+                    End If
+
+                    Return True
+
+                End If
+
+            End If
+
+        End If
+
+        Return False
+
+    End Function
 
     Private Sub AdvancePartyDemo()
 

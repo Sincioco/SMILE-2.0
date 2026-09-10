@@ -400,4 +400,24 @@ Public Function HasPointerCapture(ByRef Value As State) As Boolean
 
 End Function
 
+Public Function ClassifyBeatKey(PressedKey As Number) As Number
+
+    If PressedKey = KEY_TAB Then
+        Return 1
+    Else If PressedKey = KEY_LEFT Then
+        Return 2
+    Else If PressedKey = KEY_RIGHT Then
+        Return 3
+    Else If PressedKey = KEY_UP Then
+        Return 4
+    Else If PressedKey = KEY_DOWN Then
+        Return 5
+    Else If PressedKey = KEY_ENTER Then
+        Return 6
+    End If
+
+    Return 0
+
+End Function
+
 End Module

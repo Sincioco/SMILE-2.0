@@ -122,6 +122,7 @@ Call CalibrationCheck(TestPartyUpdate.Updated And TestPartyUpdate.Ready And
     Calibration.KeyBase = TestIndex,
     "Party owner updates its calibrated companion and restores the primary bank")
 Call CheckPartyInspector()
+Call CheckBeatSequence()
 Call SelectCharacterTab(0)
 Call CalibrationCheck(Session.Ready And Not Session.ViewerError And Not Calibration.StorageRejected,
     "Return to Arin after Dragon and Party")
@@ -1103,6 +1104,70 @@ Sub CheckDragonFireContinuity()
 
 End Sub
 
+Sub CheckBeatSequence()
+
+    Dim Saved As BeatSequence.Bookmark
+    Dim Restored As BeatSequence.Bookmark
+    Dim Schedule As BeatSequence.Timing
+    Dim Subject As Character3D.Actor
+    Dim Owner As Number
+    Dim Beat As Number
+    Dim SampleBeat As Number
+    Dim Ok As Boolean
+
+    Saved = BeatSequence.Remember(Party)
+
+    Call BeatSequence.RememberPoses(Saved, Party, Character, DragonState.Actor)
+
+    For Owner = 0 To 2
+
+        Schedule = BeatSequence.Times(Party, Character, Playback.PlaybackSpeed, Owner, 0)
+
+        For Beat = 0 To 3
+
+            SampleBeat = 3 - Beat
+
+            Ok = BeatSequence.Sample(Party, Character, ViewerCameraState.Frame,
+                Playback.SelectedClip, DragonState, Playback.PlaybackSpeed,
+                Owner, Schedule.Start[SampleBeat])
+
+            If (Not Ok Or
+                Party.Turn <> Owner Or
+                Party.Elapsed <> Schedule.Start[SampleBeat]) Then
+                Print "Beat sample diagnostic: "; Owner; " / "; SampleBeat; " / "; Ok; " / "; Party.Turn; " / "; Party.Elapsed; " / "; Schedule.Start[SampleBeat]
+            End If
+
+            Call CalibrationCheck(Ok And Party.Turn = Owner And Party.Elapsed = Schedule.Start[SampleBeat],
+                "Four actual hero and Dragon beats seek backwards without advancing the turn")
+        End For
+    End For
+
+    Party.DragonCounter = 0
+    Party.FatalTarget = 0
+    Ok = BeatSequence.Sample(Party, Character, ViewerCameraState.Frame,
+        Playback.SelectedClip, DragonState, 100, 2, 4800, True)
+
+    Call CalibrationCheck(Ok And Party.Turn = 2 And Party.Elapsed = 4800 And Party.DragonCounter = 0,
+        "Restoring a fatal reaction tail does not advance the battle turn")
+    Call BeatSequence.Restore(Party, Saved)
+
+    Ok = BeatSequence.Sample(Party, Character, ViewerCameraState.Frame,
+        Playback.SelectedClip, DragonState, Playback.PlaybackSpeed, Saved.Turn, Saved.Elapsed, True)
+
+    Call BeatSequence.Restore(Party, Saved)
+
+    Ok = BeatSequence.RestorePoses(Saved, Party, Character, DragonState, Playback.PlaybackSpeed) And Ok
+
+    Call BeatSequence.RememberPoses(Restored, Party, Character, DragonState.Actor)
+
+    For Owner = 0 To 2
+        Call CalibrationCheck(Ok And Saved.Clips[Owner] = Restored.Clips[Owner] And
+            Saved.Times[Owner] = Restored.Times[Owner] And Saved.Modes[Owner] = Restored.Modes[Owner],
+            "Camera preview restores every actor clip, playback mode and time")
+    End For
+
+End Sub
+
 Sub CheckPartyInspector()
 
     Dim Handled As Boolean
@@ -1123,7 +1188,9 @@ Sub CheckPartyInspector()
 
     For Owner = 0 To 2
 
-        Party.Turn = Owner
+        ''' Inspector selection is independent of the currently acting character.
+        Party.Turn = 0
+        BeatEditing.Selected = Owner
 
         Call BeginPartyInspector()
 
@@ -1134,7 +1201,7 @@ Sub CheckPartyInspector()
         End If
 
         Call CalibrationCheck(Party.UiBound And Session.ProfileIndex = Calibration.OwnerProfile,
-            "Party inspector binds the active profile")
+            "Party inspector binds the selected profile independently of the acting turn")
         Call CalibrationCheck(CalibrationAvailable = (Owner < 2),
             "Only the two calibrated heroes expose Pose")
 
@@ -1213,6 +1280,7 @@ Sub CheckPartyInspector()
     End For
 
     Party.Turn = 0
+    BeatEditing.Selected = 0
 
     Call BeginPartyInspector()
     Call CalibrationCheck(ViewerCalibration.SavedJson(Calibration, Character) = SavedArinJson,

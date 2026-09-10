@@ -1,0 +1,166 @@
+''' Focused relative-shot, persistence, head identity and camera-control regressions.
+Module Smile.Tools.BeatCameraTests
+
+Option Explicit
+
+Import Smile.Tools.BattleCameraShots As Shots
+Import Smile.Tools.ViewerBeatEditor As Editor
+Import Smile.Tools.ViewerBeatSequence As Sequence
+Import Smile.Tools.Character3DViewerCamera As Camera
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.PrecisionMath3D As M
+
+Private Sub Check(Condition As Boolean, Label As Text, ByRef Failures As Number)
+
+    If Not Condition Then
+        Print "FAIL: Beat Camera "; Label
+        Failures = Failures + 1
+    End If
+
+End Sub
+
+Public Function Run() As Number
+
+    Dim Failures As Number
+    Dim Value As Shots.Shot
+    Dim Decoded As Shots.Shot
+    Dim SavedHead As Shots.HeadReference
+    Dim LoadedHead As Shots.HeadReference
+    Dim First As P.Camera3D
+    Dim Resolved As P.Camera3D
+    Dim Second As P.Camera3D
+    Dim Attacker As P.Vector3
+    Dim Target As P.Vector3
+    Dim Shift As P.Vector3
+    Dim Rotation As P.Vector3
+    Dim Text As Text
+    Dim Result As Boolean
+    Dim Ui As Editor.State
+    Dim Controls As Camera.State
+    Dim Previous As Shots.Shot
+    Dim Following As Shots.Shot
+    Dim Index As Number
+
+    Attacker = P.Vector(0.125, 80.375, 10.625)
+    Target = P.Vector(0.125, 155.875, 310.625)
+    First.Position = P.Vector(100.875, 110.125, -240.625)
+    First.Target = P.Vector(0.375, 100.875, 180.125)
+    First.UpDirection = P.Vector(0.0, 1.0, 0.0)
+    First.FovDegrees = 38.125
+    First.NearPlane = 0.1
+    First.FarPlane = 5000.0
+
+    Call Shots.Capture(Value, First, Attacker, Target)
+
+    Resolved = Shots.Resolve(Value, Attacker, Target, First, 0.0)
+
+    Call Check(M.Distance(Resolved.Position, First.Position) < 1e-9, "Capture Round Trip", Failures)
+    Call Check(M.Distance(Resolved.Target, First.Target) < 1e-9, "Aim Round Trip", Failures)
+
+    Shift = P.Vector(-125.375, 10.625, 90.125)
+    Resolved = Shots.Resolve(Value, M.Add(Attacker, Shift), M.Add(Target, Shift), First, 0.0)
+
+    Call Check(M.Distance(Resolved.Position, M.Add(First.Position, Shift)) < 1e-9, "Formation Translation", Failures)
+
+    Rotation.Y = 90.0
+    Resolved = Shots.Resolve(Value, M.Rotate(Attacker, Rotation), M.Rotate(Target, Rotation), First, 0.0)
+
+    Call Check(M.Distance(Resolved.Position, M.Rotate(First.Position, Rotation)) < 1e-9, "Attacker Target Rotation", Failures)
+
+    Text = Shots.Encode(Value)
+    Result = Shots.Decode(Text, Decoded)
+
+    Call Check(Result And Decoded.Eye.X = Value.Eye.X And Decoded.Fov = Value.Fov, "Binary64 Text Round Trip", Failures)
+
+    Result = Shots.Decode("SMILE-Shot-1|1e999|", Decoded)
+
+    Call Check(Not Result And Decoded.Fov = Value.Fov, "Malformed Save Preserves Destination", Failures)
+
+    Result = Shots.WriteShot("BeatCamera.Test.Shot", Value)
+    Result = Shots.ReadShot("BeatCamera.Test.Shot", Decoded) And Result
+
+    Call Check(Result And Decoded.Eye.X = Value.Eye.X, "Actual Save Data Round Trip", Failures)
+
+    SavedHead.Offset = P.Vector(0.125, 3.375, -1.625)
+    SavedHead.Size = P.Vector(20.125, 30.375, 15.625)
+    Result = Shots.WriteHead("BeatCamera.Test.Head", SavedHead)
+    Result = Shots.ReadHead("BeatCamera.Test.Head", LoadedHead) And Result
+
+    Call Check(Result And LoadedHead.Size.Z = SavedHead.Size.Z And LoadedHead.Offset.Y = SavedHead.Offset.Y, "Head Cuboid Persistence", Failures)
+
+    For Index = 1 To 4
+
+        Value.Motion = Index
+        Resolved = Shots.Resolve(Value, Attacker, Target, First, 0.0)
+        Second = Shots.Resolve(Value, Attacker, Target, First, 1.0)
+
+        Call Check(M.Distance(Resolved.Position, First.Position) < 1e-9 And
+            M.Distance(Second.Position, First.Position) > 1.0, "Motion Endpoints", Failures)
+    End For
+
+    Resolved = Shots.Blend(First, Second, 0.0)
+
+    Call Check(M.Distance(Resolved.Position, First.Position) < 1e-9, "Connection Start", Failures)
+
+    Resolved = Shots.Blend(First, Second, 1.0)
+
+    Call Check(M.Distance(Resolved.Position, Second.Position) < 1e-9, "Connection End", Failures)
+
+    Value.Motion = 0
+    Value.Connection = 1
+    Following = Value
+    Following.Eye.X = Following.Eye.X + 80.0
+    Following.Connection = -1
+    Resolved = Shots.ResolveLinked(Value, Previous, Following, Attacker, Target, First, 1.0)
+    Second = Shots.ResolveLinked(Following, Value, Previous, Attacker, Target, First, 0.0)
+
+    Call Check(M.Distance(Resolved.Position, Second.Position) < 1e-9,
+        "Reciprocal Connections Meet Without Replaying Transition", Failures)
+
+    Resolved = Shots.ResolveLinked(Value, Previous, Previous, Attacker, Target, First, 1.0)
+    Second = Shots.Resolve(Value, Attacker, Target, First, 1.0)
+
+    Call Check(M.Distance(Resolved.Position, Second.Position) < 1e-9,
+        "Missing Neighbor Does Not Invent A Shot", Failures)
+
+    Resolved = Shots.ResolveLinked(Previous, Value, Following, Attacker, Target, First, 0.5)
+
+    Call Check(M.Distance(Resolved.Position, First.Position) < 1e-9,
+        "Unauthored Beat Retains Actual Default Camera", Failures)
+
+    Ui.Editing = True
+    Ui.Draft = Value
+    Ui.References[0] = SavedHead
+    Ui.References[1].Size = P.Vector(40.0, 45.0, 35.0)
+
+    Call Editor.Copy(Ui, True)
+
+    Ui.Selected = 1
+    Ui.Beat = 2
+
+    Call Editor.Paste(Ui)
+    Call Check(Ui.Draft.Eye.X = Value.Eye.X And Ui.References[1].Size.X = 40.0,
+        "Cross Character Copy Preserves Destination Head", Failures)
+    Call Check(Sequence.Identity(False, 2) <> Sequence.Identity(True, 2), "Independent Boss Identities", Failures)
+    Call Check(Sequence.NextActor(False, 1, True) = 2 And Sequence.NextActor(True, 5, True) = 2,
+        "Both Bosses In Selection Cycle", Failures)
+
+    Controls.Base = First
+    Controls.Base.Position = P.Vector(-400.0, 140.0, 0.0)
+    Controls.Base.Target = P.Vector(0.0, 100.0, 0.0)
+
+    Call Camera.ComposeShot(Controls)
+    Call Check(M.Distance(Controls.Live.Position, Controls.Base.Position) < 1e-9,
+        "Arbitrary Shot Basis Without Jump", Failures)
+
+    Controls.Controls.PanX = 0.125
+
+    Call Camera.ComposeShot(Controls)
+    Call Check(Abs(Controls.Live.Position.Z - Controls.Base.Position.Z) > 0.1,
+        "Pan Follows Saved Camera Right Axis", Failures)
+
+    Return Failures
+
+End Function
+
+End Module

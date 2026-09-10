@@ -97,6 +97,9 @@
     }
   },
   "sockets": {
+    "Head": {
+      "node": "head"
+    },
     "SwordBase": {
       "node": "Sword_Joint1",
       "translation": [

@@ -404,8 +404,8 @@
   "checkpointFiles": [
     {
       "path": "ValorV1.sm3d.json",
-      "sha256": "f061f2f2bcb0a72361ab017acb8ee1167eee6695f58e4450c70bb84e00c4ca44",
-      "bytes": 3761
+      "sha256": "b84d9ff83c4e9bb354023ff72c924450e3e6ed6d26c0fd20c6920f9c758a244a",
+      "bytes": 3806
     },
     {
       "path": "animation-manifest.json",

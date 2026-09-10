@@ -149,3 +149,10 @@ The same single mouth emitter now uses radius 24 and intensity 320, with a
 and target contact read substantially larger without adding an emitter, changing
 the twelve-emitter scene budget or altering either arm-lightning lease. The model,
 textures, sockets, animations and grounding remain unchanged.
+
+## September 11: Beat Camera Head Reference
+
+The descriptor exposes a generic Head socket on the verified existing head bone.
+The Party camera editor queries that animated socket through Character3D and lets
+the user offset/resize its framing box independently of pose calibration. This is
+attachment metadata only; the GLB, materials, animations and grounding are unchanged.

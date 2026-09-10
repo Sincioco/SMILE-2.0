@@ -1,0 +1,490 @@
+''' Relative shots: no actor ownership, input, renderer or choreography.
+Module Smile.Tools.BattleCameraShots
+
+Option Explicit
+
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.PrecisionMath3D As M
+
+Public Type Shot
+    Saved As Boolean
+    Eye As P.Vector3
+    Aim As P.Vector3
+    Fov As Double
+    Motion As Number
+    Connection As Number
+End Type
+
+Public Type HeadReference
+    Offset As P.Vector3
+    Size As P.Vector3
+End Type
+
+Public Type ReferenceFrame
+    Origin As P.Vector3
+    Baseline As P.Vector3
+    Right As P.Vector3
+    Length As Double
+End Type
+
+''' X is lateral world distance, Y is height above the head baseline, Z is its fraction.
+Public Function Frame(Attacker As P.Vector3, Target As P.Vector3) As ReferenceFrame
+
+    Dim Result As ReferenceFrame
+    Dim Horizontal As P.Vector3
+
+    Result.Origin = Attacker
+    Result.Baseline = M.Subtract(Target, Attacker)
+    Horizontal = Result.Baseline
+    Horizontal.Y = 0.0
+    Result.Length = M.Length(Horizontal)
+
+    If Result.Length < 1.0 Then
+        Result.Baseline = P.Vector(0.0, Result.Baseline.Y, 1.0)
+        Result.Length = 1.0
+    End If
+
+    Result.Right = P.Vector(Result.Baseline.Z / Result.Length, 0.0,
+        -Result.Baseline.X / Result.Length)
+
+    Return Result
+
+End Function
+
+Public Function Relative(Point As P.Vector3, Basis As ReferenceFrame) As P.Vector3
+
+    Dim Delta As P.Vector3
+    Dim Result As P.Vector3
+
+    Delta = M.Subtract(Point, Basis.Origin)
+    Result.Z = ((Delta.X * Basis.Baseline.X + Delta.Z * Basis.Baseline.Z) /
+        (Basis.Length * Basis.Length))
+    Result.X = M.Dot(Delta, Basis.Right)
+    Result.Y = Delta.Y - Basis.Baseline.Y * Result.Z
+
+    Return Result
+
+End Function
+
+Public Function World(Point As P.Vector3, Basis As ReferenceFrame) As P.Vector3
+
+    Dim Result As P.Vector3
+
+    Result = M.Add(Basis.Origin, M.Add(M.Scale(Basis.Right, Point.X),
+        M.Scale(Basis.Baseline, Point.Z)))
+    Result.Y = Result.Y + Point.Y
+
+    Return Result
+
+End Function
+
+Public Sub Capture(ByRef Value As Shot, Camera As P.Camera3D,
+    Attacker As P.Vector3, Target As P.Vector3)
+
+    Dim Basis As ReferenceFrame
+
+    Basis = Frame(Attacker, Target)
+    Value.Eye = Relative(Camera.Position, Basis)
+    Value.Aim = Relative(Camera.Target, Basis)
+    Value.Fov = Camera.FovDegrees
+    Value.Saved = True
+
+End Sub
+
+Public Function Resolve(Value As Shot, Attacker As P.Vector3, Target As P.Vector3,
+    Lens As P.Camera3D, Progress As Double) As P.Camera3D
+
+    Dim Basis As ReferenceFrame
+    Dim Result As P.Camera3D
+    Dim Offset As P.Vector3
+    Dim Rotation As P.Vector3
+    Dim Amount As Double
+
+    Basis = Frame(Attacker, Target)
+    Result = Lens
+    Result.Position = World(Value.Eye, Basis)
+    Result.Target = World(Value.Aim, Basis)
+    Result.UpDirection = P.Vector(0.0, 1.0, 0.0)
+    Result.FovDegrees = Value.Fov
+    Amount = Clamp(Progress, 0.0, 1.0)
+    Offset = M.Subtract(Result.Position, Result.Target)
+
+    If Value.Motion = 1 Or Value.Motion = 2 Then
+
+        Rotation.Y = Amount * 20.0
+
+        If Value.Motion = 1 Then
+            Rotation.Y = -Rotation.Y
+        End If
+
+        Offset = M.Rotate(Offset, Rotation)
+
+    Else If Value.Motion = 3 Then
+
+        Offset = M.Scale(Offset, 1.0 - Amount * 0.2)
+
+    Else If Value.Motion = 4 Then
+
+        Offset = M.Scale(Offset, 1.0 + Amount * 0.2)
+
+    End If
+
+    Result.Position = M.Add(Result.Target, Offset)
+
+    Return Result
+
+End Function
+
+''' A boundary is traversed once: an outgoing connection takes precedence over
+''' the following beat's redundant incoming connection. Unauthored shots stay default.
+Public Function ResolveLinked(Value As Shot, Previous As Shot, Following As Shot,
+    Attacker As P.Vector3, Target As P.Vector3, Lens As P.Camera3D,
+    Progress As Double) As P.Camera3D
+
+    Dim Result As P.Camera3D
+    Dim Other As P.Camera3D
+
+    Result = Lens
+
+    If Not Value.Saved Then
+        Return Result
+    End If
+
+    Result = Resolve(Value, Attacker, Target, Lens, Progress)
+
+    If (Value.Connection = -1 And
+        Previous.Saved And
+        Previous.Connection <> 1) Then
+        Other = Resolve(Previous, Attacker, Target, Lens, 1.0)
+        Result = Blend(Other, Result, Progress)
+    Else If Value.Connection = 1 And Following.Saved Then
+        Other = Resolve(Following, Attacker, Target, Lens, 0.0)
+        Result = Blend(Result, Other, Progress)
+    End If
+
+    Return Result
+
+End Function
+
+Public Function Blend(First As P.Camera3D, Second As P.Camera3D,
+    Progress As Double) As P.Camera3D
+
+    Dim Result As P.Camera3D
+    Dim Amount As Double
+
+    Amount = Clamp(Progress, 0.0, 1.0)
+    Amount = Amount * Amount * (3.0 - 2.0 * Amount)
+    Result = First
+    Result.Position = M.Lerp(First.Position, Second.Position, Amount)
+    Result.Target = M.Lerp(First.Target, Second.Target, Amount)
+    Result.FovDegrees = First.FovDegrees + (Second.FovDegrees - First.FovDegrees) * Amount
+    Result.UpDirection = P.Vector(0.0, 1.0, 0.0)
+
+    Return Result
+
+End Function
+
+Public Function Valid(Value As Shot) As Boolean
+
+    Dim Result As Boolean
+
+    Result = (Value.Fov >= 10.0 And Value.Fov <= 160.0 And
+        Value.Motion >= 0 And Value.Motion <= 4 And
+        Value.Connection >= -1 And Value.Connection <= 1 And
+        M.Length(Value.Eye) < 100000.0 And M.Length(Value.Aim) < 100000.0 And
+        M.Distance(Value.Eye, Value.Aim) > 0.000001)
+
+    Return Result
+
+End Function
+
+Private Function VectorText(Value As P.Vector3) As Text
+
+    Dim Result As Text
+
+    Result = (Text_From_Double(Value.X) + "|" + Text_From_Double(Value.Y) + "|" +
+        Text_From_Double(Value.Z) + "|")
+
+    Return Result
+
+End Function
+
+Public Function Encode(Value As Shot) As Text
+
+    Dim Result As Text
+
+    If Not Valid(Value) Then
+        Return ""
+    End If
+
+    Result = ("SMILE-Shot-1|" + VectorText(Value.Eye) + VectorText(Value.Aim) +
+        Text_From_Double(Value.Fov) + "|" + Text_From_Double(ToDouble(Value.Motion)) + "|" +
+        Text_From_Double(ToDouble(Value.Connection)) + "|")
+
+    Return Result
+
+End Function
+
+''' Validate grammar and a finite exponent before the checked conversion can terminate a program.
+Private Function ReadScalar(Source As Text, ByRef Offset As Number,
+    ByRef Result As Double) As Boolean
+
+    Dim Start As Number
+    Dim Code As Number
+    Dim Digits As Number
+    Dim Exponent As Number
+    Dim Phase As Number
+
+    Start = Offset
+
+    If Text_Slice(Source, Offset, 1) = "-" Then
+        Offset = Offset + 1
+    End If
+
+    Do
+
+        If Offset >= Text_Length(Source) Or Offset - Start > 32 Then
+            Return False
+        End If
+
+        Code = Text_Code_At(Source, Offset)
+
+        If Code >= 48 And Code <= 57 Then
+
+            Digits = Digits + 1
+
+            If Phase = 2 Then
+
+                Exponent = Exponent * 10 + Code - 48
+
+                If Exponent > 100 Then
+                    Return False
+                End If
+
+            End If
+
+        Else If (Code = 46 And
+            Phase = 0 And
+            Digits > 0) Then
+
+            Phase = 1
+            Digits = 0
+
+        Else If ((Code = 101 Or Code = 69) And
+            Phase < 2 And
+            Digits > 0) Then
+
+            Phase = 2
+            Digits = 0
+
+            If (Text_Slice(Source, Offset + 1, 1) = "-" Or
+                Text_Slice(Source, Offset + 1, 1) = "+") Then
+                Offset = Offset + 1
+            End If
+
+        Else If Code = 124 And Digits > 0 Then
+
+            Exit Do
+
+        Else
+            Return False
+
+        End If
+
+        Offset = Offset + 1
+
+    Loop
+
+    Result = Text_To_Double(Text_Slice(Source, Start, Offset - Start))
+    Offset = Offset + 1
+
+    If Abs(Result) > 1000000.0 Then
+        Return False
+    End If
+
+    Return True
+
+End Function
+
+Public Function Decode(Source As Text, ByRef Result As Shot) As Boolean
+
+    Dim Candidate As Shot
+    Dim Values[9] As Double
+    Dim Offset As Number
+    Dim Index As Number
+
+    If Text_Slice(Source, 0, 13) <> "SMILE-Shot-1|" Then
+        Return False
+    End If
+
+    Offset = 13
+
+    For Index = 0 To 8
+
+        If Not ReadScalar(Source, Offset, Values[Index]) Then
+            Return False
+        End If
+
+    End For
+
+    If (Offset <> Text_Length(Source) Or
+        Values[7] <> Truncate(Values[7]) Or
+        Values[8] <> Truncate(Values[8])) Then
+        Return False
+    End If
+
+    Candidate.Eye = P.Vector(Values[0], Values[1], Values[2])
+    Candidate.Aim = P.Vector(Values[3], Values[4], Values[5])
+    Candidate.Fov = Values[6]
+    Candidate.Motion = ToNumber(Values[7])
+    Candidate.Connection = ToNumber(Values[8])
+    Candidate.Saved = True
+
+    If Not Valid(Candidate) Then
+        Return False
+    End If
+
+    Result = Candidate
+
+    Return True
+
+End Function
+
+Private Function WriteText(Key As Text, Source As Text) As Boolean
+
+    Dim Bytes[1024] As Number
+    Dim Index As Number
+    Dim ByteCount As Number
+    Dim Status As Number
+    Dim Result As Boolean
+
+    ByteCount = Text_Length(Source)
+
+    If ByteCount = 0 Or ByteCount > 1024 Then
+        Return False
+    End If
+
+    For Index = 0 To ByteCount - 1
+        Bytes[Index] = Text_Code_At(Source, Index)
+    End For
+
+    Save Data Bytes Count ByteCount To Key Status Status
+
+    Result = Status = DATA_STATUS_OK
+
+    Return Result
+
+End Function
+
+Private Function ReadText(Key As Text) As Text
+
+    Dim Bytes[1024] As Number
+    Dim ByteCount As Number
+    Dim Status As Number
+    Dim Index As Number
+    Dim Source As Text
+
+    Load Data Key Into Bytes Count ByteCount Status Status
+
+    If Status <> DATA_STATUS_OK Then
+        Return ""
+    End If
+
+    For Index = 0 To ByteCount - 1
+
+        If Bytes[Index] < 32 Or Bytes[Index] > 126 Then
+            Return ""
+        End If
+
+        Source = Source + Text_Slice(" !""#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~", Bytes[Index] - 32, 1)
+    End For
+
+    Return Source
+
+End Function
+
+Public Function WriteShot(Key As Text, Value As Shot) As Boolean
+
+    Dim Result As Boolean
+
+    Result = WriteText(Key, Encode(Value))
+
+    Return Result
+
+End Function
+
+Public Function ReadShot(Key As Text, ByRef Value As Shot) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Decode(ReadText(Key), Value)
+
+    Return Result
+
+End Function
+
+Public Function ValidHead(Value As HeadReference) As Boolean
+
+    Dim Result As Boolean
+
+    Result = (M.Length(Value.Offset) <= 1000.0 And
+        Value.Size.X >= 1.0 And Value.Size.X <= 1000.0 And
+        Value.Size.Y >= 1.0 And Value.Size.Y <= 1000.0 And
+        Value.Size.Z >= 1.0 And Value.Size.Z <= 1000.0)
+
+    Return Result
+
+End Function
+
+Public Function WriteHead(Key As Text, Value As HeadReference) As Boolean
+
+    Dim Result As Boolean
+
+    If Not ValidHead(Value) Then
+        Return False
+    End If
+
+    Result = WriteText(Key, "SMILE-Head-1|" + VectorText(Value.Offset) + VectorText(Value.Size))
+
+    Return Result
+
+End Function
+
+Public Function ReadHead(Key As Text, ByRef Value As HeadReference) As Boolean
+
+    Dim Source As Text
+    Dim Candidate As HeadReference
+    Dim Values[6] As Double
+    Dim Index As Number
+    Dim Offset As Number
+
+    Source = ReadText(Key)
+
+    If Text_Slice(Source, 0, 13) <> "SMILE-Head-1|" Then
+        Return False
+    End If
+
+    Offset = 13
+
+    For Index = 0 To 5
+
+        If Not ReadScalar(Source, Offset, Values[Index]) Then
+            Return False
+        End If
+
+    End For
+
+    Candidate.Offset = P.Vector(Values[0], Values[1], Values[2])
+    Candidate.Size = P.Vector(Values[3], Values[4], Values[5])
+
+    If Offset <> Text_Length(Source) Or Not ValidHead(Candidate) Then
+        Return False
+    End If
+
+    Value = Candidate
+
+    Return True
+
+End Function
+
+End Module

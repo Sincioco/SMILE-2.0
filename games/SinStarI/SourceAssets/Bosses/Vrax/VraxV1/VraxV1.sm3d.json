@@ -76,6 +76,9 @@
     }
   },
   "sockets": {
+    "Head": {
+      "node": "head"
+    },
     "VraxMouth": {
       "node": "head",
       "translation": [

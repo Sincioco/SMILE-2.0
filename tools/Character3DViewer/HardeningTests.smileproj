@@ -14,6 +14,10 @@
     <SmileSource Include="DragonPresence.smile" />
     <SmileSource Include="BattleAudio.smile" />
     <SmileSource Include="BattleCamera.smile" />
+    <SmileSource Include="BattleCameraShots.smile" />
+    <SmileSource Include="ViewerBeatSequence.smile" />
+    <SmileSource Include="ViewerBeatEditor.smile" />
+    <SmileSource Include="BeatCameraTests.smile" />
     <SmileSource Include="ViewerTiming.smile" />
     <SmileSource Include="ViewerSession.smile" />
     <SmileSource Include="ViewerLifecycle.smile" />

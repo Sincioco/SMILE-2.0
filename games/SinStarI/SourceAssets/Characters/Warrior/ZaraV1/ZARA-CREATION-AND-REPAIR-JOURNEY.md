@@ -82,3 +82,10 @@ final grounded transform and the actor’s animator. Hide/reload releases owned
 effects. See equipment-vfx-attachments.json for source-model hashes and measured
 points, and tools/Character3DViewer/ARCHITECTURE.md for current effect ownership and validation routes.
 No model re-export, texture edit, grounding change or shared calibration was needed.
+
+## September 11: Beat Camera Head Reference
+
+The descriptor exposes a generic Head socket on the verified existing head bone.
+The Party camera editor queries that animated socket through Character3D and lets
+the user offset/resize its framing box independently of pose calibration. This is
+attachment metadata only; the GLB, materials, animations and grounding are unchanged.

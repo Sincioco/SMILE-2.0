@@ -314,8 +314,8 @@
   "checkpointFiles": [
     {
       "path": "VraxV1.sm3d.json",
-      "sha256": "684c146e67b0478a03a51f18a221c73bc4083b5670a44dc4e1e62aada61c7b4b",
-      "bytes": 1697
+      "sha256": "b01b22ab206524ca0ffdc895c42d023bfafd42060ff2f820c5df7b50904c9edb",
+      "bytes": 1742
     },
     {
       "path": "animation-manifest.json",

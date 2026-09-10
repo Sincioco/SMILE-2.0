@@ -21,6 +21,9 @@
     <SmileSource Include="..\Character3DViewer\ArinShieldRim.smile" />
     <SmileSource Include="..\Character3DViewer\BattleAudio.smile" />
     <SmileSource Include="..\Character3DViewer\BattleCamera.smile" />
+    <SmileSource Include="..\Character3DViewer\BattleCameraShots.smile" />
+    <SmileSource Include="..\Character3DViewer\ViewerBeatSequence.smile" />
+    <SmileSource Include="..\Character3DViewer\ViewerBeatEditor.smile" />
     <SmileSource Include="..\Character3DViewer\DragonPresence.smile" />
     <SmileSource Include="..\Character3DViewer\CalibrationJson.smile" />
     <SmileSource Include="..\Character3DViewer\ViewerTiming.smile" />

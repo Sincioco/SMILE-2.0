@@ -82,6 +82,9 @@
     }
   },
   "sockets": {
+    "Head": {
+      "node": "head"
+    },
     "SwordBase": {
       "node": "Weapon",
       "translation": [

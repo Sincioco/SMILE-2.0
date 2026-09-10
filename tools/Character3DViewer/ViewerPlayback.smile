@@ -122,6 +122,16 @@ End Sub
 Public Sub PauseForPartyPreview(ByRef Value As State)
 
     Value.ScenePaused = True
+    Value.AnimationUpdateElapsed = 0
+
+End Sub
+
+Public Sub RestoreAfterCameraPreview(ByRef Value As State, Paused As Boolean,
+    DemoEnabled As Boolean)
+
+    Value.ScenePaused = Paused
+    Value.DemoEnabled = DemoEnabled
+    Value.AnimationUpdateElapsed = 0
 
 End Sub
 

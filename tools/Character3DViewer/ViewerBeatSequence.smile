@@ -1,0 +1,569 @@
+''' Camera editor adapter over the Party's existing actors, timing and choreography.
+Module Smile.Tools.ViewerBeatSequence
+
+Option Explicit
+
+Import Smile.Simple3D.Character3D As C
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Graphics3D As Graphics
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.PrecisionMath3D As M
+Import Smile.Simple3D.PrecisionCamera3D As Camera
+Import Smile.Tools.Character3DViewerParty As Party
+Import Smile.Tools.Character3DViewerDragon As Dragon
+Import Smile.Tools.Character3DViewerProfiles As Profiles
+
+Public Type Timing
+    Start[5] As Number
+    Beat As Number
+    Progress As Double
+End Type
+
+Public Type Bookmark
+    Turn As Number
+    Elapsed As Number
+    Cycle As Number
+    Counter As Number
+    Target As Number
+    FatalTarget As Number
+    FatalStarted As Boolean
+    HitResolved As Boolean
+    DragonOnly As Boolean
+    Establish As Number
+    States[6] As Number
+    Clips[6] As Text
+    Times[6] As Number
+    Modes[6] As Number
+End Type
+
+Public Function Actor(Value As Party.State, Primary As C.Actor,
+    Boss As C.Actor, Turn As Number) As C.Actor
+
+    Dim Result As C.Actor
+
+    Result = Primary
+
+    If Turn = 1 Then
+        Result = Value.Companion.Actor
+    Else If Turn = 2 Then
+        Result = Boss
+    Else If Turn = 4 Then
+        Result = Value.Third.Actor
+    Else If Turn = 5 Then
+        Result = Value.Fourth.Actor
+    End If
+
+    Return Result
+
+End Function
+
+Public Sub RememberPoses(ByRef Saved As Bookmark, Value As Party.State,
+    Primary As C.Actor, Boss As C.Actor)
+
+    Dim Turn As Number
+    Dim Index As Number
+    Dim Subject As C.Actor
+    Dim Animator As Core.Animator3D
+
+    For Turn = 0 To 5
+
+        If Turn <> 3 And (Turn < 3 Or Value.UnityRoster) Then
+
+            Subject = Actor(Value, Primary, Boss, Turn)
+            Saved.Times[Turn] = C.AnimationTime(Subject)
+            Animator.Handle = C.AnimatorHandle(Subject)
+            Saved.Modes[Turn] = Graphics.AnimatorPlaybackMode3D(Animator)
+
+            For Index = 0 To C.ClipCount(Subject) - 1
+
+                If C.CurrentClipNameMatches(Subject, C.ClipName(Subject, Index)) Then
+                    Saved.Clips[Turn] = C.ClipName(Subject, Index)
+                End If
+
+            End For
+
+        End If
+
+    End For
+
+End Sub
+
+Public Function RestorePoses(Saved As Bookmark, Value As Party.State,
+    Primary As C.Actor, ByRef Boss As Dragon.State, Speed As Number) As Boolean
+
+    Dim Turn As Number
+    Dim Subject As C.Actor
+    Dim Mode As Number
+    Dim Name As Text
+    Dim Result As Boolean
+
+    Result = True
+
+    For Turn = 0 To 5
+
+        Name = Saved.Clips[Turn]
+
+        If Name <> "" Then
+
+            Subject = Actor(Value, Primary, Boss.Actor, Turn)
+            Mode = Saved.Modes[Turn]
+
+            Result = C.PlayMode(Subject, Name, Mode, Party.ActorPlaybackSpeed(Value, Turn, Speed)) And Result
+            Result = C.SetAnimationTime(Subject, Saved.Times[Turn]) And Result
+
+            If Turn = 2 Then
+                Boss.Clip = Name
+            End If
+
+        End If
+
+    End For
+
+    Return Result
+
+End Function
+
+Public Function Identity(UnityRoster As Boolean, Turn As Number) As Number
+
+    If Turn = 1 Then
+        Return 1
+    Else If Turn = 2 And UnityRoster Then
+        Return 5
+    Else If Turn = 2 Then
+        Return 2
+    Else If Turn = 4 Then
+        Return 3
+    Else If Turn = 5 Then
+        Return 4
+    End If
+
+    Return 0
+
+End Function
+
+Public Function Name(Identity As Number) As Text
+
+    If Identity = 1 Then
+        Return "Orin"
+    Else If Identity = 2 Then
+        Return "Dragon"
+    Else If Identity = 3 Then
+        Return "Valor"
+    Else If Identity = 4 Then
+        Return "Zara"
+    Else If Identity = 5 Then
+        Return "Vrax"
+    End If
+
+    Return "Arin"
+
+End Function
+
+Public Function NextActor(UnityRoster As Boolean, Current As Number,
+    BossVisible As Boolean) As Number
+
+    If Current = 0 Then
+        Return 1
+    Else If (Current = 1 And
+        UnityRoster And
+        Party.PARTY_VALOR_VISIBLE) Then
+        Return 4
+    Else If (Current = 1 Or Current = 4) And UnityRoster Then
+        Return 5
+    Else If Current <> 2 And BossVisible Then
+        Return 2
+    End If
+
+    Return 0
+
+End Function
+
+Public Function Opponent(Value As Party.State, Turn As Number) As Number
+
+    Dim ReturnValue As Number
+
+    If Turn = 2 Then
+        ReturnValue = Value.HitTarget
+
+        Return ReturnValue
+    End If
+
+    Return 2
+
+End Function
+
+Public Function Times(ByRef Value As Party.State, Primary As C.Actor,
+    Speed As Number, Turn As Number, Elapsed As Number) As Timing
+
+    Dim Result As Timing
+    Dim SavedTurn As Number
+    Dim Duration As Number
+    Dim Index As Number
+    Dim Impact As Number
+
+    SavedTurn = Value.Turn
+    Value.Turn = Turn
+    Duration = Party.AttackDuration(Value, Primary, Value.Companion.Actor, Speed)
+    Value.Turn = SavedTurn
+    Result.Start[1] = 650
+    Result.Start[2] = 1300
+    Result.Start[3] = 1300 + Duration
+    Result.Start[4] = Duration + 4000
+
+    If Value.UnityRoster And Turn <> 2 Then
+
+        Result.Start[1] = Party.HERO_APPROACH_DELAY_MILLISECONDS
+        Result.Start[2] = Party.HERO_ATTACK_START_MILLISECONDS
+        Result.Start[3] = Party.HERO_ATTACK_START_MILLISECONDS + Duration
+        Result.Start[4] = Duration + 2550
+
+    Else If Value.UnityRoster Then
+
+        Result.Start[1] = Party.VRAX_APPROACH_START_MILLISECONDS
+        Result.Start[2] = Party.VRAX_ATTACK_START_MILLISECONDS
+        Result.Start[3] = Party.VRAX_ATTACK_START_MILLISECONDS + Duration
+        Result.Start[4] = Duration + 3250
+
+    Else If Turn = 2 Then
+
+        Duration = Party.DragonTurnDuration(Value, Speed)
+        Impact = Party.DragonImpactTime(Value) * 100 / Max(25, Speed)
+        Result.Start[1] = Max(1, Impact / 2)
+        Result.Start[2] = Impact
+        Result.Start[3] = Max(Impact + 1, Duration * 4 / 5)
+        Result.Start[4] = Duration
+
+    End If
+
+    For Index = 1 To 3
+
+        If Elapsed >= Result.Start[Index] Then
+            Result.Beat = Index
+        End If
+
+    End For
+
+    Result.Progress = Clamp(ToDouble(Elapsed - Result.Start[Result.Beat]) /
+        ToDouble(Max(1, Result.Start[Result.Beat + 1] - Result.Start[Result.Beat])), 0.0, 1.0)
+
+    Return Result
+
+End Function
+
+Public Function Remember(Value As Party.State) As Bookmark
+
+    Dim Result As Bookmark
+    Dim Index As Number
+
+    Result.Turn = Value.Turn
+    Result.Elapsed = Value.Elapsed
+    Result.Cycle = Value.AttackCycle
+    Result.Counter = Value.DragonCounter
+    Result.Target = Value.HitTarget
+    Result.FatalTarget = Value.FatalTarget
+    Result.FatalStarted = Value.FatalStarted
+    Result.HitResolved = Value.HitResolved
+    Result.DragonOnly = Value.DragonOnlyTurn
+    Result.Establish = Value.EstablishRemaining
+
+    For Index = 0 To 5
+        Result.States[Index] = Party.PresentationState(Value, Index)
+    End For
+
+    Return Result
+
+End Function
+
+Public Sub Restore(ByRef Value As Party.State, Saved As Bookmark)
+
+    Dim Index As Number
+
+    Value.Turn = Saved.Turn
+    Value.Elapsed = Saved.Elapsed
+    Value.AttackCycle = Saved.Cycle
+    Value.DragonCounter = Saved.Counter
+    Value.HitTarget = Saved.Target
+    Value.FatalTarget = Saved.FatalTarget
+    Value.FatalStarted = Saved.FatalStarted
+    Value.HitResolved = Saved.HitResolved
+    Value.DragonOnlyTurn = Saved.DragonOnly
+    Value.EstablishRemaining = Saved.Establish
+
+    For Index = 0 To 5
+        Call Party.SetPresentationState(Value, Index, Saved.States[Index])
+    End For
+
+    Call Party.ResetCameraTracking(Value)
+
+End Sub
+
+''' A sample seeks existing clips without advancing the battle clock or emitting crossed events.
+Public Function Sample(ByRef Value As Party.State, ByRef Primary As C.Actor,
+    ByRef Frame As Camera.Framing, ByRef Clip As Number, ByRef Boss As Dragon.State,
+    Speed As Number, Turn As Number, Elapsed As Number,
+    Optional RestoreState As Boolean = False) As Boolean
+
+    Dim Result As Boolean
+    Dim Schedule As Timing
+    Dim Active As C.Actor
+    Dim ClipTime As Number
+    Dim Index As Number
+    Dim BossName As Text
+    Dim BossTime As Number
+    Dim Impact As Number
+    Dim AttackMilliseconds As Number
+
+    Value.Turn = Turn
+    Value.Elapsed = Elapsed
+    Value.EstablishRemaining = 0
+    Value.Stage = -99
+    Value.PreviewActive = False
+
+    If Not RestoreState Then
+
+        Value.FatalTarget = -1
+        Value.FatalStarted = False
+        Value.HitResolved = False
+
+        For Index = 0 To 5
+            Call Party.SetPresentationState(Value, Index, Party.STATE_ALIVE)
+        End For
+
+    End If
+
+    Result = Party.AdvanceDemo(Value, 0, False, False, Speed, Primary, Frame,
+        Clip, Dragon.PositionX(), 0, Dragon.PositionZ(), 180)
+    Schedule = Times(Value, Primary, Speed, Turn, Elapsed)
+    Active = Actor(Value, Primary, Boss.Actor, Turn)
+    ClipTime = ((Elapsed - Schedule.Start[Schedule.Beat]) *
+        Party.ActorPlaybackSpeed(Value, Turn, Speed) / 100)
+
+    If Turn = 2 Then
+
+        If Not Value.UnityRoster Then
+            BossName = Dragon.DesiredClip(Boss, False, "", True, False, 2, Value.DragonCounter, False)
+            ClipTime = Elapsed * Speed / 100
+        Else If Schedule.Beat = 2 Then
+            BossName = Profiles.PartyAttackName(Profiles.PROFILE_VRAX, Value.DragonCounter)
+        Else If (Schedule.Beat = 1 Or
+            (Schedule.Beat = 3 And
+            Elapsed < Schedule.Start[3] + Party.VRAX_RETURN_MILLISECONDS)) Then
+            BossName = "Run"
+        Else
+            BossName = "Idle"
+        End If
+
+        BossTime = ClipTime
+
+    Else
+
+        BossName = "Idle"
+        AttackMilliseconds = Party.AttackDuration(Value, Primary, Value.Companion.Actor, Speed)
+        Impact = 1300 + AttackMilliseconds * 64 / 100
+
+        If Value.UnityRoster Then
+            Impact = Party.HeroImpactTime(AttackMilliseconds, Turn)
+        End If
+
+        BossTime = Max(0, Elapsed - Impact) * Party.ActorPlaybackSpeed(Value, 2, Speed) / 100
+
+        For Index = 0 To C.ClipCount(Boss.Actor) - 1
+
+            If (C.ClipName(Boss.Actor, Index) = "Hit" And
+                Elapsed >= Impact And
+                BossTime < C.ClipDuration(Boss.Actor, Index)) Then
+                BossName = "Hit"
+            End If
+
+        End For
+
+        Result = SeekTime(Active, ClipTime) And Result
+
+    End If
+
+    Result = Dragon.SeekForCamera(Boss, BossName,
+        Party.ActorPlaybackSpeed(Value, 2, Speed), BossTime) And Result
+
+    If Turn = 2 Then
+
+        Active = Actor(Value, Primary, Boss.Actor, Value.HitTarget)
+        Impact = Party.DragonImpactTime(Value) * 100 / Max(25, Speed)
+
+        If Value.UnityRoster Then
+            AttackMilliseconds = Party.AttackDuration(Value, Primary, Value.Companion.Actor, Speed)
+            Impact = Party.VraxImpactTime(AttackMilliseconds)
+        End If
+
+        ClipTime = Max(0, Elapsed - Impact) * Party.ActorPlaybackSpeed(Value, Value.HitTarget, Speed) / 100
+        Result = SeekTime(Active, ClipTime) And Result
+
+    End If
+
+    Return Result
+
+End Function
+
+''' Clip clocks are bounded by the animation owner; a beat may outlast its clip.
+Private Function SeekTime(ByRef Subject As C.Actor, Time As Number) As Boolean
+
+    Dim Index As Number
+    Dim Duration As Number
+    Dim Name As Text
+    Dim Result As Boolean
+
+    For Index = 0 To C.ClipCount(Subject) - 1
+
+        Name = C.ClipName(Subject, Index)
+
+        If C.CurrentClipNameMatches(Subject, Name) Then
+
+            Duration = Max(1, C.ClipDuration(Subject, Index))
+            Time = Max(0, Time)
+
+            If (Name = "Idle" Or
+                Name = "Walk" Or
+                Name = "Run" Or
+                Name = "Defend") Then
+                Time = Time Mod Duration
+            Else
+                Time = Min(Time, Duration)
+            End If
+
+            Result = C.SetAnimationTime(Subject, Time)
+
+            Return Result
+
+        End If
+
+    End For
+
+    Return False
+
+End Function
+
+Public Function Head(Actor As C.Actor, Offset As P.Vector3) As P.Vector3
+
+    Dim Result As P.Vector3
+    Dim Rotation As P.Vector3
+    Dim Bounds As C.PreciseBounds3D
+    Dim Ok As Boolean
+    Dim Part As Number
+
+    Bounds = C.WorldBoundsPrecise(Actor)
+    Result = Bounds.Center
+    Result.Y = Bounds.Maximum.Y - Bounds.Size.Y * 0.12
+    Part = Min(2, C.PartCount(Actor) - 1)
+
+    If C.HasSocket(Actor, "Head") Then
+        Ok = C.TrySocketPositionPrecise(Actor, "Head", Part, False, Result)
+    End If
+
+    Ok = C.TryRotation(Actor, Rotation)
+    Rotation.X = 0.0
+    Rotation.Z = 0.0
+    Result = M.Add(Result, M.Rotate(Offset, Rotation))
+
+    Return Result
+
+End Function
+
+Public Function LocalOffset(Actor As C.Actor, WorldDelta As P.Vector3) As P.Vector3
+
+    Dim Rotation As P.Vector3
+    Dim Result As P.Vector3
+    Dim Ok As Boolean
+
+    Ok = C.TryRotation(Actor, Rotation)
+    Rotation = P.Vector(0.0, -Rotation.Y, 0.0)
+    Result = M.Rotate(WorldDelta, Rotation)
+
+    Return Result
+
+End Function
+
+''' Nearest positive ray/AABB intersection. Bounds are the actor's existing world envelope.
+Public Function HitDistance(Actor As C.Actor, CameraValue As P.Camera3D,
+    X As Number, Y As Number, Width As Number, Height As Number,
+    Optional BodyOnly As Boolean = True) As Double
+
+    Dim ReturnValue As Double
+
+    Dim Bounds As C.PreciseBounds3D
+    Dim Ray As P.Vector3
+    Dim Origin[3] As Double
+    Dim Direction[3] As Double
+    Dim Low[3] As Double
+    Dim High[3] As Double
+    Dim NearValue As Double
+    Dim FarValue As Double
+    Dim First As Double
+    Dim Second As Double
+    Dim Index As Number
+    Dim Root As P.Vector3
+    Dim HeadPoint As P.Vector3
+    Dim Radius As Double
+    Dim Ok As Boolean
+
+    Bounds = C.WorldBoundsPrecise(Actor)
+
+    If BodyOnly Then
+
+        Ok = C.TryPosition(Actor, Root)
+        HeadPoint = Head(Actor, P.Vector(0.0, 0.0, 0.0))
+        Radius = Max(8.0, Abs(HeadPoint.Y - Bounds.Minimum.Y) * 0.12)
+        Bounds.Minimum.X = Min(Root.X, HeadPoint.X) - Radius
+        Bounds.Maximum.X = Max(Root.X, HeadPoint.X) + Radius
+        Bounds.Minimum.Z = Min(Root.Z, HeadPoint.Z) - Radius
+        Bounds.Maximum.Z = Max(Root.Z, HeadPoint.Z) + Radius
+        Bounds.Maximum.Y = HeadPoint.Y + Radius
+
+    End If
+
+    Ray = M.Subtract(Camera.CursorPointAtDepth(CameraValue, X, Y, 1.0,
+        Width, Height), CameraValue.Position)
+    Origin[0] = CameraValue.Position.X
+    Origin[1] = CameraValue.Position.Y
+    Origin[2] = CameraValue.Position.Z
+    Direction[0] = Ray.X
+    Direction[1] = Ray.Y
+    Direction[2] = Ray.Z
+    Low[0] = Bounds.Minimum.X
+    Low[1] = Bounds.Minimum.Y
+    Low[2] = Bounds.Minimum.Z
+    High[0] = Bounds.Maximum.X
+    High[1] = Bounds.Maximum.Y
+    High[2] = Bounds.Maximum.Z
+    FarValue = 1000000.0
+
+    For Index = 0 To 2
+
+        If Abs(Direction[Index]) < 0.0000001 Then
+
+            If Origin[Index] < Low[Index] Or Origin[Index] > High[Index] Then
+                ReturnValue = -1.0
+
+                Return ReturnValue
+            End If
+
+        Else
+
+            First = (Low[Index] - Origin[Index]) / Direction[Index]
+            Second = (High[Index] - Origin[Index]) / Direction[Index]
+            NearValue = Max(NearValue, Min(First, Second))
+            FarValue = Min(FarValue, Max(First, Second))
+
+        End If
+
+    End For
+
+    If FarValue < NearValue Then
+        ReturnValue = -1.0
+
+        Return ReturnValue
+    End If
+
+    Return NearValue
+
+End Function
+
+End Module

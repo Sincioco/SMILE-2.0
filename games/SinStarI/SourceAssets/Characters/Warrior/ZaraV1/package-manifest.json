@@ -289,8 +289,8 @@
   "checkpointFiles": [
     {
       "path": "ZaraV1.sm3d.json",
-      "sha256": "b58c8b915c2181df09e0e95b24cf0fbf56805c47f28ca22973064ef18c0beb5d",
-      "bytes": 2827
+      "sha256": "85d2ff17fc17b8055a43a94db47a4f66187e6b4f7bf37d05efb8bd20c032152b",
+      "bytes": 2872
     },
     {
       "path": "animation-manifest.json",

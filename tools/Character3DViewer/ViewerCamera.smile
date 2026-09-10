@@ -681,4 +681,39 @@ Public Function DefaultZoomDegrees(DragonAvailable As Boolean,
 
 End Function
 
+''' A saved shot may face any arena direction. Pan/pitch use that shot's basis.
+Public Sub ComposeShot(ByRef Value As State)
+
+    Dim Offset As Precision3D.Vector3
+    Dim Forward As Precision3D.Vector3
+    Dim RightValue As Precision3D.Vector3
+    Dim UpValue As Precision3D.Vector3
+    Dim Pan As Precision3D.Vector3
+    Dim Distance As Double
+    Dim Horizontal As Double
+    Dim Yaw As Double
+    Dim Pitch As Double
+    Dim Valid As Boolean
+
+    Offset = Math3D.Subtract(Value.Base.Position, Value.Base.Target)
+    Distance = Max(0.01, Math3D.Length(Offset))
+    Horizontal = Sqrt(Offset.X * Offset.X + Offset.Z * Offset.Z)
+    Yaw = Atan2(Offset.X, Offset.Z) - Math3D.Radians(Value.Controls.OrbitYaw)
+    Pitch = Clamp(Atan2(Offset.Y, Horizontal) + Math3D.Radians(Value.Controls.OrbitPitch),
+        -1.48, 1.48)
+    Offset = Precision3D.Vector(Sin(Yaw) * Cos(Pitch) * Distance,
+        Sin(Pitch) * Distance, Cos(Yaw) * Cos(Pitch) * Distance)
+    Valid = Math3D.TryNormalize(Math3D.Scale(Offset, -1.0), Forward)
+    Valid = Math3D.TryNormalize(Math3D.Cross(Precision3D.Vector(0.0, 1.0, 0.0), Forward), RightValue) And Valid
+    UpValue = Math3D.Cross(Forward, RightValue)
+    Pan = Math3D.Add(Math3D.Scale(RightValue, Value.Controls.PanX),
+        Math3D.Scale(UpValue, Value.Controls.PanY))
+    Value.Live = Value.Base
+    Value.Live.Target = Math3D.Add(Value.Base.Target, Pan)
+    Value.Live.Position = Math3D.Add(Value.Live.Target, Offset)
+    Value.Live.UpDirection = Precision3D.Vector(0.0, 1.0, 0.0)
+    Value.Live.FovDegrees = Clamp(Value.Base.FovDegrees + Value.Zoom.Current, 10.0, 120.0)
+
+End Sub
+
 End Module

@@ -923,4 +923,49 @@ Public Sub UpdateVraxAttackPoints(ByRef Value As AttackEffects, Name As Text,
 
 End Sub
 
+''' Explicit camera scrubbing must restore clip mode as well as clip name/time.
+Public Function SeekForCamera(ByRef Value As State, Name As Text,
+    PlaybackSpeed As Number, Time As Number) As Boolean
+
+    Dim Mode As Number
+    Dim Result As Boolean
+    Dim Index As Number
+    Dim Duration As Number
+
+    Mode = Graphics3D.ANIMATION_ONCE
+
+    If (Name = "Idle" Or
+        Name = "Walk" Or
+        Name = "Run") Then
+        Mode = Graphics3D.ANIMATION_LOOP
+    End If
+
+    Result = Character3D.PlayMode(Value.Actor, Name, Mode, PlaybackSpeed)
+
+    For Index = 0 To Character3D.ClipCount(Value.Actor) - 1
+
+        If Character3D.ClipName(Value.Actor, Index) = Name Then
+            Duration = Max(1, Character3D.ClipDuration(Value.Actor, Index))
+        End If
+
+    End For
+
+    Time = Max(0, Time)
+
+    If Mode = Graphics3D.ANIMATION_LOOP Then
+        Time = Time Mod Max(1, Duration)
+    Else
+        Time = Min(Time, Duration)
+    End If
+
+    Result = Character3D.SetAnimationTime(Value.Actor, Time) And Result
+
+    If Result Then
+        Value.Clip = Name
+    End If
+
+    Return Result
+
+End Function
+
 End Module

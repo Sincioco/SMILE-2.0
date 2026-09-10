@@ -1,5 +1,59 @@
 # SMILE 2.0 - 3D Viewer, Animation Editor
 
+## Party Beat Cameras
+
+In **Party Dragon** or **Party Vrax**, press **Tab** to cycle visible combatants,
+or click an actor without dragging. The right panel identifies the selected actor
+independently of whose turn is playing. Dragon and Vrax have their own four shots.
+Clicks first test reusable head/body regions, then complete actor bounds. This avoids
+extended wings/limbs stealing nearby hero clicks; it is approximate selection, not
+pixel-perfect mesh picking. Tab disambiguates overlapping characters. A click keeps
+the current camera; dragging begins panning after a small movement threshold.
+
+Choose **Beat 1–4** to pause and edit that beat's starting composition with middle
+drag (orbit), left drag (pan), wheel (zoom), or arrow keys (orbit). Right-click or
+Enter resets the draft to its opening composition. **Save** stores the selected
+character's shot, closes the extra timeline and restores the prior battle playback.
+**Cancel** restores playback without saving the camera. Save or cancel a draft before
+switching characters/tabs. An asterisk marks a saved beat.
+
+**Copy** copies one camera's composition, motion and connection. Select any character,
+open the destination beat and **Paste**, then Save. Head definitions remain owned by
+the destination character. **Motion** cycles Stationary, Orbit Left/Right (20 degrees
+over the beat), and Zoom Forward/Backward (a 20-percent dolly). Stationary means no
+added cinematic motion: the shot still follows its attacker/target reference frame.
+**Connect** cycles Cut, To Next and From Previous. A connection becomes active when
+its neighboring shot has been saved. A reciprocal connection traverses the shared
+boundary once. Unauthored beats continue using the existing battle camera policy.
+
+The additional **Beat Sequence** timeline sits above the animation timeline. Drag it
+to seek the actual four-beat choreography and view camera interpolation. Click a beat
+button again to resume editing its start. **Preview Beats** also opens this timeline
+without changing saved shots; press it again to close. The Dragon's four segments
+cover anticipation, wind-up, attack/impact and recovery within its existing attack
+clip. Vrax and the heroes retain their existing approach, attack and return timing.
+
+Cyan **Attacker** and yellow **Target** cuboids start at each actor's Head socket;
+missing sockets use an upper-bounds estimate. Drag a cuboid to offset its center in
+the current camera plane. Orbit to adjust another direction. Select **Head Box:
+Attacker/Target** and use independent Width, Height and Depth buttons to resize it.
+Offsets and dimensions auto-save per character when released/adjusted and are reused
+across beats and attacker/target roles; Cancel only cancels camera changes. Centers
+follow animated head sockets; cuboid axes and offsets follow the actor's facing.
+The cuboid is a framing reference, not collision geometry or an animation edit.
+
+Camera position and aim use Double coordinates relative to the two head centers,
+with lateral distance, height above their baseline and fractional distance along it.
+They therefore adapt to formation translation, rotation and changed separation.
+Near-coincident heads use a deterministic one-unit forward baseline. Render submission
+retains the existing Precision3D boundary and GPU float precision limits.
+
+Shots and head cuboids use separate checksummed **Save Data** records under the
+Viewer ApplicationId (`BattleCamera.<Character>.Beat1` through `Beat4` and
+`BattleCamera.Head.<Character>`). Native storage and each Web origin are independent;
+this slice does not transfer camera saves between them. Pose-calibration JSON,
+canonical models and gameplay counters are not camera storage.
+
 [SMILE 2.0 Studio S1](../SmileStudio/README.md) provides Viewer and Character Editor
 workspaces around this same implementation. The standalone window and controls
 remain available through this folder's normal `Launch.ps1`. Both launchers protect
