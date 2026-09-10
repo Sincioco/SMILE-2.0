@@ -1,9 +1,9 @@
 # Party Beat Camera Editor
 
-Status (2026-09-11): implemented and built for Desktop/Web; focused automated and
-visible tool checks passed. Human camera-gesture acceptance remains pending on both
-targets. This is an implementation milestone, not full acceptance. Publication is
-the commit containing this checkpoint; verify its remote reachability in Git.
+Status (2026-09-11): the initial editor was published in `fd73f9d` and built for
+Desktop/Web; focused automated and visible tool checks passed. Human camera-gesture
+acceptance remains pending. The subsequent timeline enhancements below are requested,
+not implemented. Sin now prioritizes Desktop only; Web follow-through is on hold.
 
 ## Scope
 
@@ -14,6 +14,42 @@ characters. Each character owns one independently saved head cuboid (offset plus
 width/height/depth), reused as attacker or target. A temporary sequence timeline
 scrubs actual choreography; Save closes it, and Preview Beats opens it without
 editing saved cameras. Missing shots retain the existing camera policy.
+
+## Requested Timeline Enhancements — Desktop First
+
+Sin's September 11 direction prioritizes velocity and Desktop implementation and
+validation only. Keep using the shared owners; do not fork a separate Desktop
+implementation. Do not rebuild, publish or test Web for this enhancement phase.
+Record each implemented change here so Web can adopt it when Sin resumes that work.
+
+- Match the regular Animation Timeline's appearance and interactions, including
+  0-Frame, Previous Beat, Next Beat, Previous Frame and Next Frame controls.
+- Drag beat boundaries to lengthen/shorten beats. The original four beats remain
+  ordered and cannot be deleted.
+- Insert camera shot markers between the main beats. Previous/Next navigation must
+  visit both main and inserted markers. Optional marker deletion was proposed in the
+  summary but has not been explicitly confirmed.
+- Preserve per-character camera settings and head references for heroes and bosses.
+- Keep viewport pan, zoom and orbit available in Beat Edit mode for every camera
+  marker. Timeline dragging, camera dragging and head-cuboid dragging remain distinct.
+- Open timing decision: does resizing a beat change only the camera schedule, or
+  also retime battle movement/animation, impact events, SFX and VFX? Do not silently
+  choose between these meanings. No runtime changes for this request have started.
+
+### Deferred Web Adoption Record
+
+Baseline Web artifact/evidence below belongs to `fd73f9d`, not these enhancements.
+For each future Desktop milestone, append its commit, changed source owners, save
+format/timing changes, native evidence and concrete Web work still required. Shared
+source changes alone do not establish a validated or published Web implementation.
+
+| Desktop milestone | Changed owners / compatibility | Web follow-through |
+| --- | --- | --- |
+| Scope recorded; no enhancement code yet | Existing four-shot saves unchanged | On hold: port/adopt new timeline controls and markers, verify save compatibility and browser input, rebuild/publish and run focused Chrome checks |
+
+The original pending Chrome camera-gesture acceptance also remains unverified and
+is deferred with this Web work. Resume from the recorded Desktop milestones rather
+than repeating unaffected implementation, asset preparation or full smoke tests.
 
 ## Owners
 
@@ -116,9 +152,15 @@ control semantics are in the Viewer README.
 
 ## Next Action / Remaining
 
-Record the pending human Desktop and Chrome slow/moderate horizontal/vertical
-middle-button orbit, pan, zoom both ways and reset checks. Tool pan/reset and numeric
-tests do not substitute for those observations. Fix any reproduced in-scope defect
-through the existing owner, rerun affected checks, and update this checkpoint.
-Reuse unchanged build/test/pose evidence. Do not rebuild or reinstall for acceptance
-documentation alone. No VSIX installation is required. On hold: none.
+Resolve the timing decision above before implementing dependent timeline changes.
+Implement and validate the requested enhancement on Desktop, recording each change
+in the deferred Web adoption record. The original Desktop slow/moderate horizontal/
+vertical middle-button orbit, pan, zoom both ways and reset acceptance is still
+pending; combine it with the affected Desktop interaction check when practical.
+Tool pan/reset and numeric tests do not substitute for human observations. Fix any
+reproduced in-scope defect through its existing owner and rerun affected checks.
+Reuse unchanged build/test/pose evidence. Do not rebuild or reinstall for documentation
+alone. No VSIX installation is required for this scope-recording change.
+
+On hold: Web Beat Sequence enhancements, publication and validation, including the
+outstanding Chrome gesture acceptance, until Sin directs their resumption.

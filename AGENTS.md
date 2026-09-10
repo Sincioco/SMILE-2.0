@@ -78,8 +78,11 @@ implemented capabilities or authorization to implement the entire product at onc
 
 ### Current on-hold tasks
 
-- None. Sin explicitly cleared the on-hold list. Clearing the list does not
-  authorize starting a new feature phase without a current request.
+- Web follow-through for the Beat Sequence timeline enhancements, including Web
+  publication/validation and the outstanding Chrome camera-gesture acceptance.
+  Sin requested Desktop-only work for velocity on September 11, 2026. Track Desktop
+  changes and the later Web adoption steps in
+  `docs/implementation/party-beat-camera-checkpoint.md`; resume Web only on direction.
 
 ## Project identity
 
