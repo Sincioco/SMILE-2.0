@@ -1000,6 +1000,8 @@ internal sealed class WebEmitter
             SyntaxKind.WindowHeightKeyword => "smile.windowHeight()",
             SyntaxKind.WindowTitleKeyword => $"smile.windowTitle({arguments})",
             SyntaxKind.WindowActivateKeyword => "smile.windowActivate()",
+            SyntaxKind.WindowDeferCloseKeyword => $"smile.isTrue(smile.windowDeferClose({arguments}))",
+            SyntaxKind.WindowCloseRequestedKeyword => "smile.isTrue(smile.windowCloseRequested())",
             SyntaxKind.WindowLoadingKeyword => "await smile.windowLoading()",
             SyntaxKind.FileRevealKeyword => $"(({arguments}), false)",
             SyntaxKind.FileExportKeyword => $"smile.fileExport({arguments})",

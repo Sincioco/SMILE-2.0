@@ -1,0 +1,2255 @@
+''' One live Viewer workflow, shared by the standalone entry point and Studio.
+Module Smile.Tools.Character3DViewerWorkflow
+
+Option Explicit
+
+Import Smile.Simple3D.Character3D As Character3D
+Import Smile.Simple3D.CharacterViewer As CharacterViewer
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Precision3D As Precision3D
+Import Smile.Simple3D.Graphics3D As Graphics3D
+Import Smile.Tools.Character3DViewerProfiles As ViewerProfiles
+Import Smile.Tools.BattleCamera As BattleCamera
+Import Smile.Tools.Character3DViewerTiming As ViewerTiming
+Import Smile.Tools.Character3DViewerSession As ViewerSession
+Import Smile.Tools.Character3DViewerLifecycle As ViewerLifecycle
+Import Smile.Tools.Character3DViewerPlayback As ViewerPlayback
+Import Smile.Tools.Character3DViewerActors As ViewerActors
+Import Smile.Tools.Character3DViewerCamera As ViewerCamera
+Import Smile.Tools.Character3DViewerCalibration As ViewerCalibration
+Import Smile.Tools.Character3DViewerCalibrationEditing As ViewerCalibrationEditing
+Import Smile.Tools.Character3DViewerCalibrationControls As ViewerCalibrationControls
+Import Smile.Tools.Character3DViewerInput As ViewerInput
+Import Smile.Tools.Character3DViewerInspectorCommands As ViewerInspectorCommands
+Import Smile.Tools.Character3DViewerInspectorPresentation As ViewerInspectorPresentation
+Import Smile.Tools.Character3DViewerTimelineEditing As ViewerTimelineEditing
+Import Smile.Tools.Character3DViewerUi As ViewerUi
+Import Smile.Tools.Character3DViewerGizmo As ViewerGizmo
+Import Smile.Tools.Character3DViewerParty As ViewerParty
+Import Smile.Tools.Character3DViewerEffects As ViewerEffects
+Import Smile.Tools.Character3DViewerDragon As ViewerDragon
+Import Smile.Tools.Character3DViewerRendering As ViewerRendering
+
+Private Const ANIMATION_CYCLE_MILLISECONDS = 5000
+Private Const ORBIT_POINTER_DIVISOR = 1
+Private Const PAN_POINTER_DIVISOR = 3
+Private Const DEFAULT_ZOOM_DEGREES = -16
+Private Const ZOOM_IN_LIMIT = -144
+Private Const CLOSE_UP_ZOOM_START = -48
+Private Const CLOSE_UP_MINIMUM_DISTANCE_1000 = 100
+Private Const ZOOM_OUT_LIMIT = 36
+Private Const MAX_RAW_FRAME_MILLISECONDS = 60000
+Private Const MAX_ANIMATION_ELAPSED = 250
+Private Const MAX_CAMERA_ELAPSED = 250
+Private Const FRAME_BUTTON_REPEAT_MILLISECONDS = 300
+Private Const SHIELD_PART_INDEX = 0
+Private Const WEAPON_PART_INDEX = 1
+Private Const BODY_PART_INDEX = 2
+Private Const CHARACTER_MODEL_FORWARD_YAW_OFFSET = 180
+Private Const ORIN_ARENA_YAW_ADJUSTMENT = -55
+Private Const ARENA_INITIAL_ORBIT_YAW = 0
+Private Const ARENA_ORBIT_DEGREES_PER_SECOND = 12
+Private Const ARENA_CAMERA_DISTANCE = 480
+Private Const ARENA_CAMERA_HEIGHT = 180
+Private Const ARENA_CAMERA_CENTER_X = -70
+Private Const ARENA_CAMERA_CENTER_Z = -45
+Private Const ARENA_DEFAULT_ZOOM_DEGREES = -15
+Private Const ARENA_FLOOR_WIDTH = 1000
+Private Const ARENA_FLOOR_DEPTH = 1000
+Private Const CALIBRATION_MAX_CLIPS = ViewerCalibration.MAX_CLIPS
+Private Const BACKGROUND_COUNT = 5
+Private Const BACKDROP_LANDSCAPE_PATH = "Assets\Backgrounds\SinStarLandscape.png"
+Private Const BACKDROP_TITLE_PATH = "Assets\Backgrounds\SinStarTitleWithLogo.png"
+Private Const PARTY_FORMATION_RADIUS = 450
+Private Const PARTY_FORMATION_START_ANGLE = 0
+Private Const PARTY_FORMATION_END_ANGLE = 60
+
+Public Class Session
+
+    Private Party As ViewerParty.State
+    Private Character As Character3D.Actor
+    Private CharacterBounds As Character3D.Bounds3D
+    Private ActiveProfile As CharacterViewer.Profile
+    Private Rendering As ViewerRendering.State
+    Private FrameDrawResult As ViewerRendering.FrameResult
+    Private Effects As ViewerEffects.State
+    Private DragonState As ViewerDragon.State
+    Private Key As Number
+    Private FrameRate As ViewerTiming.FrameRateState
+    Private Timing As ViewerTiming.ClockState
+    Private Session As ViewerSession.State
+    Private LifecycleSettings As ViewerLifecycle.Configuration
+    Private Playback As ViewerPlayback.State
+    Private ViewerCameraState As ViewerCamera.State
+    Private Calibration As ViewerCalibration.State
+    Private ViewerInputState As ViewerInput.State
+    Private ViewerUiState As ViewerUi.State
+    Private ViewerGizmoState As ViewerGizmo.State
+    Private Equipment As ViewerActors.EquipmentVisibility
+    Private CalibrationAvailable As Boolean
+    Private SwordWristNode As Number
+    Private ShieldWristNode As Number
+
+    Private IsHosted As Boolean
+    Private IsSuspended As Boolean
+    Private ViewWidth As Number
+    Private ViewHeight As Number
+
+    Public Sub Start(InitialTab As Number, Hosted As Boolean, Width As Number, Height As Number)
+
+        Me.IsHosted = Hosted
+        Me.ViewWidth = Width
+        Me.ViewHeight = Height
+
+        Call Graphics3D.ResetRenderer3D()
+
+        Call ViewerSession.SelectCharacterTab(Me.Session, InitialTab)
+        Call ViewerParty.SetEnabled(Me.Party, ViewerProfiles.IsPartyTab(InitialTab))
+        Call ViewerParty.SelectUnityRoster(Me.Party, InitialTab = ViewerProfiles.CHARACTER_TAB_PARTY_VRAX)
+
+        Call ViewerPlayback.Reset(Me.Playback, 100)
+        Call ViewerInput.Reset(Me.ViewerInputState)
+        Call ViewerUi.Reset(Me.ViewerUiState)
+        Call ViewerGizmo.Reset(Me.ViewerGizmoState)
+        Call ViewerRendering.Reset(Me.Rendering, 3)
+
+        Call Me.LoadViewer()
+        Call ViewerSession.CaptureFailure(Me.Session, 20)
+
+        Call ViewerSession.Start(Me.Session)
+
+        Call ViewerTiming.Start(Me.Timing, Timer())
+
+    End Sub
+
+    Public Sub UpdateFrame(Width As Number, Height As Number)
+
+        Me.ViewWidth = Width
+        Me.ViewHeight = Height
+
+        If Me.IsSuspended Then
+            Return
+        End If
+
+        Me.Session.Ready = ViewerTiming.AdvanceClock(
+            Me.Timing,
+            Timer(),
+            MAX_ANIMATION_ELAPSED,
+            MAX_CAMERA_ELAPSED,
+            MAX_RAW_FRAME_MILLISECONDS
+        ) And Me.Session.Ready
+
+        Call ViewerSession.CaptureFailure(Me.Session, 24)
+
+        Call ViewerTiming.Advance(Me.FrameRate, Me.Timing.RawFrameMilliseconds)
+
+        If Not Me.Session.ViewerError Then
+
+            If Not Me.Playback.ScenePaused Then
+                Call Me.AdvanceAnimationSequence()
+
+                Call ViewerSession.CaptureFailure(Me.Session, 2)
+            End If
+
+            Call ViewerPlayback.ResolveAnimationElapsed(Me.Playback, Me.Timing.AnimationElapsed)
+
+            If Me.Party.Enabled Then
+                Call Me.AdvancePartyDemo()
+            End If
+
+            Me.Session.Ready = Character3D.Update(Me.Character, Me.Playback.AnimationUpdateElapsed) And Me.Session.Ready
+
+            Call ViewerSession.CaptureFailure(Me.Session, 3)
+
+            Me.Session.Ready = ViewerActors.ApplyPresentationOffset(
+                Me.Character,
+                Me.Session.ProfileIndex,
+                Me.Playback.SelectedClip,
+                Me.ViewerCameraState.Frame
+            ) And Me.Session.Ready
+
+            If Me.CalibrationAvailable Then
+
+                Call Me.UpdateCalibrationForCurrentFrame()
+                Call Me.ApplyWristCalibration()
+                Call Me.ApplyEquipmentCoupling()
+                Call ViewerSession.CaptureFailure(Me.Session, 4)
+
+            End If
+
+            Me.Session.Ready = ViewerCamera.AdvanceZoom(
+                Me.ViewerCameraState, Me.Timing.CameraElapsed) And Me.Session.Ready
+
+            Call ViewerSession.CaptureFailure(Me.Session, 5)
+
+            If Not Me.Playback.ScenePaused Then
+                Me.Session.Ready = ViewerCamera.AdvanceAutoOrbit(
+                    Me.ViewerCameraState,
+                    Me.Party.OrbitPhase,
+                    Me.Timing.CameraElapsed,
+                    ARENA_ORBIT_DEGREES_PER_SECOND,
+                    Me.Party.Enabled,
+                    Me.Party.UnityRoster
+                ) And Me.Session.Ready
+
+                Call ViewerSession.CaptureFailure(Me.Session, 6)
+            End If
+
+            Call ViewerCamera.UpdateResponsiveFit(
+                Me.ViewerCameraState,
+                Me.ActiveProfile,
+                Me.ViewWidth,
+                Me.ViewHeight,
+                Me.UsableWidth(),
+                Me.DragonState.Available,
+                ARENA_CAMERA_CENTER_X,
+                ARENA_CAMERA_CENTER_Z,
+                ViewerProfiles.ArenaCameraDistance(
+                    Me.Session.ProfileIndex, ARENA_CAMERA_DISTANCE),
+                ARENA_CAMERA_HEIGHT
+            )
+
+            Call ViewerCamera.Compose(
+                Me.ViewerCameraState, Me.Party.Enabled And Me.ViewerCameraState.AutoOrbit)
+
+            Call ViewerCamera.ApplyCloseUp(Me.ViewerCameraState, CLOSE_UP_ZOOM_START,
+                ZOOM_IN_LIMIT, CLOSE_UP_MINIMUM_DISTANCE_1000)
+            Call ViewerCamera.ApplyCalibrationOrbitAnchor(
+                Me.ViewerCameraState, Me.ViewWidth, Me.ViewHeight)
+
+            If Me.Effects.EpicGlowVisible Then
+
+                If Not ViewerEffects.UpdateEpicGlow(
+                    Me.Effects,
+                    Me.Character,
+                    Me.Session.ProfileIndex,
+                    Me.ViewerCameraState.Frame.ScalePercent,
+                    Me.Playback.AnimationUpdateElapsed,
+                    ViewerPlayback.SelectedClipName(Me.Character, Me.Playback),
+                    Me.Equipment.SwordVisible,
+                    Me.Equipment.ShieldVisible,
+                    ViewerCalibration.ChannelValue(
+                        Me.Calibration, Me.Playback.SelectedClip, 18) <> 0,
+                    ViewerCalibration.ChannelValue(
+                        Me.Calibration, Me.Playback.SelectedClip, 19) <> 0
+                ) Then
+                    Call ViewerEffects.HideEpicGlow(Me.Effects)
+                End If
+
+            End If
+
+            If Me.CalibrationAvailable Then
+                Call Me.ApplyEquipmentCalibration()
+
+                Call ViewerSession.CaptureFailure(Me.Session, 7)
+            End If
+
+            Call ViewerEffects.UpdateEquipmentFire(
+                Me.Effects,
+                Me.Character,
+                Me.Session.ProfileIndex,
+                Me.Party.Enabled And
+                    ViewerParty.PresentationState(Me.Party, 0) = ViewerParty.STATE_KO,
+                Me.Equipment.SwordVisible,
+                Me.Equipment.ShieldVisible,
+                Me.ViewerUiState.CalibrationEditing,
+                Me.Playback.ScenePaused,
+                Me.Playback.SelectedClip,
+                ViewerPlayback.SelectedClipLabel(
+                    Me.Character, Me.Playback, Me.Session.ProfileIndex),
+                Me.ViewerCameraState.Live,
+                Me.Timing.CameraElapsed
+            )
+
+            If Me.Party.Enabled Or Me.Session.DragonInspection Then
+                Call Me.UpdatePartyCompanion()
+            End If
+
+            If Me.Session.DragonInspection Then
+                Call Me.UpdateDragonOpponent()
+            End If
+
+            Call Me.UpdateDragon()
+            Call ViewerParty.ApplyAttackCamera(
+                Me.Party,
+                Me.ViewerCameraState.Live,
+                Me.ViewerCameraState.Frame,
+                Me.DragonState.Actor,
+                Me.DragonState.Available,
+                Me.DragonState.Visible,
+                Me.ViewerCameraState.AutoOrbit,
+                Me.Playback.PlaybackSpeed,
+                Me.Timing.CameraElapsed,
+                ViewerParty.AttackDuration(
+                    Me.Party,
+                    Me.Character,
+                    Me.Party.Companion.Actor,
+                    Me.Playback.PlaybackSpeed
+                ),
+                ViewerDragon.PositionX(),
+                ViewerDragon.PositionZ()
+            )
+
+            If Me.Rendering.FloorVisible Then
+                Call ViewerCamera.KeepAboveGround(Me.ViewerCameraState, 0)
+            End If
+
+            Call Me.UpdateBattleAudio()
+            Call Me.UpdateOrinStorm()
+
+            Me.Session.Ready = ViewerParty.UpdateUnityEquipment(Me.Party, Me.Effects, Me.Equipment,
+                Me.ViewerCameraState.Live, Me.Timing.CameraElapsed,
+                Me.Playback.AnimationUpdateElapsed, Me.Playback.ScenePaused) And Me.Session.Ready
+
+            Me.Session.Ready = ViewerEffects.AdvanceScene(
+                Me.Effects,
+                Me.Timing.CameraElapsed,
+                Me.Playback.ScenePaused,
+                Me.ViewerCameraState.Live
+            ) And Me.Session.Ready
+
+            If Me.Rendering.SocketGizmosVisible Then
+                Me.Session.Ready = ViewerRendering.UpdateSocketGizmos(
+                    Me.Rendering,
+                    Me.Character,
+                    ViewerProfiles.IsPartyCharacter(Me.Session.ProfileIndex),
+                    BODY_PART_INDEX,
+                    WEAPON_PART_INDEX,
+                    SHIELD_PART_INDEX
+                ) And Me.Session.Ready
+            End If
+
+            If Character3D.IsValid(Me.Character) Then
+                Me.CharacterBounds = Character3D.WorldBounds(Me.Character, Me.ActiveProfile.AnimationMargin)
+            End If
+
+        End If
+
+    End Sub
+
+    Public Sub DrawFrame()
+
+        If Not Me.Session.ViewerError Then
+
+            Me.FrameDrawResult = ViewerRendering.DrawFrame(
+                Me.Rendering, Me.ViewerCameraState.Live, Me.Session.Ready,
+                Me.Character, Me.Party, Me.Session.DragonInspection, Me.DragonState,
+                Me.Effects, Me.Session.ProfileIndex, Me.Equipment)
+            Me.Session.Ready = Me.FrameDrawResult.Ready
+
+            If Me.FrameDrawResult.FailureStage <> 0 Then
+                Call ViewerSession.CaptureFailure(
+                    Me.Session, Me.FrameDrawResult.FailureStage)
+            End If
+
+            If Not Me.Session.Ready Then
+                Call ViewerSession.RecordError(Me.Session)
+            End If
+
+        End If
+
+    End Sub
+
+    Public Sub StandaloneInput(PressedKey As Number)
+
+        Call Me.HandleKeyboard(PressedKey)
+        Call ViewerSession.CaptureFailure(Me.Session, 21)
+
+        Me.ViewerInputState.InterfaceBlocked = Me.HandleInterfacePointer()
+
+        Call ViewerSession.CaptureFailure(Me.Session, 22)
+        Call Me.UpdateCameraPointer(Me.ViewerInputState.InterfaceBlocked)
+        Call ViewerSession.CaptureFailure(Me.Session, 23)
+
+    End Sub
+
+    Public Sub DrawStandaloneOverlay()
+
+        Call ViewerEffects.DrawStormFlash(Me.Effects)
+        Call Me.DrawViewerOverlay()
+
+    End Sub
+
+    Public Sub Release()
+
+        Call Me.DestroyViewer()
+
+    End Sub
+
+    Private Sub LoadViewer()
+
+        If Not Me.IsHosted Then
+            Me.ViewWidth = Window_Width()
+            Me.ViewHeight = Window_Height()
+        End If
+
+        Call ViewerLifecycle.Configure(
+            Me.LifecycleSettings, 3, BACKDROP_LANDSCAPE_PATH, BACKDROP_TITLE_PATH,
+            DEFAULT_ZOOM_DEGREES, ZOOM_IN_LIMIT, ZOOM_OUT_LIMIT,
+            ARENA_INITIAL_ORBIT_YAW, ARENA_DEFAULT_ZOOM_DEGREES,
+            ARENA_FLOOR_WIDTH, ARENA_FLOOR_DEPTH,
+            ARENA_CAMERA_CENTER_X, ARENA_CAMERA_CENTER_Z,
+            ARENA_CAMERA_DISTANCE, ARENA_CAMERA_HEIGHT,
+            CHARACTER_MODEL_FORWARD_YAW_OFFSET, ORIN_ARENA_YAW_ADJUSTMENT,
+            CALIBRATION_MAX_CLIPS, PARTY_FORMATION_RADIUS,
+            PARTY_FORMATION_START_ANGLE, PARTY_FORMATION_END_ANGLE)
+
+        Me.LifecycleSettings.Hosted = Me.IsHosted
+        Me.LifecycleSettings.ViewWidth = Me.ViewWidth
+        Me.LifecycleSettings.ViewHeight = Me.ViewHeight
+
+        Call ViewerLifecycle.LoadViewer(
+            Me.Session, Me.Party, Me.Character, Me.ActiveProfile, Me.Rendering, Me.Effects,
+            Me.DragonState, Me.Playback, Me.ViewerCameraState, Me.Calibration,
+            Me.ViewerUiState, Me.ViewerGizmoState, Me.Equipment, Me.CalibrationAvailable,
+            Me.SwordWristNode, Me.ShieldWristNode, Me.LifecycleSettings)
+
+    End Sub
+
+    Private Sub UpdateDragon()
+
+        Me.Session.Ready = ViewerParty.UpdateDragon(
+            Me.Party,
+            Me.DragonState,
+            Me.Effects,
+            Me.Character,
+            Me.Session.DragonInspection,
+            ViewerPlayback.SelectedClipName(Me.Character, Me.Playback),
+            Me.Playback.ScenePaused,
+            Me.Playback.PlaybackSpeed,
+            Me.Playback.AnimationUpdateElapsed
+        ) And Me.Session.Ready
+
+    End Sub
+
+    Private Sub UpdateBattleAudio()
+
+        Dim Audible As Boolean
+        Dim Name As Text
+
+        Name = ViewerPlayback.SelectedClipName(Me.Character, Me.Playback)
+        Audible = Not Me.Playback.ScenePaused And Not Me.ViewerUiState.CalibrationEditing
+
+        Call ViewerEffects.UpdateArinAudio(
+            Me.Effects, Me.Session.ProfileIndex, Name,
+            Character3D.AnimationTime(Me.Character), Audible)
+
+        Call ViewerDragon.UpdateAudio(Me.DragonState, Audible)
+
+        If Me.Session.ProfileIndex = ViewerProfiles.PROFILE_VRAX Then
+            Call ViewerDragon.UpdateVraxAudio(Me.Effects.VraxAudio, Name,
+                Character3D.AnimationTime(Me.Character), Audible)
+        End If
+
+    End Sub
+
+    Private Sub HandleKeyboard(PressedKey As Number)
+
+        If (Me.Party.Enabled And
+            (PressedKey = KEY_4 Or
+            (PressedKey = KEY_ENTER And Not Me.ViewerUiState.CalibrationEditing And Not Me.ViewerGizmoState.Dragging))) Then
+
+            If PressedKey = KEY_ENTER Then
+                Call Me.ResetPartyInspector()
+            End If
+
+            Return
+
+        End If
+
+        Call Me.BeginPartyInspector()
+        Call Me.HandleInspectorKeyboard(PressedKey)
+        Call Me.EndPartyInspector()
+
+    End Sub
+
+    Private Sub HandleInspectorKeyboard(PressedKey As Number)
+
+        Dim Action As Number
+        Dim ApplicationCommand As ViewerInspectorCommands.ApplicationCommandResult
+        Dim InspectorResult As ViewerInspectorCommands.OperationResult
+
+        If PressedKey = KEY_BACKTICK Then
+
+            Call ViewerUi.CycleVisibility(Me.ViewerUiState)
+
+            Me.Session.Ready = ViewerLifecycle.CancelInteractionCaptures(
+                Me.Party, Me.Character, Me.Playback, Me.Session.ProfileIndex,
+                Me.ViewerUiState, Me.ViewerInputState, Me.ViewerGizmoState,
+                Me.ViewerCameraState, Me.Calibration, Me.CalibrationAvailable,
+                Me.Effects) And Me.Session.Ready
+
+            Return
+
+        End If
+
+        If Me.HandleTransformGizmoKeyboard(PressedKey) Then
+            Return
+        End If
+
+        Action = ViewerInput.ClassifyInspectorKey(
+            PressedKey,
+            Key_Event_Held(KEY_CONTROL),
+            Me.ViewerUiState.CalibrationEditing,
+            Me.Party.Enabled,
+            Me.Rendering.SocketGizmosVisible,
+            Character3D.ClipCount(Me.Character)
+        )
+
+        InspectorResult = ViewerInspectorCommands.ApplyKeyboardNavigationAction(
+            Action,
+            Me.Rendering,
+            BACKGROUND_COUNT,
+            Character3D.SocketCount(Me.Character),
+            Me.ViewerCameraState,
+            Me.Effects,
+            Me.DragonState
+        )
+
+        If InspectorResult.Handled Then
+            Me.Session.Ready = InspectorResult.Ready And Me.Session.Ready
+
+            Return
+        End If
+
+        If Me.ApplyActorPresentationCommand(
+            Action,
+            ViewerInspectorCommands.ACTOR_ACTION_SOURCE_INSPECTOR_KEYBOARD) Then
+            Return
+        End If
+
+        ApplicationCommand = ViewerInspectorCommands.ApplicationCommandForKeyboardAction(
+            Action, Me.Character, Me.Session.ProfileIndex, Me.Playback.SelectedClip,
+            Me.Session.ViewerError)
+
+        If ApplicationCommand.Handled Then
+            Call Me.ApplyInspectorApplicationCommand(
+                ApplicationCommand.Command, ApplicationCommand.Value)
+        End If
+
+    End Sub
+
+    Private Sub ApplyInspectorApplicationCommand(Command As Number, Value As Number)
+
+        If Command = ViewerInspectorCommands.APPLICATION_COMMAND_CYCLE_PROFILE Then
+            Call Me.CycleProfile()
+        Else If Command = ViewerInspectorCommands.APPLICATION_COMMAND_TOGGLE_SCENE_PAUSE Then
+            Me.Session.Ready = ViewerLifecycle.ToggleScenePause(
+                Me.Session, Me.Party, Me.Character, Me.Playback, Me.Session.ProfileIndex,
+                Me.ViewerUiState, Me.ViewerInputState, Me.Calibration,
+                Me.CalibrationAvailable, Me.Effects) And Me.Session.Ready
+        Else If Command = ViewerInspectorCommands.APPLICATION_COMMAND_PLAY_SELECTED_CLIP Then
+            Call Me.PlaySelectedClip()
+        Else If Command = ViewerInspectorCommands.APPLICATION_COMMAND_ADJUST_SPEED Then
+            Call Me.AdjustPlaybackSpeed(Value)
+        Else If Command = ViewerInspectorCommands.APPLICATION_COMMAND_RESET_VIEW Then
+            Call Me.ResetView()
+        Else If Command = ViewerInspectorCommands.APPLICATION_COMMAND_RESTART_PRESENTATION Then
+            Call Me.RestartPresentation()
+        Else If Command = ViewerInspectorCommands.APPLICATION_COMMAND_RESET_ALL Then
+            Call Me.ResetAll()
+        Else If Command = ViewerInspectorCommands.APPLICATION_COMMAND_SELECT_CLIP Then
+            Call Me.SelectPresentationClip(Value)
+        Else If Command = ViewerInspectorCommands.APPLICATION_COMMAND_STEP_FRAME Then
+            Call Me.ApplyTimelineCommand(ViewerTimelineEditing.COMMAND_STEP_FRAME, Value)
+        Else If Command = ViewerInspectorCommands.APPLICATION_COMMAND_RETRY_VIEWER Then
+            Call Me.RetryViewer()
+        End If
+
+    End Sub
+
+    Private Function HandleTransformGizmoKeyboard(PressedKey As Number) As Boolean
+
+        Dim Action As Number
+        Dim Result As ViewerCalibrationEditing.OperationResult
+
+        Action = ViewerInput.ClassifyGizmoKey(
+            PressedKey,
+            Me.CalibrationAvailable,
+            Me.ViewerUiState.CalibrationVisible,
+            Me.ViewerUiState.Visibility,
+            Me.ViewerUiState.CalibrationTarget >= ViewerUi.CALIBRATION_TARGET_SWORD,
+            Me.ViewerGizmoState.Dragging,
+            Me.ViewerUiState.CalibrationEditing
+        )
+
+        If Action = ViewerInput.GIZMO_KEY_NONE Then
+            Return False
+        End If
+
+        If ViewerCalibrationControls.GizmoKeyRequiresPartyPreview(
+            Action, Me.ViewerGizmoState.Visible, Me.ViewerUiState.CalibrationEditing,
+            Me.ViewerGizmoState.Dragging, Me.Calibration.StorageRejected) Then
+            Call ViewerParty.BeginPreviewSession(Me.Party, Me.Character, Me.Playback, Me.Session.ProfileIndex)
+        End If
+
+        Result = ViewerCalibrationControls.ApplyGizmoKeyboardAction(
+            Action,
+            Me.Calibration, Me.Character, Me.Playback.SelectedClip,
+            Me.SwordWristNode, Me.ShieldWristNode, Me.CalibrationAvailable,
+            Me.ViewerUiState, Me.ViewerGizmoState, Me.ViewerCameraState, Me.Effects)
+
+        Call ViewerSession.ApplyCalibrationOperation(Me.Session, Result)
+
+        Return True
+
+    End Function
+
+    Private Function HandleTransformGizmoPointer() As Boolean
+
+        Dim ReturnValue As Boolean
+
+        Dim Decision As ViewerGizmo.PointerDecision
+        Dim GizmoButtonContains As Boolean
+        Dim Origin As Precision3D.Vector3
+        Dim Result As ViewerCalibrationEditing.OperationResult
+
+        GizmoButtonContains = ViewerUi.CalibrationGizmoButtonContains(
+            Pointer_X(), Pointer_Y())
+        Origin = Me.ViewerGizmoState.Origin
+
+        If (Me.CalibrationAvailable And
+            Me.ViewerUiState.CalibrationVisible And
+            Me.ViewerUiState.Visibility = 0 And
+            Not Me.Session.ViewerError And
+            Me.ViewerGizmoState.Visible And
+            Not GizmoButtonContains) Then
+            Origin = ViewerCalibrationEditing.GizmoOrigin(
+                Me.Character, Me.ViewerUiState)
+        End If
+
+        Decision = ViewerGizmo.ClassifyPointer(
+            Me.ViewerGizmoState,
+            Me.CalibrationAvailable,
+            Me.ViewerUiState.CalibrationVisible,
+            Me.ViewerUiState.Visibility,
+            Me.Session.ViewerError,
+            GizmoButtonContains,
+            Pointer_Pressed(POINTER_PRIMARY),
+            Pointer_Held(POINTER_PRIMARY),
+            Pointer_Released(POINTER_PRIMARY),
+            Pointer_Pressed(POINTER_SECONDARY),
+            Pointer_X(),
+            Pointer_Y(),
+            Pointer_Delta_X(),
+            Pointer_Delta_Y(),
+            Pointer_Inside(),
+            90,
+            Me.ViewHeight - 100,
+            ViewerUi.StatusPanelX(Me.ViewWidth),
+            ViewerUi.CALIBRATION_PANEL_X,
+            ViewerUi.CALIBRATION_PANEL_Y,
+            ViewerUi.CALIBRATION_PANEL_WIDTH,
+            ViewerUi.CALIBRATION_PANEL_HEIGHT,
+            Me.ViewerUiState.CalibrationTransform,
+            Me.ViewerUiState.CalibrationAxis,
+            Origin,
+            Me.ViewerCameraState.Live,
+            Me.ViewWidth,
+            Me.ViewHeight
+        )
+
+        If ViewerCalibrationControls.GizmoPointerRequiresPartyPreview(
+            Decision.Action, Me.ViewerGizmoState.Visible,
+            Me.ViewerUiState.CalibrationEditing) Then
+            Call ViewerParty.BeginPreviewSession(Me.Party, Me.Character, Me.Playback, Me.Session.ProfileIndex)
+        End If
+
+        Result = ViewerCalibrationControls.ApplyGizmoPointerAction(
+            Decision, Pointer_Released(POINTER_PRIMARY),
+            Me.Calibration, Me.Character, Me.Playback.SelectedClip,
+            Me.SwordWristNode, Me.ShieldWristNode, Me.CalibrationAvailable,
+            Me.ViewerUiState, Me.ViewerGizmoState, Me.ViewerCameraState, Me.Effects,
+            Me.ViewWidth, Me.ViewHeight)
+
+        Call ViewerSession.ApplyCalibrationOperation(Me.Session, Result)
+
+        ReturnValue = Decision.Consumed
+
+        Return ReturnValue
+
+    End Function
+
+    Private Sub UpdateTransformGizmo()
+
+        Call ViewerGizmo.UpdateProjection(
+            Me.ViewerGizmoState,
+            ViewerCalibrationEditing.GizmoOrigin(Me.Character, Me.ViewerUiState),
+            Me.ViewerCameraState.Live,
+            Me.ViewWidth,
+            Me.ViewHeight
+        )
+
+    End Sub
+
+    Private Function ApplyActorPresentationCommand(
+        Action As Number, ActionSource As Number) As Boolean
+
+        Dim ReturnValue As Boolean
+
+        Dim Result As ViewerInspectorCommands.OperationResult
+        Dim RestoreInspector As Boolean
+
+        RestoreInspector = (Me.Party.UiBound And
+            ViewerInspectorCommands.ActorPresentationRequiresPrimaryActor(
+                Action, ActionSource))
+
+        If RestoreInspector Then
+            Call Me.EndPartyInspector()
+        End If
+
+        Result = ViewerInspectorCommands.ApplyActorPresentationAction(
+            Action, ActionSource, Me.Equipment, Me.Party, Me.Character,
+            Me.CalibrationAvailable, Me.Session.DragonInspection,
+            WEAPON_PART_INDEX, SHIELD_PART_INDEX, Me.Effects, Me.Session.ProfileIndex)
+        Me.Session.Ready = Result.Ready And Me.Session.Ready
+
+        If RestoreInspector Then
+            Call Me.BeginPartyInspector()
+        End If
+
+        ReturnValue = Result.Handled
+
+        Return ReturnValue
+
+    End Function
+
+    Private Sub RetryViewer()
+
+        Call ViewerLifecycle.PrepareRetry(
+            Me.Session, Me.Party, Me.Character, Me.Rendering, Me.Effects, Me.DragonState)
+        Call Me.LoadViewer()
+
+    End Sub
+
+    Private Sub CycleProfile()
+
+        If Not ViewerProfiles.INCLUDE_DIAGNOSTIC_PROFILES Or Me.Party.Enabled Then
+            Return
+        End If
+
+        If Me.ViewerUiState.CalibrationEditing Then
+            Call ViewerSession.BlockCharacterSwitch(Me.Session)
+
+            Return
+        End If
+
+        Call ViewerLifecycle.PrepareProfileCycle(
+            Me.Session, Me.Party, Me.Character, Me.Rendering, Me.Effects, Me.DragonState)
+        Call Me.LoadViewer()
+
+    End Sub
+
+    Private Sub AdvanceAnimationSequence()
+
+        If Me.Party.Enabled Then
+            Return
+        End If
+
+        If ViewerPlayback.AdvanceDemo(
+            Me.Playback, Me.Character, Me.Session.ProfileIndex,
+            ANIMATION_CYCLE_MILLISECONDS, Me.Timing.PresentationElapsed) Then
+            Call Me.PlaySelectedClip(True)
+        End If
+
+    End Sub
+
+    Private Function HandleInterfacePointer() As Boolean
+
+        Dim Blocked As Boolean
+        Dim Index As Number
+
+        If ViewerInput.HasInterfaceCapture(
+            Me.ViewerInputState, Me.ViewerGizmoState.Dragging) Then
+
+            Call Me.BeginPartyInspector()
+
+            Blocked = Me.HandleInspectorPointer()
+
+            Call Me.EndPartyInspector()
+
+            Return Blocked
+
+        End If
+
+        If Me.ViewerUiState.Visibility = 2 Then
+
+            If Pointer_Pressed(POINTER_SECONDARY) Then
+
+                If Me.Party.Enabled Then
+                    Call Me.ResetPartyInspector()
+                Else If Me.Session.ViewerError Then
+                    Call Me.RetryViewer()
+                Else
+
+                    Call Me.ResetAll()
+                End If
+
+                Return True
+
+            End If
+
+            Return False
+
+        End If
+
+        If (ViewerUi.LayoutTooSmall(Me.ViewWidth, Me.ViewHeight) And
+            Not Pointer_Pressed(POINTER_SECONDARY)) Then
+            Blocked = ViewerUi.HandleMinimumSizeNotice(
+                Me.ViewerUiState, Me.ViewWidth, Me.ViewHeight,
+                Pointer_X(), Pointer_Y(), Pointer_Pressed(POINTER_PRIMARY))
+
+            Return Blocked
+        End If
+
+        If ViewerUi.CharacterTabsContain(Pointer_X(), Pointer_Y()) Then
+
+            If Pointer_Pressed(POINTER_PRIMARY) Then
+
+                Index = ViewerUi.CharacterTabAtPointer(Pointer_X(), Pointer_Y())
+
+                If Index >= 0 Then
+                    Call Me.SelectCharacterTab(Index)
+                End If
+
+            End If
+
+            Return True
+
+        End If
+
+        If Me.Party.Enabled Then
+
+            If Me.HandlePartyPointer() Then
+                Return True
+            End If
+
+            Call Me.BeginPartyInspector()
+
+            Blocked = Me.HandleInspectorPointer()
+
+            Call Me.EndPartyInspector()
+
+            Return Blocked
+
+        End If
+
+        Blocked = Me.HandleInspectorPointer()
+
+        Return Blocked
+
+    End Function
+
+    Private Function HandleInspectorPointer() As Boolean
+
+        Dim Action As Number
+        Dim Blocked As Boolean
+        Dim Gesture As ViewerInput.PointerGestureUpdate
+        Dim InspectorResult As ViewerInspectorCommands.OperationResult
+        Dim KeyframeIndex As Number
+        Dim PointerResult As ViewerInspectorCommands.ApplicationCommandResult
+        Dim TimelineCommand As ViewerTimelineEditing.CommandRequest
+        Dim TransferAction As Number
+        Dim WheelDelta As Number
+
+        If Me.HandleTransformGizmoPointer() Then
+            Return True
+        End If
+
+        Gesture = ViewerInput.UpdateBeforeSliders(
+            Me.ViewerInputState,
+            Timer(),
+            FRAME_BUTTON_REPEAT_MILLISECONDS,
+            Pointer_Pressed(POINTER_PRIMARY),
+            Pointer_Held(POINTER_PRIMARY),
+            Pointer_Pressed(POINTER_SECONDARY)
+        )
+
+        If Gesture.Action = ViewerInput.POINTER_GESTURE_STEP_FRAME Then
+            Call Me.ApplyTimelineCommand(
+                ViewerTimelineEditing.COMMAND_STEP_FRAME, Gesture.Value)
+        Else If Gesture.Action = ViewerInput.POINTER_GESTURE_UPDATE_KEYFRAME Then
+            Call Me.UpdateTimelineKeyframeDrag()
+        Else If Gesture.Action = ViewerInput.POINTER_GESTURE_FINISH_KEYFRAME Then
+            Call Me.FinishTimelineKeyframeDrag()
+        End If
+
+        If Gesture.Consumed Then
+            Return True
+        End If
+
+        If Me.HandleSharedSliders() Then
+            Return True
+        End If
+
+        Gesture = ViewerInput.UpdateTimelineScrub(
+            Me.ViewerInputState,
+            Pointer_Pressed(POINTER_PRIMARY),
+            Pointer_Held(POINTER_PRIMARY),
+            Pointer_Released(POINTER_PRIMARY)
+        )
+
+        If Gesture.Action = ViewerInput.POINTER_GESTURE_SEEK_TIMELINE Then
+            Call Me.ApplyTimelineCommand(
+                ViewerTimelineEditing.COMMAND_SEEK_POINTER, 0)
+        End If
+
+        If Gesture.Consumed Then
+            Return True
+        End If
+
+        If Not Pointer_Inside() Then
+            Return False
+        End If
+
+        If Pointer_Pressed(POINTER_SECONDARY) Then
+
+            If Me.Session.ViewerError Then
+                Call Me.RetryViewer()
+            Else
+
+                Call Me.ResetAll()
+            End If
+
+            Return True
+
+        End If
+
+        If ViewerUi.TimelineContains(
+            Pointer_X(), Pointer_Y(), Me.ViewWidth, Me.ViewHeight) Then
+
+            WheelDelta = Pointer_Wheel_Delta()
+
+            If WheelDelta > 0 Then
+                Call Me.ApplyTimelineCommand(
+                    ViewerTimelineEditing.COMMAND_STEP_FRAME, 1)
+            Else If WheelDelta < 0 Then
+                Call Me.ApplyTimelineCommand(
+                    ViewerTimelineEditing.COMMAND_STEP_FRAME, -1)
+            End If
+
+            If WheelDelta <> 0 Then
+                Return True
+            End If
+
+        End If
+
+        If ViewerUi.LayoutTooSmall(Me.ViewWidth, Me.ViewHeight) Then
+            Return True
+        End If
+
+        TransferAction = ViewerUi.TransferActionAtPointer(
+            Pointer_X(),
+            Pointer_Y(),
+            Me.ViewHeight,
+            Me.CalibrationAvailable,
+            Text_Width(Me.Calibration.FileLabel, 9)
+        )
+
+        If TransferAction <> ViewerUi.TRANSFER_ACTION_NONE Then
+
+            If Pointer_Pressed(POINTER_PRIMARY) Then
+
+                If TransferAction = ViewerUi.TRANSFER_ACTION_DOWNLOAD Then
+                    Call ViewerCalibration.Download(Me.Calibration, Me.Character)
+                Else If TransferAction = ViewerUi.TRANSFER_ACTION_IMPORT Then
+                    Call Me.HandleCalibrationImport()
+                Else If TransferAction = ViewerUi.TRANSFER_ACTION_OPEN Then
+                    Call ViewerCalibration.OpenOrDownload(Me.Calibration, Me.Character)
+                End If
+
+            End If
+
+            Return True
+
+        End If
+
+        If ViewerUi.CalibrationPanelContains(
+            Pointer_X(), Pointer_Y(), Me.ViewerUiState.Visibility,
+            Me.CalibrationAvailable, Me.ViewerUiState.CalibrationVisible) Then
+            Call Me.HandleCalibrationPanelPointer()
+
+            Return True
+        End If
+
+        Blocked = ViewerUi.InspectorBlocksScene(
+            Pointer_X(), Pointer_Y(), Me.ViewWidth, Me.ViewHeight,
+            Me.ViewerUiState.Visibility)
+
+        If Not Pointer_Pressed(POINTER_PRIMARY) Then
+            Return Blocked
+        End If
+
+        KeyframeIndex = ViewerUi.TimelineKeyframeAtPointer(
+            Me.Character,
+            Me.Calibration,
+            Me.CalibrationAvailable,
+            Me.Playback.SelectedClip,
+            Pointer_X(),
+            Pointer_Y(),
+            Me.ViewWidth,
+            Me.ViewHeight
+        )
+
+        Action = ViewerUi.InspectorActionAtPointer(
+            Pointer_X(),
+            Pointer_Y(),
+            Me.ViewWidth,
+            Me.ViewHeight,
+            Me.ViewerUiState.Visibility,
+            ViewerProfiles.INCLUDE_DIAGNOSTIC_PROFILES,
+            Me.Party.Enabled,
+            Me.Session.ProfileIndex,
+            Me.Effects.SwordFireReady,
+            KeyframeIndex,
+            ViewerPlayback.PresentationIndexForRuntimeClip(Me.Character, Me.Session.ProfileIndex, Me.Playback.SelectedClip)
+        )
+
+        InspectorResult = ViewerInspectorCommands.ApplyPresentationAction(
+            Action, Me.Rendering, BACKGROUND_COUNT, Me.Effects, Me.DragonState)
+
+        If InspectorResult.Handled Then
+            Me.Session.Ready = InspectorResult.Ready And Me.Session.Ready
+
+            Return Blocked
+        End If
+
+        If Me.ApplyActorPresentationCommand(
+            Action,
+            ViewerInspectorCommands.ACTOR_ACTION_SOURCE_INSPECTOR_POINTER) Then
+            Return Blocked
+        End If
+
+        TimelineCommand = ViewerTimelineEditing.InspectorCommand(
+            Action, KeyframeIndex)
+
+        If TimelineCommand.Handled Then
+
+            Call Me.ApplyTimelineCommand(TimelineCommand.Command, TimelineCommand.Value)
+
+            If TimelineCommand.RepeatDirection <> 0 Then
+                Call ViewerInput.BeginFrameRepeat(
+                    Me.ViewerInputState,
+                    TimelineCommand.RepeatDirection,
+                    Timer() + FRAME_BUTTON_REPEAT_MILLISECONDS)
+            End If
+
+            Return Blocked
+
+        End If
+
+        PointerResult = ViewerInspectorCommands.ApplyGeneralPointerAction(
+            Action, Me.Party, Me.Character, Me.Playback, Me.ViewerUiState, Me.ViewerGizmoState,
+            Me.ViewerInputState, Me.ViewerCameraState, Me.ActiveProfile, Me.DragonState,
+            Me.Session.ProfileIndex, Me.CalibrationAvailable,
+            Me.ViewWidth, Me.ViewHeight, Me.UsableWidth(),
+            ARENA_CAMERA_CENTER_X, ARENA_CAMERA_CENTER_Z,
+            ARENA_CAMERA_DISTANCE, ARENA_CAMERA_HEIGHT)
+
+        If PointerResult.Handled Then
+            Call Me.ApplyInspectorApplicationCommand(
+                PointerResult.Command, PointerResult.Value)
+        End If
+
+        Return Blocked
+
+    End Function
+
+    Private Function HandleSharedSliders() As Boolean
+
+        Dim ReturnValue As Boolean
+
+        Dim Update As ViewerUi.SliderUpdate
+
+        Update = ViewerUi.UpdateCameraSliders(
+            Me.ViewerInputState.SliderDragOwner,
+            Me.ViewerUiState.Visibility,
+            ViewerUi.StatusPanelX(Me.ViewWidth),
+            Me.ViewHeight,
+            ToNumber(Round(Me.ViewerCameraState.Controls.OrbitYaw)),
+            ToNumber(Round(Me.ViewerCameraState.Controls.OrbitPitch)),
+            ToNumber(Round(Me.ViewerCameraState.Zoom.Target)),
+            ZOOM_IN_LIMIT,
+            ZOOM_OUT_LIMIT
+        )
+
+        If Update.Action = ViewerUi.SLIDER_ACTION_HORIZONTAL_ORBIT Then
+            Call ViewerCamera.SetHorizontalOrbit(Me.ViewerCameraState, Update.Value)
+        Else If Update.Action = ViewerUi.SLIDER_ACTION_VERTICAL_ORBIT Then
+            Call ViewerCamera.SetVerticalOrbit(Me.ViewerCameraState, Update.Value)
+        Else If Update.Action = ViewerUi.SLIDER_ACTION_ZOOM Then
+            Call ViewerCamera.SetZoomTarget(Me.ViewerCameraState, Update.Value)
+        End If
+
+        If Update.Consumed Then
+            Return True
+        End If
+
+        If Me.ViewerUiState.CalibrationVisible Or Me.ViewerInputState.SliderDragOwner = 4 Then
+
+            Update = ViewerUi.UpdateCalibrationSlider(
+                Me.ViewerInputState.SliderDragOwner,
+                ViewerCalibrationEditing.CurrentValue(
+                    Me.Calibration, Me.Playback.SelectedClip, Me.ViewerUiState),
+                ViewerCalibration.MinimumValue(Me.ViewerUiState.CalibrationTransform),
+                ViewerCalibration.MaximumValue(Me.ViewerUiState.CalibrationTransform)
+            )
+
+            If Update.Consumed And Update.Changed Then
+                Call Me.SetCurrentCalibrationValue(Update.Value)
+            End If
+
+        End If
+
+        ReturnValue = Update.Consumed
+
+        Return ReturnValue
+
+    End Function
+
+    Private Sub HandleCalibrationPanelPointer()
+
+        Dim Action As Number
+        Dim Result As ViewerCalibrationEditing.OperationResult
+
+        Action = ViewerCalibrationControls.ActionAtPointer(
+            Pointer_X(),
+            Pointer_Y(),
+            Pointer_Pressed(POINTER_PRIMARY),
+            Me.ViewerUiState.CalibrationTarget
+        )
+
+        If ViewerCalibrationControls.RequiresPartyPreview(
+            Action, Me.ViewerUiState.CalibrationEditing) Then
+            Call ViewerParty.BeginPreviewSession(Me.Party, Me.Character, Me.Playback, Me.Session.ProfileIndex)
+        End If
+
+        Result = ViewerCalibrationControls.ApplyPointerAction(
+            Action,
+            Me.Calibration,
+            Me.Character,
+            Me.Playback,
+            Me.Session.ProfileIndex,
+            Me.SwordWristNode,
+            Me.ShieldWristNode,
+            Me.CalibrationAvailable,
+            Me.ViewerUiState,
+            Me.ViewerGizmoState,
+            Me.ViewerCameraState,
+            Me.Effects
+        )
+
+        Call ViewerSession.ApplyCalibrationOperation(Me.Session, Result)
+
+    End Sub
+
+    Private Sub UpdateCameraPointer(Blocked As Boolean)
+
+        Dim CameraInput As ViewerCamera.PointerInput
+
+        CameraInput = ViewerCamera.CreatePointerInput(
+            Blocked,
+            Pointer_Pressed(POINTER_MIDDLE),
+            Pointer_Held(POINTER_MIDDLE),
+            Pointer_Released(POINTER_MIDDLE),
+            Pointer_Pressed(POINTER_PRIMARY),
+            Pointer_Held(POINTER_PRIMARY),
+            Pointer_Released(POINTER_PRIMARY),
+            Pointer_X(),
+            Pointer_Y(),
+            Pointer_Delta_X(),
+            Pointer_Delta_Y(),
+            Me.ViewWidth,
+            Me.ViewHeight,
+            Me.ViewerUiState.CalibrationVisible,
+            Me.Party.Enabled
+        )
+
+        If Not Blocked Then
+            CameraInput.WheelDelta = Pointer_Wheel_Delta()
+        End If
+
+        If ViewerCamera.PointerRequiresCalibrationOrigin(
+            Me.ViewerCameraState, CameraInput) Then
+            CameraInput.CalibrationOrigin = ViewerCalibrationEditing.GizmoOrigin(
+                Me.Character, Me.ViewerUiState)
+        End If
+
+        Me.Session.Ready = ViewerCamera.UpdatePointerInteraction(
+            Me.ViewerCameraState,
+            CameraInput,
+            ORBIT_POINTER_DIVISOR,
+            PAN_POINTER_DIVISOR,
+            8
+        ) And Me.Session.Ready
+
+    End Sub
+
+    Private Sub UpdateOrinStorm()
+
+        Call ViewerParty.UpdateOrinStorm(
+            Me.Party, Me.DragonState, Me.Effects, Me.Character,
+            Me.Session.ProfileIndex, Me.Playback.SelectedClip,
+            Me.Session.DragonInspection, Me.ViewerCameraState.Live,
+            Me.Timing.CameraElapsed, Me.Equipment.SwordVisible,
+            Me.Equipment.ShieldVisible, Me.Playback.ScenePaused)
+
+    End Sub
+
+    Private Sub AdjustPlaybackSpeed(Amount As Number, Optional SpeedTurn As Number = -1)
+
+        Dim Result As ViewerPlayback.SpeedAdjustmentResult
+
+        Result = ViewerPlayback.AdjustSpeedForContext(
+            Me.Playback,
+            Me.ActiveProfile.MinimumPlaybackSpeed,
+            Me.ActiveProfile.MaximumPlaybackSpeed,
+            Amount,
+            Me.Party.Enabled,
+            Me.Party.PreviewActive
+        )
+
+        If Result.Blocked Then
+            Call ViewerCalibration.SetTransferMessage(
+                Me.Calibration, "Resume Or Reset Before Changing Demo Speed")
+
+            Return
+        End If
+
+        If Me.Party.Enabled And Me.Party.UnityRoster Then
+
+            If SpeedTurn < 0 Then
+
+                SpeedTurn = Me.Party.Turn
+
+                If Me.Party.UiBound Then
+                    SpeedTurn = Me.Party.UiTurn
+                End If
+
+            End If
+
+            Call ViewerParty.AdjustActorSpeed(Me.Party, SpeedTurn, Amount)
+
+            Call ViewerPlayback.UseDefaultSpeed(Me.Playback,
+                ViewerParty.ActorPlaybackSpeed(Me.Party, 0, 150))
+
+        End If
+
+        If Result.ResetPartyDemo Then
+            Call Me.ResetPartyDemo()
+        Else
+
+            Call Me.PlaySelectedClip()
+        End If
+
+    End Sub
+
+    Private Sub RestartPresentation()
+
+        If Me.Party.Enabled And Me.Party.Ready Then
+            Call Me.ResetPartyInspector()
+
+            Return
+        End If
+
+        Call Me.ResetView()
+
+        Call ViewerCamera.StartAutoOrbit(Me.ViewerCameraState)
+
+        Call ViewerPlayback.RestartPresentation(
+            Me.Playback, Me.Character, Me.Session.ProfileIndex)
+
+        Call Me.PlaySelectedClip()
+
+    End Sub
+
+    Private Sub ResetView()
+
+        Call ViewerLifecycle.ResetView(
+            Me.Session, Me.Party, Me.DragonState, Me.ViewerCameraState, Me.LifecycleSettings)
+
+    End Sub
+
+    Private Sub ResetAll()
+
+        If Me.Party.UiBound Then
+
+            Call Me.CancelCalibrationEdit()
+
+            Me.Session.Ready = ViewerLifecycle.RestorePartyPreview(
+                Me.Party, Me.Character, Me.Playback, Me.Session.ProfileIndex,
+                Me.ViewerUiState, Me.ViewerInputState, Me.Calibration,
+                Me.CalibrationAvailable, Me.Effects) And Me.Session.Ready
+
+            Call Me.EndPartyInspector()
+
+        End If
+
+        If Me.ViewerUiState.CalibrationEditing Then
+            Call Me.CancelCalibrationEdit()
+        End If
+
+        Call ViewerLifecycle.ResetAll(
+            Me.Session, Me.Party, Me.Character, Me.Rendering, Me.Effects, Me.DragonState,
+            Me.Playback, Me.ViewerCameraState, Me.Calibration, Me.ViewerUiState,
+            Me.ViewerInputState, Me.ViewerGizmoState, Me.Equipment,
+            Me.CalibrationAvailable, Me.SwordWristNode, Me.ShieldWristNode,
+            Me.ActiveProfile.DefaultPlaybackSpeed, Me.LifecycleSettings)
+
+    End Sub
+
+    Private Sub SelectClip(Index As Number)
+
+        Call ViewerParty.BeginPreviewSession(Me.Party, Me.Character, Me.Playback, Me.Session.ProfileIndex)
+        Call Me.CancelCalibrationEdit()
+
+        Call ViewerPlayback.SelectClip(Me.Playback, Index, Me.Party.Enabled)
+
+        Call ViewerUi.ClearConfirmation(Me.ViewerUiState)
+
+        Call Me.PlaySelectedClip()
+
+    End Sub
+
+    Private Sub SelectPresentationClip(Index As Number)
+
+        Dim RuntimeClip As Number
+
+        RuntimeClip = ViewerPlayback.RuntimeClipForPresentationIndex(
+            Me.Character, Me.Session.ProfileIndex, Index)
+
+        If RuntimeClip >= 0 Then
+            Call Me.SelectClip(RuntimeClip)
+        End If
+
+    End Sub
+
+    Private Sub ApplyTimelineCommand(Command As Number, Value As Number)
+
+        Dim Result As ViewerCalibrationEditing.OperationResult
+
+        If Command = ViewerTimelineEditing.COMMAND_SEEK_POINTER Then
+            Call ViewerInput.BeginTimelineScrub(Me.ViewerInputState)
+        End If
+
+        Call ViewerParty.BeginPreviewSession(Me.Party, Me.Character, Me.Playback, Me.Session.ProfileIndex)
+
+        Result = ViewerTimelineEditing.ApplyCommand(
+            Command, Value, Me.ViewerInputState, Me.Calibration,
+            Me.Character, Me.Playback, Me.Session.ProfileIndex,
+            Me.SwordWristNode, Me.ShieldWristNode, Me.CalibrationAvailable,
+            Me.ViewerUiState, Me.ViewerGizmoState, Me.ViewerCameraState, Me.Effects,
+            Pointer_X(), Me.ViewWidth)
+
+        Call ViewerSession.ApplyCalibrationOperation(Me.Session, Result)
+
+    End Sub
+
+    Private Sub UpdateTimelineKeyframeDrag()
+
+        Me.Session.Ready = ViewerTimelineEditing.UpdateKeyframeDrag(
+            Me.ViewerInputState,
+            Me.Calibration,
+            Me.Character,
+            Me.Playback.SelectedClip,
+            Pointer_X(),
+            Me.ViewWidth,
+            Me.Effects
+        ) And Me.Session.Ready
+
+    End Sub
+
+    Private Sub FinishTimelineKeyframeDrag()
+
+        Dim Result As ViewerCalibrationEditing.OperationResult
+
+        Result = ViewerTimelineEditing.FinishKeyframeDrag(
+            Me.ViewerInputState,
+            Me.Calibration,
+            Me.Character,
+            Me.Playback.SelectedClip,
+            Me.Session.ProfileIndex,
+            Me.SwordWristNode,
+            Me.ShieldWristNode,
+            Me.CalibrationAvailable,
+            Me.ViewerUiState.CalibrationEditing,
+            Me.Effects
+        )
+
+        Call ViewerSession.ApplyCalibrationOperation(Me.Session, Result)
+
+    End Sub
+
+    Private Sub ConfigureCalibration()
+
+        Call ViewerLifecycle.ConfigureCalibration(
+            Me.Session, Me.Character, Me.Calibration, Me.ViewerUiState, Me.ViewerGizmoState,
+            Me.CalibrationAvailable, Me.SwordWristNode, Me.ShieldWristNode)
+
+    End Sub
+
+    Private Sub HandleCalibrationImport()
+
+        Dim Result As ViewerCalibrationEditing.OperationResult
+
+        Call ViewerParty.BeginPreviewSession(Me.Party, Me.Character, Me.Playback, Me.Session.ProfileIndex)
+
+        Call ViewerPlayback.PauseForCalibration(Me.Playback, Me.Party.Enabled)
+
+        Result = ViewerCalibrationEditing.ImportOrCommit(
+            Me.Calibration, Me.Character, Me.Playback.SelectedClip, Me.Session.ProfileIndex,
+            Me.SwordWristNode, Me.ShieldWristNode, Me.CalibrationAvailable,
+            Me.ViewerUiState, Me.Effects)
+
+        Call ViewerSession.ApplyCalibrationOperation(Me.Session, Result)
+
+    End Sub
+
+    Private Sub UpdateCalibrationForCurrentFrame()
+
+        Call ViewerCalibrationEditing.EvaluateCurrent(
+            Me.Calibration,
+            Me.Character,
+            Me.Playback.SelectedClip,
+            Me.Session.ProfileIndex,
+            Me.ViewerUiState.CalibrationEditing,
+            Me.CalibrationAvailable
+        )
+
+    End Sub
+
+    Private Sub ApplyWristCalibration()
+
+        Me.Session.Ready = ViewerCalibration.ApplyWristOffsets(
+            Me.Calibration,
+            Me.Character,
+            Me.Playback.SelectedClip,
+            Me.SwordWristNode,
+            Me.ShieldWristNode,
+            Me.CalibrationAvailable
+        ) And Me.Session.Ready
+
+    End Sub
+
+    Private Sub ApplyEquipmentCoupling()
+
+        Me.Session.Ready = ViewerCalibration.ApplyEquipmentCoupling(
+            Me.Calibration,
+            Me.Character,
+            Me.Playback.SelectedClip,
+            Me.Effects.SwordGlow,
+            Me.Effects.ShieldGlow,
+            Me.Effects.EpicGlowAvailable
+        ) And Me.Session.Ready
+
+    End Sub
+
+    Private Sub ApplyEquipmentCalibration()
+
+        Dim Application As ViewerCalibration.ApplicationResult
+
+        Application = ViewerCalibration.ApplyEquipmentTransforms(
+            Me.Calibration,
+            Me.Character,
+            Me.Playback.SelectedClip,
+            Me.Effects.SwordGlow,
+            Me.Effects.ShieldGlow,
+            Me.Effects.EpicGlowAvailable,
+            Me.Effects.EpicGlowVisible
+        )
+
+        Call ViewerSession.ApplyCalibrationResult(Me.Session, Application)
+
+    End Sub
+
+    Private Sub CancelCalibrationEdit()
+
+        Dim Result As ViewerCalibrationEditing.OperationResult
+
+        Result = ViewerCalibrationEditing.CancelEdit(
+            Me.Calibration, Me.Character, Me.Playback.SelectedClip,
+            Me.SwordWristNode, Me.ShieldWristNode, Me.CalibrationAvailable,
+            Me.ViewerUiState, Me.ViewerGizmoState, Me.ViewerCameraState, Me.Effects)
+
+        Call ViewerSession.ApplyCalibrationOperation(Me.Session, Result)
+
+    End Sub
+
+    Private Sub SetCurrentCalibrationValue(Value As Number)
+
+        Dim Result As ViewerCalibrationEditing.OperationResult
+
+        If Not Me.ViewerUiState.CalibrationEditing Then
+            Call ViewerParty.BeginPreviewSession(Me.Party, Me.Character, Me.Playback, Me.Session.ProfileIndex)
+        End If
+
+        Result = ViewerCalibrationEditing.SetCurrentValue(
+            Me.Calibration, Me.Character, Me.Playback.SelectedClip,
+            Me.SwordWristNode, Me.ShieldWristNode, Me.CalibrationAvailable,
+            Me.ViewerUiState, Me.ViewerGizmoState, Me.ViewerCameraState, Me.Effects, Value)
+
+        Call ViewerSession.ApplyCalibrationOperation(Me.Session, Result)
+
+    End Sub
+
+    Private Sub PlaySelectedClip(Optional RetainFireTails As Boolean = False)
+
+        Call ViewerLifecycle.StartSelectedClip(
+            Me.Session, Me.Character, Me.Playback, Me.Calibration, Me.Effects,
+            Me.CalibrationAvailable, Me.SwordWristNode, Me.ShieldWristNode,
+            Me.ViewerUiState.CalibrationEditing, RetainFireTails)
+
+    End Sub
+
+    Private Sub DrawViewerOverlay()
+
+        Call Me.BeginPartyInspector()
+
+        If (Me.ViewerUiState.Visibility = 0 And
+            Me.CalibrationAvailable And
+            Me.ViewerUiState.CalibrationVisible And
+            Me.ViewerGizmoState.Visible) Then
+
+            Call Me.UpdateTransformGizmo()
+
+            Me.ViewerGizmoState.HoverAxis = ViewerGizmo.AxisAtPointer(
+                Me.ViewerGizmoState,
+                Pointer_X(),
+                Pointer_Y(),
+                Pointer_Inside(),
+                90,
+                Me.ViewHeight - 100,
+                ViewerUi.StatusPanelX(Me.ViewWidth),
+                ViewerUi.CALIBRATION_PANEL_X,
+                ViewerUi.CALIBRATION_PANEL_Y,
+                ViewerUi.CALIBRATION_PANEL_WIDTH,
+                ViewerUi.CALIBRATION_PANEL_HEIGHT,
+                Me.ViewerUiState.CalibrationTransform,
+                Me.ViewerUiState.CalibrationAxis,
+                Me.ViewerCameraState.Live,
+                Me.ViewWidth,
+                Me.ViewHeight
+            )
+
+            Call ViewerGizmo.Draw(
+                Me.ViewerGizmoState,
+                Me.ViewerUiState.CalibrationTransform,
+                Me.ViewerUiState.CalibrationAxis,
+                Me.ViewerCameraState.Live,
+                Me.ViewWidth,
+                Me.ViewHeight
+            )
+
+        End If
+
+        Call Me.DrawInspectorOverlay()
+        Call Me.EndPartyInspector()
+
+    End Sub
+
+    Private Sub DrawInspectorOverlay()
+
+        Dim EffectsView As ViewerInspectorPresentation.EffectsView
+        Dim IdentityView As ViewerInspectorPresentation.IdentityView
+        Dim StatusView As ViewerInspectorPresentation.StatusView
+        Dim WorkspaceView As ViewerInspectorPresentation.WorkspaceView
+
+        If Me.ViewerUiState.Visibility = 2 Then
+            Return
+        End If
+
+        If ViewerUi.LayoutTooSmall(Me.ViewWidth, Me.ViewHeight) Then
+            Call ViewerUi.DrawMinimumSizeNotice(
+                Me.ViewerUiState, Me.ViewWidth, Me.ViewHeight)
+
+            Return
+        End If
+
+        IdentityView = ViewerInspectorPresentation.CaptureIdentity(
+            Me.ViewerUiState, Me.ActiveProfile, Me.Party, Me.Session, Me.Rendering, Me.Effects,
+            Me.DragonState, Me.Equipment, Me.CalibrationAvailable,
+            Me.ViewWidth, Me.ViewHeight)
+
+        Call ViewerInspectorPresentation.DrawIdentityAndToolbar(IdentityView)
+
+        If Me.Party.Enabled And Not Me.ViewerUiState.CalibrationVisible Then
+            Call ViewerParty.DrawOverlay(
+                Me.Party,
+                Me.ViewerUiState.Visibility,
+                Me.ViewHeight,
+                Me.DragonState.Visible,
+                Me.Equipment.SwordVisible,
+                Me.Equipment.ShieldVisible,
+                Me.Rendering.FloorVisible Or Me.Rendering.GridVisible,
+                Me.Rendering.BackgroundIndex > 0,
+                Me.Effects.EpicGlowVisible,
+                Me.Playback.ScenePaused,
+                Me.ViewerCameraState.AutoOrbit,
+                Me.Effects.FlamePaused,
+                Me.Effects.LightningPaused,
+                ViewerUi.PlaybackLabel("Fire", Me.Effects.FlamePaused, "Freeze"),
+                ViewerUi.PlaybackLabel("Lightning", Me.Effects.LightningPaused, "Freeze"),
+                ViewerEffects.ShieldFireStyleLabel(Me.Effects),
+                Me.Effects.ShieldFlameStyle,
+                ViewerEffects.StormCaption(Me.Effects),
+                ViewerTiming.FramesPerSecond(Me.FrameRate),
+                Me.Session.ViewerError,
+                Me.Session.FirstFailureStage,
+                Me.ViewerCameraState.Live
+            )
+        End If
+
+        If Me.ViewerUiState.Visibility = 0 Then
+
+            StatusView = ViewerInspectorPresentation.CaptureStatus(
+                Me.Character, Me.ActiveProfile, Me.Party, Me.Session, Me.Rendering, Me.Playback,
+                Me.ViewerCameraState, Me.FrameRate, Me.ViewWidth, Me.ViewHeight,
+                ANIMATION_CYCLE_MILLISECONDS)
+
+            Call ViewerInspectorPresentation.DrawStatusAndAnimation(StatusView)
+
+            EffectsView = ViewerInspectorPresentation.CaptureEffects(
+                Me.Session, Me.Rendering, Me.Effects, Me.DragonState, Me.Party, Me.ViewerCameraState,
+                Me.ViewWidth, Me.ViewHeight, ZOOM_IN_LIMIT, ZOOM_OUT_LIMIT)
+
+            Call ViewerInspectorPresentation.DrawEffectsAndCamera(EffectsView)
+
+        End If
+
+        WorkspaceView = ViewerInspectorPresentation.CaptureWorkspace(
+            Me.ViewerUiState, Me.Character, Me.Calibration, Me.Playback, Me.ViewerGizmoState,
+            Me.Session, Me.Party, Me.CalibrationAvailable, Me.ViewWidth, Me.ViewHeight)
+
+        Call ViewerInspectorPresentation.DrawWorkspace(
+            Me.ViewerUiState, Me.Character, Me.Calibration, Me.ViewerInputState, WorkspaceView)
+
+    End Sub
+
+    Private Sub DestroyViewer()
+
+        Call ViewerLifecycle.Shutdown(
+            Me.Session, Me.Party, Me.Character, Me.Rendering, Me.Effects, Me.DragonState)
+
+    End Sub
+
+    Private Sub SelectCharacterTab(Index As Number)
+
+        If Not ViewerSession.ShouldSelectCharacterTab(
+            Me.Session, Index, Me.Party.Enabled) Then
+            Return
+        End If
+
+        If (Me.ViewerUiState.CalibrationEditing Or
+            Me.Calibration.ImportPending) Then
+            Call ViewerSession.BlockCharacterSwitch(Me.Session)
+
+            Return
+        End If
+
+        If Not ViewerLifecycle.BeginCharacterSwitchLoading(Me.Session) Then
+            Return
+        End If
+
+        Me.Session.Ready = ViewerLifecycle.CancelInteractionCaptures(
+            Me.Party, Me.Character, Me.Playback, Me.Session.ProfileIndex,
+            Me.ViewerUiState, Me.ViewerInputState, Me.ViewerGizmoState,
+            Me.ViewerCameraState, Me.Calibration, Me.CalibrationAvailable,
+            Me.Effects) And Me.Session.Ready
+
+        Call ViewerLifecycle.PrepareCharacterSwitch(
+            Me.Session, Me.Party, Me.Character, Me.Rendering, Me.Effects,
+            Me.DragonState, Me.Playback, Index)
+        Call Me.LoadViewer()
+
+    End Sub
+
+    Private Function CaptureActorContext() As ViewerActors.Context
+
+        Dim Result As ViewerActors.Context
+
+        Result = ViewerActors.Capture(
+            Me.Character,
+            Me.ViewerCameraState.Frame,
+            Me.Session.ProfileIndex,
+            Me.Playback.SelectedClip,
+            Me.Calibration.KeyBase,
+            Me.SwordWristNode,
+            Me.ShieldWristNode,
+            Me.Effects.SwordGlow,
+            Me.Effects.ShieldGlow,
+            Me.CalibrationAvailable,
+            Me.Effects.EpicGlowAvailable,
+            Me.Effects.EpicGlowVisible,
+            Me.Party.PrimaryPresentationState
+        )
+
+        Return Result
+
+    End Function
+
+    Private Sub UseActorContext(Context As ViewerActors.Context)
+
+        Call ViewerActors.Apply(
+            Context,
+            Me.Character,
+            Me.ViewerCameraState.Frame,
+            Me.Session.ProfileIndex,
+            Me.Playback.SelectedClip,
+            Me.Calibration.KeyBase,
+            Me.SwordWristNode,
+            Me.ShieldWristNode,
+            Me.Effects.SwordGlow,
+            Me.Effects.ShieldGlow,
+            Me.CalibrationAvailable,
+            Me.Effects.EpicGlowAvailable,
+            Me.Effects.EpicGlowVisible,
+            Me.Party.PrimaryPresentationState
+        )
+
+        Me.ActiveProfile = ViewerProfiles.ProfileAt(Me.Session.ProfileIndex)
+
+    End Sub
+
+    Private Sub BeginPartyInspector()
+
+        Dim Binding As ViewerParty.InspectorBindingResult
+        Dim WasVisible As Boolean
+
+        Binding = ViewerParty.BeginInspectorSelection(
+            Me.Party,
+            Me.CaptureActorContext(),
+            Me.Party.Turn,
+            Me.DragonState,
+            Me.Session.ViewerError
+        )
+
+        If Not Binding.Bound Then
+            Return
+        End If
+
+        Call Me.UseActorContext(Binding.Context)
+
+        Call ViewerPlayback.UseDefaultSpeed(Me.Playback,
+            ViewerParty.ActorPlaybackSpeed(Me.Party, Me.Party.UiTurn, Me.Playback.PlaybackSpeed))
+
+        If Me.Calibration.OwnerProfile <> Me.Session.ProfileIndex Then
+
+            ''' One editing owner at a time. Never carry a pending import, Undo, or
+            ''' clipboard into another character's independent storage identity.
+            WasVisible = Me.ViewerUiState.CalibrationVisible
+
+            Call Me.ConfigureCalibration()
+
+            Call ViewerUi.SetCalibrationVisible(
+                Me.ViewerUiState, WasVisible, Me.CalibrationAvailable)
+
+            Call ViewerPlayback.RefreshSelectedTimelineEvent(
+                Me.Playback, Me.Character)
+
+        End If
+
+    End Sub
+
+    Private Sub EndPartyInspector()
+
+        If Not Me.Party.UiBound Then
+            Return
+        End If
+
+        Call Me.UseActorContext(ViewerParty.EndInspectorSelection(
+            Me.Party,
+            Me.CaptureActorContext(),
+            Me.DragonState
+        ))
+
+        Call ViewerPlayback.UseDefaultSpeed(Me.Playback,
+            ViewerParty.ActorPlaybackSpeed(Me.Party, 0, Me.Playback.PlaybackSpeed))
+
+    End Sub
+
+    Private Sub ResetPartyInspector()
+
+        Call Me.BeginPartyInspector()
+        Call Me.CancelCalibrationEdit()
+
+        Me.Session.Ready = ViewerLifecycle.RestorePartyPreview(
+            Me.Party, Me.Character, Me.Playback, Me.Session.ProfileIndex,
+            Me.ViewerUiState, Me.ViewerInputState, Me.Calibration,
+            Me.CalibrationAvailable, Me.Effects) And Me.Session.Ready
+
+        Call Me.EndPartyInspector()
+
+        If Me.Session.ViewerError Then
+            Call Me.RetryViewer()
+        Else
+
+            Call Me.ResetAll()
+        End If
+
+    End Sub
+
+    Private Sub UpdateDragonOpponent()
+
+        Dim Update As ViewerParty.ParticipantUpdateResult
+
+        Update = ViewerParty.UpdateDragonOpponent(
+            Me.Party,
+            Me.Calibration,
+            Me.Effects,
+            Me.Playback.AnimationUpdateElapsed,
+            Me.ViewerUiState.CalibrationEditing,
+            Me.Equipment.SwordVisible,
+            Me.Equipment.ShieldVisible,
+            Me.Playback.ScenePaused,
+            ViewerPlayback.ClipLabel(
+                Me.Party.DragonOpponent.Actor,
+                Me.Party.DragonOpponent.Profile,
+                Me.Party.DragonOpponent.Clip
+            ),
+            Me.ViewerCameraState.Live,
+            Me.Timing.CameraElapsed
+        )
+
+        Call ViewerSession.ApplyParticipantUpdate(Me.Session, Update)
+
+    End Sub
+
+    Private Sub ResetPartyDemo()
+
+        Call ViewerLifecycle.ResetPartyDemo(
+            Me.Session, Me.Party, Me.Playback, Me.ViewerUiState, Me.Equipment, Me.LifecycleSettings)
+
+    End Sub
+
+    Private Sub AdvancePartyDemo()
+
+        Me.Session.Ready = ViewerParty.AdvanceDemo(
+            Me.Party,
+            Me.Playback.AnimationUpdateElapsed,
+            Me.Playback.DemoEnabled,
+            Me.Playback.ScenePaused,
+            Me.Playback.PlaybackSpeed,
+            Me.Character,
+            Me.ViewerCameraState.Frame,
+            Me.Playback.SelectedClip,
+            ViewerDragon.PositionX(),
+            0,
+            ViewerDragon.PositionZ(),
+            CHARACTER_MODEL_FORWARD_YAW_OFFSET
+        ) And Me.Session.Ready
+
+    End Sub
+
+    Private Sub UpdatePartyCompanion()
+
+        Dim Update As ViewerParty.ParticipantUpdateResult
+
+        If Not Me.Party.Ready Then
+            Return
+        End If
+
+        Update = ViewerParty.UpdateCompanion(
+            Me.Party,
+            Me.Calibration,
+            Me.Effects,
+            Me.Playback.AnimationUpdateElapsed,
+            Me.ViewerUiState.CalibrationEditing
+        )
+
+        Call ViewerSession.ApplyParticipantUpdate(Me.Session, Update)
+
+    End Sub
+
+    Private Function HandlePartyPointer() As Boolean
+
+        Dim ReturnValue As Boolean
+
+        Dim CapturesActive As Boolean
+        Dim Decision As ViewerParty.PointerDecision
+        Dim InspectorResult As ViewerInspectorCommands.OperationResult
+        Dim Response As ViewerParty.PointerResponse
+
+        CapturesActive = ViewerInput.HasInterfaceCapture(
+            Me.ViewerInputState, Me.ViewerGizmoState.Dragging)
+        Decision = ViewerParty.ClassifyPointer(
+            Pointer_X(),
+            Pointer_Y(),
+            Pointer_Pressed(POINTER_PRIMARY),
+            Pointer_Pressed(POINTER_SECONDARY),
+            Me.ViewerUiState.Visibility,
+            Me.ViewerUiState.CalibrationVisible,
+            CapturesActive,
+            Me.ViewHeight,
+            ViewerUi.StatusPanelX(Me.ViewWidth),
+            ViewerUi.GlowButtonX(Me.ViewWidth,
+                ViewerProfiles.INCLUDE_DIAGNOSTIC_PROFILES, Me.Party.Enabled),
+            ViewerUi.GlowButtonWidth(
+                ViewerProfiles.INCLUDE_DIAGNOSTIC_PROFILES, Me.Party.Enabled),
+            Me.Party.UnityRoster
+        )
+
+        InspectorResult = ViewerInspectorCommands.ApplyPartyPresentationAction(
+            Decision.Action, Me.Rendering, BACKGROUND_COUNT,
+            Me.Effects, Me.ViewerCameraState, Me.DragonState)
+
+        If InspectorResult.Handled Then
+
+            Me.Session.Ready = InspectorResult.Ready And Me.Session.Ready
+
+            ReturnValue = Decision.Consumed
+
+            Return ReturnValue
+
+        End If
+
+        If Me.ApplyActorPresentationCommand(
+            Decision.Action,
+            ViewerInspectorCommands.ACTOR_ACTION_SOURCE_PARTY_POINTER) Then
+            ReturnValue = Decision.Consumed
+
+            Return ReturnValue
+        End If
+
+        Response = ViewerParty.PointerResponseForAction(Decision.Action)
+
+        If Response.ResetView Then
+
+            Call Me.ResetView()
+
+        Else If Response.ResetInspector Then
+
+            Call Me.ResetPartyInspector()
+
+        Else If Response.SpeedDelta <> 0 Then
+
+            Call Me.AdjustPlaybackSpeed(Response.SpeedDelta, Response.SpeedTurn)
+
+        Else If Response.TogglePause Then
+
+            Call Me.BeginPartyInspector()
+
+            Me.Session.Ready = ViewerLifecycle.ToggleScenePause(
+                Me.Session, Me.Party, Me.Character, Me.Playback, Me.Session.ProfileIndex,
+                Me.ViewerUiState, Me.ViewerInputState, Me.Calibration,
+                Me.CalibrationAvailable, Me.Effects) And Me.Session.Ready
+
+            Call Me.EndPartyInspector()
+
+        End If
+
+        ReturnValue = Decision.Consumed
+
+        Return ReturnValue
+
+    End Function
+
+    Private Function UsableWidth() As Number
+
+        Dim Result As Number
+
+        Result = Max(1, Me.ViewWidth - 284)
+
+        If Me.IsHosted Then
+            Result = Me.ViewWidth
+        End If
+
+        Return Result
+
+    End Function
+
+    Public Function TabIndex() As Number
+
+        Dim Result As Number
+
+        Result = Me.Session.SelectedCharacterTab
+
+        Return Result
+
+    End Function
+
+    Public Function HasEdits() As Boolean
+
+        Dim ReturnValue As Boolean
+
+        ReturnValue = Me.ViewerUiState.CalibrationEditing
+
+        Return ReturnValue
+
+    End Function
+
+    Public Function CanEdit() As Boolean
+
+        Dim Result As Boolean
+
+        Result = Me.CalibrationAvailable And Not Me.Party.Enabled And Not Me.Session.ViewerError
+
+        Return Result
+
+    End Function
+
+    Public Function StatusText() As Text
+
+        Dim Result As Text
+
+        Result = ViewerPlayback.SelectedClipLabel(Me.Character, Me.Playback, Me.Session.ProfileIndex)
+
+        If Me.Calibration.WriteFailed Then
+
+            Result = "Last save failed. Saved pose retained."
+
+            If Me.HasEdits() Then
+                Result = "Save failed. Preview retained; retry Save."
+            End If
+
+        Else If Me.Session.LoadingFailed Then
+
+            Result = "Loading canceled or failed. Current session retained."
+
+        Else If Me.Session.ViewerError Then
+
+            Result = "Viewer load/render error. Select a tab to retry."
+
+        End If
+
+        Return Result
+
+    End Function
+
+    Public Function ClipCount() As Number
+
+        Dim Result As Number
+
+        Result = Character3D.ClipCount(Me.Character)
+
+        Return Result
+
+    End Function
+
+    Public Function ClipName(Index As Number) As Text
+
+        Dim Result As Text
+
+        Result = Character3D.ClipName(Me.Character, Index)
+
+        Return Result
+
+    End Function
+
+    Public Function ClipIndex() As Number
+
+        Dim ReturnValue As Number
+
+        ReturnValue = Me.Playback.SelectedClip
+
+        Return ReturnValue
+
+    End Function
+
+    Public Function PoseValue() As Number
+
+        Dim Result As Number
+
+        Result = ViewerCalibrationEditing.CurrentValue(Me.Calibration, Me.Playback.SelectedClip, Me.ViewerUiState)
+
+        Return Result
+
+    End Function
+
+    Public Function AnimationMilliseconds() As Number
+
+        Dim Result As Number
+
+        Result = Character3D.AnimationTime(Me.Character)
+
+        Return Result
+
+    End Function
+
+    Public Function AnimationDurationMilliseconds() As Number
+
+        Dim Result As Number
+
+        Result = Character3D.ClipDuration(Me.Character, Me.Playback.SelectedClip)
+
+        Return Result
+
+    End Function
+
+    Public Function IsPaused() As Boolean
+
+        Dim Result As Boolean
+
+        Result = Me.Playback.ScenePaused
+
+        Return Result
+
+    End Function
+
+    Public Sub TogglePlayback()
+
+        Me.Session.Ready = ViewerLifecycle.ToggleScenePause(
+            Me.Session, Me.Party, Me.Character, Me.Playback, Me.Session.ProfileIndex,
+            Me.ViewerUiState, Me.ViewerInputState, Me.Calibration,
+            Me.CalibrationAvailable, Me.Effects) And Me.Session.Ready
+
+    End Sub
+
+    Public Sub DrawViewportOverlay(X As Number, Y As Number, Width As Number, Height As Number)
+
+        Call ViewerEffects.DrawStormFlash(Me.Effects, X, Y, Width, Height)
+
+    End Sub
+
+    Public Sub SelectTab(Index As Number)
+
+        If Me.HasEdits() Then
+            Return
+        End If
+
+        Call Me.SelectCharacterTab(Index)
+
+    End Sub
+
+    Public Sub ChooseClip(Index As Number)
+
+        If (Me.HasEdits() Or
+            Me.Party.Enabled Or
+            Index < 0 Or
+            Index >= Me.ClipCount()) Then
+            Return
+        End If
+
+        Call Me.SelectClip(Index)
+
+        Call ViewerPlayback.PauseForCalibration(Me.Playback, Me.Party.Enabled)
+
+    End Sub
+
+    Public Sub StepFrame(Direction As Number)
+
+        If Not Me.HasEdits() Then
+            Call Me.ApplyTimelineCommand(ViewerTimelineEditing.COMMAND_STEP_FRAME, Direction)
+        End If
+
+    End Sub
+
+    Public Sub SetPoseChannel(Target As Number, Axis As Number)
+
+        Call ViewerCalibrationControls.SelectRotationChannel(Me.ViewerUiState, Target, Axis)
+
+    End Sub
+
+    Public Sub NudgePose(Amount As Number)
+
+        If Not Me.CanEdit() Then
+            Return
+        End If
+
+        Call ViewerPlayback.PauseForCalibration(Me.Playback, Me.Party.Enabled)
+
+        Call Me.SetCurrentCalibrationValue(Me.PoseValue() + Amount)
+
+    End Sub
+
+    Public Function SavePose() As Boolean
+
+        Dim ReturnValue As Boolean
+
+        Dim Result As ViewerCalibrationEditing.OperationResult
+
+        If Not Me.CanEdit() Then
+            Return False
+        End If
+
+        Result = ViewerCalibrationEditing.SaveCurrentFrame(
+            Me.Calibration, Me.Character, Me.Playback.SelectedClip,
+            Me.ViewerUiState, Me.ViewerGizmoState, Me.ViewerCameraState, Me.Effects)
+
+        ReturnValue = Result.Persisted
+
+        Return ReturnValue
+
+    End Function
+
+    Public Sub UndoPose()
+
+        Dim Result As ViewerCalibrationEditing.OperationResult
+
+        If Me.HasEdits() Then
+            Call Me.CancelCalibrationEdit()
+        Else If Me.CanEdit() Then
+            Result = ViewerCalibrationEditing.UndoLastChange(
+                Me.Calibration, Me.Character, Me.Playback.SelectedClip, Me.Session.ProfileIndex,
+                Me.SwordWristNode, Me.ShieldWristNode, Me.CalibrationAvailable,
+                Me.ViewerUiState, Me.ViewerGizmoState, Me.ViewerCameraState, Me.Effects)
+        End If
+
+    End Sub
+
+    Public Sub Suspend()
+
+        Me.IsSuspended = True
+
+        Call Me.ReleaseInput()
+
+        Stop Sound On Channel 1
+        Stop Sound On Channel 2
+        Stop Sound On Channel 3
+        Stop Sound On Channel 4
+        Stop Sound On Channel 5
+
+    End Sub
+
+    Public Sub ResumePreview()
+
+        Call ViewerTiming.Start(Me.Timing, Timer())
+        Call Me.ReleaseInput()
+
+        Me.IsSuspended = False
+
+    End Sub
+
+    Public Sub ReleaseInput()
+
+        Call ViewerLifecycle.ReleasePointerCaptures(
+            Me.ViewerInputState, Me.ViewerCameraState, Me.ViewerGizmoState)
+
+    End Sub
+
+    Public Sub HostedInput(X As Number, Y As Number, Inside As Boolean, PressedKey As Number,
+        Optional OrbitPrimary As Boolean = False)
+
+        Dim Input As ViewerCamera.PointerInput
+        Dim Action As Number
+
+        If Not Inside Or Me.IsSuspended Then
+            Call Me.ReleaseInput()
+
+            Return
+        End If
+
+        Action = ViewerInput.HostedKeyCommand(PressedKey, Me.HasEdits())
+
+        If Action = ViewerInput.INSPECTOR_KEY_TOGGLE_PAUSE Then
+            Call Me.TogglePlayback()
+        Else If Action = ViewerInput.INSPECTOR_KEY_RESET Then
+            Call Me.ResetView()
+        End If
+
+        Input = ViewerCamera.CreatePointerInput(False,
+            Pointer_Pressed(POINTER_MIDDLE) Or (OrbitPrimary And Pointer_Pressed(POINTER_PRIMARY)),
+            Pointer_Held(POINTER_MIDDLE) Or (OrbitPrimary And Pointer_Held(POINTER_PRIMARY)),
+            Pointer_Released(POINTER_MIDDLE) Or (OrbitPrimary And Pointer_Released(POINTER_PRIMARY)),
+            Not OrbitPrimary And Pointer_Pressed(POINTER_PRIMARY),
+            Not OrbitPrimary And Pointer_Held(POINTER_PRIMARY),
+            Not OrbitPrimary And Pointer_Released(POINTER_PRIMARY),
+            X, Y, Pointer_Delta_X(), Pointer_Delta_Y(), Me.ViewWidth, Me.ViewHeight, False, Me.Party.Enabled)
+        Input.WheelDelta = Pointer_Wheel_Delta()
+        Me.Session.Ready = ViewerCamera.UpdatePointerInteraction(
+            Me.ViewerCameraState, Input, ORBIT_POINTER_DIVISOR, PAN_POINTER_DIVISOR, 8) And Me.Session.Ready
+
+    End Sub
+
+End Class
+
+End Module

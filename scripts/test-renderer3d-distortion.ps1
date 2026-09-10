@@ -59,7 +59,7 @@ try {
     Assert-Contains $web 'renderer3DRenderDistortionPass' 'Web distortion composite'
     Assert-Contains $native 'float2(-.03,-.03),float2(.03,.03)' 'Native bounded offset'
     Assert-Contains $web 'vec2(-.03),vec2(.03)' 'Web bounded offset'
-    Assert-Contains $web 'back.drawImage(renderer3DCanvas,0,0,logicalWidth,logicalHeight)' 'Renderer2D composition'
+    Assert-Contains $web 'back.drawImage(renderer3DCanvas,renderer3DViewport?renderer3DViewport.x:0,renderer3DViewport?renderer3DViewport.y:0,renderer3DViewport?renderer3DViewport.width:logicalWidth,renderer3DViewport?renderer3DViewport.height:logicalHeight)' 'Bounded viewport or default full-window Renderer2D composition'
 
     & $compiler --project $testProject --target windows-x64 --configuration $Configuration `
         --graphics DirectX -o $nativeOutput

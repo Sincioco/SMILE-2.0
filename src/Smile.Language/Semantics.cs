@@ -4212,7 +4212,7 @@ internal sealed class SemanticAnalyzer
         }
         var expected = SyntaxFacts.GetBuiltInFunctionParameters(identifier.Kind).Count;
         if (identifier.Kind is SyntaxKind.GameClosedKeyword or SyntaxKind.WindowWidthKeyword or
-            SyntaxKind.WindowHeightKeyword or SyntaxKind.WindowTitleKeyword or SyntaxKind.WindowActivateKeyword or SyntaxKind.WindowLoadingKeyword or
+            SyntaxKind.WindowHeightKeyword or SyntaxKind.WindowTitleKeyword or SyntaxKind.WindowActivateKeyword or SyntaxKind.WindowLoadingKeyword or SyntaxKind.WindowDeferCloseKeyword or SyntaxKind.WindowCloseRequestedKeyword or
             SyntaxKind.KeyHeldKeyword or SyntaxKind.KeyEventHeldKeyword or
             SyntaxKind.PointerXKeyword or SyntaxKind.PointerYKeyword or SyntaxKind.PointerDeltaXKeyword or
             SyntaxKind.PointerDeltaYKeyword or SyntaxKind.PointerWheelDeltaKeyword or
@@ -4281,6 +4281,13 @@ internal sealed class SemanticAnalyzer
                     "Built-in 'File_Export' requires Text filename and contents.");
             return SmileType.Boolean;
         }
+        if (identifier.Kind == SyntaxKind.WindowDeferCloseKeyword)
+        {
+            if (arguments.Count > 0)
+                RequireType(arguments[0], SmileType.Boolean, "SML3003",
+                    "Built-in 'Window_DeferClose' requires Boolean.");
+            return SmileType.Boolean;
+        }
         if (identifier.Kind is SyntaxKind.WindowTitleKeyword or SyntaxKind.FileRevealKeyword)
         {
             if (arguments.Count > 0)
@@ -4304,7 +4311,7 @@ internal sealed class SemanticAnalyzer
     }
 
     private static bool IsBooleanBuiltIn(SyntaxKind kind) =>
-        kind is SyntaxKind.GameClosedKeyword or SyntaxKind.WindowTitleKeyword or SyntaxKind.WindowActivateKeyword or SyntaxKind.WindowLoadingKeyword or
+        kind is SyntaxKind.GameClosedKeyword or SyntaxKind.WindowTitleKeyword or SyntaxKind.WindowActivateKeyword or SyntaxKind.WindowLoadingKeyword or SyntaxKind.WindowDeferCloseKeyword or SyntaxKind.WindowCloseRequestedKeyword or
             SyntaxKind.FileRevealKeyword or SyntaxKind.FileExportKeyword or
             SyntaxKind.KeyHeldKeyword or SyntaxKind.KeyEventHeldKeyword or SyntaxKind.ImageLoadedKeyword or
             SyntaxKind.PointerInsideKeyword or SyntaxKind.PointerHeldKeyword or SyntaxKind.PointerPressedKeyword or

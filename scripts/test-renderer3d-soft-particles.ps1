@@ -61,7 +61,7 @@ try {
     Assert-Contains $web 'base.a*=clamp(distance/max(softDepthSettings.y,.0001),0.0,1.0)' 'Web soft fade'
     Assert-Contains $native 'SMILE_TEST_RENDERER3D_FORCE_SOFT_DEPTH_FAILURE' 'Native fallback hook'
     Assert-Contains $web 'SMILE_TEST_RENDERER3D_FORCE_SOFT_DEPTH_FAILURE' 'Web fallback hook'
-    Assert-Contains $web 'back.drawImage(renderer3DCanvas,0,0,logicalWidth,logicalHeight)' 'Renderer2D composition'
+    Assert-Contains $web 'back.drawImage(renderer3DCanvas,renderer3DViewport?renderer3DViewport.x:0,renderer3DViewport?renderer3DViewport.y:0,renderer3DViewport?renderer3DViewport.width:logicalWidth,renderer3DViewport?renderer3DViewport.height:logicalHeight)' 'Bounded viewport or default full-window Renderer2D composition'
 
     $near = 1.0
     $far = 1000.0

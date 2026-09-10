@@ -14,6 +14,29 @@
 #include "image_resource.h"
 #include "thermal_fire3d.h"
 
+// One logical subviewport; reset is the existing full-window behavior.
+static double smile_viewport_region3d[4];
+static double smile_3d_viewport_x(void) {
+    return smile_graphics_directx_viewport_x() + floor(
+        smile_viewport_region3d[0] * smile_graphics_directx_viewport_width() + .5);
+}
+static double smile_3d_viewport_y(void) {
+    return smile_graphics_directx_viewport_y() + floor(
+        smile_viewport_region3d[1] * smile_graphics_directx_viewport_height() + .5);
+}
+static double smile_3d_viewport_width(void) {
+    if (smile_viewport_region3d[2] == 0) return smile_graphics_directx_viewport_width();
+    double right = smile_graphics_directx_viewport_x() + floor(
+        smile_viewport_region3d[2] * smile_graphics_directx_viewport_width() + .5);
+    return right > smile_3d_viewport_x() ? right - smile_3d_viewport_x() : 1;
+}
+static double smile_3d_viewport_height(void) {
+    if (smile_viewport_region3d[3] == 0) return smile_graphics_directx_viewport_height();
+    double bottom = smile_graphics_directx_viewport_y() + floor(
+        smile_viewport_region3d[3] * smile_graphics_directx_viewport_height() + .5);
+    return bottom > smile_3d_viewport_y() ? bottom - smile_3d_viewport_y() : 1;
+}
+
 #define SMILE_3D_MAX_MESHES 128
 #define SMILE_3D_MAX_OBJECTS 1024
 #define SMILE_3D_MAX_TEXTURES 128
@@ -4774,10 +4797,10 @@ static void smile_3d_set_reflection_constants(const SmileObject3D* object,
         ? (float)smile_reflections_strength_percent() / 100.0f
         : 0.0f;
     reflection[3] = (float)smile_reflections_softness_percent() / 100.0f;
-    viewport[0] = (float)smile_graphics_directx_viewport_x();
-    viewport[1] = (float)smile_graphics_directx_viewport_y();
-    viewport[2] = (float)smile_graphics_directx_viewport_width();
-    viewport[3] = (float)smile_graphics_directx_viewport_height();
+    viewport[0] = (float)smile_3d_viewport_x();
+    viewport[1] = (float)smile_3d_viewport_y();
+    viewport[2] = (float)smile_3d_viewport_width();
+    viewport[3] = (float)smile_3d_viewport_height();
 }
 
 static void smile_3d_set_object_raster(ID3D11DeviceContext* context,
@@ -7463,8 +7486,8 @@ static float smile_3d_receiver_backdrop_seam(const SmileSubmission3D* receiver)
     if (mesh == 0 || mesh->vertices == 0) return 0.5f;
     model = smile_3d_model(&receiver->object);
     view = smile_3d_view();
-    aspect = (float)smile_graphics_directx_viewport_width() /
-        (float)smile_graphics_directx_viewport_height();
+    aspect = (float)smile_3d_viewport_width() /
+        (float)smile_3d_viewport_height();
     projection = smile_3d_projection(aspect > 0.0f ? aspect : 1.0f);
     model_view = smile_3d_multiply(model, view);
     mvp = smile_3d_multiply(model_view, projection);
@@ -7556,8 +7579,8 @@ static long long smile_3d_receiver_sample_error(const SmileSubmission3D* receive
     mesh = smile_3d_mesh(receiver->mesh_handle);
     if (mesh == 0 || mesh->vertices == 0) return 0;
     model = smile_3d_model(&receiver->object);
-    aspect = (float)smile_graphics_directx_viewport_width() /
-        (float)smile_graphics_directx_viewport_height();
+    aspect = (float)smile_3d_viewport_width() /
+        (float)smile_3d_viewport_height();
     projection = smile_3d_projection(aspect > 0.0f ? aspect : 1.0f);
     previous_pass = smile_reflection_pass3d;
     smile_reflection_pass3d = 0;
@@ -7688,10 +7711,10 @@ static int smile_3d_begin(long long red, long long green, long long blue)
     context->OMSetDepthStencilState(smile_depth_state3d, 0);
     context->OMSetBlendState(0, 0, 0xffffffff);
     context->RSSetState(smile_raster_state3d);
-    viewport.TopLeftX = (FLOAT)smile_graphics_directx_viewport_x();
-    viewport.TopLeftY = (FLOAT)smile_graphics_directx_viewport_y();
-    viewport.Width = (FLOAT)smile_graphics_directx_viewport_width();
-    viewport.Height = (FLOAT)smile_graphics_directx_viewport_height();
+    viewport.TopLeftX = (FLOAT)smile_3d_viewport_x();
+    viewport.TopLeftY = (FLOAT)smile_3d_viewport_y();
+    viewport.Width = (FLOAT)smile_3d_viewport_width();
+    viewport.Height = (FLOAT)smile_3d_viewport_height();
     viewport.MinDepth = 0.0f; viewport.MaxDepth = 1.0f;
     context->RSSetViewports(1, &viewport);
     clear[0] = (float)(red & 255) / 255.0f; clear[1] = (float)(green & 255) / 255.0f;
@@ -7793,8 +7816,8 @@ static int smile_3d_draw_pbr(const SmileSubmission3D* submission)
     }
     constants.normal_matrix = smile_3d_normal_matrix(constants.model);
     view = smile_3d_view();
-    aspect = (float)smile_graphics_directx_viewport_width() /
-        (float)smile_graphics_directx_viewport_height();
+    aspect = (float)smile_3d_viewport_width() /
+        (float)smile_3d_viewport_height();
     projection = smile_3d_projection(aspect > 0.0f ? aspect : 1.0f);
     constants.mvp = smile_3d_multiply(smile_3d_multiply(constants.model, view), projection);
     constants.shadow_mvp = smile_3d_multiply(constants.model, smile_shadow_view_projection3d);
@@ -7909,8 +7932,8 @@ static int smile_3d_draw_vfx_submission(const SmileSubmission3D* submission)
         texture_sampler = texture->sampler;
     }
     view = smile_3d_view();
-    aspect = (float)smile_graphics_directx_viewport_width() /
-        (float)smile_graphics_directx_viewport_height();
+    aspect = (float)smile_3d_viewport_width() /
+        (float)smile_3d_viewport_height();
     projection = smile_3d_projection(aspect > 0.0f ? aspect : 1.0f);
     constants.view_projection = smile_3d_multiply(view, projection);
     constants.camera_right[0] = view.m[0];
@@ -8080,8 +8103,8 @@ static int smile_3d_draw_gpu_particle_system(SmileGpuParticleSystem3D* system)
         texture_sampler = texture->sampler;
     }
     view = smile_3d_view();
-    aspect = (float)smile_graphics_directx_viewport_width() /
-        (float)smile_graphics_directx_viewport_height();
+    aspect = (float)smile_3d_viewport_width() /
+        (float)smile_3d_viewport_height();
     projection = smile_3d_projection(aspect > 0.0f ? aspect : 1.0f);
     constants.view_projection = smile_3d_multiply(view, projection);
     constants.camera_right[0] = view.m[0];
@@ -8206,7 +8229,7 @@ static int smile_3d_draw_submission(const SmileSubmission3D* submission)
     }
     constants.model = smile_3d_model(object);
     view = smile_3d_view();
-    aspect = (float)smile_graphics_directx_viewport_width() / (float)smile_graphics_directx_viewport_height();
+    aspect = (float)smile_3d_viewport_width() / (float)smile_3d_viewport_height();
     projection = smile_3d_projection(aspect > 0.0f ? aspect : 1.0f);
     constants.mvp = smile_3d_multiply(smile_3d_multiply(constants.model, view), projection);
     constants.shadow_mvp = smile_3d_multiply(constants.model, smile_shadow_view_projection3d);
@@ -8324,8 +8347,8 @@ static int smile_3d_render_reflection_pass(void)
     device = (ID3D11Device*)smile_graphics_directx_device();
     context = (ID3D11DeviceContext*)smile_graphics_directx_context();
     if (context == 0 || !smile_reflections_prepare(device,
-            (int)smile_graphics_directx_viewport_width(),
-            (int)smile_graphics_directx_viewport_height(), smile_hdr_effective3d))
+            (int)smile_3d_viewport_width(),
+            (int)smile_3d_viewport_height(), smile_hdr_effective3d))
         return 1;
     target = smile_reflections_target();
     context->PSSetShaderResources(4, 1, &empty_view);
@@ -8710,8 +8733,10 @@ static int smile_3d_render_distortion_pass(void)
     context->PSSetShaderResources(0, 7, no_views);
     context->OMSetRenderTargets(1, &smile_distortion_view3d, 0);
     context->ClearRenderTargetView(smile_distortion_view3d, clear);
-    viewport.Width = (FLOAT)smile_distortion_width3d;
-    viewport.Height = (FLOAT)smile_distortion_height3d;
+    viewport.TopLeftX = (FLOAT)smile_3d_viewport_x() * smile_distortion_width3d / smile_graphics_directx_physical_width();
+    viewport.TopLeftY = (FLOAT)smile_3d_viewport_y() * smile_distortion_height3d / smile_graphics_directx_physical_height();
+    viewport.Width = (FLOAT)smile_3d_viewport_width() * smile_distortion_width3d / smile_graphics_directx_physical_width();
+    viewport.Height = (FLOAT)smile_3d_viewport_height() * smile_distortion_height3d / smile_graphics_directx_physical_height();
     viewport.MinDepth = 0.0f;
     viewport.MaxDepth = 1.0f;
     context->RSSetViewports(1, &viewport);
@@ -8939,10 +8964,10 @@ static int smile_3d_end(void)
             : (ID3D11RenderTargetView*)smile_graphics_directx_render_target();
         context->OMSetRenderTargets(1, &target, smile_depth_view3d);
         context->OMSetDepthStencilState(smile_depth_state3d, 0);
-        viewport.TopLeftX = (FLOAT)smile_graphics_directx_viewport_x();
-        viewport.TopLeftY = (FLOAT)smile_graphics_directx_viewport_y();
-        viewport.Width = (FLOAT)smile_graphics_directx_viewport_width();
-        viewport.Height = (FLOAT)smile_graphics_directx_viewport_height();
+        viewport.TopLeftX = (FLOAT)smile_3d_viewport_x();
+        viewport.TopLeftY = (FLOAT)smile_3d_viewport_y();
+        viewport.Width = (FLOAT)smile_3d_viewport_width();
+        viewport.Height = (FLOAT)smile_3d_viewport_height();
         viewport.MinDepth = 0.0f;
         viewport.MaxDepth = 1.0f;
         context->RSSetViewports(1, &viewport);
@@ -9629,6 +9654,7 @@ static void smile_3d_reset(void)
 {
     int index;
     smile_3d_end();
+    memset(smile_viewport_region3d, 0, sizeof(smile_viewport_region3d));
     smile_material_inspection3d = 0;
     smile_backdrop_texture_handle3d = 0;
     for (index = 0; index < SMILE_3D_MAX_OBJECTS; ++index)
@@ -10372,6 +10398,20 @@ extern "C" long long smile_renderer3d_command(long long command,
             if (smile_frame_active3d || object == 0 || b < 0 || b > 2)
             { smile_last_error3d = 50; return 0; }
             object->reflection_mode = (unsigned char)b;
+            return 1;
+        case SMILE_3D_SET_VIEWPORT:
+            if (smile_frame_active3d) { smile_last_error3d = 50; return 0; }
+            if (a == 0 && b == 0 && c == 0 && d == 0 && e == 0 && f == 0) {
+                memset(smile_viewport_region3d, 0, sizeof(smile_viewport_region3d));
+                return 1;
+            }
+            if (e < 1 || f < 1 || e > 1000000 || f > 1000000 ||
+                a < 0 || b < 0 || c < 1 || d < 1 || a > e || b > f ||
+                c > e - a || d > f - b) { smile_last_error3d = 50; return 0; }
+            smile_viewport_region3d[0] = (double)a / e;
+            smile_viewport_region3d[1] = (double)b / f;
+            smile_viewport_region3d[2] = (double)(a + c) / e;
+            smile_viewport_region3d[3] = (double)(b + d) / f;
             return 1;
         case SMILE_3D_REFLECTION_VALUE:
             if (a < 1 || a > 21)

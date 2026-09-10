@@ -24,6 +24,9 @@ Import Smile.Tools.Character3DViewerSession As ViewerSession
 Import Smile.Tools.Character3DViewerUi As ViewerUi
 
 Public Type Configuration
+    Hosted As Boolean
+    ViewWidth As Number
+    ViewHeight As Number
     UnusedAssetCacheLimit As Number
     BackdropLandscapePath As Text
     BackdropTitlePath As Text
@@ -152,9 +155,12 @@ Private Sub BeginAssetLoad(ByRef Session As ViewerSession.State,
     Call ViewerActors.ResetEquipmentVisibility(Equipment)
 
     Session.Ready = CharacterViewer.ValidateProfile(ActiveProfile) And Session.Ready
-    Session.Ready = Window_Title(
-        "SMILE 2.0 - 3D Viewer, Animation Editor - " +
-        ViewerProfiles.ModelFileName(Session.ProfileIndex)) And Session.Ready
+
+    If Not Settings.Hosted Then
+        Session.Ready = Window_Title(
+            "SMILE 2.0 - 3D Viewer, Animation Editor - " +
+            ViewerProfiles.ModelFileName(Session.ProfileIndex)) And Session.Ready
+    End If
 
     Call ViewerSession.CaptureFailure(Session, 30)
 
@@ -170,7 +176,7 @@ Private Sub BeginAssetLoad(ByRef Session As ViewerSession.State,
 
     Session.Ready = ViewerCamera.ConfigureFraming(
         Camera, ActiveProfile, Character,
-        Max(1, Window_Width() - 284), Max(1, Window_Height()),
+        FramingWidth(Settings), FramingHeight(Settings),
         Session.DragonInspection, ViewerDragon.ScalePercent(),
         ViewerDragon.PositionX(), 0, ViewerDragon.PositionZ(), Dragon.Available,
         Settings.ArenaCameraCenterX, Settings.ArenaCameraCenterZ,
@@ -203,7 +209,7 @@ Private Sub CreateSceneResources(ByRef Session As ViewerSession.State,
 
     Call ViewerSession.CaptureFailure(Session, 34)
 
-    Call ViewerCamera.BeginLoadedLayout(Camera, Window_Width(), Window_Height())
+    Call ViewerCamera.BeginLoadedLayout(Camera, FramingWindowWidth(Settings), FramingHeight(Settings))
 
     Call ViewerCamera.Reset(
         Camera, 0,
@@ -421,6 +427,16 @@ Public Function RestorePartyPreview(ByRef Party As ViewerParty.State,
     Return Result
 
 End Function
+
+''' Releases input ownership without reverting a pending pose or unloading the session.
+Public Sub ReleasePointerCaptures(ByRef InputState As ViewerInput.State,
+    ByRef Camera As ViewerCamera.State, ByRef Gizmo As ViewerGizmo.State)
+
+    Call ViewerInput.CancelCaptures(InputState)
+    Call ViewerCamera.CancelPointerControls(Camera)
+    Call ViewerGizmo.FinishDrag(Gizmo)
+
+End Sub
 
 Public Function CancelInteractionCaptures(
     ByRef Party As ViewerParty.State,
@@ -768,5 +784,47 @@ Private Sub PositionDragonOpponents(ByRef Session As ViewerSession.State,
         Settings.OrinArenaYawAdjustment) And Session.Ready
 
 End Sub
+
+Private Function FramingWindowWidth(Settings As Configuration) As Number
+
+    Dim Result As Number
+
+    Result = Window_Width()
+
+    If Settings.Hosted Then
+        Result = Max(1, Settings.ViewWidth)
+    End If
+
+    Return Result
+
+End Function
+
+Private Function FramingWidth(Settings As Configuration) As Number
+
+    Dim Result As Number
+
+    Result = Max(1, Window_Width() - 284)
+
+    If Settings.Hosted Then
+        Result = Max(1, Settings.ViewWidth)
+    End If
+
+    Return Result
+
+End Function
+
+Private Function FramingHeight(Settings As Configuration) As Number
+
+    Dim Result As Number
+
+    Result = Window_Height()
+
+    If Settings.Hosted Then
+        Result = Max(1, Settings.ViewHeight)
+    End If
+
+    Return Result
+
+End Function
 
 End Module

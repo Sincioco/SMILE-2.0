@@ -6,7 +6,28 @@ $repositoryRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $toolRoot = Join-Path $repositoryRoot 'tools\Character3DViewer'
 $testRoot = Join-Path $repositoryRoot 'artifacts\tests\ViewerCalibrationIsolation'
 $null = New-Item -ItemType Directory -Path $testRoot -Force
-$viewerSource = Get-Content -LiteralPath (Join-Path $toolRoot 'Program.smile') -Raw
+$workflow = Get-Content -LiteralPath (Join-Path $toolRoot 'ViewerWorkflow.smile') -Raw
+$workflow = $workflow.Replace("`r`n", "`n")
+# Retain the existing white-box regression fixture without a second production
+# controller. Project the current shared class's actual owner fields/procedures
+# into its disposable test startup. Hosted-session behavior has its own fixture.
+$imports = $workflow.Substring($workflow.IndexOf('Import '),
+    $workflow.IndexOf('Private Const ') - $workflow.IndexOf('Import '))
+$constants = $workflow.Substring($workflow.IndexOf('Private Const '),
+    $workflow.IndexOf('Public Class Session') - $workflow.IndexOf('Private Const ')).Replace('Private Const ', 'Const ')
+$fieldsStart = $workflow.IndexOf('    Private Party As ')
+$fieldsEnd = $workflow.IndexOf('    Public Sub Start(')
+$fields = $workflow.Substring($fieldsStart, $fieldsEnd - $fieldsStart)
+$fields = [regex]::Replace($fields, '(?m)^    Private (\w+) As ', 'Dim $1 As ')
+$helpersStart = $workflow.IndexOf('    Private Sub LoadViewer()')
+$helpersEnd = $workflow.IndexOf('    Public ', $helpersStart)
+if ($fieldsStart -lt 0 -or $helpersStart -lt 0 -or $helpersEnd -le $helpersStart) {
+    throw 'Shared Viewer owner boundaries changed; update the isolation harness.'
+}
+$helpers = $workflow.Substring($helpersStart, $helpersEnd - $helpersStart)
+$helpers = [regex]::Replace($helpers, '(?m)^    ', '').Replace('Private Sub ', 'Sub ').Replace('Private Function ', 'Function ').Replace('Me.', '')
+$viewerSource = "Option Explicit`n`n" + $imports + $constants + $fields +
+    "Game Window `"Fixture Assembly Boundary`"`n" + $helpers
 $viewerSource = $viewerSource.Replace("`r`n", "`n")
 $testStartup = Get-Content -LiteralPath (Join-Path $toolRoot 'CalibrationTests.smile') -Raw
 $profileConstants = foreach ($characterName in @('Arin', 'Orin')) {

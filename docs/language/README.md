@@ -33,6 +33,19 @@ End If
 Show Screen
 ```
 
+`Window_DeferClose(Enabled As Boolean)` returns `Boolean` and requires `Game Window`.
+The default is `False`. On native Windows, enabling it keeps the window alive when
+the user presses X or Alt+F4; `Window_CloseRequested()` consumes that request and
+returns `True` once. The application's ordinary frame loop can offer Save, Discard
+and Cancel, and must only exit after a successful save or explicit discard.
+Disabling deferral restores normal native closing. No automatic save is implied.
+
+On Web, enabling deferral requests the browser's standard unsaved-work confirmation
+on tab close/reload. Browser policy requires user interaction and controls the prompt;
+applications cannot customize it or guarantee a prompt during process termination.
+`Window_CloseRequested()` returns `False` on Web because that prompt belongs to the
+browser. In-application Close buttons can use their own ordinary frame-loop dialog.
+
 `Module dotted.name` ... `End Module` declares a module. Declarations are private unless prefixed with `Public`; `Private` is available when explicit intent helps. A physical source imports a module with `Import dotted.name As Alias`, then accesses exported constants, arrays, functions, subroutines, record types, and enums through that alias. Imports are scoped to that physical source. One module may span files from one provider. Inside a module, an unqualified nominal type must be built in or owned by that same module, including a type declared in another physical module source; external module types require explicit `Alias.Type` qualification. Project-global and ambient sibling-library types never enter a module's unqualified type scope. Duplicate providers, import cycles, private access, unknown members, and module access to consumer globals are diagnosed by the shared binder.
 
 ```smile

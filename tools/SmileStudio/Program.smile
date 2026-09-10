@@ -1,0 +1,171 @@
+''' Studio S1 owns one window, one live Viewer session, and one frame loop.
+
+Option Explicit
+
+Import Smile.Tools.Character3DViewerWorkflow As ViewerWorkflow
+Import Smile.Tools.StudioShell As Shell
+Import Smile.Simple3D.Graphics3D As Graphics3D
+Import Smile.UI.Controls As Controls
+
+Dim Viewer As New ViewerWorkflow.Session()
+Dim Ui As Shell.State
+Dim Command As Shell.Command
+Dim Logo As Image
+Dim Key As Number
+Dim Ready As Boolean
+Dim Closing As Boolean
+Dim Focused As Boolean
+
+Game Window "SMILE 2.0 Studio" Size 1600 By 900
+
+Load Image Logo From "Assets\Branding\smile-2.0-logo.png"
+
+Call Shell.Layout(Ui, Window_Width(), Window_Height())
+Call Viewer.Start(0, True, Ui.ViewWidth, Ui.ViewHeight)
+
+Do
+
+    Get Key Key
+
+    Call Shell.Layout(Ui, Window_Width(), Window_Height())
+
+    If Window_CloseRequested() Then
+
+        Ui.ConfirmClose = True
+        Focused = False
+
+        Call Viewer.Suspend()
+
+    End If
+
+    If Pointer_Pressed(POINTER_PRIMARY) Or Pointer_Pressed(POINTER_MIDDLE) Then
+        Focused = Controls.Contains(Ui.ViewX, Ui.ViewY, Ui.ViewWidth, Ui.ViewHeight)
+    End If
+
+    If Key = KEY_ESCAPE Then
+        Ui.Stopped = True
+
+        Call Viewer.Suspend()
+    End If
+
+    Command = Shell.ReadCommand(Ui, Viewer)
+
+    Call ApplyCommand()
+    Call Viewer.SetPoseChannel(Ui.Target, Ui.Axis)
+
+    Ready = Window_DeferClose(Viewer.HasEdits())
+
+    Call Viewer.HostedInput(Pointer_X() - Ui.ViewX, Pointer_Y() - Ui.ViewY,
+        Focused And Not Ui.ConfirmClose And Not Ui.TooSmall And
+        Controls.Contains(Ui.ViewX, Ui.ViewY, Ui.ViewWidth, Ui.ViewHeight), Key, Ui.OrbitDrag)
+    Call Viewer.UpdateFrame(Ui.ViewWidth, Ui.ViewHeight)
+
+    Ready = Graphics3D.SetViewport3D(Ui.ViewX, Ui.ViewY, Ui.ViewWidth, Ui.ViewHeight)
+
+    If Ready Then
+        Call Viewer.DrawFrame()
+    End If
+
+    Call Graphics3D.ResetViewport3D()
+    Call Viewer.DrawViewportOverlay(Ui.ViewX, Ui.ViewY, Ui.ViewWidth, Ui.ViewHeight)
+    Call Shell.Draw(Ui, Viewer, Logo, Focused)
+
+    Show Screen
+
+Loop Until Closing Or Game_Closed()
+
+Call Viewer.Release()
+
+Unload Image Logo
+
+Sub ApplyCommand()
+
+    If Command.Kind = Shell.NAVIGATE Then
+
+        Ui.Workspace = Command.Value
+        Focused = False
+
+        Call Viewer.ReleaseInput()
+
+    Else If Command.Kind = Shell.SELECT_TAB Then
+
+        Call Viewer.SelectTab(Command.Value)
+
+        Ui.ClipPage = 0
+
+    Else If Command.Kind = Shell.SELECT_CLIP Then
+
+        Call Viewer.ChooseClip(Command.Value)
+
+    Else If Command.Kind = Shell.STEP_FRAME Then
+
+        Call Viewer.StepFrame(Command.Value)
+
+    Else If Command.Kind = Shell.SET_TARGET Then
+
+        Ui.Target = Command.Value
+
+    Else If Command.Kind = Shell.SET_AXIS Then
+
+        Ui.Axis = Command.Value
+
+    Else If Command.Kind = Shell.NUDGE Then
+
+        Call Viewer.SetPoseChannel(Ui.Target, Ui.Axis)
+        Call Viewer.NudgePose(Command.Value)
+
+    Else If Command.Kind = Shell.SAVE_POSE Then
+
+        Ready = Viewer.SavePose()
+
+        If Ready And Ui.ConfirmClose Then
+            Closing = True
+        End If
+
+    Else If Command.Kind = Shell.UNDO Then
+
+        Call Viewer.UndoPose()
+
+    Else If Command.Kind = Shell.STOP_PREVIEW Then
+
+        Ui.Stopped = True
+
+        Call Viewer.Suspend()
+
+    Else If Command.Kind = Shell.TOGGLE_PLAYBACK Then
+
+        Call Viewer.TogglePlayback()
+
+    Else If Command.Kind = Shell.RESUME_PREVIEW Then
+
+        Ui.Stopped = False
+
+        Call Viewer.ResumePreview()
+
+    Else If Command.Kind = Shell.CLOSE Then
+
+        If Viewer.HasEdits() Then
+            Ui.ConfirmClose = True
+
+            Call Viewer.Suspend()
+        Else
+            Closing = True
+        End If
+
+    Else If Command.Kind = Shell.DISCARD_CLOSE Then
+
+        Call Viewer.UndoPose()
+
+        Closing = True
+
+    Else If Command.Kind = Shell.CANCEL_CLOSE Then
+
+        Ui.ConfirmClose = False
+
+        If Not Ui.Stopped Then
+            Call Viewer.ResumePreview()
+        End If
+
+    End If
+
+End Sub

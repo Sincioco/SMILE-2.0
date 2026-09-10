@@ -6,10 +6,15 @@ param(
     [string]$Target = 'All',
     [ValidateSet('Full', 'Low', 'Medium', 'High')]
     [string]$WebQuality = 'Full',
-    [switch]$PublicRoster
+    [switch]$PublicRoster,
+    [switch]$Studio,
+    [switch]$PrepareOnly
 )
 
 $ErrorActionPreference = 'Stop'
+if ($PrepareOnly -and $PublicRoster) {
+    throw 'Use -PrepareOnly for the normal local IDE roster, not PublicRoster.'
+}
 if ($PublicRoster -and $Target -ne 'Web') {
     throw 'Public roster publication requires -Target Web.'
 }
@@ -21,8 +26,13 @@ $repositoryRoot = [IO.Path]::GetFullPath((Join-Path $toolRoot '..\..'))
 $compiler = Join-Path $repositoryRoot 'artifacts\compiler\smilec.exe'
 $project = Join-Path $toolRoot 'Character3DViewer.smileproj'
 $outputRoot = Join-Path $toolRoot "bin\$Configuration"
+$studioRoot = Join-Path $repositoryRoot 'tools\SmileStudio'
+if ($Studio) {
+    $outputRoot = Join-Path $repositoryRoot "tools\SmileStudio\bin\$Configuration"
+}
 $viewerSources = @(
     'Program.smile',
+    'ViewerWorkflow.smile',
     'Profiles.smile',
     'OrinStorm.smile',
     '..\..\games\SinStarI\SourceAssets\Characters\Tank\OrinV13\OrinEquipmentContours.smile',
@@ -121,6 +131,57 @@ function Assert-CharacterPublication([string]$PublicationRoot) {
     }
 }
 
+function Set-StudioHost([xml]$ProjectXml) {
+    $ProjectXml.SmileProject.PropertyGroup.OutputName = 'SmileStudio'
+    # Preserve the authoritative calibration storage namespace, not a second
+    # Studio copy of each character's saved data.
+    $node = @($ProjectXml.SmileProject.ItemGroup.SmileSource | Where-Object {
+        [string]$_.Include -eq 'Program.smile'
+    })[0]
+    foreach ($source in @($ProjectXml.SmileProject.ItemGroup.SmileSource)) {
+        if ($source -eq $node) { continue }
+        # Both hosts are siblings. Repository-root references keep their path;
+        # Viewer-local modules stay linked, including the Web profile override.
+        if (-not $source.Include.StartsWith('..\..\')) {
+            $source.SetAttribute('Include', '..\Character3DViewer\' + $source.Include)
+        }
+    }
+    $shell = $ProjectXml.CreateElement('SmileSource')
+    $shell.SetAttribute('Include', 'StudioShell.smile')
+    $null = $node.ParentNode.InsertAfter($shell, $node)
+    $logo = $ProjectXml.CreateElement('Asset')
+    $logo.SetAttribute('Include', 'Assets\Branding\smile-2.0-logo.png')
+    $null = $node.ParentNode.AppendChild($logo)
+}
+
+function Prepare-StudioAssets([xml]$ProjectXml) {
+    # The shared project model confines asset inputs to their project directory.
+    # Mirror only declared inputs, including each model's adjacent texture files.
+    # Source modules remain linked to their real owners; live saves are never copied.
+    $inputs = @($ProjectXml.SmileProject.ItemGroup.Asset | Where-Object {
+        $_.Include -ne 'Assets\Branding\smile-2.0-logo.png'
+    } | ForEach-Object {
+        Get-ChildItem -Path (Join-Path $toolRoot $_.Include) -File
+    })
+    $modelDirectories = @($ProjectXml.SmileProject.ItemGroup.Model3DAsset | ForEach-Object {
+        Split-Path (Join-Path $toolRoot $_.Include) -Parent
+        Split-Path (Join-Path $toolRoot $_.Descriptor) -Parent
+    } | Sort-Object -Unique)
+    foreach ($directory in $modelDirectories) {
+        $inputs += Get-ChildItem -LiteralPath $directory -File -Recurse
+    }
+    foreach ($inputFile in $inputs) {
+        $relative = $inputFile.FullName.Substring($toolRoot.Length + 1)
+        $destination = Join-Path $studioRoot $relative
+        $null = New-Item -ItemType Directory -Force -Path (Split-Path $destination -Parent)
+        Copy-Item -LiteralPath $inputFile.FullName -Destination $destination -Force
+    }
+    $branding = Join-Path $studioRoot 'Assets\Branding'
+    $null = New-Item -ItemType Directory -Force -Path $branding
+    Copy-Item -LiteralPath (Join-Path $repositoryRoot 'assets\branding\smile-2.0-logo.png') `
+        -Destination (Join-Path $branding 'smile-2.0-logo.png') -Force
+}
+
 if (-not (Test-Path -LiteralPath $compiler -PathType Leaf)) {
     throw "Build SMILE before compiling the Character Viewer/editor: $compiler"
 }
@@ -134,11 +195,29 @@ if (-not $PublicRoster) {
 }
 & (Join-Path $toolRoot 'Prepare-BuildAssets.ps1') -SkipUnityRoster
 $unityLogicalPaths = @($unityAssets | ForEach-Object { $_.LogicalPath })
+if ($Studio) {
+    [xml]$expectedStudio = $nativeProject.OuterXml
+    Set-StudioHost $expectedStudio
+    $project = Join-Path $studioRoot 'SmileStudio.smileproj'
+    [xml]$studioProject = Get-Content -LiteralPath $project -Raw
+    if ($studioProject.OuterXml -cne $expectedStudio.OuterXml) {
+        throw 'SmileStudio.smileproj must retain the shared Viewer inventory plus its Program, StudioShell and official logo.'
+    }
+    if (-not $PublicRoster) { Prepare-StudioAssets $studioProject }
+}
+if ($PrepareOnly) {
+    Write-Host "Prepared project inputs: $project"
+    return
+}
 if ($Target -in @('Native', 'All')) {
     $output = Join-Path $outputRoot 'Character3DViewer.exe'
+    if ($Studio) {
+        $output = Join-Path $outputRoot 'SmileStudio.exe'
+    }
     New-Item -ItemType Directory -Force -Path $outputRoot | Out-Null
+    [string[]]$debugArguments = if ($Configuration -eq 'Debug') { @('--debug') } else { @() }
     & $compiler --project $project --target windows-x64 `
-        --configuration $Configuration --graphics DirectX -o $output
+        --configuration $Configuration --graphics DirectX -o $output @debugArguments
     if ($LASTEXITCODE -ne 0) {
         throw 'Character Viewer/editor native compilation failed.'
     }
@@ -195,6 +274,11 @@ if ($Target -in @('Web', 'All')) {
         'Character Viewer Web publication project'
     Assert-WebModelInventory $webProject
     $webProjectPath = Join-Path $toolRoot 'Character3DViewer.WebPublication.smileproj'
+    if ($Studio) {
+        Set-StudioHost $webProject
+        if ($PublicRoster) { Prepare-StudioAssets $webProject }
+        $webProjectPath = Join-Path $studioRoot 'SmileStudio.WebPublication.smileproj'
+    }
     $webProject.Save($webProjectPath)
     & $compiler --project $webProjectPath --target web `
         --configuration $Configuration --output-dir $webOutput --web-quality $WebQuality

@@ -840,9 +840,11 @@ Public Function DrawScene(ByRef Value As State) As Boolean
 
 End Function
 
-Public Sub DrawStormFlash(ByRef Value As State)
+Public Sub DrawStormFlash(ByRef Value As State,
+    Optional X As Number = 0, Optional Y As Number = 0,
+    Optional Width As Number = 0, Optional Height As Number = 0)
 
-    Call OrinStorm.DrawFlash(Value.OrinStorm)
+    Call OrinStorm.DrawFlash(Value.OrinStorm, X, Y, Width, Height)
 
 End Sub
 

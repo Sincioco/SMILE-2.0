@@ -56,6 +56,8 @@ static HWND smile_window;
 static long long smile_logical_width = 960;
 static long long smile_logical_height = 540;
 static long long smile_closed;
+static int smile_defer_close;
+static int smile_close_requested;
 static unsigned char smile_held[256];
 static long long smile_key_queue[64];
 static uint64_t smile_key_held_queue[64];
@@ -1630,6 +1632,10 @@ static LRESULT CALLBACK smile_window_proc(HWND window, UINT message, WPARAM wpar
             smile_pointer_cancel();
             return 0;
         case WM_CLOSE:
+            if (smile_defer_close) {
+                smile_close_requested = 1;
+                return 0;
+            }
             smile_window_save_placement();
             DestroyWindow(window);
             return 0;
@@ -1996,6 +2002,20 @@ void* smile_file_import(void)
         (unsigned char)result->bytes[1] == 0xbb && (unsigned char)result->bytes[2] == 0xbf)
         return smile_text_slice(result, 1, result->length);
     return result;
+}
+
+long long smile_window_defer_close(long long defer)
+{
+    if (smile_window == 0 || smile_closed) return 0;
+    smile_defer_close = defer != 0;
+    return 1;
+}
+
+long long smile_window_close_requested(void)
+{
+    int requested = smile_close_requested;
+    smile_close_requested = 0;
+    return requested;
 }
 
 long long smile_window_loading(void)

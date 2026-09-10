@@ -1,0 +1,616 @@
+''' Studio layout and commands. All character, playback and pose data belongs to the Viewer.
+Module Smile.Tools.StudioShell
+
+Option Explicit
+
+Import Smile.UI.Controls As Controls
+Import Smile.Tools.Character3DViewerWorkflow As ViewerWorkflow
+
+Public Const NAVIGATE = 1
+Public Const SELECT_TAB = 2
+Public Const SELECT_CLIP = 3
+Public Const STEP_FRAME = 4
+Public Const SET_TARGET = 5
+Public Const SET_AXIS = 6
+Public Const NUDGE = 7
+Public Const SAVE_POSE = 8
+Public Const UNDO = 9
+Public Const STOP_PREVIEW = 10
+Public Const RESUME_PREVIEW = 11
+Public Const CLOSE = 12
+Public Const DISCARD_CLOSE = 13
+Public Const CANCEL_CLOSE = 14
+Public Const TOGGLE_PLAYBACK = 15
+
+Public Type State
+    Width As Number
+    Height As Number
+    ViewX As Number
+    ViewY As Number
+    ViewWidth As Number
+    ViewHeight As Number
+    InspectorX As Number
+    InspectorWidth As Number
+    SourceX As Number
+    TimelineY As Number
+    AssetY As Number
+    PoseY As Number
+    Workspace As Number
+    ClipRows As Number
+    TooSmall As Boolean
+    ClipPage As Number
+    Target As Number
+    Axis As Number
+    OrbitDrag As Boolean
+    Stopped As Boolean
+    ConfirmClose As Boolean
+End Type
+
+Public Type Command
+    Kind As Number
+    Value As Number
+End Type
+
+Public Sub Layout(ByRef Ui As State, Width As Number, Height As Number)
+
+    Dim Rows As Number
+
+    Ui.Width = Width
+    Ui.Height = Height
+    Ui.TooSmall = Width < 1200 Or Height < 720
+    Ui.ViewX = Max(184, Min(224, Width * 17 / 100))
+    Ui.ViewY = 136
+    Ui.SourceX = Width - Max(224, Min(300, Width * 22 / 100))
+    Ui.InspectorWidth = Max(210, Min(256, Width * 16 / 100))
+    Ui.InspectorX = Ui.SourceX - Ui.InspectorWidth - 6
+    Ui.ViewWidth = Max(1, Ui.InspectorX - Ui.ViewX - 6)
+    Ui.TimelineY = Height - 184
+    Ui.ViewHeight = Max(1, Ui.TimelineY - Ui.ViewY - 6)
+    Ui.AssetY = 370
+    Rows = Max(2, Min(6, (Ui.TimelineY - 464) / 28))
+
+    If Ui.ClipRows <> Rows Then
+        Ui.ClipPage = 0
+    End If
+
+    Ui.ClipRows = Rows
+    Ui.PoseY = 202 + Rows * 28 + 52
+
+End Sub
+
+Public Function ReadCommand(ByRef Ui As State, Viewer As ViewerWorkflow.Session) As Command
+
+    Dim Result As Command
+    Dim Index As Number
+    Dim X As Number
+    Dim Width As Number
+    Dim Half As Number
+
+    X = Ui.InspectorX + 12
+    Width = Ui.InspectorWidth - 24
+    Half = (Width - 6) / 2
+
+    If Ui.ConfirmClose Then
+
+        If Controls.Clicked(Ui.Width / 2 - 210, Ui.Height / 2 + 30, 130, 36) Then
+            Result.Kind = SAVE_POSE
+        Else If Controls.Clicked(Ui.Width / 2 - 65, Ui.Height / 2 + 30, 130, 36) Then
+            Result.Kind = DISCARD_CLOSE
+        Else If Controls.Clicked(Ui.Width / 2 + 80, Ui.Height / 2 + 30, 130, 36) Then
+            Result.Kind = CANCEL_CLOSE
+        End If
+
+        Return Result
+
+    End If
+
+    If Controls.Clicked(Ui.Width - 80, 18, 68, 30) Then
+        Result.Kind = CLOSE
+    End If
+
+    If Ui.TooSmall Then
+        Return Result
+    End If
+
+    For Index = 0 To 1
+
+        If Controls.Clicked(Ui.ViewX + Index * 136, 72, 130, 28) Then
+            Result.Kind = NAVIGATE
+            Result.Value = Index
+        End If
+
+    End For
+
+    For Index = 0 To 7
+
+        If Controls.Clicked(14 + (Index Mod 2) * ((Ui.ViewX - 34) / 2 + 6),
+            Ui.AssetY + 70 + (Index / 2) * 32, (Ui.ViewX - 34) / 2, 26) Then
+            Result.Kind = SELECT_TAB
+            Result.Value = DisplayTab(Index)
+        End If
+
+    End For
+
+    If Viewer.CanEdit() And Controls.Clicked(14, Ui.AssetY + 218, Ui.ViewX - 34, 30) Then
+        Result.Kind = NAVIGATE
+        Result.Value = 1
+    End If
+
+    If Controls.Clicked(Ui.ViewX + 8, 106, 64, 24) Then
+
+        Ui.OrbitDrag = False
+
+    Else If Controls.Clicked(Ui.ViewX + 78, 106, 64, 24) Then
+
+        Ui.OrbitDrag = True
+
+    Else If Controls.Clicked(Ui.ViewX + 14, Ui.TimelineY + 36, 78, 28) Then
+
+        Result.Kind = TOGGLE_PLAYBACK
+
+        If Ui.Stopped Then
+            Result.Kind = RESUME_PREVIEW
+        End If
+
+    Else If Controls.Clicked(Ui.ViewX + 98, Ui.TimelineY + 36, 60, 28) Then
+
+        Result.Kind = STOP_PREVIEW
+
+    Else If Controls.Clicked(Ui.ViewX + 164, Ui.TimelineY + 36, 64, 28) Then
+
+        Result.Kind = STEP_FRAME
+        Result.Value = -1
+
+    Else If Controls.Clicked(Ui.ViewX + 234, Ui.TimelineY + 36, 64, 28) Then
+
+        Result.Kind = STEP_FRAME
+        Result.Value = 1
+
+    End If
+
+    For Index = 0 To Ui.ClipRows - 1
+
+        If (Controls.Clicked(X, 202 + Index * 28, Width, 24) And
+            Ui.ClipPage * Ui.ClipRows + Index < Viewer.ClipCount()) Then
+            Result.Kind = SELECT_CLIP
+            Result.Value = Ui.ClipPage * Ui.ClipRows + Index
+        End If
+
+    End For
+
+    If Controls.Clicked(X, Ui.PoseY - 44, Half, 24) Then
+        Ui.ClipPage = Max(0, Ui.ClipPage - 1)
+    Else If Controls.Clicked(X + Half + 6, Ui.PoseY - 44, Half, 24) Then
+        Ui.ClipPage = Min(Max(0, (Viewer.ClipCount() - 1) / Ui.ClipRows), Ui.ClipPage + 1)
+    End If
+
+    If Ui.Workspace <> 1 Or Not Viewer.CanEdit() Then
+        Return Result
+    End If
+
+    For Index = 0 To 3
+
+        If Controls.Clicked(X + (Index Mod 2) * (Half + 6),
+            Ui.PoseY + 26 + (Index / 2) * 30, Half, 26) Then
+            Result.Kind = SET_TARGET
+            Result.Value = Index
+        End If
+
+    End For
+
+    For Index = 0 To 2
+
+        If Controls.Clicked(X + Index * (Width / 3), Ui.PoseY + 92, Width / 3 - 4, 26) Then
+            Result.Kind = SET_AXIS
+            Result.Value = Index
+        End If
+
+    End For
+
+    If Controls.Clicked(X, Ui.PoseY + 128, 42, 28) Then
+        Result.Kind = NUDGE
+        Result.Value = -1
+    Else If Controls.Clicked(X + Width - 42, Ui.PoseY + 128, 42, 28) Then
+        Result.Kind = NUDGE
+        Result.Value = 1
+    Else If Controls.Clicked(X, Ui.PoseY + 168, Half, 28) Then
+        Result.Kind = SAVE_POSE
+    Else If Controls.Clicked(X + Half + 6, Ui.PoseY + 168, Half, 28) Then
+        Result.Kind = UNDO
+    End If
+
+    Return Result
+
+End Function
+
+Public Sub Draw(ByRef Ui As State, Viewer As ViewerWorkflow.Session, Logo As Image, Focused As Boolean)
+
+    Dim Label As Text
+
+    Fill Rectangle 0, 0, Ui.Width, 66, Rgb(7, 17, 30)
+
+    Draw Image Logo At 12, 8 Size 94 By 47 Filter Smooth
+    Draw Text "SMILE 2.0 STUDIO" At 114, 16 Size 19 Color WHITE
+    Draw Text "Create. Animate. Visualize." At 114, 40 Size 10 Color LIGHT_GRAY
+
+    Call WorkspaceTab(328, 18, 72, "Scene", False)
+    Call WorkspaceTab(406, 18, 96, "Characters", True)
+    Call WorkspaceTab(508, 18, 94, "Animations", False)
+    Call WorkspaceTab(608, 18, 54, "VFX", False)
+    Call WorkspaceTab(668, 18, 62, "Audio", False)
+    Call WorkspaceTab(736, 18, 64, "Music", False)
+    Call WorkspaceTab(806, 18, 122, "Render / Export", False)
+    Call Button(Ui.Width - 80, 18, 68, 30, "Close", False)
+
+    If Ui.TooSmall Then
+
+        Fill Rectangle 0, 66, Ui.Width, Ui.Height - 66, Rgb(12, 24, 39)
+        Draw Text "Enlarge the window to at least 1200 x 720." At 24, 160 Size 18 Color WHITE
+        Draw Text "Your session and pending edits remain open." At 24, 194 Size 14 Color CYAN
+
+    Else
+
+        Call DrawExplorer(Ui, Viewer)
+        Call DrawInspector(Ui, Viewer)
+        Call DrawDocumentPanel(Ui, Viewer)
+        Call DrawTimeline(Ui, Viewer)
+
+        Fill Rectangle Ui.ViewX, 66, Ui.ViewWidth, 70, Rgb(16, 33, 51)
+
+        Call Button(Ui.ViewX, 72, 130, 28, "Viewport", Ui.Workspace = 0)
+        Call Button(Ui.ViewX + 136, 72, 130, 28, "Character Editor", Ui.Workspace = 1)
+        Call Button(Ui.ViewX + 8, 106, 64, 24, "Pan", Not Ui.OrbitDrag)
+        Call Button(Ui.ViewX + 78, 106, 64, 24, "Orbit", Ui.OrbitDrag)
+
+        Draw Text "Perspective" At Ui.ViewX + 158, 112 Size 11 Color LIGHT_GRAY
+        Draw Text "Live Preview" At Ui.ViewX + Ui.ViewWidth - 94, 112 Size 11 Color CYAN
+        Draw Rectangle Ui.ViewX, Ui.ViewY, Ui.ViewWidth, Ui.ViewHeight, Rgb(45, 74, 102)
+
+        If Focused Then
+            Draw Rectangle Ui.ViewX, Ui.ViewY, Ui.ViewWidth, Ui.ViewHeight, Rgb(49, 166, 228)
+        End If
+
+        Fill Rectangle Ui.ViewX + 6, Ui.TimelineY - 28, Ui.ViewWidth - 12, 20, Rgb(7, 17, 30) Opacity 85
+        Draw Text "LMB Pan/Orbit  |  MMB Orbit  |  Wheel Zoom  |  R Reset" At Ui.ViewX + 14, Ui.TimelineY - 24 Size 10 Color LIGHT_GRAY
+
+    End If
+
+    Label = "Ready  |  " + TabName(Viewer.TabIndex()) + "  |  No unsaved pose edits"
+
+    If Viewer.HasEdits() Then
+        Label = "Unsaved pose preview  |  Save Frame or Undo"
+    Else If Ui.Stopped Then
+        Label = "Preview stopped  |  Session retained"
+    End If
+
+    Fill Rectangle 0, Ui.Height - 28, Ui.Width, 28, Rgb(7, 17, 30)
+    Draw Text Label At 14, Ui.Height - 20 Size 12 Color CYAN
+    Draw Text "SMILE 2.0 STUDIO" At Ui.Width - 158, Ui.Height - 20 Size 12 Color LIGHT_GRAY
+
+    If Ui.ConfirmClose Then
+
+        Fill Rectangle 0, 0, Ui.Width, Ui.Height, BLACK Opacity 70
+        Fill Rectangle Ui.Width / 2 - 240, Ui.Height / 2 - 78, 480, 164, Rgb(20, 38, 57)
+        Draw Text "Keep the unsaved pose?" At Ui.Width / 2 - 210, Ui.Height / 2 - 54 Size 22 Color WHITE
+        Draw Text "A failed save keeps this preview open." At Ui.Width / 2 - 210, Ui.Height / 2 - 16 Size 13 Color LIGHT_GRAY
+
+        Call Button(Ui.Width / 2 - 210, Ui.Height / 2 + 30, 130, 36, "Save And Close", True)
+        Call Button(Ui.Width / 2 - 65, Ui.Height / 2 + 30, 130, 36, "Discard", False)
+        Call Button(Ui.Width / 2 + 80, Ui.Height / 2 + 30, 130, 36, "Cancel", False)
+
+    End If
+
+End Sub
+
+Private Sub DrawExplorer(Ui As State, Viewer As ViewerWorkflow.Session)
+
+    Dim Index As Number
+    Dim Half As Number
+
+    Half = (Ui.ViewX - 34) / 2
+
+    Call Panel(6, 72, Ui.ViewX - 12, Ui.AssetY - 78, "Scene Explorer")
+
+    Draw Text "Character Preview" At 18, 116 Size 13 Color WHITE
+    Draw Text "Environment" At 28, 150 Size 12 Color LIGHT_GRAY
+    Draw Text "Arena / Floor" At 42, 174 Size 12 Color LIGHT_GRAY
+    Draw Text "Camera" At 28, 204 Size 12 Color LIGHT_GRAY
+    Draw Text "Viewer Camera" At 42, 228 Size 12 Color LIGHT_GRAY
+    Draw Text "Characters" At 28, 258 Size 12 Color LIGHT_GRAY
+
+    Call Button(18, 280, Ui.ViewX - 36, 26, TabName(Viewer.TabIndex()), True)
+
+    Draw Text "Model / Equipment / VFX" At 28, 320 Size 11 Color LIGHT_GRAY
+    Draw Text "Preview contents - read only" At 18, 346 Size 10 Color GRAY
+
+    Call Panel(6, Ui.AssetY, Ui.ViewX - 12, Ui.Height - Ui.AssetY - 34, "Asset Browser")
+
+    Draw Text "Characters" At 18, Ui.AssetY + 42 Size 12 Color CYAN
+
+    For Index = 0 To 7
+        Call Button(14 + (Index Mod 2) * (Half + 6), Ui.AssetY + 70 + (Index / 2) * 32,
+            Half, 26, TabName(DisplayTab(Index)), Viewer.TabIndex() = DisplayTab(Index))
+    End For
+
+    If Viewer.CanEdit() Then
+        Call Button(14, Ui.AssetY + 218, Ui.ViewX - 34, 30, "Open Character Editor", Ui.Workspace = 1)
+    Else
+        Draw Text "Pose editing unavailable" At 18, Ui.AssetY + 230 Size 11 Color GRAY
+    End If
+
+    Draw Text "Resource Catalog - Planned" At 18, Ui.AssetY + 266 Size 11 Color GRAY
+
+    If Ui.Height >= 820 Then
+        Draw Text "Environments / Materials" At 28, Ui.AssetY + 294 Size 11 Color GRAY
+        Draw Text "VFX / Audio / Scenes" At 28, Ui.AssetY + 318 Size 11 Color GRAY
+    End If
+
+End Sub
+
+Private Sub DrawInspector(Ui As State, Viewer As ViewerWorkflow.Session)
+
+    Dim Index As Number
+    Dim X As Number
+    Dim Width As Number
+    Dim Half As Number
+
+    X = Ui.InspectorX + 12
+    Width = Ui.InspectorWidth - 24
+    Half = (Width - 6) / 2
+
+    Call Panel(Ui.InspectorX, 72, Ui.InspectorWidth, Ui.TimelineY - 78, "Properties / Inspector")
+
+    Draw Text TabName(Viewer.TabIndex()) At X, 116 Size 20 Color WHITE
+    Draw Text "Character Preview" At X, 144 Size 11 Color LIGHT_GRAY
+    Draw Text "Animation" At X, 176 Size 13 Color CYAN
+
+    For Index = 0 To Ui.ClipRows - 1
+
+        If Ui.ClipPage * Ui.ClipRows + Index < Viewer.ClipCount() Then
+            Call Button(X, 202 + Index * 28, Width, 24,
+                Viewer.ClipName(Ui.ClipPage * Ui.ClipRows + Index), Viewer.ClipIndex() = Ui.ClipPage * Ui.ClipRows + Index)
+        End If
+
+    End For
+
+    Call Button(X, Ui.PoseY - 44, Half, 24, "Previous Clips", False)
+    Call Button(X + Half + 6, Ui.PoseY - 44, Half, 24, "Next Clips", False)
+
+    If Ui.Workspace = 1 And Viewer.CanEdit() Then
+
+        Draw Text "Pose Rotation (Degrees)" At X, Ui.PoseY Size 13 Color CYAN
+
+        For Index = 0 To 3
+            Call Button(X + (Index Mod 2) * (Half + 6), Ui.PoseY + 26 + (Index / 2) * 30,
+                Half, 26, TargetName(Index), Ui.Target = Index)
+        End For
+
+        For Index = 0 To 2
+            Call Button(X + Index * (Width / 3), Ui.PoseY + 92, Width / 3 - 4, 26, AxisName(Index), Ui.Axis = Index)
+        End For
+
+        Call Button(X, Ui.PoseY + 128, 42, 28, "-", False)
+        Call Button(X + Width - 42, Ui.PoseY + 128, 42, 28, "+", False)
+
+        Draw Number Viewer.PoseValue() At X + Half - 10, Ui.PoseY + 133 Size 18 Color WHITE
+
+        Call Button(X, Ui.PoseY + 168, Half, 28, "Save Frame", Viewer.HasEdits())
+        Call Button(X + Half + 6, Ui.PoseY + 168, Half, 28, "Undo", False)
+
+    Else
+
+        Draw Text "Equipment / Pose" At X, Ui.PoseY Size 13 Color CYAN
+        Draw Text "Inspect the selected character." At X, Ui.PoseY + 30 Size 11 Color LIGHT_GRAY
+        Draw Text "Open Character Editor for" At X, Ui.PoseY + 54 Size 11 Color LIGHT_GRAY
+        Draw Text "supported Arin / Orin edits." At X, Ui.PoseY + 74 Size 11 Color LIGHT_GRAY
+        Draw Text "Scene Overrides - Planned" At X, Ui.PoseY + 118 Size 11 Color GRAY
+
+    End If
+
+End Sub
+
+Private Sub DrawDocumentPanel(Ui As State, Viewer As ViewerWorkflow.Session)
+
+    Dim X As Number
+
+    X = Ui.SourceX + 14
+
+    Call Panel(Ui.SourceX, 72, Ui.Width - Ui.SourceX - 6, Ui.Height - 106, "Scene / Code / Visual")
+
+    Draw Text "PLANNED" At X, 116 Size 11 Color CYAN
+    Draw Text "Scene Documents" At X, 150 Size 18 Color WHITE
+    Draw Text "No scene document is open." At X, 184 Size 12 Color LIGHT_GRAY
+    Draw Text "Scene composition, source" At X, 216 Size 12 Color LIGHT_GRAY
+    Draw Text "editing and visual authoring" At X, 238 Size 12 Color LIGHT_GRAY
+    Draw Text "will share this workspace." At X, 260 Size 12 Color LIGHT_GRAY
+    Draw Text "Current Selection" At X, 312 Size 14 Color CYAN
+    Draw Text TabName(Viewer.TabIndex()) At X, 342 Size 18 Color WHITE
+    Draw Text "Animation Clips" At X, 380 Size 12 Color LIGHT_GRAY
+    Draw Number Viewer.ClipCount() At X, 404 Size 16 Color WHITE
+    Draw Text "Preview Status" At X, 446 Size 14 Color CYAN
+
+    Call StatusLine(X, 476, Ui.Width - X - 18, Viewer.StatusText())
+
+    Draw Text "Character edits save through" At X, 546 Size 11 Color LIGHT_GRAY
+    Draw Text "Save Frame in the Inspector." At X, 566 Size 11 Color LIGHT_GRAY
+    Draw Text "Scene export is not available." At X, 608 Size 11 Color GRAY
+
+End Sub
+
+Private Sub DrawTimeline(Ui As State, Viewer As ViewerWorkflow.Session)
+
+    Dim Label As Text
+    Dim TrackX As Number
+    Dim TrackWidth As Number
+    Dim Position As Number
+
+    TrackX = Ui.ViewX + 142
+    TrackWidth = Ui.SourceX - TrackX - 24
+    Position = Min(TrackWidth, TrackWidth * Viewer.AnimationMilliseconds() / Max(1, Viewer.AnimationDurationMilliseconds()))
+    Label = "Pause"
+
+    If Ui.Stopped Then
+        Label = "Resume"
+    Else If Viewer.IsPaused() Then
+        Label = "Play"
+    End If
+
+    Call Panel(Ui.ViewX, Ui.TimelineY, Ui.SourceX - Ui.ViewX - 6, 150, "Timeline / Sequence")
+    Call Button(Ui.ViewX + 14, Ui.TimelineY + 36, 78, 28, Label, False)
+    Call Button(Ui.ViewX + 98, Ui.TimelineY + 36, 60, 28, "Stop", Ui.Stopped)
+    Call Button(Ui.ViewX + 164, Ui.TimelineY + 36, 64, 28, "< Frame", False)
+    Call Button(Ui.ViewX + 234, Ui.TimelineY + 36, 64, 28, "Frame >", False)
+
+    Draw Number Viewer.AnimationMilliseconds() At Ui.ViewX + 316, Ui.TimelineY + 43 Size 12 Color WHITE
+    Draw Text "ms" At Ui.ViewX + 376, Ui.TimelineY + 43 Size 11 Color LIGHT_GRAY
+    Draw Text "Animation" At Ui.ViewX + 16, Ui.TimelineY + 82 Size 12 Color LIGHT_GRAY
+    Fill Rectangle TrackX, Ui.TimelineY + 78, TrackWidth, 26, Rgb(27, 55, 78)
+    Fill Rectangle TrackX, Ui.TimelineY + 78, Position, 26, Rgb(28, 97, 140)
+    Draw Text Viewer.ClipName(Viewer.ClipIndex()) At TrackX + 10, Ui.TimelineY + 84 Size 11 Color WHITE
+    Draw Line TrackX + Position, Ui.TimelineY + 74, TrackX + Position, Ui.TimelineY + 108, CYAN
+    Draw Text "Live clip position  |  Sequence authoring - Planned" At Ui.ViewX + 16, Ui.TimelineY + 122 Size 11 Color GRAY
+
+End Sub
+
+Private Sub Panel(X As Number, Y As Number, Width As Number, Height As Number, Title As Text)
+
+    Fill Rectangle X, Y, Width, Height, Rgb(12, 26, 41)
+    Fill Rectangle X, Y, Width, 28, Rgb(25, 47, 68)
+    Draw Rectangle X, Y, Width, Height, Rgb(47, 75, 100)
+    Draw Text Title At X + 10, Y + 7 Size 13 Color WHITE
+
+End Sub
+
+Private Sub WorkspaceTab(X As Number, Y As Number, Width As Number, Label As Text, Available As Boolean)
+
+    If Available Then
+
+        Call Button(X, Y, Width, 32, Label, True)
+
+    Else
+        Draw Rectangle X, Y, Width, 32, Rgb(40, 58, 77)
+        Draw Text Label At X + 8, Y + 6 Size 11 Color GRAY
+        Draw Text "Planned" At X + 8, Y + 20 Size 8 Color GRAY
+
+    End If
+
+End Sub
+
+Private Sub StatusLine(X As Number, Y As Number, Width As Number, Label As Text)
+
+    Dim Index As Number
+    Dim Line As Text
+    Dim NextLine As Text
+
+    For Index = 0 To Text_Length(Label) - 1
+
+        NextLine = Line + Text_Slice(Label, Index, 1)
+
+        If Text_Width(NextLine, 11) > Width And Line <> "" Then
+
+            Draw Text Line At X, Y Size 11 Color LIGHT_GRAY
+            Y = Y + 18
+            Line = Text_Slice(Label, Index, 1)
+
+        Else
+            Line = NextLine
+
+        End If
+
+    End For
+
+    Draw Text Line At X, Y Size 11 Color LIGHT_GRAY
+
+End Sub
+
+Private Sub Button(X As Number, Y As Number, Width As Number, Height As Number, Label As Text, Selected As Boolean)
+
+    Dim ButtonColor As Number
+    Dim FontSize As Number
+
+    ButtonColor = Rgb(23, 43, 62)
+    FontSize = 12
+
+    If Text_Width(Label, FontSize) > Width - 12 Then
+        FontSize = 10
+    End If
+
+    If Selected Then
+        ButtonColor = Rgb(22, 96, 145)
+    End If
+
+    Fill Rectangle X, Y, Width, Height, ButtonColor
+    Draw Rectangle X, Y, Width, Height, Rgb(49, 89, 118)
+    Draw Text Label At X + Max(6, (Width - Text_Width(Label, FontSize)) / 2), Y + (Height - FontSize) / 2 Size FontSize Color WHITE
+
+End Sub
+
+Private Function DisplayTab(Index As Number) As Number
+
+    If Index = 2 Then
+        Return 4
+    Else If Index = 3 Then
+        Return 5
+    Else If Index = 4 Then
+        Return 2
+    Else If Index = 5 Then
+        Return 6
+    Else If Index = 6 Then
+        Return 7
+    Else If Index = 7 Then
+        Return 3
+    End If
+
+    Return Index
+
+End Function
+
+Private Function TabName(Index As Number) As Text
+
+    If Index = 0 Then
+        Return "Arin"
+    Else If Index = 1 Then
+        Return "Orin"
+    Else If Index = 2 Then
+        Return "Dragon"
+    Else If Index = 3 Then
+        Return "Party Vrax"
+    Else If Index = 4 Then
+        Return "Valor"
+    Else If Index = 5 Then
+        Return "Zara"
+    Else If Index = 6 Then
+        Return "Vrax"
+    End If
+
+    Return "Party Dragon"
+
+End Function
+
+Private Function TargetName(Index As Number) As Text
+
+    If Index = 0 Then
+        Return "Weapon Wrist"
+    Else If Index = 1 Then
+        Return "Shield Wrist"
+    Else If Index = 2 Then
+        Return "Weapon"
+    End If
+
+    Return "Shield"
+
+End Function
+
+Private Function AxisName(Index As Number) As Text
+
+    If Index = 0 Then
+        Return "X"
+    Else If Index = 1 Then
+        Return "Y"
+    End If
+
+    Return "Z"
+
+End Function
+
+End Module

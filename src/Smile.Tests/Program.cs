@@ -249,7 +249,7 @@ Run("Window dimensions, title, and activation are live game-window built-ins", (
     Equal(SyntaxKind.WindowHeightKeyword, SyntaxFacts.GetKeywordKind("Window_Height"));
     Equal(SyntaxKind.WindowTitleKeyword, SyntaxFacts.GetKeywordKind("WINDOW_TITLE"));
     Equal(SyntaxKind.WindowActivateKeyword, SyntaxFacts.GetKeywordKind("window_activate"));
-    var analysis = Analyze("Game Window \"Responsive\"\nDim Area As Number\nDim Updated As Boolean\nArea = Window_Width() * Window_Height()\nUpdated = Window_Title(\"Model.glb\")\nUpdated = Window_Activate()\n");
+    var analysis = Analyze("Game Window \"Responsive\"\nDim Area As Number\nDim Updated As Boolean\nArea = Window_Width() * Window_Height()\nUpdated = Window_Title(\"Model.glb\")\nUpdated = Window_Activate()\nUpdated = Window_DeferClose(False)\nUpdated = Window_CloseRequested()\n");
     Equal(false, analysis.HasErrors);
     Equal(true, Analyze("Print Window_Width()\n").HasErrors);
     Equal(true, Analyze("Print Window_Title(\"No window\")\n").HasErrors);
@@ -259,16 +259,24 @@ Run("Window dimensions, title, and activation are live game-window built-ins", (
     Equal(false, Analyze("Game Window \"Loading\"\nDim Shown As Boolean\nShown = Window_Loading()\nShow Screen\n").HasErrors);
     Equal(true, Analyze("Print Window_Loading()\n").HasErrors);
     Equal(true, Analyze("Game Window \"Loading\"\nPrint Window_Loading(1)\n").HasErrors);
+    Equal(true, Analyze("Print Window_DeferClose(True)\n").HasErrors);
+    Equal(true, Analyze("Print Window_CloseRequested()\n").HasErrors);
+    Equal(true, Analyze("Game Window \"Wrong type\"\nPrint Window_DeferClose(1)\n").HasErrors);
+    Equal(true, Analyze("Game Window \"Wrong arity\"\nPrint Window_CloseRequested(True)\n").HasErrors);
     var native = new MasmEmitter(analysis, SmileGraphicsBackend.DirectX, true, false).Emit();
     Equal(true, native.Contains("call smile_window_width", StringComparison.Ordinal));
     Equal(true, native.Contains("call smile_window_height", StringComparison.Ordinal));
     Equal(true, native.Contains("call smile_window_title", StringComparison.Ordinal));
     Equal(true, native.Contains("call smile_window_activate", StringComparison.Ordinal));
+    Equal(true, native.Contains("call smile_window_defer_close", StringComparison.Ordinal));
+    Equal(true, native.Contains("call smile_window_close_requested", StringComparison.Ordinal));
     var web = new WebEmitter(analysis).Emit();
     Equal(true, web.Contains("smile.windowWidth()", StringComparison.Ordinal));
     Equal(true, web.Contains("smile.windowHeight()", StringComparison.Ordinal));
     Equal(true, web.Contains("smile.windowTitle(\"Model.glb\")", StringComparison.Ordinal));
     Equal(true, web.Contains("smile.windowActivate()", StringComparison.Ordinal));
+    Equal(true, web.Contains("smile.windowDeferClose(false)", StringComparison.Ordinal));
+    Equal(true, web.Contains("smile.windowCloseRequested()", StringComparison.Ordinal));
 });
 Run("File_Reveal takes a path and returns Boolean without a game window", () =>
 {

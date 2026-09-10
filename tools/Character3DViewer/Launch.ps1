@@ -2,6 +2,7 @@
 param(
     [string]$Executable,
     [switch]$Build,
+    [switch]$Studio,
     [switch]$SkipWindowActivation,
     [switch]$FunctionsOnly,
     [ValidateSet('Debug', 'Release')]
@@ -17,6 +18,9 @@ $syncScript = Join-Path $repositoryRoot 'scripts\sync-arin-v5-7-calibration.ps1'
 $configurationExecutable = [IO.Path]::GetFullPath(
     (Join-Path $toolRoot "bin\$Configuration\Character3DViewer.exe")
 )
+if ($Studio) {
+    $configurationExecutable = Join-Path $repositoryRoot "tools\SmileStudio\bin\$Configuration\SmileStudio.exe"
+}
 
 function Assert-ViewerLaunchPrerequisites(
     [string]$ResolvedExecutable,
@@ -55,10 +59,13 @@ function Test-ViewerProcessOwned(
 
     $normalizedPath = [IO.Path]::GetFullPath($ExecutablePath)
     $toolPrefix = $toolRoot.TrimEnd('\', '/') + [IO.Path]::DirectorySeparatorChar
+    $studioPrefix = (Join-Path $repositoryRoot 'tools\SmileStudio').TrimEnd('\', '/') + [IO.Path]::DirectorySeparatorChar
 
     return $normalizedPath -ieq $ResolvedExecutable -or
         ($ProcessName -like 'Character3DViewer*' -and
-            $normalizedPath.StartsWith($toolPrefix, [StringComparison]::OrdinalIgnoreCase))
+            $normalizedPath.StartsWith($toolPrefix, [StringComparison]::OrdinalIgnoreCase)) -or
+        ($ProcessName -eq 'SmileStudio' -and
+            $normalizedPath.StartsWith($studioPrefix, [StringComparison]::OrdinalIgnoreCase))
 }
 
 function Get-ViewerProcessCandidates([string]$ResolvedExecutable) {
@@ -162,7 +169,7 @@ foreach ($character in $characters) {
 }
 
 if ($Build -or -not (Test-Path -LiteralPath $resolvedExecutable -PathType Leaf)) {
-    & (Join-Path $toolRoot 'Build.ps1') -Configuration $Configuration -Target Native
+    & (Join-Path $toolRoot 'Build.ps1') -Configuration $Configuration -Target Native -Studio:$Studio
 }
 
 if (-not (Test-Path -LiteralPath $resolvedExecutable -PathType Leaf)) {

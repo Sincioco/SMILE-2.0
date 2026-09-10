@@ -79,6 +79,8 @@ public enum SyntaxKind
     WindowTitleKeyword,
     WindowActivateKeyword,
     WindowLoadingKeyword,
+    WindowDeferCloseKeyword,
+    WindowCloseRequestedKeyword,
     FileRevealKeyword,
     FileExportKeyword,
     FileImportKeyword,
@@ -342,6 +344,8 @@ public static class SyntaxFacts
         ["Window_Title"] = SyntaxKind.WindowTitleKeyword,
         ["Window_Activate"] = SyntaxKind.WindowActivateKeyword,
         ["Window_Loading"] = SyntaxKind.WindowLoadingKeyword,
+        ["Window_DeferClose"] = SyntaxKind.WindowDeferCloseKeyword,
+        ["Window_CloseRequested"] = SyntaxKind.WindowCloseRequestedKeyword,
         ["File_Reveal"] = SyntaxKind.FileRevealKeyword,
         ["File_Export"] = SyntaxKind.FileExportKeyword,
         ["File_Import"] = SyntaxKind.FileImportKeyword,
@@ -548,10 +552,11 @@ public static class SyntaxFacts
         return kind switch
         {
             SyntaxKind.TimerKeyword or SyntaxKind.GameClosedKeyword or SyntaxKind.WindowWidthKeyword or
-                SyntaxKind.WindowHeightKeyword or SyntaxKind.WindowActivateKeyword or SyntaxKind.WindowLoadingKeyword or SyntaxKind.PointerXKeyword or
+                SyntaxKind.WindowHeightKeyword or SyntaxKind.WindowActivateKeyword or SyntaxKind.WindowLoadingKeyword or SyntaxKind.WindowCloseRequestedKeyword or SyntaxKind.PointerXKeyword or
                 SyntaxKind.PointerYKeyword or SyntaxKind.PointerDeltaXKeyword or SyntaxKind.PointerDeltaYKeyword or
                 SyntaxKind.PointerWheelDeltaKeyword or SyntaxKind.PointerWheelRemainderKeyword or
                 SyntaxKind.PointerInsideKeyword or SyntaxKind.FileImportKeyword => NoParameters,
+            SyntaxKind.WindowDeferCloseKeyword => new[] { "defer" },
             SyntaxKind.AbsKeyword => ValueParameter,
             SyntaxKind.KeyHeldKeyword or SyntaxKind.KeyEventHeldKeyword => KeyParameter,
             SyntaxKind.PointerHeldKeyword or SyntaxKind.PointerPressedKeyword or SyntaxKind.PointerReleasedKeyword =>

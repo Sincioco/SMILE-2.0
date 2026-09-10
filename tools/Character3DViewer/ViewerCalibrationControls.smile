@@ -14,6 +14,15 @@ Import Smile.Tools.Character3DViewerPlayback As ViewerPlayback
 Import Smile.Tools.Character3DViewerTimelineEditing As ViewerTimelineEditing
 Import Smile.Tools.Character3DViewerUi As ViewerUi
 
+''' Changes the inspected channel without finishing or discarding a pending edit.
+Public Sub SelectRotationChannel(ByRef Ui As ViewerUi.State, Target As Number, Axis As Number)
+
+    Ui.CalibrationTarget = Max(0, Min(3, Target))
+    Ui.CalibrationAxis = Max(0, Min(2, Axis))
+    Ui.CalibrationTransform = ViewerUi.CALIBRATION_TRANSFORM_ROTATE
+
+End Sub
+
 Private Sub MergeOperation(
     ByRef Result As ViewerCalibrationEditing.OperationResult,
     NextResult As ViewerCalibrationEditing.OperationResult)

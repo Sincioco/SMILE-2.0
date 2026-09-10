@@ -117,8 +117,8 @@
 
             function renderer3DReflectionEnsureResources() {
                 const gl = renderer3DGl;
-                let width = Math.max(1, Math.floor(backingWidth * renderer3DReflection.scale / 100));
-                let height = Math.max(1, Math.floor(backingHeight * renderer3DReflection.scale / 100));
+                let width = Math.max(1, Math.floor(renderer3DWidth() * renderer3DReflection.scale / 100));
+                let height = Math.max(1, Math.floor(renderer3DHeight() * renderer3DReflection.scale / 100));
                 const format = renderer3DHdrEffective ? 2 : 1;
                 const longest = Math.max(width, height);
                 if (longest > 2048) {
@@ -253,7 +253,7 @@
                     renderer3DReflection.effectiveFloorHeight,
                     receiver ? renderer3DReflection.strength / 100 : 0,
                     renderer3DReflection.softness / 100);
-                gl.uniform2f(program.reflectionViewport, backingWidth, backingHeight);
+                gl.uniform2f(program.reflectionViewport, renderer3DWidth(), renderer3DHeight());
                 gl.activeTexture(gl.TEXTURE6);
                 gl.bindTexture(gl.TEXTURE_2D, receiver ? renderer3DReflection.texture : null);
                 gl.uniform1i(program.reflectionTexture, 6);
@@ -280,7 +280,7 @@
                 renderer3DModelInto(renderer3DModelScratch, receiver);
                 renderer3DViewInto(renderer3DViewScratch);
                 renderer3DProjectionInto(renderer3DProjectionScratch,
-                    backingWidth / backingHeight);
+                    renderer3DWidth() / renderer3DHeight());
                 renderer3DMultiplyInto(renderer3DMatrixScratchA,
                     renderer3DViewScratch, renderer3DModelScratch);
                 renderer3DMultiplyInto(renderer3DMvpScratch,
@@ -310,7 +310,7 @@
                 if (!mesh || !mesh.vertices) return 0;
                 renderer3DModelInto(renderer3DModelScratch, receiver);
                 renderer3DProjectionInto(renderer3DProjectionScratch,
-                    backingWidth / backingHeight);
+                    renderer3DWidth() / renderer3DHeight());
                 const previousPass = renderer3DReflection.pass;
                 renderer3DReflection.pass = false;
                 renderer3DViewInto(renderer3DViewScratch);

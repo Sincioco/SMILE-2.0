@@ -103,8 +103,9 @@ tests actual admission/lifecycle operations with synthetic points on native and
 generated Web; the private model is needed only for local attachment inspection.
 
 The [Studio design](../../docs/architecture/2026-09-09%20-%20SMILE%202.0%20Studio.md)
-governs future hosting. This document describes the current standalone Viewer.
-Program keeps the executable story; state and behavior remain with their owners.
+remains authoritative. [Studio S1](../SmileStudio/README.md) hosts the existing
+Viewer workflow. Both entry points instantiate `ViewerWorkflow.Session`; neither
+loads another executable, application loop or renderer.
 
 ## Preserved frame order
 
@@ -187,7 +188,9 @@ the compatible opaque-only default unless they explicitly request IncludeVfx.
 
 | Owner | Responsibility / public operations | Focused checks |
 |---|---|---|
-| Program | Window, primary frame loop, ordered raw input and cross-owner result adaptation | HardeningTests; static frame-order guards |
+| Standalone Program / Studio Program | Own window and one frame loop; choose input/overlay adapter and viewport | Native/Chrome launch and focus checks |
+| ViewerWorkflow.Session | One private set of existing owners; Start, scoped input, UpdateFrame, DrawFrame, pose commands, Suspend/ResumePreview, Release | HardeningTests wiring; isolated Studio SessionTests |
+| StudioShell | Chrome layout, workspace choice, inspector hit maps and close confirmation only | Native/Chrome resize, focus, dirty-close checks |
 | ViewerSession / ViewerLifecycle | First failure, identity, load phases, reset/retry/switch/release/shutdown | HardeningTests; isolated real-asset CalibrationTests |
 | ViewerTiming / ViewerPlayback | Clocks, clip selection/start, speed, pause/demo, timeline seeks/events | HardeningTests; real-actor playback |
 | ViewerActors / Profiles | Context load/update/draw/destroy, facing, profile/asset/grounding policy | CalibrationTests; package validators |
@@ -203,21 +206,51 @@ the compatible opaque-only default unless they explicitly request IncludeVfx.
 | ViewerRendering | Arena/backdrop/lighting/socket resources and one ordered DrawFrame transaction | Frame-order guards; renderer reflection/material tests |
 | Build / Prepare-BuildAssets / Prepare-UnityAssets / Launch | Canonical verification, disposable mirrors, publication and calibration sync | Preservation fixtures; native/Web and PublicRoster builds |
 
-`Program.smile` is a deliberate entry-point size exception. Its top-level executable
-story, HandleInspectorPointer, HandlePartyPointer, DrawInspectorOverlay,
-HandleInterfacePointer, HandleTransformGizmoPointer and HandleInspectorKeyboard
-sample runtime state or order calls across owners. Their state-local decisions and
-drawing stay in the modules above. Moving the entire chain into another controller
-would obscure ordering without improving ownership. Review new responsibilities,
-not a historic line-count target; do not collect all state into StudioState.
+`ViewerWorkflow.smile` is the reviewed size exception: it contains the former
+standalone coordinator once, including the existing standalone input/overlay
+adapters. The extraction exposes real hosting boundaries (`Start`, `UpdateFrame`,
+`DrawFrame`, `HostedInput`, explicit pose operations and `Release`), rather than
+copying those procedures into Studio. The standalone entry point now consumes the
+same session. Keeping the accepted ordered pipeline together avoids mechanical
+file splitting; actor, calibration, rendering, camera, Party and effects behavior
+still belongs to the typed owners above. StudioShell stores no such domain state.
+
+StudioShell's layout/command module was reviewed at the 600-line size trigger.
+Its state contains pane geometry, UI control selections and the close dialog;
+the drawing routines follow those pane boundaries. It owns no actors, calibration,
+animation clocks or renderer resources. Timeline transport and clip-position reads
+use the existing playback owner. Planned Scene/Code/Visual and future workspaces
+have no input handlers or hidden sessions. The permanent Studio project links the
+same Viewer sources and stages only ignored asset mirrors.
+
+Studio Viewer and Character Editor are two presentations of one session. A workspace
+switch releases captures and keeps pending calibration edits. Stop silences channels
+1–5 and freezes clocks without unloading the scene or autosaving. Resume primes the
+existing clock so time away cannot become one large animation step. A dirty pose
+blocks clip/tab/frame replacement; Save/Undo use the existing calibration owner.
+Close Save must report persistence before exit; a failure retains the preview.
+Native X/Alt+F4 use `Window_DeferClose`/`Window_CloseRequested`. Browser tab close
+uses its standard unsaved-work confirmation; Studio's own Close shows its dialog.
+
+`Graphics3D.SetViewport3D` selects one bounded logical rectangle on the existing
+renderer, between frames. It does not allocate a second application or engine.
+Viewport-local pointer coordinates and dimensions go to `ViewerCamera`; unfocused
+or outside input releases captures. The host resets the rectangle before drawing
+2D chrome. The existing native/Web reflection, backdrop and VFX paths use the same
+viewport aspect; the lightning flash overlay is explicitly bounded too.
 
 Immutable Character3D model/cache resources may be shared. Every live actor retains
 independent pose, equipment visibility, calibration, playback and effects. Only one
-scene clock advances shared VFX. Inactive/closed previews must release their own
-resources and audio; a future Studio host must preserve these boundaries.
+scene clock advances shared VFX. Stop retains that session; actual close releases
+its resources and audio. Official launchers close the other repo-owned host normally
+before starting a replacement, and never force past a dirty-close confirmation.
+Both hosts retain the same canonical calibration application identity and synchronizer.
 
 ## Validation routes
 
+- `scripts/test-studio-session.ps1`: actual shared session, disposable Arin/Orin saves,
+  denied atomic replacement, Stop/Resume, dirty switching and resource cleanup;
+  native execution and Node logic checks, plus generated real-Chrome fixtures.
 - `scripts/test-character-3d-viewer-hardening.ps1`: production owner assertions,
   frame order, native graphics/input/audio and generated-Web console parity.
 - `scripts/test-viewer-calibration-native.ps1 -IncludeWebPrecision`: real actors,
@@ -255,4 +288,4 @@ Do not use live user calibration for failure tests.
   (closed triangle/edge transition/no sparks/in-flight), ActorIsolationTests
   (two actual actors, authored socket alignment, three styles, charge cleanup,
   independent release and native/Web forced fallback), HardeningTests (command
-  routing and intensity bounds). Program.smile's coordinator is unchanged.
+  routing and intensity bounds). The shared workflow retains the original coordinator order.

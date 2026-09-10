@@ -1,0 +1,146 @@
+''' Isolated real-session checks. The runner supplies disposable storage and save faults.
+
+Option Explicit
+
+Import Smile.Tools.Character3DViewerWorkflow As ViewerWorkflow
+Import Smile.Simple3D.Graphics3D As Graphics3D
+Import Smile.Tools.StudioShell As Shell
+
+Const EXPECT_SAVE_SUCCESS = True
+Dim Viewer As New ViewerWorkflow.Session()
+Dim Baseline As Number
+Dim BeforeStop As Number
+Dim Index As Number
+Dim Objects As Number
+Dim Passed As Boolean
+Dim Saved As Boolean
+Dim Layout As Shell.State
+
+Game Window "Studio Session Isolation" Size 1200 By 800
+
+Passed = True
+
+Call Shell.Layout(Layout, 1200, 720)
+Call Check(Not Layout.TooSmall And Layout.ViewWidth > 400 And Layout.ViewHeight > 300,
+    "Minimum Studio layout keeps a usable viewport")
+Call Check(Layout.PoseY + 196 < Layout.TimelineY, "Pose controls remain above Timeline")
+Call Check(Layout.InspectorX + Layout.InspectorWidth < Layout.SourceX,
+    "Inspector and document panels do not overlap")
+Call Shell.Layout(Layout, 1600, 900)
+Call Check(Layout.PoseY + 196 < Layout.TimelineY And Layout.ViewWidth > 700,
+    "Large Studio layout keeps controls and preview separate")
+Call Shell.Layout(Layout, 960, 600)
+Call Check(Layout.TooSmall, "Compact layout blocks viewport interaction")
+
+Call Viewer.Start(0, True, 700, 632)
+Call Viewer.ChooseClip(3)
+Call Check(Viewer.ClipIndex() = 3, "Inspector selects the displayed runtime clip")
+Call Check(Viewer.IsPaused() And Viewer.AnimationDurationMilliseconds() > 0,
+    "Timeline reads the selected paused clip")
+Call Viewer.TogglePlayback()
+Call Check(Not Viewer.IsPaused(), "Transport starts the existing playback owner")
+Call Viewer.TogglePlayback()
+Call Check(Viewer.IsPaused(), "Transport pauses the same playback owner")
+Call Viewer.UpdateFrame(700, 632)
+Call Viewer.SetPoseChannel(0, 0)
+
+Baseline = Viewer.PoseValue()
+Objects = Graphics3D.LiveObjectCount3D()
+
+Call Viewer.NudgePose(1)
+
+Call Check(Viewer.HasEdits() And Viewer.PoseValue() = Baseline + 1, "Pose preview changed")
+Call Check(Graphics3D.SetViewport3D(100, 80, Window_Width() - 200, Window_Height() - 160), "Viewport admission")
+Call Check(Not Graphics3D.SetViewport3D(-1, 104, 700, 632), "Invalid viewport rejected")
+
+Call Check(Not Graphics3D.SetViewport3D(0, 0, 0, 0), "Zero-size viewport rejected")
+
+Call Viewer.DrawFrame()
+Call Graphics3D.ResetViewport3D()
+
+Show Screen
+
+Call Viewer.Suspend()
+
+BeforeStop = Viewer.AnimationMilliseconds()
+
+Wait 100 Milliseconds
+
+Call Viewer.UpdateFrame(700, 632)
+Call Viewer.ReleaseInput()
+
+Call Check(Viewer.HasEdits() And Viewer.PoseValue() = Baseline + 1, "Stop preserves edit")
+Call Check(BeforeStop = Viewer.AnimationMilliseconds(), "Stop freezes clip clock")
+Call Check(Objects = Graphics3D.LiveObjectCount3D(), "Stop preserves owned resources")
+
+Call Viewer.SelectTab(1)
+
+Call Check(Viewer.HasEdits() And Viewer.PoseValue() = Baseline + 1, "Dirty tab switch blocked")
+
+Call Viewer.ResumePreview()
+Call Viewer.UpdateFrame(700, 632)
+
+Call Check(BeforeStop = Viewer.AnimationMilliseconds(), "Resume primes clock")
+
+Saved = Viewer.SavePose()
+
+Call Check(Saved = EXPECT_SAVE_SUCCESS, "Save reports persistence")
+
+If EXPECT_SAVE_SUCCESS Then
+
+    Call Check(Not Viewer.HasEdits(), "Save clears pending preview")
+
+    Call Viewer.UndoPose()
+
+    Call Check(Viewer.PoseValue() = Baseline, "Undo restores saved pose")
+
+Else
+
+    Call Check(Viewer.HasEdits() And Viewer.PoseValue() = Baseline + 1, "Failed save preserves edit")
+
+    Call Viewer.UndoPose()
+
+    Call Check(Not Viewer.HasEdits() And Viewer.PoseValue() = Baseline, "Cancel restores pre-edit value")
+
+End If
+
+Call Viewer.SelectTab(1)
+Call Viewer.ChooseClip(0)
+Call Viewer.SetPoseChannel(1, 1)
+
+Baseline = Viewer.PoseValue()
+
+Call Viewer.NudgePose(1)
+
+Call Check(Viewer.HasEdits() And Viewer.PoseValue() = Baseline + 1, "Orin uses independent pose")
+
+Saved = Viewer.SavePose()
+
+Call Check(Saved, "Orin saves independently")
+
+Call Viewer.UndoPose()
+
+Call Check(Viewer.PoseValue() = Baseline, "Orin Undo restores pose")
+
+Call Viewer.Release()
+Call Viewer.Release()
+
+Call Check(Graphics3D.LiveObjectCount3D() = 0, "No actor leaks")
+Call Check(Graphics3D.LiveAnimatorCount3D() = 0, "No animator leaks")
+Call Check(Graphics3D.LiveParticleBatchCount3D() = 0, "No particle leaks")
+Call Check(Graphics3D.LiveRibbonBatchCount3D() = 0, "No ribbon leaks")
+
+If Passed Then
+    Print "Studio session isolation passed."
+Else
+    Print "Studio session isolation FAILED."
+End If
+
+Sub Check(Condition As Boolean, Label As Text)
+
+    If Not Condition Then
+        Print Label
+        Passed = False
+    End If
+
+End Sub

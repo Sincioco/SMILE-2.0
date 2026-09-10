@@ -1189,7 +1189,9 @@ Private Sub UpdateBattleEffects(Slot As Number, Head As Precision3D.Vector3,
 
 End Sub
 
-Public Sub DrawFlash(Value As Context)
+Public Sub DrawFlash(Value As Context,
+    Optional X As Number = 0, Optional Y As Number = 0,
+    Optional Width As Number = 0, Optional Height As Number = 0)
 
     Dim Slot As Number
 
@@ -1199,11 +1201,19 @@ Public Sub DrawFlash(Value As Context)
         Return
     End If
 
+    If Width <= 0 Then
+        Width = Window_Width()
+    End If
+
+    If Height <= 0 Then
+        Height = Window_Height()
+    End If
+
     If (EngineAvailable And
         RenderVisible[Slot] And
         SceneComfort <> SCENE_COMFORT_OFF And
         FlashOpacities[Slot] > 0) Then
-        Fill Rectangle 0, 0, Window_Width(), Window_Height(), Rgb(155, 195, 255) Opacity FlashOpacities[Slot] / (SceneComfort * 18)
+        Fill Rectangle X, Y, Width, Height, Rgb(155, 195, 255) Opacity FlashOpacities[Slot] / (SceneComfort * 18)
     End If
 
 End Sub

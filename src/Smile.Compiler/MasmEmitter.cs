@@ -264,6 +264,8 @@ internal sealed class MasmEmitter
         Line("EXTERN smile_window_title:PROC");
         Line("EXTERN smile_window_activate:PROC");
         Line("EXTERN smile_window_loading:PROC");
+        Line("EXTERN smile_window_defer_close:PROC");
+        Line("EXTERN smile_window_close_requested:PROC");
         Line("EXTERN smile_file_reveal:PROC");
         Line("EXTERN smile_file_export:PROC");
         Line("EXTERN smile_file_import:PROC");
@@ -1825,6 +1827,14 @@ internal sealed class MasmEmitter
                 break;
             case SyntaxKind.WindowActivateKeyword:
                 CallAligned("smile_window_activate");
+                break;
+            case SyntaxKind.WindowDeferCloseKeyword:
+                EmitExpression(call.Arguments[0].Expression);
+                Line("    mov rcx, rax");
+                CallAligned("smile_window_defer_close");
+                break;
+            case SyntaxKind.WindowCloseRequestedKeyword:
+                CallAligned("smile_window_close_requested");
                 break;
             case SyntaxKind.WindowLoadingKeyword:
                 CallAligned("smile_window_loading");

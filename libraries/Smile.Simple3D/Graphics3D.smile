@@ -140,6 +140,7 @@ Private Const COMMAND_SET_BACKDROP_TEXTURE = 131
 Private Const COMMAND_CONFIGURE_REFLECTIONS = 133
 Private Const COMMAND_SET_OBJECT_REFLECTION_MODE = 134
 Private Const COMMAND_REFLECTION_VALUE = 135
+Private Const COMMAND_SET_VIEWPORT = 136
 
 Public Const MATERIAL_INSPECTION_LIT = 0
 Public Const MATERIAL_INSPECTION_BASE_COLOR = 1
@@ -4148,6 +4149,24 @@ Public Function M5Value3D(Property As Number, Index As Number) As Number
     Return Result
 
 End Function
+
+''' Selects the one active 3D viewport in logical window coordinates, between frames.
+Public Function SetViewport3D(X As Number, Y As Number, Width As Number, Height As Number) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(COMMAND_SET_VIEWPORT, X, Y, Width, Height,
+        Window_Width(), Window_Height(), 0, 0, 0, 0) <> 0
+
+    Return Result
+
+End Function
+
+Public Sub ResetViewport3D()
+
+    Call Execute(COMMAND_SET_VIEWPORT, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+
+End Sub
 
 Public Sub ResetRenderer3D()
 

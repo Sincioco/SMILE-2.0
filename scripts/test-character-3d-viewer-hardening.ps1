@@ -16,7 +16,7 @@ $identityPath = Join-Path $repositoryRoot `
     'games\Dragonfall\SourceAssets\Arin\paladin-prototype-asset.json'
 $referencePath = Join-Path $repositoryRoot `
     'games\Dragonfall\SourceAssets\Arin\paladin-reference-images.json'
-$viewerSourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\Program.smile'
+$viewerSourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\ViewerWorkflow.smile'
 $cameraSourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\ViewerCamera.smile'
 $playbackSourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\ViewerPlayback.smile'
 $sessionSourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\ViewerSession.smile'
@@ -106,7 +106,8 @@ try {
         -not $identity.equipmentStructure.independentlySwappableShield) `
         'The fused prototype mesh must not imply modular equipment.'
 
-    $viewerSource = Get-Content -LiteralPath $viewerSourcePath -Raw
+    # Ownership moved into the shared session; normalize qualification only for wiring checks.
+    $viewerSource = (Get-Content -LiteralPath $viewerSourcePath -Raw).Replace('Me.', '')
     $cameraSource = Get-Content -LiteralPath $cameraSourcePath -Raw
     $playbackSource = Get-Content -LiteralPath $playbackSourcePath -Raw
     $sessionSource = Get-Content -LiteralPath $sessionSourcePath -Raw
@@ -191,7 +192,7 @@ try {
         -not $cameraPointerSource.Contains('ViewerCamera.AdjustZoomTarget(') -and
         -not $cameraPointerSource.Contains('ViewerCamera.UpdatePointerControls(') -and
         -not $cameraPointerSource.Contains('ViewerCamera.BeginCalibrationOrbitAnchor(')) `
-        'Camera transition behavior must remain with camera state while runtime sampling stays in Program.'
+        'Camera transition behavior must remain with camera state while runtime sampling stays in the shared Viewer workflow.'
     Assert-Contains $partySource `
         'Value.HitTarget = 1) Then' `
         'Dragon Party target ownership'

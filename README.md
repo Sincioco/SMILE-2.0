@@ -147,24 +147,29 @@ controls describe design intent and do not establish implementation status.
 
 The current compiler/runtime supports shared 2D/3D, animation, calibrated equipment,
 Fire/Lightning, audio, persistence, mandatory startup branding and Double precision.
-Studio hosting, general scene documents, reusable saved-effect/audio definitions,
-Water, declarative scene authoring and faithful scene export are **planned**.
+Studio now has a [bounded hosted Viewer and Character Editor](tools/SmileStudio/README.md),
+with a permanent [Visual Studio solution](tools/SmileStudio/SmileStudio.slnx) and
+linked shared Viewer modules. Its native/Web shell follows the working visual
+composition. General scene documents, reusable saved-effect/audio definitions,
+Water, declarative scene authoring and faithful scene export remain **planned**.
 The four accepted extensions are `.smilestudio`, `.smilescene`, `.smilevfx` and
 `.smileaudio`; the design examples are not implemented loader schemas or grammar.
 
 | Next work / owner | Dependency and focused acceptance | Completion boundary |
 |---|---|---|
-| First bounded Studio host / existing Viewer lifecycle and input owners | Expose the existing Viewer load/frame/draw/suspend/release seam to one host; test open/close/focus/resize, one supported Arin/Orin edit/save and preserved calibration | One active viewport and one frame loop; original standalone caller uses the same implementation; no copied controller, embedded second window or new engine |
+| Hosted Viewer acceptance / existing Viewer lifecycle and input owners | Finish human native/Chrome slow and moderate camera gesture acceptance; preserve source-matched automated save/failure/lifecycle evidence | Existing single session and renderer serve both callers; do not declare full S1 acceptance before remaining observations pass |
 | Character/animation documents / calibration owners | Explicit shared session, dirty state, save/undo and source-versus-scene ownership | Workspace changes preserve the same edited resource and failed saves preserve valid bytes |
 | Reusable assets and general scenes / shared asset, VFX/audio and scene owners | Validated JSON, project publication, independent instances and bindings; first Fire recipe before new families | Runtime loaders have no Studio dependency; no fixed party/combat requirement |
 | Declarative/export parity / shared language and scene owners | Shared scene semantics; real compiler, both export modes and standalone execution | One machine-readable capability register with generated `scene-feature-parity.md`; missing counterparts explicit |
 
-Readiness: **READY WITH EXPLICIT NON-BLOCKING LIMITATIONS**. The design is registered,
-obsolete instructions are retired, and the affected checks pass. Studio implementation
-has not begun. The existing Viewer coordinator owns its window
-and loop, while ViewerLifecycle already exposes ordered load/release and focused
-owners handle input, rendering and calibration. That real seam makes a hosted Viewer
-workflow the first slice; generic asset loading and Water are not prerequisites.
+Readiness: **S1 IMPLEMENTED; FINAL INTERACTION ACCEPTANCE IN PROGRESS**. Studio and
+the standalone Viewer own their respective entry points and consume one shared
+`ViewerWorkflow.Session`. Existing focused owners retain rendering, input, actor,
+calibration, effects and audio behavior. The hosted workflow supports clip selection,
+pose preview/Save/Undo, dirty-close protection and Stop/Resume. Its Inspector and
+Timeline reflect that same session. Scene/Code/Visual and future workspaces are
+visibly planned, not functioning editors. Generic asset loading and Water are not
+prerequisites for this slice and are not started by it.
 The capability register belongs to the shared scene/asset contract owner when the
 first such capability is implemented; no empty green parity table is created now.
 

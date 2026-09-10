@@ -1,5 +1,11 @@
 # SMILE 2.0 - 3D Viewer, Animation Editor
 
+[SMILE 2.0 Studio S1](../SmileStudio/README.md) provides Viewer and Character Editor
+workspaces around this same implementation. The standalone window and controls
+remain available through this folder's normal `Launch.ps1`. Both launchers protect
+one canonical calibration editing session; a pending pose must be saved or discarded
+before the other host can replace it.
+
 The normal Viewer project permanently includes locally licensed Valor, Zara and
 Vrax packages. Tabs are Arin, Orin, Valor, Zara, Dragon, Vrax, Party Dragon and
 Party Vrax. Party Dragon preserves Arin and Orin against Dragon; Party Vrax uses

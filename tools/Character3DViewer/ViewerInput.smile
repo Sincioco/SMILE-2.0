@@ -67,6 +67,19 @@ Public Type PointerGestureUpdate
     Consumed As Boolean
 End Type
 
+''' Studio supplies focus; only these two shortcuts belong to its active viewport.
+Public Function HostedKeyCommand(PressedKey As Number, Editing As Boolean) As Number
+
+    If PressedKey = KEY_SPACE And Not Editing Then
+        Return INSPECTOR_KEY_TOGGLE_PAUSE
+    Else If PressedKey = KEY_R Then
+        Return INSPECTOR_KEY_RESET
+    End If
+
+    Return INSPECTOR_KEY_NONE
+
+End Function
+
 Public Sub Reset(ByRef Value As State)
 
     Value.InterfaceBlocked = False
