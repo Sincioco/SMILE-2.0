@@ -1,166 +1,170 @@
-# Party Beat Camera Editor
+# Party Beat Camera Editor — Desktop Checkpoint
 
-Status (2026-09-11): the initial editor was published in `fd73f9d` and built for
-Desktop/Web; focused automated and visible tool checks passed. Human camera-gesture
-acceptance remains pending. The subsequent timeline enhancements below are requested,
-not implemented. Sin now prioritizes Desktop only; Web follow-through is on hold.
+Status (2026-09-11): the initial editor is published in `fd73f9d`; Desktop-first
+scope was recorded in `26bb3a9`. The current Desktop timeline/reset enhancement is
+implemented, built and validated with focused automated, visible tool and explicit
+human gesture checks. The commit containing this checkpoint is the Desktop delivery
+milestone. Web follow-through remains on hold.
 
-## Scope
+## Current Contract
 
-Party Dragon and Party Vrax share selectable combatants and four saved camera shots
-per character. Dragon and Vrax are attackers with their own four beats. Copy/paste
-transfers camera composition, motion and connection settings across beats and
-characters. Each character owns one independently saved head cuboid (offset plus
-width/height/depth), reused as attacker or target. A temporary sequence timeline
-scrubs actual choreography; Save closes it, and Preview Beats opens it without
-editing saved cameras. Missing shots retain the existing camera policy.
+Party Dragon and Party Vrax use the existing renderer, actors and choreography.
+Heroes, Dragon and Vrax each own four main camera shots. Selection, relative two-head
+framing, per-character saved head cuboids and cross-character camera copy/paste remain.
 
-## Requested Timeline Enhancements — Desktop First
+- The second timeline matches the regular Animation Timeline's controls and colors:
+  0-Frame, Previous/Next Beat, Previous/Next Frame; held frame buttons repeat.
+- Four ordered main markers cannot be deleted. Dragging boundaries 2–4 changes
+  adjacent camera durations within the fixed battle duration. Up to sixteen extra
+  shots can be inserted, moved across main beats and deleted. Navigation visits all
+  markers chronologically; motion/interpolation uses the current shot interval.
+- **Camera timing only.** Sin explicitly reversed the earlier action-retiming request.
+  Movement, animation, impacts, audio/VFX cues and gameplay counters retain the
+  original action schedule. Default/unauthored cameras retain the existing battle
+  policy. Authored camera intervals follow the edited camera schedule.
+- Pan, orbit, zoom and keyboard orbit remain available after scrubbing; editing resumes
+  from the displayed camera. Space plays/pauses the preview playhead. It stops at the
+  end; another Space restarts from zero. Pausing selects the current camera marker.
+- Preview samples existing action poses, with live battle audio muted and turn state
+  restored on closing. Continuous samples retain equipment VFX trails; discontinuous
+  seeks clear stale trails. Existing independent Fire/Lightning freeze controls remain.
+- Reset Beat restores the containing main beat's built-in camera/motion/connection,
+  keeping timing and extra markers. Reset All Beats restores the four default cameras
+  and timing, removing extra shots from the draft. Both require Save; Cancel preserves
+  saved settings. Head cuboids and other characters are untouched.
+- Reset All Beat Lengths restores only the four default camera durations; camera
+  compositions, motion/connections and extra shots remain. Extra shots retain their
+  relative positions within each main beat. This timing-only reset also waits for Save.
+- Save writes the complete character sequence atomically and closes the second
+  timeline. Preview Beats can show it without editing. Head cuboids auto-save separately.
 
-Sin's September 11 direction prioritizes velocity and Desktop implementation and
-validation only. Keep using the shared owners; do not fork a separate Desktop
-implementation. Do not rebuild, publish or test Web for this enhancement phase.
-Record each implemented change here so Web can adopt it when Sin resumes that work.
+## Owners And Compatibility
 
-- Match the regular Animation Timeline's appearance and interactions, including
-  0-Frame, Previous Beat, Next Beat, Previous Frame and Next Frame controls.
-- Drag beat boundaries to lengthen/shorten beats. The original four beats remain
-  ordered and cannot be deleted.
-- Insert camera shot markers between the main beats. Previous/Next navigation must
-  visit both main and inserted markers. Optional marker deletion was proposed in the
-  summary but has not been explicitly confirmed.
-- Preserve per-character camera settings and head references for heroes and bosses.
-- Keep viewport pan, zoom and orbit available in Beat Edit mode for every camera
-  marker. Timeline dragging, camera dragging and head-cuboid dragging remain distinct.
-- Open timing decision: does resizing a beat change only the camera schedule, or
-  also retime battle movement/animation, impact events, SFX and VFX? Do not silently
-  choose between these meanings. No runtime changes for this request have started.
+| Owner | Responsibility |
+| --- | --- |
+| `BattleCameraShots.smile` | Double relative framing, shot motion/link evaluation, bounded scalar/text and independent head storage |
+| `BattleCameraTimeline.smile` | Four camera weights, main/extra markers, ordering, resize and versioned sequence persistence |
+| `ViewerBeatTimeline.smile` | Pointer gestures, navigation/frame repeat and second timeline presentation |
+| `ViewerBeatEditor.smile` | Selection, per-character drafts/clipboard, Space preview, camera editing, staged resets and head controls |
+| `ViewerBeatSequence.smile` | Existing actor/timing adapter, original action sampling, bookmark/pose restoration and head/body picking |
+| `ViewerWorkflow.Session` | Existing input/update/draw coordination, discontinuous versus continuous visual history |
+| `MasmEmitter.AllocateStack` | Shared native allocation guard-page probing for large local/call frames |
 
-### Deferred Web Adoption Record
+`BattleCamera.Sequence.<Character>.V2` stores the timing weights and up to twenty
+shots in one checksummed Save Data envelope (`SMILE-Sequence-2`). A valid V2 sequence
+wins, including an intentionally saved reset with no authored cameras. Without it,
+legacy `BattleCamera.<Character>.Beat1` through `Beat4` records are read; they are not
+deleted or overwritten. Head keys and pose JSON remain unchanged. Native and each
+Web origin own independent saves; camera import/export is outside this slice.
 
-Baseline Web artifact/evidence below belongs to `fd73f9d`, not these enhancements.
-For each future Desktop milestone, append its commit, changed source owners, save
-format/timing changes, native evidence and concrete Web work still required. Shared
-source changes alone do not establish a validated or published Web implementation.
+Default drafts retain a separate `UseDefault` flag so displaying a captured editor
+view cannot turn a reset into a saved static camera. An actual camera edit adopts
+that view. Save failure keeps the draft; Cancel never writes a sequence.
 
-| Desktop milestone | Changed owners / compatibility | Web follow-through |
-| --- | --- | --- |
-| Scope recorded; no enhancement code yet | Existing four-shot saves unchanged | On hold: port/adopt new timeline controls and markers, verify save compatibility and browser input, rebuild/publish and run focused Chrome checks |
+The Viewer project/build and hardening fixture list the two new modules. Studio's
+project lists those same dependencies because its existing host imports the Viewer;
+its native build is a shared-consumer check, not a new Studio phase. Program.smile's
+coordinator, shared Number/Double rules, assets and live calibration are preserved.
 
-The original pending Chrome camera-gesture acceptance also remains unverified and
-is deferred with this Web work. Resume from the recorded Desktop milestones rather
-than repeating unaffected implementation, asset preparation or full smoke tests.
+## Validation And Observations
 
-## Owners
+- Baseline HEAD/origin/main `26bb3a9`, starting worktree clean. No reset, force push,
+  historical Doctor/RF replay, asset rebake or calibration migration.
+- `artifacts/temp/beat-timeline-native-tests.log`: NativeOnly hardening fixture passed,
+  including camera-only resize, ordered extra markers, serialization/actual Save Data,
+  malformed-record preservation, frame stepping, resume-from-view, Space pause/play,
+  reset draft isolation, timing-only reset and default fallback serialization; 58 native graphics,
+  pointer and audio-focus checks passed. Web fixture execution skipped.
+- `beat-timeline-compiler-tests.log`: 323 language/compiler/project/completion/timing
+  tests passed. Negative-test synthetic failures in the log are expected assertions.
+- `beat-timeline-formatter-tests.log`: 13 formatter integration tests passed.
+  Changed/new SMILE sources were explicitly formatted and checked. The repository
+  check passed for 442 tracked files; the two new modules passed an explicit check.
+- `beat-timeline-build.log`: Desktop Viewer rebuilt successfully, 110 assets reused/
+  published. `beat-timeline-studio-build.log`: existing Studio native host built,
+  111 assets. No new Viewer/Studio Web build or publication was performed.
+- `beat-timeline-vsix-build.log` and `beat-timeline-vsix-install.log`: VSIX 2.0.63
+  rebuilt and installed while Visual Studio was already closed. Installer verified
+  all 35 compiler/language/library/template payload hashes against the built package.
+  No user window was force-closed. Further Viewer-only edits need no reinstall.
+- Native tool observations: stable launch after compiler fix; timeline controls and
+  Reset Beat/Reset All Beats visible; frame step advances sequence time and sampled
+  pose; an extra shot appears and is editable; Space advances the sequence. Reset
+  Beat restored its camera while retaining modified timing. Reset All restored the
+  four default camera boundaries. Cancel closed the timeline and retained the saved
+  Beat 1. No reset was written to the user's live camera records during tool tests.
+- Final build observations: Reset All Beat Lengths is visible and invokes the
+  timing-only reset. Space advanced the playhead with equipment flames/trails visible,
+  and a second Space paused at 634 ms with Beat 3 selected. The end/replay behavior
+  was also observed. Test drafts were cancelled; the pre-existing saved camera and
+  independently saved head reference survived the normal restart.
+- Sin explicitly confirmed that dragging the Beat 2 marker moves it and it stays
+  there. The automatic drag that moved only the playhead was a tool-delivery limitation;
+  earlier screenshot-ID helper failures recovered with fresh observations.
+- Sin explicitly confirmed slow/moderate horizontal/vertical MMB orbit, left pan,
+  wheel zoom both ways and right-click reset: all smooth and stopping cleanly. These
+  are new Beat Edit observations, not reused Double confirmations. His independently
+  saved Arin head adjustment during the check was preserved.
 
-- `BattleCameraShots.smile`: precise relative frame, shot evaluation, interpolation,
-  bounded invariant text encoding and separate Save Data records for shots/heads.
-- `ViewerBeatSequence.smile`: identity/selection map, timing adapter, existing actor
-  lookup, choreography sampling/bookmark restoration, head query and body/bounds picking.
-- `ViewerBeatEditor.smile`: draft/clipboard, shared character head definitions,
-  editing/preview state, controls and projected cuboid/timeline presentation.
-- `ViewerWorkflow.Session`: existing input/update/draw ordering and owner integration.
-- `ViewerCamera.ComposeShot`: orbit/pan from arbitrary saved camera directions.
-- `ViewerInput.ClassifyBeatKey` and `ViewerPlayback`: key classification and pause ownership.
+Unchanged evidence from the initial editor remains valid: `fd73f9d` native/generated-
+Web fractional framing, linked shots, copy/paste, head storage, action sampling and
+exact bookmark restoration. Its Chrome selection, Save/reload, head resize, paste/
+Cancel, Vrax/Dragon scrub, pan/reset observations are not new timeline validation.
+See Git history for the original detailed checkpoint; do not repeat unaffected tests.
 
-The canonical Valor/Zara/Vrax descriptors now expose Head on their verified `head`
-bones (GLB node indices 100, 49 and 125). Their package manifests record the updated
-descriptor hashes. GLBs, materials, animation data and grounding remain unchanged.
-Studio's project only adds the shared module inventory required by its existing
-Viewer host. No compiler/runtime/VSIX payload or new Studio workspace is involved.
+## Reproduced Defects Fixed In This Milestone
 
-## Evidence
-
-- Baseline HEAD/origin/main: `b77bc6d`; starting worktree clean.
-- `artifacts/temp/beat-camera-hardening-final.log`: existing focused native gate,
-  BeatCameraTests and generated-Web exact console parity passed; 58 native graphics,
-  pointer and audio-focus checks passed. Shot tests cover fractional round trips,
-  translated/rotated formations, motion, linked boundaries, unauthored fallback,
-  cross-character copy, separate head storage and malformed numeric records.
-- `artifacts/temp/beat-camera-seek-web-final.log`: actual-actor native/generated-Web
-  calibration fixture passed after the final seek/restoration fixes. It checks reverse
-  beat seeking, exact clip/time/mode restoration and fatal-reaction tail restoration
-  without advancing the turn. The disposable Web fixture emitted SML3605 for its old
-  publication identity and safely republished; final production builds passed.
-- `artifacts/temp/beat-camera-formatter-tests.log`: 13 formatter integration tests
-  passed. `beat-camera-format-check.log`: repository check passed for 438 tracked
-  SMILE files; new modules were explicitly formatted and checked during development.
-- Final native/Web publications passed: `artifacts/temp/beat-camera-build-final.log`.
-  Final shared Studio native/Web build passed: `beat-camera-studio-build.log`.
-- Native tool observations: right inspector, Beat 1 editing, posed actor, cuboid and
-  second timeline. Normal final launcher succeeded: `beat-camera-launch-final.log`.
-  After restart the native screen helper failed to capture the foreground process;
-  final native gesture acceptance is unavailable to the tool and remains pending.
-- Chrome tool observations at `http://127.0.0.1:8780/`: actor selection independent of
-  turn, Arin camera Save/reload, head width auto-save, cross-character Paste preview
-  and Cancel, Vrax attack/recovery scrubbing, Dragon's own four beats, pan and
-  right-click return to the opening shot. Save closed the second timeline. Final
-  head/body picking selected Orin beside Vrax without moving the camera. Chrome is
-  left foreground in Dragon Beat 4 editing for the pending human gesture check.
-- No human gesture acceptance has been recorded for this new feature. Earlier
-  Double/Viewer confirmations are not reused as acceptance of these new controls.
-
-## Reproduced Defects Fixed
-
-- The panel's `Left` name collided with KEY_LEFT; PanelLeft now positions it correctly,
-  verified in native and Chrome. Right-click now restores the opening draft shot.
-- Scrubbing beyond short clips triggered graphics error 48. The existing actor owner
-  now wraps looping clocks and clamps one-shots before seeking, on both targets.
-- Preview restoration now preserves exact clips/times/modes and extended death-tail
-  state. Reciprocal camera connections no longer traverse the same boundary twice.
-- A click initially started pan; large boss bounds could also steal a nearby hero
-  click. Click capture now suppresses pan until a drag threshold, and generic
-  head/body picking precedes full actor bounds. Final Chrome checks passed.
+- Larger sequence/editor records exposed a native access violation during local
+  initialization: the generated frame subtracted 131184 bytes without touching the
+  intervening Windows guard pages. Diagnostic object/fault-offset inspection located
+  the write. `AllocateStack` probes each page before variable-sized frame allocation,
+  preserving incoming integer/XMM arguments. A native regression initializes two
+  8192-element Number/Double arrays and checks a fractional argument. The real Viewer
+  now launches and remains running. No assembly rewriting or retired test was used.
+- Continuous preview initially invalidated equipment visual history every frame,
+  repeatedly clearing fire trails. Only discontinuous seeks now invalidate it.
+- Pause/end state now reports the preview state, selects the active shot after crossing
+  a boundary and avoids a stale global Space instruction. Extra shot labels are integral.
 
 ## Source And Artifact Evidence
 
-SHA-256 of final source bytes (under `tools/Character3DViewer`):
+SHA-256, current Desktop source/artifact bytes:
 
-| Source | SHA-256 |
+| Source / artifact | SHA-256 |
 | --- | --- |
-| BattleCameraShots.smile | `AC9270E84DA1AE1A2FD813A485845E82EAA6A555B07B2FD236B21794B4D057A4` |
-| ViewerBeatSequence.smile | `7012026BAF783F8D8746C08DFDA7E215DE7EE69C654EE2D8A5F33375EC6B6EEB` |
-| ViewerBeatEditor.smile | `1E0370372D7A47EAD555EF7B60225934BC1C9D857F700197B3FC79FD6A0BA7A4` |
-| ViewerWorkflow.smile | `8E94BCD22C4EF2AAE0072C222EB26AE0B49B4812640D228F23775D4364FFA07A` |
+| `src/Smile.Compiler/MasmEmitter.cs` | `1D7D0B267E8183ABA6876052721B4F41381D280DE2F872E9F22FE88C9BCF6B93` |
+| `tools/Character3DViewer/BattleCameraTimeline.smile` | `A1188859B189B4A6D7D47B186ABABC4151D3DF1DE5C56BB281BD7BE249CA8D83` |
+| `tools/Character3DViewer/ViewerBeatTimeline.smile` | `7BE7B93E045A24202C56D37891B67FFF3B525A102F35686164C56985FF98EE13` |
+| `tools/Character3DViewer/ViewerBeatEditor.smile` | `232042A14A654928BBBF358FE17CB21AF34BA03A9F6421B225D0F81BA72F90D1` |
+| `tools/Character3DViewer/ViewerWorkflow.smile` | `113CB4347C4F62F7BDE927B3FF87365C67F1B675CA6412FAA56B9BEA1707C24E` |
+| `tools/Character3DViewer/bin/Release/Character3DViewer.exe` | `59F43108F1C19F7059B88F8F3B2610AC0D0AED8F861B5D33AC53D6A9445179E7` |
+| `tools/SmileStudio/bin/Release/SmileStudio.exe` | `CECB3476325C5C692324CE469F103DBAD696D2E7BEBEE916F110CB39C751522E` |
+| `artifacts/compiler/smilec.dll` | `F01DF217C455A7FC17426737B4723077B8D75D03A2E37D94E5BF237C5FE50189` |
+| `artifacts/vsix/Smile.VisualStudio.vsix` | `561660E2B7B47251CE67654A357AA2885CA1E8D510EBDC397867DBC60B9FD5CA` |
 
-Final generated artifacts (ignored build outputs; SMILE 2.0.63):
+Calibration launch/export evidence preserves Arin's 24 keys (SHA-256
+`7A3E7BC823CF544FA0136920A9D0752BF7DE585C0891B9073E688B1F783B3F67`)
+and Orin's zero keys (`13AE135FDA40302CB5A4B0146D7103A2ED5346AAEEBB3852AF6DD3C397F5D293`).
 
-| Artifact | SHA-256 |
-| --- | --- |
-| Character3DViewer/bin/Release/Character3DViewer.exe | `CE7AF508707482BEEC9151CD5251DF238E67506240A06B084F86120206037499` |
-| Character3DViewer/bin/Release/Web/game.js | `4464498A9A1F36D0E5BFA160EF8BB3245E57D9AC1CD13563717697BECED12E60` |
-| Character3DViewer/bin/Release/Web/smile-runtime.js | `90BB2837F60140E0924E8D53F3629B3041FC1EA4420BF9EBC34E48E61C75EC59` |
-| SmileStudio/bin/Release/SmileStudio.exe | `46F3973CDDC626524DA1AEC8DD382C167596DB4943FA365ADDFEEA412C124731` |
+## On Hold — Web Adoption Record
 
-Artifact paths above are relative to `tools/`. Viewer Web compilation metadata:
-2026-09-11 01:07:31 +08:00. Native launch and pre-publication calibration export
-preserve Arin's 24 keys, SHA-256
-`7A3E7BC823CF544FA0136920A9D0752BF7DE585C0891B9073E688B1F783B3F67`,
-and Orin's zero keys, SHA-256
-`13AE135FDA40302CB5A4B0146D7103A2ED5346AAEEBB3852AF6DD3C397F5D293`.
+Resume only on Sin's direction. Shared source edits are not a published Web feature.
+The existing Web artifact remains the initial editor from `fd73f9d` (game.js SHA-256
+`4464498A9A1F36D0E5BFA160EF8BB3245E57D9AC1CD13563717697BECED12E60`).
 
-## Limits
-
-Picking uses generic head/body regions then bounds, not skinned triangle picking;
-Tab disambiguates overlapping actors. Cuboid axes/offsets follow actor yaw while
-their centers follow animated Head sockets. Native and each Web origin own separate
-camera saves; cross-target import/export is not provided by this slice. Connections
-wait for a saved neighbor. Stationary means no added orbit/dolly while the shot still
-follows its two-head reference frame. Double survives to the existing Precision3D
-submission boundary; GPU float limits remain as documented there. Usage and detailed
-control semantics are in the Viewer README.
+1. Adopt the two modules and editor/workflow changes above through the existing
+   shared project inventory; no separate Web camera/editor implementation.
+2. Run the generated-Web fixture for camera-only timing, extra shots, Space, resets,
+   V2 serialization, legacy fallback and unchanged action/pose restoration.
+3. Rebuild/publish Viewer and the affected Studio shared consumer; preserve each
+   origin's saves. Native stack probing has no Web code-generation dependency.
+4. In Chrome check marker drag, insert/delete/navigation/repeat, Space, Save/Cancel,
+   legacy and V2 reload, and the outstanding slow/moderate MMB orbit, pan, zoom and
+   reset. Reuse unchanged numeric/rendering/assets evidence; no routine Edge pass.
 
 ## Next Action / Remaining
 
-Resolve the timing decision above before implementing dependent timeline changes.
-Implement and validate the requested enhancement on Desktop, recording each change
-in the deferred Web adoption record. The original Desktop slow/moderate horizontal/
-vertical middle-button orbit, pan, zoom both ways and reset acceptance is still
-pending; combine it with the affected Desktop interaction check when practical.
-Tool pan/reset and numeric tests do not substitute for human observations. Fix any
-reproduced in-scope defect through its existing owner and rerun affected checks.
-Reuse unchanged build/test/pose evidence. Do not rebuild or reinstall for documentation
-alone. No VSIX installation is required for this scope-recording change.
-
-On hold: Web Beat Sequence enhancements, publication and validation, including the
-outstanding Chrome gesture acceptance, until Sin directs their resumption.
+No remaining Desktop implementation or acceptance check for this bounded milestone.
+Native gesture acceptance is recorded above. The remaining task is the explicitly
+held Web adoption/validation record; resume only on Sin's direction. Reuse the current
+native, numeric, asset and VSIX evidence. No unrelated feature phase is authorized.

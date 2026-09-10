@@ -838,7 +838,7 @@ internal sealed class MasmEmitter
         Line($"{_routineLabels[routine]} PROC");
         Line("    push rbp");
         Line("    mov rbp, rsp");
-        Line($"    sub rsp, {_currentFrame.FrameSize}");
+        AllocateStack(_currentFrame.FrameSize);
         foreach (var symbol in routine.LocalSymbols.Values.Where(symbol => !symbol.IsConstant))
             for (var index = 0; index < Math.Max(1, symbol.ArraySize) * Math.Max(1, symbol.Type.Size / 8); index++)
                 Line($"    mov QWORD PTR [rbp-{_currentFrame.LocalOffsets[symbol] - index * 8}], 0");
@@ -1317,7 +1317,7 @@ internal sealed class MasmEmitter
         var stackArguments = Math.Max(0, argumentCount - 4);
         var padSlots = (outerSlots + argumentCount + stackArguments) & 1;
         var callAreaBytes = (4 + stackArguments + padSlots) * 8;
-        Line($"    sub rsp, {callAreaBytes}");
+        AllocateStack(callAreaBytes);
         for (var index = 4; index < argumentCount; index++)
         {
             var sourceOffset = callAreaBytes + (argumentCount - 1 - index) * 8;
@@ -2727,7 +2727,7 @@ internal sealed class MasmEmitter
         var stackArguments = Math.Max(0, site.Variables.Count - 4);
         var alignmentBytes = ((_dynamicStackSlots + stackArguments) & 1) != 0 ? 8 : 0;
         var callAreaBytes = 32 + stackArguments * 8 + alignmentBytes;
-        Line($"    sub rsp, {callAreaBytes}");
+        AllocateStack(callAreaBytes);
 
         for (var index = 0; index < site.Variables.Count; index++)
         {
@@ -3317,11 +3317,23 @@ internal sealed class MasmEmitter
     private void CallAligned(string name)
     {
         var callAreaBytes = 32 + ((_dynamicStackSlots & 1) != 0 ? 8 : 0);
-        Line($"    sub rsp, {callAreaBytes}");
+        AllocateStack(callAreaBytes);
         Line($"    call {name}");
         Line($"    add rsp, {callAreaBytes}");
     }
 
+    // Touch every page before moving RSP so large record/array frames cannot skip
+    // Windows' guard page. TEST preserves incoming integer/XMM argument registers.
+    private void AllocateStack(int bytes)
+    {
+        if (bytes >= 4096)
+        {
+            for (var offset = 4096; offset < bytes; offset += 4096)
+                Line($"    test BYTE PTR [rsp-{offset}], 0");
+            Line($"    test BYTE PTR [rsp-{bytes}], 0");
+        }
+        Line($"    sub rsp, {bytes}");
+    }
     private static int Align16(int value) => (value + 15) & ~15;
     private string NewLabel(string prefix) => prefix + "_" + _labelId++;
     private void Line(string text = "") => _builder.AppendLine(text);

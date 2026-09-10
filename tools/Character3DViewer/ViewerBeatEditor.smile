@@ -8,6 +8,8 @@ Import Smile.Simple3D.PrecisionMath3D As M
 Import Smile.Simple3D.PrecisionCamera3D As Projection
 Import Smile.Simple3D.Character3D As C
 Import Smile.Tools.BattleCameraShots As Shots
+Import Smile.Tools.BattleCameraTimeline As Track
+Import Smile.Tools.ViewerBeatTimeline As Timeline
 Import Smile.Tools.ViewerBeatSequence As Sequence
 Import Smile.Tools.Character3DViewerCamera As Camera
 Import Smile.Tools.Character3DViewerParty As Party
@@ -15,7 +17,11 @@ Import Smile.UI.Controls As UI
 Import Smile.Tools.Character3DViewerInput As Input
 
 Public Type State
-    Book[24] As Shots.Shot
+    Tracks[6] As Track.Definition
+    Working As Track.Definition
+    Timeline As Timeline.State
+    SourceSchedule As Sequence.Timing
+    ShotIndex As Number
     References[6] As Shots.HeadReference
     HeadIds[2] As Number
     CornerX[2, 8] As Number
@@ -27,14 +33,17 @@ Public Type State
     Beat As Number
     DisplayBeat As Number
     Preview As Boolean
+    Playing As Boolean
     Editing As Boolean
     Scrubbing As Boolean
     Dirty As Boolean
     Seek As Boolean
+    ContinuousSample As Boolean
     Reframe As Boolean
     Elapsed As Number
     Schedule As Sequence.Timing
     Draft As Shots.Shot
+    UseDefault As Boolean
     ResetShot As Shots.Shot
     ResetRequested As Boolean
     NewEdit As Boolean
@@ -83,11 +92,20 @@ Public Sub LoadShots(ByRef Value As State)
 
     For Identity = 0 To 5
 
-        Loaded = Shots.ReadHead("BattleCamera.Head." + Sequence.Name(Identity), Value.References[Identity])
+        Call Track.Initialize(Value.Tracks[Identity])
 
-        For Beat = 0 To 3
-            Loaded = Shots.ReadShot(Key(Identity, Beat), Value.Book[Identity * 4 + Beat])
-        End For
+        Loaded = Shots.ReadHead("BattleCamera.Head." + Sequence.Name(Identity), Value.References[Identity])
+        Loaded = Track.ReadDefinition("BattleCamera.Sequence." + Sequence.Name(Identity) + ".V2",
+            Value.Tracks[Identity])
+
+        If Not Loaded Then
+
+            For Beat = 0 To 3
+                Loaded = Shots.ReadShot(Key(Identity, Beat), Value.Tracks[Identity].Cameras[Beat])
+            End For
+
+        End If
+
     End For
 
 End Sub
@@ -123,12 +141,7 @@ Public Sub Open(ByRef Value As State, ByRef Scene As Party.State,
     Dim Bounds As C.PreciseBounds3D
     Dim RetainDraft As Boolean
 
-    If (Value.Editing And
-        Value.Dirty And
-        Beat <> Value.Beat) Then
-        Value.Message = "Save Or Cancel The Current Beat First"
-        Return
-    End If
+    Call StoreDraft(Value)
 
     If Not Value.Preview Then
 
@@ -139,19 +152,24 @@ Public Sub Open(ByRef Value As State, ByRef Scene As Party.State,
         Value.OriginalCamera = CurrentCamera
         Value.WasPaused = Paused
         Value.WasDemo = Demo
+        Value.Working = Value.Tracks[Sequence.Identity(Scene.UnityRoster, Value.Selected)]
+        Value.Timeline.DragKind = 0
+        Value.Timeline.RepeatDirection = 0
 
     End If
 
-    RetainDraft = Value.Editing And Beat = Value.Beat
+    RetainDraft = Value.Editing And Beat = Value.ShotIndex
     Value.Beat = Beat
+    Value.ShotIndex = Beat
     Value.Preview = True
+    Value.Playing = False
     Value.Editing = Edit
     Value.Scrubbing = Not Edit
     Value.NewEdit = Not RetainDraft
 
     If Not RetainDraft Then
-        Value.Dirty = False
-        Value.Draft = Value.Book[Slot(Value, Scene.UnityRoster, Beat)]
+        Value.Draft = Value.Working.Cameras[Beat]
+        Value.UseDefault = Not Value.Draft.Saved
     End If
 
     Value.HeadActors[0] = Sequence.Actor(Scene, Primary, Boss, Value.Selected)
@@ -163,9 +181,12 @@ Public Sub Open(ByRef Value As State, ByRef Scene As Party.State,
     Call InitializeHead(Value, 0)
     Call InitializeHead(Value, 1)
 
-    Value.Schedule = Sequence.Times(Scene, Primary, Speed, Value.Selected, 0)
+    Value.SourceSchedule = Sequence.Times(Scene, Primary, Speed, Value.Selected, 0)
+    Value.Schedule = Track.Schedule(Value.Working, Value.SourceSchedule, 0)
+    Value.Timeline.FrameRate = Max(1, C.ClipSampleRate(Value.HeadActors[0], 0))
     Value.Elapsed = Value.Schedule.Start[Beat]
     Value.Seek = True
+    Value.ContinuousSample = False
     Value.Reframe = Edit
     Value.Message = "MMB Orbit; LMB Pan; Wheel Zoom; RMB Reset"
 
@@ -176,29 +197,20 @@ Private Function CurrentShot(Value As State, Unity As Boolean, Identity As Numbe
 
     Dim Result As Shots.Shot
 
-    Result = Value.Book[Identity * 4 + Beat]
+    Result = Value.Tracks[Identity].Cameras[Beat]
 
-    If (Value.Editing And
-        Beat = Value.Beat And
-        Identity = Sequence.Identity(Unity, Value.Selected)) Then
-        Result = Value.Draft
+    If Value.Preview And Identity = Sequence.Identity(Unity, Value.Selected) Then
+        Result = Value.Working.Cameras[Beat]
     End If
 
-    Return Result
+    If (Value.Editing And
+        Beat = Value.ShotIndex And
+        Identity = Sequence.Identity(Unity, Value.Selected)) Then
 
-End Function
+        If Not Value.UseDefault Then
+            Result = Value.Draft
+        End If
 
-Private Function Resolve(Value As Shots.Shot, Attacker As C.Actor, Target As C.Actor,
-    AttackerHead As Shots.HeadReference, TargetHead As Shots.HeadReference,
-    Fallback As P.Camera3D, Progress As Double) As P.Camera3D
-
-    Dim Result As P.Camera3D
-
-    Result = Fallback
-
-    If Value.Saved Then
-        Result = Shots.Resolve(Value, Sequence.Head(Attacker, AttackerHead.Offset),
-            Sequence.Head(Target, TargetHead.Offset), Fallback, Progress)
     End If
 
     Return Result
@@ -207,29 +219,48 @@ End Function
 
 Public Function PlaybackCamera(Value As State, Unity As Boolean, Turn As Number,
     Attacker As C.Actor, Target As C.Actor, TargetIdentity As Number, Schedule As Sequence.Timing,
-    Fallback As P.Camera3D) As P.Camera3D
+    Time As Number, Fallback As P.Camera3D) As P.Camera3D
 
     Dim Identity As Number
     Dim Current As Shots.Shot
     Dim Previous As Shots.Shot
     Dim Following As Shots.Shot
     Dim Result As P.Camera3D
-    Dim Other As P.Camera3D
+    Dim Definition As Track.Definition
+    Dim Index As Number
+    Dim Before As Number
+    Dim After As Number
+    Dim StartTime As Number
+    Dim EndTime As Number
+    Dim Progress As Double
 
     Identity = Sequence.Identity(Unity, Turn)
-    Current = CurrentShot(Value, Unity, Identity, Schedule.Beat)
+    Definition = Value.Tracks[Identity]
 
-    If Schedule.Beat > 0 Then
-        Previous = CurrentShot(Value, Unity, Identity, Schedule.Beat - 1)
+    If Value.Preview And Identity = Sequence.Identity(Unity, Value.Selected) Then
+        Definition = Value.Working
     End If
 
-    If Schedule.Beat < 3 Then
-        Following = CurrentShot(Value, Unity, Identity, Schedule.Beat + 1)
+    Index = Track.AtTime(Definition, Schedule, Time)
+    StartTime = Track.TimeAt(Definition, Schedule, Index)
+    EndTime = Schedule.Start[4]
+    Before = Track.Neighbor(Definition, Schedule, StartTime, -1)
+    After = Track.Neighbor(Definition, Schedule, StartTime, 1)
+    Current = CurrentShot(Value, Unity, Identity, Index)
+
+    If Before >= 0 Then
+        Previous = CurrentShot(Value, Unity, Identity, Before)
     End If
 
+    If After >= 0 Then
+        Following = CurrentShot(Value, Unity, Identity, After)
+        EndTime = Track.TimeAt(Definition, Schedule, After)
+    End If
+
+    Progress = Clamp(ToDouble(Time - StartTime) / ToDouble(Max(1, EndTime - StartTime)), 0.0, 1.0)
     Result = Shots.ResolveLinked(Current, Previous, Following,
         Sequence.Head(Attacker, Value.References[Identity].Offset),
-        Sequence.Head(Target, Value.References[TargetIdentity].Offset), Fallback, Schedule.Progress)
+        Sequence.Head(Target, Value.References[TargetIdentity].Offset), Fallback, Progress)
 
     Return Result
 
@@ -252,13 +283,21 @@ Public Sub Update(ByRef Value As State, ByRef Scene As Party.State,
 
     Attacker = Sequence.Actor(Scene, Primary, Boss, Scene.Turn)
     Target = Sequence.Actor(Scene, Primary, Boss, Sequence.Opponent(Scene, Scene.Turn))
-    Schedule = Sequence.Times(Scene, Primary, Speed, Scene.Turn, Scene.Elapsed)
+    Value.SourceSchedule = Sequence.Times(Scene, Primary, Speed, Scene.Turn, Scene.Elapsed)
+    Schedule = Track.Schedule(Value.Tracks[Sequence.Identity(Scene.UnityRoster, Scene.Turn)],
+        Value.SourceSchedule, Scene.Elapsed)
+    Value.Timeline.Clock = Value.Timeline.Clock + Max(0, Elapsed)
+
+    If Value.Preview Then
+        Schedule = Track.Schedule(Value.Working, Value.SourceSchedule, Value.Elapsed)
+    End If
 
     If Not Value.Preview Then
 
         If ApplySaved And Scene.EstablishRemaining = 0 Then
             Live = PlaybackCamera(Value, Scene.UnityRoster, Scene.Turn, Attacker, Target,
-                Sequence.Identity(Scene.UnityRoster, Sequence.Opponent(Scene, Scene.Turn)), Schedule, Live)
+                Sequence.Identity(Scene.UnityRoster, Sequence.Opponent(Scene, Scene.Turn)), Schedule, Scene.Elapsed, Live)
+            Value.Camera.Live = Live
         End If
 
         Return
@@ -313,7 +352,8 @@ Public Sub Update(ByRef Value As State, ByRef Scene As Party.State,
 
     Else
         Live = PlaybackCamera(Value, Scene.UnityRoster, Scene.Turn, Attacker, Target,
-                Sequence.Identity(Scene.UnityRoster, Sequence.Opponent(Scene, Scene.Turn)), Schedule, Live)
+                Sequence.Identity(Scene.UnityRoster, Sequence.Opponent(Scene, Scene.Turn)), Schedule, Scene.Elapsed, Live)
+        Value.Camera.Live = Live
 
     End If
 
@@ -327,12 +367,15 @@ Public Function SaveShot(ByRef Value As State, Unity As Boolean) As Boolean
         Return False
     End If
 
-    If Not Shots.WriteShot(Key(Sequence.Identity(Unity, Value.Selected), Value.Beat), Value.Draft) Then
+    Call StoreDraft(Value)
+
+    If Not Track.WriteDefinition("BattleCamera.Sequence." +
+        Sequence.Name(Sequence.Identity(Unity, Value.Selected)) + ".V2", Value.Working) Then
         Value.Message = "Save Failed; Draft Retained"
         Return False
     End If
 
-    Value.Book[Slot(Value, Unity, Value.Beat)] = Value.Draft
+    Value.Tracks[Sequence.Identity(Unity, Value.Selected)] = Value.Working
     Value.Preview = False
     Value.Editing = False
     Value.Dirty = False
@@ -344,14 +387,14 @@ End Function
 
 Public Sub Copy(ByRef Value As State, Unity As Boolean)
 
-    Value.Clipboard = Value.Book[Slot(Value, Unity, Value.Beat)]
+    Value.Clipboard = Value.Tracks[Sequence.Identity(Unity, Value.Selected)].Cameras[Value.Beat]
 
     If Value.Editing Then
         Value.Clipboard = Value.Draft
     End If
 
     Value.ClipboardName = (Sequence.Name(Sequence.Identity(Unity, Value.Selected)) +
-        " Beat " + Digit(Value.Beat + 1))
+        " Shot " + ShotNumber(Value.ShotIndex + 1))
     Value.Message = "Copied " + Value.ClipboardName
 
 End Sub
@@ -366,6 +409,20 @@ Public Function Digit(Value As Number) As Text
 
 End Function
 
+Private Function ShotNumber(Value As Number) As Text
+
+    Dim Result As Text
+
+    Result = Digit(Value Mod 10)
+
+    If Value >= 10 Then
+        Result = Digit(Value / 10) + Result
+    End If
+
+    Return Result
+
+End Function
+
 Public Sub Paste(ByRef Value As State)
 
     If Not Value.Editing Or Not Value.Clipboard.Saved Then
@@ -374,10 +431,13 @@ Public Sub Paste(ByRef Value As State)
     End If
 
     Value.Draft = Value.Clipboard
+    Value.UseDefault = False
+    Value.Playing = False
 
-    If Value.Beat = 0 And Value.Draft.Connection = -1 Then
+    If Value.ShotIndex = 0 And Value.Draft.Connection = -1 Then
         Value.Draft.Connection = 0
-    Else If Value.Beat = 3 And Value.Draft.Connection = 1 Then
+    Else If (Track.Neighbor(Value.Working, Value.Schedule, Track.TimeAt(Value.Working, Value.Schedule, Value.ShotIndex), 1) < 0 And
+        Value.Draft.Connection = 1) Then
         Value.Draft.Connection = 0
     End If
 
@@ -385,7 +445,7 @@ Public Sub Paste(ByRef Value As State)
     Value.Scrubbing = False
     Value.Reframe = True
     Value.NewEdit = True
-    Value.Elapsed = Value.Schedule.Start[Value.Beat]
+    Value.Elapsed = Track.TimeAt(Value.Working, Value.Schedule, Value.ShotIndex)
     Value.Seek = True
     Value.Message = "Pasted " + Value.ClipboardName + "; Save To Keep"
 
@@ -416,6 +476,7 @@ Public Function Pointer(ByRef Value As State, Unity As Boolean, Live As P.Camera
     Dim Delta As P.Vector3
     Dim Projected As Projection.ProjectedPoint
     Dim Amount As Double
+    Dim TimelineCommand As Number
 
     X = Pointer_X()
     Y = Pointer_Y()
@@ -446,31 +507,20 @@ Public Function Pointer(ByRef Value As State, Unity As Boolean, Live As P.Camera
 
     End If
 
-    If (Value.Preview And
-        (Value.TimelineDrag Or Contains(X, Y, 18, Height - 138, Width - 306, 32))) Then
+    If Value.Preview Then
 
-        If Pointer_Pressed(POINTER_PRIMARY) Then
-            Value.TimelineDrag = True
+        TimelineCommand = Timeline.Pointer(Value.Timeline, Value.Working,
+            Value.SourceSchedule, Value.Elapsed, Value.Editing, Width, Height)
+
+        If TimelineCommand <> 0 Then
+            Call ApplyTimelineCommand(Value, Unity, TimelineCommand, Live)
+
+            Return 100
         End If
-
-        If Value.TimelineDrag Then
-
-            Value.Elapsed = Min(Value.Schedule.Start[4] - 1, Max(0,
-                (X - 18) * Value.Schedule.Start[4] / Max(1, Width - 306)))
-            Value.Seek = True
-            Value.Scrubbing = True
-
-        End If
-
-        If Not Pointer_Held(POINTER_PRIMARY) Then
-            Value.TimelineDrag = False
-        End If
-
-        Return 100
 
     End If
 
-    If Contains(X, Y, PanelLeft, 112, 252, 382) Then
+    If Contains(X, Y, PanelLeft, 112, 252, 450) Then
 
         If Not Pointer_Pressed(POINTER_PRIMARY) Then
             Return 100
@@ -506,19 +556,27 @@ Public Function Pointer(ByRef Value As State, Unity As Boolean, Live As P.Camera
 
         If Contains(X, Y, PanelLeft + 8, 302, 236, 26) Then
 
+            Call ResumeCamera(Value)
+
             Value.Draft.Motion = (Value.Draft.Motion + 1) Mod 5
+            Value.UseDefault = False
             Value.Dirty = True
 
         Else If Contains(X, Y, PanelLeft + 8, 334, 236, 26) Then
 
+            Call ResumeCamera(Value)
+
             Value.Draft.Connection = Value.Draft.Connection + 1
+            Value.UseDefault = False
 
             If Value.Draft.Connection > 1 Then
                 Value.Draft.Connection = -1
             End If
 
-            If ((Value.Beat = 0 And Value.Draft.Connection = -1) Or
-                (Value.Beat = 3 And Value.Draft.Connection = 1)) Then
+            If ((Value.ShotIndex = 0 And Value.Draft.Connection = -1) Or
+                (Track.Neighbor(Value.Working, Value.Schedule,
+                Track.TimeAt(Value.Working, Value.Schedule, Value.ShotIndex), 1) < 0 And
+                Value.Draft.Connection = 1)) Then
                 Value.Draft.Connection = 0
             End If
 
@@ -570,6 +628,18 @@ Public Function Pointer(ByRef Value As State, Unity As Boolean, Live As P.Camera
 
             Value.References[Value.HeadIds[Value.Marker]].Size.Z = Clamp(
                 Value.References[Value.HeadIds[Value.Marker]].Size.Z + Amount, 1.0, 1000.0)
+
+        Else If Contains(X, Y, PanelLeft + 8, 486, 114, 26) Then
+
+            Call ResetDefaults(Value, False)
+
+        Else If Contains(X, Y, PanelLeft + 130, 486, 114, 26) Then
+
+            Call ResetDefaults(Value, True)
+
+        Else If Contains(X, Y, PanelLeft + 8, 520, 236, 26) Then
+
+            Call ResetLengths(Value)
 
         End If
 
@@ -653,7 +723,7 @@ Public Sub Draw(Value As State, Unity As Boolean, Width As Number, Height As Num
 
     PanelLeft = Width - 268
 
-    Fill Rectangle PanelLeft, 112, 252, 382, Rgb(6, 16, 34) Opacity 94
+    Fill Rectangle PanelLeft, 112, 252, 450, Rgb(6, 16, 34) Opacity 94
     Draw Text "BEAT CAMERA: " + Sequence.Name(Sequence.Identity(Unity, Value.Selected)) At PanelLeft + 8, 120 Size 14 Color WHITE
     Draw Text "Target: " + TargetName At PanelLeft + 8, 142 Size 11 Color CYAN
     Draw Text "Tab / Click To Select" At PanelLeft + 8, 157 Size 10 Color LIGHT_GRAY
@@ -664,20 +734,28 @@ Public Sub Draw(Value As State, Unity As Boolean, Width As Number, Height As Num
 
         Label = "Beat " + Digit(Index + 1)
 
-        If Value.Book[Slot(Value, Unity, Index)].Saved Then
+        If Value.Tracks[Sequence.Identity(Unity, Value.Selected)].Cameras[Index].Saved Then
             Label = Label + " *"
         End If
 
         Call UI.DrawButton(PanelLeft + 8 + Index * 60, 208, 56, 26, Label,
-            Value.Editing And Value.Beat = Index)
+            Value.Editing And Value.ShotIndex = Index)
     End For
 
     Label = "Defaults Until Saved"
 
     If Value.Editing Then
+
         Label = "Editing Beat " + Digit(Value.Beat + 1)
+
+        If Value.ShotIndex >= 4 Then
+            Label = "Editing Extra Shot " + ShotNumber(Value.ShotIndex - 3)
+        End If
+
     Else If Value.Preview Then
+
         Label = "Preview Only - Saved Shots Unchanged"
+
     End If
 
     Draw Text Label At PanelLeft + 8, 245 Size 11 Color YELLOW
@@ -691,14 +769,6 @@ Public Sub Draw(Value As State, Unity As Boolean, Width As Number, Height As Num
 
         Call UI.DrawButton(PanelLeft + 8, 302, 236, 26, "Motion: " + MotionName(Value.Draft.Motion), False)
         Call UI.DrawButton(PanelLeft + 8, 334, 236, 26, "Connect: " + ConnectionName(Value.Draft.Connection), False)
-
-        If Value.Draft.Connection <> 0 Then
-
-            If Not Value.Book[Slot(Value, Unity, Value.Beat + Value.Draft.Connection)].Saved Then
-                Draw Text "Connection Waits For Saved Neighbor" At PanelLeft + 8, 294 Size 9 Color YELLOW
-            End If
-
-        End If
 
         Label = "Head Box: Attacker"
 
@@ -714,7 +784,13 @@ Public Sub Draw(Value As State, Unity As Boolean, Width As Number, Height As Num
         Call UI.DrawButton(PanelLeft + 8, 450, 114, 24, "Depth -", False)
         Call UI.DrawButton(PanelLeft + 130, 450, 114, 24, "Depth +", False)
 
-        Draw Text "Head Cuboids Auto-Save Per Character" At PanelLeft + 8, 479 Size 9 Color CYAN
+        Draw Text "Head Cuboids Auto-Save Per Character" At PanelLeft + 8, 475 Size 9 Color CYAN
+
+        Call UI.DrawButton(PanelLeft + 8, 486, 114, 26, "Reset Beat", False)
+        Call UI.DrawButton(PanelLeft + 130, 486, 114, 26, "Reset All Beats", False)
+        Call UI.DrawButton(PanelLeft + 8, 520, 236, 26, "Reset All Beat Lengths", False)
+
+        Draw Text "Resets Are Drafts Until Save" At PanelLeft + 8, 550 Size 9 Color LIGHT_GRAY
 
     Else
         Draw Text "Animation: " + ClipName At PanelLeft + 8, 307 Size 11 Color WHITE
@@ -728,6 +804,15 @@ Public Sub Draw(Value As State, Unity As Boolean, Width As Number, Height As Num
     If Not Value.Preview Then
         Return
     End If
+
+    Label = "Beat Sequence Paused - Space To Play; Camera Controls Active"
+
+    If Value.Playing Then
+        Label = "Beat Sequence Playing - Space To Pause"
+    End If
+
+    Fill Rectangle 18, 40, Max(0, PanelLeft - 24), 18, Rgb(4, 9, 24)
+    Draw Text Label At 18, 42 Size 12 Color YELLOW
 
     For Index = 0 To 1
 
@@ -749,26 +834,224 @@ Public Sub Draw(Value As State, Unity As Boolean, Width As Number, Height As Num
 
     End For
 
-    Fill Rectangle 18, Height - 150, Width - 306, 44, Rgb(6, 16, 34) Opacity 94
+    Call Timeline.Draw(Value.Timeline, Value.Working, Value.SourceSchedule,
+        Value.Elapsed, Value.ShotIndex, Value.Editing, Width, Height)
 
-    For Index = 0 To 3
+End Sub
 
-        Position = 18 + Value.Schedule.Start[Index] * (Width - 306) / Max(1, Value.Schedule.Start[4])
-        EndPosition = 18 + Value.Schedule.Start[Index + 1] * (Width - 306) / Max(1, Value.Schedule.Start[4])
-        Tint = Rgb(30, 62, 85)
+Public Sub StoreDraft(ByRef Value As State)
 
-        If Index = Value.DisplayBeat Then
-            Tint = Rgb(15, 120, 155)
+    Dim DefaultShot As Shots.Shot
+
+    If Value.Editing Then
+
+        Value.Working.Cameras[Value.ShotIndex] = Value.Draft
+
+        If Value.UseDefault Then
+            Value.Working.Cameras[Value.ShotIndex] = DefaultShot
         End If
 
-        Fill Rectangle Position, Height - 132, EndPosition - Position - 1, 24, Tint
-        Draw Text "Beat " + Digit(Index + 1) At Position + 3, Height - 127 Size 10 Color WHITE
+    End If
+
+End Sub
+
+Public Sub SeekTo(ByRef Value As State, Time As Number, Index As Number)
+
+    Call StoreDraft(Value)
+
+    Value.Playing = False
+    Value.Schedule = Track.Schedule(Value.Working, Value.SourceSchedule, Time)
+    Value.Elapsed = Min(Max(Time, 0), Value.Schedule.Start[4] - 1)
+
+    If Index < 0 Then
+        Index = Track.AtTime(Value.Working, Value.Schedule, Value.Elapsed)
+    End If
+
+    Value.ShotIndex = Index
+    Value.Beat = Value.Working.Beat[Index]
+    Value.Draft = Value.Working.Cameras[Index]
+    Value.UseDefault = Not Value.Draft.Saved
+    Value.ResetShot = Value.Draft
+    Value.NewEdit = True
+    Value.Seek = True
+    Value.ContinuousSample = False
+    Value.Reframe = False
+    Value.Scrubbing = True
+
+End Sub
+
+Public Sub ResumeCamera(ByRef Value As State)
+
+    If Not Value.Editing Or Not Value.Scrubbing Then
+        Return
+    End If
+
+    Call SeekTo(Value, Value.Elapsed, -1)
+
+    Value.Camera.Base = Value.Camera.Live
+    Value.UseDefault = False
+    Value.Playing = False
+    Value.Camera.Frame.PanXLimit = 1000.0
+    Value.Camera.Frame.PanYLimit = 1000.0
+
+    Call Camera.Reset(Value.Camera, 0, 0, -100, 100, 120000)
+    Call Shots.Capture(Value.Draft, Value.Camera.Base, Value.Heads[0], Value.Heads[1])
+
+    Value.ResetShot = Value.Draft
+    Value.Reframe = False
+    Value.Scrubbing = False
+
+End Sub
+
+Public Sub AdvancePreview(ByRef Value As State, Elapsed As Number)
+
+    If Not Value.Preview Or Not Value.Playing Then
+        Return
+    End If
+
+    Value.Elapsed = Min(Value.Schedule.Start[4] - 1, Value.Elapsed + Max(0, Elapsed))
+    Value.Seek = True
+    Value.ContinuousSample = True
+    Value.Scrubbing = True
+    Value.Reframe = False
+
+    If Value.Elapsed >= Value.Schedule.Start[4] - 1 Then
+
+        Call SeekTo(Value, Value.Elapsed, -1)
+
+        Value.ContinuousSample = True
+        Value.Message = "Sequence End - Space To Replay"
+
+    End If
+
+End Sub
+
+''' Reset is staged in Working; saved sequences and head references are untouched.
+''' One beat restores its built-in camera while retaining timing and extra shots.
+Public Sub ResetDefaults(ByRef Value As State, AllBeats As Boolean)
+
+    Dim DefaultTrack As Track.Definition
+    Dim DefaultShot As Shots.Shot
+    Dim Beat As Number
+
+    If Not Value.Editing Then
+        Return
+    End If
+
+    Call StoreDraft(Value)
+
+    Beat = Value.Working.Beat[Value.ShotIndex]
+
+    If AllBeats Then
+
+        Call Track.Initialize(DefaultTrack)
+
+        Value.Working = DefaultTrack
+        Value.Message = "All Four Beats And Timing Reset; Save To Keep"
+
+    Else
+        Value.Working.Cameras[Beat] = DefaultShot
+        Value.Message = "Beat Camera Reset; Timing Retained; Save To Keep"
+
+    End If
+
+    ''' Do not let SeekTo write the old draft over the reset.
+    Value.Editing = False
+    Value.Schedule = Track.Schedule(Value.Working, Value.SourceSchedule, 0)
+
+    Call SeekTo(Value, Value.Schedule.Start[Beat], Beat)
+
+    Value.Editing = True
+    Value.UseDefault = True
+    Value.Dirty = True
+
+End Sub
+
+''' Restore timing only. Extra shots retain their relative position in each beat.
+Public Sub ResetLengths(ByRef Value As State)
+
+    Dim Index As Number
+
+    If Not Value.Editing Then
+        Return
+    End If
+
+    Call StoreDraft(Value)
+
+    For Index = 0 To 3
+        Value.Working.Scale[Index] = 1.0
     End For
 
-    Position = 18 + Value.Elapsed * (Width - 306) / Max(1, Value.Schedule.Start[4])
+    Value.Schedule = Track.Schedule(Value.Working, Value.SourceSchedule, 0)
 
-    Fill Rectangle Position, Height - 138, 2, 32, YELLOW
-    Draw Text "Beat Sequence - Scrub To Preview; Click A Beat Button To Edit" At 22, Height - 149 Size 10 Color CYAN
+    Call SeekTo(Value, Track.TimeAt(Value.Working, Value.Schedule, Value.ShotIndex),
+        Value.ShotIndex)
+
+    Value.Dirty = True
+    Value.Message = "Default Beat Lengths Restored; Cameras Kept; Save To Keep"
+
+End Sub
+
+Private Sub ApplyTimelineCommand(ByRef Value As State, Unity As Boolean,
+    Command As Number, Live As P.Camera3D)
+
+    Dim Index As Number
+    Dim NewShot As Shots.Shot
+    Dim Changed As Boolean
+
+    If Command = 20 Then
+
+        Call SeekTo(Value, Value.Timeline.OutputTime, -1)
+
+    Else If Command = 21 Or Command = 22 Then
+
+        Call SeekTo(Value, Value.Timeline.OutputTime, Value.Timeline.OutputIndex)
+
+        If Command = 22 Then
+            Value.Dirty = True
+        End If
+
+    Else If Command = 23 Then
+
+        Call StoreDraft(Value)
+        Call Shots.Capture(NewShot, Live, Value.Heads[0], Value.Heads[1])
+
+        Index = Track.Insert(Value.Working, Value.Schedule, Value.Elapsed, NewShot)
+
+        If Index >= 0 Then
+
+            Call SeekTo(Value, Value.Elapsed, Index)
+
+            Value.Dirty = True
+            Value.Message = "Shot Added; Adjust Camera And Save"
+
+        Else
+            Value.Message = "Choose Space Between Markers; Limit 16 Extra Shots"
+
+        End If
+
+    Else If Command = 24 Then
+
+        Call StoreDraft(Value)
+
+        Changed = Track.Remove(Value.Working, Value.ShotIndex)
+
+        If Changed Then
+
+            Value.Editing = False
+
+            Call SeekTo(Value, Value.Elapsed, -1)
+
+            Value.Editing = True
+            Value.Dirty = True
+            Value.Message = "Extra Shot Removed; Save To Keep"
+
+        Else
+            Value.Message = "Beats 1-4 Cannot Be Deleted"
+
+        End If
+
+    End If
 
 End Sub
 
@@ -899,7 +1182,37 @@ Public Function Keyboard(ByRef Value As State, Unity As Boolean,
         Return False
     End If
 
-    If Value.Editing And Not Value.Scrubbing Then
+    If PressedKey = KEY_SPACE Then
+
+        Call StoreDraft(Value)
+
+        Value.Playing = Not Value.Playing
+        Value.Scrubbing = True
+        Value.Reframe = False
+
+        If Value.Playing And Value.Elapsed >= Value.Schedule.Start[4] - 1 Then
+            Value.Elapsed = 0
+            Value.Seek = True
+        End If
+
+        Value.Message = "Beat Sequence Paused - Space To Play"
+
+        If Value.Playing Then
+            Value.Message = "Beat Sequence Playing - Space To Pause"
+        Else
+
+            Call SeekTo(Value, Value.Elapsed, -1)
+        End If
+
+        Return True
+
+    End If
+
+    If Value.Editing And Command >= 2 Then
+
+        Call ResumeCamera(Value)
+
+        Value.UseDefault = False
 
         If Command = 2 Then
             Changed = Camera.NudgeOrbit(Value.Camera, -2, 0)

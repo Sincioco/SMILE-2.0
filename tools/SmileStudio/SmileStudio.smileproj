@@ -22,6 +22,8 @@
     <SmileSource Include="..\Character3DViewer\BattleAudio.smile" />
     <SmileSource Include="..\Character3DViewer\BattleCamera.smile" />
     <SmileSource Include="..\Character3DViewer\BattleCameraShots.smile" />
+    <SmileSource Include="..\Character3DViewer\BattleCameraTimeline.smile" />
+    <SmileSource Include="..\Character3DViewer\ViewerBeatTimeline.smile" />
     <SmileSource Include="..\Character3DViewer\ViewerBeatSequence.smile" />
     <SmileSource Include="..\Character3DViewer\ViewerBeatEditor.smile" />
     <SmileSource Include="..\Character3DViewer\DragonPresence.smile" />

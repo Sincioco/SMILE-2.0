@@ -1,0 +1,441 @@
+''' Camera-only timing and markers; battle action retains its existing clock.
+Module Smile.Tools.BattleCameraTimeline
+
+Option Explicit
+
+Import Smile.Tools.BattleCameraShots As Shots
+Import Smile.Tools.ViewerBeatSequence As Sequence
+
+Public Const MAX_SHOTS = 20
+
+Public Type Definition
+    Scale[4] As Double
+    ShotCount As Number
+    Beat[20] As Number
+    Fraction[20] As Double
+    Cameras[20] As Shots.Shot
+End Type
+
+Public Sub Initialize(ByRef Value As Definition)
+
+    Dim Index As Number
+
+    Value.ShotCount = 4
+
+    For Index = 0 To 3
+        Value.Scale[Index] = 1.0
+        Value.Beat[Index] = Index
+    End For
+
+End Sub
+
+Public Function Schedule(Value As Definition, Source As Sequence.Timing,
+    Elapsed As Number) As Sequence.Timing
+
+    Dim Result As Sequence.Timing
+    Dim Index As Number
+    Dim Total As Double
+    Dim Position As Double
+
+    For Index = 0 To 3
+        Total = Total + ToDouble(Source.Start[Index + 1] - Source.Start[Index]) * Value.Scale[Index]
+    End For
+
+    For Index = 0 To 3
+        Position = Position + ToDouble(Source.Start[Index + 1] - Source.Start[Index]) * Value.Scale[Index]
+        Result.Start[Index + 1] = ToNumber(Round(Position * ToDouble(Source.Start[4]) / Max(1.0, Total)))
+    End For
+
+    Result.Start[4] = Source.Start[4]
+
+    For Index = 1 To 3
+
+        If Elapsed >= Result.Start[Index] Then
+            Result.Beat = Index
+        End If
+
+    End For
+
+    Result.Progress = Clamp(ToDouble(Elapsed - Result.Start[Result.Beat]) /
+        ToDouble(Max(1, Result.Start[Result.Beat + 1] - Result.Start[Result.Beat])), 0.0, 1.0)
+
+    Return Result
+
+End Function
+
+Public Function TimeAt(Value As Definition, Timed As Sequence.Timing,
+    Index As Number) As Number
+
+    Dim Beat As Number
+    Dim Result As Number
+
+    Beat = Value.Beat[Index]
+    Result = Timed.Start[Beat] + ToNumber(Round(Value.Fraction[Index] *
+        ToDouble(Timed.Start[Beat + 1] - Timed.Start[Beat])))
+
+    Return Result
+
+End Function
+
+Public Function AtTime(Value As Definition, Timed As Sequence.Timing,
+    Time As Number) As Number
+
+    Dim Index As Number
+    Dim Best As Number
+    Dim BestTime As Number
+    Dim Candidate As Number
+
+    For Index = 0 To Value.ShotCount - 1
+
+        Candidate = TimeAt(Value, Timed, Index)
+
+        If Candidate <= Time And Candidate >= BestTime Then
+            Best = Index
+            BestTime = Candidate
+        End If
+
+    End For
+
+    Return Best
+
+End Function
+
+Public Function Neighbor(Value As Definition, Timed As Sequence.Timing,
+    Time As Number, Direction As Number) As Number
+
+    Dim Index As Number
+    Dim Candidate As Number
+    Dim BestTime As Number
+    Dim Result As Number
+
+    Result = -1
+    BestTime = -1
+
+    If Direction > 0 Then
+        BestTime = Timed.Start[4] + 1
+    End If
+
+    For Index = 0 To Value.ShotCount - 1
+
+        Candidate = TimeAt(Value, Timed, Index)
+
+        If ((Direction > 0 And Candidate > Time And Candidate < BestTime) Or
+            (Direction < 0 And Candidate < Time And Candidate > BestTime)) Then
+            Result = Index
+            BestTime = Candidate
+        End If
+
+    End For
+
+    Return Result
+
+End Function
+
+Public Function MoveShot(ByRef Value As Definition, Timed As Sequence.Timing,
+    Index As Number, Time As Number) As Boolean
+
+    Dim Beat As Number
+    Dim Other As Number
+    Dim Fraction As Double
+
+    If (Index < 4 Or
+        Index >= MAX_SHOTS Or
+        Time <= 0 Or
+        Time >= Timed.Start[4]) Then
+        Return False
+    End If
+
+    For Other = 0 To Value.ShotCount - 1
+
+        If Other <> Index And Abs(TimeAt(Value, Timed, Other) - Time) < 16 Then
+            Return False
+        End If
+
+    End For
+
+    For Other = 1 To 3
+
+        If Time >= Timed.Start[Other] Then
+            Beat = Other
+        End If
+
+    End For
+
+    Fraction = (ToDouble(Time - Timed.Start[Beat]) /
+        ToDouble(Max(1, Timed.Start[Beat + 1] - Timed.Start[Beat])))
+
+    If Fraction <= 0.0 Or Fraction >= 1.0 Then
+        Return False
+    End If
+
+    Value.Beat[Index] = Beat
+    Value.Fraction[Index] = Fraction
+
+    Return True
+
+End Function
+
+Public Function Insert(ByRef Value As Definition, Timed As Sequence.Timing,
+    Time As Number, Camera As Shots.Shot) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Index As Number
+
+    Index = Value.ShotCount
+
+    If Index >= MAX_SHOTS Then
+        ReturnValue = -1
+
+        Return ReturnValue
+    End If
+
+    If Not MoveShot(Value, Timed, Index, Time) Then
+        ReturnValue = -1
+
+        Return ReturnValue
+    End If
+
+    Value.Cameras[Index] = Camera
+    Value.ShotCount = Index + 1
+
+    Return Index
+
+End Function
+
+Public Function Remove(ByRef Value As Definition, Index As Number) As Boolean
+
+    Dim Cursor As Number
+
+    If Index < 4 Or Index >= Value.ShotCount Then
+        Return False
+    End If
+
+    For Cursor = Index To Value.ShotCount - 2
+        Value.Cameras[Cursor] = Value.Cameras[Cursor + 1]
+        Value.Beat[Cursor] = Value.Beat[Cursor + 1]
+        Value.Fraction[Cursor] = Value.Fraction[Cursor + 1]
+    End For
+
+    Value.ShotCount = Value.ShotCount - 1
+
+    Return True
+
+End Function
+
+''' Camera boundaries share the fixed battle duration. The adjacent shot absorbs
+''' the change; action, impacts, audio and animation timing are never retimed.
+Public Sub Resize(ByRef Value As Definition, Source As Sequence.Timing,
+    Beat As Number, Duration As Number)
+
+    Dim Timed As Sequence.Timing
+    Dim Combined As Number
+    Dim First As Number
+    Dim Index As Number
+
+    If Beat < 0 Or Beat >= 3 Then
+        Return
+    End If
+
+    Timed = Schedule(Value, Source, 0)
+    Combined = Timed.Start[Beat + 2] - Timed.Start[Beat]
+
+    If Combined < 32 Then
+        Return
+    End If
+
+    For Index = 0 To 3
+        Value.Scale[Index] = (ToDouble(Timed.Start[Index + 1] - Timed.Start[Index]) /
+            ToDouble(Max(1, Source.Start[Index + 1] - Source.Start[Index])))
+    End For
+    First = Min(Max(16, Duration), Combined - 16)
+    Value.Scale[Beat] = (ToDouble(First) /
+        ToDouble(Max(1, Source.Start[Beat + 1] - Source.Start[Beat])))
+    Value.Scale[Beat + 1] = (ToDouble(Combined - First) /
+        ToDouble(Max(1, Source.Start[Beat + 2] - Source.Start[Beat + 1])))
+
+End Sub
+
+Public Function Valid(Value As Definition) As Boolean
+
+    Dim Index As Number
+
+    If Value.ShotCount < 4 Or Value.ShotCount > MAX_SHOTS Then
+        Return False
+    End If
+
+    For Index = 0 To 3
+
+        If Value.Scale[Index] < 0.001 Or Value.Scale[Index] > 1000.0 Then
+            Return False
+        End If
+
+        If Value.Beat[Index] <> Index Or Value.Fraction[Index] <> 0.0 Then
+            Return False
+        End If
+
+    End For
+
+    For Index = 0 To Value.ShotCount - 1
+
+        If Value.Cameras[Index].Saved And Not Shots.Valid(Value.Cameras[Index]) Then
+            Return False
+        End If
+
+        If Value.Beat[Index] < 0 Or Value.Beat[Index] > 3 Then
+            Return False
+        End If
+
+        If Index >= 4 And (Value.Fraction[Index] <= 0.0 Or Value.Fraction[Index] >= 1.0) Then
+            Return False
+        End If
+
+    End For
+
+    Return True
+
+End Function
+
+Public Function Encode(Value As Definition) As Text
+
+    Dim Result As Text
+    Dim Index As Number
+    Dim Camera As Text
+
+    If Not Valid(Value) Then
+        Return ""
+    End If
+
+    Result = "SMILE-Sequence-2|" + Text_From_Double(ToDouble(Value.ShotCount)) + "|"
+
+    For Index = 0 To 3
+        Result = Result + Text_From_Double(Value.Scale[Index]) + "|"
+    End For
+
+    For Index = 0 To Value.ShotCount - 1
+
+        Camera = ""
+
+        If Value.Cameras[Index].Saved Then
+            Camera = Shots.Encode(Value.Cameras[Index])
+        End If
+
+        Result = (Result + Text_From_Double(ToDouble(Value.Beat[Index])) + "|" +
+            Text_From_Double(Value.Fraction[Index]) + "|" +
+            Text_From_Double(ToDouble(Text_Length(Camera))) + "|" + Camera)
+    End For
+
+    Return Result
+
+End Function
+
+Public Function Decode(Source As Text, ByRef Value As Definition) As Boolean
+
+    Dim Candidate As Definition
+    Dim Offset As Number
+    Dim Index As Number
+    Dim Scalar As Double
+    Dim Length As Number
+
+    If Text_Slice(Source, 0, 17) <> "SMILE-Sequence-2|" Then
+        Return False
+    End If
+
+    Offset = 17
+
+    If Not Shots.ReadScalar(Source, Offset, Scalar) Then
+        Return False
+    End If
+
+    If (Scalar <> Truncate(Scalar) Or
+        Scalar < 4.0 Or
+        Scalar > 20.0) Then
+        Return False
+    End If
+
+    Candidate.ShotCount = ToNumber(Scalar)
+
+    For Index = 0 To 3
+
+        If Not Shots.ReadScalar(Source, Offset, Candidate.Scale[Index]) Then
+            Return False
+        End If
+
+    End For
+
+    For Index = 0 To Candidate.ShotCount - 1
+
+        If Not Shots.ReadScalar(Source, Offset, Scalar) Then
+            Return False
+        End If
+
+        If (Scalar <> Truncate(Scalar) Or
+            Scalar < 0.0 Or
+            Scalar > 3.0) Then
+            Return False
+        End If
+
+        Candidate.Beat[Index] = ToNumber(Scalar)
+
+        If Not Shots.ReadScalar(Source, Offset, Candidate.Fraction[Index]) Then
+            Return False
+        End If
+
+        If Not Shots.ReadScalar(Source, Offset, Scalar) Then
+            Return False
+        End If
+
+        If (Scalar <> Truncate(Scalar) Or
+            Scalar < 0.0 Or
+            Scalar > 1024.0) Then
+            Return False
+        End If
+
+        Length = ToNumber(Scalar)
+
+        If Offset + Length > Text_Length(Source) Then
+            Return False
+        End If
+
+        If Length > 0 Then
+
+            If Not Shots.Decode(Text_Slice(Source, Offset, Length), Candidate.Cameras[Index]) Then
+                Return False
+            End If
+
+        End If
+
+        Offset = Offset + Length
+    End For
+
+    If Offset <> Text_Length(Source) Or Not Valid(Candidate) Then
+        Return False
+    End If
+
+    Value = Candidate
+
+    Return True
+
+End Function
+
+Public Function WriteDefinition(Key As Text, Value As Definition) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Shots.WriteText(Key, Encode(Value))
+
+    Return Result
+
+End Function
+
+Public Function ReadDefinition(Key As Text, ByRef Value As Definition) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Decode(Shots.ReadText(Key), Value)
+
+    Return Result
+
+End Function
+
+End Module

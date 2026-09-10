@@ -226,7 +226,7 @@ Public Function Encode(Value As Shot) As Text
 End Function
 
 ''' Validate grammar and a finite exponent before the checked conversion can terminate a program.
-Private Function ReadScalar(Source As Text, ByRef Offset As Number,
+Public Function ReadScalar(Source As Text, ByRef Offset As Number,
     ByRef Result As Double) As Boolean
 
     Dim Start As Number
@@ -350,9 +350,9 @@ Public Function Decode(Source As Text, ByRef Result As Shot) As Boolean
 
 End Function
 
-Private Function WriteText(Key As Text, Source As Text) As Boolean
+Public Function WriteText(Key As Text, Source As Text) As Boolean
 
-    Dim Bytes[1024] As Number
+    Dim Bytes[8192] As Number
     Dim Index As Number
     Dim ByteCount As Number
     Dim Status As Number
@@ -360,7 +360,7 @@ Private Function WriteText(Key As Text, Source As Text) As Boolean
 
     ByteCount = Text_Length(Source)
 
-    If ByteCount = 0 Or ByteCount > 1024 Then
+    If ByteCount = 0 Or ByteCount > 8192 Then
         Return False
     End If
 
@@ -376,9 +376,9 @@ Private Function WriteText(Key As Text, Source As Text) As Boolean
 
 End Function
 
-Private Function ReadText(Key As Text) As Text
+Public Function ReadText(Key As Text) As Text
 
-    Dim Bytes[1024] As Number
+    Dim Bytes[8192] As Number
     Dim ByteCount As Number
     Dim Status As Number
     Dim Index As Number

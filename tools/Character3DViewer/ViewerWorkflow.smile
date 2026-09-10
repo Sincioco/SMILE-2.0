@@ -161,6 +161,7 @@ Public Class Session
 
                 If Me.BeatEditing.Preview Then
 
+                    Call BeatEditor.AdvancePreview(Me.BeatEditing, Me.Timing.CameraElapsed)
                     Call ViewerPlayback.PauseForPartyPreview(Me.Playback)
 
                     If Me.BeatEditing.Seek Then
@@ -1211,7 +1212,13 @@ Public Class Session
 
         If Me.Party.Enabled And Me.BeatEditing.Preview Then
 
-            If Me.BeatEditing.Editing And Not Me.BeatEditing.Scrubbing Then
+            If Me.BeatEditing.Editing Then
+
+                If (Not Blocked And
+                    (CameraInput.OrbitHeld Or
+                    CameraInput.PanHeld Or CameraInput.WheelDelta <> 0)) Then
+                    Call BeatEditor.ResumeCamera(Me.BeatEditing)
+                End If
 
                 Me.Session.Ready = ViewerCamera.UpdatePointerInteraction(
                     Me.BeatEditing.Camera, CameraInput, ORBIT_POINTER_DIVISOR,
@@ -1221,6 +1228,7 @@ Public Class Session
                     Me.BeatEditing.Camera.Controls.Panning Or
                     CameraInput.WheelDelta <> 0) Then
                     Me.BeatEditing.Dirty = True
+                    Me.BeatEditing.UseDefault = False
                 End If
 
             End If
@@ -1909,7 +1917,10 @@ Public Class Session
         Call ViewerParty.ResetCameraTracking(Me.Party)
 
         Me.BeatEditing.Seek = False
-        Me.Effects.VisualContinuityEpoch = Me.Effects.VisualContinuityEpoch + 1
+
+        If Not Me.BeatEditing.ContinuousSample Then
+            Me.Effects.VisualContinuityEpoch = Me.Effects.VisualContinuityEpoch + 1
+        End If
 
     End Sub
 
@@ -1935,6 +1946,7 @@ Public Class Session
             Me.BeatEditing.WasPaused, Me.BeatEditing.WasDemo)
 
         Me.BeatEditing.Preview = False
+        Me.BeatEditing.Playing = False
         Me.BeatEditing.Editing = False
         Me.BeatEditing.Dirty = False
         Me.BeatEditing.DragMarker = -1
@@ -2023,6 +2035,8 @@ Public Class Session
 
             Call Me.CloseBeatSequence()
 
+            Me.BeatEditing.Message = "Camera Draft Cancelled"
+
         End If
 
         If Command <> 0 Then
@@ -2036,8 +2050,9 @@ Public Class Session
                 Me.BeatEditing.Reframe = True
                 Me.BeatEditing.ResetRequested = True
                 Me.BeatEditing.Scrubbing = False
-                Me.BeatEditing.Elapsed = Me.BeatEditing.Schedule.Start[Me.BeatEditing.Beat]
                 Me.BeatEditing.Seek = True
+                Me.BeatEditing.Playing = False
+                Me.BeatEditing.ContinuousSample = False
                 Return True
 
             End If
@@ -2046,8 +2061,7 @@ Public Class Session
 
             If (Pointer_X() < 272 Or
                 Pointer_Y() > Me.ViewHeight - 104 Or
-                Pointer_X() >= Me.ViewWidth - 276 Or
-                Me.BeatEditing.Scrubbing) Then
+                Pointer_X() >= Me.ViewWidth - 276) Then
                 Return True
             End If
 

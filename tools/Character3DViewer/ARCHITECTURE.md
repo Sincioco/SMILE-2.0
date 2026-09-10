@@ -8,8 +8,12 @@ the existing Party timing/actors to explicit seek, remembers and restores actor
 clips/times/modes and turn state, resolves Head sockets and performs head/body
 picking with full actor bounds as a fallback. No character-specific pick offsets
 or triangle-picking backend is introduced.
-`ViewerBeatEditor` owns selection, six character identities/four shots each, draft
-and clipboard, one head cuboid per identity, input and the second timeline. The
+`BattleCameraTimeline` owns the four main camera timing weights, up to sixteen extra
+shots, chronological navigation and versioned sequence serialization. It normalizes
+camera intervals to the original battle duration; no action time is remapped.
+`ViewerBeatTimeline` owns timeline gestures, frame stepping/repeat and presentation.
+`ViewerBeatEditor` owns selection, six character identities, per-character sequence
+drafts and clipboard, one head cuboid per identity, preview playback and reset controls. The
 existing `ViewerWorkflow.Session` coordinates those operations; it retains the same
 renderer, Party actor instances, calibration owners and main update/draw order.
 `ViewerCamera.ComposeShot` composes input in an arbitrary saved camera's basis;
@@ -17,8 +21,17 @@ renderer, Party actor instances, calibration owners and main update/draw order.
 The inspector binds the explicitly selected actor, independently of Party.Turn.
 
 During editing the existing battle is paused and explicitly sampled with zero
-animation elapsed. Scrubbing does not advance logical events, counters or audio.
+animation update elapsed. Space advances a separate preview playhead through the
+same action sampler; it does not retime the action or play audio. Continuous playback
+retains equipment VFX history; discontinuous seeking invalidates it once.
+Scrubbing does not advance logical events, counters or audio.
 Save/Cancel restores the prior turn, actor clip times and camera/playback state.
+Reset Beat clears the containing main camera in the draft. Reset All initializes a
+fresh four-beat draft with default timing; no saved data changes until Save.
+Reset All Beat Lengths changes only the four timing weights, retaining cameras and
+extra shots at their relative beat positions.
+`UseDefault` keeps unauthored/reset cameras as runtime policy fallbacks while the
+editor displays a captured view; an actual camera edit adopts that view as a shot.
 Head offsets/sizes auto-save independently of camera drafts; copying a shot cannot
 replace another character's head definition. No asset rebake or new renderer is
 involved. Verified canonical `head` bones are exposed as Head sockets in the
@@ -26,9 +39,16 @@ Valor/Zara/Vrax descriptors; all other socket and placement data is preserved.
 
 `BeatCameraTests` extends the existing hardening fixture with relative-frame motion,
 cross-character copy, connected boundaries, malformed data and real Save Data
-round trips. `CalibrationTests.CheckBeatSequence` seeks existing heroes/Dragon in
+round trips, camera-only retiming, extra markers, Space and reset draft isolation.
+The larger sequence records exposed a native compiler stack-guard fault.
+`MasmEmitter.AllocateStack` probes each page before allocating variable-size local
+or call frames; `CheckLargeFrame` verifies real execution with Number/Double arrays
+and a fractional argument. The refreshed compiler is included in the installed VSIX.
+`CalibrationTests.CheckBeatSequence` seeks existing heroes/Dragon in
 reverse and verifies restored clip names/times. The same fixture runs native and
-generated Web. Visible Viewer checks cover the locally licensed Vrax route.
+generated Web for the initial editor; this timeline enhancement runs NativeOnly.
+Web delivery and gesture validation remain explicitly on hold. Visible Viewer
+checks cover the locally licensed Vrax route.
 The Studio project merely lists the same shared source dependencies; no additional
 Studio workspace or feature phase is introduced by this standalone Viewer slice.
 

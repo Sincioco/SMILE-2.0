@@ -6,6 +6,8 @@ Option Explicit
 Import Smile.Tools.BattleCameraShots As Shots
 Import Smile.Tools.ViewerBeatEditor As Editor
 Import Smile.Tools.ViewerBeatSequence As Sequence
+Import Smile.Tools.BattleCameraTimeline As Track
+Import Smile.Tools.ViewerBeatTimeline As Timeline
 Import Smile.Tools.Character3DViewerCamera As Camera
 Import Smile.Simple3D.Precision3D As P
 Import Smile.Simple3D.PrecisionMath3D As M
@@ -159,8 +161,180 @@ Public Function Run() As Number
     Call Check(Abs(Controls.Live.Position.Z - Controls.Base.Position.Z) > 0.1,
         "Pan Follows Saved Camera Right Axis", Failures)
 
+    Call CheckTimeline(Failures, Value)
+    Call CheckLargeFrame(Failures, 0.375)
+
     Return Failures
 
 End Function
+
+Private Sub CheckTimeline(ByRef Failures As Number, Camera As Shots.Shot)
+
+    Dim Definition As Track.Definition
+    Dim Loaded As Track.Definition
+    Dim Source As Sequence.Timing
+    Dim Timed As Sequence.Timing
+    Dim Edited As Editor.State
+    Dim Extra As Number
+    Dim Result As Boolean
+    Dim Encoded As Text
+
+    Source.Start[1] = 1000
+    Source.Start[2] = 2000
+    Source.Start[3] = 4000
+    Source.Start[4] = 5000
+
+    Call Track.Initialize(Definition)
+    Call Track.Resize(Definition, Source, 0, 1500)
+
+    Timed = Track.Schedule(Definition, Source, 1750)
+
+    Call Check(Timed.Start[1] = 1500 And Timed.Start[2] = 2000 And
+        Timed.Start[4] = 5000, "Camera Boundary Preserves Battle Duration And Later Beats", Failures)
+    Call Check(Source.Start[1] = 1000 And Source.Start[3] = 4000,
+        "Camera Edit Leaves Original Action Schedule Unchanged", Failures)
+
+    Extra = Track.Insert(Definition, Timed, 1750, Camera)
+
+    Call Check(Extra = 4 And Track.Neighbor(Definition, Timed, 1500, 1) = 4 And
+        Track.Neighbor(Definition, Timed, 2000, -1) = 4,
+        "Next And Previous Include Extra Shots", Failures)
+    Call Check(Track.AtTime(Definition, Timed, 1800) = 4,
+        "Inserted Camera Owns Its Interval", Failures)
+
+    Result = Track.MoveShot(Definition, Timed, Extra, 3000)
+
+    Call Check(Result And Track.TimeAt(Definition, Timed, Extra) = 3000,
+        "Extra Marker Moves Across Main Beats", Failures)
+
+    Result = Track.Remove(Definition, 2)
+
+    Call Check(Not Result And Definition.ShotCount = 5, "Main Beats Cannot Be Deleted", Failures)
+
+    Definition.Cameras[0] = Camera
+    Encoded = Track.Encode(Definition)
+    Result = Track.Decode(Encoded, Loaded)
+
+    Call Check(Result And Loaded.ShotCount = 5 And
+        Loaded.Cameras[4].Eye.X = Camera.Eye.X And Loaded.Scale[0] = 1.5,
+        "Sequence And Camera Serialization", Failures)
+
+    Result = Track.WriteDefinition("BeatCamera.Test.Sequence.V2", Definition)
+    Result = Track.ReadDefinition("BeatCamera.Test.Sequence.V2", Loaded) And Result
+
+    Call Check(Result And Track.TimeAt(Loaded, Timed, 4) = 3000,
+        "Actual Atomic Sequence Save Data Round Trip", Failures)
+
+    Result = Track.Decode("SMILE-Sequence-2|21|", Loaded)
+
+    Call Check(Not Result And Loaded.ShotCount = 5,
+        "Malformed Sequence Preserves Existing Data", Failures)
+    Call Check(Timeline.StepTime(0, 30, 1, 5000) = 33 And
+        Timeline.StepTime(33, 30, -1, 5000) = 0,
+        "Forward And Backward Frame Navigation", Failures)
+
+    Edited.Working = Definition
+    Edited.SourceSchedule = Source
+    Edited.Editing = True
+    Edited.Preview = True
+    Edited.Draft = Camera
+
+    Call Editor.SeekTo(Edited, 3000, 4)
+    Call Check(Edited.ShotIndex = 4 And Edited.Editing And Edited.Scrubbing,
+        "Marker Navigation Keeps Edit Mode", Failures)
+
+    Edited.Camera.Live.Position = P.Vector(10.0, 20.0, 30.0)
+    Edited.Camera.Live.Target = P.Vector(0.0, 20.0, 100.0)
+    Edited.Camera.Live.FovDegrees = 40.0
+    Edited.Heads[1].Z = 100.0
+
+    Call Editor.ResumeCamera(Edited)
+    Call Check(Not Edited.Scrubbing And Edited.Camera.Base.Position.X = 10.0,
+        "Camera Controls Resume From Scrubbed View", Failures)
+
+    Result = Editor.Keyboard(Edited, True, True, KEY_SPACE)
+
+    Call Editor.AdvancePreview(Edited, 100)
+    Call Check(Result And Edited.Playing And Edited.Elapsed = 3100 And
+        Edited.Seek And Edited.ContinuousSample,
+        "Space Plays Beat Sequence From Current Position", Failures)
+
+    Result = Editor.Keyboard(Edited, True, True, KEY_SPACE)
+
+    Call Editor.AdvancePreview(Edited, 100)
+    Call Check(Not Edited.Playing And Edited.Elapsed = 3100,
+        "Space Pauses Beat Sequence Without Advancing", Failures)
+
+    Edited.Tracks[0] = Definition
+    Edited.References[0].Offset.X = 0.375
+
+    Call Editor.ResetLengths(Edited)
+
+    Timed = Track.Schedule(Edited.Working, Source, 0)
+
+    Call Check(Timed.Start[1] = 1000 And Timed.Start[2] = 2000 And
+        Timed.Start[3] = 4000 And Edited.Working.ShotCount = 5 And
+        Edited.Working.Cameras[0].Eye.X = Definition.Cameras[0].Eye.X And
+        Edited.Working.Cameras[4].Saved And Edited.Working.Cameras[4].Motion = Edited.Draft.Motion And
+        Edited.Tracks[0].Scale[0] = 1.5 And Edited.References[0].Offset.X = 0.375,
+        "Reset Lengths Preserves Cameras Extra Shots Heads And Saved Timing", Failures)
+
+    Call Track.Resize(Edited.Working, Source, 0, 1500)
+    Call Editor.ResetDefaults(Edited, False)
+    Call Editor.StoreDraft(Edited)
+    Call Check(Edited.ShotIndex = 2 And Edited.UseDefault And
+        Not Edited.Working.Cameras[2].Saved And Edited.Working.Cameras[0].Saved And
+        Edited.Working.ShotCount = 5 And Edited.Working.Scale[0] = 1.5,
+        "Reset Beat Restores Only Current Main Camera In Draft", Failures)
+
+    Call Editor.ResetDefaults(Edited, True)
+    Call Editor.StoreDraft(Edited)
+
+    Timed = Track.Schedule(Edited.Working, Source, 0)
+
+    Call Check(Edited.Working.ShotCount = 4 And Not Edited.Working.Cameras[0].Saved And
+        Not Edited.Working.Cameras[2].Saved And Timed.Start[1] = 1000 And
+        Timed.Start[4] = 5000 And Edited.Tracks[0].ShotCount = 5 And
+        Edited.Tracks[0].Cameras[0].Saved And Edited.References[0].Offset.X = 0.375,
+        "Reset All Restores Four Default Cameras And Timing Without Changing Saves Or Heads", Failures)
+
+    Encoded = Track.Encode(Edited.Working)
+    Result = Track.Decode(Encoded, Loaded)
+
+    Call Check(Result And Loaded.ShotCount = 4 And Not Loaded.Cameras[0].Saved,
+        "Default Camera Fallback Survives Sequence Serialization", Failures)
+
+    Edited.Elapsed = 3990
+    Edited.Playing = True
+
+    Call Editor.AdvancePreview(Edited, 100)
+
+    Result = Editor.Keyboard(Edited, True, True, KEY_SPACE)
+
+    Call Check(Not Edited.Playing And Edited.ShotIndex = 3,
+        "Pause Selects Camera Under Playhead After Crossing Beats", Failures)
+
+    Result = Track.Remove(Definition, 4)
+
+    Call Check(Result And Definition.ShotCount = 4,
+        "Optional Camera Marker Removal", Failures)
+
+End Sub
+
+''' Native regression: noncontiguous local-array initialization used to skip a
+''' Windows stack guard page before any SMILE statement in this procedure ran.
+Private Sub CheckLargeFrame(ByRef Failures As Number, Fraction As Double)
+
+    Dim Numbers[8192] As Number
+    Dim Fractions[8192] As Double
+
+    Numbers[8191] = 37
+    Fractions[8191] = Fraction
+
+    Call Check(Numbers[0] = 0 And Fractions[0] = 0.0 And
+        Numbers[8191] = 37 And Fractions[8191] = 0.375,
+        "Large Native Stack Frame Preserves Locals And Double Arguments", Failures)
+
+End Sub
 
 End Module

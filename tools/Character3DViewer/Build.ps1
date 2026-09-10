@@ -40,6 +40,8 @@ $viewerSources = @(
     'BattleAudio.smile',
     'BattleCamera.smile',
     'BattleCameraShots.smile',
+    'BattleCameraTimeline.smile',
+    'ViewerBeatTimeline.smile',
     'ViewerBeatSequence.smile',
     'ViewerBeatEditor.smile',
     'DragonPresence.smile',

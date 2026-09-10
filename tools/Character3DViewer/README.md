@@ -13,7 +13,7 @@ the current camera; dragging begins panning after a small movement threshold.
 Choose **Beat 1–4** to pause and edit that beat's starting composition with middle
 drag (orbit), left drag (pan), wheel (zoom), or arrow keys (orbit). Right-click or
 Enter resets the draft to its opening composition. **Save** stores the selected
-character's shot, closes the extra timeline and restores the prior battle playback.
+character's entire camera sequence draft, closes the extra timeline and restores the prior battle playback.
 **Cancel** restores playback without saving the camera. Save or cancel a draft before
 switching characters/tabs. An asterisk marks a saved beat.
 
@@ -26,12 +26,46 @@ added cinematic motion: the shot still follows its attacker/target reference fra
 its neighboring shot has been saved. A reciprocal connection traverses the shared
 boundary once. Unauthored beats continue using the existing battle camera policy.
 
-The additional **Beat Sequence** timeline sits above the animation timeline. Drag it
-to seek the actual four-beat choreography and view camera interpolation. Click a beat
-button again to resume editing its start. **Preview Beats** also opens this timeline
-without changing saved shots; press it again to close. The Dragon's four segments
-cover anticipation, wind-up, attack/impact and recovery within its existing attack
-clip. Vrax and the heroes retain their existing approach, attack and return timing.
+The additional **Beat Sequence** timeline sits above the animation timeline. Its
+Desktop controls match the animation timeline: **0-Frame**, **< Beat**, **Beat >**,
+**< Frame** and **Frame >**. Beat navigation visits main and extra markers in time
+order. Frame buttons step sequence time at the attacker's clip sample rate; holding
+one repeats. **Space** plays/pauses from the playhead, stops at the sequence end,
+and restarts from zero when pressed there. Pausing selects the shot under the playhead.
+Scrub, then pan/orbit/zoom or use arrow keys to edit from the displayed view.
+
+Drag a cyan main marker (2–4) to change adjacent camera durations. Beat 1 starts at
+zero and the total battle duration stays fixed. **Camera timing only** changes;
+animation, movement, impacts, audio, VFX cues and gameplay counters keep their
+existing schedule. The Dragon's four segments cover anticipation, wind-up,
+attack/impact and recovery within its existing attack clip. Vrax and the heroes
+retain their existing approach, attack and return timing. Preview samples those
+existing actions without playing audio or advancing the live battle's turn.
+
+Use **Add Shot** between markers for up to 16 extra camera shots. Green markers
+can move between main beats; **Delete Shot** removes only extra shots. Original
+Beats 1–4 cannot be deleted. Motion and connections use each shot's interval, including
+extra shots. Changing main durations moves their contained extra shots proportionally.
+Markers require a little space from neighbors when inserted/moved (16 milliseconds).
+
+**Reset Beat** restores the current main beat's built-in camera, motion and
+connection policy, retaining timeline timing and extra shots. From an extra shot it
+selects and resets the containing main beat. **Reset All Beats** restores all four
+built-in cameras and default timing and removes extra shots from the draft. Both
+wait for **Save**; **Cancel** preserves saved sequences. Neither changes head cuboids,
+poses, another character's settings or battle action timing. Built-in defaults remain
+dynamic camera-policy fallbacks, rather than a frozen snapshot of the current view.
+
+**Reset All Beat Lengths** restores only the default four camera durations. It
+preserves all camera compositions, motion/connections and extra shots. Extra shots
+keep their proportional positions within the restored main beats. Save applies the
+timing reset; Cancel preserves the previously saved lengths.
+
+**Preview Beats** opens the timeline without editing; press it again to close.
+Timing/shot edits require Beat Edit mode. The new timeline controls are validated
+and delivered on Desktop first. Web adoption and publication are on hold; the
+[checkpoint](../../docs/implementation/party-beat-camera-checkpoint.md) records the
+shared source changes and browser follow-through still required.
 
 Cyan **Attacker** and yellow **Target** cuboids start at each actor's Head socket;
 missing sockets use an upper-bounds estimate. Drag a cuboid to offset its center in
@@ -48,9 +82,13 @@ They therefore adapt to formation translation, rotation and changed separation.
 Near-coincident heads use a deterministic one-unit forward baseline. Render submission
 retains the existing Precision3D boundary and GPU float precision limits.
 
-Shots and head cuboids use separate checksummed **Save Data** records under the
-Viewer ApplicationId (`BattleCamera.<Character>.Beat1` through `Beat4` and
-`BattleCamera.Head.<Character>`). Native storage and each Web origin are independent;
+Camera sequences and head cuboids use separate checksummed **Save Data** records under the
+Viewer ApplicationId (`BattleCamera.Sequence.<Character>.V2` and
+`BattleCamera.Head.<Character>`). The sequence stores all timing weights, markers and
+shots in one envelope. If no valid V2 sequence exists, the older
+`BattleCamera.<Character>.Beat1` through `Beat4` records are read as defaults;
+they are not deleted or overwritten. A saved V2 reset intentionally takes precedence
+over older custom shots. Native storage and each Web origin are independent;
 this slice does not transfer camera saves between them. Pose-calibration JSON,
 canonical models and gameplay counters are not camera storage.
 

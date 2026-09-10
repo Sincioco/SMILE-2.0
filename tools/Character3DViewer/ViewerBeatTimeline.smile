@@ -1,0 +1,264 @@
+''' Timeline gestures and presentation shared by the Desktop beat editor.
+Module Smile.Tools.ViewerBeatTimeline
+
+Option Explicit
+
+Import Smile.Tools.BattleCameraTimeline As Track
+Import Smile.Tools.ViewerBeatSequence As Sequence
+Import Smile.UI.Controls As UI
+
+Public Type State
+    DragKind As Number
+    DragIndex As Number
+    OutputTime As Number
+    OutputIndex As Number
+    Clock As Number
+    RepeatAt As Number
+    RepeatDirection As Number
+    FrameRate As Number
+End Type
+
+Private Function Inside(X As Number, Y As Number, StartX As Number,
+    StartY As Number, Width As Number, Height As Number) As Boolean
+
+    Dim Result As Boolean
+
+    Result = X >= StartX And X < StartX + Width And Y >= StartY And Y < StartY + Height
+
+    Return Result
+
+End Function
+
+Public Function StepTime(Time As Number, Rate As Number, Direction As Number,
+    Duration As Number) As Number
+
+    Dim Frame As Number
+    Dim Result As Number
+
+    Rate = Max(1, Rate)
+    Frame = (Time * Rate + 500) / 1000 + Direction
+    Result = Min(Max((Frame * 1000 + Rate / 2) / Rate, 0), Duration - 1)
+
+    Return Result
+
+End Function
+
+''' Commands: 20 seek, 21 select, 22 changed timing, 23 add, 24 delete; 100 consumes.
+Public Function Pointer(ByRef Value As State, ByRef Definition As Track.Definition,
+    Source As Sequence.Timing, Time As Number, Editing As Boolean,
+    Width As Number, Height As Number) As Number
+
+    Dim X As Number
+    Dim Y As Number
+    Dim BarY As Number
+    Dim BarWidth As Number
+    Dim Timed As Sequence.Timing
+    Dim Index As Number
+    Dim Position As Number
+    Dim Distance As Number
+    Dim Nearest As Number
+    Dim TargetTime As Number
+    Dim Changed As Boolean
+
+    X = Pointer_X()
+    Y = Pointer_Y()
+    BarY = Height - 132
+    BarWidth = Max(120, Width - 306)
+    Timed = Track.Schedule(Definition, Source, Time)
+    TargetTime = Min(Max((X - 18) * Timed.Start[4] / BarWidth, 0), Timed.Start[4] - 1)
+
+    If Not Pointer_Held(POINTER_PRIMARY) Then
+        Value.DragKind = 0
+        Value.RepeatDirection = 0
+    End If
+
+    If Value.DragKind = 1 Then
+
+        Value.OutputTime = TargetTime
+        Return 20
+
+    Else If Value.DragKind = 2 Then
+
+        Call Track.Resize(Definition, Source, Value.DragIndex - 1,
+            TargetTime - Timed.Start[Value.DragIndex - 1])
+
+        Timed = Track.Schedule(Definition, Source, Time)
+        Value.OutputIndex = Value.DragIndex
+        Value.OutputTime = Timed.Start[Value.DragIndex]
+        Return 22
+
+    Else If Value.DragKind = 3 Then
+
+        Changed = Track.MoveShot(Definition, Timed, Value.DragIndex, TargetTime)
+        Value.OutputIndex = Value.DragIndex
+        Value.OutputTime = Track.TimeAt(Definition, Timed, Value.DragIndex)
+
+        If Changed Then
+            Return 22
+        End If
+
+        Return 100
+
+    End If
+
+    If Inside(X, Y, 18, Height - 170, BarWidth, 30) Then
+
+        If Pointer_Pressed(POINTER_PRIMARY) Then
+
+            If X < 80 Then
+                Value.OutputTime = 0
+                Return 20
+            Else If X < 160 Then
+                Value.OutputIndex = Track.Neighbor(Definition, Timed, Time, -1)
+            Else If X < 240 Then
+                Value.OutputIndex = Track.Neighbor(Definition, Timed, Time, 1)
+            Else If X < 308 Then
+                Value.RepeatDirection = -1
+            Else If X < 376 Then
+                Value.RepeatDirection = 1
+            Else If X < 462 And Editing Then
+                Return 23
+            Else If X < 548 And Editing Then
+                Return 24
+            Else
+                Return 100
+            End If
+
+            If X < 240 Then
+
+                If Value.OutputIndex >= 0 Then
+                    Value.OutputTime = Track.TimeAt(Definition, Timed, Value.OutputIndex)
+                    Return 21
+                End If
+
+                Return 100
+
+            End If
+
+            Value.RepeatAt = Value.Clock + 350
+            Value.OutputTime = StepTime(Time, Value.FrameRate, Value.RepeatDirection, Timed.Start[4])
+            Return 20
+
+        End If
+
+        If Value.RepeatDirection <> 0 And Value.Clock >= Value.RepeatAt Then
+
+            Value.RepeatAt = Value.Clock + 60
+            Value.OutputTime = StepTime(Time, Value.FrameRate, Value.RepeatDirection, Timed.Start[4])
+            Return 20
+
+        End If
+
+        Return 100
+
+    End If
+
+    If Inside(X, Y, 12, BarY - 6, BarWidth + 12, 36) Then
+
+        If Pointer_Pressed(POINTER_PRIMARY) Then
+
+            Nearest = -1
+            Distance = 8
+
+            For Index = 0 To Definition.ShotCount - 1
+
+                Position = 18 + Track.TimeAt(Definition, Timed, Index) * BarWidth / Max(1, Timed.Start[4])
+
+                If Abs(X - Position) < Distance Then
+                    Nearest = Index
+                    Distance = Abs(X - Position)
+                End If
+
+            End For
+
+            If Nearest >= 0 Then
+
+                Value.OutputIndex = Nearest
+                Value.OutputTime = Track.TimeAt(Definition, Timed, Nearest)
+
+                If Editing And Nearest > 0 Then
+
+                    Value.DragKind = 2
+
+                    If Nearest >= 4 Then
+                        Value.DragKind = 3
+                    End If
+
+                    Value.DragIndex = Nearest
+
+                End If
+
+                Return 21
+
+            End If
+
+            Value.DragKind = 1
+            Value.OutputTime = TargetTime
+            Return 20
+
+        End If
+
+        Return 100
+
+    End If
+
+    Return 0
+
+End Function
+
+Public Sub Draw(Value As State, Definition As Track.Definition,
+    Source As Sequence.Timing, Time As Number, Selected As Number,
+    Editing As Boolean, Width As Number, Height As Number)
+
+    Dim Timed As Sequence.Timing
+    Dim BarY As Number
+    Dim BarWidth As Number
+    Dim Index As Number
+    Dim Position As Number
+    Dim Tint As Number
+    Dim Label As Text
+
+    BarY = Height - 132
+    BarWidth = Max(120, Width - 306)
+    Timed = Track.Schedule(Definition, Source, Time)
+
+    Fill Rectangle 12, Height - 192, BarWidth + 12, 92, Rgb(6, 16, 34) Opacity 94
+    Draw Text "Beat Sequence - Camera Timing Only; Space To Play / Pause" At 18, Height - 190 Size 11 Color CYAN
+
+    Call UI.DrawButton(18, Height - 170, 62, 24, "0-Frame", False)
+    Call UI.DrawButton(86, Height - 170, 74, 24, "< Beat", False)
+    Call UI.DrawButton(166, Height - 170, 74, 24, "Beat >", False)
+    Call UI.DrawButton(246, Height - 170, 62, 24, "< Frame", Value.RepeatDirection < 0)
+    Call UI.DrawButton(314, Height - 170, 62, 24, "Frame >", Value.RepeatDirection > 0)
+    Call UI.DrawButton(382, Height - 170, 80, 24, "Add Shot", False)
+    Call UI.DrawButton(468, Height - 170, 80, 24, "Delete Shot", False)
+
+    Fill Rectangle 18, BarY, BarWidth, 24, Rgb(18, 35, 58) Opacity 88
+    Fill Rectangle 18, BarY, Time * BarWidth / Max(1, Timed.Start[4]), 24, Rgb(16, 102, 136) Opacity 90
+
+    For Index = 0 To Definition.ShotCount - 1
+
+        Position = 18 + Track.TimeAt(Definition, Timed, Index) * BarWidth / Max(1, Timed.Start[4])
+        Tint = GREEN
+        Label = "+"
+
+        If Index < 4 Then
+            Tint = CYAN
+            Label = Text_Slice("1234", Index, 1)
+        End If
+
+        If Editing And Index = Selected Then
+            Tint = YELLOW
+        End If
+
+        Fill Rectangle Position - 1, BarY - 5, 3, 34, Tint
+        Draw Text Label At Position + 3, BarY - 13 Size 10 Color Tint
+    End For
+
+    Draw Number Time At 24, BarY + 3 Size 10 Color WHITE
+    Draw Number Timed.Start[4] At 18 + BarWidth - 48, BarY + 3 Size 10 Color WHITE
+    Draw Text "Drag Cyan Beat Boundaries Or Green Shot Markers; Main Beats Cannot Be Deleted" At 560, Height - 162 Size 10 Color LIGHT_GRAY
+
+End Sub
+
+End Module
