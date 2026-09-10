@@ -5,6 +5,8 @@ SMILE stands for **Simple Modern and Intuitive Language for Everyone**.
 The accepted [SMILE 2.0 Studio design](2026-09-09%20-%20SMILE%202.0%20Studio.md)
 governs the next integrated host, general Scene Editor and reusable documents.
 See the root README for current implementation status and the first bounded slice.
+The [current Studio visual design](studio-visual-design.md) records Sin's September 10
+reference image, permanent visual direction and section-by-section UI interpretation.
 Current contracts include [mandatory startup](startup-presentation.md),
 [Double](../language/double.md), [precise 3D](../libraries/precision3d-boundary.md)
 and [planar reflections](renderer3d-reflections.md).

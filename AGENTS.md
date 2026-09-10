@@ -18,6 +18,22 @@ their proper owners; Git history is the archive. Do not create closed-bug dossie
 
 These instructions apply to the entire SMILE 2.0 repository.
 
+### Permanent Studio working visual design
+
+Sin designated [the Studio working visual design](docs/architecture/studio-visual-design.md)
+and its [original reference image](docs/architecture/images/smile-2.0-studio-working-design-2026-09-10.jpg)
+on September 10, 2026. Read that breakdown before Studio UI design or implementation.
+This is the current visual authority until Sin explicitly revises or replaces it:
+one dark navy modular Studio window, top workspace navigation, left Scene Explorer
+and Asset Browser, central live viewport, adjacent Inspector, right Scene/Code/Visual
+panel, lower Timeline/Sequence and bottom status bar. Preserve that composition
+and visual direction as implementation advances in bounded slices.
+The September 9 architecture remains authoritative for ownership and runtime contracts.
+The image's `SMILE 3.0` code label is mockup wording, not a product rename or proof
+of supported grammar. Use SMILE 2.0 Studio branding and the canonical official logo.
+Visible controls and the documented interpretations describe design intent, not
+implemented capabilities or authorization to implement the entire product at once.
+
 ## Permanent task progress reporting
 
 - When beginning a new task, state what the task is in a bolded bulleted list.

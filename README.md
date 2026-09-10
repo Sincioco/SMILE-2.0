@@ -140,6 +140,11 @@ VFX and Audio workspaces. It supersedes battle-only editor plans and separate
 required editor applications. Existing Viewer and labs remain working standalone
 tools until their workflows are hosted through the same implementations.
 
+Sin's September 10 [current working visual design and UI breakdown](docs/architecture/studio-visual-design.md)
+preserve the [original Studio reference image](docs/architecture/images/smile-2.0-studio-working-design-2026-09-10.jpg).
+This is the visual target for Studio until Sin explicitly changes it; pictured
+controls describe design intent and do not establish implementation status.
+
 The current compiler/runtime supports shared 2D/3D, animation, calibrated equipment,
 Fire/Lightning, audio, persistence, mandatory startup branding and Double precision.
 Studio hosting, general scene documents, reusable saved-effect/audio definitions,
