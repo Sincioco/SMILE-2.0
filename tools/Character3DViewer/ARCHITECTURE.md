@@ -3,7 +3,13 @@
 ## Party Beat Camera Ownership
 
 `BattleCameraShots` owns actor-independent Double reference frames, motion, linked
-shot interpolation and bounded Save Data serialization. `ViewerBeatSequence` adapts
+shot interpolation and bounded Save Data serialization. Shot-frame version 2 keeps
+longitudinal distance unbounded in the horizontal plane but clamps its vertical
+head-baseline influence to the attacker/target span. This preserves distant camera
+placement without multiplying animated head-height changes. Version-1 shots within
+a bounded longitudinal margin retain their original coordinate semantics; extreme
+version-1 shots use the current built-in camera until an editor interaction captures
+them in version 2. `ViewerBeatSequence` adapts
 the existing Party timing/actors to explicit seek, remembers and restores actor
 clips/times/modes and turn state, resolves Head sockets and performs head/body
 picking with full actor bounds as a fallback. No character-specific pick offsets
@@ -38,7 +44,8 @@ involved. Verified canonical `head` bones are exposed as Head sockets in the
 Valor/Zara/Vrax descriptors; all other socket and placement data is preserved.
 
 `BeatCameraTests` extends the existing hardening fixture with relative-frame motion,
-cross-character copy, connected boundaries, malformed data and real Save Data
+moving-head vertical stability, versioned legacy fallback, cross-character copy,
+connected boundaries, malformed data and real Save Data
 round trips, camera-only retiming, extra markers, Space and reset draft isolation.
 The larger sequence records exposed a native compiler stack-guard fault.
 `MasmEmitter.AllocateStack` probes each page before allocating variable-size local

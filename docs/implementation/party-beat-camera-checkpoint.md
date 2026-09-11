@@ -6,6 +6,34 @@ implemented, built and validated with focused automated, visible tool and explic
 human gesture checks. The commit containing this checkpoint is the Desktop delivery
 milestone. Web follow-through remains on hold.
 
+## Camera Frame Hardening Addendum (2026-09-11)
+
+Desktop playback reproduced an authored Beat 3 camera rising far above the fight as
+Vrax entered his hit animation, then cutting to the fixed Beat 4 composition. This was
+not interpolation across the Beat 3/4 boundary: Beat 3 was a saved Orbit Right shot
+with a Cut connection. Its version-1 eye was about nineteen attacker-to-target lengths
+behind the attacker. The old frame used that same unbounded longitudinal value against
+the animated vertical head delta, amplifying an ordinary Vrax head drop into the large
+camera rise. Beat 4 then correctly applied its explicit cut to the built-in fixed shot.
+
+Shot frame version 2 keeps the authored longitudinal value for horizontal placement
+but clamps only its vertical contribution to the span between the two heads. Newly
+captured and edited shots use `SMILE-Shot-2`. Existing version-1 shots within a bounded
+longitudinal margin keep their original frame math. Extreme version-1 shots, including
+the reproduced Beat 3 data, use the live built-in camera until editing recaptures them
+as version 2. Sequence envelopes, timing, connections, actor animation and head-cuboid
+storage remain unchanged.
+
+Focused validation passed after the change. The NativeOnly Viewer hardening run
+completed all 42 isolated calibration checks and 58 native graphics, pointer-input
+and audio-focus checks, including the new far-camera moving-head and versioned legacy
+regressions. Release builds succeeded for both `Character3DViewer.exe` (110 assets)
+and the shared `SmileStudio.exe` consumer (111 assets). In a fresh rebuilt Viewer,
+the previously unsafe interval reported camera Y 85 at frames 1158 and 1200 while
+Vrax's animated head changed height; Beat 4 reported Y 85 at frame 1238. The prior
+reproduction rose from Y 472 to Y 1337 before that boundary. The validation draft
+was cancelled, so no user camera sequence was saved or deleted.
+
 ## Current Contract
 
 Party Dragon and Party Vrax use the existing renderer, actors and choreography.

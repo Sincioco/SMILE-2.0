@@ -8,6 +8,7 @@ Import Smile.Simple3D.PrecisionMath3D As M
 
 Public Type Shot
     Saved As Boolean
+    FrameVersion As Number
     Eye As P.Vector3
     Aim As P.Vector3
     Fov As Double
@@ -27,7 +28,9 @@ Public Type ReferenceFrame
     Length As Double
 End Type
 
-''' X is lateral world distance, Y is height above the head baseline, Z is its fraction.
+''' X is lateral world distance, Y is height above the bounded head baseline, Z is
+''' its unbounded horizontal fraction. Bounded vertical influence keeps distant
+''' cameras from amplifying animated head-height changes.
 Public Function Frame(Attacker As P.Vector3, Target As P.Vector3) As ReferenceFrame
 
     Dim Result As ReferenceFrame
@@ -60,13 +63,25 @@ Public Function Relative(Point As P.Vector3, Basis As ReferenceFrame) As P.Vecto
     Result.Z = ((Delta.X * Basis.Baseline.X + Delta.Z * Basis.Baseline.Z) /
         (Basis.Length * Basis.Length))
     Result.X = M.Dot(Delta, Basis.Right)
-    Result.Y = Delta.Y - Basis.Baseline.Y * Result.Z
+    Result.Y = Delta.Y - Basis.Baseline.Y * Clamp(Result.Z, 0.0, 1.0)
 
     Return Result
 
 End Function
 
 Public Function World(Point As P.Vector3, Basis As ReferenceFrame) As P.Vector3
+
+    Dim Result As P.Vector3
+
+    Result = M.Add(Basis.Origin, M.Add(M.Scale(Basis.Right, Point.X),
+        M.Scale(Basis.Baseline, Point.Z)))
+    Result.Y = Basis.Origin.Y + Basis.Baseline.Y * Clamp(Point.Z, 0.0, 1.0) + Point.Y
+
+    Return Result
+
+End Function
+
+Private Function LegacyWorld(Point As P.Vector3, Basis As ReferenceFrame) As P.Vector3
 
     Dim Result As P.Vector3
 
@@ -88,6 +103,7 @@ Public Sub Capture(ByRef Value As Shot, Camera As P.Camera3D,
     Value.Aim = Relative(Camera.Target, Basis)
     Value.Fov = Camera.FovDegrees
     Value.Saved = True
+    Value.FrameVersion = 2
 
 End Sub
 
@@ -100,10 +116,21 @@ Public Function Resolve(Value As Shot, Attacker As P.Vector3, Target As P.Vector
     Dim Rotation As P.Vector3
     Dim Amount As Double
 
+    If Not CanResolve(Value) Then
+        Return Lens
+    End If
+
     Basis = Frame(Attacker, Target)
     Result = Lens
-    Result.Position = World(Value.Eye, Basis)
-    Result.Target = World(Value.Aim, Basis)
+
+    If Value.FrameVersion = 1 Then
+        Result.Position = LegacyWorld(Value.Eye, Basis)
+        Result.Target = LegacyWorld(Value.Aim, Basis)
+    Else
+        Result.Position = World(Value.Eye, Basis)
+        Result.Target = World(Value.Aim, Basis)
+    End If
+
     Result.UpDirection = P.Vector(0.0, 1.0, 0.0)
     Result.FovDegrees = Value.Fov
     Amount = Clamp(Progress, 0.0, 1.0)
@@ -146,18 +173,18 @@ Public Function ResolveLinked(Value As Shot, Previous As Shot, Following As Shot
 
     Result = Lens
 
-    If Not Value.Saved Then
+    If Not CanResolve(Value) Then
         Return Result
     End If
 
     Result = Resolve(Value, Attacker, Target, Lens, Progress)
 
     If (Value.Connection = -1 And
-        Previous.Saved And
+        CanResolve(Previous) And
         Previous.Connection <> 1) Then
         Other = Resolve(Previous, Attacker, Target, Lens, 1.0)
         Result = Blend(Other, Result, Progress)
-    Else If Value.Connection = 1 And Following.Saved Then
+    Else If Value.Connection = 1 And CanResolve(Following) Then
         Other = Resolve(Following, Attacker, Target, Lens, 0.0)
         Result = Blend(Result, Other, Progress)
     End If
@@ -188,11 +215,27 @@ Public Function Valid(Value As Shot) As Boolean
 
     Dim Result As Boolean
 
-    Result = (Value.Fov >= 10.0 And Value.Fov <= 160.0 And
+    Result = ((Value.FrameVersion = 1 Or Value.FrameVersion = 2) And
+        Value.Fov >= 10.0 And Value.Fov <= 160.0 And
         Value.Motion >= 0 And Value.Motion <= 4 And
         Value.Connection >= -1 And Value.Connection <= 1 And
         M.Length(Value.Eye) < 100000.0 And M.Length(Value.Aim) < 100000.0 And
         M.Distance(Value.Eye, Value.Aim) > 0.000001)
+
+    Return Result
+
+End Function
+
+''' Shot-1 stored vertical compensation against an unbounded horizontal fraction.
+''' Large fractions can turn normal animated head motion into extreme camera motion.
+Public Function CanResolve(Value As Shot) As Boolean
+
+    Dim Result As Boolean
+
+    Result = (Value.Saved And Valid(Value) And
+        (Value.FrameVersion = 2 Or
+        (Value.Eye.Z >= -0.25 And Value.Eye.Z <= 1.25 And
+        Value.Aim.Z >= -0.25 And Value.Aim.Z <= 1.25)))
 
     Return Result
 
@@ -212,12 +255,19 @@ End Function
 Public Function Encode(Value As Shot) As Text
 
     Dim Result As Text
+    Dim Prefix As Text
 
     If Not Valid(Value) Then
         Return ""
     End If
 
-    Result = ("SMILE-Shot-1|" + VectorText(Value.Eye) + VectorText(Value.Aim) +
+    Prefix = "SMILE-Shot-2|"
+
+    If Value.FrameVersion = 1 Then
+        Prefix = "SMILE-Shot-1|"
+    End If
+
+    Result = (Prefix + VectorText(Value.Eye) + VectorText(Value.Aim) +
         Text_From_Double(Value.Fov) + "|" + Text_From_Double(ToDouble(Value.Motion)) + "|" +
         Text_From_Double(ToDouble(Value.Connection)) + "|")
 
@@ -313,7 +363,8 @@ Public Function Decode(Source As Text, ByRef Result As Shot) As Boolean
     Dim Offset As Number
     Dim Index As Number
 
-    If Text_Slice(Source, 0, 13) <> "SMILE-Shot-1|" Then
+    If (Text_Slice(Source, 0, 13) <> "SMILE-Shot-1|" And
+        Text_Slice(Source, 0, 13) <> "SMILE-Shot-2|") Then
         Return False
     End If
 
@@ -339,6 +390,7 @@ Public Function Decode(Source As Text, ByRef Result As Shot) As Boolean
     Candidate.Motion = ToNumber(Values[7])
     Candidate.Connection = ToNumber(Values[8])
     Candidate.Saved = True
+    Candidate.FrameVersion = Text_Code_At(Source, 11) - 48
 
     If Not Valid(Candidate) Then
         Return False

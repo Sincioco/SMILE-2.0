@@ -77,15 +77,21 @@ follow animated head sockets; cuboid axes and offsets follow the actor's facing.
 The cuboid is a framing reference, not collision geometry or an animation edit.
 
 Camera position and aim use Double coordinates relative to the two head centers,
-with lateral distance, height above their baseline and fractional distance along it.
-They therefore adapt to formation translation, rotation and changed separation.
-Near-coincident heads use a deterministic one-unit forward baseline. Render submission
-retains the existing Precision3D boundary and GPU float precision limits.
+with lateral distance, height above their baseline and fractional horizontal distance
+along it. Horizontal distance remains unbounded for wide and rear camera placement.
+Its vertical influence is limited to the span between the heads, so a distant camera
+does not amplify animated head-height changes into a vertical flight. The coordinates
+still adapt to formation translation, rotation and changed separation. Near-coincident
+heads use a deterministic one-unit forward baseline. Render submission retains the
+existing Precision3D boundary and GPU float precision limits.
 
 Camera sequences and head cuboids use separate checksummed **Save Data** records under the
 Viewer ApplicationId (`BattleCamera.Sequence.<Character>.V2` and
 `BattleCamera.Head.<Character>`). The sequence stores all timing weights, markers and
-shots in one envelope. If no valid V2 sequence exists, the older
+shots in one envelope. Newly captured cameras use the stable `SMILE-Shot-2` frame.
+Ordinary `SMILE-Shot-1` cameras retain their original coordinates; legacy cameras
+with an extreme longitudinal fraction fall back to the built-in camera and are
+recaptured as version 2 when edited. If no valid V2 sequence exists, the older
 `BattleCamera.<Character>.Beat1` through `Beat4` records are read as defaults;
 they are not deleted or overwritten. A saved V2 reset intentionally takes precedence
 over older custom shots. Native storage and each Web origin are independent;

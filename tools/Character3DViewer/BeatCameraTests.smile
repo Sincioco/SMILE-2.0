@@ -41,6 +41,7 @@ Public Function Run() As Number
     Dim Controls As Camera.State
     Dim Previous As Shots.Shot
     Dim Following As Shots.Shot
+    Dim Legacy As Shots.Shot
     Dim Index As Number
 
     Attacker = P.Vector(0.125, 80.375, 10.625)
@@ -72,7 +73,33 @@ Public Function Run() As Number
     Text = Shots.Encode(Value)
     Result = Shots.Decode(Text, Decoded)
 
-    Call Check(Result And Decoded.Eye.X = Value.Eye.X And Decoded.Fov = Value.Fov, "Binary64 Text Round Trip", Failures)
+    Call Check(Result And Text_Slice(Text, 0, 13) = "SMILE-Shot-2|" And
+        Decoded.FrameVersion = 2 And Decoded.Eye.X = Value.Eye.X And
+        Decoded.Fov = Value.Fov, "Stable Binary64 Text Round Trip", Failures)
+
+    Call CheckStableVerticalFrame(Failures, First)
+
+    Result = Shots.Decode("SMILE-Shot-1|0|0|-18|0|0|1|40|0|0|", Legacy)
+
+    Call Check(Result And Not Shots.CanResolve(Legacy),
+        "Unsafe Legacy Shot Is Rejected For Playback", Failures)
+
+    Resolved = Shots.Resolve(Legacy, Attacker, Target, First, 0.0)
+
+    Call Check(M.Distance(Resolved.Position, First.Position) < 1e-9 And
+        M.Distance(Resolved.Target, First.Target) < 1e-9,
+        "Unsafe Legacy Shot Uses Built In Camera", Failures)
+
+    Result = Shots.Decode("SMILE-Shot-1|0|10|-0.2|0|5|1|40|0|0|", Legacy)
+
+    Call Check(Result And Shots.CanResolve(Legacy) And
+        Text_Slice(Shots.Encode(Legacy), 0, 13) = "SMILE-Shot-1|",
+        "Bounded Legacy Shot Remains Playable", Failures)
+
+    Resolved = Shots.Resolve(Legacy, Attacker, Target, First, 0.0)
+
+    Call Check(Abs(Resolved.Position.Y - 75.275) < 1e-9,
+        "Bounded Legacy Shot Retains Shot 1 Coordinates", Failures)
 
     Result = Shots.Decode("SMILE-Shot-1|1e999|", Decoded)
 
@@ -167,6 +194,35 @@ Public Function Run() As Number
     Return Failures
 
 End Function
+
+Private Sub CheckStableVerticalFrame(ByRef Failures As Number, Lens As P.Camera3D)
+
+    Dim Value As Shots.Shot
+    Dim Attacker As P.Vector3
+    Dim Target As P.Vector3
+    Dim DroppedTarget As P.Vector3
+    Dim Camera As P.Camera3D
+    Dim Resolved As P.Camera3D
+
+    Attacker = P.Vector(0.0, 80.0, 0.0)
+    Target = P.Vector(0.0, 160.0, 100.0)
+    Camera = Lens
+    Camera.Position = P.Vector(20.0, 110.0, -1800.0)
+    Camera.Target = P.Vector(0.0, 140.0, 100.0)
+
+    Call Shots.Capture(Value, Camera, Attacker, Target)
+
+    DroppedTarget = Target
+    DroppedTarget.Y = 110.0
+    Resolved = Shots.Resolve(Value, Attacker, DroppedTarget, Lens, 0.0)
+
+    Call Check(Value.Eye.Z < -1.0 And
+        Abs(Resolved.Position.Y - Camera.Position.Y) < 1e-9,
+        "Distant Camera Does Not Amplify Animated Head Height", Failures)
+    Call Check(Abs(Resolved.Target.Y - 90.0) < 1e-9,
+        "Between Actor Aim Follows Bounded Head Height", Failures)
+
+End Sub
 
 Private Sub CheckTimeline(ByRef Failures As Number, Camera As Shots.Shot)
 
