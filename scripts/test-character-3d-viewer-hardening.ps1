@@ -17,6 +17,10 @@ $identityPath = Join-Path $repositoryRoot `
 $referencePath = Join-Path $repositoryRoot `
     'games\Dragonfall\SourceAssets\Arin\paladin-reference-images.json'
 $viewerSourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\ViewerWorkflow.smile'
+$beatTimelineSourcePath = Join-Path $repositoryRoot `
+    'tools\Character3DViewer\ViewerBeatTimeline.smile'
+$beatEditorSourcePath = Join-Path $repositoryRoot `
+    'tools\Character3DViewer\ViewerBeatEditor.smile'
 $cameraSourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\ViewerCamera.smile'
 $playbackSourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\ViewerPlayback.smile'
 $sessionSourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\ViewerSession.smile'
@@ -35,6 +39,7 @@ $inspectorPresentationSourcePath = Join-Path $repositoryRoot `
 $timelineEditingSourcePath = Join-Path $repositoryRoot `
     'tools\Character3DViewer\ViewerTimelineEditing.smile'
 $uiSourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\ViewerUi.smile'
+$sharedUiSourcePath = Join-Path $repositoryRoot 'libraries\Smile.UI\Controls.smile'
 $gizmoSourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\ViewerGizmo.smile'
 $partySourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\ViewerParty.smile'
 $actorsSourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\ViewerActors.smile'
@@ -108,6 +113,8 @@ try {
 
     # Ownership moved into the shared session; normalize qualification only for wiring checks.
     $viewerSource = (Get-Content -LiteralPath $viewerSourcePath -Raw).Replace('Me.', '')
+    $beatTimelineSource = Get-Content -LiteralPath $beatTimelineSourcePath -Raw
+    $beatEditorSource = Get-Content -LiteralPath $beatEditorSourcePath -Raw
     $cameraSource = Get-Content -LiteralPath $cameraSourcePath -Raw
     $playbackSource = Get-Content -LiteralPath $playbackSourcePath -Raw
     $sessionSource = Get-Content -LiteralPath $sessionSourcePath -Raw
@@ -120,6 +127,7 @@ try {
     $inspectorPresentationSource = Get-Content -LiteralPath $inspectorPresentationSourcePath -Raw
     $timelineEditingSource = Get-Content -LiteralPath $timelineEditingSourcePath -Raw
     $uiSource = Get-Content -LiteralPath $uiSourcePath -Raw
+    $sharedUiSource = Get-Content -LiteralPath $sharedUiSourcePath -Raw
     $gizmoSource = Get-Content -LiteralPath $gizmoSourcePath -Raw
     $partySource = Get-Content -LiteralPath $partySourcePath -Raw
     $actorsSource = Get-Content -LiteralPath $actorsSourcePath -Raw
@@ -843,6 +851,47 @@ try {
         'Inspector pointer ownership boundaries must remain discoverable.'
     $inspectorPointerSource = $viewerSource.Substring(
         $inspectorPointerStart, $sharedSliderStart - $inspectorPointerStart)
+    Assert-Contains $inspectorPointerSource 'HandleBeatCameraPanelAction(Action)' `
+        'Beat Edit Camera panel pointer route'
+    Assert-Contains $viewerSource `
+        'ViewerCamera.SetHorizontalOrbit(BeatEditing.Camera, Update.Value)' `
+        'Beat Edit horizontal Camera slider route'
+    Assert-Contains $viewerSource `
+        'ViewerCamera.SetVerticalOrbit(BeatEditing.Camera, Update.Value)' `
+        'Beat Edit vertical Camera slider route'
+    Assert-Contains $viewerSource `
+        'ViewerCamera.SetZoomTarget(BeatEditing.Camera, Update.Value)' `
+        'Beat Edit zoom Camera slider route'
+    Assert-Contains $viewerSource `
+        'Pointer_X() < ViewerUi.StatusPanelX(ViewWidth)' `
+        'Beat timeline pointer boundary below the Camera panel'
+    Assert-Contains $viewerSource 'Not BeatEditing.Preview' `
+        'Animation timeline visibility outside Beat Preview'
+    $beatPointerStart = $viewerSource.IndexOf('Function HandleBeatPointer() As Boolean')
+    $advancePartyDemoStart = $viewerSource.IndexOf('Sub AdvancePartyDemo()')
+    Assert-True ($beatPointerStart -ge 0 -and $advancePartyDemoStart -gt $beatPointerStart) `
+        'Beat pointer ownership boundary must remain discoverable.'
+    $beatPointerSource = $viewerSource.Substring(
+        $beatPointerStart, $advancePartyDemoStart - $beatPointerStart)
+    Assert-True ($beatPointerSource.Contains('Call CloseBeatSequence()') -and
+        $beatPointerSource.Contains('Call ResetPartyInspector()') -and
+        -not $beatPointerSource.Contains('Call BeatEditor.ResetCameraView(')) `
+        'Beat Edit right-click must retain the current-tab reset.'
+    Assert-Contains $beatTimelineSource 'TimelineControlY(Height)' `
+        'Beat timeline animation-timeline placement'
+    Assert-True (-not $beatTimelineSource.Contains(
+            'Fill Rectangle 12, Height - 192')) `
+        'Beat timeline must not restore its former raised backing panel.'
+    Assert-Contains $sharedUiSource 'Optional Opacity As Number = 80' `
+        'Shared UI panel opacity'
+    Assert-Contains $uiSource `
+        'CAMERA_PANEL_WIDTH, InspectorViewportHeight(WindowHeight))' `
+        'Upper inspector panel boundary above Camera'
+    Assert-True (-not $beatEditorSource.Contains('Opacity 94') -and
+        -not $beatEditorSource.Contains('UI.DrawPanel(PanelLeft, PanelTop') -and
+        -not $uiSource.Contains('CAMERA_PANEL_HEIGHT, 92') -and
+        -not $uiSource.Contains('Opacity 92')) `
+        'Viewer panel backgrounds must remain at 80 percent opacity.'
     Assert-True ($inspectorPointerSource.Contains(
             'ViewerInspectorCommands.ApplyPresentationAction(') -and
         $inspectorPointerSource.Contains(

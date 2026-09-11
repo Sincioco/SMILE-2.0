@@ -11,8 +11,9 @@ pixel-perfect mesh picking. Tab disambiguates overlapping characters. A click ke
 the current camera; dragging begins panning after a small movement threshold.
 
 Choose **Beat 1–4** to pause and edit that beat's starting composition with middle
-drag (orbit), left drag (pan), wheel (zoom), or arrow keys (orbit). Right-click or
-Enter resets the draft to its opening composition. **Save** stores the selected
+drag (orbit), left drag (pan), wheel (zoom), or arrow keys (orbit). Enter resets the
+draft to its opening composition. Right-click exits Beat Edit and resets the current
+Party tab as it does outside the editor. **Save** stores the selected
 character's entire camera sequence draft and keeps Beat Editor open at the current
 shot and playhead. **Cancel** closes Beat Editor and restores playback without saving
 the camera. Save or cancel a draft before
@@ -27,8 +28,10 @@ added cinematic motion: the shot still follows its attacker/target reference fra
 its neighboring shot has been saved. A reciprocal connection traverses the shared
 boundary once. Unauthored beats continue using the existing battle camera policy.
 
-The additional **Beat Sequence** timeline sits above the animation timeline. Its
-Desktop controls match the animation timeline: **0-Frame**, **< Beat**, **Beat >**,
+During Beat Preview/Edit, **Beat Sequence** replaces the normal animation timeline in
+the same bottom position, without a separate backing panel. Closing Beat Preview
+restores the normal animation timeline. Its Desktop controls match that timeline:
+**0-Frame**, **< Beat**, **Beat >**,
 **< Frame** and **Frame >**. Beat navigation visits main and extra markers in time
 order. Frame buttons step sequence time at the attacker's clip sample rate; holding
 one repeats. **Space** plays/pauses from the playhead, stops at the sequence end,
@@ -457,6 +460,12 @@ reselecting a character tab; the operating limits below distinguish tested targe
   character and Party tab. H Orbit, V Orbit and Zoom support hover-wheel adjustment
   and capture slider drags until release, even outside the track. Vertical orbit
   supports 360 degrees. View, Present, All and Fit share that fixed panel on every tab.
+- During Beat Edit, that Camera panel reads and edits the active Beat camera. View
+  restores the edit-start composition, Present restarts Beat Sequence playback, All
+  stages the Reset All Beats draft, and Fit stages the current main Beat's built-in
+  camera. Save or Cancel retains the normal Beat draft rules.
+- All Viewer panel backgrounds render at 80-percent opacity. Text, buttons, sliders,
+  markers and scroll indicators retain their own control styling.
 - Right-side panel content above Camera scrolls vertically with the mouse wheel when
   it cannot fit. A thin scrollbar appears only while the pointer is over that
   overflowing panel and hides when the pointer leaves.

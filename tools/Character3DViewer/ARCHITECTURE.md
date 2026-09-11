@@ -17,7 +17,9 @@ or triangle-picking backend is introduced.
 `BattleCameraTimeline` owns the four main camera timing weights, up to sixteen extra
 shots, chronological navigation and versioned sequence serialization. It normalizes
 camera intervals to the original battle duration; no action time is remapped.
-`ViewerBeatTimeline` owns timeline gestures, frame stepping/repeat and presentation.
+`ViewerBeatTimeline` owns timeline gestures, frame stepping/repeat and presentation in
+the normal animation timeline's bottom layout. Beat Preview hides the animation
+timeline and closing Preview restores it; no second timeline panel is drawn.
 `ViewerBeatEditor` owns selection, six character identities, per-character sequence
 drafts and clipboard, one head cuboid per identity, preview playback and reset controls. The
 existing `ViewerWorkflow.Session` coordinates those operations; it retains the same
@@ -25,7 +27,12 @@ renderer, Party actor instances, calibration owners and main update/draw order.
 `ViewerUi` keeps one dedicated Camera panel at the original lower-right location for
 every standalone and Party tab. The upper inspector and Beat Editor use the shared
 `Smile.UI.Controls` vertical-scroll operations, with a hover-only scrollbar for
-overflowing content. `ViewerUi` also presents independent 0-200 percent
+overflowing content. The Beat Editor reuses the upper inspector background instead
+of stacking another layer. The upper inspector stops above the separate Camera panel,
+so all panel backgrounds preserve the shared 80-percent on-screen opacity.
+During Beat Edit, workflow routing binds Camera sliders and actions to the active
+Beat camera; right-click closes the draft and runs the existing current-tab reset.
+`ViewerUi` also presents independent 0-200 percent
 Weapon/Shield sliders for Arin, Orin, Valor and Zara; `ViewerEffects` owns those
 session values and their profile-to-pair mapping.
 `ViewerCamera.ComposeShot` composes input in an arbitrary saved camera's basis;

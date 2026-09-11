@@ -739,7 +739,6 @@ Public Sub Draw(Value As State, Unity As Boolean, Width As Number, Height As Num
 
     Clip Rectangle PanelLeft, PanelTop, 252, PanelHeight
 
-    Fill Rectangle PanelLeft, PanelTop, 252, PanelHeight, Rgb(6, 16, 34) Opacity 94
     Draw Text "BEAT CAMERA: " + Sequence.Name(Sequence.Identity(Unity, Value.Selected)) At PanelLeft + 8, 120 - ScrollOffset Size 14 Color WHITE
     Draw Text "Target: " + TargetName At PanelLeft + 8, 142 - ScrollOffset Size 11 Color CYAN
     Draw Text "Tab / Click To Select" At PanelLeft + 8, 157 - ScrollOffset Size 10 Color LIGHT_GRAY
@@ -838,7 +837,7 @@ Public Sub Draw(Value As State, Unity As Boolean, Width As Number, Height As Num
         Label = "Beat Sequence Playing - Space To Pause"
     End If
 
-    Fill Rectangle 18, 40, Max(0, PanelLeft - 24), 18, Rgb(4, 9, 24)
+    Fill Rectangle 18, 40, Max(0, PanelLeft - 24), 18, Rgb(4, 9, 24) Opacity 80
     Draw Text Label At 18, 42 Size 12 Color YELLOW
 
     For Index = 0 To 1
@@ -927,6 +926,36 @@ Public Sub ResumeCamera(ByRef Value As State)
     Value.ResetShot = Value.Draft
     Value.Reframe = False
     Value.Scrubbing = False
+
+End Sub
+
+Public Sub ResetCameraView(ByRef Value As State)
+
+    If Not Value.Editing Then
+        Return
+    End If
+
+    Value.Reframe = True
+    Value.ResetRequested = True
+    Value.Scrubbing = False
+    Value.Seek = True
+    Value.Playing = False
+    Value.ContinuousSample = False
+    Value.Message = "Camera View Reset To Edit Start"
+
+End Sub
+
+Public Sub RestartPresentation(ByRef Value As State)
+
+    If Not Value.Preview Then
+        Return
+    End If
+
+    Call SeekTo(Value, 0, 0)
+
+    Value.Playing = True
+    Value.Scrubbing = True
+    Value.Message = "Beat Sequence Playing From Start"
 
 End Sub
 

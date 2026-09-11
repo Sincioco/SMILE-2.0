@@ -1065,6 +1065,10 @@ Public Class Session
             Return Blocked
         End If
 
+        If Me.HandleBeatCameraPanelAction(Action) Then
+            Return Blocked
+        End If
+
         If Me.ApplyActorPresentationCommand(
             Action,
             ViewerInspectorCommands.ACTOR_ACTION_SOURCE_INSPECTOR_POINTER) Then
@@ -1110,26 +1114,63 @@ Public Class Session
 
         Dim ReturnValue As Boolean
 
+        Dim BeatCameraActive As Boolean
+        Dim HorizontalOrbit As Number
         Dim Update As ViewerUi.SliderUpdate
+        Dim VerticalOrbit As Number
+        Dim Zoom As Number
+
+        BeatCameraActive = (Me.Party.Enabled And
+            Me.BeatEditing.Preview And Me.BeatEditing.Editing)
+        HorizontalOrbit = ToNumber(Round(Me.ViewerCameraState.Controls.OrbitYaw))
+        VerticalOrbit = ToNumber(Round(Me.ViewerCameraState.Controls.OrbitPitch))
+        Zoom = ToNumber(Round(Me.ViewerCameraState.Zoom.Target))
+
+        If BeatCameraActive Then
+
+            HorizontalOrbit = ToNumber(Round(Me.BeatEditing.Camera.Controls.OrbitYaw))
+            VerticalOrbit = ToNumber(Round(Me.BeatEditing.Camera.Controls.OrbitPitch))
+            Zoom = ToNumber(Round(Me.BeatEditing.Camera.Zoom.Target))
+
+        End If
 
         Update = ViewerUi.UpdateCameraSliders(
             Me.ViewerInputState.SliderDragOwner,
             Me.ViewerUiState.Visibility,
             ViewerUi.CameraPanelX(Me.ViewWidth),
             Me.ViewHeight,
-            ToNumber(Round(Me.ViewerCameraState.Controls.OrbitYaw)),
-            ToNumber(Round(Me.ViewerCameraState.Controls.OrbitPitch)),
-            ToNumber(Round(Me.ViewerCameraState.Zoom.Target)),
+            HorizontalOrbit,
+            VerticalOrbit,
+            Zoom,
             ZOOM_IN_LIMIT,
             ZOOM_OUT_LIMIT
         )
 
-        If Update.Action = ViewerUi.SLIDER_ACTION_HORIZONTAL_ORBIT Then
-            Call ViewerCamera.SetHorizontalOrbit(Me.ViewerCameraState, Update.Value)
-        Else If Update.Action = ViewerUi.SLIDER_ACTION_VERTICAL_ORBIT Then
-            Call ViewerCamera.SetVerticalOrbit(Me.ViewerCameraState, Update.Value)
-        Else If Update.Action = ViewerUi.SLIDER_ACTION_ZOOM Then
-            Call ViewerCamera.SetZoomTarget(Me.ViewerCameraState, Update.Value)
+        If BeatCameraActive And Update.Changed Then
+
+            Call BeatEditor.ResumeCamera(Me.BeatEditing)
+
+            If Update.Action = ViewerUi.SLIDER_ACTION_HORIZONTAL_ORBIT Then
+                Call ViewerCamera.SetHorizontalOrbit(Me.BeatEditing.Camera, Update.Value)
+            Else If Update.Action = ViewerUi.SLIDER_ACTION_VERTICAL_ORBIT Then
+                Call ViewerCamera.SetVerticalOrbit(Me.BeatEditing.Camera, Update.Value)
+            Else If Update.Action = ViewerUi.SLIDER_ACTION_ZOOM Then
+                Call ViewerCamera.SetZoomTarget(Me.BeatEditing.Camera, Update.Value)
+            End If
+
+            Me.BeatEditing.Dirty = True
+            Me.BeatEditing.UseDefault = False
+
+        Else If Not BeatCameraActive Then
+
+            If Update.Action = ViewerUi.SLIDER_ACTION_HORIZONTAL_ORBIT Then
+                Call ViewerCamera.SetHorizontalOrbit(Me.ViewerCameraState, Update.Value)
+            Else If Update.Action = ViewerUi.SLIDER_ACTION_VERTICAL_ORBIT Then
+                Call ViewerCamera.SetVerticalOrbit(Me.ViewerCameraState, Update.Value)
+            Else If Update.Action = ViewerUi.SLIDER_ACTION_ZOOM Then
+                Call ViewerCamera.SetZoomTarget(Me.ViewerCameraState, Update.Value)
+            End If
+
         End If
 
         If Update.Consumed Then
@@ -1177,6 +1218,30 @@ Public Class Session
         ReturnValue = Update.Consumed
 
         Return ReturnValue
+
+    End Function
+
+    Private Function HandleBeatCameraPanelAction(Action As Number) As Boolean
+
+        If (Not Me.Party.Enabled Or
+            Not Me.BeatEditing.Preview Or
+            Not Me.BeatEditing.Editing) Then
+            Return False
+        End If
+
+        If Action = ViewerUi.INSPECTOR_ACTION_RESET_VIEW Then
+            Call BeatEditor.ResetCameraView(Me.BeatEditing)
+        Else If Action = ViewerUi.INSPECTOR_ACTION_RESTART_PRESENTATION Then
+            Call BeatEditor.RestartPresentation(Me.BeatEditing)
+        Else If Action = ViewerUi.INSPECTOR_ACTION_RESET_ALL Then
+            Call BeatEditor.ResetDefaults(Me.BeatEditing, True)
+        Else If Action = ViewerUi.INSPECTOR_ACTION_FIT Then
+            Call BeatEditor.ResetDefaults(Me.BeatEditing, False)
+        Else
+            Return False
+        End If
+
+        Return True
 
     End Function
 
@@ -1686,10 +1751,26 @@ Public Class Session
         Call ViewerInspectorPresentation.DrawIdentityAndToolbar(IdentityView)
 
         If Me.ViewerUiState.Visibility = 0 Then
+
             EffectsView = ViewerInspectorPresentation.CaptureEffects(
                 Me.Session, Me.Rendering, Me.Effects, Me.DragonState, Me.Party,
                 Me.ViewerCameraState, Me.ViewWidth, Me.ViewHeight,
                 ZOOM_IN_LIMIT, ZOOM_OUT_LIMIT)
+
+            If (Me.Party.Enabled And
+                Me.BeatEditing.Preview And
+                Me.BeatEditing.Editing) Then
+
+                EffectsView.HorizontalOrbit = ToNumber(
+                    Round(Me.BeatEditing.Camera.Controls.OrbitYaw))
+                EffectsView.VerticalOrbit = ToNumber(
+                    Round(Me.BeatEditing.Camera.Controls.OrbitPitch))
+                EffectsView.ZoomDegrees = ToNumber(
+                    Round(Me.BeatEditing.Camera.Zoom.Target))
+                EffectsView.FitLocked = Me.BeatEditing.UseDefault
+
+            End If
+
         End If
 
         If Me.Party.Enabled And Not Me.ViewerUiState.CalibrationVisible Then
@@ -1741,7 +1822,8 @@ Public Class Session
 
         WorkspaceView = ViewerInspectorPresentation.CaptureWorkspace(
             Me.ViewerUiState, Me.Character, Me.Calibration, Me.Playback, Me.ViewerGizmoState,
-            Me.Session, Me.Party, Me.CalibrationAvailable, Me.ViewWidth, Me.ViewHeight)
+            Me.Session, Me.Party, Me.CalibrationAvailable, Not Me.BeatEditing.Preview,
+            Me.ViewWidth, Me.ViewHeight)
 
         Call ViewerInspectorPresentation.DrawWorkspace(
             Me.ViewerUiState, Me.Character, Me.Calibration, Me.ViewerInputState, WorkspaceView)
@@ -2101,14 +2183,11 @@ Public Class Session
 
         If Me.BeatEditing.Preview Then
 
-            If Pointer_Pressed(POINTER_SECONDARY) And Me.BeatEditing.Editing Then
+            If Pointer_Pressed(POINTER_SECONDARY) Then
 
-                Me.BeatEditing.Reframe = True
-                Me.BeatEditing.ResetRequested = True
-                Me.BeatEditing.Scrubbing = False
-                Me.BeatEditing.Seek = True
-                Me.BeatEditing.Playing = False
-                Me.BeatEditing.ContinuousSample = False
+                Call Me.CloseBeatSequence()
+                Call Me.ResetPartyInspector()
+
                 Return True
 
             End If
@@ -2116,8 +2195,8 @@ Public Class Session
             ''' Preserve existing timeline and Party state while the temporary timeline owns seeking.
 
             If (Pointer_X() < 272 Or
-                Pointer_Y() > Me.ViewHeight - 104 Or
-                Pointer_X() >= Me.ViewWidth - 276) Then
+                (Pointer_Y() > Me.ViewHeight - 104 And
+                Pointer_X() < ViewerUi.StatusPanelX(Me.ViewWidth))) Then
                 Return True
             End If
 

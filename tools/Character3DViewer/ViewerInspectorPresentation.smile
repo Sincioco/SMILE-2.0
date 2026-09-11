@@ -105,6 +105,7 @@ Public Type EffectsView
 End Type
 
 Public Type WorkspaceView
+    AnimationTimelineVisible As Boolean
     SelectedClip As Number
     SelectedClipName As Text
     SelectedClipLabel As Text
@@ -294,11 +295,13 @@ Public Function CaptureWorkspace(ByRef Ui As ViewerUi.State,
     ByRef Actor As Character3D.Actor, ByRef Calibration As ViewerCalibration.State,
     ByRef Playback As ViewerPlayback.State, ByRef Gizmo As ViewerGizmo.State,
     ByRef Session As ViewerSession.State, ByRef Party As ViewerParty.State,
-    CalibrationAvailable As Boolean, WindowWidth As Number,
+    CalibrationAvailable As Boolean, AnimationTimelineVisible As Boolean,
+    WindowWidth As Number,
     WindowHeight As Number) As WorkspaceView
 
     Dim Result As WorkspaceView
 
+    Result.AnimationTimelineVisible = AnimationTimelineVisible
     Result.SelectedClip = Playback.SelectedClip
     Result.SelectedClipName = ViewerPlayback.SelectedClipName(Actor, Playback)
     Result.SelectedClipLabel = ViewerPlayback.SelectedClipLabel(
@@ -484,17 +487,19 @@ Public Sub DrawWorkspace(ByRef Ui As ViewerUi.State,
 
     PanelLeft = ViewerUi.StatusPanelX(Value.WindowWidth)
 
-    Call ViewerUi.DrawTimeline(
-        Actor,
-        Calibration,
-        Input,
-        Value.SelectedClip,
-        Value.SelectedClipName,
-        Value.SelectedTimelineEvent,
-        Value.CalibrationAvailable,
-        Value.WindowWidth,
-        Value.WindowHeight
-    )
+    If Value.AnimationTimelineVisible Then
+        Call ViewerUi.DrawTimeline(
+            Actor,
+            Calibration,
+            Input,
+            Value.SelectedClip,
+            Value.SelectedClipName,
+            Value.SelectedTimelineEvent,
+            Value.CalibrationAvailable,
+            Value.WindowWidth,
+            Value.WindowHeight
+        )
+    End If
 
     If (Ui.Visibility = 0 And
         Value.CalibrationAvailable And

@@ -383,6 +383,30 @@ Private Sub CheckTimeline(ByRef Failures As Number, Camera As Shots.Shot)
     Call Check(Result And Definition.ShotCount = 4,
         "Optional Camera Marker Removal", Failures)
 
+    Edited.Editing = True
+    Edited.Preview = True
+    Edited.Playing = True
+    Edited.Scrubbing = True
+    Edited.Seek = False
+    Edited.Reframe = False
+    Edited.ResetRequested = False
+
+    Call Editor.ResetCameraView(Edited)
+
+    Call Check(Edited.Reframe And Edited.ResetRequested And Edited.Seek And
+        Not Edited.Playing And Not Edited.Scrubbing,
+        "Camera View Button Resets Active Beat Camera", Failures)
+
+    Edited.Working = Definition
+    Edited.SourceSchedule = Source
+    Edited.Elapsed = 3100
+
+    Call Editor.RestartPresentation(Edited)
+
+    Call Check(Edited.Elapsed = 0 And Edited.ShotIndex = 0 And
+        Edited.Playing And Edited.Scrubbing,
+        "Camera Present Button Restarts Beat Sequence", Failures)
+
 End Sub
 
 ''' Native regression: noncontiguous local-array initialization used to skip a

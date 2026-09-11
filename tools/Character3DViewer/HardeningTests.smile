@@ -23,6 +23,7 @@ Import Smile.Tools.Character3DViewerInput As ViewerInput
 Import Smile.Tools.Character3DViewerInspectorCommands As ViewerInspectorCommands
 Import Smile.Tools.Character3DViewerInspectorPresentation As ViewerInspectorPresentation
 Import Smile.Tools.Character3DViewerTimelineEditing As ViewerTimelineEditing
+Import Smile.Tools.ViewerBeatTimeline As ViewerBeatTimeline
 Import Smile.Tools.Character3DViewerUi As ViewerUi
 Import Smile.Tools.Character3DViewerGizmo As ViewerGizmo
 Import Smile.Tools.Character3DViewerParty As ViewerParty
@@ -999,6 +1000,10 @@ Call Check(ViewerUi.AnimationButtonX(1600) = 1344)
 Call Check(ViewerUi.GlowButtonX(1600, True, False) = 1548)
 Call Check(ViewerUi.GlowButtonWidth(True, False) = 36)
 Call Check(ViewerUi.TimelineWidth(1600, 18) = 1294)
+Call CheckNamed(ViewerBeatTimeline.TimelineWidth(1600) = 1294 And
+    ViewerBeatTimeline.TimelineControlY(640) = 544 And
+    ViewerBeatTimeline.TimelineY(640) = 576,
+    "Beat timeline replaces the animation timeline coordinates")
 Call Check(ViewerUi.TimelineFrameAtPointer(512, 800, 1000, 30, 31) = 30)
 Call Check(ViewerUi.TimelineKeyframeAtPointer(
     PartyPrimary.Actor, CalibrationState, True, 3, 18, 576, 800, 640) = 0)
@@ -1275,7 +1280,17 @@ Call ViewerInspectorPresentation.DrawCamera(InspectorEffectsView)
 
 InspectorWorkspaceView = ViewerInspectorPresentation.CaptureWorkspace(
     UiState, PartyPrimary.Actor, CalibrationState, PlaybackState, GizmoState,
-    SessionState, PartyState, False, 800, 640)
+    SessionState, PartyState, False, False, 800, 640)
+
+Call CheckNamed(Not InspectorWorkspaceView.AnimationTimelineVisible,
+    "Inspector presentation hides the animation timeline for Beat Preview")
+
+InspectorWorkspaceView = ViewerInspectorPresentation.CaptureWorkspace(
+    UiState, PartyPrimary.Actor, CalibrationState, PlaybackState, GizmoState,
+    SessionState, PartyState, False, True, 800, 640)
+
+Call CheckNamed(InspectorWorkspaceView.AnimationTimelineVisible,
+    "Inspector presentation restores the animation timeline outside Beat Preview")
 
 Call ViewerInspectorPresentation.DrawWorkspace(
     UiState, PartyPrimary.Actor, CalibrationState, InputState,

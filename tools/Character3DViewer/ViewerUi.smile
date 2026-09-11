@@ -1424,7 +1424,7 @@ Public Sub DrawMinimumSizeNotice(ByRef Value As State,
     ButtonWidth = Min(220, Max(1, WindowWidth - 32))
     ButtonY = Max(8, Min(126, WindowHeight - 56))
 
-    Fill Rectangle 0, 0, WindowWidth, WindowHeight, Rgb(4, 9, 24) Opacity 92
+    Fill Rectangle 0, 0, WindowWidth, WindowHeight, Rgb(4, 9, 24) Opacity 80
     Draw Text "Small Screen" At 28, 28 Size 22 Color YELLOW
     Draw Text "Editor controls need more room." At 28, 66 Size 13 Color WHITE
     Draw Text "Continue to view the scene." At 28, 90 Size 13 Color LIGHT_GRAY
@@ -1522,7 +1522,8 @@ Public Sub DrawInspectorToolbar(
     Call UI.DrawButton(PanelLeft + 168, 56, 40, 22, "Weapon", SwordVisible)
     Call UI.DrawButton(PanelLeft + 212, 56, 40, 22, "Shield", ShieldVisible)
 
-    Call UI.DrawPanel(PanelLeft, 82, 252, Max(446, WindowHeight - 94))
+    Call UI.DrawPanel(PanelLeft, InspectorViewportTop(),
+        CAMERA_PANEL_WIDTH, InspectorViewportHeight(WindowHeight))
 
 End Sub
 
@@ -1683,7 +1684,7 @@ Public Sub DrawPauseStatus(PanelLeft As Number, CalibrationEditing As Boolean,
     If (CalibrationEditing Or
         ScenePaused Or
         CharacterSwitchBlocked) Then
-        Fill Rectangle 18, 40, Max(0, PanelLeft - 24), 18, Rgb(4, 9, 24)
+        Fill Rectangle 18, 40, Max(0, PanelLeft - 24), 18, Rgb(4, 9, 24) Opacity 80
     End If
 
     If CharacterSwitchBlocked Then
@@ -1808,7 +1809,7 @@ Public Sub DrawCameraPanel(WindowWidth As Number, WindowHeight As Number,
     PanelTop = CameraPanelY(WindowHeight)
 
     Call UI.DrawPanel(PanelLeft, PanelTop, CAMERA_PANEL_WIDTH,
-        CAMERA_PANEL_HEIGHT, 92)
+        CAMERA_PANEL_HEIGHT)
 
     Draw Text "CAMERA" At PanelLeft + 16, PanelTop + 4 Size 11 Color WHITE
 

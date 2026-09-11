@@ -60,8 +60,10 @@ Party Dragon and Party Vrax use the existing renderer, actors and choreography.
 Heroes, Dragon and Vrax each own four main camera shots. Selection, relative two-head
 framing, per-character saved head cuboids and cross-character camera copy/paste remain.
 
-- The second timeline matches the regular Animation Timeline's controls and colors:
-  0-Frame, Previous/Next Beat, Previous/Next Frame; held frame buttons repeat.
+- During Beat Preview/Edit, Beat Sequence replaces the regular Animation Timeline in
+  its bottom layout with the same controls and colors and no enclosing panel. Closing
+  Preview restores the Animation Timeline. Controls are 0-Frame, Previous/Next Beat
+  and Previous/Next Frame; held frame buttons repeat.
 - Four ordered main markers cannot be deleted. Dragging boundaries 2–4 changes
   adjacent camera durations within the fixed battle duration. Up to sixteen extra
   shots can be inserted, moved across main beats and deleted. Navigation visits all
@@ -71,8 +73,10 @@ framing, per-character saved head cuboids and cross-character camera copy/paste 
   original action schedule. Default/unauthored cameras retain the existing battle
   policy. Authored camera intervals follow the edited camera schedule.
 - Pan, orbit, zoom and keyboard orbit remain available after scrubbing; editing resumes
-  from the displayed camera. Space plays/pauses the preview playhead. It stops at the
-  end; another Space restarts from zero. Pausing selects the current camera marker.
+  from the displayed camera. The fixed Camera panel targets the active Beat camera and
+  exposes View, Present, All and Fit Beat actions. Space plays/pauses the preview
+  playhead. It stops at the end; another Space restarts from zero. Pausing selects the
+  current camera marker. Right-click exits the editor and resets the current Party tab.
 - Preview samples existing action poses, with live battle audio muted and turn state
   restored on closing. Continuous samples retain equipment VFX trails; discontinuous
   seeks clear stale trails. Existing independent Fire/Lightning freeze controls remain.
@@ -83,7 +87,7 @@ framing, per-character saved head cuboids and cross-character camera copy/paste 
 - Reset All Beat Lengths restores only the four default camera durations; camera
   compositions, motion/connections and extra shots remain. Extra shots retain their
   relative positions within each main beat. This timing-only reset also waits for Save.
-- Save writes the complete character sequence atomically and keeps the second timeline,
+- Save writes the complete character sequence atomically and keeps the Beat timeline,
   selected shot, playhead and camera-editing state open. Cancel or closing Preview
   restores the prior battle. Head cuboids auto-save separately.
 
@@ -93,7 +97,7 @@ framing, per-character saved head cuboids and cross-character camera copy/paste 
 | --- | --- |
 | `BattleCameraShots.smile` | Double relative framing, shot motion/link evaluation, bounded scalar/text and independent head storage |
 | `BattleCameraTimeline.smile` | Four camera weights, main/extra markers, ordering, resize and versioned sequence persistence |
-| `ViewerBeatTimeline.smile` | Pointer gestures, navigation/frame repeat and second timeline presentation |
+| `ViewerBeatTimeline.smile` | Pointer gestures, navigation/frame repeat and bottom replacement timeline presentation |
 | `ViewerBeatEditor.smile` | Selection, per-character drafts/clipboard, Space preview, camera editing, staged resets and head controls |
 | `ViewerBeatSequence.smile` | Existing actor/timing adapter, original action sampling, bookmark/pose restoration and head/body picking |
 | `ViewerWorkflow.Session` | Existing input/update/draw coordination, discontinuous versus continuous visual history |
@@ -192,10 +196,14 @@ SHA-256, current Desktop source/artifact bytes:
 | --- | --- |
 | `src/Smile.Compiler/MasmEmitter.cs` | `1D7D0B267E8183ABA6876052721B4F41381D280DE2F872E9F22FE88C9BCF6B93` |
 | `tools/Character3DViewer/BattleCameraTimeline.smile` | `A1188859B189B4A6D7D47B186ABABC4151D3DF1DE5C56BB281BD7BE249CA8D83` |
-| `tools/Character3DViewer/ViewerBeatTimeline.smile` | `7BE7B93E045A24202C56D37891B67FFF3B525A102F35686164C56985FF98EE13` |
-| `tools/Character3DViewer/ViewerBeatEditor.smile` | `ADFC5512B9ECE776A8E1969C5509A29F1BE424D2D252AF2A1C509DFB9135B8A3` |
-| `tools/Character3DViewer/ViewerWorkflow.smile` | `99FE5BD822D3DE1785F8615F9359CDF5B0F9395EDDCCF6C7E5435451C0003AF3` |
-| `tools/Character3DViewer/bin/Release/Character3DViewer.exe` | `2C3C15C3D4F2FA9F051556E14105FC56E69838D0BEA6998C1558DC45614FF451` |
+| `tools/Character3DViewer/ViewerBeatTimeline.smile` | `4EADC670B23C1EB0E6A563BAA0485D51A1296D6DAD177BA0F81695EE7A1426AF` |
+| `tools/Character3DViewer/ViewerBeatEditor.smile` | `11ED8D2F86610B2BDEB0E0CB130057CE148027D1DAF557E5EB451AFE371E0960` |
+| `tools/Character3DViewer/ViewerWorkflow.smile` | `B8A6959D138C74C6855A77593545031D1E90FFC7D7962DFF091F668514075B4B` |
+| `tools/Character3DViewer/ViewerInspectorPresentation.smile` | `D22A3C101FCDF1B9282965ACEAD69CCD1FC01F54BDD7A5DAD0C3DBAD7F40AA90` |
+| `tools/Character3DViewer/ViewerUi.smile` | `DCC4F98CEC9FE92D35B224E9CAD74A3E1BA4F67220B23A55A990CBBC205BF217` |
+| `tools/Character3DViewer/BeatCameraTests.smile` | `E489CD2835F1188E716334AAFD1F097351EE93806716E77230250418DE2C3DBA` |
+| `tools/Character3DViewer/HardeningTests.smile` | `C81FBEE28B932BDE5571CCDA8C20E5A0A1DE2B55C5D300DD34E3A0ADFE5A6D55` |
+| `tools/Character3DViewer/bin/Release/Character3DViewer.exe` | `BB4302198CC13611218C419519D85FFB0189870D5120D02D3F64245E52A19C39` |
 | `tools/SmileStudio/bin/Release/SmileStudio.exe` | `FDA0854F28AA33AB74C453A113C51A608585F6E9780C3A03ADA2E04DFF2BDFD2` |
 | `artifacts/compiler/smilec.dll` | `1638C9E67E3796931A1AD251E19EFEB757E9C8DB508A3C2D2909BD4890E0E450` |
 | `artifacts/vsix/Smile.VisualStudio.vsix` | `2537FD71D1FF9CE29D5589A074D12116582357A971B49E3BBA16C26C494EC438` |
@@ -215,6 +223,12 @@ and Orin's zero keys (`13AE135FDA40302CB5A4B0146D7103A2ED5346AAEEBB3852AF6DD3C39
   the mouse wheel when it overflows. A thin scrollbar appears only while that panel
   is hovered and hides when the pointer leaves. Party input bounds stop above Camera,
   so every Camera slider and button remains interactive.
+- Beat Edit now routes H Orbit, V Orbit, Zoom, View, Present, All and Fit to the active
+  Beat camera. Beat Sequence occupies the normal bottom timeline position while
+  Preview is open, and the animation timeline returns when Preview closes. Right-click
+  closes Beat Edit and runs the current Party tab reset.
+- Every Viewer panel background, including Beat Editor and the small-screen overlay,
+  uses 80-percent opacity through the shared panel presentation.
 - Arin, Orin, Valor and Zara now have independent 0-200 percent Weapon and Shield
   strength sliders in Character Status, using the shared H Orbit slider interaction.
 - The native release Viewer rebuilt successfully and passed all 58 hardening checks.
@@ -224,6 +238,12 @@ and Orin's zero keys (`13AE135FDA40302CB5A4B0146D7103A2ED5346AAEEBB3852AF6DD3C39
   hashes matching. The complete startup contract remains passed from the loader change.
 - The native capture helper now waits for the loaded editor window instead of retaining
   the temporary startup-splash handle.
+- The Beat Edit follow-through rebuilt the native Viewer and repeated the 58-check
+  NativeOnly hardening gate. Regression coverage now verifies Camera panel coordinate
+  actions, active Beat camera slider routing, View/Present state changes, replacement
+  timeline coordinates, animation-timeline visibility, right-click current-tab reset
+  routing and 80-percent panel ownership. The 13 formatter tests and the 444-file
+  repository style check also pass.
 
 ## On Hold — Web Adoption Record
 

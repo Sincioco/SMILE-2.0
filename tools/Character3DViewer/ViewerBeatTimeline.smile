@@ -18,6 +18,36 @@ Public Type State
     FrameRate As Number
 End Type
 
+Public Function TimelineY(Height As Number) As Number
+
+    Dim Result As Number
+
+    Result = Height - 64
+
+    Return Result
+
+End Function
+
+Public Function TimelineControlY(Height As Number) As Number
+
+    Dim Result As Number
+
+    Result = Height - 96
+
+    Return Result
+
+End Function
+
+Public Function TimelineWidth(Width As Number) As Number
+
+    Dim Result As Number
+
+    Result = Max(120, Width - 306)
+
+    Return Result
+
+End Function
+
 Private Function Inside(X As Number, Y As Number, StartX As Number,
     StartY As Number, Width As Number, Height As Number) As Boolean
 
@@ -62,8 +92,8 @@ Public Function Pointer(ByRef Value As State, ByRef Definition As Track.Definiti
 
     X = Pointer_X()
     Y = Pointer_Y()
-    BarY = Height - 132
-    BarWidth = Max(120, Width - 306)
+    BarY = TimelineY(Height)
+    BarWidth = TimelineWidth(Width)
     Timed = Track.Schedule(Definition, Source, Time)
     TargetTime = Min(Max((X - 18) * Timed.Start[4] / BarWidth, 0), Timed.Start[4] - 1)
 
@@ -101,38 +131,34 @@ Public Function Pointer(ByRef Value As State, ByRef Definition As Track.Definiti
 
     End If
 
-    If Inside(X, Y, 18, Height - 170, BarWidth, 30) Then
+    If Inside(X, Y, 18, TimelineControlY(Height), BarWidth, 24) Then
 
         If Pointer_Pressed(POINTER_PRIMARY) Then
 
-            If X < 80 Then
+            If Inside(X, Y, 18, TimelineControlY(Height), 62, 24) Then
                 Value.OutputTime = 0
                 Return 20
-            Else If X < 160 Then
+            Else If Inside(X, Y, 86, TimelineControlY(Height), 62, 24) Then
                 Value.OutputIndex = Track.Neighbor(Definition, Timed, Time, -1)
-            Else If X < 240 Then
+            Else If Inside(X, Y, 154, TimelineControlY(Height), 62, 24) Then
                 Value.OutputIndex = Track.Neighbor(Definition, Timed, Time, 1)
-            Else If X < 308 Then
+            Else If Inside(X, Y, 222, TimelineControlY(Height), 62, 24) Then
                 Value.RepeatDirection = -1
-            Else If X < 376 Then
+            Else If Inside(X, Y, 290, TimelineControlY(Height), 62, 24) Then
                 Value.RepeatDirection = 1
-            Else If X < 462 And Editing Then
+            Else If Inside(X, Y, 358, TimelineControlY(Height), 80, 24) And Editing Then
                 Return 23
-            Else If X < 548 And Editing Then
+            Else If Inside(X, Y, 444, TimelineControlY(Height), 80, 24) And Editing Then
                 Return 24
             Else
                 Return 100
             End If
 
-            If X < 240 Then
-
-                If Value.OutputIndex >= 0 Then
-                    Value.OutputTime = Track.TimeAt(Definition, Timed, Value.OutputIndex)
-                    Return 21
-                End If
-
+            If Value.OutputIndex >= 0 And Value.RepeatDirection = 0 Then
+                Value.OutputTime = Track.TimeAt(Definition, Timed, Value.OutputIndex)
+                Return 21
+            Else If Value.RepeatDirection = 0 Then
                 Return 100
-
             End If
 
             Value.RepeatAt = Value.Clock + 350
@@ -218,23 +244,27 @@ Public Sub Draw(Value As State, Definition As Track.Definition,
     Dim Tint As Number
     Dim Label As Text
 
-    BarY = Height - 132
-    BarWidth = Max(120, Width - 306)
+    BarY = TimelineY(Height)
+    BarWidth = TimelineWidth(Width)
     Timed = Track.Schedule(Definition, Source, Time)
 
-    Fill Rectangle 12, Height - 192, BarWidth + 12, 92, Rgb(6, 16, 34) Opacity 94
-    Draw Text "Beat Sequence - Camera Timing Only; Space To Play / Pause" At 18, Height - 190 Size 11 Color CYAN
+    Call UI.DrawButton(18, TimelineControlY(Height), 62, 24, "0-Frame", False)
+    Call UI.DrawButton(86, TimelineControlY(Height), 62, 24, "< Beat", False)
+    Call UI.DrawButton(154, TimelineControlY(Height), 62, 24, "Beat >", False)
+    Call UI.DrawButton(222, TimelineControlY(Height), 62, 24,
+        "< Frame", Value.RepeatDirection < 0)
+    Call UI.DrawButton(290, TimelineControlY(Height), 62, 24,
+        "Frame >", Value.RepeatDirection > 0)
+    Call UI.DrawButton(358, TimelineControlY(Height), 80, 24, "Add Shot", False)
+    Call UI.DrawButton(444, TimelineControlY(Height), 80, 24, "Delete Shot", False)
 
-    Call UI.DrawButton(18, Height - 170, 62, 24, "0-Frame", False)
-    Call UI.DrawButton(86, Height - 170, 74, 24, "< Beat", False)
-    Call UI.DrawButton(166, Height - 170, 74, 24, "Beat >", False)
-    Call UI.DrawButton(246, Height - 170, 62, 24, "< Frame", Value.RepeatDirection < 0)
-    Call UI.DrawButton(314, Height - 170, 62, 24, "Frame >", Value.RepeatDirection > 0)
-    Call UI.DrawButton(382, Height - 170, 80, 24, "Add Shot", False)
-    Call UI.DrawButton(468, Height - 170, 80, 24, "Delete Shot", False)
+    If BarWidth >= 760 Then
+        Draw Text "Beat Sequence" At 542, Height - 88 Size 11 Color CYAN
+        Draw Text "Camera Timing Only" At 642, Height - 88 Size 11 Color LIGHT_GRAY
+    End If
 
-    Fill Rectangle 18, BarY, BarWidth, 24, Rgb(18, 35, 58) Opacity 88
-    Fill Rectangle 18, BarY, Time * BarWidth / Max(1, Timed.Start[4]), 24, Rgb(16, 102, 136) Opacity 90
+    Fill Rectangle 18, BarY, BarWidth, 18, Rgb(18, 35, 58) Opacity 88
+    Fill Rectangle 18, BarY, Time * BarWidth / Max(1, Timed.Start[4]), 18, Rgb(16, 102, 136) Opacity 90
 
     For Index = 0 To Definition.ShotCount - 1
 
@@ -251,13 +281,13 @@ Public Sub Draw(Value As State, Definition As Track.Definition,
             Tint = YELLOW
         End If
 
-        Fill Rectangle Position - 1, BarY - 5, 3, 34, Tint
+        Fill Rectangle Position - 1, BarY - 5, 3, 28, Tint
         Draw Text Label At Position + 3, BarY - 13 Size 10 Color Tint
     End For
 
     Draw Number Time At 24, BarY + 3 Size 10 Color WHITE
     Draw Number Timed.Start[4] At 18 + BarWidth - 48, BarY + 3 Size 10 Color WHITE
-    Draw Text "Drag Cyan Beat Boundaries Or Green Shot Markers; Main Beats Cannot Be Deleted" At 560, Height - 162 Size 10 Color LIGHT_GRAY
+    Draw Text "Drag Beat Boundaries Or Shot Markers" At 18, Height - 40 Size 10 Color LIGHT_GRAY
 
 End Sub
 
