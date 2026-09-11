@@ -923,6 +923,15 @@ Public Class Session
             Return True
         End If
 
+        If ViewerUi.UpdateInspectorScroll(
+            Me.ViewerUiState,
+            Me.ViewWidth,
+            Me.ViewHeight,
+            ViewerUi.InspectorContentHeight(Me.ViewHeight)
+        ) Then
+            Return True
+        End If
+
         Gesture = ViewerInput.UpdateTimelineScrub(
             Me.ViewerInputState,
             Pointer_Pressed(POINTER_PRIMARY),
@@ -1038,6 +1047,7 @@ Public Class Session
             Me.ViewWidth,
             Me.ViewHeight,
             Me.ViewerUiState.Visibility,
+            Me.ViewerUiState.InspectorScrollOffset,
             ViewerProfiles.INCLUDE_DIAGNOSTIC_PROFILES,
             Me.Party.Enabled,
             Me.Session.ProfileIndex,
@@ -1106,6 +1116,7 @@ Public Class Session
             Me.ViewerInputState.SliderDragOwner,
             Me.ViewerUiState.Visibility,
             ViewerUi.CameraPanelX(Me.ViewWidth),
+            Me.ViewHeight,
             ToNumber(Round(Me.ViewerCameraState.Controls.OrbitYaw)),
             ToNumber(Round(Me.ViewerCameraState.Controls.OrbitPitch)),
             ToNumber(Round(Me.ViewerCameraState.Zoom.Target)),
@@ -1131,7 +1142,8 @@ Public Class Session
             ViewerUi.StatusPanelX(Me.ViewWidth),
             Me.Session.ProfileIndex,
             ViewerEffects.Intensity(Me.Effects, Me.Session.ProfileIndex, False),
-            ViewerEffects.Intensity(Me.Effects, Me.Session.ProfileIndex, True)
+            ViewerEffects.Intensity(Me.Effects, Me.Session.ProfileIndex, True),
+            Me.ViewerUiState.InspectorScrollOffset
         )
 
         If Update.Action = ViewerUi.SLIDER_ACTION_WEAPON_INTENSITY Then
@@ -1640,7 +1652,10 @@ Public Class Session
             Call BeatEditor.Draw(Me.BeatEditing, Me.Party.UnityRoster, Me.ViewWidth, Me.ViewHeight,
                 BeatSequence.Name(BeatSequence.Identity(Me.Party.UnityRoster,
                     BeatSequence.Opponent(Me.Party, Me.BeatEditing.Selected))),
-                Me.SelectedBeatClipName())
+                Me.SelectedBeatClipName(),
+                Me.ViewerUiState.InspectorScrollOffset,
+                ViewerUi.InspectorViewportTop(),
+                ViewerUi.InspectorViewportHeight(Me.ViewHeight))
         End If
 
     End Sub
@@ -1712,9 +1727,11 @@ Public Class Session
                 Me.Effects, Me.ViewerCameraState, Me.FrameRate, Me.ViewWidth, Me.ViewHeight,
                 ANIMATION_CYCLE_MILLISECONDS)
 
-            Call ViewerInspectorPresentation.DrawStatusAndAnimation(StatusView)
+            Call ViewerInspectorPresentation.DrawStatusAndAnimation(
+                StatusView, Me.ViewerUiState.InspectorScrollOffset)
 
-            Call ViewerInspectorPresentation.DrawEffects(EffectsView)
+            Call ViewerInspectorPresentation.DrawEffects(
+                EffectsView, Me.ViewerUiState.InspectorScrollOffset)
 
         End If
 
@@ -1770,6 +1787,8 @@ Public Class Session
         Call ViewerLifecycle.PrepareCharacterSwitch(
             Me.Session, Me.Party, Me.Character, Me.Rendering, Me.Effects,
             Me.DragonState, Me.Playback, Index)
+
+        Call ViewerUi.ResetInspectorScroll(Me.ViewerUiState)
         Call Me.LoadViewer()
 
         Me.BeatEditing.Selected = 0
@@ -2022,8 +2041,20 @@ Public Class Session
             Return False
         End If
 
+        If ViewerUi.UpdateInspectorScroll(
+            Me.ViewerUiState,
+            Me.ViewWidth,
+            Me.ViewHeight,
+            BeatEditor.PanelContentHeight(Me.BeatEditing.Editing)
+        ) Then
+            Return True
+        End If
+
         Command = BeatEditor.Pointer(Me.BeatEditing, Me.Party.UnityRoster,
-            Me.ViewerCameraState.Live, Me.ViewWidth, Me.ViewHeight)
+            Me.ViewerCameraState.Live, Me.ViewWidth, Me.ViewHeight,
+            Me.ViewerUiState.InspectorScrollOffset,
+            ViewerUi.InspectorViewportTop(),
+            ViewerUi.InspectorViewportHeight(Me.ViewHeight))
 
         If Command >= 1 And Command <= 4 Then
 

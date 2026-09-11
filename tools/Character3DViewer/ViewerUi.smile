@@ -18,14 +18,9 @@ Public Const ANIMATION_BUTTON_COLUMN_COUNT = 3
 Public Const ANIMATION_BUTTON_ROW_GAP = 4
 Public Const CAMERA_SLIDER_WIDTH = 146
 Public Const CAMERA_SLIDER_HEIGHT = 16
-Public Const CAMERA_PANEL_GAP = 16
-Public Const CAMERA_PANEL_Y = 96
+Public Const CAMERA_PANEL_GAP = 8
 Public Const CAMERA_PANEL_WIDTH = 252
 Public Const CAMERA_PANEL_HEIGHT = 146
-Public Const CAMERA_HORIZONTAL_SLIDER_Y = 130
-Public Const CAMERA_VERTICAL_SLIDER_Y = 156
-Public Const CAMERA_ZOOM_SLIDER_Y = 182
-Public Const CAMERA_BUTTON_Y = 210
 Public Const INTENSITY_WEAPON_SLIDER_Y = 284
 Public Const INTENSITY_SHIELD_SLIDER_Y = 310
 Public Const TIMELINE_LEFT = 18
@@ -132,11 +127,16 @@ Public Const SLIDER_ACTION_SHIELD_INTENSITY = 6
 
 Private Const MINIMUM_VIEWER_WIDTH = 800
 Private Const MINIMUM_VIEWER_HEIGHT = 540
+Private Const INSPECTOR_CONTENT_TOP = 82
+Private Const INSPECTOR_CONTENT_BOTTOM = 570
+Private Const INSPECTOR_CONTENT_TALL_BOTTOM = 662
+Private Const INSPECTOR_SCROLL_STEP = 32
 Private Const ANIMATION_DETAILS_Y = 584
 Private Const ANIMATION_DETAILS_MINIMUM_HEIGHT = 780
 
 Public Type State
     Visibility As Number
+    InspectorScrollOffset As Number
     MinimumSizeNoticeDismissed As Boolean
     CalibrationVisible As Boolean
     CalibrationTarget As Number
@@ -160,6 +160,7 @@ End Type
 Public Sub Reset(ByRef Value As State)
 
     Value.Visibility = 0
+    Value.InspectorScrollOffset = 0
     Value.CalibrationVisible = False
     Value.CalibrationEditing = False
     Value.CalibrationClearConfirm = False
@@ -168,7 +169,7 @@ Public Sub Reset(ByRef Value As State)
 End Sub
 
 Public Function UpdateCameraSliders(ByRef DragOwner As Number,
-    Visibility As Number, PanelLeft As Number,
+    Visibility As Number, PanelLeft As Number, WindowHeight As Number,
     HorizontalOrbit As Number, VerticalOrbit As Number, Zoom As Number,
     ZoomInLimit As Number, ZoomOutLimit As Number) As SliderUpdate
 
@@ -185,7 +186,7 @@ Public Function UpdateCameraSliders(ByRef DragOwner As Number,
         DragOwner,
         SLIDER_ACTION_HORIZONTAL_ORBIT,
         PanelLeft + 76,
-        CAMERA_HORIZONTAL_SLIDER_Y,
+        WindowHeight - 142,
         CAMERA_SLIDER_WIDTH,
         CAMERA_SLIDER_HEIGHT,
         -180,
@@ -209,7 +210,7 @@ Public Function UpdateCameraSliders(ByRef DragOwner As Number,
         DragOwner,
         SLIDER_ACTION_VERTICAL_ORBIT,
         PanelLeft + 76,
-        CAMERA_VERTICAL_SLIDER_Y,
+        WindowHeight - 116,
         CAMERA_SLIDER_WIDTH,
         CAMERA_SLIDER_HEIGHT,
         -180,
@@ -233,7 +234,7 @@ Public Function UpdateCameraSliders(ByRef DragOwner As Number,
         DragOwner,
         SLIDER_ACTION_ZOOM,
         PanelLeft + 76,
-        CAMERA_ZOOM_SLIDER_Y,
+        WindowHeight - 90,
         CAMERA_SLIDER_WIDTH,
         CAMERA_SLIDER_HEIGHT,
         ZoomInLimit,
@@ -255,7 +256,8 @@ End Function
 
 Public Function UpdateIntensitySliders(ByRef DragOwner As Number,
     Visibility As Number, PanelLeft As Number, ProfileIndex As Number,
-    WeaponIntensity As Number, ShieldIntensity As Number) As SliderUpdate
+    WeaponIntensity As Number, ShieldIntensity As Number,
+    ScrollOffset As Number) As SliderUpdate
 
     Dim CurrentValue As Number
     Dim Result As SliderUpdate
@@ -270,7 +272,7 @@ Public Function UpdateIntensitySliders(ByRef DragOwner As Number,
         DragOwner,
         SLIDER_ACTION_WEAPON_INTENSITY,
         PanelLeft + 76,
-        INTENSITY_WEAPON_SLIDER_Y,
+        INTENSITY_WEAPON_SLIDER_Y - ScrollOffset,
         CAMERA_SLIDER_WIDTH,
         CAMERA_SLIDER_HEIGHT,
         0,
@@ -294,7 +296,7 @@ Public Function UpdateIntensitySliders(ByRef DragOwner As Number,
         DragOwner,
         SLIDER_ACTION_SHIELD_INTENSITY,
         PanelLeft + 76,
-        INTENSITY_SHIELD_SLIDER_Y,
+        INTENSITY_SHIELD_SLIDER_Y - ScrollOffset,
         CAMERA_SLIDER_WIDTH,
         CAMERA_SLIDER_HEIGHT,
         0,
@@ -688,11 +690,98 @@ Public Function CameraPanelX(WindowWidth As Number) As Number
 
     Dim Result As Number
 
-    Result = Max(276, StatusPanelX(WindowWidth) - CAMERA_PANEL_WIDTH - CAMERA_PANEL_GAP)
+    Result = StatusPanelX(WindowWidth)
 
     Return Result
 
 End Function
+
+Public Function CameraPanelY(WindowHeight As Number) As Number
+
+    Dim Result As Number
+
+    Result = WindowHeight - CAMERA_PANEL_HEIGHT - 12
+
+    Return Result
+
+End Function
+
+Public Function InspectorViewportTop() As Number
+
+    Return INSPECTOR_CONTENT_TOP
+
+End Function
+
+Public Function InspectorViewportHeight(WindowHeight As Number) As Number
+
+    Dim Result As Number
+
+    Result = Max(1, CameraPanelY(WindowHeight) - CAMERA_PANEL_GAP - INSPECTOR_CONTENT_TOP)
+
+    Return Result
+
+End Function
+
+Public Function InspectorContentHeight(WindowHeight As Number) As Number
+
+    Dim Result As Number
+
+    Result = INSPECTOR_CONTENT_BOTTOM - INSPECTOR_CONTENT_TOP
+
+    If WindowHeight >= ANIMATION_DETAILS_MINIMUM_HEIGHT Then
+        Result = INSPECTOR_CONTENT_TALL_BOTTOM - INSPECTOR_CONTENT_TOP
+    End If
+
+    Return Result
+
+End Function
+
+Public Function UpdateInspectorScroll(ByRef Value As State,
+    WindowWidth As Number, WindowHeight As Number,
+    ContentHeight As Number) As Boolean
+
+    Dim Offset As Number
+    Dim Result As Boolean
+
+    If Value.Visibility <> 0 Then
+        Return False
+    End If
+
+    Offset = Value.InspectorScrollOffset
+    Result = UI.UpdateVerticalScroll(
+        StatusPanelX(WindowWidth),
+        InspectorViewportTop(),
+        CAMERA_PANEL_WIDTH,
+        InspectorViewportHeight(WindowHeight),
+        ContentHeight,
+        INSPECTOR_SCROLL_STEP,
+        Offset
+    )
+    Value.InspectorScrollOffset = Offset
+
+    Return Result
+
+End Function
+
+Public Sub DrawInspectorScrollbar(WindowWidth As Number, WindowHeight As Number,
+    ContentHeight As Number, ScrollOffset As Number)
+
+    Call UI.DrawVerticalScrollbar(
+        StatusPanelX(WindowWidth),
+        InspectorViewportTop(),
+        CAMERA_PANEL_WIDTH,
+        InspectorViewportHeight(WindowHeight),
+        ContentHeight,
+        ScrollOffset
+    )
+
+End Sub
+
+Public Sub ResetInspectorScroll(ByRef Value As State)
+
+    Value.InspectorScrollOffset = 0
+
+End Sub
 
 Public Function ProfileHasIntensityControls(ProfileIndex As Number) As Boolean
 
@@ -979,9 +1068,6 @@ Public Function InspectorBlocksScene(PointerX As Number, PointerY As Number,
     PanelLeft = StatusPanelX(WindowWidth)
     Result = PointerY < 90 Or PointerY >= WindowHeight - 100
     Result = Result Or (Visibility = 0 And PointerX >= PanelLeft And PointerY >= 82)
-    Result = Result Or (Visibility = 0 And InRectangle(
-        PointerX, PointerY, CameraPanelX(WindowWidth), CAMERA_PANEL_Y,
-        CAMERA_PANEL_WIDTH, CAMERA_PANEL_HEIGHT))
 
     Return Result
 
@@ -993,6 +1079,7 @@ Public Function InspectorActionAtPointer(
     WindowWidth As Number,
     WindowHeight As Number,
     Visibility As Number,
+    ScrollOffset As Number,
     DiagnosticProfiles As Boolean,
     PartyEnabled As Boolean,
     ProfileIndex As Number,
@@ -1003,11 +1090,17 @@ Public Function InspectorActionAtPointer(
 
     Dim AnimationIndex As Number
     Dim CameraLeft As Number
+    Dim ContentHovered As Boolean
+    Dim ContentPointerY As Number
     Dim PanelLeft As Number
     Dim Result As Number
 
     PanelLeft = StatusPanelX(WindowWidth)
     CameraLeft = CameraPanelX(WindowWidth)
+    ContentHovered = InRectangle(
+        PointerX, PointerY, PanelLeft, InspectorViewportTop(),
+        CAMERA_PANEL_WIDTH, InspectorViewportHeight(WindowHeight))
+    ContentPointerY = PointerY + ScrollOffset
     Result = INSPECTOR_ACTION_NONE
 
     If InRectangle(PointerX, PointerY, TIMELINE_LEFT, WindowHeight - 96, 62, 24) Then
@@ -1091,15 +1184,18 @@ Public Function InspectorActionAtPointer(
 
         Result = INSPECTOR_ACTION_SHIELD
 
-    Else If InRectangle(PointerX, PointerY, PanelLeft + 178, 330, 74, 18) Then
+    Else If (ContentHovered And
+        InRectangle(PointerX, ContentPointerY, PanelLeft + 178, 330, 74, 18)) Then
 
         Result = INSPECTOR_ACTION_DEMO
 
-    Else If InRectangle(PointerX, PointerY, PanelLeft + 12, 444, 78, 22) Then
+    Else If (ContentHovered And
+        InRectangle(PointerX, ContentPointerY, PanelLeft + 12, 444, 78, 22)) Then
 
         Result = INSPECTOR_ACTION_FLOOR
 
-    Else If InRectangle(PointerX, PointerY, PanelLeft + 94, 444, 76, 22) Then
+    Else If (ContentHovered And
+        InRectangle(PointerX, ContentPointerY, PanelLeft + 94, 444, 76, 22)) Then
 
         If ProfileIndex = ViewerProfiles.PROFILE_DRAGON Then
             Result = INSPECTOR_ACTION_DRAGON_HEAD
@@ -1109,7 +1205,8 @@ Public Function InspectorActionAtPointer(
             Result = INSPECTOR_ACTION_SWORD_FIRE
         End If
 
-    Else If InRectangle(PointerX, PointerY, PanelLeft + 174, 444, 78, 22) Then
+    Else If (ContentHovered And
+        InRectangle(PointerX, ContentPointerY, PanelLeft + 174, 444, 78, 22)) Then
 
         If ProfileIndex = ViewerProfiles.PROFILE_DRAGON Then
             Result = INSPECTOR_ACTION_DRAGON_TARGET
@@ -1120,69 +1217,80 @@ Public Function InspectorActionAtPointer(
         End If
 
     Else If (ProfileIndex = ViewerProfiles.PROFILE_ORIN And
-        InRectangle(PointerX, PointerY, PanelLeft + 12, 470, 128, 20)) Then
+        ContentHovered And
+        InRectangle(PointerX, ContentPointerY, PanelLeft + 12, 470, 128, 20)) Then
 
         Result = INSPECTOR_ACTION_STORM_COMFORT
 
     Else If (ProfileIndex = ViewerProfiles.PROFILE_ORIN And
-        InRectangle(PointerX, PointerY, PanelLeft + 144, 470, 108, 20)) Then
+        ContentHovered And
+        InRectangle(PointerX, ContentPointerY, PanelLeft + 144, 470, 108, 20)) Then
 
         Result = INSPECTOR_ACTION_STORM_PAUSE
 
     Else If (SwordFireReady And
-        InRectangle(PointerX, PointerY, PanelLeft + 12, 470, 128, 20)) Then
+        ContentHovered And
+        InRectangle(PointerX, ContentPointerY, PanelLeft + 12, 470, 128, 20)) Then
 
         Result = INSPECTOR_ACTION_FLAME_PAUSE
 
     Else If ((ProfileIndex = ViewerProfiles.PROFILE_ARIN Or ProfileIndex = ViewerProfiles.PROFILE_VALOR) And
-        InRectangle(PointerX, PointerY, PanelLeft + 144, 470, 108, 20)) Then
+        ContentHovered And
+        InRectangle(PointerX, ContentPointerY, PanelLeft + 144, 470, 108, 20)) Then
 
         Result = INSPECTOR_ACTION_SHIELD_FIRE_STYLE
 
     Else If (ProfileIndex = ViewerProfiles.PROFILE_ORIN And
-        InRectangle(PointerX, PointerY, PanelLeft + 12, 522, 240, 22)) Then
+        ContentHovered And
+        InRectangle(PointerX, ContentPointerY, PanelLeft + 12, 522, 240, 22)) Then
 
         Result = INSPECTOR_ACTION_STORM_EQUIPMENT
 
-    Else If InRectangle(PointerX, PointerY, PanelLeft + 12, 548, 240, 22) Then
+    Else If (ContentHovered And
+        InRectangle(PointerX, ContentPointerY, PanelLeft + 12, 548, 240, 22)) Then
 
         Result = INSPECTOR_ACTION_VFX_REFLECTIONS
 
-    Else If InRectangle(PointerX, PointerY, PanelLeft + 12, 496, 240, 22) Then
+    Else If (ContentHovered And
+        InRectangle(PointerX, ContentPointerY, PanelLeft + 12, 496, 240, 22)) Then
 
         Result = INSPECTOR_ACTION_FLOOR_REFLECTIONS
 
-    Else If InRectangle(PointerX, PointerY, PanelLeft + 172, 204, 30, 24) Then
+    Else If (ContentHovered And
+        InRectangle(PointerX, ContentPointerY, PanelLeft + 172, 204, 30, 24)) Then
 
         Result = INSPECTOR_ACTION_SPEED_DOWN
 
-    Else If InRectangle(PointerX, PointerY, PanelLeft + 208, 204, 30, 24) Then
+    Else If (ContentHovered And
+        InRectangle(PointerX, ContentPointerY, PanelLeft + 208, 204, 30, 24)) Then
 
         Result = INSPECTOR_ACTION_SPEED_UP
 
     Else If InRectangle(PointerX, PointerY,
-        CameraLeft + 12, CAMERA_BUTTON_Y, 52, 24) Then
+        CameraLeft + 12, WindowHeight - 64, 52, 24) Then
 
         Result = INSPECTOR_ACTION_RESET_VIEW
 
     Else If InRectangle(PointerX, PointerY,
-        CameraLeft + 68, CAMERA_BUTTON_Y, 74, 24) Then
+        CameraLeft + 68, WindowHeight - 64, 74, 24) Then
 
         Result = INSPECTOR_ACTION_RESTART_PRESENTATION
 
     Else If InRectangle(PointerX, PointerY,
-        CameraLeft + 146, CAMERA_BUTTON_Y, 40, 24) Then
+        CameraLeft + 146, WindowHeight - 64, 40, 24) Then
 
         Result = INSPECTOR_ACTION_RESET_ALL
 
     Else If InRectangle(PointerX, PointerY,
-        CameraLeft + 190, CAMERA_BUTTON_Y, 50, 24) Then
+        CameraLeft + 190, WindowHeight - 64, 50, 24) Then
 
         Result = INSPECTOR_ACTION_FIT
 
-    Else
+    Else If ContentHovered Then
+
         AnimationIndex = AnimationButtonAtPointer(
-            PointerX, PointerY, ProfileIndex, WindowWidth, SelectedPresentationIndex)
+            PointerX, ContentPointerY, ProfileIndex, WindowWidth,
+            SelectedPresentationIndex)
 
         If AnimationIndex >= 0 Then
             Result = INSPECTOR_ACTION_CLIP_BASE + AnimationIndex
@@ -1419,11 +1527,12 @@ Public Sub DrawInspectorToolbar(
 End Sub
 
 Public Sub DrawDemoControl(PanelLeft As Number, PartyEnabled As Boolean,
-    ScenePaused As Boolean, DemoEnabled As Boolean)
+    ScenePaused As Boolean, DemoEnabled As Boolean,
+    ScrollOffset As Number)
 
-    Draw Text "ANIMATIONS" At PanelLeft + 16, 334 Size 13 Color WHITE
+    Draw Text "ANIMATIONS" At PanelLeft + 16, 334 - ScrollOffset Size 13 Color WHITE
 
-    Call UI.DrawButton(PanelLeft + 178, 330, 74, 18,
+    Call UI.DrawButton(PanelLeft + 178, 330 - ScrollOffset, 74, 18,
         DemoLabel(PartyEnabled, ScenePaused, DemoEnabled), DemoEnabled)
 
 End Sub
@@ -1448,6 +1557,7 @@ Public Sub DrawProfileEffectControls(
     FlamePlaying As Boolean,
     ShieldFireStyleLabel As Text,
     ShieldFlameStyle As Boolean,
+    ScrollOffset As Number,
     Optional StormEquipmentLabel As Text = "VFX: Lightning"
 )
 
@@ -1455,46 +1565,55 @@ Public Sub DrawProfileEffectControls(
 
     PanelLeft = StatusPanelX(WindowWidth)
 
-    Call UI.DrawButton(PanelLeft + 12, 444, 78, 22, "Floor/Grid", FloorOrGridVisible)
+    Call UI.DrawButton(PanelLeft + 12, 444 - ScrollOffset, 78, 22,
+        "Floor/Grid", FloorOrGridVisible)
 
     If (ProfileIndex = ViewerProfiles.PROFILE_ARIN Or
         ProfileIndex = ViewerProfiles.PROFILE_VALOR) Then
 
-        Call UI.DrawButton(PanelLeft + 94, 444, 76, 22, "Sword Fire", SwordFireVisible)
-        Call UI.DrawButton(PanelLeft + 174, 444, 78, 22, "Shield Fire", ShieldFireVisible)
+        Call UI.DrawButton(PanelLeft + 94, 444 - ScrollOffset, 76, 22,
+            "Sword Fire", SwordFireVisible)
+        Call UI.DrawButton(PanelLeft + 174, 444 - ScrollOffset, 78, 22,
+            "Shield Fire", ShieldFireVisible)
 
     Else If ProfileIndex = ViewerProfiles.PROFILE_ORIN Then
 
-        Call UI.DrawButton(PanelLeft + 12, 522, 240, 22, StormEquipmentLabel, True)
-        Call UI.DrawButton(PanelLeft + 94, 444, 158, 22, StormStyleLabel, True)
-        Call UI.DrawButton(PanelLeft + 12, 470, 128, 20, StormComfortLabel, True)
-        Call UI.DrawButton(PanelLeft + 144, 470, 108, 20,
+        Call UI.DrawButton(PanelLeft + 12, 522 - ScrollOffset, 240, 22,
+            StormEquipmentLabel, True)
+        Call UI.DrawButton(PanelLeft + 94, 444 - ScrollOffset, 158, 22,
+            StormStyleLabel, True)
+        Call UI.DrawButton(PanelLeft + 12, 470 - ScrollOffset, 128, 20,
+            StormComfortLabel, True)
+        Call UI.DrawButton(PanelLeft + 144, 470 - ScrollOffset, 108, 20,
             LightningPlaybackLabel, LightningPaused)
 
     Else If ProfileIndex = ViewerProfiles.PROFILE_DRAGON Then
 
-        Call UI.DrawButton(PanelLeft + 94, 444, 76, 22, "Head Aim", DragonHeadTracking)
+        Call UI.DrawButton(PanelLeft + 94, 444 - ScrollOffset, 76, 22,
+            "Head Aim", DragonHeadTracking)
 
         If DragonTargetsArin Then
-            Call UI.DrawButton(PanelLeft + 174, 444, 78, 22, "At Arin", True)
+            Call UI.DrawButton(PanelLeft + 174, 444 - ScrollOffset, 78, 22,
+                "At Arin", True)
         Else
 
-            Call UI.DrawButton(PanelLeft + 174, 444, 78, 22, "At Orin", True)
+            Call UI.DrawButton(PanelLeft + 174, 444 - ScrollOffset, 78, 22,
+                "At Orin", True)
         End If
 
     End If
 
     If (SwordFireReady And
         (ProfileIndex = ViewerProfiles.PROFILE_ARIN Or ProfileIndex = ViewerProfiles.PROFILE_VALOR)) Then
-        Call UI.DrawButton(PanelLeft + 12, 470, 128, 20,
+        Call UI.DrawButton(PanelLeft + 12, 470 - ScrollOffset, 128, 20,
             FlamePlaybackLabel, FlamePlaying)
-        Call UI.DrawButton(PanelLeft + 144, 470, 108, 20,
+        Call UI.DrawButton(PanelLeft + 144, 470 - ScrollOffset, 108, 20,
             ShieldFireStyleLabel, Not ShieldFlameStyle)
     End If
 
     Call UI.DrawButton(
         PanelLeft + 12,
-        496,
+        496 - ScrollOffset,
         240,
         22,
         FloorReflectionLabel(FloorReflectionsEnabled, FloorReflectionFallback),
@@ -1502,10 +1621,12 @@ Public Sub DrawProfileEffectControls(
     )
 
     If VfxReflectionsEnabled Then
-        Call UI.DrawButton(PanelLeft + 12, 548, 240, 22, "VFX Reflections: On", True)
+        Call UI.DrawButton(PanelLeft + 12, 548 - ScrollOffset, 240, 22,
+            "VFX Reflections: On", True)
     Else
 
-        Call UI.DrawButton(PanelLeft + 12, 548, 240, 22, "VFX Reflections: Off", False)
+        Call UI.DrawButton(PanelLeft + 12, 548 - ScrollOffset, 240, 22,
+            "VFX Reflections: Off", False)
     End If
 
 End Sub
@@ -1519,7 +1640,8 @@ Public Sub DrawAnimationDetails(
     ClipEventCount As Number,
     ModelClipCount As Number,
     ModelSocketCount As Number,
-    ModelEventCount As Number
+    ModelEventCount As Number,
+    ScrollOffset As Number
 )
 
     Dim PanelText As Number
@@ -1530,15 +1652,15 @@ Public Sub DrawAnimationDetails(
 
     PanelText = PanelLeft + 16
 
-    Draw Text "Clip ms / Rate / Samples / Events" At PanelText, ANIMATION_DETAILS_Y Size 11 Color LIGHT_GRAY
-    Draw Number ClipDuration At PanelText, ANIMATION_DETAILS_Y + 20 Size 11 Color WHITE
-    Draw Number ClipSampleRate At PanelText + 58, ANIMATION_DETAILS_Y + 20 Size 11 Color CYAN
-    Draw Number ClipSampleCount At PanelText + 104, ANIMATION_DETAILS_Y + 20 Size 11 Color WHITE
-    Draw Number ClipEventCount At PanelText + 166, ANIMATION_DETAILS_Y + 20 Size 11 Color YELLOW
-    Draw Text "Model clips / sockets / events" At PanelText, ANIMATION_DETAILS_Y + 42 Size 11 Color LIGHT_GRAY
-    Draw Number ModelClipCount At PanelText, ANIMATION_DETAILS_Y + 62 Size 11 Color WHITE
-    Draw Number ModelSocketCount At PanelText + 58, ANIMATION_DETAILS_Y + 62 Size 11 Color CYAN
-    Draw Number ModelEventCount At PanelText + 116, ANIMATION_DETAILS_Y + 62 Size 11 Color YELLOW
+    Draw Text "Clip ms / Rate / Samples / Events" At PanelText, ANIMATION_DETAILS_Y - ScrollOffset Size 11 Color LIGHT_GRAY
+    Draw Number ClipDuration At PanelText, ANIMATION_DETAILS_Y + 20 - ScrollOffset Size 11 Color WHITE
+    Draw Number ClipSampleRate At PanelText + 58, ANIMATION_DETAILS_Y + 20 - ScrollOffset Size 11 Color CYAN
+    Draw Number ClipSampleCount At PanelText + 104, ANIMATION_DETAILS_Y + 20 - ScrollOffset Size 11 Color WHITE
+    Draw Number ClipEventCount At PanelText + 166, ANIMATION_DETAILS_Y + 20 - ScrollOffset Size 11 Color YELLOW
+    Draw Text "Model clips / sockets / events" At PanelText, ANIMATION_DETAILS_Y + 42 - ScrollOffset Size 11 Color LIGHT_GRAY
+    Draw Number ModelClipCount At PanelText, ANIMATION_DETAILS_Y + 62 - ScrollOffset Size 11 Color WHITE
+    Draw Number ModelSocketCount At PanelText + 58, ANIMATION_DETAILS_Y + 62 - ScrollOffset Size 11 Color CYAN
+    Draw Number ModelEventCount At PanelText + 116, ANIMATION_DETAILS_Y + 62 - ScrollOffset Size 11 Color YELLOW
 
 End Sub
 
@@ -1623,86 +1745,90 @@ Public Sub DrawCharacterStatusSummary(
     FramesPerSecond As Number,
     ProfileIndex As Number,
     WeaponIntensity As Number,
-    ShieldIntensity As Number
+    ShieldIntensity As Number,
+    ScrollOffset As Number
 )
 
     Dim PanelText As Number
 
     PanelText = PanelLeft + 16
 
-    Draw Text "CHARACTER STATUS" At PanelText, 96 Size 16 Color WHITE
-    Draw Text "Name" At PanelText, 124 Size 12 Color LIGHT_GRAY
-    Draw Text DisplayName At PanelLeft + 116, 124 Size 12 Color CYAN
-    Draw Text "Party Role" At PanelText, 146 Size 12 Color LIGHT_GRAY
-    Draw Text PartyRoleLabel(PartyRole) At PanelLeft + 116, 146 Size 12 Color CYAN
-    Draw Text "Animation" At PanelText, 168 Size 12 Color LIGHT_GRAY
-    Draw Text ClipLabel At PanelLeft + 116, 168 Size 12 Color GREEN
-    Draw Text "Candidate" At PanelText, 190 Size 12 Color LIGHT_GRAY
-    Draw Text CandidateVersion At PanelLeft + 116, 190 Size 11 Color YELLOW
-    Draw Text "Speed" At PanelText, 216 Size 12 Color LIGHT_GRAY
-    Draw Number PlaybackSpeed At PanelLeft + 116, 216 Size 12 Color WHITE
+    Draw Text "CHARACTER STATUS" At PanelText, 96 - ScrollOffset Size 16 Color WHITE
+    Draw Text "Name" At PanelText, 124 - ScrollOffset Size 12 Color LIGHT_GRAY
+    Draw Text DisplayName At PanelLeft + 116, 124 - ScrollOffset Size 12 Color CYAN
+    Draw Text "Party Role" At PanelText, 146 - ScrollOffset Size 12 Color LIGHT_GRAY
+    Draw Text PartyRoleLabel(PartyRole) At PanelLeft + 116, 146 - ScrollOffset Size 12 Color CYAN
+    Draw Text "Animation" At PanelText, 168 - ScrollOffset Size 12 Color LIGHT_GRAY
+    Draw Text ClipLabel At PanelLeft + 116, 168 - ScrollOffset Size 12 Color GREEN
+    Draw Text "Candidate" At PanelText, 190 - ScrollOffset Size 12 Color LIGHT_GRAY
+    Draw Text CandidateVersion At PanelLeft + 116, 190 - ScrollOffset Size 11 Color YELLOW
+    Draw Text "Speed" At PanelText, 216 - ScrollOffset Size 12 Color LIGHT_GRAY
+    Draw Number PlaybackSpeed At PanelLeft + 116, 216 - ScrollOffset Size 12 Color WHITE
 
-    Call UI.DrawButton(PanelLeft + 172, 204, 30, 24, "-", False)
-    Call UI.DrawButton(PanelLeft + 208, 204, 30, 24, "+", False)
+    Call UI.DrawButton(PanelLeft + 172, 204 - ScrollOffset, 30, 24, "-", False)
+    Call UI.DrawButton(PanelLeft + 208, 204 - ScrollOffset, 30, 24, "+", False)
 
-    Draw Text "Material" At PanelText, 240 Size 12 Color LIGHT_GRAY
-    Draw Text MaterialInspectionLabel(MaterialInspection) At PanelLeft + 116, 240 Size 12 Color YELLOW
-    Draw Text "Draws / Triangles" At PanelText, 262 Size 12 Color LIGHT_GRAY
-    Draw Number DrawCallCount At PanelLeft + 148, 262 Size 12 Color WHITE
-    Draw Number TriangleCount At PanelLeft + 192, 262 Size 12 Color WHITE
+    Draw Text "Material" At PanelText, 240 - ScrollOffset Size 12 Color LIGHT_GRAY
+    Draw Text MaterialInspectionLabel(MaterialInspection) At PanelLeft + 116, 240 - ScrollOffset Size 12 Color YELLOW
+    Draw Text "Draws / Triangles" At PanelText, 262 - ScrollOffset Size 12 Color LIGHT_GRAY
+    Draw Number DrawCallCount At PanelLeft + 148, 262 - ScrollOffset Size 12 Color WHITE
+    Draw Number TriangleCount At PanelLeft + 192, 262 - ScrollOffset Size 12 Color WHITE
 
     If ProfileHasIntensityControls(ProfileIndex) Then
 
-        Call DrawIntensitySlider(PanelLeft, "Weapon", INTENSITY_WEAPON_SLIDER_Y,
+        Call DrawIntensitySlider(PanelLeft, "Weapon", INTENSITY_WEAPON_SLIDER_Y - ScrollOffset,
             WeaponIntensity)
-        Call DrawIntensitySlider(PanelLeft, "Shield", INTENSITY_SHIELD_SLIDER_Y,
+        Call DrawIntensitySlider(PanelLeft, "Shield", INTENSITY_SHIELD_SLIDER_Y - ScrollOffset,
             ShieldIntensity)
 
     Else
 
-        Draw Text "Demo / Next" At PanelText, 284 Size 12 Color LIGHT_GRAY
-        Draw Text DemoStatus At PanelLeft + 116, 284 Size 12 Color CYAN
-        Draw Number SecondsRemaining At PanelLeft + 172, 284 Size 12 Color WHITE
-        Draw Text "seconds" At PanelLeft + 192, 284 Size 11 Color LIGHT_GRAY
-        Draw Text "Zoom / FPS" At PanelText, 306 Size 12 Color LIGHT_GRAY
-        Draw Number ZoomDegrees At PanelLeft + 116, 306 Size 12 Color CYAN
-        Draw Text "level" At PanelLeft + 146, 306 Size 11 Color LIGHT_GRAY
-        Draw Number FramesPerSecond At PanelLeft + 190, 306 Size 12 Color GREEN
-        Draw Text "fps" At PanelLeft + 216, 306 Size 11 Color LIGHT_GRAY
+        Draw Text "Demo / Next" At PanelText, 284 - ScrollOffset Size 12 Color LIGHT_GRAY
+        Draw Text DemoStatus At PanelLeft + 116, 284 - ScrollOffset Size 12 Color CYAN
+        Draw Number SecondsRemaining At PanelLeft + 172, 284 - ScrollOffset Size 12 Color WHITE
+        Draw Text "seconds" At PanelLeft + 192, 284 - ScrollOffset Size 11 Color LIGHT_GRAY
+        Draw Text "Zoom / FPS" At PanelText, 306 - ScrollOffset Size 12 Color LIGHT_GRAY
+        Draw Number ZoomDegrees At PanelLeft + 116, 306 - ScrollOffset Size 12 Color CYAN
+        Draw Text "level" At PanelLeft + 146, 306 - ScrollOffset Size 11 Color LIGHT_GRAY
+        Draw Number FramesPerSecond At PanelLeft + 190, 306 - ScrollOffset Size 12 Color GREEN
+        Draw Text "fps" At PanelLeft + 216, 306 - ScrollOffset Size 11 Color LIGHT_GRAY
 
     End If
 
 End Sub
 
-Public Sub DrawCameraPanel(WindowWidth As Number,
+Public Sub DrawCameraPanel(WindowWidth As Number, WindowHeight As Number,
     HorizontalOrbit As Number, VerticalOrbit As Number, ZoomDegrees As Number,
     ZoomInLimit As Number, ZoomOutLimit As Number, FitLocked As Boolean)
 
     Dim PanelLeft As Number
+    Dim PanelTop As Number
 
     PanelLeft = CameraPanelX(WindowWidth)
+    PanelTop = CameraPanelY(WindowHeight)
 
-    Call UI.DrawPanel(PanelLeft, CAMERA_PANEL_Y, CAMERA_PANEL_WIDTH,
+    Call UI.DrawPanel(PanelLeft, PanelTop, CAMERA_PANEL_WIDTH,
         CAMERA_PANEL_HEIGHT, 92)
 
-    Draw Text "CAMERA" At PanelLeft + 16, CAMERA_PANEL_Y + 8 Size 13 Color WHITE
+    Draw Text "CAMERA" At PanelLeft + 16, PanelTop + 4 Size 11 Color WHITE
 
-    Call DrawCameraSlider(PanelLeft, "H Orbit", CAMERA_HORIZONTAL_SLIDER_Y,
+    Call DrawCameraSlider(PanelLeft, "H Orbit", WindowHeight - 142,
         HorizontalOrbit, -180, 180)
-    Call DrawCameraSlider(PanelLeft, "V Orbit", CAMERA_VERTICAL_SLIDER_Y,
+    Call DrawCameraSlider(PanelLeft, "V Orbit", WindowHeight - 116,
         VerticalOrbit, -180, 180)
-    Call DrawCameraSlider(PanelLeft, "Zoom", CAMERA_ZOOM_SLIDER_Y,
+    Call DrawCameraSlider(PanelLeft, "Zoom", WindowHeight - 90,
         ZoomDegrees, ZoomInLimit, ZoomOutLimit)
 
-    Call UI.DrawButton(PanelLeft + 12, CAMERA_BUTTON_Y, 52, 24, "VIEW", False)
-    Call UI.DrawButton(PanelLeft + 68, CAMERA_BUTTON_Y, 74, 24, "PRESENT", False)
-    Call UI.DrawButton(PanelLeft + 146, CAMERA_BUTTON_Y, 40, 24, "ALL", False)
-    Call UI.DrawButton(PanelLeft + 190, CAMERA_BUTTON_Y, 50, 24, "FIT", FitLocked)
+    Call UI.DrawButton(PanelLeft + 12, WindowHeight - 64, 52, 24, "VIEW", False)
+    Call UI.DrawButton(PanelLeft + 68, WindowHeight - 64, 74, 24, "PRESENT", False)
+    Call UI.DrawButton(PanelLeft + 146, WindowHeight - 64, 40, 24, "ALL", False)
+    Call UI.DrawButton(PanelLeft + 190, WindowHeight - 64, 50, 24, "FIT", FitLocked)
 
 End Sub
 
 Public Sub DrawAnimationButtons(ProfileIndex As Number,
-    SelectedPresentationIndex As Number, WindowWidth As Number)
+    SelectedPresentationIndex As Number, WindowWidth As Number,
+    ScrollOffset As Number)
 
     Dim ButtonX As Number
     Dim ButtonY As Number
@@ -1728,7 +1854,7 @@ Public Sub DrawAnimationButtons(ProfileIndex As Number,
         Row = (Index - PageStart) / ANIMATION_BUTTON_COLUMN_COUNT
         ButtonX = AnimationButtonX(WindowWidth)
         ButtonX = ButtonX + Column * (ANIMATION_BUTTON_WIDTH + ANIMATION_BUTTON_COLUMN_GAP)
-        ButtonY = ANIMATION_BUTTON_Y
+        ButtonY = ANIMATION_BUTTON_Y - ScrollOffset
         ButtonY = ButtonY + Row * (ANIMATION_BUTTON_HEIGHT + ANIMATION_BUTTON_ROW_GAP)
 
         Call UI.DrawButton(
@@ -1742,8 +1868,10 @@ Public Sub DrawAnimationButtons(ProfileIndex As Number,
     End For
 
     If ClipCount > 9 Then
-        Call UI.DrawButton(AnimationButtonX(WindowWidth), 418, 108, 18, "Previous Page", False)
-        Call UI.DrawButton(AnimationButtonX(WindowWidth) + 116, 418, 108, 18, "Next Page", False)
+        Call UI.DrawButton(AnimationButtonX(WindowWidth), 418 - ScrollOffset,
+            108, 18, "Previous Page", False)
+        Call UI.DrawButton(AnimationButtonX(WindowWidth) + 116, 418 - ScrollOffset,
+            108, 18, "Next Page", False)
     End If
 
 End Sub

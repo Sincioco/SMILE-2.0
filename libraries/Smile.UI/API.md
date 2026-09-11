@@ -147,6 +147,9 @@ Dialogue preserves bounded Unicode wrapping, spill pagination, caller-time typew
 Shared immediate-mode controls used by Character Viewer and Fire Lab; applications still own layout and actions.
 
 - `DrawPanel(X, Y, Width, Height, Optional Opacity = 80)`: translucent dark panel.
+- `VerticalScrollOffset(CurrentOffset, ViewportHeight, ContentHeight) As Number`: clamps a caller-owned vertical content offset.
+- `UpdateVerticalScroll(X, Y, Width, Height, ContentHeight, WheelStep, ByRef Offset) As Boolean`: applies mouse-wheel scrolling only while an overflowing panel viewport is hovered. The caller clips the viewport and subtracts the offset from content Y coordinates.
+- `DrawVerticalScrollbar(X, Y, Width, Height, ContentHeight, Offset)`: draws a thin track and thumb only while the pointer is over an overflowing panel; it stays hidden otherwise.
 - `DrawButton(X, Y, Width, Height, Label, Selected)`: fitted centered white text, dark normal fill and cyan selected fill.
 - `DrawSlider(X, Y, Width, Height, Value, MinimumValue, MaximumValue, Optional KnobWidth = 4)`: dark track, cyan progress, white thumb.
 - `Contains(X, Y, Width, Height)`, `Clicked(X, Y, Width, Height)`: logical-canvas hit testing and primary press.

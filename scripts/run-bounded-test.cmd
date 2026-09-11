@@ -6,5 +6,5 @@ if "%~2"=="" (
     exit /b 2
 )
 
-powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0Invoke-BoundedProcess.ps1" -TimeoutSeconds %~1 -ProgramPath "%~2"
+pwsh -NoProfile -ExecutionPolicy Bypass -File "%~dp0Invoke-BoundedProcess.ps1" -TimeoutSeconds %~1 -ProgramPath "%~2"
 exit /b %errorlevel%

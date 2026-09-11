@@ -460,14 +460,26 @@ Public Function Contains(X As Number, Y As Number, PanelLeft As Number, Top As N
 
 End Function
 
+Public Function PanelContentHeight(Editing As Boolean) As Number
+
+    If Editing Then
+        Return 480
+    End If
+
+    Return 283
+
+End Function
+
 ''' Commands 1-4 edit a beat, 5 preview, 6 save, 7 copy, 8 paste, 9 cancel.
 Public Function Pointer(ByRef Value As State, Unity As Boolean, Live As P.Camera3D,
-    Width As Number, Height As Number) As Number
+    Width As Number, Height As Number, ScrollOffset As Number,
+    PanelTop As Number, PanelHeight As Number) As Number
 
     Dim ReturnValue As Number
 
     Dim X As Number
     Dim Y As Number
+    Dim RawY As Number
     Dim PanelLeft As Number
     Dim Index As Number
     Dim Cursor As P.Vector3
@@ -477,7 +489,8 @@ Public Function Pointer(ByRef Value As State, Unity As Boolean, Live As P.Camera
     Dim TimelineCommand As Number
 
     X = Pointer_X()
-    Y = Pointer_Y()
+    RawY = Pointer_Y()
+    Y = RawY + ScrollOffset
     PanelLeft = Width - 268
 
     If Value.DragMarker >= 0 Then
@@ -518,7 +531,7 @@ Public Function Pointer(ByRef Value As State, Unity As Boolean, Live As P.Camera
 
     End If
 
-    If Contains(X, Y, PanelLeft, 112, 252, 450) Then
+    If Contains(X, RawY, PanelLeft, PanelTop, 252, PanelHeight) Then
 
         If Not Pointer_Pressed(POINTER_PRIMARY) Then
             Return 100
@@ -649,6 +662,8 @@ Public Function Pointer(ByRef Value As State, Unity As Boolean, Live As P.Camera
 
     End If
 
+    Y = RawY
+
     If (Value.Editing And
         Not Value.Scrubbing And
         Pointer_Pressed(POINTER_PRIMARY)) Then
@@ -710,7 +725,8 @@ Public Function ConnectionName(Connection As Number) As Text
 End Function
 
 Public Sub Draw(Value As State, Unity As Boolean, Width As Number, Height As Number,
-    TargetName As Text, ClipName As Text)
+    TargetName As Text, ClipName As Text, ScrollOffset As Number,
+    PanelTop As Number, PanelHeight As Number)
 
     Dim PanelLeft As Number
     Dim Index As Number
@@ -721,12 +737,15 @@ Public Sub Draw(Value As State, Unity As Boolean, Width As Number, Height As Num
 
     PanelLeft = Width - 268
 
-    Fill Rectangle PanelLeft, 112, 252, 450, Rgb(6, 16, 34) Opacity 94
-    Draw Text "BEAT CAMERA: " + Sequence.Name(Sequence.Identity(Unity, Value.Selected)) At PanelLeft + 8, 120 Size 14 Color WHITE
-    Draw Text "Target: " + TargetName At PanelLeft + 8, 142 Size 11 Color CYAN
-    Draw Text "Tab / Click To Select" At PanelLeft + 8, 157 Size 10 Color LIGHT_GRAY
+    Clip Rectangle PanelLeft, PanelTop, 252, PanelHeight
 
-    Call UI.DrawButton(PanelLeft + 8, 172, 236, 26, "Preview Beats", Value.Preview)
+    Fill Rectangle PanelLeft, PanelTop, 252, PanelHeight, Rgb(6, 16, 34) Opacity 94
+    Draw Text "BEAT CAMERA: " + Sequence.Name(Sequence.Identity(Unity, Value.Selected)) At PanelLeft + 8, 120 - ScrollOffset Size 14 Color WHITE
+    Draw Text "Target: " + TargetName At PanelLeft + 8, 142 - ScrollOffset Size 11 Color CYAN
+    Draw Text "Tab / Click To Select" At PanelLeft + 8, 157 - ScrollOffset Size 10 Color LIGHT_GRAY
+
+    Call UI.DrawButton(PanelLeft + 8, 172 - ScrollOffset, 236, 26,
+        "Preview Beats", Value.Preview)
 
     For Index = 0 To 3
 
@@ -736,7 +755,7 @@ Public Sub Draw(Value As State, Unity As Boolean, Width As Number, Height As Num
             Label = Label + " *"
         End If
 
-        Call UI.DrawButton(PanelLeft + 8 + Index * 60, 208, 56, 26, Label,
+        Call UI.DrawButton(PanelLeft + 8 + Index * 60, 208 - ScrollOffset, 56, 26, Label,
             Value.Editing And Value.ShotIndex = Index)
     End For
 
@@ -756,17 +775,19 @@ Public Sub Draw(Value As State, Unity As Boolean, Width As Number, Height As Num
 
     End If
 
-    Draw Text Label At PanelLeft + 8, 245 Size 11 Color YELLOW
+    Draw Text Label At PanelLeft + 8, 245 - ScrollOffset Size 11 Color YELLOW
 
-    Call UI.DrawButton(PanelLeft + 8, 266, 56, 26, "Save", False)
-    Call UI.DrawButton(PanelLeft + 68, 266, 56, 26, "Copy", False)
-    Call UI.DrawButton(PanelLeft + 128, 266, 56, 26, "Paste", False)
-    Call UI.DrawButton(PanelLeft + 188, 266, 56, 26, "Cancel", False)
+    Call UI.DrawButton(PanelLeft + 8, 266 - ScrollOffset, 56, 26, "Save", False)
+    Call UI.DrawButton(PanelLeft + 68, 266 - ScrollOffset, 56, 26, "Copy", False)
+    Call UI.DrawButton(PanelLeft + 128, 266 - ScrollOffset, 56, 26, "Paste", False)
+    Call UI.DrawButton(PanelLeft + 188, 266 - ScrollOffset, 56, 26, "Cancel", False)
 
     If Value.Editing Then
 
-        Call UI.DrawButton(PanelLeft + 8, 302, 236, 26, "Motion: " + MotionName(Value.Draft.Motion), False)
-        Call UI.DrawButton(PanelLeft + 8, 334, 236, 26, "Connect: " + ConnectionName(Value.Draft.Connection), False)
+        Call UI.DrawButton(PanelLeft + 8, 302 - ScrollOffset, 236, 26,
+            "Motion: " + MotionName(Value.Draft.Motion), False)
+        Call UI.DrawButton(PanelLeft + 8, 334 - ScrollOffset, 236, 26,
+            "Connect: " + ConnectionName(Value.Draft.Connection), False)
 
         Label = "Head Box: Attacker"
 
@@ -774,28 +795,36 @@ Public Sub Draw(Value As State, Unity As Boolean, Width As Number, Height As Num
             Label = "Head Box: Target"
         End If
 
-        Call UI.DrawButton(PanelLeft + 8, 366, 236, 24, Label, False)
-        Call UI.DrawButton(PanelLeft + 8, 394, 114, 24, "Width -", False)
-        Call UI.DrawButton(PanelLeft + 130, 394, 114, 24, "Width +", False)
-        Call UI.DrawButton(PanelLeft + 8, 422, 114, 24, "Height -", False)
-        Call UI.DrawButton(PanelLeft + 130, 422, 114, 24, "Height +", False)
-        Call UI.DrawButton(PanelLeft + 8, 450, 114, 24, "Depth -", False)
-        Call UI.DrawButton(PanelLeft + 130, 450, 114, 24, "Depth +", False)
+        Call UI.DrawButton(PanelLeft + 8, 366 - ScrollOffset, 236, 24, Label, False)
+        Call UI.DrawButton(PanelLeft + 8, 394 - ScrollOffset, 114, 24, "Width -", False)
+        Call UI.DrawButton(PanelLeft + 130, 394 - ScrollOffset, 114, 24, "Width +", False)
+        Call UI.DrawButton(PanelLeft + 8, 422 - ScrollOffset, 114, 24, "Height -", False)
+        Call UI.DrawButton(PanelLeft + 130, 422 - ScrollOffset, 114, 24, "Height +", False)
+        Call UI.DrawButton(PanelLeft + 8, 450 - ScrollOffset, 114, 24, "Depth -", False)
+        Call UI.DrawButton(PanelLeft + 130, 450 - ScrollOffset, 114, 24, "Depth +", False)
 
-        Draw Text "Head Cuboids Auto-Save Per Character" At PanelLeft + 8, 475 Size 9 Color CYAN
+        Draw Text "Head Cuboids Auto-Save Per Character" At PanelLeft + 8, 475 - ScrollOffset Size 9 Color CYAN
 
-        Call UI.DrawButton(PanelLeft + 8, 486, 114, 26, "Reset Beat", False)
-        Call UI.DrawButton(PanelLeft + 130, 486, 114, 26, "Reset All Beats", False)
-        Call UI.DrawButton(PanelLeft + 8, 520, 236, 26, "Reset All Beat Lengths", False)
+        Call UI.DrawButton(PanelLeft + 8, 486 - ScrollOffset, 114, 26, "Reset Beat", False)
+        Call UI.DrawButton(PanelLeft + 130, 486 - ScrollOffset, 114, 26,
+            "Reset All Beats", False)
+        Call UI.DrawButton(PanelLeft + 8, 520 - ScrollOffset, 236, 26,
+            "Reset All Beat Lengths", False)
 
-        Draw Text "Resets Are Drafts Until Save" At PanelLeft + 8, 550 Size 9 Color LIGHT_GRAY
+        Draw Text "Resets Are Drafts Until Save" At PanelLeft + 8, 550 - ScrollOffset Size 9 Color LIGHT_GRAY
 
     Else
-        Draw Text "Animation: " + ClipName At PanelLeft + 8, 307 Size 11 Color WHITE
-        Draw Text "Copy A Shot; Select Another Character" At PanelLeft + 8, 335 Size 10 Color LIGHT_GRAY
-        Draw Text "Then Edit A Beat And Paste" At PanelLeft + 8, 353 Size 10 Color LIGHT_GRAY
+        Draw Text "Animation: " + ClipName At PanelLeft + 8, 307 - ScrollOffset Size 11 Color WHITE
+        Draw Text "Copy A Shot; Select Another Character" At PanelLeft + 8, 335 - ScrollOffset Size 10 Color LIGHT_GRAY
+        Draw Text "Then Edit A Beat And Paste" At PanelLeft + 8, 353 - ScrollOffset Size 10 Color LIGHT_GRAY
 
     End If
+
+    End Clip
+
+    Call UI.DrawVerticalScrollbar(
+        PanelLeft, PanelTop, 252, PanelHeight,
+        PanelContentHeight(Value.Editing), ScrollOffset)
 
     Draw Text Value.Message At 280, 116 Size 11 Color YELLOW
 

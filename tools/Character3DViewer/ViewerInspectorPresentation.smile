@@ -367,11 +367,13 @@ Public Sub DrawIdentityAndToolbar(Value As IdentityView)
 
 End Sub
 
-Public Sub DrawStatusAndAnimation(Value As StatusView)
+Public Sub DrawStatusAndAnimation(Value As StatusView, ScrollOffset As Number)
 
     Dim PanelLeft As Number
 
     PanelLeft = ViewerUi.StatusPanelX(Value.WindowWidth)
+
+    Clip Rectangle PanelLeft, ViewerUi.InspectorViewportTop(), ViewerUi.CAMERA_PANEL_WIDTH, ViewerUi.InspectorViewportHeight(Value.WindowHeight)
 
     Call ViewerUi.DrawCharacterStatusSummary(
         PanelLeft,
@@ -389,12 +391,15 @@ Public Sub DrawStatusAndAnimation(Value As StatusView)
         Value.FramesPerSecond,
         Value.ProfileIndex,
         Value.WeaponIntensity,
-        Value.ShieldIntensity
+        Value.ShieldIntensity,
+        ScrollOffset
     )
     Call ViewerUi.DrawDemoControl(
-        PanelLeft, Value.PartyEnabled, Value.ScenePaused, Value.DemoEnabled)
+        PanelLeft, Value.PartyEnabled, Value.ScenePaused, Value.DemoEnabled,
+        ScrollOffset)
     Call ViewerUi.DrawAnimationButtons(
-        Value.ProfileIndex, Value.SelectedPresentationIndex, Value.WindowWidth)
+        Value.ProfileIndex, Value.SelectedPresentationIndex, Value.WindowWidth,
+        ScrollOffset)
     Call ViewerUi.DrawAnimationDetails(
         PanelLeft,
         Value.WindowHeight,
@@ -404,12 +409,21 @@ Public Sub DrawStatusAndAnimation(Value As StatusView)
         Value.ClipEventCount,
         Value.ModelClipCount,
         Value.ModelSocketCount,
-        Value.ModelEventCount
+        Value.ModelEventCount,
+        ScrollOffset
     )
+
+    End Clip
 
 End Sub
 
-Public Sub DrawEffects(Value As EffectsView)
+Public Sub DrawEffects(Value As EffectsView, ScrollOffset As Number)
+
+    Dim PanelLeft As Number
+
+    PanelLeft = ViewerUi.StatusPanelX(Value.WindowWidth)
+
+    Clip Rectangle PanelLeft, ViewerUi.InspectorViewportTop(), ViewerUi.CAMERA_PANEL_WIDTH, ViewerUi.InspectorViewportHeight(Value.WindowHeight)
 
     Call ViewerUi.DrawProfileEffectControls(
         Value.WindowWidth,
@@ -431,7 +445,17 @@ Public Sub DrawEffects(Value As EffectsView)
         Value.FlamePlaying,
         Value.ShieldFireStyleLabel,
         Value.ShieldFlameStyle,
+        ScrollOffset,
         Value.StormEquipmentLabel
+    )
+
+    End Clip
+
+    Call ViewerUi.DrawInspectorScrollbar(
+        Value.WindowWidth,
+        Value.WindowHeight,
+        ViewerUi.InspectorContentHeight(Value.WindowHeight),
+        ScrollOffset
     )
 
 End Sub
@@ -440,6 +464,7 @@ Public Sub DrawCamera(Value As EffectsView)
 
     Call ViewerUi.DrawCameraPanel(
         Value.WindowWidth,
+        Value.WindowHeight,
         Value.HorizontalOrbit,
         Value.VerticalOrbit,
         Value.ZoomDegrees,

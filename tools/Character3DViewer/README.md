@@ -453,10 +453,13 @@ reselecting a character tab; the operating limits below distinguish tested targe
 - Left drag pans the view; middle drag orbits; wheel zooms smoothly.
 - With Pose Calibration open, a middle drag anchors the point under the cursor at the selected joint/equipment depth. It preserves that point's on-screen location, including after prior pan or close-up zoom, instead of orbiting the distant arena center. The view remains where it was on release; reset clears the custom anchor. This uses a depth plane rather than mesh-surface picking.
 - Zoom extends to -144 for glove and grip inspection. Beyond the former -48 limit, it moves the camera closer to the current panned anchor, reaching one tenth of the former distance. Pan the glove toward the center, then zoom in; the arena size and character pose are unchanged.
-- A dedicated Camera panel stays in the same location on every character and Party tab.
-  H Orbit, V Orbit and Zoom support hover-wheel adjustment and capture slider drags
-  until release, even outside the track. Vertical orbit supports 360 degrees. View,
-  Present, All and Fit share that panel on every tab.
+- A dedicated Camera panel stays in the original lower-right location on every
+  character and Party tab. H Orbit, V Orbit and Zoom support hover-wheel adjustment
+  and capture slider drags until release, even outside the track. Vertical orbit
+  supports 360 degrees. View, Present, All and Fit share that fixed panel on every tab.
+- Right-side panel content above Camera scrolls vertically with the mouse wheel when
+  it cannot fit. A thin scrollbar appears only while the pointer is over that
+  overflowing panel and hides when the pointer leaves.
 - Arin, Orin, Valor and Zara expose independent Weapon and Shield strength sliders in
   Character Status. Each uses the same drag and hover-wheel interaction as H Orbit,
   ranges from 0 to 200 percent and starts at 100 percent for the Viewer session.

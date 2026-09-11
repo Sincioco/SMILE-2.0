@@ -1,6 +1,7 @@
 Option Explicit
 
 Import Smile.Tools.Character3DViewerProfiles As ViewerProfiles
+Import Smile.UI.Controls As UI
 Import Smile.Simple3D.Character3D As Character3D
 Import Smile.Simple3D.CharacterViewer As CharacterViewer
 Import Smile.Simple3D.PrecisionCamera3D As PrecisionCamera
@@ -913,7 +914,7 @@ Call ViewerUi.Reset(UiState)
 
 SliderUpdate = ViewerUi.UpdateCameraSliders(
     InputState.SliderDragOwner, UiState.Visibility,
-    100, 0, 0, 0, -144, 36)
+    100, 640, 0, 0, 0, -144, 36)
 
 Call Check(Not SliderUpdate.Consumed)
 Call Check(SliderUpdate.Action = ViewerUi.SLIDER_ACTION_NONE)
@@ -983,7 +984,12 @@ Call Check(BattleArenaPreview.ReflectionLabel(True,
     Graphics3D.REFLECTION_FALLBACK_NONE) = "Battle Floor: Reflective")
 
 Call Check(ViewerUi.StatusPanelX(1600) = 1332)
-Call Check(ViewerUi.CameraPanelX(1600) = 1064)
+Call Check(ViewerUi.CameraPanelX(1600) = 1332)
+Call Check(ViewerUi.CameraPanelY(640) = 482)
+Call Check(ViewerUi.InspectorViewportTop() = 82)
+Call Check(ViewerUi.InspectorViewportHeight(640) = 392)
+Call Check(UI.VerticalScrollOffset(-20, 100, 180) = 0)
+Call Check(UI.VerticalScrollOffset(120, 100, 180) = 80)
 Call Check(ViewerUi.ProfileHasIntensityControls(ViewerProfiles.PROFILE_ARIN))
 Call Check(ViewerUi.ProfileHasIntensityControls(ViewerProfiles.PROFILE_ORIN))
 Call Check(ViewerUi.ProfileHasIntensityControls(ViewerProfiles.PROFILE_VALOR))
@@ -1028,76 +1034,76 @@ Call Check(ViewerUi.TransferActionAtPointer(18, 597, 640, False, 100) =
 Call Check(ViewerUi.CalibrationPanelContains(18, 92, 0, True, True))
 Call Check(Not ViewerUi.CalibrationPanelContains(18, 92, 1, True, True))
 Call Check(ViewerUi.InspectorBlocksScene(532, 82, 800, 640, 0))
-Call Check(ViewerUi.InspectorBlocksScene(500, 100, 800, 640, 0))
+Call Check(Not ViewerUi.InspectorBlocksScene(500, 100, 800, 640, 0))
 Call Check(Not ViewerUi.InspectorBlocksScene(260, 300, 800, 640, 0))
 Call Check(ViewerUi.InspectorActionAtPointer(
-    18, 544, 800, 640, 0, False, False,
+    18, 544, 800, 640, 0, 0, False, False,
     ViewerProfiles.PROFILE_ARIN, False, -1, 0) =
     ViewerUi.INSPECTOR_ACTION_FIRST_FRAME)
 Call Check(ViewerUi.InspectorActionAtPointer(
-    500, 576, 800, 640, 0, False, False,
+    500, 576, 800, 640, 0, 0, False, False,
     ViewerProfiles.PROFILE_ARIN, False, 2, 0) =
     ViewerUi.INSPECTOR_ACTION_KEYFRAME)
 
 Call Check(ViewerUi.InspectorActionAtPointer(
-    532, 18, 800, 640, 0, False, False,
+    532, 18, 800, 640, 0, 0, False, False,
     ViewerProfiles.PROFILE_ARIN, False, -1, 0) =
     ViewerUi.INSPECTOR_ACTION_LIGHTING)
 Call Check(ViewerUi.InspectorActionAtPointer(
-    626, 444, 800, 640, 0, False, False,
+    626, 444, 800, 640, 0, 0, False, False,
     ViewerProfiles.PROFILE_ARIN, False, -1, 0) =
     ViewerUi.INSPECTOR_ACTION_SWORD_FIRE)
 Call Check(ViewerUi.InspectorActionAtPointer(
-    626, 444, 800, 640, 0, False, False,
+    626, 444, 800, 640, 0, 0, False, False,
     ViewerProfiles.PROFILE_ORIN, False, -1, 0) =
     ViewerUi.INSPECTOR_ACTION_STORM_STYLE)
 Call Check(ViewerUi.InspectorActionAtPointer(
-    706, 444, 800, 640, 0, False, False,
+    706, 444, 800, 640, 0, 0, False, False,
     ViewerProfiles.PROFILE_DRAGON, False, -1, 0) =
     ViewerUi.INSPECTOR_ACTION_DRAGON_TARGET)
 
 Call Check(ViewerUi.InspectorActionAtPointer(
-    544, 470, 800, 640, 0, False, False,
+    544, 470, 800, 640, 0, 0, False, False,
     ViewerProfiles.PROFILE_ORIN, False, -1, 0) =
     ViewerUi.INSPECTOR_ACTION_STORM_COMFORT)
 Call Check(ViewerUi.InspectorActionAtPointer(
-    544, 470, 800, 640, 0, False, False,
+    544, 470, 800, 640, 0, 0, False, False,
     ViewerProfiles.PROFILE_ARIN, True, -1, 0) =
     ViewerUi.INSPECTOR_ACTION_FLAME_PAUSE)
 Call Check(ViewerUi.InspectorActionAtPointer(
-    600, 550, 800, 640, 0, False, False,
+    600, 454, 800, 640, 0, 96, False, False,
     ViewerProfiles.PROFILE_ARIN, False, -1, 0) =
     ViewerUi.INSPECTOR_ACTION_VFX_REFLECTIONS)
 Call Check(ViewerUi.InspectorActionAtPointer(
-    600, 500, 800, 640, 0, False, False,
+    600, 404, 800, 640, 0, 96, False, False,
     ViewerProfiles.PROFILE_ARIN, False, -1, 0) =
     ViewerUi.INSPECTOR_ACTION_FLOOR_REFLECTIONS)
 Call Check(ViewerUi.InspectorActionAtPointer(
-    600, 500, 800, 640, 1, False, False,
+    600, 404, 800, 640, 1, 96, False, False,
     ViewerProfiles.PROFILE_ARIN, False, -1, 0) =
     ViewerUi.INSPECTOR_ACTION_NONE)
 Call Check(ViewerUi.InspectorActionAtPointer(
-    544, 352, 800, 640, 0, False, False,
+    544, 352, 800, 640, 0, 0, False, False,
     ViewerProfiles.PROFILE_ARIN, False, -1, 0) =
     ViewerUi.INSPECTOR_ACTION_CLIP_BASE)
 Call Check(ViewerUi.InspectorActionAtPointer(
-    532, 18, 800, 640, 1, False, False,
+    532, 18, 800, 640, 1, 0, False, False,
     ViewerProfiles.PROFILE_ARIN, False, -1, 0) =
     ViewerUi.INSPECTOR_ACTION_NONE)
 Call Check(ViewerUi.InspectorActionAtPointer(
-    288, ViewerUi.CAMERA_BUTTON_Y, 800, 640, 0, False, True,
+    544, 576, 800, 640, 0, 0, False, True,
     ViewerProfiles.PROFILE_ARIN, False, -1, 0) =
     ViewerUi.INSPECTOR_ACTION_RESET_VIEW)
 Call Check(ViewerUi.InspectorActionAtPointer(
-    344, ViewerUi.CAMERA_BUTTON_Y, 800, 640, 0, False, True,
+    600, 576, 800, 640, 0, 0, False, True,
     ViewerProfiles.PROFILE_ARIN, False, -1, 0) =
     ViewerUi.INSPECTOR_ACTION_RESTART_PRESENTATION)
 Call Check(ViewerUi.InspectorActionAtPointer(
-    422, ViewerUi.CAMERA_BUTTON_Y, 800, 640, 0, False, True,
+    678, 576, 800, 640, 0, 0, False, True,
     ViewerProfiles.PROFILE_ARIN, False, -1, 0) =
     ViewerUi.INSPECTOR_ACTION_RESET_ALL)
 Call Check(ViewerUi.InspectorActionAtPointer(
-    466, ViewerUi.CAMERA_BUTTON_Y, 800, 640, 0, False, True,
+    722, 576, 800, 640, 0, 0, False, True,
     ViewerProfiles.PROFILE_ARIN, False, -1, 0) =
     ViewerUi.INSPECTOR_ACTION_FIT)
 
@@ -1258,13 +1264,13 @@ Call CheckNamed(InspectorStatusView.PlaybackSpeed = 100,
 Call ViewerParty.SelectUnityRoster(PartyState, False)
 Call ViewerParty.SetEnabled(PartyState, False)
 
-Call ViewerInspectorPresentation.DrawStatusAndAnimation(InspectorStatusView)
+Call ViewerInspectorPresentation.DrawStatusAndAnimation(InspectorStatusView, 0)
 
 InspectorEffectsView = ViewerInspectorPresentation.CaptureEffects(
     SessionState, RenderingState, EffectsState, DragonState, PartyState,
     CameraState, 800, 640, -144, 36)
 
-Call ViewerInspectorPresentation.DrawEffects(InspectorEffectsView)
+Call ViewerInspectorPresentation.DrawEffects(InspectorEffectsView, 0)
 Call ViewerInspectorPresentation.DrawCamera(InspectorEffectsView)
 
 InspectorWorkspaceView = ViewerInspectorPresentation.CaptureWorkspace(
@@ -1277,11 +1283,11 @@ Call ViewerInspectorPresentation.DrawWorkspace(
 Call ViewerUi.DrawProfileEffectControls(
     800, ViewerProfiles.PROFILE_ORIN, True, True, True, 0, False, False,
     "Storm", "Comfort", "Freeze Lightning", False,
-    False, False, False, "Pause Flames", True, "Shield Fire", False)
+    False, False, False, "Pause Flames", True, "Shield Fire", False, 0)
 Call ViewerUi.DrawProfileEffectControls(
     800, ViewerProfiles.PROFILE_DRAGON, True, True, True, 0, False, False,
     "Storm", "Comfort", "Freeze Lightning", False,
-    True, False, False, "Pause Flames", True, "Shield Fire", False)
+    True, False, False, "Pause Flames", True, "Shield Fire", False, 0)
 Call ViewerUi.DrawFooterMessage(800, 640, True,
     "Imported calibration key frames successfully")
 Call ViewerUi.DrawPauseStatus(532, True, False, False, True)
@@ -1546,8 +1552,8 @@ Call Check(PartyPointer.Consumed And
 PartyPointer = ViewerParty.ClassifyPointer(
     1100, 500, True, False, 0, False, False, 640, 1000, 1200, 40)
 
-Call Check(PartyPointer.Consumed And
-    PartyPointer.Action = ViewerParty.POINTER_ACTION_TOGGLE_FLOOR_REFLECTIONS)
+Call Check(Not PartyPointer.Consumed And
+    PartyPointer.Action = ViewerParty.POINTER_ACTION_NONE)
 
 PartyPointer = ViewerParty.ClassifyPointer(
     1100, 500, True, False, 1, False, False, 640, 1000, 1200, 40)
@@ -2662,8 +2668,8 @@ Call Check(InspectorOperation.Handled And InspectorOperation.Ready And
 PartyPointer = ViewerParty.ClassifyPointer(
     1100, 550, True, False, 0, False, False, 640, 1000, 1200, 40)
 
-Call Check(PartyPointer.Consumed And
-    PartyPointer.Action = ViewerParty.POINTER_ACTION_TOGGLE_VFX_REFLECTIONS)
+Call Check(Not PartyPointer.Consumed And
+    PartyPointer.Action = ViewerParty.POINTER_ACTION_NONE)
 
 InspectorOperation = ViewerInspectorCommands.ApplyPresentationAction(
     ViewerUi.INSPECTOR_ACTION_FLOOR,

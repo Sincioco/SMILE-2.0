@@ -193,12 +193,12 @@ SHA-256, current Desktop source/artifact bytes:
 | `src/Smile.Compiler/MasmEmitter.cs` | `1D7D0B267E8183ABA6876052721B4F41381D280DE2F872E9F22FE88C9BCF6B93` |
 | `tools/Character3DViewer/BattleCameraTimeline.smile` | `A1188859B189B4A6D7D47B186ABABC4151D3DF1DE5C56BB281BD7BE249CA8D83` |
 | `tools/Character3DViewer/ViewerBeatTimeline.smile` | `7BE7B93E045A24202C56D37891B67FFF3B525A102F35686164C56985FF98EE13` |
-| `tools/Character3DViewer/ViewerBeatEditor.smile` | `06DBD4820A7CBABFB0F9ED169C36E032726E0A8E7FDFFBB2DF3529E25EF093D9` |
-| `tools/Character3DViewer/ViewerWorkflow.smile` | `CB0AB9318DA49F8AA6E68A4F294BF5C4F5E58AB12DB3894B6C21F229E1A3A824` |
-| `tools/Character3DViewer/bin/Release/Character3DViewer.exe` | `F12BA17EB1A0BEDBF5DBC620B902F761079DD65F85804C2D00F677706D6C6812` |
+| `tools/Character3DViewer/ViewerBeatEditor.smile` | `ADFC5512B9ECE776A8E1969C5509A29F1BE424D2D252AF2A1C509DFB9135B8A3` |
+| `tools/Character3DViewer/ViewerWorkflow.smile` | `99FE5BD822D3DE1785F8615F9359CDF5B0F9395EDDCCF6C7E5435451C0003AF3` |
+| `tools/Character3DViewer/bin/Release/Character3DViewer.exe` | `2C3C15C3D4F2FA9F051556E14105FC56E69838D0BEA6998C1558DC45614FF451` |
 | `tools/SmileStudio/bin/Release/SmileStudio.exe` | `FDA0854F28AA33AB74C453A113C51A608585F6E9780C3A03ADA2E04DFF2BDFD2` |
-| `artifacts/compiler/smilec.dll` | `908143D8E6A92894B306DD608C04166D9DF2488632D9D6574B30B90026D53FAC` |
-| `artifacts/vsix/Smile.VisualStudio.vsix` | `4EFB2BFE391242C7161CA95CF2D5B8E90177D4CF4D5ADF666387296FA2536BD4` |
+| `artifacts/compiler/smilec.dll` | `1638C9E67E3796931A1AD251E19EFEB757E9C8DB508A3C2D2909BD4890E0E450` |
+| `artifacts/vsix/Smile.VisualStudio.vsix` | `2537FD71D1FF9CE29D5589A074D12116582357A971B49E3BBA16C26C494EC438` |
 
 Calibration launch/export evidence preserves Arin's 24 keys (SHA-256
 `7A3E7BC823CF544FA0136920A9D0752BF7DE585C0891B9073E688B1F783B3F67`)
@@ -208,14 +208,20 @@ and Orin's zero keys (`13AE135FDA40302CB5A4B0146D7103A2ED5346AAEEBB3852AF6DD3C39
 
 - The native repeat loader used during tab changes is centered over the retained
   Viewer window, clamped to the current monitor and rendered at 80-percent opacity.
-- Camera controls now occupy one dedicated panel at the same location on all
-  character and Party tabs. H Orbit, V Orbit, Zoom, View, Present, All and Fit move
-  together as one control group.
+- Camera controls now occupy one dedicated panel in their original lower-right
+  location on all character and Party tabs. H Orbit, V Orbit, Zoom, View, Present,
+  All and Fit remain together as one fixed control group.
+- Right-side inspector and Beat Editor content above Camera scrolls vertically with
+  the mouse wheel when it overflows. A thin scrollbar appears only while that panel
+  is hovered and hides when the pointer leaves. Party input bounds stop above Camera,
+  so every Camera slider and button remains interactive.
 - Arin, Orin, Valor and Zara now have independent 0-200 percent Weapon and Shield
   strength sliders in Character Status, using the shared H Orbit slider interaction.
-- The native release Viewer rebuilt successfully, passed all 58 hardening checks and
-  the complete startup contract, then launched and closed normally. Native captures
-  verified the Camera panel on Party Vrax and the strength sliders on Arin.
+- The native release Viewer rebuilt successfully and passed all 58 hardening checks.
+  A 1600-by-640 live interaction exercised every Camera slider and button on Party
+  Vrax, then verified inspector wheel scrolling and the hover-only scrollbar on Arin.
+  The full repository build passed and VSIX 2.0.63 was reinstalled with all 35 payload
+  hashes matching. The complete startup contract remains passed from the loader change.
 - The native capture helper now waits for the loaded editor window instead of retaining
   the temporary startup-splash handle.
 

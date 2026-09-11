@@ -84,6 +84,70 @@ Public Sub DrawSlider(X As Number, Y As Number, Width As Number, Height As Numbe
 
 End Sub
 
+Public Function VerticalScrollOffset(CurrentOffset As Number,
+    ViewportHeight As Number, ContentHeight As Number) As Number
+
+    Dim Result As Number
+
+    Result = Min(Max(0, ContentHeight - ViewportHeight), Max(0, CurrentOffset))
+
+    Return Result
+
+End Function
+
+''' Scrolls only while the pointer is over overflowing panel content.
+Public Function UpdateVerticalScroll(X As Number, Y As Number,
+    Width As Number, Height As Number, ContentHeight As Number,
+    WheelStep As Number, ByRef Offset As Number) As Boolean
+
+    Dim WheelDelta As Number
+
+    Offset = VerticalScrollOffset(Offset, Height, ContentHeight)
+
+    If ContentHeight <= Height Or Not Contains(X, Y, Width, Height) Then
+        Return False
+    End If
+
+    WheelDelta = Pointer_Wheel_Delta()
+
+    If WheelDelta = 0 Then
+        Return False
+    End If
+
+    Offset = VerticalScrollOffset(
+        Offset - WheelDelta * Max(1, WheelStep), Height, ContentHeight)
+
+    Return True
+
+End Function
+
+''' Shows a thin track and thumb only while the overflowing panel is hovered.
+Public Sub DrawVerticalScrollbar(X As Number, Y As Number,
+    Width As Number, Height As Number, ContentHeight As Number,
+    Offset As Number)
+
+    Dim MaximumOffset As Number
+    Dim ScrollOffset As Number
+    Dim ThumbHeight As Number
+    Dim ThumbY As Number
+    Dim TrackHeight As Number
+
+    If ContentHeight <= Height Or Not Contains(X, Y, Width, Height) Then
+        Return
+    End If
+
+    MaximumOffset = ContentHeight - Height
+    ScrollOffset = VerticalScrollOffset(Offset, Height, ContentHeight)
+    TrackHeight = Max(1, Height - 8)
+    ThumbHeight = Max(18, TrackHeight * Height / ContentHeight)
+    ThumbHeight = Min(TrackHeight, ThumbHeight)
+    ThumbY = Y + 4 + (TrackHeight - ThumbHeight) * ScrollOffset / MaximumOffset
+
+    Fill Rectangle X + Width - 5, Y + 4, 2, TrackHeight, DARK_GRAY Opacity 55
+    Fill Rectangle X + Width - 6, ThumbY, 4, ThumbHeight, CYAN Opacity 80
+
+End Sub
+
 ''' True consumes this input frame, including release outside the slider.
 ''' Start only on press; entering a slider during a scene drag cannot steal it.
 Public Function UpdateSlider(ByRef DragOwner As Number, Id As Number,

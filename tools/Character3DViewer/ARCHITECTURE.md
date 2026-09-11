@@ -22,8 +22,10 @@ camera intervals to the original battle duration; no action time is remapped.
 drafts and clipboard, one head cuboid per identity, preview playback and reset controls. The
 existing `ViewerWorkflow.Session` coordinates those operations; it retains the same
 renderer, Party actor instances, calibration owners and main update/draw order.
-`ViewerUi` keeps one dedicated Camera panel at a stable viewport-relative location
-for every standalone and Party tab. It also presents independent 0-200 percent
+`ViewerUi` keeps one dedicated Camera panel at the original lower-right location for
+every standalone and Party tab. The upper inspector and Beat Editor use the shared
+`Smile.UI.Controls` vertical-scroll operations, with a hover-only scrollbar for
+overflowing content. `ViewerUi` also presents independent 0-200 percent
 Weapon/Shield sliders for Arin, Orin, Valor and Zara; `ViewerEffects` owns those
 session values and their profile-to-pair mapping.
 `ViewerCamera.ComposeShot` composes input in an arbitrary saved camera's basis;
