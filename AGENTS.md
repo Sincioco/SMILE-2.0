@@ -201,6 +201,14 @@ Use KISS: Keep It Simple, Stupid.
 - Extend the working architecture rather than replacing it.
 - Do not add CI, GitHub Actions, a large automated test suite, cross-platform support, a package manager, or speculative infrastructure.
 - Do not stop after planning or scaffolding. Continue through implementation, build, native compilation, execution, debugging, validation, commit, and push.
+- Add regression tests for demonstrated bugs or behavior that needs direct proof. Do not grow a permanent unit-test suite for speculative concerns; retire a temporary regression test after ten relevant passing runs when it no longer protects an active risk.
+- Keep source modular by responsibility so routine edits do not require reading or rewriting monolithic files. Do not create extra layers, files, or folders without a concrete reuse or maintenance benefit.
+
+### Permanent PowerShell, browser-refresh and test-readiness preferences
+
+- Use the latest installed PowerShell 7 through `pwsh` whenever PowerShell is needed. Do not invoke Windows PowerShell when PowerShell 7 can perform the task.
+- At completion, state whether Sin must rebuild the .NET portion or only press Ctrl+F5 in Chrome. For CSS and image changes, update asset versioning or cache behavior so the browser does not retain stale content.
+- As each requested task becomes ready for Sin to test, repeat that task in bold and label it ready for testing. When the prompt queue is complete, repeat every ready-for-testing task in bold.
 
 ### Permanent defect follow-through rule
 

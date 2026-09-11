@@ -2578,14 +2578,6 @@ Public Function ClassifyPointer(
     End If
 
     If InRectangle(PointerX, PointerY,
-        StatusPanelX + 12, WindowHeight - 64, 52, 24) Then
-        Result.Action = POINTER_ACTION_RESET_VIEW
-    Else If (InRectangle(PointerX, PointerY,
-        StatusPanelX + 68, WindowHeight - 64, 74, 24) Or
-        InRectangle(PointerX, PointerY,
-            StatusPanelX + 146, WindowHeight - 64, 40, 24)) Then
-        Result.Action = POINTER_ACTION_RESET_INSPECTOR
-    Else If InRectangle(PointerX, PointerY,
         GlowButtonX, 18, GlowButtonWidth, 34) Then
         Result.Action = POINTER_ACTION_TOGGLE_GLOW
     Else If InRectangle(PointerX, PointerY,

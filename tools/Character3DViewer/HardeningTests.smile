@@ -913,7 +913,7 @@ Call ViewerUi.Reset(UiState)
 
 SliderUpdate = ViewerUi.UpdateCameraSliders(
     InputState.SliderDragOwner, UiState.Visibility,
-    100, 640, 0, 0, 0, -144, 36)
+    100, 0, 0, 0, -144, 36)
 
 Call Check(Not SliderUpdate.Consumed)
 Call Check(SliderUpdate.Action = ViewerUi.SLIDER_ACTION_NONE)
@@ -983,6 +983,12 @@ Call Check(BattleArenaPreview.ReflectionLabel(True,
     Graphics3D.REFLECTION_FALLBACK_NONE) = "Battle Floor: Reflective")
 
 Call Check(ViewerUi.StatusPanelX(1600) = 1332)
+Call Check(ViewerUi.CameraPanelX(1600) = 1064)
+Call Check(ViewerUi.ProfileHasIntensityControls(ViewerProfiles.PROFILE_ARIN))
+Call Check(ViewerUi.ProfileHasIntensityControls(ViewerProfiles.PROFILE_ORIN))
+Call Check(ViewerUi.ProfileHasIntensityControls(ViewerProfiles.PROFILE_VALOR))
+Call Check(ViewerUi.ProfileHasIntensityControls(ViewerProfiles.PROFILE_ZARA))
+Call Check(Not ViewerUi.ProfileHasIntensityControls(ViewerProfiles.PROFILE_DRAGON))
 Call Check(ViewerUi.AnimationButtonX(1600) = 1344)
 Call Check(ViewerUi.GlowButtonX(1600, True, False) = 1548)
 Call Check(ViewerUi.GlowButtonWidth(True, False) = 36)
@@ -1022,7 +1028,8 @@ Call Check(ViewerUi.TransferActionAtPointer(18, 597, 640, False, 100) =
 Call Check(ViewerUi.CalibrationPanelContains(18, 92, 0, True, True))
 Call Check(Not ViewerUi.CalibrationPanelContains(18, 92, 1, True, True))
 Call Check(ViewerUi.InspectorBlocksScene(532, 82, 800, 640, 0))
-Call Check(Not ViewerUi.InspectorBlocksScene(500, 100, 800, 640, 0))
+Call Check(ViewerUi.InspectorBlocksScene(500, 100, 800, 640, 0))
+Call Check(Not ViewerUi.InspectorBlocksScene(260, 300, 800, 640, 0))
 Call Check(ViewerUi.InspectorActionAtPointer(
     18, 544, 800, 640, 0, False, False,
     ViewerProfiles.PROFILE_ARIN, False, -1, 0) =
@@ -1077,6 +1084,22 @@ Call Check(ViewerUi.InspectorActionAtPointer(
     532, 18, 800, 640, 1, False, False,
     ViewerProfiles.PROFILE_ARIN, False, -1, 0) =
     ViewerUi.INSPECTOR_ACTION_NONE)
+Call Check(ViewerUi.InspectorActionAtPointer(
+    288, ViewerUi.CAMERA_BUTTON_Y, 800, 640, 0, False, True,
+    ViewerProfiles.PROFILE_ARIN, False, -1, 0) =
+    ViewerUi.INSPECTOR_ACTION_RESET_VIEW)
+Call Check(ViewerUi.InspectorActionAtPointer(
+    344, ViewerUi.CAMERA_BUTTON_Y, 800, 640, 0, False, True,
+    ViewerProfiles.PROFILE_ARIN, False, -1, 0) =
+    ViewerUi.INSPECTOR_ACTION_RESTART_PRESENTATION)
+Call Check(ViewerUi.InspectorActionAtPointer(
+    422, ViewerUi.CAMERA_BUTTON_Y, 800, 640, 0, False, True,
+    ViewerProfiles.PROFILE_ARIN, False, -1, 0) =
+    ViewerUi.INSPECTOR_ACTION_RESET_ALL)
+Call Check(ViewerUi.InspectorActionAtPointer(
+    466, ViewerUi.CAMERA_BUTTON_Y, 800, 640, 0, False, True,
+    ViewerProfiles.PROFILE_ARIN, False, -1, 0) =
+    ViewerUi.INSPECTOR_ACTION_FIT)
 
 Call Check(ViewerUi.TIMELINE_LEFT = 18 And ViewerUi.TIMELINE_HEIGHT = 18)
 Call Check(ViewerUi.CALIBRATION_PANEL_WIDTH = 430 And
@@ -1215,7 +1238,7 @@ Call ViewerInspectorPresentation.DrawIdentityAndToolbar(InspectorIdentityView)
 
 InspectorStatusView = ViewerInspectorPresentation.CaptureStatus(
     PartyPrimary.Actor, Profile, PartyState, SessionState, RenderingState,
-    PlaybackState, CameraState, FrameRate, 800, 650, 16000)
+    PlaybackState, EffectsState, CameraState, FrameRate, 800, 650, 16000)
 
 Call CheckNamed(InspectorStatusView.ProfileIndex = ViewerProfiles.PROFILE_ARIN And
     InspectorStatusView.DisplayName = "Arin",
@@ -1228,7 +1251,7 @@ PartyState.UiTurn = 2
 PlaybackState.PlaybackSpeed = 100
 InspectorStatusView = ViewerInspectorPresentation.CaptureStatus(
     PartyPrimary.Actor, Profile, PartyState, SessionState, RenderingState,
-    PlaybackState, CameraState, FrameRate, 800, 650, 16000)
+    PlaybackState, EffectsState, CameraState, FrameRate, 800, 650, 16000)
 
 Call CheckNamed(InspectorStatusView.PlaybackSpeed = 100,
     "Party status reports Vrax's reference playback speed")
@@ -1241,7 +1264,8 @@ InspectorEffectsView = ViewerInspectorPresentation.CaptureEffects(
     SessionState, RenderingState, EffectsState, DragonState, PartyState,
     CameraState, 800, 640, -144, 36)
 
-Call ViewerInspectorPresentation.DrawEffectsAndCamera(InspectorEffectsView)
+Call ViewerInspectorPresentation.DrawEffects(InspectorEffectsView)
+Call ViewerInspectorPresentation.DrawCamera(InspectorEffectsView)
 
 InspectorWorkspaceView = ViewerInspectorPresentation.CaptureWorkspace(
     UiState, PartyPrimary.Actor, CalibrationState, PlaybackState, GizmoState,
@@ -3298,7 +3322,7 @@ Sub TestEquipmentIntensityBounds()
 
     Call ViewerEffects.ResetEquipmentDefaults(Value)
 
-    For Target = 0 To 3
+    For Target = 0 To 7
 
         For Index = 0 To 24
             Call ViewerEffects.AdjustIntensity(Value, Target, False)
@@ -3314,7 +3338,16 @@ Sub TestEquipmentIntensityBounds()
     End For
 
     Call ViewerEffects.ResetEquipmentDefaults(Value)
-    Call Check(Value.EquipmentIntensity[0] = 200 And Value.EquipmentIntensity[3] = 200)
+    Call Check(Value.EquipmentIntensity[0] = 200 And Value.EquipmentIntensity[7] = 200)
+
+    Call ViewerEffects.SetIntensity(Value, ViewerProfiles.PROFILE_ARIN, False, 25)
+    Call ViewerEffects.SetIntensity(Value, ViewerProfiles.PROFILE_ORIN, True, 50)
+    Call ViewerEffects.SetIntensity(Value, ViewerProfiles.PROFILE_VALOR, False, 75)
+    Call ViewerEffects.SetIntensity(Value, ViewerProfiles.PROFILE_ZARA, True, 125)
+    Call Check(ViewerEffects.Intensity(Value, ViewerProfiles.PROFILE_ARIN, False) = 25)
+    Call Check(ViewerEffects.Intensity(Value, ViewerProfiles.PROFILE_ORIN, True) = 50)
+    Call Check(ViewerEffects.Intensity(Value, ViewerProfiles.PROFILE_VALOR, False) = 75)
+    Call Check(ViewerEffects.Intensity(Value, ViewerProfiles.PROFILE_ZARA, True) = 125)
 
 End Sub
 

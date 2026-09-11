@@ -1105,8 +1105,7 @@ Public Class Session
         Update = ViewerUi.UpdateCameraSliders(
             Me.ViewerInputState.SliderDragOwner,
             Me.ViewerUiState.Visibility,
-            ViewerUi.StatusPanelX(Me.ViewWidth),
-            Me.ViewHeight,
+            ViewerUi.CameraPanelX(Me.ViewWidth),
             ToNumber(Round(Me.ViewerCameraState.Controls.OrbitYaw)),
             ToNumber(Round(Me.ViewerCameraState.Controls.OrbitPitch)),
             ToNumber(Round(Me.ViewerCameraState.Zoom.Target)),
@@ -1120,6 +1119,27 @@ Public Class Session
             Call ViewerCamera.SetVerticalOrbit(Me.ViewerCameraState, Update.Value)
         Else If Update.Action = ViewerUi.SLIDER_ACTION_ZOOM Then
             Call ViewerCamera.SetZoomTarget(Me.ViewerCameraState, Update.Value)
+        End If
+
+        If Update.Consumed Then
+            Return True
+        End If
+
+        Update = ViewerUi.UpdateIntensitySliders(
+            Me.ViewerInputState.SliderDragOwner,
+            Me.ViewerUiState.Visibility,
+            ViewerUi.StatusPanelX(Me.ViewWidth),
+            Me.Session.ProfileIndex,
+            ViewerEffects.Intensity(Me.Effects, Me.Session.ProfileIndex, False),
+            ViewerEffects.Intensity(Me.Effects, Me.Session.ProfileIndex, True)
+        )
+
+        If Update.Action = ViewerUi.SLIDER_ACTION_WEAPON_INTENSITY Then
+            Call ViewerEffects.SetIntensity(
+                Me.Effects, Me.Session.ProfileIndex, False, Update.Value)
+        Else If Update.Action = ViewerUi.SLIDER_ACTION_SHIELD_INTENSITY Then
+            Call ViewerEffects.SetIntensity(
+                Me.Effects, Me.Session.ProfileIndex, True, Update.Value)
         End If
 
         If Update.Consumed Then
@@ -1650,6 +1670,13 @@ Public Class Session
 
         Call ViewerInspectorPresentation.DrawIdentityAndToolbar(IdentityView)
 
+        If Me.ViewerUiState.Visibility = 0 Then
+            EffectsView = ViewerInspectorPresentation.CaptureEffects(
+                Me.Session, Me.Rendering, Me.Effects, Me.DragonState, Me.Party,
+                Me.ViewerCameraState, Me.ViewWidth, Me.ViewHeight,
+                ZOOM_IN_LIMIT, ZOOM_OUT_LIMIT)
+        End If
+
         If Me.Party.Enabled And Not Me.ViewerUiState.CalibrationVisible Then
             Call ViewerParty.DrawOverlay(
                 Me.Party,
@@ -1682,17 +1709,17 @@ Public Class Session
 
             StatusView = ViewerInspectorPresentation.CaptureStatus(
                 Me.Character, Me.ActiveProfile, Me.Party, Me.Session, Me.Rendering, Me.Playback,
-                Me.ViewerCameraState, Me.FrameRate, Me.ViewWidth, Me.ViewHeight,
+                Me.Effects, Me.ViewerCameraState, Me.FrameRate, Me.ViewWidth, Me.ViewHeight,
                 ANIMATION_CYCLE_MILLISECONDS)
 
             Call ViewerInspectorPresentation.DrawStatusAndAnimation(StatusView)
 
-            EffectsView = ViewerInspectorPresentation.CaptureEffects(
-                Me.Session, Me.Rendering, Me.Effects, Me.DragonState, Me.Party, Me.ViewerCameraState,
-                Me.ViewWidth, Me.ViewHeight, ZOOM_IN_LIMIT, ZOOM_OUT_LIMIT)
+            Call ViewerInspectorPresentation.DrawEffects(EffectsView)
 
-            Call ViewerInspectorPresentation.DrawEffectsAndCamera(EffectsView)
+        End If
 
+        If Me.ViewerUiState.Visibility = 0 Then
+            Call ViewerInspectorPresentation.DrawCamera(EffectsView)
         End If
 
         WorkspaceView = ViewerInspectorPresentation.CaptureWorkspace(

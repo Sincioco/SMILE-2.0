@@ -50,10 +50,14 @@ public static class SmileViewerCaptureNative
 
 function Get-WindowHandle([System.Diagnostics.Process]$Process) {
     $deadline = [DateTime]::UtcNow.AddSeconds(15)
+    $readyTitlePrefix = 'SMILE 2.0 - 3D Viewer, Animation Editor - '
     do {
         $Process.Refresh()
         if ($Process.HasExited) { throw 'Character Viewer exited before evidence capture.' }
-        if ($Process.MainWindowHandle -ne [IntPtr]::Zero) { return $Process.MainWindowHandle }
+        if ($Process.MainWindowHandle -ne [IntPtr]::Zero -and
+            $Process.MainWindowTitle.StartsWith($readyTitlePrefix, [System.StringComparison]::Ordinal)) {
+            return $Process.MainWindowHandle
+        }
         Start-Sleep -Milliseconds 100
     } while ([DateTime]::UtcNow -lt $deadline)
 

@@ -213,14 +213,29 @@ static DWORD WINAPI startup_run(void*)
         MONITORINFO monitor = { sizeof(monitor) };
         if (!GetMonitorInfoW(MonitorFromWindow(startup_owner ? startup_owner : GetForegroundWindow(), MONITOR_DEFAULTTONEAREST), &monitor)) break;
         const RECT area = monitor.rcWork;
+        RECT anchor = area;
+
+        if (startup_reloading && startup_owner && IsWindow(startup_owner) &&
+            !IsIconic(startup_owner))
+            GetWindowRect(startup_owner, &anchor);
+
         int height = MulDiv(650, (int)GetDpiForSystem(), 96);
         if (height > area.bottom - area.top - 40) height = area.bottom - area.top - 40;
         if (height > area.right - area.left - 40) height = area.right - area.left - 40;
         if (STARTUP_FAULT(4) || height <= 0) break;
-        startup_window = CreateWindowExW(WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE, type.lpszClassName, startup_title,
-            WS_POPUP | WS_BORDER, area.left + (area.right - area.left - height) / 2,
-            area.top + (area.bottom - area.top - height) / 2, height, height, startup_owner, 0, type.hInstance, 0);
+        int x = anchor.left + (anchor.right - anchor.left - height) / 2;
+        int y = anchor.top + (anchor.bottom - anchor.top - height) / 2;
+        if (x < area.left) x = area.left;
+        if (y < area.top) y = area.top;
+        if (x + height > area.right) x = area.right - height;
+        if (y + height > area.bottom) y = area.bottom - height;
+        const DWORD extended_style = WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE |
+            (startup_reloading ? WS_EX_LAYERED : 0);
+        startup_window = CreateWindowExW(extended_style, type.lpszClassName, startup_title,
+            WS_POPUP | WS_BORDER, x, y, height, height, startup_owner, 0, type.hInstance, 0);
         if (!startup_window) break;
+        if (startup_reloading &&
+            !SetLayeredWindowAttributes(startup_window, 0, 204, LWA_ALPHA)) break;
         if (STARTUP_FAULT(5) || !SetTimer(startup_window, 1, 50, 0)) break;
         if (startup_cancel_requested) break;
         InterlockedExchange(&startup_prepared, 1);

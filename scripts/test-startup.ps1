@@ -23,6 +23,21 @@ $native = @'
 #include "startup/startup.h"
 #ifdef SMILE_STARTUP_TESTS
 extern "C" { int smile_startup_test_fault; void smile_startup_test_resume() {} }
+static HWND inspected_splash = 0;
+static BOOL CALLBACK find_owned_splash(HWND candidate, LPARAM owner) {
+    WCHAR name[64] = {};
+    GetClassNameW(candidate, name, 64);
+    if (GetWindow(candidate, GW_OWNER) == (HWND)owner && lstrcmpW(name, L"SMILE20StartupWindow") == 0) {
+        inspected_splash = candidate;
+        return FALSE;
+    }
+    return TRUE;
+}
+static HWND get_owned_splash(HWND owner) {
+    inspected_splash = 0;
+    EnumWindows(find_owned_splash, (LPARAM)owner);
+    return inspected_splash;
+}
 static BOOL CALLBACK cancel_owned_splash(HWND candidate, LPARAM owner) {
     WCHAR name[64] = {};
     GetClassNameW(candidate, name, 64);
@@ -81,6 +96,26 @@ int main(int argc, char**) {
     }
     smile_startup_test_fault = 0;
     if (!smile_startup_resume(owner)) return 40;
+    HWND splash = get_owned_splash(owner);
+    RECT owner_bounds = {}, splash_bounds = {};
+    MONITORINFO monitor = { sizeof(monitor) };
+    BYTE alpha = 0;
+    DWORD alpha_flags = 0;
+    COLORREF color_key = 0;
+    if (!splash || !GetWindowRect(owner, &owner_bounds) || !GetWindowRect(splash, &splash_bounds) ||
+        !GetMonitorInfoW(MonitorFromWindow(owner, MONITOR_DEFAULTTONEAREST), &monitor)) return 47;
+    int splash_width = splash_bounds.right - splash_bounds.left;
+    int splash_height = splash_bounds.bottom - splash_bounds.top;
+    int expected_x = owner_bounds.left + (owner_bounds.right - owner_bounds.left - splash_width) / 2;
+    int expected_y = owner_bounds.top + (owner_bounds.bottom - owner_bounds.top - splash_height) / 2;
+    if (expected_x < monitor.rcWork.left) expected_x = monitor.rcWork.left;
+    if (expected_y < monitor.rcWork.top) expected_y = monitor.rcWork.top;
+    if (expected_x + splash_width > monitor.rcWork.right) expected_x = monitor.rcWork.right - splash_width;
+    if (expected_y + splash_height > monitor.rcWork.bottom) expected_y = monitor.rcWork.bottom - splash_height;
+    if (splash_bounds.left != expected_x || splash_bounds.top != expected_y) return 48;
+    if (!(GetWindowLongPtrW(splash, GWL_EXSTYLE) & WS_EX_LAYERED) ||
+        !GetLayeredWindowAttributes(splash, &color_key, &alpha, &alpha_flags) ||
+        !(alpha_flags & LWA_ALPHA) || alpha != 204) return 49;
     smile_startup_ready();
     // The fault-enabled owner uses a 500-ms deadline; retain actual Windows
     // minimized eligibility for longer than it, then restore through the pumped queue.

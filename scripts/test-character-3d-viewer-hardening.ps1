@@ -423,7 +423,8 @@ try {
         'Public Function CaptureWorkspace(',
         'Public Sub DrawIdentityAndToolbar(',
         'Public Sub DrawStatusAndAnimation(',
-        'Public Sub DrawEffectsAndCamera(',
+        'Public Sub DrawEffects(',
+        'Public Sub DrawCamera(',
         'Public Sub DrawWorkspace(',
         'Call ViewerUi.DrawTimeline(',
         'Call ViewerUi.DrawCalibrationPanel(',
@@ -470,6 +471,8 @@ try {
         'Public Function DemoLabel(',
         'Public Function PartyRoleLabel(',
         'Public Function StatusPanelX(',
+        'Public Function CameraPanelX(',
+        'Public Function ProfileHasIntensityControls(',
         'Public Function AnimationButtonX(',
         'Public Function GlowButtonX(',
         'Public Function TimelineWidth(',
@@ -488,6 +491,7 @@ try {
         'Public Function CalibrationValueAtPointer(',
         'Public Function ApplyCalibrationSelection(',
         'Public Function UpdateCameraSliders(',
+        'Public Function UpdateIntensitySliders(',
         'Public Function UpdateCalibrationSlider(',
         'Public Sub DrawMinimumSizeNotice(',
         'Public Sub DrawHeader(',
@@ -495,12 +499,11 @@ try {
         'Public Sub DrawDemoControl(',
         'Public Sub DrawProfileEffectControls(',
         'Public Sub DrawAnimationDetails(',
-        'Public Sub DrawViewControls(',
         'Public Sub DrawFooterMessage(',
         'Public Sub DrawPauseStatus(',
         'Public Sub DrawRecoveryOverlay(',
         'Public Sub DrawCharacterStatusSummary(',
-        'Public Sub DrawCameraControls(',
+        'Public Sub DrawCameraPanel(',
         'Public Sub DrawAnimationButtons(',
         'Public Sub DrawCalibrationPanel(',
         'Public Sub DrawTimeline(')) {
@@ -531,7 +534,7 @@ try {
         -not $viewerSource.Contains('Function TimelineWidth(') -and
         -not $viewerSource.Contains('Function ViewerLayoutTooSmall(') -and
         -not $viewerSource.Contains('Sub DrawCharacterStatusSummary(') -and
-        -not $viewerSource.Contains('Sub DrawCameraControls(') -and
+        -not $viewerSource.Contains('Sub DrawCameraPanel(') -and
         -not $viewerSource.Contains('Sub DrawCameraSlider(') -and
         -not $viewerSource.Contains('Sub DrawAnimationButtons(') -and
         -not $viewerSource.Contains('Sub DrawCalibrationPanel(') -and
@@ -953,7 +956,9 @@ try {
         $inspectorDrawSource.Contains(
             'ViewerInspectorPresentation.DrawStatusAndAnimation(') -and
         $inspectorDrawSource.Contains(
-            'ViewerInspectorPresentation.DrawEffectsAndCamera(') -and
+            'ViewerInspectorPresentation.DrawEffects(') -and
+        $inspectorDrawSource.Contains(
+            'ViewerInspectorPresentation.DrawCamera(') -and
         $inspectorDrawSource.Contains(
             'ViewerInspectorPresentation.DrawWorkspace(') -and
         -not $inspectorDrawSource.Contains('ViewerUi.DrawInspectorToolbar(') -and

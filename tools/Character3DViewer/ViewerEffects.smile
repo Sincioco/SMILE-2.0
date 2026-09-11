@@ -51,7 +51,7 @@ Public Type State
     ShieldRim As ArinShieldRim.Context
     WeaponRim As ArinShieldRim.Context
     IntensityInitialized As Boolean
-    EquipmentIntensity[4] As Number
+    EquipmentIntensity[8] As Number
     StormStyleSelected As Boolean
     StormEquipmentStyle As Number
     Clock As SceneVfx3D.Clock
@@ -131,7 +131,7 @@ Public Sub ResetEquipmentDefaults(ByRef Value As State)
 
     If Not Value.IntensityInitialized Then
 
-        For Index = 0 To 3
+        For Index = 0 To 7
             Value.EquipmentIntensity[Index] = 100
         End For
 
@@ -219,12 +219,10 @@ Public Function Intensity(ByRef Value As State, Profile As Number, Shield As Boo
         Return 100
     End If
 
-    If Profile = ViewerProfiles.PROFILE_ORIN Then
-        Index = 2
-    End If
+    Index = IntensityTarget(Profile, Shield)
 
-    If Shield Then
-        Index = Index + 1
+    If Index < 0 Then
+        Return 100
     End If
 
     Result = Value.EquipmentIntensity[Index]
@@ -233,12 +231,55 @@ Public Function Intensity(ByRef Value As State, Profile As Number, Shield As Boo
 
 End Function
 
-''' UI target order: Arin weapon/shield, Orin weapon/shield. Session preferences only.
+Public Function IntensityTarget(Profile As Number, Shield As Boolean) As Number
+
+    Dim Result As Number
+
+    Result = -1
+
+    If Profile = ViewerProfiles.PROFILE_ARIN Then
+        Result = 0
+    Else If Profile = ViewerProfiles.PROFILE_ORIN Then
+        Result = 2
+    Else If Profile = ViewerProfiles.PROFILE_VALOR Then
+        Result = 4
+    Else If Profile = ViewerProfiles.PROFILE_ZARA Then
+        Result = 6
+    End If
+
+    If Result >= 0 And Shield Then
+        Result = Result + 1
+    End If
+
+    Return Result
+
+End Function
+
+Public Sub SetIntensity(ByRef Value As State, Profile As Number,
+    Shield As Boolean, IntensityValue As Number)
+
+    Dim Target As Number
+
+    Target = IntensityTarget(Profile, Shield)
+
+    If Target < 0 Then
+        Return
+    End If
+
+    If Not Value.IntensityInitialized Then
+        Call ResetEquipmentDefaults(Value)
+    End If
+
+    Value.EquipmentIntensity[Target] = Max(0, Min(200, IntensityValue))
+
+End Sub
+
+''' UI target order: Arin, Orin, Valor and Zara weapon/shield pairs. Session preferences only.
 Public Sub AdjustIntensity(ByRef Value As State, Target As Number, Increase As Boolean)
 
     Dim Step As Number
 
-    If Target < 0 Or Target > 3 Then
+    If Target < 0 Or Target > 7 Then
         Return
     End If
 

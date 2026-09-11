@@ -47,7 +47,7 @@ if not exist "%SMILE_ROOT%\artifacts\temp" mkdir "%SMILE_ROOT%\artifacts\temp"
 
 echo Refreshing %SMILE_EXTENSION_ID% in Visual Studio instance %SMILE_VS_INSTANCE%.
 echo Visual Studio must already be closed. This script never closes user windows.
-powershell -NoProfile -Command "if (Get-Process devenv -ErrorAction SilentlyContinue) { Write-Error 'Save your work and close Visual Studio before installing the VSIX.'; exit 1 }"
+pwsh -NoProfile -Command "if (Get-Process devenv -ErrorAction SilentlyContinue) { Write-Error 'Save your work and close Visual Studio before installing the VSIX.'; exit 1 }"
 if errorlevel 1 exit /b 2
 echo.
 echo [1/3] Removing the installed SMILE extension.
@@ -57,7 +57,7 @@ if errorlevel 1 echo Existing SMILE extension was not installed or could not be 
 
 echo.
 echo [2/3] Removing proven orphaned SMILE extension directories.
-powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0verify-vsix-install.ps1" -InstanceId "%SMILE_VS_INSTANCE%" -RemoveOrphans
+pwsh -NoProfile -ExecutionPolicy Bypass -File "%~dp0verify-vsix-install.ps1" -InstanceId "%SMILE_VS_INSTANCE%" -RemoveOrphans
 if errorlevel 1 exit /b %errorlevel%
 
 echo.
@@ -70,7 +70,7 @@ if errorlevel 1 (
     exit /b 2
 )
 
-powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0verify-vsix-install.ps1" -InstanceId "%SMILE_VS_INSTANCE%" -BuiltDllPath "%SMILE_VSIX_DLL%" -ManifestPath "%SMILE_VSIX_MANIFEST%" -BuiltVsixPath "%SMILE_VSIX%"
+pwsh -NoProfile -ExecutionPolicy Bypass -File "%~dp0verify-vsix-install.ps1" -InstanceId "%SMILE_VS_INSTANCE%" -BuiltDllPath "%SMILE_VSIX_DLL%" -ManifestPath "%SMILE_VSIX_MANIFEST%" -BuiltVsixPath "%SMILE_VSIX%"
 if errorlevel 1 exit /b %errorlevel%
 
 echo Installed the newly built SMILE extension automatically:

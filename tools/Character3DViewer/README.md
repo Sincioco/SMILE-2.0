@@ -152,6 +152,8 @@ reports Web asset bytes separately from overall preparation. No Viewer source
 initialization or optional import is required for startup. Every tab click also
 calls the shared `Window_Loading()` operation before releasing the old scene;
 the same splash remains until the new frame is presented, including cached switches.
+On native Windows, the repeat splash is centered over the Viewer and uses 80-percent
+window opacity so the retained scene remains visible behind it.
 Failed or cancelled splash preparation keeps the previous scene, edit state and
 interaction captures, and displays a retry notice. Click the tab again to retry.
 See the
@@ -268,10 +270,11 @@ on both pieces of equipment, without star particles. Lightning preserves the
 earlier appearance and star trail for comparison. Attack selection and discharge
 timing remain independent of this appearance button.
 
-Arin and Orin panels have separate **Weapon** and **Shield** intensity minus/plus
-controls, from 0% to 200% in 10% steps. 100% is each style's intended baseline,
-not an absolute brightness unit. Changes affect attached glow and emission;
-renderer capacity and opacity limits still apply at high settings. Preferences
+Arin, Orin, Valor and Zara have separate **Weapon** and **Shield** strength sliders
+in Character Status, from 0% to 200%. They use the same drag and hover-wheel
+interaction as H Orbit. 100% is each style's intended baseline, not an absolute
+brightness unit. Changes affect attached glow and emission; renderer capacity and
+opacity limits still apply at high settings. Preferences
 survive character-tab changes during this session and do not write pose saves.
 Freeze Flames/Lightning follows Orin's selected effect family.
 
@@ -450,7 +453,13 @@ reselecting a character tab; the operating limits below distinguish tested targe
 - Left drag pans the view; middle drag orbits; wheel zooms smoothly.
 - With Pose Calibration open, a middle drag anchors the point under the cursor at the selected joint/equipment depth. It preserves that point's on-screen location, including after prior pan or close-up zoom, instead of orbiting the distant arena center. The view remains where it was on release; reset clears the custom anchor. This uses a depth plane rather than mesh-surface picking.
 - Zoom extends to -144 for glove and grip inspection. Beyond the former -48 limit, it moves the camera closer to the current panned anchor, reaching one tenth of the former distance. Pan the glove toward the center, then zoom in; the arena size and character pose are unchanged.
-- H Orbit, V Orbit and Zoom support hover-wheel adjustment and capture slider drags until release, even outside the track. Vertical orbit supports 360 degrees.
+- A dedicated Camera panel stays in the same location on every character and Party tab.
+  H Orbit, V Orbit and Zoom support hover-wheel adjustment and capture slider drags
+  until release, even outside the track. Vertical orbit supports 360 degrees. View,
+  Present, All and Fit share that panel on every tab.
+- Arin, Orin, Valor and Zara expose independent Weapon and Shield strength sliders in
+  Character Status. Each uses the same drag and hover-wheel interaction as H Orbit,
+  ranges from 0 to 200 percent and starts at 100 percent for the Viewer session.
 - Arin and Orin start at speed 200. Their individual demos target three seconds per sequence and let an in-progress animation finish before advancing. Orin Block plays once and holds its final pose. Selecting an animation disables Demo; Block remains a one-shot.
 - D toggles the dragon; W toggles the current character’s weapon; S toggles shield. Hiding the dragon does not shrink the arena.
 - B/BG cycles colors and two static bitmaps. The default is the Sin Star I landscape without its title.

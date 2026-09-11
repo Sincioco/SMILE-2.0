@@ -21,6 +21,9 @@ button has the same boundary. Failed/cancelled cycles settle exactly once; late
 callbacks cannot settle a retry. Web resets only the
 presentation/progress cycle; immutable encoded-asset caching remains intact.
 The Character Viewer's existing tab selection calls the operation before teardown.
+Native repeat presentation is centered over its owning program window, clamped to
+the current monitor work area, and shown at 80-percent window opacity. Initial
+startup remains fully opaque.
 No generated program is rewritten and mandatory initial startup is unchanged.
 
 ## Owners and behavior

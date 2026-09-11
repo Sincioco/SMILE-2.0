@@ -59,6 +59,8 @@ Public Type StatusView
     SecondsRemaining As Number
     ZoomDegrees As Number
     FramesPerSecond As Number
+    WeaponIntensity As Number
+    ShieldIntensity As Number
     SelectedPresentationIndex As Number
     ClipDuration As Number
     ClipSampleRate As Number
@@ -73,8 +75,6 @@ Public Type StatusView
 End Type
 
 Public Type EffectsView
-    WeaponIntensity As Number
-    ShieldIntensity As Number
     StormEquipmentLabel As Text
     WindowWidth As Number
     WindowHeight As Number
@@ -183,7 +183,8 @@ Public Function CaptureStatus(ByRef Actor As Character3D.Actor,
     Profile As CharacterViewer.Profile, ByRef Party As ViewerParty.State,
     ByRef Session As ViewerSession.State,
     ByRef Rendering As ViewerRendering.State, ByRef Playback As ViewerPlayback.State,
-    ByRef Camera As ViewerCamera.State, ByRef FrameRate As ViewerTiming.FrameRateState,
+    ByRef Effects As ViewerEffects.State, ByRef Camera As ViewerCamera.State,
+    ByRef FrameRate As ViewerTiming.FrameRateState,
     WindowWidth As Number, WindowHeight As Number,
     AnimationCycleMilliseconds As Number) As StatusView
 
@@ -220,6 +221,8 @@ Public Function CaptureStatus(ByRef Actor As Character3D.Actor,
 
     Result.ZoomDegrees = ToNumber(Round(Camera.Zoom.Current))
     Result.FramesPerSecond = ViewerTiming.FramesPerSecond(FrameRate)
+    Result.WeaponIntensity = ViewerEffects.Intensity(Effects, Session.ProfileIndex, False)
+    Result.ShieldIntensity = ViewerEffects.Intensity(Effects, Session.ProfileIndex, True)
     Result.SelectedPresentationIndex = ViewerPlayback.PresentationIndexForRuntimeClip(
         Actor, Session.ProfileIndex, Playback.SelectedClip)
     Result.ClipDuration = Character3D.ClipDuration(Actor, Playback.SelectedClip)
@@ -258,8 +261,6 @@ Public Function CaptureEffects(ByRef Session As ViewerSession.State,
     Result.ShieldFireVisible = Effects.ShieldFireVisible
     Result.StormStyleLabel = ViewerEffects.StormStyleName(Effects)
     Result.StormEquipmentLabel = ViewerEffects.StormEquipmentName(Effects)
-    Result.WeaponIntensity = ViewerEffects.Intensity(Effects, Session.ProfileIndex, False)
-    Result.ShieldIntensity = ViewerEffects.Intensity(Effects, Session.ProfileIndex, True)
     Result.StormComfortLabel = ViewerEffects.StormSceneComfortName()
     Result.LightningPlaybackLabel = ViewerUi.PlaybackLabel(
         "Lightning", Effects.LightningPaused, "Freeze")
@@ -385,7 +386,10 @@ Public Sub DrawStatusAndAnimation(Value As StatusView)
         Value.DemoStatus,
         Value.SecondsRemaining,
         Value.ZoomDegrees,
-        Value.FramesPerSecond
+        Value.FramesPerSecond,
+        Value.ProfileIndex,
+        Value.WeaponIntensity,
+        Value.ShieldIntensity
     )
     Call ViewerUi.DrawDemoControl(
         PanelLeft, Value.PartyEnabled, Value.ScenePaused, Value.DemoEnabled)
@@ -405,11 +409,7 @@ Public Sub DrawStatusAndAnimation(Value As StatusView)
 
 End Sub
 
-Public Sub DrawEffectsAndCamera(Value As EffectsView)
-
-    Dim PanelLeft As Number
-
-    PanelLeft = ViewerUi.StatusPanelX(Value.WindowWidth)
+Public Sub DrawEffects(Value As EffectsView)
 
     Call ViewerUi.DrawProfileEffectControls(
         Value.WindowWidth,
@@ -431,21 +431,22 @@ Public Sub DrawEffectsAndCamera(Value As EffectsView)
         Value.FlamePlaying,
         Value.ShieldFireStyleLabel,
         Value.ShieldFlameStyle,
-        Value.StormEquipmentLabel,
-        Value.WeaponIntensity,
-        Value.ShieldIntensity
+        Value.StormEquipmentLabel
     )
-    Call ViewerUi.DrawCameraControls(
-        PanelLeft,
-        Value.WindowHeight,
+
+End Sub
+
+Public Sub DrawCamera(Value As EffectsView)
+
+    Call ViewerUi.DrawCameraPanel(
+        Value.WindowWidth,
         Value.HorizontalOrbit,
         Value.VerticalOrbit,
         Value.ZoomDegrees,
         Value.ZoomInLimit,
-        Value.ZoomOutLimit
+        Value.ZoomOutLimit,
+        Value.FitLocked
     )
-    Call ViewerUi.DrawViewControls(
-        Value.WindowWidth, Value.WindowHeight, Value.FitLocked)
 
 End Sub
 
