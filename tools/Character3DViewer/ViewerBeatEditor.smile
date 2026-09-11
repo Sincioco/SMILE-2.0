@@ -376,8 +376,6 @@ Public Function SaveShot(ByRef Value As State, Unity As Boolean) As Boolean
     End If
 
     Value.Tracks[Sequence.Identity(Unity, Value.Selected)] = Value.Working
-    Value.Preview = False
-    Value.Editing = False
     Value.Dirty = False
     Value.Message = "Camera Saved"
 

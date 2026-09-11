@@ -63,8 +63,9 @@ framing, per-character saved head cuboids and cross-character camera copy/paste 
 - Reset All Beat Lengths restores only the four default camera durations; camera
   compositions, motion/connections and extra shots remain. Extra shots retain their
   relative positions within each main beat. This timing-only reset also waits for Save.
-- Save writes the complete character sequence atomically and closes the second
-  timeline. Preview Beats can show it without editing. Head cuboids auto-save separately.
+- Save writes the complete character sequence atomically and keeps the second timeline,
+  selected shot, playhead and camera-editing state open. Cancel or closing Preview
+  restores the prior battle. Head cuboids auto-save separately.
 
 ## Owners And Compatibility
 
@@ -133,6 +134,10 @@ coordinator, shared Number/Double rules, assets and live calibration are preserv
   wheel zoom both ways and right-click reset: all smooth and stopping cleanly. These
   are new Beat Edit observations, not reused Double confirmations. His independently
   saved Arin head adjustment during the check was preserved.
+- The focused Beat Editor save regression writes through the isolated test
+  ApplicationId and verifies that Preview, edit mode, selected shot and playhead stay
+  in place while the dirty flag clears. The rebuilt release Viewer launched normally;
+  live user camera records were not changed for this smoke check.
 
 Unchanged evidence from the initial editor remains valid: `fd73f9d` native/generated-
 Web fractional framing, linked shots, copy/paste, head storage, action sampling and
@@ -142,6 +147,11 @@ See Git history for the original detailed checkpoint; do not repeat unaffected t
 
 ## Reproduced Defects Fixed In This Milestone
 
+- Save previously cleared Preview/edit state in `ViewerBeatEditor.SaveShot`, after
+  which `ViewerWorkflow.HandleBeatPointer` immediately restored the prior battle and
+  closed the timeline. Save now performs persistence and saved-copy/dirty-state
+  bookkeeping only. Cancel or explicitly closing Preview remains responsible for
+  leaving Beat Editor and restoring battle state.
 - Larger sequence/editor records exposed a native access violation during local
   initialization: the generated frame subtracted 131184 bytes without touching the
   intervening Windows guard pages. Diagnostic object/fault-offset inspection located

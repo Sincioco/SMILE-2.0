@@ -321,6 +321,14 @@ Private Sub CheckTimeline(ByRef Failures As Number, Camera As Shots.Shot)
     Call Check(Not Edited.Playing And Edited.Elapsed = 3100,
         "Space Pauses Beat Sequence Without Advancing", Failures)
 
+    Edited.Dirty = True
+    Result = Editor.SaveShot(Edited, True)
+
+    Call Check(Result And Edited.Preview And Edited.Editing And
+        Not Edited.Dirty And Edited.ShotIndex = 4 And Edited.Elapsed = 3100 And
+        Edited.Tracks[0].Cameras[4].Eye.X = Edited.Draft.Eye.X,
+        "Save Persists Draft Without Closing Or Moving Editor", Failures)
+
     Edited.Tracks[0] = Definition
     Edited.References[0].Offset.X = 0.375
 

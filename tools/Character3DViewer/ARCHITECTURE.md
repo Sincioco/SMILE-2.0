@@ -31,7 +31,8 @@ animation update elapsed. Space advances a separate preview playhead through the
 same action sampler; it does not retime the action or play audio. Continuous playback
 retains equipment VFX history; discontinuous seeking invalidates it once.
 Scrubbing does not advance logical events, counters or audio.
-Save/Cancel restores the prior turn, actor clip times and camera/playback state.
+Save writes the current sequence in place without changing Beat Editor state. Cancel
+or closing Preview restores the prior turn, actor clip times and camera/playback state.
 Reset Beat clears the containing main camera in the draft. Reset All initializes a
 fresh four-beat draft with default timing; no saved data changes until Save.
 Reset All Beat Lengths changes only the four timing weights, retaining cameras and

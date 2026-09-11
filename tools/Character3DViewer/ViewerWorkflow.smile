@@ -2019,9 +2019,7 @@ Public Class Session
 
         Else If Command = 6 Then
 
-            If BeatEditor.SaveShot(Me.BeatEditing, Me.Party.UnityRoster) Then
-                Call Me.CloseBeatSequence()
-            End If
+            Result = BeatEditor.SaveShot(Me.BeatEditing, Me.Party.UnityRoster)
 
         Else If Command = 7 Then
 

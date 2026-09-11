@@ -13,8 +13,9 @@ the current camera; dragging begins panning after a small movement threshold.
 Choose **Beat 1–4** to pause and edit that beat's starting composition with middle
 drag (orbit), left drag (pan), wheel (zoom), or arrow keys (orbit). Right-click or
 Enter resets the draft to its opening composition. **Save** stores the selected
-character's entire camera sequence draft, closes the extra timeline and restores the prior battle playback.
-**Cancel** restores playback without saving the camera. Save or cancel a draft before
+character's entire camera sequence draft and keeps Beat Editor open at the current
+shot and playhead. **Cancel** closes Beat Editor and restores playback without saving
+the camera. Save or cancel a draft before
 switching characters/tabs. An asterisk marks a saved beat.
 
 **Copy** copies one camera's composition, motion and connection. Select any character,
