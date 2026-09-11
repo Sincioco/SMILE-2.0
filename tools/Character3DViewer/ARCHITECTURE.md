@@ -43,6 +43,11 @@ Head offsets/sizes auto-save independently of camera drafts; copying a shot cann
 replace another character's head definition. No asset rebake or new renderer is
 involved. Verified canonical `head` bones are exposed as Head sockets in the
 Valor/Zara/Vrax descriptors; all other socket and placement data is preserved.
+Their profile inventories include that Head socket: Valor 15, Zara 11 and Vrax 5.
+Standalone loading retains exact inventory validation; it must agree with the
+canonical descriptor whenever attachment metadata changes. The real-asset
+`CalibrationTests.CheckImportedProfileTabs` switches through all three standalone
+tabs, checks their Head attachments and verifies rejection of mismatched inventories.
 
 `BeatCameraTests` extends the existing hardening fixture with relative-frame motion,
 moving-head vertical stability, versioned legacy fallback, cross-character copy,

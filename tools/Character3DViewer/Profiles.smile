@@ -150,7 +150,7 @@ Public Function ProfileAt(Index As Number) As CharacterViewer.Profile
         Result.ProductionStatus = "Preview"
         Result.AssetPath = "Assets\Generation2\ValorV1\Valor.sm3d"
         Result.ExpectedClipCount = 31
-        Result.ExpectedSocketCount = 14
+        Result.ExpectedSocketCount = 15
         Result.DesiredWorldHeight = 100
         Result.DefaultPlaybackSpeed = 200
 
@@ -163,7 +163,7 @@ Public Function ProfileAt(Index As Number) As CharacterViewer.Profile
         Result.ProductionStatus = "Preview"
         Result.AssetPath = "Assets\Generation2\ZaraV1\Zara.sm3d"
         Result.ExpectedClipCount = 26
-        Result.ExpectedSocketCount = 10
+        Result.ExpectedSocketCount = 11
         Result.DesiredWorldHeight = 100
         Result.DefaultPlaybackSpeed = 200
 
@@ -176,7 +176,7 @@ Public Function ProfileAt(Index As Number) As CharacterViewer.Profile
         Result.ProductionStatus = "Preview"
         Result.AssetPath = "Assets\Generation2\VraxV1\Vrax.sm3d"
         Result.ExpectedClipCount = 24
-        Result.ExpectedSocketCount = 4
+        Result.ExpectedSocketCount = 5
         Result.DesiredWorldHeight = 460
 
     Else If Index = PROFILE_ARIN_V56 Then

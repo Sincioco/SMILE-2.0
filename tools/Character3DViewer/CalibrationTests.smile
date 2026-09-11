@@ -47,6 +47,7 @@ Call CheckGizmoVisibility()
 Call CheckPackagedCalibration()
 Call CalibrationCheck(Character3D.SocketCount(Character) = ActiveProfile.ExpectedSocketCount,
     "Profile socket contract")
+Call CheckImportedProfileTabs()
 Call SelectCharacterTab(1)
 Call CalibrationCheck(Session.Ready And Not Session.ViewerError And Not Calibration.StorageRejected,
     "Orin loads with its canonical saved calibration")
@@ -1771,6 +1772,37 @@ Sub UpdateTestEquipmentFire()
         ViewerCameraState.Live,
         Timing.CameraElapsed
     )
+
+End Sub
+
+Sub CheckImportedProfileTabs()
+
+    Dim Index As Number
+    Dim MismatchedProfile As CharacterViewer.Profile
+
+    If Not ViewerProfiles.INCLUDE_UNITY_CHARACTERS Then
+        Return
+    End If
+
+    For Index = 4 To 6
+
+        Call SelectCharacterTab(Index)
+        Call CalibrationCheck(Session.Ready And Not Session.ViewerError,
+            ActiveProfile.DisplayName + " standalone tab loads its canonical asset")
+        Call CalibrationCheck(Character3D.HasSocket(Character, "Head"),
+            ActiveProfile.DisplayName + " retains its animated Head attachment")
+
+        MismatchedProfile = ActiveProfile
+        MismatchedProfile.ExpectedSocketCount = ActiveProfile.ExpectedSocketCount - 1
+
+        Call CalibrationCheck(Not ViewerActors.ValidateProfile(
+            Character, Session.ProfileIndex, MismatchedProfile),
+            "Standalone validation still rejects mismatched socket inventories")
+    End For
+
+    Call SelectCharacterTab(0)
+    Call CalibrationCheck(Session.Ready And Not Session.ViewerError,
+        "Arin reloads after the imported character tabs")
 
 End Sub
 

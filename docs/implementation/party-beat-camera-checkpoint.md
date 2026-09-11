@@ -6,6 +6,26 @@ implemented, built and validated with focused automated, visible tool and explic
 human gesture checks. The commit containing this checkpoint is the Desktop delivery
 milestone. Web follow-through remains on hold.
 
+## Imported Character Profile Alignment (2026-09-11)
+
+The Head attachment added for beat framing is included in the standalone profile
+inventories: Valor 15, Zara 11 and Vrax 5 sockets. Stale pre-Head counts caused the
+reported Zara/Vrax recovery screen at validation stage 32; the profile correction
+also covers Valor. Exact loaded-asset validation remains enabled. Canonical models,
+descriptors, animation, VFX and saved camera/pose data are unchanged.
+
+The native calibration fixture now switches through the three real imported tabs,
+checks each Head socket, rejects a deliberately stale inventory and reloads Arin.
+It passed along with the existing isolated calibration/persistence checks. Focused
+formatting checks and Release Viewer/Studio builds passed. Desktop tool observations
+confirmed Zara with her Vrax opponent, standalone Vrax and Party Vrax rendering.
+The launcher preserved Arin's 24 saved pose keys and Orin's zero-key snapshot.
+
+Artifact SHA-256: Viewer `B25F9075EFC405FD0AF7B396235D95454533B9128294D7FDF0307BB9DCF37DDE`;
+Studio `FDA0854F28AA33AB74C453A113C51A608585F6E9780C3A03ADA2E04DFF2BDFD2`.
+Web remains unbuilt/unpublished for this slice; its next authorized adoption must
+include the corrected shared profiles together with the pending timeline changes.
+
 ## Camera Frame Hardening Addendum (2026-09-11)
 
 Desktop playback reproduced an authored Beat 3 camera rising far above the fight as
