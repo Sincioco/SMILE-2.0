@@ -240,6 +240,9 @@ if ($Target -in @('Web', 'All')) {
     # removes obsolete managed files from this exact configuration's Web folder.
     [xml]$webProject = $nativeProject.OuterXml
     $profileText = Get-Content -LiteralPath (Join-Path $toolRoot 'Profiles.smile') -Raw
+    # Candidate comparisons are a native-only milestone; Web adoption remains deferred.
+    $profileText = $profileText.Replace('Public Const INCLUDE_MIRA_COMPARISONS = True',
+        'Public Const INCLUDE_MIRA_COMPARISONS = False')
     $localRosterPolicy = 'Public Const INCLUDE_UNITY_CHARACTERS = True'
     if ([regex]::Matches($profileText, [regex]::Escape($localRosterPolicy)).Count -ne 1) {
         throw 'Expected exactly one permanent local-roster publication policy.'

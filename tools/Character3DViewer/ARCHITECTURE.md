@@ -1,5 +1,20 @@
 # Character Viewer Architecture
 
+## Native Mira comparison
+
+`Profiles` owns Mira1's identity, nine clip names, hold/loop policy and independent
+staff part. `ViewerSession` routes its stable tab ID; `ViewerUi` appends the tab and
+derives the tab-strip hit boundary from its last button. That removes the old fixed
+510-pixel boundary which could not admit the comparison button. The existing
+hardening fixture covers the new hit region. `Prepare-BuildAssets.ps1` stages the
+self-contained MiraV1 package and the normal project asset cooker publishes it.
+`INCLUDE_MIRA_COMPARISONS` is disabled in generated Web profiles while that adoption
+is deferred. No new actor pool, calibration bank, game behavior or runtime dependency
+was added. The rigid staff uses the same production skin and the existing equipment
+visibility path. Mira1 has no equipment glow or Party role implementation yet.
+This comparison reuses the existing profile module; later substantial healer VFX
+and Party behavior should have a focused owner rather than accumulating here.
+
 ## Party Beat Camera Ownership
 
 `BattleCameraShots` owns actor-independent Double reference frames, motion, linked

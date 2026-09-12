@@ -1,5 +1,15 @@
 # SMILE 2.0 - 3D Viewer, Animation Editor
 
+## Mira comparisons (native)
+
+**Mira1** loads the preserved Pixal3D healer candidate with nine animation choices.
+Use **Weapon** or **W** to hide/show her separate staff. This is an appearance and
+animation comparison: cloth/floor contacts and water effects are unfinished. Mira2
+(TRELLIS.2) and Mira3 (Hunyuan3D-2.1) are being evaluated before final Party integration.
+The canonical package and current limitations are in
+`games/SinStarI/SourceAssets/Characters/Healer/MiraV1/README.md`.
+Candidate comparison tabs are native-only; Web follow-through remains deferred.
+
 ## Party Beat Cameras
 
 In **Party Dragon** or **Party Vrax**, press **Tab** to cycle visible combatants,

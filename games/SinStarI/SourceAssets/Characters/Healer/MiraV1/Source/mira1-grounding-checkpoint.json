@@ -1,0 +1,135 @@
+{
+  "status": "Comparison only: floor contacts not accepted",
+  "sha256": "9c3356f0c1bc1b7a0a4a67462ad9d22dc8f0782bc4fc42423e8fa2a6c1b376f0",
+  "bindMinimumZMetres": -2.7387763168462698e-08,
+  "blenderAxis": "Z up; exported GLB and Viewer Y up",
+  "equipmentExcluded": true,
+  "clips": {
+    "Attack": [
+      {
+        "sourceFrame": 1,
+        "minimumBodyZMetres": -0.01096123456954956
+      },
+      {
+        "sourceFrame": 35,
+        "minimumBodyZMetres": -0.08018407970666885
+      },
+      {
+        "sourceFrame": 70,
+        "minimumBodyZMetres": -0.01096738874912262
+      }
+    ],
+    "Death": [
+      {
+        "sourceFrame": 1,
+        "minimumBodyZMetres": -0.010968133807182312
+      },
+      {
+        "sourceFrame": 55,
+        "minimumBodyZMetres": -0.2197110503911972
+      },
+      {
+        "sourceFrame": 110,
+        "minimumBodyZMetres": -0.15645508468151093
+      }
+    ],
+    "Defend": [
+      {
+        "sourceFrame": 1,
+        "minimumBodyZMetres": -0.010963775217533112
+      },
+      {
+        "sourceFrame": 8,
+        "minimumBodyZMetres": -0.042471010237932205
+      },
+      {
+        "sourceFrame": 16,
+        "minimumBodyZMetres": -0.1058163270354271
+      }
+    ],
+    "HealOne": [
+      {
+        "sourceFrame": 1,
+        "minimumBodyZMetres": -0.04701827093958855
+      },
+      {
+        "sourceFrame": 40,
+        "minimumBodyZMetres": 0.0028379426803439856
+      },
+      {
+        "sourceFrame": 81,
+        "minimumBodyZMetres": -0.04701827093958855
+      }
+    ],
+    "HealParty": [
+      {
+        "sourceFrame": 1,
+        "minimumBodyZMetres": -0.010961651802062988
+      },
+      {
+        "sourceFrame": 33,
+        "minimumBodyZMetres": -0.23384052515029907
+      },
+      {
+        "sourceFrame": 66,
+        "minimumBodyZMetres": -0.010961353778839111
+      }
+    ],
+    "Hit": [
+      {
+        "sourceFrame": 1,
+        "minimumBodyZMetres": -0.010966457426548004
+      },
+      {
+        "sourceFrame": 18,
+        "minimumBodyZMetres": -0.0013945996761322021
+      },
+      {
+        "sourceFrame": 37,
+        "minimumBodyZMetres": -0.01096605509519577
+      }
+    ],
+    "Idle": [
+      {
+        "sourceFrame": 1,
+        "minimumBodyZMetres": -2.7387763168462698e-08
+      },
+      {
+        "sourceFrame": 60,
+        "minimumBodyZMetres": -2.7387763168462698e-08
+      },
+      {
+        "sourceFrame": 121,
+        "minimumBodyZMetres": -2.7387763168462698e-08
+      }
+    ],
+    "Run": [
+      {
+        "sourceFrame": 1,
+        "minimumBodyZMetres": 0.012496406212449074
+      },
+      {
+        "sourceFrame": 11,
+        "minimumBodyZMetres": 0.03916618973016739
+      },
+      {
+        "sourceFrame": 23,
+        "minimumBodyZMetres": 0.012496844865381718
+      }
+    ],
+    "Walk": [
+      {
+        "sourceFrame": 1,
+        "minimumBodyZMetres": 0.016820194199681282
+      },
+      {
+        "sourceFrame": 17,
+        "minimumBodyZMetres": 0.01333615928888321
+      },
+      {
+        "sourceFrame": 35,
+        "minimumBodyZMetres": 0.016820669174194336
+      }
+    ]
+  }
+}

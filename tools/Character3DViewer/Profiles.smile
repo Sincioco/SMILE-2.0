@@ -15,8 +15,11 @@ Public Const PROFILE_DRAGON = 5
 Public Const PROFILE_VALOR = 6
 Public Const PROFILE_ZARA = 7
 Public Const PROFILE_VRAX = 8
+Public Const PROFILE_MIRA1 = 9
 Public Const CHARACTER_TAB_PARTY_VRAX = 3
 Public Const CHARACTER_TAB_PARTY_DRAGON = 7
+Public Const CHARACTER_TAB_MIRA1 = 8
+Public Const INCLUDE_MIRA_COMPARISONS = True
 Public Const INCLUDE_UNITY_CHARACTERS = True
 Public Const INCLUDE_DIAGNOSTIC_PROFILES = True
 Public Const EQUIPMENT_GLOW_FIRE = 0
@@ -48,7 +51,13 @@ Public Function NextProfile(Current As Number) As Number
 
     Dim Result As Number
 
-    If INCLUDE_DIAGNOSTIC_PROFILES Then
+    If Current = PROFILE_MIRA1 Then
+        Result = PROFILE_ARIN
+    Else If (INCLUDE_MIRA_COMPARISONS And
+        Current = PROFILE_DRAGON And
+        Not INCLUDE_UNITY_CHARACTERS) Then
+        Result = PROFILE_MIRA1
+    Else If INCLUDE_DIAGNOSTIC_PROFILES Then
         Result = (Current + 1) Mod ProfileCount()
     Else If Current = PROFILE_ARIN Then
         Result = PROFILE_ORIN
@@ -60,6 +69,8 @@ Public Function NextProfile(Current As Number) As Number
         Result = PROFILE_DRAGON
     Else If Current = PROFILE_DRAGON And INCLUDE_UNITY_CHARACTERS Then
         Result = PROFILE_VRAX
+    Else If INCLUDE_MIRA_COMPARISONS Then
+        Result = PROFILE_MIRA1
     Else
         Result = PROFILE_ARIN
     End If
@@ -73,6 +84,7 @@ Public Function HoldsFinalPose(ProfileIndex As Number, ClipName As Text) As Bool
     Dim Result As Boolean
 
     Result = ((ProfileIndex = PROFILE_ORIN And ClipName = "Defend") Or
+        (ProfileIndex = PROFILE_MIRA1 And (ClipName = "Defend" Or ClipName = "Death")) Or
         (IsPartyCharacter(ProfileIndex) And ClipName = "Death") Or
         (IsUnityCharacter(ProfileIndex) And Not UnityClipLoops(ClipName)))
 
@@ -81,6 +93,12 @@ Public Function HoldsFinalPose(ProfileIndex As Number, ClipName As Text) As Bool
 End Function
 
 Public Function ProfileCount() As Number
+
+    If INCLUDE_MIRA_COMPARISONS And INCLUDE_UNITY_CHARACTERS Then
+        Return 10
+    Else If INCLUDE_MIRA_COMPARISONS Then
+        Return 7
+    End If
 
     If INCLUDE_UNITY_CHARACTERS Then
         Return 9
@@ -179,6 +197,18 @@ Public Function ProfileAt(Index As Number) As CharacterViewer.Profile
         Result.ExpectedSocketCount = 5
         Result.DesiredWorldHeight = 460
 
+    Else If Index = PROFILE_MIRA1 Then
+
+        Result.AssetId = "sin-star-i.character-4.healer.mira1"
+        Result.CandidateVersion = "v1"
+        Result.DisplayName = "Mira1"
+        Result.PartyRole = "Healer"
+        Result.ProductionStatus = "Comparison"
+        Result.AssetPath = "Assets\Generation2\MiraV1\Mira1.sm3d"
+        Result.ExpectedClipCount = 9
+        Result.ExpectedSocketCount = 7
+        Result.DesiredWorldHeight = 110
+
     Else If Index = PROFILE_ARIN_V56 Then
 
         Result.AssetId = "sin-star-i.character-1.paladin"
@@ -236,6 +266,8 @@ Public Function ModelFileName(ProfileIndex As Number) As Text
         Result = "orin-v1.3-animation-checkpoint.glb"
     Else If ProfileIndex = PROFILE_DRAGON Then
         Result = "red-dragon-v1.1-animated.glb"
+    Else If ProfileIndex = PROFILE_MIRA1 Then
+        Result = "mira1-animation-checkpoint.glb"
     Else If ProfileIndex = PROFILE_ARIN_V56 Then
         Result = "arin-integrated-candidate-v5.6.glb"
     Else If ProfileIndex = PROFILE_ARIN_ORIGINAL Then
@@ -260,7 +292,7 @@ Public Function ClipCount(ProfileIndex As Number) As Number
         Result = 24
     Else If ProfileIndex = PROFILE_DRAGON Then
         Result = 6
-    Else If ProfileIndex = PROFILE_ORIN Then
+    Else If ProfileIndex = PROFILE_ORIN Or ProfileIndex = PROFILE_MIRA1 Then
         Result = 9
     Else If IsPartyCharacter(ProfileIndex) Then
         Result = 9
@@ -292,7 +324,7 @@ Public Function EpicGlowAvailable(ProfileIndex As Number) As Boolean
 
     Dim Result As Boolean
 
-    Result = IsEquipmentCharacter(ProfileIndex)
+    Result = IsEquipmentCharacter(ProfileIndex) And ProfileIndex <> PROFILE_MIRA1
 
     Return Result
 
@@ -302,7 +334,7 @@ Public Function EpicGlowVisibleByDefault(ProfileIndex As Number) As Boolean
 
     Dim Result As Boolean
 
-    Result = IsEquipmentCharacter(ProfileIndex)
+    Result = IsEquipmentCharacter(ProfileIndex) And ProfileIndex <> PROFILE_MIRA1
 
     Return Result
 
@@ -315,6 +347,28 @@ Public Function ClipName(ProfileIndex As Number, ClipIndex As Number) As Text
     If IsUnityCharacter(ProfileIndex) Then
 
         Result = UnityClipName(ProfileIndex, ClipIndex)
+
+    Else If ProfileIndex = PROFILE_MIRA1 Then
+
+        If ClipIndex = 0 Then
+            Result = "Idle"
+        Else If ClipIndex = 1 Then
+            Result = "Walk"
+        Else If ClipIndex = 2 Then
+            Result = "Run"
+        Else If ClipIndex = 3 Then
+            Result = "Attack"
+        Else If ClipIndex = 4 Then
+            Result = "Defend"
+        Else If ClipIndex = 5 Then
+            Result = "HealOne"
+        Else If ClipIndex = 6 Then
+            Result = "HealParty"
+        Else If ClipIndex = 7 Then
+            Result = "Hit"
+        Else If ClipIndex = 8 Then
+            Result = "Death"
+        End If
 
     Else If ProfileIndex = PROFILE_DRAGON Then
 
@@ -452,7 +506,10 @@ Public Function IsEquipmentCharacter(ProfileIndex As Number) As Boolean
 
     Dim Result As Boolean
 
-    Result = IsPartyCharacter(ProfileIndex) Or ProfileIndex = PROFILE_VALOR Or ProfileIndex = PROFILE_ZARA
+    Result = (IsPartyCharacter(ProfileIndex) Or
+        ProfileIndex = PROFILE_VALOR Or
+        ProfileIndex = PROFILE_ZARA Or
+        ProfileIndex = PROFILE_MIRA1)
 
     Return Result
 
@@ -476,7 +533,7 @@ Public Function ShieldPart(ProfileIndex As Number) As Number
 
     If ProfileIndex = PROFILE_VALOR Then
         Return 9
-    Else If ProfileIndex = PROFILE_ZARA Then
+    Else If ProfileIndex = PROFILE_ZARA Or ProfileIndex = PROFILE_MIRA1 Then
         ReturnValue = -1
 
         Return ReturnValue
@@ -571,7 +628,15 @@ Public Function ClipLabel(ProfileIndex As Number, ClipIndex As Number) As Text
 
     Dim Result As Text
 
-    If ProfileIndex = PROFILE_DRAGON And ClipIndex = 1 Then
+    If ProfileIndex = PROFILE_MIRA1 And ClipIndex = 5 Then
+
+        Result = "Heal One"
+
+    Else If ProfileIndex = PROFILE_MIRA1 And ClipIndex = 6 Then
+
+        Result = "Heal Party"
+
+    Else If ProfileIndex = PROFILE_DRAGON And ClipIndex = 1 Then
 
         Result = "Fire Breath"
 
@@ -658,6 +723,8 @@ Public Function ClipLoops(ProfileIndex As Number, ClipIndex As Number) As Boolea
 
     If IsUnityCharacter(ProfileIndex) Then
         Result = UnityClipLoops(UnityClipName(ProfileIndex, ClipIndex))
+    Else If ProfileIndex = PROFILE_MIRA1 Then
+        Result = ClipIndex >= 0 And ClipIndex <= 2
     Else If ProfileIndex = PROFILE_DRAGON Then
         Result = ClipIndex = 0
     Else If ProfileIndex = PROFILE_ORIN Then

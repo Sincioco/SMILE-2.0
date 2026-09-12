@@ -1,0 +1,7 @@
+{
+  "originalArmatureScale": 0.01,
+  "finalArmatureScale": 1.0,
+  "maxVertexDifferenceMeters": 6.348983304437929e-06,
+  "sampledFramesPerClip": 3,
+  "method": "Apply rig rotation/scale; scale only action location curves and preserve equipment world transforms."
+}

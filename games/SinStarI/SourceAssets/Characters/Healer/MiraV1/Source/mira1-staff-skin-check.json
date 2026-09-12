@@ -1,0 +1,19 @@
+{
+  "maxVertexDifferenceMeters": 7.468440584028761e-07,
+  "samples": [
+    [
+      "Idle",
+      1
+    ],
+    [
+      "Walk",
+      17
+    ],
+    [
+      "Death",
+      110
+    ]
+  ],
+  "bone": "mixamorig:RightHand",
+  "weight": 1.0
+}

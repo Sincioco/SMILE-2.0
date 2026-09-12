@@ -963,7 +963,8 @@ Public Function CharacterTabsContain(PointerX As Number, PointerY As Number) As 
 
     Dim Result As Boolean
 
-    Result = InRectangle(PointerX, PointerY, 18, 62, 510, 26)
+    Result = InRectangle(PointerX, PointerY, 18, 62,
+        CharacterTabX(CharacterTabCount() - 1) + CharacterTabWidth(CharacterTabCount() - 1) - 18, 26)
 
     Return Result
 
@@ -2235,6 +2236,16 @@ End Function
 
 Private Function CharacterTabCount() As Number
 
+    If ViewerProfiles.INCLUDE_MIRA_COMPARISONS Then
+
+        If ViewerProfiles.INCLUDE_UNITY_CHARACTERS Then
+            Return 9
+        End If
+
+        Return 5
+
+    End If
+
     If ViewerProfiles.INCLUDE_UNITY_CHARACTERS Then
         Return 8
     End If
@@ -2248,6 +2259,10 @@ Private Function CharacterTabIndex(Position As Number) As Number
     Dim Result As Number
 
     Result = Position
+
+    If ViewerProfiles.INCLUDE_MIRA_COMPARISONS And Position = CharacterTabCount() - 1 Then
+        Return ViewerProfiles.CHARACTER_TAB_MIRA1
+    End If
 
     If ViewerProfiles.INCLUDE_UNITY_CHARACTERS Then
 
@@ -2291,6 +2306,8 @@ Private Function CharacterTabLabel(Index As Number) As Text
         Result = "Vrax"
     Else If Index = ViewerProfiles.CHARACTER_TAB_PARTY_DRAGON Then
         Result = "Party Dragon"
+    Else If Index = ViewerProfiles.CHARACTER_TAB_MIRA1 Then
+        Result = "Mira1"
     End If
 
     Return Result

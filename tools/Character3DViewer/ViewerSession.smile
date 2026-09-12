@@ -42,6 +42,8 @@ Public Sub SelectCharacterTab(ByRef Value As State, Index As Number)
         Value.ProfileIndex = ViewerProfiles.PROFILE_ZARA
     Else If Index = 6 Then
         Value.ProfileIndex = ViewerProfiles.PROFILE_VRAX
+    Else If Index = ViewerProfiles.CHARACTER_TAB_MIRA1 Then
+        Value.ProfileIndex = ViewerProfiles.PROFILE_MIRA1
     End If
 
 End Sub
@@ -53,6 +55,8 @@ Public Function ShouldSelectCharacterTab(ByRef Value As State,
 
     ''' A valid tab click deliberately reloads its presentation, including the current tab.
     Result = Index >= 0 And Index <= ViewerProfiles.CHARACTER_TAB_PARTY_DRAGON
+    Result = Result Or (ViewerProfiles.INCLUDE_MIRA_COMPARISONS And
+        Index = ViewerProfiles.CHARACTER_TAB_MIRA1)
 
     Return Result
 
@@ -75,6 +79,8 @@ Public Sub CycleProfile(ByRef Value As State)
         Value.SelectedCharacterTab = 5
     Else If Value.ProfileIndex = ViewerProfiles.PROFILE_VRAX Then
         Value.SelectedCharacterTab = 6
+    Else If Value.ProfileIndex = ViewerProfiles.PROFILE_MIRA1 Then
+        Value.SelectedCharacterTab = ViewerProfiles.CHARACTER_TAB_MIRA1
     End If
 
 End Sub

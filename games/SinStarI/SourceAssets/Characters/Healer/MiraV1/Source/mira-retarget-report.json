@@ -1,0 +1,50 @@
+[
+  {
+    "name": "Walk",
+    "file": "ProMagic/Standing Walk Forward.fbx",
+    "frames": 35,
+    "maxWorldJointErrorMeters": 5.384614859355983e-06
+  },
+  {
+    "name": "Run",
+    "file": "ProMagic/Standing Run Forward.fbx",
+    "frames": 23,
+    "maxWorldJointErrorMeters": 6.5972484457084935e-06
+  },
+  {
+    "name": "Attack",
+    "file": "ProMagic/Standing 1H Magic Attack 01.fbx",
+    "frames": 70,
+    "maxWorldJointErrorMeters": 4.137793420977833e-06
+  },
+  {
+    "name": "Defend",
+    "file": "ProMagic/Standing Block Start.fbx",
+    "frames": 16,
+    "maxWorldJointErrorMeters": 3.9607691439846485e-06
+  },
+  {
+    "name": "HealOne",
+    "file": "Mira-HealOne-Mirrored.fbx",
+    "frames": 81,
+    "maxWorldJointErrorMeters": 4.732879635726367e-06
+  },
+  {
+    "name": "HealParty",
+    "file": "ProMagic/Standing 2H Cast Spell 01.fbx",
+    "frames": 66,
+    "maxWorldJointErrorMeters": 3.984327574580904e-06
+  },
+  {
+    "name": "Hit",
+    "file": "ProMagic/Standing React Small From Front.fbx",
+    "frames": 37,
+    "maxWorldJointErrorMeters": 4.07927430574584e-06
+  },
+  {
+    "name": "Death",
+    "file": "ProMagic/Standing React Death Backward.fbx",
+    "frames": 110,
+    "maxWorldJointErrorMeters": 6.983138138644136e-06
+  }
+]

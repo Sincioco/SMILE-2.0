@@ -1,0 +1,7 @@
+{
+  "repairedTriangles": {
+    "Mira.Staff": 1475,
+    "Mira.SkinnedBody": 320
+  },
+  "method": "Replace zero-area UV coordinates with tiny triangle islands around their existing palette samples. Texture colors preserved."
+}
