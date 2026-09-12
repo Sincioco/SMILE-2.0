@@ -1,0 +1,205 @@
+{
+  "modelSha256": "895b3ca014f9ff760f125c317bb617d09d3b29fc16890cd6cad58019eb2c956f",
+  "units": "meters; Blender Z reported as SM3D/glTF Y",
+  "bindBody": {
+    "minimumY": 0.0,
+    "maximumY": 1.7255260944366455
+  },
+  "clips": [
+    {
+      "clip": "Attack",
+      "samples": [
+        {
+          "frame": 0,
+          "minimumY": 0.00019399216398596764,
+          "maximumY": 1.5782251358032227
+        },
+        {
+          "frame": 34,
+          "minimumY": 1.3969838619232178e-09,
+          "maximumY": 1.4948079586029053
+        },
+        {
+          "frame": 69,
+          "minimumY": 0.00019662920385599136,
+          "maximumY": 1.578230857849121
+        }
+      ]
+    },
+    {
+      "clip": "Death",
+      "samples": [
+        {
+          "frame": 0,
+          "minimumY": 0.00015603494830429554,
+          "maximumY": 1.5782310962677002
+        },
+        {
+          "frame": 54,
+          "minimumY": -8.149072527885437e-09,
+          "maximumY": 1.3373751640319824
+        },
+        {
+          "frame": 109,
+          "minimumY": 1.35740265250206e-07,
+          "maximumY": 0.5155812501907349
+        }
+      ]
+    },
+    {
+      "clip": "Defend",
+      "samples": [
+        {
+          "frame": 0,
+          "minimumY": 0.0001551751047372818,
+          "maximumY": 1.5782365798950195
+        },
+        {
+          "frame": 7,
+          "minimumY": 3.050081431865692e-08,
+          "maximumY": 1.6015571355819702
+        },
+        {
+          "frame": 15,
+          "minimumY": -2.6309862732887268e-08,
+          "maximumY": 1.4949736595153809
+        }
+      ]
+    },
+    {
+      "clip": "HealOne",
+      "samples": [
+        {
+          "frame": 0,
+          "minimumY": 2.9802322387695312e-08,
+          "maximumY": 1.551203966140747
+        },
+        {
+          "frame": 40,
+          "minimumY": 5.704350769519806e-08,
+          "maximumY": 1.6803321838378906
+        },
+        {
+          "frame": 80,
+          "minimumY": -1.862645149230957e-09,
+          "maximumY": 1.5512042045593262
+        }
+      ]
+    },
+    {
+      "clip": "HealParty",
+      "samples": [
+        {
+          "frame": 0,
+          "minimumY": 0.0001922666560858488,
+          "maximumY": 1.578225016593933
+        },
+        {
+          "frame": 32,
+          "minimumY": -2.3283064365386963e-09,
+          "maximumY": 1.3141814470291138
+        },
+        {
+          "frame": 65,
+          "minimumY": 0.0001924524549394846,
+          "maximumY": 1.5782257318496704
+        }
+      ]
+    },
+    {
+      "clip": "Hit",
+      "samples": [
+        {
+          "frame": 0,
+          "minimumY": 0.00015568570233881474,
+          "maximumY": 1.578234314918518
+        },
+        {
+          "frame": 18,
+          "minimumY": 9.553367272019386e-05,
+          "maximumY": 1.587032675743103
+        },
+        {
+          "frame": 36,
+          "minimumY": 0.00015586544759571552,
+          "maximumY": 1.5781975984573364
+        }
+      ]
+    },
+    {
+      "clip": "Idle",
+      "samples": [
+        {
+          "frame": 0,
+          "minimumY": -5.4016709327697754e-08,
+          "maximumY": 1.739323616027832
+        },
+        {
+          "frame": 60,
+          "minimumY": -5.4016709327697754e-08,
+          "maximumY": 1.739323616027832
+        },
+        {
+          "frame": 120,
+          "minimumY": -5.4016709327697754e-08,
+          "maximumY": 1.739323616027832
+        }
+      ]
+    },
+    {
+      "clip": "Run",
+      "samples": [
+        {
+          "frame": 0,
+          "minimumY": 0.0017039335798472166,
+          "maximumY": 1.559255838394165
+        },
+        {
+          "frame": 11,
+          "minimumY": 0.027532799169421196,
+          "maximumY": 1.5388820171356201
+        },
+        {
+          "frame": 22,
+          "minimumY": 0.0017045517452061176,
+          "maximumY": 1.5592557191848755
+        }
+      ]
+    },
+    {
+      "clip": "Walk",
+      "samples": [
+        {
+          "frame": 0,
+          "minimumY": 9.080395102500916e-09,
+          "maximumY": 1.5969980955123901
+        },
+        {
+          "frame": 17,
+          "minimumY": 2.491287887096405e-08,
+          "maximumY": 1.5985380411148071
+        },
+        {
+          "frame": 34,
+          "minimumY": 4.889443516731262e-09,
+          "maximumY": 1.5969979763031006
+        }
+      ]
+    }
+  ],
+  "topology": [
+    {
+      "part": "Mira2.SkinnedBody",
+      "triangles": 18100,
+      "boundaryEdges": 0,
+      "nonManifoldEdges": 0
+    },
+    {
+      "part": "Mira2.Staff",
+      "triangles": 1552,
+      "boundaryEdges": 0,
+      "nonManifoldEdges": 0
+    }
+  ],
+  "acceptance": "Comparison checkpoint only; dynamic floor/cloth contact and Party/VFX validation remain open."
+}

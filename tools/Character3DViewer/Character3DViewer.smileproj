@@ -109,6 +109,13 @@
                   Profile="Character"
                   Identity="sin-star-i.character-4.healer.mira1"
                   ProductionState="Prototype" />
+    <Model3DAsset Include="BuildAssets\MiraV2\mira2-animation-checkpoint.glb"
+                  Descriptor="BuildAssets\MiraV2\Mira2.sm3d.json"
+                  LogicalPath="Assets\Generation2\MiraV2\Mira2.sm3d"
+                  TextureOutputDirectory="Assets\Generation2\MiraV2\Textures"
+                  Profile="Character"
+                  Identity="sin-star-i.character-4.healer.mira2"
+                  ProductionState="Prototype" />
     <Asset Include="TechnicalAssets\Generation2\AnimationArticulated.sm3d" />
     <Asset Include="TechnicalAssets\Generation2\VfxAtlas.png" />
     <Asset Include="Assets\Backgrounds\SinStarLandscape.png" />

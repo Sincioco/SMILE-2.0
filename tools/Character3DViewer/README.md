@@ -2,12 +2,15 @@
 
 ## Mira comparisons (native)
 
-**Mira1** loads the preserved Pixal3D healer candidate with nine animation choices.
-Use **Weapon** or **W** to hide/show her separate staff. This is an appearance and
-animation comparison: cloth/floor contacts and water effects are unfinished. Mira2
-(TRELLIS.2) and Mira3 (Hunyuan3D-2.1) are being evaluated before final Party integration.
-The canonical package and current limitations are in
-`games/SinStarI/SourceAssets/Characters/Healer/MiraV1/README.md`.
+**Mira1** preserves the Pixal3D candidate; **Mira2** loads the independent TRELLIS.2
+candidate. Both have nine animation choices. Use **Weapon** or **W** to hide/show
+each character's own staff. Mira2 has a closed 19,652-triangle equipped surface,
+rebaked textures and measured floor corrections. This is an appearance and animation
+comparison; final healer effects and Party integration are still in progress.
+Mira3 (Hunyuan3D-2.1) has an initial generated shape under evaluation.
+Canonical packages and current limitations are in
+`games/SinStarI/SourceAssets/Characters/Healer/MiraV1/README.md` and
+`games/SinStarI/SourceAssets/Characters/Healer/MiraV2/README.md`.
 Candidate comparison tabs are native-only; Web follow-through remains deferred.
 
 ## Party Beat Cameras

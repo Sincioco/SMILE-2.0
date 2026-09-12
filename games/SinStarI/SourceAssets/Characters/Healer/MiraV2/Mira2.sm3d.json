@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "sampleRate": 30,
+  "clips": {
+    "Idle": { "loop": true },
+    "Walk": { "loop": true },
+    "Run": { "loop": true },
+    "Attack": { "loop": false },
+    "Defend": { "loop": false },
+    "HealOne": { "loop": false },
+    "HealParty": { "loop": false },
+    "Hit": { "loop": false },
+    "Death": { "loop": false }
+  },
+  "sockets": {
+    "Root": { "node": "mixamorig:Hips" },
+    "Head": { "node": "mixamorig:Head" },
+    "Chest": { "node": "mixamorig:Spine2" },
+    "HandRight": { "node": "mixamorig:RightHand" },
+    "HandLeft": { "node": "mixamorig:LeftHand" },
+    "FootLeft": { "node": "mixamorig:LeftFoot" },
+    "FootRight": { "node": "mixamorig:RightFoot" }
+  }
+}

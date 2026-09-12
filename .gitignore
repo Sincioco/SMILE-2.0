@@ -11,6 +11,8 @@ artifacts/
 *.lib
 *.vsix
 *.vsixmanifest.user
+*.blend[1-9]
+!games/SinStarI/SourceAssets/Characters/Healer/MiraV2/Source/mira2-mixamo-input.obj
 
 # Disposable mirrors of Zara's locally licensed Unity attack audio.
 tools/Character3DViewer/Assets/Audio/zara-*.wav

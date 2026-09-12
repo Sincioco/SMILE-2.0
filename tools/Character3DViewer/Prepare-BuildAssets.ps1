@@ -19,10 +19,20 @@ $dragonRoot = Join-Path $repositoryRoot `
     'games\SinStarI\SourceAssets\Bosses\RedDragon'
 $miraRoot = Join-Path $repositoryRoot `
     'games\SinStarI\SourceAssets\Characters\Healer\MiraV1'
+$mira2Root = Join-Path $repositoryRoot `
+    'games\SinStarI\SourceAssets\Characters\Healer\MiraV2'
 $technicalRoot = Join-Path $repositoryRoot `
     'games\SinStarI\TechnicalAssets\Generation2'
 $buildAssets = Join-Path $toolRoot 'BuildAssets'
 $copies = @(
+    @{
+        Source = Join-Path $mira2Root 'mira2-animation-checkpoint.glb'
+        Destination = Join-Path $buildAssets 'MiraV2\mira2-animation-checkpoint.glb'
+    },
+    @{
+        Source = Join-Path $mira2Root 'Mira2.sm3d.json'
+        Destination = Join-Path $buildAssets 'MiraV2\Mira2.sm3d.json'
+    },
     @{
         Source = Join-Path $miraRoot 'mira1-animation-checkpoint.glb'
         Destination = Join-Path $buildAssets 'MiraV1\mira1-animation-checkpoint.glb'

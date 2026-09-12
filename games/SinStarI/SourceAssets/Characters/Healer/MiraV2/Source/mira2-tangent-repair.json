@@ -1,0 +1,14 @@
+{
+  "passes": [
+    {
+      "zeroLoops": 1,
+      "faces": [
+        4534
+      ]
+    },
+    {
+      "zeroLoops": 0,
+      "faces": []
+    }
+  ]
+}

@@ -2239,10 +2239,10 @@ Private Function CharacterTabCount() As Number
     If ViewerProfiles.INCLUDE_MIRA_COMPARISONS Then
 
         If ViewerProfiles.INCLUDE_UNITY_CHARACTERS Then
-            Return 9
+            Return 10
         End If
 
-        Return 5
+        Return 6
 
     End If
 
@@ -2261,6 +2261,8 @@ Private Function CharacterTabIndex(Position As Number) As Number
     Result = Position
 
     If ViewerProfiles.INCLUDE_MIRA_COMPARISONS And Position = CharacterTabCount() - 1 Then
+        Return ViewerProfiles.CHARACTER_TAB_MIRA2
+    Else If ViewerProfiles.INCLUDE_MIRA_COMPARISONS And Position = CharacterTabCount() - 2 Then
         Return ViewerProfiles.CHARACTER_TAB_MIRA1
     End If
 
@@ -2308,6 +2310,8 @@ Private Function CharacterTabLabel(Index As Number) As Text
         Result = "Party Dragon"
     Else If Index = ViewerProfiles.CHARACTER_TAB_MIRA1 Then
         Result = "Mira1"
+    Else If Index = ViewerProfiles.CHARACTER_TAB_MIRA2 Then
+        Result = "Mira2"
     End If
 
     Return Result
@@ -2322,6 +2326,8 @@ Private Function CharacterTabX(Position As Number) As Number
 
     If ViewerProfiles.INCLUDE_UNITY_CHARACTERS And Position >= 6 Then
         Result = 54 + 6 * 52 + (Position - 6) * 82
+    Else If Not ViewerProfiles.INCLUDE_UNITY_CHARACTERS And Position >= 4 Then
+        Result = 54 + 3 * 52 + 82 + (Position - 4) * 52
     End If
 
     Return Result

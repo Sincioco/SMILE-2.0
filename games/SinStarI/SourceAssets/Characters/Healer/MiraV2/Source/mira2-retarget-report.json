@@ -1,0 +1,53 @@
+{
+  "unitMultiplier": 100,
+  "clips": [
+    {
+      "clip": "Idle",
+      "source": "Standing Idle 02.fbx",
+      "frames": 157,
+      "maximumLocalJointError": 5.013089976552978e-05
+    },
+    {
+      "clip": "Walk",
+      "source": "Standing Walk Forward.fbx",
+      "frames": 35,
+      "maximumLocalJointError": 5.833122216095857e-05
+    },
+    {
+      "clip": "Run",
+      "source": "Standing Run Forward.fbx",
+      "frames": 23,
+      "maximumLocalJointError": 5.5235234396652365e-05
+    },
+    {
+      "clip": "Attack",
+      "source": "Standing 1H Magic Attack 01.fbx",
+      "frames": 70,
+      "maximumLocalJointError": 5.291803611711215e-05
+    },
+    {
+      "clip": "Defend",
+      "source": "Standing Block Start.fbx",
+      "frames": 16,
+      "maximumLocalJointError": 4.8988801995918704e-05
+    },
+    {
+      "clip": "HealParty",
+      "source": "Standing 2H Cast Spell 01.fbx",
+      "frames": 66,
+      "maximumLocalJointError": 4.992900619558703e-05
+    },
+    {
+      "clip": "Hit",
+      "source": "Standing React Small From Front.fbx",
+      "frames": 37,
+      "maximumLocalJointError": 4.952155511024547e-05
+    },
+    {
+      "clip": "Death",
+      "source": "Standing React Death Backward.fbx",
+      "frames": 110,
+      "maximumLocalJointError": 5.194164995845224e-05
+    }
+  ]
+}

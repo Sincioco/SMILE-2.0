@@ -1,0 +1,14 @@
+[
+  {
+    "mesh": "Mira2.SkinnedBody",
+    "verticesAdjusted": 3,
+    "maximumSingleAdjustmentMeters": 7.496752163389445e-05,
+    "minimumTriangleArea": 9.088394676837197e-07
+  },
+  {
+    "mesh": "Mira2.Staff",
+    "verticesAdjusted": 6,
+    "maximumSingleAdjustmentMeters": 0.0009313016206920041,
+    "minimumTriangleArea": 7.269539992194041e-07
+  }
+]
