@@ -6,7 +6,10 @@
 candidate. Both have nine animation choices. Use **Weapon** or **W** to hide/show
 each character's own staff. Mira2 has a closed 19,652-triangle equipped surface,
 rebaked textures and measured floor corrections. This is an appearance and animation
-comparison; final healer effects and Party integration are still in progress.
+comparison; final facial/cloth quality remains under review. Mira2 also participates
+in both Party battles, cycling Water Attack, Heal One (Arin), and Heal Party with
+blue water VFX and sound. Tab/click selects her Beat Camera. Healing previews
+existing presentation states; no Sin Star I game code or health system is changed.
 Mira3 (Hunyuan3D-2.1) has an initial generated shape under evaluation.
 Canonical packages and current limitations are in
 `games/SinStarI/SourceAssets/Characters/Healer/MiraV1/README.md` and

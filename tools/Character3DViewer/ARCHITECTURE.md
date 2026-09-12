@@ -12,9 +12,23 @@ self-contained MiraV1/MiraV2 packages and the normal project asset cooker publis
 `INCLUDE_MIRA_COMPARISONS` is disabled in generated Web profiles while that adoption
 is deferred. No new actor pool, calibration bank, game behavior or runtime dependency
 was added. The rigid staff uses the same production skin and the existing equipment
-visibility path. Neither comparison has equipment glow or a Party role implementation yet.
-This comparison reuses the existing profile module; later substantial healer VFX
-and Party behavior should have a focused owner rather than accumulating here.
+visibility path. Neither comparison has equipment glow. Mira2's healer policy now lives in
+`MiraBattle` (cast timing and action labels); `MiraWater` owns one caller-held
+128-particle batch and clip-time audio on channel 6. ViewerParty owns Mira's named
+actor/context and formation, applies policy samples to existing presentation states,
+and routes her through both battle turn orders, targeting, draw/update and cleanup.
+It does not borrow a calibration bank or advance another shared scene clock.
+`CreateAdditionalParticipants`, `UpdateAdditionalEquipment` and
+`DrawAdditionalEquipment` admit Mira independently of the optional Unity roster.
+ViewerEffects owns a separate water context for the standalone Mira2 tab.
+Targets are rebuilt from final actor positions each frame and cleared on destruction.
+This prevents the four-member Vrax list leaking into the three-member Dragon scene.
+`CalibrationTests.CheckMiraBattles` exercises real models, all three casts in both
+battles, healing without boss damage, target-count cleanup, seek/restore and turn exit.
+The existing Beat fixture now verifies selection reaches Mira and both bosses.
+No compiler, runtime, Scene VFX pool, public calibration format or game rule changes
+are required. Particle/audio content is canonical in MiraV2; tool-local audio copies
+are disposable build mirrors.
 
 ## Party Beat Camera Ownership
 
@@ -36,7 +50,7 @@ camera intervals to the original battle duration; no action time is remapped.
 `ViewerBeatTimeline` owns timeline gestures, frame stepping/repeat and presentation in
 the normal animation timeline's bottom layout. Beat Preview hides the animation
 timeline and closing Preview restores it; no second timeline panel is drawn.
-`ViewerBeatEditor` owns selection, six character identities, per-character sequence
+`ViewerBeatEditor` owns selection, seven character identities, per-character sequence
 drafts and clipboard, one head cuboid per identity, preview playback and reset controls. The
 existing `ViewerWorkflow.Session` coordinates those operations; it retains the same
 renderer, Party actor instances, calibration owners and main update/draw order.

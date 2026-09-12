@@ -368,7 +368,7 @@ Private Sub DrawParticipants(ByRef Result As FrameResult,
 
     Call CaptureFrameResult(Result, Character3D.Draw(Character), 12)
 
-    Call CaptureFrameResult(Result, ViewerParty.DrawUnityEquipment(Party, Equipment), 13)
+    Call CaptureFrameResult(Result, ViewerParty.DrawAdditionalEquipment(Party, Equipment), 13)
 
     If (Party.Enabled Or DragonInspection) And Party.Ready Then
         Call CaptureFrameResult(

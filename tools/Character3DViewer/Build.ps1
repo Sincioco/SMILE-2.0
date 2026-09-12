@@ -38,6 +38,8 @@ $viewerSources = @(
     '..\..\games\SinStarI\SourceAssets\Characters\Tank\OrinV13\OrinEquipmentContours.smile',
     'ArinShieldRim.smile',
     'BattleAudio.smile',
+    'MiraBattle.smile',
+    'MiraWater.smile',
     'BattleCamera.smile',
     'BattleCameraShots.smile',
     'BattleCameraTimeline.smile',

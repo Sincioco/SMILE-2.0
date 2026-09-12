@@ -325,9 +325,10 @@ Public Class Session
             Call Me.UpdateBattleAudio()
             Call Me.UpdateOrinStorm()
 
-            Me.Session.Ready = ViewerParty.UpdateUnityEquipment(Me.Party, Me.Effects, Me.Equipment,
+            Me.Session.Ready = ViewerParty.UpdateAdditionalEquipment(Me.Party, Me.Effects, Me.Equipment,
                 Me.ViewerCameraState.Live, Me.Timing.CameraElapsed,
-                Me.Playback.AnimationUpdateElapsed, Me.Playback.ScenePaused) And Me.Session.Ready
+                Me.Playback.AnimationUpdateElapsed, Me.Playback.ScenePaused,
+                Me.Character, Me.DragonState.Actor) And Me.Session.Ready
 
             Me.Session.Ready = ViewerEffects.AdvanceScene(
                 Me.Effects,

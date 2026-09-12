@@ -19,6 +19,8 @@
     <SmileSource Include="..\..\games\SinStarI\SourceAssets\Characters\Tank\OrinV13\OrinEquipmentContours.smile" />
     <SmileSource Include="ArinShieldRim.smile" />
     <SmileSource Include="BattleAudio.smile" />
+    <SmileSource Include="MiraBattle.smile" />
+    <SmileSource Include="MiraWater.smile" />
     <SmileSource Include="BattleCamera.smile" />
     <SmileSource Include="BattleCameraShots.smile" />
     <SmileSource Include="BattleCameraTimeline.smile" />
@@ -130,6 +132,9 @@
     <Asset Include="Assets\Lightning\lightning-ribbon.png" />
     <Asset Include="Assets\Lightning\lightning-spark.png" />
     <Asset Include="Assets\Lightning\thunder.wav" />
+    <Asset Include="Assets\Audio\mira-water-attack.wav" />
+    <Asset Include="Assets\Audio\mira-heal-one.wav" />
+    <Asset Include="Assets\Audio\mira-heal-party.wav" />
     <Asset Include="Assets\Audio\arin-flame-slash.wav" />
     <Asset Include="Assets\Audio\zara-*.wav" />
     <Asset Include="Assets\Audio\vrax-*.wav" />

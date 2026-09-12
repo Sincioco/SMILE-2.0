@@ -20,6 +20,8 @@
     <SmileSource Include="..\..\games\SinStarI\SourceAssets\Characters\Tank\OrinV13\OrinEquipmentContours.smile" />
     <SmileSource Include="..\Character3DViewer\ArinShieldRim.smile" />
     <SmileSource Include="..\Character3DViewer\BattleAudio.smile" />
+    <SmileSource Include="..\Character3DViewer\MiraBattle.smile" />
+    <SmileSource Include="..\Character3DViewer\MiraWater.smile" />
     <SmileSource Include="..\Character3DViewer\BattleCamera.smile" />
     <SmileSource Include="..\Character3DViewer\BattleCameraShots.smile" />
     <SmileSource Include="..\Character3DViewer\BattleCameraTimeline.smile" />

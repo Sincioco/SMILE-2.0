@@ -1,0 +1,60 @@
+''' Ranged healer action policy; Party owns actors and the battle clock.
+Module Smile.Tools.MiraBattle
+
+Option Explicit
+
+Public Const PARTY_TURN = 6
+
+Public Type Sample
+    Clip As Text
+    Stage As Number
+    Heal As Boolean
+    HealParty As Boolean
+End Type
+
+Public Function ClipForCycle(Cycle As Number) As Text
+
+    If Cycle Mod 3 = 1 Then
+        Return "HealOne"
+    Else If Cycle Mod 3 = 2 Then
+        Return "HealParty"
+    End If
+
+    Return "Attack"
+
+End Function
+
+Public Function Caption(Cycle As Number) As Text
+
+    If Cycle Mod 3 = 1 Then
+        Return "Heal One"
+    Else If Cycle Mod 3 = 2 Then
+        Return "Heal Party"
+    End If
+
+    Return "Water Attack"
+
+End Function
+
+Public Function Evaluate(Cycle As Number, Elapsed As Number,
+    AttackStart As Number, Duration As Number) As Sample
+
+    Dim Result As Sample
+
+    Result.Clip = "Idle"
+
+    If Elapsed >= AttackStart + Duration Then
+        Result.Stage = 3
+    Else If Elapsed >= AttackStart Then
+        Result.Stage = 1
+        Result.Clip = ClipForCycle(Cycle)
+    End If
+
+    Result.Heal = Cycle Mod 3 <> 0 And Elapsed >= AttackStart + Duration / 4
+    Result.HealParty = Cycle Mod 3 = 2
+
+    Return Result
+
+End Function
+
+End Module

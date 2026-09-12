@@ -307,7 +307,7 @@ Private Sub CreateParticipants(ByRef Session As ViewerSession.State,
         Session.Ready = ViewerParty.CreateCompanion(
             Party, Calibration, Effects, ViewerProfiles.PROFILE_ORIN,
             Settings.CalibrationMaximumClips, Playback.PlaybackSpeed) And Session.Ready
-        Session.Ready = ViewerParty.CreateUnityParticipants(
+        Session.Ready = ViewerParty.CreateAdditionalParticipants(
             Party, Playback.PlaybackSpeed, Effects) And Session.Ready
 
         Call ConfigureCalibration(

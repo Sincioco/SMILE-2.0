@@ -68,5 +68,26 @@ UV corner chart by a tiny sub-pixel amount. Export Blender tangents explicitly a
 verify none are zero. Do not weaken the SM3D geometry/UV/tangent validation gates.
 
 Mira1 remains untouched in its independent package. Arin/Orin numeric placement and
-pose keys are never defaults for Mira. Final appearance acceptance and both Party
-battle roles remain outstanding; this package supports the native comparison first.
+pose keys are never defaults for Mira. Final appearance acceptance remains outstanding. Native Party integration uses
+this comparison candidate without implying final visual acceptance.
+
+## Native healer presentation
+
+ViewerParty owns Mira2's separate actor, layout and water context. MiraBattle owns
+ranged cast timing/policy; MiraWater owns bounded particle resources and cue crossing.
+Mira does not enter the Arin/Orin calibration bank predicate. The staff remains part
+1 and body part 0. Use part 0 for her HandLeft/Chest/Head socket queries; an assumed
+part 3 is invalid for this two-part model.
+
+The water batch holds at most 128 particles and samples the actor's clip time, with
+no additional shared scene-clock update. Attack draws a curved water stream;
+HealOne/HealParty draw rising blue spirals around final grounded actor positions.
+Audio uses channel 6 and the same clip clock. Muted preview samples consume cues
+without replaying them on resume. Reset target count each frame and on destruction:
+the four-member Vrax list must not leak a fourth recipient into the three-member
+Dragon battle after tab switching. The native real-asset fixture covers that defect,
+all three casts in both battles, effect cleanup and preview restoration.
+
+Healing is Viewer presentation, not a Sin Star I gameplay implementation. Camera
+selection gives Mira identity 6 independently from Vrax identity 5. Her action turn
+also uses 6, preserving the existing hero/boss turn keys.

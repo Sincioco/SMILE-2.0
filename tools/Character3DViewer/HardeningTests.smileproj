@@ -13,6 +13,8 @@
     <SmileSource Include="ArinShieldRim.smile" />
     <SmileSource Include="DragonPresence.smile" />
     <SmileSource Include="BattleAudio.smile" />
+    <SmileSource Include="MiraBattle.smile" />
+    <SmileSource Include="MiraWater.smile" />
     <SmileSource Include="BattleCamera.smile" />
     <SmileSource Include="BattleCameraShots.smile" />
     <SmileSource Include="BattleCameraTimeline.smile" />

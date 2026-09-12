@@ -17,6 +17,7 @@ Import Smile.Simple3D.SceneVfx3D As SceneVfx3D
 Import Smile.Tools.ArinShieldRim As ArinShieldRim
 Import Smile.Tools.OrinStorm As OrinStorm
 Import Smile.Tools.BattleAudio As BattleAudio
+Import Smile.Tools.MiraWater As MiraWater
 Import Smile.Tools.Character3DViewerProfiles As ViewerProfiles
 Import Smile.Tools.Character3DViewerDragon As ViewerDragon
 
@@ -44,6 +45,7 @@ Public Type ZaraAttackEffects
 End Type
 
 Public Type State
+    Water As MiraWater.Context
     ZaraAttacks As ZaraAttackEffects
     ProfileIndex As Number
     VraxAttacks As ViewerDragon.AttackEffects
@@ -521,6 +523,11 @@ Public Sub CreateEpicGlow(ByRef Value As State, ProfileIndex As Number,
     Dim GlowReady As Boolean
 
     Value.ProfileIndex = ProfileIndex
+
+    If ProfileIndex = ViewerProfiles.PROFILE_MIRA2 Then
+        GlowReady = MiraWater.Prepare(Value.Water)
+    End If
+
     Value.EpicGlowAvailable = ViewerProfiles.EpicGlowAvailable(ProfileIndex)
     Value.EpicGlowAvailable = Character3D.HasSocket(Actor, "SwordBase") And Value.EpicGlowAvailable
     Value.EpicGlowAvailable = Character3D.HasSocket(Actor, "SwordTip") And Value.EpicGlowAvailable
@@ -603,6 +610,7 @@ End Sub
 
 Public Sub DestroyEpicGlow(ByRef Value As State)
 
+    Call MiraWater.Destroy(Value.Water)
     Call ViewerDragon.ClearVraxAudio(Value.VraxAudio)
     Call ViewerDragon.ClearVraxAttacks(Value.VraxAttacks)
     Call ClearEquipmentFire(Value)
@@ -738,6 +746,19 @@ Public Sub UpdateEquipmentFire(
     CameraElapsed As Number
 )
 
+    Dim WaterReady As Boolean
+
+    If ProfileIndex = ViewerProfiles.PROFILE_MIRA2 Then
+
+        Call MiraWater.UseStandaloneTargets(Value.Water, Actor)
+
+        WaterReady = MiraWater.Update(Value.Water, Actor, SelectedClipLabel,
+            Not PrimaryKnockedOut, Not ScenePaused And Not CalibrationEditing)
+
+        Return
+
+    End If
+
     If ProfileIndex = ViewerProfiles.PROFILE_VRAX Then
         Call ViewerDragon.UpdateVraxAttacks(Value.VraxAttacks, Actor,
             SelectedClipLabel, Not PrimaryKnockedOut,
@@ -852,6 +873,7 @@ End Sub
 Public Sub DrawEquipmentFire(ByRef Value As State, SwordVisible As Boolean,
     ShieldVisible As Boolean)
 
+    Call MiraWater.Draw(Value.Water)
     Call ViewerDragon.DrawVraxAttacks(Value.VraxAttacks)
 
     If SwordVisible And Value.EpicGlowVisible Then

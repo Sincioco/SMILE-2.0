@@ -17,12 +17,12 @@ Import Smile.UI.Controls As UI
 Import Smile.Tools.Character3DViewerInput As Input
 
 Public Type State
-    Tracks[6] As Track.Definition
+    Tracks[7] As Track.Definition
     Working As Track.Definition
     Timeline As Timeline.State
     SourceSchedule As Sequence.Timing
     ShotIndex As Number
-    References[6] As Shots.HeadReference
+    References[7] As Shots.HeadReference
     HeadIds[2] As Number
     CornerX[2, 8] As Number
     CornerY[2, 8] As Number
@@ -90,7 +90,7 @@ Public Sub LoadShots(ByRef Value As State)
 
     Value.DragMarker = -1
 
-    For Identity = 0 To 5
+    For Identity = 0 To 6
 
         Call Track.Initialize(Value.Tracks[Identity])
 

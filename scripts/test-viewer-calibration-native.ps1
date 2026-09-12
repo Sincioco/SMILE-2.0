@@ -52,6 +52,7 @@ $testPrefix = $testPrefix.Replace(
         "Import Smile.Simple3D.PrecisionCamera3D As PrecisionCamera`n" +
         "Import Smile.Tools.ArinShieldRim As ArinShieldRim`n" +
         "Import Smile.Tools.DragonPresence As DragonPresence`n" +
+        "Import Smile.Tools.MiraWater As MiraWater`n" +
         "Import Smile.Simple3D.Core As Core`n")
 $testSource = $testPrefix + ($profileConstants -join "`n") + "`n`n" +
     $testStartup + "`n" + $viewerSource.Substring($helperIndex)

@@ -3,7 +3,7 @@
   "characterName": "Mira2",
   "partyRole": "Healer",
   "candidateVersion": "v2",
-  "status": "Native comparison candidate",
+  "status": "Native comparison candidate with healer battle presentation",
   "acceptedForProduction": false,
   "generator": "Microsoft TRELLIS.2 BF16, local ComfyUI / RTX 5090",
   "animationSource": "Own Mixamo rig; absolute-pose retargeting plus neutral Idle",
@@ -25,6 +25,7 @@
   "groundingCorrections": "Source/mira2-grounding-repair.json",
   "limitations": "README.md",
   "nativeViewerComparisonValidated": true,
-  "partyIntegrationValidated": false,
-  "waterEffectsImplemented": false
+  "partyIntegrationValidated": true,
+  "waterEffectsImplemented": true,
+  "audioSource": "Source/generate-water-audio.py (original deterministic mono PCM cues)"
 }

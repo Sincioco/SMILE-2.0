@@ -6,6 +6,7 @@ Option Explicit
 Import Smile.Tools.BattleCameraShots As Shots
 Import Smile.Tools.ViewerBeatEditor As Editor
 Import Smile.Tools.ViewerBeatSequence As Sequence
+Import Smile.Tools.Character3DViewerProfiles As Profiles
 Import Smile.Tools.BattleCameraTimeline As Track
 Import Smile.Tools.ViewerBeatTimeline As Timeline
 Import Smile.Tools.Character3DViewerCamera As Camera
@@ -171,8 +172,18 @@ Public Function Run() As Number
     Call Check(Ui.Draft.Eye.X = Value.Eye.X And Ui.References[1].Size.X = 40.0,
         "Cross Character Copy Preserves Destination Head", Failures)
     Call Check(Sequence.Identity(False, 2) <> Sequence.Identity(True, 2), "Independent Boss Identities", Failures)
-    Call Check(Sequence.NextActor(False, 1, True) = 2 And Sequence.NextActor(True, 5, True) = 2,
-        "Both Bosses In Selection Cycle", Failures)
+
+    If Profiles.INCLUDE_MIRA_COMPARISONS Then
+        Call Check(Sequence.NextActor(False, 1, True) = 6 And
+            Sequence.NextActor(True, 5, True) = 6 And
+            Sequence.NextActor(False, 6, True) = 2 And
+            Sequence.NextActor(True, 6, True) = 2,
+            "Mira And Both Bosses In Selection Cycle", Failures)
+    Else
+
+        Call Check(Sequence.NextActor(False, 1, True) = 2 And Sequence.NextActor(True, 5, True) = 2,
+            "Both Bosses In Selection Cycle", Failures)
+    End If
 
     Controls.Base = First
     Controls.Base.Position = P.Vector(-400.0, 140.0, 0.0)

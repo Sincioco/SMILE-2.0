@@ -1460,6 +1460,10 @@ Public Sub DrawHeader(DisplayName As Text, PartyRole As Text,
             Subtitle = "Sin Star I  •  Arin, Orin And Zara  •  Vrax Battle Preview"
         End If
 
+        If ViewerProfiles.INCLUDE_MIRA_COMPARISONS Then
+            Subtitle = Subtitle + " / Mira2 Healer"
+        End If
+
     End If
 
     Draw Text Subtitle At 18, 42 Size 13 Color LIGHT_GRAY
@@ -2256,14 +2260,20 @@ End Function
 
 Private Function CharacterTabIndex(Position As Number) As Number
 
+    Dim ReturnValue As Number
+
     Dim Result As Number
 
     Result = Position
 
     If ViewerProfiles.INCLUDE_MIRA_COMPARISONS And Position = CharacterTabCount() - 1 Then
-        Return ViewerProfiles.CHARACTER_TAB_MIRA2
+        ReturnValue = ViewerProfiles.CHARACTER_TAB_MIRA2
+
+        Return ReturnValue
     Else If ViewerProfiles.INCLUDE_MIRA_COMPARISONS And Position = CharacterTabCount() - 2 Then
-        Return ViewerProfiles.CHARACTER_TAB_MIRA1
+        ReturnValue = ViewerProfiles.CHARACTER_TAB_MIRA1
+
+        Return ReturnValue
     End If
 
     If ViewerProfiles.INCLUDE_UNITY_CHARACTERS Then

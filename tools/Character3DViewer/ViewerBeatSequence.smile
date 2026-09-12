@@ -12,6 +12,7 @@ Import Smile.Simple3D.PrecisionCamera3D As Camera
 Import Smile.Tools.Character3DViewerParty As Party
 Import Smile.Tools.Character3DViewerDragon As Dragon
 Import Smile.Tools.Character3DViewerProfiles As Profiles
+Import Smile.Tools.MiraBattle As MiraBattle
 
 Public Type Timing
     Start[5] As Number
@@ -30,10 +31,10 @@ Public Type Bookmark
     HitResolved As Boolean
     DragonOnly As Boolean
     Establish As Number
-    States[6] As Number
-    Clips[6] As Text
-    Times[6] As Number
-    Modes[6] As Number
+    States[7] As Number
+    Clips[7] As Text
+    Times[7] As Number
+    Modes[7] As Number
 End Type
 
 Public Function Actor(Value As Party.State, Primary As C.Actor,
@@ -51,6 +52,8 @@ Public Function Actor(Value As Party.State, Primary As C.Actor,
         Result = Value.Third.Actor
     Else If Turn = 5 Then
         Result = Value.Fourth.Actor
+    Else If Turn = MiraBattle.PARTY_TURN Then
+        Result = Value.Mira.Actor
     End If
 
     Return Result
@@ -65,9 +68,12 @@ Public Sub RememberPoses(ByRef Saved As Bookmark, Value As Party.State,
     Dim Subject As C.Actor
     Dim Animator As Core.Animator3D
 
-    For Turn = 0 To 5
+    For Turn = 0 To 6
 
-        If Turn <> 3 And (Turn < 3 Or Value.UnityRoster) Then
+        If (Turn <> 3 And
+            (Turn < 3 Or
+            (Turn < 6 And Value.UnityRoster) Or
+            (Turn = MiraBattle.PARTY_TURN And Value.Mira.Ready))) Then
 
             Subject = Actor(Value, Primary, Boss, Turn)
             Saved.Times[Turn] = C.AnimationTime(Subject)
@@ -99,7 +105,7 @@ Public Function RestorePoses(Saved As Bookmark, Value As Party.State,
 
     Result = True
 
-    For Turn = 0 To 5
+    For Turn = 0 To 6
 
         Name = Saved.Clips[Turn]
 
@@ -135,6 +141,8 @@ Public Function Identity(UnityRoster As Boolean, Turn As Number) As Number
         Return 3
     Else If Turn = 5 Then
         Return 4
+    Else If Turn = MiraBattle.PARTY_TURN Then
+        Return 6
     End If
 
     Return 0
@@ -153,6 +161,8 @@ Public Function Name(Identity As Number) As Text
         Return "Zara"
     Else If Identity = 5 Then
         Return "Vrax"
+    Else If Identity = 6 Then
+        Return "Mira2"
     End If
 
     Return "Arin"
@@ -162,6 +172,8 @@ End Function
 Public Function NextActor(UnityRoster As Boolean, Current As Number,
     BossVisible As Boolean) As Number
 
+    Dim ReturnValue As Number
+
     If Current = 0 Then
         Return 1
     Else If (Current = 1 And
@@ -170,6 +182,11 @@ Public Function NextActor(UnityRoster As Boolean, Current As Number,
         Return 4
     Else If (Current = 1 Or Current = 4) And UnityRoster Then
         Return 5
+    Else If (Profiles.INCLUDE_MIRA_COMPARISONS And
+        (Current = 5 Or (Current = 1 And Not UnityRoster))) Then
+        ReturnValue = MiraBattle.PARTY_TURN
+
+        Return ReturnValue
     Else If Current <> 2 And BossVisible Then
         Return 2
     End If
@@ -181,6 +198,10 @@ End Function
 Public Function Opponent(Value As Party.State, Turn As Number) As Number
 
     Dim ReturnValue As Number
+
+    If Turn = MiraBattle.PARTY_TURN And Value.AttackCycle Mod 3 <> 0 Then
+        Return 0
+    End If
 
     If Turn = 2 Then
         ReturnValue = Value.HitTarget
@@ -266,7 +287,7 @@ Public Function Remember(Value As Party.State) As Bookmark
     Result.DragonOnly = Value.DragonOnlyTurn
     Result.Establish = Value.EstablishRemaining
 
-    For Index = 0 To 5
+    For Index = 0 To 6
         Result.States[Index] = Party.PresentationState(Value, Index)
     End For
 
@@ -289,7 +310,7 @@ Public Sub Restore(ByRef Value As Party.State, Saved As Bookmark)
     Value.DragonOnlyTurn = Saved.DragonOnly
     Value.EstablishRemaining = Saved.Establish
 
-    For Index = 0 To 5
+    For Index = 0 To 6
         Call Party.SetPresentationState(Value, Index, Saved.States[Index])
     End For
 
@@ -325,7 +346,7 @@ Public Function Sample(ByRef Value As Party.State, ByRef Primary As C.Actor,
         Value.FatalStarted = False
         Value.HitResolved = False
 
-        For Index = 0 To 5
+        For Index = 0 To 6
             Call Party.SetPresentationState(Value, Index, Party.STATE_ALIVE)
         End For
 
@@ -371,6 +392,7 @@ Public Function Sample(ByRef Value As Party.State, ByRef Primary As C.Actor,
 
             If (C.ClipName(Boss.Actor, Index) = "Hit" And
                 Elapsed >= Impact And
+                (Turn <> MiraBattle.PARTY_TURN Or Value.AttackCycle Mod 3 = 0) And
                 BossTime < C.ClipDuration(Boss.Actor, Index)) Then
                 BossName = "Hit"
             End If

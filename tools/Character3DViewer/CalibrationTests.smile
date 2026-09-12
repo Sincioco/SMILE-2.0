@@ -48,6 +48,7 @@ Call CheckPackagedCalibration()
 Call CalibrationCheck(Character3D.SocketCount(Character) = ActiveProfile.ExpectedSocketCount,
     "Profile socket contract")
 Call CheckImportedProfileTabs()
+Call CheckMiraBattles()
 Call SelectCharacterTab(1)
 Call CalibrationCheck(Session.Ready And Not Session.ViewerError And Not Calibration.StorageRejected,
     "Orin loads with its canonical saved calibration")
@@ -2018,5 +2019,119 @@ Sub CheckZaraAttackEffects()
     Call CalibrationCheck(Fire.Value(1, EmptyFire) = BaselineFire And
         Lightning.Value(Lightning.QUERY_LIVE_EFFECTS, Trial.BladeArc) = 0,
         "Zara cleanup restores shared budgets without allocating fire")
+
+End Sub
+
+Sub CheckMiraBattles()
+
+    Dim TabIndex As Number
+    Dim Cycle As Number
+    Dim Schedule As BeatSequence.Timing
+    Dim Saved As BeatSequence.Bookmark
+    Dim Ok As Boolean
+    Dim Updated As ViewerParty.ParticipantUpdateResult
+    Dim Members As Number
+    Dim SampleTime As Number
+
+    If Not ViewerProfiles.INCLUDE_MIRA_COMPARISONS Then
+        Return
+    End If
+
+    For TabIndex = 8 To 9
+        Call SelectCharacterTab(TabIndex)
+        Call CalibrationCheck(Session.Ready And Character3D.ClipCount(Character) = 9,
+            "Each Mira comparison tab loads its own nine-clip package")
+    End For
+
+    For TabIndex = 0 To 1
+
+        Call SelectCharacterTab(3 + TabIndex * 4)
+        Call CalibrationCheck(Party.Mira.Ready And Party.Water.Ready And
+            Party.Mira.Profile = ViewerProfiles.PROFILE_MIRA2 And
+            Not Party.Mira.CalibrationAvailable,
+            "Both battles own Mira2 without borrowing a calibration bank")
+        Call CalibrationCheck(Party.Mira.Actor.Handle <> Character.Handle And
+            Party.Mira.Actor.Handle <> Party.Companion.Actor.Handle,
+            "Mira has an independent actor and animation clock")
+
+        Members = 3
+
+        If Party.UnityRoster Then
+            Members = 4
+        End If
+
+        Call CalibrationCheck(Party.ParticipantCount = Members,
+            "Formation admits Mira in addition to the existing heroes")
+
+        For Cycle = 0 To 2
+
+            Party.AttackCycle = Cycle
+            Party.Turn = 6
+            Schedule = BeatSequence.Times(Party, Character, Playback.PlaybackSpeed, 6, 0)
+            SampleTime = (Schedule.Start[2] + Schedule.Start[3]) / 2
+            Ok = BeatSequence.Sample(Party, Character, ViewerCameraState.Frame,
+                Playback.SelectedClip, DragonState, Playback.PlaybackSpeed, 6, SampleTime)
+            Updated = ViewerParty.UpdateCompanion(Party, Calibration, Effects, 0, False)
+            Ok = ViewerParty.UpdateAdditionalEquipment(Party, Effects, Equipment,
+                ViewerCameraState.Live, 0, 0, True, Character, DragonState.Actor) And Ok
+
+            Call CalibrationCheck(Ok And Updated.Ready And Party.Water.Visible,
+                "Mira's attack and both heals seek and render from her own clip clock")
+            Call CalibrationCheck(Party.Water.Targets.MemberCount = Members,
+                "Water effects target the final transforms of the current party")
+
+            If Cycle > 0 Then
+                Call CalibrationCheck(DragonState.Clip = "Idle" And
+                    ViewerParty.PresentationState(Party, 0) = ViewerParty.STATE_REVIVING,
+                    "Healing restores the recipient without making the boss flinch")
+            End If
+
+            Saved = BeatSequence.Remember(Party)
+
+            Call BeatSequence.RememberPoses(Saved, Party, Character, DragonState.Actor)
+
+            Ok = BeatSequence.Sample(Party, Character, ViewerCameraState.Frame,
+                Playback.SelectedClip, DragonState, Playback.PlaybackSpeed,
+                6, Schedule.Start[3] + 800)
+            Ok = ViewerParty.UpdateAdditionalEquipment(Party, Effects, Equipment,
+                ViewerCameraState.Live, 0, 0, True, Character, DragonState.Actor) And Ok
+
+            Call CalibrationCheck(Ok And Not Party.Water.Visible,
+                "Completed Mira casts clear their water particles")
+
+            Call BeatSequence.Restore(Party, Saved)
+
+            Ok = BeatSequence.RestorePoses(Saved, Party, Character, DragonState,
+                Playback.PlaybackSpeed)
+
+            Call CalibrationCheck(Ok And Character3D.AnimationTime(Party.Mira.Actor) = Saved.Times[6],
+                "Closing camera preview restores Mira's animation time")
+        End For
+
+        Ok = BeatSequence.Sample(Party, Character, ViewerCameraState.Frame,
+            Playback.SelectedClip, DragonState, Playback.PlaybackSpeed, 6, Schedule.Start[4])
+
+        Call CalibrationCheck(Ok And Party.Turn = 2,
+            "Mira's completed turn hands control back to the boss")
+
+        If Not Party.UnityRoster Then
+
+            Call ViewerParty.PrepareDragonTurn(Party, 2)
+
+            Ok = BeatSequence.Sample(Party, Character, ViewerCameraState.Frame,
+                Playback.SelectedClip, DragonState, Playback.PlaybackSpeed, 2,
+                ViewerParty.DragonImpactTime(Party) * 100 / Playback.PlaybackSpeed + 1, True)
+
+            Call CalibrationCheck(Ok And Party.HitTarget = 6 And
+                Character3D.CurrentClipNameMatches(Party.Mira.Actor, "Hit"),
+                "Dragon targeting resolves Mira's own hit clip")
+
+        End If
+
+    End For
+
+    Call SelectCharacterTab(0)
+    Call CalibrationCheck(Not Party.Mira.Ready And Not Party.Water.Ready,
+        "Leaving Party releases Mira's actor and water resources")
 
 End Sub
