@@ -1,0 +1,30 @@
+{
+  "original": {
+    "vertices": 349546,
+    "triangles": 716194,
+    "boundaryEdges": 196,
+    "nonManifoldEdges": 23399
+  },
+  "low": {
+    "vertices": 9000,
+    "triangles": 18100,
+    "boundaryEdges": 0,
+    "nonManifoldEdges": 0
+  },
+  "removedSmallVertices": 0,
+  "components": [
+    {
+      "vertices": 349393,
+      "extent": 1.1126140356063843
+    },
+    {
+      "vertices": 106,
+      "extent": 0.019230961799621582
+    },
+    {
+      "vertices": 46,
+      "extent": 0.007395356893539429
+    }
+  ],
+  "pinchedEdgeRepair": "Separate closed face fans sharing a single voxel edge."
+}

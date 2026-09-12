@@ -21,10 +21,20 @@ $miraRoot = Join-Path $repositoryRoot `
     'games\SinStarI\SourceAssets\Characters\Healer\MiraV1'
 $mira2Root = Join-Path $repositoryRoot `
     'games\SinStarI\SourceAssets\Characters\Healer\MiraV2'
+$mira3Root = Join-Path $repositoryRoot `
+    'games\SinStarI\SourceAssets\Characters\Healer\MiraV3'
 $technicalRoot = Join-Path $repositoryRoot `
     'games\SinStarI\TechnicalAssets\Generation2'
 $buildAssets = Join-Path $toolRoot 'BuildAssets'
 $copies = @(
+    @{
+        Source = Join-Path $mira3Root 'mira3-animation-checkpoint.glb'
+        Destination = Join-Path $buildAssets 'MiraV3\mira3-animation-checkpoint.glb'
+    },
+    @{
+        Source = Join-Path $mira3Root 'Mira3.sm3d.json'
+        Destination = Join-Path $buildAssets 'MiraV3\Mira3.sm3d.json'
+    },
     @{
         Source = Join-Path $mira2Root 'mira2-animation-checkpoint.glb'
         Destination = Join-Path $buildAssets 'MiraV2\mira2-animation-checkpoint.glb'
@@ -124,7 +134,7 @@ foreach ($copy in $copies) {
 }
 
 $audioRoots = @((Join-Path $arinRoot 'Audio'), (Join-Path $dragonRoot 'RedDragonV11\Audio'),
-    (Join-Path $mira2Root 'Audio'))
+    (Join-Path $mira3Root 'Audio'))
 $fireFiles = @('fire-shape-atlas.png', 'smoke-shape-atlas.png', 'ember-shape.png')
 $lightningFiles = @('lightning-ribbon.png', 'lightning-spark.png', 'thunder.wav')
 

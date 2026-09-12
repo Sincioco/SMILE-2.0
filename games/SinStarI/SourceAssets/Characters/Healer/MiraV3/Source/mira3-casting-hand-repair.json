@@ -1,0 +1,14 @@
+[
+  {
+    "clip": "Attack",
+    "frames": 70,
+    "castingHand": "Left",
+    "staffArm": "Neutral local pose following the torso; vertical right palm"
+  },
+  {
+    "clip": "HealOne",
+    "frames": 81,
+    "castingHand": "Left",
+    "staffArm": "Neutral local pose following the torso; vertical right palm"
+  }
+]

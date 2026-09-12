@@ -2037,19 +2037,23 @@ Sub CheckMiraBattles()
         Return
     End If
 
-    For TabIndex = 8 To 9
+    For TabIndex = ViewerProfiles.CHARACTER_TAB_MIRA1 To ViewerProfiles.CHARACTER_TAB_MIRA3
+
         Call SelectCharacterTab(TabIndex)
         Call CalibrationCheck(Session.Ready And Character3D.ClipCount(Character) = 9,
             "Each Mira comparison tab loads its own nine-clip package")
+        Call CalibrationCheck(Character3D.HasSocket(Character, "HandLeft") And
+            Character3D.HasSocket(Character, "HandRight"),
+            "Each Mira comparison exposes its own casting and staff hand sockets")
     End For
 
     For TabIndex = 0 To 1
 
         Call SelectCharacterTab(3 + TabIndex * 4)
         Call CalibrationCheck(Party.Mira.Ready And Party.Water.Ready And
-            Party.Mira.Profile = ViewerProfiles.PROFILE_MIRA2 And
+            Party.Mira.Profile = ViewerProfiles.PROFILE_MIRA3 And
             Not Party.Mira.CalibrationAvailable,
-            "Both battles own Mira2 without borrowing a calibration bank")
+            "Both battles own Mira3 without borrowing a calibration bank")
         Call CalibrationCheck(Party.Mira.Actor.Handle <> Character.Handle And
             Party.Mira.Actor.Handle <> Party.Companion.Actor.Handle,
             "Mira has an independent actor and animation clock")

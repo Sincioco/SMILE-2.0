@@ -1,0 +1,144 @@
+{
+  "1": {
+    "class_type": "ImageOnlyCheckpointLoader",
+    "inputs": {
+      "ckpt_name": "hunyuan_3d_v2.1.safetensors"
+    }
+  },
+  "2": {
+    "class_type": "LoadImage",
+    "inputs": {
+      "image": "mira-tpose-masked.png"
+    }
+  },
+  "3": {
+    "class_type": "InvertMask",
+    "inputs": {
+      "mask": [
+        "2",
+        1
+      ]
+    }
+  },
+  "4": {
+    "class_type": "ImageCropToMask",
+    "inputs": {
+      "images": [
+        "2",
+        0
+      ],
+      "masks": [
+        "3",
+        0
+      ],
+      "width": 1024,
+      "height": 1024,
+      "pad_factor": 1.15,
+      "grow_mask": 0,
+      "background": "#FFFFFF"
+    }
+  },
+  "5": {
+    "class_type": "CLIPVisionEncode",
+    "inputs": {
+      "clip_vision": [
+        "1",
+        1
+      ],
+      "image": [
+        "4",
+        0
+      ],
+      "crop": "center"
+    }
+  },
+  "6": {
+    "class_type": "Hunyuan3Dv2Conditioning",
+    "inputs": {
+      "clip_vision_output": [
+        "5",
+        0
+      ]
+    }
+  },
+  "7": {
+    "class_type": "EmptyLatentHunyuan3Dv2",
+    "inputs": {
+      "resolution": 4096,
+      "batch_size": 1
+    }
+  },
+  "8": {
+    "class_type": "ModelSamplingAuraFlow",
+    "inputs": {
+      "model": [
+        "1",
+        0
+      ],
+      "shift": 1.0
+    }
+  },
+  "9": {
+    "class_type": "KSampler",
+    "inputs": {
+      "model": [
+        "8",
+        0
+      ],
+      "positive": [
+        "6",
+        0
+      ],
+      "negative": [
+        "6",
+        1
+      ],
+      "latent_image": [
+        "7",
+        0
+      ],
+      "seed": 42,
+      "steps": 30,
+      "cfg": 5.0,
+      "sampler_name": "euler",
+      "scheduler": "normal",
+      "denoise": 1.0
+    }
+  },
+  "10": {
+    "class_type": "VAEDecodeHunyuan3D",
+    "inputs": {
+      "samples": [
+        "9",
+        0
+      ],
+      "vae": [
+        "1",
+        2
+      ],
+      "num_chunks": 8000,
+      "octree_resolution": 512
+    }
+  },
+  "11": {
+    "class_type": "VoxelToMesh",
+    "inputs": {
+      "voxel": [
+        "10",
+        0
+      ],
+      "algorithm": "surface net",
+      "threshold": 0.6
+    }
+  },
+  "12": {
+    "class_type": "SaveGLB",
+    "inputs": {
+      "mesh": [
+        "11",
+        0
+      ],
+      "filename_prefix": "Mira3/mira3-hunyuan21-shape"
+    }
+  }
+}

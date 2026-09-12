@@ -2,18 +2,20 @@
 
 ## Mira comparisons (native)
 
-**Mira1** preserves the Pixal3D candidate; **Mira2** loads the independent TRELLIS.2
-candidate. Both have nine animation choices. Use **Weapon** or **W** to hide/show
-each character's own staff. Mira2 has a closed 19,652-triangle equipped surface,
-rebaked textures and measured floor corrections. This is an appearance and animation
-comparison; final facial/cloth quality remains under review. Mira2 also participates
-in both Party battles, cycling Water Attack, Heal One (Arin), and Heal Party with
+**Mira1** preserves the Pixal3D candidate, **Mira2** loads the independent TRELLIS.2
+candidate, and **Mira3** loads Hunyuan3D-2.1 shape/paint with a refined face texture.
+All three have nine animation choices. Use **Weapon** or **W** to hide/show each
+character's own staff. Mira2/Mira3 each have a closed 19,652-triangle equipped surface,
+baked textures and measured floor corrections. This is an appearance and animation
+comparison; final facial/cloth quality remains under review. Mira3 is the current
+healer in both Party battles, cycling Water Attack, Heal One (Arin), and Heal Party with
 blue water VFX and sound. Tab/click selects her Beat Camera. Healing previews
 existing presentation states; no Sin Star I game code or health system is changed.
-Mira3 (Hunyuan3D-2.1) has an initial generated shape under evaluation.
+Mira3 casts with her free left hand and has baked staff-holding arm corrections.
 Canonical packages and current limitations are in
 `games/SinStarI/SourceAssets/Characters/Healer/MiraV1/README.md` and
-`games/SinStarI/SourceAssets/Characters/Healer/MiraV2/README.md`.
+`games/SinStarI/SourceAssets/Characters/Healer/MiraV2/README.md` and
+`games/SinStarI/SourceAssets/Characters/Healer/MiraV3/README.md`.
 Candidate comparison tabs are native-only; Web follow-through remains deferred.
 
 ## Party Beat Cameras

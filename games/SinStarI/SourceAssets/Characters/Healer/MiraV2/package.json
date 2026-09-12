@@ -26,6 +26,7 @@
   "limitations": "README.md",
   "nativeViewerComparisonValidated": true,
   "partyIntegrationValidated": true,
+  "currentPartyCandidate": false,
   "waterEffectsImplemented": true,
   "audioSource": "Source/generate-water-audio.py (original deterministic mono PCM cues)"
 }

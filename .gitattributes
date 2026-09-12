@@ -37,3 +37,4 @@
 
 # Preserve the actual mesh upload bytes and omit large textual geometry diffs.
 games/SinStarI/SourceAssets/Characters/Healer/MiraV2/Source/mira2-mixamo-input.obj binary
+games/SinStarI/SourceAssets/Characters/Healer/MiraV3/Source/mira3-mixamo-input.obj binary

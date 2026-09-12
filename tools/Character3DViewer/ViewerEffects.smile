@@ -524,7 +524,8 @@ Public Sub CreateEpicGlow(ByRef Value As State, ProfileIndex As Number,
 
     Value.ProfileIndex = ProfileIndex
 
-    If ProfileIndex = ViewerProfiles.PROFILE_MIRA2 Then
+    If (ProfileIndex = ViewerProfiles.PROFILE_MIRA2 Or
+        ProfileIndex = ViewerProfiles.PROFILE_MIRA3) Then
         GlowReady = MiraWater.Prepare(Value.Water)
     End If
 
@@ -748,7 +749,8 @@ Public Sub UpdateEquipmentFire(
 
     Dim WaterReady As Boolean
 
-    If ProfileIndex = ViewerProfiles.PROFILE_MIRA2 Then
+    If (ProfileIndex = ViewerProfiles.PROFILE_MIRA2 Or
+        ProfileIndex = ViewerProfiles.PROFILE_MIRA3) Then
 
         Call MiraWater.UseStandaloneTargets(Value.Water, Actor)
 

@@ -1,0 +1,12 @@
+{
+  "model": "Tencent-Hunyuan/Hunyuan3D-2.1",
+  "paint": "hunyuan3d-paintpbr-v2-1",
+  "dtype": "float16",
+  "steps": 15,
+  "guidance": 3.0,
+  "seed": 0,
+  "size": 512,
+  "view_count": 6,
+  "geometry_conditions": "Blender Cycles normal and position renders",
+  "elapsed_seconds": 22.75724768638611
+}

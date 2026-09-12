@@ -1461,7 +1461,7 @@ Public Sub DrawHeader(DisplayName As Text, PartyRole As Text,
         End If
 
         If ViewerProfiles.INCLUDE_MIRA_COMPARISONS Then
-            Subtitle = Subtitle + " / Mira2 Healer"
+            Subtitle = Subtitle + " / Mira3 Healer"
         End If
 
     End If
@@ -2243,10 +2243,10 @@ Private Function CharacterTabCount() As Number
     If ViewerProfiles.INCLUDE_MIRA_COMPARISONS Then
 
         If ViewerProfiles.INCLUDE_UNITY_CHARACTERS Then
-            Return 10
+            Return 11
         End If
 
-        Return 6
+        Return 7
 
     End If
 
@@ -2267,10 +2267,14 @@ Private Function CharacterTabIndex(Position As Number) As Number
     Result = Position
 
     If ViewerProfiles.INCLUDE_MIRA_COMPARISONS And Position = CharacterTabCount() - 1 Then
-        ReturnValue = ViewerProfiles.CHARACTER_TAB_MIRA2
+        ReturnValue = ViewerProfiles.CHARACTER_TAB_MIRA3
 
         Return ReturnValue
     Else If ViewerProfiles.INCLUDE_MIRA_COMPARISONS And Position = CharacterTabCount() - 2 Then
+        ReturnValue = ViewerProfiles.CHARACTER_TAB_MIRA2
+
+        Return ReturnValue
+    Else If ViewerProfiles.INCLUDE_MIRA_COMPARISONS And Position = CharacterTabCount() - 3 Then
         ReturnValue = ViewerProfiles.CHARACTER_TAB_MIRA1
 
         Return ReturnValue
@@ -2322,6 +2326,8 @@ Private Function CharacterTabLabel(Index As Number) As Text
         Result = "Mira1"
     Else If Index = ViewerProfiles.CHARACTER_TAB_MIRA2 Then
         Result = "Mira2"
+    Else If Index = ViewerProfiles.CHARACTER_TAB_MIRA3 Then
+        Result = "Mira3"
     End If
 
     Return Result

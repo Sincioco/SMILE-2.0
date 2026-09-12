@@ -1,5 +1,9 @@
 # Mira2 — TRELLIS.2 creation and repair
 
+Mira3 is now the active Viewer battle healer. Mira2's model and its standalone
+comparison remain preserved; the battle notes below describe its validated earlier
+checkpoint and the shared healer workflow.
+
 This independent candidate uses Microsoft TRELLIS.2 BF16 in local ComfyUI and the
 supplied T-pose reference. It is not a rename of Mira1/Pixal3D. Original generation,
 remeshing and cooking workflows are preserved in Source; generator weights stay

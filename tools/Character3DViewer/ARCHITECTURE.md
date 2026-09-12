@@ -2,32 +2,33 @@
 
 ## Native Mira comparison
 
-`Profiles` owns Mira1/Mira2 identities, their shared nine clip names and hold/loop
+`Profiles` owns Mira1/Mira2/Mira3 identities, their shared nine clip names and hold/loop
 policy, and each package's independent staff part. `ViewerSession` routes their stable
 tab IDs; `ViewerUi` appends the tabs and
 derives the tab-strip hit boundary from its last button. That removes the old fixed
 510-pixel boundary which could not admit the comparison button. The existing
 hardening fixture covers the new hit region. `Prepare-BuildAssets.ps1` stages the
-self-contained MiraV1/MiraV2 packages and the normal project asset cooker publishes them.
+self-contained MiraV1/MiraV2/MiraV3 packages and the normal project asset cooker publishes them.
 `INCLUDE_MIRA_COMPARISONS` is disabled in generated Web profiles while that adoption
 is deferred. No new actor pool, calibration bank, game behavior or runtime dependency
 was added. The rigid staff uses the same production skin and the existing equipment
-visibility path. Neither comparison has equipment glow. Mira2's healer policy now lives in
+visibility path. The comparison staffs have no equipment glow. Healer policy lives in
 `MiraBattle` (cast timing and action labels); `MiraWater` owns one caller-held
 128-particle batch and clip-time audio on channel 6. ViewerParty owns Mira's named
-actor/context and formation, applies policy samples to existing presentation states,
+actor/context and formation, loads Mira3 as the current battle candidate, applies policy samples to existing presentation states,
 and routes her through both battle turn orders, targeting, draw/update and cleanup.
 It does not borrow a calibration bank or advance another shared scene clock.
 `CreateAdditionalParticipants`, `UpdateAdditionalEquipment` and
 `DrawAdditionalEquipment` admit Mira independently of the optional Unity roster.
-ViewerEffects owns a separate water context for the standalone Mira2 tab.
+ViewerEffects owns a separate water context for the standalone Mira2/Mira3 tabs.
 Targets are rebuilt from final actor positions each frame and cleared on destruction.
 This prevents the four-member Vrax list leaking into the three-member Dragon scene.
 `CalibrationTests.CheckMiraBattles` exercises real models, all three casts in both
 battles, healing without boss damage, target-count cleanup, seek/restore and turn exit.
 The existing Beat fixture now verifies selection reaches Mira and both bosses.
 No compiler, runtime, Scene VFX pool, public calibration format or game rule changes
-are required. Particle/audio content is canonical in MiraV2; tool-local audio copies
+are required. Original Mira water/chime cues are retained in both versioned packages;
+MiraV3 is the current canonical audio publication source. Tool-local audio copies
 are disposable build mirrors.
 
 ## Party Beat Camera Ownership

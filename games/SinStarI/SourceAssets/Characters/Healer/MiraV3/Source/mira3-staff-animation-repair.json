@@ -1,0 +1,44 @@
+{
+  "minimumHandHeight": 1.0337299919128418,
+  "clips": [
+    {
+      "clip": "Attack",
+      "frames": 70,
+      "staffHold": "Baked two-bone right arm, vertical palm, floor clearance"
+    },
+    {
+      "clip": "HealOne",
+      "frames": 81,
+      "staffHold": "Baked two-bone right arm, vertical palm, floor clearance"
+    },
+    {
+      "clip": "HealParty",
+      "frames": 66,
+      "staffHold": "Baked two-bone right arm, vertical palm, floor clearance"
+    },
+    {
+      "clip": "Walk",
+      "frames": 35,
+      "staffHold": "Baked two-bone right arm, vertical palm, floor clearance"
+    },
+    {
+      "clip": "Run",
+      "frames": 23,
+      "staffHold": "Baked two-bone right arm, vertical palm, floor clearance"
+    },
+    {
+      "clip": "Defend",
+      "frames": 16,
+      "staffHold": "Baked two-bone right arm, vertical palm, floor clearance"
+    },
+    {
+      "clip": "Hit",
+      "frames": 37,
+      "staffHold": "Baked two-bone right arm, vertical palm, floor clearance"
+    },
+    {
+      "clip": "Death",
+      "staffHold": "Blend to a horizontal staff as the pose settles"
+    }
+  ]
+}
