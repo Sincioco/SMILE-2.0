@@ -1,0 +1,715 @@
+''' Caller-owned water surfaces and GPU spray; no character or battle state is retained.
+Module Smile.Simple3D.WaterVfx3D
+
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Graphics3D As G
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.PrecisionMath3D As M
+
+Public Const HEAL = 1
+Public Const SHIELD = 2
+Public Const TORRENT = 3
+Public Const IMPACT = 4
+Public Const WATER_BALL = 5
+Public Const WAVE = 6
+Public Const STORM = 7
+Private Const STRIPS = 16
+Private Const POINTS = 65
+Private Const SPRAY_CAPACITY = 4096
+
+Public Type Frame
+    Mode As Number
+    Time As Number
+    Progress As Double
+    Strength As Double
+    Origin As P.Vector3
+    Target As P.Vector3
+    Members[4] As P.Vector3
+    MemberCount As Number
+    ImpactActive As Boolean
+    ImpactProgress As Double
+    ImpactMember As Number
+End Type
+
+Public Type Context
+    Ready As Boolean
+    Visible As Boolean
+    FailureStage As Number
+    ErrorCode As Number
+    SheetTexture As Core.Texture3D
+    DropTexture As Core.Texture3D
+    SheetMaterial As Core.Material3D
+    RefractionMaterial As Core.Material3D
+    DropMaterial As Core.Material3D
+    Sheets As Core.RibbonBatch3D
+    Refraction As Core.RibbonBatch3D
+    Spray As Core.GpuParticleSystem3D
+    PreviousTime As Number
+    PreviousMode As Number
+    NextSlot As Number
+    Serial As Number
+    EmissionTime As Number
+End Type
+
+Public Function Prepare(ByRef Value As Context, AssetFolder As Text) As Boolean
+
+    Dim Index As Number
+    Dim Ok As Boolean
+    Dim FailedStage As Number
+    Dim FailedError As Number
+
+    If Value.Ready Then
+        Return True
+    End If
+
+    Value.SheetTexture = G.LoadTexture3D(AssetFolder + "/water-sheet.png",
+        G.TEXTURE_FILTER_LINEAR, G.TEXTURE_WRAP_REPEAT)
+    Value.DropTexture = G.LoadTexture3D(AssetFolder + "/water-drop.png",
+        G.TEXTURE_FILTER_LINEAR, G.TEXTURE_WRAP_CLAMP)
+    Value.SheetMaterial = G.CreateEffectMaterial3D(Value.SheetTexture, G.MATERIAL_ALPHA_BLEND, 110)
+    Value.RefractionMaterial = G.CreateEffectMaterial3D(Value.SheetTexture, G.MATERIAL_ALPHA_BLEND, 100)
+    Value.DropMaterial = G.CreateEffectMaterial3D(Value.DropTexture, G.MATERIAL_ALPHA_BLEND, 125)
+    Ok = Value.SheetTexture.Handle <> 0 And Value.DropTexture.Handle <> 0
+
+    Call CaptureFailure(Value, 1, Ok)
+
+    Ok = G.SetEffectMaterialSoftDepth3D(Value.SheetMaterial, 2, 8) And Ok
+    Ok = G.SetEffectMaterialSoftDepth3D(Value.DropMaterial, 2, 5) And Ok
+    Ok = G.SetEffectMaterialWater3D(Value.SheetMaterial, True, 18, 8, 0) And Ok
+    Ok = G.SetEffectMaterialSoftDepth3D(Value.RefractionMaterial, 2, 8) And Ok
+    Ok = G.SetEffectMaterialDistortion3D(Value.RefractionMaterial, 22, 160, 40, 25, 80) And Ok
+
+    Value.Sheets = G.CreateRibbonBatch3D(STRIPS * (POINTS + 2), Value.SheetMaterial)
+    Value.Refraction = G.CreateRibbonBatch3D(STRIPS * (POINTS + 2), Value.RefractionMaterial)
+    Ok = Value.Sheets.Handle <> 0 And Value.Refraction.Handle <> 0 And Ok
+
+    Call CaptureFailure(Value, 2, Ok)
+
+    Value.Spray = G.CreateGpuParticleSystem3D(SPRAY_CAPACITY, Value.DropMaterial,
+        G.GPU_PARTICLE_SIMULATION_GPU_FAST, 10)
+    Ok = Value.Spray.Handle <> 0 And Ok
+
+    Call CaptureFailure(Value, 3, Ok)
+
+    Ok = G.SetGpuParticleRender3D(Value.Spray, G.GPU_PARTICLE_SHADER_TEXTURED, 2) And Ok
+    Ok = G.SetGpuParticleForces3D(Value.Spray, 0, -90, 0, 0, 0, 0, 0, 350) And Ok
+    Ok = G.SetGpuParticleTurbulence3D(Value.Spray, 18, 9000, 600, 2) And Ok
+
+    Call CaptureFailure(Value, 4, Ok)
+
+    Value.Ready = Ok
+
+    If Not Ok Then
+
+        FailedStage = Value.FailureStage
+        FailedError = Value.ErrorCode
+
+        Call Destroy(Value)
+
+        Value.FailureStage = FailedStage
+        Value.ErrorCode = FailedError
+
+    End If
+
+    Return Ok
+
+End Function
+
+Private Sub CaptureFailure(ByRef Value As Context, Stage As Number, Ok As Boolean)
+
+    If Not Ok And Value.FailureStage = 0 Then
+        Value.FailureStage = Stage
+        Value.ErrorCode = G.LastError()
+    End If
+
+End Sub
+
+Public Sub Destroy(ByRef Value As Context)
+
+    Dim Index As Number
+    Dim Empty As Context
+
+    Call G.DestroyRibbonBatch3D(Value.Sheets)
+    Call G.DestroyRibbonBatch3D(Value.Refraction)
+    Call G.DestroyGpuParticleSystem3D(Value.Spray)
+    Call G.DestroyEffectMaterial3D(Value.SheetMaterial)
+    Call G.DestroyEffectMaterial3D(Value.RefractionMaterial)
+    Call G.DestroyEffectMaterial3D(Value.DropMaterial)
+    Call G.DestroyTexture3D(Value.SheetTexture)
+    Call G.DestroyTexture3D(Value.DropTexture)
+
+    Value = Empty
+
+End Sub
+
+Private Function RingPoint(Center As P.Vector3, Radius As Double,
+    Height As Double, Angle As Double) As P.Vector3
+
+    Dim Result As P.Vector3
+
+    Result = P.Vector(Center.X + Radius * Cos(Angle), Center.Y + Height,
+        Center.Z + Radius * Sin(Angle))
+
+    Return Result
+
+End Function
+
+''' Contact occupies the last part of a cast; the same sample drives splash and actor recoil.
+Public Function ImpactFraction(Progress As Double) As Double
+
+    Dim Result As Double
+
+    Result = Clamp((Progress - 0.72) / 0.28, 0.0, 1.0)
+
+    Return Result
+
+End Function
+
+Public Function RecoilDistance(Progress As Double) As Double
+
+    Dim Contact As Double
+    Dim Result As Double
+
+    Contact = ImpactFraction(Progress)
+    Result = Sin(Contact * M.PI) * 9.0
+
+    Return Result
+
+End Function
+
+Private Function LivingWaterPoint(Center As P.Vector3, Radius As Double,
+    Latitude As Double, Angle As Double, Time As Number) As P.Vector3
+
+    Dim Flow As Double
+    Dim Ripple As Double
+    Dim Result As P.Vector3
+
+    Flow = ToDouble(Time) * 0.004
+    Ripple = (1.0 + 0.13 * Sin(Angle * 3.0 + Latitude * 2.0 + Flow) +
+        0.08 * Sin(Angle * 5.0 - Latitude * 3.0 - Flow * 1.7))
+    Result = RingPoint(Center, Radius * Cos(Latitude) * Ripple,
+        Radius * Sin(Latitude) * (1.0 + 0.09 * Sin(Flow * 1.3)), Angle)
+    Result.Y = Result.Y + Cos(Latitude) * 3.5 * Sin(Angle * 4.0 + Flow * 1.8)
+
+    Return Result
+
+End Function
+
+Private Function StretchWaterPoint(Point As P.Vector3, Center As P.Vector3,
+    Forward As P.Vector3, Radius As Double) As P.Vector3
+
+    Dim Offset As P.Vector3
+    Dim Longitudinal As Double
+    Dim Taper As Double
+    Dim Result As P.Vector3
+
+    Offset = M.Subtract(Point, Center)
+    Longitudinal = M.Dot(Offset, Forward)
+    Taper = 0.78 + 0.18 * Clamp(Longitudinal / Max(1.0, Radius), -1.0, 1.0)
+    Result = M.Add(Center, M.Add(M.Scale(Offset, Taper),
+        M.Scale(Forward, Longitudinal * (1.85 - Taper))))
+
+    Return Result
+
+End Function
+
+Private Sub BarrierFrame(Sample As Frame, MemberIndex As Number,
+    ByRef Center As P.Vector3, ByRef Normal As P.Vector3, ByRef Tangent As P.Vector3)
+
+    Dim Ok As Boolean
+
+    Center = Sample.Members[Max(0, Min(3, MemberIndex))]
+    Normal = M.Subtract(Sample.Target, Center)
+    Normal.Y = 0.0
+    Ok = M.TryNormalize(Normal, Normal)
+
+    If Not Ok Then
+        Normal = P.Vector(0.0, 0.0, -1.0)
+    End If
+
+    Tangent = M.Cross(Normal, P.Vector(0.0, 1.0, 0.0))
+    Center = M.Add(Center, M.Scale(Normal, 34.0))
+    Center.Y = Center.Y + 62.0
+
+End Sub
+
+''' Backward impact displacement: fast compression, then a slower return to the guard position.
+Public Function BarrierRecoil(Progress As Double) As Double
+
+    Dim Result As Double
+
+    Progress = Clamp(Progress, 0.0, 1.0)
+    Result = 8.0 * Clamp(Progress / 0.12, 0.0, 1.0) * (1.0 - Progress) * (1.0 - Progress)
+
+    Return Result
+
+End Function
+
+Private Function BarrierPoint(Center As P.Vector3, Normal As P.Vector3,
+    Tangent As P.Vector3, Fraction As Double, Angle As Double,
+    Impact As Double) As P.Vector3
+
+    Dim Depth As Double
+    Dim Result As P.Vector3
+
+    Depth = 6.0 * (1.0 - Fraction * Fraction)
+
+    If Impact >= 0.0 Then
+        Depth = Depth - BarrierRecoil(Impact) * (1.0 - Fraction * 0.45)
+        Depth = Depth + Sin(Fraction * 20.0 - Impact * 18.0) * (1.0 - Impact) * 2.0
+    End If
+
+    Result = M.Add(Center, M.Add(M.Scale(Normal, Depth),
+        M.Scale(Tangent, Cos(Angle) * Fraction * 31.0)))
+    Result.Y = Result.Y + Sin(Angle) * Fraction * 36.0
+
+    Return Result
+
+End Function
+
+Private Sub SurfacePoint(Sample As Frame, Strip As Number, Along As Double,
+    Center As P.Vector3, Radius As Double, ByRef LeftPoint As P.Vector3,
+    ByRef RightPoint As P.Vector3)
+
+    Dim Angle As Double
+    Dim Height As Double
+    Dim Width As Double
+    Dim Latitude As Double
+    Dim Point As P.Vector3
+    Dim Normal As P.Vector3
+    Dim Tangent As P.Vector3
+    Dim Across As Double
+    Dim Phase As Double
+    Dim Ok As Boolean
+
+    Angle = Along * M.PI * 2.0
+
+    If Sample.Mode = IMPACT Then
+
+        Ok = M.TryNormalize(M.Subtract(Sample.Origin, Sample.Target), Normal)
+        Ok = M.TryNormalize(M.Cross(Normal, P.Vector(0.0, 1.0, 0.0)), Tangent) And Ok
+
+        If Not Ok Then
+            Tangent = P.Vector(1.0, 0.0, 0.0)
+        End If
+
+        Point = M.Cross(Tangent, Normal)
+        Phase = Sample.ImpactProgress
+        Radius = (5.0 + Phase * 62.0 + ToDouble(Strip Mod 4) * 4.0)
+        Radius = Radius * (1.0 + 0.10 * Sin(Angle * 7.0 + ToDouble(Strip)))
+        Center = M.Add(Sample.Target, M.Scale(Normal, 2.0 + Phase * 5.0))
+        Center.Y = Center.Y - Phase * Phase * 22.0
+        LeftPoint = M.Add(Center, M.Add(M.Scale(Tangent, Cos(Angle) * Radius),
+            M.Scale(Point, Sin(Angle) * Radius)))
+        Radius = Radius + 5.0 * (1.0 - Phase) + 1.0
+        RightPoint = M.Add(Center, M.Add(M.Scale(Tangent, Cos(Angle) * Radius),
+            M.Scale(Point, Sin(Angle) * Radius)))
+
+    Else If Sample.Mode = SHIELD Then
+
+        Call BarrierFrame(Sample, Strip / 4, Center, Normal, Tangent)
+
+        Phase = -1.0
+
+        If Sample.ImpactActive And (Sample.ImpactMember < 0 Or Sample.ImpactMember = Strip / 4) Then
+            Phase = Sample.ImpactProgress
+        End If
+
+        Latitude = ToDouble(Strip Mod 4) / 4.0
+        LeftPoint = BarrierPoint(Center, Normal, Tangent, Latitude, Angle, Phase)
+        RightPoint = BarrierPoint(Center, Normal, Tangent, Latitude + 0.25, Angle, Phase)
+
+    Else If Sample.Mode = WATER_BALL Then
+
+        Phase = Clamp((Sample.Progress - 0.15) / 0.57, 0.0, 1.0)
+        Center = M.Lerp(Sample.Origin, Sample.Target, Phase)
+        Center.Y = Center.Y + 70.0 * Phase * (1.0 - Phase)
+        Radius = 20.0 + 7.0 * Sin(Phase * M.PI)
+        Angle = Angle + ToDouble(Sample.Time) * 0.0017
+
+        If Strip < 12 Then
+
+            Latitude = -M.PI / 2.0 + ToDouble(Strip) * M.PI / 12.0
+            LeftPoint = LivingWaterPoint(Center, Radius, Latitude, Angle, Sample.Time)
+            Latitude = Latitude + M.PI / 12.0
+            RightPoint = LivingWaterPoint(Center, Radius, Latitude, Angle, Sample.Time)
+
+        Else
+
+            Angle = Angle * 3.0 + ToDouble(Strip) * M.PI / 2.0
+            Height = (Along - 0.5) * Radius * 1.6
+            Radius = Radius * 0.62 * Sin(Along * M.PI)
+            LeftPoint = RingPoint(Center, Radius, Height - 2.5, Angle)
+            RightPoint = RingPoint(Center, Radius + 2.0, Height + 2.5, Angle)
+
+        End If
+
+        Ok = M.TryNormalize(M.Subtract(Sample.Target, Sample.Origin), Tangent)
+        LeftPoint = StretchWaterPoint(LeftPoint, Center, Tangent, 27.0)
+        RightPoint = StretchWaterPoint(RightPoint, Center, Tangent, 27.0)
+
+    Else If Sample.Mode = WAVE Or Sample.Mode = STORM Then
+
+        Phase = Clamp((Sample.Progress - 0.12) / 0.68, 0.0, 1.0)
+        Center = M.Lerp(Sample.Origin, Sample.Target, Phase)
+        Center.Y = 0.0
+        Tangent = M.Subtract(Sample.Target, Sample.Origin)
+        Tangent.Y = 0.0
+        Ok = M.TryNormalize(Tangent, Tangent)
+        Normal = M.Cross(Tangent, P.Vector(0.0, 1.0, 0.0))
+        Across = (Along - 0.5) * 240.0
+        Latitude = ToDouble(Strip) * M.PI * 1.6 / ToDouble(STRIPS)
+        Height = 65.0 * (1.0 - Cos(Latitude))
+        Point = M.Add(Center, M.Scale(Normal, Across))
+        LeftPoint = M.Add(Point, M.Scale(Tangent, 40.0 * Sin(Latitude)))
+        LeftPoint.Y = 2.0 + Height + 6.0 * Sin(Along * M.PI * 8.0 + ToDouble(Sample.Time) * 0.006)
+        Latitude = Latitude + M.PI * 1.6 / ToDouble(STRIPS)
+        RightPoint = M.Add(Point, M.Scale(Tangent, 40.0 * Sin(Latitude)))
+        RightPoint.Y = (2.0 + 65.0 * (1.0 - Cos(Latitude)) +
+            6.0 * Sin(Along * M.PI * 8.0 + ToDouble(Sample.Time) * 0.006))
+        LeftPoint.Y = Max(1.0, LeftPoint.Y)
+        RightPoint.Y = Max(1.0, RightPoint.Y)
+
+    Else If Sample.Mode = HEAL Then
+
+        Center = Sample.Members[Strip / 2]
+        Angle = Angle * 2.0 + ToDouble(Strip Mod 2) * M.PI + ToDouble(Sample.Time) * 0.0025
+        Height = 4.0 + Along * 96.0
+        Radius = 29.0 + 5.0 * Sin(Along * M.PI)
+        Width = 7.0 + 4.0 * Sin(Along * M.PI)
+        LeftPoint = RingPoint(Center, Radius, Max(2.0, Height - Width), Angle)
+        RightPoint = RingPoint(Center, Radius + 1.5, Height + Width, Angle)
+
+    Else If Strip >= 4 Then
+
+        Radius = (8.0 + ToDouble(Strip + 1) * 4.0 +
+            ToDouble(Sample.Time Mod 650) * 0.06)
+        Height = 4.0 + 9.0 * Sin(Along * M.PI * 8.0 + ToDouble(Sample.Time) * 0.006)
+        LeftPoint = RingPoint(Sample.Target, Radius, Max(1.0, Height), Angle)
+        RightPoint = RingPoint(Sample.Target, Radius + 6.0, Max(2.0, Height + 3.0), Angle)
+
+    Else
+
+        Point = M.Lerp(Sample.Origin, Sample.Target, Along)
+        Point.Y = Point.Y + 40.0 * Along * (1.0 - Along)
+        Ok = M.TryNormalize(M.Subtract(Sample.Target, Sample.Origin), Tangent)
+        Ok = M.TryNormalize(M.Cross(Tangent, P.Vector(0.0, 1.0, 0.0)), Normal)
+
+        If Not Ok Then
+            Normal = P.Vector(1.0, 0.0, 0.0)
+        End If
+
+        Angle = Along * M.PI * 6.0 - ToDouble(Sample.Time) * 0.007 + ToDouble(Strip) * M.PI / 2.0
+        Point = M.Add(Point, M.Scale(Normal, Sin(Angle) * (5.0 + Along * 10.0)))
+        Point.Y = Point.Y + Cos(Angle) * (5.0 + Along * 10.0)
+        Width = 4.0 + Along * 5.0
+        LeftPoint = M.Add(Point, M.Scale(Normal, -Width))
+        RightPoint = M.Add(Point, M.Scale(Normal, Width))
+
+    End If
+
+End Sub
+
+Private Function UpdateSurfaces(ByRef Value As Context, Sample As Frame) As Boolean
+
+    Dim Strip As Number
+    Dim Index As Number
+    Dim ItemCount As Number
+    Dim PointCount As Number
+    Dim Opacity As Number
+    Dim Along As Double
+    Dim Radius As Double
+    Dim Center As P.Vector3
+    Dim LeftPoint As P.Vector3
+    Dim RightPoint As P.Vector3
+    Dim Ok As Boolean
+
+    ItemCount = STRIPS
+    Ok = True
+
+    If Sample.Mode = HEAL Then
+        ItemCount = Sample.MemberCount * 2
+    Else If Sample.Mode = SHIELD Then
+        ItemCount = Sample.MemberCount * 4
+    Else If Sample.Mode = TORRENT Or Sample.Mode = IMPACT Then
+        ItemCount = 8
+    End If
+
+    Center = Sample.Origin
+    Radius = 60.0
+
+    Opacity = ToNumber(Round(Clamp(Sample.Strength, 0.0, 1.0) * 72.0))
+
+    If Sample.Mode = SHIELD Then
+        Opacity = ToNumber(Round(Clamp(Sample.Strength, 0.0, 1.0) * 28.0))
+    End If
+
+    For Strip = 0 To ItemCount - 1
+
+        Call SurfacePoint(Sample, Strip, 0.0, Center, Radius, LeftPoint, RightPoint)
+
+        Ok = SetSurfacePoint(Value, PointCount, LeftPoint, LeftPoint, 0.0, 0) And Ok
+        PointCount = PointCount + 1
+
+        For Index = 0 To POINTS - 1
+            Along = ToDouble(Index) / ToDouble(POINTS - 1)
+
+            Call SurfacePoint(Sample, Strip, Along, Center, Radius, LeftPoint, RightPoint)
+
+            Ok = SetSurfacePoint(Value, PointCount, LeftPoint, RightPoint, Along, Opacity) And Ok
+            PointCount = PointCount + 1
+        End For
+
+        Ok = SetSurfacePoint(Value, PointCount, RightPoint, RightPoint, 1.0, 0) And Ok
+        PointCount = PointCount + 1
+    End For
+
+    Ok = G.CommitRibbonBatch3D(Value.Sheets, PointCount) And Ok
+    Ok = G.CommitRibbonBatch3D(Value.Refraction, PointCount) And Ok
+
+    Return Ok
+
+End Function
+
+Private Function SetSurfacePoint(ByRef Value As Context, Index As Number,
+    LeftPoint As P.Vector3, RightPoint As P.Vector3, Along As Double, Opacity As Number) As Boolean
+
+    Dim Ok As Boolean
+
+    Ok = P.SetRibbonPoint(Value.Sheets, Index, LeftPoint, RightPoint, Along)
+    Ok = G.SetRibbonPointColor3D(Value.Sheets, Index, 220, 245, 255, Opacity) And Ok
+    Ok = P.SetRibbonPoint(Value.Refraction, Index, LeftPoint, RightPoint, Along) And Ok
+    Ok = G.SetRibbonPointColor3D(Value.Refraction, Index, 255, 255, 255, Opacity / 2) And Ok
+
+    Return Ok
+
+End Function
+
+Private Function EmitSpray(ByRef Value As Context, Sample As Frame, ItemCount As Number) As Boolean
+
+    Dim Index As Number
+    Dim StripCount As Number
+    Dim Slot As Number
+    Dim MemberIndex As Number
+    Dim Lifetime As Number
+    Dim Along As Double
+    Dim Angle As Double
+    Dim Phase As Double
+    Dim Radius As Double
+    Dim Center As P.Vector3
+    Dim Position As P.Vector3
+    Dim Velocity As P.Vector3
+    Dim RightPoint As P.Vector3
+    Dim Normal As P.Vector3
+    Dim Tangent As P.Vector3
+    Dim Radial As P.Vector3
+    Dim RimDirection As P.Vector3
+    Dim Ok As Boolean
+
+    Ok = True
+    StripCount = STRIPS
+
+    If Sample.Mode = HEAL Then
+        StripCount = Max(1, Sample.MemberCount * 2)
+    Else If Sample.Mode = SHIELD Then
+        StripCount = Max(1, Sample.MemberCount * 4)
+    End If
+
+    Center = Sample.Origin
+    Radius = 60.0
+
+    For Index = 0 To ItemCount - 1
+
+        Slot = Value.NextSlot
+        Value.NextSlot = (Value.NextSlot + 1) Mod SPRAY_CAPACITY
+        Value.Serial = (Value.Serial + 1) Mod 2000000000
+        Along = ToDouble((Value.Serial * 37) Mod 1000) / 1000.0
+        Angle = ToDouble((Value.Serial * 137) Mod 360) * M.PI / 180.0
+
+        Call SurfacePoint(Sample, Value.Serial Mod StripCount, Along,
+            Center, Radius, Position, RightPoint)
+
+        Position = M.Lerp(Position, RightPoint, 0.5)
+        Velocity = P.Vector(Cos(Angle) * 25.0, 35.0, Sin(Angle) * 25.0)
+        Lifetime = 450 + Value.Serial Mod 250
+
+        If Sample.Mode = HEAL Then
+
+            Position = RingPoint(Sample.Members[Value.Serial Mod Max(1, Sample.MemberCount)],
+                28.0 + Along * 5.0, Along * 90.0 + 5.0, Angle)
+            Velocity = P.Vector(-Sin(Angle) * 35.0, 45.0, Cos(Angle) * 35.0)
+
+        Else If Sample.Mode = WAVE Or Sample.Mode = STORM Then
+
+            Position.Y = Max(8.0, Position.Y)
+            Velocity = P.Vector(Cos(Angle) * 55.0, 70.0, Sin(Angle) * 55.0)
+
+        Else If Sample.Mode = SHIELD Then
+
+            MemberIndex = Sample.ImpactMember
+
+            If MemberIndex < 0 Then
+                MemberIndex = Value.Serial Mod Max(1, Sample.MemberCount)
+            End If
+
+            Call BarrierFrame(Sample, MemberIndex, Position, Normal, Tangent)
+
+            Radius = Min(31.0, Sample.ImpactProgress * 120.0)
+            Radial = M.Add(M.Scale(Tangent, Cos(Angle)), P.Vector(0.0, Sin(Angle), 0.0))
+            RimDirection = M.Add(M.Scale(Tangent, -Sin(Angle)), P.Vector(0.0, Cos(Angle), 0.0))
+            Position = M.Add(Position, M.Scale(Radial, Radius))
+            Position = M.Add(Position, M.Scale(Normal,
+                6.0 - BarrierRecoil(Sample.ImpactProgress)))
+            Velocity = M.Add(M.Scale(Radial, 70.0 + Along * 40.0),
+                M.Scale(RimDirection, 45.0))
+            Velocity = M.Add(Velocity, M.Scale(Normal, -8.0))
+            Lifetime = 340 + Value.Serial Mod 180
+
+        Else If Sample.Mode = IMPACT Then
+
+            Ok = M.TryNormalize(M.Subtract(Sample.Origin, Sample.Target), Normal)
+            Ok = M.TryNormalize(M.Cross(Normal, P.Vector(0.0, 1.0, 0.0)), Tangent)
+            Position = M.Add(Sample.Target, M.Scale(Tangent, Cos(Angle) * 8.0))
+            Position.Y = Position.Y + Sin(Angle) * 8.0
+            Velocity = M.Add(M.Scale(Normal, 45.0 + Along * 70.0),
+                M.Scale(Tangent, Cos(Angle) * 115.0))
+            Velocity.Y = Velocity.Y + Sin(Angle) * 100.0 + 25.0
+
+        Else If Sample.Mode = TORRENT Then
+
+            Velocity = M.Scale(M.Subtract(Sample.Target, Sample.Origin), 0.8)
+
+        End If
+
+        If G.GpuParticleValue3D(G.GPU_PARTICLE_QUERY_SLOT_ACTIVE, Value.Spray.Handle, Slot) = 0 Then
+
+            Ok = P.SetGpuParticleSpawnKinematics(Value.Spray, Slot, Position, Velocity) And Ok
+            Ok = G.SetGpuParticleSpawnVisual3D(Value.Spray, Slot, Lifetime,
+                1 + Value.Serial Mod 2, 1, Value.Serial Mod 360, 25, 700, 650) And Ok
+            Ok = G.CommitGpuParticleSpawn3D(Value.Spray, Slot, Value.Serial, 31415 + Slot) And Ok
+
+        End If
+
+    End For
+
+    Return Ok
+
+End Function
+
+Public Function Update(ByRef Value As Context, Sample As Frame) As Boolean
+
+    Dim Elapsed As Number
+    Dim ItemCount As Number
+    Dim Index As Number
+    Dim Ok As Boolean
+
+    If Not Value.Ready Then
+        Return False
+    End If
+
+    Sample.MemberCount = Max(0, Min(4, Sample.MemberCount))
+    Sample.ImpactProgress = Clamp(Sample.ImpactProgress, 0.0, 1.0)
+
+    If ((Sample.Mode = WATER_BALL Or Sample.Mode = WAVE Or Sample.Mode = STORM) And
+        Sample.Progress >= 0.72) Then
+
+        Sample.Mode = IMPACT
+        Sample.ImpactActive = True
+        Sample.ImpactProgress = ImpactFraction(Sample.Progress)
+        Sample.Strength = Sample.Strength * (1.0 - Sample.ImpactProgress)
+
+    Else If Sample.Mode = IMPACT Then
+
+        Sample.ImpactProgress = Sample.Progress
+
+    End If
+
+    Elapsed = Sample.Time - Value.PreviousTime
+    Ok = True
+
+    If (Sample.Mode <> Value.PreviousMode Or
+        Elapsed < 0 Or
+        Elapsed > 250) Then
+
+        For Index = 0 To SPRAY_CAPACITY - 1
+
+            If G.GpuParticleValue3D(G.GPU_PARTICLE_QUERY_SLOT_ACTIVE, Value.Spray.Handle, Index) <> 0 Then
+                Ok = G.KillGpuParticleSlot3D(Value.Spray, Index) And Ok
+            End If
+
+        End For
+
+        Value.EmissionTime = 0
+        Elapsed = 0
+
+    End If
+
+    Value.PreviousTime = Sample.Time
+    Value.PreviousMode = Sample.Mode
+    Value.Visible = Sample.Mode >= HEAL And Sample.Mode <= STORM And Sample.Strength > 0.0
+    Ok = G.AdvanceGpuParticleSystem3D(Value.Spray, Max(0, Min(100, Elapsed))) And Ok
+
+    If Not Value.Visible Then
+
+        Ok = G.CommitRibbonBatch3D(Value.Sheets, 0) And Ok
+        Ok = G.CommitRibbonBatch3D(Value.Refraction, 0) And Ok
+
+        Return Ok
+
+    End If
+
+    Ok = UpdateSurfaces(Value, Sample) And Ok
+    ItemCount = 8
+
+    If Sample.Mode = IMPACT Then
+        ItemCount = 35
+    Else If Sample.Mode = SHIELD Then
+        ItemCount = 2
+    Else If Sample.Mode = WAVE Or Sample.Mode = STORM Then
+        ItemCount = 24
+    End If
+
+    Ok = G.SetEffectMaterialWater3D(Value.SheetMaterial, True, 18, ItemCount, Max(0, Sample.Time)) And Ok
+    Value.EmissionTime = Value.EmissionTime + Elapsed
+    ItemCount = Min(160, Value.EmissionTime * 4)
+
+    If Sample.Mode = WATER_BALL Then
+
+        ItemCount = Min(80, Value.EmissionTime * 2)
+
+    Else If Sample.Mode = SHIELD Then
+
+        ItemCount = 0
+
+        If Sample.ImpactActive And Sample.ImpactProgress < 0.38 Then
+            ItemCount = Min(24, Value.EmissionTime)
+        End If
+
+    End If
+
+    If ItemCount > 0 Then
+        Value.EmissionTime = 0
+        Ok = EmitSpray(Value, Sample, ItemCount) And Ok
+    End If
+
+    Return Ok
+
+End Function
+
+Public Sub Draw(ByRef Value As Context)
+
+    Dim Ok As Boolean
+
+    If Value.Ready And Value.Visible Then
+
+        Ok = G.DrawRibbonBatch3D(Value.Sheets)
+        Ok = G.DrawRibbonBatch3D(Value.Refraction) And Ok
+        Ok = G.DrawGpuParticleSystem3D(Value.Spray) And Ok
+
+    End If
+
+End Sub
+
+End Module

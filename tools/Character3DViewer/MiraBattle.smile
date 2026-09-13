@@ -3,7 +3,19 @@ Module Smile.Tools.MiraBattle
 
 Option Explicit
 
+Import Smile.Simple3D.WaterVfx3D As Water
+
 Public Const PARTY_TURN = 6
+
+Public Function IsHealing(Cycle As Number) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Cycle Mod 6 = 1 Or Cycle Mod 6 = 2
+
+    Return Result
+
+End Function
 
 Public Type Sample
     Clip As Text
@@ -14,9 +26,9 @@ End Type
 
 Public Function ClipForCycle(Cycle As Number) As Text
 
-    If Cycle Mod 3 = 1 Then
+    If Cycle Mod 6 = 1 Then
         Return "HealOne"
-    Else If Cycle Mod 3 = 2 Then
+    Else If Cycle Mod 6 = 2 Then
         Return "HealParty"
     End If
 
@@ -26,13 +38,33 @@ End Function
 
 Public Function Caption(Cycle As Number) As Text
 
-    If Cycle Mod 3 = 1 Then
+    If Cycle Mod 6 = 1 Then
         Return "Heal One"
-    Else If Cycle Mod 3 = 2 Then
+    Else If Cycle Mod 6 = 2 Then
         Return "Heal Party"
+    Else If Cycle Mod 6 = 3 Then
+        Return "Waterball"
+    Else If Cycle Mod 6 = 4 Then
+        Return "Tsunami"
+    Else If Cycle Mod 6 = 5 Then
+        Return "Tempest — Mira + Orin"
     End If
 
     Return "Water Attack"
+
+End Function
+
+Public Function WaterMode(Cycle As Number) As Number
+
+    If Cycle Mod 6 = 3 Then
+        Return Water.WATER_BALL
+    Else If Cycle Mod 6 = 4 Then
+        Return Water.WAVE
+    Else If Cycle Mod 6 = 5 Then
+        Return Water.STORM
+    End If
+
+    Return Water.TORRENT
 
 End Function
 
@@ -50,8 +82,8 @@ Public Function Evaluate(Cycle As Number, Elapsed As Number,
         Result.Clip = ClipForCycle(Cycle)
     End If
 
-    Result.Heal = Cycle Mod 3 <> 0 And Elapsed >= AttackStart + Duration / 4
-    Result.HealParty = Cycle Mod 3 = 2
+    Result.Heal = (Cycle Mod 6 = 1 Or Cycle Mod 6 = 2) And Elapsed >= AttackStart + Duration / 4
+    Result.HealParty = Cycle Mod 6 = 2
 
     Return Result
 

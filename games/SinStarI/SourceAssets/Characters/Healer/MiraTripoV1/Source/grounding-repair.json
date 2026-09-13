@@ -1,0 +1,162 @@
+{
+  "bindBodyMinimumBefore": 0.0001567411673022434,
+  "commonOffset": -0.0001567411673022434,
+  "body": [
+    {
+      "clip": "Attack",
+      "frame0Before": -0.0016063264338299632,
+      "minimumBefore": -0.0018338779918849468,
+      "maximumLift": 0.0018338779918849468
+    },
+    {
+      "clip": "Death",
+      "frame0Before": -5.843336839461699e-05,
+      "minimumBefore": -0.004481770098209381,
+      "maximumLift": 0.004481770098209381
+    },
+    {
+      "clip": "Defend",
+      "frame0Before": -5.834055627929047e-05,
+      "minimumBefore": -0.003413517028093338,
+      "maximumLift": 0.003413517028093338
+    },
+    {
+      "clip": "HealOne",
+      "frame0Before": -0.0016076993197202682,
+      "minimumBefore": -0.0016076993197202682,
+      "maximumLift": 0.0016076993197202682
+    },
+    {
+      "clip": "HealParty",
+      "frame0Before": -2.7222908101975918e-05,
+      "minimumBefore": -0.00047385157085955143,
+      "maximumLift": 0.00047385157085955143
+    },
+    {
+      "clip": "Hit",
+      "frame0Before": -5.855862400494516e-05,
+      "minimumBefore": -0.0005484892753884196,
+      "maximumLift": 0.0005484892753884196
+    },
+    {
+      "clip": "Idle",
+      "frame0Before": -5.8441393775865436e-05,
+      "minimumBefore": -0.0004455550224520266,
+      "maximumLift": 0.0004455550224520266
+    },
+    {
+      "clip": "Run",
+      "frame0Before": 0.0010240137344226241,
+      "minimumBefore": 0.0010240137344226241,
+      "maximumLift": 0
+    },
+    {
+      "clip": "Walk",
+      "frame0Before": 0.010243864730000496,
+      "minimumBefore": 0.004292705561965704,
+      "maximumLift": -0.004292705561965704
+    }
+  ],
+  "cape": [
+    {
+      "clip": "Attack",
+      "minDegrees": 5.0,
+      "maxDegrees": 6.0,
+      "maxFrameStep": 1.0
+    },
+    {
+      "clip": "Death",
+      "minDegrees": -67.0,
+      "maxDegrees": 5.0,
+      "maxFrameStep": 4.0
+    },
+    {
+      "clip": "Defend",
+      "minDegrees": -12.0,
+      "maxDegrees": -5.0,
+      "maxFrameStep": 1.0
+    },
+    {
+      "clip": "HealOne",
+      "minDegrees": 5.0,
+      "maxDegrees": 17.0,
+      "maxFrameStep": 1.0
+    },
+    {
+      "clip": "HealParty",
+      "minDegrees": 9.0,
+      "maxDegrees": 37.0,
+      "maxFrameStep": 2.0
+    },
+    {
+      "clip": "Hit",
+      "minDegrees": 5.0,
+      "maxDegrees": 5.0,
+      "maxFrameStep": 0.0
+    },
+    {
+      "clip": "Idle",
+      "minDegrees": 2.0,
+      "maxDegrees": 8.0,
+      "maxFrameStep": 1.0
+    },
+    {
+      "clip": "Run",
+      "minDegrees": 5.0,
+      "maxDegrees": 5.0,
+      "maxFrameStep": 0.0
+    },
+    {
+      "clip": "Walk",
+      "minDegrees": 5.0,
+      "maxDegrees": 5.0,
+      "maxFrameStep": 0.0
+    }
+  ],
+  "seamClearance": [
+    {
+      "clip": "Death",
+      "frame": 66,
+      "lift": 0.0025782893681231714
+    }
+  ],
+  "staff": [
+    {
+      "clip": "Attack",
+      "maximumLift": 0
+    },
+    {
+      "clip": "Death",
+      "maximumLift": 0.04015339133143425
+    },
+    {
+      "clip": "Defend",
+      "maximumLift": 0
+    },
+    {
+      "clip": "HealOne",
+      "maximumLift": 0
+    },
+    {
+      "clip": "HealParty",
+      "maximumLift": 0
+    },
+    {
+      "clip": "Hit",
+      "maximumLift": 0
+    },
+    {
+      "clip": "Idle",
+      "maximumLift": 0
+    },
+    {
+      "clip": "Run",
+      "maximumLift": 0
+    },
+    {
+      "clip": "Walk",
+      "maximumLift": 0
+    }
+  ],
+  "policy": "Body contact excludes cape/equipment; preserve Run airtime; cape hinge clears floor; Walk and Run are in place."
+}

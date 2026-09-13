@@ -10,6 +10,16 @@ Blender and glTF parsing are never required by a game at runtime. Project asset 
 
 ## Converter
 
+Desktop triangle validation is independent of authoring units. The cooker and native
+loader normalize edge components by their largest magnitude, calculate cross-product
+area in Double precision, and reject squared relative area at or below `1e-20`.
+This admits small valid details in meter-scale characters while still rejecting
+collapsed/collinear triangles. The previous absolute `1e-12` squared-area cutoff
+rejected the new Tripo Mira. `scripts/test-model3d-triangle-scale.ps1` covers small,
+normal and large geometry plus malformed input and native rejection. No asset format
+or actor scale changes are involved. Web loader adoption and validation are explicitly
+on hold with all Web work (September 13, 2026).
+
 ```powershell
 artifacts\assettool\smileasset.exe model Assets\Source\Hero.gltf -o Assets\Models\Hero.sm3d
 artifacts\assettool\smileasset.exe model Assets\Source\Hero.gltf --format-version 2 -o Assets\Models\Hero.sm3d

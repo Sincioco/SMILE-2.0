@@ -1,0 +1,45 @@
+{
+  "source_file": "Source/mira-tripo-hd-original.glb",
+  "source_sha256": "6812a9e42cdf90ee6715a9a2aae7b5f523580f81f16362ca7aa69f565596f7d9",
+  "generator": "Tripo",
+  "vertices": 1045746,
+  "triangles": 1885636,
+  "skins": 0,
+  "animations": 0,
+  "materials": [
+    {
+      "name": "tripo_mat_2d3fa87d-71c4-438b-b283-6e83c1f10d87",
+      "normalTexture": {
+        "index": 0
+      },
+      "pbrMetallicRoughness": {
+        "baseColorTexture": {
+          "index": 1
+        },
+        "metallicRoughnessTexture": {
+          "index": 2
+        }
+      }
+    }
+  ],
+  "image_dimensions": {
+    "base_color": [
+      4096,
+      4096
+    ],
+    "normal": [
+      4096,
+      4096
+    ],
+    "metallic_roughness": [
+      4096,
+      4096
+    ]
+  },
+  "blender_dimensions": [
+    0.7299500107765198,
+    0.21706393361091614,
+    0.98101806640625
+  ],
+  "state": "Preserved authoring master; optimization, rigging and native validation pending."
+}

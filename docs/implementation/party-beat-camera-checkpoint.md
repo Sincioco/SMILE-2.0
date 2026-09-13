@@ -6,6 +6,13 @@ implemented, built and validated with focused automated, visible tool and explic
 human gesture checks. The commit containing this checkpoint is the Desktop delivery
 milestone. Web follow-through remains on hold.
 
+September 13 scope update: Sin halted **all Web work**, including Mira publication,
+water effects/Lab, browser checks and this timeline follow-through. Desktop is the
+active target. On resumption, align the Web SM3D loader's triangle-area validation
+with the cooker's/native loader's scale-independent check before publishing Tripo
+Mira; its former absolute area cutoff rejects valid small details. Preserve the
+outstanding Chrome camera-gesture acceptance alongside these adoption steps.
+
 ## Imported Character Profile Alignment (2026-09-11)
 
 The Head attachment added for beat framing is included in the standalone profile

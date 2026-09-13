@@ -1,0 +1,205 @@
+{
+  "modelSha256": "234d8a02139a787d1b7b7e8f607393c0f11f8c4286be5a268ee9ea5ea0261829",
+  "heldArmChecks": [
+    {
+      "clip": "Idle",
+      "maximumWristDeviationFromNeutralDegrees": 0.0,
+      "maximumStaffGripErrorMeters": 2.9988008435812754e-07
+    },
+    {
+      "clip": "Walk",
+      "maximumWristDeviationFromNeutralDegrees": 0.0,
+      "maximumStaffGripErrorMeters": 4.3926843920301425e-07
+    },
+    {
+      "clip": "Attack",
+      "maximumWristDeviationFromNeutralDegrees": 0.0,
+      "maximumStaffGripErrorMeters": 2.5355417445082317e-07
+    },
+    {
+      "clip": "Defend",
+      "maximumWristDeviationFromNeutralDegrees": 0.0,
+      "maximumStaffGripErrorMeters": 2.9950963321688443e-07
+    },
+    {
+      "clip": "HealOne",
+      "maximumWristDeviationFromNeutralDegrees": 0.0,
+      "maximumStaffGripErrorMeters": 1.9288947382568745e-07
+    },
+    {
+      "clip": "HealParty",
+      "maximumWristDeviationFromNeutralDegrees": 0.0,
+      "maximumStaffGripErrorMeters": 1.892304467867506e-07
+    },
+    {
+      "clip": "Hit",
+      "maximumWristDeviationFromNeutralDegrees": 0.0,
+      "maximumStaffGripErrorMeters": 1.8863363416749483e-07
+    }
+  ],
+  "samples": [
+    {
+      "clip": "Attack",
+      "frame": 0,
+      "maximumBoundsErrorMeters": 4.76837158203125e-07,
+      "maximumArmStaffJointErrorMeters": 3.4567533801627927e-07
+    },
+    {
+      "clip": "Attack",
+      "frame": 34,
+      "maximumBoundsErrorMeters": 2.980232238769531e-07,
+      "maximumArmStaffJointErrorMeters": 5.268882873128993e-07
+    },
+    {
+      "clip": "Attack",
+      "frame": 69,
+      "maximumBoundsErrorMeters": 2.384185791015625e-07,
+      "maximumArmStaffJointErrorMeters": 1.6361617487667314e-07
+    },
+    {
+      "clip": "Death",
+      "frame": 0,
+      "maximumBoundsErrorMeters": 2.384185791015625e-07,
+      "maximumArmStaffJointErrorMeters": 2.4914924215087243e-07
+    },
+    {
+      "clip": "Death",
+      "frame": 54,
+      "maximumBoundsErrorMeters": 4.172325134277344e-07,
+      "maximumArmStaffJointErrorMeters": 3.0027318792621247e-07
+    },
+    {
+      "clip": "Death",
+      "frame": 109,
+      "maximumBoundsErrorMeters": 2.384185791015625e-07,
+      "maximumArmStaffJointErrorMeters": 3.68709654559452e-07
+    },
+    {
+      "clip": "Defend",
+      "frame": 0,
+      "maximumBoundsErrorMeters": 2.980232238769531e-07,
+      "maximumArmStaffJointErrorMeters": 2.1542358837725164e-07
+    },
+    {
+      "clip": "Defend",
+      "frame": 7,
+      "maximumBoundsErrorMeters": 4.76837158203125e-07,
+      "maximumArmStaffJointErrorMeters": 1.5269146510898468e-07
+    },
+    {
+      "clip": "Defend",
+      "frame": 15,
+      "maximumBoundsErrorMeters": 2.682209014892578e-07,
+      "maximumArmStaffJointErrorMeters": 2.4586915969848633e-07
+    },
+    {
+      "clip": "HealOne",
+      "frame": 0,
+      "maximumBoundsErrorMeters": 2.384185791015625e-07,
+      "maximumArmStaffJointErrorMeters": 2.3097550904845027e-07
+    },
+    {
+      "clip": "HealOne",
+      "frame": 30,
+      "maximumBoundsErrorMeters": 4.220008850097656e-05,
+      "maximumArmStaffJointErrorMeters": 4.469702594527377e-05
+    },
+    {
+      "clip": "HealOne",
+      "frame": 60,
+      "maximumBoundsErrorMeters": 4.76837158203125e-07,
+      "maximumArmStaffJointErrorMeters": 1.9260147146449334e-07
+    },
+    {
+      "clip": "HealParty",
+      "frame": 0,
+      "maximumBoundsErrorMeters": 2.384185791015625e-07,
+      "maximumArmStaffJointErrorMeters": 1.5910086411284374e-07
+    },
+    {
+      "clip": "HealParty",
+      "frame": 32,
+      "maximumBoundsErrorMeters": 2.980232238769531e-07,
+      "maximumArmStaffJointErrorMeters": 2.467706078541159e-07
+    },
+    {
+      "clip": "HealParty",
+      "frame": 65,
+      "maximumBoundsErrorMeters": 2.384185791015625e-07,
+      "maximumArmStaffJointErrorMeters": 2.2708998105120914e-07
+    },
+    {
+      "clip": "Hit",
+      "frame": 0,
+      "maximumBoundsErrorMeters": 3.5762786865234375e-07,
+      "maximumArmStaffJointErrorMeters": 1.5141368979887348e-07
+    },
+    {
+      "clip": "Hit",
+      "frame": 16,
+      "maximumBoundsErrorMeters": 3.5762786865234375e-07,
+      "maximumArmStaffJointErrorMeters": 1.4136482746161726e-07
+    },
+    {
+      "clip": "Hit",
+      "frame": 32,
+      "maximumBoundsErrorMeters": 2.384185791015625e-07,
+      "maximumArmStaffJointErrorMeters": 2.4268772415671244e-07
+    },
+    {
+      "clip": "Idle",
+      "frame": 0,
+      "maximumBoundsErrorMeters": 2.384185791015625e-07,
+      "maximumArmStaffJointErrorMeters": 2.481166393361496e-07
+    },
+    {
+      "clip": "Idle",
+      "frame": 170,
+      "maximumBoundsErrorMeters": 4.172325134277344e-07,
+      "maximumArmStaffJointErrorMeters": 3.781674276818774e-07
+    },
+    {
+      "clip": "Idle",
+      "frame": 340,
+      "maximumBoundsErrorMeters": 1.1920928955078125e-07,
+      "maximumArmStaffJointErrorMeters": 2.996022889447674e-07
+    },
+    {
+      "clip": "Run",
+      "frame": 0,
+      "maximumBoundsErrorMeters": 2.384185791015625e-07,
+      "maximumArmStaffJointErrorMeters": 1.0975390570354636e-07
+    },
+    {
+      "clip": "Run",
+      "frame": 11,
+      "maximumBoundsErrorMeters": 4.76837158203125e-07,
+      "maximumArmStaffJointErrorMeters": 1.9206933498120616e-07
+    },
+    {
+      "clip": "Run",
+      "frame": 22,
+      "maximumBoundsErrorMeters": 2.384185791015625e-07,
+      "maximumArmStaffJointErrorMeters": 4.285379400482631e-07
+    },
+    {
+      "clip": "Walk",
+      "frame": 0,
+      "maximumBoundsErrorMeters": 1.1920928955078125e-07,
+      "maximumArmStaffJointErrorMeters": 2.4856369670647795e-07
+    },
+    {
+      "clip": "Walk",
+      "frame": 17,
+      "maximumBoundsErrorMeters": 3.5762786865234375e-07,
+      "maximumArmStaffJointErrorMeters": 4.372775204181202e-07
+    },
+    {
+      "clip": "Walk",
+      "frame": 34,
+      "maximumBoundsErrorMeters": 4.76837158203125e-07,
+      "maximumArmStaffJointErrorMeters": 2.2940046069533605e-07
+    }
+  ],
+  "acceptedToleranceMeters": 5e-05
+}

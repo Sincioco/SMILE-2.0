@@ -1,0 +1,112 @@
+{
+  "schemaVersion": 1,
+  "character": "Mira",
+  "revision": "MiraTripoV1",
+  "date": "2026-09-13",
+  "target": "Native Character Viewer and Water Lab; no Sin Star I game code",
+  "generator": "Tripo HD v3.1 (user-supplied body and staff, lighting removed, PBR)",
+  "originals": [
+    "Source/mira-tripo-hd-original.glb",
+    "Source/mira-staff-tripo-hd-original.glb",
+    "Blender/mira-tripo-hd-original.blend"
+  ],
+  "runtime": {
+    "model": "mira-animation-checkpoint.glb",
+    "sha256": "234d8a02139a787d1b7b7e8f607393c0f11f8c4286be5a268ee9ea5ea0261829",
+    "descriptor": "Mira.sm3d.json",
+    "blenderCheckpoint": "Blender/mira-rigged-animation-checkpoint.blend",
+    "triangles": {
+      "body": 18438,
+      "staff": 1344,
+      "total": 19782
+    },
+    "pbrTextures": {
+      "body": [
+        4096,
+        4096
+      ],
+      "staff": [
+        2048,
+        2048
+      ],
+      "mapsPerPart": 3,
+      "decodedMiB": 240,
+      "directionalLightingBaked": false
+    },
+    "rig": {
+      "mixamoBones": 33,
+      "authoredBones": [
+        "MiraCape",
+        "MiraStaff"
+      ],
+      "totalBones": 35,
+      "sockets": 9,
+      "fullFingerRig": false
+    },
+    "calibration": "Pose, grip, cape, grounding, Run back carry and Death staff drop are baked into the accepted animation checkpoint; no borrowed Arin or Orin correction bank."
+  },
+  "animations": [
+    {
+      "clip": "Idle",
+      "source": "Source/Mixamo/Standing Idle 03.fbx",
+      "sourceSamples": 341,
+      "sampleRate": 30
+    },
+    {
+      "clip": "Walk",
+      "source": "Source/Mixamo/Standing Walk Forward.fbx",
+      "sourceSamples": 35,
+      "sampleRate": 30
+    },
+    {
+      "clip": "Run",
+      "source": "Source/Mixamo/Standing Run Forward.fbx",
+      "sourceSamples": 23,
+      "sampleRate": 30
+    },
+    {
+      "clip": "Attack",
+      "source": "Source/Mixamo/Standing 1H Magic Attack 01.fbx",
+      "sourceSamples": 70,
+      "sampleRate": 30
+    },
+    {
+      "clip": "Defend",
+      "source": "Source/Mixamo/Standing Block Start.fbx",
+      "sourceSamples": 16,
+      "sampleRate": 30
+    },
+    {
+      "clip": "HealOne",
+      "source": "Source/Mixamo/standing 1H cast spell 01.fbx",
+      "sourceSamples": 61,
+      "sampleRate": 30
+    },
+    {
+      "clip": "HealParty",
+      "source": "Source/Mixamo/Standing 2H Cast Spell 01.fbx",
+      "sourceSamples": 66,
+      "sampleRate": 30
+    },
+    {
+      "clip": "Hit",
+      "source": "Source/Mixamo/Standing React Small From Front.fbx",
+      "sourceSamples": 33,
+      "sampleRate": 30
+    },
+    {
+      "clip": "Death",
+      "source": "Source/Mixamo/Standing React Death Backward.fbx",
+      "sourceSamples": 110,
+      "sampleRate": 30
+    }
+  ],
+  "reference": "References/mira-character-reference.png",
+  "validation": [
+    "Source/mira-grounding-checkpoint.json",
+    "Source/mira-roundtrip-checkpoint.json",
+    "README.md"
+  ],
+  "checksumInventory": "checksums.sha256",
+  "heldWork": "All Web adoption/publication and Chrome acceptance remain on hold."
+}

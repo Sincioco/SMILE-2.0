@@ -1,21 +1,22 @@
 # Character Viewer Architecture
 
-## Native Mira comparison
+## Native Mira and preserved comparisons
 
-`Profiles` owns Mira1/Mira2/Mira3 identities, their shared nine clip names and hold/loop
+`Profiles` owns Mira/Mira1/Mira2/Mira3 identities, their shared nine clip names and hold/loop
 policy, and each package's independent staff part. `ViewerSession` routes their stable
 tab IDs; `ViewerUi` appends the tabs and
 derives the tab-strip hit boundary from its last button. That removes the old fixed
 510-pixel boundary which could not admit the comparison button. The existing
 hardening fixture covers the new hit region. `Prepare-BuildAssets.ps1` stages the
-self-contained MiraV1/MiraV2/MiraV3 packages and the normal project asset cooker publishes them.
+self-contained MiraTripoV1/MiraV1/MiraV2/MiraV3 packages and the normal project asset cooker publishes them.
 `INCLUDE_MIRA_COMPARISONS` is disabled in generated Web profiles while that adoption
 is deferred. No new actor pool, calibration bank, game behavior or runtime dependency
 was added. The rigid staff uses the same production skin and the existing equipment
 visibility path. The comparison staffs have no equipment glow. Healer policy lives in
-`MiraBattle` (cast timing and action labels); `MiraWater` owns one caller-held
-128-particle batch and clip-time audio on channel 6. ViewerParty owns Mira's named
-actor/context and formation, loads the selected Mira1 in both battles, applies policy samples to existing presentation states,
+`MiraBattle` (cast timing and action labels); `MiraWater` maps final sockets, recipients
+and clip time into caller-held WaterVfx3D, WaterStorm3D and CharacterGlow3D contexts.
+It owns cast audio on channel 6 and contact audio on channel 8. ViewerParty owns Mira's named
+actor/context and formation, loads the new Tripo Mira in both battles, applies policy samples to existing presentation states,
 and routes her through both battle turn orders, targeting, draw/update and cleanup.
 It does not borrow a calibration bank or advance another shared scene clock.
 `CreateAdditionalParticipants`, `UpdateAdditionalEquipment` and
@@ -23,20 +24,56 @@ It does not borrow a calibration bank or advance another shared scene clock.
 ViewerEffects owns a separate water context for every standalone Mira tab.
 Targets are rebuilt from final actor positions each frame and cleared on destruction.
 This prevents the four-member Vrax list leaking into the three-member Dragon scene.
-`CalibrationTests.CheckMiraBattles` exercises real models, all three casts in both
+`CalibrationTests.CheckMiraBattles` exercises real models, all six casts in both
 battles, healing without boss damage, target-count cleanup, seek/restore and turn exit.
-The existing Beat fixture now verifies selection reaches Mira and both bosses.
-No compiler, runtime, Scene VFX pool, public calibration format or game rule changes
-are required. Original Mira water/chime cues are retained in all three versioned packages;
-MiraV1 is the current canonical audio publication source. Tool-local audio copies
+The existing Beat fixture verifies selection reaches Mira and both bosses.
+Mira cycles Torrent, Heal One, Heal Party, Waterball, Tsunami and Tempest with Orin.
+Healing classification uses the six-action policy in both live and sought playback.
+Water contact occurs at 72 percent of the attack clip; sampled recoil returns to the
+fresh boss pose each frame. Guard impacts use the boss timeline, including Mira's Hit
+pose. The combo falls back to a wave if Orin is knocked out. Mira's borrowed glow
+overlays must be destroyed before her actor/model; the real-asset fixture switches
+Vrax to Dragon and back to Arin after every cast family to protect that lifetime.
+WaterVfx3D builds each barrier from one recipient's final position and the attacker
+direction. ViewerParty maps the struck actor to that recipient's index; dragon
+fire can ripple all the separate shields without creating a formation-sized dome.
+WaterVfx3D owns their backward compression/recovery and the matching short-lived
+droplet impulse, which fans radially and curls around the rim. It keeps that
+displacement separate from the actor's grounded pose.
+CharacterGlow3D owns the 128-sprite head shimmer, deriving its local frame from
+StaffGrip/StaffTip and its clock from the caller's sampled time. Hidden equipment
+does not draw shimmer. Its effect material borrows the water droplet texture, so
+glow is destroyed before the water context and before the model.
+
+Growth review: WaterVfx3D exceeds the 600-line review trigger because it owns seven
+bounded surface presets and their one shared staging/spray lifecycle. It retains
+one caller-held context, no game/Viewer dependency, and no hidden scene clock.
+Splitting the preset math would currently require a separate shared Frame-type
+module solely to avoid a dependency cycle; this milestone retains the cohesive
+owner. Native water lighting is isolated in water_surface3d.h; the existing native
+renderer only admits the material, passes constants and binds the borrowed scene.
+No hard size limit or reviewed legacy baseline was raised.
+No Scene VFX pool, public calibration format or game rule changes are required by
+the roster wiring. Original Mira water/chime cues are retained in the three comparison packages;
+MiraV1 retains the original heal/attack cues; the new package preserves its own copy.
+Shared water contact/wave cues and procedural textures live in TechnicalAssets/Generation3/Water. Tool-local audio copies
 are disposable build mirrors.
 
 Mira1's texture, seam weights, closed staff, cape hinge and portable animation keys
 are asset-authoring responsibilities inside MiraV1. The Viewer consumes its exported
 GLB and unchanged seven-socket descriptor. This repair adds no runtime skinning,
 cloth simulation, model editor, calibration format or dependency. The existing
-real-asset fixture covers Mira1 selection in both battles and standalone water
-ownership for all comparison tabs. Package README records pending visual review.
+real-asset fixture covers new Mira selection in both battles and standalone water
+ownership for all four tabs. It also checks the new staff's equipped bind bounds and
+standalone/Party framing so the character cannot float from a negative bind minimum.
+MiraTripoV1 owns its 35-bone rig, nine actions, 4K body/2K staff PBR bake, mesh repair,
+cape clearance and floor measurements; the Viewer remains an asset consumer.
+
+Small valid triangles in Tripo Mira exposed an absolute area cutoff in the asset
+cooker and native loader. Their existing geometry-validation owners now use a
+normalized, Double-precision area test. The focused triangle-scale regression checks
+small/normal/large valid imports and collapsed geometry rejection. This changes no
+SM3D format or actor scale. Web runtime adoption remains explicitly on hold.
 
 ## Party Beat Camera Ownership
 

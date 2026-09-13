@@ -16,6 +16,7 @@ Import Smile.UI.Controls As UI
 Import Smile.Tools.BattleCamera As BattleCamera
 Import Smile.Tools.MiraBattle As MiraBattle
 Import Smile.Tools.MiraWater As MiraWater
+Import Smile.Simple3D.WaterVfx3D As WaterVfx
 Import Smile.Tools.Character3DViewerActors As ViewerActors
 Import Smile.Tools.Character3DViewerCalibration As ViewerCalibration
 Import Smile.Tools.Character3DViewerEffects As ViewerEffects
@@ -928,7 +929,7 @@ Public Function ApplyFrame(ByRef Value As State, Actions As FrameActions,
         Result = PlaceUnityMember(Value.Mira, Precision3D.FromVector(Value.MiraLayout.Home),
             TargetX, TargetY, TargetZ, ModelForwardYawOffset) And Result
 
-        If Value.Turn = MiraBattle.PARTY_TURN And Value.AttackCycle Mod 3 <> 0 Then
+        If Value.Turn = MiraBattle.PARTY_TURN And MiraBattle.IsHealing(Value.AttackCycle) Then
             Result = ViewerActors.FaceToward(Value.Mira.Actor, Value.First.Home.X,
                 Value.First.Home.Y, Value.First.Home.Z, ModelForwardYawOffset, 0) And Result
         End If
@@ -1254,11 +1255,18 @@ Public Function DragonReactionRequested(ByRef Value As State,
     AttackDurationMilliseconds As Number) As Boolean
 
     Dim Result As Boolean
+    Dim ImpactTime As Number
+
+    ImpactTime = 1300 + AttackDurationMilliseconds * 64 / 100
+
+    If Value.Turn = MiraBattle.PARTY_TURN Then
+        ImpactTime = 1300 + AttackDurationMilliseconds * 72 / 100
+    End If
 
     Result = (Value.Enabled And
         Value.DragonReactionPending And
         Value.Stage = 1 And
-        Value.Elapsed >= 1300 + AttackDurationMilliseconds * 64 / 100)
+        Value.Elapsed >= ImpactTime)
 
     Return Result
 
@@ -1603,6 +1611,23 @@ Private Sub ApplyMiraSample(ByRef Value As State, AttackStart As Number,
         Actions.MiraClipRequested = True
         Value.Stage = Sample.Stage
         Value.DragonReactionPending = Sample.Stage = 1 And Sample.Clip = "Attack"
+
+        If Value.AttackCycle Mod 6 = 5 And Value.Companion.PresentationState <> STATE_KO Then
+
+            Actions.SecondClip = "Idle"
+            Actions.SecondClipRequested = True
+
+            If Sample.Stage = 1 Then
+                Actions.SecondClip = "ThorAttack"
+            End If
+
+            Call SetPresentationState(Value, 1, STATE_ALIVE)
+
+            If Sample.Stage = 1 Then
+                Call SetPresentationState(Value, 1, STATE_ACTING)
+            End If
+
+        End If
 
         Call SetPresentationState(Value, MiraBattle.PARTY_TURN, STATE_ALIVE)
 
@@ -2017,6 +2042,8 @@ Public Function HeroImpactTime(AttackMilliseconds As Number,
 
     If Turn = 5 Then
         HitPercent = ViewerProfiles.ZARA_ATTACK_HIT_PERCENT
+    Else If Turn = MiraBattle.PARTY_TURN Then
+        HitPercent = 72
     End If
 
     Result = HERO_ATTACK_START_MILLISECONDS + AttackMilliseconds * HitPercent / 100
@@ -2315,7 +2342,7 @@ Public Sub ApplyAttackCamera(
         Return
     End If
 
-    If Value.Turn = MiraBattle.PARTY_TURN And Value.AttackCycle Mod 3 <> 0 Then
+    If Value.Turn = MiraBattle.PARTY_TURN And MiraBattle.IsHealing(Value.AttackCycle) Then
         Value.PreviousCamera = 1
 
         Return
@@ -2895,7 +2922,7 @@ Public Function ActingName(ByRef Value As State) As Text
 
     Else If Value.Turn = MiraBattle.PARTY_TURN Then
 
-        Result = "Mira1"
+        Result = "Mira"
 
     End If
 
@@ -3006,12 +3033,12 @@ Public Sub DestroyParticipants(ByRef Value As State)
 
     Call ViewerEffects.DestroyEpicGlow(Value.ThirdEffects)
     Call ViewerEffects.DestroyEpicGlow(Value.FourthEffects)
+    Call MiraWater.Destroy(Value.Water)
     Call ViewerActors.Destroy(Value.Companion)
     Call ViewerActors.Destroy(Value.DragonOpponent)
     Call ViewerActors.Destroy(Value.Third)
     Call ViewerActors.Destroy(Value.Fourth)
     Call ViewerActors.Destroy(Value.Mira)
-    Call MiraWater.Destroy(Value.Water)
 
     Value.UnityRoster = False
 
@@ -3075,7 +3102,7 @@ Public Sub DrawOverlay(
         Call UI.DrawButton(Left + 164, 140, 76, 22, "Glow", GlowVisible)
 
         If Value.Mira.Ready Then
-            Draw Text "Party / Enemy + Mira1" At Left + 16, 178 Size 20 Color WHITE
+            Draw Text "Party / Enemy + Mira" At Left + 16, 178 Size 20 Color WHITE
         Else
             Draw Text "Party / Enemy" At Left + 16, 178 Size 20 Color WHITE
         End If
@@ -3188,7 +3215,7 @@ Public Function CreateAdditionalParticipants(ByRef Value As State,
 
     If ViewerProfiles.INCLUDE_MIRA_COMPARISONS Then
 
-        Value.Mira = ViewerActors.LoadContext(ViewerProfiles.PROFILE_MIRA1, 0)
+        Value.Mira = ViewerActors.LoadContext(ViewerProfiles.PROFILE_MIRA, 0)
         Result = Value.Mira.Ready And MiraWater.Prepare(Value.Water)
         Result = PlayClip(Value.Mira.Actor, "Idle", Value.Mira.Clip,
             Value.Mira.Actor.Handle, Value.Mira.Profile,
@@ -3231,6 +3258,7 @@ Public Function UpdateAdditionalEquipment(ByRef Value As State, ByRef Shared As 
     Primary As Character3D.Actor, Boss As Character3D.Actor) As Boolean
 
     Dim Result As Boolean
+    Dim BossSpeed As Number
 
     If Not Value.Enabled Or Not Value.Ready Then
         Return True
@@ -3241,6 +3269,40 @@ Public Function UpdateAdditionalEquipment(ByRef Value As State, ByRef Shared As 
     If Value.Mira.Ready Then
 
         Value.Water.Targets.MemberCount = 0
+        Value.Water.AttackMode = MiraBattle.WaterMode(Value.AttackCycle)
+
+        If (Value.Water.AttackMode = WaterVfx.STORM And
+            Value.Companion.PresentationState = STATE_KO) Then
+            Value.Water.AttackMode = WaterVfx.WAVE
+        End If
+
+        Value.Water.Guarding = Value.Turn = 2 And Value.Mira.PresentationState <> STATE_KO
+        Value.Water.GuardTime = Value.Elapsed
+        Value.Water.ImpactMember = Value.HitTarget
+
+        If Value.HitTarget = MiraBattle.PARTY_TURN Then
+            Value.Water.ImpactMember = 2
+        Else If Value.HitTarget = 5 Then
+            Value.Water.ImpactMember = 3
+        End If
+
+        If Not Value.UnityRoster And Value.DragonCounter Mod 3 = 0 Then
+            Value.Water.ImpactMember = -1
+        End If
+
+        BossSpeed = ActorPlaybackSpeed(Value, 2, 100)
+        Value.Water.ImpactElapsed = Value.Elapsed * BossSpeed / 100 - DragonImpactTime(Value)
+
+        If Value.UnityRoster Then
+            Value.Water.ImpactElapsed = Value.Elapsed - VraxImpactTime(Value.BossAttackDuration)
+        End If
+
+        If Value.Turn = MiraBattle.PARTY_TURN And Value.AttackCycle Mod 6 >= 3 Then
+            Result = MiraWater.ApplyRecoil(Value.Mira.Actor, Boss) And Result
+        End If
+
+        Result = Character3D.TrySocketPositionPrecise(Value.Companion.Actor,
+            "HammerHead", 1, False, Value.Water.Conductor) And Result
 
         Call MiraWater.SetAttack(Value.Water.Targets, Boss)
         Call MiraWater.SetMember(Value.Water.Targets, 0, Primary)
@@ -3254,7 +3316,7 @@ Public Function UpdateAdditionalEquipment(ByRef Value As State, ByRef Shared As 
         Result = MiraWater.Update(Value.Water, Value.Mira.Actor,
             Character3D.ClipName(Value.Mira.Actor, Value.Mira.Clip),
             Value.Mira.PresentationState <> STATE_KO,
-            Not ScenePaused And Not Value.PreviewActive)
+            Not ScenePaused And Not Value.PreviewActive, Visibility.SwordVisible) And Result
 
     End If
 
@@ -3677,7 +3739,7 @@ Private Function UpdateUnityBoss(ByRef Value As State,
     Else If Value.Turn = 2 And Value.Stage = 2 Then
         Name = "Run"
     Else If (Value.Turn <> 2 And
-        (Value.Turn <> MiraBattle.PARTY_TURN Or Value.AttackCycle Mod 3 = 0) And
+        (Value.Turn <> MiraBattle.PARTY_TURN Or Not MiraBattle.IsHealing(Value.AttackCycle)) And
         Value.Stage = 1 And
         Value.Elapsed >= HeroImpactTime(HeroAttackMilliseconds, Value.Turn)) Then
         Name = "Hit"

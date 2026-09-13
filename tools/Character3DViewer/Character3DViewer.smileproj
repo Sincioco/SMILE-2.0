@@ -104,6 +104,13 @@
                   Profile="Character"
                   Identity="sin-star-i.vrax.v1"
                   ProductionState="Prototype" />
+    <Model3DAsset Include="BuildAssets\MiraTripoV1\mira-animation-checkpoint.glb"
+                  Descriptor="BuildAssets\MiraTripoV1\Mira.sm3d.json"
+                  LogicalPath="Assets\Generation2\MiraTripoV1\Mira.sm3d"
+                  TextureOutputDirectory="Assets\Generation2\MiraTripoV1\Textures"
+                  Profile="Character"
+                  Identity="sin-star-i.character-4.healer.mira"
+                  ProductionState="Prototype" />
     <Model3DAsset Include="BuildAssets\MiraV1\mira1-animation-checkpoint.glb"
                   Descriptor="BuildAssets\MiraV1\Mira1.sm3d.json"
                   LogicalPath="Assets\Generation2\MiraV1\Mira1.sm3d"
@@ -139,6 +146,8 @@
     <Asset Include="Assets\Lightning\lightning-ribbon.png" />
     <Asset Include="Assets\Lightning\lightning-spark.png" />
     <Asset Include="Assets\Lightning\thunder.wav" />
+    <Asset Include="Assets\Water\*.png" />
+    <Asset Include="Assets\Water\*.wav" />
     <Asset Include="Assets\Audio\mira-water-attack.wav" />
     <Asset Include="Assets\Audio\mira-heal-one.wav" />
     <Asset Include="Assets\Audio\mira-heal-party.wav" />

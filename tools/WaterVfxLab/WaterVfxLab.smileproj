@@ -1,0 +1,30 @@
+<SmileProject Version="1.0">
+  <PropertyGroup>
+    <ProjectKind>Game</ProjectKind>
+    <StartupFile>Program.smile</StartupFile>
+    <OutputName>WaterVfxLab</OutputName>
+    <ApplicationId>smile.tools.water-vfx-lab</ApplicationId>
+    <WebLoadingAuthor>Louiery R. Sincioco (Sin)</WebLoadingAuthor>
+    <WebLoadingLogo>..\..\assets\branding\smile-2.0-logo.png</WebLoadingLogo>
+    <GraphicsBackend>DirectX</GraphicsBackend>
+    <VSync>true</VSync>
+    <ResponsiveWindow>true</ResponsiveWindow>
+    <RememberWindowPlacement>true</RememberWindowPlacement>
+  </PropertyGroup>
+  <ItemGroup>
+    <SmileSource Include="Program.smile" StartupOnly="true" />
+    <SmileSource Include="WaterLabScene.smile" />
+    <SmileSource Include="WaterLabUi.smile" />
+    <Asset Include="Assets\Water\*.png" />
+    <Asset Include="Assets\Water\*.wav" />
+    <Asset Include="Assets\Lightning\*.png" />
+    <Asset Include="Assets\Lightning\thunder.wav" />
+    <Asset Include="Assets\Audio\*.wav" />
+    <Model3DAsset Include="BuildAssets\mira-animation-checkpoint.glb"
+                  Descriptor="BuildAssets\Mira.sm3d.json"
+                  LogicalPath="Assets/Mira.sm3d" TextureOutputDirectory="Assets/MiraTextures"
+                  Profile="Character" Identity="sin-star-i.character-4.healer.mira" ProductionState="Prototype" />
+    <SmileProjectReference Include="..\..\libraries\Smile.Simple3D\Smile.Simple3D.smilelibproj" />
+    <SmileProjectReference Include="..\..\libraries\Smile.UI\Smile.UI.smilelibproj" />
+  </ItemGroup>
+</SmileProject>

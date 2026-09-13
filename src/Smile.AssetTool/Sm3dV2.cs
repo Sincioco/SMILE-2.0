@@ -1037,8 +1037,18 @@ internal static partial class Sm3dV2
             var a = Position(vertices, indices[index]);
             var b = Position(vertices, indices[index + 1]);
             var c = Position(vertices, indices[index + 2]);
-            var area = Vector3.Cross(b - a, c - a).LengthSquared();
-            Require(float.IsFinite(area) && area > 1e-12f, "SMA1170: geometry contains a degenerate triangle.");
+            // Relative area preserves the same decision in meters or centimeters.
+            // Double intermediates avoid underflow for small but valid detail.
+            double ux = (double)b.X - a.X, uy = (double)b.Y - a.Y, uz = (double)b.Z - a.Z;
+            double vx = (double)c.X - a.X, vy = (double)c.Y - a.Y, vz = (double)c.Z - a.Z;
+            var scale = Math.Max(Math.Max(Math.Abs(ux), Math.Abs(uy)), Math.Abs(uz));
+            scale = Math.Max(scale, Math.Max(Math.Max(Math.Abs(vx), Math.Abs(vy)), Math.Abs(vz)));
+            Require(double.IsFinite(scale) && scale > 0, "SMA1170: geometry contains a degenerate triangle.");
+            ux /= scale; uy /= scale; uz /= scale;
+            vx /= scale; vy /= scale; vz /= scale;
+            double x = uy * vz - uz * vy, y = uz * vx - ux * vz, z = ux * vy - uy * vx;
+            var area = x * x + y * y + z * z;
+            Require(double.IsFinite(area) && area > 1e-20, "SMA1170: geometry contains a degenerate triangle.");
         }
     }
 

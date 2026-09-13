@@ -1,0 +1,11 @@
+{
+  "area": "nose and eye surfaces only",
+  "unique_vertices_affected": 3198,
+  "maximum_movement_source_m": 0.0030320549849420786,
+  "reprojected_uv_loops": 17803,
+  "facial_skin_roughness_floor": 0.65,
+  "facial_normal_strength": 0.2,
+  "iterations": 70,
+  "source_preserved": "Source/mira-tripo-hd-original.glb",
+  "state": "Candidate correction; close-up review required before final bake."
+}

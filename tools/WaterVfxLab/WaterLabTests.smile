@@ -1,0 +1,114 @@
+Option Explicit
+
+Import Smile.Tools.WaterLabScene As Scene
+Import Smile.Tools.WaterLabUi As UI
+Import Smile.Simple3D.WaterVfx3D As Water
+Import Smile.Simple3D.Graphics3D As G
+Import Smile.Simple3D.Character3D As Character
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.PrecisionMath3D As M
+
+Dim Lab As Scene.State
+Dim Mode As Number
+Dim Failures As Number
+Dim Position As P.Vector3
+Dim Facing As P.Vector3
+Dim Tip As P.Vector3
+Dim Ok As Boolean
+
+Game Window "Water Lab Native Checks" Size 400 By 300
+
+Call Scene.Start(Lab)
+
+Lab.AudioEnabled = False
+Lab.Paused = True
+Lab.Orbit = False
+
+Do
+
+    Call Check(Lab.Ready)
+    Call Check(Lab.SpeedPercent = 200)
+
+    Call UI.Update(Lab, KEY_PLUS)
+    Call Check(Lab.SpeedPercent = 225)
+    Call UI.Update(Lab, KEY_MINUS)
+    Call Check(Lab.SpeedPercent = 200)
+
+    Lab.Time = 0
+    Lab.Paused = False
+
+    Call Scene.Update(Lab, 16)
+    Call Check(Lab.Time = 32)
+
+    Lab.Paused = True
+
+    Call Scene.Update(Lab, 16)
+    Call Check(Lab.Time = 32)
+
+    Ok = Character.TryRotation(Lab.Mira, Facing)
+
+    Call Check(Ok And Facing.Y = 270.0)
+    Call Check(Water.RecoilDistance(0.5) = 0.0)
+    Call Check(Water.RecoilDistance(0.86) > 8.0)
+    Call Check(Abs(Water.RecoilDistance(1.0)) < 0.001)
+    Call Check(Water.BarrierRecoil(0.0) = 0.0)
+    Call Check(Water.BarrierRecoil(0.12) > 5.0 And Water.BarrierRecoil(0.12) < 10.0)
+    Call Check(Water.BarrierRecoil(0.7) < 2.0)
+    Call Check(Water.BarrierRecoil(1.0) = 0.0)
+
+    For Mode = 1 To 7
+
+        Lab.Mode = Mode
+
+        Call Scene.Restart(Lab)
+
+        Lab.Time = 2400
+
+        Call Scene.Update(Lab, 0)
+        Call Scene.Draw(Lab)
+        Call Check(Lab.Ready And Lab.ErrorCode = 0 And Lab.Water.Visible)
+
+        Ok = Character.TrySocketPositionPrecise(Lab.Mira, "StaffTip", 0, False, Tip)
+        Ok = P.TryParticlePosition(Lab.Glow.HeadShimmer, 0, True, Position) And Ok
+        Position = M.Subtract(Position, Tip)
+
+        Call Check(Ok And Lab.Glow.ShimmerVisible And M.Dot(Position, Position) < 625.0)
+
+        Show Screen
+
+        Lab.Time = 4000
+
+        If Mode = Water.SHIELD Then
+            Lab.Time = 2610
+        End If
+
+        Call Scene.Update(Lab, 0)
+        Call Scene.Draw(Lab)
+        Call Check(Lab.ErrorCode = 0 And Lab.Water.Visible)
+
+        Show Screen
+
+        Lab.Time = 1000
+
+        Call Scene.Update(Lab, 0)
+        Call Check(Lab.ErrorCode = 0)
+    End For
+
+Loop Until True
+
+Call Scene.Destroy(Lab)
+Call Check(G.GpuParticleValue3D(G.GPU_PARTICLE_QUERY_TOTAL_CAPACITY) = 0)
+Call Check(G.LiveParticleBatchCount3D() = 0)
+Call Check(G.LiveMaterialCount3D() = 0)
+Call Check(G.LiveTextureCount3D() = 0)
+
+Print "Water Lab native failures: "; Failures
+
+Sub Check(Condition As Boolean)
+
+    If Not Condition Then
+        Failures = Failures + 1
+        Print "Water Lab check failed in mode "; Mode
+    End If
+
+End Sub

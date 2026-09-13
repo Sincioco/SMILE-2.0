@@ -471,6 +471,8 @@ Public Const GPU_PARTICLE_SHADER_THERMAL = 1
 Public Const GPU_PARTICLE_SHADER_THERMAL_BLUE = 4
 Public Const GPU_PARTICLE_SHADER_SMOKE = 2
 Public Const GPU_PARTICLE_SHADER_EMBER = 3
+''' Native texture-color particles preserve the material and texture RGB without a fire tint.
+Public Const GPU_PARTICLE_SHADER_TEXTURED = 5
 Public Const GPU_PARTICLE_QUERY_RESOURCE_CAPACITY = 30
 Public Const GPU_PARTICLE_QUERY_RESOURCE_ACTIVE = 31
 Public Const GPU_PARTICLE_QUERY_RESOURCE_PENDING = 32
@@ -3122,6 +3124,27 @@ Public Function ConfigureDistortion3D(
         0,
         0
     ) <> 0
+
+    Return Result
+
+End Function
+
+''' Native lit water on transparent surfaces, with scene refraction and view-dependent reflections.
+Public Function SetEffectMaterialWater3D(ByRef Material As Core.Material3D,
+    Enabled As Boolean, Optional RoughnessPercent As Number = 18,
+    Optional FoamPercent As Number = 10, Optional TimeMilliseconds As Number = 0) As Boolean
+
+    Dim Result As Boolean
+    Dim EnabledValue As Number
+
+    EnabledValue = 0
+
+    If Enabled Then
+        EnabledValue = 1
+    End If
+
+    Result = Dispatch(COMMAND_DISTORTION, 4, Material.Handle, EnabledValue,
+        RoughnessPercent, FoamPercent, TimeMilliseconds, 0, 0, 0, 0) <> 0
 
     Return Result
 

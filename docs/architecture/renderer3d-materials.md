@@ -2,6 +2,26 @@
 
 `Smile.Simple3D.Graphics3D` exposes one reusable material system for every 3D application. Renderer3D remains unaware of battles, characters, and individual games. M2 adds a PBR-lite path beside the unchanged simple path; it does not replace Renderer2D, SM3D v1, simple materials, or skeletal animation.
 
+## Native water effect material
+
+`SetEffectMaterialWater3D(Material, Enabled, RoughnessPercent = 18,
+FoamPercent = 10, TimeMilliseconds = 0)` selects lit water for an alpha-blended
+effect material. Roughness is 1–100, foam is 0–100, and time is a nonnegative
+32-bit millisecond value. It reuses the existing native distortion command family
+(operation 4); it changes no SM3D or public handle format. Disabling restores the
+standard effect shader. Web adoption is explicitly on hold.
+
+The native `graphics/water_surface3d.h` shader owns Fresnel/GGX surface lighting,
+animated normals, depth-dependent absorption/refraction, and a bounded 20-step
+screen-space reflection search. The draw owner provides camera/light constants
+and temporarily borrows the existing resolved opaque scene. Offscreen reflections
+use an analytic sky/horizon fallback; missing scene capture falls back to tinted
+water and environment reflection. The RAII binding releases its borrowed texture
+before the next render pass. No additional scene targets, readback, ray tracing,
+fluid solver, game state, or resource-cap increases are introduced. The native
+Water Lab exercises rendering, impact, seek and cleanup; the existing GPU/fallback
+and native graphics checks protect other effect families.
+
 ## Public texture API
 
 `LoadTexture3D(path, filter, wrap)` keeps its original nearest/linear behavior. `LoadTexture3DEx(path, usage, filter, wrap, anisotropy)` adds explicit PBR semantics:

@@ -1,0 +1,292 @@
+''' The Lab owns its preview actors, water context, renderer resources and presentation clock.
+Module Smile.Tools.WaterLabScene
+
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Graphics3D As G
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.PrecisionCamera3D As Camera
+Import Smile.Simple3D.Character3D As Character
+Import Smile.Simple3D.CharacterGlow3D As Glow
+Import Smile.Simple3D.WaterVfx3D As Water
+Import Smile.Simple3D.WaterStorm3D As Storm
+Import Smile.Simple3D.LightningVfx3D As Lightning
+Import Smile.Simple3D.Arena3D As Arena
+
+Public Type State
+    Ready As Boolean
+    ErrorCode As Number
+    Mode As Number
+    Time As Number
+    Duration As Number
+    SpeedPercent As Number
+    TimeRemainder As Number
+    Paused As Boolean
+    Orbit As Boolean
+    AudioEnabled As Boolean
+    SoundPlayed As Boolean
+    ImpactPlayed As Boolean
+    Clip As Text
+    Frame As Water.Frame
+    Water As Water.Context
+    Storm As Storm.Context
+    Glow As Glow.Context
+    Mira As Character.Actor
+    Floor As Arena.ArenaFloor
+    Targets[4] As Core.Object3D
+    BaseCamera As P.Camera3D
+    Camera As P.Camera3D
+    Controls As Camera.Controls
+End Type
+
+Public Sub Start(ByRef Value As State)
+
+    Dim Index As Number
+    Dim Ok As Boolean
+
+    Call G.ResetRenderer3D()
+
+    Ok = G.ConfigureSoftDepth3D(1)
+    Ok = G.ConfigureDistortion3D(1, 2) And Ok
+    Ok = G.ConfigurePostProcessing3D(True, True, True, 100, 1200, 45, 2, 2, 4) And Ok
+    Ok = G.SetAmbientLight3D(210, 225, 255, 90) And Ok
+    Ok = G.SetDirectionalLight3D(-35, -80, 25, 255, 247, 235, 115) And Ok
+    Ok = P.SetPointLight(1, P.Vector(0.0, 240.0, -190.0), 200, 222, 255, 110, 850) And Ok
+    Ok = P.SetPointLight(2, P.Vector(-100.0, 170.0, 180.0), 55, 155, 255, 160, 650) And Ok
+    Ok = Lightning.Initialize("Assets/Lightning", 4096, G.GPU_PARTICLE_SIMULATION_GPU_FAST, 8192) And Ok
+    Value.Mira = Character.LoadActor("Assets/Mira.sm3d")
+    Ok = Character.IsValid(Value.Mira) And Ok
+    Ok = Character.SetScale(Value.Mira, 12000) And Ok
+    Ok = Character.Place(Value.Mira, -160, 0, 0) And Ok
+    Ok = Character.Rotate(Value.Mira, 0, -90, 0) And Ok
+    Ok = Water.Prepare(Value.Water, "Assets/Water") And Ok
+    Value.Floor = Arena.Create(1000, 800, 45, 65, 95, 45, 1)
+
+    Call G.SetObjectColor(Value.Floor.Floor, 28, 40, 60)
+
+    For Index = 0 To 3
+        Value.Targets[Index] = G.CreateCylinder3D(12, 75)
+
+        Call G.SetObjectPosition(Value.Targets[Index], -80 + Index * 85, 38, 35)
+        Call G.SetObjectColor(Value.Targets[Index], 40, 85, 120)
+    End For
+
+    Value.BaseCamera.Position = P.Vector(10.0, 220.0, -560.0)
+    Value.BaseCamera.Target = P.Vector(0.0, 65.0, 0.0)
+    Value.BaseCamera.UpDirection = P.Vector(0.0, 1.0, 0.0)
+    Value.BaseCamera.FovDegrees = 55.0
+    Value.BaseCamera.NearPlane = 1.0
+    Value.BaseCamera.FarPlane = 3000.0
+    Value.Camera = Value.BaseCamera
+    Value.Mode = Water.WATER_BALL
+    Value.Duration = 5000
+    Value.SpeedPercent = 200
+    Value.AudioEnabled = True
+    Value.Orbit = True
+    Value.Ready = Ok And Value.Floor.Ready
+
+    If Not Value.Ready Then
+        Value.ErrorCode = Max(1, G.LastError())
+    End If
+
+    Call Restart(Value)
+
+End Sub
+
+Public Sub Restart(ByRef Value As State)
+
+    Dim Ok As Boolean
+
+    Value.Time = 0
+    Value.SoundPlayed = False
+    Value.ImpactPlayed = False
+    Value.Clip = "Attack"
+
+    If Value.Mode = Water.HEAL Then
+        Value.Clip = "HealParty"
+    Else If Value.Mode = Water.SHIELD Then
+        Value.Clip = "Defend"
+        Value.Frame.ImpactMember = (Value.Frame.ImpactMember + 1) Mod 4
+    End If
+
+    Call Storm.Destroy(Value.Storm)
+
+    Ok = Character.PlayAnimation(Value.Mira, Value.Clip, False)
+
+End Sub
+
+Public Sub Update(ByRef Value As State, Elapsed As Number)
+
+    Dim Index As Number
+    Dim ClipDuration As Number
+    Dim Ok As Boolean
+    Dim Charge As Double
+    Dim SimulationElapsed As Number
+
+    If Not Value.Ready Then
+        Return
+    End If
+
+    If Not Value.Paused Then
+
+        SimulationElapsed = Elapsed * Value.SpeedPercent + Value.TimeRemainder
+        Value.TimeRemainder = SimulationElapsed Mod 100
+        SimulationElapsed = SimulationElapsed / 100
+        Value.Time = Value.Time + SimulationElapsed
+
+    End If
+
+    If Value.Time >= Value.Duration Then
+        Call Restart(Value)
+    End If
+
+    If Value.Orbit Then
+        Value.Controls.OrbitYaw = Value.Controls.OrbitYaw + ToDouble(Elapsed) * 0.003
+    End If
+
+    Ok = Camera.AdvanceCameraControls(Value.Controls, Elapsed, False)
+    Value.Camera = Camera.ApplyScreenSpaceCameraControls(Value.BaseCamera, Value.Controls)
+    Value.Frame.Mode = Value.Mode
+    Value.Frame.Time = Value.Time
+    Value.Frame.Progress = ToDouble(Value.Time) / ToDouble(Value.Duration)
+    Value.Frame.Strength = Clamp(Min(Value.Frame.Progress * 5.0,
+        (1.0 - Value.Frame.Progress) * 7.0), 0.0, 1.0)
+    Value.Frame.Target = P.Vector(162.0, 58.0, 35.0)
+    Value.Frame.MemberCount = 4
+    Value.Frame.Members[0] = P.Vector(-160.0, 0.0, 0.0)
+
+    For Index = 1 To 3
+        Value.Frame.Members[Index] = P.Vector(-165.0 + ToDouble(Index) * 85.0, 0.0, 35.0)
+    End For
+
+    Value.Frame.ImpactActive = Value.Mode = Water.SHIELD And Value.Time >= 2500 And Value.Time < 3400
+    Value.Frame.ImpactProgress = Clamp(ToDouble(Value.Time - 2500) / 900.0, 0.0, 1.0)
+
+    Charge = 0.0
+
+    If (Value.Mode = Water.WATER_BALL Or
+        Value.Mode = Water.WAVE Or
+        Value.Mode = Water.STORM) Then
+        Charge = Water.RecoilDistance(Value.Frame.Progress)
+    End If
+
+    Ok = P.SetPosition(Value.Targets[3], 175.0 + Charge, 38.0, 35.0) And Ok
+
+    For Index = 0 To Character.ClipCount(Value.Mira) - 1
+
+        If Character.ClipName(Value.Mira, Index) = Value.Clip Then
+            ClipDuration = Character.ClipDuration(Value.Mira, Index)
+        End If
+
+    End For
+
+    Ok = Character.SetAnimationTime(Value.Mira,
+        ToNumber(Round(Value.Frame.Progress * ToDouble(ClipDuration)))) And Ok
+    Ok = Character.Update(Value.Mira, 0) And Ok
+    Ok = Character.TrySocketPositionPrecise(Value.Mira, "StaffTip", 0, False, Value.Frame.Origin) And Ok
+    Ok = Water.Update(Value.Water, Value.Frame) And Ok
+    Ok = Storm.Update(Value.Storm, Value.Frame, P.Vector(-80.0, 115.0, 35.0)) And Ok
+    Charge = Value.Frame.Strength
+    Ok = Glow.Update(Value.Glow, Value.Mira, Charge, True, True,
+        Value.Time, Value.Water.DropTexture) And Ok
+    Ok = P.SetPointLight(0, Value.Frame.Origin, 40, 150, 255,
+        45 + ToNumber(Round(Charge * 130.0)), 180) And Ok
+
+    If Not Value.Paused Then
+        Ok = Lightning.UpdatePrecise(SimulationElapsed, Value.Camera) And Ok
+    Else
+        Ok = Lightning.UpdatePrecise(0, Value.Camera) And Ok
+    End If
+
+    If (Value.AudioEnabled And
+        Not Value.SoundPlayed And
+        Value.Frame.Progress >= 0.3) Then
+
+        Value.SoundPlayed = True
+
+        If Value.Mode = Water.HEAL Then
+
+            Play Sound "Assets/Audio/mira-heal-party.wav" On Channel 6
+
+        Else If Value.Mode = Water.WAVE Or Value.Mode = Water.STORM Then
+
+            Play Sound "Assets/Water/water-tsunami.wav" On Channel 6
+
+        Else
+
+            Play Sound "Assets/Audio/mira-water-attack.wav" On Channel 6
+
+        End If
+
+        If Value.Mode = Water.STORM Then
+
+            Play Sound "Assets/Lightning/thunder.wav" On Channel 7
+
+        End If
+
+    End If
+
+    If Value.AudioEnabled And Not Value.ImpactPlayed Then
+
+        If Value.Mode = Water.SHIELD And Value.Frame.ImpactActive Then
+            Value.ImpactPlayed = True
+
+            Play Sound "Assets/Water/water-barrier-hit.wav" On Channel 8
+
+        Else If Value.Mode >= Water.WATER_BALL And Value.Frame.Progress >= 0.72 Then
+            Value.ImpactPlayed = True
+
+            Play Sound "Assets/Water/water-splash.wav" On Channel 8
+
+        End If
+
+    End If
+
+    If Not Ok Then
+        Value.ErrorCode = Max(1, G.LastError())
+    End If
+
+End Sub
+
+Public Sub Draw(ByRef Value As State)
+
+    Dim Index As Number
+    Dim Ok As Boolean
+
+    Ok = Arena.ConfigureForFrame(Value.Floor, True, True)
+    Ok = P.SetCamera(Value.Camera) And Ok
+    Ok = G.BeginAcceptedCamera3D(18, 28, 45) And Ok
+    Ok = Arena.Draw(Value.Floor, True, True) And Ok
+    Ok = Character.Draw(Value.Mira) And Ok
+
+    For Index = 0 To 3
+        Ok = G.DrawObject3D(Value.Targets[Index]) And Ok
+    End For
+
+    Call Glow.Draw(Value.Glow)
+    Call Water.Draw(Value.Water)
+
+    Ok = Lightning.DrawAll() And Ok
+    Ok = G.End3DChecked() And Ok
+
+End Sub
+
+Public Sub Destroy(ByRef Value As State)
+
+    Dim Index As Number
+
+    Call Storm.Destroy(Value.Storm)
+    Call Glow.Destroy(Value.Glow)
+    Call Water.Destroy(Value.Water)
+    Call Character.Destroy(Value.Mira)
+    Call Lightning.Shutdown()
+    Call Arena.Destroy(Value.Floor)
+
+    For Index = 0 To 3
+        Call G.DestroyObject3D(Value.Targets[Index])
+    End For
+
+End Sub
+
+End Module

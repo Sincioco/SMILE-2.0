@@ -13,6 +13,7 @@
 #include "graphics_directx.h"
 #include "image_resource.h"
 #include "thermal_fire3d.h"
+#include "water_surface3d.h"
 
 // One logical subviewport; reset is the existing full-window behavior.
 static double smile_viewport_region3d[4];
@@ -127,6 +128,7 @@ static double smile_3d_viewport_height(void) {
 #define SMILE_3D_SOFT_DEPTH_AUTOMATIC_DISTANCE 24.0f
 #define SMILE_3D_VFX_SHADING_STANDARD 0
 #define SMILE_3D_VFX_SHADING_DISTORTION 1
+#define SMILE_3D_VFX_SHADING_WATER 2
 #define SMILE_3D_DISTORTION_OFF 0
 #define SMILE_3D_DISTORTION_RGBA8_PACKED 1
 #define SMILE_3D_DISTORTION_RGBA16_FLOAT 2
@@ -231,6 +233,9 @@ struct SmileMaterial3D
     float distortion_noise_speed;
     float distortion_flow_x;
     float distortion_flow_y;
+    float water_roughness;
+    float water_foam;
+    float water_time;
 };
 
 struct SmileModelChunkV2
@@ -566,6 +571,11 @@ struct SmileVfxConstants3D
     float distortion[4];
     float fire_render[4];
     float reflection_clip[4];
+    float water_camera[4];
+    float water_light_direction[4];
+    float water_light_color[4];
+    float water_parameters[4];
+    float water_viewport[4];
 };
 
 struct SmileDepthConstants3D
@@ -2542,6 +2552,19 @@ static long long smile_3d_distortion_command(long long operation,
     long long b, long long c, long long d, long long e, long long f,
     long long g)
 {
+    if (operation == 4)
+    {
+        SmileMaterial3D* material = smile_3d_material(b);
+        if (material == 0 || material->mode != 0 || material->alpha_mode != 2 ||
+            (c != 0 && c != 1) || d < 1 || d > 100 || e < 0 || e > 100 ||
+            f < 0 || f > 2147483647)
+        { smile_last_error3d = SMILE_3D_DISTORTION_ERROR_INVALID; return 0; }
+        material->vfx_shading_mode = c ? SMILE_3D_VFX_SHADING_WATER : SMILE_3D_VFX_SHADING_STANDARD;
+        material->water_roughness = (float)d / 100.0f;
+        material->water_foam = (float)e / 100.0f;
+        material->water_time = (float)f / 1000.0f;
+        return 1;
+    }
     if (operation == 1)
     {
         if (smile_frame_active3d || (b != 0 && b != 1) || c < 0 || c > 3)
@@ -3970,10 +3993,16 @@ static long long smile_3d_load_model_v2(const unsigned char* bytes, unsigned int
                 const unsigned char* a = bytes + vertex_chunk->offset + (part->first_vertex + ia) * 48;
                 const unsigned char* b = bytes + vertex_chunk->offset + (part->first_vertex + ib) * 48;
                 const unsigned char* c = bytes + vertex_chunk->offset + (part->first_vertex + ic) * 48;
-                float ux=smile_3d_read_float(b)-smile_3d_read_float(a),uy=smile_3d_read_float(b+4)-smile_3d_read_float(a+4),uz=smile_3d_read_float(b+8)-smile_3d_read_float(a+8);
-                float vx=smile_3d_read_float(c)-smile_3d_read_float(a),vy=smile_3d_read_float(c+4)-smile_3d_read_float(a+4),vz=smile_3d_read_float(c+8)-smile_3d_read_float(a+8);
-                float x=uy*vz-uz*vy,y=uz*vx-ux*vz,z=ux*vy-uy*vx;
-                if (x*x+y*y+z*z <= 0.000000000001f) { smile_last_error3d = 24; return 0; }
+                // Match the cooker's unit-independent area test for small model detail.
+                double ux=(double)smile_3d_read_float(b)-smile_3d_read_float(a),uy=(double)smile_3d_read_float(b+4)-smile_3d_read_float(a+4),uz=(double)smile_3d_read_float(b+8)-smile_3d_read_float(a+8);
+                double vx=(double)smile_3d_read_float(c)-smile_3d_read_float(a),vy=(double)smile_3d_read_float(c+4)-smile_3d_read_float(a+4),vz=(double)smile_3d_read_float(c+8)-smile_3d_read_float(a+8);
+                double scale=fmax(fmax(fabs(ux),fabs(uy)),fabs(uz));
+                scale=fmax(scale,fmax(fmax(fabs(vx),fabs(vy)),fabs(vz)));
+                if (!isfinite(scale) || scale <= 0) { smile_last_error3d = 24; return 0; }
+                ux/=scale;uy/=scale;uz/=scale;vx/=scale;vy/=scale;vz/=scale;
+                double x=uy*vz-uz*vy,y=uz*vx-ux*vz,z=ux*vy-uy*vx;
+                double area=x*x+y*y+z*z;
+                if (!isfinite(area) || area <= 1e-20) { smile_last_error3d = 24; return 0; }
             }
             for (unsigned int component = 0; component < 6; ++component)
                 if (computed[component] != part_bounds[part_index][component]) { smile_last_error3d = 24; return 0; }
@@ -4846,23 +4875,24 @@ static int smile_3d_create_gpu_particle_pipeline(void)
         "struct Particle{float4 positionAge;float4 velocityLifetime;float4 sizeRotationAngular;float4 thermalDensityNoise;uint4 seedFlagsGradientFrame;};"
         "cbuffer V:register(b0){row_major float4x4 vp;float4 cameraRight;float4 cameraUp;float4 atlasOutput;float4 material;float4 softDepth;float4 target;float4 distortion;float4 fireRender;}"
         "StructuredBuffer<Particle> particleState:register(t7);"
-        "struct I{float2 corner:POSITION;float2 uv:TEXCOORD0;};struct O{float4 p:SV_POSITION;float2 uv:TEXCOORD0;float4 color:COLOR0;float worldY:TEXCOORD1;};"
+        "struct I{float2 corner:POSITION;float2 uv:TEXCOORD0;};struct O{float4 p:SV_POSITION;float2 uv:TEXCOORD0;float4 color:COLOR0;float worldY:TEXCOORD1;float3 world:TEXCOORD2;};"
         "float3 ThermalColor(float t){if(t<.25)return lerp(float3(.16,.005,0),float3(.95,.1,.005),t*4);"
         "if(t<.55)return lerp(float3(.95,.1,.005),float3(1,.55,.03),(t-.25)/.3);"
         "if(t<.8)return lerp(float3(1,.55,.03),float3(1,.92,.3),(t-.55)/.25);return lerp(float3(1,.92,.3),float3(1,1,.96),(t-.8)*5);}"
-        "O main(I i,uint id:SV_InstanceID){O o;Particle state=particleState[id];if(state.seedFlagsGradientFrame.y==0){o.p=float4(-2,-2,2,1);o.uv=0;o.color=0;o.worldY=0;return o;}"
+        "O main(I i,uint id:SV_InstanceID){O o;Particle state=particleState[id];if(state.seedFlagsGradientFrame.y==0){o.p=float4(-2,-2,2,1);o.uv=0;o.color=0;o.worldY=0;o.world=0;return o;}"
         "float life=max(state.velocityLifetime.w,1);float ratio=saturate(state.positionAge.w/life);float size=lerp(state.sizeRotationAngular.x,state.sizeRotationAngular.y,ratio);"
         "float angle=radians(state.sizeRotationAngular.z);float c=cos(angle),s=sin(angle);float2 q=float2(i.corner.x*c-i.corner.y*s,i.corner.x*s+i.corner.y*c)*size;"
         "float3 right=cameraRight.xyz,up=cameraUp.xyz;"
         "if(fireRender.y>.5){float3 forward=cross(cameraRight.xyz,cameraUp.xyz);up=fireRender.y<1.5?float3(0,1,0):state.velocityLifetime.xyz;"
         "up-=forward*dot(up,forward);float n=length(up);if(n>.0001){up/=n;right=cross(up,forward);q=i.corner*size;q.y*=fireRender.y<1.5?1.7:clamp(length(state.velocityLifetime.xyz)/max(size,1)*.04,1,4);}else up=cameraUp.xyz;}"
-        "float3 world=state.positionAge.xyz+right*q.x+up*q.y;o.p=mul(float4(world,1),vp);o.worldY=world.y;"
+        "float3 world=state.positionAge.xyz+right*q.x+up*q.y;o.p=mul(float4(world,1),vp);o.worldY=world.y;o.world=world;"
         "uint columns=(uint)max(fireRender.z,1),rows=(uint)max(fireRender.w,1);uint frame=state.seedFlagsGradientFrame.x%(columns*rows);"
         "o.uv=(float2(frame%columns,frame/columns)+i.uv)/float2(columns,rows);"
         "float temperature=saturate(state.thermalDensityNoise.x),density=saturate(state.thermalDensityNoise.y);"
         "float3 color=fireRender.x>.5?ThermalColor(temperature):float3(1,lerp(.25,.85,temperature),.08);"
         "if(fireRender.x>1.5&&fireRender.x<2.5)color=float3(.24,.22,.2);"
-        "if(fireRender.x>3.5)color=color.bgr;"
+        "if(fireRender.x>3.5&&fireRender.x<4.5)color=color.bgr;"
+        "if(fireRender.x>4.5)color=float3(1,1,1);"
         "float fade=(1-ratio);if(fireRender.x>.5)fade*=saturate(state.positionAge.w/60);"
         "o.color=float4(color,density*fade);return o;}";
     ID3D11Device* device = (ID3D11Device*)smile_graphics_directx_device();
@@ -5111,18 +5141,19 @@ static int smile_3d_create_pipeline(void)
     static const char* particle_vertex_source =
         "cbuffer V:register(b0){row_major float4x4 vp;float4 cameraRight;float4 cameraUp;float4 atlasOutput;float4 material;}"
         "struct I{float2 corner:POSITION;float2 uv:TEXCOORD0;float4 positionSize:TEXCOORD1;float4 color:COLOR0;float4 rotationUv:TEXCOORD2;};"
-        "struct O{float4 p:SV_POSITION;float2 uv:TEXCOORD0;float4 color:COLOR0;float worldY:TEXCOORD1;};"
-        "O main(I i){O o;float c=cos(i.rotationUv.x),s=sin(i.rotationUv.x);float2 q=float2(i.corner.x*c-i.corner.y*s,i.corner.x*s+i.corner.y*c)*i.positionSize.w;float3 world=i.positionSize.xyz+cameraRight.xyz*q.x+cameraUp.xyz*q.y;o.p=mul(float4(world,1),vp);o.worldY=world.y;o.uv=i.rotationUv.yz+i.uv*atlasOutput.xy;o.color=i.color;return o;}";
+        "struct O{float4 p:SV_POSITION;float2 uv:TEXCOORD0;float4 color:COLOR0;float worldY:TEXCOORD1;float3 world:TEXCOORD2;};"
+        "O main(I i){O o;float c=cos(i.rotationUv.x),s=sin(i.rotationUv.x);float2 q=float2(i.corner.x*c-i.corner.y*s,i.corner.x*s+i.corner.y*c)*i.positionSize.w;float3 world=i.positionSize.xyz+cameraRight.xyz*q.x+cameraUp.xyz*q.y;o.p=mul(float4(world,1),vp);o.worldY=world.y;o.world=world;o.uv=i.rotationUv.yz+i.uv*atlasOutput.xy;o.color=i.color;return o;}";
     static const char* ribbon_vertex_source =
         "cbuffer V:register(b0){row_major float4x4 vp;float4 cameraRight;float4 cameraUp;float4 atlasOutput;float4 material;}"
-        "struct I{float3 p:POSITION;float2 uv:TEXCOORD0;float4 color:COLOR0;};struct O{float4 p:SV_POSITION;float2 uv:TEXCOORD0;float4 color:COLOR0;float worldY:TEXCOORD1;};"
-        "O main(I i){O o;o.p=mul(float4(i.p,1),vp);o.worldY=i.p.y;o.uv=i.uv;o.color=i.color;return o;}";
-    static const char* vfx_pixel_source =
-        "cbuffer V:register(b0){row_major float4x4 vp;float4 cameraRight;float4 cameraUp;float4 atlasOutput;float4 material;float4 softDepth;float4 target;float4 distortion;float4 fireRender;float4 reflectionClip;}"
+        "struct I{float3 p:POSITION;float2 uv:TEXCOORD0;float4 color:COLOR0;};struct O{float4 p:SV_POSITION;float2 uv:TEXCOORD0;float4 color:COLOR0;float worldY:TEXCOORD1;float3 world:TEXCOORD2;};"
+        "O main(I i){O o;o.p=mul(float4(i.p,1),vp);o.worldY=i.p.y;o.world=i.p;o.uv=i.uv;o.color=i.color;return o;}";
+    static const char vfx_pixel_prefix[] =
+        "cbuffer V:register(b0){row_major float4x4 vp;float4 cameraRight;float4 cameraUp;float4 atlasOutput;float4 material;float4 softDepth;float4 target;float4 distortion;float4 fireRender;float4 reflectionClip;float4 waterCamera;float4 waterLightDirection;float4 waterLightColor;float4 waterParameters;float4 waterViewport;}"
         "Texture2D effectTexture:register(t0);SamplerState effectSampler:register(s0);Texture2D sceneDepthTexture:register(t6);SamplerState sceneDepthSampler:register(s6);"
         "float3 ToLinear(float3 c){return lerp(c/12.92,pow((c+.055)/1.055,2.4),step(.04045,c));}"
-        "float Linear(float z){return softDepth.z*softDepth.w/max(softDepth.w-z*(softDepth.w-softDepth.z),.000001);}"
-        "float4 main(float4 p:SV_POSITION,float2 uv:TEXCOORD0,float4 color:COLOR0,float worldY:TEXCOORD1):SV_TARGET{if(reflectionClip.x>.5&&worldY<reflectionClip.y+.01)discard;float4 sampled=atlasOutput.w>.5?effectTexture.Sample(effectSampler,uv):float4(1,1,1,1);if(sampled.a>.0001)sampled.rgb/=sampled.a;float4 base=color*material*sampled;if(softDepth.x>.5){float2 screenUv=p.xy/target.xy;float scene=sceneDepthTexture.SampleLevel(sceneDepthSampler,screenUv,0).r;float distance=max(scene-Linear(p.z),0);base.a*=saturate(distance/max(softDepth.y,.0001));}if(distortion.x>.5){float wave=.65+.35*sin((uv.x+uv.y)*max(distortion.z,.01)*6.283185+distortion.w);float2 flow=float2(target.z,target.w);float flowLength=max(length(flow),.0001);return float4(flow/flowLength*distortion.y*base.a*wave,0,base.a);}float3 rgb=atlasOutput.z>.5?ToLinear(saturate(base.rgb))*max(cameraRight.w,1):saturate(base.rgb*max(cameraRight.w,1));return float4(rgb,base.a);}";
+        "float Linear(float z){return softDepth.z*softDepth.w/max(softDepth.w-z*(softDepth.w-softDepth.z),.000001);}";
+    static const char vfx_pixel_main[] =
+        "float4 main(float4 p:SV_POSITION,float2 uv:TEXCOORD0,float4 color:COLOR0,float worldY:TEXCOORD1,float3 world:TEXCOORD2):SV_TARGET{if(reflectionClip.x>.5&&worldY<reflectionClip.y+.01)discard;float4 sampled=atlasOutput.w>.5?effectTexture.Sample(effectSampler,uv):float4(1,1,1,1);if(sampled.a>.0001)sampled.rgb/=sampled.a;float4 base=color*material*sampled;if(softDepth.x>.5){float2 screenUv=p.xy/target.xy;float scene=sceneDepthTexture.SampleLevel(sceneDepthSampler,screenUv,0).r;float distance=max(scene-Linear(p.z),0);base.a*=saturate(distance/max(softDepth.y,.0001));}if(distortion.x>.5){float wave=.65+.35*sin((uv.x+uv.y)*max(distortion.z,.01)*6.283185+distortion.w);float2 flow=float2(target.z,target.w);float flowLength=max(length(flow),.0001);return float4(flow/flowLength*distortion.y*base.a*wave,0,base.a);}if(waterParameters.x>.5)return ShadeWater(p,uv,base,world);float3 rgb=atlasOutput.z>.5?ToLinear(saturate(base.rgb))*max(cameraRight.w,1):saturate(base.rgb*max(cameraRight.w,1));return float4(rgb,base.a);}";
     ID3D11Device* device = (ID3D11Device*)smile_graphics_directx_device();
     ID3DBlob* vs = 0;
     ID3DBlob* ps = 0;
@@ -5213,8 +5244,14 @@ static int smile_3d_create_pipeline(void)
             device, particle_vertex_source, "main", "vs_4_0", &particle_vs);
         if (SUCCEEDED(result)) result = smile_3d_compile(
             device, ribbon_vertex_source, "main", "vs_4_0", &ribbon_vs);
-        if (SUCCEEDED(result)) result = smile_3d_compile(
-            device, vfx_pixel_source, "main", "ps_4_0", &vfx_ps);
+        if (SUCCEEDED(result))
+        {
+            char source[sizeof(vfx_pixel_prefix) + sizeof(smile_water_surface_hlsl) + sizeof(vfx_pixel_main)];
+            strcpy_s(source, vfx_pixel_prefix);
+            strcat_s(source, smile_water_surface_hlsl);
+            strcat_s(source, vfx_pixel_main);
+            result = smile_3d_compile(device, source, "main", "ps_4_0", &vfx_ps);
+        }
         if (SUCCEEDED(result)) result = device->CreateVertexShader(
             particle_vs->GetBufferPointer(), particle_vs->GetBufferSize(), 0,
             &smile_particle_vertex_shader3d);
@@ -7924,6 +7961,30 @@ static int smile_3d_draw_vfx_submission(const SmileSubmission3D* submission)
     if (context == 0 || smile_particle_vertex_shader3d == 0 ||
         smile_ribbon_vertex_shader3d == 0 || smile_vfx_pixel_shader3d == 0)
     { smile_last_error3d = 57; return 0; }
+    ID3D11ShaderResourceView* water_snapshot = 0;
+    if (material->vfx_shading_mode == SMILE_3D_VFX_SHADING_WATER)
+    {
+        constants.water_parameters[0] = 1.0f;
+        constants.water_parameters[1] = material->water_roughness;
+        constants.water_parameters[2] = material->water_foam;
+        memcpy(constants.water_camera, smile_camera_position3d, sizeof(float) * 3);
+        constants.water_camera[3] = material->water_time;
+        memcpy(constants.water_light_direction, smile_directional_light3d.direction, sizeof(float) * 3);
+        memcpy(constants.water_light_color, smile_directional_light3d.color, sizeof(float) * 3);
+        constants.water_light_color[3] = smile_directional_light3d.enabled
+            ? smile_directional_light3d.intensity : 0;
+        constants.water_viewport[0] = (float)smile_3d_viewport_x();
+        constants.water_viewport[1] = (float)smile_3d_viewport_y();
+        constants.water_viewport[2] = (float)smile_3d_viewport_width();
+        constants.water_viewport[3] = (float)smile_3d_viewport_height();
+        if (!smile_reflection_pass3d && !smile_rendering_distortion_vectors3d &&
+            smile_distortion_effective3d != SMILE_3D_DISTORTION_OFF &&
+            smile_distortion_emitter_count3d > 0)
+            water_snapshot = smile_sample_count3d > 1
+                ? smile_scene_shader_view3d : smile_distortion_scratch_shader_view3d;
+        constants.water_parameters[3] = water_snapshot ? 1.0f : 0.0f;
+    }
+    SmileWaterTextureBinding3D water_binding(context, water_snapshot, smile_post_sampler3d);
     if (material->texture_handles[0] != 0)
     {
         texture = smile_3d_texture(material->texture_handles[0]);
@@ -9627,7 +9688,7 @@ static long long smile_3d_gpu_particle_system_command(long long operation,
         }
         if (operation == 15)
         {
-            valid = c >= 0 && c <= 4 && d >= 0 && d <= 2 && e >= 1 && e <= 8 && f >= 1 && f <= 8;
+            valid = c >= 0 && c <= 5 && d >= 0 && d <= 2 && e >= 1 && e <= 8 && f >= 1 && f <= 8;
             next.render[1]=(float)c; next.render[2]=(float)d;
             next.render[3]=(float)e; next.time[1]=(float)f;
         }

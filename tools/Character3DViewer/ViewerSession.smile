@@ -42,6 +42,8 @@ Public Sub SelectCharacterTab(ByRef Value As State, Index As Number)
         Value.ProfileIndex = ViewerProfiles.PROFILE_ZARA
     Else If Index = 6 Then
         Value.ProfileIndex = ViewerProfiles.PROFILE_VRAX
+    Else If Index = ViewerProfiles.CHARACTER_TAB_MIRA Then
+        Value.ProfileIndex = ViewerProfiles.PROFILE_MIRA
     Else If Index = ViewerProfiles.CHARACTER_TAB_MIRA1 Then
         Value.ProfileIndex = ViewerProfiles.PROFILE_MIRA1
     Else If Index = ViewerProfiles.CHARACTER_TAB_MIRA2 Then
@@ -61,7 +63,7 @@ Public Function ShouldSelectCharacterTab(ByRef Value As State,
     Result = Index >= 0 And Index <= ViewerProfiles.CHARACTER_TAB_PARTY_DRAGON
     Result = Result Or (ViewerProfiles.INCLUDE_MIRA_COMPARISONS And
         (Index >= ViewerProfiles.CHARACTER_TAB_MIRA1 And
-        Index <= ViewerProfiles.CHARACTER_TAB_MIRA3))
+        Index <= ViewerProfiles.CHARACTER_TAB_MIRA))
 
     Return Result
 
@@ -84,6 +86,8 @@ Public Sub CycleProfile(ByRef Value As State)
         Value.SelectedCharacterTab = 5
     Else If Value.ProfileIndex = ViewerProfiles.PROFILE_VRAX Then
         Value.SelectedCharacterTab = 6
+    Else If Value.ProfileIndex = ViewerProfiles.PROFILE_MIRA Then
+        Value.SelectedCharacterTab = ViewerProfiles.CHARACTER_TAB_MIRA
     Else If Value.ProfileIndex = ViewerProfiles.PROFILE_MIRA1 Then
         Value.SelectedCharacterTab = ViewerProfiles.CHARACTER_TAB_MIRA1
     Else If Value.ProfileIndex = ViewerProfiles.PROFILE_MIRA2 Then

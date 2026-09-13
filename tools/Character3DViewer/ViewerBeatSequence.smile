@@ -162,7 +162,7 @@ Public Function Name(Identity As Number) As Text
     Else If Identity = 5 Then
         Return "Vrax"
     Else If Identity = 6 Then
-        Return "Mira1"
+        Return "Mira"
     End If
 
     Return "Arin"
@@ -199,7 +199,7 @@ Public Function Opponent(Value As Party.State, Turn As Number) As Number
 
     Dim ReturnValue As Number
 
-    If Turn = MiraBattle.PARTY_TURN And Value.AttackCycle Mod 3 <> 0 Then
+    If Turn = MiraBattle.PARTY_TURN And MiraBattle.IsHealing(Value.AttackCycle) Then
         Return 0
     End If
 
@@ -382,6 +382,10 @@ Public Function Sample(ByRef Value As Party.State, ByRef Primary As C.Actor,
         AttackMilliseconds = Party.AttackDuration(Value, Primary, Value.Companion.Actor, Speed)
         Impact = 1300 + AttackMilliseconds * 64 / 100
 
+        If Turn = MiraBattle.PARTY_TURN Then
+            Impact = 1300 + AttackMilliseconds * 72 / 100
+        End If
+
         If Value.UnityRoster Then
             Impact = Party.HeroImpactTime(AttackMilliseconds, Turn)
         End If
@@ -392,7 +396,7 @@ Public Function Sample(ByRef Value As Party.State, ByRef Primary As C.Actor,
 
             If (C.ClipName(Boss.Actor, Index) = "Hit" And
                 Elapsed >= Impact And
-                (Turn <> MiraBattle.PARTY_TURN Or Value.AttackCycle Mod 3 = 0) And
+                (Turn <> MiraBattle.PARTY_TURN Or Not MiraBattle.IsHealing(Value.AttackCycle)) And
                 BossTime < C.ClipDuration(Boss.Actor, Index)) Then
                 BossName = "Hit"
             End If

@@ -1,0 +1,11 @@
+{
+  "collapsed_defect_edges": 16,
+  "maximum_vertex_move_m": 0.0010677744867280126,
+  "filled_faces": 0,
+  "split_pinched_fans": 22,
+  "triangles": 18438,
+  "boundary_edges": 0,
+  "non_manifold_edges": 0,
+  "non_manifold_vertices": 0,
+  "degenerate_faces": 0
+}

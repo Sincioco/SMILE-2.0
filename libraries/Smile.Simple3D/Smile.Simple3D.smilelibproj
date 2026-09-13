@@ -25,6 +25,9 @@
     <SmileSource Include="AetherBlade3D.smile" />
     <SmileSource Include="FireEmitter3D.smile" />
     <SmileSource Include="LightningVfx3D.smile" />
+    <SmileSource Include="WaterVfx3D.smile" />
+    <SmileSource Include="WaterStorm3D.smile" />
+    <SmileSource Include="CharacterGlow3D.smile" />
     <SmileSource Include="LightPool3D.smile" />
     <SmileSource Include="SceneVfx3D.smile" />
     <SmileSource Include="Arena3D.smile" />

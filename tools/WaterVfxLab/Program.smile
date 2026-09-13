@@ -1,0 +1,31 @@
+Option Explicit
+
+Import Smile.Tools.WaterLabScene As Scene
+Import Smile.Tools.WaterLabUi As UI
+
+Dim Lab As Scene.State
+Dim Key As Number
+Dim Previous As Number
+Dim Elapsed As Number
+
+Game Window "SMILE 2.0 - Water Lab" Size 1405 By 986
+
+Call Scene.Start(Lab)
+
+Previous = Timer()
+
+Do
+    Get Key Key
+    Elapsed = Max(0, Min(100, Timer() - Previous))
+    Previous = Timer()
+
+    Call UI.Update(Lab, Key)
+    Call Scene.Update(Lab, Elapsed)
+    Call Scene.Draw(Lab)
+    Call UI.Draw(Lab)
+
+    Show Screen
+
+Loop Until Game_Closed()
+
+Call Scene.Destroy(Lab)

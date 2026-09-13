@@ -8,6 +8,13 @@ The common deterministic CPU backend remains available for exact cross-target te
 
 ## Native D3D11 backend
 
+Native `GPU_PARTICLE_SHADER_TEXTURED` (mode 5) preserves texture/material RGB for
+water and other non-fire effects. It uses the existing force/turbulence simulation,
+alignment, fade and 80-byte state. Historical modes 0–4 are unchanged; mode 0's
+orange vertex tint is retained for compatibility. The D3D11 regression accepts 5
+and rejects 6. Both native simulation backends share the same draw shader. Web
+adoption of mode 5 is explicitly on hold; it is not currently a portable mode.
+
 Feature level 11 devices compile one cached compute shader and one cached particle vertex shader. Each fast system owns two default-usage structured buffers with SRV and UAV views plus one constant buffer. A 256-thread compute dispatch reads generation N and writes generation N+1. The render pass binds the current read buffer directly to the vertex shader, indexes it with `SV_InstanceID`, and issues one capacity-bounded instanced quad draw. Inactive slots are clipped in the vertex shader.
 
 Only committed changed slots cross the CPU/GPU boundary. There is no state readback, no per-frame full-state upload, and no CPU mutation of fast-path position, velocity, rotation, or thermal fields. Small CPU metadata arrays retain only scheduling facts needed by the public bounded lifecycle: active slot, serial, age, and lifetime.

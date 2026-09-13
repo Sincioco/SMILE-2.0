@@ -1,0 +1,10 @@
+{
+  "triangles": 1344,
+  "vertices": 530,
+  "removed_flat_duplicate_shells": 52,
+  "boundary_edges": 0,
+  "nonmanifold_edges": 0,
+  "nonmanifold_vertices": 0,
+  "degenerate_faces": 0,
+  "defects": []
+}

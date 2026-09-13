@@ -1,16 +1,15 @@
-''' Mira's water presentation uses caller-owned renderer resources and the actor's clip clock.
+''' Maps clip time and final actor positions into reusable water presentation.
 Module Smile.Tools.MiraWater
 
 Option Explicit
 
-Import Smile.Simple3D.Core As Core
 Import Smile.Simple3D.Character3D As Character
-Import Smile.Simple3D.Graphics3D As Graphics
 Import Smile.Simple3D.Precision3D As P
 Import Smile.Simple3D.PrecisionMath3D As M
+Import Smile.Simple3D.WaterVfx3D As Water
+Import Smile.Simple3D.WaterStorm3D As Storm
+Import Smile.Simple3D.CharacterGlow3D As Glow
 Import Smile.Tools.BattleAudio As Audio
-
-Private Const CAPACITY = 128
 
 Public Type Targets
     Attack As P.Vector3
@@ -21,51 +20,44 @@ End Type
 Public Type Context
     Ready As Boolean
     Visible As Boolean
-    Texture As Core.Texture3D
-    Material As Core.Material3D
-    Particles As Core.ParticleBatch3D
+    Effect As Water.Context
+    Storm As Storm.Context
+    Glow As Glow.Context
+    Conductor As P.Vector3
     Cue As Audio.CueState
+    ImpactCue As Audio.CueState
     Targets As Targets
+    AttackMode As Number
+    GuardTime As Number
+    Guarding As Boolean
+    ImpactElapsed As Number
+    ImpactMember As Number
 End Type
 
 Public Function Prepare(ByRef Value As Context) As Boolean
 
-    Dim ReturnValue As Boolean
+    Dim Result As Boolean
 
-    If Value.Ready Then
-        Return True
-    End If
+    Value.Ready = Water.Prepare(Value.Effect, "Assets/Water")
+    Value.AttackMode = Water.TORRENT
+    Result = Value.Ready
 
-    Value.Texture = Graphics.LoadTexture3D("TechnicalAssets\Generation2\VfxAtlas.png",
-        Graphics.TEXTURE_FILTER_LINEAR, Graphics.TEXTURE_WRAP_CLAMP)
-    Value.Material = Graphics.CreateEffectMaterial3D(Value.Texture,
-        Graphics.MATERIAL_ALPHA_ADDITIVE, 220)
-    Value.Particles = Graphics.CreateParticleBatch3D(CAPACITY, Value.Material,
-        Graphics.VFX_BILLBOARD_CAMERA, 4, 4)
-    Value.Ready = Value.Texture.Handle <> 0 And Value.Material.Handle <> 0 And Value.Particles.Handle <> 0
-
-    If Not Value.Ready Then
-        Call Destroy(Value)
-    End If
-
-    ReturnValue = Value.Ready
-
-    Return ReturnValue
+    Return Result
 
 End Function
 
 Public Sub Destroy(ByRef Value As Context)
 
-    Call Graphics.DestroyParticleBatch3D(Value.Particles)
-    Call Graphics.DestroyEffectMaterial3D(Value.Material)
-    Call Graphics.DestroyTexture3D(Value.Texture)
+    Dim Empty As Context
+
+    Call Glow.Destroy(Value.Glow)
+    Call Water.Destroy(Value.Effect)
+    Call Storm.Destroy(Value.Storm)
 
     Stop Sound On Channel 6
+    Stop Sound On Channel 8
 
-    Value.Ready = False
-    Value.Visible = False
-    Value.Cue.Clip = ""
-    Value.Targets.MemberCount = 0
+    Value = Empty
 
 End Sub
 
@@ -97,57 +89,64 @@ End Sub
 Public Sub UseStandaloneTargets(ByRef Value As Context, Actor As Character.Actor)
 
     Dim Ok As Boolean
+    Dim Rotation As P.Vector3
 
     Value.Targets.MemberCount = 1
     Ok = Character.TryPosition(Actor, Value.Targets.Members[0])
-    Value.Targets.Attack = Value.Targets.Members[0]
-    Value.Targets.Attack.Y = Value.Targets.Attack.Y + 55.0
-    Value.Targets.Attack.Z = Value.Targets.Attack.Z + 180.0
+    Ok = Character.TryRotation(Actor, Rotation) And Ok
+    Value.Targets.Attack = M.Add(Value.Targets.Members[0],
+        M.Rotate(P.Vector(0.0, 55.0, -180.0), Rotation))
+    Value.Guarding = False
+    Value.ImpactElapsed = -1
 
 End Sub
 
-Private Function AddDrop(ByRef Value As Context, Index As Number,
-    Position As P.Vector3, Size As Double, Opacity As Number) As Boolean
+''' Apply after the caller restores the boss's authored pose; never accumulate displacement.
+Public Function ApplyRecoil(Mira As Character.Actor, Boss As Character.Actor) As Boolean
 
-    Dim Result As Boolean
-    Dim RedValue As Number
+    Dim Source As P.Vector3
+    Dim Position As P.Vector3
+    Dim Direction As P.Vector3
+    Dim Duration As Number
+    Dim Index As Number
+    Dim Progress As Double
+    Dim Ok As Boolean
 
-    RedValue = 70
+    For Index = 0 To Character.ClipCount(Mira) - 1
 
-    If Index Mod 4 = 0 Then
-        RedValue = 215
-    End If
+        If Character.ClipName(Mira, Index) = "Attack" Then
+            Duration = Character.ClipDuration(Mira, Index)
+        End If
 
-    Result = P.SetParticle(Value.Particles, Index, Position, Size, 0.0, 4 + Index Mod 4)
-    Result = Graphics.SetParticleColor3D(Value.Particles, Index,
-        RedValue, 215, 255, Max(0, Min(100, Opacity))) And Result
+    End For
 
-    Return Result
+    Progress = ToDouble(Character.AnimationTime(Mira)) / ToDouble(Max(1, Duration))
+    Ok = Character.TryPosition(Mira, Source)
+    Ok = Character.TryPosition(Boss, Position) And Ok
+    Direction = M.Subtract(Position, Source)
+    Direction.Y = 0.0
+    Ok = M.TryNormalize(Direction, Direction) And Ok
+    Position = M.Add(Position, M.Scale(Direction, Water.RecoilDistance(Progress)))
+    Ok = Character.PlacePrecise(Boss, Position.X, Position.Y, Position.Z) And Ok
+
+    Return Ok
 
 End Function
 
 Public Function Update(ByRef Value As Context, Actor As Character.Actor,
-    Name As Text, Enabled As Boolean, Audible As Boolean) As Boolean
+    Name As Text, Enabled As Boolean, Audible As Boolean,
+    Optional StaffVisible As Boolean = True) As Boolean
 
     Dim Duration As Number
     Dim Time As Number
     Dim Index As Number
-    Dim ParticleCount As Number
-    Dim Member As Number
-    Dim Members As Number
-    Dim Phase As Double
-    Dim Envelope As Double
-    Dim Along As Double
-    Dim Angle As Double
-    Dim Rise As Double
-    Dim Radius As Double
-    Dim Point As P.Vector3
-    Dim Origin As P.Vector3
-    Dim Offset As P.Vector3
-    Dim Result As Boolean
-    Dim Ok As Boolean
     Dim Healing As Boolean
-    Dim Opacity As Number
+    Dim Guarding As Boolean
+    Dim Ok As Boolean
+    Dim Sample As Water.Frame
+    Dim Charge As Double
+    Dim CueTime As Number
+    Dim ImpactClock As Number
 
     If Not Value.Ready Then
         Return True
@@ -155,7 +154,7 @@ Public Function Update(ByRef Value As Context, Actor As Character.Actor,
 
     Time = Character.AnimationTime(Actor)
     Healing = Name = "HealOne" Or Name = "HealParty"
-    Value.Visible = Enabled And (Healing Or Name = "Attack")
+    Guarding = Value.Guarding Or Name = "Defend" Or Name = "Hit"
 
     For Index = 0 To Character.ClipCount(Actor) - 1
 
@@ -165,12 +164,70 @@ Public Function Update(ByRef Value As Context, Actor As Character.Actor,
 
     End For
 
-    Phase = ToDouble(Time) / ToDouble(Max(1, Duration))
-    Envelope = Clamp(Min((Phase - 0.12) * 5.0, (0.94 - Phase) * 6.0), 0.0, 1.0)
-    Value.Visible = Value.Visible And Envelope > 0.0
+    Sample.Time = Time
+    Sample.Progress = ToDouble(Time) / ToDouble(Max(1, Duration))
+    Sample.Strength = Clamp(Min((Sample.Progress - 0.12) * 5.0,
+        (0.98 - Sample.Progress) * 8.0), 0.0, 1.0)
+    Sample.Target = Value.Targets.Attack
+    Sample.MemberCount = Value.Targets.MemberCount
+    Sample.ImpactMember = Value.ImpactMember
+    Sample.Mode = Value.AttackMode
+
+    If Character.HasSocket(Actor, "StaffTip") Then
+        Ok = Character.TrySocketPositionPrecise(Actor, "StaffTip", 0, False, Sample.Origin)
+    Else
+        Ok = Character.TrySocketPositionPrecise(Actor, "HandLeft", 0, False, Sample.Origin)
+    End If
+
+    For Index = 0 To Sample.MemberCount - 1
+        Sample.Members[Index] = Value.Targets.Members[Index]
+    End For
+
+    If Healing Then
+
+        Sample.Mode = Water.HEAL
+
+        If Name = "HealOne" Then
+            Sample.MemberCount = Min(1, Sample.MemberCount)
+        End If
+
+    Else If Guarding Then
+
+        Sample.Mode = Water.SHIELD
+        Sample.Strength = Clamp(Sample.Progress * 4.0, 0.0, 1.0)
+        Sample.ImpactActive = Value.ImpactElapsed >= 0 And Value.ImpactElapsed < 900
+        Sample.ImpactProgress = Clamp(ToDouble(Value.ImpactElapsed) / 900.0, 0.0, 1.0)
+
+        If Value.Guarding Then
+            Sample.Time = Value.GuardTime
+            Sample.Strength = Clamp(ToDouble(Value.GuardTime) / 300.0, 0.0, 1.0)
+        End If
+
+        If Name = "Defend" And Not Value.Guarding Then
+            Sample.ImpactActive = Sample.Progress >= 0.5
+            Sample.ImpactProgress = Clamp((Sample.Progress - 0.5) * 2.0, 0.0, 1.0)
+        End If
+
+        If Name = "Hit" And Not Value.Guarding Then
+
+            Sample.Strength = 1.0 - Sample.Progress * 0.65
+            Sample.ImpactActive = True
+            Sample.ImpactProgress = Sample.Progress
+
+        End If
+
+    Else If Name <> "Attack" Then
+
+        Sample.Mode = 0
+
+    End If
+
+    If Not Enabled Then
+        Sample.Mode = 0
+    End If
 
     If Audio.CrossedCue(Value.Cue, Name, Time, Duration / 4,
-        Audible And Enabled And (Healing Or Name = "Attack")) Then
+        Audible And Enabled And (Healing Or Name = "Attack" Or Guarding)) Then
 
         If Name = "HealOne" Then
 
@@ -180,6 +237,10 @@ Public Function Update(ByRef Value As Context, Actor As Character.Actor,
 
             Play Sound "Assets/Audio/mira-heal-party.wav" On Channel 6
 
+        Else If Name = "Attack" And Value.AttackMode >= Water.WAVE Then
+
+            Play Sound "Assets/Water/water-tsunami.wav" On Channel 6
+
         Else
 
             Play Sound "Assets/Audio/mira-water-attack.wav" On Channel 6
@@ -188,82 +249,58 @@ Public Function Update(ByRef Value As Context, Actor As Character.Actor,
 
     End If
 
-    If Not Audible Then
-        Stop Sound On Channel 6
+    CueTime = Duration * 72 / 100
+    ImpactClock = Time
+
+    If Value.Guarding Then
+        CueTime = 0
+        ImpactClock = Value.ImpactElapsed
+    Else If Name = "Defend" Then
+        CueTime = Duration / 2
+    Else If Name = "Hit" Then
+        CueTime = 0
     End If
 
-    If Not Value.Visible Then
-        Result = Graphics.CommitParticleBatch3D(Value.Particles, 0)
+    If Audio.CrossedCue(Value.ImpactCue, Name, ImpactClock, CueTime,
+        Audible And Enabled And (Guarding Or (Name = "Attack" And Value.AttackMode >= Water.WATER_BALL))) Then
 
-        Return Result
-    End If
+        If Guarding Then
 
-    Ok = Character.TrySocketPositionPrecise(Actor, "HandLeft", 0, False, Origin)
-    Result = Ok
-    Opacity = ToNumber(Round(Envelope * 80.0))
+            Play Sound "Assets/Water/water-barrier-hit.wav" On Channel 8
 
-    If Healing Then
+        Else
 
-        Members = Min(4, Value.Targets.MemberCount)
+            Play Sound "Assets/Water/water-splash.wav" On Channel 8
 
-        If Name = "HealOne" Then
-            Members = Min(1, Members)
         End If
 
-        For Member = 0 To Members - 1
-
-            For Index = 0 To 23
-
-                Along = ToDouble((Index * 41 + Time / 3) Mod 1000) / 1000.0
-                Angle = ToDouble(Index) * 30.0 + ToDouble(Time) * 0.24
-                Radius = 27.0 + Along * 9.0
-                Offset = M.Rotate(P.Vector(Radius, 4.0 + Along * 72.0, 0.0),
-                    P.Vector(0.0, Angle, 0.0))
-                Point = M.Add(Value.Targets.Members[Member], Offset)
-                Result = AddDrop(Value, ParticleCount, Point, 7.0 - Along * 3.0, Opacity) And Result
-                ParticleCount = ParticleCount + 1
-            End For
-        End For
-
-    Else
-
-        For Index = 0 To 95
-
-            Along = ToDouble((Index * 10 + Time) Mod 1000) / 1000.0
-            Point = M.Lerp(Origin, Value.Targets.Attack, Along)
-            Rise = 36.0 * Along * (1.0 - Along)
-            Offset = M.Rotate(P.Vector(4.0 + Along * 8.0, 0.0, 0.0),
-                P.Vector(0.0, ToDouble(Index * 47 + Time / 2), 0.0))
-            Point = M.Add(Point, Offset)
-            Point.Y = Point.Y + Rise
-            Result = AddDrop(Value, ParticleCount, Point, 8.0 + Along * 4.0, Opacity) And Result
-            ParticleCount = ParticleCount + 1
-        End For
-
     End If
 
-    For Index = 0 To 15
+    If Not Audible Then
+        Stop Sound On Channel 6
+        Stop Sound On Channel 8
+    End If
 
-        Offset = M.Rotate(P.Vector(8.0, ToDouble(Index Mod 4) - 2.0, 0.0),
-            P.Vector(0.0, ToDouble(Index) * 22.5 + ToDouble(Time) * 0.3, 0.0))
-        Point = M.Add(Origin, Offset)
-        Result = AddDrop(Value, ParticleCount, Point, 5.0, Opacity) And Result
-        ParticleCount = ParticleCount + 1
-    End For
+    Ok = Water.Update(Value.Effect, Sample) And Ok
+    Charge = 0.0
 
-    Result = Graphics.CommitParticleBatch3D(Value.Particles, ParticleCount) And Result
+    If Sample.Mode <> 0 Then
+        Charge = Sample.Strength
+    End If
 
-    Return Result
+    Ok = Glow.Update(Value.Glow, Actor, Charge, StaffVisible, Enabled,
+        Sample.Time, Value.Effect.DropTexture) And Ok
+    Ok = Storm.Update(Value.Storm, Sample, Value.Conductor) And Ok
+    Value.Visible = Value.Effect.Visible
+
+    Return Ok
 
 End Function
 
 Public Sub Draw(ByRef Value As Context)
 
-    Dim Drawn As Boolean
-
-    If Value.Ready And Value.Visible Then
-        Drawn = Graphics.DrawParticleBatch3D(Value.Particles)
-    End If
+    Call Water.Draw(Value.Effect)
+    Call Glow.Draw(Value.Glow)
 
 End Sub
 

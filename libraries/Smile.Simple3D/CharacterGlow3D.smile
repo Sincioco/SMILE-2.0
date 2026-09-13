@@ -1,0 +1,219 @@
+''' Caller-owned animated body and equipment glow; borrows the actor's model and animator.
+Module Smile.Simple3D.CharacterGlow3D
+
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Character3D As Character
+Import Smile.Simple3D.Graphics3D As G
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.PrecisionMath3D As M
+
+Public Type Context
+    Ready As Boolean
+    Material As Core.Material3D
+    Parts[2] As Core.Object3D
+    Visible[2] As Boolean
+    HeadShimmer As Core.ParticleBatch3D
+    ShimmerMaterial As Core.Material3D
+    ShimmerVisible As Boolean
+End Type
+
+Public Function Prepare(ByRef Value As Context, Actor As Character.Actor,
+    ShimmerTexture As Core.Texture3D) As Boolean
+
+    Dim Model As Core.Model3D
+    Dim Animator As Core.Animator3D
+    Dim EmptyTexture As Core.Texture3D
+    Dim Index As Number
+    Dim Ok As Boolean
+
+    If Value.Ready Then
+        Return True
+    End If
+
+    Model.Handle = Character.ModelHandle(Actor)
+    Animator.Handle = Character.AnimatorHandle(Actor)
+    Value.Material = G.CreateEffectMaterial3D(EmptyTexture, G.MATERIAL_ALPHA_ADDITIVE, 260)
+    Ok = Value.Material.Handle <> 0
+
+    For Index = 0 To 1
+
+        Value.Parts[Index] = G.CreateModelPart3D(Model, Index)
+        Ok = Value.Parts[Index].Handle <> 0 And Ok
+        Ok = G.SetObjectMaterial3D(Value.Parts[Index], Value.Material) And Ok
+        Ok = G.SetObjectAnimator3D(Value.Parts[Index], Animator) And Ok
+        Ok = G.SetObjectCullMode3D(Value.Parts[Index], G.OBJECT_CULL_FRONT) And Ok
+
+        Call G.SetObjectColor(Value.Parts[Index], 35, 180, 255)
+        Call G.SetObjectShadows3D(Value.Parts[Index], False, False)
+    End For
+
+    If Character.HasSocket(Actor, "StaffTip") Then
+
+        Value.ShimmerMaterial = G.CreateEffectMaterial3D(ShimmerTexture, G.MATERIAL_ALPHA_ADDITIVE, 220)
+        Value.HeadShimmer = G.CreateParticleBatch3D(128, Value.ShimmerMaterial)
+        Ok = Value.ShimmerMaterial.Handle <> 0 And Value.HeadShimmer.Handle <> 0 And Ok
+
+    End If
+
+    Value.Ready = Ok
+
+    If Not Ok Then
+        Call Destroy(Value)
+    End If
+
+    Return Ok
+
+End Function
+
+Public Function Update(ByRef Value As Context, Actor As Character.Actor,
+    Strength As Double, StaffVisible As Boolean, Enabled As Boolean,
+    TimeMilliseconds As Number, ShimmerTexture As Core.Texture3D) As Boolean
+
+    Dim Index As Number
+    Dim Source As Core.Object3D
+    Dim Transform As P.Transform3D
+    Dim Center As P.Vector3
+    Dim Expansion As Double
+    Dim Opacity As Number
+    Dim Ok As Boolean
+
+    Ok = Prepare(Value, Actor, ShimmerTexture)
+
+    If Not Ok Then
+        Return False
+    End If
+
+    Ok = Character.TrySocketPositionPrecise(Actor, "Chest", 0, False, Center)
+    Strength = Clamp(Strength, 0.0, 1.0)
+
+    For Index = 0 To 1
+
+        Source.Handle = Character.PartObjectHandle(Actor, Index)
+        Ok = P.TryTransform(Source, Transform) And Ok
+        Expansion = 0.012 + Strength * 0.012
+        Opacity = ToNumber(Round(Strength * 65.0))
+        Value.Visible[Index] = Enabled And Strength > 0.0
+
+        If Index = 1 Then
+            Opacity = 30 + ToNumber(Round(Strength * 65.0))
+            Value.Visible[Index] = Enabled And StaffVisible
+        End If
+
+        Transform.Position = M.Subtract(Transform.Position,
+            M.Scale(M.Subtract(Center, Transform.Position), Expansion))
+        Transform.ScalePercent = M.Scale(Transform.ScalePercent, 1.0 + Expansion)
+        Ok = P.SetTransform(Value.Parts[Index], Transform) And Ok
+
+        Call G.SetObjectOpacity(Value.Parts[Index], Opacity)
+    End For
+
+    Ok = UpdateHeadShimmer(Value, Actor, TimeMilliseconds, Strength, StaffVisible And Enabled) And Ok
+
+    Return Ok
+
+End Function
+
+''' Socket-local placement keeps every shimmer attached to the head, including back carry.
+Private Function UpdateHeadShimmer(ByRef Value As Context, Actor As Character.Actor,
+    TimeMilliseconds As Number, Strength As Double, Visible As Boolean) As Boolean
+
+    Dim Tip As P.Vector3
+    Dim Grip As P.Vector3
+    Dim Axis As P.Vector3
+    Dim Tangent As P.Vector3
+    Dim Across As P.Vector3
+    Dim Position As P.Vector3
+    Dim Radius As Double
+    Dim Angle As Double
+    Dim Seconds As Double
+    Dim Height As Double
+    Dim Sparkle As Double
+    Dim Index As Number
+    Dim Opacity As Number
+    Dim Ok As Boolean
+
+    Value.ShimmerVisible = Visible And Value.HeadShimmer.Handle <> 0
+
+    If Value.HeadShimmer.Handle = 0 Then
+        Return True
+    End If
+
+    If Not Value.ShimmerVisible Then
+        Ok = G.CommitParticleBatch3D(Value.HeadShimmer, 0)
+
+        Return Ok
+    End If
+
+    Ok = Character.TrySocketPositionPrecise(Actor, "StaffTip", 0, False, Tip)
+    Ok = Character.TrySocketPositionPrecise(Actor, "StaffGrip", 0, False, Grip) And Ok
+    Axis = M.Subtract(Tip, Grip)
+    Radius = Sqrt(M.Dot(Axis, Axis)) * 0.4
+    Ok = M.TryNormalize(Axis, Axis) And Ok
+
+    If Not M.TryNormalize(M.Cross(Axis, P.Vector(0.0, 0.0, 1.0)), Tangent) Then
+        Ok = M.TryNormalize(M.Cross(Axis, P.Vector(1.0, 0.0, 0.0)), Tangent) And Ok
+    End If
+
+    Across = M.Cross(Axis, Tangent)
+    Seconds = ToDouble(TimeMilliseconds) / 1000.0
+
+    For Index = 0 To 127
+
+        Angle = ToDouble(Index) * 2.39996 + Seconds * 1.8
+        Height = Sin(ToDouble(Index) * 1.713 + Seconds * 0.6) * Radius * 0.9
+        Position = M.Add(Tip, M.Scale(Axis, Height))
+        Position = M.Add(Position, M.Scale(Tangent, Cos(Angle) * Radius))
+        Position = M.Add(Position, M.Scale(Across, Sin(Angle) * Radius))
+        Sparkle = 0.5 + 0.5 * Sin(Seconds * 5.0 + ToDouble(Index) * 2.17)
+        Sparkle = Sparkle * Sparkle
+        Opacity = ToNumber(Round((15.0 + Sparkle * 70.0) * (0.6 + Strength * 0.4)))
+        Ok = P.SetParticle(Value.HeadShimmer, Index, Position,
+            Radius * (0.045 + Sparkle * 0.065), Angle * 180.0 / M.PI, 0) And Ok
+        Ok = G.SetParticleColor3D(Value.HeadShimmer, Index, 170, 235, 255, Opacity) And Ok
+    End For
+
+    Ok = G.CommitParticleBatch3D(Value.HeadShimmer, 128) And Ok
+
+    Return Ok
+
+End Function
+
+Public Sub Draw(ByRef Value As Context)
+
+    Dim Index As Number
+    Dim Ok As Boolean
+
+    For Index = 0 To 1
+
+        If Value.Ready And Value.Visible[Index] Then
+            Ok = G.DrawObject3D(Value.Parts[Index])
+        End If
+
+    End For
+
+    If Value.Ready And Value.ShimmerVisible Then
+        Ok = G.DrawParticleBatch3D(Value.HeadShimmer)
+    End If
+
+End Sub
+
+Public Sub Destroy(ByRef Value As Context)
+
+    Dim Index As Number
+    Dim Empty As Context
+
+    For Index = 0 To 1
+        Call G.DestroyObject3D(Value.Parts[Index])
+    End For
+
+    Call G.DestroyParticleBatch3D(Value.HeadShimmer)
+    Call G.DestroyEffectMaterial3D(Value.ShimmerMaterial)
+    Call G.DestroyEffectMaterial3D(Value.Material)
+
+    Value = Empty
+
+End Sub
+
+End Module

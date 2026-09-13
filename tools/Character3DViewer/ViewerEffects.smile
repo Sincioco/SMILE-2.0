@@ -524,7 +524,7 @@ Public Sub CreateEpicGlow(ByRef Value As State, ProfileIndex As Number,
 
     Value.ProfileIndex = ProfileIndex
 
-    If ViewerProfiles.IsMiraComparison(ProfileIndex) Then
+    If ViewerProfiles.IsMiraCharacter(ProfileIndex) Then
         GlowReady = MiraWater.Prepare(Value.Water)
     End If
 
@@ -748,12 +748,12 @@ Public Sub UpdateEquipmentFire(
 
     Dim WaterReady As Boolean
 
-    If ViewerProfiles.IsMiraComparison(ProfileIndex) Then
+    If ViewerProfiles.IsMiraCharacter(ProfileIndex) Then
 
         Call MiraWater.UseStandaloneTargets(Value.Water, Actor)
 
         WaterReady = MiraWater.Update(Value.Water, Actor, SelectedClipLabel,
-            Not PrimaryKnockedOut, Not ScenePaused And Not CalibrationEditing)
+            Not PrimaryKnockedOut, Not ScenePaused And Not CalibrationEditing, SwordVisible)
 
         Return
 

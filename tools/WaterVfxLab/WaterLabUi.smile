@@ -1,0 +1,147 @@
+''' Lab controls and inspection readouts; effect and renderer ownership stays in WaterLabScene.
+Module Smile.Tools.WaterLabUi
+
+Option Explicit
+
+Import Smile.Tools.WaterLabScene As Scene
+Import Smile.Simple3D.Graphics3D As G
+Import Smile.Simple3D.PrecisionCamera3D As Camera
+Import Smile.UI.Controls As UI
+
+Public Function Caption(Mode As Number) As Text
+
+    If Mode = 1 Then
+        Return "Healing Veil"
+    Else If Mode = 2 Then
+        Return "Tide Barrier"
+    Else If Mode = 3 Then
+        Return "Torrent"
+    Else If Mode = 4 Then
+        Return "Impact"
+    Else If Mode = 5 Then
+        Return "Waterball"
+    Else If Mode = 6 Then
+        Return "Tsunami"
+    End If
+
+    Return "Tempest Combo"
+
+End Function
+
+Public Sub Update(ByRef Value As Scene.State, Key As Number)
+
+    Dim Index As Number
+    Dim ButtonWidth As Number
+
+    ButtonWidth = (Window_Width() - 40) / 7
+
+    For Index = 1 To 7
+
+        If UI.Clicked(20 + (Index - 1) * ButtonWidth, 64, ButtonWidth - 6, 32) Then
+            Value.Mode = Index
+
+            Call Scene.Restart(Value)
+        End If
+
+    End For
+
+    If Key = KEY_TAB Then
+        Value.Mode = Value.Mode Mod 7 + 1
+
+        Call Scene.Restart(Value)
+    End If
+
+    If Key = KEY_SPACE Or UI.Clicked(20, 112, 100, 28) Then
+        Value.Paused = Not Value.Paused
+    End If
+
+    If Key = KEY_R Or UI.Clicked(128, 112, 100, 28) Then
+        Call Scene.Restart(Value)
+    End If
+
+    If Key = KEY_O Or UI.Clicked(236, 112, 110, 28) Then
+        Value.Orbit = Not Value.Orbit
+    End If
+
+    If UI.Clicked(354, 112, 100, 28) Then
+        Value.AudioEnabled = Not Value.AudioEnabled
+    End If
+
+    If Key = KEY_MINUS Or UI.Clicked(476, 112, 38, 28) Then
+        Value.SpeedPercent = Max(25, Value.SpeedPercent - 25)
+    End If
+
+    If Key = KEY_PLUS Or UI.Clicked(638, 112, 38, 28) Then
+        Value.SpeedPercent = Min(400, Value.SpeedPercent + 25)
+    End If
+
+    If Key = KEY_ENTER Or Pointer_Pressed(POINTER_SECONDARY) Then
+        Call Camera.ResetCameraControls(Value.Controls)
+    End If
+
+    If Pointer_Y() > 150 And Pointer_Y() < Window_Height() - 60 Then
+
+        If Pointer_Held(POINTER_MIDDLE) Then
+
+            Value.Orbit = False
+            Value.Controls.OrbitYaw = Value.Controls.OrbitYaw + ToDouble(Pointer_Delta_X()) * 0.3
+            Value.Controls.OrbitPitch = Clamp(Value.Controls.OrbitPitch + ToDouble(Pointer_Delta_Y()) * 0.3, -60.0, 60.0)
+
+        Else If Pointer_Held(POINTER_PRIMARY) Then
+
+            Value.Orbit = False
+            Value.Controls.PanX = Clamp(Value.Controls.PanX - ToDouble(Pointer_Delta_X()) * 0.3, -250.0, 250.0)
+            Value.Controls.PanY = Clamp(Value.Controls.PanY + ToDouble(Pointer_Delta_Y()) * 0.3, -150.0, 150.0)
+
+        End If
+
+        Value.Controls.ZoomTarget = Clamp(Value.Controls.ZoomTarget -
+            ToDouble(Pointer_Wheel_Delta()) * 3.0, -30.0, 45.0)
+
+    End If
+
+End Sub
+
+Public Sub Draw(ByRef Value As Scene.State)
+
+    Dim Index As Number
+    Dim ButtonWidth As Number
+    Dim Bottom As Number
+
+    ButtonWidth = (Window_Width() - 40) / 7
+    Bottom = Window_Height() - 54
+
+    Fill Rectangle 0, 0, Window_Width(), 151, Rgb(6, 16, 30) Opacity 94
+    Draw Text "SMILE 2.0 - Water Lab" At 20, 20 Size 24 Color White
+    Draw Text "Mira / Healing and combat" At 440, 28 Size 13 Color Cyan
+
+    For Index = 1 To 7
+        Call UI.DrawButton(20 + (Index - 1) * ButtonWidth, 64, ButtonWidth - 6, 32, Caption(Index), Value.Mode = Index)
+    End For
+
+    Call UI.DrawButton(20, 112, 100, 28, "Pause", Value.Paused)
+    Call UI.DrawButton(128, 112, 100, 28, "Restart", False)
+    Call UI.DrawButton(236, 112, 110, 28, "Orbit", Value.Orbit)
+    Call UI.DrawButton(354, 112, 100, 28, "Sound", Value.AudioEnabled)
+    Call UI.DrawButton(476, 112, 38, 28, "-", False)
+    Call UI.DrawButton(638, 112, 38, 28, "+", False)
+
+    Draw Text "Speed" At 529, 118 Size 13 Color Light_Gray
+    Draw Number Value.SpeedPercent At 580, 118 Size 13 Color Cyan
+    Draw Text "%" At 614, 118 Size 13 Color Cyan
+
+    Fill Rectangle 0, Bottom, Window_Width(), 54, Rgb(6, 16, 30) Opacity 94
+    Draw Text "GPU Spray" At 20, Bottom + 8 Size 12 Color Light_Gray
+    Draw Number Value.Water.Spray.ActiveCount At 130, Bottom + 8 Size 12 Color Cyan
+    Draw Text "D3D11 Backend" At 225, Bottom + 8 Size 12 Color Light_Gray
+    Draw Number Value.Water.Spray.EffectiveSimulation At 370, Bottom + 8 Size 12 Color Cyan
+    Draw Text "LMB Pan / MMB Orbit / Wheel Zoom / RMB Reset / Space Pause / Tab Effect / +/- Speed" At 20, Bottom + 31 Size 11 Color Light_Gray
+
+    If Not Value.Ready Or Value.ErrorCode <> 0 Then
+        Draw Text "Effect needs attention" At 710, 118 Size 13 Color Red
+        Draw Number Value.ErrorCode At 960, 118 Size 13 Color Red
+    End If
+
+End Sub
+
+End Module

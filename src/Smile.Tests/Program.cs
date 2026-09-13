@@ -229,6 +229,10 @@ Run("Viewer and game letter shortcuts are shared named input constants", () =>
     Equal(36L, SyntaxFacts.GetBuiltInConstantValue(SyntaxKind.KeyYKeyword));
     Equal(37L, SyntaxFacts.GetBuiltInConstantValue(SyntaxKind.KeyZKeyword));
     Equal(38L, SyntaxFacts.GetBuiltInConstantValue(SyntaxKind.KeyEKeyword));
+    Equal(SyntaxKind.KeyPlusKeyword, SyntaxFacts.GetKeywordKind("key_plus"));
+    Equal(SyntaxKind.KeyMinusKeyword, SyntaxFacts.GetKeywordKind("key_minus"));
+    Equal(39L, SyntaxFacts.GetBuiltInConstantValue(SyntaxKind.KeyPlusKeyword));
+    Equal(40L, SyntaxFacts.GetBuiltInConstantValue(SyntaxKind.KeyMinusKeyword));
     Equal(false, Analyze("Game Window \"UI\"\nDim Key As Number\nDim Held As Boolean\nGet Key Key\nHeld = Key_Held(KEY_BACKTICK)\nIf Key = KEY_X Or Key = KEY_Y Or Key = KEY_Z Or Key = KEY_E Then\nPrint Held\nEnd If\n").HasErrors);
 });
 Run("Queued key snapshots share typing and backend dispatch", () =>

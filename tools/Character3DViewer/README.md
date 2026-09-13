@@ -2,14 +2,23 @@
 
 ## Mira comparisons (native)
 
-**Mira1** is Sin's selected Pixal3D healer, **Mira2** loads the independent TRELLIS.2
+**Mira** is the new Tripo healer and appears immediately before **Mira1**, the preserved
+Pixal3D healer. **Mira2** loads the independent TRELLIS.2
 candidate, and **Mira3** loads Hunyuan3D-2.1 shape/paint with a refined face texture.
-All three have nine animation choices. Use **Weapon** or **W** to hide/show each
+All four have nine animation choices. Use **Weapon** or **W** to hide/show each
 character's own staff. Mira2/Mira3 each have a closed 19,652-triangle equipped surface,
 baked textures and measured floor corrections. This is an appearance and animation
-comparison; final facial/cloth quality remains under review. Mira1 is the current
-healer in both Party battles, cycling Water Attack, Heal One (Arin), and Heal Party with
-blue water VFX and sound. Tab/click selects her Beat Camera. Healing previews
+comparison. New Mira is the current
+healer in both Party battles, cycling Torrent, Heal One (Arin), Heal Party, Waterball,
+Tsunami and the Mira/Orin Tempest combo with blue water VFX and sound. The staff glows
+while equipped, small shimmering particles circle only its head/crystal, and a body
+aura rises during a cast. Boss attacks meet small, subtle
+water shields in front of individual party members. At impact the struck shield
+gives slightly, then recovers; impact droplets spread across it and disperse around
+its rim. No shield encloses the whole
+party. Waterball contact adds a splash and brief
+recoil. The native Water Lab exposes all seven effect previews independently.
+Tab/click selects her Beat Camera. Healing previews
 existing presentation states; no Sin Star I game code or health system is changed.
 Mira1 now has a cleaner 4K reference bake, repaired waist cape, closed staff and baked
 free-left-hand casts/staff hold. Its original comparison source is preserved. It has
@@ -19,7 +28,13 @@ Canonical packages and current limitations are in
 `games/SinStarI/SourceAssets/Characters/Healer/MiraV1/README.md` and
 `games/SinStarI/SourceAssets/Characters/Healer/MiraV2/README.md` and
 `games/SinStarI/SourceAssets/Characters/Healer/MiraV3/README.md`.
-Candidate comparison tabs are native-only; Web follow-through remains deferred.
+The Tripo package is `games/SinStarI/SourceAssets/Characters/Healer/MiraTripoV1`:
+19,782 equipped triangles, 4K body/2K staff PBR maps, nine clips and nine sockets.
+Its cape, nose/eye surfaces, staff grip, back carry and Death drop are authored in
+the package. Native model inspection, both six-cast Party fixtures and seven-mode
+Water Lab checks pass; the package README records validation and remaining delivery.
+All Mira tabs are native-only;
+Sin halted all Web work on September 13, including publication and browser checks.
 
 ## Party Beat Cameras
 

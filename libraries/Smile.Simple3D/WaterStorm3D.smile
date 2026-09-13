@@ -1,0 +1,97 @@
+''' Synchronizes caller-owned lightning with a water wave; the scene advances Lightning once.
+Module Smile.Simple3D.WaterStorm3D
+
+Option Explicit
+
+Import Smile.Simple3D.WaterVfx3D As Water
+Import Smile.Simple3D.LightningVfx3D As Lightning
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.PrecisionMath3D As M
+
+Public Type Context
+    Bolts[3] As Lightning.LightningEffect
+    Stage As Number
+    PreviousTime As Number
+End Type
+
+Public Sub Destroy(ByRef Value As Context)
+
+    Dim Index As Number
+    Dim Ok As Boolean
+    Dim Empty As Context
+
+    For Index = 0 To 2
+        Ok = Lightning.Destroy(Value.Bolts[Index])
+    End For
+
+    Value = Empty
+
+End Sub
+
+Public Function Update(ByRef Value As Context, Sample As Water.Frame,
+    Conductor As P.Vector3) As Boolean
+
+    Dim Stage As Number
+    Dim Index As Number
+    Dim Crest As P.Vector3
+    Dim Sky As P.Vector3
+    Dim Source As P.Vector3
+    Dim Target As P.Vector3
+    Dim Ok As Boolean
+
+    If Sample.Mode <> Water.STORM Or Sample.Time < Value.PreviousTime Then
+        Call Destroy(Value)
+    End If
+
+    Value.PreviousTime = Sample.Time
+
+    If Sample.Mode <> Water.STORM Then
+        Return True
+    End If
+
+    Crest = M.Lerp(Sample.Origin, Sample.Target,
+        Clamp((Sample.Progress - 0.12) / 0.68, 0.0, 1.0))
+    Crest.Y = 125.0
+    Sky = Crest
+    Sky.Y = 300.0
+    Stage = 0
+
+    If Sample.Progress >= 0.22 Then
+        Stage = 1
+    End If
+
+    If Sample.Progress >= 0.44 Then
+        Stage = 2
+    End If
+
+    If Sample.Progress >= 0.68 Then
+        Stage = 3
+    End If
+
+    Ok = True
+
+    For Index = Value.Stage To Stage - 1
+
+        Source = Sky
+        Target = Crest
+
+        If Index = 0 Then
+            Source = Conductor
+        Else If Index = 2 Then
+            Target = Sample.Target
+        End If
+
+        Value.Bolts[Index] = Lightning.StartAtPrecise("ChainTempest", Source, Target,
+            6113 + Index * 79 + Sample.Time, Lightning.QUALITY_ULTRA)
+        Ok = Value.Bolts[Index].Slot <> 0 And Ok
+        Ok = Lightning.SetStyle(Value.Bolts[Index], 4, 1500) And Ok
+        Ok = Lightning.SetBranchBudget(Value.Bolts[Index], 12) And Ok
+    End For
+
+    Value.Stage = Stage
+
+    Return Ok
+
+End Function
+
+End Module

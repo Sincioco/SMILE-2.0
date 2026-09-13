@@ -1,0 +1,18 @@
+{
+  "capeVertices": 1234,
+  "heldClips": [
+    "Idle",
+    "Walk",
+    "Attack",
+    "Defend",
+    "HealOne",
+    "HealParty",
+    "Hit"
+  ],
+  "backCarryClips": [
+    "Run",
+    "Death"
+  ],
+  "rigBones": 35,
+  "staffTriangles": 1344
+}

@@ -2032,33 +2032,54 @@ Sub CheckMiraBattles()
     Dim Updated As ViewerParty.ParticipantUpdateResult
     Dim Members As Number
     Dim SampleTime As Number
+    Dim Bounds As Character3D.Bounds3D
 
     If Not ViewerProfiles.INCLUDE_MIRA_COMPARISONS Then
         Return
     End If
 
-    For TabIndex = ViewerProfiles.CHARACTER_TAB_MIRA1 To ViewerProfiles.CHARACTER_TAB_MIRA3
+    For TabIndex = ViewerProfiles.CHARACTER_TAB_MIRA1 To ViewerProfiles.CHARACTER_TAB_MIRA
 
         Call SelectCharacterTab(TabIndex)
         Call CalibrationCheck(Session.Ready And Character3D.ClipCount(Character) = 9,
-            "Each Mira comparison tab loads its own nine-clip package")
+            "Each Mira tab loads its own nine-clip package")
         Call CalibrationCheck(Effects.Water.Ready,
-            "Every Mira tab, including selected Mira1, owns standalone water effects")
+            "Every Mira tab owns standalone water effects")
         Call CalibrationCheck(Character3D.HasSocket(Character, "HandLeft") And
             Character3D.HasSocket(Character, "HandRight"),
-            "Each Mira comparison exposes its own casting and staff hand sockets")
+            "Each Mira tab exposes its own casting and staff hand sockets")
+
+        If TabIndex = ViewerProfiles.CHARACTER_TAB_MIRA Then
+            Bounds = Character3D.LocalBounds(Character)
+
+            Call CalibrationCheck(Bounds.Valid And Abs(Bounds.Minimum.Y) <= 1 And
+                Abs(ViewerCameraState.Frame.PositionY) < 0.1,
+                "Mira staff bind bounds do not lift her above the arena")
+        End If
+
     End For
 
     For TabIndex = 0 To 1
 
         Call SelectCharacterTab(3 + TabIndex * 4)
+
+        If Not Party.Water.Ready Then
+
+            Print "Mira water admission tab/stage/error: "; TabIndex; "/"; Party.Water.Effect.FailureStage; "/"; Party.Water.Effect.ErrorCode
+            Print "Mira/Party ready: "; Party.Mira.Ready; "/"; Party.Ready
+            Print "GPU slots: "; Graphics3D.GpuParticleValue3D(Graphics3D.GPU_PARTICLE_QUERY_TOTAL_CAPACITY)
+
+        End If
+
         Call CalibrationCheck(Party.Mira.Ready And Party.Water.Ready And
-            Party.Mira.Profile = ViewerProfiles.PROFILE_MIRA1 And
+            Party.Mira.Profile = ViewerProfiles.PROFILE_MIRA And
             Not Party.Mira.CalibrationAvailable,
-            "Both battles own the selected Mira1 without borrowing a calibration bank")
+            "Both battles own the new Mira without borrowing a calibration bank")
         Call CalibrationCheck(Party.Mira.Actor.Handle <> Character.Handle And
             Party.Mira.Actor.Handle <> Party.Companion.Actor.Handle,
             "Mira has an independent actor and animation clock")
+        Call CalibrationCheck(Abs(Party.Mira.Frame.PositionY) < 0.1,
+            "Both party formations preserve Mira's grounded actor frame")
 
         Members = 3
 
@@ -2069,7 +2090,7 @@ Sub CheckMiraBattles()
         Call CalibrationCheck(Party.ParticipantCount = Members,
             "Formation admits Mira in addition to the existing heroes")
 
-        For Cycle = 0 To 2
+        For Cycle = 0 To 5
 
             Party.AttackCycle = Cycle
             Party.Turn = 6
@@ -2082,11 +2103,11 @@ Sub CheckMiraBattles()
                 ViewerCameraState.Live, 0, 0, True, Character, DragonState.Actor) And Ok
 
             Call CalibrationCheck(Ok And Updated.Ready And Party.Water.Visible,
-                "Mira's attack and both heals seek and render from her own clip clock")
+                "Mira's four attacks and both heals seek and render from her own clip clock")
             Call CalibrationCheck(Party.Water.Targets.MemberCount = Members,
                 "Water effects target the final transforms of the current party")
 
-            If Cycle > 0 Then
+            If Cycle = 1 Or Cycle = 2 Then
                 Call CalibrationCheck(DragonState.Clip = "Idle" And
                     ViewerParty.PresentationState(Party, 0) = ViewerParty.STATE_REVIVING,
                     "Healing restores the recipient without making the boss flinch")

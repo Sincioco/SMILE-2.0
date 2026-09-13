@@ -1,0 +1,56 @@
+[
+  {
+    "clip": "Idle",
+    "source": "Standing Idle 03.fbx",
+    "samples": 341,
+    "maxJointErrorMeters": 1.1658194657605082e-06
+  },
+  {
+    "clip": "Walk",
+    "source": "Standing Walk Forward.fbx",
+    "samples": 35,
+    "maxJointErrorMeters": 1.3137657590521546e-06
+  },
+  {
+    "clip": "Run",
+    "source": "Standing Run Forward.fbx",
+    "samples": 23,
+    "maxJointErrorMeters": 1.3751368093686554e-06
+  },
+  {
+    "clip": "Attack",
+    "source": "Standing 1H Magic Attack 01.fbx",
+    "samples": 70,
+    "maxJointErrorMeters": 1.155798800419098e-06
+  },
+  {
+    "clip": "Defend",
+    "source": "Standing Block Start.fbx",
+    "samples": 16,
+    "maxJointErrorMeters": 1.0107557703323139e-06
+  },
+  {
+    "clip": "HealOne",
+    "source": "standing 1H cast spell 01.fbx",
+    "samples": 61,
+    "maxJointErrorMeters": 1.0998884119685968e-06
+  },
+  {
+    "clip": "HealParty",
+    "source": "Standing 2H Cast Spell 01.fbx",
+    "samples": 66,
+    "maxJointErrorMeters": 1.15558481039651e-06
+  },
+  {
+    "clip": "Hit",
+    "source": "Standing React Small From Front.fbx",
+    "samples": 33,
+    "maxJointErrorMeters": 9.726419253690897e-07
+  },
+  {
+    "clip": "Death",
+    "source": "Standing React Death Backward.fbx",
+    "samples": 110,
+    "maxJointErrorMeters": 1.5304007621369085e-06
+  }
+]

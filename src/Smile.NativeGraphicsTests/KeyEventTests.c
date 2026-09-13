@@ -37,6 +37,23 @@ int main(void)
     CHECK(!smile_key_event_held(SMILE_KEY_W));
     CHECK(!smile_key_held(SMILE_KEY_W));
     CHECK(smile_get_key() == SMILE_KEY_NONE);
+    CHECK(smile_map_key(L'+', 0) == SMILE_KEY_PLUS);
+    CHECK(smile_map_key(L'=', 0) == SMILE_KEY_PLUS);
+    CHECK(smile_map_key(L'-', 0) == SMILE_KEY_MINUS);
+    CHECK(smile_map_key(0, VK_OEM_PLUS) == SMILE_KEY_PLUS);
+    CHECK(smile_map_key(0, VK_OEM_MINUS) == SMILE_KEY_MINUS);
+    smile_window_proc(0, WM_KEYDOWN, VK_ADD, 0);
+    CHECK(smile_key_held(SMILE_KEY_PLUS));
+    smile_window_proc(0, WM_KEYUP, VK_ADD, 0);
+    CHECK(!smile_key_held(SMILE_KEY_PLUS));
+    CHECK(smile_get_key() == SMILE_KEY_PLUS);
+    CHECK(smile_key_event_held(SMILE_KEY_PLUS));
+    smile_window_proc(0, WM_KEYDOWN, VK_SUBTRACT, 0);
+    CHECK(smile_key_held(SMILE_KEY_MINUS));
+    smile_window_proc(0, WM_KEYUP, VK_SUBTRACT, 0);
+    CHECK(!smile_key_held(SMILE_KEY_MINUS));
+    CHECK(smile_get_key() == SMILE_KEY_MINUS);
+    CHECK(smile_key_event_held(SMILE_KEY_MINUS));
     puts("Native queued key snapshots passed");
     return 0;
 }
