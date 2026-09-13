@@ -5,6 +5,7 @@ Option Explicit
 
 Import Smile.Tools.BattleCameraShots As Shots
 Import Smile.Tools.ViewerBeatEditor As Editor
+Import Smile.Tools.Character3DViewerBeatHeadPersistence As HeadPersistence
 Import Smile.Tools.ViewerBeatSequence As Sequence
 Import Smile.Tools.Character3DViewerProfiles As Profiles
 Import Smile.Tools.BattleCameraTimeline As Track
@@ -161,8 +162,13 @@ Public Function Run() As Number
 
     Ui.Editing = True
     Ui.Draft = Value
-    Ui.References[0] = SavedHead
-    Ui.References[1].Size = P.Vector(40.0, 45.0, 35.0)
+
+    Call HeadPersistence.Initialize(Ui.HeadStorage, 0, SavedHead)
+
+    LoadedHead = SavedHead
+    LoadedHead.Size = P.Vector(40.0, 45.0, 35.0)
+
+    Call HeadPersistence.Initialize(Ui.HeadStorage, 1, LoadedHead)
 
     Call Editor.Copy(Ui, True)
 
@@ -170,7 +176,7 @@ Public Function Run() As Number
     Ui.Beat = 2
 
     Call Editor.Paste(Ui)
-    Call Check(Ui.Draft.Eye.X = Value.Eye.X And Ui.References[1].Size.X = 40.0,
+    Call Check(Ui.Draft.Eye.X = Value.Eye.X And Editor.Head(Ui, 1).Size.X = 40.0,
         "Cross Character Copy Preserves Destination Head", Failures)
     Call Check(Sequence.Identity(False, 2) <> Sequence.Identity(True, 2), "Independent Boss Identities", Failures)
 
@@ -203,9 +209,193 @@ Public Function Run() As Number
     Call CheckTimeline(Failures, Value)
     Call CheckLargeFrame(Failures, 0.375)
 
+    If Shots.ReadText("BeatCamera.Test.HeadFaultFixture") = "READY" Then
+        Call CheckHeadPersistenceFailure(Failures, Value)
+    End If
+
     Return Failures
 
 End Function
+
+Private Function SameHead(First As Shots.HeadReference,
+    Second As Shots.HeadReference) As Boolean
+
+    Dim Result As Boolean
+
+    Result = (First.Offset.X = Second.Offset.X And
+        First.Offset.Y = Second.Offset.Y And
+        First.Offset.Z = Second.Offset.Z And
+        First.Size.X = Second.Size.X And
+        First.Size.Y = Second.Size.Y And
+        First.Size.Z = Second.Size.Z)
+
+    Return Result
+
+End Function
+
+Private Sub CheckHeadPersistenceFailure(ByRef Failures As Number,
+    Camera As Shots.Shot)
+
+    Dim Ui As Editor.State
+    Dim Reopened As HeadPersistence.State
+    Dim Baseline As Shots.HeadReference
+    Dim Candidate As Shots.HeadReference
+    Dim OrinBaseline As Shots.HeadReference
+    Dim OrinCandidate As Shots.HeadReference
+    Dim DiskHead As Shots.HeadReference
+    Dim Result As Boolean
+    Dim Started As Number
+
+    Baseline.Offset = P.Vector(1.0, 2.0, 3.0)
+    Baseline.Size = P.Vector(20.0, 30.0, 15.0)
+    OrinBaseline.Offset = P.Vector(-1.0, 4.0, 2.0)
+    OrinBaseline.Size = P.Vector(22.0, 32.0, 17.0)
+
+    Call HeadPersistence.Initialize(Ui.HeadStorage, 0, Baseline)
+    Call HeadPersistence.Initialize(Ui.HeadStorage, 1, OrinBaseline)
+
+    Ui.HeadIds[0] = 0
+    Ui.HeadIds[1] = 1
+    Candidate = Baseline
+    Candidate.Offset.X = 9.0
+    Result = Editor.SetHead(Ui, 0, Candidate)
+
+    Call Check(Result, "Head Offset Mutation Uses Its Lifecycle Owner", Failures)
+
+    Candidate.Size.X = 21.0
+    Result = Editor.SetHead(Ui, 0, Candidate)
+
+    Call Check(Result, "Head Width Mutation Uses Its Lifecycle Owner", Failures)
+
+    Candidate.Size.Y = 31.0
+    Result = Editor.SetHead(Ui, 0, Candidate)
+
+    Call Check(Result, "Head Height Mutation Uses Its Lifecycle Owner", Failures)
+
+    Candidate.Size.Z = 16.0
+    Result = Editor.SetHead(Ui, 0, Candidate)
+
+    Call Check(Result, "Head Depth Mutation Uses Its Lifecycle Owner", Failures)
+
+    Result = Editor.SetHead(Ui, 0, Candidate)
+
+    Call Check(Not Result And HeadPersistence.Pending(Ui.HeadStorage, 0),
+        "Unchanged Head Mutation Is A No-Op", Failures)
+
+    Result = Editor.SaveHead(Ui, 0)
+
+    Call Check(Not Result And HeadPersistence.Pending(Ui.HeadStorage, 0) And
+        HeadPersistence.Failed(Ui.HeadStorage, 0),
+        "Failed Arin Head Save Remains Pending", Failures)
+    Call Check(Editor.HeadWarning(Ui) = "Arin Head Save Failed - Retry Or Discard",
+        "Failed Head Warning Identifies Its Character", Failures)
+
+    Call Track.Initialize(Ui.Working)
+
+    Ui.Editing = True
+    Ui.Preview = True
+    Ui.Dirty = True
+    Ui.Selected = 0
+    Ui.Draft = Camera
+    Result = Editor.SaveShot(Ui, True)
+
+    Call Check(Result And Ui.Editing And Ui.Preview And Not Ui.Dirty,
+        "Camera Save Stays Open And Clears Only Its Draft", Failures)
+    Call Check(HeadPersistence.Pending(Ui.HeadStorage, 0) And
+        HeadPersistence.Failed(Ui.HeadStorage, 0) And
+        Editor.HeadWarning(Ui) = "Arin Head Save Failed - Retry Or Discard",
+        "Camera Save Does Not Hide Failed Head State", Failures)
+
+    Ui.Preview = False
+    Ui.Editing = False
+    Ui.Message = "Camera Draft Cancelled"
+    Result = Editor.SelectActor(Ui, 1)
+
+    Call Check(Result And Ui.Selected = 1 And
+        Editor.HeadWarning(Ui) = "Arin Head Save Failed - Retry Or Discard",
+        "Preview Close And Actor Navigation Keep Head Recovery Reachable", Failures)
+
+    Ui.HeadIds[0] = 1
+    Ui.HeadIds[1] = 0
+
+    Call Check(SameHead(Editor.Head(Ui, 0), Candidate) And
+        SameHead(Editor.Head(Ui, 1), OrinBaseline),
+        "Role Swap Does Not Swap Character Head Ownership", Failures)
+
+    OrinCandidate = OrinBaseline
+    OrinCandidate.Offset.Y = 8.0
+    Result = Editor.SetHead(Ui, 1, OrinCandidate)
+    Result = Editor.SaveHead(Ui, 0) And Result
+
+    Call Check(Result And Not HeadPersistence.Pending(Ui.HeadStorage, 1) And
+        Not HeadPersistence.Failed(Ui.HeadStorage, 1),
+        "Orin Head Can Save While Arin Head Remains Failed", Failures)
+
+    Call Track.Initialize(Ui.Working)
+
+    Ui.Editing = True
+    Ui.Preview = True
+    Ui.Dirty = True
+    Ui.Selected = 1
+    Ui.Draft = Camera
+    Result = Editor.SaveShot(Ui, True)
+
+    Call Check(Not Result And Ui.Dirty And Ui.Editing And Ui.Preview,
+        "Failed Orin Sequence Save Retains Its Camera Draft", Failures)
+    Call Check(SameHead(HeadPersistence.Persisted(Ui.HeadStorage, 1), OrinCandidate) And
+        Not HeadPersistence.Pending(Ui.HeadStorage, 1),
+        "Failed Sequence Save Does Not Roll Back Successful Head Save", Failures)
+    Call Check(Editor.HeadWarning(Ui) = "Arin Head Save Failed - Retry Or Discard",
+        "Unrelated Sequence Failure Does Not Hide Arin Head Warning", Failures)
+
+    Result = Shots.WriteText("BeatCamera.Test.HeadFaultObserved", "READY")
+
+    Call Check(Result, "Native Selective Failure Fixture Reported Its Checkpoint", Failures)
+
+    Started = Timer()
+
+    Do
+        Wait 10 Milliseconds
+
+    Loop Until (Shots.ReadText("BeatCamera.Test.HeadFaultRelease") = "READY" Or
+
+        Timer() - Started >= 10000)
+
+    Call Check(Shots.ReadText("BeatCamera.Test.HeadFaultRelease") = "READY",
+        "Native Selective Failure Fixture Released", Failures)
+
+    Print "HEAD_WRITE_FAILURE_OBSERVED"
+
+    Result = Shots.ReadHead("BattleCamera.Head.Arin", DiskHead)
+
+    Call Check(Result And SameHead(DiskHead, Baseline),
+        "Failed Head Save Preserves Last-Good Disk Value", Failures)
+
+    Ui.HeadIds[0] = 0
+    Ui.HeadIds[1] = 1
+    Result = Editor.RetryHeadSave(Ui)
+
+    Call Check(Result And Not HeadPersistence.Pending(Ui.HeadStorage, 0) And
+        Not HeadPersistence.Failed(Ui.HeadStorage, 0) And Editor.HeadWarning(Ui) = "",
+        "Retry Persists And Clears Only The Failed Head", Failures)
+
+    Result = HeadPersistence.LoadEntry(Reopened, 0, "BattleCamera.Head.Arin")
+    Result = HeadPersistence.LoadEntry(Reopened, 1, "BattleCamera.Head.Orin") And Result
+
+    Call Check(Result And SameHead(HeadPersistence.Current(Reopened, 0), Candidate) And
+        SameHead(HeadPersistence.Current(Reopened, 1), OrinCandidate),
+        "Reopened Isolated Store Retains Independent Character Heads", Failures)
+
+    Candidate.Offset.Z = 12.0
+    Result = Editor.SetHead(Ui, 0, Candidate)
+    Result = Editor.DiscardHeadChanges(Ui) And Result
+
+    Call Check(Result And SameHead(Editor.Head(Ui, 0), HeadPersistence.Current(Reopened, 0)) And
+        SameHead(Editor.Head(Ui, 1), OrinCandidate) And
+        Ui.Message = "Arin Head Changes Discarded; Camera Draft Kept",
+        "Explicit Discard Restores One Head And Keeps The Camera Draft", Failures)
+
+End Sub
 
 Private Sub CheckLinkedCameraIntegrity(ByRef Failures As Number)
 
@@ -324,6 +514,7 @@ Private Sub CheckTimeline(ByRef Failures As Number, Camera As Shots.Shot)
     Dim Extra As Number
     Dim Result As Boolean
     Dim Encoded As Text
+    Dim HeadValue As Shots.HeadReference
 
     Source.Start[1] = 1000
     Source.Start[2] = 2000
@@ -420,7 +611,12 @@ Private Sub CheckTimeline(ByRef Failures As Number, Camera As Shots.Shot)
         "Save Persists Draft Without Closing Or Moving Editor", Failures)
 
     Edited.Tracks[0] = Definition
-    Edited.References[0].Offset.X = 0.375
+    HeadValue.Size = P.Vector(20.0, 30.0, 15.0)
+
+    Call HeadPersistence.Initialize(Edited.HeadStorage, 0, HeadValue)
+
+    HeadValue.Offset.X = 0.375
+    Result = Editor.SetHead(Edited, 0, HeadValue)
 
     Call Editor.ResetLengths(Edited)
 
@@ -430,7 +626,7 @@ Private Sub CheckTimeline(ByRef Failures As Number, Camera As Shots.Shot)
         Timed.Start[3] = 4000 And Edited.Working.ShotCount = 5 And
         Edited.Working.Cameras[0].Eye.X = Definition.Cameras[0].Eye.X And
         Edited.Working.Cameras[4].Saved And Edited.Working.Cameras[4].Motion = Edited.Draft.Motion And
-        Edited.Tracks[0].Scale[0] = 1.5 And Edited.References[0].Offset.X = 0.375,
+        Edited.Tracks[0].Scale[0] = 1.5 And Editor.Head(Edited, 0).Offset.X = 0.375,
         "Reset Lengths Preserves Cameras Extra Shots Heads And Saved Timing", Failures)
 
     Call Track.Resize(Edited.Working, Source, 0, 1500)
@@ -449,7 +645,7 @@ Private Sub CheckTimeline(ByRef Failures As Number, Camera As Shots.Shot)
     Call Check(Edited.Working.ShotCount = 4 And Not Edited.Working.Cameras[0].Saved And
         Not Edited.Working.Cameras[2].Saved And Timed.Start[1] = 1000 And
         Timed.Start[4] = 5000 And Edited.Tracks[0].ShotCount = 5 And
-        Edited.Tracks[0].Cameras[0].Saved And Edited.References[0].Offset.X = 0.375,
+        Edited.Tracks[0].Cameras[0].Saved And Editor.Head(Edited, 0).Offset.X = 0.375,
         "Reset All Restores Four Default Cameras And Timing Without Changing Saves Or Heads", Failures)
 
     Encoded = Track.Encode(Edited.Working)

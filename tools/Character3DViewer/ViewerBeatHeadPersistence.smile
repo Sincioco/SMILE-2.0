@@ -1,0 +1,237 @@
+''' Independent per-character head-calibration state and persistence lifecycle.
+Module Smile.Tools.Character3DViewerBeatHeadPersistence
+
+Option Explicit
+
+Import Smile.Tools.BattleCameraShots As Shots
+
+Public Const CHARACTER_COUNT = 7
+
+Public Type Entry
+    Current As Shots.HeadReference
+    Persisted As Shots.HeadReference
+    Initialized As Boolean
+    Pending As Boolean
+    WriteFailed As Boolean
+End Type
+
+Public Type State
+    Entries[CHARACTER_COUNT] As Entry
+End Type
+
+Private Function Same(First As Shots.HeadReference, Second As Shots.HeadReference) As Boolean
+
+    Dim Result As Boolean
+
+    Result = (First.Offset.X = Second.Offset.X And
+        First.Offset.Y = Second.Offset.Y And
+        First.Offset.Z = Second.Offset.Z And
+        First.Size.X = Second.Size.X And
+        First.Size.Y = Second.Size.Y And
+        First.Size.Z = Second.Size.Z)
+
+    Return Result
+
+End Function
+
+Public Function LoadEntry(ByRef Value As State, Identity As Number, Key As Text) As Boolean
+
+    Dim Candidate As Shots.HeadReference
+    Dim Result As Boolean
+
+    If Identity < 0 Or Identity >= CHARACTER_COUNT Then
+        Return False
+    End If
+
+    Result = Shots.ReadHead(Key, Candidate)
+
+    If Result Then
+
+        Value.Entries[Identity].Current = Candidate
+        Value.Entries[Identity].Persisted = Candidate
+        Value.Entries[Identity].Initialized = True
+        Value.Entries[Identity].Pending = False
+        Value.Entries[Identity].WriteFailed = False
+
+    End If
+
+    Return Result
+
+End Function
+
+Public Sub Initialize(ByRef Value As State, Identity As Number,
+    Initial As Shots.HeadReference)
+
+    If (Identity < 0 Or
+        Identity >= CHARACTER_COUNT Or
+        Value.Entries[Identity].Initialized) Then
+        Return
+    End If
+
+    Value.Entries[Identity].Current = Initial
+    Value.Entries[Identity].Persisted = Initial
+    Value.Entries[Identity].Initialized = True
+    Value.Entries[Identity].Pending = False
+    Value.Entries[Identity].WriteFailed = False
+
+End Sub
+
+Public Function Current(Value As State, Identity As Number) As Shots.HeadReference
+
+    Dim Result As Shots.HeadReference
+
+    If Identity >= 0 And Identity < CHARACTER_COUNT Then
+        Result = Value.Entries[Identity].Current
+    End If
+
+    Return Result
+
+End Function
+
+Public Function Persisted(Value As State, Identity As Number) As Shots.HeadReference
+
+    Dim Result As Shots.HeadReference
+
+    If Identity >= 0 And Identity < CHARACTER_COUNT Then
+        Result = Value.Entries[Identity].Persisted
+    End If
+
+    Return Result
+
+End Function
+
+Public Function Replace(ByRef Value As State, Identity As Number,
+    Candidate As Shots.HeadReference) As Boolean
+
+    If (Identity < 0 Or
+        Identity >= CHARACTER_COUNT Or
+        Not Value.Entries[Identity].Initialized Or
+        Same(Value.Entries[Identity].Current, Candidate)) Then
+        Return False
+    End If
+
+    Value.Entries[Identity].Current = Candidate
+    Value.Entries[Identity].Pending = Not Same(Candidate, Value.Entries[Identity].Persisted)
+
+    If Not Value.Entries[Identity].Pending Then
+        Value.Entries[Identity].WriteFailed = False
+    End If
+
+    Return True
+
+End Function
+
+Public Function SaveEntry(ByRef Value As State, Identity As Number, Key As Text) As Boolean
+
+    Dim Result As Boolean
+
+    If (Identity < 0 Or
+        Identity >= CHARACTER_COUNT Or
+        Not Value.Entries[Identity].Initialized) Then
+        Return False
+    End If
+
+    If Not Value.Entries[Identity].Pending Then
+        Return True
+    End If
+
+    Result = Shots.WriteHead(Key, Value.Entries[Identity].Current)
+
+    If Result Then
+
+        Value.Entries[Identity].Persisted = Value.Entries[Identity].Current
+        Value.Entries[Identity].Pending = False
+        Value.Entries[Identity].WriteFailed = False
+
+    Else
+        Value.Entries[Identity].WriteFailed = True
+
+    End If
+
+    Return Result
+
+End Function
+
+Public Function Discard(ByRef Value As State, Identity As Number) As Boolean
+
+    If (Identity < 0 Or
+        Identity >= CHARACTER_COUNT Or
+        Not Value.Entries[Identity].Initialized Or
+        (Not Value.Entries[Identity].Pending And
+        Not Value.Entries[Identity].WriteFailed)) Then
+        Return False
+    End If
+
+    Value.Entries[Identity].Current = Value.Entries[Identity].Persisted
+    Value.Entries[Identity].Pending = False
+    Value.Entries[Identity].WriteFailed = False
+
+    Return True
+
+End Function
+
+Public Function Pending(Value As State, Identity As Number) As Boolean
+
+    Dim Result As Boolean
+
+    If Identity >= 0 And Identity < CHARACTER_COUNT Then
+        Result = Value.Entries[Identity].Pending
+    End If
+
+    Return Result
+
+End Function
+
+Public Function Failed(Value As State, Identity As Number) As Boolean
+
+    Dim Result As Boolean
+
+    If Identity >= 0 And Identity < CHARACTER_COUNT Then
+        Result = Value.Entries[Identity].WriteFailed
+    End If
+
+    Return Result
+
+End Function
+
+Public Function FirstFailed(Value As State) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Identity As Number
+
+    For Identity = 0 To CHARACTER_COUNT - 1
+
+        If Value.Entries[Identity].WriteFailed Then
+            Return Identity
+        End If
+
+    End For
+
+    ReturnValue = -1
+
+    Return ReturnValue
+
+End Function
+
+Public Function FirstPending(Value As State) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Identity As Number
+
+    For Identity = 0 To CHARACTER_COUNT - 1
+
+        If Value.Entries[Identity].Pending Then
+            Return Identity
+        End If
+
+    End For
+
+    ReturnValue = -1
+
+    Return ReturnValue
+
+End Function
+
+End Module

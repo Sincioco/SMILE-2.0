@@ -175,8 +175,10 @@ camera intervals to the original battle duration; no action time is remapped.
 `ViewerBeatTimeline` owns timeline gestures, frame stepping/repeat and presentation in
 the normal animation timeline's bottom layout. Beat Preview hides the animation
 timeline and closing Preview restores it; no second timeline panel is drawn.
+`ViewerBeatHeadPersistence` owns each identity's current and last-persisted head
+cuboid plus its independent pending/failure, retry and discard lifecycle.
 `ViewerBeatEditor` owns selection, seven character identities, per-character sequence
-drafts and clipboard, one head cuboid per identity, preview playback and reset controls. The
+drafts and clipboard, head-cuboid presentation/mutation routing, preview playback and reset controls. The
 existing `ViewerWorkflow.Session` coordinates those operations; it retains the same
 renderer, Party actor instances, calibration owners and main update/draw order.
 `ViewerUi` keeps one dedicated Camera panel at the original lower-right location for
@@ -207,8 +209,13 @@ Reset All Beat Lengths changes only the four timing weights, retaining cameras a
 extra shots at their relative beat positions.
 `UseDefault` keeps unauthored/reset cameras as runtime policy fallbacks while the
 editor displays a captured view; an actual camera edit adopts that view as a shot.
-Head offsets/sizes auto-save independently of camera drafts; copying a shot cannot
-replace another character's head definition. No asset rebake or new renderer is
+Head offsets/sizes auto-save independently of camera drafts. A successful camera save
+clears only the camera draft; a failed head save retains a character-specific warning
+through Preview close and actor navigation until Retry succeeds or Discard restores that
+identity's last-persisted value. The standalone native loop defers X/Alt+F4 while this
+recovery is pending, reusing `Session.HasEdits`; the existing Studio host receives the
+same shared edit-state signal without a new Studio phase. Cancel still cancels only camera changes, and copying a
+shot cannot replace another character's head definition. No asset rebake or new renderer is
 involved. Verified canonical `head` bones are exposed as Head sockets in the
 Valor/Zara/Vrax descriptors; all other socket and placement data is preserved.
 Their profile inventories include that Head socket: Valor 15, Zara 11 and Vrax 5.
@@ -219,8 +226,10 @@ tabs, checks their Head attachments and verifies rejection of mismatched invento
 
 `BeatCameraTests` extends the existing hardening fixture with relative-frame motion,
 moving-head vertical stability, versioned legacy fallback, cross-character copy,
-connected boundaries, malformed data and real Save Data
-round trips, camera-only retiming, extra markers, Space and reset draft isolation.
+connected boundaries, malformed data and real Save Data round trips, camera-only
+retiming, extra markers, Space and reset draft isolation. Its isolated native application
+identity also selectively fails one head record and one sequence record, verifies the
+previous head bytes, then exercises retry, discard, reopening and identity isolation.
 The larger sequence records exposed a native compiler stack-guard fault.
 `MasmEmitter.AllocateStack` probes each page before allocating variable-size local
 or call frames; `CheckLargeFrame` verifies real execution with Number/Double arrays

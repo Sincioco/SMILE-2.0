@@ -127,6 +127,11 @@ Offsets and dimensions auto-save per character when released/adjusted and are re
 across beats and attacker/target roles; Cancel only cancels camera changes. Centers
 follow animated head sockets; cuboid axes and offsets follow the actor's facing.
 The cuboid is a framing reference, not collision geometry or an animation edit.
+If a head save fails, the character-specific warning remains visible after camera Save,
+Preview close and actor navigation. Use **Retry Head Save** after correcting the storage
+problem, or **Discard Head** to restore only that character's last-persisted cuboid while
+leaving the camera draft in place for review. Native X/Alt+F4 is deferred while that
+recovery remains pending, so resolve the visible warning and close again.
 
 Camera position and aim use Double coordinates relative to the two head centers,
 with lateral distance, height above their baseline and fractional horizontal distance

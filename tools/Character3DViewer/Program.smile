@@ -7,19 +7,27 @@ Import Smile.Tools.Character3DViewerProfiles As Profiles
 
 Dim Viewer As New ViewerWorkflow.Session()
 Dim Key As Number
+Dim CloseRequested As Boolean
+Dim CloseDeferred As Boolean
 
 Game Window "SMILE 2.0 - 3D Viewer, Animation Editor" Size 1600 By 640
 
 Call Viewer.Start(Profiles.CHARACTER_TAB_PARTY_VRAX, False, Window_Width(), Window_Height())
 
+CloseDeferred = Window_DeferClose(Viewer.HasEdits())
+
 Do
 
     Get Key Key
+
+    CloseRequested = Window_CloseRequested()
 
     Call Viewer.StandaloneInput(Key)
     Call Viewer.UpdateFrame(Window_Width(), Window_Height())
     Call Viewer.DrawFrame()
     Call Viewer.DrawStandaloneOverlay()
+
+    CloseDeferred = Window_DeferClose(Viewer.HasEdits())
 
     Show Screen
 

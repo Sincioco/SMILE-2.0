@@ -11,16 +11,20 @@ $testProject = Join-Path $repositoryRoot 'tools\Character3DViewer\HardeningTests
 $expected = Join-Path $repositoryRoot 'tools\Character3DViewer\HardeningTests.expected.txt'
 $nativeOutput = Join-Path $repositoryRoot 'artifacts\tests\Character3DViewerHardeningTests.exe'
 $nativeLog = Join-Path $repositoryRoot 'artifacts\temp\Character3DViewerHardeningTests.out'
+$nativeErrorLog = Join-Path $repositoryRoot 'artifacts\temp\Character3DViewerHardeningTests.err'
 $webOutput = Join-Path $repositoryRoot 'artifacts\web\Character3DViewerHardeningTests'
 $identityPath = Join-Path $repositoryRoot `
     'games\Dragonfall\SourceAssets\Arin\paladin-prototype-asset.json'
 $referencePath = Join-Path $repositoryRoot `
     'games\Dragonfall\SourceAssets\Arin\paladin-reference-images.json'
+$programSourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\Program.smile'
 $viewerSourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\ViewerWorkflow.smile'
 $beatTimelineSourcePath = Join-Path $repositoryRoot `
     'tools\Character3DViewer\ViewerBeatTimeline.smile'
 $beatEditorSourcePath = Join-Path $repositoryRoot `
     'tools\Character3DViewer\ViewerBeatEditor.smile'
+$beatHeadPersistenceSourcePath = Join-Path $repositoryRoot `
+    'tools\Character3DViewer\ViewerBeatHeadPersistence.smile'
 $cameraSourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\ViewerCamera.smile'
 $playbackSourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\ViewerPlayback.smile'
 $sessionSourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\ViewerSession.smile'
@@ -78,6 +82,23 @@ function Assert-Contains([string]$Text, [string]$Expected, [string]$Label) {
     }
 }
 
+function Get-NativeDataPath([string]$DataRoot, [string]$Key) {
+    $keyHash = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData(
+        [Text.Encoding]::UTF8.GetBytes($Key))).ToLowerInvariant()
+    return Join-Path $DataRoot "$keyHash.bin"
+}
+
+function Write-NativeDataEnvelope([string]$Path, [string]$Payload) {
+    $payloadBytes = [Text.Encoding]::UTF8.GetBytes($Payload)
+    $envelope = [byte[]]::new(44 + $payloadBytes.Length)
+    [Text.Encoding]::ASCII.GetBytes('SMD4').CopyTo($envelope, 0)
+    [BitConverter]::GetBytes([uint32]1).CopyTo($envelope, 4)
+    [BitConverter]::GetBytes([uint32]$payloadBytes.Length).CopyTo($envelope, 8)
+    [Security.Cryptography.SHA256]::HashData($payloadBytes).CopyTo($envelope, 12)
+    $payloadBytes.CopyTo($envelope, 44)
+    [IO.File]::WriteAllBytes($Path, $envelope)
+}
+
 if (-not (Test-Path -LiteralPath $compiler -PathType Leaf)) {
     throw 'Build SMILE before running the Character 3D Viewer hardening gate.'
 }
@@ -112,9 +133,11 @@ try {
         'The fused prototype mesh must not imply modular equipment.'
 
     # Ownership moved into the shared session; normalize qualification only for wiring checks.
+    $programSource = Get-Content -LiteralPath $programSourcePath -Raw
     $viewerSource = (Get-Content -LiteralPath $viewerSourcePath -Raw).Replace('Me.', '')
     $beatTimelineSource = Get-Content -LiteralPath $beatTimelineSourcePath -Raw
     $beatEditorSource = Get-Content -LiteralPath $beatEditorSourcePath -Raw
+    $beatHeadPersistenceSource = Get-Content -LiteralPath $beatHeadPersistenceSourcePath -Raw
     $cameraSource = Get-Content -LiteralPath $cameraSourcePath -Raw
     $playbackSource = Get-Content -LiteralPath $playbackSourcePath -Raw
     $sessionSource = Get-Content -LiteralPath $sessionSourcePath -Raw
@@ -892,6 +915,32 @@ try {
         -not $uiSource.Contains('CAMERA_PANEL_HEIGHT, 92') -and
         -not $uiSource.Contains('Opacity 92')) `
         'Viewer panel backgrounds must remain at 80 percent opacity.'
+    foreach ($contract in @(
+        'Public Type Entry',
+        'Current As Shots.HeadReference',
+        'Persisted As Shots.HeadReference',
+        'Pending As Boolean',
+        'WriteFailed As Boolean',
+        'Public Function Replace(',
+        'Public Function SaveEntry(',
+        'Public Function Discard(',
+        'Public Function FirstFailed(')) {
+        Assert-Contains $beatHeadPersistenceSource $contract 'Beat head persistence owner'
+    }
+    Assert-True ($beatEditorSource.Contains(
+            'Import Smile.Tools.Character3DViewerBeatHeadPersistence As HeadPersistence') -and
+        $beatEditorSource.Contains('Result = HeadPersistence.Replace(') -and
+        $beatEditorSource.Contains('Result = HeadPersistence.SaveEntry(') -and
+        $beatEditorSource.Contains('Result = HeadPersistence.Discard(') -and
+        $beatEditorSource.Contains('Public Function HasPendingHead(') -and
+        $beatEditorSource.Contains('"Retry Head Save"') -and
+        $beatEditorSource.Contains('"Discard Head"') -and
+        -not $beatEditorSource.Contains('References[7] As Shots.HeadReference')) `
+        'Head calibration lifecycle must remain in its independent owner with usable recovery actions.'
+    Assert-True ($viewerSource.Contains('BeatEditor.HasPendingHead(BeatEditing)') -and
+        $programSource.Contains('Window_DeferClose(Viewer.HasEdits())') -and
+        $programSource.Contains('Window_CloseRequested()')) `
+        'Standalone native close must defer while head recovery remains pending.'
     Assert-True ($inspectorPointerSource.Contains(
             'ViewerInspectorCommands.ApplyPresentationAction(') -and
         $inspectorPointerSource.Contains(
@@ -1355,14 +1404,82 @@ try {
     $testProject = & (Join-Path $PSScriptRoot 'prepare-viewer-hardening-fixture.ps1') `
         -OutputDirectory (Join-Path $repositoryRoot 'artifacts\tests\viewer-hardening-fixture')
 
+    [xml]$isolatedProject = Get-Content -LiteralPath $testProject -Raw
+    $applicationId = "smile.tests.character3d-viewer-hardening.run-$([Guid]::NewGuid().ToString('N'))"
+    $isolatedProject.SmileProject.PropertyGroup.ApplicationId = $applicationId
+    $rememberWindowPlacement = $isolatedProject.SelectSingleNode(
+        '/SmileProject/PropertyGroup/RememberWindowPlacement')
+    if ($null -eq $rememberWindowPlacement) {
+        $rememberWindowPlacement = $isolatedProject.CreateElement('RememberWindowPlacement')
+        $null = $isolatedProject.SmileProject.PropertyGroup.AppendChild($rememberWindowPlacement)
+    }
+    $rememberWindowPlacement.InnerText = 'false'
+    $isolatedProject.Save($testProject)
+
+    $identityHash = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData(
+        [Text.Encoding]::UTF8.GetBytes($applicationId))).ToLowerInvariant()
+    $testDataRoot = Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) `
+        "SMILE 2.0\Games\$identityHash\Data"
+    $null = New-Item -ItemType Directory -Path $testDataRoot -Force
+    $faultMarkerPath = Get-NativeDataPath $testDataRoot 'BeatCamera.Test.HeadFaultFixture'
+    $faultObservedPath = Get-NativeDataPath $testDataRoot 'BeatCamera.Test.HeadFaultObserved'
+    $faultReleasePath = Get-NativeDataPath $testDataRoot 'BeatCamera.Test.HeadFaultRelease'
+    $arinHeadPath = Get-NativeDataPath $testDataRoot 'BattleCamera.Head.Arin'
+    $orinSequencePath = Get-NativeDataPath $testDataRoot 'BattleCamera.Sequence.Orin.V2'
+    $arinBaselinePayload = 'SMILE-Head-1|1|2|3|20|30|15|'
+
+    Write-NativeDataEnvelope $faultMarkerPath 'READY'
+    Write-NativeDataEnvelope "$arinHeadPath.bak" $arinBaselinePayload
+    $arinBackupHash = (Get-FileHash -LiteralPath "$arinHeadPath.bak" -Algorithm SHA256).Hash
+    $null = New-Item -ItemType Directory -Path $arinHeadPath
+    $null = New-Item -ItemType Directory -Path $orinSequencePath
+
     & $compiler --project $testProject --target windows-x64 --configuration $Configuration `
         --graphics DirectX -o $nativeOutput
     if ($LASTEXITCODE -ne 0) { throw 'Viewer hardening native compilation failed.' }
-    & 'scripts\run-bounded-test.cmd' 60 $nativeOutput |
-        Set-Content -LiteralPath $nativeLog -Encoding utf8
-    if ($LASTEXITCODE -ne 0) { throw 'Viewer hardening native execution failed.' }
+
+    Remove-Item -LiteralPath $nativeLog, $nativeErrorLog -Force -ErrorAction SilentlyContinue
+    $testProcess = Start-Process -FilePath $nativeOutput -WindowStyle Hidden -PassThru `
+        -RedirectStandardOutput $nativeLog -RedirectStandardError $nativeErrorLog
+    $deadline = [DateTime]::UtcNow.AddSeconds(60)
+    $faultReleased = $false
+
+    while (-not $testProcess.HasExited -and [DateTime]::UtcNow -lt $deadline) {
+        Start-Sleep -Milliseconds 50
+
+        if (-not $faultReleased -and
+            (Test-Path -LiteralPath $faultObservedPath -PathType Leaf)) {
+            Assert-True ((Get-Item -LiteralPath $arinHeadPath).PSIsContainer) `
+                'Arin head fault target was not the isolated directory fixture.'
+            Assert-True ((Get-Item -LiteralPath $orinSequencePath).PSIsContainer) `
+                'Orin sequence fault target was not the isolated directory fixture.'
+            Remove-Item -LiteralPath $arinHeadPath -Force
+            Remove-Item -LiteralPath $orinSequencePath -Force
+            Write-NativeDataEnvelope $arinHeadPath $arinBaselinePayload
+            Write-NativeDataEnvelope $faultReleasePath 'READY'
+            $faultReleased = $true
+        }
+    }
+
+    if (-not $testProcess.HasExited) {
+        Stop-Process -Id $testProcess.Id -Force
+        throw 'Viewer hardening native execution exceeded 60 seconds.'
+    }
+
+    $testProcess.WaitForExit()
+    if ($testProcess.ExitCode -ne 0) {
+        $nativeErrors = if (Test-Path -LiteralPath $nativeErrorLog) {
+            Get-Content -LiteralPath $nativeErrorLog -Raw
+        } else { '' }
+        throw "Viewer hardening native execution failed ($($testProcess.ExitCode)): $nativeErrors"
+    }
+    Assert-True $faultReleased 'Native head/sequence selective failure fixture did not run.'
+    Assert-True ((Get-FileHash -LiteralPath "$arinHeadPath.bak" -Algorithm SHA256).Hash -ceq
+        $arinBackupHash) 'Failed head write changed the last-good backup bytes.'
     $expectedText = (Get-Content -LiteralPath $expected -Raw).Trim()
-    $actualText = (Get-Content -LiteralPath $nativeLog -Raw).Trim()
+    $actualText = ((Get-Content -LiteralPath $nativeLog | Where-Object {
+        $_ -cne 'HEAD_WRITE_FAILURE_OBSERVED'
+    }) -join [Environment]::NewLine).Trim()
     Assert-True ($actualText -ceq $expectedText) `
         "Viewer hardening native assertions failed: $actualText"
 

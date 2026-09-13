@@ -27,6 +27,7 @@
     <SmileSource Include="..\Character3DViewer\BattleCameraTimeline.smile" />
     <SmileSource Include="..\Character3DViewer\ViewerBeatTimeline.smile" />
     <SmileSource Include="..\Character3DViewer\ViewerBeatSequence.smile" />
+    <SmileSource Include="..\Character3DViewer\ViewerBeatHeadPersistence.smile" />
     <SmileSource Include="..\Character3DViewer\ViewerBeatEditor.smile" />
     <SmileSource Include="..\Character3DViewer\DragonPresence.smile" />
     <SmileSource Include="..\Character3DViewer\CalibrationJson.smile" />

@@ -20,6 +20,7 @@
     <SmileSource Include="BattleCameraTimeline.smile" />
     <SmileSource Include="ViewerBeatTimeline.smile" />
     <SmileSource Include="ViewerBeatSequence.smile" />
+    <SmileSource Include="ViewerBeatHeadPersistence.smile" />
     <SmileSource Include="ViewerBeatEditor.smile" />
     <SmileSource Include="BeatCameraTests.smile" />
     <SmileSource Include="ViewerTiming.smile" />

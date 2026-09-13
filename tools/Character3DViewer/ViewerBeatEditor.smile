@@ -8,6 +8,7 @@ Import Smile.Simple3D.PrecisionMath3D As M
 Import Smile.Simple3D.PrecisionCamera3D As Projection
 Import Smile.Simple3D.Character3D As C
 Import Smile.Tools.BattleCameraShots As Shots
+Import Smile.Tools.Character3DViewerBeatHeadPersistence As HeadPersistence
 Import Smile.Tools.BattleCameraTimeline As Track
 Import Smile.Tools.ViewerBeatTimeline As Timeline
 Import Smile.Tools.ViewerBeatSequence As Sequence
@@ -22,7 +23,7 @@ Public Type State
     Timeline As Timeline.State
     SourceSchedule As Sequence.Timing
     ShotIndex As Number
-    References[7] As Shots.HeadReference
+    HeadStorage As HeadPersistence.State
     HeadIds[2] As Number
     CornerX[2, 8] As Number
     CornerY[2, 8] As Number
@@ -94,7 +95,8 @@ Public Sub LoadShots(ByRef Value As State)
 
         Call Track.Initialize(Value.Tracks[Identity])
 
-        Loaded = Shots.ReadHead("BattleCamera.Head." + Sequence.Name(Identity), Value.References[Identity])
+        Loaded = HeadPersistence.LoadEntry(Value.HeadStorage, Identity,
+            "BattleCamera.Head." + Sequence.Name(Identity))
         Loaded = Track.ReadDefinition("BattleCamera.Sequence." + Sequence.Name(Identity) + ".V2",
             Value.Tracks[Identity])
 
@@ -109,6 +111,16 @@ Public Sub LoadShots(ByRef Value As State)
     End For
 
 End Sub
+
+Public Function Head(Value As State, Identity As Number) As Shots.HeadReference
+
+    Dim Result As Shots.HeadReference
+
+    Result = HeadPersistence.Current(Value.HeadStorage, Identity)
+
+    Return Result
+
+End Function
 
 Public Function Slot(Value As State, Unity As Boolean, Beat As Number) As Number
 
@@ -259,8 +271,8 @@ Public Function PlaybackCamera(Value As State, Unity As Boolean, Turn As Number,
 
     Progress = Clamp(ToDouble(Time - StartTime) / ToDouble(Max(1, EndTime - StartTime)), 0.0, 1.0)
     Result = Shots.ResolveLinked(Current, Previous, Following,
-        Sequence.Head(Attacker, Value.References[Identity].Offset),
-        Sequence.Head(Target, Value.References[TargetIdentity].Offset), Fallback, Progress)
+        Sequence.Head(Attacker, Head(Value, Identity).Offset),
+        Sequence.Head(Target, Head(Value, TargetIdentity).Offset), Fallback, Progress)
 
     Return Result
 
@@ -310,8 +322,8 @@ Public Sub Update(ByRef Value As State, ByRef Scene As Party.State,
     Value.HeadActors[1] = Target
     Value.HeadIds[0] = Sequence.Identity(Scene.UnityRoster, Scene.Turn)
     Value.HeadIds[1] = Sequence.Identity(Scene.UnityRoster, Sequence.Opponent(Scene, Scene.Turn))
-    Value.Heads[0] = Sequence.Head(Attacker, Value.References[Value.HeadIds[0]].Offset)
-    Value.Heads[1] = Sequence.Head(Target, Value.References[Value.HeadIds[1]].Offset)
+    Value.Heads[0] = Sequence.Head(Attacker, Head(Value, Value.HeadIds[0]).Offset)
+    Value.Heads[1] = Sequence.Head(Target, Head(Value, Value.HeadIds[1]).Offset)
 
     If Value.Reframe Then
 
@@ -380,6 +392,126 @@ Public Function SaveShot(ByRef Value As State, Unity As Boolean) As Boolean
     Value.Message = "Camera Saved"
 
     Return True
+
+End Function
+
+Public Function SetHead(ByRef Value As State, Identity As Number,
+    Candidate As Shots.HeadReference) As Boolean
+
+    Dim Result As Boolean
+
+    Result = HeadPersistence.Replace(Value.HeadStorage, Identity, Candidate)
+
+    If Result Then
+        Value.Message = Sequence.Name(Identity) + " Head Adjustment Pending"
+    End If
+
+    Return Result
+
+End Function
+
+Public Function SaveHead(ByRef Value As State, Index As Number) As Boolean
+
+    Dim Identity As Number
+    Dim Result As Boolean
+
+    If Index < 0 Or Index > 1 Then
+        Return False
+    End If
+
+    Identity = Value.HeadIds[Index]
+    Result = HeadPersistence.SaveEntry(Value.HeadStorage, Identity,
+        "BattleCamera.Head." + Sequence.Name(Identity))
+
+    If Result Then
+        Value.Message = Sequence.Name(Identity) + " Head Cuboid Saved"
+    Else
+        Value.Message = Sequence.Name(Identity) + " Head Save Failed; Retry Or Discard"
+    End If
+
+    Return Result
+
+End Function
+
+Public Function RetryHeadSave(ByRef Value As State) As Boolean
+
+    Dim Identity As Number
+    Dim Result As Boolean
+
+    Identity = HeadPersistence.FirstFailed(Value.HeadStorage)
+
+    If Identity < 0 Then
+        Identity = HeadPersistence.FirstPending(Value.HeadStorage)
+    End If
+
+    If Identity < 0 Then
+        Value.Message = "No Head Adjustment Needs Retry"
+        Return False
+    End If
+
+    Result = HeadPersistence.SaveEntry(Value.HeadStorage, Identity,
+        "BattleCamera.Head." + Sequence.Name(Identity))
+
+    If Result Then
+        Value.Message = Sequence.Name(Identity) + " Head Cuboid Saved"
+    Else
+        Value.Message = Sequence.Name(Identity) + " Head Save Failed; Retry Or Discard"
+    End If
+
+    Return Result
+
+End Function
+
+Public Function DiscardHeadChanges(ByRef Value As State) As Boolean
+
+    Dim Identity As Number
+    Dim Result As Boolean
+
+    Identity = HeadPersistence.FirstFailed(Value.HeadStorage)
+
+    If Identity < 0 Then
+        Identity = HeadPersistence.FirstPending(Value.HeadStorage)
+    End If
+
+    If Identity < 0 Then
+        Value.Message = "No Pending Head Adjustment To Discard"
+        Return False
+    End If
+
+    Result = HeadPersistence.Discard(Value.HeadStorage, Identity)
+
+    If Result Then
+        Value.Reframe = Value.Editing
+        Value.Message = (Sequence.Name(Identity) +
+            " Head Changes Discarded; Camera Draft Kept")
+    End If
+
+    Return Result
+
+End Function
+
+Public Function HeadWarning(Value As State) As Text
+
+    Dim Identity As Number
+    Dim Result As Text
+
+    Identity = HeadPersistence.FirstFailed(Value.HeadStorage)
+
+    If Identity >= 0 Then
+        Result = Sequence.Name(Identity) + " Head Save Failed - Retry Or Discard"
+    End If
+
+    Return Result
+
+End Function
+
+Public Function HasPendingHead(Value As State) As Boolean
+
+    Dim Result As Boolean
+
+    Result = HeadPersistence.FirstPending(Value.HeadStorage) >= 0
+
+    Return Result
 
 End Function
 
@@ -463,7 +595,7 @@ End Function
 Public Function PanelContentHeight(Editing As Boolean) As Number
 
     If Editing Then
-        Return 480
+        Return 520
     End If
 
     Return 283
@@ -487,6 +619,8 @@ Public Function Pointer(ByRef Value As State, Unity As Boolean, Live As P.Camera
     Dim Projected As Projection.ProjectedPoint
     Dim Amount As Double
     Dim TimelineCommand As Number
+    Dim Candidate As Shots.HeadReference
+    Dim Changed As Boolean
 
     X = Pointer_X()
     RawY = Pointer_Y()
@@ -497,7 +631,7 @@ Public Function Pointer(ByRef Value As State, Unity As Boolean, Live As P.Camera
 
         If Not Pointer_Held(POINTER_PRIMARY) Then
 
-            Call SaveHead(Value, Value.DragMarker)
+            Changed = SaveHead(Value, Value.DragMarker)
 
             Value.DragMarker = -1
             Return 100
@@ -509,10 +643,12 @@ Public Function Pointer(ByRef Value As State, Unity As Boolean, Live As P.Camera
         Delta = M.Add(Value.DragOffset, Delta)
 
         If M.Length(Delta) <= 1000.0 Then
-            Value.References[Value.HeadIds[Value.DragMarker]].Offset = Delta
-        End If
 
-        Value.Dirty = True
+            Candidate = Head(Value, Value.HeadIds[Value.DragMarker])
+            Candidate.Offset = Delta
+            Changed = SetHead(Value, Value.HeadIds[Value.DragMarker], Candidate)
+
+        End If
 
         Return 100
 
@@ -605,13 +741,9 @@ Public Function Pointer(ByRef Value As State, Unity As Boolean, Live As P.Camera
                 Amount = 2.0
             End If
 
-            If Value.Marker = 0 Then
-                Value.References[Value.HeadIds[0]].Size.X = Clamp(Value.References[Value.HeadIds[0]].Size.X + Amount, 1.0, 1000.0)
-            Else
-                Value.References[Value.HeadIds[1]].Size.X = Clamp(Value.References[Value.HeadIds[1]].Size.X + Amount, 1.0, 1000.0)
-            End If
-
-            Value.Dirty = True
+            Candidate = Head(Value, Value.HeadIds[Value.Marker])
+            Candidate.Size.X = Clamp(Candidate.Size.X + Amount, 1.0, 1000.0)
+            Changed = SetHead(Value, Value.HeadIds[Value.Marker], Candidate)
 
         Else If Contains(X, Y, PanelLeft + 8, 422, 236, 24) Then
 
@@ -621,13 +753,9 @@ Public Function Pointer(ByRef Value As State, Unity As Boolean, Live As P.Camera
                 Amount = 2.0
             End If
 
-            If Value.Marker = 0 Then
-                Value.References[Value.HeadIds[0]].Size.Y = Clamp(Value.References[Value.HeadIds[0]].Size.Y + Amount, 1.0, 1000.0)
-            Else
-                Value.References[Value.HeadIds[1]].Size.Y = Clamp(Value.References[Value.HeadIds[1]].Size.Y + Amount, 1.0, 1000.0)
-            End If
-
-            Value.Dirty = True
+            Candidate = Head(Value, Value.HeadIds[Value.Marker])
+            Candidate.Size.Y = Clamp(Candidate.Size.Y + Amount, 1.0, 1000.0)
+            Changed = SetHead(Value, Value.HeadIds[Value.Marker], Candidate)
 
         Else If Contains(X, Y, PanelLeft + 8, 450, 236, 24) Then
 
@@ -637,8 +765,9 @@ Public Function Pointer(ByRef Value As State, Unity As Boolean, Live As P.Camera
                 Amount = 2.0
             End If
 
-            Value.References[Value.HeadIds[Value.Marker]].Size.Z = Clamp(
-                Value.References[Value.HeadIds[Value.Marker]].Size.Z + Amount, 1.0, 1000.0)
+            Candidate = Head(Value, Value.HeadIds[Value.Marker])
+            Candidate.Size.Z = Clamp(Candidate.Size.Z + Amount, 1.0, 1000.0)
+            Changed = SetHead(Value, Value.HeadIds[Value.Marker], Candidate)
 
         Else If Contains(X, Y, PanelLeft + 8, 486, 114, 26) Then
 
@@ -652,10 +781,20 @@ Public Function Pointer(ByRef Value As State, Unity As Boolean, Live As P.Camera
 
             Call ResetLengths(Value)
 
+        Else If Contains(X, Y, PanelLeft + 8, 576, 114, 26) Then
+
+            Changed = RetryHeadSave(Value)
+
+        Else If Contains(X, Y, PanelLeft + 130, 576, 114, 26) Then
+
+            Changed = DiscardHeadChanges(Value)
+
         End If
 
-        If Y >= 394 And Y < 474 Then
-            Call SaveHead(Value, Value.Marker)
+        If (Changed And
+            Y >= 394 And
+            Y < 474) Then
+            Changed = SaveHead(Value, Value.Marker)
         End If
 
         Return 100
@@ -678,10 +817,10 @@ Public Function Pointer(ByRef Value As State, Unity As Boolean, Live As P.Camera
                 Projected = Projection.ProjectViewerPoint(Value.Heads[Index], Live, Width, Height)
                 Value.DragDepth = Projected.Depth
                 Value.DragOrigin = Projection.CursorPointAtDepth(Live, X, Y, Projected.Depth, Width, Height)
-                Value.DragOffset = Value.References[Value.HeadIds[0]].Offset
+                Value.DragOffset = Head(Value, Value.HeadIds[0]).Offset
 
                 If Index = 1 Then
-                    Value.DragOffset = Value.References[Value.HeadIds[1]].Offset
+                    Value.DragOffset = Head(Value, Value.HeadIds[1]).Offset
                 End If
 
                 Return 100
@@ -734,6 +873,7 @@ Public Sub Draw(Value As State, Unity As Boolean, Width As Number, Height As Num
     Dim Position As Number
     Dim EndPosition As Number
     Dim Tint As Number
+    Dim Warning As Text
 
     PanelLeft = Width - 268
 
@@ -812,6 +952,11 @@ Public Sub Draw(Value As State, Unity As Boolean, Width As Number, Height As Num
 
         Draw Text "Resets Are Drafts Until Save" At PanelLeft + 8, 550 - ScrollOffset Size 9 Color LIGHT_GRAY
 
+        Call UI.DrawButton(PanelLeft + 8, 576 - ScrollOffset, 114, 26,
+            "Retry Head Save", False)
+        Call UI.DrawButton(PanelLeft + 130, 576 - ScrollOffset, 114, 26,
+            "Discard Head", False)
+
     Else
         Draw Text "Animation: " + ClipName At PanelLeft + 8, 307 - ScrollOffset Size 11 Color WHITE
         Draw Text "Copy A Shot; Select Another Character" At PanelLeft + 8, 335 - ScrollOffset Size 10 Color LIGHT_GRAY
@@ -824,6 +969,12 @@ Public Sub Draw(Value As State, Unity As Boolean, Width As Number, Height As Num
     Call UI.DrawVerticalScrollbar(
         PanelLeft, PanelTop, 252, PanelHeight,
         PanelContentHeight(Value.Editing), ScrollOffset)
+
+    Warning = HeadWarning(Value)
+
+    If Text_Length(Warning) > 0 Then
+        Draw Text Warning At 280, 98 Size 11 Color YELLOW
+    End If
 
     Draw Text Value.Message At 280, 116 Size 11 Color YELLOW
 
@@ -1115,28 +1266,19 @@ Private Sub InitializeHead(ByRef Value As State, Index As Number)
 
     Dim Bounds As C.PreciseBounds3D
     Dim Size As Double
+    Dim Initial As Shots.HeadReference
 
-    If Value.References[Value.HeadIds[Index]].Size.X > 0.0 Then
+    Initial = Head(Value, Value.HeadIds[Index])
+
+    If Initial.Size.X > 0.0 Then
         Return
     End If
 
     Bounds = C.WorldBoundsPrecise(Value.HeadActors[Index])
     Size = Max(8.0, Bounds.Size.Y * 0.15)
-    Value.References[Value.HeadIds[Index]].Size = P.Vector(Size, Size, Size)
+    Initial.Size = P.Vector(Size, Size, Size)
 
-End Sub
-
-Private Sub SaveHead(ByRef Value As State, Index As Number)
-
-    Dim Identity As Number
-
-    Identity = Value.HeadIds[Index]
-
-    If Shots.WriteHead("BattleCamera.Head." + Sequence.Name(Identity), Value.References[Identity]) Then
-        Value.Message = Sequence.Name(Identity) + " Head Cuboid Saved"
-    Else
-        Value.Message = "Head Save Failed; Adjustment Still In Memory"
-    End If
+    Call HeadPersistence.Initialize(Value.HeadStorage, Value.HeadIds[Index], Initial)
 
 End Sub
 
@@ -1154,7 +1296,7 @@ Private Sub ProjectHeads(ByRef Value As State, Live As P.Camera3D, Width As Numb
 
     For Index = 0 To 1
 
-        Size = Value.References[Value.HeadIds[Index]].Size
+        Size = Head(Value, Value.HeadIds[Index]).Size
         Ok = C.TryRotation(Value.HeadActors[Index], Rotation)
         Rotation = P.Vector(0.0, Rotation.Y, 0.0)
         Value.BoxVisible[Index] = False

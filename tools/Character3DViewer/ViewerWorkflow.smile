@@ -2475,7 +2475,8 @@ Public Class Session
 
         Dim ReturnValue As Boolean
 
-        ReturnValue = Me.ViewerUiState.CalibrationEditing
+        ReturnValue = (Me.ViewerUiState.CalibrationEditing Or
+            BeatEditor.HasPendingHead(Me.BeatEditing))
 
         Return ReturnValue
 
