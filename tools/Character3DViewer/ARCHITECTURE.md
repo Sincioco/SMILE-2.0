@@ -69,6 +69,26 @@ standalone/Party framing so the character cannot float from a negative bind mini
 MiraTripoV1 owns its 35-bone rig, nine actions, 4K body/2K staff PBR bake, mesh repair,
 cape clearance and floor measurements; the Viewer remains an asset consumer.
 
+The new Mira tab also uses the existing Dragon arena and `ViewerParty.Companion`
+slot for Arin, without enabling Party choreography. `ViewerLifecycle` loads and
+places that companion, restores Mira's inspector calibration owner after loading
+Arin's existing bank, and binds borrowed preview actors to the standalone `MiraWater`
+context. `MiraWater` rebuilds final-position targets (Arin first for Heal One, then
+Mira) and the Dragon Chest attack target each frame. Its existing destruction resets
+the borrowed handles. Update/draw admit an actual ready companion independently of
+Party mode; the existing calibrated update and destruction paths retain ownership.
+Companion creation restores the primary effects profile. Dragon tracking selects a
+valid body reference for Mira's two-part package while retaining Arin/Orin part two.
+`CheckMiraPreview` covers all nine clips, calibration/effect ownership, target positions,
+pause, cleanup and preserved solo comparisons; `CheckMiraBattles` retains both Party
+routes. Standalone water consumes the actual clip name rather than the inspector
+label: `HealOne`/`HealParty` drive the effect and sound even though the UI displays
+spaces. The native fixture checks active heal surfaces at the middle of both clips.
+This adds no runtime API, calibration format, actor pool or scene clock.
+Growth is limited to existing owners: the workflow/rendering gates are replacements,
+with small lifecycle, profile, target-adapter and companion changes. The existing
+reviewed workflow exception is unchanged; no guardrail or baseline is raised.
+
 Small valid triangles in Tripo Mira exposed an absolute area cutoff in the asset
 cooker and native loader. Their existing geometry-validation owners now use a
 normalized, Double-precision area test. The focused triangle-scale regression checks

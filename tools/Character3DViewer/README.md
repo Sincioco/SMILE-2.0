@@ -6,7 +6,11 @@
 Pixal3D healer. **Mira2** loads the independent TRELLIS.2
 candidate, and **Mira3** loads Hunyuan3D-2.1 shape/paint with a refined face texture.
 All four have nine animation choices. Use **Weapon** or **W** to hide/show each
-character's own staff. Mira2/Mira3 each have a closed 19,652-triangle equipped surface,
+character's own staff. The **Mira** tab uses Arin's arena view with **Dragon** and a
+separate, calibrated **Arin** companion. Mira keeps the animation inspector; Arin
+idles beside her. **Dragon** or **D** toggles the opponent. Her attack previews target
+Dragon, **Heal One** targets Arin, and **Heal Party** includes Arin and Mira.
+Mira1/Mira2/Mira3 remain solo comparisons. Mira2/Mira3 each have a closed 19,652-triangle equipped surface,
 baked textures and measured floor corrections. This is an appearance and animation
 comparison. New Mira is the current
 healer in both Party battles, cycling Torrent, Heal One (Arin), Heal Party, Waterball,

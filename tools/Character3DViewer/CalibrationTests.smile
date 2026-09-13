@@ -2055,9 +2055,15 @@ Sub CheckMiraBattles()
             Call CalibrationCheck(Bounds.Valid And Abs(Bounds.Minimum.Y) <= 1 And
                 Abs(ViewerCameraState.Frame.PositionY) < 0.1,
                 "Mira staff bind bounds do not lift her above the arena")
+        Else
+
+            Call CalibrationCheck(Not DragonState.Available And Not Party.Companion.Ready,
+                "Preserved Mira comparison tabs remain solo previews")
         End If
 
     End For
+
+    Call CheckMiraPreview()
 
     For TabIndex = 0 To 1
 
@@ -2160,5 +2166,75 @@ Sub CheckMiraBattles()
     Call SelectCharacterTab(0)
     Call CalibrationCheck(Not Party.Mira.Ready And Not Party.Water.Ready,
         "Leaving Party releases Mira's actor and water resources")
+
+End Sub
+
+Sub CheckMiraPreview()
+
+    Dim Index As Number
+    Dim Position As Precision3D.Vector3
+    Dim Chest As Precision3D.Vector3
+    Dim CompanionTime As Number
+    Dim Ok As Boolean
+    Dim Updated As ViewerParty.ParticipantUpdateResult
+
+    Call CalibrationCheck(Session.Ready And Not Party.Enabled And
+        DragonState.Available And DragonState.Visible And Not DragonState.UseVrax And
+        Party.Companion.Ready And Party.Companion.Profile = ViewerProfiles.PROFILE_ARIN,
+        "Mira preview owns Dragon and Arin without enabling Party choreography")
+    Call CalibrationCheck(Calibration.OwnerProfile = ViewerProfiles.PROFILE_MIRA And
+        Not CalibrationAvailable And Party.Companion.CalibrationAvailable And
+        Effects.ProfileIndex = ViewerProfiles.PROFILE_MIRA,
+        "Arin companion loading preserves Mira inspector and effect ownership")
+
+    Ok = Character3D.TryPosition(Party.Companion.Actor, Position)
+
+    Call CalibrationCheck(Ok And Position.X = Party.Companion.Frame.PositionX And
+        Position.Z = Party.Companion.Frame.PositionZ And Position.Z < -100.0,
+        "Arin companion has a separate grounded arena placement")
+
+    For Index = 0 To Character3D.ClipCount(Character) - 1
+
+        Call ViewerPlayback.SelectClip(Playback, Index, False)
+
+        Ok = ViewerPlayback.StartSelectedClip(Playback, Character, Session.ProfileIndex)
+        Ok = Character3D.SetAnimationTime(Character, Character3D.ClipDuration(Character, Index) / 2) And Ok
+        Updated = ViewerParty.UpdateCompanion(Party, Calibration, Effects, 0, False)
+
+        Call UpdateDragon()
+        Call UpdateTestEquipmentFire()
+        Call CalibrationCheck(Ok And Updated.Ready And Session.Ready And
+            Character3D.LastError() = 0 And Effects.Water.Targets.MemberCount = 2,
+            "All Mira clips retain both recipients and valid Dragon socket targeting")
+
+        If (Character3D.ClipName(Character, Index) = "HealOne" Or
+            Character3D.ClipName(Character, Index) = "HealParty") Then
+            Call CalibrationCheck(Effects.Water.Visible And Effects.Water.Effect.PreviousMode = 1,
+                "Standalone healing labels resolve to an active water heal effect")
+        End If
+
+    End For
+
+    Ok = Character3D.TrySocketPositionPrecise(DragonState.Actor, "Chest", 0, False, Chest)
+    Ok = Character3D.TryPosition(Party.Companion.Actor, Position) And Ok
+
+    Call CalibrationCheck(Ok And Abs(Effects.Water.Targets.Attack.X - Chest.X) < 0.1 And
+        Abs(Effects.Water.Targets.Attack.Y - Chest.Y) < 0.1 And
+        Abs(Effects.Water.Targets.Members[0].X - Position.X) < 0.1 And
+        Abs(Effects.Water.Targets.Members[0].Z - Position.Z) < 0.1,
+        "Mira attacks Dragon and Heal One targets Arin's final position")
+
+    CompanionTime = Character3D.AnimationTime(Party.Companion.Actor)
+    Updated = ViewerParty.UpdateCompanion(Party, Calibration, Effects, 0, False)
+
+    Call CalibrationCheck(Updated.Ready And
+        Character3D.AnimationTime(Party.Companion.Actor) = CompanionTime,
+        "Paused Mira preview also pauses Arin")
+    Call SelectCharacterTab(ViewerProfiles.CHARACTER_TAB_MIRA1)
+    Call UpdateTestEquipmentFire()
+    Call CalibrationCheck(Session.Ready And Not Party.Companion.Ready And
+        Effects.Water.PreviewAlly.Handle = 0 And Effects.Water.PreviewOpponent.Handle = 0 And
+        Effects.Water.Targets.MemberCount = 1,
+        "Leaving Mira releases preview actors and restores solo water targets")
 
 End Sub

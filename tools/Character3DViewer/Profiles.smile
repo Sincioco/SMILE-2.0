@@ -368,7 +368,9 @@ Public Function InitialOrbitYaw(ProfileIndex As Number) As Number
 
     Dim Result As Number
 
-    If IsPartyCharacter(ProfileIndex) Or ProfileIndex = PROFILE_ARIN_V56 Then
+    If (IsPartyCharacter(ProfileIndex) Or
+        ProfileIndex = PROFILE_ARIN_V56 Or
+        ProfileIndex = PROFILE_MIRA) Then
         Result = -90
     End If
 
@@ -1114,7 +1116,8 @@ Public Function HasBattleOpponent(ProfileIndex As Number) As Boolean
 
     Dim Result As Boolean
 
-    Result = IsPartyCharacter(ProfileIndex) Or ProfileIndex = PROFILE_VALOR Or ProfileIndex = PROFILE_ZARA
+    Result = (IsPartyCharacter(ProfileIndex) Or ProfileIndex = PROFILE_VALOR Or
+        ProfileIndex = PROFILE_ZARA Or ProfileIndex = PROFILE_MIRA)
 
     Return Result
 

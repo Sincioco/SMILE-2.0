@@ -976,10 +976,12 @@ Public Function CreateCompanion(ByRef Value As State,
     Dim PreviousKeyBase As Number
     Dim PreviousShieldGlow As Core.Object3D
     Dim PreviousSwordGlow As Core.Object3D
+    Dim PreviousProfile As Number
     Dim PlaybackReady As Boolean
     Dim Result As Boolean
 
     PreviousKeyBase = Calibration.KeyBase
+    PreviousProfile = Effects.ProfileIndex
     PreviousSwordGlow = Effects.SwordGlow
     PreviousShieldGlow = Effects.ShieldGlow
     PreviousGlowAvailable = Effects.EpicGlowAvailable
@@ -1045,6 +1047,7 @@ Public Function CreateCompanion(ByRef Value As State,
     Effects.ShieldGlow = PreviousShieldGlow
     Effects.EpicGlowAvailable = PreviousGlowAvailable
     Effects.EpicGlowVisible = PreviousGlowVisible
+    Effects.ProfileIndex = PreviousProfile
     Result = Companion.Ready And Value.Ready And PlaybackReady
 
     Return Result
@@ -1297,6 +1300,7 @@ Public Function UpdateDragon(
     Dim Target As Core.Vector3
     Dim ReactionRequested As Boolean
     Dim Result As Boolean
+    Dim PrimaryReferencePart As Number
 
     If Not ViewerDragon.IsValid(Dragon) Then
         Call ViewerDragon.ClearOwnedEffects(Dragon, Effects.DragonLight)
@@ -1377,10 +1381,17 @@ Public Function UpdateDragon(
         )
 
     Else
+
+        ''' Mira's body is part zero; the calibrated Arin/Orin packages use part two.
+
+        If Character3D.PartCount(PrimaryActor) > BODY_PART_INDEX Then
+            PrimaryReferencePart = BODY_PART_INDEX
+        End If
+
         Target = Character3D.SocketPosition(
             PrimaryActor,
             "Chest",
-            BODY_PART_INDEX
+            PrimaryReferencePart
         )
 
     End If

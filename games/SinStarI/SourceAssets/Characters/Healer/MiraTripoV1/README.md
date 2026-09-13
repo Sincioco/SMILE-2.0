@@ -77,6 +77,25 @@ Native Mira and Water Lab delivery is complete. Water remains bounded real-time
 VFX with screen-space reflection/refraction, not a fluid solver or ray tracing.
 All Web adoption/publication remains on hold.
 
+## Standalone Mira arena
+
+The Mira tab now uses the same Dragon arena presentation as Arin's tab, with a
+separate Arin companion beside Mira. Mira remains the inspected character with all
+nine animation controls. Arin uses his existing v5.7 package and saved calibration;
+no model, rig, attachment or calibration values were changed. Dragon can be hidden
+with its button or **D**. Mira's attack preview targets Dragon's Chest, Heal One
+targets Arin, and Heal Party includes both heroes. Mira1/Mira2/Mira3 stay solo.
+
+The standalone water adapter consumes actual clip names, fixing the spaced
+Heal One/Heal Party labels that previously suppressed their water and sound cues.
+Native validation covers all nine clips, active healing, final actor targets,
+companion pause, cleanup, both Party routes and exact canonical calibration exports.
+The healing regression failed for both clips before that correction.
+The rebuilt native Viewer visibly verified all three actors, Dragon hide/show,
+Heal One surrounding Arin and Heal Party surrounding both heroes. Native hardening
+passed 58 graphics/input/audio checks; the 453-file style check and final focused
+style check passed. All 58 package checksums remain verified.
+
 ## Reproduction
 
 Use the installed Blender 5.2 with `--background --python` and these scripts in order:

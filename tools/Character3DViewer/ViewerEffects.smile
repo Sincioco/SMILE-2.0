@@ -752,7 +752,7 @@ Public Sub UpdateEquipmentFire(
 
         Call MiraWater.UseStandaloneTargets(Value.Water, Actor)
 
-        WaterReady = MiraWater.Update(Value.Water, Actor, SelectedClipLabel,
+        WaterReady = MiraWater.Update(Value.Water, Actor, Character3D.ClipName(Actor, SelectedClip),
             Not PrimaryKnockedOut, Not ScenePaused And Not CalibrationEditing, SwordVisible)
 
         Return

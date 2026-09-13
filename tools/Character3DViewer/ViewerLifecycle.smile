@@ -119,6 +119,12 @@ Public Sub LoadViewer(ByRef Session As ViewerSession.State,
         Session, Party, Character, Effects, Playback, Calibration,
         Ui, Gizmo, Equipment, CalibrationAvailable,
         SwordWristNode, ShieldWristNode, Settings)
+
+    If Session.ProfileIndex = ViewerProfiles.PROFILE_MIRA Then
+        Effects.Water.PreviewAlly = Party.Companion.Actor
+        Effects.Water.PreviewOpponent = Dragon.Actor
+    End If
+
     Call CompleteLoad(Session)
 
 End Sub
@@ -302,6 +308,8 @@ Private Sub CreateParticipants(ByRef Session As ViewerSession.State,
     ByRef CalibrationAvailable As Boolean, ByRef SwordWristNode As Number,
     ByRef ShieldWristNode As Number, Settings As Configuration)
 
+    Dim CalibrationOwner As ViewerCalibration.State
+
     If Party.Enabled Then
 
         Session.Ready = ViewerParty.CreateCompanion(
@@ -314,6 +322,23 @@ Private Sub CreateParticipants(ByRef Session As ViewerSession.State,
             Session, Character, Calibration, Ui, Gizmo,
             CalibrationAvailable, SwordWristNode, ShieldWristNode)
         Call ResetPartyDemo(Session, Party, Playback, Ui, Equipment, Settings)
+
+    End If
+
+    If Session.ProfileIndex = ViewerProfiles.PROFILE_MIRA Then
+
+        ''' Arin keeps his own bank; Mira remains the selected, uncalibrated inspector actor.
+        CalibrationOwner = Calibration
+        Session.Ready = ViewerParty.CreateCompanion(
+            Party, Calibration, Effects, ViewerProfiles.PROFILE_ARIN,
+            0, Playback.PlaybackSpeed) And Session.Ready
+        Calibration = CalibrationOwner
+        Party.Companion.Frame.PositionX = 60.0
+        Party.Companion.Frame.PositionZ = -125.0
+        Session.Ready = ViewerActors.PreparePrimaryPresentation(
+            Party.Companion.Actor, Party.Companion.Frame, ViewerProfiles.PROFILE_ARIN,
+            False, True, ViewerDragon.PositionX(), 0, ViewerDragon.PositionZ(),
+            ViewerDragon.RotationY(), Settings.CharacterModelForwardYawOffset, 0) And Session.Ready
 
     End If
 

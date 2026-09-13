@@ -370,7 +370,7 @@ Private Sub DrawParticipants(ByRef Result As FrameResult,
 
     Call CaptureFrameResult(Result, ViewerParty.DrawAdditionalEquipment(Party, Equipment), 13)
 
-    If (Party.Enabled Or DragonInspection) And Party.Ready Then
+    If Party.Companion.Ready And Party.Ready Then
         Call CaptureFrameResult(
             Result,
             ViewerParty.DrawCompanion(

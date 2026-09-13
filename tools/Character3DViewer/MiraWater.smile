@@ -27,6 +27,8 @@ Public Type Context
     Cue As Audio.CueState
     ImpactCue As Audio.CueState
     Targets As Targets
+    PreviewAlly As Character.Actor
+    PreviewOpponent As Character.Actor
     AttackMode As Number
     GuardTime As Number
     Guarding As Boolean
@@ -96,6 +98,21 @@ Public Sub UseStandaloneTargets(ByRef Value As Context, Actor As Character.Actor
     Ok = Character.TryRotation(Actor, Rotation) And Ok
     Value.Targets.Attack = M.Add(Value.Targets.Members[0],
         M.Rotate(P.Vector(0.0, 55.0, -180.0), Rotation))
+
+    If Character.IsValid(Value.PreviewAlly) Then
+
+        ''' Heal One selects Arin; Heal Party includes both grounded characters.
+        Value.Targets.Members[1] = Value.Targets.Members[0]
+        Value.Targets.MemberCount = 2
+
+        Call SetMember(Value.Targets, 0, Value.PreviewAlly)
+
+    End If
+
+    If Character.IsValid(Value.PreviewOpponent) Then
+        Call SetAttack(Value.Targets, Value.PreviewOpponent)
+    End If
+
     Value.Guarding = False
     Value.ImpactElapsed = -1
 
