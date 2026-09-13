@@ -187,6 +187,9 @@ every standalone and Party tab. The upper inspector and Beat Editor use the shar
 overflowing content. The Beat Editor reuses the upper inspector background instead
 of stacking another layer. The upper inspector stops above the separate Camera panel,
 so all panel backgrounds preserve the shared 80-percent on-screen opacity.
+`ViewerBeatEditor.ResolvePointerCoordinates` keeps raw logical viewport Y separate
+from inspector-content Y. Head picking and every held drag sample use the raw coordinate;
+only visibly clipped inspector controls use the scroll-adjusted coordinate.
 During Beat Edit, workflow routing binds Camera sliders and actions to the active
 Beat camera; right-click closes the draft and runs the existing current-tab reset.
 `ViewerUi` also presents independent 0-200 percent

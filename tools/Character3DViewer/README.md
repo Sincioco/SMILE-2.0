@@ -127,6 +127,9 @@ Offsets and dimensions auto-save per character when released/adjusted and are re
 across beats and attacker/target roles; Cancel only cancels camera changes. Centers
 follow animated head sockets; cuboid axes and offsets follow the actor's facing.
 The cuboid is a framing reference, not collision geometry or an animation edit.
+Inspector scrolling changes only the panel-control coordinate. Picking and dragging
+either cuboid continue to use the same raw viewport pixels, so a held pointer does not
+move the head when the panel is scrolled.
 If a head save fails, the character-specific warning remains visible after camera Save,
 Preview close and actor navigation. Use **Retry Head Save** after correcting the storage
 problem, or **Discard Head** to restore only that character's last-persisted cuboid while

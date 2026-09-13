@@ -941,6 +941,15 @@ try {
         $programSource.Contains('Window_DeferClose(Viewer.HasEdits())') -and
         $programSource.Contains('Window_CloseRequested()')) `
         'Standalone native close must defer while head recovery remains pending.'
+    Assert-True ($beatEditorSource.Contains('Public Function ResolvePointerCoordinates(') -and
+        $beatEditorSource.Contains(
+            'Cursor = Projection.CursorPointAtDepth(Live, ViewportX, ViewportY,') -and
+        $beatEditorSource.Contains(
+            'Contains(ViewportX, PanelY, PanelLeft + 8, 450, 236, 24)') -and
+        $beatEditorSource.Contains(
+            'Contains(ViewportX, ViewportY, Value.BoxX[Index], Value.BoxY[Index],') -and
+        -not $beatEditorSource.Contains('RawY')) `
+        'Head dragging must keep raw viewport and scrolled panel coordinates separate.'
     Assert-True ($inspectorPointerSource.Contains(
             'ViewerInspectorCommands.ApplyPresentationAction(') -and
         $inspectorPointerSource.Contains(

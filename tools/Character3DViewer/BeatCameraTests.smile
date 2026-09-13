@@ -13,6 +13,7 @@ Import Smile.Tools.ViewerBeatTimeline As Timeline
 Import Smile.Tools.Character3DViewerCamera As Camera
 Import Smile.Simple3D.Precision3D As P
 Import Smile.Simple3D.PrecisionMath3D As M
+Import Smile.Simple3D.PrecisionCamera3D As Projection
 
 Private Sub Check(Condition As Boolean, Label As Text, ByRef Failures As Number)
 
@@ -137,6 +138,7 @@ Public Function Run() As Number
 
     Call Check(M.Distance(Resolved.Position, Second.Position) < 1e-9, "Connection End", Failures)
     Call CheckLinkedCameraIntegrity(Failures)
+    Call CheckScrolledHeadDrag(Failures)
 
     Value.Motion = 0
     Value.Connection = 1
@@ -216,6 +218,58 @@ Public Function Run() As Number
     Return Failures
 
 End Function
+
+Private Sub CheckScrolledHeadDrag(ByRef Failures As Number)
+
+    Dim Live As P.Camera3D
+    Dim ZeroScroll As Editor.PointerCoordinates
+    Dim Scrolled As Editor.PointerCoordinates
+    Dim Hidden As Editor.PointerCoordinates
+    Dim ZeroOrigin As P.Vector3
+    Dim ScrolledOrigin As P.Vector3
+    Dim ZeroMoved As P.Vector3
+    Dim ScrolledMoved As P.Vector3
+    Dim ZeroDelta As P.Vector3
+    Dim ScrolledDelta As P.Vector3
+
+    Live.Position = P.Vector(0.0, 100.0, -300.0)
+    Live.Target = P.Vector(0.0, 100.0, 0.0)
+    Live.UpDirection = P.Vector(0.0, 1.0, 0.0)
+    Live.FovDegrees = 45.0
+    ZeroScroll = Editor.ResolvePointerCoordinates(360, 0)
+    Scrolled = Editor.ResolvePointerCoordinates(360, 96)
+    ZeroOrigin = Projection.CursorPointAtDepth(Live, 640, ZeroScroll.ViewportY,
+        300.0, 1280, 720)
+    ScrolledOrigin = Projection.CursorPointAtDepth(Live, 640, Scrolled.ViewportY,
+        300.0, 1280, 720)
+
+    Call Check(M.Distance(ZeroOrigin, ScrolledOrigin) < 1e-9,
+        "Scrolled Stationary Head Drag Has Zero Delta", Failures)
+
+    ZeroScroll = Editor.ResolvePointerCoordinates(364, 0)
+    Scrolled = Editor.ResolvePointerCoordinates(364, 96)
+    ZeroMoved = Projection.CursorPointAtDepth(Live, 644, ZeroScroll.ViewportY,
+        300.0, 1280, 720)
+    ScrolledMoved = Projection.CursorPointAtDepth(Live, 644, Scrolled.ViewportY,
+        300.0, 1280, 720)
+    ZeroDelta = M.Subtract(ZeroMoved, ZeroOrigin)
+    ScrolledDelta = M.Subtract(ScrolledMoved, ScrolledOrigin)
+
+    Call Check(M.Length(ZeroDelta) > 0.0 And M.Distance(ZeroDelta, ScrolledDelta) < 1e-9,
+        "Raw Pixel Head Drag Is Independent Of Inspector Scroll", Failures)
+
+    Scrolled = Editor.ResolvePointerCoordinates(360, 96)
+    Hidden = Editor.ResolvePointerCoordinates(100, 350)
+
+    Call Check(Scrolled.PanelY = 456 And
+        Editor.Contains(1250, Scrolled.ViewportY, 1012, 110, 252, 390) And
+        Editor.Contains(1250, Scrolled.PanelY, 1020, 450, 236, 24),
+        "Visible Panel Button Uses Scrolled Content Coordinates", Failures)
+    Call Check(Not Editor.Contains(1250, Hidden.ViewportY, 1012, 110, 252, 390) And
+        Editor.Contains(1250, Hidden.PanelY, 1020, 450, 236, 24),
+        "Clipped Panel Button Cannot Receive A Hidden Hit", Failures)
+
+End Sub
 
 Private Function SameHead(First As Shots.HeadReference,
     Second As Shots.HeadReference) As Boolean

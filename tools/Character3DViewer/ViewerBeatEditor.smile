@@ -73,6 +73,11 @@ Public Type State
     Message As Text
 End Type
 
+Public Type PointerCoordinates
+    ViewportY As Number
+    PanelY As Number
+End Type
+
 Public Function Key(Identity As Number, Beat As Number) As Text
 
     Dim Result As Text
@@ -592,6 +597,18 @@ Public Function Contains(X As Number, Y As Number, PanelLeft As Number, Top As N
 
 End Function
 
+Public Function ResolvePointerCoordinates(ViewportY As Number,
+    ScrollOffset As Number) As PointerCoordinates
+
+    Dim Result As PointerCoordinates
+
+    Result.ViewportY = ViewportY
+    Result.PanelY = ViewportY + ScrollOffset
+
+    Return Result
+
+End Function
+
 Public Function PanelContentHeight(Editing As Boolean) As Number
 
     If Editing Then
@@ -609,9 +626,10 @@ Public Function Pointer(ByRef Value As State, Unity As Boolean, Live As P.Camera
 
     Dim ReturnValue As Number
 
-    Dim X As Number
-    Dim Y As Number
-    Dim RawY As Number
+    Dim ViewportX As Number
+    Dim ViewportY As Number
+    Dim PanelY As Number
+    Dim Coordinates As PointerCoordinates
     Dim PanelLeft As Number
     Dim Index As Number
     Dim Cursor As P.Vector3
@@ -622,9 +640,10 @@ Public Function Pointer(ByRef Value As State, Unity As Boolean, Live As P.Camera
     Dim Candidate As Shots.HeadReference
     Dim Changed As Boolean
 
-    X = Pointer_X()
-    RawY = Pointer_Y()
-    Y = RawY + ScrollOffset
+    ViewportX = Pointer_X()
+    Coordinates = ResolvePointerCoordinates(Pointer_Y(), ScrollOffset)
+    ViewportY = Coordinates.ViewportY
+    PanelY = Coordinates.PanelY
     PanelLeft = Width - 268
 
     If Value.DragMarker >= 0 Then
@@ -638,7 +657,8 @@ Public Function Pointer(ByRef Value As State, Unity As Boolean, Live As P.Camera
 
         End If
 
-        Cursor = Projection.CursorPointAtDepth(Live, X, Y, Value.DragDepth, Width, Height)
+        Cursor = Projection.CursorPointAtDepth(Live, ViewportX, ViewportY,
+            Value.DragDepth, Width, Height)
         Delta = Sequence.LocalOffset(Value.HeadActors[Value.DragMarker], M.Subtract(Cursor, Value.DragOrigin))
         Delta = M.Add(Value.DragOffset, Delta)
 
@@ -667,19 +687,19 @@ Public Function Pointer(ByRef Value As State, Unity As Boolean, Live As P.Camera
 
     End If
 
-    If Contains(X, RawY, PanelLeft, PanelTop, 252, PanelHeight) Then
+    If Contains(ViewportX, ViewportY, PanelLeft, PanelTop, 252, PanelHeight) Then
 
         If Not Pointer_Pressed(POINTER_PRIMARY) Then
             Return 100
         End If
 
-        If Contains(X, Y, PanelLeft + 8, 172, 236, 26) Then
+        If Contains(ViewportX, PanelY, PanelLeft + 8, 172, 236, 26) Then
             Return 5
         End If
 
         For Index = 0 To 3
 
-            If Contains(X, Y, PanelLeft + 8 + Index * 60, 208, 56, 26) Then
+            If Contains(ViewportX, PanelY, PanelLeft + 8 + Index * 60, 208, 56, 26) Then
                 ReturnValue = Index + 1
 
                 Return ReturnValue
@@ -689,7 +709,7 @@ Public Function Pointer(ByRef Value As State, Unity As Boolean, Live As P.Camera
 
         For Index = 0 To 3
 
-            If Contains(X, Y, PanelLeft + 8 + Index * 60, 266, 56, 26) Then
+            If Contains(ViewportX, PanelY, PanelLeft + 8 + Index * 60, 266, 56, 26) Then
                 ReturnValue = Index + 6
 
                 Return ReturnValue
@@ -701,7 +721,7 @@ Public Function Pointer(ByRef Value As State, Unity As Boolean, Live As P.Camera
             Return 100
         End If
 
-        If Contains(X, Y, PanelLeft + 8, 302, 236, 26) Then
+        If Contains(ViewportX, PanelY, PanelLeft + 8, 302, 236, 26) Then
 
             Call ResumeCamera(Value)
 
@@ -709,7 +729,7 @@ Public Function Pointer(ByRef Value As State, Unity As Boolean, Live As P.Camera
             Value.UseDefault = False
             Value.Dirty = True
 
-        Else If Contains(X, Y, PanelLeft + 8, 334, 236, 26) Then
+        Else If Contains(ViewportX, PanelY, PanelLeft + 8, 334, 236, 26) Then
 
             Call ResumeCamera(Value)
 
@@ -729,15 +749,15 @@ Public Function Pointer(ByRef Value As State, Unity As Boolean, Live As P.Camera
 
             Value.Dirty = True
 
-        Else If Contains(X, Y, PanelLeft + 8, 366, 236, 24) Then
+        Else If Contains(ViewportX, PanelY, PanelLeft + 8, 366, 236, 24) Then
 
             Value.Marker = 1 - Value.Marker
 
-        Else If Contains(X, Y, PanelLeft + 8, 394, 236, 24) Then
+        Else If Contains(ViewportX, PanelY, PanelLeft + 8, 394, 236, 24) Then
 
             Amount = -2.0
 
-            If X >= PanelLeft + 126 Then
+            If ViewportX >= PanelLeft + 126 Then
                 Amount = 2.0
             End If
 
@@ -745,11 +765,11 @@ Public Function Pointer(ByRef Value As State, Unity As Boolean, Live As P.Camera
             Candidate.Size.X = Clamp(Candidate.Size.X + Amount, 1.0, 1000.0)
             Changed = SetHead(Value, Value.HeadIds[Value.Marker], Candidate)
 
-        Else If Contains(X, Y, PanelLeft + 8, 422, 236, 24) Then
+        Else If Contains(ViewportX, PanelY, PanelLeft + 8, 422, 236, 24) Then
 
             Amount = -2.0
 
-            If X >= PanelLeft + 126 Then
+            If ViewportX >= PanelLeft + 126 Then
                 Amount = 2.0
             End If
 
@@ -757,11 +777,11 @@ Public Function Pointer(ByRef Value As State, Unity As Boolean, Live As P.Camera
             Candidate.Size.Y = Clamp(Candidate.Size.Y + Amount, 1.0, 1000.0)
             Changed = SetHead(Value, Value.HeadIds[Value.Marker], Candidate)
 
-        Else If Contains(X, Y, PanelLeft + 8, 450, 236, 24) Then
+        Else If Contains(ViewportX, PanelY, PanelLeft + 8, 450, 236, 24) Then
 
             Amount = -2.0
 
-            If X >= PanelLeft + 126 Then
+            If ViewportX >= PanelLeft + 126 Then
                 Amount = 2.0
             End If
 
@@ -769,39 +789,37 @@ Public Function Pointer(ByRef Value As State, Unity As Boolean, Live As P.Camera
             Candidate.Size.Z = Clamp(Candidate.Size.Z + Amount, 1.0, 1000.0)
             Changed = SetHead(Value, Value.HeadIds[Value.Marker], Candidate)
 
-        Else If Contains(X, Y, PanelLeft + 8, 486, 114, 26) Then
+        Else If Contains(ViewportX, PanelY, PanelLeft + 8, 486, 114, 26) Then
 
             Call ResetDefaults(Value, False)
 
-        Else If Contains(X, Y, PanelLeft + 130, 486, 114, 26) Then
+        Else If Contains(ViewportX, PanelY, PanelLeft + 130, 486, 114, 26) Then
 
             Call ResetDefaults(Value, True)
 
-        Else If Contains(X, Y, PanelLeft + 8, 520, 236, 26) Then
+        Else If Contains(ViewportX, PanelY, PanelLeft + 8, 520, 236, 26) Then
 
             Call ResetLengths(Value)
 
-        Else If Contains(X, Y, PanelLeft + 8, 576, 114, 26) Then
+        Else If Contains(ViewportX, PanelY, PanelLeft + 8, 576, 114, 26) Then
 
             Changed = RetryHeadSave(Value)
 
-        Else If Contains(X, Y, PanelLeft + 130, 576, 114, 26) Then
+        Else If Contains(ViewportX, PanelY, PanelLeft + 130, 576, 114, 26) Then
 
             Changed = DiscardHeadChanges(Value)
 
         End If
 
         If (Changed And
-            Y >= 394 And
-            Y < 474) Then
+            PanelY >= 394 And
+            PanelY < 474) Then
             Changed = SaveHead(Value, Value.Marker)
         End If
 
         Return 100
 
     End If
-
-    Y = RawY
 
     If (Value.Editing And
         Not Value.Scrubbing And
@@ -810,13 +828,15 @@ Public Function Pointer(ByRef Value As State, Unity As Boolean, Live As P.Camera
         For Index = 0 To 1
 
             If (Value.BoxVisible[Index] And
-                Contains(X, Y, Value.BoxX[Index], Value.BoxY[Index], Value.BoxWidth[Index], Value.BoxHeight[Index])) Then
+                Contains(ViewportX, ViewportY, Value.BoxX[Index], Value.BoxY[Index],
+                Value.BoxWidth[Index], Value.BoxHeight[Index])) Then
 
                 Value.DragMarker = Index
                 Value.Marker = Index
                 Projected = Projection.ProjectViewerPoint(Value.Heads[Index], Live, Width, Height)
                 Value.DragDepth = Projected.Depth
-                Value.DragOrigin = Projection.CursorPointAtDepth(Live, X, Y, Projected.Depth, Width, Height)
+                Value.DragOrigin = Projection.CursorPointAtDepth(Live, ViewportX,
+                    ViewportY, Projected.Depth, Width, Height)
                 Value.DragOffset = Head(Value, Value.HeadIds[0]).Offset
 
                 If Index = 1 Then
