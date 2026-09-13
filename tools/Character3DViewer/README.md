@@ -99,6 +99,11 @@ can move between main beats; **Delete Shot** removes only extra shots. Original
 Beats 1–4 cannot be deleted. Motion and connections use each shot's interval, including
 extra shots. Changing main durations moves their contained extra shots proportionally.
 Markers require a little space from neighbors when inserted/moved (16 milliseconds).
+The same spacing is checked after final millisecond rounding. A retime that would merge
+an extra shot with a main or neighboring marker is rejected without moving or deleting
+the authored shot; move that extra marker and retry. If changed action timing makes a
+stored sequence inapplicable, Preview reports the fallback and uses the four safe main
+markers without overwriting the stored bytes.
 
 **Reset Beat** restores the current main beat's built-in camera, motion and
 connection policy, retaining timeline timing and extra shots. From an extra shot it

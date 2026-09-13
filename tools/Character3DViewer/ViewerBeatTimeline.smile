@@ -73,7 +73,8 @@ Public Function StepTime(Time As Number, Rate As Number, Direction As Number,
 
 End Function
 
-''' Commands: 20 seek, 21 select, 22 changed timing, 23 add, 24 delete; 100 consumes.
+''' Commands: 20 seek, 21 select, 22 changed timing, 23 add, 24 delete,
+''' 25 rejected timing; 100 consumes.
 Public Function Pointer(ByRef Value As State, ByRef Definition As Track.Definition,
     Source As Sequence.Timing, Time As Number, Editing As Boolean,
     Width As Number, Height As Number) As Number
@@ -109,8 +110,12 @@ Public Function Pointer(ByRef Value As State, ByRef Definition As Track.Definiti
 
     Else If Value.DragKind = 2 Then
 
-        Call Track.Resize(Definition, Source, Value.DragIndex - 1,
+        Changed = Track.TryResize(Definition, Source, Value.DragIndex - 1,
             TargetTime - Timed.Start[Value.DragIndex - 1])
+
+        If Not Changed Then
+            Return 25
+        End If
 
         Timed = Track.Schedule(Definition, Source, Time)
         Value.OutputIndex = Value.DragIndex

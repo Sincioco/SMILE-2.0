@@ -21,6 +21,8 @@ $programSourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\Program.
 $viewerSourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\ViewerWorkflow.smile'
 $beatTimelineSourcePath = Join-Path $repositoryRoot `
     'tools\Character3DViewer\ViewerBeatTimeline.smile'
+$cameraTimelineSourcePath = Join-Path $repositoryRoot `
+    'tools\Character3DViewer\BattleCameraTimeline.smile'
 $beatEditorSourcePath = Join-Path $repositoryRoot `
     'tools\Character3DViewer\ViewerBeatEditor.smile'
 $beatHeadPersistenceSourcePath = Join-Path $repositoryRoot `
@@ -136,6 +138,7 @@ try {
     $programSource = Get-Content -LiteralPath $programSourcePath -Raw
     $viewerSource = (Get-Content -LiteralPath $viewerSourcePath -Raw).Replace('Me.', '')
     $beatTimelineSource = Get-Content -LiteralPath $beatTimelineSourcePath -Raw
+    $cameraTimelineSource = Get-Content -LiteralPath $cameraTimelineSourcePath -Raw
     $beatEditorSource = Get-Content -LiteralPath $beatEditorSourcePath -Raw
     $beatHeadPersistenceSource = Get-Content -LiteralPath $beatHeadPersistenceSourcePath -Raw
     $cameraSource = Get-Content -LiteralPath $cameraSourcePath -Raw
@@ -905,6 +908,22 @@ try {
     Assert-True (-not $beatTimelineSource.Contains(
             'Fill Rectangle 12, Height - 192')) `
         'Beat timeline must not restore its former raised backing panel.'
+    foreach ($contract in @(
+        'Public Function EffectiveScheduleValid(',
+        'Public Function EffectiveValid(',
+        'Public Function TryResize(',
+        'If Not EffectiveScheduleValid(Candidate, Timed) Then',
+        'If Not EffectiveValid(Candidate, Source) Then')) {
+        Assert-Contains $cameraTimelineSource $contract 'Effective beat timeline owner'
+    }
+    Assert-True ($beatTimelineSource.Contains(
+            'Changed = Track.TryResize(Definition, Source, Value.DragIndex - 1,') -and
+        $beatTimelineSource.Contains('Return 25') -and
+        $beatEditorSource.Contains(
+            'If Not Track.EffectiveValid(Value.Working, Value.SourceSchedule) Then') -and
+        $beatEditorSource.Contains(
+            '"Timing Change Rejected; Move A Nearby Extra Shot First"')) `
+        'Beat timing edits and saved-definition fallback must share the effective owner contract.'
     Assert-Contains $sharedUiSource 'Optional Opacity As Number = 80' `
         'Shared UI panel opacity'
     Assert-Contains $uiSource `

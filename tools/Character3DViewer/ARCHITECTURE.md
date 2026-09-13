@@ -172,6 +172,12 @@ or triangle-picking backend is introduced.
 `BattleCameraTimeline` owns the four main camera timing weights, up to sixteen extra
 shots, chronological navigation and versioned sequence serialization. It normalizes
 camera intervals to the original battle duration; no action time is remapped.
+Structural decoding remains source-independent. `EffectiveValid` applies one bounded
+contract to the final rounded main and extra marker times for a particular action:
+positive main intervals, 16-millisecond boundary/neighbor spacing, unique reachable
+markers and the unchanged total duration. Insert, move and resize replace a draft only
+after this check. A stored sequence that no longer fits changed action timing remains
+on disk while playback and a newly opened draft use the four safe main markers.
 `ViewerBeatTimeline` owns timeline gestures, frame stepping/repeat and presentation in
 the normal animation timeline's bottom layout. Beat Preview hides the animation
 timeline and closing Preview restores it; no second timeline panel is drawn.

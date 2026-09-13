@@ -157,6 +157,7 @@ Public Sub Open(ByRef Value As State, ByRef Scene As Party.State,
 
     Dim Bounds As C.PreciseBounds3D
     Dim RetainDraft As Boolean
+    Dim TimingFallback As Boolean
 
     Call StoreDraft(Value)
 
@@ -173,6 +174,14 @@ Public Sub Open(ByRef Value As State, ByRef Scene As Party.State,
         Value.Timeline.DragKind = 0
         Value.Timeline.RepeatDirection = 0
 
+    End If
+
+    Value.SourceSchedule = Sequence.Times(Scene, Primary, Speed, Value.Selected, 0)
+
+    If Not Track.EffectiveValid(Value.Working, Value.SourceSchedule) Then
+        Call Track.Initialize(Value.Working)
+
+        TimingFallback = True
     End If
 
     RetainDraft = Value.Editing And Beat = Value.ShotIndex
@@ -198,7 +207,6 @@ Public Sub Open(ByRef Value As State, ByRef Scene As Party.State,
     Call InitializeHead(Value, 0)
     Call InitializeHead(Value, 1)
 
-    Value.SourceSchedule = Sequence.Times(Scene, Primary, Speed, Value.Selected, 0)
     Value.Schedule = Track.Schedule(Value.Working, Value.SourceSchedule, 0)
     Value.Timeline.FrameRate = Max(1, C.ClipSampleRate(Value.HeadActors[0], 0))
     Value.Elapsed = Value.Schedule.Start[Beat]
@@ -206,6 +214,10 @@ Public Sub Open(ByRef Value As State, ByRef Scene As Party.State,
     Value.ContinuousSample = False
     Value.Reframe = Edit
     Value.Message = "MMB Orbit; LMB Pan; Wheel Zoom; RMB Reset"
+
+    If TimingFallback Then
+        Value.Message = "Saved Camera Timing Does Not Fit This Action; Using Defaults"
+    End If
 
 End Sub
 
@@ -385,6 +397,11 @@ Public Function SaveShot(ByRef Value As State, Unity As Boolean) As Boolean
     End If
 
     Call StoreDraft(Value)
+
+    If Not Track.EffectiveValid(Value.Working, Value.SourceSchedule) Then
+        Value.Message = "Camera Timing Is Invalid; Adjust Markers Before Save"
+        Return False
+    End If
 
     If Not Track.WriteDefinition("BattleCamera.Sequence." +
         Sequence.Name(Sequence.Identity(Unity, Value.Selected)) + ".V2", Value.Working) Then
@@ -1197,6 +1214,7 @@ End Sub
 ''' Restore timing only. Extra shots retain their relative position in each beat.
 Public Sub ResetLengths(ByRef Value As State)
 
+    Dim Candidate As Track.Definition
     Dim Index As Number
 
     If Not Value.Editing Then
@@ -1205,9 +1223,18 @@ Public Sub ResetLengths(ByRef Value As State)
 
     Call StoreDraft(Value)
 
+    Candidate = Value.Working
+
     For Index = 0 To 3
-        Value.Working.Scale[Index] = 1.0
+        Candidate.Scale[Index] = 1.0
     End For
+
+    If Not Track.EffectiveValid(Candidate, Value.SourceSchedule) Then
+        Value.Message = "Default Timing Rejected; Move A Nearby Extra Shot First"
+        Return
+    End If
+
+    Value.Working = Candidate
 
     Value.Schedule = Track.Schedule(Value.Working, Value.SourceSchedule, 0)
 
@@ -1277,6 +1304,10 @@ Private Sub ApplyTimelineCommand(ByRef Value As State, Unity As Boolean,
             Value.Message = "Beats 1-4 Cannot Be Deleted"
 
         End If
+
+    Else If Command = 25 Then
+
+        Value.Message = "Timing Change Rejected; Move A Nearby Extra Shot First"
 
     End If
 

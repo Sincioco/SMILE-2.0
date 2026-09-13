@@ -209,6 +209,7 @@ Public Function Run() As Number
         "Pan Follows Saved Camera Right Axis", Failures)
 
     Call CheckTimeline(Failures, Value)
+    Call CheckEffectiveTimeline(Failures, Value)
     Call CheckLargeFrame(Failures, 0.375)
 
     If Shots.ReadText("BeatCamera.Test.HeadFaultFixture") = "READY" Then
@@ -268,6 +269,120 @@ Private Sub CheckScrolledHeadDrag(ByRef Failures As Number)
     Call Check(Not Editor.Contains(1250, Hidden.ViewportY, 1012, 110, 252, 390) And
         Editor.Contains(1250, Hidden.PanelY, 1020, 450, 236, 24),
         "Clipped Panel Button Cannot Receive A Hidden Hit", Failures)
+
+End Sub
+
+Private Sub CheckEffectiveTimeline(ByRef Failures As Number,
+    Camera As Shots.Shot)
+
+    Dim Definition As Track.Definition
+    Dim Original As Track.Definition
+    Dim Loaded As Track.Definition
+    Dim Capacity As Track.Definition
+    Dim Source As Sequence.Timing
+    Dim ChangedSource As Sequence.Timing
+    Dim Timed As Sequence.Timing
+    Dim Encoded As Text
+    Dim Extra As Number
+    Dim Index As Number
+    Dim Beat As Number
+    Dim Time As Number
+    Dim Result As Boolean
+
+    Source.Start[1] = 650
+    Source.Start[2] = 1300
+    Source.Start[3] = 3000
+    Source.Start[4] = 5700
+
+    Call Track.Initialize(Definition)
+
+    Timed = Track.Schedule(Definition, Source, 0)
+    Extra = Track.Insert(Definition, Timed, 633, Camera)
+    Original = Definition
+    Result = Track.TryResize(Definition, Source, 0, 16)
+    Timed = Track.Schedule(Definition, Source, 0)
+
+    Call Check(Extra = 4 And Not Result And Timed.Start[1] = 650 And
+        Track.TimeAt(Definition, Timed, Extra) = 633 And
+        Definition.Cameras[Extra].Eye.X = Original.Cameras[Extra].Eye.X,
+        "Collapsed Extra Marker Resize Is Rejected Transactionally", Failures)
+    Call Check(Track.AtTime(Definition, Timed, 633) = Extra And
+        Track.Neighbor(Definition, Timed, 633, 1) = 1 And
+        Track.Neighbor(Definition, Timed, 650, -1) = Extra,
+        "Effective Marker Order Agrees Across Playback And Navigation", Failures)
+
+    Result = Track.TryResize(Definition, Source, 0, 620)
+    Timed = Track.Schedule(Definition, Source, 0)
+
+    Call Check(Result And Timed.Start[1] = 620 And Timed.Start[4] = Source.Start[4] And
+        Track.TimeAt(Definition, Timed, Extra) = 604 And
+        Track.EffectiveValid(Definition, Source),
+        "Ordinary Legal Resize Preserves Duration And Extra Identity", Failures)
+
+    Call Track.Initialize(Definition)
+
+    Timed = Track.Schedule(Definition, Source, 0)
+    Extra = Track.Insert(Definition, Timed, 617, Camera)
+    Index = Track.Insert(Definition, Timed, 633, Camera)
+
+    Call Check(Extra = 4 And Index = 5 And Track.EffectiveScheduleValid(Definition, Timed) And
+        Track.AtTime(Definition, Timed, 617) = Extra And
+        Track.AtTime(Definition, Timed, 633) = Index,
+        "Adjacent Extras At The Spacing Boundary Stay Reachable", Failures)
+
+    Call Track.Initialize(Capacity)
+
+    Source.Start[1] = 1000
+    Source.Start[2] = 2000
+    Source.Start[3] = 3000
+    Source.Start[4] = 4000
+    Timed = Track.Schedule(Capacity, Source, 0)
+
+    For Index = 0 To 15
+        Beat = Index / 4
+        Time = Timed.Start[Beat] + (Index Mod 4 + 1) * 100
+        Extra = Track.Insert(Capacity, Timed, Time, Camera)
+    End For
+
+    Extra = Track.Insert(Capacity, Timed, 500, Camera)
+
+    Call Check(Capacity.ShotCount = Track.MAX_SHOTS And Extra = -1 And
+        Track.EffectiveScheduleValid(Capacity, Timed),
+        "Capacity Twenty Retains A Valid Reachable Marker Set", Failures)
+
+    Result = Track.MoveShot(Capacity, Timed, 19, 3500)
+    Result = Track.Remove(Capacity, 19) And Result
+
+    Call Check(Result And Capacity.ShotCount = 19 And
+        Track.EffectiveScheduleValid(Capacity, Timed),
+        "Legal Extra Move And Delete Preserve Effective Validity", Failures)
+
+    Source.Start[1] = 650
+    Source.Start[2] = 1300
+    Source.Start[3] = 3000
+    Source.Start[4] = 5700
+
+    Call Track.Initialize(Definition)
+
+    Timed = Track.Schedule(Definition, Source, 0)
+    Extra = Track.Insert(Definition, Timed, 633, Camera)
+    Encoded = Track.Encode(Definition)
+    Result = Track.Decode(Encoded, Loaded)
+
+    Call Check(Result And Track.EffectiveValid(Loaded, Source) And
+        Loaded.Cameras[Extra].Eye.X = Camera.Eye.X,
+        "Structurally Valid Sequence Reloads Against Its Source Duration", Failures)
+
+    ChangedSource = Source
+    ChangedSource.Start[1] = 16
+    Timed = Track.Schedule(Loaded, ChangedSource, 16)
+
+    Call Check(Not Track.EffectiveValid(Loaded, ChangedSource) And
+        Timed.Start[1] = 16 And Timed.Start[4] = ChangedSource.Start[4] And
+        Track.AtTime(Loaded, Timed, 16) = 1 And
+        Track.Neighbor(Loaded, Timed, 0, 1) = 1 And
+        Loaded.ShotCount = 5 And Loaded.Cameras[Extra].Eye.X = Camera.Eye.X,
+        "Changed Source Duration Uses Safe Main Markers Without Erasing Stored Extras", Failures)
 
 End Sub
 
@@ -346,6 +461,10 @@ Private Sub CheckHeadPersistenceFailure(ByRef Failures As Number,
 
     Call Track.Initialize(Ui.Working)
 
+    Ui.SourceSchedule.Start[1] = 1000
+    Ui.SourceSchedule.Start[2] = 2000
+    Ui.SourceSchedule.Start[3] = 3000
+    Ui.SourceSchedule.Start[4] = 4000
     Ui.Editing = True
     Ui.Preview = True
     Ui.Dirty = True

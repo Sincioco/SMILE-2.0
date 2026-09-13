@@ -29,7 +29,7 @@ Public Sub Initialize(ByRef Value As Definition)
 
 End Sub
 
-Public Function Schedule(Value As Definition, Source As Sequence.Timing,
+Private Function BuildSchedule(Value As Definition, Source As Sequence.Timing,
     Elapsed As Number) As Sequence.Timing
 
     Dim Result As Sequence.Timing
@@ -63,7 +63,7 @@ Public Function Schedule(Value As Definition, Source As Sequence.Timing,
 
 End Function
 
-Public Function TimeAt(Value As Definition, Timed As Sequence.Timing,
+Private Function RawTimeAt(Value As Definition, Timed As Sequence.Timing,
     Index As Number) As Number
 
     Dim Beat As Number
@@ -77,6 +77,98 @@ Public Function TimeAt(Value As Definition, Timed As Sequence.Timing,
 
 End Function
 
+Public Function EffectiveScheduleValid(Value As Definition,
+    Timed As Sequence.Timing) As Boolean
+
+    Dim Index As Number
+    Dim Other As Number
+    Dim Beat As Number
+    Dim Time As Number
+
+    If Not Valid(Value) Then
+        Return False
+    End If
+
+    For Beat = 0 To 3
+
+        If Timed.Start[Beat + 1] - Timed.Start[Beat] < 16 Then
+            Return False
+        End If
+
+    End For
+
+    For Index = 0 To Value.ShotCount - 1
+
+        Time = RawTimeAt(Value, Timed, Index)
+        Beat = Value.Beat[Index]
+
+        If Index >= 4 And (Time - Timed.Start[Beat] < 16 Or
+            Timed.Start[Beat + 1] - Time < 16) Then
+            Return False
+        End If
+
+        For Other = 0 To Index - 1
+
+            If Abs(RawTimeAt(Value, Timed, Other) - Time) < 16 Then
+                Return False
+            End If
+
+        End For
+    End For
+
+    Return True
+
+End Function
+
+Public Function EffectiveValid(Value As Definition,
+    Source As Sequence.Timing) As Boolean
+
+    Dim Timed As Sequence.Timing
+    Dim Result As Boolean
+
+    If Not Valid(Value) Then
+        Return False
+    End If
+
+    Timed = BuildSchedule(Value, Source, 0)
+    Result = EffectiveScheduleValid(Value, Timed)
+
+    Return Result
+
+End Function
+
+''' Invalid or now-inapplicable stored timing stays on disk but resolves through the
+''' four default action markers until the user creates and saves a valid draft.
+Public Function Schedule(Value As Definition, Source As Sequence.Timing,
+    Elapsed As Number) As Sequence.Timing
+
+    Dim Candidate As Definition
+    Dim Result As Sequence.Timing
+
+    Candidate = Value
+
+    If Not EffectiveValid(Candidate, Source) Then
+        Call Initialize(Candidate)
+    End If
+
+    Result = BuildSchedule(Candidate, Source, Elapsed)
+
+    Return Result
+
+End Function
+
+Public Function TimeAt(Value As Definition, Timed As Sequence.Timing,
+    Index As Number) As Number
+
+    Dim Beat As Number
+    Dim Result As Number
+
+    Result = RawTimeAt(Value, Timed, Index)
+
+    Return Result
+
+End Function
+
 Public Function AtTime(Value As Definition, Timed As Sequence.Timing,
     Time As Number) As Number
 
@@ -84,8 +176,15 @@ Public Function AtTime(Value As Definition, Timed As Sequence.Timing,
     Dim Best As Number
     Dim BestTime As Number
     Dim Candidate As Number
+    Dim MarkerCount As Number
 
-    For Index = 0 To Value.ShotCount - 1
+    MarkerCount = Value.ShotCount
+
+    If Not EffectiveScheduleValid(Value, Timed) Then
+        MarkerCount = Min(4, Value.ShotCount)
+    End If
+
+    For Index = 0 To MarkerCount - 1
 
         Candidate = TimeAt(Value, Timed, Index)
 
@@ -107,6 +206,7 @@ Public Function Neighbor(Value As Definition, Timed As Sequence.Timing,
     Dim Candidate As Number
     Dim BestTime As Number
     Dim Result As Number
+    Dim MarkerCount As Number
 
     Result = -1
     BestTime = -1
@@ -115,7 +215,13 @@ Public Function Neighbor(Value As Definition, Timed As Sequence.Timing,
         BestTime = Timed.Start[4] + 1
     End If
 
-    For Index = 0 To Value.ShotCount - 1
+    MarkerCount = Value.ShotCount
+
+    If Not EffectiveScheduleValid(Value, Timed) Then
+        MarkerCount = Min(4, Value.ShotCount)
+    End If
+
+    For Index = 0 To MarkerCount - 1
 
         Candidate = TimeAt(Value, Timed, Index)
 
@@ -134,12 +240,13 @@ End Function
 Public Function MoveShot(ByRef Value As Definition, Timed As Sequence.Timing,
     Index As Number, Time As Number) As Boolean
 
+    Dim Candidate As Definition
     Dim Beat As Number
     Dim Other As Number
     Dim Fraction As Double
 
     If (Index < 4 Or
-        Index >= MAX_SHOTS Or
+        Index >= Value.ShotCount Or
         Time <= 0 Or
         Time >= Timed.Start[4]) Then
         Return False
@@ -168,8 +275,15 @@ Public Function MoveShot(ByRef Value As Definition, Timed As Sequence.Timing,
         Return False
     End If
 
-    Value.Beat[Index] = Beat
-    Value.Fraction[Index] = Fraction
+    Candidate = Value
+    Candidate.Beat[Index] = Beat
+    Candidate.Fraction[Index] = Fraction
+
+    If Not EffectiveScheduleValid(Candidate, Timed) Then
+        Return False
+    End If
+
+    Value = Candidate
 
     Return True
 
@@ -180,6 +294,7 @@ Public Function Insert(ByRef Value As Definition, Timed As Sequence.Timing,
 
     Dim ReturnValue As Number
 
+    Dim Candidate As Definition
     Dim Index As Number
 
     Index = Value.ShotCount
@@ -190,14 +305,17 @@ Public Function Insert(ByRef Value As Definition, Timed As Sequence.Timing,
         Return ReturnValue
     End If
 
-    If Not MoveShot(Value, Timed, Index, Time) Then
+    Candidate = Value
+    Candidate.ShotCount = Index + 1
+    Candidate.Cameras[Index] = Camera
+
+    If Not MoveShot(Candidate, Timed, Index, Time) Then
         ReturnValue = -1
 
         Return ReturnValue
     End If
 
-    Value.Cameras[Index] = Camera
-    Value.ShotCount = Index + 1
+    Value = Candidate
 
     Return Index
 
@@ -225,34 +343,54 @@ End Function
 
 ''' Camera boundaries share the fixed battle duration. The adjacent shot absorbs
 ''' the change; action, impacts, audio and animation timing are never retimed.
-Public Sub Resize(ByRef Value As Definition, Source As Sequence.Timing,
-    Beat As Number, Duration As Number)
+Public Function TryResize(ByRef Value As Definition, Source As Sequence.Timing,
+    Beat As Number, Duration As Number) As Boolean
 
+    Dim Candidate As Definition
     Dim Timed As Sequence.Timing
     Dim Combined As Number
     Dim First As Number
     Dim Index As Number
 
     If Beat < 0 Or Beat >= 3 Then
-        Return
+        Return False
     End If
 
     Timed = Schedule(Value, Source, 0)
     Combined = Timed.Start[Beat + 2] - Timed.Start[Beat]
 
     If Combined < 32 Then
-        Return
+        Return False
     End If
 
+    Candidate = Value
+
     For Index = 0 To 3
-        Value.Scale[Index] = (ToDouble(Timed.Start[Index + 1] - Timed.Start[Index]) /
+        Candidate.Scale[Index] = (ToDouble(Timed.Start[Index + 1] - Timed.Start[Index]) /
             ToDouble(Max(1, Source.Start[Index + 1] - Source.Start[Index])))
     End For
     First = Min(Max(16, Duration), Combined - 16)
-    Value.Scale[Beat] = (ToDouble(First) /
+    Candidate.Scale[Beat] = (ToDouble(First) /
         ToDouble(Max(1, Source.Start[Beat + 1] - Source.Start[Beat])))
-    Value.Scale[Beat + 1] = (ToDouble(Combined - First) /
+    Candidate.Scale[Beat + 1] = (ToDouble(Combined - First) /
         ToDouble(Max(1, Source.Start[Beat + 2] - Source.Start[Beat + 1])))
+
+    If Not EffectiveValid(Candidate, Source) Then
+        Return False
+    End If
+
+    Value = Candidate
+
+    Return True
+
+End Function
+
+Public Sub Resize(ByRef Value As Definition, Source As Sequence.Timing,
+    Beat As Number, Duration As Number)
+
+    Dim Changed As Boolean
+
+    Changed = TryResize(Value, Source, Beat, Duration)
 
 End Sub
 
