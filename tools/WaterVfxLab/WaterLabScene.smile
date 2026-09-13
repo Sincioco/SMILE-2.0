@@ -118,11 +118,9 @@ End Sub
 
 Public Sub Update(ByRef Value As State, Elapsed As Number)
 
-    Dim Index As Number
-    Dim ClipDuration As Number
     Dim Ok As Boolean
-    Dim Charge As Double
     Dim SimulationElapsed As Number
+    Dim StepMilliseconds As Number
 
     If Not Value.Ready Then
         Return
@@ -133,12 +131,7 @@ Public Sub Update(ByRef Value As State, Elapsed As Number)
         SimulationElapsed = Elapsed * Value.SpeedPercent + Value.TimeRemainder
         Value.TimeRemainder = SimulationElapsed Mod 100
         SimulationElapsed = SimulationElapsed / 100
-        Value.Time = Value.Time + SimulationElapsed
 
-    End If
-
-    If Value.Time >= Value.Duration Then
-        Call Restart(Value)
     End If
 
     If Value.Orbit Then
@@ -147,6 +140,41 @@ Public Sub Update(ByRef Value As State, Elapsed As Number)
 
     Ok = Camera.AdvanceCameraControls(Value.Controls, Elapsed, False)
     Value.Camera = Camera.ApplyScreenSpaceCameraControls(Value.BaseCamera, Value.Controls)
+
+    ''' Shared particle/lightning updates accept at most 100 ms; retain all scaled time.
+
+    Do
+        StepMilliseconds = Min(100, SimulationElapsed)
+
+        Call StepPresentation(Value, StepMilliseconds)
+
+        SimulationElapsed = SimulationElapsed - StepMilliseconds
+
+    Loop Until SimulationElapsed <= 0
+
+End Sub
+
+Private Sub StepPresentation(ByRef Value As State, SimulationElapsed As Number)
+
+    Dim Index As Number
+    Dim ClipDuration As Number
+    Dim Ok As Boolean
+    Dim Charge As Double
+    Dim LoopRemainder As Number
+
+    Value.Time = Value.Time + SimulationElapsed
+
+    If Value.Time >= Value.Duration Then
+
+        LoopRemainder = Value.Time Mod Value.Duration
+
+        Call Restart(Value)
+
+        Value.Time = LoopRemainder
+
+    End If
+
+    Ok = True
     Value.Frame.Mode = Value.Mode
     Value.Frame.Time = Value.Time
     Value.Frame.Progress = ToDouble(Value.Time) / ToDouble(Value.Duration)
@@ -193,11 +221,7 @@ Public Sub Update(ByRef Value As State, Elapsed As Number)
     Ok = P.SetPointLight(0, Value.Frame.Origin, 40, 150, 255,
         45 + ToNumber(Round(Charge * 130.0)), 180) And Ok
 
-    If Not Value.Paused Then
-        Ok = Lightning.UpdatePrecise(SimulationElapsed, Value.Camera) And Ok
-    Else
-        Ok = Lightning.UpdatePrecise(0, Value.Camera) And Ok
-    End If
+    Ok = Lightning.UpdatePrecise(SimulationElapsed, Value.Camera) And Ok
 
     If (Value.AudioEnabled And
         Not Value.SoundPlayed And

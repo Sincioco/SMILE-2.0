@@ -28,6 +28,9 @@ or the visible speed buttons to change it in 25-point steps between 25% and 400%
 One scaled presentation clock drives Mira's pose, water motion, staff shimmer,
 lightning and cue timing. Camera interaction/orbit keeps real-time responsiveness;
 audio clips retain their original pitch. Pause and effect changes preserve the speed.
+Scaled time is consumed in steps of at most 100 milliseconds, respecting the shared
+particle/lightning update limits. A slow frame at 400% therefore advances Mira,
+droplets and lightning together instead of clipping only the effect clocks.
 
 ## Ownership and limits
 
@@ -65,3 +68,7 @@ Procedural PNGs and original PCM splash/barrier/tsunami sounds are in
 recoil and cleanup using the actual Mira asset. Native GPU shader mode 5 preserves
 texture color; modes 0–4 retain their historical behavior. All Web adoption and
 publication are on hold at Sin's direction.
+
+The speed regression first reproduced two failures with a 100 ms frame at 400%:
+lightning advanced only 100 ms and water treated the 400 ms gap as a seek. It now
+passes with 400 ms of lightning age and live water spray, alongside all seven modes.

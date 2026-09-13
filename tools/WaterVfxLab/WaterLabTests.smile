@@ -7,6 +7,7 @@ Import Smile.Simple3D.Graphics3D As G
 Import Smile.Simple3D.Character3D As Character
 Import Smile.Simple3D.Precision3D As P
 Import Smile.Simple3D.PrecisionMath3D As M
+Import Smile.Simple3D.LightningVfx3D As Lightning
 
 Dim Lab As Scene.State
 Dim Mode As Number
@@ -15,6 +16,7 @@ Dim Position As P.Vector3
 Dim Facing As P.Vector3
 Dim Tip As P.Vector3
 Dim Ok As Boolean
+Dim LightningAge As Number
 
 Game Window "Water Lab Native Checks" Size 400 By 300
 
@@ -44,6 +46,22 @@ Do
 
     Call Scene.Update(Lab, 16)
     Call Check(Lab.Time = 32)
+
+    Lab.Mode = Water.STORM
+    Lab.Time = 1500
+
+    Call Scene.Update(Lab, 0)
+
+    LightningAge = Lightning.Value(Lightning.QUERY_AGE, Lab.Storm.Bolts[0])
+    Lab.SpeedPercent = 400
+    Lab.Paused = False
+
+    Call Scene.Update(Lab, 100)
+    Call Check(Lab.Time = 1900)
+    Call Check(Lightning.Value(Lightning.QUERY_AGE, Lab.Storm.Bolts[0]) - LightningAge = 400)
+    Call Check(Lab.Water.Spray.ActiveCount > 0)
+
+    Lab.Paused = True
 
     Ok = Character.TryRotation(Lab.Mira, Facing)
 
