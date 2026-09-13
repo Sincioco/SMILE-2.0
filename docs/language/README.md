@@ -282,6 +282,23 @@ Format-version 7 packages serialize each Public Class with its stable identity, 
 
 This milestone intentionally does not add inheritance, virtual dispatch, user-defined destructors/finalizers, static Class members, indexed/default properties, Class arrays, or general exception unwinding.
 
+### Open native module-initializer defect
+
+On September 13, 2026, Sin Star I's native presentation integration demonstrated
+that a private module-level `Dim Preview As New Viewer.Session()` compiles but
+leaves the reference `Nothing`. The first method call then terminates with
+`SMILE runtime error: Object reference is Nothing.` Moving the assignment
+`Preview = New Viewer.Session()` into the module's explicit `Enter` operation
+works and retains the same module ownership. Sin Star I uses that construction
+path and its nine-entry presentation regression exercises it.
+
+The compiler defect remains open: shared binding should either reject an
+unsupported declaration initializer or define and emit its initialization order.
+Next action is a minimal module-initializer regression followed by a review of
+native startup emission and the shared language contract. That compiler change
+is deferred from the game-menu integration because initialization ordering is
+a language-wide behavior; no Web behavior was tested or changed.
+
 ## Enum types
 
 `Enum Name` ... `End Enum` declares a closed nominal value type. Enums may be project-global or direct module declarations and follow the same private-by-default module visibility rules as records. Each member begins on its own declaration line and uses either `Name` or `Name = NumberConstantExpression`. The first implicit value is zero; every later implicit value is the checked previous value plus one. Explicit values accept signed 64-bit compile-time `Number` expressions, including forward `Const` resolution and the normal constant arithmetic and numeric built-ins; constant cycles are diagnosed. Overflow, division by zero, non-Number values, and enum-typed operands are rejected rather than wrapped or converted.

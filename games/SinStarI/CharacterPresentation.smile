@@ -1,0 +1,130 @@
+''' Game-facing presentation host; the shared Viewer owns actors, arena, choreography and effects.
+Module SinStarI.CharacterPresentation
+
+Option Explicit
+
+Import SinStarI.TitleScreen As TitleScreen
+Import Smile.Tools.Character3DViewerWorkflow As Viewer
+Import Smile.Tools.Character3DViewerProfiles As Profiles
+
+Private Dim Preview As Viewer.Session
+Private Dim Active As Boolean
+Private Dim Heading As Text
+
+Public Function IsPresentation(Action As TitleScreen.TitleAction) As Boolean
+
+    Dim Result As Boolean
+
+    Result = (Action = TitleScreen.TitleAction.Arin Or
+        Action = TitleScreen.TitleAction.Orin Or Action = TitleScreen.TitleAction.Mira Or
+        Action = TitleScreen.TitleAction.Zara Or Action = TitleScreen.TitleAction.Valor Or
+        Action = TitleScreen.TitleAction.Dragon Or Action = TitleScreen.TitleAction.Vrax Or
+        Action = TitleScreen.TitleAction.DragonBattle Or Action = TitleScreen.TitleAction.VraxBattle)
+
+    Return Result
+
+End Function
+
+Private Function TabFor(Action As TitleScreen.TitleAction) As Number
+
+    Select Case Action
+        Case TitleScreen.TitleAction.Orin
+            Return 1
+        Case TitleScreen.TitleAction.Mira
+            Return Profiles.CHARACTER_TAB_MIRA
+        Case TitleScreen.TitleAction.Zara
+            Return 5
+        Case TitleScreen.TitleAction.Valor
+            Return 4
+        Case TitleScreen.TitleAction.Dragon
+            Return 2
+        Case TitleScreen.TitleAction.Vrax
+            Return 6
+        Case TitleScreen.TitleAction.DragonBattle
+            Return Profiles.CHARACTER_TAB_PARTY_DRAGON
+        Case TitleScreen.TitleAction.VraxBattle
+            Return Profiles.CHARACTER_TAB_PARTY_VRAX
+    End Select
+
+    Return 0
+
+End Function
+
+Public Sub Enter(Action As TitleScreen.TitleAction)
+
+    Dim CycleClips As Boolean
+
+    If Active Then
+        Call Shutdown()
+    End If
+
+    If Not Window_Loading() Then
+        Return
+    End If
+
+    Preview = New Viewer.Session()
+    Heading = TitleScreen.Label(Action)
+    CycleClips = (Action <> TitleScreen.TitleAction.DragonBattle And
+        Action <> TitleScreen.TitleAction.VraxBattle)
+
+    Call Preview.Start(TabFor(Action), True, Window_Width(), Window_Height(), CycleClips)
+    Call Preview.UpdateFrame(Window_Width(), Window_Height())
+
+    Active = True
+
+End Sub
+
+Public Function BackRequested(Key As Number) As Boolean
+
+    Dim Result As Boolean
+
+    Result = (Key = KEY_ESCAPE Or
+        (Pointer_Inside() And Pointer_Pressed(POINTER_PRIMARY) And
+        Pointer_X() >= 20 And Pointer_X() < 115 And
+        Pointer_Y() >= 20 And Pointer_Y() < 56))
+
+    Return Result
+
+End Function
+
+Public Sub Update(Key As Number)
+
+    If Not Active Then
+        Return
+    End If
+
+    Call Preview.PresentationInput(Key)
+    Call Preview.UpdateFrame(Window_Width(), Window_Height())
+
+End Sub
+
+Public Sub Draw()
+
+    If Not Active Then
+        Return
+    End If
+
+    Call Preview.DrawFrame()
+    Call Preview.DrawViewportOverlay(0, 0, Window_Width(), Window_Height())
+
+    Fill Rectangle 20, 20, 95, 36, Rgb(15, 35, 55)
+    Draw Text "< Back" At 33, 28 Size 18 Color WHITE
+    Draw Text Heading At 136, 23 Size 26 Color WHITE
+    Draw Text Preview.PresentationCaption() At 136, 57 Size 16 Color CYAN
+    Fill Rectangle 20, Window_Height() - 47, Window_Width() - 40, 29, Rgb(10, 20, 35)
+    Draw Text "Drag: Pan   Middle Drag: Orbit   Wheel: Zoom   O: Auto Orbit   Space: Pause   F: Reflections   R: Reset   Esc: Back" At 30, Window_Height() - 40 Size 14 Color WHITE
+
+End Sub
+
+Public Sub Shutdown()
+
+    If Active Then
+        Call Preview.Release()
+    End If
+
+    Preview = Nothing
+    Active = False
+
+End Sub
+
+End Module

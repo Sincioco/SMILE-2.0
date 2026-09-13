@@ -1,0 +1,79 @@
+''' Regression: a character selection must construct and release its hosted session.
+
+Option Explicit
+
+Import SinStarI.CharacterPresentation As Presentation
+Import SinStarI.TitleScreen As TitleScreen
+Import Smile.Simple3D.Graphics3D As Graphics3D
+
+Dim Selection As Number
+Dim Action As TitleScreen.TitleAction
+Dim Passed As Boolean
+
+Game Window "Sin Star I Presentation Check" Size 1280 By 720
+
+Passed = True
+Selection = 0
+
+Do
+
+    Select Case Selection
+        Case 0
+            Action = TitleScreen.TitleAction.Arin
+        Case 1
+            Action = TitleScreen.TitleAction.Orin
+        Case 2
+            Action = TitleScreen.TitleAction.Mira
+        Case 3
+            Action = TitleScreen.TitleAction.Zara
+        Case 4
+            Action = TitleScreen.TitleAction.Valor
+        Case 5
+            Action = TitleScreen.TitleAction.Dragon
+        Case 6
+            Action = TitleScreen.TitleAction.Vrax
+        Case 7
+            Action = TitleScreen.TitleAction.DragonBattle
+        Case 8
+            Action = TitleScreen.TitleAction.VraxBattle
+    End Select
+
+    Call Presentation.Enter(Action)
+    Call Presentation.Draw()
+
+    Show Screen
+
+    Call Check(Graphics3D.LiveAnimatorCount3D() > 0, "Character animations loaded")
+    Call Check(Graphics3D.LastError() = 0, "Presentation draws without a renderer error")
+    Call Presentation.Update(0)
+    Call Presentation.Draw()
+
+    Show Screen
+
+    Call Check(Graphics3D.LastError() = 0, "Presentation advances without a renderer error")
+    Call Presentation.Shutdown()
+    Call Check(Graphics3D.LiveObjectCount3D() = 0, "Actors released")
+    Call Check(Graphics3D.LiveAnimatorCount3D() = 0, "Animators released")
+    Call Check(Graphics3D.LiveParticleBatchCount3D() = 0, "Particles released")
+    Call Check(Graphics3D.LiveRibbonBatchCount3D() = 0, "Ribbons released")
+
+    Selection = Selection + 1
+
+Loop Until Selection = 9 Or Game_Closed()
+
+If Passed And Selection = 9 Then
+    Print "Sin Star I presentations passed."
+Else
+    Print "Sin Star I presentations FAILED."
+End If
+
+End Program
+
+Sub Check(Condition As Boolean, Label As Text)
+
+    If Not Condition Then
+        Print TitleScreen.Label(Action) + ": " + Label
+        Passed = False
+    End If
+
+End Sub

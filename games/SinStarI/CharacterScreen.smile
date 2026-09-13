@@ -156,7 +156,7 @@ Public Sub Draw()
     Call DrawCell(3, CELL_2_X, CELL_2_Y)
 
     Draw Text "The selected character is manual; the others walk and run autonomously." At 640, 650 Size 16 Color WHITE Centered
-    Draw Text "Press ESC to return to the title screen" At 640, 690 Size 16 Color LIGHT_BLUE Centered
+    Draw Text "Press ESC to return to Legacy" At 640, 690 Size 16 Color LIGHT_BLUE Centered
 
 End Sub
 

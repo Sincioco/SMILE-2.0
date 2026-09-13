@@ -70,10 +70,18 @@ End Sub
 Public Function PrepareAssetLoading(UnusedAssetCacheLimit As Number) As Boolean
 
     Dim Result As Boolean
+    Dim CacheReady As Boolean
 
     Result = Scene3D.SetQuality(Scene3D.QUALITY_HIGH)
-    Result = Character3D.SetUnusedAssetCacheLimit(
-        UnusedAssetCacheLimit) And Result
+    CacheReady = Character3D.SetUnusedAssetCacheLimit(UnusedAssetCacheLimit)
+
+    ''' A newly hosted scene acknowledges the deliberate renderer reset once.
+
+    If Not CacheReady And Character3D.LastError() = Character3D.CHARACTER_ERROR_RENDERER_RESET Then
+        CacheReady = Character3D.SetUnusedAssetCacheLimit(UnusedAssetCacheLimit)
+    End If
+
+    Result = CacheReady And Result
 
     Return Result
 

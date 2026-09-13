@@ -1,5 +1,34 @@
 # Character Viewer Architecture
 
+## Sin Star I presentation host
+
+Sin Star I's `CharacterPresentation` links this shared session and its existing
+owners, with game-owned menu/status/Back UI. The optional `Start` flag `CycleAllClips`
+selects individual character clip cycling even on the coordinated Mira/Dragon
+profiles; the default remains unchanged for Viewer and Studio. The two simulation
+entries use ordinary Party tab identities. `PresentationInput` exposes only camera,
+pause, reflection and playback-speed actions; `PresentationCaption` reports the
+current clip or battle turn. No editor save/import/control surface is drawn by the
+game. Actor/clock/lighting/calibration ownership remains here, while Sin Star I
+retains its own application storage namespace and packaged calibration defaults.
+These are thin shared-session operations, not a second game battle scheduler.
+
+The game host explicitly constructs a session during scene entry, displays the
+standard loader, and prepares its first camera frame before drawing. The shared
+rendering owner retries cache setup only for the character owner's acknowledged
+renderer-reset signal; a scene restart must not inherit a fatal error from that
+intentional reset. The nine-entry native game regression covers loading, first
+draw, advancement and resource release. Existing native hardening guards remain
+unchanged and pass.
+
+Growth review: the game entry point remains 159 lines (+15); menu ownership stays
+in its 356-line title module, and the new 130-line presentation module owns one
+session. The existing reviewed workflow coordinator grows by 53 lines to 2,814
+for hosting options/input/caption delegation. The rendering owner grows by eight
+lines for reset handling. No threshold, baseline, exclusion or dependency rule
+was raised. The module-declaration class initializer issue is tracked separately
+in the language reference; game entry uses ordinary explicit construction.
+
 ## Coordinated standalone battle previews
 
 `ViewerBattlePreview` adapts the Mira and Dragon inspectors to `ViewerParty`'s

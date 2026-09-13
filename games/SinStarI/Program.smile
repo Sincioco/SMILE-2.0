@@ -5,6 +5,7 @@ Import SinStarI.TownScreen As TownScreen
 Import SinStarI.Town2Screen As Town2Screen
 Import SinStarI.CharacterScreen As CharacterScreen
 Import SinStarI.BattleArenaPreview As BattleArenaPreview
+Import SinStarI.CharacterPresentation As CharacterPresentation
 
 Dim Mode As TitleScreen.TitleAction
 Dim PendingAction As TitleScreen.TitleAction
@@ -50,6 +51,8 @@ Do
         Call CharacterScreen.Draw()
     Else If Mode = TitleScreen.TitleAction.Battle Then
         Call BattleArenaPreview.Draw()
+    Else If CharacterPresentation.IsPresentation(Mode) Then
+        Call CharacterPresentation.Draw()
     Else
 
         Call DrawScene()
@@ -58,8 +61,9 @@ Do
     Show Screen
     Wait 8 Milliseconds
 
-Loop Until Game_Closed() = True
+Loop Until Game_Closed() = True Or Mode = TitleScreen.TitleAction.ExitGame
 
+Call CharacterPresentation.Shutdown()
 Call CharacterScreen.Shutdown()
 Call BattleArenaPreview.Shutdown()
 Call Town2Screen.Shutdown()
@@ -71,6 +75,10 @@ End Program
 Sub OpenScene(SceneId As TitleScreen.TitleAction)
 
     Mode = SceneId
+
+    If SceneId = TitleScreen.TitleAction.ExitGame Then
+        Return
+    End If
 
     If SceneId = TitleScreen.TitleAction.Town Then
         SceneLabel = "Town"
@@ -96,13 +104,16 @@ Sub OpenScene(SceneId As TitleScreen.TitleAction)
         Call CharacterScreen.Enter()
     Else If SceneId = TitleScreen.TitleAction.Battle Then
         Call BattleArenaPreview.Enter()
+    Else If CharacterPresentation.IsPresentation(SceneId) Then
+        Call CharacterPresentation.Enter(SceneId)
     End If
 
 End Sub
 
 Sub HandleScene(Key As Number)
 
-    If Key = KEY_ESCAPE Then
+    If (Key = KEY_ESCAPE Or
+        (CharacterPresentation.IsPresentation(Mode) And CharacterPresentation.BackRequested(Key))) Then
 
         If Mode = TitleScreen.TitleAction.Town Then
             Call TownScreen.Shutdown()
@@ -112,6 +123,8 @@ Sub HandleScene(Key As Number)
             Call CharacterScreen.Shutdown()
         Else If Mode = TitleScreen.TitleAction.Battle Then
             Call BattleArenaPreview.Shutdown()
+        Else If CharacterPresentation.IsPresentation(Mode) Then
+            Call CharacterPresentation.Shutdown()
         End If
 
         Mode = TitleScreen.TitleAction.None
@@ -130,6 +143,8 @@ Sub HandleScene(Key As Number)
         Call CharacterScreen.Update(Key)
     Else If Mode = TitleScreen.TitleAction.Battle Then
         Call BattleArenaPreview.Update(Key)
+    Else If CharacterPresentation.IsPresentation(Mode) Then
+        Call CharacterPresentation.Update(Key)
     End If
 
 End Sub
@@ -139,6 +154,6 @@ Sub DrawScene()
     Clear Rgb(5, 9, 18)
     Fill Rectangle 0, 0, 1280, 72, Rgb(17, 29, 50)
     Draw Text SceneLabel At 32, 20 Size 32 Color YELLOW
-    Draw Text "Press ESC to return to the main menu" At 32, 674 Size 18 Color WHITE
+    Draw Text "Press ESC to return to Legacy" At 32, 674 Size 18 Color WHITE
 
 End Sub

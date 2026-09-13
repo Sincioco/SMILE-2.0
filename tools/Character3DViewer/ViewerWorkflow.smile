@@ -96,13 +96,16 @@ Public Class Session
     Private ShieldWristNode As Number
 
     Private IsHosted As Boolean
+    Private CycleAllClips As Boolean
     Private IsSuspended As Boolean
     Private ViewWidth As Number
     Private ViewHeight As Number
 
-    Public Sub Start(InitialTab As Number, Hosted As Boolean, Width As Number, Height As Number)
+    Public Sub Start(InitialTab As Number, Hosted As Boolean, Width As Number, Height As Number,
+        Optional CycleAllClips As Boolean = False)
 
         Me.IsHosted = Hosted
+        Me.CycleAllClips = CycleAllClips
         Me.ViewWidth = Width
         Me.ViewHeight = Height
 
@@ -159,9 +162,11 @@ Public Class Session
 
             Call ViewerPlayback.ResolveAnimationElapsed(Me.Playback, Me.Timing.AnimationElapsed)
 
-            Me.Session.Ready = ViewerBattlePreview.Advance(Me.BattlePreview, Me.Party,
-                Me.Character, Me.ViewerCameraState.Frame, Me.Playback, Me.Effects,
-                Me.Session.ProfileIndex) And Me.Session.Ready
+            If Not Me.CycleAllClips Then
+                Me.Session.Ready = ViewerBattlePreview.Advance(Me.BattlePreview, Me.Party,
+                    Me.Character, Me.ViewerCameraState.Frame, Me.Playback, Me.Effects,
+                    Me.Session.ProfileIndex) And Me.Session.Ready
+            End If
 
             If Me.Party.Enabled Then
 
@@ -803,7 +808,8 @@ Public Class Session
 
     Private Sub AdvanceAnimationSequence()
 
-        If Me.Party.Enabled Or ViewerBattlePreview.Applies(Me.Session.ProfileIndex) Then
+        If (Me.Party.Enabled Or
+            (Not Me.CycleAllClips And ViewerBattlePreview.Applies(Me.Session.ProfileIndex))) Then
             Return
         End If
 
@@ -2755,6 +2761,53 @@ Public Class Session
             Me.ViewerCameraState, Input, ORBIT_POINTER_DIVISOR, PAN_POINTER_DIVISOR, 8) And Me.Session.Ready
 
     End Sub
+
+    Public Sub PresentationInput(PressedKey As Number)
+
+        Dim Action As Number
+        Dim Result As ViewerInspectorCommands.OperationResult
+
+        If PressedKey = KEY_O Then
+            Action = ViewerParty.POINTER_ACTION_TOGGLE_ORBIT
+        Else If PressedKey = KEY_F Then
+            Action = ViewerParty.POINTER_ACTION_TOGGLE_FLOOR_REFLECTIONS
+        Else If PressedKey = KEY_PLUS Then
+            Call Me.AdjustPlaybackSpeed(25)
+        Else If PressedKey = KEY_MINUS Then
+            Call Me.AdjustPlaybackSpeed(-25)
+        End If
+
+        If Action <> 0 Then
+            Result = ViewerInspectorCommands.ApplyPartyPresentationAction(Action,
+                Me.Rendering, BACKGROUND_COUNT, Me.Effects, Me.ViewerCameraState, Me.DragonState)
+            Me.Session.Ready = Result.Ready And Me.Session.Ready
+        End If
+
+        Call Me.HostedInput(Pointer_X(), Pointer_Y(), Pointer_Inside(), PressedKey)
+
+    End Sub
+
+    Public Function PresentationCaption() As Text
+
+        Dim Result As Text
+
+        If Me.Session.ViewerError Then
+            Return "Unable to load this scene. Use Back to retry."
+        End If
+
+        Result = Me.StatusText()
+
+        If Me.Party.Enabled Then
+            Result = ViewerParty.ActingName(Me.Party) + " - " + ViewerParty.AttackSequenceName(Me.Party)
+        End If
+
+        If Me.Playback.ScenePaused Then
+            Result = "Paused - " + Result
+        End If
+
+        Return Result
+
+    End Function
 
 End Class
 

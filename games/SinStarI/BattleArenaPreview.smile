@@ -202,7 +202,7 @@ Public Sub Draw()
 
         Clear Rgb(5, 9, 18)
         Draw Text "Battle Arena Preview could not load." At 32, 32 Size 24 Color YELLOW
-        Draw Text "Press ESC to return to the main menu." At 32, 674 Size 18 Color WHITE
+        Draw Text "Press ESC to return to Legacy." At 32, 674 Size 18 Color WHITE
 
         Return
 
@@ -301,7 +301,7 @@ Private Sub DrawOverlay()
     Draw Text FloorLabel At REFLECTION_BUTTON_X + 12, REFLECTION_BUTTON_Y + 9 Size 13 Color WHITE
     Draw Text "Click or press R to toggle" At 32, 130 Size 10 Color LIGHT_GRAY
     Draw Text "LMB pan • MMB orbit • Wheel zoom • O auto orbit" At 32, 154 Size 10 Color LIGHT_GRAY
-    Draw Text "Press ESC to return to the main menu" At 32, 674 Size 18 Color WHITE
+    Draw Text "Press ESC to return to Legacy" At 32, 674 Size 18 Color WHITE
 
 End Sub
 

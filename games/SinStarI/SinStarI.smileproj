@@ -4,8 +4,10 @@
     <StartupFile>Program.smile</StartupFile>
     <OutputName>SinStarI</OutputName>
     <ApplicationId>smile.game.sin-star-i</ApplicationId>
-    <GraphicsBackend>Auto</GraphicsBackend>
+    <GraphicsBackend>DirectX</GraphicsBackend>
     <VSync>true</VSync>
+    <RememberWindowPlacement>true</RememberWindowPlacement>
+    <ResponsiveWindow>true</ResponsiveWindow>
   </PropertyGroup>
   <ItemGroup>
     <SmileSource Include="Program.smile" StartupOnly="true" />
@@ -15,17 +17,74 @@
     <SmileSource Include="Town2Screen.smile" />
     <SmileSource Include="CharacterScreen.smile" />
     <SmileSource Include="BattleArenaPreview.smile" />
-    <Model3DAsset Include="SourceAssets\Characters\Paladin\ArinV57\arin-v5.7-idle-equipment-checkpoint.glb"
-                  Descriptor="SourceAssets\Characters\Paladin\ArinV57\ArinV57.sm3d.json"
-                  LogicalPath="Assets\BattlePreview\ArinV57.sm3d"
-                  TextureOutputDirectory="Assets\BattlePreview\Textures"
-                  Profile="Character"
-                  Identity="sin-star-i.character-1.paladin"
-                  ProductionState="Prototype" />
+    <Model3DAsset Include="SourceAssets\Characters\Paladin\ArinV57\arin-v5.7-idle-equipment-checkpoint.glb" Descriptor="SourceAssets\Characters\Paladin\ArinV57\ArinV57.sm3d.json" LogicalPath="Assets\BattlePreview\ArinV57.sm3d" TextureOutputDirectory="Assets\BattlePreview\Textures" Profile="Character" Identity="sin-star-i.character-1.paladin" ProductionState="Prototype" />
     <SmileProjectReference Include="..\..\libraries\Smile.Game\Smile.Game.smilelibproj" />
     <SmileProjectReference Include="..\..\libraries\Smile.Simple3D\Smile.Simple3D.smilelibproj" />
     <Asset Include="Assets\**\*.png" />
     <Asset Include="Assets\*.mp3" />
     <Asset Include="Maps\**\*.smilemap" />
+    <SmileSource Include="CharacterPresentation.smile" />
+    <SmileSource Include="..\..\tools\Character3DViewer\ViewerWorkflow.smile" />
+    <SmileSource Include="..\..\tools\Character3DViewer\Profiles.smile" />
+    <SmileSource Include="..\..\tools\Character3DViewer\OrinStorm.smile" />
+    <SmileSource Include="SourceAssets\Characters\Tank\OrinV13\OrinEquipmentContours.smile" />
+    <SmileSource Include="..\..\tools\Character3DViewer\ArinShieldRim.smile" />
+    <SmileSource Include="..\..\tools\Character3DViewer\BattleAudio.smile" />
+    <SmileSource Include="..\..\tools\Character3DViewer\MiraBattle.smile" />
+    <SmileSource Include="..\..\tools\Character3DViewer\MiraWater.smile" />
+    <SmileSource Include="..\..\tools\Character3DViewer\BattleCamera.smile" />
+    <SmileSource Include="..\..\tools\Character3DViewer\BattleCameraShots.smile" />
+    <SmileSource Include="..\..\tools\Character3DViewer\BattleCameraTimeline.smile" />
+    <SmileSource Include="..\..\tools\Character3DViewer\ViewerBeatTimeline.smile" />
+    <SmileSource Include="..\..\tools\Character3DViewer\ViewerBeatSequence.smile" />
+    <SmileSource Include="..\..\tools\Character3DViewer\ViewerBeatEditor.smile" />
+    <SmileSource Include="..\..\tools\Character3DViewer\DragonPresence.smile" />
+    <SmileSource Include="..\..\tools\Character3DViewer\CalibrationJson.smile" />
+    <SmileSource Include="..\..\tools\Character3DViewer\ViewerTiming.smile" />
+    <SmileSource Include="..\..\tools\Character3DViewer\ViewerSession.smile" />
+    <SmileSource Include="..\..\tools\Character3DViewer\ViewerLifecycle.smile" />
+    <SmileSource Include="..\..\tools\Character3DViewer\ViewerPlayback.smile" />
+    <SmileSource Include="..\..\tools\Character3DViewer\ViewerActors.smile" />
+    <SmileSource Include="..\..\tools\Character3DViewer\ViewerCamera.smile" />
+    <SmileSource Include="..\..\tools\Character3DViewer\ViewerCalibration.smile" />
+    <SmileSource Include="..\..\tools\Character3DViewer\ViewerCalibrationEditing.smile" />
+    <SmileSource Include="..\..\tools\Character3DViewer\ViewerCalibrationControls.smile" />
+    <SmileSource Include="..\..\tools\Character3DViewer\ViewerInput.smile" />
+    <SmileSource Include="..\..\tools\Character3DViewer\ViewerInspectorCommands.smile" />
+    <SmileSource Include="..\..\tools\Character3DViewer\ViewerInspectorPresentation.smile" />
+    <SmileSource Include="..\..\tools\Character3DViewer\ViewerTimelineEditing.smile" />
+    <SmileSource Include="..\..\tools\Character3DViewer\ViewerUi.smile" />
+    <SmileSource Include="..\..\tools\Character3DViewer\ViewerGizmo.smile" />
+    <SmileSource Include="..\..\tools\Character3DViewer\ViewerParty.smile" />
+    <SmileSource Include="..\..\tools\Character3DViewer\ViewerBattlePreview.smile" />
+    <SmileSource Include="..\..\tools\Character3DViewer\ViewerEffects.smile" />
+    <SmileSource Include="..\..\tools\Character3DViewer\ViewerDragon.smile" />
+    <SmileSource Include="..\..\tools\Character3DViewer\ViewerRendering.smile" />
+    <Model3DAsset Include="BuildAssets\ArinV57\arin-v5.7-idle-equipment-checkpoint.glb" Descriptor="BuildAssets\ArinV57\ArinV57.sm3d.json" LogicalPath="Assets\Generation2\ArinV57\ArinV57.sm3d" TextureOutputDirectory="Assets\Generation2\ArinV57\Textures" Profile="Character" Identity="sin-star-i.character-1.paladin" ProductionState="Prototype" />
+    <Model3DAsset Include="BuildAssets\OrinV13\orin-v1.3-animation-checkpoint.glb" Descriptor="BuildAssets\OrinV13\OrinV13.sm3d.json" LogicalPath="Assets\Generation2\OrinV13\OrinV13.sm3d" TextureOutputDirectory="Assets\Generation2\OrinV13\Textures" Profile="Character" Identity="sin-star-i.character-2.tank" ProductionState="Prototype" />
+    <Model3DAsset Include="BuildAssets\RedDragon\red-dragon-v1.1-animated.glb" Descriptor="BuildAssets\RedDragon\RedDragonV11.sm3d.json" LogicalPath="Assets\Generation2\RedDragon\RedDragon.sm3d" TextureOutputDirectory="Assets\Generation2\RedDragon\Textures" Profile="Character" Identity="sin-star-i.boss.red-dragon" ProductionState="Prototype" />
+    <Model3DAsset Include="BuildAssets\ValorV1\Valor-v1-animation-set.glb" Descriptor="BuildAssets\ValorV1\ValorV1.sm3d.json" LogicalPath="Assets\Generation2\ValorV1\Valor.sm3d" TextureOutputDirectory="Assets\Generation2\ValorV1\Textures" Profile="Character" Identity="sin-star-i.valor.v1" ProductionState="Prototype" />
+    <Model3DAsset Include="BuildAssets\ZaraV1\Zara-v1-animation-set.glb" Descriptor="BuildAssets\ZaraV1\ZaraV1.sm3d.json" LogicalPath="Assets\Generation2\ZaraV1\Zara.sm3d" TextureOutputDirectory="Assets\Generation2\ZaraV1\Textures" Profile="Character" Identity="sin-star-i.zara.v1" ProductionState="Prototype" />
+    <Model3DAsset Include="BuildAssets\VraxV1\Vrax-v1-animation-set.glb" Descriptor="BuildAssets\VraxV1\VraxV1.sm3d.json" LogicalPath="Assets\Generation2\VraxV1\Vrax.sm3d" TextureOutputDirectory="Assets\Generation2\VraxV1\Textures" Profile="Character" Identity="sin-star-i.vrax.v1" ProductionState="Prototype" />
+    <Model3DAsset Include="BuildAssets\MiraTripoV1\mira-animation-checkpoint.glb" Descriptor="BuildAssets\MiraTripoV1\Mira.sm3d.json" LogicalPath="Assets\Generation2\MiraTripoV1\Mira.sm3d" TextureOutputDirectory="Assets\Generation2\MiraTripoV1\Textures" Profile="Character" Identity="sin-star-i.character-4.healer.mira" ProductionState="Prototype" />
+    <Asset Include="TechnicalAssets\Generation2\AnimationArticulated.sm3d" />
+    <Asset Include="TechnicalAssets\Generation2\VfxAtlas.png" />
+    <Asset Include="Assets\Calibration\arin-v5.7.smkf" />
+    <Asset Include="Assets\Calibration\orin-v1.3.smkf" />
+    <Asset Include="Assets\Calibration\arin-v5.7.metadata.json" />
+    <Asset Include="Assets\Calibration\orin-v1.3.metadata.json" />
+    <Asset Include="Assets\Lightning\thunder.wav" />
+    <Asset Include="Assets\Water\*.wav" />
+    <Asset Include="Assets\Audio\mira-water-attack.wav" />
+    <Asset Include="Assets\Audio\mira-heal-one.wav" />
+    <Asset Include="Assets\Audio\mira-heal-party.wav" />
+    <Asset Include="Assets\Audio\arin-flame-slash.wav" />
+    <Asset Include="Assets\Audio\zara-*.wav" />
+    <Asset Include="Assets\Audio\vrax-*.wav" />
+    <Asset Include="Assets\Audio\arin-flame-crosscut.wav" />
+    <Asset Include="Assets\Audio\dragon-fire-breath.wav" />
+    <Asset Include="Assets\Audio\dragon-claw-strike.wav" />
+    <Asset Include="Assets\Audio\dragon-fireball-impact.wav" />
+    <SmileProjectReference Include="..\..\libraries\Smile.UI\Smile.UI.smilelibproj" />
   </ItemGroup>
 </SmileProject>

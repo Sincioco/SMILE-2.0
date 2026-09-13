@@ -1,9 +1,8 @@
-''' Sin Star I title-screen assets, state, input, music, and drawing.
+''' Sin Star I menus, title assets and music; scene resources stay with their owners.
 Module SinStarI.TitleScreen
 
 Option Explicit
 
-''' Identifies a title selection and the application scene it opens.
 Public Enum TitleAction
     None = 0
     Character = 1
@@ -12,27 +11,44 @@ Public Enum TitleAction
     Shop = 4
     Dungeon = 5
     Battle = 6
+    Arin = 7
+    Orin = 8
+    Mira = 9
+    Zara = 10
+    Valor = 11
+    Dragon = 12
+    Vrax = 13
+    DragonBattle = 14
+    VraxBattle = 15
+    ExitGame = 16
+End Enum
+
+Private Enum MenuPage
+    Main = 0
+    Characters = 1
+    Battles = 2
+    Legacy = 3
 End Enum
 
 Private Dim TitleBackground As Image
 Private Dim TitleLogo As Image
 Private Dim MenuBackground As Image
-Private Dim TitleSelection As TitleAction
+Private Dim Page As MenuPage
+Private Dim Selection As Number
 
-''' Loads the title-screen assets, selects the first menu item, and starts the title music.
 Public Sub Initialize()
 
     Load Image TitleBackground From "Assets\Sin Star - Title Screen - Background.png"
     Load Image TitleLogo From "Assets\Sin Star - Logo.png"
     Load Image MenuBackground From "Assets\MenuBackground.png"
 
-    TitleSelection = TitleAction.Character
+    Page = MenuPage.Main
+    Selection = 0
 
     Call Enter()
 
 End Sub
 
-''' Restarts the looping title-screen music.
 Public Sub Enter()
 
     Stop Music
@@ -40,14 +56,12 @@ Public Sub Enter()
 
 End Sub
 
-''' Stops title-screen music before the application opens another scene.
 Public Sub Leave()
 
     Stop Music
 
 End Sub
 
-''' Stops the title music and releases every title-screen image.
 Public Sub Shutdown()
 
     Stop Music
@@ -57,54 +71,210 @@ Public Sub Shutdown()
 
 End Sub
 
-''' Updates menu navigation and returns the chosen title action, or TitleAction.None.
+Private Function ChoiceCount() As Number
+
+    If Page = MenuPage.Characters Then
+        Return 8
+    Else If Page = MenuPage.Legacy Then
+        Return 7
+    Else If Page = MenuPage.Main Then
+        Return 4
+    End If
+
+    Return 3
+
+End Function
+
+Private Function MenuLeft() As Number
+
+    Dim Result As Number
+
+    Result = Max(22, Window_Width() / 2 - 105)
+
+    Return Result
+
+End Function
+
+Private Function MenuTop() As Number
+
+    Dim Result As Number
+
+    Result = Max(190, Window_Height() / 2 - 120)
+
+    Return Result
+
+End Function
+
+Public Function Label(Action As TitleAction) As Text
+
+    Select Case Action
+        Case TitleAction.Character
+            Return "Character Gallery"
+        Case TitleAction.Town
+            Return "Town"
+        Case TitleAction.Town2
+            Return "Town 2"
+        Case TitleAction.Shop
+            Return "Shop"
+        Case TitleAction.Dungeon
+            Return "Dungeon"
+        Case TitleAction.Battle
+            Return "Original Battle Preview"
+        Case TitleAction.Arin
+            Return "Arin"
+        Case TitleAction.Orin
+            Return "Orin"
+        Case TitleAction.Mira
+            Return "Mira"
+        Case TitleAction.Zara
+            Return "Zara"
+        Case TitleAction.Valor
+            Return "Valor"
+        Case TitleAction.Dragon
+            Return "Dragon"
+        Case TitleAction.Vrax
+            Return "Vrax"
+        Case TitleAction.DragonBattle
+            Return "Dragon Battle"
+        Case TitleAction.VraxBattle
+            Return "Vrax Battle"
+        Case TitleAction.ExitGame
+            Return "Exit"
+    End Select
+
+    Return "Back"
+
+End Function
+
+Private Function ChoiceAction(Index As Number) As TitleAction
+
+    If Page = MenuPage.Characters Then
+
+        Select Case Index
+            Case 0
+                Return TitleAction.Arin
+            Case 1
+                Return TitleAction.Orin
+            Case 2
+                Return TitleAction.Mira
+            Case 3
+                Return TitleAction.Zara
+            Case 4
+                Return TitleAction.Valor
+            Case 5
+                Return TitleAction.Dragon
+            Case 6
+                Return TitleAction.Vrax
+        End Select
+
+    Else If Page = MenuPage.Battles Then
+
+        If Index = 0 Then
+            Return TitleAction.DragonBattle
+        Else If Index = 1 Then
+            Return TitleAction.VraxBattle
+        End If
+
+    Else If Page = MenuPage.Legacy Then
+
+        Select Case Index
+            Case 0
+                Return TitleAction.Character
+            Case 1
+                Return TitleAction.Town
+            Case 2
+                Return TitleAction.Town2
+            Case 3
+                Return TitleAction.Shop
+            Case 4
+                Return TitleAction.Dungeon
+            Case 5
+                Return TitleAction.Battle
+        End Select
+
+    End If
+
+    Return TitleAction.None
+
+End Function
+
+Private Sub BackToMain()
+
+    If Page = MenuPage.Characters Then
+        Selection = 0
+    Else If Page = MenuPage.Battles Then
+        Selection = 1
+    Else
+        Selection = 2
+    End If
+
+    Page = MenuPage.Main
+
+End Sub
+
 Public Function HandleInput(Key As Number) As TitleAction
 
     Dim Action As TitleAction
+    Dim Confirm As Boolean
+    Dim Index As Number
+    Dim Y As Number
 
     Action = TitleAction.None
+    Confirm = Key = KEY_ENTER Or Key = KEY_SPACE
+
+    If Key = KEY_ESCAPE And Page <> MenuPage.Main Then
+        Call BackToMain()
+
+        Return Action
+    End If
 
     If Key = KEY_UP Or Key = KEY_W Then
-
-        Select Case TitleSelection
-            Case TitleAction.Character
-                TitleSelection = TitleAction.Battle
-            Case TitleAction.Town
-                TitleSelection = TitleAction.Character
-            Case TitleAction.Town2
-                TitleSelection = TitleAction.Town
-            Case TitleAction.Shop
-                TitleSelection = TitleAction.Town2
-            Case TitleAction.Dungeon
-                TitleSelection = TitleAction.Shop
-            Case TitleAction.Battle
-                TitleSelection = TitleAction.Dungeon
-            Case Else
-                TitleSelection = TitleAction.Character
-        End Select
-
+        Selection = (Selection + ChoiceCount() - 1) Mod ChoiceCount()
     Else If Key = KEY_DOWN Or Key = KEY_S Then
+        Selection = (Selection + 1) Mod ChoiceCount()
+    End If
 
-        Select Case TitleSelection
-            Case TitleAction.Character
-                TitleSelection = TitleAction.Town
-            Case TitleAction.Town
-                TitleSelection = TitleAction.Town2
-            Case TitleAction.Town2
-                TitleSelection = TitleAction.Shop
-            Case TitleAction.Shop
-                TitleSelection = TitleAction.Dungeon
-            Case TitleAction.Dungeon
-                TitleSelection = TitleAction.Battle
-            Case TitleAction.Battle
-                TitleSelection = TitleAction.Character
-            Case Else
-                TitleSelection = TitleAction.Character
-        End Select
+    For Index = 0 To ChoiceCount() - 1
 
-    Else If Key = KEY_ENTER Or Key = KEY_SPACE Then
+        Y = MenuTop() + Index * 46
 
-        Action = TitleSelection
+        If (Pointer_Inside() And
+            Pointer_Pressed(POINTER_PRIMARY) And
+            Pointer_X() >= MenuLeft() And
+            Pointer_X() < MenuLeft() + 445 And
+            Pointer_Y() >= Y - 5 And
+            Pointer_Y() < Y + 35) Then
+            Selection = Index
+            Confirm = True
+        End If
+
+    End For
+
+    If Confirm Then
+
+        If Page = MenuPage.Main Then
+
+            If Selection = 3 Then
+                Return TitleAction.ExitGame
+            Else If Selection = 0 Then
+                Page = MenuPage.Characters
+            Else If Selection = 1 Then
+                Page = MenuPage.Battles
+            Else
+                Page = MenuPage.Legacy
+            End If
+
+            Selection = 0
+
+        Else
+
+            Action = ChoiceAction(Selection)
+
+            If Action = TitleAction.None Then
+                Call BackToMain()
+            End If
+
+        End If
 
     End If
 
@@ -112,38 +282,74 @@ Public Function HandleInput(Key As Number) As TitleAction
 
 End Function
 
-''' Draws the complete Sin Star I title screen.
 Public Sub Draw()
 
-    Clear Rgb(4, 8, 20)
-    Draw Image TitleBackground At 0, 0 Size 1280 By 720 Filter Smooth
-    Draw Image TitleLogo At 30, 30 Size 480 By 600 Filter Smooth
-    'Draw Image MenuBackground At 505, 297 Size 380 By 300 Opacity 80 Filter Smooth
+    Dim Index As Number
+    Dim Heading As Text
+    Dim ChoiceLabel As Text
+    Dim Y As Number
+    Dim X As Number
+    Dim Top As Number
+    Dim LogoWidth As Number
 
-    Call DrawChoice(TitleAction.Character, "Character", 358)
-    Call DrawChoice(TitleAction.Town, "Town", 408)
-    Call DrawChoice(TitleAction.Town2, "Town 2", 458)
-    Call DrawChoice(TitleAction.Shop, "Shop", 508)
-    Call DrawChoice(TitleAction.Dungeon, "Dungeon", 558)
-    Call DrawChoice(TitleAction.Battle, "Battle", 608)
+    X = MenuLeft()
+    Top = MenuTop()
+    LogoWidth = Min(480, Max(240, Window_Width() / 2 - 140))
 
-    'Draw Text "Programmed by:  Louiery R. Sincioco  August 16, 2026. Copyright (c) 2026.  All rights reserved." At 641, 695 Size 12 Color BLACK Centered
-    Draw Text "Programmed by:  Louiery R. Sincioco  August 16, 2026. Copyright (c) 2026.  All rights reserved." At 640, 694 Size 12 Color WHITE Centered
+    Heading = "Sin Star I"
 
-End Sub
-
-Private Sub DrawChoice(Action As TitleAction, Label As Text, Y As Number)
-
-    If TitleSelection = Action Then
-
-        Draw Image MenuBackground At 525, Y - 5 Size 300 By 42 Opacity 80 Filter Smooth
-        Draw Text ">" At 543, Y Size 24 Color WHITE
-        Draw Text Label At 581, Y Size 24 Color WHITE
-
-    Else
-        Draw Text Label At 581, Y Size 24 Color WHITE
-
+    If Page = MenuPage.Characters Then
+        Heading = "Characters"
+    Else If Page = MenuPage.Battles Then
+        Heading = "Battle Simulations"
+    Else If Page = MenuPage.Legacy Then
+        Heading = "Legacy"
     End If
+
+    Clear Rgb(4, 8, 20)
+    Draw Image TitleBackground At 0, 0 Size Window_Width() By Window_Height() Filter Smooth
+    Draw Image TitleLogo At 30, (Window_Height() - LogoWidth * 5 / 4) / 2 Size LogoWidth By LogoWidth * 5 / 4 Filter Smooth
+    Draw Image MenuBackground At X - 15, Top - 87 Size 470 By 470 Opacity 85 Filter Smooth
+    Draw Text Heading At X + 19, Top - 60 Size 32 Color WHITE
+
+    For Index = 0 To ChoiceCount() - 1
+
+        ChoiceLabel = Label(ChoiceAction(Index))
+
+        If Page = MenuPage.Main Then
+
+            If Index = 0 Then
+                ChoiceLabel = "Characters"
+            Else If Index = 1 Then
+                ChoiceLabel = "Battle Simulations"
+            Else If Index = 2 Then
+                ChoiceLabel = "Legacy"
+            Else
+                ChoiceLabel = "Exit"
+            End If
+
+        Else If Page = MenuPage.Battles Then
+
+            If Index = 0 Then
+                ChoiceLabel = "Dragon"
+            Else If Index = 1 Then
+                ChoiceLabel = "Vrax"
+            End If
+
+        End If
+
+        Y = Top + Index * 46
+
+        If Selection = Index Then
+            Draw Image MenuBackground At X, Y - 5 Size 445 By 40 Opacity 100 Filter Smooth
+            Draw Text ">" At X + 13, Y Size 24 Color CYAN
+        End If
+
+        Draw Text ChoiceLabel At X + 46, Y Size 24 Color WHITE
+    End For
+
+    Draw Text "Click Or Use Arrows / Enter     Esc: Back" At X + 19, Window_Height() - 85 Size 16 Color WHITE
+    Draw Text "Programmed by:  Louiery R. Sincioco  August 16, 2026. Copyright (c) 2026.  All rights reserved." At Window_Width() / 2, Window_Height() - 26 Size 12 Color WHITE Centered
 
 End Sub
 
