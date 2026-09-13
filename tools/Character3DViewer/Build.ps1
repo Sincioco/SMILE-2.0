@@ -64,6 +64,7 @@ $viewerSources = @(
     'ViewerUi.smile',
     'ViewerGizmo.smile',
     'ViewerParty.smile',
+    'ViewerBattlePreview.smile',
     'ViewerEffects.smile',
     'ViewerDragon.smile',
     'ViewerRendering.smile'

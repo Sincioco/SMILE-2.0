@@ -86,6 +86,15 @@ no model, rig, attachment or calibration values were changed. Dragon can be hidd
 with its button or **D**. Mira's attack preview targets Dragon's Chest, Heal One
 targets Arin, and Heal Party includes both heroes. Mira1/Mira2/Mira3 stay solo.
 
+Demo On now choreographs Arin and Mira against Dragon using the existing Party
+scheduler, including attacks, guarding, hits and healing. Selecting a clip or
+turning Demo Off restores individual inspection with idle Arin. The Dragon tab
+also owns Mira alongside Arin and Orin; its opening round demonstrates the
+Orin/Mira Tempest combo, followed by the full six-cast rotation. Both tabs preserve
+the accepted asset and calibrated actor transforms, pause all animation clocks
+together, and begin with wider framing. Focused native checks cover these paths,
+Mira advancing exactly once in Dragon inspection, and borrowed-handle cleanup.
+
 The standalone water adapter consumes actual clip names, fixing the spaced
 Heal One/Heal Party labels that previously suppressed their water and sound cues.
 Native validation covers all nine clips, active healing, final actor targets,

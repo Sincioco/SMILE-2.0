@@ -2064,6 +2064,7 @@ Sub CheckMiraBattles()
     End For
 
     Call CheckMiraPreview()
+    Call CheckCoordinatedPreviews()
 
     For TabIndex = 0 To 1
 
@@ -2166,6 +2167,157 @@ Sub CheckMiraBattles()
     Call SelectCharacterTab(0)
     Call CalibrationCheck(Not Party.Mira.Ready And Not Party.Water.Ready,
         "Leaving Party releases Mira's actor and water resources")
+
+End Sub
+
+Sub CheckCoordinatedPreviews()
+
+    Dim TabIndex As Number
+    Dim Cycle As Number
+    Dim Ok As Boolean
+    Dim ArinHandle As Number
+    Dim MiraHandle As Number
+    Dim SavedElapsed As Number
+    Dim MiraTime As Number
+    Dim Arin As Character3D.Actor
+    Dim Water As MiraWater.Context
+
+    For TabIndex = 0 To 1
+
+        If TabIndex = 0 Then
+            Call SelectCharacterTab(ViewerProfiles.CHARACTER_TAB_MIRA)
+        Else
+
+            Call SelectCharacterTab(2)
+        End If
+
+        Playback.DemoEnabled = True
+        Playback.ScenePaused = False
+        Playback.AnimationUpdateElapsed = 16
+
+        Call AdvancePreviewTestFrame()
+
+        Arin = Party.DragonOpponent.Actor
+        MiraHandle = Party.Mira.Actor.Handle
+
+        If TabIndex = 0 Then
+            Arin = Party.Companion.Actor
+            MiraHandle = Character.Handle
+        End If
+
+        ArinHandle = Arin.Handle
+
+        Call CalibrationCheck(Session.Ready And BattlePreview.Active And
+            Not Party.Enabled And Not Party.MiraDuo And
+            Party.ParticipantCount = 2 + TabIndex,
+            "Standalone Demo borrows the correct roster and returns ownership each frame")
+
+        Party.Turn = 0
+        Party.Elapsed = 1300
+        Party.Stage = -1
+
+        Call AdvancePreviewTestFrame()
+        Call CalibrationCheck(Session.Ready And
+            (Character3D.CurrentClipNameMatches(Arin, "SwordAttack") Or
+            Character3D.CurrentClipNameMatches(Arin, "SwordAttack2")),
+            "Arin performs his own attack in both standalone battle demos")
+
+        Party.Elapsed = 10000
+
+        Call AdvancePreviewTestFrame()
+        Call CalibrationCheck(Party.Turn = 6 - TabIndex * 5,
+            "Arin hands the Mira duo turn to Mira and the Dragon trio turn to Orin")
+
+        For Cycle = 0 To 5
+
+            Party.Turn = 6
+            Party.AttackCycle = Cycle
+            Party.Elapsed = 1400
+            Party.Stage = -1
+            Party.HitResolved = False
+
+            Call AdvancePreviewTestFrame()
+
+            Water = Party.Water
+
+            If TabIndex = 0 Then
+                Water = Effects.Water
+            End If
+
+            Call CalibrationCheck(Session.Ready And Water.Targets.MemberCount = 2 + TabIndex,
+                "Standalone choreography supports all six Mira casts with the correct recipients")
+
+            If Cycle = 5 And TabIndex = 1 Then
+                Call CalibrationCheck(Character3D.CurrentClipNameMatches(Party.Mira.Actor, "Attack") And
+                    Character3D.CurrentClipNameMatches(Party.Companion.Actor, "ThorAttack") And
+                    Water.AttackMode = 7,
+                    "Dragon Demo synchronizes Mira's Tempest with Orin's ThorAttack")
+            End If
+
+        End For
+
+        SavedElapsed = Party.Elapsed
+        Playback.ScenePaused = True
+        Playback.AnimationUpdateElapsed = 0
+
+        Call AdvancePreviewTestFrame()
+        Call CalibrationCheck(Party.Elapsed = SavedElapsed And Session.Ready,
+            "Pausing standalone Demo freezes the shared choreography")
+
+        Playback.ScenePaused = False
+        Playback.AnimationUpdateElapsed = 16
+
+        If TabIndex = 1 Then
+
+            MiraTime = Character3D.AnimationTime(Party.Mira.Actor)
+
+            Call AdvancePreviewTestFrame()
+            Call CalibrationCheck(Character3D.AnimationTime(Party.Mira.Actor) - MiraTime =
+                16 * Playback.PlaybackSpeed / 100,
+                "Dragon inspection advances Mira once despite two calibrated opponents")
+
+        End If
+
+        Playback.DemoEnabled = False
+
+        Call AdvancePreviewTestFrame()
+
+        Ok = Not BattlePreview.Active And Not Party.Enabled And Session.Ready
+
+        If TabIndex = 0 Then
+            Ok = (Ok And Not Party.Mira.Ready And Character.Handle = MiraHandle And
+                Party.Companion.Actor.Handle = ArinHandle)
+        Else
+            Ok = (Ok And Party.Mira.Actor.Handle = MiraHandle And
+                Party.DragonOpponent.Actor.Handle = ArinHandle)
+        End If
+
+        Call CalibrationCheck(Ok And Character3D.CurrentClipNameMatches(Arin, "Idle"),
+            "Demo Off restores idle companions and preserves actor ownership for manual inspection")
+    End For
+
+    Call SelectCharacterTab(0)
+    Call CalibrationCheck(Session.Ready And Not Party.Mira.Ready And Not BattlePreview.Active,
+        "Leaving a coordinated preview releases Mira without leaking borrowed actors")
+
+End Sub
+
+Sub AdvancePreviewTestFrame()
+
+    Session.Ready = ViewerBattlePreview.Advance(BattlePreview, Party, Character,
+        ViewerCameraState.Frame, Playback, Effects, Session.ProfileIndex) And Session.Ready
+
+    If Not Session.DragonInspection Or Not BattlePreview.Active Then
+        Session.Ready = Character3D.Update(Character, Playback.AnimationUpdateElapsed) And Session.Ready
+    End If
+
+    Call UpdatePartyCompanion()
+
+    If Session.DragonInspection Then
+        Call UpdateDragonOpponent()
+    End If
+
+    Call UpdateDragon()
 
 End Sub
 

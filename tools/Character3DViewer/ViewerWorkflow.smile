@@ -26,6 +26,7 @@ Import Smile.Tools.Character3DViewerTimelineEditing As ViewerTimelineEditing
 Import Smile.Tools.Character3DViewerUi As ViewerUi
 Import Smile.Tools.Character3DViewerGizmo As ViewerGizmo
 Import Smile.Tools.Character3DViewerParty As ViewerParty
+Import Smile.Tools.Character3DViewerBattlePreview As ViewerBattlePreview
 Import Smile.Tools.Character3DViewerEffects As ViewerEffects
 Import Smile.Tools.Character3DViewerDragon As ViewerDragon
 Import Smile.Tools.Character3DViewerRendering As ViewerRendering
@@ -69,6 +70,7 @@ Private Const PARTY_FORMATION_END_ANGLE = 60
 Public Class Session
 
     Private Party As ViewerParty.State
+    Private BattlePreview As ViewerBattlePreview.State
     Private BeatEditing As BeatEditor.State
     Private Character As Character3D.Actor
     Private CharacterBounds As Character3D.Bounds3D
@@ -157,6 +159,10 @@ Public Class Session
 
             Call ViewerPlayback.ResolveAnimationElapsed(Me.Playback, Me.Timing.AnimationElapsed)
 
+            Me.Session.Ready = ViewerBattlePreview.Advance(Me.BattlePreview, Me.Party,
+                Me.Character, Me.ViewerCameraState.Frame, Me.Playback, Me.Effects,
+                Me.Session.ProfileIndex) And Me.Session.Ready
+
             If Me.Party.Enabled Then
 
                 If Me.BeatEditing.Preview Then
@@ -176,7 +182,10 @@ Public Class Session
 
             End If
 
-            Me.Session.Ready = Character3D.Update(Me.Character, Me.Playback.AnimationUpdateElapsed) And Me.Session.Ready
+            If Not Me.Session.DragonInspection Or Not Me.BattlePreview.Active Then
+                Me.Session.Ready = Character3D.Update(Me.Character,
+                    Me.Playback.AnimationUpdateElapsed) And Me.Session.Ready
+            End If
 
             Call ViewerSession.CaptureFailure(Me.Session, 3)
 
@@ -277,7 +286,8 @@ Public Class Session
                 ViewerPlayback.SelectedClipLabel(
                     Me.Character, Me.Playback, Me.Session.ProfileIndex),
                 Me.ViewerCameraState.Live,
-                Me.Timing.CameraElapsed
+                Me.Timing.CameraElapsed,
+                Me.BattlePreview.Active
             )
 
             If Me.Party.Companion.Ready Then
@@ -407,6 +417,8 @@ Public Class Session
 
     Private Sub LoadViewer()
 
+        Call ViewerBattlePreview.Reset(Me.BattlePreview)
+
         If Not Me.IsHosted Then
             Me.ViewWidth = Window_Width()
             Me.ViewHeight = Window_Height()
@@ -437,6 +449,15 @@ Public Class Session
 
     Private Sub UpdateDragon()
 
+        Me.Session.Ready = ViewerBattlePreview.UpdateScene(Me.BattlePreview, Me.Party,
+            Me.Character, Me.ViewerCameraState.Frame, Me.Playback, Me.Effects,
+            Me.DragonState, Me.Equipment, Me.ViewerCameraState.Live,
+            Me.Timing.CameraElapsed, Me.ViewerUiState.CalibrationEditing) And Me.Session.Ready
+
+        If Me.BattlePreview.Active Then
+            Return
+        End If
+
         Me.Session.Ready = ViewerParty.UpdateDragon(
             Me.Party,
             Me.DragonState,
@@ -459,9 +480,11 @@ Public Class Session
         Name = ViewerPlayback.SelectedClipName(Me.Character, Me.Playback)
         Audible = Not Me.Playback.ScenePaused And Not Me.ViewerUiState.CalibrationEditing
 
-        Call ViewerEffects.UpdateArinAudio(
-            Me.Effects, Me.Session.ProfileIndex, Name,
-            Character3D.AnimationTime(Me.Character), Audible)
+        If Not Me.BattlePreview.Active Then
+            Call ViewerEffects.UpdateArinAudio(
+                Me.Effects, Me.Session.ProfileIndex, Name,
+                Character3D.AnimationTime(Me.Character), Audible)
+        End If
 
         Call ViewerDragon.UpdateAudio(Me.DragonState, Audible)
 
@@ -780,7 +803,7 @@ Public Class Session
 
     Private Sub AdvanceAnimationSequence()
 
-        If Me.Party.Enabled Then
+        If Me.Party.Enabled Or ViewerBattlePreview.Applies(Me.Session.ProfileIndex) Then
             Return
         End If
 
@@ -1438,6 +1461,9 @@ Public Class Session
 
     Private Sub ResetAll()
 
+        Me.Session.Ready = ViewerBattlePreview.EndDemo(Me.BattlePreview, Me.Party,
+            Me.Character, Me.ViewerCameraState.Frame, Me.Playback, Me.Effects) And Me.Session.Ready
+
         If Me.Party.UiBound Then
 
             Call Me.CancelCalibrationEdit()
@@ -1711,6 +1737,10 @@ Public Class Session
         Call Me.DrawInspectorOverlay()
         Call Me.EndPartyInspector()
 
+        If Me.BattlePreview.Active And Me.ViewerUiState.Visibility <> 2 Then
+            Call ViewerUi.DrawBattlePreviewCaption(Me.BattlePreview.Caption)
+        End If
+
         If (Me.Party.Enabled And
             Me.Party.Ready And
             Me.ViewerUiState.Visibility <> 2 And
@@ -1808,6 +1838,10 @@ Public Class Session
                 Me.Character, Me.ActiveProfile, Me.Party, Me.Session, Me.Rendering, Me.Playback,
                 Me.Effects, Me.ViewerCameraState, Me.FrameRate, Me.ViewWidth, Me.ViewHeight,
                 ANIMATION_CYCLE_MILLISECONDS)
+
+            If Me.BattlePreview.Active Then
+                StatusView.SecondsRemaining = Me.BattlePreview.SecondsRemaining
+            End If
 
             Call ViewerInspectorPresentation.DrawStatusAndAnimation(
                 StatusView, Me.ViewerUiState.InspectorScrollOffset)

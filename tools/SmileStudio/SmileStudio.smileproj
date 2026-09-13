@@ -46,6 +46,7 @@
     <SmileSource Include="..\Character3DViewer\ViewerUi.smile" />
     <SmileSource Include="..\Character3DViewer\ViewerGizmo.smile" />
     <SmileSource Include="..\Character3DViewer\ViewerParty.smile" />
+    <SmileSource Include="..\Character3DViewer\ViewerBattlePreview.smile" />
     <SmileSource Include="..\Character3DViewer\ViewerEffects.smile" />
     <SmileSource Include="..\Character3DViewer\ViewerDragon.smile" />
     <SmileSource Include="..\Character3DViewer\ViewerRendering.smile" />

@@ -743,12 +743,17 @@ Public Sub UpdateEquipmentFire(
     SelectedClip As Number,
     SelectedClipLabel As Text,
     Camera As Precision3D.Camera3D,
-    CameraElapsed As Number
+    CameraElapsed As Number,
+    Optional CoordinatedPreview As Boolean = False
 )
 
     Dim WaterReady As Boolean
 
     If ViewerProfiles.IsMiraCharacter(ProfileIndex) Then
+
+        If CoordinatedPreview Then
+            Return
+        End If
 
         Call MiraWater.UseStandaloneTargets(Value.Water, Actor)
 

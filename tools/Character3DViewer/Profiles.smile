@@ -1142,6 +1142,8 @@ Public Function ArenaCameraDistance(ProfileIndex As Number, DefaultDistance As N
 
     If UsesVraxOpponent(ProfileIndex) Then
         Result = DefaultDistance * 2
+    Else If ProfileIndex = PROFILE_MIRA Or ProfileIndex = PROFILE_DRAGON Then
+        Result = DefaultDistance * 2
     End If
 
     Return Result

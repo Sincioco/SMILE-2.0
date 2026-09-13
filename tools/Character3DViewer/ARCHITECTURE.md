@@ -1,5 +1,32 @@
 # Character Viewer Architecture
 
+## Coordinated standalone battle previews
+
+`ViewerBattlePreview` adapts the Mira and Dragon inspectors to `ViewerParty`'s
+existing turn scheduler. Its state owns only activation, saved home framing and
+presentation labels; it owns no actor, effect resource or clock. Within each call,
+Mira's primary actor/water or Dragon's calibrated Arin opponent is temporarily bound
+to the Party roles, then returned to its original owner before draw/input/lifecycle.
+`ViewerParty.MiraDuo` supplies the bounded two-hero turn and recipient mapping; the
+ordinary Party Dragon and Party Vrax rosters retain their existing paths. Dragon's
+extra Mira is owned by `ViewerParty` and loaded/released by its normal actor lifecycle.
+
+Workflow remains the coordinator: advance, update actors once, apply calibrated
+transforms, resolve Dragon and water effects, then audio/draw. The Dragon primary
+is advanced by the battle's Dragon owner; updating its Arin opponent skips the
+additional-member update/draw so Mira is never advanced/drawn twice. Demo Off
+restores companion homes and Idle while preserving the inspector's selected clip.
+Space pauses both choreography and actor time. Arin and Orin calibration banks and
+canonical assets are unchanged. Wider default framing admits the expanded roster.
+
+`CalibrationTests.CheckCoordinatedPreviews` uses real assets to verify both rosters,
+Arin attacks and turn handoff, all six Mira casts, simultaneous Attack/ThorAttack
+with storm mode, exact Mira elapsed time, pause, Demo Off and ownership cleanup.
+The same native fixture also checks both existing Party scenes and calibration
+round trips. Growth stays within these responsibilities: a focused adapter,
+small duo branches in the legacy Party coordinator and thin Workflow wiring;
+no size threshold, baseline or dependency exclusion was changed.
+
 ## Native Mira and preserved comparisons
 
 `Profiles` owns Mira/Mira1/Mira2/Mira3 identities, their shared nine clip names and hold/loop

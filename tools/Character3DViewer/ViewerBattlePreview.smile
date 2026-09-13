@@ -1,0 +1,326 @@
+''' Borrows standalone actors for the existing Party battle, returning every handle to its owner.
+Module Smile.Tools.Character3DViewerBattlePreview
+
+Option Explicit
+
+Import Smile.Simple3D.Character3D As Character3D
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Math3D As Math3D
+Import Smile.Simple3D.Precision3D As Precision3D
+Import Smile.Simple3D.PrecisionCamera3D As PrecisionCamera
+Import Smile.Tools.Character3DViewerActors As Actors
+Import Smile.Tools.Character3DViewerProfiles As Profiles
+Import Smile.Tools.Character3DViewerPlayback As Playback
+Import Smile.Tools.Character3DViewerParty As Party
+Import Smile.Tools.Character3DViewerEffects As Effects
+Import Smile.Tools.Character3DViewerDragon As Dragon
+Import Smile.Tools.MiraWater As MiraWater
+
+Public Type State
+    Active As Boolean
+    Duo As Boolean
+    Speed As Number
+    MiraPresentation As Number
+    SecondsRemaining As Number
+    Caption As Text
+    ArinHome As PrecisionCamera.Framing
+    OrinHome As PrecisionCamera.Framing
+    MiraHome As PrecisionCamera.Framing
+End Type
+
+Public Function Applies(Profile As Number) As Boolean
+
+    Dim Result As Boolean
+
+    Result = (Profiles.INCLUDE_MIRA_COMPARISONS And
+        (Profile = Profiles.PROFILE_MIRA Or Profile = Profiles.PROFILE_DRAGON))
+
+    Return Result
+
+End Function
+
+Public Sub Reset(ByRef Value As State)
+
+    Dim Empty As State
+
+    Value = Empty
+
+End Sub
+
+Private Function Bind(ByRef Value As State, ByRef Battle As Party.State,
+    Primary As Character3D.Actor, Frame As PrecisionCamera.Framing,
+    Clip As Number, ByRef Shared As Effects.State) As Actors.Context
+
+    Dim Arin As Actors.Context
+    Dim EmptyActor As Actors.Context
+    Dim EmptyWater As MiraWater.Context
+
+    If Value.Duo Then
+
+        Arin = Battle.Companion
+        Battle.Companion = EmptyActor
+        Battle.Mira.Actor = Primary
+        Battle.Mira.Frame = Frame
+        Battle.Mira.Clip = Clip
+        Battle.Mira.Profile = Profiles.PROFILE_MIRA
+        Battle.Mira.Ready = True
+        Battle.Mira.PresentationState = Value.MiraPresentation
+        Battle.Water = Shared.Water
+        Shared.Water = EmptyWater
+
+    Else
+
+        Arin = Battle.DragonOpponent
+
+    End If
+
+    Battle.Enabled = True
+    Battle.MiraDuo = Value.Duo
+
+    Return Arin
+
+End Function
+
+Private Sub Unbind(ByRef Value As State, ByRef Battle As Party.State,
+    Arin As Actors.Context, ByRef Frame As PrecisionCamera.Framing,
+    ByRef Clip As Number, ByRef Shared As Effects.State)
+
+    Dim EmptyActor As Actors.Context
+    Dim EmptyWater As MiraWater.Context
+
+    Arin.PresentationState = Battle.PrimaryPresentationState
+
+    If Value.Duo Then
+
+        Frame = Battle.Mira.Frame
+        Clip = Battle.Mira.Clip
+        Value.MiraPresentation = Battle.Mira.PresentationState
+        Shared.Water = Battle.Water
+        Battle.Water = EmptyWater
+        Battle.Mira = EmptyActor
+        Battle.Companion = Arin
+
+    Else
+
+        Battle.DragonOpponent = Arin
+
+    End If
+
+    Battle.Enabled = False
+    Battle.MiraDuo = False
+
+End Sub
+
+Private Function RestoreMember(ByRef Member As Actors.Context,
+    Home As PrecisionCamera.Framing, Speed As Number) As Boolean
+
+    Dim Result As Boolean
+    Dim Facing As Number
+
+    If Member.Profile = Profiles.PROFILE_ORIN Then
+        Facing = -55
+    End If
+
+    Member.Frame = Home
+    Member.PresentationState = Party.STATE_ALIVE
+    Result = Party.PlayClip(Member.Actor, "Idle", Member.Clip,
+        Member.Actor.Handle, Member.Profile, Speed)
+    Result = Actors.ApplyPresentationOffset(Member.Actor, Member.Profile,
+        Member.Clip, Member.Frame) And Result
+    Result = Actors.FaceToward(Member.Actor, Dragon.PositionX(), 0,
+        Dragon.PositionZ(), 180, Facing) And Result
+
+    Return Result
+
+End Function
+
+Public Function EndDemo(ByRef Value As State, ByRef Battle As Party.State,
+    ByRef Primary As Character3D.Actor, ByRef Frame As PrecisionCamera.Framing,
+    ByRef Playing As Playback.State, ByRef Shared As Effects.State) As Boolean
+
+    Dim Result As Boolean
+
+    Result = True
+
+    If Not Value.Active Then
+        Return Result
+    End If
+
+    If Value.Duo Then
+
+        Result = RestoreMember(Battle.Companion, Value.ArinHome, Playing.PlaybackSpeed)
+        Frame = Value.MiraHome
+        Result = Actors.ApplyPresentationOffset(Primary, Profiles.PROFILE_MIRA,
+            Playing.SelectedClip, Frame) And Result
+        Result = Actors.FaceToward(Primary, Dragon.PositionX(), 0,
+            Dragon.PositionZ(), 180, 0) And Result
+
+        Call MiraWater.UseStandaloneTargets(Shared.Water, Primary)
+
+    Else
+
+        Result = RestoreMember(Battle.DragonOpponent, Value.ArinHome, Playing.PlaybackSpeed)
+        Result = RestoreMember(Battle.Companion, Value.OrinHome, Playing.PlaybackSpeed) And Result
+        Result = RestoreMember(Battle.Mira, Value.MiraHome, Playing.PlaybackSpeed) And Result
+
+        Call MiraWater.UseStandaloneTargets(Battle.Water, Battle.Mira.Actor)
+
+    End If
+
+    Value.Active = False
+
+    Return Result
+
+End Function
+
+Public Function Advance(ByRef Value As State, ByRef Battle As Party.State,
+    ByRef Primary As Character3D.Actor, ByRef Frame As PrecisionCamera.Framing,
+    ByRef Playing As Playback.State, ByRef Shared As Effects.State,
+    Profile As Number) As Boolean
+
+    Dim Arin As Actors.Context
+    Dim Result As Boolean
+    Dim Starting As Boolean
+    Dim Index As Number
+
+    If Not Applies(Profile) Then
+        Return True
+    End If
+
+    If Not Playing.DemoEnabled Then
+        Result = EndDemo(Value, Battle, Primary, Frame, Playing, Shared)
+
+        Return Result
+    End If
+
+    Starting = Not Value.Active
+    Result = True
+
+    If Starting Then
+
+        Value.Duo = Profile = Profiles.PROFILE_MIRA
+        Value.Active = True
+        Value.MiraPresentation = Party.STATE_ALIVE
+        Value.ArinHome = Battle.DragonOpponent.Frame
+        Value.OrinHome = Battle.Companion.Frame
+        Value.MiraHome = Battle.Mira.Frame
+
+        If Value.Duo Then
+            Value.ArinHome = Battle.Companion.Frame
+            Value.MiraHome = Frame
+        End If
+
+    End If
+
+    Arin = Bind(Value, Battle, Primary, Frame, Playing.SelectedClip, Shared)
+
+    If Starting Or Value.Speed <> Playing.PlaybackSpeed Then
+
+        Value.Speed = Playing.PlaybackSpeed
+
+        For Index = 0 To 6
+            Battle.ActorSpeeds[Index] = Value.Speed
+        End For
+
+        Result = Party.ResetDemo(Battle, Math3D.Vector(Dragon.PositionX(), 0,
+            Dragon.PositionZ()), 300, 10, 50,
+            Math3D.Vector(-21, 0, -44), Math3D.Vector(-49, 0, 4), -55, True, True)
+
+        If Not Value.Duo Then
+            Battle.AttackCycle = 5
+        End If
+
+        ''' The opening demonstrates the combo before random knockout/revival rounds.
+
+        Call Party.PrepareDragonTurn(Battle, -1)
+
+    End If
+
+    Result = Party.AdvanceDemo(Battle, Playing.AnimationUpdateElapsed,
+        True, Playing.ScenePaused, Value.Speed, Arin.Actor, Arin.Frame, Arin.Clip,
+        Dragon.PositionX(), 0, Dragon.PositionZ(), 180) And Result
+    Value.SecondsRemaining = Party.PresentationSecondsRemaining(Battle,
+        Arin.Actor, Battle.Companion.Actor, Value.Speed)
+    Value.Caption = Party.ActingName(Battle) + " - " + Party.AttackSequenceName(Battle)
+
+    If (Value.Duo And
+        Battle.Turn = 6 And
+        Battle.AttackCycle Mod 6 = 5) Then
+        Value.Caption = "Mira - Tsunami"
+    End If
+
+    Call Unbind(Value, Battle, Arin, Frame, Playing.SelectedClip, Shared)
+
+    Return Result
+
+End Function
+
+Public Function UpdateScene(ByRef Value As State, ByRef Battle As Party.State,
+    ByRef Primary As Character3D.Actor, ByRef Frame As PrecisionCamera.Framing,
+    ByRef Playing As Playback.State, ByRef Shared As Effects.State,
+    ByRef Boss As Dragon.State, Visibility As Actors.EquipmentVisibility,
+    Camera As Precision3D.Camera3D, CameraElapsed As Number,
+    CalibrationEditing As Boolean) As Boolean
+
+    Dim Arin As Actors.Context
+    Dim Result As Boolean
+    Dim Index As Number
+
+    If Not Value.Active Then
+
+        Result = True
+
+        If Battle.Mira.Ready And Not Battle.Enabled Then
+            Call MiraWater.UseStandaloneTargets(Battle.Water, Battle.Mira.Actor)
+
+            Result = MiraWater.Update(Battle.Water, Battle.Mira.Actor,
+                Character3D.ClipName(Battle.Mira.Actor, Battle.Mira.Clip),
+                True, Not Playing.ScenePaused, Visibility.SwordVisible)
+        End If
+
+        Return Result
+
+    End If
+
+    Arin = Bind(Value, Battle, Primary, Frame, Playing.SelectedClip, Shared)
+    Result = Party.UpdateDragon(Battle, Boss, Shared, Arin.Actor, False,
+        Character3D.ClipName(Arin.Actor, Arin.Clip), Playing.ScenePaused,
+        Value.Speed, Playing.AnimationUpdateElapsed)
+    Result = Party.UpdateAdditionalEquipment(Battle, Shared, Visibility,
+        Camera, CameraElapsed, Playing.AnimationUpdateElapsed,
+        Playing.ScenePaused, Arin.Actor, Boss.Actor) And Result
+
+    Call Effects.UpdateArinAudio(Shared, Profiles.PROFILE_ARIN,
+        Character3D.ClipName(Arin.Actor, Arin.Clip),
+        Character3D.AnimationTime(Arin.Actor),
+        Not Playing.ScenePaused And Not CalibrationEditing)
+
+    If Value.Duo Then
+        Call Effects.UpdateEquipmentFire(Shared, Arin.Actor, Profiles.PROFILE_ARIN,
+            Battle.PrimaryPresentationState = Party.STATE_KO,
+            True, True, CalibrationEditing, Playing.ScenePaused, Arin.Clip,
+            Character3D.ClipName(Arin.Actor, Arin.Clip), Camera, CameraElapsed)
+
+        Shared.ProfileIndex = Profiles.PROFILE_MIRA
+    End If
+
+    Call Unbind(Value, Battle, Arin, Frame, Playing.SelectedClip, Shared)
+
+    If Not Value.Duo Then
+
+        For Index = 0 To Character3D.ClipCount(Primary) - 1
+
+            If Character3D.ClipName(Primary, Index) = Boss.Clip Then
+                Playing.SelectedClip = Index
+                Exit For
+            End If
+
+        End For
+
+    End If
+
+    Return Result
+
+End Function
+
+End Module

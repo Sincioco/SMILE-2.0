@@ -291,7 +291,8 @@ Private Sub PrepareEditingAndPresentation(ByRef Session As ViewerSession.State,
         Effects, Dragon.Available Or Session.ProfileIndex = ViewerProfiles.PROFILE_VALOR Or
             Session.ProfileIndex = ViewerProfiles.PROFILE_VRAX,
         (CalibrationAvailable And Session.ProfileIndex = ViewerProfiles.PROFILE_ARIN) Or
-            Session.ProfileIndex = ViewerProfiles.PROFILE_VALOR)
+            Session.ProfileIndex = ViewerProfiles.PROFILE_VALOR Or
+            Session.ProfileIndex = ViewerProfiles.PROFILE_MIRA)
 
     If Dragon.Available Then
         Call ViewerDragon.InitializeEffects()
@@ -355,6 +356,19 @@ Private Sub CreateParticipants(ByRef Session As ViewerSession.State,
             Settings.CalibrationMaximumClips, Playback.PlaybackSpeed) And Session.Ready
 
         Call PositionDragonOpponents(Session, Party, Settings)
+
+        If ViewerProfiles.INCLUDE_MIRA_COMPARISONS Then
+
+            Session.Ready = ViewerParty.CreateAdditionalParticipants(
+                Party, Playback.PlaybackSpeed, Effects) And Session.Ready
+            Party.Mira.Frame.PositionX = 80.0
+            Party.Mira.Frame.PositionZ = 75.0
+            Session.Ready = ViewerActors.PreparePrimaryPresentation(
+                Party.Mira.Actor, Party.Mira.Frame, ViewerProfiles.PROFILE_MIRA,
+                False, True, ViewerDragon.PositionX(), 0, ViewerDragon.PositionZ(),
+                ViewerDragon.RotationY(), Settings.CharacterModelForwardYawOffset, 0) And Session.Ready
+
+        End If
 
         Call ViewerEffects.EnableSwordFire(Effects)
 

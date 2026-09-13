@@ -1803,6 +1803,12 @@ Public Sub DrawCharacterStatusSummary(
 
 End Sub
 
+Public Sub DrawBattlePreviewCaption(Caption As Text)
+
+    Draw Text "Demo: " + Caption At 20, 104 Size 14 Color CYAN
+
+End Sub
+
 Public Sub DrawCameraPanel(WindowWidth As Number, WindowHeight As Number,
     HorizontalOrbit As Number, VerticalOrbit As Number, ZoomDegrees As Number,
     ZoomInLimit As Number, ZoomOutLimit As Number, FitLocked As Boolean)

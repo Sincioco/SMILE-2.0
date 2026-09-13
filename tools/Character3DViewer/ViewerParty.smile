@@ -105,6 +105,7 @@ Public Type State
     ThirdLayout As ParticipantLayout
     FourthLayout As ParticipantLayout
     UnityRoster As Boolean
+    MiraDuo As Boolean
     UnityRosterRequested As Boolean
     BossAttackDuration As Number
     DragonOpponent As ViewerActors.Context
@@ -268,6 +269,10 @@ Public Sub InitializeFormation(ByRef Value As State, Center As Core.Vector3,
         Value.ParticipantCount = Value.ParticipantCount + 1
     End If
 
+    If Value.MiraDuo Then
+        Value.ParticipantCount = 2
+    End If
+
     Value.MiraLayout.Home = BattleCamera.FormationPosition(Center, Radius,
         StartAngle, EndAngle, Value.ParticipantCount - 1, Value.ParticipantCount)
     Value.MiraLayout.Approach = Value.MiraLayout.Home
@@ -329,7 +334,7 @@ Public Function ResetDemo(ByRef Value As State, Center As Core.Vector3,
 
     Result = True
 
-    If Value.Ready Then
+    If Value.Ready And Not Value.MiraDuo Then
         Result = Character3D.SetPartVisible(
             Value.Companion.Actor, WEAPON_PART_INDEX, SwordVisible)
         Result = Character3D.SetPartVisible(
@@ -729,11 +734,11 @@ Public Sub PrepareDragonTurn(ByRef Value As State, RolledTarget As Number)
 
     If Value.Mira.Ready Then
 
-        If Value.HitTarget = 2 Then
+        If Value.HitTarget = Value.ParticipantCount - 1 Then
             Value.HitTarget = MiraBattle.PARTY_TURN
         End If
 
-        If Value.FatalTarget = 2 Then
+        If Value.FatalTarget = Value.ParticipantCount - 1 Then
             Value.FatalTarget = MiraBattle.PARTY_TURN
         End If
 
@@ -892,7 +897,7 @@ Public Function ApplyFrame(ByRef Value As State, Actions As FrameActions,
             ActorPlaybackSpeed(Value, 0, PlaybackSpeed))
     End If
 
-    If Actions.SecondClipRequested Then
+    If Actions.SecondClipRequested And Not Value.MiraDuo Then
         Result = PlayClip(Value.Companion.Actor, Actions.SecondClip,
             Value.Companion.Clip, Value.Companion.Actor.Handle,
             Value.Companion.Profile, ActorPlaybackSpeed(Value, 1, PlaybackSpeed)) And Result
@@ -942,14 +947,17 @@ Public Function ApplyFrame(ByRef Value As State, Actions As FrameActions,
     Value.Companion.Frame.PositionZ = Actions.SecondPosition.Z
     Result = Character3D.PlacePrecise(FirstActor, FirstFrame.PositionX,
         FirstFrame.PositionY, FirstFrame.PositionZ) And Result
-    Result = Character3D.PlacePrecise(Value.Companion.Actor,
-        Value.Companion.Frame.PositionX, Value.Companion.Frame.PositionY,
-        Value.Companion.Frame.PositionZ) And Result
     Result = ViewerActors.FaceToward(FirstActor, TargetX, TargetY, TargetZ,
         ModelForwardYawOffset, Value.First.FacingAdjustment) And Result
-    Result = ViewerActors.FaceToward(Value.Companion.Actor,
-        TargetX, TargetY, TargetZ, ModelForwardYawOffset,
-        Value.Second.FacingAdjustment) And Result
+
+    If Not Value.MiraDuo Then
+        Result = Character3D.PlacePrecise(Value.Companion.Actor,
+            Value.Companion.Frame.PositionX, Value.Companion.Frame.PositionY,
+            Value.Companion.Frame.PositionZ) And Result
+        Result = ViewerActors.FaceToward(Value.Companion.Actor,
+            TargetX, TargetY, TargetZ, ModelForwardYawOffset,
+            Value.Second.FacingAdjustment) And Result
+    End If
 
     If Value.UnityRoster Then
         Result = PlaceUnityMember(Value.Third, Actions.ThirdPosition,
@@ -1057,7 +1065,7 @@ End Function
 Public Function UpdateCompanion(ByRef Value As State,
     ByRef Calibration As ViewerCalibration.State,
     ByRef Effects As ViewerEffects.State, AnimationElapsed As Number,
-    CalibrationEditing As Boolean) As ParticipantUpdateResult
+    CalibrationEditing As Boolean, Optional UpdateAdditional As Boolean = True) As ParticipantUpdateResult
 
     Dim Application As ViewerCalibration.ApplicationResult
     Dim CompanionReady As Boolean
@@ -1152,7 +1160,7 @@ Public Function UpdateCompanion(ByRef Value As State,
     Value.Companion.Ready = CompanionReady
     Value.Ready = CompanionReady
 
-    If Value.Mira.Ready Then
+    If Value.Mira.Ready And UpdateAdditional Then
         Result.Ready = UpdateUnityMember(Value.Mira, AnimationElapsed) And Result.Ready
         Value.Ready = Result.Ready
     End If
@@ -1183,7 +1191,7 @@ Public Function UpdateDragonOpponent(ByRef Value As State,
     SavedCompanion = Value.Companion
     Value.Companion = Value.DragonOpponent
     Result = UpdateCompanion(
-        Value, Calibration, Effects, AnimationElapsed, CalibrationEditing)
+        Value, Calibration, Effects, AnimationElapsed, CalibrationEditing, False)
     Value.DragonOpponent = Value.Companion
     Value.Companion = SavedCompanion
 
@@ -1623,7 +1631,9 @@ Private Sub ApplyMiraSample(ByRef Value As State, AttackStart As Number,
         Value.Stage = Sample.Stage
         Value.DragonReactionPending = Sample.Stage = 1 And Sample.Clip = "Attack"
 
-        If Value.AttackCycle Mod 6 = 5 And Value.Companion.PresentationState <> STATE_KO Then
+        If (Not Value.MiraDuo And
+            Value.AttackCycle Mod 6 = 5 And
+            Value.Companion.PresentationState <> STATE_KO) Then
 
             Actions.SecondClip = "Idle"
             Actions.SecondClipRequested = True
@@ -1838,7 +1848,8 @@ Public Function AdvanceChoreography(ByRef Value As State,
 
         Value.Elapsed = 0
 
-        If Value.Turn = 1 And Value.Mira.Ready Then
+        If (Value.Mira.Ready And
+            (Value.Turn = 1 Or (Value.MiraDuo And Value.Turn = 0))) Then
 
             Value.Turn = MiraBattle.PARTY_TURN
             Value.HitResolved = False
@@ -2991,13 +3002,13 @@ End Function
 
 Public Function DrawCompanion(ByRef Value As State, PartyEnabled As Boolean,
     DragonInspection As Boolean, SceneGlowVisible As Boolean,
-    SwordVisible As Boolean) As Boolean
+    SwordVisible As Boolean, Optional DrawAdditional As Boolean = True) As Boolean
 
     Dim Result As Boolean
 
     Result = ViewerActors.Draw(Value.Companion)
 
-    If PartyEnabled And Value.Mira.Ready Then
+    If DrawAdditional And Value.Mira.Ready Then
         Result = ViewerActors.Draw(Value.Mira) And Result
     End If
 
@@ -3033,7 +3044,7 @@ Public Function DrawDragonOpponent(ByRef Value As State,
     SavedCompanion = Value.Companion
     Value.Companion = Value.DragonOpponent
     Result = DrawCompanion(
-        Value, PartyEnabled, DragonInspection, SceneGlowVisible, SwordVisible)
+        Value, PartyEnabled, DragonInspection, SceneGlowVisible, SwordVisible, False)
     Value.Companion = SavedCompanion
 
     Return Result
@@ -3052,6 +3063,7 @@ Public Sub DestroyParticipants(ByRef Value As State)
     Call ViewerActors.Destroy(Value.Mira)
 
     Value.UnityRoster = False
+    Value.MiraDuo = False
 
     Value.Ready = False
 
@@ -3283,7 +3295,7 @@ Public Function UpdateAdditionalEquipment(ByRef Value As State, ByRef Shared As 
         Value.Water.AttackMode = MiraBattle.WaterMode(Value.AttackCycle)
 
         If (Value.Water.AttackMode = WaterVfx.STORM And
-            Value.Companion.PresentationState = STATE_KO) Then
+            (Value.MiraDuo Or Value.Companion.PresentationState = STATE_KO)) Then
             Value.Water.AttackMode = WaterVfx.WAVE
         End If
 
@@ -3295,6 +3307,10 @@ Public Function UpdateAdditionalEquipment(ByRef Value As State, ByRef Shared As 
             Value.Water.ImpactMember = 2
         Else If Value.HitTarget = 5 Then
             Value.Water.ImpactMember = 3
+        End If
+
+        If Value.MiraDuo And Value.HitTarget = MiraBattle.PARTY_TURN Then
+            Value.Water.ImpactMember = 1
         End If
 
         If Not Value.UnityRoster And Value.DragonCounter Mod 3 = 0 Then
@@ -3312,13 +3328,22 @@ Public Function UpdateAdditionalEquipment(ByRef Value As State, ByRef Shared As 
             Result = MiraWater.ApplyRecoil(Value.Mira.Actor, Boss) And Result
         End If
 
-        Result = Character3D.TrySocketPositionPrecise(Value.Companion.Actor,
-            "HammerHead", 1, False, Value.Water.Conductor) And Result
-
         Call MiraWater.SetAttack(Value.Water.Targets, Boss)
         Call MiraWater.SetMember(Value.Water.Targets, 0, Primary)
-        Call MiraWater.SetMember(Value.Water.Targets, 1, Value.Companion.Actor)
-        Call MiraWater.SetMember(Value.Water.Targets, 2, Value.Mira.Actor)
+
+        If Value.MiraDuo Then
+
+            Call MiraWater.SetMember(Value.Water.Targets, 1, Value.Mira.Actor)
+
+        Else
+
+            Result = Character3D.TrySocketPositionPrecise(Value.Companion.Actor,
+                "HammerHead", 1, False, Value.Water.Conductor) And Result
+
+            Call MiraWater.SetMember(Value.Water.Targets, 1, Value.Companion.Actor)
+            Call MiraWater.SetMember(Value.Water.Targets, 2, Value.Mira.Actor)
+
+        End If
 
         If Value.UnityRoster Then
             Call MiraWater.SetMember(Value.Water.Targets, 3, Value.Fourth.Actor)
@@ -3389,7 +3414,7 @@ Public Function DrawAdditionalEquipment(ByRef Value As State,
 
     Dim Result As Boolean
 
-    If Not Value.Enabled Or Not Value.Ready Then
+    If Not Value.Ready Then
         Return True
     End If
 
