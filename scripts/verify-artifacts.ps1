@@ -992,11 +992,11 @@ try {
     $manifestReader = [System.IO.StreamReader]::new($manifestEntry.Open())
     try { $vsixManifest = $manifestReader.ReadToEnd() }
     finally { $manifestReader.Dispose() }
-    if ($vsixManifest -notmatch 'Version="2\.0\.63"') {
+    if ($vsixManifest -notmatch 'Identity Id="Smile\.VisualStudio\.2\.0" Version="2\.0\.64"') {
         throw 'VSIX identity version is not 2.0.64.'
     }
     if ($vsixManifest -notmatch 'Type="Microsoft\.VisualStudio\.Assembly"' -or
-        $vsixManifest -notmatch 'AssemblyName="Smile\.VisualStudio, Version=2\.0\.63\.0, Culture=neutral, PublicKeyToken=null"') {
+        $vsixManifest -notmatch 'AssemblyName="Smile\.VisualStudio, Version=2\.0\.64\.0, Culture=neutral, PublicKeyToken=null"') {
         throw 'VSIX does not register the template wizard assembly.'
     }
     if ($vsixManifest -notmatch 'Type="Microsoft\.VisualStudio\.VsPackage" Path="Smile\.LanguageConfiguration\.pkgdef"') {
