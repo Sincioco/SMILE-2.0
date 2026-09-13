@@ -162,7 +162,7 @@ The four accepted extensions are `.smilestudio`, `.smilescene`, `.smilevfx` and
 | Reusable assets and general scenes / shared asset, VFX/audio and scene owners | Validated JSON, project publication, independent instances and bindings; first Fire recipe before new families | Runtime loaders have no Studio dependency; no fixed party/combat requirement |
 | Declarative/export parity / shared language and scene owners | Shared scene semantics; real compiler, both export modes and standalone execution | One machine-readable capability register with generated `scene-feature-parity.md`; missing counterparts explicit |
 
-Readiness: **S1 IMPLEMENTED; FINAL INTERACTION ACCEPTANCE IN PROGRESS**. Studio and
+Readiness: **S1 IMPLEMENTED; FINAL INTERACTION ACCEPTANCE ON HOLD**. Studio and
 the standalone Viewer own their respective entry points and consume one shared
 `ViewerWorkflow.Session`. Existing focused owners retain rendering, input, actor,
 calibration, effects and audio behavior. The hosted workflow supports clip selection,
@@ -184,7 +184,9 @@ SMILE 2.0 is authoritative for core evolution; compatibility moves forward and a
 missing legacy text/console capability needs an explicit alignment path. Studio
 and richer 3D evolve the current implementation rather than replacing its engine.
 
-On Hold: None. Clearing a hold does not automatically start unrelated features.
+On Hold: SMILE Studio creation/development/acceptance/next phases, and all Web
+adoption/publication/browser validation. Clearing a hold does not automatically
+start an unrelated phase.
 
 ## Try it
 

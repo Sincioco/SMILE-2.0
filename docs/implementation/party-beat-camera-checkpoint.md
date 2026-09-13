@@ -13,6 +13,63 @@ with the cooker's/native loader's scale-independent check before publishing Trip
 Mira; its former absolute area cutoff rejects valid small details. Preserve the
 outstanding Chrome camera-gesture acceptance alongside these adoption steps.
 
+Sin also placed Studio creation, development, acceptance and next phases on hold.
+The existing Studio project may retain shared source inventory, but it is not a
+validation target or an authorized next phase for the native hardening below.
+
+## Native Review Hardening (2026-09-13)
+
+The review baseline was `c5a348c3abda773c62158fb23b82ab2b5267be37`.
+Current code was reconciled without resetting to that commit. The five demonstrated
+native findings are repaired in their existing owners:
+
+- Linked cameras interpolate target, distance and a unit viewing direction over a
+  deterministic great-circle path. Midpoint, near-midpoint, opposing-view and
+  parallel-up cases now submit a valid native basis while exact endpoints remain.
+- `ViewerBeatHeadPersistence` owns per-character current/persisted head values and
+  pending/failure recovery. Camera Save/Cancel cannot erase the warning; Retry and
+  Discard affect only that identity, and native X/Alt+F4 is deferred while recovery
+  is unresolved.
+- Head picking and dragging always use raw logical viewport coordinates. Inspector
+  scrolling is applied only to visible panel controls, so a stationary held pointer
+  produces zero drag delta at both zero and nonzero scroll.
+- `BattleCameraTimeline.EffectiveValid` checks final rounded main/extra marker times,
+  boundary and neighbor spacing, uniqueness and reachability against current action
+  timing. Insert/move/resize/reset are transactional; an incompatible stored schedule
+  stays on disk while playback uses the four safe main markers.
+- Native compiler startup now emits accepted support/module scalar Class initializers
+  exactly once, with provider/import dependencies before consumers and declaration
+  order retained. Entry/local and explicit construction retain their existing paths;
+  Sin Star I still constructs its Viewer session explicitly inside `Enter`.
+
+Focused native acceptance passed: the NativeOnly Viewer gate completed 42 isolated
+Arin calibration checks and 58 native graphics/pointer/audio checks; calibration
+isolation preserved Arin's 24 keys and Orin's zero-key snapshot and did not touch live
+storage. Local and package-backed module initializers, explicit/entry/local creation,
+repeated access, failure cleanup and zero Class/Text lifetime counts passed. All 323
+shared language/compiler/project tests, 46 native Text checks, 13 formatter groups and
+the 462-file style gate passed. Seven Sin Star I character entries and both battle
+simulations created, drew and released their actual assets. Release builds published
+138 Viewer assets and 211 Sin Star I assets.
+
+The compiler and VSIX were rebuilt at 2.0.64. `smilec.exe` SHA-256 is
+`9B00239D957EF47EC6F2FBFF6089A09927AA875AA85379BDDF6B6052F40EF284`;
+the VSIX SHA-256 is
+`AF59896C786E92436BFF78E139C4322C8CE6D01B36908B3E0AEE019EC064229E`.
+Installation is deferred because Visual Studio is actively debugging the unrelated
+PMT solution; the repository installer correctly refuses a live instance. The
+installed extension remains 2.0.63 until Visual Studio is closed and 2.0.64 is
+installed. No held Viewer/Sin Star/Studio Web build, publication or browser
+validation was performed, and no Studio build or acceptance work was resumed.
+
+Growth review against the reviewed commit: `BattleCameraShots.smile` is 657 lines
+(+115), `BattleCameraTimeline.smile` is 579 (+138), `ViewerBeatTimeline.smile` is
+299 (+5), and the legacy `ViewerBeatEditor.smile` is 1,487 (+193). The new focused
+head-persistence owner is 237 lines. `MasmEmitter.cs` is 3,415 lines (+50) and its
+change stays at native startup emission. The camera math remains in its existing shot
+owner as requested; persistent head state is not added to the editor coordinator.
+No architecture threshold, baseline, exclusion, dependency or framework was changed.
+
 ## Imported Character Profile Alignment (2026-09-11)
 
 The Head attachment added for beat framing is included in the standalone profile
@@ -105,10 +162,12 @@ framing, per-character saved head cuboids and cross-character camera copy/paste 
 | `BattleCameraShots.smile` | Double relative framing, shot motion/link evaluation, bounded scalar/text and independent head storage |
 | `BattleCameraTimeline.smile` | Four camera weights, main/extra markers, ordering, resize and versioned sequence persistence |
 | `ViewerBeatTimeline.smile` | Pointer gestures, navigation/frame repeat and bottom replacement timeline presentation |
+| `ViewerBeatHeadPersistence.smile` | Per-character head current/persisted values, pending/failure state, retry and identity-scoped discard |
 | `ViewerBeatEditor.smile` | Selection, per-character drafts/clipboard, Space preview, camera editing, staged resets and head controls |
 | `ViewerBeatSequence.smile` | Existing actor/timing adapter, original action sampling, bookmark/pose restoration and head/body picking |
 | `ViewerWorkflow.Session` | Existing input/update/draw coordination, discontinuous versus continuous visual history |
 | `MasmEmitter.AllocateStack` | Shared native allocation guard-page probing for large local/call frames |
+| `MasmEmitter.EmitSupportClassInitializers` | Native once-only dependency/source/declaration startup order for accepted support/module Class initializers |
 
 `BattleCamera.Sequence.<Character>.V2` stores the timing weights and up to twenty
 shots in one checksummed Save Data envelope (`SMILE-Sequence-2`). A valid V2 sequence
@@ -121,9 +180,10 @@ Default drafts retain a separate `UseDefault` flag so displaying a captured edit
 view cannot turn a reset into a saved static camera. An actual camera edit adopts
 that view. Save failure keeps the draft; Cancel never writes a sequence.
 
-The Viewer project/build and hardening fixture list the two new modules. Studio's
-project lists those same dependencies because its existing host imports the Viewer;
-its native build is a shared-consumer check, not a new Studio phase. Program.smile's
+The Viewer project/build and hardening fixture list the current timeline and head
+persistence owners. Studio's project retains those same dependencies because its
+existing host imports the Viewer; this compatibility inventory is not a new Studio
+phase or acceptance check. Program.smile's
 coordinator, shared Number/Double rules, assets and live calibration are preserved.
 
 ## Validation And Observations
@@ -252,9 +312,10 @@ and Orin's zero keys (`13AE135FDA40302CB5A4B0146D7103A2ED5346AAEEBB3852AF6DD3C39
   routing and 80-percent panel ownership. The 13 formatter tests and the 444-file
   repository style check also pass.
 
-## On Hold — Web Adoption Record
+## On Hold — Studio And Web Adoption Record
 
-Resume only on Sin's direction. Shared source edits are not a published Web feature.
+Resume either workstream only on Sin's direction. Studio creation, development,
+acceptance and next phases remain held. Shared source edits are not a published Web feature.
 The existing Web artifact remains the initial editor from `fd73f9d` (game.js SHA-256
 `4464498A9A1F36D0E5BFA160EF8BB3245E57D9AC1CD13563717697BECED12E60`).
 
@@ -273,7 +334,7 @@ The existing Web artifact remains the initial editor from `fd73f9d` (game.js SHA
 
 ## Next Action / Remaining
 
-No remaining Desktop implementation or acceptance check for this bounded milestone.
-Native gesture acceptance is recorded above. The remaining task is the explicitly
-held Web adoption/validation record; resume only on Sin's direction. Reuse the current
-native, numeric, asset and VSIX evidence. No unrelated feature phase is authorized.
+No remaining native implementation or acceptance check exists for this bounded
+hardening milestone. Install the already-built VSIX 2.0.64 only after the unrelated
+Visual Studio debugging session is closed. Studio and Web remain explicitly held;
+resume only on Sin's direction. No unrelated feature phase is authorized.

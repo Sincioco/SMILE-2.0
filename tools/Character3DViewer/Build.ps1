@@ -46,6 +46,7 @@ $viewerSources = @(
     'ViewerBeatTimeline.smile',
     'ViewerBeatSequence.smile',
     'ViewerBeatEditor.smile',
+    'ViewerBeatHeadPersistence.smile',
     'DragonPresence.smile',
     'CalibrationJson.smile',
     'ViewerTiming.smile',

@@ -123,6 +123,8 @@ Timing/shot edits require Beat Edit mode. The new timeline controls are validate
 and delivered on Desktop first. Web adoption and publication are on hold; the
 [checkpoint](../../docs/implementation/party-beat-camera-checkpoint.md) records the
 shared source changes and browser follow-through still required.
+Studio creation, development, acceptance and next phases are also on hold. Its
+existing shared source listing is compatibility wiring, not an active Studio phase.
 
 Cyan **Attacker** and yellow **Target** cuboids start at each actor's Head socket;
 missing sockets use an upper-bounds estimate. Drag a cuboid to offset its center in

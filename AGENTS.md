@@ -78,10 +78,12 @@ implemented capabilities or authorization to implement the entire product at onc
 
 ### Current on-hold tasks
 
-- Web follow-through for the Beat Sequence timeline enhancements, including Web
-  publication/validation and the outstanding Chrome camera-gesture acceptance.
-  Sin requested Desktop-only work for velocity on September 11, 2026. Track Desktop
-  changes and the later Web adoption steps in
+- SMILE Studio creation, development, acceptance and next phases. Existing shared
+  source inventory may stay aligned for native compilation, but do not resume a
+  Studio workstream or infer a next feature phase without Sin's direction.
+- All Web adoption, publication and browser validation, including the Beat Sequence
+  timeline follow-through, Mira/Water work and outstanding Chrome camera-gesture
+  acceptance. Track later adoption in
   `docs/implementation/party-beat-camera-checkpoint.md`; resume Web only on direction.
 
 ## Project identity
