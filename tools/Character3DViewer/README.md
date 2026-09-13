@@ -135,7 +135,9 @@ Its vertical influence is limited to the span between the heads, so a distant ca
 does not amplify animated head-height changes into a vertical flight. The coordinates
 still adapt to formation translation, rotation and changed separation. Near-coincident
 heads use a deterministic one-unit forward baseline. Render submission retains the
-existing Precision3D boundary and GPU float precision limits.
+existing Precision3D boundary and GPU float precision limits. Linked cameras follow a
+stateless bounded arc between viewing directions. Exactly opposing views use one stable
+great-circle plane, and a parallel up direction is repaired before native submission.
 
 Camera sequences and head cuboids use separate checksummed **Save Data** records under the
 Viewer ApplicationId (`BattleCamera.Sequence.<Character>.V2` and

@@ -154,7 +154,11 @@ SM3D format or actor scale. Web runtime adoption remains explicitly on hold.
 ## Party Beat Camera Ownership
 
 `BattleCameraShots` owns actor-independent Double reference frames, motion, linked
-shot interpolation and bounded Save Data serialization. Shot-frame version 2 keeps
+shot interpolation and bounded Save Data serialization. Linked shots interpolate
+their target, distance and unit viewing direction independently. The direction follows
+a stateless great-circle path; exactly opposing views use one deterministic perpendicular
+plane, and the up vector is made orthogonal before native submission. Exact endpoints
+remain unchanged. Shot-frame version 2 keeps
 longitudinal distance unbounded in the horizontal plane but clamps its vertical
 head-baseline influence to the attacker/target span. This preserves distant camera
 placement without multiplying animated head-height changes. Version-1 shots within

@@ -157,6 +157,8 @@ Public Function Resolve(Value As Shot, Attacker As P.Vector3, Target As P.Vector
     End If
 
     Result.Position = M.Add(Result.Target, Offset)
+    Result.UpDirection = SafeUp(M.Subtract(Result.Target, Result.Position),
+        Result.UpDirection)
 
     Return Result
 
@@ -198,14 +200,127 @@ Public Function Blend(First As P.Camera3D, Second As P.Camera3D,
 
     Dim Result As P.Camera3D
     Dim Amount As Double
+    Dim FirstDirection As P.Vector3
+    Dim SecondDirection As P.Vector3
+    Dim Direction As P.Vector3
+    Dim PreferredUp As P.Vector3
+    Dim Distance As Double
 
     Amount = Clamp(Progress, 0.0, 1.0)
+
+    If Amount = 0.0 Then
+        Return First
+    Else If Amount = 1.0 Then
+        Return Second
+    End If
+
     Amount = Amount * Amount * (3.0 - 2.0 * Amount)
     Result = First
-    Result.Position = M.Lerp(First.Position, Second.Position, Amount)
     Result.Target = M.Lerp(First.Target, Second.Target, Amount)
+    FirstDirection = M.Subtract(First.Target, First.Position)
+    SecondDirection = M.Subtract(Second.Target, Second.Position)
+    Direction = BlendDirection(FirstDirection, SecondDirection, Amount)
+    Distance = (M.Length(FirstDirection) +
+        (M.Length(SecondDirection) - M.Length(FirstDirection)) * Amount)
+    Distance = Max(0.001, Distance)
+    Result.Position = M.Subtract(Result.Target, M.Scale(Direction, Distance))
     Result.FovDegrees = First.FovDegrees + (Second.FovDegrees - First.FovDegrees) * Amount
-    Result.UpDirection = P.Vector(0.0, 1.0, 0.0)
+    PreferredUp = M.Lerp(First.UpDirection, Second.UpDirection, Amount)
+    Result.UpDirection = SafeUp(Direction, PreferredUp)
+
+    Return Result
+
+End Function
+
+''' Interpolate on the unit sphere. Exactly opposing views use one deterministic
+''' great-circle plane so seeking never depends on a previous rendered frame.
+Private Function BlendDirection(First As P.Vector3, Second As P.Vector3,
+    Amount As Double) As P.Vector3
+
+    Dim FirstUnit As P.Vector3
+    Dim SecondUnit As P.Vector3
+    Dim Tangent As P.Vector3
+    Dim TangentUnit As P.Vector3
+    Dim Result As P.Vector3
+    Dim DotValue As Double
+    Dim Angle As Double
+
+    If Not M.TryNormalize(First, FirstUnit) Then
+
+        If M.TryNormalize(Second, SecondUnit) Then
+            Return SecondUnit
+        End If
+
+        Result = P.Vector(0.0, 0.0, 1.0)
+
+        Return Result
+
+    End If
+
+    If Not M.TryNormalize(Second, SecondUnit) Then
+        Return FirstUnit
+    End If
+
+    DotValue = Clamp(M.Dot(FirstUnit, SecondUnit), -1.0, 1.0)
+    Tangent = M.Subtract(SecondUnit, M.Scale(FirstUnit, DotValue))
+
+    If M.TryNormalize(Tangent, TangentUnit) Then
+        Angle = Atan2(M.Length(Tangent), DotValue)
+    Else If DotValue >= 0.0 Then
+        Return FirstUnit
+    Else
+        TangentUnit = Perpendicular(FirstUnit)
+        Angle = M.PI
+    End If
+
+    Result = M.Add(M.Scale(FirstUnit, Cos(Angle * Amount)),
+        M.Scale(TangentUnit, Sin(Angle * Amount)))
+
+    Return Result
+
+End Function
+
+Private Function SafeUp(Direction As P.Vector3, Preferred As P.Vector3) As P.Vector3
+
+    Dim Forward As P.Vector3
+    Dim Candidate As P.Vector3
+    Dim Result As P.Vector3
+
+    If Not M.TryNormalize(Direction, Forward) Then
+        Result = P.Vector(0.0, 1.0, 0.0)
+
+        Return Result
+    End If
+
+    Candidate = M.Subtract(Preferred, M.Scale(Forward, M.Dot(Preferred, Forward)))
+
+    If M.TryNormalize(Candidate, Result) Then
+        Return Result
+    End If
+
+    Result = Perpendicular(Forward)
+
+    Return Result
+
+End Function
+
+Private Function Perpendicular(Direction As P.Vector3) As P.Vector3
+
+    Dim Reference As P.Vector3
+    Dim Result As P.Vector3
+
+    If (Abs(Direction.X) <= Abs(Direction.Y) And
+        Abs(Direction.X) <= Abs(Direction.Z)) Then
+        Reference = P.Vector(1.0, 0.0, 0.0)
+    Else If Abs(Direction.Y) <= Abs(Direction.Z) Then
+        Reference = P.Vector(0.0, 1.0, 0.0)
+    Else
+        Reference = P.Vector(0.0, 0.0, 1.0)
+    End If
+
+    If Not M.TryNormalize(M.Cross(Direction, Reference), Result) Then
+        Result = P.Vector(0.0, 1.0, 0.0)
+    End If
 
     Return Result
 
