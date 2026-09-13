@@ -1,0 +1,7 @@
+Option Explicit
+
+Import Smile.Tests.NativeInitializerFailure As Failure
+
+Print "unreachable"
+
+End Program

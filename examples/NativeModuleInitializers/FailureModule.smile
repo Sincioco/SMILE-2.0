@@ -1,0 +1,32 @@
+Module Smile.Tests.NativeInitializerFailure
+
+Option Explicit
+
+Private Dim Constructed As Number
+
+Private Class Owner
+    Public Sub New(Fail As Boolean)
+
+        Dim Missing As Owner
+
+        Constructed = Constructed + 1
+        Print Constructed
+
+        If Fail Then
+            Call Missing.Touch()
+        End If
+
+    End Sub
+
+    Public Sub Touch()
+
+        Print "unreachable"
+
+    End Sub
+
+End Class
+
+Private Dim First As New Owner(False)
+Private Dim Second As New Owner(True)
+
+End Module

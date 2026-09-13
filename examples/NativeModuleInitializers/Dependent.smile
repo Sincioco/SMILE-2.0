@@ -1,0 +1,36 @@
+Module Smile.Tests.NativeInitializerDependent
+
+Option Explicit
+
+Import Smile.Tests.NativeInitializerBase As Base
+
+Private Dim DependentValue As New Base.Counter(Base.PrivateResult() + 1, "dependent", 3)
+Private Dim ExplicitValue As Base.Counter
+
+Public Function Result() As Number
+
+    Dim ReturnValue As Number
+
+    ReturnValue = DependentValue.Value
+
+    Return ReturnValue
+
+End Function
+
+Public Sub InitializeExplicitly()
+
+    ExplicitValue = New Base.Counter(60, "explicit", 6)
+
+End Sub
+
+Public Function ExplicitResult() As Number
+
+    Dim ReturnValue As Number
+
+    ReturnValue = ExplicitValue.Value
+
+    Return ReturnValue
+
+End Function
+
+End Module

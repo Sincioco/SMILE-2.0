@@ -1,0 +1,11 @@
+<SmileProject Version="1.0">
+  <PropertyGroup>
+    <ProjectKind>Console</ProjectKind>
+    <StartupFile>Failure.smile</StartupFile>
+    <OutputName>NativeModuleInitializerFailure</OutputName>
+  </PropertyGroup>
+  <ItemGroup>
+    <SmileSource Include="Failure.smile" StartupOnly="true" />
+    <SmileSource Include="FailureModule.smile" />
+  </ItemGroup>
+</SmileProject>

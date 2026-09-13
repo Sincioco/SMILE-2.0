@@ -6,6 +6,13 @@ $root = Split-Path $PSScriptRoot -Parent
 $gameRoot = Join-Path $root 'games\SinStarI'
 $testRoot = Join-Path $root ('artifacts\tests\SinStarPresentation-' + [Guid]::NewGuid().ToString('N'))
 $null = New-Item -ItemType Directory -Path $testRoot
+$presentationSource = Get-Content -LiteralPath (Join-Path $gameRoot 'CharacterPresentation.smile') -Raw
+if ($presentationSource -match 'Dim\s+Preview\s+As\s+New\s+Viewer\.Session') {
+    throw 'Sin Star I must not move Viewer session construction into a module initializer.'
+}
+if ($presentationSource -notmatch '(?s)Public Sub Enter\(.+?Preview = New Viewer\.Session\(\).+?End Sub') {
+    throw 'Sin Star I must construct the Viewer session explicitly inside Enter.'
+}
 [xml]$project = Get-Content -LiteralPath (Join-Path $gameRoot 'SinStarI.smileproj') -Raw
 $project.SmileProject.PropertyGroup.ApplicationId = 'smile.tests.sin-star-presentation'
 # Keep the brief native fixture beside the chat when the game has saved bounds.

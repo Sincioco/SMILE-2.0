@@ -282,22 +282,31 @@ Format-version 7 packages serialize each Public Class with its stable identity, 
 
 This milestone intentionally does not add inheritance, virtual dispatch, user-defined destructors/finalizers, static Class members, indexed/default properties, Class arrays, or general exception unwinding.
 
-### Open native module-initializer defect
+### Module-level Class initialization
 
-On September 13, 2026, Sin Star I's native presentation integration demonstrated
-that a private module-level `Dim Preview As New Viewer.Session()` compiles but
-leaves the reference `Nothing`. The first method call then terminates with
-`SMILE runtime error: Object reference is Nothing.` Moving the assignment
-`Preview = New Viewer.Session()` into the module's explicit `Enter` operation
-works and retains the same module ownership. Sin Star I uses that construction
-path and its nine-entry presentation regression exercises it.
+On native Windows, an accepted scalar Class initializer in a support source or
+module executes exactly once before the selected startup source begins. Imported
+modules initialize before their importers. Otherwise library providers retain
+resolved dependency order, consuming-project sources retain project or command-line
+source order, and declarations in one source retain declaration order. An
+initializer failure uses normal deterministic termination and clears completed,
+partially constructed, and still-uninitialized global references safely.
 
-The compiler defect remains open: shared binding should either reject an
-unsupported declaration initializer or define and emit its initialization order.
-Next action is a minimal module-initializer regression followed by a review of
-native startup emission and the shared language contract. That compiler change
-is deferred from the game-menu integration because initialization ordering is
-a language-wide behavior; no Web behavior was tested or changed.
+The selected startup source continues to execute its own `Dim As New` declarations
+at their source positions. Entry/local initialization and explicit assignment keep
+their existing behavior. Circular module imports remain rejected by `SML3108`, and
+project or package dependency cycles remain rejected by `SML3205`; neither case
+defines a cyclic initialization order.
+
+Sin Star I keeps `Preview = New Viewer.Session()` inside its explicit `Enter`
+operation because that game lifecycle owns actor/resource creation and teardown.
+The generic compiler support does not move application-session ownership into
+global startup.
+
+Web adoption of support/module Class initialization remains open and is not native
+parity: the Web emitter still executes only the selected startup tree. Do not rely
+on a support/module `Dim As New` initializer for Web until that held target adopts
+the same ordering contract.
 
 ## Enum types
 

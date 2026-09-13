@@ -1,0 +1,48 @@
+Module Smile.Tests.NativeInitializerBase
+
+Option Explicit
+
+Private Dim Constructed As Number
+Private Dim TraceValue As Number
+
+Public Class Counter
+    Public Value As Number
+    Public Label As Text
+
+    Public Sub New(Start As Number, Name As Text, Marker As Number)
+
+        Constructed = Constructed + 1
+        TraceValue = TraceValue * 10 + Marker
+        Me.Value = Start
+        Me.Label = Name
+
+    End Sub
+
+End Class
+
+Private Dim PrivateValue As New Counter(10, "private", 1)
+Public Dim PublicValue As New Counter(20, "public", 2)
+
+Public Function PrivateResult() As Number
+
+    Dim ReturnValue As Number
+
+    ReturnValue = PrivateValue.Value
+
+    Return ReturnValue
+
+End Function
+
+Public Function ConstructionCount() As Number
+
+    Return Constructed
+
+End Function
+
+Public Function ConstructionTrace() As Number
+
+    Return TraceValue
+
+End Function
+
+End Module

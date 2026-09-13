@@ -387,6 +387,7 @@ internal sealed class MasmEmitter
             Line("    mov rcx, 1");
             CallAligned("smile_window_responsive_configure");
         }
+        EmitSupportClassInitializers();
         _currentSource = _analysis.BoundSyntaxTree.Source;
         EmitStatements(_analysis.BoundSyntaxTree.Root.Statements);
         CallAligned("smile_cleanup_staged_arguments");
@@ -1399,6 +1400,55 @@ internal sealed class MasmEmitter
         Line("    mov rcx, rax");
         CallAligned("smile_class_move_assign");
     }
+
+    private void EmitSupportClassInitializers()
+    {
+        var startupTree = _analysis.BoundSyntaxTree;
+        var trees = _analysis.BoundSyntaxTrees.Where(tree => !tree.IsStartup).ToArray();
+        var treeOrder = trees.Select((tree, index) => new { tree.Source, index })
+            .ToDictionary(item => item.Source, item => item.index);
+        var treesBySource = trees.ToDictionary(tree => tree.Source);
+        var initializersBySource = _analysis.SemanticModel.ClassInitializers
+            .Where(initializer => initializer.IsGlobal &&
+                                  !ReferenceEquals(initializer.Source, startupTree.Source))
+            .GroupBy(initializer => initializer.Source)
+            .ToDictionary(group => group.Key, group => group.OrderBy(initializer =>
+                initializer.Declaration.Span.Start).ToArray());
+        var visited = new HashSet<SourceText>();
+
+        foreach (var tree in trees.OrderBy(tree => SameProvider(tree, startupTree) ? 1 : 0)
+                     .ThenBy(tree => treeOrder[tree.Source]))
+            EmitSource(tree.Source);
+
+        void EmitSource(SourceText source)
+        {
+            if (!visited.Add(source) || !treesBySource.ContainsKey(source))
+                return;
+
+            foreach (var module in _analysis.SemanticModel.GetImports(source).Values
+                         .Distinct().OrderBy(module => module.SyntaxTrees.Min(tree =>
+                             treeOrder.TryGetValue(tree.Source, out var index) ? index : int.MaxValue))
+                         .ThenBy(module => module.Name, StringComparer.OrdinalIgnoreCase)
+                         .ThenBy(module => module.Name, StringComparer.Ordinal))
+            {
+                foreach (var dependencyTree in module.SyntaxTrees.OrderBy(tree =>
+                             treeOrder.TryGetValue(tree.Source, out var index) ? index : int.MaxValue))
+                    EmitSource(dependencyTree.Source);
+            }
+
+            if (!initializersBySource.TryGetValue(source, out var initializers))
+                return;
+
+            foreach (var initializer in initializers)
+            {
+                _currentSource = initializer.Source;
+                EmitClassInitializer(initializer);
+            }
+        }
+    }
+
+    private static bool SameProvider(SyntaxTree left, SyntaxTree right) =>
+        string.Equals(left.ProviderIdentity, right.ProviderIdentity, StringComparison.OrdinalIgnoreCase);
 
     private void EmitArrayIndex(IReadOnlyList<ExpressionSyntax> indices, VariableSymbol symbol)
     {

@@ -5832,9 +5832,9 @@ Run("Sin Star I keeps its TitleScreen Module and exposes one typed action enum",
     var titleModule = analysis.SemanticModel.Modules["SinStarI.TitleScreen"];
     var titleAction = (EnumTypeSymbol)titleModule.Types["TitleAction"].Type!;
     Equal(ModuleVisibility.Public, titleModule.Types["TitleAction"].Visibility);
-    Equal("None|Character|Town|Town2|Shop|Dungeon|Battle",
+    Equal("None|Character|Town|Town2|Shop|Dungeon|Battle|Arin|Orin|Mira|Zara|Valor|Dragon|Vrax|DragonBattle|VraxBattle|ExitGame",
         string.Join("|", titleAction.Members.Select(member => member.Name)));
-    Equal("0|1|2|3|4|5|6",
+    Equal("0|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16",
         string.Join("|", titleAction.Members.Select(member => member.Value)));
     Equal(false, titleModule.Members.Keys.Any(name =>
         name.StartsWith("TITLE_ACTION_", StringComparison.OrdinalIgnoreCase)));
@@ -5863,7 +5863,7 @@ Run("Sin Star I keeps its TitleScreen Module and exposes one typed action enum",
 
     var enumCompletionPosition = programText.IndexOf("TitleScreen.TitleAction.None",
         StringComparison.Ordinal) + "TitleScreen.TitleAction.".Length;
-    Equal("None|Character|Town|Town2|Shop|Dungeon|Battle", string.Join("|",
+    Equal("None|Character|Town|Town2|Shop|Dungeon|Battle|Arin|Orin|Mira|Zara|Valor|Dragon|Vrax|DragonBattle|VraxBattle|ExitGame", string.Join("|",
         SmileCompletionService.GetCompletions(analysis, tree, enumCompletionPosition)
             .Select(completion => completion.DisplayText)));
 
@@ -5922,14 +5922,14 @@ Run("VSIX templates render localized identity metadata within the aligned header
     foreach (var manifest in new[] { gameManifest, consoleManifest })
     {
         Equal(true, manifest.Contains("SmileProjectTemplateWizard", StringComparison.Ordinal));
-        Equal(true, manifest.Contains("Version=2.0.63.0", StringComparison.Ordinal));
+        Equal(true, manifest.Contains("Version=2.0.64.0", StringComparison.Ordinal));
     }
     foreach (var applicationProject in new[] { gameProject, consoleProject })
         Equal(true, applicationProject.Contains("<ApplicationId>$smileapplicationid$</ApplicationId>", StringComparison.Ordinal));
     Equal(false, libraryProject.Contains("ApplicationId", StringComparison.Ordinal));
     Equal(true, wizard.Contains("\"smile.app.a\" + Guid.NewGuid().ToString(\"N\")", StringComparison.Ordinal));
     Equal(true, wizard.Contains("ToString(\"D\", CultureInfo.CurrentCulture)", StringComparison.Ordinal));
-    Equal(true, project.Contains("<Version>2.0.63</Version>", StringComparison.Ordinal));
+    Equal(true, project.Contains("<Version>2.0.64</Version>", StringComparison.Ordinal));
     Equal(true, vsixManifest.Contains("Type=\"Microsoft.VisualStudio.Assembly\"", StringComparison.Ordinal));
 });
 

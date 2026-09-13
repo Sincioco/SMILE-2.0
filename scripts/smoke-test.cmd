@@ -313,6 +313,9 @@ node "%SMILE_ROOT%\scripts\run-web-test.js" "%SMILE_ROOT%\artifacts\web\ClassNot
 if errorlevel 1 exit /b 1
 echo Class constructor, identity, evaluation-order, ARC, finalization, and null-failure tests passed.
 
+pwsh -NoProfile -File "%SMILE_ROOT%\scripts\test-native-module-initializers.ps1" -Configuration Release
+if errorlevel 1 exit /b 1
+
 "%SMILE_ROOT%\artifacts\compiler\smilec.exe" --project "%SMILE_ROOT%\examples\TypeMemberRuntime\TypeMemberRuntime.smileproj" --target windows-x64 --configuration Release --debug -o "%SMILE_ROOT%\artifacts\games\TypeMemberRuntime.exe"
 if errorlevel 1 exit /b 1
 call "%SMILE_ROOT%\scripts\run-bounded-test.cmd" 60 "%SMILE_ROOT%\artifacts\games\TypeMemberRuntime.exe" > "%SMILE_ROOT%\artifacts\temp\TypeMemberRuntime.out"

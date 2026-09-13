@@ -1,0 +1,36 @@
+Option Explicit
+
+Import Smile.Tests.NativeInitializerBase As Base
+Import Smile.Tests.NativeInitializerDependent As Dependent
+
+Dim EntryValue As New Base.Counter(40, "entry", 4)
+
+Print Base.PrivateResult()
+Print Base.PublicValue.Value
+Print Dependent.Result()
+Print EntryValue.Value
+Print Base.ConstructionCount()
+Print Base.ConstructionTrace()
+Print Dependent.Result()
+Print Base.ConstructionCount()
+Print Base.ConstructionTrace()
+
+Call VerifyLocal()
+
+Call Dependent.InitializeExplicitly()
+
+Print Dependent.ExplicitResult()
+Print Base.ConstructionCount()
+Print Base.ConstructionTrace()
+
+End Program
+
+Sub VerifyLocal()
+
+    Dim LocalValue As New Base.Counter(50, "local", 5)
+
+    Print LocalValue.Value
+    Print Base.ConstructionCount()
+    Print Base.ConstructionTrace()
+
+End Sub
