@@ -72,3 +72,6 @@ publication are on hold at Sin's direction.
 The speed regression first reproduced two failures with a 100 ms frame at 400%:
 lightning advanced only 100 ms and water treated the 400 ms gap as a seek. It now
 passes with 400 ms of lightning age and live water spray, alongside all seven modes.
+
+On September 13, 2026, Sin confirmed that manual controls, including orbit, panning
+and zooming, work as expected. This completes the native camera acceptance check.

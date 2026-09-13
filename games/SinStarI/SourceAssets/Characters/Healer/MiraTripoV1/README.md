@@ -71,10 +71,11 @@ Visual Studio closed normally through its stop-debugging confirmation. Installat
 verified the extension DLL and all 35 compiler/language/library/template payload
 hashes against the built VSIX. Visual Studio remains closed as requested.
 
-Remaining delivery: Water Lab middle-button drag still needs a direct manual check;
-the available automation drag API only supports the primary button. Water is
-bounded real-time VFX with screen-space reflection/refraction, not a fluid solver
-or ray tracing. All Web adoption/publication remains on hold.
+Sin completed the remaining manual Water Lab camera check on September 13, 2026,
+confirming that its manual controls, orbit, panning and zooming work as expected.
+Native Mira and Water Lab delivery is complete. Water remains bounded real-time
+VFX with screen-space reflection/refraction, not a fluid solver or ray tracing.
+All Web adoption/publication remains on hold.
 
 ## Reproduction
 
