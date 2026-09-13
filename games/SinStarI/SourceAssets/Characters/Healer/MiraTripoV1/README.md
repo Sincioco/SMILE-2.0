@@ -66,9 +66,12 @@ Build logs are working evidence in `D:\AI\Mira3D\MiraTripoV1`; reproduction comm
 remain in the Viewer and Water Lab READMEs. `package-manifest.json` identifies the
 portable source, rig and animation mapping; `checksums.sha256` covers this package.
 
-Remaining delivery: the rebuilt VSIX requires Visual Studio to close before
-`scripts/install-vsix.cmd --skip-build` can install it. Sin's PMT debugging session
-was preserved. Water Lab middle-button drag still needs a direct manual check;
+The rebuilt VSIX 2.0.63 was installed after Sin requested closing Visual Studio.
+Visual Studio closed normally through its stop-debugging confirmation. Installation
+verified the extension DLL and all 35 compiler/language/library/template payload
+hashes against the built VSIX. Visual Studio remains closed as requested.
+
+Remaining delivery: Water Lab middle-button drag still needs a direct manual check;
 the available automation drag API only supports the primary button. Water is
 bounded real-time VFX with screen-space reflection/refraction, not a fluid solver
 or ray tracing. All Web adoption/publication remains on hold.
