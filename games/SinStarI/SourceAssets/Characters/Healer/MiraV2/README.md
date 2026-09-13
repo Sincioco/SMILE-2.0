@@ -43,7 +43,7 @@ standard-library authoring script in Source. Water remains visible while paused;
 seeking is silent and leaving a cast clears its particles. Mira has her own Beat
 Camera identity and preview restores her clip/time. Sin Star I game code is unchanged.
 
-Mira3 is now the active battle healer after the Hunyuan3D-2.1 comparison was assembled.
+Sin subsequently selected Mira1 as the active battle healer after all three comparisons.
 Mira2 remains unchanged as a model on its own tab, including standalone water effects,
 for comparison with Mira1 and Mira3. Its earlier battle validation remains historical
 evidence, not a claim that the current Party tabs load Mira2.

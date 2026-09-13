@@ -75,7 +75,8 @@ the exact model checksum. Inspect first/middle/final staff clearance and settled
 Death separately; equipment must not drive the body's placement baseline.
 
 Profiles owns Mira3 identity and nine clip names; ViewerSession/ViewerUi route her
-tab. ViewerParty uses Mira3 as the current healer in both battles. MiraBattle and
+tab. ViewerParty used Mira3 in both battles during comparison; Sin later selected
+Mira1 for that role. MiraBattle and
 MiraWater retain cast timing, bounded per-actor particles, clip-time sound and target
 cleanup. Mira does not enter an Arin/Orin calibration bank. Socket queries use body
 part 0. Original Mira water/chime cues are retained in Audio. No game code changes.

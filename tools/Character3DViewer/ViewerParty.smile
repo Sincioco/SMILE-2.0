@@ -2895,7 +2895,7 @@ Public Function ActingName(ByRef Value As State) As Text
 
     Else If Value.Turn = MiraBattle.PARTY_TURN Then
 
-        Result = "Mira3"
+        Result = "Mira1"
 
     End If
 
@@ -3075,7 +3075,7 @@ Public Sub DrawOverlay(
         Call UI.DrawButton(Left + 164, 140, 76, 22, "Glow", GlowVisible)
 
         If Value.Mira.Ready Then
-            Draw Text "Party / Enemy + Mira3" At Left + 16, 178 Size 20 Color WHITE
+            Draw Text "Party / Enemy + Mira1" At Left + 16, 178 Size 20 Color WHITE
         Else
             Draw Text "Party / Enemy" At Left + 16, 178 Size 20 Color WHITE
         End If
@@ -3188,7 +3188,7 @@ Public Function CreateAdditionalParticipants(ByRef Value As State,
 
     If ViewerProfiles.INCLUDE_MIRA_COMPARISONS Then
 
-        Value.Mira = ViewerActors.LoadContext(ViewerProfiles.PROFILE_MIRA3, 0)
+        Value.Mira = ViewerActors.LoadContext(ViewerProfiles.PROFILE_MIRA1, 0)
         Result = Value.Mira.Ready And MiraWater.Prepare(Value.Water)
         Result = PlayClip(Value.Mira.Actor, "Idle", Value.Mira.Clip,
             Value.Mira.Actor.Handle, Value.Mira.Profile,

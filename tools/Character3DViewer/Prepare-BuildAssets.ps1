@@ -134,7 +134,7 @@ foreach ($copy in $copies) {
 }
 
 $audioRoots = @((Join-Path $arinRoot 'Audio'), (Join-Path $dragonRoot 'RedDragonV11\Audio'),
-    (Join-Path $mira3Root 'Audio'))
+    (Join-Path $miraRoot 'Audio'))
 $fireFiles = @('fire-shape-atlas.png', 'smoke-shape-atlas.png', 'ember-shape.png')
 $lightningFiles = @('lightning-ribbon.png', 'lightning-spark.png', 'thunder.wav')
 

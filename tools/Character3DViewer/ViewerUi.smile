@@ -1461,7 +1461,7 @@ Public Sub DrawHeader(DisplayName As Text, PartyRole As Text,
         End If
 
         If ViewerProfiles.INCLUDE_MIRA_COMPARISONS Then
-            Subtitle = Subtitle + " / Mira3 Healer"
+            Subtitle = Subtitle + " / Mira1 Healer"
         End If
 
     End If

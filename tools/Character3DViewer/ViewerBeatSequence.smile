@@ -162,7 +162,7 @@ Public Function Name(Identity As Number) As Text
     Else If Identity = 5 Then
         Return "Vrax"
     Else If Identity = 6 Then
-        Return "Mira3"
+        Return "Mira1"
     End If
 
     Return "Arin"

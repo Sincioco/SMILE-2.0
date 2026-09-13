@@ -1,0 +1,54 @@
+{
+  "sourceBlendSha256": "a898fe163fd9a4c357f50b9941e83d1828656f97b791496d367115927fd9a6b6",
+  "method": "Calibrated direct reference projection, new UV layout, padded silhouette and 4K bake; original face/hands/cape retained",
+  "seamWeightRepairs": 1,
+  "maximumWeights": 4,
+  "maximumCostumeRelaxationMeters": 0.005000047327156642,
+  "baseColorSha256": "71fbec209bccfc90299c8f7f675e98ee4472a85404c208a8a5b3fb2704f7fb13",
+  "projectionViews": [
+    [
+      [
+        0,
+        -1,
+        0
+      ],
+      "X",
+      1,
+      285,
+      465
+    ],
+    [
+      [
+        1,
+        0,
+        0
+      ],
+      "Y",
+      1,
+      650,
+      465
+    ],
+    [
+      [
+        0,
+        1,
+        0
+      ],
+      "X",
+      -1,
+      1085,
+      465
+    ],
+    [
+      [
+        -1,
+        0,
+        0
+      ],
+      "Y",
+      -1,
+      1485,
+      465
+    ]
+  ]
+}

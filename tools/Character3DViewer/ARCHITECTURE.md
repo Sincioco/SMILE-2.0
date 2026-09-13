@@ -15,21 +15,28 @@ was added. The rigid staff uses the same production skin and the existing equipm
 visibility path. The comparison staffs have no equipment glow. Healer policy lives in
 `MiraBattle` (cast timing and action labels); `MiraWater` owns one caller-held
 128-particle batch and clip-time audio on channel 6. ViewerParty owns Mira's named
-actor/context and formation, loads Mira3 as the current battle candidate, applies policy samples to existing presentation states,
+actor/context and formation, loads the selected Mira1 in both battles, applies policy samples to existing presentation states,
 and routes her through both battle turn orders, targeting, draw/update and cleanup.
 It does not borrow a calibration bank or advance another shared scene clock.
 `CreateAdditionalParticipants`, `UpdateAdditionalEquipment` and
 `DrawAdditionalEquipment` admit Mira independently of the optional Unity roster.
-ViewerEffects owns a separate water context for the standalone Mira2/Mira3 tabs.
+ViewerEffects owns a separate water context for every standalone Mira tab.
 Targets are rebuilt from final actor positions each frame and cleared on destruction.
 This prevents the four-member Vrax list leaking into the three-member Dragon scene.
 `CalibrationTests.CheckMiraBattles` exercises real models, all three casts in both
 battles, healing without boss damage, target-count cleanup, seek/restore and turn exit.
 The existing Beat fixture now verifies selection reaches Mira and both bosses.
 No compiler, runtime, Scene VFX pool, public calibration format or game rule changes
-are required. Original Mira water/chime cues are retained in both versioned packages;
-MiraV3 is the current canonical audio publication source. Tool-local audio copies
+are required. Original Mira water/chime cues are retained in all three versioned packages;
+MiraV1 is the current canonical audio publication source. Tool-local audio copies
 are disposable build mirrors.
+
+Mira1's texture, seam weights, closed staff, cape hinge and portable animation keys
+are asset-authoring responsibilities inside MiraV1. The Viewer consumes its exported
+GLB and unchanged seven-socket descriptor. This repair adds no runtime skinning,
+cloth simulation, model editor, calibration format or dependency. The existing
+real-asset fixture covers Mira1 selection in both battles and standalone water
+ownership for all comparison tabs. Package README records pending visual review.
 
 ## Party Beat Camera Ownership
 

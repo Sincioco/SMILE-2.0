@@ -1,10 +1,10 @@
 # Mira3 — Hunyuan3D-2.1 comparison
 
-Mira3 is the third independent model candidate and the current native Viewer battle
-healer. Tencent Hunyuan3D-2.1 generated her shape and PBR textures locally on the
+Mira3 is the third independent model candidate. Sin subsequently selected Mira1 as
+the native Viewer battle healer. Tencent Hunyuan3D-2.1 generated Mira3's shape and PBR textures locally on the
 RTX 5090. Mira1 (Pixal3D) and Mira2 (TRELLIS.2) remain in their own packages and tabs.
-Mira3's clearer face is the reason for using this candidate in the current battles;
-this is not a claim that Sin has accepted her final appearance.
+Mira3 remains on her own tab with her earlier battle validation preserved below;
+the current Party scenes load Mira1. Mira3's model and animation assets are unchanged.
 
 The equipped model has **19,652 triangles**: 18,100 body and 1,552 staff. Both meshes
 are closed, with no boundary/non-manifold edges. The body has 4096-pixel baked base
@@ -18,8 +18,8 @@ upright during movement/casting; it turns horizontal as Death settles. The origi
 Mixamo exports are preserved. Neutral Idle rotations are retained as JSON and applied
 to Mira3's own bone lengths. No Arin/Orin calibration or numeric floor offset is used.
 
-In **Party Dragon**, Mira3 joins Arin and Orin. In **Party Vrax**, she joins Arin,
-Orin and Zara. She cycles Water Attack, Heal One (Arin) and Heal Party with blue water
+In the earlier comparison milestone, Mira3 joined Arin and Orin in **Party Dragon**
+and Arin, Orin and Zara in **Party Vrax**. She cycled Water Attack, Heal One (Arin) and Heal Party with blue water
 VFX and original water/chime sounds. Her Beat Camera identity is independent of Vrax.
 Healing uses Viewer presentation states; no Sin Star I game code or health rules change.
 

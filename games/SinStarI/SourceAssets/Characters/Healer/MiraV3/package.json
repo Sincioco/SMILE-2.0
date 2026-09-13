@@ -3,7 +3,7 @@
   "characterName": "Mira3",
   "partyRole": "Healer",
   "candidateVersion": "v3",
-  "status": "Native comparison candidate; current battle healer",
+  "status": "Preserved native comparison; Mira1 selected for battles",
   "acceptedForProduction": false,
   "generator": "Tencent Hunyuan3D-2.1 shape BF16 and Hunyuan3D-2.1 Paint FP16, locally on RTX 5090",
   "animationSource": "Own Mixamo 25-bone rig and action pack; neutral Idle rotations retained within this package",
@@ -28,5 +28,6 @@
   "nativeViewerComparisonValidated": true,
   "partyIntegrationValidated": true,
   "waterEffectsImplemented": true,
-  "audioSource": "Source/generate-water-audio.py; original Mira water/chime cues"
+  "audioSource": "Source/generate-water-audio.py; original Mira water/chime cues",
+  "activeBattleHealer": false
 }

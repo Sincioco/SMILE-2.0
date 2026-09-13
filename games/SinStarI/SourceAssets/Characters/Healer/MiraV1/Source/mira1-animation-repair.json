@@ -1,0 +1,135 @@
+{
+  "bindBodyMinimum": -0.0016883020289242268,
+  "commonActorOffset": 0.0016883020289242268,
+  "bodyGrounding": [
+    {
+      "clip": "Attack",
+      "maximumLift": 0.01492422353476286,
+      "frame0Before": -0.009809930808842182,
+      "frames": 70
+    },
+    {
+      "clip": "Death",
+      "maximumLift": 0.13788026571273804,
+      "frame0Before": 0.0021955319680273533,
+      "frames": 110
+    },
+    {
+      "clip": "Defend",
+      "maximumLift": 0,
+      "frame0Before": 0.0021950772497802973,
+      "frames": 16
+    },
+    {
+      "clip": "HealOne",
+      "maximumLift": 0.017358694225549698,
+      "frame0Before": -0.017161227762699127,
+      "frames": 81
+    },
+    {
+      "clip": "HealParty",
+      "maximumLift": 0.030971171334385872,
+      "frame0Before": 0.002232781844213605,
+      "frames": 66
+    },
+    {
+      "clip": "Hit",
+      "maximumLift": 0,
+      "frame0Before": 0.002195329638198018,
+      "frames": 37
+    },
+    {
+      "clip": "Idle",
+      "maximumLift": 5.82870349208342e-11,
+      "frame0Before": -5.82870349208342e-11,
+      "frames": 121
+    },
+    {
+      "clip": "Run",
+      "maximumLift": 0,
+      "frame0Before": 0.01305482443422079,
+      "frames": 23
+    },
+    {
+      "clip": "Walk",
+      "maximumLift": -0.017875168472528458,
+      "frame0Before": 0.027016960084438324,
+      "frames": 35
+    }
+  ],
+  "cape": [
+    {
+      "clip": "Attack",
+      "minimumDegrees": 0,
+      "maximumDegrees": 19,
+      "maximumFrameStep": 5
+    },
+    {
+      "clip": "Death",
+      "minimumDegrees": -47,
+      "maximumDegrees": 12,
+      "maximumFrameStep": 20
+    },
+    {
+      "clip": "Defend",
+      "minimumDegrees": 7,
+      "maximumDegrees": 44,
+      "maximumFrameStep": 5
+    },
+    {
+      "clip": "HealOne",
+      "minimumDegrees": -15,
+      "maximumDegrees": 0,
+      "maximumFrameStep": 6
+    },
+    {
+      "clip": "HealParty",
+      "minimumDegrees": 0,
+      "maximumDegrees": 39,
+      "maximumFrameStep": 11
+    },
+    {
+      "clip": "Hit",
+      "minimumDegrees": -15,
+      "maximumDegrees": 14,
+      "maximumFrameStep": 13
+    },
+    {
+      "clip": "Idle",
+      "minimumDegrees": 0,
+      "maximumDegrees": 0,
+      "maximumFrameStep": 0
+    },
+    {
+      "clip": "Run",
+      "minimumDegrees": 0,
+      "maximumDegrees": 0,
+      "maximumFrameStep": 0
+    },
+    {
+      "clip": "Walk",
+      "minimumDegrees": 0,
+      "maximumDegrees": 17,
+      "maximumFrameStep": 4
+    }
+  ],
+  "capeVertices": 90,
+  "capeAttachment": "Top rows extended beneath belt, nearest waist weights, one baked hinge",
+  "castingHand": "Left",
+  "staff": {
+    "part": "Mira.Staff",
+    "triangles": 1412,
+    "boundaryEdges": 0,
+    "method": "Original oval staff dimensions; closed primitive reconstruction before reduction"
+  },
+  "staffCarryOffset": [
+    -0.14333315193653107,
+    -0.22614718973636627,
+    -0.36406421661376953
+  ],
+  "staffDeathDegrees": [
+    0,
+    90
+  ],
+  "policy": "Ground body without equipment/cape; preserve Run airtime; articulate cape independently"
+}
