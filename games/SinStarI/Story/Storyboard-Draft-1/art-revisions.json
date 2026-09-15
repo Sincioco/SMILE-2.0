@@ -1,0 +1,27 @@
+[
+  {
+    "page": 2,
+    "source": "exec-87c8c494-11b4-4835-a641-cb1e688c1c35.png",
+    "prompt": "Edit this four-panel storyboard sheet. Preserve the exact style, all four panel rectangles, and top-left, top-right, bottom-left artwork. Change ONLY the BOTTOM-RIGHT palace panel: remove the golden dog at lower left and remove the large dark-haired armored veteran at upper right. They are later companions and cannot be here yet. Keep Mira (brown-haired woman) presenting records, young Arin behind her, the older engineer, seated king and queen. Fill removed areas naturally with palace furniture/architecture, not replacement extra heroes. Preserve every other element, no text."
+  },
+  {
+    "page": 3,
+    "source": "exec-308ea2c9-ed74-429d-b5bc-1afd429c1804.png",
+    "prompt": "Correct the cast and canine anatomy of this four-panel Veyra storyboard. Keep painterly comic style, exact 2x2 layout, young clean-shaven Arin, brown-bun Mira, and older broad stubbled Orin. Zara the red robot and Milo the golden-white dog have NOT joined the party yet. TOP LEFT: remove the foreground golden armored dog entirely. Change red robot background civilian to a visibly different slim turquoise civilian robot. Replace the upright dog administrator with a normal anatomically quadrupedal black-and-white border collie standing on FOUR paws on a low platform, wearing a teal tool harness, nose operating a waist-low kiosk. No dog has arms, hands, human chest, biped stance, cloak or human posture. TOP RIGHT: replace golden armored engineer dog with a normal quadrupedal charcoal grey shepherd dog in a simple orange engineering harness operating low controls with a nose tool; change red friendly robot firing beside heroes to a beige civilian helping evacuees. Keep hostile black sentries distant. BOTTOM LEFT: remove red robot and foreground golden dog entirely, filling seats with ordinary human evacuees or bags. BOTTOM RIGHT: remove red robot and golden dog entirely; keep ONLY Arin, Mira, Orin around camp supplies, three portions not five. Preserve narrative action and setting, no lettering, no captions, no extra panels."
+  },
+  {
+    "page": 7,
+    "source": "exec-0ab53336-bd01-4214-9b28-427a77eb732b.png",
+    "prompt": "Edit this four-panel storyboard sheet; preserve all other art exactly. In the TOP-LEFT panel only there are two copies of the same broad dark-haired stubbled armored veteran Orin on the right. Remove the lower/far-right duplicate head and shoulder, keeping the higher veteran standing behind the red robot. There must be exactly FIVE companions watching Kael: brown-haired female Mira, young brown-haired Arin, broad older Orin, red robot Zara, golden quadrupedal dog Milo. Kael is the separate silver-haired figure on left. Fill removed duplicate naturally with observatory architecture. Keep all other panels unchanged. No text."
+  },
+  {
+    "page": 10,
+    "source": "exec-4599c623-11bf-45d1-b88c-e5900f7a666c.png",
+    "prompt": "Edit this finished 2x2 storyboard sheet, preserving the same cinematic style, aspect ratio, all four panel boundaries and all content except the following single continuity correction. BOTTOM LEFT PANEL ONLY: replace the silver-haired man at the front right of the archive interface with Orin: broad older dark-haired man, short stubble beard, weathered face, white/navy/gold heavy armor, as seen in the BOTTOM RIGHT PANEL of the same sheet. He listens thoughtfully to the archive. Keep the existing young brown-haired Arin at center, Mira, red robot Zara and four-legged golden dog Milo exactly where they are. There must be no silver-haired Kael in bottom-left. All other panels, especially Kael's presence in both TOP panels, unchanged. No words or lettering."
+  },
+  {
+    "page": 14,
+    "source": "exec-3c81578f-b150-4da5-905f-776385f88601.png",
+    "prompt": "Edit this finished 2x2 cinematic storyboard sheet. Preserve the style, four panels, all scenery and dramatic action. One correction only in TOP RIGHT PANEL: it mistakenly has two copies of brown-haired female healer Mira. Keep Mira at the far LEFT beside young brown-haired Arin. REMOVE the other Mira figure and her blue-tipped staff near the RIGHT side immediately left of broad bearded Orin, filling that small area with coherent ruined cosmic background. Keep Orin at the right and silver-haired Kael at center intercepting the cosmic blast, keep red robot Zara and four-legged golden dog Milo at the left. In this top-right panel there should be exactly six companions total: Kael, Arin, Mira once, Orin once, Zara, Milo. Aevos the giant cosmic antagonist above them remains. All other panels fully unchanged. No lettering."
+  }
+]

@@ -1,0 +1,151 @@
+{
+  "tool": "Built-in image generation",
+  "date": "2026-09-15",
+  "presentation": "Four equal panels per sheet, displayed as CSS quadrants with separate HTML dialogue",
+  "images": [
+    {
+      "page": 1,
+      "file": "asset/images/page-01.png",
+      "source": "exec-ab3fe0a2-2640-452e-bab5-dc6e58b57d8c.png",
+      "sha256": "a982c6689f6d7374b035359894be5ec5ba6bbdc937a4e29b90b2bcd0f7bc9a3c",
+      "bytes": 3024266,
+      "revised": false
+    },
+    {
+      "page": 2,
+      "file": "asset/images/page-02.png",
+      "source": "exec-36901249-428d-4d2d-80a9-24e5c87a84b5.png",
+      "sha256": "db4a8e8701641a66faae69c2e347cd993d5fab0a93f900c17df1659b3e60fd9c",
+      "bytes": 2816478,
+      "revised": true
+    },
+    {
+      "page": 3,
+      "file": "asset/images/page-03.png",
+      "source": "exec-1644cd99-c0d6-42a3-b96d-315c51f6ab3f.png",
+      "sha256": "22a645bf05089246d100409335a3fe5ebf0b9c680c9180f5ce3e4f0d24470c3d",
+      "bytes": 3050232,
+      "revised": true
+    },
+    {
+      "page": 4,
+      "file": "asset/images/page-04.png",
+      "source": "exec-6dd0893f-1546-4d72-9673-5f3f8088bdf8.png",
+      "sha256": "a0a6b036e12bed82a129a8c3cff4f24cc7807e417c076857b611b8aefd947da2",
+      "bytes": 3500711,
+      "revised": false
+    },
+    {
+      "page": 5,
+      "file": "asset/images/page-05.png",
+      "source": "exec-1ae599cb-ab64-4e87-bc1c-932fcade8b20.png",
+      "sha256": "bba0ed85f4aa70adb33a5f66ee6669492bb1959aedc1f0092875bdb9688abc68",
+      "bytes": 3477097,
+      "revised": false
+    },
+    {
+      "page": 6,
+      "file": "asset/images/page-06.png",
+      "source": "exec-7390a5b4-2c70-4fd4-ac95-9996dea5eafe.png",
+      "sha256": "7da7bf93f135fb96f21ccdb29c5e110788b8398465e77d9828894142ea3ac04b",
+      "bytes": 2976908,
+      "revised": false
+    },
+    {
+      "page": 7,
+      "file": "asset/images/page-07.png",
+      "source": "exec-f8d3a1e3-dd14-473b-9c62-6c36f48d5061.png",
+      "sha256": "d279285071b90a608678c6cda9b8e000b0aa3ed951243ca80793c20afcf8b408",
+      "bytes": 2948426,
+      "revised": true
+    },
+    {
+      "page": 8,
+      "file": "asset/images/page-08.png",
+      "source": "exec-97347216-ac5c-4679-a30c-04eaa5089d46.png",
+      "sha256": "1b657ffe0a383f999c21a391eb6b0f17eb62c5f54ab793c1a3ba061aa73ac9a4",
+      "bytes": 3226285,
+      "revised": false
+    },
+    {
+      "page": 9,
+      "file": "asset/images/page-09.png",
+      "source": "exec-6db29092-4acf-4c46-959c-8ae3c325fbac.png",
+      "sha256": "f66babb2b7209532a08b6bad9ee96c5f13dfa6acf31104bb1ffd5ee8bf61321b",
+      "bytes": 3147194,
+      "revised": false
+    },
+    {
+      "page": 10,
+      "file": "asset/images/page-10.png",
+      "source": "exec-fa0d3658-1057-4fb3-a1fb-ed201d4204dc.png",
+      "sha256": "e42b0a4e0d557b543ac57f4d33838ae6ea7ba809fcba98b28e6de3f19e6c8526",
+      "bytes": 3060027,
+      "revised": true
+    },
+    {
+      "page": 11,
+      "file": "asset/images/page-11.png",
+      "source": "exec-76f7d2b2-e06a-4422-85b6-1acb5078f0ff.png",
+      "sha256": "48ddcbe5e3adfbed24145d7ebcd134e59bf72ea2744c78d8221c23bced0e2fb1",
+      "bytes": 3766519,
+      "revised": false
+    },
+    {
+      "page": 12,
+      "file": "asset/images/page-12.png",
+      "source": "exec-d5380954-b3ad-456f-aca7-72cdfcc3941d.png",
+      "sha256": "cc5f56089721697e84de74f322ad42ad245c4014b4f8187064cdffa98c3acd41",
+      "bytes": 3544736,
+      "revised": false
+    },
+    {
+      "page": 13,
+      "file": "asset/images/page-13.png",
+      "source": "exec-66911ece-9c13-4273-98ed-1c16813e4076.png",
+      "sha256": "28135cfe79ab2b1cc61d4d8c60270b1d9b2081189fb3445e481387f710b15673",
+      "bytes": 3644353,
+      "revised": false
+    },
+    {
+      "page": 14,
+      "file": "asset/images/page-14.png",
+      "source": "exec-6c46bfbb-2003-46f9-a386-4d9a9041a3e3.png",
+      "sha256": "903e3cfcee50f70ad61b656e73fcb5ed4c8c12083739bb35e885948a7077d719",
+      "bytes": 3316724,
+      "revised": true
+    },
+    {
+      "page": 15,
+      "file": "asset/images/page-15.png",
+      "source": "exec-966fc2c8-dded-4f53-8039-6db631260a04.png",
+      "sha256": "a46b162fe1e7a2505a528dec8a0e0beb030604612c555db4d1315d37c93ed1c4",
+      "bytes": 3655373,
+      "revised": false
+    },
+    {
+      "page": 16,
+      "file": "asset/images/page-16.png",
+      "source": "exec-14b373cf-2f31-4e0d-b1a4-9c8e5f52b101.png",
+      "sha256": "a135b886516203bfa15bc39262317e52595ab3b43a88e39a17f904a35ca755dc",
+      "bytes": 3250735,
+      "revised": false
+    },
+    {
+      "page": 17,
+      "file": "asset/images/page-17.png",
+      "source": "exec-7d5a0863-32f0-4958-9f26-32e374454f18.png",
+      "sha256": "499ea727ec3dafaaaa1e07e97777cd060bcc934c336353f5f7ffb4f1baf7f60e",
+      "bytes": 2900697,
+      "revised": false
+    },
+    {
+      "page": 18,
+      "file": "asset/images/page-18.png",
+      "source": "exec-840658e9-6ada-47f1-8315-c807caf6aea0.png",
+      "sha256": "6b06a2c7f5eafc30411a7fa38891b7329f980a9e82bc6ae66ade0b1144e911cb",
+      "bytes": 3205579,
+      "revised": false
+    }
+  ]
+}

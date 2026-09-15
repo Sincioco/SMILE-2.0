@@ -106,6 +106,11 @@ fresh scene with reflections requested On.
 
 ## Content
 
+The [story package](Story/Start%20Here.md) contains the visual storyboard, complete
+v0.2 narrative script and accepted D01-D16 canon, including Sin's clarification
+that prosecuting Orin's father would expose deeper military corruption. These
+are narrative/art drafts and accepted story decisions, not playable encounters.
+
 The project publishes its accepted PNG, MP3, and `.smilemap` content through the
 existing recursive asset rules. `CONTENT_PIPELINES.md` records the reusable town
 and character authoring workflows; visual asset revision remains a separate,
