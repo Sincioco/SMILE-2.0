@@ -21,6 +21,7 @@ Public Enum TitleAction
     DragonBattle = 14
     VraxBattle = 15
     ExitGame = 16
+    Yalis = 17
 End Enum
 
 Private Enum MenuPage
@@ -74,7 +75,7 @@ End Sub
 Private Function ChoiceCount() As Number
 
     If Page = MenuPage.Characters Then
-        Return 8
+        Return 9
     Else If Page = MenuPage.Legacy Then
         Return 7
     Else If Page = MenuPage.Main Then
@@ -134,6 +135,8 @@ Public Function Label(Action As TitleAction) As Text
             Return "Dragon"
         Case TitleAction.Vrax
             Return "Vrax"
+        Case TitleAction.Yalis
+            Return "Yalis"
         Case TitleAction.DragonBattle
             Return "Dragon Battle"
         Case TitleAction.VraxBattle
@@ -165,6 +168,8 @@ Private Function ChoiceAction(Index As Number) As TitleAction
                 Return TitleAction.Dragon
             Case 6
                 Return TitleAction.Vrax
+            Case 7
+                Return TitleAction.Yalis
         End Select
 
     Else If Page = MenuPage.Battles Then

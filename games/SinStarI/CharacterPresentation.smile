@@ -18,6 +18,7 @@ Public Function IsPresentation(Action As TitleScreen.TitleAction) As Boolean
     Result = (Action = TitleScreen.TitleAction.Arin Or
         Action = TitleScreen.TitleAction.Orin Or Action = TitleScreen.TitleAction.Mira Or
         Action = TitleScreen.TitleAction.Zara Or Action = TitleScreen.TitleAction.Valor Or
+        Action = TitleScreen.TitleAction.Yalis Or
         Action = TitleScreen.TitleAction.Dragon Or Action = TitleScreen.TitleAction.Vrax Or
         Action = TitleScreen.TitleAction.DragonBattle Or Action = TitleScreen.TitleAction.VraxBattle)
 
@@ -40,6 +41,8 @@ Private Function TabFor(Action As TitleScreen.TitleAction) As Number
             Return 2
         Case TitleScreen.TitleAction.Vrax
             Return 6
+        Case TitleScreen.TitleAction.Yalis
+            Return Profiles.CHARACTER_TAB_YALIS
         Case TitleScreen.TitleAction.DragonBattle
             Return Profiles.CHARACTER_TAB_PARTY_DRAGON
         Case TitleScreen.TitleAction.VraxBattle

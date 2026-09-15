@@ -1,5 +1,23 @@
 # SMILE 2.0 - 3D Viewer, Animation Editor
 
+## Yalis (native)
+
+**Yalis** is the native sword-fighter candidate and appears after Vrax, before the
+preserved Mira comparison tabs. Her ten clips are Idle, Walk, Run, Attack, Attack 2,
+Dodge, Defend, Hit, Death and Victory. Use **Weapon** or **W** to hide/show her sword;
+she has no shield or equipment glow. Idle/Walk/Run loop, Defend holds its sword-forward
+guard, Death finishes with the released sword on the floor, and Victory raises it
+overhead. Her long hair has subtle clip-specific, three-bone follow-through baked into
+the portable model rather than a Viewer-only physics path.
+
+The self-contained package is
+`games/SinStarI/SourceAssets/Characters/Fighter/YalisV1`: 44,907 body triangles,
+5,996 sword triangles, 4K body/2K sword PBR maps, 29 bones and ten sockets. The normal
+build stages it through `Prepare-BuildAssets.ps1`; the Character Viewer and Sin Star I
+cook byte-identical SM3D assets. The native build, package/GLB validators, 58-check
+Viewer hardening fixture and Sin Star I's eight-character presentation fixture pass.
+All Web adoption and browser validation remain on hold.
+
 ## Mira comparisons (native)
 
 The **Dragon** tab now includes **Arin, Orin and Mira**. Its Demo runs the same battle

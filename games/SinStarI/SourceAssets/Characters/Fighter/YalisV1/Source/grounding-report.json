@@ -1,0 +1,276 @@
+{
+  "bindBodyMinimumBeforeMeters": -0.0007096370682120323,
+  "commonActorOffsetMeters": 0.0007096370682120323,
+  "floorClearanceMeters": 0.001,
+  "body": [
+    {
+      "clip": "Attack",
+      "frames": 51,
+      "firstMinimumBeforeMeters": -0.0003698250511661172,
+      "minimumBeforeMeters": -0.0062567261047661304,
+      "maximumBeforeMeters": 0.002785529475659132,
+      "minimumCorrectionMeters": 0.0,
+      "maximumCorrectionMeters": 0.0072567261047661305,
+      "rootXYMeters": [
+        0.0012578332098200917,
+        0.0008547215256839991
+      ]
+    },
+    {
+      "clip": "Attack2",
+      "frames": 107,
+      "firstMinimumBeforeMeters": -0.0003697904758155346,
+      "minimumBeforeMeters": -0.06786087155342102,
+      "maximumBeforeMeters": 0.21127071976661682,
+      "minimumCorrectionMeters": 0.0,
+      "maximumCorrectionMeters": 0.06886087155342102,
+      "rootXYMeters": [
+        0.0012578383320942521,
+        0.0008547171019017696
+      ]
+    },
+    {
+      "clip": "Death",
+      "frames": 110,
+      "firstMinimumBeforeMeters": 0.0005230234237387776,
+      "minimumBeforeMeters": -0.1279086470603943,
+      "maximumBeforeMeters": 0.0076543004252016544,
+      "minimumCorrectionMeters": 0.0,
+      "maximumCorrectionMeters": 0.1289086470603943,
+      "rootXYMeters": [
+        2.224475611001253e-05,
+        -0.0006302003166638315
+      ]
+    },
+    {
+      "clip": "Defend",
+      "frames": 43,
+      "firstMinimumBeforeMeters": 0.00012044352479279041,
+      "minimumBeforeMeters": 0.00011776026804000139,
+      "maximumBeforeMeters": 0.0001332023530267179,
+      "minimumCorrectionMeters": 0.0008667976469732821,
+      "maximumCorrectionMeters": 0.0008822397319599986,
+      "rootXYMeters": [
+        0.001611454994417727,
+        -0.0006249447469599545
+      ]
+    },
+    {
+      "clip": "Dodge",
+      "frames": 44,
+      "firstMinimumBeforeMeters": 0.0006948353839106858,
+      "minimumBeforeMeters": -0.0015821147244423628,
+      "maximumBeforeMeters": 0.0019180455710738897,
+      "minimumCorrectionMeters": 0.0,
+      "maximumCorrectionMeters": 0.002582114724442363,
+      "rootXYMeters": [
+        -0.0006455008406192064,
+        0.0012446142500266433
+      ]
+    },
+    {
+      "clip": "Hit",
+      "frames": 37,
+      "firstMinimumBeforeMeters": 0.0005223581683821976,
+      "minimumBeforeMeters": 0.0003838038246612996,
+      "maximumBeforeMeters": 0.0006239215144887567,
+      "minimumCorrectionMeters": 0.00037607848551124336,
+      "maximumCorrectionMeters": 0.0006161961753387004,
+      "rootXYMeters": [
+        2.076057717204094e-05,
+        -0.0006312630721367896
+      ]
+    },
+    {
+      "clip": "Idle",
+      "frames": 77,
+      "firstMinimumBeforeMeters": -0.0003698829095810652,
+      "minimumBeforeMeters": -0.00037175859324634075,
+      "maximumBeforeMeters": -0.00036540208384394646,
+      "minimumCorrectionMeters": 0.0013654020838439465,
+      "maximumCorrectionMeters": 0.0013717585932463408,
+      "rootXYMeters": [
+        0.0012578406604006886,
+        0.0008546917233616114
+      ]
+    },
+    {
+      "clip": "Run",
+      "frames": 22,
+      "firstMinimumBeforeMeters": 0.002116396790370345,
+      "minimumBeforeMeters": -0.0015356517396867275,
+      "maximumBeforeMeters": 0.05079728364944458,
+      "minimumCorrectionMeters": 0.0,
+      "maximumCorrectionMeters": 0.0025356517396867275,
+      "rootXYMeters": [
+        0.0005541306454688311,
+        -0.0046516284346580505
+      ]
+    },
+    {
+      "clip": "Victory",
+      "frames": 257,
+      "firstMinimumBeforeMeters": -0.00014874804764986038,
+      "minimumBeforeMeters": -0.0005592011148110032,
+      "maximumBeforeMeters": -5.0032336730509996e-05,
+      "minimumCorrectionMeters": 0.00105003233673051,
+      "maximumCorrectionMeters": 0.0015592011148110032,
+      "rootXYMeters": [
+        -0.0018448319751769304,
+        -0.012048913165926933
+      ]
+    },
+    {
+      "clip": "Walk",
+      "frames": 34,
+      "firstMinimumBeforeMeters": 0.0024439552798867226,
+      "minimumBeforeMeters": -0.014519971795380116,
+      "maximumBeforeMeters": 0.017952565103769302,
+      "minimumCorrectionMeters": -0.0169525651037693,
+      "maximumCorrectionMeters": 0.015519971795380116,
+      "rootXYMeters": [
+        -9.432598017156124e-05,
+        0.0014987144386395812
+      ]
+    }
+  ],
+  "sword": [
+    {
+      "clip": "Attack",
+      "adjustedFrames": 0,
+      "maximumAbsoluteTiltDegrees": 0.0,
+      "predictedBoundingBoxMinimumMeters": 0.008599980734288692,
+      "adjustments": []
+    },
+    {
+      "clip": "Attack2",
+      "adjustedFrames": 6,
+      "maximumAbsoluteTiltDegrees": 24.0,
+      "predictedBoundingBoxMinimumMeters": 0.001136483857408166,
+      "adjustments": [
+        {
+          "frame": 30,
+          "degrees": 11.0
+        },
+        {
+          "frame": 31,
+          "degrees": 21.0
+        },
+        {
+          "frame": 32,
+          "degrees": 24.0
+        },
+        {
+          "frame": 33,
+          "degrees": 18.0
+        },
+        {
+          "frame": 34,
+          "degrees": 12.0
+        },
+        {
+          "frame": 35,
+          "degrees": 3.0
+        }
+      ]
+    },
+    {
+      "clip": "Death",
+      "adjustedFrames": 10,
+      "maximumAbsoluteTiltDegrees": 17.0,
+      "predictedBoundingBoxMinimumMeters": 0.003542946418747306,
+      "adjustments": [
+        {
+          "frame": 36,
+          "degrees": -11.0
+        },
+        {
+          "frame": 37,
+          "degrees": -15.0
+        },
+        {
+          "frame": 38,
+          "degrees": -17.0
+        },
+        {
+          "frame": 39,
+          "degrees": -17.0
+        },
+        {
+          "frame": 40,
+          "degrees": -16.0
+        },
+        {
+          "frame": 41,
+          "degrees": -14.0
+        },
+        {
+          "frame": 42,
+          "degrees": -11.0
+        },
+        {
+          "frame": 43,
+          "degrees": -8.0
+        },
+        {
+          "frame": 44,
+          "degrees": -4.0
+        },
+        {
+          "frame": 45,
+          "degrees": -1.0
+        }
+      ]
+    },
+    {
+      "clip": "Defend",
+      "adjustedFrames": 0,
+      "maximumAbsoluteTiltDegrees": 0.0,
+      "predictedBoundingBoxMinimumMeters": 0.414018839597702,
+      "adjustments": []
+    },
+    {
+      "clip": "Dodge",
+      "adjustedFrames": 0,
+      "maximumAbsoluteTiltDegrees": 0.0,
+      "predictedBoundingBoxMinimumMeters": 0.13648544251918793,
+      "adjustments": []
+    },
+    {
+      "clip": "Hit",
+      "adjustedFrames": 0,
+      "maximumAbsoluteTiltDegrees": 0.0,
+      "predictedBoundingBoxMinimumMeters": 0.2559562623500824,
+      "adjustments": []
+    },
+    {
+      "clip": "Idle",
+      "adjustedFrames": 0,
+      "maximumAbsoluteTiltDegrees": 0.0,
+      "predictedBoundingBoxMinimumMeters": 0.21959005296230316,
+      "adjustments": []
+    },
+    {
+      "clip": "Run",
+      "adjustedFrames": 0,
+      "maximumAbsoluteTiltDegrees": 0.0,
+      "predictedBoundingBoxMinimumMeters": 0.257023423910141,
+      "adjustments": []
+    },
+    {
+      "clip": "Victory",
+      "adjustedFrames": 0,
+      "maximumAbsoluteTiltDegrees": 0.0,
+      "predictedBoundingBoxMinimumMeters": 0.418732225894928,
+      "adjustments": []
+    },
+    {
+      "clip": "Walk",
+      "adjustedFrames": 0,
+      "maximumAbsoluteTiltDegrees": 0.0,
+      "predictedBoundingBoxMinimumMeters": 0.3542463481426239,
+      "adjustments": []
+    }
+  ],
+  "policy": "All clips keep a stable root X/Y for game-controlled movement. Idle, Walk, Defend, and Hit retain continuous body contact; other clips preserve positive airtime and correct only floor penetration. Held sword sweeps retain the hand grip and use the smallest local crossguard-axis tilt needed to clear the floor."
+}

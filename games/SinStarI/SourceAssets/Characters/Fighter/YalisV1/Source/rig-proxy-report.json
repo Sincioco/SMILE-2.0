@@ -1,0 +1,17 @@
+{
+  "purpose": "Mixamo-only Yalis-proportioned skeleton donor; never shipped",
+  "jointReferenceMeters": {
+    "chinZ": 0.845,
+    "shoulderZ": 0.785,
+    "wristX": 0.325,
+    "groinZ": 0.47,
+    "kneeZ": 0.3
+  },
+  "voxelSizeMeters": 0.0045,
+  "componentsBeforeCleanup": 5,
+  "removedLooseVertices": 32,
+  "trianglesBeforeDecimate": 95396,
+  "trianglesAfterDecimate": 20000,
+  "targetTriangles": 20000,
+  "fbx": "yalis-v1-mixamo-rig-proxy.fbx"
+}

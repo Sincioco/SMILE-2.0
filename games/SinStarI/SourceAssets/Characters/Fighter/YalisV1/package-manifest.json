@@ -1,0 +1,96 @@
+{
+  "schemaVersion": 1,
+  "character": "Yalis",
+  "revision": "YalisV1",
+  "date": "2026-09-15",
+  "target": "Native Character Viewer and Sin Star I",
+  "role": "Quick and nimble sword fighter",
+  "generator": "User-supplied 2M body and sword GLBs with 4K PBR and no baked lighting",
+  "originals": [
+    {
+      "path": "Source/yalis-v1-body.original.glb",
+      "sha256": "0f5619b7f1fb164ebb582d7d954fd705d3f12cd48911ef439cdd42cb1df703e5"
+    },
+    {
+      "path": "Source/yalis-v1-sword.original.glb",
+      "sha256": "8a03ad6faf0baf3c525921d2c68ce3e4d8caf8bcb5ef9f2debc9e0a74618452b"
+    }
+  ],
+  "authoring": {
+    "reducedSource": "Blender/yalis-v1-unrigged-reduced.blend",
+    "riggedCheckpoint": "Blender/yalis-v1-rigged-animation-checkpoint.blend",
+    "mixamoRig": "Source/Mixamo/yalis-v1-rigged-tpose.fbx",
+    "mixamoSkeleton": "No Fingers",
+    "mixamoBones": 25,
+    "proxyTriangles": 20000,
+    "weightTransfer": "Nearest proxy face with barycentric interpolation; four maximum influences; zero unweighted runtime body vertices"
+  },
+  "runtime": {
+    "model": "yalis-v1-animation-checkpoint.glb",
+    "sha256": "f7ccbcf2493c9fcd1285c8d965b570205dffdb0bd780aaf35ce8c036c1674127",
+    "descriptor": "YalisV1.sm3d.json",
+    "cookedSha256": "6ead3d8cea6d4bc7e78357479413e51c756c83ebc8c212109f2086f198758b87",
+    "triangles": {
+      "body": 44907,
+      "sword": 5996,
+      "total": 50903
+    },
+    "exportedVertices": {
+      "body": 62565,
+      "sword": 7019,
+      "total": 69584,
+      "bodyPrimitiveHeadroom": 2970
+    },
+    "pbrTextures": {
+      "body": [4096, 4096],
+      "sword": [2048, 2048],
+      "mapsPerPart": 3,
+      "decodedMiB": 240,
+      "directionalLightingBaked": false
+    },
+    "rig": {
+      "totalBones": 29,
+      "authoredBones": [
+        "YalisSword",
+        "YalisHairRoot",
+        "YalisHairMid",
+        "YalisHairTip"
+      ],
+      "sockets": 10,
+      "fullFingerRig": false
+    },
+    "equipment": "Sword, glove grip, clip-specific guard/victory/drop behavior and subtle hair follow-through are baked into the accepted checkpoint."
+  },
+  "animations": [
+    { "clip": "Idle", "source": "Source/Mixamo/Idle.fbx", "mixamo": "Sword And Shield Idle", "sourceSamples": 77, "sampleRate": 30, "loop": true },
+    { "clip": "Walk", "source": "Source/Mixamo/Walk.fbx", "mixamo": "Sword And Shield Walk (In Place)", "sourceSamples": 34, "sampleRate": 30, "loop": true },
+    { "clip": "Run", "source": "Source/Mixamo/Run.fbx", "mixamo": "Sword And Shield Run (In Place)", "sourceSamples": 22, "sampleRate": 30, "loop": true },
+    { "clip": "Attack", "source": "Source/Mixamo/Attack.fbx", "mixamo": "Sword And Shield Cross Slash", "sourceSamples": 51, "sampleRate": 30, "loop": false },
+    { "clip": "Attack2", "source": "Source/Mixamo/Attack2.fbx", "mixamo": "Sword And Shield Slash Combo", "sourceSamples": 107, "sampleRate": 30, "loop": false },
+    { "clip": "Dodge", "source": "Source/Mixamo/Dodge.fbx", "mixamo": "Dodging Right", "sourceSamples": 44, "sampleRate": 30, "loop": false },
+    { "clip": "Defend", "source": "Source/Mixamo/Defend.fbx", "mixamo": "Sword And Shield Block Idle", "sourceSamples": 43, "sampleRate": 30, "loop": false },
+    { "clip": "Hit", "source": "Source/Mixamo/Hit.fbx", "mixamo": "Standing React Small From Front", "sourceSamples": 37, "sampleRate": 30, "loop": false },
+    { "clip": "Death", "source": "Source/Mixamo/Death.fbx", "mixamo": "Standing React Death Backward", "sourceSamples": 110, "sampleRate": 30, "loop": false },
+    { "clip": "Victory", "source": "Source/Mixamo/Victory.fbx", "mixamo": "Celebrating After A Win", "sourceSamples": 257, "sampleRate": 30, "loop": false }
+  ],
+  "references": [
+    "References/Yalis - Front.png",
+    "References/Yalis - Back.png",
+    "References/Yalis - Left.png",
+    "References/Yalis - Right.png",
+    "References/Yalis - Sword.png"
+  ],
+  "validation": [
+    "Source/source-inspection.json",
+    "Source/reduction-report.json",
+    "Source/rig-proxy-report.json",
+    "Source/animation-assembly.json",
+    "Source/equipment-fit.json",
+    "Source/grounding-report.json",
+    "Source/export-validation.json",
+    "Source/roundtrip-validation.json",
+    "README.md"
+  ],
+  "checksumInventory": "checksums.sha256",
+  "heldWork": "All Web adoption, publication and Chrome acceptance remain on hold."
+}

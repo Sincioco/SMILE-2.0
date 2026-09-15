@@ -99,6 +99,13 @@
                   Profile="Character"
                   Identity="sin-star-i.zara.v1"
                   ProductionState="Prototype" />
+    <Model3DAsset Include="BuildAssets\YalisV1\yalis-v1-animation-checkpoint.glb"
+                  Descriptor="BuildAssets\YalisV1\YalisV1.sm3d.json"
+                  LogicalPath="Assets\Generation2\YalisV1\Yalis.sm3d"
+                  TextureOutputDirectory="Assets\Generation2\YalisV1\Textures"
+                  Profile="Character"
+                  Identity="sin-star-i.character-5.fighter.yalis"
+                  ProductionState="Prototype" />
     <Model3DAsset Include="BuildAssets\VraxV1\Vrax-v1-animation-set.glb"
                   Descriptor="BuildAssets\VraxV1\VraxV1.sm3d.json"
                   LogicalPath="Assets\Generation2\VraxV1\Vrax.sm3d"

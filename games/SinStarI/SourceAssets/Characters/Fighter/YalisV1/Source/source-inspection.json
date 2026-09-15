@@ -1,0 +1,95 @@
+{
+  "body": {
+    "file": "yalis-v1-body.original.glb",
+    "sha256": "0f5619b7f1fb164ebb582d7d954fd705d3f12cd48911ef439cdd42cb1df703e5",
+    "meshes": 17,
+    "triangles": 1086254,
+    "bounds": {
+      "minimum": [
+        -0.3552122116088867,
+        -0.11492657661437988,
+        0.0
+      ],
+      "maximum": [
+        0.356547087430954,
+        0.11501380801200867,
+        0.997992753982544
+      ],
+      "dimensions": [
+        0.7117592990398407,
+        0.22994038462638855,
+        0.997992753982544
+      ]
+    },
+    "textures": [
+      {
+        "name": "Yalis.Body.BaseColor",
+        "size": [
+          4096,
+          4096
+        ]
+      },
+      {
+        "name": "Yalis.Body.Normal",
+        "size": [
+          4096,
+          4096
+        ]
+      },
+      {
+        "name": "Yalis.Body.MetallicRoughness",
+        "size": [
+          4096,
+          4096
+        ]
+      }
+    ]
+  },
+  "sword": {
+    "file": "yalis-v1-sword.original.glb",
+    "sha256": "8a03ad6faf0baf3c525921d2c68ce3e4d8caf8bcb5ef9f2debc9e0a74618452b",
+    "triangles": 1648018,
+    "bounds": {
+      "minimum": [
+        -0.11241914331912994,
+        -0.05450058355927467,
+        0.0
+      ],
+      "maximum": [
+        0.11266328394412994,
+        0.05414963886141777,
+        0.98492431640625
+      ],
+      "dimensions": [
+        0.2250824272632599,
+        0.10865022242069244,
+        0.98492431640625
+      ]
+    },
+    "textures": [
+      {
+        "name": "Yalis.Sword.BaseColor",
+        "size": [
+          4096,
+          4096
+        ]
+      },
+      {
+        "name": "Yalis.Sword.Normal",
+        "size": [
+          4096,
+          4096
+        ]
+      },
+      {
+        "name": "Yalis.Sword.MetallicRoughness",
+        "size": [
+          4096,
+          4096
+        ]
+      }
+    ]
+  },
+  "skins": 0,
+  "animations": 0
+}

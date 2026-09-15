@@ -1,0 +1,91 @@
+{
+  "body": {
+    "before": {
+      "vertices": 642897,
+      "triangles": 1086254,
+      "boundaryEdges": 225974,
+      "nonManifoldEdges": 225974,
+      "degenerateFaces": 359,
+      "uvLayers": [
+        "UVMap"
+      ]
+    },
+    "after": {
+      "vertices": 53900,
+      "triangles": 44907,
+      "boundaryEdges": 59216,
+      "nonManifoldEdges": 74278,
+      "degenerateFaces": 0,
+      "uvLayers": [
+        "UVMap"
+      ]
+    },
+    "target": 45000,
+    "bounds": {
+      "minimum": [
+        -0.35927313566207886,
+        -0.11595308780670166,
+        -0.0007096393965184689
+      ],
+      "maximum": [
+        0.3558642268180847,
+        0.1140841394662857,
+        0.9982343316078186
+      ],
+      "dimensions": [
+        0.7151373624801636,
+        0.23003722727298737,
+        0.9989439710043371
+      ]
+    },
+    "textureSize": [
+      4096,
+      4096
+    ]
+  },
+  "sword": {
+    "before": {
+      "vertices": 1105579,
+      "triangles": 1648018,
+      "boundaryEdges": 654416,
+      "nonManifoldEdges": 654416,
+      "degenerateFaces": 31,
+      "uvLayers": [
+        "UVMap"
+      ]
+    },
+    "after": {
+      "vertices": 3006,
+      "triangles": 5996,
+      "boundaryEdges": 12,
+      "nonManifoldEdges": 12,
+      "degenerateFaces": 0,
+      "uvLayers": []
+    },
+    "target": 6000,
+    "voxelSizeMeters": 0.0015,
+    "bounds": {
+      "minimum": [
+        -0.11144012212753296,
+        -0.05426907539367676,
+        0.00016929411503951997
+      ],
+      "maximum": [
+        0.11159894615411758,
+        0.05427994206547737,
+        0.9844922423362732
+      ],
+      "dimensions": [
+        0.22303906828165054,
+        0.10854901745915413,
+        0.9843229482212337
+      ]
+    },
+    "textureSize": [
+      2048,
+      2048
+    ]
+  },
+  "totalTriangles": 50903,
+  "policy": "Preserve layered body surfaces and original UVs; retain 4K body PBR; use 2K sword PBR."
+}

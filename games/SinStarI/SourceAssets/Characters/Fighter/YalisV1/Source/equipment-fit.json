@@ -1,0 +1,104 @@
+{
+  "swordScale": 0.72,
+  "swordGripSourceZMeters": 0.875,
+  "swordPalmOffsetMeters": [
+    -0.023000000044703484,
+    -0.03700000047683716,
+    -0.014999999664723873
+  ],
+  "modeledGrip": {
+    "affectedVertices": 47,
+    "maximumDisplacementMeters": 0.049945070422192435,
+    "hiltCenterMeters": [
+      -0.3199999928474426,
+      0.020999999716877937,
+      0.7940000295639038
+    ],
+    "curlDegrees": 105.0
+  },
+  "swordTriangles": 5996,
+  "hair": {
+    "affectedVertices": 8332,
+    "perBone": {
+      "YalisHairRoot": 3572,
+      "YalisHairMid": 2687,
+      "YalisHairTip": 2073
+    },
+    "selectionBoundsMeters": {
+      "minimum": [
+        -0.1996953785419464,
+        0.03828328475356102,
+        0.400866836309433
+      ],
+      "maximum": [
+        0.19824647903442383,
+        0.11379798501729965,
+        0.9289885759353638
+      ]
+    },
+    "maximumAddedWeight": 0.34
+  },
+  "rigBones": 29,
+  "clips": [
+    {
+      "clip": "Attack",
+      "samples": 51,
+      "hairAmplitudeDegrees": 6.0,
+      "swordBehavior": "right-hand attachment"
+    },
+    {
+      "clip": "Attack2",
+      "samples": 107,
+      "hairAmplitudeDegrees": 7.0,
+      "swordBehavior": "right-hand attachment"
+    },
+    {
+      "clip": "Death",
+      "samples": 110,
+      "hairAmplitudeDegrees": 7.0,
+      "swordBehavior": "held through frame 30, then dropped by frame 48"
+    },
+    {
+      "clip": "Defend",
+      "samples": 43,
+      "hairAmplitudeDegrees": 1.8,
+      "swordBehavior": "right-hand attachment"
+    },
+    {
+      "clip": "Dodge",
+      "samples": 44,
+      "hairAmplitudeDegrees": 6.0,
+      "swordBehavior": "right-hand attachment"
+    },
+    {
+      "clip": "Hit",
+      "samples": 37,
+      "hairAmplitudeDegrees": 5.0,
+      "swordBehavior": "right-hand attachment"
+    },
+    {
+      "clip": "Idle",
+      "samples": 77,
+      "hairAmplitudeDegrees": 1.2,
+      "swordBehavior": "right-hand attachment"
+    },
+    {
+      "clip": "Run",
+      "samples": 22,
+      "hairAmplitudeDegrees": 4.5,
+      "swordBehavior": "right-hand attachment"
+    },
+    {
+      "clip": "Victory",
+      "samples": 257,
+      "hairAmplitudeDegrees": 3.5,
+      "swordBehavior": "right-hand attachment"
+    },
+    {
+      "clip": "Walk",
+      "samples": 34,
+      "hairAmplitudeDegrees": 2.8,
+      "swordBehavior": "right-hand attachment"
+    }
+  ]
+}

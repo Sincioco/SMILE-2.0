@@ -81,4 +81,4 @@ $actual = & (Join-Path $PSScriptRoot 'run-bounded-test.cmd') 60 $exe
 if ($LASTEXITCODE -ne 0 -or ($actual -join "`n").Trim() -ne 'Sin Star I presentations passed.') {
     throw "Presentation regression failed: $actual"
 }
-Write-Host 'PASS: Seven character entries and both battle simulations create, draw and release their actual assets.'
+Write-Host 'PASS: Eight character entries and both battle simulations create, draw and release their actual assets.'

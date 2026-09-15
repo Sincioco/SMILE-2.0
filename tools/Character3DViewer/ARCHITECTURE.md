@@ -17,7 +17,7 @@ The game host explicitly constructs a session during scene entry, displays the
 standard loader, and prepares its first camera frame before drawing. The shared
 rendering owner retries cache setup only for the character owner's acknowledged
 renderer-reset signal; a scene restart must not inherit a fatal error from that
-intentional reset. The nine-entry native game regression covers loading, first
+intentional reset. The ten-entry native game regression covers loading, first
 draw, advancement and resource release. Existing native hardening guards remain
 unchanged and pass.
 
@@ -28,6 +28,31 @@ for hosting options/input/caption delegation. The rendering owner grows by eight
 lines for reset handling. No threshold, baseline, exclusion or dependency rule
 was raised. The module-declaration class initializer issue is tracked separately
 in the language reference; game entry uses ordinary explicit construction.
+
+## Native Yalis package and profile
+
+Yalis remains an asset/profile addition, not a character-specific runtime subsystem.
+Her package owns reduction, proxy-assisted Mixamo rigging, skin transfer, sword/grip
+posing, keyed hair follow-through, grounding, portable export and validation.
+`Profiles` owns her identity, ten-clip/ten-socket inventory, looping/hold rules,
+equipment part and 133-unit equipped bind height. `ViewerSession` owns the stable tab
+route, `ViewerUi` appends its button and derives hit bounds from the final tab, and
+`Prepare-BuildAssets.ps1` stages the canonical GLB/descriptor into ignored cooking
+inputs. Existing `ViewerActors`, playback, renderer and equipment visibility paths
+load the result without a new actor pool, clock, physics service or calibration bank.
+
+Sin Star I adds only its menu action and maps that action back to the shared Yalis
+profile. The existing presentation fixture now opens, draws, advances and releases all
+eight character entries plus both battle simulations. Viewer hardening directly checks
+Yalis identity, profile height, ten clips, loop policy, sockets, equipment visibility,
+tab routing and battle-opponent policy. Full-frame Blender and GLB round-trip checks
+remain package-owned. Web publication and browser validation are explicitly deferred.
+
+Growth stays in the existing owners: `Profiles` adds the Yalis metadata, clip and
+socket branches; `ViewerSession` and `ViewerUi` add only routing/hit-area cases;
+`Prepare-BuildAssets.ps1` adds one canonical staging entry; and Sin Star I adds one
+menu action plus one presentation mapping. No workflow coordinator, renderer, actor
+pool, effect service, guardrail, baseline or dependency exclusion changes for Yalis.
 
 ## Coordinated standalone battle previews
 

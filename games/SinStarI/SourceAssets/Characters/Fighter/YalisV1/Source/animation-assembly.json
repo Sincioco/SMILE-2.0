@@ -1,0 +1,86 @@
+{
+  "rigSource": "Mixamo auto-rigged clean Yalis-proportioned proxy",
+  "skeletonPreset": "No Fingers (25 bones)",
+  "weightTransfer": {
+    "bodyVertices": 53900,
+    "proxyVertices": 10002,
+    "unweightedVertices": 0,
+    "maximumInfluences": 4,
+    "mapping": "nearest proxy face with barycentric weight interpolation",
+    "meanNearestDistanceMeters": 0.033663485154018395,
+    "p95NearestDistanceMeters": 0.09493531286716461,
+    "maximumNearestDistanceMeters": 0.14692184329032898
+  },
+  "animations": [
+    {
+      "clip": "Idle",
+      "source": "Idle.fbx",
+      "mixamoDescription": "Sword And Shield Idle",
+      "samples": 77,
+      "maximumJointErrorMeters": 6.938346930395421e-07
+    },
+    {
+      "clip": "Walk",
+      "source": "Walk.fbx",
+      "mixamoDescription": "Sword And Shield Walk (In Place)",
+      "samples": 34,
+      "maximumJointErrorMeters": 6.43127971576499e-07
+    },
+    {
+      "clip": "Run",
+      "source": "Run.fbx",
+      "mixamoDescription": "Sword And Shield Run (In Place)",
+      "samples": 22,
+      "maximumJointErrorMeters": 7.005527018258873e-07
+    },
+    {
+      "clip": "Attack",
+      "source": "Attack.fbx",
+      "mixamoDescription": "Sword And Shield Cross Slash",
+      "samples": 51,
+      "maximumJointErrorMeters": 7.508562643358995e-07
+    },
+    {
+      "clip": "Attack2",
+      "source": "Attack2.fbx",
+      "mixamoDescription": "Sword And Shield Slash Combo",
+      "samples": 107,
+      "maximumJointErrorMeters": 1.0612305292346988e-06
+    },
+    {
+      "clip": "Dodge",
+      "source": "Dodge.fbx",
+      "mixamoDescription": "Dodging Right",
+      "samples": 44,
+      "maximumJointErrorMeters": 6.319859195867041e-07
+    },
+    {
+      "clip": "Defend",
+      "source": "Defend.fbx",
+      "mixamoDescription": "Sword And Shield Block Idle",
+      "samples": 43,
+      "maximumJointErrorMeters": 6.496574114548415e-07
+    },
+    {
+      "clip": "Hit",
+      "source": "Hit.fbx",
+      "mixamoDescription": "Standing React Small From Front",
+      "samples": 37,
+      "maximumJointErrorMeters": 7.768011918577239e-07
+    },
+    {
+      "clip": "Death",
+      "source": "Death.fbx",
+      "mixamoDescription": "Standing React Death Backward",
+      "samples": 110,
+      "maximumJointErrorMeters": 8.292014212108945e-07
+    },
+    {
+      "clip": "Victory",
+      "source": "Victory.fbx",
+      "mixamoDescription": "Celebrating After A Win",
+      "samples": 257,
+      "maximumJointErrorMeters": 8.490066541187312e-07
+    }
+  ]
+}

@@ -1,7 +1,7 @@
 # Sin Star I
 
 Sin Star I opens with **Characters**, **Battle Simulations**, **Legacy**, and **Exit**.
-Characters offers Arin, Orin, Mira, Zara, Valor, Dragon, and Vrax. Each selection
+Characters offers Arin, Orin, Mira, Zara, Valor, Dragon, Vrax, and Yalis. Each selection
 runs that character's animation cycle with the Character Viewer's background,
 rotating reflective arena, calibrated equipment, VFX and sounds. Battle Simulations
 offers the existing Dragon and Vrax party choreography, including Mira's healing,
@@ -14,14 +14,14 @@ Run `games/SinStarI/Build.ps1` from PowerShell 7, then launch
 `games/SinStarI/bin/Release/SinStarI.exe`. Use `-PrepareOnly` before building the
 project directly in Visual Studio. The preparation reuses the Viewer's canonical
 model, audio, VFX and calibration packaging. Tool-generated inputs under BuildAssets
-and the named Assets subdirectories are ignored mirrors. The seven accepted models
+and the named Assets subdirectories are ignored mirrors. The eight accepted models
 are cooked by the normal compiler; preserved Mira comparisons are not published.
 All inputs and dependencies are local. Web adoption remains on hold.
 
 ## Focused validation
 
 `scripts/test-sin-star-presentation.ps1` compiles the actual game presentation
-module against all seven packages, opens all nine entries, draws the first frame
+module against all eight packages, opens all ten entries, draws the first frame
 before the ordinary update loop, advances another frame, and verifies renderer
 object/animator/particle/ribbon cleanup after each exit. It also observes private
 Viewer load failures in a disposable source copy so a partial load cannot pass
@@ -34,11 +34,12 @@ first draw. Native checks cover these demonstrated integration failures. The
 remaining module-declaration initializer defect is recorded in the
 [language reference](../../docs/language/README.md#open-native-module-initializer-defect).
 
-Native manual validation observed the exact four-item main menu, seven-character
+Native manual validation observed the exact four-item main menu, the prior seven-character
 submenu, Mira's animation/water presentation, both running battle simulations,
 the four-character Vrax roster, pause/pan/zoom/reflection/reset controls, Back and
 Escape navigation, Legacy's sprite gallery and original 3D preview, and normal
-Exit. The existing 58 native graphics/input/audio-focus checks and architecture
+Exit. The automated native fixture now additionally opens and releases Yalis. The
+existing 58 native graphics/input/audio-focus checks and architecture
 guards also pass. The shared camera and battle algorithms were reused; this was
 a focused host-integration check, not an exhaustive replay of every effect.
 
@@ -52,7 +53,7 @@ Class would add identity without a useful second instance.
 The module exports the typed `TitleAction` enum. Its explicit values preserve the
 existing scene contract: `None=0`, `Character=1`, `Town=2`, `Town2=3`, `Shop=4`,
 `Dungeon=5`, and `Battle=6`. Navigation uses explicit enum transitions rather
-than enum arithmetic. New action values are appended; Legacy keeps values 1–6.
+than enum arithmetic. Yalis is appended as value 17; Legacy keeps values 1–6.
 
 `TitleScreen` owns its three submenu states, keyboard/pointer selection and title
 music. `CharacterPresentation` owns one hosted `Character3DViewerWorkflow.Session`
