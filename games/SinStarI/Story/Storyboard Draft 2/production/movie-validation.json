@@ -1,0 +1,98 @@
+[
+  {
+    "file": "Sin-Star-I-Room-for-One-Credited.mp4",
+    "seconds": 29.938,
+    "bytes": 24092123,
+    "full_decode": "Passed",
+    "audio_levels": [
+      "[Parsed_volumedetect_0 @ 00000263c2d96940] mean_volume: -17.5 dB",
+      "[Parsed_volumedetect_0 @ 00000263c2d96940] max_volume: -0.5 dB"
+    ],
+    "streams": [
+      {
+        "codec_type": "video",
+        "codec_name": "h264",
+        "width": 1920,
+        "height": 1080,
+        "r_frame_rate": "24/1",
+        "sample_rate": null,
+        "channels": null
+      },
+      {
+        "codec_type": "audio",
+        "codec_name": "aac",
+        "width": null,
+        "height": null,
+        "r_frame_rate": "0/0",
+        "sample_rate": "48000",
+        "channels": 2
+      }
+    ],
+    "website_bytes": 24092123,
+    "website_full_decode": "Passed"
+  },
+  {
+    "file": "Sin-Star-I-A-Universe-Worth-Fighting-For.mp4",
+    "seconds": 277.855,
+    "bytes": 258027986,
+    "full_decode": "Passed",
+    "audio_levels": [
+      "[Parsed_volumedetect_0 @ 000001b381b96940] mean_volume: -18.9 dB",
+      "[Parsed_volumedetect_0 @ 000001b381b96940] max_volume: -1.4 dB"
+    ],
+    "streams": [
+      {
+        "codec_type": "video",
+        "codec_name": "h264",
+        "width": 1920,
+        "height": 1080,
+        "r_frame_rate": "24/1",
+        "sample_rate": null,
+        "channels": null
+      },
+      {
+        "codec_type": "audio",
+        "codec_name": "aac",
+        "width": null,
+        "height": null,
+        "r_frame_rate": "0/0",
+        "sample_rate": "96000",
+        "channels": 2
+      }
+    ],
+    "website_bytes": 76782826,
+    "website_full_decode": "Passed"
+  },
+  {
+    "file": "Sin-Star-I-A-Universe-Worth-Fighting-For-Trailer.mp4",
+    "seconds": 30.02002,
+    "bytes": 27067807,
+    "full_decode": "Passed",
+    "audio_levels": [
+      "[Parsed_volumedetect_0 @ 0000012c38f16980] mean_volume: -17.5 dB",
+      "[Parsed_volumedetect_0 @ 0000012c38f16980] max_volume: -2.8 dB"
+    ],
+    "streams": [
+      {
+        "codec_type": "video",
+        "codec_name": "h264",
+        "width": 1920,
+        "height": 1080,
+        "r_frame_rate": "24/1",
+        "sample_rate": null,
+        "channels": null
+      },
+      {
+        "codec_type": "audio",
+        "codec_name": "aac",
+        "width": null,
+        "height": null,
+        "r_frame_rate": "0/0",
+        "sample_rate": "96000",
+        "channels": 2
+      }
+    ],
+    "website_bytes": 27067807,
+    "website_full_decode": "Passed"
+  }
+]

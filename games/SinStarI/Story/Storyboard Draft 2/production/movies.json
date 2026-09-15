@@ -1,0 +1,35 @@
+[
+  {
+    "id": "trailer",
+    "name": "Defy the End",
+    "kind": "Cinematic Trailer",
+    "duration": "30 seconds",
+    "description": "The end is coming. Give it a reason to hesitate.",
+    "file": "Sin-Star-I-A-Universe-Worth-Fighting-For-Trailer.mp4",
+    "url": "https://youtu.be/KSLICX-pJS0",
+    "poster": "panel-14-3.png",
+    "scene": "c09-s01"
+  },
+  {
+    "id": "film",
+    "name": "A Universe Worth Fighting For",
+    "kind": "Cinematic Story Film",
+    "duration": "4 minutes 38 seconds",
+    "description": "From one empty room to a family worth protecting. Follow Arin and his companions across the stars.",
+    "file": "Sin-Star-I-A-Universe-Worth-Fighting-For.mp4",
+    "url": "https://youtu.be/QiwCNI7RVLc",
+    "poster": "sin-star-poster.png",
+    "scene": "c00-s01"
+  },
+  {
+    "id": "room-for-one",
+    "name": "Room for One",
+    "kind": "Opening Preview",
+    "duration": "30 seconds",
+    "description": "Before the universe calls, there is one ordinary morning—and a life waiting to change.",
+    "file": "Sin-Star-I-Room-for-One-Credited.mp4",
+    "url": "https://youtu.be/iXHhrFC2W3o",
+    "poster": "panel-01-2.png",
+    "scene": "c00-s01"
+  }
+]

@@ -1,0 +1,22 @@
+{
+  "film": "D:\\Sin - AI Prompt - Contents\\Sin Star I - Draft 2 Movies\\Sin-Star-I-A-Universe-Worth-Fighting-For.mp4",
+  "film_seconds": 277.855,
+  "trailer": "D:\\Sin - AI Prompt - Contents\\Sin Star I - Draft 2 Movies\\Sin-Star-I-A-Universe-Worth-Fighting-For-Trailer.mp4",
+  "trailer_seconds": 30.02002,
+  "status": "Final export validated and uploaded Unlisted; see movie-validation.json and youtube-uploads.json",
+  "corrected_takes": [
+    9,
+    19,
+    28,
+    31,
+    40,
+    42
+  ],
+  "caption_source": "Authored script lines, independently typeset",
+  "music": [
+    "Starforge March",
+    "Bloom",
+    "Starforge Ascend"
+  ],
+  "credit": "Created by: Louiery R. Sincioco (Sin)"
+}

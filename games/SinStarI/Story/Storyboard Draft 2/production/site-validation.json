@@ -1,0 +1,15 @@
+{
+  "status": "Passed",
+  "html_pages": 3,
+  "local_references": 874,
+  "scenes": 53,
+  "illustrations": 120,
+  "new_illustrations": 48,
+  "decoded_png_files": 140,
+  "script_narrative": "Unchanged",
+  "canon": "Unchanged",
+  "draft1_files_unchanged": 30,
+  "javascript_syntax_checks": 2,
+  "script_image_scene_and_return_links": "120 passed",
+  "browser_layout_test": "Not performed; static delivery validation"
+}

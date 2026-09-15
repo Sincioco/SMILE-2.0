@@ -1,0 +1,866 @@
+[
+  {
+    "id": "panel-01-1",
+    "source": "page-01.png",
+    "box": [
+      0,
+      0,
+      766,
+      508
+    ],
+    "file": "panel-01-1.png",
+    "sha256": "3e2473ccc1"
+  },
+  {
+    "id": "panel-01-2",
+    "source": "page-01.png",
+    "box": [
+      770,
+      0,
+      1537,
+      508
+    ],
+    "file": "panel-01-2.png",
+    "sha256": "cda82846e6"
+  },
+  {
+    "id": "panel-01-3",
+    "source": "page-01.png",
+    "box": [
+      0,
+      513,
+      766,
+      1023
+    ],
+    "file": "panel-01-3.png",
+    "sha256": "8c83420af4"
+  },
+  {
+    "id": "panel-01-4",
+    "source": "page-01.png",
+    "box": [
+      770,
+      513,
+      1537,
+      1023
+    ],
+    "file": "panel-01-4.png",
+    "sha256": "6661c0cfeb"
+  },
+  {
+    "id": "panel-02-1",
+    "source": "page-02.png",
+    "box": [
+      0,
+      0,
+      767,
+      507
+    ],
+    "file": "panel-02-1.png",
+    "sha256": "1155f7fa1e"
+  },
+  {
+    "id": "panel-02-2",
+    "source": "page-02.png",
+    "box": [
+      772,
+      0,
+      1537,
+      507
+    ],
+    "file": "panel-02-2.png",
+    "sha256": "0340bf4de5"
+  },
+  {
+    "id": "panel-02-3",
+    "source": "page-02.png",
+    "box": [
+      0,
+      512,
+      767,
+      1023
+    ],
+    "file": "panel-02-3.png",
+    "sha256": "3c16f0833c"
+  },
+  {
+    "id": "panel-02-4",
+    "source": "page-02.png",
+    "box": [
+      772,
+      512,
+      1537,
+      1023
+    ],
+    "file": "panel-02-4.png",
+    "sha256": "4b541c3bb2"
+  },
+  {
+    "id": "panel-03-1",
+    "source": "page-03.png",
+    "box": [
+      0,
+      0,
+      766,
+      507
+    ],
+    "file": "panel-03-1.png",
+    "sha256": "c4b14aecda"
+  },
+  {
+    "id": "panel-03-2",
+    "source": "page-03.png",
+    "box": [
+      772,
+      0,
+      1537,
+      507
+    ],
+    "file": "panel-03-2.png",
+    "sha256": "48d315bc27"
+  },
+  {
+    "id": "panel-03-3",
+    "source": "page-03.png",
+    "box": [
+      0,
+      512,
+      766,
+      1023
+    ],
+    "file": "panel-03-3.png",
+    "sha256": "3f4df33e4a"
+  },
+  {
+    "id": "panel-03-4",
+    "source": "page-03.png",
+    "box": [
+      772,
+      512,
+      1537,
+      1023
+    ],
+    "file": "panel-03-4.png",
+    "sha256": "c8dd000543"
+  },
+  {
+    "id": "panel-04-1",
+    "source": "page-04.png",
+    "box": [
+      0,
+      0,
+      766,
+      508
+    ],
+    "file": "panel-04-1.png",
+    "sha256": "eebde947c4"
+  },
+  {
+    "id": "panel-04-2",
+    "source": "page-04.png",
+    "box": [
+      769,
+      0,
+      1536,
+      508
+    ],
+    "file": "panel-04-2.png",
+    "sha256": "f0db6d21c0"
+  },
+  {
+    "id": "panel-04-3",
+    "source": "page-04.png",
+    "box": [
+      0,
+      513,
+      766,
+      1024
+    ],
+    "file": "panel-04-3.png",
+    "sha256": "3c947195aa"
+  },
+  {
+    "id": "panel-04-4",
+    "source": "page-04.png",
+    "box": [
+      769,
+      513,
+      1536,
+      1024
+    ],
+    "file": "panel-04-4.png",
+    "sha256": "096eefae8f"
+  },
+  {
+    "id": "panel-05-1",
+    "source": "page-05.png",
+    "box": [
+      0,
+      0,
+      766,
+      509
+    ],
+    "file": "panel-05-1.png",
+    "sha256": "3f640bf272"
+  },
+  {
+    "id": "panel-05-2",
+    "source": "page-05.png",
+    "box": [
+      770,
+      0,
+      1537,
+      509
+    ],
+    "file": "panel-05-2.png",
+    "sha256": "36deaa18f3"
+  },
+  {
+    "id": "panel-05-3",
+    "source": "page-05.png",
+    "box": [
+      0,
+      513,
+      766,
+      1023
+    ],
+    "file": "panel-05-3.png",
+    "sha256": "d2ff5a39d3"
+  },
+  {
+    "id": "panel-05-4",
+    "source": "page-05.png",
+    "box": [
+      770,
+      513,
+      1537,
+      1023
+    ],
+    "file": "panel-05-4.png",
+    "sha256": "0d0429038f"
+  },
+  {
+    "id": "panel-06-1",
+    "source": "page-06.png",
+    "box": [
+      0,
+      0,
+      766,
+      507
+    ],
+    "file": "panel-06-1.png",
+    "sha256": "04a715d98a"
+  },
+  {
+    "id": "panel-06-2",
+    "source": "page-06.png",
+    "box": [
+      771,
+      0,
+      1537,
+      507
+    ],
+    "file": "panel-06-2.png",
+    "sha256": "5f6e8bdc9b"
+  },
+  {
+    "id": "panel-06-3",
+    "source": "page-06.png",
+    "box": [
+      0,
+      512,
+      766,
+      1023
+    ],
+    "file": "panel-06-3.png",
+    "sha256": "191196de7e"
+  },
+  {
+    "id": "panel-06-4",
+    "source": "page-06.png",
+    "box": [
+      771,
+      512,
+      1537,
+      1023
+    ],
+    "file": "panel-06-4.png",
+    "sha256": "13a7e1e8df"
+  },
+  {
+    "id": "panel-07-1",
+    "source": "page-07.png",
+    "box": [
+      0,
+      0,
+      766,
+      510
+    ],
+    "file": "panel-07-1.png",
+    "sha256": "5fd7b5786f"
+  },
+  {
+    "id": "panel-07-2",
+    "source": "page-07.png",
+    "box": [
+      770,
+      0,
+      1537,
+      510
+    ],
+    "file": "panel-07-2.png",
+    "sha256": "30e2d8d60a"
+  },
+  {
+    "id": "panel-07-3",
+    "source": "page-07.png",
+    "box": [
+      0,
+      514,
+      766,
+      1023
+    ],
+    "file": "panel-07-3.png",
+    "sha256": "a64afe7bf9"
+  },
+  {
+    "id": "panel-07-4",
+    "source": "page-07.png",
+    "box": [
+      770,
+      514,
+      1537,
+      1023
+    ],
+    "file": "panel-07-4.png",
+    "sha256": "60624632d0"
+  },
+  {
+    "id": "panel-08-1",
+    "source": "page-08.png",
+    "box": [
+      0,
+      0,
+      766,
+      508
+    ],
+    "file": "panel-08-1.png",
+    "sha256": "d86d1ee0d6"
+  },
+  {
+    "id": "panel-08-2",
+    "source": "page-08.png",
+    "box": [
+      770,
+      0,
+      1537,
+      508
+    ],
+    "file": "panel-08-2.png",
+    "sha256": "cf91b5523a"
+  },
+  {
+    "id": "panel-08-3",
+    "source": "page-08.png",
+    "box": [
+      0,
+      512,
+      766,
+      1023
+    ],
+    "file": "panel-08-3.png",
+    "sha256": "31a864b52a"
+  },
+  {
+    "id": "panel-08-4",
+    "source": "page-08.png",
+    "box": [
+      770,
+      512,
+      1537,
+      1023
+    ],
+    "file": "panel-08-4.png",
+    "sha256": "62d959adf2"
+  },
+  {
+    "id": "panel-09-1",
+    "source": "page-09.png",
+    "box": [
+      0,
+      0,
+      767,
+      490
+    ],
+    "file": "panel-09-1.png",
+    "sha256": "0a657b41a3"
+  },
+  {
+    "id": "panel-09-2",
+    "source": "page-09.png",
+    "box": [
+      771,
+      0,
+      1537,
+      490
+    ],
+    "file": "panel-09-2.png",
+    "sha256": "dc4670a50c"
+  },
+  {
+    "id": "panel-09-3",
+    "source": "page-09.png",
+    "box": [
+      0,
+      494,
+      767,
+      1023
+    ],
+    "file": "panel-09-3.png",
+    "sha256": "b0a2ff6e0e"
+  },
+  {
+    "id": "panel-09-4",
+    "source": "page-09.png",
+    "box": [
+      771,
+      494,
+      1537,
+      1023
+    ],
+    "file": "panel-09-4.png",
+    "sha256": "53f142d4de"
+  },
+  {
+    "id": "panel-10-1",
+    "source": "page-10.png",
+    "box": [
+      0,
+      0,
+      766,
+      508
+    ],
+    "file": "panel-10-1.png",
+    "sha256": "1f5666845b"
+  },
+  {
+    "id": "panel-10-2",
+    "source": "page-10.png",
+    "box": [
+      771,
+      0,
+      1537,
+      508
+    ],
+    "file": "panel-10-2.png",
+    "sha256": "7a6006fa57"
+  },
+  {
+    "id": "panel-10-3",
+    "source": "page-10.png",
+    "box": [
+      0,
+      514,
+      766,
+      1023
+    ],
+    "file": "panel-10-3.png",
+    "sha256": "1a00a61660"
+  },
+  {
+    "id": "panel-10-4",
+    "source": "page-10.png",
+    "box": [
+      771,
+      514,
+      1537,
+      1023
+    ],
+    "file": "panel-10-4.png",
+    "sha256": "f1f18841ce"
+  },
+  {
+    "id": "panel-11-1",
+    "source": "page-11.png",
+    "box": [
+      0,
+      0,
+      763,
+      508
+    ],
+    "file": "panel-11-1.png",
+    "sha256": "7beeb96933"
+  },
+  {
+    "id": "panel-11-2",
+    "source": "page-11.png",
+    "box": [
+      767,
+      0,
+      1536,
+      508
+    ],
+    "file": "panel-11-2.png",
+    "sha256": "d3c1f74e9f"
+  },
+  {
+    "id": "panel-11-3",
+    "source": "page-11.png",
+    "box": [
+      0,
+      512,
+      763,
+      1024
+    ],
+    "file": "panel-11-3.png",
+    "sha256": "8269effb96"
+  },
+  {
+    "id": "panel-11-4",
+    "source": "page-11.png",
+    "box": [
+      767,
+      512,
+      1536,
+      1024
+    ],
+    "file": "panel-11-4.png",
+    "sha256": "136b13d51f"
+  },
+  {
+    "id": "panel-12-1",
+    "source": "page-12.png",
+    "box": [
+      0,
+      0,
+      766,
+      507
+    ],
+    "file": "panel-12-1.png",
+    "sha256": "12bcf85f96"
+  },
+  {
+    "id": "panel-12-2",
+    "source": "page-12.png",
+    "box": [
+      771,
+      0,
+      1537,
+      507
+    ],
+    "file": "panel-12-2.png",
+    "sha256": "0563010083"
+  },
+  {
+    "id": "panel-12-3",
+    "source": "page-12.png",
+    "box": [
+      0,
+      511,
+      766,
+      1023
+    ],
+    "file": "panel-12-3.png",
+    "sha256": "0605db8724"
+  },
+  {
+    "id": "panel-12-4",
+    "source": "page-12.png",
+    "box": [
+      771,
+      511,
+      1537,
+      1023
+    ],
+    "file": "panel-12-4.png",
+    "sha256": "8378fe0758"
+  },
+  {
+    "id": "panel-13-1",
+    "source": "page-13.png",
+    "box": [
+      0,
+      0,
+      765,
+      507
+    ],
+    "file": "panel-13-1.png",
+    "sha256": "8091e5804b"
+  },
+  {
+    "id": "panel-13-2",
+    "source": "page-13.png",
+    "box": [
+      769,
+      0,
+      1537,
+      507
+    ],
+    "file": "panel-13-2.png",
+    "sha256": "1127b17433"
+  },
+  {
+    "id": "panel-13-3",
+    "source": "page-13.png",
+    "box": [
+      0,
+      512,
+      762,
+      1023
+    ],
+    "file": "panel-13-3.png",
+    "sha256": "5ae59d780f"
+  },
+  {
+    "id": "panel-13-4",
+    "source": "page-13.png",
+    "box": [
+      768,
+      512,
+      1537,
+      1023
+    ],
+    "file": "panel-13-4.png",
+    "sha256": "c67b40fcb0"
+  },
+  {
+    "id": "panel-14-1",
+    "source": "page-14.png",
+    "box": [
+      0,
+      0,
+      766,
+      509
+    ],
+    "file": "panel-14-1.png",
+    "sha256": "273455dc26"
+  },
+  {
+    "id": "panel-14-2",
+    "source": "page-14.png",
+    "box": [
+      772,
+      0,
+      1537,
+      509
+    ],
+    "file": "panel-14-2.png",
+    "sha256": "c3bda06c1a"
+  },
+  {
+    "id": "panel-14-3",
+    "source": "page-14.png",
+    "box": [
+      0,
+      514,
+      766,
+      1023
+    ],
+    "file": "panel-14-3.png",
+    "sha256": "1cacf0906b"
+  },
+  {
+    "id": "panel-14-4",
+    "source": "page-14.png",
+    "box": [
+      772,
+      514,
+      1537,
+      1023
+    ],
+    "file": "panel-14-4.png",
+    "sha256": "b229ff2005"
+  },
+  {
+    "id": "panel-15-1",
+    "source": "page-15.png",
+    "box": [
+      0,
+      0,
+      765,
+      507
+    ],
+    "file": "panel-15-1.png",
+    "sha256": "18d81cf3e0"
+  },
+  {
+    "id": "panel-15-2",
+    "source": "page-15.png",
+    "box": [
+      770,
+      0,
+      1537,
+      507
+    ],
+    "file": "panel-15-2.png",
+    "sha256": "7b7a70f76f"
+  },
+  {
+    "id": "panel-15-3",
+    "source": "page-15.png",
+    "box": [
+      0,
+      512,
+      765,
+      1023
+    ],
+    "file": "panel-15-3.png",
+    "sha256": "78db0f9892"
+  },
+  {
+    "id": "panel-15-4",
+    "source": "page-15.png",
+    "box": [
+      770,
+      512,
+      1537,
+      1023
+    ],
+    "file": "panel-15-4.png",
+    "sha256": "28225d55d4"
+  },
+  {
+    "id": "panel-16-1",
+    "source": "page-16.png",
+    "box": [
+      0,
+      0,
+      766,
+      508
+    ],
+    "file": "panel-16-1.png",
+    "sha256": "3190dc666c"
+  },
+  {
+    "id": "panel-16-2",
+    "source": "page-16.png",
+    "box": [
+      771,
+      0,
+      1537,
+      508
+    ],
+    "file": "panel-16-2.png",
+    "sha256": "5a76110b37"
+  },
+  {
+    "id": "panel-16-3",
+    "source": "page-16.png",
+    "box": [
+      0,
+      513,
+      766,
+      1023
+    ],
+    "file": "panel-16-3.png",
+    "sha256": "819e464150"
+  },
+  {
+    "id": "panel-16-4",
+    "source": "page-16.png",
+    "box": [
+      771,
+      513,
+      1537,
+      1023
+    ],
+    "file": "panel-16-4.png",
+    "sha256": "ed4c1e191e"
+  },
+  {
+    "id": "panel-17-1",
+    "source": "page-17.png",
+    "box": [
+      0,
+      0,
+      765,
+      507
+    ],
+    "file": "panel-17-1.png",
+    "sha256": "dad6429f6d"
+  },
+  {
+    "id": "panel-17-2",
+    "source": "page-17.png",
+    "box": [
+      772,
+      0,
+      1537,
+      507
+    ],
+    "file": "panel-17-2.png",
+    "sha256": "d0241c6a4f"
+  },
+  {
+    "id": "panel-17-3",
+    "source": "page-17.png",
+    "box": [
+      0,
+      512,
+      765,
+      1023
+    ],
+    "file": "panel-17-3.png",
+    "sha256": "80a89e998b"
+  },
+  {
+    "id": "panel-17-4",
+    "source": "page-17.png",
+    "box": [
+      772,
+      512,
+      1537,
+      1023
+    ],
+    "file": "panel-17-4.png",
+    "sha256": "0d184064b4"
+  },
+  {
+    "id": "panel-18-1",
+    "source": "page-18.png",
+    "box": [
+      0,
+      0,
+      767,
+      508
+    ],
+    "file": "panel-18-1.png",
+    "sha256": "dbba4b174a"
+  },
+  {
+    "id": "panel-18-2",
+    "source": "page-18.png",
+    "box": [
+      771,
+      0,
+      1537,
+      508
+    ],
+    "file": "panel-18-2.png",
+    "sha256": "bc46b6fb32"
+  },
+  {
+    "id": "panel-18-3",
+    "source": "page-18.png",
+    "box": [
+      0,
+      512,
+      767,
+      1023
+    ],
+    "file": "panel-18-3.png",
+    "sha256": "5bb3d85663"
+  },
+  {
+    "id": "panel-18-4",
+    "source": "page-18.png",
+    "box": [
+      771,
+      512,
+      1537,
+      1023
+    ],
+    "file": "panel-18-4.png",
+    "sha256": "0d7eaed50d"
+  }
+]
