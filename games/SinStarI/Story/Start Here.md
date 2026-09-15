@@ -8,8 +8,10 @@
    purposes, growth and the scene-to-page index.
 3. **Canon.md** - the accepted D01-D16 decisions and remaining open details.
 4. **Sin-Star-I-Game-Script-v0.2.html** - the complete script with accepted-canon
-   labels, revised D10 scene and updated review register. This local reading
-   document includes its existing styles and controls; it needs no server.
+   labels, revised D10 scene and updated review register. All 72 illustrations
+   appear beside their matching story beats, each showing only its own panel.
+   Select an illustration to return to that exact Visual Storyboard panel, or use
+   the permanent **Visual Storyboard** link at the top. It needs no server.
 
 ## Scope and review
 
@@ -32,7 +34,8 @@ visual proposals. Nothing here claims implementation of the suggested encounters
 
 ## Open the website
 
-Extract **Sin-Star-I-Storyboard-Draft-1-Website.zip**, then open **index.html**.
+Extract **Sin-Star-I-Storyboard-Draft-1-Website-Illustrated-Script.zip**, then open
+**index.html**. The earlier ZIP remains available as the original delivery.
 Keep `asset`, `Storyboard-Draft-1` and the companion files beside it. The website
 also works directly from this source folder and can be served by any static web
 server. It requires no installation, package download or internet connection.
@@ -41,6 +44,11 @@ Use **Contents** to jump to a sheet. Read panels left to right on a wide screen,
 or top to bottom on a phone. Select an image to open the full art sheet; select a
 scene number to read the complete dialogue in the revised script. Scene notes
 explain purpose, character growth and the suggested game beat.
+
+The Visual Storyboard, its dialogue and its artwork are unchanged from the first
+delivery. The Full Script uses a fixed frame to display the appropriate quarter
+of each existing sheet; it adds no duplicate image files and preserves the full
+script's story text and existing reading controls.
 
 No .NET rebuild, VSIX installation or application restart is needed. Open
 `index.html`; press Ctrl+F5 in Chrome only if replacing a previously opened copy.
@@ -52,9 +60,13 @@ is limited to this explicitly requested, local storyboard website.
 
 - All 47 main scenes and six optional scenes are mapped to 72 panels with dialogue.
 - All 18 PNG images decode successfully and match the selected-output checksums.
-- Both HTML documents have valid local files and fragment targets: 382 references.
-- Chrome desktop and narrow-screen reading layouts were checked, including the
-  contents menu, image placement, selectable dialogue and horizontal overflow.
+- Both HTML documents have valid local files and fragment targets: 528 references.
+- Every script illustration is inside the matching scene, uses the correct quarter
+  of its art sheet and links back to the exact Visual Storyboard panel.
+- Script prose is unchanged. The Visual Storyboard and its supporting assets match
+  their original checksums. Its previously reviewed Chrome layout is preserved.
+- This revision uses focused file, markup and script-syntax checks; it does not
+  claim a new browser test pass.
 - The ZIP is integrity-checked; every extracted file is compared with its source.
 
 The HTML is a static reading edition, with CSS owning layout and a small script

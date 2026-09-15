@@ -6,7 +6,7 @@
 <meta name="description" content="The complete Sin Star I draft game script, version 0.2, with JRPG dialogue, scene direction, character notes, and author review annotations.">
 <meta name="source-file" content="2026-09-14-0018-sin-star-i-draft-game-script-v0.1.md">
 <meta name="source-sha256" content="c88c853d8a5eff75a96628461c5cc016c350c32ed4ebaa71f24bb7134e9da9fe">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:; connect-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src 'self' data:; connect-src 'none'; base-uri 'none'; form-action 'none'">
 <title>Sin Star I — Draft Game Script v0.2</title>
 <style>
 :root {
@@ -184,6 +184,28 @@ td:first-child {font-weight:600}
  a {color:inherit; text-decoration:none}
  blockquote {break-inside:avoid; font-size:14pt}
 }
+
+/* Full-script illustrations reuse the unchanged storyboard art sheets. */
+.script-art {margin:28px 0 34px; border:1px solid var(--border); border-radius:8px; overflow:hidden; break-inside:avoid}
+.script-art-link {display:block; text-decoration:none; color:var(--accent)}
+.script-art-link:focus-visible {outline-offset:-4px}
+.script-art-crop {display:block; position:relative; width:100%; overflow:hidden; background:var(--soft)}
+.script-art-crop img {display:block; position:absolute; width:200%; height:200%; max-width:none}
+.script-art-caption {display:flex; justify-content:space-between; gap:12px; padding:10px 15px; background:var(--soft); font-size:14px; line-height:1.6; text-decoration:underline; text-underline-offset:.2em}
+.script-art-link:hover .script-art-caption {background:var(--accent-soft)}
+.storyboard-return {font-size:14px; text-decoration:none; margin-left:auto}
+@media (max-width:760px) {
+ html {scroll-padding-top:132px}
+ .topbar-inner {flex-wrap:wrap}
+ .brand {flex:1}
+ .storyboard-return {order:3; flex-basis:100%; text-align:center; margin-left:0}
+ .script-art {margin:24px 0 28px}
+ .script-art-caption {padding:10px 12px}
+}
+@media print {
+ .script-art {max-width:136mm; margin:15pt auto; break-inside:avoid; page-break-inside:avoid}
+ .script-art-caption {font-size:9pt; padding:6pt 9pt}
+}
 </style>
 </head>
 <body>
@@ -191,6 +213,7 @@ td:first-child {font-weight:600}
 <header class="topbar">
   <div class="topbar-inner">
     <a class="brand" href="#sin-star-i">SIN STAR I <small>GAME SCRIPT · v0.2</small></a>
+    <a class="control storyboard-return" href="index.html">← Visual Storyboard</a>
     <div class="reader-actions js-tool" aria-label="Reading controls">
       <button class="control" type="button" id="theme-toggle" aria-pressed="false">Dark mode</button>
       <button class="control" type="button" id="print-script">Print</button>
@@ -619,6 +642,15 @@ td:first-child {font-weight:600}
 <strong>Source / review:</strong> S01–S03. D01. The ship memory is impressionistic; it does not establish the exact mechanics of Arin's childhood survival. The earliest opponent is a dream image, not confirmed future sight or evidence that Kael has already contacted him.</p>
 <p class="cue scene-cue"><strong>SCENE</strong></p>
 <p>Black screen. A loose fitting rattles against metal. A woman's hand fastens a strap around a child's wrist. We do not see her whole face.</p>
+<figure class="script-art" id="script-panel-01-1">
+  <a class="script-art-link" href="index.html#panel-01-1" aria-label="Return to Visual Storyboard, panel 01.1">
+    <span class="script-art-crop" style="aspect-ratio:1537/1023">
+      <img src="asset/images/page-01.png?v=a982c6689f" alt="Inside a civilian spaceship, a mother&#x27;s hand fastens a worn wrist strap on a young boy; his father&#x27;s smiling face is reflected in the window, beyond which a sudden white flash begins." width="1537" height="1023" style="left:0%;top:0%" loading="lazy" decoding="async">
+    </span>
+    <span class="script-art-caption">Visual Storyboard · Panel 01.1<span aria-hidden="true">↩</span></span>
+  </a>
+</figure>
+
 <p class="dialogue"><strong class="speaker">MOTHER:</strong><span class="spoken-line"> Too tight?</span></p>
 <p class="dialogue"><strong class="speaker">YOUNG ARIN:</strong><span class="spoken-line"> No.</span></p>
 <p class="dialogue"><strong class="speaker">FATHER:</strong><span class="spoken-line"> He'd say that if you tied him to the chair.</span></p>
@@ -637,6 +669,15 @@ td:first-child {font-weight:600}
 <p>Arin wakes with one hand extended.</p>
 <p class="dialogue"><strong class="speaker">ARIN:</strong><span class="spoken-line"> ...No.</span></p>
 <p>Someone pounds on the wall.</p>
+<figure class="script-art" id="script-panel-01-2">
+  <a class="script-art-link" href="index.html#panel-01-2" aria-label="Return to Visual Storyboard, panel 01.2">
+    <span class="script-art-crop" style="aspect-ratio:1537/1023">
+      <img src="asset/images/page-01.png?v=a982c6689f" alt="Adult Arin wakes alone in cheap lodging, dark undershirt, armor on a chair." width="1537" height="1023" style="left:-100%;top:0%" loading="lazy" decoding="async">
+    </span>
+    <span class="script-art-caption">Visual Storyboard · Panel 01.2<span aria-hidden="true">↩</span></span>
+  </a>
+</figure>
+
 <p class="dialogue"><strong class="speaker">NEIGHBOR:</strong><span class="spoken-line"> Some of us work in the morning!</span></p>
 <p class="dialogue"><strong class="speaker">ARIN:</strong><span class="spoken-line"> So do I.</span></p>
 <p>He lowers his hand before noticing what it is doing. The cup stops against a ledger listing rent and armor repairs.</p>
@@ -650,6 +691,15 @@ td:first-child {font-weight:600}
 <strong>Source / review:</strong> S01, D02. Role names are temporary. Arin is not a former Neris soldier.</p>
 <p class="cue scene-cue"><strong>SCENE</strong></p>
 <p>The armorer holds Arin's shoulder plate against the light.</p>
+<figure class="script-art" id="script-panel-01-3">
+  <a class="script-art-link" href="index.html#panel-01-3" aria-label="Return to Visual Storyboard, panel 01.3">
+    <span class="script-art-crop" style="aspect-ratio:1537/1023">
+      <img src="asset/images/page-01.png?v=a982c6689f" alt="At a Neris repair stall, adult Arin in battered surplus white navy gold armor counts a few coins while a practical armorer points to his cracked shoulder rivet." width="1537" height="1023" style="left:0%;top:-100%" loading="lazy" decoding="async">
+    </span>
+    <span class="script-art-caption">Visual Storyboard · Panel 01.3<span aria-hidden="true">↩</span></span>
+  </a>
+</figure>
+
 <p class="dialogue"><strong class="speaker">ARMORER:</strong><span class="spoken-line"> This is Neris issue.</span></p>
 <p class="dialogue"><strong class="speaker">ARIN:</strong><span class="spoken-line"> It was Neris issue. Then it was a box behind a counter. Then it was mine.</span></p>
 <p class="dialogue"><strong class="speaker">ARMORER:</strong><span class="spoken-line"> The rivets remember the first owner.</span></p>
@@ -691,6 +741,15 @@ td:first-child {font-weight:600}
 <p>Then he stops.</p>
 <p>A sound from Arin's dream reaches him—not as ordinary airborne speech, but as a disturbance briefly visible in the stars' reflections in his eyes.</p>
 <p>He repeats part of it under his breath. Nothing happens. He is comparing, not casting.</p>
+<figure class="script-art" id="script-panel-01-4">
+  <a class="script-art-link" href="index.html#panel-01-4" aria-label="Return to Visual Storyboard, panel 01.4">
+    <span class="script-art-crop" style="aspect-ratio:1537/1023">
+      <img src="asset/images/page-01.png?v=a982c6689f" alt="Kael with long silver hair and black silver cosmic armor stands on a grassy Earth hillside above an ordinary warmly lit town." width="1537" height="1023" style="left:-100%;top:-100%" loading="lazy" decoding="async">
+    </span>
+    <span class="script-art-caption">Visual Storyboard · Panel 01.4<span aria-hidden="true">↩</span></span>
+  </a>
+</figure>
+
 <p class="dialogue"><strong class="speaker">KAEL:</strong><span class="spoken-line"> That wasn't mine.</span></p>
 <p>He looks toward a region of sky with no special star marked for the player.</p>
 <p>Cut before he explains or acts.</p>
@@ -711,6 +770,15 @@ td:first-child {font-weight:600}
 <p>The conduit opens.</p>
 <p>A curved wall of water rises between him and the descending metal. It holds for a heartbeat, then hardens into a turning sheet that throws the assembly aside.</p>
 <p>Mira drops from the access stairs.</p>
+<figure class="script-art" id="script-panel-02-1">
+  <a class="script-art-link" href="index.html#panel-02-1" aria-label="Return to Visual Storyboard, panel 02.1">
+    <span class="script-art-crop" style="aspect-ratio:1537/1023">
+      <img src="asset/images/page-02.png?v=db4a8e8701" alt="In flooded industrial waterworks, Mira in plain navy travel clothes with tied brown hair kneels beside injured adult Arin." width="1537" height="1023" style="left:0%;top:0%" loading="lazy" decoding="async">
+    </span>
+    <span class="script-art-caption">Visual Storyboard · Panel 02.1<span aria-hidden="true">↩</span></span>
+  </a>
+</figure>
+
 <p class="dialogue"><strong class="speaker">MIRA:</strong><span class="spoken-line"> Can you move your foot?</span></p>
 <p class="dialogue"><strong class="speaker">ARIN:</strong><span class="spoken-line"> I was getting to that.</span></p>
 <p class="dialogue"><strong class="speaker">MIRA:</strong><span class="spoken-line"> Try now.</span></p>
@@ -747,6 +815,15 @@ td:first-child {font-weight:600}
 <p class="dialogue"><strong class="speaker">ARIN:</strong><span class="spoken-line"> They have people for this.</span></p>
 <p class="dialogue"><strong class="speaker">MIRA:</strong><span class="spoken-line"> Two. One has been awake since yesterday.</span></p>
 <p>She does not look up.</p>
+<figure class="script-art" id="script-panel-02-2">
+  <a class="script-art-link" href="index.html#panel-02-2" aria-label="Return to Visual Storyboard, panel 02.2">
+    <span class="script-art-crop" style="aspect-ratio:1537/1023">
+      <img src="asset/images/page-02.png?v=db4a8e8701" alt="Before dawn in a crowded modest street clinic, Mira washes a surveyor&#x27;s wound while weary Arin carries a stack of water basins." width="1537" height="1023" style="left:-100%;top:0%" loading="lazy" decoding="async">
+    </span>
+    <span class="script-art-caption">Visual Storyboard · Panel 02.2<span aria-hidden="true">↩</span></span>
+  </a>
+</figure>
+
 <p class="dialogue"><strong class="speaker">MIRA:</strong><span class="spoken-line"> There are six basins outside. Would you bring them in?</span></p>
 <p class="dialogue"><strong class="speaker">ARIN:</strong><span class="spoken-line"> I'm not part of the clinic.</span></p>
 <p class="dialogue"><strong class="speaker">MIRA:</strong><span class="spoken-line"> Neither am I.</span></p>
@@ -787,6 +864,15 @@ td:first-child {font-weight:600}
 <p>The sound is the one from the prologue, clearer now. No invented phonetic vocabulary is locked into the script; audio uses a recurring motif pending language design.</p>
 <p>Dust hangs motionless. The glyph ring recognizes something. Beyond the chamber, a distant clock tower trembles.</p>
 <p>Mira braces the water around them.</p>
+<figure class="script-art" id="script-panel-02-3">
+  <a class="script-art-link" href="index.html#panel-02-3" aria-label="Return to Visual Storyboard, panel 02.3">
+    <span class="script-art-crop" style="aspect-ratio:1537/1023">
+      <img src="asset/images/page-02.png?v=db4a8e8701" alt="Under Neris, ancient cyan glyph rings threaded through modern pipes react to unconscious Arin; dust hangs in air." width="1537" height="1023" style="left:0%;top:-100%" loading="lazy" decoding="async">
+    </span>
+    <span class="script-art-caption">Visual Storyboard · Panel 02.3<span aria-hidden="true">↩</span></span>
+  </a>
+</figure>
+
 <p class="dialogue"><strong class="speaker">MIRA:</strong><span class="spoken-line"> Arin. Listen to my voice.</span></p>
 <p>The engineer's instrument displays responses from locations its map does not contain.</p>
 <p class="dialogue"><strong class="speaker">MIRA:</strong><span class="spoken-line"> Breathe. Don't try to speak.</span></p>
@@ -818,6 +904,15 @@ td:first-child {font-weight:600}
 <p class="dialogue"><strong class="speaker">MARSHAL:</strong><span class="spoken-line"> There are security restrictions—</span></p>
 <p class="dialogue"><strong class="speaker">QUEEN:</strong><span class="spoken-line"> That is a request for an investigation, not permission to destroy one. Preserve them.</span></p>
 <p>The king asks Mira to remain in Neris while specialists investigate the off-world responses.</p>
+<figure class="script-art" id="script-panel-02-4">
+  <a class="script-art-link" href="index.html#panel-02-4" aria-label="Return to Visual Storyboard, panel 02.4">
+    <span class="script-art-crop" style="aspect-ratio:1537/1023">
+      <img src="asset/images/page-02.png?v=db4a8e8701" alt="Neris palace council: Mira now in white navy gold field armor places waterworks logs and a relief plan before her living king and queen." width="1537" height="1023" style="left:-100%;top:-100%" loading="lazy" decoding="async">
+    </span>
+    <span class="script-art-caption">Visual Storyboard · Panel 02.4<span aria-hidden="true">↩</span></span>
+  </a>
+</figure>
+
 <p class="dialogue"><strong class="speaker">KING:</strong><span class="spoken-line"> Your place is here.</span></p>
 <p class="dialogue"><strong class="speaker">MIRA:</strong><span class="spoken-line"> If this were only a broken pump, I would agree. The same device is answering from other planets. Our engineers cannot repair something they do not understand.</span></p>
 <p class="dialogue"><strong class="speaker">KING:</strong><span class="spoken-line"> You are not an engineer.</span></p>
@@ -849,6 +944,15 @@ td:first-child {font-weight:600}
 <p class="cue scene-cue"><strong>SCENE</strong></p>
 <p>Low workstations line the terminal. A Kynari administrator taps a panel with a paw while a human mechanic waits at an adjustable counter.</p>
 <p>Arin nearly steps through a recessed traffic lane.</p>
+<figure class="script-art" id="script-panel-03-1">
+  <a class="script-art-link" href="index.html#panel-03-1" aria-label="Return to Visual Storyboard, panel 03.1">
+    <span class="script-art-crop" style="aspect-ratio:1537/1023">
+      <img src="asset/images/page-03.png?v=22a645bf05" alt="A bustling Kynari frontier spaceport on Veyra, amber cliffs and teal transit rails, low curved canine-built architecture, recessed scent-marked lanes, paw and nose operated kiosks, adjustable human counters." width="1537" height="1023" style="left:0%;top:0%" loading="lazy" decoding="async">
+    </span>
+    <span class="script-art-caption">Visual Storyboard · Panel 03.1<span aria-hidden="true">↩</span></span>
+  </a>
+</figure>
+
 <p class="dialogue"><strong class="speaker">PORT ADMINISTRATOR:</strong><span class="spoken-line"> Marked path, please.</span></p>
 <p>The translated voice comes from the administrator's harness.</p>
 <p>Arin looks for a human speaker.</p>
@@ -883,6 +987,15 @@ td:first-child {font-weight:600}
 <p>He runs toward Arin.</p>
 <p class="dialogue"><strong class="speaker">ARIN:</strong><span class="spoken-line"> Get out of here!</span></p>
 <p>Orin parries the next attack and pulls him behind a support.</p>
+<figure class="script-art" id="script-panel-03-2">
+  <a class="script-art-link" href="index.html#panel-03-2" aria-label="Return to Visual Storyboard, panel 03.2">
+    <span class="script-art-crop" style="aspect-ratio:1537/1023">
+      <img src="asset/images/page-03.png?v=22a645bf05" alt="Veyra terminal under raider attack." width="1537" height="1023" style="left:-100%;top:0%" loading="lazy" decoding="async">
+    </span>
+    <span class="script-art-caption">Visual Storyboard · Panel 03.2<span aria-hidden="true">↩</span></span>
+  </a>
+</figure>
+
 <p class="dialogue"><strong class="speaker">ORIN:</strong><span class="spoken-line"> Where are they leaving from?</span></p>
 <p class="dialogue"><strong class="speaker">ARIN:</strong><span class="spoken-line"> The east ramp. You can't win this.</span></p>
 <p class="dialogue"><strong class="speaker">ORIN:</strong><span class="spoken-line"> Then stop trying to win. Help me get them out.</span></p>
@@ -914,6 +1027,15 @@ td:first-child {font-weight:600}
 <p class="dialogue"><strong class="speaker">ARIN:</strong><span class="spoken-line"> You didn't know me.</span></p>
 <p class="dialogue"><strong class="speaker">ORIN:</strong><span class="spoken-line"> Would that have made the shots miss?</span></p>
 <p>Arin lets the question settle.</p>
+<figure class="script-art" id="script-panel-03-3">
+  <a class="script-art-link" href="index.html#panel-03-3" aria-label="Return to Visual Storyboard, panel 03.3">
+    <span class="script-art-crop" style="aspect-ratio:1537/1023">
+      <img src="asset/images/page-03.png?v=22a645bf05" alt="Inside an evacuation shuttle after escape, broad older dark-haired stubbled Orin carefully bandages younger clean-shaven Arin&#x27;s shoulder with permission." width="1537" height="1023" style="left:0%;top:-100%" loading="lazy" decoding="async">
+    </span>
+    <span class="script-art-caption">Visual Storyboard · Panel 03.3<span aria-hidden="true">↩</span></span>
+  </a>
+</figure>
+
 <p class="dialogue"><strong class="speaker">ARIN:</strong><span class="spoken-line"> Arin.</span></p>
 <p class="dialogue"><strong class="speaker">ORIN:</strong><span class="spoken-line"> Orin.</span></p>
 <p>They look at one another.</p>
@@ -946,6 +1068,15 @@ td:first-child {font-weight:600}
 <p class="dialogue"><strong class="speaker">MIRA:</strong><span class="spoken-line"> You can say so before you drop your weapon.</span></p>
 <p>He does not answer. She leaves a filled canteen beside him.</p>
 <p>Arin sets out three portions rather than two. He notices what he has done only after placing the third.</p>
+<figure class="script-art" id="script-panel-03-4">
+  <a class="script-art-link" href="index.html#panel-03-4" aria-label="Return to Visual Storyboard, panel 03.4">
+    <span class="script-art-crop" style="aspect-ratio:1537/1023">
+      <img src="asset/images/page-03.png?v=22a645bf05" alt="Evening emergency camp outside a damaged archive on Veyra: Arin lays out three food portions, Mira leaves a canteen beside Orin whose hand trembles from lightning use." width="1537" height="1023" style="left:-100%;top:-100%" loading="lazy" decoding="async">
+    </span>
+    <span class="script-art-caption">Visual Storyboard · Panel 03.4<span aria-hidden="true">↩</span></span>
+  </a>
+</figure>
+
 <p class="dialogue"><strong class="speaker">ARIN:</strong><span class="spoken-line"> There was extra.</span></p>
 <p class="dialogue"><strong class="speaker">ORIN:</strong><span class="spoken-line"> Convenient.</span></p>
 <p class="direction-note"><strong>PLAY:</strong> Orin becomes a continuing party member. His initial camp interaction is short; his family history remains withheld until he has earned trust.</p>
@@ -960,6 +1091,15 @@ td:first-child {font-weight:600}
 <p>A service hatch slides open. Zara backs out, carrying a disabled surveillance assembly.</p>
 <p class="dialogue"><strong class="speaker">ZARA:</strong><span class="spoken-line"> If you're here to ask whether that was supposed to explode, yes. If you're here about the noise, the answer is more complicated.</span></p>
 <p>Milo emerges behind her with a tool secured to his harness. He sneezes dust from his nose.</p>
+<figure class="script-art" id="script-panel-04-1">
+  <a class="script-art-link" href="index.html#panel-04-1" aria-label="Return to Visual Storyboard, panel 04.1">
+    <span class="script-art-crop" style="aspect-ratio:1536/1024">
+      <img src="asset/images/page-04.png?v=a0a6b036e1" alt="Red and charcoal fully artificial angular armored woman Zara backs out of a smoking low service hatch with a disabled surveillance unit." width="1536" height="1024" style="left:0%;top:0%" loading="lazy" decoding="async">
+    </span>
+    <span class="script-art-caption">Visual Storyboard · Panel 04.1<span aria-hidden="true">↩</span></span>
+  </a>
+</figure>
+
 <p class="dialogue"><strong class="speaker">MILO:</strong><span class="spoken-line"> It was supposed to explode after we left.</span></p>
 <p class="dialogue"><strong class="speaker">ZARA:</strong><span class="spoken-line"> A timing issue.</span></p>
 <p>Arin notices Zara's artificial construction. He looks, then looks away. Nothing more is required yet.</p>
@@ -989,6 +1129,15 @@ td:first-child {font-weight:600}
 <p class="dialogue"><strong class="speaker">MILO:</strong><span class="spoken-line"> That is him.</span></p>
 <p>Zara highlights the release controls.</p>
 <p>A faction controller appears on the local display.</p>
+<figure class="script-art" id="script-panel-04-2">
+  <a class="script-art-link" href="index.html#panel-04-2" aria-label="Return to Visual Storyboard, panel 04.2">
+    <span class="script-art-crop" style="aspect-ratio:1536/1024">
+      <img src="asset/images/page-04.png?v=a0a6b036e1" alt="Zara disconnects detention locks from a hostile controller." width="1536" height="1024" style="left:-100%;top:0%" loading="lazy" decoding="async">
+    </span>
+    <span class="script-art-caption">Visual Storyboard · Panel 04.2<span aria-hidden="true">↩</span></span>
+  </a>
+</figure>
+
 <p class="dialogue"><strong class="speaker">CONTROLLER:</strong><span class="spoken-line"> Unauthorized transfer. State your ownership claim.</span></p>
 <p class="dialogue"><strong class="speaker">ZARA:</strong><span class="spoken-line"> None.</span></p>
 <p class="dialogue"><strong class="speaker">CONTROLLER:</strong><span class="spoken-line"> Then leave the assets in containment.</span></p>
@@ -1017,6 +1166,15 @@ td:first-child {font-weight:600}
 <p>Milo's partner leans against him for a long moment. Their reunion is untranslated.</p>
 <p>The elder thanks the rescuers, then asks them to wait while families contact the missing. The cosmic quest does not automatically outrank that work.</p>
 <p>Arin looks at an old image of Earth dogs beside a Kynari migration map.</p>
+<figure class="script-art" id="script-panel-04-3">
+  <a class="script-art-link" href="index.html#panel-04-3" aria-label="Return to Visual Storyboard, panel 04.3">
+    <span class="script-art-crop" style="aspect-ratio:1536/1024">
+      <img src="asset/images/page-04.png?v=a0a6b036e1" alt="Kynari community hall, low tables, varied-height sleeping alcoves, paw-operated water taps and scent markers." width="1536" height="1024" style="left:0%;top:-100%" loading="lazy" decoding="async">
+    </span>
+    <span class="script-art-caption">Visual Storyboard · Panel 04.3<span aria-hidden="true">↩</span></span>
+  </a>
+</figure>
+
 <p class="dialogue"><strong class="speaker">ARIN:</strong><span class="spoken-line"> Those look like dogs from Earth.</span></p>
 <p class="dialogue"><strong class="speaker">ELDER:</strong><span class="spoken-line"> Your Earth dogs have distant family here.</span></p>
 <p class="dialogue"><strong class="speaker">ARIN:</strong><span class="spoken-line"> Our histories don't say that.</span></p>
@@ -1050,6 +1208,15 @@ td:first-child {font-weight:600}
 <p class="dialogue"><strong class="speaker">MIRA:</strong><span class="spoken-line"> Do you like it?</span></p>
 <p class="dialogue"><strong class="speaker">ZARA:</strong><span class="spoken-line"> That is a much better question.</span></p>
 <p>Milo has settled partly against Arin's boot. Arin shifts, unsure whether to move him.</p>
+<figure class="script-art" id="script-panel-04-4">
+  <a class="script-art-link" href="index.html#panel-04-4" aria-label="Return to Visual Storyboard, panel 04.4">
+    <span class="script-art-crop" style="aspect-ratio:1536/1024">
+      <img src="asset/images/page-04.png?v=a0a6b036e1" alt="Exactly five companions round a small campfire: young Arin, Mira, broad older Orin, red armored robot Zara, and quadrupedal golden Milo resting against Arin&#x27;s boot." width="1536" height="1024" style="left:-100%;top:-100%" loading="lazy" decoding="async">
+    </span>
+    <span class="script-art-caption">Visual Storyboard · Panel 04.4<span aria-hidden="true">↩</span></span>
+  </a>
+</figure>
+
 <p class="dialogue"><strong class="speaker">MILO:</strong><span class="spoken-line"> Is this uncomfortable?</span></p>
 <p class="dialogue"><strong class="speaker">ARIN:</strong><span class="spoken-line"> No.</span></p>
 <p class="dialogue"><strong class="speaker">MILO:</strong><span class="spoken-line"> Then stop holding your leg like that. It is making me uncomfortable.</span></p>
@@ -1084,6 +1251,15 @@ td:first-child {font-weight:600}
 <p class="cue play-cue"><strong>FLASHBACK / PLAY</strong></p>
 <p>Rain. A mountain causeway is breaking apart. Orin, already an experienced warrior but without lightning, reaches an old man trapped on the far side.</p>
 <p>The player crosses using movement, timing, and an ordinary rope. Do not place a lightning skill on the command menu.</p>
+<figure class="script-art" id="script-panel-05-1">
+  <a class="script-art-link" href="index.html#panel-05-1" aria-label="Return to Visual Storyboard, panel 05.1">
+    <span class="script-art-crop" style="aspect-ratio:1537/1023">
+      <img src="asset/images/page-05.png?v=bba0ed85f4" alt="Rain on a collapsing mountain bridge: younger broad Orin without lightning powers hauls a vulnerable old traveler and his case to safety with an ordinary rope." width="1537" height="1023" style="left:0%;top:0%" loading="lazy" decoding="async">
+    </span>
+    <span class="script-art-caption">Visual Storyboard · Panel 05.1<span aria-hidden="true">↩</span></span>
+  </a>
+</figure>
+
 <p class="dialogue"><strong class="speaker">OLD MAN:</strong><span class="spoken-line"> My case!</span></p>
 <p class="dialogue"><strong class="speaker">ORIN:</strong><span class="spoken-line"> Your legs first.</span></p>
 <p class="dialogue"><strong class="speaker">OLD MAN:</strong><span class="spoken-line"> You have no idea what is in that case.</span></p>
@@ -1120,6 +1296,15 @@ td:first-child {font-weight:600}
 <p class="dialogue"><strong class="speaker">MIRA:</strong><span class="spoken-line"> Move the surface. Don't lift the whole bowl.</span></p>
 <p>Arin concentrates. The bowl rises, turns, and empties over him.</p>
 <p>Zara moves her notes out of reach of the splash.</p>
+<figure class="script-art" id="script-panel-05-2">
+  <a class="script-art-link" href="index.html#panel-05-2" aria-label="Return to Visual Storyboard, panel 05.2">
+    <span class="script-art-crop" style="aspect-ratio:1537/1023">
+      <img src="asset/images/page-05.png?v=bba0ed85f4" alt="Safe padded ship practice bay: a bowl tips water onto embarrassed Arin while Mira calmly instructs and Zara moves notes from the splash." width="1537" height="1023" style="left:-100%;top:0%" loading="lazy" decoding="async">
+    </span>
+    <span class="script-art-caption">Visual Storyboard · Panel 05.2<span aria-hidden="true">↩</span></span>
+  </a>
+</figure>
+
 <p class="dialogue"><strong class="speaker">ZARA:</strong><span class="spoken-line"> The surface has moved considerably.</span></p>
 <p class="dialogue"><strong class="speaker">ARIN:</strong><span class="spoken-line"> Thank you.</span></p>
 <p class="dialogue"><strong class="speaker">MIRA:</strong><span class="spoken-line"> Again. Smaller.</span></p>
@@ -1158,6 +1343,15 @@ td:first-child {font-weight:600}
 <p class="dialogue"><strong class="speaker">ARIN:</strong><span class="spoken-line"> I didn't ask for a lesson.</span></p>
 <p class="dialogue"><strong class="speaker">KAEL:</strong><span class="spoken-line"> You need one.</span></p>
 <p>Arin reaches for his weapon. It returns to his hand before he touches it.</p>
+<figure class="script-art" id="script-panel-05-3">
+  <a class="script-art-link" href="index.html#panel-05-3" aria-label="Return to Visual Storyboard, panel 05.3">
+    <span class="script-art-crop" style="aspect-ratio:1537/1023">
+      <img src="asset/images/page-05.png?v=bba0ed85f4" alt="On a dark reflected dream floor, long silver-haired Kael effortlessly turns aside Arin&#x27;s water and fire strike with a small movement." width="1537" height="1023" style="left:0%;top:-100%" loading="lazy" decoding="async">
+    </span>
+    <span class="script-art-caption">Visual Storyboard · Panel 05.3<span aria-hidden="true">↩</span></span>
+  </a>
+</figure>
+
 <p class="dialogue"><strong class="speaker">KAEL:</strong><span class="spoken-line"> The Axiom. That is what you have been speaking.</span></p>
 <p class="dialogue"><strong class="speaker">ARIN:</strong><span class="spoken-line"> A spell?</span></p>
 <p class="dialogue"><strong class="speaker">KAEL:</strong><span class="spoken-line"> A spell is a small thing someone has learned to repeat. This is what the repetition is asking.</span></p>
@@ -1187,6 +1381,15 @@ td:first-child {font-weight:600}
 <p class="cue play-cue"><strong>PLAY</strong></p>
 <p>The party repairs an accessible heater loop and relocates residents before opening the damaged archive. Zara does not perform every task remotely; Milo finds a viable route, Orin braces an unsafe hatch, Mira manages exposure injuries, and Arin uses controlled heat under supervision.</p>
 <p>A child asks why his hand is shaking afterward.</p>
+<figure class="script-art" id="script-panel-05-4">
+  <a class="script-art-link" href="index.html#panel-05-4" aria-label="Return to Visual Storyboard, panel 05.4">
+    <span class="script-art-crop" style="aspect-ratio:1537/1023">
+      <img src="asset/images/page-05.png?v=bba0ed85f4" alt="A damaged remote station warmed by Arin&#x27;s carefully contained hand flame; Mira attends chilled families in blankets, Orin braces a hatch, Zara repairs a heater, Milo finds a low safe route." width="1537" height="1023" style="left:-100%;top:-100%" loading="lazy" decoding="async">
+    </span>
+    <span class="script-art-caption">Visual Storyboard · Panel 05.4<span aria-hidden="true">↩</span></span>
+  </a>
+</figure>
+
 <p class="dialogue"><strong class="speaker">ARIN:</strong><span class="spoken-line"> I'm learning.</span></p>
 <p class="dialogue"><strong class="speaker">CHILD:</strong><span class="spoken-line"> Are you bad at it?</span></p>
 <p class="dialogue"><strong class="speaker">ARIN:</strong><span class="spoken-line"> Less than yesterday.</span></p>
@@ -1205,6 +1408,15 @@ td:first-child {font-weight:600}
 <p>Zara compares timestamps, hull identifiers, and the surviving distress transmission.</p>
 <p class="dialogue"><strong class="speaker">ZARA:</strong><span class="spoken-line"> The clock offsets differ. Give me a moment.</span></p>
 <p>Arin grips the edge of the table.</p>
+<figure class="script-art" id="script-panel-06-1">
+  <a class="script-art-link" href="index.html#panel-06-1" aria-label="Return to Visual Storyboard, panel 06.1">
+    <span class="script-art-crop" style="aspect-ratio:1537/1023">
+      <img src="asset/images/page-06.png?v=7da7bf93f1" alt="Zara cross-checks two civilian ship records on a station screen, times and hull silhouettes aligned without readable text." width="1537" height="1023" style="left:0%;top:0%" loading="lazy" decoding="async">
+    </span>
+    <span class="script-art-caption">Visual Storyboard · Panel 06.1<span aria-hidden="true">↩</span></span>
+  </a>
+</figure>
+
 <p class="dialogue"><strong class="speaker">ARIN:</strong><span class="spoken-line"> Is it the same ship?</span></p>
 <p class="dialogue"><strong class="speaker">ZARA:</strong><span class="spoken-line"> I think so. I want to know before I tell you.</span></p>
 <p>She finishes the comparison. The distress call ends on a syllable Arin remembers hearing in his sleep.</p>
@@ -1226,6 +1438,15 @@ td:first-child {font-weight:600}
 <strong>Source / review:</strong> S09. Zara does not owe him comfort while he blames her.</p>
 <p class="cue scene-cue"><strong>SCENE</strong></p>
 <p>Zara approaches carrying a copy of the verified records.</p>
+<figure class="script-art" id="script-panel-06-2">
+  <a class="script-art-link" href="index.html#panel-06-2" aria-label="Return to Visual Storyboard, panel 06.2">
+    <span class="script-art-crop" style="aspect-ratio:1537/1023">
+      <img src="asset/images/page-06.png?v=7da7bf93f1" alt="At a dusk station shelter, angry grieving Arin faces rigid red robotic Zara who sets verified records down between them and turns away." width="1537" height="1023" style="left:-100%;top:0%" loading="lazy" decoding="async">
+    </span>
+    <span class="script-art-caption">Visual Storyboard · Panel 06.2<span aria-hidden="true">↩</span></span>
+  </a>
+</figure>
+
 <p class="dialogue"><strong class="speaker">ZARA:</strong><span class="spoken-line"> You should have your own copy. The station's archive is not reliable enough to be the only one.</span></p>
 <p class="dialogue"><strong class="speaker">ARIN:</strong><span class="spoken-line"> How many more are there?</span></p>
 <p class="dialogue"><strong class="speaker">ZARA:</strong><span class="spoken-line"> Records?</span></p>
@@ -1257,6 +1478,15 @@ td:first-child {font-weight:600}
 <p>A recurring relay fault triggers old wartime security routines. The station chief proposes disconnecting every artificial resident from shared systems and clearing their working memory before reconnection.</p>
 <p class="dialogue"><strong class="speaker">CHIEF:</strong><span class="spoken-line"> I am not taking chances after what we found in that archive.</span></p>
 <p>Zara stands beside an artificial maintenance worker who has kept the residents' heating operational all winter.</p>
+<figure class="script-art" id="script-panel-06-3">
+  <a class="script-art-link" href="index.html#panel-06-3" aria-label="Return to Visual Storyboard, panel 06.3">
+    <span class="script-art-crop" style="aspect-ratio:1537/1023">
+      <img src="asset/images/page-06.png?v=7da7bf93f1" alt="A human station chief reaches toward a mass memory-reset console while Arin firmly blocks the action with an open hand." width="1537" height="1023" style="left:0%;top:-100%" loading="lazy" decoding="async">
+    </span>
+    <span class="script-art-caption">Visual Storyboard · Panel 06.3<span aria-hidden="true">↩</span></span>
+  </a>
+</figure>
+
 <p class="dialogue"><strong class="speaker">ARIN:</strong><span class="spoken-line"> The archive named a combat unit.</span></p>
 <p class="dialogue"><strong class="speaker">CHIEF:</strong><span class="spoken-line"> You know what they can do.</span></p>
 <p class="dialogue"><strong class="speaker">ARIN:</strong><span class="spoken-line"> I know what that unit did.</span></p>
@@ -1277,6 +1507,15 @@ td:first-child {font-weight:600}
 <strong>Source / review:</strong> S09. An apology names the wrong, does not excuse it through grief, and allows Zara to set the pace.</p>
 <p class="cue scene-cue"><strong>SCENE</strong></p>
 <p>Zara is checking a cracked tool housing. Arin waits until she puts it down.</p>
+<figure class="script-art" id="script-panel-06-4">
+  <a class="script-art-link" href="index.html#panel-06-4" aria-label="Return to Visual Storyboard, panel 06.4">
+    <span class="script-art-crop" style="aspect-ratio:1537/1023">
+      <img src="asset/images/page-06.png?v=7da7bf93f1" alt="Quiet cargo ramp morning: Arin has placed a corrected report beside Zara and holds one side of a cracked tool housing while she repairs it." width="1537" height="1023" style="left:-100%;top:-100%" loading="lazy" decoding="async">
+    </span>
+    <span class="script-art-caption">Visual Storyboard · Panel 06.4<span aria-hidden="true">↩</span></span>
+  </a>
+</figure>
+
 <p class="dialogue"><strong class="speaker">ARIN:</strong><span class="spoken-line"> I blamed you for something you didn't do.</span></p>
 <p>She waits.</p>
 <p class="dialogue"><strong class="speaker">ARIN:</strong><span class="spoken-line"> I knew you before I opened that record. I let it turn you into someone easier to be angry at.</span></p>
@@ -1312,17 +1551,44 @@ td:first-child {font-weight:600}
 <p class="dialogue"><strong class="speaker">KAEL:</strong><span class="spoken-line"> You brought everyone.</span></p>
 <p class="dialogue"><strong class="speaker">ARIN:</strong><span class="spoken-line"> They came.</span></p>
 <p>Kael opens the observatory's view. A dead world appears beyond its field. With a quiet utterance he kindles a band of light across its atmosphere.</p>
+<figure class="script-art" id="script-panel-07-1">
+  <a class="script-art-link" href="index.html#panel-07-1" aria-label="Return to Visual Storyboard, panel 07.1">
+    <span class="script-art-crop" style="aspect-ratio:1537/1023">
+      <img src="asset/images/page-07.png?v=d279285071" alt="In an ancient observatory, Kael calmly gestures toward a dead planet through an enormous viewing ring; a narrow warm band spreads across its cold atmosphere." width="1537" height="1023" style="left:0%;top:0%" loading="lazy" decoding="async">
+    </span>
+    <span class="script-art-caption">Visual Storyboard · Panel 07.1<span aria-hidden="true">↩</span></span>
+  </a>
+</figure>
+
 <p class="dialogue"><strong class="speaker">KAEL:</strong><span class="spoken-line"> I can warm it. Give it oceans. Wait for life, or place life there. I have done all of those things.</span></p>
 <p class="dialogue"><strong class="speaker">MIRA:</strong><span class="spoken-line"> And the people already living on other worlds?</span></p>
 <p class="dialogue"><strong class="speaker">KAEL:</strong><span class="spoken-line"> I have fed them. Healed them. Defended them. I can address a crisis. I cannot make the laws stop producing new ones.</span></p>
 <p>He turns to Arin.</p>
 <p class="dialogue"><strong class="speaker">KAEL:</strong><span class="spoken-line"> One of my children lived before your oldest surviving histories. The line continued. Across worlds, across names. Eventually, you.</span></p>
 <p>Arin searches his face for a joke that does not arrive.</p>
+<figure class="script-art" id="script-panel-07-2">
+  <a class="script-art-link" href="index.html#panel-07-2" aria-label="Return to Visual Storyboard, panel 07.2">
+    <span class="script-art-crop" style="aspect-ratio:1537/1023">
+      <img src="asset/images/page-07.png?v=d279285071" alt="Close two-shot Kael silver-haired ancient-looking but youthful, Arin brown-haired surprised." width="1537" height="1023" style="left:-100%;top:0%" loading="lazy" decoding="async">
+    </span>
+    <span class="script-art-caption">Visual Storyboard · Panel 07.2<span aria-hidden="true">↩</span></span>
+  </a>
+</figure>
+
 <p class="dialogue"><strong class="speaker">ARIN:</strong><span class="spoken-line"> You're saying I'm you?</span></p>
 <p class="dialogue"><strong class="speaker">KAEL:</strong><span class="spoken-line"> No. You are what came after. I have never seen my own authority emerge in another life this way.</span></p>
 <p class="dialogue"><strong class="speaker">ZARA:</strong><span class="spoken-line"> Authority is not the same as agreement.</span></p>
 <p class="dialogue"><strong class="speaker">KAEL:</strong><span class="spoken-line"> It need not be. Not yet.</span></p>
 <p>He explains the Second Dawn: two compatible speakers may reach the Origin and rewrite conditions that have defeated his attempts from within.</p>
+<figure class="script-art" id="script-panel-07-3">
+  <a class="script-art-link" href="index.html#panel-07-3" aria-label="Return to Visual Storyboard, panel 07.3">
+    <span class="script-art-crop" style="aspect-ratio:1537/1023">
+      <img src="asset/images/page-07.png?v=d279285071" alt="Mira and four-legged golden Milo confront Kael across an observatory table, Zara and Orin attentive." width="1537" height="1023" style="left:0%;top:-100%" loading="lazy" decoding="async">
+    </span>
+    <span class="script-art-caption">Visual Storyboard · Panel 07.3<span aria-hidden="true">↩</span></span>
+  </a>
+</figure>
+
 <p class="dialogue"><strong class="speaker">ARIN:</strong><span class="spoken-line"> What happens to everyone here?</span></p>
 <p class="dialogue"><strong class="speaker">KAEL:</strong><span class="spoken-line"> I would preserve what I could.</span></p>
 <p class="dialogue"><strong class="speaker">ARIN:</strong><span class="spoken-line"> That wasn't the question.</span></p>
@@ -1332,6 +1598,15 @@ td:first-child {font-weight:600}
 <p class="dialogue"><strong class="speaker">KAEL:</strong><span class="spoken-line"> I know what loss is.</span></p>
 <p class="dialogue"><strong class="speaker">ARIN:</strong><span class="spoken-line"> Then you know why I'm not giving you theirs.</span></p>
 <p>Kael looks at him, wounded more than enraged.</p>
+<figure class="script-art" id="script-panel-07-4">
+  <a class="script-art-link" href="index.html#panel-07-4" aria-label="Return to Visual Storyboard, panel 07.4">
+    <span class="script-art-crop" style="aspect-ratio:1537/1023">
+      <img src="asset/images/page-07.png?v=d279285071" alt="Arin stands with all four companions, resolute rather than aggressive; Kael alone beside the open observatory ring, wounded by the refusal." width="1537" height="1023" style="left:-100%;top:-100%" loading="lazy" decoding="async">
+    </span>
+    <span class="script-art-caption">Visual Storyboard · Panel 07.4<span aria-hidden="true">↩</span></span>
+  </a>
+</figure>
+
 <p class="dialogue"><strong class="speaker">KAEL:</strong><span class="spoken-line"> You have one life with which to judge this.</span></p>
 <p class="dialogue"><strong class="speaker">ARIN:</strong><span class="spoken-line"> It's the one I have.</span></p>
 <p class="dialogue"><strong class="speaker">KAEL:</strong><span class="spoken-line"> Let me show you why I am asking before you refuse forever.</span></p>
@@ -1352,6 +1627,15 @@ td:first-child {font-weight:600}
 <p>A resident has heard the surname.</p>
 <p class="dialogue"><strong class="speaker">RESIDENT:</strong><span class="spoken-line"> Your village got the flour.</span></p>
 <p>Orin does not deny it.</p>
+<figure class="script-art" id="script-panel-08-1">
+  <a class="script-art-link" href="index.html#panel-08-1" aria-label="Return to Visual Storyboard, panel 08.1">
+    <span class="script-art-crop" style="aspect-ratio:1537/1023">
+      <img src="asset/images/page-08.png?v=1b657ffe0a" alt="East Valley with empty house foundations and a modest famine memorial, not a battlefield." width="1537" height="1023" style="left:0%;top:0%" loading="lazy" decoding="async">
+    </span>
+    <span class="script-art-caption">Visual Storyboard · Panel 08.1<span aria-hidden="true">↩</span></span>
+  </a>
+</figure>
+
 <p class="dialogue"><strong class="speaker">ORIN:</strong><span class="spoken-line"> Yes.</span></p>
 <p class="dialogue"><strong class="speaker">RESIDENT:</strong><span class="spoken-line"> We kept sending someone to the road. Every afternoon.</span></p>
 <p class="dialogue"><strong class="speaker">ARIN:</strong><span class="spoken-line"> His father kept their village alive.</span></p>
@@ -1392,6 +1676,15 @@ td:first-child {font-weight:600}
 <p class="dialogue"><strong class="speaker">ORIN:</strong><span class="spoken-line"> I know where the house is.</span></p>
 <p class="dialogue"><strong class="speaker">ARIN:</strong><span class="spoken-line"> I would give anything—</span></p>
 <p>He stops, but not soon enough.</p>
+<figure class="script-art" id="script-panel-08-2">
+  <a class="script-art-link" href="index.html#panel-08-2" aria-label="Return to Visual Storyboard, panel 08.2">
+    <span class="script-art-crop" style="aspect-ratio:1537/1023">
+      <img src="asset/images/page-08.png?v=1b657ffe0a" alt="In a living modest village, Orin&#x27;s sister embraces her broad armored brother." width="1537" height="1023" style="left:-100%;top:0%" loading="lazy" decoding="async">
+    </span>
+    <span class="script-art-caption">Visual Storyboard · Panel 08.2<span aria-hidden="true">↩</span></span>
+  </a>
+</figure>
+
 <p class="dialogue"><strong class="speaker">ORIN:</strong><span class="spoken-line"> I am not asking you to stop missing your parents. Don't ask me to pretend you know mine.</span></p>
 <p>Arin looks toward the repaired door.</p>
 <p class="dialogue"><strong class="speaker">ARIN:</strong><span class="spoken-line"> You're right. I don't.</span></p>
@@ -1413,6 +1706,15 @@ td:first-child {font-weight:600}
 <p>She unfolds the permitted page.</p>
 <p class="dialogue"><strong class="speaker">MOTHER, letter:</strong><span class="spoken-line"> You wrote about everyone in the village and nothing about whether you are eating. I know what that means. The first rain came yesterday. I wanted to complain about it to you. I miss having someone who already knows what I am going to say.</span></p>
 <p>Orin looks away while his sister refolds it.</p>
+<figure class="script-art" id="script-panel-08-3">
+  <a class="script-art-link" href="index.html#panel-08-3" aria-label="Return to Visual Storyboard, panel 08.3">
+    <span class="script-art-crop" style="aspect-ratio:1537/1023">
+      <img src="asset/images/page-08.png?v=1b657ffe0a" alt="Lamplit sister&#x27;s house: she unfolds only one permitted page from a private letter for Orin." width="1537" height="1023" style="left:0%;top:-100%" loading="lazy" decoding="async">
+    </span>
+    <span class="script-art-caption">Visual Storyboard · Panel 08.3<span aria-hidden="true">↩</span></span>
+  </a>
+</figure>
+
 <p class="dialogue"><strong class="speaker">ORIN:</strong><span class="spoken-line"> I thought she had left him.</span></p>
 <p class="dialogue"><strong class="speaker">SISTER:</strong><span class="spoken-line"> She left the house.</span></p>
 <p>A pause.</p>
@@ -1438,6 +1740,15 @@ td:first-child {font-weight:600}
 <p>They remain standing.</p>
 <p class="dialogue"><strong class="speaker">ORIN:</strong><span class="spoken-line"> I went to East Valley.</span></p>
 <p>His father lowers his eyes briefly.</p>
+<figure class="script-art" id="script-panel-08-4">
+  <a class="script-art-link" href="index.html#panel-08-4" aria-label="Return to Visual Storyboard, panel 08.4">
+    <span class="script-art-crop" style="aspect-ratio:1537/1023">
+      <img src="asset/images/page-08.png?v=1b657ffe0a" alt="Father&#x27;s modest kitchen: an older worn former officer stands opposite his son Orin, a clean uniform coat inside an open cupboard." width="1537" height="1023" style="left:-100%;top:-100%" loading="lazy" decoding="async">
+    </span>
+    <span class="script-art-caption">Visual Storyboard · Panel 08.4<span aria-hidden="true">↩</span></span>
+  </a>
+</figure>
+
 <p class="dialogue"><strong class="speaker">FATHER:</strong><span class="spoken-line"> Then you heard them.</span></p>
 <p class="dialogue"><strong class="speaker">ORIN:</strong><span class="spoken-line"> You were ordered to deliver the supplies.</span></p>
 <p class="dialogue"><strong class="speaker">FATHER:</strong><span class="spoken-line"> Food. Ammunition. Equipment. Yes.</span></p>
@@ -1453,6 +1764,15 @@ td:first-child {font-weight:600}
 <p class="dialogue"><strong class="speaker">FATHER:</strong><span class="spoken-line"> I can name the families I fed. I cannot give you an honest number for everyone harmed by what I took. That used to let me turn away from the question. It doesn't anymore.</span></p>
 <p class="dialogue"><strong class="speaker">ORIN:</strong><span class="spoken-line"> Would you do it again?</span></p>
 <p>His father looks directly at him.</p>
+<figure class="script-art" id="script-panel-09-1">
+  <a class="script-art-link" href="index.html#panel-09-1" aria-label="Return to Visual Storyboard, panel 09.1">
+    <span class="script-art-crop" style="aspect-ratio:1537/1023">
+      <img src="asset/images/page-09.png?v=f66babb2b7" alt="At the same kitchen table, Orin&#x27;s father speaks with painful sincerity, open empty hands." width="1537" height="1023" style="left:0%;top:0%" loading="lazy" decoding="async">
+    </span>
+    <span class="script-art-caption">Visual Storyboard · Panel 09.1<span aria-hidden="true">↩</span></span>
+  </a>
+</figure>
+
 <p class="dialogue"><strong class="speaker">FATHER:</strong><span class="spoken-line"> I would do it again to keep you alive.</span></p>
 <p>A long pause. He does not try to fill it with the crimes of other officers.</p>
 <p class="dialogue"><strong class="speaker">FATHER:</strong><span class="spoken-line"> But now... I'm not so sure if I did the right thing. And for that, I am sorry, my son. Please forgive me.</span></p>
@@ -1486,10 +1806,28 @@ td:first-child {font-weight:600}
 <p class="dialogue"><strong class="speaker">MARSHAL:</strong><span class="spoken-line"> You cannot govern by letting every frightened district set its own demands.</span></p>
 <p class="dialogue"><strong class="speaker">MIRA:</strong><span class="spoken-line"> And you cannot call a report false because it names something you chose not to fix.</span></p>
 <p>He attempts to seize the convoy and close the depot. Some officers refuse; others follow him. The conflict is not “the party against every Neris soldier.”</p>
+<figure class="script-art" id="script-panel-09-3">
+  <a class="script-art-link" href="index.html#panel-09-3" aria-label="Return to Visual Storyboard, panel 09.3">
+    <span class="script-art-crop" style="aspect-ratio:1537/1023">
+      <img src="asset/images/page-09.png?v=f66babb2b7" alt="Neris relief depot: Orin shields unarmed record carriers and civilians while Mira coordinates loyal officers protecting loaded supply carts." width="1537" height="1023" style="left:0%;top:-100%" loading="lazy" decoding="async">
+    </span>
+    <span class="script-art-caption">Visual Storyboard · Panel 09.3<span aria-hidden="true">↩</span></span>
+  </a>
+</figure>
+
 <p class="cue play-cue"><strong>PLAY</strong></p>
 <p>A contained depot encounter protects civilians, fuel lines, and evidence carriers. Orin commands an evacuation rather than directing indiscriminate attacks on former comrades. Mira's authority helps coordinate loyal personnel but does not make every command instantly obeyed.</p>
 <p>The marshal is disarmed and placed under authorized guard. His exact eventual legal outcome remains outside the draft's immediate scope.</p>
 <p>Afterward, an investigator compares the stalled case with the wider diversion records and corroborating testimony. Orin's father was never formally charged because prosecution would have exposed deeper corruption within the military. The suppression protected the institution; it did not establish his innocence. The exact responsible officials and the route of the original scandal's exposure remain open details.</p>
+<figure class="script-art" id="script-panel-09-2">
+  <a class="script-art-link" href="index.html#panel-09-2" aria-label="Return to Visual Storyboard, panel 09.2">
+    <span class="script-art-crop" style="aspect-ratio:1537/1023">
+      <img src="asset/images/page-09.png?v=f66babb2b7" alt="Neris investigator lays an unfiled prosecution folder beside diversion ledgers leading to several private military stores." width="1537" height="1023" style="left:-100%;top:0%" loading="lazy" decoding="async">
+    </span>
+    <span class="script-art-caption">Visual Storyboard · Panel 09.2<span aria-hidden="true">↩</span></span>
+  </a>
+</figure>
+
 <p class="dialogue"><strong class="speaker">MIRA:</strong><span class="spoken-line"> Put the suppression in the report. Prosecuting him would have exposed the wider corruption. That does not make him innocent.</span></p>
 <p class="dialogue"><strong class="speaker">QUEEN:</strong><span class="spoken-line"> And your father and I will answer for what reached us, and what we failed to ask for.</span></p>
 <p class="editorial-note"><strong>REVIEW:</strong> This admission begins accountability; it is not a royal absolution scene. The final game should decide what the monarchs knew and when.</p>
@@ -1508,6 +1846,15 @@ td:first-child {font-weight:600}
 <p class="dialogue"><strong class="speaker">ORIN:</strong><span class="spoken-line"> I don't know all of that yet.</span></p>
 <p class="dialogue"><strong class="speaker">ARIN:</strong><span class="spoken-line"> All right.</span></p>
 <p>Orin looks toward his father near the fence.</p>
+<figure class="script-art" id="script-panel-09-4">
+  <a class="script-art-link" href="index.html#panel-09-4" aria-label="Return to Visual Storyboard, panel 09.4">
+    <span class="script-art-crop" style="aspect-ratio:1537/1023">
+      <img src="asset/images/page-09.png?v=f66babb2b7" alt="At a late-afternoon departure field, Orin holds a reply from his mother and looks toward his father standing at the fence with a signed account." width="1537" height="1023" style="left:-100%;top:-100%" loading="lazy" decoding="async">
+    </span>
+    <span class="script-art-caption">Visual Storyboard · Panel 09.4<span aria-hidden="true">↩</span></span>
+  </a>
+</figure>
+
 <p class="dialogue"><strong class="speaker">ORIN:</strong><span class="spoken-line"> I said I would write.</span></p>
 <p>Arin follows his gaze, then deliberately looks away so the moment can belong to them.</p>
 <p class="dialogue"><strong class="speaker">ORIN:</strong><span class="spoken-line"> Thank you for waiting.</span></p>
@@ -1529,6 +1876,15 @@ td:first-child {font-weight:600}
 <p class="cue scene-cue"><strong>SCENE</strong></p>
 <p>The route Kael revealed brings them to Earth. There is time for a short town walk before the observatory opens.</p>
 <p>Milo exchanges a cautious greeting with an ordinary Earth dog. His translator does not turn the other dog's sounds into fluent Kynari speech. They still understand enough to investigate one another.</p>
+<figure class="script-art" id="script-panel-10-1">
+  <a class="script-art-link" href="index.html#panel-10-1" aria-label="Return to Visual Storyboard, panel 10.1">
+    <span class="script-art-crop" style="aspect-ratio:1537/1023">
+      <img src="asset/images/page-10.png?v=e42b0a4e0d" alt="On an ordinary Earth observatory hillside town path, armored quadrupedal Milo politely sniffs a smaller unarmored Earth dog beside its human." width="1537" height="1023" style="left:0%;top:0%" loading="lazy" decoding="async">
+    </span>
+    <span class="script-art-caption">Visual Storyboard · Panel 10.1<span aria-hidden="true">↩</span></span>
+  </a>
+</figure>
+
 <p class="dialogue"><strong class="speaker">ARIN:</strong><span class="spoken-line"> Can you talk to him?</span></p>
 <p class="dialogue"><strong class="speaker">MILO:</strong><span class="spoken-line"> Not about the observatory.</span></p>
 <p>The other dog settles beside its human companion.</p>
@@ -1562,6 +1918,15 @@ td:first-child {font-weight:600}
 <p>Kael marks the records separately.</p>
 <p class="dialogue"><strong class="speaker">KAEL:</strong><span class="spoken-line"> These lived. These were projections.</span></p>
 <p>A world without food scarcity still suffered political violence. Another reduced disease but displaced its poor during a rapid expansion. A third flourished for a long time, then collapsed after an event his interventions did not prevent.</p>
+<figure class="script-art" id="script-panel-10-2">
+  <a class="script-art-link" href="index.html#panel-10-2" aria-label="Return to Visual Storyboard, panel 10.2">
+    <span class="script-art-crop" style="aspect-ratio:1537/1023">
+      <img src="asset/images/page-10.png?v=e42b0a4e0d" alt="Observatory records chamber: Kael displays miniature histories of an abundant garden city and its later ruins in separate windows; Zara distinguishes a wireframe prediction from a lived record." width="1537" height="1023" style="left:-100%;top:0%" loading="lazy" decoding="async">
+    </span>
+    <span class="script-art-caption">Visual Storyboard · Panel 10.2<span aria-hidden="true">↩</span></span>
+  </a>
+</figure>
+
 <p class="dialogue"><strong class="speaker">MIRA:</strong><span class="spoken-line"> This one improved.</span></p>
 <p class="dialogue"><strong class="speaker">KAEL:</strong><span class="spoken-line"> For nine centuries.</span></p>
 <p class="dialogue"><strong class="speaker">MIRA:</strong><span class="spoken-line"> That is not an insignificant amount of healing.</span></p>
@@ -1618,6 +1983,15 @@ td:first-child {font-weight:600}
 <p>The field loses coherence when Zara attempts a noninvasive transfer.</p>
 <p class="dialogue"><strong class="speaker">ZARA:</strong><span class="spoken-line"> Stop. We are disturbing whatever is still there.</span></p>
 <p>Arin removes his hand.</p>
+<figure class="script-art" id="script-panel-10-3">
+  <a class="script-art-link" href="index.html#panel-10-3" aria-label="Return to Visual Storyboard, panel 10.3">
+    <span class="script-art-crop" style="aspect-ratio:1537/1023">
+      <img src="asset/images/page-10.png?v=e42b0a4e0d" alt="Vast nonhuman archive with layered cosmic iteration rings, ancestral migration traces and evolving light patterns." width="1537" height="1023" style="left:0%;top:-100%" loading="lazy" decoding="async">
+    </span>
+    <span class="script-art-caption">Visual Storyboard · Panel 10.3<span aria-hidden="true">↩</span></span>
+  </a>
+</figure>
+
 <p class="dialogue"><strong class="speaker">MIRA:</strong><span class="spoken-line"> Was that a recording?</span></p>
 <p class="dialogue"><strong class="speaker">ZARA:</strong><span class="spoken-line"> It answered something no recording here could have anticipated. Beyond that, I won't promise you what it was.</span></p>
 <p class="dialogue"><strong class="speaker">ARIN:</strong><span class="spoken-line"> Can we bring someone back?</span></p>
@@ -1642,6 +2016,15 @@ td:first-child {font-weight:600}
 <p class="dialogue"><strong class="speaker">MIRA:</strong><span class="spoken-line"> You think?</span></p>
 <p class="dialogue"><strong class="speaker">ZARA:</strong><span class="spoken-line"> Yes. We verify before touching either.</span></p>
 <p>Arin looks at the others.</p>
+<figure class="script-art" id="script-panel-10-4">
+  <a class="script-art-link" href="index.html#panel-10-4" aria-label="Return to Visual Storyboard, panel 10.4">
+    <span class="script-art-crop" style="aspect-ratio:1537/1023">
+      <img src="asset/images/page-10.png?v=e42b0a4e0d" alt="Warm familiar ship common room: all five companions around a practical gateway map and supply ledger." width="1537" height="1023" style="left:-100%;top:-100%" loading="lazy" decoding="async">
+    </span>
+    <span class="script-art-caption">Visual Storyboard · Panel 10.4<span aria-hidden="true">↩</span></span>
+  </a>
+</figure>
+
 <p class="dialogue"><strong class="speaker">ARIN:</strong><span class="spoken-line"> I don't know if we can stop him. I know I can't do it alone.</span></p>
 <p class="dialogue"><strong class="speaker">ORIN:</strong><span class="spoken-line"> You finally asked the useful question.</span></p>
 <p class="dialogue"><strong class="speaker">ARIN:</strong><span class="spoken-line"> I haven't asked yet.</span></p>
@@ -1681,6 +2064,15 @@ td:first-child {font-weight:600}
 <p class="dialogue"><strong class="speaker">ARIN:</strong><span class="spoken-line"> Will they manage?</span></p>
 <p class="dialogue"><strong class="speaker">MIRA:</strong><span class="spoken-line"> Not perfectly. They know what to do next. I have to let that be true without standing beside every desk.</span></p>
 <p>He sits on the other end of the bench.</p>
+<figure class="script-art" id="script-panel-11-1">
+  <a class="script-art-link" href="index.html#panel-11-1" aria-label="Return to Visual Storyboard, panel 11.1">
+    <span class="script-art-crop" style="aspect-ratio:1536/1024">
+      <img src="asset/images/page-11.png?v=48ddcbe5e3" alt="Last safe port at dusk: Arin and Mira sit at opposite ends of a bench with warm space between them." width="1536" height="1024" style="left:0%;top:0%" loading="lazy" decoding="async">
+    </span>
+    <span class="script-art-caption">Visual Storyboard · Panel 11.1<span aria-hidden="true">↩</span></span>
+  </a>
+</figure>
+
 <p class="dialogue"><strong class="speaker">ARIN:</strong><span class="spoken-line"> When we get back, I'd like to see the kingdom in daylight.</span></p>
 <p class="dialogue"><strong class="speaker">MIRA:</strong><span class="spoken-line"> You saw it in daylight.</span></p>
 <p class="dialogue"><strong class="speaker">ARIN:</strong><span class="spoken-line"> Without a contract. Or someone bleeding on us.</span></p>
@@ -1706,6 +2098,15 @@ td:first-child {font-weight:600}
 <p>Ancient structures surround a region that refuses to resolve cleanly through the viewport. The stars behind it remain fixed while rings of the approach slowly rotate.</p>
 <p>Milo lays out navigation nodes at different heights with harness tools. Zara adapts their translator to the gateway's changing references. Orin and Arin secure the physical route. Mira monitors the field's effect on bodies and instruments.</p>
 <p>A small unmanned probe enters a shallow boundary pocket and returns. Its protected clock matches the ship's elapsed time. An unprotected test oscillator does not.</p>
+<figure class="script-art" id="script-panel-11-2">
+  <a class="script-art-link" href="index.html#panel-11-2" aria-label="Return to Visual Storyboard, panel 11.2">
+    <span class="script-art-crop" style="aspect-ratio:1536/1024">
+      <img src="asset/images/page-11.png?v=48ddcbe5e3" alt="At immense ancient physical gateway rings under stars, Milo places low navigation nodes using harness tools; Zara retrieves a small unmanned probe near two synchronized clock indicators with no text." width="1536" height="1024" style="left:-100%;top:0%" loading="lazy" decoding="async">
+    </span>
+    <span class="script-art-caption">Visual Storyboard · Panel 11.2<span aria-hidden="true">↩</span></span>
+  </a>
+</figure>
+
 <p class="dialogue"><strong class="speaker">MILO:</strong><span class="spoken-line"> We take our measure of time with us. Like keeping a path marked behind you.</span></p>
 <p class="dialogue"><strong class="speaker">ARIN:</strong><span class="spoken-line"> So nothing outside stops while we're there?</span></p>
 <p class="dialogue"><strong class="speaker">ZARA:</strong><span class="spoken-line"> Nothing stops. If we spend an hour together, approximately an hour passes at home. No extra billion years, no returning before we left.</span></p>
@@ -1742,6 +2143,15 @@ td:first-child {font-weight:600}
 <p class="dialogue"><strong class="speaker">KAEL:</strong><span class="spoken-line"> I cannot make the change without another living will that can hold it with me. Not a recording. Not an imitation I create to agree with me. You are the first.</span></p>
 <p class="dialogue"><strong class="speaker">ZARA:</strong><span class="spoken-line"> And his answer is no.</span></p>
 <p>Kael's gaze stays on Arin.</p>
+<figure class="script-art" id="script-panel-11-3">
+  <a class="script-art-link" href="index.html#panel-11-3" aria-label="Return to Visual Storyboard, panel 11.3">
+    <span class="script-art-crop" style="aspect-ratio:1536/1024">
+      <img src="asset/images/page-11.png?v=48ddcbe5e3" alt="Gateway control chamber: separate steady cyan sustaining column and bright violet access ring with two channels, one lit." width="1536" height="1024" style="left:0%;top:-100%" loading="lazy" decoding="async">
+    </span>
+    <span class="script-art-caption">Visual Storyboard · Panel 11.3<span aria-hidden="true">↩</span></span>
+  </a>
+</figure>
+
 <p class="dialogue"><strong class="speaker">KAEL:</strong><span class="spoken-line"> Please.</span></p>
 <p>Arin's answer is quiet.</p>
 <p class="dialogue"><strong class="speaker">ARIN:</strong><span class="spoken-line"> Not this way.</span></p>
@@ -1756,6 +2166,15 @@ td:first-child {font-weight:600}
 <p>Arin steps forward and catches the first Axiom strike. The stance resembles his dreams.</p>
 <p>It fails in the same way.</p>
 <p>Orin catches his shoulder before he falls.</p>
+<figure class="script-art" id="script-panel-11-4">
+  <a class="script-art-link" href="index.html#panel-11-4" aria-label="Return to Visual Storyboard, panel 11.4">
+    <span class="script-art-crop" style="aspect-ratio:1536/1024">
+      <img src="asset/images/page-11.png?v=48ddcbe5e3" alt="Arin lunges alone at Kael on reflected gateway floor and is knocked off balance; broad Orin catches his shoulder with shield ready." width="1536" height="1024" style="left:-100%;top:-100%" loading="lazy" decoding="async">
+    </span>
+    <span class="script-art-caption">Visual Storyboard · Panel 11.4<span aria-hidden="true">↩</span></span>
+  </a>
+</figure>
+
 <p class="dialogue"><strong class="speaker">ORIN:</strong><span class="spoken-line"> Not that arrangement.</span></p>
 <p>Mira anchors the displaced air and water around them. Zara calls out the sequence of the access focuses. Milo marks a route across the shifting floor that remains within the synchronized field.</p>
 <p class="cue play-cue"><strong>PLAY — THREE FOCUSES</strong></p>
@@ -1768,6 +2187,15 @@ td:first-child {font-weight:600}
 <p>Orin blocks the counterattack. Mira restores the group's footing. Milo completes the safe route to the final focus, and Zara releases its supervisory lock.</p>
 <p>The third focus goes dark.</p>
 <p>Kael staggers away from the interface. His active command breaks. The party has forced him to stop.</p>
+<figure class="script-art" id="script-panel-12-1">
+  <a class="script-art-link" href="index.html#panel-12-1" aria-label="Return to Visual Storyboard, panel 12.1">
+    <span class="script-art-crop" style="aspect-ratio:1537/1023">
+      <img src="asset/images/page-12.png?v=cc5f560897" alt="Final of three access focuses extinguishes as Zara releases a contact reached via Milo&#x27;s blue route, Orin blocks Kael&#x27;s counterstrike, Mira braces the group and Arin redirects a current at the focus." width="1537" height="1023" style="left:0%;top:0%" loading="lazy" decoding="async">
+    </span>
+    <span class="script-art-caption">Visual Storyboard · Panel 12.1<span aria-hidden="true">↩</span></span>
+  </a>
+</figure>
+
 <p class="dialogue"><strong class="speaker">KAEL:</strong><span class="spoken-line"> All that power. And you spend it refusing me.</span></p>
 <p>Arin is barely standing.</p>
 <p class="dialogue"><strong class="speaker">ARIN:</strong><span class="spoken-line"> It's mine to refuse with.</span></p>
@@ -1786,11 +2214,29 @@ td:first-child {font-weight:600}
 <p>The sound is clear for the first time. Its intended meaning is shown in the action, not treated as a finalized English incantation.</p>
 <p><strong>INTENT: HOLD.</strong></p>
 <p>The broken floor stops falling.</p>
+<figure class="script-art" id="script-panel-12-2">
+  <a class="script-art-link" href="index.html#panel-12-2" aria-label="Return to Visual Storyboard, panel 12.2">
+    <span class="script-art-crop" style="aspect-ratio:1537/1023">
+      <img src="asset/images/page-12.png?v=cc5f560897" alt="Gateway floor folds inward beneath Mira and four-legged Milo." width="1537" height="1023" style="left:-100%;top:0%" loading="lazy" decoding="async">
+    </span>
+    <span class="script-art-caption">Visual Storyboard · Panel 12.2<span aria-hidden="true">↩</span></span>
+  </a>
+</figure>
+
 <p>Then the second channel lights.</p>
 <p>Kael looks at it in genuine surprise.</p>
 <p class="dialogue"><strong class="speaker">KAEL:</strong><span class="spoken-line"> Two voices.</span></p>
 <p class="dialogue"><strong class="speaker">ZARA:</strong><span class="spoken-line"> It wasn't asking whether you agreed.</span></p>
 <p>An inscription resolves into a function the archive did not fully preserve: access requires independent compatible authority. Arin's protective command has completed it against Kael's lingering one.</p>
+<figure class="script-art" id="script-panel-12-3">
+  <a class="script-art-link" href="index.html#panel-12-3" aria-label="Return to Visual Storyboard, panel 12.3">
+    <span class="script-art-crop" style="aspect-ratio:1537/1023">
+      <img src="asset/images/page-12.png?v=cc5f560897" alt="Two distinct cyan and violet living channels light the gateway ring from Arin and Kael." width="1537" height="1023" style="left:0%;top:-100%" loading="lazy" decoding="async">
+    </span>
+    <span class="script-art-caption">Visual Storyboard · Panel 12.3<span aria-hidden="true">↩</span></span>
+  </a>
+</figure>
+
 <p>The gateway opens.</p>
 <p>Far beyond, something turns to look.</p>
 <p>Kael takes one step forward without appearing to choose it. He catches himself, frightened by the familiarity of the pull.</p>
@@ -1799,6 +2245,15 @@ td:first-child {font-weight:600}
 <p class="dialogue"><strong class="speaker">KAEL:</strong><span class="spoken-line"> No.</span></p>
 <p>The access field continues exposing their universe to whatever lies beyond. Closing it safely now requires control from the other side. Retreat is not a way to pretend the connection was never made.</p>
 <p>Mira checks the shared time field.</p>
+<figure class="script-art" id="script-panel-12-4">
+  <a class="script-art-link" href="index.html#panel-12-4" aria-label="Return to Visual Storyboard, panel 12.4">
+    <span class="script-art-crop" style="aspect-ratio:1537/1023">
+      <img src="asset/images/page-12.png?v=cc5f560897" alt="Exactly five companions and silver-haired Kael cross a monumental opened portal within a connected blue field: Arin Mira Orin red robot Zara and golden four-legged Milo." width="1537" height="1023" style="left:-100%;top:-100%" loading="lazy" decoding="async">
+    </span>
+    <span class="script-art-caption">Visual Storyboard · Panel 12.4<span aria-hidden="true">↩</span></span>
+  </a>
+</figure>
+
 <p class="dialogue"><strong class="speaker">MIRA:</strong><span class="spoken-line"> Together. Nobody crosses alone.</span></p>
 <p>Orin looks at Kael.</p>
 <p class="dialogue"><strong class="speaker">ORIN:</strong><span class="spoken-line"> That includes you.</span></p>
@@ -1824,6 +2279,15 @@ td:first-child {font-weight:600}
 <p class="dialogue"><strong class="speaker">KAEL:</strong><span class="spoken-line"> Who are you?</span></p>
 <p class="dialogue"><strong class="speaker">AEVOS:</strong><span class="spoken-line"> Aevos. You have spent a long time trying to speak to me.</span></p>
 <p>Arin looks past the figure toward the enormous structure.</p>
+<figure class="script-art" id="script-panel-13-1">
+  <a class="script-art-link" href="index.html#panel-13-1" aria-label="Return to Visual Storyboard, panel 13.1">
+    <span class="script-art-crop" style="aspect-ratio:1537/1023">
+      <img src="asset/images/page-13.png?v=28135cfe79" alt="The Origin: gigantic four-armed black gold cosmic armored Aevos with galaxy chest, horned crown, rings, red and blue displayed worlds, two hourglass vessels, shattered floating colonnades, blue grid reflective floor." width="1537" height="1023" style="left:0%;top:0%" loading="lazy" decoding="async">
+    </span>
+    <span class="script-art-caption">Visual Storyboard · Panel 13.1<span aria-hidden="true">↩</span></span>
+  </a>
+</figure>
+
 <p class="dialogue"><strong class="speaker">ARIN:</strong><span class="spoken-line"> You made all of this?</span></p>
 <p class="dialogue"><strong class="speaker">AEVOS:</strong><span class="spoken-line"> This universe. Its sustaining systems. The conditions in which you arose. A self-sustaining simulation, built to let life develop.</span></p>
 <p class="dialogue"><strong class="speaker">ARIN:</strong><span class="spoken-line"> You mean none of it was real?</span></p>
@@ -1847,6 +2311,15 @@ td:first-child {font-weight:600}
 <p>Aevos turns his attention to Kael. Around them, a sequence of embodied lives appears without reducing them to a rapid spectacle of exotic species.</p>
 <p>A hand teaching another to write. A crowded meal. A bed left empty. A final breath. Another beginning.</p>
 <p>Kael recognizes the details before the party understands what they are seeing.</p>
+<figure class="script-art" id="script-panel-13-2">
+  <a class="script-art-link" href="index.html#panel-13-2" aria-label="Return to Visual Storyboard, panel 13.2">
+    <span class="script-art-crop" style="aspect-ratio:1537/1023">
+      <img src="asset/images/page-13.png?v=28135cfe79" alt="Kael stands shocked among projections of ordinary moments from many embodied lives: learning to write, shared meals, empty bed." width="1537" height="1023" style="left:-100%;top:0%" loading="lazy" decoding="async">
+    </span>
+    <span class="script-art-caption">Visual Storyboard · Panel 13.2<span aria-hidden="true">↩</span></span>
+  </a>
+</figure>
+
 <p class="dialogue"><strong class="speaker">AEVOS:</strong><span class="spoken-line"> The One. The continuous witness.</span></p>
 <p class="dialogue"><strong class="speaker">KAEL:</strong><span class="spoken-line"> Those are my lives.</span></p>
 <p class="dialogue"><strong class="speaker">AEVOS:</strong><span class="spoken-line"> Yes.</span></p>
@@ -1880,6 +2353,15 @@ td:first-child {font-weight:600}
 <p class="dialogue"><strong class="speaker">AEVOS:</strong><span class="spoken-line"> He has lived what you have not. Do not discard his suffering because it complicates your wish to continue.</span></p>
 <p class="dialogue"><strong class="speaker">KAEL:</strong><span class="spoken-line"> I have not finished speaking.</span></p>
 <p>For the first time, the custodian is interrupted by his witness.</p>
+<figure class="script-art" id="script-panel-13-3">
+  <a class="script-art-link" href="index.html#panel-13-3" aria-label="Return to Visual Storyboard, panel 13.3">
+    <span class="script-art-crop" style="aspect-ratio:1537/1023">
+      <img src="asset/images/page-13.png?v=28135cfe79" alt="Aevos calmly turns an hourglass, a line toward the universe gateway begins to whiten." width="1537" height="1023" style="left:0%;top:-100%" loading="lazy" decoding="async">
+    </span>
+    <span class="script-art-caption">Visual Storyboard · Panel 13.3<span aria-hidden="true">↩</span></span>
+  </a>
+</figure>
+
 <p class="dialogue"><strong class="speaker">KAEL:</strong><span class="spoken-line"> There was no one like Arin in all those lives. I came because he made a different possibility available. Not because the universe had stopped making possibilities.</span></p>
 <p class="dialogue"><strong class="speaker">AEVOS:</strong><span class="spoken-line"> An unexpected development does not establish a successful outcome.</span></p>
 <p class="dialogue"><strong class="speaker">KAEL:</strong><span class="spoken-line"> Neither does my despair establish that there can be none.</span></p>
@@ -1912,6 +2394,15 @@ td:first-child {font-weight:600}
 <p class="dialogue"><strong class="speaker">AEVOS:</strong><span class="spoken-line"> I am not seeking emptiness.</span></p>
 <p class="dialogue"><strong class="speaker">MILO:</strong><span class="spoken-line"> Then please stop making it the first step.</span></p>
 <p>Arin looks back through the gateway. Somewhere beyond it, the street Mira promised to show him still exists.</p>
+<figure class="script-art" id="script-panel-13-4">
+  <a class="script-art-link" href="index.html#panel-13-4" aria-label="Return to Visual Storyboard, panel 13.4">
+    <span class="script-art-crop" style="aspect-ratio:1537/1023">
+      <img src="asset/images/page-13.png?v=28135cfe79" alt="Exactly five companions stand against the monumental custodian, their blue return anchor behind them showing the small ordinary sky they came from." width="1537" height="1023" style="left:-100%;top:-100%" loading="lazy" decoding="async">
+    </span>
+    <span class="script-art-caption">Visual Storyboard · Panel 13.4<span aria-hidden="true">↩</span></span>
+  </a>
+</figure>
+
 <p class="dialogue"><strong class="speaker">ARIN:</strong><span class="spoken-line"> We do not know the final answer. We still choose to live.</span></p>
 <p class="dialogue"><strong class="speaker">AEVOS:</strong><span class="spoken-line"> Your choice is understood.</span></p>
 <p>The sequence continues.</p>
@@ -1922,6 +2413,15 @@ td:first-child {font-weight:600}
 <p>Kael remains at the platform's edge, visibly shaken rather than conveniently unconscious.</p>
 <p>A blast tears through a marker. Milo falls; Zara catches his harness without lifting him by the collar. Orin moves between them and the next strike. Mira tries to reach the injured through a failing barrier.</p>
 <p>Arin places himself beside them. He knows the stance from his dreams will not be enough.</p>
+<figure class="script-art" id="script-panel-14-1">
+  <a class="script-art-link" href="index.html#panel-14-1" aria-label="Return to Visual Storyboard, panel 14.1">
+    <span class="script-art-crop" style="aspect-ratio:1537/1023">
+      <img src="asset/images/page-14.png?v=903e3cfcee" alt="Origin floor shifts, a blue route marker shattered." width="1537" height="1023" style="left:0%;top:0%" loading="lazy" decoding="async">
+    </span>
+    <span class="script-art-caption">Visual Storyboard · Panel 14.1<span aria-hidden="true">↩</span></span>
+  </a>
+</figure>
+
 <p class="dialogue"><strong class="speaker">MIRA:</strong><span class="spoken-line"> Arin—back to my voice.</span></p>
 <p>He is listening. He cannot make the barrier hold.</p>
 <p>Aevos raises one hand toward him.</p>
@@ -1935,6 +2435,15 @@ td:first-child {font-weight:600}
 <p>For a moment, the image resembles his earlier effortless defenses.</p>
 <p>Then his expression changes.</p>
 <p>The blow penetrates the protective field and tears through the embodied continuity Aevos knows how to reach. Kael falls to one knee. He is genuinely hurt, not pretending in order to teach Arin.</p>
+<figure class="script-art" id="script-panel-14-2">
+  <a class="script-art-link" href="index.html#panel-14-2" aria-label="Return to Visual Storyboard, panel 14.2">
+    <span class="script-art-crop" style="aspect-ratio:1537/1023">
+      <img src="asset/images/page-14.png?v=903e3cfcee" alt="Silver-haired Kael suddenly steps between Aevos&#x27;s brilliant strike and Arin&#x27;s party." width="1537" height="1023" style="left:-100%;top:0%" loading="lazy" decoding="async">
+    </span>
+    <span class="script-art-caption">Visual Storyboard · Panel 14.2<span aria-hidden="true">↩</span></span>
+  </a>
+</figure>
+
 <p class="dialogue"><strong class="speaker">ARIN:</strong><span class="spoken-line"> Kael!</span></p>
 <p>Kael lifts a hand to keep the collapsing barrier from reaching the others.</p>
 <p class="dialogue"><strong class="speaker">AEVOS:</strong><span class="spoken-line"> You would obstruct what you came here seeking?</span></p>
@@ -1943,6 +2452,15 @@ td:first-child {font-weight:600}
 <p>Kael looks at Arin, then at the people Arin was trying to protect.</p>
 <p class="dialogue"><strong class="speaker">KAEL:</strong><span class="spoken-line"> I thought that if I preserved the possibility of life, I had preserved the lives themselves.</span></p>
 <p>He struggles for breath.</p>
+<figure class="script-art" id="script-panel-14-3">
+  <a class="script-art-link" href="index.html#panel-14-3" aria-label="Return to Visual Storyboard, panel 14.3">
+    <span class="script-art-crop" style="aspect-ratio:1537/1023">
+      <img src="asset/images/page-14.png?v=903e3cfcee" alt="Wounded Kael kneels beside young Arin, looking past him to Mira helping Zara and Milo while Orin guards." width="1537" height="1023" style="left:0%;top:-100%" loading="lazy" decoding="async">
+    </span>
+    <span class="script-art-caption">Visual Storyboard · Panel 14.3<span aria-hidden="true">↩</span></span>
+  </a>
+</figure>
+
 <p class="dialogue"><strong class="speaker">KAEL:</strong><span class="spoken-line"> I was wrong.</span></p>
 <p class="dialogue"><strong class="speaker">AEVOS:</strong><span class="spoken-line"> Your descendant is evidence worth retaining. I can preserve his hereditary design.</span></p>
 <p class="dialogue"><strong class="speaker">KAEL:</strong><span class="spoken-line"> His name is Arin.</span></p>
@@ -1983,6 +2501,15 @@ td:first-child {font-weight:600}
 <p class="dialogue"><strong class="speaker">MIRA:</strong><span class="spoken-line"> I can keep this from getting worse for a little while. That is not the same as fixing it.</span></p>
 <p class="dialogue"><strong class="speaker">KAEL:</strong><span class="spoken-line"> A little while is what I need.</span></p>
 <p>Arin kneels opposite him.</p>
+<figure class="script-art" id="script-panel-14-4">
+  <a class="script-art-link" href="index.html#panel-14-4" aria-label="Return to Visual Storyboard, panel 14.4">
+    <span class="script-art-crop" style="aspect-ratio:1537/1023">
+      <img src="asset/images/page-14.png?v=903e3cfcee" alt="Mira kneels to stabilize wounded Kael with restrained water arts while Arin listens opposite." width="1537" height="1023" style="left:-100%;top:-100%" loading="lazy" decoding="async">
+    </span>
+    <span class="script-art-caption">Visual Storyboard · Panel 14.4<span aria-hidden="true">↩</span></span>
+  </a>
+</figure>
+
 <p class="dialogue"><strong class="speaker">KAEL:</strong><span class="spoken-line"> I cannot hold the counter-command alone. Not against him. I need you to understand what you are saying.</span></p>
 <p class="dialogue"><strong class="speaker">ARIN:</strong><span class="spoken-line"> Not a new universe.</span></p>
 <p class="dialogue"><strong class="speaker">KAEL:</strong><span class="spoken-line"> This one. Keep what is here. Deny the operation trying to replace it.</span></p>
@@ -2043,9 +2570,27 @@ td:first-child {font-weight:600}
 <p class="dialogue"><strong class="speaker">AEVOS:</strong><span class="spoken-line"> Then what are you offering them?</span></p>
 <p class="dialogue"><strong class="speaker">ARIN:</strong><span class="spoken-line"> The chance to have one.</span></p>
 <p>Aevos changes the floor's geometry. The direct path fails.</p>
+<figure class="script-art" id="script-panel-15-1">
+  <a class="script-art-link" href="index.html#panel-15-1" aria-label="Return to Visual Storyboard, panel 15.1">
+    <span class="script-art-crop" style="aspect-ratio:1537/1023">
+      <img src="asset/images/page-15.png?v=a46b162fe1" alt="Four-legged Milo uses a harness-mounted tool in a low contact while red robot Zara isolates a nearby supervisory console." width="1537" height="1023" style="left:0%;top:0%" loading="lazy" decoding="async">
+    </span>
+    <span class="script-art-caption">Visual Storyboard · Panel 15.1<span aria-hidden="true">↩</span></span>
+  </a>
+</figure>
+
 <p class="dialogue"><strong class="speaker">MILO:</strong><span class="spoken-line"> Left marker. Follow the blue reflection, not the wall.</span></p>
 <p class="dialogue"><strong class="speaker">ORIN:</strong><span class="spoken-line"> I've got the crossing. Go!</span></p>
 <p>Aevos reaches toward Orin. Arin instinctively increases the counter-command too far.</p>
+<figure class="script-art" id="script-panel-15-2">
+  <a class="script-art-link" href="index.html#panel-15-2" aria-label="Return to Visual Storyboard, panel 15.2">
+    <span class="script-art-crop" style="aspect-ratio:1537/1023">
+      <img src="asset/images/page-15.png?v=a46b162fe1" alt="Close on Arin shaking with effort holding a narrow cyan counter-Axiom beside wounded seated Kael&#x27;s violet signature." width="1537" height="1023" style="left:-100%;top:0%" loading="lazy" decoding="async">
+    </span>
+    <span class="script-art-caption">Visual Storyboard · Panel 15.2<span aria-hidden="true">↩</span></span>
+  </a>
+</figure>
+
 <p class="dialogue"><strong class="speaker">MIRA:</strong><span class="spoken-line"> Arin. Back to my voice.</span></p>
 <p>His hands shake. He reduces the force rather than breaking his body trying to prove he can exceed Kael.</p>
 <p class="dialogue"><strong class="speaker">ARIN:</strong><span class="spoken-line"> I'm here.</span></p>
@@ -2054,6 +2599,15 @@ td:first-child {font-weight:600}
 <p class="dialogue"><strong class="speaker">MILO:</strong><span class="spoken-line"> Clear.</span></p>
 <p class="dialogue"><strong class="speaker">ZARA:</strong><span class="spoken-line"> Now.</span></p>
 <p>Arin and Kael hold the existing continuity while Zara severs the destructive supervisory address. Orin prevents the physical contact from reconnecting. Mira redirects the discharge away from all of them.</p>
+<figure class="script-art" id="script-panel-15-3">
+  <a class="script-art-link" href="index.html#panel-15-3" aria-label="Return to Visual Storyboard, panel 15.3">
+    <span class="script-art-crop" style="aspect-ratio:1537/1023">
+      <img src="asset/images/page-15.png?v=a46b162fe1" alt="Milo safely backs out across blue return mark, Zara deliberately disconnects a bright destructive tether, Orin prevents contact rejoining, Mira diverts the discharge, Arin and wounded Kael keep a thin field steady." width="1537" height="1023" style="left:0%;top:-100%" loading="lazy" decoding="async">
+    </span>
+    <span class="script-art-caption">Visual Storyboard · Panel 15.3<span aria-hidden="true">↩</span></span>
+  </a>
+</figure>
+
 <p>Aevos loses the connection that had given his local intervention its overwhelming reach. He remains dangerous, but the final attack no longer requires the party to outmuscle the whole universe.</p>
 <p class="cue play-cue"><strong>PLAY — FINAL RESOLUTION</strong></p>
 <p>A short, earned final window lets the player complete the coordinated sequence. No hidden requirement that Arin be the last attacker; victory belongs to the party. The cinematic resolves whatever final input closes the window.</p>
@@ -2063,6 +2617,15 @@ td:first-child {font-weight:600}
 <p class="dialogue"><strong class="speaker">ARIN:</strong><span class="spoken-line"> I know.</span></p>
 <p>The accumulated feedback and the party's final assault overwhelm Aevos's embodied presence. The custodian dies in this primary draft. No laughing new form rises from him.</p>
 <p>The worlds displayed above his hands dim. The independent sustaining structure continues to pulse.</p>
+<figure class="script-art" id="script-panel-15-4">
+  <a class="script-art-link" href="index.html#panel-15-4" aria-label="Return to Visual Storyboard, panel 15.4">
+    <span class="script-art-crop" style="aspect-ratio:1537/1023">
+      <img src="asset/images/page-15.png?v=a46b162fe1" alt="Defeated Aevos&#x27;s embodied black gold cosmic armor collapses into inert shards and fading light after the party&#x27;s final assault." width="1537" height="1023" style="left:-100%;top:-100%" loading="lazy" decoding="async">
+    </span>
+    <span class="script-art-caption">Visual Storyboard · Panel 15.4<span aria-hidden="true">↩</span></span>
+  </a>
+</figure>
+
 <p>One pulse.</p>
 <p>Another.</p>
 <p class="dialogue"><strong class="speaker">MIRA:</strong><span class="spoken-line"> It's still running.</span></p>
@@ -2104,6 +2667,15 @@ td:first-child {font-weight:600}
 <p class="dialogue"><strong class="speaker">KAEL:</strong><span class="spoken-line"> I did.</span></p>
 <p class="cue play-cue"><strong>SCENE / PLAY</strong></p>
 <p>The party crosses together. The synchronized clocks record ordinary elapsed time. Zara isolates the gateway's destructive access remnants while leaving the independent sustaining connection intact. The procedure is prepared in the preceding encounter, not invented during a collapsing escape timer.</p>
+<figure class="script-art" id="script-panel-16-1">
+  <a class="script-art-link" href="index.html#panel-16-1" aria-label="Return to Visual Storyboard, panel 16.1">
+    <span class="script-art-crop" style="aspect-ratio:1537/1023">
+      <img src="asset/images/page-16.png?v=a135b88651" alt="The five companions escort critically wounded silver-haired Kael in a prepared casualty sling through the gateway inside the blue synchronized field." width="1537" height="1023" style="left:0%;top:0%" loading="lazy" decoding="async">
+    </span>
+    <span class="script-art-caption">Visual Storyboard · Panel 16.1<span aria-hidden="true">↩</span></span>
+  </a>
+</figure>
+
 <p>Kael's condition remains critical. Mira's final line on the subject is precise:</p>
 <p class="dialogue"><strong class="speaker">MIRA:</strong><span class="spoken-line"> He is alive. I can't tell you more than that yet.</span></p>
 <p class="editorial-note"><strong>REVIEW:</strong> This is mortal injury with uncertain survival, not a quick-heal setup. The sequel may choose death or enduring severe incapacity, but full-power Kael cannot simply resume solving Arin's problems.</p>
@@ -2113,6 +2685,15 @@ td:first-child {font-weight:600}
 <strong>Player objective:</strong> Short post-finale visits or a sequence of interactive epilogue scenes.<br/>
 <strong>Source / review:</strong> S04, S07–S10, S15. The victory preserves the existing timeline and people. It does not restore every death, erase wrongdoing, or instantly reconcile every relationship.</p>
 <p class="cue scene-cue"><strong>SCENE A — Neris clinic</strong></p>
+
+<figure class="script-art" id="script-panel-16-2">
+  <a class="script-art-link" href="index.html#panel-16-2" aria-label="Return to Visual Storyboard, panel 16.2">
+    <span class="script-art-crop" style="aspect-ratio:1537/1023">
+      <img src="asset/images/page-16.png?v=a135b88651" alt="Four soft-edged connected epilogue vignettes within this single panel: Mira helps a Neris clinic coordinator at clean running water; Orin writes a family letter beside testimony folders; red robot Zara hands Arin a new contract; golden dog Milo reunites with his canine route partner at a low Veyra map." width="1537" height="1023" style="left:-100%;top:0%" loading="lazy" decoding="async">
+    </span>
+    <span class="script-art-caption">Visual Storyboard · Panel 16.2<span aria-hidden="true">↩</span></span>
+  </a>
+</figure>
 <p>The water runs clear from a repaired local supply. A treatment board is still full.</p>
 <p class="dialogue"><strong class="speaker">ATTENDANT:</strong><span class="spoken-line"> We have three more rooms open. Still not enough hands.</span></p>
 <p>Mira rolls up her sleeves, then looks at the coordinator and asks where she will be useful instead of taking over without consultation.</p>
@@ -2150,6 +2731,15 @@ td:first-child {font-weight:600}
 <p class="dialogue"><strong class="speaker">MIRA:</strong><span class="spoken-line"> You don't have to buy anything.</span></p>
 <p class="dialogue"><strong class="speaker">ARIN:</strong><span class="spoken-line"> I know.</span></p>
 <p>He buys two simple drinks anyway. It is a small expense he chooses rather than a royal gift that solves his life.</p>
+<figure class="script-art" id="script-panel-16-3">
+  <a class="script-art-link" href="index.html#panel-16-3" aria-label="Return to Visual Storyboard, panel 16.3">
+    <span class="script-art-crop" style="aspect-ratio:1537/1023">
+      <img src="asset/images/page-16.png?v=a135b88651" alt="Arin and Mira walk a modest sunlit Neris market street, carrying two inexpensive drinks." width="1537" height="1023" style="left:0%;top:-100%" loading="lazy" decoding="async">
+    </span>
+    <span class="script-art-caption">Visual Storyboard · Panel 16.3<span aria-hidden="true">↩</span></span>
+  </a>
+</figure>
+
 <p>For a while they watch the street.</p>
 <p class="dialogue"><strong class="speaker">MIRA:</strong><span class="spoken-line"> What will you do now?</span></p>
 <p>Arin looks toward the sky, where no one has hung a sign naming him its most powerful remaining inhabitant.</p>
@@ -2162,6 +2752,15 @@ td:first-child {font-weight:600}
 <p>She does not qualify it as another investigation.</p>
 <p class="cue scene-cue"><strong>FINAL SCENE — evening meal</strong></p>
 <p>Orin has chosen a table with enough space for everyone's equipment. Zara is explaining why an allegedly simple contract is clearly not simple. Milo is negotiating the location of a plate.</p>
+<figure class="script-art" id="script-panel-16-4">
+  <a class="script-art-link" href="index.html#panel-16-4" aria-label="Return to Visual Storyboard, panel 16.4">
+    <span class="script-art-crop" style="aspect-ratio:1537/1023">
+      <img src="asset/images/page-16.png?v=a135b88651" alt="Warm evening meal on a modest Neris street terrace." width="1537" height="1023" style="left:-100%;top:-100%" loading="lazy" decoding="async">
+    </span>
+    <span class="script-art-caption">Visual Storyboard · Panel 16.4<span aria-hidden="true">↩</span></span>
+  </a>
+</figure>
+
 <p>Arin approaches and instinctively counts the places.</p>
 <p>There is room for him.</p>
 <p>He sits.</p>
@@ -2181,6 +2780,15 @@ td:first-child {font-weight:600}
 <p class="dialogue"><strong class="speaker">MIRA:</strong><span class="spoken-line"> Was it yours?</span></p>
 <p class="dialogue"><strong class="speaker">ARIN:</strong><span class="spoken-line"> My mother kept fastening it too tightly. My father said I'd complain if it wasn't tight enough either.</span></p>
 <p>He smiles unexpectedly.</p>
+<figure class="script-art" id="script-panel-17-1">
+  <a class="script-art-link" href="index.html#panel-17-1" aria-label="Return to Visual Storyboard, panel 17.1">
+    <span class="script-art-crop" style="aspect-ratio:1537/1023">
+      <img src="asset/images/page-17.png?v=499ea727ec" alt="In warm ship lamplight, Arin repairs his old wrist strap and smiles unexpectedly, Mira quietly sitting nearby." width="1537" height="1023" style="left:0%;top:0%" loading="lazy" decoding="async">
+    </span>
+    <span class="script-art-caption">Visual Storyboard · Panel 17.1<span aria-hidden="true">↩</span></span>
+  </a>
+</figure>
+
 <p class="dialogue"><strong class="speaker">MIRA:</strong><span class="spoken-line"> What was he like?</span></p>
 <p class="dialogue"><strong class="speaker">ARIN:</strong><span class="spoken-line"> Terrible at telling stories. He'd explain the ending before he remembered the beginning.</span></p>
 <p class="dialogue"><strong class="speaker">MIRA:</strong><span class="spoken-line"> Did you tell him?</span></p>
@@ -2199,6 +2807,15 @@ td:first-child {font-weight:600}
 <p>Orin waits, then sets a clean towel beside her.</p>
 <p class="dialogue"><strong class="speaker">ORIN:</strong><span class="spoken-line"> What do you need next?</span></p>
 <p>She looks toward the overloaded treatment board.</p>
+<figure class="script-art" id="script-panel-17-2">
+  <a class="script-art-link" href="index.html#panel-17-2" aria-label="Return to Visual Storyboard, panel 17.2">
+    <span class="script-art-crop" style="aspect-ratio:1537/1023">
+      <img src="asset/images/page-17.png?v=499ea727ec" alt="During Neris relief work, exhausted Mira washes her hands at clinic basin after a limited treatment." width="1537" height="1023" style="left:-100%;top:0%" loading="lazy" decoding="async">
+    </span>
+    <span class="script-art-caption">Visual Storyboard · Panel 17.2<span aria-hidden="true">↩</span></span>
+  </a>
+</figure>
+
 <p class="dialogue"><strong class="speaker">MIRA:</strong><span class="spoken-line"> Another trained healer. Clean supplies. Time.</span></p>
 <p class="dialogue"><strong class="speaker">ORIN:</strong><span class="spoken-line"> Which of those can we get first?</span></p>
 <p>After a moment she hands him a supply list.</p>
@@ -2206,6 +2823,15 @@ td:first-child {font-weight:600}
 <h3 class="scene-heading" id="opt-03">OPT-03 — Why Zara stays after the interesting part</h3>
 <p class="editorial-note"><strong>Suggested placement:</strong> After C05-S04; allow at least one later shared task before this conversation. <strong>Cast:</strong> Arin, Zara.</p>
 <p>Zara sorts damaged station parts for reuse.</p>
+<figure class="script-art" id="script-panel-17-3">
+  <a class="script-art-link" href="index.html#panel-17-3" aria-label="Return to Visual Storyboard, panel 17.3">
+    <span class="script-art-crop" style="aspect-ratio:1537/1023">
+      <img src="asset/images/page-17.png?v=499ea727ec" alt="At a damaged station doorway after the apology, red robotic Zara sorts a box of hinges and reusable parts." width="1537" height="1023" style="left:0%;top:-100%" loading="lazy" decoding="async">
+    </span>
+    <span class="script-art-caption">Visual Storyboard · Panel 17.3<span aria-hidden="true">↩</span></span>
+  </a>
+</figure>
+
 <p class="dialogue"><strong class="speaker">ARIN:</strong><span class="spoken-line"> I thought you joined the guild for adventure.</span></p>
 <p class="dialogue"><strong class="speaker">ZARA:</strong><span class="spoken-line"> I did.</span></p>
 <p class="dialogue"><strong class="speaker">ARIN:</strong><span class="spoken-line"> This is a box of hinges.</span></p>
@@ -2223,16 +2849,43 @@ td:first-child {font-weight:600}
 <p>Orin listens twice before recording a reply.</p>
 <p class="dialogue"><strong class="speaker">ORIN:</strong><span class="spoken-line"> I thought there would be one answer that made everything simpler.</span></p>
 <p>He pauses.</p>
+<figure class="script-art" id="script-panel-17-4">
+  <a class="script-art-link" href="index.html#panel-17-4" aria-label="Return to Visual Storyboard, panel 17.4">
+    <span class="script-art-crop" style="aspect-ratio:1537/1023">
+      <img src="asset/images/page-17.png?v=499ea727ec" alt="Orin alone in a safe ship communications nook listening carefully to his mother&#x27;s audio message, then recording a reply." width="1537" height="1023" style="left:-100%;top:-100%" loading="lazy" decoding="async">
+    </span>
+    <span class="script-art-caption">Visual Storyboard · Panel 17.4<span aria-hidden="true">↩</span></span>
+  </a>
+</figure>
+
 <p class="dialogue"><strong class="speaker">ORIN:</strong><span class="spoken-line"> I don't need you to find one for me. I just wanted to hear from you.</span></p>
 <p class="editorial-note"><strong>REVIEW:</strong> Her safety and location are not disclosed. Her love does not speak on behalf of victims elsewhere or settle what she knew before the scandal.</p>
 <h3 class="scene-heading" id="opt-05">OPT-05 — The map only Milo can read</h3>
 <p class="editorial-note"><strong>Suggested placement:</strong> Before C08-S01. <strong>Cast:</strong> Milo, Zara, Arin.</p>
 <p>Arin studies a Kynari route projection that keeps changing as Milo shifts his head.</p>
+<figure class="script-art" id="script-panel-18-1">
+  <a class="script-art-link" href="index.html#panel-18-1" aria-label="Return to Visual Storyboard, panel 18.1">
+    <span class="script-art-crop" style="aspect-ratio:1537/1023">
+      <img src="asset/images/page-18.png?v=6b06a2c7f5" alt="Golden quadrupedal Milo stands by a low spatial route projector adjusted with his nose; the luminous map shifts with the viewing angle." width="1537" height="1023" style="left:0%;top:0%" loading="lazy" decoding="async">
+    </span>
+    <span class="script-art-caption">Visual Storyboard · Panel 18.1<span aria-hidden="true">↩</span></span>
+  </a>
+</figure>
+
 <p class="dialogue"><strong class="speaker">ARIN:</strong><span class="spoken-line"> The map moved.</span></p>
 <p class="dialogue"><strong class="speaker">MILO:</strong><span class="spoken-line"> You moved.</span></p>
 <p class="dialogue"><strong class="speaker">ARIN:</strong><span class="spoken-line"> Maps usually object less.</span></p>
 <p class="dialogue"><strong class="speaker">ZARA:</strong><span class="spoken-line"> It records approach, position, and the route back. Your display is trying to flatten all of those at once.</span></p>
 <p>Milo lowers the projection so Arin can examine it from the intended angle.</p>
+<figure class="script-art" id="script-panel-18-2">
+  <a class="script-art-link" href="index.html#panel-18-2" aria-label="Return to Visual Storyboard, panel 18.2">
+    <span class="script-art-crop" style="aspect-ratio:1537/1023">
+      <img src="asset/images/page-18.png?v=6b06a2c7f5" alt="Arin carefully holds an awkward crouch at Milo&#x27;s intended low viewing angle while Milo pads away on four paws toward a drinking bowl, Zara amused nearby." width="1537" height="1023" style="left:-100%;top:0%" loading="lazy" decoding="async">
+    </span>
+    <span class="script-art-caption">Visual Storyboard · Panel 18.2<span aria-hidden="true">↩</span></span>
+  </a>
+</figure>
+
 <p class="dialogue"><strong class="speaker">MILO:</strong><span class="spoken-line"> There. That is where we turn.</span></p>
 <p class="dialogue"><strong class="speaker">ARIN:</strong><span class="spoken-line"> I see it now.</span></p>
 <p class="dialogue"><strong class="speaker">MILO:</strong><span class="spoken-line"> Good. Hold that for a moment. I need a drink.</span></p>
@@ -2242,10 +2895,28 @@ td:first-child {font-weight:600}
 <p class="editorial-note"><strong>Suggested placement:</strong> After C06-S06. <strong>Cast:</strong> Arin, Orin.</p>
 <p>Orin tries to tighten a fastening one-handed after a fight.</p>
 <p>Arin sits beside him and holds out his hand for the strap.</p>
+<figure class="script-art" id="script-panel-18-3">
+  <a class="script-art-link" href="index.html#panel-18-3" aria-label="Return to Visual Storyboard, panel 18.3">
+    <span class="script-art-crop" style="aspect-ratio:1537/1023">
+      <img src="asset/images/page-18.png?v=6b06a2c7f5" alt="After a fight at a quiet camp, older broad Orin struggles one-handed with a strap buckle." width="1537" height="1023" style="left:0%;top:-100%" loading="lazy" decoding="async">
+    </span>
+    <span class="script-art-caption">Visual Storyboard · Panel 18.3<span aria-hidden="true">↩</span></span>
+  </a>
+</figure>
+
 <p class="dialogue"><strong class="speaker">ORIN:</strong><span class="spoken-line"> I can manage.</span></p>
 <p class="dialogue"><strong class="speaker">ARIN:</strong><span class="spoken-line"> I know.</span></p>
 <p>He keeps his hand extended.</p>
 <p>Orin finally gives him the strap.</p>
+<figure class="script-art" id="script-panel-18-4">
+  <a class="script-art-link" href="index.html#panel-18-4" aria-label="Return to Visual Storyboard, panel 18.4">
+    <span class="script-art-crop" style="aspect-ratio:1537/1023">
+      <img src="asset/images/page-18.png?v=6b06a2c7f5" alt="Orin has handed the strap to Arin, who concentrates on untwisting the buckle." width="1537" height="1023" style="left:-100%;top:-100%" loading="lazy" decoding="async">
+    </span>
+    <span class="script-art-caption">Visual Storyboard · Panel 18.4<span aria-hidden="true">↩</span></span>
+  </a>
+</figure>
+
 <p class="dialogue"><strong class="speaker">ORIN:</strong><span class="spoken-line"> It twists at the buckle.</span></p>
 <p class="dialogue"><strong class="speaker">ARIN:</strong><span class="spoken-line"> I have been receiving lessons about equipment for weeks.</span></p>
 <p class="dialogue"><strong class="speaker">ORIN:</strong><span class="spoken-line"> Then this should be excellent work.</span></p>
@@ -2534,9 +3205,9 @@ td:first-child {font-weight:600}
 <p><strong>End of draft.</strong></p>
 </section></article>
     <footer class="footer">
-      <a href="#sin-star-i">Back to the beginning ↑</a><br>
-      Self-contained HTML reading edition · Source: supplied September 14 v0.1 HTML; canon update authorized by Sin's September 15 storyboard prompt<br>
-      Canon-update edition based on the September 14 v0.1 script. All 47 main scenes and six optional scenes retained; accepted decision labels, affected review notes and D10 updated. Embedded styling and controls; no external resources, accounts, or network connection required.
+      <a href="#sin-star-i">Back to the beginning ↑</a> · <a href="index.html">Visual Storyboard</a><br>
+      Illustrated HTML reading edition · Source: supplied September 14 v0.1 HTML; canon update authorized by Sin's September 15 storyboard prompt<br>
+      Canon-update edition based on the September 14 v0.1 script. All 47 main scenes and six optional scenes retained; accepted decision labels, affected review notes and D10 updated. Embedded styling and controls; illustrations use the local asset/images folder. Select an illustration to return to its exact Visual Storyboard panel. No accounts or network connection required.
     </footer>
   </main>
 </div>
