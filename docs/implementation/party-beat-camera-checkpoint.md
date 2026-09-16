@@ -26,6 +26,10 @@ smooth water normals, a compact crown-shaped impact and B-key Lab background
 cycling. Mira's added body/staff glow and head shimmer are removed from the shared
 presentation owner. Adopt these on the held Web path only when directed; verify
 the new normal interpolation and ribbon layout there before claiming parity.
+The shared-preset follow-up adopts that clear finish, denser geometry, sparse
+runoff and compact crown across all eight water previews, including barrier
+contacts. On Web resumption, validate all modes and simultaneous shield hits
+against the unchanged ribbon capacity and shared 128-droplet contact budget.
 
 Sin also placed Studio creation, development, acceptance and next phases on hold.
 The existing Studio project may retain shared source inventory, but it is not a

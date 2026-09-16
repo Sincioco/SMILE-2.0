@@ -13,8 +13,10 @@ and keeps that target through pause and playback. After the rise and curl, the h
 extends to that pillar at 72% of the cast, with a splash and brief recoil. Continuous
 waterbending droplet emission is 75% lower; the main surface and rounded skin remain.
 Its contact now opens a compact, curled crown of clear water sheets, breaks into
-an irregular rim, and fades. It emits one bounded 128-droplet impulse rather than
-a sustained impact shower. Other attack modes keep their original impact presets.
+an irregular rim, and fades. All eight previews now share this clear-water finish,
+low foam, smoother surfaces and sparse runoff. Every attack contact and the Impact
+preview use the same compact crown and bounded 128-droplet impulse. There is no
+sustained impact shower; each preset keeps its own travel, shape and timing.
 Torrent winds a connected water whip around the staff, releases
 it toward the target, then splashes and recoils the target at 72% of the cast.
 The waterball forms at Mira's staff, stretches along its travel,
@@ -23,7 +25,7 @@ recoils nine world units and returns. Tide Barrier places a small translucent di
 in front of each of the four recipients, facing the attacker. It leaves the party
 visible and does not enclose the formation. The preview receives an impact halfway
 through its cycle. The struck shield compresses backward toward its recipient,
-while impact droplets fan across the surface and curl outward around the rim.
+while the same compact crown opens at the struck disc and droplets spread outward.
 The shield recovers over 900 milliseconds. Other
 shields stay in place. The storm preview shows
 a conductor strike followed by overhead lightning into the wave and target.
@@ -66,12 +68,20 @@ lighting, clock and audio; `WaterLabUi` owns controls. The same `WaterVfx3D`,
 one 4,096-slot GPU spray system. `WaterFlow3D` owns only the stateless waterbending
 centerline, combat-whip path and closed skin samples, receiving origin, target, progress and time;
 it depends on precision math, not on the water context, Lab or character code.
-Waterbending uses 32 strips with 97 samples each, up from 16 with 65: 6,144
-surface triangles instead of 2,048. Its shape, motion and material are retained.
-Other modes retain their original sampling. `WaterImpact3D` owns stateless contact
+Waterbending, Torrent, Waterball, Tsunami and Tempest use 32 strips with 97 samples
+each: 6,144 surface triangles. Healing retains two spirals per recipient with 97
+samples each. Barriers use eight radial bands with 49 samples per recipient,
+leaving room for sixteen 21-sample crown sectors on each struck shield. Even four
+simultaneous barrier crowns fit the existing 3,168-point allocation per batch
+(3,104 points used). Standalone/attack impacts use sixteen 97-sample crown sectors.
+`WaterImpact3D` owns stateless contact
 sheet geometry, breakup opacity and the compact radial spray impulse; it has no
 Lab, character, clock or resource dependency. WaterVfx3D retains the cast identity
 internally when transitioning to impact and owns the bounded emission count.
+All contact modes share the same burst: 96 initial droplets and a 32-droplet tail,
+ending before 26% of contact. Simultaneous shield hits share that whole-event budget
+across recipients. Pausing cannot re-emit it; a new cast, hit, or backward seek
+resets it. Ordinary runoff uses Waterbending's maximum 20 droplets per update.
 The native GPU handles spray motion, gravity,
 turbulence and drawing. Lightning borrows the scene's existing global initialization
 and clock; the water adapter owns only its three strike handles. No resource ceilings
@@ -91,7 +101,8 @@ the former fixed blue-green transmission fallback. That copy is owned and bounde
 by the shared reflection renderer; it is reused each frame and released on reset,
 resize or device loss. Main-view water reuses the existing scene target. There is
 no GPU readback. These are real-time approximations, not ray tracing or
-a physically simulated fluid. Quiet barriers use very little foam.
+a physically simulated fluid. All modes use Waterbending's low foam setting;
+barriers retain their subtle opacity so the party remains visible.
 
 This is authored real-time VFX, not a fluid/collision simulation. Target contact is
 provided by the caller; the Lab uses the front surface of its target cylinder.
@@ -142,6 +153,28 @@ through `WaterFlow3D.AttackCenter`; it uses the existing 72% contact boundary an
 caller-provided target. No Unity package or C# effect implementation is imported.
 
 ## Native validation (September 16, 2026)
+
+The shared-preset follow-up applies Waterbending's material, surface quality and
+compact impact to all eight previews, without changing cast paths, actor assets,
+combat timing or renderer code. `WaterVfx3D` remains the caller-owned lifecycle and
+preset owner; `WaterImpact3D` supplies the existing stateless crown. No new module,
+dependency, native runtime/VSIX change or resource ceiling is needed.
+The extended native fixture checks each preset's surface density, sparse runoff,
+single contact burst, paused contact, late emission cutoff, and one to four
+simultaneous barrier crowns. An initial three/four-recipient burst exceeded the
+GPU spawn limit (error 68); sharing one 128-droplet budget fixes that path and
+keeps the accepted sparse appearance. The regression covers it directly.
+Validation passes: Water Lab native fixture, seam-normal check, 13 formatter
+regressions, repository style check (464 sources), Viewer native ownership/hardening
+checks (58 graphics/input/audio checks), and all eight Sin Star I character entries
+plus both battle simulations. WaterVfx3D grows 792→802 lines and its focused native
+fixture 347→440; existing ownership and review limits remain unchanged.
+Visual review of this follow-up remains unverified: the native computer-use capture
+returned `foreground window did not report a process id` after refreshing the
+window selection and launching a separate fixed-frame inspection. The native app
+and automated rendering checks run successfully. Next acceptance step: inspect
+all eight presets and their contact in the rebuilt Lab, especially Tide Barrier,
+Waterball and Tsunami. No browser or Web acceptance is claimed.
 
 Impact geometry reference: Ugur VFX Studios,
 [UE | Mixed Magic "5" - Water Impact](https://www.youtube.com/watch?v=ZyA4GJgItOk),

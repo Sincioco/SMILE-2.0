@@ -18,10 +18,12 @@ Public Const WATER_BALL = 5
 Public Const WAVE = 6
 Public Const STORM = 7
 Public Const WATER_BEND = 8
-Private Const STRIPS = 16
-Private Const BEND_STRIPS = 32
-Private Const POINTS = 65
-Private Const BEND_POINTS = 97
+Private Const STRIPS = 32
+Private Const POINTS = 97
+Private Const IMPACT_STRIPS = 16
+Private Const SHIELD_STRIPS = 8
+Private Const SHIELD_POINTS = 49
+Private Const SHIELD_IMPACT_POINTS = 21
 Private Const SPRAY_CAPACITY = 4096
 
 Public Type Frame
@@ -56,7 +58,10 @@ Public Type Context
     NextSlot As Number
     Serial As Number
     EmissionTime As Number
-    PreviousWaterbendImpact As Boolean
+    PreviousCastMode As Number
+    PreviousImpactActive As Boolean
+    PreviousImpactProgress As Double
+    PreviousImpactMember As Number
     ImpactSprayCount As Number
 End Type
 
@@ -84,12 +89,14 @@ Public Function Prepare(ByRef Value As Context, AssetFolder As Text) As Boolean
 
     Ok = G.SetEffectMaterialSoftDepth3D(Value.SheetMaterial, 2, 8) And Ok
     Ok = G.SetEffectMaterialSoftDepth3D(Value.DropMaterial, 2, 5) And Ok
-    Ok = G.SetEffectMaterialWater3D(Value.SheetMaterial, True, 18, 8, 0) And Ok
+    Ok = G.SetEffectMaterialWater3D(Value.SheetMaterial, True, 18, 4, 0) And Ok
+    Ok = G.SetEffectMaterial3D(Value.DropMaterial, G.MATERIAL_ALPHA_BLEND,
+        255, 155, 130, 90, 180) And Ok
     Ok = G.SetEffectMaterialSoftDepth3D(Value.RefractionMaterial, 2, 8) And Ok
     Ok = G.SetEffectMaterialDistortion3D(Value.RefractionMaterial, 22, 160, 40, 25, 80) And Ok
 
-    Value.Sheets = G.CreateRibbonBatch3D(BEND_STRIPS * (BEND_POINTS + 2), Value.SheetMaterial)
-    Value.Refraction = G.CreateRibbonBatch3D(BEND_STRIPS * (BEND_POINTS + 2), Value.RefractionMaterial)
+    Value.Sheets = G.CreateRibbonBatch3D(STRIPS * (POINTS + 2), Value.SheetMaterial)
+    Value.Refraction = G.CreateRibbonBatch3D(STRIPS * (POINTS + 2), Value.RefractionMaterial)
     Ok = Value.Sheets.Handle <> 0 And Value.Refraction.Handle <> 0 And Ok
 
     Call CaptureFailure(Value, 2, Ok)
@@ -276,7 +283,7 @@ Private Function BarrierPoint(Center As P.Vector3, Normal As P.Vector3,
 
 End Function
 
-Private Sub SurfacePoint(Sample As Frame, WaterbendImpact As Boolean, Strip As Number, Along As Double,
+Private Sub SurfacePoint(Sample As Frame, Strip As Number, Along As Double,
     Center As P.Vector3, Radius As Double, ByRef LeftPoint As P.Vector3,
     ByRef RightPoint As P.Vector3)
 
@@ -289,6 +296,7 @@ Private Sub SurfacePoint(Sample As Frame, WaterbendImpact As Boolean, Strip As N
     Dim Tangent As P.Vector3
     Dim Across As Double
     Dim Phase As Double
+    Dim MemberIndex As Number
     Dim Ok As Boolean
 
     Angle = Along * M.PI * 2.0
@@ -297,10 +305,6 @@ Private Sub SurfacePoint(Sample As Frame, WaterbendImpact As Boolean, Strip As N
 
         Width = M.PI * 2.0 / ToDouble(STRIPS)
 
-        If Sample.Mode = WATER_BEND Then
-            Width = M.PI * 2.0 / ToDouble(BEND_STRIPS)
-        End If
-
         Angle = ToDouble(Strip) * Width
         LeftPoint = Flow.SurfacePoint(Sample.Origin, Sample.Target,
             Sample.Progress, Sample.Time, Along, Angle, Sample.Mode = TORRENT)
@@ -308,47 +312,50 @@ Private Sub SurfacePoint(Sample As Frame, WaterbendImpact As Boolean, Strip As N
             Sample.Progress, Sample.Time, Along, Angle + Width,
             Sample.Mode = TORRENT)
 
-    Else If WaterbendImpact Then
+    Else If Sample.Mode = IMPACT Then
 
         LeftPoint = Splash.SheetPoint(Sample.Origin, Sample.Target, Sample.ImpactProgress,
             Strip, Along, -1.0)
         RightPoint = Splash.SheetPoint(Sample.Origin, Sample.Target, Sample.ImpactProgress,
             Strip, Along, 1.0)
 
-    Else If Sample.Mode = IMPACT Then
-
-        Ok = M.TryNormalize(M.Subtract(Sample.Origin, Sample.Target), Normal)
-        Ok = M.TryNormalize(M.Cross(Normal, P.Vector(0.0, 1.0, 0.0)), Tangent) And Ok
-
-        If Not Ok Then
-            Tangent = P.Vector(1.0, 0.0, 0.0)
-        End If
-
-        Point = M.Cross(Tangent, Normal)
-        Phase = Sample.ImpactProgress
-        Radius = (5.0 + Phase * 62.0 + ToDouble(Strip Mod 4) * 4.0)
-        Radius = Radius * (1.0 + 0.10 * Sin(Angle * 7.0 + ToDouble(Strip)))
-        Center = M.Add(Sample.Target, M.Scale(Normal, 2.0 + Phase * 5.0))
-        Center.Y = Center.Y - Phase * Phase * 22.0
-        LeftPoint = M.Add(Center, M.Add(M.Scale(Tangent, Cos(Angle) * Radius),
-            M.Scale(Point, Sin(Angle) * Radius)))
-        Radius = Radius + 5.0 * (1.0 - Phase) + 1.0
-        RightPoint = M.Add(Center, M.Add(M.Scale(Tangent, Cos(Angle) * Radius),
-            M.Scale(Point, Sin(Angle) * Radius)))
-
     Else If Sample.Mode = SHIELD Then
 
-        Call BarrierFrame(Sample, Strip / 4, Center, Normal, Tangent)
+        If Strip >= Sample.MemberCount * SHIELD_STRIPS Then
+
+            MemberIndex = (Strip - Sample.MemberCount * SHIELD_STRIPS) / IMPACT_STRIPS
+
+            If Sample.ImpactMember >= 0 Then
+                MemberIndex = Sample.ImpactMember
+            End If
+
+            Call BarrierFrame(Sample, MemberIndex, Center, Normal, Tangent)
+
+            Center = M.Add(Center, M.Scale(Normal, 6.0 - BarrierRecoil(Sample.ImpactProgress)))
+            LeftPoint = Splash.SheetPoint(Sample.Target, Center, Sample.ImpactProgress,
+                Strip Mod IMPACT_STRIPS, Along, -1.0)
+            RightPoint = Splash.SheetPoint(Sample.Target, Center, Sample.ImpactProgress,
+                Strip Mod IMPACT_STRIPS, Along, 1.0)
+
+            Return
+
+        End If
+
+        MemberIndex = Strip / SHIELD_STRIPS
+
+        Call BarrierFrame(Sample, MemberIndex, Center, Normal, Tangent)
 
         Phase = -1.0
 
-        If Sample.ImpactActive And (Sample.ImpactMember < 0 Or Sample.ImpactMember = Strip / 4) Then
+        If (Sample.ImpactActive And
+            (Sample.ImpactMember < 0 Or Sample.ImpactMember = MemberIndex)) Then
             Phase = Sample.ImpactProgress
         End If
 
-        Latitude = ToDouble(Strip Mod 4) / 4.0
+        Latitude = ToDouble(Strip Mod SHIELD_STRIPS) / ToDouble(SHIELD_STRIPS)
         LeftPoint = BarrierPoint(Center, Normal, Tangent, Latitude, Angle, Phase)
-        RightPoint = BarrierPoint(Center, Normal, Tangent, Latitude + 0.25, Angle, Phase)
+        RightPoint = BarrierPoint(Center, Normal, Tangent,
+            Latitude + 1.0 / ToDouble(SHIELD_STRIPS), Angle, Phase)
 
     Else If Sample.Mode = WATER_BALL Then
 
@@ -358,20 +365,23 @@ Private Sub SurfacePoint(Sample As Frame, WaterbendImpact As Boolean, Strip As N
         Radius = 20.0 + 7.0 * Sin(Phase * M.PI)
         Angle = Angle + ToDouble(Sample.Time) * 0.0017
 
-        If Strip < 12 Then
+        If Strip < 24 Then
 
-            Latitude = -M.PI / 2.0 + ToDouble(Strip) * M.PI / 12.0
+            Latitude = -M.PI / 2.0 + ToDouble(Strip) * M.PI / 24.0
             LeftPoint = LivingWaterPoint(Center, Radius, Latitude, Angle, Sample.Time)
-            Latitude = Latitude + M.PI / 12.0
+            Latitude = Latitude + M.PI / 24.0
             RightPoint = LivingWaterPoint(Center, Radius, Latitude, Angle, Sample.Time)
 
         Else
 
-            Angle = Angle * 3.0 + ToDouble(Strip) * M.PI / 2.0
+            ''' Subdivide each of the four inner spirals without changing its shape.
+            Angle = Angle * 3.0 + ToDouble((Strip - 24) / 2) * M.PI / 2.0
             Height = (Along - 0.5) * Radius * 1.6
             Radius = Radius * 0.62 * Sin(Along * M.PI)
-            LeftPoint = RingPoint(Center, Radius, Height - 2.5, Angle)
-            RightPoint = RingPoint(Center, Radius + 2.0, Height + 2.5, Angle)
+            Point = RingPoint(Center, Radius, Height - 2.5, Angle)
+            Normal = RingPoint(Center, Radius + 2.0, Height + 2.5, Angle)
+            LeftPoint = M.Lerp(Point, Normal, ToDouble(Strip Mod 2) / 2.0)
+            RightPoint = M.Lerp(Point, Normal, ToDouble(Strip Mod 2 + 1) / 2.0)
 
         End If
 
@@ -415,8 +425,30 @@ Private Sub SurfacePoint(Sample As Frame, WaterbendImpact As Boolean, Strip As N
 
 End Sub
 
-Private Function UpdateSurfaces(ByRef Value As Context, Sample As Frame,
-    WaterbendImpact As Boolean) As Boolean
+''' Attack contact is one splash; shields may receive one hit or a simultaneous party hit.
+Private Function ContactCount(Sample As Frame) As Number
+
+    Dim Result As Number
+
+    If Sample.Mode = IMPACT Then
+
+        Result = 1
+
+    Else If Sample.Mode = SHIELD And Sample.ImpactActive Then
+
+        If Sample.ImpactMember < 0 Then
+            Result = Sample.MemberCount
+        Else If Sample.ImpactMember < Sample.MemberCount Then
+            Result = 1
+        End If
+
+    End If
+
+    Return Result
+
+End Function
+
+Private Function UpdateSurfaces(ByRef Value As Context, Sample As Frame) As Boolean
 
     Dim Strip As Number
     Dim Index As Number
@@ -431,20 +463,18 @@ Private Function UpdateSurfaces(ByRef Value As Context, Sample As Frame,
     Dim LeftPoint As P.Vector3
     Dim RightPoint As P.Vector3
     Dim Ok As Boolean
+    Dim ContactSheet As Boolean
 
     ItemCount = STRIPS
     Samples = POINTS
     Ok = True
 
-    If Sample.Mode = WATER_BEND Then
-        ItemCount = BEND_STRIPS
-        Samples = BEND_POINTS
-    Else If Sample.Mode = HEAL Then
+    If Sample.Mode = HEAL Then
         ItemCount = Sample.MemberCount * 2
     Else If Sample.Mode = SHIELD Then
-        ItemCount = Sample.MemberCount * 4
-    Else If Sample.Mode = IMPACT And Not WaterbendImpact Then
-        ItemCount = 8
+        ItemCount = Sample.MemberCount * SHIELD_STRIPS + ContactCount(Sample) * IMPACT_STRIPS
+    Else If Sample.Mode = IMPACT Then
+        ItemCount = IMPACT_STRIPS
     End If
 
     Center = Sample.Origin
@@ -454,13 +484,26 @@ Private Function UpdateSurfaces(ByRef Value As Context, Sample As Frame,
 
     If Sample.Mode = SHIELD Then
         Opacity = ToNumber(Round(Clamp(Sample.Strength, 0.0, 1.0) * 28.0))
-    Else If Sample.Mode = WATER_BEND Or Sample.Mode = TORRENT Then
+    Else If Sample.Mode <> HEAL And Sample.Mode <> IMPACT Then
         Opacity = ToNumber(Round(Clamp(Sample.Strength, 0.0, 1.0) * 92.0))
     End If
 
     For Strip = 0 To ItemCount - 1
 
-        Call SurfacePoint(Sample, WaterbendImpact, Strip, 0.0, Center, Radius, LeftPoint, RightPoint)
+        ContactSheet = Sample.Mode = IMPACT
+
+        If Sample.Mode = SHIELD Then
+
+            ContactSheet = Strip >= Sample.MemberCount * SHIELD_STRIPS
+            Samples = SHIELD_POINTS
+
+            If ContactSheet Then
+                Samples = SHIELD_IMPACT_POINTS
+            End If
+
+        End If
+
+        Call SurfacePoint(Sample, Strip, 0.0, Center, Radius, LeftPoint, RightPoint)
 
         Ok = SetSurfacePoint(Value, PointCount, LeftPoint, LeftPoint, 0.0, 0) And Ok
         PointCount = PointCount + 1
@@ -469,13 +512,13 @@ Private Function UpdateSurfaces(ByRef Value As Context, Sample As Frame,
 
             Along = ToDouble(Index) / ToDouble(Samples - 1)
 
-            Call SurfacePoint(Sample, WaterbendImpact, Strip, Along, Center, Radius, LeftPoint, RightPoint)
+            Call SurfacePoint(Sample, Strip, Along, Center, Radius, LeftPoint, RightPoint)
 
             PointOpacity = Opacity
 
-            If WaterbendImpact Then
-                PointOpacity = ToNumber(Round(ToDouble(Opacity) *
-                    Splash.SheetOpacity(Sample.ImpactProgress, Strip, Along)))
+            If ContactSheet Then
+                PointOpacity = ToNumber(Round(72.0 * Clamp(Sample.Strength, 0.0, 1.0) *
+                    Splash.SheetOpacity(Sample.ImpactProgress, Strip Mod IMPACT_STRIPS, Along)))
             End If
 
             Ok = SetSurfacePoint(Value, PointCount, LeftPoint, RightPoint, Along, PointOpacity) And Ok
@@ -507,8 +550,7 @@ Private Function SetSurfacePoint(ByRef Value As Context, Index As Number,
 
 End Function
 
-Private Function EmitSpray(ByRef Value As Context, Sample As Frame,
-    WaterbendImpact As Boolean, ItemCount As Number) As Boolean
+Private Function EmitSpray(ByRef Value As Context, Sample As Frame, ItemCount As Number) As Boolean
 
     Dim Index As Number
     Dim StripCount As Number
@@ -517,7 +559,6 @@ Private Function EmitSpray(ByRef Value As Context, Sample As Frame,
     Dim Lifetime As Number
     Dim Along As Double
     Dim Angle As Double
-    Dim Phase As Double
     Dim Radius As Double
     Dim Center As P.Vector3
     Dim Position As P.Vector3
@@ -525,8 +566,6 @@ Private Function EmitSpray(ByRef Value As Context, Sample As Frame,
     Dim RightPoint As P.Vector3
     Dim Normal As P.Vector3
     Dim Tangent As P.Vector3
-    Dim Radial As P.Vector3
-    Dim RimDirection As P.Vector3
     Dim Ok As Boolean
 
     Ok = True
@@ -535,7 +574,9 @@ Private Function EmitSpray(ByRef Value As Context, Sample As Frame,
     If Sample.Mode = HEAL Then
         StripCount = Max(1, Sample.MemberCount * 2)
     Else If Sample.Mode = SHIELD Then
-        StripCount = Max(1, Sample.MemberCount * 4)
+        StripCount = Max(1, Sample.MemberCount * SHIELD_STRIPS)
+    Else If Sample.Mode = IMPACT Then
+        StripCount = IMPACT_STRIPS
     End If
 
     Center = Sample.Origin
@@ -549,7 +590,7 @@ Private Function EmitSpray(ByRef Value As Context, Sample As Frame,
         Along = ToDouble((Value.Serial * 37) Mod 1000) / 1000.0
         Angle = ToDouble((Value.Serial * 137) Mod 360) * M.PI / 180.0
 
-        Call SurfacePoint(Sample, WaterbendImpact, Value.Serial Mod StripCount, Along,
+        Call SurfacePoint(Sample, Value.Serial Mod StripCount, Along,
             Center, Radius, Position, RightPoint)
 
         Position = M.Lerp(Position, RightPoint, 0.5)
@@ -592,32 +633,18 @@ Private Function EmitSpray(ByRef Value As Context, Sample As Frame,
 
             Call BarrierFrame(Sample, MemberIndex, Position, Normal, Tangent)
 
-            Radius = Min(31.0, Sample.ImpactProgress * 120.0)
-            Radial = M.Add(M.Scale(Tangent, Cos(Angle)), P.Vector(0.0, Sin(Angle), 0.0))
-            RimDirection = M.Add(M.Scale(Tangent, -Sin(Angle)), P.Vector(0.0, Cos(Angle), 0.0))
-            Position = M.Add(Position, M.Scale(Radial, Radius))
             Position = M.Add(Position, M.Scale(Normal,
                 6.0 - BarrierRecoil(Sample.ImpactProgress)))
-            Velocity = M.Add(M.Scale(Radial, 70.0 + Along * 40.0),
-                M.Scale(RimDirection, 45.0))
-            Velocity = M.Add(Velocity, M.Scale(Normal, -8.0))
-            Lifetime = 340 + Value.Serial Mod 180
 
-        Else If WaterbendImpact Then
-
-            Call Splash.Spray(Sample.Origin, Sample.Target, Value.Serial, Position, Velocity)
+            Call Splash.Spray(Sample.Target, Position, Value.Serial, Position, Velocity)
 
             Lifetime = 300 + Value.Serial Mod 260
 
         Else If Sample.Mode = IMPACT Then
 
-            Ok = M.TryNormalize(M.Subtract(Sample.Origin, Sample.Target), Normal)
-            Ok = M.TryNormalize(M.Cross(Normal, P.Vector(0.0, 1.0, 0.0)), Tangent)
-            Position = M.Add(Sample.Target, M.Scale(Tangent, Cos(Angle) * 8.0))
-            Position.Y = Position.Y + Sin(Angle) * 8.0
-            Velocity = M.Add(M.Scale(Normal, 45.0 + Along * 70.0),
-                M.Scale(Tangent, Cos(Angle) * 115.0))
-            Velocity.Y = Velocity.Y + Sin(Angle) * 100.0 + 25.0
+            Call Splash.Spray(Sample.Origin, Sample.Target, Value.Serial, Position, Velocity)
+
+            Lifetime = 300 + Value.Serial Mod 260
 
         Else If Sample.Mode = TORRENT Then
 
@@ -645,8 +672,9 @@ Public Function Update(ByRef Value As Context, Sample As Frame) As Boolean
     Dim Elapsed As Number
     Dim ItemCount As Number
     Dim Index As Number
+    Dim CastMode As Number
+    Dim Contacts As Number
     Dim Ok As Boolean
-    Dim WaterbendImpact As Boolean
 
     If Not Value.Ready Then
         Return False
@@ -654,7 +682,7 @@ Public Function Update(ByRef Value As Context, Sample As Frame) As Boolean
 
     Sample.MemberCount = Max(0, Min(4, Sample.MemberCount))
     Sample.ImpactProgress = Clamp(Sample.ImpactProgress, 0.0, 1.0)
-    WaterbendImpact = Sample.Mode = WATER_BEND And Sample.Progress >= 0.72
+    CastMode = Sample.Mode
 
     If ((Sample.Mode = WATER_BALL Or Sample.Mode = WAVE Or
         Sample.Mode = STORM Or Sample.Mode = TORRENT Or Sample.Mode = WATER_BEND) And
@@ -667,15 +695,20 @@ Public Function Update(ByRef Value As Context, Sample As Frame) As Boolean
 
     Else If Sample.Mode = IMPACT Then
 
+        Sample.ImpactActive = True
         Sample.ImpactProgress = Sample.Progress
 
     End If
 
     Elapsed = Sample.Time - Value.PreviousTime
+    Contacts = ContactCount(Sample)
     Ok = True
 
     If (Sample.Mode <> Value.PreviousMode Or
-        WaterbendImpact <> Value.PreviousWaterbendImpact Or
+        CastMode <> Value.PreviousCastMode Or
+        Sample.ImpactActive <> Value.PreviousImpactActive Or
+        Sample.ImpactProgress < Value.PreviousImpactProgress Or
+        Sample.ImpactMember <> Value.PreviousImpactMember Or
         Elapsed < 0 Or
         Elapsed > 250) Then
 
@@ -695,7 +728,10 @@ Public Function Update(ByRef Value As Context, Sample As Frame) As Boolean
 
     Value.PreviousTime = Sample.Time
     Value.PreviousMode = Sample.Mode
-    Value.PreviousWaterbendImpact = WaterbendImpact
+    Value.PreviousCastMode = CastMode
+    Value.PreviousImpactActive = Sample.ImpactActive
+    Value.PreviousImpactProgress = Sample.ImpactProgress
+    Value.PreviousImpactMember = Sample.ImpactMember
     Value.Visible = Sample.Mode >= HEAL And Sample.Mode <= WATER_BEND And Sample.Strength > 0.0
     Ok = G.AdvanceGpuParticleSystem3D(Value.Spray, Max(0, Min(100, Elapsed))) And Ok
 
@@ -708,37 +744,23 @@ Public Function Update(ByRef Value As Context, Sample As Frame) As Boolean
 
     End If
 
-    Ok = UpdateSurfaces(Value, Sample, WaterbendImpact) And Ok
+    Ok = UpdateSurfaces(Value, Sample) And Ok
+    Ok = G.SetEffectMaterialWater3D(Value.SheetMaterial, True, 18, 4, Max(0, Sample.Time)) And Ok
 
-    If Sample.Mode = WATER_BEND Then
-        Ok = G.SetEffectMaterial3D(Value.DropMaterial, G.MATERIAL_ALPHA_BLEND,
-            255, 155, 130, 90, 180) And Ok
-    Else
+    If Contacts > 0 Then
         Ok = G.SetEffectMaterial3D(Value.DropMaterial, G.MATERIAL_ALPHA_BLEND,
             255, 255, 255, 100, 125) And Ok
+    Else
+        Ok = G.SetEffectMaterial3D(Value.DropMaterial, G.MATERIAL_ALPHA_BLEND,
+            255, 155, 130, 90, 180) And Ok
     End If
 
-    ItemCount = 8
-
-    If WaterbendImpact Then
-        ItemCount = 4
-    Else If Sample.Mode = IMPACT Then
-        ItemCount = 35
-    Else If Sample.Mode = WATER_BEND Then
-        ItemCount = 4
-    Else If Sample.Mode = SHIELD Then
-        ItemCount = 2
-    Else If Sample.Mode = WAVE Or Sample.Mode = STORM Then
-        ItemCount = 24
-    End If
-
-    Ok = G.SetEffectMaterialWater3D(Value.SheetMaterial, True, 18, ItemCount, Max(0, Sample.Time)) And Ok
     Value.EmissionTime = Value.EmissionTime + Elapsed
-    ItemCount = Min(160, Value.EmissionTime * 4)
+    ItemCount = Min(20, Value.EmissionTime / 2)
 
-    If WaterbendImpact Then
+    If Contacts > 0 Then
 
-        ''' Emit one compact burst, with a short tail and no continuous contact shower.
+        ''' Share one compact burst across simultaneous hits, within the GPU spawn budget.
         ItemCount = 0
 
         If Sample.ImpactProgress < 0.26 Then
@@ -748,27 +770,15 @@ Public Function Update(ByRef Value As Context, Sample As Frame) As Boolean
 
         Value.ImpactSprayCount = Value.ImpactSprayCount + ItemCount
 
-    Else If Sample.Mode = WATER_BALL Then
-
-        ItemCount = Min(80, Value.EmissionTime * 2)
-
-    Else If Sample.Mode = WATER_BEND Then
-
-        ItemCount = Min(20, Value.EmissionTime / 2)
-
     Else If Sample.Mode = SHIELD Then
 
         ItemCount = 0
-
-        If Sample.ImpactActive And Sample.ImpactProgress < 0.38 Then
-            ItemCount = Min(24, Value.EmissionTime)
-        End If
 
     End If
 
     If ItemCount > 0 Then
         Value.EmissionTime = 0
-        Ok = EmitSpray(Value, Sample, WaterbendImpact, ItemCount) And Ok
+        Ok = EmitSpray(Value, Sample, ItemCount) And Ok
     End If
 
     Return Ok

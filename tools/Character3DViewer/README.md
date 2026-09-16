@@ -48,7 +48,9 @@ water shields in front of individual party members. At impact the struck shield
 gives slightly, then recovers; impact droplets spread across it and disperse around
 its rim. No shield encloses the whole
 party. Waterball contact adds a splash and brief
-recoil. The native Water Lab exposes all seven effect previews independently.
+recoil. The native Water Lab exposes all eight effect previews independently.
+The shared water presets use Waterbending's clear finish, sparse spray and compact
+curled impacts, including struck shields; each cast retains its own motion.
 Tab/click selects her Beat Camera. Healing previews
 existing presentation states; no Sin Star I game code or health system is changed.
 Mira1 now has a cleaner 4K reference bake, repaired waist cape, closed staff and baked

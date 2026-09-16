@@ -115,6 +115,18 @@ Do
         Call Scene.Update(Lab, 0)
         Call Scene.Draw(Lab)
         Call Check(Lab.Ready And Lab.ErrorCode = 0 And Lab.Water.Visible)
+
+        If Mode = Water.HEAL Then
+            Call Check(Lab.Water.Sheets.PointCount = 8 * 99)
+        Else If Mode = Water.SHIELD Then
+            Call Check(Lab.Water.Sheets.PointCount = 32 * 51)
+        Else If Mode = Water.IMPACT Then
+            Call Check(Lab.Water.Sheets.PointCount = 16 * 99)
+        Else
+
+            Call Check(Lab.Water.Sheets.PointCount = 32 * 99)
+        End If
+
         Call Check(G.ReflectionValue3D(G.REFLECTION_QUERY_EFFECTIVE) = 1)
         Call Check(G.ReflectionValue3D(G.REFLECTION_QUERY_DRAWS) > 0)
         Call Check(G.ReflectionValue3D(G.REFLECTION_QUERY_COMPOSITIONS) = 1)
@@ -173,7 +185,8 @@ Do
 Loop Until True
 
 Call CheckWaterbendingTargets(Lab)
-Call CheckWaterbendingImpact(Lab)
+Call CheckCompactImpact(Lab)
+Call CheckSharedWater(Lab)
 Call CheckBackgrounds(Lab)
 
 Ok = G.ConfigurePostProcessing3D(False, False, False, 100, 1200, 45, 2, 2, 4)
@@ -263,45 +276,11 @@ Sub CheckWaterbendingTargets(ByRef Value As Scene.State)
 
 End Sub
 
-Sub CheckWaterbendingImpact(ByRef Value As Scene.State)
+Sub CheckCompactImpact(ByRef Value As Scene.State)
 
     Dim Strip As Number
     Dim Point As P.Vector3
     Dim Delta As P.Vector3
-    Dim PreviousSerial As Number
-
-    Value.Mode = Water.WATER_BEND
-    Value.SpeedPercent = 100
-    Value.Paused = True
-
-    Call Scene.Restart(Value)
-
-    Value.Time = 3500
-
-    Call Scene.Update(Value, 0)
-    Call Check(Value.Water.Sheets.PointCount = 32 * 99)
-
-    Value.Time = 3600
-
-    Call Scene.Update(Value, 0)
-    Call Check(Value.Water.PreviousWaterbendImpact And Value.Water.ImpactSprayCount = 96)
-
-    PreviousSerial = Value.Water.Serial
-
-    Call Scene.Update(Value, 0)
-    Call Check(Value.Water.Serial = PreviousSerial)
-
-    Value.Paused = False
-
-    Call Scene.Update(Value, 300)
-    Call Check(Value.Water.ImpactSprayCount = 128)
-
-    PreviousSerial = Value.Water.Serial
-
-    Call Scene.Update(Value, 500)
-    Call Check(Value.Water.Serial = PreviousSerial)
-
-    Value.Paused = True
 
     For Strip = 0 To 15
         Point = Splash.SheetPoint(Value.Frame.Origin, Value.Frame.Target, 0.35, Strip, 1.0, 1.0)
@@ -309,6 +288,120 @@ Sub CheckWaterbendingImpact(ByRef Value As Scene.State)
 
         Call Check(M.Dot(Delta, Delta) > 400.0 And M.Dot(Delta, Delta) < 3600.0)
         Call Check(Splash.SheetOpacity(1.0, Strip, 0.5) = 0.0)
+    End For
+
+End Sub
+
+''' All presets share the sparse spray and bounded contact burst, including every struck shield.
+Sub CheckSharedWater(ByRef Value As Scene.State)
+
+    Dim Sample As Water.Frame
+    Dim CastMode As Number
+    Dim ContactMembers As Number
+    Dim PreviousSerial As Number
+    Dim Ready As Boolean
+
+    Sample = Value.Frame
+    Sample.Strength = 1.0
+    Sample.MemberCount = 4
+
+    For CastMode = Water.HEAL To Water.WATER_BEND
+
+        Mode = CastMode
+        Sample.Mode = CastMode
+        Sample.Time = 10000
+        Sample.Progress = 0.2
+        Sample.ImpactActive = False
+        Sample.ImpactProgress = 0.0
+        Sample.ImpactMember = 0
+        Ready = Water.Update(Value.Water, Sample)
+        PreviousSerial = Value.Water.Serial
+        Sample.Time = Sample.Time + 100
+        Ready = Water.Update(Value.Water, Sample) And Ready
+
+        If CastMode = Water.SHIELD Or CastMode = Water.IMPACT Then
+            Call Check(Value.Water.Serial = PreviousSerial)
+        Else
+
+            Call Check(Value.Water.Serial - PreviousSerial = 20)
+        End If
+
+        Call Check(Ready)
+
+        If CastMode <> Water.HEAL Then
+
+            Sample.Progress = 0.72
+            Sample.ImpactActive = CastMode = Water.SHIELD
+            Sample.ImpactProgress = 0.0
+
+            If CastMode = Water.IMPACT Then
+                Sample.Progress = 0.0
+            End If
+
+            Ready = Water.Update(Value.Water, Sample)
+
+            Call Check(Ready And Value.Water.ImpactSprayCount = 96)
+
+            PreviousSerial = Value.Water.Serial
+            Ready = Water.Update(Value.Water, Sample)
+
+            Call Check(Ready And Value.Water.Serial = PreviousSerial)
+
+            Sample.Time = Sample.Time + 100
+            Sample.Progress = 0.776
+            Sample.ImpactProgress = 0.2
+
+            If CastMode = Water.IMPACT Then
+                Sample.Progress = 0.2
+            End If
+
+            Ready = Water.Update(Value.Water, Sample)
+
+            Call Check(Ready And Value.Water.ImpactSprayCount = 128)
+
+            PreviousSerial = Value.Water.Serial
+            Sample.Time = Sample.Time + 100
+            Sample.Progress = 0.86
+            Sample.ImpactProgress = 0.5
+
+            If CastMode = Water.IMPACT Then
+                Sample.Progress = 0.5
+            End If
+
+            Ready = Water.Update(Value.Water, Sample)
+
+            Call Check(Ready And Value.Water.Serial = PreviousSerial)
+
+        End If
+
+    End For
+
+    ''' Four simultaneous barrier crowns fit the same ribbon allocation alongside lightning.
+    Sample.Mode = Water.SHIELD
+    Sample.ImpactActive = True
+    Sample.ImpactMember = -1
+
+    For ContactMembers = 1 To 4
+
+        Mode = Water.SHIELD
+        Sample.MemberCount = ContactMembers
+        Sample.Time = Sample.Time + 1000
+        Sample.ImpactProgress = 0.0
+        Ready = Water.Update(Value.Water, Sample)
+
+        Call Check(Ready And Value.Water.ImpactSprayCount = 96)
+        Call Check(Value.Water.Sheets.PointCount = ContactMembers * (8 * 51 + 16 * 23))
+        Call Check(Value.Water.Sheets.PointCount <= 32 * 99)
+        Call Scene.Draw(Value)
+        Call Check(G.LastError() = 0)
+
+        Show Screen
+
+        Sample.Time = Sample.Time + 100
+        Sample.ImpactProgress = 0.2
+        Ready = Water.Update(Value.Water, Sample)
+
+        Call Check(Ready And Value.Water.ImpactSprayCount = 128)
     End For
 
 End Sub

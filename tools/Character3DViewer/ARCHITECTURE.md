@@ -134,7 +134,12 @@ precision vectors and scalar samples without importing
 WaterVfx3D's Frame or Context. This keeps the dependency one-way without a new shared
 state module. WaterVfx3D retains one caller-held context, no game/Viewer dependency,
 and no hidden scene clock. Native water lighting is isolated in water_surface3d.h;
-the compact waterbending contact geometry delegates to stateless WaterImpact3D.
+all attack contacts and struck-shield crowns delegate to stateless WaterImpact3D.
+The eight water presets share Waterbending's clear material and sparse runoff.
+The same context tracks cast/contact transitions and the 128-droplet burst budget,
+shared across simultaneous shield hits. Denser preset surfaces and up to four
+barrier crowns stay within the existing 3,168 points per ribbon batch; no new
+effect context, hidden clock, renderer cap or scene-owned water state is introduced.
 The native water_ribbon_normals3d.h helper computes area-weighted smooth normals
 at ribbon commit and welds coincident seam vertices; reusable scratch belongs to
 the ribbon batch and is freed with it. No character identity enters the renderer.
