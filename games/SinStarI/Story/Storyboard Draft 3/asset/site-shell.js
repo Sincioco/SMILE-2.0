@@ -7,6 +7,8 @@
   const scenes = sceneLinks.map(link => document.getElementById(link.hash.slice(1))).filter(Boolean);
   let currentScene = null;
   let scheduled = false;
+  let headerHeight = 0;
+  const header = document.querySelector('.site-header');
 
   function carryTheme() {
     const theme = document.documentElement.dataset.theme;
@@ -52,7 +54,12 @@
 
   function updatePosition() {
     scheduled = false;
-    const edge = document.querySelector('.site-header').getBoundingClientRect().bottom + 80;
+    const bounds = header.getBoundingClientRect();
+    if (bounds.height !== headerHeight) {
+      headerHeight = bounds.height;
+      document.documentElement.style.setProperty('--site-header-height', headerHeight + 'px');
+    }
+    const edge = bounds.bottom + 80;
     let selected = null;
     for (const scene of scenes) {
       if (scene.getBoundingClientRect().top > edge) break;
@@ -80,6 +87,7 @@
   window.addEventListener('scroll', schedulePosition, {passive:true});
   window.addEventListener('resize', schedulePosition);
   window.addEventListener('load', schedulePosition);
+  if ('ResizeObserver' in window) new ResizeObserver(schedulePosition).observe(header);
   updatePosition();
 
   const contents = document.getElementById('scene-index');

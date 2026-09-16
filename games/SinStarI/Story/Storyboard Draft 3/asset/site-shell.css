@@ -12,7 +12,7 @@
   --gold:#74521c; --note:#fbf5e9; --note-border:#c9af7b; --shadow:0 10px 35px #182f3a08;
   --bg:var(--page); --ink:var(--text); --line:var(--border);
 }
-html { scroll-padding-top:100px; }
+html { --site-header-height:88px; scroll-padding-top:calc(var(--site-header-height) + 12px); }
 body { background:var(--page); color:var(--text); }
 .site-header { position:sticky; top:0; z-index:10; border-bottom:1px solid var(--border); background:var(--paper); }
 .site-header-inner {
@@ -33,9 +33,9 @@ body { background:var(--page); color:var(--text); }
 .site-header :focus-visible, .site-sidebar :focus-visible { outline:3px solid var(--gold); outline-offset:3px; }
 .site-layout { max-width:1540px; margin:auto; padding:28px 30px 60px; display:grid; grid-template-columns:280px minmax(0,1fr); gap:32px; align-items:start; }
 .site-layout > main { padding:0; margin:0; min-width:0; max-width:none; }
-.site-sidebar { position:sticky; top:112px; min-width:0; color:var(--text); font:400 14px/1.5 "Segoe UI",sans-serif; }
+.site-sidebar { position:sticky; top:calc(var(--site-header-height) + 24px); min-width:0; color:var(--text); font:400 14px/1.5 "Segoe UI",sans-serif; }
 .scene-index > summary { cursor:pointer; font-size:15px; font-weight:700; padding:0 0 14px; color:var(--gold); }
-.scene-index-body { max-height:calc(100vh - 170px); overflow:auto; scrollbar-width:thin; padding:0 13px 12px 0; }
+.scene-index-body { max-height:calc(100vh - var(--site-header-height) - 82px); overflow:auto; scrollbar-width:thin; padding:0 13px 12px 0; }
 .scene-filter-tools label { display:block; font-size:14px; color:var(--muted); margin-bottom:6px; }
 #scene-filter { width:100%; min-height:42px; padding:9px; border:1px solid var(--border); border-radius:6px; background:var(--paper); color:var(--text); font:inherit; }
 #scene-filter-status { color:var(--muted); margin:6px 0; font-size:14px; }
@@ -71,7 +71,7 @@ body[data-view="script"] .script-art .dialogue strong { color:var(--gold); }
   .site-tools a { font-size:14px; }
 }
 @media (max-width:860px) {
-  html { scroll-padding-top:176px; }
+  html { --site-header-height:164px; }
   .site-header-inner { padding:12px 16px; gap:12px; }
   .site-brand { font-size:19px; margin-right:auto; }
   .view-tabs a { padding:8px 12px; }

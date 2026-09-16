@@ -1,7 +1,7 @@
 {
   "playback": {
     "status": "Passed",
-    "checks": 15,
+    "checks": 23,
     "results": [
       "No video download before interaction",
       "Hover plays muted and reveals video only after playback begins",
@@ -17,12 +17,20 @@
       "Video errors retain the image and offer a readable status",
       "Slow failed loads time out without hiding the illustration",
       "Keyboard focus starts links but leaves buttons awaiting activation",
-      "Changing reduced motion stops an automatic preview"
+      "Changing reduced motion stops an automatic preview",
+      "Audio On enables sound and Audio Off immediately mutes the active clip",
+      "Blocked sound falls back to visible muted playback with explicit sound action",
+      "Stale blocked audio cannot revive a departed picture",
+      "Clip selection starts the alternate and keeps later hovers on that clip",
+      "Remember saves the selected clip, follows changes, and clears without changing current playback",
+      "External remembered clip changes synchronize controls and active preview",
+      "Clip selection is explicit playback under reduced motion",
+      "Storage restrictions explain the linked-view fallback"
     ]
   },
   "theme_navigation": {
     "status": "Passed",
-    "checks": 17,
+    "checks": 18,
     "results": [
       "Link preference wins across local HTML views",
       "Saved preference is restored",
@@ -40,12 +48,34 @@
       "Clearing search restores the whole scene list",
       "Mobile navigation folds into a disclosure",
       "Shared Print control invokes browser printing",
-      "Open views receive stored theme changes"
+      "Open views receive stored theme changes",
+      "Wrapped header height updates sidebar and anchor clearance"
     ]
   },
+  "media_preferences": {
+    "status": "Passed",
+    "checks": 10,
+    "results": [
+      "First visit starts with audio off and one click enables it",
+      "Audio setting persists after reload",
+      "Remember persists a clip and clears when unchecked",
+      "Script and Storyboard links carry audio and remembered clips without losing theme or anchor",
+      "Cross-view preferences work when file storage and history are blocked",
+      "Cleared link choices override stale per-file storage",
+      "Image, external and same-page anchor links are untouched",
+      "Open views react to shared stored preferences",
+      "Malformed preferences fall back safely",
+      "Current URL stores selections for reload and bookmarks"
+    ]
+  },
+  "original_planet_video_preserved": {
+    "status": "Passed",
+    "decoded_video_sha256": "c13aa0246ea2b54da85d879e785babef36a9019e9533b0b23434946150473a69"
+  },
   "site_javascript_sha256": {
-    "animated-pictures.js": "af63dd47a956c18b5ac582219d9ade548f2f206b85b1aeee334808a4efe5c024",
-    "site-shell.js": "3cfb70bf79e13f808252a5dfc51e06cf588153fc63361e08fbde19fbe4aed82b",
+    "animated-pictures.js": "814a00b49819d8464683d82005977bffc9d48a5aa99bfdbac3725aabb39bf136",
+    "media-preferences.js": "597ec3668f501e50b5ad47f611a7354bc23a53056a9e914413ac5ff09dece250",
+    "site-shell.js": "0835608eca8d38eeb6ddb35f9dd6b4d9fe600b5aed94c58eeecc70fcf42965d1",
     "site-theme.js": "cf83103d5b01bcfc6c7e362c015b672118885e4e0ba268c5fe3532ad093b6887"
   }
 }

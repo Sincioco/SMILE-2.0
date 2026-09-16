@@ -1,10 +1,11 @@
-"""Collect completed LTX renders and make compact, silent browser previews."""
+"""Collect completed LTX renders and make compact browser previews with audio."""
 from pathlib import Path
 import json
 import shutil
 import subprocess
 import sys
 import urllib.request
+from media_catalog import all_clips
 
 ROOT = Path(__file__).resolve().parents[1]
 PRODUCTION = ROOT / 'production'
@@ -19,13 +20,20 @@ def export_preview(item, source):
     if 'start' in item:
         args += ['-ss', str(item['start'])]
     args += ['-i', str(source)]
+    audio_input = '0:a:0?'
+    if item.get('audio_source'):
+        if 'start' in item:
+            args += ['-ss', str(item['start'])]
+        args += ['-i', item['audio_source']]
+        audio_input = '1:a:0'
     if 'duration' in item:
         args += ['-t', str(item['duration'])]
     filters = item.get('crop', '')
     if filters:
         filters += ','
     filters += 'scale=960:-2,setsar=1'
-    args += ['-an', '-vf', filters, '-c:v', 'libx264', '-preset', 'fast', '-crf', '23',
+    args += ['-map', '0:v:0', '-map', audio_input, '-vf', filters,
+             '-c:a', 'aac', '-b:a', '128k', '-c:v', 'libx264', '-preset', 'fast', '-crf', '23',
              '-pix_fmt', 'yuv420p', '-movflags', '+faststart', str(target)]
     subprocess.run(args, check=True, capture_output=True)
 
@@ -37,7 +45,7 @@ def collect():
     (OUT / 'clips').mkdir(parents=True, exist_ok=True)
     (OUT / 'history').mkdir(exist_ok=True)
     report = []
-    for item in items:
+    for item in all_clips(items):
         target = ROOT / item['video']
         source = None
         status = 'pending'
@@ -65,7 +73,7 @@ def collect():
                         status = 'rendered'
                     elif state['status_str'] == 'error':
                         status = 'failed'
-        force_reuse = '--refresh-reused' in sys.argv and item['status'] == 'reuse'
+        force_reuse = '--refresh-all' in sys.argv or ('--refresh-reused' in sys.argv and item['status'] == 'reuse')
         newer_source = source and source.exists() and target.exists() and source.stat().st_mtime > target.stat().st_mtime
         if source and source.exists() and (not target.exists() or force_reuse or newer_source):
             export_preview(item, source)

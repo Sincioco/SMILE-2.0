@@ -33,6 +33,7 @@ def apply_shell(page, name, sidebar, version):
               '<small>Storyboard Draft 3</small></a>'
               f'<nav class="view-tabs" aria-label="Reading view">{tabs}</nav>'
               '<div class="site-tools"><a href="movies.html">Films &amp; Trailer</a>'
+              '<button id="site-audio-toggle" type="button" aria-pressed="false" hidden>Audio Off</button>'
               '<button id="site-theme-toggle" type="button" aria-pressed="false" hidden>Dark Theme</button>'
               '<button id="site-print" type="button" hidden>Print</button></div></div></header>')
     header_pattern = r'<header class="(?:bar|topbar)"[^>]*>.*?</header>'
@@ -52,5 +53,6 @@ def apply_shell(page, name, sidebar, version):
     page = re.sub(r'<script src="asset/reading.js[^\"]*"></script>', '', page)
     page = page.replace('</head>', f'<script src="asset/site-theme.js?v={version("asset/site-theme.js")}"></script>'
                         f'<link rel="stylesheet" href="asset/site-shell.css?v={version("asset/site-shell.css")}"></head>')
-    page = page.replace('</body>', f'<script src="asset/site-shell.js?v={version("asset/site-shell.js")}"></script></body>')
+    page = page.replace('</body>', f'<script src="asset/site-shell.js?v={version("asset/site-shell.js")}"></script>'
+                        f'<script src="asset/media-preferences.js?v={version("asset/media-preferences.js")}"></script></body>')
     return page

@@ -9,6 +9,7 @@ import subprocess
 import sys
 from PIL import Image
 from html_document import Document, descendants
+from media_catalog import all_clips, clips_for
 
 ROOT = Path(__file__).resolve().parents[1]
 PRODUCTION = ROOT / 'production'
@@ -49,6 +50,8 @@ def validate():
                 references += 1
     expected = json.loads((PRODUCTION / 'hover-media.json').read_text(encoding='utf-8'))
     assert len(expected) == 129 and len({item['id'] for item in expected}) == 129
+    clips = all_clips(expected)
+    assert len(clips) == 130 and len({clip['id'] for clip in clips}) == 130
     render_status = json.loads((PRODUCTION / 'render-status.json').read_text(encoding='utf-8'))
     pending_jobs = [item['id'] for item in render_status if item['status'] not in ('rendered', 'reused')]
     assert allow_pending or not pending_jobs, ('unfinished render jobs', pending_jobs)
@@ -65,14 +68,24 @@ def validate():
             assert video.attrs.get('preload') == 'none' and 'src' not in video.attrs
             assert all(key in video.attrs for key in ('muted', 'loop', 'playsinline'))
             assert any(node.tag == 'button' for node in nodes)
+            variants = [node for node in nodes if 'data-clip' in node.attrs]
+            available = clips_for(item)
+            if len(available) > 1:
+                assert [node.attrs['data-clip'] for node in variants] == [clip['id'] for clip in available]
+                assert [urlsplit(node.attrs['data-src']).path for node in variants] == [clip['video'] for clip in available]
+                assert any(node.attrs.get('class') == 'remember-clip' for node in nodes)
+                assert host.attrs['data-default-clip'] in [clip['id'] for clip in available]
+            else:
+                assert not variants
             if name == SCRIPT and item['kind'] == 'scene':
-                assert nodes[0].attrs['href'] == 'index.html#' + item['id']
+                assert next(node for node in nodes if node.tag == 'a').attrs['href'] == 'index.html#' + item['id']
     board_nav = re.search(r'<aside class="site-sidebar">.*?</aside>', sources['index.html'], re.S).group(0)
     script_nav = re.search(r'<aside class="site-sidebar">.*?</aside>', sources[SCRIPT], re.S).group(0)
     assert board_nav == script_nav
     assert board_nav.count('data-scene-link') == 53
     headers = [re.search(r'<header class="site-header">.*?</header>', sources[n], re.S).group(0) for n in ('index.html', SCRIPT)]
     assert headers[0].replace(' aria-current="page"', '') == headers[1].replace(' aria-current="page"', '')
+    assert all(docs[name].by_id('site-audio-toggle').tag == 'button' for name in docs)
     assert docs['index.html'].by_id('new-c09-s03-planet').parent.parent.attrs['id'] == 'c09-s03'
     planet_at = sources[SCRIPT].index('id="script-new-c09-s03-planet"')
     assert sources[SCRIPT].index('They succeed in delaying it.') < planet_at < sources[SCRIPT].index("Kael remains at the platform's edge")
@@ -102,6 +115,7 @@ def validate():
         subprocess.run([node_exe, '--check', str(path)], check=True, capture_output=True)
     result = dict(status='Pending media' if missing or pending_jobs else 'Passed', html_pages=len(docs),
                   local_references=references, scene_previews=121, cast_portraits=7, poster=True,
+                  video_clips=len(clips), illustrations_with_variations=sum('variants' in item for item in expected),
                   matching_navigation=True, script_narrative='Unchanged', canon='Unchanged',
                   preserved_draft_files=len(preserved), decoded_png_files=decoded,
                   javascript_syntax_checks=len(scripts), pending_videos=sorted(set(missing)),

@@ -1,6 +1,7 @@
 .animated-picture { position: relative; isolation: isolate; }
-.animated-picture > a { display: block; position: relative; overflow: hidden; }
-.animated-picture > a > img { display: block; width: 100%; height: auto; }
+.picture-stage { position:relative; }
+.picture-stage > a { display: block; position: relative; overflow: hidden; }
+.picture-stage > a > img { display: block; width: 100%; height: auto; }
 .animated-picture video {
   position: absolute; inset: 0; width: 100%; height: 100%;
   object-fit: contain; background: #080e1a; opacity: 0;
@@ -17,7 +18,7 @@
 }
 .animation-toggle[hidden] { display: none; }
 .animation-toggle:hover { background: #24344a; }
-.animation-toggle:focus-visible, .animated-picture > a:focus-visible {
+.animation-toggle:focus-visible, .picture-stage > a:focus-visible {
   outline: 3px solid #59cfff; outline-offset: 3px;
 }
 .animation-status {
@@ -31,9 +32,16 @@
 .profile-portrait figcaption { margin-top: .5rem; font-size: .875rem; color: #596270; }
 .manuscript-intro .poster-portrait { margin-top: 1.5rem; margin-bottom: 1.5rem; }
 .animation-guide { font-size: .95rem; line-height: 1.5; }
+.clip-choices { display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding:12px; background:var(--soft); color:var(--text); font:500 14px/1.4 system-ui,sans-serif; }
+.clip-choices button { min-height:40px; padding:8px 14px; border:1px solid var(--border); border-radius:5px; background:var(--paper); color:var(--text); cursor:pointer; font:inherit; }
+.clip-choices button[aria-pressed="true"] { background:var(--accent-soft); box-shadow:inset 0 -3px var(--gold); font-weight:700; }
+.clip-choices label { display:flex; align-items:center; gap:7px; min-height:40px; margin-left:auto; cursor:pointer; }
+.clip-choices input { width:18px; height:18px; accent-color:var(--accent); }
+.clip-choices :focus-visible { outline:3px solid var(--gold); outline-offset:3px; }
+.clip-save-status:not(:empty) { flex-basis:100%; color:var(--muted); }
 @media (prefers-reduced-motion: reduce) {
   .animated-picture video { transition: none; }
 }
 @media print {
-  .animated-picture video, .animation-toggle, .animation-status, .animation-guide { display: none !important; }
+  .animated-picture video, .animation-toggle, .animation-status, .animation-guide, .clip-choices { display: none !important; }
 }

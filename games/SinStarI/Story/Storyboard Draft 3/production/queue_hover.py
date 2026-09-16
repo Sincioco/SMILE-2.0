@@ -5,6 +5,7 @@ import json
 import shutil
 import urllib.request
 from PIL import Image
+from media_catalog import all_clips
 
 ROOT = Path(__file__).resolve().parents[1]
 PRODUCTION = ROOT / 'production'
@@ -27,7 +28,7 @@ def build_graph(item, index, api_template, ui_template):
     prefix = f'SinStarI_Draft3/{item["id"]}'
     width, height = Image.open(ROOT / item['image']).size
     render_width, render_height = (1152, 640) if width / height > 1.7 else (1152, 768)
-    seed = 20260916300 + index
+    seed = item.get('seed', 20260916300 + index)
     prompt = (
         'One continuous four-second cinematic painted animation of exactly the supplied illustration. '
         'Keep the camera locked and retain the same composition, people, faces, anatomy, clothing and props. '
@@ -89,7 +90,7 @@ def main():
     ui_template = json.loads((SOURCE / 'Sin Star I - Room for One - LTX 2.5 - 24 Seconds.json').read_text(encoding='utf-8'))
     receipt_path = PRODUCTION / 'queue-receipts.json'
     receipts = json.loads(receipt_path.read_text(encoding='utf-8')) if receipt_path.exists() else []
-    for index, item in enumerate(items):
+    for index, item in enumerate(all_clips(items)):
         if item['status'] == 'reuse' or any(r['id'] == item['id'] for r in receipts):
             continue
         shutil.copy2(ROOT / item['image'], INPUT / f'{item["id"]}.png')

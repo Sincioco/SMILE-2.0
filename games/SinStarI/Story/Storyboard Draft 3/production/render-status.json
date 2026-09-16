@@ -3,774 +3,780 @@
     "id": "panel-01-1",
     "status": "reused",
     "ready": true,
-    "bytes": 1014010
+    "bytes": 1114428
   },
   {
     "id": "panel-01-2",
     "status": "reused",
     "ready": true,
-    "bytes": 628194
+    "bytes": 727771
   },
   {
     "id": "panel-01-3",
     "status": "reused",
     "ready": true,
-    "bytes": 1853787
+    "bytes": 1955524
   },
   {
     "id": "panel-01-4",
     "status": "reused",
     "ready": true,
-    "bytes": 1247384
+    "bytes": 1346851
   },
   {
     "id": "panel-02-1",
     "status": "reused",
     "ready": true,
-    "bytes": 1118299
+    "bytes": 1217630
   },
   {
     "id": "panel-02-2",
     "status": "reused",
     "ready": true,
-    "bytes": 1162692
+    "bytes": 1262720
   },
   {
     "id": "panel-02-3",
     "status": "reused",
     "ready": true,
-    "bytes": 1033812
+    "bytes": 1133469
   },
   {
     "id": "panel-02-4",
     "status": "rendered",
     "ready": true,
-    "bytes": 489905
+    "bytes": 556799
   },
   {
     "id": "panel-03-1",
     "status": "reused",
     "ready": true,
-    "bytes": 1471879
+    "bytes": 1571037
   },
   {
     "id": "panel-03-2",
     "status": "reused",
     "ready": true,
-    "bytes": 925437
+    "bytes": 1026238
   },
   {
     "id": "panel-03-3",
     "status": "reused",
     "ready": true,
-    "bytes": 920405
+    "bytes": 1019885
   },
   {
     "id": "panel-03-4",
     "status": "rendered",
     "ready": true,
-    "bytes": 666823
+    "bytes": 733217
   },
   {
     "id": "panel-04-1",
     "status": "reused",
     "ready": true,
-    "bytes": 1292550
+    "bytes": 1391833
   },
   {
     "id": "panel-04-2",
     "status": "reused",
     "ready": true,
-    "bytes": 1364660
+    "bytes": 1464681
   },
   {
     "id": "panel-04-3",
     "status": "rendered",
     "ready": true,
-    "bytes": 682339
+    "bytes": 748576
   },
   {
     "id": "panel-04-4",
     "status": "reused",
     "ready": true,
-    "bytes": 898788
+    "bytes": 997875
   },
   {
     "id": "panel-05-1",
     "status": "rendered",
     "ready": true,
-    "bytes": 943306
+    "bytes": 1009539
   },
   {
     "id": "panel-05-2",
     "status": "reused",
     "ready": true,
-    "bytes": 1215452
+    "bytes": 1314602
   },
   {
     "id": "panel-05-3",
     "status": "reused",
     "ready": true,
-    "bytes": 1308661
+    "bytes": 1409035
   },
   {
     "id": "panel-05-4",
     "status": "rendered",
     "ready": true,
-    "bytes": 682159
+    "bytes": 748415
   },
   {
     "id": "panel-06-1",
     "status": "reused",
     "ready": true,
-    "bytes": 1131182
+    "bytes": 1231063
   },
   {
     "id": "panel-06-2",
     "status": "rendered",
     "ready": true,
-    "bytes": 646284
+    "bytes": 712668
   },
   {
     "id": "panel-06-3",
     "status": "rendered",
     "ready": true,
-    "bytes": 631589
+    "bytes": 697944
   },
   {
     "id": "panel-06-4",
     "status": "reused",
     "ready": true,
-    "bytes": 940719
+    "bytes": 1041219
   },
   {
     "id": "panel-07-1",
     "status": "rendered",
     "ready": true,
-    "bytes": 668087
+    "bytes": 734375
   },
   {
     "id": "panel-07-2",
     "status": "rendered",
     "ready": true,
-    "bytes": 724668
+    "bytes": 790959
   },
   {
     "id": "panel-07-3",
     "status": "reused",
     "ready": true,
-    "bytes": 756165
+    "bytes": 855650
   },
   {
     "id": "panel-07-4",
     "status": "reused",
     "ready": true,
-    "bytes": 829130
+    "bytes": 929057
   },
   {
     "id": "panel-08-1",
     "status": "reused",
     "ready": true,
-    "bytes": 1698081
+    "bytes": 1798309
   },
   {
     "id": "panel-08-2",
     "status": "rendered",
     "ready": true,
-    "bytes": 1378168
+    "bytes": 1444235
   },
   {
     "id": "panel-08-3",
     "status": "rendered",
     "ready": true,
-    "bytes": 480934
+    "bytes": 547527
   },
   {
     "id": "panel-08-4",
     "status": "rendered",
     "ready": true,
-    "bytes": 508290
+    "bytes": 575105
   },
   {
     "id": "panel-09-1",
     "status": "reused",
     "ready": true,
-    "bytes": 364475
+    "bytes": 406279
   },
   {
     "id": "panel-09-2",
     "status": "rendered",
     "ready": true,
-    "bytes": 676445
+    "bytes": 742864
   },
   {
     "id": "panel-09-3",
     "status": "rendered",
     "ready": true,
-    "bytes": 723087
+    "bytes": 789567
   },
   {
     "id": "panel-09-4",
     "status": "rendered",
     "ready": true,
-    "bytes": 759487
+    "bytes": 826335
   },
   {
     "id": "panel-10-1",
     "status": "reused",
     "ready": true,
-    "bytes": 1222005
+    "bytes": 1321435
   },
   {
     "id": "panel-10-2",
     "status": "rendered",
     "ready": true,
-    "bytes": 651756
+    "bytes": 718082
   },
   {
     "id": "panel-10-3",
     "status": "reused",
     "ready": true,
-    "bytes": 995211
+    "bytes": 1094875
   },
   {
     "id": "panel-10-4",
     "status": "rendered",
     "ready": true,
-    "bytes": 559572
+    "bytes": 626320
   },
   {
     "id": "panel-11-1",
     "status": "reused",
     "ready": true,
-    "bytes": 918317
+    "bytes": 1018714
   },
   {
     "id": "panel-11-2",
     "status": "reused",
     "ready": true,
-    "bytes": 1661599
+    "bytes": 1760751
   },
   {
     "id": "panel-11-3",
     "status": "reused",
     "ready": true,
-    "bytes": 1102864
+    "bytes": 1202518
   },
   {
     "id": "panel-11-4",
     "status": "reused",
     "ready": true,
-    "bytes": 1087938
+    "bytes": 1187841
   },
   {
     "id": "panel-12-1",
     "status": "reused",
     "ready": true,
-    "bytes": 925785
+    "bytes": 1025676
   },
   {
     "id": "panel-12-2",
     "status": "reused",
     "ready": true,
-    "bytes": 1875875
+    "bytes": 1975063
   },
   {
     "id": "panel-12-3",
     "status": "reused",
     "ready": true,
-    "bytes": 1061896
+    "bytes": 1161326
   },
   {
     "id": "panel-12-4",
     "status": "rendered",
     "ready": true,
-    "bytes": 1244851
+    "bytes": 1311246
   },
   {
     "id": "panel-13-1",
     "status": "reused",
     "ready": true,
-    "bytes": 1514017
+    "bytes": 1613933
   },
   {
     "id": "panel-13-2",
     "status": "rendered",
     "ready": true,
-    "bytes": 740222
+    "bytes": 806535
   },
   {
     "id": "panel-13-3",
     "status": "reused",
     "ready": true,
-    "bytes": 952594
+    "bytes": 1053107
   },
   {
     "id": "panel-13-4",
     "status": "reused",
     "ready": true,
-    "bytes": 1288814
+    "bytes": 1388469
   },
   {
     "id": "panel-14-1",
     "status": "rendered",
     "ready": true,
-    "bytes": 706451
+    "bytes": 772585
   },
   {
     "id": "panel-14-2",
     "status": "reused",
     "ready": true,
-    "bytes": 1713692
+    "bytes": 1813188
   },
   {
     "id": "panel-14-3",
     "status": "reused",
     "ready": true,
-    "bytes": 913552
+    "bytes": 1012803
   },
   {
     "id": "panel-14-4",
     "status": "reused",
     "ready": true,
-    "bytes": 1303901
+    "bytes": 1403194
   },
   {
     "id": "panel-15-1",
     "status": "reused",
     "ready": true,
-    "bytes": 613611
+    "bytes": 652200
   },
   {
     "id": "panel-15-2",
     "status": "reused",
     "ready": true,
-    "bytes": 1506799
+    "bytes": 1606078
   },
   {
     "id": "panel-15-3",
     "status": "reused",
     "ready": true,
-    "bytes": 1761170
+    "bytes": 1860223
   },
   {
     "id": "panel-15-4",
     "status": "reused",
     "ready": true,
-    "bytes": 941055
+    "bytes": 990863
   },
   {
     "id": "panel-16-1",
     "status": "reused",
     "ready": true,
-    "bytes": 2402420
+    "bytes": 2502209
   },
   {
     "id": "panel-16-2",
     "status": "rendered",
     "ready": true,
-    "bytes": 546160
+    "bytes": 612502
   },
   {
     "id": "panel-16-3",
     "status": "reused",
     "ready": true,
-    "bytes": 1481745
+    "bytes": 1581401
   },
   {
     "id": "panel-16-4",
     "status": "reused",
     "ready": true,
-    "bytes": 1074174
+    "bytes": 1173391
   },
   {
     "id": "panel-17-1",
     "status": "rendered",
     "ready": true,
-    "bytes": 487925
+    "bytes": 554874
   },
   {
     "id": "panel-17-2",
     "status": "rendered",
     "ready": true,
-    "bytes": 611835
+    "bytes": 678548
   },
   {
     "id": "panel-17-3",
     "status": "rendered",
     "ready": true,
-    "bytes": 677943
+    "bytes": 744619
   },
   {
     "id": "panel-17-4",
     "status": "rendered",
     "ready": true,
-    "bytes": 417270
+    "bytes": 483695
   },
   {
     "id": "panel-18-1",
     "status": "rendered",
     "ready": true,
-    "bytes": 701022
+    "bytes": 767785
   },
   {
     "id": "panel-18-2",
     "status": "rendered",
     "ready": true,
-    "bytes": 829374
+    "bytes": 895926
   },
   {
     "id": "panel-18-3",
     "status": "rendered",
     "ready": true,
-    "bytes": 715190
+    "bytes": 781902
   },
   {
     "id": "panel-18-4",
     "status": "rendered",
     "ready": true,
-    "bytes": 827086
+    "bytes": 893588
   },
   {
     "id": "new-c00-s01-dream",
     "status": "reused",
     "ready": true,
-    "bytes": 772126
+    "bytes": 872219
   },
   {
     "id": "new-c00-s02-contract",
     "status": "rendered",
     "ready": true,
-    "bytes": 551452
+    "bytes": 617643
   },
   {
     "id": "new-c00-s03-course",
     "status": "rendered",
     "ready": true,
-    "bytes": 718821
+    "bytes": 785110
   },
   {
     "id": "new-c01-s01-carry",
     "status": "reused",
     "ready": true,
-    "bytes": 1308821
+    "bytes": 1408372
   },
   {
     "id": "new-c02-s04",
     "status": "rendered",
     "ready": true,
-    "bytes": 953808
+    "bytes": 1020447
   },
   {
     "id": "new-c03-s01",
     "status": "rendered",
     "ready": true,
-    "bytes": 861784
+    "bytes": 928071
   },
   {
     "id": "new-c03-s02",
     "status": "rendered",
     "ready": true,
-    "bytes": 957801
+    "bytes": 1024354
   },
   {
     "id": "new-c03-s03",
     "status": "rendered",
     "ready": true,
-    "bytes": 516175
+    "bytes": 582678
   },
   {
     "id": "new-c03-s04",
     "status": "rendered",
     "ready": true,
-    "bytes": 848219
+    "bytes": 914417
   },
   {
     "id": "new-c04-s01",
     "status": "rendered",
     "ready": true,
-    "bytes": 746782
+    "bytes": 813293
   },
   {
     "id": "new-c04-s02",
     "status": "rendered",
     "ready": true,
-    "bytes": 820977
+    "bytes": 887416
   },
   {
     "id": "new-c05-s01",
     "status": "rendered",
     "ready": true,
-    "bytes": 530405
+    "bytes": 596642
   },
   {
     "id": "new-c01-s02",
     "status": "rendered",
     "ready": true,
-    "bytes": 618540
+    "bytes": 685286
   },
   {
     "id": "new-c01-s03",
     "status": "rendered",
     "ready": true,
-    "bytes": 939954
+    "bytes": 1006508
   },
   {
     "id": "new-c01-s04",
     "status": "rendered",
     "ready": true,
-    "bytes": 413019
+    "bytes": 454771
   },
   {
     "id": "new-c02-s01",
     "status": "rendered",
     "ready": true,
-    "bytes": 1098849
+    "bytes": 1165037
   },
   {
     "id": "new-c02-s02",
     "status": "rendered",
     "ready": true,
-    "bytes": 886899
+    "bytes": 953668
   },
   {
     "id": "new-c02-s03",
     "status": "rendered",
     "ready": true,
-    "bytes": 681906
+    "bytes": 748121
   },
   {
     "id": "new-c04-s03",
     "status": "rendered",
     "ready": true,
-    "bytes": 335765
+    "bytes": 401846
   },
   {
     "id": "new-c04-s04",
     "status": "rendered",
     "ready": true,
-    "bytes": 772885
+    "bytes": 839276
   },
   {
     "id": "new-c05-s02",
     "status": "rendered",
     "ready": true,
-    "bytes": 976732
+    "bytes": 1043445
   },
   {
     "id": "new-c05-s03",
     "status": "rendered",
     "ready": true,
-    "bytes": 554743
+    "bytes": 620924
   },
   {
     "id": "new-c05-s04",
     "status": "rendered",
     "ready": true,
-    "bytes": 803790
+    "bytes": 870418
   },
   {
     "id": "new-c05-s05",
     "status": "rendered",
     "ready": true,
-    "bytes": 775355
+    "bytes": 841629
   },
   {
     "id": "new-c06-s01",
     "status": "rendered",
     "ready": true,
-    "bytes": 872804
+    "bytes": 939043
   },
   {
     "id": "new-c06-s02",
     "status": "rendered",
     "ready": true,
-    "bytes": 707287
+    "bytes": 773522
   },
   {
     "id": "new-c06-s03",
     "status": "rendered",
     "ready": true,
-    "bytes": 484863
+    "bytes": 551006
   },
   {
     "id": "new-c06-s04",
     "status": "rendered",
     "ready": true,
-    "bytes": 482398
+    "bytes": 548709
   },
   {
     "id": "new-c06-s05",
     "status": "rendered",
     "ready": true,
-    "bytes": 592840
+    "bytes": 659649
   },
   {
     "id": "new-c06-s06",
     "status": "rendered",
     "ready": true,
-    "bytes": 784175
+    "bytes": 850428
   },
   {
     "id": "new-c07-s01",
     "status": "rendered",
     "ready": true,
-    "bytes": 778132
+    "bytes": 844620
   },
   {
     "id": "new-c07-s02",
     "status": "rendered",
     "ready": true,
-    "bytes": 870767
+    "bytes": 937055
   },
   {
     "id": "new-c07-s03",
     "status": "rendered",
     "ready": true,
-    "bytes": 1008551
+    "bytes": 1074531
   },
   {
     "id": "new-c07-s03-trace",
     "status": "rendered",
     "ready": true,
-    "bytes": 852186
+    "bytes": 918842
   },
   {
     "id": "new-c08-s01",
     "status": "rendered",
     "ready": true,
-    "bytes": 918979
+    "bytes": 985372
   },
   {
     "id": "new-c08-s02",
     "status": "rendered",
     "ready": true,
-    "bytes": 830972
+    "bytes": 897306
   },
   {
     "id": "new-c08-s03",
     "status": "rendered",
     "ready": true,
-    "bytes": 834715
+    "bytes": 900996
   },
   {
     "id": "new-c08-s04",
     "status": "rendered",
     "ready": true,
-    "bytes": 833664
+    "bytes": 899988
   },
   {
     "id": "new-c09-s01",
     "status": "rendered",
     "ready": true,
-    "bytes": 1058115
+    "bytes": 1124276
   },
   {
     "id": "new-c09-s02",
     "status": "rendered",
     "ready": true,
-    "bytes": 962610
+    "bytes": 1029028
   },
   {
     "id": "new-c09-s03",
     "status": "rendered",
     "ready": true,
-    "bytes": 1056891
+    "bytes": 1123033
   },
   {
     "id": "new-c09-s05",
     "status": "rendered",
     "ready": true,
-    "bytes": 1110696
+    "bytes": 1177220
   },
   {
     "id": "new-e01-s01",
     "status": "rendered",
     "ready": true,
-    "bytes": 726249
+    "bytes": 792420
   },
   {
     "id": "new-e01-s02",
     "status": "rendered",
     "ready": true,
-    "bytes": 809080
+    "bytes": 875980
   },
   {
     "id": "new-c07-s04",
     "status": "rendered",
     "ready": true,
-    "bytes": 790701
+    "bytes": 857045
   },
   {
     "id": "new-c07-s05",
     "status": "rendered",
     "ready": true,
-    "bytes": 762091
+    "bytes": 828366
   },
   {
     "id": "new-c09-s04",
     "status": "rendered",
     "ready": true,
-    "bytes": 1268148
+    "bytes": 1334263
   },
   {
     "id": "new-e01-s03",
     "status": "rendered",
     "ready": true,
-    "bytes": 634753
+    "bytes": 701547
   },
   {
     "id": "poster",
     "status": "rendered",
     "ready": true,
-    "bytes": 738089
+    "bytes": 804382
   },
   {
     "id": "cast-arin",
     "status": "rendered",
     "ready": true,
-    "bytes": 746192
+    "bytes": 812324
   },
   {
     "id": "cast-mira",
     "status": "rendered",
     "ready": true,
-    "bytes": 972221
+    "bytes": 1038565
   },
   {
     "id": "cast-orin",
     "status": "rendered",
     "ready": true,
-    "bytes": 1017873
+    "bytes": 1084104
   },
   {
     "id": "cast-zara",
     "status": "rendered",
     "ready": true,
-    "bytes": 829292
+    "bytes": 895780
   },
   {
     "id": "cast-milo",
     "status": "rendered",
     "ready": true,
-    "bytes": 597473
+    "bytes": 663695
   },
   {
     "id": "cast-kael",
     "status": "rendered",
     "ready": true,
-    "bytes": 902542
+    "bytes": 968735
   },
   {
     "id": "cast-aevos",
     "status": "rendered",
     "ready": true,
-    "bytes": 890313
+    "bytes": 956440
   },
   {
     "id": "new-c09-s03-planet",
     "status": "rendered",
     "ready": true,
-    "bytes": 3621868
+    "bytes": 3753969
+  },
+  {
+    "id": "new-c09-s03-planet-take2",
+    "status": "rendered",
+    "ready": true,
+    "bytes": 3879367
   }
 ]

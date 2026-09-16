@@ -7,6 +7,7 @@ import re
 from urllib.parse import urlsplit
 from PIL import Image
 from site_shell import apply_shell, navigation
+from media_catalog import clips_for
 
 ROOT = Path(__file__).resolve().parents[1]
 PRODUCTION = ROOT / 'production'
@@ -35,10 +36,20 @@ def picture(link, item):
     video = (f'<video data-src="{src}?v={version(src)}" muted loop playsinline '
              'preload="none" aria-hidden="true" tabindex="-1"></video>')
     link = link.replace('</a>', video + '</a>')
-    return (f'<div class="animated-picture" data-media-id="{item["id"]}">{link}'
-            f'<button class="animation-toggle" type="button" aria-label="Toggle animated preview: {escape(item["caption"])}" '
+    clips = clips_for(item)
+    choices = ''
+    if len(clips) > 1:
+        buttons = ''.join(f'<button type="button" data-clip="{clip["id"]}" '
+                          f'data-src="{clip["video"]}?v={version(clip["video"])}" aria-pressed="false">Clip {i + 1}</button>'
+                          for i, clip in enumerate(clips))
+        choices = ('<div class="clip-choices" role="group" aria-label="Video clip variations" hidden>' + buttons
+                   + '<label><input class="remember-clip" type="checkbox"> Remember</label>'
+                   '<span class="clip-save-status" role="status"></span></div>')
+    return (f'<div class="animated-picture" data-media-id="{item["id"]}" '
+            f'data-default-clip="{item.get("default_clip", item["id"])}"><div class="picture-stage">{link}'
+            f'<button class="animation-toggle" type="button" data-caption="{escape(item["caption"])}" aria-label="Play Preview: {escape(item["caption"])}" '
             'aria-pressed="false" hidden>Play Preview</button>'
-            '<span class="animation-status" role="status" aria-live="polite"></span></div>' + caption)
+            '<span class="animation-status" role="status" aria-live="polite"></span></div>' + choices + '</div>' + caption)
 
 
 def portrait(item):
@@ -101,7 +112,9 @@ def main():
                 return picture(link, item) if item else link
             page = re.sub(r'<a\b[^>]*>\s*<img\b[^>]*>.*?</a>', animate, page, flags=re.S)
             guide = ('<p class="animation-guide">Hover over an illustration to bring it to life, or select '
-                     '<strong>Play Preview</strong>. Previews are silent. Select the image to follow its link.</p>')
+                     '<strong>Play Preview</strong>. Turn <strong>Audio On</strong> in the header for sound. '
+                     'Where available, choose a clip and check <strong>Remember</strong> to keep it in both views. '
+                     'Select the image to follow its link.</p>')
             if name == SCRIPT:
                 poster = next(item for item in items if item['kind'] == 'poster')
                 header = '<h2 id="draft-game-script-version-0-1">Draft Game Script — Version 0.2: Canon Update</h2>'
@@ -117,8 +130,9 @@ def main():
             else:
                 page = page.replace('<div id="story">', guide + '<div id="story">', 1)
             page = page.replace('</head>', f'<link rel="stylesheet" href="asset/animated-pictures.css?v={version("asset/animated-pictures.css")}"></head>')
-            page = page.replace('</body>', f'<script src="asset/animated-pictures.js?v={version("asset/animated-pictures.js")}"></script></body>')
         page = apply_shell(page, name, sidebar, version)
+        if name != 'movies.html':
+            page = page.replace('</body>', f'<script src="asset/animated-pictures.js?v={version("asset/animated-pictures.js")}"></script></body>')
         (ROOT / name).write_text(page, encoding='utf-8')
     print(json.dumps({'scene_previews':sum(i['kind']=='scene' for i in items),
                       'portraits':sum(i['kind']=='cast' for i in items), 'poster':True}))

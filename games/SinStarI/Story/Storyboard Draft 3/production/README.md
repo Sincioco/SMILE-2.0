@@ -17,10 +17,16 @@ external fonts, package downloads or an internet connection.
   It cancels stale play requests, unloads departed clips, pauses hidden/offscreen
   media, respects reduced motion and supports touch/keyboard activation.
   Its companion stylesheet owns video overlays and controls.
+- `asset/media-preferences.js` owns shared audio and remembered clip choices.
+  It persists them in local storage and carries them in local view URLs when
+  file storage is restricted. Clip controls use the same picture IDs in both views.
 - `hover-media.json` maps all 129 pictures to preview, source, provenance and edits.
+  Optional `variants` add clips; `default_clip` selects the starting take when no
+  preference is saved. `media_catalog.py` expands this inventory for queueing,
+  collection, HTML generation and validation. There are currently 130 clips.
   `cast-portraits.json` records the seven new portraits.
 - `queue_hover.py` appends missing LTX 2.5 jobs to the existing local queue.
-  `collect_hover.py` collects jobs and exports silent H.264 previews.
+  `collect_hover.py` collects jobs and exports H.264/AAC previews with original audio.
   `validate_media.py` fully decodes new or changed clips once.
 - `validate_draft3.py` validates links, exact image/video pairings, shared navigation,
   script text, cast/poster placement, security policy, JavaScript syntax and hashes
@@ -31,7 +37,7 @@ external fonts, package downloads or an internet connection.
 The edition reuses 45 existing LTX renders: the 44-shot film selection, with its
 reviewed second takes, and the armorer shot from Room for One. Existing edited
 movie framing removes generated lettering where needed. The lower authored caption
-band is cropped out for silent hover use. Seven reviewed clips retain full framing
+band is cropped out for hover use. Seven reviewed clips retain full framing
 to protect foreground characters; two of these use shorter clean excerpts.
 Wider previews are contained within the original illustration area without stretching
 or clipping additional faces. Each source and edit is recorded in the media map.
@@ -44,6 +50,18 @@ and dialogue accompany the figure; all previously accepted script prose is prese
 Saved API/UI workflow pairs record LTX 2.5
 distilled 22B INT8, existing local encoders/VAEs/upscaler, fixed seeds, and full
 initial-image conditioning. No models or packages were installed.
+
+The planet-throw scene also has a revised take that keeps Mira's head and body
+aligned through the impact. Clip 1 retains the original picture sequence; Clip 2
+is the new default. Both use the same illustration and remain selectable.
+
+All 130 previews now include audio. The carry-together scene uses the original
+LTX audio because its edited-film intermediate was silent; `audio_source` records
+that correction. Other clips retain their selected source soundtracks. First-visit
+audio is off; one header click enables it. A rejected sound autoplay request falls
+back to muted video with an explicit Play With Sound action. See the official
+[Chrome autoplay policy](https://developer.chrome.com/blog/autoplay/) for the
+browser interaction requirement. Muting stops sound immediately without reloading.
 
 The original poster title remains visible over the top portion of its animation,
 so its lettering stays exact. Static artwork remains underneath each preview,
@@ -66,6 +84,7 @@ python production/validate_media.py
 ```
 
 Queueing is needed only for missing renders. Receipts prevent duplicate submissions.
+Use `collect_hover.py --refresh-all` to re-export existing clips after export changes.
 Collection reads `http://127.0.0.1:8191` and retains original renders in the separate
 `Sin Star I - Draft 3 Animations` output folder. Saved workflows also open in ComfyUI.
 
