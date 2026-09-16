@@ -1,0 +1,17 @@
+{
+  "status": "Passed",
+  "html_pages": 3,
+  "local_references": 1257,
+  "scene_previews": 121,
+  "cast_portraits": 7,
+  "poster": true,
+  "matching_navigation": true,
+  "script_narrative": "Unchanged",
+  "canon": "Unchanged",
+  "preserved_draft_files": 310,
+  "decoded_png_files": 148,
+  "javascript_syntax_checks": 3,
+  "pending_videos": [],
+  "pending_render_jobs": [],
+  "browser_test": "Not performed; static and isolated behavior checks only"
+}

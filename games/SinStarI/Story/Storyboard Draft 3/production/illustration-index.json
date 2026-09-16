@@ -1,0 +1,2627 @@
+[
+  {
+    "scene": "c00-s01",
+    "shot": "Close / memory",
+    "art": "Inside a civilian spaceship, a mother's hand fastens a worn wrist strap on a young boy; his father's smiling face is reflected in the window, beyond which a sudden white flash begins. Tender memory interrupted, no bodies or gore.",
+    "caption": "Before the warning chime, there was a laugh.",
+    "dialogue": [
+      [
+        "Mother",
+        "Too tight?"
+      ],
+      [
+        "Young Arin",
+        "No."
+      ]
+    ],
+    "id": "panel-01-1",
+    "file": "panel-01-1.png",
+    "label": "01.1",
+    "page": 1
+  },
+  {
+    "scene": "c00-s01",
+    "shot": "Wide / lonely",
+    "art": "Adult Arin wakes alone in cheap lodging, dark undershirt, armor on a chair. A cup slides by itself; a hairline crack climbs the plaster. He clutches the same ordinary wrist strap. An unused pillow is wedged into a rattling window.",
+    "caption": "The dream reaches the waking room. No one has taught him what his voice can do.",
+    "dialogue": [
+      [
+        "Neighbor",
+        "Some of us work in the morning!"
+      ],
+      [
+        "Arin",
+        "So do I."
+      ]
+    ],
+    "id": "panel-01-2",
+    "file": "panel-01-2.png",
+    "label": "01.2",
+    "page": 1
+  },
+  {
+    "scene": "c00-s02",
+    "shot": "Medium / dry humor",
+    "art": "At a Neris repair stall, adult Arin in battered surplus white navy gold armor counts a few coins while a practical armorer points to his cracked shoulder rivet. Contract papers and a public water queue behind him.",
+    "caption": "Neris surplus armor. An empty emergency-contact field. One more contract.",
+    "dialogue": [
+      [
+        "Armorer",
+        "The rivets remember the first owner."
+      ],
+      [
+        "Arin",
+        "Can they pay for the repair?"
+      ]
+    ],
+    "id": "panel-01-3",
+    "file": "panel-01-3.png",
+    "label": "01.3",
+    "page": 1
+  },
+  {
+    "scene": "c00-s03",
+    "shot": "Wide / distant answer",
+    "art": "Kael with long silver hair and black silver cosmic armor stands on a grassy Earth hillside above an ordinary warmly lit town. He turns suddenly toward stars disturbed by a faint violet ripple. Quiet concern, no attack.",
+    "caption": "On Earth, far from Neris, someone hears the disturbance.",
+    "dialogue": [
+      [
+        "Kael",
+        "That wasn't mine."
+      ]
+    ],
+    "id": "panel-01-4",
+    "file": "panel-01-4.png",
+    "label": "01.4",
+    "page": 1
+  },
+  {
+    "scene": "c01-s01",
+    "shot": "Action / rescue",
+    "art": "In flooded industrial waterworks, Mira in plain navy travel clothes with tied brown hair kneels beside injured adult Arin. She raises a curved turquoise water shield against falling machinery. A trapped surveyor is visible behind a damaged beam. Her focus is medical and decisive.",
+    "caption": "A broken fastening. A collapsing conduit. A stranger who comes back.",
+    "dialogue": [
+      [
+        "Arin",
+        "That thing isn't finished."
+      ],
+      [
+        "Mira",
+        "Neither are we."
+      ]
+    ],
+    "id": "panel-02-1",
+    "file": "panel-02-1.png",
+    "label": "02.1",
+    "page": 2
+  },
+  {
+    "scene": "c01-s02",
+    "shot": "Medium / care",
+    "art": "Before dawn in a crowded modest street clinic, Mira washes a surveyor's wound while weary Arin carries a stack of water basins. Rolled sleeves, clean cloths, tired patients. He could leave but stays.",
+    "caption": "The recorder is safe. His paid work is over. He picks up another basin.",
+    "dialogue": [
+      [
+        "Arin",
+        "I'm not part of the clinic."
+      ],
+      [
+        "Mira",
+        "Neither am I."
+      ]
+    ],
+    "id": "panel-02-2",
+    "file": "panel-02-2.png",
+    "label": "02.2",
+    "page": 2
+  },
+  {
+    "scene": "c01-s03",
+    "shot": "Wide / uncanny",
+    "art": "Under Neris, ancient cyan glyph rings threaded through modern pipes react to unconscious Arin; dust hangs in air. Mira braces a ring of water around him while a frightened municipal engineer works the isolated valve. No spoken magical letters.",
+    "caption": "An old relay recognizes him. Shortages, concealed faults and Axiom pulses overlap.",
+    "dialogue": [
+      [
+        "Mira",
+        "Arin. Listen to my voice."
+      ]
+    ],
+    "id": "panel-02-3",
+    "file": "panel-02-3.png",
+    "label": "02.3",
+    "page": 2
+  },
+  {
+    "scene": "c01-s04",
+    "shot": "Medium / resolve",
+    "art": "Neris palace council: Mira now in white navy gold field armor places waterworks logs and a relief plan before her living king and queen. Arin stands awkwardly behind her; a severe marshal watches. Travel cases at door, local engineer holding the handover.",
+    "caption": "The princess follows the relay network after arranging relief and unfiltered reports.",
+    "dialogue": [
+      [
+        "Mira",
+        "I am the person you expect to rule the people drinking that water."
+      ]
+    ],
+    "id": "panel-02-4",
+    "file": "panel-02-4.png",
+    "label": "02.4",
+    "page": 2
+  },
+  {
+    "scene": "c02-s01",
+    "shot": "Establishing / wonder",
+    "art": "A bustling Kynari frontier spaceport on Veyra, amber cliffs and teal transit rails, low curved canine-built architecture, recessed scent-marked lanes, paw and nose operated kiosks, adjustable human counters. Intelligent quadrupedal dogs in tool harnesses work alongside human and diverse artificial civilians. A canine administrator looks directly at bewildered Arin; Mira beside him. No humanoid dogs.",
+    "caption": "Veyra: a Kynari trading world, with its own rules and people already running it.",
+    "dialogue": [
+      [
+        "Port administrator",
+        "Marked path, please."
+      ],
+      [
+        "Port administrator",
+        "I am still here."
+      ]
+    ],
+    "id": "panel-03-1",
+    "file": "panel-03-1.png",
+    "label": "03.1",
+    "page": 3
+  },
+  {
+    "scene": "c02-s02",
+    "shot": "Action / impossible odds",
+    "art": "Veyra terminal under raider attack. Arin holds a narrow approach while Mira treats evacuees on the east ramp. Massive veteran Orin steps off a departing lift and raises his broad shield beside Arin. A Kynari engineer restores the rail from a low service housing. Distinct hostile angular black sentries in distance.",
+    "caption": "The objective is survival. Orin gives up the last lift.",
+    "dialogue": [
+      [
+        "Arin",
+        "You can't win this."
+      ],
+      [
+        "Orin",
+        "Then stop trying to win. Help me get them out."
+      ]
+    ],
+    "id": "panel-03-2",
+    "file": "panel-03-2.png",
+    "label": "03.2",
+    "page": 3
+  },
+  {
+    "scene": "c02-s03",
+    "shot": "Close / guarded warmth",
+    "art": "Inside an evacuation shuttle after escape, broad older dark-haired stubbled Orin carefully bandages younger clean-shaven Arin's shoulder with permission. Mira checks survivors behind them. Clearly distinct ages and builds, quiet exhaustion.",
+    "caption": "He came back for a stranger. He was afraid, too.",
+    "dialogue": [
+      [
+        "Arin",
+        "Arin."
+      ],
+      [
+        "Orin",
+        "Orin."
+      ],
+      [
+        "Arin",
+        "That's going to be inconvenient."
+      ]
+    ],
+    "id": "panel-03-3",
+    "file": "panel-03-3.png",
+    "label": "03.3",
+    "page": 3
+  },
+  {
+    "scene": "c02-s04",
+    "shot": "Medium / first belonging",
+    "art": "Evening emergency camp outside a damaged archive on Veyra: Arin lays out three food portions, Mira leaves a canteen beside Orin whose hand trembles from lightning use. Warm lanterns against teal wreckage.",
+    "caption": "The next building holds both the records they need and the transmitter families need.",
+    "dialogue": [
+      [
+        "Arin",
+        "There was extra."
+      ],
+      [
+        "Orin",
+        "Convenient."
+      ]
+    ],
+    "id": "panel-03-4",
+    "file": "panel-03-4.png",
+    "label": "03.4",
+    "page": 3
+  },
+  {
+    "scene": "c03-s01",
+    "shot": "Medium / comic arrival",
+    "art": "Red and charcoal fully artificial angular armored woman Zara backs out of a smoking low service hatch with a disabled surveillance unit. Four-legged golden-white dog Milo emerges wearing a white blue gold tool harness, sneezing dust. Arin Mira Orin listen to their route plan. No human face or hair on Zara.",
+    "caption": "They already have a rescue plan. The newcomers offer a way back out.",
+    "dialogue": [
+      [
+        "Milo",
+        "It was supposed to explode after we left."
+      ],
+      [
+        "Zara",
+        "A timing issue."
+      ]
+    ],
+    "id": "panel-04-1",
+    "file": "panel-04-1.png",
+    "label": "04.1",
+    "page": 4
+  },
+  {
+    "scene": "c03-s02",
+    "shot": "Action / refusal",
+    "art": "Zara disconnects detention locks from a hostile controller. Cages open for canine prisoners and artificial defectors; Milo uses a harness tool at a low contact. Arin and Orin return for an injured artificial person while Mira cools a damaged joint. No gore, no actual text on screens.",
+    "caption": "Inventory numbers become people going home. Some artificial guards refuse to fire.",
+    "dialogue": [
+      [
+        "Controller",
+        "State your ownership claim."
+      ],
+      [
+        "Zara",
+        "None."
+      ]
+    ],
+    "id": "panel-04-2",
+    "file": "panel-04-2.png",
+    "label": "04.2",
+    "page": 4
+  },
+  {
+    "scene": "c03-s03",
+    "shot": "Wide / community",
+    "art": "Kynari community hall, low tables, varied-height sleeping alcoves, paw-operated water taps and scent markers. Milo presses against his rescued golden canine route partner in an untranslated reunion. A dignified elder dog in a survey harness welcomes human and red robotic visitors. A migration map glows behind them.",
+    "caption": "The translator gives others access to Kynari language; it does not create their intelligence.",
+    "dialogue": [
+      [
+        "Elder",
+        "Your Earth dogs have distant family here."
+      ],
+      [
+        "Milo",
+        "I also want to come back and tell him where they lead."
+      ]
+    ],
+    "id": "panel-04-3",
+    "file": "panel-04-3.png",
+    "label": "04.3",
+    "page": 4
+  },
+  {
+    "scene": "c03-s04",
+    "shot": "Wide / warmth",
+    "art": "Exactly five companions round a small campfire: young Arin, Mira, broad older Orin, red armored robot Zara, and quadrupedal golden Milo resting against Arin's boot. Five portions, comfortable asymmetrical grouping, stars above a frontier port.",
+    "caption": "Five places by the fire. In the morning, five portions. Nobody remarks on the number.",
+    "dialogue": [
+      [
+        "Milo",
+        "Then stop holding your leg like that. It is making me uncomfortable."
+      ]
+    ],
+    "id": "panel-04-4",
+    "file": "panel-04-4.png",
+    "label": "04.4",
+    "page": 4
+  },
+  {
+    "scene": "c04-s01",
+    "shot": "Flashback / courage",
+    "art": "Rain on a collapsing mountain bridge: younger broad Orin without lightning powers hauls a vulnerable old traveler and his case to safety with an ordinary rope. A soft separate distant memory vignette shows a later lightning strike and Orin drawing breath beside an ordinary fallen weapon, not a triumph pose. Old man face unidentifiable under hood.",
+    "caption": "He rescued the stranger first. Only later did the predicted lightning find him.",
+    "dialogue": [
+      [
+        "Old man",
+        "My case!"
+      ],
+      [
+        "Orin",
+        "Your legs first."
+      ]
+    ],
+    "id": "panel-05-1",
+    "file": "panel-05-1.png",
+    "label": "05.1",
+    "page": 5
+  },
+  {
+    "scene": "c04-s02",
+    "shot": "Medium / practice",
+    "art": "Safe padded ship practice bay: a bowl tips water onto embarrassed Arin while Mira calmly instructs and Zara moves notes from the splash. Milo watches the floor, Orin by a grounded target. A playback speaker stays inert. Comic gentle physical humor.",
+    "caption": "Practice spans several journeys. A recording of the same sound produces nothing.",
+    "dialogue": [
+      [
+        "Mira",
+        "Again. Smaller."
+      ],
+      [
+        "Zara",
+        "Same sound. No response."
+      ]
+    ],
+    "id": "panel-05-2",
+    "file": "panel-05-2.png",
+    "label": "05.2",
+    "page": 5
+  },
+  {
+    "scene": "c04-s03",
+    "shot": "Wide / unequal lesson",
+    "art": "On a dark reflected dream floor, long silver-haired Kael effortlessly turns aside Arin's water and fire strike with a small movement. Arin's weapon returns toward his hand, and he is startled rather than victorious.",
+    "caption": "Kael finally answers the dream. Arin tells Mira when he wakes.",
+    "dialogue": [
+      [
+        "Kael",
+        "The Axiom. That is what you have been speaking."
+      ],
+      [
+        "Arin",
+        "And what do you get?"
+      ]
+    ],
+    "id": "panel-05-3",
+    "file": "panel-05-3.png",
+    "label": "05.3",
+    "page": 5
+  },
+  {
+    "scene": "c04-s04",
+    "shot": "Medium / responsibility",
+    "art": "A damaged remote station warmed by Arin's carefully contained hand flame; Mira attends chilled families in blankets, Orin braces a hatch, Zara repairs a heater, Milo finds a low safe route. A recovered archive screen glows in the back.",
+    "caption": "Some pulse times match his nights. Older faults remain. They help before investigating.",
+    "dialogue": [
+      [
+        "Child",
+        "Are you bad at it?"
+      ],
+      [
+        "Arin",
+        "Less than yesterday."
+      ]
+    ],
+    "id": "panel-05-4",
+    "file": "panel-05-4.png",
+    "label": "05.4",
+    "page": 5
+  },
+  {
+    "scene": "c05-s01",
+    "shot": "Close / devastating evidence",
+    "art": "Zara cross-checks two civilian ship records on a station screen, times and hull silhouettes aligned without readable text. Arin grips the table, old wrist strap in hand, stricken. Mira stands near without touching him. The image of the lost ship is civilian, no cosmic conspirator.",
+    "caption": "A verified combat log identifies a specific artificial faction and unit. Zara had no part in it.",
+    "dialogue": [
+      [
+        "Arin",
+        "Is it the same ship?"
+      ],
+      [
+        "Zara",
+        "It is the same ship."
+      ]
+    ],
+    "id": "panel-06-1",
+    "file": "panel-06-1.png",
+    "label": "06.1",
+    "page": 6
+  },
+  {
+    "scene": "c05-s02",
+    "shot": "Two-shot / rupture",
+    "art": "At a dusk station shelter, angry grieving Arin faces rigid red robotic Zara who sets verified records down between them and turns away. Space and a hard shadow divide them. No physical violence.",
+    "caption": "He knows who Zara is. He blames her anyway.",
+    "dialogue": [
+      [
+        "Arin",
+        "Like that unit. Like you."
+      ],
+      [
+        "Zara",
+        "What happened to your parents was wrong. I will not stand here and admit that it was mine."
+      ]
+    ],
+    "id": "panel-06-2",
+    "file": "panel-06-2.png",
+    "label": "06.2",
+    "page": 6
+  },
+  {
+    "scene": "c05-s03",
+    "shot": "Medium / public correction",
+    "art": "A human station chief reaches toward a mass memory-reset console while Arin firmly blocks the action with an open hand. Zara stands beside a distinct artificial maintenance worker. Fault logs and heater circuits, no threatening pose from civilians.",
+    "caption": "When the chief proposes erasing artificial residents' memories, Arin objects in public.",
+    "dialogue": [
+      [
+        "Arin",
+        "I know what that unit did."
+      ],
+      [
+        "Arin",
+        "You have access logs. Use them."
+      ]
+    ],
+    "id": "panel-06-3",
+    "file": "panel-06-3.png",
+    "label": "06.3",
+    "page": 6
+  },
+  {
+    "scene": "c05-s04",
+    "shot": "Close / no bargain",
+    "art": "Quiet cargo ramp morning: Arin has placed a corrected report beside Zara and holds one side of a cracked tool housing while she repairs it. Their body language cautious, no embrace, modest beginning of cooperation.",
+    "caption": "He names the harm. She does not owe him instant forgiveness.",
+    "dialogue": [
+      [
+        "Arin",
+        "I blamed you for something you didn't do."
+      ],
+      [
+        "Zara",
+        "Start by not doing it again."
+      ]
+    ],
+    "id": "panel-06-4",
+    "file": "panel-06-4.png",
+    "label": "06.4",
+    "page": 6
+  },
+  {
+    "scene": "c05-s05",
+    "shot": "Wide / tremendous power",
+    "art": "In an ancient observatory, Kael calmly gestures toward a dead planet through an enormous viewing ring; a narrow warm band spreads across its cold atmosphere. The five companions watch, awed but wary. The planet is lifeless, no civilians erased.",
+    "caption": "He can warm worlds. He cannot rewrite existence's foundational rules alone.",
+    "dialogue": [
+      [
+        "Kael",
+        "I can address a crisis. I cannot make the laws stop producing new ones."
+      ]
+    ],
+    "id": "panel-07-1",
+    "file": "panel-07-1.png",
+    "label": "07.1",
+    "page": 7
+  },
+  {
+    "scene": "c05-s05",
+    "shot": "Close / kinship",
+    "art": "Close two-shot Kael silver-haired ancient-looking but youthful, Arin brown-haired surprised. A subtle branching succession of distant lives appears between them as an abstract light reflection, not a power beam transferring into Arin.",
+    "caption": "Arin descends from one of Kael's incarnations. He is his own person.",
+    "dialogue": [
+      [
+        "Arin",
+        "You're saying I'm you?"
+      ],
+      [
+        "Kael",
+        "No. You are what came after."
+      ]
+    ],
+    "id": "panel-07-2",
+    "file": "panel-07-2.png",
+    "label": "07.2",
+    "page": 7
+  },
+  {
+    "scene": "c05-s05",
+    "shot": "Medium / the unanswered cost",
+    "art": "Mira and four-legged golden Milo confront Kael across an observatory table, Zara and Orin attentive. A magnificent but uncertain nebula beyond the ring. Kael's calm visibly strains as he cannot guarantee the existing people's survival.",
+    "caption": "The Second Dawn would risk the people already here for an untested improvement.",
+    "dialogue": [
+      [
+        "Arin",
+        "What happens to everyone here?"
+      ],
+      [
+        "Kael",
+        "I would preserve what I could."
+      ]
+    ],
+    "id": "panel-07-3",
+    "file": "panel-07-3.png",
+    "label": "07.3",
+    "page": 7
+  },
+  {
+    "scene": "c05-s05",
+    "shot": "Wide / refusal",
+    "art": "Arin stands with all four companions, resolute rather than aggressive; Kael alone beside the open observatory ring, wounded by the refusal. A route of relay lights remains glowing behind him.",
+    "caption": "He asks again for understanding. They will examine his evidence, not surrender their answer.",
+    "dialogue": [
+      [
+        "Kael",
+        "You have one life with which to judge this."
+      ],
+      [
+        "Arin",
+        "It's the one I have."
+      ]
+    ],
+    "id": "panel-07-4",
+    "file": "panel-07-4.png",
+    "label": "07.4",
+    "page": 7
+  },
+  {
+    "scene": "c06-s01",
+    "shot": "Wide / consequence",
+    "art": "East Valley with empty house foundations and a modest famine memorial, not a battlefield. An older resident shows Orin a delivery ledger while Arin carries relief sacks. Mira asks permission to record testimony. Grief and practical work, no angry mob.",
+    "caption": "The flour that saved one village never reached another.",
+    "dialogue": [
+      [
+        "Resident",
+        "We kept sending someone to the road. Every afternoon."
+      ]
+    ],
+    "id": "panel-08-1",
+    "file": "panel-08-1.png",
+    "label": "08.1",
+    "page": 8
+  },
+  {
+    "scene": "c06-s02",
+    "shot": "Medium / threshold",
+    "art": "In a living modest village, Orin's sister embraces her broad armored brother. Behind them the father's house has a conspicuously repaired door. Arin starts to speak, then stops. Neighbors unload food nearby with sincere gratitude.",
+    "caption": "His father resigned. His village remembers being fed. Neither fact settles the account.",
+    "dialogue": [
+      [
+        "Orin",
+        "Don't ask me to pretend you know mine."
+      ],
+      [
+        "Arin",
+        "You're right. I don't."
+      ]
+    ],
+    "id": "panel-08-2",
+    "file": "panel-08-2.png",
+    "label": "08.2",
+    "page": 8
+  },
+  {
+    "scene": "c06-s03",
+    "shot": "Close / private love",
+    "art": "Lamplit sister's house: she unfolds only one permitted page from a private letter for Orin. His expression softens painfully. The rest stays folded under her hand. Two cups and a closed drawer; no mother's address readable.",
+    "caption": "Threats and a home invasion drove his mother to safety. The marriage did not end.",
+    "dialogue": [
+      [
+        "Orin",
+        "I thought she had left him."
+      ],
+      [
+        "Sister",
+        "She left the house."
+      ]
+    ],
+    "id": "panel-08-3",
+    "file": "panel-08-3.png",
+    "label": "08.3",
+    "page": 8
+  },
+  {
+    "scene": "c06-s04",
+    "shot": "Two-shot / difficult honesty",
+    "art": "Father's modest kitchen: an older worn former officer stands opposite his son Orin, a clean uniform coat inside an open cupboard. Two empty chairs. Father lowers his eyes then meets Orin's gaze, no villain lighting.",
+    "caption": "Orin goes inside. Arin waits outside without listening.",
+    "dialogue": [
+      [
+        "Orin",
+        "People waited for what you kept."
+      ],
+      [
+        "Father",
+        "I know."
+      ]
+    ],
+    "id": "panel-08-4",
+    "file": "panel-08-4.png",
+    "label": "08.4",
+    "page": 8
+  },
+  {
+    "scene": "c06-s04",
+    "shot": "Close / confession",
+    "art": "At the same kitchen table, Orin's father speaks with painful sincerity, open empty hands. Orin grips a chair, then begins to sit, setting down his travel pack. A uniform coat hangs in the cupboard. Neither smiles or embraces.",
+    "caption": "He saved his family and harmed others. Orin stays, without pretending he has forgiven him.",
+    "dialogue": [
+      [
+        "Father",
+        "I would do it again to keep you alive."
+      ],
+      [
+        "Father",
+        "But now... I'm not so sure if I did the right thing."
+      ]
+    ],
+    "id": "panel-09-1",
+    "file": "panel-09-1.png",
+    "label": "09.1",
+    "page": 9
+  },
+  {
+    "scene": "c06-s05",
+    "shot": "Detail / institutional concealment",
+    "art": "Neris investigator lays an unfiled prosecution folder beside diversion ledgers leading to several private military stores. Mira and the queen read the linked evidence. Seals, strings, maps and witness copies, no single conspirator portrait or invented names; records survived deliberate suppression.",
+    "caption": "Canon D10: a prosecution would have exposed deeper corruption within the military.",
+    "dialogue": [
+      [
+        "Investigator",
+        "They buried the case to keep the wider corruption out of court."
+      ],
+      [
+        "Mira",
+        "Put that in the report. It does not make him innocent."
+      ]
+    ],
+    "id": "panel-09-2",
+    "file": "panel-09-2-revised.png",
+    "label": "09.2",
+    "page": 9
+  },
+  {
+    "scene": "c06-s05",
+    "shot": "Action / protect the handover",
+    "art": "Neris relief depot: Orin shields unarmed record carriers and civilians while Mira coordinates loyal officers protecting loaded supply carts. The marshal is disarmed by authorized guards. Some soldiers refuse the seizure order. No indiscriminate fighting or triumphant mass destruction.",
+    "caption": "The marshal tries to seize the convoy. Protecting people and evidence comes first.",
+    "dialogue": [
+      [
+        "Mira",
+        "We have staged relief and a replacement distribution order."
+      ]
+    ],
+    "id": "panel-09-3",
+    "file": "panel-09-3.png",
+    "label": "09.3",
+    "page": 9
+  },
+  {
+    "scene": "c06-s06",
+    "shot": "Wide / unfinished repair",
+    "art": "At a late-afternoon departure field, Orin holds a reply from his mother and looks toward his father standing at the fence with a signed account. Arin waits beside him, Mira trusts a local coordinator with final loading, Zara and Milo ready by ramp.",
+    "caption": "His father's testimony enters the inquiry. Reform and reparations remain work for the living.",
+    "dialogue": [
+      [
+        "Orin",
+        "I said I would write."
+      ],
+      [
+        "Arin",
+        "Everyone's here."
+      ]
+    ],
+    "id": "panel-09-4",
+    "file": "panel-09-4.png",
+    "label": "09.4",
+    "page": 9
+  },
+  {
+    "scene": "c07-s01",
+    "shot": "Medium / ordinary life",
+    "art": "On an ordinary Earth observatory hillside town path, armored quadrupedal Milo politely sniffs a smaller unarmored Earth dog beside its human. Arin smiles, Mira nearby; silver-haired Kael looks down toward families in the town. Gentle afternoon light.",
+    "caption": "Earth matters to Kael. The dogs share ancestry, not a suddenly shared spoken vocabulary.",
+    "dialogue": [
+      [
+        "Arin",
+        "Can you talk to him?"
+      ],
+      [
+        "Milo",
+        "Not about the observatory."
+      ]
+    ],
+    "id": "panel-10-1",
+    "file": "panel-10-1.png",
+    "label": "10.1",
+    "page": 10
+  },
+  {
+    "scene": "c07-s02",
+    "shot": "Medium / evidence challenged",
+    "art": "Observatory records chamber: Kael displays miniature histories of an abundant garden city and its later ruins in separate windows; Zara distinguishes a wireframe prediction from a lived record. Mira points to the thriving city, Orin watches a record of an unanswered disaster.",
+    "caption": "His experiments include real improvements and harm caused by his own choices.",
+    "dialogue": [
+      [
+        "Kael",
+        "For nine centuries."
+      ],
+      [
+        "Mira",
+        "Do the nine centuries stop counting?"
+      ]
+    ],
+    "id": "panel-10-2",
+    "file": "panel-10-2.png",
+    "label": "10.2",
+    "page": 10
+  },
+  {
+    "scene": "c07-s03",
+    "shot": "Wide / the witness archive",
+    "art": "Vast nonhuman archive with layered cosmic iteration rings, ancestral migration traces and evolving light patterns. Milo reveals a route from a low viewpoint, Zara translates. Arin listens to a faint fragmentary presence at an interface while Mira signals restraint. No restored parents or ghosts emerging bodily.",
+    "caption": "Imported ancestry, consciousness shaping reality, traces after death. Evidence of persistence is not a way to restore a whole life.",
+    "dialogue": [
+      [
+        "Arin",
+        "Can we bring someone back?"
+      ],
+      [
+        "Zara",
+        "Not from this."
+      ]
+    ],
+    "id": "panel-10-3",
+    "file": "panel-10-3.png",
+    "label": "10.3",
+    "page": 10
+  },
+  {
+    "scene": "c07-s04",
+    "shot": "Wide / five choices",
+    "art": "Warm familiar ship common room: all five companions around a practical gateway map and supply ledger. Arin asks rather than commands. Mira thoughtful and firm, Orin steady, Zara attentive, Milo with paws beside a low route projector.",
+    "caption": "Stopping Kael requires action at the boundary. Each companion chooses the journey.",
+    "dialogue": [
+      [
+        "Arin",
+        "Will you come with me?"
+      ],
+      [
+        "Orin",
+        "Yes."
+      ]
+    ],
+    "id": "panel-10-4",
+    "file": "panel-10-4.png",
+    "label": "10.4",
+    "page": 10
+  },
+  {
+    "scene": "c07-s05",
+    "shot": "Two-shot / restrained affection",
+    "art": "Last safe port at dusk: Arin and Mira sit at opposite ends of a bench with warm space between them. Her relief report is closed, his hands relaxed. In soft background Orin records a family message while Zara and Milo check route equipment.",
+    "caption": "They make plans small enough to want to survive for.",
+    "dialogue": [
+      [
+        "Arin",
+        "When we get back, I'd like to see the kingdom in daylight."
+      ],
+      [
+        "Mira",
+        "I know a street you missed."
+      ]
+    ],
+    "id": "panel-11-1",
+    "file": "panel-11-1.png",
+    "label": "11.1",
+    "page": 11
+  },
+  {
+    "scene": "c08-s01",
+    "shot": "Wide / preparation",
+    "art": "At immense ancient physical gateway rings under stars, Milo places low navigation nodes using harness tools; Zara retrieves a small unmanned probe near two synchronized clock indicators with no text. Arin Orin secure a route, Mira checks bodies, a folded spare casualty sling ready.",
+    "caption": "The field carries their measure of elapsed time, all five companions, and one injured passenger.",
+    "dialogue": [
+      [
+        "Zara",
+        "Nothing stops."
+      ],
+      [
+        "Milo",
+        "We planned for one."
+      ]
+    ],
+    "id": "panel-11-2",
+    "file": "panel-11-2.png",
+    "label": "11.2",
+    "page": 11
+  },
+  {
+    "scene": "c08-s02",
+    "shot": "Wide / last invitation",
+    "art": "Gateway control chamber: separate steady cyan sustaining column and bright violet access ring with two channels, one lit. Kael faces Arin and four companions. Kael's hand open in a sincere plea, Arin quiet firm refusal. No weapon impact on the sustaining column.",
+    "caption": "Rewriting foundations requires a second independent living will's sustained cooperation.",
+    "dialogue": [
+      [
+        "Kael",
+        "Please."
+      ],
+      [
+        "Arin",
+        "Not this way."
+      ]
+    ],
+    "id": "panel-11-3",
+    "file": "panel-11-3.png",
+    "label": "11.3",
+    "page": 11
+  },
+  {
+    "scene": "c08-s03",
+    "shot": "Action / familiar failure",
+    "art": "Arin lunges alone at Kael on reflected gateway floor and is knocked off balance; broad Orin catches his shoulder with shield ready. Mira stabilizes displaced water, Zara studies three access focuses, Milo marks a safe route. Kael remains formidable.",
+    "caption": "The stance from the dreams fails again. His friends change the outcome.",
+    "dialogue": [
+      [
+        "Orin",
+        "Not that arrangement."
+      ]
+    ],
+    "id": "panel-11-4",
+    "file": "panel-11-4.png",
+    "label": "11.4",
+    "page": 11
+  },
+  {
+    "scene": "c08-s03",
+    "shot": "Action / earned victory",
+    "art": "Final of three access focuses extinguishes as Zara releases a contact reached via Milo's blue route, Orin blocks Kael's counterstrike, Mira braces the group and Arin redirects a current at the focus. Kael staggers from the control ring; independent cyan support remains steady.",
+    "caption": "They force him to stop. Arin has not become stronger than Kael.",
+    "dialogue": [
+      [
+        "Kael",
+        "All that power. And you spend it refusing me."
+      ],
+      [
+        "Arin",
+        "It's mine to refuse with."
+      ]
+    ],
+    "id": "panel-12-1",
+    "file": "panel-12-1.png",
+    "label": "12.1",
+    "page": 12
+  },
+  {
+    "scene": "c08-s04",
+    "shot": "Action / protective reflex",
+    "art": "Gateway floor folds inward beneath Mira and four-legged Milo. Arin extends a shaking hand with a coherent thin cyan field holding the broken floor in place. Zara reaches a slow manual isolation control; Kael's violet channel remains imprinted and live.",
+    "caption": "His command means Hold. He saves his friends from the boundary failure.",
+    "dialogue": [
+      [
+        "Zara",
+        "His channel is still live. Don't give it another..."
+      ]
+    ],
+    "id": "panel-12-2",
+    "file": "panel-12-2.png",
+    "label": "12.2",
+    "page": 12
+  },
+  {
+    "scene": "c08-s04",
+    "shot": "Detail / two authorities",
+    "art": "Two distinct cyan and violet living channels light the gateway ring from Arin and Kael. They remain visibly opposed on opposite sides, not shaking hands. A door to an impossibly vast dark reflective realm opens; both men visibly surprised.",
+    "caption": "Access asks for compatible independent authority. It does not ask for agreement.",
+    "dialogue": [
+      [
+        "Kael",
+        "Two voices."
+      ],
+      [
+        "Zara",
+        "It wasn't asking whether you agreed."
+      ]
+    ],
+    "id": "panel-12-3",
+    "file": "panel-12-3.png",
+    "label": "12.3",
+    "page": 12
+  },
+  {
+    "scene": "c08-s04",
+    "shot": "Wide / tense passage",
+    "art": "Exactly five companions and silver-haired Kael cross a monumental opened portal within a connected blue field: Arin Mira Orin red robot Zara and golden four-legged Milo. A tiny shared clock pulse, vast reflective darkness ahead. Cautious necessary alliance, no celebration.",
+    "caption": "Their universe is exposed. Safe closure now needs the far side. Retreat cannot undo the opening.",
+    "dialogue": [
+      [
+        "Mira",
+        "Together. Nobody crosses alone."
+      ],
+      [
+        "Orin",
+        "That includes you."
+      ]
+    ],
+    "id": "panel-12-4",
+    "file": "panel-12-4.png",
+    "label": "12.4",
+    "page": 12
+  },
+  {
+    "scene": "c09-s01",
+    "shot": "Extreme wide / scale",
+    "art": "The Origin: gigantic four-armed black gold cosmic armored Aevos with galaxy chest, horned crown, rings, red and blue displayed worlds, two hourglass vessels, shattered floating colonnades, blue grid reflective floor. Exactly five tiny but distinct party members Arin Mira Orin Zara Milo in foreground, silver-haired Kael separate. A steady independent sustaining ring behind Aevos distinct from his chest control tether.",
+    "caption": "A place someone built. Made lives still feel, choose, and matter.",
+    "dialogue": [
+      [
+        "Aevos",
+        "A self-sustaining simulation, built to let life develop."
+      ],
+      [
+        "Zara",
+        "And not the place you came from."
+      ]
+    ],
+    "id": "panel-13-1",
+    "file": "panel-13-1.png",
+    "label": "13.1",
+    "page": 13
+  },
+  {
+    "scene": "c09-s02",
+    "shot": "Close / the witness",
+    "art": "Kael stands shocked among projections of ordinary moments from many embodied lives: learning to write, shared meals, empty bed. His long silver hair and black armor remain sharply foregrounded. Distant Aevos observes without rage. No reincarnation transfer to Arin.",
+    "caption": "Earlier renewals preserved Kael's memory. This is his first physical return for assessment.",
+    "dialogue": [
+      [
+        "Aevos",
+        "The One. The continuous witness."
+      ],
+      [
+        "Kael",
+        "Those are my lives."
+      ]
+    ],
+    "id": "panel-13-2",
+    "file": "panel-13-2.png",
+    "label": "13.2",
+    "page": 13
+  },
+  {
+    "scene": "c09-s02",
+    "shot": "Medium / the fatal inference",
+    "art": "Aevos calmly turns an hourglass, a line toward the universe gateway begins to whiten. Kael protests while Arin and companions watch. An old continuity ribbon spanning cosmic cycles is now threatened with total severance, symbolic interface only.",
+    "caption": "His engineered urge to return helped shape the verdict. This termination would discard Kael too.",
+    "dialogue": [
+      [
+        "Kael",
+        "Neither does my despair establish that there can be none."
+      ],
+      [
+        "Aevos",
+        "This universe will end. Another will be made."
+      ]
+    ],
+    "id": "panel-13-3",
+    "file": "panel-13-3.png",
+    "label": "13.3",
+    "page": 13
+  },
+  {
+    "scene": "c09-s03",
+    "shot": "Wide / refusal",
+    "art": "Exactly five companions stand against the monumental custodian, their blue return anchor behind them showing the small ordinary sky they came from. Mira steps forward, Zara open defiant hand, Orin shields, Milo by route marker, Arin tired and resolute. Reset vessels begin turning despite their refusal.",
+    "caption": "Aevos hears their choice and continues. He is powerful, not omnipotent.",
+    "dialogue": [
+      [
+        "Arin",
+        "We do not know the final answer. We still choose to live."
+      ],
+      [
+        "Aevos",
+        "Your choice is understood."
+      ]
+    ],
+    "id": "panel-13-4",
+    "file": "panel-13-4.png",
+    "label": "13.4",
+    "page": 13
+  },
+  {
+    "scene": "c09-s03",
+    "shot": "Action / outmatched",
+    "art": "Origin floor shifts, a blue route marker shattered. Red robot Zara catches fallen golden dog Milo by his supportive harness, never his collar. Orin shields them, injured but standing. Mira reaches through a failing water barrier, Arin's thin protective field buckling under Aevos's raised hand.",
+    "caption": "They delay the reset. Aevos escalates. The old solo stance cannot save them.",
+    "dialogue": [
+      [
+        "Mira",
+        "Arin - back to my voice."
+      ]
+    ],
+    "id": "panel-14-1",
+    "file": "panel-14-1.png",
+    "label": "14.1",
+    "page": 14
+  },
+  {
+    "scene": "c09-s04",
+    "shot": "Action / interception",
+    "art": "Silver-haired Kael suddenly steps between Aevos's brilliant strike and Arin's party. His protective field cracks and he falls to one knee, armor fractured with violet light escaping, visibly seriously hurt but no graphic gore. The five companions survive behind him.",
+    "caption": "His first allied act is protection. It costs him what he cannot promise to recover.",
+    "dialogue": [
+      [
+        "Kael",
+        "I thought that if I preserved the possibility of life, I had preserved the lives themselves."
+      ],
+      [
+        "Kael",
+        "I was wrong."
+      ]
+    ],
+    "id": "panel-14-2",
+    "file": "panel-14-2.png",
+    "label": "14.2",
+    "page": 14
+  },
+  {
+    "scene": "c09-s04",
+    "shot": "Close / this person",
+    "art": "Wounded Kael kneels beside young Arin, looking past him to Mira helping Zara and Milo while Orin guards. Colossal Aevos distant. Kael's expression fierce with recognition, Arin upset, no forgiveness embrace.",
+    "caption": "A comparable bearer of power would not be this person, or these companions.",
+    "dialogue": [
+      [
+        "Kael",
+        "His name is Arin."
+      ],
+      [
+        "Arin",
+        "You were going to do this to us."
+      ],
+      [
+        "Kael",
+        "I know."
+      ]
+    ],
+    "id": "panel-14-3",
+    "file": "panel-14-3.png",
+    "label": "14.3",
+    "page": 14
+  },
+  {
+    "scene": "c09-s05",
+    "shot": "Medium / the plan",
+    "art": "Mira kneels to stabilize wounded Kael with restrained water arts while Arin listens opposite. Zara points out the destructive chest control tether and separate sustaining ring, Milo maps low contacts and Orin braces the route. Team work, Kael unable to stand.",
+    "caption": "Two compatible speakers can hold continuity briefly while the five companions isolate destructive access.",
+    "dialogue": [
+      [
+        "Arin",
+        "Not a new universe."
+      ],
+      [
+        "Kael",
+        "This one. Keep what is here."
+      ]
+    ],
+    "id": "panel-14-4",
+    "file": "panel-14-4.png",
+    "label": "14.4",
+    "page": 14
+  },
+  {
+    "scene": "c09-s05",
+    "shot": "Action / the moving route",
+    "art": "Four-legged Milo uses a harness-mounted tool in a low contact while red robot Zara isolates a nearby supervisory console. Broad Orin plants his shield and holds a failing connection apart on the moving reflected blue route. Arin and seated wounded Kael sustain a thin field in distance, Mira beside them.",
+    "caption": "Milo finds the route. Zara identifies the address. Orin keeps the crossing open.",
+    "dialogue": [
+      [
+        "Milo",
+        "Left marker. Follow the blue reflection, not the wall."
+      ],
+      [
+        "Orin",
+        "I've got the crossing. Go!"
+      ]
+    ],
+    "id": "panel-15-1",
+    "file": "panel-15-1.png",
+    "label": "15.1",
+    "page": 15
+  },
+  {
+    "scene": "c09-s05",
+    "shot": "Close / restraint",
+    "art": "Close on Arin shaking with effort holding a narrow cyan counter-Axiom beside wounded seated Kael's violet signature. Mira catches Arin's attention with calm urgent eye contact and a hand near him. His blaze visibly reduces to controlled light instead of exploding into new armor.",
+    "caption": "More force would destroy him. He listens and reduces it.",
+    "dialogue": [
+      [
+        "Mira",
+        "Arin. Back to my voice."
+      ],
+      [
+        "Arin",
+        "I'm here."
+      ]
+    ],
+    "id": "panel-15-2",
+    "file": "panel-15-2.png",
+    "label": "15.2",
+    "page": 15
+  },
+  {
+    "scene": "c09-s05",
+    "shot": "Action / now",
+    "art": "Milo safely backs out across blue return mark, Zara deliberately disconnects a bright destructive tether, Orin prevents contact rejoining, Mira diverts the discharge, Arin and wounded Kael keep a thin field steady. Colossal Aevos's chest tether breaks away from machinery; vast separate sustaining ring intact. All five identifiable.",
+    "caption": "Milo clears the contact. Isolation opens a final window against Aevos's local presence.",
+    "dialogue": [
+      [
+        "Milo",
+        "Clear."
+      ],
+      [
+        "Zara",
+        "Now."
+      ]
+    ],
+    "id": "panel-15-3",
+    "file": "panel-15-3.png",
+    "label": "15.3",
+    "page": 15
+  },
+  {
+    "scene": "c09-s05",
+    "shot": "Wide / one more pulse",
+    "art": "Defeated Aevos's embodied black gold cosmic armor collapses into inert shards and fading light after the party's final assault. His displayed worlds dim like projections. Behind him the independent cyan sustaining structure visibly continues two luminous concentric pulses; the real universe remains visible in the intact small gateway. Five exhausted companions immediately turn to wounded Kael, no victory pose.",
+    "caption": "Aevos dies in this staged ending. The independent sustaining system continues.",
+    "dialogue": [
+      [
+        "Mira",
+        "It's still running."
+      ],
+      [
+        "Milo",
+        "Home is still there."
+      ]
+    ],
+    "id": "panel-15-4",
+    "file": "panel-15-4.png",
+    "label": "15.4",
+    "page": 15
+  },
+  {
+    "scene": "e01-s01",
+    "shot": "Wide / carry him home",
+    "art": "The five companions escort critically wounded silver-haired Kael in a prepared casualty sling through the gateway inside the blue synchronized field. Orin carries support, Mira treats, Zara preserves records, Milo guides the return mark, Arin keeps close. No glowing power transfer, clocks continue forward.",
+    "caption": "Knowledge is preserved. No immortality, reincarnation, or inherited office is promised.",
+    "dialogue": [
+      [
+        "Kael",
+        "Do not call it truth merely because I said it."
+      ],
+      [
+        "Mira",
+        "He is alive. I can't tell you more than that yet."
+      ]
+    ],
+    "id": "panel-16-1",
+    "file": "panel-16-1.png",
+    "label": "16.1",
+    "page": 16
+  },
+  {
+    "scene": "e01-s02",
+    "shot": "Montage / work continues",
+    "art": "Four soft-edged connected epilogue vignettes within this single panel: Mira helps a Neris clinic coordinator at clean running water; Orin writes a family letter beside testimony folders; red robot Zara hands Arin a new contract; golden dog Milo reunites with his canine route partner at a low Veyra map. Everyday labor and warmth, no coronation.",
+    "caption": "Relief, testimony, letters, contracts, reunion. The sky surviving did not finish the work.",
+    "dialogue": [
+      [
+        "Milo",
+        "I found the way back too."
+      ]
+    ],
+    "id": "panel-16-2",
+    "file": "panel-16-2.png",
+    "label": "16.2",
+    "page": 16
+  },
+  {
+    "scene": "e01-s03",
+    "shot": "Two-shot / daylight",
+    "art": "Arin and Mira walk a modest sunlit Neris market street, carrying two inexpensive drinks. White navy gold armor travel-worn, shoulder and hands relaxed; fingertips briefly touch at a cup. Repaired roofs and ordinary vendors behind. Gentle affection, no kiss or wedding.",
+    "caption": "He spends a little on something he wants. They imagine another ordinary day.",
+    "dialogue": [
+      [
+        "Arin",
+        "Could we do this again?"
+      ],
+      [
+        "Mira",
+        "Yes."
+      ]
+    ],
+    "id": "panel-16-3",
+    "file": "panel-16-3.png",
+    "label": "16.3",
+    "page": 16
+  },
+  {
+    "scene": "e01-s03",
+    "shot": "Wide / room for him",
+    "art": "Warm evening meal on a modest Neris street terrace. Exactly five companions: Arin sits in the last open chair, Mira beside him, older broad Orin across, red robotic Zara telling a story, golden quadrupedal Milo at a low accessible place by the table with his own plate. Starry sky over repaired city; cozy candid conversation, no extra hero.",
+    "caption": "He counts the places. There is room for him. He sits.",
+    "dialogue": [
+      [
+        "Zara",
+        "Arin, are you listening?"
+      ],
+      [
+        "Arin",
+        "Yes."
+      ]
+    ],
+    "id": "panel-16-4",
+    "file": "panel-16-4.png",
+    "label": "16.4",
+    "page": 16
+  },
+  {
+    "scene": "opt-01",
+    "shot": "Close / memory beyond loss",
+    "art": "In warm ship lamplight, Arin repairs his old wrist strap and smiles unexpectedly, Mira quietly sitting nearby. A faint benign memory reflection of his father laughing, no explosion or ghost. Intimate but platonic posture.",
+    "caption": "After C04-S02. His parents were people, not only the event that hurt him.",
+    "dialogue": [
+      [
+        "Arin",
+        "He'd explain the ending before he remembered the beginning."
+      ],
+      [
+        "Mira",
+        "You remembered this part today."
+      ]
+    ],
+    "id": "panel-17-1",
+    "file": "panel-17-1.png",
+    "label": "17.1",
+    "page": 17
+  },
+  {
+    "scene": "opt-02",
+    "shot": "Medium / a concrete need",
+    "art": "During Neris relief work, exhausted Mira washes her hands at clinic basin after a limited treatment. Orin sets a clean towel and supply list beside her without lecturing. A busy treatment board behind, no dying body shown.",
+    "caption": "During C06-S05. Being skilled does not make a healer limitless.",
+    "dialogue": [
+      [
+        "Mira",
+        "Another trained healer. Clean supplies. Time."
+      ],
+      [
+        "Orin",
+        "Which of those can we get first?"
+      ]
+    ],
+    "id": "panel-17-2",
+    "file": "panel-17-2.png",
+    "label": "17.2",
+    "page": 17
+  },
+  {
+    "scene": "opt-03",
+    "shot": "Medium / staying afterward",
+    "art": "At a damaged station doorway after the apology, red robotic Zara sorts a box of hinges and reusable parts. Arin sits down to sort the other half. Modest repair work, ordinary daylight, no dramatic glowing effects.",
+    "caption": "After C05-S04 and another shared task. Zara chooses the aftermath as part of adventure.",
+    "dialogue": [
+      [
+        "Arin",
+        "This is a box of hinges."
+      ],
+      [
+        "Zara",
+        "The door won't open without them."
+      ]
+    ],
+    "id": "panel-17-3",
+    "file": "panel-17-3.png",
+    "label": "17.3",
+    "page": 17
+  },
+  {
+    "scene": "opt-04",
+    "shot": "Close / more than one feeling",
+    "art": "Orin alone in a safe ship communications nook listening carefully to his mother's audio message, then recording a reply. Gloved hands relaxed, soft lamp on his weathered face, closed privacy curtain, no mother's location or screen text.",
+    "caption": "After C06-S06. Love and anger can coexist; neither speaks for the victims.",
+    "dialogue": [
+      [
+        "Mother",
+        "Being angry has never told me that I stopped loving him."
+      ],
+      [
+        "Orin",
+        "I just wanted to hear from you."
+      ]
+    ],
+    "id": "panel-17-4",
+    "file": "panel-17-4.png",
+    "label": "17.4",
+    "page": 17
+  },
+  {
+    "scene": "opt-05",
+    "shot": "Medium / another viewpoint",
+    "art": "Golden quadrupedal Milo stands by a low spatial route projector adjusted with his nose; the luminous map shifts with the viewing angle. Arin crouches awkwardly and red robot Zara watches with amusement. Paw-width lanes clearly shown.",
+    "caption": "Before C08-S01. Kynari maps record approach, position and the route back.",
+    "dialogue": [
+      [
+        "Arin",
+        "The map moved."
+      ],
+      [
+        "Milo",
+        "You moved."
+      ]
+    ],
+    "id": "panel-18-1",
+    "file": "panel-18-1.png",
+    "label": "18.1",
+    "page": 18
+  },
+  {
+    "scene": "opt-05",
+    "shot": "Wide / gentle joke",
+    "art": "Arin carefully holds an awkward crouch at Milo's intended low viewing angle while Milo pads away on four paws toward a drinking bowl, Zara amused nearby. Route now visibly lines up correctly from Arin's new position.",
+    "caption": "The unfamiliar map becomes legible when he stops assuming his viewpoint is the default.",
+    "dialogue": [
+      [
+        "Milo",
+        "Good. Hold that for a moment. I need a drink."
+      ]
+    ],
+    "id": "panel-18-2",
+    "file": "panel-18-2.png",
+    "label": "18.2",
+    "page": 18
+  },
+  {
+    "scene": "opt-06",
+    "shot": "Close / offered back",
+    "art": "After a fight at a quiet camp, older broad Orin struggles one-handed with a strap buckle. Younger Arin sits beside him and patiently holds out his empty open hand to offer help. Matching white navy gold armor, different builds. No new injury drama.",
+    "caption": "After C06-S06. The man who always returns can also accept a hand.",
+    "dialogue": [
+      [
+        "Orin",
+        "I can manage."
+      ],
+      [
+        "Arin",
+        "I know."
+      ]
+    ],
+    "id": "panel-18-3",
+    "file": "panel-18-3.png",
+    "label": "18.3",
+    "page": 18
+  },
+  {
+    "scene": "opt-06",
+    "shot": "Medium / accepted care",
+    "art": "Orin has handed the strap to Arin, who concentrates on untwisting the buckle. Orin relaxes and looks away instead of inspecting. Warm modest camp light, quiet humor between distinct older and younger armored men.",
+    "caption": "The bandage from the evacuation transport has become a two-way promise.",
+    "dialogue": [
+      [
+        "Orin",
+        "Then this should be excellent work."
+      ],
+      [
+        "Arin",
+        "Try not to inspect it while I'm doing it."
+      ]
+    ],
+    "id": "panel-18-4",
+    "file": "panel-18-4.png",
+    "label": "18.4",
+    "page": 18
+  },
+  {
+    "after": "A line of light divides the floor.",
+    "shot": "Wide / unreachable",
+    "caption": "The dream has an opponent. It offers no answer.",
+    "dialogue": [
+      [
+        "Arin",
+        "Who are you?"
+      ]
+    ],
+    "id": "new-c00-s01-dream",
+    "scene": "c00-s01",
+    "file": "c00-s01-dream.png",
+    "art": "The dream has an opponent. It offers no answer. Wide / unreachable",
+    "source": "C:\\Users\\louie\\.codex\\generated_images\\01a0a581-c8d1-70f0-a1d6-12d11703b872\\exec-6a34c9c5-f45e-4f5a-b265-df2accf09f3b.png",
+    "label": "N01",
+    "prompt": "Use case: illustration-story. Create ONE new 1536x1024 landscape illustration for Sin Star I Storyboard Draft 2, a single continuous composition, no quadrants, no montage, no inset, no lettering or speech bubbles. Match the richly detailed cinematic painted graphic novel style of reference 1, crisp expressive faces, luminous dramatic lighting. Reference 1 is STYLE ONLY: invent the requested new composition, not its four-panel layout. Remaining images are CHARACTER IDENTITY references; preserve recognizable faces and armor. Scene: Arin's recurring dream before he knows its cause. Young clean-shaven brown-haired Arin in battered white/navy/gold surplus plate and small kite shield holds a defensive stance on an immense black reflective floor. His cyan longsword is low, blue star chest crest visible. Far away, a merely indistinct human-shaped silhouette stands beside a thin vertical line of cold white light like an unreachable receding doorway. Wide low three-quarter shot, foreground Arin and vast negative space, his uncertainty and isolation palpable. Opponent is unrecognizable and shadowed; do not show Kael's face, silver hair or identifiable costume. No attacks, no blood, no triumphant pose. Single continuous dream environment.",
+    "reference_images": [
+      "D:\\SMILE 2.0\\games\\SinStarI\\Story\\Storyboard Draft 2\\asset\\images\\archive\\draft-1-sheets\\page-01.png",
+      "D:\\Sin - AI Prompt - Contents\\2026-09-15 1809 - Sin Star I - Story Board 2\\image-9cb55147c2ea1b3d490167b70bfa73b2633918683c5e83fc61854f4775e2570b.png"
+    ]
+  },
+  {
+    "after": "He signs.",
+    "shot": "Close / the blank space",
+    "caption": "There is room for a name. He leaves it empty.",
+    "dialogue": [
+      [
+        "Arin",
+        "Leave it blank."
+      ]
+    ],
+    "id": "new-c00-s02-contract",
+    "scene": "c00-s02",
+    "file": "c00-s02-contract.png",
+    "art": "There is room for a name. He leaves it empty. Close / the blank space",
+    "source": "C:\\Users\\louie\\.codex\\generated_images\\01a0a581-c8d1-70f0-a1d6-12d11703b872\\exec-93c65888-09f9-4a05-b11f-6662eee9a230.png",
+    "label": "N02",
+    "prompt": "Use case: illustration-story. Create ONE new 1536x1024 landscape illustration for Sin Star I Storyboard Draft 2, a single continuous composition, no quadrants, no montage, no inset, no lettering or speech bubbles. Match the richly detailed cinematic painted graphic novel style of reference 1, crisp expressive faces, luminous dramatic lighting. Reference 1 is STYLE ONLY: invent the requested new composition, not its four-panel layout. Remaining images are CHARACTER IDENTITY references; preserve recognizable faces and armor. Scene: Neris guild counter, early daylight. Young clean-shaven short brown-haired Arin in visibly scratched cheap white/navy/gold surplus armor leans over a contract with a pen paused, a blank outlined box on the form suggesting an unanswered emergency contact. No legible writing. The practical middle-aged clerk waits sympathetically across the wooden desk. Arin's guarded face, worn wrist strap, meager coins and empty chair beside him tell his loneliness. Behind them a softly blurred city water queue and white-gold civic architecture with navy awnings. Intimate medium two-shot, amber sidelight, understated human acting.",
+    "reference_images": [
+      "D:\\SMILE 2.0\\games\\SinStarI\\Story\\Storyboard Draft 2\\asset\\images\\archive\\draft-1-sheets\\page-01.png",
+      "D:\\Sin - AI Prompt - Contents\\2026-09-15 1809 - Sin Star I - Story Board 2\\image-9cb55147c2ea1b3d490167b70bfa73b2633918683c5e83fc61854f4775e2570b.png"
+    ]
+  },
+  {
+    "after": "Kael lowers two fingers.",
+    "shot": "Close / intervention",
+    "caption": "The town never knows how close the danger came.",
+    "dialogue": [
+      [
+        "Kael",
+        "That wasn't mine."
+      ]
+    ],
+    "id": "new-c00-s03-course",
+    "scene": "c00-s03",
+    "file": "c00-s03-course.png",
+    "art": "The town never knows how close the danger came. Close / intervention",
+    "source": "C:\\Users\\louie\\.codex\\generated_images\\01a0a581-c8d1-70f0-a1d6-12d11703b872\\exec-a0b25147-b5a2-4bd3-a521-4870b364d98b.png",
+    "label": "N03",
+    "prompt": "Use case: illustration-story. Create ONE new 1536x1024 landscape illustration for Sin Star I Storyboard Draft 2, a single continuous composition, no quadrants, no montage, no inset, no lettering or speech bubbles. Match the richly detailed cinematic painted graphic novel style of reference 1, crisp expressive faces, luminous dramatic lighting. Reference 1 is STYLE ONLY: invent the requested new composition, not its four-panel layout. Remaining images are CHARACTER IDENTITY references; preserve recognizable faces and armor. Scene: Earth hillside at night. Close three-quarter portrait of Kael, pale youthful adult man, extremely long silver hair, ornate black/silver armor with gold fine edges and violet star details, composed protective concern. His raised two fingers gently lower as one tiny bright distant object changes its course in a subtle curved trace high in the sky. Warm ordinary inhabited town windows below remain peaceful, civilians unaware. Restrained violet reflected starlight in his eyes, wind through silver hair and flowers, blue night. This is a quiet protective intervention, no blast, no attack, no huge spaceship or portal. Kael distinctly matches character reference.",
+    "reference_images": [
+      "D:\\SMILE 2.0\\games\\SinStarI\\Story\\Storyboard Draft 2\\asset\\images\\archive\\draft-1-sheets\\page-01.png",
+      "D:\\SMILE 2.0\\games\\SinStarI\\Assets\\Characters\\Kael\\Kael - Normal Pose Holding Weapon.png"
+    ]
+  },
+  {
+    "after": "He puts away the recorder and starts searching.",
+    "shot": "Medium / carry together",
+    "caption": "The contract is finished. There is still someone to carry.",
+    "dialogue": [
+      [
+        "Mira",
+        "He can't use stairs like this. Find a board we can carry."
+      ]
+    ],
+    "id": "new-c01-s01-carry",
+    "scene": "c01-s01",
+    "file": "c01-s01-carry.png",
+    "art": "The contract is finished. There is still someone to carry. Medium / carry together",
+    "source": "C:\\Users\\louie\\.codex\\generated_images\\01a0a581-c8d1-70f0-a1d6-12d11703b872\\exec-fd383790-f93e-41bf-9e79-5da022875144.png",
+    "label": "N04",
+    "prompt": "Use case: illustration-story. Create ONE new 1536x1024 landscape illustration for Sin Star I Storyboard Draft 2, a single continuous composition, no quadrants, no montage, no inset, no lettering or speech bubbles. Match the richly detailed cinematic painted graphic novel style of reference 1, crisp expressive faces, luminous dramatic lighting. Reference 1 is STYLE ONLY: invent the requested new composition, not its four-panel layout. Remaining images are CHARACTER IDENTITY references; preserve recognizable faces and armor. Scene: after a rescue in flooded Neris waterworks. Arin and Mira together carry a conscious exhausted adult surveyor on an improvised board toward an iron stairway out of ankle-deep water. Arin clean-shaven brown-haired in battered surplus white/navy/gold armor, shoulder clasp damaged, his recorder tucked away; he chooses to help beyond his fee. Mira's FACE and brown hair BUN match reference, but she wears PLAIN NAVY TRAVEL CLOTHES with rolled sleeves here, no royal armor or crown. She calmly guides their steps. A broken non-sentient maintenance machine and conduits remain behind, water reflects a hopeful dawn through a grate. Medium wide cinematic compassionate scene, no other party members, no gore.",
+    "reference_images": [
+      "D:\\SMILE 2.0\\games\\SinStarI\\Story\\Storyboard Draft 2\\asset\\images\\archive\\draft-1-sheets\\page-01.png",
+      "D:\\Sin - AI Prompt - Contents\\2026-09-15 1809 - Sin Star I - Story Board 2\\image-9cb55147c2ea1b3d490167b70bfa73b2633918683c5e83fc61854f4775e2570b.png",
+      "D:\\Sin - AI Prompt - Contents\\2026-09-15 1809 - Sin Star I - Story Board 2\\image-d38b5bae8e3428ebcefab114a54a4d0f1e80506e65e7b320a456bcdadf753487.png"
+    ]
+  },
+  {
+    "id": "new-c02-s04",
+    "scene": "c02-s04",
+    "file": "c02-s04-added.png",
+    "after": "MIRA: We need its records. They need its transmitter.",
+    "caption": "One building. More than one reason to enter.",
+    "shot": "Wide / the next useful thing",
+    "art": "Arin, Mira and broad Orin in field armor study a damaged archive and communications building from a Veyra emergency camp, just three companions at this stage. Local families beside tents hold silent transmitters, hoping to contact loved ones. Mira points to the building's dark aerial, Orin shoulders his enormous rectangular shield. Evening teal wreckage, warm lantern glow, purpose forming without a heroic pose.",
+    "dialogue": [
+      [
+        "Mira",
+        "We need its records. They need its transmitter."
+      ],
+      [
+        "Orin",
+        "Same building. Different things to carry out."
+      ]
+    ],
+    "reference_images": [
+      "D:\\SMILE 2.0\\games\\SinStarI\\Story\\Storyboard Draft 2\\asset\\images\\archive\\draft-1-sheets\\page-01.png",
+      "D:\\Sin - AI Prompt - Contents\\2026-09-15 1809 - Sin Star I - Story Board 2\\image-9cb55147c2ea1b3d490167b70bfa73b2633918683c5e83fc61854f4775e2570b.png",
+      "D:\\Sin - AI Prompt - Contents\\2026-09-15 1809 - Sin Star I - Story Board 2\\image-d38b5bae8e3428ebcefab114a54a4d0f1e80506e65e7b320a456bcdadf753487.png",
+      "D:\\Sin - AI Prompt - Contents\\2026-09-15 1809 - Sin Star I - Story Board 2\\image-7bb6ccc62a40fdb90428b21cf9af0b85862b8c7f66bd9469df5508b06e747e5a.png"
+    ],
+    "prompt": "Use case: illustration-story. Generate ONE single continuous landscape illustration, 1536x1024, cinematic painted graphic novel style, expressive realistic faces and crisp ink contours. No text, letters, bubbles, grid, panels, inset or collage. Reference 1 supplies STYLE ONLY, never copy its panel layout. Subsequent references supply exact named character identities, do not copy turnaround layout. Arin is youthful clean-shaven short brown-haired man in white/navy/gold battered surplus plate, cyan sword, modest kite shield. Mira has brown hair in a bun; dress as scene specifies. Orin is much broader older dark-haired stubbled man with huge rectangular shield and hammer. Milo is strictly a four-legged golden-white dog, not humanoid. Zara is only the RED mechanical robot from her screenshot, never its human background portrait/UI. Establish a NEW story moment: Arin, Mira and broad Orin in field armor study a damaged archive and communications building from a Veyra emergency camp, just three companions at this stage. Local families beside tents hold silent transmitters, hoping to contact loved ones. Mira points to the building's dark aerial, Orin shoulders his enormous rectangular shield. Evening teal wreckage, warm lantern glow, purpose forming without a heroic pose.",
+    "label": "N11",
+    "source": "C:\\Users\\louie\\.codex\\generated_images\\01a0a581-c8d1-70f0-a1d6-12d11703b872\\exec-b1eb539f-e9b3-48cc-8885-542cd2307f82.png"
+  },
+  {
+    "id": "new-c03-s01",
+    "scene": "c03-s01",
+    "file": "c03-s01-added.png",
+    "after": "ZARA: By repeated, enthusiastic choice.",
+    "caption": "They already have their own reasons.",
+    "shot": "Medium / the route underneath",
+    "art": "They already have their own reasons. Medium / the route underneath",
+    "dialogue": [
+      [
+        "Arin",
+        "You're a Hunter?"
+      ],
+      [
+        "Zara",
+        "By repeated, enthusiastic choice."
+      ]
+    ],
+    "reference_images": [
+      "D:\\SMILE 2.0\\games\\SinStarI\\Story\\Storyboard Draft 2\\asset\\images\\archive\\draft-1-sheets\\page-01.png",
+      "D:\\Sin - AI Prompt - Contents\\2026-09-15 1809 - Sin Star I - Story Board 2\\image-9cb55147c2ea1b3d490167b70bfa73b2633918683c5e83fc61854f4775e2570b.png",
+      "D:\\Sin - AI Prompt - Contents\\2026-09-15 1809 - Sin Star I - Story Board 2\\image-d38b5bae8e3428ebcefab114a54a4d0f1e80506e65e7b320a456bcdadf753487.png",
+      "D:\\Sin - AI Prompt - Contents\\2026-09-15 1809 - Sin Star I - Story Board 2\\image-8f17a98c2f3a9af43851974f721ea73e49011b8398186b1201e3e926d072a82c.png",
+      "D:\\SMILE 2.0\\games\\SinStarI\\SourceAssets\\Characters\\Warrior\\ZaraV1\\Private\\Previews\\zara-neon-white-native.jpg"
+    ],
+    "prompt": "Use case: illustration-story. Generate ONE single continuous landscape illustration, 1536x1024, cinematic painted graphic novel style, expressive realistic faces and crisp ink contours. No text, letters, bubbles, grid, panels, inset or collage. Reference 1 supplies STYLE ONLY, never copy its panel layout. Subsequent references supply exact named character identities, do not copy turnaround layout. Arin is youthful clean-shaven short brown-haired man in white/navy/gold battered surplus plate, cyan sword, modest kite shield. Mira has brown hair in a bun; dress as scene specifies. Orin is much broader older dark-haired stubbled man with huge rectangular shield and hammer. Milo is strictly a four-legged golden-white dog, not humanoid. Zara is only the RED mechanical robot from her screenshot, never its human background portrait/UI. Establish a NEW story moment: Inside a damaged Veyra enclosure, Zara the FULLY ARTIFICIAL RED AND CHARCOAL female robot kneels beside a low ventilation route, confidently laying out her independent rescue plan. Milo a golden-white FOUR-LEGGED dog in white/navy/gold toolharness points his muzzle toward the low route, no hands or upright pose. Armored Arin and Mira listen at edge. Zara has mechanical face and glowing sensor eyes, NO human skin/hair. Ignore UI and woman in Zara screenshot.",
+    "label": "N12",
+    "source": "C:\\Users\\louie\\.codex\\generated_images\\01a0a581-c8d1-70f0-a1d6-12d11703b872\\exec-b56d2514-a69b-4eb2-959a-c360e4d21d6e.png"
+  },
+  {
+    "id": "new-c03-s02",
+    "scene": "c03-s02",
+    "file": "c03-s02-added.png",
+    "after": "MIRA: Tell me when to stop.",
+    "caption": "Different skills. The same person to save.",
+    "shot": "Close / careful repair",
+    "art": "Different skills. The same person to save. Close / careful repair",
+    "dialogue": [
+      [
+        "Mira",
+        "Tell me when to stop."
+      ],
+      [
+        "Zara",
+        "There. Hold it there."
+      ]
+    ],
+    "reference_images": [
+      "D:\\SMILE 2.0\\games\\SinStarI\\Story\\Storyboard Draft 2\\asset\\images\\archive\\draft-1-sheets\\page-01.png",
+      "D:\\Sin - AI Prompt - Contents\\2026-09-15 1809 - Sin Star I - Story Board 2\\image-d38b5bae8e3428ebcefab114a54a4d0f1e80506e65e7b320a456bcdadf753487.png",
+      "D:\\SMILE 2.0\\games\\SinStarI\\SourceAssets\\Characters\\Warrior\\ZaraV1\\Private\\Previews\\zara-neon-white-native.jpg"
+    ],
+    "prompt": "Use case: illustration-story. ONE continuous 1536x1024 landscape scene, richly painted cinematic graphic novel, crisp expressive faces and detailed believable materials, no lettering, bubbles, captions, HUD, grid, inset or montage. First reference is style only; do not copy its four-panel composition or cast. Remaining references establish identity only for named people in this scene, not a lineup. Include EXACTLY the cast specified below and no other named companions. Do not add any character merely because a reference or the larger story contains them. Zara reference: use ONLY the red robot in the CENTER, ignore all UI and the unrelated human woman behind. Scene: Only Mira, Zara and an injured anonymous silver-gray artificial defector appear. At the opened Veyra detention area, brown-bun Mira in white/navy/gold healer armor cools the damaged mechanical knee joint with a small controlled ribbon of water while red-and-charcoal fully mechanical Zara repairs the joint using a physical tool. The defector sits conscious and consents. Focus on precise cooperative hands, cool blue reflected light, no magical instant repair.",
+    "label": "N13",
+    "source": "C:\\Users\\louie\\.codex\\generated_images\\01a0a581-c8d1-70f0-a1d6-12d11703b872\\exec-5bef46ff-ecff-4cc2-8637-092a57a57a2f.png"
+  },
+  {
+    "id": "new-c03-s03",
+    "scene": "c03-s03",
+    "file": "c03-s03-added.png",
+    "after": "He glances toward the open door",
+    "caption": "A promise to find the way back.",
+    "shot": "Medium / belonging and departure",
+    "art": "A promise to find the way back. Medium / belonging and departure",
+    "dialogue": [
+      [
+        "Milo",
+        "I also want to come back and tell him where they lead."
+      ]
+    ],
+    "reference_images": [
+      "D:\\SMILE 2.0\\games\\SinStarI\\Story\\Storyboard Draft 2\\asset\\images\\archive\\draft-1-sheets\\page-01.png",
+      "D:\\Sin - AI Prompt - Contents\\2026-09-15 1809 - Sin Star I - Story Board 2\\image-8f17a98c2f3a9af43851974f721ea73e49011b8398186b1201e3e926d072a82c.png"
+    ],
+    "prompt": "Use case: illustration-story. ONE continuous 1536x1024 landscape scene, richly painted cinematic graphic novel, crisp expressive faces and detailed believable materials, no lettering, bubbles, captions, HUD, grid, inset or montage. First reference is style only; do not copy its four-panel composition or cast. Remaining references establish identity only for named people in this scene, not a lineup. Include EXACTLY the cast specified below and no other named companions. Do not add any character merely because a reference or the larger story contains them. Zara reference: use ONLY the red robot in the CENTER, ignore all UI and the unrelated human woman behind. Scene: Only Milo and his rescued canine partner appear in a Kynari community hall. Milo is the golden-white four-legged dog with the white/navy/gold armored tool harness; his partner is a distinct darker golden four-legged dog in a simple civilian harness. The partner operates the restored low transmitter with a paw while Milo looks back from the doorway toward him, torn but resolved to help their people. Low canine-height viewpoint, scent-marked architecture, warm late light. No humanoid bodies, no human companions.",
+    "label": "N14",
+    "source": "C:\\Users\\louie\\.codex\\generated_images\\01a0a581-c8d1-70f0-a1d6-12d11703b872\\exec-f4a60322-cb9d-4f02-a992-e9628a505743.png"
+  },
+  {
+    "id": "new-c03-s04",
+    "scene": "c03-s04",
+    "file": "c03-s04-added.png",
+    "after": "Orin moves the kettle closer to the fire",
+    "caption": "Company without an interrogation.",
+    "shot": "Close / the night watch",
+    "art": "Only Arin and Orin are awake and visible beside a nearly spent campfire at night. Young clean-shaven brown-haired Arin has just woken on his bedroll, navy undershirt, worn wrist strap in his hand. Substantially broader older dark-haired stubbled Orin in loosened white/navy/gold armor moves a kettle toward the coals and offers comfortable silence. Intimate low framing of kettle and faces, no cosmic magic, no extra companions in view.",
+    "dialogue": [
+      [
+        "Orin",
+        "Bad one?"
+      ]
+    ],
+    "reference_images": [
+      "D:\\SMILE 2.0\\games\\SinStarI\\Story\\Storyboard Draft 2\\asset\\images\\archive\\draft-1-sheets\\page-01.png",
+      "D:\\Sin - AI Prompt - Contents\\2026-09-15 1809 - Sin Star I - Story Board 2\\image-9cb55147c2ea1b3d490167b70bfa73b2633918683c5e83fc61854f4775e2570b.png",
+      "D:\\Sin - AI Prompt - Contents\\2026-09-15 1809 - Sin Star I - Story Board 2\\image-7bb6ccc62a40fdb90428b21cf9af0b85862b8c7f66bd9469df5508b06e747e5a.png"
+    ],
+    "prompt": "Use case: illustration-story. ONE continuous 1536x1024 landscape scene, richly painted cinematic graphic novel, crisp expressive faces and detailed believable materials, no lettering, bubbles, captions, HUD, grid, inset or montage. First reference is style only; do not copy its four-panel composition or cast. Remaining references establish identity only for named people in this scene, not a lineup. Include EXACTLY the cast specified below and no other named companions. Do not add any character merely because a reference or the larger story contains them. Zara reference: use ONLY the red robot in the CENTER, ignore all UI and the unrelated human woman behind. Scene: Only Arin and Orin are awake and visible beside a nearly spent campfire at night. Young clean-shaven brown-haired Arin has just woken on his bedroll, navy undershirt, worn wrist strap in his hand. Substantially broader older dark-haired stubbled Orin in loosened white/navy/gold armor moves a kettle toward the coals and offers comfortable silence. Intimate low framing of kettle and faces, no cosmic magic, no extra companions in view.",
+    "label": "N15",
+    "source": "C:\\Users\\louie\\.codex\\generated_images\\01a0a581-c8d1-70f0-a1d6-12d11703b872\\exec-6be7c035-ac7a-430f-b334-13623562ee61.png"
+  },
+  {
+    "id": "new-c04-s01",
+    "scene": "c04-s01",
+    "file": "c04-s01-added.png",
+    "after": "His hand briefly covers the injury on Orin's wrist.",
+    "caption": "Courage came before the lightning.",
+    "shot": "Detail / an unexplained kindness",
+    "art": "Courage came before the lightning. Detail / an unexplained kindness",
+    "dialogue": [
+      [
+        "Old man",
+        "No. It is supposed to be remembered."
+      ]
+    ],
+    "reference_images": [
+      "D:\\SMILE 2.0\\games\\SinStarI\\Story\\Storyboard Draft 2\\asset\\images\\archive\\draft-1-sheets\\page-01.png",
+      "D:\\Sin - AI Prompt - Contents\\2026-09-15 1809 - Sin Star I - Story Board 2\\image-7bb6ccc62a40fdb90428b21cf9af0b85862b8c7f66bd9469df5508b06e747e5a.png"
+    ],
+    "prompt": "Use case: illustration-story. ONE continuous 1536x1024 landscape scene, richly painted cinematic graphic novel, crisp expressive faces and detailed believable materials, no lettering, bubbles, captions, HUD, grid, inset or montage. First reference is style only; do not copy its four-panel composition or cast. Remaining references establish identity only for named people in this scene, not a lineup. Include EXACTLY the cast specified below and no other named companions. Do not add any character merely because a reference or the larger story contains them. Zara reference: use ONLY the red robot in the CENTER, ignore all UI and the unrelated human woman behind. Scene: Only younger Orin and an elderly anonymous hooded traveler at a wet mountain shelter in a flashback. Broad dark-haired stubbled Orin has ordinary worn field clothing and simpler old armor, no glowing lightning. The traveler's face remains hidden under a weathered hood as his hand gently covers a small injury on Orin's wrist. The old rescue rope and case lie nearby. Rain outside, subdued human mystery; do not visually establish a spell, divine blessing or identity.",
+    "label": "N16",
+    "source": "C:\\Users\\louie\\.codex\\generated_images\\01a0a581-c8d1-70f0-a1d6-12d11703b872\\exec-d27d54bf-307e-4e17-9b4a-0275fb520726.png"
+  },
+  {
+    "id": "new-c04-s02",
+    "scene": "c04-s02",
+    "file": "c04-s02-added.png",
+    "after": "Zara plays a recording of Arin's sleep utterance through a speaker.",
+    "caption": "The sound alone does nothing.",
+    "shot": "Detail / a necessary limit",
+    "art": "Only Arin, Mira and Zara visible in the safe ship practice bay. Red mechanical Zara presses play on a small physical recorder beside a plain speaker. A still bowl of water and inert floor remain completely unchanged. Young armored Arin looks expectant; brown-bun Mira observes thoughtfully with staff resting aside. Small reflections on metal, quiet scientific comparison, no magical glow from the speaker, no text.",
+    "dialogue": [
+      [
+        "Zara",
+        "Same sound. No response."
+      ]
+    ],
+    "reference_images": [
+      "D:\\SMILE 2.0\\games\\SinStarI\\Story\\Storyboard Draft 2\\asset\\images\\archive\\draft-1-sheets\\page-01.png",
+      "D:\\Sin - AI Prompt - Contents\\2026-09-15 1809 - Sin Star I - Story Board 2\\image-9cb55147c2ea1b3d490167b70bfa73b2633918683c5e83fc61854f4775e2570b.png",
+      "D:\\Sin - AI Prompt - Contents\\2026-09-15 1809 - Sin Star I - Story Board 2\\image-d38b5bae8e3428ebcefab114a54a4d0f1e80506e65e7b320a456bcdadf753487.png",
+      "D:\\SMILE 2.0\\games\\SinStarI\\SourceAssets\\Characters\\Warrior\\ZaraV1\\Private\\Previews\\zara-neon-white-native.jpg"
+    ],
+    "prompt": "Use case: illustration-story. ONE continuous 1536x1024 landscape scene, richly painted cinematic graphic novel, crisp expressive faces and detailed believable materials, no lettering, bubbles, captions, HUD, grid, inset or montage. First reference is style only; do not copy its four-panel composition or cast. Remaining references establish identity only for named people in this scene, not a lineup. Include EXACTLY the cast specified below and no other named companions. Do not add any character merely because a reference or the larger story contains them. Zara reference: use ONLY the red robot in the CENTER, ignore all UI and the unrelated human woman behind. Scene: Only Arin, Mira and Zara visible in the safe ship practice bay. Red mechanical Zara presses play on a small physical recorder beside a plain speaker. A still bowl of water and inert floor remain completely unchanged. Young armored Arin looks expectant; brown-bun Mira observes thoughtfully with staff resting aside. Small reflections on metal, quiet scientific comparison, no magical glow from the speaker, no text.",
+    "label": "N17",
+    "source": "C:\\Users\\louie\\.codex\\generated_images\\01a0a581-c8d1-70f0-a1d6-12d11703b872\\exec-87b985ea-56fe-4956-91ff-e5ac0ac5b602.png"
+  },
+  {
+    "id": "new-c05-s01",
+    "scene": "c05-s01",
+    "file": "c05-s01-added.png",
+    "after": "Arin stares at the faction's identifier.",
+    "caption": "The record names an attacker. Grief searches for someone nearer.",
+    "shot": "Close / a terrible recognition",
+    "art": "The record names an attacker. Grief searches for someone nearer. Close / a terrible recognition",
+    "dialogue": [
+      [
+        "Arin",
+        "They knew there were people aboard."
+      ]
+    ],
+    "reference_images": [
+      "D:\\SMILE 2.0\\games\\SinStarI\\Story\\Storyboard Draft 2\\asset\\images\\archive\\draft-1-sheets\\page-01.png",
+      "D:\\Sin - AI Prompt - Contents\\2026-09-15 1809 - Sin Star I - Story Board 2\\image-9cb55147c2ea1b3d490167b70bfa73b2633918683c5e83fc61854f4775e2570b.png",
+      "D:\\SMILE 2.0\\games\\SinStarI\\SourceAssets\\Characters\\Warrior\\ZaraV1\\Private\\Previews\\zara-neon-white-native.jpg"
+    ],
+    "prompt": "Use case: illustration-story. ONE continuous 1536x1024 landscape scene, richly painted cinematic graphic novel, crisp expressive faces and detailed believable materials, no lettering, bubbles, captions, HUD, grid, inset or montage. First reference is style only; do not copy its four-panel composition or cast. Remaining references establish identity only for named people in this scene, not a lineup. Include EXACTLY the cast specified below and no other named companions. Do not add any character merely because a reference or the larger story contains them. Zara reference: use ONLY the red robot in the CENTER, ignore all UI and the unrelated human woman behind. Scene: Only Arin and red mechanical Zara visible at an archive terminal. Extreme intimate three-quarter portrait of Arin's stunned face, brown hair and clean-shaven youth, his gloved hand gripping the small old brown wrist strap at the desk edge. Behind his hand a blurred civilian-ship silhouette and matching combat log glow without readable labels. Zara stands quietly beside the screen, separate from the distant hostile faction symbol. No parents' bodies or gore. Cold screen light, enormous emotional silence.",
+    "label": "N20",
+    "source": "C:\\Users\\louie\\.codex\\generated_images\\01a0a581-c8d1-70f0-a1d6-12d11703b872\\exec-59dfc224-9aef-44fa-8f29-b8c0ac0430c9.png"
+  },
+  {
+    "id": "new-c01-s02",
+    "scene": "c01-s02",
+    "file": "c01-s02-added.png",
+    "after": "Later, Arin sets the final basin down.",
+    "caption": "A basin becomes an introduction.",
+    "shot": "Close / honest admission",
+    "art": "In the modest night clinic, Arin sets down his final basin then meets Mira's gaze honestly. She pauses washing a wound and listens, brown hair in a bun and plain navy rolled-sleeve clothes. Close intimate two-shot, exhausted compassionate faces, warm lamp reflected in water. Other patients blurred.",
+    "dialogue": [
+      [
+        "Arin",
+        "I don't know whether I would have gone back for you."
+      ],
+      [
+        "Mira",
+        "You don't have to answer that before helping with the next person."
+      ]
+    ],
+    "reference_images": [
+      "D:\\SMILE 2.0\\games\\SinStarI\\Story\\Storyboard Draft 2\\asset\\images\\archive\\draft-1-sheets\\page-01.png",
+      "D:\\Sin - AI Prompt - Contents\\2026-09-15 1809 - Sin Star I - Story Board 2\\image-9cb55147c2ea1b3d490167b70bfa73b2633918683c5e83fc61854f4775e2570b.png",
+      "D:\\Sin - AI Prompt - Contents\\2026-09-15 1809 - Sin Star I - Story Board 2\\image-d38b5bae8e3428ebcefab114a54a4d0f1e80506e65e7b320a456bcdadf753487.png"
+    ],
+    "prompt": "Use case: illustration-story. Generate ONE single continuous landscape illustration, 1536x1024, cinematic painted graphic novel style, expressive realistic faces and crisp ink contours. No text, letters, bubbles, grid, panels, inset or collage. Reference 1 supplies STYLE ONLY, never copy its panel layout. Subsequent references supply exact named character identities, do not copy turnaround layout. Arin is youthful clean-shaven short brown-haired man in white/navy/gold battered surplus plate, cyan sword, modest kite shield. Mira has brown hair in a bun; dress as scene specifies. Orin is much broader older dark-haired stubbled man with huge rectangular shield and hammer. Milo is strictly a four-legged golden-white dog, not humanoid. Zara is only the RED mechanical robot from her screenshot, never its human background portrait/UI. Establish a NEW story moment: In the modest night clinic, Arin sets down his final basin then meets Mira's gaze honestly. She pauses washing a wound and listens, brown hair in a bun and plain navy rolled-sleeve clothes. Close intimate two-shot, exhausted compassionate faces, warm lamp reflected in water. Other patients blurred.",
+    "label": "N05",
+    "sourceBefore": "C:\\Users\\louie\\.codex\\generated_images\\01a0a581-c8d1-70f0-a1d6-12d11703b872\\exec-6621ce0e-f988-473a-bfe9-b200a7810c94.png",
+    "source": "C:\\Users\\louie\\.codex\\generated_images\\01a0a581-c8d1-70f0-a1d6-12d11703b872\\exec-006b8ddf-883f-41d0-b882-b541762ede04.png",
+    "revision_prompt": "Edit this single illustration, preserving its painted graphic novel style, main characters, lighting, faces and environment. Remove only the wrongly present later companions as specified. Reconstruct the background naturally where removed. NO text or additional panels. Clinic: REMOVE the golden dog, red robot and older armored man. ONLY young Arin and brown-bun Mira in plain navy rolled sleeves are the named cast; anonymous blurred clinic patients may remain."
+  },
+  {
+    "id": "new-c01-s03",
+    "scene": "c01-s03",
+    "file": "c01-s03-added.png",
+    "after": "Mira studies the connected pipes.",
+    "caption": "Keep the clinic supplied. Isolate the dangerous loop.",
+    "shot": "Medium / a practical choice",
+    "art": "Before the supernatural surge, Mira in plain navy clothes studies intersecting industrial water pipes and indicates a bypass valve while the frightened municipal engineer holds an unsigned form and Arin reaches a manual wheel. Tension from keeping water flowing to people, blue machinery light and practical amber worklamp. All conscious and standing; no spell yet.",
+    "dialogue": [
+      [
+        "Engineer",
+        "Then the clinic loses water. So do the upper reservoirs."
+      ],
+      [
+        "Mira",
+        "We isolate this loop. Not the whole district."
+      ]
+    ],
+    "reference_images": [
+      "D:\\SMILE 2.0\\games\\SinStarI\\Story\\Storyboard Draft 2\\asset\\images\\archive\\draft-1-sheets\\page-01.png",
+      "D:\\Sin - AI Prompt - Contents\\2026-09-15 1809 - Sin Star I - Story Board 2\\image-9cb55147c2ea1b3d490167b70bfa73b2633918683c5e83fc61854f4775e2570b.png",
+      "D:\\Sin - AI Prompt - Contents\\2026-09-15 1809 - Sin Star I - Story Board 2\\image-d38b5bae8e3428ebcefab114a54a4d0f1e80506e65e7b320a456bcdadf753487.png"
+    ],
+    "prompt": "Use case: illustration-story. Generate ONE single continuous landscape illustration, 1536x1024, cinematic painted graphic novel style, expressive realistic faces and crisp ink contours. No text, letters, bubbles, grid, panels, inset or collage. Reference 1 supplies STYLE ONLY, never copy its panel layout. Subsequent references supply exact named character identities, do not copy turnaround layout. Arin is youthful clean-shaven short brown-haired man in white/navy/gold battered surplus plate, cyan sword, modest kite shield. Mira has brown hair in a bun; dress as scene specifies. Orin is much broader older dark-haired stubbled man with huge rectangular shield and hammer. Milo is strictly a four-legged golden-white dog, not humanoid. Zara is only the RED mechanical robot from her screenshot, never its human background portrait/UI. Establish a NEW story moment: Before the supernatural surge, Mira in plain navy clothes studies intersecting industrial water pipes and indicates a bypass valve while the frightened municipal engineer holds an unsigned form and Arin reaches a manual wheel. Tension from keeping water flowing to people, blue machinery light and practical amber worklamp. All conscious and standing; no spell yet.",
+    "label": "N06",
+    "sourceBefore": "C:\\Users\\louie\\.codex\\generated_images\\01a0a581-c8d1-70f0-a1d6-12d11703b872\\exec-cedbf842-e035-43b1-a48f-c47aee7d31b1.png",
+    "source": "C:\\Users\\louie\\.codex\\generated_images\\01a0a581-c8d1-70f0-a1d6-12d11703b872\\exec-b42942cf-8bc7-459f-853c-42e3809f1261.png",
+    "revision_prompt": "Edit this single illustration, preserving its painted graphic novel style, main characters, lighting, faces and environment. Remove only the wrongly present later companions as specified. Reconstruct the background naturally where removed. NO text or additional panels. Water relay: REMOVE the golden dog, red robot and older armored man. ONLY young Arin, brown-bun Mira in plain navy clothes, and one anonymous municipal engineer. Keep the water pipes and valve action."
+  },
+  {
+    "id": "new-c01-s04",
+    "scene": "c01-s04",
+    "file": "c01-s04-added.png",
+    "after": "Outside, a palace aide brings Mira her field armor.",
+    "caption": "A mandate to investigate. A responsibility to return.",
+    "shot": "Medium / new partnership",
+    "art": "Outside the palace after the council, Mira now dressed in fitted white/navy/gold field armor and holding gold open-ring bluecrystal staff examines Arin's very battered matching surplus shoulder plate with a dry affectionate smile. He notices how much better her armor fits. A palace aide with an empty garment case behind, Neris spires in evening light. Two young adults, no crowns.",
+    "dialogue": [
+      [
+        "Arin",
+        "Yours fits better."
+      ],
+      [
+        "Mira",
+        "Yours has seen more use."
+      ]
+    ],
+    "reference_images": [
+      "D:\\SMILE 2.0\\games\\SinStarI\\Story\\Storyboard Draft 2\\asset\\images\\archive\\draft-1-sheets\\page-01.png",
+      "D:\\Sin - AI Prompt - Contents\\2026-09-15 1809 - Sin Star I - Story Board 2\\image-9cb55147c2ea1b3d490167b70bfa73b2633918683c5e83fc61854f4775e2570b.png",
+      "D:\\Sin - AI Prompt - Contents\\2026-09-15 1809 - Sin Star I - Story Board 2\\image-d38b5bae8e3428ebcefab114a54a4d0f1e80506e65e7b320a456bcdadf753487.png"
+    ],
+    "prompt": "Use case: illustration-story. Generate ONE single continuous landscape illustration, 1536x1024, cinematic painted graphic novel style, expressive realistic faces and crisp ink contours. No text, letters, bubbles, grid, panels, inset or collage. Reference 1 supplies STYLE ONLY, never copy its panel layout. Subsequent references supply exact named character identities, do not copy turnaround layout. Arin is youthful clean-shaven short brown-haired man in white/navy/gold battered surplus plate, cyan sword, modest kite shield. Mira has brown hair in a bun; dress as scene specifies. Orin is much broader older dark-haired stubbled man with huge rectangular shield and hammer. Milo is strictly a four-legged golden-white dog, not humanoid. Zara is only the RED mechanical robot from her screenshot, never its human background portrait/UI. Establish a NEW story moment: Outside the palace after the council, Mira now dressed in fitted white/navy/gold field armor and holding gold open-ring bluecrystal staff examines Arin's very battered matching surplus shoulder plate with a dry affectionate smile. He notices how much better her armor fits. A palace aide with an empty garment case behind, Neris spires in evening light. Two young adults, no crowns.",
+    "label": "N07",
+    "sourceBefore": "C:\\Users\\louie\\.codex\\generated_images\\01a0a581-c8d1-70f0-a1d6-12d11703b872\\exec-ec5066ca-e206-489c-99ad-b0ee44a006c9.png",
+    "source": "C:\\Users\\louie\\.codex\\generated_images\\01a0a581-c8d1-70f0-a1d6-12d11703b872\\exec-99c80320-5054-4ced-a80c-6398ef920cc1.png",
+    "revision_prompt": "Edit this single illustration, preserving its painted graphic novel style, main characters, lighting, faces and environment. Remove only the wrongly present later companions as specified. Reconstruct the background naturally where removed. NO text or additional panels. Palace steps: REMOVE the golden dog bottom-left, older armored man upper-left and red robot behind Mira. Preserve Arin, Mira, and the anonymous palace aide holding garment case."
+  },
+  {
+    "id": "new-c02-s01",
+    "scene": "c02-s01",
+    "file": "c02-s01-added.png",
+    "after": "MIRA: And the people being moved?",
+    "caption": "A useful thing, phrased as a contract.",
+    "shot": "Medium / choosing the route",
+    "art": "At Veyra port, armored Arin and Mira consult an intelligent quadrupedal canine evacuation coordinator at a low paw-operated route table. Arin indicates the same safe passage for civilian evacuees and their destination. A few human, artificial and four-legged canine families wait with travel packs, amber cliffs and teal transit rails. Thoughtful active logistics, not discovery or human superiority. No readable labels.",
+    "dialogue": [
+      [
+        "Mira",
+        "And the people being moved?"
+      ],
+      [
+        "Arin",
+        "Also reach the station."
+      ]
+    ],
+    "reference_images": [
+      "D:\\SMILE 2.0\\games\\SinStarI\\Story\\Storyboard Draft 2\\asset\\images\\archive\\draft-1-sheets\\page-01.png",
+      "D:\\Sin - AI Prompt - Contents\\2026-09-15 1809 - Sin Star I - Story Board 2\\image-9cb55147c2ea1b3d490167b70bfa73b2633918683c5e83fc61854f4775e2570b.png",
+      "D:\\Sin - AI Prompt - Contents\\2026-09-15 1809 - Sin Star I - Story Board 2\\image-d38b5bae8e3428ebcefab114a54a4d0f1e80506e65e7b320a456bcdadf753487.png",
+      "D:\\Sin - AI Prompt - Contents\\2026-09-15 1809 - Sin Star I - Story Board 2\\image-8f17a98c2f3a9af43851974f721ea73e49011b8398186b1201e3e926d072a82c.png"
+    ],
+    "prompt": "Use case: illustration-story. Generate ONE single continuous landscape illustration, 1536x1024, cinematic painted graphic novel style, expressive realistic faces and crisp ink contours. No text, letters, bubbles, grid, panels, inset or collage. Reference 1 supplies STYLE ONLY, never copy its panel layout. Subsequent references supply exact named character identities, do not copy turnaround layout. Arin is youthful clean-shaven short brown-haired man in white/navy/gold battered surplus plate, cyan sword, modest kite shield. Mira has brown hair in a bun; dress as scene specifies. Orin is much broader older dark-haired stubbled man with huge rectangular shield and hammer. Milo is strictly a four-legged golden-white dog, not humanoid. Zara is only the RED mechanical robot from her screenshot, never its human background portrait/UI. Establish a NEW story moment: At Veyra port, armored Arin and Mira consult an intelligent quadrupedal canine evacuation coordinator at a low paw-operated route table. Arin indicates the same safe passage for civilian evacuees and their destination. A few human, artificial and four-legged canine families wait with travel packs, amber cliffs and teal transit rails. Thoughtful active logistics, not discovery or human superiority. No readable labels.",
+    "label": "N08",
+    "sourceBefore": "C:\\Users\\louie\\.codex\\generated_images\\01a0a581-c8d1-70f0-a1d6-12d11703b872\\exec-f02fb80f-fbfc-4315-9ef7-ec2da5f7692f.png",
+    "source": "C:\\Users\\louie\\.codex\\generated_images\\01a0a581-c8d1-70f0-a1d6-12d11703b872\\exec-2340d4e2-534e-419b-96f0-7f7410ab3270.png",
+    "revision_prompt": "Edit this single illustration, preserving its painted graphic novel style, main characters, lighting, faces and environment. Remove only the wrongly present later companions as specified. Reconstruct the background naturally where removed. NO text or additional panels. Veyra port: remove the huge shield and older armored man from the right. The robot coordinator on right must be a neutral gray civilian robot, NOT red. The canine coordinator at table must be a distinct brown-and-gray dog in a plain gray civilian harness, NOT the golden-white armored party dog. Keep Arin, Mira, families and logistics table."
+  },
+  {
+    "id": "new-c02-s02",
+    "scene": "c02-s02",
+    "file": "c02-s02-added.png",
+    "after": "A shot clips Arin's already-repaired armor.",
+    "caption": "He holds because people are still crossing.",
+    "shot": "Action / the last approach",
+    "art": "He holds because people are still crossing. Action / the last approach",
+    "dialogue": [
+      [
+        "Mira, over comms",
+        "They are still working. Can you fall back?"
+      ],
+      [
+        "Arin",
+        "Not yet."
+      ]
+    ],
+    "reference_images": [
+      "D:\\SMILE 2.0\\games\\SinStarI\\Story\\Storyboard Draft 2\\asset\\images\\archive\\draft-1-sheets\\page-01.png",
+      "D:\\Sin - AI Prompt - Contents\\2026-09-15 1809 - Sin Star I - Story Board 2\\image-9cb55147c2ea1b3d490167b70bfa73b2633918683c5e83fc61854f4775e2570b.png",
+      "D:\\Sin - AI Prompt - Contents\\2026-09-15 1809 - Sin Star I - Story Board 2\\image-d38b5bae8e3428ebcefab114a54a4d0f1e80506e65e7b320a456bcdadf753487.png"
+    ],
+    "prompt": "Use case: illustration-story. Generate ONE single continuous landscape illustration, 1536x1024, cinematic painted graphic novel style, expressive realistic faces and crisp ink contours. No text, letters, bubbles, grid, panels, inset or collage. Reference 1 supplies STYLE ONLY, never copy its panel layout. Subsequent references supply exact named character identities, do not copy turnaround layout. Arin is youthful clean-shaven short brown-haired man in white/navy/gold battered surplus plate, cyan sword, modest kite shield. Mira has brown hair in a bun; dress as scene specifies. Orin is much broader older dark-haired stubbled man with huge rectangular shield and hammer. Milo is strictly a four-legged golden-white dog, not humanoid. Zara is only the RED mechanical robot from her screenshot, never its human background portrait/UI. Establish a NEW story moment: Urgent low angle on Arin alone holding his small kite shield under a streak of incoming raider fire, a small impact sparks off his repaired shoulder. Behind his protective silhouette frightened civilians of several species hurry toward the east evacuation ramp where Mira treats an injured traveler. Teal broken rail and amber terminal. Black angular hostile non-sentient sentries distant. Orin has not reached him yet. Brave vulnerable stance, no gore.",
+    "label": "N09",
+    "sourceBefore": "C:\\Users\\louie\\.codex\\generated_images\\01a0a581-c8d1-70f0-a1d6-12d11703b872\\exec-bde65650-7ca0-4811-80aa-5e5a49cdb8ba.png",
+    "source": "C:\\Users\\louie\\.codex\\generated_images\\01a0a581-c8d1-70f0-a1d6-12d11703b872\\exec-67516efa-9844-4e27-ac52-418c03ad1afd.png",
+    "revision_prompt": "Edit this single illustration, preserving its painted graphic novel style, main characters, lighting, faces and environment. Remove only the wrongly present later companions as specified. Reconstruct the background naturally where removed. NO text or additional panels. Veyra evacuation: REMOVE the golden-white dog standing behind Arin. Keep Arin's protective action, Mira treating a civilian and the evacuation crowd."
+  },
+  {
+    "id": "new-c02-s03",
+    "scene": "c02-s03",
+    "file": "c02-s03-added.png",
+    "after": "MIRA: Mira is enough here.",
+    "caption": "Outside the chain of command.",
+    "shot": "Medium / recognition",
+    "art": "Inside the refuge shuttle broad older stubbled Orin, white/navy/gold heavy armor, looks up respectfully at the younger brown-bun healer Mira as he recognizes the princess. She waves off formality with tired gentle resolve. Arin sits with bandaged shoulder foreground. Close warm trio, Orin much broader and rugged, Mira without crown, soft blue window light and amber cabin lamp.",
+    "dialogue": [
+      [
+        "Orin",
+        "...I did, Your Highness."
+      ],
+      [
+        "Mira",
+        "Mira is enough here."
+      ]
+    ],
+    "reference_images": [
+      "D:\\SMILE 2.0\\games\\SinStarI\\Story\\Storyboard Draft 2\\asset\\images\\archive\\draft-1-sheets\\page-01.png",
+      "D:\\Sin - AI Prompt - Contents\\2026-09-15 1809 - Sin Star I - Story Board 2\\image-9cb55147c2ea1b3d490167b70bfa73b2633918683c5e83fc61854f4775e2570b.png",
+      "D:\\Sin - AI Prompt - Contents\\2026-09-15 1809 - Sin Star I - Story Board 2\\image-d38b5bae8e3428ebcefab114a54a4d0f1e80506e65e7b320a456bcdadf753487.png",
+      "D:\\Sin - AI Prompt - Contents\\2026-09-15 1809 - Sin Star I - Story Board 2\\image-7bb6ccc62a40fdb90428b21cf9af0b85862b8c7f66bd9469df5508b06e747e5a.png"
+    ],
+    "prompt": "Use case: illustration-story. Generate ONE single continuous landscape illustration, 1536x1024, cinematic painted graphic novel style, expressive realistic faces and crisp ink contours. No text, letters, bubbles, grid, panels, inset or collage. Reference 1 supplies STYLE ONLY, never copy its panel layout. Subsequent references supply exact named character identities, do not copy turnaround layout. Arin is youthful clean-shaven short brown-haired man in white/navy/gold battered surplus plate, cyan sword, modest kite shield. Mira has brown hair in a bun; dress as scene specifies. Orin is much broader older dark-haired stubbled man with huge rectangular shield and hammer. Milo is strictly a four-legged golden-white dog, not humanoid. Zara is only the RED mechanical robot from her screenshot, never its human background portrait/UI. Establish a NEW story moment: Inside the refuge shuttle broad older stubbled Orin, white/navy/gold heavy armor, looks up respectfully at the younger brown-bun healer Mira as he recognizes the princess. She waves off formality with tired gentle resolve. Arin sits with bandaged shoulder foreground. Close warm trio, Orin much broader and rugged, Mira without crown, soft blue window light and amber cabin lamp.",
+    "label": "N10",
+    "sourceBefore": "C:\\Users\\louie\\.codex\\generated_images\\01a0a581-c8d1-70f0-a1d6-12d11703b872\\exec-dc6b6da7-6fb3-4015-bd45-1f0383a98fcb.png",
+    "source": "C:\\Users\\louie\\.codex\\generated_images\\01a0a581-c8d1-70f0-a1d6-12d11703b872\\exec-668f451f-56e5-4473-8e2e-77d757360ccd.png",
+    "revision_prompt": "Edit this single illustration, preserving its painted graphic novel style, main characters, lighting, faces and environment. Remove only the wrongly present later companions as specified. Reconstruct the background naturally where removed. NO text or additional panels. Shuttle: REMOVE golden-white dog and red robot. Keep ONLY Arin with bandaged shoulder, brown-bun Mira, and rugged broad Orin. Fill removed areas with shuttle interior."
+  },
+  {
+    "id": "new-c04-s03",
+    "scene": "c04-s03",
+    "file": "c04-s03-added.png",
+    "after": "ARIN: This time someone answered.",
+    "caption": "This time, he tells her.",
+    "shot": "Medium / trust through disclosure",
+    "art": "This time, he tells her. Medium / trust through disclosure",
+    "dialogue": [
+      [
+        "Mira",
+        "You said a name."
+      ],
+      [
+        "Arin",
+        "This time someone answered."
+      ]
+    ],
+    "reference_images": [
+      "D:\\SMILE 2.0\\games\\SinStarI\\Story\\Storyboard Draft 2\\asset\\images\\archive\\draft-1-sheets\\page-01.png",
+      "D:\\Sin - AI Prompt - Contents\\2026-09-15 1809 - Sin Star I - Story Board 2\\image-9cb55147c2ea1b3d490167b70bfa73b2633918683c5e83fc61854f4775e2570b.png",
+      "D:\\Sin - AI Prompt - Contents\\2026-09-15 1809 - Sin Star I - Story Board 2\\image-d38b5bae8e3428ebcefab114a54a4d0f1e80506e65e7b320a456bcdadf753487.png"
+    ],
+    "prompt": "Use case: illustration-story. ONE continuous 1536x1024 landscape scene, richly painted cinematic graphic novel, crisp expressive faces and detailed believable materials, no lettering, bubbles, captions, HUD, grid, inset or montage. First reference is style only; do not copy its four-panel composition or cast. Remaining references establish identity only for named people in this scene, not a lineup. Include EXACTLY the cast specified below and no other named companions. Do not add any character merely because a reference or the larger story contains them. Zara reference: use ONLY the red robot in the CENTER, ignore all UI and the unrelated human woman behind. Scene: Only Arin and Mira at the doorway of a quiet ship practice bay at night. Arin sits up on his bedroll, tousled short brown hair, clean-shaven face, navy sleeveless undershirt and worn wrist strap. Mira stands just outside within hearing distance, brown hair in bun, simple navy off-duty clothes, quietly listening as he shares the dream. Stowed armor and training mats, soft blue passage light meets warm bedside lamp. No physical Kael or magical apparition.",
+    "label": "N18",
+    "sourceBefore": "C:\\Users\\louie\\.codex\\generated_images\\01a0a581-c8d1-70f0-a1d6-12d11703b872\\exec-3f761ba0-1f7d-46e1-90d8-8dce2dae5a96.png",
+    "source": "C:\\Users\\louie\\.codex\\generated_images\\01a0a581-c8d1-70f0-a1d6-12d11703b872\\exec-259941c4-be0b-403a-9704-1f75c063c479.png",
+    "revision_prompt": "Edit this single illustration. Preserve Arin, Mira, their faces, costumes, exact actions, lighting and painted style. REMOVE the red round-headed robot from the background; this intimate scene contains only Arin and Mira. Fill its former position naturally with the existing cabin or station architecture. No new figures, no lettering, no panels."
+  },
+  {
+    "id": "new-c04-s04",
+    "scene": "c04-s04",
+    "file": "c04-s04-added.png",
+    "after": "ARIN: That doesn't make these ones disappear.",
+    "caption": "Responsibility begins with what is in front of them.",
+    "shot": "Close / the cost outside himself",
+    "art": "Responsibility begins with what is in front of them. Close / the cost outside himself",
+    "dialogue": [
+      [
+        "Arin",
+        "That doesn't make these ones disappear."
+      ],
+      [
+        "Mira",
+        "No. So we help with what is in front of us, and we learn how to prevent another."
+      ]
+    ],
+    "reference_images": [
+      "D:\\SMILE 2.0\\games\\SinStarI\\Story\\Storyboard Draft 2\\asset\\images\\archive\\draft-1-sheets\\page-01.png",
+      "D:\\Sin - AI Prompt - Contents\\2026-09-15 1809 - Sin Star I - Story Board 2\\image-9cb55147c2ea1b3d490167b70bfa73b2633918683c5e83fc61854f4775e2570b.png",
+      "D:\\Sin - AI Prompt - Contents\\2026-09-15 1809 - Sin Star I - Story Board 2\\image-d38b5bae8e3428ebcefab114a54a4d0f1e80506e65e7b320a456bcdadf753487.png"
+    ],
+    "prompt": "Use case: illustration-story. ONE continuous 1536x1024 landscape scene, richly painted cinematic graphic novel, crisp expressive faces and detailed believable materials, no lettering, bubbles, captions, HUD, grid, inset or montage. First reference is style only; do not copy its four-panel composition or cast. Remaining references establish identity only for named people in this scene, not a lineup. Include EXACTLY the cast specified below and no other named companions. Do not add any character merely because a reference or the larger story contains them. Zara reference: use ONLY the red robot in the CENTER, ignore all UI and the unrelated human woman behind. Scene: Only Arin and Mira prominent at the damaged remote station, both in white/navy/gold field armor. Arin holds a chart of pulse times, his shoulders lowered by realizing some align with his nights. Mira watches him with compassion and seriousness, indicating the cold families under emergency blankets beyond the window. Blurred ordinary families only; no additional named companions. Close emotional composition with amber heater glow and cold blue station light.",
+    "label": "N19",
+    "sourceBefore": "C:\\Users\\louie\\.codex\\generated_images\\01a0a581-c8d1-70f0-a1d6-12d11703b872\\exec-2a79bb03-16cb-47b9-89ba-eac66daa9f38.png",
+    "source": "C:\\Users\\louie\\.codex\\generated_images\\01a0a581-c8d1-70f0-a1d6-12d11703b872\\exec-4bd4d493-3273-479e-bffb-b62f5c3cab98.png",
+    "revision_prompt": "Edit this single illustration. Preserve Arin, Mira, their faces, costumes, exact actions, lighting and painted style. REMOVE the red round-headed robot from the background; this intimate scene contains only Arin and Mira. Fill its former position naturally with the existing cabin or station architecture. No new figures, no lettering, no panels."
+  },
+  {
+    "id": "new-c05-s02",
+    "scene": "c05-s02",
+    "file": "c05-s02-added.png",
+    "after": "She sets the records down.",
+    "caption": "A grief she will not accept as blame.",
+    "shot": "Cinematic / character moment",
+    "art": "Zara sets a small data archive on a shelter bench and turns away from Arin, whose anger collapses into ashamed silence. Only youthful brown-haired armored Arin and the red/charcoal artificial woman Zara are visible, physical distance between them. Dusky amber station exterior, rain beyond shelter. Zara is dignified and resolved, not consoling him.",
+    "dialogue": [
+      [
+        "Zara",
+        "What happened to your parents was wrong. I will not stand here and admit that it was mine."
+      ]
+    ],
+    "reference_images": [
+      "D:\\SMILE 2.0\\games\\SinStarI\\Story\\Storyboard Draft 2\\asset\\images\\archive\\draft-1-sheets\\page-01.png",
+      "D:\\Sin - AI Prompt - Contents\\2026-09-15 1809 - Sin Star I - Story Board 2\\image-9cb55147c2ea1b3d490167b70bfa73b2633918683c5e83fc61854f4775e2570b.png",
+      "D:\\SMILE 2.0\\games\\SinStarI\\SourceAssets\\Characters\\Warrior\\ZaraV1\\Private\\Previews\\zara-neon-white-native.jpg"
+    ],
+    "prompt": "Use case: illustration-story. ONE continuous 1536x1024 landscape scene, richly painted cinematic graphic novel, crisp expressive faces and detailed believable materials, no lettering, bubbles, captions, HUD, grid, inset or montage. First reference is style only; do not copy its four-panel composition or cast. Remaining references establish identity only for named people in this scene, not a lineup. Include EXACTLY the cast specified below and no other named companions. Do not add any character merely because a reference or the larger story contains them. Scene: Zara sets a small data archive on a shelter bench and turns away from Arin, whose anger collapses into ashamed silence. Only youthful brown-haired armored Arin and the red/charcoal artificial woman Zara are visible, physical distance between them. Dusky amber station exterior, rain beyond shelter. Zara is dignified and resolved, not consoling him. For Zara's screenshot use only red robot center, ignore UI and woman behind.",
+    "label": "N21",
+    "source": "C:\\Users\\louie\\.codex\\generated_images\\01a0a581-c8d1-70f0-a1d6-12d11703b872\\exec-9f430d40-3b29-46a6-a474-f657618f82ec.png"
+  },
+  {
+    "id": "new-c05-s03",
+    "scene": "c05-s03",
+    "file": "c05-s03-added.png",
+    "after": "ZARA: Arin, hold the west circuit. Not the one beside me.",
+    "caption": "Trust becomes an action.",
+    "shot": "Cinematic / character moment",
+    "art": "Only Arin and Zara in station service area during power failure. Zara the red and charcoal robot points to the WEST isolated circuit across the walkway; Arin works its manual lever exactly as she directs. Pale arc of electrical feedback along floor, practical teamwork. No one touches exposed current. Blue diagnostic light and amber emergency light.",
+    "dialogue": [
+      [
+        "Zara",
+        "Arin, hold the west circuit. Not the one beside me."
+      ]
+    ],
+    "reference_images": [
+      "D:\\SMILE 2.0\\games\\SinStarI\\Story\\Storyboard Draft 2\\asset\\images\\archive\\draft-1-sheets\\page-01.png",
+      "D:\\Sin - AI Prompt - Contents\\2026-09-15 1809 - Sin Star I - Story Board 2\\image-9cb55147c2ea1b3d490167b70bfa73b2633918683c5e83fc61854f4775e2570b.png",
+      "D:\\SMILE 2.0\\games\\SinStarI\\SourceAssets\\Characters\\Warrior\\ZaraV1\\Private\\Previews\\zara-neon-white-native.jpg"
+    ],
+    "prompt": "Use case: illustration-story. ONE continuous 1536x1024 landscape scene, richly painted cinematic graphic novel, crisp expressive faces and detailed believable materials, no lettering, bubbles, captions, HUD, grid, inset or montage. First reference is style only; do not copy its four-panel composition or cast. Remaining references establish identity only for named people in this scene, not a lineup. Include EXACTLY the cast specified below and no other named companions. Do not add any character merely because a reference or the larger story contains them. Scene: Only Arin and Zara in station service area during power failure. Zara the red and charcoal robot points to the WEST isolated circuit across the walkway; Arin works its manual lever exactly as she directs. Pale arc of electrical feedback along floor, practical teamwork. No one touches exposed current. Blue diagnostic light and amber emergency light. For Zara's screenshot use only red robot center, ignore UI and woman behind.",
+    "label": "N22",
+    "source": "C:\\Users\\louie\\.codex\\generated_images\\01a0a581-c8d1-70f0-a1d6-12d11703b872\\exec-9b71cab8-283c-4100-b6d2-17571e8d109a.png"
+  },
+  {
+    "id": "new-c05-s04",
+    "scene": "c05-s04",
+    "file": "c05-s04-added.png",
+    "after": "They work for a little while without speaking.",
+    "caption": "Repair begins with holding steady.",
+    "shot": "Cinematic / character moment",
+    "art": "Only Arin and Zara, seated at the ship's cargo ramp in quiet morning. Zara red and charcoal fully mechanical woman uses a fine physical tool on a cracked equipment housing while Arin holds the other side steadily with both gloved hands. Close crop on faces and shared object, tentative trust without instant smiles or forgiveness. Soft sunrise, worn white/navy/gold armor.",
+    "dialogue": [
+      [
+        "Zara",
+        "The housing. Hold that side steady."
+      ]
+    ],
+    "reference_images": [
+      "D:\\SMILE 2.0\\games\\SinStarI\\Story\\Storyboard Draft 2\\asset\\images\\archive\\draft-1-sheets\\page-01.png",
+      "D:\\Sin - AI Prompt - Contents\\2026-09-15 1809 - Sin Star I - Story Board 2\\image-9cb55147c2ea1b3d490167b70bfa73b2633918683c5e83fc61854f4775e2570b.png",
+      "D:\\SMILE 2.0\\games\\SinStarI\\SourceAssets\\Characters\\Warrior\\ZaraV1\\Private\\Previews\\zara-neon-white-native.jpg"
+    ],
+    "prompt": "Use case: illustration-story. ONE continuous 1536x1024 landscape scene, richly painted cinematic graphic novel, crisp expressive faces and detailed believable materials, no lettering, bubbles, captions, HUD, grid, inset or montage. First reference is style only; do not copy its four-panel composition or cast. Remaining references establish identity only for named people in this scene, not a lineup. Include EXACTLY the cast specified below and no other named companions. Do not add any character merely because a reference or the larger story contains them. Scene: Only Arin and Zara, seated at the ship's cargo ramp in quiet morning. Zara red and charcoal fully mechanical woman uses a fine physical tool on a cracked equipment housing while Arin holds the other side steadily with both gloved hands. Close crop on faces and shared object, tentative trust without instant smiles or forgiveness. Soft sunrise, worn white/navy/gold armor. For Zara's screenshot use only red robot center, ignore UI and woman behind.",
+    "label": "N23",
+    "source": "C:\\Users\\louie\\.codex\\generated_images\\01a0a581-c8d1-70f0-a1d6-12d11703b872\\exec-83b01bfd-c195-4f6f-9ba1-8ccd52241ec7.png"
+  },
+  {
+    "id": "new-c05-s05",
+    "scene": "c05-s05",
+    "file": "c05-s05-added.png",
+    "after": "Kael's composure strains.",
+    "caption": "Even he cannot promise who survives.",
+    "shot": "Cinematic / character moment",
+    "art": "Only Arin and Kael at the vast dark observatory ring, close over-Arin-shoulder view toward youthful pale long-silver-haired Kael in black/silver cosmic armor. Kael's self-assurance cracks into uncertainty, his hand lowers from a holographic distant world. No other companions visible. Cold stars contrast with warm human face, tense intimate confrontation.",
+    "dialogue": [
+      [
+        "Kael",
+        "I do not know. I have never been able to attempt it."
+      ]
+    ],
+    "reference_images": [
+      "D:\\SMILE 2.0\\games\\SinStarI\\Story\\Storyboard Draft 2\\asset\\images\\archive\\draft-1-sheets\\page-01.png",
+      "D:\\Sin - AI Prompt - Contents\\2026-09-15 1809 - Sin Star I - Story Board 2\\image-9cb55147c2ea1b3d490167b70bfa73b2633918683c5e83fc61854f4775e2570b.png",
+      "D:\\SMILE 2.0\\games\\SinStarI\\Assets\\Characters\\Kael\\Kael - Normal Pose Holding Weapon.png"
+    ],
+    "prompt": "Use case: illustration-story. ONE continuous 1536x1024 landscape scene, richly painted cinematic graphic novel, crisp expressive faces and detailed believable materials, no lettering, bubbles, captions, HUD, grid, inset or montage. First reference is style only; do not copy its four-panel composition or cast. Remaining references establish identity only for named people in this scene, not a lineup. Include EXACTLY the cast specified below and no other named companions. Do not add any character merely because a reference or the larger story contains them. Scene: Only Arin and Kael at the vast dark observatory ring, close over-Arin-shoulder view toward youthful pale long-silver-haired Kael in black/silver cosmic armor. Kael's self-assurance cracks into uncertainty, his hand lowers from a holographic distant world. No other companions visible. Cold stars contrast with warm human face, tense intimate confrontation.",
+    "label": "N24",
+    "source": "C:\\Users\\louie\\.codex\\generated_images\\01a0a581-c8d1-70f0-a1d6-12d11703b872\\exec-b8def521-c02b-44d6-8ce3-5322b6a56996.png"
+  },
+  {
+    "id": "new-c06-s01",
+    "scene": "c06-s01",
+    "file": "c06-s01-added.png",
+    "after": "The party helps without receiving forgiveness",
+    "caption": "Bring what is needed today.",
+    "shot": "Cinematic / character moment",
+    "art": "Only rugged broad Orin and an elderly anonymous resident at the doorway of an East Valley relief store. Orin in worn white/navy/gold heavy plate carries a real flour sack inside with lowered gaze while resident silently indicates where it belongs. Memorial stones and newer homes beyond, no readable names. Daylight, restrained grounded human consequence, no welcoming celebration.",
+    "dialogue": [
+      [
+        "Resident",
+        "Put the supplies inside. That's what we need today."
+      ]
+    ],
+    "reference_images": [
+      "D:\\SMILE 2.0\\games\\SinStarI\\Story\\Storyboard Draft 2\\asset\\images\\archive\\draft-1-sheets\\page-01.png",
+      "D:\\Sin - AI Prompt - Contents\\2026-09-15 1809 - Sin Star I - Story Board 2\\image-7bb6ccc62a40fdb90428b21cf9af0b85862b8c7f66bd9469df5508b06e747e5a.png"
+    ],
+    "prompt": "Use case: illustration-story. ONE continuous 1536x1024 landscape scene, richly painted cinematic graphic novel, crisp expressive faces and detailed believable materials, no lettering, bubbles, captions, HUD, grid, inset or montage. First reference is style only; do not copy its four-panel composition or cast. Remaining references establish identity only for named people in this scene, not a lineup. Include EXACTLY the cast specified below and no other named companions. Do not add any character merely because a reference or the larger story contains them. Scene: Only rugged broad Orin and an elderly anonymous resident at the doorway of an East Valley relief store. Orin in worn white/navy/gold heavy plate carries a real flour sack inside with lowered gaze while resident silently indicates where it belongs. Memorial stones and newer homes beyond, no readable names. Daylight, restrained grounded human consequence, no welcoming celebration.",
+    "label": "N25",
+    "source": "C:\\Users\\louie\\.codex\\generated_images\\01a0a581-c8d1-70f0-a1d6-12d11703b872\\exec-bb204be4-bcbd-4dc5-b936-2d8ee528553e.png"
+  },
+  {
+    "id": "new-c06-s02",
+    "scene": "c06-s02",
+    "file": "c06-s02-added.png",
+    "after": "She embraces him before he has an answer.",
+    "caption": "A door that still opens for him.",
+    "shot": "Cinematic / character moment",
+    "art": "Only broad dark-haired stubbled Orin and his adult sister outside her village door. She embraces his huge armored shoulders firmly, his astonished weary face visible above her shoulder. She has dark brown hair tied back and plain warm brown village clothing. Daylight everyday neighbors softly blurred, no companions, no palace.",
+    "dialogue": [
+      [
+        "Sister",
+        "You could have told me yesterday."
+      ]
+    ],
+    "reference_images": [
+      "D:\\SMILE 2.0\\games\\SinStarI\\Story\\Storyboard Draft 2\\asset\\images\\archive\\draft-1-sheets\\page-01.png",
+      "D:\\Sin - AI Prompt - Contents\\2026-09-15 1809 - Sin Star I - Story Board 2\\image-7bb6ccc62a40fdb90428b21cf9af0b85862b8c7f66bd9469df5508b06e747e5a.png"
+    ],
+    "prompt": "Use case: illustration-story. ONE continuous 1536x1024 landscape scene, richly painted cinematic graphic novel, crisp expressive faces and detailed believable materials, no lettering, bubbles, captions, HUD, grid, inset or montage. First reference is style only; do not copy its four-panel composition or cast. Remaining references establish identity only for named people in this scene, not a lineup. Include EXACTLY the cast specified below and no other named companions. Do not add any character merely because a reference or the larger story contains them. Scene: Only broad dark-haired stubbled Orin and his adult sister outside her village door. She embraces his huge armored shoulders firmly, his astonished weary face visible above her shoulder. She has dark brown hair tied back and plain warm brown village clothing. Daylight everyday neighbors softly blurred, no companions, no palace.",
+    "label": "N26",
+    "source": "C:\\Users\\louie\\.codex\\generated_images\\01a0a581-c8d1-70f0-a1d6-12d11703b872\\exec-7c22ec31-3fd3-440d-a425-084d79bf5e1b.png"
+  },
+  {
+    "id": "new-c06-s03",
+    "scene": "c06-s03",
+    "file": "c06-s03-added.png",
+    "after": "She unfolds the permitted page.",
+    "caption": "Distance did not end their love.",
+    "shot": "Cinematic / character moment",
+    "art": "Only Orin and his adult dark-haired sister at a wooden table in her modest village home, warm evening lamp. She holds a SINGLE unfolded page she has permission to share, the rest of letter remains folded under her other hand. Rugged Orin listens vulnerably, heavy armor loosened. Letter has indistinct marks, no legible text, no ghost/vision of mother.",
+    "dialogue": [
+      [
+        "Sister",
+        "They never stopped loving each other, Orin."
+      ]
+    ],
+    "reference_images": [
+      "D:\\SMILE 2.0\\games\\SinStarI\\Story\\Storyboard Draft 2\\asset\\images\\archive\\draft-1-sheets\\page-01.png",
+      "D:\\Sin - AI Prompt - Contents\\2026-09-15 1809 - Sin Star I - Story Board 2\\image-7bb6ccc62a40fdb90428b21cf9af0b85862b8c7f66bd9469df5508b06e747e5a.png"
+    ],
+    "prompt": "Use case: illustration-story. ONE continuous 1536x1024 landscape scene, richly painted cinematic graphic novel, crisp expressive faces and detailed believable materials, no lettering, bubbles, captions, HUD, grid, inset or montage. First reference is style only; do not copy its four-panel composition or cast. Remaining references establish identity only for named people in this scene, not a lineup. Include EXACTLY the cast specified below and no other named companions. Do not add any character merely because a reference or the larger story contains them. Scene: Only Orin and his adult dark-haired sister at a wooden table in her modest village home, warm evening lamp. She holds a SINGLE unfolded page she has permission to share, the rest of letter remains folded under her other hand. Rugged Orin listens vulnerably, heavy armor loosened. Letter has indistinct marks, no legible text, no ghost/vision of mother.",
+    "label": "N27",
+    "source": "C:\\Users\\louie\\.codex\\generated_images\\01a0a581-c8d1-70f0-a1d6-12d11703b872\\exec-26268f1b-354c-4153-986a-87e59853dba0.png"
+  },
+  {
+    "id": "new-c06-s04",
+    "scene": "c06-s04",
+    "file": "c06-s04-added.png",
+    "after": "Orin finally puts down his pack and sits.",
+    "caption": "He stays. The answer can wait.",
+    "shot": "Cinematic / character moment",
+    "art": "Only broad stubbled dark-haired Orin and his older gray-haired father in modest kitchen. Orin finally sits across wooden table and lowers his pack to floor, father quietly pulls his own chair in. Open cupboard behind contains an old neatly hung military coat. Space and unresolved sadness between them, late morning daylight. No embrace, no cheerful reconciliation, no weapons held.",
+    "dialogue": [
+      [
+        "Orin",
+        "I don't know how to forgive you yet."
+      ],
+      [
+        "Father",
+        "Then don't say it to spare me."
+      ]
+    ],
+    "reference_images": [
+      "D:\\SMILE 2.0\\games\\SinStarI\\Story\\Storyboard Draft 2\\asset\\images\\archive\\draft-1-sheets\\page-01.png",
+      "D:\\Sin - AI Prompt - Contents\\2026-09-15 1809 - Sin Star I - Story Board 2\\image-7bb6ccc62a40fdb90428b21cf9af0b85862b8c7f66bd9469df5508b06e747e5a.png"
+    ],
+    "prompt": "Use case: illustration-story. ONE continuous 1536x1024 landscape scene, richly painted cinematic graphic novel, crisp expressive faces and detailed believable materials, no lettering, bubbles, captions, HUD, grid, inset or montage. First reference is style only; do not copy its four-panel composition or cast. Remaining references establish identity only for named people in this scene, not a lineup. Include EXACTLY the cast specified below and no other named companions. Do not add any character merely because a reference or the larger story contains them. Scene: Only broad stubbled dark-haired Orin and his older gray-haired father in modest kitchen. Orin finally sits across wooden table and lowers his pack to floor, father quietly pulls his own chair in. Open cupboard behind contains an old neatly hung military coat. Space and unresolved sadness between them, late morning daylight. No embrace, no cheerful reconciliation, no weapons held.",
+    "label": "N28",
+    "source": "C:\\Users\\louie\\.codex\\generated_images\\01a0a581-c8d1-70f0-a1d6-12d11703b872\\exec-d29a1e7a-3c85-4c43-8f0d-44968251eeac.png"
+  },
+  {
+    "id": "new-c06-s05",
+    "scene": "c06-s05",
+    "file": "c06-s05-added.png",
+    "after": "Mira brings copies and witnesses to the queen",
+    "caption": "Evidence must reach someone who can act.",
+    "shot": "Cinematic / discovery and connection",
+    "art": "Only brown-bun armored Mira, her mature brown-haired mother the Queen in white/gold court robes and small crown, and an anonymous elderly investigator at a Neris council table. Mira hands over copied ledgers with quiet resolve; the queen listens seriously. Queen must be clearly middle-aged with brown hair in an updo, never silver-haired or youthful. No readable writing. Daylight, white-gold civic room.",
+    "dialogue": [
+      [
+        "Mira",
+        "And you cannot call a report false because it names something you chose not to fix."
+      ]
+    ],
+    "reference_images": [
+      "D:\\SMILE 2.0\\games\\SinStarI\\Story\\Storyboard Draft 2\\asset\\images\\archive\\draft-1-sheets\\page-01.png",
+      "D:\\Sin - AI Prompt - Contents\\2026-09-15 1809 - Sin Star I - Story Board 2\\image-d38b5bae8e3428ebcefab114a54a4d0f1e80506e65e7b320a456bcdadf753487.png"
+    ],
+    "prompt": "Use case: illustration-story. ONE continuous 1536x1024 landscape scene, richly painted cinematic graphic novel, crisp expressive faces and detailed believable materials, no lettering, bubbles, captions, HUD, grid, inset or montage. First reference is style only; do not copy its four-panel composition or cast. Remaining references establish identity only for named people in this scene, not a lineup. Include EXACTLY the cast specified below and no other named companions. Do not add any character merely because a reference or the larger story contains them. Scene: Only brown-bun armored Mira, her mature brown-haired mother the Queen in white/gold court robes and small crown, and an anonymous elderly investigator at a Neris council table. Mira hands over copied ledgers with quiet resolve; the queen listens seriously. Queen must be clearly middle-aged with brown hair in an updo, never silver-haired or youthful. No readable writing. Daylight, white-gold civic room.",
+    "label": "N29",
+    "source": "C:\\Users\\louie\\.codex\\generated_images\\01a0a581-c8d1-70f0-a1d6-12d11703b872\\exec-db353e06-7403-49e4-8765-6e0c6bde41b2.png"
+  },
+  {
+    "id": "new-c06-s06",
+    "scene": "c06-s06",
+    "file": "c06-s06-added.png",
+    "after": "Orin folds it carefully.",
+    "caption": "A reply worth carrying.",
+    "shot": "Cinematic / discovery and connection",
+    "art": "Only rugged broad Orin and his adult dark-haired sister beside the departure ramp. He carefully folds their mother's short reply into his huge gauntleted palm with tentative relief; sister watches. Father is only a tiny indistinct older silhouette by distant fence, not a second Orin. Afternoon light, understated family tenderness. No readable lettering.",
+    "dialogue": [
+      [
+        "Mother, letter",
+        "I am glad you wrote. Start anywhere. I will know it is you."
+      ]
+    ],
+    "reference_images": [
+      "D:\\SMILE 2.0\\games\\SinStarI\\Story\\Storyboard Draft 2\\asset\\images\\archive\\draft-1-sheets\\page-01.png",
+      "D:\\Sin - AI Prompt - Contents\\2026-09-15 1809 - Sin Star I - Story Board 2\\image-7bb6ccc62a40fdb90428b21cf9af0b85862b8c7f66bd9469df5508b06e747e5a.png"
+    ],
+    "prompt": "Use case: illustration-story. ONE continuous 1536x1024 landscape scene, richly painted cinematic graphic novel, crisp expressive faces and detailed believable materials, no lettering, bubbles, captions, HUD, grid, inset or montage. First reference is style only; do not copy its four-panel composition or cast. Remaining references establish identity only for named people in this scene, not a lineup. Include EXACTLY the cast specified below and no other named companions. Do not add any character merely because a reference or the larger story contains them. Scene: Only rugged broad Orin and his adult dark-haired sister beside the departure ramp. He carefully folds their mother's short reply into his huge gauntleted palm with tentative relief; sister watches. Father is only a tiny indistinct older silhouette by distant fence, not a second Orin. Afternoon light, understated family tenderness. No readable lettering.",
+    "label": "N30",
+    "source": "C:\\Users\\louie\\.codex\\generated_images\\01a0a581-c8d1-70f0-a1d6-12d11703b872\\exec-ecd799b9-5336-4468-adc3-d22c6a36e3b5.png"
+  },
+  {
+    "id": "new-c07-s01",
+    "scene": "c07-s01",
+    "file": "c07-s01-added.png",
+    "after": "Kael watches a parent lifting a tired child",
+    "caption": "A world he remembers loving.",
+    "shot": "Cinematic / discovery and connection",
+    "art": "Only youthful long-silver-haired Kael visible near camera on old Earth observatory terrace. Black/silver cosmic armor and violet star accents, quiet melancholy as he watches tiny ordinary parent lift tired child onto shoulders on hillside town lane below. Warm late afternoon ordinary life; no magic spell, no destruction, no other companions.",
+    "dialogue": [
+      [
+        "Kael",
+        "I remember it before people asked that question."
+      ]
+    ],
+    "reference_images": [
+      "D:\\SMILE 2.0\\games\\SinStarI\\Story\\Storyboard Draft 2\\asset\\images\\archive\\draft-1-sheets\\page-01.png",
+      "D:\\SMILE 2.0\\games\\SinStarI\\Assets\\Characters\\Kael\\Kael - Normal Pose Holding Weapon.png"
+    ],
+    "prompt": "Use case: illustration-story. ONE continuous 1536x1024 landscape scene, richly painted cinematic graphic novel, crisp expressive faces and detailed believable materials, no lettering, bubbles, captions, HUD, grid, inset or montage. First reference is style only; do not copy its four-panel composition or cast. Remaining references establish identity only for named people in this scene, not a lineup. Include EXACTLY the cast specified below and no other named companions. Do not add any character merely because a reference or the larger story contains them. Scene: Only youthful long-silver-haired Kael visible near camera on old Earth observatory terrace. Black/silver cosmic armor and violet star accents, quiet melancholy as he watches tiny ordinary parent lift tired child onto shoulders on hillside town lane below. Warm late afternoon ordinary life; no magic spell, no destruction, no other companions.",
+    "label": "N31",
+    "source": "C:\\Users\\louie\\.codex\\generated_images\\01a0a581-c8d1-70f0-a1d6-12d11703b872\\exec-20f59b5f-a179-4904-9273-c9fbec7a046b.png"
+  },
+  {
+    "id": "new-c07-s02",
+    "scene": "c07-s02",
+    "file": "c07-s02-added.png",
+    "after": "Kael closes that record too quickly.",
+    "caption": "Nine centuries still count.",
+    "shot": "Cinematic / discovery and connection",
+    "art": "Only Mira and Kael facing each other in observatory records chamber. Mira brown bun white/navy/gold healer armor points at a fading luminous model of a thriving green city; youthful pale long-silver-haired Kael pulls his hand away from the projection defensively. Intimate tense two-shot, healer values concrete lives. No readable labels, no unrelated party.",
+    "dialogue": [
+      [
+        "Mira",
+        "Do the nine centuries stop counting?"
+      ]
+    ],
+    "reference_images": [
+      "D:\\SMILE 2.0\\games\\SinStarI\\Story\\Storyboard Draft 2\\asset\\images\\archive\\draft-1-sheets\\page-01.png",
+      "D:\\Sin - AI Prompt - Contents\\2026-09-15 1809 - Sin Star I - Story Board 2\\image-d38b5bae8e3428ebcefab114a54a4d0f1e80506e65e7b320a456bcdadf753487.png",
+      "D:\\SMILE 2.0\\games\\SinStarI\\Assets\\Characters\\Kael\\Kael - Normal Pose Holding Weapon.png"
+    ],
+    "prompt": "Use case: illustration-story. ONE continuous 1536x1024 landscape scene, richly painted cinematic graphic novel, crisp expressive faces and detailed believable materials, no lettering, bubbles, captions, HUD, grid, inset or montage. First reference is style only; do not copy its four-panel composition or cast. Remaining references establish identity only for named people in this scene, not a lineup. Include EXACTLY the cast specified below and no other named companions. Do not add any character merely because a reference or the larger story contains them. Scene: Only Mira and Kael facing each other in observatory records chamber. Mira brown bun white/navy/gold healer armor points at a fading luminous model of a thriving green city; youthful pale long-silver-haired Kael pulls his hand away from the projection defensively. Intimate tense two-shot, healer values concrete lives. No readable labels, no unrelated party.",
+    "label": "N32",
+    "source": "C:\\Users\\louie\\.codex\\generated_images\\01a0a581-c8d1-70f0-a1d6-12d11703b872\\exec-49132efc-5aa4-47c9-ba51-11309fc2e513.png"
+  },
+  {
+    "id": "new-c07-s03",
+    "scene": "c07-s03",
+    "file": "c07-s03-added.png",
+    "after": "The records show repeated versions",
+    "caption": "The sky has been started again.",
+    "shot": "Cinematic / discovery and connection",
+    "art": "Only golden-white quadrupedal Milo and red/charcoal fully mechanical Zara in immense archive corridor. Milo's muzzle indicates a hidden spatial route below a visual map while Zara follows with handheld translator. Beyond, colossal translucent nested astronomical rings show successive cosmic models, not images of people. Low canine-height camera, amber and cyan ancient architecture, clear four legs, no human party.",
+    "dialogue": [
+      [
+        "Zara",
+        "These aren't different dates in one sky. The laws are being initialized again."
+      ]
+    ],
+    "reference_images": [
+      "D:\\SMILE 2.0\\games\\SinStarI\\Story\\Storyboard Draft 2\\asset\\images\\archive\\draft-1-sheets\\page-01.png",
+      "D:\\Sin - AI Prompt - Contents\\2026-09-15 1809 - Sin Star I - Story Board 2\\image-8f17a98c2f3a9af43851974f721ea73e49011b8398186b1201e3e926d072a82c.png",
+      "D:\\SMILE 2.0\\games\\SinStarI\\SourceAssets\\Characters\\Warrior\\ZaraV1\\Private\\Previews\\zara-neon-white-native.jpg"
+    ],
+    "prompt": "Use case: illustration-story. ONE continuous 1536x1024 landscape scene, richly painted cinematic graphic novel, crisp expressive faces and detailed believable materials, no lettering, bubbles, captions, HUD, grid, inset or montage. First reference is style only; do not copy its four-panel composition or cast. Remaining references establish identity only for named people in this scene, not a lineup. Include EXACTLY the cast specified below and no other named companions. Do not add any character merely because a reference or the larger story contains them. Scene: Only golden-white quadrupedal Milo and red/charcoal fully mechanical Zara in immense archive corridor. Milo's muzzle indicates a hidden spatial route below a visual map while Zara follows with handheld translator. Beyond, colossal translucent nested astronomical rings show successive cosmic models, not images of people. Low canine-height camera, amber and cyan ancient architecture, clear four legs, no human party. For Zara screenshot use only red robot center, ignore UI and woman behind.",
+    "label": "N33",
+    "source": "C:\\Users\\louie\\.codex\\generated_images\\01a0a581-c8d1-70f0-a1d6-12d11703b872\\exec-5c2a77a5-125f-4216-919a-f430bddf997e.png"
+  },
+  {
+    "id": "new-c07-s03-trace",
+    "scene": "c07-s03",
+    "file": "c07-s03-trace.png",
+    "after": "Arin removes his hand.",
+    "caption": "A trace is not a life they can return.",
+    "shot": "Cinematic / discovery and connection",
+    "art": "Only Arin, Mira and Zara beside a fragile glowing archive interface. Arin pulls his hand away painfully as the small abstract luminous trace loses coherence, Mira close with compassion, red mechanical Zara holding out a careful stop gesture. No visible ghosts, no resurrected parents. Soft cold glow in ancient stone-and-metal hall, restraint and grief.",
+    "dialogue": [
+      [
+        "Zara",
+        "A surviving trace is not an intact life we know how to return. I am sorry."
+      ]
+    ],
+    "reference_images": [
+      "D:\\SMILE 2.0\\games\\SinStarI\\Story\\Storyboard Draft 2\\asset\\images\\archive\\draft-1-sheets\\page-01.png",
+      "D:\\Sin - AI Prompt - Contents\\2026-09-15 1809 - Sin Star I - Story Board 2\\image-9cb55147c2ea1b3d490167b70bfa73b2633918683c5e83fc61854f4775e2570b.png",
+      "D:\\Sin - AI Prompt - Contents\\2026-09-15 1809 - Sin Star I - Story Board 2\\image-d38b5bae8e3428ebcefab114a54a4d0f1e80506e65e7b320a456bcdadf753487.png",
+      "D:\\SMILE 2.0\\games\\SinStarI\\SourceAssets\\Characters\\Warrior\\ZaraV1\\Private\\Previews\\zara-neon-white-native.jpg"
+    ],
+    "prompt": "Use case: illustration-story. ONE continuous 1536x1024 landscape scene, richly painted cinematic graphic novel, crisp expressive faces and detailed believable materials, no lettering, bubbles, captions, HUD, grid, inset or montage. First reference is style only; do not copy its four-panel composition or cast. Remaining references establish identity only for named people in this scene, not a lineup. Include EXACTLY the cast specified below and no other named companions. Do not add any character merely because a reference or the larger story contains them. Scene: Only Arin, Mira and Zara beside a fragile glowing archive interface. Arin pulls his hand away painfully as the small abstract luminous trace loses coherence, Mira close with compassion, red mechanical Zara holding out a careful stop gesture. No visible ghosts, no resurrected parents. Soft cold glow in ancient stone-and-metal hall, restraint and grief. For Zara screenshot use only red robot center, ignore UI and woman behind.",
+    "label": "N34",
+    "source": "C:\\Users\\louie\\.codex\\generated_images\\01a0a581-c8d1-70f0-a1d6-12d11703b872\\exec-2e756b68-0355-4634-b0fb-e3feea84ad6c.png"
+  },
+  {
+    "id": "new-c08-s01",
+    "scene": "c08-s01",
+    "file": "c08-s01-added.png",
+    "after": "Arin checks the linked pulse",
+    "caption": "A way home, tested before the leap.",
+    "shot": "Cinematic / the Origin",
+    "art": "Only Arin and Mira standing beside a compact returning unmanned probe on ancient gateway approach. Arin checks small synchronized blue pulse lights on wrist equipment; brown-bun Mira compares the probe's instrument with her own. No readable numbers. Behind them huge turning rings frame stars, no gateway crossing yet. Practical preparation, full intact footing, blue-gold light.",
+    "dialogue": [
+      [
+        "Arin",
+        "All five."
+      ]
+    ],
+    "reference_images": [
+      "D:\\SMILE 2.0\\games\\SinStarI\\Story\\Storyboard Draft 2\\asset\\images\\archive\\draft-1-sheets\\page-01.png",
+      "D:\\Sin - AI Prompt - Contents\\2026-09-15 1809 - Sin Star I - Story Board 2\\image-9cb55147c2ea1b3d490167b70bfa73b2633918683c5e83fc61854f4775e2570b.png",
+      "D:\\Sin - AI Prompt - Contents\\2026-09-15 1809 - Sin Star I - Story Board 2\\image-d38b5bae8e3428ebcefab114a54a4d0f1e80506e65e7b320a456bcdadf753487.png"
+    ],
+    "prompt": "Use case: illustration-story. ONE continuous 1536x1024 landscape scene, richly painted cinematic graphic novel, crisp expressive faces and detailed believable materials, no lettering, bubbles, captions, HUD, grid, inset or montage. First reference is style only; do not copy its four-panel composition or cast. Remaining references establish identity only for named people in this scene, not a lineup. Include EXACTLY the cast specified below and no other named companions. Do not add any character merely because a reference or the larger story contains them. Scene: Only Arin and Mira standing beside a compact returning unmanned probe on ancient gateway approach. Arin checks small synchronized blue pulse lights on wrist equipment; brown-bun Mira compares the probe's instrument with her own. No readable numbers. Behind them huge turning rings frame stars, no gateway crossing yet. Practical preparation, full intact footing, blue-gold light.",
+    "label": "N37",
+    "source": "C:\\Users\\louie\\.codex\\generated_images\\01a0a581-c8d1-70f0-a1d6-12d11703b872\\exec-a17df2cb-d3d2-4623-8eeb-7342da64225b.png"
+  },
+  {
+    "id": "new-c08-s02",
+    "scene": "c08-s02",
+    "file": "c08-s02-added.png",
+    "after": "Mira does not look away.",
+    "caption": "Every moment happened to someone.",
+    "shot": "Cinematic / the Origin",
+    "art": "Only Mira and Kael face each other across outer gateway chamber. Youthful pale long-silver-haired Kael black/silver armor with violet stars holds rigid posture; Mira warm-tan brown bun white/navy/gold healer plate stands unflinchingly with staff lowered. A stable support pillar and separate luminous access ring are visibly distinct behind them. Eye-level intense human two-shot.",
+    "dialogue": [
+      [
+        "Mira",
+        "We were there for it."
+      ]
+    ],
+    "reference_images": [
+      "D:\\SMILE 2.0\\games\\SinStarI\\Story\\Storyboard Draft 2\\asset\\images\\archive\\draft-1-sheets\\page-01.png",
+      "D:\\Sin - AI Prompt - Contents\\2026-09-15 1809 - Sin Star I - Story Board 2\\image-d38b5bae8e3428ebcefab114a54a4d0f1e80506e65e7b320a456bcdadf753487.png",
+      "D:\\SMILE 2.0\\games\\SinStarI\\Assets\\Characters\\Kael\\Kael - Normal Pose Holding Weapon.png"
+    ],
+    "prompt": "Use case: illustration-story. ONE continuous 1536x1024 landscape scene, richly painted cinematic graphic novel, crisp expressive faces and detailed believable materials, no lettering, bubbles, captions, HUD, grid, inset or montage. First reference is style only; do not copy its four-panel composition or cast. Remaining references establish identity only for named people in this scene, not a lineup. Include EXACTLY the cast specified below and no other named companions. Do not add any character merely because a reference or the larger story contains them. Scene: Only Mira and Kael face each other across outer gateway chamber. Youthful pale long-silver-haired Kael black/silver armor with violet stars holds rigid posture; Mira warm-tan brown bun white/navy/gold healer plate stands unflinchingly with staff lowered. A stable support pillar and separate luminous access ring are visibly distinct behind them. Eye-level intense human two-shot.",
+    "label": "N38",
+    "source": "C:\\Users\\louie\\.codex\\generated_images\\01a0a581-c8d1-70f0-a1d6-12d11703b872\\exec-1aa7699b-23b0-4e55-8b89-f78eff7311b3.png"
+  },
+  {
+    "id": "new-c08-s03",
+    "scene": "c08-s03",
+    "file": "c08-s03-added.png",
+    "after": "Arin redirects it toward a focus Zara has exposed",
+    "caption": "He changes where the power goes.",
+    "shot": "Cinematic / the Origin",
+    "art": "Only Arin and Zara prominently visible, distant Kael constrained at central gateway interface. Young Arin redirects a narrow cyan current from his lowered sword toward an exposed side focus that red mechanical Zara has opened with tools. Lean kinetic composition with diagonal energy arc that misses Kael. Continuous arena floor, precise teamwork rather than massive uncontrolled explosion.",
+    "dialogue": [
+      [
+        "Arin",
+        "Orin showed me where to stand."
+      ]
+    ],
+    "reference_images": [
+      "D:\\SMILE 2.0\\games\\SinStarI\\Story\\Storyboard Draft 2\\asset\\images\\archive\\draft-1-sheets\\page-01.png",
+      "D:\\Sin - AI Prompt - Contents\\2026-09-15 1809 - Sin Star I - Story Board 2\\image-9cb55147c2ea1b3d490167b70bfa73b2633918683c5e83fc61854f4775e2570b.png",
+      "D:\\SMILE 2.0\\games\\SinStarI\\SourceAssets\\Characters\\Warrior\\ZaraV1\\Private\\Previews\\zara-neon-white-native.jpg",
+      "D:\\SMILE 2.0\\games\\SinStarI\\Assets\\Characters\\Kael\\Kael - Normal Pose Holding Weapon.png"
+    ],
+    "prompt": "Use case: illustration-story. ONE continuous 1536x1024 landscape scene, richly painted cinematic graphic novel, crisp expressive faces and detailed believable materials, no lettering, bubbles, captions, HUD, grid, inset or montage. First reference is style only; do not copy its four-panel composition or cast. Remaining references establish identity only for named people in this scene, not a lineup. Include EXACTLY the cast specified below and no other named companions. Do not add any character merely because a reference or the larger story contains them. Scene: Only Arin and Zara prominently visible, distant Kael constrained at central gateway interface. Young Arin redirects a narrow cyan current from his lowered sword toward an exposed side focus that red mechanical Zara has opened with tools. Lean kinetic composition with diagonal energy arc that misses Kael. Continuous arena floor, precise teamwork rather than massive uncontrolled explosion. Use only red robot center from Zara screenshot, ignore UI and woman behind.",
+    "label": "N39",
+    "source": "C:\\Users\\louie\\.codex\\generated_images\\01a0a581-c8d1-70f0-a1d6-12d11703b872\\exec-8184fa4c-6b72-4deb-a79b-7276681dfcd6.png"
+  },
+  {
+    "id": "new-c08-s04",
+    "scene": "c08-s04",
+    "file": "c08-s04-added.png",
+    "after": "Kael takes one step forward",
+    "caption": "An invitation that feels like a command.",
+    "shot": "Cinematic / the Origin",
+    "art": "Only Kael close in foreground, pale youthful face and very long silver hair, black/silver armor. He involuntarily starts toward newly opened immense doorway of white-blue cosmic depth, catches his own step with frightened recognition, hand against a pillar. Wide negative space beyond gate, cold mysterious light. No destruction, no extra cast.",
+    "dialogue": [
+      [
+        "Kael",
+        "I know this feeling."
+      ]
+    ],
+    "reference_images": [
+      "D:\\SMILE 2.0\\games\\SinStarI\\Story\\Storyboard Draft 2\\asset\\images\\archive\\draft-1-sheets\\page-01.png",
+      "D:\\SMILE 2.0\\games\\SinStarI\\Assets\\Characters\\Kael\\Kael - Normal Pose Holding Weapon.png"
+    ],
+    "prompt": "Use case: illustration-story. ONE continuous 1536x1024 landscape scene, richly painted cinematic graphic novel, crisp expressive faces and detailed believable materials, no lettering, bubbles, captions, HUD, grid, inset or montage. First reference is style only; do not copy its four-panel composition or cast. Remaining references establish identity only for named people in this scene, not a lineup. Include EXACTLY the cast specified below and no other named companions. Do not add any character merely because a reference or the larger story contains them. Scene: Only Kael close in foreground, pale youthful face and very long silver hair, black/silver armor. He involuntarily starts toward newly opened immense doorway of white-blue cosmic depth, catches his own step with frightened recognition, hand against a pillar. Wide negative space beyond gate, cold mysterious light. No destruction, no extra cast.",
+    "label": "N40",
+    "source": "C:\\Users\\louie\\.codex\\generated_images\\01a0a581-c8d1-70f0-a1d6-12d11703b872\\exec-9c1ed531-838b-4307-a454-1aaea0662b56.png"
+  },
+  {
+    "id": "new-c09-s01",
+    "scene": "c09-s01",
+    "file": "c09-s01-added.png",
+    "after": "He is not the heart. He is using it.",
+    "caption": "The maker and the machinery are different.",
+    "shot": "Cinematic / the Origin",
+    "art": "Wide cosmic architecture illustration with ONLY enormous four-armed helmeted black-and-gold Aevos. A BRIGHT THIN chest connection runs from his embodied figure to a separate colossal sustaining torus far behind, which glows with its own steady cyan pulse. Red fracturing planet, blue cold planet and hourglass vessels frame him. Reflective dark floor, incomprehensible scale, no text, no humanoid hero party foreground.",
+    "dialogue": [
+      [
+        "Aevos",
+        "I mean it was made. I did not say you do not feel."
+      ]
+    ],
+    "reference_images": [
+      "D:\\SMILE 2.0\\games\\SinStarI\\Story\\Storyboard Draft 2\\asset\\images\\archive\\draft-1-sheets\\page-01.png",
+      "D:\\Sin - AI Prompt - Contents\\2026-09-15 1809 - Sin Star I - Story Board 2\\image-500beb7cea149b7830f618d4d6176f146cebd7b05388012af34cf4bf0a1a456a.png"
+    ],
+    "prompt": "Use case: illustration-story. ONE continuous 1536x1024 landscape scene, richly painted cinematic graphic novel, crisp expressive faces and detailed believable materials, no lettering, bubbles, captions, HUD, grid, inset or montage. First reference is style only; do not copy its four-panel composition or cast. Remaining references establish identity only for named people in this scene, not a lineup. Include EXACTLY the cast specified below and no other named companions. Do not add any character merely because a reference or the larger story contains them. Scene: Wide cosmic architecture illustration with ONLY enormous four-armed helmeted black-and-gold Aevos. A BRIGHT THIN chest connection runs from his embodied figure to a separate colossal sustaining torus far behind, which glows with its own steady cyan pulse. Red fracturing planet, blue cold planet and hourglass vessels frame him. Reflective dark floor, incomprehensible scale, no text, no humanoid hero party foreground.",
+    "label": "N41",
+    "source": "C:\\Users\\louie\\.codex\\generated_images\\01a0a581-c8d1-70f0-a1d6-12d11703b872\\exec-435a388e-deea-41b8-b06f-3352582f61f3.png"
+  },
+  {
+    "id": "new-c09-s02",
+    "scene": "c09-s02",
+    "file": "c09-s02-added.png",
+    "after": "For the first time, the custodian is interrupted",
+    "caption": "The witness has not finished speaking.",
+    "shot": "Cinematic / the Origin",
+    "art": "Only long-silver-haired youthful Kael in foreground, taking a defiant step and lifting an open hand to interrupt towering four-armed black-gold Aevos behind. Kael's vulnerable anger is clear, not grandiose magic. Reflective Origin platform and slow cyan sustaining rings, no battle blast. Two distinct figures, cinematic low angle.",
+    "dialogue": [
+      [
+        "Kael",
+        "Neither does my despair establish that there can be none."
+      ]
+    ],
+    "reference_images": [
+      "D:\\SMILE 2.0\\games\\SinStarI\\Story\\Storyboard Draft 2\\asset\\images\\archive\\draft-1-sheets\\page-01.png",
+      "D:\\SMILE 2.0\\games\\SinStarI\\Assets\\Characters\\Kael\\Kael - Normal Pose Holding Weapon.png",
+      "D:\\Sin - AI Prompt - Contents\\2026-09-15 1809 - Sin Star I - Story Board 2\\image-500beb7cea149b7830f618d4d6176f146cebd7b05388012af34cf4bf0a1a456a.png"
+    ],
+    "prompt": "Use case: illustration-story. ONE continuous 1536x1024 landscape scene, richly painted cinematic graphic novel, crisp expressive faces and detailed believable materials, no lettering, bubbles, captions, HUD, grid, inset or montage. First reference is style only; do not copy its four-panel composition or cast. Remaining references establish identity only for named people in this scene, not a lineup. Include EXACTLY the cast specified below and no other named companions. Do not add any character merely because a reference or the larger story contains them. Scene: Only long-silver-haired youthful Kael in foreground, taking a defiant step and lifting an open hand to interrupt towering four-armed black-gold Aevos behind. Kael's vulnerable anger is clear, not grandiose magic. Reflective Origin platform and slow cyan sustaining rings, no battle blast. Two distinct figures, cinematic low angle.",
+    "label": "N42",
+    "source": "C:\\Users\\louie\\.codex\\generated_images\\01a0a581-c8d1-70f0-a1d6-12d11703b872\\exec-f8363751-81d6-4036-8531-454bb2e4af7d.png"
+  },
+  {
+    "id": "new-c09-s03",
+    "scene": "c09-s03",
+    "file": "c09-s03-added.png",
+    "after": "A blast tears through a marker.",
+    "caption": "No one becomes expendable.",
+    "shot": "Cinematic / the Origin",
+    "art": "Close kinetic shot of red mechanical Zara catching golden-white quadrupedal Milo by his BODY HARNESS after a blue navigation marker shatters; Milo's four canine paws scramble onto solid platform. Broad dark-haired stubbled Orin braces huge rectangular shield between them and distant incoming golden energy. No collar suspension, no blood. Reflective cosmic floor fragments, motion and desperate care.",
+    "dialogue": [
+      [
+        "Mira, off-screen",
+        "Arin—back to my voice."
+      ]
+    ],
+    "reference_images": [
+      "D:\\SMILE 2.0\\games\\SinStarI\\Story\\Storyboard Draft 2\\asset\\images\\archive\\draft-1-sheets\\page-01.png",
+      "D:\\SMILE 2.0\\games\\SinStarI\\SourceAssets\\Characters\\Warrior\\ZaraV1\\Private\\Previews\\zara-neon-white-native.jpg",
+      "D:\\Sin - AI Prompt - Contents\\2026-09-15 1809 - Sin Star I - Story Board 2\\image-8f17a98c2f3a9af43851974f721ea73e49011b8398186b1201e3e926d072a82c.png",
+      "D:\\Sin - AI Prompt - Contents\\2026-09-15 1809 - Sin Star I - Story Board 2\\image-7bb6ccc62a40fdb90428b21cf9af0b85862b8c7f66bd9469df5508b06e747e5a.png"
+    ],
+    "prompt": "Use case: illustration-story. ONE continuous 1536x1024 landscape scene, richly painted cinematic graphic novel, crisp expressive faces and detailed believable materials, no lettering, bubbles, captions, HUD, grid, inset or montage. First reference is style only; do not copy its four-panel composition or cast. Remaining references establish identity only for named people in this scene, not a lineup. Include EXACTLY the cast specified below and no other named companions. Do not add any character merely because a reference or the larger story contains them. Scene: Close kinetic shot of red mechanical Zara catching golden-white quadrupedal Milo by his BODY HARNESS after a blue navigation marker shatters; Milo's four canine paws scramble onto solid platform. Broad dark-haired stubbled Orin braces huge rectangular shield between them and distant incoming golden energy. No collar suspension, no blood. Reflective cosmic floor fragments, motion and desperate care. Use only red robot center from Zara screenshot, ignore UI and woman behind.",
+    "label": "N43",
+    "source": "C:\\Users\\louie\\.codex\\generated_images\\01a0a581-c8d1-70f0-a1d6-12d11703b872\\exec-636bbd13-53f8-48c0-84f7-bdfbe51f1849.png"
+  },
+  {
+    "id": "new-c09-s05",
+    "scene": "c09-s05",
+    "file": "c09-s05-added.png",
+    "after": "Orin prevents the physical contact from reconnecting.",
+    "caption": "Hold the crossing. Keep the worlds alive.",
+    "shot": "Cinematic / lives worth keeping",
+    "art": "Hold the crossing. Keep the worlds alive. Cinematic / lives worth keeping",
+    "dialogue": [
+      [
+        "Zara",
+        "Now."
+      ]
+    ],
+    "reference_images": [
+      "D:\\SMILE 2.0\\games\\SinStarI\\Story\\Storyboard Draft 2\\asset\\images\\archive\\draft-1-sheets\\page-01.png",
+      "D:\\Sin - AI Prompt - Contents\\2026-09-15 1809 - Sin Star I - Story Board 2\\image-7bb6ccc62a40fdb90428b21cf9af0b85862b8c7f66bd9469df5508b06e747e5a.png",
+      "D:\\SMILE 2.0\\games\\SinStarI\\SourceAssets\\Characters\\Warrior\\ZaraV1\\Private\\Previews\\zara-neon-white-native.jpg",
+      "D:\\Sin - AI Prompt - Contents\\2026-09-15 1809 - Sin Star I - Story Board 2\\image-d38b5bae8e3428ebcefab114a54a4d0f1e80506e65e7b320a456bcdadf753487.png"
+    ],
+    "prompt": "Use case: illustration-story. ONE continuous 1536x1024 landscape scene, richly painted cinematic graphic novel, crisp expressive faces and detailed believable materials, no lettering, bubbles, captions, HUD, grid, inset or montage. First reference is style only; do not copy its four-panel composition or cast. Remaining references establish identity only for named people in this scene, not a lineup. Include EXACTLY the cast specified below and no other named companions. Do not add any character merely because a reference or the larger story contains them. Scene: Only broad rugged Orin, red mechanical Zara and brown-bun Mira in a tight action composition at Origin supervisory contacts. Orin plants enormous rectangular shield to physically hold apart a reconnecting golden control arm; Zara disconnects a small supervisory conductor with precise tool; Mira's controlled narrow water-and-air arc diverts sparking discharge away. Intact distant cyan sustaining torus visible, no explosion of the heart, no lettering. Use only red robot center from Zara screenshot, ignore UI and woman behind.",
+    "label": "N45",
+    "source": "C:\\Users\\louie\\.codex\\generated_images\\01a0a581-c8d1-70f0-a1d6-12d11703b872\\exec-b9efef2a-4129-40ec-964f-ec8b52506587.png"
+  },
+  {
+    "id": "new-e01-s01",
+    "scene": "e01-s01",
+    "file": "e01-s01-added.png",
+    "after": "The gesture is familial, not a transfer effect.",
+    "caption": "Kinship, without a promise.",
+    "shot": "Cinematic / lives worth keeping",
+    "art": "Only critically wounded youthful pale long-silver-haired Kael reclining on prepared transport support and young brown-haired Arin kneeling beside him, Mira softly visible stabilizing injury at edge. Kael weakly touches Arin's wrist as family, NO glowing transfer between hands, no power inheritance, no revived healthy Kael. Tender close-up against distant quiet cosmic machinery, dignity without gore.",
+    "dialogue": [
+      [
+        "Kael",
+        "I thought nothing small could surprise me anymore."
+      ],
+      [
+        "Arin",
+        "You missed quite a lot."
+      ]
+    ],
+    "reference_images": [
+      "D:\\SMILE 2.0\\games\\SinStarI\\Story\\Storyboard Draft 2\\asset\\images\\archive\\draft-1-sheets\\page-01.png",
+      "D:\\SMILE 2.0\\games\\SinStarI\\Assets\\Characters\\Kael\\Kael - Normal Pose Holding Weapon.png",
+      "D:\\Sin - AI Prompt - Contents\\2026-09-15 1809 - Sin Star I - Story Board 2\\image-9cb55147c2ea1b3d490167b70bfa73b2633918683c5e83fc61854f4775e2570b.png",
+      "D:\\Sin - AI Prompt - Contents\\2026-09-15 1809 - Sin Star I - Story Board 2\\image-d38b5bae8e3428ebcefab114a54a4d0f1e80506e65e7b320a456bcdadf753487.png"
+    ],
+    "prompt": "Use case: illustration-story. ONE continuous 1536x1024 landscape scene, richly painted cinematic graphic novel, crisp expressive faces and detailed believable materials, no lettering, bubbles, captions, HUD, grid, inset or montage. First reference is style only; do not copy its four-panel composition or cast. Remaining references establish identity only for named people in this scene, not a lineup. Include EXACTLY the cast specified below and no other named companions. Do not add any character merely because a reference or the larger story contains them. Scene: Only critically wounded youthful pale long-silver-haired Kael reclining on prepared transport support and young brown-haired Arin kneeling beside him, Mira softly visible stabilizing injury at edge. Kael weakly touches Arin's wrist as family, NO glowing transfer between hands, no power inheritance, no revived healthy Kael. Tender close-up against distant quiet cosmic machinery, dignity without gore.",
+    "label": "N46",
+    "source": "C:\\Users\\louie\\.codex\\generated_images\\01a0a581-c8d1-70f0-a1d6-12d11703b872\\exec-cc2a436c-804b-4653-b5a0-bd7952f0a002.png"
+  },
+  {
+    "id": "new-e01-s02",
+    "scene": "e01-s02",
+    "file": "e01-s02-added.png",
+    "after": "Milo greets his route partner.",
+    "caption": "He found the way back.",
+    "shot": "Cinematic / lives worth keeping",
+    "art": "Only golden-white quadrupedal Milo in white/navy/gold toolharness greeting his darker golden canine route partner in simple civilian harness at a low Kynari village doorway. Two dogs touch noses before words; partner's paw rests near a low route projection. Warm late light and lived-in canine-height furnishings, four paws each, no hands, no human companions.",
+    "dialogue": [
+      [
+        "Milo",
+        "I found the way back too."
+      ]
+    ],
+    "reference_images": [
+      "D:\\SMILE 2.0\\games\\SinStarI\\Story\\Storyboard Draft 2\\asset\\images\\archive\\draft-1-sheets\\page-01.png",
+      "D:\\Sin - AI Prompt - Contents\\2026-09-15 1809 - Sin Star I - Story Board 2\\image-8f17a98c2f3a9af43851974f721ea73e49011b8398186b1201e3e926d072a82c.png"
+    ],
+    "prompt": "Use case: illustration-story. ONE continuous 1536x1024 landscape scene, richly painted cinematic graphic novel, crisp expressive faces and detailed believable materials, no lettering, bubbles, captions, HUD, grid, inset or montage. First reference is style only; do not copy its four-panel composition or cast. Remaining references establish identity only for named people in this scene, not a lineup. Include EXACTLY the cast specified below and no other named companions. Do not add any character merely because a reference or the larger story contains them. Scene: Only golden-white quadrupedal Milo in white/navy/gold toolharness greeting his darker golden canine route partner in simple civilian harness at a low Kynari village doorway. Two dogs touch noses before words; partner's paw rests near a low route projection. Warm late light and lived-in canine-height furnishings, four paws each, no hands, no human companions.",
+    "label": "N47",
+    "source": "C:\\Users\\louie\\.codex\\generated_images\\01a0a581-c8d1-70f0-a1d6-12d11703b872\\exec-f42b6be4-1cc1-4aa1-9998-61714fe3d08d.png"
+  },
+  {
+    "id": "new-c07-s04",
+    "scene": "c07-s04",
+    "file": "c07-s04-added.png",
+    "after": "They begin planning.",
+    "caption": "The answer becomes a plan.",
+    "shot": "Cinematic / discovery and connection",
+    "art": "Five companions around low ship common-room navigation table: young armored Arin listening, brown-bun Mira marking supplies, broad rugged Orin inspecting retreat route, red mechanical Zara aligning navigation device, golden-white FOUR-LEGGED Milo operating low paw control beside table. Warm practical cabin, quiet teamwork and agency, no heroic lineup, no readable map labels.",
+    "dialogue": [
+      [
+        "Arin",
+        "Will you come with me?"
+      ],
+      [
+        "Orin",
+        "Yes."
+      ]
+    ],
+    "reference_images": [
+      "D:\\SMILE 2.0\\games\\SinStarI\\Story\\Storyboard Draft 2\\asset\\images\\archive\\draft-1-sheets\\page-01.png",
+      "D:\\Sin - AI Prompt - Contents\\2026-09-15 1809 - Sin Star I - Story Board 2\\image-9cb55147c2ea1b3d490167b70bfa73b2633918683c5e83fc61854f4775e2570b.png",
+      "D:\\Sin - AI Prompt - Contents\\2026-09-15 1809 - Sin Star I - Story Board 2\\image-d38b5bae8e3428ebcefab114a54a4d0f1e80506e65e7b320a456bcdadf753487.png",
+      "D:\\Sin - AI Prompt - Contents\\2026-09-15 1809 - Sin Star I - Story Board 2\\image-8f17a98c2f3a9af43851974f721ea73e49011b8398186b1201e3e926d072a82c.png",
+      "D:\\SMILE 2.0\\games\\SinStarI\\SourceAssets\\Characters\\Warrior\\ZaraV1\\Private\\Previews\\zara-neon-white-native.jpg"
+    ],
+    "prompt": "Use case: illustration-story. ONE continuous 1536x1024 landscape scene, richly painted cinematic graphic novel, crisp expressive faces and detailed believable materials, no lettering, bubbles, captions, HUD, grid, inset or montage. First reference is style only; do not copy its four-panel composition or cast. Remaining references establish identity only for named people in this scene, not a lineup. Include EXACTLY the cast specified below and no other named companions. Do not add any character merely because a reference or the larger story contains them. Scene: Five companions around low ship common-room navigation table: young armored Arin listening, brown-bun Mira marking supplies, broad rugged Orin inspecting retreat route, red mechanical Zara aligning navigation device, golden-white FOUR-LEGGED Milo operating low paw control beside table. Warm practical cabin, quiet teamwork and agency, no heroic lineup, no readable map labels. For Zara screenshot use only red robot center, ignore UI and woman behind.",
+    "label": "N35",
+    "revision_prompt": "Edit only Orin, the broad older brown-haired man in the first image. His canonical appearance is the SECOND reference: short dark brown hair, square rugged face with short stubble rather than a bushy full beard, and heavy white/navy/gold plate armor. Remove his goggles and leather apron/cloth-only outfit; give him the exact canonical armor, facial proportions and short stubble of reference 2. Preserve his current pose and action, keep his larger build distinct from young Arin. Do not add people, weapons or extra shields to this composition. All other figures, their faces, their poses, the background, lighting and framing stay unchanged. One continuous illustration, no lettering or panels.",
+    "sourceBefore": "C:\\Users\\louie\\.codex\\generated_images\\01a0a581-c8d1-70f0-a1d6-12d11703b872\\exec-f3a68339-ea60-4fdc-8928-150a56dcc61a.png",
+    "revision_references": [
+      "C:\\Users\\louie\\.codex\\generated_images\\01a0a581-c8d1-70f0-a1d6-12d11703b872\\exec-f3a68339-ea60-4fdc-8928-150a56dcc61a.png",
+      "D:\\Sin - AI Prompt - Contents\\2026-09-15 1809 - Sin Star I - Story Board 2\\image-7bb6ccc62a40fdb90428b21cf9af0b85862b8c7f66bd9469df5508b06e747e5a.png"
+    ],
+    "source": "C:\\Users\\louie\\.codex\\generated_images\\01a0a581-c8d1-70f0-a1d6-12d11703b872\\exec-75de7443-acf4-496b-ab99-cddf27a8674f.png"
+  },
+  {
+    "id": "new-c07-s05",
+    "scene": "c07-s05",
+    "file": "c07-s05-added.png",
+    "after": "A little left.",
+    "caption": "A serious conversation.",
+    "shot": "Cinematic / discovery and connection",
+    "art": "Only Arin and golden-white FOUR-LEGGED Milo seated side by side at last safe port departure overlook. Arin smiles faintly while scratching behind the dog's ear after welcome; Milo leans into the contact with dignity and contentment, harness remains white/navy/gold and all paws canine. Evening runway lights beyond. Human-dog friendship at quiet scale, no other cast.",
+    "dialogue": [
+      [
+        "Arin",
+        "I thought this was going to be a serious conversation."
+      ],
+      [
+        "Milo",
+        "It is. A little left."
+      ]
+    ],
+    "reference_images": [
+      "D:\\SMILE 2.0\\games\\SinStarI\\Story\\Storyboard Draft 2\\asset\\images\\archive\\draft-1-sheets\\page-01.png",
+      "D:\\Sin - AI Prompt - Contents\\2026-09-15 1809 - Sin Star I - Story Board 2\\image-9cb55147c2ea1b3d490167b70bfa73b2633918683c5e83fc61854f4775e2570b.png",
+      "D:\\Sin - AI Prompt - Contents\\2026-09-15 1809 - Sin Star I - Story Board 2\\image-8f17a98c2f3a9af43851974f721ea73e49011b8398186b1201e3e926d072a82c.png"
+    ],
+    "prompt": "Use case: illustration-story. ONE continuous 1536x1024 landscape scene, richly painted cinematic graphic novel, crisp expressive faces and detailed believable materials, no lettering, bubbles, captions, HUD, grid, inset or montage. First reference is style only; do not copy its four-panel composition or cast. Remaining references establish identity only for named people in this scene, not a lineup. Include EXACTLY the cast specified below and no other named companions. Do not add any character merely because a reference or the larger story contains them. Scene: Only Arin and golden-white FOUR-LEGGED Milo seated side by side at last safe port departure overlook. Arin smiles faintly while scratching behind the dog's ear after welcome; Milo leans into the contact with dignity and contentment, harness remains white/navy/gold and all paws canine. Evening runway lights beyond. Human-dog friendship at quiet scale, no other cast.",
+    "label": "N36",
+    "source": "C:\\Users\\louie\\.codex\\generated_images\\01a0a581-c8d1-70f0-a1d6-12d11703b872\\exec-cbb06635-538e-4fa4-97c3-237ad008ce20.png"
+  },
+  {
+    "id": "new-c09-s04",
+    "scene": "c09-s04",
+    "file": "c09-s04-added.png",
+    "after": "He turns the damaged barrier",
+    "caption": "An opening they still have to earn.",
+    "shot": "Cinematic / the Origin",
+    "art": "Wounded long-silver-haired Kael kneels in foreground and uses one shaking hand to turn a fractured violet translucent barrier sideways, making passage for broad rugged Orin supporting red mechanical Zara and golden-white four-legged Milo toward safety. Arin reaches Kael from near edge. Full continuous Origin arena, no gore, exhausting protective effort, not effortless omnipotence.",
+    "dialogue": [
+      [
+        "Kael",
+        "Get them clear. Then help me stop it."
+      ]
+    ],
+    "reference_images": [
+      "D:\\SMILE 2.0\\games\\SinStarI\\Story\\Storyboard Draft 2\\asset\\images\\archive\\draft-1-sheets\\page-01.png",
+      "D:\\SMILE 2.0\\games\\SinStarI\\Assets\\Characters\\Kael\\Kael - Normal Pose Holding Weapon.png",
+      "D:\\SMILE 2.0\\games\\SinStarI\\SourceAssets\\Characters\\Warrior\\ZaraV1\\Private\\Previews\\zara-neon-white-native.jpg",
+      "D:\\Sin - AI Prompt - Contents\\2026-09-15 1809 - Sin Star I - Story Board 2\\image-8f17a98c2f3a9af43851974f721ea73e49011b8398186b1201e3e926d072a82c.png",
+      "D:\\Sin - AI Prompt - Contents\\2026-09-15 1809 - Sin Star I - Story Board 2\\image-9cb55147c2ea1b3d490167b70bfa73b2633918683c5e83fc61854f4775e2570b.png"
+    ],
+    "prompt": "Use case: illustration-story. ONE continuous 1536x1024 landscape scene, richly painted cinematic graphic novel, crisp expressive faces and detailed believable materials, no lettering, bubbles, captions, HUD, grid, inset or montage. First reference is style only; do not copy its four-panel composition or cast. Remaining references establish identity only for named people in this scene, not a lineup. Include EXACTLY the cast specified below and no other named companions. Do not add any character merely because a reference or the larger story contains them. Scene: Wounded long-silver-haired Kael kneels in foreground and uses one shaking hand to turn a fractured violet translucent barrier sideways, making passage for broad rugged Orin supporting red mechanical Zara and golden-white four-legged Milo toward safety. Arin reaches Kael from near edge. Full continuous Origin arena, no gore, exhausting protective effort, not effortless omnipotence. Use only red robot center from Zara screenshot, ignore UI and woman behind.",
+    "label": "N44",
+    "revision_prompt": "Edit only Orin, the broad older brown-haired man in the first image. His canonical appearance is the SECOND reference: short dark brown hair, square rugged face with short stubble rather than a bushy full beard, and heavy white/navy/gold plate armor. Remove his goggles and leather apron/cloth-only outfit; give him the exact canonical armor, facial proportions and short stubble of reference 2. Preserve his current pose and action, keep his larger build distinct from young Arin. Do not add people, weapons or extra shields to this composition. All other figures, their faces, their poses, the background, lighting and framing stay unchanged. One continuous illustration, no lettering or panels.",
+    "sourceBefore": "C:\\Users\\louie\\.codex\\generated_images\\01a0a581-c8d1-70f0-a1d6-12d11703b872\\exec-c10dbf35-cc92-45bf-8483-78a480252333.png",
+    "revision_references": [
+      "C:\\Users\\louie\\.codex\\generated_images\\01a0a581-c8d1-70f0-a1d6-12d11703b872\\exec-c10dbf35-cc92-45bf-8483-78a480252333.png",
+      "D:\\Sin - AI Prompt - Contents\\2026-09-15 1809 - Sin Star I - Story Board 2\\image-7bb6ccc62a40fdb90428b21cf9af0b85862b8c7f66bd9469df5508b06e747e5a.png"
+    ],
+    "source": "C:\\Users\\louie\\.codex\\generated_images\\01a0a581-c8d1-70f0-a1d6-12d11703b872\\exec-2c4be106-07dc-4dab-a6c9-84b9269b3487.png"
+  },
+  {
+    "id": "new-e01-s03",
+    "scene": "e01-s03",
+    "file": "e01-s03-added.png",
+    "after": "There is room for him.",
+    "caption": "At last, a place among them.",
+    "shot": "Cinematic / lives worth keeping",
+    "art": "Final intimate evening meal: Arin slides into the empty chair reserved for him, seen near eye level with his relieved real smile. Brown-bun Mira sits beside the space, broad rugged Orin opposite, red fully mechanical Zara gesturing over a contract, golden-white FOUR-LEGGED Milo beside a low plate on floor. Warm lamplit outdoor table, modest Neris street under stars. All five distinct, no Kael, no boss, no extra humans at their table, no readable text.",
+    "dialogue": [
+      [
+        "Zara",
+        "Arin, are you listening?"
+      ],
+      [
+        "Arin",
+        "Yes."
+      ]
+    ],
+    "reference_images": [
+      "D:\\SMILE 2.0\\games\\SinStarI\\Story\\Storyboard Draft 2\\asset\\images\\archive\\draft-1-sheets\\page-01.png",
+      "D:\\Sin - AI Prompt - Contents\\2026-09-15 1809 - Sin Star I - Story Board 2\\image-9cb55147c2ea1b3d490167b70bfa73b2633918683c5e83fc61854f4775e2570b.png",
+      "D:\\Sin - AI Prompt - Contents\\2026-09-15 1809 - Sin Star I - Story Board 2\\image-d38b5bae8e3428ebcefab114a54a4d0f1e80506e65e7b320a456bcdadf753487.png",
+      "D:\\SMILE 2.0\\games\\SinStarI\\SourceAssets\\Characters\\Warrior\\ZaraV1\\Private\\Previews\\zara-neon-white-native.jpg",
+      "D:\\Sin - AI Prompt - Contents\\2026-09-15 1809 - Sin Star I - Story Board 2\\image-8f17a98c2f3a9af43851974f721ea73e49011b8398186b1201e3e926d072a82c.png"
+    ],
+    "prompt": "Use case: illustration-story. ONE continuous 1536x1024 landscape scene, richly painted cinematic graphic novel, crisp expressive faces and detailed believable materials, no lettering, bubbles, captions, HUD, grid, inset or montage. First reference is style only; do not copy its four-panel composition or cast. Remaining references establish identity only for named people in this scene, not a lineup. Include EXACTLY the cast specified below and no other named companions. Do not add any character merely because a reference or the larger story contains them. Scene: Final intimate evening meal: Arin slides into the empty chair reserved for him, seen near eye level with his relieved real smile. Brown-bun Mira sits beside the space, broad rugged Orin opposite, red fully mechanical Zara gesturing over a contract, golden-white FOUR-LEGGED Milo beside a low plate on floor. Warm lamplit outdoor table, modest Neris street under stars. All five distinct, no Kael, no boss, no extra humans at their table, no readable text. Use only red robot center from Zara screenshot, ignore UI and woman behind.",
+    "label": "N48",
+    "revision_prompt": "Edit only Orin, the broad older brown-haired man in the first image. His canonical appearance is the SECOND reference: short dark brown hair, square rugged face with short stubble rather than a bushy full beard, and heavy white/navy/gold plate armor. Remove his goggles and leather apron/cloth-only outfit; give him the exact canonical armor, facial proportions and short stubble of reference 2. Preserve his current pose and action, keep his larger build distinct from young Arin. Do not add people, weapons or extra shields to this composition. All other figures, their faces, their poses, the background, lighting and framing stay unchanged. One continuous illustration, no lettering or panels.",
+    "sourceBefore": "C:\\Users\\louie\\.codex\\generated_images\\01a0a581-c8d1-70f0-a1d6-12d11703b872\\exec-7d908903-631c-4367-8134-6ab70dfd5993.png",
+    "revision_references": [
+      "C:\\Users\\louie\\.codex\\generated_images\\01a0a581-c8d1-70f0-a1d6-12d11703b872\\exec-7d908903-631c-4367-8134-6ab70dfd5993.png",
+      "D:\\Sin - AI Prompt - Contents\\2026-09-15 1809 - Sin Star I - Story Board 2\\image-7bb6ccc62a40fdb90428b21cf9af0b85862b8c7f66bd9469df5508b06e747e5a.png"
+    ],
+    "source": "C:\\Users\\louie\\.codex\\generated_images\\01a0a581-c8d1-70f0-a1d6-12d11703b872\\exec-f9e70618-2534-407c-9827-bec547e22d86.png"
+  },
+  {
+    "id": "new-c09-s03-planet",
+    "scene": "c09-s03",
+    "file": "c09-s03-planet.png",
+    "after": "They succeed in delaying it.",
+    "caption": "Their defiance buys seconds. Aevos answers with a world.",
+    "shot": "Final Battle / a world hurled",
+    "art": "Colossal four-armed Aevos hurls a planet at Arin, Mira, Orin, red robot Zara and Milo. The party braces together behind a blue barrier on a shattered cosmic causeway; silver-haired Kael watches from the platform edge.",
+    "dialogue": [
+      [
+        "Orin",
+        "Behind my shield!"
+      ],
+      [
+        "Arin",
+        "Together—hold!"
+      ]
+    ],
+    "label": "N49",
+    "source": "C:\\Users\\louie\\.codex\\generated_images\\01a0a581-c8d1-70f0-a1d6-12d11703b872\\exec-a33d8e25-9035-45db-be3d-e181025e9e76.png"
+  }
+]

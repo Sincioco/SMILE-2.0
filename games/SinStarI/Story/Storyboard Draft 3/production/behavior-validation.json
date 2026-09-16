@@ -1,0 +1,51 @@
+{
+  "playback": {
+    "status": "Passed",
+    "checks": 15,
+    "results": [
+      "No video download before interaction",
+      "Hover plays muted and reveals video only after playback begins",
+      "Moving between pictures releases the previous video",
+      "Late playback resolution cannot revive a departed picture",
+      "Pointer leave cancels automatic playback",
+      "Touch pointer entry does not autoplay",
+      "Reduced motion blocks automatic previews",
+      "Explicit play works with reduced motion and survives pointer leave",
+      "Escape stops a preview",
+      "Hidden tabs stop playback",
+      "Offscreen pictures stop playback",
+      "Video errors retain the image and offer a readable status",
+      "Slow failed loads time out without hiding the illustration",
+      "Keyboard focus starts links but leaves buttons awaiting activation",
+      "Changing reduced motion stops an automatic preview"
+    ]
+  },
+  "theme_navigation": {
+    "status": "Passed",
+    "checks": 17,
+    "results": [
+      "Link preference wins across local HTML views",
+      "Saved preference is restored",
+      "Light system preference is respected",
+      "Dark system preference is respected",
+      "Storage restrictions still allow linked preference",
+      "Invalid query preference falls back to saved preference",
+      "Theme propagates to view links and exact panel return links",
+      "External URLs and image files remain intact",
+      "Theme toggle updates document and saved preference",
+      "Theme toggle refreshes the other view link",
+      "Switching views carries the current scene",
+      "Scrolling updates the active scene without stale highlights",
+      "Scene search filters both shared chapter groups",
+      "Clearing search restores the whole scene list",
+      "Mobile navigation folds into a disclosure",
+      "Shared Print control invokes browser printing",
+      "Open views receive stored theme changes"
+    ]
+  },
+  "site_javascript_sha256": {
+    "animated-pictures.js": "af63dd47a956c18b5ac582219d9ade548f2f206b85b1aeee334808a4efe5c024",
+    "site-shell.js": "3cfb70bf79e13f808252a5dfc51e06cf588153fc63361e08fbde19fbe4aed82b",
+    "site-theme.js": "cf83103d5b01bcfc6c7e362c015b672118885e4e0ba268c5fe3532ad093b6887"
+  }
+}

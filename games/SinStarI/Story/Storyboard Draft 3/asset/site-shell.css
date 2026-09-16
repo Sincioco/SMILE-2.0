@@ -1,0 +1,89 @@
+:root, :root[data-theme="dark"] {
+  color-scheme: dark;
+  --page:#0c1422; --paper:#142033; --text:#eeeae3; --muted:#b3bece;
+  --border:#35455e; --soft:#1b2a40; --accent:#94d9e5; --accent-soft:#20394a;
+  --gold:#e2c587; --note:#2b2a28; --note-border:#80704e; --shadow:none;
+  --bg:var(--page); --ink:var(--text); --line:var(--border);
+}
+:root[data-theme="light"] {
+  color-scheme: light;
+  --page:#eef2f7; --paper:#fff; --text:#1b293b; --muted:#516176;
+  --border:#cbd4df; --soft:#e9eff6; --accent:#16566d; --accent-soft:#dfedf2;
+  --gold:#74521c; --note:#fbf5e9; --note-border:#c9af7b; --shadow:0 10px 35px #182f3a08;
+  --bg:var(--page); --ink:var(--text); --line:var(--border);
+}
+html { scroll-padding-top:100px; }
+body { background:var(--page); color:var(--text); }
+.site-header { position:sticky; top:0; z-index:10; border-bottom:1px solid var(--border); background:var(--paper); }
+.site-header-inner {
+  max-width:1540px; min-height:88px; margin:auto; padding:16px 30px;
+  display:flex; flex-wrap:wrap; align-items:center; gap:20px 32px;
+  font:500 15px/1.4 "Segoe UI",sans-serif;
+}
+.site-brand { text-decoration:none; color:var(--text); font:600 21px/1.3 Georgia,serif; letter-spacing:.09em; white-space:nowrap; }
+.site-brand > span { color:var(--gold); }
+.site-brand small { display:block; margin:4px 0 0 25px; color:var(--muted); font:500 12px/1.4 "Segoe UI",sans-serif; letter-spacing:.035em; }
+.view-tabs { display:flex; padding:4px; gap:4px; border:1px solid var(--border); border-radius:9px; background:var(--page); }
+.view-tabs a { color:var(--muted); padding:8px 18px; border-radius:6px; text-decoration:none; }
+.view-tabs a[aria-current="page"] { background:var(--soft); color:var(--text); font-weight:700; box-shadow:inset 0 -2px var(--gold); }
+.site-tools { display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin-left:auto; }
+.site-tools a { color:var(--accent); padding:7px 5px; }
+.site-tools button { min-height:40px; padding:7px 12px; border:1px solid var(--border); border-radius:6px; background:var(--paper); color:var(--text); font:inherit; cursor:pointer; }
+.site-tools button:hover, .scene-index a:hover { background:var(--accent-soft); }
+.site-header :focus-visible, .site-sidebar :focus-visible { outline:3px solid var(--gold); outline-offset:3px; }
+.site-layout { max-width:1540px; margin:auto; padding:28px 30px 60px; display:grid; grid-template-columns:280px minmax(0,1fr); gap:32px; align-items:start; }
+.site-layout > main { padding:0; margin:0; min-width:0; max-width:none; }
+.site-sidebar { position:sticky; top:112px; min-width:0; color:var(--text); font:400 14px/1.5 "Segoe UI",sans-serif; }
+.scene-index > summary { cursor:pointer; font-size:15px; font-weight:700; padding:0 0 14px; color:var(--gold); }
+.scene-index-body { max-height:calc(100vh - 170px); overflow:auto; scrollbar-width:thin; padding:0 13px 12px 0; }
+.scene-filter-tools label { display:block; font-size:14px; color:var(--muted); margin-bottom:6px; }
+#scene-filter { width:100%; min-height:42px; padding:9px; border:1px solid var(--border); border-radius:6px; background:var(--paper); color:var(--text); font:inherit; }
+#scene-filter-status { color:var(--muted); margin:6px 0; font-size:14px; }
+.scene-nav-group { border-top:1px solid var(--border); padding:12px 0; }
+.scene-nav-group > summary { cursor:pointer; font-weight:650; }
+.scene-index a { color:var(--text); text-decoration:none; }
+.scene-nav-group ul { list-style:none; margin:10px 0 0; padding:0 0 0 16px; }
+.scene-nav-group li { margin:0 0 4px; }
+.scene-nav-group li a { display:block; padding:6px 7px; border-radius:4px; color:var(--muted); }
+.scene-nav-group a[aria-current="location"] { color:var(--text); background:var(--accent-soft); box-shadow:inset 3px 0 var(--gold); }
+.reference-links { display:grid; gap:12px; padding-top:18px; border-top:1px solid var(--border); }
+.reference-links a { color:var(--accent); }
+body[data-view="storyboard"] figure { background:var(--paper); color:var(--text); }
+body[data-view="storyboard"] .scene-label { color:var(--muted); }
+body[data-view="storyboard"] .dialogue strong { color:var(--gold); }
+body[data-view="storyboard"] .scene-label a:hover { color:var(--accent); }
+body[data-view="storyboard"] .table-wrap { border-color:var(--border); }
+body[data-view="storyboard"] th { color:var(--gold); }
+body[data-view="script"] article { background:var(--paper); color:var(--text); }
+body[data-view="script"] .script-art figcaption { padding:14px 18px; background:var(--soft); }
+body[data-view="script"] .script-art figcaption p { margin:0 0 8px; }
+body[data-view="script"] .script-art .scene-label { display:flex; flex-wrap:wrap; justify-content:space-between; gap:8px; font-size:13px; color:var(--muted); }
+body[data-view="script"] .script-art .dialogue { font-size:15px; }
+body[data-view="script"] .script-art .dialogue strong { color:var(--gold); }
+.profile-portrait figcaption { color:var(--muted); }
+.animation-guide { color:var(--muted); margin:20px 0; font-size:15px; }
+.manuscript-intro > p.animation-guide { font-size:14px; padding:0; background:none; }
+[hidden] { display:none !important; }
+@media (max-width:1100px) {
+  .site-header-inner { gap:14px 20px; }
+  .site-layout { grid-template-columns:240px minmax(0,1fr); gap:22px; padding:24px 20px 45px; }
+  .site-tools { gap:6px; }
+  .site-tools a { font-size:14px; }
+}
+@media (max-width:860px) {
+  html { scroll-padding-top:176px; }
+  .site-header-inner { padding:12px 16px; gap:12px; }
+  .site-brand { font-size:19px; margin-right:auto; }
+  .view-tabs a { padding:8px 12px; }
+  .site-tools { width:100%; margin:0; justify-content:flex-end; }
+  .site-tools a { margin-right:auto; }
+  .site-layout { display:block; padding:16px 12px 40px; }
+  .site-sidebar { position:static; padding:14px 16px; margin:0 0 20px; background:var(--paper); border:1px solid var(--border); border-radius:8px; }
+  .scene-index:not([open]) > summary { padding-bottom:0; }
+  .scene-index-body { max-height:52vh; }
+}
+@media print {
+  .site-header,.site-sidebar { display:none !important; }
+  .site-layout { display:block; max-width:none; padding:0; }
+  :root,:root[data-theme="dark"],:root[data-theme="light"] { color-scheme:light; --page:#fff; --paper:#fff; --text:#111; --muted:#444; --border:#ccc; --soft:#f7f7f7; --accent:#254754; --gold:#5c492e; }
+}

@@ -1,0 +1,146 @@
+[
+  {
+    "theme": "dark",
+    "foreground": "text",
+    "background": "page",
+    "ratio": 15.38
+  },
+  {
+    "theme": "dark",
+    "foreground": "text",
+    "background": "paper",
+    "ratio": 13.64
+  },
+  {
+    "theme": "dark",
+    "foreground": "text",
+    "background": "soft",
+    "ratio": 12.06
+  },
+  {
+    "theme": "dark",
+    "foreground": "muted",
+    "background": "page",
+    "ratio": 9.81
+  },
+  {
+    "theme": "dark",
+    "foreground": "muted",
+    "background": "paper",
+    "ratio": 8.7
+  },
+  {
+    "theme": "dark",
+    "foreground": "muted",
+    "background": "soft",
+    "ratio": 7.7
+  },
+  {
+    "theme": "dark",
+    "foreground": "accent",
+    "background": "page",
+    "ratio": 11.69
+  },
+  {
+    "theme": "dark",
+    "foreground": "accent",
+    "background": "paper",
+    "ratio": 10.37
+  },
+  {
+    "theme": "dark",
+    "foreground": "accent",
+    "background": "soft",
+    "ratio": 9.17
+  },
+  {
+    "theme": "dark",
+    "foreground": "gold",
+    "background": "page",
+    "ratio": 11.04
+  },
+  {
+    "theme": "dark",
+    "foreground": "gold",
+    "background": "paper",
+    "ratio": 9.79
+  },
+  {
+    "theme": "dark",
+    "foreground": "gold",
+    "background": "soft",
+    "ratio": 8.66
+  },
+  {
+    "theme": "light",
+    "foreground": "text",
+    "background": "page",
+    "ratio": 13.09
+  },
+  {
+    "theme": "light",
+    "foreground": "text",
+    "background": "paper",
+    "ratio": 14.72
+  },
+  {
+    "theme": "light",
+    "foreground": "text",
+    "background": "soft",
+    "ratio": 12.71
+  },
+  {
+    "theme": "light",
+    "foreground": "muted",
+    "background": "page",
+    "ratio": 5.62
+  },
+  {
+    "theme": "light",
+    "foreground": "muted",
+    "background": "paper",
+    "ratio": 6.32
+  },
+  {
+    "theme": "light",
+    "foreground": "muted",
+    "background": "soft",
+    "ratio": 5.46
+  },
+  {
+    "theme": "light",
+    "foreground": "accent",
+    "background": "page",
+    "ratio": 7.22
+  },
+  {
+    "theme": "light",
+    "foreground": "accent",
+    "background": "paper",
+    "ratio": 8.12
+  },
+  {
+    "theme": "light",
+    "foreground": "accent",
+    "background": "soft",
+    "ratio": 7.02
+  },
+  {
+    "theme": "light",
+    "foreground": "gold",
+    "background": "page",
+    "ratio": 6.3
+  },
+  {
+    "theme": "light",
+    "foreground": "gold",
+    "background": "paper",
+    "ratio": 7.08
+  },
+  {
+    "theme": "light",
+    "foreground": "gold",
+    "background": "soft",
+    "ratio": 6.12
+  }
+]

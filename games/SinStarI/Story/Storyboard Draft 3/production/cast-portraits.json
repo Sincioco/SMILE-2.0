@@ -1,0 +1,86 @@
+[
+  {
+    "id": "cast-arin",
+    "name": "Arin",
+    "image": "asset/images/cast-arin.png",
+    "video": "asset/videos/hover/cast-arin.mp4",
+    "caption": "Arin — Character Portrait",
+    "art": "Arin, young clean-shaven short brown-haired man in battered white/navy/gold surplus armor. One dynamic three-quarter full-body stance at a ruined Neris gateway, cyan sword angled down and small kite shield raised protectively, determined eyes with a hint of vulnerability. Windblown dust and cyan sparks, dawn on pale stone.",
+    "kind": "cast",
+    "status": "needs_render",
+    "source": "C:\\Users\\louie\\.codex\\generated_images\\01a0a581-c8d1-70f0-a1d6-12d11703b872\\exec-c4193acc-aa1a-4bfb-a432-f2c909091e8e.png",
+    "reference": "D:\\Sin - AI Prompt - Contents\\2026-09-15 1809 - Sin Star I - Story Board 3\\image-9cb55147c2ea1b3d490167b70bfa73b2633918683c5e83fc61854f4775e2570b.png"
+  },
+  {
+    "id": "cast-mira",
+    "name": "Mira",
+    "image": "asset/images/cast-mira.png",
+    "video": "asset/videos/hover/cast-mira.mp4",
+    "caption": "Mira — Character Portrait",
+    "art": "Mira, warm tan young woman with brown hair in a practical bun, white/navy/gold healer armor and long blue-and-white coat. One controlled step forward, holding her tall staff with an open golden ring and floating blue crystal, the other palm guiding a beautiful ribbon of water into a protective arc. Luminous submerged temple setting; intelligence, warmth and resolve, no crown.",
+    "kind": "cast",
+    "status": "needs_render",
+    "source": "C:\\Users\\louie\\.codex\\generated_images\\01a0a581-c8d1-70f0-a1d6-12d11703b872\\exec-a07d9ead-3437-4b28-a81e-047fb147add7.png",
+    "reference": "D:\\Sin - AI Prompt - Contents\\2026-09-15 1809 - Sin Star I - Story Board 3\\image-d38b5bae8e3428ebcefab114a54a4d0f1e80506e65e7b320a456bcdadf753487.png"
+  },
+  {
+    "id": "cast-orin",
+    "name": "Orin",
+    "image": "asset/images/cast-orin.png",
+    "video": "asset/videos/hover/cast-orin.mp4",
+    "caption": "Orin — Character Portrait",
+    "art": "Orin, broad older short dark-haired man with light stubble, heavy battered white/navy/gold armor. Planting an enormous rectangular tower shield at a broken bridge, hammer held ready beside him, feet firmly planted. Heroic protector with a tired compassionate face. Lightning flickers in storm clouds behind, not huge lightning replacing his physical strength.",
+    "kind": "cast",
+    "status": "needs_render",
+    "source": "C:\\Users\\louie\\.codex\\generated_images\\01a0a581-c8d1-70f0-a1d6-12d11703b872\\exec-831eb8de-6a25-44d6-bb05-425708d82662.png",
+    "reference": "D:\\Sin - AI Prompt - Contents\\2026-09-15 1809 - Sin Star I - Story Board 3\\image-7bb6ccc62a40fdb90428b21cf9af0b85862b8c7f66bd9469df5508b06e747e5a.png"
+  },
+  {
+    "id": "cast-zara",
+    "name": "Zara",
+    "image": "asset/images/cast-zara.png",
+    "video": "asset/videos/hover/cast-zara.mp4",
+    "caption": "Zara — Character Portrait",
+    "art": "Zara is ONLY the red-and-charcoal fully artificial angular robot in the center of the first reference. Ignore every human woman, UI element and text in that screenshot. Create a single full-body red mechanical person with glowing amber eyes, no hair or skin, precise segmented hands, curved crimson head plating. She is in a purposeful ready stance at an opened prison control panel, one luminous mechanical blade lowered, her free hand disconnecting an ownership restraint. Express personhood and confident curiosity through pose. Warm orange sparks and cool cobalt machinery.",
+    "kind": "cast",
+    "status": "needs_render",
+    "source": "C:\\Users\\louie\\.codex\\generated_images\\01a0a581-c8d1-70f0-a1d6-12d11703b872\\exec-b1abbe8f-bbbf-49a6-bebb-8c6de9169b0d.png",
+    "reference": "D:\\SMILE 2.0\\games\\SinStarI\\SourceAssets\\Characters\\Warrior\\ZaraV1\\Private\\Previews\\zara-neon-white-native.jpg"
+  },
+  {
+    "id": "cast-milo",
+    "name": "Milo",
+    "image": "asset/images/cast-milo.png",
+    "video": "asset/videos/hover/cast-milo.mp4",
+    "caption": "Milo — Character Portrait",
+    "art": "Milo, the golden-and-white four-legged courier dog with white face blaze, warm expressive eyes, white/navy/gold technological harness, utility pouches and four paw boots. One athletic quadrupedal leap over a low broken walkway toward a blue navigation beacon, all four paws and full fluffy tail visible. He is unmistakably a natural canine, no hands, no humanoid torso. Joyful courage and competence in a vast frontier spaceport.",
+    "kind": "cast",
+    "status": "needs_render",
+    "source": "C:\\Users\\louie\\.codex\\generated_images\\01a0a581-c8d1-70f0-a1d6-12d11703b872\\exec-d74fa241-2c60-4ad0-b325-f14bf59db3c2.png",
+    "reference": "D:\\Sin - AI Prompt - Contents\\2026-09-15 1809 - Sin Star I - Story Board 3\\image-8f17a98c2f3a9af43851974f721ea73e49011b8398186b1201e3e926d072a82c.png"
+  },
+  {
+    "id": "cast-kael",
+    "name": "Kael",
+    "image": "asset/images/cast-kael.png",
+    "video": "asset/videos/hover/cast-kael.mp4",
+    "caption": "Kael — Character Portrait",
+    "art": "Kael, youthful pale man with very long flowing silver hair and black/silver fitted armor adorned with violet stars. One solemn three-quarter full-body stance in an open observatory, one hand extended toward a delicate orbit of violet starlight, expression ancient, conflicted and restrained. Reflecting marble, Earthlike horizon, cosmic scale. No villain grin, no helmet, no extra person.",
+    "kind": "cast",
+    "status": "needs_render",
+    "source": "C:\\Users\\louie\\.codex\\generated_images\\01a0a581-c8d1-70f0-a1d6-12d11703b872\\exec-ca357b20-ab98-4148-aa64-4e41c1e0974a.png",
+    "reference": "D:\\Sin - AI Prompt - Contents\\2026-09-15 1809 - Sin Star I - Story Board 3\\image-6dc98a15ad3acd7bda221905a784d951b9903c6f9cc3cca93437a6aec3f73c31.png"
+  },
+  {
+    "id": "cast-aevos",
+    "name": "Aevos",
+    "image": "asset/images/cast-aevos.png",
+    "video": "asset/videos/hover/cast-aevos.mp4",
+    "caption": "Aevos — Character Portrait",
+    "art": "Aevos alone, the immense four-armed black-and-gold cosmic custodian from the first reference, with faceless horned helmet, luminous orbital heart, four carefully distinct arms. Upper hands hold two tiny glowing worlds, lower hands support hourglass vessels. A terrifying serene monumental portrait with rotating cosmic architecture and nebulae, no small heroes, no other characters. Keep intricate silhouette and cosmic scale.",
+    "kind": "cast",
+    "status": "needs_render",
+    "source": "C:\\Users\\louie\\.codex\\generated_images\\01a0a581-c8d1-70f0-a1d6-12d11703b872\\exec-55c7520a-0ab9-4f32-9041-e2b721cd26ee.png",
+    "reference": "D:\\Sin - AI Prompt - Contents\\2026-09-15 1809 - Sin Star I - Story Board 3\\image-500beb7cea149b7830f618d4d6176f146cebd7b05388012af34cf4bf0a1a456a.png"
+  }
+]
