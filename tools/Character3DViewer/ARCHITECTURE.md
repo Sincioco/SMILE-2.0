@@ -95,7 +95,7 @@ is deferred. No new actor pool, calibration bank, game behavior or runtime depen
 was added. The rigid staff uses the same production skin and the existing equipment
 visibility path. The comparison staffs have no equipment glow. Healer policy lives in
 `MiraBattle` (cast timing and action labels); `MiraWater` maps final sockets, recipients
-and clip time into caller-held WaterVfx3D, WaterStorm3D and CharacterGlow3D contexts.
+and clip time into caller-held WaterVfx3D and WaterStorm3D contexts.
 It owns cast audio on channel 6 and contact audio on channel 8. ViewerParty owns Mira's named
 actor/context and formation, loads the new Tripo Mira in both battles, applies policy samples to existing presentation states,
 and routes her through both battle turn orders, targeting, draw/update and cleanup.
@@ -112,8 +112,7 @@ Mira cycles Torrent, Heal One, Heal Party, Waterball, Tsunami and Tempest with O
 Healing classification uses the six-action policy in both live and sought playback.
 Water contact occurs at 72 percent of the attack clip; sampled recoil returns to the
 fresh boss pose each frame. Guard impacts use the boss timeline, including Mira's Hit
-pose. The combo falls back to a wave if Orin is knocked out. Mira's borrowed glow
-overlays must be destroyed before her actor/model; the real-asset fixture switches
+pose. The combo falls back to a wave if Orin is knocked out. The real-asset fixture switches
 Vrax to Dragon and back to Arin after every cast family to protect that lifetime.
 WaterVfx3D builds each barrier from one recipient's final position and the attacker
 direction. ViewerParty maps the struck actor to that recipient's index; dragon
@@ -121,10 +120,11 @@ fire can ripple all the separate shields without creating a formation-sized dome
 WaterVfx3D owns their backward compression/recovery and the matching short-lived
 droplet impulse, which fans radially and curls around the rim. It keeps that
 displacement separate from the actor's grounded pose.
-CharacterGlow3D owns the 128-sprite head shimmer, deriving its local frame from
-StaffGrip/StaffTip and its clock from the caller's sampled time. Hidden equipment
-does not draw shimmer. Its effect material borrows the water droplet texture, so
-glow is destroyed before the water context and before the model.
+Sin removed Mira's added glow on September 16. MiraWater and WaterLabScene no longer
+allocate, update or draw CharacterGlow3D contexts; the generic module remains
+available to other callers. Sin Star I links the same MiraWater owner, so the body
+aura, staff outline and head shimmer are absent there too. The Lab also removes
+its cast-following point light. No model/package material or other actor changes.
 
 Growth review: WaterVfx3D exceeds the 600-line review trigger because it owns the
 shared staging/spray lifecycle and original seven bounded cast presets. The eighth,
@@ -134,6 +134,10 @@ precision vectors and scalar samples without importing
 WaterVfx3D's Frame or Context. This keeps the dependency one-way without a new shared
 state module. WaterVfx3D retains one caller-held context, no game/Viewer dependency,
 and no hidden scene clock. Native water lighting is isolated in water_surface3d.h;
+the compact waterbending contact geometry delegates to stateless WaterImpact3D.
+The native water_ribbon_normals3d.h helper computes area-weighted smooth normals
+at ribbon commit and welds coincident seam vertices; reusable scratch belongs to
+the ribbon batch and is freed with it. No character identity enters the renderer.
 the existing native
 renderer only admits the material, passes constants and binds the borrowed scene.
 No hard size limit or reviewed legacy baseline was raised.

@@ -21,6 +21,11 @@ Chrome. A native pass does not validate the Web material.
 The native reflected-water fix also uses a matching opaque color snapshot and
 mirrored camera instead of the fixed tinted fallback. Adopt that resource/shading
 path and validate HDR/LDR reflection color and cleanup when Web work resumes.
+The later native water follow-up adds denser waterbending geometry, seam-welded
+smooth water normals, a compact crown-shaped impact and B-key Lab background
+cycling. Mira's added body/staff glow and head shimmer are removed from the shared
+presentation owner. Adopt these on the held Web path only when directed; verify
+the new normal interpolation and ribbon layout there before claiming parity.
 
 Sin also placed Studio creation, development, acceptance and next phases on hold.
 The existing Studio project may retain shared source inventory, but it is not a

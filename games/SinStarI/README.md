@@ -7,6 +7,8 @@ rotating reflective arena, calibrated equipment, VFX and sounds. Battle Simulati
 offers the existing Dragon and Vrax party choreography, including Mira's healing,
 water attacks and Orin combo. Legacy preserves the earlier character gallery,
 Town, Town 2, Shop, Dungeon, and Original Battle Preview.
+Mira's shared presentation no longer adds body glow, staff glow or head sparkles;
+her authored model/materials and water attacks remain.
 
 ## Native build and launch
 

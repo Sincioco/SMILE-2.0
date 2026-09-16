@@ -65,10 +65,11 @@ float3 WaterReflection(float3 origin, float3 direction, float3 fallback)
     return fallback;
 }
 
-float4 ShadeWater(float4 pixel, float2 uv, float4 base, float3 world)
+float4 ShadeWater(float4 pixel, float2 uv, float4 base, float3 world, float3 surfaceNormal)
 {
     float3 view = normalize(waterCamera.xyz - world);
-    float3 normal = normalize(cross(ddx(world), ddy(world)) + float3(0,.000001,0));
+    float3 normal = normalize(dot(surfaceNormal,surfaceNormal) > .0001 ? surfaceNormal :
+        cross(ddx(world), ddy(world)) + float3(0,.000001,0));
     normal *= dot(normal, view) < 0 ? -1 : 1;
     float seconds = waterCamera.w;
     float height = WaterHeight(world, seconds);

@@ -1,4 +1,4 @@
-''' Maps clip time and final actor positions into reusable water presentation.
+''' Maps clip time and final actor positions into water; Mira has no added glow layers.
 Module Smile.Tools.MiraWater
 
 Option Explicit
@@ -8,7 +8,6 @@ Import Smile.Simple3D.Precision3D As P
 Import Smile.Simple3D.PrecisionMath3D As M
 Import Smile.Simple3D.WaterVfx3D As Water
 Import Smile.Simple3D.WaterStorm3D As Storm
-Import Smile.Simple3D.CharacterGlow3D As Glow
 Import Smile.Tools.BattleAudio As Audio
 
 Public Type Targets
@@ -22,7 +21,6 @@ Public Type Context
     Visible As Boolean
     Effect As Water.Context
     Storm As Storm.Context
-    Glow As Glow.Context
     Conductor As P.Vector3
     Cue As Audio.CueState
     ImpactCue As Audio.CueState
@@ -52,7 +50,6 @@ Public Sub Destroy(ByRef Value As Context)
 
     Dim Empty As Context
 
-    Call Glow.Destroy(Value.Glow)
     Call Water.Destroy(Value.Effect)
     Call Storm.Destroy(Value.Storm)
 
@@ -161,7 +158,6 @@ Public Function Update(ByRef Value As Context, Actor As Character.Actor,
     Dim Guarding As Boolean
     Dim Ok As Boolean
     Dim Sample As Water.Frame
-    Dim Charge As Double
     Dim CueTime As Number
     Dim ImpactClock As Number
 
@@ -299,14 +295,6 @@ Public Function Update(ByRef Value As Context, Actor As Character.Actor,
     End If
 
     Ok = Water.Update(Value.Effect, Sample) And Ok
-    Charge = 0.0
-
-    If Sample.Mode <> 0 Then
-        Charge = Sample.Strength
-    End If
-
-    Ok = Glow.Update(Value.Glow, Actor, Charge, StaffVisible, Enabled,
-        Sample.Time, Value.Effect.DropTexture) And Ok
     Ok = Storm.Update(Value.Storm, Sample, Value.Conductor) And Ok
     Value.Visible = Value.Effect.Visible
 
@@ -317,7 +305,6 @@ End Function
 Public Sub Draw(ByRef Value As Context)
 
     Call Water.Draw(Value.Effect)
-    Call Glow.Draw(Value.Glow)
 
 End Sub
 

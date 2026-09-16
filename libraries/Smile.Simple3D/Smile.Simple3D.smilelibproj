@@ -27,6 +27,7 @@
     <SmileSource Include="LightningVfx3D.smile" />
     <SmileSource Include="WaterVfx3D.smile" />
     <SmileSource Include="WaterFlow3D.smile" />
+    <SmileSource Include="WaterImpact3D.smile" />
     <SmileSource Include="WaterStorm3D.smile" />
     <SmileSource Include="CharacterGlow3D.smile" />
     <SmileSource Include="LightPool3D.smile" />

@@ -1,0 +1,128 @@
+''' Stateless compact contact sheets and spray; the water context owns their lifetime.
+Module Smile.Simple3D.WaterImpact3D
+
+Option Explicit
+
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.PrecisionMath3D As M
+
+''' Face the incoming stream, including vertical contact without a degenerate basis.
+Private Sub ContactFrame(
+    Origin As P.Vector3,
+    Target As P.Vector3,
+    ByRef Normal As P.Vector3,
+    ByRef Tangent As P.Vector3,
+    ByRef SurfaceUp As P.Vector3
+
+)
+
+    Dim Ok As Boolean
+
+    Ok = M.TryNormalize(M.Subtract(Origin, Target), Normal)
+
+    If Not Ok Then
+        Normal = P.Vector(-1.0, 0.0, 0.0)
+    End If
+
+    Ok = M.TryNormalize(M.Cross(Normal, P.Vector(0.0, 1.0, 0.0)), Tangent)
+
+    If Not Ok Then
+        Tangent = P.Vector(1.0, 0.0, 0.0)
+    End If
+
+    SurfaceUp = M.Cross(Tangent, Normal)
+
+End Sub
+
+''' Sixteen irregular sectors open into a shallow crown, then thin to a curled broken rim.
+Public Function SheetPoint(
+    Origin As P.Vector3,
+    Target As P.Vector3,
+    Progress As Double,
+    Strip As Number,
+    Along As Double,
+    Side As Double
+) As P.Vector3
+
+    Dim Normal As P.Vector3
+    Dim Tangent As P.Vector3
+    Dim SurfaceUp As P.Vector3
+    Dim Result As P.Vector3
+    Dim Phase As Double
+    Dim Spread As Double
+    Dim Angle As Double
+    Dim Radius As Double
+    Dim Inner As Double
+    Dim Curl As Double
+    Dim Depth As Double
+    Dim Width As Double
+
+    Call ContactFrame(Origin, Target, Normal, Tangent, SurfaceUp)
+
+    Phase = Clamp(Progress, 0.0, 1.0)
+    Along = Clamp(Along, 0.0, 1.0)
+    Spread = 1.0 - (1.0 - Phase) * (1.0 - Phase) * (1.0 - Phase)
+    Angle = ToDouble(Strip) * M.PI / 8.0
+    Width = (0.19 - Phase * 0.065) * (1.0 + 0.14 * Sin(Angle * 5.0))
+    Angle = Angle + Side * Width + 0.045 * Sin(Along * 9.0 + Angle * 3.0 - Phase * 7.0)
+    Radius = (8.0 + 32.0 * Spread) * (1.0 + 0.12 * Sin(Angle * 5.0 + 0.6) +
+        0.07 * Sin(Angle * 9.0 - Phase * 3.0))
+    Inner = Radius * (0.05 + 0.70 * Phase)
+    Radius = Inner + (Radius - Inner) * Along
+    Curl = Clamp((Along - 0.70) / 0.30, 0.0, 1.0) * M.PI * 1.2
+    Radius = Radius + Sin(Curl) * (2.0 + Spread * 4.0)
+    Depth = 2.0 + Spread * (4.0 + 9.0 * Along * Along)
+    Depth = Depth + (1.0 - Cos(Curl)) * Spread * 6.0
+    Depth = Depth + Sin(Along * 14.0 + Angle * 6.0 - Phase * 12.0) * Along * Spread * 2.5
+    Result = M.Add(Target, M.Add(M.Scale(Normal, Depth),
+        M.Add(M.Scale(Tangent, Cos(Angle) * Radius), M.Scale(SurfaceUp, Sin(Angle) * Radius))))
+    Result.Y = Max(1.5, Result.Y + Spread * 4.0 - Phase * Phase * 18.0)
+
+    Return Result
+
+End Function
+
+''' Open uneven holes during breakup instead of leaving a solid expanding target ring.
+Public Function SheetOpacity(Progress As Double, Strip As Number, Along As Double) As Double
+
+    Dim Fray As Double
+    Dim Result As Double
+
+    Fray = ((0.5 + 0.5 * Sin(Along * 31.0 + ToDouble(Strip) * 2.4)) *
+        (0.5 + 0.5 * Cos(Along * 17.0 - ToDouble(Strip) * 1.7)))
+    Result = Clamp((1.0 - Progress - Fray * Progress * 1.8) * 2.5, 0.0, 1.0)
+    Result = Result * Clamp(Along * 12.0, 0.0, 1.0) * Clamp((1.0 - Along) * 16.0, 0.0, 1.0)
+
+    Return Result
+
+End Function
+
+''' A brief radial impulse follows the same contact-facing crown; gravity supplies the tail.
+Public Sub Spray(
+    Origin As P.Vector3,
+    Target As P.Vector3,
+    Serial As Number,
+    ByRef Position As P.Vector3,
+    ByRef Velocity As P.Vector3
+)
+
+    Dim Normal As P.Vector3
+    Dim Tangent As P.Vector3
+    Dim SurfaceUp As P.Vector3
+    Dim Radial As P.Vector3
+    Dim Angle As Double
+    Dim Fraction As Double
+
+    Call ContactFrame(Origin, Target, Normal, Tangent, SurfaceUp)
+
+    Angle = ToDouble((Serial * 137) Mod 360) * M.PI / 180.0
+    Fraction = ToDouble((Serial * 37) Mod 1000) / 1000.0
+    Radial = M.Add(M.Scale(Tangent, Cos(Angle)), M.Scale(SurfaceUp, Sin(Angle)))
+    Position = M.Add(Target, M.Add(M.Scale(Normal, 4.0), M.Scale(Radial, 4.0 + Fraction * 5.0)))
+    Velocity = M.Add(M.Scale(Normal, 18.0 + Fraction * 22.0),
+        M.Scale(Radial, 45.0 + Fraction * 40.0))
+    Velocity.Y = Velocity.Y + 18.0
+
+End Sub
+
+End Module

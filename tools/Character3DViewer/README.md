@@ -40,9 +40,10 @@ Mira1/Mira2/Mira3 remain solo comparisons. Mira2/Mira3 each have a closed 19,652
 baked textures and measured floor corrections. This is an appearance and animation
 comparison. New Mira is the current
 healer in both Party battles, cycling Torrent, Heal One (Arin), Heal Party, Waterball,
-Tsunami and the Mira/Orin Tempest combo with blue water VFX and sound. The staff glows
-while equipped, small shimmering particles circle only its head/crystal, and a body
-aura rises during a cast. Boss attacks meet small, subtle
+Tsunami and the Mira/Orin Tempest combo with clear water VFX and sound. At Sin's
+September 16 direction, Mira has no added body aura, staff outline or head sparkles
+in the Viewer, Water Lab or Sin Star I. Her original model/materials remain.
+Boss attacks meet small, subtle
 water shields in front of individual party members. At impact the struck shield
 gives slightly, then recovers; impact droplets spread across it and disperse around
 its rim. No shield encloses the whole

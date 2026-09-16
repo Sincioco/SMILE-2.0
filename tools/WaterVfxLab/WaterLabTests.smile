@@ -4,6 +4,7 @@ Import Smile.Tools.WaterLabScene As Scene
 Import Smile.Tools.WaterLabUi As UI
 Import Smile.Simple3D.WaterVfx3D As Water
 Import Smile.Simple3D.WaterFlow3D As Flow
+Import Smile.Simple3D.WaterImpact3D As Splash
 Import Smile.Simple3D.Graphics3D As G
 Import Smile.Simple3D.Character3D As Character
 Import Smile.Simple3D.Precision3D As P
@@ -15,7 +16,6 @@ Dim Mode As Number
 Dim Failures As Number
 Dim Position As P.Vector3
 Dim Facing As P.Vector3
-Dim Tip As P.Vector3
 Dim Ok As Boolean
 Dim LightningAge As Number
 Dim Edge As P.Vector3
@@ -130,11 +130,9 @@ Do
             G.ReflectionValue3D(G.REFLECTION_QUERY_WIDTH) *
             G.ReflectionValue3D(G.REFLECTION_QUERY_HEIGHT) * ReflectionBytesPerPixel)
 
-        Ok = Character.TrySocketPositionPrecise(Lab.Mira, "StaffTip", 0, False, Tip)
-        Ok = P.TryParticlePosition(Lab.Glow.HeadShimmer, 0, True, Position) And Ok
-        Position = M.Subtract(Position, Tip)
+        ''' Only the shared lightning batch remains; Mira has no staff shimmer batch.
 
-        Call Check(Ok And Lab.Glow.ShimmerVisible And M.Dot(Position, Position) < 625.0)
+        Call Check(G.LiveParticleBatchCount3D() = 1)
 
         Show Screen
 
@@ -175,6 +173,8 @@ Do
 Loop Until True
 
 Call CheckWaterbendingTargets(Lab)
+Call CheckWaterbendingImpact(Lab)
+Call CheckBackgrounds(Lab)
 
 Ok = G.ConfigurePostProcessing3D(False, False, False, 100, 1200, 45, 2, 2, 4)
 
@@ -259,6 +259,80 @@ Sub CheckWaterbendingTargets(ByRef Value As Scene.State)
             End If
 
         End For
+    End For
+
+End Sub
+
+Sub CheckWaterbendingImpact(ByRef Value As Scene.State)
+
+    Dim Strip As Number
+    Dim Point As P.Vector3
+    Dim Delta As P.Vector3
+    Dim PreviousSerial As Number
+
+    Value.Mode = Water.WATER_BEND
+    Value.SpeedPercent = 100
+    Value.Paused = True
+
+    Call Scene.Restart(Value)
+
+    Value.Time = 3500
+
+    Call Scene.Update(Value, 0)
+    Call Check(Value.Water.Sheets.PointCount = 32 * 99)
+
+    Value.Time = 3600
+
+    Call Scene.Update(Value, 0)
+    Call Check(Value.Water.PreviousWaterbendImpact And Value.Water.ImpactSprayCount = 96)
+
+    PreviousSerial = Value.Water.Serial
+
+    Call Scene.Update(Value, 0)
+    Call Check(Value.Water.Serial = PreviousSerial)
+
+    Value.Paused = False
+
+    Call Scene.Update(Value, 300)
+    Call Check(Value.Water.ImpactSprayCount = 128)
+
+    PreviousSerial = Value.Water.Serial
+
+    Call Scene.Update(Value, 500)
+    Call Check(Value.Water.Serial = PreviousSerial)
+
+    Value.Paused = True
+
+    For Strip = 0 To 15
+        Point = Splash.SheetPoint(Value.Frame.Origin, Value.Frame.Target, 0.35, Strip, 1.0, 1.0)
+        Delta = M.Subtract(Point, Value.Frame.Target)
+
+        Call Check(M.Dot(Delta, Delta) > 400.0 And M.Dot(Delta, Delta) < 3600.0)
+        Call Check(Splash.SheetOpacity(1.0, Strip, 0.5) = 0.0)
+    End For
+
+End Sub
+
+Sub CheckBackgrounds(ByRef Value As Scene.State)
+
+    Dim Index As Number
+    Dim TextureCount As Number
+    Dim SavedTime As Number
+
+    TextureCount = G.LiveTextureCount3D()
+    SavedTime = Value.Time
+
+    Call Check(Value.BackgroundIndex = 3 And Value.TitleBackground.Ready)
+
+    For Index = 1 To 5
+
+        Call UI.Update(Value, KEY_B)
+        Call Scene.Draw(Value)
+        Call Check(Value.BackgroundIndex = (3 + Index) Mod 5)
+        Call Check(Value.Time = SavedTime And Value.Paused And G.LastError() = 0)
+        Call Check(G.LiveTextureCount3D() = TextureCount)
+
+        Show Screen
     End For
 
 End Sub

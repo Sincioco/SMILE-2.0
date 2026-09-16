@@ -12,6 +12,9 @@ and light falling spray. Each cast chooses one of the four enemy pillars at rand
 and keeps that target through pause and playback. After the rise and curl, the head
 extends to that pillar at 72% of the cast, with a splash and brief recoil. Continuous
 waterbending droplet emission is 75% lower; the main surface and rounded skin remain.
+Its contact now opens a compact, curled crown of clear water sheets, breaks into
+an irregular rim, and fades. It emits one bounded 128-droplet impulse rather than
+a sustained impact shower. Other attack modes keep their original impact presets.
 Torrent winds a connected water whip around the staff, releases
 it toward the target, then splashes and recoils the target at 72% of the cast.
 The waterball forms at Mira's staff, stretches along its travel,
@@ -34,6 +37,9 @@ The screen-fixed background matches the Character Viewer's default landscape,
 using `games/SinStarI/Assets/Sin Star - Title Screen - Background.png` through
 the shared `StaticBackdrop3D` owner. Build stages an ignored `SinStarLandscape.png`
 copy; the original artwork is unchanged. Water refraction samples the background.
+Press **B** or the background button to cycle Scene → Logo → Black → Green → Purple
+→ Scene, matching the Character Viewer. Both images preload at startup; switching
+does not reload textures, reset the cast, move the camera or unpause playback.
 The arena uses the shared planar reflection pass, including Mira, targets, water
 and the background, with the existing 85% strength and 5% softness arena defaults.
 The camera begins a slow two-minute orbit. Use Orbit or O to toggle it, middle drag
@@ -44,7 +50,7 @@ lightning stop advancing while paused; effects rebuild from the selected cast ti
 
 Animation speed defaults to **200%**. Press `+` (or `=`), `-`, numpad plus/minus,
 or the visible speed buttons to change it in 25-point steps between 25% and 400%.
-One scaled presentation clock drives Mira's pose, water motion, staff shimmer,
+One scaled presentation clock drives Mira's pose, water motion,
 lightning and cue timing. Camera interaction/orbit keeps real-time responsiveness;
 audio clips retain their original pitch. Pause and effect changes preserve the speed.
 Scaled time is consumed in steps of at most 100 milliseconds, respecting the shared
@@ -55,20 +61,23 @@ droplets and lightning together instead of clipping only the effect clocks.
 
 `Program` only wires the loop. `WaterLabScene` owns preview actors, renderer setup,
 lighting, clock and audio; `WaterLabUi` owns controls. The same `WaterVfx3D`,
-`WaterStorm3D` and `CharacterGlow3D` modules are used by the Character Viewer.
+`WaterStorm3D` modules are used by the Character Viewer.
 `WaterVfx3D` owns two bounded ribbon batches (visible surface and refraction) and
 one 4,096-slot GPU spray system. `WaterFlow3D` owns only the stateless waterbending
 centerline, combat-whip path and closed skin samples, receiving origin, target, progress and time;
 it depends on precision math, not on the water context, Lab or character code.
-Sixteen strips provide the animated shape and internal flow without a fluid solver.
+Waterbending uses 32 strips with 97 samples each, up from 16 with 65: 6,144
+surface triangles instead of 2,048. Its shape, motion and material are retained.
+Other modes retain their original sampling. `WaterImpact3D` owns stateless contact
+sheet geometry, breakup opacity and the compact radial spray impulse; it has no
+Lab, character, clock or resource dependency. WaterVfx3D retains the cast identity
+internally when transitioning to impact and owns the bounded emission count.
 The native GPU handles spray motion, gravity,
 turbulence and drawing. Lightning borrows the scene's existing global initialization
 and clock; the water adapter owns only its three strike handles. No resource ceilings
-were raised. Glow overlays borrow Mira's model and animator and die before the actor.
-The staff-head shimmer uses 128 instanced sprites and the shared droplet texture.
-Its positions are rebuilt in the StaffGrip/StaffTip frame so it stays around the
-head during every pose and back carry; it does not leave particles down the shaft.
-The glow context releases that borrowed texture's material before water cleanup.
+were raised. Mira no longer has a body aura, staff glow overlay, head shimmer or
+Lab cast-following point light. Her authored model/materials remain intact. The
+same glow removal in `MiraWater` covers the Viewer and Sin Star I shared sessions.
 
 The native lit-water material adds Fresnel reflection, directional specular lighting,
 animated surface normals and depth-dependent absorption/refraction. Multiscale
@@ -133,6 +142,29 @@ through `WaterFlow3D.AttackCenter`; it uses the existing 72% contact boundary an
 caller-provided target. No Unity package or C# effect implementation is imported.
 
 ## Native validation (September 16, 2026)
+
+Impact geometry reference: Ugur VFX Studios,
+[UE | Mixed Magic "5" - Water Impact](https://www.youtube.com/watch?v=ZyA4GJgItOk),
+particularly the opening burst and breakup around 0:01–0:02. Only its sheet spread,
+curled crown and thinning edge are adapted. Sin requested a much smaller splash
+around a single pillar using the already accepted clear-water shading. No video
+assets, Unreal package or external dependency is imported.
+
+The grid-pattern follow-up adds native smooth water normals across triangle and
+ribbon seams, with batch-owned reusable scratch and unchanged resource ceilings.
+`WaterSurfaceTests.cpp` checks welded seam normals and degenerate connectors.
+The native fixture also checks the denser committed surface, single impact burst,
+pause stability, compact sheet extent, fade, five-background wraparound and no
+Mira shimmer allocation. Native VFX batches, reflections, 58 Viewer checks and all
+ten Sin Star I presentations pass. All three native applications and the VSIX
+were rebuilt; the installed VSIX matches its 35 checked payload hashes.
+
+Follow-up growth review: WaterVfx3D 733→792, WaterLabScene 344→369,
+WaterLabUi 149→170, WaterLabTests 273→347; MiraWater shrinks 324→311.
+The new stateless WaterImpact3D is 128 lines. Native normal generation is a
+74-line helper; the existing renderer coordinator grows 10,635→10,656 for
+vertex layout, scratch lifetime and delegation. No dependency cycle, public
+language syntax, size-limit exception or renderer-cap increase is introduced.
 
 The normal Debug/Release build, 13 formatter regression checks, repository style
 check, native GPU particle checks and Character Viewer native hardening checks

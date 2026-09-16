@@ -14,6 +14,7 @@
 #include "image_resource.h"
 #include "thermal_fire3d.h"
 #include "water_surface3d.h"
+#include "water_ribbon_normals3d.h"
 
 // One logical subviewport; reset is the existing full-window behavior.
 static double smile_viewport_region3d[4];
@@ -476,10 +477,12 @@ struct SmileRibbonVertex3D
     float position[3];
     float uv[2];
     float color[4];
+    float normal[3];
 };
 
 struct SmileRibbonBatch3D
 {
+    SmileWaterNormalKey3D* water_normal_keys;
     unsigned short generation;
     unsigned char active;
     unsigned int capacity;
@@ -1637,6 +1640,9 @@ static void smile_3d_delete_particle_batch(SmileParticleBatch3D* batch)
 
 static void smile_3d_delete_ribbon_batch(SmileRibbonBatch3D* batch)
 {
+    void* water_normal_keys = batch->water_normal_keys;
+    smile_3d_free(water_normal_keys);
+    batch->water_normal_keys = 0;
     void* points = batch->points;
     void* staging_vertices = batch->staging_vertices;
     void* vertices = batch->vertices;
@@ -2366,7 +2372,18 @@ static int smile_3d_commit_ribbon_batch(SmileRibbonBatch3D* batch, unsigned int 
             vertex->uv[0] = batch->points[point].u;
             vertex->uv[1] = side == 0 ? 0.0f : 1.0f;
             memcpy(vertex->color, batch->points[point].color, sizeof(vertex->color));
+            memset(vertex->normal, 0, sizeof(vertex->normal));
         }
+    }
+    SmileMaterial3D* material = smile_3d_material(batch->material_handle);
+    if (material != 0 && material->vfx_shading_mode == SMILE_3D_VFX_SHADING_WATER && count > 0)
+    {
+        if (batch->water_normal_keys == 0)
+            batch->water_normal_keys = (SmileWaterNormalKey3D*)smile_3d_allocate(
+                sizeof(SmileWaterNormalKey3D) * batch->capacity * 2);
+        if (batch->water_normal_keys == 0)
+        { smile_last_error3d = 55; smile_vfx_rejected_operation_count3d++; return 0; }
+        smile_water_ribbon_normals(batch->staging_vertices, count * 2, batch->water_normal_keys);
     }
     revision = batch->revision + 1;
     if (revision == 0) revision = 1;
@@ -5141,19 +5158,19 @@ static int smile_3d_create_pipeline(void)
     static const char* particle_vertex_source =
         "cbuffer V:register(b0){row_major float4x4 vp;float4 cameraRight;float4 cameraUp;float4 atlasOutput;float4 material;}"
         "struct I{float2 corner:POSITION;float2 uv:TEXCOORD0;float4 positionSize:TEXCOORD1;float4 color:COLOR0;float4 rotationUv:TEXCOORD2;};"
-        "struct O{float4 p:SV_POSITION;float2 uv:TEXCOORD0;float4 color:COLOR0;float worldY:TEXCOORD1;float3 world:TEXCOORD2;};"
-        "O main(I i){O o;float c=cos(i.rotationUv.x),s=sin(i.rotationUv.x);float2 q=float2(i.corner.x*c-i.corner.y*s,i.corner.x*s+i.corner.y*c)*i.positionSize.w;float3 world=i.positionSize.xyz+cameraRight.xyz*q.x+cameraUp.xyz*q.y;o.p=mul(float4(world,1),vp);o.worldY=world.y;o.world=world;o.uv=i.rotationUv.yz+i.uv*atlasOutput.xy;o.color=i.color;return o;}";
+        "struct O{float4 p:SV_POSITION;float2 uv:TEXCOORD0;float4 color:COLOR0;float worldY:TEXCOORD1;float3 world:TEXCOORD2;float3 normal:TEXCOORD3;};"
+        "O main(I i){O o;float c=cos(i.rotationUv.x),s=sin(i.rotationUv.x);float2 q=float2(i.corner.x*c-i.corner.y*s,i.corner.x*s+i.corner.y*c)*i.positionSize.w;float3 world=i.positionSize.xyz+cameraRight.xyz*q.x+cameraUp.xyz*q.y;o.p=mul(float4(world,1),vp);o.worldY=world.y;o.world=world;o.normal=0;o.uv=i.rotationUv.yz+i.uv*atlasOutput.xy;o.color=i.color;return o;}";
     static const char* ribbon_vertex_source =
         "cbuffer V:register(b0){row_major float4x4 vp;float4 cameraRight;float4 cameraUp;float4 atlasOutput;float4 material;}"
-        "struct I{float3 p:POSITION;float2 uv:TEXCOORD0;float4 color:COLOR0;};struct O{float4 p:SV_POSITION;float2 uv:TEXCOORD0;float4 color:COLOR0;float worldY:TEXCOORD1;float3 world:TEXCOORD2;};"
-        "O main(I i){O o;o.p=mul(float4(i.p,1),vp);o.worldY=i.p.y;o.world=i.p;o.uv=i.uv;o.color=i.color;return o;}";
+        "struct I{float3 p:POSITION;float2 uv:TEXCOORD0;float4 color:COLOR0;float3 n:NORMAL;};struct O{float4 p:SV_POSITION;float2 uv:TEXCOORD0;float4 color:COLOR0;float worldY:TEXCOORD1;float3 world:TEXCOORD2;float3 normal:TEXCOORD3;};"
+        "O main(I i){O o;o.p=mul(float4(i.p,1),vp);o.worldY=i.p.y;o.world=i.p;o.normal=i.n;o.uv=i.uv;o.color=i.color;return o;}";
     static const char vfx_pixel_prefix[] =
         "cbuffer V:register(b0){row_major float4x4 vp;float4 cameraRight;float4 cameraUp;float4 atlasOutput;float4 material;float4 softDepth;float4 target;float4 distortion;float4 fireRender;float4 reflectionClip;float4 waterCamera;float4 waterLightDirection;float4 waterLightColor;float4 waterParameters;float4 waterViewport;}"
         "Texture2D effectTexture:register(t0);SamplerState effectSampler:register(s0);Texture2D sceneDepthTexture:register(t6);SamplerState sceneDepthSampler:register(s6);"
         "float3 ToLinear(float3 c){return lerp(c/12.92,pow((c+.055)/1.055,2.4),step(.04045,c));}"
         "float Linear(float z){return softDepth.z*softDepth.w/max(softDepth.w-z*(softDepth.w-softDepth.z),.000001);}";
     static const char vfx_pixel_main[] =
-        "float4 main(float4 p:SV_POSITION,float2 uv:TEXCOORD0,float4 color:COLOR0,float worldY:TEXCOORD1,float3 world:TEXCOORD2):SV_TARGET{if(reflectionClip.x>.5&&worldY<reflectionClip.y+.01)discard;float4 sampled=atlasOutput.w>.5?effectTexture.Sample(effectSampler,uv):float4(1,1,1,1);if(sampled.a>.0001)sampled.rgb/=sampled.a;float4 base=color*material*sampled;if(softDepth.x>.5){float2 screenUv=p.xy/target.xy;float scene=sceneDepthTexture.SampleLevel(sceneDepthSampler,screenUv,0).r;float distance=max(scene-Linear(p.z),0);base.a*=saturate(distance/max(softDepth.y,.0001));}if(distortion.x>.5){float wave=.65+.35*sin((uv.x+uv.y)*max(distortion.z,.01)*6.283185+distortion.w);float2 flow=float2(target.z,target.w);float flowLength=max(length(flow),.0001);return float4(flow/flowLength*distortion.y*base.a*wave,0,base.a);}if(waterParameters.x>.5)return ShadeWater(p,uv,base,world);float3 rgb=atlasOutput.z>.5?ToLinear(saturate(base.rgb))*max(cameraRight.w,1):saturate(base.rgb*max(cameraRight.w,1));return float4(rgb,base.a);}";
+        "float4 main(float4 p:SV_POSITION,float2 uv:TEXCOORD0,float4 color:COLOR0,float worldY:TEXCOORD1,float3 world:TEXCOORD2,float3 normal:TEXCOORD3):SV_TARGET{if(reflectionClip.x>.5&&worldY<reflectionClip.y+.01)discard;float4 sampled=atlasOutput.w>.5?effectTexture.Sample(effectSampler,uv):float4(1,1,1,1);if(sampled.a>.0001)sampled.rgb/=sampled.a;float4 base=color*material*sampled;if(softDepth.x>.5){float2 screenUv=p.xy/target.xy;float scene=sceneDepthTexture.SampleLevel(sceneDepthSampler,screenUv,0).r;float distance=max(scene-Linear(p.z),0);base.a*=saturate(distance/max(softDepth.y,.0001));}if(distortion.x>.5){float wave=.65+.35*sin((uv.x+uv.y)*max(distortion.z,.01)*6.283185+distortion.w);float2 flow=float2(target.z,target.w);float flowLength=max(length(flow),.0001);return float4(flow/flowLength*distortion.y*base.a*wave,0,base.a);}if(waterParameters.x>.5)return ShadeWater(p,uv,base,world,normal);float3 rgb=atlasOutput.z>.5?ToLinear(saturate(base.rgb))*max(cameraRight.w,1):saturate(base.rgb*max(cameraRight.w,1));return float4(rgb,base.a);}";
     ID3D11Device* device = (ID3D11Device*)smile_graphics_directx_device();
     ID3DBlob* vs = 0;
     ID3DBlob* ps = 0;
@@ -5172,7 +5189,7 @@ static int smile_3d_create_pipeline(void)
     D3D11_INPUT_ELEMENT_DESC elements[5] = {};
     D3D11_INPUT_ELEMENT_DESC pbr_elements[6] = {};
     D3D11_INPUT_ELEMENT_DESC particle_elements[5] = {};
-    D3D11_INPUT_ELEMENT_DESC ribbon_elements[3] = {};
+    D3D11_INPUT_ELEMENT_DESC ribbon_elements[4] = {};
     D3D11_BUFFER_DESC buffer = {};
     D3D11_DEPTH_STENCIL_DESC depth = {};
     D3D11_DEPTH_STENCIL_DESC depth_read = {};
@@ -5302,8 +5319,12 @@ static int smile_3d_create_pipeline(void)
         ribbon_elements[2].Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
         ribbon_elements[2].AlignedByteOffset = 20;
         ribbon_elements[2].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
+        ribbon_elements[3].SemanticName = "NORMAL";
+        ribbon_elements[3].Format = DXGI_FORMAT_R32G32B32_FLOAT;
+        ribbon_elements[3].AlignedByteOffset = 36;
+        ribbon_elements[3].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
         if (SUCCEEDED(result)) result = device->CreateInputLayout(
-            ribbon_elements, 3, ribbon_vs->GetBufferPointer(), ribbon_vs->GetBufferSize(),
+            ribbon_elements, 4, ribbon_vs->GetBufferPointer(), ribbon_vs->GetBufferSize(),
             &smile_ribbon_input_layout3d);
         buffer.ByteWidth = sizeof(SmileVfxConstants3D);
         buffer.Usage = D3D11_USAGE_DEFAULT;

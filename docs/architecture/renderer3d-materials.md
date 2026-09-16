@@ -18,6 +18,14 @@ multiscale world-space surface derivatives for moving folds, lighter bounded
 absorption, a broader reflected rim for gameplay visibility, and a brighter analytic
 sky fallback. Screen depth remains a capped
 thickness approximation; it is not a measurement of a closed fluid volume.
+Lit-water ribbon commits now build area-weighted vertex normals and weld coincident
+seams at 1/4096 world-unit precision through `water_ribbon_normals3d.h`. This fixes
+the visible rectangular shading patches without changing the clear-water palette.
+Scratch keys are allocated lazily within each batch's existing capacity and reused;
+batch destruction/reset frees them. Failed allocation leaves the previous committed
+geometry intact. Non-water ribbons skip this work; water particles retain the
+derivative-normal fallback. The shared ribbon vertex carries the interpolated normal
+to both main and reflected views. No new SMILE operation or public format is needed.
 The draw owner provides the active view's camera/light constants
 and temporarily borrows that view's resolved opaque scene. Offscreen reflections
 use an analytic sky/horizon fallback; missing scene capture falls back to tinted

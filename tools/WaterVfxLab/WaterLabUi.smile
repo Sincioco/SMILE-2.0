@@ -65,6 +65,10 @@ Public Sub Update(ByRef Value As Scene.State, Key As Number)
         Value.Orbit = Not Value.Orbit
     End If
 
+    If Key = KEY_B Or UI.Clicked(702, 112, 160, 28) Then
+        Call Scene.CycleBackground(Value)
+    End If
+
     If UI.Clicked(354, 112, 100, 28) Then
         Value.AudioEnabled = Not Value.AudioEnabled
     End If
@@ -127,6 +131,7 @@ Public Sub Draw(ByRef Value As Scene.State)
     Call UI.DrawButton(354, 112, 100, 28, "Sound", Value.AudioEnabled)
     Call UI.DrawButton(476, 112, 38, 28, "-", False)
     Call UI.DrawButton(638, 112, 38, 28, "+", False)
+    Call UI.DrawButton(702, 112, 160, 28, BackgroundCaption(Value.BackgroundIndex), False)
 
     Draw Text "Speed" At 529, 118 Size 13 Color Light_Gray
     Draw Number Value.SpeedPercent At 580, 118 Size 13 Color Cyan
@@ -137,13 +142,29 @@ Public Sub Draw(ByRef Value As Scene.State)
     Draw Number Value.Water.Spray.ActiveCount At 130, Bottom + 8 Size 12 Color Cyan
     Draw Text "D3D11 Backend" At 225, Bottom + 8 Size 12 Color Light_Gray
     Draw Number Value.Water.Spray.EffectiveSimulation At 370, Bottom + 8 Size 12 Color Cyan
-    Draw Text "LMB Pan / MMB Orbit / Wheel Zoom / RMB Reset / Space Pause / Tab Effect / +/- Speed" At 20, Bottom + 31 Size 11 Color Light_Gray
+    Draw Text "LMB Pan / MMB Orbit / Wheel Zoom / RMB Reset / Space Pause / Tab Effect / +/- Speed / B Background" At 20, Bottom + 31 Size 11 Color Light_Gray
 
     If Not Value.Ready Or Value.ErrorCode <> 0 Then
-        Draw Text "Effect needs attention" At 710, 118 Size 13 Color Red
-        Draw Number Value.ErrorCode At 960, 118 Size 13 Color Red
+        Draw Text "Effect needs attention" At 880, 118 Size 13 Color Red
+        Draw Number Value.ErrorCode At 1090, 118 Size 13 Color Red
     End If
 
 End Sub
+
+Private Function BackgroundCaption(Index As Number) As Text
+
+    If Index = 1 Then
+        Return "B: Green"
+    Else If Index = 2 Then
+        Return "B: Purple"
+    Else If Index = 3 Then
+        Return "B: Scene"
+    Else If Index = 4 Then
+        Return "B: Logo"
+    End If
+
+    Return "B: Black"
+
+End Function
 
 End Module

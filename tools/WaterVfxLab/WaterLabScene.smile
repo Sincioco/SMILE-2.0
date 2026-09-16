@@ -8,7 +8,6 @@ Import Smile.Simple3D.Graphics3D As G
 Import Smile.Simple3D.Precision3D As P
 Import Smile.Simple3D.PrecisionCamera3D As Camera
 Import Smile.Simple3D.Character3D As Character
-Import Smile.Simple3D.CharacterGlow3D As Glow
 Import Smile.Simple3D.WaterVfx3D As Water
 Import Smile.Simple3D.WaterStorm3D As Storm
 Import Smile.Simple3D.LightningVfx3D As Lightning
@@ -32,10 +31,11 @@ Public Type State
     Frame As Water.Frame
     Water As Water.Context
     Storm As Storm.Context
-    Glow As Glow.Context
     Mira As Character.Actor
     Floor As Arena.ArenaFloor
     Background As Backdrop.Backdrop
+    TitleBackground As Backdrop.Backdrop
+    BackgroundIndex As Number
     Targets[4] As Core.Object3D
     TargetIndex As Number
     BaseCamera As P.Camera3D
@@ -51,7 +51,10 @@ Public Sub Start(ByRef Value As State)
     Call G.ResetRenderer3D()
 
     Value.Background = Backdrop.Create("Assets/Backgrounds/SinStarLandscape.png")
+    Value.TitleBackground = Backdrop.Create("Assets/Backgrounds/SinStarTitleWithLogo.png")
+    Value.BackgroundIndex = 3
     Ok = G.ConfigureSoftDepth3D(1)
+    Ok = Value.TitleBackground.Ready And Ok
     Ok = Backdrop.SetActive(Value.Background) And Ok
     Ok = G.ConfigureDistortion3D(1, 2) And Ok
     Ok = G.ConfigurePostProcessing3D(True, True, True, 100, 1200, 45, 2, 2, 4) And Ok
@@ -96,6 +99,26 @@ Public Sub Start(ByRef Value As State)
     End If
 
     Call Restart(Value)
+
+End Sub
+
+Public Sub CycleBackground(ByRef Value As State)
+
+    Dim Ok As Boolean
+
+    Value.BackgroundIndex = (Value.BackgroundIndex + 1) Mod 5
+
+    If Value.BackgroundIndex = 3 Then
+        Ok = Backdrop.SetActive(Value.Background)
+    Else If Value.BackgroundIndex = 4 Then
+        Ok = Backdrop.SetActive(Value.TitleBackground)
+    Else
+        Ok = Backdrop.ClearActive()
+    End If
+
+    If Not Ok Then
+        Value.ErrorCode = Max(1, G.LastError())
+    End If
 
 End Sub
 
@@ -240,11 +263,6 @@ Private Sub StepPresentation(ByRef Value As State, SimulationElapsed As Number)
 
     Ok = Water.Update(Value.Water, Value.Frame) And Ok
     Ok = Storm.Update(Value.Storm, Value.Frame, P.Vector(-80.0, 115.0, 35.0)) And Ok
-    Charge = Value.Frame.Strength
-    Ok = Glow.Update(Value.Glow, Value.Mira, Charge, True, True,
-        Value.Time, Value.Water.DropTexture) And Ok
-    Ok = P.SetPointLight(0, Value.Frame.Origin, 40, 150, 255,
-        45 + ToNumber(Round(Charge * 130.0)), 180) And Ok
 
     Ok = Lightning.UpdatePrecise(SimulationElapsed, Value.Camera) And Ok
 
@@ -307,7 +325,15 @@ Public Sub Draw(ByRef Value As State)
 
     Ok = Arena.ConfigureForFrame(Value.Floor, True, True)
     Ok = P.SetCamera(Value.Camera) And Ok
-    Ok = G.BeginAcceptedCamera3D(72, 82, 96) And Ok
+
+    If Value.BackgroundIndex = 1 Then
+        Ok = G.BeginAcceptedCamera3D(0, 96, 32) And Ok
+    Else If Value.BackgroundIndex = 2 Then
+        Ok = G.BeginAcceptedCamera3D(62, 20, 96) And Ok
+    Else
+        Ok = G.BeginAcceptedCamera3D(0, 0, 0) And Ok
+    End If
+
     Ok = Arena.Draw(Value.Floor, True, True) And Ok
     Ok = Character.Draw(Value.Mira) And Ok
 
@@ -315,7 +341,6 @@ Public Sub Draw(ByRef Value As State)
         Ok = G.DrawObject3D(Value.Targets[Index]) And Ok
     End For
 
-    Call Glow.Draw(Value.Glow)
     Call Water.Draw(Value.Water)
 
     Ok = Lightning.DrawAll() And Ok
@@ -328,12 +353,12 @@ Public Sub Destroy(ByRef Value As State)
     Dim Index As Number
 
     Call Storm.Destroy(Value.Storm)
-    Call Glow.Destroy(Value.Glow)
     Call Water.Destroy(Value.Water)
     Call Character.Destroy(Value.Mira)
     Call Lightning.Shutdown()
     Call Arena.Destroy(Value.Floor)
     Call Backdrop.Destroy(Value.Background)
+    Call Backdrop.Destroy(Value.TitleBackground)
 
     For Index = 0 To 3
         Call G.DestroyObject3D(Value.Targets[Index])

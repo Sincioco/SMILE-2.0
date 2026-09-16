@@ -37,8 +37,11 @@ and focused checks pass; earlier Mira packages remain intact.
 
 ## Native delivery and validation
 
-The Character Viewer and Water Lab share water surfaces, GPU droplets, staff-head
-shimmer, casting glow and the Mira/Orin lightning adapter. Mira cycles Torrent,
+The Character Viewer and Water Lab share water surfaces, GPU droplets and the
+Mira/Orin lightning adapter. On September 16, Sin removed added body/staff glow and
+head shimmer from all Mira appearances, including Sin Star I. This is a shared
+presentation change; package models, materials and checksums are unchanged.
+Mira cycles Torrent,
 Heal One, Heal Party, Waterball, Tsunami and Tempest in both Party battles. Barriers
 remain small individual discs; impact spray spreads across the struck disc and
 curls around its rim as the surface gives slightly. No formation-sized dome remains.
@@ -50,7 +53,8 @@ Validation on September 13, 2026:
 - Blender/GLB round-trip samples cover all nine clips. Held-clip wrist and staff-grip
   checks run through every sample; grounding reports record the final GLB hash.
 - Native Viewer inspection covered held poses, Run back carry, settled Death and
-  both parties. The final head shimmer followed back carry and hid with the weapon.
+  both parties. The then-current head shimmer followed back carry and hid with the
+  weapon; that added effect was removed at Sin's September 16 direction.
 - The real-asset calibration fixture passed all six Mira actions in both parties,
   healing/contact policy, seek/restore, target-count cleanup and return to Arin.
 - The Viewer hardening fixture passed, including 58 native graphics/input/audio

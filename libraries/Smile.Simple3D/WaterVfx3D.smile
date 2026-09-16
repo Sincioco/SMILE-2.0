@@ -8,6 +8,7 @@ Import Smile.Simple3D.Graphics3D As G
 Import Smile.Simple3D.Precision3D As P
 Import Smile.Simple3D.PrecisionMath3D As M
 Import Smile.Simple3D.WaterFlow3D As Flow
+Import Smile.Simple3D.WaterImpact3D As Splash
 
 Public Const HEAL = 1
 Public Const SHIELD = 2
@@ -18,7 +19,9 @@ Public Const WAVE = 6
 Public Const STORM = 7
 Public Const WATER_BEND = 8
 Private Const STRIPS = 16
+Private Const BEND_STRIPS = 32
 Private Const POINTS = 65
+Private Const BEND_POINTS = 97
 Private Const SPRAY_CAPACITY = 4096
 
 Public Type Frame
@@ -53,6 +56,8 @@ Public Type Context
     NextSlot As Number
     Serial As Number
     EmissionTime As Number
+    PreviousWaterbendImpact As Boolean
+    ImpactSprayCount As Number
 End Type
 
 Public Function Prepare(ByRef Value As Context, AssetFolder As Text) As Boolean
@@ -83,8 +88,8 @@ Public Function Prepare(ByRef Value As Context, AssetFolder As Text) As Boolean
     Ok = G.SetEffectMaterialSoftDepth3D(Value.RefractionMaterial, 2, 8) And Ok
     Ok = G.SetEffectMaterialDistortion3D(Value.RefractionMaterial, 22, 160, 40, 25, 80) And Ok
 
-    Value.Sheets = G.CreateRibbonBatch3D(STRIPS * (POINTS + 2), Value.SheetMaterial)
-    Value.Refraction = G.CreateRibbonBatch3D(STRIPS * (POINTS + 2), Value.RefractionMaterial)
+    Value.Sheets = G.CreateRibbonBatch3D(BEND_STRIPS * (BEND_POINTS + 2), Value.SheetMaterial)
+    Value.Refraction = G.CreateRibbonBatch3D(BEND_STRIPS * (BEND_POINTS + 2), Value.RefractionMaterial)
     Ok = Value.Sheets.Handle <> 0 And Value.Refraction.Handle <> 0 And Ok
 
     Call CaptureFailure(Value, 2, Ok)
@@ -271,7 +276,7 @@ Private Function BarrierPoint(Center As P.Vector3, Normal As P.Vector3,
 
 End Function
 
-Private Sub SurfacePoint(Sample As Frame, Strip As Number, Along As Double,
+Private Sub SurfacePoint(Sample As Frame, WaterbendImpact As Boolean, Strip As Number, Along As Double,
     Center As P.Vector3, Radius As Double, ByRef LeftPoint As P.Vector3,
     ByRef RightPoint As P.Vector3)
 
@@ -290,12 +295,25 @@ Private Sub SurfacePoint(Sample As Frame, Strip As Number, Along As Double,
 
     If Sample.Mode = WATER_BEND Or Sample.Mode = TORRENT Then
 
-        Angle = ToDouble(Strip) * M.PI * 2.0 / ToDouble(STRIPS)
+        Width = M.PI * 2.0 / ToDouble(STRIPS)
+
+        If Sample.Mode = WATER_BEND Then
+            Width = M.PI * 2.0 / ToDouble(BEND_STRIPS)
+        End If
+
+        Angle = ToDouble(Strip) * Width
         LeftPoint = Flow.SurfacePoint(Sample.Origin, Sample.Target,
             Sample.Progress, Sample.Time, Along, Angle, Sample.Mode = TORRENT)
         RightPoint = Flow.SurfacePoint(Sample.Origin, Sample.Target,
-            Sample.Progress, Sample.Time, Along, Angle + M.PI * 2.0 / ToDouble(STRIPS),
+            Sample.Progress, Sample.Time, Along, Angle + Width,
             Sample.Mode = TORRENT)
+
+    Else If WaterbendImpact Then
+
+        LeftPoint = Splash.SheetPoint(Sample.Origin, Sample.Target, Sample.ImpactProgress,
+            Strip, Along, -1.0)
+        RightPoint = Splash.SheetPoint(Sample.Origin, Sample.Target, Sample.ImpactProgress,
+            Strip, Along, 1.0)
 
     Else If Sample.Mode = IMPACT Then
 
@@ -397,13 +415,16 @@ Private Sub SurfacePoint(Sample As Frame, Strip As Number, Along As Double,
 
 End Sub
 
-Private Function UpdateSurfaces(ByRef Value As Context, Sample As Frame) As Boolean
+Private Function UpdateSurfaces(ByRef Value As Context, Sample As Frame,
+    WaterbendImpact As Boolean) As Boolean
 
     Dim Strip As Number
     Dim Index As Number
     Dim ItemCount As Number
     Dim PointCount As Number
+    Dim Samples As Number
     Dim Opacity As Number
+    Dim PointOpacity As Number
     Dim Along As Double
     Dim Radius As Double
     Dim Center As P.Vector3
@@ -412,13 +433,17 @@ Private Function UpdateSurfaces(ByRef Value As Context, Sample As Frame) As Bool
     Dim Ok As Boolean
 
     ItemCount = STRIPS
+    Samples = POINTS
     Ok = True
 
-    If Sample.Mode = HEAL Then
+    If Sample.Mode = WATER_BEND Then
+        ItemCount = BEND_STRIPS
+        Samples = BEND_POINTS
+    Else If Sample.Mode = HEAL Then
         ItemCount = Sample.MemberCount * 2
     Else If Sample.Mode = SHIELD Then
         ItemCount = Sample.MemberCount * 4
-    Else If Sample.Mode = IMPACT Then
+    Else If Sample.Mode = IMPACT And Not WaterbendImpact Then
         ItemCount = 8
     End If
 
@@ -435,17 +460,25 @@ Private Function UpdateSurfaces(ByRef Value As Context, Sample As Frame) As Bool
 
     For Strip = 0 To ItemCount - 1
 
-        Call SurfacePoint(Sample, Strip, 0.0, Center, Radius, LeftPoint, RightPoint)
+        Call SurfacePoint(Sample, WaterbendImpact, Strip, 0.0, Center, Radius, LeftPoint, RightPoint)
 
         Ok = SetSurfacePoint(Value, PointCount, LeftPoint, LeftPoint, 0.0, 0) And Ok
         PointCount = PointCount + 1
 
-        For Index = 0 To POINTS - 1
-            Along = ToDouble(Index) / ToDouble(POINTS - 1)
+        For Index = 0 To Samples - 1
 
-            Call SurfacePoint(Sample, Strip, Along, Center, Radius, LeftPoint, RightPoint)
+            Along = ToDouble(Index) / ToDouble(Samples - 1)
 
-            Ok = SetSurfacePoint(Value, PointCount, LeftPoint, RightPoint, Along, Opacity) And Ok
+            Call SurfacePoint(Sample, WaterbendImpact, Strip, Along, Center, Radius, LeftPoint, RightPoint)
+
+            PointOpacity = Opacity
+
+            If WaterbendImpact Then
+                PointOpacity = ToNumber(Round(ToDouble(Opacity) *
+                    Splash.SheetOpacity(Sample.ImpactProgress, Strip, Along)))
+            End If
+
+            Ok = SetSurfacePoint(Value, PointCount, LeftPoint, RightPoint, Along, PointOpacity) And Ok
             PointCount = PointCount + 1
         End For
 
@@ -474,7 +507,8 @@ Private Function SetSurfacePoint(ByRef Value As Context, Index As Number,
 
 End Function
 
-Private Function EmitSpray(ByRef Value As Context, Sample As Frame, ItemCount As Number) As Boolean
+Private Function EmitSpray(ByRef Value As Context, Sample As Frame,
+    WaterbendImpact As Boolean, ItemCount As Number) As Boolean
 
     Dim Index As Number
     Dim StripCount As Number
@@ -515,7 +549,7 @@ Private Function EmitSpray(ByRef Value As Context, Sample As Frame, ItemCount As
         Along = ToDouble((Value.Serial * 37) Mod 1000) / 1000.0
         Angle = ToDouble((Value.Serial * 137) Mod 360) * M.PI / 180.0
 
-        Call SurfacePoint(Sample, Value.Serial Mod StripCount, Along,
+        Call SurfacePoint(Sample, WaterbendImpact, Value.Serial Mod StripCount, Along,
             Center, Radius, Position, RightPoint)
 
         Position = M.Lerp(Position, RightPoint, 0.5)
@@ -569,6 +603,12 @@ Private Function EmitSpray(ByRef Value As Context, Sample As Frame, ItemCount As
             Velocity = M.Add(Velocity, M.Scale(Normal, -8.0))
             Lifetime = 340 + Value.Serial Mod 180
 
+        Else If WaterbendImpact Then
+
+            Call Splash.Spray(Sample.Origin, Sample.Target, Value.Serial, Position, Velocity)
+
+            Lifetime = 300 + Value.Serial Mod 260
+
         Else If Sample.Mode = IMPACT Then
 
             Ok = M.TryNormalize(M.Subtract(Sample.Origin, Sample.Target), Normal)
@@ -606,6 +646,7 @@ Public Function Update(ByRef Value As Context, Sample As Frame) As Boolean
     Dim ItemCount As Number
     Dim Index As Number
     Dim Ok As Boolean
+    Dim WaterbendImpact As Boolean
 
     If Not Value.Ready Then
         Return False
@@ -613,6 +654,7 @@ Public Function Update(ByRef Value As Context, Sample As Frame) As Boolean
 
     Sample.MemberCount = Max(0, Min(4, Sample.MemberCount))
     Sample.ImpactProgress = Clamp(Sample.ImpactProgress, 0.0, 1.0)
+    WaterbendImpact = Sample.Mode = WATER_BEND And Sample.Progress >= 0.72
 
     If ((Sample.Mode = WATER_BALL Or Sample.Mode = WAVE Or
         Sample.Mode = STORM Or Sample.Mode = TORRENT Or Sample.Mode = WATER_BEND) And
@@ -633,6 +675,7 @@ Public Function Update(ByRef Value As Context, Sample As Frame) As Boolean
     Ok = True
 
     If (Sample.Mode <> Value.PreviousMode Or
+        WaterbendImpact <> Value.PreviousWaterbendImpact Or
         Elapsed < 0 Or
         Elapsed > 250) Then
 
@@ -645,12 +688,14 @@ Public Function Update(ByRef Value As Context, Sample As Frame) As Boolean
         End For
 
         Value.EmissionTime = 0
+        Value.ImpactSprayCount = 0
         Elapsed = 0
 
     End If
 
     Value.PreviousTime = Sample.Time
     Value.PreviousMode = Sample.Mode
+    Value.PreviousWaterbendImpact = WaterbendImpact
     Value.Visible = Sample.Mode >= HEAL And Sample.Mode <= WATER_BEND And Sample.Strength > 0.0
     Ok = G.AdvanceGpuParticleSystem3D(Value.Spray, Max(0, Min(100, Elapsed))) And Ok
 
@@ -663,7 +708,7 @@ Public Function Update(ByRef Value As Context, Sample As Frame) As Boolean
 
     End If
 
-    Ok = UpdateSurfaces(Value, Sample) And Ok
+    Ok = UpdateSurfaces(Value, Sample, WaterbendImpact) And Ok
 
     If Sample.Mode = WATER_BEND Then
         Ok = G.SetEffectMaterial3D(Value.DropMaterial, G.MATERIAL_ALPHA_BLEND,
@@ -675,7 +720,9 @@ Public Function Update(ByRef Value As Context, Sample As Frame) As Boolean
 
     ItemCount = 8
 
-    If Sample.Mode = IMPACT Then
+    If WaterbendImpact Then
+        ItemCount = 4
+    Else If Sample.Mode = IMPACT Then
         ItemCount = 35
     Else If Sample.Mode = WATER_BEND Then
         ItemCount = 4
@@ -689,7 +736,19 @@ Public Function Update(ByRef Value As Context, Sample As Frame) As Boolean
     Value.EmissionTime = Value.EmissionTime + Elapsed
     ItemCount = Min(160, Value.EmissionTime * 4)
 
-    If Sample.Mode = WATER_BALL Then
+    If WaterbendImpact Then
+
+        ''' Emit one compact burst, with a short tail and no continuous contact shower.
+        ItemCount = 0
+
+        If Sample.ImpactProgress < 0.26 Then
+            ItemCount = Max(0, 96 + ToNumber(Round(32.0 *
+                Clamp(Sample.ImpactProgress / 0.18, 0.0, 1.0))) - Value.ImpactSprayCount)
+        End If
+
+        Value.ImpactSprayCount = Value.ImpactSprayCount + ItemCount
+
+    Else If Sample.Mode = WATER_BALL Then
 
         ItemCount = Min(80, Value.EmissionTime * 2)
 
@@ -709,7 +768,7 @@ Public Function Update(ByRef Value As Context, Sample As Frame) As Boolean
 
     If ItemCount > 0 Then
         Value.EmissionTime = 0
-        Ok = EmitSpray(Value, Sample, ItemCount) And Ok
+        Ok = EmitSpray(Value, Sample, WaterbendImpact, ItemCount) And Ok
     End If
 
     Return Ok
