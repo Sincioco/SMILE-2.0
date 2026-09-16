@@ -18,6 +18,9 @@ an eighth Waterbending preview and native lit-water shading refinements. On Web
 resumption, adopt the shader and validate the new preview, pause/speed, reduced
 runoff, per-cast random pillar targeting, contact/recoil and resource cleanup in
 Chrome. A native pass does not validate the Web material.
+The native reflected-water fix also uses a matching opaque color snapshot and
+mirrored camera instead of the fixed tinted fallback. Adopt that resource/shading
+path and validate HDR/LDR reflection color and cleanup when Web work resumes.
 
 Sin also placed Studio creation, development, acceptance and next phases on hold.
 The existing Studio project may retain shared source inventory, but it is not a

@@ -29,6 +29,8 @@ int smile_reflections_include_vfx(void);
 void smile_reflections_begin_frame(void);
 void smile_reflections_skip(int reason);
 int smile_reflections_prepare(ID3D11Device* device, int width, int height, int hdr);
+int smile_reflections_capture_opaque_scene(ID3D11Device* device, ID3D11DeviceContext* context);
+ID3D11ShaderResourceView* smile_reflections_opaque_scene(void);
 ID3D11RenderTargetView* smile_reflections_target(void);
 ID3D11DepthStencilView* smile_reflections_depth(void);
 ID3D11ShaderResourceView* smile_reflections_shader_view(void);

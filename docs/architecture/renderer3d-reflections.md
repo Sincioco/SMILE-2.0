@@ -127,6 +127,17 @@ Reflected effects use reflected depth and floor clipping, not main-camera soft d
 Backdrop submission restores the capture depth attachment even when the main view
 uses another resolution/MSAA count. Heat distortion remains excluded.
 
+Native lit-water replay uses the mirrored camera and a frozen copy of this
+capture's opaque color. `graphics3d_reflections.cpp` owns the lazily allocated
+snapshot; the frame coordinator requests one copy before transparent replay only
+when an accepted water ribbon/particle submission needs it. It shares the bounded
+capture dimensions and HDR/LDR format, is released on resize/reset/device loss,
+and caches allocation failure until the configuration changes. The existing target
+byte query includes its additional 8 bytes per HDR pixel or 4 per LDR pixel.
+Water shading borrows the snapshot for each draw and unbinds it afterward. It does
+not read and write the reflection target simultaneously or borrow main-camera depth.
+This native water path has not been adopted or validated on Web.
+
 ## Focused checks
 
 `scripts/test-renderer3d-reflections.ps1` exercises actual native/generated-Web

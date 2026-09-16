@@ -43,6 +43,10 @@ struct SmileReflectionState3D
     ID3D11Texture2D* depth_texture;
     ID3D11DepthStencilView* depth_view;
     ID3D11SamplerState* sampler;
+    ID3D11Texture2D* opaque_texture;
+    ID3D11ShaderResourceView* opaque_view;
+    int opaque_ready;
+    int opaque_failed_revision;
     int failed_revision;
     int failed_width;
     int failed_height;
@@ -69,6 +73,10 @@ static SmileReflectionState3D smile_reflections3d =
 
 static void smile_reflections_release_resources(void)
 {
+    smile_reflections_release(smile_reflections3d.opaque_view);
+    smile_reflections_release(smile_reflections3d.opaque_texture);
+    smile_reflections3d.opaque_ready = 0;
+    smile_reflections3d.opaque_failed_revision = 0;
     smile_reflections_release(smile_reflections3d.sampler);
     smile_reflections_release(smile_reflections3d.depth_view);
     smile_reflections_release(smile_reflections3d.depth_texture);
@@ -167,6 +175,7 @@ int smile_reflections_include_vfx(void)
 
 void smile_reflections_begin_frame(void)
 {
+    smile_reflections3d.opaque_ready = 0;
     smile_reflections3d.effective_floor_height =
         smile_reflections3d.requested_floor_height >= 0.0f
             ? smile_reflections3d.requested_floor_height
@@ -320,6 +329,45 @@ int smile_reflections_prepare(ID3D11Device* device, int width, int height, int h
     smile_reflections3d.effective = 1;
     smile_reflections3d.fallback_reason = SMILE_3D_REFLECTION_FALLBACK_NONE;
     return 1;
+}
+
+int smile_reflections_capture_opaque_scene(ID3D11Device* device, ID3D11DeviceContext* context)
+{
+    if (!smile_reflections3d.effective || !smile_reflections3d.color_texture)
+        return 0;
+    if (!smile_reflections3d.opaque_texture)
+    {
+        if (smile_reflections3d.opaque_failed_revision == smile_reflections3d.configuration_revision)
+            return 0;
+        D3D11_TEXTURE2D_DESC description = {};
+        smile_reflections3d.color_texture->GetDesc(&description);
+        description.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+        HRESULT result = device->CreateTexture2D(&description, 0, &smile_reflections3d.opaque_texture);
+        if (SUCCEEDED(result))
+            result = device->CreateShaderResourceView(smile_reflections3d.opaque_texture,
+                0, &smile_reflections3d.opaque_view);
+        if (FAILED(result))
+        {
+            smile_reflections_release(smile_reflections3d.opaque_view);
+            smile_reflections_release(smile_reflections3d.opaque_texture);
+            smile_reflections3d.opaque_failed_revision = smile_reflections3d.configuration_revision;
+            return 0;
+        }
+        smile_reflections3d.target_bytes += (long long)smile_reflections3d.width *
+            smile_reflections3d.height * (smile_reflections3d.hdr ? 8 : 4);
+    }
+    // Freeze this pass's opaque color before any transparent water draws into it.
+    context->OMSetRenderTargets(0, 0, 0);
+    context->CopyResource(smile_reflections3d.opaque_texture, smile_reflections3d.color_texture);
+    context->OMSetRenderTargets(1, &smile_reflections3d.color_view, smile_reflections3d.depth_view);
+    smile_reflections3d.opaque_ready = 1;
+    return 1;
+}
+
+ID3D11ShaderResourceView* smile_reflections_opaque_scene(void)
+{
+    return smile_reflections3d.effective && smile_reflections3d.opaque_ready
+        ? smile_reflections3d.opaque_view : 0;
 }
 
 ID3D11RenderTargetView* smile_reflections_target(void)

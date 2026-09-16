@@ -76,8 +76,12 @@ world-space folds cross strip boundaries; bounded absorption keeps the interior
 nearly clear, while a brighter sky fallback gives the surface silver reflections.
 It borrows the
 existing opaque scene and depth for a bounded 20-step screen-space reflection search;
-offscreen rays use a simple sky/horizon fallback. It allocates no new scene targets
-and performs no GPU readback. These are real-time approximations, not ray tracing or
+offscreen rays use a simple sky/horizon fallback. The arena's water reflection
+uses the mirrored camera and a color copy of the reflected opaque scene, replacing
+the former fixed blue-green transmission fallback. That copy is owned and bounded
+by the shared reflection renderer; it is reused each frame and released on reset,
+resize or device loss. Main-view water reuses the existing scene target. There is
+no GPU readback. These are real-time approximations, not ray tracing or
 a physically simulated fluid. Quiet barriers use very little foam.
 
 This is authored real-time VFX, not a fluid/collision simulation. Target contact is
@@ -138,6 +142,13 @@ modes, including closed skin/contact geometry, reflection draws/composition, spr
 seek, pause/speed and resource cleanup. The installed VSIX payload verification
 matched all 35 checked files.
 
+The reflection-color regression reproduced nine missing-snapshot failures before
+the native renderer fix and passes afterward: all eight effect modes in HDR and
+one LDR transition, followed by zero reflection bytes after reset. Native reflection
+normal/failure/retry checks also pass. Visual comparison confirms clear/silver water
+in both the main and arena views; highlight brightness still depends on view angle.
+The runtime and native Lab were rebuilt and the refreshed VSIX was installed.
+
 The rebuilt Lab was launched and visually checked for the curved water body,
 falling spray, landscape and arena reflection. Its published landscape has the same
 SHA-256 as the Character Viewer's default asset. This is a visual approximation of
@@ -158,8 +169,14 @@ cast restarts. It restores all pillars before applying the selected one's recoil
 selection, enemy identity or new shared clock enters the reusable VFX modules.
 
 Growth review: the new stateless `WaterFlow3D` has 192 lines. `WaterVfx3D` grows
-715→733, the native water shader 103→121, the scene 316→344, the UI 147→149,
-the focused native fixture 132→247 and the build script 25→29. The library and Lab
+715→733, the native water shader 103→130, the scene 316→344, the UI 147→149,
+the focused native fixture 132→273 and the build script 25→29. The library and Lab
 project inventories each add one entry. Existing lifecycle owners remain unchanged;
 no dependency cycle, renderer resource ceiling, size limit or legacy baseline was
 introduced or raised.
+
+The reflection correction adds 48 lines to its existing resource owner (435→483)
+and two declarations to its header. The legacy native draw coordinator adds 24
+lines for view constants and capture delegation (10,611→10,635); allocation,
+failure caching and teardown stay in the reflection owner. No new source module,
+dependency cycle or review-limit exception is introduced.

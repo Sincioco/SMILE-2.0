@@ -1,6 +1,6 @@
 #pragma once
 
-// Native water shading borrows the resolved opaque scene/depth for this draw.
+// Native water shading borrows this view's opaque scene and optional matching depth.
 // It owns no render targets and must release the SRV before the next render pass.
 struct SmileWaterTextureBinding3D
 {
@@ -57,7 +57,9 @@ float3 WaterReflection(float3 origin, float3 direction, float3 fallback)
         if (gap > .1 && gap < 4.0 + index * 1.3)
         {
             float edge = saturate(min(min(unit.x, 1-unit.x), min(unit.y, 1-unit.y)) * 12);
-            return lerp(fallback, waterScene.SampleLevel(waterSampler, screen, 0).rgb, edge * .85);
+            float3 sceneColor = waterScene.SampleLevel(waterSampler, screen, 0).rgb;
+            if (atlasOutput.z < .5) sceneColor = ToLinear(saturate(sceneColor));
+            return lerp(fallback, sceneColor, edge * .85);
         }
     }
     return fallback;
@@ -101,12 +103,19 @@ float4 ShadeWater(float4 pixel, float2 uv, float4 base, float3 world)
     if (waterParameters.w > .5)
     {
         float2 refracted = clamp(screen + bend, .001, .999);
-        float behind = sceneDepthTexture.SampleLevel(sceneDepthSampler, refracted, 0).r;
-        if (behind < Linear(pixel.z)) refracted = screen;
-        // Screen depth is a bounded thickness proxy, never the distance to a far backdrop.
-        float depth = min(24, max(2, behind-Linear(pixel.z)));
+        // Reflected color is valid without borrowing the unrelated main-camera depth.
+        float depth = 2;
+        if (softDepth.x > .5)
+        {
+            float behind = sceneDepthTexture.SampleLevel(sceneDepthSampler, refracted, 0).r;
+            if (behind < Linear(pixel.z)) refracted = screen;
+            // Screen depth is a bounded thickness proxy, never a far-backdrop distance.
+            depth = min(24, max(2, behind-Linear(pixel.z)));
+        }
         float3 absorption = exp(-float3(.009,.004,.0028)*depth);
-        transmission = waterScene.SampleLevel(waterSampler, refracted, 0).rgb * absorption;
+        float3 sceneColor = waterScene.SampleLevel(waterSampler, refracted, 0).rgb;
+        if (atlasOutput.z < .5) sceneColor = ToLinear(saturate(sceneColor));
+        transmission = sceneColor * absorption;
         transmission += float3(.035,.075,.085) * (1-absorption);
     }
     float foamNoise = sin(world.x*.62 + sin(world.z*.41)*2 + seconds*2.8) *

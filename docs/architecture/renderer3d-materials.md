@@ -18,12 +18,21 @@ multiscale world-space surface derivatives for moving folds, lighter bounded
 absorption, a broader reflected rim for gameplay visibility, and a brighter analytic
 sky fallback. Screen depth remains a capped
 thickness approximation; it is not a measurement of a closed fluid volume.
-The draw owner provides camera/light constants
-and temporarily borrows the existing resolved opaque scene. Offscreen reflections
+The draw owner provides the active view's camera/light constants
+and temporarily borrows that view's resolved opaque scene. Offscreen reflections
 use an analytic sky/horizon fallback; missing scene capture falls back to tinted
 water and environment reflection. The RAII binding releases its borrowed texture
-before the next render pass. No additional scene targets, readback, ray tracing,
-fluid solver, game state, or resource-cap increases are introduced. The native
+before the next render pass. Main-view water borrows the existing scene target.
+When reflected water is present, the reflection resource owner lazily allocates
+one matching color snapshot and copies its opaque capture before replaying any
+transparent effects. This prevents reflected water from taking the fixed tinted
+fallback. The snapshot follows the reflection target's 2,048-pixel cap, format,
+resize/reset lifecycle and cached allocation-failure policy. Its bytes are included
+in the existing reflection resource diagnostic. Water uses the mirrored camera and
+capture dimensions, never the main-view depth in that pass; without matching linear
+depth it uses the existing thin-surface absorption minimum. LDR scene samples are
+decoded to linear color before shading. No readback, ray tracing, fluid solver,
+game state, or resource-cap increases are introduced. The native
 Water Lab exercises rendering, impact, seek and cleanup; the existing GPU/fallback
 and native graphics checks protect other effect families.
 

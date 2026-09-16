@@ -19,6 +19,7 @@ Dim Tip As P.Vector3
 Dim Ok As Boolean
 Dim LightningAge As Number
 Dim Edge As P.Vector3
+Dim ReflectionBytesPerPixel As Number
 
 Game Window "Water Lab Native Checks" Size 400 By 300
 
@@ -118,6 +119,17 @@ Do
         Call Check(G.ReflectionValue3D(G.REFLECTION_QUERY_DRAWS) > 0)
         Call Check(G.ReflectionValue3D(G.REFLECTION_QUERY_COMPOSITIONS) = 1)
 
+        ''' Water must refract the reflected opaque scene, not a fixed green fallback.
+        ReflectionBytesPerPixel = 12
+
+        If G.ReflectionValue3D(G.REFLECTION_QUERY_TARGET_FORMAT) = 2 Then
+            ReflectionBytesPerPixel = 20
+        End If
+
+        Call Check(G.ReflectionValue3D(G.REFLECTION_QUERY_TARGET_BYTES) =
+            G.ReflectionValue3D(G.REFLECTION_QUERY_WIDTH) *
+            G.ReflectionValue3D(G.REFLECTION_QUERY_HEIGHT) * ReflectionBytesPerPixel)
+
         Ok = Character.TrySocketPositionPrecise(Lab.Mira, "StaffTip", 0, False, Tip)
         Ok = P.TryParticlePosition(Lab.Glow.HeadShimmer, 0, True, Position) And Ok
         Position = M.Subtract(Position, Tip)
@@ -163,11 +175,25 @@ Do
 Loop Until True
 
 Call CheckWaterbendingTargets(Lab)
+
+Ok = G.ConfigurePostProcessing3D(False, False, False, 100, 1200, 45, 2, 2, 4)
+
+Call Check(Ok)
+Call Scene.Draw(Lab)
+Call Check(G.ReflectionValue3D(G.REFLECTION_QUERY_TARGET_FORMAT) = 1)
+Call Check(G.ReflectionValue3D(G.REFLECTION_QUERY_TARGET_BYTES) =
+    G.ReflectionValue3D(G.REFLECTION_QUERY_WIDTH) *
+    G.ReflectionValue3D(G.REFLECTION_QUERY_HEIGHT) * 12)
+
+Show Screen
+
 Call Scene.Destroy(Lab)
 Call Check(G.GpuParticleValue3D(G.GPU_PARTICLE_QUERY_TOTAL_CAPACITY) = 0)
 Call Check(G.LiveParticleBatchCount3D() = 0)
 Call Check(G.LiveMaterialCount3D() = 0)
 Call Check(G.LiveTextureCount3D() = 0)
+Call G.ResetRenderer3D()
+Call Check(G.ReflectionValue3D(G.REFLECTION_QUERY_TARGET_BYTES) = 0)
 
 Print "Water Lab native failures: "; Failures
 

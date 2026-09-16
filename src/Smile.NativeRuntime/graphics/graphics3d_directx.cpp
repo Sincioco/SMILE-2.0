@@ -7967,7 +7967,7 @@ static int smile_3d_draw_vfx_submission(const SmileSubmission3D* submission)
         constants.water_parameters[0] = 1.0f;
         constants.water_parameters[1] = material->water_roughness;
         constants.water_parameters[2] = material->water_foam;
-        memcpy(constants.water_camera, smile_camera_position3d, sizeof(float) * 3);
+        smile_3d_active_camera_position(constants.water_camera);
         constants.water_camera[3] = material->water_time;
         memcpy(constants.water_light_direction, smile_directional_light3d.direction, sizeof(float) * 3);
         memcpy(constants.water_light_color, smile_directional_light3d.color, sizeof(float) * 3);
@@ -7977,14 +7977,22 @@ static int smile_3d_draw_vfx_submission(const SmileSubmission3D* submission)
         constants.water_viewport[1] = (float)smile_3d_viewport_y();
         constants.water_viewport[2] = (float)smile_3d_viewport_width();
         constants.water_viewport[3] = (float)smile_3d_viewport_height();
-        if (!smile_reflection_pass3d && !smile_rendering_distortion_vectors3d &&
+        if (smile_reflection_pass3d)
+        {
+            water_snapshot = smile_reflections_opaque_scene();
+            constants.water_viewport[0] = constants.water_viewport[1] = 0;
+            constants.water_viewport[2] = (float)smile_reflections_width();
+            constants.water_viewport[3] = (float)smile_reflections_height();
+        }
+        else if (!smile_rendering_distortion_vectors3d &&
             smile_distortion_effective3d != SMILE_3D_DISTORTION_OFF &&
             smile_distortion_emitter_count3d > 0)
             water_snapshot = smile_sample_count3d > 1
                 ? smile_scene_shader_view3d : smile_distortion_scratch_shader_view3d;
         constants.water_parameters[3] = water_snapshot ? 1.0f : 0.0f;
     }
-    SmileWaterTextureBinding3D water_binding(context, water_snapshot, smile_post_sampler3d);
+    SmileWaterTextureBinding3D water_binding(context, water_snapshot,
+        smile_reflection_pass3d ? smile_reflections_sampler() : smile_post_sampler3d);
     if (material->texture_handles[0] != 0)
     {
         texture = smile_3d_texture(material->texture_handles[0]);
@@ -8023,6 +8031,11 @@ static int smile_3d_draw_vfx_submission(const SmileSubmission3D* submission)
     constants.soft_depth[3] = smile_camera_far3d;
     constants.target[0] = (float)smile_graphics_directx_physical_width();
     constants.target[1] = (float)smile_graphics_directx_physical_height();
+    if (smile_reflection_pass3d)
+    {
+        constants.target[0] = (float)smile_reflections_width();
+        constants.target[1] = (float)smile_reflections_height();
+    }
     if (smile_rendering_distortion_vectors3d)
     {
         constants.target[0] = (float)smile_distortion_width3d;
@@ -8453,8 +8466,19 @@ static int smile_3d_render_reflection_pass(void)
         }
     if (success && smile_reflections_include_vfx())
     {
-        // Replay immutable transparent submissions in the existing scene order.
         for (unsigned int index = 0; index < smile_frame_submission_count3d; ++index)
+        {
+            const SmileSubmission3D* submission = &smile_frame_submissions3d[index];
+            if ((submission->kind == SMILE_3D_SUBMISSION_RIBBON_BATCH ||
+                submission->kind == SMILE_3D_SUBMISSION_PARTICLE_BATCH) &&
+                submission->material.vfx_shading_mode == SMILE_3D_VFX_SHADING_WATER)
+            {
+                success = smile_reflections_capture_opaque_scene(device, context);
+                break;
+            }
+        }
+        // Replay immutable transparent submissions in the existing scene order.
+        for (unsigned int index = 0; success && index < smile_frame_submission_count3d; ++index)
         {
             const SmileSubmission3D* submission = &smile_frame_submissions3d[index];
             if (smile_3d_submission_is_opaque(submission) ||
