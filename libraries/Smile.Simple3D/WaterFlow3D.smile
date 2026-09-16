@@ -1,0 +1,192 @@
+''' Stateless waterbending geometry; callers own the clock, ribbons and spray.
+Module Smile.Simple3D.WaterFlow3D
+
+Option Explicit
+
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.PrecisionMath3D As M
+
+''' A rising column curls into a heavy rounded head, then reaches contact at 72 percent.
+Public Function CenterPoint(
+    Origin As P.Vector3,
+    Target As P.Vector3,
+    Progress As Double,
+    Time As Number,
+    Along As Double
+) As P.Vector3
+
+    Dim Forward As P.Vector3
+    Dim Side As P.Vector3
+    Dim Result As P.Vector3
+    Dim Head As P.Vector3
+    Dim Seconds As Double
+    Dim Bend As Double
+    Dim Lift As Double
+    Dim Reach As Double
+    Dim Inverse As Double
+    Dim Strike As Double
+    Dim Ok As Boolean
+
+    Forward = M.Subtract(Target, Origin)
+    Forward.Y = 0.0
+    Ok = M.TryNormalize(Forward, Forward)
+
+    If Not Ok Then
+        Forward = P.Vector(1.0, 0.0, 0.0)
+    End If
+
+    Side = M.Cross(Forward, P.Vector(0.0, 1.0, 0.0))
+    Seconds = ToDouble(Time) * 0.001
+    Along = Clamp(Along, 0.0, 1.0)
+    Inverse = 1.0 - Along
+    Lift = Clamp(Min(Progress * 6.0, (1.0 - Progress) * 6.0), 0.0, 1.0)
+    Lift = Lift * Lift * (3.0 - 2.0 * Lift)
+    Bend = 0.5 + 0.5 * Sin(Seconds * 1.4 - 0.8)
+    Reach = (3.0 * Inverse * Along * Along * (25.0 + Bend * 55.0) +
+        Along * Along * Along * (75.0 + Bend * 100.0)) * Lift
+    Result = M.Add(Origin, M.Scale(Forward, Reach))
+    Result.Y = Result.Y + (3.0 * Inverse * Inverse * Along * 82.0 +
+        3.0 * Inverse * Along * Along * 174.0 + Along * Along * Along * 115.0) * Lift
+    Result = M.Add(Result, M.Scale(Side,
+        Sin(Along * M.PI) * Sin(Along * 5.0 - Seconds * 1.8) * 8.0 * Lift))
+
+    ''' Keep the original rise/curl, extending its head smoothly to the caller's target.
+    Head = M.Add(Origin, M.Scale(Forward, (75.0 + Bend * 100.0) * Lift))
+    Head.Y = Head.Y + 115.0 * Lift
+    Strike = Clamp((Progress - 0.42) / 0.30, 0.0, 1.0)
+    Strike = Strike * Strike * (3.0 - 2.0 * Strike)
+    Result = M.Add(Result, M.Scale(M.Subtract(Target, Head), Strike * Along * Along * Along))
+
+    Return Result
+
+End Function
+
+''' Wind a water whip around its source, then throw the connected body toward contact.
+Public Function AttackCenter(
+    Origin As P.Vector3,
+    Target As P.Vector3,
+    Progress As Double,
+    Time As Number,
+    Along As Double
+) As P.Vector3
+
+    Dim Forward As P.Vector3
+    Dim Side As P.Vector3
+    Dim Tail As P.Vector3
+    Dim Head As P.Vector3
+    Dim FirstControl As P.Vector3
+    Dim LastControl As P.Vector3
+    Dim Coil As P.Vector3
+    Dim Result As P.Vector3
+    Dim Flight As Double
+    Dim Release As Double
+    Dim Angle As Double
+    Dim Radius As Double
+    Dim Ok As Boolean
+
+    Forward = M.Subtract(Target, Origin)
+    Forward.Y = 0.0
+    Ok = M.TryNormalize(Forward, Forward)
+
+    If Not Ok Then
+        Forward = P.Vector(1.0, 0.0, 0.0)
+    End If
+
+    Side = M.Cross(Forward, P.Vector(0.0, 1.0, 0.0))
+    Along = Clamp(Along, 0.0, 1.0)
+    Flight = Clamp((Progress - 0.24) / 0.48, 0.0, 1.0)
+    Release = Clamp(Flight * 4.0, 0.0, 1.0)
+    Release = Release * Release * (3.0 - 2.0 * Release)
+    Angle = Along * M.PI * 1.7 + ToDouble(Time) * 0.002
+    Radius = Sin(Along * M.PI) * 55.0
+    Coil = M.Add(Origin, M.Add(M.Scale(Side, Cos(Angle) * Radius),
+        M.Scale(Forward, Sin(Angle) * Radius)))
+    Coil.Y = Coil.Y + Sin(Along * M.PI * 2.0) * 28.0
+    Tail = M.Lerp(Origin, Target, Max(0.0, Flight - 0.55))
+    Head = M.Lerp(Origin, Target, Flight)
+    Head.Y = Head.Y + Sin(Flight * M.PI) * 22.0
+    FirstControl = M.Add(Tail, M.Scale(Side, 65.0 * (1.0 - Flight)))
+    FirstControl.Y = FirstControl.Y + 42.0 * (1.0 - Flight)
+    LastControl = M.Add(Head, M.Scale(Forward, -40.0 * (1.0 - Flight)))
+    LastControl = M.Add(LastControl, M.Scale(Side, -35.0 * (1.0 - Flight)))
+    Result = M.Lerp(Coil, M.Cubic(Tail, FirstControl, LastControl, Head, Along), Release)
+
+    Return Result
+
+End Function
+
+''' Adjacent strips share exact edges; the radius closes at the nose instead of leaving a pipe.
+Public Function SurfacePoint(
+    Origin As P.Vector3,
+    Target As P.Vector3,
+    Progress As Double,
+    Time As Number,
+    Along As Double,
+    Angle As Double,
+    Optional Attack As Boolean = False
+) As P.Vector3
+
+    Dim Center As P.Vector3
+    Dim Tangent As P.Vector3
+    Dim Side As P.Vector3
+    Dim SurfaceUp As P.Vector3
+    Dim Result As P.Vector3
+    Dim Seconds As Double
+    Dim Radius As Double
+    Dim Swell As Double
+    Dim Ripple As Double
+    Dim Ok As Boolean
+
+    Center = CenterPoint(Origin, Target, Progress, Time, Along)
+    Tangent = M.Subtract(CenterPoint(Origin, Target, Progress, Time, Along + 0.004),
+        CenterPoint(Origin, Target, Progress, Time, Along - 0.004))
+
+    If Attack Then
+        Center = AttackCenter(Origin, Target, Progress, Time, Along)
+        Tangent = M.Subtract(AttackCenter(Origin, Target, Progress, Time, Along + 0.004),
+            AttackCenter(Origin, Target, Progress, Time, Along - 0.004))
+    End If
+
+    Ok = M.TryNormalize(Tangent, Tangent)
+
+    If Not Ok Then
+        Tangent = P.Vector(0.0, 1.0, 0.0)
+    End If
+
+    Side = M.Subtract(Target, Origin)
+    Side.Y = 0.0
+    Side = M.Cross(Side, P.Vector(0.0, 1.0, 0.0))
+    Ok = M.TryNormalize(Side, Side)
+
+    If Not Ok Then
+        Side = P.Vector(0.0, 0.0, 1.0)
+    End If
+
+    SurfaceUp = M.Cross(Side, Tangent)
+    Ok = M.TryNormalize(SurfaceUp, SurfaceUp)
+    Side = M.Cross(Tangent, SurfaceUp)
+    Seconds = ToDouble(Time) * 0.001
+    Swell = Clamp(1.0 - Abs(Along - 0.82) / 0.23, 0.0, 1.0)
+    Swell = Swell * Swell * (3.0 - 2.0 * Swell)
+    Radius = (10.0 + Swell * 15.0) * Sqrt(Clamp((1.0 - Along) * 9.0, 0.0, 1.0))
+
+    If Attack Then
+        Radius = (5.0 + Swell * 9.0) * Sqrt(Max(0.0, Sin(Along * M.PI)))
+    End If
+
+    Ripple = 1.0 + 0.12 * Sin(Along * 23.0 - Seconds * 4.5 + Angle * 3.0)
+    Ripple = Ripple + 0.06 * Sin(Along * 51.0 - Seconds * 7.0 - Angle * 5.0)
+    Ripple = Ripple + 0.035 * Sin(Along * 97.0 + Seconds * 3.0 + Angle * 7.0)
+    Radius = Radius * Ripple
+    Result = M.Add(Center, M.Add(M.Scale(Side, Cos(Angle) * Radius),
+        M.Scale(SurfaceUp, Sin(Angle) * Radius)))
+
+    If Not Attack Then
+        Result.Y = Max(Origin.Y, Result.Y)
+    End If
+
+    Return Result
+
+End Function
+
+End Module

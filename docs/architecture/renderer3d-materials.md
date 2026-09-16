@@ -13,7 +13,12 @@ standard effect shader. Web adoption is explicitly on hold.
 
 The native `graphics/water_surface3d.h` shader owns Fresnel/GGX surface lighting,
 animated normals, depth-dependent absorption/refraction, and a bounded 20-step
-screen-space reflection search. The draw owner provides camera/light constants
+screen-space reflection search. The September 16 waterbending refinement uses
+multiscale world-space surface derivatives for moving folds, lighter bounded
+absorption, a broader reflected rim for gameplay visibility, and a brighter analytic
+sky fallback. Screen depth remains a capped
+thickness approximation; it is not a measurement of a closed fluid volume.
+The draw owner provides camera/light constants
 and temporarily borrows the existing resolved opaque scene. Offscreen reflections
 use an analytic sky/horizon fallback; missing scene capture falls back to tinted
 water and environment reflection. The RAII binding releases its borrowed texture

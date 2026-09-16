@@ -3,6 +3,7 @@ Option Explicit
 Import Smile.Tools.WaterLabScene As Scene
 Import Smile.Tools.WaterLabUi As UI
 Import Smile.Simple3D.WaterVfx3D As Water
+Import Smile.Simple3D.WaterFlow3D As Flow
 Import Smile.Simple3D.Graphics3D As G
 Import Smile.Simple3D.Character3D As Character
 Import Smile.Simple3D.Precision3D As P
@@ -17,6 +18,7 @@ Dim Facing As P.Vector3
 Dim Tip As P.Vector3
 Dim Ok As Boolean
 Dim LightningAge As Number
+Dim Edge As P.Vector3
 
 Game Window "Water Lab Native Checks" Size 400 By 300
 
@@ -29,6 +31,8 @@ Lab.Orbit = False
 Do
 
     Call Check(Lab.Ready)
+    Call Check(Lab.Background.Ready)
+    Call Check(Lab.Floor.ReflectionsEnabled)
     Call Check(Lab.SpeedPercent = 200)
 
     Call UI.Update(Lab, KEY_PLUS)
@@ -74,7 +78,32 @@ Do
     Call Check(Water.BarrierRecoil(0.7) < 2.0)
     Call Check(Water.BarrierRecoil(1.0) = 0.0)
 
-    For Mode = 1 To 7
+    ''' The closed waterbending skin must meet at its seam and close at the rounded nose.
+    Position = Flow.SurfacePoint(P.Vector(0.0, 2.0, 0.0), P.Vector(200.0, 100.0, 0.0),
+        0.5, 2500, 0.65, 0.0)
+    Edge = Flow.SurfacePoint(P.Vector(0.0, 2.0, 0.0), P.Vector(200.0, 100.0, 0.0),
+        0.5, 2500, 0.65, M.PI * 2.0)
+    Facing = M.Subtract(Position, Edge)
+
+    Call Check(M.Dot(Facing, Facing) < 0.000001)
+
+    Position = Flow.SurfacePoint(P.Vector(0.0, 2.0, 0.0), P.Vector(200.0, 100.0, 0.0),
+        0.5, 2500, 1.0, 1.7)
+    Edge = Flow.CenterPoint(P.Vector(0.0, 2.0, 0.0), P.Vector(200.0, 100.0, 0.0),
+        0.5, 2500, 1.0)
+    Facing = M.Subtract(Position, Edge)
+
+    Call Check(M.Dot(Facing, Facing) < 0.000001)
+    Call Check(Position.Y > 100.0 And Position.X > 50.0)
+
+    ''' The combat whip's head reaches caller-provided contact at the shared impact time.
+    Position = Flow.AttackCenter(P.Vector(-100.0, 90.0, 0.0), P.Vector(162.0, 58.0, 35.0),
+        0.72, 3600, 1.0)
+    Facing = M.Subtract(Position, P.Vector(162.0, 58.0, 35.0))
+
+    Call Check(M.Dot(Facing, Facing) < 0.000001)
+
+    For Mode = 1 To 8
 
         Lab.Mode = Mode
 
@@ -85,6 +114,9 @@ Do
         Call Scene.Update(Lab, 0)
         Call Scene.Draw(Lab)
         Call Check(Lab.Ready And Lab.ErrorCode = 0 And Lab.Water.Visible)
+        Call Check(G.ReflectionValue3D(G.REFLECTION_QUERY_EFFECTIVE) = 1)
+        Call Check(G.ReflectionValue3D(G.REFLECTION_QUERY_DRAWS) > 0)
+        Call Check(G.ReflectionValue3D(G.REFLECTION_QUERY_COMPOSITIONS) = 1)
 
         Ok = Character.TrySocketPositionPrecise(Lab.Mira, "StaffTip", 0, False, Tip)
         Ok = P.TryParticlePosition(Lab.Glow.HeadShimmer, 0, True, Position) And Ok
@@ -104,16 +136,33 @@ Do
         Call Scene.Draw(Lab)
         Call Check(Lab.ErrorCode = 0 And Lab.Water.Visible)
 
+        If Mode = Water.TORRENT Then
+            Call Check(Lab.Water.PreviousMode = Water.IMPACT)
+        End If
+
         Show Screen
 
         Lab.Time = 1000
 
         Call Scene.Update(Lab, 0)
         Call Check(Lab.ErrorCode = 0)
+
+        If Mode = Water.WATER_BEND Then
+
+            Lab.Paused = False
+
+            Call Scene.Update(Lab, 100)
+            Call Check(Lab.Water.Spray.ActiveCount > 0)
+
+            Lab.Paused = True
+
+        End If
+
     End For
 
 Loop Until True
 
+Call CheckWaterbendingTargets(Lab)
 Call Scene.Destroy(Lab)
 Call Check(G.GpuParticleValue3D(G.GPU_PARTICLE_QUERY_TOTAL_CAPACITY) = 0)
 Call Check(G.LiveParticleBatchCount3D() = 0)
@@ -121,6 +170,72 @@ Call Check(G.LiveMaterialCount3D() = 0)
 Call Check(G.LiveTextureCount3D() = 0)
 
 Print "Water Lab native failures: "; Failures
+
+Sub CheckWaterbendingTargets(ByRef Value As Scene.State)
+
+    Dim TargetIndex As Number
+    Dim PillarIndex As Number
+    Dim SelectedTarget As Number
+    Dim PreviousSerial As Number
+    Dim Head As P.Vector3
+    Dim Delta As P.Vector3
+    Dim Pillar As P.Transform3D
+    Dim Ready As Boolean
+
+    Value.Mode = Water.WATER_BEND
+    Value.SpeedPercent = 100
+
+    For TargetIndex = 0 To 3
+
+        Call Scene.Restart(Value)
+        Call Check(Value.TargetIndex >= 0 And Value.TargetIndex < 4)
+
+        SelectedTarget = Value.TargetIndex
+        Value.Time = 1000
+        Value.Paused = False
+
+        Call Scene.Update(Value, 0)
+
+        PreviousSerial = Value.Water.Serial
+
+        Call Scene.Update(Value, 100)
+        Call Check(Value.TargetIndex = SelectedTarget)
+        Call Check(Value.Water.Serial > PreviousSerial And Value.Water.Serial - PreviousSerial <= 20)
+
+        Value.Paused = True
+        Value.TargetIndex = TargetIndex
+        Value.Time = 3600
+
+        Call Scene.Update(Value, 0)
+
+        Head = Flow.CenterPoint(Value.Frame.Origin, Value.Frame.Target, 0.72, Value.Time, 1.0)
+        Delta = M.Subtract(Head, Value.Frame.Target)
+
+        Call Check(M.Dot(Delta, Delta) < 0.000001)
+        Call Check(Value.Water.PreviousMode = Water.IMPACT)
+
+        Value.Time = 4300
+
+        Call Scene.Update(Value, 0)
+
+        For PillarIndex = 0 To 3
+
+            Ready = P.TryTransform(Value.Targets[PillarIndex], Pillar)
+
+            Call Check(Ready And Pillar.Position.X >= 175.0)
+            Call Check(Pillar.Position.Z = -120.0 + ToDouble(PillarIndex) * 80.0)
+
+            If PillarIndex = TargetIndex Then
+                Call Check(Pillar.Position.X > 183.0)
+            Else
+
+                Call Check(Pillar.Position.X = 175.0)
+            End If
+
+        End For
+    End For
+
+End Sub
 
 Sub Check(Condition As Boolean)
 

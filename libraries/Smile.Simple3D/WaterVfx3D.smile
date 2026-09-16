@@ -7,6 +7,7 @@ Import Smile.Simple3D.Core As Core
 Import Smile.Simple3D.Graphics3D As G
 Import Smile.Simple3D.Precision3D As P
 Import Smile.Simple3D.PrecisionMath3D As M
+Import Smile.Simple3D.WaterFlow3D As Flow
 
 Public Const HEAL = 1
 Public Const SHIELD = 2
@@ -15,6 +16,7 @@ Public Const IMPACT = 4
 Public Const WATER_BALL = 5
 Public Const WAVE = 6
 Public Const STORM = 7
+Public Const WATER_BEND = 8
 Private Const STRIPS = 16
 Private Const POINTS = 65
 Private Const SPRAY_CAPACITY = 4096
@@ -286,7 +288,16 @@ Private Sub SurfacePoint(Sample As Frame, Strip As Number, Along As Double,
 
     Angle = Along * M.PI * 2.0
 
-    If Sample.Mode = IMPACT Then
+    If Sample.Mode = WATER_BEND Or Sample.Mode = TORRENT Then
+
+        Angle = ToDouble(Strip) * M.PI * 2.0 / ToDouble(STRIPS)
+        LeftPoint = Flow.SurfacePoint(Sample.Origin, Sample.Target,
+            Sample.Progress, Sample.Time, Along, Angle, Sample.Mode = TORRENT)
+        RightPoint = Flow.SurfacePoint(Sample.Origin, Sample.Target,
+            Sample.Progress, Sample.Time, Along, Angle + M.PI * 2.0 / ToDouble(STRIPS),
+            Sample.Mode = TORRENT)
+
+    Else If Sample.Mode = IMPACT Then
 
         Ok = M.TryNormalize(M.Subtract(Sample.Origin, Sample.Target), Normal)
         Ok = M.TryNormalize(M.Cross(Normal, P.Vector(0.0, 1.0, 0.0)), Tangent) And Ok
@@ -382,32 +393,6 @@ Private Sub SurfacePoint(Sample As Frame, Strip As Number, Along As Double,
         LeftPoint = RingPoint(Center, Radius, Max(2.0, Height - Width), Angle)
         RightPoint = RingPoint(Center, Radius + 1.5, Height + Width, Angle)
 
-    Else If Strip >= 4 Then
-
-        Radius = (8.0 + ToDouble(Strip + 1) * 4.0 +
-            ToDouble(Sample.Time Mod 650) * 0.06)
-        Height = 4.0 + 9.0 * Sin(Along * M.PI * 8.0 + ToDouble(Sample.Time) * 0.006)
-        LeftPoint = RingPoint(Sample.Target, Radius, Max(1.0, Height), Angle)
-        RightPoint = RingPoint(Sample.Target, Radius + 6.0, Max(2.0, Height + 3.0), Angle)
-
-    Else
-
-        Point = M.Lerp(Sample.Origin, Sample.Target, Along)
-        Point.Y = Point.Y + 40.0 * Along * (1.0 - Along)
-        Ok = M.TryNormalize(M.Subtract(Sample.Target, Sample.Origin), Tangent)
-        Ok = M.TryNormalize(M.Cross(Tangent, P.Vector(0.0, 1.0, 0.0)), Normal)
-
-        If Not Ok Then
-            Normal = P.Vector(1.0, 0.0, 0.0)
-        End If
-
-        Angle = Along * M.PI * 6.0 - ToDouble(Sample.Time) * 0.007 + ToDouble(Strip) * M.PI / 2.0
-        Point = M.Add(Point, M.Scale(Normal, Sin(Angle) * (5.0 + Along * 10.0)))
-        Point.Y = Point.Y + Cos(Angle) * (5.0 + Along * 10.0)
-        Width = 4.0 + Along * 5.0
-        LeftPoint = M.Add(Point, M.Scale(Normal, -Width))
-        RightPoint = M.Add(Point, M.Scale(Normal, Width))
-
     End If
 
 End Sub
@@ -433,7 +418,7 @@ Private Function UpdateSurfaces(ByRef Value As Context, Sample As Frame) As Bool
         ItemCount = Sample.MemberCount * 2
     Else If Sample.Mode = SHIELD Then
         ItemCount = Sample.MemberCount * 4
-    Else If Sample.Mode = TORRENT Or Sample.Mode = IMPACT Then
+    Else If Sample.Mode = IMPACT Then
         ItemCount = 8
     End If
 
@@ -444,6 +429,8 @@ Private Function UpdateSurfaces(ByRef Value As Context, Sample As Frame) As Bool
 
     If Sample.Mode = SHIELD Then
         Opacity = ToNumber(Round(Clamp(Sample.Strength, 0.0, 1.0) * 28.0))
+    Else If Sample.Mode = WATER_BEND Or Sample.Mode = TORRENT Then
+        Opacity = ToNumber(Round(Clamp(Sample.Strength, 0.0, 1.0) * 92.0))
     End If
 
     For Strip = 0 To ItemCount - 1
@@ -535,7 +522,22 @@ Private Function EmitSpray(ByRef Value As Context, Sample As Frame, ItemCount As
         Velocity = P.Vector(Cos(Angle) * 25.0, 35.0, Sin(Angle) * 25.0)
         Lifetime = 450 + Value.Serial Mod 250
 
-        If Sample.Mode = HEAL Then
+        If Sample.Mode = WATER_BEND Then
+
+            ''' Shed downward from the moving body's underside, retaining forward flow.
+            Position = Flow.SurfacePoint(Sample.Origin, Sample.Target,
+                Sample.Progress, Sample.Time, Along,
+                -M.PI * ToDouble((Value.Serial * 97) Mod 1000) / 1000.0)
+            Tangent = M.Subtract(Flow.CenterPoint(Sample.Origin, Sample.Target,
+                Sample.Progress, Sample.Time, Along + 0.01),
+                Flow.CenterPoint(Sample.Origin, Sample.Target,
+                Sample.Progress, Sample.Time, Along - 0.01))
+            Ok = M.TryNormalize(Tangent, Tangent)
+            Velocity = M.Add(M.Scale(Tangent, 22.0 + Along * 18.0),
+                P.Vector(Cos(Angle) * 12.0, -24.0 - Along * 18.0, Sin(Angle) * 12.0))
+            Lifetime = 700 + Value.Serial Mod 350
+
+        Else If Sample.Mode = HEAL Then
 
             Position = RingPoint(Sample.Members[Value.Serial Mod Max(1, Sample.MemberCount)],
                 28.0 + Along * 5.0, Along * 90.0 + 5.0, Angle)
@@ -612,7 +614,8 @@ Public Function Update(ByRef Value As Context, Sample As Frame) As Boolean
     Sample.MemberCount = Max(0, Min(4, Sample.MemberCount))
     Sample.ImpactProgress = Clamp(Sample.ImpactProgress, 0.0, 1.0)
 
-    If ((Sample.Mode = WATER_BALL Or Sample.Mode = WAVE Or Sample.Mode = STORM) And
+    If ((Sample.Mode = WATER_BALL Or Sample.Mode = WAVE Or
+        Sample.Mode = STORM Or Sample.Mode = TORRENT Or Sample.Mode = WATER_BEND) And
         Sample.Progress >= 0.72) Then
 
         Sample.Mode = IMPACT
@@ -648,7 +651,7 @@ Public Function Update(ByRef Value As Context, Sample As Frame) As Boolean
 
     Value.PreviousTime = Sample.Time
     Value.PreviousMode = Sample.Mode
-    Value.Visible = Sample.Mode >= HEAL And Sample.Mode <= STORM And Sample.Strength > 0.0
+    Value.Visible = Sample.Mode >= HEAL And Sample.Mode <= WATER_BEND And Sample.Strength > 0.0
     Ok = G.AdvanceGpuParticleSystem3D(Value.Spray, Max(0, Min(100, Elapsed))) And Ok
 
     If Not Value.Visible Then
@@ -661,10 +664,21 @@ Public Function Update(ByRef Value As Context, Sample As Frame) As Boolean
     End If
 
     Ok = UpdateSurfaces(Value, Sample) And Ok
+
+    If Sample.Mode = WATER_BEND Then
+        Ok = G.SetEffectMaterial3D(Value.DropMaterial, G.MATERIAL_ALPHA_BLEND,
+            255, 155, 130, 90, 180) And Ok
+    Else
+        Ok = G.SetEffectMaterial3D(Value.DropMaterial, G.MATERIAL_ALPHA_BLEND,
+            255, 255, 255, 100, 125) And Ok
+    End If
+
     ItemCount = 8
 
     If Sample.Mode = IMPACT Then
         ItemCount = 35
+    Else If Sample.Mode = WATER_BEND Then
+        ItemCount = 4
     Else If Sample.Mode = SHIELD Then
         ItemCount = 2
     Else If Sample.Mode = WAVE Or Sample.Mode = STORM Then
@@ -678,6 +692,10 @@ Public Function Update(ByRef Value As Context, Sample As Frame) As Boolean
     If Sample.Mode = WATER_BALL Then
 
         ItemCount = Min(80, Value.EmissionTime * 2)
+
+    Else If Sample.Mode = WATER_BEND Then
+
+        ItemCount = Min(20, Value.EmissionTime / 2)
 
     Else If Sample.Mode = SHIELD Then
 

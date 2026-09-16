@@ -20,6 +20,7 @@
     <Asset Include="Assets\Lightning\*.png" />
     <Asset Include="Assets\Lightning\thunder.wav" />
     <Asset Include="Assets\Audio\*.wav" />
+    <Asset Include="Assets\Backgrounds\SinStarLandscape.png" />
     <Model3DAsset Include="BuildAssets\mira-animation-checkpoint.glb"
                   Descriptor="BuildAssets\Mira.sm3d.json"
                   LogicalPath="Assets/Mira.sm3d" TextureOutputDirectory="Assets/MiraTextures"

@@ -22,6 +22,8 @@ Public Function Caption(Mode As Number) As Text
         Return "Waterball"
     Else If Mode = 6 Then
         Return "Tsunami"
+    Else If Mode = 8 Then
+        Return "Waterbending"
     End If
 
     Return "Tempest Combo"
@@ -33,9 +35,9 @@ Public Sub Update(ByRef Value As Scene.State, Key As Number)
     Dim Index As Number
     Dim ButtonWidth As Number
 
-    ButtonWidth = (Window_Width() - 40) / 7
+    ButtonWidth = (Window_Width() - 40) / 8
 
-    For Index = 1 To 7
+    For Index = 1 To 8
 
         If UI.Clicked(20 + (Index - 1) * ButtonWidth, 64, ButtonWidth - 6, 32) Then
             Value.Mode = Index
@@ -46,7 +48,7 @@ Public Sub Update(ByRef Value As Scene.State, Key As Number)
     End For
 
     If Key = KEY_TAB Then
-        Value.Mode = Value.Mode Mod 7 + 1
+        Value.Mode = Value.Mode Mod 8 + 1
 
         Call Scene.Restart(Value)
     End If
@@ -108,14 +110,14 @@ Public Sub Draw(ByRef Value As Scene.State)
     Dim ButtonWidth As Number
     Dim Bottom As Number
 
-    ButtonWidth = (Window_Width() - 40) / 7
+    ButtonWidth = (Window_Width() - 40) / 8
     Bottom = Window_Height() - 54
 
     Fill Rectangle 0, 0, Window_Width(), 151, Rgb(6, 16, 30) Opacity 94
     Draw Text "SMILE 2.0 - Water Lab" At 20, 20 Size 24 Color White
     Draw Text "Mira / Healing and combat" At 440, 28 Size 13 Color Cyan
 
-    For Index = 1 To 7
+    For Index = 1 To 8
         Call UI.DrawButton(20 + (Index - 1) * ButtonWidth, 64, ButtonWidth - 6, 32, Caption(Index), Value.Mode = Index)
     End For
 

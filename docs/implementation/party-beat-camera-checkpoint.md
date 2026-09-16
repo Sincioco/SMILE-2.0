@@ -13,6 +13,12 @@ with the cooker's/native loader's scale-independent check before publishing Trip
 Mira; its former absolute area cutoff rejects valid small details. Preserve the
 outstanding Chrome camera-gesture acceptance alongside these adoption steps.
 
+September 16 native Water Lab work adds the shared `WaterFlow3D` geometry module,
+an eighth Waterbending preview and native lit-water shading refinements. On Web
+resumption, adopt the shader and validate the new preview, pause/speed, reduced
+runoff, per-cast random pillar targeting, contact/recoil and resource cleanup in
+Chrome. A native pass does not validate the Web material.
+
 Sin also placed Studio creation, development, acceptance and next phases on hold.
 The existing Studio project may retain shared source inventory, but it is not a
 validation target or an authorized next phase for the native hardening below.

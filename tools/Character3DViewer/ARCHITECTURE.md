@@ -126,12 +126,15 @@ StaffGrip/StaffTip and its clock from the caller's sampled time. Hidden equipmen
 does not draw shimmer. Its effect material borrows the water droplet texture, so
 glow is destroyed before the water context and before the model.
 
-Growth review: WaterVfx3D exceeds the 600-line review trigger because it owns seven
-bounded surface presets and their one shared staging/spray lifecycle. It retains
-one caller-held context, no game/Viewer dependency, and no hidden scene clock.
-Splitting the preset math would currently require a separate shared Frame-type
-module solely to avoid a dependency cycle; this milestone retains the cohesive
-owner. Native water lighting is isolated in water_surface3d.h; the existing native
+Growth review: WaterVfx3D exceeds the 600-line review trigger because it owns the
+shared staging/spray lifecycle and original seven bounded cast presets. The eighth,
+Lab-only waterbending preset and the refined Torrent combat whip delegate their
+centerlines and closed skin to the stateless WaterFlow3D module, which takes
+precision vectors and scalar samples without importing
+WaterVfx3D's Frame or Context. This keeps the dependency one-way without a new shared
+state module. WaterVfx3D retains one caller-held context, no game/Viewer dependency,
+and no hidden scene clock. Native water lighting is isolated in water_surface3d.h;
+the existing native
 renderer only admits the material, passes constants and binds the borrowed scene.
 No hard size limit or reviewed legacy baseline was raised.
 No Scene VFX pool, public calibration format or game rule changes are required by

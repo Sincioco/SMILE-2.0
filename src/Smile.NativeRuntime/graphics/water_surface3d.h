@@ -24,8 +24,21 @@ SamplerState waterSampler : register(s7);
 
 float3 WaterEnvironment(float3 reflected)
 {
-    float horizon = saturate(reflected.y * 0.5 + 0.5);
-    return lerp(float3(.018,.028,.035), float3(.32,.43,.50), horizon);
+    float horizon = smoothstep(-.18, .55, reflected.y);
+    float cloud = .5 + .5 * sin(reflected.x * 8 + reflected.z * 5);
+    return lerp(float3(.025,.032,.038), lerp(float3(.42,.51,.57),
+        float3(.82,.87,.90), cloud), horizon);
+}
+
+// Continuous world-space detail crosses strip seams and travels with the caller's clock.
+float WaterHeight(float3 p, float seconds)
+{
+    p += float3(seconds * -1.8, seconds * 3.2, seconds * .9);
+    float warp = sin(p.x*.12 + p.y*.16) + cos(p.z*.18 - p.y*.09);
+    float broad = sin(p.x*.24 + warp) * cos(p.y*.21 - p.z*.19 + warp);
+    float folds = sin(p.x*.71 - p.z*.53 + broad*2) * sin(p.y*.63 + warp);
+    float fine = sin(p.x*1.83 + p.y*1.21 + folds) * cos(p.z*1.67 - p.y*.97);
+    return broad * 1.15 + folds * .32 + fine * .075;
 }
 
 float3 WaterReflection(float3 origin, float3 direction, float3 fallback)
@@ -56,11 +69,15 @@ float4 ShadeWater(float4 pixel, float2 uv, float4 base, float3 world)
     float3 normal = normalize(cross(ddx(world), ddy(world)) + float3(0,.000001,0));
     normal *= dot(normal, view) < 0 ? -1 : 1;
     float seconds = waterCamera.w;
-    float3 ripples = float3(sin(world.z*.20 + seconds*2.1),
-        sin(world.x*.17 - seconds*1.7), cos(world.y*.23 + seconds*1.5));
-    normal = normalize(normal + ripples * .11);
+    float height = WaterHeight(world, seconds);
+    float3 dx = ddx(world), dy = ddy(world);
+    float3 acrossX = cross(dy, normal), acrossY = cross(normal, dx);
+    float determinant = dot(dx, acrossX);
+    float3 gradient = ddx(height)*acrossX + ddy(height)*acrossY;
+    normal = normalize(normal - gradient * sign(determinant) / max(abs(determinant), .00001));
     float facing = saturate(dot(normal, view));
-    float fresnel = .0204 + .9796 * pow(1-facing, 5);
+    // Broaden the reflected rim so narrow authored streams read at gameplay distance.
+    float fresnel = .06 + .94 * pow(1-facing, 3);
     float3 reflected = reflect(-view, normal);
     float3 reflection = WaterReflection(world + normal*2, reflected, WaterEnvironment(reflected));
 
@@ -79,17 +96,18 @@ float4 ShadeWater(float4 pixel, float2 uv, float4 base, float3 world)
     float3 highlight = min(specular, 12) * nl * waterLightColor.rgb * waterLightColor.w;
 
     float2 screen = pixel.xy / target.xy;
-    float2 bend = float2(dot(normal,cameraRight.xyz), -dot(normal,cameraUp.xyz)) * .008;
-    float3 transmission = float3(.025,.095,.12);
+    float2 bend = float2(dot(normal,cameraRight.xyz), -dot(normal,cameraUp.xyz)) * .012;
+    float3 transmission = float3(.055,.085,.095);
     if (waterParameters.w > .5)
     {
         float2 refracted = clamp(screen + bend, .001, .999);
         float behind = sceneDepthTexture.SampleLevel(sceneDepthSampler, refracted, 0).r;
         if (behind < Linear(pixel.z)) refracted = screen;
-        float depth = min(55, max(4, behind-Linear(pixel.z)));
-        float3 absorption = exp(-float3(.024,.007,.004)*depth);
+        // Screen depth is a bounded thickness proxy, never the distance to a far backdrop.
+        float depth = min(24, max(2, behind-Linear(pixel.z)));
+        float3 absorption = exp(-float3(.009,.004,.0028)*depth);
         transmission = waterScene.SampleLevel(waterSampler, refracted, 0).rgb * absorption;
-        transmission += float3(.012,.07,.09) * (1-absorption);
+        transmission += float3(.035,.075,.085) * (1-absorption);
     }
     float foamNoise = sin(world.x*.62 + sin(world.z*.41)*2 + seconds*2.8) *
         sin(world.y*.83 - world.z*.36 + seconds*1.9);

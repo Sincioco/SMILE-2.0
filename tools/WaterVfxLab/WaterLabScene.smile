@@ -13,6 +13,7 @@ Import Smile.Simple3D.WaterVfx3D As Water
 Import Smile.Simple3D.WaterStorm3D As Storm
 Import Smile.Simple3D.LightningVfx3D As Lightning
 Import Smile.Simple3D.Arena3D As Arena
+Import Smile.Simple3D.StaticBackdrop3D As Backdrop
 
 Public Type State
     Ready As Boolean
@@ -34,7 +35,9 @@ Public Type State
     Glow As Glow.Context
     Mira As Character.Actor
     Floor As Arena.ArenaFloor
+    Background As Backdrop.Backdrop
     Targets[4] As Core.Object3D
+    TargetIndex As Number
     BaseCamera As P.Camera3D
     Camera As P.Camera3D
     Controls As Camera.Controls
@@ -47,7 +50,9 @@ Public Sub Start(ByRef Value As State)
 
     Call G.ResetRenderer3D()
 
+    Value.Background = Backdrop.Create("Assets/Backgrounds/SinStarLandscape.png")
     Ok = G.ConfigureSoftDepth3D(1)
+    Ok = Backdrop.SetActive(Value.Background) And Ok
     Ok = G.ConfigureDistortion3D(1, 2) And Ok
     Ok = G.ConfigurePostProcessing3D(True, True, True, 100, 1200, 45, 2, 2, 4) And Ok
     Ok = G.SetAmbientLight3D(210, 225, 255, 90) And Ok
@@ -61,14 +66,14 @@ Public Sub Start(ByRef Value As State)
     Ok = Character.Place(Value.Mira, -160, 0, 0) And Ok
     Ok = Character.Rotate(Value.Mira, 0, -90, 0) And Ok
     Ok = Water.Prepare(Value.Water, "Assets/Water") And Ok
-    Value.Floor = Arena.Create(1000, 800, 45, 65, 95, 45, 1)
+    Value.Floor = Arena.Create(1000, 800, 45, 65, 95, 45, 1, True)
 
-    Call G.SetObjectColor(Value.Floor.Floor, 28, 40, 60)
+    Call G.SetObjectColor(Value.Floor.Floor, 0, 0, 0)
 
     For Index = 0 To 3
         Value.Targets[Index] = G.CreateCylinder3D(12, 75)
 
-        Call G.SetObjectPosition(Value.Targets[Index], -80 + Index * 85, 38, 35)
+        Call G.SetObjectPosition(Value.Targets[Index], 175, 38, -120 + Index * 80)
         Call G.SetObjectColor(Value.Targets[Index], 40, 85, 120)
     End For
 
@@ -79,7 +84,7 @@ Public Sub Start(ByRef Value As State)
     Value.BaseCamera.NearPlane = 1.0
     Value.BaseCamera.FarPlane = 3000.0
     Value.Camera = Value.BaseCamera
-    Value.Mode = Water.WATER_BALL
+    Value.Mode = Water.WATER_BEND
     Value.Duration = 5000
     Value.SpeedPercent = 200
     Value.AudioEnabled = True
@@ -97,11 +102,18 @@ End Sub
 Public Sub Restart(ByRef Value As State)
 
     Dim Ok As Boolean
+    Dim ChosenTarget As Number
 
     Value.Time = 0
     Value.SoundPlayed = False
     Value.ImpactPlayed = False
     Value.Clip = "Attack"
+    Value.TargetIndex = 3
+
+    If Value.Mode = Water.WATER_BEND Then
+        Random ChosenTarget From 0 To 3
+        Value.TargetIndex = ChosenTarget
+    End If
 
     If Value.Mode = Water.HEAL Then
         Value.Clip = "HealParty"
@@ -180,12 +192,12 @@ Private Sub StepPresentation(ByRef Value As State, SimulationElapsed As Number)
     Value.Frame.Progress = ToDouble(Value.Time) / ToDouble(Value.Duration)
     Value.Frame.Strength = Clamp(Min(Value.Frame.Progress * 5.0,
         (1.0 - Value.Frame.Progress) * 7.0), 0.0, 1.0)
-    Value.Frame.Target = P.Vector(162.0, 58.0, 35.0)
+    Value.Frame.Target = P.Vector(162.0, 58.0, -120.0 + ToDouble(Value.TargetIndex) * 80.0)
     Value.Frame.MemberCount = 4
     Value.Frame.Members[0] = P.Vector(-160.0, 0.0, 0.0)
 
     For Index = 1 To 3
-        Value.Frame.Members[Index] = P.Vector(-165.0 + ToDouble(Index) * 85.0, 0.0, 35.0)
+        Value.Frame.Members[Index] = P.Vector(175.0, 0.0, -200.0 + ToDouble(Index) * 80.0)
     End For
 
     Value.Frame.ImpactActive = Value.Mode = Water.SHIELD And Value.Time >= 2500 And Value.Time < 3400
@@ -193,13 +205,21 @@ Private Sub StepPresentation(ByRef Value As State, SimulationElapsed As Number)
 
     Charge = 0.0
 
-    If (Value.Mode = Water.WATER_BALL Or
+    If (Value.Mode = Water.TORRENT Or
+        Value.Mode = Water.WATER_BALL Or
         Value.Mode = Water.WAVE Or
-        Value.Mode = Water.STORM) Then
+        Value.Mode = Water.STORM Or
+        Value.Mode = Water.WATER_BEND) Then
         Charge = Water.RecoilDistance(Value.Frame.Progress)
     End If
 
-    Ok = P.SetPosition(Value.Targets[3], 175.0 + Charge, 38.0, 35.0) And Ok
+    For Index = 0 To 3
+        Ok = P.SetPosition(Value.Targets[Index], 175.0, 38.0,
+            -120.0 + ToDouble(Index) * 80.0) And Ok
+    End For
+
+    Ok = P.SetPosition(Value.Targets[Value.TargetIndex], 175.0 + Charge, 38.0,
+        Value.Frame.Target.Z) And Ok
 
     For Index = 0 To Character.ClipCount(Value.Mira) - 1
 
@@ -213,6 +233,11 @@ Private Sub StepPresentation(ByRef Value As State, SimulationElapsed As Number)
         ToNumber(Round(Value.Frame.Progress * ToDouble(ClipDuration)))) And Ok
     Ok = Character.Update(Value.Mira, 0) And Ok
     Ok = Character.TrySocketPositionPrecise(Value.Mira, "StaffTip", 0, False, Value.Frame.Origin) And Ok
+
+    If Value.Mode = Water.WATER_BEND Then
+        Value.Frame.Origin = P.Vector(-65.0, 2.0, -40.0)
+    End If
+
     Ok = Water.Update(Value.Water, Value.Frame) And Ok
     Ok = Storm.Update(Value.Storm, Value.Frame, P.Vector(-80.0, 115.0, 35.0)) And Ok
     Charge = Value.Frame.Strength
@@ -258,7 +283,9 @@ Private Sub StepPresentation(ByRef Value As State, SimulationElapsed As Number)
 
             Play Sound "Assets/Water/water-barrier-hit.wav" On Channel 8
 
-        Else If Value.Mode >= Water.WATER_BALL And Value.Frame.Progress >= 0.72 Then
+        Else If ((Value.Mode = Water.TORRENT Or
+            (Value.Mode >= Water.WATER_BALL And Value.Mode <= Water.WATER_BEND)) And
+            Value.Frame.Progress >= 0.72) Then
             Value.ImpactPlayed = True
 
             Play Sound "Assets/Water/water-splash.wav" On Channel 8
@@ -280,7 +307,7 @@ Public Sub Draw(ByRef Value As State)
 
     Ok = Arena.ConfigureForFrame(Value.Floor, True, True)
     Ok = P.SetCamera(Value.Camera) And Ok
-    Ok = G.BeginAcceptedCamera3D(18, 28, 45) And Ok
+    Ok = G.BeginAcceptedCamera3D(72, 82, 96) And Ok
     Ok = Arena.Draw(Value.Floor, True, True) And Ok
     Ok = Character.Draw(Value.Mira) And Ok
 
@@ -306,6 +333,7 @@ Public Sub Destroy(ByRef Value As State)
     Call Character.Destroy(Value.Mira)
     Call Lightning.Shutdown()
     Call Arena.Destroy(Value.Floor)
+    Call Backdrop.Destroy(Value.Background)
 
     For Index = 0 To 3
         Call G.DestroyObject3D(Value.Targets[Index])
