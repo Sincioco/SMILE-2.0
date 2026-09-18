@@ -194,7 +194,8 @@ Public Function SurfacePoint(
     Angle As Double,
     Optional Attack As Boolean = False,
     Optional WrapStyle As Number = 0,
-    Optional Realistic As Boolean = False
+    Optional Realistic As Boolean = False,
+    Optional FlowScale As Double = 1.0
 ) As P.Vector3
 
     Dim Center As P.Vector3
@@ -204,9 +205,15 @@ Public Function SurfacePoint(
     Dim Result As P.Vector3
     Dim Seconds As Double
     Dim Radius As Double
+    Dim WorldOrigin As P.Vector3
     Dim Swell As Double
     Dim Ripple As Double
     Dim Ok As Boolean
+
+    WorldOrigin = Origin
+    FlowScale = Max(0.01, FlowScale)
+    Target = M.Scale(M.Subtract(Target, Origin), 1.0 / FlowScale)
+    Origin = P.Vector(0.0, 0.0, 0.0)
 
     If Attack Then
         Center = AttackCenter(Origin, Target, Progress, Time, Along, WrapStyle)
@@ -281,6 +288,8 @@ Public Function SurfacePoint(
     If Not Attack Then
         Result.Y = Max(Origin.Y, Result.Y)
     End If
+
+    Result = M.Add(WorldOrigin, M.Scale(Result, FlowScale))
 
     Return Result
 

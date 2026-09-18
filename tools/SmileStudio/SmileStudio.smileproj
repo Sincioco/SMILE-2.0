@@ -23,6 +23,7 @@
     <SmileSource Include="..\Character3DViewer\MiraBattle.smile" />
     <SmileSource Include="..\Character3DViewer\MiraWater.smile" />
     <SmileSource Include="..\Character3DViewer\KaelEarth.smile" />
+    <SmileSource Include="..\Character3DViewer\KaelWater.smile" />
     <SmileSource Include="..\Character3DViewer\BattleCamera.smile" />
     <SmileSource Include="..\Character3DViewer\BattleCameraShots.smile" />
     <SmileSource Include="..\Character3DViewer\BattleCameraTimeline.smile" />

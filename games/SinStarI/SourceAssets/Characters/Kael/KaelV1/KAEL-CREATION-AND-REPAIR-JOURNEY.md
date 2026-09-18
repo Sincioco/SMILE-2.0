@@ -138,8 +138,9 @@ the same normalized clock. Validate with the IK helpers muted and with native
 socket sampling, as for Earth. The initial supporting-arm samples were too small;
 the final poses exceed 0.35 m of travel on both arms and 0.12 m of head-height change.
 
-The separate water GLB has sixteen clips and ten sockets. Keep it separate while
-Sin reviews the Lab; the accepted thirteen-clip GLB hash remains
+The water GLB has sixteen clips and ten sockets. Sin subsequently authorized
+native Viewer/game adoption; both now stage this same water-named GLB and descriptor.
+Keep its filename and checksum stable. The preserved thirteen-clip Earth baseline hash is
 `d3187af4bba99e1709aa7a27faa7987bd3f0fa837c00494d790517d33a6fbbda`.
 The water GLB hash is
 `231f4494c656b9a3a5c363b2108a6d6d1f737772a38609e2bd174a6abd5dde8e`.
@@ -154,3 +155,17 @@ Small-target wrapping requires explicit cylindrical bounds and follows the targe
 recoil. It does not add fluid simulation or infer collisions from arbitrary meshes.
 The native fixture checks body motion, helix clearance, target contact, dimensions,
 wrap coverage behind the pillar, shader-look toggling, demo progression and cleanup.
+
+## Native Viewer/game adoption — September 18, 2026
+
+`KaelWater` maps final grounded actor pose, clip time and caller-supplied target body
+bounds into the shared water effect. `WaterFlow3D` accepts an optional scale;
+geometry is computed in caster-local units and returned to world space, preserving
+world target contact. Impacts retain the target's actual dimensions. No animations
+were rebaked for adoption. The realistic preset is on in Viewer/game, while the
+Lab retains its comparison toggle. Both adapters respect the existing sword toggle.
+
+Normal/Earth/Water categories repeat every three boss turns, every Earth and Water
+skill appears within nine turns, and normal attacks alternate continuously.
+The game fixture advances the actual scheduler and all sixteen demo clips, samples
+water flight/contact and checks full scene cleanup. Web adoption remains held.

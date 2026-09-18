@@ -16,6 +16,7 @@
     <SmileSource Include="MiraBattle.smile" />
     <SmileSource Include="MiraWater.smile" />
     <SmileSource Include="KaelEarth.smile" />
+    <SmileSource Include="KaelWater.smile" />
     <SmileSource Include="BattleCamera.smile" />
     <SmileSource Include="BattleCameraShots.smile" />
     <SmileSource Include="BattleCameraTimeline.smile" />

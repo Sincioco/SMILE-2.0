@@ -17,6 +17,7 @@ Import Smile.Tools.BattleCamera As BattleCamera
 Import Smile.Tools.MiraBattle As MiraBattle
 Import Smile.Tools.MiraWater As MiraWater
 Import Smile.Tools.KaelEarth As KaelEarth
+Import Smile.Tools.KaelWater As KaelWater
 Import Smile.Simple3D.WaterVfx3D As WaterVfx
 Import Smile.Tools.Character3DViewerActors As ViewerActors
 Import Smile.Tools.Character3DViewerCalibration As ViewerCalibration
@@ -151,13 +152,21 @@ End Type
 
 Public Function BossProfile(Value As State) As Number
 
+    Dim ReturnValue As Number
+
     If Value.SelectedBossProfile = ViewerProfiles.PROFILE_KAEL Then
-        Return ViewerProfiles.PROFILE_KAEL
+        ReturnValue = ViewerProfiles.PROFILE_KAEL
+
+        Return ReturnValue
     Else If Value.UnityRoster Then
-        Return ViewerProfiles.PROFILE_VRAX
+        ReturnValue = ViewerProfiles.PROFILE_VRAX
+
+        Return ReturnValue
     End If
 
-    Return ViewerProfiles.PROFILE_DRAGON
+    ReturnValue = ViewerProfiles.PROFILE_DRAGON
+
+    Return ReturnValue
 
 End Function
 
@@ -1402,7 +1411,22 @@ Public Function UpdateDragon(
 
             Result = KaelEarth.Update(Dragon.Earth, Dragon.Actor, Dragon.Clip,
                 Precision3D.Vector(ToDouble(Target.X), 65.0, ToDouble(Target.Z)), True,
-                Not ScenePaused And Not Value.PreviewActive, EarthElapsed) And Result
+                Not ScenePaused And Not Value.PreviewActive, EarthElapsed,
+                KaelWater.StyleForClip(Dragon.Clip) = 0) And Result
+
+            If Value.HitTarget = 1 Then
+                Call KaelWater.SetTarget(Dragon.KaelWater, Value.Companion.Actor)
+            Else If Value.HitTarget = 5 Then
+                Call KaelWater.SetTarget(Dragon.KaelWater, Value.Fourth.Actor)
+            Else If Value.HitTarget = MiraBattle.PARTY_TURN Then
+                Call KaelWater.SetTarget(Dragon.KaelWater, Value.Mira.Actor)
+            Else
+
+                Call KaelWater.SetTarget(Dragon.KaelWater, PrimaryActor)
+            End If
+
+            Result = KaelWater.Update(Dragon.KaelWater, Dragon.Actor, Dragon.Clip, True,
+                Not ScenePaused And Not Value.PreviewActive) And Result
 
         End If
 
@@ -2262,7 +2286,8 @@ Public Function BossImpactTime(ByRef Value As State, AttackMilliseconds As Numbe
     Result = VraxImpactTime(AttackMilliseconds)
     Clip = ViewerProfiles.PartyAttackName(BossProfile(Value), Value.DragonCounter)
 
-    If BossProfile(Value) = ViewerProfiles.PROFILE_KAEL And KaelEarth.ModeForClip(Clip) <> 0 Then
+    If (BossProfile(Value) = ViewerProfiles.PROFILE_KAEL And
+        (KaelEarth.ModeForClip(Clip) <> 0 Or KaelWater.StyleForClip(Clip) <> 0)) Then
         Result = VRAX_ATTACK_START_MILLISECONDS + AttackMilliseconds * 72 / 100
     End If
 

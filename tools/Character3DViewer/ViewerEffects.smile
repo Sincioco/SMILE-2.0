@@ -19,6 +19,7 @@ Import Smile.Tools.OrinStorm As OrinStorm
 Import Smile.Tools.BattleAudio As BattleAudio
 Import Smile.Tools.MiraWater As MiraWater
 Import Smile.Tools.KaelEarth As KaelEarth
+Import Smile.Tools.KaelWater As KaelWater
 Import Smile.Tools.Character3DViewerProfiles As ViewerProfiles
 Import Smile.Tools.Character3DViewerDragon As ViewerDragon
 
@@ -48,6 +49,7 @@ End Type
 Public Type State
     Water As MiraWater.Context
     Earth As KaelEarth.Context
+    KaelWater As KaelWater.Context
     ZaraAttacks As ZaraAttackEffects
     ProfileIndex As Number
     VraxAttacks As ViewerDragon.AttackEffects
@@ -530,6 +532,7 @@ Public Sub CreateEpicGlow(ByRef Value As State, ProfileIndex As Number,
         GlowReady = MiraWater.Prepare(Value.Water)
     Else If ProfileIndex = ViewerProfiles.PROFILE_KAEL Then
         GlowReady = KaelEarth.Prepare(Value.Earth)
+        GlowReady = KaelWater.Prepare(Value.KaelWater) And GlowReady
     End If
 
     Value.EpicGlowAvailable = ViewerProfiles.EpicGlowAvailable(ProfileIndex)
@@ -616,6 +619,7 @@ Public Sub DestroyEpicGlow(ByRef Value As State)
 
     Call MiraWater.Destroy(Value.Water)
     Call KaelEarth.Destroy(Value.Earth)
+    Call KaelWater.Destroy(Value.KaelWater)
     Call ViewerDragon.ClearVraxAudio(Value.VraxAudio)
     Call ViewerDragon.ClearVraxAttacks(Value.VraxAttacks)
     Call ClearEquipmentFire(Value)
@@ -763,7 +767,10 @@ Public Sub UpdateEquipmentFire(
         End If
 
         WaterReady = KaelEarth.Update(Value.Earth, Actor, SelectedClipLabel,
-            EarthTarget, False, Not ScenePaused And Not CalibrationEditing, EarthElapsed, SwordVisible)
+            EarthTarget, False, Not ScenePaused And Not CalibrationEditing, EarthElapsed,
+            SwordVisible And KaelWater.StyleForClip(SelectedClipLabel) = 0)
+        WaterReady = KaelWater.Update(Value.KaelWater, Actor, SelectedClipLabel, False,
+            Not ScenePaused And Not CalibrationEditing) And WaterReady
 
         Return
 
@@ -900,6 +907,7 @@ Public Sub DrawEquipmentFire(ByRef Value As State, SwordVisible As Boolean,
 
     Call MiraWater.Draw(Value.Water)
     Call KaelEarth.Draw(Value.Earth)
+    Call KaelWater.Draw(Value.KaelWater)
     Call ViewerDragon.DrawVraxAttacks(Value.VraxAttacks)
 
     If SwordVisible And Value.EpicGlowVisible Then

@@ -1,5 +1,35 @@
 # Character Viewer Architecture
 
+## Native Kael Water adoption
+
+`KaelWater` owns the caster adapter, frame and two audio cues (channels 12/13),
+using a caller-owned `WaterVfx3D.Context`. `ViewerEffects` owns the solo context;
+`ViewerDragon` owns the Party context. `ViewerParty` supplies the selected hero's
+final transform and grounded head-derived body cylinder after boss animation update.
+The Earth adapter remains the single sword-visibility writer; callers exclude
+Water clips from its normal sword preference. Both families contact at 72%.
+
+`WaterFlow3D.SurfacePoint` takes an optional scale and transforms its local geometry
+back to world space; target dimensions and impact wrapping remain in world units.
+`WaterVfx3D.Frame.FlowScale` defaults to one for existing callers. No renderer,
+language, compiler, resource-budget or entry-point changes are required. Kael and
+Mira own separate water resources and release them with their scene; no shared
+mutable effect state is introduced.
+
+`Profiles` defines all sixteen clips and normal → Earth → Water attack categories,
+cycling all six bending skills in nine boss turns. Normal attacks alternate across
+cycles. Both applications link the same implementation and stage the same canonical
+water-named GLB/descriptor. The historical Earth GLB remains a preserved baseline.
+Studio's source inventory is aligned only; Studio and Web work remain on hold.
+
+Validation extends the existing native game fixture (actual demo and scheduler,
+flight/contact, scale and cleanup), Water Lab geometry checks and Viewer hardening.
+No size limit, baseline, exclusion, dependency or architecture guardrail is changed.
+The adapter is 160 lines. Existing owners grow by 27 lines (`Profiles`), 25
+(`ViewerParty`), 15 (`ViewerDragon`), 8 (`ViewerEffects`), 9 (`WaterFlow3D`) and
+5 (`WaterVfx3D`); bootstrap files do not grow. These are bounded wiring and
+geometry changes within their current responsibilities.
+
 ## Native Kael Earth casts and quiet Idle
 
 `KaelEarth` is the focused adapter for Kael's clip time, static grounded scale,
@@ -20,7 +50,7 @@ existing target and updates Earth effects after advancing the boss actor. Its
 impact helper aligns Earth hit/shield reaction to 72% of the cast; Volley has three
 visual/audio contacts and the existing single Party hit resolves at the middle one.
 Sword attacks retain their existing contact policy. `Profiles` appends three clips
-and selects the five-attack cycle. Sin Star I links these same owners; Studio only
+and initially selected the five-attack cycle (superseded by Water adoption above). Sin Star I links these same owners; Studio only
 keeps its source inventory aligned while development remains held.
 
 The Earth Lab owns one actor/camera/arena/clock in `EarthLabScene`, controls in
@@ -31,9 +61,9 @@ the ground-debris check requires no ground stones after lift-off and preserves
 airborne stones and target fragments. Dust regressions cover the held final pose,
 Idle transition, pause and complete expiration. Existing native
 Viewer hardening and game presentation fixtures cover integration and cleanup.
-The shared game fixture advances the solo demo through all thirteen clips and
-the real Party turn scheduler through five successive boss attacks, verifying
-all three Earth casts without assigning the boss counter or selected clip.
+The shared game fixture advances the solo demo through all sixteen clips and
+the real Party turn scheduler through nine successive boss attacks, verifying
+all three Earth and all three Water casts without assigning the boss counter or selected clip.
 
 The initial Earth slice added a 442-line shared effect, 167-line Kael adapter,
 31-line Lab entry point, 267-line scene owner, 162-line UI owner and 168-line native

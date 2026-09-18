@@ -6,12 +6,15 @@ Zara and Mira. A status panel shows every hero and the selected boss with live s
 animation and speed. Dragon includes Zara's attacks, hit/KO/revival and water shields.
 Kael starts at speed 200 in both his character presentation and battle simulation.
 
-Kael's mostly stationary Breathing Idle and three Earth clips are shared with the
-Viewer and Earth Lab. Kael Party alternates his two sword attacks with Boulder Hurl,
-Stone Volley and Fault Line. Both hands drive the Earth casts while the sword is
-hidden; it returns for his other animations. Rocks, dust and original audio follow
-the actor's clip time and selected battle target. Hurl/Volley clear 90% of their
-loose ground stones once the boulders rise.
+Kael's sixteen-clip model includes his quiet Breathing Idle, two normal attacks,
+three Earth attacks and three Water attacks, shared with the Viewer.
+Kael Party repeats **normal → Earth → Water**: Boulder Hurl / Water Whip,
+Stone Volley / Serpent Orbit, then Fault Line / Tidal Surge, with a normal attack
+before each pair. Normal attacks alternate between Attack and Attack2.
+The character demo includes all sixteen clips. Both bending families hide the sword
+and synchronize casting, target contact and audio; water uses the realistic Lab
+preset and wraps sufficiently small targets. Hurl/Volley clear all loose ground
+stones after lift-off, and their impact dust fades through its remaining lifetime.
 
 Characters offers Arin, Orin, Mira, Zara, Valor, Dragon, Vrax, Yalis, and Kael. Each selection
 runs that character's animation cycle with the Character Viewer's background,

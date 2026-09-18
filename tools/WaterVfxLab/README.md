@@ -36,7 +36,8 @@ These are visual references; no video, animation, shader, package or service was
 
 The canonical Kael package owns a separate `kael-v1-water-preview.glb`, descriptor,
 Blender checkpoints, original authoring script, measurements and pose previews.
-The accepted thirteen-clip Viewer/game model remains unchanged during this Lab review.
+Sin has now authorized native adoption: the Viewer and Sin Star I use this same
+sixteen-clip model in their demos and normal/Earth/Water Party rotation.
 Normal Lab builds stage and cook the local preview; Blender is needed only to re-author it.
 
 ### Ownership and focused validation

@@ -38,6 +38,7 @@ Public Type Frame
     ImpactActive As Boolean
     ImpactProgress As Double
     ImpactMember As Number
+    FlowScale As Double
     WrapStyle As Number
     Realistic As Boolean
     TargetCenter As P.Vector3
@@ -313,10 +314,10 @@ Private Sub SurfacePoint(Sample As Frame, Strip As Number, Along As Double,
         Angle = ToDouble(Strip) * Width
         LeftPoint = Flow.SurfacePoint(Sample.Origin, Sample.Target,
             Sample.Progress, Sample.Time, Along, Angle, Sample.Mode = TORRENT,
-            Sample.WrapStyle, Sample.Realistic)
+            Sample.WrapStyle, Sample.Realistic, Sample.FlowScale)
         RightPoint = Flow.SurfacePoint(Sample.Origin, Sample.Target,
             Sample.Progress, Sample.Time, Along, Angle + Width,
-            Sample.Mode = TORRENT, Sample.WrapStyle, Sample.Realistic)
+            Sample.Mode = TORRENT, Sample.WrapStyle, Sample.Realistic, Sample.FlowScale)
 
     Else If Sample.Mode = IMPACT Then
 
@@ -721,6 +722,10 @@ Public Function Update(ByRef Value As Context, Sample As Frame) As Boolean
 
     If Not Value.Ready Then
         Return False
+    End If
+
+    If Sample.FlowScale <= 0.0 Then
+        Sample.FlowScale = 1.0
     End If
 
     Sample.MemberCount = Max(0, Min(4, Sample.MemberCount))

@@ -20,6 +20,7 @@ Import Smile.Simple3D.PrecisionCamera3D As PrecisionCamera
 Import Smile.Simple3D.CharacterViewer As CharacterViewer
 Import Smile.Tools.DragonPresence As DragonPresence
 Import Smile.Tools.KaelEarth As KaelEarth
+Import Smile.Tools.KaelWater As KaelWater
 
 Private Const ASSET_PATH = "Assets\Generation2\RedDragon\RedDragon.sm3d"
 Private Const SCALE_PERCENT = 25000
@@ -75,17 +76,26 @@ Public Type State
     Audio As BattleAudio.CueState
     VraxAudio As VraxAudioState
     Earth As KaelEarth.Context
+    KaelWater As KaelWater.Context
 End Type
 
 Public Function ProfileIndex(Value As State) As Number
 
+    Dim ReturnValue As Number
+
     If Value.SelectedProfile = ViewerProfiles.PROFILE_KAEL Then
-        Return ViewerProfiles.PROFILE_KAEL
+        ReturnValue = ViewerProfiles.PROFILE_KAEL
+
+        Return ReturnValue
     Else If Value.UseVrax Then
-        Return ViewerProfiles.PROFILE_VRAX
+        ReturnValue = ViewerProfiles.PROFILE_VRAX
+
+        Return ReturnValue
     End If
 
-    Return ViewerProfiles.PROFILE_DRAGON
+    ReturnValue = ViewerProfiles.PROFILE_DRAGON
+
+    Return ReturnValue
 
 End Function
 
@@ -202,6 +212,7 @@ Public Function Create(ByRef Value As State, ByRef BorrowedActor As Character3D.
 
         If Value.SelectedProfile = ViewerProfiles.PROFILE_KAEL Then
             Result = KaelEarth.Prepare(Value.Earth) And Result
+            Result = KaelWater.Prepare(Value.KaelWater) And Result
         End If
 
     Else If Result Then
@@ -255,9 +266,12 @@ End Function
 Public Sub DrawEffects(ByRef Value As State)
 
     If Value.SelectedProfile = ViewerProfiles.PROFILE_KAEL Then
+
         Call KaelEarth.Draw(Value.Earth)
+        Call KaelWater.Draw(Value.KaelWater)
 
         Return
+
     End If
 
     If Value.UseVrax Then
@@ -280,6 +294,7 @@ Public Sub ClearOwnedEffects(ByRef Value As State, Light As LightPool3D.Lease)
 
     Call ClearVraxAttacks(Value.Attacks)
     Call KaelEarth.Destroy(Value.Earth)
+    Call KaelWater.Destroy(Value.KaelWater)
 
     If Value.Breath.Slot <> 0 Then
         Ok = Fire.Destroy(Value.Breath)

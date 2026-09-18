@@ -4,10 +4,10 @@
   "revision": "v1",
   "status": "Native candidate",
   "date": "2026-09-18",
-  "model": "kael-v1-animation-checkpoint.glb",
-  "descriptor": "KaelV1.sm3d.json",
-  "modelSha256": "d3187af4bba99e1709aa7a27faa7987bd3f0fa837c00494d790517d33a6fbbda",
-  "modelBytes": 28277176,
+  "model": "kael-v1-water-preview.glb",
+  "descriptor": "KaelWaterPreview.sm3d.json",
+  "modelSha256": "231f4494c656b9a3a5c363b2108a6d6d1f737772a38609e2bd174a6abd5dde8e",
+  "modelBytes": 28413464,
   "bodyTriangles": 42000,
   "swordTriangles": 6996,
   "bones": 42,
@@ -25,13 +25,16 @@
     "Victory",
     "EarthHurl",
     "EarthVolley",
-    "EarthSlam"
+    "EarthSlam",
+    "WaterWhip",
+    "WaterOrbit",
+    "WaterSurge"
   ],
   "originalBody": "Source/kael-v1-body.original.glb",
   "originalSword": "Source/kael-v1-sword.original.glb",
   "originalBodySha256": "0a08f9cbfbe8c1831700dde71bb12b14d6ea0a0f0df46109691ee5eae1f1522a",
   "originalSwordSha256": "cc3522b4c351f3609f886425f28bf71c954cb635a51c2094b2401a8981729277",
-  "acceptedBlenderCheckpoint": "Blender/kael-v1-rigged-animation-checkpoint.blend",
+  "acceptedBlenderCheckpoint": "Blender/kael-v1-water-preview.blend",
   "soloEquippedWorldHeight": 134,
   "partyScaleMultiplier": 2,
   "reports": [
@@ -42,12 +45,15 @@
     "Source/export-validation.json",
     "Source/roundtrip-validation.json",
     "Source/native-validation.json",
-    "Source/earth-animation-report.json"
+    "Source/earth-animation-report.json",
+    "Source/water-animation-report.json",
+    "Source/water-export-validation.json",
+    "Source/water-roundtrip-validation.json"
   ],
   "runtimePoseCalibration": "None; Kael corrections are baked into this versioned asset",
   "webStatus": "On hold; not adopted or browser-validated",
   "waterPreview": {
-    "status": "Native Water Lab feedback candidate",
+    "status": "Adopted native Viewer, Sin Star I and Water Lab",
     "model": "kael-v1-water-preview.glb",
     "descriptor": "KaelWaterPreview.sm3d.json",
     "modelSha256": "231f4494c656b9a3a5c363b2108a6d6d1f737772a38609e2bd174a6abd5dde8e",
@@ -64,6 +70,6 @@
       "Source/water-export-validation.json",
       "Source/water-roundtrip-validation.json"
     ],
-    "adoption": "Water Lab only; accepted Viewer/game model unchanged"
+    "adoption": "Shared sixteen-clip model; legacy preview filename retained to preserve asset provenance"
   }
 }

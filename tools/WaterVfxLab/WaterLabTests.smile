@@ -257,6 +257,22 @@ Sub CheckKael(ByRef Value As Scene.State)
         1500, 0.5, 1.0, True, 1, True)
 
     Call Check(M.Length(M.Subtract(LeftNow, RightNow)) > 0.5)
+
+    LeftNow = Flow.SurfacePoint(P.Vector(0.0, 0.0, 0.0), P.Vector(100.0, 60.0, 0.0),
+        0.3, 1500, 0.5, 1.0, True, 1, True)
+    RightNow = Flow.SurfacePoint(P.Vector(25.0, 3.0, -10.0), P.Vector(225.0, 123.0, -10.0),
+        0.3, 1500, 0.5, 1.0, True, 1, True, 2.0)
+
+    Call Check(M.Length(M.Subtract(RightNow,
+        M.Add(P.Vector(25.0, 3.0, -10.0), M.Scale(LeftNow, 2.0)))) < 0.001,
+        "Scaled cast preserves body clearance at a translated origin")
+
+    RightNow = Flow.SurfacePoint(P.Vector(25.0, 3.0, -10.0), P.Vector(225.0, 123.0, -10.0),
+        0.72, 3600, 1.0, 1.0, True, 1, True, 2.0)
+
+    Call Check(M.Length(M.Subtract(RightNow, P.Vector(225.0, 123.0, -10.0))) < 0.001,
+        "Scaled water head reaches the unchanged world target")
+
     Call Check(Splash.CanWrap(12.0, 75.0))
     Call Check(Not Splash.CanWrap(0.0, 0.0) And Not Splash.CanWrap(50.0, 75.0))
     Call Check(Not Splash.CanWrap(12.0, 160.0))

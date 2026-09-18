@@ -273,7 +273,7 @@ Public Function ProfileAt(Index As Number) As CharacterViewer.Profile
         Result.PartyRole = "Boss"
         Result.ProductionStatus = "Candidate"
         Result.AssetPath = "Assets\Generation2\KaelV1\Kael.sm3d"
-        Result.ExpectedClipCount = 13
+        Result.ExpectedClipCount = 16
         Result.ExpectedSocketCount = 10
         Result.DesiredWorldHeight = 134
         Result.DefaultPlaybackSpeed = 200
@@ -435,7 +435,7 @@ Public Function ClipCount(ProfileIndex As Number) As Number
     Else If ProfileIndex = PROFILE_DRAGON Then
         Result = 6
     Else If ProfileIndex = PROFILE_KAEL Then
-        Result = 13
+        Result = 16
     Else If IsSwordFighter(ProfileIndex) Then
         Result = 10
     Else If ProfileIndex = PROFILE_ORIN Or IsMiraCharacter(ProfileIndex) Then
@@ -525,6 +525,12 @@ Public Function ClipName(ProfileIndex As Number, ClipIndex As Number) As Text
             Result = "EarthVolley"
         Else If ClipIndex = 12 And ProfileIndex = PROFILE_KAEL Then
             Result = "EarthSlam"
+        Else If ClipIndex = 13 And ProfileIndex = PROFILE_KAEL Then
+            Result = "WaterWhip"
+        Else If ClipIndex = 14 And ProfileIndex = PROFILE_KAEL Then
+            Result = "WaterOrbit"
+        Else If ClipIndex = 15 And ProfileIndex = PROFILE_KAEL Then
+            Result = "WaterSurge"
         End If
 
     Else If IsUnityCharacter(ProfileIndex) Then
@@ -774,16 +780,37 @@ Public Function PartyAttackName(ProfileIndex As Number, AttackCycle As Number) A
 
     If ProfileIndex = PROFILE_KAEL Then
 
-        If AttackCycle Mod 5 = 0 Then
-            Result = "Attack"
-        Else If AttackCycle Mod 5 = 1 Then
+        If AttackCycle Mod 3 = 0 Then
+
+            If AttackCycle Mod 2 = 0 Then
+                Result = "Attack"
+            Else
+                Result = "Attack2"
+            End If
+
+        Else If AttackCycle Mod 9 = 1 Then
+
             Result = "EarthHurl"
-        Else If AttackCycle Mod 5 = 2 Then
-            Result = "Attack2"
-        Else If AttackCycle Mod 5 = 3 Then
+
+        Else If AttackCycle Mod 9 = 2 Then
+
+            Result = "WaterWhip"
+
+        Else If AttackCycle Mod 9 = 4 Then
+
             Result = "EarthVolley"
-        Else
+
+        Else If AttackCycle Mod 9 = 5 Then
+
+            Result = "WaterOrbit"
+
+        Else If AttackCycle Mod 9 = 7 Then
+
             Result = "EarthSlam"
+
+        Else
+            Result = "WaterSurge"
+
         End If
 
     Else If ProfileIndex = PROFILE_ARIN Then

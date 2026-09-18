@@ -34,11 +34,11 @@ $technicalRoot = Join-Path $repositoryRoot `
 $buildAssets = Join-Path $toolRoot 'BuildAssets'
 $copies = @(
     @{
-        Source = Join-Path $kaelRoot 'kael-v1-animation-checkpoint.glb'
+        Source = Join-Path $kaelRoot 'kael-v1-water-preview.glb'
         Destination = Join-Path $buildAssets 'KaelV1\kael-v1-animation-checkpoint.glb'
     },
     @{
-        Source = Join-Path $kaelRoot 'KaelV1.sm3d.json'
+        Source = Join-Path $kaelRoot 'KaelWaterPreview.sm3d.json'
         Destination = Join-Path $buildAssets 'KaelV1\KaelV1.sm3d.json'
     },
     @{

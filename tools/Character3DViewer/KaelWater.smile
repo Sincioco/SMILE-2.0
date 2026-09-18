@@ -1,0 +1,160 @@
+''' Kael's water clip adapter; callers supply the final actor and target transforms.
+Module Smile.Tools.KaelWater
+
+Option Explicit
+
+Import Smile.Simple3D.Character3D As Character
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.PrecisionMath3D As M
+Import Smile.Simple3D.WaterVfx3D As Water
+Import Smile.Tools.BattleAudio As Audio
+
+Public Type Context
+    Effect As Water.Context
+    Frame As Water.Frame
+    CastCue As Audio.CueState
+    ImpactCue As Audio.CueState
+End Type
+
+Public Function Prepare(ByRef Value As Context) As Boolean
+
+    Dim Ok As Boolean
+
+    Ok = Water.Prepare(Value.Effect, "Assets/Water")
+
+    Return Ok
+
+End Function
+
+Public Function StyleForClip(Clip As Text) As Number
+
+    If Clip = "WaterWhip" Then
+        Return 1
+    Else If Clip = "WaterOrbit" Then
+        Return 2
+    Else If Clip = "WaterSurge" Then
+        Return 3
+    End If
+
+    Return 0
+
+End Function
+
+''' Approximate the target's body, excluding weapon reach, with a grounded cylinder.
+Public Sub SetTarget(ByRef Value As Context, Actor As Character.Actor)
+
+    Dim Foot As P.Vector3
+    Dim Head As P.Vector3
+    Dim Ok As Boolean
+
+    Ok = Character.TryPosition(Actor, Foot)
+    Ok = Character.TrySocketPositionPrecise(Actor, "Head", 0, False, Head) And Ok
+    Value.Frame.TargetHeight = Max(1.0, Head.Y - Foot.Y + 8.0)
+    Value.Frame.TargetRadius = Value.Frame.TargetHeight * 0.22
+    Value.Frame.TargetCenter = P.Vector(Foot.X,
+        Foot.Y + Value.Frame.TargetHeight * 0.5, Foot.Z)
+
+End Sub
+
+Public Function Update(ByRef Value As Context, Actor As Character.Actor, Clip As Text,
+    UseTarget As Boolean, Audible As Boolean) As Boolean
+
+    Dim Rotation As P.Vector3
+    Dim Bounds As Character.PreciseBounds3D
+    Dim Direction As P.Vector3
+    Dim Duration As Number
+    Dim Index As Number
+    Dim Ok As Boolean
+
+    Value.Frame.WrapStyle = StyleForClip(Clip)
+    Value.Frame.Mode = 0
+
+    If Value.Frame.WrapStyle = 0 And Not Value.Effect.Ready Then
+        Return True
+    End If
+
+    Ok = Prepare(Value)
+    Ok = Character.TryPosition(Actor, Value.Frame.Origin) And Ok
+    Bounds = Character.WorldBoundsPrecise(Actor)
+    Value.Frame.FlowScale = Clamp(Bounds.Size.Y / 134.0, 0.5, 3.0)
+    Value.Frame.Realistic = True
+
+    If UseTarget Then
+
+        Direction = M.Subtract(Value.Frame.TargetCenter, Value.Frame.Origin)
+        Direction.Y = 0.0
+        Ok = M.TryNormalize(Direction, Direction) And Ok
+        Value.Frame.Target = M.Subtract(Value.Frame.TargetCenter,
+            M.Scale(Direction, Value.Frame.TargetRadius + 1.0))
+        Value.Frame.Target.Y = Value.Frame.TargetCenter.Y + Value.Frame.TargetHeight * 0.15
+
+    Else
+
+        Ok = Character.TryRotation(Actor, Rotation) And Ok
+        Direction = M.Rotate(P.Vector(0.0, 55.0, -250.0), Rotation)
+        Value.Frame.Target = M.Add(Value.Frame.Origin, M.Scale(Direction, Value.Frame.FlowScale))
+        Value.Frame.TargetRadius = 0.0
+        Value.Frame.TargetHeight = 0.0
+
+    End If
+
+    For Index = 0 To Character.ClipCount(Actor) - 1
+
+        If Character.ClipName(Actor, Index) = Clip Then
+            Duration = Character.ClipDuration(Actor, Index)
+        End If
+
+    End For
+
+    Value.Frame.Time = Character.AnimationTime(Actor)
+    Value.Frame.Progress = Clamp(ToDouble(Value.Frame.Time) / ToDouble(Max(1, Duration)), 0.0, 1.0)
+    Value.Frame.Strength = Clamp(Min(Value.Frame.Progress * 5.0,
+        (1.0 - Value.Frame.Progress) * 7.0), 0.0, 1.0)
+
+    If Value.Frame.WrapStyle > 0 Then
+        Value.Frame.Mode = Water.TORRENT
+    End If
+
+    Ok = Water.Update(Value.Effect, Value.Frame) And Ok
+    Audible = Audible And Value.Frame.Mode <> 0
+
+    If Audio.CrossedCue(Value.CastCue, Clip, Value.Frame.Time, Duration * 30 / 100, Audible) Then
+
+        Play Sound "Assets/Audio/mira-water-attack.wav" On Channel 12
+
+    End If
+
+    If Audio.CrossedCue(Value.ImpactCue, Clip, Value.Frame.Time, Duration * 72 / 100, Audible) Then
+
+        Play Sound "Assets/Water/water-splash.wav" On Channel 13
+
+    End If
+
+    If Not Audible Then
+        Stop Sound On Channel 12
+        Stop Sound On Channel 13
+    End If
+
+    Return Ok
+
+End Function
+
+Public Sub Draw(ByRef Value As Context)
+
+    Call Water.Draw(Value.Effect)
+
+End Sub
+
+Public Sub Destroy(ByRef Value As Context)
+
+    Dim Empty As Context
+
+    Call Water.Destroy(Value.Effect)
+
+    Stop Sound On Channel 12
+    Stop Sound On Channel 13
+    Value = Empty
+
+End Sub
+
+End Module

@@ -33,5 +33,23 @@
   "fullFrameGroundingSamples": 1091,
   "earthRocksSha256": "04340998025bf4f1f3c5b697fa52c48b67a303cfa9c7d07bba901f8878d6c7e2",
   "earthAssetEquality": "All three native applications cook byte-identical rock models; Kael Viewer/game models match, while the Lab model uses its own embedded texture paths.",
-  "validationScope": "Focused native checks and short visible interactions; no full-playthrough soak, RTX benchmark or Web/browser acceptance."
+  "validationScope": "Focused native checks and short visible interactions; no full-playthrough soak, RTX benchmark or Web/browser acceptance.",
+  "waterAdoption": {
+    "nativeViewerBuild": "Passed",
+    "sinStarIBuild": "Passed",
+    "animationCount": 16,
+    "waterCastCount": 3,
+    "automaticPartyTurns": 9,
+    "rotation": "Normal, Earth, Water; all six bending skills covered",
+    "automaticDemo": "All sixteen clips advance",
+    "targetChecks": "Scaled flight and 75-percent contact burst; actual target body bounds",
+    "waterLabNativeFailures": 0,
+    "cookedKaelSha256": "339210ff4bcdac723b784d6b6fa16ebf6697b66b6d50fefa47dfcababff70b31",
+    "assetEquality": "Viewer and Sin Star I cooked models are byte-identical",
+    "visualChecks": [
+      "Viewer: sixteen-clip animation page; WaterWhip casting pose, surrounding water and hidden sword",
+      "Sin Star I: Battle Simulations menu and updated Kael Party entry"
+    ],
+    "web": "On hold; not tested"
+  }
 }

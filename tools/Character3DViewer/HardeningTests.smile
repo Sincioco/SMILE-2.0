@@ -3089,9 +3089,10 @@ Call Check(Not ViewerProfiles.EpicGlowVisibleByDefault(ViewerProfiles.PROFILE_YA
 Profile = ViewerProfiles.ProfileAt(ViewerProfiles.PROFILE_KAEL)
 
 Call CheckNamed(CharacterViewer.ValidateProfile(Profile) And
-    Profile.DisplayName = "Kael" And Profile.ExpectedClipCount = 13 And
+    Profile.DisplayName = "Kael" And Profile.ExpectedClipCount = 16 And
+    ViewerProfiles.ClipCount(ViewerProfiles.PROFILE_KAEL) = 16 And
     Profile.ExpectedSocketCount = 10 And Profile.DefaultPlaybackSpeed = 200,
-    "Kael owns his thirteen-clip sword and Earth profile at speed 200")
+    "Kael owns his sixteen-clip sword, Earth and Water profile at speed 200")
 Call CheckNamed(ViewerProfiles.WeaponPart(ViewerProfiles.PROFILE_KAEL) = 1 And
     ViewerProfiles.ShieldPart(ViewerProfiles.PROFILE_KAEL) = -1 And
     Not ViewerProfiles.HasBattleOpponent(ViewerProfiles.PROFILE_KAEL),

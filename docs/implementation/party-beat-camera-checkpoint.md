@@ -47,12 +47,20 @@ build, publication or browser acceptance was performed for this native task.
 
 September 18 Earth follow-up: Kael has a quiet Breathing Idle and three additional
 Earth casts, a native Earth Lab, shared rock/dust VFX and original audio. The sword
-is hidden only during Earth casts so both hands can drive the choreography.
-On explicit Web resumption, adopt the thirteen-clip package, Earth asset selection,
-shared effect/visibility/cue logic and five-attack Party cycle. Validate material
-detail, six remaining ground stones after lift-off, all three Volley contacts,
+is hidden during bending casts so both hands can drive the choreography.
+On explicit Web resumption, adopt the current sixteen-clip water-named package,
+Earth and Water assets, shared effect/visibility/cue logic and the alternating
+normal/Earth/Water Party cycle. Validate material detail, no remaining ground
+stones after lift-off, fading dust tails, all three Volley contacts,
 pause/seek, sword restoration and cleanup in Chrome. None of that Web adoption or
 browser validation was performed by the native delivery.
+
+September 18 Water adoption adds WaterWhip, WaterOrbit and WaterSurge to the native
+Viewer/game, all sixteen demo clips and all six bending casts in nine Party turns.
+Held Web work must also adopt scaled caster-local water geometry, realistic water
+inputs, grounded target cylinders and small-target wrapping. The Water Lab retains
+its Mira/Kael switch, realistic toggle and four progressively wider/taller pillars.
+No Web build, publication or browser validation was performed for these changes.
 
 ## Native Review Hardening (2026-09-13)
 

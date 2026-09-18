@@ -13,18 +13,22 @@ The states remain presentation states; no HP/MP or combat damage system is added
 
 ## Kael (native)
 
-Kael now also has **EarthHurl**, **EarthVolley** and **EarthSlam**, for thirteen
-clips total. Use the animation list's next page to reach the Earth clips. His
-mostly stationary **Breathing Idle** replaces the active sword/shield idle.
-Earth casts use stomps, lowered stances, both arms and torso-led strikes; the
-sword hides during these casts and returns for other clips according to Weapon/W.
-Kael Party cycles Attack, EarthHurl, Attack2, EarthVolley and EarthSlam. The shared
-game session uses the same sequence, target, model, VFX and audio. Speed remains 200.
-With **Demo** enabled, Kael's solo presentation automatically cycles all thirteen
-clips, including Boulder Hurl (`EarthHurl`), Stone Volley (`EarthVolley`) and
-Fault Line (`EarthSlam`). Sin Star I's **Characters → Kael** uses the same demo;
-**Battle Simulations → Kael Party** uses the five-attack rotation above.
-The [native Earth Lab](../EarthVfxLab/README.md) provides focused effect inspection.
+Kael has **sixteen clips**, including Boulder Hurl (`EarthHurl`), Stone Volley
+(`EarthVolley`), Fault Line (`EarthSlam`), Water Whip (`WaterWhip`), Serpent Orbit
+(`WaterOrbit`) and Tidal Surge (`WaterSurge`). Use the animation list's next page
+for the bending clips. His quiet Breathing Idle and speed **200** are preserved.
+The sword hides during both Earth and Water casts and otherwise respects Weapon/W.
+
+**Kael Party** repeats normal → Earth → Water. The first nine turns are Attack,
+EarthHurl, WaterWhip, Attack2, EarthVolley, WaterOrbit, Attack, EarthSlam, WaterSurge;
+normal attacks continue alternating Attack/Attack2 across subsequent cycles.
+**Demo** automatically plays all sixteen clips. Sin Star I's **Characters → Kael**
+and **Battle Simulations → Kael Party** use these same assets, rotations and effects.
+Water uses the Lab's realistic preset, scales around the larger Party Kael and
+wraps sufficiently small targets using a grounded body cylinder. Hits and sounds
+agree at 72% of each bending clip. The [Water Lab](../WaterVfxLab/README.md) retains
+its appearance toggle and pillar inspection; the [Earth Lab](../EarthVfxLab/README.md)
+retains focused rock/dust inspection.
 
 **Kael** opens the new sword-boss candidate; **Kael Party** runs Arin, Orin, Zara
 and Mira against Kael at exactly twice his solo scale. Both tabs use the existing

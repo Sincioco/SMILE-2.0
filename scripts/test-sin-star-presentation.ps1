@@ -83,7 +83,7 @@ Call Me.LoadViewer()
                 ViewerParty.ActorPlaybackSpeed(Me.Party, 2, 100) <> 200) Then
                 Print "Kael Party must load Kael at speed 200."
             End If
-            Call Me.CheckKaelEarthFixture()
+            Call Me.CheckKaelBendingFixture()
         End If
         If Me.Session.SelectedCharacterTab = ViewerProfiles.CHARACTER_TAB_KAEL Then
             If Me.Playback.PlaybackSpeed <> 200 Then
@@ -93,8 +93,8 @@ Call Me.LoadViewer()
         End If
 '@
 $workflowText = $workflowText.Replace($loadBoundary, $diagnosticLoad)
-$earthFixture = @'
-    Private Sub CheckKaelEarthFixture()
+$bendingFixture = @'
+    Private Sub CheckKaelBendingFixture()
 
         Dim Cycle As Number
         Dim TurnIndex As Number
@@ -111,7 +111,7 @@ $earthFixture = @'
 
         Call Me.UpdateDragon()
 
-        For Cycle = 0 To 4
+        For Cycle = 0 To 8
 
             For TurnIndex = 0 To 5
 
@@ -130,6 +130,18 @@ $earthFixture = @'
             Call Me.AdvancePartyDemo()
 
             Name = ViewerProfiles.PartyAttackName(ViewerProfiles.PROFILE_KAEL, Cycle)
+            If ((Cycle = 0 And Name <> "Attack") Or
+                (Cycle = 1 And Name <> "EarthHurl") Or
+                (Cycle = 2 And Name <> "WaterWhip") Or
+                (Cycle = 3 And Name <> "Attack2") Or
+                (Cycle = 4 And Name <> "EarthVolley") Or
+                (Cycle = 5 And Name <> "WaterOrbit") Or
+                (Cycle = 6 And Name <> "Attack") Or
+                (Cycle = 7 And Name <> "EarthSlam") Or
+                (Cycle = 8 And Name <> "WaterSurge")) Then
+                Print "Kael must alternate normal, Earth and Water attacks."
+            End If
+
             Ok = ViewerParty.UpdateDragon(Me.Party, Me.DragonState, Me.Effects,
                 Me.Character, False, Name, False, 200, 0)
 
@@ -137,9 +149,7 @@ $earthFixture = @'
                 Print "Kael automatic battle rotation skipped: "; Name
             End If
 
-            If (Cycle = 1 Or
-                Cycle = 3 Or
-                Cycle = 4) Then
+            If Cycle Mod 3 <> 0 Then
 
                 For ClipIndex = 0 To Character3D.ClipCount(Me.DragonState.Actor) - 1
 
@@ -153,10 +163,27 @@ $earthFixture = @'
                 Ok = ViewerParty.UpdateDragon(Me.Party, Me.DragonState, Me.Effects,
                     Me.Character, False, Name, False, 200, 0) And Ok
 
-                If (Not Ok Or
-                    Not Me.DragonState.Earth.Effect.Visible Or
-                    Me.DragonState.Earth.Effect.ErrorCode <> 0) Then
-                    Print "Kael Earth cast failed: "; Name
+                If Cycle Mod 3 = 1 Then
+                    Ok = Me.DragonState.Earth.Effect.Visible And Ok
+                    Ok = Me.DragonState.Earth.Effect.ErrorCode = 0 And Ok
+                Else
+                    Ok = Me.DragonState.KaelWater.Effect.Visible And Ok
+                    Ok = Me.DragonState.KaelWater.Frame.WrapStyle = Cycle / 3 + 1 And Ok
+                    Ok = Me.DragonState.KaelWater.Frame.FlowScale > 1.9 And Ok
+                    Ok = Me.DragonState.KaelWater.Frame.TargetHeight > 0.0 And Ok
+                    Ok = Character3D.SetAnimationTime(Me.DragonState.Actor, Duration * 75 / 100) And Ok
+                    Ok = ViewerParty.UpdateDragon(Me.Party, Me.DragonState, Me.Effects,
+                        Me.Character, False, Name, False, 200, 0) And Ok
+                    Ok = Me.DragonState.KaelWater.Effect.Visible And Ok
+                    Ok = Me.DragonState.KaelWater.Effect.ImpactSprayCount > 0 And Ok
+                End If
+
+                If Not Ok Then
+                    Print "Kael automatic bending cast failed: "; Name
+                    Print Me.DragonState.KaelWater.Frame.WrapStyle
+                    Print Me.DragonState.KaelWater.Frame.FlowScale
+                    Print Me.DragonState.KaelWater.Frame.TargetHeight
+                    Print Me.DragonState.KaelWater.Effect.ImpactSprayCount
                 End If
 
             End If
@@ -177,14 +204,20 @@ $earthFixture = @'
         Dim SeenHurl As Boolean
         Dim SeenVolley As Boolean
         Dim SeenSlam As Boolean
+        Dim SeenWhip As Boolean
+        Dim SeenOrbit As Boolean
+        Dim SeenSurge As Boolean
         Dim Ok As Boolean
 
-        For ClipIndex = 0 To 12
+        For ClipIndex = 0 To 15
 
             Name = ViewerPlayback.SelectedClipName(Me.Character, Me.Playback)
             SeenHurl = SeenHurl Or Name = "EarthHurl"
             SeenVolley = SeenVolley Or Name = "EarthVolley"
             SeenSlam = SeenSlam Or Name = "EarthSlam"
+            SeenWhip = SeenWhip Or Name = "WaterWhip"
+            SeenOrbit = SeenOrbit Or Name = "WaterOrbit"
+            SeenSurge = SeenSurge Or Name = "WaterSurge"
 
             For StepIndex = 0 To 199
 
@@ -195,6 +228,13 @@ $earthFixture = @'
                     Me.Playback.SelectedClip, Name, Me.ViewerCameraState.Live, 100, False, 200)
 
                 Ok = Me.Effects.Earth.Effect.ErrorCode = 0 And Ok
+                If Name = "WaterWhip" Or Name = "WaterOrbit" Or Name = "WaterSurge" Then
+                    If Character3D.AnimationTime(Me.Character) = 2000 Then
+                        Ok = Me.Effects.KaelWater.Effect.Visible And Ok
+                        Ok = Abs(Me.Effects.KaelWater.Frame.FlowScale - 1.0) < 0.03 And Ok
+                    End If
+                End If
+
                 Me.Timing.PresentationElapsed = 100
 
                 Call Me.AdvanceAnimationSequence()
@@ -218,14 +258,14 @@ $earthFixture = @'
 
         If (Not SeenHurl Or
             Not SeenVolley Or
-            Not SeenSlam) Then
-            Print "Kael automatic demo skipped an Earth attack."
+            Not SeenSlam Or Not SeenWhip Or Not SeenOrbit Or Not SeenSurge) Then
+            Print "Kael automatic demo skipped an Earth or Water attack."
         End If
 
     End Sub
 
 '@
-$workflowText = $workflowText.Replace('End Class', $earthFixture + 'End Class')
+$workflowText = $workflowText.Replace('End Class', $bendingFixture + 'End Class')
 [IO.File]::WriteAllText((Join-Path $testRoot 'ViewerWorkflow.smile'), $workflowText)
 $workflowEntry.SetAttribute('Include', 'ViewerWorkflow.smile')
 $projectPath = Join-Path $testRoot 'PresentationTests.smileproj'
@@ -238,4 +278,4 @@ if ($LASTEXITCODE -ne 0 -or ($actual -join "`n").Trim() -ne 'Sin Star I presenta
     throw "Presentation regression failed: $actual"
 }
 Write-Host 'PASS: Nine character entries and three battle simulations create, draw and release their actual assets.'
-Write-Host 'PASS: Kael automatically cycles all thirteen demo clips and all five battle attacks, including all three Earth casts.'
+Write-Host 'PASS: Kael automatically cycles all sixteen demo clips and nine alternating normal/Earth/Water turns, including all six bending casts.'
