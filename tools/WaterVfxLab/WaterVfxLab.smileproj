@@ -26,6 +26,10 @@
                   Descriptor="BuildAssets\Mira.sm3d.json"
                   LogicalPath="Assets/Mira.sm3d" TextureOutputDirectory="Assets/MiraTextures"
                   Profile="Character" Identity="sin-star-i.character-4.healer.mira" ProductionState="Prototype" />
+    <Model3DAsset Include="BuildAssets\kael-v1-water-preview.glb"
+                  Descriptor="BuildAssets\KaelWaterPreview.sm3d.json"
+                  LogicalPath="Assets/KaelWater.sm3d" TextureOutputDirectory="Assets/KaelTextures"
+                  Profile="Character" Identity="sin-star-i.kael.water-preview" ProductionState="Prototype" />
     <SmileProjectReference Include="..\..\libraries\Smile.Simple3D\Smile.Simple3D.smilelibproj" />
     <SmileProjectReference Include="..\..\libraries\Smile.UI\Smile.UI.smilelibproj" />
   </ItemGroup>

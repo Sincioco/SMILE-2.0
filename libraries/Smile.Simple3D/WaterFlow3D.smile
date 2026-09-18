@@ -67,7 +67,8 @@ Public Function AttackCenter(
     Target As P.Vector3,
     Progress As Double,
     Time As Number,
-    Along As Double
+    Along As Double,
+    Optional WrapStyle As Number = 0
 ) As P.Vector3
 
     Dim Forward As P.Vector3
@@ -83,6 +84,12 @@ Public Function AttackCenter(
     Dim Angle As Double
     Dim Radius As Double
     Dim Ok As Boolean
+
+    If WrapStyle > 0 Then
+        Result = WrapCenter(Origin, Target, Progress, Along, WrapStyle)
+
+        Return Result
+    End If
 
     Forward = M.Subtract(Target, Origin)
     Forward.Y = 0.0
@@ -115,6 +122,68 @@ Public Function AttackCenter(
 
 End Function
 
+''' Ground-relative helix with body clearance, unwinding into a cast at 42 percent.
+''' Styles: 1 rising whip, 2 broad orbit, 3 rising wave. Contact remains at 72 percent.
+Public Function WrapCenter(Origin As P.Vector3, Target As P.Vector3,
+    Progress As Double, Along As Double, Style As Number) As P.Vector3
+
+    Dim Forward As P.Vector3
+    Dim Side As P.Vector3
+    Dim Coil As P.Vector3
+    Dim Tail As P.Vector3
+    Dim Head As P.Vector3
+    Dim Control As P.Vector3
+    Dim Result As P.Vector3
+    Dim Angle As Double
+    Dim Radius As Double
+    Dim Lift As Double
+    Dim Flight As Double
+    Dim Release As Double
+    Dim Ok As Boolean
+
+    Along = Clamp(Along, 0.0, 1.0)
+    Forward = M.Subtract(Target, Origin)
+    Forward.Y = 0.0
+    Ok = M.TryNormalize(Forward, Forward)
+
+    If Not Ok Then
+        Forward = P.Vector(1.0, 0.0, 0.0)
+    End If
+
+    Side = M.Cross(Forward, P.Vector(0.0, 1.0, 0.0))
+    Lift = Clamp(Progress / 0.22, 0.0, 1.0)
+    Lift = Lift * Lift * (3.0 - 2.0 * Lift)
+    Flight = Clamp((Progress - 0.42) / 0.30, 0.0, 1.0)
+    Release = Clamp(Flight * 2.0, 0.0, 1.0)
+    Release = Release * Release * (3.0 - 2.0 * Release)
+    Angle = Along * M.PI * 2.5 - Min(Progress, 0.42) * M.PI * 4.0
+    Radius = 74.0 + Sin(Along * M.PI) * 8.0
+
+    If Style = 2 Then
+        Angle = Along * M.PI * 3.5 + Min(Progress, 0.42) * M.PI * 5.0
+        Radius = 85.0
+    Else If Style = 3 Then
+        Angle = Along * M.PI * 2.0 - Min(Progress, 0.42) * M.PI * 3.0
+        Radius = 88.0
+    End If
+
+    Coil = M.Add(Origin, M.Add(M.Scale(Side, Cos(Angle) * Radius),
+        M.Scale(Forward, Sin(Angle) * Radius)))
+    Coil.Y = Origin.Y + 9.0 + (Along * 113.0 + Sin(Along * M.PI) * 14.0) * Lift
+    Tail = M.Add(Origin, M.Scale(Forward, 78.0))
+    Tail.Y = Origin.Y + 67.0
+    Head = M.Lerp(Tail, Target, Flight)
+    Head.Y = Head.Y + Sin(Flight * M.PI) * 32.0
+    Tail = M.Lerp(Tail, Target, Max(0.0, Flight - 0.45))
+    Control = M.Lerp(Tail, Head, 0.4)
+    Control = M.Add(Control, M.Scale(Side, (1.0 - Flight) * 85.0))
+    Control.Y = Control.Y + (1.0 - Flight) * 50.0
+    Result = M.Lerp(Coil, M.Cubic(Tail, Control, Head, Head, Along), Release)
+
+    Return Result
+
+End Function
+
 ''' Adjacent strips share exact edges; the radius closes at the nose instead of leaving a pipe.
 Public Function SurfacePoint(
     Origin As P.Vector3,
@@ -123,7 +192,9 @@ Public Function SurfacePoint(
     Time As Number,
     Along As Double,
     Angle As Double,
-    Optional Attack As Boolean = False
+    Optional Attack As Boolean = False,
+    Optional WrapStyle As Number = 0,
+    Optional Realistic As Boolean = False
 ) As P.Vector3
 
     Dim Center As P.Vector3
@@ -137,14 +208,15 @@ Public Function SurfacePoint(
     Dim Ripple As Double
     Dim Ok As Boolean
 
-    Center = CenterPoint(Origin, Target, Progress, Time, Along)
-    Tangent = M.Subtract(CenterPoint(Origin, Target, Progress, Time, Along + 0.004),
-        CenterPoint(Origin, Target, Progress, Time, Along - 0.004))
-
     If Attack Then
-        Center = AttackCenter(Origin, Target, Progress, Time, Along)
-        Tangent = M.Subtract(AttackCenter(Origin, Target, Progress, Time, Along + 0.004),
-            AttackCenter(Origin, Target, Progress, Time, Along - 0.004))
+        Center = AttackCenter(Origin, Target, Progress, Time, Along, WrapStyle)
+        Tangent = M.Subtract(AttackCenter(Origin, Target, Progress, Time, Along + 0.004, WrapStyle),
+            AttackCenter(Origin, Target, Progress, Time, Along - 0.004, WrapStyle))
+    Else
+
+        Center = CenterPoint(Origin, Target, Progress, Time, Along)
+        Tangent = M.Subtract(CenterPoint(Origin, Target, Progress, Time, Along + 0.004),
+            CenterPoint(Origin, Target, Progress, Time, Along - 0.004))
     End If
 
     Ok = M.TryNormalize(Tangent, Tangent)
@@ -156,6 +228,11 @@ Public Function SurfacePoint(
     Side = M.Subtract(Target, Origin)
     Side.Y = 0.0
     Side = M.Cross(Side, P.Vector(0.0, 1.0, 0.0))
+
+    If WrapStyle > 0 Then
+        Side = M.Cross(Tangent, P.Vector(0.0, 1.0, 0.0))
+    End If
+
     Ok = M.TryNormalize(Side, Side)
 
     If Not Ok Then
@@ -174,10 +251,30 @@ Public Function SurfacePoint(
         Radius = (5.0 + Swell * 9.0) * Sqrt(Max(0.0, Sin(Along * M.PI)))
     End If
 
+    If WrapStyle > 0 Then
+
+        Radius = (12.0 + Swell * 18.0) * Sqrt(Max(0.0, Sin(Along * M.PI)))
+
+        If Realistic Then
+            Radius = Radius * (1.25 + 0.18 * Sin(Along * 32.0 - Seconds * 3.2))
+            SurfaceUp = M.Scale(SurfaceUp, 1.0 + 0.22 * Sin(Along * 21.0 + Seconds * 2.0))
+        End If
+
+        If WrapStyle = 3 Then
+            Radius = Radius * (1.0 + Clamp((Progress - 0.4) * 8.0, 0.0, 1.0))
+        End If
+
+    End If
+
     Ripple = 1.0 + 0.12 * Sin(Along * 23.0 - Seconds * 4.5 + Angle * 3.0)
     Ripple = Ripple + 0.06 * Sin(Along * 51.0 - Seconds * 7.0 - Angle * 5.0)
     Ripple = Ripple + 0.035 * Sin(Along * 97.0 + Seconds * 3.0 + Angle * 7.0)
     Radius = Radius * Ripple
+
+    If WrapStyle > 0 Then
+        SurfaceUp = M.Scale(SurfaceUp, 0.7)
+    End If
+
     Result = M.Add(Center, M.Add(M.Scale(Side, Cos(Angle) * Radius),
         M.Scale(SurfaceUp, Sin(Angle) * Radius)))
 

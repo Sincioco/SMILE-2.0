@@ -6,6 +6,7 @@ Option Explicit
 Import Smile.Simple3D.Core As Core
 Import Smile.Simple3D.Graphics3D As G
 Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.PrecisionMath3D As M
 Import Smile.Simple3D.PrecisionCamera3D As Camera
 Import Smile.Simple3D.Character3D As Character
 Import Smile.Simple3D.WaterVfx3D As Water
@@ -32,11 +33,18 @@ Public Type State
     Water As Water.Context
     Storm As Storm.Context
     Mira As Character.Actor
+    Kael As Character.Actor
+    KaelSelected As Boolean
+    KaelAttack As Number
+    Demo As Boolean
+    RealisticWater As Boolean
     Floor As Arena.ArenaFloor
     Background As Backdrop.Backdrop
     TitleBackground As Backdrop.Backdrop
     BackgroundIndex As Number
     Targets[4] As Core.Object3D
+    TargetRadii[4] As Number
+    TargetHeights[4] As Number
     TargetIndex As Number
     BaseCamera As P.Camera3D
     Camera As P.Camera3D
@@ -68,15 +76,30 @@ Public Sub Start(ByRef Value As State)
     Ok = Character.SetScale(Value.Mira, 12000) And Ok
     Ok = Character.Place(Value.Mira, -160, 0, 0) And Ok
     Ok = Character.Rotate(Value.Mira, 0, -90, 0) And Ok
+    Value.Kael = Character.LoadActor("Assets/KaelWater.sm3d")
+    Ok = Character.IsValid(Value.Kael) And Ok
+    Ok = Character.SetScale(Value.Kael, 12000) And Ok
+    Ok = Character.Place(Value.Kael, -160, 0, 0) And Ok
+    Ok = Character.Rotate(Value.Kael, 0, -90, 0) And Ok
+    Ok = Character.SetPartVisible(Value.Kael, 1, False) And Ok
+    Value.KaelSelected = True
+    Value.KaelAttack = 1
+    Value.TargetIndex = -1
+    Value.Demo = True
+    Value.RealisticWater = True
     Ok = Water.Prepare(Value.Water, "Assets/Water") And Ok
     Value.Floor = Arena.Create(1000, 800, 45, 65, 95, 45, 1, True)
 
     Call G.SetObjectColor(Value.Floor.Floor, 0, 0, 0)
 
     For Index = 0 To 3
-        Value.Targets[Index] = G.CreateCylinder3D(12, 75)
 
-        Call G.SetObjectPosition(Value.Targets[Index], 175, 38, -120 + Index * 80)
+        Value.TargetRadii[Index] = 12 + Index * 12
+        Value.TargetHeights[Index] = 60 + Index * 35
+        Value.Targets[Index] = G.CreateCylinder3D(Value.TargetRadii[Index], Value.TargetHeights[Index])
+        Ok = P.SetPosition(Value.Targets[Index], 175.0,
+            ToDouble(Value.TargetHeights[Index]) * 0.5, -150.0 + ToDouble(Index) * 100.0) And Ok
+
         Call G.SetObjectColor(Value.Targets[Index], 40, 85, 120)
     End For
 
@@ -122,6 +145,18 @@ Public Sub CycleBackground(ByRef Value As State)
 
 End Sub
 
+Public Sub SelectCharacter(ByRef Value As State, KaelSelected As Boolean)
+
+    Value.KaelSelected = KaelSelected
+    Value.Mode = Water.WATER_BEND
+    Value.KaelAttack = 1
+    Value.TargetIndex = -1
+    Value.TimeRemainder = 0
+
+    Call Restart(Value)
+
+End Sub
+
 Public Sub Restart(ByRef Value As State)
 
     Dim Ok As Boolean
@@ -131,9 +166,12 @@ Public Sub Restart(ByRef Value As State)
     Value.SoundPlayed = False
     Value.ImpactPlayed = False
     Value.Clip = "Attack"
-    Value.TargetIndex = 3
 
-    If Value.Mode = Water.WATER_BEND Then
+    If Not Value.KaelSelected Then
+        Value.TargetIndex = 3
+    End If
+
+    If Value.Mode = Water.WATER_BEND And Not Value.KaelSelected Then
         Random ChosenTarget From 0 To 3
         Value.TargetIndex = ChosenTarget
     End If
@@ -147,7 +185,29 @@ Public Sub Restart(ByRef Value As State)
 
     Call Storm.Destroy(Value.Storm)
 
-    Ok = Character.PlayAnimation(Value.Mira, Value.Clip, False)
+    If Value.KaelSelected Then
+
+        Value.Mode = Water.TORRENT
+        Value.Clip = "WaterWhip"
+
+        If Value.KaelAttack = 2 Then
+            Value.Clip = "WaterOrbit"
+        Else If Value.KaelAttack = 3 Then
+            Value.Clip = "WaterSurge"
+        End If
+
+        Value.TargetIndex = (Value.TargetIndex + 1) Mod 4
+        Ok = Character.PlayAnimation(Value.Kael, Value.Clip, False)
+
+    Else
+
+        Ok = Character.PlayAnimation(Value.Mira, Value.Clip, False)
+
+    End If
+
+    If Not Ok Then
+        Value.ErrorCode = Max(1, G.LastError())
+    End If
 
 End Sub
 
@@ -192,16 +252,20 @@ End Sub
 Private Sub StepPresentation(ByRef Value As State, SimulationElapsed As Number)
 
     Dim Index As Number
-    Dim ClipDuration As Number
     Dim Ok As Boolean
     Dim Charge As Double
     Dim LoopRemainder As Number
+    Dim Direction As P.Vector3
 
     Value.Time = Value.Time + SimulationElapsed
 
     If Value.Time >= Value.Duration Then
 
         LoopRemainder = Value.Time Mod Value.Duration
+
+        If Value.KaelSelected And Value.Demo Then
+            Value.KaelAttack = Value.KaelAttack Mod 3 + 1
+        End If
 
         Call Restart(Value)
 
@@ -215,12 +279,11 @@ Private Sub StepPresentation(ByRef Value As State, SimulationElapsed As Number)
     Value.Frame.Progress = ToDouble(Value.Time) / ToDouble(Value.Duration)
     Value.Frame.Strength = Clamp(Min(Value.Frame.Progress * 5.0,
         (1.0 - Value.Frame.Progress) * 7.0), 0.0, 1.0)
-    Value.Frame.Target = P.Vector(162.0, 58.0, -120.0 + ToDouble(Value.TargetIndex) * 80.0)
     Value.Frame.MemberCount = 4
     Value.Frame.Members[0] = P.Vector(-160.0, 0.0, 0.0)
 
     For Index = 1 To 3
-        Value.Frame.Members[Index] = P.Vector(175.0, 0.0, -200.0 + ToDouble(Index) * 80.0)
+        Value.Frame.Members[Index] = P.Vector(175.0, 0.0, -250.0 + ToDouble(Index) * 100.0)
     End For
 
     Value.Frame.ImpactActive = Value.Mode = Water.SHIELD And Value.Time >= 2500 And Value.Time < 3400
@@ -237,30 +300,47 @@ Private Sub StepPresentation(ByRef Value As State, SimulationElapsed As Number)
     End If
 
     For Index = 0 To 3
-        Ok = P.SetPosition(Value.Targets[Index], 175.0, 38.0,
-            -120.0 + ToDouble(Index) * 80.0) And Ok
+        Ok = P.SetPosition(Value.Targets[Index], 175.0,
+            ToDouble(Value.TargetHeights[Index]) * 0.5,
+            -150.0 + ToDouble(Index) * 100.0) And Ok
     End For
 
-    Ok = P.SetPosition(Value.Targets[Value.TargetIndex], 175.0 + Charge, 38.0,
-        Value.Frame.Target.Z) And Ok
+    Value.Frame.TargetCenter = P.Vector(175.0 + Charge,
+        ToDouble(Value.TargetHeights[Value.TargetIndex]) * 0.5,
+        -150.0 + ToDouble(Value.TargetIndex) * 100.0)
+    Ok = P.SetPosition(Value.Targets[Value.TargetIndex], Value.Frame.TargetCenter.X,
+        Value.Frame.TargetCenter.Y, Value.Frame.TargetCenter.Z) And Ok
 
-    For Index = 0 To Character.ClipCount(Value.Mira) - 1
+    Value.Frame.WrapStyle = 0
+    Value.Frame.Realistic = Value.KaelSelected And Value.RealisticWater
+    Value.Frame.TargetRadius = 0.0
+    Value.Frame.TargetHeight = 0.0
 
-        If Character.ClipName(Value.Mira, Index) = Value.Clip Then
-            ClipDuration = Character.ClipDuration(Value.Mira, Index)
+    If Value.KaelSelected Then
+
+        Ok = PoseActor(Value.Kael, Value.Clip, Value.Frame.Progress) And Ok
+        Value.Frame.Origin = P.Vector(-160.0, 0.0, 0.0)
+        Value.Frame.WrapStyle = Value.KaelAttack
+        Value.Frame.TargetRadius = ToDouble(Value.TargetRadii[Value.TargetIndex])
+        Value.Frame.TargetHeight = ToDouble(Value.TargetHeights[Value.TargetIndex])
+
+    Else
+
+        Ok = PoseActor(Value.Mira, Value.Clip, Value.Frame.Progress) And Ok
+        Ok = Character.TrySocketPositionPrecise(Value.Mira, "StaffTip", 0, False, Value.Frame.Origin) And Ok
+
+        If Value.Mode = Water.WATER_BEND Then
+            Value.Frame.Origin = P.Vector(-65.0, 2.0, -40.0)
         End If
 
-    End For
-
-    Ok = Character.SetAnimationTime(Value.Mira,
-        ToNumber(Round(Value.Frame.Progress * ToDouble(ClipDuration)))) And Ok
-    Ok = Character.Update(Value.Mira, 0) And Ok
-    Ok = Character.TrySocketPositionPrecise(Value.Mira, "StaffTip", 0, False, Value.Frame.Origin) And Ok
-
-    If Value.Mode = Water.WATER_BEND Then
-        Value.Frame.Origin = P.Vector(-65.0, 2.0, -40.0)
     End If
 
+    Direction = M.Subtract(Value.Frame.TargetCenter, Value.Frame.Origin)
+    Direction.Y = 0.0
+    Ok = M.TryNormalize(Direction, Direction) And Ok
+    Value.Frame.Target = M.Subtract(Value.Frame.TargetCenter,
+        M.Scale(Direction, ToDouble(Value.TargetRadii[Value.TargetIndex]) + 1.0))
+    Value.Frame.Target.Y = ToDouble(Value.TargetHeights[Value.TargetIndex]) * 0.65
     Ok = Water.Update(Value.Water, Value.Frame) And Ok
     Ok = Storm.Update(Value.Storm, Value.Frame, P.Vector(-80.0, 115.0, 35.0)) And Ok
 
@@ -318,6 +398,27 @@ Private Sub StepPresentation(ByRef Value As State, SimulationElapsed As Number)
 
 End Sub
 
+Private Function PoseActor(ByRef Actor As Character.Actor, Clip As Text, Progress As Double) As Boolean
+
+    Dim Index As Number
+    Dim Duration As Number
+    Dim Ok As Boolean
+
+    For Index = 0 To Character.ClipCount(Actor) - 1
+
+        If Character.ClipName(Actor, Index) = Clip Then
+            Duration = Character.ClipDuration(Actor, Index)
+        End If
+
+    End For
+
+    Ok = Character.SetAnimationTime(Actor, ToNumber(Round(Progress * ToDouble(Duration))))
+    Ok = Character.Update(Actor, 0) And Ok
+
+    Return Ok
+
+End Function
+
 Public Sub Draw(ByRef Value As State)
 
     Dim Index As Number
@@ -335,7 +436,12 @@ Public Sub Draw(ByRef Value As State)
     End If
 
     Ok = Arena.Draw(Value.Floor, True, True) And Ok
-    Ok = Character.Draw(Value.Mira) And Ok
+
+    If Value.KaelSelected Then
+        Ok = Character.Draw(Value.Kael) And Ok
+    Else
+        Ok = Character.Draw(Value.Mira) And Ok
+    End If
 
     For Index = 0 To 3
         Ok = G.DrawObject3D(Value.Targets[Index]) And Ok
@@ -355,6 +461,7 @@ Public Sub Destroy(ByRef Value As State)
     Call Storm.Destroy(Value.Storm)
     Call Water.Destroy(Value.Water)
     Call Character.Destroy(Value.Mira)
+    Call Character.Destroy(Value.Kael)
     Call Lightning.Shutdown()
     Call Arena.Destroy(Value.Floor)
     Call Backdrop.Destroy(Value.Background)

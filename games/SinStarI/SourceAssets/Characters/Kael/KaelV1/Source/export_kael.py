@@ -100,11 +100,17 @@ def topology(obj):
 
 
 def main():
-    bpy.ops.wm.open_mainfile(filepath=str(BLENDER / "kael-v1-earth-grounded.blend"))
+    water = '--water-preview' in sys.argv
+    clips_to_export = CLIPS + (("WaterWhip", "WaterOrbit", "WaterSurge") if water else ())
+    model = PACKAGE / ("kael-v1-water-preview.glb" if water else MODEL.name)
+    checkpoint = "kael-v1-water-preview.blend" if water else "kael-v1-rigged-animation-checkpoint.blend"
+    report_name = "water-export-validation.json" if water else "export-validation.json"
+    descriptor_name = "KaelWaterPreview.sm3d.json" if water else "KaelV1.sm3d.json"
+    bpy.ops.wm.open_mainfile(filepath=str(BLENDER / ("kael-v1-water-grounded.blend" if water else "kael-v1-earth-grounded.blend")))
     rig = bpy.data.objects["Kael.Rig"]
     body = bpy.data.objects["Kael.Body"]
     sword = bpy.data.objects["Kael.Sword"]
-    if {a.name for a in bpy.data.actions} != set(CLIPS):
+    if {a.name for a in bpy.data.actions} != set(clips_to_export):
         raise RuntimeError("Unexpected animation set")
     parts = [topology(body), topology(sword)]
     rig.data.pose_position = "REST"
@@ -112,7 +118,7 @@ def main():
     bind = {"body": bounds(body), "sword": bounds(sword)}
     rig.data.pose_position = "POSE"
     clips = []
-    for name in CLIPS:
+    for name in clips_to_export:
         action = action_at(rig, name, 1)
         samples = []
         roots = []
@@ -142,11 +148,11 @@ def main():
     for action in bpy.data.actions:
         action.use_fake_user = True
     bpy.ops.file.pack_all()
-    bpy.ops.wm.save_as_mainfile(filepath=str(BLENDER / "kael-v1-rigged-animation-checkpoint.blend"), compress=True)
-    bpy.ops.export_scene.gltf(filepath=str(MODEL), export_format="GLB", use_selection=True,
+    bpy.ops.wm.save_as_mainfile(filepath=str(BLENDER / checkpoint), compress=True)
+    bpy.ops.export_scene.gltf(filepath=str(model), export_format="GLB", use_selection=True,
         export_animations=True, export_animation_mode="ACTIONS", export_skins=True,
         export_influence_nb=4, export_all_influences=False, export_tangents=True, export_yup=True)
-    data = MODEL.read_bytes()
+    data = model.read_bytes()
     length = struct.unpack_from("<I", data, 12)[0]
     gltf = json.loads(data[20:20+length])
     primitive_counts = [gltf["accessors"][p["attributes"]["POSITION"]]["count"]
@@ -160,15 +166,15 @@ def main():
               "mixamoBones": 41, "authoredBones": ["KaelSword"],
               "exportedPrimitiveVertexCounts": primitive_counts,
               "bodyTextureSize": [4096,4096], "swordTextureSize": [2048,2048]}
-    (SOURCE / "export-validation.json").write_text(json.dumps(report, indent=2), encoding="utf-8", newline="\n")
+    (SOURCE / report_name).write_text(json.dumps(report, indent=2), encoding="utf-8", newline="\n")
     sockets = {name: {"node": "mixamorig:"+bone} for name,bone in
                (("Root","Hips"),("Head","Head"),("Chest","Spine2"),("HandRight","RightHand"),
                 ("HandLeft","LeftHand"),("FootLeft","LeftFoot"),("FootRight","RightFoot"))}
     sockets.update({"SwordGrip": {"node":"KaelSword"}, "SwordBase":{"node":"KaelSword"},
                     "SwordTip":{"node":"KaelSword","translation":[0,0,.6084]}})
-    descriptor = {"version":1,"sampleRate":30,"clips":{n:{"loop":n in CLIPS[:3]} for n in CLIPS},
+    descriptor = {"version":1,"sampleRate":30,"clips":{n:{"loop":n in CLIPS[:3]} for n in clips_to_export},
                   "sockets":sockets}
-    (PACKAGE / "KaelV1.sm3d.json").write_text(json.dumps(descriptor, indent=2), encoding="utf-8", newline="\n")
+    (PACKAGE / descriptor_name).write_text(json.dumps(descriptor, indent=2), encoding="utf-8", newline="\n")
     print("KAEL_EXPORT_READY " + report["modelSha256"], flush=True)
 
 

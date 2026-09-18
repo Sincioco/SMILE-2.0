@@ -6,6 +6,66 @@ Option Explicit
 Import Smile.Simple3D.Precision3D As P
 Import Smile.Simple3D.PrecisionMath3D As M
 
+''' Caller-supplied cylindrical bounds; zero/large bounds retain the ordinary splash.
+Public Function CanWrap(Radius As Double, Height As Double) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Radius > 0.0 And Radius <= 40.0 And Height > 0.0 And Height <= 140.0
+
+    Return Result
+
+End Function
+
+''' Paired sheets split at contact, meet behind a small target, then drain and break up.
+Public Function WrapPoint(Origin As P.Vector3, Contact As P.Vector3,
+    Center As P.Vector3, Radius As Double, Height As Double,
+    Progress As Double, Strip As Number, Along As Double, Edge As Double) As P.Vector3
+
+    Dim Normal As P.Vector3
+    Dim Tangent As P.Vector3
+    Dim Result As P.Vector3
+    Dim Angle As Double
+    Dim Spread As Double
+    Dim Band As Double
+    Dim Width As Double
+    Dim Shell As Double
+    Dim Ok As Boolean
+
+    Normal = M.Subtract(Origin, Center)
+    Normal.Y = 0.0
+    Ok = M.TryNormalize(Normal, Normal)
+
+    If Not Ok Then
+        Normal = P.Vector(-1.0, 0.0, 0.0)
+    End If
+
+    Tangent = M.Cross(Normal, P.Vector(0.0, 1.0, 0.0))
+    Progress = Clamp(Progress, 0.0, 1.0)
+    Along = Clamp(Along, 0.0, 1.0)
+    Spread = Clamp(Progress / 0.32, 0.0, 1.0)
+    Angle = Along * M.PI * Spread
+
+    If Strip Mod 2 = 1 Then
+        Angle = -Angle
+    End If
+
+    Band = (ToDouble(Strip / 2) - 3.5) * Height * 0.1
+    Width = (2.0 + 2.4 * Sin(Along * M.PI)) * (1.0 - Progress * 0.5)
+    Shell = Radius + 6.0 + Progress * Progress * 14.0
+    Shell = Shell + Sin(Along * 19.0 + ToDouble(Strip) * 2.1 - Progress * 17.0) * Spread * 1.5
+    Result = M.Add(Center, M.Add(M.Scale(Normal, Cos(Angle) * Shell),
+        M.Scale(Tangent, Sin(Angle) * Shell)))
+    Result.Y = Contact.Y + (Center.Y - Contact.Y) * Spread
+    Result.Y = Result.Y + Band * Clamp(Progress * 9.0, 0.0, 1.0) + Edge * Width
+    Result.Y = Min(Center.Y + Height * 0.5 + 3.0, Result.Y)
+    Result.Y = Max(Center.Y - Height * 0.5 + 1.5,
+        Result.Y - Progress * Progress * Height * 0.45)
+
+    Return Result
+
+End Function
+
 ''' Face the incoming stream, including vertical contact without a degenerate basis.
 Private Sub ContactFrame(
     Origin As P.Vector3,

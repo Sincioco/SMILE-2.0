@@ -125,3 +125,32 @@ the intentional raised foot, and verify frame zero plus Block/Hit/settled Death.
 Normal sword attacks and their attachment/grounding remain unchanged. The adapter
 restores the normal Weapon/W preference when leaving an Earth clip. Model scale,
 speed 200, ten sockets and the four-hero battle roster remain unchanged.
+
+## Water Lab review candidate — September 18, 2026
+
+Use the three links in the Water Lab README as visual references: sweeping arms and
+weight shifts, a clear winding water body, then a torso-led release. The water
+authoring uses original pose keys and the existing two-bone IK bake. Reuse the
+accepted quiet Idle and its grounding; do not retarget or replace it again.
+WaterWhip, WaterOrbit and WaterSurge each contain 151 frames at 30 Hz (5 seconds).
+The native Lab plays them at 200%, hiding the sword and synchronizing water through
+the same normalized clock. Validate with the IK helpers muted and with native
+socket sampling, as for Earth. The initial supporting-arm samples were too small;
+the final poses exceed 0.35 m of travel on both arms and 0.12 m of head-height change.
+
+The separate water GLB has sixteen clips and ten sockets. Keep it separate while
+Sin reviews the Lab; the accepted thirteen-clip GLB hash remains
+`d3187af4bba99e1709aa7a27faa7987bd3f0fa837c00494d790517d33a6fbbda`.
+The water GLB hash is
+`231f4494c656b9a3a5c363b2108a6d6d1f737772a38609e2bd174a6abd5dde8e`.
+The bind body's minimum is effectively zero; Idle and new Water clip starts are
+0.001 m. `water-export-validation.json` records every-frame floor checks, root spans,
+topology and budgets; `water-roundtrip-validation.json` records imported starts,
+Defend/Hit/settled Death and mid/end water poses. Separate water Blender checkpoints
+and nine pose previews preserve the complete reproducible candidate.
+
+The optional Realistic Water preset changes only authored geometry/material inputs.
+Small-target wrapping requires explicit cylindrical bounds and follows the target's
+recoil. It does not add fluid simulation or infer collisions from arbitrary meshes.
+The native fixture checks body motion, helix clearance, target contact, dimensions,
+wrap coverage behind the pillar, shader-look toggling, demo progression and cleanup.

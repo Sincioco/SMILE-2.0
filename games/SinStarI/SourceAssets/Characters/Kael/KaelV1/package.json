@@ -45,5 +45,25 @@
     "Source/earth-animation-report.json"
   ],
   "runtimePoseCalibration": "None; Kael corrections are baked into this versioned asset",
-  "webStatus": "On hold; not adopted or browser-validated"
+  "webStatus": "On hold; not adopted or browser-validated",
+  "waterPreview": {
+    "status": "Native Water Lab feedback candidate",
+    "model": "kael-v1-water-preview.glb",
+    "descriptor": "KaelWaterPreview.sm3d.json",
+    "modelSha256": "231f4494c656b9a3a5c363b2108a6d6d1f737772a38609e2bd174a6abd5dde8e",
+    "modelBytes": 28413464,
+    "additionalClips": [
+      "WaterWhip",
+      "WaterOrbit",
+      "WaterSurge"
+    ],
+    "bakeCheckpoint": "Blender/kael-v1-water-grounded.blend",
+    "exportCheckpoint": "Blender/kael-v1-water-preview.blend",
+    "reports": [
+      "Source/water-animation-report.json",
+      "Source/water-export-validation.json",
+      "Source/water-roundtrip-validation.json"
+    ],
+    "adoption": "Water Lab only; accepted Viewer/game model unchanged"
+  }
 }

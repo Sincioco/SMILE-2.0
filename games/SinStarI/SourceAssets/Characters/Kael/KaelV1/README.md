@@ -1,5 +1,20 @@
 # Kael v1 — native sword and Earth boss candidate
 
+## Water Lab review candidate
+
+The [Water Lab](../../../../../../../tools/WaterVfxLab/README.md) now has a Mira/Kael
+toggle and three Kael water casts: WaterWhip, WaterOrbit and WaterSurge. Its separate
+`kael-v1-water-preview.glb` / `KaelWaterPreview.sm3d.json` contains the thirteen
+accepted clips plus these three original animations. The main model and its
+Viewer/game attack rotation are unchanged in this feedback stage.
+
+`Source/author_kael_water.py` reuses the grounded IK baker. Run it in installed
+Blender background mode, then `Source/export_kael.py -- --water-preview` and
+`Source/preview_kael.py -- --water-preview`. These write only water-named checkpoints,
+GLB, descriptor, measurements and `Previews/preview-water*` images. The manifest
+records their paths and checksums. Every new cast has visible motion in both hands
+and the body, locked horizontal root travel, and floor-safe body/equipment samples.
+
 The canonical package for Sin's September 18, 2026 Kael request. The original body
 and sword remain unchanged in `Source`. The Viewer and Sin Star I both consume
 `kael-v1-animation-checkpoint.glb` with `KaelV1.sm3d.json`.

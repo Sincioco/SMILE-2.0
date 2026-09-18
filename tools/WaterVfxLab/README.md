@@ -1,12 +1,73 @@
-# SMILE 2.0 — Water Lab (native)
+# SMILE 2.0 â€” Water Lab (native)
+
+## Kael water preview â€” September 18, 2026
+
+The native Lab starts with **Kael**, speed **200%**, **Demo** and **Realistic Water**
+enabled. **Mira / Kael** buttons or **X** switch between the preloaded actors.
+Mira keeps her eight existing previews. Kael has **Water Whip**, **Serpent Orbit**
+and **Tidal Surge**, with original baked arm sweeps, torso turns, lowered stances
+and recoveries. His sword stays hidden in this water preview.
+
+**D / Demo** cycles all three Kael casts. Selecting a cast or pressing Tab turns
+Demo off and repeats that cast. **F / Realistic Water** compares the clear standard
+look with thicker irregular water, sharper reflections, lower foam and stronger
+refraction. Switching looks preserves the paused pose and clock and allocates no
+new resources. This approximates the reference's appearance with authored real-time
+geometry; it is not an offline fluid simulation.
+
+Water winds around Kael, releases at 42% and contacts the selected pillar at 72%.
+The impact splits around both sides of the pillar, meets behind it, then drains
+and breaks apart. Callers supply cylindrical target bounds: radius up to 40 and
+height up to 140 world units can wrap; missing or larger bounds keep the normal
+crown splash. The four pillars have width × height 24×60, 48×95, 72×130 and 96×165.
+Kael visits them in order across casts; the first three wrap and the largest uses
+the crown splash. The Lab supplies the selected pillar's actual radius, height and
+recoiling center, and aims at its surface. The footer identifies the target and size.
+This is an explicit target approximation, not automatic mesh collision.
+
+Space pauses; **Left / Right** step the paused presentation by 100 ms. The header
+shows the clip and time. Camera and background controls remain available while paused.
+Leave Demo running for continuous feedback, or use these controls to inspect contact.
+
+References: [Jared Koh â€” body motion](https://www.youtube.com/watch?v=5Lq0vTq6eeo),
+[Krifton â€” clear water winding around the body](https://www.youtube.com/watch?v=QjWQXMB5xNs),
+and [A Bit Of Game Dev â€” attacks from 16:13](https://www.youtube.com/watch?v=3CcWus6d_B8&t=973s).
+These are visual references; no video, animation, shader, package or service was downloaded.
+
+The canonical Kael package owns a separate `kael-v1-water-preview.glb`, descriptor,
+Blender checkpoints, original authoring script, measurements and pose previews.
+The accepted thirteen-clip Viewer/game model remains unchanged during this Lab review.
+Normal Lab builds stage and cook the local preview; Blender is needed only to re-author it.
+
+### Ownership and focused validation
+
+`WaterLabScene` owns both actors and selection/clock/target/demo state; `WaterLabUi`
+owns controls. `WaterFlow3D` owns stateless surrounding-water paths and skin samples.
+`WaterImpact3D` owns small-target eligibility and paired wrap sheets. `WaterVfx3D`
+accepts those frame parameters and retains its existing two ribbons and 4,096-slot
+spray allocation. No runtime, compiler, startup-loop or dependency extension is needed.
+The offline IK baker now accepts pose samplers and output names, allowing Water to
+reuse the grounded Earth workflow without replacing its assets.
+
+Native tests cover Mira's eight modes, Kael's three cooked body motions, target
+clearance/contact, paused toggle/clock preservation, automatic demo progression,
+constant resource counts across character switches, and complete cleanup. Export
+checks every frame of all sixteen clips; a GLB round trip checks clip starts and
+final Defend/Hit/Death plus mid/end Water poses. Native visual inspection accompanies
+these checks. Formatter integration and the repository style gate also apply.
+
+Growth for this slice: scene +107 lines, UI +88, shared flow +97, shared impact +60,
+shared water renderer +50; the focused native fixture grows by 189 lines. These
+changes stay within their existing responsibilities. No guardrail, baseline,
+exclusion or resource ceiling changes. Studio and all Web adoption remain on hold.
 
 Run `pwsh tools/WaterVfxLab/Launch.ps1 -Build` from the repository. The Lab uses the
 installed Windows compiler, D3D11 renderer and repository assets; no downloads or
 external dependencies are required. The official one-second startup presentation
 and remembered native window placement come from the normal runtime.
 
-Eight previews: Healing Veil, Tide Barrier, Torrent, Impact, Waterball, Tsunami,
-Tempest Combo and Waterbending. Waterbending is the startup selection. It raises a
+Mira’s eight previews: Healing Veil, Tide Barrier, Torrent, Impact, Waterball, Tsunami,
+Tempest Combo and Waterbending. Waterbending is selected when switching to Mira. It raises a
 ground-fed column into a thick, curling, rounded head, with moving surface folds
 and light falling spray. Each cast chooses one of the four enemy pillars at random
 and keeps that target through pause and playback. After the rise and curl, the head
@@ -39,8 +100,8 @@ The screen-fixed background matches the Character Viewer's default landscape,
 using `games/SinStarI/Assets/Sin Star - Title Screen - Background.png` through
 the shared `StaticBackdrop3D` owner. Build stages an ignored `SinStarLandscape.png`
 copy; the original artwork is unchanged. Water refraction samples the background.
-Press **B** or the background button to cycle Scene → Logo → Black → Green → Purple
-→ Scene, matching the Character Viewer. Both images preload at startup; switching
+Press **B** or the background button to cycle Scene â†’ Logo â†’ Black â†’ Green â†’ Purple
+â†’ Scene, matching the Character Viewer. Both images preload at startup; switching
 does not reload textures, reset the cast, move the camera or unpause playback.
 The arena uses the shared planar reflection pass, including Mira, targets, water
 and the background, with the existing 85% strength and 5% softness arena defaults.
@@ -115,7 +176,7 @@ Procedural PNGs and original PCM splash/barrier/tsunami sounds are in
 
 `Test.ps1` exercises all eight modes, rendering, backward seek, facing, contact
 recoil and cleanup using the actual Mira asset. Native GPU shader mode 5 preserves
-texture color; modes 0–4 retain their historical behavior. All Web adoption and
+texture color; modes 0â€“4 retain their historical behavior. All Web adoption and
 publication are on hold at Sin's direction.
 
 The speed regression first reproduced two failures with a 100 ms frame at 400%:
@@ -167,8 +228,8 @@ keeps the accepted sparse appearance. The regression covers it directly.
 Validation passes: Water Lab native fixture, seam-normal check, 13 formatter
 regressions, repository style check (464 sources), Viewer native ownership/hardening
 checks (58 graphics/input/audio checks), and all eight Sin Star I character entries
-plus both battle simulations. WaterVfx3D grows 792→802 lines and its focused native
-fixture 347→440; existing ownership and review limits remain unchanged.
+plus both battle simulations. WaterVfx3D grows 792â†’802 lines and its focused native
+fixture 347â†’440; existing ownership and review limits remain unchanged.
 Visual review of this follow-up remains unverified: the native computer-use capture
 returned `foreground window did not report a process id` after refreshing the
 window selection and launching a separate fixed-frame inspection. The native app
@@ -178,7 +239,7 @@ Waterball and Tsunami. No browser or Web acceptance is claimed.
 
 Impact geometry reference: Ugur VFX Studios,
 [UE | Mixed Magic "5" - Water Impact](https://www.youtube.com/watch?v=ZyA4GJgItOk),
-particularly the opening burst and breakup around 0:01–0:02. Only its sheet spread,
+particularly the opening burst and breakup around 0:01â€“0:02. Only its sheet spread,
 curled crown and thinning edge are adapted. Sin requested a much smaller splash
 around a single pillar using the already accepted clear-water shading. No video
 assets, Unreal package or external dependency is imported.
@@ -192,10 +253,10 @@ Mira shimmer allocation. Native VFX batches, reflections, 58 Viewer checks and a
 ten Sin Star I presentations pass. All three native applications and the VSIX
 were rebuilt; the installed VSIX matches its 35 checked payload hashes.
 
-Follow-up growth review: WaterVfx3D 733→792, WaterLabScene 344→369,
-WaterLabUi 149→170, WaterLabTests 273→347; MiraWater shrinks 324→311.
+Follow-up growth review: WaterVfx3D 733â†’792, WaterLabScene 344â†’369,
+WaterLabUi 149â†’170, WaterLabTests 273â†’347; MiraWater shrinks 324â†’311.
 The new stateless WaterImpact3D is 128 lines. Native normal generation is a
-74-line helper; the existing renderer coordinator grows 10,635→10,656 for
+74-line helper; the existing renderer coordinator grows 10,635â†’10,656 for
 vertex layout, scratch lifetime and delegation. No dependency cycle, public
 language syntax, size-limit exception or renderer-cap increase is introduced.
 
@@ -234,14 +295,14 @@ cast restarts. It restores all pillars before applying the selected one's recoil
 selection, enemy identity or new shared clock enters the reusable VFX modules.
 
 Growth review: the new stateless `WaterFlow3D` has 192 lines. `WaterVfx3D` grows
-715→733, the native water shader 103→130, the scene 316→344, the UI 147→149,
-the focused native fixture 132→273 and the build script 25→29. The library and Lab
+715â†’733, the native water shader 103â†’130, the scene 316â†’344, the UI 147â†’149,
+the focused native fixture 132â†’273 and the build script 25â†’29. The library and Lab
 project inventories each add one entry. Existing lifecycle owners remain unchanged;
 no dependency cycle, renderer resource ceiling, size limit or legacy baseline was
 introduced or raised.
 
-The reflection correction adds 48 lines to its existing resource owner (435→483)
+The reflection correction adds 48 lines to its existing resource owner (435â†’483)
 and two declarations to its header. The legacy native draw coordinator adds 24
-lines for view constants and capture delegation (10,611→10,635); allocation,
+lines for view constants and capture delegation (10,611â†’10,635); allocation,
 failure caching and teardown stay in the reflection owner. No new source module,
 dependency cycle or review-limit exception is introduced.

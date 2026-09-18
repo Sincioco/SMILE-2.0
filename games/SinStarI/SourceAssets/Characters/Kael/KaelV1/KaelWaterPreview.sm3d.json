@@ -1,0 +1,91 @@
+{
+  "version": 1,
+  "sampleRate": 30,
+  "clips": {
+    "Idle": {
+      "loop": true
+    },
+    "Walk": {
+      "loop": true
+    },
+    "Run": {
+      "loop": true
+    },
+    "Attack": {
+      "loop": false
+    },
+    "Attack2": {
+      "loop": false
+    },
+    "Dodge": {
+      "loop": false
+    },
+    "Defend": {
+      "loop": false
+    },
+    "Hit": {
+      "loop": false
+    },
+    "Death": {
+      "loop": false
+    },
+    "Victory": {
+      "loop": false
+    },
+    "EarthHurl": {
+      "loop": false
+    },
+    "EarthVolley": {
+      "loop": false
+    },
+    "EarthSlam": {
+      "loop": false
+    },
+    "WaterWhip": {
+      "loop": false
+    },
+    "WaterOrbit": {
+      "loop": false
+    },
+    "WaterSurge": {
+      "loop": false
+    }
+  },
+  "sockets": {
+    "Root": {
+      "node": "mixamorig:Hips"
+    },
+    "Head": {
+      "node": "mixamorig:Head"
+    },
+    "Chest": {
+      "node": "mixamorig:Spine2"
+    },
+    "HandRight": {
+      "node": "mixamorig:RightHand"
+    },
+    "HandLeft": {
+      "node": "mixamorig:LeftHand"
+    },
+    "FootLeft": {
+      "node": "mixamorig:LeftFoot"
+    },
+    "FootRight": {
+      "node": "mixamorig:RightFoot"
+    },
+    "SwordGrip": {
+      "node": "KaelSword"
+    },
+    "SwordBase": {
+      "node": "KaelSword"
+    },
+    "SwordTip": {
+      "node": "KaelSword",
+      "translation": [
+        0,
+        0,
+        0.6084
+      ]
+    }
+  }
+}

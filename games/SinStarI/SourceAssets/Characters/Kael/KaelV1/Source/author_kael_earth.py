@@ -48,33 +48,41 @@ def cast_pose(name, t, idle_hand):
     return list(neutral[1:])
 
 
-def main():
-    bpy.ops.wm.open_mainfile(filepath=str(PACKAGE / 'Blender/kael-v1-grounded.blend'))
+def bake_casts(pose_sampler=cast_pose, casts=(('EarthHurl',97),('EarthVolley',121),('EarthSlam',91)),
+               family='earth', input_checkpoint='kael-v1-grounded.blend', replace_idle=True,
+               right_sampler=None):
+    """Shared offline IK bake; every family supplies poses and owns a separate checkpoint."""
+    bpy.ops.wm.open_mainfile(filepath=str(PACKAGE / 'Blender' / input_checkpoint))
     rig = bpy.data.objects['Kael.Rig']
     body = bpy.data.objects['Kael.Body']
     sword = bpy.data.objects['Kael.Sword']
     palm = Vector(json.loads((SOURCE/'grounding-report.json').read_text())['sword']['palmLocalMeters'])
     rest_inverse = rig.data.bones['KaelSword'].matrix_local.inverted()
     points = [rest_inverse @ v.co for v in sword.data.vertices]
-    bpy.data.actions.remove(bpy.data.actions['Idle'])
-    idle_report = retarget_clip(rig, 'Idle', SOURCE/'Mixamo/BreathingIdle.fbx',
-        'Breathing Idle: Sway 0, Breathing 25, Overdrive 50; downloaded for Kael')
     hips = rig.pose.bones['mixamorig:Hips']
     action_at(rig, 'Idle', 1)
     origin = hips.matrix.translation.copy()
-    # The new relaxed hand is reoriented to keep the long blade above the floor.
-    for f in range(1, int(bpy.data.actions['Idle'].frame_range[1])+1):
-        action_at(rig, 'Idle', f)
-        pose = hips.matrix.copy()
-        pose.translation.x, pose.translation.y = origin.x, origin.y
-        pose.translation.z += .001-minimum_z(body)
-        write_pose(hips, pose, f)
-        bpy.context.view_layer.update()
-        hand = rig.pose.bones['mixamorig:RightHand']
-        safe, _ = floor_safe_hand(rig, hand.matrix.copy(), palm, points)
-        write_pose(hand, safe, f)
-        bpy.context.view_layer.update()
-        write_pose(rig.pose.bones['KaelSword'], held_pose(hand.matrix, palm), f)
+    idle_report = None
+    if replace_idle:
+        bpy.data.actions.remove(bpy.data.actions['Idle'])
+        idle_report = retarget_clip(rig, 'Idle', SOURCE/'Mixamo/BreathingIdle.fbx',
+            'Breathing Idle: Sway 0, Breathing 25, Overdrive 50; downloaded for Kael')
+        hips = rig.pose.bones['mixamorig:Hips']
+        action_at(rig, 'Idle', 1)
+        origin = hips.matrix.translation.copy()
+        # The new relaxed hand is reoriented to keep the long blade above the floor.
+        for f in range(1, int(bpy.data.actions['Idle'].frame_range[1])+1):
+            action_at(rig, 'Idle', f)
+            pose = hips.matrix.copy()
+            pose.translation.x, pose.translation.y = origin.x, origin.y
+            pose.translation.z += .001-minimum_z(body)
+            write_pose(hips, pose, f)
+            bpy.context.view_layer.update()
+            hand = rig.pose.bones['mixamorig:RightHand']
+            safe, _ = floor_safe_hand(rig, hand.matrix.copy(), palm, points)
+            write_pose(hand, safe, f)
+            bpy.context.view_layer.update()
+            write_pose(rig.pose.bones['KaelSword'], held_pose(hand.matrix, palm), f)
     action_at(rig, 'Idle', 1)
     base = {b.name:b.matrix_basis.copy() for b in rig.pose.bones}
     feet = {side:rig.pose.bones['mixamorig:'+side+'Foot'].matrix.copy() for side in ('Left','Right')}
@@ -93,7 +101,7 @@ def main():
             targets[side+end] = target
             constraints.append((rig.pose.bones['mixamorig:'+side+limb], constraint))
     report=[]
-    for name, length in (('EarthHurl',97),('EarthVolley',121),('EarthSlam',91)):
+    for name, length in casts:
         old=bpy.data.actions.get(name)
         if old: bpy.data.actions.remove(old)
         action=bpy.data.actions.new(name); action.use_fake_user=True
@@ -101,7 +109,7 @@ def main():
         samples=[]
         for f in range(1,length+1):
             t=(f-1)/(length-1)
-            crouch,twist,lean,lx,ly,lz,width,step,knee,guard=cast_pose(name,t,hands['Left'])
+            crouch,twist,lean,lx,ly,lz,width,step,knee,guard=pose_sampler(name,t,hands['Left'])
             bpy.context.scene.frame_set(f)
             for b in rig.pose.bones: b.matrix_basis=base[b.name]
             hip=rig.pose.bones['mixamorig:Hips']
@@ -132,7 +140,10 @@ def main():
                 exchange=math.exp(-((t-.55)/.028)**4)
                 right=Vector((-.27,.06,.64)).lerp(right,exchange)
                 left=left.lerp(Vector((.27,.06,.64)),exchange)
-            right=hands['Right'].lerp(right,envelope)
+            if right_sampler:
+                right=right_sampler(name,t,hands['Right'])
+            else:
+                right=hands['Right'].lerp(right,envelope)
             for side, p in (('Left',left),('Right',right)):
                 targets[side+'Hand'].location=rig.matrix_world @ p
             bpy.context.view_layer.update()
@@ -166,16 +177,16 @@ def main():
         spans={label:[max(p[i] for p in positions)-min(p[i] for p in positions)
                       for i in range(3)] for label,positions in trajectories.items()}
         if min(max(spans['HandLeft']),max(spans['HandRight']))<.35 or spans['Head'][2]<.12:
-            raise RuntimeError(('Earth cast body motion missing',name,spans))
-        report.append({'clip':name,'frames':length,'sampleRate':30,'sword':'hidden during Earth casts by shared Kael adapter',
+            raise RuntimeError((family+' cast body motion missing',name,spans))
+        report.append({'clip':name,'frames':length,'sampleRate':30,'sword':'hidden during '+family+' casts by the caller',
                        'poseTravelMeters':spans})
         for bone,constraint in constraints: constraint.mute=False
-        print('EARTH_BAKED',name,flush=True)
+        print(family.upper()+'_BAKED',name,flush=True)
     for bone,constraint in constraints: bone.constraints.remove(constraint)
     for target in targets.values(): bpy.data.objects.remove(target,do_unlink=True)
     action_at(rig,'Idle',1)
     bpy.ops.file.pack_all()
-    bpy.ops.wm.save_as_mainfile(filepath=str(PACKAGE/'Blender/kael-v1-earth-grounded.blend'),compress=True)
-    (SOURCE/'earth-animation-report.json').write_text(json.dumps({'idle':idle_report,'casts':report},indent=2),encoding='utf-8',newline='\n')
+    bpy.ops.wm.save_as_mainfile(filepath=str(PACKAGE/('Blender/kael-v1-'+family+'-grounded.blend')),compress=True)
+    (SOURCE/(family+'-animation-report.json')).write_text(json.dumps({'idle':idle_report,'casts':report},indent=2),encoding='utf-8',newline='\n')
 
-if __name__=='__main__': main()
+if __name__=='__main__': bake_casts()

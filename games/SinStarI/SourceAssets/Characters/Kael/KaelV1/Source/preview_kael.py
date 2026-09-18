@@ -13,23 +13,29 @@ from prepare_kael import preview
 from fit_and_ground_kael import action_at
 from export_kael import bounds, CLIPS
 
-bpy.ops.wm.open_mainfile(filepath=str(PACKAGE / "Blender/kael-v1-rigged-animation-checkpoint.blend"))
+water = '--water-preview' in sys.argv
+checkpoint = "Blender/kael-v1-water-preview.blend" if water else "Blender/kael-v1-rigged-animation-checkpoint.blend"
+model = "kael-v1-water-preview.glb" if water else "kael-v1-animation-checkpoint.glb"
+clip_names = CLIPS + (("WaterWhip", "WaterOrbit", "WaterSurge") if water else ())
+poses = (("WaterWhip",57),("WaterOrbit",76),("WaterSurge",58)) if water else (
+    ("Idle",1),("EarthHurl",54),("EarthVolley",66),("EarthSlam",47))
+bpy.ops.wm.open_mainfile(filepath=str(PACKAGE / checkpoint))
 rig = bpy.data.objects["Kael.Rig"]
 body = bpy.data.objects["Kael.Body"]
 sword = bpy.data.objects["Kael.Sword"]
-for name, frame in (("Idle",1),("EarthHurl",54),("EarthVolley",66),("EarthSlam",47)):
+for name, frame in poses:
     action_at(rig, name, frame)
-    sword.hide_render = name.startswith("Earth")
-    preview(body, "accepted-" + name.lower(), () if sword.hide_render else (sword,))
+    sword.hide_render = name.startswith(("Earth", "Water"))
+    preview(body, ("preview-" if water else "accepted-") + name.lower(), () if sword.hide_render else (sword,))
 
 bpy.ops.wm.read_factory_settings(use_empty=True)
-bpy.ops.import_scene.gltf(filepath=str(PACKAGE / "kael-v1-animation-checkpoint.glb"))
+bpy.ops.import_scene.gltf(filepath=str(PACKAGE / model))
 rig = next(obj for obj in bpy.context.scene.objects if obj.type == "ARMATURE")
 body = bpy.data.objects["Kael.Body"]
 sword = bpy.data.objects["Kael.Sword"]
 bpy.context.scene.render.fps = 30
 report = []
-for name in CLIPS:
+for name in clip_names:
     action = next(a for a in bpy.data.actions if a.name == name or a.name.startswith(name + "_"))
     rig.animation_data.action = action
     rig.animation_data.action_slot = action.slots[0]
@@ -38,6 +44,8 @@ for name in CLIPS:
     frames = [int(action.frame_range[0])]
     if name in ("Defend", "Hit", "Death"):
         frames.append(int(action.frame_range[1]))
+    elif name.startswith("Water"):
+        frames += [int(sum(action.frame_range)/2), int(action.frame_range[1])]
     for frame in frames:
         bpy.context.scene.frame_set(frame)
         bpy.context.view_layer.update()
@@ -46,5 +54,6 @@ for name in CLIPS:
             raise RuntimeError((name, frame, b, s))
         report.append({"clip":name,"frame":frame,"bodyMinimumMeters":b["minimum"][2],
                        "swordMinimumMeters":s["minimum"][2]})
-(SOURCE / "roundtrip-validation.json").write_text(json.dumps(report,indent=2),encoding="utf-8", newline="\n")
+(SOURCE / ("water-roundtrip-validation.json" if water else "roundtrip-validation.json")).write_text(
+    json.dumps(report,indent=2),encoding="utf-8", newline="\n")
 print("KAEL_ROUNDTRIP_VALID", flush=True)

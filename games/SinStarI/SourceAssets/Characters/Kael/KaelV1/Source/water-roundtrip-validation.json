@@ -1,0 +1,152 @@
+[
+  {
+    "clip": "Idle",
+    "frame": 0,
+    "bodyMinimumMeters": 0.0010003454517573118,
+    "swordMinimumMeters": 0.4766404628753662
+  },
+  {
+    "clip": "Walk",
+    "frame": 0,
+    "bodyMinimumMeters": 0.001000113901682198,
+    "swordMinimumMeters": 0.5368312001228333
+  },
+  {
+    "clip": "Run",
+    "frame": 0,
+    "bodyMinimumMeters": 0.001000061514787376,
+    "swordMinimumMeters": 0.42968472838401794
+  },
+  {
+    "clip": "Attack",
+    "frame": 0,
+    "bodyMinimumMeters": 0.001000485848635435,
+    "swordMinimumMeters": 0.45232874155044556
+  },
+  {
+    "clip": "Attack2",
+    "frame": 0,
+    "bodyMinimumMeters": 0.0010001895716413856,
+    "swordMinimumMeters": 0.4523286819458008
+  },
+  {
+    "clip": "Dodge",
+    "frame": 0,
+    "bodyMinimumMeters": 0.0010000482434406877,
+    "swordMinimumMeters": 0.467354953289032
+  },
+  {
+    "clip": "Defend",
+    "frame": 0,
+    "bodyMinimumMeters": 0.0010010488331317902,
+    "swordMinimumMeters": 0.3804197311401367
+  },
+  {
+    "clip": "Defend",
+    "frame": 34,
+    "bodyMinimumMeters": 0.0010009639663621783,
+    "swordMinimumMeters": 0.380338191986084
+  },
+  {
+    "clip": "Hit",
+    "frame": 0,
+    "bodyMinimumMeters": 0.0010010586120188236,
+    "swordMinimumMeters": 0.3763027489185333
+  },
+  {
+    "clip": "Hit",
+    "frame": 19,
+    "bodyMinimumMeters": 0.0010004445211961865,
+    "swordMinimumMeters": 0.3766596019268036
+  },
+  {
+    "clip": "Death",
+    "frame": 0,
+    "bodyMinimumMeters": 0.0010004063369706273,
+    "swordMinimumMeters": 0.45232853293418884
+  },
+  {
+    "clip": "Death",
+    "frame": 56,
+    "bodyMinimumMeters": 0.000999998883344233,
+    "swordMinimumMeters": 0.000999998883344233
+  },
+  {
+    "clip": "Victory",
+    "frame": 0,
+    "bodyMinimumMeters": 0.0010001780465245247,
+    "swordMinimumMeters": 0.4480031728744507
+  },
+  {
+    "clip": "EarthHurl",
+    "frame": 0,
+    "bodyMinimumMeters": 0.0010002180933952332,
+    "swordMinimumMeters": 0.4766402542591095
+  },
+  {
+    "clip": "EarthVolley",
+    "frame": 0,
+    "bodyMinimumMeters": 0.0010002180933952332,
+    "swordMinimumMeters": 0.4766402542591095
+  },
+  {
+    "clip": "EarthSlam",
+    "frame": 0,
+    "bodyMinimumMeters": 0.0010002180933952332,
+    "swordMinimumMeters": 0.4766402542591095
+  },
+  {
+    "clip": "WaterWhip",
+    "frame": 0,
+    "bodyMinimumMeters": 0.0010002180933952332,
+    "swordMinimumMeters": 0.4766402542591095
+  },
+  {
+    "clip": "WaterWhip",
+    "frame": 60,
+    "bodyMinimumMeters": 0.0010000279871746898,
+    "swordMinimumMeters": 0.5473400950431824
+  },
+  {
+    "clip": "WaterWhip",
+    "frame": 120,
+    "bodyMinimumMeters": 0.0010002371855080128,
+    "swordMinimumMeters": 0.4767359495162964
+  },
+  {
+    "clip": "WaterOrbit",
+    "frame": 0,
+    "bodyMinimumMeters": 0.0010002180933952332,
+    "swordMinimumMeters": 0.4766402542591095
+  },
+  {
+    "clip": "WaterOrbit",
+    "frame": 60,
+    "bodyMinimumMeters": 0.0010000001639127731,
+    "swordMinimumMeters": 0.5588984489440918
+  },
+  {
+    "clip": "WaterOrbit",
+    "frame": 120,
+    "bodyMinimumMeters": 0.0010002371855080128,
+    "swordMinimumMeters": 0.4767359495162964
+  },
+  {
+    "clip": "WaterSurge",
+    "frame": 0,
+    "bodyMinimumMeters": 0.0010002180933952332,
+    "swordMinimumMeters": 0.4766402542591095
+  },
+  {
+    "clip": "WaterSurge",
+    "frame": 60,
+    "bodyMinimumMeters": 0.0009999878238886595,
+    "swordMinimumMeters": 0.5365231037139893
+  },
+  {
+    "clip": "WaterSurge",
+    "frame": 120,
+    "bodyMinimumMeters": 0.0010002371855080128,
+    "swordMinimumMeters": 0.4767359495162964
+  }
+]

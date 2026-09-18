@@ -24,6 +24,8 @@ Dim ReflectionBytesPerPixel As Number
 Game Window "Water Lab Native Checks" Size 400 By 300
 
 Call Scene.Start(Lab)
+Call Check(Lab.KaelSelected And Character.ClipCount(Lab.Kael) = 16)
+Call Scene.SelectCharacter(Lab, False)
 
 Lab.AudioEnabled = False
 Lab.Paused = True
@@ -188,27 +190,208 @@ Call CheckWaterbendingTargets(Lab)
 Call CheckCompactImpact(Lab)
 Call CheckSharedWater(Lab)
 Call CheckBackgrounds(Lab)
+Call CheckKael(Lab)
 
 Ok = G.ConfigurePostProcessing3D(False, False, False, 100, 1200, 45, 2, 2, 4)
 
 Call Check(Ok)
 Call Scene.Draw(Lab)
-Call Check(G.ReflectionValue3D(G.REFLECTION_QUERY_TARGET_FORMAT) = 1)
+Call Check(G.ReflectionValue3D(G.REFLECTION_QUERY_TARGET_FORMAT) = 1, "LDR reflection")
 Call Check(G.ReflectionValue3D(G.REFLECTION_QUERY_TARGET_BYTES) =
     G.ReflectionValue3D(G.REFLECTION_QUERY_WIDTH) *
-    G.ReflectionValue3D(G.REFLECTION_QUERY_HEIGHT) * 12)
+    G.ReflectionValue3D(G.REFLECTION_QUERY_HEIGHT) * 12, "LDR bytes")
 
 Show Screen
 
 Call Scene.Destroy(Lab)
-Call Check(G.GpuParticleValue3D(G.GPU_PARTICLE_QUERY_TOTAL_CAPACITY) = 0)
-Call Check(G.LiveParticleBatchCount3D() = 0)
-Call Check(G.LiveMaterialCount3D() = 0)
-Call Check(G.LiveTextureCount3D() = 0)
+Call Check(G.GpuParticleValue3D(G.GPU_PARTICLE_QUERY_TOTAL_CAPACITY) = 0, "GPU cleanup")
+Call Check(G.LiveParticleBatchCount3D() = 0, "Particle cleanup")
+Call Check(G.LiveMaterialCount3D() = 0, "Material cleanup")
+Call Check(G.LiveTextureCount3D() = 0, "Texture cleanup")
 Call G.ResetRenderer3D()
 Call Check(G.ReflectionValue3D(G.REFLECTION_QUERY_TARGET_BYTES) = 0)
 
 Print "Water Lab native failures: "; Failures
+
+Sub CheckKael(ByRef Value As Scene.State)
+
+    Dim Index As Number
+    Dim FrameIndex As Number
+    Dim SavedTextures As Number
+    Dim SavedMaterials As Number
+    Dim LeftStart As P.Vector3
+    Dim RightStart As P.Vector3
+    Dim LeftNow As P.Vector3
+    Dim RightNow As P.Vector3
+    Dim Head As P.Vector3
+    Dim Delta As P.Vector3
+    Dim LeftTravel As Double
+    Dim RightTravel As Double
+    Dim Low As Double
+    Dim High As Double
+    Dim Ready As Boolean
+
+    SavedTextures = G.LiveTextureCount3D()
+    SavedMaterials = G.LiveMaterialCount3D()
+
+    Call UI.Update(Value, KEY_X)
+    Call Check(Value.KaelSelected And Value.KaelAttack = 1 And Value.Paused)
+
+    Value.Demo = False
+
+    ''' The realism toggle changes presentation without replaying the cast or allocating resources.
+    Value.Time = 1500
+
+    Call Scene.Update(Value, 0)
+    Call Check(Value.Frame.Realistic)
+    Call UI.Update(Value, KEY_F)
+    Call Scene.Update(Value, 0)
+    Call Check(Not Value.Frame.Realistic And Value.Time = 1500 And Value.Paused)
+    Call UI.Update(Value, KEY_F)
+    Call Scene.Update(Value, 0)
+    Call Check(Value.Frame.Realistic And Value.Time = 1500)
+
+    LeftNow = Flow.SurfacePoint(Value.Frame.Origin, Value.Frame.Target, 0.3,
+        1500, 0.5, 1.0, True, 1, False)
+    RightNow = Flow.SurfacePoint(Value.Frame.Origin, Value.Frame.Target, 0.3,
+        1500, 0.5, 1.0, True, 1, True)
+
+    Call Check(M.Length(M.Subtract(LeftNow, RightNow)) > 0.5)
+    Call Check(Splash.CanWrap(12.0, 75.0))
+    Call Check(Not Splash.CanWrap(0.0, 0.0) And Not Splash.CanWrap(50.0, 75.0))
+    Call Check(Not Splash.CanWrap(12.0, 160.0))
+
+    For Index = 0 To 15
+
+        LeftNow = Splash.WrapPoint(P.Vector(-160.0, 0.0, 0.0), P.Vector(162.0, 58.0, 0.0),
+            P.Vector(175.0, 38.0, 0.0), 12.0, 75.0, 0.32, Index, 1.0, 0.0)
+
+        Call Check(LeftNow.X > 188.0 And Abs(LeftNow.Z) < 0.001, "Water reaches behind small target")
+
+        For FrameIndex = 0 To 10
+
+            RightNow = Splash.WrapPoint(P.Vector(-160.0, 0.0, 0.0), P.Vector(162.0, 58.0, 0.0),
+                P.Vector(175.0, 38.0, 0.0), 12.0, 75.0, 0.6, Index,
+                ToDouble(FrameIndex) / 10.0, -1.0)
+            Delta = M.Subtract(RightNow, P.Vector(175.0, 38.0, 0.0))
+
+            Call Check(Delta.X * Delta.X + Delta.Z * Delta.Z > 144.0 And RightNow.Y >= 2.0,
+                "Target wrap clears cylinder and floor")
+        End For
+    End For
+
+    For Mode = 1 To 3
+
+        Value.KaelAttack = Mode
+        LeftTravel = 0.0
+        RightTravel = 0.0
+        Low = 10000.0
+        High = -10000.0
+
+        Call Scene.Restart(Value)
+        Call Check(Character.CurrentClipNameMatches(Value.Kael, Value.Clip))
+
+        For FrameIndex = 0 To 9
+
+            Value.Time = FrameIndex * 500
+
+            Call Scene.Update(Value, 0)
+            Call Scene.Draw(Value)
+            Call Check(Value.ErrorCode = 0 And G.LastError() = 0)
+            Call Check(Value.Frame.WrapStyle = Mode)
+
+            Ready = Character.TrySocketPositionPrecise(Value.Kael, "HandLeft", 0, False, LeftNow)
+            Ready = Character.TrySocketPositionPrecise(Value.Kael, "HandRight", 0, False, RightNow) And Ready
+            Ready = Character.TrySocketPositionPrecise(Value.Kael, "Head", 0, False, Head) And Ready
+
+            Call Check(Ready)
+
+            If FrameIndex = 0 Then
+                LeftStart = LeftNow
+                RightStart = RightNow
+            End If
+
+            LeftTravel = Max(LeftTravel, M.Length(M.Subtract(LeftNow, LeftStart)))
+            RightTravel = Max(RightTravel, M.Length(M.Subtract(RightNow, RightStart)))
+            Low = Min(Low, Head.Y)
+            High = Max(High, Head.Y)
+
+            Show Screen
+        End For
+
+        Call Check(LeftTravel > 30.0 And RightTravel > 30.0 And High - Low > 12.0)
+
+        ''' The held helix clears the body and its closed head reaches the chosen pillar.
+
+        For Index = 0 To 10
+            Head = Flow.WrapCenter(Value.Frame.Origin, Value.Frame.Target, 0.3,
+                ToDouble(Index) / 10.0, Mode)
+            Delta = M.Subtract(Head, Value.Frame.Origin)
+
+            Call Check(Delta.X * Delta.X + Delta.Z * Delta.Z >= 73.9 * 73.9)
+        End For
+
+        Head = Flow.SurfacePoint(Value.Frame.Origin, Value.Frame.Target, 0.72,
+            3600, 1.0, 1.7, True, Mode)
+
+        Call Check(M.Length(M.Subtract(Head, Value.Frame.Target)) < 0.001)
+
+        Value.Time = 3600
+
+        Call Scene.Update(Value, 0)
+        Call Check(Value.Water.PreviousMode = Water.IMPACT And Value.Water.ImpactSprayCount = 96)
+        Call Check(Value.Frame.TargetRadius = ToDouble(Value.TargetRadii[Value.TargetIndex]) And
+            Value.Frame.TargetHeight = ToDouble(Value.TargetHeights[Value.TargetIndex]))
+        Call UI.Update(Value, KEY_X)
+        Call Scene.Update(Value, 0)
+        Call Check(Not Value.KaelSelected And Value.Frame.WrapStyle = 0)
+        Call UI.Update(Value, KEY_X)
+        Call Check(G.LiveTextureCount3D() = SavedTextures And G.LiveMaterialCount3D() = SavedMaterials)
+    End For
+
+    Value.Demo = True
+    Value.Paused = False
+    Value.SpeedPercent = 200
+
+    ''' Every progressive-size target receives a surface hit, including the non-wrapping largest.
+
+    For Index = 0 To 3
+
+        Value.TargetIndex = Index
+        Value.Paused = True
+        Value.Time = 4100
+
+        Call Scene.Update(Value, 0)
+        Call Scene.Draw(Value)
+        Call Check(Value.ErrorCode = 0 And G.LastError() = 0)
+
+        Delta = M.Subtract(Value.Frame.Target, Value.Frame.TargetCenter)
+        Delta.Y = 0.0
+
+        Call Check(Abs(M.Length(Delta) - ToDouble(Value.TargetRadii[Index]) - 1.0) < 0.001)
+        Call Check(Splash.CanWrap(Value.Frame.TargetRadius, Value.Frame.TargetHeight) = (Index < 3))
+
+        Show Screen
+    End For
+
+    Value.Paused = False
+
+    For Index = 1 To 3
+        Value.Time = Value.Duration - 20
+
+        Call Scene.Update(Value, 10)
+        Call Check(Value.KaelAttack = Index Mod 3 + 1 And Value.Time = 0)
+        Call Check(Character.CurrentClipNameMatches(Value.Kael, Value.Clip))
+    End For
+
+    Value.Paused = True
+
+    ''' Keep a visible refracting surface for the following LDR target allocation check.
+    Value.Time = 1500
+
+    Call Scene.Update(Value, 0)
+
+End Sub
 
 Sub CheckWaterbendingTargets(ByRef Value As Scene.State)
 
@@ -262,7 +445,13 @@ Sub CheckWaterbendingTargets(ByRef Value As Scene.State)
             Ready = P.TryTransform(Value.Targets[PillarIndex], Pillar)
 
             Call Check(Ready And Pillar.Position.X >= 175.0)
-            Call Check(Pillar.Position.Z = -120.0 + ToDouble(PillarIndex) * 80.0)
+            Call Check(Pillar.Position.Z = -150.0 + ToDouble(PillarIndex) * 100.0)
+            Call Check(Pillar.Position.Y = ToDouble(Value.TargetHeights[PillarIndex]) * 0.5)
+
+            If PillarIndex > 0 Then
+                Call Check(Value.TargetRadii[PillarIndex] > Value.TargetRadii[PillarIndex - 1] And
+                    Value.TargetHeights[PillarIndex] > Value.TargetHeights[PillarIndex - 1])
+            End If
 
             If PillarIndex = TargetIndex Then
                 Call Check(Pillar.Position.X > 183.0)
@@ -430,11 +619,11 @@ Sub CheckBackgrounds(ByRef Value As Scene.State)
 
 End Sub
 
-Sub Check(Condition As Boolean)
+Sub Check(Condition As Boolean, Optional Label As Text = "")
 
     If Not Condition Then
         Failures = Failures + 1
-        Print "Water Lab check failed in mode "; Mode
+        Print "Water Lab check failed in mode "; Mode; " "; Label
     End If
 
 End Sub

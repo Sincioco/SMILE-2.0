@@ -14,6 +14,10 @@ foreach ($modelFile in @('mira-animation-checkpoint.glb', 'Mira.sm3d.json')) {
     Copy-Item -LiteralPath (Join-Path $waterRepository "games\SinStarI\SourceAssets\Characters\Healer\MiraTripoV1\$modelFile") `
         -Destination $modelDestination -Force
 }
+foreach ($modelFile in @('kael-v1-water-preview.glb', 'KaelWaterPreview.sm3d.json')) {
+    Copy-Item -LiteralPath (Join-Path $waterRepository "games\SinStarI\SourceAssets\Characters\Kael\KaelV1\$modelFile") `
+        -Destination $modelDestination -Force
+}
 foreach ($family in @('Water', 'Lightning')) {
     $destination = Join-Path $PSScriptRoot "Assets\$family"
     New-Item -ItemType Directory -Path $destination -Force | Out-Null

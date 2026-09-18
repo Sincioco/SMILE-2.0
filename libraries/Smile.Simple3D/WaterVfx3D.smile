@@ -38,6 +38,11 @@ Public Type Frame
     ImpactActive As Boolean
     ImpactProgress As Double
     ImpactMember As Number
+    WrapStyle As Number
+    Realistic As Boolean
+    TargetCenter As P.Vector3
+    TargetRadius As Double
+    TargetHeight As Double
 End Type
 
 Public Type Context
@@ -307,12 +312,24 @@ Private Sub SurfacePoint(Sample As Frame, Strip As Number, Along As Double,
 
         Angle = ToDouble(Strip) * Width
         LeftPoint = Flow.SurfacePoint(Sample.Origin, Sample.Target,
-            Sample.Progress, Sample.Time, Along, Angle, Sample.Mode = TORRENT)
+            Sample.Progress, Sample.Time, Along, Angle, Sample.Mode = TORRENT,
+            Sample.WrapStyle, Sample.Realistic)
         RightPoint = Flow.SurfacePoint(Sample.Origin, Sample.Target,
             Sample.Progress, Sample.Time, Along, Angle + Width,
-            Sample.Mode = TORRENT)
+            Sample.Mode = TORRENT, Sample.WrapStyle, Sample.Realistic)
 
     Else If Sample.Mode = IMPACT Then
+
+        If Splash.CanWrap(Sample.TargetRadius, Sample.TargetHeight) Then
+
+            LeftPoint = Splash.WrapPoint(Sample.Origin, Sample.Target, Sample.TargetCenter,
+                Sample.TargetRadius, Sample.TargetHeight, Sample.ImpactProgress, Strip, Along, -1.0)
+            RightPoint = Splash.WrapPoint(Sample.Origin, Sample.Target, Sample.TargetCenter,
+                Sample.TargetRadius, Sample.TargetHeight, Sample.ImpactProgress, Strip, Along, 1.0)
+
+            Return
+
+        End If
 
         LeftPoint = Splash.SheetPoint(Sample.Origin, Sample.Target, Sample.ImpactProgress,
             Strip, Along, -1.0)
@@ -488,6 +505,10 @@ Private Function UpdateSurfaces(ByRef Value As Context, Sample As Frame) As Bool
         Opacity = ToNumber(Round(Clamp(Sample.Strength, 0.0, 1.0) * 92.0))
     End If
 
+    If Sample.Realistic Then
+        Opacity = ToNumber(Round(ToDouble(Opacity) * 0.9))
+    End If
+
     For Strip = 0 To ItemCount - 1
 
         ContactSheet = Sample.Mode = IMPACT
@@ -644,11 +665,33 @@ Private Function EmitSpray(ByRef Value As Context, Sample As Frame, ItemCount As
 
             Call Splash.Spray(Sample.Origin, Sample.Target, Value.Serial, Position, Velocity)
 
+            If Splash.CanWrap(Sample.TargetRadius, Sample.TargetHeight) Then
+
+                Position = Splash.WrapPoint(Sample.Origin, Sample.Target, Sample.TargetCenter,
+                    Sample.TargetRadius, Sample.TargetHeight, Sample.ImpactProgress,
+                    Value.Serial Mod IMPACT_STRIPS, Along, 0.0)
+                Velocity = M.Subtract(Position, Sample.TargetCenter)
+                Velocity.Y = -18.0 + Along * 24.0
+
+            End If
+
             Lifetime = 300 + Value.Serial Mod 260
 
         Else If Sample.Mode = TORRENT Then
 
             Velocity = M.Scale(M.Subtract(Sample.Target, Sample.Origin), 0.8)
+
+            If Sample.WrapStyle > 0 Then
+
+                Tangent = M.Subtract(Flow.WrapCenter(Sample.Origin, Sample.Target,
+                    Sample.Progress, Along + 0.01, Sample.WrapStyle),
+                    Flow.WrapCenter(Sample.Origin, Sample.Target,
+                    Sample.Progress, Along - 0.01, Sample.WrapStyle))
+                Ok = M.TryNormalize(Tangent, Tangent) And Ok
+                Velocity = M.Add(M.Scale(Tangent, 38.0), P.Vector(0.0, -24.0, 0.0))
+                Lifetime = 600 + Value.Serial Mod 300
+
+            End If
 
         End If
 
@@ -745,7 +788,14 @@ Public Function Update(ByRef Value As Context, Sample As Frame) As Boolean
     End If
 
     Ok = UpdateSurfaces(Value, Sample) And Ok
-    Ok = G.SetEffectMaterialWater3D(Value.SheetMaterial, True, 18, 4, Max(0, Sample.Time)) And Ok
+
+    If Sample.Realistic Then
+        Ok = G.SetEffectMaterialWater3D(Value.SheetMaterial, True, 8, 1, Max(0, Sample.Time)) And Ok
+        Ok = G.SetEffectMaterialDistortion3D(Value.RefractionMaterial, 28, 210, 55, 25, 80) And Ok
+    Else
+        Ok = G.SetEffectMaterialWater3D(Value.SheetMaterial, True, 18, 4, Max(0, Sample.Time)) And Ok
+        Ok = G.SetEffectMaterialDistortion3D(Value.RefractionMaterial, 22, 160, 40, 25, 80) And Ok
+    End If
 
     If Contacts > 0 Then
         Ok = G.SetEffectMaterial3D(Value.DropMaterial, G.MATERIAL_ALPHA_BLEND,

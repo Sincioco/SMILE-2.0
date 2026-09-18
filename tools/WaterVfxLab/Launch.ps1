@@ -2,8 +2,9 @@
 param([switch]$Build)
 $ErrorActionPreference = 'Stop'
 $waterExecutable = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot 'bin\Release\WaterVfxLab.exe'))
-foreach ($waterProcess in @(Get-Process -Name WaterVfxLab -ErrorAction SilentlyContinue)) {
-    if ($waterProcess.Path -eq $waterExecutable) {
+foreach ($waterProcess in @(Get-Process -Name 'WaterVfxLab*' -ErrorAction SilentlyContinue)) {
+    if ($waterProcess.Path -eq $waterExecutable -or
+        $waterProcess.Path.StartsWith($waterExecutable + '~RF', [StringComparison]::OrdinalIgnoreCase)) {
         [void]$waterProcess.CloseMainWindow()
         if (-not $waterProcess.WaitForExit(10000)) { throw 'The previous Water Lab did not close gracefully.' }
     }
