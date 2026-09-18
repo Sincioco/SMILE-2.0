@@ -1,6 +1,11 @@
 # Sin Star I
 
 Sin Star I opens with **Characters**, **Battle Simulations**, **Legacy**, and **Exit**.
+All three battle simulations use the Viewer's current four-hero party: Arin, Orin,
+Zara and Mira. A status panel shows every hero and the selected boss with live state,
+animation and speed. Dragon includes Zara's attacks, hit/KO/revival and water shields.
+Kael starts at speed 200 in both his character presentation and battle simulation.
+
 Characters offers Arin, Orin, Mira, Zara, Valor, Dragon, Vrax, Yalis, and Kael. Each selection
 runs that character's animation cycle with the Character Viewer's background,
 rotating reflective arena, calibrated equipment, VFX and sounds. Battle Simulations
@@ -28,8 +33,9 @@ module against all nine packages, opens all twelve entries, draws the first fram
 before the ordinary update loop, advances another frame, and verifies renderer
 object/animator/particle/ribbon cleanup after each exit. It also observes private
 Viewer load failures in a disposable source copy so a partial load cannot pass
-just because later calls clear the renderer's last-error value. The Kael Party
-entry additionally checks its boss identity and exact four-hero roster.
+just because later calls clear the renderer's last-error value. All three battle
+entries check their exact four-hero roster, and Kael's solo and Party entries
+check speed 200; Kael Party also checks its boss identity.
 
 The shared loader acknowledges the character cache's one-time renderer-reset
 signal before setting the next scene's cache policy. Session construction is

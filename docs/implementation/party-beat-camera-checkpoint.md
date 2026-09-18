@@ -364,3 +364,11 @@ No remaining native implementation or acceptance check exists for this bounded
 hardening milestone. Install the already-built VSIX 2.0.64 only after the unrelated
 Visual Studio debugging session is closed. Studio and Web remain explicitly held;
 resume only on Sin's direction. No unrelated feature phase is authorized.
+
+## September 18 native party follow-through — Web remains on hold
+
+Native Viewer and Sin Star I now share live state/clip/speed rows for Arin, Orin,
+Zara, Mira and the selected Dragon/Vrax/Kael boss. Native Dragon Party includes Zara
+in formation, turns, targeting, equipment, water recipients and Beat selection.
+Kael's solo and Party defaults are 200. These shared-source changes have not been
+adopted, published or browser-validated for Web; resume that work only on Sin's direction.

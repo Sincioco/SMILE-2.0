@@ -505,7 +505,7 @@ Public Class Session
         If Me.Party.Enabled Then
 
             If BeatEditor.Keyboard(Me.BeatEditing, Me.Party.UnityRoster,
-                Me.DragonState.Visible, PressedKey) Then
+                Me.DragonState.Visible, PressedKey, Me.Party.Fourth.Ready) Then
                 Return
             End If
 
@@ -1812,6 +1812,7 @@ Public Class Session
         End If
 
         If Me.Party.Enabled And Not Me.ViewerUiState.CalibrationVisible Then
+
             Call ViewerParty.DrawOverlay(
                 Me.Party,
                 Me.ViewerUiState.Visibility,
@@ -1836,6 +1837,12 @@ Public Class Session
                 Me.Session.FirstFailureStage,
                 Me.ViewerCameraState.Live
             )
+
+            If Me.ViewerUiState.Visibility = 0 And Me.ViewHeight >= 720 Then
+                Call ViewerInspectorPresentation.DrawPartyStatuses(Me.Party,
+                    Me.Character, Me.DragonState, Me.Playback.PlaybackSpeed, 28, 470)
+            End If
+
         End If
 
         If (Me.ViewerUiState.Visibility = 0 And
@@ -2302,7 +2309,8 @@ Public Class Session
                             BroadBest = Turn
                         End If
 
-                        Turn = BeatSequence.NextActor(Me.Party.UnityRoster, Turn, Me.DragonState.Visible)
+                        Turn = BeatSequence.NextActor(Me.Party.UnityRoster, Turn,
+                            Me.DragonState.Visible, Me.Party.Fourth.Ready)
 
                     Loop Until Turn = 0
 
@@ -2810,6 +2818,16 @@ Public Class Session
         Return Result
 
     End Function
+
+    Public Sub DrawPresentationStatuses()
+
+        If Me.Party.Enabled And Me.Party.Ready Then
+            Call ViewerInspectorPresentation.DrawPartyStatuses(Me.Party,
+                Me.Character, Me.DragonState, Me.Playback.PlaybackSpeed,
+                Me.ViewWidth - 252, 110, True)
+        End If
+
+    End Sub
 
 End Class
 

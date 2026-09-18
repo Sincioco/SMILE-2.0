@@ -1456,6 +1456,10 @@ Public Sub DrawHeader(DisplayName As Text, PartyRole As Text,
 
         Subtitle = "Sin Star I  •  Arin And Orin  •  Party Battle Preview"
 
+        If ViewerProfiles.INCLUDE_UNITY_CHARACTERS Then
+            Subtitle = "Sin Star I  •  Arin, Orin And Zara  •  Dragon Battle Preview"
+        End If
+
         If ViewerProfiles.UsesUnityPartyRoster(SelectedCharacterTab) Then
             Subtitle = "Sin Star I  •  Arin, Orin And Zara  •  Vrax Battle Preview"
         End If

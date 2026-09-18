@@ -2033,6 +2033,7 @@ Sub CheckMiraBattles()
     Dim Members As Number
     Dim SampleTime As Number
     Dim Bounds As Character3D.Bounds3D
+    Dim MemberStatus As ViewerInspectorPresentation.PartyMemberStatus
 
     If Not ViewerProfiles.INCLUDE_MIRA_COMPARISONS Then
         Return
@@ -2090,12 +2091,30 @@ Sub CheckMiraBattles()
 
         Members = 3
 
-        If Party.UnityRoster Then
+        If Party.Fourth.Ready Then
             Members = 4
         End If
 
         Call CalibrationCheck(Party.ParticipantCount = Members,
             "Formation admits Mira in addition to the existing heroes")
+
+        Call CalibrationCheck(Party.Fourth.Ready And
+            Party.Fourth.Profile = ViewerProfiles.PROFILE_ZARA,
+            "Dragon and Vrax each load Zara's own actor")
+
+        Schedule = BeatSequence.Times(Party, Character, Playback.PlaybackSpeed, 5, 0)
+        Ok = BeatSequence.Sample(Party, Character, ViewerCameraState.Frame,
+            Playback.SelectedClip, DragonState, Playback.PlaybackSpeed, 5, Schedule.Start[2] + 1)
+        MemberStatus = ViewerInspectorPresentation.CapturePartyMember(
+            Party, Character, DragonState, 5, Playback.PlaybackSpeed)
+
+        Call CalibrationCheck(Ok And MemberStatus.Name = "Zara" And
+            MemberStatus.State = "Acting" And
+            (MemberStatus.Clip = "SwordAttack" Or MemberStatus.Clip = "SwordAttack2"),
+            "Zara's turn and status use her live attack in either battle")
+        Call CalibrationCheck(BeatSequence.NextActor(Party.UnityRoster, 1,
+            True, Party.Fourth.Ready) = 5,
+            "Actor selection reaches Zara in Dragon and Vrax")
 
         For Cycle = 0 To 5
 
@@ -2150,7 +2169,7 @@ Sub CheckMiraBattles()
 
         If Not Party.UnityRoster Then
 
-            Call ViewerParty.PrepareDragonTurn(Party, 2)
+            Call ViewerParty.PrepareDragonTurn(Party, 3)
 
             Ok = BeatSequence.Sample(Party, Character, ViewerCameraState.Frame,
                 Playback.SelectedClip, DragonState, Playback.PlaybackSpeed, 2,
@@ -2159,6 +2178,26 @@ Sub CheckMiraBattles()
             Call CalibrationCheck(Ok And Party.HitTarget = 6 And
                 Character3D.CurrentClipNameMatches(Party.Mira.Actor, "Hit"),
                 "Dragon targeting resolves Mira's own hit clip")
+
+            Call ViewerParty.PrepareDragonTurn(Party, 2)
+
+            Ok = BeatSequence.Sample(Party, Character, ViewerCameraState.Frame,
+                Playback.SelectedClip, DragonState, Playback.PlaybackSpeed, 2,
+                (ViewerParty.DragonImpactTime(Party) + 351) * 100 / Playback.PlaybackSpeed, True)
+            MemberStatus = ViewerInspectorPresentation.CapturePartyMember(
+                Party, Character, DragonState, 5, Playback.PlaybackSpeed)
+
+            Call CalibrationCheck(Ok And Party.HitTarget = 5 And
+                MemberStatus.State = "KO" And MemberStatus.Clip = "Death",
+                "Dragon targets Zara and her status reports the resulting KO")
+
+            Ok = BeatSequence.Sample(Party, Character, ViewerCameraState.Frame,
+                Playback.SelectedClip, DragonState, Playback.PlaybackSpeed, 5, 0, True)
+            MemberStatus = ViewerInspectorPresentation.CapturePartyMember(
+                Party, Character, DragonState, 5, Playback.PlaybackSpeed)
+
+            Call CalibrationCheck(Ok And MemberStatus.State = "Reviving",
+                "Zara revives on her own next Dragon Party turn")
 
         End If
 

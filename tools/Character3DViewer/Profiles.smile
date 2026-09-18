@@ -276,6 +276,7 @@ Public Function ProfileAt(Index As Number) As CharacterViewer.Profile
         Result.ExpectedClipCount = 10
         Result.ExpectedSocketCount = 10
         Result.DesiredWorldHeight = 134
+        Result.DefaultPlaybackSpeed = 200
 
     Else If Index = PROFILE_YALIS Then
 

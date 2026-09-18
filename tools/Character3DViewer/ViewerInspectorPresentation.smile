@@ -21,6 +21,121 @@ Import Smile.Tools.Character3DViewerRendering As ViewerRendering
 Import Smile.Tools.Character3DViewerSession As ViewerSession
 Import Smile.Tools.Character3DViewerTiming As ViewerTiming
 Import Smile.Tools.Character3DViewerUi As ViewerUi
+Import Smile.UI.Controls As UI
+
+Public Type PartyMemberStatus
+    Name As Text
+    State As Text
+    Clip As Text
+    Speed As Number
+End Type
+
+Public Function CapturePartyMember(ByRef Party As ViewerParty.State,
+    Primary As Character3D.Actor, Boss As ViewerDragon.State,
+    Turn As Number, FallbackSpeed As Number) As PartyMemberStatus
+
+    Dim Result As PartyMemberStatus
+    Dim Actor As Character3D.Actor
+    Dim Profile As CharacterViewer.Profile
+    Dim ProfileIndex As Number
+    Dim Index As Number
+
+    Actor = Primary
+    ProfileIndex = ViewerProfiles.PROFILE_ARIN
+
+    If Party.UiBound Then
+        Actor = Party.UiPrimary.Actor
+    End If
+
+    If Turn = 1 Then
+        Actor = Party.Companion.Actor
+        ProfileIndex = Party.Companion.Profile
+    Else If Turn = 5 Then
+        Actor = Party.Fourth.Actor
+        ProfileIndex = Party.Fourth.Profile
+    Else If Turn = 6 Then
+        Actor = Party.Mira.Actor
+        ProfileIndex = Party.Mira.Profile
+    Else If Turn = 2 Then
+        Actor = Boss.Actor
+        ProfileIndex = ViewerParty.BossProfile(Party)
+    End If
+
+    Profile = ViewerProfiles.ProfileAt(ProfileIndex)
+    Result.Name = Profile.DisplayName
+    Result.Speed = ViewerParty.ActorPlaybackSpeed(Party, Turn, FallbackSpeed)
+    Result.State = ViewerParty.PresentationStateName(ViewerParty.PresentationState(Party, Turn))
+
+    For Index = 0 To Character3D.ClipCount(Actor) - 1
+
+        If Character3D.CurrentClipNameMatches(Actor, Character3D.ClipName(Actor, Index)) Then
+            Result.Clip = Character3D.ClipName(Actor, Index)
+            Exit For
+        End If
+
+    End For
+
+    If Turn = 2 Then
+
+        Result.State = "Alive"
+
+        If Result.Clip = "Hit" Then
+            Result.State = "Hit"
+        Else If Result.Clip = "Death" Then
+            Result.State = "KO"
+        Else If Result.Clip = "Defend" Then
+            Result.State = "Guarding"
+        Else If Result.Clip <> "Idle" And Result.Clip <> "" Then
+            Result.State = "Acting"
+        End If
+
+    End If
+
+    Return Result
+
+End Function
+
+Public Sub DrawPartyStatuses(ByRef Party As ViewerParty.State,
+    Primary As Character3D.Actor, Boss As ViewerDragon.State,
+    FallbackSpeed As Number, X As Number, Y As Number,
+    Optional Panel As Boolean = False)
+
+    Dim Row As Number
+    Dim Turn As Number
+    Dim Status As PartyMemberStatus
+
+    If Panel Then
+        Call UI.DrawPanel(X - 12, Y - 10, 252, 148)
+    End If
+
+    For Row = 0 To 4
+
+        Turn = Row
+
+        If Row = 2 Then
+            Turn = 5
+        Else If Row = 3 Then
+            Turn = 6
+        Else If Row = 4 Then
+            Turn = 2
+        End If
+
+        If (Turn < 3 Or
+            (Turn = 5 And Party.Fourth.Ready) Or
+            (Turn = 6 And Party.Mira.Ready)) Then
+
+            Status = CapturePartyMember(Party, Primary, Boss, Turn, FallbackSpeed)
+            Draw Text Status.Name At X, Y + Row * 28 Size 12 Color CYAN
+            Draw Text Status.State At X + 80, Y + Row * 28 Size 12 Color WHITE
+            Draw Text Status.Clip At X, Y + Row * 28 + 14 Size 10 Color LIGHT_GRAY
+            Draw Text "Speed" At X + 156, Y + Row * 28 + 14 Size 10 Color LIGHT_GRAY
+            Draw Number Status.Speed At X + 192, Y + Row * 28 + 14 Size 10 Color WHITE
+
+        End If
+
+    End For
+
+End Sub
 
 Public Type IdentityView
     Visibility As Number

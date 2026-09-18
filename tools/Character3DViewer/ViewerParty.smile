@@ -268,6 +268,7 @@ Public Sub ResetChoreography(ByRef Value As State)
     Call SetPresentationState(Value, MiraBattle.PARTY_TURN, STATE_ALIVE)
     Call SetPresentationState(Value, 0, STATE_ALIVE)
     Call SetPresentationState(Value, 1, STATE_ALIVE)
+    Call SetPresentationState(Value, 5, STATE_ALIVE)
 
 End Sub
 
@@ -291,7 +292,7 @@ Public Sub InitializeFormation(ByRef Value As State, Center As Core.Vector3,
 
     End If
 
-    If Value.UnityRoster Then
+    If Value.UnityRoster Or Value.Fourth.Ready Then
 
         Value.ParticipantCount = 3
 
@@ -318,7 +319,7 @@ Public Sub InitializeFormation(ByRef Value As State, Center As Core.Vector3,
     Value.Second.Home = BattleCamera.FormationPosition(Center, Radius,
         StartAngle, EndAngle, 1, Value.ParticipantCount)
 
-    If Value.UnityRoster Then
+    If Value.UnityRoster Or Value.Fourth.Ready Then
 
         Value.ThirdLayout.Home = BattleCamera.FormationPosition(Center, Radius,
             StartAngle, EndAngle, 2, Value.ParticipantCount)
@@ -421,6 +422,9 @@ Public Function ApplyEquipmentVisibility(ByRef Value As State,
         If Value.UnityRoster Then
             Result = ApplyProfileEquipmentPart(Value.Third.Actor,
                 Value.Third.Profile, PartIndex, Visible) And Result
+        End If
+
+        If Value.Fourth.Ready Then
             Result = ApplyProfileEquipmentPart(Value.Fourth.Actor,
                 Value.Fourth.Profile, PartIndex, Visible) And Result
         End If
@@ -777,6 +781,18 @@ Public Sub PrepareDragonTurn(ByRef Value As State, RolledTarget As Number)
 
     End If
 
+    If Value.Fourth.Ready Then
+
+        If Value.HitTarget = 2 Then
+            Value.HitTarget = 5
+        End If
+
+        If Value.FatalTarget = 2 Then
+            Value.FatalTarget = 5
+        End If
+
+    End If
+
 End Sub
 
 Public Function AdvanceElapsed(ByRef Value As State, Elapsed As Number,
@@ -828,7 +844,7 @@ Public Function AttackDuration(ByRef Value As State,
             Value.AttackCycle)
     End If
 
-    If Value.UnityRoster Then
+    If Value.UnityRoster Or Value.Fourth.Ready Then
 
         If Value.Turn = 4 Then
             Actor = Value.Third.Actor
@@ -836,7 +852,7 @@ Public Function AttackDuration(ByRef Value As State,
         Else If Value.Turn = 5 Then
             Actor = Value.Fourth.Actor
             Name = UnityAttackName(Value)
-        Else If Value.Turn = 2 Then
+        Else If Value.Turn = 2 And Value.UnityRoster Then
             ReturnValue = Value.BossAttackDuration
 
             Return ReturnValue
@@ -944,6 +960,10 @@ Public Function ApplyFrame(ByRef Value As State, Actions As FrameActions,
                 ActorPlaybackSpeed(Value, 4, PlaybackSpeed)) And Result
         End If
 
+    End If
+
+    If Value.Fourth.Ready Then
+
         If Actions.FourthClipRequested Then
             Result = PlayClip(Value.Fourth.Actor, Actions.FourthClip, Value.Fourth.Clip,
                 Value.Fourth.Actor.Handle, Value.Fourth.Profile,
@@ -995,6 +1015,9 @@ Public Function ApplyFrame(ByRef Value As State, Actions As FrameActions,
     If Value.UnityRoster Then
         Result = PlaceUnityMember(Value.Third, Actions.ThirdPosition,
             TargetX, TargetY, TargetZ, ModelForwardYawOffset) And Result
+    End If
+
+    If Value.Fourth.Ready Then
         Result = PlaceUnityMember(Value.Fourth, Actions.FourthPosition,
             TargetX, TargetY, TargetZ, ModelForwardYawOffset) And Result
     End If
@@ -1199,11 +1222,13 @@ Public Function UpdateCompanion(ByRef Value As State,
     End If
 
     If Value.UnityRoster Then
-
         Result.Ready = UpdateUnityMember(Value.Third, AnimationElapsed) And Result.Ready
+        Value.Ready = Result.Ready
+    End If
+
+    If Value.Fourth.Ready And UpdateAdditional Then
         Result.Ready = UpdateUnityMember(Value.Fourth, AnimationElapsed) And Result.Ready
         Value.Ready = Result.Ready
-
     End If
 
     Return Result
@@ -1408,6 +1433,12 @@ Public Function UpdateDragon(
                 BODY_PART_INDEX
             )
         End If
+
+    Else If (Value.Enabled And
+        Value.HitTarget = 5 And
+        Value.Fourth.Ready) Then
+
+        Target = Character3D.SocketPosition(Value.Fourth.Actor, "Chest")
 
     Else If Value.Enabled And Value.HitTarget = MiraBattle.PARTY_TURN Then
 
@@ -1622,7 +1653,9 @@ Public Function WillPrepareDragonTurn(ByRef Value As State,
         NextElapsed = NextElapsed + Elapsed
     End If
 
-    If Value.Turn = MiraBattle.PARTY_TURN Or (Value.Turn = 1 And Not Value.Mira.Ready) Then
+    If (Value.Turn = MiraBattle.PARTY_TURN Or
+        (Value.Turn = 5 And Not Value.Mira.Ready) Or
+        (Value.Turn = 1 And Not Value.Mira.Ready And Not Value.Fourth.Ready)) Then
         Result = NextElapsed >= AttackMilliseconds + PUBLIC_HERO_TURN_TAIL_MILLISECONDS
     Else If (Value.Turn = 2 And
         Not Value.DragonOnlyTurn And
@@ -1639,6 +1672,7 @@ Private Sub SetPositions(ByRef Value As State, Progress As Double,
 
     Actions.FirstPosition = Precision3D.FromVector(Value.First.Home)
     Actions.SecondPosition = Precision3D.FromVector(Value.Second.Home)
+    Actions.FourthPosition = Precision3D.FromVector(Value.FourthLayout.Home)
 
     If Value.Turn = 0 Then
         Actions.FirstPosition = PreciseMath.Lerp(Actions.FirstPosition,
@@ -1646,6 +1680,9 @@ Private Sub SetPositions(ByRef Value As State, Progress As Double,
     Else If Value.Turn = 1 Then
         Actions.SecondPosition = PreciseMath.Lerp(Actions.SecondPosition,
             Precision3D.FromVector(Value.Second.Approach), Progress)
+    Else If Value.Turn = 5 Then
+        Actions.FourthPosition = PreciseMath.Lerp(Actions.FourthPosition,
+            Precision3D.FromVector(Value.FourthLayout.Approach), Progress)
     End If
 
     Actions.PositionsAvailable = True
@@ -1706,7 +1743,7 @@ Private Sub ApplyMiraSample(ByRef Value As State, AttackStart As Number,
             Actions.SecondClip = "Idle"
             Actions.SecondClipRequested = True
             Actions.FourthClip = "Idle"
-            Actions.FourthClipRequested = Value.UnityRoster
+            Actions.FourthClipRequested = Value.Fourth.Ready
 
             Call SetPresentationState(Value, 1, STATE_REVIVING)
             Call SetPresentationState(Value, 5, STATE_REVIVING)
@@ -1763,6 +1800,15 @@ Private Function AdvanceDragonTurn(ByRef Value As State,
 
     If Value.Stage <> 0 Then
 
+        If Value.Fourth.Ready And Value.Fourth.PresentationState <> STATE_KO Then
+
+            Actions.FourthClip = "BlockImpact"
+            Actions.FourthClipRequested = True
+
+            Call SetPresentationState(Value, 5, STATE_GUARDING)
+
+        End If
+
         If Value.Mira.Ready And Value.Mira.PresentationState <> STATE_KO Then
 
             Actions.MiraClip = "Defend"
@@ -1803,6 +1849,9 @@ Private Function AdvanceDragonTurn(ByRef Value As State,
         If Value.HitTarget = 0 Then
             Actions.FirstClip = "Hit"
             Actions.FirstClipRequested = True
+        Else If Value.HitTarget = 5 Then
+            Actions.FourthClip = "Hit"
+            Actions.FourthClipRequested = True
         Else If Value.HitTarget = MiraBattle.PARTY_TURN Then
             Actions.MiraClip = "Hit"
             Actions.MiraClipRequested = True
@@ -1826,6 +1875,9 @@ Private Function AdvanceDragonTurn(ByRef Value As State,
             If Value.FatalTarget = 0 Then
                 Actions.FirstClip = "Death"
                 Actions.FirstClipRequested = True
+            Else If Value.FatalTarget = 5 Then
+                Actions.FourthClip = "Death"
+                Actions.FourthClipRequested = True
             Else If Value.FatalTarget = MiraBattle.PARTY_TURN Then
                 Actions.MiraClip = "Death"
                 Actions.MiraClipRequested = True
@@ -1841,6 +1893,9 @@ Private Function AdvanceDragonTurn(ByRef Value As State,
             If Value.HitTarget = 0 Then
                 Actions.FirstClip = "Defend"
                 Actions.FirstClipRequested = True
+            Else If Value.HitTarget = 5 Then
+                Actions.FourthClip = "BlockImpact"
+                Actions.FourthClipRequested = True
             Else If Value.HitTarget = MiraBattle.PARTY_TURN Then
                 Actions.MiraClip = "Defend"
                 Actions.MiraClipRequested = True
@@ -1883,13 +1938,17 @@ Public Function AdvanceChoreography(ByRef Value As State,
 
         Value.Elapsed = 0
 
-        If (Value.Mira.Ready And
-            (Value.Turn = 1 Or (Value.MiraDuo And Value.Turn = 0))) Then
+        If Value.Turn = 1 And Value.Fourth.Ready Then
+
+            Value.Turn = 5
+
+        Else If (Value.Mira.Ready And
+            (Value.Turn = 1 Or Value.Turn = 5 Or (Value.MiraDuo And Value.Turn = 0))) Then
 
             Value.Turn = MiraBattle.PARTY_TURN
             Value.HitResolved = False
 
-        Else If Value.Turn = MiraBattle.PARTY_TURN Then
+        Else If Value.Turn = MiraBattle.PARTY_TURN Or Value.Turn = 5 Then
 
             Value.Turn = 2
             Actions.MiraClip = "Idle"
@@ -1960,6 +2019,8 @@ Public Function AdvanceChoreography(ByRef Value As State,
         If Value.Turn = 1 Then
             Name = ViewerProfiles.PartyAttackName(ViewerProfiles.PROFILE_ORIN,
                 Value.AttackCycle)
+        Else If Value.Turn = 5 Then
+            Name = UnityAttackName(Value)
         End If
 
     End If
@@ -1995,7 +2056,7 @@ Public Function AdvanceChoreography(ByRef Value As State,
 
             End If
 
-        Else
+        Else If Value.Turn = 1 Then
 
             If PresentationState(Value, 1) = STATE_KO Then
                 Call SetPresentationState(Value, 1, STATE_REVIVING)
@@ -2016,6 +2077,19 @@ Public Function AdvanceChoreography(ByRef Value As State,
 
             Actions.SecondClip = Name
             Actions.SecondClipRequested = True
+
+        Else If Value.Turn = 5 Then
+
+            If PresentationState(Value, 5) = STATE_KO Then
+                Call SetPresentationState(Value, 5, STATE_REVIVING)
+            Else If Stage = 3 Then
+                Call SetPresentationState(Value, 5, STATE_ALIVE)
+            Else If Stage >= 0 Then
+                Call SetPresentationState(Value, 5, STATE_ACTING)
+            End If
+
+            Actions.FourthClip = Name
+            Actions.FourthClipRequested = True
 
         End If
 
@@ -2503,6 +2577,9 @@ Public Sub ApplyAttackCamera(
         If Value.HitTarget = MiraBattle.PARTY_TURN Then
             OtherHero = Precision3D.Vector(Value.Mira.Frame.PositionX,
                 Value.Mira.Frame.PositionY + 68.0, Value.Mira.Frame.PositionZ)
+        Else If Value.HitTarget = 5 And Value.Fourth.Ready Then
+            OtherHero = Precision3D.Vector(Value.Fourth.Frame.PositionX,
+                Value.Fourth.Frame.PositionY + 68.0, Value.Fourth.Frame.PositionZ)
         End If
 
         WaistHeight = Min(Hero.Y, OtherHero.Y) - 32.0
@@ -2990,7 +3067,7 @@ Public Function AttackSequenceName(ByRef Value As State) As Text
         Return Result
     End If
 
-    If Value.UnityRoster Then
+    If Value.UnityRoster Or Value.Turn = 5 Then
         Result = UnityAttackName(Value)
 
         Return Result
@@ -3046,8 +3123,10 @@ Public Function DrawCompanion(ByRef Value As State, PartyEnabled As Boolean,
             Result = ViewerActors.Draw(Value.Third) And Result
         End If
 
-        Result = ViewerActors.Draw(Value.Fourth) And Result
+    End If
 
+    If DrawAdditional And Value.Fourth.Ready Then
+        Result = ViewerActors.Draw(Value.Fourth) And Result
     End If
 
     If (Value.Companion.GlowVisible And
@@ -3126,17 +3205,12 @@ Public Sub DrawOverlay(
     Dim BossLabel As Text
     Dim Acting As Text
     Dim AttackSequence As Text
-    Dim PrimaryState As Number
-    Dim CompanionState As Number
-    Dim PresentationCaption As Text
 
     Left = 12
     BossLabel = BossName(Value)
 
     Acting = ActingName(Value)
     AttackSequence = AttackSequenceName(Value)
-    PrimaryState = PresentationState(Value, 0)
-    CompanionState = PresentationState(Value, 1)
 
     If UiVisibility = 0 Then
 
@@ -3190,32 +3264,16 @@ Public Sub DrawOverlay(
 
         End If
 
-        If WindowHeight >= 740 Then
+        If WindowHeight >= 850 Then
 
-            If PrimaryState = STATE_KO Then
+            Draw Text StormCaption At Left + 16, 636 Size 12 Color CYAN
+            Draw Text "Camera" At Left + 16, 676 Size 12 Color LIGHT_GRAY
+            Draw Number Value.ActiveCamera At Left + 80, 676 Size 12 Color CYAN
 
-                Draw Text "Arin KO - Revives On His Turn" At Left + 16, 470 Size 12 Color YELLOW
+            Call DrawCameraDetails(Camera, Left + 16, 696)
 
-            Else If CompanionState = STATE_KO Then
-
-                Draw Text "Orin KO - Revives On His Turn" At Left + 16, 470 Size 12 Color YELLOW
-
-            Else
-                PresentationCaption = "Arin " + PresentationStateName(PrimaryState)
-                PresentationCaption = PresentationCaption + " / Orin "
-                PresentationCaption = PresentationCaption + PresentationStateName(CompanionState)
-                Draw Text PresentationCaption At Left + 16, 470 Size 12 Color LIGHT_GRAY
-
-            End If
-
-            Draw Text StormCaption At Left + 16, 488 Size 12 Color CYAN
-            Draw Text "Camera" At Left + 16, 528 Size 12 Color LIGHT_GRAY
-            Draw Number Value.ActiveCamera At Left + 80, 528 Size 12 Color CYAN
-
-            Call DrawCameraDetails(Camera, Left + 16, 548)
-
-            Draw Text "FPS" At Left + 16, 508 Size 13 Color LIGHT_GRAY
-            Draw Number FramesPerSecond At Left + 62, 508 Size 13 Color GREEN
+            Draw Text "FPS" At Left + 16, 656 Size 13 Color LIGHT_GRAY
+            Draw Number FramesPerSecond At Left + 62, 656 Size 13 Color GREEN
 
         End If
 
@@ -3271,28 +3329,38 @@ Public Function CreateAdditionalParticipants(ByRef Value As State,
 
     End If
 
-    If Not Value.UnityRoster Then
+    If (Not Value.UnityRoster And
+        (Not Value.Enabled Or Not ViewerProfiles.INCLUDE_UNITY_CHARACTERS)) Then
         Return Result
     End If
 
-    Value.Third = ViewerActors.LoadContext(ViewerProfiles.PROFILE_VALOR, 0)
+    If Value.UnityRoster Then
+
+        Value.Third = ViewerActors.LoadContext(ViewerProfiles.PROFILE_VALOR, 0)
+        Result = Value.Third.Ready And Result
+        Result = PlayClip(Value.Third.Actor, "Idle", Value.Third.Clip,
+            Value.Third.Actor.Handle, Value.Third.Profile,
+            ActorPlaybackSpeed(Value, 4, PlaybackSpeed)) And Result
+
+        Call ViewerEffects.ResetEquipmentDefaults(Value.ThirdEffects)
+        Call ViewerEffects.CreateEpicGlow(Value.ThirdEffects, Value.Third.Profile, Value.Third.Actor)
+
+        Value.ThirdEffects.SwordFireReady = Effects.FireInitialized
+        Result = Value.ThirdEffects.EpicGlowAvailable And Result
+
+    End If
+
     Value.Fourth = ViewerActors.LoadContext(ViewerProfiles.PROFILE_ZARA, 0)
     Value.BossAttackDuration = 2000
-    Result = Value.Third.Ready And Value.Fourth.Ready And Result
-    Result = PlayClip(Value.Third.Actor, "Idle", Value.Third.Clip,
-        Value.Third.Actor.Handle, Value.Third.Profile,
-        ActorPlaybackSpeed(Value, 4, PlaybackSpeed)) And Result
+    Result = Value.Fourth.Ready And Result
     Result = PlayClip(Value.Fourth.Actor, "Idle", Value.Fourth.Clip,
         Value.Fourth.Actor.Handle, Value.Fourth.Profile,
         ActorPlaybackSpeed(Value, 5, PlaybackSpeed)) And Result
 
-    Call ViewerEffects.ResetEquipmentDefaults(Value.ThirdEffects)
     Call ViewerEffects.ResetEquipmentDefaults(Value.FourthEffects)
-    Call ViewerEffects.CreateEpicGlow(Value.ThirdEffects, Value.Third.Profile, Value.Third.Actor)
     Call ViewerEffects.CreateEpicGlow(Value.FourthEffects, Value.Fourth.Profile, Value.Fourth.Actor)
 
-    Value.ThirdEffects.SwordFireReady = Effects.FireInitialized
-    Result = Value.ThirdEffects.EpicGlowAvailable And Value.FourthEffects.EpicGlowAvailable And Result
+    Result = Value.FourthEffects.EpicGlowAvailable And Result
     Value.Ready = Value.Ready And Result
 
     Return Result
@@ -3369,7 +3437,7 @@ Public Function UpdateAdditionalEquipment(ByRef Value As State, ByRef Shared As 
 
         End If
 
-        If Value.UnityRoster Then
+        If Value.Fourth.Ready Then
             Call MiraWater.SetMember(Value.Water.Targets, 3, Value.Fourth.Actor)
         End If
 
@@ -3380,11 +3448,11 @@ Public Function UpdateAdditionalEquipment(ByRef Value As State, ByRef Shared As 
 
     End If
 
-    If Not Value.UnityRoster Then
+    If Not Value.Fourth.Ready Then
         Return Result
     End If
 
-    If PARTY_VALOR_VISIBLE Then
+    If Value.UnityRoster And PARTY_VALOR_VISIBLE Then
         Result = UpdateMemberEquipment(Value.Third, Value.ThirdEffects, Shared,
             Visibility, Camera, CameraElapsed, AnimationElapsed, ScenePaused)
     Else
@@ -3444,13 +3512,15 @@ Public Function DrawAdditionalEquipment(ByRef Value As State,
 
     Call MiraWater.Draw(Value.Water)
 
-    If Not Value.UnityRoster Then
+    If Not Value.Fourth.Ready Then
         Return True
     End If
 
     Result = True
 
-    If PARTY_VALOR_VISIBLE And Value.ThirdEffects.EpicGlowVisible Then
+    If (Value.UnityRoster And
+        PARTY_VALOR_VISIBLE And
+        Value.ThirdEffects.EpicGlowVisible) Then
         Result = ViewerEffects.DrawEquipmentGlow(Value.ThirdEffects, Value.Third.Profile,
             Visibility.SwordVisible, Visibility.ShieldVisible)
         Result = ViewerEffects.DrawEpicGlow(Value.ThirdEffects, Value.Third.Profile,
@@ -3462,7 +3532,7 @@ Public Function DrawAdditionalEquipment(ByRef Value As State,
             Visibility.SwordVisible, Visibility.ShieldVisible) And Result
     End If
 
-    If PARTY_VALOR_VISIBLE Then
+    If Value.UnityRoster And PARTY_VALOR_VISIBLE Then
         Call ViewerEffects.DrawEquipmentFire(Value.ThirdEffects,
             Visibility.SwordVisible, Visibility.ShieldVisible)
     End If
@@ -3680,6 +3750,7 @@ Private Function AdvanceUnityChoreography(ByRef Value As State,
         Call SetPresentationState(Value, 1, STATE_ALIVE)
         Call SetPresentationState(Value, 4, STATE_ALIVE)
         Call SetPresentationState(Value, 5, STATE_ALIVE)
+        Call SetPresentationState(Value, MiraBattle.PARTY_TURN, STATE_ALIVE)
 
         Actions.FirstClip = "Idle"
         Actions.SecondClip = "Idle"
@@ -3870,6 +3941,8 @@ Public Function ActorPlaybackSpeed(ByRef Value As State, Turn As Number,
 
             If Turn = 0 Or Turn = 1 Then
                 Result = 150
+            Else If Turn = 2 And BossProfile(Value) = ViewerProfiles.PROFILE_KAEL Then
+                Result = 200
             End If
 
         End If

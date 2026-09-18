@@ -115,6 +115,7 @@ Public Sub Draw()
 
     Call Preview.DrawFrame()
     Call Preview.DrawViewportOverlay(0, 0, Window_Width(), Window_Height())
+    Call Preview.DrawPresentationStatuses()
 
     Fill Rectangle 20, 20, 95, 36, Rgb(15, 35, 55)
     Draw Text "< Back" At 33, 28 Size 18 Color WHITE

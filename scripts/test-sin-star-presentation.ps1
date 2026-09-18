@@ -68,14 +68,25 @@ Call Me.LoadViewer()
             Print Me.Session.FirstViewerError
             Print Me.Session.FirstRendererError
         End If
-        If Me.Session.SelectedCharacterTab = ViewerProfiles.CHARACTER_TAB_PARTY_KAEL Then
+        If ViewerProfiles.IsPartyTab(Me.Session.SelectedCharacterTab) Then
             If (Me.Party.ParticipantCount <> 4 Or
-                Me.DragonState.SelectedProfile <> ViewerProfiles.PROFILE_KAEL Or
-                Me.DragonState.UseVrax Or
+                Not Me.Party.Fourth.Ready Or Not Me.Party.Mira.Ready Or
                 Me.Party.Companion.Profile <> ViewerProfiles.PROFILE_ORIN Or
                 Me.Party.Fourth.Profile <> ViewerProfiles.PROFILE_ZARA Or
                 Me.Party.Mira.Profile <> ViewerProfiles.PROFILE_MIRA) Then
-                Print "Kael Party loaded an incorrect boss or hero roster."
+                Print "Party loaded an incorrect four-hero roster."
+            End If
+        End If
+        If Me.Session.SelectedCharacterTab = ViewerProfiles.CHARACTER_TAB_PARTY_KAEL Then
+            If (Me.DragonState.SelectedProfile <> ViewerProfiles.PROFILE_KAEL Or
+                Me.DragonState.UseVrax Or
+                ViewerParty.ActorPlaybackSpeed(Me.Party, 2, 100) <> 200) Then
+                Print "Kael Party must load Kael at speed 200."
+            End If
+        End If
+        If Me.Session.SelectedCharacterTab = ViewerProfiles.CHARACTER_TAB_KAEL Then
+            If Me.Playback.PlaybackSpeed <> 200 Then
+                Print "Kael's solo presentation must start at speed 200."
             End If
         End If
 '@

@@ -72,7 +72,8 @@ Public Sub RememberPoses(ByRef Saved As Bookmark, Value As Party.State,
 
         If (Turn <> 3 And
             (Turn < 3 Or
-            (Turn < 6 And Value.UnityRoster) Or
+            (Turn = 4 And Value.UnityRoster) Or
+            (Turn = 5 And Value.Fourth.Ready) Or
             (Turn = MiraBattle.PARTY_TURN And Value.Mira.Ready))) Then
 
             Subject = Actor(Value, Primary, Boss, Turn)
@@ -175,7 +176,7 @@ Public Function Name(Identity As Number) As Text
 End Function
 
 Public Function NextActor(UnityRoster As Boolean, Current As Number,
-    BossVisible As Boolean) As Number
+    BossVisible As Boolean, Optional ZaraReady As Boolean = False) As Number
 
     Dim ReturnValue As Number
 
@@ -185,7 +186,7 @@ Public Function NextActor(UnityRoster As Boolean, Current As Number,
         UnityRoster And
         Party.PARTY_VALOR_VISIBLE) Then
         Return 4
-    Else If (Current = 1 Or Current = 4) And UnityRoster Then
+    Else If (Current = 1 Or Current = 4) And (UnityRoster Or ZaraReady) Then
         Return 5
     Else If (Profiles.INCLUDE_MIRA_COMPARISONS And
         (Current = 5 Or (Current = 1 And Not UnityRoster))) Then

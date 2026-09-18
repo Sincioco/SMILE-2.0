@@ -1,5 +1,16 @@
 # SMILE 2.0 - 3D Viewer, Animation Editor
 
+## Native party status and roster
+
+Party Dragon, Party Vrax and Kael Party each field Arin, Orin, Zara and Mira.
+The left panel lists all four heroes and the selected boss, with each actor's
+live state, current animation and playback speed. Zara joins Dragon's existing
+turn order, guard/hit/KO/revival, targeting and water-shield recipients using her
+own model and effects. Tab selection and Beat preview also include her.
+Sin Star I uses these same battle sessions and status rows in all three simulations.
+Kael starts at speed **200** in his solo tab and Party, in both applications.
+The states remain presentation states; no HP/MP or combat damage system is added.
+
 ## Kael (native)
 
 **Kael** opens the new sword-boss candidate; **Kael Party** runs Arin, Orin, Zara
@@ -609,8 +620,8 @@ for Save Frame or Cancel inside the editor. Both characters use the same correct
 
 ## Party arena
 
-Party Vrax places Arin, Orin, Valor and Zara opposite Vrax. Party Dragon preserves
-Arin and Orin opposite Dragon. Heroes approach, attack and return to formation in
+Party Vrax and Party Dragon place Arin, Orin, Zara and Mira opposite the selected
+boss; Valor remains parked. Heroes approach, attack and return to formation in
 turn, while the others idle or guard. The camera orbits by default.
 Camera 1 sweeps a smooth front arc from one side of the boss to the other, using the same
 12-degree-per-second phase rate as the individual tabs and easing at the arc endpoints.

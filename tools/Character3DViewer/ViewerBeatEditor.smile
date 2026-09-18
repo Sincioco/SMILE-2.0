@@ -1419,7 +1419,8 @@ Private Sub DrawHeadEdges(Value As State, Index As Number, Tint As Number)
 End Sub
 
 Public Function Keyboard(ByRef Value As State, Unity As Boolean,
-    BossVisible As Boolean, PressedKey As Number) As Boolean
+    BossVisible As Boolean, PressedKey As Number,
+    Optional ZaraReady As Boolean = False) As Boolean
 
     Dim Command As Number
     Dim Changed As Boolean
@@ -1427,7 +1428,7 @@ Public Function Keyboard(ByRef Value As State, Unity As Boolean,
     Command = Input.ClassifyBeatKey(PressedKey)
 
     If Command = 1 Then
-        Changed = SelectActor(Value, Sequence.NextActor(Unity, Value.Selected, BossVisible))
+        Changed = SelectActor(Value, Sequence.NextActor(Unity, Value.Selected, BossVisible, ZaraReady))
         Return True
     End If
 

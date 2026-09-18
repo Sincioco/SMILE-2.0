@@ -3090,7 +3090,8 @@ Profile = ViewerProfiles.ProfileAt(ViewerProfiles.PROFILE_KAEL)
 
 Call CheckNamed(CharacterViewer.ValidateProfile(Profile) And
     Profile.DisplayName = "Kael" And Profile.ExpectedClipCount = 10 And
-    Profile.ExpectedSocketCount = 10, "Kael owns his ten-clip sword profile")
+    Profile.ExpectedSocketCount = 10 And Profile.DefaultPlaybackSpeed = 200,
+    "Kael owns his ten-clip sword profile at speed 200")
 Call CheckNamed(ViewerProfiles.WeaponPart(ViewerProfiles.PROFILE_KAEL) = 1 And
     ViewerProfiles.ShieldPart(ViewerProfiles.PROFILE_KAEL) = -1 And
     Not ViewerProfiles.HasBattleOpponent(ViewerProfiles.PROFILE_KAEL),
@@ -3107,8 +3108,9 @@ PartyState.SelectedBossProfile = ViewerProfiles.PROFILE_KAEL
 PartyState.UnityRoster = True
 
 Call CheckNamed(ViewerParty.BossProfile(PartyState) = ViewerProfiles.PROFILE_KAEL And
-    ViewerProfiles.PartyAttackName(ViewerParty.BossProfile(PartyState), 1) = "Attack2",
-    "Kael Party uses Kael's own attacks")
+    ViewerProfiles.PartyAttackName(ViewerParty.BossProfile(PartyState), 1) = "Attack2" And
+    ViewerParty.ActorPlaybackSpeed(PartyState, 2, 100) = 200,
+    "Kael Party uses Kael's own attacks at speed 200")
 
 PartyState.SelectedBossProfile = 0
 PartyState.UnityRoster = False

@@ -1,5 +1,33 @@
 # Character Viewer Architecture
 
+## Shared native party status and Dragon roster
+
+`ViewerParty` continues to own participant state and choreography. Zara's existing
+Fourth context now also loads for native Party Dragon; readiness controls her actor,
+equipment and water-recipient lifecycle independently of `UnityRoster`, which still
+selects the Vrax/Kael boss choreography and camera policy. Dragon retains its fire,
+claw and fatal-hit timing, with Zara added between Orin and Mira. No second scheduler
+or actor pool is introduced. Standalone Dragon/Mira previews retain their rosters.
+
+`ViewerInspectorPresentation.CapturePartyMember` reads each actor's live clip, state
+and speed. Boss state is derived from its actual clip. `DrawPartyStatuses` presents
+the same five rows in the Viewer and game; Workflow only delegates the host call.
+Kael's profile and Party default are 200. Mira's presentation state resets with her
+Idle animation at a Vrax/Kael stage boundary. Beat actor navigation and pose bookmarks
+include Zara when loaded in Dragon Party.
+
+Focused native checks cover the actual four-hero rosters, Zara's attack and KO/revival,
+Mira's four recipients, actor selection, Kael's speed and all twelve game entries.
+No entry-point algorithms, new mutable global state, dependencies, compiler/runtime
+features, size-limit changes or guardrail exceptions are needed. Studio and Web
+adoption remain on hold.
+
+Net source growth for this slice: Party +73 lines, inspector presentation +115,
+Workflow +18, profile +1, UI +4, Beat Editor +1 and Beat Sequence +1; the game
+adapter adds one delegation call. Both executable entry points are unchanged.
+The Party growth extends its existing participant paths; status layout stays in
+the inspector owner, without moving feature algorithms into Workflow.
+
 ## Native Kael package and boss selection
 
 Kael v1's canonical package owns body reduction, sword depth repair, Mixamo rig and
