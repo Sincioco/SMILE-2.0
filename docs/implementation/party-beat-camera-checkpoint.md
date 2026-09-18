@@ -43,6 +43,17 @@ profile/tab changes, adopt the canonical Kael GLB/descriptor, and validate mater
 animation, floor contact, four-hero playback and Chrome interaction. No Kael Web
 build, publication or browser acceptance was performed for this native task.
 
+## Native Earth follow-up (2026-09-18)
+
+September 18 Earth follow-up: Kael has a quiet Breathing Idle and three additional
+Earth casts, a native Earth Lab, shared rock/dust VFX and original audio. The sword
+is hidden only during Earth casts so both hands can drive the choreography.
+On explicit Web resumption, adopt the thirteen-clip package, Earth asset selection,
+shared effect/visibility/cue logic and five-attack Party cycle. Validate material
+detail, six remaining ground stones after lift-off, all three Volley contacts,
+pause/seek, sword restoration and cleanup in Chrome. None of that Web adoption or
+browser validation was performed by the native delivery.
+
 ## Native Review Hardening (2026-09-13)
 
 The review baseline was `c5a348c3abda773c62158fb23b82ab2b5267be37`.

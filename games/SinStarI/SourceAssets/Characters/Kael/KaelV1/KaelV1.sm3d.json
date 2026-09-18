@@ -31,6 +31,15 @@
     },
     "Victory": {
       "loop": false
+    },
+    "EarthHurl": {
+      "loop": false
+    },
+    "EarthVolley": {
+      "loop": false
+    },
+    "EarthSlam": {
+      "loop": false
     }
   },
   "sockets": {

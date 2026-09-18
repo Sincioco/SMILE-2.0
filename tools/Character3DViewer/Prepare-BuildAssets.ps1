@@ -283,3 +283,12 @@ foreach ($lightningFile in $lightningFiles) {
     Copy-Item -LiteralPath (Join-Path $repositoryRoot "TechnicalAssets\Generation3\Lightning\$lightningFile") `
         -Destination (Join-Path $lightningAssets $lightningFile) -Force
 }
+
+$earthAssets = Join-Path $toolRoot 'Assets\Earth'
+$earthModels = Join-Path $buildAssets 'Earth'
+New-Item -ItemType Directory -Path $earthAssets, $earthModels -Force | Out-Null
+Get-ChildItem -LiteralPath (Join-Path $repositoryRoot 'TechnicalAssets\Generation3\Earth') -File |
+    Where-Object Extension -In '.png', '.wav' | ForEach-Object { Copy-Item -LiteralPath $_.FullName -Destination $earthAssets -Force }
+foreach ($earthFile in @('earth-rocks.glb', 'EarthRocks.sm3d.json')) {
+    Copy-Item -LiteralPath (Join-Path $repositoryRoot "TechnicalAssets\Generation3\Earth\$earthFile") -Destination $earthModels -Force
+}

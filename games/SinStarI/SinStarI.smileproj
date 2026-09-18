@@ -32,6 +32,7 @@
     <SmileSource Include="..\..\tools\Character3DViewer\BattleAudio.smile" />
     <SmileSource Include="..\..\tools\Character3DViewer\MiraBattle.smile" />
     <SmileSource Include="..\..\tools\Character3DViewer\MiraWater.smile" />
+    <SmileSource Include="..\..\tools\Character3DViewer\KaelEarth.smile" />
     <SmileSource Include="..\..\tools\Character3DViewer\BattleCamera.smile" />
     <SmileSource Include="..\..\tools\Character3DViewer\BattleCameraShots.smile" />
     <SmileSource Include="..\..\tools\Character3DViewer\BattleCameraTimeline.smile" />
@@ -89,5 +90,10 @@
     <Asset Include="Assets\Audio\dragon-claw-strike.wav" />
     <Asset Include="Assets\Audio\dragon-fireball-impact.wav" />
     <SmileProjectReference Include="..\..\libraries\Smile.UI\Smile.UI.smilelibproj" />
+    <Model3DAsset Include="BuildAssets\Earth\earth-rocks.glb" Descriptor="BuildAssets\Earth\EarthRocks.sm3d.json"
+                  LogicalPath="Assets/Earth/EarthRocks.sm3d" TextureOutputDirectory="Assets/Earth/Textures"
+                  Profile="Static" Identity="smile.vfx.earth-rocks" ProductionState="Prototype" />
+    <Asset Include="Assets\Earth\*.png" />
+    <Asset Include="Assets\Earth\*.wav" />
   </ItemGroup>
 </SmileProject>

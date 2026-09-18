@@ -1,0 +1,168 @@
+Option Explicit
+
+Import Smile.Tools.EarthLabScene As Scene
+Import Smile.Tools.EarthLabUi As UI
+Import Smile.Simple3D.Graphics3D As G
+Import Smile.Simple3D.Character3D As Character
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.PrecisionMath3D As M
+
+Dim Lab As Scene.State
+Dim Mode As Number
+Dim SampleIndex As Number
+Dim Failures As Number
+Dim SavedTime As Number
+Dim SavedSpawns As Number
+Dim RockIndex As Number
+Dim GroundRocks As Number
+Dim HandStart As P.Vector3
+Dim HandNow As P.Vector3
+Dim RightStart As P.Vector3
+Dim RightNow As P.Vector3
+Dim HeadNow As P.Vector3
+Dim HandTravel As Double
+Dim RightTravel As Double
+Dim HeadLow As Double
+Dim HeadHigh As Double
+Dim Ok As Boolean
+
+Game Window "Earth Lab Native Checks" Size 640 By 480
+
+Call Scene.Start(Lab)
+
+Lab.AudioEnabled = False
+Lab.Orbit = False
+
+Do
+
+    Call Check(Lab.Ready And Lab.Floor.ReflectionsEnabled And Lab.Background.Ready)
+    Call Check(Character.ClipCount(Lab.Kael) = 13 And Lab.SpeedPercent = 200)
+
+    For Mode = 1 To 4
+
+        Lab.Mode = Mode
+
+        Call Scene.Restart(Lab)
+
+        Lab.Paused = True
+        HandTravel = 0.0
+        RightTravel = 0.0
+        HeadLow = 10000.0
+        HeadHigh = -10000.0
+
+        For SampleIndex = 0 To 10
+
+            Lab.Time = Lab.ClipDuration * SampleIndex / 10
+
+            Call Scene.Update(Lab, 0)
+            Call Scene.Draw(Lab)
+            Call Check(Lab.ErrorCode = 0 And G.LastError() = 0)
+
+            Ok = Character.TrySocketPositionPrecise(Lab.Kael, "HandLeft", 0, False, HandNow)
+            Ok = Character.TrySocketPositionPrecise(Lab.Kael, "HandRight", 0, False, RightNow) And Ok
+            Ok = Character.TrySocketPositionPrecise(Lab.Kael, "Head", 0, False, HeadNow) And Ok
+
+            Call Check(Ok)
+
+            If SampleIndex = 0 Then
+                HandStart = HandNow
+                RightStart = RightNow
+            End If
+
+            HandTravel = Max(HandTravel, M.Length(M.Subtract(HandNow, HandStart)))
+            RightTravel = Max(RightTravel, M.Length(M.Subtract(RightNow, RightStart)))
+            HeadLow = Min(HeadLow, HeadNow.Y)
+            HeadHigh = Max(HeadHigh, HeadNow.Y)
+
+            Show Screen
+        End For
+
+        If Mode <= 3 Then
+            Call Check(HandTravel > 30.0 And RightTravel > 30.0 And HeadHigh - HeadLow > 12.0)
+        Else
+
+            Call Check(HandTravel < 3.0 And HeadHigh - HeadLow < 3.0)
+        End If
+
+        Call Scene.Restart(Lab)
+        Call Scene.Update(Lab, 0)
+        Call Check(Lab.ErrorCode = 0)
+    End For
+
+    Lab.Mode = 1
+    Lab.Paused = False
+    Lab.SpeedPercent = 400
+
+    Call Scene.Restart(Lab)
+    Call Scene.Update(Lab, 100)
+    Call Check(Lab.Time = 400 And Lab.ErrorCode = 0)
+
+    For SampleIndex = 1 To 5
+        Call Scene.Update(Lab, 100)
+    End For
+
+    Call Check(Lab.Earth.Effect.Dust.ActiveCount > 0)
+
+    ''' Hurl and Volley keep just six of sixty ground stones after lift-off.
+
+    For Mode = 1 To 2
+
+        Lab.Mode = Mode
+        Lab.Paused = True
+
+        Call Scene.Restart(Lab)
+
+        Lab.Time = Lab.ClipDuration * 40 / 100
+        GroundRocks = 0
+
+        Call Scene.Update(Lab, 0)
+
+        For RockIndex = 3 To 62
+
+            If Lab.Earth.Effect.Rocks[RockIndex].Visible Then
+                GroundRocks = GroundRocks + 1
+            End If
+
+        End For
+
+        Call Check(GroundRocks = 6)
+    End For
+
+    For SampleIndex = 1 To 3
+        Lab.Time = Lab.ClipDuration * (55 + SampleIndex * 10) / 100
+
+        Call Scene.Update(Lab, 0)
+        Call Check(Lab.Earth.Effect.ImpactCount = SampleIndex)
+    End For
+
+    Lab.Paused = False
+
+    Call Scene.Update(Lab, 100)
+
+    SavedTime = Lab.Time
+    SavedSpawns = G.GpuParticleValue3D(G.GPU_PARTICLE_QUERY_SPAWNS_ACCEPTED)
+    Lab.Paused = True
+
+    Call Scene.Update(Lab, 100)
+    Call Check(Lab.Time = SavedTime)
+    Call Check(G.GpuParticleValue3D(G.GPU_PARTICLE_QUERY_SPAWNS_ACCEPTED) = SavedSpawns)
+
+    Lab.Time = 0
+
+    Call Scene.Update(Lab, 0)
+    Call Check(Lab.Earth.Effect.Dust.ActiveCount = 0)
+    Call Scene.Destroy(Lab)
+    Call Check(G.GpuParticleValue3D(G.GPU_PARTICLE_QUERY_LIVE_SYSTEMS) = 0)
+
+Loop Until True
+
+Print "Earth Lab native failures: "; Failures
+
+Sub Check(Condition As Boolean)
+
+    If Not Condition Then
+        Failures = Failures + 1
+        Print "Earth Lab check failed: mode "; Mode; " sample "; SampleIndex; " error "; Lab.ErrorCode
+    End If
+
+End Sub

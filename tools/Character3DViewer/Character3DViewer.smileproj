@@ -21,6 +21,7 @@
     <SmileSource Include="BattleAudio.smile" />
     <SmileSource Include="MiraBattle.smile" />
     <SmileSource Include="MiraWater.smile" />
+    <SmileSource Include="KaelEarth.smile" />
     <SmileSource Include="BattleCamera.smile" />
     <SmileSource Include="BattleCameraShots.smile" />
     <SmileSource Include="BattleCameraTimeline.smile" />
@@ -162,6 +163,12 @@
     <Asset Include="Assets\Lightning\lightning-ribbon.png" />
     <Asset Include="Assets\Lightning\lightning-spark.png" />
     <Asset Include="Assets\Lightning\thunder.wav" />
+    <Model3DAsset Include="BuildAssets\Earth\earth-rocks.glb"
+                  Descriptor="BuildAssets\Earth\EarthRocks.sm3d.json"
+                  LogicalPath="Assets/Earth/EarthRocks.sm3d" TextureOutputDirectory="Assets/Earth/Textures"
+                  Profile="Static" Identity="smile.vfx.earth-rocks" ProductionState="Prototype" />
+    <Asset Include="Assets\Earth\*.png" />
+    <Asset Include="Assets\Earth\*.wav" />
     <Asset Include="Assets\Water\*.png" />
     <Asset Include="Assets\Water\*.wav" />
     <Asset Include="Assets\Audio\mira-water-attack.wav" />

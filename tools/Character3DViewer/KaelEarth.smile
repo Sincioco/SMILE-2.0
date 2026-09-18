@@ -1,0 +1,167 @@
+''' Kael's clip/socket adapter; reusable earth geometry contains no character policy.
+Module Smile.Tools.KaelEarth
+
+Option Explicit
+
+Import Smile.Simple3D.Character3D As Character
+Import Smile.Simple3D.EarthVfx3D As Earth
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.PrecisionMath3D As M
+Import Smile.Tools.BattleAudio As Audio
+
+Public Type Context
+    Effect As Earth.Context
+    Frame As Earth.Frame
+    Rise As Audio.CueState
+    Launch[3] As Audio.CueState
+    Impact[3] As Audio.CueState
+End Type
+
+Public Function Prepare(ByRef Value As Context) As Boolean
+
+    Dim Ok As Boolean
+
+    Ok = Earth.Prepare(Value.Effect, "Assets/Earth")
+
+    Return Ok
+
+End Function
+
+Public Function ModeForClip(Clip As Text) As Number
+
+    If Clip = "EarthHurl" Then
+        Return Earth.HURL
+    Else If Clip = "EarthVolley" Then
+        Return Earth.VOLLEY
+    Else If Clip = "EarthSlam" Then
+        Return Earth.SLAM
+    End If
+
+    Return 0
+
+End Function
+
+Public Function ClipForMode(Mode As Number) As Text
+
+    If Mode = Earth.VOLLEY Then
+        Return "EarthVolley"
+    Else If Mode = Earth.SLAM Then
+        Return "EarthSlam"
+    End If
+
+    Return "EarthHurl"
+
+End Function
+
+Public Function Update(ByRef Value As Context, ByRef Actor As Character.Actor, Clip As Text,
+    Target As P.Vector3, UseTarget As Boolean, Audible As Boolean,
+    Optional SwordVisible As Boolean = True) As Boolean
+
+    Dim Position As P.Vector3
+    Dim Rotation As P.Vector3
+    Dim Bounds As Character.PreciseBounds3D
+    Dim Direction As P.Vector3
+    Dim Duration As Number
+    Dim Index As Number
+    Dim CueCount As Number
+    Dim Contact As Double
+    Dim Ok As Boolean
+
+    Value.Frame.Mode = ModeForClip(Clip)
+    Ok = Character.SetPartVisible(Actor, 1, SwordVisible And Value.Frame.Mode = 0)
+
+    If Value.Frame.Mode = 0 And Not Value.Effect.Ready Then
+        Return Ok
+    End If
+
+    Ok = Prepare(Value) And Ok
+    Ok = Character.TryPosition(Actor, Position) And Ok
+    Ok = Character.TryRotation(Actor, Rotation) And Ok
+    Bounds = Character.WorldBoundsPrecise(Actor)
+    Value.Frame.Scale = Clamp(Bounds.Size.Y / 134.0, 0.5, 3.0)
+    Direction = M.Rotate(P.Vector(0.0, 0.0, -1.0), Rotation)
+
+    If UseTarget Then
+
+        Direction = M.Subtract(Target, Position)
+        Direction.Y = 0.0
+        Ok = M.TryNormalize(Direction, Direction) And Ok
+
+    Else
+        Target = M.Add(Position, M.Scale(Direction, 250.0 * Value.Frame.Scale))
+        Target.Y = Position.Y + 55.0 * Value.Frame.Scale
+
+    End If
+
+    Value.Frame.Origin = M.Add(Position, M.Scale(Direction, 55.0 * Value.Frame.Scale))
+    Value.Frame.Target = Target
+    Value.Frame.Time = Character.AnimationTime(Actor)
+
+    For Index = 0 To Character.ClipCount(Actor) - 1
+
+        If Character.ClipName(Actor, Index) = Clip Then
+            Duration = Character.ClipDuration(Actor, Index)
+        End If
+
+    End For
+
+    Value.Frame.Progress = Clamp(ToDouble(Value.Frame.Time) / ToDouble(Max(1, Duration)), 0.0, 1.0)
+    Ok = Earth.Update(Value.Effect, Value.Frame) And Ok
+    Audible = Audible And Value.Frame.Mode <> 0
+
+    If Audio.CrossedCue(Value.Rise, Clip, Value.Frame.Time, Duration * 12 / 100, Audible) Then
+
+        Play Sound "Assets/Earth/earth-rise.wav" On Channel 9
+
+    End If
+
+    CueCount = 1
+
+    If Value.Frame.Mode = Earth.VOLLEY Then
+        CueCount = 3
+    End If
+
+    For Index = 0 To CueCount - 1
+
+        Contact = Earth.ContactProgress(Value.Frame.Mode, Index)
+
+        If Audio.CrossedCue(Value.Launch[Index], Clip, Value.Frame.Time,
+            ToNumber(ToDouble(Duration) * (Contact - 0.17)), Audible) Then
+
+            Play Sound "Assets/Earth/earth-launch.wav" On Channel 10
+
+        End If
+
+        If Audio.CrossedCue(Value.Impact[Index], Clip, Value.Frame.Time,
+            ToNumber(ToDouble(Duration) * Contact), Audible) Then
+
+            Play Sound "Assets/Earth/earth-impact.wav" On Channel 11
+
+        End If
+
+    End For
+
+    Return Ok
+
+End Function
+
+Public Sub Draw(ByRef Value As Context)
+
+    Call Earth.Draw(Value.Effect)
+
+End Sub
+
+Public Sub Destroy(ByRef Value As Context)
+
+    Dim Empty As Context
+
+    Call Earth.Destroy(Value.Effect)
+
+    Stop Sound On Channel 9
+    Stop Sound On Channel 10
+    Stop Sound On Channel 11
+    Value = Empty
+
+End Sub
+
+End Module

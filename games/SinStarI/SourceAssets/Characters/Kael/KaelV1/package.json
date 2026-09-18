@@ -6,8 +6,8 @@
   "date": "2026-09-18",
   "model": "kael-v1-animation-checkpoint.glb",
   "descriptor": "KaelV1.sm3d.json",
-  "modelSha256": "93c0b7c4091938eeaee22137ee38f1296eed551e6261126bed7627731e459cd6",
-  "modelBytes": 28098500,
+  "modelSha256": "d3187af4bba99e1709aa7a27faa7987bd3f0fa837c00494d790517d33a6fbbda",
+  "modelBytes": 28277176,
   "bodyTriangles": 42000,
   "swordTriangles": 6996,
   "bones": 42,
@@ -22,7 +22,10 @@
     "Defend",
     "Hit",
     "Death",
-    "Victory"
+    "Victory",
+    "EarthHurl",
+    "EarthVolley",
+    "EarthSlam"
   ],
   "originalBody": "Source/kael-v1-body.original.glb",
   "originalSword": "Source/kael-v1-sword.original.glb",
@@ -38,7 +41,8 @@
     "Source/grounding-report.json",
     "Source/export-validation.json",
     "Source/roundtrip-validation.json",
-    "Source/native-validation.json"
+    "Source/native-validation.json",
+    "Source/earth-animation-report.json"
   ],
   "runtimePoseCalibration": "None; Kael corrections are baked into this versioned asset",
   "webStatus": "On hold; not adopted or browser-validated"

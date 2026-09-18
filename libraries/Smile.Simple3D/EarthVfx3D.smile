@@ -1,0 +1,442 @@
+''' Caller-owned rock geometry and GPU dust, sampled from one supplied cast clock.
+Module Smile.Simple3D.EarthVfx3D
+
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Graphics3D As G
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.PrecisionMath3D As M
+
+Public Const HURL = 1
+Public Const VOLLEY = 2
+Public Const SLAM = 3
+Private Const ROCK_COUNT = 63
+Private Const DUST_CAPACITY = 4096
+
+Public Type Frame
+    Mode As Number
+    Time As Number
+    Progress As Double
+    Scale As Double
+    Origin As P.Vector3
+    Target As P.Vector3
+End Type
+
+Public Type Context
+    Ready As Boolean
+    Visible As Boolean
+    Model As Core.Model3D
+    Rocks[63] As Core.Object3D
+    DustTexture As Core.Texture3D
+    DustMaterial As Core.Material3D
+    Dust As Core.GpuParticleSystem3D
+    PreviousTime As Number
+    PreviousMode As Number
+    Slot As Number
+    Serial As Number
+    ImpactCount As Number
+    ErrorCode As Number
+End Type
+
+Public Function Prepare(ByRef Value As Context, Folder As Text) As Boolean
+
+    Dim Ok As Boolean
+    Dim Index As Number
+    Dim FailedError As Number
+
+    If Value.Ready Then
+        Return True
+    End If
+
+    Value.Model = G.LoadModel3D(Folder + "/EarthRocks.sm3d")
+    Ok = Value.Model.Handle <> 0 And Value.Model.PartCount = 3
+
+    For Index = 0 To ROCK_COUNT - 1
+        Value.Rocks[Index] = G.CreateModelPart3D(Value.Model, Index Mod 3)
+        Ok = Value.Rocks[Index].Handle <> 0 And Ok
+        Ok = G.SetObjectShadowsChecked3D(Value.Rocks[Index], True, True) And Ok
+    End For
+
+    Value.DustTexture = G.LoadTexture3D(Folder + "/earth-dust.png", G.TEXTURE_FILTER_LINEAR, G.TEXTURE_WRAP_CLAMP)
+    Value.DustMaterial = G.CreateEffectMaterial3D(Value.DustTexture, G.MATERIAL_ALPHA_BLEND, 100)
+    Ok = G.SetEffectMaterialSoftDepth3D(Value.DustMaterial, 2, 12) And Ok
+    Value.Dust = G.CreateGpuParticleSystem3D(DUST_CAPACITY, Value.DustMaterial, G.GPU_PARTICLE_SIMULATION_GPU_FAST, 10)
+    Ok = Value.Dust.Handle <> 0 And Ok
+    Ok = G.SetGpuParticleRender3D(Value.Dust, G.GPU_PARTICLE_SHADER_TEXTURED, 0) And Ok
+    Ok = G.SetGpuParticleForces3D(Value.Dust, 0, -8, 0, 4, 0, 0, 0, 650) And Ok
+    Ok = G.SetGpuParticleTurbulence3D(Value.Dust, 22, 4500, 450, 2) And Ok
+    Value.Ready = Ok
+
+    If Not Ok Then
+
+        FailedError = Max(1, G.LastError())
+
+        Call Destroy(Value)
+
+        Value.ErrorCode = FailedError
+
+    End If
+
+    Return Ok
+
+End Function
+
+Public Function ContactProgress(Mode As Number, Index As Number) As Double
+
+    Dim Result As Double
+
+    Result = 0.72
+
+    If Mode = VOLLEY Then
+        Result = 0.62 + ToDouble(Index) * 0.10
+    End If
+
+    Return Result
+
+End Function
+
+Private Function RockPosition(Sample As Frame, Index As Number) As P.Vector3
+
+    Dim Result As P.Vector3
+    Dim Side As P.Vector3
+    Dim Direction As P.Vector3
+    Dim Rise As Double
+    Dim Flight As Double
+    Dim Contact As Double
+    Dim Ok As Boolean
+
+    Direction = M.Subtract(Sample.Target, Sample.Origin)
+    Direction.Y = 0.0
+    Ok = M.TryNormalize(Direction, Direction)
+    Side = P.Vector(Direction.Z, 0.0, 0.0 - Direction.X)
+    Result = Sample.Origin
+
+    If Sample.Mode = VOLLEY Then
+        Result = M.Add(Result, M.Scale(Side, ToDouble(Index - 1) * 52.0 * Sample.Scale))
+    End If
+
+    Rise = Clamp((Sample.Progress - 0.10) / 0.22, 0.0, 1.0)
+    Result.Y = Sample.Origin.Y + (-26.0 + 96.0 *
+        (1.0 - (1.0 - Rise) * (1.0 - Rise) * (1.0 - Rise))) * Sample.Scale
+
+    If Sample.Mode = VOLLEY And Index = 1 Then
+        Result.Y = Result.Y + 12.0 * Rise * Sample.Scale
+    End If
+
+    Contact = ContactProgress(Sample.Mode, Index)
+    Flight = Clamp((Sample.Progress - Contact + 0.17) / 0.17, 0.0, 1.0)
+    Result = M.Lerp(Result, Sample.Target, Flight * Flight)
+
+    Return Result
+
+End Function
+
+Private Function PlaceRock(ByRef Rock As Core.Object3D, Position As P.Vector3,
+    Radius As Double, Angle As Double, Opacity As Number) As Boolean
+
+    Dim Ok As Boolean
+
+    Ok = P.SetPosition(Rock, Position.X, Position.Y, Position.Z)
+    Ok = P.SetRotation(Rock, Angle * 0.73, Angle, Angle * 0.31) And Ok
+    Ok = P.SetScale(Rock, Max(0.01, Radius) * 100.0,
+        Max(0.01, Radius) * 83.0, Max(0.01, Radius) * 107.0) And Ok
+
+    Call G.SetObjectOpacity(Rock, Opacity)
+    Call G.SetObjectVisible(Rock, Radius > 0.1 And Opacity > 0)
+
+    Return Ok
+
+End Function
+
+Private Function GroundDebrisFade(Index As Number, Progress As Double) As Number
+
+    Dim Fade As Number
+
+    ''' Keep six of the sixty loose stones once the main boulders finish rising.
+    Fade = 100
+
+    If Index <> 3 And (Index < 15 Or (Index - 15) Mod 10 <> 0) Then
+        Fade = ToNumber(Round(100.0 * Clamp((0.32 - Progress) / 0.08, 0.0, 1.0)))
+    End If
+
+    Return Fade
+
+End Function
+
+Private Function BuildRocks(ByRef Value As Context, Sample As Frame) As Boolean
+
+    Dim Index As Number
+    Dim ItemCount As Number
+    Dim Ok As Boolean
+    Dim Position As P.Vector3
+    Dim Angle As Double
+    Dim Radius As Double
+    Dim Age As Double
+    Dim Fade As Number
+    Dim Along As Double
+    Dim Contact As Double
+
+    Ok = True
+    ItemCount = 1
+
+    If Sample.Mode = VOLLEY Then
+        ItemCount = 3
+    End If
+
+    For Index = 0 To 2
+
+        Position = RockPosition(Sample, Index)
+        Radius = 29.0 * Sample.Scale
+
+        If Sample.Mode = VOLLEY Then
+            Radius = 20.0 * Sample.Scale
+        End If
+
+        Fade = 100
+
+        If (Index >= ItemCount Or
+            Sample.Mode = SLAM Or
+            Sample.Progress < 0.10 Or
+            Sample.Progress >= ContactProgress(Sample.Mode, Index)) Then
+            Fade = 0
+        End If
+
+        Ok = PlaceRock(Value.Rocks[Index], Position, Radius,
+            ToDouble(Sample.Time) * 0.018 + ToDouble(Index) * 77.0, Fade) And Ok
+    End For
+
+    ''' Fractured ground collar; Slam sends a fast line of rising stone through the target.
+
+    For Index = 3 To 14
+
+        Angle = ToDouble(Index - 3) * M.PI / 6.0
+        Position = M.Add(Sample.Origin, P.Vector(Cos(Angle) * 39.0 * Sample.Scale,
+            0.0, Sin(Angle) * 39.0 * Sample.Scale))
+        Radius = (7.0 + ToDouble(Index Mod 4) * 2.0) * Sample.Scale
+        Age = Clamp((Sample.Progress - 0.08) / 0.12, 0.0, 1.0)
+
+        If Sample.Mode = SLAM Then
+
+            Along = ToDouble(Index - 3) / 11.0
+            Position = M.Lerp(Sample.Origin, Sample.Target, Along)
+            Position.Y = Sample.Origin.Y
+            Age = Clamp((Sample.Progress - 0.46 - Along * 0.20) / 0.06, 0.0, 1.0)
+            Radius = (17.0 + Along * 13.0) * Sample.Scale
+
+        End If
+
+        Position.Y = Position.Y + Radius * (-0.8 + 1.25 * Age)
+        Fade = ToNumber(Round(100.0 * Clamp((1.0 - Sample.Progress) / 0.16, 0.0, 1.0)))
+
+        If Sample.Mode <> SLAM Then
+            Fade = Min(Fade, GroundDebrisFade(Index, Sample.Progress))
+        End If
+
+        Ok = PlaceRock(Value.Rocks[Index], Position, Radius * Age, Angle * 180.0 / M.PI, Fade) And Ok
+    End For
+
+    ''' Analytic chunks can be sought and paused exactly; only fine dust runs on the GPU.
+
+    For Index = 15 To ROCK_COUNT - 1
+
+        Angle = ToDouble((Index * 137) Mod 360) * M.PI / 180.0
+        Along = ToDouble(Index Mod 11) / 10.0
+        Contact = ContactProgress(Sample.Mode, (Index - 15) Mod 3)
+        Age = Max(0.0, (Sample.Progress - Contact) * 3.2)
+        Position = Sample.Target
+
+        If Sample.Progress < Contact Then
+            Age = Max(0.0, (Sample.Progress - 0.12) * 2.0)
+            Position = Sample.Origin
+        End If
+
+        Position.X = Position.X + Cos(Angle) * (18.0 + Age * (35.0 + Along * 110.0)) * Sample.Scale
+        Position.Z = Position.Z + Sin(Angle) * (18.0 + Age * (35.0 + Along * 110.0)) * Sample.Scale
+        Position.Y = Max(Sample.Origin.Y + 2.0 * Sample.Scale,
+            Position.Y + (Age * (90.0 + Along * 110.0) - Age * Age * 240.0) * Sample.Scale)
+        Radius = (1.6 + Along * 5.0) * Sample.Scale
+        Fade = ToNumber(Round(100.0 * Clamp((1.0 - Sample.Progress) / 0.12, 0.0, 1.0)))
+
+        If Sample.Progress < 0.12 Then
+            Fade = 0
+        End If
+
+        If Sample.Mode <> SLAM And Sample.Progress < Contact Then
+            Fade = Min(Fade, GroundDebrisFade(Index, Sample.Progress))
+        End If
+
+        Ok = PlaceRock(Value.Rocks[Index], Position, Radius,
+            ToDouble(Sample.Time) * (0.12 + Along * 0.28) + Angle * 60.0, Fade) And Ok
+    End For
+
+    Return Ok
+
+End Function
+
+Private Function EmitDust(ByRef Value As Context, Sample As Frame, ItemCount As Number) As Boolean
+
+    Dim Index As Number
+    Dim Ok As Boolean
+    Dim Center As P.Vector3
+    Dim Position As P.Vector3
+    Dim Velocity As P.Vector3
+    Dim Angle As Double
+    Dim Spread As Double
+    Dim Lifetime As Number
+    Dim Opacity As Number
+
+    Center = Sample.Origin
+
+    If Sample.Progress >= ContactProgress(Sample.Mode, 0) Then
+        Center = Sample.Target
+    Else If Sample.Progress > 0.32 And Sample.Mode <> SLAM Then
+        Center = RockPosition(Sample, 0)
+    End If
+
+    Ok = True
+
+    For Index = 0 To ItemCount - 1
+
+        Value.Serial = (Value.Serial + 1) Mod 10000000
+        Angle = ToDouble((Value.Serial * 137) Mod 360) * M.PI / 180.0
+        Spread = ToDouble(Value.Serial Mod 31) * Sample.Scale
+        Position = M.Add(Center, P.Vector(Cos(Angle) * Spread, 4.0 * Sample.Scale, Sin(Angle) * Spread))
+        Velocity = P.Vector(Cos(Angle) * 45.0 * Sample.Scale,
+            (16.0 + ToDouble(Value.Serial Mod 23)) * Sample.Scale, Sin(Angle) * 45.0 * Sample.Scale)
+        Lifetime = 550 + Value.Serial Mod 650
+        Opacity = 35
+
+        If Sample.Mode <> SLAM And Sample.Progress < ContactProgress(Sample.Mode, 0) Then
+            Lifetime = 250 + Value.Serial Mod 250
+            Opacity = 18
+        End If
+
+        Ok = P.SetGpuParticleSpawnKinematics(Value.Dust, Value.Slot, Position, Velocity) And Ok
+        Ok = G.SetGpuParticleSpawnVisual3D(Value.Dust, Value.Slot, Lifetime,
+            ToNumber(6.0 * Sample.Scale), ToNumber(35.0 * Sample.Scale), Value.Serial Mod 360,
+            Opacity, 0, 750) And Ok
+        Ok = G.CommitGpuParticleSpawn3D(Value.Dust, Value.Slot, Value.Serial, Value.Serial * 17) And Ok
+        Value.Slot = (Value.Slot + 1) Mod DUST_CAPACITY
+    End For
+
+    Return Ok
+
+End Function
+
+Public Function Update(ByRef Value As Context, Sample As Frame) As Boolean
+
+    Dim Elapsed As Number
+    Dim ItemCount As Number
+    Dim Ok As Boolean
+    Dim Restarted As Boolean
+    Dim Index As Number
+    Dim Contacts As Number
+
+    If Not Value.Ready Then
+        Return False
+    End If
+
+    Restarted = Sample.Mode <> Value.PreviousMode Or Sample.Time < Value.PreviousTime
+    Elapsed = Max(0, Min(100, Sample.Time - Value.PreviousTime))
+    Ok = True
+
+    If Restarted Then
+
+        For Index = 0 To DUST_CAPACITY - 1
+
+            If G.GpuParticleValue3D(G.GPU_PARTICLE_QUERY_SLOT_ACTIVE, Value.Dust.Handle, Index) <> 0 Then
+                Ok = G.KillGpuParticleSlot3D(Value.Dust, Index) And Ok
+            End If
+
+        End For
+        Value.ImpactCount = 0
+        Elapsed = 0
+
+    End If
+
+    Value.Visible = Sample.Mode >= HURL And Sample.Mode <= SLAM
+
+    If Value.Visible Then
+
+        Ok = BuildRocks(Value, Sample) And Ok
+
+        If (Elapsed > 0 And
+            Sample.Progress > 0.10 And
+            Sample.Progress < 0.90) Then
+
+            ItemCount = Min(48, Elapsed)
+
+            If (Sample.Mode <> SLAM And
+                Sample.Progress > 0.24 And
+                Sample.Progress < ContactProgress(Sample.Mode, 0)) Then
+                ItemCount = Max(1, ItemCount / 8)
+            End If
+
+            For Index = 0 To 2
+
+                If Sample.Progress >= ContactProgress(Sample.Mode, Index) Then
+                    Contacts = Contacts + 1
+                End If
+
+            End For
+
+            If Contacts > Value.ImpactCount Then
+                ItemCount = 128
+                Value.ImpactCount = Contacts
+            End If
+
+            Ok = EmitDust(Value, Sample, ItemCount) And Ok
+
+        End If
+
+    End If
+
+    Ok = G.AdvanceGpuParticleSystem3D(Value.Dust, Elapsed) And Ok
+    Value.PreviousTime = Sample.Time
+    Value.PreviousMode = Sample.Mode
+
+    If Not Ok Then
+        Value.ErrorCode = Max(1, G.LastError())
+    End If
+
+    Return Ok
+
+End Function
+
+Public Sub Draw(ByRef Value As Context)
+
+    Dim Index As Number
+    Dim Ok As Boolean
+
+    If Value.Ready And Value.Visible Then
+
+        For Index = 0 To ROCK_COUNT - 1
+            Ok = G.DrawObject3D(Value.Rocks[Index])
+        End For
+
+        Ok = G.DrawGpuParticleSystem3D(Value.Dust)
+
+    End If
+
+End Sub
+
+Public Sub Destroy(ByRef Value As Context)
+
+    Dim Index As Number
+    Dim Empty As Context
+
+    For Index = 0 To ROCK_COUNT - 1
+        Call G.DestroyObjectInstance3D(Value.Rocks[Index])
+    End For
+
+    Call G.DestroyModel3D(Value.Model)
+    Call G.DestroyGpuParticleSystem3D(Value.Dust)
+    Call G.DestroyEffectMaterial3D(Value.DustMaterial)
+    Call G.DestroyTexture3D(Value.DustTexture)
+
+    Value = Empty
+
+End Sub
+
+End Module

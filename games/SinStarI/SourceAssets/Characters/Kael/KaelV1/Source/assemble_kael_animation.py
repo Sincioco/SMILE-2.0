@@ -139,7 +139,7 @@ def retarget_clip(rig, clip_name, source_path, description):
     conversion = rig.matrix_world.inverted() @ source.matrix_world
 
     source_names = {bone.name for bone in source.pose.bones}
-    rig_names = {bone.name for bone in rig.pose.bones}
+    rig_names = {bone.name for bone in rig.pose.bones if bone.name.startswith("mixamorig:")}
     missing = sorted(rig_names - source_names)
     if missing:
         raise RuntimeError(
@@ -166,6 +166,8 @@ def retarget_clip(rig, clip_name, source_path, description):
             )
 
         for pose_bone in rig.pose.bones:
+            if pose_bone.name not in rig_names:
+                continue
             conversion_arguments = {}
             if pose_bone.parent:
                 conversion_arguments = {
@@ -192,6 +194,7 @@ def retarget_clip(rig, clip_name, source_path, description):
                 - desired[pose_bone.name].translation
             ).length
             for pose_bone in rig.pose.bones
+            if pose_bone.name in rig_names
         )
         maximum_error = max(maximum_error, frame_error)
 

@@ -3,7 +3,7 @@
   "nativeViewerBuild": "Passed",
   "sinStarIBuild": "Passed",
   "formatterGroups": 13,
-  "repositoryStyleFiles": 464,
+  "repositoryStyleFiles": 470,
   "nativeGraphicsPointerAudioChecks": 58,
   "calibrationTransferChecks": 42,
   "realAssetPresentationEntries": 12,
@@ -13,17 +13,25 @@
     "Zara",
     "Mira"
   ],
-  "cookedKaelSha256": "7c8365172a53ceb318a8fbf6c0606357bf5088b2f8bf9c198fbabf276d56ac40",
+  "cookedKaelSha256": "a98cbb871ddc3167465d4634fd7ae06d8ee5f2f398e29fb02e25b9045d4dc738",
   "assetEquality": "Viewer and Sin Star I cooked Kael SM3D files match",
   "nativeVisualChecks": [
-    "Kael tab loads and animates",
-    "Kael Party loads the four heroes and large boss",
-    "Kael target label",
-    "Sword attachment",
-    "Party pause",
-    "Sin Star I Characters menu and Kael animation cycle",
-    "Sin Star I Battle Simulations menu and Kael Party playback"
+    "Earth Lab: all three cast selections, strong body poses and hidden sword",
+    "Earth Lab: Quiet Idle restores sword and remains mostly stationary",
+    "Earth Lab: detailed rocks, sparse ground debris and reflective arena",
+    "Earth Lab: pause, speed, slow orbit, small/large pan, zoom in/out and camera reset",
+    "Character Viewer: thirteen clips, speed 200, EarthHurl selection and paused casting pose",
+    "Character Viewer: Kael Party roster and live status rows",
+    "Sin Star I: Battle Simulations menu and current Kael Party playback",
+    "All three rebuilt native windows retain their placement to the right of Codex"
   ],
   "studio": "On hold",
-  "web": "On hold; no browser validation"
+  "web": "On hold; no browser validation",
+  "earthLabNativeFailures": 0,
+  "earthCastCount": 3,
+  "animationCount": 13,
+  "fullFrameGroundingSamples": 1091,
+  "earthRocksSha256": "04340998025bf4f1f3c5b697fa52c48b67a303cfa9c7d07bba901f8878d6c7e2",
+  "earthAssetEquality": "All three native applications cook byte-identical rock models; Kael Viewer/game models match, while the Lab model uses its own embedded texture paths.",
+  "validationScope": "Focused native checks and short visible interactions; no full-playthrough soak, RTX benchmark or Web/browser acceptance."
 }

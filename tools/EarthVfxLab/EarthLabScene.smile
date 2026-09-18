@@ -1,0 +1,267 @@
+''' Earth Lab owns its actor, targets, camera and clock; shared modules own rendering effects.
+Module Smile.Tools.EarthLabScene
+
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Graphics3D As G
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.PrecisionCamera3D As Camera
+Import Smile.Simple3D.Character3D As Character
+Import Smile.Simple3D.Arena3D As Arena
+Import Smile.Simple3D.StaticBackdrop3D As Backdrop
+Import Smile.Tools.KaelEarth As Earth
+
+Public Type State
+    Ready As Boolean
+    ErrorCode As Number
+    Mode As Number
+    Time As Number
+    Duration As Number
+    ClipDuration As Number
+    SpeedPercent As Number
+    TimeRemainder As Number
+    Paused As Boolean
+    Orbit As Boolean
+    AudioEnabled As Boolean
+    Clip As Text
+    Earth As Earth.Context
+    Kael As Character.Actor
+    Floor As Arena.ArenaFloor
+    Background As Backdrop.Backdrop
+    TitleBackground As Backdrop.Backdrop
+    BackgroundIndex As Number
+    Targets[4] As Core.Object3D
+    TargetIndex As Number
+    BaseCamera As P.Camera3D
+    Camera As P.Camera3D
+    Controls As Camera.Controls
+End Type
+
+Public Sub Start(ByRef Value As State)
+
+    Dim Index As Number
+    Dim Ok As Boolean
+
+    Call G.ResetRenderer3D()
+
+    Value.Background = Backdrop.Create("Assets/Backgrounds/SinStarLandscape.png")
+    Value.TitleBackground = Backdrop.Create("Assets/Backgrounds/SinStarTitleWithLogo.png")
+    Value.BackgroundIndex = 3
+    Ok = G.ConfigureSoftDepth3D(1)
+    Ok = Backdrop.SetActive(Value.Background) And Ok
+    Ok = G.ConfigurePostProcessing3D(True, True, True, 100, 1200, 30, 2, 2, 4) And Ok
+    Ok = G.SetAmbientLight3D(210, 225, 255, 80) And Ok
+    Ok = G.SetDirectionalLight3D(-35, -80, 25, 255, 237, 208, 120) And Ok
+    Ok = P.SetPointLight(1, P.Vector(0.0, 240.0, -190.0), 200, 222, 255, 110, 850) And Ok
+    Value.Kael = Character.LoadActor("Assets/Kael.sm3d")
+    Ok = Character.IsValid(Value.Kael) And Ok
+    Ok = Character.SetScale(Value.Kael, 12000) And Ok
+    Ok = Character.Place(Value.Kael, -160, 0, 0) And Ok
+    Ok = Character.Rotate(Value.Kael, 0, -90, 0) And Ok
+    Ok = Earth.Prepare(Value.Earth) And Ok
+    Value.Floor = Arena.Create(1000, 800, 95, 72, 42, 45, 1, True)
+
+    For Index = 0 To 3
+        Value.Targets[Index] = G.CreateCylinder3D(13, 75)
+
+        Call G.SetObjectPosition(Value.Targets[Index], 175, 38, -120 + Index * 80)
+        Call G.SetObjectColor(Value.Targets[Index], 65, 82, 98)
+    End For
+
+    Value.BaseCamera.Position = P.Vector(10.0, 220.0, -560.0)
+    Value.BaseCamera.Target = P.Vector(0.0, 65.0, 0.0)
+    Value.BaseCamera.UpDirection = P.Vector(0.0, 1.0, 0.0)
+    Value.BaseCamera.FovDegrees = 55.0
+    Value.BaseCamera.NearPlane = 1.0
+    Value.BaseCamera.FarPlane = 3000.0
+    Value.Camera = Value.BaseCamera
+    Value.Mode = 1
+    Value.SpeedPercent = 200
+    Value.AudioEnabled = True
+    Value.Orbit = True
+    Value.Ready = Ok And Value.Floor.Ready
+
+    If Not Value.Ready Then
+        Value.ErrorCode = Max(1, G.LastError())
+    End If
+
+    Call Restart(Value)
+
+End Sub
+
+Public Sub CycleBackground(ByRef Value As State)
+
+    Dim Ok As Boolean
+
+    Value.BackgroundIndex = (Value.BackgroundIndex + 1) Mod 5
+
+    If Value.BackgroundIndex = 3 Then
+        Ok = Backdrop.SetActive(Value.Background)
+    Else If Value.BackgroundIndex = 4 Then
+        Ok = Backdrop.SetActive(Value.TitleBackground)
+    Else
+        Ok = Backdrop.ClearActive()
+    End If
+
+End Sub
+
+Public Sub Restart(ByRef Value As State)
+
+    Dim Index As Number
+    Dim Ok As Boolean
+    Dim Chosen As Number
+
+    Value.Time = 0
+    Value.Clip = Earth.ClipForMode(Value.Mode)
+
+    If Value.Mode = 4 Then
+        Value.Clip = "Idle"
+    End If
+
+    Random Chosen From 0 To 3
+    Value.TargetIndex = Chosen
+
+    For Index = 0 To Character.ClipCount(Value.Kael) - 1
+
+        If Character.ClipName(Value.Kael, Index) = Value.Clip Then
+            Value.ClipDuration = Character.ClipDuration(Value.Kael, Index)
+        End If
+
+    End For
+
+    Value.Duration = Value.ClipDuration + 900
+    Ok = Character.PlayAnimation(Value.Kael, Value.Clip, False)
+
+End Sub
+
+Public Sub Update(ByRef Value As State, Elapsed As Number)
+
+    Dim Ok As Boolean
+    Dim SimulationElapsed As Number
+    Dim StepMilliseconds As Number
+
+    If Not Value.Ready Then
+        Return
+    End If
+
+    If Not Value.Paused Then
+
+        SimulationElapsed = Elapsed * Value.SpeedPercent + Value.TimeRemainder
+        Value.TimeRemainder = SimulationElapsed Mod 100
+        SimulationElapsed = SimulationElapsed / 100
+
+    End If
+
+    If Value.Orbit Then
+        Value.Controls.OrbitYaw = Value.Controls.OrbitYaw + ToDouble(Elapsed) * 0.003
+    End If
+
+    Ok = Camera.AdvanceCameraControls(Value.Controls, Elapsed, False)
+    Value.Camera = Camera.ApplyScreenSpaceCameraControls(Value.BaseCamera, Value.Controls)
+
+    Do
+        StepMilliseconds = Min(100, SimulationElapsed)
+
+        Call StepPresentation(Value, StepMilliseconds)
+
+        SimulationElapsed = SimulationElapsed - StepMilliseconds
+
+    Loop Until SimulationElapsed <= 0
+
+End Sub
+
+Private Sub StepPresentation(ByRef Value As State, Elapsed As Number)
+
+    Dim Index As Number
+    Dim Ok As Boolean
+    Dim Target As P.Vector3
+    Dim Recoil As Double
+    Dim Progress As Double
+    Dim Remainder As Number
+
+    Value.Time = Value.Time + Elapsed
+
+    If Value.Time >= Value.Duration Then
+
+        Remainder = Value.Time Mod Value.Duration
+
+        Call Restart(Value)
+
+        Value.Time = Remainder
+
+    End If
+
+    Ok = Character.SetAnimationTime(Value.Kael, Min(Value.Time, Value.ClipDuration))
+    Ok = Character.Update(Value.Kael, 0) And Ok
+    Target = P.Vector(162.0, 55.0, -120.0 + ToDouble(Value.TargetIndex) * 80.0)
+    Ok = Earth.Update(Value.Earth, Value.Kael, Value.Clip, Target, True,
+        Value.AudioEnabled And Not Value.Paused) And Ok
+    Progress = ToDouble(Value.Time) / ToDouble(Max(1, Value.ClipDuration))
+    Recoil = Sin(Clamp((Progress - 0.72) / 0.20, 0.0, 1.0) * 3.14159265) * 12.0
+
+    For Index = 0 To 3
+        Ok = P.SetPosition(Value.Targets[Index], 175.0, 38.0,
+            -120.0 + ToDouble(Index) * 80.0) And Ok
+    End For
+
+    If Value.Mode <> 4 Then
+        Ok = P.SetPosition(Value.Targets[Value.TargetIndex], 175.0 + Recoil, 38.0, Target.Z) And Ok
+    End If
+
+    If Not Ok Then
+        Value.ErrorCode = Max(1, G.LastError())
+    End If
+
+End Sub
+
+Public Sub Draw(ByRef Value As State)
+
+    Dim Index As Number
+    Dim Ok As Boolean
+
+    Ok = Arena.ConfigureForFrame(Value.Floor, True, True)
+    Ok = P.SetCamera(Value.Camera) And Ok
+
+    If Value.BackgroundIndex = 1 Then
+        Ok = G.BeginAcceptedCamera3D(0, 96, 32) And Ok
+    Else If Value.BackgroundIndex = 2 Then
+        Ok = G.BeginAcceptedCamera3D(62, 20, 96) And Ok
+    Else
+        Ok = G.BeginAcceptedCamera3D(0, 0, 0) And Ok
+    End If
+
+    Ok = Arena.Draw(Value.Floor, True, True) And Ok
+    Ok = Character.Draw(Value.Kael) And Ok
+
+    For Index = 0 To 3
+        Ok = G.DrawObject3D(Value.Targets[Index]) And Ok
+    End For
+
+    Call Earth.Draw(Value.Earth)
+
+    Ok = G.End3DChecked() And Ok
+
+    If Not Ok Then
+        Value.ErrorCode = Max(1, G.LastError())
+    End If
+
+End Sub
+
+Public Sub Destroy(ByRef Value As State)
+
+    Dim Index As Number
+
+    Call Earth.Destroy(Value.Earth)
+    Call Character.Destroy(Value.Kael)
+    Call Arena.Destroy(Value.Floor)
+    Call Backdrop.Destroy(Value.Background)
+    Call Backdrop.Destroy(Value.TitleBackground)
+
+    For Index = 0 To 3
+        Call G.DestroyObject3D(Value.Targets[Index])
+    End For
+
+End Sub
+
+End Module

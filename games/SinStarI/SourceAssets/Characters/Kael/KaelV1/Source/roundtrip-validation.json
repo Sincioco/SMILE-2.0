@@ -2,8 +2,8 @@
   {
     "clip": "Idle",
     "frame": 0,
-    "bodyMinimumMeters": 0.0010004787473008037,
-    "swordMinimumMeters": 0.4522706866264343
+    "bodyMinimumMeters": 0.0010003454517573118,
+    "swordMinimumMeters": 0.4766404628753662
   },
   {
     "clip": "Walk",
@@ -76,5 +76,23 @@
     "frame": 0,
     "bodyMinimumMeters": 0.0010001780465245247,
     "swordMinimumMeters": 0.4480031728744507
+  },
+  {
+    "clip": "EarthHurl",
+    "frame": 0,
+    "bodyMinimumMeters": 0.0010002180933952332,
+    "swordMinimumMeters": 0.4766402542591095
+  },
+  {
+    "clip": "EarthVolley",
+    "frame": 0,
+    "bodyMinimumMeters": 0.0010002180933952332,
+    "swordMinimumMeters": 0.4766402542591095
+  },
+  {
+    "clip": "EarthSlam",
+    "frame": 0,
+    "bodyMinimumMeters": 0.0010002180933952332,
+    "swordMinimumMeters": 0.4766402542591095
   }
 ]

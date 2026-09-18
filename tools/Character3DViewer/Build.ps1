@@ -40,6 +40,7 @@ $viewerSources = @(
     'BattleAudio.smile',
     'MiraBattle.smile',
     'MiraWater.smile',
+    'KaelEarth.smile',
     'BattleCamera.smile',
     'BattleCameraShots.smile',
     'BattleCameraTimeline.smile',

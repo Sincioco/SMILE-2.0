@@ -273,7 +273,7 @@ Public Function ProfileAt(Index As Number) As CharacterViewer.Profile
         Result.PartyRole = "Boss"
         Result.ProductionStatus = "Candidate"
         Result.AssetPath = "Assets\Generation2\KaelV1\Kael.sm3d"
-        Result.ExpectedClipCount = 10
+        Result.ExpectedClipCount = 13
         Result.ExpectedSocketCount = 10
         Result.DesiredWorldHeight = 134
         Result.DefaultPlaybackSpeed = 200
@@ -434,6 +434,8 @@ Public Function ClipCount(ProfileIndex As Number) As Number
         Result = 24
     Else If ProfileIndex = PROFILE_DRAGON Then
         Result = 6
+    Else If ProfileIndex = PROFILE_KAEL Then
+        Result = 13
     Else If IsSwordFighter(ProfileIndex) Then
         Result = 10
     Else If ProfileIndex = PROFILE_ORIN Or IsMiraCharacter(ProfileIndex) Then
@@ -517,6 +519,12 @@ Public Function ClipName(ProfileIndex As Number, ClipIndex As Number) As Text
             Result = "Death"
         Else If ClipIndex = 9 Then
             Result = "Victory"
+        Else If ClipIndex = 10 And ProfileIndex = PROFILE_KAEL Then
+            Result = "EarthHurl"
+        Else If ClipIndex = 11 And ProfileIndex = PROFILE_KAEL Then
+            Result = "EarthVolley"
+        Else If ClipIndex = 12 And ProfileIndex = PROFILE_KAEL Then
+            Result = "EarthSlam"
         End If
 
     Else If IsUnityCharacter(ProfileIndex) Then
@@ -766,10 +774,16 @@ Public Function PartyAttackName(ProfileIndex As Number, AttackCycle As Number) A
 
     If ProfileIndex = PROFILE_KAEL Then
 
-        If AttackCycle Mod 2 = 0 Then
+        If AttackCycle Mod 5 = 0 Then
             Result = "Attack"
-        Else
+        Else If AttackCycle Mod 5 = 1 Then
+            Result = "EarthHurl"
+        Else If AttackCycle Mod 5 = 2 Then
             Result = "Attack2"
+        Else If AttackCycle Mod 5 = 3 Then
+            Result = "EarthVolley"
+        Else
+            Result = "EarthSlam"
         End If
 
     Else If ProfileIndex = PROFILE_ARIN Then

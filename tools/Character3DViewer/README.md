@@ -13,9 +13,18 @@ The states remain presentation states; no HP/MP or combat damage system is added
 
 ## Kael (native)
 
+Kael now also has **EarthHurl**, **EarthVolley** and **EarthSlam**, for thirteen
+clips total. Use the animation list's next page to reach the Earth clips. His
+mostly stationary **Breathing Idle** replaces the active sword/shield idle.
+Earth casts use stomps, lowered stances, both arms and torso-led strikes; the
+sword hides during these casts and returns for other clips according to Weapon/W.
+Kael Party cycles Attack, EarthHurl, Attack2, EarthVolley and EarthSlam. The shared
+game session uses the same sequence, target, model, VFX and audio. Speed remains 200.
+The [native Earth Lab](../EarthVfxLab/README.md) provides focused effect inspection.
+
 **Kael** opens the new sword-boss candidate; **Kael Party** runs Arin, Orin, Zara
 and Mira against Kael at exactly twice his solo scale. Both tabs use the existing
-playback, equipment and battle owners. Kael's ten clips are Idle, Walk, Run,
+playback, equipment and battle owners. His original clips remain Idle, Walk, Run,
 Attack, Attack 2, Dodge, Defend, Hit, Death and Victory. Weapon/W toggles his sword.
 The sword blade is thinner in side view, with its unwanted depth spikes removed;
 Defend uses a sword guard and Death releases the weapon onto the floor.

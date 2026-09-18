@@ -33,10 +33,17 @@ Run these package scripts in order:
    is opposite the hand's local Z axis; the other sign produces a reversed grip.
    Defend gets a baked right-arm sword guard. Floor correction rotates the wrist
    and sword together; Death releases the sword over frames 30–48.
-6. `Source/export_kael.py` validates weights, tangents, all animated floor samples,
+6. `Source/author_kael_earth.py` opens the preserved grounded checkpoint, replaces
+   Idle with this rig's Breathing Idle, then bakes EarthHurl/EarthVolley/EarthSlam.
+   The authored pose sequence uses a raised knee/stomp, deep planted stance, lift,
+   wind-up and torso-led strikes inspired by Jared Koh's reference. Both arms move;
+   the shared Kael adapter hides the sword during Earth casts, following Sin's
+   later instruction. The hidden sword node remains floor-safe without restricting
+   the casting wrist. The original grounded checkpoint remains available.
+7. `Source/export_kael.py` validates weights, tangents, all animated floor samples,
    root stability and runtime vertex/bone limits, then packs the Blender checkpoint
    and exports GLB plus the ten-socket descriptor.
-7. `Source/preview_kael.py` renders complete equipped views and checks the GLB
+8. `Source/preview_kael.py` renders the final views and checks the GLB
    round trip. Refresh `checksums.sha256` and `package.json` after accepted changes.
 
 Blender does not reliably return a failing process status for Python exceptions
@@ -50,7 +57,7 @@ archive, not a delivery bundle.
 
 | Runtime clip | Mixamo source |
 | --- | --- |
-| Idle | sword and shield idle.fbx |
+| Idle | BreathingIdle.fbx, Sway 0, Breathing 25, Overdrive 50; 30 fps, no reduction |
 | Walk | sword and shield walk.fbx |
 | Run | sword and shield run.fbx |
 | Attack | sword and shield slash (4).fbx |
@@ -60,6 +67,9 @@ archive, not a delivery bundle.
 | Death | sword and shield death.fbx, then keyed sword release |
 | Dodge | Dodging Right, separately downloaded for this rig |
 | Victory | Victory, separately downloaded for this rig |
+| EarthHurl | Original authored stomp, lift and two-handed thrust; 97 frames |
+| EarthVolley | Original authored lift and three alternating thrusts; 121 frames |
+| EarthSlam | Original authored lift and low downward strike; 91 frames |
 
 Idle, Walk and Run loop. Defend and Death hold their final poses. Walk and Run were
 downloaded with root motion; the grounding pass removes horizontal root travel
@@ -71,7 +81,7 @@ Ground the skinned body independently of equipment before applying per-clip
 corrections. The final body bind minimum is effectively 0 m; Idle frame zero is
 0.001 m. Every clip begins at 0.001 m, excluding equipment. Idle, Walk, Defend and
 Hit maintain contact. Other clips preserve positive airtime; Death maintains
-contact after frame 40. All 730 Blender samples pass body/sword floor checks and
+contact after frame 40. Every Blender sample passes body/sword floor checks and
 horizontal root stability; the exported GLB round trip also passes clip-start
 and final Defend/Hit/Death checks. Use the JSON reports for exact values and hashes.
 
@@ -84,11 +94,34 @@ the same cooked Kael asset for the Viewer and Sin Star I.
 
 ## Native integration
 
-`Profiles.smile` owns the ten-clip/ten-socket metadata and equipped height of 134.
+`Profiles.smile` owns the thirteen-clip/ten-socket metadata and equipped height of 134.
 `ViewerDragon` owns the opponent actor and applies twice the solo fit scale.
 `ViewerParty` keeps the existing four-hero turn sequence and selects Kael's own
-Attack/Attack2 clips. Kael approaches to 150 world units; heroes close further than
+Attack/EarthHurl/Attack2/EarthVolley/EarthSlam cycle. Kael approaches to 150 world units; heroes close further than
 for Vrax's broad body. Vrax-only node aiming, effects and audio are not attached
 to Kael. `ViewerBeatSequence` reserves identity 7 for Kael camera/head saves.
 Sin Star I's menu routes into the same Viewer session, with no duplicate battle
 implementation. Keep Studio and Web work on hold.
+
+## Earth casting and Idle acceptance
+
+The source reference is [Jared Koh's Avatar Earthbending Animation](https://www.youtube.com/watch?v=lZRYNRqdWD4).
+The first restrained casting pass was not visibly strong enough. The revised
+authoring uses distinct keyed anticipation, stomp, crouch, lift, chamber, strike
+and recovery phases, with three separate Volley thrusts. Sin subsequently allowed
+the sword to disappear during Earthbending, freeing the right arm for these poses.
+Do not restore the superseded sword-in-hand constraint for Earth clips.
+
+`Source/earth-animation-report.json` records both hands, head and planted-foot travel.
+Measure the baked action with temporary IK constraints muted, or the stationary
+helper targets conceal actual keyed hand movement. The native Earth Lab fixture
+also samples the cooked actor's hand/head sockets: body motion must survive export
+and native playback, not merely exist in a Blender action. Idle must remain below
+the small native movement threshold. Inspect the actual newly launched executable;
+an older running process retains its previous loaded model after a build.
+
+Ground all clips by the body's minimum, independently of the hidden sword, preserve
+the intentional raised foot, and verify frame zero plus Block/Hit/settled Death.
+Normal sword attacks and their attachment/grounding remain unchanged. The adapter
+restores the normal Weapon/W preference when leaving an Earth clip. Model scale,
+speed 200, ten sockets and the four-hero battle roster remain unchanged.

@@ -16,6 +16,7 @@ Import Smile.UI.Controls As UI
 Import Smile.Tools.BattleCamera As BattleCamera
 Import Smile.Tools.MiraBattle As MiraBattle
 Import Smile.Tools.MiraWater As MiraWater
+Import Smile.Tools.KaelEarth As KaelEarth
 Import Smile.Simple3D.WaterVfx3D As WaterVfx
 Import Smile.Tools.Character3DViewerActors As ViewerActors
 Import Smile.Tools.Character3DViewerCalibration As ViewerCalibration
@@ -1390,6 +1391,10 @@ Public Function UpdateDragon(
                 Dragon.Visible, Effects.FireInitialized, Effects.LightningInitialized,
                 Effects.FlamePaused, Effects.LightningPaused, Effects.VisualContinuityEpoch,
                 Value.Turn = 2, ToDouble(Target.X), 65.0, ToDouble(Target.Z))
+        Else If BossProfile(Value) = ViewerProfiles.PROFILE_KAEL Then
+            Result = KaelEarth.Update(Dragon.Earth, Dragon.Actor, Dragon.Clip,
+                Precision3D.Vector(ToDouble(Target.X), 65.0, ToDouble(Target.Z)), True,
+                Not ScenePaused And Not Value.PreviewActive) And Result
         End If
 
         Return Result
@@ -2235,6 +2240,22 @@ Public Function VraxImpactTime(AttackMilliseconds As Number) As Number
     Dim Result As Number
 
     Result = VRAX_ATTACK_START_MILLISECONDS + AttackMilliseconds / 6
+
+    Return Result
+
+End Function
+
+Public Function BossImpactTime(ByRef Value As State, AttackMilliseconds As Number) As Number
+
+    Dim Result As Number
+    Dim Clip As Text
+
+    Result = VraxImpactTime(AttackMilliseconds)
+    Clip = ViewerProfiles.PartyAttackName(BossProfile(Value), Value.DragonCounter)
+
+    If BossProfile(Value) = ViewerProfiles.PROFILE_KAEL And KaelEarth.ModeForClip(Clip) <> 0 Then
+        Result = VRAX_ATTACK_START_MILLISECONDS + AttackMilliseconds * 72 / 100
+    End If
 
     Return Result
 
@@ -3413,7 +3434,7 @@ Public Function UpdateAdditionalEquipment(ByRef Value As State, ByRef Shared As 
         Value.Water.ImpactElapsed = Value.Elapsed * BossSpeed / 100 - DragonImpactTime(Value)
 
         If Value.UnityRoster Then
-            Value.Water.ImpactElapsed = Value.Elapsed - VraxImpactTime(Value.BossAttackDuration)
+            Value.Water.ImpactElapsed = Value.Elapsed - BossImpactTime(Value, Value.BossAttackDuration)
         End If
 
         If Value.Turn = MiraBattle.PARTY_TURN And Value.AttackCycle Mod 6 >= 3 Then
@@ -3783,7 +3804,7 @@ Private Function AdvanceUnityChoreography(ByRef Value As State,
 
     If (Value.Turn = 2 And
         Not Value.HitResolved And
-        Value.Elapsed >= VraxImpactTime(AttackMilliseconds)) Then
+        Value.Elapsed >= BossImpactTime(Value, AttackMilliseconds)) Then
 
         Value.HitResolved = True
 

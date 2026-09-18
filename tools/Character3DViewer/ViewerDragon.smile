@@ -19,6 +19,7 @@ Import Smile.Tools.Character3DViewerActors As ViewerActors
 Import Smile.Simple3D.PrecisionCamera3D As PrecisionCamera
 Import Smile.Simple3D.CharacterViewer As CharacterViewer
 Import Smile.Tools.DragonPresence As DragonPresence
+Import Smile.Tools.KaelEarth As KaelEarth
 
 Private Const ASSET_PATH = "Assets\Generation2\RedDragon\RedDragon.sm3d"
 Private Const SCALE_PERCENT = 25000
@@ -73,6 +74,7 @@ Public Type State
     FireWasPaused As Boolean
     Audio As BattleAudio.CueState
     VraxAudio As VraxAudioState
+    Earth As KaelEarth.Context
 End Type
 
 Public Function ProfileIndex(Value As State) As Number
@@ -198,6 +200,10 @@ Public Function Create(ByRef Value As State, ByRef BorrowedActor As Character3D.
         Result = Character3D.PlayAnimation(Value.Actor, "Idle", True) And Result
         Result = Character3D.SetShadows(Value.Actor, True, True) And Result
 
+        If Value.SelectedProfile = ViewerProfiles.PROFILE_KAEL Then
+            Result = KaelEarth.Prepare(Value.Earth) And Result
+        End If
+
     Else If Result Then
 
         Result = Character3D.SetScale(Value.Actor, SCALE_PERCENT) And Result
@@ -249,6 +255,8 @@ End Function
 Public Sub DrawEffects(ByRef Value As State)
 
     If Value.SelectedProfile = ViewerProfiles.PROFILE_KAEL Then
+        Call KaelEarth.Draw(Value.Earth)
+
         Return
     End If
 
@@ -271,6 +279,7 @@ Public Sub ClearOwnedEffects(ByRef Value As State, Light As LightPool3D.Lease)
     Dim Ok As Boolean
 
     Call ClearVraxAttacks(Value.Attacks)
+    Call KaelEarth.Destroy(Value.Earth)
 
     If Value.Breath.Slot <> 0 Then
         Ok = Fire.Destroy(Value.Breath)

@@ -1,5 +1,37 @@
 # Character Viewer Architecture
 
+## Native Kael Earth casts and quiet Idle
+
+`KaelEarth` is the focused adapter for Kael's clip time, static grounded scale,
+target, temporary sword hiding and audio cues. The caller passes the desired
+normal sword visibility, so leaving an Earth clip respects Weapon/W. The canonical
+Kael package owns the actual baked body animation and its export/floor measurements.
+`Smile.Simple3D.EarthVfx3D` owns only reusable rocks and GPU dust through a caller-owned
+context and explicit frame input; it depends on no game, tool, actor or global clock.
+
+`ViewerEffects` owns the standalone adapter; `ViewerDragon` owns its Party instance.
+Both preload and release their own effect resources. `ViewerParty` supplies its
+existing target and updates Earth effects after advancing the boss actor. Its
+impact helper aligns Earth hit/shield reaction to 72% of the cast; Volley has three
+visual/audio contacts and the existing single Party hit resolves at the middle one.
+Sword attacks retain their existing contact policy. `Profiles` appends three clips
+and selects the five-attack cycle. Sin Star I links these same owners; Studio only
+keeps its source inventory aligned while development remains held.
+
+The Earth Lab owns one actor/camera/arena/clock in `EarthLabScene`, controls in
+`EarthLabUi`, and a thin startup loop. No entry-point implementation, runtime or
+compiler feature, size threshold, baseline, exclusion or dependency rule changed.
+Native socket-motion checks prevent effects passing while the body remains still;
+the ground-debris check requires six visible stones after lift-off. Existing native
+Viewer hardening and game presentation fixtures cover integration and cleanup.
+
+Source growth for this slice: the new shared effect is 442 lines and the Kael
+adapter is 167. The new Lab uses a 31-line entry point, 267-line scene owner and
+162-line UI owner. Existing profile, Party, standalone-effects and opponent owners
+grow by 14, 21, 14 and 9 lines respectively. Both existing executable entry points
+are unchanged. The focused Lab regression fixture is 168 lines. These boundaries
+keep reusable rendering independent of character policy and application controls.
+
 ## Shared native party status and Dragon roster
 
 `ViewerParty` continues to own participant state and choreography. Zara's existing

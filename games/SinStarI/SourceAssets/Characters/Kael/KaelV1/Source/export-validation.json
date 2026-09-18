@@ -1,6 +1,6 @@
 {
-  "modelSha256": "93c0b7c4091938eeaee22137ee38f1296eed551e6261126bed7627731e459cd6",
-  "modelBytes": 28098500,
+  "modelSha256": "d3187af4bba99e1709aa7a27faa7987bd3f0fa837c00494d790517d33a6fbbda",
+  "modelBytes": 28277176,
   "units": "meters; Blender Z becomes glTF/SM3D Y",
   "bindBounds": {
     "body": {
@@ -28,32 +28,32 @@
       ]
     }
   },
-  "bindToIdleFrameZeroFloorDeltaMeters": 0.0009999695466831326,
+  "bindToIdleFrameZeroFloorDeltaMeters": 0.0010000461479648948,
   "clips": [
     {
       "clip": "Idle",
-      "framesChecked": 111,
+      "framesChecked": 163,
       "rootXYSpanMeters": [
-        1.862645149230957e-09,
+        0.0,
         0.0
       ],
-      "minimumBodyMeters": 0.0009998512687161565,
-      "minimumSwordMeters": 0.4285668730735779,
+      "minimumBodyMeters": 0.0009999716421589255,
+      "minimumSwordMeters": 0.4760883152484894,
       "samples": [
         {
           "frame": 0,
-          "bodyMinimumMeters": 0.0009999683825299144,
-          "swordMinimumMeters": 0.4522705376148224
+          "bodyMinimumMeters": 0.0010000449838116765,
+          "swordMinimumMeters": 0.47664016485214233
         },
         {
-          "frame": 55,
-          "bodyMinimumMeters": 0.0010000639595091343,
-          "swordMinimumMeters": 0.428628146648407
+          "frame": 81,
+          "bodyMinimumMeters": 0.0010000875918194652,
+          "swordMinimumMeters": 0.47835713624954224
         },
         {
-          "frame": 110,
-          "bodyMinimumMeters": 0.0009999837493523955,
-          "swordMinimumMeters": 0.4522928297519684
+          "frame": 162,
+          "bodyMinimumMeters": 0.001000000978820026,
+          "swordMinimumMeters": 0.47663983702659607
         }
       ]
     },
@@ -297,6 +297,87 @@
           "frame": 256,
           "bodyMinimumMeters": 0.0010000719921663404,
           "swordMinimumMeters": 0.44800323247909546
+        }
+      ]
+    },
+    {
+      "clip": "EarthHurl",
+      "framesChecked": 97,
+      "rootXYSpanMeters": [
+        0.0,
+        1.862645149230957e-09
+      ],
+      "minimumBodyMeters": 0.000999988173134625,
+      "minimumSwordMeters": 0.3170631229877472,
+      "samples": [
+        {
+          "frame": 0,
+          "bodyMinimumMeters": 0.0010000065667554736,
+          "swordMinimumMeters": 0.47664010524749756
+        },
+        {
+          "frame": 48,
+          "bodyMinimumMeters": 0.0009999977191910148,
+          "swordMinimumMeters": 0.5562465190887451
+        },
+        {
+          "frame": 96,
+          "bodyMinimumMeters": 0.0010000065667554736,
+          "swordMinimumMeters": 0.47664010524749756
+        }
+      ]
+    },
+    {
+      "clip": "EarthVolley",
+      "framesChecked": 121,
+      "rootXYSpanMeters": [
+        0.0,
+        1.862645149230957e-09
+      ],
+      "minimumBodyMeters": 0.0009999850299209356,
+      "minimumSwordMeters": 0.3164440989494324,
+      "samples": [
+        {
+          "frame": 0,
+          "bodyMinimumMeters": 0.0010000065667554736,
+          "swordMinimumMeters": 0.47664010524749756
+        },
+        {
+          "frame": 60,
+          "bodyMinimumMeters": 0.0010000456823036075,
+          "swordMinimumMeters": 0.6293181777000427
+        },
+        {
+          "frame": 120,
+          "bodyMinimumMeters": 0.0010000065667554736,
+          "swordMinimumMeters": 0.47664010524749756
+        }
+      ]
+    },
+    {
+      "clip": "EarthSlam",
+      "framesChecked": 91,
+      "rootXYSpanMeters": [
+        0.0,
+        1.862645149230957e-09
+      ],
+      "minimumBodyMeters": 0.0009999823523685336,
+      "minimumSwordMeters": 0.3167818486690521,
+      "samples": [
+        {
+          "frame": 0,
+          "bodyMinimumMeters": 0.0010000065667554736,
+          "swordMinimumMeters": 0.47664010524749756
+        },
+        {
+          "frame": 45,
+          "bodyMinimumMeters": 0.0010000125039368868,
+          "swordMinimumMeters": 0.3213028907775879
+        },
+        {
+          "frame": 90,
+          "bodyMinimumMeters": 0.0010000065667554736,
+          "swordMinimumMeters": 0.47664010524749756
         }
       ]
     }

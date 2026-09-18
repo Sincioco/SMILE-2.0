@@ -1,0 +1,95 @@
+{
+  "idle": {
+    "clip": "Idle",
+    "source": "BreathingIdle.fbx",
+    "mixamoDescription": "Breathing Idle: Sway 0, Breathing 25, Overdrive 50; downloaded for Kael",
+    "samples": 163,
+    "maximumJointErrorMeters": 1.5533176293706234e-06
+  },
+  "casts": [
+    {
+      "clip": "EarthHurl",
+      "frames": 97,
+      "sampleRate": 30,
+      "sword": "hidden during Earth casts by shared Kael adapter",
+      "poseTravelMeters": {
+        "Head": [
+          0.005810479444335215,
+          0.06595899257808924,
+          0.2159695029258728
+        ],
+        "HandLeft": [
+          0.1981707364320755,
+          0.38665515929460526,
+          0.45359188318252563
+        ],
+        "HandRight": [
+          0.2070726379752159,
+          0.3445880189538002,
+          0.47521477937698364
+        ],
+        "FootLeft": [
+          0.10001758486032486,
+          0.250006727874279,
+          0.2103223204612732
+        ]
+      }
+    },
+    {
+      "clip": "EarthVolley",
+      "frames": 121,
+      "sampleRate": 30,
+      "sword": "hidden during Earth casts by shared Kael adapter",
+      "poseTravelMeters": {
+        "Head": [
+          0.005803845604532398,
+          0.06892358092591166,
+          0.2282717227935791
+        ],
+        "HandLeft": [
+          0.2070111632347107,
+          0.39248573035001755,
+          0.45439398288726807
+        ],
+        "HandRight": [
+          0.1863127499818802,
+          0.2999333143234253,
+          0.47593292593955994
+        ],
+        "FootLeft": [
+          0.10001925379037857,
+          0.2500055804848671,
+          0.20960679650306702
+        ]
+      }
+    },
+    {
+      "clip": "EarthSlam",
+      "frames": 91,
+      "sampleRate": 30,
+      "sword": "hidden during Earth casts by shared Kael adapter",
+      "poseTravelMeters": {
+        "Head": [
+          0.0043165989918634295,
+          0.07940558157861233,
+          0.24074941873550415
+        ],
+        "HandLeft": [
+          0.16964616626501083,
+          0.32479575648903847,
+          0.537117063999176
+        ],
+        "HandRight": [
+          0.1825525462627411,
+          0.2738978639245033,
+          0.5266488492488861
+        ],
+        "FootLeft": [
+          0.1000160202383995,
+          0.2400105521082878,
+          0.20960679650306702
+        ]
+      }
+    }
+  ]
+}

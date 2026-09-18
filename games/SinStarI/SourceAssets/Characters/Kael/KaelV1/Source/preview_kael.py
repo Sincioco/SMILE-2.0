@@ -17,9 +17,10 @@ bpy.ops.wm.open_mainfile(filepath=str(PACKAGE / "Blender/kael-v1-rigged-animatio
 rig = bpy.data.objects["Kael.Rig"]
 body = bpy.data.objects["Kael.Body"]
 sword = bpy.data.objects["Kael.Sword"]
-for name, frame in (("Idle",1),("Attack",37),("Defend",1),("Death",70)):
+for name, frame in (("Idle",1),("EarthHurl",54),("EarthVolley",66),("EarthSlam",47)):
     action_at(rig, name, frame)
-    preview(body, "accepted-" + name.lower(), (sword,))
+    sword.hide_render = name.startswith("Earth")
+    preview(body, "accepted-" + name.lower(), () if sword.hide_render else (sword,))
 
 bpy.ops.wm.read_factory_settings(use_empty=True)
 bpy.ops.import_scene.gltf(filepath=str(PACKAGE / "kael-v1-animation-checkpoint.glb"))

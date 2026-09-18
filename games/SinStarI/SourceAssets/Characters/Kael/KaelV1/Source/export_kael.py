@@ -16,7 +16,8 @@ PACKAGE = Path(__file__).resolve().parent.parent
 SOURCE = PACKAGE / "Source"
 BLENDER = PACKAGE / "Blender"
 MODEL = PACKAGE / "kael-v1-animation-checkpoint.glb"
-CLIPS = ("Idle", "Walk", "Run", "Attack", "Attack2", "Dodge", "Defend", "Hit", "Death", "Victory")
+CLIPS = ("Idle", "Walk", "Run", "Attack", "Attack2", "Dodge", "Defend", "Hit", "Death", "Victory",
+         "EarthHurl", "EarthVolley", "EarthSlam")
 
 
 def bounds(obj):
@@ -99,7 +100,7 @@ def topology(obj):
 
 
 def main():
-    bpy.ops.wm.open_mainfile(filepath=str(BLENDER / "kael-v1-grounded.blend"))
+    bpy.ops.wm.open_mainfile(filepath=str(BLENDER / "kael-v1-earth-grounded.blend"))
     rig = bpy.data.objects["Kael.Rig"]
     body = bpy.data.objects["Kael.Body"]
     sword = bpy.data.objects["Kael.Sword"]

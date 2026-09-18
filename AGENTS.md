@@ -208,6 +208,9 @@ Use KISS: Keep It Simple, Stupid.
 
 ### Permanent PowerShell, browser-refresh and test-readiness preferences
 
+- Keep relaunched test applications to the right of Codex, sized to fill the remaining
+  screen space without covering the chat. Preserve that placement across relaunches.
+
 - Use the latest installed PowerShell 7 through `pwsh` whenever PowerShell is needed. Do not invoke Windows PowerShell when PowerShell 7 can perform the task.
 - At completion, state whether Sin must rebuild the .NET portion or only press Ctrl+F5 in Chrome. For CSS and image changes, update asset versioning or cache behavior so the browser does not retain stale content.
 - As each requested task becomes ready for Sin to test, repeat that task in bold and label it ready for testing. When the prompt queue is complete, repeat every ready-for-testing task in bold.

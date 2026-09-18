@@ -83,6 +83,7 @@ Call Me.LoadViewer()
                 ViewerParty.ActorPlaybackSpeed(Me.Party, 2, 100) <> 200) Then
                 Print "Kael Party must load Kael at speed 200."
             End If
+            Call Me.CheckKaelEarthFixture()
         End If
         If Me.Session.SelectedCharacterTab = ViewerProfiles.CHARACTER_TAB_KAEL Then
             If Me.Playback.PlaybackSpeed <> 200 Then
@@ -91,6 +92,49 @@ Call Me.LoadViewer()
         End If
 '@
 $workflowText = $workflowText.Replace($loadBoundary, $diagnosticLoad)
+$earthFixture = @'
+    Private Sub CheckKaelEarthFixture()
+
+        Dim Cycle As Number
+        Dim ClipIndex As Number
+        Dim Duration As Number
+        Dim Ok As Boolean
+        Dim Name As Text
+
+        For Cycle = 1 To 4
+
+            If Cycle <> 2 Then
+                Me.Party.Turn = 2
+                Me.Party.Stage = 1
+                Me.Party.DragonCounter = Cycle
+                Name = ViewerProfiles.PartyAttackName(ViewerProfiles.PROFILE_KAEL, Cycle)
+                Ok = ViewerParty.UpdateDragon(Me.Party, Me.DragonState, Me.Effects,
+                    Me.Character, False, Name, False, 200, 0)
+
+                For ClipIndex = 0 To Character3D.ClipCount(Me.DragonState.Actor) - 1
+
+                    If Character3D.ClipName(Me.DragonState.Actor, ClipIndex) = Name Then
+                        Duration = Character3D.ClipDuration(Me.DragonState.Actor, ClipIndex)
+                    End If
+
+                End For
+
+                Ok = Character3D.SetAnimationTime(Me.DragonState.Actor, Duration * 60 / 100) And Ok
+                Ok = ViewerParty.UpdateDragon(Me.Party, Me.DragonState, Me.Effects,
+                    Me.Character, False, Name, False, 200, 0) And Ok
+
+                If Not Ok Or Not Me.DragonState.Earth.Effect.Visible Or Me.DragonState.Earth.Effect.ErrorCode <> 0 Then
+                    Print "Kael Earth cast failed: "; Name
+                End If
+
+            End If
+
+        End For
+
+    End Sub
+
+'@
+$workflowText = $workflowText.Replace('End Class', $earthFixture + 'End Class')
 [IO.File]::WriteAllText((Join-Path $testRoot 'ViewerWorkflow.smile'), $workflowText)
 $workflowEntry.SetAttribute('Include', 'ViewerWorkflow.smile')
 $projectPath = Join-Path $testRoot 'PresentationTests.smileproj'

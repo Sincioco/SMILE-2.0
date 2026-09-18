@@ -18,6 +18,7 @@ Import Smile.Tools.ArinShieldRim As ArinShieldRim
 Import Smile.Tools.OrinStorm As OrinStorm
 Import Smile.Tools.BattleAudio As BattleAudio
 Import Smile.Tools.MiraWater As MiraWater
+Import Smile.Tools.KaelEarth As KaelEarth
 Import Smile.Tools.Character3DViewerProfiles As ViewerProfiles
 Import Smile.Tools.Character3DViewerDragon As ViewerDragon
 
@@ -46,6 +47,7 @@ End Type
 
 Public Type State
     Water As MiraWater.Context
+    Earth As KaelEarth.Context
     ZaraAttacks As ZaraAttackEffects
     ProfileIndex As Number
     VraxAttacks As ViewerDragon.AttackEffects
@@ -526,6 +528,8 @@ Public Sub CreateEpicGlow(ByRef Value As State, ProfileIndex As Number,
 
     If ViewerProfiles.IsMiraCharacter(ProfileIndex) Then
         GlowReady = MiraWater.Prepare(Value.Water)
+    Else If ProfileIndex = ViewerProfiles.PROFILE_KAEL Then
+        GlowReady = KaelEarth.Prepare(Value.Earth)
     End If
 
     Value.EpicGlowAvailable = ViewerProfiles.EpicGlowAvailable(ProfileIndex)
@@ -611,6 +615,7 @@ End Sub
 Public Sub DestroyEpicGlow(ByRef Value As State)
 
     Call MiraWater.Destroy(Value.Water)
+    Call KaelEarth.Destroy(Value.Earth)
     Call ViewerDragon.ClearVraxAudio(Value.VraxAudio)
     Call ViewerDragon.ClearVraxAttacks(Value.VraxAttacks)
     Call ClearEquipmentFire(Value)
@@ -748,6 +753,14 @@ Public Sub UpdateEquipmentFire(
 )
 
     Dim WaterReady As Boolean
+    Dim EarthTarget As Precision3D.Vector3
+
+    If ProfileIndex = ViewerProfiles.PROFILE_KAEL Then
+        WaterReady = KaelEarth.Update(Value.Earth, Actor, SelectedClipLabel,
+            EarthTarget, False, Not ScenePaused And Not CalibrationEditing, SwordVisible)
+
+        Return
+    End If
 
     If ViewerProfiles.IsMiraCharacter(ProfileIndex) Then
 
@@ -879,6 +892,7 @@ Public Sub DrawEquipmentFire(ByRef Value As State, SwordVisible As Boolean,
     ShieldVisible As Boolean)
 
     Call MiraWater.Draw(Value.Water)
+    Call KaelEarth.Draw(Value.Earth)
     Call ViewerDragon.DrawVraxAttacks(Value.VraxAttacks)
 
     If SwordVisible And Value.EpicGlowVisible Then
