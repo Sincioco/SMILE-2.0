@@ -18,8 +18,9 @@ Blender 5.2 and its bundled Python/numpy. Run Blender with `--background
 
 `Smile.Simple3D.EarthVfx3D` shares these resources between Earth Lab, Character
 Viewer and Sin Star I. It reuses 63 instances and a bounded 4,096-slot GPU dust
-pool. The user-requested Hurl/Volley cleanup leaves six of sixty loose stones
-after lift-off. Impact fragments have their own lifetime at the target.
+pool. Hurl/Volley clear all sixty loose ground stones after lift-off. Impact
+fragments still appear at the target; each dust puff expands and fades through
+the cast's recovery and into the next animation instead of being cut off.
 
 The three user-supplied YouTube references are linked in the Earth Lab README.
 No video, sampled audio or extracted media from those references is included.

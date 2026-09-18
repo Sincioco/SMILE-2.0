@@ -12,10 +12,13 @@ returns for Idle. The default speed is 200. His normal sword attacks remain in
 the Character Viewer and Sin Star I.
 
 The Lab uses Water Lab's Sin Star background, a reflective arena, random pillar
-targets and a slow two-minute camera orbit. Hurl and Volley fade 54 of their 60
-loose ground stones between 24% and 32% of the cast, leaving six after lift-off.
+targets and a slow two-minute camera orbit. Hurl and Volley fade all 60 loose
+ground stones between 24% and 32% of the cast, leaving none after lift-off.
 New impact fragments still appear at the target. Lighter, shorter-lived lift dust
-keeps Kael and the floating rocks readable.
+keeps Kael and the floating rocks readable. Each impact releases a bounded puff
+that expands and fades over 1–1.8 seconds of playback time, including the held
+final pose and the next animation. At the default 200 speed, this takes 0.5–0.9
+seconds on screen; Pause freezes the remaining dust.
 
 | Control | Action |
 | --- | --- |
@@ -37,9 +40,10 @@ keeps Kael and the floating rocks readable.
 owns controls/readouts. The shared `KaelEarth` adapter owns clip/effect timing,
 sword visibility and audio cues. `Smile.Simple3D.EarthVfx3D` owns a caller-supplied
 effect context: 63 reusable rock instances and a 4,096-slot GPU dust pool. It
-accepts an explicit time, scale and target; it has no character or Lab dependency.
-Resources preload during startup. Pausing does not emit particles; seeking backward
-clears old dust. Hidden instances use a positive transform scale, avoiding the
+accepts explicit cast time, elapsed playback time, scale and target; it has no
+character or Lab dependency. Resources preload during startup. Pausing does not
+emit particles; a paused backward seek clears old dust. Normal cast loops and
+clip changes retain the fading tail. Hidden instances use a positive transform scale, avoiding the
 native zero-scale rejection found during this work.
 
 Three original rock meshes have 5,120 triangles each, smooth normals, weathered
@@ -48,8 +52,9 @@ data. Rendering uses the existing native PBR, GPU particles and planar reflectio
 there is no new physics engine, runtime/compiler extension or RTX-only feature.
 
 Run `Test.ps1` after building. Its focused native fixture checks every mode,
-actual hand/head socket movement, quiet Idle, six remaining ground rocks,
-pause/seek, speed, reflection readiness and resource cleanup. The shared Viewer
+actual hand/head socket movement, quiet Idle, complete ground-rock clearing,
+dust aging after the final pose and into Idle, pause/seek, speed, reflection
+readiness and resource cleanup. The shared Viewer
 hardening and Sin Star I presentation checks cover integration, including all
 three Earth casts in Kael Party. Web and Studio remain on hold.
 

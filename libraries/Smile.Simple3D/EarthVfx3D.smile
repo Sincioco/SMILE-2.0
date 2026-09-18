@@ -1,4 +1,4 @@
-''' Caller-owned rock geometry and GPU dust, sampled from one supplied cast clock.
+''' Caller-owned rocks follow cast time; GPU dust also receives elapsed playback time for its tail.
 Module Smile.Simple3D.EarthVfx3D
 
 Option Explicit
@@ -17,6 +17,7 @@ Private Const DUST_CAPACITY = 4096
 Public Type Frame
     Mode As Number
     Time As Number
+    Elapsed As Number
     Progress As Double
     Scale As Double
     Origin As P.Vector3
@@ -149,16 +150,11 @@ Private Function PlaceRock(ByRef Rock As Core.Object3D, Position As P.Vector3,
 
 End Function
 
-Private Function GroundDebrisFade(Index As Number, Progress As Double) As Number
+Private Function GroundDebrisFade(Progress As Double) As Number
 
     Dim Fade As Number
 
-    ''' Keep six of the sixty loose stones once the main boulders finish rising.
-    Fade = 100
-
-    If Index <> 3 And (Index < 15 Or (Index - 15) Mod 10 <> 0) Then
-        Fade = ToNumber(Round(100.0 * Clamp((0.32 - Progress) / 0.08, 0.0, 1.0)))
-    End If
+    Fade = ToNumber(Round(100.0 * Clamp((0.32 - Progress) / 0.08, 0.0, 1.0)))
 
     Return Fade
 
@@ -230,7 +226,7 @@ Private Function BuildRocks(ByRef Value As Context, Sample As Frame) As Boolean
         Fade = ToNumber(Round(100.0 * Clamp((1.0 - Sample.Progress) / 0.16, 0.0, 1.0)))
 
         If Sample.Mode <> SLAM Then
-            Fade = Min(Fade, GroundDebrisFade(Index, Sample.Progress))
+            Fade = Min(Fade, GroundDebrisFade(Sample.Progress))
         End If
 
         Ok = PlaceRock(Value.Rocks[Index], Position, Radius * Age, Angle * 180.0 / M.PI, Fade) And Ok
@@ -263,7 +259,7 @@ Private Function BuildRocks(ByRef Value As Context, Sample As Frame) As Boolean
         End If
 
         If Sample.Mode <> SLAM And Sample.Progress < Contact Then
-            Fade = Min(Fade, GroundDebrisFade(Index, Sample.Progress))
+            Fade = Min(Fade, GroundDebrisFade(Sample.Progress))
         End If
 
         Ok = PlaceRock(Value.Rocks[Index], Position, Radius,
@@ -284,7 +280,7 @@ Private Function EmitDust(ByRef Value As Context, Sample As Frame, ItemCount As 
     Dim Angle As Double
     Dim Spread As Double
     Dim Lifetime As Number
-    Dim Opacity As Number
+    Dim Density As Number
 
     Center = Sample.Origin
 
@@ -304,18 +300,18 @@ Private Function EmitDust(ByRef Value As Context, Sample As Frame, ItemCount As 
         Position = M.Add(Center, P.Vector(Cos(Angle) * Spread, 4.0 * Sample.Scale, Sin(Angle) * Spread))
         Velocity = P.Vector(Cos(Angle) * 45.0 * Sample.Scale,
             (16.0 + ToDouble(Value.Serial Mod 23)) * Sample.Scale, Sin(Angle) * 45.0 * Sample.Scale)
-        Lifetime = 550 + Value.Serial Mod 650
-        Opacity = 35
+        Lifetime = 1000 + Value.Serial Mod 800
+        Density = 350
 
         If Sample.Mode <> SLAM And Sample.Progress < ContactProgress(Sample.Mode, 0) Then
             Lifetime = 250 + Value.Serial Mod 250
-            Opacity = 18
+            Density = 180
         End If
 
         Ok = P.SetGpuParticleSpawnKinematics(Value.Dust, Value.Slot, Position, Velocity) And Ok
         Ok = G.SetGpuParticleSpawnVisual3D(Value.Dust, Value.Slot, Lifetime,
             ToNumber(6.0 * Sample.Scale), ToNumber(35.0 * Sample.Scale), Value.Serial Mod 360,
-            Opacity, 0, 750) And Ok
+            35, 0, Density) And Ok
         Ok = G.CommitGpuParticleSpawn3D(Value.Dust, Value.Slot, Value.Serial, Value.Serial * 17) And Ok
         Value.Slot = (Value.Slot + 1) Mod DUST_CAPACITY
     End For
@@ -327,6 +323,7 @@ End Function
 Public Function Update(ByRef Value As Context, Sample As Frame) As Boolean
 
     Dim Elapsed As Number
+    Dim ClipElapsed As Number
     Dim ItemCount As Number
     Dim Ok As Boolean
     Dim Restarted As Boolean
@@ -338,20 +335,30 @@ Public Function Update(ByRef Value As Context, Sample As Frame) As Boolean
     End If
 
     Restarted = Sample.Mode <> Value.PreviousMode Or Sample.Time < Value.PreviousTime
-    Elapsed = Max(0, Min(100, Sample.Time - Value.PreviousTime))
+    ClipElapsed = Max(0, Min(100, Sample.Time - Value.PreviousTime))
+    Elapsed = Max(0, Min(250, Sample.Elapsed))
     Ok = True
 
     If Restarted Then
 
-        For Index = 0 To DUST_CAPACITY - 1
+        ''' A paused backward seek clears stale dust; playback and clip changes keep its tail.
 
-            If G.GpuParticleValue3D(G.GPU_PARTICLE_QUERY_SLOT_ACTIVE, Value.Dust.Handle, Index) <> 0 Then
-                Ok = G.KillGpuParticleSlot3D(Value.Dust, Index) And Ok
-            End If
+        If (Sample.Mode <> 0 And
+            Sample.Mode = Value.PreviousMode And
+            Sample.Elapsed = 0) Then
 
-        End For
+            For Index = 0 To DUST_CAPACITY - 1
+
+                If G.GpuParticleValue3D(G.GPU_PARTICLE_QUERY_SLOT_ACTIVE, Value.Dust.Handle, Index) <> 0 Then
+                    Ok = G.KillGpuParticleSlot3D(Value.Dust, Index) And Ok
+                End If
+
+            End For
+
+        End If
+
         Value.ImpactCount = 0
-        Elapsed = 0
+        ClipElapsed = 0
 
     End If
 
@@ -361,11 +368,11 @@ Public Function Update(ByRef Value As Context, Sample As Frame) As Boolean
 
         Ok = BuildRocks(Value, Sample) And Ok
 
-        If (Elapsed > 0 And
+        If (ClipElapsed > 0 And
             Sample.Progress > 0.10 And
             Sample.Progress < 0.90) Then
 
-            ItemCount = Min(48, Elapsed)
+            ItemCount = Min(48, ClipElapsed)
 
             If (Sample.Mode <> SLAM And
                 Sample.Progress > 0.24 And
@@ -382,8 +389,10 @@ Public Function Update(ByRef Value As Context, Sample As Frame) As Boolean
             End For
 
             If Contacts > Value.ImpactCount Then
-                ItemCount = 128
+                ItemCount = 64
                 Value.ImpactCount = Contacts
+            Else If Contacts > 0 Then
+                ItemCount = 0
             End If
 
             Ok = EmitDust(Value, Sample, ItemCount) And Ok
@@ -392,7 +401,7 @@ Public Function Update(ByRef Value As Context, Sample As Frame) As Boolean
 
     End If
 
-    Ok = G.AdvanceGpuParticleSystem3D(Value.Dust, Elapsed) And Ok
+    Ok = G.AdvanceGpuParticleSystem3D(Value.Dust, Max(Elapsed, ClipElapsed)) And Ok
     Value.PreviousTime = Sample.Time
     Value.PreviousMode = Sample.Mode
 
@@ -409,15 +418,19 @@ Public Sub Draw(ByRef Value As Context)
     Dim Index As Number
     Dim Ok As Boolean
 
-    If Value.Ready And Value.Visible Then
+    If Not Value.Ready Then
+        Return
+    End If
+
+    If Value.Visible Then
 
         For Index = 0 To ROCK_COUNT - 1
             Ok = G.DrawObject3D(Value.Rocks[Index])
         End For
 
-        Ok = G.DrawGpuParticleSystem3D(Value.Dust)
-
     End If
+
+    Ok = G.DrawGpuParticleSystem3D(Value.Dust)
 
 End Sub
 

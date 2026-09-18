@@ -15,6 +15,9 @@ Dim SavedTime As Number
 Dim SavedSpawns As Number
 Dim RockIndex As Number
 Dim GroundRocks As Number
+Dim DustSlot As Number
+Dim DustAge As Number
+Dim DustCount As Number
 Dim HandStart As P.Vector3
 Dim HandNow As P.Vector3
 Dim RightStart As P.Vector3
@@ -103,7 +106,7 @@ Do
 
     Call Check(Lab.Earth.Effect.Dust.ActiveCount > 0)
 
-    ''' Hurl and Volley keep just six of sixty ground stones after lift-off.
+    ''' Hurl and Volley clear all sixty ground stones after lift-off.
 
     For Mode = 1 To 2
 
@@ -125,7 +128,13 @@ Do
 
         End For
 
-        Call Check(GroundRocks = 6)
+        Call Check(GroundRocks = 0)
+        Call Check(Lab.Earth.Effect.Rocks[0].Visible)
+
+        If Mode = 2 Then
+            Call Check(Lab.Earth.Effect.Rocks[1].Visible And Lab.Earth.Effect.Rocks[2].Visible)
+        End If
+
     End For
 
     For SampleIndex = 1 To 3
@@ -133,6 +142,7 @@ Do
 
         Call Scene.Update(Lab, 0)
         Call Check(Lab.Earth.Effect.ImpactCount = SampleIndex)
+        Call Check(Lab.Earth.Effect.Rocks[15].Visible)
     End For
 
     Lab.Paused = False
@@ -151,6 +161,51 @@ Do
 
     Call Scene.Update(Lab, 0)
     Call Check(Lab.Earth.Effect.Dust.ActiveCount = 0)
+
+    ''' Impact dust keeps aging through the held final pose and the following Idle.
+    Lab.Time = Lab.ClipDuration * 85 / 100
+
+    Call Scene.Update(Lab, 0)
+
+    DustSlot = (Lab.Earth.Effect.Slot + 4095) Mod 4096
+    Lab.Time = Lab.ClipDuration
+
+    Call Scene.Update(Lab, 0)
+
+    DustAge = G.GpuParticleValue3D(G.GPU_PARTICLE_QUERY_SLOT_AGE,
+        Lab.Earth.Effect.Dust.Handle, DustSlot)
+    Lab.Paused = False
+    Lab.SpeedPercent = 100
+
+    Call Scene.Update(Lab, 100)
+    Call Check(G.GpuParticleValue3D(G.GPU_PARTICLE_QUERY_SLOT_AGE,
+        Lab.Earth.Effect.Dust.Handle, DustSlot) > DustAge)
+
+    DustAge = G.GpuParticleValue3D(G.GPU_PARTICLE_QUERY_SLOT_AGE,
+        Lab.Earth.Effect.Dust.Handle, DustSlot)
+    Lab.Paused = True
+
+    Call Scene.Update(Lab, 100)
+    Call Check(G.GpuParticleValue3D(G.GPU_PARTICLE_QUERY_SLOT_AGE,
+        Lab.Earth.Effect.Dust.Handle, DustSlot) = DustAge)
+
+    DustCount = Lab.Earth.Effect.Dust.ActiveCount
+    Lab.Mode = 4
+
+    Call Scene.Restart(Lab)
+    Call Scene.Update(Lab, 0)
+    Call Check(DustCount > 0 And Lab.Earth.Effect.Dust.ActiveCount = DustCount)
+
+    Lab.Paused = False
+
+    For SampleIndex = 1 To 20
+        Call Scene.Update(Lab, 100)
+        Call Scene.Draw(Lab)
+
+        Show Screen
+    End For
+
+    Call Check(Lab.Earth.Effect.Dust.ActiveCount = 0 And Lab.ErrorCode = 0)
     Call Scene.Destroy(Lab)
     Call Check(G.GpuParticleValue3D(G.GPU_PARTICLE_QUERY_LIVE_SYSTEMS) = 0)
 

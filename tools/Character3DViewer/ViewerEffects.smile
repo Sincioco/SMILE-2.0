@@ -749,17 +749,24 @@ Public Sub UpdateEquipmentFire(
     SelectedClipLabel As Text,
     Camera As Precision3D.Camera3D,
     CameraElapsed As Number,
-    Optional CoordinatedPreview As Boolean = False
+    Optional CoordinatedPreview As Boolean = False,
+    Optional EarthElapsed As Number = 0
 )
 
     Dim WaterReady As Boolean
     Dim EarthTarget As Precision3D.Vector3
 
     If ProfileIndex = ViewerProfiles.PROFILE_KAEL Then
+
+        If ScenePaused Or CalibrationEditing Then
+            EarthElapsed = 0
+        End If
+
         WaterReady = KaelEarth.Update(Value.Earth, Actor, SelectedClipLabel,
-            EarthTarget, False, Not ScenePaused And Not CalibrationEditing, SwordVisible)
+            EarthTarget, False, Not ScenePaused And Not CalibrationEditing, EarthElapsed, SwordVisible)
 
         Return
+
     End If
 
     If ViewerProfiles.IsMiraCharacter(ProfileIndex) Then

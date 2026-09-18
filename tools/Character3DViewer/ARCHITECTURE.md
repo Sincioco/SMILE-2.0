@@ -8,6 +8,11 @@ normal sword visibility, so leaving an Earth clip respects Weapon/W. The canonic
 Kael package owns the actual baked body animation and its export/floor measurements.
 `Smile.Simple3D.EarthVfx3D` owns only reusable rocks and GPU dust through a caller-owned
 context and explicit frame input; it depends on no game, tool, actor or global clock.
+Callers also supply elapsed playback time so GPU dust can finish fading after
+the actor's clip clock stops. Normal loops and clip changes preserve the tail;
+a paused backward seek clears it. Dust draws independently of the active rock
+cast. The existing native textured-particle shader supplies the lifetime fade;
+impact emission is a bounded burst with density in the actual density argument.
 
 `ViewerEffects` owns the standalone adapter; `ViewerDragon` owns its Party instance.
 Both preload and release their own effect resources. `ViewerParty` supplies its
@@ -22,15 +27,21 @@ The Earth Lab owns one actor/camera/arena/clock in `EarthLabScene`, controls in
 `EarthLabUi`, and a thin startup loop. No entry-point implementation, runtime or
 compiler feature, size threshold, baseline, exclusion or dependency rule changed.
 Native socket-motion checks prevent effects passing while the body remains still;
-the ground-debris check requires six visible stones after lift-off. Existing native
+the ground-debris check requires no ground stones after lift-off and preserves
+airborne stones and target fragments. Dust regressions cover the held final pose,
+Idle transition, pause and complete expiration. Existing native
 Viewer hardening and game presentation fixtures cover integration and cleanup.
+The shared game fixture advances the solo demo through all thirteen clips and
+the real Party turn scheduler through five successive boss attacks, verifying
+all three Earth casts without assigning the boss counter or selected clip.
 
-Source growth for this slice: the new shared effect is 442 lines and the Kael
-adapter is 167. The new Lab uses a 31-line entry point, 267-line scene owner and
-162-line UI owner. Existing profile, Party, standalone-effects and opponent owners
-grow by 14, 21, 14 and 9 lines respectively. Both existing executable entry points
-are unchanged. The focused Lab regression fixture is 168 lines. These boundaries
-keep reusable rendering independent of character policy and application controls.
+The initial Earth slice added a 442-line shared effect, 167-line Kael adapter,
+31-line Lab entry point, 267-line scene owner, 162-line UI owner and 168-line native
+fixture. The dust/ground-clearing correction adds 13, 1, 0, 0, 0 and 55 lines to
+those files respectively. Existing Party and standalone-effects owners gain nine
+and seven lines; Workflow gains one elapsed-time delegation line. No executable entry
+point, runtime, compiler, dependency or architecture guardrail changes. These
+boundaries keep reusable rendering independent of character policy and controls.
 
 ## Shared native party status and Dragon roster
 

@@ -292,7 +292,8 @@ Public Class Session
                     Me.Character, Me.Playback, Me.Session.ProfileIndex),
                 Me.ViewerCameraState.Live,
                 Me.Timing.CameraElapsed,
-                Me.BattlePreview.Active
+                Me.BattlePreview.Active,
+                Me.Playback.AnimationUpdateElapsed * Me.Playback.PlaybackSpeed / 100
             )
 
             If Me.Party.Companion.Ready Then

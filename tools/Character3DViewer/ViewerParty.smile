@@ -1368,6 +1368,7 @@ Public Function UpdateDragon(
     Dim ReactionRequested As Boolean
     Dim Result As Boolean
     Dim PrimaryReferencePart As Number
+    Dim EarthElapsed As Number
 
     If Not ViewerDragon.IsValid(Dragon) Then
         Call ViewerDragon.ClearOwnedEffects(Dragon, Effects.DragonLight)
@@ -1387,14 +1388,22 @@ Public Function UpdateDragon(
         Target = HomePosition(Value, Value.HitTarget)
 
         If Dragon.UseVrax Then
+
             Call ViewerDragon.UpdateVraxAttacks(Dragon.Attacks, Dragon.Actor, Dragon.Clip,
                 Dragon.Visible, Effects.FireInitialized, Effects.LightningInitialized,
                 Effects.FlamePaused, Effects.LightningPaused, Effects.VisualContinuityEpoch,
                 Value.Turn = 2, ToDouble(Target.X), 65.0, ToDouble(Target.Z))
+
         Else If BossProfile(Value) = ViewerProfiles.PROFILE_KAEL Then
+
+            If Not ScenePaused And Not Value.PreviewActive Then
+                EarthElapsed = AnimationElapsed * ActorPlaybackSpeed(Value, 2, PlaybackSpeed) / 100
+            End If
+
             Result = KaelEarth.Update(Dragon.Earth, Dragon.Actor, Dragon.Clip,
                 Precision3D.Vector(ToDouble(Target.X), 65.0, ToDouble(Target.Z)), True,
-                Not ScenePaused And Not Value.PreviewActive) And Result
+                Not ScenePaused And Not Value.PreviewActive, EarthElapsed) And Result
+
         End If
 
         Return Result

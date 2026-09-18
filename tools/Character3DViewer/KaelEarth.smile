@@ -54,7 +54,7 @@ Public Function ClipForMode(Mode As Number) As Text
 End Function
 
 Public Function Update(ByRef Value As Context, ByRef Actor As Character.Actor, Clip As Text,
-    Target As P.Vector3, UseTarget As Boolean, Audible As Boolean,
+    Target As P.Vector3, UseTarget As Boolean, Audible As Boolean, Elapsed As Number,
     Optional SwordVisible As Boolean = True) As Boolean
 
     Dim Position As P.Vector3
@@ -96,6 +96,7 @@ Public Function Update(ByRef Value As Context, ByRef Actor As Character.Actor, C
     Value.Frame.Origin = M.Add(Position, M.Scale(Direction, 55.0 * Value.Frame.Scale))
     Value.Frame.Target = Target
     Value.Frame.Time = Character.AnimationTime(Actor)
+    Value.Frame.Elapsed = Elapsed
 
     For Index = 0 To Character.ClipCount(Actor) - 1
 

@@ -89,6 +89,7 @@ Call Me.LoadViewer()
             If Me.Playback.PlaybackSpeed <> 200 Then
                 Print "Kael's solo presentation must start at speed 200."
             End If
+            Call Me.CheckKaelDemoFixture()
         End If
 '@
 $workflowText = $workflowText.Replace($loadBoundary, $diagnosticLoad)
@@ -96,20 +97,49 @@ $earthFixture = @'
     Private Sub CheckKaelEarthFixture()
 
         Dim Cycle As Number
+        Dim TurnIndex As Number
         Dim ClipIndex As Number
         Dim Duration As Number
         Dim Ok As Boolean
         Dim Name As Text
 
-        For Cycle = 1 To 4
+        Me.Playback.AnimationUpdateElapsed = 60000
 
-            If Cycle <> 2 Then
-                Me.Party.Turn = 2
-                Me.Party.Stage = 1
-                Me.Party.DragonCounter = Cycle
-                Name = ViewerProfiles.PartyAttackName(ViewerProfiles.PROFILE_KAEL, Cycle)
-                Ok = ViewerParty.UpdateDragon(Me.Party, Me.DragonState, Me.Effects,
-                    Me.Character, False, Name, False, 200, 0)
+        Call Me.AdvancePartyDemo()
+
+        Me.Playback.AnimationUpdateElapsed = 0
+
+        Call Me.UpdateDragon()
+
+        For Cycle = 0 To 4
+
+            For TurnIndex = 0 To 5
+
+                If Me.Party.Turn = 2 Then
+                    Exit For
+                End If
+
+                Me.Playback.AnimationUpdateElapsed = 60000
+
+                Call Me.AdvancePartyDemo()
+
+            End For
+
+            Me.Playback.AnimationUpdateElapsed = ViewerParty.VRAX_ATTACK_START_MILLISECONDS
+
+            Call Me.AdvancePartyDemo()
+
+            Name = ViewerProfiles.PartyAttackName(ViewerProfiles.PROFILE_KAEL, Cycle)
+            Ok = ViewerParty.UpdateDragon(Me.Party, Me.DragonState, Me.Effects,
+                Me.Character, False, Name, False, 200, 0)
+
+            If Me.Party.DragonCounter <> Cycle Or Me.DragonState.Clip <> Name Then
+                Print "Kael automatic battle rotation skipped: "; Name
+            End If
+
+            If (Cycle = 1 Or
+                Cycle = 3 Or
+                Cycle = 4) Then
 
                 For ClipIndex = 0 To Character3D.ClipCount(Me.DragonState.Actor) - 1
 
@@ -123,13 +153,74 @@ $earthFixture = @'
                 Ok = ViewerParty.UpdateDragon(Me.Party, Me.DragonState, Me.Effects,
                     Me.Character, False, Name, False, 200, 0) And Ok
 
-                If Not Ok Or Not Me.DragonState.Earth.Effect.Visible Or Me.DragonState.Earth.Effect.ErrorCode <> 0 Then
+                If (Not Ok Or
+                    Not Me.DragonState.Earth.Effect.Visible Or
+                    Me.DragonState.Earth.Effect.ErrorCode <> 0) Then
                     Print "Kael Earth cast failed: "; Name
                 End If
 
             End If
 
+            Me.Playback.AnimationUpdateElapsed = 60000
+
+            Call Me.AdvancePartyDemo()
+
         End For
+
+    End Sub
+
+    Private Sub CheckKaelDemoFixture()
+
+        Dim ClipIndex As Number
+        Dim StepIndex As Number
+        Dim Name As Text
+        Dim SeenHurl As Boolean
+        Dim SeenVolley As Boolean
+        Dim SeenSlam As Boolean
+        Dim Ok As Boolean
+
+        For ClipIndex = 0 To 12
+
+            Name = ViewerPlayback.SelectedClipName(Me.Character, Me.Playback)
+            SeenHurl = SeenHurl Or Name = "EarthHurl"
+            SeenVolley = SeenVolley Or Name = "EarthVolley"
+            SeenSlam = SeenSlam Or Name = "EarthSlam"
+
+            For StepIndex = 0 To 199
+
+                Ok = Character3D.Update(Me.Character, 100)
+
+                Call ViewerEffects.UpdateEquipmentFire(Me.Effects, Me.Character,
+                    ViewerProfiles.PROFILE_KAEL, False, True, False, False, False,
+                    Me.Playback.SelectedClip, Name, Me.ViewerCameraState.Live, 100, False, 200)
+
+                Ok = Me.Effects.Earth.Effect.ErrorCode = 0 And Ok
+                Me.Timing.PresentationElapsed = 100
+
+                Call Me.AdvanceAnimationSequence()
+
+                If Not Ok Then
+                    Print "Kael automatic demo effect failed: "; Name
+                    Exit For
+                End If
+
+                If ViewerPlayback.SelectedClipName(Me.Character, Me.Playback) <> Name Then
+                    Exit For
+                End If
+
+            End For
+
+            If ViewerPlayback.SelectedClipName(Me.Character, Me.Playback) = Name Then
+                Print "Kael automatic demo did not advance: "; Name
+            End If
+
+        End For
+
+        If (Not SeenHurl Or
+            Not SeenVolley Or
+            Not SeenSlam) Then
+            Print "Kael automatic demo skipped an Earth attack."
+        End If
 
     End Sub
 
@@ -147,3 +238,4 @@ if ($LASTEXITCODE -ne 0 -or ($actual -join "`n").Trim() -ne 'Sin Star I presenta
     throw "Presentation regression failed: $actual"
 }
 Write-Host 'PASS: Nine character entries and three battle simulations create, draw and release their actual assets.'
+Write-Host 'PASS: Kael automatically cycles all thirteen demo clips and all five battle attacks, including all three Earth casts.'

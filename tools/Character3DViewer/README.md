@@ -20,6 +20,10 @@ Earth casts use stomps, lowered stances, both arms and torso-led strikes; the
 sword hides during these casts and returns for other clips according to Weapon/W.
 Kael Party cycles Attack, EarthHurl, Attack2, EarthVolley and EarthSlam. The shared
 game session uses the same sequence, target, model, VFX and audio. Speed remains 200.
+With **Demo** enabled, Kael's solo presentation automatically cycles all thirteen
+clips, including Boulder Hurl (`EarthHurl`), Stone Volley (`EarthVolley`) and
+Fault Line (`EarthSlam`). Sin Star I's **Characters → Kael** uses the same demo;
+**Battle Simulations → Kael Party** uses the five-attack rotation above.
 The [native Earth Lab](../EarthVfxLab/README.md) provides focused effect inspection.
 
 **Kael** opens the new sword-boss candidate; **Kael Party** runs Arin, Orin, Zara
