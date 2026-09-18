@@ -1,0 +1,140 @@
+Option Explicit
+
+Import Smile.Tools.FireLabCharacters As Scene
+Import Smile.Tools.KaelFire As KaelFire
+Import Smile.Simple3D.Character3D As Character
+Import Smile.Simple3D.Graphics3D As G
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.FireEmitter3D As Fire
+
+Dim Value As Scene.State
+Dim Camera As Core.Camera3D
+Dim Empty As Fire.FireEmitter
+Dim Hand As P.Vector3
+Dim StartHand As P.Vector3
+Dim Seen[3] As Boolean
+Dim Animated[3] As Boolean
+Dim Emitted[3] As Boolean
+Dim BlastHands As Boolean
+Dim Index As Number
+Dim Attack As Number
+Dim ArinClip As Number
+Dim Duration As Number
+Dim Failures As Number
+Dim Ok As Boolean
+
+Game Window "Kael Fire Lab Native Checks" Size 640 By 360
+
+Call G.ResetRenderer3D()
+
+Ok = Fire.Initialize("Assets/Fire")
+Camera = G.DefaultCamera()
+
+Call Scene.Start(Value)
+Call Check(Ok And Value.Ready, "Scene loads both actors and Arin calibration")
+Call Check(Character.PartCount(Value.Kael) = 3, "Body, sword and silver hair parts")
+Call Check(Character.ClipCount(Value.Kael) = 19, "Nineteen preview clips")
+
+Ok = Character.TrySocketPositionPrecise(Value.Kael, "HandLeft", 0, False, StartHand)
+
+Do
+
+    Call Scene.Update(Value, 50, True, True, 3, 3, False, True)
+    Call Fire.Update(100)
+
+    Attack = Value.Attack - 1
+    Seen[Attack] = True
+    Ok = Character.TrySocketPositionPrecise(Value.Kael, "HandLeft", 0, False, Hand)
+    Animated[Attack] = Animated[Attack] Or Abs(Hand.Y - StartHand.Y) > 15.0
+    Emitted[Attack] = Emitted[Attack] Or Value.KaelFire.Emitting
+
+    If Value.Attack = 3 And Value.Time = 2800 Then
+        BlastHands = (Value.KaelFire.Jets[0].Slot <> 0 And
+            Value.KaelFire.Jets[1].Slot <> 0 And
+            Value.KaelFire.Jets[0].Slot <> Value.KaelFire.Jets[1].Slot)
+    End If
+
+    Ok = G.Begin3D(Camera, 0, 0, 0)
+
+    Call Scene.Draw(Value)
+
+    Ok = G.End3DChecked() And Ok
+    Index = Index + 1
+
+Loop Until Index = 195
+
+For Index = 0 To 2
+    Call Check(Seen[Index] And Animated[Index] And Emitted[Index], KaelFire.Label(Index + 1))
+End For
+
+Call Check(Value.ErrorCode = 0, "No character or emitter errors")
+Call Check(BlastHands, "Inferno Blast emits from both hands")
+
+Value.KaelSelected = False
+Value.Attack = 2
+
+Call Scene.Restart(Value)
+Call Scene.Update(Value, 50, False, True, 3, 3, False, True)
+Call Fire.Update(100)
+Call Check(Value.KaelFire.Jets[0].Slot = 0 And Value.KaelFire.Impact.Slot = 0,
+    "Switching to Arin releases Kael effects")
+Call Check(Value.ArinFire.Flames[0].Slot <> 0 And Value.ArinFire.Flames[3].Slot <> 0,
+    "Arin retains sword and three shield-edge flames")
+Call Check(Value.ErrorCode = 0, "Arin calibrated attachment update")
+
+For Index = 0 To Character.ClipCount(Value.Arin) - 1
+
+    If Character.ClipName(Value.Arin, Index) = "SwordAttack" Then
+        ArinClip = Index
+    End If
+
+End For
+
+Duration = Character.ClipDuration(Value.Arin, ArinClip)
+Ok = Character.SetAnimationTime(Value.Arin, Duration - 1)
+
+Call Scene.Update(Value, 0, False, True, 3, 3, False, True)
+
+Ok = Character.TrySocketPositionPrecise(Value.Arin, "SwordTip", 1, False, StartHand)
+Ok = Character.SetAnimationTime(Value.Arin, Duration) And Ok
+
+Call Scene.Update(Value, 0, False, True, 3, 3, False, True)
+
+Ok = Character.TrySocketPositionPrecise(Value.Arin, "SwordTip", 1, False, Hand) And Ok
+
+Call Check(Ok And Abs(Hand.X - StartHand.X) + Abs(Hand.Y - StartHand.Y) +
+    Abs(Hand.Z - StartHand.Z) < 3.0, "Held Arin attack keeps its own calibration")
+
+Value.KaelSelected = True
+
+Call Scene.Restart(Value)
+Call Check(Value.ArinFire.Flames[0].Slot = 0, "Returning to Kael releases Arin flames")
+
+Value.Attack = 1
+
+Call Scene.Restart(Value)
+
+Value.Time = 1300
+
+Call Scene.Update(Value, 50, False, True, 1, 1, False, True)
+Call Fire.Update(100)
+Call Check(Fire.Value(3, Value.KaelFire.Jets[0]) = 1 And
+    Fire.Value(4, Value.KaelFire.Jets[0]) > 0, "Native CPU fallback emits")
+
+Call Scene.Shutdown(Value)
+Call Check(Character.LiveActorCount() = 0, "Actor cleanup")
+Call Check(Fire.Value(1, Empty) = 0, "Emitter cleanup")
+Call Fire.Shutdown()
+Call G.ResetRenderer3D()
+
+Print "Kael Fire Lab native failures: "; Failures
+
+Sub Check(Condition As Boolean, Label As Text)
+
+    If Not Condition Then
+        Failures = Failures + 1
+        Print "Failed: "; Label
+    End If
+
+End Sub

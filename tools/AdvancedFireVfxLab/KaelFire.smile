@@ -1,0 +1,199 @@
+''' Kael's socket-driven fire choreography; the caller owns animation and the shared fire clock.
+Module Smile.Tools.KaelFire
+
+Option Explicit
+
+Import Smile.Simple3D.Character3D As Character
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.FireEmitter3D As Fire
+
+Public Type Context
+    Jets[3] As Fire.FireEmitter
+    Impact As Fire.FireEmitter
+    ImpactStarted As Boolean
+    ErrorCode As Number
+    Emitting As Boolean
+End Type
+
+Public Function Clip(Attack As Number) As Text
+
+    If Attack = 2 Then
+        Return "FireSweep"
+    Else If Attack = 3 Then
+        Return "FireBlast"
+    End If
+
+    Return "FirePunch"
+
+End Function
+
+Public Function Label(Attack As Number) As Text
+
+    If Attack = 2 Then
+        Return "Flame Sweep"
+    Else If Attack = 3 Then
+        Return "Inferno Blast"
+    End If
+
+    Return "Ember Strikes"
+
+End Function
+
+Public Sub Update(ByRef Value As Context, ByRef Actor As Character.Actor,
+    Attack As Number, Time As Number, Enabled As Boolean, Quality As Number,
+    Backend As Number, Wind As Boolean, Turbulence As Boolean)
+
+    Dim Index As Number
+    Dim Socket As Text
+    Dim Position As P.Vector3
+    Dim Direction As Core.Vector3
+    Dim Active As Boolean
+    Dim Radius As Number
+    Dim Ok As Boolean
+    Dim WindX As Number
+    Dim Strength As Number
+
+    Value.Emitting = False
+
+    If Wind Then
+        WindX = 80
+    End If
+
+    If Turbulence Then
+        Strength = 75
+    End If
+
+    For Index = 0 To 2
+
+        Socket = "HandLeft"
+        Radius = 15
+        Direction.X = 530
+        Direction.Y = -8
+        Direction.Z = 0
+        Active = Attack = 1 And Index = 0 And Time >= 1250 And Time < 1780
+
+        If Index = 1 Then
+            Socket = "HandRight"
+            Active = Attack = 1 And Time >= 2620 And Time < 3200
+        Else If Index = 2 Then
+            Socket = "FootLeft"
+            Active = Attack = 2 And Time >= 1550 And Time < 2450
+        End If
+
+        If Attack = 2 Then
+
+            Radius = 21
+            Direction.X = 430
+            Direction.Y = 12
+            Direction.Z = (Time - 2000) / 2
+
+        Else If Attack = 3 Then
+
+            Radius = 23
+            Active = Index < 2 And Time >= 2450 And Time < 3450
+            Direction.X = 610
+            Direction.Y = -5
+
+        End If
+
+        Ok = Character.TrySocketPositionPrecise(Actor, Socket, 0, False, Position)
+        Active = Active And Enabled And Ok
+        Value.Emitting = Value.Emitting Or Active
+
+        If Active And Value.Jets[Index].Slot = 0 Then
+
+            Value.Jets[Index] = Fire.StartAtPrecise("KaelFireJet", Position,
+                9181439 + Attack * 31 + Index, Quality, Backend, Radius)
+
+            Call Fire.SetSourceVelocityInheritance(Value.Jets[Index], 0)
+            Call Fire.SetIntensity(Value.Jets[Index], 135)
+
+            If Value.Jets[Index].Slot = 0 Then
+                Value.ErrorCode = Max(1, Fire.Value(12, Value.Jets[Index]))
+            End If
+
+        End If
+
+        If Value.Jets[Index].Slot <> 0 Then
+
+            Ok = Fire.SetPositionPrecise(Value.Jets[Index], Position)
+            Ok = Fire.SetDirection(Value.Jets[Index], Direction) And Ok
+            Ok = Fire.SetWind(Value.Jets[Index], WindX, 0, 0) And Ok
+            Ok = Fire.SetTurbulence(Value.Jets[Index], Strength) And Ok
+
+            Call Fire.SetEnabled(Value.Jets[Index], Active)
+
+            If Not Ok Then
+                Value.ErrorCode = Max(1, Fire.Value(12, Value.Jets[Index]))
+            End If
+
+        End If
+
+    End For
+
+    ''' Start a bounded target flare after the stream's travel; its own particles cool and expire.
+
+    If (Enabled And
+        Not Value.ImpactStarted And
+        Time >= 3300) Then
+
+        Value.ImpactStarted = True
+        Position = P.Vector(130.0, 70.0, 0.0)
+        Value.Impact = Fire.StartAtPrecise("FireBurstGen3", Position, 9181500 + Attack,
+            Quality, Backend, 16)
+
+        If Value.Impact.Slot = 0 Then
+            Value.ErrorCode = Max(1, Fire.Value(12, Value.Impact))
+        End If
+
+    End If
+
+End Sub
+
+Public Function Draw(ByRef Value As Context) As Boolean
+
+    Dim Index As Number
+    Dim Result As Boolean
+
+    Result = True
+
+    For Index = 0 To 2
+
+        If Value.Jets[Index].Slot <> 0 Then
+            Result = Fire.Draw(Value.Jets[Index]) And Result
+        End If
+
+    End For
+
+    If Value.Impact.Slot <> 0 Then
+        Result = Fire.Draw(Value.Impact) And Result
+    End If
+
+    Return Result
+
+End Function
+
+Public Sub Destroy(ByRef Value As Context)
+
+    Dim Index As Number
+    Dim Ok As Boolean
+
+    For Index = 0 To 2
+
+        If Value.Jets[Index].Slot <> 0 Then
+            Ok = Fire.Destroy(Value.Jets[Index])
+        End If
+
+    End For
+
+    If Value.Impact.Slot <> 0 Then
+        Ok = Fire.Destroy(Value.Impact)
+    End If
+
+    Value.ImpactStarted = False
+    Value.Emitting = False
+
+End Sub
+
+End Module

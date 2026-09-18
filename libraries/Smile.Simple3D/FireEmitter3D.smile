@@ -250,6 +250,8 @@ Private Function PresetId(Name As Text) As Number
         Return 5
     Else If Name = "DragonFireBreathPreview" Then
         Return 6
+    Else If Name = "KaelFireJet" Then
+        Return 7
     End If
 
     Return 0
@@ -398,6 +400,16 @@ Private Function ConfigureLayer(Index As Number, Layer As Number) As Boolean
         Columns = 1
         Buoyancy = 0
         Growth = 0
+
+    End If
+
+    If Items[Index].Preset = 7 And Layer < 2 Then
+
+        ''' Flow-aligned tongues widen downstream instead of a row of upright torch cards.
+        Alignment = 2
+        Drag = 350
+        Buoyancy = Radius
+        Growth = Radius * 2
 
     End If
 

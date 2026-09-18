@@ -1,0 +1,603 @@
+{
+  "modelSha256": "ac4f0f60ca7a1f7691382160a33a308b12f0ff39339328fab21acdb290a6a33e",
+  "modelBytes": 28626632,
+  "units": "meters; Blender Z becomes glTF/SM3D Y",
+  "bindBounds": {
+    "body": {
+      "minimum": [
+        -0.4200109839439392,
+        -0.12613962590694427,
+        -1.1641532182693481e-09
+      ],
+      "maximum": [
+        0.4200463891029358,
+        0.12609343230724335,
+        0.9446519613265991
+      ]
+    },
+    "sword": {
+      "minimum": [
+        -0.4090926945209503,
+        -0.06489604711532593,
+        0.6014382243156433
+      ],
+      "maximum": [
+        -0.28106242418289185,
+        -0.013480652123689651,
+        1.3090875148773193
+      ]
+    }
+  },
+  "bindToIdleFrameZeroFloorDeltaMeters": 0.0010000461479648948,
+  "clips": [
+    {
+      "clip": "Idle",
+      "framesChecked": 163,
+      "rootXYSpanMeters": [
+        0.0,
+        0.0
+      ],
+      "minimumBodyMeters": 0.0009999716421589255,
+      "minimumSwordMeters": 0.4760883152484894,
+      "samples": [
+        {
+          "frame": 0,
+          "bodyMinimumMeters": 0.0010000449838116765,
+          "swordMinimumMeters": 0.47664016485214233
+        },
+        {
+          "frame": 81,
+          "bodyMinimumMeters": 0.0010000875918194652,
+          "swordMinimumMeters": 0.47835713624954224
+        },
+        {
+          "frame": 162,
+          "bodyMinimumMeters": 0.001000000978820026,
+          "swordMinimumMeters": 0.47663983702659607
+        }
+      ]
+    },
+    {
+      "clip": "Walk",
+      "framesChecked": 34,
+      "rootXYSpanMeters": [
+        9.313225746154785e-10,
+        3.166496753692627e-08
+      ],
+      "minimumBodyMeters": 0.0009999332251027226,
+      "minimumSwordMeters": 0.5209320187568665,
+      "samples": [
+        {
+          "frame": 0,
+          "bodyMinimumMeters": 0.001000102492980659,
+          "swordMinimumMeters": 0.5368310809135437
+        },
+        {
+          "frame": 16,
+          "bodyMinimumMeters": 0.001000108546577394,
+          "swordMinimumMeters": 0.540821373462677
+        },
+        {
+          "frame": 33,
+          "bodyMinimumMeters": 0.001000039279460907,
+          "swordMinimumMeters": 0.5368210077285767
+        }
+      ]
+    },
+    {
+      "clip": "Run",
+      "framesChecked": 22,
+      "rootXYSpanMeters": [
+        4.656612873077393e-10,
+        3.3527612686157227e-08
+      ],
+      "minimumBodyMeters": 0.0010000037727877498,
+      "minimumSwordMeters": 0.42820942401885986,
+      "samples": [
+        {
+          "frame": 0,
+          "bodyMinimumMeters": 0.0010000314796343446,
+          "swordMinimumMeters": 0.42968469858169556
+        },
+        {
+          "frame": 10,
+          "bodyMinimumMeters": 0.0027837026864290237,
+          "swordMinimumMeters": 0.4410683512687683
+        },
+        {
+          "frame": 21,
+          "bodyMinimumMeters": 0.0010001806076616049,
+          "swordMinimumMeters": 0.4296850562095642
+        }
+      ]
+    },
+    {
+      "clip": "Attack",
+      "framesChecked": 74,
+      "rootXYSpanMeters": [
+        7.450580596923828e-09,
+        3.725290298461914e-08
+      ],
+      "minimumBodyMeters": 0.000999700860120356,
+      "minimumSwordMeters": 0.04158980771899223,
+      "samples": [
+        {
+          "frame": 0,
+          "bodyMinimumMeters": 0.0009999790927395225,
+          "swordMinimumMeters": 0.452328622341156
+        },
+        {
+          "frame": 36,
+          "bodyMinimumMeters": 0.1193721741437912,
+          "swordMinimumMeters": 0.8870508074760437
+        },
+        {
+          "frame": 73,
+          "bodyMinimumMeters": 0.0010004107607528567,
+          "swordMinimumMeters": 0.45232853293418884
+        }
+      ]
+    },
+    {
+      "clip": "Attack2",
+      "framesChecked": 51,
+      "rootXYSpanMeters": [
+        1.862645149230957e-09,
+        1.4901161193847656e-08
+      ],
+      "minimumBodyMeters": 0.0009998815366998315,
+      "minimumSwordMeters": 0.44532886147499084,
+      "samples": [
+        {
+          "frame": 0,
+          "bodyMinimumMeters": 0.0009999290341511369,
+          "swordMinimumMeters": 0.4523284435272217
+        },
+        {
+          "frame": 25,
+          "bodyMinimumMeters": 0.0010002419585362077,
+          "swordMinimumMeters": 0.7255622744560242
+        },
+        {
+          "frame": 50,
+          "bodyMinimumMeters": 0.000999924843199551,
+          "swordMinimumMeters": 0.4523286819458008
+        }
+      ]
+    },
+    {
+      "clip": "Dodge",
+      "framesChecked": 44,
+      "rootXYSpanMeters": [
+        4.656612873077393e-10,
+        1.862645149230957e-09
+      ],
+      "minimumBodyMeters": 0.0009998215828090906,
+      "minimumSwordMeters": 0.36732691526412964,
+      "samples": [
+        {
+          "frame": 0,
+          "bodyMinimumMeters": 0.0010000531328842044,
+          "swordMinimumMeters": 0.4673548936843872
+        },
+        {
+          "frame": 21,
+          "bodyMinimumMeters": 0.002804253250360489,
+          "swordMinimumMeters": 0.3811764121055603
+        },
+        {
+          "frame": 43,
+          "bodyMinimumMeters": 0.0010002112248912454,
+          "swordMinimumMeters": 0.4673551619052887
+        }
+      ]
+    },
+    {
+      "clip": "Defend",
+      "framesChecked": 43,
+      "rootXYSpanMeters": [
+        2.3283064365386963e-10,
+        9.313225746154785e-10
+      ],
+      "minimumBodyMeters": 0.0009998609311878681,
+      "minimumSwordMeters": 0.38025224208831787,
+      "samples": [
+        {
+          "frame": 0,
+          "bodyMinimumMeters": 0.0009999517351388931,
+          "swordMinimumMeters": 0.38041961193084717
+        },
+        {
+          "frame": 21,
+          "bodyMinimumMeters": 0.0009999219328165054,
+          "swordMinimumMeters": 0.3816147744655609
+        },
+        {
+          "frame": 42,
+          "bodyMinimumMeters": 0.0009999804897233844,
+          "swordMinimumMeters": 0.380423903465271
+        }
+      ]
+    },
+    {
+      "clip": "Hit",
+      "framesChecked": 24,
+      "rootXYSpanMeters": [
+        4.656612873077393e-10,
+        9.313225746154785e-10
+      ],
+      "minimumBodyMeters": 0.0009998626774176955,
+      "minimumSwordMeters": 0.3392089605331421,
+      "samples": [
+        {
+          "frame": 0,
+          "bodyMinimumMeters": 0.0010000035399571061,
+          "swordMinimumMeters": 0.37630268931388855
+        },
+        {
+          "frame": 11,
+          "bodyMinimumMeters": 0.0009999816538766026,
+          "swordMinimumMeters": 0.3425601124763489
+        },
+        {
+          "frame": 23,
+          "bodyMinimumMeters": 0.0009999294998124242,
+          "swordMinimumMeters": 0.37629687786102295
+        }
+      ]
+    },
+    {
+      "clip": "Death",
+      "framesChecked": 70,
+      "rootXYSpanMeters": [
+        3.725290298461914e-09,
+        3.4458935260772705e-08
+      ],
+      "minimumBodyMeters": 0.0009999481262639165,
+      "minimumSwordMeters": 0.000999998883344233,
+      "samples": [
+        {
+          "frame": 0,
+          "bodyMinimumMeters": 0.0009999481262639165,
+          "swordMinimumMeters": 0.45232829451560974
+        },
+        {
+          "frame": 34,
+          "bodyMinimumMeters": 0.0019101012730970979,
+          "swordMinimumMeters": 0.5855444669723511
+        },
+        {
+          "frame": 69,
+          "bodyMinimumMeters": 0.003553402377292514,
+          "swordMinimumMeters": 0.000999998883344233
+        }
+      ]
+    },
+    {
+      "clip": "Victory",
+      "framesChecked": 257,
+      "rootXYSpanMeters": [
+        9.313225746154785e-10,
+        0.0
+      ],
+      "minimumBodyMeters": 0.0009999781614169478,
+      "minimumSwordMeters": 0.44470441341400146,
+      "samples": [
+        {
+          "frame": 0,
+          "bodyMinimumMeters": 0.0010000079637393355,
+          "swordMinimumMeters": 0.4480031132698059
+        },
+        {
+          "frame": 128,
+          "bodyMinimumMeters": 0.001001371187157929,
+          "swordMinimumMeters": 0.8517998456954956
+        },
+        {
+          "frame": 256,
+          "bodyMinimumMeters": 0.0010000719921663404,
+          "swordMinimumMeters": 0.44800323247909546
+        }
+      ]
+    },
+    {
+      "clip": "EarthHurl",
+      "framesChecked": 97,
+      "rootXYSpanMeters": [
+        0.0,
+        1.862645149230957e-09
+      ],
+      "minimumBodyMeters": 0.000999988173134625,
+      "minimumSwordMeters": 0.3170631229877472,
+      "samples": [
+        {
+          "frame": 0,
+          "bodyMinimumMeters": 0.0010000065667554736,
+          "swordMinimumMeters": 0.47664010524749756
+        },
+        {
+          "frame": 48,
+          "bodyMinimumMeters": 0.0009999977191910148,
+          "swordMinimumMeters": 0.5562465190887451
+        },
+        {
+          "frame": 96,
+          "bodyMinimumMeters": 0.0010000065667554736,
+          "swordMinimumMeters": 0.47664010524749756
+        }
+      ]
+    },
+    {
+      "clip": "EarthVolley",
+      "framesChecked": 121,
+      "rootXYSpanMeters": [
+        0.0,
+        1.862645149230957e-09
+      ],
+      "minimumBodyMeters": 0.0009999850299209356,
+      "minimumSwordMeters": 0.3164440989494324,
+      "samples": [
+        {
+          "frame": 0,
+          "bodyMinimumMeters": 0.0010000065667554736,
+          "swordMinimumMeters": 0.47664010524749756
+        },
+        {
+          "frame": 60,
+          "bodyMinimumMeters": 0.0010000456823036075,
+          "swordMinimumMeters": 0.6293181777000427
+        },
+        {
+          "frame": 120,
+          "bodyMinimumMeters": 0.0010000065667554736,
+          "swordMinimumMeters": 0.47664010524749756
+        }
+      ]
+    },
+    {
+      "clip": "EarthSlam",
+      "framesChecked": 91,
+      "rootXYSpanMeters": [
+        0.0,
+        1.862645149230957e-09
+      ],
+      "minimumBodyMeters": 0.0009999823523685336,
+      "minimumSwordMeters": 0.3167818486690521,
+      "samples": [
+        {
+          "frame": 0,
+          "bodyMinimumMeters": 0.0010000065667554736,
+          "swordMinimumMeters": 0.47664010524749756
+        },
+        {
+          "frame": 45,
+          "bodyMinimumMeters": 0.0010000125039368868,
+          "swordMinimumMeters": 0.3213028907775879
+        },
+        {
+          "frame": 90,
+          "bodyMinimumMeters": 0.0010000065667554736,
+          "swordMinimumMeters": 0.47664010524749756
+        }
+      ]
+    },
+    {
+      "clip": "WaterWhip",
+      "framesChecked": 151,
+      "rootXYSpanMeters": [
+        0.0,
+        1.862645149230957e-09
+      ],
+      "minimumBodyMeters": 0.0009999623289331794,
+      "minimumSwordMeters": 0.451291024684906,
+      "samples": [
+        {
+          "frame": 0,
+          "bodyMinimumMeters": 0.0010000065667554736,
+          "swordMinimumMeters": 0.47664010524749756
+        },
+        {
+          "frame": 75,
+          "bodyMinimumMeters": 0.0010000319452956319,
+          "swordMinimumMeters": 0.5470096468925476
+        },
+        {
+          "frame": 150,
+          "bodyMinimumMeters": 0.0010000065667554736,
+          "swordMinimumMeters": 0.47664010524749756
+        }
+      ]
+    },
+    {
+      "clip": "WaterOrbit",
+      "framesChecked": 151,
+      "rootXYSpanMeters": [
+        0.0,
+        1.862645149230957e-09
+      ],
+      "minimumBodyMeters": 0.00099995790515095,
+      "minimumSwordMeters": 0.46507132053375244,
+      "samples": [
+        {
+          "frame": 0,
+          "bodyMinimumMeters": 0.0010000065667554736,
+          "swordMinimumMeters": 0.47664010524749756
+        },
+        {
+          "frame": 75,
+          "bodyMinimumMeters": 0.00100003054831177,
+          "swordMinimumMeters": 0.5573301315307617
+        },
+        {
+          "frame": 150,
+          "bodyMinimumMeters": 0.0010000065667554736,
+          "swordMinimumMeters": 0.47664010524749756
+        }
+      ]
+    },
+    {
+      "clip": "WaterSurge",
+      "framesChecked": 151,
+      "rootXYSpanMeters": [
+        0.0,
+        1.862645149230957e-09
+      ],
+      "minimumBodyMeters": 0.0009999671019613743,
+      "minimumSwordMeters": 0.3441866338253021,
+      "samples": [
+        {
+          "frame": 0,
+          "bodyMinimumMeters": 0.0010000065667554736,
+          "swordMinimumMeters": 0.47664010524749756
+        },
+        {
+          "frame": 75,
+          "bodyMinimumMeters": 0.0010000033071264625,
+          "swordMinimumMeters": 0.5239203572273254
+        },
+        {
+          "frame": 150,
+          "bodyMinimumMeters": 0.0010000065667554736,
+          "swordMinimumMeters": 0.47664010524749756
+        }
+      ]
+    },
+    {
+      "clip": "FirePunch",
+      "framesChecked": 151,
+      "rootXYSpanMeters": [
+        0.0,
+        1.862645149230957e-09
+      ],
+      "minimumBodyMeters": 0.0009999765316024423,
+      "minimumSwordMeters": 0.475057452917099,
+      "samples": [
+        {
+          "frame": 0,
+          "bodyMinimumMeters": 0.0010000065667554736,
+          "swordMinimumMeters": 0.47664010524749756
+        },
+        {
+          "frame": 75,
+          "bodyMinimumMeters": 0.0010000067995861173,
+          "swordMinimumMeters": 0.5949572324752808
+        },
+        {
+          "frame": 150,
+          "bodyMinimumMeters": 0.0010000065667554736,
+          "swordMinimumMeters": 0.47664010524749756
+        }
+      ]
+    },
+    {
+      "clip": "FireSweep",
+      "framesChecked": 151,
+      "rootXYSpanMeters": [
+        0.0,
+        1.862645149230957e-09
+      ],
+      "minimumBodyMeters": 0.0009999765316024423,
+      "minimumSwordMeters": 0.25323039293289185,
+      "samples": [
+        {
+          "frame": 0,
+          "bodyMinimumMeters": 0.0010000065667554736,
+          "swordMinimumMeters": 0.47664010524749756
+        },
+        {
+          "frame": 75,
+          "bodyMinimumMeters": 0.0010000584879890084,
+          "swordMinimumMeters": 0.6558429598808289
+        },
+        {
+          "frame": 150,
+          "bodyMinimumMeters": 0.0010000065667554736,
+          "swordMinimumMeters": 0.47664010524749756
+        }
+      ]
+    },
+    {
+      "clip": "FireBlast",
+      "framesChecked": 151,
+      "rootXYSpanMeters": [
+        0.0,
+        1.862645149230957e-09
+      ],
+      "minimumBodyMeters": 0.0009999762987717986,
+      "minimumSwordMeters": 0.37064963579177856,
+      "samples": [
+        {
+          "frame": 0,
+          "bodyMinimumMeters": 0.0010000065667554736,
+          "swordMinimumMeters": 0.47664010524749756
+        },
+        {
+          "frame": 75,
+          "bodyMinimumMeters": 0.0010000137845054269,
+          "swordMinimumMeters": 0.5247121453285217
+        },
+        {
+          "frame": 150,
+          "bodyMinimumMeters": 0.0010000065667554736,
+          "swordMinimumMeters": 0.47664010524749756
+        }
+      ]
+    }
+  ],
+  "topology": [
+    {
+      "part": "Kael.Body",
+      "vertices": 17259,
+      "triangles": 33734,
+      "collapsedUvFacesRepaired": 7,
+      "cornerNormalsRepaired": 2,
+      "microTriangleVerticesRepaired": 0,
+      "maximumVertexRepairMeters": 0,
+      "invalidTangents": 0,
+      "maximumInfluences": 4,
+      "unweightedVertices": 0
+    },
+    {
+      "part": "Kael.Sword",
+      "vertices": 3401,
+      "triangles": 6996,
+      "collapsedUvFacesRepaired": 16,
+      "cornerNormalsRepaired": 6,
+      "microTriangleVerticesRepaired": 1,
+      "maximumVertexRepairMeters": 0.0005606511872645015,
+      "invalidTangents": 0,
+      "maximumInfluences": 1,
+      "unweightedVertices": 0
+    },
+    {
+      "part": "Kael.ZHair",
+      "vertices": 4604,
+      "triangles": 8266,
+      "collapsedUvFacesRepaired": 1,
+      "cornerNormalsRepaired": 0,
+      "microTriangleVerticesRepaired": 0,
+      "maximumVertexRepairMeters": 0,
+      "invalidTangents": 0,
+      "maximumInfluences": 4,
+      "unweightedVertices": 0
+    }
+  ],
+  "rigBones": 42,
+  "mixamoBones": 41,
+  "authoredBones": [
+    "KaelSword"
+  ],
+  "exportedPrimitiveVertexCounts": [
+    25505,
+    7045,
+    6762
+  ],
+  "bodyTextureSize": [
+    4096,
+    4096
+  ],
+  "swordTextureSize": [
+    2048,
+    2048
+  ]
+}

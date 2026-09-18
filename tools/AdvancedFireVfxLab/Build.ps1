@@ -32,6 +32,31 @@ New-Item -ItemType Directory -Path $taskAssets -Force | Out-Null
 Get-ChildItem -LiteralPath (Join-Path $taskRoot 'TechnicalAssets\Generation3\Fire') -Filter *.png -File |
     ForEach-Object { Copy-Item -LiteralPath $_.FullName -Destination $taskAssets -Force }
 $taskBackgrounds = Join-Path $PSScriptRoot 'Assets\Backgrounds'
+$modelDestination = Join-Path $PSScriptRoot 'BuildAssets'
+New-Item -ItemType Directory -Path $modelDestination -Force | Out-Null
+foreach ($modelFile in @('kael-v1-fire-preview.glb', 'KaelFirePreview.sm3d.json')) {
+    Copy-Item -LiteralPath (Join-Path $taskRoot "games\SinStarI\SourceAssets\Characters\Kael\KaelV1\$modelFile") `
+        -Destination $modelDestination -Force
+}
+foreach ($modelFile in @('arin-v5.7-idle-equipment-checkpoint.glb', 'ArinV57.sm3d.json')) {
+    Copy-Item -LiteralPath (Join-Path $taskRoot "games\SinStarI\SourceAssets\Characters\Paladin\ArinV57\$modelFile") `
+        -Destination $modelDestination -Force
+}
+& {
+    . (Join-Path $taskRoot 'scripts\sync-arin-v5-7-calibration.ps1') -Character Arin -FunctionsOnly
+    $snapshot = Read-Snapshot $snapshotPath
+    $payload = Convert-SnapshotToPayload $snapshot
+    $roundTrip = Convert-PayloadToSnapshot $payload
+    $destination = Join-Path $PSScriptRoot 'Assets\Calibration\arin-v5.7.smkf'
+    Write-AtomicBytes $destination $payload (Get-PathHash $destination)
+    $metadata = [ordered]@{
+        schemaVersion = 2; assetId = $roundTrip.assetId
+        characterVersion = $roundTrip.characterVersion; applicationId = $roundTrip.applicationId
+        dataKey = $roundTrip.dataKey; storageVersion = 3; profile = $roundTrip.profile
+    } | ConvertTo-Json -Depth 8 -Compress
+    $metadataPath = [IO.Path]::ChangeExtension($destination, '.metadata.json')
+    Write-AtomicBytes $metadataPath ([Text.Encoding]::UTF8.GetBytes($metadata)) (Get-PathHash $metadataPath)
+}
 New-Item -ItemType Directory -Path $taskBackgrounds -Force | Out-Null
 Copy-Item -LiteralPath (Join-Path $taskRoot 'games\SinStarI\Assets\Sin Star - Title Screen - Background.png') `
     -Destination (Join-Path $taskBackgrounds 'SinStarLandscape.png') -Force

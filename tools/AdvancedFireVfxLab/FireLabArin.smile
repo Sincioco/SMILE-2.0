@@ -1,0 +1,120 @@
+''' Arin preview adapter: canonical calibration and unchanged sword/shield flame presets.
+Module Smile.Tools.FireLabArin
+
+Option Explicit
+
+Import Smile.Simple3D.Character3D As Character
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.PrecisionMath3D As M
+Import Smile.Simple3D.FireEmitter3D As Fire
+Import Smile.Tools.Character3DViewerCalibration As Calibration
+
+Public Type Context
+    Pose As Calibration.State
+    Nodes As Calibration.ConfigurationResult
+    Flames[4] As Fire.FireEmitter
+    ErrorCode As Number
+End Type
+
+Public Sub Update(ByRef Value As Context, ByRef Actor As Character.Actor, Enabled As Boolean,
+    Quality As Number, Backend As Number, Wind As Boolean, Turbulence As Boolean)
+
+    Dim Points[3] As P.Vector3
+    Dim Base As P.Vector3
+    Dim Tip As P.Vector3
+    Dim Delta As P.Vector3
+    Dim Length As Double
+    Dim Clip As Number
+    Dim Index As Number
+    Dim Ok As Boolean
+    Dim Empty As Core.Object3D
+    Dim Visible As Boolean
+    Dim Applied As Calibration.ApplicationResult
+    Dim WindX As Number
+    Dim Strength As Number
+
+    For Index = 0 To Character.ClipCount(Actor) - 1
+
+        If Character.CurrentClipNameMatches(Actor, Character.ClipName(Actor, Index)) Then
+            Clip = Index
+        End If
+
+    End For
+
+    Call Calibration.Evaluate(Value.Pose, Actor, Clip,
+        Calibration.CurrentAnimationFrame(Actor, Clip), False)
+
+    Ok = Calibration.ApplyWristOffsets(Value.Pose, Actor, Clip,
+        Value.Nodes.SwordWristNode, Value.Nodes.ShieldWristNode, Value.Nodes.Available)
+    Applied = Calibration.ApplyEquipmentTransforms(Value.Pose, Actor, Clip, Empty, Empty, False, Visible)
+    Ok = Applied.Ready And Ok
+    Ok = Character.TrySocketPositionPrecise(Actor, "SwordBase", 1, False, Base) And Ok
+    Ok = Character.TrySocketPositionPrecise(Actor, "SwordTip", 1, False, Tip) And Ok
+    Delta = P.Vector(Tip.X - Base.X, Tip.Y - Base.Y, Tip.Z - Base.Z)
+    Length = M.Length(Delta)
+
+    If Value.Flames[0].Slot = 0 Then
+        Value.Flames[0] = Fire.StartAtPrecise("PaladinFlameBlade", Base, 5701,
+            Quality, Backend, Max(2, ToNumber(Ceiling(Length / 12.0))))
+    End If
+
+    Ok = Fire.SetSegmentPrecise(Value.Flames[0], Base, Tip) And Ok
+
+    Call Fire.SetIntensity(Value.Flames[0], 200)
+    Call Fire.SetSourceVelocityInheritance(Value.Flames[0], 10)
+    Call Fire.SetEnabled(Value.Flames[0], Enabled)
+
+    Ok = Character.TrySocketPositionPrecise(Actor, "ShieldFireLeft", 0, False, Points[0]) And Ok
+    Ok = Character.TrySocketPositionPrecise(Actor, "ShieldFireRight", 0, False, Points[1]) And Ok
+    Ok = Character.TrySocketPositionPrecise(Actor, "ShieldFireTip", 0, False, Points[2]) And Ok
+
+    For Index = 0 To 2
+
+        If Value.Flames[Index + 1].Slot = 0 Then
+            Value.Flames[Index + 1] = Fire.StartAtPrecise("LineFire", Points[Index], 5710 + Index,
+                Quality, Backend, 3)
+        End If
+
+        Ok = Fire.SetSegmentPrecise(Value.Flames[Index + 1], Points[Index], Points[(Index + 1) Mod 3]) And Ok
+
+        Call Fire.SetIntensity(Value.Flames[Index + 1], 7)
+        Call Fire.SetSourceVelocityInheritance(Value.Flames[Index + 1], 0)
+        Call Fire.SetEnabled(Value.Flames[Index + 1], Enabled)
+    End For
+
+    If Wind Then
+        WindX = 190
+    End If
+
+    If Turbulence Then
+        Strength = 100
+    End If
+
+    For Index = 0 To 3
+        Ok = Fire.SetWind(Value.Flames[Index], WindX, 0, 0) And Ok
+        Ok = Fire.SetTurbulence(Value.Flames[Index], Strength) And Ok
+    End For
+
+    If Not Ok Then
+        Value.ErrorCode = Max(1, Character.LastError())
+    End If
+
+End Sub
+
+Public Sub Destroy(ByRef Value As Context)
+
+    Dim Index As Number
+    Dim Ok As Boolean
+
+    For Index = 0 To 3
+
+        If Value.Flames[Index].Slot <> 0 Then
+            Ok = Fire.Destroy(Value.Flames[Index])
+        End If
+
+    End For
+
+End Sub
+
+End Module

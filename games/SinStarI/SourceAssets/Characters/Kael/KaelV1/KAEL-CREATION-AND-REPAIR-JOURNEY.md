@@ -169,3 +169,47 @@ Normal/Earth/Water categories repeat every three boss turns, every Earth and Wat
 skill appears within nine turns, and normal attacks alternate continuously.
 The game fixture advances the actual scheduler and all sixteen demo clips, samples
 water flight/contact and checks full scene cleanup. Web adoption remains held.
+
+## Fire Lab preview and silver-gray hair — September 18, 2026
+
+The Fire request adds an isolated native Lab preview with Arin/Kael switching,
+three original five-second clips (FirePunch, FireSweep, FireBlast), and a repeating
+speed-200 demo. Jared Koh's two animations and Arcomade's live-action segment are
+visual references; no motion or effect assets were downloaded. The clip names,
+source times, checkpoints and measurements are recorded in `package.json`.
+
+The grounded IK baker now accepts an optional foot-path callback. The sweeping
+kick lifts and arcs the left foot, punches exchange chambered hands, and the blast
+raises both arms before a rooted lunge. An early sweep failed the existing 0.35 m
+hand-travel gate; the cross-body follow-through was strengthened until both hands
+and the body passed. The existing threshold was preserved. All old clips remain
+intact; Fire's separate model has nineteen clips and its sword is hidden by the Lab.
+The exporter audits every frame against the floor and checks locked horizontal
+root motion. The GLB round trip checks every clip start and relevant settled poses.
+
+KaelFire owns socket emission timing and per-cast resources. FireEmitter3D's new
+KaelFireJet preset aligns flame tongues with velocity and allows widening downstream.
+Existing Arin presets remain byte-for-byte unchanged in their branches; the Lab
+uses his canonical calibration and established sword/shield flame parameters.
+The native fixture exercises the real automatic three-attack cycle, both blast
+hands, body motion, switching, cleanup and CPU fallback. UI sample hover is guarded
+so it cannot destroy an active sample emitter, and character-mode controls do not
+call the empty legacy emitter. Shared thermal, Viewer and game fixtures pass.
+Arin's adapter resolves the current clip by name even after its animation completes;
+using only the playing flag would incorrectly apply Idle calibration to a held
+attack. The focused fixture checks the sword tip across that final-frame boundary.
+
+Sin also requested silver-gray hair. `silver_kael_hair.py` selects existing hair
+faces for a cool linear material factor (0.40, 0.44, 0.49), preserving the packed
+texture details. Hair is appended as skinned part 2, retaining body 0 and sword 1.
+Export explicitly checks this ordering and writes the portable glTF material
+factor, since Blender's linked-node export did not reliably retain it. Total
+triangles remain 48,996 and the skeleton stays at 42 bones. Original exports and
+grounded source checkpoints remain unchanged; the material step runs at export.
+
+The same hair update is exported into the thirteen-clip Earth baseline, active
+sixteen-clip Water model and nineteen-clip Fire preview. Viewer/game cooked models
+match byte-for-byte. Fire attacks remain Lab-only pending a later adoption request.
+Native builds, checks and preview evidence are in `Source/fire-native-validation.json`.
+No new runtime, compiler, VSIX payload, dependency or resource budget is introduced.
+Web and Studio remain on hold.

@@ -9,6 +9,7 @@ Import Smile.Simple3D.Graphics3D As Graphics3D
 Import Smile.Simple3D.FireEmitter3D As Fire
 Import Smile.Simple3D.Interaction As Interaction
 Import Smile.Simple3D.FixedMath As FixedMath
+Import Smile.Tools.FireLabCharacters As Characters
 
 Const ARENA_WIDTH = 1000
 Const ARENA_DEPTH = 1000
@@ -69,6 +70,8 @@ Dim Distortion As Boolean
 Dim Turbulence As Boolean
 Dim Wind As Boolean
 Dim Ok As Boolean
+Dim Actors As Characters.State
+Dim ActiveFire As Fire.FireEmitter
 
 Game Window "Smile 2.0 - Advance Native Fire Lab" Size 1280 By 720
 
@@ -95,9 +98,9 @@ Camera.Position.Z = -450
 Camera.Target.Y = 90
 Camera.Target.Z = 50
 BaseCamera = Camera
-ZoomTarget = 650
-ZoomLive = 650000
-Cinematic = True
+ZoomTarget = 800
+ZoomLive = 800000
+Cinematic = False
 Demo = True
 Arena = Arena3D.Create(ARENA_WIDTH, ARENA_DEPTH, 210, 120, 40,
     ARENA_TILE_SIZE, ARENA_LINE_THICKNESS)
@@ -115,6 +118,7 @@ Ok = StaticBackdrop3D.SetActive(Landscape)
 Ok = Fire.Initialize("Assets/Fire")
 
 Call ApplyModes()
+Call Characters.Start(Actors)
 Call Restart()
 
 Previous = Timer()
@@ -129,9 +133,18 @@ Do
         UiVisibility = (UiVisibility + 1) Mod 3
         SliderDragOwner = 0
 
+    Else If Key = KEY_X Then
+
+        Actors.KaelSelected = Not Actors.KaelSelected
+        Actors.Active = True
+        Demo = True
+
+        Call Restart()
+
     Else If Key = KEY_TAB Then
 
         Demo = False
+        Actors.Active = False
         Station = Station Mod 8 + 1
 
         Call FrameStation()
@@ -150,13 +163,18 @@ Do
     Else If Key = KEY_1 Then
 
         DebugLayer = (DebugLayer + 2) Mod 6 - 1
-        Ok = Fire.SetDebugLayer(Emitter, DebugLayer)
+
+        If ActiveFire.Slot <> 0 Then
+            Ok = Fire.SetDebugLayer(ActiveFire, DebugLayer)
+        End If
 
     Else If Key = KEY_F Then
 
         Enabled = Not Enabled
 
-        Call Fire.SetEnabled(Emitter, Enabled)
+        If Emitter.Slot <> 0 Then
+            Call Fire.SetEnabled(Emitter, Enabled)
+        End If
 
     Else If Key = KEY_P Or Key = KEY_SPACE Then
 
@@ -212,7 +230,9 @@ Do
 
     Call UpdateCamera()
 
-    If Demo And Not Paused Then
+    If (Demo And
+        Not Paused And
+        Not Actors.Active) Then
 
         DemoTime = DemoTime + Elapsed
 
@@ -236,7 +256,7 @@ Do
 
         Time = Time + Elapsed
 
-        If Station = 4 Or Station = 5 Then
+        If Not Actors.Active And (Station = 4 Or Station = 5) Then
 
             Phase = Time Mod 6000
 
@@ -255,16 +275,34 @@ Do
 
         End If
 
-        Call Fire.Update(Elapsed)
+        Call Characters.Update(Actors, Elapsed, Demo, Enabled, Quality, Mode, Wind, Turbulence)
+
+        If Actors.Active Then
+            Call Fire.Update(Elapsed * 2)
+        Else
+
+            Call Fire.Update(Elapsed)
+        End If
 
     End If
 
-    Light = Fire.LightPosition(Emitter)
+    ActiveFire = Emitter
+
+    If Actors.Active Then
+        ActiveFire = Characters.ActiveEmitter(Actors)
+    End If
+
+    Light = Fire.LightPosition(ActiveFire)
     Ok = Graphics3D.SetPointLight3D(0, Light.X, Light.Y, Light.Z, 255, 170, 65,
-        Fire.LightIntensity(Emitter), 260)
+        Fire.LightIntensity(ActiveFire), 260)
     Ok = BeginScene()
     Ok = Arena3D.Draw(Arena, FloorVisible, GridVisible) And Ok
-    Ok = Fire.Draw(Emitter) And Ok
+
+    If Actors.Active Then
+        Call Characters.Draw(Actors)
+    Else
+        Ok = Fire.Draw(Emitter) And Ok
+    End If
 
     If Comparison.Slot <> 0 Then
         Ok = Fire.Draw(Comparison) And Ok
@@ -278,6 +316,7 @@ Do
 
 Loop Until Key = KEY_ESCAPE Or Game_Closed()
 
+Call Characters.Shutdown(Actors)
 Call Fire.Shutdown()
 Call StaticBackdrop3D.Destroy(Landscape)
 Call StaticBackdrop3D.Destroy(TitleBackdrop)
@@ -370,6 +409,7 @@ Sub DrawHud()
 
     Dim X As Number
     Dim Row As Number
+    Dim DisplayedQuality As Number
 
     If UiVisibility = 2 Then
         Return
@@ -384,6 +424,14 @@ Sub DrawHud()
 
     If UiVisibility = 0 Then
 
+        Call Characters.DrawUi(Actors)
+
+        DisplayedQuality = Quality
+
+        If ActiveFire.Slot <> 0 Then
+            DisplayedQuality = Fire.Value(2, ActiveFire)
+        End If
+
         Call UI.DrawButton(X, 18, 60, 34, "Fire", Enabled)
         Call UI.DrawButton(X + 64, 18, 60, 34, HdrLabel(), Hdr)
         Call UI.DrawButton(X + 128, 18, 60, 34, "Depth", Soft)
@@ -396,14 +444,20 @@ Sub DrawHud()
         Draw Text "Fire Status" At X + 16, 98 Size 16 Color White
 
         Draw Text "Running" At X + 16, 126 Size 11 Color Light_Gray
-        Draw Text BackendLabel(Fire.Value(3, Emitter)) At X + 114, 126 Size 11 Color Cyan
-        Draw Text "Quality" At X + 16, 148 Size 11 Color Light_Gray
-        Draw Text QualityLabel(Fire.Value(2, Emitter)) At X + 114, 148 Size 11 Color Cyan
 
-        Call DrawStat("Particles", 170, Fire.Value(6, Emitter))
-        Call DrawStat("Systems", 192, Fire.Value(7, Emitter))
-        Call DrawStat("Spawned", 214, Fire.Value(4, Emitter))
-        Call DrawStat("Dropped", 236, Fire.Value(5, Emitter))
+        If Actors.Active And ActiveFire.Slot = 0 Then
+            Draw Text "Preparing" At X + 114, 126 Size 11 Color Cyan
+        Else
+            Draw Text BackendLabel(Fire.Value(3, ActiveFire)) At X + 114, 126 Size 11 Color Cyan
+        End If
+
+        Draw Text "Quality" At X + 16, 148 Size 11 Color Light_Gray
+        Draw Text QualityLabel(DisplayedQuality) At X + 114, 148 Size 11 Color Cyan
+
+        Call DrawStat("Particles", 170, Fire.Value(6, ActiveFire))
+        Call DrawStat("Systems", 192, Fire.Value(7, ActiveFire))
+        Call DrawStat("Spawned", 214, Fire.Value(4, ActiveFire))
+        Call DrawStat("Dropped", 236, Fire.Value(5, ActiveFire))
         Call DrawStat("GPU bytes", 258, Graphics3D.GpuParticleValue3D(17))
         Call DrawStat("Scene AA Samples", 280, Graphics3D.M5Value3D(13, 0))
         Call DrawStat("Error", 302, Fire.Value(12, Empty))
@@ -412,7 +466,7 @@ Sub DrawHud()
 
         For Row = 0 To 7
             Call UI.DrawButton(X + 12 + (Row Mod 2) * 118, 352 + (Row / 2) * 24,
-                110, 22, StationLabel(Row + 1), Station = Row + 1)
+                110, 22, StationLabel(Row + 1), Not Actors.Active And Station = Row + 1)
         End For
 
         Call UI.DrawButton(X + 12, 456, 110, 22, QualityLabel(Quality), True)
@@ -432,7 +486,7 @@ Sub DrawHud()
     Draw Text "LMB pan  /  MMB orbit  /  Wheel zoom  /  RMB reset  /  Space pause" At 18, Window_Height() - 20 Size 10 Color Light_Gray
 
     If Paused Then
-        Draw Text "Movement paused - camera controls remain active" At 18, 98 Size 12 Color Yellow
+        Draw Text "Movement paused - camera controls remain active" At 18, 224 Size 12 Color Yellow
     End If
 
 End Sub
@@ -548,6 +602,20 @@ Function HandleUi() As Boolean
 
     X = PanelX()
 
+    If Characters.HandleUi(Actors, Demo) Then
+
+        If Actors.Active And Emitter.Slot <> 0 Then
+            Ok = Fire.Destroy(Emitter)
+        End If
+
+        If Actors.Active And Comparison.Slot <> 0 Then
+            Ok = Fire.Destroy(Comparison)
+        End If
+
+        Return True
+
+    End If
+
     If UI.UpdateSlider(SliderDragOwner, 1, X + 76, Window_Height() - 142,
         144, 16, -180, 180, 1, CameraControls.OrbitYaw) Then
 
@@ -568,53 +636,85 @@ Function HandleUi() As Boolean
     End If
 
     If UI.Clicked(X, 18, 60, 34) Then
+
         Enabled = Not Enabled
 
-        Call Fire.SetEnabled(Emitter, Enabled)
+        If Emitter.Slot <> 0 Then
+            Call Fire.SetEnabled(Emitter, Enabled)
+        End If
+
     Else If UI.Clicked(X + 64, 18, 60, 34) Then
+
         Hdr = Not Hdr
 
         Call ApplyModes()
+
     Else If UI.Clicked(X + 128, 18, 60, 34) Then
+
         Soft = Not Soft
 
         Call ApplyModes()
+
     Else If UI.Clicked(X + 192, 18, 60, 34) Then
+
         Distortion = Not Distortion
 
         Call ApplyModes()
+
     Else If UI.Clicked(X, 56, 80, 22) Then
+
         Turbulence = Not Turbulence
 
         Call ApplyWind()
+
     Else If UI.Clicked(X + 84, 56, 80, 22) Then
+
         Wind = Not Wind
 
         Call ApplyWind()
+
     Else If UI.Clicked(X + 168, 56, 84, 22) Then
+
         Demo = Not Demo
         DemoTime = 0
+
     Else If UI.Clicked(X + 12, 456, 110, 22) Then
+
         Quality = Quality Mod 3 + 1
 
         Call Restart()
+
     Else If UI.Clicked(X + 130, 456, 110, 22) Then
+
         Mode = Mode Mod 3 + 1
 
         Call Restart()
+
     Else If UI.Clicked(X + 12, 484, 110, 22) Then
+
         Cinematic = Not Cinematic
+
     Else If UI.Clicked(X + 130, 484, 110, 22) Then
+
         Call Restart()
+
     Else If UI.Clicked(X + 12, 512, 110, 22) Then
+
         FloorVisible = Not (FloorVisible Or GridVisible)
         GridVisible = FloorVisible
+
     Else If UI.Clicked(X + 130, 512, 110, 22) Then
+
         Call CycleBackground()
+
     Else If UI.Clicked(X + 12, Window_Height() - 64, 110, 24) Then
+
         ZoomTarget = 420
+
     Else If UI.Clicked(X + 130, Window_Height() - 64, 110, 24) Then
+
         Call ResetView()
+
     End If
 
     For Row = 0 To 7
@@ -622,6 +722,7 @@ Function HandleUi() As Boolean
         If UI.Clicked(X + 12 + (Row Mod 2) * 118, 352 + (Row / 2) * 24, 110, 22) Then
 
             Station = Row + 1
+            Actors.Active = False
             Demo = False
 
             Call FrameStation()
@@ -695,17 +796,31 @@ Sub UpdateCamera()
     ZoomLive = ZoomLive + Ease
     Camera = BaseCamera
 
-    If Station = 4 Then
+    If Actors.Active Then
+
+        Camera.Target.X = 25
+        Camera.Target.Y = 65
+        Camera.Target.Z = 0
+
+    Else If Station = 4 Then
+
         Camera.Target.X = Source.X + 60
         Camera.Target.Y = 150
+
     Else If Station = 5 Then
+
         Camera.Target.X = Source.X
         Camera.Target.Y = 110
+
     Else If Station = 3 Then
+
         Camera.Target.Y = 145
+
     Else If Station = 7 Then
+
         Camera.Target.X = 80
         Camera.Target.Y = 60
+
     End If
 
     If Cinematic Then
@@ -793,6 +908,10 @@ Sub ApplyWind()
     Dim WindX As Number
     Dim Strength As Number
 
+    If Actors.Active Then
+        Return
+    End If
+
     If Wind Or Station = 2 Then
         WindX = 190
     End If
@@ -816,6 +935,16 @@ Sub Restart()
 
     If Comparison.Slot <> 0 Then
         Ok = Fire.Destroy(Comparison)
+    End If
+
+    Call Characters.Restart(Actors)
+
+    If Actors.Active Then
+
+        Preset = "Character Fire Preview"
+        Enabled = True
+        Return
+
     End If
 
     Source.X = 0

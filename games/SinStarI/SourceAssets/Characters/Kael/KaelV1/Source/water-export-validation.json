@@ -1,6 +1,6 @@
 {
-  "modelSha256": "231f4494c656b9a3a5c363b2108a6d6d1f737772a38609e2bd174a6abd5dde8e",
-  "modelBytes": 28413464,
+  "modelSha256": "b3adf34d5bdd15710f44e438ef1de6f6dc0ebd3fa2ac494a065e6479090e2302",
+  "modelBytes": 28492204,
   "units": "meters; Blender Z becomes glTF/SM3D Y",
   "bindBounds": {
     "body": {
@@ -12,7 +12,7 @@
       "maximum": [
         0.4200463891029358,
         0.12609343230724335,
-        0.9786130785942078
+        0.9446519613265991
       ]
     },
     "sword": {
@@ -268,7 +268,7 @@
         },
         {
           "frame": 69,
-          "bodyMinimumMeters": 0.0010000584879890084,
+          "bodyMinimumMeters": 0.003553402377292514,
           "swordMinimumMeters": 0.000999998883344233
         }
       ]
@@ -466,9 +466,9 @@
   "topology": [
     {
       "part": "Kael.Body",
-      "vertices": 20903,
-      "triangles": 42000,
-      "collapsedUvFacesRepaired": 8,
+      "vertices": 17259,
+      "triangles": 33734,
+      "collapsedUvFacesRepaired": 7,
       "cornerNormalsRepaired": 2,
       "microTriangleVerticesRepaired": 0,
       "maximumVertexRepairMeters": 0,
@@ -487,6 +487,18 @@
       "invalidTangents": 0,
       "maximumInfluences": 1,
       "unweightedVertices": 0
+    },
+    {
+      "part": "Kael.ZHair",
+      "vertices": 4604,
+      "triangles": 8266,
+      "collapsedUvFacesRepaired": 1,
+      "cornerNormalsRepaired": 0,
+      "microTriangleVerticesRepaired": 0,
+      "maximumVertexRepairMeters": 0,
+      "invalidTangents": 0,
+      "maximumInfluences": 4,
+      "unweightedVertices": 0
     }
   ],
   "rigBones": 42,
@@ -495,8 +507,9 @@
     "KaelSword"
   ],
   "exportedPrimitiveVertexCounts": [
-    31133,
-    7045
+    25505,
+    7045,
+    6762
   ],
   "bodyTextureSize": [
     4096,

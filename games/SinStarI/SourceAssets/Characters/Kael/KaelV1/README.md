@@ -1,5 +1,24 @@
 # Kael v1 — native sword, Earth and Water boss candidate
 
+## Fire Lab preview and silver-gray hair
+
+The [Fire Lab](../../../../../../../tools/AdvancedFireVfxLab/README.md) owns the
+feedback preview for FirePunch, FireSweep and FireBlast. Its separate nineteen-clip
+`kael-v1-fire-preview.glb` preserves all sixteen accepted clips. Fire adoption into
+Viewer/game rotations is pending a later request; their active model stays at sixteen.
+
+Run `Source/author_kael_fire.py` in installed Blender, then
+`Source/export_kael.py -- --fire-preview` and `Source/preview_kael.py -- --fire-preview`.
+The shared IK baker accepts an optional foot path; existing Earth/Water callers
+are unchanged. The package owns both Fire Blender checkpoints, descriptor,
+full-frame grounding measurements, GLB round-trip checks and nine pose previews.
+
+`Source/silver_kael_hair.py` assigns a cool silver material to existing skinned hair
+geometry without repainting the packed atlas. Exported parts remain body **0** and
+sword **1**, with hair appended as **2**. The total body-plus-hair triangle count
+stays 42,000; sword visibility and all animation names remain unchanged. The active
+Water model, Earth baseline and Fire preview all receive this color update at export.
+
 ## Adopted native water model
 
 The [Water Lab](../../../../../../../tools/WaterVfxLab/README.md) now has a Mira/Kael
@@ -24,7 +43,7 @@ The thirteen-clip `kael-v1-animation-checkpoint.glb` remains the Earth baseline.
 | Property | Runtime checkpoint |
 | --- | --- |
 | Body / sword triangles | 42,000 / 6,996 |
-| Exported vertices per part | 31,133 / 7,045 |
+| Exported vertices: body / sword / hair | 25,505 / 7,045 / 6,762 |
 | Skeleton | 41 Mixamo bones + KaelSword |
 | Body / sword PBR maps | 4K / 2K |
 | Animations / sockets | 16 / 10 |

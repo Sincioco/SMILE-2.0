@@ -50,7 +50,7 @@ def cast_pose(name, t, idle_hand):
 
 def bake_casts(pose_sampler=cast_pose, casts=(('EarthHurl',97),('EarthVolley',121),('EarthSlam',91)),
                family='earth', input_checkpoint='kael-v1-grounded.blend', replace_idle=True,
-               right_sampler=None):
+               right_sampler=None, foot_sampler=None):
     """Shared offline IK bake; every family supplies poses and owns a separate checkpoint."""
     bpy.ops.wm.open_mainfile(filepath=str(PACKAGE / 'Blender' / input_checkpoint))
     rig = bpy.data.objects['Kael.Rig']
@@ -132,6 +132,8 @@ def bake_casts(pose_sampler=cast_pose, casts=(('EarthHurl',97),('EarthVolley',12
                 foot.x+=sign*.10*width
                 foot.y+=(-.20 if side=='Left' else .14)*step
                 if side=='Left': foot.z+=knee
+                if foot_sampler:
+                    foot=foot_sampler(name,t,side,foot)
                 targets[side+'Foot'].location=rig.matrix_world @ foot
             left=Vector((lx,ly,lz))
             envelope=max(0,min(1,t/.07,(1-t)/.14))

@@ -13,6 +13,11 @@ The states remain presentation states; no HP/MP or combat damage system is added
 
 ## Kael (native)
 
+Kael's hair now uses a cooler silver-gray material. The hair is a separate skinned
+part; the existing body and sword indices and Weapon/W behavior are preserved.
+The Fire Lab has a separate nineteen-clip feedback preview; fire attacks are not
+yet part of the Viewer/game rotation.
+
 Kael has **sixteen clips**, including Boulder Hurl (`EarthHurl`), Stone Volley
 (`EarthVolley`), Fault Line (`EarthSlam`), Water Whip (`WaterWhip`), Serpent Orbit
 (`WaterOrbit`) and Tidal Surge (`WaterSurge`). Use the animation list's next page

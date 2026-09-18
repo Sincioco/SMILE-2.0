@@ -1,5 +1,22 @@
 # Character Viewer Architecture
 
+## Kael silver hair and separate native Fire Lab
+
+The canonical Kael exporter separates existing hair faces into a third skinned part
+and applies a silver-gray material factor. Body stays at part 0, sword at part 1;
+the same skeleton, clips, sockets and 48,996 total triangles are retained. Viewer,
+Sin Star I and Water Lab still use the sixteen-clip model; Earth Lab uses thirteen.
+Their callers need no changes. The new nineteen-clip Fire preview remains separate.
+
+Fire Lab ownership and focused checks are documented in
+`tools/AdvancedFireVfxLab/README.md`. Its new scene owner is 279 lines, Kael effect
+owner 199 and Arin adapter 120. The existing 894-line sample/camera coordinator
+gains 129 lines of routing, controls and safe diagnostic selection; feature logic
+lives in those focused modules. `FireEmitter3D` grows by 12 lines for a separate
+flow-aligned preset. Existing preset parameters, renderer resource budgets,
+language/compiler contracts, dependencies and guardrails are unchanged. This is a
+bounded addition to the legacy Lab, not a replacement monolithic controller.
+
 ## Native Kael Water adoption
 
 `KaelWater` owns the caster adapter, frame and two audio cues (channels 12/13),

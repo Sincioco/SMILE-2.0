@@ -11,6 +11,7 @@ from mathutils import Vector
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from fit_and_ground_kael import action_at
+from silver_kael_hair import apply as silver_hair
 
 PACKAGE = Path(__file__).resolve().parent.parent
 SOURCE = PACKAGE / "Source"
@@ -106,13 +107,22 @@ def main():
     checkpoint = "kael-v1-water-preview.blend" if water else "kael-v1-rigged-animation-checkpoint.blend"
     report_name = "water-export-validation.json" if water else "export-validation.json"
     descriptor_name = "KaelWaterPreview.sm3d.json" if water else "KaelV1.sm3d.json"
-    bpy.ops.wm.open_mainfile(filepath=str(BLENDER / ("kael-v1-water-grounded.blend" if water else "kael-v1-earth-grounded.blend")))
+    input_checkpoint = "kael-v1-water-grounded.blend" if water else "kael-v1-earth-grounded.blend"
+    if '--fire-preview' in sys.argv:
+        clips_to_export = CLIPS + ("WaterWhip", "WaterOrbit", "WaterSurge", "FirePunch", "FireSweep", "FireBlast")
+        model = PACKAGE / "kael-v1-fire-preview.glb"
+        checkpoint = "kael-v1-fire-preview.blend"
+        input_checkpoint = "kael-v1-fire-grounded.blend"
+        report_name = "fire-export-validation.json"
+        descriptor_name = "KaelFirePreview.sm3d.json"
+    bpy.ops.wm.open_mainfile(filepath=str(BLENDER / input_checkpoint))
     rig = bpy.data.objects["Kael.Rig"]
     body = bpy.data.objects["Kael.Body"]
     sword = bpy.data.objects["Kael.Sword"]
+    hair = silver_hair(body)
     if {a.name for a in bpy.data.actions} != set(clips_to_export):
         raise RuntimeError("Unexpected animation set")
-    parts = [topology(body), topology(sword)]
+    parts = [topology(body), topology(sword), topology(hair)]
     rig.data.pose_position = "REST"
     bpy.context.view_layer.update()
     bind = {"body": bounds(body), "sword": bounds(sword)}
@@ -142,7 +152,7 @@ def main():
         print("KAEL_CLIP_VALID " + json.dumps(row), flush=True)
     action_at(rig, "Idle", 1)
     bpy.ops.object.select_all(action="DESELECT")
-    for obj in (rig, body, sword):
+    for obj in (rig, body, sword, hair):
         obj.select_set(True)
     bpy.context.view_layer.objects.active = rig
     for action in bpy.data.actions:
@@ -155,6 +165,18 @@ def main():
     data = model.read_bytes()
     length = struct.unpack_from("<I", data, 12)[0]
     gltf = json.loads(data[20:20+length])
+    # Blender's graph exporter may omit the linked multiply factor. Keep the
+    # portable material explicit and retain the original packed atlas unchanged.
+    hair_material = next(m for m in gltf['materials'] if m.get('name') == 'Kael.SilverGrayHair')
+    hair_material['pbrMetallicRoughness']['baseColorFactor'] = [.40,.44,.49,1]
+    mesh_nodes = [n['name'] for n in gltf['nodes'] if 'mesh' in n]
+    if mesh_nodes != ['Kael.Body','Kael.Sword','Kael.ZHair']:
+        raise RuntimeError(('Runtime part order changed',mesh_nodes))
+    encoded=json.dumps(gltf,separators=(',',':')).encode('utf-8')
+    encoded += b' ' * ((-len(encoded)) % 4)
+    tail=data[20+length:]
+    data=struct.pack('<III',0x46546c67,2,20+len(encoded)+len(tail))+struct.pack('<II',len(encoded),0x4e4f534a)+encoded+tail
+    model.write_bytes(data)
     primitive_counts = [gltf["accessors"][p["attributes"]["POSITION"]]["count"]
                         for m in gltf["meshes"] for p in m["primitives"]]
     if max(primitive_counts) > 65535 or len(rig.data.bones) > 128:

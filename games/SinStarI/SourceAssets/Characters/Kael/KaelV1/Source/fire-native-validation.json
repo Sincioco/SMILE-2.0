@@ -1,0 +1,37 @@
+{
+  "date": "2026-09-18",
+  "fireLabNativeFailures": 0,
+  "fireThermalContracts": "Passed",
+  "nativeCpuFallback": "Passed",
+  "dualHandBlast": "Passed",
+  "characterSwitchCleanup": "Passed",
+  "firePreviewModelSha256": "ac4f0f60ca7a1f7691382160a33a308b12f0ff39339328fab21acdb290a6a33e",
+  "clipCount": 19,
+  "groundingFramesChecked": 1997,
+  "roundTrip": "All clip starts; Defend/Hit/Death settled poses; Water and Fire middle/end samples",
+  "viewerAndGameCookedSha256": "f1ef2a9bbc61b3bcb64853a7da4d79e1ebc46475cce5f1293f6e32f04f17e4b2",
+  "nativeBuilds": [
+    "Fire Lab",
+    "Character Viewer",
+    "Sin Star I",
+    "Water Lab",
+    "Earth Lab"
+  ],
+  "formatterGroups": 13,
+  "repositoryStyleTrackedFiles": 475,
+  "nativeGraphicsPointerAudioChecks": 58,
+  "presentationEntries": 12,
+  "automaticDemoClips": 16,
+  "automaticKaelPartyTurns": 9,
+  "visualChecks": [
+    "Fire follows hands and sweeping foot with visible body motion",
+    "Arin/Kael toggle and preserved sword/shield flames",
+    "Silver-gray hair, normal sword visible and bending sword hidden in Viewer",
+    "Fire Lab saved beside Codex at x475 y0 width1421 height1025",
+    "Sin Star I: Kael solo model loads with silver-gray hair and intact sword",
+    "Fire Lab: backtick hides character controls with panels and restores them"
+  ],
+  "studio": "On hold",
+  "web": "On hold; not validated",
+  "heldArinAttackCalibration": "Passed"
+}

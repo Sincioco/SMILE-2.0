@@ -6,8 +6,8 @@
   "date": "2026-09-18",
   "model": "kael-v1-water-preview.glb",
   "descriptor": "KaelWaterPreview.sm3d.json",
-  "modelSha256": "231f4494c656b9a3a5c363b2108a6d6d1f737772a38609e2bd174a6abd5dde8e",
-  "modelBytes": 28413464,
+  "modelSha256": "b3adf34d5bdd15710f44e438ef1de6f6dc0ebd3fa2ac494a065e6479090e2302",
+  "modelBytes": 28492204,
   "bodyTriangles": 42000,
   "swordTriangles": 6996,
   "bones": 42,
@@ -48,7 +48,12 @@
     "Source/earth-animation-report.json",
     "Source/water-animation-report.json",
     "Source/water-export-validation.json",
-    "Source/water-roundtrip-validation.json"
+    "Source/water-roundtrip-validation.json",
+    "Source/fire-animation-report.json",
+    "Source/fire-export-validation.json",
+    "Source/fire-roundtrip-validation.json",
+    "Source/silver-hair-report.json",
+    "Source/fire-native-validation.json"
   ],
   "runtimePoseCalibration": "None; Kael corrections are baked into this versioned asset",
   "webStatus": "On hold; not adopted or browser-validated",
@@ -56,8 +61,8 @@
     "status": "Adopted native Viewer, Sin Star I and Water Lab",
     "model": "kael-v1-water-preview.glb",
     "descriptor": "KaelWaterPreview.sm3d.json",
-    "modelSha256": "231f4494c656b9a3a5c363b2108a6d6d1f737772a38609e2bd174a6abd5dde8e",
-    "modelBytes": 28413464,
+    "modelSha256": "b3adf34d5bdd15710f44e438ef1de6f6dc0ebd3fa2ac494a065e6479090e2302",
+    "modelBytes": 28492204,
     "additionalClips": [
       "WaterWhip",
       "WaterOrbit",
@@ -71,5 +76,60 @@
       "Source/water-roundtrip-validation.json"
     ],
     "adoption": "Shared sixteen-clip model; legacy preview filename retained to preserve asset provenance"
+  },
+  "firePreview": {
+    "status": "Native Fire Lab feedback preview; Viewer/game fire adoption not requested yet",
+    "model": "kael-v1-fire-preview.glb",
+    "descriptor": "KaelFirePreview.sm3d.json",
+    "modelSha256": "ac4f0f60ca7a1f7691382160a33a308b12f0ff39339328fab21acdb290a6a33e",
+    "modelBytes": 28626632,
+    "additionalClips": [
+      "FirePunch",
+      "FireSweep",
+      "FireBlast"
+    ],
+    "clipCount": 19,
+    "bakeCheckpoint": "Blender/kael-v1-fire-grounded.blend",
+    "exportCheckpoint": "Blender/kael-v1-fire-preview.blend",
+    "reports": [
+      "Source/fire-animation-report.json",
+      "Source/fire-export-validation.json",
+      "Source/fire-roundtrip-validation.json"
+    ],
+    "references": [
+      {
+        "url": "https://www.youtube.com/watch?v=bm35JrFHqPQ",
+        "scope": "Full 11-second animation"
+      },
+      {
+        "url": "https://www.youtube.com/watch?v=jwwwfwCQl_A",
+        "startSeconds": 24,
+        "endSeconds": 54
+      },
+      {
+        "url": "https://www.youtube.com/watch?v=T5vdPy7nbRQ",
+        "startSeconds": 37,
+        "endSeconds": 54
+      }
+    ]
+  },
+  "silverHair": {
+    "status": "Adopted in native Viewer, Sin Star I, Earth Lab, Water Lab and Fire Lab",
+    "source": "Source/silver_kael_hair.py",
+    "report": "Source/silver-hair-report.json",
+    "partOrder": [
+      "Body",
+      "Sword",
+      "Hair"
+    ],
+    "baseColorFactorLinear": [
+      0.4,
+      0.44,
+      0.49,
+      1
+    ],
+    "bodyAndHairTriangles": 42000,
+    "swordTriangles": 6996,
+    "originalTextures": "unchanged"
   }
 }

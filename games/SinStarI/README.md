@@ -5,6 +5,9 @@ All three battle simulations use the Viewer's current four-hero party: Arin, Ori
 Zara and Mira. A status panel shows every hero and the selected boss with live state,
 animation and speed. Dragon includes Zara's attacks, hit/KO/revival and water shields.
 Kael starts at speed 200 in both his character presentation and battle simulation.
+His hair now uses the canonical silver-gray material, with the sword visibility
+and existing sixteen-clip rotation preserved. New fire attacks are available for
+feedback in the separate native Fire Lab.
 
 Kael's sixteen-clip model includes his quiet Breathing Idle, two normal attacks,
 three Earth attacks and three Water attacks, shared with the Viewer.

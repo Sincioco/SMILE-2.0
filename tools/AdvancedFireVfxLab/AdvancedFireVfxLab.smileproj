@@ -13,6 +13,22 @@
   </PropertyGroup>
   <ItemGroup>
     <SmileSource Include="Program.smile" StartupOnly="true" />
+    <SmileSource Include="FireLabCharacters.smile" />
+    <SmileSource Include="FireLabArin.smile" />
+    <SmileSource Include="KaelFire.smile" />
+    <SmileSource Include="..\Character3DViewer\Profiles.smile" />
+    <SmileSource Include="..\Character3DViewer\ViewerCalibration.smile" />
+    <SmileSource Include="..\Character3DViewer\CalibrationJson.smile" />
+    <Asset Include="Assets\Calibration\arin-v5.7.smkf" />
+    <Asset Include="Assets\Calibration\arin-v5.7.metadata.json" />
+    <Model3DAsset Include="BuildAssets\kael-v1-fire-preview.glb"
+                  Descriptor="BuildAssets\KaelFirePreview.sm3d.json"
+                  LogicalPath="Assets/KaelFire.sm3d" TextureOutputDirectory="Assets/KaelTextures"
+                  Profile="Character" Identity="sin-star-i.kael.fire-preview" ProductionState="Prototype" />
+    <Model3DAsset Include="BuildAssets\arin-v5.7-idle-equipment-checkpoint.glb"
+                  Descriptor="BuildAssets\ArinV57.sm3d.json"
+                  LogicalPath="Assets/Arin.sm3d" TextureOutputDirectory="Assets/ArinTextures"
+                  Profile="Character" Identity="sin-star-i.arin-v57" ProductionState="Prototype" />
     <Asset Include="Assets\Fire\*.png" />
     <Asset Include="Assets\Backgrounds\SinStarLandscape.png" />
     <Asset Include="Assets\Backgrounds\SinStarTitleWithLogo.png" />

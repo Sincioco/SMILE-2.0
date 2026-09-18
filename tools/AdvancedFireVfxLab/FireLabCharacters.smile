@@ -1,0 +1,279 @@
+''' Native character scene and playback ownership; sample-emitter inspection stays in the Lab.
+Module Smile.Tools.FireLabCharacters
+
+Option Explicit
+
+Import Smile.Simple3D.Character3D As Character
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Graphics3D As G
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.FireEmitter3D As Fire
+Import Smile.UI.Controls As UI
+Import Smile.Tools.KaelFire As KaelFire
+Import Smile.Tools.FireLabArin As ArinFire
+Import Smile.Tools.Character3DViewerCalibration As Calibration
+
+Public Type State
+    Kael As Character.Actor
+    Arin As Character.Actor
+    KaelFire As KaelFire.Context
+    ArinFire As ArinFire.Context
+    Target As Core.Object3D
+    Active As Boolean
+    KaelSelected As Boolean
+    Attack As Number
+    Time As Number
+    Ready As Boolean
+    ErrorCode As Number
+End Type
+
+Public Sub Start(ByRef Value As State)
+
+    Dim Ok As Boolean
+
+    Value.Kael = Character.LoadActor("Assets/KaelFire.sm3d")
+    Value.Arin = Character.LoadActor("Assets/Arin.sm3d")
+    Ok = Character.IsValid(Value.Kael) And Character.IsValid(Value.Arin)
+    Ok = Character.SetScale(Value.Kael, 12000) And Ok
+    Ok = Character.Place(Value.Kael, -150, 0, 0) And Ok
+    Ok = Character.Rotate(Value.Kael, 0, -90, 0) And Ok
+    Ok = Character.SetPartVisible(Value.Kael, 1, False) And Ok
+    Ok = Character.SetScale(Value.Arin, 10000) And Ok
+    Ok = Character.Place(Value.Arin, -100, 0, 0) And Ok
+    Ok = Character.Rotate(Value.Arin, 0, -90, 0) And Ok
+    Value.ArinFire.Nodes = Calibration.ConfigureForActor(Value.ArinFire.Pose, 0, 0, Value.Arin)
+    Ok = Value.ArinFire.Nodes.Available And Not Value.ArinFire.Pose.StorageRejected And Ok
+    Value.Target = G.CreateCylinder3D(28, 120)
+    Ok = P.SetPosition(Value.Target, 160.0, 60.0, 0.0) And Ok
+
+    Call G.SetObjectColor(Value.Target, 65, 76, 90)
+
+    Ok = G.SetAmbientLight3D(215, 225, 255, 85) And Ok
+    Ok = G.SetDirectionalLight3D(-35, -80, 25, 255, 240, 215, 115) And Ok
+    Value.Active = True
+    Value.KaelSelected = True
+    Value.Attack = 1
+    Value.Ready = Ok
+
+    If Not Ok Then
+        Value.ErrorCode = Max(1, Character.LastError())
+    End If
+
+    Call Restart(Value)
+
+End Sub
+
+Public Sub Restart(ByRef Value As State)
+
+    Dim Ok As Boolean
+    Dim Clip As Text
+
+    Call KaelFire.Destroy(Value.KaelFire)
+    Call ArinFire.Destroy(Value.ArinFire)
+
+    Value.Time = 0
+
+    If Value.KaelSelected Then
+
+        Ok = Character.PlayAnimation(Value.Kael, KaelFire.Clip(Value.Attack), False)
+
+    Else
+
+        Clip = "Idle"
+
+        If Value.Attack = 2 Then
+            Clip = "SwordAttack"
+        Else If Value.Attack = 3 Then
+            Clip = "SwordAttack2"
+        End If
+
+        Ok = Character.PlayAnimation(Value.Arin, Clip, False)
+
+    End If
+
+    If Not Ok Then
+        Value.ErrorCode = Max(1, Character.LastError())
+    End If
+
+End Sub
+
+Public Sub Update(ByRef Value As State, Elapsed As Number, Demo As Boolean,
+    Enabled As Boolean, Quality As Number, Backend As Number, Wind As Boolean, Turbulence As Boolean)
+
+    Dim Ok As Boolean
+
+    If Not Value.Active Or Not Value.Ready Then
+        Return
+    End If
+
+    Value.Time = Value.Time + Elapsed * 2
+
+    If Value.Time >= 6500 Then
+
+        If Demo Then
+            Value.Attack = Value.Attack Mod 3 + 1
+        End If
+
+        Call Restart(Value)
+
+    End If
+
+    If Value.KaelSelected Then
+
+        Ok = Character.SetAnimationTime(Value.Kael, Min(5000, Value.Time))
+
+        Call KaelFire.Update(Value.KaelFire, Value.Kael, Value.Attack, Value.Time,
+            Enabled, Quality, Backend, Wind, Turbulence)
+
+        Value.ErrorCode = Max(Value.ErrorCode, Value.KaelFire.ErrorCode)
+
+    Else
+
+        Ok = Character.Update(Value.Arin, Elapsed * 2)
+
+        Call ArinFire.Update(Value.ArinFire, Value.Arin, Enabled, Quality, Backend, Wind, Turbulence)
+
+        Value.ErrorCode = Max(Value.ErrorCode, Value.ArinFire.ErrorCode)
+
+    End If
+
+End Sub
+
+Public Sub Draw(ByRef Value As State)
+
+    Dim Ok As Boolean
+    Dim Index As Number
+
+    If Not Value.Active Or Not Value.Ready Then
+        Return
+    End If
+
+    If Value.KaelSelected Then
+
+        Ok = Character.Draw(Value.Kael)
+        Ok = G.DrawObject3D(Value.Target) And Ok
+        Ok = KaelFire.Draw(Value.KaelFire) And Ok
+
+    Else
+
+        Ok = Character.Draw(Value.Arin)
+
+        For Index = 0 To 3
+
+            If Value.ArinFire.Flames[Index].Slot <> 0 Then
+                Ok = Fire.Draw(Value.ArinFire.Flames[Index]) And Ok
+            End If
+
+        End For
+
+    End If
+
+End Sub
+
+Public Function ActiveEmitter(ByRef Value As State) As Fire.FireEmitter
+
+    Dim Result As Fire.FireEmitter
+    Dim Index As Number
+
+    If Not Value.KaelSelected Then
+        Result = Value.ArinFire.Flames[0]
+        Return Result
+    End If
+
+    For Index = 0 To 2
+
+        If Value.KaelFire.Jets[Index].Slot <> 0 Then
+            Result = Value.KaelFire.Jets[Index]
+        End If
+
+    End For
+
+    Return Result
+
+End Function
+
+Public Function HandleUi(ByRef Value As State, ByRef Demo As Boolean) As Boolean
+
+    Dim Index As Number
+    Dim Result As Boolean
+
+    If UI.Clicked(18, 102, 110, 28) Or UI.Clicked(136, 102, 110, 28) Then
+
+        Value.KaelSelected = UI.Contains(18, 102, 110, 28)
+        Value.Active = True
+        Value.Attack = 1
+        Demo = True
+
+        Call Restart(Value)
+
+    End If
+
+    For Index = 1 To 3
+
+        If UI.Clicked(18 + (Index - 1) * 144, 138, 138, 26) Then
+
+            Value.Active = True
+            Value.Attack = Index
+            Demo = False
+
+            Call Restart(Value)
+
+        End If
+
+    End For
+
+    Result = UI.Contains(18, 102, 432, 62)
+    Return Result
+
+End Function
+
+Public Sub DrawUi(ByRef Value As State)
+
+    Dim Index As Number
+    Dim Label As Text
+
+    Call UI.DrawButton(18, 102, 110, 28, "Kael", Value.Active And Value.KaelSelected)
+    Call UI.DrawButton(136, 102, 110, 28, "Arin", Value.Active And Not Value.KaelSelected)
+
+    For Index = 1 To 3
+
+        Label = KaelFire.Label(Index)
+
+        If Not Value.KaelSelected Then
+
+            Label = "Idle"
+
+            If Index = 2 Then
+                Label = "Sword Attack"
+            Else If Index = 3 Then
+                Label = "Sword Attack 2"
+            End If
+
+        End If
+
+        Call UI.DrawButton(18 + (Index - 1) * 144, 138, 138, 26, Label,
+            Value.Active And Value.Attack = Index)
+    End For
+
+    If Value.Active Then
+        Draw Text "Character Speed 200  /  X: Switch Character" At 18, 176 Size 12 Color Light_Gray
+    End If
+
+    If Value.ErrorCode <> 0 Then
+        Draw Text "Character Preview Error" At 18, 200 Size 14 Color Red
+        Draw Number Value.ErrorCode At 220, 200 Size 14 Color Red
+    End If
+
+End Sub
+
+Public Sub Shutdown(ByRef Value As State)
+
+    Call KaelFire.Destroy(Value.KaelFire)
+    Call ArinFire.Destroy(Value.ArinFire)
+    Call Character.Destroy(Value.Kael)
+    Call Character.Destroy(Value.Arin)
+    Call G.DestroyObject3D(Value.Target)
+
+End Sub
+
+End Module

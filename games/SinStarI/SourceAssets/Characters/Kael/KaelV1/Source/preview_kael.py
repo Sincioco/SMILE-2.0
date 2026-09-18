@@ -19,14 +19,22 @@ model = "kael-v1-water-preview.glb" if water else "kael-v1-animation-checkpoint.
 clip_names = CLIPS + (("WaterWhip", "WaterOrbit", "WaterSurge") if water else ())
 poses = (("WaterWhip",57),("WaterOrbit",76),("WaterSurge",58)) if water else (
     ("Idle",1),("EarthHurl",54),("EarthVolley",66),("EarthSlam",47))
+fire = '--fire-preview' in sys.argv
+if fire:
+    checkpoint = "Blender/kael-v1-fire-preview.blend"
+    model = "kael-v1-fire-preview.glb"
+    clip_names = CLIPS + ("WaterWhip", "WaterOrbit", "WaterSurge", "FirePunch", "FireSweep", "FireBlast")
+    poses = (("FirePunch",43),("FireSweep",64),("FireBlast",81))
 bpy.ops.wm.open_mainfile(filepath=str(PACKAGE / checkpoint))
 rig = bpy.data.objects["Kael.Rig"]
 body = bpy.data.objects["Kael.Body"]
 sword = bpy.data.objects["Kael.Sword"]
+hair = bpy.data.objects.get("Kael.ZHair")
 for name, frame in poses:
     action_at(rig, name, frame)
-    sword.hide_render = name.startswith(("Earth", "Water"))
-    preview(body, ("preview-" if water else "accepted-") + name.lower(), () if sword.hide_render else (sword,))
+    sword.hide_render = name.startswith(("Earth", "Water", "Fire"))
+    equipment=(() if sword.hide_render else (sword,)) + ((hair,) if hair else ())
+    preview(body, ("preview-" if water or fire else "accepted-") + name.lower(), equipment)
 
 bpy.ops.wm.read_factory_settings(use_empty=True)
 bpy.ops.import_scene.gltf(filepath=str(PACKAGE / model))
@@ -44,7 +52,7 @@ for name in clip_names:
     frames = [int(action.frame_range[0])]
     if name in ("Defend", "Hit", "Death"):
         frames.append(int(action.frame_range[1]))
-    elif name.startswith("Water"):
+    elif name.startswith(("Water", "Fire")):
         frames += [int(sum(action.frame_range)/2), int(action.frame_range[1])]
     for frame in frames:
         bpy.context.scene.frame_set(frame)
@@ -54,6 +62,6 @@ for name in clip_names:
             raise RuntimeError((name, frame, b, s))
         report.append({"clip":name,"frame":frame,"bodyMinimumMeters":b["minimum"][2],
                        "swordMinimumMeters":s["minimum"][2]})
-(SOURCE / ("water-roundtrip-validation.json" if water else "roundtrip-validation.json")).write_text(
+(SOURCE / ("fire-roundtrip-validation.json" if fire else "water-roundtrip-validation.json" if water else "roundtrip-validation.json")).write_text(
     json.dumps(report,indent=2),encoding="utf-8", newline="\n")
 print("KAEL_ROUNDTRIP_VALID", flush=True)
