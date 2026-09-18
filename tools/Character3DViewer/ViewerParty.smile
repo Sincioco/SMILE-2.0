@@ -107,6 +107,7 @@ Public Type State
     UnityRoster As Boolean
     MiraDuo As Boolean
     UnityRosterRequested As Boolean
+    SelectedBossProfile As Number
     BossAttackDuration As Number
     DragonOpponent As ViewerActors.Context
     UiPrimary As ViewerActors.Context
@@ -146,6 +147,32 @@ Public Type State
     ShotBossHead As Precision3D.Vector3
     ShotMouth As Precision3D.Vector3
 End Type
+
+Public Function BossProfile(Value As State) As Number
+
+    If Value.SelectedBossProfile = ViewerProfiles.PROFILE_KAEL Then
+        Return ViewerProfiles.PROFILE_KAEL
+    Else If Value.UnityRoster Then
+        Return ViewerProfiles.PROFILE_VRAX
+    End If
+
+    Return ViewerProfiles.PROFILE_DRAGON
+
+End Function
+
+Private Function BossName(Value As State) As Text
+
+    Dim ReturnValue As Text
+
+    Dim Profile As CharacterViewer.Profile
+
+    Profile = ViewerProfiles.ProfileAt(BossProfile(Value))
+
+    ReturnValue = Profile.DisplayName
+
+    Return ReturnValue
+
+End Function
 
 Public Sub SetEnabled(ByRef Value As State, Enabled As Boolean)
 
@@ -253,6 +280,16 @@ Public Sub InitializeFormation(ByRef Value As State, Center As Core.Vector3,
 
     ZaraIndex = 2
     Value.ParticipantCount = LIVE_PARTICIPANT_COUNT
+
+    If BossProfile(Value) = ViewerProfiles.PROFILE_KAEL Then
+
+        ''' Kael's upright body needs closer sword contact than Vrax's broad body.
+        FirstApproach.X = Center.X + (FirstApproach.X - Center.X) * 55 / 100
+        FirstApproach.Z = Center.Z + (FirstApproach.Z - Center.Z) * 55 / 100
+        SecondApproach.X = Center.X + (SecondApproach.X - Center.X) * 60 / 100
+        SecondApproach.Z = Center.Z + (SecondApproach.Z - Center.Z) * 60 / 100
+
+    End If
 
     If Value.UnityRoster Then
 
@@ -565,11 +602,7 @@ Public Function BeginInspectorSelection(ByRef Value As State,
     Else If Value.UiTurn = 2 Then
 
         Result.Context.Actor = Dragon.Actor
-        Result.Context.Profile = ViewerProfiles.PROFILE_DRAGON
-
-        If Dragon.UseVrax Then
-            Result.Context.Profile = ViewerProfiles.PROFILE_VRAX
-        End If
+        Result.Context.Profile = ViewerDragon.ProfileIndex(Dragon)
 
         Result.Context.CalibrationAvailable = False
         Result.Context.GlowAvailable = False
@@ -1327,10 +1360,12 @@ Public Function UpdateDragon(
         Result = UpdateUnityBoss(Value, Dragon, PrimaryActor, PlaybackSpeed, AnimationElapsed)
         Target = HomePosition(Value, Value.HitTarget)
 
-        Call ViewerDragon.UpdateVraxAttacks(Dragon.Attacks, Dragon.Actor, Dragon.Clip,
-            Dragon.Visible, Effects.FireInitialized, Effects.LightningInitialized,
-            Effects.FlamePaused, Effects.LightningPaused, Effects.VisualContinuityEpoch,
-            Value.Turn = 2, ToDouble(Target.X), 65.0, ToDouble(Target.Z))
+        If Dragon.UseVrax Then
+            Call ViewerDragon.UpdateVraxAttacks(Dragon.Attacks, Dragon.Actor, Dragon.Clip,
+                Dragon.Visible, Effects.FireInitialized, Effects.LightningInitialized,
+                Effects.FlamePaused, Effects.LightningPaused, Effects.VisualContinuityEpoch,
+                Value.Turn = 2, ToDouble(Target.X), 65.0, ToDouble(Target.Z))
+        End If
 
         Return Result
 
@@ -2161,6 +2196,7 @@ Public Function VraxPosition(ByRef Value As State) As Precision3D.Vector3
     Dim Approach As Precision3D.Vector3
     Dim Result As Precision3D.Vector3
     Dim Progress As Double
+    Dim AttackDistance As Double
     Dim Valid As Boolean
 
     Home = Precision3D.Vector(ToDouble(ViewerDragon.PositionX()), 0.0,
@@ -2173,7 +2209,13 @@ Public Function VraxPosition(ByRef Value As State) As Precision3D.Vector3
 
     Target = Precision3D.FromVector(HomePosition(Value, Value.HitTarget))
     Valid = PreciseMath.TryNormalize(PreciseMath.Subtract(Target, Home), Direction)
-    Approach = PreciseMath.Subtract(Target, PreciseMath.Scale(Direction, 260.0))
+    AttackDistance = 260.0
+
+    If BossProfile(Value) = ViewerProfiles.PROFILE_KAEL Then
+        AttackDistance = 150.0
+    End If
+
+    Approach = PreciseMath.Subtract(Target, PreciseMath.Scale(Direction, AttackDistance))
     Progress = Clamp(ToDouble(Value.Elapsed - VRAX_APPROACH_START_MILLISECONDS) /
         ToDouble(VRAX_ATTACK_START_MILLISECONDS - VRAX_APPROACH_START_MILLISECONDS), 0.0, 1.0)
 
@@ -2923,29 +2965,15 @@ Public Function ActingName(ByRef Value As State) As Text
     Result = "Arin"
 
     If Value.Turn = 1 Then
-
         Result = "Orin"
-
     Else If Value.Turn = 2 Then
-
-        Result = "Dragon"
-
-        If Value.UnityRoster Then
-            Result = "Vrax"
-        End If
-
+        Result = BossName(Value)
     Else If Value.Turn = 4 Then
-
         Result = "Valor"
-
     Else If Value.Turn = 5 Then
-
         Result = "Zara"
-
     Else If Value.Turn = MiraBattle.PARTY_TURN Then
-
         Result = "Mira"
-
     End If
 
     Return Result
@@ -3103,11 +3131,7 @@ Public Sub DrawOverlay(
     Dim PresentationCaption As Text
 
     Left = 12
-    BossLabel = "Dragon"
-
-    If Value.UnityRoster Then
-        BossLabel = "Vrax"
-    End If
+    BossLabel = BossName(Value)
 
     Acting = ActingName(Value)
     AttackSequence = AttackSequenceName(Value)
@@ -3135,7 +3159,7 @@ Public Sub DrawOverlay(
             Call DrawActorSpeed(Value, 0, "Arin", Left + 12, 208)
             Call DrawActorSpeed(Value, 1, "Orin", Left + 128, 208)
             Call DrawActorSpeed(Value, 5, "Zara", Left + 12, 236)
-            Call DrawActorSpeed(Value, 2, "Vrax", Left + 128, 236)
+            Call DrawActorSpeed(Value, 2, BossLabel, Left + 128, 236)
 
         Else
             Draw Text "Arin  •  Paladin" At Left + 16, 212 Size 15 Color CYAN
@@ -3489,7 +3513,7 @@ Private Function UnityAttackName(ByRef Value As State) As Text
     If Value.Turn = MiraBattle.PARTY_TURN Then
         Result = MiraBattle.ClipForCycle(Value.AttackCycle)
     Else If Value.Turn = 2 Then
-        Result = ViewerProfiles.PartyAttackName(ViewerProfiles.PROFILE_VRAX, Value.DragonCounter)
+        Result = ViewerProfiles.PartyAttackName(BossProfile(Value), Value.DragonCounter)
     Else If Value.Turn = 1 Then
         Result = ViewerProfiles.PartyAttackName(ViewerProfiles.PROFILE_ORIN, Value.AttackCycle)
     Else If Value.AttackCycle Mod 2 = 1 Then
@@ -3755,7 +3779,7 @@ Private Function UpdateUnityBoss(ByRef Value As State,
     HeroAttackMilliseconds = AttackDuration(
         Value, Primary, Value.Companion.Actor, PlaybackSpeed)
     AttackName = ViewerProfiles.PartyAttackName(
-        ViewerProfiles.PROFILE_VRAX, Value.DragonCounter)
+        BossProfile(Value), Value.DragonCounter)
 
     For Index = 0 To Character3D.ClipCount(Boss.Actor) - 1
 
@@ -3804,8 +3828,11 @@ Private Function UpdateUnityBoss(ByRef Value As State,
         180, 0) And Result
     Result = ViewerDragon.UpdateVraxPreview(Boss, Name, BossPlaybackSpeed, Elapsed) And Result
     Target.Y = 65
-    Result = NodeAim3D.Update(Boss.HeadAim, Boss.Actor, Target, Elapsed,
-        Value.Turn = 2 And Not Value.PreviewActive) And Result
+
+    If Boss.UseVrax Then
+        Result = NodeAim3D.Update(Boss.HeadAim, Boss.Actor, Target, Elapsed,
+            Value.Turn = 2 And Not Value.PreviewActive) And Result
+    End If
 
     Return Result
 

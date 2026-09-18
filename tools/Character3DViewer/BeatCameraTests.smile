@@ -181,6 +181,9 @@ Public Function Run() As Number
     Call Check(Ui.Draft.Eye.X = Value.Eye.X And Editor.Head(Ui, 1).Size.X = 40.0,
         "Cross Character Copy Preserves Destination Head", Failures)
     Call Check(Sequence.Identity(False, 2) <> Sequence.Identity(True, 2), "Independent Boss Identities", Failures)
+    Call Check(Sequence.Identity(True, 2, Profiles.PROFILE_KAEL) = 7 And
+        Sequence.Name(7) = "Kael" And HeadPersistence.CHARACTER_COUNT = 8,
+        "Kael Camera And Head Storage Remain Independent Of Vrax", Failures)
 
     If Profiles.INCLUDE_MIRA_COMPARISONS Then
         Call Check(Sequence.NextActor(False, 1, True) = 6 And

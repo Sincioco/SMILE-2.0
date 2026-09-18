@@ -1,0 +1,29 @@
+{
+  "date": "2026-09-18",
+  "nativeViewerBuild": "Passed",
+  "sinStarIBuild": "Passed",
+  "formatterGroups": 13,
+  "repositoryStyleFiles": 464,
+  "nativeGraphicsPointerAudioChecks": 58,
+  "calibrationTransferChecks": 42,
+  "realAssetPresentationEntries": 12,
+  "kaelPartyRoster": [
+    "Arin",
+    "Orin",
+    "Zara",
+    "Mira"
+  ],
+  "cookedKaelSha256": "7c8365172a53ceb318a8fbf6c0606357bf5088b2f8bf9c198fbabf276d56ac40",
+  "assetEquality": "Viewer and Sin Star I cooked Kael SM3D files match",
+  "nativeVisualChecks": [
+    "Kael tab loads and animates",
+    "Kael Party loads the four heroes and large boss",
+    "Kael target label",
+    "Sword attachment",
+    "Party pause",
+    "Sin Star I Characters menu and Kael animation cycle",
+    "Sin Star I Battle Simulations menu and Kael Party playback"
+  ],
+  "studio": "On hold",
+  "web": "On hold; no browser validation"
+}

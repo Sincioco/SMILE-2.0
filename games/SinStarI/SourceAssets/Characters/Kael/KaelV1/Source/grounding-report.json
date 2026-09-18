@@ -1,0 +1,129 @@
+{
+  "bindMinimumBeforeMeters": 5.512252391781658e-05,
+  "commonOffsetMeters": -5.512252391781658e-05,
+  "floorClearanceMeters": 0.001,
+  "clips": [
+    {
+      "clip": "Attack",
+      "frames": 74,
+      "firstMinimumBeforeMeters": 0.00029867171542719007,
+      "minimumCorrectionMeters": 0.00070132828457281,
+      "maximumCorrectionMeters": 0.025559963494539262
+    },
+    {
+      "clip": "Attack2",
+      "frames": 51,
+      "firstMinimumBeforeMeters": 0.0002985430182889104,
+      "minimumCorrectionMeters": 0.0007014569817110896,
+      "maximumCorrectionMeters": 0.0022489762157201767
+    },
+    {
+      "clip": "Death",
+      "frames": 70,
+      "firstMinimumBeforeMeters": 0.00029870407888665795,
+      "minimumCorrectionMeters": -0.0018090269770473242,
+      "maximumCorrectionMeters": 0.06314748695492745
+    },
+    {
+      "clip": "Defend",
+      "frames": 43,
+      "firstMinimumBeforeMeters": 0.0011406898265704513,
+      "minimumCorrectionMeters": -0.00015088268648833034,
+      "maximumCorrectionMeters": -0.00013406369928270576
+    },
+    {
+      "clip": "Dodge",
+      "frames": 44,
+      "firstMinimumBeforeMeters": 0.0008178191492334008,
+      "minimumCorrectionMeters": 0.0001821808507665992,
+      "maximumCorrectionMeters": 0.0034572403635829687
+    },
+    {
+      "clip": "Hit",
+      "frames": 24,
+      "firstMinimumBeforeMeters": 0.001136347884312272,
+      "minimumCorrectionMeters": -0.00018208664935082195,
+      "maximumCorrectionMeters": -0.00012428783904761074
+    },
+    {
+      "clip": "Idle",
+      "frames": 111,
+      "firstMinimumBeforeMeters": 0.00029848795384168625,
+      "minimumCorrectionMeters": 0.0005997597579844296,
+      "maximumCorrectionMeters": 0.0007881538438377902
+    },
+    {
+      "clip": "Run",
+      "frames": 22,
+      "firstMinimumBeforeMeters": -0.0010426490334793925,
+      "minimumCorrectionMeters": 0.0020426490334793925,
+      "maximumCorrectionMeters": 0.00640456036105752
+    },
+    {
+      "clip": "Victory",
+      "frames": 257,
+      "firstMinimumBeforeMeters": 1.8163402273785323e-05,
+      "minimumCorrectionMeters": 0.0009818365977262147,
+      "maximumCorrectionMeters": 0.0012404574042884633
+    },
+    {
+      "clip": "Walk",
+      "frames": 34,
+      "firstMinimumBeforeMeters": 0.002401703502982855,
+      "minimumCorrectionMeters": -0.012359046541154384,
+      "maximumCorrectionMeters": 0.007094449665397406
+    }
+  ],
+  "sword": {
+    "scale": 0.72,
+    "gripSourceZMeters": 0.845,
+    "palmLocalMeters": [
+      2.60770320892334e-08,
+      0.025225214660167694,
+      -9.313225746154785e-09
+    ],
+    "clips": [
+      {
+        "clip": "Attack",
+        "wristCorrections": []
+      },
+      {
+        "clip": "Attack2",
+        "wristCorrections": []
+      },
+      {
+        "clip": "Death",
+        "wristCorrections": []
+      },
+      {
+        "clip": "Defend",
+        "wristCorrections": []
+      },
+      {
+        "clip": "Dodge",
+        "wristCorrections": []
+      },
+      {
+        "clip": "Hit",
+        "wristCorrections": []
+      },
+      {
+        "clip": "Idle",
+        "wristCorrections": []
+      },
+      {
+        "clip": "Run",
+        "wristCorrections": []
+      },
+      {
+        "clip": "Victory",
+        "wristCorrections": []
+      },
+      {
+        "clip": "Walk",
+        "wristCorrections": []
+      }
+    ]
+  },
+  "policy": "Ground bind pose before clip corrections; lock root X/Y. Every clip starts at the floor. Idle, Walk, Defend, Hit, and settled Death maintain contact; other motion retains airtime. Floor corrections rotate the wrist and sword together. Death releases the sword from frames 30 to 48."
+}

@@ -27,10 +27,20 @@ $miraTripoRoot = Join-Path $repositoryRoot `
     'games\SinStarI\SourceAssets\Characters\Healer\MiraTripoV1'
 $yalisRoot = Join-Path $repositoryRoot `
     'games\SinStarI\SourceAssets\Characters\Fighter\YalisV1'
+$kaelRoot = Join-Path $repositoryRoot `
+    'games\SinStarI\SourceAssets\Characters\Kael\KaelV1'
 $technicalRoot = Join-Path $repositoryRoot `
     'games\SinStarI\TechnicalAssets\Generation2'
 $buildAssets = Join-Path $toolRoot 'BuildAssets'
 $copies = @(
+    @{
+        Source = Join-Path $kaelRoot 'kael-v1-animation-checkpoint.glb'
+        Destination = Join-Path $buildAssets 'KaelV1\kael-v1-animation-checkpoint.glb'
+    },
+    @{
+        Source = Join-Path $kaelRoot 'KaelV1.sm3d.json'
+        Destination = Join-Path $buildAssets 'KaelV1\KaelV1.sm3d.json'
+    },
     @{
         Source = Join-Path $yalisRoot 'yalis-v1-animation-checkpoint.glb'
         Destination = Join-Path $buildAssets 'YalisV1\yalis-v1-animation-checkpoint.glb'

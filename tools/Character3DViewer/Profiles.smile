@@ -20,6 +20,7 @@ Public Const PROFILE_MIRA2 = 10
 Public Const PROFILE_MIRA3 = 11
 Public Const PROFILE_MIRA = 12
 Public Const PROFILE_YALIS = 13
+Public Const PROFILE_KAEL = 14
 Public Const CHARACTER_TAB_PARTY_VRAX = 3
 Public Const CHARACTER_TAB_PARTY_DRAGON = 7
 Public Const CHARACTER_TAB_MIRA1 = 8
@@ -27,11 +28,23 @@ Public Const CHARACTER_TAB_MIRA2 = 9
 Public Const CHARACTER_TAB_MIRA3 = 10
 Public Const CHARACTER_TAB_MIRA = 11
 Public Const CHARACTER_TAB_YALIS = 12
+Public Const CHARACTER_TAB_KAEL = 13
+Public Const CHARACTER_TAB_PARTY_KAEL = 14
 Public Const INCLUDE_MIRA_COMPARISONS = True
 Public Const INCLUDE_UNITY_CHARACTERS = True
 Public Const INCLUDE_DIAGNOSTIC_PROFILES = True
 Public Const EQUIPMENT_GLOW_FIRE = 0
 Public Const EQUIPMENT_GLOW_LIGHTNING = 1
+
+Public Function IsSwordFighter(ProfileIndex As Number) As Boolean
+
+    Dim Result As Boolean
+
+    Result = ProfileIndex = PROFILE_YALIS Or ProfileIndex = PROFILE_KAEL
+
+    Return Result
+
+End Function
 
 Public Function IsMiraCharacter(ProfileIndex As Number) As Boolean
 
@@ -49,7 +62,7 @@ Public Function IsPartyTab(Index As Number) As Boolean
     Dim Result As Boolean
 
     Result = (Index = CHARACTER_TAB_PARTY_VRAX Or
-        Index = CHARACTER_TAB_PARTY_DRAGON)
+        Index = CHARACTER_TAB_PARTY_DRAGON Or Index = CHARACTER_TAB_PARTY_KAEL)
 
     Return Result
 
@@ -60,7 +73,7 @@ Public Function UsesUnityPartyRoster(Index As Number) As Boolean
     Dim Result As Boolean
 
     Result = (INCLUDE_UNITY_CHARACTERS And
-        Index = CHARACTER_TAB_PARTY_VRAX)
+        (Index = CHARACTER_TAB_PARTY_VRAX Or Index = CHARACTER_TAB_PARTY_KAEL))
 
     Return Result
 
@@ -71,6 +84,10 @@ Public Function NextProfile(Current As Number) As Number
     Dim Result As Number
 
     If Current = PROFILE_YALIS Then
+
+        Result = PROFILE_KAEL
+
+    Else If Current = PROFILE_KAEL Then
 
         If INCLUDE_MIRA_COMPARISONS Then
             Result = PROFILE_MIRA
@@ -146,7 +163,7 @@ Public Function HoldsFinalPose(ProfileIndex As Number, ClipName As Text) As Bool
     Dim Result As Boolean
 
     Result = ((ProfileIndex = PROFILE_ORIN And ClipName = "Defend") Or
-        (ProfileIndex = PROFILE_YALIS And (ClipName = "Defend" Or ClipName = "Death")) Or
+        (IsSwordFighter(ProfileIndex) And (ClipName = "Defend" Or ClipName = "Death")) Or
         (IsMiraCharacter(ProfileIndex) And (ClipName = "Defend" Or ClipName = "Death")) Or
         (IsPartyCharacter(ProfileIndex) And ClipName = "Death") Or
         (IsUnityCharacter(ProfileIndex) And Not UnityClipLoops(ClipName)))
@@ -158,16 +175,16 @@ End Function
 Public Function ProfileCount() As Number
 
     If INCLUDE_MIRA_COMPARISONS And INCLUDE_UNITY_CHARACTERS Then
-        Return 14
+        Return 15
     Else If INCLUDE_MIRA_COMPARISONS Then
-        Return 11
+        Return 12
     End If
 
     If INCLUDE_UNITY_CHARACTERS Then
-        Return 10
+        Return 11
     End If
 
-    Return 7
+    Return 8
 
 End Function
 
@@ -247,6 +264,18 @@ Public Function ProfileAt(Index As Number) As CharacterViewer.Profile
         Result.ExpectedSocketCount = 11
         Result.DesiredWorldHeight = 100
         Result.DefaultPlaybackSpeed = 200
+
+    Else If Index = PROFILE_KAEL Then
+
+        Result.AssetId = "sin-star-i.character.kael"
+        Result.CandidateVersion = "v1"
+        Result.DisplayName = "Kael"
+        Result.PartyRole = "Boss"
+        Result.ProductionStatus = "Candidate"
+        Result.AssetPath = "Assets\Generation2\KaelV1\Kael.sm3d"
+        Result.ExpectedClipCount = 10
+        Result.ExpectedSocketCount = 10
+        Result.DesiredWorldHeight = 134
 
     Else If Index = PROFILE_YALIS Then
 
@@ -378,6 +407,8 @@ Public Function ModelFileName(ProfileIndex As Number) As Text
         Result = "mira3-animation-checkpoint.glb"
     Else If ProfileIndex = PROFILE_YALIS Then
         Result = "yalis-v1-animation-checkpoint.glb"
+    Else If ProfileIndex = PROFILE_KAEL Then
+        Result = "kael-v1-animation-checkpoint.glb"
     Else If ProfileIndex = PROFILE_ARIN_V56 Then
         Result = "arin-integrated-candidate-v5.6.glb"
     Else If ProfileIndex = PROFILE_ARIN_ORIGINAL Then
@@ -402,7 +433,7 @@ Public Function ClipCount(ProfileIndex As Number) As Number
         Result = 24
     Else If ProfileIndex = PROFILE_DRAGON Then
         Result = 6
-    Else If ProfileIndex = PROFILE_YALIS Then
+    Else If IsSwordFighter(ProfileIndex) Then
         Result = 10
     Else If ProfileIndex = PROFILE_ORIN Or IsMiraCharacter(ProfileIndex) Then
         Result = 9
@@ -427,7 +458,7 @@ Public Function InitialOrbitYaw(ProfileIndex As Number) As Number
     If (IsPartyCharacter(ProfileIndex) Or
         ProfileIndex = PROFILE_ARIN_V56 Or
         ProfileIndex = PROFILE_MIRA Or
-        ProfileIndex = PROFILE_YALIS) Then
+        IsSwordFighter(ProfileIndex)) Then
         Result = -90
     End If
 
@@ -441,7 +472,7 @@ Public Function EpicGlowAvailable(ProfileIndex As Number) As Boolean
 
     Result = (IsEquipmentCharacter(ProfileIndex) And
         Not IsMiraCharacter(ProfileIndex) And
-        ProfileIndex <> PROFILE_YALIS)
+        Not IsSwordFighter(ProfileIndex))
 
     Return Result
 
@@ -453,7 +484,7 @@ Public Function EpicGlowVisibleByDefault(ProfileIndex As Number) As Boolean
 
     Result = (IsEquipmentCharacter(ProfileIndex) And
         Not IsMiraCharacter(ProfileIndex) And
-        ProfileIndex <> PROFILE_YALIS)
+        Not IsSwordFighter(ProfileIndex))
 
     Return Result
 
@@ -463,7 +494,7 @@ Public Function ClipName(ProfileIndex As Number, ClipIndex As Number) As Text
 
     Dim Result As Text
 
-    If ProfileIndex = PROFILE_YALIS Then
+    If IsSwordFighter(ProfileIndex) Then
 
         If ClipIndex = 0 Then
             Result = "Idle"
@@ -652,7 +683,7 @@ Public Function IsEquipmentCharacter(ProfileIndex As Number) As Boolean
     Result = (IsPartyCharacter(ProfileIndex) Or
         ProfileIndex = PROFILE_VALOR Or
         ProfileIndex = PROFILE_ZARA Or
-        ProfileIndex = PROFILE_YALIS Or
+        IsSwordFighter(ProfileIndex) Or
         IsMiraCharacter(ProfileIndex))
 
     Return Result
@@ -678,7 +709,7 @@ Public Function ShieldPart(ProfileIndex As Number) As Number
     If ProfileIndex = PROFILE_VALOR Then
         Return 9
     Else If (ProfileIndex = PROFILE_ZARA Or
-        ProfileIndex = PROFILE_YALIS Or
+        IsSwordFighter(ProfileIndex) Or
         IsMiraCharacter(ProfileIndex)) Then
         ReturnValue = -1
 
@@ -697,7 +728,7 @@ Public Function EquipmentSocketPart(ProfileIndex As Number, Shield As Boolean) A
 
     If (ProfileIndex = PROFILE_VALOR Or
         ProfileIndex = PROFILE_ZARA Or
-        ProfileIndex = PROFILE_YALIS) Then
+        IsSwordFighter(ProfileIndex)) Then
 
         Result = WeaponPart(ProfileIndex)
 
@@ -732,7 +763,15 @@ Public Function PartyAttackName(ProfileIndex As Number, AttackCycle As Number) A
 
     AttackCycle = Max(0, AttackCycle)
 
-    If ProfileIndex = PROFILE_ARIN Then
+    If ProfileIndex = PROFILE_KAEL Then
+
+        If AttackCycle Mod 2 = 0 Then
+            Result = "Attack"
+        Else
+            Result = "Attack2"
+        End If
+
+    Else If ProfileIndex = PROFILE_ARIN Then
 
         If AttackCycle Mod 2 = 0 Then
             Result = "SwordAttack"
@@ -776,7 +815,7 @@ Public Function ClipLabel(ProfileIndex As Number, ClipIndex As Number) As Text
 
     Dim Result As Text
 
-    If ProfileIndex = PROFILE_YALIS And ClipIndex = 4 Then
+    If IsSwordFighter(ProfileIndex) And ClipIndex = 4 Then
 
         Result = "Attack 2"
 
@@ -875,7 +914,7 @@ Public Function ClipLoops(ProfileIndex As Number, ClipIndex As Number) As Boolea
 
     If IsUnityCharacter(ProfileIndex) Then
         Result = UnityClipLoops(UnityClipName(ProfileIndex, ClipIndex))
-    Else If ProfileIndex = PROFILE_YALIS Then
+    Else If IsSwordFighter(ProfileIndex) Then
         Result = ClipIndex >= 0 And ClipIndex <= 2
     Else If IsMiraCharacter(ProfileIndex) Then
         Result = ClipIndex >= 0 And ClipIndex <= 2
@@ -1120,7 +1159,7 @@ Public Function SocketCount(ProfileIndex As Number) As Number
 
     If ProfileIndex = PROFILE_DRAGON Then
         Result = 6
-    Else If ProfileIndex = PROFILE_YALIS Then
+    Else If IsSwordFighter(ProfileIndex) Then
         Result = 10
     Else If IsPartyCharacter(ProfileIndex) Then
         Result = 10
@@ -1140,7 +1179,7 @@ Public Function SocketName(ProfileIndex As Number, SocketIndex As Number) As Tex
 
     Dim Result As Text
 
-    If ProfileIndex = PROFILE_YALIS Then
+    If IsSwordFighter(ProfileIndex) Then
 
         If SocketIndex = 0 Then
             Result = "Root"

@@ -2254,6 +2254,17 @@ VraxTestPosition = ViewerParty.VraxPosition(PartyState)
 Call CheckNamed(Abs(PreciseMath.Distance(VraxTestPosition,
     Precision3D.FromVector(PartyState.Second.Home)) - 260.0) < 0.000001,
     "Vrax stops directly in front of the selected defender")
+
+PartyState.SelectedBossProfile = ViewerProfiles.PROFILE_KAEL
+VraxTestPosition = ViewerParty.VraxPosition(PartyState)
+
+Call CheckNamed(Abs(PreciseMath.Distance(VraxTestPosition,
+    Precision3D.FromVector(PartyState.Second.Home)) - 150.0) < 0.000001,
+    "Kael closes to his own sword reach instead of Vrax's larger clearance")
+
+PartyState.SelectedBossProfile = 0
+VraxTestPosition = ViewerParty.VraxPosition(PartyState)
+
 Call ViewerParty.ApplyAttackCamera(PartyState, PreciseOrbitBase, Frame,
     PartyPrimary.Actor, True, True, True, 100, 16, 1200, -208, -120)
 Call CheckNamed(PreciseOrbitBase.Target.X = VraxTestPosition.X And
@@ -3013,7 +3024,7 @@ Call Check(ViewerProfiles.PartyAttackName(ViewerProfiles.PROFILE_ARIN, 2) = "Swo
 Call Check(ViewerProfiles.EpicGlowAvailable(ViewerProfiles.PROFILE_ARIN))
 Call Check(ViewerProfiles.EpicGlowVisibleByDefault(ViewerProfiles.PROFILE_ARIN))
 Call Check(ViewerProfiles.INCLUDE_UNITY_CHARACTERS)
-Call Check(ViewerProfiles.ProfileCount() = 14)
+Call Check(ViewerProfiles.ProfileCount() = 15)
 Call Check(ViewerUi.CharacterTabsContain(560, 70))
 Call Check(ViewerUi.CharacterTabAtPointer(560, 70) = ViewerProfiles.CHARACTER_TAB_YALIS)
 Call Check(ViewerUi.CharacterTabAtPointer(640, 70) = ViewerProfiles.CHARACTER_TAB_MIRA)
@@ -3021,7 +3032,8 @@ Call Check(ViewerUi.CharacterTabAtPointer(720, 70) = ViewerProfiles.CHARACTER_TA
 Call Check(ViewerUi.CharacterTabAtPointer(800, 70) = ViewerProfiles.CHARACTER_TAB_MIRA2)
 Call Check(ViewerUi.CharacterTabAtPointer(880, 70) = ViewerProfiles.CHARACTER_TAB_MIRA3)
 Call Check(ViewerProfiles.NextProfile(ViewerProfiles.PROFILE_VRAX) = ViewerProfiles.PROFILE_YALIS)
-Call Check(ViewerProfiles.NextProfile(ViewerProfiles.PROFILE_YALIS) = ViewerProfiles.PROFILE_MIRA)
+Call Check(ViewerProfiles.NextProfile(ViewerProfiles.PROFILE_YALIS) = ViewerProfiles.PROFILE_KAEL)
+Call Check(ViewerProfiles.NextProfile(ViewerProfiles.PROFILE_KAEL) = ViewerProfiles.PROFILE_MIRA)
 Call Check(ViewerProfiles.NextProfile(ViewerProfiles.PROFILE_MIRA) = ViewerProfiles.PROFILE_MIRA1)
 Call Check(ViewerProfiles.HasBattleOpponent(ViewerProfiles.PROFILE_ARIN))
 Call Check(ViewerProfiles.HasBattleOpponent(ViewerProfiles.PROFILE_ORIN))
@@ -3073,6 +3085,33 @@ Call Check(ViewerProfiles.WeaponPart(ViewerProfiles.PROFILE_YALIS) = 1)
 Call Check(ViewerProfiles.ShieldPart(ViewerProfiles.PROFILE_YALIS) = -1)
 Call Check(Not ViewerProfiles.EpicGlowAvailable(ViewerProfiles.PROFILE_YALIS))
 Call Check(Not ViewerProfiles.EpicGlowVisibleByDefault(ViewerProfiles.PROFILE_YALIS))
+
+Profile = ViewerProfiles.ProfileAt(ViewerProfiles.PROFILE_KAEL)
+
+Call CheckNamed(CharacterViewer.ValidateProfile(Profile) And
+    Profile.DisplayName = "Kael" And Profile.ExpectedClipCount = 10 And
+    Profile.ExpectedSocketCount = 10, "Kael owns his ten-clip sword profile")
+Call CheckNamed(ViewerProfiles.WeaponPart(ViewerProfiles.PROFILE_KAEL) = 1 And
+    ViewerProfiles.ShieldPart(ViewerProfiles.PROFILE_KAEL) = -1 And
+    Not ViewerProfiles.HasBattleOpponent(ViewerProfiles.PROFILE_KAEL),
+    "Kael solo inspection uses his own sword without a companion boss")
+Call ViewerSession.SelectCharacterTab(SessionState, ViewerProfiles.CHARACTER_TAB_KAEL)
+Call CheckNamed(SessionState.ProfileIndex = ViewerProfiles.PROFILE_KAEL,
+    "Kael tab selects Kael")
+Call ViewerSession.SelectCharacterTab(SessionState, ViewerProfiles.CHARACTER_TAB_PARTY_KAEL)
+Call CheckNamed(SessionState.ProfileIndex = ViewerProfiles.PROFILE_ARIN And
+    ViewerProfiles.UsesUnityPartyRoster(SessionState.SelectedCharacterTab),
+    "Kael Party selects the four-hero roster")
+
+PartyState.SelectedBossProfile = ViewerProfiles.PROFILE_KAEL
+PartyState.UnityRoster = True
+
+Call CheckNamed(ViewerParty.BossProfile(PartyState) = ViewerProfiles.PROFILE_KAEL And
+    ViewerProfiles.PartyAttackName(ViewerParty.BossProfile(PartyState), 1) = "Attack2",
+    "Kael Party uses Kael's own attacks")
+
+PartyState.SelectedBossProfile = 0
+PartyState.UnityRoster = False
 
 Profile = ViewerProfiles.ProfileAt(ViewerProfiles.PROFILE_VRAX)
 

@@ -35,6 +35,14 @@ Sin also placed Studio creation, development, acceptance and next phases on hold
 The existing Studio project may retain shared source inventory, but it is not a
 validation target or an authorized next phase for the native hardening below.
 
+September 18 native Kael work adds the canonical Kael v1 package, Kael/Kael Party
+tabs and Sin Star I menu routes. Kael Party uses a twice-sized Kael boss with Arin,
+Orin, Zara and Mira; its saved camera/head identity is separate from Vrax. When Web
+work is explicitly resumed, align publication asset selection with these shared
+profile/tab changes, adopt the canonical Kael GLB/descriptor, and validate material,
+animation, floor contact, four-hero playback and Chrome interaction. No Kael Web
+build, publication or browser acceptance was performed for this native task.
+
 ## Native Review Hardening (2026-09-13)
 
 The review baseline was `c5a348c3abda773c62158fb23b82ab2b5267be37`.

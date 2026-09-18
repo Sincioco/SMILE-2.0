@@ -129,9 +129,12 @@ Public Function RestorePoses(Saved As Bookmark, Value As Party.State,
 
 End Function
 
-Public Function Identity(UnityRoster As Boolean, Turn As Number) As Number
+Public Function Identity(UnityRoster As Boolean, Turn As Number,
+    Optional BossProfile As Number = 0) As Number
 
-    If Turn = 1 Then
+    If Turn = 2 And BossProfile = Profiles.PROFILE_KAEL Then
+        Return 7
+    Else If Turn = 1 Then
         Return 1
     Else If Turn = 2 And UnityRoster Then
         Return 5
@@ -163,6 +166,8 @@ Public Function Name(Identity As Number) As Text
         Return "Vrax"
     Else If Identity = 6 Then
         Return "Mira"
+    Else If Identity = 7 Then
+        Return "Kael"
     End If
 
     Return "Arin"
@@ -365,7 +370,7 @@ Public Function Sample(ByRef Value As Party.State, ByRef Primary As C.Actor,
             BossName = Dragon.DesiredClip(Boss, False, "", True, False, 2, Value.DragonCounter, False)
             ClipTime = Elapsed * Speed / 100
         Else If Schedule.Beat = 2 Then
-            BossName = Profiles.PartyAttackName(Profiles.PROFILE_VRAX, Value.DragonCounter)
+            BossName = Profiles.PartyAttackName(Party.BossProfile(Value), Value.DragonCounter)
         Else If (Schedule.Beat = 1 Or
             (Schedule.Beat = 3 And
             Elapsed < Schedule.Start[3] + Party.VRAX_RETURN_MILLISECONDS)) Then

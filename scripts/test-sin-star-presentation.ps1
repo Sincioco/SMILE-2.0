@@ -68,6 +68,16 @@ Call Me.LoadViewer()
             Print Me.Session.FirstViewerError
             Print Me.Session.FirstRendererError
         End If
+        If Me.Session.SelectedCharacterTab = ViewerProfiles.CHARACTER_TAB_PARTY_KAEL Then
+            If (Me.Party.ParticipantCount <> 4 Or
+                Me.DragonState.SelectedProfile <> ViewerProfiles.PROFILE_KAEL Or
+                Me.DragonState.UseVrax Or
+                Me.Party.Companion.Profile <> ViewerProfiles.PROFILE_ORIN Or
+                Me.Party.Fourth.Profile <> ViewerProfiles.PROFILE_ZARA Or
+                Me.Party.Mira.Profile <> ViewerProfiles.PROFILE_MIRA) Then
+                Print "Kael Party loaded an incorrect boss or hero roster."
+            End If
+        End If
 '@
 $workflowText = $workflowText.Replace($loadBoundary, $diagnosticLoad)
 [IO.File]::WriteAllText((Join-Path $testRoot 'ViewerWorkflow.smile'), $workflowText)
@@ -81,4 +91,4 @@ $actual = & (Join-Path $PSScriptRoot 'run-bounded-test.cmd') 60 $exe
 if ($LASTEXITCODE -ne 0 -or ($actual -join "`n").Trim() -ne 'Sin Star I presentations passed.') {
     throw "Presentation regression failed: $actual"
 }
-Write-Host 'PASS: Eight character entries and both battle simulations create, draw and release their actual assets.'
+Write-Host 'PASS: Nine character entries and three battle simulations create, draw and release their actual assets.'

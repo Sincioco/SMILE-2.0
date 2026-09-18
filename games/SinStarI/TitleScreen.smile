@@ -22,6 +22,8 @@ Public Enum TitleAction
     VraxBattle = 15
     ExitGame = 16
     Yalis = 17
+    Kael = 18
+    KaelBattle = 19
 End Enum
 
 Private Enum MenuPage
@@ -75,14 +77,14 @@ End Sub
 Private Function ChoiceCount() As Number
 
     If Page = MenuPage.Characters Then
-        Return 9
+        Return 10
     Else If Page = MenuPage.Legacy Then
         Return 7
     Else If Page = MenuPage.Main Then
         Return 4
     End If
 
-    Return 3
+    Return 4
 
 End Function
 
@@ -100,7 +102,8 @@ Private Function MenuTop() As Number
 
     Dim Result As Number
 
-    Result = Max(190, Window_Height() / 2 - 120)
+    Result = Max(120, Min(Window_Height() / 2 - 120,
+        Window_Height() - ChoiceCount() * 46 - 100))
 
     Return Result
 
@@ -137,6 +140,10 @@ Public Function Label(Action As TitleAction) As Text
             Return "Vrax"
         Case TitleAction.Yalis
             Return "Yalis"
+        Case TitleAction.Kael
+            Return "Kael"
+        Case TitleAction.KaelBattle
+            Return "Kael Party"
         Case TitleAction.DragonBattle
             Return "Dragon Battle"
         Case TitleAction.VraxBattle
@@ -170,6 +177,8 @@ Private Function ChoiceAction(Index As Number) As TitleAction
                 Return TitleAction.Vrax
             Case 7
                 Return TitleAction.Yalis
+            Case 8
+                Return TitleAction.Kael
         End Select
 
     Else If Page = MenuPage.Battles Then
@@ -178,6 +187,8 @@ Private Function ChoiceAction(Index As Number) As TitleAction
             Return TitleAction.DragonBattle
         Else If Index = 1 Then
             Return TitleAction.VraxBattle
+        Else If Index = 2 Then
+            Return TitleAction.KaelBattle
         End If
 
     Else If Page = MenuPage.Legacy Then
@@ -314,7 +325,7 @@ Public Sub Draw()
     Clear Rgb(4, 8, 20)
     Draw Image TitleBackground At 0, 0 Size Window_Width() By Window_Height() Filter Smooth
     Draw Image TitleLogo At 30, (Window_Height() - LogoWidth * 5 / 4) / 2 Size LogoWidth By LogoWidth * 5 / 4 Filter Smooth
-    Draw Image MenuBackground At X - 15, Top - 87 Size 470 By 470 Opacity 85 Filter Smooth
+    Draw Image MenuBackground At X - 15, Top - 87 Size 470 By ChoiceCount() * 46 + 92 Opacity 85 Filter Smooth
     Draw Text Heading At X + 19, Top - 60 Size 32 Color WHITE
 
     For Index = 0 To ChoiceCount() - 1

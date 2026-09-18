@@ -18,7 +18,8 @@ Import Smile.UI.Controls As UI
 Import Smile.Tools.Character3DViewerInput As Input
 
 Public Type State
-    Tracks[7] As Track.Definition
+    Tracks[8] As Track.Definition
+    BossProfile As Number
     Working As Track.Definition
     Timeline As Timeline.State
     SourceSchedule As Sequence.Timing
@@ -96,7 +97,7 @@ Public Sub LoadShots(ByRef Value As State)
 
     Value.DragMarker = -1
 
-    For Identity = 0 To 6
+    For Identity = 0 To HeadPersistence.CHARACTER_COUNT - 1
 
         Call Track.Initialize(Value.Tracks[Identity])
 
@@ -131,7 +132,7 @@ Public Function Slot(Value As State, Unity As Boolean, Beat As Number) As Number
 
     Dim Result As Number
 
-    Result = Sequence.Identity(Unity, Value.Selected) * 4 + Beat
+    Result = Sequence.Identity(Unity, Value.Selected, Value.BossProfile) * 4 + Beat
 
     Return Result
 
@@ -161,6 +162,8 @@ Public Sub Open(ByRef Value As State, ByRef Scene As Party.State,
 
     Call StoreDraft(Value)
 
+    Value.BossProfile = Party.BossProfile(Scene)
+
     If Not Value.Preview Then
 
         Value.Bookmark = Sequence.Remember(Scene)
@@ -170,7 +173,7 @@ Public Sub Open(ByRef Value As State, ByRef Scene As Party.State,
         Value.OriginalCamera = CurrentCamera
         Value.WasPaused = Paused
         Value.WasDemo = Demo
-        Value.Working = Value.Tracks[Sequence.Identity(Scene.UnityRoster, Value.Selected)]
+        Value.Working = Value.Tracks[Sequence.Identity(Scene.UnityRoster, Value.Selected, Party.BossProfile(Scene))]
         Value.Timeline.DragKind = 0
         Value.Timeline.RepeatDirection = 0
 
@@ -201,8 +204,8 @@ Public Sub Open(ByRef Value As State, ByRef Scene As Party.State,
     Value.HeadActors[0] = Sequence.Actor(Scene, Primary, Boss, Value.Selected)
     Value.HeadActors[1] = Sequence.Actor(Scene, Primary, Boss, Sequence.Opponent(Scene, Value.Selected))
 
-    Value.HeadIds[0] = Sequence.Identity(Scene.UnityRoster, Value.Selected)
-    Value.HeadIds[1] = Sequence.Identity(Scene.UnityRoster, Sequence.Opponent(Scene, Value.Selected))
+    Value.HeadIds[0] = Sequence.Identity(Scene.UnityRoster, Value.Selected, Party.BossProfile(Scene))
+    Value.HeadIds[1] = Sequence.Identity(Scene.UnityRoster, Sequence.Opponent(Scene, Value.Selected), Party.BossProfile(Scene))
 
     Call InitializeHead(Value, 0)
     Call InitializeHead(Value, 1)
@@ -228,13 +231,13 @@ Private Function CurrentShot(Value As State, Unity As Boolean, Identity As Numbe
 
     Result = Value.Tracks[Identity].Cameras[Beat]
 
-    If Value.Preview And Identity = Sequence.Identity(Unity, Value.Selected) Then
+    If Value.Preview And Identity = Sequence.Identity(Unity, Value.Selected, Value.BossProfile) Then
         Result = Value.Working.Cameras[Beat]
     End If
 
     If (Value.Editing And
         Beat = Value.ShotIndex And
-        Identity = Sequence.Identity(Unity, Value.Selected)) Then
+        Identity = Sequence.Identity(Unity, Value.Selected, Value.BossProfile)) Then
 
         If Not Value.UseDefault Then
             Result = Value.Draft
@@ -263,10 +266,10 @@ Public Function PlaybackCamera(Value As State, Unity As Boolean, Turn As Number,
     Dim EndTime As Number
     Dim Progress As Double
 
-    Identity = Sequence.Identity(Unity, Turn)
+    Identity = Sequence.Identity(Unity, Turn, Value.BossProfile)
     Definition = Value.Tracks[Identity]
 
-    If Value.Preview And Identity = Sequence.Identity(Unity, Value.Selected) Then
+    If Value.Preview And Identity = Sequence.Identity(Unity, Value.Selected, Value.BossProfile) Then
         Definition = Value.Working
     End If
 
@@ -310,10 +313,11 @@ Public Sub Update(ByRef Value As State, ByRef Scene As Party.State,
     Dim HeightValue As Double
     Dim Focal As Double
 
+    Value.BossProfile = Party.BossProfile(Scene)
     Attacker = Sequence.Actor(Scene, Primary, Boss, Scene.Turn)
     Target = Sequence.Actor(Scene, Primary, Boss, Sequence.Opponent(Scene, Scene.Turn))
     Value.SourceSchedule = Sequence.Times(Scene, Primary, Speed, Scene.Turn, Scene.Elapsed)
-    Schedule = Track.Schedule(Value.Tracks[Sequence.Identity(Scene.UnityRoster, Scene.Turn)],
+    Schedule = Track.Schedule(Value.Tracks[Sequence.Identity(Scene.UnityRoster, Scene.Turn, Party.BossProfile(Scene))],
         Value.SourceSchedule, Scene.Elapsed)
     Value.Timeline.Clock = Value.Timeline.Clock + Max(0, Elapsed)
 
@@ -325,7 +329,7 @@ Public Sub Update(ByRef Value As State, ByRef Scene As Party.State,
 
         If ApplySaved And Scene.EstablishRemaining = 0 Then
             Live = PlaybackCamera(Value, Scene.UnityRoster, Scene.Turn, Attacker, Target,
-                Sequence.Identity(Scene.UnityRoster, Sequence.Opponent(Scene, Scene.Turn)), Schedule, Scene.Elapsed, Live)
+                Sequence.Identity(Scene.UnityRoster, Sequence.Opponent(Scene, Scene.Turn), Party.BossProfile(Scene)), Schedule, Scene.Elapsed, Live)
             Value.Camera.Live = Live
         End If
 
@@ -337,8 +341,8 @@ Public Sub Update(ByRef Value As State, ByRef Scene As Party.State,
     Value.DisplayBeat = Schedule.Beat
     Value.HeadActors[0] = Attacker
     Value.HeadActors[1] = Target
-    Value.HeadIds[0] = Sequence.Identity(Scene.UnityRoster, Scene.Turn)
-    Value.HeadIds[1] = Sequence.Identity(Scene.UnityRoster, Sequence.Opponent(Scene, Scene.Turn))
+    Value.HeadIds[0] = Sequence.Identity(Scene.UnityRoster, Scene.Turn, Party.BossProfile(Scene))
+    Value.HeadIds[1] = Sequence.Identity(Scene.UnityRoster, Sequence.Opponent(Scene, Scene.Turn), Party.BossProfile(Scene))
     Value.Heads[0] = Sequence.Head(Attacker, Head(Value, Value.HeadIds[0]).Offset)
     Value.Heads[1] = Sequence.Head(Target, Head(Value, Value.HeadIds[1]).Offset)
 
@@ -381,7 +385,7 @@ Public Sub Update(ByRef Value As State, ByRef Scene As Party.State,
 
     Else
         Live = PlaybackCamera(Value, Scene.UnityRoster, Scene.Turn, Attacker, Target,
-                Sequence.Identity(Scene.UnityRoster, Sequence.Opponent(Scene, Scene.Turn)), Schedule, Scene.Elapsed, Live)
+                Sequence.Identity(Scene.UnityRoster, Sequence.Opponent(Scene, Scene.Turn), Party.BossProfile(Scene)), Schedule, Scene.Elapsed, Live)
         Value.Camera.Live = Live
 
     End If
@@ -404,12 +408,12 @@ Public Function SaveShot(ByRef Value As State, Unity As Boolean) As Boolean
     End If
 
     If Not Track.WriteDefinition("BattleCamera.Sequence." +
-        Sequence.Name(Sequence.Identity(Unity, Value.Selected)) + ".V2", Value.Working) Then
+        Sequence.Name(Sequence.Identity(Unity, Value.Selected, Value.BossProfile)) + ".V2", Value.Working) Then
         Value.Message = "Save Failed; Draft Retained"
         Return False
     End If
 
-    Value.Tracks[Sequence.Identity(Unity, Value.Selected)] = Value.Working
+    Value.Tracks[Sequence.Identity(Unity, Value.Selected, Value.BossProfile)] = Value.Working
     Value.Dirty = False
     Value.Message = "Camera Saved"
 
@@ -539,13 +543,13 @@ End Function
 
 Public Sub Copy(ByRef Value As State, Unity As Boolean)
 
-    Value.Clipboard = Value.Tracks[Sequence.Identity(Unity, Value.Selected)].Cameras[Value.Beat]
+    Value.Clipboard = Value.Tracks[Sequence.Identity(Unity, Value.Selected, Value.BossProfile)].Cameras[Value.Beat]
 
     If Value.Editing Then
         Value.Clipboard = Value.Draft
     End If
 
-    Value.ClipboardName = (Sequence.Name(Sequence.Identity(Unity, Value.Selected)) +
+    Value.ClipboardName = (Sequence.Name(Sequence.Identity(Unity, Value.Selected, Value.BossProfile)) +
         " Shot " + ShotNumber(Value.ShotIndex + 1))
     Value.Message = "Copied " + Value.ClipboardName
 
@@ -916,7 +920,7 @@ Public Sub Draw(Value As State, Unity As Boolean, Width As Number, Height As Num
 
     Clip Rectangle PanelLeft, PanelTop, 252, PanelHeight
 
-    Draw Text "BEAT CAMERA: " + Sequence.Name(Sequence.Identity(Unity, Value.Selected)) At PanelLeft + 8, 120 - ScrollOffset Size 14 Color WHITE
+    Draw Text "BEAT CAMERA: " + Sequence.Name(Sequence.Identity(Unity, Value.Selected, Value.BossProfile)) At PanelLeft + 8, 120 - ScrollOffset Size 14 Color WHITE
     Draw Text "Target: " + TargetName At PanelLeft + 8, 142 - ScrollOffset Size 11 Color CYAN
     Draw Text "Tab / Click To Select" At PanelLeft + 8, 157 - ScrollOffset Size 10 Color LIGHT_GRAY
 
@@ -927,7 +931,7 @@ Public Sub Draw(Value As State, Unity As Boolean, Width As Number, Height As Num
 
         Label = "Beat " + Digit(Index + 1)
 
-        If Value.Tracks[Sequence.Identity(Unity, Value.Selected)].Cameras[Index].Saved Then
+        If Value.Tracks[Sequence.Identity(Unity, Value.Selected, Value.BossProfile)].Cameras[Index].Saved Then
             Label = Label + " *"
         End If
 

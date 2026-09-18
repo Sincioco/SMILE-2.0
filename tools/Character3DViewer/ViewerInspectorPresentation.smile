@@ -158,7 +158,15 @@ Public Function CaptureIdentity(ByRef Ui As ViewerUi.State,
     Result.DragonControlLabel = ViewerUi.DragonLabel(
         Session.DragonInspection, Dragon.Available, Dragon.Visible)
 
-    If Dragon.UseVrax Then
+    If Dragon.SelectedProfile = ViewerProfiles.PROFILE_KAEL Then
+
+        Result.DragonControlLabel = "Kael Off"
+
+        If Dragon.Visible Then
+            Result.DragonControlLabel = "Kael On"
+        End If
+
+    Else If Dragon.UseVrax Then
 
         Result.DragonControlLabel = "Vrax Off"
 

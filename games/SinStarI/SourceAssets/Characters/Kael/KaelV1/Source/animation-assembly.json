@@ -1,0 +1,86 @@
+{
+  "rigSource": "Mixamo auto-rigged Kael body",
+  "skeletonPreset": "2 Chain Fingers (41 bones)",
+  "weightTransfer": {
+    "bodyVertices": 20903,
+    "proxyVertices": 20903,
+    "unweightedVertices": 0,
+    "maximumInfluences": 4,
+    "mapping": "nearest proxy face with barycentric weight interpolation",
+    "meanNearestDistanceMeters": 0.0,
+    "p95NearestDistanceMeters": 0.0,
+    "maximumNearestDistanceMeters": 0.0
+  },
+  "animations": [
+    {
+      "clip": "Idle",
+      "source": "Idle.fbx",
+      "mixamoDescription": "Sword And Shield Idle",
+      "samples": 111,
+      "maximumJointErrorMeters": 2.63507629811955E-06
+    },
+    {
+      "clip": "Walk",
+      "source": "Walk.fbx",
+      "mixamoDescription": "Sword And Shield Walk (root motion removed during grounding)",
+      "samples": 34,
+      "maximumJointErrorMeters": 2.830703450481202E-06
+    },
+    {
+      "clip": "Run",
+      "source": "Run.fbx",
+      "mixamoDescription": "Sword And Shield Run (root motion removed during grounding)",
+      "samples": 22,
+      "maximumJointErrorMeters": 3.456362804188318E-06
+    },
+    {
+      "clip": "Attack",
+      "source": "Attack.fbx",
+      "mixamoDescription": "Sword and Shield slash (4)",
+      "samples": 74,
+      "maximumJointErrorMeters": 3.861586401072793E-06
+    },
+    {
+      "clip": "Attack2",
+      "source": "Attack2.fbx",
+      "mixamoDescription": "Sword and Shield slash (3)",
+      "samples": 51,
+      "maximumJointErrorMeters": 2.3868169625077468E-06
+    },
+    {
+      "clip": "Dodge",
+      "source": "Dodge.fbx",
+      "mixamoDescription": "Dodging Right",
+      "samples": 44,
+      "maximumJointErrorMeters": 1.8014783230181713E-06
+    },
+    {
+      "clip": "Defend",
+      "source": "Defend.fbx",
+      "mixamoDescription": "Sword And Shield Block Idle",
+      "samples": 43,
+      "maximumJointErrorMeters": 1.9492205483278288E-06
+    },
+    {
+      "clip": "Hit",
+      "source": "Hit.fbx",
+      "mixamoDescription": "Sword And Shield Impact",
+      "samples": 24,
+      "maximumJointErrorMeters": 1.878430304409194E-06
+    },
+    {
+      "clip": "Death",
+      "source": "Death.fbx",
+      "mixamoDescription": "Sword And Shield Death",
+      "samples": 70,
+      "maximumJointErrorMeters": 2.7040379997637245E-06
+    },
+    {
+      "clip": "Victory",
+      "source": "Victory.fbx",
+      "mixamoDescription": "Victory",
+      "samples": 257,
+      "maximumJointErrorMeters": 2.976696354107342E-06
+    }
+  ]
+}

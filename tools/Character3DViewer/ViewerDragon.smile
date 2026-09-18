@@ -56,6 +56,7 @@ End Type
 Public Type State
     Actor As Character3D.Actor
     UseVrax As Boolean
+    SelectedProfile As Number
     Attacks As AttackEffects
     Frame As PrecisionCamera.Framing
     HeadAim As NodeAim3D.Constraint
@@ -73,6 +74,18 @@ Public Type State
     Audio As BattleAudio.CueState
     VraxAudio As VraxAudioState
 End Type
+
+Public Function ProfileIndex(Value As State) As Number
+
+    If Value.SelectedProfile = ViewerProfiles.PROFILE_KAEL Then
+        Return ViewerProfiles.PROFILE_KAEL
+    Else If Value.UseVrax Then
+        Return ViewerProfiles.PROFILE_VRAX
+    End If
+
+    Return ViewerProfiles.PROFILE_DRAGON
+
+End Function
 
 Public Sub SetAvailable(ByRef Value As State, Available As Boolean)
 
@@ -140,8 +153,8 @@ Public Function Create(ByRef Value As State, ByRef BorrowedActor As Character3D.
 
     Path = ASSET_PATH
 
-    If Value.UseVrax Then
-        Profile = ViewerProfiles.ProfileAt(ViewerProfiles.PROFILE_VRAX)
+    If Value.UseVrax Or Value.SelectedProfile = ViewerProfiles.PROFILE_KAEL Then
+        Profile = ViewerProfiles.ProfileAt(ProfileIndex(Value))
         Path = Profile.AssetPath
     End If
 
@@ -161,7 +174,7 @@ Public Function Create(ByRef Value As State, ByRef BorrowedActor As Character3D.
     Value.Clip = "Idle"
     Value.HeadTracking = True
 
-    If Value.UseVrax And Result Then
+    If (Value.UseVrax Or Value.SelectedProfile = ViewerProfiles.PROFILE_KAEL) And Result Then
 
         Bounds = Character3D.LocalBounds(Value.Actor)
         Value.Frame = PrecisionCamera.AutoFit(Profile, Bounds, 0, 0, 55.0,
@@ -169,8 +182,15 @@ Public Function Create(ByRef Value As State, ByRef BorrowedActor As Character3D.
         Value.Frame.PositionX = ToDouble(POSITION_X)
         Value.Frame.PositionZ = ToDouble(POSITION_Z)
         Value.HeadTracking = False
-        Result = NodeAim3D.Configure(Value.HeadAim, Value.Actor, "VraxMouth",
-            Math3D.Vector(1, 0, 0), Math3D.Vector(0, 30, 35)) And Result
+
+        If Value.UseVrax Then
+            Result = NodeAim3D.Configure(Value.HeadAim, Value.Actor, "VraxMouth",
+                Math3D.Vector(1, 0, 0), Math3D.Vector(0, 30, 35)) And Result
+        Else
+            Value.Frame.ScalePercent = Value.Frame.ScalePercent * 2
+            Value.Frame.PositionY = Value.Frame.PositionY * 2.0
+        End If
+
         Result = Character3D.SetScale(Value.Actor, Value.Frame.ScalePercent) And Result
         Result = Character3D.PlacePrecise(Value.Actor, Value.Frame.PositionX,
             Value.Frame.PositionY, Value.Frame.PositionZ) And Result
@@ -227,6 +247,10 @@ Public Function Draw(ByRef Value As State) As Boolean
 End Function
 
 Public Sub DrawEffects(ByRef Value As State)
+
+    If Value.SelectedProfile = ViewerProfiles.PROFILE_KAEL Then
+        Return
+    End If
 
     If Value.UseVrax Then
         Call DrawVraxAttacks(Value.Attacks)
@@ -373,7 +397,7 @@ Public Function Update(
 
     Result = True
 
-    If Value.UseVrax Then
+    If Value.UseVrax Or Value.SelectedProfile = ViewerProfiles.PROFILE_KAEL Then
         Result = UpdateVraxPreview(Value, Name, PlaybackSpeed, AnimationElapsed)
 
         Return Result
@@ -685,7 +709,7 @@ Public Function UpdateVraxPreview(ByRef Value As State, Name As Text,
     End For
 
     Result = ViewerActors.ApplyPresentationOffset(Value.Actor,
-        ViewerProfiles.PROFILE_VRAX, Clip, Value.Frame) And Result
+        ProfileIndex(Value), Clip, Value.Frame) And Result
 
     Return Result
 

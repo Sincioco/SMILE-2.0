@@ -1,0 +1,9 @@
+{
+  "bladeRegionMaximumZ": 0.6,
+  "blendIntoGuardEndsAtZ": 0.77,
+  "sourceBladeDepthMeters": 0.09800625592470169,
+  "repairedBladeDepthMeters": 0.004805364180356264,
+  "maximumFrontSilhouetteChangeMeters": 0.0,
+  "method": "Continuous depth compression; unchanged front coordinates and UVs",
+  "originalPreserved": "Source/kael-v1-sword.original.glb"
+}

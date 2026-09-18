@@ -1460,6 +1460,10 @@ Public Sub DrawHeader(DisplayName As Text, PartyRole As Text,
             Subtitle = "Sin Star I  •  Arin, Orin And Zara  •  Vrax Battle Preview"
         End If
 
+        If SelectedCharacterTab = ViewerProfiles.CHARACTER_TAB_PARTY_KAEL Then
+            Subtitle = "Sin Star I  •  Arin, Orin And Zara  •  Kael Battle Preview"
+        End If
+
         If ViewerProfiles.INCLUDE_MIRA_COMPARISONS Then
             Subtitle = Subtitle + " / Mira Healer"
         End If
@@ -2249,50 +2253,68 @@ Private Function CharacterTabCount() As Number
     If ViewerProfiles.INCLUDE_MIRA_COMPARISONS Then
 
         If ViewerProfiles.INCLUDE_UNITY_CHARACTERS Then
-            Return 13
+            Return 15
         End If
 
-        Return 9
+        Return 10
 
     End If
 
     If ViewerProfiles.INCLUDE_UNITY_CHARACTERS Then
-        Return 9
+        Return 11
     End If
 
-    Return 5
+    Return 6
 
 End Function
 
 Private Function CharacterTabIndex(Position As Number) As Number
 
+    Dim ReturnValue2 As Number
+
     Dim ReturnValue As Number
 
     Dim Result As Number
+    Dim BaseCount As Number
 
     Result = Position
+    BaseCount = CharacterTabCount() - 1
 
-    If ViewerProfiles.INCLUDE_MIRA_COMPARISONS And Position = CharacterTabCount() - 1 Then
+    If ViewerProfiles.INCLUDE_UNITY_CHARACTERS Then
+        BaseCount = BaseCount - 1
+    End If
+
+    If Position = BaseCount Then
+        ReturnValue2 = ViewerProfiles.CHARACTER_TAB_KAEL
+
+        Return ReturnValue2
+    Else If Position = BaseCount + 1 Then
+        ReturnValue2 = ViewerProfiles.CHARACTER_TAB_PARTY_KAEL
+
+        Return ReturnValue2
+    End If
+
+    If ViewerProfiles.INCLUDE_MIRA_COMPARISONS And Position = BaseCount - 1 Then
         ReturnValue = ViewerProfiles.CHARACTER_TAB_MIRA3
 
         Return ReturnValue
-    Else If ViewerProfiles.INCLUDE_MIRA_COMPARISONS And Position = CharacterTabCount() - 2 Then
+    Else If ViewerProfiles.INCLUDE_MIRA_COMPARISONS And Position = BaseCount - 2 Then
         ReturnValue = ViewerProfiles.CHARACTER_TAB_MIRA2
 
         Return ReturnValue
-    Else If ViewerProfiles.INCLUDE_MIRA_COMPARISONS And Position = CharacterTabCount() - 3 Then
+    Else If ViewerProfiles.INCLUDE_MIRA_COMPARISONS And Position = BaseCount - 3 Then
         ReturnValue = ViewerProfiles.CHARACTER_TAB_MIRA1
 
         Return ReturnValue
-    Else If ViewerProfiles.INCLUDE_MIRA_COMPARISONS And Position = CharacterTabCount() - 4 Then
+    Else If ViewerProfiles.INCLUDE_MIRA_COMPARISONS And Position = BaseCount - 4 Then
         ReturnValue = ViewerProfiles.CHARACTER_TAB_MIRA
 
         Return ReturnValue
-    Else If ViewerProfiles.INCLUDE_MIRA_COMPARISONS And Position = CharacterTabCount() - 5 Then
+    Else If ViewerProfiles.INCLUDE_MIRA_COMPARISONS And Position = BaseCount - 5 Then
         ReturnValue = ViewerProfiles.CHARACTER_TAB_YALIS
 
         Return ReturnValue
-    Else If Not ViewerProfiles.INCLUDE_MIRA_COMPARISONS And Position = CharacterTabCount() - 1 Then
+    Else If Not ViewerProfiles.INCLUDE_MIRA_COMPARISONS And Position = BaseCount - 1 Then
         ReturnValue = ViewerProfiles.CHARACTER_TAB_YALIS
 
         Return ReturnValue
@@ -2350,6 +2372,10 @@ Private Function CharacterTabLabel(Index As Number) As Text
         Result = "Mira3"
     Else If Index = ViewerProfiles.CHARACTER_TAB_YALIS Then
         Result = "Yalis"
+    Else If Index = ViewerProfiles.CHARACTER_TAB_KAEL Then
+        Result = "Kael"
+    Else If Index = ViewerProfiles.CHARACTER_TAB_PARTY_KAEL Then
+        Result = "Kael Party"
     End If
 
     Return Result

@@ -1,5 +1,21 @@
 # SMILE 2.0 - 3D Viewer, Animation Editor
 
+## Kael (native)
+
+**Kael** opens the new sword-boss candidate; **Kael Party** runs Arin, Orin, Zara
+and Mira against Kael at exactly twice his solo scale. Both tabs use the existing
+playback, equipment and battle owners. Kael's ten clips are Idle, Walk, Run,
+Attack, Attack 2, Dodge, Defend, Hit, Death and Victory. Weapon/W toggles his sword.
+The sword blade is thinner in side view, with its unwanted depth spikes removed;
+Defend uses a sword guard and Death releases the weapon onto the floor.
+
+The canonical [Kael v1 package](../../games/SinStarI/SourceAssets/Characters/Kael/KaelV1/README.md)
+contains the originals, Blender repair/rig/export workflow, Mixamo sources,
+checksummed 48,996-triangle model, ten sockets and final previews. Kael has a
+separate Beat Camera/head identity from Dragon and Vrax. Sin Star I links the same
+model and session under Characters → Kael and Battle Simulations → Kael Party.
+Build with `Build.ps1 -Target Native`, then use `Launch.ps1`. Web remains on hold.
+
 ## Yalis (native)
 
 **Yalis** is the native sword-fighter candidate and appears after Vrax, before the

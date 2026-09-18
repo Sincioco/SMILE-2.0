@@ -113,7 +113,7 @@ Public Class Session
 
         Call ViewerSession.SelectCharacterTab(Me.Session, InitialTab)
         Call ViewerParty.SetEnabled(Me.Party, ViewerProfiles.IsPartyTab(InitialTab))
-        Call ViewerParty.SelectUnityRoster(Me.Party, InitialTab = ViewerProfiles.CHARACTER_TAB_PARTY_VRAX)
+        Call ViewerParty.SelectUnityRoster(Me.Party, ViewerProfiles.UsesUnityPartyRoster(InitialTab))
 
         Call ViewerPlayback.Reset(Me.Playback, 100)
         Call ViewerInput.Reset(Me.ViewerInputState)
@@ -1753,7 +1753,8 @@ Public Class Session
             Not Me.ViewerUiState.CalibrationVisible) Then
             Call BeatEditor.Draw(Me.BeatEditing, Me.Party.UnityRoster, Me.ViewWidth, Me.ViewHeight,
                 BeatSequence.Name(BeatSequence.Identity(Me.Party.UnityRoster,
-                    BeatSequence.Opponent(Me.Party, Me.BeatEditing.Selected))),
+                    BeatSequence.Opponent(Me.Party, Me.BeatEditing.Selected),
+                    ViewerParty.BossProfile(Me.Party))),
                 Me.SelectedBeatClipName(),
                 Me.ViewerUiState.InspectorScrollOffset,
                 ViewerUi.InspectorViewportTop(),

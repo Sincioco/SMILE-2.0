@@ -19,6 +19,7 @@ Public Function IsPresentation(Action As TitleScreen.TitleAction) As Boolean
         Action = TitleScreen.TitleAction.Orin Or Action = TitleScreen.TitleAction.Mira Or
         Action = TitleScreen.TitleAction.Zara Or Action = TitleScreen.TitleAction.Valor Or
         Action = TitleScreen.TitleAction.Yalis Or
+        Action = TitleScreen.TitleAction.Kael Or Action = TitleScreen.TitleAction.KaelBattle Or
         Action = TitleScreen.TitleAction.Dragon Or Action = TitleScreen.TitleAction.Vrax Or
         Action = TitleScreen.TitleAction.DragonBattle Or Action = TitleScreen.TitleAction.VraxBattle)
 
@@ -43,6 +44,10 @@ Private Function TabFor(Action As TitleScreen.TitleAction) As Number
             Return 6
         Case TitleScreen.TitleAction.Yalis
             Return Profiles.CHARACTER_TAB_YALIS
+        Case TitleScreen.TitleAction.Kael
+            Return Profiles.CHARACTER_TAB_KAEL
+        Case TitleScreen.TitleAction.KaelBattle
+            Return Profiles.CHARACTER_TAB_PARTY_KAEL
         Case TitleScreen.TitleAction.DragonBattle
             Return Profiles.CHARACTER_TAB_PARTY_DRAGON
         Case TitleScreen.TitleAction.VraxBattle
@@ -68,6 +73,7 @@ Public Sub Enter(Action As TitleScreen.TitleAction)
     Preview = New Viewer.Session()
     Heading = TitleScreen.Label(Action)
     CycleClips = (Action <> TitleScreen.TitleAction.DragonBattle And
+        Action <> TitleScreen.TitleAction.KaelBattle And
         Action <> TitleScreen.TitleAction.VraxBattle)
 
     Call Preview.Start(TabFor(Action), True, Window_Width(), Window_Height(), CycleClips)

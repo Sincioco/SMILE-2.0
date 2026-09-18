@@ -1,5 +1,39 @@
 # Character Viewer Architecture
 
+## Native Kael package and boss selection
+
+Kael v1's canonical package owns body reduction, sword depth repair, Mixamo rig and
+animation provenance, equipment fitting, grounding, GLB export and focused asset
+validation. `Profiles` owns profile 14 and the ten-clip/ten-socket inventory; tab
+identities 13 and 14 are Kael and Kael Party. `ViewerSession` routes tabs,
+`ViewerUi` renders them, and the standard asset preparer stages the package.
+
+The existing opponent owner, `ViewerDragon`, records the selected boss profile
+and loads Kael with twice the solo fit scale. `ViewerParty` selects the boss's own
+attacks, labels and contact distances while retaining the established Arin/Orin/
+Zara/Mira scheduler. Vrax's node aim and effects remain conditional on Vrax.
+`ViewerLifecycle` wires this selection during loading. No additional actor pool,
+renderer, clock, calibration bank or game-specific battle scheduler is introduced.
+
+`ViewerBeatSequence` gives Kael identity 7. The editor's tracks and head persistence
+have eight entries, and every boss identity lookup includes the selected profile,
+including the target label. Existing Dragon/Vrax storage names remain compatible.
+Sin Star I appends two menu actions and hosts these same tabs. Its title layout
+fits the additional character row above the help text.
+
+Focused validation adds Kael profile/tab/attack/contact checks, independent camera
+identity checks, and actual-model roster checks in the twelve-entry Sin Star I
+presentation fixture. Existing native hardening architecture checks apply. Growth
+stays in the current owners; no size limit, reviewed baseline, exclusion or
+dependency guardrail is changed. Studio and all Web adoption remain on hold.
+
+Kael growth review (net lines): Profiles +39, Party +27, opponent owner +24,
+UI +26, lifecycle +10, session +6, Beat Editor +4, Beat Sequence +5, inspector +8
+and workflow coordinator +1. Sin Star I's title owner grows by 11 lines and its
+presentation adapter by six; both executable entry points remain unchanged.
+The changes stay with metadata, actor selection, choreography or presentation;
+no new mutable global owner or reverse dependency into an entry point is added.
+
 ## Sin Star I presentation host
 
 Sin Star I's `CharacterPresentation` links this shared session and its existing

@@ -144,12 +144,22 @@ Private Sub BeginAssetLoad(ByRef Session As ViewerSession.State,
 
     ActiveProfile = ViewerProfiles.ProfileAt(Session.ProfileIndex)
 
-    If Session.SelectedCharacterTab = ViewerProfiles.CHARACTER_TAB_PARTY_VRAX Then
+    If ViewerProfiles.UsesUnityPartyRoster(Session.SelectedCharacterTab) Then
         ActiveProfile.DefaultPlaybackSpeed = ViewerParty.ActorPlaybackSpeed(Party, 0, 150)
     End If
 
+    Party.SelectedBossProfile = ViewerProfiles.PROFILE_DRAGON
+
+    If Session.SelectedCharacterTab = ViewerProfiles.CHARACTER_TAB_PARTY_KAEL Then
+        Party.SelectedBossProfile = ViewerProfiles.PROFILE_KAEL
+    Else If Party.UnityRosterRequested Then
+        Party.SelectedBossProfile = ViewerProfiles.PROFILE_VRAX
+    End If
+
+    Dragon.SelectedProfile = Party.SelectedBossProfile
     Dragon.UseVrax = ((Party.Enabled And Party.UnityRosterRequested) Or
         ViewerProfiles.UsesVraxOpponent(Session.ProfileIndex))
+    Dragon.UseVrax = Dragon.UseVrax And Dragon.SelectedProfile <> ViewerProfiles.PROFILE_KAEL
 
     Call ViewerCalibration.SelectProfileBank(Calibration, Session.ProfileIndex)
 

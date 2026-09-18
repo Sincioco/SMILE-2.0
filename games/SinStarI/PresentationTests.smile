@@ -38,6 +38,10 @@ Do
             Action = TitleScreen.TitleAction.DragonBattle
         Case 9
             Action = TitleScreen.TitleAction.VraxBattle
+        Case 10
+            Action = TitleScreen.TitleAction.Kael
+        Case 11
+            Action = TitleScreen.TitleAction.KaelBattle
     End Select
 
     Call Presentation.Enter(Action)
@@ -61,9 +65,9 @@ Do
 
     Selection = Selection + 1
 
-Loop Until Selection = 10 Or Game_Closed()
+Loop Until Selection = 12 Or Game_Closed()
 
-If Passed And Selection = 10 Then
+If Passed And Selection = 12 Then
     Print "Sin Star I presentations passed."
 Else
     Print "Sin Star I presentations FAILED."

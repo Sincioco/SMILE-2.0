@@ -5,7 +5,7 @@ Option Explicit
 
 Import Smile.Tools.BattleCameraShots As Shots
 
-Public Const CHARACTER_COUNT = 7
+Public Const CHARACTER_COUNT = 8
 
 Public Type Entry
     Current As Shots.HeadReference
