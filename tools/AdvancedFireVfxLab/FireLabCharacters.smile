@@ -18,7 +18,7 @@ Public Type State
     Arin As Character.Actor
     KaelFire As KaelFire.Context
     ArinFire As ArinFire.Context
-    Target As Core.Object3D
+    Targets[4] As Core.Object3D
     Active As Boolean
     KaelSelected As Boolean
     Attack As Number
@@ -30,6 +30,8 @@ End Type
 Public Sub Start(ByRef Value As State)
 
     Dim Ok As Boolean
+    Dim Index As Number
+    Dim Height As Number
 
     Value.Kael = Character.LoadActor("Assets/KaelFire.sm3d")
     Value.Arin = Character.LoadActor("Assets/Arin.sm3d")
@@ -43,10 +45,16 @@ Public Sub Start(ByRef Value As State)
     Ok = Character.Rotate(Value.Arin, 0, -90, 0) And Ok
     Value.ArinFire.Nodes = Calibration.ConfigureForActor(Value.ArinFire.Pose, 0, 0, Value.Arin)
     Ok = Value.ArinFire.Nodes.Available And Not Value.ArinFire.Pose.StorageRejected And Ok
-    Value.Target = G.CreateCylinder3D(28, 120)
-    Ok = P.SetPosition(Value.Target, 160.0, 60.0, 0.0) And Ok
 
-    Call G.SetObjectColor(Value.Target, 65, 76, 90)
+    For Index = 0 To 3
+
+        Height = 60 + Index * 35
+        Value.Targets[Index] = G.CreateCylinder3D(12 + Index * 12, Height)
+        Ok = P.SetPosition(Value.Targets[Index], 175.0,
+            ToDouble(Height) * 0.5, -150.0 + ToDouble(Index) * 100.0) And Ok
+
+        Call G.SetObjectColor(Value.Targets[Index], 40, 85, 120)
+    End For
 
     Ok = G.SetAmbientLight3D(215, 225, 255, 85) And Ok
     Ok = G.SetDirectionalLight3D(-35, -80, 25, 255, 240, 215, 115) And Ok
@@ -155,7 +163,6 @@ Public Function Draw(ByRef Value As State) As Boolean
     If Value.KaelSelected Then
 
         Ok = Character.Draw(Value.Kael)
-        Ok = G.DrawObject3D(Value.Target) And Ok
         Ok = KaelFire.Draw(Value.KaelFire) And Ok
 
     Else
@@ -171,6 +178,10 @@ Public Function Draw(ByRef Value As State) As Boolean
         End For
 
     End If
+
+    For Index = 0 To 3
+        Ok = G.DrawObject3D(Value.Targets[Index]) And Ok
+    End For
 
     If Not Ok And Value.ErrorCode = 0 Then
         Value.ErrorCode = 1
@@ -278,11 +289,16 @@ End Sub
 
 Public Sub Shutdown(ByRef Value As State)
 
+    Dim Index As Number
+
     Call KaelFire.Destroy(Value.KaelFire)
     Call ArinFire.Destroy(Value.ArinFire)
     Call Character.Destroy(Value.Kael)
     Call Character.Destroy(Value.Arin)
-    Call G.DestroyObject3D(Value.Target)
+
+    For Index = 0 To 3
+        Call G.DestroyObject3D(Value.Targets[Index])
+    End For
 
 End Sub
 

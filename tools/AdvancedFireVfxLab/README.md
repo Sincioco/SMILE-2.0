@@ -4,7 +4,7 @@ Build with `pwsh -File tools/AdvancedFireVfxLab/Build.ps1 -Target Native`, then 
 with `pwsh -File tools/AdvancedFireVfxLab/Launch.ps1`. The launcher closes only an
 older copy of this Lab gracefully. Window placement is remembered.
 
-The Lab starts on **Kael**, at speed **200**, with **Demo** cycling:
+The Lab starts on **Kael**, at speed **200**, with **Auto Orbit** enabled and **Demo** cycling:
 
 - **Ember Strikes** (`FirePunch`): two chambered punches and forward fire jets.
 - **Flame Sweep** (`FireSweep`): a raised, sweeping kick with fire attached to the foot.
@@ -32,7 +32,7 @@ in those applications through the active sixteen-clip model.
 
 ## Ownership and validation
 
-`FireLabCharacters` owns actors, playback, target and character controls.
+`FireLabCharacters` owns actors, playback, four target pillars and character controls.
 `KaelFire` owns only the caller-owned three jets and impact context and its timed
 socket choreography. `FireLabArin` adapts the existing calibration module and
 unchanged equipment flame parameters. The Lab loop advances the shared fire pool
@@ -47,7 +47,9 @@ algorithms stay in the focused owners above. No size limit or exclusion changes.
 `Test.ps1` compiles/runs the focused native fixture: real nineteen-clip model,
 three-part hair/sword preservation, all three automatic attacks, actual socket
 motion, dual-hand emission, Arin calibration/flames, switching cleanup and native
-CPU fallback. The existing `FireEmitterTests` covers unchanged thermal contracts.
+CPU fallback. It also checks all four target handles and compares the complete
+Arin calibration loaded by the actual Fire scene with the canonical package JSON.
+The existing `FireEmitterTests` covers unchanged thermal contracts.
 The fixture checks Begin3D, complete scene submission and End3DChecked on every
 frame, including Arin flames and CPU fallback. `FireLabCharacters.Draw` returns
 the combined actor/target/effect result and retains failure in its scene state.
@@ -89,7 +91,9 @@ In sample mode, Demo cycles Torch, Windy Torch, Brazier, Line Fire, Fireball, Fi
 
 ## Controls
 
-The floor grid uses a normal orange, opaque, non-emissive material rather than additive neon. Bare Alt no longer interrupts the frame loop in rebuilt native programs.
+The floor uses Water Lab's reflective arena and subdued blue grid. **Auto Orbit**
+toggles continuous horizontal camera motion; manual pan, orbit and eased zoom remain
+available. Bare Alt no longer interrupts the frame loop in rebuilt native programs.
 
 - Backtick (the grave-accent key above Tab on US keyboards) cycles through panels hidden, all UI hidden, then the prior UI restored. The first tap keeps the header, FPS, and helper text. Hidden controls cannot intercept the mouse. The scene and camera continue normally. Right-click reset restores the UI.
 - Left drag pans; middle drag orbits; wheel zooms smoothly.
@@ -103,7 +107,11 @@ The floor grid uses a normal orange, opaque, non-emissive material rather than a
 
 ## Shared presentation
 
-`Smile.Simple3D.Arena3D` is the same floor/grid recipe as Character Viewer. Fire Lab requests a 1000-by-1000 black arena, neon-orange lines, tile spacing 160 and line thickness 2 world units. The tile spacing is four times the previous 40-unit setting. Legacy sample-mode pillars and decorative torches remain removed; the new Kael scene has one target pillar.
+`Smile.Simple3D.Arena3D` supplies the same reflective floor recipe as Water Lab:
+1000 by 800 world units, 45-unit tiles and 1-unit blue grid lines. The coordinator
+configures reflection before each scene begins. Both character previews share four
+pillars with radii 12/24/36/48 and heights 60/95/130/165. Their bases sit on the
+floor; the initial camera frames the wider arena. Decorative torches remain removed.
 
 `Smile.Simple3D.StaticBackdrop3D` displays the Character Viewer's default Sin Star I landscape without its title. It is screen-fixed, not attached to camera motion. Localized heat refraction remains intentional. `Smile.UI.Controls` supplies the shared panels, buttons, sliders, hover hit-testing, and drag capture. Starting yaw, pitch and auto-orbit speed are constants at the top of `Program.smile`; the arena does not own the camera.
 

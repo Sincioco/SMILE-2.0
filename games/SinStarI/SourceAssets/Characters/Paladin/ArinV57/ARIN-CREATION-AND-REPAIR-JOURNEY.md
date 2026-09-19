@@ -950,3 +950,11 @@ matched the live saved calibration. No production persistence defect was reprodu
 The fixture uses a unique application identity and never deletes live user keys.
 Wrist translation is not a saved control; wrist rotations and equipment transforms
 are the supported contract. Save the edited frame before downloading a backup.
+
+### Native Fire Lab calibration preview (September 20, 2026)
+
+Fire Lab continues to use the shared pose-calibration owner for both wrist
+rotations, equipment positions/rotations and coupling flags. Its native fixture
+now compares the scene's complete loaded JSON with this package's canonical JSON.
+The reflective-floor/four-pillar update changes presentation only; it does not
+replace Arin's model, equipment transforms, sockets or saved 24-key calibration.

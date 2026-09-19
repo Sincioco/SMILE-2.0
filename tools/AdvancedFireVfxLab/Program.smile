@@ -12,9 +12,9 @@ Import Smile.Simple3D.FixedMath As FixedMath
 Import Smile.Tools.FireLabCharacters As Characters
 
 Const ARENA_WIDTH = 1000
-Const ARENA_DEPTH = 1000
-Const ARENA_TILE_SIZE = 160
-Const ARENA_LINE_THICKNESS = 2
+Const ARENA_DEPTH = 800
+Const ARENA_TILE_SIZE = 45
+Const ARENA_LINE_THICKNESS = 1
 Const START_YAW = 27
 Const START_PITCH = 12
 Const AUTO_ORBIT_SPEED = 5
@@ -34,7 +34,6 @@ Dim CinematicYaw1000 As Number
 Dim Demo As Boolean
 Dim DemoTime As Number
 Dim Arena As Arena3D.ArenaFloor
-Dim GridTexture As Core.Texture3D
 Dim Landscape As StaticBackdrop3D.Backdrop
 Dim TitleBackdrop As StaticBackdrop3D.Backdrop
 Dim BackgroundIndex As Number
@@ -98,18 +97,12 @@ Camera.Position.Z = -450
 Camera.Target.Y = 90
 Camera.Target.Z = 50
 BaseCamera = Camera
-ZoomTarget = 800
-ZoomLive = 800000
-Cinematic = False
+ZoomTarget = 1200
+ZoomLive = 1200000
+Cinematic = True
 Demo = True
-Arena = Arena3D.Create(ARENA_WIDTH, ARENA_DEPTH, 210, 120, 40,
-    ARENA_TILE_SIZE, ARENA_LINE_THICKNESS)
-
-Call Graphics3D.DestroyMaterial3D(Arena.GridMaterial)
-
-Arena.GridMaterial = Graphics3D.CreateMaterial3D(GridTexture,
-    Graphics3D.MATERIAL_ALPHA_OPAQUE, 210, 120, 40, 100, True, 0, 50)
-Ok = Graphics3D.SetObjectMaterial3D(Arena.Grid, Arena.GridMaterial)
+Arena = Arena3D.Create(ARENA_WIDTH, ARENA_DEPTH, 45, 65, 95,
+    ARENA_TILE_SIZE, ARENA_LINE_THICKNESS, True)
 
 Landscape = StaticBackdrop3D.Create("Assets/Backgrounds/SinStarLandscape.png")
 TitleBackdrop = StaticBackdrop3D.Create("Assets/Backgrounds/SinStarTitleWithLogo.png")
@@ -295,7 +288,8 @@ Do
     Light = Fire.LightPosition(ActiveFire)
     Ok = Graphics3D.SetPointLight3D(0, Light.X, Light.Y, Light.Z, 255, 170, 65,
         Fire.LightIntensity(ActiveFire), 260)
-    Ok = BeginScene()
+    Ok = Arena3D.ConfigureForFrame(Arena, FloorVisible, GridVisible)
+    Ok = BeginScene() And Ok
     Ok = Arena3D.Draw(Arena, FloorVisible, GridVisible) And Ok
 
     If Actors.Active Then
@@ -850,6 +844,11 @@ Sub UpdateCamera()
 End Sub
 
 Sub FrameStation()
+
+    If Actors.Active Then
+        ZoomTarget = 1200
+        Return
+    End If
 
     ZoomTarget = 650
     CameraControls.PanX = 0

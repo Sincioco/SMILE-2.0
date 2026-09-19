@@ -28,7 +28,19 @@ try {
         --target windows-x64 --configuration Release --graphics DirectX -o $output
     if ($LASTEXITCODE -ne 0) { throw 'Fire Lab native fixture compilation failed.' }
     $result = & (Join-Path $fireRepository 'scripts\run-bounded-test.cmd') 30 $output
-    if ($LASTEXITCODE -ne 0 -or (($result -join "`n").Trim() -ne 'Kael Fire Lab native failures: 0')) {
+    $runExit = $LASTEXITCODE
+    $calibration = @($result | Where-Object { $_.StartsWith('FIRE_ARIN_JSON: ') })
+    if ($calibration.Count -ne 1) { throw 'Expected the actual Fire Lab Arin calibration export.' }
+    & {
+        . (Join-Path $fireRepository 'scripts\sync-arin-v5-7-calibration.ps1') -Character Arin -FunctionsOnly
+        $actual = Normalize-Snapshot ($calibration[0].Substring('FIRE_ARIN_JSON: '.Length) | ConvertFrom-Json -AsHashtable)
+        $expected = Read-Snapshot $snapshotPath
+        if (($actual | ConvertTo-Json -Depth 24 -Compress) -cne ($expected | ConvertTo-Json -Depth 24 -Compress)) {
+            throw 'Fire Lab Arin calibration differs from the complete canonical package.'
+        }
+    }
+    $result = @($result | Where-Object { -not $_.StartsWith('FIRE_ARIN_JSON: ') })
+    if ($runExit -ne 0 -or (($result -join "`n").Trim() -ne 'Kael Fire Lab native failures: 0')) {
         throw "Fire Lab native checks failed: $result"
     }
     Write-Host ($result -join "`n")

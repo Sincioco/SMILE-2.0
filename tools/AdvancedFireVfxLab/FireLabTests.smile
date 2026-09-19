@@ -2,6 +2,7 @@ Option Explicit
 
 Import Smile.Tools.FireLabCharacters As Scene
 Import Smile.Tools.KaelFire As KaelFire
+Import Smile.Tools.Character3DViewerCalibration As Calibration
 Import Smile.Simple3D.Character3D As Character
 Import Smile.Simple3D.Graphics3D As G
 Import Smile.Simple3D.Core As Core
@@ -35,6 +36,12 @@ Call Scene.Start(Value)
 Call Check(Ok And Value.Ready, "Scene loads both actors and Arin calibration")
 Call Check(Character.PartCount(Value.Kael) = 3, "Body, sword and silver hair parts")
 Call Check(Character.ClipCount(Value.Kael) = 19, "Nineteen preview clips")
+
+For Index = 0 To 3
+    Call Check(Value.Targets[Index].Handle <> 0, "Four arena pillars load")
+End For
+
+Print "FIRE_ARIN_JSON: " + Calibration.SavedJson(Value.ArinFire.Pose, Value.Arin)
 
 Ok = Character.TrySocketPositionPrecise(Value.Kael, "HandLeft", 0, False, StartHand)
 
