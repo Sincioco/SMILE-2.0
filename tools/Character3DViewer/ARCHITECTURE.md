@@ -729,3 +729,8 @@ Do not use live user calibration for failure tests.
   (two actual actors, authored socket alignment, three styles, charge cleanup,
   independent release and native/Web forced fallback), HardeningTests (command
   routing and intensity bounds). The shared workflow retains the original coordinator order.
+
+`CalibrationRoundTripTests.smile` is a focused companion injected by the existing
+native isolation runner. It owns only complete-pose recovery assertions: all 20
+channels plus wrist/equipment world matrices. Production state ownership remains
+in ViewerCalibration and ViewerCalibrationEditing; no persistence code changed.

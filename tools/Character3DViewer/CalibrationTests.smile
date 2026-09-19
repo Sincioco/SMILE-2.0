@@ -141,6 +141,7 @@ Session.CharacterSwitchBlocked = False
 
 ''' The remaining editing checks start from an empty isolated track.
 
+Call CheckFullPoseRoundTrip()
 Call ViewerCalibration.ResetBank(Calibration)
 
 Calibration.Saved = False

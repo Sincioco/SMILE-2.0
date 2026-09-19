@@ -936,3 +936,17 @@ calibration. Native mesh drawing restores triangle-list topology after reflected
 ribbons; this fixes the ribbon-only scene artifact found while adding Zara VFX.
 No Arin package model, descriptor or saved calibration changed. See the shared
 character-equipment-vfx checkpoint for validation.
+
+### Complete pose recovery check (September 20, 2026)
+
+The native isolated calibration fixture now runs `CalibrationRoundTripTests.smile`.
+It edits both wrists' XYZ rotations, sword/shield XYZ rotations and positions,
+and both decouple flags through the production editing controls. It checks all
+20 values and the four complete world socket transforms after Reset / Reload Key,
+Delete All Key Frames / JSON import, and native storage reload. The deletion is
+for the selected clip; the imported backup restores the full saved snapshot.
+The September 20 run passed with the current 24-key Arin package, which also
+matched the live saved calibration. No production persistence defect was reproduced.
+The fixture uses a unique application identity and never deletes live user keys.
+Wrist translation is not a saved control; wrist rotations and equipment transforms
+are the supported contract. Save the edited frame before downloading a backup.

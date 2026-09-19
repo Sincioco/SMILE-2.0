@@ -878,3 +878,17 @@ working keys. Keep private roster publication separate from public distribution.
 Orin's storm clouds are light/flash presentation, not volumetric weather; one-boss
 Chain Arcs do not imply multi-enemy combat. Dragon is a preview rig without flight
 or foot-plant IK. Current calibration tools are not a full Blender replacement.
+
+### Complete pose recovery check (September 20, 2026)
+
+The native isolated calibration fixture now runs `CalibrationRoundTripTests.smile`.
+It edits both wrists' XYZ rotations, sword/shield XYZ rotations and positions,
+and both decouple flags through the production editing controls. It checks all
+20 values and the four complete world socket transforms after Reset / Reload Key,
+Delete All Key Frames / JSON import, and native storage reload. The deletion is
+for the selected clip; the imported backup restores the full saved snapshot.
+The September 20 run passed with the current 24-key Arin package, which also
+matched the live saved calibration. No production persistence defect was reproduced.
+The fixture uses a unique application identity and never deletes live user keys.
+Wrist translation is not a saved control; wrist rotations and equipment transforms
+are the supported contract. Save the edited frame before downloading a backup.

@@ -1,0 +1,149 @@
+''' Injected into the isolated production Viewer fixture; never uses live saves.
+Sub CheckFullPoseRoundTrip()
+
+    Dim Original As Text
+    Dim Backup As Text
+    Dim Expected[20] As Number
+    Dim Matrices[4, 12] As Number
+    Dim Names[4] As Text
+    Dim Parts[4] As Number
+    Dim GroupIndex As Number
+    Dim Axis As Number
+    Dim Channel As Number
+    Dim Socket As Number
+    Dim Property As Number
+    Dim Phase As Number
+    Dim Accepted As Boolean
+    Dim Result As ViewerCalibrationEditing.OperationResult
+
+    Original = ViewerCalibration.SavedJson(Calibration, Character)
+    ViewerGizmoState.HoldGrip = False
+
+    Call SelectClip(1)
+    Call ApplyCalibrationControlForTest(ViewerUi.CALIBRATION_ACTION_CLEAR)
+
+    ''' Edit through the same numeric-control owner as the visible editor.
+
+    For GroupIndex = 0 To 5
+
+        ViewerUiState.CalibrationTarget = GroupIndex
+        ViewerUiState.CalibrationTransform = ViewerUi.CALIBRATION_TRANSFORM_ROTATE
+
+        If GroupIndex >= 4 Then
+            ViewerUiState.CalibrationTarget = GroupIndex - 2
+            ViewerUiState.CalibrationTransform = ViewerUi.CALIBRATION_TRANSFORM_MOVE
+        End If
+
+        For Axis = 0 To 2
+            Channel = GroupIndex * 3 + Axis
+            Expected[Channel] = 7 + Channel * 2
+            ViewerUiState.CalibrationAxis = Axis
+
+            Call SetCurrentCalibrationValue(Expected[Channel])
+        End For
+    End For
+
+    Expected[18] = 1
+    Expected[19] = 1
+
+    Call ApplyCalibrationControlForTest(ViewerUi.CALIBRATION_ACTION_DECOUPLE_WEAPON)
+    Call ApplyCalibrationControlForTest(ViewerUi.CALIBRATION_ACTION_DECOUPLE_SHIELD)
+    Call ApplyWristCalibration()
+    Call ApplyEquipmentCoupling()
+    Call ApplyEquipmentCalibration()
+    Call ApplyCalibrationControlForTest(ViewerUi.CALIBRATION_ACTION_SAVE)
+    Call CalibrationCheck(TestCalibrationOperation.Persisted,
+        "Complete pose save persists both wrists and both equipment transforms")
+
+    Backup = ViewerCalibration.SavedJson(Calibration, Character)
+    Names[0] = "HandRight"
+    Names[1] = "HandLeft"
+    Names[2] = "SwordTip"
+    Names[3] = "ShieldCenter"
+    Parts[0] = BODY_PART_INDEX
+    Parts[1] = BODY_PART_INDEX
+    Parts[2] = WEAPON_PART_INDEX
+    Parts[3] = SHIELD_PART_INDEX
+
+    For Socket = 0 To 3
+
+        For Property = 1 To 12
+            Matrices[Socket, Property - 1] = Character3D.SocketValueThousandths(
+                Character, Names[Socket], Property, Parts[Socket])
+
+            Call CalibrationCheck(Character3D.LastError() = 0, "Capture saved world pose")
+        End For
+    End For
+
+    For Phase = 1 To 3
+
+        If Phase = 1 Then
+
+            For GroupIndex = 0 To 3
+                ViewerUiState.CalibrationTarget = GroupIndex
+
+                Call ApplyCalibrationControlForTest(ViewerUi.CALIBRATION_ACTION_RESET)
+            End For
+
+            Call CalibrationCheck(ViewerCalibration.ChannelValue(
+                Calibration, Playback.SelectedClip, 0) = 0,
+                "Reset changes the wrist preview before reload")
+            Call ApplyCalibrationControlForTest(ViewerUi.CALIBRATION_ACTION_RELOAD)
+
+        Else If Phase = 2 Then
+
+            Call ApplyCalibrationControlForTest(ViewerUi.CALIBRATION_ACTION_CLEAR)
+            Call CalibrationCheck(ViewerCalibration.KeyCount(
+                Calibration, Playback.SelectedClip) = 0,
+                "Delete All Key Frames really clears the selected clip")
+
+            Accepted = ViewerCalibration.PrepareImport(Calibration, Character,
+                Backup, ViewerUiState.CalibrationEditing)
+
+            Call CalibrationCheck(Accepted, "Validate complete pose backup after deletion")
+
+            Result = ViewerCalibrationEditing.ImportOrCommit(
+                Calibration, Character, Playback.SelectedClip, Session.ProfileIndex,
+                SwordWristNode, ShieldWristNode, CalibrationAvailable, ViewerUiState, Effects)
+
+            Call CalibrationCheck(Result.Applied And Result.Ready,
+                "Import applies complete pose immediately after deletion")
+
+        Else
+
+            Call ViewerCalibration.Reload(Calibration, Character)
+            Call UpdateCalibrationForCurrentFrame()
+            Call ApplyWristCalibration()
+            Call ApplyEquipmentCoupling()
+            Call ApplyEquipmentCalibration()
+
+        End If
+
+        For Channel = 0 To 19
+            Call CalibrationCheck(ViewerCalibration.ChannelValue(
+                Calibration, Playback.SelectedClip, Channel) = Expected[Channel],
+                "Complete pose channel survives phase " + ViewerCalibration.NumberText(Phase) + ": " + ViewerCalibration.NumberText(Channel))
+        End For
+
+        For Socket = 0 To 3
+
+            For Property = 1 To 12
+                Call CalibrationCheck(Character3D.SocketValueThousandths(
+                    Character, Names[Socket], Property, Parts[Socket]) =
+                    Matrices[Socket, Property - 1],
+                    "World pose survives phase " + ViewerCalibration.NumberText(Phase) + ": " + Names[Socket])
+            End For
+        End For
+
+        Call CalibrationCheck(ViewerCalibration.SavedJson(Calibration, Character) = Backup,
+            "Complete saved JSON survives reset, delete/import, and storage reload")
+    End For
+
+    Accepted = ViewerCalibration.PrepareImport(
+        Calibration, Character, Original, False)
+    Accepted = ViewerCalibration.CommitImport(
+        Calibration, Character, Playback.SelectedClip, False) And Accepted
+
+    Call CalibrationCheck(Accepted, "Restore isolated starting snapshot")
+
+End Sub

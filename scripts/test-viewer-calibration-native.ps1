@@ -30,6 +30,7 @@ $viewerSource = "Option Explicit`n`n" + $imports + $constants + $fields +
     "Game Window `"Fixture Assembly Boundary`"`n" + $helpers
 $viewerSource = $viewerSource.Replace("`r`n", "`n")
 $testStartup = Get-Content -LiteralPath (Join-Path $toolRoot 'CalibrationTests.smile') -Raw
+$testStartup += "`n" + (Get-Content -LiteralPath (Join-Path $toolRoot 'CalibrationRoundTripTests.smile') -Raw)
 $profileConstants = foreach ($characterName in @('Arin', 'Orin')) {
     $fingerprint = & {
         . (Join-Path $PSScriptRoot 'sync-arin-v5-7-calibration.ps1') -Character $characterName -FunctionsOnly
