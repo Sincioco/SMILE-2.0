@@ -139,13 +139,17 @@ Public Sub Update(ByRef Value As State, Elapsed As Number, Demo As Boolean,
 
 End Sub
 
-Public Sub Draw(ByRef Value As State)
+Public Function Draw(ByRef Value As State) As Boolean
 
     Dim Ok As Boolean
     Dim Index As Number
 
-    If Not Value.Active Or Not Value.Ready Then
-        Return
+    If Not Value.Active Then
+        Return True
+    End If
+
+    If Not Value.Ready Then
+        Return False
     End If
 
     If Value.KaelSelected Then
@@ -168,7 +172,13 @@ Public Sub Draw(ByRef Value As State)
 
     End If
 
-End Sub
+    If Not Ok And Value.ErrorCode = 0 Then
+        Value.ErrorCode = 1
+    End If
+
+    Return Ok
+
+End Function
 
 Public Function ActiveEmitter(ByRef Value As State) As Fire.FireEmitter
 

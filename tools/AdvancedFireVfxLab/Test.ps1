@@ -1,13 +1,27 @@
 [CmdletBinding()]
-param()
+param([ValidateSet('None', 'Begin', 'Draw', 'End')][string]$Fault = 'None')
 $ErrorActionPreference = 'Stop'
 $fireRepository = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..'))
 $projectPath = Join-Path $PSScriptRoot 'FireLabTests.generated.smileproj'
+$fixturePath = Join-Path $PSScriptRoot 'FireFault.generated.smile'
 $projectText = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'AdvancedFireVfxLab.smileproj') -Raw
 $projectText = $projectText.Replace('Program.smile', 'FireLabTests.smile').Replace(
     '<ApplicationId>smile.examples.advanced-fire-vfx-lab</ApplicationId>',
     '<ApplicationId>smile.tests.kael-fire-lab</ApplicationId>')
 try {
+    if ($Fault -ne 'None') {
+        $fixture = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'FireLabTests.smile') -Raw
+        $operation = switch ($Fault) {
+            Begin { '    Ok = G.Begin3D(Camera, 0, 0, 0)' }
+            Draw { '        Ok = Scene.Draw(Value)' }
+            End { '    Ok = G.End3DChecked() And Ok' }
+        }
+        if (-not $fixture.Contains($operation)) { throw "Missing $Fault observation boundary." }
+        # Preserve real rendering and cleanup; inject only the first observed return value.
+        $fixture = $fixture.Replace($operation, $operation + "`n`n    If Index = 0 Then`n        Ok = False`n    End If`n")
+        [IO.File]::WriteAllText($fixturePath, $fixture)
+        $projectText = $projectText.Replace('FireLabTests.smile', 'FireFault.generated.smile')
+    }
     [IO.File]::WriteAllText($projectPath, $projectText)
     $output = Join-Path $PSScriptRoot 'bin\Tests\FireLabTests.exe'
     & (Join-Path $fireRepository 'artifacts\compiler\smilec.exe') --project $projectPath `
@@ -20,4 +34,5 @@ try {
     Write-Host ($result -join "`n")
 } finally {
     if (Test-Path -LiteralPath $projectPath) { Remove-Item -LiteralPath $projectPath }
+    if (Test-Path -LiteralPath $fixturePath) { Remove-Item -LiteralPath $fixturePath }
 }

@@ -112,6 +112,15 @@ Space pauses the presentation; R restarts; Tab cycles effects. Buttons also cont
 pause, restart and sound. Manual pan/orbit stops the automatic orbit. Water and
 lightning stop advancing while paused; effects rebuild from the selected cast time.
 
+Sound Off, pause, seeking, restart, character/effect changes and destruction stop
+only this Lab's channels 6/7/8. Seeking samples the pose silently; resume and Sound
+On rebase cue state without replaying earlier sounds. Normal forward playback
+still plays each cast/contact once. `WaterLabScene.SetPaused`, `SetAudioEnabled`
+and `Seek` own these transitions; keyboard and pointer controls delegate to them.
+`Test-Audio.ps1` observes the actual compiled scene's Play/Stop statements with
+real playback retained, covering 19 transition/variant cases. This checks command
+admission and channel ownership, not speaker output or an audio-device recording.
+
 Animation speed defaults to **200%**. Press `+` (or `=`), `-`, numpad plus/minus,
 or the visible speed buttons to change it in 25-point steps between 25% and 400%.
 One scaled presentation clock drives Mira's pose, water motion,

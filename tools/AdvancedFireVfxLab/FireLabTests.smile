@@ -38,6 +38,8 @@ Call Check(Character.ClipCount(Value.Kael) = 19, "Nineteen preview clips")
 
 Ok = Character.TrySocketPositionPrecise(Value.Kael, "HandLeft", 0, False, StartHand)
 
+Call Check(Ok, "Initial hand socket")
+
 Do
 
     Call Scene.Update(Value, 50, True, True, 3, 3, False, True)
@@ -46,6 +48,9 @@ Do
     Attack = Value.Attack - 1
     Seen[Attack] = True
     Ok = Character.TrySocketPositionPrecise(Value.Kael, "HandLeft", 0, False, Hand)
+
+    Call Check(Ok, "Animated hand socket")
+
     Animated[Attack] = Animated[Attack] Or Abs(Hand.Y - StartHand.Y) > 15.0
     Emitted[Attack] = Emitted[Attack] Or Value.KaelFire.Emitting
 
@@ -55,11 +60,8 @@ Do
             Value.KaelFire.Jets[0].Slot <> Value.KaelFire.Jets[1].Slot)
     End If
 
-    Ok = G.Begin3D(Camera, 0, 0, 0)
+    Call CheckFrame()
 
-    Call Scene.Draw(Value)
-
-    Ok = G.End3DChecked() And Ok
     Index = Index + 1
 
 Loop Until Index = 195
@@ -82,6 +84,9 @@ Call Check(Value.KaelFire.Jets[0].Slot = 0 And Value.KaelFire.Impact.Slot = 0,
 Call Check(Value.ArinFire.Flames[0].Slot <> 0 And Value.ArinFire.Flames[3].Slot <> 0,
     "Arin retains sword and three shield-edge flames")
 Call Check(Value.ErrorCode = 0, "Arin calibrated attachment update")
+Call CheckFrame()
+
+ArinClip = -1
 
 For Index = 0 To Character.ClipCount(Value.Arin) - 1
 
@@ -91,9 +96,12 @@ For Index = 0 To Character.ClipCount(Value.Arin) - 1
 
 End For
 
+Call Check(ArinClip >= 0, "Arin SwordAttack clip exists")
+
 Duration = Character.ClipDuration(Value.Arin, ArinClip)
 Ok = Character.SetAnimationTime(Value.Arin, Duration - 1)
 
+Call Check(Ok And Duration > 0, "Arin terminal-frame pose setup")
 Call Scene.Update(Value, 0, False, True, 3, 3, False, True)
 
 Ok = Character.TrySocketPositionPrecise(Value.Arin, "SwordTip", 1, False, StartHand)
@@ -121,6 +129,7 @@ Call Scene.Update(Value, 50, False, True, 1, 1, False, True)
 Call Fire.Update(100)
 Call Check(Fire.Value(3, Value.KaelFire.Jets[0]) = 1 And
     Fire.Value(4, Value.KaelFire.Jets[0]) > 0, "Native CPU fallback emits")
+Call CheckFrame()
 
 Call Scene.Shutdown(Value)
 Call Check(Character.LiveActorCount() = 0, "Actor cleanup")
@@ -130,11 +139,29 @@ Call G.ResetRenderer3D()
 
 Print "Kael Fire Lab native failures: "; Failures
 
+Sub CheckFrame()
+
+    Ok = G.Begin3D(Camera, 0, 0, 0)
+
+    Call Check(Ok, "Begin3D")
+
+    If Ok Then
+        Ok = Scene.Draw(Value)
+
+        Call Check(Ok, "Scene.Draw")
+    End If
+
+    Ok = G.End3DChecked() And Ok
+
+    Call Check(Ok, "End3DChecked / submitted frame")
+
+End Sub
+
 Sub Check(Condition As Boolean, Label As Text)
 
     If Not Condition Then
         Failures = Failures + 1
-        Print "Failed: "; Label
+        Print "Failed: "; Label; " attack "; Value.Attack; " frame "; Index
     End If
 
 End Sub

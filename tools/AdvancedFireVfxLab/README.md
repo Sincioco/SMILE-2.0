@@ -48,6 +48,12 @@ algorithms stay in the focused owners above. No size limit or exclusion changes.
 three-part hair/sword preservation, all three automatic attacks, actual socket
 motion, dual-hand emission, Arin calibration/flames, switching cleanup and native
 CPU fallback. The existing `FireEmitterTests` covers unchanged thermal contracts.
+The fixture checks Begin3D, complete scene submission and End3DChecked on every
+frame, including Arin flames and CPU fallback. `FireLabCharacters.Draw` returns
+the combined actor/target/effect result and retains failure in its scene state.
+Run `Test.ps1 -Fault Begin`, `-Fault Draw`, and `-Fault End` separately as deliberate
+negative controls: each must fail the normal runner. They preserve actual frame
+operations and inject one false result at the fixture's observation boundary.
 The shared native Viewer/game checks cover silver-hair asset adoption.
 Web adoption, publication and browser validation remain on hold.
 

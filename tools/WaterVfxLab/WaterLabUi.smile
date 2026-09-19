@@ -103,7 +103,7 @@ Public Sub Update(ByRef Value As Scene.State, Key As Number)
     End If
 
     If Key = KEY_SPACE Or UI.Clicked(20, 112, 100, 28) Then
-        Value.Paused = Not Value.Paused
+        Call Scene.SetPaused(Value, Not Value.Paused)
     End If
 
     If Key = KEY_R Or UI.Clicked(128, 112, 100, 28) Then
@@ -111,9 +111,9 @@ Public Sub Update(ByRef Value As Scene.State, Key As Number)
     End If
 
     If Value.Paused And Key = KEY_LEFT Then
-        Value.Time = Max(0, Value.Time - 100)
+        Call Scene.Seek(Value, Value.Time - 100)
     Else If Value.Paused And Key = KEY_RIGHT Then
-        Value.Time = Min(Value.Duration - 1, Value.Time + 100)
+        Call Scene.Seek(Value, Value.Time + 100)
     End If
 
     If Key = KEY_O Or UI.Clicked(236, 112, 110, 28) Then
@@ -125,7 +125,7 @@ Public Sub Update(ByRef Value As Scene.State, Key As Number)
     End If
 
     If UI.Clicked(354, 112, 100, 28) Then
-        Value.AudioEnabled = Not Value.AudioEnabled
+        Call Scene.SetAudioEnabled(Value, Not Value.AudioEnabled)
     End If
 
     If Key = KEY_MINUS Or UI.Clicked(476, 112, 38, 28) Then

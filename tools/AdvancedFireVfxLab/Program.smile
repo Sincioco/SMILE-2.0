@@ -299,7 +299,7 @@ Do
     Ok = Arena3D.Draw(Arena, FloorVisible, GridVisible) And Ok
 
     If Actors.Active Then
-        Call Characters.Draw(Actors)
+        Ok = Characters.Draw(Actors) And Ok
     Else
         Ok = Fire.Draw(Emitter) And Ok
     End If

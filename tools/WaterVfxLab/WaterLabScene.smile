@@ -162,7 +162,10 @@ Public Sub Restart(ByRef Value As State)
     Dim Ok As Boolean
     Dim ChosenTarget As Number
 
+    Call StopAudio()
+
     Value.Time = 0
+    Value.TimeRemainder = 0
     Value.SoundPlayed = False
     Value.ImpactPlayed = False
     Value.Clip = "Attack"
@@ -208,6 +211,60 @@ Public Sub Restart(ByRef Value As State)
     If Not Ok Then
         Value.ErrorCode = Max(1, G.LastError())
     End If
+
+End Sub
+
+Public Sub SetPaused(ByRef Value As State, Paused As Boolean)
+
+    If Paused Then
+        Call StopAudio()
+    End If
+
+    Value.Paused = Paused
+
+    Call RebaseAudio(Value)
+
+End Sub
+
+Public Sub SetAudioEnabled(ByRef Value As State, Enabled As Boolean)
+
+    If Not Enabled Then
+        Call StopAudio()
+    End If
+
+    Value.AudioEnabled = Enabled
+
+    Call RebaseAudio(Value)
+
+End Sub
+
+Public Sub Seek(ByRef Value As State, Time As Number)
+
+    Call StopAudio()
+
+    Value.Time = Max(0, Min(Time, Value.Duration - 1))
+    Value.TimeRemainder = 0
+
+    Call RebaseAudio(Value)
+
+End Sub
+
+Private Sub RebaseAudio(ByRef Value As State)
+
+    Value.SoundPlayed = Value.Time >= Value.Duration * 30 / 100
+    Value.ImpactPlayed = Value.Time >= Value.Duration * 72 / 100
+
+    If Value.Mode = Water.SHIELD Then
+        Value.ImpactPlayed = Value.Time >= 2500
+    End If
+
+End Sub
+
+Private Sub StopAudio()
+
+    Stop Sound On Channel 6
+    Stop Sound On Channel 7
+    Stop Sound On Channel 8
 
 End Sub
 
@@ -346,7 +403,9 @@ Private Sub StepPresentation(ByRef Value As State, SimulationElapsed As Number)
 
     Ok = Lightning.UpdatePrecise(SimulationElapsed, Value.Camera) And Ok
 
-    If (Value.AudioEnabled And
+    If (SimulationElapsed > 0 And
+        Not Value.Paused And
+        Value.AudioEnabled And
         Not Value.SoundPlayed And
         Value.Frame.Progress >= 0.3) Then
 
@@ -374,7 +433,10 @@ Private Sub StepPresentation(ByRef Value As State, SimulationElapsed As Number)
 
     End If
 
-    If Value.AudioEnabled And Not Value.ImpactPlayed Then
+    If (SimulationElapsed > 0 And
+        Not Value.Paused And
+        Value.AudioEnabled And
+        Not Value.ImpactPlayed) Then
 
         If Value.Mode = Water.SHIELD And Value.Frame.ImpactActive Then
             Value.ImpactPlayed = True
@@ -391,6 +453,8 @@ Private Sub StepPresentation(ByRef Value As State, SimulationElapsed As Number)
         End If
 
     End If
+
+    Call RebaseAudio(Value)
 
     If Not Ok Then
         Value.ErrorCode = Max(1, G.LastError())
@@ -458,6 +522,7 @@ Public Sub Destroy(ByRef Value As State)
 
     Dim Index As Number
 
+    Call StopAudio()
     Call Storm.Destroy(Value.Storm)
     Call Water.Destroy(Value.Water)
     Call Character.Destroy(Value.Mira)
