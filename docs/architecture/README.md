@@ -99,6 +99,50 @@ The seven complete game projects are Snake, SMILE 2.0 Tetris, Paddle Ball, Brick
 
 The Visual Studio extension embeds the same compiler/runtime payload and registers one factory for `.smileproj` and `.smilelibproj`. The shared project model owns startup/support sources, library identity, and project/package references. Project builds pass `--project` to the compiler so editor diagnostics, build diagnostics, native/Web emission, dependency order, and source debugging use the same files and bound model. The project system's existing Stop callback now cancels the active compiler process and its child tree instead of merely changing UI state. Solution Explorer projects References as a live node; add/remove reference commands update XML, hierarchy, and editor analysis immediately.
 
+Source nodes use Visual Studio's standard item menu and icons. The shell/Git
+provider owns Compare With, history, unmodified comparisons and ignore/track
+actions. `SmileProjectSourceControl.cs` supplies real hierarchy paths and provider
+glyphs through `IVsSccProject2`. `SmileProjectFileCommands.cs` is the focused
+project-hierarchy adapter for clipboard operations, inline rename and deletion;
+it reuses the shared project-file editor and existing refresh/document tracking.
+The partial declarations preserve one COM hierarchy identity, not a second project
+model. `SmileProjectEditors.cs` owns normal and specific-editor opening through
+`IVsProject3`, preserving the editor factory, physical/logical view and existing
+document data supplied by Visual Studio. The legacy hierarchy coordinator shrinks
+by 96 lines; the focused file, source-control and editor adapters are 294, 60 and
+131 lines respectively. No size guardrail or exclusion was changed.
+
+Copy Full Path works for file nodes. Copy/Paste handles one `.smile` at a time;
+paste into a project/folder creates a unique name on collision. Cut/Paste moves
+between SMILE project/folder nodes. Cut does not promise Explorer move semantics.
+Physical rename/delete/cut are limited to source files inside the project root;
+the startup source can be renamed but cannot be cut/deleted. Rename preserves
+explicit or implicit startup identity. Delete sends the file to the Recycle Bin;
+Remove from Project preserves the file. Open documents receive save prompts.
+
+For a VSIX regression check, use an ignored disposable project: F2-rename a
+support source, rename an implicit `Program.smile`, verify project membership and
+startup identity, copy/paste a source, and exercise Delete and Remove separately.
+Check a tracked modified source's Git comparison and history in the real solution.
+For the comparison regression, save an exact copy of a tracked `.smile` file,
+append one temporary comment, then invoke Git > Compare with Unmodified and
+Compare With against the copy. Both must show an actual difference view containing
+that comment, including when the ordinary text editor is already open. Merely
+activating the text tab is a failure. Restore the exact original bytes afterward.
+Build/install the VSIX before this UI check; compiler tests alone do not prove
+Visual Studio command routing. No standalone architecture checker exists for
+these adapters; ownership and changed-file growth are reviewed with the diff.
+
+September 20 native VSIX validation: the installed extension passed Copy Full
+Path, source/startup rename, copy/paste, cut/paste, Recycle Bin deletion and
+Remove-from-Project checks in an ignored disposable project. In SinStarI, Git
+history and both comparison commands opened their real views; both comparisons
+showed the expected temporary comment, which was then restored byte-for-byte.
+Git ignore/track menu visibility was inspected; repository tracking was not changed
+as a test. The Release build had no warnings/errors and installation verified all
+35 bundled payload hashes. The comparison regression above remains a manual VSIX
+test because compiler-only tests cannot exercise the shell's COM editor selection.
+
 The editor workspace retains current text snapshots for every open project buffer. A buffer change invalidates analysis caches for the other participating files after the normal debounce. The language analysis carries one direct-provider access context used by project/package validation, editor completion, the compiler, and native/Web emitters; module presence alone never grants import access. Focused per-directory watchers use tolerant participation discovery, preserve last-known reachable paths through partial graph failures, and refresh only the owning project when direct or transitive dependencies change or reappear. Expected graph or package failures become shared `SML32xx` diagnostics while local analysis remains available; unexpected failures are logged and enter a safe diagnostic state instead of faulting the cache. The selected startup uses ordinary supports; an unselected `StartupOnly` file is instead analyzed as a hypothetical startup with those same supports and without the selected complete program. Missing project sources produce a physical-file `SML0001` diagnostic rather than falling back to unrelated single-file semantics. Loose source builds retain their ordinary program behavior while any supplied packages use the shared exact-provider resolver.
 
 Phase 7 adds two source-library layers above the language/runtime: `Smile.Game` owns reusable 2D movement/map/camera/collision mechanics; `Smile.RPG` owns reusable RPG definitions and world/story/encounter progress. Applications own UI, art, audio, maps, and gameplay policy. The complete design is documented in [phase7-top-down-rpg-world.md](phase7-top-down-rpg-world.md).

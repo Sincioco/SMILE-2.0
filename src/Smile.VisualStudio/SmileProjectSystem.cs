@@ -149,7 +149,7 @@ internal sealed class SmileProjectFactory : IVsProjectFactory, IDisposable
     }
 }
 
-internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvider, IPersistFileFormat, IVsPersistHierarchyItem2, IOleCommandTarget
+internal sealed partial class SmileProject : IVsUIHierarchy, IVsProject3, IVsGetCfgProvider, IPersistFileFormat, IVsPersistHierarchyItem2, IOleCommandTarget
 {
     private const int CommandNotSupported = unchecked((int)0x80040100);
 
@@ -531,6 +531,10 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
             pvar = item.DisplayCaption;
         else if (propid == (int)__VSHPROPID.VSHPROPID_SaveName)
             pvar = item.Path;
+        else if (propid == (int)__VSHPROPID.VSHPROPID_EditLabel && item.Kind == ItemKind.File)
+            pvar = Path.GetFileName(item.Path);
+        else if (propid == (int)__VSHPROPID.VSHPROPID_StateIconIndex)
+            pvar = _sourceControlIcons.TryGetValue(itemid, out var stateIcon) ? (int)stateIcon : 0;
         else if (propid == (int)__VSHPROPID.VSHPROPID_Expandable)
             pvar = item.Kind is ItemKind.Project or ItemKind.Folder or ItemKind.References;
         else if (propid == (int)__VSHPROPID.VSHPROPID_ExpandByDefault)
@@ -657,6 +661,8 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
     public int SetGuidProperty(uint itemid, int propid, ref Guid rguid) => VSConstants.E_NOTIMPL;
     public int SetProperty(uint itemid, int propid, object var)
     {
+        if (propid == (int)__VSHPROPID.VSHPROPID_EditLabel)
+            return SetSourceLabel(itemid, var);
         ThreadHelper.ThrowIfNotOnUIThread();
         if (itemid != VSConstants.VSITEMID_ROOT)
             return VSConstants.E_INVALIDARG;
@@ -768,6 +774,8 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
                 prgCmds[index].cmdf = CommandStatus(item, prgCmds[index].cmdID);
             return VSConstants.S_OK;
         }
+        if (item != null && QueryFileCommands(item, pguidCmdGroup, cCmds, prgCmds))
+            return VSConstants.S_OK;
         if (Item(itemid)?.Kind != ItemKind.File)
             return CommandNotSupported;
         var supported = false;
@@ -786,6 +794,16 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
     {
         ThreadHelper.ThrowIfNotOnUIThread();
         var item = Item(itemid);
+        if (item != null && IsFileCommand(pguidCmdGroup, nCmdID))
+        {
+            try { return ExecuteFileCommand(item, pguidCmdGroup, nCmdID); }
+            catch (Exception exception)
+            {
+                ShowMessage(exception.Message, OLEMSGICON.OLEMSGICON_CRITICAL);
+                ActivityLog.LogError(nameof(SmileProject), exception.ToString());
+                return VSConstants.S_OK;
+            }
+        }
         if (pguidCmdGroup == VSConstants.GUID_VsUIHierarchyWindowCmds &&
             nCmdID == (uint)VSConstants.VsUIHierarchyWindowCmdIds.UIHWCMDID_RightClick && item != null)
             return ShowContextMenu(item, pvaIn);
@@ -830,50 +848,6 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
     {
         ThreadHelper.ThrowIfNotOnUIThread();
         return ExecCommand(_contextCommandItemId, ref pguidCmdGroup, nCmdID, nCmdexecopt, pvaIn, pvaOut);
-    }
-
-    private int ShowContextMenu(ProjectItem item, IntPtr pointerToVariant)
-    {
-        ThreadHelper.ThrowIfNotOnUIThread();
-        var shell = Package.GetGlobalService(typeof(SVsUIShell)) as IVsUIShell;
-        if (shell == null)
-            return VSConstants.E_FAIL;
-        var menuId = item.Kind switch
-        {
-            ItemKind.Project => SmileProjectCommands.ProjectContextMenu,
-            ItemKind.Folder => SmileProjectCommands.FolderContextMenu,
-            ItemKind.References => SmileProjectCommands.ReferencesContextMenu,
-            ItemKind.Reference => SmileProjectCommands.ReferenceContextMenu,
-            _ => SmileProjectCommands.SourceContextMenu
-        };
-        var x = Cursor.Position.X;
-        var y = Cursor.Position.Y;
-        if (pointerToVariant != IntPtr.Zero)
-        {
-            try
-            {
-                var packed = Convert.ToUInt32(Marshal.GetObjectForNativeVariant(pointerToVariant));
-                x = unchecked((short)(packed & 0xffff));
-                y = unchecked((short)(packed >> 16));
-            }
-            catch (Exception exception) when (exception is InvalidCastException or FormatException or OverflowException)
-            {
-                ActivityLog.LogWarning(nameof(SmileProject), $"Visual Studio supplied invalid context-menu coordinates: {exception.Message}");
-            }
-        }
-
-        var points = new[] { new POINTS { x = checked((short)x), y = checked((short)y) } };
-        var menuGroup = SmileProjectCommands.CommandSet;
-        var previousItemId = _contextCommandItemId;
-        _contextCommandItemId = item.Id;
-        try
-        {
-            return shell.ShowContextMenu(0, ref menuGroup, menuId, points, this);
-        }
-        finally
-        {
-            _contextCommandItemId = previousItemId;
-        }
     }
 
     private uint CommandStatus(ProjectItem item, uint commandId)
@@ -1257,7 +1231,7 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
         RefreshSolutionExplorer(item?.Id);
     }
 
-    private void RefreshSolutionExplorer(uint? selectItemId = null)
+    private void RefreshSolutionExplorer(uint? selectItemId = null, bool editLabel = false)
     {
         ThreadHelper.ThrowIfNotOnUIThread();
         try
@@ -1275,7 +1249,8 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
             hierarchyWindow.ExpandItem(this, VSConstants.VSITEMID_ROOT, EXPANDFLAGS.EXPF_ExpandFolder);
             if (selectItemId.HasValue)
                 hierarchyWindow.ExpandItem(this, selectItemId.Value,
-                    EXPANDFLAGS.EXPF_ExpandParentsToShowItem | EXPANDFLAGS.EXPF_SelectItem);
+                    EXPANDFLAGS.EXPF_ExpandParentsToShowItem | EXPANDFLAGS.EXPF_SelectItem |
+                    (editLabel ? EXPANDFLAGS.EXPF_EditItemLabel : 0));
         }
         catch (Exception exception)
         {
@@ -1407,73 +1382,6 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
         return string.IsNullOrEmpty(pbstrMkDocument) ? VSConstants.E_INVALIDARG : VSConstants.S_OK;
     }
 
-    public int OpenItem(uint itemid, ref Guid rguidLogicalView, IntPtr punkDocDataExisting, out IVsWindowFrame ppWindowFrame)
-    {
-        ThreadHelper.ThrowIfNotOnUIThread();
-        ppWindowFrame = null!;
-        var item = Item(itemid);
-        if (item == null || item.Kind != ItemKind.File)
-            return VSConstants.E_INVALIDARG;
-        if (item.IsSource && !item.Exists)
-        {
-            ShowMessage($"The included SMILE source file was not found: {item.Path}", OLEMSGICON.OLEMSGICON_WARNING);
-            return VSConstants.S_OK;
-        }
-
-        try
-        {
-            var openDocument = Package.GetGlobalService(typeof(SVsUIShellOpenDocument)) as IVsUIShellOpenDocument;
-            if (openDocument == null)
-                return VSConstants.E_FAIL;
-
-            var logicalView = VSConstants.LOGVIEWID_TextView;
-            var openItemIds = new uint[1];
-            var result = openDocument.IsDocumentOpen(
-                this,
-                itemid,
-                item.Path,
-                ref logicalView,
-                (uint)__VSIDOFLAGS.IDO_ActivateIfOpen,
-                out _,
-                openItemIds,
-                out ppWindowFrame,
-                out var isOpen);
-            if (ErrorHandler.Failed(result))
-                return result;
-
-            if (isOpen != 0)
-            {
-                ppWindowFrame.Show();
-                return VSConstants.S_OK;
-            }
-
-            var editorType = VSConstants.GUID_TextEditorFactory;
-            var site = _site ?? (Microsoft.VisualStudio.OLE.Interop.IServiceProvider)_package;
-            result = openDocument.OpenSpecificEditor(
-                (uint)_VSRDTFLAGS.RDT_EditLock,
-                item.Path,
-                ref editorType,
-                null!,
-                ref logicalView,
-                item.Caption,
-                this,
-                itemid,
-                punkDocDataExisting,
-                site,
-                out ppWindowFrame);
-            if (ErrorHandler.Failed(result))
-                return result;
-
-            ppWindowFrame.Show();
-            return result;
-        }
-        catch (Exception exception)
-        {
-            ActivityLog.LogError(nameof(SmileProject), exception.ToString());
-            return Marshal.GetHRForException(exception);
-        }
-    }
-
     public int GetItemContext(uint itemid, out Microsoft.VisualStudio.OLE.Interop.IServiceProvider ppSP)
     { ppSP = _site!; return _site == null ? VSConstants.E_FAIL : VSConstants.S_OK; }
     public int GetCfgProvider(out IVsCfgProvider ppCfgProvider)
@@ -1485,10 +1393,6 @@ internal sealed class SmileProject : IVsUIHierarchy, IVsProject2, IVsGetCfgProvi
     { if (pResult.Length != 0) pResult[0] = VSADDRESULT.ADDRESULT_Failure; return VSConstants.E_NOTIMPL; }
     public int RemoveItem(uint dwReserved, uint itemid, out int pfResult)
     { pfResult = 0; return VSConstants.E_NOTIMPL; }
-    public int ReopenItem(uint itemid, ref Guid rguidEditorType, string pszPhysicalView, ref Guid rguidLogicalView,
-        IntPtr punkDocDataExisting, out IVsWindowFrame ppWindowFrame)
-    { ThreadHelper.ThrowIfNotOnUIThread(); return OpenItem(itemid, ref rguidLogicalView, punkDocDataExisting, out ppWindowFrame); }
-
     public int GetClassID(out Guid pClassID) { pClassID = new Guid(SmileProjectFactory.SmileProjectTypeGuidString); return VSConstants.S_OK; }
     public int IsDirty(out int pfIsDirty) { pfIsDirty = 0; return VSConstants.S_OK; }
     public int InitNew(uint nFormatIndex) => VSConstants.S_OK;

@@ -25,6 +25,7 @@
     <Reference Include="System.Drawing" />
     <Reference Include="PresentationCore" />
     <Reference Include="System.Windows.Forms" />
+    <Reference Include="Microsoft.VisualBasic" />
     <ProjectReference Include="..\Smile.Language\Smile.Language.csproj">
       <Private>true</Private>
       <IncludeOutputGroupsInVSIX>BuiltProjectOutputGroup</IncludeOutputGroupsInVSIX>
