@@ -1,6 +1,21 @@
 # Sin Star I
 
 Sin Star I opens with **Characters**, **Battle Simulations**, **Legacy**, and **Exit**.
+The title uses `Assets/Backgrounds/SinStarLandscape.png` with the transparent
+`Sin Star I - Text.png` lettering at upper left. The left-aligned choices form a
+group centered in the reference image's left menu area; muted two-line credits
+sit below them. The main heading and keyboard-hint captions are omitted, while
+keyboard and pointer navigation remain available. Title music is
+`Assets/Music/Starforge Horizon.mp3`; all ten original MP3s now live in `Assets/Music`.
+
+**Open title-art requirement (September 20, 2026):** the built-in image generator
+returned a transparent 2079-by-756 PNG on both the original and 4K retry. The
+current tracked lettering and published copy are that actual output, not 4K.
+The native composition and navigation have been checked. A 3840-pixel-wide
+transparent export remains pending Sin's answer about using Windows imaging
+to resize it; resizing would not add newly generated detail. Preserve its aspect
+ratio and alpha, replace the canonical asset and rebuild after that decision.
+
 All three battle simulations use the Viewer's current four-hero party: Arin, Orin,
 Zara and Mira. A status panel shows every hero and the selected boss with live state,
 animation and speed. Dragon includes Zara's attacks, hit/KO/revival and water shields.

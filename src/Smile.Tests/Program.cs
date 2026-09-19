@@ -5821,8 +5821,9 @@ Run("Sin Star I keeps its TitleScreen Module and exposes one typed action enum",
     Equal(SmileProjectKind.Game, project.ProjectKind);
     Equal("smile.game.sin-star-i", project.ApplicationId);
     Equal("Program.smile", project.StartupFile);
-    Equal(true, project.AssetPaths.Contains("Assets/Sin Star - Title Screen - Background.png"));
-    Equal(true, project.AssetPaths.Contains("Assets/TitleMusic.mp3"));
+    Equal(true, project.AssetPaths.Contains("Assets/Backgrounds/SinStarLandscape.png"));
+    Equal(true, project.AssetPaths.Contains("Assets/Backgrounds/Sin Star I - Text.png"));
+    Equal(true, project.AssetPaths.Contains("Assets/Music/Starforge Horizon.mp3"));
     Equal(true, project.AssetPaths.Contains("Maps/Towns/Town2_NE.smilemap"));
 
     var compilation = SmileProjectCompilation.Load(project.ProjectPath);
@@ -5832,9 +5833,9 @@ Run("Sin Star I keeps its TitleScreen Module and exposes one typed action enum",
     var titleModule = analysis.SemanticModel.Modules["SinStarI.TitleScreen"];
     var titleAction = (EnumTypeSymbol)titleModule.Types["TitleAction"].Type!;
     Equal(ModuleVisibility.Public, titleModule.Types["TitleAction"].Visibility);
-    Equal("None|Character|Town|Town2|Shop|Dungeon|Battle|Arin|Orin|Mira|Zara|Valor|Dragon|Vrax|DragonBattle|VraxBattle|ExitGame",
+    Equal("None|Character|Town|Town2|Shop|Dungeon|Battle|Arin|Orin|Mira|Zara|Valor|Dragon|Vrax|DragonBattle|VraxBattle|ExitGame|Yalis|Kael|KaelBattle",
         string.Join("|", titleAction.Members.Select(member => member.Name)));
-    Equal("0|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16",
+    Equal("0|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19",
         string.Join("|", titleAction.Members.Select(member => member.Value)));
     Equal(false, titleModule.Members.Keys.Any(name =>
         name.StartsWith("TITLE_ACTION_", StringComparison.OrdinalIgnoreCase)));
@@ -5863,7 +5864,7 @@ Run("Sin Star I keeps its TitleScreen Module and exposes one typed action enum",
 
     var enumCompletionPosition = programText.IndexOf("TitleScreen.TitleAction.None",
         StringComparison.Ordinal) + "TitleScreen.TitleAction.".Length;
-    Equal("None|Character|Town|Town2|Shop|Dungeon|Battle|Arin|Orin|Mira|Zara|Valor|Dragon|Vrax|DragonBattle|VraxBattle|ExitGame", string.Join("|",
+    Equal("None|Character|Town|Town2|Shop|Dungeon|Battle|Arin|Orin|Mira|Zara|Valor|Dragon|Vrax|DragonBattle|VraxBattle|ExitGame|Yalis|Kael|KaelBattle", string.Join("|",
         SmileCompletionService.GetCompletions(analysis, tree, enumCompletionPosition)
             .Select(completion => completion.DisplayText)));
 

@@ -14,7 +14,7 @@ from collect_renders import collect
 ROOT = Path(__file__).resolve().parents[1]
 OUT = Path(r'D:\Sin - AI Prompt - Contents\Sin Star I - Draft 2 Movies')
 EDIT = OUT / 'edit'
-ASSETS = ROOT.parents[1] / 'Assets'
+ASSETS = ROOT.parents[1] / 'Assets' / 'Music'
 FFMPEG = shutil.which('ffmpeg')
 FFPROBE = shutil.which('ffprobe')
 POSTER = Path(r'D:\Sin - AI Prompt - Contents\2026-09-15 1809 - Sin Star I - Story Board 2\image-103ada11c940727e1b61aa2bcf1065123bb49069fc6ae2b4009fd525e62219e6.png')

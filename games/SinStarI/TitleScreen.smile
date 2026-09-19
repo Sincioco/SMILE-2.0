@@ -41,8 +41,8 @@ Private Dim Selection As Number
 
 Public Sub Initialize()
 
-    Load Image TitleBackground From "Assets\Sin Star - Title Screen - Background.png"
-    Load Image TitleLogo From "Assets\Sin Star - Logo.png"
+    Load Image TitleBackground From "Assets\Backgrounds\SinStarLandscape.png"
+    Load Image TitleLogo From "Assets\Backgrounds\Sin Star I - Text.png"
     Load Image MenuBackground From "Assets\MenuBackground.png"
 
     Page = MenuPage.Main
@@ -55,7 +55,7 @@ End Sub
 Public Sub Enter()
 
     Stop Music
-    Play Music "Assets\TitleMusic.mp3" Loop
+    Play Music "Assets\Music\Starforge Horizon.mp3" Loop
 
 End Sub
 
@@ -88,12 +88,43 @@ Private Function ChoiceCount() As Number
 
 End Function
 
+Private Function MenuTextSize() As Number
+
+    Dim Result As Number
+
+    Result = Max(16, Min(32, Window_Height() * 32 / 941))
+    Return Result
+
+End Function
+
+Private Function RowHeight() As Number
+
+    Dim Result As Number
+
+    Result = Max(28, Window_Height() * 46 / 941)
+    Return Result
+
+End Function
+
+Private Function MenuWidth() As Number
+
+    Dim Result As Number
+    Dim Index As Number
+
+    For Index = 0 To ChoiceCount() - 1
+        Result = Max(Result, Text_Width(ChoiceLabel(Index), MenuTextSize()))
+    End For
+
+    Result = Result + 42
+    Return Result
+
+End Function
+
 Private Function MenuLeft() As Number
 
     Dim Result As Number
 
-    Result = Max(22, Window_Width() / 2 - 105)
-
+    Result = Window_Width() * 406 / 1672 - MenuWidth() / 2
     Return Result
 
 End Function
@@ -102,9 +133,7 @@ Private Function MenuTop() As Number
 
     Dim Result As Number
 
-    Result = Max(120, Min(Window_Height() / 2 - 120,
-        Window_Height() - ChoiceCount() * 46 - 100))
-
+    Result = Window_Height() * 545 / 941 - ChoiceCount() * RowHeight() / 2
     Return Result
 
 End Function
@@ -252,14 +281,14 @@ Public Function HandleInput(Key As Number) As TitleAction
 
     For Index = 0 To ChoiceCount() - 1
 
-        Y = MenuTop() + Index * 46
+        Y = MenuTop() + Index * RowHeight()
 
         If (Pointer_Inside() And
             Pointer_Pressed(POINTER_PRIMARY) And
             Pointer_X() >= MenuLeft() And
-            Pointer_X() < MenuLeft() + 445 And
+            Pointer_X() < MenuLeft() + MenuWidth() And
             Pointer_Y() >= Y - 5 And
-            Pointer_Y() < Y + 35) Then
+            Pointer_Y() < Y + RowHeight() - 5) Then
             Selection = Index
             Confirm = True
         End If
@@ -298,21 +327,57 @@ Public Function HandleInput(Key As Number) As TitleAction
 
 End Function
 
+Private Function ChoiceLabel(Index As Number) As Text
+
+    Dim Result As Text
+
+    Result = Label(ChoiceAction(Index))
+
+    If Page = MenuPage.Main Then
+
+        Select Case Index
+            Case 0
+                Result = "Characters"
+            Case 1
+                Result = "Battle Simulations"
+            Case 2
+                Result = "Legacy"
+            Case 3
+                Result = "Exit"
+        End Select
+
+    Else If Page = MenuPage.Battles Then
+
+        If Index = 0 Then
+            Result = "Dragon"
+        Else If Index = 1 Then
+            Result = "Vrax"
+        End If
+
+    End If
+
+    Return Result
+
+End Function
+
 Public Sub Draw()
 
     Dim Index As Number
     Dim Heading As Text
-    Dim ChoiceLabel As Text
     Dim Y As Number
     Dim X As Number
     Dim Top As Number
     Dim LogoWidth As Number
+    Dim LogoHeight As Number
+    Dim CreditSize As Number
+    Dim CreditCenter As Number
 
     X = MenuLeft()
     Top = MenuTop()
-    LogoWidth = Min(480, Max(240, Window_Width() / 2 - 140))
-
-    Heading = "Sin Star I"
+    LogoWidth = Window_Width() * 725 / 1672
+    LogoHeight = LogoWidth * Image_Height(TitleLogo) / Max(1, Image_Width(TitleLogo))
+    CreditSize = Max(9, Min(12, Window_Height() * 12 / 941))
+    CreditCenter = Window_Width() * 406 / 1672
 
     If Page = MenuPage.Characters Then
         Heading = "Characters"
@@ -324,48 +389,27 @@ Public Sub Draw()
 
     Clear Rgb(4, 8, 20)
     Draw Image TitleBackground At 0, 0 Size Window_Width() By Window_Height() Filter Smooth
-    Draw Image TitleLogo At 30, (Window_Height() - LogoWidth * 5 / 4) / 2 Size LogoWidth By LogoWidth * 5 / 4 Filter Smooth
-    Draw Image MenuBackground At X - 15, Top - 87 Size 470 By ChoiceCount() * 46 + 92 Opacity 85 Filter Smooth
-    Draw Text Heading At X + 19, Top - 60 Size 32 Color WHITE
+    Draw Image TitleLogo At Window_Width() * 40 / 1672, Window_Height() * 125 / 941 - LogoHeight / 2 Size LogoWidth By LogoHeight Filter Smooth
+
+    If Page <> MenuPage.Main Then
+        Draw Text Heading At CreditCenter, Window_Height() * 227 / 941 Size MenuTextSize() Color WHITE Centered
+    End If
 
     For Index = 0 To ChoiceCount() - 1
 
-        ChoiceLabel = Label(ChoiceAction(Index))
-
-        If Page = MenuPage.Main Then
-
-            If Index = 0 Then
-                ChoiceLabel = "Characters"
-            Else If Index = 1 Then
-                ChoiceLabel = "Battle Simulations"
-            Else If Index = 2 Then
-                ChoiceLabel = "Legacy"
-            Else
-                ChoiceLabel = "Exit"
-            End If
-
-        Else If Page = MenuPage.Battles Then
-
-            If Index = 0 Then
-                ChoiceLabel = "Dragon"
-            Else If Index = 1 Then
-                ChoiceLabel = "Vrax"
-            End If
-
-        End If
-
-        Y = Top + Index * 46
+        Y = Top + Index * RowHeight()
 
         If Selection = Index Then
-            Draw Image MenuBackground At X, Y - 5 Size 445 By 40 Opacity 100 Filter Smooth
-            Draw Text ">" At X + 13, Y Size 24 Color CYAN
+            Draw Image MenuBackground At X, Y - 4 Size MenuWidth() By RowHeight() Opacity 75 Filter Smooth
+            Draw Text ">" At X + 5, Y Size MenuTextSize() Color CYAN
         End If
 
-        Draw Text ChoiceLabel At X + 46, Y Size 24 Color WHITE
+        Draw Text ChoiceLabel(Index) At X + 32, Y Size MenuTextSize() Color WHITE
     End For
 
-    Draw Text "Click Or Use Arrows / Enter     Esc: Back" At X + 19, Window_Height() - 85 Size 16 Color WHITE
-    Draw Text "Programmed by:  Louiery R. Sincioco  August 16, 2026. Copyright (c) 2026.  All rights reserved." At Window_Width() / 2, Window_Height() - 26 Size 12 Color WHITE Centered
+    Draw Image MenuBackground At Window_Width() * 43 / 1672, Window_Height() * 868 / 941 Size Window_Width() * 725 / 1672 By Window_Height() * 59 / 941 Opacity 70 Filter Smooth
+    Draw Text "Programmed by: Louiery R. Sincioco - August 16, 2026." At CreditCenter, Window_Height() * 881 / 941 Size CreditSize Color Rgb(160, 174, 193) Centered
+    Draw Text "Copyright (c) 2026. All rights reserved." At CreditCenter, Window_Height() * 901 / 941 Size CreditSize Color Rgb(160, 174, 193) Centered
 
 End Sub
 

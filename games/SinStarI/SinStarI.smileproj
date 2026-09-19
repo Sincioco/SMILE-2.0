@@ -21,7 +21,7 @@
     <SmileProjectReference Include="..\..\libraries\Smile.Game\Smile.Game.smilelibproj" />
     <SmileProjectReference Include="..\..\libraries\Smile.Simple3D\Smile.Simple3D.smilelibproj" />
     <Asset Include="Assets\**\*.png" />
-    <Asset Include="Assets\*.mp3" />
+    <Asset Include="Assets\Music\*.mp3" />
     <Asset Include="Maps\**\*.smilemap" />
     <SmileSource Include="CharacterPresentation.smile" />
     <SmileSource Include="..\..\tools\Character3DViewer\ViewerWorkflow.smile" />
