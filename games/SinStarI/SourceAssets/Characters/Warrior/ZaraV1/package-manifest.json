@@ -7,8 +7,8 @@
   "publication": "Local assets; source/derivative redistribution not approved",
   "export": {
     "path": "Private/Zara-v1-animation-set.glb",
-    "sha256": "94f96990aed59cb347dee1d831e19587d21b92ed217a11d630a507cf8c1df67b",
-    "bytes": 24619332
+    "sha256": "457e640bfe00b9b1fb2673965f5bfb843ba40fd40a48b9b04fb08ab659026812",
+    "bytes": 24870568
   },
   "originals": [
     {
@@ -274,7 +274,7 @@
   ],
   "triangles": 47810,
   "bones": 69,
-  "animationClips": 26,
+  "animationClips": 27,
   "presentation": {
     "desiredWorldHeight": 100,
     "maximumFitScalePercent": 10000
@@ -289,13 +289,13 @@
   "checkpointFiles": [
     {
       "path": "ZaraV1.sm3d.json",
-      "sha256": "85d2ff17fc17b8055a43a94db47a4f66187e6b4f7bf37d05efb8bd20c032152b",
-      "bytes": 2872
+      "sha256": "0b6460e2739908fc96fc243824de9ffe6c4ba3aeb690b92887cb2bfd604390b0",
+      "bytes": 2919
     },
     {
       "path": "animation-manifest.json",
-      "sha256": "e65b7081cf5af90e25fff1dfe22b0850b00d878b0e401a73f63015e7ea7ac01e",
-      "bytes": 5149
+      "sha256": "28fd45919216449e62c5a83f4af506295262c774884bc56c0ab54bc85d9f245d",
+      "bytes": 5320
     },
     {
       "path": "grounding-corrections.json",
@@ -403,5 +403,11 @@
       "sha256": "8af34850f541e1d653b26ca1fccfe5a0e69d958b38ceaaf71a00f62b3846057c",
       "unitySoundSlot": 12
     }
-  ]
+  ],
+  "victory": {
+    "blenderCheckpoint": "Private/Zara-v1-victory.blend",
+    "nativeOnly": true,
+    "source": "Private/Mixamo/Victory.fbx",
+    "validation": "victory-import.json"
+  }
 }

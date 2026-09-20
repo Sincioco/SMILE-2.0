@@ -62,6 +62,45 @@ Public Sub Create(ByRef Value As State, Viewer As Workflow.Session)
 
 End Sub
 
+''' Restart presentation without recapturing a traveling actor as its new home.
+Public Sub Restart(ByRef Value As State)
+
+    Dim Previous As State
+    Dim Empty As State
+    Dim Index As Number
+
+    Previous = Value
+
+    Call Feedback.Destroy(Value.Feedback)
+
+    Value = Empty
+    Value.Ready = True
+
+    For Index = 0 To 4
+        Value.Homes[Index] = Previous.Homes[Index]
+    End For
+
+    Call Feedback.Create(Value.Feedback)
+
+End Sub
+
+''' Use only real clips in this actor's accepted package.
+Public Function VictoryClip(Actor As Actors.Context) As Text
+
+    Dim Index As Number
+
+    For Index = 0 To Character.ClipCount(Actor.Actor) - 1
+
+        If Character.ClipName(Actor.Actor, Index) = "Victory" Then
+            Return "Victory"
+        End If
+
+    End For
+
+    Return "Idle"
+
+End Function
+
 ''' Sin's September 20 order-selection camera, read from the supplied Viewer screenshot.
 Public Sub OrdersCamera(Viewer As Workflow.Session)
 
@@ -125,7 +164,7 @@ Public Sub BeginAction(ByRef Value As State, Viewer As Workflow.Session, ByRef B
     Dim Actor As Actors.Context
     Dim Speed As Number
 
-    If Battle.ActionSerial = Value.ActionSerial Then
+    If Battle.ActionSerial = Value.ActionSerial Or Battle.Phase <> Rules.EXECUTING Then
         Return
     End If
 
@@ -221,6 +260,18 @@ Public Sub Apply(ByRef Value As State, Viewer As Workflow.Session,
 
         End If
 
+        If Battle.Phase >= Rules.VICTORY And Battle.Members[Index].HP > 0 Then
+
+            Name = "Idle"
+            Actor.PresentationState = Party.STATE_ALIVE
+
+            If ((Battle.Phase = Rules.VICTORY And Index < 4) Or
+                (Battle.Phase = Rules.DEFEAT And Index = 4)) Then
+                Name = VictoryClip(Actor)
+            End If
+
+        End If
+
         If Battle.Phase = Rules.EXECUTING And Battle.Turn = Index Then
 
             Actor.PresentationState = Party.STATE_ACTING
@@ -257,7 +308,7 @@ Public Sub Apply(ByRef Value As State, Viewer As Workflow.Session,
 
             If Name = "Idle" Or Name = "Run" Then
                 Mode = Graphics.ANIMATION_LOOP
-            Else If Profiles.HoldsFinalPose(Actor.Profile, Name) Then
+            Else If Name = "Victory" Or Profiles.HoldsFinalPose(Actor.Profile, Name) Then
                 Mode = Graphics.ANIMATION_HOLD
             End If
 

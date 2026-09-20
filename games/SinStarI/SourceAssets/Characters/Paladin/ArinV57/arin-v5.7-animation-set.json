@@ -65,6 +65,11 @@
     {
       "name": "Death",
       "file": "arin-v5.7-mixamo-death.fbx"
+    },
+    {
+      "name": "Victory",
+      "appendScript": "scripts/add-party-victory-clip.py",
+      "file": "arin-v5.7-mixamo-victory-without-skin.fbx"
     }
   ]
 }

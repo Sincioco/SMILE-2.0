@@ -13,6 +13,11 @@ safe workflow for v5.8 or another character.
 
 ## Current Viewer-authored pose authority
 
+The September 20 Victory addition brings this package to ten clips. Its source,
+authoring checkpoint and grounding audit are indexed in `arin-v5.7-package.json`.
+The append preserves existing model/animation bytes and all 24 authored pose keys;
+the saved JSON's asset fingerprint is migrated to the new model.
+
 Sin's September 20 exported `Calibration/arin-v5.7-pose-calibration.json` is the
 accepted pose authority. Future Viewer exports saved to that canonical filename
 replace it intentionally; an older application-data save must never overwrite it.

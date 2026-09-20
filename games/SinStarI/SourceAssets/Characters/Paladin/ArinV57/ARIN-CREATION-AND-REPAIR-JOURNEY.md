@@ -1,5 +1,25 @@
 # Arin: Creation, Import, Animation, and Repair Lessons
 
+## September 20: Victory appended without changing accepted poses
+
+Sin approved uploading the existing rigged model to Mixamo and downloading the
+standing **Victory / Celebrating After A Win** clip. The source is
+`arin-v5.7-mixamo-victory-without-skin.fbx` (30 fps, no keyframe reduction).
+`Blender/arin-v5.7-victory.blend` retains the previous nine actions plus Victory.
+`scripts/add-party-victory-clip.py` appends only new animation data to the accepted
+GLB; existing geometry, materials, rig, sockets, animation indices and binary data
+remain unchanged. Do not regenerate the accepted GLB with the older whole-model
+builder as part of a future clip addition.
+
+`Calibration/victory-import.json` records model/source checksums and grounding:
+bind body minimum Y 0.003441, Idle frame zero 0.023041, new Victory minimum
+0.023041. New-clip floor correction preserves jumps and neutral equipment grips.
+All 24 Viewer-authored keyframes were compared by exact clip name and preserved;
+only asset identity metadata and an empty Victory bank were added. The runtime
+profile records the cooker's actual clip order and 258 sampled Victory poses.
+The original authoring checkpoint remains intact; rerunning the append script
+requires a pre-Victory GLB, and intentionally rejects a duplicate Victory clip.
+
 ## Playable battle consumer — September 20, 2026
 
 Sin Star I's `Battle/BattleActors.smile` loads this accepted package and evaluates

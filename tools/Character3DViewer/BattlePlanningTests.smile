@@ -3,6 +3,7 @@ Option Explicit
 Import Smile.Tools.ViewerBattlePlanning As Planning
 Import SinStarI.BattleRules As Rules
 Import SinStarI.Progression As Growth
+Import Smile.Tools.ViewerBattleProgression As Curves
 
 Dim Value As Planning.State
 Dim Index As Number
@@ -10,6 +11,7 @@ Dim Accepted As Boolean
 Dim Before As Number
 Dim Expected As Number
 Dim Failures As Number
+Dim Stats As Growth.Stats
 
 Call Planning.Start(Value)
 
@@ -87,6 +89,51 @@ Call Check(Value.Combat.Members[0].LB = 0, "LB Consumed At Impact")
 Call Check(Growth.EscapeChance(1, 20) = 50 And Growth.EscapeChance(40, 20) = 100, "Escape Scaling")
 Call Check(Growth.NextXP(300) > Growth.NextXP(299) * 20, "Post 300 Difficulty")
 Call Check(Growth.LevelForXP(Growth.TotalXP(9999)) = 9999, "Future Level Room")
+Call Check(Curves.GrowthPoints(1) = 0 And Curves.GrowthPoints(2) = 1, "Preserve Initial Stats And Growth")
+Call Check(Curves.GrowthPoints(300) - Curves.GrowthPoints(299) >
+    Curves.GrowthPoints(150) - Curves.GrowthPoints(149), "Accelerating Stat Growth")
+Call Check(Curves.KaelReward(1) = 160 And Curves.KaelReward(20) = 1200, "Kael Reward Curve")
+
+Stats = Curves.AtLevel(Growth.MIRA, 9999)
+
+Call Check(Stats.HP > 0 And Stats.LimitPower > Stats.Magic, "Maximum Level Curved Stats")
+Call Planning.Start(Value)
+
+Value.Combat.Members[4].HP = 1
+Value.Combat.Members[1].Escaped = True
+Value.Combat.Members[2].HP = 0
+
+Call Planning.BeginRound(Value)
+Call Planning.Advance(Value, 2000, 99, 0)
+Call Check(Value.Combat.Phase = Rules.VICTORY, "Enemy Defeat Ends Encounter")
+Call Check(Value.Award[0] = 1200 And Value.Award[1] = 0 And Value.Award[2] = 1200,
+    "Non Escaped Party Shares EXP Including KO Members")
+Call Check(Value.PreviousLevel[0] = 1 And Value.Combat.Members[0].Level > 1, "Award Levels Party")
+
+Before = Value.Combat.Members[0].XP
+Expected = Value.Combat.Members[0].Level
+Stats = Curves.AtLevel(0, Expected)
+
+Call Check(Value.Combat.Members[0].Stats.HP = Stats.HP, "Award Uses Curved Stats")
+Call Planning.Advance(Value, 2000, 99, 0)
+Call Check(Value.Combat.Members[0].XP = Before, "Reward Awarded Once")
+Call Planning.Start(Value, True)
+Call Check(Value.Combat.Members[0].XP = Before And Value.Combat.Members[0].Level = Expected,
+    "Restart Retains Experience And Levels")
+Call Check(Value.Planning And Value.Combat.Round = 1 And Value.Combat.Members[0].HP = Stats.HP,
+    "Restart Restores Health And Waits For Orders")
+
+For Index = 0 To 3
+    Value.Combat.Members[Index].HP = 0
+End For
+
+Value.Planning = False
+Value.Combat.Phase = Rules.EXECUTING
+Value.Combat.Applied = True
+
+Call Planning.Advance(Value, 2000, 99, 0)
+Call Check(Value.Combat.Phase = Rules.DEFEAT And Value.Combat.Members[0].XP = Before,
+    "Defeat Does Not Grant EXP")
 
 If Failures = 0 Then
     Print "PASS Viewer Battle Planning"

@@ -15,8 +15,25 @@ whole-round repetition and applies this encounter's +300% defense policy.
 `BattlePresentation` translates resolved actions into borrowed Viewer actor clips,
 movement, reactions, floating feedback and the requested camera preset.
 `BattleUi` owns layout, menus and input; it does not resolve combat. The existing
-Sin Star I progression, stats views, attacks, rules, feedback and icon functions
-are source-linked unchanged. No game source/assets or character packages change.
+Sin Star I progression, stats-view input, attacks, rules, feedback and icon
+functions are source-linked unchanged. Part 1a adds Viewer-owned curved stats and
+rewards, plus approved Victory additions to the canonical character packages;
+game code and held Web publications remain unchanged.
+
+`BattleProgression` owns the pure stat and Kael reward curve. `BattlePlanning`
+owns session EXP, previous values for display and one-time reward application.
+`BattleGrowthView` draws the curved table/graphs using existing stats-view input.
+`BattleOutcome` owns the ending clock, inactivity timeout, sound and reward
+dialog. Its cinematic camera composes the shared ArenaCamera3D orbit; it does not
+introduce private pan/zoom/orbit controls. NativeViewerHost owns these states and
+delegates input/update/draw. The sound is native-only in derived host inventories.
+
+Right-click restarts from captured formation homes and retains session EXP.
+Outcome presentation cannot grant or revoke rewards; early dismissal is safe.
+Victory clips are selected by name from each actual actor, with Idle fallback
+for future packages without one. The three approved additions preserve all
+pre-existing GLB animation/model data and indices. Arin's fingerprint migration
+preserves every authored pose key by exact clip name, with an empty Victory bank.
 
 Workflow retains scene/actor/calibration ownership and exposes a bounded directed
 playback bridge. Existing Party choreography and camera policies are bypassed only
@@ -46,14 +63,30 @@ existing coordinator exception gains only explicit scene operations, state and
 delegation; Party gains directed-mode guards and selected healing-target wiring.
 No size threshold, no-growth baseline, exclusion or dependency is changed.
 
-Growth review: NativeProgram is 37 lines, NativeViewerHost 322, BattlePlanning 186,
-BattlePresentation 362 and BattleUi 536. The coordinator grows by
+Growth review after Part 1a: NativeProgram is 37 lines, NativeViewerHost 370,
+BattlePlanning 238, BattlePresentation 413 and BattleUi 537. The new focused
+owners are BattleProgression 55, BattleGrowthView 274 and BattleOutcome 209.
+Profiles adds ten net lines for clip inventory, hold policy and the migrated
+fingerprint. The asset append script is 317 lines and remains build-time tooling.
+Part 1a does not grow Workflow or Party. The original battle coordinator grew by
 195 net lines to 3,058, Party by 35 to 4,083, Camera by 14 to 663, Playback by 14
 to 535, inspector presentation by two and legacy UI by five. Camera's small preset
 operation belongs with its existing controls; no new camera algorithm is placed
 in Workflow. The existing oversized legacy owners keep their responsibilities.
 The pre-existing held Studio asset-manifest mismatch is recorded in the Party
 Beat checkpoint; preserving its source inventory is not Studio build acceptance.
+
+Part 1a validation covers one-time rewards, retained EXP/levels, full-heal restart,
+curved growth, all four living Victory clips, dialog counting/activity/timeout,
+centered dialog placement and full-circle camera endpoints. Native hardening and
+calibration pass, including exact preservation of the nine original Arin pose
+matrix rows and all 24 keys; the tenth reference is Victory. The shared native
+Fire Lab pose comparison also passes after accepting the expanded clip inventory.
+Visual preview checks caught and fixed the reserved `Left` coordinate collision
+and Zara's root-parent/export basis mismatch. The dialog, dismissal controls,
+ending camera and all four celebrations were inspected in the native renderer.
+No language/runtime extension, new dependency or architecture exception was added.
+Audio asset/playback calls are exercised; no captured audible-output check is claimed.
 
 Directed-mode resets restore the camera without entering the legacy inspector
 borrow/reset lifecycle. That lifecycle otherwise reopens panels and restarts demo

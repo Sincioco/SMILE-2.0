@@ -7,6 +7,11 @@ belongs to this work.
 
 ## Current state
 
+September 20 adds the approved Mixamo Victory clip, bringing the current package
+to ten clips. The working checkpoint is now `Blender/mira-victory.blend`;
+`Source/victory-import.json` records source/model hashes and grounding checks.
+All previous model and animation data remain intact.
+
 Authoring/export, native model/animation checks, both Party cast fixtures and the
 seven-mode native Water Lab checks have passed. The original has 1,885,636 triangles, 1,045,746 imported
 vertices, and three embedded 4096 × 4096 JPEG maps: base color, tangent normal, and

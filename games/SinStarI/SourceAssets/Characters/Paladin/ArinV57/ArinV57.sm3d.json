@@ -28,6 +28,9 @@
     },
     "Death": {
       "loop": false
+    },
+    "Victory": {
+      "loop": false
     }
   },
   "sockets": {

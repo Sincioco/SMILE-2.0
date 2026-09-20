@@ -2,17 +2,13 @@
   "version": 1,
   "assetId": "sin-star-i.character-1.paladin",
   "characterVersion": "v5.7",
-  "modelSha256": "EDCFC5F92E22DF7FD58030AB64410E0EBD9931D92F7AA2E297565B966C8C502E",
-  "descriptorSha256": "2768A01120F5E0D35A85AF8C445D70A186193097F223429809E95D5098081620",
-  "sm3dSha256": "401C14E7E00A90304C084AA8B766ABFEACD08A1F5B36DDA02025C1F8320B2CCD",
+  "modelSha256": "AD05AA6A135388675F687EF6E7862FEFEB54E004D2266F94FA523BBA0176F624",
+  "descriptorSha256": "B9BED4D33D9CE8A22DA9F1F86B8AFC6D128583FB378B66C330D670571EECB991",
+  "sm3dSha256": "1C23DA1585D5E05EB27078C2F5133650DC2140BCC25BAEA843619AAE4B23EE6F",
   "clips": [
     {
       "name": "BlockImpact",
       "sampleCount": 25
-    },
-    {
-      "name": "Death",
-      "sampleCount": 119
     },
     {
       "name": "Defend",
@@ -41,6 +37,14 @@
     {
       "name": "Walk",
       "sampleCount": 35
+    },
+    {
+      "name": "Death",
+      "sampleCount": 119
+    },
+    {
+      "name": "Victory",
+      "sampleCount": 258
     }
   ],
   "sockets": [

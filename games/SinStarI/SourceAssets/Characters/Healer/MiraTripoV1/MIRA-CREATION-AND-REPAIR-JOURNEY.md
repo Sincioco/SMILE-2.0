@@ -1,5 +1,22 @@
 # Tripo Mira authoring workflow
 
+## September 20 Victory addition
+
+Sin approved the rig upload to Mixamo. `Source/Mixamo/Victory.fbx` is the standing
+**Victory / Celebrating After A Win** download, without skin, 30 fps and no
+keyframe reduction. `Blender/mira-victory.blend` retains the original actions plus
+Victory. `scripts/add-party-victory-clip.py` converts the sampled pose into Mira's
+rig space, keeps her accepted neutral right-hand grip, and bakes MiraStaff to that
+hand. It appends animation data only; existing GLB model and animation bytes,
+indices, cape and old staff-drop behavior remain untouched.
+
+`Source/victory-import.json` records hashes and every-frame floor-check extrema.
+Bind and Idle frame-zero body minimum Y are approximately zero; the new Victory
+minimum is within 0.000001 of zero. As in prior Mira checks, cape vertices are
+excluded from body contact measurements. Do not overwrite the accepted model by
+rerunning the older full-character builder; clip appends require the prior model
+and reject duplicate names. No Arin/Orin correction values are borrowed.
+
 The raw HD source is a preservation master, not a Character Viewer runtime asset.
 The original download already has real 4K maps; increasing their dimensions cannot
 fix generated geometry or improve the information in the source artwork.

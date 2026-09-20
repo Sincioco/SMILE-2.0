@@ -5,6 +5,13 @@ These images inspect Sin's Viewer-exported JSON, unchanged at SHA-256
 The JSON remains authoritative; later intentional Viewer exports supersede these
 references. Do not copy pose values back from images or the test baseline.
 
+Later on September 20, the approved Victory asset addition migrated only the
+JSON's asset identity and added an empty Victory bank. All 24 authored keys and
+the nine original frame-zero matrix rows were verified exactly unchanged. The
+matrix inventory now also includes Victory; the existing images below continue
+to describe the original nine clips. The current JSON hash is stored alongside
+the matrices and in the package manifest.
+
 Every image is a native capture at animation frame **0**, with equipment flames
 disabled to expose the grips. Viewer images show the interactive editor from the
 front. Game and Fire Lab images show the opposite side using temporary native

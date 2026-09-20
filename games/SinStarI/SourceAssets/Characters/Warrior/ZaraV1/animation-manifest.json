@@ -116,14 +116,14 @@
     "source": "Assets\\CyberJagg5\\Animations\\CyberJagg5@Rage.fbx",
     "frames": 58,
     "frameRate": 30,
-    "bodyMinimumYFrame0": -8.438786608166993e-05
+    "bodyMinimumYFrame0": -8.438786608166993E-05
   },
   {
     "name": "RageW",
     "source": "Assets\\CyberJagg5\\Animations\\CyberJagg5@RageW.fbx",
     "frames": 58,
     "frameRate": 30,
-    "bodyMinimumYFrame0": -8.375904144486412e-05
+    "bodyMinimumYFrame0": -8.375904144486412E-05
   },
   {
     "name": "RunUnarmed",
@@ -180,5 +180,12 @@
     "frames": 52,
     "frameRate": 30,
     "bodyMinimumYFrame0": 0.0020927893929183483
+  },
+  {
+    "frameRate": 30,
+    "name": "Victory",
+    "source": "Private/Mixamo/Victory.fbx",
+    "frames": 257,
+    "bodyMinimumYFrame0": 0.0002258528402308002
   }
 ]

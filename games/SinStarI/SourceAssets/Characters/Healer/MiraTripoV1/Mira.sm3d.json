@@ -10,7 +10,8 @@
     "HealOne": { "loop": false },
     "HealParty": { "loop": false },
     "Hit": { "loop": false },
-    "Death": { "loop": false }
+    "Death": { "loop": false },
+    "Victory": { "loop": false }
   },
   "sockets": {
     "Root": { "node": "mixamorig:Hips" },

@@ -1,0 +1,111 @@
+{
+  "character": "Zara",
+  "source": "Private/Mixamo/Victory.fbx",
+  "sourceSha256": "94c4bc2a6d707eef0d08f9f440734b8d21cf832fd1da1a22ce24267271f241ab",
+  "checkpoint": "Private/Zara-v1-victory.blend",
+  "checkpointSha256": "fa24c5cfaf3ba37fa18c32f28ae9539250ffe92144de98276c4203ed0c014666",
+  "previousModelSha256": "94f96990aed59cb347dee1d831e19587d21b92ed217a11d630a507cf8c1df67b",
+  "modelSha256": "457e640bfe00b9b1fb2673965f5bfb843ba40fd40a48b9b04fb08ab659026812",
+  "sampleRate": 30,
+  "frames": 257,
+  "bindBodyMinimumY": -0.0012311635073274374,
+  "idleFrameZeroBodyMinimumY": 0.00022568716667592525,
+  "victoryFrameZero": {
+    "frame": 0,
+    "bodyMinimumY": 0.0002258528402308002,
+    "sceneMinimumY": 0.0002258528402308002
+  },
+  "minimumBodyY": 0.0002257254091091454,
+  "minimumSceneY": 0.0002257254091091454,
+  "samples": [
+    {
+      "frame": 0,
+      "bodyMinimumY": 0.0002258528402308002,
+      "sceneMinimumY": 0.0002258528402308002
+    },
+    {
+      "frame": 128,
+      "bodyMinimumY": 0.0033889985643327236,
+      "sceneMinimumY": 0.0033889985643327236
+    },
+    {
+      "frame": 256,
+      "bodyMinimumY": 0.00022586208069697022,
+      "sceneMinimumY": 0.00022586208069697022
+    }
+  ],
+  "preservedModelAndOldAnimationBytes": true,
+  "animationParentNamesMatch": true,
+  "previousClips": [
+    "attack3",
+    "attack4",
+    "attack5",
+    "attack6",
+    "BlockImpact",
+    "Death",
+    "Death1",
+    "Death2",
+    "Death2W",
+    "gethit3",
+    "Hit",
+    "Idle",
+    "idle2W",
+    "idle3",
+    "Rage",
+    "RageW",
+    "Run",
+    "RunUnarmed",
+    "StrafeLeft",
+    "StrafeLeftW",
+    "StrafeRight",
+    "StrafeRightW",
+    "SwordAttack",
+    "SwordAttack2",
+    "Walk",
+    "WalkUnarmed"
+  ],
+  "newClipIndex": 26,
+  "newAnimationChannels": 207,
+  "exportedGlbSkinValidation": {
+    "bindBodyMinimumY": -0.0012312025748124726,
+    "modelSha256": "457e640bfe00b9b1fb2673965f5bfb843ba40fd40a48b9b04fb08ab659026812",
+    "clips": [
+      {
+        "name": "Idle",
+        "durationSeconds": 1.6333333253860474,
+        "bodyFloorSamples": [
+          {
+            "seconds": 0,
+            "minimumY": 0.00022551722811921596
+          },
+          {
+            "seconds": 0.8166666626930237,
+            "minimumY": -3.996347722205751E-05
+          },
+          {
+            "seconds": 1.6333333253860474,
+            "minimumY": 0.00022587194686329512
+          }
+        ]
+      },
+      {
+        "name": "Victory",
+        "durationSeconds": 8.566666603088379,
+        "bodyFloorSamples": [
+          {
+            "seconds": 0,
+            "minimumY": 0.00022594106178855318
+          },
+          {
+            "seconds": 4.2833333015441895,
+            "minimumY": 0.0021559133291834103
+          },
+          {
+            "seconds": 8.566666603088379,
+            "minimumY": 0.00022602030546880933
+          }
+        ]
+      }
+    ]
+  }
+}

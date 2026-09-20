@@ -1,0 +1,209 @@
+''' Battle ending clock, cinematic shot and animated reward dialog.
+Module Smile.Tools.ViewerBattleOutcome
+
+Option Explicit
+
+Import Smile.Tools.ViewerBattlePlanning As Planning
+Import Smile.Tools.Character3DViewerWorkflow As Workflow
+Import SinStarI.BattleRules As Rules
+Import SinStarI.Progression As Growth
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.PrecisionCamera3D As Camera
+Import Smile.Simple3D.ArenaCamera3D As Arena
+Import Smile.UI.Controls As UI
+
+Public Const ORBIT_DURATION = 12000
+Public Const COUNT_DURATION = 1800
+Public Const DISMISS_DELAY = 10000
+
+Public Type State
+    Started As Boolean
+    Visible As Boolean
+    OrbitTime As Number
+    CountTime As Number
+    IdleTime As Number
+    SoundTime As Number
+    PointerX As Number
+    PointerY As Number
+End Type
+
+Public Sub Start(ByRef Value As State, Victory As Boolean)
+
+    Dim Empty As State
+
+    Value = Empty
+    Value.Started = True
+    Value.Visible = Victory
+    Value.PointerX = Pointer_X()
+    Value.PointerY = Pointer_Y()
+
+End Sub
+
+Public Function OrbitView(Time As Number) As P.Camera3D
+
+    Dim Base As P.Camera3D
+    Dim Result As P.Camera3D
+    Dim Controls As Camera.Controls
+    Dim Fraction As Double
+
+    Base.Position = P.Vector(500.0, 300.0, 600.0)
+    Base.Target = P.Vector(0.0, 80.0, 0.0)
+    Base.UpDirection = P.Vector(0.0, 1.0, 0.0)
+    Base.FovDegrees = 40.0
+    Base.NearPlane = 1.0
+    Base.FarPlane = 10000.0
+    Fraction = Min(1.0, Max(0.0, ToDouble(Time) / ToDouble(ORBIT_DURATION)))
+    Controls.OrbitYaw = 360.0 * Fraction * Fraction * (3.0 - 2.0 * Fraction)
+    Result = Arena.ComposeOrbit(Base, Controls)
+    Return Result
+
+End Function
+
+Public Function DialogLeft() As Number
+
+    Dim PanelX As Number
+
+    PanelX = (Window_Width() - 680) / 2
+    Return PanelX
+
+End Function
+
+''' Input activity extends the timeout; explicit dismissal never changes the award.
+Public Sub Activity(ByRef Value As State, Active As Boolean, Dismiss As Boolean)
+
+    If Active Then
+        Value.IdleTime = 0
+    End If
+
+    If Dismiss Then
+        Value.Visible = False
+    End If
+
+End Sub
+
+Public Sub Input(ByRef Value As State, Key As Number)
+
+    Dim Active As Boolean
+    Dim Dismiss As Boolean
+    Dim PanelX As Number
+    Dim PanelY As Number
+
+    PanelX = DialogLeft()
+    PanelY = (Window_Height() - 360) / 2
+    Active = (Key <> KEY_NONE Or Pointer_X() <> Value.PointerX Or
+        Pointer_Y() <> Value.PointerY Or Pointer_Pressed(POINTER_PRIMARY) Or
+        Pointer_Pressed(POINTER_SECONDARY) Or Pointer_Pressed(POINTER_MIDDLE) Or
+        Pointer_Wheel_Delta() <> 0)
+    Dismiss = (Key = KEY_ESCAPE Or Key = KEY_ENTER Or
+        UI.Clicked(PanelX + 626, PanelY + 14, 36, 28) Or
+        UI.Clicked(PanelX + 552, PanelY + 308, 104, 32))
+    Value.PointerX = Pointer_X()
+    Value.PointerY = Pointer_Y()
+
+    Call Activity(Value, Active, Dismiss)
+
+End Sub
+
+Public Sub Advance(ByRef Value As State, Elapsed As Number)
+
+    Value.OrbitTime = Min(ORBIT_DURATION, Value.OrbitTime + Elapsed)
+
+    If Not Value.Visible Then
+        Return
+    End If
+
+    Value.CountTime = Min(COUNT_DURATION, Value.CountTime + Elapsed)
+    Value.IdleTime = Value.IdleTime + Elapsed
+
+    If Value.IdleTime >= DISMISS_DELAY Then
+        Value.Visible = False
+    End If
+
+End Sub
+
+Public Sub Update(ByRef Value As State, Viewer As Workflow.Session, Elapsed As Number)
+
+    Dim Orbiting As Boolean
+
+    Orbiting = Value.OrbitTime < ORBIT_DURATION
+
+    Call Advance(Value, Elapsed)
+
+    If Orbiting Then
+        Call Viewer.SetPartyView(OrbitView(Value.OrbitTime))
+    End If
+
+    If Value.Visible And Value.CountTime < COUNT_DURATION Then
+
+        Value.SoundTime = Value.SoundTime + Elapsed
+
+        If Value.SoundTime >= 90 Then
+            Value.SoundTime = Value.SoundTime Mod 90
+
+            Play Sound "BattleExperienceTick.wav" On Channel 14
+
+        End If
+
+    End If
+
+End Sub
+
+Public Function DisplayAward(Value As State, Amount As Number) As Number
+
+    Dim Result As Number
+
+    Result = Amount * Value.CountTime / COUNT_DURATION
+    Return Result
+
+End Function
+
+Public Sub Draw(Value As State, Battle As Planning.State)
+
+    Dim PanelX As Number
+    Dim PanelY As Number
+    Dim Index As Number
+    Dim Award As Number
+    Dim Level As Number
+    Dim Label As Text
+    Dim TextColor As Number
+
+    If Not Value.Visible Then
+        Return
+    End If
+
+    PanelX = DialogLeft()
+    PanelY = (Window_Height() - 360) / 2
+
+    Call UI.DrawPanel(PanelX, PanelY, 680, 360, 80)
+    Call UI.DrawButton(PanelX + 626, PanelY + 14, 36, 28, "X", False)
+
+    Draw Text "Victory - Battle Rewards" At PanelX + 24, PanelY + 20 Size 23 Color WHITE
+    Draw Text "Kael Lv " + Growth.NumberText(Battle.Combat.Members[4].Level) + " defeated" At PanelX + 24, PanelY + 58 Size 15 Color CYAN
+    Draw Text "EXP gained per hero: " + Growth.NumberText(DisplayAward(Value, Battle.Combat.Reward)) At PanelX + 24, PanelY + 88 Size 18 Color YELLOW
+
+    For Index = 0 To 3
+
+        Award = DisplayAward(Value, Battle.Award[Index])
+        Level = Growth.LevelForXP(Battle.PreviousXP[Index] + Award)
+        Label = "Lv " + Growth.NumberText(Level)
+        TextColor = WHITE
+
+        If Battle.Award[Index] = 0 Then
+            Label = Label + " - Escaped"
+        Else If Level > Battle.PreviousLevel[Index] Then
+            Label = "Level Up!  " + Growth.NumberText(Battle.PreviousLevel[Index]) + " -> " + Growth.NumberText(Level)
+            TextColor = YELLOW
+        End If
+
+        Draw Text Growth.Name(Index) At PanelX + 24, PanelY + 138 + Index * 37 Size 16 Color CYAN
+        Draw Text "+" + Growth.NumberText(Award) + " EXP" At PanelX + 155, PanelY + 138 + Index * 37 Size 16 Color WHITE
+        Draw Text Label At PanelX + 348, PanelY + 138 + Index * 37 Size 16 Color TextColor
+    End For
+
+    Draw Text "Closes after " + Growth.NumberText((DISMISS_DELAY - Value.IdleTime + 999) / 1000) + "s without activity" At PanelX + 24, PanelY + 316 Size 13 Color LIGHT_GRAY
+
+    Call UI.DrawButton(PanelX + 552, PanelY + 308, 104, 32, "OK (Esc)", False)
+
+End Sub
+
+End Module

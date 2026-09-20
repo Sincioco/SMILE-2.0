@@ -1,5 +1,35 @@
 # Zara V1 Creation And Repair Journey
 
+## September 20: approved Mixamo Victory addition
+
+Sin explicitly approved uploading Zara's existing rig to Mixamo. The accepted
+authoring scene was exported without the weapon by
+`Private/Pipeline/prepare-zara-victory-upload.py`; Mixamo recognized the existing
+rig. `Private/Mixamo/Victory.fbx` is **Victory / Celebrating After A Win**, 30 fps,
+without skin or keyframe reduction. `Private/Zara-v1-victory.blend` retains all
+previous actions and the new Victory action. These licensed assets remain local
+and ignored; this approval does not authorize public redistribution.
+
+`scripts/add-party-victory-clip.py` appends only the new clip to the accepted GLB,
+preserving all 26 previous clips and model bytes. Zara's weapon bone follows her
+accepted Idle grip. Her armature differs from Arin/Mira: it has a rotated basis
+and scale 0.01. Floor corrections must transform a world-up displacement through
+the inverse armature matrix; adding it directly to local Z is incorrect.
+Her accepted GLB also has the armature object's transform baked into its root
+bone. Export the complete hierarchy, then explicitly compose the static armature
+transform into the root's translation, rotation and scale tracks before removing
+that parent. Blender's automatic armature removal left root translations in the
+unscaled basis for this rig. The append script now performs that conversion and
+rejects mismatched animation parent names. Exported GLB skin evaluation checks
+Victory at the start, midpoint and end; all stay at the authored floor height.
+
+`victory-import.json` records the new checksum and grounding: bind body minimum
+Y -0.001231, Idle frame zero 0.000226, and Victory minimum 0.000226. The append
+checks all 257 source frames and preserves intentional motion above the floor.
+The canonical export now has 27 clips. Old whole-model builders must not overwrite
+this checkpoint; the append script requires the pre-Victory GLB and rejects a
+duplicate Victory name. Earlier Web validation below applies to the prior asset.
+
 ## September 10: full weapon contour, red storms and original audio
 
 The descriptor's ten weapon sockets now span 99.97 percent of the measured weapon

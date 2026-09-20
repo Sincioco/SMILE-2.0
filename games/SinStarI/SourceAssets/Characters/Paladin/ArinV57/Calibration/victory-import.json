@@ -1,0 +1,52 @@
+{
+  "character": "Arin",
+  "source": "arin-v5.7-mixamo-victory-without-skin.fbx",
+  "sourceSha256": "de9c34ee534561f6ccb1518eea9d25d52b8a9228278f288bd453845c2b6e3b6e",
+  "previousModelSha256": "edcfc5f92e22df7fd58030ab64410e0ebd9931d92f7aa2e297565b966c8c502e",
+  "modelSha256": "ad05aa6a135388675f687ef6e7862fefeb54e004d2266f94fa523bba0176f624",
+  "sampleRate": 30,
+  "frames": 257,
+  "bindBodyMinimumY": 0.0034411458764225245,
+  "idleFrameZeroBodyMinimumY": 0.02304132655262947,
+  "victoryFrameZero": {
+    "frame": 0,
+    "bodyMinimumY": 0.023041334003210068,
+    "sceneMinimumY": 0.023041334003210068
+  },
+  "minimumBodyY": 0.02304125763475895,
+  "minimumSceneY": 0.02304125763475895,
+  "samples": [
+    {
+      "frame": 0,
+      "bodyMinimumY": 0.023041334003210068,
+      "sceneMinimumY": 0.023041334003210068
+    },
+    {
+      "frame": 128,
+      "bodyMinimumY": 0.023041298612952232,
+      "sceneMinimumY": 0.023041298612952232
+    },
+    {
+      "frame": 256,
+      "bodyMinimumY": 0.02304130792617798,
+      "sceneMinimumY": 0.02304130792617798
+    }
+  ],
+  "preservedModelAndOldAnimationBytes": true,
+  "previousClips": [
+    "BlockImpact",
+    "Defend",
+    "Hit",
+    "Idle",
+    "Run",
+    "SwordAttack",
+    "SwordAttack2",
+    "Walk",
+    "Death"
+  ],
+  "newClipIndex": 9,
+  "newAnimationChannels": 99,
+  "checkpoint": "Blender/arin-v5.7-victory.blend",
+  "checkpointSha256": "6ba77a7a9cd633bb05c444b8abec41a2e2fcfd4b9c9e4d0b424200856e31cb1d",
+  "animationParentNamesMatch": true
+}

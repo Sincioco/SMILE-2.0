@@ -1,0 +1,55 @@
+''' Native encounter growth policy; shared RPG types and XP thresholds stay unchanged.
+Module Smile.Tools.ViewerBattleProgression
+
+Option Explicit
+
+Import SinStarI.Progression As Growth
+
+''' A cubic rise follows Sin's gently starting, increasingly steep reference curve.
+Public Function GrowthPoints(Level As Number) As Number
+
+    Dim N As Number
+    Dim Result As Number
+
+    N = Min(Growth.MAX_LEVEL, Max(1, Level)) - 1
+    Result = N + N * N * N / 900
+    Return Result
+
+End Function
+
+Public Function AtLevel(Id As Number, Level As Number) As Growth.Stats
+
+    Dim Result As Growth.Stats
+    Dim Base As Growth.Stats
+    Dim StepValue As Growth.Stats
+    Dim Points As Number
+
+    Base = Growth.AtLevel(Id, 1)
+    StepValue = Growth.AtLevel(Id, 2)
+    Points = GrowthPoints(Level)
+    Result.HP = Base.HP + (StepValue.HP - Base.HP) * Points
+    Result.MP = Base.MP + (StepValue.MP - Base.MP) * Points
+    Result.Attack = Base.Attack + (StepValue.Attack - Base.Attack) * Points
+    Result.Magic = Base.Magic + (StepValue.Magic - Base.Magic) * Points
+    Result.Defense = Base.Defense + (StepValue.Defense - Base.Defense) * Points
+    Result.MagicDefense = Base.MagicDefense + (StepValue.MagicDefense - Base.MagicDefense) * Points
+    Result.LimitPower = Result.Attack * 6 + Min(Growth.MAX_LEVEL, Max(1, Level)) * 5
+
+    If Id = Growth.MIRA Then
+        Result.LimitPower = Result.Magic * 6 + Min(Growth.MAX_LEVEL, Max(1, Level)) * 5
+    End If
+
+    Return Result
+
+End Function
+
+Public Function KaelReward(Level As Number) As Number
+
+    Dim Result As Number
+
+    Result = 160 + 40 * GrowthPoints(Level)
+    Return Result
+
+End Function
+
+End Module

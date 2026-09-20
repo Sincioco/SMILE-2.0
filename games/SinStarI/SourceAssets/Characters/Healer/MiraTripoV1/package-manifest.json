@@ -12,9 +12,9 @@
   ],
   "runtime": {
     "model": "mira-animation-checkpoint.glb",
-    "sha256": "234d8a02139a787d1b7b7e8f607393c0f11f8c4286be5a268ee9ea5ea0261829",
+    "sha256": "4046495788f220f6614312b9f93c39833227af75d926ee25a27936e998cd4205",
     "descriptor": "Mira.sm3d.json",
-    "blenderCheckpoint": "Blender/mira-rigged-animation-checkpoint.blend",
+    "blenderCheckpoint": "Blender/mira-victory.blend",
     "triangles": {
       "body": 18438,
       "staff": 1344,
@@ -99,13 +99,20 @@
       "source": "Source/Mixamo/Standing React Death Backward.fbx",
       "sourceSamples": 110,
       "sampleRate": 30
+    },
+    {
+      "sampleRate": 30,
+      "sourceSamples": 257,
+      "clip": "Victory",
+      "source": "Source/Mixamo/Victory.fbx"
     }
   ],
   "reference": "References/mira-character-reference.png",
   "validation": [
     "Source/mira-grounding-checkpoint.json",
     "Source/mira-roundtrip-checkpoint.json",
-    "README.md"
+    "README.md",
+    "Source/victory-import.json"
   ],
   "checksumInventory": "checksums.sha256",
   "heldWork": "All Web adoption/publication and Chrome acceptance remain on hold."

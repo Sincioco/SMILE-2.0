@@ -42,8 +42,8 @@ try {
     $result = @($result | Where-Object { -not $_.StartsWith('FIRE_ARIN_JSON: ') })
     $poseRows = @($result | Where-Object { $_.StartsWith('FIRE_FRAME_ZERO: ') })
     $reference = Get-Content -LiteralPath (Join-Path $fireRepository 'games\SinStarI\SourceAssets\Characters\Paladin\ArinV57\Previews\Accepted-Pose-References\frame-zero-transforms.json') -Raw | ConvertFrom-Json
-    if ($poseRows.Count -ne 9) { throw 'Expected all nine Fire Lab frame-zero poses.' }
-    for ($poseIndex = 0; $poseIndex -lt 9; $poseIndex++) {
+    if ($poseRows.Count -ne $reference.poses.Count) { throw 'Expected every canonical Arin frame-zero pose.' }
+    for ($poseIndex = 0; $poseIndex -lt $poseRows.Count; $poseIndex++) {
         $actualPose = $poseRows[$poseIndex].Replace('FIRE_FRAME_ZERO: ', 'ARIN_FRAME_ZERO: ').Split('|')
         $matching = @($reference.poses | Where-Object { $_.Split('|')[0] -ceq $actualPose[0] })
         if ($matching.Count -ne 1) { throw "Missing Viewer pose: $($actualPose[0])" }

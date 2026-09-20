@@ -1,5 +1,21 @@
 # Party Beat Camera Editor — Desktop Checkpoint
 
+## Native Battle System Part 1a — September 20, 2026
+
+The native Viewer adds right-click restart retaining session EXP, one-time Kael
+rewards/level-ups with an animated dismissible dialog, curved stat/reward tables,
+and a full cinematic ending orbit. Sin separately approved Mixamo rig uploads and
+Victory additions for Arin, Mira and Zara. Canonical packages now contain those
+clips; all existing GLB animation/model data and Arin's 24 authored pose keys are
+preserved. Game code remains unchanged. See the Viewer README and architecture
+for policy, state ownership and focused validation.
+
+One build accidentally used `Build.ps1`'s default `All`, regenerating ignored local
+Web build output. No deployment or browser acceptance followed. That output is
+not an accepted Web milestone. Future builds in this held period must explicitly
+use `-Target Native` (or the native launcher). Web/Studio adoption remains held,
+including the existing Studio asset-inventory mismatch below.
+
 ## Native playable battle follow-through — September 20, 2026
 
 Sin Star I now has a game-owned turn-based Battle and character stat tables/graphs;

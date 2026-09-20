@@ -15,8 +15,12 @@
     <SmileSource Include="NativeProgram.smile" StartupOnly="true" />
     <SmileSource Include="NativeViewerHost.smile" />
     <SmileSource Include="BattlePlanning.smile" />
+    <SmileSource Include="BattleProgression.smile" />
     <SmileSource Include="BattlePresentation.smile" />
     <SmileSource Include="BattleUi.smile" />
+    <SmileSource Include="BattleGrowthView.smile" />
+    <SmileSource Include="BattleOutcome.smile" />
+    <Asset Include="BattleExperienceTick.wav" />
     <SmileSource Include="..\..\games\SinStarI\Characters\Progression.smile" />
     <SmileSource Include="..\..\games\SinStarI\Characters\StatsView.smile" />
     <SmileSource Include="..\..\games\SinStarI\Battle\BattleRules.smile" />

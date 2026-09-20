@@ -8,6 +8,7 @@ Import Smile.Tools.Character3DViewerProfiles As Profiles
 Import Smile.Tools.ViewerBattlePlanning As Planning
 Import Smile.Tools.ViewerBattlePresentation As Presentation
 Import Smile.Tools.ViewerBattleUi As BattleUi
+Import Smile.Tools.ViewerBattleOutcome As Outcome
 Import Smile.UI.Controls As UI
 Import SinStarI.BattleRules As Rules
 
@@ -92,6 +93,7 @@ Public Class Session
     Private Encounter As Planning.State
     Private Visual As Presentation.State
     Private Menus As BattleUi.State
+    Private Ending As Outcome.State
     Private SelectedTab As Number
     Private PreviousTime As Number
     Private Elapsed As Number
@@ -159,13 +161,36 @@ Public Class Session
     Private Sub BeginBattle(Viewer As Workflow.Session)
 
         Dim EmptyMenus As BattleUi.State
+        Dim EmptyEnding As Outcome.State
 
         Me.BattleActive = True
         Me.Menus = EmptyMenus
+        Me.Ending = EmptyEnding
 
         Call Viewer.ConfigureExternalHost(True)
-        Call Planning.Start(Me.Encounter)
+        Call Planning.Start(Me.Encounter, True)
         Call Presentation.Create(Me.Visual, Viewer)
+        Call Presentation.Apply(Me.Visual, Viewer, Me.Encounter.Combat, 0)
+        Call Presentation.OrdersCamera(Viewer)
+
+    End Sub
+
+    Public Sub RestartBattle(Viewer As Workflow.Session)
+
+        Dim EmptyMenus As BattleUi.State
+        Dim EmptyEnding As Outcome.State
+
+        If Not Me.BattleActive Or Not Viewer.CanSwitchTab() Then
+            Return
+        End If
+
+        Me.Menus = EmptyMenus
+        Me.Ending = EmptyEnding
+
+        Call Viewer.ResumeDirectedScene()
+        Call Viewer.ConfigureExternalHost(True)
+        Call Planning.Start(Me.Encounter, True)
+        Call Presentation.Restart(Me.Visual)
         Call Presentation.Apply(Me.Visual, Viewer, Me.Encounter.Combat, 0)
         Call Presentation.OrdersCamera(Viewer)
 
@@ -181,6 +206,18 @@ Public Class Session
 
         X = 18
         Blocked = UI.Contains(18, 62, 850, 26)
+
+        If Me.BattleActive And Pointer_Pressed(POINTER_SECONDARY) Then
+            Call Me.RestartBattle(Viewer)
+
+            Return
+        End If
+
+        If Me.BattleActive And Me.Ending.Visible Then
+            Call Outcome.Input(Me.Ending, Key)
+
+            Return
+        End If
 
         If Not Me.Menus.Stats.Visible Then
 
@@ -260,6 +297,16 @@ Public Class Session
                 Call Presentation.BeginAction(Me.Visual, Viewer, Me.Encounter.Combat)
                 Call Presentation.Apply(Me.Visual, Viewer, Me.Encounter.Combat, Me.Elapsed)
 
+                If Me.Encounter.Combat.Phase >= Rules.VICTORY And Not Me.Ending.Started Then
+                    Me.Menus.Stats.Visible = False
+
+                    Call Outcome.Start(Me.Ending, Me.Encounter.Combat.Phase = Rules.VICTORY)
+                End If
+
+                If Me.Ending.Started Then
+                    Call Outcome.Update(Me.Ending, Viewer, Me.Elapsed)
+                End If
+
                 If Me.Encounter.Planning And Not WasPlanning Then
                     Call Presentation.OrdersCamera(Viewer)
                 End If
@@ -302,6 +349,7 @@ Public Class Session
 
             Call Presentation.Draw(Me.Visual, Viewer, Me.Encounter.Combat)
             Call BattleUi.Draw(Me.Menus, Me.Encounter, Me.Inspecting)
+            Call Outcome.Draw(Me.Ending, Me.Encounter)
 
         End If
 

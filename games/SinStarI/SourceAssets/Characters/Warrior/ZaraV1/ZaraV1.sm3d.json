@@ -79,6 +79,9 @@
     },
     "Walk": {
       "loop": true
+    },
+    "Victory": {
+      "loop": false
     }
   },
   "sockets": {

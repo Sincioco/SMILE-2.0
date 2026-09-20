@@ -5,21 +5,67 @@ Option Explicit
 
 Import SinStarI.BattleRules As Rules
 Import SinStarI.Progression As Growth
+Import Smile.Tools.ViewerBattleProgression As Curves
 
 Public Type State
     Combat As Rules.State
     Planning As Boolean
     Confirmed[4] As Boolean
+    PreviousXP[4] As Number
+    PreviousLevel[4] As Number
+    Award[4] As Number
 End Type
 
-Public Sub Start(ByRef Value As State)
+Public Sub Start(ByRef Value As State, Optional KeepExperience As Boolean = False)
 
     Dim Empty As State
+    Dim Previous As State
+    Dim Index As Number
 
+    Previous = Value
     Value = Empty
     Value.Planning = True
 
     Call Rules.Start(Value.Combat)
+
+    For Index = 0 To 4
+
+        If KeepExperience And Index < 4 Then
+            Value.Combat.Members[Index].XP = Previous.Combat.Members[Index].XP
+            Value.Combat.Members[Index].Level = Growth.LevelForXP(Value.Combat.Members[Index].XP)
+        End If
+
+        Value.Combat.Members[Index].Stats = Curves.AtLevel(Index, Value.Combat.Members[Index].Level)
+        Value.Combat.Members[Index].HP = Value.Combat.Members[Index].Stats.HP
+        Value.Combat.Members[Index].MP = Value.Combat.Members[Index].Stats.MP
+    End For
+
+End Sub
+
+''' Capture and apply the award exactly once, before the legacy turn finisher.
+Private Sub Victory(ByRef Value As State)
+
+    Dim Index As Number
+
+    Value.Combat.Phase = Rules.VICTORY
+    Value.Combat.Reward = Curves.KaelReward(Value.Combat.Members[4].Level)
+    Value.Combat.Message = "Victory! Right-Click To Battle Again"
+
+    For Index = 0 To 3
+
+        Value.PreviousXP[Index] = Value.Combat.Members[Index].XP
+        Value.PreviousLevel[Index] = Value.Combat.Members[Index].Level
+
+        If Not Value.Combat.Members[Index].Escaped Then
+
+            Value.Award[Index] = Value.Combat.Reward
+            Value.Combat.Members[Index].XP = Value.PreviousXP[Index] + Value.Award[Index]
+            Value.Combat.Members[Index].Level = Growth.LevelForXP(Value.Combat.Members[Index].XP)
+            Value.Combat.Members[Index].Stats = Curves.AtLevel(Index, Value.Combat.Members[Index].Level)
+
+        End If
+
+    End For
 
 End Sub
 
@@ -161,6 +207,12 @@ Public Sub Advance(ByRef Value As State, Elapsed As Number,
     If Value.Combat.Elapsed >= Value.Combat.Duration Then
 
         OldRound = Value.Combat.Round
+
+        If Value.Combat.Members[4].HP <= 0 Then
+            Call Victory(Value)
+
+            Return
+        End If
 
         Call Rules.NextTurn(Value.Combat, EnemyTargetRoll)
 

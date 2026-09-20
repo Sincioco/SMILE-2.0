@@ -1,0 +1,52 @@
+{
+  "character": "Mira",
+  "source": "Source/Mixamo/Victory.fbx",
+  "sourceSha256": "641de6fa18d8ff1f74479490c7a855216479c85d69cfe00ac447057494c58731",
+  "previousModelSha256": "234d8a02139a787d1b7b7e8f607393c0f11f8c4286be5a268ee9ea5ea0261829",
+  "modelSha256": "4046495788f220f6614312b9f93c39833227af75d926ee25a27936e998cd4205",
+  "sampleRate": 30,
+  "frames": 257,
+  "bindBodyMinimumY": 0.0,
+  "idleFrameZeroBodyMinimumY": -2.865272108465433E-08,
+  "victoryFrameZero": {
+    "frame": 0,
+    "bodyMinimumY": -5.4104020819067955E-08,
+    "sceneMinimumY": -5.4104020819067955E-08
+  },
+  "minimumBodyY": -8.15198291093111E-08,
+  "minimumSceneY": -8.15198291093111E-08,
+  "samples": [
+    {
+      "frame": 0,
+      "bodyMinimumY": -5.4104020819067955E-08,
+      "sceneMinimumY": -5.4104020819067955E-08
+    },
+    {
+      "frame": 128,
+      "bodyMinimumY": -2.561137080192566E-09,
+      "sceneMinimumY": -2.561137080192566E-09
+    },
+    {
+      "frame": 256,
+      "bodyMinimumY": -4.816683940589428E-09,
+      "sceneMinimumY": -4.816683940589428E-09
+    }
+  ],
+  "preservedModelAndOldAnimationBytes": true,
+  "previousClips": [
+    "Attack",
+    "Death",
+    "Defend",
+    "HealOne",
+    "HealParty",
+    "Hit",
+    "Idle",
+    "Run",
+    "Walk"
+  ],
+  "newClipIndex": 9,
+  "newAnimationChannels": 105,
+  "checkpoint": "Blender/mira-victory.blend",
+  "checkpointSha256": "a30e0233dba2507d2c5c340a5ee0699ef53695405ff81e4eef678a93bbe58c7e",
+  "animationParentNamesMatch": true
+}

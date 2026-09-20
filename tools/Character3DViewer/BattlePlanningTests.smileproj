@@ -6,6 +6,7 @@
   <ItemGroup>
     <SmileSource Include="BattlePlanningTests.smile" StartupOnly="true" />
     <SmileSource Include="BattlePlanning.smile" />
+    <SmileSource Include="BattleProgression.smile" />
     <SmileSource Include="..\..\games\SinStarI\Characters\Progression.smile" />
     <SmileSource Include="..\..\games\SinStarI\Battle\BattleRules.smile" />
   </ItemGroup>

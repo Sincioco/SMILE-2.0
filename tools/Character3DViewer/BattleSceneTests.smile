@@ -8,6 +8,7 @@ Import Smile.Tools.Character3DViewerProfiles As Profiles
 Import Smile.Tools.Character3DViewerActors As Actors
 Import Smile.Tools.ViewerBattlePresentation As Presentation
 Import Smile.Tools.ViewerBattlePlanning As Planning
+Import Smile.Tools.ViewerBattleOutcome As Outcome
 Import Smile.Simple3D.Precision3D As P
 Import SinStarI.BattleRules As Rules
 
@@ -20,9 +21,13 @@ Dim Position As P.Vector3
 Dim First As Number
 Dim Second As Number
 Dim Failures As Number
+Dim Ending As Outcome.State
+Dim FirstView As P.Camera3D
+Dim LastView As P.Camera3D
 
 Game Window "Viewer Battle Formation Check" Size 1420 By 990
 
+Call Check(Outcome.DialogLeft() = 370, "Reward Dialog Centers Without Left Constant Collision")
 Call Host.Start(Viewer, NativeHost.BATTLE_TAB, True, 1420, 990)
 Call Check(Viewer.PanelVisibility() = 2, "Battle Startup Hides Legacy Panels")
 Call Planning.Start(Battle)
@@ -72,6 +77,7 @@ End For
 Call Check(Viewer.SceneReady(), "Directed Round Remains Ready")
 
 Battle.Combat.Turn = 3
+Battle.Combat.Members[3].HP = Battle.Combat.Members[3].Stats.HP
 Battle.Combat.Members[3].LB = Battle.Combat.Members[3].Stats.HP
 
 Call Rules.BeginCommand(Battle.Combat, Rules.LIMIT_BREAK, 0)
@@ -82,6 +88,55 @@ Battle.Combat.Elapsed = 400
 Call Presentation.Apply(Visual, Viewer, Battle.Combat, 16)
 Call Viewer.UpdateFrame(1420, 990)
 Call Check(Visual.CastClip = "HealParty" And Visual.Ready And Viewer.SceneReady(), "Mira LB Uses Party Healing")
+Call Planning.Start(Battle)
+
+Battle.Combat.Members[4].HP = 1
+
+Call Planning.BeginRound(Battle)
+Call Planning.Advance(Battle, 2000, 99, 0)
+Call Presentation.Apply(Visual, Viewer, Battle.Combat, 16)
+Call Viewer.UpdateFrame(1420, 990)
+Call Check(Visual.Clips[1] = "Victory" And Visual.Clips[4] = "Death", "Living Orin Celebrates Defeated Kael")
+
+For First = 0 To 3
+    Call Check(Visual.Clips[First] = "Victory", "All Living Heroes Have Victory Clips")
+End For
+
+Call Check(Visual.Ready And Viewer.SceneReady(), "Ending Uses Valid Character Clips")
+Call Outcome.Start(Ending, True)
+Call Outcome.Advance(Ending, 900)
+Call Check(Outcome.DisplayAward(Ending, 1200) = 600, "EXP Counts Up")
+Call Outcome.Advance(Ending, 8999)
+Call Check(Ending.Visible, "Dialog Remains Before Ten Seconds")
+Call Outcome.Activity(Ending, True, False)
+Call Outcome.Advance(Ending, 9999)
+Call Check(Ending.Visible, "Activity Resets Inactivity Countdown")
+Call Outcome.Advance(Ending, 1)
+Call Check(Not Ending.Visible, "Ten Inactive Seconds Dismiss")
+Call Outcome.Start(Ending, True)
+Call Outcome.Activity(Ending, True, True)
+Call Check(Not Ending.Visible, "Explicit Dismissal")
+
+FirstView = Outcome.OrbitView(0)
+LastView = Outcome.OrbitView(Outcome.ORBIT_DURATION)
+
+Call Check(Abs(FirstView.Position.X - LastView.Position.X) < 0.01 And
+    Abs(FirstView.Position.Z - LastView.Position.Z) < 0.01, "Orbit Completes Full Circle")
+
+LastView = Outcome.OrbitView(Outcome.ORBIT_DURATION / 2)
+
+Call Check(Abs(FirstView.Position.X + LastView.Position.X) < 0.01 And
+    Abs(FirstView.Position.Z + LastView.Position.Z) < 0.01, "Orbit Passes Opposite Side")
+Call Presentation.Restart(Visual)
+Call Planning.Start(Battle, True)
+Call Presentation.Apply(Visual, Viewer, Battle.Combat, 0)
+Call Check(Visual.Clips[1] = "Idle" And Visual.Clips[4] = "Idle", "Restart Clears Victory And Death Poses")
+Call Host.RestartBattle(Viewer)
+Call Viewer.UpdateFrame(1420, 990)
+Call Check(Viewer.PanelVisibility() = 2 And Viewer.SceneReady(), "Host Restart Preserves Directed Scene")
+Call Outcome.Start(Ending, False)
+Call Outcome.Update(Ending, Viewer, 16)
+Call Check(Ending.OrbitTime = 16 And Not Ending.Visible, "Defeat Orbits Without EXP Dialog")
 Call Presentation.Destroy(Visual)
 Call Viewer.ConfigureExternalHost(False)
 Call Viewer.SelectTab(Profiles.CHARACTER_TAB_PARTY_KAEL)

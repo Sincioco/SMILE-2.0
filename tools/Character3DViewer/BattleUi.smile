@@ -9,6 +9,7 @@ Import SinStarI.BattleAttacks As Attacks
 Import SinStarI.BattleUI As Icons
 Import SinStarI.Progression As Growth
 Import SinStarI.StatsView As StatsView
+Import Smile.Tools.ViewerBattleGrowthView As GrowthView
 Import Smile.UI.Controls As UI
 
 Public Type State
@@ -528,7 +529,7 @@ Public Sub Draw(Value As State, Encounter As Planning.State, Inspecting As Boole
     End If
 
     If Value.Stats.Visible Then
-        Call StatsView.Draw(Value.Stats)
+        Call GrowthView.Draw(Value.Stats)
     End If
 
 End Sub

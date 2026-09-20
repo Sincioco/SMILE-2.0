@@ -27,14 +27,26 @@ are hidden in the native tab strip; the accepted Mira follows Zara.
   mark selection. Damage/healing numbers rise and fade above their targets.
 - The order-selection camera uses Sin's September 20 screenshot: position
   `(623, 0, 382)`, target `(-67, 122, -66)`, FOV 24 degrees. It is restored when
-  new orders are requested and by right-click reset; normal smooth arena controls
+  new orders are requested and by right-click restart; normal smooth arena controls
   remain available. Actors use separate formation homes before the first frame.
 - Each hero and Kael has **Stats Table** and **Graphs** buttons: per-level values
   or increases, XP, individual graphs and normalized/actual-value overlays,
-  with levels 1–300 or 1–9,999. Select the Battle System tab again to restart.
+  with levels 1–300 or 1–9,999. Kael's last column/graph is **EXP Reward**.
+- Right-click restarts the encounter with full HP/MP while retaining earned EXP
+  and levels for this running Viewer session. Returning to Battle System also
+  retains that progress. Closing the application ends the session.
+- Defeating Kael awards EXP once to each hero who has not escaped (including KO
+  heroes). A navy reward dialog counts up EXP and levels with a short tick sound.
+  Mouse/keyboard activity resets its ten-second inactivity timeout; Escape,
+  Enter, **OK** or **X** closes it. Closing early does not lose the award.
+- Victory and defeat each finish with a twelve-second, eased 360-degree camera
+  orbit. Living winners play their own Victory clips; defeated actors retain
+  Death. Arin, Zara and Mira now have rig-matched Mixamo Victory clips alongside
+  Orin's existing clip. Right-click can restart during the ending.
 
-Growth reuses the existing pure progression module without changing Sin Star I.
-For level `L`, let `g = L - 1`. The table shows level-1 value plus gain per level:
+The Viewer owns its curved stat/reward policy and reuses the game's existing XP
+thresholds. For level `L`, let `g = (L - 1) + floor((L - 1)^3 / 900)`.
+The table shows each stat's level-1 value plus its weighted growth points:
 
 | Hero | HP | MP | Attack | Magic | Physical Def | Magic Def |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -43,8 +55,11 @@ For level `L`, let `g = L - 1`. The table shows level-1 value plus gain per leve
 | Zara / Kael | 250 + 40g | 70 + 15g | 48 + 5g | 32 + 3g | 30 + 2g | 30 + 2g |
 | Mira | 220 + 40g | 130 + 25g | 23 + 2g | 52 + 5g | 35 + 3g | 45 + 4g |
 
-Priority units are 10 HP, 5 MP, 1 Attack or 1 Defense per growth point. XP to the
-next level is `60 + 20g + 3g²` through level 299; from level 300 onward it becomes
+Priority units are 10 HP, 5 MP, 1 Attack or 1 Defense per growth point. This smooth
+accelerating curve follows the supplied visual reference rather than claiming
+exact values from that unlabelled image. Kael rewards `160 + 40g` EXP per eligible
+hero: 1,200 at level 20. For XP costs only, let `n = L - 1`. XP to the
+next level is `60 + 20n + 3n²` through level 299; from level 300 onward it becomes
 `25 × normal cost + 500,000 × (L - 299)²`. Level 9,999 is the maximum. Closed-form
 totals and bounded graph sampling keep inspection responsive.
 

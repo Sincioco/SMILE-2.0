@@ -33,6 +33,9 @@ if ($Studio) {
 $nativeBattleSources = @(
     'NativeViewerHost.smile',
     'BattlePlanning.smile',
+    'BattleProgression.smile',
+    'BattleGrowthView.smile',
+    'BattleOutcome.smile',
     'BattlePresentation.smile',
     'BattleUi.smile',
     '..\..\games\SinStarI\Characters\Progression.smile',
@@ -163,7 +166,7 @@ function Preserve-ExistingHost([xml]$ProjectXml) {
         if ($item.Name -eq 'SmileSource' -and $item.Include -eq 'NativeProgram.smile') {
             $item.SetAttribute('Include', 'Program.smile')
         } elseif (($item.Name -eq 'SmileSource' -and $item.Include -in $nativeBattleSources) -or
-            ($item.Name -eq 'Asset' -and $item.Include -eq 'Assets\Battle\BitmapFont.png')) {
+            ($item.Name -eq 'Asset' -and $item.Include -in @('Assets\Battle\BitmapFont.png', 'BattleExperienceTick.wav'))) {
             $null = $item.ParentNode.RemoveChild($item)
         }
     }
