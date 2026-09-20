@@ -6,6 +6,8 @@ Import Smile.Tools.Character3DViewerWorkflow As Workflow
 Import Smile.Tools.NativeViewerHost As NativeHost
 Import Smile.Tools.Character3DViewerProfiles As Profiles
 Import Smile.Tools.Character3DViewerActors As Actors
+Import Smile.Tools.Character3DViewerParty As Party
+Import Smile.Tools.Character3DViewerCamera As ViewerCamera
 Import Smile.Tools.ViewerBattlePresentation As Presentation
 Import Smile.Tools.ViewerBattlePlanning As Planning
 Import Smile.Tools.ViewerBattleOutcome As Outcome
@@ -34,7 +36,9 @@ Dim FollowingView As P.Camera3D
 Dim CompactLayout As Hud.Layout
 Dim ExpandedLayout As Hud.Layout
 Dim Shots As Cinematics.State
-Dim ScreenPoint As Core.ProjectedPoint3D
+Dim ManualCamera As ViewerCamera.State
+Dim CameraInput As ViewerCamera.PointerInput
+Dim CameraOk As Boolean
 
 Game Window "Viewer Battle Formation Check" Size 1420 By 990
 
@@ -70,7 +74,7 @@ Call Cinematics.Update(Shots, Viewer, Battle.Combat, 16, 1420, 990)
 Call Check(Abs(FirstView.Position.X - Shots.View.Position.X) > 0.001,
     "Opening Camera Drifts While Waiting For Orders")
 
-FollowingView = Cinematics.Compose(Shots, Battle.Combat, 1420, 990, 2)
+FollowingView = Presentation.OrdersView()
 FirstView = Cinematics.Establish(Shots.EstablishView, FollowingView, 0)
 LastView = Cinematics.Establish(Shots.EstablishView, FollowingView, 2000)
 
@@ -101,6 +105,20 @@ Call Check(Math3D.Distance(FollowingView.Position, LastView.Position) = 0.0 And
     FollowingView.FovDegrees = LastView.FovDegrees, "Transition Reaches The Exact Following Camera")
 Call Cinematics.Update(Shots, Viewer, Battle.Combat, 3000, 1420, 990)
 
+FirstView = Presentation.OrdersView()
+
+For First = 0 To 3
+
+    Battle.Combat.Turn = First
+
+    Call Cinematics.Update(Shots, Viewer, Battle.Combat, 8000, 1420, 990)
+    Call Check(Math3D.Distance(FirstView.Position, Shots.View.Position) = 0.0 And
+        Math3D.Distance(FirstView.Target, Shots.View.Target) = 0.0 And
+        FirstView.FovDegrees = Shots.View.FovDegrees,
+        "Every Hero's Orders Hold The Exact Default Camera Across Shot Timers")
+End For
+
+Battle.Combat.Turn = 0
 Shots.Enabled = False
 FirstView = Shots.View
 
@@ -108,54 +126,123 @@ Call Cinematics.Update(Shots, Viewer, Battle.Combat, 500, 1420, 990)
 Call Check(FirstView.Position.X = Shots.View.Position.X, "Disabled Cinematics Preserve Manual View")
 
 Shots.Enabled = True
-Battle.Combat.Phase = Rules.EXECUTING
-Battle.Combat.ImpactTime = 1200
-Battle.Combat.Elapsed = 500
 
-Call Check(Not Presentation.OrderArrowVisible(Battle.Combat), "Executing Attacks Hide Order Arrow")
-Call Check(Cinematics.ShotFor(Battle.Combat, 7000) = Cinematics.CLOSE_UP, "Cast Uses Close-Up")
+Call Check(Party.CameraActionTime(400, False) = Party.HERO_ATTACK_START_MILLISECONDS And
+    Party.CameraActionTime(400, True) = Party.VRAX_ATTACK_START_MILLISECONDS,
+    "Directed Attacks Use Kael Party Camera Beat Boundaries")
 
-Battle.Combat.Elapsed = 1100
+For First = 0 To 4
 
-Call Check(Cinematics.ShotFor(Battle.Combat, 7000) = Cinematics.IMPACT, "Impact Cut Precedes Contact")
-Call Cinematics.Update(Shots, Viewer, Battle.Combat, 16, 1420, 990)
+    Call Planning.Start(Battle)
 
-FirstView = Shots.View
+    Battle.Combat.Turn = First
 
-Call Cinematics.Update(Shots, Viewer, Battle.Combat, 16, 1420, 990)
-Call Check(Abs(FirstView.Position.X - Shots.View.Position.X) > 0.001,
-    "Impact Two-Character Shot Keeps Orbiting")
+    Call Rules.BeginCommand(Battle.Combat, Rules.ATTACK, 0)
+    Call Presentation.BeginAction(Visual, Viewer, Battle.Combat)
 
-LastView = Cinematics.Compose(Shots, Battle.Combat, 1420, 990, 0)
+    Battle.Combat.Elapsed = 400
+
+    Call Presentation.Apply(Visual, Viewer, Battle.Combat, 16)
+    Call Cinematics.Update(Shots, Viewer, Battle.Combat, 16, 1420, 990)
+    Call Viewer.UpdateFrame(1420, 990)
+    Call Check(Not Presentation.OrderArrowVisible(Battle.Combat), "Executing Attacks Hide Order Arrow")
+
+    FirstView = Shots.View
+
+    If First < 4 Then
+        Call Check(FirstView.FovDegrees = 24.0 And
+            Math3D.Distance(FirstView.Position, FirstView.Target) > 846.0,
+            "Hero Attack Uses Kael Party's Wide Planted Camera")
+    Else
+
+        Call Check(FirstView.FovDegrees = 26.0 And
+            Math3D.Distance(FirstView.Position, FirstView.Target) > 500.0,
+            "Enemy Attack Uses Kael Party's Behind-Defender Camera")
+    End If
+
+    Call Cinematics.Update(Shots, Viewer, Battle.Combat, 500, 1420, 990)
+    Call Check(Math3D.Distance(FirstView.Position, Shots.View.Position) < 0.001,
+        "Attack Camera Holds Like Kael Party Instead Of Continuing To Zoom Or Orbit")
+
+    FirstView = Viewer.CurrentCamera()
+
+    Call Viewer.StandaloneInput(KEY_RIGHT)
+    Call Cinematics.Update(Shots, Viewer, Battle.Combat, 16, 1420, 990)
+    Call Viewer.UpdateFrame(1420, 990)
+
+    LastView = Viewer.CurrentCamera()
+
+    Call Check(Math3D.Distance(FirstView.Position, LastView.Position) > 1.0,
+        "Keyboard Orbit Reaches The Rendered Camera During Every Fighter's Attack")
+    Call Cinematics.Update(Shots, Viewer, Battle.Combat, 16, 1420, 990)
+    Call Viewer.UpdateFrame(1420, 990)
+
+    FirstView = Viewer.CurrentCamera()
+
+    Call Check(Math3D.Distance(FirstView.Position, LastView.Position) < 0.001,
+        "Following Attack Frame Retains Manual Camera Instead Of Resetting It")
+    Call Viewer.FollowPartyView(Shots.View, True)
+End For
+
+''' Replay small and moderate drag deltas through the actual shared input owner.
+ManualCamera.Frame.PanXLimit = 1000.0
+ManualCamera.Frame.PanYLimit = 1000.0
+
+Call ViewerCamera.Reset(ManualCamera, 0, 0, -144, 36, 96000)
 
 For First = 0 To 1
 
-    Second = First * 4
-    Position = Shots.Positions[Second]
-    Position.Y = Position.Y + Shots.Height[Second]
-    ScreenPoint = Camera.ProjectPixel(Position, LastView, 1420, 990)
+    Call ViewerCamera.FollowView(ManualCamera, FirstView, True)
 
-    Call Check(ScreenPoint.Visible And ScreenPoint.X > CompactLayout.AreaX And
-        ScreenPoint.X < CompactLayout.AreaX + CompactLayout.AreaWidth And
-        ScreenPoint.Y > 158 And ScreenPoint.Y < CompactLayout.PanelY - 36,
-        "Impact Shot Keeps Both Heads Between HUD And Inspectors")
+    CameraInput = ViewerCamera.CreatePointerInput(False,
+        First = 0, First = 0, False, First = 1, First = 1, False,
+        700, 450, 1, 1, 1420, 990, False, True)
+    CameraOk = ViewerCamera.UpdatePointerInteraction(ManualCamera, CameraInput, 1, 3, 8)
+
+    Call ViewerCamera.Compose(ManualCamera, False)
+
+    LastView = ManualCamera.Live
+    CameraInput.PointerDeltaX = 20
+    CameraInput.PointerDeltaY = -15
+    CameraOk = ViewerCamera.UpdatePointerInteraction(ManualCamera, CameraInput, 1, 3, 8) And CameraOk
+
+    Call ViewerCamera.FollowView(ManualCamera, FollowingView)
+    Call ViewerCamera.Compose(ManualCamera, False)
+    Call Check(CameraOk And Math3D.Distance(LastView.Position, ManualCamera.Live.Position) > 0.1 And
+        Math3D.Distance(ManualCamera.Base.Position, FirstView.Position) < 0.001,
+        "Slow And Moderate Pan/Orbit Take Over The Current Shot And Survive Cinematic Updates")
 End For
 
-For First = Cinematics.WIDE To Cinematics.IMPACT
+CameraInput.OrbitHeld = False
+CameraInput.PanHeld = False
+CameraInput.PanPressed = False
+CameraInput.PanReleased = True
+CameraInput.WheelDelta = 1
+CameraOk = ViewerCamera.UpdatePointerInteraction(ManualCamera, CameraInput, 1, 3, 8)
+CameraOk = ViewerCamera.AdvanceZoom(ManualCamera, 50) And CameraOk
 
-    Shots.Shot = First
-    Shots.ShotTime = 0
-    FirstView = Cinematics.Compose(Shots, Battle.Combat, 1420, 990, 2)
-    Shots.ShotTime = 16
-    LastView = Cinematics.Compose(Shots, Battle.Combat, 1420, 990, 2)
+Call ViewerCamera.FollowView(ManualCamera, FollowingView)
+Call Check(CameraOk And ManualCamera.Zoom.Target < 0.0 And ManualCamera.Zoom.Current < 0.0,
+    "Wheel Zoom Eases And Survives Shot Updates")
 
-    Call Check(Abs(FirstView.Position.X - LastView.Position.X) +
-        Abs(FirstView.Position.Z - LastView.Position.Z) > 0.001, "Every Shot Type Drifts")
-End For
+CameraInput.WheelDelta = -2
+CameraOk = ViewerCamera.UpdatePointerInteraction(ManualCamera, CameraInput, 1, 3, 8)
+CameraOk = ViewerCamera.AdvanceZoom(ManualCamera, 50) And CameraOk
 
-Battle.Combat.Elapsed = 1900
+Call Check(CameraOk And ManualCamera.Zoom.Target > 0.0, "Wheel Zoom Out Uses The Same Controls")
+Call ViewerCamera.FollowView(ManualCamera, FollowingView, True)
+Call Check(ManualCamera.Controls.OrbitYaw = 0.0 And ManualCamera.Controls.PanX = 0.0 And
+    ManualCamera.Zoom.Target = 0.0, "Explicit Camera Reset Clears Manual Offsets")
 
-Call Check(Cinematics.ShotFor(Battle.Combat, 7000) = Cinematics.PAIR, "Recovery Frames Both Fighters")
+Battle.Combat.Phase = Rules.WAITING
+
+Call Cinematics.Update(Shots, Viewer, Battle.Combat, 16, 1420, 990)
+
+FirstView = Presentation.OrdersView()
+
+Call Check(Math3D.Distance(FirstView.Position, Shots.View.Position) = 0.0 And
+    Math3D.Distance(FirstView.Target, Shots.View.Target) = 0.0,
+    "Returning From Combat To Orders Restores The Fixed Default Camera")
 Call Planning.Start(Battle)
 
 For First = 0 To 4

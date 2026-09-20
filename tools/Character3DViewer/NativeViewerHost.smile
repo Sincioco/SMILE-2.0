@@ -273,9 +273,10 @@ Public Class Session
                 Blocked = Blocked Or Pointer_X() < 278 Or Pointer_X() >= Window_Width() - 278 Or Pointer_Y() >= Window_Height() - 100
             End If
 
-            If (Me.Menus.Stats.Visible Or Key = KEY_UP Or Key = KEY_DOWN Or
-                Key = KEY_LEFT Or Key = KEY_RIGHT Or Key = KEY_ENTER Or
-                Key = KEY_SPACE Or Key = KEY_ESCAPE) Then
+            If (Me.Menus.Stats.Visible Or Key = KEY_ENTER Or
+                Key = KEY_SPACE Or Key = KEY_ESCAPE Or
+                (Me.Encounter.Planning And (Key = KEY_UP Or Key = KEY_DOWN Or
+                Key = KEY_LEFT Or Key = KEY_RIGHT))) Then
                 ViewerKey = KEY_NONE
             End If
 

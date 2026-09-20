@@ -106,7 +106,7 @@ Public Function VictoryClip(Actor As Actors.Context) As Text
 End Function
 
 ''' Sin's September 20 order-selection camera, read from the supplied Viewer screenshot.
-Public Sub OrdersCamera(Viewer As Workflow.Session)
+Public Function OrdersView() As P.Camera3D
 
     Dim View As P.Camera3D
 
@@ -116,6 +116,16 @@ Public Sub OrdersCamera(Viewer As Workflow.Session)
     View.FovDegrees = 24.0
     View.NearPlane = 1.0
     View.FarPlane = 10000.0
+
+    Return View
+
+End Function
+
+Public Sub OrdersCamera(Viewer As Workflow.Session)
+
+    Dim View As P.Camera3D
+
+    View = OrdersView()
 
     Call Viewer.SetPartyView(View)
 

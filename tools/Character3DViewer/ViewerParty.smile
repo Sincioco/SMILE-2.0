@@ -2276,6 +2276,53 @@ Public Function EstablishOrbitDegrees(Remaining As Number) As Double
 
 End Function
 
+''' Formation framing shared by the demo and directed battles.
+Public Function FormationCamera(View As Precision3D.Camera3D,
+    Remaining As Number) As Precision3D.Camera3D
+
+    Dim Offset As Precision3D.Vector3
+    Dim Rotation As Precision3D.Vector3
+
+    View.Position = PreciseMath.Add(View.Target,
+        PreciseMath.Scale(PreciseMath.Subtract(View.Position, View.Target), 1.65))
+    View.Position.Y = View.Position.Y + 110.0
+    View.Target.Y = View.Target.Y + 110.0
+
+    If Remaining > 0 Then
+
+        Offset = PreciseMath.Subtract(View.Position, View.Target)
+        Rotation = Precision3D.Vector(0.0, -EstablishOrbitDegrees(Remaining), 0.0)
+        View.Position = PreciseMath.Add(View.Target, PreciseMath.Rotate(Offset, Rotation))
+        View.UpDirection = PreciseMath.Rotate(View.UpDirection, Rotation)
+
+    End If
+
+    Return View
+
+End Function
+
+''' Directed combat has a 400-ms approach; map it onto the same demo camera beats.
+Public Function CameraActionTime(Elapsed As Number, Boss As Boolean) As Number
+
+    Dim StartTime As Number
+    Dim Result As Number
+
+    StartTime = HERO_ATTACK_START_MILLISECONDS
+
+    If Boss Then
+        StartTime = VRAX_ATTACK_START_MILLISECONDS
+    End If
+
+    Result = StartTime + Elapsed - 400
+
+    If Elapsed < 400 Then
+        Result = Elapsed * StartTime / 400
+    End If
+
+    Return Result
+
+End Function
+
 Public Function VraxImpactTime(AttackMilliseconds As Number) As Number
 
     Dim Result As Number
@@ -2399,7 +2446,8 @@ Public Sub OrbitBattleShot(ByRef Value As State, ByRef Camera As Precision3D.Cam
 End Sub
 
 Private Sub ApplyVraxAttackCamera(ByRef Value As State,
-    ByRef LiveCamera As Precision3D.Camera3D, AttackMilliseconds As Number)
+    ByRef LiveCamera As Precision3D.Camera3D, AttackMilliseconds As Number,
+    DragonActor As Character3D.Actor, ActionTime As Number)
 
     Dim Boss As Precision3D.Vector3
     Dim Hero As Precision3D.Vector3
@@ -2413,11 +2461,16 @@ Private Sub ApplyVraxAttackCamera(ByRef Value As State,
     Dim Valid As Boolean
 
     Boss = VraxPosition(Value)
+
+    If Value.DirectedPlayback Then
+        Valid = Character3D.TryPosition(DragonActor, Boss)
+    End If
+
     Anchor = Boss
     Hero = Precision3D.FromVector(HomePosition(Value, Value.HitTarget))
     Valid = PreciseMath.TryNormalize(PreciseMath.Subtract(Hero, Boss), Direction)
     Side = Precision3D.Vector(-Direction.Z, 0.0, Direction.X)
-    Beat = VraxCameraBeat(Value.Elapsed, AttackMilliseconds)
+    Beat = VraxCameraBeat(ActionTime, AttackMilliseconds)
     Desired = Value.OrbitCamera
     Desired.UpDirection = Precision3D.Vector(0.0, 1.0, 0.0)
     Desired.Target = Boss
@@ -2482,7 +2535,8 @@ Public Sub ApplyAttackCamera(
     CameraElapsed As Number,
     AttackMilliseconds As Number,
     DragonPositionX As Number,
-    DragonPositionZ As Number
+    DragonPositionZ As Number,
+    Optional DirectedCamera As Boolean = False
 )
 
     Dim Hero As Precision3D.Vector3
@@ -2509,39 +2563,30 @@ Public Sub ApplyAttackCamera(
     Dim ActionStart As Number
     Dim LowAngleStart As Number
     Dim StableAnchor As Precision3D.Vector3
-    Dim EstablishOffset As Precision3D.Vector3
-    Dim EstablishRotation As Precision3D.Vector3
+    Dim ActionTime As Number
+    Dim EstablishRemaining As Number
     Dim TargetEase As Double
 
     Value.OrbitCamera = LiveCamera
     Value.ActiveCamera = 1
 
-    If Value.DirectedPlayback Then
+    If Value.DirectedPlayback And Not DirectedCamera Then
         Return
+    End If
+
+    ActionTime = Value.Elapsed
+    EstablishRemaining = Value.EstablishRemaining
+
+    If DirectedCamera Then
+        ActionTime = CameraActionTime(Value.Elapsed, Value.Turn = 2)
+        EstablishRemaining = 0
     End If
 
     ''' Start from a formation-wide orbit before the five hero camera phases.
 
     If Value.Enabled And Value.UnityRoster Then
-
-        LiveCamera.Position.X = LiveCamera.Target.X + (LiveCamera.Position.X - LiveCamera.Target.X) * 1.65
-        LiveCamera.Position.Y = LiveCamera.Target.Y + (LiveCamera.Position.Y - LiveCamera.Target.Y) * 1.65 + 110.0
-        LiveCamera.Position.Z = LiveCamera.Target.Z + (LiveCamera.Position.Z - LiveCamera.Target.Z) * 1.65
-        LiveCamera.Target.Y = LiveCamera.Target.Y + 110.0
-
-        If Value.EstablishRemaining > 0 Then
-
-            EstablishOffset = PreciseMath.Subtract(LiveCamera.Position, LiveCamera.Target)
-            EstablishRotation = Precision3D.Vector(0.0,
-                -EstablishOrbitDegrees(Value.EstablishRemaining), 0.0)
-            EstablishOffset = PreciseMath.Rotate(EstablishOffset, EstablishRotation)
-            LiveCamera.Position = PreciseMath.Add(LiveCamera.Target, EstablishOffset)
-            LiveCamera.UpDirection = PreciseMath.Rotate(LiveCamera.UpDirection, EstablishRotation)
-
-        End If
-
+        LiveCamera = FormationCamera(LiveCamera, EstablishRemaining)
         Value.OrbitCamera = LiveCamera
-
     End If
 
     If (Not Value.Enabled Or
@@ -2549,19 +2594,21 @@ Public Sub ApplyAttackCamera(
         Not DragonAvailable Or
         Not AutoOrbit Or
         Not DragonVisible Or
-        Value.EstablishRemaining > 0) Then
+        EstablishRemaining > 0) Then
         Value.PreviousCamera = 1
         Return
     End If
 
-    If Value.Turn = MiraBattle.PARTY_TURN And MiraBattle.IsHealing(Value.AttackCycle) Then
+    If (Value.Turn = MiraBattle.PARTY_TURN And
+        ((Not DirectedCamera And MiraBattle.IsHealing(Value.AttackCycle)) Or
+        (DirectedCamera And Value.DirectedHealing))) Then
         Value.PreviousCamera = 1
 
         Return
     End If
 
     If Value.UnityRoster And Value.Turn = 2 Then
-        Call ApplyVraxAttackCamera(Value, LiveCamera, AttackMilliseconds)
+        Call ApplyVraxAttackCamera(Value, LiveCamera, AttackMilliseconds, DragonActor, ActionTime)
 
         Return
     End If
@@ -2604,7 +2651,7 @@ Public Sub ApplyAttackCamera(
             Value.Mira.Frame.PositionY + 68.0, Value.Mira.Frame.PositionZ)
     End If
 
-    CameraBeat = HeroCameraBeat(Value.Turn, Value.Elapsed, AttackMilliseconds)
+    CameraBeat = HeroCameraBeat(Value.Turn, ActionTime, AttackMilliseconds)
 
     If Value.UnityRoster And CameraBeat >= HERO_CAMERA_BEAT_ATTACK Then
 
@@ -2688,7 +2735,7 @@ Public Sub ApplyAttackCamera(
 
     ActionStart = HERO_ATTACK_START_MILLISECONDS
     LowAngleStart = ActionStart
-    CameraBeat = HeroCameraBeat(Value.Turn, Value.Elapsed, AttackMilliseconds)
+    CameraBeat = HeroCameraBeat(Value.Turn, ActionTime, AttackMilliseconds)
     PositionEase = 180.0
     TargetEase = 120.0
     SceneScale = 1.0

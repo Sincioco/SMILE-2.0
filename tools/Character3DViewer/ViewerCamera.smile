@@ -179,6 +179,22 @@ Public Sub UseView(ByRef Value As State, View As Precision3D.Camera3D)
 
 End Sub
 
+''' Follow a scripted shot without discarding smooth zoom or captured pointer motion.
+''' Pan/orbit already disable AutoOrbit, so manual control retains the last shot.
+Public Sub FollowView(ByRef Value As State, View As Precision3D.Camera3D,
+    Optional Restart As Boolean = False)
+
+    If Restart Then
+        Call UseView(Value, View)
+        Call SetAutoOrbit(Value, True)
+    End If
+
+    If Value.AutoOrbit Then
+        Value.Base = View
+    End If
+
+End Sub
+
 Public Function UpdatePointerControls(ByRef Value As State,
     OrbitPressed As Boolean, OrbitHeld As Boolean, OrbitReleased As Boolean,
     OrbitActive As Boolean, PanPressed As Boolean, PanHeld As Boolean,

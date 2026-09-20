@@ -104,6 +104,7 @@ Public Class Session
     Private IsHosted As Boolean
     Private ExternalTabs As Boolean
     Private DirectedView As Precision3D.Camera3D
+    Private PartyCameraBase As Precision3D.Camera3D
     Private CalibrationYaw As Double
     Private CycleAllClips As Boolean
     Private IsSuspended As Boolean
@@ -224,7 +225,7 @@ Public Class Session
 
             Call ViewerSession.CaptureFailure(Me.Session, 5)
 
-            If Not Me.Playback.ScenePaused Then
+            If Not Me.Playback.ScenePaused And Not Me.Party.DirectedPlayback Then
                 Me.Session.Ready = ViewerCamera.AdvanceAutoOrbit(
                     Me.ViewerCameraState,
                     Me.Party.OrbitPhase,
@@ -345,7 +346,7 @@ Public Class Session
                 Call BeatEditor.Update(Me.BeatEditing, Me.Party, Me.Character,
                     Me.DragonState.Actor, Me.ViewerCameraState.Live, Me.Playback.PlaybackSpeed,
                     Me.Timing.CameraElapsed, Me.ViewWidth, Me.ViewHeight,
-                    Me.ViewerCameraState.AutoOrbit)
+                    Me.ViewerCameraState.AutoOrbit And Not Me.Party.DirectedPlayback)
             End If
 
             Call Me.UpdateBattleAudio()
@@ -2899,6 +2900,22 @@ Public Class Session
 
         If Directed Then
 
+            If Not Me.Party.DirectedPlayback Then
+
+                Call ViewerLifecycle.ResetView(Me.Session, Me.Party, Me.DragonState,
+                    Me.ViewerCameraState, Me.LifecycleSettings)
+                Call ViewerCamera.StartAutoOrbit(Me.ViewerCameraState)
+
+                Me.Session.Ready = ViewerCamera.AdvanceAutoOrbit(Me.ViewerCameraState,
+                    Me.Party.OrbitPhase, 0, ARENA_ORBIT_DEGREES_PER_SECOND,
+                    Me.Party.Enabled, Me.Party.UnityRoster) And Me.Session.Ready
+
+                Call ViewerCamera.Compose(Me.ViewerCameraState, False)
+
+                Me.PartyCameraBase = Me.ViewerCameraState.Live
+
+            End If
+
             Me.ViewerUiState.Visibility = 2
 
             Call ViewerPlayback.BeginDirected(Me.Playback)
@@ -2924,6 +2941,56 @@ Public Class Session
         Call Me.ResetView()
 
     End Sub
+
+    ''' Reuse the ordinary Kael Party camera with the directed actor clock/positions.
+    Public Function PartyCameraView(AttackMilliseconds As Number, Elapsed As Number,
+        Optional NewAction As Boolean = False) As Precision3D.Camera3D
+
+        Dim View As Precision3D.Camera3D
+        Dim Controls As PrecisionCamera.Controls
+
+        View = Me.PartyCameraBase
+
+        If AttackMilliseconds <= 0 Then
+            View = ViewerParty.FormationCamera(View, 0)
+            Return View
+        End If
+
+        If NewAction Then
+            Call ViewerParty.ResetCameraTracking(Me.Party)
+        End If
+
+        Me.Party.OrbitPhase = (Me.Party.OrbitPhase + ToDouble(Elapsed) *
+            ToDouble(ARENA_ORBIT_DEGREES_PER_SECOND) / 1000.0)
+        Controls.OrbitYaw = Me.Party.OrbitPhase
+        View = ArenaCamera.ComposeOrbit(View, Controls)
+
+        Call ViewerParty.ApplyAttackCamera(Me.Party, View, Me.ViewerCameraState.Frame,
+            Me.DragonState.Actor, Me.DragonState.Available, Me.DragonState.Visible,
+            True, Me.Playback.PlaybackSpeed, Elapsed, AttackMilliseconds,
+            ViewerDragon.PositionX(), ViewerDragon.PositionZ(), True)
+
+        Return View
+
+    End Function
+
+    Public Sub FollowPartyView(View As Precision3D.Camera3D,
+        Optional Restart As Boolean = False)
+
+        Call ViewerCamera.FollowView(Me.ViewerCameraState, View, Restart)
+
+        Me.DirectedView = Me.ViewerCameraState.Base
+
+    End Sub
+
+    Public Function CurrentCamera() As Precision3D.Camera3D
+
+        Dim View As Precision3D.Camera3D
+
+        View = Me.ViewerCameraState.Live
+        Return View
+
+    End Function
 
     Public Function CanSwitchTab() As Boolean
 

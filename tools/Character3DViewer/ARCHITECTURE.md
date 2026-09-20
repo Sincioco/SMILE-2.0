@@ -36,8 +36,8 @@ pre-existing GLB animation/model data and indices. Arin's fingerprint migration
 preserves every authored pose key by exact clip name, with an empty Victory bank.
 
 Workflow retains scene/actor/calibration ownership and exposes a bounded directed
-playback bridge. Existing Party choreography and camera policies are bypassed only
-while that explicit mode is active. Playback owns pause/demo state; ViewerCamera
+playback bridge. Existing Party choreography is bypassed while that explicit mode is active;
+its camera policy is reused through the directed camera bridge described below. Playback owns pause/demo state; ViewerCamera
 owns preset adoption and the shared smooth controls. Returning to Kael Party
 clears directed mode and reloads the original scene. Unsaved editing and active
 Beat previews block tab changes; battle execution restores the primary actor
@@ -96,14 +96,11 @@ the requested camera and formation are retained.
 
 ## Native battle cinematics and responsive HUD (Part 1b)
 
-`BattleCinematics` owns the host's enabled flag, shot clock and current camera.
-It selects opening/wide/close-up/two-character/impact framing from combat phase,
-acting hero, target and actual impact timing. Every shot applies a slow Double
-orbit through the existing shared `ArenaCamera3D.ComposeOrbit`; input controls,
-renderer and language are unchanged. The host coordinates camera ownership with
-pending pose edits, Beat preview and the pre-existing twelve-second ending orbit.
-Turning the option off preserves the last shot for manual inspection. The opening
-uses the accepted screenshot preset, then cinematic cuts continue during orders.
+`BattleCinematics` owns the host's enabled flag, opening clock and phase changes.
+The current native camera path reuses Party framing/attack shots; see the camera
+parity section below. It no longer calculates separate close-up radii or rotates
+while orders are waiting. The host coordinates camera ownership with pending
+pose edits, Beat preview and the pre-existing twelve-second ending orbit.
 
 `BattleHud` owns pure responsive geometry, status rendering and the native right
 panel's Battle/Inspector tabs. `BattleUi` consumes the same geometry for hit tests
@@ -133,6 +130,54 @@ toggle off/on, an attack close-up, deferred interruption, relocated Kael stats,
 and the final crystal pointer following the next hero. Arin and Orin exports
 match their canonical JSON bytes. The final native Viewer was rebuilt and
 relaunched through Launch.ps1; no Web build, publication or browser acceptance.
+
+## Native Battle System camera parity with Kael Party
+
+The September 21 correction replaces BattleCinematics' separate close-up/radius
+formulas with the existing Kael Party camera policy. `ViewerParty.FormationCamera`
+is a small extraction of the original formation zoom/height/revolution. The demo
+and directed bridge call the same implementation. `ApplyAttackCamera` explicitly
+opts directed playback into its existing shots; the ordinary frame-loop call
+still bypasses it. A small time adapter maps the directed 400-ms approach to the
+same hero/boss camera beats. Kael's directed shot reads his real presented position
+instead of estimating movement from the demo's different timeline.
+
+Workflow captures the ordinary Party camera preset, including its initial orbit
+angle, pitch and zoom, before adopting a directed preset. Its new operations only
+compose/delegate camera policy and expose the rendered camera for verification.
+BattleCinematics keeps the two-second revolution and one-second blend, selects
+Party action shots, and restores the exact order preset on the transition to
+WAITING. Waiting has no timed cuts or automatic rotation.
+
+`ViewerCamera.FollowView` changes the scripted base without clearing input capture,
+pan, orbit or zoom state. Existing pan/orbit input disables automatic following
+and retains the last shot; smooth wheel zoom remains effective across shots.
+Only explicit entry/reset, re-enabling cinematics or returning to orders clears
+those offsets. Directed playback does not also advance the legacy automatic orbit
+or apply a saved demo Beat timeline over that result. NativeHost passes arrow keys
+to camera navigation during execution; they continue to select menus in orders.
+Ending-camera and battle-restart policy are unchanged.
+
+Growth from the preceding committed version: BattleCinematics 255 -> 87 lines,
+BattlePresentation 505 -> 515, NativeViewerHost 419 -> 420, ViewerCamera 663 -> 679,
+ViewerParty 4,084 -> 4,131 and Workflow 3,065 -> 3,132. SceneTests 392 -> 479.
+The legacy coordinator gains only state, bounded operations and delegation;
+framing stays with Party and interaction stays with Camera. No new dependency,
+language/runtime feature, file-size limit, baseline or exclusion is introduced.
+
+The real-asset fixture covers the complete revolution and blend boundaries,
+all four order selections across former cut deadlines, wide planted hero and
+behind-defender boss shots, all five actors' rendered keyboard-camera response,
+retention on the next attack frame, and small/moderate horizontal/vertical pointer
+pan/orbit plus smooth zoom in/out and reset through the shared input owner.
+The normal native hardening/architecture, calibration and 58 graphics/input/audio
+checks pass. Native visual inspection confirms the wider attack framing, arrow-key
+orbit during execution, horizontal/vertical pan during Kael's action, wheel zoom
+in/out, and right-click replay of the wide opening followed by the default order
+view. Small/moderate middle-button deltas are covered through the actual shared
+input owner; the available desktop automation supports only left-button drags.
+The final native Viewer is rebuilt and relaunched in its saved position. Web/Studio
+validation remains held.
 
 ## Native battle travel facing and automatic restart
 

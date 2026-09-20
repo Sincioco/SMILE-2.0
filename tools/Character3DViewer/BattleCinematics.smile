@@ -1,189 +1,36 @@
-''' Native battle shot direction. The shared arena library owns orbit composition.
+''' Native battle camera lifecycle. Party owns the shared framing and attack shots.
 Module Smile.Tools.ViewerBattleCinematics
 
 Option Explicit
 
 Import Smile.Tools.Character3DViewerWorkflow As Workflow
-Import Smile.Tools.Character3DViewerActors As Actors
-Import Smile.Tools.ViewerBeatSequence As Beats
 Import Smile.Tools.Character3DViewerParty As Party
 Import Smile.Tools.BattleCameraShots As Shots
 Import Smile.Tools.ViewerBattlePresentation As Presentation
 Import SinStarI.BattleRules As Rules
 Import Smile.Simple3D.Precision3D As P
-Import Smile.Simple3D.PrecisionMath3D As M
 Import Smile.Simple3D.PrecisionCamera3D As Camera
 Import Smile.Simple3D.ArenaCamera3D As Arena
 
-Public Const WIDE = 0
-Public Const CLOSE_UP = 1
-Public Const PAIR = 2
-Public Const IMPACT = 3
-Public Const OPENING = 4
-
 Public Type State
     Enabled As Boolean
+    WasEnabled As Boolean
     Time As Number
-    ShotTime As Number
-    Shot As Number
+    Phase As Number
     Serial As Number
-    Height[5] As Double
-    Positions[5] As P.Vector3
     View As P.Camera3D
     EstablishView As P.Camera3D
 End Type
 
 Public Sub Reset(ByRef Value As State, Viewer As Workflow.Session)
 
-    Dim Index As Number
-    Dim Actor As Actors.Context
-    Dim Head As P.Vector3
-
     Value.Time = 0
-    Value.ShotTime = 0
-    Value.Shot = -1
+    Value.Phase = -1
     Value.Serial = -1
-
-    For Index = 0 To 4
-        Actor = Viewer.PartyActor(Presentation.PartyTurn(Index))
-        Head = Beats.Head(Actor.Actor, P.Vector(0.0, 0.0, 0.0))
-        Value.Height[Index] = Max(30.0, Head.Y - Actor.Frame.PositionY)
-    End For
+    Value.WasEnabled = False
+    Value.EstablishView = Viewer.PartyCameraView(0, 0)
 
 End Sub
-
-''' Impact framing begins before contact and holds through the reaction.
-Public Function ShotFor(Battle As Rules.State, Time As Number) As Number
-
-    If Battle.Phase <> Rules.EXECUTING Then
-
-        If Time < 6500 Then
-            Return OPENING
-        Else If (Time / 6500) Mod 2 = 0 Then
-            Return PAIR
-        End If
-
-        Return WIDE
-
-    End If
-
-    If Battle.Elapsed < 400 Then
-        Return WIDE
-    Else If Battle.Elapsed < Max(400, Battle.ImpactTime - 240) Then
-        Return CLOSE_UP
-    Else If Battle.Elapsed <= Battle.ImpactTime + 550 Then
-        Return IMPACT
-    End If
-
-    Return PAIR
-
-End Function
-
-''' Fit the active subjects inside the vertical space between the two HUD strips.
-Public Function Compose(Value As State, Battle As Rules.State,
-    Width As Number, Height As Number, Visibility As Number) As P.Camera3D
-
-    Dim Base As P.Camera3D
-    Dim Result As P.Camera3D
-    Dim Controls As Camera.Controls
-    Dim Center As P.Vector3
-    Dim Direction As P.Vector3
-    Dim Delta As P.Vector3
-    Dim ActorIndex As Number
-    Dim TargetIndex As Number
-    Dim Index As Number
-    Dim Radius As Double
-    Dim Distance As Double
-    Dim SafeFraction As Double
-    Dim AvailableWidth As Number
-
-    ActorIndex = Battle.Turn
-    TargetIndex = Battle.Target
-
-    If Battle.Phase <> Rules.EXECUTING Then
-        TargetIndex = 4
-    End If
-
-    If TargetIndex = ActorIndex Then
-
-        TargetIndex = 4
-
-        If ActorIndex = 4 Then
-            TargetIndex = 0
-        End If
-
-    End If
-
-    AvailableWidth = Width - 36
-    SafeFraction = ToDouble(Max(180, Height - 375)) / ToDouble(Height)
-
-    If Visibility <> 2 And Width >= 1100 Then
-        AvailableWidth = Width - 556
-        SafeFraction = ToDouble(Max(180, Height - 449)) / ToDouble(Height)
-    End If
-
-    SafeFraction = Min(SafeFraction, ToDouble(AvailableWidth) / ToDouble(Height))
-    Base.UpDirection = P.Vector(0.0, 1.0, 0.0)
-    Base.FovDegrees = 42.0
-    Base.NearPlane = 1.0
-    Base.FarPlane = 10000.0
-    Controls.OrbitYaw = ToDouble(Value.ShotTime) * 0.003
-    Direction = P.Vector(0.74, 0.28, 0.61)
-
-    If Value.Shot = OPENING Then
-
-        Base.Position = P.Vector(623.0, 0.0, 382.0)
-        Base.Target = P.Vector(-67.0, 122.0, -66.0)
-        Base.FovDegrees = 24.0
-
-    Else
-
-        Center = M.Scale(M.Add(Value.Positions[ActorIndex], Value.Positions[TargetIndex]), 0.5)
-        Center.Y = Center.Y + Max(Value.Height[ActorIndex], Value.Height[TargetIndex]) * 0.5
-        Radius = M.Distance(Value.Positions[ActorIndex], Value.Positions[TargetIndex]) * 0.5
-        Radius = Radius + Max(Value.Height[ActorIndex], Value.Height[TargetIndex]) * 0.65
-        Delta = M.Subtract(Value.Positions[TargetIndex], Value.Positions[ActorIndex])
-        Distance = Max(1.0, Sqrt(Delta.X * Delta.X + Delta.Z * Delta.Z))
-        Direction = P.Vector((Delta.Z * 0.94 + Delta.X * 0.34) / Distance,
-            0.24, (-Delta.X * 0.94 + Delta.Z * 0.34) / Distance)
-
-        If Value.Shot = WIDE Then
-
-            Center = P.Vector(0.0, 0.0, 0.0)
-
-            For Index = 0 To 4
-                Center = M.Add(Center, Value.Positions[Index])
-            End For
-
-            Center = M.Scale(Center, 0.2)
-            Center.Y = Center.Y + 70.0
-            Radius = 0.0
-
-            For Index = 0 To 4
-                Radius = Max(Radius, M.Distance(Center, Value.Positions[Index]) + Value.Height[Index] * 0.6)
-            End For
-
-            Direction = P.Vector(0.74, 0.28, 0.61)
-
-        Else If Value.Shot = CLOSE_UP Then
-
-            Center = Value.Positions[ActorIndex]
-            Center.Y = Center.Y + Value.Height[ActorIndex] * 0.72
-            Radius = Value.Height[ActorIndex] * 0.43
-
-        End If
-
-        Distance = Radius / (0.358 * Max(0.2, SafeFraction))
-        Base.Target = Center
-        Base.Position = M.Add(Center, M.Scale(Direction, Distance))
-        Controls.OrbitYaw = Controls.OrbitYaw + ToDouble((Battle.ActionSerial Mod 3) - 1) * 12.0
-
-    End If
-
-    Result = Arena.ComposeOrbit(Base, Controls)
-    Return Result
-
-End Function
 
 ''' Match Kael Party's complete two-second orbit, then ease into the live shot for one second.
 Public Function Establish(Base As P.Camera3D, Following As P.Camera3D, Time As Number) As P.Camera3D
@@ -208,47 +55,32 @@ End Function
 Public Sub Update(ByRef Value As State, Viewer As Workflow.Session, Battle As Rules.State,
     Elapsed As Number, Width As Number, Height As Number)
 
-    Dim Index As Number
-    Dim Actor As Actors.Context
-    Dim Shot As Number
+    Dim Restart As Boolean
 
     If Not Value.Enabled Then
+        Value.WasEnabled = False
         Return
     End If
 
-    For Index = 0 To 4
-        Actor = Viewer.PartyActor(Presentation.PartyTurn(Index))
-        Value.Positions[Index] = P.Vector(Actor.Frame.PositionX, Actor.Frame.PositionY, Actor.Frame.PositionZ)
-    End For
-
-    If Value.Time = 0 Then
-
-        Value.Shot = WIDE
-        Value.EstablishView = Compose(Value, Battle, Width, Height, Viewer.PanelVisibility())
-        Value.Shot = -1
-
-    End If
-
     Value.Time = Value.Time + Elapsed
-    Shot = ShotFor(Battle, Max(0, Value.Time - Party.ESTABLISH_TOTAL_MILLISECONDS))
+    Value.View = Presentation.OrdersView()
 
-    If Shot <> Value.Shot Or Battle.ActionSerial <> Value.Serial Then
-
-        Value.ShotTime = 0
-        Value.Shot = Shot
-        Value.Serial = Battle.ActionSerial
-
+    If Battle.Phase = Rules.EXECUTING Then
+        Value.View = Viewer.PartyCameraView(Max(1, Battle.Duration - 900), Elapsed,
+            Battle.ActionSerial <> Value.Serial)
     End If
-
-    Value.ShotTime = Value.ShotTime + Elapsed
-
-    Value.View = Compose(Value, Battle, Width, Height, Viewer.PanelVisibility())
 
     If Value.Time <= Party.ESTABLISH_TOTAL_MILLISECONDS Then
         Value.View = Establish(Value.EstablishView, Value.View, Value.Time)
     End If
 
-    Call Viewer.SetPartyView(Value.View)
+    Restart = (Not Value.WasEnabled Or
+        (Battle.Phase = Rules.WAITING And Value.Phase <> Rules.WAITING))
+    Value.WasEnabled = True
+    Value.Phase = Battle.Phase
+    Value.Serial = Battle.ActionSerial
+
+    Call Viewer.FollowPartyView(Value.View, Restart)
 
 End Sub
 

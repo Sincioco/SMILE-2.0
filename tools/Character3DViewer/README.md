@@ -42,19 +42,23 @@ are hidden in the native tab strip; the accepted Mira follows Zara.
   equipment corrections and glow turn with him; Orin's standing hammer stance
   is restored after travel. Saved poses and character packages are preserved.
 - The right panel has **Battle** and **Inspector** tabs. **Cinematic Camera Battle**
-  starts on. The camera continuously orbits slowly through wide, close-up and
-  two-character shots; impact cuts begin just before contact and continue moving
-  through the reaction. Shots track the current actor and target. Turn it off to
-  retain the current shot and use the existing smooth manual camera controls.
-- The opening makes one complete, eased 360-degree revolution around the party
-  over two seconds, matching Kael Party, then blends for one second into the
-  battle camera. Its initial destination uses Sin's screenshot: position
-  `(623, 0, 382)`, target `(-67, 122, -66)`, FOV 24 degrees.
-  Right-click and automatic restart replay that opening.
-  Cinematics keep moving while waiting for orders. Active pose edits or Beat
-  previews retain their existing camera ownership until saved/cancelled. The
-  required twelve-second ending orbit still runs; enabled cinematics resume
-  afterwards. Actors use separate formation homes before the first frame.
+  starts on and uses Kael Party's existing formation framing and attack cameras.
+  Hero attacks hold the same wide view behind the party; Kael uses the same
+  behind-defender shot. The former separate Battle System close-up/zoom formulas
+  are removed.
+- The opening uses Kael Party's formation-wide view and complete, eased two-second
+  360-degree revolution, then blends for one second into Sin's default view behind
+  the party: position `(623, 0, 382)`, target `(-67, 122, -66)`, FOV 24 degrees.
+  **Choose Party Action** and individual orders stay in that view with no automatic
+  rotation. Returning to orders restores it once. Right-click and automatic
+  restart replay the opening.
+- Left drag pans, middle drag orbits and the wheel zooms during both hero and enemy
+  actions. Pan/orbit take over the current shot; later camera updates retain the
+  manual view. Zoom uses the same smooth controls and preserves its target across
+  shot changes. Arrow keys also orbit during execution; during orders they navigate
+  menus. Turn cinematics off to retain the shot, or off/on to resume automatic
+  framing. Active pose edits and Beat previews retain their existing ownership.
+  The twelve-second ending orbit and fifteen-second battle restart remain in place.
 - Each hero and Kael has **Stats Table** and **Graphs** buttons: per-level values
   or increases, XP, individual graphs and normalized/actual-value overlays,
   with levels 1–300 or 1–9,999. Kael's last column/graph is **EXP Reward**.
