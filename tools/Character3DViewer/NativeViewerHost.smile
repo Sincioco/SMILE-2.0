@@ -286,12 +286,14 @@ Public Class Session
     Public Sub UpdateFrame(Viewer As Workflow.Session, Width As Number, Height As Number)
 
         Dim Now As Number
+        Dim FrameElapsed As Number
         Dim EscapeRoll As Number
         Dim TargetRoll As Number
         Dim WasPlanning As Boolean
 
         Now = Timer()
-        Me.Elapsed = Min(100, Max(0, Now - Me.PreviousTime))
+        FrameElapsed = Max(0, Now - Me.PreviousTime)
+        Me.Elapsed = Min(100, FrameElapsed)
         Me.PreviousTime = Now
 
         If Me.BattleActive Then
@@ -319,7 +321,11 @@ Public Class Session
                 End If
 
                 If Me.Ending.Started Then
-                    Call Outcome.Update(Me.Ending, Viewer, Me.Elapsed)
+                    Call Outcome.Update(Me.Ending, Viewer, FrameElapsed)
+                End If
+
+                If Outcome.RestartDue(Me.Ending) Then
+                    Call Me.RestartBattle(Viewer)
                 End If
 
                 If Me.Encounter.Planning And Not WasPlanning And Not Me.Camera.Enabled Then

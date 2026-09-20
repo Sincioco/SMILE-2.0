@@ -154,6 +154,41 @@ Public Function Rotate(Value As Precision3D.Vector3, Rotation As Precision3D.Vec
 
 End Function
 
+''' Express a world-axis correction in axes turned around world Y, preserving XYZ Euler order.
+Public Function ReorientYaw(Rotation As Precision3D.Vector3, Yaw As Double) As Precision3D.Vector3
+
+    Dim XAxis As Precision3D.Vector3
+    Dim YAxis As Precision3D.Vector3
+    Dim ZAxis As Precision3D.Vector3
+    Dim Turn As Precision3D.Vector3
+    Dim Inverse As Precision3D.Vector3
+    Dim Result As Precision3D.Vector3
+    Dim Horizontal As Double
+
+    If Yaw = 0.0 Then
+        Return Rotation
+    End If
+
+    Turn = Precision3D.Vector(0.0, Yaw, 0.0)
+    Inverse = Precision3D.Vector(0.0, -Yaw, 0.0)
+    XAxis = Rotate(Rotate(Rotate(Precision3D.Vector(1.0, 0.0, 0.0), Inverse), Rotation), Turn)
+    YAxis = Rotate(Rotate(Rotate(Precision3D.Vector(0.0, 1.0, 0.0), Inverse), Rotation), Turn)
+    ZAxis = Rotate(Rotate(Rotate(Precision3D.Vector(0.0, 0.0, 1.0), Inverse), Rotation), Turn)
+    Horizontal = Sqrt(XAxis.X * XAxis.X + XAxis.Y * XAxis.Y)
+    Result.Y = Degrees(Atan2(-XAxis.Z, Horizontal))
+
+    If Horizontal > 0.000001 Then
+        Result.X = Degrees(Atan2(YAxis.Z, ZAxis.Z))
+        Result.Z = Degrees(Atan2(XAxis.Y, XAxis.X))
+    Else
+        Result.X = Degrees(Atan2(-ZAxis.Y, YAxis.Y))
+        Result.Z = 0.0
+    End If
+
+    Return Result
+
+End Function
+
 Public Function Lerp(Start As Precision3D.Vector3, Finish As Precision3D.Vector3,
     Progress As Double) As Precision3D.Vector3
 

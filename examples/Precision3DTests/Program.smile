@@ -230,6 +230,12 @@ Sub RunTests()
     Call Check(Abs(FirstPosition.X - SecondPosition.X) < 1e-9)
     Call Check(Abs(FirstPosition.Y - SecondPosition.Y) < 1e-9)
 
+    Call CheckYaw(Precision3D.Vector(-129.0, -8.0, 107.0), 37.25)
+    Call CheckYaw(Precision3D.Vector(77.0, 0.0, -67.0), -180.0)
+    Call CheckYaw(Precision3D.Vector(0.0, 90.0, 0.0), 15.0)
+    Call CheckYaw(Precision3D.Vector(0.0, -90.0, 0.0), -35.0)
+    Call CheckYaw(Precision3D.Vector(-129.0, -8.0, 107.0), 0.0)
+
     Stale = Source
 
     Call Graphics3D.DestroyObject3D(Source)
@@ -241,5 +247,38 @@ Sub RunTests()
     Call Check(Graphics3D.LastError() <> 0)
     Call Graphics3D.DestroyObject3D(Receiver)
     Call Graphics3D.ResetRenderer3D()
+
+End Sub
+
+''' Turn an authored correction and compare its action on all three basis vectors.
+Sub CheckYaw(Correction As Precision3D.Vector3, Yaw As Double)
+
+    Dim Axis As Number
+    Dim Basis As Precision3D.Vector3
+    Dim Turn As Precision3D.Vector3
+    Dim Reoriented As Precision3D.Vector3
+    Dim Expected As Precision3D.Vector3
+    Dim Actual As Precision3D.Vector3
+
+    Turn = Precision3D.Vector(0.0, Yaw, 0.0)
+    Reoriented = Math3D.ReorientYaw(Correction, Yaw)
+
+    For Axis = 0 To 2
+
+        Basis = Precision3D.Vector(0.0, 0.0, 0.0)
+
+        If Axis = 0 Then
+            Basis.X = 1.0
+        Else If Axis = 1 Then
+            Basis.Y = 1.0
+        Else
+            Basis.Z = 1.0
+        End If
+
+        Expected = Math3D.Rotate(Math3D.Rotate(Basis, Correction), Turn)
+        Actual = Math3D.Rotate(Math3D.Rotate(Basis, Turn), Reoriented)
+
+        Call Check(Math3D.Distance(Expected, Actual) < 0.000001)
+    End For
 
 End Sub

@@ -2843,6 +2843,21 @@ Public Function SetPartPositionOffset(
 ) As Boolean
 
     Dim Result As Boolean
+
+    Result = SetPartPositionOffsetPrecise(Value, PartIndex, ToDouble(X), ToDouble(Y), ToDouble(Z))
+    Return Result
+
+End Function
+
+Public Function SetPartPositionOffsetPrecise(
+    ByRef Value As Actor,
+    PartIndex As Number,
+    X As Double,
+    Y As Double,
+    Z As Double
+) As Boolean
+
+    Dim Result As Boolean
     Dim Slot As Number
 
     Slot = ActorSlot(Value)
@@ -2857,12 +2872,12 @@ Public Function SetPartPositionOffset(
         Return False
     End If
 
-    If (X < -CHARACTER_MAX_WORLD_POSITION Or
-        X > CHARACTER_MAX_WORLD_POSITION Or
-        Y < -CHARACTER_MAX_WORLD_POSITION Or
-        Y > CHARACTER_MAX_WORLD_POSITION Or
-        Z < -CHARACTER_MAX_WORLD_POSITION Or
-        Z > CHARACTER_MAX_WORLD_POSITION) Then
+    If (X < -ToDouble(CHARACTER_MAX_WORLD_POSITION) Or
+        X > ToDouble(CHARACTER_MAX_WORLD_POSITION) Or
+        Y < -ToDouble(CHARACTER_MAX_WORLD_POSITION) Or
+        Y > ToDouble(CHARACTER_MAX_WORLD_POSITION) Or
+        Z < -ToDouble(CHARACTER_MAX_WORLD_POSITION) Or
+        Z > ToDouble(CHARACTER_MAX_WORLD_POSITION)) Then
         Call SetActorFailure(Slot, CHARACTER_ERROR_INVALID_ARGUMENT, 0)
 
         Return False
@@ -2870,9 +2885,9 @@ Public Function SetPartPositionOffset(
 
     Result = Precision3D.SetPosition(
         ActorParts[Slot, PartIndex],
-        ActorPositionX[Slot] + ToDouble(X),
-        ActorPositionY[Slot] + ToDouble(Y),
-        ActorPositionZ[Slot] + ToDouble(Z)
+        ActorPositionX[Slot] + X,
+        ActorPositionY[Slot] + Y,
+        ActorPositionZ[Slot] + Z
     )
 
     If Result Then

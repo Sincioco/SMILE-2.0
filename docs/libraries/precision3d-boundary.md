@@ -21,6 +21,15 @@ Public units remain world units, degrees, percentage scale and X-then-Y-then-Z
 Euler order. Existing Core fixed vectors/matrices and integer APIs remain available.
 No asset scaling/rebaking, second renderer, second owning Object3D or actor pool.
 
+`PrecisionMath3D.ReorientYaw` expresses an existing world-axis XYZ correction in
+axes turned around world Y: `Ry(Yaw) * Correction * Ry(-Yaw)`. It preserves the
+same transformed basis, including Euler pole cases; zero yaw returns the original
+angles exactly. `Character3D.SetPartPositionOffsetPrecise` accepts Double offsets
+relative to the actor's world position. The existing Number operation delegates
+to it. These source-library helpers let a presenter turn authored equipment
+corrections with a traveling actor without changing integral saved calibration
+channels or adding renderer/runtime commands.
+
 Precise camera AutoFit accepts an optional final MaximumScalePercent argument,
 defaulting to the existing 10000%. It clamps that bound to Character3D's supported
 1–30000% range and derives all framing extents from the resulting actor scale.

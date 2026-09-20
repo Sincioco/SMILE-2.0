@@ -32,6 +32,10 @@ are hidden in the native tab strip; the accepted Mira follows Zara.
   aura marks the hero receiving orders. It is hidden throughout attack execution
   and after battle; the active hero's card remains highlighted. Damage/healing
   numbers rise and fade above their targets.
+- Attacking fighters face their destination during approach and return, then
+  restore their accepted attack/standing facing on arrival. Arin's authored
+  equipment corrections and glow turn with him; Orin's standing hammer stance
+  is restored after travel. Saved poses and character packages are preserved.
 - The right panel has **Battle** and **Inspector** tabs. **Cinematic Camera Battle**
   starts on. The camera continuously orbits slowly through wide, close-up and
   two-character shots; impact cuts begin just before contact and continue moving
@@ -49,6 +53,10 @@ are hidden in the native tab strip; the accepted Mira follows Zara.
 - Right-click restarts the encounter with full HP/MP while retaining earned EXP
   and levels for this running Viewer session. Returning to Battle System also
   retains that progress. Closing the application ends the session.
+- Victory or defeat automatically restarts the encounter after 15 seconds with
+  the same full-heal, retained-EXP behavior, returning to initial orders. Reward
+  dialog activity or dismissal does not postpone it. Pending editor changes
+  retain the existing save/cancel protection.
 - Defeating Kael awards EXP once to each hero who has not escaped (including KO
   heroes). A navy reward dialog counts up EXP and levels with a short tick sound.
   Mouse/keyboard activity resets its ten-second inactivity timeout; Escape,

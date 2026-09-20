@@ -14,6 +14,8 @@ Import Smile.Tools.ViewerBattleCinematics As Cinematics
 Import Smile.Simple3D.Precision3D As P
 Import Smile.Simple3D.PrecisionCamera3D As Camera
 Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Character3D As Character
+Import Smile.Simple3D.PrecisionMath3D As Math3D
 Import SinStarI.BattleRules As Rules
 
 Dim Viewer As New Workflow.Session()
@@ -164,6 +166,14 @@ For First = 0 To 4
 End For
 
 Call Check(Viewer.SceneReady(), "Directed Round Remains Ready")
+Call Viewer.PauseDirectedPlayback(True)
+Call CheckTravel(0, 4)
+Call CheckTravel(1, 4)
+Call CheckTravel(2, 4)
+Call CheckTravel(4, 0)
+Call Viewer.PauseDirectedPlayback(False)
+Call Presentation.Restart(Visual)
+Call Planning.Start(Battle)
 
 Battle.Combat.Turn = 3
 Battle.Combat.Members[3].HP = Battle.Combat.Members[3].Stats.HP
@@ -226,6 +236,17 @@ Call Check(Viewer.PanelVisibility() = 2 And Viewer.SceneReady(), "Host Restart P
 Call Outcome.Start(Ending, False)
 Call Outcome.Update(Ending, Viewer, 16)
 Call Check(Ending.OrbitTime = 16 And Not Ending.Visible, "Defeat Orbits Without EXP Dialog")
+
+For First = 0 To 1
+
+    Call Outcome.Start(Ending, First = 0)
+    Call Outcome.Advance(Ending, 14999)
+    Call Outcome.Activity(Ending, True, False)
+    Call Check(Not Outcome.RestartDue(Ending), "Win Or Loss Does Not Restart Early")
+    Call Outcome.Advance(Ending, 1)
+    Call Check(Outcome.RestartDue(Ending), "Win Or Loss Restarts At Fifteen Seconds Despite Dialog Activity")
+End For
+
 Call Presentation.Destroy(Visual)
 Call Viewer.ConfigureExternalHost(False)
 Call Viewer.SelectTab(Profiles.CHARACTER_TAB_PARTY_KAEL)
@@ -245,5 +266,95 @@ Sub Check(Passed As Boolean, Label As Text)
         Failures = Failures + 1
         Print "FAIL: " + Label
     End If
+
+End Sub
+
+Sub CheckTravel(Member As Number, Target As Number)
+
+    Dim Subject As Actors.Context
+    Dim Rotation As P.Vector3
+    Dim CastRotation As P.Vector3
+    Dim Forward As P.Vector3
+    Dim Direction As P.Vector3
+    Dim Origin As P.Vector3
+    Dim NewOrigin As P.Vector3
+    Dim Sword As P.Vector3
+    Dim NewSword As P.Vector3
+    Dim Expected As P.Vector3
+    Dim Ok As Boolean
+
+    Call Planning.Start(Battle)
+    Call Presentation.Restart(Visual)
+
+    Battle.Combat.Turn = Member
+
+    Call Rules.BeginCommand(Battle.Combat, Rules.ATTACK, Target)
+    Call Presentation.BeginAction(Visual, Viewer, Battle.Combat)
+
+    Battle.Combat.Elapsed = 200
+
+    Call Presentation.Apply(Visual, Viewer, Battle.Combat, 0)
+    Call Viewer.UpdateFrame(1420, 990)
+
+    Subject = Viewer.PartyActor(Presentation.PartyTurn(Member))
+    Ok = Character.TryRotation(Subject.Actor, Rotation)
+    Ok = Character.TryPosition(Subject.Actor, Origin) And Ok
+    Forward = Math3D.Rotate(P.Vector(0.0, 0.0, -1.0), Rotation)
+    Direction = Math3D.Subtract(Visual.Homes[Target], P.Vector(Origin.X, 0.0, Origin.Z))
+    Direction.Y = 0.0
+
+    Call Check(Ok And Math3D.Dot(Forward, Direction) / Math3D.Length(Direction) > 0.999,
+        "Approach Faces The Direction Of Travel")
+
+    If Member = 0 Then
+        Ok = Character.TrySocketPositionPrecise(Subject.Actor, "SwordTip", 1, False, Sword) And Ok
+    End If
+
+    Battle.Combat.Elapsed = 400 + Visual.CastDuration + 250
+
+    Call Presentation.Apply(Visual, Viewer, Battle.Combat, 0)
+    Call Viewer.UpdateFrame(1420, 990)
+
+    Subject = Viewer.PartyActor(Presentation.PartyTurn(Member))
+    Ok = Character.TryRotation(Subject.Actor, CastRotation) And Ok
+    Ok = Character.TryPosition(Subject.Actor, NewOrigin) And Ok
+    Forward = Math3D.Rotate(P.Vector(0.0, 0.0, -1.0), CastRotation)
+    Direction = Math3D.Subtract(Visual.Homes[Member], P.Vector(NewOrigin.X, 0.0, NewOrigin.Z))
+    Direction.Y = 0.0
+
+    Call Check(Ok And Math3D.Dot(Forward, Direction) / Math3D.Length(Direction) > 0.999,
+        "Return Faces Home Instead Of Running Backwards")
+
+    If Member = 0 Then
+
+        Ok = Character.TrySocketPositionPrecise(Subject.Actor, "SwordTip", 1, False, NewSword) And Ok
+        Expected = Math3D.Add(NewOrigin, Math3D.Rotate(Math3D.Subtract(Sword, Origin),
+            P.Vector(0.0, CastRotation.Y - Rotation.Y, 0.0)))
+
+        Call Check(Ok And Math3D.Distance(Expected, NewSword) < 0.02,
+            "Arin Authored Run Sword Correction Turns With The Body")
+
+    End If
+
+    Battle.Combat.Elapsed = 400
+
+    Call Presentation.Apply(Visual, Viewer, Battle.Combat, 0)
+    Call Viewer.UpdateFrame(1420, 990)
+
+    Subject = Viewer.PartyActor(Presentation.PartyTurn(Member))
+    Ok = Character.TryRotation(Subject.Actor, CastRotation) And Ok
+
+    Battle.Combat.Elapsed = Battle.Combat.Duration
+
+    Call Presentation.Apply(Visual, Viewer, Battle.Combat, 0)
+    Call Viewer.UpdateFrame(1420, 990)
+
+    Subject = Viewer.PartyActor(Presentation.PartyTurn(Member))
+    Ok = Character.TryRotation(Subject.Actor, Rotation) And Ok
+
+    Call Check(Ok And Abs(Math3D.WrapDegrees(CastRotation.Y - Rotation.Y)) < 0.01 And
+        Subject.CalibrationYaw = 0.0 And Visual.Clips[Member] = "Idle",
+        "Arriving Home Restores Battle Stance And Idle")
+    Call Check(Visual.Ready And Viewer.SceneReady(), "Travel Retains Valid Actors And Equipment")
 
 End Sub

@@ -1211,7 +1211,8 @@ Public Function UpdateCompanion(ByRef Value As State,
         Value.Companion.WeaponGlow,
         Value.Companion.ShieldGlow,
         Value.Companion.GlowAvailable,
-        Value.Companion.GlowVisible
+        Value.Companion.GlowVisible,
+        Value.Companion.CalibrationYaw
     )
     Result.Ready = Application.Ready And Result.Ready
 

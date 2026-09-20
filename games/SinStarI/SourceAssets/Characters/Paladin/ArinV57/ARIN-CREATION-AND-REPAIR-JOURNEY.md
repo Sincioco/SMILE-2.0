@@ -1026,3 +1026,15 @@ The package model, descriptor, animation and calibration JSON remain unchanged;
 this fixes missing Battle lifecycle calls, not an asset or pose defect. The native
 real-asset regression advances full attacks and checks effects, sound cues and
 scene cleanup. See games/SinStarI/Battle/README.md for integration ownership.
+
+## September 20: native Viewer battle travel facing
+
+The directed Battle System now faces Arin along his approach/return path and
+restores his captured battle facing on arrival. Saved sword/shield corrections
+use world axes, so simply rotating the body detached the authored Run equipment
+orientation. ViewerCalibration now accepts a runtime yaw delta: it rotates saved
+position vectors and conjugates saved rotation matrices into the turned axes,
+including glow. Wrist corrections remain local. No saved channel is rewritten;
+zero delta preserves the existing editor/game behavior. Model, animation,
+descriptor and canonical 24-key JSON are unchanged. The native scene fixture
+checks that the actual Run SwordTip rotates with the body on the return leg.

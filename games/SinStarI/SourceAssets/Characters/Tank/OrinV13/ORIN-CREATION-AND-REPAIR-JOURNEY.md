@@ -306,3 +306,12 @@ The package model, descriptor, animation and calibration JSON remain unchanged;
 this fixes missing Battle lifecycle calls, not an asset or pose defect. The native
 real-asset regression advances full attacks and checks effects, sound cues and
 scene cleanup. See games/SinStarI/Battle/README.md for integration ownership.
+
+## September 20: native Viewer battle travel facing
+
+The directed Battle System uses Orin's model-forward axis while running toward
+the target or home. His accepted -55-degree hammer stance is an attack/standing
+adjustment, so it must not turn the running direction sideways. Arrival restores
+the captured battle stance. This is presenter state only; original Party demo,
+model, clips, grounding, equipment and zero-key calibration remain unchanged.
+The native scene fixture checks both travel directions and restored facing.

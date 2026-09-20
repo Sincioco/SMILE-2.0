@@ -28,6 +28,7 @@ Public Type Context
     GlowAvailable As Boolean
     GlowVisible As Boolean
     PresentationState As Number
+    CalibrationYaw As Double
     Ready As Boolean
 End Type
 

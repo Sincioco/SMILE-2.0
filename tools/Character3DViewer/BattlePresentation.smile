@@ -11,6 +11,7 @@ Import Smile.Simple3D.Character3D As Character
 Import Smile.Simple3D.Graphics3D As Graphics
 Import Smile.Simple3D.Core As Core
 Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.PrecisionMath3D As Math3D
 Import SinStarI.BattleRules As Rules
 Import SinStarI.BattleAttacks As Attacks
 Import SinStarI.BattleFeedback As Feedback
@@ -18,6 +19,7 @@ Import SinStarI.Progression As Growth
 
 Public Type State
     Homes[5] As P.Vector3
+    HomeFacing[5] As P.Vector3
     Clips[5] As Text
     HitTime[5] As Number
     ActionSerial As Number
@@ -56,6 +58,7 @@ Public Sub Create(ByRef Value As State, Viewer As Workflow.Session)
         Actor = Viewer.PartyActor(PartyTurn(Index))
         Value.Homes[Index] = P.Vector(Actor.Frame.PositionX,
             Actor.Frame.PositionY, Actor.Frame.PositionZ)
+        Value.Ready = Character.TryRotation(Actor.Actor, Value.HomeFacing[Index]) And Value.Ready
     End For
 
     Call Feedback.Create(Value.Feedback)
@@ -78,6 +81,7 @@ Public Sub Restart(ByRef Value As State)
 
     For Index = 0 To 4
         Value.Homes[Index] = Previous.Homes[Index]
+        Value.HomeFacing[Index] = Previous.HomeFacing[Index]
     End For
 
     Call Feedback.Create(Value.Feedback)
@@ -199,6 +203,52 @@ Public Sub BeginAction(ByRef Value As State, Viewer As Workflow.Session, ByRef B
 
 End Sub
 
+''' Traveling actors face their destination; arrivals restore the accepted battle stance.
+Private Function FaceActor(Value As State, ByRef Actor As Actors.Context,
+    Battle As Rules.State, Index As Number, Travel As Boolean, Target As Number) As Boolean
+
+    Dim Destination As P.Vector3
+    Dim Rotation As P.Vector3
+    Dim Moving As Boolean
+    Dim Result As Boolean
+
+    Actor.CalibrationYaw = 0.0
+    Moving = (Travel And Battle.Phase = Rules.EXECUTING And Battle.Turn = Index And
+        Battle.Elapsed < Battle.Duration And
+        (Battle.Elapsed < 400 Or Battle.Elapsed >= 400 + Value.CastDuration))
+    Result = Character.PlacePrecise(Actor.Actor, Actor.Frame.PositionX,
+        Actor.Frame.PositionY, Actor.Frame.PositionZ)
+
+    If Moving Then
+
+        Destination = Value.Homes[Battle.Target]
+
+        If Battle.Elapsed >= 400 + Value.CastDuration Then
+            Destination = Value.Homes[Index]
+        End If
+
+        Result = Actors.FaceToward(Actor.Actor, ToNumber(Destination.X),
+            0, ToNumber(Destination.Z), 180, 0) And Result
+        Result = Character.TryRotation(Actor.Actor, Rotation) And Result
+        Actor.CalibrationYaw = Math3D.WrapDegrees(Rotation.Y - Value.HomeFacing[Index].Y)
+
+    Else If Index < 3 Then
+
+        Rotation = Value.HomeFacing[Index]
+        Result = Character.RotatePrecise(Actor.Actor, Rotation.X, Rotation.Y, Rotation.Z) And Result
+
+    Else
+
+        Destination = Value.Homes[Target]
+        Result = Actors.FaceToward(Actor.Actor, ToNumber(Destination.X),
+            0, ToNumber(Destination.Z), 180, 0) And Result
+
+    End If
+
+    Return Result
+
+End Function
+
 Public Sub Apply(ByRef Value As State, Viewer As Workflow.Session,
     Battle As Rules.State, Elapsed As Number)
 
@@ -237,6 +287,7 @@ Public Sub Apply(ByRef Value As State, Viewer As Workflow.Session,
         Actor.Frame.PositionZ = Value.Homes[Index].Z
         Actor.PresentationState = Party.STATE_ALIVE
         Name = "Idle"
+        Travel = False
         Value.HitTime[Index] = Max(0, Value.HitTime[Index] - Elapsed)
 
         If Battle.Members[Index].HP <= 0 Then
@@ -279,7 +330,7 @@ Public Sub Apply(ByRef Value As State, Viewer As Workflow.Session,
 
             If Battle.Elapsed >= 400 And Battle.Elapsed < 400 + Value.CastDuration Then
                 Name = Value.CastClip
-            Else If Travel Then
+            Else If Travel And Battle.Elapsed < Battle.Duration Then
                 Name = "Run"
             End If
 
@@ -338,14 +389,15 @@ Public Sub Apply(ByRef Value As State, Viewer As Workflow.Session,
                 Target = 4
             End If
 
-            Value.Ready = Actors.FaceToward(Actor.Actor, ToNumber(Value.Homes[Target].X),
-                0, ToNumber(Value.Homes[Target].Z), 180, 0) And Value.Ready
-
         End If
 
         If Index = 4 Then
-            Value.Ready = Actors.FaceToward(Actor.Actor, ToNumber(Value.Homes[Value.KaelTarget].X),
-                0, ToNumber(Value.Homes[Value.KaelTarget].Z), 180, 0) And Value.Ready
+            Target = Value.KaelTarget
+        End If
+
+        Value.Ready = FaceActor(Value, Actor, Battle, Index, Travel, Target) And Value.Ready
+
+        If Index = 4 Then
             Value.Ready = Actors.ApplyPresentationOffset(Actor.Actor, Actor.Profile,
                 Actor.Clip, Actor.Frame) And Value.Ready
         End If

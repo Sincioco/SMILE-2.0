@@ -104,6 +104,7 @@ Public Class Session
     Private IsHosted As Boolean
     Private ExternalTabs As Boolean
     Private DirectedView As Precision3D.Camera3D
+    Private CalibrationYaw As Double
     Private CycleAllClips As Boolean
     Private IsSuspended As Boolean
     Private ViewWidth As Number
@@ -455,6 +456,8 @@ Public Class Session
     End Sub
 
     Private Sub LoadViewer()
+
+        Me.CalibrationYaw = 0.0
 
         Call Diagnostics.BeginAttempt(Me.DiagnosticState)
         Call ViewerBattlePreview.Reset(Me.BattlePreview)
@@ -1706,7 +1709,8 @@ Public Class Session
             Me.Effects.SwordGlow,
             Me.Effects.ShieldGlow,
             Me.Effects.EpicGlowAvailable,
-            Me.Effects.EpicGlowVisible
+            Me.Effects.EpicGlowVisible,
+            Me.CalibrationYaw
         )
 
         Call ViewerSession.ApplyCalibrationResult(Me.Session, Application)
@@ -2001,11 +2005,14 @@ Public Class Session
             Me.Party.PrimaryPresentationState
         )
 
+        Result.CalibrationYaw = Me.CalibrationYaw
         Return Result
 
     End Function
 
     Private Sub UseActorContext(Context As ViewerActors.Context)
+
+        Me.CalibrationYaw = Context.CalibrationYaw
 
         Call ViewerActors.Apply(
             Context,

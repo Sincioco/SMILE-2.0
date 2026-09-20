@@ -15,11 +15,13 @@ Import Smile.UI.Controls As UI
 Public Const ORBIT_DURATION = 12000
 Public Const COUNT_DURATION = 1800
 Public Const DISMISS_DELAY = 10000
+Public Const RESTART_DELAY = 15000
 
 Public Type State
     Started As Boolean
     Visible As Boolean
     OrbitTime As Number
+    EndTime As Number
     CountTime As Number
     IdleTime As Number
     SoundTime As Number
@@ -106,6 +108,7 @@ End Sub
 
 Public Sub Advance(ByRef Value As State, Elapsed As Number)
 
+    Value.EndTime = Min(RESTART_DELAY, Value.EndTime + Max(0, Elapsed))
     Value.OrbitTime = Min(ORBIT_DURATION, Value.OrbitTime + Elapsed)
 
     If Not Value.Visible Then
@@ -120,6 +123,15 @@ Public Sub Advance(ByRef Value As State, Elapsed As Number)
     End If
 
 End Sub
+
+Public Function RestartDue(Value As State) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Value.Started And Value.EndTime >= RESTART_DELAY
+    Return Result
+
+End Function
 
 Public Sub Update(ByRef Value As State, Viewer As Workflow.Session, Elapsed As Number)
 

@@ -134,6 +134,54 @@ and the final crystal pointer following the next hero. Arin and Orin exports
 match their canonical JSON bytes. The final native Viewer was rebuilt and
 relaunched through Launch.ps1; no Web build, publication or browser acceptance.
 
+## Native battle travel facing and automatic restart
+
+`BattlePresentation` captures formation facing alongside formation positions.
+During approach/return it faces the active fighter along the path, then restores
+the accepted battle stance at the attack and home endpoints. It stops selecting
+Run at the arrival boundary. Orin's -55-degree hammer stance is restored only
+outside locomotion; Kael continues to face his selected target after arrival.
+The original Party demo is unchanged.
+
+Runtime calibration yaw belongs to the borrowed `ViewerActors.Context` and is
+copied through Workflow's existing inspector/context bridge. ViewerCalibration
+turns equipment position vectors and rotation corrections, including glow, using
+shared `PrecisionMath3D.ReorientYaw` and `Character3D.SetPartPositionOffsetPrecise`.
+Both extend existing source-library owners; no renderer, language, persistence
+format or asset change is required. Default zero yaw preserves existing callers
+and all saved calibration channels. Wrist corrections retain local bone space.
+
+`BattleOutcome` owns a separate 15,000-ms ending clock unaffected by dialog
+activity/dismissal. NativeViewerHost passes actual frame elapsed time to ending
+presentation (combat integration retains its 100-ms cap), then delegates to its
+existing full-heal, EXP-preserving restart. Victory and defeat use the same path.
+Pending editor changes keep the existing save/cancel guard. Restart clears ending
+and menu state, restores the camera/formation and waits for initial orders.
+
+Growth: BattlePresentation 453 -> 505 lines, BattleOutcome 209 -> 221 and
+NativeViewerHost 393 -> 399. The math owner grows 205 -> 240. Existing legacy
+owners gain only related responsibility: Character3D +15 lines for a precise
+offset overload, ViewerCalibration +6 for correction-space application,
+Workflow +7 for context/reset/delegation and Party +1 for the calibration argument.
+ViewerActors gains one context field. No limit, baseline or exclusion changes.
+
+The native real-asset fixture covers all four traveling fighters, approach/return
+direction, arrival Idle/facing and Arin's actual Run SwordTip under the reversed
+body transform. It also checks both outcome deadlines at 14,999/15,000 ms,
+including dialog activity. Existing planning checks cover retained EXP/levels and
+full-heal restart. The native precision fixture compares all three rotated basis
+vectors for authored sword/shield corrections, fractional yaw, Euler pole cases
+and unchanged zero yaw. BattleSceneTests grows 249 -> 360 lines; Precision3DTests
+adds 39 lines to the existing fixture.
+
+Validation also passes the native hardening/architecture gate, 49 Arin calibration
+checks, isolated pose round-trip and 58 graphics/input/audio checks. Scoped style
+and diff checks pass. Both pre-commit calibration exports preserve the canonical
+JSON bytes. The native Viewer was rebuilt/relaunched through Launch.ps1 in its
+saved placement; visible Auto battle exercises the new presenter and automatically
+returns from defeat to Round 1 with full HP/MP and initial orders. Web/Studio
+adoption and their existing held acceptance work remain out of scope.
+
 ## Standalone tab music
 
 `ViewerMusic` owns the Kael Party track policy using the existing `Play Music`
