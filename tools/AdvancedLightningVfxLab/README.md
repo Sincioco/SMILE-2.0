@@ -1,5 +1,10 @@
 # Advanced Lightning Lab
 
+The native arena uses the [shared Viewer arena library](../../docs/libraries/arena3d.md).
+F toggles Floor; G toggles Grid; B cycles the same five Viewer backgrounds.
+Left drag pans, middle drag orbits, wheel zooms smoothly, and right-click resets
+the camera. Grid color, spacing and dimensions remain library creation options.
+
 The accepted [Studio design](../../docs/architecture/2026-09-09%20-%20SMILE%202.0%20Studio.md)
 places this specialized workflow inside VFX. The current standalone project and
 shared effect modules remain authoritative; generic saved `.smilevfx` authoring

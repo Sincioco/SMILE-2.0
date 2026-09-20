@@ -1,6 +1,9 @@
 Option Explicit
 
 Import Smile.Simple3D.Character3D As Character3D
+Import Smile.Simple3D.ArenaViewport3D As Viewport
+Import Smile.Simple3D.Arena3D As SharedArena
+Import Smile.Simple3D.Precision3D As ArenaPrecision
 Import Smile.Simple3D.Core As Core
 Import Smile.Simple3D.Effects3D As Effects3D
 Import Smile.Simple3D.Graphics3D As Graphics3D
@@ -10,7 +13,7 @@ Const PRESET_STRESS_BURST = 40
 
 Dim Camera As Core.Camera3D
 Dim Hero As Character3D.Actor
-Dim Arena As Core.Object3D
+Dim Arena As Viewport.State
 Dim Atlas As Core.Texture3D
 Dim AlphaMaterial As Core.Material3D
 Dim AdditiveMaterial As Core.Material3D
@@ -49,6 +52,8 @@ Call TriggerSelected()
 Do
 
     Get Key Key
+
+    Call Viewport.Update(Arena, Key, Pointer_Y() < 100)
 
     If Key = KEY_ESCAPE Then
         Running = False
@@ -107,11 +112,11 @@ Do
     Camera.Target.X = 0
     Camera.Target.Y = 42
     Camera.Target.Z = 48
-    FrameReady = Scene3D.Begin(Camera, 2, 5, 14) And FrameReady
+    FrameReady = Viewport.BeginFrame(Arena, ArenaPrecision.FromCamera(Camera), True) And FrameReady
 
     If FrameReady Then
 
-        FrameReady = Graphics3D.DrawObject3D(Arena)
+        FrameReady = Viewport.Draw(Arena)
         FrameReady = Character3D.Draw(Hero) And FrameReady
         FrameReady = Effects3D.Draw() And FrameReady
         FrameReady = Graphics3D.DrawParticleBatch3D(VerticalBatch) And FrameReady
@@ -132,9 +137,9 @@ Call DestroyLab()
 Sub LoadLab()
 
     Camera = Graphics3D.DefaultCamera()
-    Arena = Graphics3D.CreatePlane3D(430, 280)
+    Arena = Viewport.Create(430, 280, 1.0, 24, 150, 255, 40, 2)
 
-    Call Graphics3D.SetObjectPosition(Arena, 0, -3, 60)
+    Call SharedArena.Place(Arena.Floor, 0, -3, 60)
 
     Atlas = Graphics3D.LoadTexture3D(
         "Assets\VfxAtlas.png",
@@ -390,7 +395,7 @@ Sub DestroyLab()
     Call Effects3D.Shutdown()
     Call Graphics3D.DestroyParticleBatch3D(VerticalBatch)
     Call Character3D.Shutdown()
-    Call Graphics3D.DestroyObject3D(Arena)
+    Call Viewport.Destroy(Arena)
     Call Graphics3D.DestroyMaterial3D(AlphaMaterial)
     Call Graphics3D.DestroyMaterial3D(AdditiveMaterial)
     Call Graphics3D.DestroyMaterial3D(RibbonMaterial)

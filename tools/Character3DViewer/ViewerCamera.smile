@@ -3,6 +3,7 @@ Module Smile.Tools.Character3DViewerCamera
 
 Option Explicit
 
+Import Smile.Simple3D.ArenaCamera3D As ArenaCamera
 Import Smile.Simple3D.Core As Core
 Import Smile.Simple3D.Character3D As Character3D
 Import Smile.Simple3D.CharacterViewer As CharacterViewer
@@ -170,61 +171,24 @@ Public Function UpdatePointerControls(ByRef Value As State,
     PanReleased As Boolean, PanActive As Boolean, PointerDeltaX As Number,
     PointerDeltaY As Number, OrbitDivisor As Number, PanDivisor As Number) As Boolean
 
-    Dim OrbitDeltaX As Double
-    Dim OrbitDeltaY As Double
-    Dim PanDeltaX As Double
-    Dim PanDeltaY As Double
     Dim Result As Boolean
 
     If OrbitDivisor <= 0 Or PanDivisor <= 0 Then
         Return False
     End If
 
-    If OrbitActive Then
-        OrbitDeltaX = ToDouble(PointerDeltaX) / ToDouble(OrbitDivisor)
-        OrbitDeltaY = ToDouble(PointerDeltaY) / ToDouble(OrbitDivisor)
-    End If
+    Result = PrecisionCamera.UpdateOrbitControls(Value.Controls,
+        OrbitPressed, OrbitHeld, OrbitReleased, 0, 0)
+    Result = PrecisionCamera.UpdatePanZoomControls(Value.Controls,
+        PanPressed, PanHeld, PanReleased, 0, 0, 0) And Result
 
-    If PanActive Then
-        PanDeltaX = ToDouble(PointerDeltaX) / ToDouble(PanDivisor)
-        PanDeltaY = ToDouble(PointerDeltaY) / ToDouble(PanDivisor)
-    End If
+    Call ArenaCamera.ApplyDrag(Value.Controls, OrbitActive, PanActive,
+        PointerDeltaX, PointerDeltaY, Value.Frame.PanXLimit, Value.Frame.PanYLimit,
+        1.0, OrbitDivisor, PanDivisor)
 
-    Result = PrecisionCamera.UpdateOrbitControls(
-        Value.Controls,
-        OrbitPressed,
-        OrbitHeld,
-        OrbitReleased,
-        0,
-        0
-    )
-    Result = PrecisionCamera.UpdatePanZoomControls(
-        Value.Controls,
-        PanPressed,
-        PanHeld,
-        PanReleased,
-        0,
-        0,
-        0
-    ) And Result
-
-    If OrbitActive Then
-
+    If OrbitActive Or PanActive Then
         Value.AutoOrbit = False
-        Value.Controls.OrbitYaw = Value.Controls.OrbitYaw + OrbitDeltaX
-        Value.Controls.OrbitPitch = Value.Controls.OrbitPitch + OrbitDeltaY
-
     End If
-
-    If PanActive Then
-
-        Value.AutoOrbit = False
-        Value.Controls.PanX = Value.Controls.PanX - PanDeltaX
-        Value.Controls.PanY = Value.Controls.PanY + PanDeltaY
-
-    End If
-
-    Call ClampControls(Value)
 
     Return Result
 
@@ -471,18 +435,8 @@ End Function
 Public Sub ApplyCloseUp(ByRef Value As State, CloseUpStart As Number,
     ZoomInLimit As Number, MinimumDistance1000 As Number)
 
-    Dim Progress As Double
-    Dim Distance As Double
-
-    If Value.Zoom.Current >= ToDouble(CloseUpStart) Or CloseUpStart <= ZoomInLimit Then
-        Return
-    End If
-
-    Progress = Clamp((ToDouble(CloseUpStart) - Value.Zoom.Current) /
-        ToDouble(CloseUpStart - ZoomInLimit), 0.0, 1.0)
-    Distance = 1.0 - Progress * (1.0 - ToDouble(MinimumDistance1000) / 1000.0)
-    Value.Live.Position = Math3D.Add(Value.Live.Target,
-        Math3D.Scale(Math3D.Subtract(Value.Live.Position, Value.Live.Target), Distance))
+    Call ArenaCamera.ApplyCloseUp(Value.Live, Value.Zoom.Current,
+        CloseUpStart, ZoomInLimit, MinimumDistance1000)
 
 End Sub
 

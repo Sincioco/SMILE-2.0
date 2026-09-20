@@ -1580,7 +1580,7 @@ Public Sub DrawProfileEffectControls(
     PanelLeft = StatusPanelX(WindowWidth)
 
     Call UI.DrawButton(PanelLeft + 12, 444 - ScrollOffset, 78, 22,
-        "Floor/Grid", FloorOrGridVisible)
+        "Floor", FloorOrGridVisible)
 
     If (ProfileIndex = ViewerProfiles.PROFILE_ARIN Or
         ProfileIndex = ViewerProfiles.PROFILE_VALOR) Then
@@ -1686,7 +1686,7 @@ Public Sub DrawFooterMessage(WindowWidth As Number, WindowHeight As Number,
             TimelineWidth(WindowWidth, TIMELINE_LEFT) - CALIBRATION_TRANSFER_TEXT_OFFSET) Then
         Draw Text TransferMessage At TIMELINE_LEFT, WindowHeight - 22 Size 9 Color CYAN
     Else
-        Draw Text "LMB pan  •  MMB orbit  •  Wheel zoom  •  Space pause  •  RMB reset  •  D dragon  •  W sword  •  S shield" At 16, WindowHeight - 22 Size 11 Color LIGHT_GRAY
+        Draw Text "LMB Pan • MMB Orbit • Wheel Zoom • RMB Reset • Space Pause • F Floor • G Grid • B Background • D Dragon • W/S Equipment" At 16, WindowHeight - 22 Size 11 Color LIGHT_GRAY
     End If
 
 End Sub
@@ -1951,7 +1951,7 @@ Public Sub DrawCalibrationPanel(
         CurrentValue, MinimumValue, MaximumValue, 6)
 
     If GizmoVisible Then
-        Draw Text "G Move  •  R/E Rotate  •  X/Y/Z Constrain" At 34, 232 Size 11 Color WHITE
+        Draw Text "E Move  •  R Rotate  •  X/Y/Z Constrain" At 34, 232 Size 11 Color WHITE
         Draw Text "Enter Confirm/Save  •  Esc Cancel  •  Drag Colored Handles" At 34, 248 Size 10 Color LIGHT_GRAY
     Else
         Draw Text "Numeric Controls  •  X/Y/Z Select Axis" At 34, 232 Size 11 Color WHITE

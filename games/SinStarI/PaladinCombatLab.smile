@@ -3,6 +3,9 @@
 Option Explicit
 
 Import Smile.Simple3D.Character3D As Character3D
+Import Smile.Simple3D.ArenaViewport3D As Viewport
+Import Smile.Simple3D.Arena3D As SharedArena
+Import Smile.Simple3D.Precision3D As ArenaPrecision
 Import Smile.Simple3D.Core As Core
 Import Smile.Simple3D.Effects3D As Effects3D
 Import Smile.Simple3D.Graphics3D As Graphics3D
@@ -29,7 +32,7 @@ Const TARGET_Y = 30
 Const TARGET_Z = 72
 
 Dim Arin As Character3D.Actor
-Dim Arena As Core.Object3D
+Dim Arena As Viewport.State
 Dim TargetDummy As Core.Object3D
 Dim Camera As Core.Camera3D
 Dim DrawCamera As Core.Camera3D
@@ -94,6 +97,8 @@ Do
 
     Get Key Key
 
+    Call Viewport.Update(Arena, Key, Pointer_X() >= Window_Width() - 310 Or Pointer_Y() < 90)
+
     Call HandleKeyboard(Key)
 
     Call HandlePointer()
@@ -136,11 +141,11 @@ Do
     DrawCamera.Position.X = DrawCamera.Position.X + Effects3D.CameraShakeX()
     DrawCamera.Position.Y = DrawCamera.Position.Y + Effects3D.CameraShakeY()
     DrawCamera.Position.Z = DrawCamera.Position.Z + Effects3D.CameraShakeZ()
-    Ready = Scene3D.Begin(DrawCamera, 3, 7, 18) And Ready
+    Ready = Viewport.BeginFrame(Arena, ArenaPrecision.FromCamera(DrawCamera), True) And Ready
 
     If Ready Then
 
-        Ready = Graphics3D.DrawObject3D(Arena)
+        Ready = Viewport.Draw(Arena)
         Ready = Graphics3D.DrawObject3D(TargetDummy) And Ready
         Ready = Character3D.Draw(Arin) And Ready
         Ready = Effects3D.Draw() And Ready
@@ -170,15 +175,14 @@ Call DestroyLab()
 Sub LoadLab()
 
     Camera = Graphics3D.DefaultCamera()
-    Arena = Graphics3D.CreatePlane3D(560, 420)
+    Arena = Viewport.Create(560, 420, 1.0, 24, 150, 255, 40, 2)
     TargetDummy = Graphics3D.CreateCube3D(30)
 
-    Call Graphics3D.SetObjectPosition(Arena, 0, -1, -10)
-    Call Graphics3D.SetObjectColor(Arena, 18, 30, 54)
+    Call SharedArena.Place(Arena.Floor, 0, -1, -10)
     Call Graphics3D.SetObjectPosition(TargetDummy, TARGET_X, 15, TARGET_Z)
     Call Graphics3D.SetObjectColor(TargetDummy, 100, 150, 210)
 
-    Ready = Graphics3D.SetObjectShadowsChecked3D(Arena, False, True)
+    Ready = Graphics3D.SetObjectShadowsChecked3D(Arena.Floor.Floor, False, True)
     Ready = Graphics3D.SetObjectShadowsChecked3D(TargetDummy, True, True) And Ready
     Arin = Character3D.LoadWithPolicy(
         "Assets\CombatLab\ArinV55.sm3d",
@@ -443,11 +447,11 @@ Sub HandleKeyboard(PressedKey As Number)
 
         Call StartSelectedState()
 
-    Else If PressedKey = KEY_F Then
+    Else If PressedKey = KEY_E Then
 
         VfxEnabled = Not VfxEnabled
 
-    Else If PressedKey = KEY_G Then
+    Else If PressedKey = KEY_X Then
 
         SocketsVisible = Not SocketsVisible
 
@@ -1360,7 +1364,7 @@ Sub DestroyLab()
     Call Graphics3D.DestroyParticleBatch3D(SocketMarkers)
     Call Effects3D.Shutdown()
     Call Graphics3D.DestroyObject3D(TargetDummy)
-    Call Graphics3D.DestroyObject3D(Arena)
+    Call Viewport.Destroy(Arena)
     Call Character3D.Destroy(Arin)
     Call Graphics3D.DestroyMaterial3D(RibbonMaterial)
     Call Graphics3D.DestroyMaterial3D(AdditiveMaterial)

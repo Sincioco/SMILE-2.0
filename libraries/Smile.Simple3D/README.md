@@ -10,13 +10,17 @@
 - Windows and WebGL2 Renderer3D prefer requested 4x MSAA and safely fall back to 2x or 1x. WebGL2 checks both color and depth sample support and framebuffer completeness; the reported scene sample count is the effective count, not the request.
 - `Renderer`, `Primitives`, `Mesh`, and `Interaction` preserve the original bounded wireframe lessons over Renderer2D, including GDI support.
 
+For current and future arena programs, use the [shared arena](../../docs/libraries/arena3d.md):
+`ArenaViewport3D` supplies the Viewer floor/grid, F/G/B controls, palette, pan, orbit
+and eased zoom. The separate arena/camera/backdrop owners support specialized editors.
+
 Reference the source library from a game project:
 
 ```xml
 <SmileProjectReference Include="..\..\libraries\Smile.Simple3D\Smile.Simple3D.smilelibproj" />
 ```
 
-The beginner true-3D path needs only two imports; add `Smile.Simple3D.Interaction` when the game needs standard camera controls:
+The beginner true-3D path needs only two imports; use `ArenaViewport3D` for the standard arena and camera controls:
 
 ```smile
 Import Smile.Simple3D.Core As Core

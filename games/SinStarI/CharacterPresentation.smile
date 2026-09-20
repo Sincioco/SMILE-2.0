@@ -30,11 +30,15 @@ End Function
 
 Private Function TabFor(Action As TitleScreen.TitleAction) As Number
 
+    Dim ReturnValue As Number
+
     Select Case Action
         Case TitleScreen.TitleAction.Orin
             Return 1
         Case TitleScreen.TitleAction.Mira
-            Return Profiles.CHARACTER_TAB_MIRA
+            ReturnValue = Profiles.CHARACTER_TAB_MIRA
+
+            Return ReturnValue
         Case TitleScreen.TitleAction.Zara
             Return 5
         Case TitleScreen.TitleAction.Valor
@@ -44,15 +48,25 @@ Private Function TabFor(Action As TitleScreen.TitleAction) As Number
         Case TitleScreen.TitleAction.Vrax
             Return 6
         Case TitleScreen.TitleAction.Yalis
-            Return Profiles.CHARACTER_TAB_YALIS
+            ReturnValue = Profiles.CHARACTER_TAB_YALIS
+
+            Return ReturnValue
         Case TitleScreen.TitleAction.Kael
-            Return Profiles.CHARACTER_TAB_KAEL
+            ReturnValue = Profiles.CHARACTER_TAB_KAEL
+
+            Return ReturnValue
         Case TitleScreen.TitleAction.KaelBattle
-            Return Profiles.CHARACTER_TAB_PARTY_KAEL
+            ReturnValue = Profiles.CHARACTER_TAB_PARTY_KAEL
+
+            Return ReturnValue
         Case TitleScreen.TitleAction.DragonBattle
-            Return Profiles.CHARACTER_TAB_PARTY_DRAGON
+            ReturnValue = Profiles.CHARACTER_TAB_PARTY_DRAGON
+
+            Return ReturnValue
         Case TitleScreen.TitleAction.VraxBattle
-            Return Profiles.CHARACTER_TAB_PARTY_VRAX
+            ReturnValue = Profiles.CHARACTER_TAB_PARTY_VRAX
+
+            Return ReturnValue
     End Select
 
     Return 0
@@ -142,7 +156,7 @@ Public Sub Draw()
     Draw Text Heading At 136, 23 Size 26 Color WHITE
     Draw Text Preview.PresentationCaption() At 136, 57 Size 16 Color CYAN
     Fill Rectangle 20, Window_Height() - 47, Window_Width() - 40, 29, Rgb(10, 20, 35)
-    Draw Text "Drag: Pan   Middle Drag: Orbit   Wheel: Zoom   O: Auto Orbit   Space: Pause   F: Reflections   R: Reset   Esc: Back" At 30, Window_Height() - 40 Size 14 Color WHITE
+    Draw Text "Drag: Pan   Middle Drag: Orbit   Wheel: Zoom   O: Auto Orbit   Space: Pause   F: Floor   G: Grid   B: Background   R: Reset   Esc: Back" At 30, Window_Height() - 40 Size 14 Color WHITE
 
 End Sub
 

@@ -1,19 +1,20 @@
 Option Explicit
 
+Import Smile.Simple3D.ArenaViewport3D As Viewport
+Import Smile.Simple3D.Arena3D As SharedArena
+Import Smile.Simple3D.Precision3D As ArenaPrecision
 Import Smile.Simple3D.Core As Core
 Import Smile.Simple3D.Graphics3D As Graphics3D
-Import Smile.Simple3D.Interaction As Interaction
 Import Smile.Simple3D.Scene3D As Scene3D
 Import Smile.Simple3D.Character3D As Character3D
 
 Dim BaseCamera As Core.Camera3D
 Dim Camera As Core.Camera3D
-Dim CameraControls As Core.CameraControl3D
 Dim Hero As Character3D.Actor
 Dim Partner As Character3D.Actor
 Dim HeroBounds As Character3D.Bounds3D
 Dim SocketMarker As Core.Object3D
-Dim Ground As Core.Object3D
+Dim Ground As Viewport.State
 Dim Socket As Core.Vector3
 Dim Running As Boolean
 Dim FrameReady As Boolean
@@ -49,6 +50,8 @@ PreviousTime = Timer()
 Do
 
     Get Key Key
+
+    Call Viewport.Update(Ground, Key, Pointer_Y() < 100)
 
     If Key = KEY_ESCAPE Then
         Running = False
@@ -100,10 +103,8 @@ Do
     FrameReady = Character3D.Update(Hero, FrameMilliseconds)
     ActorDiagnostic = Character3D.ActorLastError(Hero)
     FrameReady = Character3D.Update(Partner, FrameMilliseconds) And FrameReady
-    FrameReady = Interaction.UpdateCameraControlsFromPointer(CameraControls, True, True, True)
-    FrameReady = Interaction.AdvanceCameraControls(CameraControls, 1)
 
-    Camera = Interaction.ApplyCameraControls(BaseCamera, CameraControls)
+    Camera = BaseCamera
     Socket = Character3D.SocketPosition(Hero, "HandTip")
 
     If Character3D.IsValid(Hero) Then
@@ -112,11 +113,11 @@ Do
 
     Call Graphics3D.SetObjectPosition(SocketMarker, Socket.X, Socket.Y, Socket.Z)
 
-    FrameReady = Scene3D.Begin(Camera, 4, 8, 20)
+    FrameReady = Viewport.BeginFrame(Ground, ArenaPrecision.FromCamera(Camera), True)
 
     If FrameReady Then
 
-        FrameReady = Graphics3D.DrawObject3D(Ground)
+        FrameReady = Viewport.Draw(Ground)
         FrameReady = Character3D.Draw(Hero) And FrameReady
         FrameReady = Character3D.Draw(Partner) And FrameReady
 
@@ -146,13 +147,10 @@ Sub LoadLab()
     BaseCamera.Target.Y = 12
     BaseCamera.Target.Z = 20
 
-    Call Interaction.ResetCameraControls(CameraControls)
-
-    Ground = Graphics3D.CreatePlane3D(120, 90)
+    Ground = Viewport.Create(120, 90, 0.2, 24, 150, 255, 8, 1)
     SocketMarker = Graphics3D.CreateSphere3D(2)
 
-    Call Graphics3D.SetObjectPosition(Ground, 0, -1, 20)
-    Call Graphics3D.SetObjectColor(Ground, 22, 34, 58)
+    Call SharedArena.Place(Ground.Floor, 0, -1, 20)
     Call Graphics3D.SetObjectColor(SocketMarker, 255, 226, 72)
 
     Call ReloadActors()
@@ -167,11 +165,10 @@ Sub RecoverFromRendererReset()
 
     Call Scene3D.ResetState()
 
-    Ground = Graphics3D.CreatePlane3D(120, 90)
+    Ground = Viewport.Create(120, 90, 0.2, 24, 150, 255, 8, 1)
     SocketMarker = Graphics3D.CreateSphere3D(2)
 
-    Call Graphics3D.SetObjectPosition(Ground, 0, -1, 20)
-    Call Graphics3D.SetObjectColor(Ground, 22, 34, 58)
+    Call SharedArena.Place(Ground.Floor, 0, -1, 20)
     Call Graphics3D.SetObjectColor(SocketMarker, 255, 226, 72)
     Call ReloadActors()
     Call SelectLighting()
@@ -406,7 +403,7 @@ Sub DestroyLab()
 
     Call Character3D.Shutdown()
     Call Graphics3D.DestroyObject3D(SocketMarker)
-    Call Graphics3D.DestroyObject3D(Ground)
+    Call Viewport.Destroy(Ground)
     Call Graphics3D.ResetRenderer3D()
 
 End Sub

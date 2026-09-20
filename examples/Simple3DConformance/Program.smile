@@ -2,9 +2,12 @@ Option Explicit
 
 Import Smile.Simple3D.Core As Core
 Import Smile.Simple3D.Graphics3D As Graphics3D
+Import Smile.Simple3D.ArenaViewport3D As Viewport
+Import Smile.Simple3D.Arena3D As Arena
+Import Smile.Simple3D.Precision3D As P
 
 Dim Camera As Core.Camera3D
-Dim FloorObject As Core.Object3D
+Dim FloorObject As Viewport.State
 Dim CubeObject As Core.Object3D
 Dim NearCube As Core.Object3D
 Dim SphereObject As Core.Object3D
@@ -27,7 +30,7 @@ If Available Then
     Camera.Position.Y = 360
     Camera.Position.Z = -1050
     Camera.Target.Y = 40
-    FloorObject = Graphics3D.CreatePlane3D(1400, 900)
+    FloorObject = Viewport.Create(1400, 900, 2.0)
     CubeObject = Graphics3D.CreateCube3D(170)
     NearCube = Graphics3D.CreateCube3D(130)
     SphereObject = Graphics3D.CreateSphere3D(95)
@@ -35,8 +38,7 @@ If Available Then
     CylinderObject = Graphics3D.CreateCylinder3D(75, 210)
     TorusObject = Graphics3D.CreateTorus3D(100, 34)
 
-    Call Graphics3D.SetObjectPosition(FloorObject, 0, -120, 100)
-    Call Graphics3D.SetObjectColor(FloorObject, 18, 30, 54)
+    Call Arena.Place(FloorObject.Floor, 0, -120, 100)
     Call Graphics3D.SetObjectPosition(CubeObject, -300, 0, 80)
     Call Graphics3D.SetObjectColor(CubeObject, 40, 220, 255)
     Call Graphics3D.SetObjectPosition(NearCube, -260, 35, -15)
@@ -56,6 +58,8 @@ Running = True
 
 Do
     Get Key Key
+
+    Call Viewport.Update(FloorObject, Key, Pointer_Y() < 60)
 
     If Key = KEY_ESCAPE Then
         Running = False
@@ -80,11 +84,11 @@ Do
         Call Graphics3D.SetObjectRotation(CylinderObject, Angle, 0, Angle / 2)
         Call Graphics3D.SetObjectRotation(TorusObject, 70, Angle, 0)
 
-        FrameReady = Graphics3D.Begin3D(Camera, 2, 5, 14)
+        FrameReady = Viewport.BeginFrame(FloorObject, P.FromCamera(Camera), False)
 
         If FrameReady Then
 
-            FrameReady = Graphics3D.DrawObject3D(FloorObject)
+            FrameReady = Viewport.Draw(FloorObject)
             FrameReady = Graphics3D.DrawObject3D(CubeObject)
             FrameReady = Graphics3D.DrawObject3D(SphereObject)
             FrameReady = Graphics3D.DrawObject3D(PyramidObject)
@@ -118,7 +122,7 @@ Loop Until Not Running
 
 If Available Then
 
-    Call Graphics3D.DestroyObject3D(FloorObject)
+    Call Viewport.Destroy(FloorObject)
     Call Graphics3D.DestroyObject3D(CubeObject)
     Call Graphics3D.DestroyObject3D(NearCube)
     Call Graphics3D.DestroyObject3D(SphereObject)

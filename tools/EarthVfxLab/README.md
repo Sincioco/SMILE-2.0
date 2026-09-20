@@ -1,5 +1,10 @@
 # SMILE 2.0 Earth Lab (native)
 
+The native arena uses the [shared Viewer arena library](../../docs/libraries/arena3d.md).
+F toggles Floor; G toggles Grid; B cycles the same five Viewer backgrounds.
+Left drag pans, middle drag orbits, wheel zooms smoothly, and right-click resets
+the camera. Grid color, spacing and dimensions remain library creation options.
+
 Run `Build.ps1`, then `Launch.ps1` with PowerShell 7. The launcher closes an older
 Lab gracefully and preserves the normal runtime window placement. Keep it to the
 right of Codex so the chat stays visible.

@@ -1,5 +1,22 @@
 # Character Viewer Architecture
 
+## Shared arena adoption
+
+The native Viewer now consumes `Smile.Simple3D.Arena3D`, `ArenaCamera3D` and
+`ArenaBackdrop3D` as the shared visual/interaction authority. `ArenaViewport3D`
+composes those owners for other applications. The library depends on no Viewer
+module. Scene state owns its resources, camera controls, zoom and palette index.
+ViewerCamera retains responsive fit, actor framing and calibration cursor anchoring;
+ViewerInput classifies keys, and ViewerInspectorCommands applies game presentation
+commands. No pose, socket, equipment or calibration values are changed.
+
+F and G now toggle independent floor/grid visibility. B uses the shared palette.
+The move gizmo uses E and rotation uses R, leaving G available during pose editing.
+See [the arena contract](../../docs/libraries/arena3d.md) for reuse and asset staging.
+The existing native hardening fixture and focused Arena3DTests cover these boundaries.
+No architecture threshold, baseline, exclusion or dependency exception was added.
+
+
 ## Kael silver hair and separate native Fire Lab
 
 September 20 alignment keeps music state in Sin Star I's `BackgroundMusic` module

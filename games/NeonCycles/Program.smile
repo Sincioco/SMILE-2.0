@@ -1,5 +1,8 @@
 Option Explicit
 
+Import Smile.Simple3D.ArenaViewport3D As Viewport
+Import Smile.Simple3D.Arena3D As SharedArena
+Import Smile.Simple3D.Precision3D As ArenaPrecision
 Import Smile.Simple3D.Core As Core
 Import Smile.Simple3D.Graphics3D As Graphics3D
 Import NeonCycles.Simulation As Simulation
@@ -16,7 +19,7 @@ Const MODE_TWO_PLAYER = 2
 Const TRAIL_OBJECT_COUNT = 65
 
 Dim Camera As Core.Camera3D
-Dim FloorObject As Core.Object3D
+Dim FloorObject As Viewport.State
 Dim TrailTemplate As Core.Object3D
 Dim PlayerOneCycle As Core.Object3D
 Dim PlayerTwoCycle As Core.Object3D
@@ -60,6 +63,8 @@ Do
     Elapsed = Max(0, Min(100, CurrentTime - PreviousTime))
     PreviousTime = CurrentTime
     Get Key KeyValue
+
+    Call Viewport.Update(FloorObject, KeyValue, Pointer_Y() < 100)
 
     Call HandleInput(KeyValue)
 
@@ -139,7 +144,7 @@ Sub CreateScene()
     Camera.Position.Z = -880
     Camera.Target.Y = -100
     Camera.Target.Z = 40
-    FloorObject = Graphics3D.CreatePlane3D(900, 900)
+    FloorObject = Viewport.Create(900, 900, 2.0, 24, 150, 255, 80, 4)
     TrailTemplate = Graphics3D.CreateCube3D(100)
     PlayerOneCycle = Graphics3D.CreateCube3D(100)
     PlayerTwoCycle = Graphics3D.CreateCube3D(100)
@@ -148,8 +153,7 @@ Sub CreateScene()
     BoundaryEast = Graphics3D.CreateCube3D(100)
     BoundaryWest = Graphics3D.CreateCube3D(100)
 
-    Call Graphics3D.SetObjectPosition(FloorObject, 0, -120, 0)
-    Call Graphics3D.SetObjectColor(FloorObject, 7, 14, 30)
+    Call SharedArena.Place(FloorObject.Floor, 0, -120, 0)
     Call Graphics3D.SetObjectVisible(TrailTemplate, False)
     Call Graphics3D.SetObjectScale(PlayerOneCycle, 34, 34, 80)
     Call Graphics3D.SetObjectScale(PlayerTwoCycle, 34, 34, 80)
@@ -189,7 +193,7 @@ Sub DestroyScene()
     End For
 
     Call Graphics3D.DestroyObject3D(TrailTemplate)
-    Call Graphics3D.DestroyObject3D(FloorObject)
+    Call Viewport.Destroy(FloorObject)
     Call Graphics3D.DestroyObject3D(PlayerOneCycle)
     Call Graphics3D.DestroyObject3D(PlayerTwoCycle)
     Call Graphics3D.DestroyObject3D(BoundaryNorth)
@@ -427,13 +431,13 @@ Sub DrawArena3D()
     Call Graphics3D.SetObjectRotation(PlayerOneCycle, 0, Simulation.PlayerDirection(Simulation.PLAYER_ONE) * 90, 0)
     Call Graphics3D.SetObjectRotation(PlayerTwoCycle, 0, Simulation.PlayerDirection(Simulation.PLAYER_TWO) * 90, 0)
 
-    FrameReady = Graphics3D.Begin3D(Camera, 1, 3, 12)
+    FrameReady = Viewport.BeginFrame(FloorObject, ArenaPrecision.FromCamera(Camera), False)
 
     If Not FrameReady Then
         Return
     End If
 
-    FrameReady = Graphics3D.DrawObject3D(FloorObject)
+    FrameReady = Viewport.Draw(FloorObject)
     FrameReady = Graphics3D.DrawObject3D(BoundaryNorth)
     FrameReady = Graphics3D.DrawObject3D(BoundarySouth)
     FrameReady = Graphics3D.DrawObject3D(BoundaryEast)

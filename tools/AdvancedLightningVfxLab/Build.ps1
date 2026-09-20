@@ -33,10 +33,7 @@ Get-ChildItem -LiteralPath (Join-Path $taskRoot 'TechnicalAssets\Generation3\Lig
     ForEach-Object { Copy-Item -LiteralPath $_.FullName -Destination $taskAssets -Force }
 $taskBackgrounds = Join-Path $PSScriptRoot 'Assets\Backgrounds'
 New-Item -ItemType Directory -Path $taskBackgrounds -Force | Out-Null
-Copy-Item -LiteralPath (Join-Path $taskRoot 'games\SinStarI\Assets\Sin Star - Title Screen - Background.png') `
-    -Destination (Join-Path $taskBackgrounds 'SinStarLandscape.png') -Force
-Copy-Item -LiteralPath (Join-Path $taskRoot 'games\SinStarI\Assets\Title Screen with Logo.png') `
-    -Destination (Join-Path $taskBackgrounds 'SinStarTitleWithLogo.png') -Force
+& (Join-Path $taskRoot 'scripts\copy-arena-assets.ps1') -ProjectDirectory $PSScriptRoot
 if ($Target -in @('Native', 'All')) {
     New-Item -ItemType Directory -Force -Path ([IO.Path]::GetDirectoryName([IO.Path]::GetFullPath($OutputPath))) | Out-Null
     & $compiler --project $project --target windows-x64 `

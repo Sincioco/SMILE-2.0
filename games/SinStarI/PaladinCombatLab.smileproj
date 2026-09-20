@@ -20,5 +20,7 @@
                   ProductionState="Prototype" />
     <Asset Include="Assets\CombatLab\VfxAtlas.png" />
     <SmileProjectReference Include="..\..\libraries\Smile.Simple3D\Smile.Simple3D.smilelibproj" />
+    <Asset Include="Assets\Backgrounds\SinStarLandscape.png" />
+    <Asset Include="Assets\Backgrounds\SinStarTitleWithLogo.png" />
   </ItemGroup>
 </SmileProject>

@@ -3,13 +3,14 @@ Module Smile.Tools.EarthLabScene
 
 Option Explicit
 
+Import Smile.Simple3D.ArenaCamera3D As ArenaCamera
 Import Smile.Simple3D.Core As Core
 Import Smile.Simple3D.Graphics3D As G
 Import Smile.Simple3D.Precision3D As P
 Import Smile.Simple3D.PrecisionCamera3D As Camera
 Import Smile.Simple3D.Character3D As Character
 Import Smile.Simple3D.Arena3D As Arena
-Import Smile.Simple3D.StaticBackdrop3D As Backdrop
+Import Smile.Simple3D.ArenaBackdrop3D As Backdrop
 Import Smile.Tools.KaelEarth As Earth
 
 Public Type State
@@ -28,14 +29,16 @@ Public Type State
     Earth As Earth.Context
     Kael As Character.Actor
     Floor As Arena.ArenaFloor
-    Background As Backdrop.Backdrop
-    TitleBackground As Backdrop.Backdrop
+    Backgrounds As Backdrop.State
     BackgroundIndex As Number
     Targets[4] As Core.Object3D
     TargetIndex As Number
     BaseCamera As P.Camera3D
     Camera As P.Camera3D
     Controls As Camera.Controls
+    Zoom As Camera.ZoomState
+    FloorVisible As Boolean
+    GridVisible As Boolean
 End Type
 
 Public Sub Start(ByRef Value As State)
@@ -45,11 +48,10 @@ Public Sub Start(ByRef Value As State)
 
     Call G.ResetRenderer3D()
 
-    Value.Background = Backdrop.Create("Assets/Backgrounds/SinStarLandscape.png")
-    Value.TitleBackground = Backdrop.Create("Assets/Backgrounds/SinStarTitleWithLogo.png")
+    Value.Backgrounds = Backdrop.Create()
     Value.BackgroundIndex = 3
     Ok = G.ConfigureSoftDepth3D(1)
-    Ok = Backdrop.SetActive(Value.Background) And Ok
+    Ok = Backdrop.Apply(Value.Backgrounds, Value.BackgroundIndex) And Ok
     Ok = G.ConfigurePostProcessing3D(True, True, True, 100, 1200, 30, 2, 2, 4) And Ok
     Ok = G.SetAmbientLight3D(210, 225, 255, 80) And Ok
     Ok = G.SetDirectionalLight3D(-35, -80, 25, 255, 237, 208, 120) And Ok
@@ -60,7 +62,7 @@ Public Sub Start(ByRef Value As State)
     Ok = Character.Place(Value.Kael, -160, 0, 0) And Ok
     Ok = Character.Rotate(Value.Kael, 0, -90, 0) And Ok
     Ok = Earth.Prepare(Value.Earth) And Ok
-    Value.Floor = Arena.Create(1000, 800, 95, 72, 42, 45, 1, True)
+    Value.Floor = Arena.Create(1000, 800)
 
     For Index = 0 To 3
         Value.Targets[Index] = G.CreateCylinder3D(13, 75)
@@ -75,7 +77,17 @@ Public Sub Start(ByRef Value As State)
     Value.BaseCamera.FovDegrees = 55.0
     Value.BaseCamera.NearPlane = 1.0
     Value.BaseCamera.FarPlane = 3000.0
-    Value.Camera = Value.BaseCamera
+
+    Call ArenaCamera.Reset(Value.Controls, Value.Zoom)
+
+    Value.FloorVisible = True
+    Value.GridVisible = True
+    Value.Camera = ArenaCamera.Compose(Value.BaseCamera, Value.Controls)
+
+    If Value.FloorVisible Then
+        Call Camera.KeepCameraAboveGround(Value.Camera, 0.0)
+    End If
+
     Value.Mode = 1
     Value.SpeedPercent = 200
     Value.AudioEnabled = True
@@ -92,17 +104,7 @@ End Sub
 
 Public Sub CycleBackground(ByRef Value As State)
 
-    Dim Ok As Boolean
-
-    Value.BackgroundIndex = (Value.BackgroundIndex + 1) Mod 5
-
-    If Value.BackgroundIndex = 3 Then
-        Ok = Backdrop.SetActive(Value.Background)
-    Else If Value.BackgroundIndex = 4 Then
-        Ok = Backdrop.SetActive(Value.TitleBackground)
-    Else
-        Ok = Backdrop.ClearActive()
-    End If
+    Call Backdrop.Cycle(Value.BackgroundIndex)
 
 End Sub
 
@@ -157,8 +159,13 @@ Public Sub Update(ByRef Value As State, Elapsed As Number)
         Value.Controls.OrbitYaw = Value.Controls.OrbitYaw + ToDouble(Elapsed) * 0.003
     End If
 
-    Ok = Camera.AdvanceCameraControls(Value.Controls, Elapsed, False)
-    Value.Camera = Camera.ApplyScreenSpaceCameraControls(Value.BaseCamera, Value.Controls)
+    Call ArenaCamera.Advance(Value.Controls, Value.Zoom, Elapsed)
+
+    Value.Camera = ArenaCamera.Compose(Value.BaseCamera, Value.Controls)
+
+    If Value.FloorVisible Then
+        Call Camera.KeepCameraAboveGround(Value.Camera, 0.0)
+    End If
 
     Do
         StepMilliseconds = Min(100, SimulationElapsed)
@@ -220,18 +227,12 @@ Public Sub Draw(ByRef Value As State)
     Dim Index As Number
     Dim Ok As Boolean
 
-    Ok = Arena.ConfigureForFrame(Value.Floor, True, True)
+    Ok = Arena.ConfigureForFrame(Value.Floor, Value.FloorVisible, True)
     Ok = P.SetCamera(Value.Camera) And Ok
 
-    If Value.BackgroundIndex = 1 Then
-        Ok = G.BeginAcceptedCamera3D(0, 96, 32) And Ok
-    Else If Value.BackgroundIndex = 2 Then
-        Ok = G.BeginAcceptedCamera3D(62, 20, 96) And Ok
-    Else
-        Ok = G.BeginAcceptedCamera3D(0, 0, 0) And Ok
-    End If
+    Ok = Backdrop.BeginFrame(Value.Backgrounds, Value.BackgroundIndex) And Ok
 
-    Ok = Arena.Draw(Value.Floor, True, True) And Ok
+    Ok = Arena.Draw(Value.Floor, Value.FloorVisible, Value.GridVisible) And Ok
     Ok = Character.Draw(Value.Kael) And Ok
 
     For Index = 0 To 3
@@ -255,8 +256,7 @@ Public Sub Destroy(ByRef Value As State)
     Call Earth.Destroy(Value.Earth)
     Call Character.Destroy(Value.Kael)
     Call Arena.Destroy(Value.Floor)
-    Call Backdrop.Destroy(Value.Background)
-    Call Backdrop.Destroy(Value.TitleBackground)
+    Call Backdrop.Destroy(Value.Backgrounds)
 
     For Index = 0 To 3
         Call G.DestroyObject3D(Value.Targets[Index])

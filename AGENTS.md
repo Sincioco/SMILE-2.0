@@ -187,7 +187,8 @@ The SMILE 2.0 - 3D Viewer, Animation Editor is allowed to evolve into a lightwei
 - Sin's September 20 arena rule: the Character Viewer's arena is the visual and
   interaction authority for current and future SMILE games/tools that use a 3D
   arena. Keep its floor/grid appearance and consistent pan, zoom and orbit in
-  reusable SMILE library owners. F toggles Floor; G toggles Grid. Keep grid color
+  reusable SMILE library owners. F toggles Floor; G toggles Grid. B cycles the
+  shared Viewer backgrounds: Black, Green, Purple, Landscape and Title. Keep grid color
   and grid spacing/size configurable. Consumers use the shared implementation;
   do not copy private tool-specific arena/camera code into new programs. Existing
   Studio and Web adoption holds remain in force until explicitly resumed.

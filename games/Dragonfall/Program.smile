@@ -86,7 +86,7 @@ Do
     InterfacePointerBlocked = HandleInterfacePointer()
 
     If RendererAvailable And EncounterReady Then
-        Call Scene.HandleCameraPointer(InterfacePointerBlocked, Paused)
+        Call Scene.HandleCameraPointer(InterfacePointerBlocked, Paused, KeyValue)
     End If
 
     If EncounterReady And Not Paused Then

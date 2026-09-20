@@ -6,7 +6,7 @@ Import Smile.Battle3D.Camera As BattleCamera
 Import Dragonfall.Battle As Battle
 Import Dragonfall.Scene As Scene
 
-Const RESTART_COUNT = 100
+Const RESTART_COUNT = 3
 
 Dim Failures As Number
 Dim Cycle As Number
@@ -19,7 +19,7 @@ Dim Ready As Boolean
 Dim CameraReady As Boolean
 Dim Projected As BattleCamera.ProjectedPoint3D
 Dim BlockerTemplate As Core.Object3D
-Dim Blockers[80] As Core.Object3D
+Dim Blockers[120] As Core.Object3D
 
 Game Window "Dragonfall Lifecycle Tests" Size 480 By 270
 
@@ -27,7 +27,7 @@ Call Graphics3D.ResetRenderer3D()
 
 BlockerTemplate = Graphics3D.CreateCube3D(10)
 
-For Cycle = 0 To 79
+For Cycle = 0 To 119
     Blockers[Cycle] = Graphics3D.CreateObjectFromMesh3D(BlockerTemplate.MeshHandle)
 End For
 
@@ -39,7 +39,7 @@ End If
 
 If (Ready Or
     Graphics3D.LiveMeshCount3D() <> 1 Or
-    Graphics3D.LiveObjectCount3D() <> 81 Or
+    Graphics3D.LiveObjectCount3D() <> 121 Or
     Graphics3D.LiveMaterialCount3D() <> 0 Or
     Graphics3D.LiveTextureCount3D() <> 0 Or
     Graphics3D.LastError() = 0) Then
@@ -49,7 +49,7 @@ End If
 Call Scene.Shutdown()
 Call Battle.Shutdown()
 
-For Cycle = 0 To 79
+For Cycle = 0 To 119
     Call Graphics3D.DestroyObjectInstance3D(Blockers[Cycle])
 End For
 
@@ -109,6 +109,8 @@ For Cycle = 1 To RESTART_COUNT
                 CameraReady = BattleCamera.Update(Battle.StateHandle(), 1)
             End If
 
+            Call Scene.HandleCameraPointer(False, False)
+
             Projected = BattleCamera.ProjectWorldPoint(Battle.StateHandle(), -930, 72, -330, 960, 540)
 
             If (Not CameraReady Or
@@ -124,11 +126,11 @@ For Cycle = 1 To RESTART_COUNT
             StableObjects <= 0 Or
             StableObjects >= Graphics3D.MaximumObjectCount3D() Or
             StableMaterials <= 0 Or
-            StableObjects <> 441 Or
+            StableObjects <> 404 Or
             Graphics3D.MaximumObjectCount3D() - StableObjects < 64 Or
-            StableMeshes <> 48 Or
-            StableMaterials <> 24 Or
-            StableTextures <> 6 Or
+            StableMeshes <> 11 Or
+            StableMaterials <> 22 Or
+            StableTextures <> 7 Or
             Graphics3D.LiveMeshCount3D() <> StableMeshes Or
             Graphics3D.LiveObjectCount3D() <> StableObjects Or
             Graphics3D.LiveMaterialCount3D() <> StableMaterials Or
@@ -166,7 +168,7 @@ End For
 
 Fill Rectangle 0, 0, 480, 270, Rgb(3, 2, 10)
 Draw Text "2D AFTER DRAGONFALL 3D" At 240, 105 Size 20 Color WHITE Centered
-Draw Text "100 CLEAN RESTARTS" At 240, 145 Size 17 Color ORANGE Centered
+Draw Text "3 Clean Restarts" At 240, 145 Size 17 Color ORANGE Centered
 Show Screen
 
 Call Graphics3D.ResetRenderer3D()

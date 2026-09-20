@@ -11,7 +11,7 @@ Import Smile.Simple3D.Core As Core
 Import Smile.Simple3D.Precision3D As Precision3D
 Import Smile.Simple3D.Graphics3D As Graphics3D
 Import Smile.Simple3D.Scene3D As Scene3D
-Import Smile.Simple3D.StaticBackdrop3D As StaticBackdrop3D
+Import Smile.Simple3D.ArenaBackdrop3D As ArenaBackdrop
 Import Smile.Tools.Character3DViewerActors As ViewerActors
 Import Smile.Tools.Character3DViewerDragon As ViewerDragon
 Import Smile.Tools.Character3DViewerEffects As ViewerEffects
@@ -26,10 +26,7 @@ Public Type State
     BackgroundIndex As Number
     LightingIndex As Number
     MaterialInspection As Number
-    BackdropLandscape As StaticBackdrop3D.Backdrop
-    BackdropTitle As StaticBackdrop3D.Backdrop
-    BackdropAvailable As Boolean
-    BackdropTextureIndex As Number
+    Backgrounds As ArenaBackdrop.State
     SocketGizmos[4] As Core.Object3D
     SocketGizmoCount As Number
     SocketGizmosVisible As Boolean
@@ -48,7 +45,7 @@ Public Sub Reset(ByRef Value As State, BackgroundIndex As Number)
 
     Call ResetControls(Value, BackgroundIndex)
 
-    Value.BackdropTextureIndex = -1
+    Value.Backgrounds.AppliedIndex = -1
     Value.SelectedSocket = 0
 
 End Sub
@@ -203,7 +200,7 @@ End Function
 
 Public Sub CreateArena(ByRef Value As State, Width As Number, Depth As Number)
 
-    Value.Arena = Arena3D.Create(Width, Depth, 24, 150, 255, 40, 2, True)
+    Value.Arena = Arena3D.Create(Width, Depth)
     Value.FloorVisible = True
     Value.GridVisible = True
     Value.FloorReflectionsEnabled = True
@@ -250,22 +247,7 @@ End Sub
 Public Sub CreateBackdrops(ByRef Value As State, LandscapePath As Text,
     TitlePath As Text)
 
-    Dim BackdropReady As Boolean
-
-    Value.BackdropAvailable = False
-    Value.BackdropTextureIndex = -1
-    Value.BackdropLandscape = StaticBackdrop3D.Create(LandscapePath)
-    Value.BackdropTitle = StaticBackdrop3D.Create(TitlePath)
-    BackdropReady = Value.BackdropLandscape.Ready
-    BackdropReady = Value.BackdropTitle.Ready And BackdropReady
-
-    If Not BackdropReady Then
-        Call DestroyBackdrops(Value)
-
-        Return
-    End If
-
-    Value.BackdropAvailable = True
+    Value.Backgrounds = ArenaBackdrop.Create(LandscapePath, TitlePath)
 
 End Sub
 
@@ -273,23 +255,7 @@ Public Function ApplyBackdrop(ByRef Value As State) As Boolean
 
     Dim Result As Boolean
 
-    Result = True
-
-    If Value.BackdropTextureIndex = Value.BackgroundIndex Then
-        Return True
-    End If
-
-    If Value.BackdropAvailable And Value.BackgroundIndex = 3 Then
-        Result = StaticBackdrop3D.SetActive(Value.BackdropLandscape)
-    Else If Value.BackdropAvailable And Value.BackgroundIndex = 4 Then
-        Result = StaticBackdrop3D.SetActive(Value.BackdropTitle)
-    Else
-        Result = StaticBackdrop3D.ClearActive()
-    End If
-
-    If Result Then
-        Value.BackdropTextureIndex = Value.BackgroundIndex
-    End If
+    Result = ArenaBackdrop.Apply(Value.Backgrounds, Value.BackgroundIndex)
 
     Return Result
 
@@ -309,19 +275,8 @@ Public Function BeginScene(ByRef Value As State, Camera As Precision3D.Camera3D)
         Return False
     End If
 
-    Result = ApplyBackdrop(Value)
-
-    If Not Result Then
-        Return False
-    End If
-
-    If Value.BackgroundIndex = 1 Then
-        Result = Scene3D.BeginPrecise(Camera, 0, 96, 32)
-    Else If Value.BackgroundIndex = 2 Then
-        Result = Scene3D.BeginPrecise(Camera, 62, 20, 96)
-    Else
-        Result = Scene3D.BeginPrecise(Camera, 0, 0, 0)
-    End If
+    Result = Precision3D.SetCamera(Camera) And Result
+    Result = ArenaBackdrop.BeginFrame(Value.Backgrounds, Value.BackgroundIndex, True) And Result
 
     Return Result
 
@@ -458,33 +413,19 @@ End Function
 
 Public Sub DestroyBackdrops(ByRef Value As State)
 
-    Dim BackdropCleared As Boolean
-
-    BackdropCleared = StaticBackdrop3D.ClearActive()
-
-    Call StaticBackdrop3D.Destroy(Value.BackdropLandscape)
-    Call StaticBackdrop3D.Destroy(Value.BackdropTitle)
-
-    Value.BackdropAvailable = False
-    Value.BackdropTextureIndex = -1
+    Call ArenaBackdrop.Destroy(Value.Backgrounds)
 
 End Sub
 
-Public Sub ToggleFloorAndGrid(ByRef Value As State)
+Public Sub ToggleFloor(ByRef Value As State)
 
-    If Value.FloorVisible Or Value.GridVisible Then
-        Value.FloorVisible = False
-        Value.GridVisible = False
-    Else
-        Value.FloorVisible = True
-        Value.GridVisible = True
-    End If
+    Call Arena3D.HandleKey(KEY_F, Value.FloorVisible, Value.GridVisible)
 
 End Sub
 
 Public Sub ToggleGrid(ByRef Value As State)
 
-    Value.GridVisible = Not Value.GridVisible
+    Call Arena3D.HandleKey(KEY_G, Value.FloorVisible, Value.GridVisible)
 
 End Sub
 
@@ -502,7 +443,7 @@ End Sub
 
 Public Sub CycleBackground(ByRef Value As State, BackgroundCount As Number)
 
-    Value.BackgroundIndex = (Value.BackgroundIndex + 1) Mod BackgroundCount
+    Call ArenaBackdrop.Cycle(Value.BackgroundIndex)
 
 End Sub
 

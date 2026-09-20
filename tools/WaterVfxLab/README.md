@@ -1,5 +1,10 @@
 # SMILE 2.0 â€” Water Lab (native)
 
+The native arena uses the [shared Viewer arena library](../../docs/libraries/arena3d.md).
+F toggles Floor; G toggles Grid; B cycles the same five Viewer backgrounds.
+Left drag pans, middle drag orbits, wheel zooms smoothly, and right-click resets
+the camera. Grid color, spacing and dimensions remain library creation options.
+
 ## Kael water preview â€” September 18, 2026
 
 The native Lab starts with **Kael**, speed **200%**, **Demo** and **Realistic Water**

@@ -58,10 +58,7 @@ foreach ($modelFile in @('arin-v5.7-idle-equipment-checkpoint.glb', 'ArinV57.sm3
     Write-AtomicBytes $metadataPath ([Text.Encoding]::UTF8.GetBytes($metadata)) (Get-PathHash $metadataPath)
 }
 New-Item -ItemType Directory -Path $taskBackgrounds -Force | Out-Null
-Copy-Item -LiteralPath (Join-Path $taskRoot 'games\SinStarI\Assets\Sin Star - Title Screen - Background.png') `
-    -Destination (Join-Path $taskBackgrounds 'SinStarLandscape.png') -Force
-Copy-Item -LiteralPath (Join-Path $taskRoot 'games\SinStarI\Assets\Title Screen with Logo.png') `
-    -Destination (Join-Path $taskBackgrounds 'SinStarTitleWithLogo.png') -Force
+& (Join-Path $taskRoot 'scripts\copy-arena-assets.ps1') -ProjectDirectory $PSScriptRoot
 if ($Target -in @('Native', 'All')) {
     New-Item -ItemType Directory -Force -Path ([IO.Path]::GetDirectoryName([IO.Path]::GetFullPath($OutputPath))) | Out-Null
     & $compiler --project $project --target windows-x64 `

@@ -83,6 +83,7 @@ Public Const POINTER_ACTION_TOGGLE_FIRE = 15
 Public Const POINTER_ACTION_TOGGLE_LIGHTNING = 16
 Public Const POINTER_ACTION_TOGGLE_SHIELD_STYLE = 17
 Public Const POINTER_ACTION_TOGGLE_FLOOR_REFLECTIONS = 18
+Public Const POINTER_ACTION_TOGGLE_GRID = 20
 Public Const POINTER_ACTION_TOGGLE_VFX_REFLECTIONS = 19
 
 Public Type ParticipantLayout
@@ -3281,7 +3282,7 @@ Public Sub DrawOverlay(
         Call UI.DrawButton(Left, 104, 76, 30, BossLabel, DragonVisible)
         Call UI.DrawButton(Left + 82, 104, 76, 30, "Weapon", SwordVisible)
         Call UI.DrawButton(Left + 164, 104, 76, 30, "Shield", ShieldVisible)
-        Call UI.DrawButton(Left, 140, 76, 22, "Floor/Grid", FloorOrGridVisible)
+        Call UI.DrawButton(Left, 140, 76, 22, "Floor", FloorOrGridVisible)
         Call UI.DrawButton(Left + 82, 140, 76, 22, "Backdrop", BackgroundVisible)
         Call UI.DrawButton(Left + 164, 140, 76, 22, "Glow", GlowVisible)
 

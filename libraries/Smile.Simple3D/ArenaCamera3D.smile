@@ -1,0 +1,167 @@
+''' Shared Character Viewer camera policy; all state belongs to the calling scene.
+Module Smile.Simple3D.ArenaCamera3D
+
+Option Explicit
+
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.PrecisionMath3D As M
+Import Smile.Simple3D.PrecisionCamera3D As Camera
+
+Public Const ORBIT_POINTER_DIVISOR = 1
+Public Const PAN_POINTER_DIVISOR = 3
+Public Const DEFAULT_ZOOM = -16
+Public Const ZOOM_IN_LIMIT = -144
+Public Const ZOOM_OUT_LIMIT = 36
+Public Const ZOOM_STEP = 8
+Public Const ZOOM_RATE = 96000
+Public Const CLOSE_UP_START = -48
+Public Const CLOSE_UP_DISTANCE = 100
+
+Public Type PointerInput
+    Blocked As Boolean
+    OrbitPressed As Boolean
+    OrbitHeld As Boolean
+    OrbitReleased As Boolean
+    PanPressed As Boolean
+    PanHeld As Boolean
+    PanReleased As Boolean
+    DeltaX As Number
+    DeltaY As Number
+    Wheel As Number
+End Type
+
+Public Function ReadPointer(Blocked As Boolean) As PointerInput
+
+    Dim Result As PointerInput
+
+    Result.Blocked = Blocked
+    Result.OrbitPressed = Pointer_Pressed(POINTER_MIDDLE)
+    Result.OrbitHeld = Pointer_Held(POINTER_MIDDLE)
+    Result.OrbitReleased = Pointer_Released(POINTER_MIDDLE)
+    Result.PanPressed = Pointer_Pressed(POINTER_PRIMARY)
+    Result.PanHeld = Pointer_Held(POINTER_PRIMARY)
+    Result.PanReleased = Pointer_Released(POINTER_PRIMARY)
+    Result.DeltaX = Pointer_Delta_X()
+    Result.DeltaY = Pointer_Delta_Y()
+    Result.Wheel = Pointer_Wheel_Delta()
+
+    Return Result
+
+End Function
+
+Public Sub Reset(ByRef Controls As Camera.Controls, ByRef Zoom As Camera.ZoomState,
+    Optional InitialYaw As Double = 0.0, Optional InitialZoom As Number = DEFAULT_ZOOM)
+
+    Call Camera.ResetCameraControls(Controls)
+    Call Camera.InitializeZoom(Zoom, InitialZoom, ZOOM_IN_LIMIT, ZOOM_OUT_LIMIT, ZOOM_RATE)
+
+    Controls.OrbitYaw = InitialYaw
+    Controls.Zoom = Zoom.Current
+    Controls.ZoomTarget = Zoom.Target
+
+End Sub
+
+''' Double motion preserves a one-pixel drag. Scale is world units relative to the Viewer.
+Public Sub ApplyDrag(ByRef Controls As Camera.Controls, OrbitActive As Boolean,
+    PanActive As Boolean, DeltaX As Number, DeltaY As Number,
+    PanXLimit As Double, PanYLimit As Double, Optional WorldScale As Double = 1.0,
+    Optional OrbitDivisor As Number = ORBIT_POINTER_DIVISOR,
+    Optional PanDivisor As Number = PAN_POINTER_DIVISOR)
+
+    If (OrbitDivisor <= 0 Or
+        PanDivisor <= 0 Or
+        WorldScale <= 0.0) Then
+        Return
+    End If
+
+    If OrbitActive Then
+        Controls.OrbitYaw = Camera.NormalizeAngle(Controls.OrbitYaw + ToDouble(DeltaX) / ToDouble(OrbitDivisor))
+        Controls.OrbitPitch = Clamp(Controls.OrbitPitch + ToDouble(DeltaY) / ToDouble(OrbitDivisor), -75.0, 75.0)
+    Else If PanActive Then
+        Controls.PanX = Controls.PanX - ToDouble(DeltaX) * WorldScale / ToDouble(PanDivisor)
+        Controls.PanY = Controls.PanY + ToDouble(DeltaY) * WorldScale / ToDouble(PanDivisor)
+    End If
+
+    Controls.PanX = Clamp(Controls.PanX, -PanXLimit, PanXLimit)
+    Controls.PanY = Clamp(Controls.PanY, -PanYLimit, PanYLimit)
+
+End Sub
+
+''' A captured drag continues outside the viewport and releases over a panel.
+''' Return True when manual input should stop a caller's automatic camera motion.
+Public Function UpdatePointer(ByRef Controls As Camera.Controls,
+    ByRef Zoom As Camera.ZoomState, Input As PointerInput,
+    Optional PanXLimit As Double = 360.0, Optional PanYLimit As Double = 220.0,
+    Optional WorldScale As Double = 1.0) As Boolean
+
+    Dim OrbitActive As Boolean
+    Dim PanActive As Boolean
+    Dim Changed As Boolean
+
+    OrbitActive = ((Not Input.Blocked And (Input.OrbitPressed Or Input.OrbitHeld)) Or
+        (Controls.Orbiting And (Input.OrbitHeld Or Input.OrbitReleased)))
+    PanActive = Not OrbitActive And ((Not Input.Blocked And (Input.PanPressed Or Input.PanHeld)) Or
+        (Controls.Panning And (Input.PanHeld Or Input.PanReleased)))
+
+    Call ApplyDrag(Controls, OrbitActive, PanActive, Input.DeltaX, Input.DeltaY,
+        PanXLimit, PanYLimit, WorldScale)
+
+    Controls.Orbiting = OrbitActive And Input.OrbitHeld And Not Input.OrbitReleased
+    Controls.Panning = PanActive And Input.PanHeld And Not Input.PanReleased
+    Changed = OrbitActive Or PanActive
+
+    If Not Input.Blocked And Input.Wheel <> 0 Then
+        Call Camera.AdjustZoomTarget(Zoom, Input.Wheel, ZOOM_STEP)
+
+        Changed = True
+    End If
+
+    Controls.ZoomTarget = Zoom.Target
+
+    Return Changed
+
+End Function
+
+Public Sub Advance(ByRef Controls As Camera.Controls, ByRef Zoom As Camera.ZoomState,
+    ElapsedMilliseconds As Number)
+
+    Dim Ok As Boolean
+
+    Ok = Camera.AdvanceZoom(Zoom, Min(250, Max(0, ElapsedMilliseconds)))
+    Controls.Zoom = Zoom.Current
+    Controls.ZoomTarget = Zoom.Target
+
+End Sub
+
+Public Sub ApplyCloseUp(ByRef Live As P.Camera3D, Zoom As Double,
+    Optional CloseUpStart As Number = CLOSE_UP_START,
+    Optional ZoomInLimit As Number = ZOOM_IN_LIMIT,
+    Optional MinimumDistance1000 As Number = CLOSE_UP_DISTANCE)
+
+    Dim Progress As Double
+    Dim Distance As Double
+
+    If Zoom >= ToDouble(CloseUpStart) Or CloseUpStart <= ZoomInLimit Then
+        Return
+    End If
+
+    Progress = Clamp((ToDouble(CloseUpStart) - Zoom) /
+        ToDouble(CloseUpStart - ZoomInLimit), 0.0, 1.0)
+    Distance = 1.0 - Progress * (1.0 - ToDouble(MinimumDistance1000) / 1000.0)
+    Live.Position = M.Add(Live.Target, M.Scale(M.Subtract(Live.Position, Live.Target), Distance))
+
+End Sub
+
+Public Function Compose(Base As P.Camera3D, Controls As Camera.Controls) As P.Camera3D
+
+    Dim Result As P.Camera3D
+
+    Result = Camera.ApplyScreenSpaceCameraControls(Base, Controls)
+
+    Call ApplyCloseUp(Result, Controls.Zoom)
+
+    Return Result
+
+End Function
+
+End Module

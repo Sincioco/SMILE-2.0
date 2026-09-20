@@ -5,6 +5,7 @@ Option Explicit
 
 Import Smile.Simple3D.Character3D As Character3D
 Import Smile.Simple3D.CharacterViewer As CharacterViewer
+Import Smile.Simple3D.ArenaCamera3D As ArenaCamera
 Import Smile.Simple3D.Core As Core
 Import Smile.Simple3D.Precision3D As Precision3D
 Import Smile.Simple3D.Graphics3D As Graphics3D
@@ -34,13 +35,13 @@ Import Smile.Tools.ViewerBeatEditor As BeatEditor
 Import Smile.Tools.ViewerBeatSequence As BeatSequence
 
 Private Const ANIMATION_CYCLE_MILLISECONDS = 5000
-Private Const ORBIT_POINTER_DIVISOR = 1
-Private Const PAN_POINTER_DIVISOR = 3
-Private Const DEFAULT_ZOOM_DEGREES = -16
-Private Const ZOOM_IN_LIMIT = -144
-Private Const CLOSE_UP_ZOOM_START = -48
-Private Const CLOSE_UP_MINIMUM_DISTANCE_1000 = 100
-Private Const ZOOM_OUT_LIMIT = 36
+Private Const ORBIT_POINTER_DIVISOR = ArenaCamera.ORBIT_POINTER_DIVISOR
+Private Const PAN_POINTER_DIVISOR = ArenaCamera.PAN_POINTER_DIVISOR
+Private Const DEFAULT_ZOOM_DEGREES = ArenaCamera.DEFAULT_ZOOM
+Private Const ZOOM_IN_LIMIT = ArenaCamera.ZOOM_IN_LIMIT
+Private Const CLOSE_UP_ZOOM_START = ArenaCamera.CLOSE_UP_START
+Private Const CLOSE_UP_MINIMUM_DISTANCE_1000 = ArenaCamera.CLOSE_UP_DISTANCE
+Private Const ZOOM_OUT_LIMIT = ArenaCamera.ZOOM_OUT_LIMIT
 Private Const MAX_RAW_FRAME_MILLISECONDS = 60000
 Private Const MAX_ANIMATION_ELAPSED = 250
 Private Const MAX_CAMERA_ELAPSED = 250
@@ -2775,24 +2776,17 @@ Public Class Session
 
     Public Sub PresentationInput(PressedKey As Number)
 
-        Dim Action As Number
         Dim Result As ViewerInspectorCommands.OperationResult
 
-        If PressedKey = KEY_O Then
-            Action = ViewerParty.POINTER_ACTION_TOGGLE_ORBIT
-        Else If PressedKey = KEY_F Then
-            Action = ViewerParty.POINTER_ACTION_TOGGLE_FLOOR_REFLECTIONS
-        Else If PressedKey = KEY_PLUS Then
+        If PressedKey = KEY_PLUS Then
             Call Me.AdjustPlaybackSpeed(25)
         Else If PressedKey = KEY_MINUS Then
             Call Me.AdjustPlaybackSpeed(-25)
         End If
 
-        If Action <> 0 Then
-            Result = ViewerInspectorCommands.ApplyPartyPresentationAction(Action,
-                Me.Rendering, BACKGROUND_COUNT, Me.Effects, Me.ViewerCameraState, Me.DragonState)
-            Me.Session.Ready = Result.Ready And Me.Session.Ready
-        End If
+        Result = ViewerInspectorCommands.ApplyPresentationKey(PressedKey,
+            Me.Rendering, BACKGROUND_COUNT, Me.Effects, Me.ViewerCameraState, Me.DragonState)
+        Me.Session.Ready = Result.Ready And Me.Session.Ready
 
         Call Me.HostedInput(Pointer_X(), Pointer_Y(), Pointer_Inside(), PressedKey)
 

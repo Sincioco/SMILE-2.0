@@ -44,12 +44,12 @@ Build `Dragonfall-NoDemo.smileproj` or launch `artifacts\games\Dragonfall-NoDemo
 
 - `DragonfallBattle.smile` owns deterministic definitions, ATB submissions, boss policy, phase transitions, and presentation-neutral visual events.
 - `Smile.Battle3D.Articulation` provides reusable deterministic segment solving, locomotion cycles, and action envelopes for rigid characters and creatures.
-- `DragonfallScene.smile` owns the original procedural arena, articulated cast composition, bounds-driven and two-stage action cameras, fly-in/result tracking, bounded effect presets, transforms, rendering, and exact resource teardown.
+- `DragonfallScene.smile` composes the shared `ArenaViewport3D` floor, grid, backgrounds and manual camera with its articulated cast, authored battle shots, effects and resource teardown. F toggles Floor, G toggles Grid, B cycles the Viewer backgrounds, and right-click resets the manual camera.
 - `DragonfallAudio.smile` maps presentation events to layered, four-channel sampled cues without affecting battle mechanics.
 - `Program.smile` is the crowd demo and is the only file containing player-command demo AI and automatic replay.
 - `Program-NoDemo.smile` is the complete manual-command startup with that demo implementation removed.
 - `DragonfallTests.smile` proves win/loss routes, all commands, boss action variety, phase transition, 100 mechanics restarts, and 108,000 accelerated fixed ticks in native and Web.
-- `DragonfallLifecycleTests.smile` creates, renders, and destroys the complete arena 100 times and requires every Renderer3D resource count to return to zero in native DirectX and the WebGL2 test host.
+- `DragonfallLifecycleTests.smile` checks allocation-failure cleanup and three brief create/render/destroy cycles, requiring every Renderer3D resource count to return to zero. The shared arena uses 404 initial objects, 411 boss objects, 11 meshes, 22 materials and seven textures. Native DirectX validation passes; Web adoption and validation remain on hold.
 
 All combat assets are preloaded. Particle objects are preallocated and draw after opaque geometry. Presentation can advance independently without altering mechanics.
 

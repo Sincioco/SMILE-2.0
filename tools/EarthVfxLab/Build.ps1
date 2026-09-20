@@ -12,8 +12,7 @@ foreach ($file in @('kael-v1-animation-checkpoint.glb', 'KaelV1.sm3d.json')) {
 Copy-Item -LiteralPath (Join-Path $earthRepository 'TechnicalAssets\Generation3\Earth\earth-rocks.glb') -Destination $earthModels -Force
 Get-ChildItem -LiteralPath (Join-Path $earthRepository 'TechnicalAssets\Generation3\Earth') -File |
     Where-Object Extension -In '.png', '.wav' | ForEach-Object { Copy-Item -LiteralPath $_.FullName -Destination $earthAssets -Force }
-Copy-Item -LiteralPath (Join-Path $earthRepository 'games\SinStarI\Assets\Sin Star - Title Screen - Background.png') -Destination (Join-Path $earthBackgrounds 'SinStarLandscape.png') -Force
-Copy-Item -LiteralPath (Join-Path $earthRepository 'games\SinStarI\Assets\Title Screen with Logo.png') -Destination (Join-Path $earthBackgrounds 'SinStarTitleWithLogo.png') -Force
+& (Join-Path $earthRepository 'scripts\copy-arena-assets.ps1') -ProjectDirectory $PSScriptRoot
 $earthOutput = Join-Path $PSScriptRoot "bin\$Configuration\EarthVfxLab.exe"
 & (Join-Path $earthRepository 'artifacts\compiler\smilec.exe') --project (Join-Path $PSScriptRoot 'EarthVfxLab.smileproj') --target windows-x64 --configuration $Configuration --graphics DirectX -o $earthOutput
 if ($LASTEXITCODE -ne 0) { throw 'Native Earth Lab compilation failed.' }

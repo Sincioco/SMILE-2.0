@@ -116,7 +116,7 @@ rules, IDs, scene transitions and saved calibration remain unchanged.
 - Every scene: Escape returns to its submenu and selects title music; an already
   playing title track continues without restarting.
 - Characters/Battle Simulations: left-drag pans, middle-drag orbits, wheel zooms,
-  O toggles auto-orbit, Space pauses/resumes, F toggles reflections, and R or
+  O toggles auto-orbit, Space pauses/resumes, F toggles Floor, G toggles Grid, B cycles the shared Viewer backgrounds, and R or
   right-click resets the view. The Back button returns to the submenu.
 - Character: 1-4 or Tab selects the manual preview; arrows/WASD move; Space
   toggles its walk/run sheet.

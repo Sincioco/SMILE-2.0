@@ -34,6 +34,9 @@
     <SmileSource Include="LightPool3D.smile" />
     <SmileSource Include="SceneVfx3D.smile" />
     <SmileSource Include="Arena3D.smile" />
+    <SmileSource Include="ArenaCamera3D.smile" />
+    <SmileSource Include="ArenaBackdrop3D.smile" />
+    <SmileSource Include="ArenaViewport3D.smile" />
     <SmileSource Include="StaticBackdrop3D.smile" />
   </ItemGroup>
 </SmileProject>

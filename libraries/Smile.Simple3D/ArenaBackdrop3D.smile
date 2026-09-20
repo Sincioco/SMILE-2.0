@@ -1,0 +1,114 @@
+''' The Viewer background palette: Black, Green, Purple, Landscape, Title.
+Module Smile.Simple3D.ArenaBackdrop3D
+
+Option Explicit
+
+Import Smile.Simple3D.StaticBackdrop3D As Backdrop
+Import Smile.Simple3D.Graphics3D As G
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.Scene3D As Scene
+
+Public Const BACKGROUND_COUNT = 5
+Public Const DEFAULT_BACKGROUND = 3
+
+Public Type State
+    Landscape As Backdrop.Backdrop
+    Title As Backdrop.Backdrop
+    AppliedIndex As Number
+    Ready As Boolean
+End Type
+
+Public Function Create(
+    Optional LandscapePath As Text = "Assets/Backgrounds/SinStarLandscape.png",
+    Optional TitlePath As Text = "Assets/Backgrounds/SinStarTitleWithLogo.png") As State
+
+    Dim Result As State
+
+    Result.Landscape = Backdrop.Create(LandscapePath)
+    Result.Title = Backdrop.Create(TitlePath)
+    Result.Ready = Result.Landscape.Ready And Result.Title.Ready
+    Result.AppliedIndex = -1
+
+    Return Result
+
+End Function
+
+Public Sub Cycle(ByRef Index As Number)
+
+    Index = (Index + 1) Mod BACKGROUND_COUNT
+
+End Sub
+
+Public Function Apply(ByRef Value As State, Index As Number) As Boolean
+
+    Dim Result As Boolean
+
+    If Index = Value.AppliedIndex Then
+        Return True
+    End If
+
+    If Index = 3 Then
+        Result = Backdrop.SetActive(Value.Landscape)
+    Else If Index = 4 Then
+        Result = Backdrop.SetActive(Value.Title)
+    Else
+        Result = Backdrop.ClearActive()
+    End If
+
+    If Result Then
+        Value.AppliedIndex = Index
+    End If
+
+    Return Result
+
+End Function
+
+''' Call after accepting the scene's precise camera, before drawing objects.
+Public Function BeginFrame(ByRef Value As State, Index As Number,
+    Optional UseScene As Boolean = False) As Boolean
+
+    Dim Result As Boolean
+    Dim RedValue As Number
+    Dim GreenValue As Number
+    Dim BlueValue As Number
+
+    Result = Apply(Value, Index)
+
+    If Not Result Then
+        Return False
+    End If
+
+    If Index = 1 Then
+
+        GreenValue = 96
+        BlueValue = 32
+
+    Else If Index = 2 Then
+
+        RedValue = 62
+        GreenValue = 20
+        BlueValue = 96
+
+    End If
+
+    If UseScene Then
+        Result = Scene.BeginPrecise(P.AcceptedCamera(), RedValue, GreenValue, BlueValue)
+    Else
+        Result = G.BeginAcceptedCamera3D(RedValue, GreenValue, BlueValue)
+    End If
+
+    Return Result
+
+End Function
+
+Public Sub Destroy(ByRef Value As State)
+
+    Call Backdrop.Destroy(Value.Landscape)
+    Call Backdrop.Destroy(Value.Title)
+
+    Value.Ready = False
+    Value.AppliedIndex = -1
+
+End Sub
+
+End Module

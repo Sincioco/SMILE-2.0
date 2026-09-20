@@ -1,0 +1,181 @@
+Option Explicit
+
+Import Smile.Simple3D.Arena3D As Arena
+Import Smile.Simple3D.ArenaCamera3D As Motion
+Import Smile.Simple3D.ArenaBackdrop3D As Backdrop
+Import Smile.Simple3D.ArenaViewport3D As Viewport
+Import Smile.Simple3D.PrecisionCamera3D As Camera
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.Graphics3D As G
+Import Smile.Simple3D.Scene3D As Scene
+
+Dim Failures As Number
+Dim Checks As Number
+
+Game Window "Shared Arena Regression Checks" Size 640 By 480
+
+Do
+
+    Call RunChecks()
+
+Loop Until True
+
+If Failures = 0 Then
+    Print "Shared arena checks passed: "; Checks
+Else
+    Print "Shared arena failures: "; Failures
+End If
+
+Sub Check(Valid As Boolean)
+
+    Checks = Checks + 1
+
+    If Not Valid Then
+        Failures = Failures + 1
+        Print "Failed arena check "; Checks
+    End If
+
+End Sub
+
+Sub RunChecks()
+
+    Dim Controls As Camera.Controls
+    Dim Zoom As Camera.ZoomState
+    Dim Input As Motion.PointerInput
+    Dim View As Viewport.State
+    Dim Custom As Arena.ArenaFloor
+    Dim Base As P.Camera3D
+    Dim Live As P.Camera3D
+    Dim Changed As Boolean
+    Dim Ok As Boolean
+    Dim Index As Number
+    Dim PreviousZoom As Double
+
+    Call Motion.Reset(Controls, Zoom)
+
+    Input.PanPressed = True
+    Input.PanHeld = True
+    Input.DeltaX = 1
+    Input.DeltaY = 1
+    Changed = Motion.UpdatePointer(Controls, Zoom, Input)
+
+    Call Check(Changed And Controls.Panning)
+    Call Check(Abs(Controls.PanX + 1.0 / 3.0) < 0.000001)
+    Call Check(Abs(Controls.PanY - 1.0 / 3.0) < 0.000001)
+
+    Input.Blocked = True
+    Input.PanPressed = False
+    Input.PanHeld = False
+    Input.PanReleased = True
+    Input.DeltaX = 30
+    Input.DeltaY = -30
+    Changed = Motion.UpdatePointer(Controls, Zoom, Input)
+
+    Call Check(Changed And Not Controls.Panning)
+    Call Check(Abs(Controls.PanX + 31.0 / 3.0) < 0.000001)
+
+    Input.PanReleased = False
+    Input.PanPressed = True
+    Input.PanHeld = True
+    Changed = Motion.UpdatePointer(Controls, Zoom, Input)
+
+    Call Check(Not Changed And Not Controls.Panning)
+    Call Motion.Reset(Controls, Zoom)
+
+    Input.Blocked = False
+    Input.PanPressed = False
+    Input.PanHeld = False
+    Input.OrbitPressed = True
+    Input.OrbitHeld = True
+    Input.DeltaX = 1
+    Input.DeltaY = 1
+    Changed = Motion.UpdatePointer(Controls, Zoom, Input)
+
+    Call Check(Controls.OrbitYaw = 1.0 And Controls.OrbitPitch = 1.0)
+
+    Input.DeltaX = 30
+    Input.DeltaY = 30
+    Changed = Motion.UpdatePointer(Controls, Zoom, Input)
+
+    Call Check(Controls.OrbitYaw = 31.0 And Controls.OrbitPitch = 31.0)
+
+    Input.DeltaY = 200
+    Changed = Motion.UpdatePointer(Controls, Zoom, Input)
+
+    Call Check(Controls.OrbitPitch = 75.0)
+
+    Input.Blocked = True
+    Input.OrbitHeld = False
+    Input.OrbitReleased = True
+    Input.DeltaX = 0
+    Input.DeltaY = 0
+    Changed = Motion.UpdatePointer(Controls, Zoom, Input)
+
+    Call Check(Not Controls.Orbiting)
+    Call Motion.Reset(Controls, Zoom)
+
+    Input.Blocked = False
+    Input.OrbitPressed = False
+    Input.OrbitReleased = False
+    Input.Wheel = 1
+    Changed = Motion.UpdatePointer(Controls, Zoom, Input)
+
+    Call Check(Zoom.Target = -24.0 And Zoom.Current = -16.0)
+    Call Motion.Advance(Controls, Zoom, 16)
+    Call Check(Zoom.Current < -16.0 And Zoom.Current > Zoom.Target)
+
+    PreviousZoom = Zoom.Current
+    Input.Wheel = -1
+    Changed = Motion.UpdatePointer(Controls, Zoom, Input)
+
+    Call Motion.Advance(Controls, Zoom, 16)
+    Call Check(Zoom.Current > PreviousZoom)
+
+    Input.Wheel = 1000
+    Changed = Motion.UpdatePointer(Controls, Zoom, Input)
+
+    Call Check(Zoom.Target = ToDouble(Motion.ZOOM_IN_LIMIT))
+    Call Motion.Reset(Controls, Zoom)
+    Call Check(Controls.PanX = 0.0 And Controls.OrbitYaw = 0.0 And Zoom.Current = -16.0)
+
+    Base = P.FromCamera(G.DefaultCamera())
+    Base.Position = P.Vector(0.0, 80.0, -300.0)
+    Base.Target = P.Vector(0.0, 40.0, 0.0)
+    View = Viewport.Create(400, 320)
+    Custom = Arena.Create(400, 320, 255, 80, 20, 80, 4)
+
+    Call Check(View.Ready And Custom.Ready And View.Floor.ReflectionsEnabled)
+    Call Check(Custom.LineCount <> View.Floor.LineCount)
+    Call Arena.Place(View.Floor, 0, -5, 20)
+    Call Check(View.Floor.FloorHeight = -5)
+    Call Arena.HandleKey(KEY_F, View.FloorVisible, View.GridVisible)
+    Call Check(Not View.FloorVisible And View.GridVisible)
+    Call Arena.HandleKey(KEY_G, View.FloorVisible, View.GridVisible)
+    Call Check(Not View.FloorVisible And Not View.GridVisible)
+    Call Arena.HandleKey(KEY_F, View.FloorVisible, View.GridVisible)
+    Call Check(View.FloorVisible And Not View.GridVisible)
+
+    View.BackgroundIndex = 0
+
+    For Index = 0 To 4
+
+        Call Check(View.BackgroundIndex = Index)
+
+        Ok = Viewport.BeginFrame(View, Base)
+        Live = P.AcceptedCamera()
+
+        Call Check(Ok And G.FrameActive3D())
+        Call Check(Abs(Live.FovDegrees - View.LiveCamera.FovDegrees) < 0.000001)
+        Call Check(Abs(Live.FovDegrees - Base.FovDegrees) < 0.000001)
+        Call Check(Viewport.Draw(View))
+        Call Check(Scene.EndScene())
+        Call Backdrop.Cycle(View.BackgroundIndex)
+    End For
+
+    Call Check(View.BackgroundIndex = 0)
+    Call Arena.Destroy(Custom)
+    Call Viewport.Destroy(View)
+    Call Check(Not View.Ready And Not View.Backgrounds.Ready And Not View.Floor.Ready)
+    Call G.ResetRenderer3D()
+
+End Sub

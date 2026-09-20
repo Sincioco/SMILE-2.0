@@ -746,6 +746,13 @@ Call Check(ViewerInput.ClassifyArrow(39, 37, 39, 38, 40, True) =
 Call Check(ViewerInput.ClassifyInspectorKey(
     KEY_SPACE, False, True, True, False, 0) =
     ViewerInput.INSPECTOR_KEY_TOGGLE_PAUSE)
+Call CheckNamed(ViewerInput.ClassifyInspectorKey(KEY_F, False, True, False, False, 0) =
+    ViewerInput.INSPECTOR_KEY_TOGGLE_FLOOR And
+    ViewerInput.ClassifyInspectorKey(KEY_G, False, True, False, False, 0) =
+    ViewerInput.INSPECTOR_KEY_TOGGLE_GRID And
+    ViewerInput.ClassifyInspectorKey(KEY_B, False, True, False, False, 0) =
+    ViewerInput.INSPECTOR_KEY_CYCLE_BACKGROUND,
+    "Arena keys remain independent while pose editing")
 Call Check(ViewerInput.ClassifyInspectorKey(
     KEY_R, False, False, True, False, 3) =
     ViewerInput.INSPECTOR_KEY_NONE)
@@ -817,7 +824,7 @@ Call Check(ViewerInput.ClassifyGizmoKey(
     KEY_G, True, True, 0, False, False, False) =
     ViewerInput.GIZMO_KEY_NONE)
 Call Check(ViewerInput.ClassifyGizmoKey(
-    KEY_G, True, True, 0, True, False, False) =
+    KEY_E, True, True, 0, True, False, False) =
     ViewerInput.GIZMO_KEY_MOVE)
 Call Check(ViewerInput.ClassifyGizmoKey(
     KEY_ENTER, True, True, 0, True, False, False) =
@@ -1612,8 +1619,8 @@ InspectorOperation = ViewerInspectorCommands.ApplyPartyPresentationAction(
     ViewerParty.POINTER_ACTION_TOGGLE_FLOOR,
     RenderingState, 5, EffectsState, CameraState, DragonState)
 
-Call CheckNamed(Not RenderingState.FloorVisible And Not RenderingState.GridVisible,
-    "Party floor action changes rendering state")
+Call CheckNamed(Not RenderingState.FloorVisible And RenderingState.GridVisible,
+    "Party floor action preserves independent grid visibility")
 
 InspectorOperation = ViewerInspectorCommands.ApplyPartyPresentationAction(
     ViewerParty.POINTER_ACTION_CYCLE_BACKGROUND,
@@ -2714,7 +2721,7 @@ InspectorOperation = ViewerInspectorCommands.ApplyPresentationAction(
     ViewerUi.INSPECTOR_ACTION_FLOOR,
     RenderingState, 5, EffectsState, DragonState)
 
-Call Check(Not RenderingState.FloorVisible And Not RenderingState.GridVisible)
+Call Check(Not RenderingState.FloorVisible And RenderingState.GridVisible)
 
 InspectorOperation = ViewerInspectorCommands.ApplyPresentationAction(
     ViewerUi.INSPECTOR_ACTION_FLOOR,

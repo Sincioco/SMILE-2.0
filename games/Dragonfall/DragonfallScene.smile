@@ -3,6 +3,11 @@ Module Dragonfall.Scene
 
 Option Explicit
 
+Import Smile.Simple3D.ArenaViewport3D As Viewport
+Import Smile.Simple3D.Arena3D As SharedArena
+Import Smile.Simple3D.ArenaCamera3D As ArenaMotion
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.PrecisionCamera3D As PreciseCamera
 Import Smile.Simple3D.Core As Core
 Import Smile.Simple3D.Character3D As Character3D
 Import Smile.Simple3D.Effects3D As Effects3D
@@ -28,7 +33,6 @@ Public Const SHOT_VICTORY = 10
 Public Const SHOT_BOSS_ENTRANCE = 11
 Public Const SHOT_IDLE_PARTY_BACK = 12
 
-Private Const ARENA_OBJECT_COUNT = 39
 Private Const HERO_PART_COUNT = 56
 Private Const PARTY_OBJECT_COUNT = 224
 Private Const HERO_FACE_PART_COUNT = 5
@@ -40,11 +44,11 @@ Private Const CINDERLING_OBJECT_COUNT = 90
 Private Const PARTICLE_OBJECT_COUNT = 35
 Private Const IMPACT_OBJECT_COUNT = 24
 Private Const RIG_TEMPLATE_COUNT = 8
-Private Const INITIAL_OBJECT_COUNT = 441
-Private Const BOSS_OBJECT_COUNT = 448
-Private Const INITIAL_MESH_COUNT = 48
-Private Const MATERIAL_COUNT = 24
-Private Const TEXTURE_COUNT = 6
+Private Const INITIAL_OBJECT_COUNT = 404
+Private Const BOSS_OBJECT_COUNT = 411
+Private Const INITIAL_MESH_COUNT = 11
+Private Const MATERIAL_COUNT = 22
+Private Const TEXTURE_COUNT = 7
 Private Const MINIMUM_OBJECT_HEADROOM = 64
 Private Const RIG_CUBE = 0
 Private Const RIG_SPHERE = 1
@@ -83,16 +87,12 @@ Private Dim Ready As Boolean
 Private Dim CinderlingsCreated As Boolean
 Private Dim DragonCreated As Boolean
 Private Dim Camera As Core.Camera3D
-Private Dim CosmicTexture As Core.Texture3D
 Private Dim DragonScaleTexture As Core.Texture3D
 Private Dim DragonWingTexture As Core.Texture3D
 Private Dim HeroClothTexture As Core.Texture3D
 Private Dim ForgedSteelTexture As Core.Texture3D
 Private Dim VfxTexture As Core.Texture3D
 Private Dim EmptyTexture As Core.Texture3D
-Private Dim FloorMaterial As Core.Material3D
-Private Dim GridMaterial As Core.Material3D
-Private Dim CosmicMaterial As Core.Material3D
 Private Dim StoneMaterial As Core.Material3D
 Private Dim BronzeMaterial As Core.Material3D
 Private Dim LavaMaterial As Core.Material3D
@@ -115,7 +115,7 @@ Private Dim DragonWingMaterial As Core.Material3D
 Private Dim DragonUnderbellyMaterial As Core.Material3D
 Private Dim ParticleMaterial As Core.Material3D
 Private Dim RigTemplates[8] As Core.Object3D
-Private Dim Arena[39] As Core.Object3D
+Private Dim Arena As Viewport.State
 Private Dim PartyParts[224] As Core.Object3D
 Private Dim PartyFaceParts[20] As Core.Object3D
 Private Dim DragonParts[97] As Core.Object3D
@@ -588,60 +588,9 @@ End Sub
 
 Private Sub CreateArena()
 
-    Dim LineIndex As Number
-    Dim ObjectIndex As Number
-    Dim Coordinate As Number
+    Arena = Viewport.Create(10000, 10000, 10.0, 24, 150, 255, 400, 20)
 
-    ''' Oversized near-black ground and emissive blue lines keep every camera
-    ''' frustum inside the grid, so orbiting and wide shots never reveal an edge.
-
-    Arena[0] = Graphics3D.CreatePlane3D(10000, 10000)
-    OperationAccepted = Graphics3D.SetObjectMaterial3D(Arena[0], FloorMaterial)
-
-    Call Graphics3D.SetObjectPosition(Arena[0], 0, -55, 30)
-
-    ObjectIndex = 1
-
-    For LineIndex = 0 To 16
-        Coordinate = -3200 + LineIndex * 400
-        Arena[ObjectIndex] = Graphics3D.CreateCube3D(100)
-
-        Call Configure(Arena[ObjectIndex], GridMaterial, 0, -51, Coordinate + 30, 9000, 3, 7)
-
-        ObjectIndex = ObjectIndex + 1
-    End For
-
-    For LineIndex = 0 To 16
-        Coordinate = -3200 + LineIndex * 400
-        Arena[ObjectIndex] = Graphics3D.CreateCube3D(100)
-
-        Call Configure(Arena[ObjectIndex], GridMaterial, Coordinate, -51, 30, 7, 3, 9000)
-
-        ObjectIndex = ObjectIndex + 1
-    End For
-
-    ''' Four distant textured walls surround the grid. Each wall is far beyond
-    ''' combat bounds and tall enough for low, wide, close-up, and orbit shots,
-    ''' creating a static cosmic panorama without adding runtime particles.
-
-    Arena[ObjectIndex] = Graphics3D.CreateCube3D(100)
-
-    Call Configure(Arena[ObjectIndex], CosmicMaterial, 4500, 1100, 30, 18, 2500, 9000)
-
-    ObjectIndex = ObjectIndex + 1
-    Arena[ObjectIndex] = Graphics3D.CreateCube3D(100)
-
-    Call Configure(Arena[ObjectIndex], CosmicMaterial, -4500, 1100, 30, 18, 2500, 9000)
-
-    ObjectIndex = ObjectIndex + 1
-    Arena[ObjectIndex] = Graphics3D.CreateCube3D(100)
-
-    Call Configure(Arena[ObjectIndex], CosmicMaterial, 0, 1100, 4530, 9000, 2500, 18)
-
-    ObjectIndex = ObjectIndex + 1
-    Arena[ObjectIndex] = Graphics3D.CreateCube3D(100)
-
-    Call Configure(Arena[ObjectIndex], CosmicMaterial, 0, 1100, -4470, 9000, 2500, 18)
+    Call SharedArena.Place(Arena.Floor, 0, -55, 30)
 
 End Sub
 
@@ -2268,15 +2217,11 @@ Private Function InitialResourcesReady() As Boolean
     Dim Index As Number
     Dim ResourcesReady As Boolean
 
-    ResourcesReady = (CosmicTexture.Handle <> 0 And
-        DragonScaleTexture.Handle <> 0 And
+    ResourcesReady = (DragonScaleTexture.Handle <> 0 And
         DragonWingTexture.Handle <> 0 And
         HeroClothTexture.Handle <> 0 And
         ForgedSteelTexture.Handle <> 0 And
         VfxTexture.Handle <> 0 And
-        FloorMaterial.Handle <> 0 And
-        GridMaterial.Handle <> 0 And
-        CosmicMaterial.Handle <> 0 And
         StoneMaterial.Handle <> 0 And
         BronzeMaterial.Handle <> 0 And
         LavaMaterial.Handle <> 0 And
@@ -2305,9 +2250,7 @@ Private Function InitialResourcesReady() As Boolean
         ResourcesReady = ResourcesReady And RigTemplates[Index].Handle <> 0 And RigTemplates[Index].MeshHandle <> 0
     End For
 
-    For Index = 0 To ARENA_OBJECT_COUNT - 1
-        ResourcesReady = ResourcesReady And Arena[Index].Handle <> 0 And Arena[Index].MeshHandle <> 0
-    End For
+    ResourcesReady = ResourcesReady And Arena.Ready
 
     For Index = 0 To PARTY_OBJECT_COUNT - 1
         ResourcesReady = ResourcesReady And PartyParts[Index].Handle <> 0
@@ -2634,11 +2577,6 @@ Public Function Initialize(StateHandle As Number) As Boolean
     DragonCreated = False
     State = StateHandle
     Camera = Graphics3D.DefaultCamera()
-    CosmicTexture = Graphics3D.LoadTexture3D(
-        "Assets\CosmicBackdrop.png",
-        Graphics3D.TEXTURE_FILTER_LINEAR,
-        Graphics3D.TEXTURE_WRAP_REPEAT
-    )
     DragonScaleTexture = Graphics3D.LoadTexture3D(
         "Assets\Textures\DragonScales.png",
         Graphics3D.TEXTURE_FILTER_LINEAR,
@@ -2665,19 +2603,6 @@ Public Function Initialize(StateHandle As Number) As Boolean
         Graphics3D.TEXTURE_WRAP_REPEAT
     )
 
-    FloorMaterial = Material(3, 7, 18, 0, False)
-    GridMaterial = Material(24, 126, 255, 90, False)
-    CosmicMaterial = Graphics3D.CreateMaterial3D(
-        CosmicTexture,
-        Graphics3D.MATERIAL_ALPHA_OPAQUE,
-        92,
-        96,
-        118,
-        100,
-        True,
-        32,
-        50
-    )
     StoneMaterial = Material(52, 55, 68, 0, False)
     BronzeMaterial = Material(205, 110, 38, 22, False)
     LavaMaterial = Material(255, 62, 7, 100, True)
@@ -2920,6 +2845,23 @@ Private Function CombatTextActive() As Boolean
 
 End Function
 
+Private Function ProjectArenaPoint(X As Number, Y As Number, Z As Number,
+    Width As Number, Height As Number) As BattleCamera.ProjectedPoint3D
+
+    Dim Point As PreciseCamera.ProjectedPoint
+    Dim Result As BattleCamera.ProjectedPoint3D
+
+    Point = PreciseCamera.ProjectViewerPoint(P.Vector(ToDouble(X), ToDouble(Y), ToDouble(Z)),
+        Arena.LiveCamera, Width, Height)
+    Result.X = ToNumber(Point.X)
+    Result.Y = ToNumber(Point.Y)
+    Result.Depth = ToNumber(Point.Depth)
+    Result.Visible = Point.Visible
+
+    Return Result
+
+End Function
+
 Private Function ProjectCombatText() As BattleCamera.ProjectedPoint3D
 
     Dim X As Number
@@ -2944,7 +2886,7 @@ Private Function ProjectCombatText() As BattleCamera.ProjectedPoint3D
     End If
 
     Rise = Max(0, Battle.VisualStep() - 29) * 4
-    ReturnValue = BattleCamera.ProjectWorldPoint(State, X, Y + Height + Rise, Z, 960, 540)
+    ReturnValue = ProjectArenaPoint( X, Y + Height + Rise, Z, 960, 540)
     Return ReturnValue
 
 End Function
@@ -4122,6 +4064,8 @@ Private Sub ApplyCameraView()
     Camera.NearPlane = 1
     Camera.FarPlane = 10000
 
+    Call Viewport.ComposeCamera(Arena, P.FromCamera(Camera))
+
 End Sub
 
 Private Sub UpdateCamera()
@@ -4150,14 +4094,14 @@ Private Function PointerHitsSphere(
     Dim DeltaX As Number
     Dim DeltaY As Number
 
-    Center = BattleCamera.ProjectWorldPoint(State, WorldX, WorldY, WorldZ, 960, 540)
+    Center = ProjectArenaPoint( WorldX, WorldY, WorldZ, 960, 540)
 
     If Not Center.Visible Then
         Return False
     End If
 
-    HorizontalEdge = BattleCamera.ProjectWorldPoint(State, WorldX + Radius, WorldY, WorldZ, 960, 540)
-    VerticalEdge = BattleCamera.ProjectWorldPoint(State, WorldX, WorldY + Radius, WorldZ, 960, 540)
+    HorizontalEdge = ProjectArenaPoint( WorldX + Radius, WorldY, WorldZ, 960, 540)
+    VerticalEdge = ProjectArenaPoint( WorldX, WorldY + Radius, WorldZ, 960, 540)
     PixelRadius = 12
 
     If HorizontalEdge.Visible Then
@@ -4233,49 +4177,15 @@ Public Function ArenaPointerAvailable(PointerX As Number, PointerY As Number) As
 End Function
 
 ''' Routes cross-target pointer input to the reusable camera override.
-Public Sub HandleCameraPointer(BlockedByInterface As Boolean, AdvancePausedReturn As Boolean)
-
-    Dim StartDrag As Boolean
-    Dim StartOrbit As Boolean
-    Dim WheelDelta As Number
+Public Sub HandleCameraPointer(BlockedByInterface As Boolean, AdvancePausedReturn As Boolean,
+    Optional Key As Number = 0)
 
     If Not Ready Then
         Return
     End If
 
-    StartDrag = (Pointer_Pressed(POINTER_PRIMARY) And
-        Not BlockedByInterface And
-        ArenaPointerAvailable(Pointer_X(), Pointer_Y()))
-    StartOrbit = (Pointer_Pressed(POINTER_MIDDLE) And
-        Not BlockedByInterface And
-        ArenaPointerAvailable(Pointer_X(), Pointer_Y()))
-    WheelDelta = 0
-
-    If (Not BlockedByInterface And
-        Pointer_Inside() And
-        Pointer_Y() >= 116 And
-        Pointer_Y() < 420) Then
-        WheelDelta = Pointer_Wheel_Delta()
-    End If
-
-    CameraInputAccepted = BattleCamera.UpdateManualInput(State,
-        StartDrag,
-        Pointer_Held(POINTER_PRIMARY),
-        Pointer_Released(POINTER_PRIMARY),
-        Pointer_Delta_X(),
-        Pointer_Delta_Y(),
-        WheelDelta)
-    CameraInputAccepted = BattleCamera.UpdateManualOrbitInput(State,
-        StartOrbit,
-        Pointer_Held(POINTER_MIDDLE),
-        Pointer_Released(POINTER_MIDDLE),
-        Pointer_Delta_X(),
-        Pointer_Delta_Y())
-
-    If AdvancePausedReturn Then
-        CameraInputAccepted = BattleCamera.UpdateManualReturnOnly(State, 1)
-    End If
-
+    Call Viewport.Update(Arena, Key, BlockedByInterface Or
+        Not ArenaPointerAvailable(Pointer_X(), Pointer_Y()))
     Call ApplyCameraView()
 
 End Sub
@@ -4284,7 +4194,10 @@ Public Function CameraOverrideActive() As Boolean
 
     Dim ReturnValue As Boolean
 
-    ReturnValue = Ready And BattleCamera.IsManualActive(State)
+    ReturnValue = (Ready And (Arena.Controls.Panning Or Arena.Controls.Orbiting Or
+        Arena.Controls.PanX <> 0.0 Or Arena.Controls.PanY <> 0.0 Or
+        Arena.Controls.OrbitYaw <> 0.0 Or Arena.Controls.OrbitPitch <> 0.0 Or
+        Arena.Zoom.Target <> ToDouble(ArenaMotion.DEFAULT_ZOOM)))
 
     Return ReturnValue
 
@@ -4294,7 +4207,7 @@ Public Function CameraDragging() As Boolean
 
     Dim ReturnValue As Boolean
 
-    ReturnValue = Ready And BattleCamera.IsManualDragging(State)
+    ReturnValue = Ready And (Arena.Controls.Panning Or Arena.Controls.Orbiting)
 
     Return ReturnValue
 
@@ -4395,7 +4308,7 @@ Private Sub ApplyResultOrbit(StepValue As Number)
     Dim OffsetY As Number
     Dim OffsetZ As Number
 
-    If BattleCamera.IsManualActive(State) Then
+    If CameraOverrideActive() Then
         Return
     End If
 
@@ -4710,7 +4623,7 @@ Private Sub UpdateActors()
         DragonOffsetY = Approach * 760 / 190 + Abs(Wing) * Approach / 190
         DragonOffsetZ = 0 - Approach * 920 / 190
 
-        If Not BattleCamera.IsManualActive(State) Then
+        If Not CameraOverrideActive() Then
             OperationAccepted = BattleCamera.FollowPoint(
                 State,
                 DRAGON_ROOT_X - 120 + DragonOffsetX,
@@ -4971,15 +4884,13 @@ Public Sub Draw()
 
     LastGeneration2ArinDrawn = False
     LastFrameReady = False
-    FrameReady = Graphics3D.Begin3D(Camera, 3, 2, 10)
+    FrameReady = Viewport.BeginFrame(Arena, P.FromCamera(Camera), False)
 
     If Not FrameReady Then
         Return
     End If
 
-    For Index = 0 To ARENA_OBJECT_COUNT - 1
-        FrameReady = Graphics3D.DrawObject3D(Arena[Index])
-    End For
+    FrameReady = Viewport.Draw(Arena) And FrameReady
 
     For Index = 0 To PARTY_OBJECT_COUNT - 1
         FrameReady = Graphics3D.DrawObject3D(PartyParts[Index])
@@ -5196,12 +5107,12 @@ Public Function CurrentCameraName() As Text
 
     ReturnValue = BattleCamera.CurrentShotName(State)
 
-    If BattleCamera.IsManualOrbiting(State) Then
+    If Arena.Controls.Orbiting Then
         ReturnValue = ReturnValue + " // PLAYER ORBIT"
-    Else If BattleCamera.IsManualDragging(State) Then
+    Else If CameraDragging() Then
         ReturnValue = ReturnValue + " // PLAYER CAMERA"
-    Else If BattleCamera.IsManualActive(State) Then
-        ReturnValue = ReturnValue + " // RETURNING"
+    Else If CameraOverrideActive() Then
+        ReturnValue = ReturnValue + " // PLAYER CAMERA"
     End If
 
     Return ReturnValue
@@ -5254,9 +5165,7 @@ Public Sub Shutdown()
         Call Graphics3D.DestroyObject3D(RigTemplates[Index])
     End For
 
-    For Index = 0 To ARENA_OBJECT_COUNT - 1
-        Call Graphics3D.DestroyObject3D(Arena[Index])
-    End For
+    Call Viewport.Destroy(Arena)
 
     Call Graphics3D.DestroyMaterial3D(ParticleMaterial)
     Call Graphics3D.DestroyMaterial3D(EnhancedVfxRibbonMaterial)
@@ -5282,15 +5191,11 @@ Public Sub Shutdown()
     Call Graphics3D.DestroyMaterial3D(LavaMaterial)
     Call Graphics3D.DestroyMaterial3D(BronzeMaterial)
     Call Graphics3D.DestroyMaterial3D(StoneMaterial)
-    Call Graphics3D.DestroyMaterial3D(CosmicMaterial)
-    Call Graphics3D.DestroyMaterial3D(GridMaterial)
-    Call Graphics3D.DestroyMaterial3D(FloorMaterial)
     Call Graphics3D.DestroyTexture3D(ForgedSteelTexture)
     Call Graphics3D.DestroyTexture3D(VfxTexture)
     Call Graphics3D.DestroyTexture3D(HeroClothTexture)
     Call Graphics3D.DestroyTexture3D(DragonWingTexture)
     Call Graphics3D.DestroyTexture3D(DragonScaleTexture)
-    Call Graphics3D.DestroyTexture3D(CosmicTexture)
     Call Graphics3D.DestroyTexture3D(EnhancedVfxTexture)
 
     Ready = False

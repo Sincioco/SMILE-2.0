@@ -1,5 +1,10 @@
 # Native Fire Lab
 
+The native arena uses the [shared Viewer arena library](../../docs/libraries/arena3d.md).
+F toggles Floor; G toggles Grid; B cycles the same five Viewer backgrounds.
+Left drag pans, middle drag orbits, wheel zooms smoothly, and right-click resets
+the camera. Grid color, spacing and dimensions remain library creation options.
+
 Arin consumes the canonical Viewer-exported calibration JSON through its generated
 asset. Saved equipment corrections use world axes, so the Arin adapter retains
 the Viewer's authoring facing and grounding when placing him in this Lab. Do not
@@ -106,9 +111,9 @@ available. Bare Alt no longer interrupts the frame loop in rebuilt native progra
 - Left drag pans; middle drag orbits; wheel zooms smoothly.
 - H Orbit, V Orbit, and Zoom sliders support hover-wheel adjustment and capture a drag until release, including outside the track.
 - Right-click resets view/settings and restarts Demo; sample mode starts at Torch. Reset View only resets the camera.
-- Space or P pauses/resumes. F toggles fire; R restarts the selected effect; Tab selects the next sequence.
+- Space or P pauses/resumes. O toggles fire; R restarts the selected effect; Tab selects the next sequence.
 - G cycles CPU/GPU/Auto; the quality button cycles Low/Medium/High.
-- B or BG cycles landscape, title bitmap, black, green and purple. Floor / Grid hides/shows both together. Right-click restores landscape and visible floor/grid.
+- B or BG cycles landscape, title bitmap, black, green and purple. F toggles Floor and G toggles Grid independently. E switches the simulation backend. Right-click resets the camera.
 - Ctrl toggles HDR/LDR; S toggles soft depth; D toggles heat distortion; O toggles turbulence; W toggles wind; 1 cycles debug layers.
 - Click the equivalent labeled UI buttons. Cyan selection shows enabled options; HDR On/LDR and requested mode/quality are named explicitly. Fire Status reports the actual backend/quality and actual scene AA sample count.
 

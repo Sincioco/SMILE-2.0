@@ -4,6 +4,8 @@ Module Smile.Tools.EarthLabUi
 Option Explicit
 
 Import Smile.Tools.EarthLabScene As Scene
+Import Smile.Simple3D.Arena3D As Arena
+Import Smile.Simple3D.ArenaCamera3D As ArenaCamera
 Import Smile.Simple3D.Graphics3D As G
 Import Smile.Simple3D.PrecisionCamera3D As Camera
 Import Smile.UI.Controls As UI
@@ -73,29 +75,17 @@ Public Sub Update(ByRef Value As Scene.State, Key As Number)
         Value.SpeedPercent = Min(400, Value.SpeedPercent + 25)
     End If
 
+    Call Arena.HandleKey(Key, Value.FloorVisible, Value.GridVisible)
+
     If Key = KEY_ENTER Or Pointer_Pressed(POINTER_SECONDARY) Then
-        Call Camera.ResetCameraControls(Value.Controls)
+        Call ArenaCamera.Reset(Value.Controls, Value.Zoom)
+
+        Value.Orbit = False
     End If
 
-    If Pointer_Y() > 150 And Pointer_Y() < Window_Height() - 60 Then
-
-        If Pointer_Held(POINTER_MIDDLE) Then
-
-            Value.Orbit = False
-            Value.Controls.OrbitYaw = Value.Controls.OrbitYaw + ToDouble(Pointer_Delta_X()) * 0.3
-            Value.Controls.OrbitPitch = Clamp(Value.Controls.OrbitPitch + ToDouble(Pointer_Delta_Y()) * 0.3, -60.0, 60.0)
-
-        Else If Pointer_Held(POINTER_PRIMARY) Then
-
-            Value.Orbit = False
-            Value.Controls.PanX = Clamp(Value.Controls.PanX - ToDouble(Pointer_Delta_X()) * 0.3, -250.0, 250.0)
-            Value.Controls.PanY = Clamp(Value.Controls.PanY + ToDouble(Pointer_Delta_Y()) * 0.3, -150.0, 150.0)
-
-        End If
-
-        Value.Controls.ZoomTarget = Clamp(Value.Controls.ZoomTarget -
-            ToDouble(Pointer_Wheel_Delta()) * 3.0, -30.0, 45.0)
-
+    If ArenaCamera.UpdatePointer(Value.Controls, Value.Zoom,
+        ArenaCamera.ReadPointer(Pointer_Y() <= 150 Or Pointer_Y() >= Window_Height() - 60)) Then
+        Value.Orbit = False
     End If
 
 End Sub
@@ -134,7 +124,7 @@ Public Sub Draw(ByRef Value As Scene.State)
     Draw Number Value.Earth.Effect.Dust.ActiveCount At 130, Bottom + 8 Size 12 Color Cyan
     Draw Text "D3D11 Backend" At 225, Bottom + 8 Size 12 Color Light_Gray
     Draw Number Value.Earth.Effect.Dust.EffectiveSimulation At 370, Bottom + 8 Size 12 Color Cyan
-    Draw Text "LMB Pan / MMB Orbit / Wheel Zoom / RMB Reset / Space Pause / Tab Effect / +/- Speed / B Background" At 20, Bottom + 31 Size 11 Color Light_Gray
+    Draw Text "LMB Pan / MMB Orbit / Wheel Zoom / RMB Reset / Space Pause / Tab Effect / +/- Speed / F Floor / G Grid / B Background" At 20, Bottom + 31 Size 11 Color Light_Gray
 
     If Not Value.Ready Or Value.ErrorCode <> 0 Then
         Draw Text "Effect needs attention" At 880, 118 Size 13 Color Red

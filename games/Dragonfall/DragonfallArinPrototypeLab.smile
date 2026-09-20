@@ -2,6 +2,9 @@ Option Explicit
 
 Import Dragonfall.VisualActor As VisualActor
 Import Smile.Simple3D.Character3D As Character3D
+Import Smile.Simple3D.ArenaViewport3D As Viewport
+Import Smile.Simple3D.Arena3D As SharedArena
+Import Smile.Simple3D.Precision3D As ArenaPrecision
 Import Smile.Simple3D.Core As Core
 Import Smile.Simple3D.Graphics3D As Graphics3D
 Import Smile.Simple3D.Scene3D As Scene3D
@@ -9,7 +12,7 @@ Import Smile.Simple3D.Scene3D As Scene3D
 Dim Actor As VisualActor.Actor
 Dim Camera As Core.Camera3D
 Dim ClassicFallback As Core.Object3D
-Dim Floor As Core.Object3D
+Dim Floor As Viewport.State
 Dim Options As VisualActor.CreateOptions
 Dim Ready As Boolean
 Dim Running As Boolean
@@ -30,6 +33,8 @@ PreviousTime = Timer()
 Do
 
     Get Key Key
+
+    Call Viewport.Update(Floor, Key, Pointer_Y() < 100)
 
     If Key = KEY_ESCAPE Then
 
@@ -57,11 +62,11 @@ Do
     Camera.Target.X = 0
     Camera.Target.Y = 6
     Camera.Target.Z = 5
-    Ready = Scene3D.Begin(Camera, 3, 6, 16) And Ready
+    Ready = Viewport.BeginFrame(Floor, ArenaPrecision.FromCamera(Camera), True) And Ready
 
     If Ready Then
 
-        Ready = Graphics3D.DrawObject3D(Floor)
+        Ready = Viewport.Draw(Floor)
         Ready = VisualActor.Draw(Actor) And Ready
         Ready = Scene3D.EndScene() And Ready
 
@@ -80,11 +85,10 @@ Call DestroyPrototype()
 Sub LoadPrototype()
 
     Camera = Graphics3D.DefaultCamera()
-    Floor = Graphics3D.CreatePlane3D(42, 25)
+    Floor = Viewport.Create(42, 40, 0.04, 24, 150, 255, 2, 1)
     ClassicFallback = Graphics3D.CreateCube3D(80)
 
-    Call Graphics3D.SetObjectPosition(Floor, 0, 0, 5)
-    Call Graphics3D.SetObjectColor(Floor, 24, 31, 48)
+    Call SharedArena.Place(Floor.Floor, 0, 0, 5)
     Call Graphics3D.SetObjectColor(ClassicFallback, 232, 190, 68)
 
     Ready = Scene3D.SetQuality(Scene3D.QUALITY_HIGH)
@@ -136,7 +140,7 @@ Sub DestroyPrototype()
     Call VisualActor.Destroy(Actor)
     Call Character3D.Shutdown()
     Call Graphics3D.DestroyObject3D(ClassicFallback)
-    Call Graphics3D.DestroyObject3D(Floor)
+    Call Viewport.Destroy(Floor)
     Call VisualActor.Shutdown()
     Call Graphics3D.ResetRenderer3D()
 

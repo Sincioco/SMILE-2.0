@@ -359,6 +359,13 @@ and Orin's zero keys (`13AE135FDA40302CB5A4B0146D7103A2ED5346AAEEBB3852AF6DD3C39
 
 ## On Hold — Studio And Web Adoption Record
 
+September 20 shared arena work adopts `Arena3D`, `ArenaCamera3D`, `ArenaBackdrop3D`
+and `ArenaViewport3D` on native consumers. When the hold is lifted, adopt these same
+library owners and the two Viewer background assets; verify F Floor, G Grid, the
+five-state B sequence, fractional pan/orbit and eased zoom in Chrome. Do not restore
+private camera or palette copies. No Studio feature work or Web build, publication
+or browser acceptance was performed for this native milestone.
+
 September 20 native pose/music work retired obsolete generated Arin calibration
 copies, including held Studio/Web output copies. Rebuild those consumers from the
 canonical Viewer-exported JSON when their hold is lifted; do not restore the old

@@ -1,16 +1,17 @@
 Option Explicit
 
+Import Smile.Simple3D.ArenaViewport3D As Viewport
+Import Smile.Simple3D.Arena3D As SharedArena
+Import Smile.Simple3D.Precision3D As ArenaPrecision
 Import Smile.Simple3D.Core As Core
 Import Smile.Simple3D.Graphics3D As Graphics3D
-Import Smile.Simple3D.Interaction As Interaction
 Import Smile.Simple3D.Scene3D As Scene3D
 Import Smile.Simple3D.Character3D As Character3D
 
 Dim BaseCamera As Core.Camera3D
 Dim Camera As Core.Camera3D
-Dim CameraControls As Core.CameraControl3D
 Dim Hero As Character3D.Actor
-Dim Ground As Core.Object3D
+Dim Ground As Viewport.State
 Dim EmissiveRing As Core.Object3D
 Dim SimpleCube As Core.Object3D
 Dim MaskModel As Core.Model3D
@@ -45,6 +46,8 @@ PreviousTime = Timer()
 Do
 
     Get Key Key
+
+    Call Viewport.Update(Ground, Key, Pointer_Y() < 100)
 
     If Key = KEY_ESCAPE Then
 
@@ -103,19 +106,17 @@ Do
     PreviousTime = CurrentTime
 
     FrameReady = Character3D.Update(Hero, FrameMilliseconds)
-    FrameReady = Interaction.UpdateCameraControlsFromPointer(CameraControls, True, True, True)
-    FrameReady = Interaction.AdvanceCameraControls(CameraControls, 1) And FrameReady
-    Camera = Interaction.ApplyCameraControls(BaseCamera, CameraControls)
+    Camera = BaseCamera
     Angle = (Angle + 1) Mod 360
 
     Call Graphics3D.SetObjectRotation(EmissiveRing, 72, Angle, 0)
     Call Graphics3D.SetObjectRotation(MaskObject, 0, 0 - Angle, 0)
 
-    FrameReady = Scene3D.Begin(Camera, 3, 6, 16)
+    FrameReady = Viewport.BeginFrame(Ground, ArenaPrecision.FromCamera(Camera), True)
 
     If FrameReady Then
 
-        FrameReady = Graphics3D.DrawObject3D(Ground)
+        FrameReady = Viewport.Draw(Ground)
         FrameReady = Character3D.Draw(Hero) And FrameReady
         FrameReady = Graphics3D.DrawObject3D(EmissiveRing) And FrameReady
         FrameReady = Graphics3D.DrawObject3D(MaskObject) And FrameReady
@@ -144,9 +145,7 @@ Sub LoadLab()
     BaseCamera.Target.Y = 32
     BaseCamera.Target.Z = 45
 
-    Call Interaction.ResetCameraControls(CameraControls)
-
-    Ground = Graphics3D.CreatePlane3D(330, 240)
+    Ground = Viewport.Create(330, 240, 1.0, 24, 150, 255, 40, 2)
     EmissiveRing = Graphics3D.CreateTorus3D(30, 10)
     SimpleCube = Graphics3D.CreateCube3D(42)
     GroundMaterial = Graphics3D.CreatePbrMaterial3D(
@@ -190,10 +189,9 @@ Sub LoadLab()
         240,
         360
     ) And FrameReady
-    FrameReady = Graphics3D.SetObjectMaterial3D(Ground, GroundMaterial) And FrameReady
     FrameReady = Graphics3D.SetObjectMaterial3D(EmissiveRing, EmissiveMaterial) And FrameReady
 
-    Call Graphics3D.SetObjectPosition(Ground, 0, -2, 55)
+    Call SharedArena.Place(Ground.Floor, 0, -2, 55)
     Call Graphics3D.SetObjectPosition(EmissiveRing, -82, 36, 38)
     Call Graphics3D.SetObjectPosition(SimpleCube, 82, 20, 46)
     Call Graphics3D.SetObjectColor(SimpleCube, 112, 212, 255)
@@ -317,7 +315,7 @@ End Sub
 Sub DestroyLab()
 
     Call Character3D.Shutdown()
-    Call Graphics3D.DestroyObject3D(Ground)
+    Call Viewport.Destroy(Ground)
     Call Graphics3D.DestroyObject3D(EmissiveRing)
     Call Graphics3D.DestroyObject3D(SimpleCube)
     Call Graphics3D.DestroyObjectInstance3D(MaskObject)

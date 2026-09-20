@@ -193,7 +193,7 @@ try {
         'Const CALIBRATION_MAX_CLIPS = ViewerCalibration.MAX_CLIPS',
         'Function ApplyActorPresentationCommand(',
         'ViewerEffects.AdvanceScene(',
-        'Const ZOOM_IN_LIMIT = -144',
+        'Const ZOOM_IN_LIMIT = ArenaCamera.ZOOM_IN_LIMIT',
         'Window_Width()',
         'Window_Height()',
         'Call ViewerLifecycle.LoadViewer(')) {
@@ -234,7 +234,7 @@ try {
         'Call ViewerCamera.KeepAboveGround(ViewerCameraState, 0)' `
         'Solid-floor camera comfort'
     foreach ($contract in @(
-        'ToDouble(PointerDeltaX) / ToDouble(OrbitDivisor)',
+        'ArenaCamera.ApplyDrag(Value.Controls, OrbitActive, PanActive,',
         'PrecisionCamera.AdvanceZoom(',
         'PrecisionCamera.ApplyScreenSpaceCameraControls(',
         'PrecisionCamera.KeepCursorAnchor(',
@@ -428,7 +428,7 @@ try {
         'ViewerRendering.CycleMaterialInspection(Rendering)',
         'ViewerRendering.CycleSocketDisplay(Rendering)',
         'ViewerRendering.CycleBackground(Rendering, BackgroundCount)',
-        'ViewerRendering.ToggleFloorAndGrid(Rendering)',
+        'ViewerRendering.ToggleFloor(Rendering)',
         'ViewerEffects.ToggleLightningPause(Effects)',
         'ViewerEffects.ToggleFlamePause(Effects)',
         'ViewerActors.ToggleSwordVisibility(Equipment)',

@@ -1,0 +1,121 @@
+''' A caller-owned arena for new games/tools and simple existing preview programs.
+Module Smile.Simple3D.ArenaViewport3D
+
+Option Explicit
+
+Import Smile.Simple3D.Arena3D As Arena
+Import Smile.Simple3D.ArenaCamera3D As Motion
+Import Smile.Simple3D.ArenaBackdrop3D As Backdrop
+Import Smile.Simple3D.PrecisionCamera3D As Camera
+Import Smile.Simple3D.Precision3D As P
+
+Public Type State
+    Floor As Arena.ArenaFloor
+    Backgrounds As Backdrop.State
+    Controls As Camera.Controls
+    Zoom As Camera.ZoomState
+    LiveCamera As P.Camera3D
+    FloorVisible As Boolean
+    GridVisible As Boolean
+    BackgroundIndex As Number
+    WorldScale As Double
+    PreviousTime As Number
+    Ready As Boolean
+End Type
+
+Public Function Create(Width As Number, Depth As Number,
+    Optional WorldScale As Double = 1.0,
+    Optional GridRed As Number = 24, Optional GridGreen As Number = 150,
+    Optional GridBlue As Number = 255, Optional TileSize As Number = 40,
+    Optional LineThickness As Number = 2) As State
+
+    Dim Result As State
+
+    Result.Floor = Arena.Create(Width, Depth, GridRed, GridGreen, GridBlue, TileSize, LineThickness)
+    Result.Backgrounds = Backdrop.Create()
+    Result.FloorVisible = True
+    Result.GridVisible = True
+    Result.BackgroundIndex = Backdrop.DEFAULT_BACKGROUND
+    Result.WorldScale = WorldScale
+    Result.PreviousTime = Timer()
+    Result.Ready = Result.Floor.Ready And Result.Backgrounds.Ready And WorldScale > 0.0
+
+    Call Motion.Reset(Result.Controls, Result.Zoom)
+
+    Return Result
+
+End Function
+
+''' Host UI blocks only new gestures; an existing drag always receives its release.
+Public Sub Update(ByRef Value As State, Key As Number, Optional Blocked As Boolean = False)
+
+    Dim Changed As Boolean
+    Dim CurrentTime As Number
+
+    Call Arena.HandleKey(Key, Value.FloorVisible, Value.GridVisible)
+
+    If Key = KEY_B Then
+        Call Backdrop.Cycle(Value.BackgroundIndex)
+    End If
+
+    If Not Blocked And Pointer_Pressed(POINTER_SECONDARY) Then
+        Call Motion.Reset(Value.Controls, Value.Zoom)
+    End If
+
+    Changed = Motion.UpdatePointer(Value.Controls, Value.Zoom, Motion.ReadPointer(Blocked),
+        360.0 * Value.WorldScale, 220.0 * Value.WorldScale, Value.WorldScale)
+    CurrentTime = Timer()
+
+    Call Motion.Advance(Value.Controls, Value.Zoom, CurrentTime - Value.PreviousTime)
+
+    Value.PreviousTime = CurrentTime
+
+End Sub
+
+''' BaseCamera describes the intended reset framing, independent of the zoom slider offset.
+Public Sub ComposeCamera(ByRef Value As State, BaseCamera As P.Camera3D)
+
+    BaseCamera.FovDegrees = BaseCamera.FovDegrees - ToDouble(Motion.DEFAULT_ZOOM)
+    Value.LiveCamera = Motion.Compose(BaseCamera, Value.Controls)
+
+    If Value.FloorVisible Then
+        Call Camera.KeepCameraAboveGround(Value.LiveCamera, ToDouble(Value.Floor.FloorHeight + 1))
+    End If
+
+End Sub
+
+Public Function BeginFrame(ByRef Value As State, BaseCamera As P.Camera3D,
+    Optional UseScene As Boolean = True) As Boolean
+
+    Dim Result As Boolean
+
+    Call ComposeCamera(Value, BaseCamera)
+
+    Result = Arena.ConfigureForFrame(Value.Floor, Value.FloorVisible, True)
+    Result = P.SetCamera(Value.LiveCamera) And Result
+    Result = Backdrop.BeginFrame(Value.Backgrounds, Value.BackgroundIndex, UseScene) And Result
+
+    Return Result
+
+End Function
+
+Public Function Draw(ByRef Value As State) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Arena.Draw(Value.Floor, Value.FloorVisible, Value.GridVisible)
+
+    Return Result
+
+End Function
+
+Public Sub Destroy(ByRef Value As State)
+
+    Call Arena.Destroy(Value.Floor)
+    Call Backdrop.Destroy(Value.Backgrounds)
+
+    Value.Ready = False
+
+End Sub
+
+End Module

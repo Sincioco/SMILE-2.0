@@ -1,4 +1,4 @@
-''' One arena floor/grid recipe shared by native tools; only the grid tint varies.
+''' The Character Viewer arena recipe, reusable by games, tools and examples.
 Module Smile.Simple3D.Arena3D
 
 Option Explicit
@@ -21,9 +21,10 @@ Public Type ArenaFloor
 End Type
 
 Public Function Create(Width As Number, Depth As Number,
-    RedValue As Number, GreenValue As Number, BlueValue As Number,
+    Optional RedValue As Number = 24, Optional GreenValue As Number = 150,
+    Optional BlueValue As Number = 255,
     Optional TileSize As Number = 40, Optional LineThickness As Number = 2,
-    Optional Reflective As Boolean = False) As ArenaFloor
+    Optional Reflective As Boolean = True) As ArenaFloor
 
     Dim Result As ArenaFloor
     Dim EmptyTexture As Core.Texture3D
@@ -161,6 +162,27 @@ End Function
 Public Sub SetReflectionsEnabled(ByRef Value As ArenaFloor, Enabled As Boolean)
 
     Value.ReflectionsEnabled = Enabled
+
+End Sub
+
+''' Floor and grid visibility are independent, including when the floor is hidden.
+Public Sub HandleKey(Key As Number, ByRef ShowFloor As Boolean, ByRef ShowGrid As Boolean)
+
+    If Key = KEY_F Then
+        ShowFloor = Not ShowFloor
+    Else If Key = KEY_G Then
+        ShowGrid = Not ShowGrid
+    End If
+
+End Sub
+
+''' Place an arena without moving the actors or changing the world's unit scale.
+Public Sub Place(ByRef Value As ArenaFloor, X As Number, FloorY As Number, Z As Number)
+
+    Value.FloorHeight = FloorY
+
+    Call Graphics3D.SetObjectPosition(Value.Floor, X, FloorY, Z)
+    Call Graphics3D.SetObjectPosition(Value.Grid, X, FloorY + 1, Z)
 
 End Sub
 
