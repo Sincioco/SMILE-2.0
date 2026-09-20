@@ -152,11 +152,53 @@ Public Sub ApplyCloseUp(ByRef Live As P.Camera3D, Zoom As Double,
 
 End Sub
 
+''' Viewer shot policy: world-up orbit, pole limits and pan in the live camera basis.
+Public Function ComposeOrbit(Base As P.Camera3D, Controls As Camera.Controls,
+    Optional MinimumFov As Double = 18.0) As P.Camera3D
+
+    Dim Result As P.Camera3D
+    Dim Offset As P.Vector3
+    Dim Forward As P.Vector3
+    Dim RightValue As P.Vector3
+    Dim UpValue As P.Vector3
+    Dim Pan As P.Vector3
+    Dim Distance As Double
+    Dim Horizontal As Double
+    Dim Yaw As Double
+    Dim Pitch As Double
+    Dim Valid As Boolean
+
+    Offset = M.Subtract(Base.Position, Base.Target)
+    Distance = Max(0.01, M.Length(Offset))
+    Horizontal = Sqrt(Offset.X * Offset.X + Offset.Z * Offset.Z)
+    Yaw = Atan2(Offset.X, Offset.Z) - M.Radians(Controls.OrbitYaw)
+    Pitch = Clamp(Atan2(Offset.Y, Horizontal) + M.Radians(Controls.OrbitPitch), -1.48, 1.48)
+    Offset = P.Vector(Sin(Yaw) * Cos(Pitch) * Distance,
+        Sin(Pitch) * Distance, Cos(Yaw) * Cos(Pitch) * Distance)
+    Valid = M.TryNormalize(M.Scale(Offset, -1.0), Forward)
+    Valid = M.TryNormalize(M.Cross(P.Vector(0.0, 1.0, 0.0), Forward), RightValue) And Valid
+
+    If Not Valid Then
+        Return Base
+    End If
+
+    UpValue = M.Cross(Forward, RightValue)
+    Pan = M.Add(M.Scale(RightValue, Controls.PanX), M.Scale(UpValue, Controls.PanY))
+    Result = Base
+    Result.Target = M.Add(Base.Target, Pan)
+    Result.Position = M.Add(Result.Target, Offset)
+    Result.UpDirection = P.Vector(0.0, 1.0, 0.0)
+    Result.FovDegrees = Clamp(Base.FovDegrees + Controls.Zoom, MinimumFov, 120.0)
+
+    Return Result
+
+End Function
+
 Public Function Compose(Base As P.Camera3D, Controls As Camera.Controls) As P.Camera3D
 
     Dim Result As P.Camera3D
 
-    Result = Camera.ApplyScreenSpaceCameraControls(Base, Controls)
+    Result = ComposeOrbit(Base, Controls)
 
     Call ApplyCloseUp(Result, Controls.Zoom)
 

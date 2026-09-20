@@ -5,6 +5,7 @@ Import Smile.UI.Controls As UI
 Import Smile.Simple3D.Character3D As Character3D
 Import Smile.Simple3D.CharacterViewer As CharacterViewer
 Import Smile.Simple3D.PrecisionCamera3D As PrecisionCamera
+Import Smile.Simple3D.ArenaCamera3D As ArenaCamera
 Import Smile.Simple3D.Graphics3D As Graphics3D
 Import Smile.Simple3D.Interaction As Interaction
 Import Smile.Tools.OrinStorm As OrinStorm
@@ -595,7 +596,7 @@ Call Check(CameraState.Zoom.Target = DirectZoom.Target)
 Call Check(CameraState.Controls.Zoom = DirectZoom.Current)
 
 CameraState.Base = Precision3D.FromCamera(Graphics3D.DefaultCamera())
-DirectCamera = PrecisionCamera.ApplyScreenSpaceCameraControls(
+DirectCamera = ArenaCamera.ComposeOrbit(
     CameraState.Base, CameraState.Controls)
 
 Call ViewerCamera.Compose(CameraState, False)

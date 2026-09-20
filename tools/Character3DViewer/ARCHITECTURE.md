@@ -92,6 +92,16 @@ No compiler/runtime, dependency, state-owner, guardrail or baseline changes.
 
 ## Shared arena adoption
 
+The normal camera and authored-shot camera now delegate roll-free orbit composition
+to `ArenaCamera3D.ComposeOrbit`. This is the previous `ComposeShot` world-up spherical
+policy, including its ±1.48-radian final elevation bound, extracted into the shared
+library after Sin Star I exposed roll with diagonal base cameras. Viewer-specific
+fit, cursor anchoring, close-up application and the authored-shot minimum FOV remain
+with their existing callers. ViewerCamera loses 24 net lines; the library gains 42.
+The architecture contract requires the shared call; no size baseline is raised.
+Native `Arena3DTests` covers the reported angle regression (ten pre-fix failures,
+67 passing checks afterward). Saved camera and pose formats remain unchanged.
+
 The native Viewer now consumes `Smile.Simple3D.Arena3D`, `ArenaCamera3D` and
 `ArenaBackdrop3D` as the shared visual/interaction authority. `ArenaViewport3D`
 composes those owners for other applications. The library depends on no Viewer

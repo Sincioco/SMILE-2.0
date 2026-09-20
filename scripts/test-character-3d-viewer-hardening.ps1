@@ -236,7 +236,7 @@ try {
     foreach ($contract in @(
         'ArenaCamera.ApplyDrag(Value.Controls, OrbitActive, PanActive,',
         'PrecisionCamera.AdvanceZoom(',
-        'PrecisionCamera.ApplyScreenSpaceCameraControls(',
+        'ArenaCamera.ComposeOrbit(',
         'PrecisionCamera.KeepCursorAnchor(',
         'Public Type PointerInput',
         'Public Function CreatePointerInput(',

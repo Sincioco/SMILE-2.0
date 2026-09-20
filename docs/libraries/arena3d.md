@@ -15,6 +15,13 @@ middle drag orbits, and the wheel changes a bounded, elapsed-time eased zoom tar
 Fractional movement remains Double. Captured drags release over UI panels; panels
 block new gestures. Pointer pitch is bounded to ±75 degrees. Scene scale and pan
 bounds are caller inputs. Reset returns the camera to its initial framing.
+Orbit composition uses the Viewer's authored-shot policy: yaw around world Y,
+world-up orientation and final elevation clamped to ±1.48 radians (about 84.8°).
+This final bound includes the base camera elevation, so diagonal/rear base views
+cannot introduce roll or cross a pole even when a caller supplies larger controls.
+`ComposeOrbit` supplies this shared calculation without close-up distance easing;
+`Compose` adds that easing for ordinary arena consumers. The Viewer calls the same
+operation for normal and authored-shot views, preserving its shot FOV range.
 Viewer-specific responsive fit, calibration cursor anchoring, numeric pose editing
 and authored battle cameras remain in the Viewer.
 
@@ -125,3 +132,19 @@ the maintenance boundary; new programs must not copy private camera/palette code
 - Arin and Orin calibration exports match their canonical JSON without changing
   bytes. Studio and Web remain held; no .NET or VSIX rebuild is required for this
   source-library adoption. Existing native consumers must be recompiled to adopt it.
+
+## Constrained diagonal orbit correction
+
+Sin Star I exposed roll when the old composition rotated a diagonal base camera
+and its up vector around fixed world Euler axes. Sharing pointer pitch limits was
+insufficient. The existing Viewer shot algorithm now lives in `ArenaCamera3D`;
+both Viewer routes and ordinary arena composition delegate there. No new mutable
+state, dependency, runtime feature or architecture exception is introduced.
+The shared owner gains 42 net lines; ViewerCamera loses 24 net lines. The source
+contract check now requires the shared call rather than the superseded helper.
+
+The added diagonal/rear-camera regression failed ten checks before the fix;
+all 67 arena checks pass afterward. It covers four yaw quadrants, upright world
+vertical projection, both pitch extremes, existing slow/moderate input packets,
+pan, eased zoom, reset and floor/background controls. Physical middle-button
+drag acceptance remains a user check; native automation cannot inject that drag.

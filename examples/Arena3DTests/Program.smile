@@ -8,6 +8,7 @@ Import Smile.Simple3D.PrecisionCamera3D As Camera
 Import Smile.Simple3D.Precision3D As P
 Import Smile.Simple3D.Graphics3D As G
 Import Smile.Simple3D.Scene3D As Scene
+Import Smile.Simple3D.Core As Core
 
 Dim Failures As Number
 Dim Checks As Number
@@ -50,6 +51,9 @@ Sub RunChecks()
     Dim Ok As Boolean
     Dim Index As Number
     Dim PreviousZoom As Double
+    Dim Above As P.Vector3
+    Dim CenterPixel As Core.ProjectedPoint3D
+    Dim AbovePixel As Core.ProjectedPoint3D
 
     Call Motion.Reset(Controls, Zoom)
 
@@ -137,6 +141,38 @@ Sub RunChecks()
     Call Check(Zoom.Target = ToDouble(Motion.ZOOM_IN_LIMIT))
     Call Motion.Reset(Controls, Zoom)
     Call Check(Controls.PanX = 0.0 And Controls.OrbitYaw = 0.0 And Zoom.Current = -16.0)
+
+    ''' Diagonal rear-facing Battle camera must never roll or cross an orbit pole.
+
+    Base = P.FromCamera(G.DefaultCamera())
+    Base.Position = P.Vector(760.0, 310.0, 440.0)
+    Base.Target = P.Vector(-70.0, 115.0, 10.0)
+
+    For Index = 0 To 3
+
+        Controls.OrbitYaw = ToDouble(Index * 90)
+        Controls.OrbitPitch = 45.0
+        Live = Motion.Compose(Base, Controls)
+        Above = Live.Target
+        Above.Y = Above.Y + 40.0
+        CenterPixel = Camera.ProjectPixel(Live.Target, Live, 640, 480)
+        AbovePixel = Camera.ProjectPixel(Above, Live, 640, 480)
+
+        Call Check(Abs(Live.UpDirection.X) < 0.000001 And Abs(Live.UpDirection.Z) < 0.000001)
+        Call Check(Live.UpDirection.Y > 0.0)
+        Call Check(Abs(CenterPixel.X - AbovePixel.X) <= 1 And AbovePixel.Y < CenterPixel.Y)
+    End For
+
+    Controls.OrbitPitch = 180.0
+    Live = Motion.Compose(Base, Controls)
+
+    Call Check(Live.Position.Y > Live.Target.Y And Live.UpDirection.Y > 0.0)
+
+    Controls.OrbitPitch = -180.0
+    Live = Motion.Compose(Base, Controls)
+
+    Call Check(Live.Position.Y < Live.Target.Y And Live.UpDirection.Y > 0.0)
+    Call Motion.Reset(Controls, Zoom)
 
     Base = P.FromCamera(G.DefaultCamera())
     Base.Position = P.Vector(0.0, 80.0, -300.0)
