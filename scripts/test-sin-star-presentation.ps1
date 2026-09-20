@@ -1,5 +1,5 @@
 [CmdletBinding()]
-param()
+param([switch]$BattleOnly)
 
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
@@ -15,6 +15,9 @@ if ($presentationSource -notmatch '(?s)Public Sub Enter\(.+?Preview = New Viewer
 }
 [xml]$project = Get-Content -LiteralPath (Join-Path $gameRoot 'SinStarI.smileproj') -Raw
 $project.SmileProject.PropertyGroup.ApplicationId = 'smile.tests.sin-star-presentation'
+$battleTests = $project.CreateElement('SmileSource')
+$battleTests.SetAttribute('Include', 'Battle/BattlePresentationTests.smile')
+$null = $project.SmileProject.ItemGroup.AppendChild($battleTests)
 # Keep the brief native fixture beside the chat when the game has saved bounds.
 function Get-StorageHash([string]$Value) {
     [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData(
@@ -67,6 +70,32 @@ $viewerMusicText = $viewerMusicText.Replace('Stop Music', 'Print "MUSIC_UNEXPECT
 [IO.File]::WriteAllText((Join-Path $testRoot 'ViewerMusic.smile'), $viewerMusicText)
 $viewerMusicEntry.SetAttribute('Include', 'ViewerMusic.smile')
 $startup = Get-Content -LiteralPath (Join-Path $testRoot 'Program.smile') -Raw
+if ($BattleOnly) {
+    $startup = @'
+Option Explicit
+
+Import SinStarI.TitleScreen As TitleScreen
+Import SinStarI.BattlePresentationTests As BattleTests
+
+Dim Passed As Boolean
+
+Game Window "Sin Star I Battle Check" Size 1280 By 720
+
+Passed = True
+
+Do
+    Call BattleTests.Run(Passed)
+Loop Until True
+
+If Passed Then
+    Print "Sin Star I presentations passed."
+Else
+    Print "Sin Star I battle FAILED."
+End If
+
+End Program
+'@
+}
 $startup = $startup.Replace('Import SinStarI.TitleScreen As TitleScreen',
     "Import SinStarI.TitleScreen As TitleScreen`nImport SinStarI.BackgroundMusic As BackgroundMusic")
 $startup = $startup.Replace('Passed = True', @'
@@ -76,8 +105,7 @@ Call BackgroundMusic.SelectTrack("")
 Call BackgroundMusic.SelectTrack("Unassigned")
 Passed = True
 '@)
-$startup = $startup.Replace('Print "Sin Star I presentations passed."',
-    "Call BackgroundMusic.Shutdown()`nPrint `"Sin Star I presentations passed.`"")
+$startup = $startup.Replace('If Passed', "Call BackgroundMusic.Shutdown()`n`nIf Passed")
 [IO.File]::WriteAllText((Join-Path $testRoot 'Program.smile'), $startup)
 $workflowEntry = $project.SmileProject.ItemGroup.SmileSource | Where-Object { $_.Include.EndsWith('ViewerWorkflow.smile') }
 $workflowText = Get-Content -LiteralPath (Join-Path $root 'tools\Character3DViewer\ViewerWorkflow.smile') -Raw
@@ -412,20 +440,25 @@ $workflowText = $workflowText.Replace('End Class', $bendingFixture + 'End Class'
 $workflowEntry.SetAttribute('Include', 'ViewerWorkflow.smile')
 $projectPath = Join-Path $testRoot 'PresentationTests.smileproj'
 $project.Save($projectPath)
-$exe = Join-Path $testRoot 'PresentationTests.exe'
+$outputRoot = Join-Path $testRoot 'bin'
+$exe = Join-Path $outputRoot 'PresentationTests.exe'
 & (Join-Path $root 'artifacts\compiler\smilec.exe') --project $projectPath --target windows-x64 --graphics DirectX -o $exe
 if ($LASTEXITCODE -ne 0) { throw 'Presentation regression compilation failed.' }
 $actual = & (Join-Path $PSScriptRoot 'run-bounded-test.cmd') 60 $exe
+$actual | Set-Content -LiteralPath (Join-Path $testRoot 'result.txt')
 $expectedMusic = @('MUSIC_SELECTED: Starforge Horizon (Title Screen)', 'MUSIC_SELECTED: Bloom (Arin)',
     'MUSIC_SELECTED: Starforge March (Orin)', 'MUSIC_SELECTED: Golden Hour Ascend (Mira)',
     'MUSIC_SELECTED: Starforge Ascend (Kael)', 'MUSIC_STOPPED')
+if ($BattleOnly) {
+    $expectedMusic = @('MUSIC_SELECTED: Starforge Horizon (Title Screen)', 'MUSIC_STOPPED')
+}
 $musicEvents = @($actual | Where-Object { $_.StartsWith('MUSIC_') })
 if (($musicEvents -join "`n") -cne ($expectedMusic -join "`n")) {
-    throw "Music continuity or character selection failed: $musicEvents"
+    throw "Music continuity or character selection failed: $actual"
 }
 $actual = @($actual | Where-Object { -not $_.StartsWith('MUSIC_') })
 foreach ($musicFile in Get-ChildItem -LiteralPath (Join-Path $gameRoot 'Assets\Music') -Filter *.mp3) {
-    $published = Join-Path $testRoot "Assets\Music\$($musicFile.Name)"
+    $published = Join-Path $outputRoot "Assets\Music\$($musicFile.Name)"
     if ((Get-FileHash -LiteralPath $published).Hash -cne (Get-FileHash -LiteralPath $musicFile.FullName).Hash) {
         throw "Deployed music differs: $($musicFile.Name)"
     }
@@ -433,8 +466,12 @@ foreach ($musicFile in Get-ChildItem -LiteralPath (Join-Path $gameRoot 'Assets\M
 if ($LASTEXITCODE -ne 0 -or ($actual -join "`n").Trim() -ne 'Sin Star I presentations passed.') {
     throw "Presentation regression failed: $actual"
 }
+if ($BattleOnly) {
+    Write-Host 'PASS: Playable battle loads/draws/releases, all catalog attacks and spell/defense transitions, stationary bending, upright rear camera and Order -> Fight keyboard selection.'
+    return
+}
 Write-Host 'PASS: Nine character entries and three battle simulations create, draw and release their actual assets.'
 Write-Host 'PASS: Kael automatically cycles all sixteen demo clips and nine alternating normal/Earth/Water turns, including all six bending casts.'
 Write-Host 'PASS: Live and Beat preview use Idle around all six bending casts and Run around sword attacks.'
 Write-Host 'PASS: Mira defaults and actual native animation clocks use speed 200 in solo and Party entries.'
-Write-Host 'PASS: Five deployed MP3s match their sources; only explicit track changes restart playback, and scene shutdown preserves music.'
+Write-Host 'PASS: All deployed MP3s match their sources; only explicit track changes restart playback, and scene shutdown preserves music.'

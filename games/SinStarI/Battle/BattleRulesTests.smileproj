@@ -1,0 +1,12 @@
+<SmileProject Version="1.0">
+  <PropertyGroup>
+    <ProjectKind>Console</ProjectKind>
+    <StartupFile>BattleRulesTests.smile</StartupFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <SmileSource Include="BattleRulesTests.smile" StartupOnly="true" />
+    <SmileSource Include="../Characters/Progression.smile" />
+    <SmileSource Include="BattleRules.smile" />
+    <SmileSource Include="BattleAttacks.smile" />
+  </ItemGroup>
+</SmileProject>

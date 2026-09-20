@@ -1,0 +1,389 @@
+''' Actor lifecycle/animation adapter. Battle rules never own renderer handles.
+Module SinStarI.BattleActors
+
+Option Explicit
+
+Import SinStarI.BattleRules As Rules
+Import SinStarI.BattleAttacks As Attacks
+Import SinStarI.Progression As Growth
+Import Smile.Tools.Character3DViewerActors As Actors
+Import Smile.Tools.Character3DViewerProfiles As Profiles
+Import Smile.Tools.Character3DViewerCalibration As Calibration
+Import Smile.Tools.BattleCamera As Formation
+Import Smile.Simple3D.Character3D As Character
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.Graphics3D As G
+
+Public Type State
+    Members[5] As Actors.Context
+    Poses[2] As Calibration.State
+    Nodes[2] As Calibration.ConfigurationResult
+    Homes[5] As P.Vector3
+    Clips[5] As Text
+    HitTime[5] As Number
+    ActionSerial As Number
+    EventSerial As Number
+    CastDuration As Number
+    CastClip As Text
+    Ready As Boolean
+    Failure As Text
+End Type
+
+Private Sub RecordFailure(ByRef Value As State, Index As Number, Stage As Text)
+
+    If Not Value.Ready And Value.Failure = "" Then
+        Value.Failure = (Growth.Name(Index) + " / " + Value.Clips[Index] + " / " + Stage +
+            " / Actor " + Growth.NumberText(Character.LastError()) +
+            " / Renderer " + Growth.NumberText(G.LastError()))
+        Print Value.Failure
+    End If
+
+End Sub
+
+Public Function Profile(Id As Number) As Number
+
+    Select Case Id
+        Case 0
+            Return Profiles.PROFILE_ARIN
+        Case 1
+            Return Profiles.PROFILE_ORIN
+        Case 2
+            Return Profiles.PROFILE_ZARA
+        Case 3
+            Return Profiles.PROFILE_MIRA
+    End Select
+
+    Return Profiles.PROFILE_KAEL
+
+End Function
+
+Public Function Speed(Id As Number) As Number
+
+    If Id = 0 Or Id = 1 Then
+        Return 150
+    Else If Id = 3 Or Id = 4 Then
+        Return 200
+    End If
+
+    Return 100
+
+End Function
+
+Public Sub PlayClip(ByRef Value As State, Index As Number, Name As Text)
+
+    Dim ClipIndex As Number
+    Dim Mode As Number
+
+    If Value.Clips[Index] = Name Then
+        Return
+    End If
+
+    Value.Clips[Index] = Name
+    Mode = G.ANIMATION_ONCE
+
+    If Name = "Idle" Or Name = "Run" Then
+        Mode = G.ANIMATION_LOOP
+    Else If Profiles.HoldsFinalPose(Profile(Index), Name) Then
+        Mode = G.ANIMATION_HOLD
+    End If
+
+    For ClipIndex = 0 To Character.ClipCount(Value.Members[Index].Actor) - 1
+
+        If Character.ClipName(Value.Members[Index].Actor, ClipIndex) = Name Then
+            Value.Members[Index].Clip = ClipIndex
+        End If
+
+    End For
+
+    Value.Ready = Character.PlayMode(Value.Members[Index].Actor, Name, Mode, Speed(Index)) And Value.Ready
+
+    Call RecordFailure(Value, Index, "Play Clip")
+
+End Sub
+
+Public Sub Create(ByRef Value As State)
+
+    Dim Index As Number
+    Dim Home As Core.Vector3
+    Dim Center As Core.Vector3
+    Dim Adjustment As Number
+
+    Value.Ready = True
+    Center.X = Profiles.ARENA_OPPONENT_X
+    Center.Z = Profiles.ARENA_OPPONENT_Z
+
+    For Index = 0 To 4
+
+        Value.Members[Index] = Actors.LoadContext(Profile(Index), Index * Calibration.MAX_CLIPS)
+        Value.Ready = Value.Members[Index].Ready And Value.Ready
+        Home = Formation.FormationPosition(Center, 450, 0, 60, Index, 4)
+
+        If Index = 2 Then
+
+            Home.X = ToNumber(Value.Homes[1].X) + (Home.X - ToNumber(Value.Homes[1].X)) * 80 / 100
+            Home.Z = ToNumber(Value.Homes[1].Z) + (Home.Z - ToNumber(Value.Homes[1].Z)) * 80 / 100
+
+        Else If Index = 4 Then
+
+            Home = Center
+            Value.Members[Index].Frame.ScalePercent = Value.Members[Index].Frame.ScalePercent * 3
+            Value.Members[Index].Frame.PositionY = Value.Members[Index].Frame.PositionY * 3.0
+
+        End If
+
+        Value.Homes[Index] = P.Vector(ToDouble(Home.X), Value.Members[Index].Frame.PositionY, ToDouble(Home.Z))
+        Value.Members[Index].Frame.PositionX = Value.Homes[Index].X
+        Value.Members[Index].Frame.PositionZ = Value.Homes[Index].Z
+        Value.Ready = Character.SetScale(Value.Members[Index].Actor,
+            Value.Members[Index].Frame.ScalePercent) And Value.Ready
+        Value.Ready = Character.PlacePrecise(Value.Members[Index].Actor,
+            Value.Homes[Index].X, Value.Homes[Index].Y, Value.Homes[Index].Z) And Value.Ready
+        Adjustment = 0
+
+        If Index = 1 Then
+            Adjustment = -55
+        End If
+
+        If Index < 4 Then
+            Value.Ready = Actors.FaceToward(Value.Members[Index].Actor,
+                Center.X, 0, Center.Z, 180, Adjustment) And Value.Ready
+        Else
+            Value.Ready = Actors.FaceToward(Value.Members[Index].Actor,
+                140, 0, 110, 180, 0) And Value.Ready
+        End If
+
+        If Index < 2 Then
+            Value.Nodes[Index] = Calibration.ConfigureForActor(Value.Poses[Index],
+                Profile(Index), Index * Calibration.MAX_CLIPS, Value.Members[Index].Actor)
+            Value.Ready = Value.Nodes[Index].Available And Not Value.Poses[Index].StorageRejected And Value.Ready
+        End If
+
+        Call PlayClip(Value, Index, "Idle")
+    End For
+
+End Sub
+
+Private Function ActionClip(Battle As Rules.State) As Text
+
+    If Battle.Command = Rules.DEFEND Then
+
+        If Battle.Turn = 2 Then
+            Return "BlockImpact"
+        End If
+
+        Return "Defend"
+
+    Else If Battle.Command = Rules.RUN Then
+
+        Return "Run"
+
+    Else If Battle.Turn = 3 Then
+
+        If Battle.Command = Rules.HEAL Or Battle.Command = Rules.LIMIT_BREAK Then
+            Return "HealOne"
+        End If
+
+        Return "Attack"
+
+    Else If Battle.Turn = 4 Then
+
+        If Battle.Command = Rules.EARTH Then
+            Return "EarthHurl"
+        Else If Battle.Command = Rules.WATER Then
+            Return "WaterSurge"
+        End If
+
+    End If
+
+    Dim Result As Text
+
+    Result = Attacks.Clip(Battle.Turn, Battle.AttackVariant)
+    Return Result
+
+End Function
+
+Public Sub BeginAction(ByRef Value As State, ByRef Battle As Rules.State)
+
+    Dim Index As Number
+
+    If Value.ActionSerial = Battle.ActionSerial Then
+        Return
+    End If
+
+    Value.ActionSerial = Battle.ActionSerial
+
+    If Battle.Turn = 4 Then
+        Value.Ready = Actors.FaceToward(Value.Members[4].Actor,
+            ToNumber(Value.Homes[Battle.Target].X), 0,
+            ToNumber(Value.Homes[Battle.Target].Z), 180, 0) And Value.Ready
+    End If
+
+    Value.CastClip = ActionClip(Battle)
+    Value.CastDuration = 900
+
+    For Index = 0 To Character.ClipCount(Value.Members[Battle.Turn].Actor) - 1
+
+        If Character.ClipName(Value.Members[Battle.Turn].Actor, Index) = Value.CastClip Then
+            Value.CastDuration = Character.ClipDuration(Value.Members[Battle.Turn].Actor, Index) * 100 / Speed(Battle.Turn)
+        End If
+
+    End For
+
+    If Battle.Command = Rules.RUN Or Battle.Command = Rules.DEFEND Then
+        Value.CastDuration = 900
+    End If
+
+    Battle.Duration = 400 + Value.CastDuration + 500
+    Battle.ImpactTime = 400 + Value.CastDuration * 64 / 100
+
+    If Battle.Turn = 4 And Battle.Command <> Rules.ATTACK Then
+        Battle.ImpactTime = 400 + Value.CastDuration * 72 / 100
+    End If
+
+    If Battle.Turn = 3 Then
+        Battle.ImpactTime = 400 + Value.CastDuration / 2
+    End If
+
+End Sub
+
+Private Sub Pose(ByRef Value As State, Index As Number)
+
+    Dim Applied As Calibration.ApplicationResult
+    Dim Empty As Core.Object3D
+    Dim Visible As Boolean
+
+    Value.Ready = Actors.ApplyPresentationOffset(Value.Members[Index].Actor,
+        Profile(Index), Value.Members[Index].Clip, Value.Members[Index].Frame) And Value.Ready
+
+    Call RecordFailure(Value, Index, "Placement")
+
+    If Index >= 2 Then
+        Return
+    End If
+
+    Call Calibration.Evaluate(Value.Poses[Index], Value.Members[Index].Actor,
+        Value.Members[Index].Clip, Calibration.CurrentAnimationFrame(
+            Value.Members[Index].Actor, Value.Members[Index].Clip), False)
+
+    Value.Ready = Calibration.ApplyWristOffsets(Value.Poses[Index], Value.Members[Index].Actor,
+        Value.Members[Index].Clip, Value.Nodes[Index].SwordWristNode,
+        Value.Nodes[Index].ShieldWristNode, True) And Value.Ready
+
+    Call RecordFailure(Value, Index, "Wrists")
+
+    Applied = Calibration.ApplyEquipmentTransforms(Value.Poses[Index], Value.Members[Index].Actor,
+        Value.Members[Index].Clip, Empty, Empty, False, Visible)
+    Value.Ready = Applied.Ready And Value.Ready
+
+    Call RecordFailure(Value, Index, "Equipment")
+
+End Sub
+
+Public Sub Update(ByRef Value As State, Battle As Rules.State, Elapsed As Number)
+
+    Dim Index As Number
+    Dim Name As Text
+    Dim Travel As Boolean
+    Dim Fraction As Double
+    Dim Target As P.Vector3
+
+    If Value.EventSerial <> Battle.EventSerial Then
+
+        Value.EventSerial = Battle.EventSerial
+
+        If Battle.EventAmount > 0 And Not Battle.EventHealing Then
+            Value.HitTime[Battle.EventTarget] = 450
+        End If
+
+    End If
+
+    For Index = 0 To 4
+
+        Name = "Idle"
+        Value.HitTime[Index] = Max(0, Value.HitTime[Index] - Elapsed)
+        Value.Members[Index].Frame.PositionX = Value.Homes[Index].X
+        Value.Members[Index].Frame.PositionZ = Value.Homes[Index].Z
+
+        If Battle.Members[Index].HP <= 0 Then
+
+            Name = "Death"
+
+        Else If Value.HitTime[Index] > 0 Then
+
+            Name = "Hit"
+
+        Else If Battle.Members[Index].Guarding Then
+
+            Name = "Defend"
+
+            If Index = 2 Then
+                Name = "BlockImpact"
+            End If
+
+        End If
+
+        If Battle.Phase = Rules.EXECUTING And Battle.Turn = Index Then
+
+            Travel = (Battle.Command = Rules.ATTACK Or Battle.Command = Rules.LIMIT_BREAK) And Index <> 3
+
+            If Battle.Elapsed >= 400 And Battle.Elapsed < 400 + Value.CastDuration Then
+                Name = Value.CastClip
+            Else If Travel Then
+                Name = "Run"
+            End If
+
+            If Travel Then
+
+                Fraction = Min(1.0, ToDouble(Battle.Elapsed) / 400.0)
+
+                If Battle.Elapsed > 400 + Value.CastDuration Then
+                    Fraction = Max(0.0, 1.0 - ToDouble(Battle.Elapsed - 400 - Value.CastDuration) / 500.0)
+                End If
+
+                Target = Value.Homes[Battle.Target]
+                Value.Members[Index].Frame.PositionX = Value.Homes[Index].X + (Target.X - Value.Homes[Index].X) * Fraction * 0.72
+                Value.Members[Index].Frame.PositionZ = Value.Homes[Index].Z + (Target.Z - Value.Homes[Index].Z) * Fraction * 0.72
+
+            End If
+
+        End If
+
+        Call PlayClip(Value, Index, Name)
+
+        Value.Ready = Character.Update(Value.Members[Index].Actor, Elapsed) And Value.Ready
+
+        Call RecordFailure(Value, Index, "Advance")
+
+        Value.Ready = Character.SetVisible(Value.Members[Index].Actor, Not Battle.Members[Index].Escaped) And Value.Ready
+
+        Call Pose(Value, Index)
+    End For
+
+End Sub
+
+Public Sub Draw(ByRef Value As State)
+
+    Dim Index As Number
+
+    For Index = 0 To 4
+        Value.Ready = Character.Draw(Value.Members[Index].Actor) And Value.Ready
+
+        Call RecordFailure(Value, Index, "Draw")
+    End For
+
+End Sub
+
+Public Sub Destroy(ByRef Value As State)
+
+    Dim Index As Number
+
+    For Index = 0 To 4
+        Call Actors.Destroy(Value.Members[Index])
+    End For
+
+    Value.Ready = False
+
+End Sub
+
+End Module

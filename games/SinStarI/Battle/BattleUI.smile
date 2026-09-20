@@ -1,0 +1,525 @@
+''' Five battle panels and a small stacked menu; rules own command legality.
+Module SinStarI.BattleUI
+
+Option Explicit
+
+Import SinStarI.BattleRules As Rules
+Import SinStarI.BattleAttacks As Attacks
+Import SinStarI.Progression As Growth
+Import Smile.UI.Controls As UI
+
+Public Type State
+    Page As Number
+    Selection As Number
+    PendingMagic As Number
+    PreviousTurn As Number
+End Type
+
+Public Function PanelY() As Number
+
+    Dim Result As Number
+
+    Result = Window_Height() - 182
+    Return Result
+
+End Function
+
+Private Function PanelWidth() As Number
+
+    Dim Result As Number
+
+    Result = (Window_Width() - 48) / 5
+    Return Result
+
+End Function
+
+Private Function MenuX() As Number
+
+    Dim Result As Number
+
+    Result = 16 + PanelWidth() * 2
+    Return Result
+
+End Function
+
+Private Function MenuRows(Page As Number, CharacterId As Number) As Number
+
+    Dim ReturnValue As Number
+
+    If Page = 1 Then
+        Return 6
+    Else If Page = 2 Then
+        ReturnValue = Attacks.AttackCount(CharacterId)
+
+        Return ReturnValue
+    Else If Page = 4 Then
+        Return 4
+    Else If Page = 5 Then
+        Return 1
+    End If
+
+    Return 2
+
+End Function
+
+Private Function MenuTop(Page As Number, CharacterId As Number) As Number
+
+    Dim Result As Number
+
+    Result = PanelY() + 31
+
+    If Page > 0 Then
+        Result = PanelY() - MenuRows(Page, CharacterId) * 37 - 55
+    End If
+
+    Return Result
+
+End Function
+
+Private Function OrderCommand(Index As Number) As Number
+
+    Select Case Index
+        Case 0
+            Return Rules.ATTACK
+        Case 1
+            Return Rules.FIRE
+        Case 2
+            Return Rules.ITEM
+        Case 3
+            Return Rules.DEFEND
+        Case 4
+            Return Rules.LIMIT_BREAK
+        Case 5
+            Return Rules.RUN
+    End Select
+
+    Return Rules.ATTACK
+
+End Function
+
+Public Sub Icon(Command As Number, X As Number, Y As Number, Tint As Number)
+
+    If Command = Rules.ATTACK Then
+
+        Draw Line X + 3, Y + 19, X + 19, Y + 3, Tint
+        Draw Line X + 6, Y + 10, X + 14, Y + 18, Tint
+        Draw Line X + 4, Y + 20, X + 20, Y + 4, Tint
+
+    Else If Command = Rules.ITEM Then
+
+        Draw Rectangle X + 3, Y + 7, 17, 15, Tint
+        Draw Rectangle X + 7, Y + 2, 9, 6, Tint
+
+    Else If Command = Rules.DEFEND Then
+
+        Draw Line X + 2, Y + 3, X + 20, Y + 3, Tint
+        Draw Line X + 2, Y + 3, X + 5, Y + 17, Tint
+        Draw Line X + 20, Y + 3, X + 17, Y + 17, Tint
+        Draw Line X + 5, Y + 17, X + 11, Y + 23, Tint
+        Draw Line X + 17, Y + 17, X + 11, Y + 23, Tint
+
+    Else If Command = Rules.RUN Then
+
+        Draw Line X + 1, Y + 12, X + 21, Y + 12, Tint
+        Draw Line X + 14, Y + 5, X + 21, Y + 12, Tint
+        Draw Line X + 14, Y + 19, X + 21, Y + 12, Tint
+
+    Else
+        Draw Line X + 11, Y + 1, X + 11, Y + 23, Tint
+        Draw Line X + 1, Y + 12, X + 21, Y + 12, Tint
+        Draw Line X + 4, Y + 5, X + 18, Y + 19, Tint
+        Draw Line X + 4, Y + 19, X + 18, Y + 5, Tint
+
+    End If
+
+End Sub
+
+Public Function Blocked(Value As State) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Value.Page > 0 Or Pointer_Y() >= PanelY() - 12 Or Pointer_Y() < 85
+    Return Result
+
+End Function
+
+Public Function BackRequested(Value As State, Battle As Rules.State, Key As Number) As Boolean
+
+    Dim Result As Boolean
+
+    Result = UI.Clicked(16, 16, 100, 34)
+
+    If (Value.Page = 0 And
+        Battle.Phase <> Rules.EXECUTING And
+        Key = KEY_ESCAPE) Then
+        Result = True
+    End If
+
+    Return Result
+
+End Function
+
+Private Function ChoiceEnabled(Value As State, Battle As Rules.State, Index As Number) As Boolean
+
+    Dim Command As Number
+    Dim Result As Boolean
+
+    If Value.Page = 1 Then
+
+        Command = OrderCommand(Index)
+
+        If (Index = 0 Or
+            Index = 1 Or
+            Index = 2) Then
+            Return True
+        End If
+
+        Result = Rules.CanCommand(Battle.Members[Battle.Turn], Command)
+        Return Result
+
+    Else If Value.Page = 3 Then
+
+        Result = Rules.CanCommand(Battle.Members[Battle.Turn], Rules.MagicFor(Battle.Turn, Index))
+        Return Result
+
+    Else If Value.Page = 4 Then
+
+        Result = Rules.Available(Battle.Members[Index])
+        Return Result
+
+    End If
+
+    Return True
+
+End Function
+
+Private Sub Accept(ByRef Value As State, ByRef Battle As Rules.State)
+
+    Dim Command As Number
+
+    If Not ChoiceEnabled(Value, Battle, Value.Selection) Then
+        Return
+    End If
+
+    If Value.Page = 0 Then
+
+        If Value.Selection = 0 Then
+            Call Rules.RepeatCommand(Battle)
+        Else
+
+            Value.Page = 1
+            Value.Selection = 0
+        End If
+
+    Else If Value.Page = 1 Then
+
+        If Value.Selection = 0 Then
+            Value.Page = 2
+            Value.Selection = Battle.Members[Battle.Turn].LastAttack
+        Else If Value.Selection = 1 Then
+            Value.Page = 3
+            Value.Selection = 0
+        Else If Value.Selection = 2 Then
+            Value.Page = 5
+            Value.Selection = 0
+        Else
+
+            Command = OrderCommand(Value.Selection)
+
+            Call Rules.BeginCommand(Battle, Command, 4)
+        End If
+
+    Else If Value.Page = 2 Then
+
+        Call Rules.BeginCommand(Battle, Rules.ATTACK, 4, Value.Selection)
+
+    Else If Value.Page = 3 Then
+
+        Value.PendingMagic = Rules.MagicFor(Battle.Turn, Value.Selection)
+
+        If Value.PendingMagic = Rules.HEAL Then
+            Value.Page = 4
+            Value.Selection = Rules.HealingTarget(Battle)
+        Else
+
+            Call Rules.BeginCommand(Battle, Value.PendingMagic, 4)
+        End If
+
+    Else If Value.Page = 4 Then
+
+        Call Rules.BeginCommand(Battle, Value.PendingMagic, Value.Selection)
+
+    Else If Value.Page = 5 Then
+
+        Value.Page = 1
+        Value.Selection = 2
+
+    End If
+
+    If Battle.Phase = Rules.EXECUTING Then
+        Value.Page = 0
+        Value.Selection = 0
+    End If
+
+End Sub
+
+Public Sub Update(ByRef Value As State, ByRef Battle As Rules.State, Key As Number)
+
+    Dim RowIndex As Number
+    Dim RowCount As Number
+    Dim Top As Number
+    Dim Confirm As Boolean
+
+    If Battle.Phase = Rules.EXECUTING Then
+
+        If (Key <> KEY_NONE Or
+            Pointer_Pressed(POINTER_PRIMARY) Or
+            Pointer_Pressed(POINTER_SECONDARY) Or
+            Pointer_Pressed(POINTER_MIDDLE)) Then
+            Battle.StopRequested = True
+        End If
+
+        Return
+
+    Else If Battle.Phase >= Rules.VICTORY Then
+
+        Return
+
+    End If
+
+    If Value.PreviousTurn <> Battle.Turn Then
+
+        Value.PreviousTurn = Battle.Turn
+        Value.Page = 0
+        Value.Selection = 0
+
+    End If
+
+    If Key = KEY_ESCAPE And Value.Page > 0 Then
+
+        Value.Page = Max(0, Value.Page - 1)
+
+        If Value.Page > 1 Then
+            Value.Page = 1
+        End If
+
+        Value.Selection = 0
+        Return
+
+    End If
+
+    RowCount = MenuRows(Value.Page, Battle.Turn)
+    Top = MenuTop(Value.Page, Battle.Turn)
+    Confirm = Key = KEY_ENTER Or Key = KEY_SPACE
+
+    If Key = KEY_UP Then
+        Value.Selection = (Value.Selection + RowCount - 1) Mod RowCount
+    Else If Key = KEY_DOWN Then
+        Value.Selection = (Value.Selection + 1) Mod RowCount
+    End If
+
+    For RowIndex = 0 To RowCount - 1
+
+        If UI.Clicked(MenuX() + 5, Top + RowIndex * 37, PanelWidth() - 16, 34) Then
+            Value.Selection = RowIndex
+            Confirm = True
+        End If
+
+    End For
+
+    If Confirm Then
+        Call Accept(Value, Battle)
+    End If
+
+End Sub
+
+Private Function ChoiceLabel(Value As State, Battle As Rules.State, Index As Number) As Text
+
+    Dim Result As Text
+    Dim Command As Number
+
+    If Value.Page = 0 Then
+
+        If Index = 0 Then
+            Return "Fight"
+        End If
+
+        Return "Order"
+
+    Else If Value.Page = 1 Then
+
+        Select Case Index
+            Case 0
+                Return "Fight >"
+            Case 1
+                Return "Magic >"
+            Case 2
+                Return "Item >"
+            Case 3
+                Return "Defend x3"
+            Case 4
+                Return "Limit Break"
+            Case 5
+                Return "Run"
+        End Select
+
+    Else If Value.Page = 2 Then
+
+        Result = Attacks.Label(Battle.Turn, Index)
+
+    Else If Value.Page = 3 Then
+
+        Command = Rules.MagicFor(Battle.Turn, Index)
+        Result = Rules.CommandName(Command) + " (" + Growth.NumberText(Rules.Cost(Command)) + " MP)"
+
+    Else If Value.Page = 4 Then
+
+        Result = Growth.Name(Index) + " " + Growth.NumberText(Battle.Members[Index].HP) + " HP"
+
+    Else
+        Result = "No Items Yet - Back"
+
+    End If
+
+    Return Result
+
+End Function
+
+Private Sub DrawMenu(Value As State, Battle As Rules.State)
+
+    Dim Index As Number
+    Dim Top As Number
+    Dim RowCount As Number
+    Dim Tint As Number
+    Dim Command As Number
+
+    RowCount = MenuRows(Value.Page, Battle.Turn)
+    Top = MenuTop(Value.Page, Battle.Turn)
+
+    If Value.Page > 0 Then
+        Call UI.DrawPanel(MenuX() - 8, Top - 38, PanelWidth() + 8, RowCount * 37 + 49)
+
+        Draw Text "Orders - " + Growth.Name(Battle.Turn) At MenuX() + 5, Top - 30 Size 15 Color CYAN
+    End If
+
+    For Index = 0 To RowCount - 1
+
+        Tint = WHITE
+        Command = Rules.ATTACK
+
+        If Value.Page = 1 Then
+            Command = OrderCommand(Index)
+        Else If Value.Page = 3 Or Value.Page = 4 Then
+            Command = Rules.HEAL
+        Else If Value.Page = 5 Then
+            Command = Rules.ITEM
+        End If
+
+        If Not ChoiceEnabled(Value, Battle, Index) Then
+            Tint = Rgb(100, 109, 126)
+        End If
+
+        If Value.Selection = Index Then
+            Fill Rectangle MenuX() + 4, Top + Index * 37, PanelWidth() - 17, 34, Rgb(23, 83, 114) Opacity 80
+        End If
+
+        Call Icon(Command, MenuX() + 9, Top + Index * 37 + 4, Tint)
+
+        Draw Text ChoiceLabel(Value, Battle, Index) At MenuX() + 37, Top + Index * 37 + 9 Size 12 Color Tint
+    End For
+
+End Sub
+
+Public Sub Draw(Value As State, Battle As Rules.State)
+
+    Dim Index As Number
+    Dim Column As Number
+    Dim X As Number
+    Dim Y As Number
+    Dim Width As Number
+    Dim Label As Text
+    Dim RootMenu As State
+
+    Y = PanelY()
+    Width = PanelWidth()
+
+    Call UI.DrawButton(16, 16, 100, 34, "< Back", False)
+    Call UI.DrawPanel(Window_Width() / 2 - 165, 16, 330, 62)
+
+    Draw Text "Kael - Level 20" At Window_Width() / 2, 24 Size 19 Color WHITE Centered
+    Draw Text "HP " + Growth.NumberText(Battle.Members[4].HP) + " / " + Growth.NumberText(Battle.Members[4].Stats.HP) At Window_Width() / 2, 52 Size 14 Color CYAN Centered
+
+    For Index = 0 To 3
+
+        Column = Index
+
+        If Index >= 2 Then
+            Column = Index + 1
+        End If
+
+        X = 16 + Column * Width
+
+        Call UI.DrawPanel(X, Y, Width - 8, 150)
+
+        If Battle.Turn = Index And Battle.Phase < Rules.VICTORY Then
+            Fill Rectangle X, Y, Width - 8, 4, CYAN
+        End If
+
+        Draw Text Growth.Name(Index) + "  Lv " + Growth.NumberText(Battle.Members[Index].Level) At X + 10, Y + 12 Size 17 Color WHITE
+        Draw Text "HP " + Growth.NumberText(Battle.Members[Index].HP) + "/" + Growth.NumberText(Battle.Members[Index].Stats.HP) At X + 10, Y + 39 Size 14 Color WHITE
+        Draw Text "MP " + Growth.NumberText(Battle.Members[Index].MP) + "/" + Growth.NumberText(Battle.Members[Index].Stats.MP) At X + 10, Y + 62 Size 14 Color CYAN
+        Draw Text "LB" At X + 10, Y + 87 Size 13 Color Rgb(255, 189, 80)
+        Fill Rectangle X + 40, Y + 88, Width - 65, 11, Rgb(43, 41, 57)
+        Fill Rectangle X + 40, Y + 88, (Width - 65) * Battle.Members[Index].LB / Battle.Members[Index].Stats.HP, 11, Rgb(255, 183, 63)
+        Label = Rules.CommandName(Battle.Members[Index].LastCommand)
+
+        If Battle.Members[Index].LastCommand = Rules.ATTACK Then
+            Label = Attacks.Label(Index, Battle.Members[Index].LastAttack)
+        End If
+
+        If Battle.Members[Index].HP = 0 Then
+            Label = "Knocked Out"
+        Else If Battle.Members[Index].Escaped Then
+            Label = "Escaped"
+        End If
+
+        Call Icon(Battle.Members[Index].LastCommand, X + 9, Y + 114, CYAN)
+
+        Draw Text Label At X + 37, Y + 118 Size 12 Color WHITE
+    End For
+
+    Call UI.DrawPanel(MenuX(), Y, Width - 8, 150)
+
+    Draw Text "Round " + Growth.NumberText(Battle.Round) At MenuX() + 12, Y + 10 Size 14 Color CYAN
+
+    If Battle.Phase = Rules.WAITING Then
+
+        If Value.Page > 0 Then
+            RootMenu.Selection = 1
+
+            Call DrawMenu(RootMenu, Battle)
+        End If
+
+        Call DrawMenu(Value, Battle)
+
+    Else
+        Label = "Auto Battle"
+
+        If Battle.StopRequested Then
+            Label = "Orders Next Round"
+        Else If Battle.Phase >= Rules.VICTORY Then
+            Label = "Battle Finished"
+        End If
+
+        Draw Text Label At MenuX() + 12, Y + 57 Size 13 Color WHITE
+
+    End If
+
+    Call UI.DrawPanel(16, Y - 43, Window_Width() - 40, 34)
+
+    Draw Text Battle.Message At 28, Y - 34 Size 15 Color WHITE
+    Draw Text "Enter: Select | Arrows: Menu | Any Input During Battle: Orders Next Round | F: Floor | G: Grid | B: Background | Drag / Wheel: Camera" At 18, Window_Height() - 23 Size 11 Color LIGHT_GRAY
+
+End Sub
+
+End Module

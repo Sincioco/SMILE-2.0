@@ -5,6 +5,7 @@ Import SinStarI.TownScreen As TownScreen
 Import SinStarI.Town2Screen As Town2Screen
 Import SinStarI.CharacterScreen As CharacterScreen
 Import SinStarI.CharacterPresentation As CharacterPresentation
+Import SinStarI.BattleScreen As BattleScreen
 
 Dim Mode As TitleScreen.TitleAction
 Dim PendingAction As TitleScreen.TitleAction
@@ -45,6 +46,8 @@ Do
         Call Town2Screen.Draw()
     Else If Mode = TitleScreen.TitleAction.Character Then
         Call CharacterScreen.Draw()
+    Else If Mode = TitleScreen.TitleAction.Battle Then
+        Call BattleScreen.Draw()
     Else If CharacterPresentation.IsPresentation(Mode) Then
         Call CharacterPresentation.Draw()
     End If
@@ -55,6 +58,7 @@ Do
 Loop Until Game_Closed() = True Or Mode = TitleScreen.TitleAction.ExitGame
 
 Call CharacterPresentation.Shutdown()
+Call BattleScreen.Shutdown()
 Call CharacterScreen.Shutdown()
 Call Town2Screen.Shutdown()
 Call TownScreen.Shutdown()
@@ -76,6 +80,8 @@ Sub OpenScene(SceneId As TitleScreen.TitleAction)
         Call Town2Screen.Enter()
     Else If SceneId = TitleScreen.TitleAction.Character Then
         Call CharacterScreen.Enter()
+    Else If SceneId = TitleScreen.TitleAction.Battle Then
+        Call BattleScreen.Enter()
     Else If CharacterPresentation.IsPresentation(SceneId) Then
         Call CharacterPresentation.Enter(SceneId)
     End If
@@ -84,7 +90,9 @@ End Sub
 
 Sub HandleScene(Key As Number)
 
-    If (Key = KEY_ESCAPE Or
+    If ((Key = KEY_ESCAPE And Not CharacterPresentation.IsPresentation(Mode) And
+        Mode <> TitleScreen.TitleAction.Battle) Or
+        (Mode = TitleScreen.TitleAction.Battle And BattleScreen.BackRequested(Key)) Or
         (CharacterPresentation.IsPresentation(Mode) And CharacterPresentation.BackRequested(Key))) Then
 
         If Mode = TitleScreen.TitleAction.Town Then
@@ -93,6 +101,8 @@ Sub HandleScene(Key As Number)
             Call Town2Screen.Shutdown()
         Else If Mode = TitleScreen.TitleAction.Character Then
             Call CharacterScreen.Shutdown()
+        Else If Mode = TitleScreen.TitleAction.Battle Then
+            Call BattleScreen.Shutdown()
         Else If CharacterPresentation.IsPresentation(Mode) Then
             Call CharacterPresentation.Shutdown()
         End If
@@ -111,6 +121,8 @@ Sub HandleScene(Key As Number)
         Call Town2Screen.Update(Key)
     Else If Mode = TitleScreen.TitleAction.Character Then
         Call CharacterScreen.Update(Key)
+    Else If Mode = TitleScreen.TitleAction.Battle Then
+        Call BattleScreen.Update(Key)
     Else If CharacterPresentation.IsPresentation(Mode) Then
         Call CharacterPresentation.Update(Key)
     End If

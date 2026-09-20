@@ -1,0 +1,97 @@
+''' Native encounter coordinator: independent rules, presentation and UI owners.
+Module SinStarI.BattleScreen
+
+Option Explicit
+
+Import SinStarI.BattleRules As Rules
+Import SinStarI.BattleActors As Actors
+Import SinStarI.BattleArena As Arena
+Import SinStarI.BattleUI As UI
+Import SinStarI.BackgroundMusic As BackgroundMusic
+
+Private Dim Encounter As Rules.State
+Private Dim Scene As Arena.State
+Private Dim Menus As UI.State
+Private Dim PreviousTime As Number
+Private Dim Active As Boolean
+
+Public Sub Enter()
+
+    Dim EmptyMenu As UI.State
+
+    If Not Window_Loading() Then
+        Return
+    End If
+
+    Menus = EmptyMenu
+
+    Call Rules.Start(Encounter)
+    Call Arena.Create(Scene)
+    Call Arena.Update(Scene, Encounter, 0, KEY_NONE, True)
+    Call BackgroundMusic.SelectTrack("Starforge Ascend (Kael)")
+
+    PreviousTime = Timer()
+    Active = True
+
+End Sub
+
+Public Function BackRequested(Key As Number) As Boolean
+
+    Dim Result As Boolean
+
+    If Not Scene.Ready And Key = KEY_ESCAPE Then
+        Return True
+    End If
+
+    Result = UI.BackRequested(Menus, Encounter, Key)
+    Return Result
+
+End Function
+
+Public Sub Update(Key As Number)
+
+    Dim Now As Number
+    Dim Elapsed As Number
+    Dim EscapeRoll As Number
+    Dim EnemyTargetRoll As Number
+
+    If Not Active Or Not Scene.Ready Then
+        Return
+    End If
+
+    Now = Timer()
+    Elapsed = Min(100, Max(0, Now - PreviousTime))
+    PreviousTime = Now
+
+    Random EscapeRoll From 0 To 99
+    Random EnemyTargetRoll From 0 To 3
+
+    Call UI.Update(Menus, Encounter, Key)
+    Call Actors.BeginAction(Scene.Actors, Encounter)
+    Call Rules.Advance(Encounter, Elapsed, EscapeRoll, EnemyTargetRoll)
+    Call Actors.BeginAction(Scene.Actors, Encounter)
+    Call Arena.Update(Scene, Encounter, Elapsed, Key, UI.Blocked(Menus))
+
+End Sub
+
+Public Sub Draw()
+
+    If Active Then
+        Call Arena.Draw(Scene, Encounter)
+
+        Call UI.Draw(Menus, Encounter)
+    End If
+
+End Sub
+
+Public Sub Shutdown()
+
+    If Active Then
+        Call Arena.Destroy(Scene)
+    End If
+
+    Active = False
+
+End Sub
+
+End Module

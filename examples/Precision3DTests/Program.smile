@@ -129,6 +129,37 @@ Sub RunTests()
     Call Check(Projected.Visible)
     Call Check(Abs(Projected.X - 210.0) < 1e-10 And Abs(Projected.Y - 190.0) < 1e-10)
 
+    ''' The battle camera looks from behind the party, opposite the Viewer default.
+    Invalid = Camera
+    Invalid.Position = Precision3D.Vector(760.0, 310.0, 440.0)
+    Invalid.Target = Precision3D.Vector(-70.0, 115.0, 10.0)
+    Invalid.UpDirection = Precision3D.Vector(0.0, 1.0, 0.0)
+
+    Call Camera3D.ResetCameraControls(Controls)
+
+    Composed = Camera3D.ApplyScreenSpaceCameraControls(Invalid, Controls)
+
+    Call Check(Composed.UpDirection.Y > 0.9)
+
+    Result = Composed.Target
+    Result.Y = Result.Y + 50.0
+    Projected = Camera3D.ProjectViewerPoint(Result, Composed, 640, 480)
+
+    Call Check(Projected.Visible And Projected.Y < 240.0)
+
+    Controls.PanX = 12.0
+    Accepted = Camera3D.ApplyScreenSpaceCameraControls(Invalid, Controls)
+    Projected = Camera3D.ProjectViewerPoint(Invalid.Target, Accepted, 640, 480)
+
+    Call Check(Projected.X < 320.0)
+
+    Controls.PanX = 0.0
+    Controls.PanY = 12.0
+    Accepted = Camera3D.ApplyScreenSpaceCameraControls(Invalid, Controls)
+    Projected = Camera3D.ProjectViewerPoint(Invalid.Target, Accepted, 640, 480)
+
+    Call Check(Projected.Y > 240.0)
+
     Source = Graphics3D.CreateCube3D(24)
     Receiver = Graphics3D.CreatePlane3D(180, 140)
     Transform.Position = Precision3D.Vector(0.25, 20.25, 0.5)

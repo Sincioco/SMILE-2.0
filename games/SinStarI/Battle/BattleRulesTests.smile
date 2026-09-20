@@ -1,0 +1,142 @@
+Option Explicit
+
+Import SinStarI.Progression As Growth
+Import SinStarI.BattleRules As Rules
+Import SinStarI.BattleAttacks As Attacks
+
+Dim Battle As Rules.State
+Dim Zara As Growth.Stats
+Dim Index As Number
+Dim StatIndex As Number
+Dim Before As Number
+Dim Failures As Number
+
+Call Rules.Start(Battle)
+
+For Index = 0 To 3
+    Call Check(Battle.Members[Index].Level = 1, "Party Level 1")
+End For
+
+Zara = Growth.AtLevel(Growth.ZARA, 20)
+
+Call Check(Battle.Members[4].Level = 20, "Kael Level 20")
+
+For StatIndex = 0 To 6
+    Call Check(Growth.StatValue(Battle.Members[4].Stats, StatIndex) = Growth.StatValue(Zara, StatIndex), "Kael Matches Zara")
+End For
+
+For Index = 1 To 9998
+    Call Check(Growth.TotalXP(Index + 1) - Growth.TotalXP(Index) = Growth.NextXP(Index), "XP Prefix")
+End For
+
+Call Check(Growth.NextXP(2) > Growth.NextXP(1), "Increasing XP")
+Call Check(Growth.NextXP(300) > Growth.NextXP(299) * 20, "Post 300 Difficulty")
+Call Check(Growth.LevelForXP(0) = 1, "Initial XP")
+Call Check(Growth.LevelForXP(Growth.TotalXP(300) - 1) = 299, "Level Boundary")
+Call Check(Growth.LevelForXP(Growth.TotalXP(9999)) = 9999, "Maximum Level")
+Call Check(Growth.NumberText(Growth.TotalXP(9999)) = "152113650571981357", "Exact Large XP Label")
+Call Check(Growth.EscapeChance(1, 20) = 50, "Base Escape")
+Call Check(Growth.EscapeChance(40, 20) = 100, "Guaranteed Escape")
+Call Check(Attacks.AttackCount(0) = 2 And Attacks.AttackCount(1) = 3 And Attacks.AttackCount(3) = 1, "Attack Lists")
+Call Rules.BeginCommand(Battle, Rules.ATTACK, 4, 1)
+Call Check(Battle.Members[0].LastAttack = 1, "Remember Selected Attack")
+
+Before = Battle.Members[4].HP
+
+Call Rules.ResolveImpact(Battle, 99)
+Call Rules.ResolveImpact(Battle, 99)
+Call Check(Before - Battle.Members[4].HP = Rules.Damage(Battle.Members[0], Battle.Members[4], Rules.ATTACK, 1), "Single Impact")
+Call Rules.NextTurn(Battle, 0)
+Call Check(Battle.Turn = 1 And Battle.Phase = Rules.WAITING, "Orin Next")
+Call Rules.RepeatCommand(Battle)
+Call Rules.Advance(Battle, 2000, 99, 0)
+Call Check(Battle.Turn = 2, "Zara Next")
+Call Rules.RepeatCommand(Battle)
+Call Rules.Advance(Battle, 2000, 99, 0)
+Call Check(Battle.Turn = 3, "Mira Next")
+Call Rules.RepeatCommand(Battle)
+Call Rules.Advance(Battle, 2000, 99, 0)
+Call Check(Battle.Turn = 4 And Battle.Phase = Rules.EXECUTING, "Enemy Next")
+Call Rules.Advance(Battle, 2000, 99, 0)
+Call Check(Battle.Turn = 0 And Battle.Round = 2 And Battle.Phase = Rules.EXECUTING, "Auto Repeat")
+Call Check(Battle.AttackVariant = 1, "Auto Remembers Attack")
+
+Battle.StopRequested = True
+Battle.Members[4].HP = 100000
+
+For Index = 0 To 4
+    Call Rules.Advance(Battle, 2000, 99, 1)
+End For
+
+Call Check(Battle.Turn = 0 And Battle.Round = 3 And Battle.Phase = Rules.WAITING, "Stop At Round Boundary")
+Call Rules.Start(Battle)
+Call Rules.BeginCommand(Battle, Rules.DEFEND, 4)
+Call Rules.ResolveImpact(Battle, 99)
+Call Check(Battle.Members[0].Guarding, "Guard Active")
+Call Check(Rules.Damage(Battle.Members[4], Battle.Members[0], Rules.ATTACK) = 28600 / 250, "Physical Defense Times Three")
+Call Check(Rules.Damage(Battle.Members[4], Battle.Members[0], Rules.EARTH) = 26700 / 226, "Magic Defense Times Three")
+
+Battle.Phase = Rules.WAITING
+
+Call Rules.BeginCommand(Battle, Rules.ATTACK, 4)
+Call Check(Not Battle.Members[0].Guarding, "Guard Expires On Own Turn")
+Call Rules.Start(Battle)
+Call Rules.ApplyDamage(Battle, 0, 99999)
+Call Check(Battle.Members[0].HP = 0 And Battle.Members[0].LB = Battle.Members[0].Stats.HP, "LB Uses Actual Damage")
+Call Check(Not Rules.CanCommand(Battle.Members[0], Rules.LIMIT_BREAK), "KO Cannot Act")
+Call Rules.Start(Battle)
+Call Check(Not Rules.CanCommand(Battle.Members[0], Rules.LIMIT_BREAK), "Empty LB Disabled")
+
+Battle.Members[0].LB = Battle.Members[0].Stats.HP
+
+Call Rules.BeginCommand(Battle, Rules.LIMIT_BREAK, 4)
+Call Rules.ResolveImpact(Battle, 99)
+Call Check(Battle.Members[0].LB = 0, "LB Consumed")
+Call Rules.Start(Battle)
+
+Battle.Members[0].HP = 100
+
+Call Rules.BeginCommand(Battle, Rules.HEAL, 0)
+Call Rules.ResolveImpact(Battle, 99)
+Call Check(Battle.Members[0].MP = 43 And Battle.Members[0].HP = 190 And Battle.Members[0].LB = 0, "Healing And MP")
+
+Battle.Phase = Rules.WAITING
+Battle.Members[0].MP = 0
+
+Call Rules.RepeatCommand(Battle)
+Call Check(Battle.Command = Rules.ATTACK, "Repeat Without MP Falls Back")
+Call Rules.Start(Battle)
+Call Rules.BeginCommand(Battle, Rules.ITEM, 4)
+Call Check(Battle.Phase = Rules.WAITING, "Item Placeholder")
+Call Rules.BeginCommand(Battle, Rules.RUN, 4)
+Call Rules.ResolveImpact(Battle, 49)
+Call Check(Battle.Members[0].Escaped And Not Battle.Members[1].Escaped, "Individual Escape")
+Call Rules.NextTurn(Battle, 0)
+Call Check(Battle.Turn = 1, "Escaped Hero Skipped")
+Call Rules.Start(Battle)
+
+Battle.Members[4].HP = 1
+
+Call Rules.BeginCommand(Battle, Rules.ATTACK, 4)
+Call Rules.Advance(Battle, 2000, 99, 0)
+Call Check(Battle.Phase = Rules.VICTORY And Battle.Reward = 920 And Battle.Members[0].Level > 1, "Victory XP")
+
+Before = Battle.Members[0].XP
+
+Call Rules.Advance(Battle, 2000, 99, 0)
+Call Check(Battle.Members[0].XP = Before, "Reward Once")
+
+If Failures = 0 Then
+    Print "Battle rules passed."
+Else
+    Print "Battle rule failures: "; Failures
+End If
+
+Sub Check(Valid As Boolean, Label As Text)
+
+    If Not Valid Then
+        Failures = Failures + 1
+        Print "FAIL: "; Label
+    End If
+
+End Sub

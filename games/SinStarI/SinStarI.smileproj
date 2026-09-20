@@ -11,6 +11,16 @@
   </PropertyGroup>
   <ItemGroup>
     <SmileSource Include="Program.smile" StartupOnly="true" />
+    <SmileSource Include="Characters\Progression.smile" />
+    <SmileSource Include="Characters\StatsView.smile" />
+    <SmileSource Include="Battle\BattleRules.smile" />
+    <SmileSource Include="Battle\BattleAttacks.smile" />
+    <SmileSource Include="Battle\BattleActors.smile" />
+    <SmileSource Include="Battle\BattleFeedback.smile" />
+    <SmileSource Include="Battle\BattleArena.smile" />
+    <SmileSource Include="Battle\BattleUI.smile" />
+    <SmileSource Include="Battle\BattleScreen.smile" />
+    <Asset Include="Assets\Battle\BitmapFont.png" />
     <SmileSource Include="TitleScreen.smile" />
     <SmileSource Include="Music.smile" />
     <SmileSource Include="TownScreen.smile" />

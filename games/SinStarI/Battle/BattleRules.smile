@@ -1,0 +1,544 @@
+''' Battle authority: no rendering, input polling, animation or Viewer state.
+Module SinStarI.BattleRules
+
+Option Explicit
+
+Import SinStarI.Progression As Progression
+
+Public Const ATTACK = 0
+Public Const HEAL = 1
+Public Const FIRE = 2
+Public Const EARTH = 3
+Public Const WATER = 4
+Public Const DEFEND = 5
+Public Const LIMIT_BREAK = 6
+Public Const RUN = 7
+Public Const ITEM = 8
+Public Const WAITING = 0
+Public Const EXECUTING = 1
+Public Const VICTORY = 2
+Public Const DEFEAT = 3
+Public Const ESCAPED = 4
+
+Public Type Member
+    Id As Number
+    Level As Number
+    XP As Number
+    Stats As Progression.Stats
+    HP As Number
+    MP As Number
+    LB As Number
+    LastCommand As Number
+    LastAttack As Number
+    LastTarget As Number
+    Guarding As Boolean
+    Escaped As Boolean
+End Type
+
+Public Type State
+    Members[5] As Member
+    Phase As Number
+    Turn As Number
+    Round As Number
+    AutoRun As Boolean
+    StopRequested As Boolean
+    Command As Number
+    AttackVariant As Number
+    Target As Number
+    Elapsed As Number
+    Duration As Number
+    ImpactTime As Number
+    Applied As Boolean
+    ActionSerial As Number
+    EventSerial As Number
+    EventTarget As Number
+    EventAmount As Number
+    EventHealing As Boolean
+    EventText As Text
+    Message As Text
+    Reward As Number
+End Type
+
+Public Function CommandName(Command As Number) As Text
+
+    Select Case Command
+        Case ATTACK
+            Return "Attack"
+        Case HEAL
+            Return "Healing Light"
+        Case FIRE
+            Return "Flame Strike"
+        Case EARTH
+            Return "Earth Strike"
+        Case WATER
+            Return "Water Surge"
+        Case DEFEND
+            Return "Defend"
+        Case LIMIT_BREAK
+            Return "Limit Break"
+        Case RUN
+            Return "Run"
+    End Select
+
+    Return "Item"
+
+End Function
+
+Public Function Cost(Command As Number) As Number
+
+    If Command = HEAL Then
+        Return 12
+    Else If Command >= FIRE And Command <= WATER Then
+        Return 10
+    End If
+
+    Return 0
+
+End Function
+
+Public Function MagicFor(Id As Number, Slot As Number) As Number
+
+    If Slot = 0 Then
+
+        If Id = Progression.MIRA Or Id = Progression.ARIN Then
+            Return HEAL
+        Else If Id = Progression.ORIN Then
+            Return EARTH
+        End If
+
+        Return FIRE
+
+    End If
+
+    If Id = Progression.MIRA Or Id = Progression.ORIN Then
+        Return WATER
+    Else If Id = Progression.ARIN Then
+        Return FIRE
+    End If
+
+    Return EARTH
+
+End Function
+
+Public Function Available(Value As Member) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Value.HP > 0 And Not Value.Escaped
+    Return Result
+
+End Function
+
+Public Sub Start(ByRef Value As State)
+
+    Dim Empty As State
+    Dim Index As Number
+
+    Value = Empty
+    Value.Round = 1
+    Value.Message = "Arin's Orders"
+
+    For Index = 0 To 4
+
+        Value.Members[Index].Id = Index
+        Value.Members[Index].Level = 1
+
+        If Index = 4 Then
+            Value.Members[Index].Level = 20
+        End If
+
+        Value.Members[Index].XP = Progression.TotalXP(Value.Members[Index].Level)
+        Value.Members[Index].Stats = Progression.AtLevel(Index, Value.Members[Index].Level)
+        Value.Members[Index].HP = Value.Members[Index].Stats.HP
+        Value.Members[Index].MP = Value.Members[Index].Stats.MP
+        Value.Members[Index].LastTarget = 4
+    End For
+
+End Sub
+
+Public Function CanCommand(Value As Member, Command As Number) As Boolean
+
+    If Not Available(Value) Or Command = ITEM Then
+        Return False
+    End If
+
+    If Command = LIMIT_BREAK Then
+
+        If Value.LB < Value.Stats.HP Then
+            Return False
+        End If
+
+    End If
+
+    If (Command >= HEAL And
+        Command <= WATER And
+        Value.Id <> Progression.KAEL) Then
+
+        If Command <> MagicFor(Value.Id, 0) And Command <> MagicFor(Value.Id, 1) Then
+            Return False
+        End If
+
+    End If
+
+    If Value.MP < Cost(Command) Then
+        Return False
+    End If
+
+    Return True
+
+End Function
+
+Public Function FirstActive(ByRef Value As State) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Index As Number
+
+    For Index = 0 To 3
+
+        If Available(Value.Members[Index]) Then
+            Return Index
+        End If
+
+    End For
+
+    ReturnValue = -1
+
+    Return ReturnValue
+
+End Function
+
+Public Function HealingTarget(ByRef Value As State) As Number
+
+    Dim Index As Number
+    Dim Result As Number
+    Dim Lowest As Number
+    Dim Percent As Number
+
+    Result = FirstActive(Value)
+    Lowest = 101
+
+    For Index = 0 To 3
+
+        If Available(Value.Members[Index]) Then
+
+            Percent = Value.Members[Index].HP * 100 / Value.Members[Index].Stats.HP
+
+            If Percent < Lowest Then
+                Lowest = Percent
+                Result = Index
+            End If
+
+        End If
+
+    End For
+
+    Return Result
+
+End Function
+
+''' The host may replace timing with the actual animation duration before advancing.
+Public Sub BeginCommand(ByRef Value As State, Command As Number, Target As Number,
+    Optional AttackVariant As Number = 0)
+
+    If Value.Phase <> WAITING Or Not CanCommand(Value.Members[Value.Turn], Command) Then
+        Return
+    End If
+
+    If Command = HEAL Then
+
+        If Target < 0 Or Target > 3 Then
+            Target = HealingTarget(Value)
+        Else If Not Available(Value.Members[Target]) Then
+            Target = HealingTarget(Value)
+        End If
+
+    Else If Value.Turn < 4 Then
+
+        Target = 4
+
+    End If
+
+    Value.Members[Value.Turn].Guarding = False
+    Value.Members[Value.Turn].MP = Value.Members[Value.Turn].MP - Cost(Command)
+    Value.Members[Value.Turn].LastCommand = Command
+    Value.Members[Value.Turn].LastAttack = AttackVariant
+    Value.Members[Value.Turn].LastTarget = Target
+    Value.Command = Command
+    Value.AttackVariant = AttackVariant
+    Value.Target = Target
+    Value.Phase = EXECUTING
+    Value.Elapsed = 0
+    Value.Duration = 1600
+    Value.ImpactTime = 900
+    Value.Applied = False
+    Value.ActionSerial = Value.ActionSerial + 1
+    Value.Message = Progression.Name(Value.Turn) + " - " + CommandName(Command)
+
+End Sub
+
+Public Sub RepeatCommand(ByRef Value As State)
+
+    Dim Command As Number
+    Dim Target As Number
+
+    Command = Value.Members[Value.Turn].LastCommand
+    Target = Value.Members[Value.Turn].LastTarget
+
+    If Not CanCommand(Value.Members[Value.Turn], Command) Then
+        Command = ATTACK
+    End If
+
+    Call BeginCommand(Value, Command, Target, Value.Members[Value.Turn].LastAttack)
+
+End Sub
+
+Public Function Damage(Attacker As Member, Defender As Member, Command As Number,
+    Optional AttackVariant As Number = 0) As Number
+
+    Dim Power As Number
+    Dim Armor As Number
+    Dim Result As Number
+
+    Power = Attacker.Stats.Attack * 2
+    Armor = Defender.Stats.Defense
+
+    If Command = ATTACK Then
+        Power = Power * (100 + AttackVariant * 10) / 100
+    End If
+
+    If Command >= FIRE And Command <= WATER Then
+        Power = Attacker.Stats.Magic * 3
+        Armor = Defender.Stats.MagicDefense
+    Else If Command = LIMIT_BREAK Then
+        Power = Attacker.Stats.LimitPower
+    End If
+
+    If Defender.Guarding Then
+        Armor = Armor * 3
+    End If
+
+    Result = Max(1, Power * 100 / (100 + Armor))
+    Return Result
+
+End Function
+
+Public Sub ApplyDamage(ByRef Value As State, Target As Number, Amount As Number)
+
+    Amount = Min(Value.Members[Target].HP, Max(0, Amount))
+    Value.Members[Target].HP = Value.Members[Target].HP - Amount
+    Value.Members[Target].LB = Min(Value.Members[Target].Stats.HP,
+        Value.Members[Target].LB + Amount)
+    Value.EventTarget = Target
+    Value.EventAmount = Amount
+    Value.EventHealing = False
+    Value.EventText = ""
+    Value.EventSerial = Value.EventSerial + 1
+
+End Sub
+
+Private Sub ApplyHealing(ByRef Value As State, Target As Number, Amount As Number)
+
+    Amount = Min(Value.Members[Target].Stats.HP - Value.Members[Target].HP, Amount)
+    Value.Members[Target].HP = Value.Members[Target].HP + Amount
+    Value.EventTarget = Target
+    Value.EventAmount = Amount
+    Value.EventHealing = True
+    Value.EventText = ""
+    Value.EventSerial = Value.EventSerial + 1
+
+End Sub
+
+Public Sub ResolveImpact(ByRef Value As State, EscapeRoll As Number)
+
+    Dim Actor As Number
+    Dim Amount As Number
+
+    If Value.Phase <> EXECUTING Or Value.Applied Then
+        Return
+    End If
+
+    Actor = Value.Turn
+    Value.Applied = True
+    Value.EventTarget = Actor
+    Value.EventAmount = 0
+    Value.EventHealing = False
+    Value.EventText = ""
+
+    Select Case Value.Command
+        Case DEFEND
+            Value.Members[Actor].Guarding = True
+            Value.EventText = "Defense x3"
+            Value.EventSerial = Value.EventSerial + 1
+        Case RUN
+
+            If EscapeRoll < Progression.EscapeChance(Value.Members[Actor].Level,
+                Value.Members[4].Level) Then
+                Value.Members[Actor].Escaped = True
+                Value.EventText = "Escaped"
+            Else
+                Value.EventText = "Could Not Escape"
+            End If
+
+            Value.EventSerial = Value.EventSerial + 1
+        Case HEAL
+
+            Call ApplyHealing(Value, Value.Target, Value.Members[Actor].Stats.Magic * 3)
+
+        Case Else
+
+            If Value.Command = LIMIT_BREAK And Actor = Progression.MIRA Then
+                Call ApplyHealing(Value, HealingTarget(Value), Value.Members[Actor].Stats.LimitPower)
+            Else
+
+                Amount = Damage(Value.Members[Actor], Value.Members[Value.Target],
+                    Value.Command, Value.AttackVariant)
+
+                Call ApplyDamage(Value, Value.Target, Amount)
+            End If
+
+            If Value.Command = LIMIT_BREAK Then
+                Value.Members[Actor].LB = 0
+            End If
+
+    End Select
+
+End Sub
+
+Private Sub FinishBattle(ByRef Value As State)
+
+    Dim Index As Number
+    Dim EscapedCount As Number
+
+    If Value.Members[4].HP <= 0 Then
+
+        Value.Phase = VICTORY
+        Value.Reward = 120 + Value.Members[4].Level * 40
+        Value.Message = "Victory! Each Remaining Hero Gains " + Progression.NumberText(Value.Reward) + " XP"
+
+        For Index = 0 To 3
+
+            If Not Value.Members[Index].Escaped Then
+
+                Value.Members[Index].XP = Value.Members[Index].XP + Value.Reward
+                Value.Members[Index].Level = Progression.LevelForXP(Value.Members[Index].XP)
+                Value.Members[Index].Stats = Progression.AtLevel(Index, Value.Members[Index].Level)
+
+            End If
+
+        End For
+
+    Else If FirstActive(Value) < 0 Then
+
+        For Index = 0 To 3
+
+            If Value.Members[Index].Escaped Then
+                EscapedCount = EscapedCount + 1
+            End If
+
+        End For
+
+        Value.Phase = DEFEAT
+        Value.Message = "Defeat - Kael Wins"
+
+        If EscapedCount > 0 Then
+            Value.Phase = ESCAPED
+            Value.Message = "Battle Ended - Surviving Heroes Escaped"
+        End If
+
+    End If
+
+End Sub
+
+Public Sub NextTurn(ByRef Value As State, EnemyTargetRoll As Number)
+
+    Dim Attempts As Number
+    Dim Target As Number
+    Dim EnemyCommand As Number
+
+    Call FinishBattle(Value)
+
+    If Value.Phase >= VICTORY Then
+        Return
+    End If
+
+    Value.Turn = Value.Turn + 1
+
+    If Value.Turn > 4 Then
+
+        Value.Turn = 0
+        Value.Round = Value.Round + 1
+        Value.AutoRun = Not Value.StopRequested
+        Value.StopRequested = False
+
+    End If
+
+    For Attempts = 0 To 3
+
+        If Value.Turn < 4 Then
+
+            If Not Available(Value.Members[Value.Turn]) Then
+                Value.Turn = Value.Turn + 1
+            End If
+
+        End If
+
+    End For
+
+    Value.Phase = WAITING
+    Value.Message = Progression.Name(Value.Turn) + "'s Orders"
+
+    If Value.Turn = 4 Then
+
+        Target = EnemyTargetRoll Mod 4
+        EnemyCommand = ATTACK
+
+        If Value.Round Mod 3 = 1 Then
+            EnemyCommand = EARTH
+        Else If Value.Round Mod 3 = 2 Then
+            EnemyCommand = WATER
+        End If
+
+        If Not CanCommand(Value.Members[4], EnemyCommand) Then
+            EnemyCommand = ATTACK
+        End If
+
+        For Attempts = 0 To 3
+
+            If Available(Value.Members[Target]) Then
+                Call BeginCommand(Value, EnemyCommand, Target)
+
+                Return
+            End If
+
+            Target = (Target + 1) Mod 4
+        End For
+
+    Else If Value.AutoRun Then
+
+        Call RepeatCommand(Value)
+
+    End If
+
+End Sub
+
+Public Sub Advance(ByRef Value As State, Elapsed As Number,
+    EscapeRoll As Number, EnemyTargetRoll As Number)
+
+    If Value.Phase <> EXECUTING Then
+        Return
+    End If
+
+    Value.Elapsed = Value.Elapsed + Elapsed
+
+    If Value.Elapsed >= Value.ImpactTime And Not Value.Applied Then
+        Call ResolveImpact(Value, EscapeRoll)
+    End If
+
+    If Value.Elapsed >= Value.Duration Then
+        Call NextTurn(Value, EnemyTargetRoll)
+    End If
+
+End Sub
+
+End Module

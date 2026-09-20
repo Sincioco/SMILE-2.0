@@ -1,6 +1,9 @@
 # Sin Star I
 
-Sin Star I opens with **Characters**, **Battle Simulations**, **Legacy**, and **Exit**.
+Sin Star I opens with **Characters**, **Battle**, **Battle Simulations**, **Legacy**, and **Exit**.
+The [playable native battle](Battle/README.md) provides turn-based orders, remembered
+attacks, magic, defense, LB and individual escape for four level-1 heroes against
+level-20 Kael. Characters also provides level-growth tables and graphs.
 The title uses `Assets/Backgrounds/SinStarLandscape.png` with the transparent
 `Assets/Sin Star I - Logo.png` lettering selected by Sin at upper left. The choices
 remain grouped in the left menu area. Credits form one centered line across the

@@ -1,0 +1,138 @@
+''' Real-asset regression for the playable battle and its menu/animation bridge.
+Module SinStarI.BattlePresentationTests
+
+Option Explicit
+
+Import SinStarI.BattleRules As Rules
+Import SinStarI.BattleActors As Actors
+Import SinStarI.BattleArena As Arena
+Import SinStarI.BattleAttacks As Attacks
+Import SinStarI.BattleUI As UI
+Import Smile.Simple3D.Character3D As Character
+Import Smile.Simple3D.Graphics3D As G
+
+Public Sub Run(ByRef Passed As Boolean)
+
+    Dim Scene As Arena.State
+    Dim Battle As Rules.State
+    Dim Menu As UI.State
+    Dim Index As Number
+    Dim Variant As Number
+
+    Call Rules.Start(Battle)
+    Call Arena.Create(Scene)
+    Call Arena.Update(Scene, Battle, 0, KEY_NONE, True)
+    Call Check(Passed, Scene.Ready, "Battle loads")
+
+    If Not Scene.Ready Then
+        Return
+    End If
+
+    Call Check(Passed, Scene.View.LiveCamera.UpDirection.Y > 0.9, "Upright rear camera")
+
+    For Index = 0 To 4
+
+        For Variant = 0 To Attacks.AttackCount(Index) - 1
+            Call Check(Passed, Character.HasClip(Scene.Actors.Members[Index].Actor,
+                Attacks.Clip(Index, Variant)), "Catalog clip exists")
+            Call Exercise(Passed, Scene, Battle, Index, Rules.ATTACK, Variant)
+        End For
+
+        Call Exercise(Passed, Scene, Battle, Index, Rules.DEFEND, 0)
+    End For
+
+    Call Exercise(Passed, Scene, Battle, 0, Rules.HEAL, 0)
+    Call Exercise(Passed, Scene, Battle, 3, Rules.HEAL, 0)
+    Call Exercise(Passed, Scene, Battle, 3, Rules.WATER, 0)
+    Call Exercise(Passed, Scene, Battle, 4, Rules.EARTH, 0)
+    Call Exercise(Passed, Scene, Battle, 4, Rules.WATER, 0)
+    Call Rules.Start(Battle)
+    Call UI.Update(Menu, Battle, KEY_DOWN)
+    Call UI.Update(Menu, Battle, KEY_ENTER)
+    Call Check(Passed, Menu.Page = 1, "Order menu opens")
+    Call UI.Update(Menu, Battle, KEY_ENTER)
+    Call Check(Passed, Menu.Page = 2 And Battle.Phase = Rules.WAITING, "Fight opens attacks without executing")
+    Call UI.Update(Menu, Battle, KEY_DOWN)
+    Call UI.Update(Menu, Battle, KEY_ENTER)
+    Call Check(Passed, Battle.Phase = Rules.EXECUTING And Battle.AttackVariant = 1, "Selected attack executes")
+    Call UI.Update(Menu, Battle, KEY_SPACE)
+    Call Check(Passed, Battle.StopRequested, "Input requests orders")
+    Call Arena.Destroy(Scene)
+    Call Check(Passed, G.LiveObjectCount3D() = 0 And G.LiveAnimatorCount3D() = 0, "Battle actors released")
+    Call Check(Passed, G.LiveParticleBatchCount3D() = 0 And G.LiveRibbonBatchCount3D() = 0, "Battle effects released")
+
+End Sub
+
+Private Sub Exercise(ByRef Passed As Boolean, ByRef Scene As Arena.State,
+    ByRef Battle As Rules.State, Index As Number, Command As Number, Variant As Number)
+
+    Dim Frame As Number
+    Dim TargetIndex As Number
+
+    For TargetIndex = 0 To 4
+        Battle.Members[TargetIndex].HP = Battle.Members[TargetIndex].Stats.HP
+        Battle.Members[TargetIndex].Guarding = False
+    End For
+
+    Battle.Phase = Rules.WAITING
+    Battle.Turn = Index
+    Battle.Members[Index].HP = Battle.Members[Index].Stats.HP
+    Battle.Members[Index].MP = Battle.Members[Index].Stats.MP
+
+    Call Rules.BeginCommand(Battle, Command, 0, Variant)
+    Call Actors.BeginAction(Scene.Actors, Battle)
+
+    For Frame = 0 To 3
+
+        Battle.Elapsed = 0
+
+        If Frame = 1 Then
+            Battle.Elapsed = 450
+        Else If Frame = 2 Then
+            Battle.Elapsed = Battle.ImpactTime
+
+            Call Rules.ResolveImpact(Battle, 99)
+        Else If Frame = 3 Then
+            Battle.Elapsed = Battle.Duration - 1
+        End If
+
+        Call Arena.Update(Scene, Battle, 50, KEY_NONE, True)
+        Call Check(Passed, Scene.Ready, "Action advances")
+
+        If Not Scene.Ready Then
+            Return
+        End If
+
+        Call Arena.Draw(Scene, Battle)
+        Call UI.Draw(NewMenu(), Battle)
+
+        Show Screen
+
+        Call Check(Passed, Scene.Ready And G.LastError() = 0, "Action draws")
+
+        If Index = 4 And (Command = Rules.EARTH Or Command = Rules.WATER) Then
+            Call Check(Passed, Scene.Actors.Clips[4] <> "Run", "Bending never runs")
+        End If
+
+    End For
+
+End Sub
+
+Private Function NewMenu() As UI.State
+
+    Dim Result As UI.State
+
+    Return Result
+
+End Function
+
+Private Sub Check(ByRef Passed As Boolean, Condition As Boolean, Label As Text)
+
+    If Not Condition Then
+        Passed = False
+        Print "Battle presentation failed: " + Label
+    End If
+
+End Sub
+
+End Module

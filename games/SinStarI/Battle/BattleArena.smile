@@ -1,0 +1,263 @@
+''' Scene resources and effects; all combat decisions stay in BattleRules.
+Module SinStarI.BattleArena
+
+Option Explicit
+
+Import SinStarI.BattleRules As Rules
+Import SinStarI.BattleActors As Cast
+Import SinStarI.BattleFeedback As Feedback
+Import SinStarI.Progression As Growth
+Import Smile.Simple3D.ArenaViewport3D As Arena
+Import Smile.Simple3D.Character3D As Character
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.PrecisionCamera3D As Camera
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Scene3D As Scene
+Import Smile.Simple3D.Graphics3D As G
+Import Smile.Tools.Character3DViewerRendering As Rendering
+Import Smile.Tools.KaelEarth As Earth
+Import Smile.Tools.KaelWater As Water
+Import Smile.Tools.MiraWater As MiraWater
+
+Public Type State
+    View As Arena.State
+    Actors As Cast.State
+    Feedback As Feedback.State
+    BaseCamera As P.Camera3D
+    Earth As Earth.Context
+    Water As Water.Context
+    Mira As MiraWater.Context
+    EventSerial As Number
+    KaelTarget As Number
+    Ready As Boolean
+    Failure As Text
+End Type
+
+Private Sub RecordFailure(ByRef Value As State, Stage As Text)
+
+    If Not Value.Ready And Value.Failure = "" Then
+        Value.Failure = (Stage + " / Actor " + Growth.NumberText(Character.LastError()) +
+            " / Renderer " + Growth.NumberText(G.LastError()) + " " + Value.Actors.Failure)
+        Print "Battle: " + Value.Failure
+    End If
+
+End Sub
+
+Public Sub Create(ByRef Value As State)
+
+    Dim Empty As State
+    Dim Lights As Rendering.State
+
+    Value = Empty
+
+    Call G.ResetRenderer3D()
+
+    Value.Ready = Rendering.PrepareAssetLoading(3)
+    Value.Ready = Rendering.ApplyLighting(Lights) And Value.Ready
+    Value.View = Arena.Create(1600, 1600)
+    Value.BaseCamera.Position = P.Vector(760.0, 310.0, 440.0)
+    Value.BaseCamera.Target = P.Vector(-70.0, 115.0, 10.0)
+    Value.BaseCamera.UpDirection = P.Vector(0.0, 1.0, 0.0)
+    Value.BaseCamera.FovDegrees = 52.0
+    Value.BaseCamera.NearPlane = 1.0
+    Value.BaseCamera.FarPlane = 4000.0
+
+    Call Cast.Create(Value.Actors)
+    Call Feedback.Create(Value.Feedback)
+
+    Value.Ready = Value.Actors.Ready And Value.View.Ready And Value.Ready
+    Value.Ready = Earth.Prepare(Value.Earth) And Value.Ready
+    Value.Ready = Water.Prepare(Value.Water) And Value.Ready
+    Value.Ready = MiraWater.Prepare(Value.Mira) And Value.Ready
+
+End Sub
+
+Public Function ActorPoint(ByRef Value As State, Index As Number) As Core.ProjectedPoint3D
+
+    Dim Position As P.Vector3
+    Dim Bounds As Character.PreciseBounds3D
+    Dim Result As Core.ProjectedPoint3D
+
+    Bounds = Character.WorldBoundsPrecise(Value.Actors.Members[Index].Actor)
+    Position = Bounds.Center
+    Position.Y = Bounds.Maximum.Y + 16.0
+    Result = Camera.ProjectPixel(Position, Value.View.LiveCamera, Window_Width(), Window_Height())
+    Return Result
+
+End Function
+
+Public Sub Update(ByRef Value As State, Battle As Rules.State, Elapsed As Number,
+    Key As Number, Blocked As Boolean)
+
+    Dim Point As Core.ProjectedPoint3D
+    Dim Target As P.Vector3
+    Dim Label As Text
+    Dim SwordVisible As Boolean
+
+    Call Arena.Update(Value.View, Key, Blocked)
+    Call Arena.ComposeCamera(Value.View, Value.BaseCamera)
+    Call Cast.Update(Value.Actors, Battle, Elapsed)
+    Call Feedback.Update(Value.Feedback, Elapsed)
+
+    Value.Ready = Value.Actors.Ready And Value.Ready
+
+    Call RecordFailure(Value, "Actors")
+
+    If Battle.Turn = 4 And Battle.Target < 4 Then
+        Value.KaelTarget = Battle.Target
+    End If
+
+    Target = Value.Actors.Homes[Value.KaelTarget]
+    SwordVisible = Water.StyleForClip(Value.Actors.Clips[4]) = 0
+    Value.Ready = Earth.Update(Value.Earth, Value.Actors.Members[4].Actor,
+        Value.Actors.Clips[4], Target, True, True, Elapsed, SwordVisible) And Value.Ready
+
+    Call RecordFailure(Value, "Earth")
+
+    Call Water.SetTarget(Value.Water, Value.Actors.Members[Value.KaelTarget].Actor)
+
+    Value.Ready = Water.Update(Value.Water, Value.Actors.Members[4].Actor,
+        Value.Actors.Clips[4], True, True) And Value.Ready
+
+    Call RecordFailure(Value, "Kael Water")
+
+    Value.Mira.Targets.MemberCount = 1
+
+    Call MiraWater.SetMember(Value.Mira.Targets, 0, Value.Actors.Members[Battle.Target].Actor)
+    Call MiraWater.SetAttack(Value.Mira.Targets, Value.Actors.Members[4].Actor)
+
+    Value.Ready = MiraWater.Update(Value.Mira, Value.Actors.Members[3].Actor,
+        Value.Actors.Clips[3], Battle.Members[3].HP > 0, True) And Value.Ready
+
+    Call RecordFailure(Value, "Mira Water")
+
+    If Value.EventSerial <> Battle.EventSerial Then
+
+        Value.EventSerial = Battle.EventSerial
+        Point = ActorPoint(Value, Battle.EventTarget)
+        Label = Battle.EventText
+
+        If Label = "" Then
+
+            Label = Growth.NumberText(Battle.EventAmount)
+
+            If Battle.EventHealing Then
+                Label = "+" + Label
+            End If
+
+        End If
+
+        If Point.Visible Then
+            Call Feedback.Add(Value.Feedback, Label, Point.X, Point.Y)
+        End If
+
+    End If
+
+End Sub
+
+Public Sub Draw(ByRef Value As State, Battle As Rules.State)
+
+    Dim Point As Core.ProjectedPoint3D
+    Dim Source As Core.ProjectedPoint3D
+    Dim Target As Core.ProjectedPoint3D
+    Dim Travel As Number
+    Dim X As Number
+    Dim Y As Number
+    Dim Tint As Number
+
+    If Not Value.Ready Then
+
+        Clear Rgb(20, 8, 16)
+        Draw Text "Battle Arena Could Not Load - Press Esc To Return" At 40, 80 Size 24 Color WHITE
+        Draw Text Value.Failure At 40, 120 Size 16 Color WHITE
+        Return
+
+    End If
+
+    Value.Ready = Arena.BeginFrame(Value.View, Value.BaseCamera) And Value.Ready
+
+    Call RecordFailure(Value, "Begin Frame")
+
+    Value.Ready = Arena.Draw(Value.View) And Value.Ready
+
+    Call RecordFailure(Value, "Floor/Grid")
+
+    Call Cast.Draw(Value.Actors)
+    Call Earth.Draw(Value.Earth)
+    Call Water.Draw(Value.Water)
+    Call MiraWater.Draw(Value.Mira)
+
+    Value.Ready = Scene.EndScene() And Value.Ready
+
+    Call RecordFailure(Value, "End Frame")
+
+    If Battle.Phase < Rules.VICTORY And Battle.Turn < 4 Then
+
+        Point = ActorPoint(Value, Battle.Turn)
+
+        If Point.Visible Then
+
+            Fill Rectangle Point.X - 4, Point.Y - 28, 8, 20, RED
+            Draw Line Point.X - 13, Point.Y - 14, Point.X, Point.Y, RED
+            Draw Line Point.X + 13, Point.Y - 14, Point.X, Point.Y, RED
+
+        End If
+
+    End If
+
+    ''' Lightweight spell cue for hero abilities without a character-specific effect.
+
+    If Battle.Phase = Rules.EXECUTING And Battle.Turn < 3 Then
+
+        If Battle.Command >= Rules.HEAL And Battle.Command <= Rules.WATER Then
+
+            Source = ActorPoint(Value, Battle.Turn)
+            Target = ActorPoint(Value, Battle.Target)
+            Travel = Min(1000, Max(0, (Battle.Elapsed - 400) * 1000 / Max(1, Battle.ImpactTime - 400)))
+            Tint = Rgb(255, 116, 45)
+
+            If Battle.Command = Rules.EARTH Then
+                Tint = Rgb(216, 170, 91)
+            Else If Battle.Command = Rules.WATER Then
+                Tint = CYAN
+            Else If Battle.Command = Rules.HEAL Then
+                Tint = GREEN
+            End If
+
+            If (Source.Visible And
+                Target.Visible And
+                Battle.Elapsed > 400 And
+                Not Battle.Applied) Then
+
+                X = Source.X + (Target.X - Source.X) * Travel / 1000
+                Y = Source.Y + (Target.Y - Source.Y) * Travel / 1000 + 38
+
+                Fill Circle X, Y, 10, Tint
+                Draw Line Source.X, Source.Y + 38, X, Y, Tint
+
+            End If
+
+        End If
+
+    End If
+
+    Call Feedback.Draw(Value.Feedback)
+
+End Sub
+
+Public Sub Destroy(ByRef Value As State)
+
+    Call Earth.Destroy(Value.Earth)
+    Call Water.Destroy(Value.Water)
+    Call MiraWater.Destroy(Value.Mira)
+    Call Cast.Destroy(Value.Actors)
+    Call Feedback.Destroy(Value.Feedback)
+    Call Arena.Destroy(Value.View)
+    Call Character.Shutdown()
+    Call Scene.Shutdown()
+
+    Value.Ready = False
+
+End Sub
+
+End Module

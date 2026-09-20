@@ -3,6 +3,14 @@
 Read this before changing Orin's model, rig, animation sources, equipment fit,
 calibration, or VFX attachment points.
 
+## Playable battle consumer — September 20, 2026
+
+Sin Star I's `Battle/BattleActors.smile` loads this package, Orin's separate saved
+calibration bank, current grounding and established Party facing adjustment.
+Order → Fight selects SwordAttack, JumpAttack or ThorAttack from this package.
+The rear battle camera does not alter authored equipment offsets. No model or
+pose JSON changes are made for this consumer; future Viewer exports remain authoritative.
+
 ## Accepted source combination
 
 The canonical result deliberately combines two compatible sources. The body

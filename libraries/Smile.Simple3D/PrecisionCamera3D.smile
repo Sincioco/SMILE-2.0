@@ -249,7 +249,14 @@ Public Function ApplyCameraControls(BaseCamera As Precision3D.Camera3D,
 
     If ScreenSpace Then
 
-        RightValue = Math3D.Rotate(Precision3D.Vector(1.0, 0.0, 0.0), Rotation)
+        Forward = Math3D.Subtract(BaseCamera.Target, BaseCamera.Position)
+        Valid = Math3D.TryNormalize(Math3D.Cross(BaseCamera.UpDirection, Forward), RightValue)
+
+        If Not Valid Then
+            Return BaseCamera
+        End If
+
+        RightValue = Math3D.Rotate(RightValue, Rotation)
         Valid = Math3D.TryNormalize(Math3D.Scale(Offset, -1.0), Forward)
         Valid = Math3D.TryNormalize(Math3D.Cross(Forward, RightValue), UpValue) And Valid
 

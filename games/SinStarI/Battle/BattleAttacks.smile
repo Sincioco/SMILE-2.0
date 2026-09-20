@@ -1,0 +1,94 @@
+''' Available authored attacks; menus and animation use this same catalog.
+Module SinStarI.BattleAttacks
+
+Option Explicit
+
+Import SinStarI.Progression As Growth
+
+Public Function AttackCount(CharacterId As Number) As Number
+
+    If CharacterId = Growth.ZARA Then
+        Return 6
+    Else If CharacterId = Growth.ORIN Then
+        Return 3
+    Else If CharacterId = Growth.MIRA Then
+        Return 1
+    End If
+
+    Return 2
+
+End Function
+
+Public Function Label(CharacterId As Number, Variant As Number) As Text
+
+    Dim Result As Text
+
+    If CharacterId = Growth.ZARA And Variant >= 2 Then
+        Result = "Sword Combo " + Growth.NumberText(Variant + 1)
+        Return Result
+    End If
+
+    If CharacterId = Growth.MIRA Then
+
+        Return "Staff Strike"
+
+    Else If CharacterId = Growth.ORIN Then
+
+        If Variant = 1 Then
+            Return "Jump Strike"
+        Else If Variant = 2 Then
+            Return "Thunder Strike"
+        End If
+
+        Return "Hammer Strike"
+
+    Else If Variant = 1 Then
+
+        Return "Crosscut"
+
+    End If
+
+    Return "Sword Slash"
+
+End Function
+
+Public Function Clip(CharacterId As Number, Variant As Number) As Text
+
+    Dim Result As Text
+
+    If CharacterId = Growth.ZARA And Variant >= 2 Then
+        Result = "attack" + Growth.NumberText(Variant + 1)
+        Return Result
+    End If
+
+    If CharacterId = Growth.MIRA Then
+
+        Return "Attack"
+
+    Else If CharacterId = Growth.KAEL Then
+
+        If Variant = 1 Then
+            Return "Attack2"
+        End If
+
+        Return "Attack"
+
+    Else If CharacterId = Growth.ORIN Then
+
+        If Variant = 1 Then
+            Return "JumpAttack"
+        Else If Variant = 2 Then
+            Return "ThorAttack"
+        End If
+
+    Else If Variant = 1 Then
+
+        Return "SwordAttack2"
+
+    End If
+
+    Return "SwordAttack"
+
+End Function
+
+End Module

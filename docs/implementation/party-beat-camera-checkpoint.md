@@ -1,5 +1,14 @@
 # Party Beat Camera Editor — Desktop Checkpoint
 
+## Native playable battle follow-through — September 20, 2026
+
+Sin Star I now has a game-owned turn-based Battle and character stat tables/graphs;
+see `games/SinStarI/Battle/README.md` for owners and current contracts. Later Web
+adoption must include those sources/assets and the shared rear-camera basis fix.
+No Web build/publication/browser acceptance is claimed. Adding stats inspection to
+the standalone Character Viewer is separately deferred by Sin's battle document.
+This does not resume Studio or the intermittent Viewer recovery investigation.
+
 ## Open native recovery report — September 20, 2026
 
 Sin reported a responsive recovery overlay in Kael Party during EarthHurl, with

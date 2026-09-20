@@ -1,0 +1,361 @@
+''' Reusable character progression popup; the caller owns its state.
+Module SinStarI.StatsView
+
+Option Explicit
+
+Import SinStarI.Progression As Growth
+Import Smile.UI.Controls As UI
+
+Public Type State
+    Visible As Boolean
+    Graph As Boolean
+    CharacterId As Number
+    FirstLevel As Number
+    MaxLevel As Number
+    SelectedStat As Number
+    Normalize As Boolean
+    Increases As Boolean
+End Type
+
+Public Sub Open(ByRef Value As State, CharacterId As Number, Graph As Boolean)
+
+    Value.Visible = True
+    Value.CharacterId = CharacterId
+    Value.Graph = Graph
+    Value.FirstLevel = 1
+    Value.MaxLevel = 300
+    Value.SelectedStat = -1
+    Value.Normalize = True
+
+End Sub
+
+Private Function Rows() As Number
+
+    Dim Result As Number
+
+    Result = Max(3, (Window_Height() - 275) / 27)
+    Return Result
+
+End Function
+
+Public Sub Update(ByRef Value As State, Key As Number)
+
+    Dim Index As Number
+    Dim ButtonWidth As Number
+
+    If Key = KEY_ESCAPE Or UI.Clicked(Window_Width() - 146, 40, 98, 32) Then
+        Value.Visible = False
+        Return
+    End If
+
+    If UI.Clicked(48, 92, 130, 32) Then
+        Value.Graph = False
+    Else If UI.Clicked(186, 92, 130, 32) Then
+        Value.Graph = True
+    Else If UI.Clicked(326, 92, 150, 32) Then
+        Value.MaxLevel = 10299 - Value.MaxLevel
+        Value.FirstLevel = 1
+    Else If UI.Clicked(486, 92, 150, 32) Then
+        Value.Normalize = Not Value.Normalize
+        Value.Increases = Not Value.Increases
+    End If
+
+    If Value.Graph Then
+
+        ButtonWidth = (Window_Width() - 96) / 8
+
+        For Index = 0 To 7
+
+            If UI.Clicked(48 + Index * ButtonWidth, 138, ButtonWidth - 5, 30) Then
+                Value.SelectedStat = Index - 1
+            End If
+
+        End For
+
+    Else
+
+        If Key = KEY_LEFT Or UI.Clicked(48, Window_Height() - 101, 110, 32) Then
+            Value.FirstLevel = Max(1, Value.FirstLevel - Rows())
+        Else If Key = KEY_RIGHT Or UI.Clicked(166, Window_Height() - 101, 110, 32) Then
+            Value.FirstLevel = Min(Value.MaxLevel - Rows() + 1, Value.FirstLevel + Rows())
+        Else If UI.Clicked(286, Window_Height() - 101, 110, 32) Then
+            Value.FirstLevel = 1
+        Else If UI.Clicked(404, Window_Height() - 101, 110, 32) Then
+            Value.FirstLevel = Value.MaxLevel - Rows() + 1
+        End If
+
+    End If
+
+End Sub
+
+Public Function StatColor(Index As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Select Case Index
+        Case 0
+            ReturnValue = Rgb(255, 107, 125)
+
+            Return ReturnValue
+        Case 1
+            ReturnValue = Rgb(100, 175, 255)
+
+            Return ReturnValue
+        Case 2
+            ReturnValue = Rgb(255, 192, 70)
+
+            Return ReturnValue
+        Case 3
+            ReturnValue = Rgb(208, 135, 255)
+
+            Return ReturnValue
+        Case 4
+            ReturnValue = Rgb(85, 230, 171)
+
+            Return ReturnValue
+        Case 5
+            ReturnValue = Rgb(85, 222, 243)
+
+            Return ReturnValue
+    End Select
+
+    ReturnValue = Rgb(255, 145, 220)
+
+    Return ReturnValue
+
+End Function
+
+Private Function ColumnX(Index As Number, Width As Number) As Number
+
+    Dim Result As Number
+
+    Result = 50
+
+    If Index = 1 Then
+        Result = Result + Width * 6 / 100
+    Else If Index = 2 Then
+        Result = Result + Width * 21 / 100
+    Else If Index >= 3 Then
+        Result = Result + Width * 41 / 100 + (Index - 3) * Width * 8 / 100
+    End If
+
+    Return Result
+
+End Function
+
+Private Sub DrawTable(Value As State)
+
+    Dim Index As Number
+    Dim RowIndex As Number
+    Dim Level As Number
+    Dim Width As Number
+    Dim Y As Number
+    Dim Amount As Number
+    Dim Current As Growth.Stats
+    Dim Previous As Growth.Stats
+    Dim Heading As Text
+
+    Width = Window_Width() - 100
+
+    For Index = 0 To 9
+
+        Heading = Growth.StatName(Index - 3)
+
+        If Index = 0 Then
+            Heading = "Level"
+        Else If Index = 1 Then
+            Heading = "XP To Next"
+        Else If Index = 2 Then
+            Heading = "Total XP"
+        End If
+
+        Draw Text Heading At ColumnX(Index, Width), 148 Size 12 Color CYAN
+    End For
+
+    For RowIndex = 0 To Rows() - 1
+
+        Level = Value.FirstLevel + RowIndex
+        Current = Growth.AtLevel(Value.CharacterId, Level)
+        Previous = Growth.AtLevel(Value.CharacterId, Max(1, Level - 1))
+        Y = 180 + RowIndex * 27
+
+        If RowIndex Mod 2 = 0 Then
+            Fill Rectangle 44, Y - 4, Width + 8, 26, Rgb(25, 42, 67) Opacity 70
+        End If
+
+        For Index = 0 To 9
+
+            Amount = Growth.StatValue(Current, Index - 3)
+
+            If Value.Increases Then
+                Amount = Amount - Growth.StatValue(Previous, Index - 3)
+            End If
+
+            If Index = 0 Then
+                Amount = Level
+            Else If Index = 1 Then
+                Amount = Growth.NextXP(Level)
+            Else If Index = 2 Then
+                Amount = Growth.TotalXP(Level)
+            End If
+
+            Draw Text Growth.NumberText(Amount) At ColumnX(Index, Width), Y Size 11 Color WHITE
+        End For
+    End For
+
+    Call UI.DrawButton(48, Window_Height() - 101, 110, 32, "< Previous", False)
+    Call UI.DrawButton(166, Window_Height() - 101, 110, 32, "Next >", False)
+    Call UI.DrawButton(286, Window_Height() - 101, 110, 32, "First Level", False)
+    Call UI.DrawButton(404, Window_Height() - 101, 110, 32, "Last Level", False)
+
+    Draw Text "LB Gauge Capacity = Maximum HP; LB Power = Damage / Mira Healing" At 530, Window_Height() - 91 Size 12 Color LIGHT_GRAY
+
+End Sub
+
+Private Sub DrawGraph(Value As State)
+
+    Dim Index As Number
+    Dim Sample As Number
+    Dim Level As Number
+    Dim Width As Number
+    Dim Height As Number
+    Dim X As Number
+    Dim Y As Number
+    Dim LastX As Number
+    Dim LastY As Number
+    Dim Amount As Number
+    Dim Maximum As Number
+    Dim CommonMaximum As Number
+    Dim ButtonWidth As Number
+    Dim Current As Growth.Stats
+    Dim FinalStats As Growth.Stats
+    Dim Label As Text
+
+    Width = Window_Width() - 200
+    Height = Window_Height() - 340
+    ButtonWidth = (Window_Width() - 96) / 8
+    FinalStats = Growth.AtLevel(Value.CharacterId, Value.MaxLevel)
+
+    For Index = 0 To 7
+
+        Label = "Overlay All"
+
+        If Index > 0 Then
+            Label = Growth.StatName(Index - 1)
+        End If
+
+        Call UI.DrawButton(48 + Index * ButtonWidth, 138, ButtonWidth - 5, 30,
+            Label, Value.SelectedStat = Index - 1)
+    End For
+
+    For Index = 0 To 6
+        CommonMaximum = Max(CommonMaximum, Growth.StatValue(FinalStats, Index))
+    End For
+
+    If Value.SelectedStat >= 0 Then
+        CommonMaximum = Growth.StatValue(FinalStats, Value.SelectedStat)
+    End If
+
+    For Index = 0 To 4
+
+        Y = 215 + Height * Index / 4
+
+        Draw Line 105, Y, 105 + Width, Y, Rgb(45, 59, 79)
+
+        Amount = CommonMaximum * (4 - Index) / 4
+
+        If Value.Normalize And Value.SelectedStat < 0 Then
+            Amount = (4 - Index) * 25
+        End If
+
+        Draw Text Growth.NumberText(Amount) At 49, Y - 6 Size 12 Color LIGHT_GRAY
+    End For
+
+    For Index = 0 To 6
+
+        If Value.SelectedStat < 0 Or Value.SelectedStat = Index Then
+
+            Maximum = CommonMaximum
+
+            If Value.Normalize And Value.SelectedStat < 0 Then
+                Maximum = Growth.StatValue(FinalStats, Index)
+            End If
+
+            For Sample = 0 To 300
+
+                Level = 1 + (Value.MaxLevel - 1) * Sample / 300
+                Current = Growth.AtLevel(Value.CharacterId, Level)
+                Amount = Growth.StatValue(Current, Index)
+                X = 105 + Width * Sample / 300
+                Y = 215 + Height - Amount * Height / Max(1, Maximum)
+
+                If Sample > 0 Then
+                    Draw Line LastX, LastY, X, Y, StatColor(Index)
+                End If
+
+                LastX = X
+                LastY = Y
+            End For
+
+        End If
+
+        Draw Text Growth.StatName(Index) At 58 + Index * (Window_Width() - 110) / 7, Window_Height() - 96 Size 13 Color StatColor(Index)
+    End For
+
+    Draw Text "Level 1" At 105, 227 + Height Size 13 Color WHITE
+    Draw Text "Level " + Growth.NumberText(Value.MaxLevel) At 105 + Width - 110, 227 + Height Size 13 Color WHITE
+    Label = "Actual Stat Values"
+
+    If Value.Normalize And Value.SelectedStat < 0 Then
+        Label = "Overlay: % Of Each Stat At The Final Level"
+    End If
+
+    Draw Text Label At 105, 183 Size 13 Color CYAN
+
+End Sub
+
+Public Sub Draw(Value As State)
+
+    Dim RangeLabel As Text
+    Dim ModeLabel As Text
+
+    Fill Rectangle 0, 0, Window_Width(), Window_Height(), BLACK Opacity 75
+
+    Call UI.DrawPanel(28, 24, Window_Width() - 56, Window_Height() - 48, 98)
+    Call UI.DrawButton(Window_Width() - 146, 40, 98, 32, "Close (Esc)", False)
+
+    Draw Text Growth.Name(Value.CharacterId) + " - Level Growth" At 48, 45 Size 25 Color WHITE
+    RangeLabel = "Levels 1-" + Growth.NumberText(Value.MaxLevel)
+    ModeLabel = "Show Increases"
+
+    If Value.Graph Then
+
+        ModeLabel = "Normalize Overlay"
+
+        If Value.Normalize Then
+            ModeLabel = "Use Actual Values"
+        End If
+
+    Else If Value.Increases Then
+
+        ModeLabel = "Show Stat Totals"
+
+    End If
+
+    Call UI.DrawButton(48, 92, 130, 32, "Stats Table", Not Value.Graph)
+    Call UI.DrawButton(186, 92, 130, 32, "Graphs", Value.Graph)
+    Call UI.DrawButton(326, 92, 150, 32, RangeLabel, False)
+    Call UI.DrawButton(486, 92, 150, 32, ModeLabel, False)
+
+    If Value.Graph Then
+        Call DrawGraph(Value)
+    Else
+
+        Call DrawTable(Value)
+    End If
+
+    Draw Text "Level 1 Start | Standard Progression To 300 | Beyond 300: Extreme XP Grind | LB Fills After Taking One Full HP Bar Of Damage" At 48, Window_Height() - 51 Size 12 Color LIGHT_GRAY
+
+End Sub
+
+End Module

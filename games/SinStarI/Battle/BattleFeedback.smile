@@ -1,0 +1,98 @@
+''' Bounded floating combat labels, using the shared opacity-capable bitmap font.
+Module SinStarI.BattleFeedback
+
+Option Explicit
+
+Import Smile.UI.Core As UI
+Import Smile.UI.BitmapFont As Font
+
+Public Type Flyout
+    Label As Text
+    X As Number
+    Y As Number
+    Age As Number
+    Active As Boolean
+End Type
+
+Public Type State
+    Atlas As Image
+    FontHandle As Number
+    Items[8] As Flyout
+    NextSlot As Number
+End Type
+
+Public Sub Create(ByRef Value As State)
+
+    Dim Style As UI.BitmapFontStyle
+
+    Load Image Value.Atlas From "Assets\Battle\BitmapFont.png"
+
+    Style.Atlas = Value.Atlas
+    Style.FirstCodePoint = 32
+    Style.GlyphCount = 96
+    Style.Columns = 16
+    Style.SourceCellWidth = 64
+    Style.SourceCellHeight = 64
+    Style.DrawWidth = 32
+    Style.DrawHeight = 32
+    Style.AdvanceX = 23
+    Style.LineHeight = 36
+    Style.FallbackCodePoint = 63
+    Value.FontHandle = Font.Create(Style)
+
+End Sub
+
+Public Sub Add(ByRef Value As State, Label As Text, X As Number, Y As Number)
+
+    Value.Items[Value.NextSlot].Label = Label
+    Value.Items[Value.NextSlot].X = X
+    Value.Items[Value.NextSlot].Y = Y
+    Value.Items[Value.NextSlot].Age = 0
+    Value.Items[Value.NextSlot].Active = True
+    Value.NextSlot = (Value.NextSlot + 1) Mod 8
+
+End Sub
+
+Public Sub Update(ByRef Value As State, Elapsed As Number)
+
+    Dim Index As Number
+
+    For Index = 0 To 7
+
+        If Value.Items[Index].Active Then
+            Value.Items[Index].Age = Value.Items[Index].Age + Elapsed
+            Value.Items[Index].Active = Value.Items[Index].Age < 1400
+        End If
+
+    End For
+
+End Sub
+
+Public Sub Draw(ByRef Value As State)
+
+    Dim Index As Number
+    Dim Opacity As Number
+
+    For Index = 0 To 7
+
+        If Value.Items[Index].Active Then
+            Opacity = Min(100, (1400 - Value.Items[Index].Age) * 100 / 800)
+
+            Call Font.Draw(Value.FontHandle, Value.Items[Index].Label,
+                Value.Items[Index].X, Value.Items[Index].Y - Value.Items[Index].Age / 24,
+                UI.UI_ALIGN_CENTER, Opacity)
+        End If
+
+    End For
+
+End Sub
+
+Public Sub Destroy(ByRef Value As State)
+
+    Call Font.Destroy(Value.FontHandle)
+
+    Unload Image Value.Atlas
+
+End Sub
+
+End Module

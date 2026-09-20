@@ -23,6 +23,7 @@ Public Enum TitleAction
     Yalis = 17
     Kael = 18
     KaelBattle = 19
+    Battle = 20
 End Enum
 
 Private Enum MenuPage
@@ -74,7 +75,7 @@ Private Function ChoiceCount() As Number
     Else If Page = MenuPage.Legacy Then
         Return 4
     Else If Page = MenuPage.Main Then
-        Return 4
+        Return 5
     End If
 
     Return 4
@@ -160,6 +161,8 @@ Public Function Label(Action As TitleAction) As Text
             Return "Kael"
         Case TitleAction.KaelBattle
             Return "Kael Party"
+        Case TitleAction.Battle
+            Return "Battle"
         Case TitleAction.DragonBattle
             Return "Dragon Battle"
         Case TitleAction.VraxBattle
@@ -229,9 +232,9 @@ Private Sub BackToMain()
     If Page = MenuPage.Characters Then
         Selection = 0
     Else If Page = MenuPage.Battles Then
-        Selection = 1
-    Else
         Selection = 2
+    Else
+        Selection = 3
     End If
 
     Page = MenuPage.Main
@@ -280,11 +283,13 @@ Public Function HandleInput(Key As Number) As TitleAction
 
         If Page = MenuPage.Main Then
 
-            If Selection = 3 Then
+            If Selection = 4 Then
                 Return TitleAction.ExitGame
             Else If Selection = 0 Then
                 Page = MenuPage.Characters
             Else If Selection = 1 Then
+                Return TitleAction.Battle
+            Else If Selection = 2 Then
                 Page = MenuPage.Battles
             Else
                 Page = MenuPage.Legacy
@@ -320,10 +325,12 @@ Private Function ChoiceLabel(Index As Number) As Text
             Case 0
                 Result = "Characters"
             Case 1
-                Result = "Battle Simulations"
+                Result = "Battle"
             Case 2
-                Result = "Legacy"
+                Result = "Battle Simulations"
             Case 3
+                Result = "Legacy"
+            Case 4
                 Result = "Exit"
         End Select
 

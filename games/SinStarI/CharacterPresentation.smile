@@ -7,10 +7,14 @@ Import SinStarI.TitleScreen As TitleScreen
 Import SinStarI.BackgroundMusic As BackgroundMusic
 Import Smile.Tools.Character3DViewerWorkflow As Viewer
 Import Smile.Tools.Character3DViewerProfiles As Profiles
+Import SinStarI.StatsView As StatsView
 
 Private Dim Preview As Viewer.Session
 Private Dim Active As Boolean
 Private Dim Heading As Text
+Private Dim GrowthView As StatsView.State
+Private Dim CharacterId As Number
+Private Dim ShowStats As Boolean
 
 Public Function IsPresentation(Action As TitleScreen.TitleAction) As Boolean
 
@@ -87,6 +91,32 @@ Public Sub Enter(Action As TitleScreen.TitleAction)
 
     Preview = New Viewer.Session()
     Heading = TitleScreen.Label(Action)
+    GrowthView.Visible = False
+    ShowStats = True
+
+    Select Case Action
+        Case TitleScreen.TitleAction.Arin
+            CharacterId = 0
+        Case TitleScreen.TitleAction.Orin
+            CharacterId = 1
+        Case TitleScreen.TitleAction.Zara
+            CharacterId = 2
+        Case TitleScreen.TitleAction.Mira
+            CharacterId = 3
+        Case TitleScreen.TitleAction.Kael
+            CharacterId = 4
+        Case TitleScreen.TitleAction.Valor
+            CharacterId = 5
+        Case TitleScreen.TitleAction.Dragon
+            CharacterId = 6
+        Case TitleScreen.TitleAction.Vrax
+            CharacterId = 7
+        Case TitleScreen.TitleAction.Yalis
+            CharacterId = 8
+        Case Else
+            ShowStats = False
+    End Select
+
     CycleClips = (Action <> TitleScreen.TitleAction.DragonBattle And
         Action <> TitleScreen.TitleAction.KaelBattle And
         Action <> TitleScreen.TitleAction.VraxBattle)
@@ -121,6 +151,10 @@ Public Function BackRequested(Key As Number) As Boolean
 
     Dim Result As Boolean
 
+    If GrowthView.Visible Then
+        Return False
+    End If
+
     Result = (Key = KEY_ESCAPE Or
         (Pointer_Inside() And Pointer_Pressed(POINTER_PRIMARY) And
         Pointer_X() >= 20 And Pointer_X() < 115 And
@@ -133,6 +167,26 @@ End Function
 Public Sub Update(Key As Number)
 
     If Not Active Then
+        Return
+    End If
+
+    If GrowthView.Visible Then
+
+        Call StatsView.Update(GrowthView, Key)
+        Call Preview.UpdateFrame(Window_Width(), Window_Height())
+
+        Return
+
+    End If
+
+    If (ShowStats And
+        Pointer_Inside() And
+        Pointer_Pressed(POINTER_PRIMARY) And
+        Pointer_Y() >= 20 And
+        Pointer_Y() < 56 And
+        Pointer_X() >= Window_Width() - 260) Then
+        Call StatsView.Open(GrowthView, CharacterId, Pointer_X() >= Window_Width() - 130)
+
         Return
     End If
 
@@ -157,6 +211,19 @@ Public Sub Draw()
     Draw Text Preview.PresentationCaption() At 136, 57 Size 16 Color CYAN
     Fill Rectangle 20, Window_Height() - 47, Window_Width() - 40, 29, Rgb(10, 20, 35)
     Draw Text "Drag: Pan   Middle Drag: Orbit   Wheel: Zoom   O: Auto Orbit   Space: Pause   F: Floor   G: Grid   B: Background   R: Reset   Esc: Back" At 30, Window_Height() - 40 Size 14 Color WHITE
+
+    If ShowStats Then
+
+        Fill Rectangle Window_Width() - 260, 20, 120, 36, Rgb(15, 55, 75) Opacity 80
+        Fill Rectangle Window_Width() - 130, 20, 110, 36, Rgb(15, 55, 75) Opacity 80
+        Draw Text "Stats Table" At Window_Width() - 251, 29 Size 15 Color WHITE
+        Draw Text "Graphs" At Window_Width() - 106, 29 Size 15 Color WHITE
+
+    End If
+
+    If GrowthView.Visible Then
+        Call StatsView.Draw(GrowthView)
+    End If
 
 End Sub
 

@@ -1,5 +1,14 @@
 # Arin: Creation, Import, Animation, and Repair Lessons
 
+## Playable battle consumer — September 20, 2026
+
+Sin Star I's `Battle/BattleActors.smile` loads this accepted package and evaluates
+its saved calibration on every clip/frame. The new rear battle view changes the
+camera, not the accepted actor facing or world-axis equipment corrections. The
+Fight list uses the existing SwordAttack and SwordAttack2 clips. No model, socket,
+animation source or pose JSON is rebaked for the new battle. Continue making pose
+changes in the Viewer and rebuilding consumers from the latest exported JSON.
+
 ## Current pose-authoring rule — September 20, 2026
 
 Sin makes pose changes in the Character Viewer and saves/exports JSON. The latest

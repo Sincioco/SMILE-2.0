@@ -1,0 +1,275 @@
+''' Pure progression/stat formulas shared by gameplay and inspection views.
+Module SinStarI.Progression
+
+Option Explicit
+
+Public Const NORMAL_LEVEL_CAP = 300
+Public Const MAX_LEVEL = 9999
+Public Const ARIN = 0
+Public Const ORIN = 1
+Public Const ZARA = 2
+Public Const MIRA = 3
+Public Const KAEL = 4
+
+Public Type Stats
+    HP As Number
+    MP As Number
+    Attack As Number
+    Magic As Number
+    Defense As Number
+    MagicDefense As Number
+    LimitPower As Number
+End Type
+
+Public Function Name(Id As Number) As Text
+
+    Select Case Id
+        Case ARIN
+            Return "Arin"
+        Case ORIN
+            Return "Orin"
+        Case ZARA
+            Return "Zara"
+        Case MIRA
+            Return "Mira"
+        Case KAEL
+            Return "Kael"
+        Case 5
+            Return "Valor"
+        Case 6
+            Return "Dragon"
+        Case 7
+            Return "Vrax"
+        Case 8
+            Return "Yalis"
+    End Select
+
+    Return "Character"
+
+End Function
+
+''' Cost to advance FROM this level; post-300 advancement is optional prestige grinding.
+Public Function NextXP(Level As Number) As Number
+
+    Dim N As Number
+    Dim Result As Number
+
+    If Level >= MAX_LEVEL Then
+        Return 0
+    End If
+
+    N = Max(1, Level) - 1
+    Result = 60 + 20 * N + 3 * N * N
+
+    If Level >= NORMAL_LEVEL_CAP Then
+        N = Level - NORMAL_LEVEL_CAP + 1
+        Result = Result * 25 + 500000 * N * N
+    End If
+
+    Return Result
+
+End Function
+
+''' Closed-form prefix keeps charts and level lookup responsive even near 9,999.
+Private Function BaseTotal(LevelCount As Number) As Number
+
+    Dim Result As Number
+
+    Result = (60 * LevelCount + 10 * LevelCount * (LevelCount - 1) +
+        LevelCount * (LevelCount - 1) * (2 * LevelCount - 1) / 2)
+    Return Result
+
+End Function
+
+Public Function TotalXP(Level As Number) As Number
+
+    Dim LevelCount As Number
+    Dim Extra As Number
+    Dim Result As Number
+
+    LevelCount = Min(MAX_LEVEL, Max(1, Level)) - 1
+    Result = BaseTotal(LevelCount)
+
+    If LevelCount >= NORMAL_LEVEL_CAP Then
+        Extra = LevelCount - NORMAL_LEVEL_CAP + 1
+        Result = (BaseTotal(299) + 25 * (BaseTotal(LevelCount) - BaseTotal(299)) +
+            500000 * Extra * (Extra + 1) * (2 * Extra + 1) / 6)
+    End If
+
+    Return Result
+
+End Function
+
+Public Function LevelForXP(Experience As Number) As Number
+
+    Dim Low As Number
+    Dim High As Number
+    Dim Middle As Number
+
+    Low = 1
+    High = MAX_LEVEL
+
+    Do
+        Middle = (Low + High + 1) / 2
+
+        If TotalXP(Middle) <= Experience Then
+            Low = Middle
+        Else
+            High = Middle - 1
+        End If
+
+    Loop Until Low >= High
+
+    Return Low
+
+End Function
+
+Public Function AtLevel(Id As Number, Level As Number) As Stats
+
+    Dim Result As Stats
+    Dim Growth As Number
+
+    Level = Min(MAX_LEVEL, Max(1, Level))
+    Growth = Level - 1
+    ''' Priority units: 10 HP, 5 MP, 1 Attack or 1 Defense per growth point.
+    Result.HP = 230 + Growth * 24
+    Result.MP = 65 + Growth * 6
+    Result.Attack = 43 + Growth * 4
+    Result.Magic = 28 + Growth * 3
+    Result.Defense = 30 + Growth * 2
+    Result.MagicDefense = 28 + Growth * 2
+
+    If Id = ARIN Then
+
+        Result.HP = 240 + Growth * 30
+        Result.MP = 55 + Growth * 10
+        Result.Attack = 40 + Growth * 4
+        Result.Magic = 30 + Growth * 3
+        Result.Defense = 50 + Growth * 5
+        Result.MagicDefense = 42 + Growth * 4
+
+    Else If Id = ORIN Then
+
+        Result.HP = 270 + Growth * 40
+        Result.MP = 40 + Growth * 10
+        Result.Attack = 50 + Growth * 5
+        Result.Magic = 22 + Growth * 2
+        Result.Defense = 40 + Growth * 3
+        Result.MagicDefense = 32 + Growth * 3
+
+    Else If Id = MIRA Then
+
+        Result.HP = 220 + Growth * 40
+        Result.MP = 130 + Growth * 25
+        Result.Attack = 23 + Growth * 2
+        Result.Magic = 52 + Growth * 5
+        Result.Defense = 35 + Growth * 3
+        Result.MagicDefense = 45 + Growth * 4
+
+    Else If Id = ZARA Or Id = KAEL Then
+
+        Result.HP = 250 + Growth * 40
+        Result.MP = 70 + Growth * 15
+        Result.Attack = 48 + Growth * 5
+        Result.Magic = 32 + Growth * 3
+        Result.Defense = 30 + Growth * 2
+        Result.MagicDefense = 30 + Growth * 2
+
+    End If
+
+    Result.LimitPower = Result.Attack * 6 + Level * 5
+
+    If Id = MIRA Then
+        Result.LimitPower = Result.Magic * 6 + Level * 5
+    End If
+
+    Return Result
+
+End Function
+
+Public Function EscapeChance(Level As Number, EnemyLevel As Number) As Number
+
+    Dim Result As Number
+
+    Result = Min(100, 50 + Max(0, Level - EnemyLevel) * 5 / 2)
+    Return Result
+
+End Function
+
+Public Function StatName(Index As Number) As Text
+
+    Select Case Index
+        Case 0
+            Return "HP"
+        Case 1
+            Return "MP"
+        Case 2
+            Return "Attack"
+        Case 3
+            Return "Magic"
+        Case 4
+            Return "Physical Def"
+        Case 5
+            Return "Magic Def"
+        Case 6
+            Return "LB Power"
+    End Select
+
+    Return ""
+
+End Function
+
+Public Function StatValue(Value As Stats, Index As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Select Case Index
+        Case 0
+            ReturnValue = Value.HP
+
+            Return ReturnValue
+        Case 1
+            ReturnValue = Value.MP
+
+            Return ReturnValue
+        Case 2
+            ReturnValue = Value.Attack
+
+            Return ReturnValue
+        Case 3
+            ReturnValue = Value.Magic
+
+            Return ReturnValue
+        Case 4
+            ReturnValue = Value.Defense
+
+            Return ReturnValue
+        Case 5
+            ReturnValue = Value.MagicDefense
+
+            Return ReturnValue
+    End Select
+
+    ReturnValue = Value.LimitPower
+
+    Return ReturnValue
+
+End Function
+
+Public Function NumberText(Value As Number) As Text
+
+    Dim Result As Text
+    Dim Digit As Number
+
+    Do
+        Digit = Value Mod 10
+        Result = Text_Slice("0123456789", Digit, 1) + Result
+        Value = Value / 10
+
+    Loop Until Value = 0
+
+    Return Result
+
+End Function
+
+End Module

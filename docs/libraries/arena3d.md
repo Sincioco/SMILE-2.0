@@ -28,6 +28,10 @@ initialization, call `Update` with the queued key and UI-blocking flag, then cal
 `BeginFrame`, `Draw`, and the ordinary scene end operation. Destroy before changing
 scenes. Supply a base camera appropriate to the actors; the shared controls work
 relative to that camera. Floor visibility also keeps the live camera above ground.
+Screen-space composition derives its right/up basis from that base camera, including
+rear views from positive Z. The Sin Star I battle exposed an inverted view when the
+old helper assumed world +X was always screen right; native Precision3D regression
+checks now cover upright projection and both pan directions for the rear view.
 The base camera describes reset framing; the default zoom offset does not narrow
 an existing scene's field of view. `ComposeCamera` supplies that same live camera
 before drawing when a host needs screen picking or labels.
