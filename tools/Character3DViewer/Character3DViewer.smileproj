@@ -18,6 +18,8 @@
     <SmileSource Include="BattleProgression.smile" />
     <SmileSource Include="BattlePresentation.smile" />
     <SmileSource Include="BattleUi.smile" />
+    <SmileSource Include="BattleHud.smile" />
+    <SmileSource Include="BattleCinematics.smile" />
     <SmileSource Include="BattleGrowthView.smile" />
     <SmileSource Include="BattleOutcome.smile" />
     <Asset Include="BattleExperienceTick.wav" />

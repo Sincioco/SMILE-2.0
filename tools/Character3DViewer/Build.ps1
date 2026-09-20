@@ -38,6 +38,8 @@ $nativeBattleSources = @(
     'BattleOutcome.smile',
     'BattlePresentation.smile',
     'BattleUi.smile',
+    'BattleHud.smile',
+    'BattleCinematics.smile',
     '..\..\games\SinStarI\Characters\Progression.smile',
     '..\..\games\SinStarI\Characters\StatsView.smile',
     '..\..\games\SinStarI\Battle\BattleRules.smile',

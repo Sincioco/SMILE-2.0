@@ -22,13 +22,27 @@ are hidden in the native tab strip; the accepted Mira follows Zara.
   statistics during execution requests orders at the round boundary; inspector
   editing waits for that boundary. Close inspectors with backtick to resume
   normal battle presentation. Save/cancel pending pose or Beat edits first.
-- The five panels use the shared 80%-opacity navy style, centered HP/MP/LB
-  fractions and remembered-order icons. A red arrow and highlighted hero panel
-  mark selection. Damage/healing numbers rise and fade above their targets.
-- The order-selection camera uses Sin's September 20 screenshot: position
-  `(623, 0, 382)`, target `(-67, 122, -66)`, FOV 24 degrees. It is restored when
-  new orders are requested and by right-click restart; normal smooth arena controls
-  remain available. Actors use separate formation homes before the first frame.
+- The five panels use the shared 80%-opacity navy style and remembered-order
+  icons. With all editor panels hidden, the four hero panels widen and move down;
+  the centered Fight/Order/Auto panel stays 166 pixels wide. Kael's left-aligned
+  info and HP bar span the same available width with 18-pixel outer margins.
+  Showing the editors restores the narrower layout. HUD drawing and clicks use
+  the same layout, including each Stats Table/Graphs button.
+- A floating red crystal pointer with shaded facets, luminous edges and a pulsing
+  aura marks the hero receiving orders. It is hidden throughout attack execution
+  and after battle; the active hero's card remains highlighted. Damage/healing
+  numbers rise and fade above their targets.
+- The right panel has **Battle** and **Inspector** tabs. **Cinematic Camera Battle**
+  starts on. The camera continuously orbits slowly through wide, close-up and
+  two-character shots; impact cuts begin just before contact and continue moving
+  through the reaction. Shots track the current actor and target. Turn it off to
+  retain the current shot and use the existing smooth manual camera controls.
+- The opening shot starts from Sin's screenshot: position `(623, 0, 382)`, target
+  `(-67, 122, -66)`, FOV 24 degrees. Right-click restart restores that opening.
+  Cinematics keep moving while waiting for orders. Active pose edits or Beat
+  previews retain their existing camera ownership until saved/cancelled. The
+  required twelve-second ending orbit still runs; enabled cinematics resume
+  afterwards. Actors use separate formation homes before the first frame.
 - Each hero and Kael has **Stats Table** and **Graphs** buttons: per-level values
   or increases, XP, individual graphs and normalized/actual-value overlays,
   with levels 1–300 or 1–9,999. Kael's last column/graph is **EXP Reward**.

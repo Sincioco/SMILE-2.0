@@ -9,6 +9,8 @@ Import Smile.Tools.ViewerBattlePlanning As Planning
 Import Smile.Tools.ViewerBattlePresentation As Presentation
 Import Smile.Tools.ViewerBattleUi As BattleUi
 Import Smile.Tools.ViewerBattleOutcome As Outcome
+Import Smile.Tools.ViewerBattleHud As Hud
+Import Smile.Tools.ViewerBattleCinematics As Cinematics
 Import Smile.UI.Controls As UI
 Import SinStarI.BattleRules As Rules
 
@@ -94,6 +96,8 @@ Public Class Session
     Private Visual As Presentation.State
     Private Menus As BattleUi.State
     Private Ending As Outcome.State
+    Private Camera As Cinematics.State
+    Private BattlePanel As Boolean
     Private SelectedTab As Number
     Private PreviousTime As Number
     Private Elapsed As Number
@@ -104,6 +108,8 @@ Public Class Session
 
         Dim ViewerTab As Number
 
+        Me.Camera.Enabled = True
+        Me.BattlePanel = True
         Me.SelectedTab = InitialTab
         ViewerTab = InitialTab
 
@@ -172,6 +178,7 @@ Public Class Session
         Call Presentation.Create(Me.Visual, Viewer)
         Call Presentation.Apply(Me.Visual, Viewer, Me.Encounter.Combat, 0)
         Call Presentation.OrdersCamera(Viewer)
+        Call Cinematics.Reset(Me.Camera, Viewer)
 
     End Sub
 
@@ -193,6 +200,7 @@ Public Class Session
         Call Presentation.Restart(Me.Visual)
         Call Presentation.Apply(Me.Visual, Viewer, Me.Encounter.Combat, 0)
         Call Presentation.OrdersCamera(Viewer)
+        Call Cinematics.Reset(Me.Camera, Viewer)
 
     End Sub
 
@@ -203,6 +211,7 @@ Public Class Session
         Dim Blocked As Boolean
         Dim ViewerKey As Number
         Dim WasPlanning As Boolean
+        Dim Layout As Hud.Layout
 
         X = 18
         Blocked = UI.Contains(18, 62, 850, 26)
@@ -238,17 +247,23 @@ Public Class Session
 
         If Me.BattleActive Then
 
+            Layout = Hud.Arrange(Window_Width(), Window_Height(), Viewer.PanelVisibility())
             WasPlanning = Me.Encounter.Planning
 
+            If Not Me.Menus.Stats.Visible Then
+                Blocked = Hud.OptionsInput(Me.BattlePanel, Me.Camera.Enabled,
+                    Viewer.PanelVisibility(), Viewer.CanSwitchTab()) Or Blocked
+            End If
+
             If Viewer.CanSwitchTab() Then
-                Call BattleUi.Update(Me.Menus, Me.Encounter, Key)
+                Call BattleUi.Update(Me.Menus, Me.Encounter, Key, Layout)
             End If
 
             If WasPlanning And Not Me.Encounter.Planning Then
                 Call Viewer.ResumeDirectedScene()
             End If
 
-            Blocked = Blocked Or BattleUi.Blocked(Me.Menus)
+            Blocked = Blocked Or BattleUi.Blocked(Me.Menus, Layout)
 
             ''' Inspectors may open during a round, but editing waits for its boundary.
 
@@ -307,12 +322,18 @@ Public Class Session
                     Call Outcome.Update(Me.Ending, Viewer, Me.Elapsed)
                 End If
 
-                If Me.Encounter.Planning And Not WasPlanning Then
+                If Me.Encounter.Planning And Not WasPlanning And Not Me.Camera.Enabled Then
                     Call Presentation.OrdersCamera(Viewer)
                 End If
 
             End If
 
+        End If
+
+        If (Me.BattleActive And Viewer.SceneReady() And Viewer.CanSwitchTab() And
+            (Not Me.Ending.Started Or Me.Ending.OrbitTime >= Outcome.ORBIT_DURATION)) Then
+            Call Cinematics.Update(Me.Camera, Viewer, Me.Encounter.Combat,
+                Me.Elapsed, Width, Height)
         End If
 
         Call Viewer.UpdateFrame(Width, Height)
@@ -348,7 +369,9 @@ Public Class Session
             End If
 
             Call Presentation.Draw(Me.Visual, Viewer, Me.Encounter.Combat)
-            Call BattleUi.Draw(Me.Menus, Me.Encounter, Me.Inspecting)
+            Call Hud.DrawOptions(Me.BattlePanel, Me.Camera.Enabled, Viewer.PanelVisibility())
+            Call BattleUi.Draw(Me.Menus, Me.Encounter, Me.Inspecting,
+                Hud.Arrange(Window_Width(), Window_Height(), Viewer.PanelVisibility()))
             Call Outcome.Draw(Me.Ending, Me.Encounter)
 
         End If

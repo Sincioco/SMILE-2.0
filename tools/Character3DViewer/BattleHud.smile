@@ -1,0 +1,237 @@
+''' Native battle layout and status panels; drawing and hit testing share one layout.
+Module Smile.Tools.ViewerBattleHud
+
+Option Explicit
+
+Import Smile.Tools.ViewerBattlePlanning As Planning
+Import SinStarI.BattleRules As Rules
+Import SinStarI.BattleAttacks As Attacks
+Import SinStarI.BattleUI As Icons
+Import SinStarI.Progression As Growth
+Import Smile.UI.Controls As UI
+
+Public Type Layout
+    AreaX As Number
+    AreaWidth As Number
+    HeroWidth As Number
+    MenuX As Number
+    MenuWidth As Number
+    PanelY As Number
+End Type
+
+Public Function Arrange(Width As Number, Height As Number, Visibility As Number) As Layout
+
+    Dim Result As Layout
+    Dim Margin As Number
+
+    Margin = 18
+    Result.PanelY = Height - 171
+    Result.MenuWidth = 166
+
+    If Visibility <> 2 Then
+
+        Result.PanelY = Height - 245
+
+        If Width >= 1100 Then
+            Margin = 278
+        End If
+
+    End If
+
+    Result.HeroWidth = (Width - Margin * 2 - Result.MenuWidth - 24) / 4
+    Result.AreaWidth = Result.HeroWidth * 4 + Result.MenuWidth + 24
+    Result.AreaX = (Width - Result.AreaWidth) / 2
+    Result.MenuX = Result.AreaX + (Result.HeroWidth + 6) * 2
+    Return Result
+
+End Function
+
+Public Function HeroX(Value As Layout, Index As Number) As Number
+
+    Dim Result As Number
+
+    Result = Value.AreaX + Index * (Value.HeroWidth + 6)
+
+    If Index >= 2 Then
+        Result = Result + Value.MenuWidth + 6
+    End If
+
+    Return Result
+
+End Function
+
+Private Sub Bar(Name As Text, Current As Number, Maximum As Number,
+    X As Number, Y As Number, BarWidth As Number, Tint As Number,
+    Optional AlignLeft As Boolean = False)
+
+    Fill Rectangle X, Y, BarWidth, 18, Rgb(26, 35, 54) Opacity 80
+    Fill Rectangle X, Y, BarWidth * Current / Max(1, Maximum), 18, Tint Opacity 80
+    Draw Text Name At X + 3, Y + 3 Size 10 Color WHITE
+
+    If AlignLeft Then
+        Draw Text Growth.NumberText(Current) + "/" + Growth.NumberText(Maximum) At X + 32, Y + 2 Size 12 Color WHITE
+    Else
+        Draw Text Growth.NumberText(Current) + "/" + Growth.NumberText(Maximum) At X + BarWidth / 2, Y + 2 Size 12 Color WHITE Centered
+    End If
+
+End Sub
+
+Public Sub DrawPanels(Value As Layout, Encounter As Planning.State, Inspecting As Boolean)
+
+    Dim Index As Number
+    Dim X As Number
+    Dim Y As Number
+    Dim Member As Rules.Member
+    Dim Caption As Text
+
+    Y = Value.PanelY
+
+    For Index = 0 To 3
+
+        Member = Encounter.Combat.Members[Index]
+        X = HeroX(Value, Index)
+
+        Call UI.DrawPanel(X, Y, Value.HeroWidth, 145)
+
+        If Encounter.Combat.Turn = Index And Encounter.Combat.Phase < Rules.VICTORY Then
+            Draw Rectangle X, Y, Value.HeroWidth, 145, CYAN
+            Fill Rectangle X, Y, Value.HeroWidth, 3, CYAN
+        End If
+
+        Draw Text Growth.Name(Index) + " Lv " + Growth.NumberText(Member.Level) At X + 7, Y + 9 Size 14 Color WHITE
+
+        Call Bar("HP", Member.HP, Member.Stats.HP, X + 7, Y + 31, Value.HeroWidth - 14, Rgb(169, 48, 67))
+        Call Bar("MP", Member.MP, Member.Stats.MP, X + 7, Y + 52, Value.HeroWidth - 14, Rgb(35, 96, 185))
+        Call Bar("LB", Member.LB, Member.Stats.HP, X + 7, Y + 73, Value.HeroWidth - 14, Rgb(166, 111, 29))
+        Call Icons.Icon(Member.LastCommand, X + 7, Y + 96, CYAN)
+
+        Caption = Rules.CommandName(Member.LastCommand)
+
+        If Member.LastCommand = Rules.ATTACK Then
+            Caption = Attacks.Label(Index, Member.LastAttack)
+        End If
+
+        If Member.HP = 0 Then
+            Caption = "Knocked Out"
+        Else If Member.Escaped Then
+            Caption = "Escaped"
+        End If
+
+        Draw Text Caption At X + 34, Y + 102 Size 10 Color WHITE
+
+        Call UI.DrawButton(X + 5, Y + 124, (Value.HeroWidth - 8) / 2, 19, "Stats Table", False)
+        Call UI.DrawButton(X + (Value.HeroWidth + 6) / 2, Y + 124, (Value.HeroWidth - 8) / 2, 19, "Graphs", False)
+    End For
+
+    X = Value.MenuX
+
+    Call UI.DrawPanel(X, Y, Value.MenuWidth, 145)
+
+    Draw Text "Round " + Growth.NumberText(Encounter.Combat.Round) At X + 9, Y + 9 Size 13 Color CYAN
+
+    If Not Encounter.Planning Then
+
+        Caption = "Auto Battle"
+
+        If Encounter.Combat.StopRequested Then
+            Caption = "Orders Next Round"
+        Else If Encounter.Combat.Phase >= Rules.VICTORY Then
+            Caption = "Battle Finished"
+        End If
+
+        Draw Text Caption At X + 8, Y + 60 Size 11 Color WHITE
+
+    End If
+
+    Call UI.DrawPanel(Value.AreaX, Y - 36, Value.AreaWidth, 29)
+
+    Caption = Encounter.Combat.Message
+
+    If Inspecting Then
+        Caption = "Inspector Open - Battle Paused (` To Resume)"
+    End If
+
+    Draw Text Caption At Value.AreaX + 9, Y - 28 Size 13 Color WHITE
+
+    Member = Encounter.Combat.Members[4]
+    X = Value.AreaX
+
+    Call UI.DrawPanel(X, 94, Value.AreaWidth, 64)
+
+    Draw Text "Kael - Level " + Growth.NumberText(Member.Level) At X + 7, 101 Size 15 Color WHITE
+
+    Call UI.DrawButton(X + 184, 98, 82, 22, "Stats Table", False)
+    Call UI.DrawButton(X + 270, 98, 82, 22, "Graphs", False)
+    Call Bar("HP", Member.HP, Member.Stats.HP, X + 7, 130, Value.AreaWidth - 14, Rgb(169, 48, 67), True)
+
+    Draw Text "Arrows: Choose | Enter/Space: Confirm | Esc: Back | Input During Battle: Orders Next Round | `: Panels" At Value.AreaX, Window_Height() - 20 Size 11 Color LIGHT_GRAY
+
+End Sub
+
+Public Function OptionsInput(ByRef BattleTab As Boolean, ByRef Cinematic As Boolean,
+    Visibility As Number, CanEdit As Boolean) As Boolean
+
+    Dim X As Number
+    Dim Blocked As Boolean
+
+    If Visibility = 2 Then
+        Return False
+    End If
+
+    X = Window_Width() - 268
+    Blocked = UI.Contains(X, 90, 252, 28)
+
+    If CanEdit Then
+
+        If UI.Clicked(X, 90, 100, 26) Then
+            BattleTab = True
+        Else If UI.Clicked(X + 104, 90, 148, 26) Then
+            BattleTab = False
+        End If
+
+        If BattleTab And UI.Clicked(X + 8, 132, 236, 36) Then
+            Cinematic = Not Cinematic
+        End If
+
+    End If
+
+    Blocked = Blocked Or (BattleTab And UI.Contains(X, 118, 252, Window_Height() - 130))
+    Return Blocked
+
+End Function
+
+Public Sub DrawOptions(BattleTab As Boolean, Cinematic As Boolean, Visibility As Number)
+
+    Dim X As Number
+    Dim Caption As Text
+
+    If Visibility = 2 Then
+        Return
+    End If
+
+    X = Window_Width() - 268
+
+    Call UI.DrawButton(X, 90, 100, 26, "Battle", BattleTab)
+    Call UI.DrawButton(X + 104, 90, 148, 26, "Inspector", Not BattleTab)
+
+    If Not BattleTab Then
+        Return
+    End If
+
+    Call UI.DrawPanel(X, 118, 252, Window_Height() - 130, 100)
+    Call UI.DrawButton(X + 8, 132, 236, 36, "Cinematic Camera Battle", Cinematic)
+
+    Caption = "Off - Manual Camera"
+
+    If Cinematic Then
+        Caption = "On - Moving Cinematic Shots"
+    End If
+
+    Draw Text Caption At X + 12, 184 Size 12 Color CYAN
+    Draw Text "Close-Ups / Wide / Two Characters" At X + 12, 210 Size 11 Color WHITE
+    Draw Text "Impact Shots Follow Each Attack" At X + 12, 232 Size 11 Color WHITE
+    Draw Text "` Hides Panels And Expands HUD" At X + 12, 270 Size 11 Color LIGHT_GRAY
+
+End Sub
+
+End Module

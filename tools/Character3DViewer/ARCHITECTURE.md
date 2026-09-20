@@ -14,7 +14,7 @@ Studio/Web host inventory; it does not adopt or publish this feature there.
 whole-round repetition and applies this encounter's +300% defense policy.
 `BattlePresentation` translates resolved actions into borrowed Viewer actor clips,
 movement, reactions, floating feedback and the requested camera preset.
-`BattleUi` owns layout, menus and input; it does not resolve combat. The existing
+`BattleUi` owns menus and input; it does not resolve combat. The existing
 Sin Star I progression, stats-view input, attacks, rules, feedback and icon
 functions are source-linked unchanged. Part 1a adds Viewer-owned curved stats and
 rewards, plus approved Victory additions to the canonical character packages;
@@ -93,6 +93,46 @@ borrow/reset lifecycle. That lifecycle otherwise reopens panels and restarts dem
 state underneath the encounter. Both reset entry paths are guarded; the native
 scene fixture checks reset visibility and the visible right-click check verifies
 the requested camera and formation are retained.
+
+## Native battle cinematics and responsive HUD (Part 1b)
+
+`BattleCinematics` owns the host's enabled flag, shot clock and current camera.
+It selects opening/wide/close-up/two-character/impact framing from combat phase,
+acting hero, target and actual impact timing. Every shot applies a slow Double
+orbit through the existing shared `ArenaCamera3D.ComposeOrbit`; input controls,
+renderer and language are unchanged. The host coordinates camera ownership with
+pending pose edits, Beat preview and the pre-existing twelve-second ending orbit.
+Turning the option off preserves the last shot for manual inspection. The opening
+uses the accepted screenshot preset, then cinematic cuts continue during orders.
+
+`BattleHud` owns pure responsive geometry, status rendering and the native right
+panel's Battle/Inspector tabs. `BattleUi` consumes the same geometry for hit tests
+and menu drawing. Hidden editors yield four wider hero cards and a wider enemy
+bar, with a fixed 166-pixel command card and symmetric margins. This extraction
+moves existing HUD responsibilities out of BattleUi; combat and progression are
+unchanged. No Workflow, Party, shared source inventory or asset change is needed.
+
+The highlighted red order pointer remains in `BattlePresentation`, the owner of
+world-projected feedback. It is a faceted, glowing, gently floating game cursor,
+visible only for a living, present hero in WAITING. EXECUTING and terminal phases
+hide it, following Sin's corrected instruction.
+
+Growth: BattleUi shrinks from 537 to 409 lines; BattleHud is 237 lines and
+BattleCinematics 220. NativeViewerHost grows from 370 to 393 lines through state
+and delegation; BattlePresentation grows from 413 to 453 for order-pointer policy
+and drawing. BattleSceneTests is 249 lines. All feature owners stay below the
+600-line review trigger; no threshold, baseline or exclusion was altered.
+
+Validation: the native planning/real-asset scene fixtures pass, including fixed
+command geometry, expanded margins, all shot types moving, impact timing and
+both subjects' heads inside the unobscured scene area. The order-arrow policy
+passes in waiting/executing phases. The native hardening gate passes, including
+calibration isolation and 58 graphics/input/audio checks; scoped formatting and
+diff checks pass. Native UI review verified compact/expanded layouts, Battle
+toggle off/on, an attack close-up, deferred interruption, relocated Kael stats,
+and the final crystal pointer following the next hero. Arin and Orin exports
+match their canonical JSON bytes. The final native Viewer was rebuilt and
+relaunched through Launch.ps1; no Web build, publication or browser acceptance.
 
 ## Standalone tab music
 

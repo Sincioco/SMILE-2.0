@@ -1,5 +1,21 @@
 # Party Beat Camera Editor — Desktop Checkpoint
 
+## Native Battle System Part 1b — September 20, 2026
+
+The native right panel now has Battle/Inspector tabs and a default-on Cinematic
+Camera Battle option. Moving wide, close-up and two-character shots cut around
+actual impact timing. Hiding all legacy panels widens and lowers the four hero
+cards while preserving the fixed central command card; Kael's left-aligned HP
+panel spans the same width. The highlighted order cursor is a faceted red crystal
+with a pulsing aura. Sin corrected the execution-arrow request: it is visible
+only while receiving orders, never while attacks execute.
+
+Native battle regressions, hardening/calibration checks, formatting and UI review
+pass; the rebuilt Viewer is launched. Camera and HUD ownership/growth are in the
+Viewer architecture document. No game rules, assets, calibration JSON, Web output
+or Studio sources changed. Web/Studio adoption and the earlier recovery
+investigation remain on hold; no next phase is implied.
+
 ## Native Battle System Part 1a — September 20, 2026
 
 The native Viewer adds right-click restart retaining session EXP, one-time Kael

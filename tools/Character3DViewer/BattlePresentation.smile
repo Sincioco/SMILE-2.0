@@ -384,21 +384,61 @@ Public Sub Draw(ByRef Value As State, Viewer As Workflow.Session, Battle As Rule
 
     End If
 
-    If Battle.Turn < 4 And Battle.Phase < Rules.VICTORY Then
+    If OrderArrowVisible(Battle) Then
 
         Point = Viewer.PartyHeadPoint(PartyTurn(Battle.Turn))
 
         If Point.Visible Then
-
-            Fill Rectangle Point.X - 4, Point.Y - 28, 8, 20, RED
-            Draw Line Point.X - 13, Point.Y - 14, Point.X, Point.Y, RED
-            Draw Line Point.X + 13, Point.Y - 14, Point.X, Point.Y, RED
-
+            Call DrawOrderArrow(Point.X, Point.Y)
         End If
 
     End If
 
     Call Feedback.Draw(Value.Feedback)
+
+End Sub
+
+Public Function OrderArrowVisible(Battle As Rules.State) As Boolean
+
+    Dim Result As Boolean
+
+    Result = (Battle.Phase = Rules.WAITING And Battle.Turn < 4 And
+        Battle.Members[Battle.Turn].HP > 0 And Not Battle.Members[Battle.Turn].Escaped)
+    Return Result
+
+End Function
+
+Private Sub DrawOrderArrow(X As Number, Y As Number)
+
+    Dim Row As Number
+    Dim TipY As Number
+    Dim HalfWidth As Number
+    Dim Notch As Number
+    Dim Glow As Number
+
+    TipY = Y - ToNumber(Round(4.0 + Sin(ToDouble(Timer()) * 0.005) * 4.0))
+    Glow = 18 + ToNumber(Round((1.0 + Sin(ToDouble(Timer()) * 0.004)) * 7.0))
+
+    ''' A translucent aura surrounds the split, beveled crystal faces.
+
+    For Row = 0 To 55
+        HalfWidth = (56 - Row) * 28 / 56
+        Fill Rectangle X - HalfWidth, TipY - 50 + Row, HalfWidth * 2 + 1, 1, Rgb(255, 16, 58) Opacity Glow
+    End For
+
+    For Row = 0 To 43
+        HalfWidth = (44 - Row) * 22 / 44
+        Notch = Max(0, 8 - Row)
+        Fill Rectangle X - HalfWidth, TipY - 44 + Row, HalfWidth - Notch + 1, 1, Rgb(244, 32, 66)
+        Fill Rectangle X + Notch, TipY - 44 + Row, HalfWidth - Notch + 1, 1, Rgb(135, 8, 40)
+    End For
+
+    Draw Line X - 22, TipY - 44, X, TipY, Rgb(255, 111, 126)
+    Draw Line X + 22, TipY - 44, X, TipY, Rgb(83, 4, 32)
+    Draw Line X, TipY - 36, X, TipY - 4, Rgb(255, 69, 103)
+    Draw Line X - 22, TipY - 44, X - 8, TipY - 44, Rgb(255, 150, 160)
+    Draw Line X - 10, TipY - 57, X, TipY - 52, Rgb(255, 65, 102)
+    Draw Line X + 10, TipY - 57, X, TipY - 52, Rgb(180, 20, 66)
 
 End Sub
 

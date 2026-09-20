@@ -10,6 +10,7 @@ Import SinStarI.BattleUI As Icons
 Import SinStarI.Progression As Growth
 Import SinStarI.StatsView As StatsView
 Import Smile.Tools.ViewerBattleGrowthView As GrowthView
+Import Smile.Tools.ViewerBattleHud As Hud
 Import Smile.UI.Controls As UI
 
 Public Type State
@@ -18,34 +19,6 @@ Public Type State
     PendingMagic As Number
     Stats As StatsView.State
 End Type
-
-Public Function PanelLeft() As Number
-
-    If Window_Width() >= 1100 Then
-        Return 278
-    End If
-
-    Return 18
-
-End Function
-
-Public Function PanelWidth() As Number
-
-    Dim Result As Number
-
-    Result = (Window_Width() - PanelLeft() * 2) / 5
-    Return Result
-
-End Function
-
-Public Function PanelTop() As Number
-
-    Dim Result As Number
-
-    Result = Window_Height() - 245
-    Return Result
-
-End Function
 
 Private Function Rows(Page As Number, Actor As Number) As Number
 
@@ -69,14 +42,14 @@ Private Function Rows(Page As Number, Actor As Number) As Number
 
 End Function
 
-Private Function MenuTop(Page As Number, Actor As Number) As Number
+Private Function MenuTop(Layout As Hud.Layout, Page As Number, Actor As Number) As Number
 
     Dim Result As Number
 
-    Result = PanelTop() + 30
+    Result = Layout.PanelY + 30
 
     If Page > 0 Then
-        Result = PanelTop() - Rows(Page, Actor) * 32 + 20
+        Result = Layout.PanelY - Rows(Page, Actor) * 32 + 20
     End If
 
     Return Result
@@ -252,10 +225,9 @@ Public Sub Accept(ByRef Value As State, ByRef Encounter As Planning.State)
 
 End Sub
 
-Public Sub Update(ByRef Value As State, ByRef Encounter As Planning.State, Key As Number)
+Public Sub Update(ByRef Value As State, ByRef Encounter As Planning.State, Key As Number, Layout As Hud.Layout)
 
     Dim Index As Number
-    Dim Column As Number
     Dim X As Number
     Dim Y As Number
     Dim Confirm As Boolean
@@ -276,24 +248,25 @@ Public Sub Update(ByRef Value As State, ByRef Encounter As Planning.State, Key A
 
     For Index = 0 To 4
 
-        Column = Index
+        X = Hud.HeroX(Layout, Index)
+        Y = Layout.PanelY + 124
 
-        If Index >= 2 Then
-            Column = Index + 1
-        End If
+        If Index < 4 Then
 
-        X = PanelLeft() + Column * PanelWidth()
-        Y = PanelTop() + 124
+            If UI.Clicked(X + 5, Y, (Layout.HeroWidth - 8) / 2, 19) Then
+                Call StatsView.Open(Value.Stats, Index, False)
+            Else If UI.Clicked(X + (Layout.HeroWidth + 6) / 2, Y, (Layout.HeroWidth - 8) / 2, 19) Then
+                Call StatsView.Open(Value.Stats, Index, True)
+            End If
 
-        If Index = 4 Then
-            X = Window_Width() / 2 - 78
-            Y = 136
-        End If
+        Else If UI.Clicked(Layout.AreaX + 184, 98, 82, 22) Then
 
-        If UI.Clicked(X + 5, Y, (PanelWidth() - 14) / 2, 19) Then
             Call StatsView.Open(Value.Stats, Index, False)
-        Else If UI.Clicked(X + PanelWidth() / 2, Y, (PanelWidth() - 14) / 2, 19) Then
+
+        Else If UI.Clicked(Layout.AreaX + 270, 98, 82, 22) Then
+
             Call StatsView.Open(Value.Stats, Index, True)
+
         End If
 
     End For
@@ -316,8 +289,8 @@ Public Sub Update(ByRef Value As State, ByRef Encounter As Planning.State, Key A
     End If
 
     RowCount = Rows(Value.Page, Encounter.Combat.Turn)
-    Y = MenuTop(Value.Page, Encounter.Combat.Turn)
-    X = PanelLeft() + PanelWidth() * 2
+    Y = MenuTop(Layout, Value.Page, Encounter.Combat.Turn)
+    X = Layout.MenuX
     Confirm = Key = KEY_ENTER Or Key = KEY_SPACE Or Key = KEY_RIGHT
 
     If Key = KEY_UP Then
@@ -328,7 +301,7 @@ Public Sub Update(ByRef Value As State, ByRef Encounter As Planning.State, Key A
 
     For Index = 0 To RowCount - 1
 
-        If UI.Clicked(X + 3, Y + Index * 32, PanelWidth() - 12, 30) Then
+        If UI.Clicked(X + 3, Y + Index * 32, Layout.MenuWidth - 6, 30) Then
             Value.Selection = Index
             Confirm = True
         End If
@@ -341,28 +314,18 @@ Public Sub Update(ByRef Value As State, ByRef Encounter As Planning.State, Key A
 
 End Sub
 
-Public Function Blocked(Value As State) As Boolean
+Public Function Blocked(Value As State, Layout As Hud.Layout) As Boolean
 
     Dim Result As Boolean
 
     Result = (Value.Stats.Visible Or Value.Page > 0 Or
-        UI.Contains(PanelLeft(), PanelTop() - 36, PanelWidth() * 5, 190) Or
-        UI.Contains(Window_Width() / 2 - 150, 92, 300, 67))
+        UI.Contains(Layout.AreaX, Layout.PanelY - 36, Layout.AreaWidth, 190) Or
+        UI.Contains(Layout.AreaX, 94, Layout.AreaWidth, 64))
     Return Result
 
 End Function
 
-Private Sub Bar(Name As Text, Current As Number, Maximum As Number,
-    X As Number, Y As Number, BarWidth As Number, Tint As Number)
-
-    Fill Rectangle X, Y, BarWidth, 18, Rgb(26, 35, 54) Opacity 80
-    Fill Rectangle X, Y, BarWidth * Current / Max(1, Maximum), 18, Tint Opacity 80
-    Draw Text Name At X + 3, Y + 3 Size 10 Color WHITE
-    Draw Text Growth.NumberText(Current) + "/" + Growth.NumberText(Maximum) At X + BarWidth / 2, Y + 2 Size 12 Color WHITE Centered
-
-End Sub
-
-Private Sub DrawMenu(Value As State, Battle As Rules.State)
+Private Sub DrawMenu(Value As State, Battle As Rules.State, Layout As Hud.Layout)
 
     Dim Index As Number
     Dim X As Number
@@ -370,14 +333,14 @@ Private Sub DrawMenu(Value As State, Battle As Rules.State)
     Dim Tint As Number
     Dim Command As Number
 
-    X = PanelLeft() + PanelWidth() * 2
-    Y = MenuTop(Value.Page, Battle.Turn)
+    X = Layout.MenuX
+    Y = MenuTop(Layout, Value.Page, Battle.Turn)
 
     If Value.Page > 0 Then
 
-        Call UI.DrawPanel(X - 8, Y - 27, PanelWidth() + 10, Rows(Value.Page, Battle.Turn) * 32 + 37)
+        Call UI.DrawPanel(X - 8, Y - 27, Layout.MenuWidth + 16, Rows(Value.Page, Battle.Turn) * 32 + 37)
 
-        Draw Rectangle X - 8, Y - 27, PanelWidth() + 10, Rows(Value.Page, Battle.Turn) * 32 + 37, Rgb(52, 85, 116)
+        Draw Rectangle X - 8, Y - 27, Layout.MenuWidth + 16, Rows(Value.Page, Battle.Turn) * 32 + 37, Rgb(52, 85, 116)
         Draw Text Growth.Name(Battle.Turn) + " - Orders" At X + 4, Y - 20 Size 12 Color CYAN
 
     End If
@@ -400,7 +363,7 @@ Private Sub DrawMenu(Value As State, Battle As Rules.State)
         End If
 
         If Index = Value.Selection Then
-            Fill Rectangle X + 3, Y + Index * 32, PanelWidth() - 12, 30, Rgb(23, 83, 114) Opacity 80
+            Fill Rectangle X + 3, Y + Index * 32, Layout.MenuWidth - 6, 30, Rgb(23, 83, 114) Opacity 80
         End If
 
         Call Icons.Icon(Command, X + 8, Y + Index * 32 + 3, Tint)
@@ -410,103 +373,12 @@ Private Sub DrawMenu(Value As State, Battle As Rules.State)
 
 End Sub
 
-Public Sub Draw(Value As State, Encounter As Planning.State, Inspecting As Boolean)
+Public Sub Draw(Value As State, Encounter As Planning.State, Inspecting As Boolean, Layout As Hud.Layout)
 
-    Dim Index As Number
-    Dim Column As Number
-    Dim X As Number
-    Dim Y As Number
-    Dim Member As Rules.Member
-    Dim Caption As Text
     Dim Root As State
     Dim Parent As State
 
-    Y = PanelTop()
-
-    For Index = 0 To 3
-
-        Member = Encounter.Combat.Members[Index]
-        Column = Index
-
-        If Index >= 2 Then
-            Column = Index + 1
-        End If
-
-        X = PanelLeft() + Column * PanelWidth()
-
-        Call UI.DrawPanel(X, Y, PanelWidth() - 6, 145)
-
-        If Encounter.Combat.Turn = Index And Encounter.Combat.Phase < Rules.VICTORY Then
-            Draw Rectangle X, Y, PanelWidth() - 6, 145, CYAN
-            Fill Rectangle X, Y, PanelWidth() - 6, 3, CYAN
-        End If
-
-        Draw Text Growth.Name(Index) + " Lv " + Growth.NumberText(Member.Level) At X + 7, Y + 9 Size 14 Color WHITE
-
-        Call Bar("HP", Member.HP, Member.Stats.HP, X + 7, Y + 31, PanelWidth() - 20, Rgb(169, 48, 67))
-        Call Bar("MP", Member.MP, Member.Stats.MP, X + 7, Y + 52, PanelWidth() - 20, Rgb(35, 96, 185))
-        Call Bar("LB", Member.LB, Member.Stats.HP, X + 7, Y + 73, PanelWidth() - 20, Rgb(166, 111, 29))
-        Call Icons.Icon(Member.LastCommand, X + 7, Y + 96, CYAN)
-
-        Caption = Rules.CommandName(Member.LastCommand)
-
-        If Member.LastCommand = Rules.ATTACK Then
-            Caption = Attacks.Label(Index, Member.LastAttack)
-        End If
-
-        If Member.HP = 0 Then
-            Caption = "Knocked Out"
-        Else If Member.Escaped Then
-            Caption = "Escaped"
-        End If
-
-        Draw Text Caption At X + 34, Y + 102 Size 10 Color WHITE
-
-        Call UI.DrawButton(X + 5, Y + 124, (PanelWidth() - 14) / 2, 19, "Stats Table", False)
-        Call UI.DrawButton(X + PanelWidth() / 2, Y + 124, (PanelWidth() - 14) / 2, 19, "Graphs", False)
-    End For
-
-    X = PanelLeft() + PanelWidth() * 2
-
-    Call UI.DrawPanel(X, Y, PanelWidth() - 6, 145)
-
-    Draw Text "Round " + Growth.NumberText(Encounter.Combat.Round) At X + 9, Y + 9 Size 13 Color CYAN
-
-    If Not Encounter.Planning Then
-
-        Caption = "Auto Battle"
-
-        If Encounter.Combat.StopRequested Then
-            Caption = "Orders Next Round"
-        Else If Encounter.Combat.Phase >= Rules.VICTORY Then
-            Caption = "Battle Finished"
-        End If
-
-        Draw Text Caption At X + 8, Y + 60 Size 11 Color WHITE
-
-    End If
-
-    Call UI.DrawPanel(PanelLeft(), Y - 36, PanelWidth() * 5 - 6, 29)
-
-    Caption = Encounter.Combat.Message
-
-    If Inspecting Then
-        Caption = "Inspector Open - Battle Paused (` To Resume)"
-    End If
-
-    Draw Text Caption At PanelLeft() + 9, Y - 28 Size 13 Color WHITE
-
-    Call UI.DrawPanel(Window_Width() / 2 - 150, 94, 300, 64)
-
-    Draw Text "Kael - Level 20" At Window_Width() / 2, 99 Size 15 Color WHITE Centered
-    Draw Text "HP " + Growth.NumberText(Encounter.Combat.Members[4].HP) + "/" + Growth.NumberText(Encounter.Combat.Members[4].Stats.HP) At Window_Width() / 2, 119 Size 12 Color CYAN Centered
-
-    X = Window_Width() / 2 - 78
-
-    Call UI.DrawButton(X + 5, 136, (PanelWidth() - 14) / 2, 19, "Stats Table", False)
-    Call UI.DrawButton(X + PanelWidth() / 2, 136, (PanelWidth() - 14) / 2, 19, "Graphs", False)
-
-    Draw Text "Arrows: Choose | Enter/Space: Confirm | Esc: Back | Input During Battle: Orders Next Round | `: Panels" At PanelLeft(), Window_Height() - 24 Size 11 Color LIGHT_GRAY
+    Call Hud.DrawPanels(Layout, Encounter, Inspecting)
 
     ''' Popups draw after the HUD so its message strip cannot cover menu choices.
 
@@ -517,14 +389,14 @@ Public Sub Draw(Value As State, Encounter As Planning.State, Inspecting As Boole
         Parent.Selection = 0
 
         If Value.Page > 0 Then
-            Call DrawMenu(Root, Encounter.Combat)
+            Call DrawMenu(Root, Encounter.Combat, Layout)
         End If
 
         If Value.Page > 1 Then
-            Call DrawMenu(Parent, Encounter.Combat)
+            Call DrawMenu(Parent, Encounter.Combat, Layout)
         End If
 
-        Call DrawMenu(Value, Encounter.Combat)
+        Call DrawMenu(Value, Encounter.Combat, Layout)
 
     End If
 

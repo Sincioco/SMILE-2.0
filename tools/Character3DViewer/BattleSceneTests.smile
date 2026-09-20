@@ -9,7 +9,11 @@ Import Smile.Tools.Character3DViewerActors As Actors
 Import Smile.Tools.ViewerBattlePresentation As Presentation
 Import Smile.Tools.ViewerBattlePlanning As Planning
 Import Smile.Tools.ViewerBattleOutcome As Outcome
+Import Smile.Tools.ViewerBattleHud As Hud
+Import Smile.Tools.ViewerBattleCinematics As Cinematics
 Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.PrecisionCamera3D As Camera
+Import Smile.Simple3D.Core As Core
 Import SinStarI.BattleRules As Rules
 
 Dim Viewer As New Workflow.Session()
@@ -24,16 +28,101 @@ Dim Failures As Number
 Dim Ending As Outcome.State
 Dim FirstView As P.Camera3D
 Dim LastView As P.Camera3D
+Dim CompactLayout As Hud.Layout
+Dim ExpandedLayout As Hud.Layout
+Dim Shots As Cinematics.State
+Dim ScreenPoint As Core.ProjectedPoint3D
 
 Game Window "Viewer Battle Formation Check" Size 1420 By 990
 
 Call Check(Outcome.DialogLeft() = 370, "Reward Dialog Centers Without Left Constant Collision")
+
+CompactLayout = Hud.Arrange(1420, 990, 0)
+ExpandedLayout = Hud.Arrange(1420, 990, 2)
+
+Call Check(CompactLayout.MenuWidth = ExpandedLayout.MenuWidth And
+    CompactLayout.MenuX = ExpandedLayout.MenuX, "Command Panel Remains Fixed And Centered")
+Call Check(ExpandedLayout.HeroWidth > CompactLayout.HeroWidth And
+    ExpandedLayout.PanelY > CompactLayout.PanelY, "Hidden Panels Expand And Lower Four Hero Cards")
+Call Check(ExpandedLayout.AreaX >= 18 And
+    ExpandedLayout.AreaX + ExpandedLayout.AreaWidth <= 1402, "Enemy And Party Respect Screen Margins")
+Call Check(Hud.HeroX(ExpandedLayout, 3) + ExpandedLayout.HeroWidth =
+    ExpandedLayout.AreaX + ExpandedLayout.AreaWidth, "Four Heroes Fill Available Width")
 Call Host.Start(Viewer, NativeHost.BATTLE_TAB, True, 1420, 990)
 Call Check(Viewer.PanelVisibility() = 2, "Battle Startup Hides Legacy Panels")
 Call Planning.Start(Battle)
 Call Presentation.Create(Visual, Viewer)
 Call Presentation.OrdersCamera(Viewer)
 Call Check(Viewer.SceneReady(), "Loaded All Actors")
+Call Check(Presentation.OrderArrowVisible(Battle.Combat), "Order Selection Shows Arrow")
+
+Shots.Enabled = True
+
+Call Cinematics.Reset(Shots, Viewer)
+Call Cinematics.Update(Shots, Viewer, Battle.Combat, 16, 1420, 990)
+
+FirstView = Shots.View
+
+Call Cinematics.Update(Shots, Viewer, Battle.Combat, 16, 1420, 990)
+Call Check(Abs(FirstView.Position.X - Shots.View.Position.X) > 0.001,
+    "Opening Camera Drifts While Waiting For Orders")
+
+Shots.Enabled = False
+FirstView = Shots.View
+
+Call Cinematics.Update(Shots, Viewer, Battle.Combat, 500, 1420, 990)
+Call Check(FirstView.Position.X = Shots.View.Position.X, "Disabled Cinematics Preserve Manual View")
+
+Shots.Enabled = True
+Battle.Combat.Phase = Rules.EXECUTING
+Battle.Combat.ImpactTime = 1200
+Battle.Combat.Elapsed = 500
+
+Call Check(Not Presentation.OrderArrowVisible(Battle.Combat), "Executing Attacks Hide Order Arrow")
+Call Check(Cinematics.ShotFor(Battle.Combat, 7000) = Cinematics.CLOSE_UP, "Cast Uses Close-Up")
+
+Battle.Combat.Elapsed = 1100
+
+Call Check(Cinematics.ShotFor(Battle.Combat, 7000) = Cinematics.IMPACT, "Impact Cut Precedes Contact")
+Call Cinematics.Update(Shots, Viewer, Battle.Combat, 16, 1420, 990)
+
+FirstView = Shots.View
+
+Call Cinematics.Update(Shots, Viewer, Battle.Combat, 16, 1420, 990)
+Call Check(Abs(FirstView.Position.X - Shots.View.Position.X) > 0.001,
+    "Impact Two-Character Shot Keeps Orbiting")
+
+LastView = Cinematics.Compose(Shots, Battle.Combat, 1420, 990, 0)
+
+For First = 0 To 1
+
+    Second = First * 4
+    Position = Shots.Positions[Second]
+    Position.Y = Position.Y + Shots.Height[Second]
+    ScreenPoint = Camera.ProjectPixel(Position, LastView, 1420, 990)
+
+    Call Check(ScreenPoint.Visible And ScreenPoint.X > CompactLayout.AreaX And
+        ScreenPoint.X < CompactLayout.AreaX + CompactLayout.AreaWidth And
+        ScreenPoint.Y > 158 And ScreenPoint.Y < CompactLayout.PanelY - 36,
+        "Impact Shot Keeps Both Heads Between HUD And Inspectors")
+End For
+
+For First = Cinematics.WIDE To Cinematics.IMPACT
+
+    Shots.Shot = First
+    Shots.ShotTime = 0
+    FirstView = Cinematics.Compose(Shots, Battle.Combat, 1420, 990, 2)
+    Shots.ShotTime = 16
+    LastView = Cinematics.Compose(Shots, Battle.Combat, 1420, 990, 2)
+
+    Call Check(Abs(FirstView.Position.X - LastView.Position.X) +
+        Abs(FirstView.Position.Z - LastView.Position.Z) > 0.001, "Every Shot Type Drifts")
+End For
+
+Battle.Combat.Elapsed = 1900
+
+Call Check(Cinematics.ShotFor(Battle.Combat, 7000) = Cinematics.PAIR, "Recovery Frames Both Fighters")
+Call Planning.Start(Battle)
 
 For First = 0 To 4
 
