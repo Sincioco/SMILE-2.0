@@ -17,6 +17,7 @@
     <SmileSource Include="FireLabArin.smile" />
     <SmileSource Include="KaelFire.smile" />
     <SmileSource Include="..\Character3DViewer\Profiles.smile" />
+    <SmileSource Include="..\Character3DViewer\ViewerActors.smile" />
     <SmileSource Include="..\Character3DViewer\ViewerCalibration.smile" />
     <SmileSource Include="..\Character3DViewer\CalibrationJson.smile" />
     <Asset Include="Assets\Calibration\arin-v5.7.smkf" />

@@ -1,5 +1,5 @@
 {
-  "modelSha256": "53930e065c57a9c7c48d999f3f8f9e98f3a1571c85c316de3a43f54beb0d410d",
+  "modelSha256": "d78a611d39ea0260f8b8e40221cf009b8686aa6b3c6251f431de9a4730430c51",
   "modelBytes": 28355916,
   "units": "meters; Blender Z becomes glTF/SM3D Y",
   "bindBounds": {
@@ -437,5 +437,6 @@
   "swordTextureSize": [
     2048,
     2048
-  ]
+  ],
+  "materialRevision": "2026-09-20 muted gray hair; no metallic highlights; binary mesh/animation/texture chunk unchanged"
 }

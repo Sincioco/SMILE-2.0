@@ -40,6 +40,24 @@ try {
         }
     }
     $result = @($result | Where-Object { -not $_.StartsWith('FIRE_ARIN_JSON: ') })
+    $poseRows = @($result | Where-Object { $_.StartsWith('FIRE_FRAME_ZERO: ') })
+    $reference = Get-Content -LiteralPath (Join-Path $fireRepository 'games\SinStarI\SourceAssets\Characters\Paladin\ArinV57\Previews\Accepted-Pose-References\frame-zero-transforms.json') -Raw | ConvertFrom-Json
+    if ($poseRows.Count -ne 9) { throw 'Expected all nine Fire Lab frame-zero poses.' }
+    for ($poseIndex = 0; $poseIndex -lt 9; $poseIndex++) {
+        $actualPose = $poseRows[$poseIndex].Replace('FIRE_FRAME_ZERO: ', 'ARIN_FRAME_ZERO: ').Split('|')
+        $matching = @($reference.poses | Where-Object { $_.Split('|')[0] -ceq $actualPose[0] })
+        if ($matching.Count -ne 1) { throw "Missing Viewer pose: $($actualPose[0])" }
+        $expectedPose = $matching[0].Split('|')
+        if ($actualPose[0] -cne $expectedPose[0] -or $actualPose.Count -ne $expectedPose.Count) {
+            throw 'Fire Lab pose reference layout differs.'
+        }
+        for ($component = 1; $component -lt $actualPose.Count; $component++) {
+            if ([Math]::Abs([long]$actualPose[$component] - [long]$expectedPose[$component]) -gt 2) {
+                throw "Fire Lab pose differs from Viewer: $($actualPose[0]), component $component ($($actualPose[$component]) versus $($expectedPose[$component]))."
+            }
+        }
+    }
+    $result = @($result | Where-Object { -not $_.StartsWith('FIRE_FRAME_ZERO: ') })
     if ($runExit -ne 0 -or (($result -join "`n").Trim() -ne 'Kael Fire Lab native failures: 0')) {
         throw "Fire Lab native checks failed: $result"
     }

@@ -2,6 +2,12 @@
 
 ## Fire Lab preview and silver-gray hair
 
+September 20 revision: hair uses muted cool gray `(0.32, 0.31, 0.38)`, metallic 0
+and roughness 1, without the previous pale metallic highlights. All three GLBs and
+their Blender checkpoints match; GLB binary geometry/rig/animation chunks are
+unchanged. Party presentation is **3× solo scale**. Earth and Water casts stay at
+Kael's home position while facing their target; normal sword attacks still approach.
+
 The [Fire Lab](../../../../../../../tools/AdvancedFireVfxLab/README.md) owns the
 feedback preview for FirePunch, FireSweep and FireBlast. Its separate nineteen-clip
 `kael-v1-fire-preview.glb` preserves all sixteen accepted clips. Fire adoption into

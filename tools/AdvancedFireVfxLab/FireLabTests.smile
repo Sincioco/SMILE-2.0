@@ -8,6 +8,8 @@ Import Smile.Simple3D.Graphics3D As G
 Import Smile.Simple3D.Core As Core
 Import Smile.Simple3D.Precision3D As P
 Import Smile.Simple3D.FireEmitter3D As Fire
+Import Smile.Simple3D.PrecisionCamera3D As Framing
+Import Smile.Tools.Character3DViewerProfiles As Profiles
 
 Dim Value As Scene.State
 Dim Camera As Core.Camera3D
@@ -42,6 +44,8 @@ For Index = 0 To 3
 End For
 
 Print "FIRE_ARIN_JSON: " + Calibration.SavedJson(Value.ArinFire.Pose, Value.Arin)
+
+Call CheckAcceptedArinPoses()
 
 Ok = Character.TrySocketPositionPrecise(Value.Kael, "HandLeft", 0, False, StartHand)
 
@@ -145,6 +149,64 @@ Call Fire.Shutdown()
 Call G.ResetRenderer3D()
 
 Print "Kael Fire Lab native failures: "; Failures
+
+Sub CheckAcceptedArinPoses()
+
+    Dim Frame As Framing.Framing
+    Dim Clip As Number
+    Dim Channel As Number
+    Dim Socket As Number
+    Dim Property As Number
+    Dim Names[4] As Text
+    Dim Parts[4] As Number
+    Dim Row As Text
+
+    Frame = Framing.AutoFit(Profiles.ProfileAt(Profiles.PROFILE_ARIN),
+        Character.LocalBounds(Value.Arin), 0, 0, 55.0, 10000)
+    Ok = Character.PlacePrecise(Value.Arin, Frame.PositionX, Frame.PositionY, Frame.PositionZ)
+    Value.KaelSelected = False
+    Names[0] = "HandRight"
+    Names[1] = "HandLeft"
+    Names[2] = "SwordTip"
+    Names[3] = "ShieldCenter"
+    Parts[0] = 2
+    Parts[1] = 2
+    Parts[2] = 1
+    Parts[3] = 0
+
+    For Clip = 0 To Character.ClipCount(Value.Arin) - 1
+
+        Ok = Character.PlayAnimation(Value.Arin, Character.ClipName(Value.Arin, Clip), False) And Ok
+        Ok = Character.SetAnimationTime(Value.Arin, 0) And Ok
+
+        Call Scene.Update(Value, 0, False, False, 3, 3, False, False)
+
+        Row = "FIRE_FRAME_ZERO: " + Character.ClipName(Value.Arin, Clip)
+
+        For Channel = 0 To 19
+            Row = Row + "|" + Calibration.NumberText(
+                Calibration.ChannelValue(Value.ArinFire.Pose, Clip, Channel))
+        End For
+
+        For Socket = 0 To 3
+
+            For Property = 1 To 12
+                Row = Row + "|" + Calibration.NumberText(
+                    Character.SocketValueThousandths(Value.Arin, Names[Socket], Property, Parts[Socket]))
+            End For
+        End For
+
+        Print Row
+    End For
+
+    Call Check(Ok And Value.ErrorCode = 0, "All nine accepted Arin poses")
+
+    Ok = Character.PlacePrecise(Value.Arin, -100.0, Frame.PositionY, 0.0)
+    Value.KaelSelected = True
+
+    Call Scene.Restart(Value)
+
+End Sub
 
 Sub CheckFrame()
 

@@ -87,7 +87,7 @@ try {
     $viewerParty = Get-Content -LiteralPath `
         'tools\Character3DViewer\ViewerParty.smile' -Raw
     $gamePreview = Get-Content -LiteralPath `
-        'games\SinStarI\BattleArenaPreview.smile' -Raw
+        'games\SinStarI\CharacterPresentation.smile' -Raw
 
     Assert-Contains $nativeHeader 'SMILE_3D_CONFIGURE_REFLECTIONS = 133' `
         'Native append-only reflection ABI'
@@ -216,18 +216,10 @@ try {
         'Viewer compact-height animation-details suppression'
     Assert-Contains $viewerParty 'Result.Consumed = True' `
         'Party reflection control ownership'
-    Assert-Contains $gamePreview 'Import Smile.Simple3D.Arena3D As Arena3D' `
-        'Sin Star I shared arena reuse'
-    Assert-Contains $gamePreview 'Import Smile.Simple3D.PrecisionCamera3D As Interaction' `
-        'Sin Star I shared camera reuse'
-    Assert-Contains $gamePreview 'Character3D.PlayMode(' `
-        'Sin Star I live animated actor'
-    Assert-Contains $gamePreview 'Character3D.SetUnusedAssetCacheLimit(0)' `
-        'Sin Star I renderer-reset re-entry synchronization'
-    if ($gamePreview.IndexOf('Character3DViewer',
-            [System.StringComparison]::OrdinalIgnoreCase) -ge 0) {
-        throw 'Sin Star I preview imports or copies a Character Viewer owner.'
-    }
+    Assert-Contains $gamePreview 'Import Smile.Tools.Character3DViewerWorkflow As Viewer' `
+        'Sin Star I reuses the shared character presentation owner'
+    Assert-Contains $gamePreview 'Call Preview.DrawFrame()' `
+        'Sin Star I draws through the shared reflection path'
 
     # Supplemental scalar sanity only; compiled production-path diagnostics below
     # provide the discriminating view/projection and receiver-plane regression.

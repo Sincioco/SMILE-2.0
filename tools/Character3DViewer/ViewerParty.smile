@@ -2327,12 +2327,20 @@ Public Function VraxPosition(ByRef Value As State) As Precision3D.Vector3
     Dim Progress As Double
     Dim AttackDistance As Double
     Dim Valid As Boolean
+    Dim Clip As Text
 
     Home = Precision3D.Vector(ToDouble(ViewerDragon.PositionX()), 0.0,
         ToDouble(ViewerDragon.PositionZ()))
     Result = Home
 
     If Value.Turn <> 2 Then
+        Return Result
+    End If
+
+    Clip = ViewerProfiles.PartyAttackName(BossProfile(Value), Value.DragonCounter)
+
+    If (BossProfile(Value) = ViewerProfiles.PROFILE_KAEL And
+        (KaelEarth.ModeForClip(Clip) <> 0 Or KaelWater.StyleForClip(Clip) <> 0)) Then
         Return Result
     End If
 

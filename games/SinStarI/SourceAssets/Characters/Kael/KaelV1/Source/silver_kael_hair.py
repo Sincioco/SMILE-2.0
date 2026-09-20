@@ -9,10 +9,31 @@ import bmesh
 import bpy
 import numpy as np
 
+COLOR = (.32, .31, .38, 1)
+
+
+def finish_material(material):
+    shader = next(n for n in material.node_tree.nodes if n.type == 'BSDF_PRINCIPLED')
+    shader.inputs['Metallic'].default_value = 0
+    shader.inputs['Roughness'].default_value = 1
+    for link in list(shader.inputs['Metallic'].links) + list(shader.inputs['Roughness'].links):
+        material.node_tree.links.remove(link)
+    for node in material.node_tree.nodes:
+        if node.type == 'MIX_RGB' and node.blend_type == 'MULTIPLY':
+            node.inputs[2].default_value = COLOR
+
+
+def finish_gltf(gltf):
+    material = next(m for m in gltf['materials'] if m.get('name') == 'Kael.SilverGrayHair')
+    surface = material['pbrMetallicRoughness']
+    surface.update(baseColorFactor=list(COLOR), metallicFactor=0, roughnessFactor=1)
+    surface.pop('metallicRoughnessTexture', None)
+
 
 def apply(body):
     existing=bpy.data.objects.get('Kael.ZHair')
     if existing:
+        finish_material(existing.data.materials[0])
         return existing
     material=body.data.materials[0]
     shader=next(n for n in material.node_tree.nodes if n.type=='BSDF_PRINCIPLED')
@@ -54,12 +75,14 @@ def apply(body):
     source=silver_shader.inputs['Base Color'].links[0].from_socket
     tint=silver.node_tree.nodes.new('ShaderNodeMixRGB')
     tint.blend_type='MULTIPLY'; tint.inputs[0].default_value=1
-    tint.inputs[2].default_value=(.40,.44,.49,1)
+    tint.inputs[2].default_value=COLOR
     silver.node_tree.links.new(source,tint.inputs[1])
     silver.node_tree.links.new(tint.outputs[0],silver_shader.inputs['Base Color'])
+    finish_material(silver)
     hair.data.materials.clear(); hair.data.materials.append(silver)
     report={'hairTriangles':len(chosen),'bodyTriangles':len(body.data.polygons),
-            'baseColorFactorLinear':[.40,.44,.49,1], 'partOrder':['Kael.Body','Kael.Sword','Kael.ZHair'],
+            'baseColorFactorLinear':list(COLOR), 'metallicFactor':0, 'roughnessFactor':1,
+            'partOrder':['Kael.Body','Kael.Sword','Kael.ZHair'],
             'originalPackedTextures':'unchanged', 'method':'material factor on selected existing skinned hair faces'}
     (Path(__file__).parent/'silver-hair-report.json').write_text(json.dumps(report,indent=2),encoding='utf-8',newline='\n')
     return hair

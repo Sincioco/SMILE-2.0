@@ -1,5 +1,19 @@
 # Kael v1 creation and repair journey
 
+## Current presentation — September 20, 2026
+
+Keep the muted silver-gray hair material `(0.32, 0.31, 0.38)`, metallic 0 and
+roughness 1 in the Earth baseline, active Water package and Fire preview. The
+material-only revision preserved every GLB binary chunk, including geometry,
+rigging, animation and images. Export scripts apply the same material settings.
+
+Party scale is 3× solo, satisfying both the requested 3× baseline and at least
+4/3 of the previous 2× Party scale. The shared Character3D scale ceiling is now
+30000%; the native precise renderer already supports that range. Grounding scales
+with the actor. Earth/Water casts remain at the home position and face the selected
+target; sword attacks retain their approach. Fire remains a stationary Lab preview
+until its separate adoption milestone; do not claim Fire is in the Party rotation.
+
 ## Sources and ownership
 
 Sin supplied two unrigged Tripo GLBs: a 1,981,524-triangle body and a

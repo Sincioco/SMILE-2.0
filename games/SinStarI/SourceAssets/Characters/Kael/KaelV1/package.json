@@ -6,7 +6,7 @@
   "date": "2026-09-18",
   "model": "kael-v1-water-preview.glb",
   "descriptor": "KaelWaterPreview.sm3d.json",
-  "modelSha256": "b3adf34d5bdd15710f44e438ef1de6f6dc0ebd3fa2ac494a065e6479090e2302",
+  "modelSha256": "bcd38d20500768668769d3a634736abafaa07d31ef9c2ae61b226d9f0e315ebe",
   "modelBytes": 28492204,
   "bodyTriangles": 42000,
   "swordTriangles": 6996,
@@ -36,7 +36,7 @@
   "originalSwordSha256": "cc3522b4c351f3609f886425f28bf71c954cb635a51c2094b2401a8981729277",
   "acceptedBlenderCheckpoint": "Blender/kael-v1-water-preview.blend",
   "soloEquippedWorldHeight": 134,
-  "partyScaleMultiplier": 2,
+  "partyScaleMultiplier": 3,
   "reports": [
     "Source/reduce-report.json",
     "Source/sword-repair.json",
@@ -61,7 +61,7 @@
     "status": "Adopted native Viewer, Sin Star I and Water Lab",
     "model": "kael-v1-water-preview.glb",
     "descriptor": "KaelWaterPreview.sm3d.json",
-    "modelSha256": "b3adf34d5bdd15710f44e438ef1de6f6dc0ebd3fa2ac494a065e6479090e2302",
+    "modelSha256": "bcd38d20500768668769d3a634736abafaa07d31ef9c2ae61b226d9f0e315ebe",
     "modelBytes": 28492204,
     "additionalClips": [
       "WaterWhip",
@@ -81,8 +81,8 @@
     "status": "Native Fire Lab feedback preview; Viewer/game fire adoption not requested yet",
     "model": "kael-v1-fire-preview.glb",
     "descriptor": "KaelFirePreview.sm3d.json",
-    "modelSha256": "ac4f0f60ca7a1f7691382160a33a308b12f0ff39339328fab21acdb290a6a33e",
-    "modelBytes": 28626632,
+    "modelSha256": "e83956a98d3666547c6b0f4c44395cc5fc5b9fa90fedba048a066bfe7f6b5b0c",
+    "modelBytes": 28626636,
     "additionalClips": [
       "FirePunch",
       "FireSweep",

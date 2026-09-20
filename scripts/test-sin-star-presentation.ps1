@@ -54,8 +54,29 @@ foreach ($entry in $project.SmileProject.ItemGroup.ChildNodes) {
     }
 }
 Copy-Item -LiteralPath (Join-Path $gameRoot 'PresentationTests.smile') -Destination (Join-Path $testRoot 'Program.smile')
+$musicEntry = $project.SmileProject.ItemGroup.SmileSource | Where-Object { $_.Include.EndsWith('Music.smile') }
+$musicText = Get-Content -LiteralPath (Join-Path $gameRoot 'Music.smile') -Raw
+$musicText = $musicText.Replace('    CurrentTrack = Name', "    CurrentTrack = Name`n    Print `"MUSIC_SELECTED: `" + Name")
+$musicText = $musicText.Replace('    Stop Music', "    Stop Music`n    Print `"MUSIC_STOPPED`"")
+[IO.File]::WriteAllText((Join-Path $testRoot 'Music.smile'), $musicText)
+$musicEntry.SetAttribute('Include', 'Music.smile')
+$startup = Get-Content -LiteralPath (Join-Path $testRoot 'Program.smile') -Raw
+$startup = $startup.Replace('Import SinStarI.TitleScreen As TitleScreen',
+    "Import SinStarI.TitleScreen As TitleScreen`nImport SinStarI.BackgroundMusic As BackgroundMusic")
+$startup = $startup.Replace('Passed = True', @'
+Call BackgroundMusic.SelectTrack("Starforge March (Title Screen)")
+Call BackgroundMusic.SelectTrack("Starforge March (Title Screen)")
+Call BackgroundMusic.SelectTrack("")
+Call BackgroundMusic.SelectTrack("Unassigned")
+Passed = True
+'@)
+$startup = $startup.Replace('Print "Sin Star I presentations passed."',
+    "Call BackgroundMusic.Shutdown()`nPrint `"Sin Star I presentations passed.`"")
+[IO.File]::WriteAllText((Join-Path $testRoot 'Program.smile'), $startup)
 $workflowEntry = $project.SmileProject.ItemGroup.SmileSource | Where-Object { $_.Include.EndsWith('ViewerWorkflow.smile') }
 $workflowText = Get-Content -LiteralPath (Join-Path $root 'tools\Character3DViewer\ViewerWorkflow.smile') -Raw
+$workflowText = $workflowText.Replace('Import Smile.Simple3D.Core As Core',
+    "Import Smile.Simple3D.Core As Core`nImport Smile.Simple3D.PrecisionCamera3D As PrecisionCamera")
 # Observe the existing private load-error state in the disposable fixture only.
 # A partial actor load must not pass just because a later draw clears LastError.
 $loadBoundary = 'Call Me.LoadViewer()'
@@ -102,6 +123,19 @@ $bendingFixture = @'
         Dim Duration As Number
         Dim Ok As Boolean
         Dim Name As Text
+        Dim SoloFrame As PrecisionCamera.Framing
+        Dim Home As Precision3D.Vector3
+        Dim Position As Precision3D.Vector3
+
+        SoloFrame = PrecisionCamera.AutoFit(
+            ViewerProfiles.ProfileAt(ViewerProfiles.PROFILE_KAEL),
+            Character3D.LocalBounds(Me.DragonState.Actor), 0, 0, 55.0, 10000)
+        If Me.DragonState.Frame.ScalePercent <> SoloFrame.ScalePercent * 3 Then
+            Print "Kael Party must be three times solo scale."
+        End If
+
+        Home = Precision3D.Vector(ToDouble(ViewerDragon.PositionX()), 0.0,
+            ToDouble(ViewerDragon.PositionZ()))
 
         Me.Playback.AnimationUpdateElapsed = 60000
 
@@ -150,6 +184,11 @@ $bendingFixture = @'
             End If
 
             If Cycle Mod 3 <> 0 Then
+
+                Position = ViewerParty.VraxPosition(Me.Party)
+                If Position.X <> Home.X Or Position.Z <> Home.Z Then
+                    Print "Kael bending left his home position: "; Name
+                End If
 
                 For ClipIndex = 0 To Character3D.ClipCount(Me.DragonState.Actor) - 1
 
@@ -274,8 +313,23 @@ $exe = Join-Path $testRoot 'PresentationTests.exe'
 & (Join-Path $root 'artifacts\compiler\smilec.exe') --project $projectPath --target windows-x64 --graphics DirectX -o $exe
 if ($LASTEXITCODE -ne 0) { throw 'Presentation regression compilation failed.' }
 $actual = & (Join-Path $PSScriptRoot 'run-bounded-test.cmd') 60 $exe
+$expectedMusic = @('MUSIC_SELECTED: Starforge March (Title Screen)', 'MUSIC_SELECTED: Bloom (Arin)',
+    'MUSIC_SELECTED: Sunrise Oath (Orin)', 'MUSIC_SELECTED: Golden Hour Ascend (Mira)',
+    'MUSIC_SELECTED: Starforge Ascend (Kael)', 'MUSIC_STOPPED')
+$musicEvents = @($actual | Where-Object { $_.StartsWith('MUSIC_') })
+if (($musicEvents -join "`n") -cne ($expectedMusic -join "`n")) {
+    throw "Music continuity or character selection failed: $musicEvents"
+}
+$actual = @($actual | Where-Object { -not $_.StartsWith('MUSIC_') })
+foreach ($musicFile in Get-ChildItem -LiteralPath (Join-Path $gameRoot 'Assets\Music') -Filter *.mp3) {
+    $published = Join-Path $testRoot "Assets\Music\$($musicFile.Name)"
+    if ((Get-FileHash -LiteralPath $published).Hash -cne (Get-FileHash -LiteralPath $musicFile.FullName).Hash) {
+        throw "Deployed music differs: $($musicFile.Name)"
+    }
+}
 if ($LASTEXITCODE -ne 0 -or ($actual -join "`n").Trim() -ne 'Sin Star I presentations passed.') {
     throw "Presentation regression failed: $actual"
 }
 Write-Host 'PASS: Nine character entries and three battle simulations create, draw and release their actual assets.'
 Write-Host 'PASS: Kael automatically cycles all sixteen demo clips and nine alternating normal/Earth/Water turns, including all six bending casts.'
+Write-Host 'PASS: Five deployed MP3s match their sources; only explicit track changes restart playback, and scene shutdown preserves music.'

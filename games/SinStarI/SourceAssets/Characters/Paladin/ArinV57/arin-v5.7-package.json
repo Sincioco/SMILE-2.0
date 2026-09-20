@@ -37,7 +37,11 @@
     "readableSnapshot": "Calibration/arin-v5.7-pose-calibration.json",
     "runtimeWorkingFormat": "generated SMILE SMD4 persistent-data envelope",
     "syncScript": "scripts/sync-arin-v5-7-calibration.ps1",
-    "grounding": "Calibration/arin-v5.7-grounding.json"
+    "grounding": "Calibration/arin-v5.7-grounding.json",
+    "authority": "Latest Character Viewer export saved to readableSnapshot",
+    "acceptedSnapshotSha256": "8896989dd711ebba1cd2f62ffd1a840774287ed9d52e53663c66fe5b4e83e8dc",
+    "poseReferences": "Previews/Accepted-Pose-References/README.md",
+    "frameZeroTransforms": "Previews/Accepted-Pose-References/frame-zero-transforms.json"
   },
   "previews": "arin-v57-idle-previews",
   "workflowHandoff": "ARIN-CREATION-AND-REPAIR-JOURNEY.md",

@@ -2,6 +2,15 @@
 
 ## Kael silver hair and separate native Fire Lab
 
+September 20 alignment keeps music state in Sin Star I's `BackgroundMusic` module
+and calibration conflict decisions in the existing PowerShell synchronizer. The
+Fire Lab adapter reuses `ViewerActors.FaceToward` and shared profile opponent
+coordinates to preserve the current world-axis calibration reference. Its native
+test compares all nine wrist/equipment transforms against the Viewer baseline.
+`Character3D` alone owns the expanded 30000% scale limit; `ViewerDragon` applies
+Kael's 3× presentation scale and `ViewerParty` keeps bending casts at home.
+No new dependency, entry-point algorithm or guardrail exception was introduced.
+
 The canonical Kael exporter separates existing hair faces into a third skinned part
 and applies a silver-gray material factor. Body stays at part 0, sword at part 1;
 the same skeleton, clips, sockets and 48,996 total triangles are retained. Viewer,
@@ -625,6 +634,15 @@ floor label from shared renderer diagnostics. Generic Arena3D/Graphics3D callers
 the compatible opaque-only default unless they explicitly request IncludeVfx.
 
 ## Current owners and maintenance routes
+
+Calibration authority belongs to the JSON saved/exported by Sin from the Viewer,
+stored in the named character's canonical package. The synchronization script owns
+the ignored native receipt of the last synchronized JSON hash; binary Save Data is
+a working copy. Content changes to the JSON take precedence over that working copy,
+independent of timestamps. Unchanged exports do not rewrite the accepted JSON.
+`test-arin-calibration.ps1` covers this conflict and subsequent editor saves;
+`test-viewer-calibration-native.ps1` checks Arin's accepted frame-zero correction
+channels and four socket matrices against the package's screenshot reference set.
 
 | Owner | Responsibility / public operations | Focused checks |
 |---|---|---|

@@ -141,11 +141,36 @@ $SourcePath = $source
 $DestinationPath = $livePath
 $null = Restore-LiveCalibration $false
 $envelopeHash = Get-PathHash $livePath
+$originalEnvelope = [IO.File]::ReadAllBytes($livePath)
 Check ($envelopeHash.Length -eq 64) 'Isolated binary save exists'
 $DestinationPath = Join-Path $testRoot 'export.json'
 $SourcePath = $livePath
 $null = Export-LiveCalibration $false
 Check ((Get-PathHash $DestinationPath) -ceq $firstHash) 'Binary import/export canonical parity'
+$acceptedPath = $DestinationPath
+$modified = Clone $fixture
+$modified.clips[0].keyframes[0].sword.rotation[0] = 179
+Write-Snapshot $acceptedPath $modified (Get-PathHash $acceptedPath)
+$acceptedHash = Get-PathHash $acceptedPath
+[IO.File]::SetLastWriteTimeUtc($acceptedPath, [DateTime]::UtcNow.AddMinutes(-2))
+Check (-not (Export-LiveCalibration $false)) 'Replaced authoritative JSON wins even with an older timestamp'
+Check ((Get-PathHash $acceptedPath) -ceq $acceptedHash) 'Latest exported pose survives launch/commit export'
+$SourcePath = $acceptedPath
+$DestinationPath = $livePath
+Check (Restore-LiveCalibration $false) 'Launch adopts newer JSON even when a valid older working save exists'
+$SourcePath = $livePath
+$DestinationPath = $acceptedPath
+$acceptedTime = (Get-Item -LiteralPath $acceptedPath).LastWriteTimeUtc
+Check (Export-LiveCalibration $false) 'Matching working save requires no JSON rewrite'
+Check ((Get-PathHash $acceptedPath) -ceq $acceptedHash -and
+    (Get-Item -LiteralPath $acceptedPath).LastWriteTimeUtc -eq $acceptedTime) 'No-op export preserves exact JSON bytes and timestamp'
+# A later Save Frame remains exportable after adopting the accepted baseline.
+Write-AtomicBytes $livePath $originalEnvelope (Get-PathHash $livePath)
+[IO.File]::SetLastWriteTimeUtc($acceptedPath, [DateTime]::UtcNow.AddMinutes(-1))
+$SourcePath = $livePath
+$DestinationPath = $acceptedPath
+Check (Export-LiveCalibration $false) 'Newer editor save still exports after reconciliation'
+Check ((Get-PathHash $acceptedPath) -ceq $firstHash) 'Later editor changes reach the canonical snapshot'
 $badEnvelope = [IO.File]::ReadAllBytes($livePath)
 $badEnvelope[45] = $badEnvelope[45] -bxor 1
 $badPath = Join-Path $testRoot 'bad.bin'

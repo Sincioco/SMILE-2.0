@@ -11,6 +11,18 @@ safe workflow for v5.8 or another character.
 
 `arin-v5.7-package.json` is the machine-readable package index. `Calibration` holds the permanent pose-correction JSON. `arin-v57-idle-previews` holds the accepted checkpoint preview frames. Reusable build tooling remains in the repository `scripts` and `tools` directories rather than being duplicated inside the character package.
 
+## Current Viewer-authored pose authority
+
+Sin's September 20 exported `Calibration/arin-v5.7-pose-calibration.json` is the
+accepted pose authority. Future Viewer exports saved to that canonical filename
+replace it intentionally; an older application-data save must never overwrite it.
+Launch through `tools/Character3DViewer/Launch.ps1` to reconcile the native working
+save. Rebuild consumers after a new export so their packaged defaults match.
+
+[Accepted pose references](Previews/Accepted-Pose-References/README.md) contain
+named frame-zero screenshots for all nine clips and a native transform baseline.
+The baseline is evidence, not an alternate source of pose defaults.
+
 ## Visual Approval and Deferred Model Repair (September 4, 2026)
 
 Sin visually approved the current Viewer/editor and Arin v5.7 work, including the

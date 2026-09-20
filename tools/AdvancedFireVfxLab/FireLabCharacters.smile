@@ -40,9 +40,7 @@ Public Sub Start(ByRef Value As State)
     Ok = Character.Place(Value.Kael, -150, 0, 0) And Ok
     Ok = Character.Rotate(Value.Kael, 0, -90, 0) And Ok
     Ok = Character.SetPartVisible(Value.Kael, 1, False) And Ok
-    Ok = Character.SetScale(Value.Arin, 10000) And Ok
-    Ok = Character.Place(Value.Arin, -100, 0, 0) And Ok
-    Ok = Character.Rotate(Value.Arin, 0, -90, 0) And Ok
+    Ok = ArinFire.PrepareActor(Value.Arin) And Ok
     Value.ArinFire.Nodes = Calibration.ConfigureForActor(Value.ArinFire.Pose, 0, 0, Value.Arin)
     Ok = Value.ArinFire.Nodes.Available And Not Value.ArinFire.Pose.StorageRejected And Ok
 

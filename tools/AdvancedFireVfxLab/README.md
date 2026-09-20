@@ -1,5 +1,12 @@
 # Native Fire Lab
 
+Arin consumes the canonical Viewer-exported calibration JSON through its generated
+asset. Saved equipment corrections use world axes, so the Arin adapter retains
+the Viewer's authoring facing and grounding when placing him in this Lab. Do not
+rotate the actor independently and expect identical equipment corrections.
+`Test.ps1` compares all nine frame-zero poses with the Viewer's accepted socket
+transform reference, in addition to comparing the complete calibration snapshot.
+
 Build with `pwsh -File tools/AdvancedFireVfxLab/Build.ps1 -Target Native`, then launch
 with `pwsh -File tools/AdvancedFireVfxLab/Launch.ps1`. The launcher closes only an
 older copy of this Lab gracefully. Window placement is remembered.

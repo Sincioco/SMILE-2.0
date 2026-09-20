@@ -23,7 +23,9 @@ No asset scaling/rebaking, second renderer, second owning Object3D or actor pool
 
 Precise camera AutoFit accepts an optional final MaximumScalePercent argument,
 defaulting to the existing 10000%. It clamps that bound to Character3D's supported
-1–25000% range and derives all framing extents from the resulting actor scale.
+1–30000% range and derives all framing extents from the resulting actor scale.
+The 30000% ceiling supports Kael's three-times-solo Party presentation without
+rebaking or changing the accepted model's units.
 Vrax uses 20000% to double his initial preview; other Viewer profiles keep their
 existing default. Source meshes and shared Double transform ownership are unchanged.
 
@@ -81,8 +83,8 @@ precision. No origin-rebasing feature is included.
 ## Production adoption and compatibility
 
 `PrecisionCamera3D` owns shared continuous pan, orbit, bounded eased zoom,
-auto-fit, projection and cursor anchoring. ViewerCamera and Sin Star I's
-BattleArenaPreview supply their own scene sensitivity and framing. UI pixel
+auto-fit, projection and cursor anchoring. ViewerCamera supplies scene sensitivity
+and framing for the Viewer and Sin Star I's hosted presentations. UI pixel
 coordinates, pointer identities and elapsed milliseconds remain Number; conversion
 occurs before continuous motion math. Integer labels do not feed camera acceptance.
 

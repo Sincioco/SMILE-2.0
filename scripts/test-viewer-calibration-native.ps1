@@ -1,5 +1,5 @@
 [CmdletBinding()]
-param([switch]$IncludeWebPrecision)
+param([switch]$IncludeWebPrecision, [switch]$AcceptPoseReference)
 
 $ErrorActionPreference = 'Stop'
 $repositoryRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
@@ -31,6 +31,9 @@ $viewerSource = "Option Explicit`n`n" + $imports + $constants + $fields +
 $viewerSource = $viewerSource.Replace("`r`n", "`n")
 $testStartup = Get-Content -LiteralPath (Join-Path $toolRoot 'CalibrationTests.smile') -Raw
 $testStartup += "`n" + (Get-Content -LiteralPath (Join-Path $toolRoot 'CalibrationRoundTripTests.smile') -Raw)
+$firstPackagedCheck = $testStartup.IndexOf('Call CheckPackagedCalibration()')
+$testStartup = $testStartup.Insert($firstPackagedCheck + 'Call CheckPackagedCalibration()'.Length,
+    "`nCall CaptureAcceptedFrameZero()")
 $profileConstants = foreach ($characterName in @('Arin', 'Orin')) {
     $fingerprint = & {
         . (Join-Path $PSScriptRoot 'sync-arin-v5-7-calibration.ps1') -Character $characterName -FunctionsOnly
@@ -213,7 +216,27 @@ foreach ($jsonLine in $jsonLines) {
         }
     } $jsonLine
 }
-$assertionOutput = ($result -split "`n" | Where-Object { -not $_.StartsWith('CALIBRATION_JSON: ') }) -join "`n"
+$poseRows = @($result -split "`n" | Where-Object { $_.StartsWith('ARIN_FRAME_ZERO: ') } | ForEach-Object { $_.Trim() } | Sort-Object)
+if ($poseRows.Count -ne 9) { throw 'Expected all nine Arin frame-zero poses.' }
+$poseReference = Join-Path $repositoryRoot 'games/SinStarI/SourceAssets/Characters/Paladin/ArinV57/Previews/Accepted-Pose-References/frame-zero-transforms.json'
+$poseEvidence = [ordered]@{
+    schemaVersion = 1
+    calibrationSha256 = (Get-FileHash -LiteralPath (Join-Path $repositoryRoot 'games/SinStarI/SourceAssets/Characters/Paladin/ArinV57/Calibration/arin-v5.7-pose-calibration.json')).Hash
+    columns = 'clip name; 20 correction channels; HandRight, HandLeft, SwordTip, ShieldCenter world matrices, 12 properties each in thousandths'
+    poses = $poseRows
+}
+if ($AcceptPoseReference) {
+    [IO.File]::WriteAllText($poseReference, ($poseEvidence | ConvertTo-Json -Depth 4) + "`n", $encoding)
+} else {
+    $accepted = Get-Content -LiteralPath $poseReference -Raw | ConvertFrom-Json
+    if ($accepted.calibrationSha256 -cne $poseEvidence.calibrationSha256 -or
+        ($accepted.poses -join "`n") -cne ($poseRows -join "`n")) {
+        throw 'Arin accepted poses changed. Review the reference screenshots and intentional corrections before using -AcceptPoseReference.'
+    }
+}
+$assertionOutput = ($result -split "`n" | Where-Object {
+    -not $_.StartsWith('CALIBRATION_JSON: ') -and -not $_.StartsWith('ARIN_FRAME_ZERO: ')
+}) -join "`n"
 if ($assertionOutput.Trim() -cne 'Viewer calibration isolation passed') { throw "Native Viewer checks failed; see $output." }
 Write-Host $assertionOutput.Trim()
 Write-Host 'Both shared JSON exports exactly match canonical snapshots and native round-trips.'

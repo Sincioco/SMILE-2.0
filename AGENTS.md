@@ -148,6 +148,12 @@ The SMILE 2.0 - 3D Viewer, Animation Editor is allowed to evolve into a lightwei
 
 ### Permanent versioned character-package rule
 
+- Sin authors character pose corrections in the 3D Character Viewer. The JSON
+  Sin saves/exports there is authoritative now and going forward for that character.
+  Keep the accepted export in its canonical versioned package; never replace it
+  with older application-data saves, build mirrors, backups, or historical offsets.
+  Synchronization must detect a replaced JSON by content, not file timestamps.
+
 - Keep every named character revision self-contained in one canonical versioned repository folder. For Arin v5.7, that folder is `games\SinStarI\SourceAssets\Characters\Paladin\ArinV57`.
 - Store the revision's original model exports, cleaned derivatives, rig sources, animation sources and manifest, accepted viewer checkpoint, SM3D descriptor, pose-calibration snapshot, previews, package manifest, checksums, and handoff notes together in that folder.
 - Keep the Character Viewer/editor project, build script, launcher, and reusable editor source in `tools\Character3DViewer`. Generated tool-local cooking inputs and binaries are disposable mirrors and must remain ignored by Git.
@@ -177,6 +183,14 @@ The SMILE 2.0 - 3D Viewer, Animation Editor is allowed to evolve into a lightwei
   syntax. Studio's accepted design governs new scene/editor work.
 
 ### Permanent smooth 3D camera interaction rule
+
+- Sin's September 20 arena rule: the Character Viewer's arena is the visual and
+  interaction authority for current and future SMILE games/tools that use a 3D
+  arena. Keep its floor/grid appearance and consistent pan, zoom and orbit in
+  reusable SMILE library owners. F toggles Floor; G toggles Grid. Keep grid color
+  and grid spacing/size configurable. Consumers use the shared implementation;
+  do not copy private tool-specific arena/camera code into new programs. Existing
+  Studio and Web adoption holds remain in force until explicitly resumed.
 
 - Future SMILE games, viewers, examples, templates, and programs with pan, zoom, orbit, or rotation controls must make those controls smooth by default on native and Web targets.
 - For unchanged legacy integer camera APIs, use an integer-world scale large enough that camera and target movement does not visibly quantize around the subject. Meter-scale imported assets may use Character3D scale up to 25,000 percent when needed for camera precision or to match established world-scale actors.

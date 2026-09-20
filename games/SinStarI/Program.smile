@@ -4,25 +4,21 @@ Import SinStarI.TitleScreen As TitleScreen
 Import SinStarI.TownScreen As TownScreen
 Import SinStarI.Town2Screen As Town2Screen
 Import SinStarI.CharacterScreen As CharacterScreen
-Import SinStarI.BattleArenaPreview As BattleArenaPreview
 Import SinStarI.CharacterPresentation As CharacterPresentation
 
 Dim Mode As TitleScreen.TitleAction
 Dim PendingAction As TitleScreen.TitleAction
 Dim PressedKey As Number
-Dim SceneLabel As Text
 
 Game Window "Sin Star I" Size 1280 By 720
 
 Mode = TitleScreen.TitleAction.None
 PendingAction = TitleScreen.TitleAction.None
-SceneLabel = ""
 
 Call TitleScreen.Initialize()
 Call TownScreen.Initialize()
 Call Town2Screen.Initialize()
 Call CharacterScreen.Initialize()
-Call BattleArenaPreview.Initialize()
 
 Do
     Get Key PressedKey
@@ -49,13 +45,8 @@ Do
         Call Town2Screen.Draw()
     Else If Mode = TitleScreen.TitleAction.Character Then
         Call CharacterScreen.Draw()
-    Else If Mode = TitleScreen.TitleAction.Battle Then
-        Call BattleArenaPreview.Draw()
     Else If CharacterPresentation.IsPresentation(Mode) Then
         Call CharacterPresentation.Draw()
-    Else
-
-        Call DrawScene()
     End If
 
     Show Screen
@@ -65,7 +56,6 @@ Loop Until Game_Closed() = True Or Mode = TitleScreen.TitleAction.ExitGame
 
 Call CharacterPresentation.Shutdown()
 Call CharacterScreen.Shutdown()
-Call BattleArenaPreview.Shutdown()
 Call Town2Screen.Shutdown()
 Call TownScreen.Shutdown()
 Call TitleScreen.Shutdown()
@@ -81,29 +71,11 @@ Sub OpenScene(SceneId As TitleScreen.TitleAction)
     End If
 
     If SceneId = TitleScreen.TitleAction.Town Then
-        SceneLabel = "Town"
-    Else If SceneId = TitleScreen.TitleAction.Town2 Then
-        SceneLabel = "Town 2"
-    Else If SceneId = TitleScreen.TitleAction.Shop Then
-        SceneLabel = "Shop"
-    Else If SceneId = TitleScreen.TitleAction.Dungeon Then
-        SceneLabel = "Dungeon"
-    Else If SceneId = TitleScreen.TitleAction.Character Then
-        SceneLabel = "Character"
-    Else
-        SceneLabel = "Battle"
-    End If
-
-    Call TitleScreen.Leave()
-
-    If SceneId = TitleScreen.TitleAction.Town Then
         Call TownScreen.Enter()
     Else If SceneId = TitleScreen.TitleAction.Town2 Then
         Call Town2Screen.Enter()
     Else If SceneId = TitleScreen.TitleAction.Character Then
         Call CharacterScreen.Enter()
-    Else If SceneId = TitleScreen.TitleAction.Battle Then
-        Call BattleArenaPreview.Enter()
     Else If CharacterPresentation.IsPresentation(SceneId) Then
         Call CharacterPresentation.Enter(SceneId)
     End If
@@ -121,8 +93,6 @@ Sub HandleScene(Key As Number)
             Call Town2Screen.Shutdown()
         Else If Mode = TitleScreen.TitleAction.Character Then
             Call CharacterScreen.Shutdown()
-        Else If Mode = TitleScreen.TitleAction.Battle Then
-            Call BattleArenaPreview.Shutdown()
         Else If CharacterPresentation.IsPresentation(Mode) Then
             Call CharacterPresentation.Shutdown()
         End If
@@ -141,19 +111,8 @@ Sub HandleScene(Key As Number)
         Call Town2Screen.Update(Key)
     Else If Mode = TitleScreen.TitleAction.Character Then
         Call CharacterScreen.Update(Key)
-    Else If Mode = TitleScreen.TitleAction.Battle Then
-        Call BattleArenaPreview.Update(Key)
     Else If CharacterPresentation.IsPresentation(Mode) Then
         Call CharacterPresentation.Update(Key)
     End If
-
-End Sub
-
-Sub DrawScene()
-
-    Clear Rgb(5, 9, 18)
-    Fill Rectangle 0, 0, 1280, 72, Rgb(17, 29, 50)
-    Draw Text SceneLabel At 32, 20 Size 32 Color YELLOW
-    Draw Text "Press ESC to return to Legacy" At 32, 674 Size 18 Color WHITE
 
 End Sub

@@ -4,6 +4,7 @@ Module SinStarI.CharacterPresentation
 Option Explicit
 
 Import SinStarI.TitleScreen As TitleScreen
+Import SinStarI.BackgroundMusic As BackgroundMusic
 Import Smile.Tools.Character3DViewerWorkflow As Viewer
 Import Smile.Tools.Character3DViewerProfiles As Profiles
 
@@ -80,6 +81,25 @@ Public Sub Enter(Action As TitleScreen.TitleAction)
     Call Preview.UpdateFrame(Window_Width(), Window_Height())
 
     Active = True
+
+    Select Case Action
+        Case TitleScreen.TitleAction.Arin
+
+            Call BackgroundMusic.SelectTrack("Bloom (Arin)")
+
+        Case TitleScreen.TitleAction.Orin
+
+            Call BackgroundMusic.SelectTrack("Sunrise Oath (Orin)")
+
+        Case TitleScreen.TitleAction.Mira
+
+            Call BackgroundMusic.SelectTrack("Golden Hour Ascend (Mira)")
+
+        Case TitleScreen.TitleAction.Kael
+
+            Call BackgroundMusic.SelectTrack("Starforge Ascend (Kael)")
+
+    End Select
 
 End Sub
 

@@ -38,7 +38,6 @@ Import Smile.Simple3D.Math3D As Math3D
 Import Smile.Simple3D.FixedMath As Fixed
 Import Smile.Simple3D.LightPool3D As LightPool3D
 Import Smile.Simple3D.SceneVfx3D As SceneVfx3D
-Import SinStarI.BattleArenaPreview As BattleArenaPreview
 Import Smile.Tools.BeatCameraTests As BeatCameraTests
 
 Dim Alternating As CharacterViewer.ZoomState
@@ -980,16 +979,6 @@ Call Check(ViewerUi.FloorReflectionLabel(True,
     Graphics3D.REFLECTION_FALLBACK_UNSUPPORTED_RECEIVER) = "Battle Floor: Unavailable")
 Call Check(ViewerUi.FloorReflectionLabel(False,
     Graphics3D.REFLECTION_FALLBACK_UNSUPPORTED_RECEIVER) = "Battle Floor: Original")
-Call Check(BattleArenaPreview.ReflectionLabel(True,
-    Graphics3D.REFLECTION_FALLBACK_UNSUPPORTED_RECEIVER) = "Battle Floor: Unavailable")
-Call Check(BattleArenaPreview.ReflectionLabel(False,
-    Graphics3D.REFLECTION_FALLBACK_UNSUPPORTED_RECEIVER) = "Battle Floor: Original")
-Call Check(BattleArenaPreview.ReflectionLabel(True,
-    Graphics3D.REFLECTION_FALLBACK_ALLOCATION_FAILED) = "Battle Floor: Unavailable")
-Call Check(BattleArenaPreview.ReflectionLabel(True,
-    Graphics3D.REFLECTION_FALLBACK_RENDER_FAILED) = "Battle Floor: Unavailable")
-Call Check(BattleArenaPreview.ReflectionLabel(True,
-    Graphics3D.REFLECTION_FALLBACK_NONE) = "Battle Floor: Reflective")
 
 Call Check(ViewerUi.StatusPanelX(1600) = 1332)
 Call Check(ViewerUi.CameraPanelX(1600) = 1332)
@@ -2256,12 +2245,29 @@ Call CheckNamed(Abs(PreciseMath.Distance(VraxTestPosition,
     "Vrax stops directly in front of the selected defender")
 
 PartyState.SelectedBossProfile = ViewerProfiles.PROFILE_KAEL
+PartyState.DragonCounter = 0
 VraxTestPosition = ViewerParty.VraxPosition(PartyState)
 
 Call CheckNamed(Abs(PreciseMath.Distance(VraxTestPosition,
     Precision3D.FromVector(PartyState.Second.Home)) - 150.0) < 0.000001,
     "Kael closes to his own sword reach instead of Vrax's larger clearance")
 
+For Index = 1 To 8
+
+    If Index Mod 3 <> 0 Then
+
+        PartyState.DragonCounter = Index
+        PartyState.Elapsed = 1450
+        VraxTestPosition = ViewerParty.VraxPosition(PartyState)
+
+        Call CheckNamed(VraxTestPosition.X = -208.0 And VraxTestPosition.Z = -120.0,
+            "Every Kael Earth/Water attack remains at arena home")
+
+    End If
+
+End For
+
+PartyState.DragonCounter = 0
 PartyState.SelectedBossProfile = 0
 VraxTestPosition = ViewerParty.VraxPosition(PartyState)
 

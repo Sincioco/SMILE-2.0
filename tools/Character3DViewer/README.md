@@ -779,8 +779,16 @@ On Web, clicking the **filename** downloads the current **saved** schema-2 JSON 
 temporary unsaved pose adjustments. All 20 channels and name-bound clips are
 preserved. The label does not claim the browser can read or write `D:\`.
 
-Downloads do not synchronize with the repository or another browser origin.
-The native calibration synchronizer remains authoritative for desktop integration.
+Sin's saved/exported JSON is the authoritative character pose revision. Save it to
+the canonical package path shown below the timeline. An export elsewhere remains
+a separate file until placed there; browser downloads do not write the repository.
+Native `Launch.ps1` reconciles that JSON before opening the editor. A small ignored
+application-data receipt records the last synchronized JSON hash. Replacing the JSON
+invalidates the receipt even when its timestamp is older: launch adopts that export,
+and commit/watch exports refuse to overwrite it with a differing working save.
+Ordinary later Save Frame operations still synchronize through the launcher watcher.
+Matching exports preserve the exact JSON bytes. Game/Lab builds cook that same JSON
+into disposable assets; running programs require a rebuild/relaunch to adopt changes.
 **Import Key Frames** uses the shared UTF-8 picker. The transfer row is ordered
 Import Key Frames, Download Key Frames, JSON filename, then status text. Narrow
 windows show status on the line below instead of truncating the confirmation.

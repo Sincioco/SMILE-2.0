@@ -757,6 +757,22 @@ function Show-SnapshotSummary([string]$Label, $Snapshot) {
     }
 }
 
+function Test-CalibrationJsonChanged([string]$LiveFile, [string]$JsonFile, [string]$JsonHash) {
+    $receiptPath = "$LiveFile.sync.json"
+    if (-not (Test-Path -LiteralPath $receiptPath)) { return $true }
+    try { $receipt = Get-Content -LiteralPath $receiptPath -Raw | ConvertFrom-Json }
+    catch { return $true }
+    return $receipt.jsonPath -ine [IO.Path]::GetFullPath($JsonFile) -or
+        $receipt.jsonSha256 -ine $JsonHash
+}
+
+function Save-CalibrationSyncReceipt([string]$LiveFile, [string]$JsonFile, [string]$JsonHash) {
+    $receiptPath = "$LiveFile.sync.json"
+    $receipt = [ordered]@{ jsonPath = [IO.Path]::GetFullPath($JsonFile); jsonSha256 = $JsonHash }
+    $bytes = [Text.Encoding]::UTF8.GetBytes(($receipt | ConvertTo-Json -Compress))
+    Write-AtomicBytes $receiptPath $bytes (Get-PathHash $receiptPath)
+}
+
 function Export-LiveCalibration([bool]$MissingIsAllowed) {
     $source = if ($SourcePath) { $SourcePath } else { $livePath }
     $destination = if ($DestinationPath) { $DestinationPath } else { $snapshotPath }
@@ -780,8 +796,22 @@ function Export-LiveCalibration([bool]$MissingIsAllowed) {
         $unresolved = @($previous.clips | Where-Object { $_.name -cnotin $clipNames })
         $snapshot.clips = @($snapshot.clips) + $unresolved
         foreach ($entry in $unresolved) { $snapshot.totalKeyframes += @($entry.keyframes).Count }
+        if (($previous | ConvertTo-Json -Depth 24 -Compress) -ceq
+            ((Normalize-Snapshot $snapshot) | ConvertTo-Json -Depth 24 -Compress)) {
+            Save-CalibrationSyncReceipt $source $destination $previousHash
+            Write-Host 'Repository JSON already matches the working save; original JSON bytes remain unchanged.'
+            return $true
+        }
+        # An exported/replaced JSON is an intentional authoring input. Never let
+        # launch, commit or an old watcher silently roll it back to an older save.
+        if (Test-CalibrationJsonChanged $source $destination $previousHash) {
+            Write-Warning 'Repository JSON was replaced or has no synchronization receipt; kept the authoritative JSON. Relaunch through Launch.ps1 to apply it.'
+            return $false
+        }
     }
     Write-Snapshot $destination $snapshot $previousHash
+    $writtenJson = ((Normalize-Snapshot $snapshot) | ConvertTo-Json -Depth 16).Replace("`r`n", "`n") + "`n"
+    Save-CalibrationSyncReceipt $source $destination (Get-TextSha256 $writtenJson)
     Write-Host "Exported $($snapshot.totalKeyframes) keys: $destination (SHA-256 $(Get-PathHash $destination))"
 
     return $true
@@ -803,6 +833,7 @@ function Restore-LiveCalibration([bool]$Overwrite) {
     # A normal restore accepts a validated primary or previous-good backup.
     # An explicit forced migration may replace a runtime payload bound to the
     # preceding asset fingerprint while preserving rejected primary evidence.
+    $sourceHash = Get-PathHash $source
     $snapshot = Read-Snapshot $source
     $previousHash = Get-PathHash $destination
 
@@ -810,13 +841,17 @@ function Restore-LiveCalibration([bool]$Overwrite) {
         $usable = Select-UsableLiveCalibration $destination
 
         if ($null -ne $usable) {
-            if ($usable.Source -eq 'Backup') {
-                Write-Host 'Previous-good Character calibration is usable; repository defaults were not restored over it.'
+            $same = ($snapshot | ConvertTo-Json -Depth 24 -Compress) -ceq
+                ($usable.Snapshot | ConvertTo-Json -Depth 24 -Compress)
+            if (-not $same -and (Test-CalibrationJsonChanged $destination $source $sourceHash)) {
+                # The launcher closes the editor before this reconciliation.
+                $Overwrite = $true
+                Write-Host 'Applying the authoritative repository JSON to the working save.'
             } else {
-                Write-Host 'Live Character calibration already exists; repository JSON was not restored over it.'
+                if ($same) { Save-CalibrationSyncReceipt $destination $source $sourceHash }
+                Write-Host 'Working calibration is synchronized or has newer editor changes; no restore needed.'
+                return $false
             }
-
-            return $false
         }
     }
 
@@ -832,6 +867,7 @@ function Restore-LiveCalibration([bool]$Overwrite) {
     [Security.Cryptography.SHA256]::HashData($payload).CopyTo($envelope, 12)
     $payload.CopyTo($envelope, 44)
     Write-AtomicBytes $destination $envelope $previousHash -PreservePreviousBackup:$Overwrite
+    Save-CalibrationSyncReceipt $destination $source $sourceHash
     Write-Host "Restored $($snapshot.totalKeyframes) Character keyframes from repository JSON."
 
     return $true

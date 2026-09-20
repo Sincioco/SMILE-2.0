@@ -2,19 +2,17 @@
 
 Sin Star I opens with **Characters**, **Battle Simulations**, **Legacy**, and **Exit**.
 The title uses `Assets/Backgrounds/SinStarLandscape.png` with the transparent
-`Sin Star I - Text.png` lettering at upper left. The left-aligned choices form a
-group centered in the reference image's left menu area; muted two-line credits
-sit below them. The main heading and keyboard-hint captions are omitted, while
-keyboard and pointer navigation remain available. Title music is
-`Assets/Music/Starforge Horizon.mp3`; all ten original MP3s now live in `Assets/Music`.
+`Assets/Sin Star I - Logo.png` lettering selected by Sin at upper left. The choices
+remain grouped in the left menu area. Credits form one centered line across the
+window, twenty pixels above its bottom, with no background panel.
+The game-owned `Music.smile` keeps the current track playing through navigation
+until a screen requests an override. Tracks in `Assets/Music` are:
 
-**Open title-art requirement (September 20, 2026):** the built-in image generator
-returned a transparent 2079-by-756 PNG on both the original and 4K retry. The
-current tracked lettering and published copy are that actual output, not 4K.
-The native composition and navigation have been checked. A 3840-pixel-wide
-transparent export remains pending Sin's answer about using Windows imaging
-to resize it; resizing would not add newly generated detail. Preserve its aspect
-ratio and alpha, replace the canonical asset and rebuild after that decision.
+- Title: `Starforge March (Title Screen).mp3`.
+- Arin: `Bloom (Arin).mp3`.
+- Orin: `Sunrise Oath (Orin).mp3`.
+- Mira: `Golden Hour Ascend (Mira).mp3`.
+- Kael: `Starforge Ascend (Kael).mp3`.
 
 All three battle simulations use the Viewer's current four-hero party: Arin, Orin,
 Zara and Mira. A status panel shows every hero and the selected boss with live state,
@@ -39,8 +37,9 @@ runs that character's animation cycle with the Character Viewer's background,
 rotating reflective arena, calibrated equipment, VFX and sounds. Battle Simulations
 offers Dragon, Vrax and **Kael Party** choreography, including Mira's healing,
 water attacks and Orin combo. Kael Party pits Arin, Orin, Zara and Mira against
-Kael at twice his solo model scale. Legacy preserves the earlier character gallery,
-Town, Town 2, Shop, Dungeon, and Original Battle Preview.
+Kael at three times his solo model scale. Earth and Water casts remain at his arena
+home while facing the selected target; normal sword attacks still approach.
+Legacy contains only the character gallery, Town, Town 2, and Back.
 Mira's shared presentation no longer adds body glow, staff glow or head sparkles;
 her authored model/materials and water attacks remain.
 
@@ -88,14 +87,14 @@ and thin scene routing. `SinStarI.TitleScreen` remains an application-local Modu
 there is one title-screen service with private assets and selection state, so a
 Class would add identity without a useful second instance.
 
-The module exports the typed `TitleAction` enum. Its explicit values preserve the
-existing scene contract: `None=0`, `Character=1`, `Town=2`, `Town2=3`, `Shop=4`,
-`Dungeon=5`, and `Battle=6`. Navigation uses explicit enum transitions rather
-than enum arithmetic. Yalis is value 17, Kael is 18, and KaelBattle is 19;
-Legacy keeps values 1–6.
+The module exports the typed `TitleAction` enum. Retained scenes keep their explicit
+values: `None=0`, `Character=1`, `Town=2`, `Town2=3`; retired values 4–6 are unused.
+Navigation uses explicit enum transitions rather than enum arithmetic. Yalis is
+value 17, Kael is 18, and KaelBattle is 19.
 
-`TitleScreen` owns its three submenu states, keyboard/pointer selection and title
-music. `CharacterPresentation` owns one hosted `Character3DViewerWorkflow.Session`
+`TitleScreen` owns its three submenu states, keyboard/pointer selection and requests
+the title track from `BackgroundMusic`, the sole music-state owner.
+`CharacterPresentation` owns one hosted `Character3DViewerWorkflow.Session`
 and game-facing Back/status controls. It links the exact Viewer sources, as Studio
 does, rather than copying choreography, lighting, calibration, or VFX algorithms.
 The shared session's `CycleAllClips` option selects the gallery's full clip cycle;
@@ -114,7 +113,8 @@ rules, IDs, scene transitions and saved calibration remain unchanged.
 
 - Menus: click an item, or use Up/Down/W/S and Enter/Space. Escape or Back returns
   from a submenu; Exit closes the game after normal resource shutdown.
-- Every scene: Escape returns to its submenu and restarts title music.
+- Every scene: Escape returns to its submenu and selects title music; an already
+  playing title track continues without restarting.
 - Characters/Battle Simulations: left-drag pans, middle-drag orbits, wheel zooms,
   O toggles auto-orbit, Space pauses/resumes, F toggles reflections, and R or
   right-click resets the view. The Back button returns to the submenu.
@@ -123,25 +123,9 @@ rules, IDs, scene transitions and saved calibration remain unchanged.
 - Town: arrows/WASD move; 1 and 2 switch the visible character.
 - Town 2: arrows/WASD take manual control; hold Space to run as Character 1;
   Enter starts or pauses the edge tour; 1 and 2 switch characters.
-- Battle Arena Preview: click `Battle Floor: Reflective / Original` or press R to
-  toggle the shared floor; left-drag pans, middle-drag orbits, the wheel zooms,
-  O toggles the default smooth auto-orbit, and Escape returns to the title.
 
-Title music plays only while the title is active. Opening a scene stops it, and
-returning with Escape restarts it. Screen images and scene resources are released
-by their owning application-local Modules during shutdown.
-
-## Legacy Battle Arena Preview
-
-`SinStarI.BattleArenaPreview` replaces only the former Battle placeholder. It owns a
-small shared `Arena3D`, the existing screen-fixed title backdrop, one live animated
-and socket-grounded Arin v5.7 actor, smooth shared camera controls, a visible
-reflection preference, and bounded lifecycle. Both
-native and Web builds use the same `Smile.Simple3D.Graphics3D` planar-reflection
-implementation as the Character Viewer. This preserved Legacy module imports no Viewer module and owns no
-GPU reflection algorithm, calibration editor, battle authority, damage model, or scene
-schema. Leaving the preview destroys its actor, arena, and backdrop; re-entry creates a
-fresh scene with reflections requested On.
+Screen images and scene resources are released by their owning Modules during
+shutdown. The music owner stops playback only on a track change or game shutdown.
 
 ## Content
 

@@ -24,8 +24,8 @@ Import Smile.Tools.KaelWater As KaelWater
 
 Private Const ASSET_PATH = "Assets\Generation2\RedDragon\RedDragon.sm3d"
 Private Const SCALE_PERCENT = 25000
-Private Const POSITION_X = -208
-Private Const POSITION_Z = -120
+Private Const POSITION_X = ViewerProfiles.ARENA_OPPONENT_X
+Private Const POSITION_Z = ViewerProfiles.ARENA_OPPONENT_Z
 Private Const ROTATION_Y = 240
 Private Const BODY_PART_INDEX = 2
 
@@ -199,8 +199,8 @@ Public Function Create(ByRef Value As State, ByRef BorrowedActor As Character3D.
             Result = NodeAim3D.Configure(Value.HeadAim, Value.Actor, "VraxMouth",
                 Math3D.Vector(1, 0, 0), Math3D.Vector(0, 30, 35)) And Result
         Else
-            Value.Frame.ScalePercent = Value.Frame.ScalePercent * 2
-            Value.Frame.PositionY = Value.Frame.PositionY * 2.0
+            Value.Frame.ScalePercent = Value.Frame.ScalePercent * 3
+            Value.Frame.PositionY = Value.Frame.PositionY * 3.0
         End If
 
         Result = Character3D.SetScale(Value.Actor, Value.Frame.ScalePercent) And Result

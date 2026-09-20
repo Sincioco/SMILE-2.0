@@ -4,11 +4,16 @@ This directory is the permanent repository-owned copy of Arin v5.7 Character Vie
 
 - `arin-v5.7-pose-calibration.json` is the permanent, human-readable source of truth used for review, manual inspection, comparison, commits, and future Arin v5.8 reference work.
 - The live working copy remains in stable SMILE application data so it survives native viewer rebuilds.
-- `scripts\sync-arin-v5-7-calibration.ps1` exports the live binary working copy to JSON or validates and restores JSON into SMILE application data when that working copy is absent.
+- `scripts\sync-arin-v5-7-calibration.ps1` exports subsequent native saves, and restores canonical JSON when the working copy is absent or the JSON has intentionally changed since the last synchronization.
 - `tools\Character3DViewer\Launch.ps1` starts a small background synchronizer so every subsequent `Save Frame` is mirrored to JSON while that editor session is open.
 
-The JSON may be read and edited by a human. Prefer using the viewer/editor and
-Save Frame, then review the generated JSON before committing.
+Author poses in the Viewer. A saved/exported JSON placed at the canonical filename
+is authoritative, including when its filesystem timestamp is older. An ignored
+content-hash receipt beside the native save distinguishes a newly replaced JSON
+from subsequent native Save Frame edits. A missing receipt gives priority to JSON.
+No-op synchronization preserves the original JSON bytes. Relaunch through
+`Launch.ps1` after replacing JSON, and rebuild consuming applications. Unsaved
+preview adjustments still require Save Frame/export; screenshots do not author poses.
 
 ## Hardened Storage (M7E-G0)
 

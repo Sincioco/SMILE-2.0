@@ -1,0 +1,41 @@
+''' One game music owner; navigation without an override preserves playback.
+Module SinStarI.BackgroundMusic
+
+Option Explicit
+
+Private Dim CurrentTrack As Text
+
+Public Sub SelectTrack(Name As Text)
+
+    If Name = "" Or Name = CurrentTrack Then
+        Return
+    End If
+
+    Select Case Name
+        Case "Starforge March (Title Screen)"
+            Play Music "Assets\Music\Starforge March (Title Screen).mp3" Loop
+        Case "Bloom (Arin)"
+            Play Music "Assets\Music\Bloom (Arin).mp3" Loop
+        Case "Sunrise Oath (Orin)"
+            Play Music "Assets\Music\Sunrise Oath (Orin).mp3" Loop
+        Case "Golden Hour Ascend (Mira)"
+            Play Music "Assets\Music\Golden Hour Ascend (Mira).mp3" Loop
+        Case "Starforge Ascend (Kael)"
+            Play Music "Assets\Music\Starforge Ascend (Kael).mp3" Loop
+        Case Else
+            Return
+    End Select
+
+    CurrentTrack = Name
+
+End Sub
+
+Public Sub Shutdown()
+
+    Stop Music
+
+    CurrentTrack = ""
+
+End Sub
+
+End Module

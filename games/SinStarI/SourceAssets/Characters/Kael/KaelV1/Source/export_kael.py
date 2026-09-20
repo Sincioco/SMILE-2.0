@@ -11,7 +11,7 @@ from mathutils import Vector
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from fit_and_ground_kael import action_at
-from silver_kael_hair import apply as silver_hair
+from silver_kael_hair import apply as silver_hair, finish_gltf
 
 PACKAGE = Path(__file__).resolve().parent.parent
 SOURCE = PACKAGE / "Source"
@@ -167,8 +167,7 @@ def main():
     gltf = json.loads(data[20:20+length])
     # Blender's graph exporter may omit the linked multiply factor. Keep the
     # portable material explicit and retain the original packed atlas unchanged.
-    hair_material = next(m for m in gltf['materials'] if m.get('name') == 'Kael.SilverGrayHair')
-    hair_material['pbrMetallicRoughness']['baseColorFactor'] = [.40,.44,.49,1]
+    finish_gltf(gltf)
     mesh_nodes = [n['name'] for n in gltf['nodes'] if 'mesh' in n]
     if mesh_nodes != ['Kael.Body','Kael.Sword','Kael.ZHair']:
         raise RuntimeError(('Runtime part order changed',mesh_nodes))

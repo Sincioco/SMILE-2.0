@@ -23,7 +23,7 @@ committed particles and ribbons without a second simulation or resource admissio
 | Public SMILE configuration, roles, fallback/query contract | `libraries/Smile.Simple3D/Graphics3D.smile` | Same shared SMILE source |
 | Optional polished arena floor | `libraries/Smile.Simple3D/Arena3D.smile` | Same shared SMILE source |
 | Character Viewer state, rendering, Party routing, labels, tests | Focused `ViewerRendering`, `ViewerUi`, `ViewerParty`, inspector, and hardening owners | Same Viewer sources on both targets |
-| Sin Star I production preview | `games/SinStarI/BattleArenaPreview.smile` | Same game source on both targets |
+| Sin Star I character presentations | `games/SinStarI/CharacterPresentation.smile`, hosting the shared Viewer | Native adoption; Web remains on hold |
 
 No Viewer renderer owner was copied into Sin Star I. Both integrations consume
 the shared `Smile.Simple3D` API and the target runtime implementation.

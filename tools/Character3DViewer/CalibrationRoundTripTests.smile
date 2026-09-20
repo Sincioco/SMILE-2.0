@@ -1,4 +1,52 @@
 ''' Injected into the isolated production Viewer fixture; never uses live saves.
+Sub CaptureAcceptedFrameZero()
+
+    Dim Clip As Number
+    Dim Channel As Number
+    Dim Socket As Number
+    Dim Property As Number
+    Dim Names[4] As Text
+    Dim Parts[4] As Number
+    Dim Row As Text
+
+    Names[0] = "HandRight"
+    Names[1] = "HandLeft"
+    Names[2] = "SwordTip"
+    Names[3] = "ShieldCenter"
+    Parts[0] = BODY_PART_INDEX
+    Parts[1] = BODY_PART_INDEX
+    Parts[2] = WEAPON_PART_INDEX
+    Parts[3] = SHIELD_PART_INDEX
+
+    For Clip = 0 To Character3D.ClipCount(Character) - 1
+
+        Call SelectClip(Clip)
+        Call ApplyWristCalibration()
+        Call ApplyEquipmentCoupling()
+        Call ApplyEquipmentCalibration()
+
+        Row = "ARIN_FRAME_ZERO: " + Character3D.ClipName(Character, Clip)
+
+        For Channel = 0 To 19
+            Row = Row + "|" + ViewerCalibration.NumberText(
+                ViewerCalibration.ChannelValue(Calibration, Clip, Channel))
+        End For
+
+        For Socket = 0 To 3
+
+            For Property = 1 To 12
+                Row = Row + "|" + ViewerCalibration.NumberText(
+                    Character3D.SocketValueThousandths(Character, Names[Socket], Property, Parts[Socket]))
+            End For
+        End For
+
+        Call CalibrationCheck(Character3D.LastError() = 0, "Accepted frame-zero socket transforms")
+
+        Print Row
+    End For
+
+End Sub
+
 Sub CheckFullPoseRoundTrip()
 
     Dim Original As Text

@@ -359,6 +359,11 @@ and Orin's zero keys (`13AE135FDA40302CB5A4B0146D7103A2ED5346AAEEBB3852AF6DD3C39
 
 ## On Hold — Studio And Web Adoption Record
 
+September 20 native pose/music work retired obsolete generated Arin calibration
+copies, including held Studio/Web output copies. Rebuild those consumers from the
+canonical Viewer-exported JSON when their hold is lifted; do not restore the old
+payloads. The current native Viewer/game/Fire Lab payloads are synchronized.
+
 Resume either workstream only on Sin's direction. Studio creation, development,
 acceptance and next phases remain held. Shared source edits are not a published Web feature.
 The existing Web artifact remains the initial editor from `fd73f9d` (game.js SHA-256

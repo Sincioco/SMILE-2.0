@@ -2,9 +2,9 @@
   "hairTriangles": 8266,
   "bodyTriangles": 33734,
   "baseColorFactorLinear": [
-    0.4,
-    0.44,
-    0.49,
+    0.32,
+    0.31,
+    0.38,
     1
   ],
   "partOrder": [
@@ -13,5 +13,7 @@
     "Kael.ZHair"
   ],
   "originalPackedTextures": "unchanged",
-  "method": "material factor on selected existing skinned hair faces"
+  "method": "material factor on selected existing skinned hair faces",
+  "metallicFactor": 0,
+  "roughnessFactor": 1
 }

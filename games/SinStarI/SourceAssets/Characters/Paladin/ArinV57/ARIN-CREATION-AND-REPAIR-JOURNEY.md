@@ -1,5 +1,26 @@
 # Arin: Creation, Import, Animation, and Repair Lessons
 
+## Current pose-authoring rule — September 20, 2026
+
+Sin makes pose changes in the Character Viewer and saves/exports JSON. The latest
+canonical exported JSON owns wrist, sword, shield, position and rotation values.
+Do not restore historic offsets or infer corrections from screenshots. The accepted
+24-key snapshot is SHA-256
+`8896989dd711ebba1cd2f62ffd1a840774287ed9d52e53663c66fe5b4e83e8dc`.
+
+An older native working save was found alongside this newer exported JSON. The
+launcher's export-before-restore sequence could replace that authoring input.
+Synchronization now compares a saved content-hash receipt: changed canonical JSON
+wins; later native saves export normally after reconciliation. No-op export retains
+the user's exact JSON bytes. Always launch through `Launch.ps1`; after an external
+export, relaunch and rebuild game/Lab consumers. Tests cover older timestamps,
+relaunch, later saves, all twenty channels and frame-zero socket transforms.
+
+See [accepted pose references](Previews/Accepted-Pose-References/README.md) for
+clip-named native images. These are inspection evidence and must never overwrite
+later artist-authored JSON. Refresh the transform baseline only after an intentional
+accepted pose change, using `test-viewer-calibration-native.ps1 -AcceptPoseReference`.
+
 September 9 post-delivery VFX-01: equipment-rim acquisition now promotes only a
 complete texture/material/three-ribbon candidate. Capacity rejection rolls back
 the candidate and the same visible context can recover on a later normal update.
@@ -18,6 +39,14 @@ Where an old screenshot showed a symptom but did not establish its cause, this
 guide says so rather than inventing a diagnosis.
 
 ## 1. Read This Before Touching Arin
+
+Equipment position/rotation channels currently use world axes. Fire Lab's previous
+independent -90-degree actor heading changed the visible result despite loading
+the correct JSON. Its adapter now preserves the shared Viewer's reference facing,
+scale and grounding before translating Arin to the Lab. All nine wrist/equipment
+socket matrices match the Viewer after removing that scene translation. This is
+not a new actor-local calibration format; future arbitrary-facing pose transfer
+needs an explicit coordinate-space migration that preserves accepted Viewer poses.
 
 - Arin v5.7's sword, shield, flames, and artist-authored poses are approved for
   the current Character Viewer. Preserve their appearance.
