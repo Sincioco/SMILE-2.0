@@ -7,6 +7,8 @@ Import SinStarI.BattleRules As Rules
 Import SinStarI.Progression As Growth
 Import Smile.Tools.ViewerBattleProgression As Curves
 
+Public Const INITIAL_AUTO_DELAY = 30000
+
 Public Type State
     Combat As Rules.State
     Planning As Boolean
@@ -14,6 +16,7 @@ Public Type State
     PreviousXP[4] As Number
     PreviousLevel[4] As Number
     Award[4] As Number
+    InitialIdleTime As Number
 End Type
 
 Public Sub Start(ByRef Value As State, Optional KeepExperience As Boolean = False)
@@ -79,6 +82,32 @@ Public Sub BeginRound(ByRef Value As State)
     Call Rules.RepeatCommand(Value.Combat)
 
 End Sub
+
+''' Only the initial round may start itself; later requested orders keep waiting.
+Public Function AdvanceInitialIdle(
+    ByRef Value As State,
+    Elapsed As Number,
+    Active As Boolean,
+    Available As Boolean
+) As Boolean
+
+    If (Not Value.Planning Or Value.Combat.ActionSerial <> 0 Or
+        Value.Combat.Phase <> Rules.WAITING Or Active Or Not Available) Then
+        Value.InitialIdleTime = 0
+        Return False
+    End If
+
+    Value.InitialIdleTime = Min(INITIAL_AUTO_DELAY, Value.InitialIdleTime + Max(0, Elapsed))
+
+    If Value.InitialIdleTime < INITIAL_AUTO_DELAY Then
+        Return False
+    End If
+
+    Call BeginRound(Value)
+
+    Return True
+
+End Function
 
 Public Function Plan(ByRef Value As State, Command As Number,
     Target As Number, Optional Variant As Number = 0) As Boolean

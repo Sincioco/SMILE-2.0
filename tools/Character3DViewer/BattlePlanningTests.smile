@@ -15,6 +15,43 @@ Dim Stats As Growth.Stats
 
 Call Planning.Start(Value)
 
+Accepted = Planning.AdvanceInitialIdle(Value, 29999, False, True)
+
+Call Check(Not Accepted And Value.Planning, "Initial Auto Does Not Start Early")
+
+Accepted = Planning.AdvanceInitialIdle(Value, 1, True, True)
+
+Call Check(Not Accepted And Value.InitialIdleTime = 0, "Input Resets Initial Idle Countdown")
+
+Accepted = Planning.AdvanceInitialIdle(Value, 29999, False, True)
+
+Call Check(Not Accepted And Value.Planning, "Wait Thirty Seconds After Last Input")
+
+Accepted = Planning.AdvanceInitialIdle(Value, 1, False, True)
+
+Call Check(Accepted And Not Value.Planning And Value.Combat.AutoRun,
+    "Thirty Idle Seconds Selects Auto")
+
+Before = Value.Combat.ActionSerial
+Accepted = Planning.AdvanceInitialIdle(Value, 30000, False, True)
+
+Call Check(Not Accepted And Value.Combat.ActionSerial = Before, "Idle Auto Does Not Restart Active Combat")
+Call Planning.Start(Value)
+
+Accepted = Planning.Plan(Value, Rules.DEFEND, 4)
+Accepted = Planning.AdvanceInitialIdle(Value, 20000, False, True)
+Accepted = Planning.AdvanceInitialIdle(Value, 10000, False, False)
+
+Call Check(Not Accepted And Value.Planning And Value.InitialIdleTime = 0,
+    "Stats Or Editor Ownership Clears Initial Idle Countdown")
+
+Accepted = Planning.AdvanceInitialIdle(Value, 30000, False, True)
+
+Call Check(Accepted And Value.Combat.Command = Rules.DEFEND,
+    "Idle Auto Preserves Confirmed Orders")
+Call Planning.Start(Value, True)
+Call Check(Value.InitialIdleTime = 0, "Battle Restart Rearms Full Initial Delay")
+
 Before = Value.Combat.Members[0].MP
 Accepted = Planning.Plan(Value, Rules.HEAL, 0)
 
@@ -44,6 +81,10 @@ End For
 
 Call Check(Value.Planning And Value.Combat.Turn = Rules.FirstActive(Value.Combat), "Interrupt Waits For Round Boundary")
 Call Check(Value.Combat.Round = 3, "Boss Finished Before Planning")
+
+Accepted = Planning.AdvanceInitialIdle(Value, 30000, False, True)
+
+Call Check(Not Accepted And Value.Planning, "Later Requested Orders Do Not Time Out")
 Call Planning.Start(Value)
 
 Accepted = Planning.Plan(Value, Rules.DEFEND, 4)

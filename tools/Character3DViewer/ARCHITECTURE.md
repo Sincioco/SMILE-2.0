@@ -182,6 +182,46 @@ saved placement; visible Auto battle exercises the new presenter and automatical
 returns from defeat to Round 1 with full HP/MP and initial orders. Web/Studio
 adoption and their existing held acceptance work remain out of scope.
 
+## Initial idle Auto and opening revolution
+
+`BattlePlanning.State` owns the initial inactivity clock. `AdvanceInitialIdle`
+starts the same `BeginRound` path as the Auto button after 30,000 inactive ms,
+only before the first action of a fresh encounter. User activity and unavailable
+presentation reset the clock. `Start` rearms it for entry and both reset paths;
+orders requested after a running round remain indefinite. Confirmed and remembered
+orders retain their existing meaning.
+
+`BattleUi.ObserveActivity` samples keys, pointer motion, wheel and pressed/held
+buttons before any menu/editor early return. NativeViewerHost passes this state
+and actual elapsed time to the planning owner. Stats, visible inspectors, pending
+edits or an unavailable scene prevent idle startup. The host clears an abandoned
+order submenu and resumes the existing directed scene when Auto starts.
+
+`BattleCinematics` captures a formation-wide opening and reuses Kael Party's
+two-second `EstablishOrbitDegrees` timing with shared `ArenaCamera3D.ComposeOrbit`.
+The following second uses the existing `BattleCameraShots.Blend` operation to ease
+into the current cinematic shot, including target, direction, distance and FOV.
+The full revolution completes before blending. Entry and reset replay it;
+disabled cinematics continue to preserve the manual view. No shared camera math,
+renderer, language, asset or calibration extension is needed.
+
+Growth: BattlePlanning 238 -> 267 lines, BattleUi 409 -> 422,
+NativeViewerHost 399 -> 419 and BattleCinematics 220 -> 255. Existing focused
+owners retain their responsibilities; no legacy owner, threshold, baseline or
+exclusion changes. PlanningTests adds 41 lines and SceneTests adds 32.
+
+Native planning checks cover 29,999/30,000-ms boundaries, activity reset,
+inspector/stats suspension, preserved orders, restart rearming and later manual
+planning. Real-asset scene checks cover opposite-side and full-circle positions,
+both smooth transition boundaries and the exact destination camera/FOV, plus
+the existing battle regressions. Native hardening/calibration and 58
+graphics/input/audio checks pass; scoped formatting and diff checks pass.
+The rebuilt native Viewer visibly starts Auto without a button click. Activity
+just before the original deadline keeps it waiting beyond that deadline, then
+Auto starts after the renewed idle interval. Native opening and following-shot
+views were inspected; exact revolution/transition timing is covered by the fixture.
+Launch.ps1 preserves the saved window placement and authoritative calibration.
+
 ## Standalone tab music
 
 `ViewerMusic` owns the Kael Party track policy using the existing `Play Music`

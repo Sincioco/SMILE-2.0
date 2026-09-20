@@ -8,7 +8,12 @@ Mira start at level 1 against level-20 Kael (Zara's stat growth). The ordinary
 Kael Party tab retains its demo. Yalis and the three older Mira comparison tabs
 are hidden in the native tab strip; the accepted Mira follows Zara.
 
-- Initial orders wait indefinitely. Confirm Arin, Orin, Zara and Mira in order;
+- Initial orders select **Auto** after 30 seconds without keyboard, pointer-motion,
+  mouse-button or wheel activity. Activity starts a fresh 30-second countdown.
+  This also applies after a battle reset. Open statistics, inspectors or pending
+  edits suspend the countdown. Later orders explicitly requested during combat
+  still wait for confirmation.
+- Confirm Arin, Orin, Zara and Mira in order;
   no action resolves until all available heroes have orders. **Fight** confirms
   the remembered order (Attack initially). **Order** opens attack variants, magic
   and healing targets, the Item placeholder, Defend, full-gauge Limit Break or Run.
@@ -41,8 +46,11 @@ are hidden in the native tab strip; the accepted Mira follows Zara.
   two-character shots; impact cuts begin just before contact and continue moving
   through the reaction. Shots track the current actor and target. Turn it off to
   retain the current shot and use the existing smooth manual camera controls.
-- The opening shot starts from Sin's screenshot: position `(623, 0, 382)`, target
-  `(-67, 122, -66)`, FOV 24 degrees. Right-click restart restores that opening.
+- The opening makes one complete, eased 360-degree revolution around the party
+  over two seconds, matching Kael Party, then blends for one second into the
+  battle camera. Its initial destination uses Sin's screenshot: position
+  `(623, 0, 382)`, target `(-67, 122, -66)`, FOV 24 degrees.
+  Right-click and automatic restart replay that opening.
   Cinematics keep moving while waiting for orders. Active pose edits or Beat
   previews retain their existing camera ownership until saved/cancelled. The
   required twelve-second ending orbit still runs; enabled cinematics resume

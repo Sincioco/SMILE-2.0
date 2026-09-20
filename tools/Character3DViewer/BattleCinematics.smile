@@ -6,6 +6,8 @@ Option Explicit
 Import Smile.Tools.Character3DViewerWorkflow As Workflow
 Import Smile.Tools.Character3DViewerActors As Actors
 Import Smile.Tools.ViewerBeatSequence As Beats
+Import Smile.Tools.Character3DViewerParty As Party
+Import Smile.Tools.BattleCameraShots As Shots
 Import Smile.Tools.ViewerBattlePresentation As Presentation
 Import SinStarI.BattleRules As Rules
 Import Smile.Simple3D.Precision3D As P
@@ -28,6 +30,7 @@ Public Type State
     Height[5] As Double
     Positions[5] As P.Vector3
     View As P.Camera3D
+    EstablishView As P.Camera3D
 End Type
 
 Public Sub Reset(ByRef Value As State, Viewer As Workflow.Session)
@@ -182,6 +185,26 @@ Public Function Compose(Value As State, Battle As Rules.State,
 
 End Function
 
+''' Match Kael Party's complete two-second orbit, then ease into the live shot for one second.
+Public Function Establish(Base As P.Camera3D, Following As P.Camera3D, Time As Number) As P.Camera3D
+
+    Dim Controls As Camera.Controls
+    Dim Result As P.Camera3D
+    Dim Progress As Double
+
+    Controls.OrbitYaw = Party.EstablishOrbitDegrees(Party.ESTABLISH_TOTAL_MILLISECONDS - Time)
+    Result = Arena.ComposeOrbit(Base, Controls)
+
+    If Time > Party.ESTABLISH_SPIN_MILLISECONDS Then
+        Progress = (ToDouble(Time - Party.ESTABLISH_SPIN_MILLISECONDS) /
+            ToDouble(Party.ESTABLISH_TOTAL_MILLISECONDS - Party.ESTABLISH_SPIN_MILLISECONDS))
+        Result = Shots.Blend(Result, Following, Progress)
+    End If
+
+    Return Result
+
+End Function
+
 Public Sub Update(ByRef Value As State, Viewer As Workflow.Session, Battle As Rules.State,
     Elapsed As Number, Width As Number, Height As Number)
 
@@ -193,8 +216,21 @@ Public Sub Update(ByRef Value As State, Viewer As Workflow.Session, Battle As Ru
         Return
     End If
 
+    For Index = 0 To 4
+        Actor = Viewer.PartyActor(Presentation.PartyTurn(Index))
+        Value.Positions[Index] = P.Vector(Actor.Frame.PositionX, Actor.Frame.PositionY, Actor.Frame.PositionZ)
+    End For
+
+    If Value.Time = 0 Then
+
+        Value.Shot = WIDE
+        Value.EstablishView = Compose(Value, Battle, Width, Height, Viewer.PanelVisibility())
+        Value.Shot = -1
+
+    End If
+
     Value.Time = Value.Time + Elapsed
-    Shot = ShotFor(Battle, Value.Time)
+    Shot = ShotFor(Battle, Max(0, Value.Time - Party.ESTABLISH_TOTAL_MILLISECONDS))
 
     If Shot <> Value.Shot Or Battle.ActionSerial <> Value.Serial Then
 
@@ -206,12 +242,11 @@ Public Sub Update(ByRef Value As State, Viewer As Workflow.Session, Battle As Ru
 
     Value.ShotTime = Value.ShotTime + Elapsed
 
-    For Index = 0 To 4
-        Actor = Viewer.PartyActor(Presentation.PartyTurn(Index))
-        Value.Positions[Index] = P.Vector(Actor.Frame.PositionX, Actor.Frame.PositionY, Actor.Frame.PositionZ)
-    End For
-
     Value.View = Compose(Value, Battle, Width, Height, Viewer.PanelVisibility())
+
+    If Value.Time <= Party.ESTABLISH_TOTAL_MILLISECONDS Then
+        Value.View = Establish(Value.EstablishView, Value.View, Value.Time)
+    End If
 
     Call Viewer.SetPartyView(Value.View)
 

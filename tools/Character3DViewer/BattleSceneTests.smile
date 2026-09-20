@@ -30,6 +30,7 @@ Dim Failures As Number
 Dim Ending As Outcome.State
 Dim FirstView As P.Camera3D
 Dim LastView As P.Camera3D
+Dim FollowingView As P.Camera3D
 Dim CompactLayout As Hud.Layout
 Dim ExpandedLayout As Hud.Layout
 Dim Shots As Cinematics.State
@@ -68,6 +69,37 @@ FirstView = Shots.View
 Call Cinematics.Update(Shots, Viewer, Battle.Combat, 16, 1420, 990)
 Call Check(Abs(FirstView.Position.X - Shots.View.Position.X) > 0.001,
     "Opening Camera Drifts While Waiting For Orders")
+
+FollowingView = Cinematics.Compose(Shots, Battle.Combat, 1420, 990, 2)
+FirstView = Cinematics.Establish(Shots.EstablishView, FollowingView, 0)
+LastView = Cinematics.Establish(Shots.EstablishView, FollowingView, 2000)
+
+Call Check(Math3D.Distance(FirstView.Position, LastView.Position) < 0.00001,
+    "Opening Completes One Full Revolution")
+
+LastView = Cinematics.Establish(Shots.EstablishView, FollowingView, 1000)
+Position = Math3D.Add(FirstView.Position, LastView.Position)
+Position = Math3D.Subtract(Position, Math3D.Scale(FirstView.Target, 2.0))
+
+Call Check(Abs(Position.X) + Abs(Position.Z) < 0.00001 And
+    Abs(FirstView.Position.Y - LastView.Position.Y) < 0.00001,
+    "Opening Passes Opposite Side Without Changing Height")
+
+LastView = Cinematics.Establish(Shots.EstablishView, FollowingView, 2001)
+
+Call Check(Math3D.Distance(FirstView.Position, LastView.Position) < 0.02,
+    "Orbit Joins The Eased Transition Without A Cut")
+
+LastView = Cinematics.Establish(Shots.EstablishView, FollowingView, 2999)
+
+Call Check(Math3D.Distance(FollowingView.Position, LastView.Position) < 0.02,
+    "Transition Eases Into The Following Shot")
+
+LastView = Cinematics.Establish(Shots.EstablishView, FollowingView, 3000)
+
+Call Check(Math3D.Distance(FollowingView.Position, LastView.Position) = 0.0 And
+    FollowingView.FovDegrees = LastView.FovDegrees, "Transition Reaches The Exact Following Camera")
+Call Cinematics.Update(Shots, Viewer, Battle.Combat, 3000, 1420, 990)
 
 Shots.Enabled = False
 FirstView = Shots.View

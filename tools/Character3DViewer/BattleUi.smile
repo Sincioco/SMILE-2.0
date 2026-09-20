@@ -18,7 +18,20 @@ Public Type State
     Selection As Number
     PendingMagic As Number
     Stats As StatsView.State
+    InputActive As Boolean
 End Type
+
+''' Observe input even when a stats page or editor owns the key/click.
+Public Sub ObserveActivity(ByRef Value As State, Key As Number)
+
+    Value.InputActive = (Key <> KEY_NONE Or
+        Pointer_Delta_X() <> 0 Or Pointer_Delta_Y() <> 0 Or
+        Pointer_Wheel_Delta() <> 0 Or
+        Pointer_Pressed(POINTER_PRIMARY) Or Pointer_Held(POINTER_PRIMARY) Or
+        Pointer_Pressed(POINTER_SECONDARY) Or Pointer_Held(POINTER_SECONDARY) Or
+        Pointer_Pressed(POINTER_MIDDLE) Or Pointer_Held(POINTER_MIDDLE))
+
+End Sub
 
 Private Function Rows(Page As Number, Actor As Number) As Number
 

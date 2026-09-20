@@ -216,6 +216,8 @@ Public Class Session
         X = 18
         Blocked = UI.Contains(18, 62, 850, 26)
 
+        Call BattleUi.ObserveActivity(Me.Menus, Key)
+
         If Me.BattleActive And Pointer_Pressed(POINTER_SECONDARY) Then
             Call Me.RestartBattle(Viewer)
 
@@ -287,6 +289,7 @@ Public Class Session
 
         Dim Now As Number
         Dim FrameElapsed As Number
+        Dim StartedAutomatically As Boolean
         Dim EscapeRoll As Number
         Dim TargetRoll As Number
         Dim WasPlanning As Boolean
@@ -299,6 +302,23 @@ Public Class Session
         If Me.BattleActive Then
 
             Me.Inspecting = (Me.Encounter.Planning And Viewer.PanelVisibility() <> 2) Or Viewer.HasEdits()
+
+            StartedAutomatically = Planning.AdvanceInitialIdle(
+                Me.Encounter,
+                FrameElapsed,
+                Me.Menus.InputActive,
+                Viewer.SceneReady() And Viewer.CanSwitchTab() And
+                    Not Me.Inspecting And Not Me.Menus.Stats.Visible
+            )
+
+            If StartedAutomatically Then
+
+                Me.Menus.Page = 0
+                Me.Menus.Selection = 0
+
+                Call Viewer.ResumeDirectedScene()
+
+            End If
 
             Call Viewer.PauseDirectedPlayback(Me.Inspecting Or (Me.Menus.Stats.Visible And Me.Encounter.Planning))
 
