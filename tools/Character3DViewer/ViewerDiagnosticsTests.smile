@@ -1,0 +1,122 @@
+Module Smile.Tools.ViewerDiagnosticsTests
+
+Option Explicit
+
+Import Smile.Tools.ViewerDiagnostics As Diagnostics
+Import Smile.Tools.Character3DViewerSession As Session
+Import Smile.Tools.Character3DViewerPlayback As Playback
+Import Smile.Tools.Character3DViewerParty As Party
+Import Smile.Tools.Character3DViewerDragon As Dragon
+Import Smile.Tools.ViewerBeatEditor As Beat
+Import Smile.Simple3D.Character3D As C
+Import Smile.Simple3D.Precision3D As P
+
+Public Function Run() As Number
+
+    Dim Value As Diagnostics.State
+    Dim Invalid As Diagnostics.State
+    Dim Failure As Session.State
+    Dim Playing As Playback.State
+    Dim Battle As Party.State
+    Dim Boss As Dragon.State
+    Dim Editing As Beat.State
+    Dim Actor As C.Actor
+    Dim Camera As P.Camera3D
+    Dim Bytes[16384] As Number
+    Dim Again[16384] As Number
+    Dim ByteCount As Number
+    Dim AgainCount As Number
+    Dim Status As Number
+    Dim Index As Number
+    Dim Failures As Number
+
+    For Index = 0 To 33
+        Call Diagnostics.Record(Value, "Synthetic ring event")
+    End For
+
+    If Value.EventCount <> 32 Or Value.NextEvent <> 2 Then
+        Failures = Failures + 1
+    End If
+
+    Call Diagnostics.Record(Value, "Synthetic input: Backtick UI cycle")
+    Call Diagnostics.Record(Value, "Synthetic input: Arin Beat 1")
+    Call Diagnostics.Record(Value, "Synthetic input: Right-click Reset")
+
+    Failure.ViewerError = True
+    Failure.FirstFailureStage = 25
+    Failure.FirstViewerError = 17
+    Failure.FirstRendererError = 23
+    Boss.Clip = "EarthHurl"
+    Editing.Selected = 0
+    Editing.Beat = 0
+
+    Call Diagnostics.CaptureRecovery(Value, Failure, Actor, Playing, Battle,
+        Boss, Editing, Camera, 1280, 720, 0, False)
+
+    Load Data Diagnostics.STORAGE_KEY Into Bytes Count ByteCount Status Status
+
+    If Value.SaveStatus <> DATA_STATUS_OK Or Status <> DATA_STATUS_OK Then
+        Failures = Failures + 1
+    End If
+
+    If ByteCount < 500 Or Bytes[0] <> 83 Then
+        Failures = Failures + 1
+    End If
+
+    Call Diagnostics.SaveReport(Value, "Must not overwrite the first report")
+
+    Load Data Diagnostics.STORAGE_KEY Into Again Count AgainCount Status Status
+
+    If AgainCount <> ByteCount Or Status <> DATA_STATUS_OK Then
+        Failures = Failures + 1
+    End If
+
+    For Index = 0 To ByteCount - 1
+
+        If Bytes[Index] <> Again[Index] Then
+            Failures = Failures + 1
+        End If
+
+    End For
+
+    If Failure.FirstViewerError <> 17 Or Failure.FirstRendererError <> 23 Then
+        Failures = Failures + 1
+    End If
+
+    Call Diagnostics.BeginAttempt(Value)
+
+    If Value.Reported Or Value.SaveStatus <> -1 Then
+        Failures = Failures + 1
+    End If
+
+    Call Diagnostics.CaptureRecovery(Value, Failure, Actor, Playing, Battle,
+        Boss, Editing, Camera, 1280, 720, 0, False)
+
+    If Not Value.Reported Or Value.SaveStatus <> DATA_STATUS_OK Then
+        Failures = Failures + 1
+    End If
+
+    Failure.ViewerError = False
+
+    Call Diagnostics.CaptureRecovery(Value, Failure, Actor, Playing, Battle,
+        Boss, Editing, Camera, 1280, 720, 0, False)
+
+    If Value.Reported Then
+        Failures = Failures + 1
+    End If
+
+    Call Diagnostics.SaveReport(Invalid, "Non-byte character: €", "Viewer.Recovery.Invalid")
+
+    If Invalid.SaveStatus <> DATA_STATUS_INVALID Then
+        Failures = Failures + 1
+    End If
+
+    If Failures <> 0 Then
+        Print "Recovery reporting failures: "; Failures
+    End If
+
+    Return Failures
+
+End Function
+
+End Module

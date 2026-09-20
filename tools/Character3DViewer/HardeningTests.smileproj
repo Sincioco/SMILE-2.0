@@ -27,6 +27,8 @@
     <SmileSource Include="BeatCameraTests.smile" />
     <SmileSource Include="ViewerTiming.smile" />
     <SmileSource Include="ViewerSession.smile" />
+    <SmileSource Include="ViewerDiagnostics.smile" />
+    <SmileSource Include="ViewerDiagnosticsTests.smile" />
     <SmileSource Include="ViewerLifecycle.smile" />
     <SmileSource Include="ViewerPlayback.smile" />
     <SmileSource Include="ViewerActors.smile" />

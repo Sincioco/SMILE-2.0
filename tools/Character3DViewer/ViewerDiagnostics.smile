@@ -1,0 +1,335 @@
+''' Bounded input history and persistent handled-recovery reports; caller owns all state.
+Module Smile.Tools.ViewerDiagnostics
+
+Option Explicit
+
+Import Smile.Simple3D.Character3D As C
+Import Smile.Simple3D.Graphics3D As G
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Tools.Character3DViewerSession As Session
+Import Smile.Tools.Character3DViewerPlayback As Playback
+Import Smile.Tools.Character3DViewerParty As Party
+Import Smile.Tools.Character3DViewerDragon As Dragon
+Import Smile.Tools.ViewerBeatEditor As Beat
+Import Smile.Tools.Character3DViewerProfiles As Profiles
+
+Public Const STORAGE_KEY = "Viewer.Recovery.v1"
+Private Const NEWLINE = "
+"
+Private Const HISTORY_LIMIT = 32
+Private Const REPORT_LIMIT = 16384
+
+Public Type State
+    Events[32] As Text
+    NextEvent As Number
+    EventCount As Number
+    LastState As Text
+    Reported As Boolean
+    SaveStatus As Number
+End Type
+
+Private Function N(Value As Number) As Text
+
+    Dim Result As Text
+
+    Result = Text_From_Double(ToDouble(Value))
+
+    If Text_Slice(Result, Text_Length(Result) - 2, 2) = ".0" Then
+        Result = Text_Slice(Result, 0, Text_Length(Result) - 2)
+    End If
+
+    Return Result
+
+End Function
+
+Private Function B(Value As Boolean) As Text
+
+    If Value Then
+        Return "True"
+    End If
+
+    Return "False"
+
+End Function
+
+Private Function Vector(Value As P.Vector3) As Text
+
+    Dim Result As Text
+
+    Result = Text_From_Double(Value.X) + ", " + Text_From_Double(Value.Y) + ", " + Text_From_Double(Value.Z)
+
+    Return Result
+
+End Function
+
+Public Sub Record(ByRef Value As State, Event As Text)
+
+    Value.Events[Value.NextEvent] = N(Timer()) + " ms: " + Text_Slice(Event, 0, 256)
+    Value.NextEvent = (Value.NextEvent + 1) Mod HISTORY_LIMIT
+    Value.EventCount = Min(Value.EventCount + 1, HISTORY_LIMIT)
+
+End Sub
+
+Public Sub BeginAttempt(ByRef Value As State)
+
+    Value.Reported = False
+    Value.SaveStatus = -1
+
+    Call Record(Value, "LoadViewer")
+
+End Sub
+
+Public Sub ObserveInput(ByRef Value As State, Key As Number)
+
+    Dim Buttons As Text
+
+    If Pointer_Pressed(POINTER_PRIMARY) Then
+        Buttons = Buttons + "LeftDown "
+    End If
+
+    If Pointer_Pressed(POINTER_SECONDARY) Then
+        Buttons = Buttons + "RightDown/Reset "
+    End If
+
+    If Pointer_Pressed(POINTER_MIDDLE) Then
+        Buttons = Buttons + "MiddleDown "
+    End If
+
+    If Pointer_Released(POINTER_PRIMARY) Then
+        Buttons = Buttons + "LeftUp "
+    End If
+
+    If Pointer_Released(POINTER_MIDDLE) Then
+        Buttons = Buttons + "MiddleUp "
+    End If
+
+    If (Key > 0 Or
+        Buttons <> "" Or
+        Pointer_Wheel_Delta() <> 0) Then
+        Call Record(Value, "Input Key=" + N(Key) + " Buttons=" + Buttons +
+            "Wheel=" + N(Pointer_Wheel_Delta()) + " XY=" + N(Pointer_X()) + "," + N(Pointer_Y()))
+    End If
+
+End Sub
+
+Public Sub ObserveState(ByRef Value As State, Tab As Number, Visibility As Number, ByRef Editing As Beat.State)
+
+    Dim Current As Text
+
+    Current = ("Tab=" + N(Tab) + " UI=" + N(Visibility) + " BeatActor=" + N(Editing.Selected) +
+        " Beat=" + N(Editing.Beat) + " Preview=" + B(Editing.Preview) +
+        " Editing=" + B(Editing.Editing) + " Dirty=" + B(Editing.Dirty))
+
+    If Current <> Value.LastState Then
+        Call Record(Value, Current)
+
+        Value.LastState = Current
+    End If
+
+End Sub
+
+Public Function Operation(Stage As Number) As Text
+
+    If Stage = 2 Then
+        Return "Advance animation sequence"
+    Else If Stage = 3 Then
+        Return "Advance Party/Beat/primary animation"
+    Else If Stage = 4 Then
+        Return "Apply pose and equipment calibration"
+    Else If Stage = 5 Then
+        Return "Advance camera zoom"
+    Else If Stage = 6 Then
+        Return "Advance auto orbit"
+    Else If Stage = 7 Then
+        Return "Update scene camera/presentation"
+    Else If Stage = 8 Then
+        Return "Begin scene"
+    Else If Stage = 9 Then
+        Return "Draw floor"
+    Else If Stage = 10 Then
+        Return "Draw grid"
+    Else If Stage = 11 Then
+        Return "Draw boss"
+    Else If Stage = 12 Then
+        Return "Draw characters"
+    Else If Stage = 13 Then
+        Return "Draw equipment/effects and end scene"
+    Else If Stage = 20 Then
+        Return "Initial load"
+    Else If Stage = 21 Then
+        Return "Keyboard commands"
+    Else If Stage = 22 Then
+        Return "Interface pointer commands"
+    Else If Stage = 23 Then
+        Return "Camera pointer commands"
+    Else If Stage = 24 Then
+        Return "Advance frame clock"
+    Else If Stage = 25 Then
+        Return "Update boss"
+    Else If Stage = 26 Then
+        Return "Update additional equipment and water"
+    Else If Stage = 27 Then
+        Return "Advance shared effects"
+    Else If Stage = 28 Then
+        Return "Before scene drawing"
+    Else If Stage = 30 Then
+        Return "Validate profile/window"
+    Else If Stage = 31 Then
+        Return "Load primary actor"
+    Else If Stage = 32 Then
+        Return "Validate actor profile"
+    Else If Stage = 33 Then
+        Return "Configure camera framing"
+    Else If Stage = 34 Then
+        Return "Create arena"
+    Else If Stage = 35 Then
+        Return "Configure shadows"
+    Else If Stage = 36 Then
+        Return "Lighting and actor presentation"
+    Else If Stage = 37 Then
+        Return "Create boss"
+    Else If Stage = 38 Then
+        Return "Create socket gizmos"
+    Else If Stage = 39 Then
+        Return "Create equipment glow"
+    Else If Stage = 40 Then
+        Return "Configure calibration"
+    Else If Stage = 41 Then
+        Return "Reset material inspection"
+    Else If Stage = 42 Then
+        Return "Restart presentation"
+    End If
+
+    Return "Unclassified operation"
+
+End Function
+
+Public Function History(ByRef Value As State) As Text
+
+    Dim Result As Text
+    Dim Index As Number
+    Dim Slot As Number
+
+    For Index = 0 To Value.EventCount - 1
+        Slot = (Value.NextEvent - Value.EventCount + HISTORY_LIMIT + Index) Mod HISTORY_LIMIT
+        Result = Result + Value.Events[Slot] + NEWLINE
+    End For
+
+    Return Result
+
+End Function
+
+Public Sub SaveReport(ByRef Value As State, Contents As Text, Optional Key As Text = STORAGE_KEY)
+
+    Dim Bytes[16384] As Number
+    Dim ByteCount As Number
+    Dim Index As Number
+
+    If Value.Reported Then
+        Return
+    End If
+
+    Value.Reported = True
+    ByteCount = Text_Length(Contents)
+    Value.SaveStatus = DATA_STATUS_TOO_LARGE
+
+    If ByteCount > REPORT_LIMIT Then
+        Return
+    End If
+
+    For Index = 0 To ByteCount - 1
+        Bytes[Index] = Text_Code_At(Contents, Index)
+    End For
+
+    Save Data Bytes Count ByteCount To Key Status Value.SaveStatus
+
+End Sub
+
+Public Sub CaptureRecovery(
+    ByRef Value As State,
+    ByRef Failure As Session.State,
+    ByRef Actor As C.Actor,
+    ByRef Playing As Playback.State,
+    ByRef Battle As Party.State,
+    ByRef Boss As Dragon.State,
+    ByRef Editing As Beat.State,
+    Camera As P.Camera3D,
+    Width As Number,
+    Height As Number,
+    UiVisibility As Number,
+    PointerCaptured As Boolean
+)
+
+    Dim Report As Text
+
+    If Not Failure.ViewerError Then
+        Value.Reported = False
+        Return
+    End If
+
+    If Value.Reported Then
+        Return
+    End If
+
+    ' The session already froze the first error before any diagnostic resource queries.
+    Report = "SMILE Character Viewer Recovery v1" + NEWLINE
+    Report = Report + "Stage=" + N(Failure.FirstFailureStage) + NEWLINE
+    Report = Report + "Operation=" + Operation(Failure.FirstFailureStage) + NEWLINE
+    Report = Report + "FirstViewerError=" + N(Failure.FirstViewerError) + NEWLINE
+    Report = Report + "FirstRendererError=" + N(Failure.FirstRendererError) + NEWLINE
+    Report = Report + "TimerMs=" + N(Timer()) + NEWLINE
+    Report = Report + "Tab=" + N(Failure.SelectedCharacterTab) + NEWLINE
+    Report = Report + "Profile=" + N(Failure.ProfileIndex) + NEWLINE
+    Report = Report + "Model=" + Profiles.ModelFileName(Failure.ProfileIndex) + NEWLINE
+    Report = Report + "ViewerEpoch=" + N(Failure.ViewerEpoch) + NEWLINE
+    Report = Report + "RendererEpoch=" + N(G.ResourceEpoch3D()) + NEWLINE
+    Report = Report + "LoadingFailed=" + B(Failure.LoadingFailed) + NEWLINE
+    Report = Report + "PrimaryClip=" + C.ClipName(Actor, Playing.SelectedClip) + NEWLINE
+    Report = Report + "PrimaryTimeMs=" + N(C.AnimationTime(Actor)) + NEWLINE
+    Report = Report + "PrimarySpeed=" + N(Playing.PlaybackSpeed) + NEWLINE
+    Report = Report + "Paused=" + B(Playing.ScenePaused) + NEWLINE
+    Report = Report + "Demo=" + B(Playing.DemoEnabled) + NEWLINE
+    Report = Report + "AnimationElapsedMs=" + N(Playing.AnimationUpdateElapsed) + NEWLINE
+    Report = Report + "PartyEnabled=" + B(Battle.Enabled) + NEWLINE
+    Report = Report + "PartyReady=" + B(Battle.Ready) + NEWLINE
+    Report = Report + "PartyTurn=" + N(Battle.Turn) + NEWLINE
+    Report = Report + "PartyStage=" + N(Battle.Stage) + NEWLINE
+    Report = Report + "PartyElapsedMs=" + N(Battle.Elapsed) + NEWLINE
+    Report = Report + "PartyTarget=" + N(Battle.HitTarget) + NEWLINE
+    Report = Report + "BossCounter=" + N(Battle.DragonCounter) + NEWLINE
+    Report = Report + "BossProfile=" + N(Boss.SelectedProfile) + NEWLINE
+    Report = Report + "BossClip=" + Boss.Clip + NEWLINE
+    Report = Report + "BossTimeMs=" + N(C.AnimationTime(Boss.Actor)) + NEWLINE
+    Report = Report + "BossAvailable=" + B(Boss.Available) + NEWLINE
+    Report = Report + "BossEarthError=" + N(Boss.Earth.Effect.ErrorCode) + NEWLINE
+    Report = Report + "BossEarthTime=" + N(Boss.Earth.Frame.Time) + NEWLINE
+    Report = Report + "BossWaterError=" + N(Boss.KaelWater.Effect.ErrorCode) + NEWLINE
+    Report = Report + "BeatActor=" + N(Editing.Selected) + NEWLINE
+    Report = Report + "Beat=" + N(Editing.Beat) + NEWLINE
+    Report = Report + "BeatPreview=" + B(Editing.Preview) + NEWLINE
+    Report = Report + "BeatEditing=" + B(Editing.Editing) + NEWLINE
+    Report = Report + "BeatDirty=" + B(Editing.Dirty) + NEWLINE
+    Report = Report + "BeatElapsedMs=" + N(Editing.Elapsed) + NEWLINE
+    Report = Report + "UiVisibility=" + N(UiVisibility) + NEWLINE
+    Report = Report + "PointerCaptured=" + B(PointerCaptured) + NEWLINE
+    Report = Report + "Viewport=" + N(Width) + " x " + N(Height) + NEWLINE
+    Report = Report + "CameraPosition=" + Vector(Camera.Position) + NEWLINE
+    Report = Report + "CameraTarget=" + Vector(Camera.Target) + NEWLINE
+    Report = Report + "CameraUp=" + Vector(Camera.UpDirection) + NEWLINE
+    Report = Report + "CameraFov=" + Text_From_Double(Camera.FovDegrees) + NEWLINE
+    Report = Report + "Meshes=" + N(G.LiveMeshCount3D()) + NEWLINE
+    Report = Report + "Objects=" + N(G.LiveObjectCount3D()) + NEWLINE
+    Report = Report + "Textures=" + N(G.LiveTextureCount3D()) + NEWLINE
+    Report = Report + "Materials=" + N(G.LiveMaterialCount3D()) + NEWLINE
+    Report = Report + "Models=" + N(G.LiveModelCount3D()) + NEWLINE
+    Report = Report + "Animators=" + N(G.LiveAnimatorCount3D()) + NEWLINE
+    Report = Report + "ParticleBatches=" + N(G.LiveParticleBatchCount3D()) + NEWLINE
+    Report = Report + "Ribbons=" + N(G.LiveRibbonBatchCount3D()) + NEWLINE
+    Report = Report + "KeyCodes: Backtick=" + N(KEY_BACKTICK) + " Enter=" + N(KEY_ENTER) + NEWLINE
+    Report = Report + "RecentEvents (oldest first):" + NEWLINE + History(Value)
+
+    Call SaveReport(Value, Report)
+
+End Sub
+
+End Module

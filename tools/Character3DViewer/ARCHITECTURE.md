@@ -1,5 +1,38 @@
 # Character Viewer Architecture
 
+## Persistent recovery evidence
+
+`ViewerDiagnostics` owns bounded report formatting, a 32-event in-memory history
+and checked storage writes. Its state belongs to each Workflow instance. It reads
+existing actor/Party/Beat/session state without owning or modifying that state;
+no owner calls back into Workflow. Workflow only observes input, marks load/reset
+actions and delegates one report after entering recovery. A failed retry starts a
+new reporting attempt; repeated frames never rewrite the same failure. Session
+and the existing inspector/UI presentation pass through the checked save status.
+
+The report is limited to 16 KiB and uses existing `Save Data` with the stable
+`Viewer.Recovery.v1` key. Error codes are taken from the already latched session
+before diagnostic resource queries. `export-viewer-recovery.ps1` owns native
+envelope validation and readable local archival; the launcher starts its hidden
+watcher. It verifies the SMD4 length/version/SHA-256, reads through atomic file
+replacement, preserves valid backups, and deduplicates by application and payload.
+Existing checked storage preserves only the latest and previous report until
+export. This is handled-recovery evidence, not unhandled OS exception interception.
+
+Validation lives in `ViewerDiagnosticsTests.smile` (the native hardening fixture)
+and `scripts/test-viewer-recovery.ps1`. The hardening script also verifies the
+actual saved native report after process exit. No language/runtime extension,
+dependency, architecture threshold, baseline or guardrail exception is introduced.
+Studio only receives the shared-source inventory entry; its workstream stays held.
+
+This slice adds a 335-line diagnostics owner and 122-line focused test module.
+Existing Workflow grows by 17 delegation/state lines; Session by one status field;
+Inspector presentation by three net lines; UI by eight and the launcher by eleven.
+Feature algorithms remain outside the startup program. Native Viewer and Sin Star I
+builds, the hardening/architecture checks (including 58 graphics/input/audio checks),
+checked native report readback/export, exporter/watch lifecycle checks and scoped
+SMILE formatting pass. No crash reproduction or Web acceptance is claimed.
+
 ## Recovery-stage diagnostics
 
 The existing session owner now captures failures immediately after the boss update

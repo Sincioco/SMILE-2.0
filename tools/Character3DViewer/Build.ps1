@@ -53,6 +53,7 @@ $viewerSources = @(
     'CalibrationJson.smile',
     'ViewerTiming.smile',
     'ViewerSession.smile',
+    'ViewerDiagnostics.smile',
     'ViewerLifecycle.smile',
     'ViewerPlayback.smile',
     'ViewerActors.smile',

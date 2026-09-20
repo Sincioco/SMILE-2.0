@@ -1,5 +1,34 @@
 # SMILE 2.0 - 3D Viewer, Animation Editor
 
+## Automatic native recovery reports
+
+When the recovery screen appears, the Viewer saves one bounded report for that
+failure. It includes the first stage and operation name, error codes, model and
+clip, Party turn/target, animation and Beat timing, camera/viewport, renderer
+resource counts, and the last 32 input/state events. Backtick panel changes,
+Beat selection and right-click resets are included. Saving does not change poses
+or Beat camera drafts. The recovery screen confirms save success or a storage
+failure code.
+
+Use `Launch.ps1` as usual. Its hidden watcher exports readable reports into
+`D:\SMILE 2.0\artifacts\reports\Character3DViewer` while the Viewer runs and on
+exit. Filenames include UTC save time, failure stage, clip and a content hash.
+The watcher adds the running executable's SHA-256 and process identity. Nothing
+is uploaded. These local reports are ignored by Git.
+
+Opening the EXE directly still saves the latest report and its previous backup
+in checked application storage. The next launcher run exports both; alternatively
+run `pwsh -File scripts\export-viewer-recovery.ps1` from the repository. Sin Star I
+uses the same recovery writer under its own application identity; export those
+reports with `-ApplicationId smile.game.sin-star-i`. Its direct EXE has no watcher.
+Only the latest two storage revisions are retained until exported; keep the launcher
+watcher running to archive recurrences.
+
+This captures handled Viewer recovery screens, including the reported Kael Party
+symptom. It is not an operating-system crash dump and cannot record a process
+termination that bypasses the recovery path. The original intermittent failure
+remains unresolved; investigation is paused at Sin's time limit.
+
 ## Native party status and roster
 
 Party Dragon, Party Vrax and Kael Party each field Arin, Orin, Zara and Mira.

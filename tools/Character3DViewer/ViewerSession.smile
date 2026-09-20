@@ -22,6 +22,7 @@ Public Type State
     FirstViewerError As Number
     FirstRendererError As Number
     FirstFailureStage As Number
+    RecoverySaveStatus As Number
     ViewerEpoch As Number
     ProfileIndex As Number
 End Type

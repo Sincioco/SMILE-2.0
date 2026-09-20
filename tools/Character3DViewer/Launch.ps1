@@ -15,6 +15,7 @@ $ErrorActionPreference = 'Stop'
 $toolRoot = $PSScriptRoot
 $repositoryRoot = [IO.Path]::GetFullPath((Join-Path $toolRoot '..\..'))
 $syncScript = Join-Path $repositoryRoot 'scripts\sync-arin-v5-7-calibration.ps1'
+$recoveryScript = Join-Path $repositoryRoot 'scripts\export-viewer-recovery.ps1'
 $configurationExecutable = [IO.Path]::GetFullPath(
     (Join-Path $toolRoot "bin\$Configuration\Character3DViewer.exe")
 )
@@ -179,6 +180,9 @@ if (-not (Test-Path -LiteralPath $resolvedExecutable -PathType Leaf)) {
 foreach ($character in $characters) {
     & $syncScript -Character $character -Mode Restore
 }
+if (-not $Studio) {
+    & $recoveryScript
+}
 $viewerProcess = Start-Process -FilePath $resolvedExecutable `
     -WorkingDirectory ([IO.Path]::GetDirectoryName($resolvedExecutable)) -PassThru
 $shellCommand = Get-Command pwsh.exe -ErrorAction SilentlyContinue
@@ -191,6 +195,13 @@ foreach ($character in $characters) {
     $watchArguments = '-NoProfile -ExecutionPolicy Bypass -File "{0}" -Character {1} -Mode Watch -ViewerProcessId {2}' -f `
         $syncScript, $character, $viewerProcess.Id
     Start-Process -FilePath $shellCommand.Source -ArgumentList $watchArguments `
+        -WindowStyle Hidden | Out-Null
+}
+
+if (-not $Studio) {
+    $recoveryArguments = '-NoProfile -File "{0}" -Mode Watch -ViewerProcessId {1}' -f `
+        $recoveryScript, $viewerProcess.Id
+    Start-Process -FilePath $shellCommand.Source -ArgumentList $recoveryArguments `
         -WindowStyle Hidden | Out-Null
 }
 

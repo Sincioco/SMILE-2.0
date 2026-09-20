@@ -28,8 +28,14 @@ confirmed repair of the intermittent recovery**.
 
 Sin limited further hunting to ten minutes. The bounded attempts did not isolate
 the cause, and investigation is now paused under that limit; resume on recurrence
-or new direction. Next action: capture the new
-stage/error numbers and the active clip after repeating the reported interactions.
+or new direction. At Sin's separate request, persistent diagnostics now record
+the stage/operation, error codes, active clip and timing, Party/Beat/camera state,
+resource counts and recent input. The native launcher archives readable reports
+in `artifacts/reports/Character3DViewer`; direct EXE launches retain the latest
+report and previous backup for later export. See the Viewer README for export
+instructions and limits. This reporting work does not resume root-cause hunting.
+Next action on recurrence: inspect the automatically captured report before
+repeating the reported interactions.
 Saved poses and Beat camera settings must be preserved. Studio/Web holds remain.
 
 Status (2026-09-11): the initial editor is published in `fd73f9d`; Desktop-first

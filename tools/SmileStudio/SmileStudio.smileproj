@@ -35,6 +35,7 @@
     <SmileSource Include="..\Character3DViewer\CalibrationJson.smile" />
     <SmileSource Include="..\Character3DViewer\ViewerTiming.smile" />
     <SmileSource Include="..\Character3DViewer\ViewerSession.smile" />
+    <SmileSource Include="..\Character3DViewer\ViewerDiagnostics.smile" />
     <SmileSource Include="..\Character3DViewer\ViewerLifecycle.smile" />
     <SmileSource Include="..\Character3DViewer\ViewerPlayback.smile" />
     <SmileSource Include="..\Character3DViewer\ViewerActors.smile" />

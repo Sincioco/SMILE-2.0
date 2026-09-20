@@ -1724,13 +1724,13 @@ End Sub
 
 Public Sub DrawRecoveryOverlay(Visibility As Number, ViewerError As Boolean,
     FirstViewerError As Number, FirstRendererError As Number,
-    FirstFailureStage As Number)
+    FirstFailureStage As Number, Optional RecoverySaveStatus As Number = -1)
 
     If Visibility <> 0 Or Not ViewerError Then
         Return
     End If
 
-    Fill Rectangle 120, 142, 580, 210, Rgb(56, 8, 18) Opacity 80
+    Fill Rectangle 120, 142, 580, 240, Rgb(56, 8, 18) Opacity 80
     Draw Text "CHARACTER VIEWER RECOVERY" At 148, 166 Size 22 Color WHITE
     Draw Text "The 3D renderer or character resource became unavailable." At 148, 204 Size 14 Color LIGHT_GRAY
     Draw Text "Viewer error" At 148, 238 Size 13 Color LIGHT_GRAY
@@ -1739,6 +1739,14 @@ Public Sub DrawRecoveryOverlay(Visibility As Number, ViewerError As Boolean,
     Draw Number FirstRendererError At 486, 238 Size 13 Color YELLOW
     Draw Text "Failure stage" At 148, 270 Size 13 Color LIGHT_GRAY
     Draw Number FirstFailureStage At 270, 270 Size 13 Color YELLOW
+
+    If RecoverySaveStatus = DATA_STATUS_OK Then
+        Draw Text "Recovery details saved automatically." At 148, 344 Size 12 Color LIGHT_GRAY
+    Else
+        Draw Text "Recovery report could not be saved. Storage status:" At 148, 344 Size 12 Color YELLOW
+        Draw Number RecoverySaveStatus At 620, 344 Size 12 Color YELLOW
+    End If
+
     Draw Text "Press Enter or click Reset to reload the profile safely." At 148, 310 Size 14 Color CYAN
 
 End Sub

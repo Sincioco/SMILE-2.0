@@ -13,6 +13,7 @@ Import Smile.Tools.Character3DViewerProfiles As ViewerProfiles
 Import Smile.Tools.BattleCamera As BattleCamera
 Import Smile.Tools.Character3DViewerTiming As ViewerTiming
 Import Smile.Tools.Character3DViewerSession As ViewerSession
+Import Smile.Tools.ViewerDiagnostics As Diagnostics
 Import Smile.Tools.Character3DViewerLifecycle As ViewerLifecycle
 Import Smile.Tools.Character3DViewerPlayback As ViewerPlayback
 Import Smile.Tools.Character3DViewerActors As ViewerActors
@@ -84,6 +85,7 @@ Public Class Session
     Private FrameRate As ViewerTiming.FrameRateState
     Private Timing As ViewerTiming.ClockState
     Private Session As ViewerSession.State
+    Private DiagnosticState As Diagnostics.State
     Private LifecycleSettings As ViewerLifecycle.Configuration
     Private Playback As ViewerPlayback.State
     Private ViewerCameraState As ViewerCamera.State
@@ -401,10 +403,18 @@ Public Class Session
 
         End If
 
+        Call Diagnostics.CaptureRecovery(Me.DiagnosticState, Me.Session, Me.Character,
+            Me.Playback, Me.Party, Me.DragonState, Me.BeatEditing, Me.ViewerCameraState.Live,
+            Me.ViewWidth, Me.ViewHeight, Me.ViewerUiState.Visibility,
+            ViewerInput.HasPointerCapture(Me.ViewerInputState))
+
+        Me.Session.RecoverySaveStatus = Me.DiagnosticState.SaveStatus
+
     End Sub
 
     Public Sub StandaloneInput(PressedKey As Number)
 
+        Call Diagnostics.ObserveInput(Me.DiagnosticState, PressedKey)
         Call Me.HandleKeyboard(PressedKey)
         Call ViewerSession.CaptureFailure(Me.Session, 21)
 
@@ -413,6 +423,8 @@ Public Class Session
         Call ViewerSession.CaptureFailure(Me.Session, 22)
         Call Me.UpdateCameraPointer(Me.ViewerInputState.InterfaceBlocked)
         Call ViewerSession.CaptureFailure(Me.Session, 23)
+        Call Diagnostics.ObserveState(Me.DiagnosticState, Me.Session.SelectedCharacterTab,
+            Me.ViewerUiState.Visibility, Me.BeatEditing)
 
     End Sub
 
@@ -431,6 +443,7 @@ Public Class Session
 
     Private Sub LoadViewer()
 
+        Call Diagnostics.BeginAttempt(Me.DiagnosticState)
         Call ViewerBattlePreview.Reset(Me.BattlePreview)
 
         If Not Me.IsHosted Then
@@ -1476,6 +1489,8 @@ Public Class Session
 
     Private Sub ResetAll()
 
+        Call Diagnostics.Record(Me.DiagnosticState, "ResetAll")
+
         Me.Session.Ready = ViewerBattlePreview.EndDemo(Me.BattlePreview, Me.Party,
             Me.Character, Me.ViewerCameraState.Frame, Me.Playback, Me.Effects) And Me.Session.Ready
 
@@ -2113,6 +2128,8 @@ Public Class Session
     Private Sub CloseBeatSequence()
 
         Dim Saved As BeatSequence.Bookmark
+
+        Call Diagnostics.Record(Me.DiagnosticState, "CloseBeatSequence")
 
         Saved = Me.BeatEditing.Bookmark
 

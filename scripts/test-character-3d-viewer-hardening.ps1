@@ -1511,6 +1511,18 @@ try {
     Assert-True ($actualText -ceq $expectedText) `
         "Viewer hardening native assertions failed: $actualText"
 
+    $recoveryDirectory = Join-Path $repositoryRoot "artifacts\tests\viewer-recovery\$identityHash"
+    & (Join-Path $PSScriptRoot 'export-viewer-recovery.ps1') `
+        -ApplicationId $applicationId -OutputDirectory $recoveryDirectory
+    $recoveryFiles = @(Get-ChildItem -LiteralPath $recoveryDirectory -Filter '*Stage25-EarthHurl-*.txt')
+    Assert-True ($recoveryFiles.Count -gt 0) 'Native recovery report was not persisted and exported.'
+    $recoveryText = Get-Content -LiteralPath $recoveryFiles[0].FullName -Raw
+    foreach ($field in @('FirstViewerError=17', 'FirstRendererError=23', 'Operation=Update boss',
+        'Synthetic input: Backtick UI cycle', 'Synthetic input: Arin Beat 1',
+        'Synthetic input: Right-click Reset', 'Viewport=1280 x 720', 'CameraPosition=', 'Objects=')) {
+        Assert-Contains $recoveryText $field 'Native recovery evidence'
+    }
+
     if (-not $NativeOnly) {
         & $compiler --project $testProject --target web --configuration $Configuration `
             --output-dir $webOutput

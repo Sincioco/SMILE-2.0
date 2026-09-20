@@ -39,6 +39,7 @@ Import Smile.Simple3D.FixedMath As Fixed
 Import Smile.Simple3D.LightPool3D As LightPool3D
 Import Smile.Simple3D.SceneVfx3D As SceneVfx3D
 Import Smile.Tools.BeatCameraTests As BeatCameraTests
+Import Smile.Tools.ViewerDiagnosticsTests As DiagnosticsTests
 
 Dim Alternating As CharacterViewer.ZoomState
 Dim Bounds As Character3D.Bounds3D
@@ -3333,6 +3334,7 @@ Call Check(Remainder = 0)
 Call CheckDragonCreation()
 
 Failures = Failures + BeatCameraTests.Run()
+Failures = Failures + DiagnosticsTests.Run()
 
 If Failures = 0 Then
     Print "Character 3D Viewer hardening tests passed."

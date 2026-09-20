@@ -247,6 +247,7 @@ Public Type WorkspaceView
     FirstViewerError As Number
     FirstRendererError As Number
     FirstFailureStage As Number
+    RecoverySaveStatus As Number
 End Type
 
 Public Function CaptureIdentity(ByRef Ui As ViewerUi.State,
@@ -457,6 +458,7 @@ Public Function CaptureWorkspace(ByRef Ui As ViewerUi.State,
     Result.FirstViewerError = Session.FirstViewerError
     Result.FirstRendererError = Session.FirstRendererError
     Result.FirstFailureStage = Session.FirstFailureStage
+    Result.RecoverySaveStatus = Session.RecoverySaveStatus
 
     Return Result
 
@@ -662,7 +664,7 @@ Public Sub DrawWorkspace(ByRef Ui As ViewerUi.State,
         Value.ViewerError,
         Value.FirstViewerError,
         Value.FirstRendererError,
-        Value.FirstFailureStage
+        Value.FirstFailureStage, Value.RecoverySaveStatus
     )
 
     If Value.LoadingFailed Then
