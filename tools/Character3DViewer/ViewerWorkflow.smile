@@ -306,6 +306,7 @@ Public Class Session
             End If
 
             Call Me.UpdateDragon()
+            Call ViewerSession.CaptureFailure(Me.Session, 25)
             Call ViewerParty.ApplyAttackCamera(
                 Me.Party,
                 Me.ViewerCameraState.Live,
@@ -347,12 +348,16 @@ Public Class Session
                 Me.Playback.AnimationUpdateElapsed, Me.Playback.ScenePaused,
                 Me.Character, Me.DragonState.Actor) And Me.Session.Ready
 
+            Call ViewerSession.CaptureFailure(Me.Session, 26)
+
             Me.Session.Ready = ViewerEffects.AdvanceScene(
                 Me.Effects,
                 Me.Timing.CameraElapsed,
                 Me.Playback.ScenePaused,
                 Me.ViewerCameraState.Live
             ) And Me.Session.Ready
+
+            Call ViewerSession.CaptureFailure(Me.Session, 27)
 
             If Me.Rendering.SocketGizmosVisible Then
                 Me.Session.Ready = ViewerRendering.UpdateSocketGizmos(
@@ -376,6 +381,8 @@ Public Class Session
     Public Sub DrawFrame()
 
         If Not Me.Session.ViewerError Then
+
+            Call ViewerSession.CaptureFailure(Me.Session, 28)
 
             Me.FrameDrawResult = ViewerRendering.DrawFrame(
                 Me.Rendering, Me.ViewerCameraState.Live, Me.Session.Ready,

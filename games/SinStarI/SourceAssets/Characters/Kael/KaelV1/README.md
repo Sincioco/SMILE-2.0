@@ -2,10 +2,12 @@
 
 ## Fire Lab preview and silver-gray hair
 
-September 20 revision: hair uses muted cool gray `(0.32, 0.31, 0.38)`, metallic 0
-and roughness 1, without the previous pale metallic highlights. All three GLBs and
-their Blender checkpoints match; GLB binary geometry/rig/animation chunks are
-unchanged. Party presentation is **3× solo scale**. Earth and Water casts stay at
+September 20 revision: hair retains muted cool gray `(0.32, 0.31, 0.38)`, metallic 0
+and roughness **0.42** for Sin's requested subtle sheen. Selection now includes the
+long back tips, front locks and shoulder roots that previously remained white.
+The central white breast cloth and skin remain outside the hair selection. All
+three GLBs and their Blender checkpoints match; the existing faces are repartitioned,
+with no new geometry or animation authoring. Party presentation is **3× solo scale**. Earth and Water casts stay at
 Kael's home position while facing their target; normal sword attacks still approach.
 
 The [Fire Lab](../../../../../../../tools/AdvancedFireVfxLab/README.md) owns the
@@ -49,15 +51,15 @@ The thirteen-clip `kael-v1-animation-checkpoint.glb` remains the Earth baseline.
 | Property | Runtime checkpoint |
 | --- | --- |
 | Body / sword triangles | 42,000 / 6,996 |
-| Exported vertices: body / sword / hair | 25,505 / 7,045 / 6,762 |
+| Exported vertices: body / sword / hair | 22,273 / 7,045 / 10,397 |
 | Skeleton | 41 Mixamo bones + KaelSword |
 | Body / sword PBR maps | 4K / 2K |
 | Animations / sockets | 16 / 10 |
 | GLB bytes / checksum | See `package.json` and `Source/water-export-validation.json` |
-| Solo / boss scale | 134-unit equipped bind height / exactly twice the solo scale |
+| Solo / boss scale | 134-unit equipped bind height / exactly three times the solo scale |
 
 The equipped bind height includes the upright sword; the body itself is about
-100 world units tall at solo scale and 200 at boss scale. The blade was flattened
+100 world units tall at solo scale and 300 at boss scale. The blade was flattened
 along its depth axis, preserving its front outline and UVs. Its measured source
 blade depth went from 98.0 mm to 4.8 mm before the 72% equipment fitting scale.
 The ornamental crossguard and pommel retain their intended depth.

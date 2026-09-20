@@ -13,7 +13,8 @@ The states remain presentation states; no HP/MP or combat damage system is added
 
 ## Kael (native)
 
-Kael's hair now uses a cooler silver-gray material. The hair is a separate skinned
+Kael's hair uses muted silver-gray with a subtle nonmetallic sheen. The material
+covers the back tips, front locks and shoulder roots. The hair is a separate skinned
 part; the existing body and sword indices and Weapon/W behavior are preserved.
 The Fire Lab has a separate nineteen-clip feedback preview; fire attacks are not
 yet part of the Viewer/game rotation.
@@ -36,7 +37,7 @@ its appearance toggle and pillar inspection; the [Earth Lab](../EarthVfxLab/READ
 retains focused rock/dust inspection.
 
 **Kael** opens the new sword-boss candidate; **Kael Party** runs Arin, Orin, Zara
-and Mira against Kael at exactly twice his solo scale. Both tabs use the existing
+and Mira against Kael at exactly three times his solo scale. Both tabs use the existing
 playback, equipment and battle owners. His original clips remain Idle, Walk, Run,
 Attack, Attack 2, Dodge, Defend, Hit, Death and Victory. Weapon/W toggles his sword.
 The sword blade is thinner in side view, with its unwanted depth spikes removed;

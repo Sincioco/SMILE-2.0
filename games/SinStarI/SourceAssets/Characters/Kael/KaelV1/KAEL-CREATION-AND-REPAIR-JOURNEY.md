@@ -227,3 +227,26 @@ match byte-for-byte. Fire attacks remain Lab-only pending a later adoption reque
 Native builds, checks and preview evidence are in `Source/fire-native-validation.json`.
 No new runtime, compiler, VSIX payload, dependency or resource budget is introduced.
 Web and Studio remain on hold.
+
+## Complete gray hair coverage and sheen — September 20, 2026
+
+Sin's front/back screenshots demonstrated that the original spatial selection ended
+above the hair tips and missed the front/shoulder roots. Changing only the material
+factor could never recolor those faces: they still belonged to the body material.
+Expand the selection on the grounded pre-hair source and re-export all three models;
+do not patch only the existing GLB material. Preserve the central breast cloth and
+use the neutral-color test to exclude skin, gold trim and purple armor details.
+
+The final requested color is the previous cool gray `(0.32, 0.31, 0.38, 1)`, with
+metallic 0 and roughness 0.42 for a little reflected sheen. The intervening black
+candidate was superseded by Sin and was never deployed. Original packed textures,
+the 42-bone rig, clip inventories and body/sword/hair part ordering are preserved.
+Hair now contains 12,252 of the existing 42,000 body triangles; total geometry
+remains 48,996 triangles. Re-exported variants pass the exporter floor/topology
+checks and GLB round-trip floor audit. `preview_kael.py -- --audit-only` runs that
+audit without regenerating the unrelated attack preview gallery; combine it with
+`--water-preview` or `--fire-preview` for those variants.
+
+`Previews/hair-gray-sheen-bind-pose-front.png`, `-back.png` and `-side.png` show the
+reviewed coverage under two broad area lights. Native lighting can produce lighter
+reflections; those are distinct from the former unassigned white hair sections.

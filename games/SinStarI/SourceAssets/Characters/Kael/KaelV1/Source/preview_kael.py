@@ -30,7 +30,7 @@ rig = bpy.data.objects["Kael.Rig"]
 body = bpy.data.objects["Kael.Body"]
 sword = bpy.data.objects["Kael.Sword"]
 hair = bpy.data.objects.get("Kael.ZHair")
-for name, frame in poses:
+for name, frame in (() if '--audit-only' in sys.argv else poses):
     action_at(rig, name, frame)
     sword.hide_render = name.startswith(("Earth", "Water", "Fire"))
     equipment=(() if sword.hide_render else (sword,)) + ((hair,) if hair else ())

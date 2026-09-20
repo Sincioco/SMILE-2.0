@@ -2644,6 +2644,14 @@ Call CheckNamed(ViewerRendering.ArenaReady(RenderingState) And
     RenderingState.FloorVisible And RenderingState.GridVisible,
     "Rendering owner creates visible arena")
 
+RenderingFrameResult = ViewerRendering.DrawFrame(
+    RenderingState, PreciseOrbitBase, False, PartyPrimary.Actor,
+    PartyState, False, DragonState, EffectsState, 0, EquipmentVisibility)
+
+Call CheckNamed(Not RenderingFrameResult.Ready And RenderingFrameResult.FailureStage = 28,
+    "Failed update is identified before starting a render scene")
+
+RenderingFrameResult.FailureStage = 0
 RenderingFrameResult.Ready = True
 
 Call ViewerRendering.CaptureFrameResult(RenderingFrameResult, True, 8)

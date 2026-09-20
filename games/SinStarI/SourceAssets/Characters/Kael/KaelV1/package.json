@@ -6,8 +6,8 @@
   "date": "2026-09-18",
   "model": "kael-v1-water-preview.glb",
   "descriptor": "KaelWaterPreview.sm3d.json",
-  "modelSha256": "bcd38d20500768668769d3a634736abafaa07d31ef9c2ae61b226d9f0e315ebe",
-  "modelBytes": 28492204,
+  "modelSha256": "3dc29d72f73126ccc1ca35e353402ec5f112ca0ed8f79a0b26669ce8761580c3",
+  "modelBytes": 28519592,
   "bodyTriangles": 42000,
   "swordTriangles": 6996,
   "bones": 42,
@@ -61,8 +61,8 @@
     "status": "Adopted native Viewer, Sin Star I and Water Lab",
     "model": "kael-v1-water-preview.glb",
     "descriptor": "KaelWaterPreview.sm3d.json",
-    "modelSha256": "bcd38d20500768668769d3a634736abafaa07d31ef9c2ae61b226d9f0e315ebe",
-    "modelBytes": 28492204,
+    "modelSha256": "3dc29d72f73126ccc1ca35e353402ec5f112ca0ed8f79a0b26669ce8761580c3",
+    "modelBytes": 28519592,
     "additionalClips": [
       "WaterWhip",
       "WaterOrbit",
@@ -81,8 +81,8 @@
     "status": "Native Fire Lab feedback preview; Viewer/game fire adoption not requested yet",
     "model": "kael-v1-fire-preview.glb",
     "descriptor": "KaelFirePreview.sm3d.json",
-    "modelSha256": "e83956a98d3666547c6b0f4c44395cc5fc5b9fa90fedba048a066bfe7f6b5b0c",
-    "modelBytes": 28626636,
+    "modelSha256": "9339349a77a20f5773dc380c935467dc936ec87ce0eb10ad095510c1c0511254",
+    "modelBytes": 28654024,
     "additionalClips": [
       "FirePunch",
       "FireSweep",
@@ -123,13 +123,17 @@
       "Hair"
     ],
     "baseColorFactorLinear": [
-      0.4,
-      0.44,
-      0.49,
+      0.32,
+      0.31,
+      0.38,
       1
     ],
     "bodyAndHairTriangles": 42000,
     "swordTriangles": 6996,
-    "originalTextures": "unchanged"
+    "originalTextures": "unchanged",
+    "metallicFactor": 0,
+    "roughnessFactor": 0.42,
+    "hairTriangles": 12252,
+    "coverage": "Back tips, front locks and shoulder roots; central breast cloth and skin excluded"
   }
 }

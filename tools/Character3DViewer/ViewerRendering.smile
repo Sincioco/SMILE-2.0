@@ -394,6 +394,11 @@ Public Function DrawFrame(ByRef Value As State, Camera As Precision3D.Camera3D,
 
     Result.Ready = ReadyBeforeDraw
 
+    If Not ReadyBeforeDraw Then
+        Result.FailureStage = 28
+        Return Result
+    End If
+
     Call CaptureFrameResult(Result, BeginScene(Value, Camera), 8)
 
     If Result.Ready Then

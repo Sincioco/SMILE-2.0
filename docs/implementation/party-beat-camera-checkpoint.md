@@ -1,5 +1,37 @@
 # Party Beat Camera Editor — Desktop Checkpoint
 
+## Open native recovery report — September 20, 2026
+
+Sin reported a responsive recovery overlay in Kael Party during EarthHurl, with
+failure stage 21 and viewer/renderer codes both zero. The preceding interactions
+were backtick panel cycling, opening Arin Beat 1 without edits, and right-click
+reset. The new hair edits were not exported or deployed when this happened; the
+running Viewer held the earlier assets. That rules out the unbuilt hair change,
+but does not establish the underlying cause.
+
+The native Beat 1/right-click interaction recovered normally. Bounded actual-asset
+fixtures completed two EarthHurl encounters around the panel/Beat reset sequence,
+including an 8 ms sampling pass while EarthHurl was active, without reproducing
+the recovery. These were one-time investigation runs, not permanent soak tests.
+The temporary fixture is under `artifacts/test-kael-crash.ps1`; successful output
+is in `artifacts/kael-crash-test-final.log`. Its inherited nine-turn summary does
+not describe that diagnostic variant: the variant replaced that loop with the
+two-encounter reproduction. The normal presentation check remains separate.
+
+One reporting defect was confirmed in reachable source: failures after the older
+update checkpoints could enter `BeginScene`, erase last-error evidence, then be
+mislabelled as keyboard stage 21 on the following frame. The existing owners now
+capture boss update (25), Party effects (26), scene effects (27) and pre-draw (28),
+and skip rendering when the update has already failed. A focused native regression
+covers the failed-update drawing boundary. This is diagnostic hardening, **not a
+confirmed repair of the intermittent recovery**.
+
+Sin limited further hunting to ten minutes. The bounded attempts did not isolate
+the cause, and investigation is now paused under that limit; resume on recurrence
+or new direction. Next action: capture the new
+stage/error numbers and the active clip after repeating the reported interactions.
+Saved poses and Beat camera settings must be preserved. Studio/Web holds remain.
+
 Status (2026-09-11): the initial editor is published in `fd73f9d`; Desktop-first
 scope was recorded in `26bb3a9`. The current Desktop timeline/reset enhancement is
 implemented, built and validated with focused automated, visible tool and explicit

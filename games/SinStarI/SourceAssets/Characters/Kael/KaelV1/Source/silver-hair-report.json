@@ -1,19 +1,29 @@
 {
-  "hairTriangles": 8266,
-  "bodyTriangles": 33734,
+  "hairTriangles": 12252,
+  "bodyTriangles": 29748,
   "baseColorFactorLinear": [
     0.32,
     0.31,
     0.38,
     1
   ],
+  "metallicFactor": 0,
+  "roughnessFactor": 0.42,
   "partOrder": [
     "Kael.Body",
     "Kael.Sword",
     "Kael.ZHair"
   ],
+  "coverageWitnesses": {
+    "backTip": 17459,
+    "frontLock": 15620,
+    "shoulderRootUpper": 29348,
+    "shoulderRootLower": 29415
+  },
+  "protectedWitnesses": {
+    "breastCloth": 17963,
+    "face": 19849
+  },
   "originalPackedTextures": "unchanged",
-  "method": "material factor on selected existing skinned hair faces",
-  "metallicFactor": 0,
-  "roughnessFactor": 1
+  "method": "material factor on selected existing skinned hair faces"
 }

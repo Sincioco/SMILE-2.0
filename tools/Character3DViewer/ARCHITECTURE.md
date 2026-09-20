@@ -1,5 +1,21 @@
 # Character Viewer Architecture
 
+## Recovery-stage diagnostics
+
+The existing session owner now captures failures immediately after the boss update
+(25), additional Party equipment/water update (26), shared effect advance (27), and
+before drawing (28). Previously an uncaptured late update failure could reach
+`BeginScene`, clear the lower-level last-error values, then be labelled keyboard
+stage 21 on the next frame. `ViewerRendering.DrawFrame` now returns immediately
+for an already failed update, preserving the failure and avoiding an unclosed scene.
+The native hardening fixture covers this demonstrated reporting gap. This improves
+diagnosis; it is not a confirmed fix for Sin's intermittent Kael Party recovery.
+Current evidence and the investigation limit are in the Party Beat checkpoint.
+
+Ownership is unchanged: Workflow adds seven lifecycle-delegation lines, Rendering
+adds five failure-boundary lines, and the existing regression fixture adds eight.
+No compiler/runtime, dependency, state-owner, guardrail or baseline changes.
+
 ## Shared arena adoption
 
 The native Viewer now consumes `Smile.Simple3D.Arena3D`, `ArenaCamera3D` and
