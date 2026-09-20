@@ -209,6 +209,7 @@ Public Class Session
         Dim Index As Number
         Dim X As Number
         Dim Blocked As Boolean
+        Dim OptionsPanel As Boolean
         Dim ViewerKey As Number
         Dim WasPlanning As Boolean
         Dim Layout As Hud.Layout
@@ -253,12 +254,13 @@ Public Class Session
             WasPlanning = Me.Encounter.Planning
 
             If Not Me.Menus.Stats.Visible Then
-                Blocked = Hud.OptionsInput(Me.BattlePanel, Me.Camera.Enabled,
-                    Viewer.PanelVisibility(), Viewer.CanSwitchTab()) Or Blocked
+                OptionsPanel = Hud.OptionsInput(Me.BattlePanel, Me.Camera.Enabled,
+                    Viewer.PanelVisibility(), Viewer.CanSwitchTab())
+                Blocked = OptionsPanel Or Blocked
             End If
 
             If Viewer.CanSwitchTab() Then
-                Call BattleUi.Update(Me.Menus, Me.Encounter, Key, Layout)
+                Call BattleUi.Update(Me.Menus, Me.Encounter, Key, Layout, OptionsPanel)
             End If
 
             If WasPlanning And Not Me.Encounter.Planning Then

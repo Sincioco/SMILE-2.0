@@ -164,7 +164,7 @@ Public Sub DrawPanels(Value As Layout, Encounter As Planning.State, Inspecting A
     Call UI.DrawButton(X + 270, 98, 82, 22, "Graphs", False)
     Call Bar("HP", Member.HP, Member.Stats.HP, X + 7, 130, Value.AreaWidth - 14, Rgb(169, 48, 67), True)
 
-    Draw Text "Arrows: Choose | Enter/Space: Confirm | Esc: Back | Input During Battle: Orders Next Round | `: Panels" At Value.AreaX, Window_Height() - 20 Size 11 Color LIGHT_GRAY
+    Draw Text "Arrows: Choose | Enter/Space: Confirm | Esc: Back | Panel Click/Enter/Space: Orders Next Round | `: Panels" At Value.AreaX, Window_Height() - 20 Size 11 Color LIGHT_GRAY
 
 End Sub
 
@@ -224,12 +224,12 @@ Public Sub DrawOptions(BattleTab As Boolean, Cinematic As Boolean, Visibility As
     Caption = "Off - Manual Camera"
 
     If Cinematic Then
-        Caption = "On - Moving Cinematic Shots"
+        Caption = "On - Kael Party Camera"
     End If
 
     Draw Text Caption At X + 12, 184 Size 12 Color CYAN
-    Draw Text "Close-Ups / Wide / Two Characters" At X + 12, 210 Size 11 Color WHITE
-    Draw Text "Impact Shots Follow Each Attack" At X + 12, 232 Size 11 Color WHITE
+    Draw Text "Pan / Orbit / Zoom Keep Auto Running" At X + 12, 210 Size 11 Color WHITE
+    Draw Text "Panel Click / Enter / Space: Orders" At X + 12, 232 Size 11 Color WHITE
     Draw Text "` Hides Panels And Expands HUD" At X + 12, 270 Size 11 Color LIGHT_GRAY
 
 End Sub

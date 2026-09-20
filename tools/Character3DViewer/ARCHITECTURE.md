@@ -179,6 +179,32 @@ input owner; the available desktop automation supports only left-button drags.
 The final native Viewer is rebuilt and relaunched in its saved position. Web/Studio
 validation remains held.
 
+## Explicit Auto Battle interruption
+
+`BattleUi.InterruptForInput` owns the native interruption policy: Enter, Space or
+a primary click inside a Battle System panel requests orders. Camera drags,
+scene clicks, wheel motion, ordinary keys and showing the panels with backtick
+leave automatic rounds running. Existing battle HUD/stats hit areas are reused;
+NativeViewerHost additionally supplies the existing Battle options-panel hit.
+The shared planning/rules owner still finishes all heroes and Kael before it
+turns Auto off at the round boundary. Initial 30-second inactivity startup,
+right-click restart and the ending/restart timers are unchanged.
+
+BattleUi grows 422 -> 439 lines, NativeViewerHost 420 -> 422 and SceneTests
+479 -> 517. BattleHud stays 237 lines and updates the visible control guidance,
+including stale text for the replaced cinematic policy. No new source owner,
+language/runtime feature, dependency or architectural exception is needed.
+Focused regression checks cover camera/ordinary input retaining Auto and each
+of panel click, Enter and Space deferring the stop until the round finishes.
+
+Validation: native battle planning/scene regression checks, the native-only
+hardening/architecture suite and focused source formatting checks pass. The
+rebuilt native Viewer retained Auto across rounds after scene dragging and
+arrow-key camera input. Space, Enter and a party-panel click each displayed
+`Orders Next Round` and returned to the orders screen at the next round.
+The Viewer was gracefully replaced and remains running in its saved position.
+Web/Studio validation remains held.
+
 ## Native battle travel facing and automatic restart
 
 `BattlePresentation` captures formation facing alongside formation positions.

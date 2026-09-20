@@ -238,7 +238,28 @@ Public Sub Accept(ByRef Value As State, ByRef Encounter As Planning.State)
 
 End Sub
 
-Public Sub Update(ByRef Value As State, ByRef Encounter As Planning.State, Key As Number, Layout As Hud.Layout)
+''' Only explicit battle controls request orders; camera input keeps Auto running.
+Public Sub InterruptForInput(
+    ByRef Encounter As Planning.State,
+    Key As Number,
+    PanelClicked As Boolean
+)
+
+    If (Key = KEY_ENTER Or
+        Key = KEY_SPACE Or
+        PanelClicked) Then
+        Call Planning.Interrupt(Encounter)
+    End If
+
+End Sub
+
+Public Sub Update(
+    ByRef Value As State,
+    ByRef Encounter As Planning.State,
+    Key As Number,
+    Layout As Hud.Layout,
+    Optional OptionsPanel As Boolean = False
+)
 
     Dim Index As Number
     Dim X As Number
@@ -246,12 +267,8 @@ Public Sub Update(ByRef Value As State, ByRef Encounter As Planning.State, Key A
     Dim Confirm As Boolean
     Dim RowCount As Number
 
-    If (Key <> KEY_NONE Or
-        Pointer_Pressed(POINTER_PRIMARY) Or
-        Pointer_Pressed(POINTER_SECONDARY) Or
-        Pointer_Pressed(POINTER_MIDDLE)) Then
-        Call Planning.Interrupt(Encounter)
-    End If
+    Call InterruptForInput(Encounter, Key, Pointer_Pressed(POINTER_PRIMARY) And
+        (Blocked(Value, Layout) Or OptionsPanel))
 
     If Value.Stats.Visible Then
         Call StatsView.Update(Value.Stats, Key)

@@ -12,6 +12,7 @@ Import Smile.Tools.ViewerBattlePresentation As Presentation
 Import Smile.Tools.ViewerBattlePlanning As Planning
 Import Smile.Tools.ViewerBattleOutcome As Outcome
 Import Smile.Tools.ViewerBattleHud As Hud
+Import Smile.Tools.ViewerBattleUi As BattleUi
 Import Smile.Tools.ViewerBattleCinematics As Cinematics
 Import Smile.Simple3D.Precision3D As P
 Import Smile.Simple3D.PrecisionCamera3D As Camera
@@ -55,6 +56,43 @@ Call Check(ExpandedLayout.AreaX >= 18 And
     ExpandedLayout.AreaX + ExpandedLayout.AreaWidth <= 1402, "Enemy And Party Respect Screen Margins")
 Call Check(Hud.HeroX(ExpandedLayout, 3) + ExpandedLayout.HeroWidth =
     ExpandedLayout.AreaX + ExpandedLayout.AreaWidth, "Four Heroes Fill Available Width")
+
+Call Planning.Start(Battle)
+Call Planning.BeginRound(Battle)
+Call BattleUi.InterruptForInput(Battle, KEY_NONE, False)
+Call BattleUi.InterruptForInput(Battle, KEY_RIGHT, False)
+Call BattleUi.InterruptForInput(Battle, KEY_UP, False)
+Call BattleUi.InterruptForInput(Battle, KEY_A, False)
+Call BattleUi.InterruptForInput(Battle, KEY_O, False)
+Call BattleUi.InterruptForInput(Battle, KEY_BACKTICK, False)
+Call Check(Not Battle.Combat.StopRequested,
+    "Camera Input And Showing Panels Leave Auto Battle Running")
+
+For First = 0 To 2
+
+    Call Planning.Start(Battle)
+    Call Planning.BeginRound(Battle)
+
+    If First = 0 Then
+        Call BattleUi.InterruptForInput(Battle, KEY_NONE, True)
+    Else If First = 1 Then
+        Call BattleUi.InterruptForInput(Battle, KEY_ENTER, False)
+    Else
+
+        Call BattleUi.InterruptForInput(Battle, KEY_SPACE, False)
+    End If
+
+    Call Check(Battle.Combat.StopRequested And Not Battle.Planning,
+        "Panel Click, Enter Or Space Requests Orders Without Cutting Off An Attack")
+
+    For Second = 0 To 4
+        Call Planning.Advance(Battle, 2000, 99, 0)
+    End For
+
+    Call Check(Battle.Planning And Battle.Combat.Round = 2,
+        "Explicit Auto Stop Waits Until Party And Kael Finish The Round")
+End For
+
 Call Host.Start(Viewer, NativeHost.BATTLE_TAB, True, 1420, 990)
 Call Check(Viewer.PanelVisibility() = 2, "Battle Startup Hides Legacy Panels")
 Call Planning.Start(Battle)

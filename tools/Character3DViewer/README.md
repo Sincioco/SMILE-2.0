@@ -19,14 +19,15 @@ are hidden in the native tab strip; the accepted Mira follows Zara.
   and healing targets, the Item placeholder, Defend, full-gauge Limit Break or Run.
 - **Auto** starts immediately using confirmed orders and the remaining remembered
   orders. After any started round, the whole party acts, then Kael, then the
-  same orders repeat automatically. Any key or mouse-button press requests new
-  orders only after the current party-and-boss round finishes. Defeated or escaped
-  heroes are skipped. Illegal repeat orders fall back to Attack.
+  same orders repeat automatically. Click a Battle System panel, or press Enter
+  or Space, to request new orders after the current party-and-boss round finishes.
+  Camera pan/orbit/zoom, scene clicks and other keys leave Auto running. Defeated
+  or escaped heroes are skipped. Illegal repeat orders fall back to Attack.
 - Arrows choose; Enter/Space confirm; Escape goes back. Menus also accept clicks.
-  Backtick retains the three legacy panel visibility states. Opening panels or
-  statistics during execution requests orders at the round boundary; inspector
-  editing waits for that boundary. Close inspectors with backtick to resume
-  normal battle presentation. Save/cancel pending pose or Beat edits first.
+  Backtick retains the three legacy panel visibility states without stopping Auto.
+  Clicking battle panels or statistics requests orders at the round boundary;
+  inspector editing waits for that boundary. Close inspectors with backtick to
+  resume normal battle presentation. Save/cancel pending pose or Beat edits first.
 - The five panels use the shared 80%-opacity navy style and remembered-order
   icons. With all editor panels hidden, the four hero panels widen and move down;
   the centered Fight/Order/Auto panel stays 166 pixels wide. Kael's left-aligned
