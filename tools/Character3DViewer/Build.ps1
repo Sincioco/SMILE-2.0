@@ -54,6 +54,7 @@ $viewerSources = @(
     'ViewerTiming.smile',
     'ViewerSession.smile',
     'ViewerDiagnostics.smile',
+    'ViewerMusic.smile',
     'ViewerLifecycle.smile',
     'ViewerPlayback.smile',
     'ViewerActors.smile',

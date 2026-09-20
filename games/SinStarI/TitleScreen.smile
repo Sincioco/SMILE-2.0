@@ -53,7 +53,7 @@ End Sub
 
 Public Sub Enter()
 
-    Call BackgroundMusic.SelectTrack("Starforge March (Title Screen)")
+    Call BackgroundMusic.SelectTrack("Starforge Horizon (Title Screen)")
 
 End Sub
 

@@ -2340,8 +2340,7 @@ Public Function VraxPosition(ByRef Value As State) As Precision3D.Vector3
 
     Clip = ViewerProfiles.PartyAttackName(BossProfile(Value), Value.DragonCounter)
 
-    If (BossProfile(Value) = ViewerProfiles.PROFILE_KAEL And
-        (KaelEarth.ModeForClip(Clip) <> 0 Or KaelWater.StyleForClip(Clip) <> 0)) Then
+    If ViewerProfiles.PartyTravelClip(BossProfile(Value), Clip) = "Idle" Then
         Return Result
     End If
 
@@ -3932,7 +3931,7 @@ Private Function UpdateUnityBoss(ByRef Value As State,
     If Value.Turn = 2 And Value.Stage = 1 Then
         Name = AttackName
     Else If Value.Turn = 2 And Value.Stage = 2 Then
-        Name = "Run"
+        Name = ViewerProfiles.PartyTravelClip(BossProfile(Value), AttackName)
     Else If (Value.Turn <> 2 And
         (Value.Turn <> MiraBattle.PARTY_TURN Or Not MiraBattle.IsHealing(Value.AttackCycle)) And
         Value.Stage = 1 And
@@ -3993,6 +3992,10 @@ Public Function ActorPlaybackSpeed(ByRef Value As State, Turn As Number,
 
     Result = Fallback
 
+    If Turn = MiraBattle.PARTY_TURN And Not Value.MiraDuo Then
+        Result = ViewerProfiles.MIRA_DEFAULT_PLAYBACK_SPEED
+    End If
+
     If (Value.UnityRoster And
         Turn >= 0 And
         Turn < 7) Then
@@ -4007,6 +4010,8 @@ Public Function ActorPlaybackSpeed(ByRef Value As State, Turn As Number,
                 Result = 150
             Else If Turn = 2 And BossProfile(Value) = ViewerProfiles.PROFILE_KAEL Then
                 Result = 200
+            Else If Turn = MiraBattle.PARTY_TURN Then
+                Result = ViewerProfiles.MIRA_DEFAULT_PLAYBACK_SPEED
             End If
 
         End If

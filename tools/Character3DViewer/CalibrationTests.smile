@@ -2313,7 +2313,7 @@ Sub CheckCoordinatedPreviews()
 
             Call AdvancePreviewTestFrame()
             Call CalibrationCheck(Character3D.AnimationTime(Party.Mira.Actor) - MiraTime =
-                16 * Playback.PlaybackSpeed / 100,
+                16 * ViewerProfiles.MIRA_DEFAULT_PLAYBACK_SPEED / 100,
                 "Dragon inspection advances Mira once despite two calibrated opponents")
 
         End If

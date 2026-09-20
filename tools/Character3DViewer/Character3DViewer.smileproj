@@ -35,6 +35,7 @@
     <SmileSource Include="ViewerTiming.smile" />
     <SmileSource Include="ViewerSession.smile" />
     <SmileSource Include="ViewerDiagnostics.smile" />
+    <SmileSource Include="ViewerMusic.smile" />
     <SmileSource Include="ViewerLifecycle.smile" />
     <SmileSource Include="ViewerPlayback.smile" />
     <SmileSource Include="ViewerActors.smile" />
@@ -176,6 +177,7 @@
     <Asset Include="Assets\Audio\mira-water-attack.wav" />
     <Asset Include="Assets\Audio\mira-heal-one.wav" />
     <Asset Include="Assets\Audio\mira-heal-party.wav" />
+    <Asset Include="Assets\Music\Starforge Ascend (Kael).mp3" />
     <Asset Include="Assets\Audio\arin-flame-slash.wav" />
     <Asset Include="Assets\Audio\zara-*.wav" />
     <Asset Include="Assets\Audio\vrax-*.wav" />

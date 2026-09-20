@@ -1,5 +1,46 @@
 # Character Viewer Architecture
 
+## Standalone tab music
+
+`ViewerMusic` owns the Kael Party track policy using the existing `Play Music`
+runtime. Its small state belongs to each Workflow instance. Workflow delegates
+after a tab load and at release only for standalone sessions, preserving the
+game's separate music owner. Repeated Kael Party loads do not restart the track.
+The new owner is 39 lines; Workflow adds ten import/state/delegation lines.
+`Prepare-BuildAssets.ps1` mirrors the canonical Sin Star I MP3 into ignored cooking
+inputs; the Viewer project publishes it. No runtime extension or guardrail change.
+Studio receives only the required shared-source inventory entry.
+
+Validation: both native builds, native theme transition fixture, actual-asset
+presentation/music continuity checks, Viewer hardening (including calibration and
+58 graphics/input/audio checks), scoped formatting and brief native launches pass.
+The hosted fixture rejects any standalone Viewer music override. No Web validation
+or audible-output capture is claimed.
+
+## Kael bending without locomotion
+
+`Profiles.PartyTravelClip` owns the distinction between Kael's named bending casts
+and sword attacks. `ViewerParty` uses it for both home-position gating and live
+travel-phase animation; `ViewerBeatSequence` uses the same policy when seeking.
+The previous position-only gate left the Run clip active while Kael stood still.
+Bending now uses Idle before/after the authored cast without moving impact times,
+camera beat durations or saved camera data. Fire's three existing Lab names share
+the policy; its assets/effects are not adopted into Party by this change.
+
+The travel policy adds 23 profile lines; the two existing callers change only their clip/position
+selection. The actual-asset presentation fixture checks approach, cast and return
+in live and Beat playback for all six Earth/Water casts and normal sword attacks.
+Hardening checks the Fire names and Vrax's unchanged Run policy. No new module,
+dependency, state owner, compiler/runtime capability or guardrail exception.
+
+Mira's default speed is a shared profile constant (200), used by all Mira profile
+variants, Party's per-actor speed resolver and the Dragon demo's return to Idle.
+Mira's own solo speed control and explicit Party overrides remain respected.
+The Water Lab already advances its sampled animation/VFX clock at 200 by default.
+The native presentation fixture checks real actor clocks: 50 ms advances Mira by
+100 animation milliseconds in solo and all loaded Party rosters. Runtime assets
+and saved pose/Beat data do not change.
+
 ## Persistent recovery evidence
 
 `ViewerDiagnostics` owns bounded report formatting, a 32-event in-memory history

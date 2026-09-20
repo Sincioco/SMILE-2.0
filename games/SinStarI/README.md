@@ -8,11 +8,14 @@ window, twenty pixels above its bottom, with no background panel.
 The game-owned `Music.smile` keeps the current track playing through navigation
 until a screen requests an override. Tracks in `Assets/Music` are:
 
-- Title: `Starforge March (Title Screen).mp3`.
+- Title: `Starforge Horizon (Title Screen).mp3`.
 - Arin: `Bloom (Arin).mp3`.
-- Orin: `Sunrise Oath (Orin).mp3`.
+- Orin: `Starforge March (Orin).mp3`.
 - Mira: `Golden Hour Ascend (Mira).mp3`.
 - Kael: `Starforge Ascend (Kael).mp3`.
+
+`Sunrise Oath.mp3` remains available as an unassigned music asset. Music filenames
+and assignments above reflect Sin's September 20 revision.
 
 All three battle simulations use the Viewer's current four-hero party: Arin, Orin,
 Zara and Mira. A status panel shows every hero and the selected boss with live state,

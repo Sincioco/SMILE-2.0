@@ -375,7 +375,8 @@ Public Function Sample(ByRef Value As Party.State, ByRef Primary As C.Actor,
         Else If (Schedule.Beat = 1 Or
             (Schedule.Beat = 3 And
             Elapsed < Schedule.Start[3] + Party.VRAX_RETURN_MILLISECONDS)) Then
-            BossName = "Run"
+            BossName = Profiles.PartyTravelClip(Party.BossProfile(Value),
+                Profiles.PartyAttackName(Party.BossProfile(Value), Value.DragonCounter))
         Else
             BossName = "Idle"
         End If

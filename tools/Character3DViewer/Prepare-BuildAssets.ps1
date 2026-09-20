@@ -34,6 +34,10 @@ $technicalRoot = Join-Path $repositoryRoot `
 $buildAssets = Join-Path $toolRoot 'BuildAssets'
 $copies = @(
     @{
+        Source = Join-Path $repositoryRoot 'games\SinStarI\Assets\Music\Starforge Ascend (Kael).mp3'
+        Destination = Join-Path $toolRoot 'Assets\Music\Starforge Ascend (Kael).mp3'
+    },
+    @{
         Source = Join-Path $kaelRoot 'kael-v1-water-preview.glb'
         Destination = Join-Path $buildAssets 'KaelV1\kael-v1-animation-checkpoint.glb'
     },

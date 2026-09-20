@@ -161,7 +161,8 @@ Public Function EndDemo(ByRef Value As State, ByRef Battle As Party.State,
 
         Result = RestoreMember(Battle.DragonOpponent, Value.ArinHome, Playing.PlaybackSpeed)
         Result = RestoreMember(Battle.Companion, Value.OrinHome, Playing.PlaybackSpeed) And Result
-        Result = RestoreMember(Battle.Mira, Value.MiraHome, Playing.PlaybackSpeed) And Result
+        Result = RestoreMember(Battle.Mira, Value.MiraHome,
+            Profiles.MIRA_DEFAULT_PLAYBACK_SPEED) And Result
 
         Call MiraWater.UseStandaloneTargets(Battle.Water, Battle.Mira.Actor)
 

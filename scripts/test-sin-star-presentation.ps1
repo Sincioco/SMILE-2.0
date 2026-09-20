@@ -54,18 +54,24 @@ foreach ($entry in $project.SmileProject.ItemGroup.ChildNodes) {
     }
 }
 Copy-Item -LiteralPath (Join-Path $gameRoot 'PresentationTests.smile') -Destination (Join-Path $testRoot 'Program.smile')
-$musicEntry = $project.SmileProject.ItemGroup.SmileSource | Where-Object { $_.Include.EndsWith('Music.smile') }
+$musicEntry = $project.SmileProject.ItemGroup.SmileSource | Where-Object { (Split-Path $_.Include -Leaf) -eq 'Music.smile' }
 $musicText = Get-Content -LiteralPath (Join-Path $gameRoot 'Music.smile') -Raw
 $musicText = $musicText.Replace('    CurrentTrack = Name', "    CurrentTrack = Name`n    Print `"MUSIC_SELECTED: `" + Name")
 $musicText = $musicText.Replace('    Stop Music', "    Stop Music`n    Print `"MUSIC_STOPPED`"")
 [IO.File]::WriteAllText((Join-Path $testRoot 'Music.smile'), $musicText)
 $musicEntry.SetAttribute('Include', 'Music.smile')
+$viewerMusicEntry = $project.SmileProject.ItemGroup.SmileSource | Where-Object { $_.Include.EndsWith('ViewerMusic.smile') }
+$viewerMusicText = Get-Content -LiteralPath (Join-Path $root 'tools\Character3DViewer\ViewerMusic.smile') -Raw
+$viewerMusicText = $viewerMusicText.Replace('Play Music ', 'Print "MUSIC_UNEXPECTED_VIEWER_OVERRIDE"' + "`n            Play Music ")
+$viewerMusicText = $viewerMusicText.Replace('Stop Music', 'Print "MUSIC_UNEXPECTED_VIEWER_STOP"' + "`n        Stop Music")
+[IO.File]::WriteAllText((Join-Path $testRoot 'ViewerMusic.smile'), $viewerMusicText)
+$viewerMusicEntry.SetAttribute('Include', 'ViewerMusic.smile')
 $startup = Get-Content -LiteralPath (Join-Path $testRoot 'Program.smile') -Raw
 $startup = $startup.Replace('Import SinStarI.TitleScreen As TitleScreen',
     "Import SinStarI.TitleScreen As TitleScreen`nImport SinStarI.BackgroundMusic As BackgroundMusic")
 $startup = $startup.Replace('Passed = True', @'
-Call BackgroundMusic.SelectTrack("Starforge March (Title Screen)")
-Call BackgroundMusic.SelectTrack("Starforge March (Title Screen)")
+Call BackgroundMusic.SelectTrack("Starforge Horizon (Title Screen)")
+Call BackgroundMusic.SelectTrack("Starforge Horizon (Title Screen)")
 Call BackgroundMusic.SelectTrack("")
 Call BackgroundMusic.SelectTrack("Unassigned")
 Passed = True
@@ -88,6 +94,18 @@ Call Me.LoadViewer()
             Print Me.Session.FirstFailureStage
             Print Me.Session.FirstViewerError
             Print Me.Session.FirstRendererError
+        End If
+        If ViewerProfiles.IsMiraCharacter(Me.Session.ProfileIndex) Then
+            If Me.Playback.PlaybackSpeed <> 200 Then
+                Print "Mira must default to animation speed 200."
+            End If
+            Call Me.CheckMiraSpeedFixture(Me.Character)
+        End If
+        If Me.Party.Mira.Ready Then
+            If ViewerParty.ActorPlaybackSpeed(Me.Party, 6, 100) <> 200 Then
+                Print "Party Mira must default to animation speed 200."
+            End If
+            Call Me.CheckMiraSpeedFixture(Me.Party.Mira.Actor)
         End If
         If ViewerProfiles.IsPartyTab(Me.Session.SelectedCharacterTab) Then
             If (Me.Party.ParticipantCount <> 4 Or
@@ -227,11 +245,96 @@ $bendingFixture = @'
 
             End If
 
+            Call Me.CheckKaelTravelFixture(Name)
+
             Me.Playback.AnimationUpdateElapsed = 60000
 
             Call Me.AdvancePartyDemo()
 
         End For
+
+    End Sub
+
+    Private Sub CheckMiraSpeedFixture(ByRef Actor As Character3D.Actor)
+
+        Dim Original As Number
+        Dim Ok As Boolean
+
+        Original = Character3D.AnimationTime(Actor)
+        Ok = Character3D.Update(Actor, 50)
+
+        If Not Ok Or Character3D.AnimationTime(Actor) <> Original + 100 Then
+            Print "Mira's native animation clock must advance at speed 200."
+        End If
+
+        Ok = Character3D.SetAnimationTime(Actor, Original)
+
+        If Not Ok Then
+            Print "Mira speed fixture could not restore the animation time."
+        End If
+
+    End Sub
+
+    Private Sub CheckKaelTravelFixture(AttackName As Text)
+
+        Dim SavedParty As ViewerParty.State
+        Dim SavedPlayback As ViewerPlayback.State
+        Dim Saved As BeatSequence.Bookmark
+        Dim Phase As Number
+        Dim Elapsed As Number
+        Dim Expected As Text
+        Dim Ok As Boolean
+
+        SavedParty = Me.Party
+        SavedPlayback = Me.Playback
+        Saved = BeatSequence.Remember(Me.Party)
+
+        Call BeatSequence.RememberPoses(Saved, Me.Party, Me.Character, Me.DragonState.Actor)
+
+        For Phase = 0 To 2
+
+            Me.Party = SavedParty
+            Expected = "Run"
+
+            If AttackName <> "Attack" And AttackName <> "Attack2" Then
+                Expected = "Idle"
+            End If
+
+            Elapsed = ViewerParty.VRAX_APPROACH_START_MILLISECONDS + 100
+
+            If Phase = 1 Then
+                Elapsed = ViewerParty.VRAX_ATTACK_START_MILLISECONDS + 100
+                Expected = AttackName
+            Else If Phase = 2 Then
+                Elapsed = ViewerParty.VRAX_ATTACK_START_MILLISECONDS + Me.Party.BossAttackDuration + 100
+            End If
+
+            Me.Party.Elapsed = Elapsed
+            Me.Playback.AnimationUpdateElapsed = 0
+
+            Call Me.AdvancePartyDemo()
+            Call Me.UpdateDragon()
+
+            Ok = Me.Session.Ready And Me.DragonState.Clip = Expected
+            Ok = Character3D.CurrentClipNameMatches(Me.DragonState.Actor, Expected) And Ok
+            Ok = BeatSequence.Sample(Me.Party, Me.Character, Me.ViewerCameraState.Frame,
+                Me.Playback.SelectedClip, Me.DragonState, 200, 2, Elapsed, True) And Ok
+            Ok = Me.DragonState.Clip = Expected And Ok
+            Ok = Character3D.CurrentClipNameMatches(Me.DragonState.Actor, Expected) And Ok
+
+            If Not Ok Then
+                Print "Kael live/Beat travel regression: "; AttackName; " Phase "; Phase
+            End If
+
+        End For
+
+        Me.Party = SavedParty
+        Me.Playback = SavedPlayback
+        Ok = BeatSequence.RestorePoses(Saved, Me.Party, Me.Character, Me.DragonState, 200)
+
+        If Not Ok Then
+            Print "Kael travel fixture could not restore poses."
+        End If
 
     End Sub
 
@@ -313,8 +416,8 @@ $exe = Join-Path $testRoot 'PresentationTests.exe'
 & (Join-Path $root 'artifacts\compiler\smilec.exe') --project $projectPath --target windows-x64 --graphics DirectX -o $exe
 if ($LASTEXITCODE -ne 0) { throw 'Presentation regression compilation failed.' }
 $actual = & (Join-Path $PSScriptRoot 'run-bounded-test.cmd') 60 $exe
-$expectedMusic = @('MUSIC_SELECTED: Starforge March (Title Screen)', 'MUSIC_SELECTED: Bloom (Arin)',
-    'MUSIC_SELECTED: Sunrise Oath (Orin)', 'MUSIC_SELECTED: Golden Hour Ascend (Mira)',
+$expectedMusic = @('MUSIC_SELECTED: Starforge Horizon (Title Screen)', 'MUSIC_SELECTED: Bloom (Arin)',
+    'MUSIC_SELECTED: Starforge March (Orin)', 'MUSIC_SELECTED: Golden Hour Ascend (Mira)',
     'MUSIC_SELECTED: Starforge Ascend (Kael)', 'MUSIC_STOPPED')
 $musicEvents = @($actual | Where-Object { $_.StartsWith('MUSIC_') })
 if (($musicEvents -join "`n") -cne ($expectedMusic -join "`n")) {
@@ -332,4 +435,6 @@ if ($LASTEXITCODE -ne 0 -or ($actual -join "`n").Trim() -ne 'Sin Star I presenta
 }
 Write-Host 'PASS: Nine character entries and three battle simulations create, draw and release their actual assets.'
 Write-Host 'PASS: Kael automatically cycles all sixteen demo clips and nine alternating normal/Earth/Water turns, including all six bending casts.'
+Write-Host 'PASS: Live and Beat preview use Idle around all six bending casts and Run around sword attacks.'
+Write-Host 'PASS: Mira defaults and actual native animation clocks use speed 200 in solo and Party entries.'
 Write-Host 'PASS: Five deployed MP3s match their sources; only explicit track changes restart playback, and scene shutdown preserves music.'

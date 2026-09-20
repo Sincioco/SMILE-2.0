@@ -103,7 +103,7 @@ Public Sub Enter(Action As TitleScreen.TitleAction)
 
         Case TitleScreen.TitleAction.Orin
 
-            Call BackgroundMusic.SelectTrack("Sunrise Oath (Orin)")
+            Call BackgroundMusic.SelectTrack("Starforge March (Orin)")
 
         Case TitleScreen.TitleAction.Mira
 

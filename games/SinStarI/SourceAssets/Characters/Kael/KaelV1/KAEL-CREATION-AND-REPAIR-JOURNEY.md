@@ -3,9 +3,10 @@
 ## Current presentation — September 20, 2026
 
 Keep the muted silver-gray hair material `(0.32, 0.31, 0.38)`, metallic 0 and
-roughness 1 in the Earth baseline, active Water package and Fire preview. The
-material-only revision preserved every GLB binary chunk, including geometry,
-rigging, animation and images. Export scripts apply the same material settings.
+roughness 0.42 in the Earth baseline, active Water package and Fire preview.
+The accepted export covers 12,252 hair triangles, including front roots and back
+tips. See the complete coverage/sheen lesson below; preserve the rig, clips and
+original packed texture while exporting the corrected face selection.
 
 Party scale is 3× solo, satisfying both the requested 3× baseline and at least
 4/3 of the previous 2× Party scale. The shared Character3D scale ceiling is now
@@ -13,6 +14,13 @@ Party scale is 3× solo, satisfying both the requested 3× baseline and at least
 with the actor. Earth/Water casts remain at the home position and face the selected
 target; sword attacks retain their approach. Fire remains a stationary Lab preview
 until its separate adoption milestone; do not claim Fire is in the Party rotation.
+
+The home-position gate alone did not suppress the inherited Run animation during
+approach/return. `Profiles.PartyTravelClip` now gives Earth, Water and the three
+named Fire casts Idle for these phases, shared by live Party and Beat seeking.
+Play the authored bending clip during the attack phase. Preserve existing timing,
+contact cues and camera saves. The actual-asset regression samples all three phases
+for every active Earth/Water cast and checks that sword attacks still use Run.
 
 ## Sources and ownership
 
@@ -108,10 +116,10 @@ the same cooked Kael asset for the Viewer and Sin Star I.
 
 ## Native integration
 
-`Profiles.smile` owns the thirteen-clip/ten-socket metadata and equipped height of 134.
-`ViewerDragon` owns the opponent actor and applies twice the solo fit scale.
+`Profiles.smile` owns the active sixteen-clip/ten-socket metadata and equipped height of 134.
+`ViewerDragon` owns the opponent actor and applies three times the solo fit scale.
 `ViewerParty` keeps the existing four-hero turn sequence and selects Kael's own
-Attack/EarthHurl/Attack2/EarthVolley/EarthSlam cycle. Kael approaches to 150 world units; heroes close further than
+normal/Earth/Water cycle. Sword attacks approach to 150 world units; heroes close further than
 for Vrax's broad body. Vrax-only node aiming, effects and audio are not attached
 to Kael. `ViewerBeatSequence` reserves identity 7 for Kael camera/head saves.
 Sin Star I's menu routes into the same Viewer session, with no duplicate battle

@@ -28,6 +28,7 @@
     <SmileSource Include="ViewerTiming.smile" />
     <SmileSource Include="ViewerSession.smile" />
     <SmileSource Include="ViewerDiagnostics.smile" />
+    <SmileSource Include="ViewerMusic.smile" />
     <SmileSource Include="ViewerDiagnosticsTests.smile" />
     <SmileSource Include="ViewerLifecycle.smile" />
     <SmileSource Include="ViewerPlayback.smile" />

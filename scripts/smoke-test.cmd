@@ -1252,7 +1252,7 @@ if errorlevel 1 exit /b %errorlevel%
 if errorlevel 1 exit /b %errorlevel%
 node --check "%SMILE_ROOT%\artifacts\web\SinStarI\game.js"
 if errorlevel 1 exit /b %errorlevel%
-for %%A in ("Assets\Backgrounds\SinStarLandscape.png" "Assets\Backgrounds\Sin Star I - Text.png" "Assets\Music\Starforge Horizon.mp3" "Maps\Towns\Town2_NE.smilemap") do (
+for %%A in ("Assets\Backgrounds\SinStarLandscape.png" "Assets\Backgrounds\Sin Star I - Text.png" "Assets\Music\Starforge Horizon (Title Screen).mp3" "Maps\Towns\Town2_NE.smilemap") do (
     if not exist "%SMILE_ROOT%\artifacts\games\SinStarI\%%~A" (
         echo Sin Star I native project asset is missing: %%~A
         exit /b 1

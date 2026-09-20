@@ -237,6 +237,17 @@ Call Check(ViewerPlayback.ClipMode(ViewerProfiles.PROFILE_ARIN, "Idle") =
     Graphics3D.ANIMATION_LOOP)
 Call Check(ViewerPlayback.DemoTarget(ViewerProfiles.PROFILE_DRAGON, 7000) = 7000)
 Call Check(ViewerPlayback.DemoTarget(ViewerProfiles.PROFILE_ORIN, 7000) = 3000)
+Call Check(ViewerProfiles.PartyTravelClip(ViewerProfiles.PROFILE_KAEL, "FirePunch") = "Idle")
+Call Check(ViewerProfiles.PartyTravelClip(ViewerProfiles.PROFILE_KAEL, "FireSweep") = "Idle")
+Call Check(ViewerProfiles.PartyTravelClip(ViewerProfiles.PROFILE_KAEL, "FireBlast") = "Idle")
+Call Check(ViewerProfiles.PartyTravelClip(ViewerProfiles.PROFILE_KAEL, "Attack") = "Run")
+Call Check(ViewerProfiles.PartyTravelClip(ViewerProfiles.PROFILE_VRAX, "Attack") = "Run")
+
+For Index = ViewerProfiles.PROFILE_MIRA1 To ViewerProfiles.PROFILE_MIRA
+    Profile = ViewerProfiles.ProfileAt(Index)
+
+    Call Check(Profile.DefaultPlaybackSpeed = 200)
+End For
 
 PlaybackState.AnimationCycleElapsed = 90
 

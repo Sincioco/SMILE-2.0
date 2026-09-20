@@ -1,5 +1,10 @@
 # SMILE 2.0 - 3D Viewer, Animation Editor
 
+The standalone **Kael Party** tab loops `Starforge Ascend (Kael).mp3` from
+Sin Star I's canonical music assets. Scene resets keep the song playing; selecting
+another tab or closing the Viewer stops it. Hosted presentations leave music with
+their game. Native builds deploy the MP3 beside the application.
+
 ## Automatic native recovery reports
 
 When the recovery screen appears, the Viewer saves one bounded report for that
@@ -38,6 +43,10 @@ turn order, guard/hit/KO/revival, targeting and water-shield recipients using he
 own model and effects. Tab selection and Beat preview also include her.
 Sin Star I uses these same battle sessions and status rows in all three simulations.
 Kael starts at speed **200** in his solo tab and Party, in both applications.
+Mira also defaults to **200** in her solo/comparison tabs and every Party roster.
+Her Dragon demo companion keeps that default; the Water Lab already uses 200.
+Explicit speed adjustments remain available, and animation/VFX timing follows
+the selected speed without changing the authored clips.
 The states remain presentation states; no HP/MP or combat damage system is added.
 
 ## Kael (native)
@@ -53,6 +62,10 @@ Kael has **sixteen clips**, including Boulder Hurl (`EarthHurl`), Stone Volley
 (`WaterOrbit`) and Tidal Surge (`WaterSurge`). Use the animation list's next page
 for the bending clips. His quiet Breathing Idle and speed **200** are preserved.
 The sword hides during both Earth and Water casts and otherwise respects Weapon/W.
+Kael casts from his home position without Run before or after bending. Live Party
+and Beat preview use Idle around the authored cast, preserving its impact timing.
+Sword attacks keep their approach and return. The same travel rule recognizes the
+three Fire Lab clip names for later adoption; Fire remains outside the Party rotation.
 
 **Kael Party** repeats normal → Earth → Water. The first nine turns are Attack,
 EarthHurl, WaterWhip, Attack2, EarthVolley, WaterOrbit, Attack, EarthSlam, WaterSurge;

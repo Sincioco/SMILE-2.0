@@ -14,6 +14,7 @@ Import Smile.Tools.BattleCamera As BattleCamera
 Import Smile.Tools.Character3DViewerTiming As ViewerTiming
 Import Smile.Tools.Character3DViewerSession As ViewerSession
 Import Smile.Tools.ViewerDiagnostics As Diagnostics
+Import Smile.Tools.ViewerMusic As ViewerMusic
 Import Smile.Tools.Character3DViewerLifecycle As ViewerLifecycle
 Import Smile.Tools.Character3DViewerPlayback As ViewerPlayback
 Import Smile.Tools.Character3DViewerActors As ViewerActors
@@ -86,6 +87,7 @@ Public Class Session
     Private Timing As ViewerTiming.ClockState
     Private Session As ViewerSession.State
     Private DiagnosticState As Diagnostics.State
+    Private MusicState As ViewerMusic.State
     Private LifecycleSettings As ViewerLifecycle.Configuration
     Private Playback As ViewerPlayback.State
     Private ViewerCameraState As ViewerCamera.State
@@ -439,6 +441,10 @@ Public Class Session
 
         Call Me.DestroyViewer()
 
+        If Not Me.IsHosted Then
+            Call ViewerMusic.Shutdown(Me.MusicState)
+        End If
+
     End Sub
 
     Private Sub LoadViewer()
@@ -471,6 +477,10 @@ Public Class Session
             Me.DragonState, Me.Playback, Me.ViewerCameraState, Me.Calibration,
             Me.ViewerUiState, Me.ViewerGizmoState, Me.Equipment, Me.CalibrationAvailable,
             Me.SwordWristNode, Me.ShieldWristNode, Me.LifecycleSettings)
+
+        If Not Me.IsHosted Then
+            Call ViewerMusic.SelectTab(Me.MusicState, Me.Session.SelectedCharacterTab)
+        End If
 
     End Sub
 

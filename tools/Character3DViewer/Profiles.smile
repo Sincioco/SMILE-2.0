@@ -19,6 +19,7 @@ Public Const PROFILE_MIRA1 = 9
 Public Const PROFILE_MIRA2 = 10
 Public Const PROFILE_MIRA3 = 11
 Public Const PROFILE_MIRA = 12
+Public Const MIRA_DEFAULT_PLAYBACK_SPEED = 200
 Public Const PROFILE_YALIS = 13
 Public Const PROFILE_KAEL = 14
 Public Const ARENA_OPPONENT_X = -208
@@ -308,6 +309,7 @@ Public Function ProfileAt(Index As Number) As CharacterViewer.Profile
 
     Else If IsMiraCharacter(Index) Then
 
+        Result.DefaultPlaybackSpeed = MIRA_DEFAULT_PLAYBACK_SPEED
         Result.AssetId = "sin-star-i.character-4.healer.mira1"
         Result.CandidateVersion = "v1"
         Result.DisplayName = "Mira1"
@@ -770,6 +772,29 @@ Public Function CalibrationAsset(ProfileIndex As Number) As Text
     End If
 
     Return Result
+
+End Function
+
+''' Bending uses a planted stance; sword attacks retain their approach and return.
+Public Function PartyTravelClip(ProfileIndex As Number, AttackName As Text) As Text
+
+    If ProfileIndex = PROFILE_KAEL Then
+
+        If (AttackName = "EarthHurl" Or
+            AttackName = "EarthVolley" Or
+            AttackName = "EarthSlam" Or
+            AttackName = "WaterWhip" Or
+            AttackName = "WaterOrbit" Or
+            AttackName = "WaterSurge" Or
+            AttackName = "FirePunch" Or
+            AttackName = "FireSweep" Or
+            AttackName = "FireBlast") Then
+            Return "Idle"
+        End If
+
+    End If
+
+    Return "Run"
 
 End Function
 

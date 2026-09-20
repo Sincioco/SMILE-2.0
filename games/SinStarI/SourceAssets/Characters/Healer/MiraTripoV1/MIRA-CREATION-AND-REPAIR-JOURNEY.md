@@ -91,3 +91,12 @@ radius from StaffGrip–StaffTip distance, keeping it around the head rather tha
 spreading along the shaft. Build its frame from the animated sockets so it follows
 back carry and the settled staff during Death. Body glow and all attachments use
 the same grounded actor transform.
+
+## Playback speed — September 20, 2026
+
+Sin designated 200 as Mira's default animation speed across programs. The shared
+Viewer profile owns that default for Mira and the preserved comparison tabs.
+Party playback uses 200 for Mira independently of another actor's speed, including
+the Dragon demo companion and its return to Idle. Explicit Mira speed controls
+remain available. The native Water Lab already samples both animation and VFX at
+200 by default. Authored GLB animation samples, grounding and equipment are unchanged.

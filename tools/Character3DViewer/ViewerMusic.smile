@@ -1,0 +1,39 @@
+''' Standalone Viewer tab music; hosted sessions leave music with their host.
+Module Smile.Tools.ViewerMusic
+
+Option Explicit
+
+Import Smile.Tools.Character3DViewerProfiles As Profiles
+
+Public Type State
+    Playing As Boolean
+End Type
+
+Public Sub SelectTab(ByRef Value As State, Tab As Number)
+
+    If Tab = Profiles.CHARACTER_TAB_PARTY_KAEL Then
+
+        If Not Value.Playing Then
+            Play Music "Assets\Music\Starforge Ascend (Kael).mp3" Loop
+
+            Value.Playing = True
+        End If
+
+    Else
+
+        Call Shutdown(Value)
+
+    End If
+
+End Sub
+
+Public Sub Shutdown(ByRef Value As State)
+
+    If Value.Playing Then
+        Stop Music
+        Value.Playing = False
+    End If
+
+End Sub
+
+End Module
