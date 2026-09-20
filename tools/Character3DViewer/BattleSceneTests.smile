@@ -47,6 +47,8 @@ Show Screen
 
 Call Check(Viewer.SceneReady(), "First Directed Frame")
 Call Check(Battle.Planning And Battle.Combat.ActionSerial = 0, "Initial Orders Wait")
+Call Viewer.StandaloneInput(KEY_ENTER)
+Call Check(Viewer.PanelVisibility() = 2, "Legacy Reset Preserves Battle Panel Visibility")
 Call Planning.BeginRound(Battle)
 Call Planning.Interrupt(Battle)
 

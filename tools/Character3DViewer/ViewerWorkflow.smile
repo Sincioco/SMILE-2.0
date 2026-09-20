@@ -1512,6 +1512,12 @@ Public Class Session
 
     Private Sub ResetAll()
 
+        If Me.Party.DirectedPlayback Then
+            Call Me.ResetView()
+
+            Return
+        End If
+
         Call Diagnostics.Record(Me.DiagnosticState, "ResetAll")
 
         Me.Session.Ready = ViewerBattlePreview.EndDemo(Me.BattlePreview, Me.Party,
@@ -2080,6 +2086,12 @@ Public Class Session
     End Sub
 
     Private Sub ResetPartyInspector()
+
+        If Me.Party.DirectedPlayback Then
+            Call Me.ResetView()
+
+            Return
+        End If
 
         Call Me.BeginPartyInspector()
         Call Me.CancelCalibrationEdit()

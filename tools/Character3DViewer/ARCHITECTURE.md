@@ -48,12 +48,18 @@ No size threshold, no-growth baseline, exclusion or dependency is changed.
 
 Growth review: NativeProgram is 37 lines, NativeViewerHost 322, BattlePlanning 186,
 BattlePresentation 362 and BattleUi 536. The coordinator grows by
-183 net lines to 3,046, Party by 35 to 4,083, Camera by 14 to 663, Playback by 14
+195 net lines to 3,058, Party by 35 to 4,083, Camera by 14 to 663, Playback by 14
 to 535, inspector presentation by two and legacy UI by five. Camera's small preset
 operation belongs with its existing controls; no new camera algorithm is placed
 in Workflow. The existing oversized legacy owners keep their responsibilities.
 The pre-existing held Studio asset-manifest mismatch is recorded in the Party
 Beat checkpoint; preserving its source inventory is not Studio build acceptance.
+
+Directed-mode resets restore the camera without entering the legacy inspector
+borrow/reset lifecycle. That lifecycle otherwise reopens panels and restarts demo
+state underneath the encounter. Both reset entry paths are guarded; the native
+scene fixture checks reset visibility and the visible right-click check verifies
+the requested camera and formation are retained.
 
 ## Standalone tab music
 
