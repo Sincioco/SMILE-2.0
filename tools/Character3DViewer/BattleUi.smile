@@ -238,16 +238,14 @@ Public Sub Accept(ByRef Value As State, ByRef Encounter As Planning.State)
 
 End Sub
 
-''' Only explicit battle controls request orders; camera input keeps Auto running.
+''' Only Enter and battle-panel clicks request orders; camera input and pause retain Auto.
 Public Sub InterruptForInput(
     ByRef Encounter As Planning.State,
     Key As Number,
     PanelClicked As Boolean
 )
 
-    If (Key = KEY_ENTER Or
-        Key = KEY_SPACE Or
-        PanelClicked) Then
+    If Key = KEY_ENTER Or PanelClicked Then
         Call Planning.Interrupt(Encounter)
     End If
 
@@ -289,11 +287,11 @@ Public Sub Update(
                 Call StatsView.Open(Value.Stats, Index, True)
             End If
 
-        Else If UI.Clicked(Layout.AreaX + 184, 98, 82, 22) Then
+        Else If UI.Clicked(Layout.AreaX + 184, Layout.EnemyY + 4, 82, 22) Then
 
             Call StatsView.Open(Value.Stats, Index, False)
 
-        Else If UI.Clicked(Layout.AreaX + 270, 98, 82, 22) Then
+        Else If UI.Clicked(Layout.AreaX + 270, Layout.EnemyY + 4, 82, 22) Then
 
             Call StatsView.Open(Value.Stats, Index, True)
 
@@ -321,7 +319,7 @@ Public Sub Update(
     RowCount = Rows(Value.Page, Encounter.Combat.Turn)
     Y = MenuTop(Layout, Value.Page, Encounter.Combat.Turn)
     X = Layout.MenuX
-    Confirm = Key = KEY_ENTER Or Key = KEY_SPACE Or Key = KEY_RIGHT
+    Confirm = Key = KEY_ENTER Or Key = KEY_RIGHT
 
     If Key = KEY_UP Then
         Value.Selection = (Value.Selection + RowCount - 1) Mod RowCount
@@ -350,7 +348,7 @@ Public Function Blocked(Value As State, Layout As Hud.Layout) As Boolean
 
     Result = (Value.Stats.Visible Or Value.Page > 0 Or
         UI.Contains(Layout.AreaX, Layout.PanelY - 36, Layout.AreaWidth, 190) Or
-        UI.Contains(Layout.AreaX, 94, Layout.AreaWidth, 64))
+        UI.Contains(Layout.AreaX, Layout.EnemyY, Layout.AreaWidth, 64))
     Return Result
 
 End Function
@@ -403,12 +401,18 @@ Private Sub DrawMenu(Value As State, Battle As Rules.State, Layout As Hud.Layout
 
 End Sub
 
-Public Sub Draw(Value As State, Encounter As Planning.State, Inspecting As Boolean, Layout As Hud.Layout)
+Public Sub Draw(
+    Value As State,
+    Encounter As Planning.State,
+    Inspecting As Boolean,
+    Layout As Hud.Layout,
+    Optional Paused As Boolean = False
+)
 
     Dim Root As State
     Dim Parent As State
 
-    Call Hud.DrawPanels(Layout, Encounter, Inspecting)
+    Call Hud.DrawPanels(Layout, Encounter, Inspecting, Paused)
 
     ''' Popups draw after the HUD so its message strip cannot cover menu choices.
 

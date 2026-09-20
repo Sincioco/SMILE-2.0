@@ -11,7 +11,7 @@ $null = New-Item -ItemType Directory -Force -Path $testRoot
 # Reuse the prepared native project inventory; no second asset ownership list.
 [xml]$project = Get-Content -LiteralPath (Join-Path $viewerRoot 'Character3DViewer.smileproj') -Raw
 $project.SmileProject.PropertyGroup.StartupFile = 'BattleSceneTests.smile'
-$project.SmileProject.PropertyGroup.ApplicationId = 'smile.tests.viewer-battle'
+$project.SmileProject.PropertyGroup.ApplicationId = "smile.tests.viewer-battle.run-$([Guid]::NewGuid().ToString('N'))"
 $project.SmileProject.PropertyGroup.RememberWindowPlacement = 'false'
 $entry = $project.SmileProject.ItemGroup.SmileSource | Where-Object { $_.StartupOnly -eq 'true' }
 $entry.SetAttribute('Include', 'BattleSceneTests.smile')

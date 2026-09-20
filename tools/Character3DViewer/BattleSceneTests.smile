@@ -6,6 +6,7 @@ Import Smile.Tools.Character3DViewerWorkflow As Workflow
 Import Smile.Tools.NativeViewerHost As NativeHost
 Import Smile.Tools.Character3DViewerProfiles As Profiles
 Import Smile.Tools.Character3DViewerActors As Actors
+Import Smile.Tools.Character3DViewerCalibration As Calibration
 Import Smile.Tools.Character3DViewerParty As Party
 Import Smile.Tools.Character3DViewerCamera As ViewerCamera
 Import Smile.Tools.ViewerBattlePresentation As Presentation
@@ -40,6 +41,7 @@ Dim Shots As Cinematics.State
 Dim ManualCamera As ViewerCamera.State
 Dim CameraInput As ViewerCamera.PointerInput
 Dim CameraOk As Boolean
+Dim ArinKeys As Calibration.State
 
 Game Window "Viewer Battle Formation Check" Size 1420 By 990
 
@@ -57,6 +59,14 @@ Call Check(ExpandedLayout.AreaX >= 18 And
 Call Check(Hud.HeroX(ExpandedLayout, 3) + ExpandedLayout.HeroWidth =
     ExpandedLayout.AreaX + ExpandedLayout.AreaWidth, "Four Heroes Fill Available Width")
 
+CompactLayout = Hud.Arrange(1420, 990, 2, True)
+
+Call Check(CompactLayout.EnemyY = 18 And ExpandedLayout.EnemyY = 94,
+    "Hidden Header Moves Kael To An 18-Pixel Top Margin")
+Call Check(CompactLayout.AreaX = ExpandedLayout.AreaX And
+    CompactLayout.PanelY = ExpandedLayout.PanelY,
+    "Hidden Header Preserves The Expanded Party Layout")
+
 Call Planning.Start(Battle)
 Call Planning.BeginRound(Battle)
 Call BattleUi.InterruptForInput(Battle, KEY_NONE, False)
@@ -64,26 +74,26 @@ Call BattleUi.InterruptForInput(Battle, KEY_RIGHT, False)
 Call BattleUi.InterruptForInput(Battle, KEY_UP, False)
 Call BattleUi.InterruptForInput(Battle, KEY_A, False)
 Call BattleUi.InterruptForInput(Battle, KEY_O, False)
+Call BattleUi.InterruptForInput(Battle, KEY_C, False)
+Call BattleUi.InterruptForInput(Battle, KEY_SPACE, False)
 Call BattleUi.InterruptForInput(Battle, KEY_BACKTICK, False)
 Call Check(Not Battle.Combat.StopRequested,
     "Camera Input And Showing Panels Leave Auto Battle Running")
 
-For First = 0 To 2
+For First = 0 To 1
 
     Call Planning.Start(Battle)
     Call Planning.BeginRound(Battle)
 
     If First = 0 Then
         Call BattleUi.InterruptForInput(Battle, KEY_NONE, True)
-    Else If First = 1 Then
-        Call BattleUi.InterruptForInput(Battle, KEY_ENTER, False)
     Else
 
-        Call BattleUi.InterruptForInput(Battle, KEY_SPACE, False)
+        Call BattleUi.InterruptForInput(Battle, KEY_ENTER, False)
     End If
 
     Call Check(Battle.Combat.StopRequested And Not Battle.Planning,
-        "Panel Click, Enter Or Space Requests Orders Without Cutting Off An Attack")
+        "Panel Click Or Enter Requests Orders Without Cutting Off An Attack")
 
     For Second = 0 To 4
         Call Planning.Advance(Battle, 2000, 99, 0)
@@ -94,7 +104,16 @@ For First = 0 To 2
 End For
 
 Call Host.Start(Viewer, NativeHost.BATTLE_TAB, True, 1420, 990)
+Call Check(Calibration.KeyCount(ArinKeys, 3) > 0 And
+    Calibration.KeyCount(ArinKeys, 8) > 0,
+    "Battle Startup Loads Arin Authored Idle And Death Keys")
 Call Check(Viewer.PanelVisibility() = 2, "Battle Startup Hides Legacy Panels")
+Call Host.StandaloneInput(Viewer, KEY_SPACE)
+Call Host.UpdateFrame(Viewer, 1420, 990)
+Call Check(Viewer.IsPaused(), "Space Pauses Directed Battle Playback")
+Call Host.StandaloneInput(Viewer, KEY_SPACE)
+Call Host.UpdateFrame(Viewer, 1420, 990)
+Call Check(Not Viewer.IsPaused(), "Space Resumes Directed Battle Playback")
 Call Planning.Start(Battle)
 Call Presentation.Create(Visual, Viewer)
 Call Presentation.OrdersCamera(Viewer)
@@ -272,6 +291,60 @@ Call ViewerCamera.FollowView(ManualCamera, FollowingView, True)
 Call Check(ManualCamera.Controls.OrbitYaw = 0.0 And ManualCamera.Controls.PanX = 0.0 And
     ManualCamera.Zoom.Target = 0.0, "Explicit Camera Reset Clears Manual Offsets")
 
+''' Camera return works with automatic framing on or off and never cuts the current view.
+
+For First = 0 To 1
+
+    Shots.Enabled = First = 0
+    FirstView = Presentation.OrdersView()
+    FirstView.Position.X = FirstView.Position.X + 400.0
+    FirstView.Target.Y = FirstView.Target.Y + 70.0
+    FirstView.FovDegrees = 40.0
+
+    Call Viewer.SetPartyView(FirstView)
+    Call Viewer.UpdateFrame(1420, 990)
+
+    FirstView = Viewer.CurrentCamera()
+
+    Call Cinematics.ReturnToOrders(Shots, Viewer)
+    Call Cinematics.Update(Shots, Viewer, Battle.Combat, 0, 1420, 990)
+    Call Viewer.UpdateFrame(1420, 990)
+
+    LastView = Viewer.CurrentCamera()
+
+    Call Check(Math3D.Distance(FirstView.Position, LastView.Position) < 0.001 And
+        Abs(FirstView.FovDegrees - LastView.FovDegrees) < 0.001,
+        "Camera Return Starts At The Rendered Position And Zoom Without A Cut")
+    Call Cinematics.Update(Shots, Viewer, Battle.Combat, 500, 1420, 990)
+    Call Viewer.UpdateFrame(1420, 990)
+
+    LastView = Viewer.CurrentCamera()
+    FollowingView = Presentation.OrdersView()
+
+    Call Check(Math3D.Distance(LastView.Position, FollowingView.Position) > 1.0 And
+        LastView.FovDegrees > FollowingView.FovDegrees And
+        LastView.FovDegrees < FirstView.FovDegrees, "Camera Return Eases Through An Intermediate View")
+    Call Cinematics.Update(Shots, Viewer, Battle.Combat, 500, 1420, 990)
+    Call Viewer.UpdateFrame(1420, 990)
+
+    LastView = Viewer.CurrentCamera()
+
+    Call Check(Math3D.Distance(LastView.Position, FollowingView.Position) < 0.001 And
+        Math3D.Distance(LastView.Target, FollowingView.Target) < 0.001 And
+        Abs(LastView.FovDegrees - FollowingView.FovDegrees) < 0.001,
+        "Camera Return Reaches The Exact Default Position Angle And Zoom")
+    Call Viewer.StandaloneInput(KEY_RIGHT)
+    Call Cinematics.Update(Shots, Viewer, Battle.Combat, 2000, 1420, 990)
+    Call Viewer.UpdateFrame(1420, 990)
+
+    LastView = Viewer.CurrentCamera()
+
+    Call Check(Math3D.Distance(LastView.Position, FollowingView.Position) > 1.0,
+        "Manual Orbit Remains Available After Returning To Default")
+End For
+
+Shots.Enabled = True
+
 Battle.Combat.Phase = Rules.WAITING
 
 Call Cinematics.Update(Shots, Viewer, Battle.Combat, 16, 1420, 990)
@@ -409,6 +482,10 @@ Call Viewer.ConfigureExternalHost(False)
 Call Viewer.SelectTab(Profiles.CHARACTER_TAB_PARTY_KAEL)
 Call Viewer.UpdateFrame(1420, 990)
 Call Check(Viewer.SceneReady() And Viewer.PanelVisibility() = 0, "Original Kael Party Still Loads")
+Call Host.SelectTab(Viewer, 0)
+Call Check(Calibration.KeyCount(ArinKeys, 3) > 0 And
+    Calibration.KeyCount(ArinKeys, 8) > 0,
+    "Arin Editor Retains Authored Keys After Battle And Kael Party")
 Call Host.Release(Viewer)
 
 If Failures = 0 Then

@@ -1357,9 +1357,19 @@ Private Sub LoadSaved(ByRef Value As State, ByRef Actor As Character3D.Actor)
 
     If LoadedCount > 0 Then
 
+        Value.TransferMessage = "Saved Keys Rejected: Invalid Calibration Data"
+
         If Decode(Value, Actor, LoadedCount) Then
+
             Value.StorageCount = LoadedCount
+            Value.TransferMessage = "Saved Keys: " + Value.FileLabel
+
+            If Value.PersistenceStatus = DATA_STATUS_RECOVERED Then
+                Value.TransferMessage = "Recovered Last-Good Backup; Primary Not Changed"
+            End If
+
             Return
+
         End If
 
         Call ResetBank(Value)
@@ -1539,6 +1549,7 @@ Private Function Decode(ByRef Value As State, ByRef Actor As Character3D.Actor,
         For NameIndex = 0 To 63
 
             If Storage[10 + NameIndex] <> Text_Code_At(Value.ProfileFingerprint, NameIndex) Then
+                Value.TransferMessage = "Saved Keys Rejected: Character Profile Mismatch"
                 Return False
             End If
 
@@ -1607,6 +1618,7 @@ Private Function Decode(ByRef Value As State, ByRef Actor As Character3D.Actor,
         End If
 
         If Clip < 0 Or SeenClips[Clip] <> 0 Then
+            Value.TransferMessage = "Saved Keys Rejected: Unknown Or Repeated Clip"
             Return False
         End If
 
@@ -1639,6 +1651,7 @@ Private Function Decode(ByRef Value As State, ByRef Actor As Character3D.Actor,
 
             If (FrameValue <= PreviousFrame Or
                 FrameValue >= Character3D.ClipSampleCount(Actor, Clip)) Then
+                Value.TransferMessage = "Saved Keys Rejected: Invalid Frame In " + Character3D.ClipName(Actor, Clip)
                 Return False
             End If
 
@@ -2248,7 +2261,15 @@ Public Function PrepareImport(ByRef Value As State, ByRef Actor As Character3D.A
 
     Call CancelPendingImport(Value)
 
-    If Editing Or Value.StorageRejected Then
+    If Editing Then
+        Return False
+    End If
+
+    If Value.StorageRejected Then
+        Call Reload(Value, Actor)
+    End If
+
+    If Value.StorageRejected Then
         Return False
     End If
 
@@ -2348,7 +2369,10 @@ Public Function ImportOrCommit(ByRef Value As State, ByRef Actor As Character3D.
     End If
 
     If Value.StorageRejected Then
-        Value.TransferMessage = "Resolve Rejected Storage Before Import"
+        Call Reload(Value, Actor)
+    End If
+
+    If Value.StorageRejected Then
         Return False
     End If
 

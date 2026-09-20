@@ -760,6 +760,11 @@ They support `Get Key`, `Key_Held` and queued `Key_Event_Held` snapshots. The Wa
 Lab uses them for global animation speed. Existing key values are unchanged.
 Web input adoption remains on hold and is not claimed as supported.
 
+`KEY_C` (41) exposes C through native `Get Key`, `Key_Held` and queued
+`Key_Event_Held` snapshots. The Battle System uses it to ease the camera back
+to its default orders view. Existing key values are unchanged. Web input
+adoption remains on hold.
+
 `KEY_BACKTICK` maps the US grave-accent/tilde key (Windows `VK_OEM_3`, browser physical `Backquote`) in `Get Key` and `Key_Held`. The physical glyph can differ with keyboard layout. Character Viewer and Fire Lab use it to hide/show their entire UI; it does not change animation pause state.
 
 Phase 5 adds `Text_Length`, `Text_Code_At`, and `Text_Slice`. Their zero-based indices and counts use Unicode scalar values rather than native UTF-8 bytes or Web UTF-16 code units. `Text_Code_At` returns `-1` outside the value, while `Text_Slice` safely clamps and returns empty text for negative starts, nonpositive counts, or starts beyond the end. Routine analysis also records direct and transitive `requiresGameWindow` capability; a Console consumer receives one `SML3704` at its own call site instead of diagnostics cascading from library source. Phase 5.2 adds the Unicode-safe menu overflow/marker/geometry and hierarchical-navigation foundation. Smile.UI 2.0 keeps those bounded engines private behind `Menu`, `MenuNavigator`, and `Dialogue` Class facades with constructors, methods, properties, named/default arguments, and idempotent destruction. Full details are in `phase5-ui.md`.

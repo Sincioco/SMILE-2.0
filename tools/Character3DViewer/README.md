@@ -19,12 +19,19 @@ are hidden in the native tab strip; the accepted Mira follows Zara.
   and healing targets, the Item placeholder, Defend, full-gauge Limit Break or Run.
 - **Auto** starts immediately using confirmed orders and the remaining remembered
   orders. After any started round, the whole party acts, then Kael, then the
-  same orders repeat automatically. Click a Battle System panel, or press Enter
-  or Space, to request new orders after the current party-and-boss round finishes.
+  same orders repeat automatically. Click a Battle System panel, or press Enter,
+  to request new orders after the current party-and-boss round finishes.
   Camera pan/orbit/zoom, scene clicks and other keys leave Auto running. Defeated
   or escaped heroes are skipped. Illegal repeat orders fall back to Attack.
-- Arrows choose; Enter/Space confirm; Escape goes back. Menus also accept clicks.
-  Backtick retains the three legacy panel visibility states without stopping Auto.
+- Arrows choose; Enter confirms; Escape goes back. Menus also accept clicks.
+  **Space** pauses/resumes battle playback like Kael Party, preserving Auto and
+  current orders. Combat, animation, initial-idle and ending/restart clocks wait
+  while paused; pan/orbit/zoom and C's eased camera return remain available.
+  Backtick cycles the three legacy panel visibility states, then a fourth Battle
+  view hiding the header and tabs, without stopping Auto. The fourth view moves
+  Kael's info, HP and stats buttons up to an 18-pixel top margin. Another backtick
+  restores the full editor layout. The ordinary character tabs keep their existing
+  three-state cycle.
   Clicking battle panels or statistics requests orders at the round boundary;
   inspector editing waits for that boundary. Close inspectors with backtick to
   resume normal battle presentation. Save/cancel pending pose or Beat edits first.
@@ -53,6 +60,13 @@ are hidden in the native tab strip; the accepted Mira follows Zara.
   **Choose Party Action** and individual orders stay in that view with no automatic
   rotation. Returning to orders restores it once. Right-click and automatic
   restart replay the opening.
+- **C** eases from the current camera back to that default orders view over one
+  second, restoring its position, angle and zoom without stopping Auto Battle.
+  It holds the default framing across attacks; pan/orbit/zoom remain available,
+  including during the transition. Turn cinematics off/on to resume attack shots.
+  C also works with cinematics off and can end the result camera's orbit without
+  changing rewards or the battle restart timer. Active editors and stats retain
+  their input ownership.
 - Left drag pans, middle drag orbits and the wheel zooms during both hero and enemy
   actions. Pan/orbit take over the current shot; later camera updates retain the
   manual view. Zoom uses the same smooth controls and preserves its target across
@@ -959,8 +973,11 @@ count mismatches, malformed/trailing JSON and files above the 8 MiB transfer lim
 Current identity/clip strings are bounded printable ASCII (including equivalent
 JSON escapes). This is not a general JSON API or a legacy-character migration tool.
 Omitted clips are cleared by the explicitly confirmed full-snapshot replacement.
-Rejected/unavailable working storage remains write-blocked; its existing recovery
-workflow must be resolved first. There is no automatic cross-tab/process merge.
+Import retries a previously rejected working save using the normal checked,
+read-only loader. A valid save restores its keys before the picker/confirmation;
+still-invalid or unavailable storage stays write-blocked and reports its reason.
+No import bypasses the character fingerprint or overwrites rejected storage.
+There is no automatic cross-tab/process merge.
 The shared export fixture validates both characters against canonical JSON and
 the desktop binary serializer. An actual Edge Arin download also round-tripped
 byte-for-byte through the native text import/export dialogs in an isolated sample.

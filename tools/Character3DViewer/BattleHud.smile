@@ -17,9 +17,15 @@ Public Type Layout
     MenuX As Number
     MenuWidth As Number
     PanelY As Number
+    EnemyY As Number
 End Type
 
-Public Function Arrange(Width As Number, Height As Number, Visibility As Number) As Layout
+Public Function Arrange(
+    Width As Number,
+    Height As Number,
+    Visibility As Number,
+    Optional HeaderHidden As Boolean = False
+) As Layout
 
     Dim Result As Layout
     Dim Margin As Number
@@ -27,6 +33,11 @@ Public Function Arrange(Width As Number, Height As Number, Visibility As Number)
     Margin = 18
     Result.PanelY = Height - 171
     Result.MenuWidth = 166
+    Result.EnemyY = 94
+
+    If HeaderHidden Then
+        Result.EnemyY = Margin
+    End If
 
     If Visibility <> 2 Then
 
@@ -76,7 +87,12 @@ Private Sub Bar(Name As Text, Current As Number, Maximum As Number,
 
 End Sub
 
-Public Sub DrawPanels(Value As Layout, Encounter As Planning.State, Inspecting As Boolean)
+Public Sub DrawPanels(
+    Value As Layout,
+    Encounter As Planning.State,
+    Inspecting As Boolean,
+    Optional Paused As Boolean = False
+)
 
     Dim Index As Number
     Dim X As Number
@@ -151,20 +167,25 @@ Public Sub DrawPanels(Value As Layout, Encounter As Planning.State, Inspecting A
         Caption = "Inspector Open - Battle Paused (` To Resume)"
     End If
 
+    If Paused Then
+        Caption = "Paused - Space To Resume; Camera Controls Remain Active"
+    End If
+
     Draw Text Caption At Value.AreaX + 9, Y - 28 Size 13 Color WHITE
 
     Member = Encounter.Combat.Members[4]
     X = Value.AreaX
+    Y = Value.EnemyY
 
-    Call UI.DrawPanel(X, 94, Value.AreaWidth, 64)
+    Call UI.DrawPanel(X, Y, Value.AreaWidth, 64)
 
-    Draw Text "Kael - Level " + Growth.NumberText(Member.Level) At X + 7, 101 Size 15 Color WHITE
+    Draw Text "Kael - Level " + Growth.NumberText(Member.Level) At X + 7, Y + 7 Size 15 Color WHITE
 
-    Call UI.DrawButton(X + 184, 98, 82, 22, "Stats Table", False)
-    Call UI.DrawButton(X + 270, 98, 82, 22, "Graphs", False)
-    Call Bar("HP", Member.HP, Member.Stats.HP, X + 7, 130, Value.AreaWidth - 14, Rgb(169, 48, 67), True)
+    Call UI.DrawButton(X + 184, Y + 4, 82, 22, "Stats Table", False)
+    Call UI.DrawButton(X + 270, Y + 4, 82, 22, "Graphs", False)
+    Call Bar("HP", Member.HP, Member.Stats.HP, X + 7, Y + 36, Value.AreaWidth - 14, Rgb(169, 48, 67), True)
 
-    Draw Text "Arrows: Choose | Enter/Space: Confirm | Esc: Back | Panel Click/Enter/Space: Orders Next Round | `: Panels" At Value.AreaX, Window_Height() - 20 Size 11 Color LIGHT_GRAY
+    Draw Text "Arrows: Choose | Enter: Confirm/Orders Next Round | Space: Pause/Resume | Esc: Back | C: Reset Camera | `: UI" At Value.AreaX, Window_Height() - 20 Size 11 Color LIGHT_GRAY
 
 End Sub
 
@@ -229,8 +250,8 @@ Public Sub DrawOptions(BattleTab As Boolean, Cinematic As Boolean, Visibility As
 
     Draw Text Caption At X + 12, 184 Size 12 Color CYAN
     Draw Text "Pan / Orbit / Zoom Keep Auto Running" At X + 12, 210 Size 11 Color WHITE
-    Draw Text "Panel Click / Enter / Space: Orders" At X + 12, 232 Size 11 Color WHITE
-    Draw Text "` Hides Panels And Expands HUD" At X + 12, 270 Size 11 Color LIGHT_GRAY
+    Draw Text "Click / Enter: Orders | Space: Pause" At X + 12, 232 Size 11 Color WHITE
+    Draw Text "C: Reset Camera | `: Panels" At X + 12, 270 Size 11 Color LIGHT_GRAY
 
 End Sub
 

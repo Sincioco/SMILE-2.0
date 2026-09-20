@@ -181,7 +181,7 @@ validation remains held.
 
 ## Explicit Auto Battle interruption
 
-`BattleUi.InterruptForInput` owns the native interruption policy: Enter, Space or
+`BattleUi.InterruptForInput` owns the native interruption policy: Enter or
 a primary click inside a Battle System panel requests orders. Camera drags,
 scene clicks, wheel motion, ordinary keys and showing the panels with backtick
 leave automatic rounds running. Existing battle HUD/stats hit areas are reused;
@@ -195,15 +195,73 @@ BattleUi grows 422 -> 439 lines, NativeViewerHost 420 -> 422 and SceneTests
 including stale text for the replaced cinematic policy. No new source owner,
 language/runtime feature, dependency or architectural exception is needed.
 Focused regression checks cover camera/ordinary input retaining Auto and each
-of panel click, Enter and Space deferring the stop until the round finishes.
+of panel click and Enter deferring the stop until the round finishes. Sin's later
+Space correction below supersedes the original Space interruption policy.
 
 Validation: native battle planning/scene regression checks, the native-only
 hardening/architecture suite and focused source formatting checks pass. The
 rebuilt native Viewer retained Auto across rounds after scene dragging and
-arrow-key camera input. Space, Enter and a party-panel click each displayed
+arrow-key camera input. Enter and a party-panel click each displayed
 `Orders Next Round` and returned to the orders screen at the next round.
 The Viewer was gracefully replaced and remains running in its saved position.
 Web/Studio validation remains held.
+
+## Native camera return, pause and header-free view — September 21
+
+`NativeViewerHost` owns the battle pause flag and fourth UI visibility state.
+Space now pauses/resumes like Kael Party without requesting new orders. Combat,
+actor, inactivity and result/restart clocks pause together; Viewer camera input
+continues. `BattleCinematics` captures the rendered camera and composes the existing
+`BattleCameraShots.Blend` for C's one-second return to the initial orders view,
+including while paused or cinematics are disabled. It retains that default until
+manual camera input or a cinematic toggle/reset. No camera algorithm is duplicated.
+
+The fourth backtick state hides the header/tab drawing and hit regions, then
+returns to the original three-state cycle. `BattleHud.Layout.EnemyY` owns Kael's
+94/18-pixel placement and is shared by rendering and `BattleUi` stats hit tests.
+Ordinary character tabs retain their existing cycle. `KEY_C = 41` extends the
+shared language constant inventory and native key map/held/event snapshot range;
+old values are unchanged. Web input adoption remains held and is documented.
+
+Growth from the preceding commit: BattleCinematics 87 -> 122, BattleHud 237 -> 258,
+BattleUi 439 -> 443, NativeViewerHost 422 -> 471, BattleSceneTests 517 -> 594.
+State stays with the existing feature owners; Workflow, Party and the entry point
+do not grow. No dependency, threshold, baseline or exception changes.
+
+## Calibration rejection recovery — September 21
+
+The live Viewer showed rejected storage and zero keys while its saved binary was
+byte-equivalent to the authoritative 24-key JSON. Import returned before opening
+the picker because `StorageRejected` stayed set. Rebuilding/relaunching restored
+the authored values and the picker without changing either saved file. The
+original rejection trigger was not reproduced; the open evidence/next action is
+in `docs/implementation/party-beat-camera-checkpoint.md`.
+
+`ViewerCalibration` retains transaction ownership. Import retries the normal
+checked read when an earlier rejection is latched, and proceeds only after the
+current save passes validation. Persistent rejection still blocks writes. Load
+diagnostics now distinguish profile, clip and frame failures; they no longer
+leave a misleading default “Saved Keys” message after a failed decode. Existing
+recovered-backup wording is preserved. No pose, profile or asset migration occurs.
+
+ViewerCalibration grows 2,485 -> 2,509 lines within its existing persistence
+responsibility; CalibrationTests grows 2,433 -> 2,460. This is a local recovery
+change in the reviewed legacy owner, without new shared state or extraction.
+Focused checks cover read-only recovery, still-unavailable storage protection,
+unchanged saved JSON, and Arin key availability through Battle startup and return
+to the editor. The battle fixture now uses fresh isolated storage on each run.
+
+Validation for this delivery: battle planning/real-asset scene tests, native-only
+Viewer hardening/architecture and calibration isolation pass, including 49
+synchronizer and 58 graphics/pointer/audio checks. The native queued-key fixture
+passes with C, as do 323 shared language/compiler tests. The shared test's stale
+Sin Star I music names and appended Battle enum expectation were updated to its
+current source contract. Scoped SMILE formatting and diff checks pass. The rebuilt
+VSIX is installed and all 35 installed payload hashes match. Visible native checks
+confirm Space retains Auto, C returns while paused, pan/zoom remain available,
+the fourth UI state relocates Kael, and Arin's Import picker opens. No Web/Studio
+adoption, publication or browser validation is claimed; generic compiler tests
+include their existing temporary Web-output fixtures.
 
 ## Native battle travel facing and automatic restart
 

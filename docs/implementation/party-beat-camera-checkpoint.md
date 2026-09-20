@@ -1,5 +1,35 @@
 # Party Beat Camera Editor — Desktop Checkpoint
 
+## Open native Arin load-rejection trigger — September 21, 2026
+
+Sin reported incorrect Arin poses and an unresponsive Import Key Frames button.
+The live native Viewer (build 06:02 +08:00) showed `Storage blocked`, zero keys and
+`Resolve Rejected Storage Before Import`. Re-selecting the current Arin tab did
+not recover it. Canonical JSON had 24 keys and SHA-256
+`8BC36F50E58D7F901D7C8A5F64A5873707B66764C3EE294742F34508D55DE32D`;
+the working SMD4 save had SHA-256
+`BB7D504724CED88DC61E5CDF8C1F907C818FBD413DA530A2AA329F4E52E532CA`.
+Its payload exactly matched the canonical serializer. The published SM3D identity
+also passed. Copies of both saves and the previous binary backup were preserved
+locally under `artifacts/temp/arin-rejected-save-20260921`.
+
+The current isolated native fixture accepted every key. A rebuild/relaunch through
+Launch.ps1 restored the live corrections and Import picker with both saved hashes
+unchanged. The latched rejection blocked Import before `File_Import`; this known
+recovery defect now retries the checked read without writing. Still-invalid saves
+remain protected. Load failures now report profile/clip/frame rejection instead
+of leaving the default “Saved Keys” status. Regression checks cover retry and
+protection, plus authored keys through Battle startup and return to Arin.
+
+The initial rejection trigger remains unresolved: no reproduction survived the
+restart, and the former generic message did not identify the failing decode
+condition. The recovery change is not proof that this trigger is repaired.
+Next action on recurrence: retain the new rejection text and selected clip/profile,
+compare canonical/live hashes before any edits or restart, then reproduce that
+specific load transition in the isolated native fixture. Do not restore historical
+poses or relax fingerprint validation. This is separate from the held Kael Party
+renderer-recovery investigation; Web and Studio adoption remain held.
+
 ## Native Battle System Part 1b — September 20, 2026
 
 The native right panel now has Battle/Inspector tabs and a default-on Cinematic

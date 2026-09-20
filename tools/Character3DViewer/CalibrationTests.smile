@@ -45,6 +45,33 @@ Call CheckEquipmentGlowAlignment()
 Call CalibrationCheck(Not Calibration.StorageRejected, "Accept current Arin saved calibration")
 Call CheckGizmoVisibility()
 Call CheckPackagedCalibration()
+
+TestSavedJson = ViewerCalibration.SavedJson(Calibration, Character)
+Calibration.StorageRejected = True
+
+Call ViewerCalibration.ResetBank(Calibration)
+Call CalibrationCheck(ViewerCalibration.PrepareImport(
+    Calibration, Character, ReadImportFixture("canonical.json"), False),
+    "Import retries a previously rejected save before validating the candidate")
+Call CalibrationCheck(Not Calibration.StorageRejected And Calibration.ImportPending And
+    ViewerCalibration.SavedJson(Calibration, Character) = TestSavedJson,
+    "Read-only import recovery restores all saved keys without replacing them")
+Call ViewerCalibration.CancelPendingImport(Calibration)
+
+TestDataKey = Calibration.DataKey
+Calibration.DataKey = "Viewer Denied Storage Probe"
+Calibration.StorageRejected = True
+
+Call CalibrationCheck(Not ViewerCalibration.PrepareImport(
+    Calibration, Character, ReadImportFixture("canonical.json"), False) And
+    Calibration.StorageRejected And Not Calibration.ImportPending,
+    "Unavailable storage remains protected during import retry")
+
+Calibration.DataKey = TestDataKey
+
+Call ViewerCalibration.Reload(Calibration, Character)
+Call CalibrationCheck(ViewerCalibration.SavedJson(Calibration, Character) = TestSavedJson,
+    "A rejected recovery never replaces the original calibration")
 Call CalibrationCheck(Character3D.SocketCount(Character) = ActiveProfile.ExpectedSocketCount,
     "Profile socket contract")
 Call CheckImportedProfileTabs()

@@ -1,5 +1,24 @@
 # Arin: Creation, Import, Animation, and Repair Lessons
 
+## September 21: distinguish rejected loading from lost poses
+
+The running native Viewer showed zero keys and “Storage blocked” even though the
+canonical JSON and working binary agreed on all 24 keys. The accepted post-Victory
+JSON remains SHA-256
+`8BC36F50E58D7F901D7C8A5F64A5873707B66764C3EE294742F34508D55DE32D`.
+The earlier 889698 hash below predates the Victory metadata update; do not restore it.
+Rebuilding/relaunching loaded the authored values again without editing either save.
+The exact initial rejection trigger is unproven; do not report a confirmed asset
+or synchronizer regression from this symptom alone.
+
+Import formerly exited before its picker whenever a prior load had been rejected.
+It now retries the checked read and opens normally if the save validates, while
+still protecting invalid/unavailable storage. Decode failures show a specific
+profile/clip/frame reason. Native checks cover retry without replacement and
+authored keys after Battle startup and return to Arin. On recurrence, capture that
+reason, clip/profile and both saved-file hashes before restarting or editing poses;
+see the open report in `docs/implementation/party-beat-camera-checkpoint.md`.
+
 ## September 20: Victory appended without changing accepted poses
 
 Sin approved uploading the existing rigged model to Mixamo and downloading the

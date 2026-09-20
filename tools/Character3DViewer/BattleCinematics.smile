@@ -12,6 +12,8 @@ Import Smile.Simple3D.Precision3D As P
 Import Smile.Simple3D.PrecisionCamera3D As Camera
 Import Smile.Simple3D.ArenaCamera3D As Arena
 
+Public Const RETURN_MILLISECONDS = 1000
+
 Public Type State
     Enabled As Boolean
     WasEnabled As Boolean
@@ -20,6 +22,9 @@ Public Type State
     Serial As Number
     View As P.Camera3D
     EstablishView As P.Camera3D
+    DefaultRequested As Boolean
+    ReturnTime As Number
+    ReturnFrom As P.Camera3D
 End Type
 
 Public Sub Reset(ByRef Value As State, Viewer As Workflow.Session)
@@ -28,7 +33,21 @@ Public Sub Reset(ByRef Value As State, Viewer As Workflow.Session)
     Value.Phase = -1
     Value.Serial = -1
     Value.WasEnabled = False
+    Value.DefaultRequested = False
     Value.EstablishView = Viewer.PartyCameraView(0, 0)
+
+End Sub
+
+''' Start from the rendered view, including manual pan/orbit/zoom, without a cut.
+Public Sub ReturnToOrders(ByRef Value As State, Viewer As Workflow.Session)
+
+    Value.DefaultRequested = True
+    Value.ReturnTime = 0
+    Value.ReturnFrom = Viewer.CurrentCamera()
+    Value.Time = Party.ESTABLISH_TOTAL_MILLISECONDS + 1
+    Value.WasEnabled = Value.Enabled
+
+    Call Viewer.FollowPartyView(Value.ReturnFrom, True)
 
 End Sub
 
@@ -56,6 +75,22 @@ Public Sub Update(ByRef Value As State, Viewer As Workflow.Session, Battle As Ru
     Elapsed As Number, Width As Number, Height As Number)
 
     Dim Restart As Boolean
+
+    If Value.Enabled <> Value.WasEnabled Then
+        Value.DefaultRequested = False
+    End If
+
+    If Value.DefaultRequested Then
+
+        Value.ReturnTime = Min(RETURN_MILLISECONDS, Value.ReturnTime + Max(0, Elapsed))
+        Value.View = Shots.Blend(Value.ReturnFrom, Presentation.OrdersView(),
+            ToDouble(Value.ReturnTime) / ToDouble(RETURN_MILLISECONDS))
+
+        Call Viewer.FollowPartyView(Value.View)
+
+        Return
+
+    End If
 
     If Not Value.Enabled Then
         Value.WasEnabled = False

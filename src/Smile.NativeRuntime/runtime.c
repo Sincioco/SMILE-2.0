@@ -40,6 +40,7 @@
 #define SMILE_KEY_E 38
 #define SMILE_KEY_PLUS 39
 #define SMILE_KEY_MINUS 40
+#define SMILE_KEY_C 41
 #define SMILE_KEY_UP 10
 #define SMILE_KEY_DOWN 11
 #define SMILE_KEY_LEFT 12
@@ -1199,6 +1200,7 @@ static long long smile_map_key(WCHAR character, WORD virtual_key)
     if (character == L'y' || character == L'Y' || virtual_key == 'Y') return SMILE_KEY_Y;
     if (character == L'z' || character == L'Z' || virtual_key == 'Z') return SMILE_KEY_Z;
     if (character == L'e' || character == L'E' || virtual_key == 'E') return SMILE_KEY_E;
+    if (character == L'c' || character == L'C' || virtual_key == 'C') return SMILE_KEY_C;
     if (character == L'+' || character == L'=' || virtual_key == VK_OEM_PLUS || virtual_key == VK_ADD) return SMILE_KEY_PLUS;
     if (character == L'-' || character == L'_' || virtual_key == VK_OEM_MINUS || virtual_key == VK_SUBTRACT) return SMILE_KEY_MINUS;
     if (virtual_key == VK_UP) return SMILE_KEY_UP;
@@ -1236,6 +1238,7 @@ static int smile_key_virtual(long long key)
         case SMILE_KEY_Y: return 'Y';
         case SMILE_KEY_Z: return 'Z';
         case SMILE_KEY_E: return 'E';
+        case SMILE_KEY_C: return 'C';
         case SMILE_KEY_PLUS: return VK_OEM_PLUS;
         case SMILE_KEY_MINUS: return VK_OEM_MINUS;
         case SMILE_KEY_UP: return VK_UP;
@@ -1275,7 +1278,7 @@ static void smile_queue_key(long long key)
     if (next == smile_key_head)
         return;
     smile_key_queue[smile_key_tail] = key;
-    for (held_key = 1; held_key <= SMILE_KEY_MINUS; held_key++)
+    for (held_key = 1; held_key <= SMILE_KEY_C; held_key++)
     {
         if (smile_key_is_held(held_key))
             held_mask |= UINT64_C(1) << held_key;
@@ -1345,6 +1348,7 @@ long long smile_get_key(void)
         if ((GetAsyncKeyState('Y') & 0x8000) != 0) return SMILE_KEY_Y;
         if ((GetAsyncKeyState('Z') & 0x8000) != 0) return SMILE_KEY_Z;
         if ((GetAsyncKeyState('E') & 0x8000) != 0) return SMILE_KEY_E;
+        if ((GetAsyncKeyState('C') & 0x8000) != 0) return SMILE_KEY_C;
         if (((GetAsyncKeyState(VK_OEM_PLUS) | GetAsyncKeyState(VK_ADD)) & 0x8000) != 0) return SMILE_KEY_PLUS;
         if (((GetAsyncKeyState(VK_OEM_MINUS) | GetAsyncKeyState(VK_SUBTRACT)) & 0x8000) != 0) return SMILE_KEY_MINUS;
         if ((GetAsyncKeyState(VK_CONTROL) & 0x8000) != 0) return SMILE_KEY_CONTROL;
@@ -1360,7 +1364,7 @@ long long smile_key_held(long long key)
 
 long long smile_key_event_held(long long key)
 {
-    return key > 0 && key <= SMILE_KEY_MINUS &&
+    return key > 0 && key <= SMILE_KEY_C &&
         (smile_key_event_held_mask & (UINT64_C(1) << key)) != 0;
 }
 

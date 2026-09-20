@@ -103,6 +103,8 @@ Public Class Session
     Private Elapsed As Number
     Private Inspecting As Boolean
     Private BattleActive As Boolean
+    Private HeaderHidden As Boolean
+    Private Paused As Boolean
 
     Public Sub Start(Viewer As Workflow.Session, InitialTab As Number, Hosted As Boolean, Width As Number, Height As Number)
 
@@ -155,6 +157,7 @@ Public Class Session
 
         Me.SelectedTab = Index
         Me.BattleActive = Index = BATTLE_TAB
+        Me.HeaderHidden = False
 
         If Me.BattleActive Then
             Call Me.BeginBattle(Viewer)
@@ -170,6 +173,7 @@ Public Class Session
         Dim EmptyEnding As Outcome.State
 
         Me.BattleActive = True
+        Me.Paused = False
         Me.Menus = EmptyMenus
         Me.Ending = EmptyEnding
 
@@ -193,6 +197,7 @@ Public Class Session
 
         Me.Menus = EmptyMenus
         Me.Ending = EmptyEnding
+        Me.Paused = False
 
         Call Viewer.ResumeDirectedScene()
         Call Viewer.ConfigureExternalHost(True)
@@ -215,9 +220,29 @@ Public Class Session
         Dim Layout As Hud.Layout
 
         X = 18
-        Blocked = UI.Contains(18, 62, 850, 26)
+        Blocked = Not Me.HeaderHidden And UI.Contains(18, 62, 850, 26)
 
         Call BattleUi.ObserveActivity(Me.Menus, Key)
+
+        If (Me.BattleActive And Key = KEY_SPACE And
+            Viewer.CanSwitchTab() And Not Me.Menus.Stats.Visible) Then
+            Me.Paused = Not Me.Paused
+            Return
+        End If
+
+        If (Me.BattleActive And Key = KEY_C And
+            Viewer.SceneReady() And Viewer.CanSwitchTab() And
+            Not Me.Menus.Stats.Visible) Then
+
+            Call Cinematics.ReturnToOrders(Me.Camera, Viewer)
+
+            If Me.Ending.Started Then
+                Me.Ending.OrbitTime = Outcome.ORBIT_DURATION
+            End If
+
+            Return
+
+        End If
 
         If Me.BattleActive And Pointer_Pressed(POINTER_SECONDARY) Then
             Call Me.RestartBattle(Viewer)
@@ -231,7 +256,18 @@ Public Class Session
             Return
         End If
 
-        If Not Me.Menus.Stats.Visible Then
+        If (Me.BattleActive And Key = KEY_BACKTICK And
+            Viewer.PanelVisibility() = 2 And Not Me.Menus.Stats.Visible) Then
+
+            Me.HeaderHidden = Not Me.HeaderHidden
+
+            If Me.HeaderHidden Then
+                Return
+            End If
+
+        End If
+
+        If Not Me.Menus.Stats.Visible And Not Me.HeaderHidden Then
 
             For Index = 0 To 11
 
@@ -250,7 +286,8 @@ Public Class Session
 
         If Me.BattleActive Then
 
-            Layout = Hud.Arrange(Window_Width(), Window_Height(), Viewer.PanelVisibility())
+            Layout = Hud.Arrange(Window_Width(), Window_Height(), Viewer.PanelVisibility(),
+                Me.HeaderHidden)
             WasPlanning = Me.Encounter.Planning
 
             If Not Me.Menus.Stats.Visible Then
@@ -296,11 +333,17 @@ Public Class Session
         Dim EscapeRoll As Number
         Dim TargetRoll As Number
         Dim WasPlanning As Boolean
+        Dim CameraElapsed As Number
 
         Now = Timer()
         FrameElapsed = Max(0, Now - Me.PreviousTime)
         Me.Elapsed = Min(100, FrameElapsed)
+        CameraElapsed = Me.Elapsed
         Me.PreviousTime = Now
+
+        If Me.Paused And Not Me.Camera.DefaultRequested Then
+            CameraElapsed = 0
+        End If
 
         If Me.BattleActive Then
 
@@ -311,7 +354,7 @@ Public Class Session
                 FrameElapsed,
                 Me.Menus.InputActive,
                 Viewer.SceneReady() And Viewer.CanSwitchTab() And
-                    Not Me.Inspecting And Not Me.Menus.Stats.Visible
+                    Not Me.Inspecting And Not Me.Menus.Stats.Visible And Not Me.Paused
             )
 
             If StartedAutomatically Then
@@ -323,9 +366,10 @@ Public Class Session
 
             End If
 
-            Call Viewer.PauseDirectedPlayback(Me.Inspecting Or (Me.Menus.Stats.Visible And Me.Encounter.Planning))
+            Call Viewer.PauseDirectedPlayback(Me.Paused Or Me.Inspecting Or
+                (Me.Menus.Stats.Visible And Me.Encounter.Planning))
 
-            If Not Me.Inspecting And Viewer.SceneReady() Then
+            If Not Me.Paused And Not Me.Inspecting And Viewer.SceneReady() Then
 
                 Random EscapeRoll From 0 To 99
                 Random TargetRoll From 0 To 3
@@ -362,7 +406,7 @@ Public Class Session
         If (Me.BattleActive And Viewer.SceneReady() And Viewer.CanSwitchTab() And
             (Not Me.Ending.Started Or Me.Ending.OrbitTime >= Outcome.ORBIT_DURATION)) Then
             Call Cinematics.Update(Me.Camera, Viewer, Me.Encounter.Combat,
-                Me.Elapsed, Width, Height)
+                CameraElapsed, Width, Height)
         End If
 
         Call Viewer.UpdateFrame(Width, Height)
@@ -384,23 +428,28 @@ Public Class Session
 
         X = 18
 
-        For Index = 0 To 11
-            Call UI.DrawButton(X, 62, TabWidth(Index) - 4, 26,
-                TabLabel(Index), Me.SelectedTab = TabAt(Index))
+        If Not Me.HeaderHidden Then
 
-            X = X + TabWidth(Index)
-        End For
+            For Index = 0 To 11
+                Call UI.DrawButton(X, 62, TabWidth(Index) - 4, 26,
+                    TabLabel(Index), Me.SelectedTab = TabAt(Index))
+
+                X = X + TabWidth(Index)
+            End For
+
+        End If
 
         If Me.BattleActive Then
 
-            If Viewer.PanelVisibility() = 2 Then
+            If Viewer.PanelVisibility() = 2 And Not Me.HeaderHidden Then
                 Draw Text "SMILE 2.0 - Battle System" At 18, 12 Size 22 Color WHITE
             End If
 
             Call Presentation.Draw(Me.Visual, Viewer, Me.Encounter.Combat)
             Call Hud.DrawOptions(Me.BattlePanel, Me.Camera.Enabled, Viewer.PanelVisibility())
             Call BattleUi.Draw(Me.Menus, Me.Encounter, Me.Inspecting,
-                Hud.Arrange(Window_Width(), Window_Height(), Viewer.PanelVisibility()))
+                Hud.Arrange(Window_Width(), Window_Height(), Viewer.PanelVisibility(),
+                    Me.HeaderHidden), Me.Paused)
             Call Outcome.Draw(Me.Ending, Me.Encounter)
 
         End If
