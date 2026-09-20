@@ -1,0 +1,136 @@
+''' Battle-owned instances of the Viewer's established equipment and audio effects.
+Module SinStarI.BattleEffects
+
+Option Explicit
+
+Import SinStarI.BattleActors As Cast
+Import SinStarI.BattleRules As Rules
+Import Smile.Tools.Character3DViewerEffects As Effects
+Import Smile.Tools.Character3DViewerCalibration As Calibration
+Import Smile.Simple3D.Character3D As Character
+Import Smile.Simple3D.Precision3D As P
+
+Public Type State
+    Heroes[3] As Effects.State
+    Ready As Boolean
+End Type
+
+Public Sub Create(ByRef Value As State, ByRef Actors As Cast.State)
+
+    Dim Index As Number
+
+    Value.Ready = Effects.PrepareShared(Value.Heroes[0])
+
+    Call Effects.PrepareFire(Value.Heroes[0], True, True)
+
+    Value.Ready = Value.Heroes[0].SwordFireReady And Value.Ready
+    Value.Ready = Effects.PrepareLightning(Value.Heroes[0]) And Value.Ready
+
+    For Index = 0 To 2
+        Call Effects.ResetEquipmentDefaults(Value.Heroes[Index])
+        Call Effects.CreateEpicGlow(Value.Heroes[Index], Cast.Profile(Index), Actors.Members[Index].Actor)
+
+        Value.Heroes[Index].LightningInitialized = Value.Heroes[0].LightningInitialized
+        Value.Ready = Value.Heroes[Index].EpicGlowAvailable And Value.Ready
+    End For
+
+    Call Effects.EnableSwordFire(Value.Heroes[0])
+
+End Sub
+
+Public Sub Update(ByRef Value As State, ByRef Actors As Cast.State,
+    Battle As Rules.State, Camera As P.Camera3D, Elapsed As Number)
+
+    Dim Index As Number
+    Dim Visible As Boolean
+    Dim WeaponDetached As Boolean
+    Dim ShieldDetached As Boolean
+    Dim Applied As Calibration.ApplicationResult
+    Dim Bounds As Character.PreciseBounds3D
+
+    For Index = 0 To 2
+
+        Visible = Battle.Members[Index].HP > 0 And Not Battle.Members[Index].Escaped
+        Value.Heroes[Index].EpicGlowVisible = Visible
+        WeaponDetached = False
+        ShieldDetached = False
+
+        If Not Visible Then
+            Call Effects.ClearZaraAttacks(Value.Heroes[Index].ZaraAttacks)
+        End If
+
+        If Index < 2 Then
+            WeaponDetached = Calibration.ChannelValue(Actors.Poses[Index], Actors.Members[Index].Clip, 18) <> 0
+            ShieldDetached = Calibration.ChannelValue(Actors.Poses[Index], Actors.Members[Index].Clip, 19) <> 0
+        End If
+
+        Value.Ready = Effects.UpdateEpicGlow(Value.Heroes[Index], Actors.Members[Index].Actor,
+            Cast.Profile(Index), Actors.Members[Index].Frame.ScalePercent, Elapsed,
+            Actors.Clips[Index], Visible, Visible, WeaponDetached, ShieldDetached) And Value.Ready
+
+        If Index < 2 Then
+            Applied = Calibration.ApplyEquipmentTransforms(Actors.Poses[Index],
+                Actors.Members[Index].Actor, Actors.Members[Index].Clip,
+                Value.Heroes[Index].SwordGlow, Value.Heroes[Index].ShieldGlow,
+                True, Value.Heroes[Index].EpicGlowVisible)
+            Value.Ready = Applied.Ready And Value.Ready
+        End If
+
+        If Index <> 1 Then
+            Call Effects.UpdateEquipmentFire(Value.Heroes[Index], Actors.Members[Index].Actor,
+                Cast.Profile(Index), Not Visible, Visible, Visible, False, False,
+                Actors.Members[Index].Clip, Actors.Clips[Index], Camera, Elapsed)
+        End If
+
+    End For
+
+    Call Effects.UpdateArinAudio(Value.Heroes[0], Cast.Profile(0), Actors.Clips[0],
+        Character.AnimationTime(Actors.Members[0].Actor), Value.Heroes[0].EpicGlowVisible)
+
+    Bounds = Character.WorldBoundsPrecise(Actors.Members[4].Actor)
+    Visible = Value.Heroes[1].EpicGlowVisible
+
+    Call Effects.UpdateStorm(Value.Heroes[0], Actors.Members[1].Actor, Actors.Clips[1],
+        Bounds.Center, Camera, Elapsed, Visible, Visible, Visible, False)
+
+    Value.Ready = Effects.AdvanceScene(Value.Heroes[0], Elapsed, False, Camera) And Value.Ready
+
+End Sub
+
+Public Sub Draw(ByRef Value As State)
+
+    Dim Index As Number
+    Dim Visible As Boolean
+
+    For Index = 0 To 2
+
+        Visible = Value.Heroes[Index].EpicGlowVisible
+
+        If Visible Then
+            Value.Ready = Effects.DrawEquipmentGlow(Value.Heroes[Index], Cast.Profile(Index), True, True) And Value.Ready
+            Value.Ready = Effects.DrawEpicGlow(Value.Heroes[Index], Cast.Profile(Index), True, True) And Value.Ready
+        End If
+
+        Call Effects.DrawEquipmentFire(Value.Heroes[Index], Visible, Visible)
+    End For
+
+    Value.Ready = Effects.DrawScene(Value.Heroes[0]) And Value.Ready
+
+End Sub
+
+Public Sub Destroy(ByRef Value As State)
+
+    Dim Index As Number
+    Dim Released As Boolean
+
+    For Index = 0 To 2
+        Call Effects.ClearZaraAttacks(Value.Heroes[Index].ZaraAttacks)
+        Call Effects.DestroyEpicGlow(Value.Heroes[Index])
+    End For
+
+    Released = Effects.ShutdownShared(Value.Heroes[0])
+    Value.Ready = False
+
+End Sub
+
+End Module

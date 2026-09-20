@@ -6,6 +6,7 @@ Option Explicit
 Import SinStarI.BattleRules As Rules
 Import SinStarI.BattleActors As Cast
 Import SinStarI.BattleFeedback As Feedback
+Import SinStarI.BattleEffects As Effects
 Import SinStarI.Progression As Growth
 Import Smile.Simple3D.ArenaViewport3D As Arena
 Import Smile.Simple3D.Character3D As Character
@@ -23,6 +24,7 @@ Public Type State
     View As Arena.State
     Actors As Cast.State
     Feedback As Feedback.State
+    Effects As Effects.State
     BaseCamera As P.Camera3D
     Earth As Earth.Context
     Water As Water.Context
@@ -70,6 +72,10 @@ Public Sub Create(ByRef Value As State)
     Value.Ready = Water.Prepare(Value.Water) And Value.Ready
     Value.Ready = MiraWater.Prepare(Value.Mira) And Value.Ready
 
+    Call Effects.Create(Value.Effects, Value.Actors)
+
+    Value.Ready = Value.Effects.Ready And Value.Ready
+
 End Sub
 
 Public Function ActorPoint(ByRef Value As State, Index As Number) As Core.ProjectedPoint3D
@@ -102,6 +108,12 @@ Public Sub Update(ByRef Value As State, Battle As Rules.State, Elapsed As Number
     Value.Ready = Value.Actors.Ready And Value.Ready
 
     Call RecordFailure(Value, "Actors")
+
+    Call Effects.Update(Value.Effects, Value.Actors, Battle, Value.View.LiveCamera, Elapsed)
+
+    Value.Ready = Value.Effects.Ready And Value.Ready
+
+    Call RecordFailure(Value, "Equipment Effects")
 
     If Battle.Turn = 4 And Battle.Target < 4 Then
         Value.KaelTarget = Battle.Target
@@ -183,9 +195,12 @@ Public Sub Draw(ByRef Value As State, Battle As Rules.State)
     Call RecordFailure(Value, "Floor/Grid")
 
     Call Cast.Draw(Value.Actors)
+    Call Effects.Draw(Value.Effects)
     Call Earth.Draw(Value.Earth)
     Call Water.Draw(Value.Water)
     Call MiraWater.Draw(Value.Mira)
+
+    Value.Ready = Value.Effects.Ready And Value.Ready
 
     Value.Ready = Scene.EndScene() And Value.Ready
 
@@ -250,6 +265,7 @@ Public Sub Destroy(ByRef Value As State)
     Call Earth.Destroy(Value.Earth)
     Call Water.Destroy(Value.Water)
     Call MiraWater.Destroy(Value.Mira)
+    Call Effects.Destroy(Value.Effects)
     Call Cast.Destroy(Value.Actors)
     Call Feedback.Destroy(Value.Feedback)
     Call Arena.Destroy(Value.View)

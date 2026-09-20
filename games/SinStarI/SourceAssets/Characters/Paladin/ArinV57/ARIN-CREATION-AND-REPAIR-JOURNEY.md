@@ -996,3 +996,13 @@ rotations, equipment positions/rotations and coupling flags. Its native fixture
 now compares the scene's complete loaded JSON with this package's canonical JSON.
 The reflective-floor/four-pillar update changes presentation only; it does not
 replace Arin's model, equipment transforms, sockets or saved 24-key calibration.
+
+## September 20: playable Battle equipment effects
+
+Sin Star I's BattleEffects adapter now delegates the existing Viewer equipment
+VFX and clip-time audio after the actor's final grounded pose is evaluated. Glow
+meshes receive the same canonical saved transforms as the weapon and shield.
+The package model, descriptor, animation and calibration JSON remain unchanged;
+this fixes missing Battle lifecycle calls, not an asset or pose defect. The native
+real-asset regression advances full attacks and checks effects, sound cues and
+scene cleanup. See games/SinStarI/Battle/README.md for integration ownership.

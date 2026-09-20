@@ -10,6 +10,7 @@ Import SinStarI.BattleAttacks As Attacks
 Import SinStarI.BattleUI As UI
 Import Smile.Simple3D.Character3D As Character
 Import Smile.Simple3D.Graphics3D As G
+Import Smile.Tools.OrinStorm As Storm
 
 Public Sub Run(ByRef Passed As Boolean)
 
@@ -68,6 +69,9 @@ Private Sub Exercise(ByRef Passed As Boolean, ByRef Scene As Arena.State,
 
     Dim Frame As Number
     Dim TargetIndex As Number
+    Dim SawEffect As Boolean
+    Dim SawAudio As Boolean
+    Dim ThunderBefore As Number
 
     For TargetIndex = 0 To 4
         Battle.Members[TargetIndex].HP = Battle.Members[TargetIndex].Stats.HP
@@ -82,18 +86,14 @@ Private Sub Exercise(ByRef Passed As Boolean, ByRef Scene As Arena.State,
     Call Rules.BeginCommand(Battle, Command, 0, Variant)
     Call Actors.BeginAction(Scene.Actors, Battle)
 
-    For Frame = 0 To 3
+    ThunderBefore = Storm.ThunderEventCount(Scene.Effects.Heroes[0].OrinStorm)
 
-        Battle.Elapsed = 0
+    For Frame = 0 To Battle.Duration / 50
 
-        If Frame = 1 Then
-            Battle.Elapsed = 450
-        Else If Frame = 2 Then
-            Battle.Elapsed = Battle.ImpactTime
+        Battle.Elapsed = Frame * 50
 
+        If Battle.Elapsed >= Battle.ImpactTime And Not Battle.Applied Then
             Call Rules.ResolveImpact(Battle, 99)
-        Else If Frame = 3 Then
-            Battle.Elapsed = Battle.Duration - 1
         End If
 
         Call Arena.Update(Scene, Battle, 50, KEY_NONE, True)
@@ -114,7 +114,37 @@ Private Sub Exercise(ByRef Passed As Boolean, ByRef Scene As Arena.State,
             Call Check(Passed, Scene.Actors.Clips[4] <> "Run", "Bending never runs")
         End If
 
+        If Index = 0 Then
+            SawEffect = SawEffect Or Scene.Effects.Heroes[0].SwordFire.Slot <> 0
+            SawAudio = SawAudio Or Scene.Effects.Heroes[0].ArinAudio.Played
+        Else If Index = 1 Then
+            SawEffect = SawEffect Or Storm.EffectiveEffectCount(Scene.Effects.Heroes[0].OrinStorm) > 0
+            SawAudio = SawAudio Or Storm.ThunderEventCount(Scene.Effects.Heroes[0].OrinStorm) > ThunderBefore
+        Else If Index = 2 Then
+            SawEffect = SawEffect Or Scene.Effects.Heroes[2].ZaraAttacks.BladeArc.Slot <> 0
+            SawAudio = SawAudio Or Scene.Effects.Heroes[2].ZaraAudio.Played
+        Else If Index = 3 Then
+            SawEffect = SawEffect Or Scene.Mira.Effect.Visible
+            SawAudio = SawAudio Or Scene.Mira.Cue.Played
+        Else If Command = Rules.EARTH Then
+            SawEffect = SawEffect Or Scene.Earth.Effect.Visible
+            SawAudio = SawAudio Or Scene.Earth.Rise.Played
+        Else If Command = Rules.WATER Then
+            SawEffect = SawEffect Or Scene.Water.Effect.Visible
+            SawAudio = SawAudio Or Scene.Water.CastCue.Played
+        End If
+
     End For
+
+    If (Command = Rules.ATTACK And
+        Index < 4 Or
+        Index = 3 And
+        Command = Rules.HEAL Or
+        Index = 4 And
+        (Command = Rules.EARTH Or Command = Rules.WATER)) Then
+        Call Check(Passed, SawEffect, "Character VFX emitted")
+        Call Check(Passed, SawAudio, "Character sound cue crossed")
+    End If
 
 End Sub
 

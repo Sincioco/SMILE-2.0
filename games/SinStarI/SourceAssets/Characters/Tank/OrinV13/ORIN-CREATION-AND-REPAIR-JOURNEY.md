@@ -296,3 +296,13 @@ ViewerParty now uses the target actor world-bounds center as a fallback, so
 attached Blue Flame/Neon Arcs/Lightning updates continue. Individual and Party
 effects were checked in native and Chrome views. Do not add Orin sockets or
 change his accepted calibration fingerprint to solve an enemy-target query.
+
+## September 20: playable Battle equipment effects
+
+Sin Star I's BattleEffects adapter now delegates the existing Viewer equipment
+VFX and clip-time audio after the actor's final grounded pose is evaluated. Glow
+meshes receive the same canonical saved transforms as the weapon and shield.
+The package model, descriptor, animation and calibration JSON remain unchanged;
+this fixes missing Battle lifecycle calls, not an asset or pose defect. The native
+real-asset regression advances full attacks and checks effects, sound cues and
+scene cleanup. See games/SinStarI/Battle/README.md for integration ownership.

@@ -18,6 +18,7 @@
     <SmileSource Include="Battle\BattleActors.smile" />
     <SmileSource Include="Battle\BattleFeedback.smile" />
     <SmileSource Include="Battle\BattleArena.smile" />
+    <SmileSource Include="Battle\BattleEffects.smile" />
     <SmileSource Include="Battle\BattleUI.smile" />
     <SmileSource Include="Battle\BattleScreen.smile" />
     <Asset Include="Assets\Battle\BitmapFont.png" />

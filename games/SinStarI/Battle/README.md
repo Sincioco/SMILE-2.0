@@ -74,6 +74,8 @@ stored and displayed with integer arithmetic, without Double precision loss.
 - `BattleActors`: five renderer actors, grounded placement, accepted calibration and
   clip timing. Kael faces his current target; canonical Arin/Orin facing is preserved.
 - `BattleArena`: scene/effect resources, separate Kael effect target and shared arena.
+- `BattleEffects`: battle-owned instances of the existing Viewer equipment effects,
+  one shared Fire/Lightning clock and clip-timed character audio.
 - `BattleFeedback`: a bounded pool of eight fading labels using the existing bitmap font.
 - `BattleUI`: five panels and stacked command choices, without combat authority.
 - `BattleScreen`: lifecycle and update/draw coordination; Program only routes screens.
@@ -105,7 +107,7 @@ input fixtures cover the shared orbit policy; no new human middle-drag acceptanc
 or Web validation is claimed. Arin and Orin exports matched their canonical JSON
 without byte changes.
 
-Ownership review: nine production modules add 2,646 lines; the largest are the
+Initial ownership review: nine production modules added 2,646 lines; the largest are the
 cohesive battle-rules (544) and battle-UI (525) owners. Neither depends on Program
 or the Viewer host. The existing startup grows by 12 net routing lines, title
 routing by seven, character presentation by 67 and the shared camera helper by
@@ -113,3 +115,26 @@ seven. No baseline/exclusion is raised. Rule and presentation fixtures add 280
 lines, with 31 regression lines in the existing precision fixture. Build products
 remain ignored. The source-only library fix needs consumer recompilation; no .NET
 runtime or VSIX rebuild is required.
+
+## Character effects integration
+
+The first Battle adapter omitted Arin, Orin and Zara's Viewer effect lifecycle;
+publishing their assets did not activate their effects or clip-time sound cues.
+`BattleEffects` now reuses that implementation for Arin's sword/shield fire and
+slash audio, Orin's blue equipment flames/storm/thunder, and Zara's red weapon
+rim, lightning attacks and layered audio. Existing Mira water/healing and Kael
+Earth/Water adapters remain active. This restores established character effects;
+it does not add the separate Fire Lab's unadopted Kael clips.
+
+Effects follow the final grounded, calibrated actor pose. Arin and Orin coating
+meshes receive the same saved equipment transforms as their weapons and shields.
+Hidden/defeated heroes stop emitting; scene exit releases per-character resources
+before shutting down the shared effect families. No model, calibration, runtime,
+Viewer implementation or resource budget changes are needed.
+
+The 136-line adapter owns only battle effect instances and delegates the existing
+algorithms; Arena adds 16 lifecycle lines, and the executable startup is unchanged.
+The real-asset battle regression now advances complete attacks in 50 ms steps and
+asserts effect emission and sound-cue crossings for all five characters, followed
+by renderer-resource cleanup. This checks scheduling, not a recording of the
+speaker output. Native fixture and Release compilation pass; Web stays held.
