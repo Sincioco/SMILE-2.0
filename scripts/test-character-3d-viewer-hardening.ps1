@@ -17,7 +17,7 @@ $identityPath = Join-Path $repositoryRoot `
     'games\Dragonfall\SourceAssets\Arin\paladin-prototype-asset.json'
 $referencePath = Join-Path $repositoryRoot `
     'games\Dragonfall\SourceAssets\Arin\paladin-reference-images.json'
-$programSourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\Program.smile'
+$programSourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\NativeProgram.smile'
 $viewerSourcePath = Join-Path $repositoryRoot 'tools\Character3DViewer\ViewerWorkflow.smile'
 $beatTimelineSourcePath = Join-Path $repositoryRoot `
     'tools\Character3DViewer\ViewerBeatTimeline.smile'

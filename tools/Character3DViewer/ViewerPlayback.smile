@@ -50,6 +50,20 @@ Public Sub TogglePause(ByRef Value As State)
 
 End Sub
 
+Public Sub BeginDirected(ByRef Value As State)
+
+    Value.DemoEnabled = False
+    Value.ScenePaused = False
+    Value.AnimationUpdateElapsed = 0
+
+End Sub
+
+Public Sub PauseDirected(ByRef Value As State, Paused As Boolean)
+
+    Value.ScenePaused = Paused
+
+End Sub
+
 Public Function ApplyDemoToggle(ByRef Value As State,
     PartyEnabled As Boolean) As Boolean
 

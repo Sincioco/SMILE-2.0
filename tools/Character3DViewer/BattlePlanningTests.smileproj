@@ -1,0 +1,12 @@
+<SmileProject Version="1.0">
+  <PropertyGroup>
+    <ProjectKind>Console</ProjectKind>
+    <StartupFile>BattlePlanningTests.smile</StartupFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <SmileSource Include="BattlePlanningTests.smile" StartupOnly="true" />
+    <SmileSource Include="BattlePlanning.smile" />
+    <SmileSource Include="..\..\games\SinStarI\Characters\Progression.smile" />
+    <SmileSource Include="..\..\games\SinStarI\Battle\BattleRules.smile" />
+  </ItemGroup>
+</SmileProject>

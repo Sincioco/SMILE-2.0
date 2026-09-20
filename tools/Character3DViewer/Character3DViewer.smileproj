@@ -1,7 +1,7 @@
 <SmileProject Version="1.0">
   <PropertyGroup>
     <ProjectKind>Game</ProjectKind>
-    <StartupFile>Program.smile</StartupFile>
+    <StartupFile>NativeProgram.smile</StartupFile>
     <OutputName>Character3DViewer</OutputName>
     <ApplicationId>smile.tools.character3d-viewer</ApplicationId>
     <WebLoadingAuthor>Louiery R. Sincioco (Sin)</WebLoadingAuthor>
@@ -12,7 +12,17 @@
     <VSync>true</VSync>
   </PropertyGroup>
   <ItemGroup>
-    <SmileSource Include="Program.smile" StartupOnly="true" />
+    <SmileSource Include="NativeProgram.smile" StartupOnly="true" />
+    <SmileSource Include="NativeViewerHost.smile" />
+    <SmileSource Include="BattlePlanning.smile" />
+    <SmileSource Include="BattlePresentation.smile" />
+    <SmileSource Include="BattleUi.smile" />
+    <SmileSource Include="..\..\games\SinStarI\Characters\Progression.smile" />
+    <SmileSource Include="..\..\games\SinStarI\Characters\StatsView.smile" />
+    <SmileSource Include="..\..\games\SinStarI\Battle\BattleRules.smile" />
+    <SmileSource Include="..\..\games\SinStarI\Battle\BattleAttacks.smile" />
+    <SmileSource Include="..\..\games\SinStarI\Battle\BattleFeedback.smile" />
+    <SmileSource Include="..\..\games\SinStarI\Battle\BattleUI.smile" />
     <SmileSource Include="ViewerWorkflow.smile" />
     <SmileSource Include="Profiles.smile" />
     <SmileSource Include="OrinStorm.smile" />
@@ -154,6 +164,7 @@
                   ProductionState="Prototype" />
     <Asset Include="TechnicalAssets\Generation2\AnimationArticulated.sm3d" />
     <Asset Include="TechnicalAssets\Generation2\VfxAtlas.png" />
+    <Asset Include="Assets\Battle\BitmapFont.png" />
     <Asset Include="Assets\Backgrounds\SinStarLandscape.png" />
     <Asset Include="Assets\Backgrounds\SinStarTitleWithLogo.png" />
     <Asset Include="Assets\Calibration\arin-v5.7.smkf" />

@@ -1,0 +1,362 @@
+''' Directs the cloned Party scene; the Viewer retains actor, calibration and VFX ownership.
+Module Smile.Tools.ViewerBattlePresentation
+
+Option Explicit
+
+Import Smile.Tools.Character3DViewerWorkflow As Workflow
+Import Smile.Tools.Character3DViewerActors As Actors
+Import Smile.Tools.Character3DViewerProfiles As Profiles
+Import Smile.Tools.Character3DViewerParty As Party
+Import Smile.Simple3D.Character3D As Character
+Import Smile.Simple3D.Graphics3D As Graphics
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Precision3D As P
+Import SinStarI.BattleRules As Rules
+Import SinStarI.BattleAttacks As Attacks
+Import SinStarI.BattleFeedback As Feedback
+Import SinStarI.Progression As Growth
+
+Public Type State
+    Homes[5] As P.Vector3
+    Clips[5] As Text
+    HitTime[5] As Number
+    ActionSerial As Number
+    EventSerial As Number
+    CastDuration As Number
+    CastClip As Text
+    KaelTarget As Number
+    Feedback As Feedback.State
+    Ready As Boolean
+End Type
+
+Public Function PartyTurn(Index As Number) As Number
+
+    If Index = 2 Then
+        Return 5
+    Else If Index = 3 Then
+        Return 6
+    Else If Index = 4 Then
+        Return 2
+    End If
+
+    Return Index
+
+End Function
+
+Public Sub Create(ByRef Value As State, Viewer As Workflow.Session)
+
+    Dim Empty As State
+    Dim Index As Number
+    Dim Actor As Actors.Context
+
+    Value = Empty
+    Value.Ready = Viewer.SceneReady()
+
+    For Index = 0 To 4
+        Actor = Viewer.PartyActor(PartyTurn(Index))
+        Value.Homes[Index] = P.Vector(Actor.Frame.PositionX,
+            Actor.Frame.PositionY, Actor.Frame.PositionZ)
+    End For
+
+    Call Feedback.Create(Value.Feedback)
+
+End Sub
+
+''' Sin's September 20 order-selection camera, read from the supplied Viewer screenshot.
+Public Sub OrdersCamera(Viewer As Workflow.Session)
+
+    Dim View As P.Camera3D
+
+    View.Position = P.Vector(623.0, 0.0, 382.0)
+    View.Target = P.Vector(-67.0, 122.0, -66.0)
+    View.UpDirection = P.Vector(0.0, 1.0, 0.0)
+    View.FovDegrees = 24.0
+    View.NearPlane = 1.0
+    View.FarPlane = 10000.0
+
+    Call Viewer.SetPartyView(View)
+
+End Sub
+
+Private Function Clip(Battle As Rules.State) As Text
+
+    Dim Result As Text
+
+    If Battle.Command = Rules.DEFEND Then
+
+        If Battle.Turn = 2 Then
+            Return "BlockImpact"
+        End If
+
+        Return "Defend"
+
+    Else If Battle.Command = Rules.RUN Then
+
+        Return "Run"
+
+    Else If Battle.Turn = 3 Then
+
+        If Battle.Command = Rules.LIMIT_BREAK Then
+            Return "HealParty"
+        Else If Battle.Command = Rules.HEAL Then
+            Return "HealOne"
+        End If
+
+        Return "Attack"
+
+    Else If Battle.Turn = 4 Then
+
+        If Battle.Command = Rules.EARTH Then
+            Return "EarthHurl"
+        Else If Battle.Command = Rules.WATER Then
+            Return "WaterSurge"
+        End If
+
+    End If
+
+    Result = Attacks.Clip(Battle.Turn, Battle.AttackVariant)
+    Return Result
+
+End Function
+
+Public Sub BeginAction(ByRef Value As State, Viewer As Workflow.Session, ByRef Battle As Rules.State)
+
+    Dim Index As Number
+    Dim Actor As Actors.Context
+    Dim Speed As Number
+
+    If Battle.ActionSerial = Value.ActionSerial Then
+        Return
+    End If
+
+    Value.ActionSerial = Battle.ActionSerial
+    Value.CastClip = Clip(Battle)
+    Value.CastDuration = 900
+    Actor = Viewer.PartyActor(PartyTurn(Battle.Turn))
+    Speed = Viewer.PartySpeed(PartyTurn(Battle.Turn))
+
+    For Index = 0 To Character.ClipCount(Actor.Actor) - 1
+
+        If Character.ClipName(Actor.Actor, Index) = Value.CastClip Then
+            Value.CastDuration = Character.ClipDuration(Actor.Actor, Index) * 100 / Max(1, Speed)
+        End If
+
+    End For
+
+    If Battle.Command = Rules.RUN Or Battle.Command = Rules.DEFEND Then
+        Value.CastDuration = 900
+    End If
+
+    Battle.Duration = 400 + Value.CastDuration + 500
+    Battle.ImpactTime = 400 + Value.CastDuration * 64 / 100
+
+    If Battle.Turn = 4 And Battle.Command <> Rules.ATTACK Then
+        Battle.ImpactTime = 400 + Value.CastDuration * 72 / 100
+    Else If Battle.Turn = 3 Then
+        Battle.ImpactTime = 400 + Value.CastDuration / 2
+    End If
+
+    Value.Clips[Battle.Turn] = ""
+
+End Sub
+
+Public Sub Apply(ByRef Value As State, Viewer As Workflow.Session,
+    Battle As Rules.State, Elapsed As Number)
+
+    Dim Index As Number
+    Dim ClipIndex As Number
+    Dim Actor As Actors.Context
+    Dim Name As Text
+    Dim Mode As Number
+    Dim Speed As Number
+    Dim Fraction As Double
+    Dim Travel As Boolean
+    Dim Target As Number
+    Dim Healing As Boolean
+
+    Target = Battle.Target
+    Healing = Battle.Command = Rules.HEAL
+
+    If Battle.Command = Rules.LIMIT_BREAK And Battle.Turn = Growth.MIRA Then
+        Target = Rules.HealingTarget(Battle)
+    End If
+
+    If Battle.Turn = 4 And Target < 4 Then
+        Value.KaelTarget = Target
+    End If
+
+    Call Viewer.DirectPartyTurn(PartyTurn(Battle.Turn), PartyTurn(Target), Battle.Elapsed, Healing)
+
+    If Value.EventSerial <> Battle.EventSerial And Not Battle.EventHealing Then
+        Value.HitTime[Battle.EventTarget] = 450
+    End If
+
+    For Index = 0 To 4
+
+        Actor = Viewer.PartyActor(PartyTurn(Index))
+        Actor.Frame.PositionX = Value.Homes[Index].X
+        Actor.Frame.PositionZ = Value.Homes[Index].Z
+        Actor.PresentationState = Party.STATE_ALIVE
+        Name = "Idle"
+        Value.HitTime[Index] = Max(0, Value.HitTime[Index] - Elapsed)
+
+        If Battle.Members[Index].HP <= 0 Then
+
+            Name = "Death"
+            Actor.PresentationState = Party.STATE_KO
+
+        Else If Value.HitTime[Index] > 0 And Battle.EventAmount > 0 Then
+
+            Name = "Hit"
+            Actor.PresentationState = Party.STATE_HIT
+
+        Else If Battle.Members[Index].Guarding Then
+
+            Name = "Defend"
+            Actor.PresentationState = Party.STATE_GUARDING
+
+            If Index = 2 Then
+                Name = "BlockImpact"
+            End If
+
+        End If
+
+        If Battle.Phase = Rules.EXECUTING And Battle.Turn = Index Then
+
+            Actor.PresentationState = Party.STATE_ACTING
+            Travel = (Battle.Command = Rules.ATTACK Or Battle.Command = Rules.LIMIT_BREAK) And Index <> 3
+
+            If Battle.Elapsed >= 400 And Battle.Elapsed < 400 + Value.CastDuration Then
+                Name = Value.CastClip
+            Else If Travel Then
+                Name = "Run"
+            End If
+
+            If Travel Then
+
+                Fraction = Min(1.0, ToDouble(Battle.Elapsed) / 400.0)
+
+                If Battle.Elapsed > 400 + Value.CastDuration Then
+                    Fraction = Max(0.0, 1.0 - ToDouble(Battle.Elapsed - 400 - Value.CastDuration) / 500.0)
+                End If
+
+                Actor.Frame.PositionX = (Value.Homes[Index].X +
+                    (Value.Homes[Battle.Target].X - Value.Homes[Index].X) * Fraction * 0.72)
+                Actor.Frame.PositionZ = (Value.Homes[Index].Z +
+                    (Value.Homes[Battle.Target].Z - Value.Homes[Index].Z) * Fraction * 0.72)
+
+            End If
+
+        End If
+
+        If Value.Clips[Index] <> Name Then
+
+            Value.Clips[Index] = Name
+            Mode = Graphics.ANIMATION_ONCE
+            Speed = Viewer.PartySpeed(PartyTurn(Index))
+
+            If Name = "Idle" Or Name = "Run" Then
+                Mode = Graphics.ANIMATION_LOOP
+            Else If Profiles.HoldsFinalPose(Actor.Profile, Name) Then
+                Mode = Graphics.ANIMATION_HOLD
+            End If
+
+            Value.Ready = Character.PlayMode(Actor.Actor, Name, Mode, Speed) And Value.Ready
+
+            For ClipIndex = 0 To Character.ClipCount(Actor.Actor) - 1
+
+                If Character.ClipName(Actor.Actor, ClipIndex) = Name Then
+                    Actor.Clip = ClipIndex
+                End If
+
+            End For
+
+        End If
+
+        Value.Ready = Character.SetVisible(Actor.Actor, Not Battle.Members[Index].Escaped) And Value.Ready
+
+        If Index = Growth.MIRA Then
+
+            If Healing And Battle.Turn = Growth.MIRA And Battle.Phase = Rules.EXECUTING Then
+                Target = Battle.Target
+            Else
+                Target = 4
+            End If
+
+            If Target = Growth.MIRA Then
+                Target = 4
+            End If
+
+            Value.Ready = Actors.FaceToward(Actor.Actor, ToNumber(Value.Homes[Target].X),
+                0, ToNumber(Value.Homes[Target].Z), 180, 0) And Value.Ready
+
+        End If
+
+        If Index = 4 Then
+            Value.Ready = Actors.FaceToward(Actor.Actor, ToNumber(Value.Homes[Value.KaelTarget].X),
+                0, ToNumber(Value.Homes[Value.KaelTarget].Z), 180, 0) And Value.Ready
+            Value.Ready = Actors.ApplyPresentationOffset(Actor.Actor, Actor.Profile,
+                Actor.Clip, Actor.Frame) And Value.Ready
+        End If
+
+        Call Viewer.PresentPartyActor(PartyTurn(Index), Actor)
+    End For
+
+    Call Feedback.Update(Value.Feedback, Elapsed)
+
+End Sub
+
+Public Sub Draw(ByRef Value As State, Viewer As Workflow.Session, Battle As Rules.State)
+
+    Dim Point As Core.ProjectedPoint3D
+    Dim Label As Text
+
+    If Value.EventSerial <> Battle.EventSerial Then
+
+        Value.EventSerial = Battle.EventSerial
+        Point = Viewer.PartyHeadPoint(PartyTurn(Battle.EventTarget))
+        Label = Battle.EventText
+
+        If Label = "" Then
+
+            Label = Growth.NumberText(Battle.EventAmount)
+
+            If Battle.EventHealing Then
+                Label = "+" + Label
+            End If
+
+        End If
+
+        If Point.Visible Then
+            Call Feedback.Add(Value.Feedback, Label, Point.X, Point.Y)
+        End If
+
+    End If
+
+    If Battle.Turn < 4 And Battle.Phase < Rules.VICTORY Then
+
+        Point = Viewer.PartyHeadPoint(PartyTurn(Battle.Turn))
+
+        If Point.Visible Then
+
+            Fill Rectangle Point.X - 4, Point.Y - 28, 8, 20, RED
+            Draw Line Point.X - 13, Point.Y - 14, Point.X, Point.Y, RED
+            Draw Line Point.X + 13, Point.Y - 14, Point.X, Point.Y, RED
+
+        End If
+
+    End If
+
+    Call Feedback.Draw(Value.Feedback)
+
+End Sub
+
+Public Sub Destroy(ByRef Value As State)
+
+    Call Feedback.Destroy(Value.Feedback)
+
+    Value.Ready = False
+
+End Sub
+
+End Module

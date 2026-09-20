@@ -1,0 +1,37 @@
+''' Standalone window and frame-loop owner for the shared Viewer workflow.
+
+Option Explicit
+
+Import Smile.Tools.Character3DViewerWorkflow As ViewerWorkflow
+Import Smile.Tools.NativeViewerHost As NativeHost
+
+Dim Viewer As New ViewerWorkflow.Session()
+Dim Host As New NativeHost.Session()
+Dim Key As Number
+Dim CloseRequested As Boolean
+Dim CloseDeferred As Boolean
+
+Game Window "SMILE 2.0 - 3D Viewer, Animation Editor" Size 1600 By 640
+
+Call Host.Start(Viewer, NativeHost.BATTLE_TAB, False, Window_Width(), Window_Height())
+
+CloseDeferred = Window_DeferClose(Viewer.HasEdits())
+
+Do
+
+    Get Key Key
+
+    CloseRequested = Window_CloseRequested()
+
+    Call Host.StandaloneInput(Viewer, Key)
+    Call Host.UpdateFrame(Viewer, Window_Width(), Window_Height())
+    Call Host.DrawFrame(Viewer)
+    Call Host.DrawStandaloneOverlay(Viewer)
+
+    CloseDeferred = Window_DeferClose(Viewer.HasEdits())
+
+    Show Screen
+
+Loop Until Game_Closed()
+
+Call Host.Release(Viewer)

@@ -93,6 +93,8 @@ Public Type ParticipantLayout
 End Type
 
 Public Type State
+    DirectedPlayback As Boolean
+    DirectedHealing As Boolean
     ActorSpeeds[7] As Number
     EstablishRemaining As Number
     Enabled As Boolean
@@ -2156,6 +2158,10 @@ Public Function AdvanceDemo(ByRef Value As State,
     Dim Result As Boolean
     Dim RolledTarget As Number
 
+    If Value.DirectedPlayback Then
+        Return True
+    End If
+
     If Value.UnityRoster Then
 
         Actions = AdvanceUnityChoreography(Value, AnimationElapsed, DemoEnabled,
@@ -2508,6 +2514,10 @@ Public Sub ApplyAttackCamera(
 
     Value.OrbitCamera = LiveCamera
     Value.ActiveCamera = 1
+
+    If Value.DirectedPlayback Then
+        Return
+    End If
 
     ''' Start from a formation-wide orbit before the five hero camera phases.
 
@@ -3504,6 +3514,26 @@ Public Function UpdateAdditionalEquipment(ByRef Value As State, ByRef Shared As 
             Call MiraWater.SetMember(Value.Water.Targets, 3, Value.Fourth.Actor)
         End If
 
+        If Value.DirectedPlayback Then
+
+            Value.Water.Guarding = Value.Mira.PresentationState = STATE_GUARDING
+
+            If Value.DirectedHealing Then
+
+                If Value.HitTarget = 1 Then
+                    Call MiraWater.SetMember(Value.Water.Targets, 0, Value.Companion.Actor)
+                Else If Value.HitTarget = 5 Then
+                    Call MiraWater.SetMember(Value.Water.Targets, 0, Value.Fourth.Actor)
+                Else If Value.HitTarget = MiraBattle.PARTY_TURN Then
+                    Call MiraWater.SetMember(Value.Water.Targets, 0, Value.Mira.Actor)
+                End If
+
+                Value.Water.Targets.MemberCount = 1
+
+            End If
+
+        End If
+
         Result = MiraWater.Update(Value.Water, Value.Mira.Actor,
             Character3D.ClipName(Value.Mira.Actor, Value.Mira.Clip),
             Value.Mira.PresentationState <> STATE_KO,
@@ -3907,6 +3937,11 @@ Private Function UpdateUnityBoss(ByRef Value As State,
     Dim HitMilliseconds As Number
     Dim Position As Precision3D.Vector3
     Dim Target As Core.Vector3
+
+    If Value.DirectedPlayback Then
+        Result = Character3D.Update(Boss.Actor, Elapsed)
+        Return Result
+    End If
 
     Name = "Idle"
     BossPlaybackSpeed = ActorPlaybackSpeed(Value, 2, PlaybackSpeed)

@@ -165,6 +165,20 @@ Public Sub Compose(ByRef Value As State, FractionalAutoOrbit As Boolean)
 
 End Sub
 
+''' Adopt a host's camera preset while retaining the shared smooth controls.
+Public Sub UseView(ByRef Value As State, View As Precision3D.Camera3D)
+
+    Call PrecisionCamera.ResetCameraControls(Value.Controls)
+
+    Value.Base = View
+    Value.Live = View
+    Value.Zoom.Current = 0.0
+    Value.Zoom.Target = 0.0
+    Value.CalibrationOrbitActive = False
+    Value.AutoOrbit = False
+
+End Sub
+
 Public Function UpdatePointerControls(ByRef Value As State,
     OrbitPressed As Boolean, OrbitHeld As Boolean, OrbitReleased As Boolean,
     OrbitActive As Boolean, PanPressed As Boolean, PanHeld As Boolean,

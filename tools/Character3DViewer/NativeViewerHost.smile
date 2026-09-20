@@ -1,0 +1,322 @@
+''' Standalone native tab host. Kael Party remains the unchanged Viewer workflow.
+Module Smile.Tools.NativeViewerHost
+
+Option Explicit
+
+Import Smile.Tools.Character3DViewerWorkflow As Workflow
+Import Smile.Tools.Character3DViewerProfiles As Profiles
+Import Smile.Tools.ViewerBattlePlanning As Planning
+Import Smile.Tools.ViewerBattlePresentation As Presentation
+Import Smile.Tools.ViewerBattleUi As BattleUi
+Import Smile.UI.Controls As UI
+Import SinStarI.BattleRules As Rules
+
+Public Const BATTLE_TAB = 15
+
+Public Function TabAt(Position As Number) As Number
+
+    Select Case Position
+        Case 0
+            Return 0
+        Case 1
+            Return 1
+        Case 2
+            Return 4
+        Case 3
+            Return 5
+        Case 4
+            Return Profiles.CHARACTER_TAB_MIRA
+        Case 5
+            Return 2
+        Case 6
+            Return 6
+        Case 7
+            Return Profiles.CHARACTER_TAB_PARTY_DRAGON
+        Case 8
+            Return Profiles.CHARACTER_TAB_PARTY_VRAX
+        Case 9
+            Return Profiles.CHARACTER_TAB_KAEL
+        Case 10
+            Return Profiles.CHARACTER_TAB_PARTY_KAEL
+    End Select
+
+    Return BATTLE_TAB
+
+End Function
+
+Public Function TabLabel(Position As Number) As Text
+
+    Select Case Position
+        Case 0
+            Return "Arin"
+        Case 1
+            Return "Orin"
+        Case 2
+            Return "Valor"
+        Case 3
+            Return "Zara"
+        Case 4
+            Return "Mira"
+        Case 5
+            Return "Dragon"
+        Case 6
+            Return "Vrax"
+        Case 7
+            Return "Party Dragon"
+        Case 8
+            Return "Party Vrax"
+        Case 9
+            Return "Kael"
+        Case 10
+            Return "Kael Party"
+    End Select
+
+    Return "Battle System"
+
+End Function
+
+Public Function TabWidth(Position As Number) As Number
+
+    If Position = 11 Then
+        Return 106
+    Else If Position = 7 Or Position = 8 Or Position = 10 Then
+        Return 84
+    End If
+
+    Return 52
+
+End Function
+
+Public Class Session
+
+    Private Encounter As Planning.State
+    Private Visual As Presentation.State
+    Private Menus As BattleUi.State
+    Private SelectedTab As Number
+    Private PreviousTime As Number
+    Private Elapsed As Number
+    Private Inspecting As Boolean
+    Private BattleActive As Boolean
+
+    Public Sub Start(Viewer As Workflow.Session, InitialTab As Number, Hosted As Boolean, Width As Number, Height As Number)
+
+        Dim ViewerTab As Number
+
+        Me.SelectedTab = InitialTab
+        ViewerTab = InitialTab
+
+        If InitialTab = BATTLE_TAB Then
+            ViewerTab = Profiles.CHARACTER_TAB_PARTY_KAEL
+        End If
+
+        Call Viewer.Start(ViewerTab, Hosted, Width, Height)
+        Call Viewer.ConfigureExternalHost(False)
+
+        If InitialTab = BATTLE_TAB Then
+            Call Me.BeginBattle(Viewer)
+        End If
+
+        Me.PreviousTime = Timer()
+
+    End Sub
+
+    Public Sub SelectTab(Viewer As Workflow.Session, Index As Number)
+
+        Dim ViewerTab As Number
+
+        If Not Viewer.CanSwitchTab() Then
+            Return
+        End If
+
+        ViewerTab = Index
+
+        If Index = BATTLE_TAB Then
+            ViewerTab = Profiles.CHARACTER_TAB_PARTY_KAEL
+        End If
+
+        If Me.BattleActive Then
+            Call Presentation.Destroy(Me.Visual)
+        End If
+
+        Call Viewer.ConfigureExternalHost(False)
+        Call Viewer.SelectTab(ViewerTab)
+
+        If Viewer.TabIndex() <> ViewerTab Then
+            Return
+        End If
+
+        Me.SelectedTab = Index
+        Me.BattleActive = Index = BATTLE_TAB
+
+        If Me.BattleActive Then
+            Call Me.BeginBattle(Viewer)
+        End If
+
+        Me.PreviousTime = Timer()
+
+    End Sub
+
+    Private Sub BeginBattle(Viewer As Workflow.Session)
+
+        Dim EmptyMenus As BattleUi.State
+
+        Me.BattleActive = True
+        Me.Menus = EmptyMenus
+
+        Call Viewer.ConfigureExternalHost(True)
+        Call Planning.Start(Me.Encounter)
+        Call Presentation.Create(Me.Visual, Viewer)
+        Call Presentation.Apply(Me.Visual, Viewer, Me.Encounter.Combat, 0)
+        Call Presentation.OrdersCamera(Viewer)
+
+    End Sub
+
+    Public Sub StandaloneInput(Viewer As Workflow.Session, Key As Number)
+
+        Dim Index As Number
+        Dim X As Number
+        Dim Blocked As Boolean
+        Dim ViewerKey As Number
+        Dim WasPlanning As Boolean
+
+        X = 18
+        Blocked = UI.Contains(18, 62, 850, 26)
+
+        If Not Me.Menus.Stats.Visible Then
+
+            For Index = 0 To 11
+
+                If UI.Clicked(X, 62, TabWidth(Index) - 4, 26) Then
+                    Call Me.SelectTab(Viewer, TabAt(Index))
+
+                    Return
+                End If
+
+                X = X + TabWidth(Index)
+            End For
+
+        End If
+
+        ViewerKey = Key
+
+        If Me.BattleActive Then
+
+            WasPlanning = Me.Encounter.Planning
+
+            If Viewer.CanSwitchTab() Then
+                Call BattleUi.Update(Me.Menus, Me.Encounter, Key)
+            End If
+
+            If WasPlanning And Not Me.Encounter.Planning Then
+                Call Viewer.ResumeDirectedScene()
+            End If
+
+            Blocked = Blocked Or BattleUi.Blocked(Me.Menus)
+
+            ''' Inspectors may open during a round, but editing waits for its boundary.
+
+            If Not Me.Encounter.Planning And Viewer.PanelVisibility() <> 2 Then
+                Blocked = Blocked Or Pointer_X() < 278 Or Pointer_X() >= Window_Width() - 278 Or Pointer_Y() >= Window_Height() - 100
+            End If
+
+            If (Me.Menus.Stats.Visible Or Key = KEY_UP Or Key = KEY_DOWN Or
+                Key = KEY_LEFT Or Key = KEY_RIGHT Or Key = KEY_ENTER Or
+                Key = KEY_SPACE Or Key = KEY_ESCAPE) Then
+                ViewerKey = KEY_NONE
+            End If
+
+        End If
+
+        Call Viewer.StandaloneInput(ViewerKey, Blocked)
+
+    End Sub
+
+    Public Sub UpdateFrame(Viewer As Workflow.Session, Width As Number, Height As Number)
+
+        Dim Now As Number
+        Dim EscapeRoll As Number
+        Dim TargetRoll As Number
+        Dim WasPlanning As Boolean
+
+        Now = Timer()
+        Me.Elapsed = Min(100, Max(0, Now - Me.PreviousTime))
+        Me.PreviousTime = Now
+
+        If Me.BattleActive Then
+
+            Me.Inspecting = (Me.Encounter.Planning And Viewer.PanelVisibility() <> 2) Or Viewer.HasEdits()
+
+            Call Viewer.PauseDirectedPlayback(Me.Inspecting Or (Me.Menus.Stats.Visible And Me.Encounter.Planning))
+
+            If Not Me.Inspecting And Viewer.SceneReady() Then
+
+                Random EscapeRoll From 0 To 99
+                Random TargetRoll From 0 To 3
+
+                WasPlanning = Me.Encounter.Planning
+
+                Call Presentation.BeginAction(Me.Visual, Viewer, Me.Encounter.Combat)
+                Call Planning.Advance(Me.Encounter, Me.Elapsed, EscapeRoll, TargetRoll)
+                Call Presentation.BeginAction(Me.Visual, Viewer, Me.Encounter.Combat)
+                Call Presentation.Apply(Me.Visual, Viewer, Me.Encounter.Combat, Me.Elapsed)
+
+                If Me.Encounter.Planning And Not WasPlanning Then
+                    Call Presentation.OrdersCamera(Viewer)
+                End If
+
+            End If
+
+        End If
+
+        Call Viewer.UpdateFrame(Width, Height)
+
+    End Sub
+
+    Public Sub DrawFrame(Viewer As Workflow.Session)
+
+        Call Viewer.DrawFrame()
+
+    End Sub
+
+    Public Sub DrawStandaloneOverlay(Viewer As Workflow.Session)
+
+        Dim Index As Number
+        Dim X As Number
+
+        Call Viewer.DrawStandaloneOverlay()
+
+        X = 18
+
+        For Index = 0 To 11
+            Call UI.DrawButton(X, 62, TabWidth(Index) - 4, 26,
+                TabLabel(Index), Me.SelectedTab = TabAt(Index))
+
+            X = X + TabWidth(Index)
+        End For
+
+        If Me.BattleActive Then
+
+            If Viewer.PanelVisibility() = 2 Then
+                Draw Text "SMILE 2.0 - Battle System" At 18, 12 Size 22 Color WHITE
+            End If
+
+            Call Presentation.Draw(Me.Visual, Viewer, Me.Encounter.Combat)
+            Call BattleUi.Draw(Me.Menus, Me.Encounter, Me.Inspecting)
+
+        End If
+
+    End Sub
+
+    Public Sub Release(Viewer As Workflow.Session)
+
+        If Me.BattleActive Then
+            Call Presentation.Destroy(Me.Visual)
+        End If
+
+        Call Viewer.Release()
+
+    End Sub
+
+End Class
+
+End Module

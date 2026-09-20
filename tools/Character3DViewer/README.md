@@ -1,5 +1,63 @@
 # SMILE 2.0 - 3D Viewer, Animation Editor
 
+## Native Battle System
+
+The native Viewer opens directly on **Battle System**, using the existing Kael
+Party arena, actors, accepted poses, equipment and effects. Arin, Orin, Zara and
+Mira start at level 1 against level-20 Kael (Zara's stat growth). The ordinary
+Kael Party tab retains its demo. Yalis and the three older Mira comparison tabs
+are hidden in the native tab strip; the accepted Mira follows Zara.
+
+- Initial orders wait indefinitely. Confirm Arin, Orin, Zara and Mira in order;
+  no action resolves until all available heroes have orders. **Fight** confirms
+  the remembered order (Attack initially). **Order** opens attack variants, magic
+  and healing targets, the Item placeholder, Defend, full-gauge Limit Break or Run.
+- **Auto** starts immediately using confirmed orders and the remaining remembered
+  orders. After any started round, the whole party acts, then Kael, then the
+  same orders repeat automatically. Any key or mouse-button press requests new
+  orders only after the current party-and-boss round finishes. Defeated or escaped
+  heroes are skipped. Illegal repeat orders fall back to Attack.
+- Arrows choose; Enter/Space confirm; Escape goes back. Menus also accept clicks.
+  Backtick retains the three legacy panel visibility states. Opening panels or
+  statistics during execution requests orders at the round boundary; inspector
+  editing waits for that boundary. Close inspectors with backtick to resume
+  normal battle presentation. Save/cancel pending pose or Beat edits first.
+- The five panels use the shared 80%-opacity navy style, centered HP/MP/LB
+  fractions and remembered-order icons. A red arrow and highlighted hero panel
+  mark selection. Damage/healing numbers rise and fade above their targets.
+- The order-selection camera uses Sin's September 20 screenshot: position
+  `(623, 0, 382)`, target `(-67, 122, -66)`, FOV 24 degrees. It is restored when
+  new orders are requested and by right-click reset; normal smooth arena controls
+  remain available. Actors use separate formation homes before the first frame.
+- Each hero and Kael has **Stats Table** and **Graphs** buttons: per-level values
+  or increases, XP, individual graphs and normalized/actual-value overlays,
+  with levels 1–300 or 1–9,999. Select the Battle System tab again to restart.
+
+Growth reuses the existing pure progression module without changing Sin Star I.
+For level `L`, let `g = L - 1`. The table shows level-1 value plus gain per level:
+
+| Hero | HP | MP | Attack | Magic | Physical Def | Magic Def |
+| --- | --- | --- | --- | --- | --- | --- |
+| Arin | 240 + 30g | 55 + 10g | 40 + 4g | 30 + 3g | 50 + 5g | 42 + 4g |
+| Orin | 270 + 40g | 40 + 10g | 50 + 5g | 22 + 2g | 40 + 3g | 32 + 3g |
+| Zara / Kael | 250 + 40g | 70 + 15g | 48 + 5g | 32 + 3g | 30 + 2g | 30 + 2g |
+| Mira | 220 + 40g | 130 + 25g | 23 + 2g | 52 + 5g | 35 + 3g | 45 + 4g |
+
+Priority units are 10 HP, 5 MP, 1 Attack or 1 Defense per growth point. XP to the
+next level is `60 + 20g + 3g²` through level 299; from level 300 onward it becomes
+`25 × normal cost + 500,000 × (L - 299)²`. Level 9,999 is the maximum. Closed-form
+totals and bounded graph sampling keep inspection responsive.
+
+LB accumulates actual HP lost up to maximum HP; its power is `6 × Attack + 5 × L`
+(Mira uses Magic for healing). Defend adds 300% to physical and magic defense
+through Kael's response: four times the base, expiring at the next round. Run is
+individual, starting at 50%, reaching 100% at 20 levels above the enemy.
+
+Build/launch: `pwsh -File tools\Character3DViewer\Launch.ps1 -Build`.
+Focused native regression: `pwsh -File scripts\test-viewer-battle.ps1` after asset
+preparation. No .NET/VSIX rebuild is required for this source-only slice. Studio
+and Web adoption remain held; their existing entry points are preserved.
+
 The standalone **Kael Party** tab loops `Starforge Ascend (Kael).mp3` from
 Sin Star I's canonical music assets. Scene resets keep the song playing; selecting
 another tab or closing the Viewer stops it. Hosted presentations leave music with

@@ -1,0 +1,186 @@
+''' Viewer encounter policy: collect a complete round before resolving any action.
+Module Smile.Tools.ViewerBattlePlanning
+
+Option Explicit
+
+Import SinStarI.BattleRules As Rules
+Import SinStarI.Progression As Growth
+
+Public Type State
+    Combat As Rules.State
+    Planning As Boolean
+    Confirmed[4] As Boolean
+End Type
+
+Public Sub Start(ByRef Value As State)
+
+    Dim Empty As State
+
+    Value = Empty
+    Value.Planning = True
+
+    Call Rules.Start(Value.Combat)
+
+End Sub
+
+Public Sub BeginRound(ByRef Value As State)
+
+    Value.Planning = False
+    Value.Combat.Turn = Rules.FirstActive(Value.Combat)
+    Value.Combat.AutoRun = True
+    Value.Combat.Phase = Rules.WAITING
+
+    Call Rules.RepeatCommand(Value.Combat)
+
+End Sub
+
+Public Function Plan(ByRef Value As State, Command As Number,
+    Target As Number, Optional Variant As Number = 0) As Boolean
+
+    Dim Actor As Number
+    Dim Index As Number
+
+    Actor = Value.Combat.Turn
+
+    If Not Value.Planning Or Actor > 3 Then
+        Return False
+    End If
+
+    If Not Rules.CanCommand(Value.Combat.Members[Actor], Command) Then
+        Return False
+    End If
+
+    Value.Combat.Members[Actor].LastCommand = Command
+    Value.Combat.Members[Actor].LastTarget = Target
+    Value.Combat.Members[Actor].LastAttack = Variant
+    Value.Confirmed[Actor] = True
+
+    For Index = Actor + 1 To 3
+
+        If Rules.Available(Value.Combat.Members[Index]) Then
+
+            Value.Combat.Turn = Index
+            Value.Combat.Message = Growth.Name(Index) + "'s Orders"
+            Return True
+
+        End If
+
+    End For
+
+    Call BeginRound(Value)
+
+    Return True
+
+End Function
+
+Public Sub Repeat(ByRef Value As State)
+
+    Dim Actor As Number
+    Dim Command As Number
+    Dim Accepted As Boolean
+
+    Actor = Value.Combat.Turn
+    Command = Value.Combat.Members[Actor].LastCommand
+
+    If Not Rules.CanCommand(Value.Combat.Members[Actor], Command) Then
+        Command = Rules.ATTACK
+    End If
+
+    Accepted = Plan(Value, Command, Value.Combat.Members[Actor].LastTarget,
+        Value.Combat.Members[Actor].LastAttack)
+
+End Sub
+
+Public Sub Interrupt(ByRef Value As State)
+
+    If Not Value.Planning And Value.Combat.Phase = Rules.EXECUTING Then
+        Value.Combat.StopRequested = True
+    End If
+
+End Sub
+
+''' +300% means four times the base defense for this Viewer encounter.
+Private Sub Impact(ByRef Value As State, EscapeRoll As Number)
+
+    Dim Defender As Rules.Member
+    Dim Amount As Number
+
+    If (Value.Combat.Command = Rules.ATTACK Or
+        (Value.Combat.Command >= Rules.FIRE And Value.Combat.Command <= Rules.WATER) Or
+        (Value.Combat.Command = Rules.LIMIT_BREAK And Value.Combat.Turn <> Growth.MIRA)) Then
+
+        Defender = Value.Combat.Members[Value.Combat.Target]
+
+        If Defender.Guarding Then
+
+            Defender.Stats.Defense = Defender.Stats.Defense * 4
+            Defender.Stats.MagicDefense = Defender.Stats.MagicDefense * 4
+            Defender.Guarding = False
+
+        End If
+
+        Amount = Rules.Damage(Value.Combat.Members[Value.Combat.Turn], Defender,
+            Value.Combat.Command, Value.Combat.AttackVariant)
+
+        Call Rules.ApplyDamage(Value.Combat, Value.Combat.Target, Amount)
+
+        Value.Combat.Applied = True
+
+        If Value.Combat.Command = Rules.LIMIT_BREAK Then
+            Value.Combat.Members[Value.Combat.Turn].LB = 0
+        End If
+
+    Else
+
+        Call Rules.ResolveImpact(Value.Combat, EscapeRoll)
+
+        If Value.Combat.Command = Rules.DEFEND Then
+            Value.Combat.EventText = "Defense +300%"
+        End If
+
+    End If
+
+End Sub
+
+Public Sub Advance(ByRef Value As State, Elapsed As Number,
+    EscapeRoll As Number, EnemyTargetRoll As Number)
+
+    Dim Index As Number
+    Dim OldRound As Number
+
+    If Value.Planning Or Value.Combat.Phase <> Rules.EXECUTING Then
+        Return
+    End If
+
+    Value.Combat.Elapsed = Value.Combat.Elapsed + Elapsed
+
+    If Value.Combat.Elapsed >= Value.Combat.ImpactTime And Not Value.Combat.Applied Then
+        Call Impact(Value, EscapeRoll)
+    End If
+
+    If Value.Combat.Elapsed >= Value.Combat.Duration Then
+
+        OldRound = Value.Combat.Round
+
+        Call Rules.NextTurn(Value.Combat, EnemyTargetRoll)
+
+        If Value.Combat.Round <> OldRound Then
+
+            ''' Defense lasts through the boss response, then expires at the round boundary.
+
+            For Index = 0 To 3
+                Value.Combat.Members[Index].Guarding = False
+                Value.Confirmed[Index] = False
+            End For
+
+        End If
+
+        If Value.Combat.Phase = Rules.WAITING Then
+            Value.Planning = True
+        End If
+
+    End If
+
+End Sub
+
+End Module

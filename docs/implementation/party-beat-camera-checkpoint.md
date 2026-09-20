@@ -5,9 +5,24 @@
 Sin Star I now has a game-owned turn-based Battle and character stat tables/graphs;
 see `games/SinStarI/Battle/README.md` for owners and current contracts. Later Web
 adoption must include those sources/assets and the shared rear-camera basis fix.
-No Web build/publication/browser acceptance is claimed. Adding stats inspection to
-the standalone Character Viewer is separately deferred by Sin's battle document.
-This does not resume Studio or the intermittent Viewer recovery investigation.
+No Web build/publication/browser acceptance is claimed. Sin's subsequent scope
+clarification authorizes Battle System and stats inspection in the native Viewer
+only; that implementation is documented in `tools/Character3DViewer/README.md`.
+The native Viewer now opens on Battle System. This does not resume Studio, Web
+adoption or the intermittent Viewer recovery investigation, and changes no game files.
+
+### Held Studio asset inventory
+
+The September 20 native battle check found an existing mismatch between
+`tools/SmileStudio/SmileStudio.smileproj` and the Viewer-derived asset manifest:
+15 model/asset entries (Kael, Yalis, Mira packages, Earth/Water and Kael music).
+Comparing the pre-task Git versions reproduces those same 15 differences; the
+shared source inventory matches. Consequently the existing `Build.ps1 -Studio`
+manifest equality gate would reject that held build. Native Viewer is unaffected.
+The new native-only battle entries are removed when deriving held host projects,
+which reproduces the previous Viewer manifest exactly. Do not resume Studio or
+silently relax the equality gate. On Sin's direction, align the held asset inventory
+and validate its native build before Studio adoption.
 
 ## Open native recovery report — September 20, 2026
 

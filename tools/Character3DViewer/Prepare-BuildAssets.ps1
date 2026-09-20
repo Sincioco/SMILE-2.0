@@ -289,6 +289,11 @@ foreach ($lightningFile in $lightningFiles) {
 }
 
 $earthAssets = Join-Path $toolRoot 'Assets\Earth'
+$battleAssets = Join-Path $toolRoot 'Assets\Battle'
+New-Item -ItemType Directory -Path $battleAssets -Force | Out-Null
+Copy-Item -LiteralPath (Join-Path $repositoryRoot 'games\SinStarI\Assets\Battle\BitmapFont.png') `
+    -Destination $battleAssets -Force
+
 $earthModels = Join-Path $buildAssets 'Earth'
 New-Item -ItemType Directory -Path $earthAssets, $earthModels -Force | Out-Null
 Get-ChildItem -LiteralPath (Join-Path $repositoryRoot 'TechnicalAssets\Generation3\Earth') -File |

@@ -1436,7 +1436,8 @@ Public Sub DrawMinimumSizeNotice(ByRef Value As State,
 End Sub
 
 Public Sub DrawHeader(DisplayName As Text, PartyRole As Text,
-    PartyEnabled As Boolean, SelectedCharacterTab As Number, WindowWidth As Number)
+    PartyEnabled As Boolean, SelectedCharacterTab As Number, WindowWidth As Number,
+    Optional ExternalTabs As Boolean = False)
 
     Dim Subtitle As Text
     Dim Index As Number
@@ -1475,6 +1476,10 @@ Public Sub DrawHeader(DisplayName As Text, PartyRole As Text,
     End If
 
     Draw Text Subtitle At 18, 42 Size 13 Color LIGHT_GRAY
+
+    If ExternalTabs Then
+        Return
+    End If
 
     For Index = 0 To CharacterTabCount() - 1
         TabIndex = CharacterTabIndex(Index)

@@ -1,0 +1,103 @@
+''' Regression: the native battle must capture the actual formation before frame one.
+
+Option Explicit
+
+Import Smile.Tools.Character3DViewerWorkflow As Workflow
+Import Smile.Tools.NativeViewerHost As NativeHost
+Import Smile.Tools.Character3DViewerProfiles As Profiles
+Import Smile.Tools.Character3DViewerActors As Actors
+Import Smile.Tools.ViewerBattlePresentation As Presentation
+Import Smile.Tools.ViewerBattlePlanning As Planning
+Import Smile.Simple3D.Precision3D As P
+Import SinStarI.BattleRules As Rules
+
+Dim Viewer As New Workflow.Session()
+Dim Host As New NativeHost.Session()
+Dim Visual As Presentation.State
+Dim Battle As Planning.State
+Dim Actor As Actors.Context
+Dim Position As P.Vector3
+Dim First As Number
+Dim Second As Number
+Dim Failures As Number
+
+Game Window "Viewer Battle Formation Check" Size 1420 By 990
+
+Call Host.Start(Viewer, NativeHost.BATTLE_TAB, True, 1420, 990)
+Call Check(Viewer.PanelVisibility() = 2, "Battle Startup Hides Legacy Panels")
+Call Planning.Start(Battle)
+Call Presentation.Create(Visual, Viewer)
+Call Presentation.OrdersCamera(Viewer)
+Call Check(Viewer.SceneReady(), "Loaded All Actors")
+
+For First = 0 To 4
+
+    For Second = First + 1 To 4
+        Call Check(Abs(Visual.Homes[First].X - Visual.Homes[Second].X) +
+            Abs(Visual.Homes[First].Z - Visual.Homes[Second].Z) > 20.0,
+            "Distinct Formation Homes Before First Frame")
+    End For
+End For
+
+Call Presentation.Apply(Visual, Viewer, Battle.Combat, 0)
+Call Viewer.UpdateFrame(1420, 990)
+Call Viewer.DrawFrame()
+
+Show Screen
+
+Call Check(Viewer.SceneReady(), "First Directed Frame")
+Call Check(Battle.Planning And Battle.Combat.ActionSerial = 0, "Initial Orders Wait")
+Call Planning.BeginRound(Battle)
+Call Planning.Interrupt(Battle)
+
+For First = 0 To 4
+    Call Presentation.BeginAction(Visual, Viewer, Battle.Combat)
+    Call Planning.Advance(Battle, Battle.Combat.Duration, 99, 3)
+    Call Presentation.Apply(Visual, Viewer, Battle.Combat, 16)
+    Call Viewer.UpdateFrame(1420, 990)
+End For
+
+Call Check(Battle.Planning And Battle.Combat.Round = 2, "Complete Round Before New Orders")
+
+For First = 0 To 4
+    Actor = Viewer.PartyActor(Presentation.PartyTurn(First))
+    Position = Visual.Homes[First]
+
+    Call Check(Abs(Actor.Frame.PositionX - Position.X) < 0.01 And
+        Abs(Actor.Frame.PositionZ - Position.Z) < 0.01, "Return To Own Formation Home")
+End For
+
+Call Check(Viewer.SceneReady(), "Directed Round Remains Ready")
+
+Battle.Combat.Turn = 3
+Battle.Combat.Members[3].LB = Battle.Combat.Members[3].Stats.HP
+
+Call Rules.BeginCommand(Battle.Combat, Rules.LIMIT_BREAK, 0)
+Call Presentation.BeginAction(Visual, Viewer, Battle.Combat)
+
+Battle.Combat.Elapsed = 400
+
+Call Presentation.Apply(Visual, Viewer, Battle.Combat, 16)
+Call Viewer.UpdateFrame(1420, 990)
+Call Check(Visual.CastClip = "HealParty" And Visual.Ready And Viewer.SceneReady(), "Mira LB Uses Party Healing")
+Call Presentation.Destroy(Visual)
+Call Viewer.ConfigureExternalHost(False)
+Call Viewer.SelectTab(Profiles.CHARACTER_TAB_PARTY_KAEL)
+Call Viewer.UpdateFrame(1420, 990)
+Call Check(Viewer.SceneReady() And Viewer.PanelVisibility() = 0, "Original Kael Party Still Loads")
+Call Host.Release(Viewer)
+
+If Failures = 0 Then
+    Print "PASS Viewer Battle Scene"
+Else
+    Print "FAIL Viewer Battle Scene"
+End If
+
+Sub Check(Passed As Boolean, Label As Text)
+
+    If Not Passed Then
+        Failures = Failures + 1
+        Print "FAIL: " + Label
+    End If
+
+End Sub

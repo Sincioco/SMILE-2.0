@@ -8,6 +8,7 @@ Import Smile.Simple3D.CharacterViewer As CharacterViewer
 Import Smile.Simple3D.ArenaCamera3D As ArenaCamera
 Import Smile.Simple3D.Core As Core
 Import Smile.Simple3D.Precision3D As Precision3D
+Import Smile.Simple3D.PrecisionCamera3D As PrecisionCamera
 Import Smile.Simple3D.Graphics3D As Graphics3D
 Import Smile.Tools.Character3DViewerProfiles As ViewerProfiles
 Import Smile.Tools.BattleCamera As BattleCamera
@@ -101,6 +102,8 @@ Public Class Session
     Private ShieldWristNode As Number
 
     Private IsHosted As Boolean
+    Private ExternalTabs As Boolean
+    Private DirectedView As Precision3D.Camera3D
     Private CycleAllClips As Boolean
     Private IsSuspended As Boolean
     Private ViewWidth As Number
@@ -414,13 +417,17 @@ Public Class Session
 
     End Sub
 
-    Public Sub StandaloneInput(PressedKey As Number)
+    Public Sub StandaloneInput(PressedKey As Number, Optional PointerBlocked As Boolean = False)
 
         Call Diagnostics.ObserveInput(Me.DiagnosticState, PressedKey)
         Call Me.HandleKeyboard(PressedKey)
         Call ViewerSession.CaptureFailure(Me.Session, 21)
 
-        Me.ViewerInputState.InterfaceBlocked = Me.HandleInterfacePointer()
+        Me.ViewerInputState.InterfaceBlocked = PointerBlocked
+
+        If Not PointerBlocked Then
+            Me.ViewerInputState.InterfaceBlocked = Me.HandleInterfacePointer()
+        End If
 
         Call ViewerSession.CaptureFailure(Me.Session, 22)
         Call Me.UpdateCameraPointer(Me.ViewerInputState.InterfaceBlocked)
@@ -1492,6 +1499,12 @@ Public Class Session
 
     Private Sub ResetView()
 
+        If Me.Party.DirectedPlayback Then
+            Call ViewerCamera.UseView(Me.ViewerCameraState, Me.DirectedView)
+
+            Return
+        End If
+
         Call ViewerLifecycle.ResetView(
             Me.Session, Me.Party, Me.DragonState, Me.ViewerCameraState, Me.LifecycleSettings)
 
@@ -1819,6 +1832,8 @@ Public Class Session
             Me.ViewerUiState, Me.ActiveProfile, Me.Party, Me.Session, Me.Rendering, Me.Effects,
             Me.DragonState, Me.Equipment, Me.CalibrationAvailable,
             Me.ViewWidth, Me.ViewHeight)
+
+        IdentityView.ExternalTabs = Me.ExternalTabs
 
         Call ViewerInspectorPresentation.DrawIdentityAndToolbar(IdentityView)
 
@@ -2857,6 +2872,174 @@ Public Class Session
         End If
 
     End Sub
+
+    ''' A standalone host may provide its own tabs and direct the existing Party actors.
+    Public Sub ConfigureExternalHost(Directed As Boolean)
+
+        Me.ExternalTabs = True
+
+        If Directed Then
+
+            Me.ViewerUiState.Visibility = 2
+
+            Call ViewerPlayback.BeginDirected(Me.Playback)
+            Call ViewerCamera.SetAutoOrbit(Me.ViewerCameraState, False)
+
+            ''' Place the loaded formation before the external presenter captures its homes.
+
+            Call Me.AdvancePartyDemo()
+
+        Else
+            Me.ViewerUiState.Visibility = 0
+
+        End If
+
+        Me.Party.DirectedPlayback = Directed
+
+    End Sub
+
+    Public Sub SetPartyView(View As Precision3D.Camera3D)
+
+        Me.DirectedView = View
+
+        Call Me.ResetView()
+
+    End Sub
+
+    Public Function CanSwitchTab() As Boolean
+
+        Dim Result As Boolean
+
+        Result = Not Me.HasEdits() And Not Me.BeatEditing.Preview And Not Me.Calibration.ImportPending
+        Return Result
+
+    End Function
+
+    Public Function PanelVisibility() As Number
+
+        Dim Result As Number
+
+        Result = Me.ViewerUiState.Visibility
+        Return Result
+
+    End Function
+
+    Public Function SceneReady() As Boolean
+
+        Dim Result As Boolean
+
+        Result = Me.Session.Ready And Not Me.Session.ViewerError
+        Return Result
+
+    End Function
+
+    Public Function PartyActor(Turn As Number) As ViewerActors.Context
+
+        Dim Result As ViewerActors.Context
+        Dim Index As Number
+
+        Result = Me.CaptureActorContext()
+
+        If Turn = 1 Then
+
+            Result = Me.Party.Companion
+
+        Else If Turn = 5 Then
+
+            Result = Me.Party.Fourth
+
+        Else If Turn = 6 Then
+
+            Result = Me.Party.Mira
+
+        Else If Turn = 2 Then
+
+            Result.Actor = Me.DragonState.Actor
+            Result.Frame = Me.DragonState.Frame
+            Result.Profile = ViewerDragon.ProfileIndex(Me.DragonState)
+
+            For Index = 0 To Character3D.ClipCount(Result.Actor) - 1
+
+                If Character3D.ClipName(Result.Actor, Index) = Me.DragonState.Clip Then
+                    Result.Clip = Index
+                End If
+
+            End For
+
+        End If
+
+        Return Result
+
+    End Function
+
+    Public Sub PresentPartyActor(Turn As Number, Value As ViewerActors.Context)
+
+        If Not Me.Party.DirectedPlayback Then
+            Return
+        End If
+
+        If Turn = 0 Then
+            Call Me.UseActorContext(Value)
+        Else If Turn = 1 Then
+            Me.Party.Companion = Value
+        Else If Turn = 5 Then
+            Me.Party.Fourth = Value
+        Else If Turn = 6 Then
+            Me.Party.Mira = Value
+        Else If Turn = 2 Then
+            Me.DragonState.Frame = Value.Frame
+            Me.DragonState.Clip = Character3D.ClipName(Value.Actor, Value.Clip)
+        End If
+
+    End Sub
+
+    Public Sub DirectPartyTurn(Turn As Number, Target As Number,
+        Optional Elapsed As Number = 0, Optional Healing As Boolean = False)
+
+        Me.Party.Turn = Turn
+        Me.Party.HitTarget = Target
+        Me.Party.Elapsed = Elapsed
+        Me.Party.DirectedHealing = Healing
+
+    End Sub
+
+    Public Sub PauseDirectedPlayback(Paused As Boolean)
+
+        If Me.Party.DirectedPlayback Then
+            Call ViewerPlayback.PauseDirected(Me.Playback, Paused)
+        End If
+
+    End Sub
+
+    Public Sub ResumeDirectedScene()
+
+        If Me.Party.DirectedPlayback And Me.Party.UiBound Then
+            Call Me.EndPartyInspector()
+        End If
+
+    End Sub
+
+    Public Function PartySpeed(Turn As Number) As Number
+
+        Dim Result As Number
+
+        Result = ViewerParty.ActorPlaybackSpeed(Me.Party, Turn, Me.Playback.PlaybackSpeed)
+        Return Result
+
+    End Function
+
+    Public Function PartyHeadPoint(Turn As Number) As Core.ProjectedPoint3D
+
+        Dim Result As Core.ProjectedPoint3D
+        Dim Subject As Character3D.Actor
+        Dim Head As Precision3D.Vector3
+
+        Subject = BeatSequence.Actor(Me.Party, Me.Character, Me.DragonState.Actor, Turn)
+        Head = BeatSequence.Head(Subject, Precision3D.Vector(0.0, 18.0, 0.0))
+        Result = PrecisionCamera.ProjectPixel(Head, Me.ViewerCameraState.Live, Me.ViewWidth, Me.ViewHeight)
+        Return Result
+
+    End Function
 
 End Class
 

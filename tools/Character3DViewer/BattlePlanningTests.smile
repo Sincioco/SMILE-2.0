@@ -1,0 +1,104 @@
+Option Explicit
+
+Import Smile.Tools.ViewerBattlePlanning As Planning
+Import SinStarI.BattleRules As Rules
+Import SinStarI.Progression As Growth
+
+Dim Value As Planning.State
+Dim Index As Number
+Dim Accepted As Boolean
+Dim Before As Number
+Dim Expected As Number
+Dim Failures As Number
+
+Call Planning.Start(Value)
+
+Before = Value.Combat.Members[0].MP
+Accepted = Planning.Plan(Value, Rules.HEAL, 0)
+
+Call Check(Accepted And Value.Combat.Turn = 1, "Arin Plans Then Orin")
+Call Check(Value.Combat.ActionSerial = 0 And Value.Combat.EventSerial = 0, "No Early Action")
+Call Check(Value.Combat.Members[0].MP = Before, "No MP Spent While Planning")
+Call Planning.Repeat(Value)
+Call Planning.Repeat(Value)
+Call Check(Value.Planning And Value.Combat.Turn = 3, "All Four Orders Required")
+Call Planning.Repeat(Value)
+Call Check(Not Value.Planning And Value.Combat.Turn = 0, "Arin Executes First")
+Call Check(Value.Combat.Members[0].MP = Before - 12, "MP Paid On Execution")
+
+For Index = 1 To 4
+    Call Planning.Advance(Value, 2000, 99, 0)
+    Call Check(Value.Combat.Turn = Index, "Party Then Boss Sequence")
+End For
+
+Call Planning.Advance(Value, 2000, 99, 0)
+Call Check(Value.Combat.Round = 2 And Not Value.Planning, "No Input Repeats Round")
+Call Check(Value.Combat.Command = Rules.HEAL, "Remember Healing Order")
+Call Planning.Interrupt(Value)
+
+For Index = 0 To 4
+    Call Planning.Advance(Value, 2000, 99, 0)
+End For
+
+Call Check(Value.Planning And Value.Combat.Turn = Rules.FirstActive(Value.Combat), "Interrupt Waits For Round Boundary")
+Call Check(Value.Combat.Round = 3, "Boss Finished Before Planning")
+Call Planning.Start(Value)
+
+Accepted = Planning.Plan(Value, Rules.DEFEND, 4)
+
+Call Planning.BeginRound(Value)
+Call Planning.Advance(Value, 1000, 99, 0)
+Call Check(Value.Combat.Members[0].Guarding, "Defend Applied")
+
+For Index = 0 To 3
+    Call Planning.Advance(Value, 2000, 99, 0)
+End For
+
+Before = Value.Combat.Members[0].HP
+Expected = (Value.Combat.Members[4].Stats.Magic * 3 * 100 /
+    (100 + Value.Combat.Members[0].Stats.MagicDefense * 4))
+
+Call Planning.Advance(Value, 1000, 99, 0)
+Call Check(Before - Value.Combat.Members[0].HP = Expected, "Defense Increases By 300 Percent")
+Call Check(Value.Combat.Members[0].LB = Expected, "LB Equals Actual Damage")
+Call Planning.Interrupt(Value)
+Call Planning.Advance(Value, 1000, 99, 0)
+Call Check(Not Value.Combat.Members[0].Guarding, "Defense Expires After Boss")
+Call Planning.Start(Value)
+
+Value.Combat.Members[1].Escaped = True
+Value.Combat.Members[2].HP = 0
+
+Call Planning.Repeat(Value)
+Call Check(Value.Combat.Turn = 3, "Unavailable Heroes Skipped")
+Call Planning.Start(Value)
+
+Accepted = Planning.Plan(Value, Rules.LIMIT_BREAK, 4)
+
+Call Check(Not Accepted, "Empty LB Cannot Be Planned")
+
+Value.Combat.Members[0].LB = Value.Combat.Members[0].Stats.HP
+Accepted = Planning.Plan(Value, Rules.LIMIT_BREAK, 4)
+
+Call Check(Accepted, "Full LB Can Be Planned")
+Call Planning.BeginRound(Value)
+Call Planning.Advance(Value, 1000, 99, 0)
+Call Check(Value.Combat.Members[0].LB = 0, "LB Consumed At Impact")
+Call Check(Growth.EscapeChance(1, 20) = 50 And Growth.EscapeChance(40, 20) = 100, "Escape Scaling")
+Call Check(Growth.NextXP(300) > Growth.NextXP(299) * 20, "Post 300 Difficulty")
+Call Check(Growth.LevelForXP(Growth.TotalXP(9999)) = 9999, "Future Level Room")
+
+If Failures = 0 Then
+    Print "PASS Viewer Battle Planning"
+Else
+    Print "FAIL Viewer Battle Planning"
+End If
+
+Sub Check(Condition As Boolean, Label As Text)
+
+    If Not Condition Then
+        Failures = Failures + 1
+        Print "FAIL " + Label
+    End If
+
+End Sub

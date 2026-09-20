@@ -1,5 +1,60 @@
 # Character Viewer Architecture
 
+## Native battle planning and presentation
+
+`NativeProgram` owns only the native window/frame loop and constructs Workflow
+and NativeViewerHost. `Program` remains the existing held-host entry point.
+`NativeViewerHost.Session` owns encounter, battle presentation and menu state,
+tab selection and their clock. It passes the existing Workflow instance explicitly
+because SMILE does not support storing another class instance as a class field.
+The build removes native-only source/font entries when deriving the existing
+Studio/Web host inventory; it does not adopt or publish this feature there.
+
+`BattlePlanning` collects four orders, wraps the unchanged rules for automatic
+whole-round repetition and applies this encounter's +300% defense policy.
+`BattlePresentation` translates resolved actions into borrowed Viewer actor clips,
+movement, reactions, floating feedback and the requested camera preset.
+`BattleUi` owns layout, menus and input; it does not resolve combat. The existing
+Sin Star I progression, stats views, attacks, rules, feedback and icon functions
+are source-linked unchanged. No game source/assets or character packages change.
+
+Workflow retains scene/actor/calibration ownership and exposes a bounded directed
+playback bridge. Existing Party choreography and camera policies are bypassed only
+while that explicit mode is active. Playback owns pause/demo state; ViewerCamera
+owns preset adoption and the shared smooth controls. Returning to Kael Party
+clears directed mode and reloads the original scene. Unsaved editing and active
+Beat previews block tab changes; battle execution restores the primary actor
+after a legacy inspector binding. No renderer or language extension is needed.
+
+The reported stacking bug was caused by capturing frames before the first Party
+formation placement. Directed startup now applies the existing formation before
+the presenter records homes. The real-asset `BattleSceneTests` checks distinct
+homes before frame one, return to those homes after the full round, initial
+waiting, scene health and return to ordinary Kael Party. `BattlePlanningTests`
+covers order collection, implicit repetition, deferred interruption, +300% defense,
+LB and progression boundaries. `scripts/test-viewer-battle.ps1` derives the scene
+fixture inventory from the native project and uses isolated application storage.
+
+The existing native hardening/architecture gate passes, including isolated
+calibration and 58 graphics/input/audio checks. Its startup inventory and one
+duplicate import were adjusted for the native entry point; assertions were not
+relaxed. Native visual checks cover formation, camera, Fight/Auto, repeated rounds,
+deferred orders and stats displays. Web acceptance remains held.
+
+The new feature owners remain below the 600-line review trigger. Workflow's
+existing coordinator exception gains only explicit scene operations, state and
+delegation; Party gains directed-mode guards and selected healing-target wiring.
+No size threshold, no-growth baseline, exclusion or dependency is changed.
+
+Growth review: NativeProgram is 37 lines, NativeViewerHost 322, BattlePlanning 186,
+BattlePresentation 362 and BattleUi 536. The coordinator grows by
+183 net lines to 3,046, Party by 35 to 4,083, Camera by 14 to 663, Playback by 14
+to 535, inspector presentation by two and legacy UI by five. Camera's small preset
+operation belongs with its existing controls; no new camera algorithm is placed
+in Workflow. The existing oversized legacy owners keep their responsibilities.
+The pre-existing held Studio asset-manifest mismatch is recorded in the Party
+Beat checkpoint; preserving its source inventory is not Studio build acceptance.
+
 ## Standalone tab music
 
 `ViewerMusic` owns the Kael Party track policy using the existing `Play Music`

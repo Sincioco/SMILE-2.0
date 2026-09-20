@@ -138,6 +138,7 @@ Public Sub DrawPartyStatuses(ByRef Party As ViewerParty.State,
 End Sub
 
 Public Type IdentityView
+    ExternalTabs As Boolean
     Visibility As Number
     DisplayName As Text
     PartyRole As Text
@@ -471,7 +472,8 @@ Public Sub DrawIdentityAndToolbar(Value As IdentityView)
         Value.PartyRole,
         Value.PartyEnabled,
         Value.SelectedCharacterTab,
-        Value.WindowWidth
+        Value.WindowWidth,
+        Value.ExternalTabs
     )
 
     If Value.Visibility = 0 Then

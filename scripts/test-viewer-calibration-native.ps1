@@ -53,7 +53,6 @@ $testPrefix = $testPrefix.Replace(
         "Import Smile.Simple3D.LightningVfx3D As Lightning`n" +
         "Import Smile.Simple3D.Math3D As Math3D`n" +
         "Import Smile.Simple3D.Scene3D As Scene3D`n" +
-        "Import Smile.Simple3D.PrecisionCamera3D As PrecisionCamera`n" +
         "Import Smile.Tools.ArinShieldRim As ArinShieldRim`n" +
         "Import Smile.Tools.DragonPresence As DragonPresence`n" +
         "Import Smile.Tools.MiraWater As MiraWater`n" +
@@ -63,6 +62,9 @@ $testSource = $testPrefix + ($profileConstants -join "`n") + "`n`n" +
 $encoding = [Text.UTF8Encoding]::new($false)
 [IO.File]::WriteAllText((Join-Path $testRoot 'Program.smile'), $testSource, $encoding)
 [xml]$project = Get-Content -LiteralPath (Join-Path $toolRoot 'Character3DViewer.smileproj') -Raw
+$project.SmileProject.PropertyGroup.StartupFile = 'Program.smile'
+$nativeStartup = $project.SmileProject.ItemGroup.SmileSource | Where-Object { $_.StartupOnly -eq 'true' }
+$nativeStartup.SetAttribute('Include', 'Program.smile')
 # Disposable parser fixtures use canonical JSON, never the user's writable saves.
 $fixtureRoot = Join-Path $testRoot 'ImportFixtures'
 $null = New-Item -ItemType Directory -Path $fixtureRoot -Force

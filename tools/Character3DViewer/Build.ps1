@@ -30,8 +30,19 @@ $studioRoot = Join-Path $repositoryRoot 'tools\SmileStudio'
 if ($Studio) {
     $outputRoot = Join-Path $repositoryRoot "tools\SmileStudio\bin\$Configuration"
 }
-$viewerSources = @(
-    'Program.smile',
+$nativeBattleSources = @(
+    'NativeViewerHost.smile',
+    'BattlePlanning.smile',
+    'BattlePresentation.smile',
+    'BattleUi.smile',
+    '..\..\games\SinStarI\Characters\Progression.smile',
+    '..\..\games\SinStarI\Characters\StatsView.smile',
+    '..\..\games\SinStarI\Battle\BattleRules.smile',
+    '..\..\games\SinStarI\Battle\BattleAttacks.smile',
+    '..\..\games\SinStarI\Battle\BattleFeedback.smile',
+    '..\..\games\SinStarI\Battle\BattleUI.smile'
+)
+$viewerSources = @('NativeProgram.smile') + $nativeBattleSources + @(
     'ViewerWorkflow.smile',
     'Profiles.smile',
     'OrinStorm.smile',
@@ -85,8 +96,8 @@ function Assert-ViewerSourceInventory(
     })
     $sourceNodes = @($ProjectXml.SmileProject.ItemGroup.SmileSource)
 
-    if ([string]$ProjectXml.SmileProject.PropertyGroup.StartupFile -cne 'Program.smile') {
-        throw "$Label must keep Program.smile as StartupFile."
+    if ([string]$ProjectXml.SmileProject.PropertyGroup.StartupFile -cne 'NativeProgram.smile') {
+        throw "$Label must keep NativeProgram.smile as StartupFile."
     }
     if ([string]$ProjectXml.SmileProject.PropertyGroup.ApplicationId -cne
         'smile.tools.character3d-viewer') {
@@ -105,10 +116,10 @@ function Assert-ViewerSourceInventory(
         }
     }
     $programNode = @($sourceNodes | Where-Object {
-        [string]$_.Include -ceq 'Program.smile'
+        [string]$_.Include -ceq 'NativeProgram.smile'
     })
     if ([string]$programNode[0].StartupOnly -cne 'true') {
-        throw "$Label must keep Program.smile StartupOnly."
+        throw "$Label must keep NativeProgram.smile StartupOnly."
     }
 }
 
@@ -144,7 +155,22 @@ function Assert-CharacterPublication([string]$PublicationRoot) {
     }
 }
 
+function Preserve-ExistingHost([xml]$ProjectXml) {
+    # Battle System is a standalone native slice. Held hosts retain their entry
+    # point and source/asset inventory; this does not adopt the feature there.
+    $ProjectXml.SmileProject.PropertyGroup.StartupFile = 'Program.smile'
+    foreach ($item in @($ProjectXml.SmileProject.ItemGroup.ChildNodes)) {
+        if ($item.Name -eq 'SmileSource' -and $item.Include -eq 'NativeProgram.smile') {
+            $item.SetAttribute('Include', 'Program.smile')
+        } elseif (($item.Name -eq 'SmileSource' -and $item.Include -in $nativeBattleSources) -or
+            ($item.Name -eq 'Asset' -and $item.Include -eq 'Assets\Battle\BitmapFont.png')) {
+            $null = $item.ParentNode.RemoveChild($item)
+        }
+    }
+}
+
 function Set-StudioHost([xml]$ProjectXml) {
+    Preserve-ExistingHost $ProjectXml
     $ProjectXml.SmileProject.PropertyGroup.OutputName = 'SmileStudio'
     # Preserve the authoritative calibration storage namespace, not a second
     # Studio copy of each character's saved data.
@@ -289,6 +315,7 @@ if ($Target -in @('Web', 'All')) {
     Assert-ViewerSourceInventory $webProject 'BuildAssets\ViewerWeb\Profiles.smile' `
         'Character Viewer Web publication project'
     Assert-WebModelInventory $webProject
+    Preserve-ExistingHost $webProject
     $webProjectPath = Join-Path $toolRoot 'Character3DViewer.WebPublication.smileproj'
     if ($Studio) {
         Set-StudioHost $webProject
