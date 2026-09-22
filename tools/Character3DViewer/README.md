@@ -28,10 +28,10 @@ are hidden in the native tab strip; the accepted Mira follows Zara.
   current orders. Combat, animation, initial-idle and ending/restart clocks wait
   while paused; pan/orbit/zoom and C's eased camera return remain available.
   Backtick cycles the three legacy panel visibility states, then a fourth Battle
-  view hiding the header and tabs, without stopping Auto. The fourth view moves
-  Kael's info, HP and stats buttons up to an 18-pixel top margin. Another backtick
-  restores the full editor layout. The ordinary character tabs keep their existing
-  three-state cycle.
+  view hiding the header and tabs, without stopping Auto. Battle System starts
+  in this fourth view, with Kael's info, HP and stats buttons at an 18-pixel top
+  margin. Another backtick restores the full editor layout. The ordinary character
+  tabs keep their existing three-state cycle.
   Clicking battle panels or statistics requests orders at the round boundary;
   inspector editing waits for that boundary. Close inspectors with backtick to
   resume normal battle presentation. Save/cancel pending pose or Beat edits first.

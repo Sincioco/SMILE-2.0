@@ -217,7 +217,9 @@ including while paused or cinematics are disabled. It retains that default until
 manual camera input or a cinematic toggle/reset. No camera algorithm is duplicated.
 
 The fourth backtick state hides the header/tab drawing and hit regions, then
-returns to the original three-state cycle. `BattleHud.Layout.EnemyY` owns Kael's
+returns to the original three-state cycle. Battle startup selects this fourth
+state through the existing `NativeViewerHost.HeaderHidden` flag; restarting a
+battle preserves the current selection. `BattleHud.Layout.EnemyY` owns Kael's
 94/18-pixel placement and is shared by rendering and `BattleUi` stats hit tests.
 Ordinary character tabs retain their existing cycle. `KEY_C = 41` extends the
 shared language constant inventory and native key map/held/event snapshot range;
@@ -227,6 +229,9 @@ Growth from the preceding commit: BattleCinematics 87 -> 122, BattleHud 237 -> 2
 BattleUi 439 -> 443, NativeViewerHost 422 -> 471, BattleSceneTests 517 -> 594.
 State stays with the existing feature owners; Workflow, Party and the entry point
 do not grow. No dependency, threshold, baseline or exception changes.
+
+The startup-default follow-up adds one line to NativeViewerHost (471 -> 472),
+without introducing state or changing the existing four-state cycle.
 
 ## Calibration rejection recovery — September 21
 
