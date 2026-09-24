@@ -2,6 +2,17 @@
 
 ## Open native Arin load-rejection trigger — September 21, 2026
 
+September 24 DLSS5 baseline observation: the pre-existing Viewer process (artifact
+September 21, 14:23:30 +08:00) displayed `Saved Keys Rejected: Character Profile
+Mismatch` in Battle System and Kael Party. The native hardening/calibration fixture
+passed. Normal closure and `Launch.ps1 -Build -SkipWindowActivation` produced the
+September 24, 22:51:58 +08:00 artifact and normal saved-key status, with canonical
+Arin/Orin JSON unchanged. No pre-restart working-save hash was captured, and this
+does not isolate the trigger or prove a repair. No DLSS code was installed.
+See the [experiment report](../experiments/dlss5-kael-party.md) for evidence;
+retain the existing capture/reproduction next action below. Renderer-recovery
+root-cause hunting remains held; calibration data was not rewritten to hide this.
+
 Sin reported incorrect Arin poses and an unresponsive Import Key Frames button.
 The live native Viewer (build 06:02 +08:00) showed `Storage blocked`, zero keys and
 `Resolve Rejected Storage Before Import`. Re-selecting the current Arin tab did

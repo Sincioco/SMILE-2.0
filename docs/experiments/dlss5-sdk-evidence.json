@@ -1,0 +1,154 @@
+{
+  "inspectedAt": "2026-09-24T22:53:41.4684675+08:00",
+  "scope": "Official public x64 package inspection; no feature initialization or runtime support query",
+  "releaseUrl": "https://github.com/NVIDIA-RTX/Streamline/releases/tag/v2.14.1",
+  "releaseVersion": "v2.14.1",
+  "releasePublishedAt": "2026-09-08T15:29:48Z",
+  "assetUrl": "https://github.com/NVIDIA-RTX/Streamline/releases/download/v2.14.1/streamline-sdk-v2.14.1.zip",
+  "assetId": 550764153,
+  "assetBytes": 275994000,
+  "archiveSha256": "92c4d954631a1710da86ca3fa8d5034f2b9503838c95fc4ae977ae149319781b",
+  "githubAssetDigestMatches": true,
+  "publicSourceRevision": "2122257e0fce486f91b385aa63b9a09b0a34b363",
+  "sourceTreeTruncated": false,
+  "extractedFileCount": 501,
+  "coreFeatureDeclaration": "constexpr Feature kFeatureDLSS_NR = 1004;",
+  "coreFeatureDeclarationLocation": "include/sl_core_types.h:253",
+  "featureNameMappingLocation": "include/sl_helpers.h:347",
+  "changelogPluginName": "sl.dlss_nr",
+  "featureSpecificHeaderPresent": false,
+  "featureSpecificGuidePresent": false,
+  "featurePluginBinaryPresent": false,
+  "neuralRenderingNamedFiles": [],
+  "publicHeaders": [
+    "sl_appidentity.h",
+    "sl_consts.h",
+    "sl_core_api.h",
+    "sl_core_types.h",
+    "sl_deepdvc.h",
+    "sl_device_wrappers.h",
+    "sl_directsr.h",
+    "sl_dlss_d.h",
+    "sl_dlss_g.h",
+    "sl_dlss.h",
+    "sl_helpers_vk.h",
+    "sl_helpers.h",
+    "sl_hooks.h",
+    "sl_matrix_helpers.h",
+    "sl_nis.h",
+    "sl_nvperf.h",
+    "sl_pcl.h",
+    "sl_reflex.h",
+    "sl_result.h",
+    "sl_security.h",
+    "sl_struct.h",
+    "sl_template.h",
+    "sl_version.h",
+    "sl.h"
+  ],
+  "featureGuides": [
+    "docs/ProgrammingGuide.md",
+    "docs/ProgrammingGuideDeepDVC.md",
+    "docs/ProgrammingGuideDirectSR.md",
+    "docs/ProgrammingGuideDLSS_G.md",
+    "docs/ProgrammingGuideDLSS_RR.md",
+    "docs/ProgrammingGuideDLSS.md",
+    "docs/ProgrammingGuideManualHooking.md",
+    "docs/ProgrammingGuideNIS.md",
+    "docs/ProgrammingGuidePCL.md",
+    "docs/ProgrammingGuideReflex.md"
+  ],
+  "dlssBinaries": [
+    {
+      "path": "bin/x64/development/nvngx_dlss.dll",
+      "fileVersion": "310,9,1,0"
+    },
+    {
+      "path": "bin/x64/development/nvngx_dlssd.dll",
+      "fileVersion": "310,9,1,0"
+    },
+    {
+      "path": "bin/x64/development/nvngx_dlssg.dll",
+      "fileVersion": "310,9,1,0"
+    },
+    {
+      "path": "bin/x64/development/sl.common.dll",
+      "fileVersion": "2,14,1,0"
+    },
+    {
+      "path": "bin/x64/development/sl.dlss_d.dll",
+      "fileVersion": "2,14,1,0"
+    },
+    {
+      "path": "bin/x64/development/sl.dlss_g.dll",
+      "fileVersion": "2,14,1,0"
+    },
+    {
+      "path": "bin/x64/development/sl.dlss.dll",
+      "fileVersion": "2,14,1,0"
+    },
+    {
+      "path": "bin/x64/development/sl.interposer.dll",
+      "fileVersion": "2,14,1,0"
+    },
+    {
+      "path": "bin/x64/nvngx_dlss.dll",
+      "fileVersion": "310,9,1,0"
+    },
+    {
+      "path": "bin/x64/nvngx_dlssd.dll",
+      "fileVersion": "310,9,1,0"
+    },
+    {
+      "path": "bin/x64/nvngx_dlssg.dll",
+      "fileVersion": "310,9,1,0"
+    },
+    {
+      "path": "bin/x64/sl.common.dll",
+      "fileVersion": "2,14,1,0"
+    },
+    {
+      "path": "bin/x64/sl.dlss_d.dll",
+      "fileVersion": "2,14,1,0"
+    },
+    {
+      "path": "bin/x64/sl.dlss_g.dll",
+      "fileVersion": "2,14,1,0"
+    },
+    {
+      "path": "bin/x64/sl.dlss.dll",
+      "fileVersion": "2,14,1,0"
+    },
+    {
+      "path": "bin/x64/sl.interposer.dll",
+      "fileVersion": "2,14,1,0"
+    }
+  ],
+  "inspectedFiles": [
+    {
+      "path": "include/sl_core_types.h",
+      "sha256": "f420cb052ce14489fc9fa0d933c3ed81a010deb01fa13b1aa8d45da1c5ba3234"
+    },
+    {
+      "path": "include/sl_helpers.h",
+      "sha256": "48629edbf25dfdb6444c91235fc278f0f9a5878243fae83204c5906ce9eacd8a"
+    },
+    {
+      "path": "include/sl_version.h",
+      "sha256": "48e9cb86f0ff6711304bdf3f7150f46466878bbefc21f648773267bc6a326285"
+    },
+    {
+      "path": "changelog.txt",
+      "sha256": "8e16fd900d9e9c1e697a945376f09d2f0512ae048ee4063e091503c668090ae9"
+    },
+    {
+      "path": "license.txt",
+      "sha256": "7b6f23e7d6f3ad6292f9308d2b42cdc3d82ae4e9b2abb55f230279d83bedd43d"
+    },
+    {
+      "path": "bin/x64/nvngx_dlss.license.txt",
+      "sha256": "3027f23ca5a46dd9cb8183fbd522983a86f64d7daac5982912bf9f214671f294"
+    }
+  ],
+  "conclusion": "DLSS 5 NR has a public core identifier, but this package cannot establish its feature contract or provide a runnable implementation. D3D11 and D3D12 feature support remain unverified."
+}
