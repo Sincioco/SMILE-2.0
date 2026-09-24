@@ -9,6 +9,8 @@ A readable language. A native compiler. A world taking shape.</p>
 <p align="center">
   <a href="#latest-progress--the-native-battle-system">Latest Progress</a> ·
   <a href="#earth-lab--giving-kael-the-power-to-move-stone">Earth Lab</a> ·
+  <a href="#fire-lab--choreographing-flame">Fire Lab</a> ·
+  <a href="#water-lab--shaping-flow-and-impact">Water Lab</a> ·
   <a href="#sin-star-i--from-script-to-screen">Sin Star I Trailer &amp; Story</a> ·
   <a href="#build-and-explore">Build &amp; Explore</a> ·
   <a href="#work-with-sin">Work With Sin</a>
@@ -28,7 +30,7 @@ Much of the hands-on progress happens in the **3D Character Viewer and Animation
 Editor**: bringing characters to life, refining equipment and poses, building
 reusable effects, and turning party choreography into interactive battles.
 
-**Development snapshot: September 24, 2026.** The nine Viewer and Earth Lab
+**Development snapshot: September 24, 2026.** The thirteen Viewer and VFX Lab
 screenshots on this page were captured from the native applications for this
 update. The story illustrations and trailer below are separate creative-production
 material. Sin Star I is a work in progress.
@@ -85,6 +87,66 @@ are already used in the native Viewer and Sin Star I's Kael presentations.
 
 [Explore Earth Lab and its controls](tools/EarthVfxLab/README.md)
 · [Inspect the shared Earth effect](libraries/Smile.Simple3D/EarthVfx3D.smile)
+
+## Fire Lab — choreographing flame
+
+**Ember Strikes. Flame Sweep. Inferno Blast.** The native Fire Lab connects
+Kael's punches, sweeping kick and two-handed release to jets emitted from his
+animated hands and foot. Bright flame cores, embers, heat distortion and cooling
+smoke make each motion visible across the reflective arena.
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/images/readme/2026-09-24/fire-inferno-blast.jpg" alt="Kael releases a wide Inferno Blast toward target pillars in the native Fire Lab"></td>
+    <td width="50%"><img src="docs/images/readme/2026-09-24/fire-ember-strikes.jpg" alt="Kael punches a forward jet of flame during Ember Strikes in the native Fire Lab"></td>
+  </tr>
+  <tr>
+    <td><strong>Inferno Blast</strong><br>A low lunge and two-handed release drive a broad jet toward the targets.</td>
+    <td><strong>Ember Strikes</strong><br>Chambered punches send fire forward from the animated hands.</td>
+  </tr>
+</table>
+
+The Lab also previews Arin's sword and shield flames and standalone effects such
+as torches, fireballs and dragon breath. Playback can pause while the camera stays
+active; quality, wind, turbulence and CPU/GPU controls support focused inspection.
+Shared fire emitters own the effect resources, while character adapters provide
+the attachment positions and attack timing.
+
+**Current status:** Kael's three Fire attacks are native Lab previews. Their
+adoption into his Character Viewer and Sin Star I battle rotations is pending.
+
+[Explore Fire Lab and its controls](tools/AdvancedFireVfxLab/README.md)
+· [Inspect the shared fire emitter](libraries/Smile.Simple3D/FireEmitter3D.smile)
+
+## Water Lab — shaping flow and impact
+
+**Water Whip. Serpent Orbit. Tidal Surge.** Water winds around Kael before
+following his arm sweeps and torso turns toward a target. The native Water Lab
+brings the animation, translucent water surfaces, spray and reflections together,
+with a choice of standard and Realistic Water appearances.
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/images/readme/2026-09-24/water-serpent-orbit.jpg" alt="Reflective water coils around Kael during Serpent Orbit with Realistic Water enabled in the native Water Lab"></td>
+    <td width="50%"><img src="docs/images/readme/2026-09-24/water-tidal-surge.jpg" alt="Kael guides a curved water surge toward the target pillars during Tidal Surge in the native Water Lab"></td>
+  </tr>
+  <tr>
+    <td><strong>Serpent Orbit</strong><br>Coiling water surrounds the caster, shown with Realistic Water enabled.</td>
+    <td><strong>Tidal Surge</strong><br>A broad curved flow follows the cast before reaching the selected pillar.</td>
+  </tr>
+</table>
+
+Impacts can split around the smaller cylindrical targets and reunite behind them;
+the largest target uses a crown splash. These are authored real-time effects with
+explicit target bounds. The Lab also retains Mira's eight effect previews and
+provides pause, 100 ms stepping, speed controls and a live clip clock for inspection.
+Shared water modules own flow, impact geometry and spray independently of the actor.
+
+**Current status:** Kael's three Water casts are already used in the native
+Character Viewer and Sin Star I's normal/Earth/Water party rotation.
+
+[Explore Water Lab and its controls](tools/WaterVfxLab/README.md)
+· [Inspect the shared water effect](libraries/Smile.Simple3D/WaterVfx3D.smile)
 
 ## Kael — from character package to elemental opponent
 

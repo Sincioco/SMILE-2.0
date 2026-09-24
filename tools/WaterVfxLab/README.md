@@ -1,11 +1,11 @@
-# SMILE 2.0 â€” Water Lab (native)
+# SMILE 2.0 — Water Lab (native)
 
 The native arena uses the [shared Viewer arena library](../../docs/libraries/arena3d.md).
 F toggles Floor; G toggles Grid; B cycles the same five Viewer backgrounds.
 Left drag pans, middle drag orbits, wheel zooms smoothly, and right-click resets
 the camera. Grid color, spacing and dimensions remain library creation options.
 
-## Kael water preview â€” September 18, 2026
+## Kael water preview — September 18, 2026
 
 The native Lab starts with **Kael**, speed **200%**, **Demo** and **Realistic Water**
 enabled. **Mira / Kael** buttons or **X** switch between the preloaded actors.
@@ -14,7 +14,7 @@ and **Tidal Surge**, with original baked arm sweeps, torso turns, lowered stance
 and recoveries. His sword stays hidden in this water preview.
 
 **D / Demo** cycles all three Kael casts. Selecting a cast or pressing Tab turns
-Demo off and repeats that cast. **F / Realistic Water** compares the clear standard
+Demo off and repeats that cast. **E / Realistic Water** compares the clear standard
 look with thicker irregular water, sharper reflections, lower foam and stronger
 refraction. Switching looks preserves the paused pose and clock and allocates no
 new resources. This approximates the reference's appearance with authored real-time
@@ -34,9 +34,9 @@ Space pauses; **Left / Right** step the paused presentation by 100 ms. The heade
 shows the clip and time. Camera and background controls remain available while paused.
 Leave Demo running for continuous feedback, or use these controls to inspect contact.
 
-References: [Jared Koh â€” body motion](https://www.youtube.com/watch?v=5Lq0vTq6eeo),
-[Krifton â€” clear water winding around the body](https://www.youtube.com/watch?v=QjWQXMB5xNs),
-and [A Bit Of Game Dev â€” attacks from 16:13](https://www.youtube.com/watch?v=3CcWus6d_B8&t=973s).
+References: [Jared Koh — body motion](https://www.youtube.com/watch?v=5Lq0vTq6eeo),
+[Krifton — clear water winding around the body](https://www.youtube.com/watch?v=QjWQXMB5xNs),
+and [A Bit Of Game Dev — attacks from 16:13](https://www.youtube.com/watch?v=3CcWus6d_B8&t=973s).
 These are visual references; no video, animation, shader, package or service was downloaded.
 
 The canonical Kael package owns a separate `kael-v1-water-preview.glb`, descriptor,
