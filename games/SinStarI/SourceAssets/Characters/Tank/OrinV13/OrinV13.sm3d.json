@@ -28,6 +28,9 @@
     },
     "JumpAttack": {
       "loop": false
+    },
+    "Walk": {
+      "loop": true
     }
   },
   "sockets": {

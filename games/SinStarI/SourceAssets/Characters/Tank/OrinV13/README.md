@@ -34,8 +34,18 @@ forward. His left hand sits at the shield's vertical midpoint; the shield has a
 40-degree outward fit, followed by Sin's approved Blender translation and
 rotation corrections so it does not cut through his forearm, torso, or legs.
 
-The runtime set contains nine Mixamo clips: Idle, SwordAttack, JumpAttack,
-ThorAttack, Defend, Hit, Death, Victory, and Run. `ThorAttack` is the stable
+The runtime set contains ten Mixamo clips: Idle, SwordAttack, JumpAttack,
+ThorAttack, Defend, Hit, Death, Victory, Run and Walk. The September 25 town Walk
+is a separate sampled pose transfer from `Animations/orin-v1.3-mixamo-town-walk.fbx`.
+Its re-uploaded FBX has different rest axes; copying its curves or applying a second
+rest-space rotation twists the shoulders. `scripts/add-orin-town-walk.py` samples
+armature-space poses onto the accepted rig and grounds them against accepted Idle.
+`orin-v1.3-nine-clips.glb` preserves the exact previous checkpoint; the append audit
+proves its geometry, skin, materials, nine clips and original binary data are intact.
+`Blender/orin-v1.3-town-walk.blend` is the focused Walk authoring source. Measurements
+and import checksums live in `Calibration/town-walk-*.json`.
+
+`ThorAttack` is the stable
 animation contract for lightning: raise the hammer, receive the charge, and
 release it into the ground. The viewer adds a white hammer core, blue/white
 electrical aura and an eight-point shield perimeter glow. Neither shield face

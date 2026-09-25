@@ -318,9 +318,31 @@ The native scene fixture checks both travel directions and restored facing.
 
 ## September 25: native Neris town locomotion
 
-Orin v1.3 has Run but no Walk clip. Neris uses that existing Run at a 65% base
-playback rate, multiplied by the town's walking speed (initially 200%), with
-fractional elapsed time retained, instead of requesting a nonexistent
-Walk. The body follows the model-forward axis; the battle-only -55-degree hammer
-stance is not applied to town travel. Grounding and saved equipment translations
-scale with the smaller actor. The source model and zero-key JSON remain unchanged.
+The initial town build used slowed Run because Walk was absent. Sin subsequently
+requested separate Walk and Run for every member. The accepted Idle FBX was uploaded
+to Mixamo and Walking was downloaded in place, without skin, at 30 fps. Its 41 bone
+names/parents match, but its rest axes differ. A pose-delta pass looked grounded yet
+twisted the shoulders in a rendered preview. Sampling absolute armature-space poses
+and solving local channels on the accepted rig fixes that visible error.
+
+Measure the floor against the accepted GLB's Idle, not the older FBX skin. The FBX
+reference was 0.013 model units lower. The final Walk measures +4 thousandths across
+33 cooked samples, versus +3 for accepted Idle frame zero; the original bind minimum
+remains -116. The 1-thousandth difference is within this import's 2-thousandth contact
+tolerance. Existing Defend/Hit/Death/JumpAttack placement corrections and Run airtime
+are unchanged. Frame zero of all ten clips and full contact clips were measured.
+
+The importer appends only Walk to `orin-v1.3-nine-clips.glb`; it asserts all earlier
+model and animation bytes are unchanged. Keep the new FBX, focused Walk `.blend`,
+preview, import audit and grounding report in this package. Updating profile hashes
+and migrating JSON by clip name preserves the zero-key snapshot; Arin's 24 keys are
+unrelated and remain unchanged. The original Orin builder is now import-safe under a
+`__main__` guard; importing helpers must never rebuild the accepted package.
+
+Normalize the descriptor to the repository's CRLF policy before computing its
+profile hash. A mixed-line-ending descriptor changes bytes after Git checkout,
+invalidating calibration identity even though its parsed JSON is identical.
+
+Neris hides equipment and defaults to Run. The body follows its model-forward axis;
+the battle-only -55-degree stance does not apply to town travel. Other tabs retain
+their equipment, authored corrections and attack behavior.

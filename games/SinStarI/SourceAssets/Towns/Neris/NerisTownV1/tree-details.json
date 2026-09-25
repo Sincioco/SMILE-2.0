@@ -1,0 +1,22 @@
+{
+  "source": "Source/detail_trees.py",
+  "seed": [
+    9103,
+    3719
+  ],
+  "instances": 27,
+  "variants": [
+    {
+      "leaves": 2970,
+      "branches": 158,
+      "vertices": 21120,
+      "faces": 14258
+    },
+    {
+      "leaves": 2970,
+      "branches": 158,
+      "vertices": 21120,
+      "faces": 14258
+    }
+  ]
+}

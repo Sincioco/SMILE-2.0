@@ -84,6 +84,15 @@
       "frameStart": 1,
       "frameEnd": 71,
       "loop": false
+    },
+    {
+      "name": "Walk",
+      "file": "orin-v1.3-mixamo-town-walk.fbx",
+      "sourceSha256": "A31A8AF1847ABE08680255CC27CE72D06FE9F3DCDDCE950A2C8ED053526ACAD6",
+      "frameStart": 1,
+      "frameEnd": 32,
+      "loop": true,
+      "importAudit": "Calibration/town-walk-import.json"
     }
   ],
   "equipmentSource": "orin-v1.0-equipment-source.glb",

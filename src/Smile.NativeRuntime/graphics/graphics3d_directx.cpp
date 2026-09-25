@@ -237,6 +237,7 @@ struct SmileMaterial3D
     float water_roughness;
     float water_foam;
     float water_time;
+    float water_ripple_strength;
 };
 
 struct SmileModelChunkV2
@@ -2574,12 +2575,14 @@ static long long smile_3d_distortion_command(long long operation,
         SmileMaterial3D* material = smile_3d_material(b);
         if (material == 0 || material->mode != 0 || material->alpha_mode != 2 ||
             (c != 0 && c != 1) || d < 1 || d > 100 || e < 0 || e > 100 ||
-            f < 0 || f > 2147483647)
+            f < 0 || f > 2147483647 || g < -100 || g > 0)
         { smile_last_error3d = SMILE_3D_DISTORTION_ERROR_INVALID; return 0; }
         material->vfx_shading_mode = c ? SMILE_3D_VFX_SHADING_WATER : SMILE_3D_VFX_SHADING_STANDARD;
         material->water_roughness = (float)d / 100.0f;
         material->water_foam = (float)e / 100.0f;
         material->water_time = (float)f / 1000.0f;
+        // Offset encoding preserves full strength for older callers passing zero.
+        material->water_ripple_strength = 1.0f + (float)g / 100.0f;
         return 1;
     }
     if (operation == 1)
@@ -5113,6 +5116,9 @@ static int smile_3d_create_pipeline(void)
         "if(textureFlags.y>.5){float3 mapped=normalMap.Sample(normalSampler,uv).xyz*2-1;mapped.xy*=surfaceFactors.z;N=normalize(T*mapped.x+B*mapped.y+N*mapped.z);}"
         "float3 orm=textureFlags.z>.5?ormTexture.Sample(ormSampler,uv).rgb:float3(1,1,1);"
         "float ao=lerp(1,orm.r,surfaceFactors.w);float rough=clamp(surfaceFactors.y*orm.g,.045,1);float metal=saturate(surfaceFactors.x*orm.b);"
+        // Broaden subpixel highlights by the normal variation across the pixel footprint.
+        "float3 normalDx=ddx(N),normalDy=ddy(N);float variance=min(.18,.25*(dot(normalDx,normalDx)+dot(normalDy,normalDy)));"
+        "rough=min(1,sqrt(sqrt(pow(rough,4)+variance)));"
         "float3 V=normalize(cameraPosition.xyz-world);float3 color=ambientLight.rgb*ambientLight.w*base.rgb*ao;"
         "if(directionalDirection.w>.5){float3 L=normalize(directionalDirection.xyz);float sf=shadow.y<1.5?ShadowValue(sp,N,L):1;color+=Shade(N,V,L,directionalColor.rgb*directionalColor.w*sf,base.rgb,metal,rough);}"
         "[unroll]for(int light=0;light<4;++light){float type=localPositionType[light].w;if(type>.5){float3 delta=localPositionType[light].xyz-world;"
@@ -7991,6 +7997,7 @@ static int smile_3d_draw_vfx_submission(const SmileSubmission3D* submission)
         smile_3d_active_camera_position(constants.water_camera);
         constants.water_camera[3] = material->water_time;
         memcpy(constants.water_light_direction, smile_directional_light3d.direction, sizeof(float) * 3);
+        constants.water_light_direction[3] = material->water_ripple_strength;
         memcpy(constants.water_light_color, smile_directional_light3d.color, sizeof(float) * 3);
         constants.water_light_color[3] = smile_directional_light3d.enabled
             ? smile_directional_light3d.intensity : 0;

@@ -21,7 +21,7 @@ Public Type Member
     Previous As P.Vector3
     Yaw As Double
     IdleClip As Number
-    WalkClip As Number
+    TravelClip As Number
     TravelName As Text
     TravelRate As Number
     AnimationRemainder As Number
@@ -35,6 +35,7 @@ Public Type State
     Keys As Calibration.State
     Path As Trail.State
     MemberCount As Number
+    Running As Boolean
     SpeedPercent As Number
     Loaded As Number
     Ready As Boolean
@@ -43,17 +44,27 @@ End Type
 
 Public Function ProfileAt(Index As Number) As Number
 
+    Dim ReturnValue As Number
+
     Dim Unassigned As Number
 
     Select Case Index
         Case 0
-            Return Profiles.PROFILE_ARIN
+            ReturnValue = Profiles.PROFILE_ARIN
+
+            Return ReturnValue
         Case 1
-            Return Profiles.PROFILE_ORIN
+            ReturnValue = Profiles.PROFILE_ORIN
+
+            Return ReturnValue
         Case 2
-            Return Profiles.PROFILE_ZARA
+            ReturnValue = Profiles.PROFILE_ZARA
+
+            Return ReturnValue
         Case 3
-            Return Profiles.PROFILE_MIRA
+            ReturnValue = Profiles.PROFILE_MIRA
+
+            Return ReturnValue
     End Select
 
     Unassigned = -1
@@ -68,7 +79,8 @@ Public Sub Start(ByRef Value As State)
 
     Value = Empty
     Value.MemberCount = 4
-    Value.SpeedPercent = 200
+    Value.SpeedPercent = 100
+    Value.Running = True
 
     Call Trail.Reset(Value.Path, P.Vector(0.0, 22.42, -330.0), Value.MemberCount, 22.0)
 
@@ -78,7 +90,11 @@ Public Function WalkingSpeed(ByRef Value As State) As Double
 
     Dim Result As Double
 
-    Result = 35.0 * ToDouble(Value.SpeedPercent) / 100.0
+    Result = (280.0 / 3.0) * ToDouble(Value.SpeedPercent) / 100.0
+
+    If Not Value.Running Then
+        Result = Result / 3.0
+    End If
 
     Return Result
 
@@ -100,11 +116,34 @@ Public Function ClipIndex(Actor As Character.Actor, Name As Text) As Number
 
 End Function
 
+Public Sub SetRunning(ByRef Value As State, Running As Boolean)
+
+    Dim Index As Number
+
+    Value.Running = Running
+
+    For Index = 0 To Value.Loaded - 1
+
+        Value.Members[Index].TravelName = "Walk"
+        Value.Members[Index].TravelRate = 89
+
+        If Running Then
+            Value.Members[Index].TravelName = "Run"
+            Value.Members[Index].TravelRate = 267
+        End If
+
+        Value.Members[Index].TravelClip = ClipIndex(Value.Members[Index].Body.Actor,
+            Value.Members[Index].TravelName)
+    End For
+
+End Sub
+
 Public Sub LoadNext(ByRef Value As State)
 
     Dim Index As Number
     Dim Bounds As Character.Bounds3D
     Dim Settings As Calibration.ConfigurationResult
+    Dim HiddenEquipment As Actors.EquipmentVisibility
     Dim Ok As Boolean
 
     If Value.Loaded >= Value.MemberCount Or Value.Failed Then
@@ -125,16 +164,20 @@ Public Sub LoadNext(ByRef Value As State)
         Ok = Character.SetScale(Value.Members[Index].Body.Actor, Value.Members[Index].Body.Frame.ScalePercent) And Ok
         Ok = Character.SetRootMotion(Value.Members[Index].Body.Actor, Character.ROOT_MOTION_IGNORE) And Ok
         Value.Members[Index].IdleClip = ClipIndex(Value.Members[Index].Body.Actor, "Idle")
-        Value.Members[Index].TravelName = "Walk"
-        Value.Members[Index].TravelRate = 100
+        Value.Members[Index].TravelName = "Run"
+        Value.Members[Index].TravelRate = 267
 
-        If Not Character.HasClip(Value.Members[Index].Body.Actor, "Walk") Then
-            Value.Members[Index].TravelName = "Run"
-            Value.Members[Index].TravelRate = 65
+        If Not Value.Running Then
+            Value.Members[Index].TravelName = "Walk"
+            Value.Members[Index].TravelRate = 89
         End If
 
+        Ok = Actors.ApplyEquipmentVisibility(Value.Members[Index].Body.Actor,
+            HiddenEquipment, ProfileAt(Index)) And Ok
+        Ok = Character.HasClip(Value.Members[Index].Body.Actor, "Walk") And Ok
+        Ok = Character.HasClip(Value.Members[Index].Body.Actor, "Run") And Ok
         Ok = Character.HasClip(Value.Members[Index].Body.Actor, Value.Members[Index].TravelName) And Ok
-        Value.Members[Index].WalkClip = ClipIndex(Value.Members[Index].Body.Actor, Value.Members[Index].TravelName)
+        Value.Members[Index].TravelClip = ClipIndex(Value.Members[Index].Body.Actor, Value.Members[Index].TravelName)
         Value.Members[Index].Body.Clip = Value.Members[Index].IdleClip
         Value.Members[Index].Previous = Value.Path.Positions[Index]
         Ok = Character.PlayAnimation(Value.Members[Index].Body.Actor, "Idle", True) And Ok
@@ -167,6 +210,14 @@ Private Sub Animate(ByRef Value As Member, Moving As Boolean, Elapsed As Number,
     Ok = True
     AnimationElapsed = Elapsed
 
+    If Value.Walking And Value.Body.Clip <> Value.TravelClip Then
+
+        Ok = Character.CrossFade(Value.Body.Actor, Value.TravelName, 120, G.ANIMATION_LOOP)
+        Value.Body.Clip = Value.TravelClip
+        Value.SettleTime = -1
+
+    End If
+
     If Moving Or Value.Walking Then
 
         Value.AnimationRemainder = Value.AnimationRemainder + Elapsed * Value.TravelRate * SpeedPercent
@@ -177,10 +228,10 @@ Private Sub Animate(ByRef Value As Member, Moving As Boolean, Elapsed As Number,
 
     If Moving Then
 
-        If Not Value.Walking Then
+        If Not Value.Walking Or Value.Body.Clip <> Value.TravelClip Then
 
             Ok = Character.CrossFade(Value.Body.Actor, Value.TravelName, 120, G.ANIMATION_LOOP)
-            Value.Body.Clip = Value.WalkClip
+            Value.Body.Clip = Value.TravelClip
             Value.Walking = True
 
         End If
@@ -190,7 +241,7 @@ Private Sub Animate(ByRef Value As Member, Moving As Boolean, Elapsed As Number,
     Else If Value.Walking Then
 
         If Value.SettleTime < 0 Then
-            Duration = Max(1, Character.ClipDuration(Value.Body.Actor, Value.WalkClip))
+            Duration = Max(1, Character.ClipDuration(Value.Body.Actor, Value.TravelClip))
             Value.SettleTime = Duration - (Character.AnimationTime(Value.Body.Actor) Mod Duration)
         End If
 

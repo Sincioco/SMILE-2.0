@@ -1334,7 +1334,7 @@ try {
         'Public Function EpicGlowAvailable(ProfileIndex As Number) As Boolean' 'Viewer profile'
     Assert-Contains $profileSource `
         'Public Function EpicGlowVisibleByDefault(ProfileIndex As Number) As Boolean' 'Viewer profile'
-    Assert-Contains $profileSource 'Result.ExpectedClipCount = 9' 'Current nine-clip Viewer profile'
+    Assert-Contains $profileSource 'Result.ExpectedClipCount = 10' 'Current ten-clip Viewer profile'
     Assert-Contains $profileSource 'AnimationArticulated.sm3d' 'Viewer fixture profile'
     foreach ($contract in @(
         'RequestedClipNames[Slot] = ClipName',

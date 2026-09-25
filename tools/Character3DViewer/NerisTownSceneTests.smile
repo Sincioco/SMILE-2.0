@@ -9,7 +9,10 @@ Import Smile.Tools.NerisTownNavigation As Navigation
 Import Smile.Simple3D.Precision3D As P
 Import Smile.Simple3D.Character3D As Character
 Import Smile.Simple3D.ArenaCamera3D As Motion
+Import Smile.Simple3D.Graphics3D As G
 Import Smile.Tools.Character3DViewerCalibration As Calibration
+Import Smile.Tools.NerisTownTrees As Trees
+Import Smile.Tools.NerisTownMap As TownMap
 
 Dim Value As Town.State
 Dim Leader As P.Vector3
@@ -36,6 +39,11 @@ If Value.Ready Then
 
     Call CheckCamera(Value)
     Call CheckSpeed(Value)
+    Call CheckGarden(Value)
+    Call Check(TownMap.MapX(0.0, 0, 200) = 100 And TownMap.MapY(0.0, 0, 180) = 90,
+        "Minimap Maps Town Center")
+    Call Check(TownMap.MapY(400.0, 0, 180) < TownMap.MapY(-400.0, 0, 180),
+        "Minimap Keeps North Up")
 
     Value.People.Keys.KeyBase = 0
 
@@ -46,10 +54,14 @@ If Value.Ready Then
     Print "Arin Pose Keys " + Calibration.NumberText(KeyTotal)
 
     For MemberIndex = 0 To Value.People.MemberCount - 1
+
         Call Check(Value.People.Members[MemberIndex].Visible = (MemberIndex = 0),
             "Only Arin Visible Before Walking")
         Call Check(Character.HasClip(Value.People.Members[MemberIndex].Body.Actor,
             Value.People.Members[MemberIndex].TravelName), "Character Has Real Locomotion Animation")
+        Call Check(Character.HasClip(Value.People.Members[MemberIndex].Body.Actor, "Walk") And
+            Character.HasClip(Value.People.Members[MemberIndex].Body.Actor, "Run"),
+            "Every Character Has Their Own Walk And Run")
     End For
 
     Leader = Value.People.Path.Positions[0]
@@ -68,8 +80,20 @@ If Value.Ready Then
     For MemberIndex = 1 To Value.People.MemberCount - 1
         Call Check(Abs(Value.People.Path.Progress[0] - Value.People.Path.Progress[MemberIndex] -
             ToDouble(MemberIndex) * Value.People.Path.Spacing) < 0.001,
-            "Followers Keep Spacing At Doubled Speed")
+            "Followers Keep Spacing At Default Run Speed")
     End For
+
+    Call Town.Input(Value, KEY_W, True)
+
+    Leader = Navigation.Move(Leader, 1.0, 0.0)
+
+    Call Party.Update(Value.People, Leader, 25)
+    Call Check(Value.People.Members[0].Body.Clip = Value.People.Members[0].TravelClip And
+        Value.People.Members[0].TravelName = "Walk", "Moving Run Transitions To Walk")
+    Call Town.Input(Value, KEY_R, True)
+    Call Party.Update(Value.People, Leader, 25)
+    Call Check(Value.People.Members[0].Body.Clip = Value.People.Members[0].TravelClip And
+        Value.People.Members[0].TravelName = "Run", "Settling Walk Can Switch Back To Run")
 
     For Index = 1 To 250
         Call Party.Update(Value.People, Leader, 25)
@@ -82,7 +106,16 @@ If Value.Ready Then
 
     Call Town.Update(Value, 16)
     Call Town.Draw(Value)
+    Call Town.Overlay(Value)
     Call Check(Not Value.Failed And Value.People.Ready, "Town Renders With Shared Reflective Arena")
+    Call Check(Value.Look.Ready And Value.Look.Time = 16,
+        "Water Surface Clock Advances Independently Of Walking")
+    Call Check(Value.Look.Surfaces[0].PointCount = 2 And
+        Value.Look.Surfaces[1].PointCount = 2 And Value.Look.Surfaces[2].PointCount = 49,
+        "Both Canals And Fountain Have Native Water Surfaces")
+    Call Check(G.DistortionValue3D(G.DISTORTION_QUERY_EMITTERS) = 3 And
+        G.DistortionValue3D(G.DISTORTION_QUERY_COMPOSITE_DRAWS) > 0,
+        "Water Captures And Refracts The Town Scene")
 
     Show Screen
 
@@ -91,6 +124,9 @@ End If
 Call Town.Destroy(Value)
 Call Check(Not Value.Ready And Value.Town.ObjectCount = 0 And Value.People.Loaded = 0,
     "Town Releases Owned Resources")
+Call Check(Value.Look.Water.Handle = 0 And Value.Look.Refraction.Handle = 0 And
+    Value.Look.Surfaces[2].Handle = 0 And Value.Look.Distortion[2].Handle = 0,
+    "Town Releases Water Materials And Surfaces")
 
 If Failures = 0 Then
     Print "PASS Neris Town Scene"
@@ -102,12 +138,18 @@ Sub CheckSpeed(ByRef Scene As Town.State)
 
     Dim StepIndex As Number
 
-    Call Check(Scene.People.SpeedPercent = 200 And Party.WalkingSpeed(Scene.People) = 70.0,
-        "Default Walking Speed Is Doubled")
+    Call Check(Scene.People.SpeedPercent = 100 And Scene.People.Running And
+        Abs(Party.WalkingSpeed(Scene.People) - 280.0 / 3.0) < 0.001,
+        "Default Run Is One Third Faster Than Previous Speed")
+    Call Town.Input(Scene, KEY_W, True)
+    Call Check(Not Scene.People.Running And
+        Abs(Party.WalkingSpeed(Scene.People) - 280.0 / 9.0) < 0.001,
+        "Walk Is One Third Of Run Speed")
+    Call Town.Input(Scene, KEY_R, True)
     Call Town.Input(Scene, KEY_PLUS, True)
-    Call Check(Scene.People.SpeedPercent = 225, "Plus Speeds Up Walking")
+    Call Check(Scene.People.SpeedPercent = 125, "Plus Speeds Up Locomotion")
     Call Town.Input(Scene, KEY_MINUS, True)
-    Call Check(Scene.People.SpeedPercent = 200, "Minus Slows Down Walking")
+    Call Check(Scene.People.SpeedPercent = 100, "Minus Slows Down Locomotion")
 
     For StepIndex = 1 To 20
         Call Town.Input(Scene, KEY_MINUS, True)
@@ -121,7 +163,7 @@ Sub CheckSpeed(ByRef Scene As Town.State)
 
     Call Check(Scene.People.SpeedPercent = 400, "Walking Speed Has An Upper Bound")
 
-    For StepIndex = 1 To 8
+    For StepIndex = 1 To 12
         Call Town.Input(Scene, KEY_MINUS, True)
     End For
 
@@ -131,6 +173,9 @@ Sub CheckCamera(ByRef Scene As Town.State)
 
     Dim Pointer As Motion.PointerInput
     Dim Changed As Boolean
+
+    Call Check(Scene.BaseCamera.NearPlane = 10.0,
+        "Town Camera Preserves Depth Precision For Thin Paving Layers")
 
     Pointer.OrbitPressed = True
     Pointer.OrbitHeld = True
@@ -154,6 +199,64 @@ Sub CheckCamera(ByRef Scene As Town.State)
     Call Check(Scene.Cinematic And Not Scene.Follow And
         Scene.View.Controls.OrbitYaw = 0.0 And Scene.View.Controls.OrbitPitch = 0.0,
         "C Resets Camera And Resumes Cinematic Overview")
+
+    Scene.View.FloorVisible = False
+    Scene.View.Controls.OrbitPitch = -75.0
+    Scene.View.Controls.PanY = -550.0
+    Scene.View.Controls.Zoom = -144.0
+
+    Call Town.Update(Scene, 0)
+    Call Check(Scene.View.LiveCamera.Position.Y > 25.0 And
+        Scene.View.LiveCamera.Target.Y >= 24.999, "Overview Cannot Move Beneath Town With Floor Hidden")
+
+    Scene.Follow = True
+    Scene.View.Controls.OrbitPitch = -75.0
+    Scene.View.Controls.PanY = -550.0
+
+    Call Town.Update(Scene, 0)
+    Call Check(Scene.View.LiveCamera.Position.Y > 25.0 And
+        Scene.View.LiveCamera.Target.Y >= 24.999, "Follow Camera Cannot Move Beneath Town")
+
+    Scene.View.FloorVisible = True
+
+    Call Town.Input(Scene, KEY_C, True)
+    Call Town.Update(Scene, 0)
+
+End Sub
+
+Sub CheckGarden(ByRef Scene As Town.State)
+
+    Dim Index As Number
+    Dim ObjectsBefore As Number
+    Dim Ok As Boolean
+
+    ObjectsBefore = G.LiveObjectCount3D()
+
+    For Index = 0 To 84
+        Call Trees.Update(Scene.Look.Garden, 1000)
+        Call Check(Scene.Look.Garden.FadingCount <= 1, "Only One Fallen Leaf Fades At A Time")
+    End For
+
+    Call Check(Scene.Look.Garden.Ready And G.LiveObjectCount3D() = ObjectsBefore,
+        "Two Leaf Recycling Cycles Allocate No New Objects")
+    Call Check(Trees.Breeze(12.0, 0) = 0.0 And Abs(Trees.Breeze(3.0, 0)) < 0.66,
+        "Tree Breezes Have Quiet Gaps And Gentle Sway")
+
+    Ok = G.SetEffectMaterialWater3D(Scene.Look.Water, True, 32, 0, 0, -1)
+
+    Call Check(Not Ok, "Water Rejects Negative Ripple Strength")
+
+    Ok = G.SetEffectMaterialWater3D(Scene.Look.Water, True, 32, 0, 0, 101)
+
+    Call Check(Not Ok, "Water Rejects Excessive Ripple Strength")
+
+    Ok = G.SetEffectMaterialWater3D(Scene.Look.Water, True, 32, 0, 0, 0)
+
+    Call Check(Ok, "Water Supports Still Surfaces")
+
+    Ok = G.SetEffectMaterialWater3D(Scene.Look.Water, True, 32, 0, 0)
+
+    Call Check(Ok, "Existing Water Calls Retain Full Strength By Default")
 
 End Sub
 

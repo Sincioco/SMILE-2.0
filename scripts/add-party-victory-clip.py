@@ -106,12 +106,12 @@ def fold_zara_armature(path):
     write_glb(path, document, binary)
 
 
-def append_animation(base_path, clip_path):
+def append_animation(base_path, clip_path, name='Victory'):
     document, binary = read_glb(base_path)
     incoming, incoming_binary = read_glb(clip_path)
     original = copy.deepcopy(document)
-    assert not any(a['name'] == 'Victory' for a in document['animations'])
-    animation = copy.deepcopy(next(a for a in incoming['animations'] if a['name'] == 'Victory'))
+    assert not any(a['name'] == name for a in document['animations'])
+    animation = copy.deepcopy(next(a for a in incoming['animations'] if a['name'] == name))
     node_names = {n['name']: i for i, n in enumerate(document['nodes']) if 'name' in n}
     def parents(model):
         return {child: model['nodes'][index].get('name')

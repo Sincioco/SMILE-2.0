@@ -1,0 +1,162 @@
+''' Town-scale lighting and native water surfaces. All resources belong to the town.
+Module Smile.Tools.NerisTownAppearance
+
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Graphics3D As G
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.Scene3D As Scene
+Import Smile.Tools.NerisTownCrystals As Crystals
+Import Smile.Tools.NerisTownTrees As Trees
+
+Public Type State
+    Water As Core.Material3D
+    Refraction As Core.Material3D
+    Surfaces[3] As Core.RibbonBatch3D
+    Distortion[3] As Core.RibbonBatch3D
+    Time As Number
+    Gems As Crystals.State
+    Garden As Trees.State
+    Ready As Boolean
+End Type
+
+Private Function ApplyLighting() As Boolean
+
+    Dim Ok As Boolean
+
+    Ok = G.ClearAdditionalLights3DChecked()
+    Ok = G.SetAmbientLight3D(180, 192, 215, 20) And Ok
+    Ok = G.SetDirectionalLight3D(-40, -65, -25, 255, 237, 214, 260) And Ok
+    Ok = G.SetPointLight3D(0, -600, 550, -380, 195, 218, 255, 300, 1800) And Ok
+    Ok = G.SetPointLight3D(1, 580, 780, 260, 255, 230, 190, 420, 2200) And Ok
+    Ok = G.SetPointLight3D(2, -350, 280, 560, 240, 246, 255, 170, 1300) And Ok
+    Ok = G.SetPointLight3D(3, 0, 900, -600, 235, 245, 255, 260, 1800) And Ok
+
+    Call Scene.UseCustomLighting()
+
+    Return Ok
+
+End Function
+
+Private Function BuildSurface(ByRef Batch As Core.RibbonBatch3D, Surface As Number) As Boolean
+
+    Dim Index As Number
+    Dim Points As Number
+    Dim LeftPoint As P.Vector3
+    Dim RightPoint As P.Vector3
+    Dim Angle As Double
+    Dim CenterX As Double
+    Dim Ok As Boolean
+
+    Points = 2
+    Ok = True
+
+    If Surface = 2 Then
+        Points = 49
+    End If
+
+    For Index = 0 To Points - 1
+
+        If Surface = 2 Then
+
+            Angle = ToDouble(Index) * 6.283185307179586 / 48.0
+            LeftPoint = P.Vector(0.0, 29.5, -200.0)
+            RightPoint = P.Vector(Cos(Angle) * 36.6, 29.5, -200.0 + Sin(Angle) * 36.6)
+
+        Else
+
+            CenterX = -125.0 + ToDouble(Surface) * 250.0
+            LeftPoint = P.Vector(CenterX - 14.0, 22.8, -385.0 + ToDouble(Index) * 530.0)
+            RightPoint = P.Vector(CenterX + 14.0, 22.8, LeftPoint.Z)
+
+        End If
+
+        Ok = P.SetRibbonPoint(Batch, Index, LeftPoint, RightPoint,
+            ToDouble(Index) / ToDouble(Points - 1)) And Ok
+        Ok = G.SetRibbonPointColor3D(Batch, Index, 255, 255, 255, 100) And Ok
+    End For
+
+    Ok = G.CommitRibbonBatch3D(Batch, Points) And Ok
+
+    Return Ok
+
+End Function
+
+Public Function Create(ByRef Value As State) As Boolean
+
+    Dim NoTexture As Core.Texture3D
+    Dim Index As Number
+    Dim Ok As Boolean
+
+    Ok = ApplyLighting()
+    Ok = Trees.Create(Value.Garden) And Ok
+    Ok = Crystals.Create(Value.Gems) And Ok
+    Ok = G.ConfigureDistortion3D(1, 2) And Ok
+    Value.Water = G.CreateEffectMaterial3D(NoTexture, G.MATERIAL_ALPHA_BLEND, 100)
+    Value.Refraction = G.CreateEffectMaterial3D(NoTexture, G.MATERIAL_ALPHA_BLEND, 100)
+    Ok = Value.Water.Handle <> 0 And Value.Refraction.Handle <> 0 And Ok
+    Ok = G.SetEffectMaterial3D(Value.Water, G.MATERIAL_ALPHA_BLEND, 255, 255, 255, 78, 100) And Ok
+    Ok = G.SetEffectMaterialWater3D(Value.Water, True, 32, 0, 0, 8) And Ok
+    Ok = G.SetEffectMaterialDistortion3D(Value.Refraction, 1, 90, 0, 20, 80) And Ok
+
+    For Index = 0 To 2
+        Value.Surfaces[Index] = G.CreateRibbonBatch3D(49, Value.Water)
+        Value.Distortion[Index] = G.CreateRibbonBatch3D(49, Value.Refraction)
+        Ok = BuildSurface(Value.Surfaces[Index], Index) And Ok
+        Ok = BuildSurface(Value.Distortion[Index], Index) And Ok
+    End For
+
+    Value.Ready = Ok
+
+    Return Ok
+
+End Function
+
+Public Sub Update(ByRef Value As State, Elapsed As Number)
+
+    Value.Time = (Value.Time + Max(0, Elapsed)) Mod 3600000
+    Value.Ready = G.SetEffectMaterialWater3D(Value.Water, True, 32, 0, Value.Time / 8, 8)
+
+    Call Crystals.Update(Value.Gems, Elapsed)
+    Call Trees.Update(Value.Garden, Elapsed)
+
+End Sub
+
+Public Function Draw(ByRef Value As State) As Boolean
+
+    Dim Index As Number
+    Dim Ok As Boolean
+
+    Ok = Value.Ready And Trees.Draw(Value.Garden)
+
+    For Index = 0 To 2
+        Ok = G.DrawRibbonBatch3D(Value.Surfaces[Index]) And Ok
+        Ok = G.DrawRibbonBatch3D(Value.Distortion[Index]) And Ok
+    End For
+
+    Ok = Crystals.Draw(Value.Gems) And Ok
+
+    Return Ok
+
+End Function
+
+Public Sub Destroy(ByRef Value As State)
+
+    Dim Index As Number
+
+    For Index = 0 To 2
+        Call G.DestroyRibbonBatch3D(Value.Surfaces[Index])
+        Call G.DestroyRibbonBatch3D(Value.Distortion[Index])
+    End For
+
+    Call G.DestroyMaterial3D(Value.Water)
+    Call G.DestroyMaterial3D(Value.Refraction)
+    Call Crystals.Destroy(Value.Gems)
+    Call Trees.Destroy(Value.Garden)
+
+    Value.Ready = False
+
+End Sub
+
+End Module

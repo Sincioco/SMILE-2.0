@@ -1,16 +1,16 @@
 {
-  "source": "Blend/Neris-Town-V1.blend",
-  "source_sha256": "d67bd21b18c89fc42e7da0bf96fb0a9c0d94338a031bdeeb2fffb66c4940bf99",
-  "evaluated_instances": 5511,
-  "triangles": 1830062,
+  "source": "Blend/Neris-Town-Detailed.blend",
+  "source_sha256": "5c8969c080ae6e3124c241e00339d81aab9f5bb665571bd4a0fca999b6625126",
+  "evaluated_instances": 12596,
+  "triangles": 2142732,
   "removed_degenerate_triangles": 190542,
   "coordinate_mapping": "Blender XYZ -> SMILE XZY; runtime scale 10, height +21",
   "chunks": [
     {
       "file": "Neris-00.glb",
       "parts": 4,
-      "triangles": 97124,
-      "sha256": "0fbf69c3a91ecdbd9078414c82d65e586b6ba2475585b50ef49406f183c12e82"
+      "triangles": 95776,
+      "sha256": "4192d551cfc272fa34f35cd3de3e8568589527d3728c99276b8353b4c7421cba"
     },
     {
       "file": "Neris-01.glb",
@@ -21,8 +21,8 @@
     {
       "file": "Neris-02.glb",
       "parts": 5,
-      "triangles": 103992,
-      "sha256": "7e154a457e2ce3add50ba3bfc468540a2a1c64a76ba6f3dc900b7d7418864c96"
+      "triangles": 105416,
+      "sha256": "d8aa8c7781bf137defec5c9a262f3f38fcfafcf28d67ab820b53120f622e58c1"
     },
     {
       "file": "Neris-03.glb",
@@ -32,15 +32,15 @@
     },
     {
       "file": "Neris-04.glb",
-      "parts": 6,
-      "triangles": 49956,
-      "sha256": "879d06c15e813dbaea8fbd78f6a0ee5160deae9c026a24220789407aaaf45d78"
+      "parts": 7,
+      "triangles": 51700,
+      "sha256": "1a61d127a97477a069b1bfaa2a9d4b27fbafe40fd3cfa0f26abf637136902408"
     },
     {
       "file": "Neris-05.glb",
       "parts": 3,
-      "triangles": 80244,
-      "sha256": "707cdbdc8f600e11fcbbff77cbee960adc3dc4ed2dcf610741e9cc390a41cd48"
+      "triangles": 80736,
+      "sha256": "d659bfdbd9cb3c1b3accb39e7b7c1e34a924c80cefaf6578d099ae002688abaf"
     },
     {
       "file": "Neris-06.glb",
@@ -88,55 +88,589 @@
       "file": "Neris-13.glb",
       "parts": 3,
       "triangles": 95429,
-      "sha256": "0cbd1c28df2a89881d5256198eb1a365cc1b646938ef61fa465e7ef4c7b50ca1"
+      "sha256": "5dbc10c2cbad4a602c14f51252bc0f31593c1f89147223431857c338c2975845"
     },
     {
       "file": "Neris-14.glb",
       "parts": 3,
-      "triangles": 81437,
-      "sha256": "aa5fc30f7af1fa083326d57be42227c22bbde830d916d561fe5126706ee22042"
+      "triangles": 102030,
+      "sha256": "78ed73bab5d3f764ade8c993469be24ca3c61dcad58e3435955d5136a631c7b8"
     },
     {
       "file": "Neris-15.glb",
       "parts": 2,
       "triangles": 130000,
-      "sha256": "cf3b4d265b3f8eb9d4729b1c48714c0d525f3f237ae2af84ef2ac63aff8d634c"
+      "sha256": "65c7130f82111e2719b31301071408723c61e22a79d441dc13acde76765a84bc"
     },
     {
       "file": "Neris-16.glb",
-      "parts": 4,
-      "triangles": 51258,
-      "sha256": "4f37fa43ee0a4626812e9a6277d8f0a7e83dc7b015fc3742d0b86fdc1866a015"
+      "parts": 2,
+      "triangles": 130000,
+      "sha256": "b8a8aaf03fe91bc916910766e8098f85fa49716a7c98eb5993456aabcdd4a377"
     },
     {
       "file": "Neris-17.glb",
-      "parts": 5,
-      "triangles": 105804,
-      "sha256": "27d0d74b75faa0158776b0d758ccf150d176c0a8cb73c1cd586156c204fa9c97"
+      "parts": 2,
+      "triangles": 130000,
+      "sha256": "b7169b89c6ea9aad4afa08fadc34290c93a82a6ad3390fc6fe86fc9c41e6a925"
     },
     {
       "file": "Neris-18.glb",
-      "parts": 3,
-      "triangles": 128396,
-      "sha256": "0ed2429f4686c1894a40d8e261870703ccf7c396adf7cb2c533e3e12d689fbea"
+      "parts": 4,
+      "triangles": 129319,
+      "sha256": "b8903362ddbc2e310bc859b7ad225e4d1da86c39b99db8d92fe85e56acc7c406"
     },
     {
       "file": "Neris-19.glb",
-      "parts": 6,
-      "triangles": 128255,
-      "sha256": "11293f36ff5a3de7d1320952a9c706e5bfc9cda05ca7945d49ce932f50cb6319"
+      "parts": 5,
+      "triangles": 51994,
+      "sha256": "46bd80757bcde01684010d35089eb9baef275cbb7b7378a917a89c07a5faf947"
     },
     {
       "file": "Neris-20.glb",
-      "parts": 8,
-      "triangles": 88663,
-      "sha256": "94b5206c03d185e4205dadf88bff72b44869789ff16792b959fb6c450253d4e5"
+      "parts": 2,
+      "triangles": 130000,
+      "sha256": "93f10056e3ef6012ad520b39b41c6d77e1201013862c3c70843d0e1286846a01"
     },
     {
       "file": "Neris-21.glb",
-      "parts": 8,
-      "triangles": 48369,
-      "sha256": "69a6cf2f9b688f76b8e84c276745908def01fb3b3162262edad528d80277e987"
+      "parts": 6,
+      "triangles": 127748,
+      "sha256": "b58db0d200cbe44ee16ffe5b027b523654bebfa67fba618f2646445dfdce83ad"
+    },
+    {
+      "file": "Neris-22.glb",
+      "parts": 9,
+      "triangles": 85861,
+      "sha256": "7a8dd55e6e4832fc32a655b592f8e754d6d3eadea140d89c59bb7f6876ad7bb1"
+    },
+    {
+      "file": "Neris-23.glb",
+      "parts": 9,
+      "triangles": 55588,
+      "sha256": "db98898c4ca2e435da1ecb967fb61e7cc4f7c9e6c2bef711a0b1fb2b436f5c0f"
     }
-  ]
+  ],
+  "tree_templates": [
+    {
+      "file": "Tree-0.glb",
+      "parts": 4,
+      "triangles": 23024,
+      "sha256": "04b6b174953bc0d849c4a104d9e2d8f65a76993fcbfec2a7d962be577df11f93"
+    },
+    {
+      "file": "Tree-1.glb",
+      "parts": 4,
+      "triangles": 23024,
+      "sha256": "c23b05cb1de7a7f3521b8e5df6f1e3d5edf94d039d5ab2a8b38e80fe0b2a11c5"
+    }
+  ],
+  "trees": [
+    {
+      "variant": 0,
+      "position": [
+        -460.0,
+        21.3,
+        -370.0
+      ],
+      "scale": [
+        850.00002,
+        850.00002,
+        850.00002
+      ],
+      "yaw": -0.0
+    },
+    {
+      "variant": 1,
+      "position": [
+        -460.0,
+        21.3,
+        -250.0
+      ],
+      "scale": [
+        935.0,
+        935.0,
+        935.0
+      ],
+      "yaw": -97.40283
+    },
+    {
+      "variant": 0,
+      "position": [
+        -460.0,
+        21.3,
+        -120.0
+      ],
+      "scale": [
+        1019.99998,
+        1019.99998,
+        1019.99998
+      ],
+      "yaw": -194.80566
+    },
+    {
+      "variant": 1,
+      "position": [
+        -460.0,
+        21.3,
+        10.0
+      ],
+      "scale": [
+        1105.00002,
+        1105.00002,
+        1105.00002
+      ],
+      "yaw": -292.20847
+    },
+    {
+      "variant": 0,
+      "position": [
+        -460.0,
+        21.3,
+        140.0
+      ],
+      "scale": [
+        850.00002,
+        850.00002,
+        850.00002
+      ],
+      "yaw": -389.61131
+    },
+    {
+      "variant": 1,
+      "position": [
+        -460.0,
+        21.3,
+        270.0
+      ],
+      "scale": [
+        935.0,
+        935.0,
+        935.0
+      ],
+      "yaw": -487.01413
+    },
+    {
+      "variant": 0,
+      "position": [
+        -460.0,
+        21.3,
+        390.0
+      ],
+      "scale": [
+        1019.99998,
+        1019.99998,
+        1019.99998
+      ],
+      "yaw": -584.41694
+    },
+    {
+      "variant": 1,
+      "position": [
+        460.0,
+        21.3,
+        -370.0
+      ],
+      "scale": [
+        1105.00002,
+        1105.00002,
+        1105.00002
+      ],
+      "yaw": -681.81975
+    },
+    {
+      "variant": 0,
+      "position": [
+        460.0,
+        21.3,
+        -250.0
+      ],
+      "scale": [
+        850.00002,
+        850.00002,
+        850.00002
+      ],
+      "yaw": -779.22262
+    },
+    {
+      "variant": 1,
+      "position": [
+        460.0,
+        21.3,
+        -120.0
+      ],
+      "scale": [
+        935.0,
+        935.0,
+        935.0
+      ],
+      "yaw": -876.62544
+    },
+    {
+      "variant": 0,
+      "position": [
+        460.0,
+        21.3,
+        10.0
+      ],
+      "scale": [
+        1019.99998,
+        1019.99998,
+        1019.99998
+      ],
+      "yaw": -974.02825
+    },
+    {
+      "variant": 1,
+      "position": [
+        460.0,
+        21.3,
+        140.0
+      ],
+      "scale": [
+        1105.00002,
+        1105.00002,
+        1105.00002
+      ],
+      "yaw": -1071.43112
+    },
+    {
+      "variant": 0,
+      "position": [
+        460.0,
+        21.3,
+        270.0
+      ],
+      "scale": [
+        850.00002,
+        850.00002,
+        850.00002
+      ],
+      "yaw": -1168.83388
+    },
+    {
+      "variant": 1,
+      "position": [
+        460.0,
+        21.3,
+        390.0
+      ],
+      "scale": [
+        935.0,
+        935.0,
+        935.0
+      ],
+      "yaw": -1266.23675
+    },
+    {
+      "variant": 0,
+      "position": [
+        -70.0,
+        21.3,
+        410.0
+      ],
+      "scale": [
+        1019.99998,
+        1019.99998,
+        1019.99998
+      ],
+      "yaw": -1363.63951
+    },
+    {
+      "variant": 1,
+      "position": [
+        70.0,
+        21.3,
+        410.0
+      ],
+      "scale": [
+        1105.00002,
+        1105.00002,
+        1105.00002
+      ],
+      "yaw": -1461.04238
+    },
+    {
+      "variant": 0,
+      "position": [
+        190.0,
+        21.3,
+        410.0
+      ],
+      "scale": [
+        850.00002,
+        850.00002,
+        850.00002
+      ],
+      "yaw": -1558.44525
+    },
+    {
+      "variant": 1,
+      "position": [
+        -170.0,
+        21.3,
+        -250.0
+      ],
+      "scale": [
+        935.0,
+        935.0,
+        935.0
+      ],
+      "yaw": -1655.84801
+    },
+    {
+      "variant": 0,
+      "position": [
+        -170.0,
+        21.3,
+        -30.0
+      ],
+      "scale": [
+        1019.99998,
+        1019.99998,
+        1019.99998
+      ],
+      "yaw": -1753.25087
+    },
+    {
+      "variant": 1,
+      "position": [
+        -170.0,
+        21.3,
+        210.0
+      ],
+      "scale": [
+        1105.00002,
+        1105.00002,
+        1105.00002
+      ],
+      "yaw": -1850.65363
+    },
+    {
+      "variant": 0,
+      "position": [
+        170.0,
+        21.3,
+        -250.0
+      ],
+      "scale": [
+        850.00002,
+        850.00002,
+        850.00002
+      ],
+      "yaw": -1948.0565
+    },
+    {
+      "variant": 1,
+      "position": [
+        170.0,
+        21.3,
+        -30.0
+      ],
+      "scale": [
+        935.0,
+        935.0,
+        935.0
+      ],
+      "yaw": -2045.45937
+    },
+    {
+      "variant": 0,
+      "position": [
+        170.0,
+        21.3,
+        210.0
+      ],
+      "scale": [
+        1019.99998,
+        1019.99998,
+        1019.99998
+      ],
+      "yaw": -2142.86224
+    },
+    {
+      "variant": 1,
+      "position": [
+        -60.0,
+        21.3,
+        -350.0
+      ],
+      "scale": [
+        1105.00002,
+        1105.00002,
+        1105.00002
+      ],
+      "yaw": -2240.26489
+    },
+    {
+      "variant": 0,
+      "position": [
+        60.0,
+        21.3,
+        -350.0
+      ],
+      "scale": [
+        850.00002,
+        850.00002,
+        850.00002
+      ],
+      "yaw": -2337.66776
+    },
+    {
+      "variant": 1,
+      "position": [
+        -70.0,
+        21.3,
+        -100.0
+      ],
+      "scale": [
+        935.0,
+        935.0,
+        935.0
+      ],
+      "yaw": -2435.07063
+    },
+    {
+      "variant": 0,
+      "position": [
+        70.0,
+        21.3,
+        -100.0
+      ],
+      "scale": [
+        1019.99998,
+        1019.99998,
+        1019.99998
+      ],
+      "yaw": -2532.4735
+    }
+  ],
+  "lamps": [
+    [
+      -33.5,
+      70.60001,
+      193.60001
+    ],
+    [
+      33.5,
+      70.6,
+      193.60001
+    ],
+    [
+      -18.0,
+      60.6,
+      -26.0
+    ],
+    [
+      18.0,
+      60.6,
+      -26.0
+    ],
+    [
+      274.5,
+      50.7,
+      242.79999
+    ],
+    [
+      274.5,
+      50.7,
+      197.2
+    ],
+    [
+      307.5,
+      48.8,
+      164.0
+    ],
+    [
+      332.5,
+      48.8,
+      276.0
+    ],
+    [
+      274.5,
+      50.7,
+      22.8
+    ],
+    [
+      274.5,
+      50.7,
+      -22.8
+    ],
+    [
+      307.5,
+      48.8,
+      -56.0
+    ],
+    [
+      332.5,
+      48.8,
+      55.99999
+    ],
+    [
+      274.5,
+      50.7,
+      -197.20001
+    ],
+    [
+      274.5,
+      50.7,
+      -242.79999
+    ],
+    [
+      307.5,
+      48.8,
+      -276.00003
+    ],
+    [
+      332.5,
+      48.8,
+      -164.0
+    ],
+    [
+      -298.99997,
+      47.0,
+      238.00002
+    ],
+    [
+      -303.99997,
+      47.0,
+      48.0
+    ],
+    [
+      -300.0,
+      47.0,
+      -152.00002
+    ],
+    [
+      -298.99997,
+      47.0,
+      -342.0
+    ],
+    [
+      -372.0,
+      47.0,
+      354.0
+    ],
+    [
+      -211.99998,
+      47.0,
+      310.0
+    ],
+    [
+      308.0,
+      47.0,
+      329.0
+    ],
+    [
+      346.0,
+      47.0,
+      -372.0
+    ]
+  ],
+  "leaf": {
+    "file": "Leaf.glb",
+    "parts": 1,
+    "triangles": 4,
+    "sha256": "bd2ab15df1b7a8aae84b4f87dea8e0ecd769d79dc7ceace7acf6c2e8dcc9bbd5"
+  }
 }

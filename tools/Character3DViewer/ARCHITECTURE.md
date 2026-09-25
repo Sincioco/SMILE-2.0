@@ -18,11 +18,12 @@ increase is involved. The manifest records source and output hashes.
 
 `NerisTownNavigation` owns exterior building/canal/boundary collision, bridge
 passages, axis sliding and paving heights. `NerisTownParty` owns the character
-handles, named Idle/Walk clips, grounded presentation, saved calibration and
+handles, named Idle/Walk/Run clips, town-only equipment hiding, grounded presentation, saved calibration and
 visibility after the finishing gait cycle. Calibration's optional position scale
 defaults to one for existing callers; smaller actors scale authored equipment
 translations while preserving rotations and the authoritative JSON.
-The party also owns session walking speed, initially 200%. Town input adjusts it
+The party owns Run/Walk mode and session speed, initially 100% of the new run baseline
+(93 1/3 world units/second). Walking is one-third of running. Town input adjusts speed
 in 25-point steps within 25–400%; leader movement and follower catch-up derive from
 the same rate. Only gait elapsed time is multiplied, with fractional time retained.
 
@@ -34,15 +35,51 @@ leader. It owns no input, actor handles, animation, global state or game data.
 `NerisTownSceneTests` exercises actual models, accepted keys, visibility and cleanup.
 
 Town camera policy composes the shared `ArenaViewport3D` / `ArenaCamera3D` controls.
-It reuses the reflective arena, grid, backgrounds and Viewer lighting recipe.
+It reuses the reflective arena, grid and backgrounds. `NerisTownAppearance` owns
+town-scale lighting, the water clock, two canal strips and a fountain disk, with
+matching distortion batches. It uses the existing native water material and releases
+all six batches before its two materials. No camera or party state is borrowed.
+Town input policy bounds absolute orbit elevation to 10–80 degrees and vertical pan
+to a target Y of at least 25. This keeps both overview and follow cameras above the
+town independently of arena-floor visibility, without copying shared camera math.
+The camera near plane is 10 town units: the former 1-unit plane let thin paving
+layers collapse into the same 24-bit depth value at overview distance. Water sits
+above its opaque color backing with enough separation for the same depth buffer.
 Movement begins a following view; direct mouse manipulation pauses cinematic
 orbit. This does not implement a general scene editor or resume Studio work.
 
-Growth review: the native coordinator grows from 472 to 554 lines; town owners
-remain at or below 320 lines each after walking-speed controls. Existing ViewerCalibration grows by one net line for
-the optional translation scale. No startup algorithms, source-size exclusions,
-renderer limits or dependency cycles were added. The only reusable new behavior
-in the library is the caller-owned follower trail.
+`NerisTownTrees` owns two reusable tree models, 108 placed part objects and a pool
+of ten leaf objects sharing one mesh/material. Existing precise transforms supply
+root-anchored sway; no shader or per-frame mesh extension is needed. The leaf clock
+stages falling, settling and a two-second fade at four-second intervals. All handles
+are allocated once and destroyed before their models. `NerisTownCrystals` owns cyan
+crystal halos/sparkles and warm lamp halos; both reuse one texture/material.
+`NerisTownLayout` is generated placement data from Blender, without rendering or
+input logic. `NerisTownMap` owns stateless 2D map drawing and coordinate projection,
+receiving only the party leader's position. Appearance delegates these effect owners.
+
+Native shaders filter procedural water octaves by pixel footprint and broaden
+PBR/water highlights using normal variance. A default-preserving optional ripple
+strength is added to the existing water operation. The renderer has no town
+dependency, new resource type or capacity increase. Web adoption remains held.
+
+Detailed vegetation is authored by `Source/detail_trees.py` in a separate
+`Neris-Town-Detailed.blend`, preserving the original town file. Two deterministic
+tree templates replace the 27 canopy placeholders with tapered trunks, branches
+and 2,970 modeled leaves each. The static portion is 24 chunks / 89 parts /
+2,142,732 triangles; reusable tree meshes add eight parts and the leaf adds one.
+`detail_flowers.py` authors 14 planters; `detail_materials.py` authors the palette
+and two deterministic stone textures. The writer embeds these maps with planar UVs,
+preserving evaluated normals and avoiding external dependencies.
+
+Growth review: NativeProgram changes only its initial tab. NativeViewerHost is
+unchanged. NerisTown and NerisTownParty remain below 400 lines; new appearance,
+trees, glow, layout and map owners remain below 300 each. Profiles has only explicit
+Orin clip registration/loop/fingerprint changes. Existing no-growth baselines,
+architecture checks, thresholds and exclusions are unchanged. The importer appends
+only Walk to Orin's accepted nine-clip checkpoint and migrates calibration by name.
+Native scene checks cover loading/drawing/cleanup, water arguments, camera bounds,
+map coordinates, Run/Walk transitions and allocation-free leaf recycling.
 
 ## Native battle planning and presentation
 

@@ -3132,7 +3132,8 @@ End Function
 ''' Native lit water on transparent surfaces, with scene refraction and view-dependent reflections.
 Public Function SetEffectMaterialWater3D(ByRef Material As Core.Material3D,
     Enabled As Boolean, Optional RoughnessPercent As Number = 18,
-    Optional FoamPercent As Number = 10, Optional TimeMilliseconds As Number = 0) As Boolean
+    Optional FoamPercent As Number = 10, Optional TimeMilliseconds As Number = 0,
+    Optional RippleStrengthPercent As Number = 100) As Boolean
 
     Dim Result As Boolean
     Dim EnabledValue As Number
@@ -3144,7 +3145,7 @@ Public Function SetEffectMaterialWater3D(ByRef Material As Core.Material3D,
     End If
 
     Result = Dispatch(COMMAND_DISTORTION, 4, Material.Handle, EnabledValue,
-        RoughnessPercent, FoamPercent, TimeMilliseconds, 0, 0, 0, 0) <> 0
+        RoughnessPercent, FoamPercent, TimeMilliseconds, RippleStrengthPercent - 100, 0, 0, 0) <> 0
 
     Return Result
 

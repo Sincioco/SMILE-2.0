@@ -10,7 +10,8 @@
     "neutralReference": "orin-v1.2-neutral-reference.glb",
     "equipmentSource": "orin-v1.0-equipment-source.glb",
     "acceptedViewerCheckpoint": "orin-v1.3-animation-checkpoint.glb",
-    "currentAnimationWorkingFile": "Blender/orin-v1.3-death-repaired.blend"
+    "currentAnimationWorkingFile": "Blender/orin-v1.3-death-repaired.blend",
+    "preTownWalkCheckpoint": "orin-v1.3-nine-clips.glb"
   },
   "rig": {
     "mixamoUpload": "orin-v1.3-mixamo-t-pose-with-skeleton.fbx",
@@ -19,7 +20,8 @@
   },
   "animations": {
     "manifest": "orin-v1.3-animation-set.json",
-    "sourcePattern": "Animations/orin-v1.3-mixamo-*.fbx"
+    "sourcePattern": "Animations/orin-v1.3-mixamo-*.fbx",
+    "townWalkWorkingFile": "Blender/orin-v1.3-town-walk.blend"
   },
   "runtime": {
     "descriptor": "OrinV13.sm3d.json",
@@ -36,7 +38,9 @@
     "groundingPolicy": "Shared -0.119 model-unit baseline, with measured Defend, Hit and Death contact corrections; JumpAttack preserves its launch and grounds impact through get-up; glow uses the final actor position",
     "syncScript": "scripts/sync-arin-v5-7-calibration.ps1 -Character Orin",
     "deathRootRepair": "Calibration/orin-v1.3-death-root-repair.json",
-    "jumpAttackGroundingRepair": "Calibration/orin-v1.3-jump-attack-grounding-repair.json"
+    "jumpAttackGroundingRepair": "Calibration/orin-v1.3-jump-attack-grounding-repair.json",
+    "townWalkImport": "Calibration/town-walk-import.json",
+    "townWalkGrounding": "Calibration/town-walk-grounding.json"
   },
   "previews": "Previews",
   "vfx": {
@@ -67,6 +71,7 @@
     "blenderBuilder": "scripts/build-orin-v1-3-mixamo.py",
     "viewerBuild": "tools/Character3DViewer/Build.ps1",
     "acceptedDeathRepair": "scripts/repair-orin-death-root.py",
-    "acceptedJumpAttackRepair": "scripts/repair-orin-jump-attack-grounding.py"
+    "acceptedJumpAttackRepair": "scripts/repair-orin-jump-attack-grounding.py",
+    "townWalkBuilder": "scripts/add-orin-town-walk.py"
   }
 }

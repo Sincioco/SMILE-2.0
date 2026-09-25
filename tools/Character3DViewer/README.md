@@ -2,6 +2,21 @@
 
 ## Native Neris Town
 
+The native Viewer opens on **Neris Town**. Its 27 trees use branching trunks and
+2,970 modeled leaves each, with a higher-contrast jade/lime palette and richer grass.
+Gentle six-second breezes have quiet gaps. Ten preallocated mesh leaves occasionally
+fall, settle, then fade one at a time before recycling; no objects are created during
+playback. Fourteen planters have sculpted bowls, stems, leaves and layered flowers.
+Paving has subtle stone grain, shallow normal detail and a restrained polished sheen.
+
+Town-scale warm/cool lighting gives bronze and teal enamel directional highlights.
+Canals and the fountain use calm native water at 8% ripple strength and one-eighth
+speed. Crystals have faint cyan halos and slow sparkles; 24 door lamps have warm
+amber halos centered on their luminous geometry. Depth precision and shader filtering
+address paving, water and highlight shimmer. This uses native PBR lighting, without
+Blender's HDR environment lighting. The upper-right map tracks Arin and labels City
+Hall, Weapon, Armor and Item shops. North stays up while the camera orbits.
+
 The **Neris Town** tab reconstructs the accepted Blender town using its evaluated
 geometry: 13 buildings including the relay tower, canals, bridges, gardens and street furniture.
 Models load incrementally with progress. The town sits on the same reflective arena
@@ -9,8 +24,9 @@ with the shared grid, backgrounds and camera controls.
 
 | Control | Action |
 | --- | --- |
-| WASD / Arrow Keys | Walk Arin relative to the camera; start the following view |
-| + / − (Main Keyboard or Numpad) | Increase / decrease walking speed by 25 percentage points |
+| Arrow Keys | Move Arin relative to the camera; start the following view |
+| R / W | Select Run / Walk without moving the party |
+| + / − (Main Keyboard or Numpad) | Increase / decrease locomotion speed by 25 percentage points |
 | Middle Mouse Drag | Orbit; pauses cinematic rotation |
 | Left Mouse Drag | Pan; pauses cinematic rotation |
 | Mouse Wheel | Smooth zoom |
@@ -23,14 +39,17 @@ point, finish their gait animation and hide. Arin remains visible. Exterior coll
 keeps the party out of buildings and canals; bridges remain traversable. Building
 interiors and NPC interactions are outside this scene.
 
-Walking defaults to 200% of the original town speed (70 world units per second).
-The header shows the current speed; the range is 25–400%. This setting lasts until
-the town is reopened. Leader movement, follower catch-up and gait animation scale
-together; idle animation and cinematic orbit retain their normal speed.
+Run is the default: 93 1/3 world units per second, one-third faster than the previous
+70. Walk is one-third of Run (31 1/9 units/second). The header starts at 100% of this
+new baseline; +/- adjusts 25–400% until the town is reopened. Leader movement,
+follower catch-up and gait animation scale together; other animation clocks do not.
+Every member uses their own Walk and Run. Orin's new Mixamo Walk was retargeted to
+his accepted bind axes and grounded, while preserving his nine existing clips.
+Town equipment is hidden; other tabs retain normal equipment and calibration.
 
-Orin v1.3 has Run but no Walk clip, so his existing Run uses a 65% base rate before
-the walking-speed multiplier. Arin, Zara and Mira use their Walk clips. Original
-character packages stay unchanged.
+Orbit elevation stays between 10 and 80 degrees. Vertical pan keeps the target at
+least 25 world units high, above the town paving, even when F hides the arena floor.
+This policy applies to both overview and party-follow framing, including close zoom.
 
 The current identified roster is Arin, Orin, Zara and Mira. Mila's model identity
 is awaiting clarification; the controller supports a fifth member without substituting
@@ -40,17 +59,20 @@ Native build: `pwsh -File tools/Character3DViewer/Launch.ps1 -Build`.
 See `NerisTownTests.smileproj` for route checks and `NerisTownSceneTests.smile`
 for the real-asset acceptance fixture. Studio and Web adoption remain held.
 
-September 25 acceptance: native build, route/obstacle and real-asset scene checks,
-24 accepted Arin keys, follower appearance/gathering, resource cleanup and shared
-Viewer hardening passed. Visible checks covered town/Arin tab switching, follow
-framing, slow/moderate pan, zoom in/out, reset and F/G/B. Slow/moderate horizontal
-and vertical orbit are checked through the shared pointer-input path; the desktop
-automation interface cannot issue a held middle-button drag. Original Blender and
-all 22 exported GLB hashes match the package manifest.
+September 25 appearance checks: native build and real-asset town fixture pass with
+24 static chunks, four actors and all 24 accepted Arin keys. The fixture covers
+Run/Walk switching, speed bounds, gathering, map coordinates, hidden-floor camera
+limits, slow/moderate orbit input, water strength bounds and two simulated leaf
+recycling cycles without allocation. The native hardening/architecture gate and
+58 shared graphics, pointer-input and audio checks pass. Blender garden geometry,
+materials and Orin's new Walk were rendered and inspected. Final native
+motion/appearance review remains pending: desktop
+automation was stopped by Escape and was not resumed. Earlier pan/zoom/F/G/B visual
+checks apply to the original town build, not the new appearance revision.
 
 ## Native Battle System
 
-The native Viewer opens directly on **Battle System**, using the existing Kael
+The **Battle System** tab uses the existing Kael
 Party arena, actors, accepted poses, equipment and effects. Arin, Orin, Zara and
 Mira start at level 1 against level-20 Kael (Zara's stat growth). The ordinary
 Kael Party tab retains its demo. Yalis and the three older Mira comparison tabs

@@ -31,14 +31,18 @@ float3 WaterEnvironment(float3 reflected)
 }
 
 // Continuous world-space detail crosses strip seams and travels with the caller's clock.
-float WaterHeight(float3 p, float seconds)
+float WaterHeight(float3 p, float seconds, float footprint)
 {
     p += float3(seconds * -1.8, seconds * 3.2, seconds * .9);
     float warp = sin(p.x*.12 + p.y*.16) + cos(p.z*.18 - p.y*.09);
     float broad = sin(p.x*.24 + warp) * cos(p.y*.21 - p.z*.19 + warp);
     float folds = sin(p.x*.71 - p.z*.53 + broad*2) * sin(p.y*.63 + warp);
     float fine = sin(p.x*1.83 + p.y*1.21 + folds) * cos(p.z*1.67 - p.y*.97);
-    return broad * 1.15 + folds * .32 + fine * .075;
+    // Fade each octave before it becomes subpixel; MSAA cannot filter shader noise.
+    float broadWeight = 1-smoothstep(2.0, 8.0, footprint);
+    float foldWeight = 1-smoothstep(.8, 3.0, footprint);
+    float fineWeight = 1-smoothstep(.3, 1.3, footprint);
+    return broad * 1.15 * broadWeight + folds * .32 * foldWeight + fine * .075 * fineWeight;
 }
 
 float3 WaterReflection(float3 origin, float3 direction, float3 fallback)
@@ -72,8 +76,9 @@ float4 ShadeWater(float4 pixel, float2 uv, float4 base, float3 world, float3 sur
         cross(ddx(world), ddy(world)) + float3(0,.000001,0));
     normal *= dot(normal, view) < 0 ? -1 : 1;
     float seconds = waterCamera.w;
-    float height = WaterHeight(world, seconds);
     float3 dx = ddx(world), dy = ddy(world);
+    float footprint = max(length(dx), length(dy));
+    float height = WaterHeight(world, seconds, footprint) * waterLightDirection.w;
     float3 acrossX = cross(dy, normal), acrossY = cross(normal, dx);
     float determinant = dot(dx, acrossX);
     float3 gradient = ddx(height)*acrossX + ddy(height)*acrossY;
@@ -90,6 +95,9 @@ float4 ShadeWater(float4 pixel, float2 uv, float4 base, float3 world, float3 sur
     float nh = saturate(dot(normal, halfway));
     float vh = saturate(dot(view, halfway));
     float roughness = max(.08, waterParameters.y);
+    float3 normalDx = ddx(normal), normalDy = ddy(normal);
+    float variance = min(.18, .25*(dot(normalDx,normalDx)+dot(normalDy,normalDy)));
+    roughness = min(1, sqrt(sqrt(pow(roughness,4)+variance)));
     float alpha = roughness * roughness;
     float denominator = nh*nh*(alpha*alpha-1)+1;
     float distribution = alpha*alpha / max(3.141593*denominator*denominator, .00001);
@@ -121,7 +129,7 @@ float4 ShadeWater(float4 pixel, float2 uv, float4 base, float3 world, float3 sur
     }
     float foamNoise = sin(world.x*.62 + sin(world.z*.41)*2 + seconds*2.8) *
         sin(world.y*.83 - world.z*.36 + seconds*1.9);
-    float foam = smoothstep(.72,.94,foamNoise) * waterParameters.z;
+    float foam = smoothstep(.72,.94,foamNoise) * waterParameters.z * (1-smoothstep(.8,3,footprint));
     float3 result = lerp(transmission, reflection, fresnel) + highlight;
     result = lerp(result, float3(.72,.83,.85), foam);
     float opacity = saturate(base.a * (1.15 + fresnel*.45 + foam*.5));

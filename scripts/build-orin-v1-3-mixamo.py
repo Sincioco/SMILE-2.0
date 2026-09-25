@@ -553,4 +553,5 @@ def build() -> None:
     print("ORIN_V13_CHECKPOINT_READY=" + json.dumps(report))
 
 
-build()
+if __name__ == '__main__':
+    build()

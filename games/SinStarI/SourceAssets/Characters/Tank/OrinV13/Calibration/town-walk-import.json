@@ -1,0 +1,26 @@
+{
+  "preservedModelAndOldAnimationBytes": true,
+  "animationParentNamesMatch": true,
+  "previousClips": [
+    "Death",
+    "Defend",
+    "Hit",
+    "Idle",
+    "JumpAttack",
+    "Run",
+    "SwordAttack",
+    "ThorAttack",
+    "Victory"
+  ],
+  "newClipIndex": 9,
+  "newAnimationChannels": 123,
+  "source": "orin-v1.3-mixamo-town-walk.fbx",
+  "maxRestMatrixDelta": 0.6033575783843617,
+  "bones": 41,
+  "sourceSha256": "A31A8AF1847ABE08680255CC27CE72D06FE9F3DCDDCE950A2C8ED053526ACAD6",
+  "modelSha256": "8B10BD5D7B29A69226D531114F2041FA131E5D6E1EF2443711EA961083C6949D",
+  "idleMinimum": 0.003268100321292877,
+  "walkMinimum": 0.003268034430220723,
+  "walkMaximum": 0.0032681722659617662,
+  "retarget": "Sampled armature-space poses onto accepted rig, grounded walking contact"
+}

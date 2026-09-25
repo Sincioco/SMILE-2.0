@@ -1,0 +1,129 @@
+''' North-up town map. Coordinates use the same exterior world as navigation.
+Module Smile.Tools.NerisTownMap
+
+Option Explicit
+
+Import Smile.Simple3D.Precision3D As P
+
+Public Function MapX(WorldX As Double, Origin As Number, Size As Number) As Number
+
+    Dim Result As Number
+
+    Result = Origin + ToNumber(Round((Max(-510.0, Min(510.0, WorldX)) + 510.0) * ToDouble(Size) / 1020.0))
+
+    Return Result
+
+End Function
+
+Public Function MapY(WorldZ As Double, Origin As Number, Size As Number) As Number
+
+    Dim Result As Number
+
+    Result = Origin + ToNumber(Round((450.0 - Max(-450.0, Min(450.0, WorldZ))) * ToDouble(Size) / 900.0))
+
+    Return Result
+
+End Function
+
+Private Sub Landmark(X As Number, Y As Number, Name As Text,
+    Optional LabelLeft As Boolean = False, Optional LabelAbove As Boolean = False)
+
+    Dim LabelX As Number
+    Dim LabelY As Number
+
+    LabelX = X + 12
+    LabelY = Y - 6
+
+    If LabelLeft Then
+        LabelX = X - Text_Length(Name) * 7 - 12
+    End If
+
+    If LabelAbove Then
+        LabelX = X - Text_Length(Name) * 7 / 2
+        LabelY = Y - 27
+    End If
+
+    Fill Rectangle X - 7, Y - 6, 14, 12, RGB(219, 187, 116)
+    Fill Rectangle LabelX - 3, LabelY - 2, Text_Length(Name) * 7 + 6, 17, RGB(12, 25, 34)
+    Draw Text Name At LabelX, LabelY Size 12 Color WHITE
+
+End Sub
+
+Public Sub Draw(Position As P.Vector3)
+
+    Dim X As Number
+    Dim Y As Number
+    Dim Width As Number
+    Dim Height As Number
+    Dim Index As Number
+    Dim PointX As Number
+    Dim PointY As Number
+    Dim WorldZ As Double
+
+    Width = Min(270, Max(200, Window_Width() / 5))
+    Height = Width * 9 / 10
+    X = Window_Width() - Width - 20
+    Y = 134
+    Fill Rectangle X - 10, Y - 32, Width + 20, Height + 58, RGB(10, 24, 34)
+    Draw Text "Neris Town" At X, Y - 25 Size 14 Color RGB(225, 210, 162)
+    Draw Text "N ^" At X + Width - 27, Y - 25 Size 14 Color RGB(225, 210, 162)
+    Fill Rectangle X, Y, Width, Height, RGB(54, 81, 61)
+    Fill Rectangle MapX(-85.0, X, Width), Y + 9, Width * 17 / 102, Height - 16, RGB(154, 170, 171)
+
+    For Index = 0 To 3
+
+        Select Case Index
+            Case 0
+                WorldZ = -320.0
+            Case 1
+                WorldZ = -100.0
+            Case 2
+                WorldZ = 140.0
+            Case 3
+                WorldZ = 390.0
+        End Select
+
+        PointY = MapY(WorldZ, Y, Height)
+        Fill Rectangle X + 5, PointY - 3, Width - 10, 6, RGB(154, 170, 171)
+    End For
+
+    For Index = 0 To 1
+        PointX = MapX(-125.0 + ToDouble(Index) * 250.0, X, Width)
+        Fill Rectangle PointX - 2, MapY(145.0, Y, Height), 4, Height * 53 / 90, RGB(56, 160, 176)
+        PointX = MapX(-210.0 + ToDouble(Index) * 420.0, X, Width)
+        Fill Rectangle PointX - 3, Y + 10, 6, Height - 20, RGB(154, 170, 171)
+    End For
+
+    For Index = 0 To 3
+
+        Select Case Index
+            Case 0
+                WorldZ = -330.0
+            Case 1
+                WorldZ = -140.0
+            Case 2
+                WorldZ = 60.0
+            Case 3
+                WorldZ = 250.0
+        End Select
+
+        PointX = MapX(-340.0, X, Width)
+        PointY = MapY(WorldZ, Y, Height)
+        Fill Rectangle PointX - 10, PointY - 9, 20, 18, RGB(201, 207, 193)
+    End For
+
+    Call Landmark(MapX(0.0, X, Width), MapY(260.0, Y, Height), "City Hall", False, True)
+    Call Landmark(MapX(320.0, X, Width), MapY(220.0, Y, Height), "Weapon", True)
+    Call Landmark(MapX(320.0, X, Width), MapY(0.0, Y, Height), "Item", True)
+    Call Landmark(MapX(320.0, X, Width), MapY(-220.0, Y, Height), "Armor", True)
+
+    Fill Rectangle MapX(0.0, X, Width) - 4, MapY(20.0, Y, Height) - 5, 8, 10, RGB(74, 205, 234)
+    PointX = MapX(Position.X, X, Width)
+    PointY = MapY(Position.Z, Y, Height)
+    Fill Circle PointX, PointY, 5, BLACK
+    Fill Circle PointX, PointY, 3, RGB(255, 230, 83)
+    Draw Text "You: Arin" At X, Y + Height + 7 Size 12 Color RGB(255, 230, 83)
+
+End Sub
+
+End Module

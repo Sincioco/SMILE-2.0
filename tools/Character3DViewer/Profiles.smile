@@ -226,7 +226,7 @@ Public Function ProfileAt(Index As Number) As CharacterViewer.Profile
         Result.PrototypeAlias = ""
         Result.ProductionStatus = "Candidate"
         Result.AssetPath = "Assets\Generation2\OrinV13\OrinV13.sm3d"
-        Result.ExpectedClipCount = 9
+        Result.ExpectedClipCount = 10
         Result.ExpectedSocketCount = 21
         Result.DesiredWorldHeight = 125
         Result.DefaultPlaybackSpeed = 200
@@ -444,9 +444,10 @@ Public Function ClipCount(ProfileIndex As Number) As Number
         Result = 16
     Else If IsSwordFighter(ProfileIndex) Then
         Result = 10
-    Else If ProfileIndex = PROFILE_ARIN Or ProfileIndex = PROFILE_MIRA Then
+    Else If (ProfileIndex = PROFILE_ARIN Or
+        ProfileIndex = PROFILE_MIRA Or ProfileIndex = PROFILE_ORIN) Then
         Result = 10
-    Else If ProfileIndex = PROFILE_ORIN Or IsMiraCharacter(ProfileIndex) Then
+    Else If IsMiraCharacter(ProfileIndex) Then
         Result = 9
     Else If IsPartyCharacter(ProfileIndex) Then
         Result = 9
@@ -605,6 +606,8 @@ Public Function ClipName(ProfileIndex As Number, ClipIndex As Number) As Text
             Result = "Victory"
         Else If ClipIndex = 8 Then
             Result = "Run"
+        Else If ClipIndex = 9 Then
+            Result = "Walk"
         End If
 
     Else If IsPartyCharacter(ProfileIndex) Then
@@ -998,7 +1001,7 @@ Public Function ClipLoops(ProfileIndex As Number, ClipIndex As Number) As Boolea
     Else If ProfileIndex = PROFILE_DRAGON Then
         Result = ClipIndex = 0
     Else If ProfileIndex = PROFILE_ORIN Then
-        Result = ClipIndex = 0 Or ClipIndex = 8
+        Result = ClipIndex = 0 Or ClipIndex = 8 Or ClipIndex = 9
     Else If IsPartyCharacter(ProfileIndex) Then
         Result = (ClipIndex = 0 Or
             ClipIndex = 3 Or
@@ -1424,7 +1427,7 @@ Public Function CalibrationFingerprint(ProfileIndex As Number) As Text
     Result = "625aa1fd454ddab2ba8c250e42e3c5eabfdcf7c5a8d3c10def0587514357622f"
 
     If ProfileIndex = PROFILE_ORIN Then
-        Result = "df83d4b8076e6f903902acc27321ab5da2cbdbb1348fdb8f8045e70aed0691c8"
+        Result = "a9e7f41214ab55101c101423db5010289853b48719bf76c9df83f92ebe2aca48"
     End If
 
     Return Result

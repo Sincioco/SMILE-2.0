@@ -6,6 +6,10 @@ Created by: Louiery R. Sincioco (Sin). September 25, 2026.
 
 **[Open the complete Blender town](Blend/Neris-Town-V1.blend)**
 
+**[Open the detailed-tree revision](Blend/Neris-Town-Detailed.blend)** — current
+native Viewer source. The original town and its hand-editable scene remain intact.
+See the [new trees preview](Previews/Neris-Detailed-Trees.png).
+
 The self-contained Blender 5.2.1 LTS file opens with a material-preview overview.
 It embeds the five previously modeled Neris buildings, eight new homes in three
 styles, and all streets, landscape and props. No external textures or linked
@@ -53,7 +57,8 @@ not a reconstruction of the Paseo map.
   and southeastern edges.
 - **Public space:** two garden canals with six bridges, a crystal arrival circle,
   two small market stalls, benches, lamps, signs, flower beds and private hedges.
-- **Landscape:** 27 faceted trees, low boundary walls and an open southern gate.
+- **Landscape:** 27 trees, low boundary walls and an open southern gate. The original
+  uses faceted crowns; the detailed revision uses branching trunks and mesh leaves.
 - **Scale:** 102 × 90 m foundation; meters, Blender Z up, north +Y.
 
 Names and the arrival-circle purpose are visual design suggestions. No new story
@@ -143,24 +148,54 @@ Studio/Web holds remain unchanged.
 
 ## September 25: native Character Viewer reconstruction
 
-The native Viewer now imports this accepted scene through `Runtime/`, retaining
-1,830,062 visible triangles in 22 static GLBs / 83 mesh parts. Export evaluates
-all 5,511 mesh instances; 190,542 zero-area or sub-microscopic degenerate triangles
-are discarded. Identical PBR materials and exact shared position/normal vertices
-are combined without decimation. The Blender scene and existing previews are
-unchanged. `Runtime/manifest.json` records source and export SHA-256 checksums.
+The native Viewer imports `Blend/Neris-Town-Detailed.blend` through `Runtime/`.
+The fixed town uses 24 GLBs / 89 mesh parts / 2,142,732 triangles. Two reusable tree
+models each contain four parts and 23,024 triangles, placed at the original 27 roots.
+The complete town contains 2,764,380 triangles before the ten tiny falling leaves.
+Export evaluates 12,596 non-tree instances and removes 190,542 degenerate triangles.
+Identical PBR materials and exact position/normal vertices are shared without
+decimation. The original `Neris-Town-V1.blend` remains byte-for-byte unchanged.
+`Runtime/manifest.json` records current source/export hashes, tree transforms and
+individual lamp positions. `export_layout.py` derives runtime placement data.
+
+`Source/detail_trees.py` creates two deterministic tree templates with tapered
+trunks, root flares, 158 branch/root sections and 2,970 individual shaped leaves
+per tree (80,190 leaves across town). Leaf surfaces have folded geometry and three
+green PBR materials; they are not solid crown blobs or textured billboards. Existing
+positions, tree scales, building geometry and collision footprints are preserved.
+The original 22-chunk export is recoverable from Git history. `detail_flowers.py`
+replaces 14 placeholder planters with bowls, open bronze rim inlays, soil and 29
+stemmed, leafy, layered flowers each. `detail_materials.py` supplies the richer garden
+palette and deterministic stone grain/normal maps in `Textures/`. Paving roughness
+is 0.43 with shallow normal strength 0.25. No external texture URLs are required.
 
 Rebuild the static export with installed Blender 5.2:
 
 ```powershell
 & 'C:\Program Files\Blender Foundation\Blender 5.2\blender.exe' --background `
-  'Blend/Neris-Town-V1.blend' --python-exit-code 1 --python 'Source/export_native.py'
+  'Blend/Neris-Town-V1.blend' --python-exit-code 1 --python 'Source/detail_trees.py'
+& 'C:\Program Files\Blender Foundation\Blender 5.2\blender.exe' --background `
+  'Blend/Neris-Town-Detailed.blend' --python-exit-code 1 `
+  --python 'Source/detail_flowers.py' --python 'Source/detail_materials.py'
+& 'C:\Program Files\Blender Foundation\Blender 5.2\blender.exe' --background `
+  'Blend/Neris-Town-Detailed.blend' --python-exit-code 1 `
+  --python 'Source/export_native.py' --python 'Source/export_layout.py'
 ```
 
-Run from this package directory. `static_glb.py` preserves the evaluated normals
-and supplies a valid orthonormal tangent basis for the flat PBR materials. It avoids
+Run the full recipe from this package directory to reconstruct the derived revision
+from the original; for placement-only edits, run just the last command.
+`static_glb.py` preserves evaluated normals, embeds the stone maps and supplies
+planar UVs with a tangent basis. It avoids
 Blender's second-export vertex splitting. A changed chunk count requires updating
 `NerisTownAssets.CHUNK_COUNT` and the native project asset inventory.
+
+The Viewer uses existing precise transforms to sway each tree by at most 0.65 degrees
+in intermittent six-second breezes. Ten reusable mesh leaves fall at four-second
+intervals, settle, then fade for two seconds, one at a time, before recycling. This
+adds no per-frame mesh creation or renderer extension. Crystals and the 24 individual
+door lamps use separate cyan and amber halos, with restrained crystal sparkles.
+`Previews/Neris-Detailed-Garden.png` shows the new planters and stone; the updated
+tree preview shows the stronger greens. These are Blender previews, not native captures.
 
 The Viewer provides a small exterior navigation layer, grounded party followers
 and the common arena/camera controls; it is not a complete game level. Small

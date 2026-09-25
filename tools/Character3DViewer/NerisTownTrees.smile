@@ -1,0 +1,206 @@
+''' Reusable tree models, gentle intermittent sway, and ten recycled mesh leaves.
+Module Smile.Tools.NerisTownTrees
+
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Graphics3D As G
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Tools.NerisTownLayout As Layout
+Import Smile.Tools.NerisTownNavigation As Navigation
+
+Public Const LEAF_COUNT = 10
+
+Public Type State
+    Models[2] As Core.Model3D
+    Objects[108] As Core.Object3D
+    LeafModel As Core.Model3D
+    Leaves[10] As Core.Object3D
+    Time As Double
+    Sway As Double
+    FadingCount As Number
+    Ready As Boolean
+End Type
+
+Public Function Create(ByRef Value As State) As Boolean
+
+    Dim Index As Number
+    Dim Part As Number
+    Dim Place As Layout.TreePlacement
+    Dim Ok As Boolean
+
+    Value.Models[0] = G.LoadModel3D("Assets/Neris/Tree-0.sm3d")
+    Value.Models[1] = G.LoadModel3D("Assets/Neris/Tree-1.sm3d")
+    Value.LeafModel = G.LoadModel3D("Assets/Neris/Leaf.sm3d")
+    Ok = G.PrepareModelPbr3D(Value.Models[0], 1, 1, 4)
+    Ok = G.PrepareModelPbr3D(Value.Models[1], 1, 1, 4) And Ok
+    Ok = G.PrepareModelPbr3D(Value.LeafModel, 1, 1, 4) And Ok
+    Ok = Value.Models[0].PartCount = 4 And Value.Models[1].PartCount = 4 And Ok
+
+    For Index = 0 To Layout.TREE_COUNT - 1
+
+        Place = Layout.TreeAt(Index)
+
+        For Part = 0 To 3
+
+            Value.Objects[Index * 4 + Part] = G.CreateModelPart3D(Value.Models[Place.Variant], Part)
+            Ok = P.SetPosition(Value.Objects[Index * 4 + Part], Place.Position.X,
+                Place.Position.Y, Place.Position.Z) And Ok
+            Ok = P.SetScale(Value.Objects[Index * 4 + Part], Place.Scale.X,
+                Place.Scale.Y, Place.Scale.Z) And Ok
+        End For
+    End For
+
+    For Index = 0 To LEAF_COUNT - 1
+        Value.Leaves[Index] = G.CreateModelPart3D(Value.LeafModel, 0)
+        Ok = P.SetScale(Value.Leaves[Index], 1000.0, 1000.0, 1000.0) And Ok
+        Ok = G.SetObjectVisibleChecked3D(Value.Leaves[Index], False) And Ok
+    End For
+
+    Value.Ready = Ok
+
+    Return Ok
+
+End Function
+
+''' Smooth six-second breezes with quiet gaps; roots stay anchored.
+Public Function Breeze(Seconds As Double, Index As Number) As Double
+
+    Dim Phase As Double
+    Dim Envelope As Double
+    Dim Result As Double
+
+    Phase = Seconds + ToDouble(Index) * 0.29
+    Phase = Phase - Floor(Phase / 18.0) * 18.0
+
+    If Phase < 6.0 Then
+        Envelope = Sin(Phase * 3.141592653589793 / 6.0)
+    End If
+
+    Result = Envelope * Envelope * Sin(Seconds * 1.35 + ToDouble(Index) * 0.31) * 0.65
+
+    Return Result
+
+End Function
+
+Private Function UpdateLeaf(ByRef Value As State, Index As Number) As Boolean
+
+    Dim Age As Double
+    Dim Cycle As Number
+    Dim Progress As Double
+    Dim Spin As Double
+    Dim Ground As Double
+    Dim Opacity As Number
+    Dim Place As Layout.TreePlacement
+    Dim Point As P.Vector3
+    Dim Ok As Boolean
+
+    Age = Value.Time - 2.0 - ToDouble(Index) * 4.0
+    Ok = True
+
+    If Age < 0.0 Then
+        Return Ok
+    End If
+
+    Cycle = ToNumber(Floor(Age / 40.0))
+    Age = Age - ToDouble(Cycle) * 40.0
+    Place = Layout.TreeAt((Index * 7 + Cycle * 3) Mod Layout.TREE_COUNT)
+    Progress = Min(1.0, Age / 6.0)
+    Point = Place.Position
+    Point.X = Point.X + Progress * 7.0 + Sin(Progress * 9.0 + ToDouble(Index)) * 2.0
+    Point.Z = Point.Z + Progress * 4.0 + Cos(Progress * 8.0 + ToDouble(Index)) * 2.0
+    Ground = Navigation.GroundHeight(Point.X, Point.Z) + 0.16
+    Point.Y = Ground + (1.0 - Progress) * (Place.Scale.Y * 0.035)
+    Spin = Sin(Age * 2.2) * 32.0 * (1.0 - Progress)
+    Opacity = 100
+
+    If Age > 38.0 Then
+        Opacity = ToNumber((40.0 - Age) * 50.0)
+        Value.FadingCount = Value.FadingCount + 1
+    End If
+
+    Call G.SetObjectOpacity(Value.Leaves[Index], Opacity)
+
+    Ok = G.SetObjectVisibleChecked3D(Value.Leaves[Index], True)
+    Ok = P.SetPosition(Value.Leaves[Index], Point.X, Point.Y, Point.Z) And Ok
+    Ok = P.SetRotation(Value.Leaves[Index], Spin, ToDouble(Index) * 41.0 + Progress * 250.0, Spin * 0.5) And Ok
+
+    Return Ok
+
+End Function
+
+Public Sub Update(ByRef Value As State, Elapsed As Number)
+
+    Dim Index As Number
+    Dim Part As Number
+    Dim Place As Layout.TreePlacement
+    Dim Sway As Double
+    Dim Ok As Boolean
+
+    Value.Time = Value.Time + ToDouble(Elapsed) / 1000.0
+    Value.FadingCount = 0
+    Value.Sway = 0.0
+    Ok = Value.Ready
+
+    For Index = 0 To Layout.TREE_COUNT - 1
+
+        Place = Layout.TreeAt(Index)
+        Sway = Breeze(Value.Time, Index)
+        Value.Sway = Max(Value.Sway, Abs(Sway))
+
+        For Part = 0 To 3
+            Ok = P.SetRotation(Value.Objects[Index * 4 + Part], Sway,
+                Place.Yaw, Sway * 0.6) And Ok
+        End For
+    End For
+
+    For Index = 0 To LEAF_COUNT - 1
+        Ok = UpdateLeaf(Value, Index) And Ok
+    End For
+
+    Value.Ready = Ok
+
+End Sub
+
+Public Function Draw(ByRef Value As State) As Boolean
+
+    Dim Index As Number
+    Dim Ok As Boolean
+
+    Ok = Value.Ready
+
+    For Index = 0 To Layout.TREE_COUNT * 4 - 1
+        Ok = G.DrawObject3D(Value.Objects[Index]) And Ok
+    End For
+
+    For Index = 0 To LEAF_COUNT - 1
+        Ok = G.DrawObject3D(Value.Leaves[Index]) And Ok
+    End For
+
+    Return Ok
+
+End Function
+
+Public Sub Destroy(ByRef Value As State)
+
+    Dim Index As Number
+
+    For Index = 0 To Layout.TREE_COUNT * 4 - 1
+        Call G.DestroyObject3D(Value.Objects[Index])
+    End For
+
+    For Index = 0 To LEAF_COUNT - 1
+        Call G.DestroyObject3D(Value.Leaves[Index])
+    End For
+
+    For Index = 0 To 1
+        Call G.DestroyModel3D(Value.Models[Index])
+    End For
+
+    Call G.DestroyModel3D(Value.LeafModel)
+
+    Value.Ready = False
+
+End Sub
+
+End Module

@@ -4,12 +4,24 @@
 
 ## Native water effect material
 
+September 25 native filtering: world-space ripple octaves and procedural foam fade
+before their pixel footprint becomes unresolved. Water and PBR GGX roughness also
+incorporate screen-space normal variance, broadening subpixel highlights rather than
+letting them flash during camera movement. Close, resolved surfaces retain authored
+roughness. MSAA still owns geometric coverage; it cannot replace shader filtering.
+Filtering adds no resource and does not adopt changes on Web.
+
 `SetEffectMaterialWater3D(Material, Enabled, RoughnessPercent = 18,
-FoamPercent = 10, TimeMilliseconds = 0)` selects lit water for an alpha-blended
+FoamPercent = 10, TimeMilliseconds = 0, RippleStrengthPercent = 100)` selects lit water for an alpha-blended
 effect material. Roughness is 1–100, foam is 0–100, and time is a nonnegative
 32-bit millisecond value. It reuses the existing native distortion command family
 (operation 4); it changes no SM3D or public handle format. Disabling restores the
-standard effect shader. Web adoption is explicitly on hold.
+standard effect shader. Ripple strength is 0–100: zero keeps a calm flat normal;
+100 preserves the existing effect. It scales height before pixel derivatives, so
+normal displacement and roughness filtering remain consistent. The optional native
+parameter uses a -100 offset in the existing spare command argument; legacy zero
+arguments retain full strength. Neris uses 8 and advances the water clock at one-eighth
+speed. Invalid strength values are rejected. Web adoption is explicitly on hold.
 
 The native `graphics/water_surface3d.h` shader owns Fresnel/GGX surface lighting,
 animated normals, depth-dependent absorption/refraction, and a bounded 20-step

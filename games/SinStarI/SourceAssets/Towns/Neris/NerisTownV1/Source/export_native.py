@@ -23,6 +23,8 @@ instance_count = 0
 degenerate_count = 0
 for instance in depsgraph.object_instances:
     obj = instance.object
+    if obj.name.startswith('Neris Detailed Tree '):
+        continue  # Export reusable templates below, preserving each tree's root transform.
     if obj.type not in {"MESH", "FONT", "CURVE", "SURFACE"}:
         continue
     mesh = obj.to_mesh()
@@ -91,8 +93,9 @@ for part in sorted(parts, key=lambda value: value[3], reverse=True):
 print(f"NERIS: {len(parts)} parts, {len(groups)} unique materials, {len(batches)} models", flush=True)
 assert len(parts) <= 105, "Reserve meshes for party and arena."
 assert len(batches) <= 56, "Leave native model slots for five actors and backgrounds."
-manifest = {"source": "Blend/Neris-Town-V1.blend", "source_sha256": hashlib.sha256(
-    (ROOT / "Blend/Neris-Town-V1.blend").read_bytes()).hexdigest(),
+source = Path(bpy.data.filepath)
+manifest = {"source": source.relative_to(ROOT).as_posix(), "source_sha256": hashlib.sha256(
+    source.read_bytes()).hexdigest(),
     "evaluated_instances": instance_count, "triangles": source_triangles,
     "removed_degenerate_triangles": degenerate_count,
     "coordinate_mapping": "Blender XYZ -> SMILE XZY; runtime scale 10, height +21",
@@ -104,5 +107,35 @@ for index, batch in enumerate(batches):
         "triangles": sum(len(part[2]) for part in batch),
         "sha256": hashlib.sha256((OUTPUT / filename).read_bytes()).hexdigest()})
     print(f"NERIS: exported {index + 1}/{len(batches)}", flush=True)
+
+trees = sorted([o for o in bpy.data.objects if o.name.startswith('Garden Tree ')],key=lambda o:o.name)
+templates = sorted({o.instance_collection.name for o in trees})
+for index, name in enumerate(templates):
+    obj = next(o for o in bpy.data.collections[name].objects if o.type=='MESH')
+    mesh = obj.data
+    mesh.calc_loop_triangles()
+    tree_parts=[]
+    for material_index,mat in enumerate(mesh.materials):
+        triangles=[tuple((tuple(mesh.vertices[mesh.loops[i].vertex_index].co),
+                          tuple(mesh.corner_normals[i].vector)) for i in t.loops)
+                   for t in mesh.loop_triangles if t.material_index==material_index]
+        tree_parts.append((mat.name,mat,triangles,len({v for t in triangles for v in t})))
+    filename=f'Tree-{index}.glb'
+    write(OUTPUT/filename, tree_parts)
+    manifest.setdefault('tree_templates',[]).append({'file':filename,'parts':len(tree_parts),
+        'triangles':sum(len(p[2]) for p in tree_parts),
+        'sha256':hashlib.sha256((OUTPUT/filename).read_bytes()).hexdigest()})
+manifest['trees']=[{'variant':templates.index(o.instance_collection.name),
+    'position':[round(o.location.x*10,5),round(o.location.z*10+21,5),round(o.location.y*10,5)],
+    'scale':[round(v*1000,5) for v in (o.scale.x,o.scale.z,o.scale.y)],
+    'yaw':round(-o.rotation_euler.z*180/3.141592653589793,5)} for o in trees]
+lamps=[]
+for inst in depsgraph.object_instances:
+    obj=inst.object
+    if obj.type=='MESH' and any(m and m.name.startswith('Warm Lantern') for m in obj.data.materials):
+        points=[inst.matrix_world @ v.co for v in obj.data.vertices]
+        center=sum(points,Vector())/len(points)
+        lamps.append([round(center.x*10,4),round(center.z*10+21,4),round(center.y*10,4)])
+manifest['lamps']=lamps
 (OUTPUT / "Neris.sm3d.json").write_text('{"version": 1}\n', encoding="utf-8")
 (OUTPUT / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")

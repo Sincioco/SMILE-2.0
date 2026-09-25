@@ -13,7 +13,7 @@ Dim CloseDeferred As Boolean
 
 Game Window "SMILE 2.0 - 3D Viewer, Animation Editor" Size 1600 By 640
 
-Call Host.Start(Viewer, NativeHost.BATTLE_TAB, False, Window_Width(), Window_Height())
+Call Host.Start(Viewer, NativeHost.TOWN_TAB, False, Window_Width(), Window_Height())
 
 CloseDeferred = Window_DeferClose(Viewer.HasEdits())
 
