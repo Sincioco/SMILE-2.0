@@ -10,6 +10,7 @@ with the shared grid, backgrounds and camera controls.
 | Control | Action |
 | --- | --- |
 | WASD / Arrow Keys | Walk Arin relative to the camera; start the following view |
+| + / − (Main Keyboard or Numpad) | Increase / decrease walking speed by 25 percentage points |
 | Middle Mouse Drag | Orbit; pauses cinematic rotation |
 | Left Mouse Drag | Pan; pauses cinematic rotation |
 | Mouse Wheel | Smooth zoom |
@@ -22,8 +23,14 @@ point, finish their gait animation and hide. Arin remains visible. Exterior coll
 keeps the party out of buildings and canals; bridges remain traversable. Building
 interiors and NPC interactions are outside this scene.
 
-Orin v1.3 has Run but no Walk clip, so his existing Run plays at 65% speed in town.
-Arin, Zara and Mira use their Walk clips. Original character packages stay unchanged.
+Walking defaults to 200% of the original town speed (70 world units per second).
+The header shows the current speed; the range is 25–400%. This setting lasts until
+the town is reopened. Leader movement, follower catch-up and gait animation scale
+together; idle animation and cinematic orbit retain their normal speed.
+
+Orin v1.3 has Run but no Walk clip, so his existing Run uses a 65% base rate before
+the walking-speed multiplier. Arin, Zara and Mira use their Walk clips. Original
+character packages stay unchanged.
 
 The current identified roster is Arin, Orin, Zara and Mira. Mila's model identity
 is awaiting clarification; the controller supports a fifth member without substituting

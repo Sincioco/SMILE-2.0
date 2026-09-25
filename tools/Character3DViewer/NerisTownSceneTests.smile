@@ -35,6 +35,7 @@ Print "Actors " + Calibration.NumberText(Value.People.Loaded) + " Error " + Cali
 If Value.Ready Then
 
     Call CheckCamera(Value)
+    Call CheckSpeed(Value)
 
     Value.People.Keys.KeyBase = 0
 
@@ -53,8 +54,8 @@ If Value.Ready Then
 
     Leader = Value.People.Path.Positions[0]
 
-    For Index = 1 To 180
-        Leader = Navigation.Move(Leader, 0.8, 0.0)
+    For Index = 1 To 82
+        Leader = Navigation.Move(Leader, Party.WalkingSpeed(Value.People) * 0.025, 0.0)
 
         Call Party.Update(Value.People, Leader, 25)
     End For
@@ -62,6 +63,12 @@ If Value.Ready Then
     For MemberIndex = 0 To Value.People.MemberCount - 1
         Call Check(Value.People.Members[MemberIndex].Visible,
             "Every Party Member Emerges While Walking")
+    End For
+
+    For MemberIndex = 1 To Value.People.MemberCount - 1
+        Call Check(Abs(Value.People.Path.Progress[0] - Value.People.Path.Progress[MemberIndex] -
+            ToDouble(MemberIndex) * Value.People.Path.Spacing) < 0.001,
+            "Followers Keep Spacing At Doubled Speed")
     End For
 
     For Index = 1 To 250
@@ -90,6 +97,35 @@ If Failures = 0 Then
 Else
     Print "FAIL Neris Town Scene"
 End If
+
+Sub CheckSpeed(ByRef Scene As Town.State)
+
+    Dim StepIndex As Number
+
+    Call Check(Scene.People.SpeedPercent = 200 And Party.WalkingSpeed(Scene.People) = 70.0,
+        "Default Walking Speed Is Doubled")
+    Call Town.Input(Scene, KEY_PLUS, True)
+    Call Check(Scene.People.SpeedPercent = 225, "Plus Speeds Up Walking")
+    Call Town.Input(Scene, KEY_MINUS, True)
+    Call Check(Scene.People.SpeedPercent = 200, "Minus Slows Down Walking")
+
+    For StepIndex = 1 To 20
+        Call Town.Input(Scene, KEY_MINUS, True)
+    End For
+
+    Call Check(Scene.People.SpeedPercent = 25, "Walking Speed Has A Positive Lower Bound")
+
+    For StepIndex = 1 To 20
+        Call Town.Input(Scene, KEY_PLUS, True)
+    End For
+
+    Call Check(Scene.People.SpeedPercent = 400, "Walking Speed Has An Upper Bound")
+
+    For StepIndex = 1 To 8
+        Call Town.Input(Scene, KEY_MINUS, True)
+    End For
+
+End Sub
 
 Sub CheckCamera(ByRef Scene As Town.State)
 

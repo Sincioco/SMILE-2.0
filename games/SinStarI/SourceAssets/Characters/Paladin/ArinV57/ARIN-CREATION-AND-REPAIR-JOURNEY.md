@@ -1066,3 +1066,5 @@ scale, defaulting to 1 for existing consumers. Town equipment translations scale
 by the ratio to the original Viewer auto-fit, while saved rotations remain intact
 and rotate with travel facing. No model, descriptor or canonical pose JSON is
 rewritten. The native Neris fixture compares the loaded key count to this package.
+Town walking speed defaults to 200% and scales the travel animation clock together
+with movement; Idle and the accepted pose keyframes remain unchanged.

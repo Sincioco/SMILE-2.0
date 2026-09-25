@@ -35,6 +35,7 @@ Public Type State
     Keys As Calibration.State
     Path As Trail.State
     MemberCount As Number
+    SpeedPercent As Number
     Loaded As Number
     Ready As Boolean
     Failed As Boolean
@@ -67,10 +68,21 @@ Public Sub Start(ByRef Value As State)
 
     Value = Empty
     Value.MemberCount = 4
+    Value.SpeedPercent = 200
 
     Call Trail.Reset(Value.Path, P.Vector(0.0, 22.42, -330.0), Value.MemberCount, 22.0)
 
 End Sub
+
+Public Function WalkingSpeed(ByRef Value As State) As Double
+
+    Dim Result As Double
+
+    Result = 35.0 * ToDouble(Value.SpeedPercent) / 100.0
+
+    Return Result
+
+End Function
 
 Public Function ClipIndex(Actor As Character.Actor, Name As Text) As Number
 
@@ -145,7 +157,8 @@ Public Sub LoadNext(ByRef Value As State)
 
 End Sub
 
-Private Sub Animate(ByRef Value As Member, Moving As Boolean, Elapsed As Number)
+Private Sub Animate(ByRef Value As Member, Moving As Boolean, Elapsed As Number,
+    SpeedPercent As Number)
 
     Dim Ok As Boolean
     Dim Duration As Number
@@ -156,9 +169,9 @@ Private Sub Animate(ByRef Value As Member, Moving As Boolean, Elapsed As Number)
 
     If Moving Or Value.Walking Then
 
-        Value.AnimationRemainder = Value.AnimationRemainder + Elapsed * Value.TravelRate
-        AnimationElapsed = Value.AnimationRemainder / 100
-        Value.AnimationRemainder = Value.AnimationRemainder Mod 100
+        Value.AnimationRemainder = Value.AnimationRemainder + Elapsed * Value.TravelRate * SpeedPercent
+        AnimationElapsed = Value.AnimationRemainder / 10000
+        Value.AnimationRemainder = Value.AnimationRemainder Mod 10000
 
     End If
 
@@ -203,14 +216,15 @@ Private Sub Animate(ByRef Value As Member, Moving As Boolean, Elapsed As Number)
 End Sub
 
 Private Sub Present(ByRef Value As Member, ByRef Keys As Calibration.State,
-    Position As P.Vector3, Moving As Boolean, Visible As Boolean, Elapsed As Number)
+    Position As P.Vector3, Moving As Boolean, Visible As Boolean, Elapsed As Number,
+    SpeedPercent As Number)
 
     Dim Delta As P.Vector3
     Dim Grounded As P.Vector3
     Dim Applied As Calibration.ApplicationResult
     Dim Ok As Boolean
 
-    Call Animate(Value, Moving, Elapsed)
+    Call Animate(Value, Moving, Elapsed, SpeedPercent)
 
     Delta = M.Subtract(Position, Value.Previous)
 
@@ -258,7 +272,7 @@ Public Sub Update(ByRef Value As State, Leader As P.Vector3, Elapsed As Number)
     Dim Separation As Double
     Dim PreviousSeparation As Double
 
-    Call Trail.Advance(Value.Path, Leader, Elapsed, 42.0)
+    Call Trail.Advance(Value.Path, Leader, Elapsed, WalkingSpeed(Value) * 1.2)
 
     For Index = 0 To Value.MemberCount - 1
 
@@ -268,7 +282,7 @@ Public Sub Update(ByRef Value As State, Leader As P.Vector3, Elapsed As Number)
         Visible = Index = 0 Or (Separation > 7.0 And PreviousSeparation > 7.0)
 
         Call Present(Value.Members[Index], Value.Keys, Value.Path.Positions[Index],
-            Value.Path.Moving[Index], Visible, Elapsed)
+            Value.Path.Moving[Index], Visible, Elapsed, Value.SpeedPercent)
 
         Value.Ready = Value.Ready And Value.Members[Index].Body.Ready
     End For

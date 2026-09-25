@@ -22,6 +22,9 @@ handles, named Idle/Walk clips, grounded presentation, saved calibration and
 visibility after the finishing gait cycle. Calibration's optional position scale
 defaults to one for existing callers; smaller actors scale authored equipment
 translations while preserving rotations and the authoritative JSON.
+The party also owns session walking speed, initially 200%. Town input adjusts it
+in 25-point steps within 25–400%; leader movement and follower catch-up derive from
+the same rate. Only gait elapsed time is multiplied, with fractional time retained.
 
 `Smile.Simple3D.PartyTrail3D` owns only a bounded arc-length history and follower
 progress. The caller supplies a collision-resolved leader position; followers walk
@@ -35,8 +38,8 @@ It reuses the reflective arena, grid, backgrounds and Viewer lighting recipe.
 Movement begins a following view; direct mouse manipulation pauses cinematic
 orbit. This does not implement a general scene editor or resume Studio work.
 
-Growth review: the native coordinator grows from 472 to 554 lines; new town owners
-remain below 310 lines each. Existing ViewerCalibration grows by one net line for
+Growth review: the native coordinator grows from 472 to 554 lines; town owners
+remain at or below 320 lines each after walking-speed controls. Existing ViewerCalibration grows by one net line for
 the optional translation scale. No startup algorithms, source-size exclusions,
 renderer limits or dependency cycles were added. The only reusable new behavior
 in the library is the caller-owned follower trail.

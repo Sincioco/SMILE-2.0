@@ -14,6 +14,7 @@ Import Smile.Tools.Character3DViewerRendering As Rendering
 Import Smile.Tools.NerisTownAssets As Assets
 Import Smile.Tools.NerisTownParty As Party
 Import Smile.Tools.NerisTownNavigation As Navigation
+Import Smile.Tools.Character3DViewerCalibration As Numbers
 
 Public Type State
     Town As Assets.State
@@ -94,6 +95,12 @@ Public Sub Input(ByRef Value As State, Key As Number, Blocked As Boolean)
     End If
 
     Pointer = Motion.ReadPointer(Blocked)
+
+    If Key = KEY_PLUS Then
+        Value.People.SpeedPercent = Min(400, Value.People.SpeedPercent + 25)
+    Else If Key = KEY_MINUS Then
+        Value.People.SpeedPercent = Max(25, Value.People.SpeedPercent - 25)
+    End If
 
     If Not Blocked And (Pointer.OrbitPressed Or Pointer.PanPressed Or Pointer.Wheel <> 0) Then
         Value.Cinematic = False
@@ -184,7 +191,7 @@ Public Sub Update(ByRef Value As State, Elapsed As Number)
 
         End If
 
-        Distance = 35.0 * ToDouble(Elapsed) / 1000.0
+        Distance = Party.WalkingSpeed(Value.People) * ToDouble(Elapsed) / 1000.0
         Leader = Navigation.Move(Leader, Direction.X * Distance, Direction.Z * Distance)
 
     End If
@@ -250,6 +257,7 @@ Public Sub Overlay(ByRef Value As State)
 
     Fill Rectangle 0, 0, Window_Width(), 94, RGB(12, 20, 32)
     Draw Text "Neris Town" At 18, 12 Size 23 Color WHITE
+    Draw Text "Walk Speed: " + Numbers.NumberText(Value.People.SpeedPercent) + "%  (+ / -)" At 365, 18 Size 16 Color WHITE
     Draw Text "WASD / Arrows: Walk    Middle Drag: Orbit    Left Drag: Pan    Wheel: Zoom" At 18, Window_Height() - 48 Size 14 Color WHITE
     Draw Text "F: Floor    G: Grid    B: Background    C / Right Click: Cinematic Overview    Tab: Follow Party" At 18, Window_Height() - 26 Size 14 Color WHITE
 
