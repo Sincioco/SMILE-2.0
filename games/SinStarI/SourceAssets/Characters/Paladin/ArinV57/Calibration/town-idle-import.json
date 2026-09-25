@@ -1,0 +1,30 @@
+{
+  "preservedModelAndOldAnimationBytes": true,
+  "animationParentNamesMatch": true,
+  "previousClips": [
+    "BlockImpact",
+    "Defend",
+    "Hit",
+    "Idle",
+    "Run",
+    "SwordAttack",
+    "SwordAttack2",
+    "Walk",
+    "Death",
+    "Victory"
+  ],
+  "newClipIndex": 10,
+  "newAnimationChannels": 99,
+  "bindBodyMinimumY": 0.0034411458764225245,
+  "idleBodyMinimumY": 0.02304309606552124,
+  "townBodyMinimumY": [
+    0.023043086752295494,
+    0.023043086752295494,
+    0.023043086752295494
+  ],
+  "frames": 61,
+  "sampleRate": 30,
+  "source": "Blender/arin-v5.7-victory.blend",
+  "townOnly": true,
+  "standingHandsAtSides": true
+}

@@ -70,6 +70,13 @@
       "name": "Victory",
       "appendScript": "scripts/add-party-victory-clip.py",
       "file": "arin-v5.7-mixamo-victory-without-skin.fbx"
+    },
+    {
+      "name": "TownIdle",
+      "file": "Blender/arin-v5.7-town-idle.blend",
+      "loop": true,
+      "authoredBy": "scripts/add-arin-town-idle.py",
+      "importAudit": "Calibration/town-idle-import.json"
     }
   ]
 }

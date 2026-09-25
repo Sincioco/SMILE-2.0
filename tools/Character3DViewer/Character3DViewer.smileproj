@@ -22,6 +22,7 @@
     <SmileSource Include="NerisTownMap.smile" />
     <SmileSource Include="NerisTownTrees.smile" />
     <SmileSource Include="NerisTownNavigation.smile" />
+    <SmileSource Include="NerisTownDistricts.smile" />
     <SmileSource Include="NerisTownParty.smile" />
     <SmileSource Include="BattlePlanning.smile" />
     <SmileSource Include="BattleProgression.smile" />
@@ -87,11 +88,13 @@
                   LogicalPath="Assets\Neris\Neris-22.sm3d"
                   TextureOutputDirectory="Assets\Neris\Textures"
                   Profile="Static" Identity="sin-star-i.town.neris" ProductionState="Prototype" />
-    <Model3DAsset Include="BuildAssets\Neris\Neris-23.glb"
-                  Descriptor="BuildAssets\Neris\Neris.sm3d.json"
-                  LogicalPath="Assets\Neris\Neris-23.sm3d"
-                  TextureOutputDirectory="Assets\Neris\Textures"
-                  Profile="Static" Identity="sin-star-i.town.neris" ProductionState="Prototype" />
+    <Asset Include="Assets\Neris\Neris-Minimap.png" />
+    <Asset Include="Assets\Neris\Neris-Minimap-Arin.png" />
+    <Model3DAsset Include="BuildAssets\Neris\Neris-23.glb" Descriptor="BuildAssets\Neris\Neris.sm3d.json" LogicalPath="Assets\Neris\Neris-23.sm3d" TextureOutputDirectory="Assets\Neris\Textures" Profile="Static" Identity="sin-star-i.town.neris" ProductionState="Prototype" />
+    <Model3DAsset Include="BuildAssets\Neris\Neris-24.glb" Descriptor="BuildAssets\Neris\Neris.sm3d.json" LogicalPath="Assets\Neris\Neris-24.sm3d" TextureOutputDirectory="Assets\Neris\Textures" Profile="Static" Identity="sin-star-i.town.neris" ProductionState="Prototype" />
+    <Model3DAsset Include="BuildAssets\Neris\Neris-25.glb" Descriptor="BuildAssets\Neris\Neris.sm3d.json" LogicalPath="Assets\Neris\Neris-25.sm3d" TextureOutputDirectory="Assets\Neris\Textures" Profile="Static" Identity="sin-star-i.town.neris" ProductionState="Prototype" />
+    <Model3DAsset Include="BuildAssets\Neris\Neris-26.glb" Descriptor="BuildAssets\Neris\Neris.sm3d.json" LogicalPath="Assets\Neris\Neris-26.sm3d" TextureOutputDirectory="Assets\Neris\Textures" Profile="Static" Identity="sin-star-i.town.neris" ProductionState="Prototype" />
+    <Model3DAsset Include="BuildAssets\Neris\Neris-27.glb" Descriptor="BuildAssets\Neris\Neris.sm3d.json" LogicalPath="Assets\Neris\Neris-27.sm3d" TextureOutputDirectory="Assets\Neris\Textures" Profile="Static" Identity="sin-star-i.town.neris" ProductionState="Prototype" />
     <Model3DAsset Include="BuildAssets\Neris\Neris-00.glb"
                   Descriptor="BuildAssets\Neris\Neris.sm3d.json"
                   LogicalPath="Assets\Neris\Neris-00.sm3d"

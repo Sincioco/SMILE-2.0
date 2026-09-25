@@ -1068,3 +1068,20 @@ and rotate with travel facing. No model, descriptor or canonical pose JSON is
 rewritten. The native Neris fixture compares the loaded key count to this package.
 Town walking speed defaults to 200% and scales the travel animation clock together
 with movement; Idle and the accepted pose keyframes remain unchanged.
+
+
+## September 25: relaxed town standing
+
+`scripts/add-arin-town-idle.py` authors a separate 61-frame TownIdle from the accepted
+Victory Blender checkpoint. Arms hang at the sides, with a small torso breathing
+motion. Bind body minimum Y is 0.00344115 m; accepted Idle frame 0 is 0.02304310 m.
+TownIdle's sampled minimum is 0.02304309 m, matching that established contact plane.
+The preceding ten-clip GLB and Blender source remain in this package.
+
+Append-only import preserves every previous model/skin/material/animation byte.
+The new canonical descriptor adds only looping TownIdle. Calibration migrates its
+identity and appends an empty bank by name, preserving all 24 saved keys exactly.
+The native fixture's ten old frame-zero correction/socket-transform rows also match
+their preceding accepted reference exactly; TownIdle adds the eleventh reference.
+Use TownIdle only for town presentation; ordinary Viewer/battle Idle is unchanged.
+See `Calibration/town-idle-import.json` and `Previews/Arin-Town-Idle.png`.

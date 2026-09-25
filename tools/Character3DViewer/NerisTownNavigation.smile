@@ -4,6 +4,8 @@ Module Smile.Tools.NerisTownNavigation
 Option Explicit
 
 Import Smile.Simple3D.Precision3D As P
+Import Smile.Tools.NerisTownDistricts As Districts
+Import Smile.Tools.NerisTownLayout As Layout
 
 Private Function InBox(X As Double, Z As Double,
     MinimumX As Double, Front As Double, MaximumX As Double, Back As Double) As Boolean
@@ -21,21 +23,15 @@ Public Function CanStand(X As Double, Z As Double) As Boolean
     Dim Canal As Boolean
     Dim Bridge As Boolean
     Dim Index As Number
-    Dim TreeZ As Double
+    Dim Tree As Layout.TreePlacement
 
-    If Abs(X) > 480.0 Or Abs(Z) > 423.0 Then
+    If Not Districts.CanStand(X, Z) Then
         Return False
     End If
 
     ''' Neris-City-Hall
 
     If InBox(X, Z, -112.000, 167.600, 112.000, 341.500) Then
-        Return False
-    End If
-
-    ''' Neris-Communication-Tower
-
-    If InBox(X, Z, -65.527, -39.600, 65.527, 76.874) Then
         Return False
     End If
 
@@ -87,12 +83,6 @@ Public Function CanStand(X As Double, Z As Double) As Boolean
         Return False
     End If
 
-    ''' Home 06 — Garden Pavilion
-
-    If InBox(X, Z, -239.200, 302.950, -160.800, 389.200) Then
-        Return False
-    End If
-
     ''' Home 07 — Family House
 
     If InBox(X, Z, 271.013, 321.950, 368.987, 411.970) Then
@@ -124,11 +114,11 @@ Public Function CanStand(X As Double, Z As Double) As Boolean
         Return False
     End If
 
-    For Index = 0 To 2
+    For Index = 0 To Layout.TREE_COUNT - 1
 
-        TreeZ = -250.0 + ToDouble(Index) * 220.0
+        Tree = Layout.TreeAt(Index)
 
-        If Abs(Abs(X) - 170.0) < 12.0 And Abs(Z - TreeZ) < 12.0 Then
+        If Abs(X - Tree.Position.X) < 8.0 And Abs(Z - Tree.Position.Z) < 8.0 Then
             Return False
         End If
 
@@ -142,18 +132,18 @@ Public Function GroundHeight(X As Double, Z As Double) As Double
 
     Dim Result As Double
 
-    Result = 20.9
+    Result = Districts.GroundHeight(X, Z)
 
     If (Abs(X) < 85.0 And
         Z > -425.0 And
         Z < 365.0) Then
-        Result = 21.92
+        Result = Max(Result, 21.92)
     End If
 
     If (Abs(X) < 135.0 And
         Z > 105.0 And
         Z < 395.0) Then
-        Result = 22.12
+        Result = Max(Result, 22.12)
     End If
 
     If Abs(Abs(X) - 210.0) < 25.0 And Abs(Z) < 405.0 Then

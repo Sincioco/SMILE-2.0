@@ -283,3 +283,14 @@ When rebuilding, prepare a review GLB with the manifest, compare existing clips,
 then run `scripts/prepare-arin-shield-rim.py` against the resulting checkpoint and
 descriptor. Any asset hash/clip/socket change requires an explicit name-preserving
 calibration migration before importing the new runtime profile.
+
+
+### Relaxed town idle
+
+The current package has eleven clips. `TownIdle` is a separate arms-at-sides standing
+pose for Neris town, with gentle breathing and the existing Idle contact height.
+The ten earlier animation clips and all 24 accepted pose keys remain unchanged.
+See the [preview](Previews/Arin-Town-Idle.png), [authoring file](Blender/arin-v5.7-town-idle.blend)
+and [import measurements](Calibration/town-idle-import.json). Reproduce the append
+with `scripts/add-arin-town-idle.py` in background Blender; review its candidate
+before replacing the accepted model and migrating calibration identity by name.

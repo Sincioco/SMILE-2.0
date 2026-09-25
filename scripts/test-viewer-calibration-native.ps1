@@ -219,7 +219,8 @@ foreach ($jsonLine in $jsonLines) {
     } $jsonLine
 }
 $poseRows = @($result -split "`n" | Where-Object { $_.StartsWith('ARIN_FRAME_ZERO: ') } | ForEach-Object { $_.Trim() } | Sort-Object)
-if ($poseRows.Count -ne 10) { throw 'Expected all ten Arin frame-zero poses, including Victory.' }
+$arinProfile = Get-Content -LiteralPath (Join-Path $repositoryRoot 'games/SinStarI/SourceAssets/Characters/Paladin/ArinV57/Calibration/arin-v5.7-profile.json') -Raw | ConvertFrom-Json
+if ($poseRows.Count -ne $arinProfile.clips.Count) { throw 'Expected frame-zero poses for every canonical Arin clip.' }
 $poseReference = Join-Path $repositoryRoot 'games/SinStarI/SourceAssets/Characters/Paladin/ArinV57/Previews/Accepted-Pose-References/frame-zero-transforms.json'
 $poseEvidence = [ordered]@{
     schemaVersion = 1

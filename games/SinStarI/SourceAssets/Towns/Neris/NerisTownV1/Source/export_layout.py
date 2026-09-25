@@ -4,6 +4,7 @@ import json
 import hashlib
 import bpy
 import sys
+import math
 from mathutils import Vector
 sys.path.insert(0,str(Path(__file__).resolve().parent))
 from static_glb import write
@@ -69,6 +70,15 @@ lines += ['    End Select','','    Return Result','','End Function','',
           '    Select Case Index']
 for i,p in enumerate(data['lamps']):
     lines += [f'        Case {i}',f'            Result = {vector(p)}']
-lines += ['    End Select','','    Return Result','','End Function','','End Module','']
+lines += ['    End Select','','    Return Result','','End Function','',
+          'Public Function PavingHeight(X As Double, Z As Double) As Double','']
+layout=json.loads((ROOT/'expansion-layout.json').read_text())
+for x,y,w,d in layout['paving']:
+    left,right=math.floor(x-w/2)*10,math.ceil(x+w/2)*10
+    front,back=math.floor(y-d/2)*10,math.ceil(y+d/2)*10
+    lines += [f'    If (X >= {left}.0 And X <= {right}.0 And',
+              f'        Z >= {front}.0 And Z <= {back}.0) Then',
+              '        Return 23.12','    End If','']
+lines += ['    Return 20.9','','End Function','','End Module','']
 (ROOT.parents[5]/'tools/Character3DViewer/NerisTownLayout.smile').write_text('\n'.join(lines))
 print('LAYOUT',len(data['trees']),'trees',len(data['lamps']),'lamps, fixed reusable leaf mesh',flush=True)

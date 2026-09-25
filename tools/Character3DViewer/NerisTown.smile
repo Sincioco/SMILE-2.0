@@ -23,6 +23,7 @@ Public Type State
     People As Party.State
     View As Arena.State
     Look As Appearance.State
+    Map As TownMap.State
     BaseCamera As P.Camera3D
     Cinematic As Boolean
     Follow As Boolean
@@ -40,10 +41,10 @@ Public Sub Start(ByRef Value As State)
     Value.BaseCamera.UpDirection = P.Vector(0.0, 1.0, 0.0)
     ' Town-scale depth precision keeps thin paving layers separated during orbit.
     Value.BaseCamera.NearPlane = 10.0
-    Value.BaseCamera.FarPlane = 5000.0
+    Value.BaseCamera.FarPlane = 12000.0
     Value.BaseCamera.FovDegrees = 48.0
-    Value.BaseCamera.Target = P.Vector(0.0, 40.0, 0.0)
-    Value.BaseCamera.Position = P.Vector(780.0, 880.0, -1080.0)
+    Value.BaseCamera.Target = P.Vector(0.0, 80.0, 310.0)
+    Value.BaseCamera.Position = P.Vector(2350.0, 2550.0, -2950.0)
     Ok = Rendering.PrepareAssetLoading(0)
     Value.Failed = Not Ok
 
@@ -79,9 +80,12 @@ Public Sub LoadNext(ByRef Value As State)
 
     End If
 
-    Value.View = Arena.Create(1500, 1400, 2.5)
+    Value.View = Arena.Create(3400, 4200, 6.0)
+    Value.View.FloorVisible = False
+    Value.View.GridVisible = False
     Ok = Appearance.Create(Value.Look)
-    Ok = Scene.SetShadowArea(0, 110, 0, 1400, 1400, 1, 2200) And Ok
+    Ok = TownMap.Create(Value.Map) And Ok
+    Ok = Scene.SetShadowArea(0, 280, 310, 3200, 3600, 1, 6000) And Ok
     Value.Ready = Value.View.Ready And Value.People.Ready And Ok
     Value.Failed = Not Value.Ready
 
@@ -115,7 +119,9 @@ Public Sub Input(ByRef Value As State, Key As Number, Blocked As Boolean)
         Value.Cinematic = False
     End If
 
-    If Key = KEY_C Or (Not Blocked And Pointer_Pressed(POINTER_SECONDARY)) Then
+    If (Key = KEY_C Or
+        Key = KEY_O Or
+        (Not Blocked And Pointer_Pressed(POINTER_SECONDARY))) Then
 
         Value.Cinematic = True
         Value.Follow = False
@@ -207,6 +213,7 @@ Public Sub Update(ByRef Value As State, Elapsed As Number)
 
     Call Party.Update(Value.People, Leader, Elapsed)
     Call Appearance.Update(Value.Look, Elapsed)
+    Call TownMap.Update(Value.Map, Party.IsMoving(Value.People), Elapsed)
 
     If Value.Cinematic Then
         Value.View.Controls.OrbitYaw = Camera.NormalizeAngle(Value.View.Controls.OrbitYaw + ToDouble(Elapsed) * 0.0025)
@@ -216,8 +223,8 @@ Public Sub Update(ByRef Value As State, Elapsed As Number)
         Value.BaseCamera.Target = M.Add(Leader, P.Vector(0.0, 10.0, 0.0))
         Value.BaseCamera.Position = M.Add(Leader, P.Vector(75.0, 220.0, -140.0))
     Else
-        Value.BaseCamera.Target = P.Vector(0.0, 40.0, 0.0)
-        Value.BaseCamera.Position = P.Vector(780.0, 880.0, -1080.0)
+        Value.BaseCamera.Target = P.Vector(0.0, 80.0, 310.0)
+        Value.BaseCamera.Position = P.Vector(2350.0, 2550.0, -2950.0)
     End If
 
     Call ConstrainCamera(Value)
@@ -291,11 +298,11 @@ Public Sub Overlay(ByRef Value As State)
     Draw Text "Neris Town" At 18, 12 Size 23 Color WHITE
     Draw Text "Speed: " + Numbers.NumberText(Value.People.SpeedPercent) + "%  (+ / -)" At 405, 18 Size 16 Color WHITE
     Draw Text "Arrows: Move    R: Run    W: Walk    Middle Drag: Orbit    Left Drag: Pan    Wheel: Zoom" At 18, Window_Height() - 48 Size 14 Color WHITE
-    Draw Text "F: Floor    G: Grid    B: Background    C / Right Click: Cinematic Overview    Tab: Follow Party" At 18, Window_Height() - 26 Size 14 Color WHITE
+    Draw Text "F: Floor    G: Grid    B: Background    O / C / Right Click: Orbit Town    Tab: Follow Party" At 18, Window_Height() - 26 Size 14 Color WHITE
 
     If Value.Ready Then
 
-        Call TownMap.Draw(Value.People.Path.Positions[0])
+        Call TownMap.Draw(Value.Map, Value.People.Path.Positions[0])
 
         If Value.People.Running Then
             Draw Text "Run" At 345, 18 Size 16 Color RGB(70, 210, 205)
@@ -316,6 +323,7 @@ End Sub
 Public Sub Destroy(ByRef Value As State)
 
     Call Appearance.Destroy(Value.Look)
+    Call TownMap.Destroy(Value.Map)
     Call Party.Destroy(Value.People)
     Call Assets.Destroy(Value.Town)
     Call Arena.Destroy(Value.View)

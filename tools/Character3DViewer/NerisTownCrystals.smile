@@ -75,7 +75,7 @@ Public Function Create(ByRef Value As State) As Boolean
     Call Add(Value, 0.0, 53.0, -200.0)
     Call Add(Value, -80.0, 34.5, -390.0)
     Call Add(Value, 80.0, 34.5, -390.0)
-    Call Add(Value, 0.0, 231.0, 20.0)
+    Call Add(Value, 150.0, 231.0, 750.0)
     Call Add(Value, 0.0, 197.0, 260.0)
 
     Value.Texture = G.LoadTexture3D("Assets/Fire/ember-shape.png",

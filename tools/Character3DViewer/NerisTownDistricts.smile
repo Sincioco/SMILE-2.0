@@ -1,0 +1,158 @@
+''' Expanded residential and royal precinct collision and surface heights.
+Module Smile.Tools.NerisTownDistricts
+
+Option Explicit
+
+Import Smile.Tools.NerisTownLayout As Layout
+
+Public Function InBox(X As Double, Z As Double, CenterX As Double,
+    CenterZ As Double, Width As Double, Depth As Double) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Abs(X - CenterX) < Width / 2.0 + 4.0 And Abs(Z - CenterZ) < Depth / 2.0 + 4.0
+
+    Return Result
+
+End Function
+
+Public Function CanStand(X As Double, Z As Double) As Boolean
+
+    Dim Row As Number
+    Dim Column As Number
+    Dim CenterX As Double
+    Dim CenterZ As Double
+    Dim Bridge As Boolean
+
+    If (Abs(X) > 1310.0 Or
+        Z < -1160.0 Or
+        Z > 1780.0) Then
+        Return False
+    End If
+
+    For Column = 0 To 1
+
+        For Row = 0 To 1
+
+            If InBox(X, Z, -1150.0 + ToDouble(Column) * 380.0,
+                -230.0 + ToDouble(Row) * 450.0, 170.0, 150.0) Then
+                Return False
+            End If
+
+        End For
+
+        For Row = 0 To 2
+
+            If InBox(X, Z, 750.0 + ToDouble(Column) * 360.0,
+                -280.0 + ToDouble(Row) * 290.0, 112.0, 120.0) Then
+                Return False
+            End If
+
+        End For
+    End For
+
+    For Column = 0 To 5
+
+        CenterX = -660.0 + ToDouble(Column) * 240.0
+
+        If Column >= 3 Then
+            CenterX = CenterX + 120.0
+        End If
+
+        For Row = 0 To 1
+
+            If InBox(X, Z, CenterX, -770.0 - ToDouble(Row) * 260.0, 93.0, 95.0) Then
+                Return False
+            End If
+
+        End For
+    End For
+
+    ' Relocated relay tower and garden pavilion.
+
+    If (InBox(X, Z, 150.0, 750.0, 133.0, 118.0) Or
+        InBox(X, Z, -240.0, -540.0, 80.0, 87.0)) Then
+        Return False
+    End If
+
+    Bridge = Abs(X + 480.0) < 39.0 And Z > 775.0 And Z < 1010.0
+
+    If Not Bridge Then
+
+        If (InBox(X, Z, -480.0, 880.0, 940.0, 80.0) Or
+            InBox(X, Z, -480.0, 1650.0, 940.0, 80.0) Or
+            InBox(X, Z, -905.0, 1265.0, 90.0, 690.0) Or
+            InBox(X, Z, -55.0, 1265.0, 90.0, 690.0)) Then
+            Return False
+        End If
+
+    End If
+
+    ' Castle walls and keep; the gate and courtyard remain traversable.
+
+    If (InBox(X, Z, -850.0, 1270.0, 16.0, 600.0) Or
+        InBox(X, Z, -110.0, 1270.0, 16.0, 600.0) Or
+        InBox(X, Z, -480.0, 1570.0, 740.0, 16.0) Or
+        InBox(X, Z, -690.0, 970.0, 320.0, 16.0) Or
+        InBox(X, Z, -270.0, 970.0, 320.0, 16.0) Or
+        InBox(X, Z, -480.0, 1400.0, 590.0, 220.0) Or
+        InBox(X, Z, -480.0, 1110.0, 90.0, 90.0)) Then
+        Return False
+    End If
+
+    ' Headquarters walls, rear command hall/barracks and central flag dais.
+
+    If (InBox(X, Z, 290.0, 1250.0, 16.0, 660.0) Or
+        InBox(X, Z, 1030.0, 1250.0, 16.0, 660.0) Or
+        InBox(X, Z, 660.0, 1580.0, 740.0, 16.0) Or
+        InBox(X, Z, 447.5, 920.0, 315.0, 16.0) Or
+        InBox(X, Z, 872.5, 920.0, 315.0, 16.0) Or
+        InBox(X, Z, 660.0, 1460.0, 280.0, 180.0) Or
+        InBox(X, Z, 410.0, 1430.0, 200.0, 210.0) Or
+        InBox(X, Z, 910.0, 1430.0, 200.0, 210.0) Or
+        InBox(X, Z, 660.0, 1190.0, 44.0, 44.0)) Then
+        Return False
+    End If
+
+    Return True
+
+End Function
+
+Public Function GroundHeight(X As Double, Z As Double) As Double
+
+    Dim Result As Double
+
+    Result = Layout.PavingHeight(X, Z)
+
+    If (X > -855.0 And
+        X < -105.0 And
+        Z > 950.0 And
+        Z < 1590.0) Then
+        Result = 22.3
+    End If
+
+    If (X > 275.0 And
+        X < 1045.0 And
+        Z > 905.0 And
+        Z < 1595.0) Then
+        Result = 22.3
+    End If
+
+    If (Abs(X + 480.0) < 43.0 And
+        Z > 775.0 And
+        Z < 1010.0) Then
+        Result = 23.8
+    End If
+
+    If (X > 410.0 And
+        X < 910.0 And
+        Z > 1015.0 And
+        Z < 1345.0) Then
+        Result = 23.6
+    End If
+
+    Return Result
+
+End Function
+
+End Module

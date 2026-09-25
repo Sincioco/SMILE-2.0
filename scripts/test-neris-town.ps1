@@ -11,6 +11,11 @@ $null = New-Item -ItemType Directory -Path $logs -Force
 if (-not (Test-Path -LiteralPath (Join-Path $output 'Assets\Neris\Neris-00.sm3d'))) {
     throw 'Build Character3DViewer with -Target Native before running town acceptance.'
 }
+foreach ($image in @('Neris-Minimap.png', 'Neris-Minimap-Arin.png')) {
+    if (-not (Test-Path -LiteralPath (Join-Path $output "Assets\Neris\$image"))) {
+        throw "Published town map is missing: $image. Rebuild the native Viewer."
+    }
+}
 
 & $compiler --project (Join-Path $viewer 'NerisTownTests.smileproj') --target windows-x64 `
     -o (Join-Path $logs 'Routes.exe')
@@ -40,7 +45,11 @@ $stdout = Join-Path $logs 'scene.txt'
 $stderr = Join-Path $logs 'scene-errors.txt'
 $process = Start-Process -FilePath $executable -WorkingDirectory $output -WindowStyle Hidden `
     -RedirectStandardOutput $stdout -RedirectStandardError $stderr -PassThru
-if (-not $process.WaitForExit(60000)) { throw 'Town scene acceptance exceeded 60 seconds.' }
+if (-not $process.WaitForExit(60000)) {
+    # This process is the isolated fixture created above; it owns no user edits.
+    $process.Kill()
+    throw 'Town scene acceptance exceeded 60 seconds.'
+}
 $scene = Get-Content -LiteralPath $stdout -Raw
 Write-Host $scene.Trim()
 if ($process.ExitCode -ne 0 -or $scene -notmatch 'PASS Neris Town Scene' -or $scene -match 'FAIL') {

@@ -212,7 +212,7 @@ Public Function ProfileAt(Index As Number) As CharacterViewer.Profile
         Result.PrototypeAlias = "dragonfall.arin-v5-7"
         Result.ProductionStatus = "Candidate"
         Result.AssetPath = "Assets\Generation2\ArinV57\ArinV57.sm3d"
-        Result.ExpectedClipCount = 10
+        Result.ExpectedClipCount = 11
         Result.ExpectedSocketCount = 21
         Result.DesiredWorldHeight = 100
         Result.DefaultPlaybackSpeed = 200
@@ -444,8 +444,9 @@ Public Function ClipCount(ProfileIndex As Number) As Number
         Result = 16
     Else If IsSwordFighter(ProfileIndex) Then
         Result = 10
-    Else If (ProfileIndex = PROFILE_ARIN Or
-        ProfileIndex = PROFILE_MIRA Or ProfileIndex = PROFILE_ORIN) Then
+    Else If ProfileIndex = PROFILE_ARIN Then
+        Result = 11
+    Else If ProfileIndex = PROFILE_MIRA Or ProfileIndex = PROFILE_ORIN Then
         Result = 10
     Else If IsMiraCharacter(ProfileIndex) Then
         Result = 9
@@ -632,6 +633,8 @@ Public Function ClipName(ProfileIndex As Number, ClipIndex As Number) As Text
             Result = "Death"
         Else If ClipIndex = 9 And ProfileIndex = PROFILE_ARIN Then
             Result = "Victory"
+        Else If ClipIndex = 10 And ProfileIndex = PROFILE_ARIN Then
+            Result = "TownIdle"
         End If
 
     Else If ProfileIndex = PROFILE_ARIN_V56 Then
@@ -1006,7 +1009,8 @@ Public Function ClipLoops(ProfileIndex As Number, ClipIndex As Number) As Boolea
         Result = (ClipIndex = 0 Or
             ClipIndex = 3 Or
             ClipIndex = 6 Or
-            ClipIndex = 7)
+            ClipIndex = 7 Or
+            (ProfileIndex = PROFILE_ARIN And ClipIndex = 10))
     Else If ProfileIndex = PROFILE_ARIN_V56 Then
         Result = (ClipIndex = 0 Or
             ClipIndex = 3 Or
@@ -1424,7 +1428,7 @@ Public Function CalibrationFingerprint(ProfileIndex As Number) As Text
 
     Dim Result As Text
 
-    Result = "625aa1fd454ddab2ba8c250e42e3c5eabfdcf7c5a8d3c10def0587514357622f"
+    Result = "51caf06c31e975f23fe807474d69c1c2e0a74a09641414f17b3f93119a8c54e7"
 
     If ProfileIndex = PROFILE_ORIN Then
         Result = "a9e7f41214ab55101c101423db5010289853b48719bf76c9df83f92ebe2aca48"

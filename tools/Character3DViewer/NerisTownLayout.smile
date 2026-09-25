@@ -5,8 +5,8 @@ Option Explicit
 
 Import Smile.Simple3D.Precision3D As P
 
-Public Const TREE_COUNT = 27
-Public Const LAMP_COUNT = 24
+Public Const TREE_COUNT = 73
+Public Const LAMP_COUNT = 80
 
 Public Type TreePlacement
     Position As P.Vector3
@@ -31,126 +31,356 @@ Public Function TreeAt(Index As Number) As TreePlacement
             Result.Yaw = -97.40283
             Result.Variant = 1
         Case 2
+            Result.Position = P.Vector(-1290.00000, 21.30000, -390.00000)
+            Result.Scale = P.Vector(959.99998, 959.99998, 959.99998)
+            Result.Yaw = -2727.27902
+            Result.Variant = 0
+        Case 3
+            Result.Position = P.Vector(-1290.00000, 21.30000, -70.00000)
+            Result.Scale = P.Vector(959.99998, 959.99998, 959.99998)
+            Result.Yaw = -2824.68189
+            Result.Variant = 1
+        Case 4
             Result.Position = P.Vector(-460.00000, 21.30000, -120.00000)
             Result.Scale = P.Vector(1019.99998, 1019.99998, 1019.99998)
             Result.Yaw = -194.80566
             Result.Variant = 0
-        Case 3
+        Case 5
+            Result.Position = P.Vector(-1010.00000, 21.30000, -390.00000)
+            Result.Scale = P.Vector(959.99998, 959.99998, 959.99998)
+            Result.Yaw = -2922.08476
+            Result.Variant = 0
+        Case 6
+            Result.Position = P.Vector(-1010.00000, 21.30000, -70.00000)
+            Result.Scale = P.Vector(959.99998, 959.99998, 959.99998)
+            Result.Yaw = -3019.48762
+            Result.Variant = 1
+        Case 7
+            Result.Position = P.Vector(-1290.00000, 21.30000, 60.00000)
+            Result.Scale = P.Vector(959.99998, 959.99998, 959.99998)
+            Result.Yaw = -3116.89049
+            Result.Variant = 0
+        Case 8
+            Result.Position = P.Vector(-1290.00000, 21.30000, 380.00000)
+            Result.Scale = P.Vector(959.99998, 959.99998, 959.99998)
+            Result.Yaw = -3214.29314
+            Result.Variant = 1
+        Case 9
+            Result.Position = P.Vector(-1010.00000, 21.30000, 60.00000)
+            Result.Scale = P.Vector(959.99998, 959.99998, 959.99998)
+            Result.Yaw = -3311.69601
+            Result.Variant = 0
+        Case 10
+            Result.Position = P.Vector(-1010.00000, 21.30000, 380.00000)
+            Result.Scale = P.Vector(959.99998, 959.99998, 959.99998)
+            Result.Yaw = -3409.09888
+            Result.Variant = 1
+        Case 11
+            Result.Position = P.Vector(-910.00000, 21.30000, -390.00000)
+            Result.Scale = P.Vector(959.99998, 959.99998, 959.99998)
+            Result.Yaw = -3506.50175
+            Result.Variant = 0
+        Case 12
+            Result.Position = P.Vector(-910.00000, 21.30000, -70.00000)
+            Result.Scale = P.Vector(959.99998, 959.99998, 959.99998)
+            Result.Yaw = -3603.90462
+            Result.Variant = 1
+        Case 13
+            Result.Position = P.Vector(-630.00000, 21.30000, -390.00000)
+            Result.Scale = P.Vector(959.99998, 959.99998, 959.99998)
+            Result.Yaw = -3701.30727
+            Result.Variant = 0
+        Case 14
+            Result.Position = P.Vector(-630.00000, 21.30000, -70.00000)
+            Result.Scale = P.Vector(959.99998, 959.99998, 959.99998)
+            Result.Yaw = -3798.71036
+            Result.Variant = 1
+        Case 15
             Result.Position = P.Vector(-460.00000, 21.30000, 10.00000)
             Result.Scale = P.Vector(1105.00002, 1105.00002, 1105.00002)
             Result.Yaw = -292.20847
             Result.Variant = 1
-        Case 4
+        Case 16
+            Result.Position = P.Vector(-910.00000, 21.30000, 60.00000)
+            Result.Scale = P.Vector(959.99998, 959.99998, 959.99998)
+            Result.Yaw = -3896.11301
+            Result.Variant = 0
+        Case 17
+            Result.Position = P.Vector(-910.00000, 21.30000, 380.00000)
+            Result.Scale = P.Vector(959.99998, 959.99998, 959.99998)
+            Result.Yaw = -3993.51566
+            Result.Variant = 1
+        Case 18
+            Result.Position = P.Vector(-630.00000, 21.30000, 60.00000)
+            Result.Scale = P.Vector(959.99998, 959.99998, 959.99998)
+            Result.Yaw = -4090.91874
+            Result.Variant = 0
+        Case 19
+            Result.Position = P.Vector(-630.00000, 21.30000, 380.00000)
+            Result.Scale = P.Vector(959.99998, 959.99998, 959.99998)
+            Result.Yaw = -4188.32139
+            Result.Variant = 1
+        Case 20
+            Result.Position = P.Vector(860.00000, 21.30000, -185.00000)
+            Result.Scale = P.Vector(730.00002, 730.00002, 730.00002)
+            Result.Yaw = -4285.72448
+            Result.Variant = 0
+        Case 21
+            Result.Position = P.Vector(860.00000, 21.30000, 105.00000)
+            Result.Scale = P.Vector(730.00002, 730.00002, 730.00002)
+            Result.Yaw = -4383.12713
+            Result.Variant = 1
+        Case 22
+            Result.Position = P.Vector(860.00000, 21.30000, 395.00000)
+            Result.Scale = P.Vector(730.00002, 730.00002, 730.00002)
+            Result.Yaw = -4480.52978
+            Result.Variant = 0
+        Case 23
+            Result.Position = P.Vector(1220.00000, 21.30000, -185.00000)
+            Result.Scale = P.Vector(730.00002, 730.00002, 730.00002)
+            Result.Yaw = -4577.93287
+            Result.Variant = 1
+        Case 24
+            Result.Position = P.Vector(1220.00000, 21.30000, 105.00000)
+            Result.Scale = P.Vector(730.00002, 730.00002, 730.00002)
+            Result.Yaw = -4675.33552
+            Result.Variant = 0
+        Case 25
+            Result.Position = P.Vector(1220.00000, 21.30000, 395.00000)
+            Result.Scale = P.Vector(730.00002, 730.00002, 730.00002)
+            Result.Yaw = -4772.73861
+            Result.Variant = 1
+        Case 26
             Result.Position = P.Vector(-460.00000, 21.30000, 140.00000)
             Result.Scale = P.Vector(850.00002, 850.00002, 850.00002)
             Result.Yaw = -389.61131
             Result.Variant = 0
-        Case 5
+        Case 27
+            Result.Position = P.Vector(-860.00000, 21.30000, -650.00000)
+            Result.Scale = P.Vector(699.99999, 699.99999, 699.99999)
+            Result.Yaw = -4870.14126
+            Result.Variant = 0
+        Case 28
+            Result.Position = P.Vector(860.00000, 21.30000, -650.00000)
+            Result.Scale = P.Vector(699.99999, 699.99999, 699.99999)
+            Result.Yaw = -4967.54391
+            Result.Variant = 1
+        Case 29
+            Result.Position = P.Vector(-860.00000, 21.30000, -1080.00000)
+            Result.Scale = P.Vector(699.99999, 699.99999, 699.99999)
+            Result.Yaw = -5064.94700
+            Result.Variant = 0
+        Case 30
+            Result.Position = P.Vector(860.00000, 21.30000, -1080.00000)
+            Result.Scale = P.Vector(699.99999, 699.99999, 699.99999)
+            Result.Yaw = -5162.34965
+            Result.Variant = 1
+        Case 31
+            Result.Position = P.Vector(-1210.00000, 21.30000, 540.00000)
+            Result.Scale = P.Vector(920.00002, 920.00002, 920.00002)
+            Result.Yaw = -5259.75273
+            Result.Variant = 0
+        Case 32
+            Result.Position = P.Vector(-950.00000, 21.30000, 540.00000)
+            Result.Scale = P.Vector(920.00002, 920.00002, 920.00002)
+            Result.Yaw = -5357.15538
+            Result.Variant = 1
+        Case 33
+            Result.Position = P.Vector(-700.00000, 21.30000, 540.00000)
+            Result.Scale = P.Vector(920.00002, 920.00002, 920.00002)
+            Result.Yaw = -5454.55803
+            Result.Variant = 0
+        Case 34
+            Result.Position = P.Vector(-230.00000, 21.30000, 540.00000)
+            Result.Scale = P.Vector(920.00002, 920.00002, 920.00002)
+            Result.Yaw = -5551.96112
+            Result.Variant = 1
+        Case 35
+            Result.Position = P.Vector(170.00000, 21.30000, 540.00000)
+            Result.Scale = P.Vector(920.00002, 920.00002, 920.00002)
+            Result.Yaw = -5649.36377
+            Result.Variant = 0
+        Case 36
+            Result.Position = P.Vector(450.00000, 21.30000, 540.00000)
+            Result.Scale = P.Vector(920.00002, 920.00002, 920.00002)
+            Result.Yaw = -5746.76686
+            Result.Variant = 1
+        Case 37
             Result.Position = P.Vector(-460.00000, 21.30000, 270.00000)
             Result.Scale = P.Vector(935.00000, 935.00000, 935.00000)
             Result.Yaw = -487.01413
             Result.Variant = 1
-        Case 6
+        Case 38
+            Result.Position = P.Vector(900.00000, 21.30000, 540.00000)
+            Result.Scale = P.Vector(920.00002, 920.00002, 920.00002)
+            Result.Yaw = -5844.16951
+            Result.Variant = 0
+        Case 39
+            Result.Position = P.Vector(1190.00000, 21.30000, 540.00000)
+            Result.Scale = P.Vector(920.00002, 920.00002, 920.00002)
+            Result.Yaw = -5941.57216
+            Result.Variant = 1
+        Case 40
+            Result.Position = P.Vector(-1070.00000, 21.30000, 970.00000)
+            Result.Scale = P.Vector(1130.00000, 1130.00000, 1130.00000)
+            Result.Yaw = -6038.97525
+            Result.Variant = 0
+        Case 41
+            Result.Position = P.Vector(-1070.00000, 21.30000, 1200.00000)
+            Result.Scale = P.Vector(1130.00000, 1130.00000, 1130.00000)
+            Result.Yaw = -6136.37790
+            Result.Variant = 1
+        Case 42
+            Result.Position = P.Vector(-1070.00000, 21.30000, 1460.00000)
+            Result.Scale = P.Vector(1130.00000, 1130.00000, 1130.00000)
+            Result.Yaw = -6233.78099
+            Result.Variant = 0
+        Case 43
+            Result.Position = P.Vector(-1070.00000, 21.30000, 1710.00000)
+            Result.Scale = P.Vector(1130.00000, 1130.00000, 1130.00000)
+            Result.Yaw = -6331.18364
+            Result.Variant = 1
+        Case 44
+            Result.Position = P.Vector(100.00000, 21.30000, 970.00000)
+            Result.Scale = P.Vector(1130.00000, 1130.00000, 1130.00000)
+            Result.Yaw = -6428.58629
+            Result.Variant = 0
+        Case 45
+            Result.Position = P.Vector(100.00000, 21.30000, 1200.00000)
+            Result.Scale = P.Vector(1130.00000, 1130.00000, 1130.00000)
+            Result.Yaw = -6525.98937
+            Result.Variant = 1
+        Case 46
+            Result.Position = P.Vector(100.00000, 21.30000, 1460.00000)
+            Result.Scale = P.Vector(1130.00000, 1130.00000, 1130.00000)
+            Result.Yaw = -6623.39202
+            Result.Variant = 0
+        Case 47
+            Result.Position = P.Vector(100.00000, 21.30000, 1710.00000)
+            Result.Scale = P.Vector(1130.00000, 1130.00000, 1130.00000)
+            Result.Yaw = -6720.79511
+            Result.Variant = 1
+        Case 48
             Result.Position = P.Vector(-460.00000, 21.30000, 390.00000)
             Result.Scale = P.Vector(1019.99998, 1019.99998, 1019.99998)
             Result.Yaw = -584.41694
             Result.Variant = 0
-        Case 7
+        Case 49
+            Result.Position = P.Vector(1160.00000, 21.30000, 970.00000)
+            Result.Scale = P.Vector(1130.00000, 1130.00000, 1130.00000)
+            Result.Yaw = -6818.19776
+            Result.Variant = 0
+        Case 50
+            Result.Position = P.Vector(1160.00000, 21.30000, 1200.00000)
+            Result.Scale = P.Vector(1130.00000, 1130.00000, 1130.00000)
+            Result.Yaw = -6915.60041
+            Result.Variant = 1
+        Case 51
+            Result.Position = P.Vector(1160.00000, 21.30000, 1460.00000)
+            Result.Scale = P.Vector(1130.00000, 1130.00000, 1130.00000)
+            Result.Yaw = -7013.00350
+            Result.Variant = 0
+        Case 52
+            Result.Position = P.Vector(1160.00000, 21.30000, 1710.00000)
+            Result.Scale = P.Vector(1130.00000, 1130.00000, 1130.00000)
+            Result.Yaw = -7110.40615
+            Result.Variant = 1
+        Case 53
             Result.Position = P.Vector(460.00000, 21.30000, -370.00000)
             Result.Scale = P.Vector(1105.00002, 1105.00002, 1105.00002)
             Result.Yaw = -681.81975
             Result.Variant = 1
-        Case 8
+        Case 54
             Result.Position = P.Vector(460.00000, 21.30000, -250.00000)
             Result.Scale = P.Vector(850.00002, 850.00002, 850.00002)
             Result.Yaw = -779.22262
             Result.Variant = 0
-        Case 9
+        Case 55
             Result.Position = P.Vector(460.00000, 21.30000, -120.00000)
             Result.Scale = P.Vector(935.00000, 935.00000, 935.00000)
             Result.Yaw = -876.62544
             Result.Variant = 1
-        Case 10
+        Case 56
             Result.Position = P.Vector(460.00000, 21.30000, 10.00000)
             Result.Scale = P.Vector(1019.99998, 1019.99998, 1019.99998)
             Result.Yaw = -974.02825
             Result.Variant = 0
-        Case 11
+        Case 57
             Result.Position = P.Vector(460.00000, 21.30000, 140.00000)
             Result.Scale = P.Vector(1105.00002, 1105.00002, 1105.00002)
             Result.Yaw = -1071.43112
             Result.Variant = 1
-        Case 12
+        Case 58
             Result.Position = P.Vector(460.00000, 21.30000, 270.00000)
             Result.Scale = P.Vector(850.00002, 850.00002, 850.00002)
             Result.Yaw = -1168.83388
             Result.Variant = 0
-        Case 13
+        Case 59
             Result.Position = P.Vector(460.00000, 21.30000, 390.00000)
             Result.Scale = P.Vector(935.00000, 935.00000, 935.00000)
             Result.Yaw = -1266.23675
             Result.Variant = 1
-        Case 14
+        Case 60
             Result.Position = P.Vector(-70.00000, 21.30000, 410.00000)
             Result.Scale = P.Vector(1019.99998, 1019.99998, 1019.99998)
             Result.Yaw = -1363.63951
             Result.Variant = 0
-        Case 15
+        Case 61
             Result.Position = P.Vector(70.00000, 21.30000, 410.00000)
             Result.Scale = P.Vector(1105.00002, 1105.00002, 1105.00002)
             Result.Yaw = -1461.04238
             Result.Variant = 1
-        Case 16
+        Case 62
             Result.Position = P.Vector(190.00000, 21.30000, 410.00000)
             Result.Scale = P.Vector(850.00002, 850.00002, 850.00002)
             Result.Yaw = -1558.44525
             Result.Variant = 0
-        Case 17
+        Case 63
             Result.Position = P.Vector(-170.00000, 21.30000, -250.00000)
             Result.Scale = P.Vector(935.00000, 935.00000, 935.00000)
             Result.Yaw = -1655.84801
             Result.Variant = 1
-        Case 18
+        Case 64
             Result.Position = P.Vector(-170.00000, 21.30000, -30.00000)
             Result.Scale = P.Vector(1019.99998, 1019.99998, 1019.99998)
             Result.Yaw = -1753.25087
             Result.Variant = 0
-        Case 19
+        Case 65
             Result.Position = P.Vector(-170.00000, 21.30000, 210.00000)
             Result.Scale = P.Vector(1105.00002, 1105.00002, 1105.00002)
             Result.Yaw = -1850.65363
             Result.Variant = 1
-        Case 20
+        Case 66
             Result.Position = P.Vector(170.00000, 21.30000, -250.00000)
             Result.Scale = P.Vector(850.00002, 850.00002, 850.00002)
             Result.Yaw = -1948.05650
             Result.Variant = 0
-        Case 21
+        Case 67
             Result.Position = P.Vector(170.00000, 21.30000, -30.00000)
             Result.Scale = P.Vector(935.00000, 935.00000, 935.00000)
             Result.Yaw = -2045.45937
             Result.Variant = 1
-        Case 22
+        Case 68
             Result.Position = P.Vector(170.00000, 21.30000, 210.00000)
             Result.Scale = P.Vector(1019.99998, 1019.99998, 1019.99998)
             Result.Yaw = -2142.86224
             Result.Variant = 0
-        Case 23
+        Case 69
             Result.Position = P.Vector(-60.00000, 21.30000, -350.00000)
             Result.Scale = P.Vector(1105.00002, 1105.00002, 1105.00002)
             Result.Yaw = -2240.26489
             Result.Variant = 1
-        Case 24
+        Case 70
             Result.Position = P.Vector(60.00000, 21.30000, -350.00000)
             Result.Scale = P.Vector(850.00002, 850.00002, 850.00002)
             Result.Yaw = -2337.66776
             Result.Variant = 0
-        Case 25
+        Case 71
             Result.Position = P.Vector(-70.00000, 21.30000, -100.00000)
             Result.Scale = P.Vector(935.00000, 935.00000, 935.00000)
             Result.Yaw = -2435.07063
             Result.Variant = 1
-        Case 26
+        Case 72
             Result.Position = P.Vector(70.00000, 21.30000, -100.00000)
             Result.Scale = P.Vector(1019.99998, 1019.99998, 1019.99998)
             Result.Yaw = -2532.47350
@@ -171,9 +401,9 @@ Public Function LampAt(Index As Number) As P.Vector3
         Case 1
             Result = P.Vector(33.50000, 70.60000, 193.60001)
         Case 2
-            Result = P.Vector(-18.00000, 60.60000, -26.00000)
+            Result = P.Vector(131.99998, 60.60000, 704.00000)
         Case 3
-            Result = P.Vector(18.00000, 60.60000, -26.00000)
+            Result = P.Vector(168.00002, 60.60000, 703.99994)
         Case 4
             Result = P.Vector(274.50000, 50.70000, 242.79999)
         Case 5
@@ -209,14 +439,580 @@ Public Function LampAt(Index As Number) As P.Vector3
         Case 20
             Result = P.Vector(-372.00000, 47.00000, 354.00000)
         Case 21
-            Result = P.Vector(-211.99998, 47.00000, 310.00000)
+            Result = P.Vector(-251.99998, 47.00000, -580.00000)
         Case 22
             Result = P.Vector(308.00000, 47.00000, 329.00000)
         Case 23
             Result = P.Vector(346.00000, 47.00000, -372.00000)
+        Case 24
+            Result = P.Vector(-1160.99988, 48.00000, -301.49997)
+        Case 25
+            Result = P.Vector(-1139.00012, 48.00000, -301.49997)
+        Case 26
+            Result = P.Vector(-1160.99988, 48.00000, 148.50003)
+        Case 27
+            Result = P.Vector(-1139.00012, 48.00000, 148.50003)
+        Case 28
+            Result = P.Vector(-780.99988, 48.00000, -301.49997)
+        Case 29
+            Result = P.Vector(-759.00012, 48.00000, -301.49997)
+        Case 30
+            Result = P.Vector(-780.99988, 48.00000, 148.50003)
+        Case 31
+            Result = P.Vector(-759.00012, 48.00000, 148.50003)
+        Case 32
+            Result = P.Vector(715.99988, 48.00000, -330.19995)
+        Case 33
+            Result = P.Vector(738.00000, 48.00000, -330.19995)
+        Case 34
+            Result = P.Vector(762.00000, 48.00000, -330.19995)
+        Case 35
+            Result = P.Vector(784.00012, 48.00000, -330.19995)
+        Case 36
+            Result = P.Vector(715.99988, 48.00000, -40.20000)
+        Case 37
+            Result = P.Vector(738.00000, 48.00000, -40.20000)
+        Case 38
+            Result = P.Vector(762.00000, 48.00000, -40.20000)
+        Case 39
+            Result = P.Vector(784.00012, 48.00000, -40.20000)
+        Case 40
+            Result = P.Vector(715.99988, 48.00000, 249.80003)
+        Case 41
+            Result = P.Vector(738.00000, 48.00000, 249.80003)
+        Case 42
+            Result = P.Vector(762.00000, 48.00000, 249.80003)
+        Case 43
+            Result = P.Vector(784.00012, 48.00000, 249.80003)
+        Case 44
+            Result = P.Vector(1075.99988, 48.00000, -330.19995)
+        Case 45
+            Result = P.Vector(1098.00024, 48.00000, -330.19995)
+        Case 46
+            Result = P.Vector(1121.99976, 48.00000, -330.19995)
+        Case 47
+            Result = P.Vector(1144.00012, 48.00000, -330.19995)
+        Case 48
+            Result = P.Vector(1075.99988, 48.00000, -40.20000)
+        Case 49
+            Result = P.Vector(1098.00024, 48.00000, -40.20000)
+        Case 50
+            Result = P.Vector(1121.99976, 48.00000, -40.20000)
+        Case 51
+            Result = P.Vector(1144.00012, 48.00000, -40.20000)
+        Case 52
+            Result = P.Vector(1075.99988, 48.00000, 249.80003)
+        Case 53
+            Result = P.Vector(1098.00024, 48.00000, 249.80003)
+        Case 54
+            Result = P.Vector(1121.99976, 48.00000, 249.80003)
+        Case 55
+            Result = P.Vector(1144.00012, 48.00000, 249.80003)
+        Case 56
+            Result = P.Vector(-670.99988, 48.00000, -810.20007)
+        Case 57
+            Result = P.Vector(-649.00012, 48.00000, -810.20007)
+        Case 58
+            Result = P.Vector(-670.99988, 48.00000, -1070.20007)
+        Case 59
+            Result = P.Vector(-649.00012, 48.00000, -1070.20007)
+        Case 60
+            Result = P.Vector(-430.99994, 48.00000, -810.20007)
+        Case 61
+            Result = P.Vector(-409.00006, 48.00000, -810.20007)
+        Case 62
+            Result = P.Vector(-430.99994, 48.00000, -1070.20007)
+        Case 63
+            Result = P.Vector(-409.00006, 48.00000, -1070.20007)
+        Case 64
+            Result = P.Vector(-191.00003, 48.00000, -810.20007)
+        Case 65
+            Result = P.Vector(-169.00000, 48.00000, -810.20007)
+        Case 66
+            Result = P.Vector(-191.00003, 48.00000, -1070.20007)
+        Case 67
+            Result = P.Vector(-169.00000, 48.00000, -1070.20007)
+        Case 68
+            Result = P.Vector(168.99997, 48.00000, -810.20007)
+        Case 69
+            Result = P.Vector(191.00003, 48.00000, -810.20007)
+        Case 70
+            Result = P.Vector(168.99997, 48.00000, -1070.20007)
+        Case 71
+            Result = P.Vector(191.00003, 48.00000, -1070.20007)
+        Case 72
+            Result = P.Vector(409.00006, 48.00000, -810.20007)
+        Case 73
+            Result = P.Vector(430.99994, 48.00000, -810.20007)
+        Case 74
+            Result = P.Vector(409.00006, 48.00000, -1070.20007)
+        Case 75
+            Result = P.Vector(430.99994, 48.00000, -1070.20007)
+        Case 76
+            Result = P.Vector(649.00012, 48.00000, -810.20007)
+        Case 77
+            Result = P.Vector(670.99988, 48.00000, -810.20007)
+        Case 78
+            Result = P.Vector(649.00012, 48.00000, -1070.20007)
+        Case 79
+            Result = P.Vector(670.99988, 48.00000, -1070.20007)
     End Select
 
     Return Result
+
+End Function
+
+Public Function PavingHeight(X As Double, Z As Double) As Double
+
+    If (X >= -1280.0 And
+        X <= 1280.0 And
+        Z >= 550.0 And
+        Z <= 650.0) Then
+        Return 23.12
+    End If
+
+    If (X >= -1280.0 And
+        X <= 1280.0 And
+        Z >= -630.0 And
+        Z <= -550.0) Then
+        Return 23.12
+    End If
+
+    If (X >= -900.0 And
+        X <= 900.0 And
+        Z >= -940.0 And
+        Z <= -880.0) Then
+        Return 23.12
+    End If
+
+    If (X >= -620.0 And
+        X <= -560.0 And
+        Z >= -460.0 And
+        Z <= 620.0) Then
+        Return 23.12
+    End If
+
+    If (X >= 560.0 And
+        X <= 620.0 And
+        Z >= -450.0 And
+        Z <= 630.0) Then
+        Return 23.12
+    End If
+
+    If (X >= -990.0 And
+        X <= -930.0 And
+        Z >= -540.0 And
+        Z <= 580.0) Then
+        Return 23.12
+    End If
+
+    If (X >= 880.0 And
+        X <= 940.0 And
+        Z >= -540.0 And
+        Z <= 580.0) Then
+        Return 23.12
+    End If
+
+    If (X >= -40.0 And
+        X <= 40.0 And
+        Z >= -950.0 And
+        Z <= -450.0) Then
+        Return 23.12
+    End If
+
+    If (X >= -40.0 And
+        X <= 40.0 And
+        Z >= 340.0 And
+        Z <= 580.0) Then
+        Return 23.12
+    End If
+
+    If (X >= -530.0 And
+        X <= -430.0 And
+        Z >= 600.0 And
+        Z <= 860.0) Then
+        Return 23.12
+    End If
+
+    If (X >= 600.0 And
+        X <= 720.0 And
+        Z >= 600.0 And
+        Z <= 900.0) Then
+        Return 23.12
+    End If
+
+    If (X >= -1300.0 And
+        X <= -540.0 And
+        Z >= -490.0 And
+        Z <= -430.0) Then
+        Return 23.12
+    End If
+
+    If (X >= -1300.0 And
+        X <= -540.0 And
+        Z >= 420.0 And
+        Z <= 480.0) Then
+        Return 23.12
+    End If
+
+    If (X >= 540.0 And
+        X <= 1300.0 And
+        Z >= -480.0 And
+        Z <= -420.0) Then
+        Return 23.12
+    End If
+
+    If (X >= 540.0 And
+        X <= 1300.0 And
+        Z >= 420.0 And
+        Z <= 480.0) Then
+        Return 23.12
+    End If
+
+    If (X >= -870.0 And
+        X <= 870.0 And
+        Z >= -1170.0 And
+        Z <= -1110.0) Then
+        Return 23.12
+    End If
+
+    If (X >= -830.0 And
+        X <= -770.0 And
+        Z >= -1140.0 And
+        Z <= -580.0) Then
+        Return 23.12
+    End If
+
+    If (X >= 770.0 And
+        X <= 830.0 And
+        Z >= -1140.0 And
+        Z <= -580.0) Then
+        Return 23.12
+    End If
+
+    If (X >= -170.0 And
+        X <= 170.0 And
+        Z >= -30.0 And
+        Z <= 170.0) Then
+        Return 23.12
+    End If
+
+    If (X >= 40.0 And
+        X <= 260.0 And
+        Z >= 650.0 And
+        Z <= 850.0) Then
+        Return 23.12
+    End If
+
+    If (X >= -1170.0 And
+        X <= -1130.0 And
+        Z >= -360.0 And
+        Z <= -300.0) Then
+        Return 23.12
+    End If
+
+    If (X >= -1310.0 And
+        X <= -990.0 And
+        Z >= -360.0 And
+        Z <= -320.0) Then
+        Return 23.12
+    End If
+
+    If (X >= -1170.0 And
+        X <= -1130.0 And
+        Z >= 90.0 And
+        Z <= 150.0) Then
+        Return 23.12
+    End If
+
+    If (X >= -1310.0 And
+        X <= -990.0 And
+        Z >= 90.0 And
+        Z <= 130.0) Then
+        Return 23.12
+    End If
+
+    If (X >= -790.0 And
+        X <= -750.0 And
+        Z >= -360.0 And
+        Z <= -300.0) Then
+        Return 23.12
+    End If
+
+    If (X >= -930.0 And
+        X <= -610.0 And
+        Z >= -360.0 And
+        Z <= -320.0) Then
+        Return 23.12
+    End If
+
+    If (X >= -790.0 And
+        X <= -750.0 And
+        Z >= 90.0 And
+        Z <= 150.0) Then
+        Return 23.12
+    End If
+
+    If (X >= -930.0 And
+        X <= -610.0 And
+        Z >= 90.0 And
+        Z <= 130.0) Then
+        Return 23.12
+    End If
+
+    If (X >= 730.0 And
+        X <= 770.0 And
+        Z >= -400.0 And
+        Z <= -330.0) Then
+        Return 23.12
+    End If
+
+    If (X >= 630.0 And
+        X <= 870.0 And
+        Z >= -370.0 And
+        Z <= -330.0) Then
+        Return 23.12
+    End If
+
+    If (X >= 730.0 And
+        X <= 770.0 And
+        Z >= -110.0 And
+        Z <= -40.0) Then
+        Return 23.12
+    End If
+
+    If (X >= 630.0 And
+        X <= 870.0 And
+        Z >= -80.0 And
+        Z <= -40.0) Then
+        Return 23.12
+    End If
+
+    If (X >= 730.0 And
+        X <= 770.0 And
+        Z >= 180.0 And
+        Z <= 250.0) Then
+        Return 23.12
+    End If
+
+    If (X >= 630.0 And
+        X <= 870.0 And
+        Z >= 210.0 And
+        Z <= 250.0) Then
+        Return 23.12
+    End If
+
+    If (X >= 1090.0 And
+        X <= 1130.0 And
+        Z >= -400.0 And
+        Z <= -330.0) Then
+        Return 23.12
+    End If
+
+    If (X >= 990.0 And
+        X <= 1230.0 And
+        Z >= -370.0 And
+        Z <= -330.0) Then
+        Return 23.12
+    End If
+
+    If (X >= 1090.0 And
+        X <= 1130.0 And
+        Z >= -110.0 And
+        Z <= -40.0) Then
+        Return 23.12
+    End If
+
+    If (X >= 990.0 And
+        X <= 1230.0 And
+        Z >= -80.0 And
+        Z <= -40.0) Then
+        Return 23.12
+    End If
+
+    If (X >= 1090.0 And
+        X <= 1130.0 And
+        Z >= 180.0 And
+        Z <= 250.0) Then
+        Return 23.12
+    End If
+
+    If (X >= 990.0 And
+        X <= 1230.0 And
+        Z >= 210.0 And
+        Z <= 250.0) Then
+        Return 23.12
+    End If
+
+    If (X >= -680.0 And
+        X <= -640.0 And
+        Z >= -880.0 And
+        Z <= -810.0) Then
+        Return 23.12
+    End If
+
+    If (X >= -770.0 And
+        X <= -550.0 And
+        Z >= -850.0 And
+        Z <= -810.0) Then
+        Return 23.12
+    End If
+
+    If (X >= -680.0 And
+        X <= -640.0 And
+        Z >= -1140.0 And
+        Z <= -1070.0) Then
+        Return 23.12
+    End If
+
+    If (X >= -770.0 And
+        X <= -550.0 And
+        Z >= -1110.0 And
+        Z <= -1070.0) Then
+        Return 23.12
+    End If
+
+    If (X >= -440.0 And
+        X <= -400.0 And
+        Z >= -880.0 And
+        Z <= -810.0) Then
+        Return 23.12
+    End If
+
+    If (X >= -530.0 And
+        X <= -310.0 And
+        Z >= -850.0 And
+        Z <= -810.0) Then
+        Return 23.12
+    End If
+
+    If (X >= -440.0 And
+        X <= -400.0 And
+        Z >= -1140.0 And
+        Z <= -1070.0) Then
+        Return 23.12
+    End If
+
+    If (X >= -530.0 And
+        X <= -310.0 And
+        Z >= -1110.0 And
+        Z <= -1070.0) Then
+        Return 23.12
+    End If
+
+    If (X >= -200.0 And
+        X <= -160.0 And
+        Z >= -880.0 And
+        Z <= -810.0) Then
+        Return 23.12
+    End If
+
+    If (X >= -290.0 And
+        X <= -70.0 And
+        Z >= -850.0 And
+        Z <= -810.0) Then
+        Return 23.12
+    End If
+
+    If (X >= -200.0 And
+        X <= -160.0 And
+        Z >= -1140.0 And
+        Z <= -1070.0) Then
+        Return 23.12
+    End If
+
+    If (X >= -290.0 And
+        X <= -70.0 And
+        Z >= -1110.0 And
+        Z <= -1070.0) Then
+        Return 23.12
+    End If
+
+    If (X >= 160.0 And
+        X <= 200.0 And
+        Z >= -880.0 And
+        Z <= -810.0) Then
+        Return 23.12
+    End If
+
+    If (X >= 70.0 And
+        X <= 290.0 And
+        Z >= -850.0 And
+        Z <= -810.0) Then
+        Return 23.12
+    End If
+
+    If (X >= 160.0 And
+        X <= 200.0 And
+        Z >= -1140.0 And
+        Z <= -1070.0) Then
+        Return 23.12
+    End If
+
+    If (X >= 70.0 And
+        X <= 290.0 And
+        Z >= -1110.0 And
+        Z <= -1070.0) Then
+        Return 23.12
+    End If
+
+    If (X >= 400.0 And
+        X <= 440.0 And
+        Z >= -880.0 And
+        Z <= -810.0) Then
+        Return 23.12
+    End If
+
+    If (X >= 310.0 And
+        X <= 530.0 And
+        Z >= -850.0 And
+        Z <= -810.0) Then
+        Return 23.12
+    End If
+
+    If (X >= 400.0 And
+        X <= 440.0 And
+        Z >= -1140.0 And
+        Z <= -1070.0) Then
+        Return 23.12
+    End If
+
+    If (X >= 310.0 And
+        X <= 530.0 And
+        Z >= -1110.0 And
+        Z <= -1070.0) Then
+        Return 23.12
+    End If
+
+    If (X >= 640.0 And
+        X <= 680.0 And
+        Z >= -880.0 And
+        Z <= -810.0) Then
+        Return 23.12
+    End If
+
+    If (X >= 550.0 And
+        X <= 770.0 And
+        Z >= -850.0 And
+        Z <= -810.0) Then
+        Return 23.12
+    End If
+
+    If (X >= 640.0 And
+        X <= 680.0 And
+        Z >= -1140.0 And
+        Z <= -1070.0) Then
+        Return 23.12
+    End If
+
+    If (X >= 550.0 And
+        X <= 770.0 And
+        Z >= -1110.0 And
+        Z <= -1070.0) Then
+        Return 23.12
+    End If
+
+    Return 20.9
 
 End Function
 

@@ -40,6 +40,7 @@ $nativeBattleSources = @(
     'NerisTownMap.smile',
     'NerisTownTrees.smile',
     'NerisTownNavigation.smile',
+    'NerisTownDistricts.smile',
     'NerisTownParty.smile',
     'BattlePlanning.smile',
     'BattleProgression.smile',
@@ -177,7 +178,8 @@ function Preserve-ExistingHost([xml]$ProjectXml) {
         if ($item.Name -eq 'SmileSource' -and $item.Include -eq 'NativeProgram.smile') {
             $item.SetAttribute('Include', 'Program.smile')
         } elseif (($item.Name -eq 'SmileSource' -and $item.Include -in $nativeBattleSources) -or
-            ($item.Name -eq 'Model3DAsset' -and $item.LogicalPath -like 'Assets\Neris\*') -or
+            ($item.Name -in @('Model3DAsset', 'Asset') -and $item.LogicalPath -like 'Assets\Neris\*') -or
+            ($item.Name -eq 'Asset' -and $item.Include -like 'Assets\Neris\*') -or
             ($item.Name -eq 'Asset' -and $item.Include -in @('Assets\Battle\BitmapFont.png', 'BattleExperienceTick.wav'))) {
             $null = $item.ParentNode.RemoveChild($item)
         }
@@ -269,6 +271,11 @@ if ($Target -in @('Native', 'All')) {
     $null = New-Item -ItemType Directory -Path $townMirror -Force
     foreach ($file in Get-ChildItem -LiteralPath $townSource -File) {
         Copy-Item -LiteralPath $file.FullName -Destination $townMirror -Force
+    }
+    $townImages = Join-Path $toolRoot 'Assets\Neris'
+    $null = New-Item -ItemType Directory -Path $townImages -Force
+    foreach ($file in Get-ChildItem -LiteralPath (Join-Path (Split-Path $townSource -Parent) 'Textures') -Filter 'Neris-Minimap*.png') {
+        Copy-Item -LiteralPath $file.FullName -Destination $townImages -Force
     }
     $output = Join-Path $outputRoot 'Character3DViewer.exe'
     if ($Studio) {

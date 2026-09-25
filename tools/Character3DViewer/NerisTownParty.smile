@@ -21,6 +21,7 @@ Public Type Member
     Previous As P.Vector3
     Yaw As Double
     IdleClip As Number
+    IdleName As Text
     TravelClip As Number
     TravelName As Text
     TravelRate As Number
@@ -163,7 +164,14 @@ Public Sub LoadNext(ByRef Value As State)
         Value.Members[Index].BaseY = Value.Members[Index].Body.Frame.PositionY * Value.Members[Index].PositionScale
         Ok = Character.SetScale(Value.Members[Index].Body.Actor, Value.Members[Index].Body.Frame.ScalePercent) And Ok
         Ok = Character.SetRootMotion(Value.Members[Index].Body.Actor, Character.ROOT_MOTION_IGNORE) And Ok
-        Value.Members[Index].IdleClip = ClipIndex(Value.Members[Index].Body.Actor, "Idle")
+        Value.Members[Index].IdleName = "Idle"
+
+        If ProfileAt(Index) = Profiles.PROFILE_ARIN Then
+            Value.Members[Index].IdleName = "TownIdle"
+        End If
+
+        Value.Members[Index].IdleClip = ClipIndex(Value.Members[Index].Body.Actor,
+            Value.Members[Index].IdleName)
         Value.Members[Index].TravelName = "Run"
         Value.Members[Index].TravelRate = 267
 
@@ -180,7 +188,8 @@ Public Sub LoadNext(ByRef Value As State)
         Value.Members[Index].TravelClip = ClipIndex(Value.Members[Index].Body.Actor, Value.Members[Index].TravelName)
         Value.Members[Index].Body.Clip = Value.Members[Index].IdleClip
         Value.Members[Index].Previous = Value.Path.Positions[Index]
-        Ok = Character.PlayAnimation(Value.Members[Index].Body.Actor, "Idle", True) And Ok
+        Ok = Character.PlayAnimation(Value.Members[Index].Body.Actor,
+            Value.Members[Index].IdleName, True) And Ok
 
         If Index < 2 Then
 
@@ -249,7 +258,7 @@ Private Sub Animate(ByRef Value As Member, Moving As Boolean, Elapsed As Number,
 
         If Value.SettleTime = 0 Then
 
-            Ok = Character.CrossFade(Value.Body.Actor, "Idle", 160, G.ANIMATION_LOOP)
+            Ok = Character.CrossFade(Value.Body.Actor, Value.IdleName, 160, G.ANIMATION_LOOP)
             Value.Body.Clip = Value.IdleClip
             Value.Walking = False
             Value.SettleTime = 160
@@ -339,6 +348,22 @@ Public Sub Update(ByRef Value As State, Leader As P.Vector3, Elapsed As Number)
     End For
 
 End Sub
+
+Public Function IsMoving(ByRef Value As State) As Boolean
+
+    Dim Index As Number
+
+    For Index = 0 To Value.MemberCount - 1
+
+        If Value.Path.Moving[Index] Then
+            Return True
+        End If
+
+    End For
+
+    Return False
+
+End Function
 
 Public Function Draw(ByRef Value As State) As Boolean
 

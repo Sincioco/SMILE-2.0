@@ -40,14 +40,25 @@ If Value.Ready Then
     Call CheckCamera(Value)
     Call CheckSpeed(Value)
     Call CheckGarden(Value)
-    Call Check(TownMap.MapX(0.0, 0, 200) = 100 And TownMap.MapY(0.0, 0, 180) = 90,
+    Call Check(TownMap.MapX(0.0, 0, 200) = 100 And TownMap.MapY(310.0, 0, 180) = 90,
         "Minimap Maps Town Center")
     Call Check(TownMap.MapY(400.0, 0, 180) < TownMap.MapY(-400.0, 0, 180),
         "Minimap Keeps North Up")
+    Call Check(Value.Map.Opacity = 0.0, "Minimap Starts Hidden")
+    Call TownMap.Update(Value.Map, True, 100)
+    Call Check(Value.Map.Opacity = 50.0, "Moving Minimap Fades In")
+    Call TownMap.Update(Value.Map, True, 100)
+    Call TownMap.Update(Value.Map, False, 400)
+    Call Check(Value.Map.Opacity = 50.0, "Stopped Minimap Fades Out Gradually")
+    Call TownMap.Update(Value.Map, False, 400)
+    Call Check(Value.Map.Opacity = 0.0, "Stopped Minimap Disappears")
+    Call Check(Value.People.Members[0].IdleName = "TownIdle" And
+        Character.HasClip(Value.People.Members[0].Body.Actor, "TownIdle"),
+        "Arin Uses His Relaxed Town Standing Clip")
 
     Value.People.Keys.KeyBase = 0
 
-    For Index = 0 To 9
+    For Index = 0 To 10
         KeyTotal = KeyTotal + Calibration.KeyCount(Value.People.Keys, Index)
     End For
 
@@ -113,7 +124,9 @@ If Value.Ready Then
     Call Check(Value.Look.Surfaces[0].PointCount = 2 And
         Value.Look.Surfaces[1].PointCount = 2 And Value.Look.Surfaces[2].PointCount = 49,
         "Both Canals And Fountain Have Native Water Surfaces")
-    Call Check(G.DistortionValue3D(G.DISTORTION_QUERY_EMITTERS) = 3 And
+    Call Check(Value.Look.Surfaces[3].PointCount = 5 And
+        Value.Look.Surfaces[4].PointCount = 49, "Castle Moat And Fountain Have Water")
+    Call Check(G.DistortionValue3D(G.DISTORTION_QUERY_EMITTERS) = 5 And
         G.DistortionValue3D(G.DISTORTION_QUERY_COMPOSITE_DRAWS) > 0,
         "Water Captures And Refracts The Town Scene")
 
@@ -176,6 +189,8 @@ Sub CheckCamera(ByRef Scene As Town.State)
 
     Call Check(Scene.BaseCamera.NearPlane = 10.0,
         "Town Camera Preserves Depth Precision For Thin Paving Layers")
+    Call Check(Not Scene.View.FloorVisible And Not Scene.View.GridVisible,
+        "Town Floor And Grid Start Hidden")
 
     Pointer.OrbitPressed = True
     Pointer.OrbitHeld = True
@@ -195,10 +210,10 @@ Sub CheckCamera(ByRef Scene As Town.State)
 
     Call Check(Changed And Scene.View.Controls.OrbitYaw = 25.0 And
         Scene.View.Controls.OrbitPitch = -15.0, "Moderate Horizontal And Vertical Orbit")
-    Call Town.Input(Scene, KEY_C, True)
+    Call Town.Input(Scene, KEY_O, True)
     Call Check(Scene.Cinematic And Not Scene.Follow And
         Scene.View.Controls.OrbitYaw = 0.0 And Scene.View.Controls.OrbitPitch = 0.0,
-        "C Resets Camera And Resumes Cinematic Overview")
+        "O Resets Camera And Resumes Cinematic Overview")
 
     Scene.View.FloorVisible = False
     Scene.View.Controls.OrbitPitch = -75.0
@@ -239,8 +254,8 @@ Sub CheckGarden(ByRef Scene As Town.State)
 
     Call Check(Scene.Look.Garden.Ready And G.LiveObjectCount3D() = ObjectsBefore,
         "Two Leaf Recycling Cycles Allocate No New Objects")
-    Call Check(Trees.Breeze(12.0, 0) = 0.0 And Abs(Trees.Breeze(3.0, 0)) < 0.66,
-        "Tree Breezes Have Quiet Gaps And Gentle Sway")
+    Call Check(Abs(Trees.Breeze(12.0, 0)) > 0.1 And Abs(Trees.Breeze(3.0, 0)) < 1.16,
+        "Tree Breezes Continue Regularly Within Gentle Bounds")
 
     Ok = G.SetEffectMaterialWater3D(Scene.Look.Water, True, 32, 0, 0, -1)
 

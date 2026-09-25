@@ -13,7 +13,7 @@ Public Const LEAF_COUNT = 10
 
 Public Type State
     Models[2] As Core.Model3D
-    Objects[108] As Core.Object3D
+    Objects[292] As Core.Object3D
     LeafModel As Core.Model3D
     Leaves[10] As Core.Object3D
     Time As Double
@@ -63,21 +63,16 @@ Public Function Create(ByRef Value As State) As Boolean
 
 End Function
 
-''' Smooth six-second breezes with quiet gaps; roots stay anchored.
+''' A steady light breeze with gently varying strength; roots stay anchored.
 Public Function Breeze(Seconds As Double, Index As Number) As Double
 
     Dim Phase As Double
     Dim Envelope As Double
     Dim Result As Double
 
-    Phase = Seconds + ToDouble(Index) * 0.29
-    Phase = Phase - Floor(Phase / 18.0) * 18.0
-
-    If Phase < 6.0 Then
-        Envelope = Sin(Phase * 3.141592653589793 / 6.0)
-    End If
-
-    Result = Envelope * Envelope * Sin(Seconds * 1.35 + ToDouble(Index) * 0.31) * 0.65
+    Phase = Seconds * 0.38 + ToDouble(Index) * 0.29
+    Envelope = 0.80 + 0.20 * Sin(Phase)
+    Result = Envelope * Sin(Seconds * 1.20 + ToDouble(Index) * 0.31) * 1.15
 
     Return Result
 

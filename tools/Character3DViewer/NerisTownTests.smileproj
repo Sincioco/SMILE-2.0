@@ -6,6 +6,8 @@
   <ItemGroup>
     <SmileSource Include="NerisTownTests.smile" StartupOnly="true" />
     <SmileSource Include="NerisTownNavigation.smile" />
+    <SmileSource Include="NerisTownDistricts.smile" />
+    <SmileSource Include="NerisTownLayout.smile" />
     <SmileProjectReference Include="..\..\libraries\Smile.Simple3D\Smile.Simple3D.smilelibproj" />
   </ItemGroup>
 </SmileProject>

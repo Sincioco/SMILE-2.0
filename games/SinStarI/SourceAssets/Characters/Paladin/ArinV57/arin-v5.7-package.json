@@ -10,7 +10,8 @@
     "unequippedOriginal": "arin-v5.7-no-sword-and-shield.original.glb",
     "cleanedBody": "arin-v5.7-no-equipment.cleaned.glb",
     "acceptedViewerCheckpoint": "arin-v5.7-idle-equipment-checkpoint.glb",
-    "currentAnimationWorkingFile": "Blender/arin-v5.7-victory.blend"
+    "currentAnimationWorkingFile": "Blender/arin-v5.7-town-idle.blend",
+    "precedingTenClipCheckpoint": "arin-v5.7-ten-clips.glb"
   },
   "rig": {
     "neutralReference": "arin-v5.7-mixamo-rigged-t-pose.fbx",
@@ -20,8 +21,9 @@
     "manifest": "arin-v5.7-animation-set.json",
     "sourcePattern": "arin-v5.7-mixamo-*-without-skin.fbx",
     "deathSource": "arin-v5.7-mixamo-death.fbx",
-    "clipCount": 10,
-    "victoryValidation": "Calibration/victory-import.json"
+    "clipCount": 11,
+    "victoryValidation": "Calibration/victory-import.json",
+    "townIdleValidation": "Calibration/town-idle-import.json"
   },
   "runtime": {
     "descriptor": "ArinV57.sm3d.json",
@@ -40,7 +42,7 @@
     "syncScript": "scripts/sync-arin-v5-7-calibration.ps1",
     "grounding": "Calibration/arin-v5.7-grounding.json",
     "authority": "Latest Character Viewer export saved to readableSnapshot",
-    "acceptedSnapshotSha256": "8bc36f50e58d7f901d7c8a5f64a5873707b66764c3ee294742f34508d55de32d",
+    "acceptedSnapshotSha256": "8baf29418ea4d44c4af8a582ee0164464ab3e6eaa95db42deea38a0854c377d9",
     "poseReferences": "Previews/Accepted-Pose-References/README.md",
     "frameZeroTransforms": "Previews/Accepted-Pose-References/frame-zero-transforms.json"
   },
@@ -59,7 +61,8 @@
     "animationAudit": "scripts/audit-arin-v5-7-animation-set.py",
     "compatibleClipAppend": "scripts/append-character-animation.py",
     "shieldOutlineSockets": "scripts/prepare-arin-shield-rim.py",
-    "victoryAppend": "scripts/add-party-victory-clip.py"
+    "victoryAppend": "scripts/add-party-victory-clip.py",
+    "townIdleAppend": "scripts/add-arin-town-idle.py"
   },
   "audio": {
     "manifest": "Audio/attack-audio.json",

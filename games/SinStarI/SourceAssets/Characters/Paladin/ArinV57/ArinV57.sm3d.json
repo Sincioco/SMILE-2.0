@@ -31,6 +31,9 @@
     },
     "Victory": {
       "loop": false
+    },
+    "TownIdle": {
+      "loop": true
     }
   },
   "sockets": {

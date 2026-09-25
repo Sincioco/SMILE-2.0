@@ -6,8 +6,11 @@ Created by: Louiery R. Sincioco (Sin). September 25, 2026.
 
 **[Open the complete Blender town](Blend/Neris-Town-V1.blend)**
 
-**[Open the detailed-tree revision](Blend/Neris-Town-Detailed.blend)** — current
-native Viewer source. The original town and its hand-editable scene remain intact.
+**[Open the expanded town](Blend/Neris-Town-Expanded.blend)** — current native
+Viewer source, with residential districts, castle, moat, bridge and military HQ.
+
+**[Open the detailed-tree revision](Blend/Neris-Town-Detailed.blend)** — preserved
+pre-expansion revision. The original town and its hand-editable scene remain intact.
 See the [new trees preview](Previews/Neris-Detailed-Trees.png).
 
 The self-contained Blender 5.2.1 LTS file opens with a material-preview overview.
@@ -34,7 +37,7 @@ standard controls. Toggle overlays to see/select helpers. The scene was shown in
 a separate Blender window placed to the right of Codex; the user's previous
 unsaved Blender scene was preserved.
 
-## Layout and Paseo reference
+## Original layout and Paseo reference
 
 The reference was Phantasy Star II's starting town, Paseo:
 
@@ -203,3 +206,76 @@ decorative props are generally nonblocking. The fifth requested character, Mila,
 still needs a model identity/path. See the Viewer README for the available roster
 and controls. Native acceptance: `scripts/test-neris-town.ps1`; shared Viewer
 checks: `scripts/test-character-3d-viewer-hardening.ps1 -NativeOnly`.
+
+## Residential and royal expansion — September 25
+
+The expanded revision preserves the original and detailed Blender files. Its
+foundation spans 270 × 302 m (X −135…135, north Y −120…182). It includes 37 buildings:
+the original thirteen, 22 new residences, the King's Castle and Military Headquarters.
+
+- West: four large homes on spacious lawns, with four shade trees per estate.
+- East: six medium homes with smaller courts and one tree per lot.
+- South: twelve smaller workers' homes along shared paved courts, with sparse trees.
+- North-west: a large tiered castle on an island with four moat bands, a bridge,
+  open gate, courtyard fountain, towers, teal roofs and Neris banners.
+- North-east: military command hall, barracks, walls, open gate and a 50 × 33 m
+  parade lawn with a Neris flag.
+- City Hall retains its location and gains an open 34 × 19 m forecourt. The relay
+  tower moves to (15, 75) m near military HQ; one older pavilion moves south-west.
+
+The five supplied home/castle/HQ PNG designs and Neris flag in `Assets/Towns/Neris`
+guide the stylized exterior models. Templates are separate editable collections.
+The grass spacing, tree distribution and architecture distinguish the districts.
+All paving is darker slate, with its previous grain and sheen. New street crossings
+use the union of one grid, avoiding overlapping coplanar tile surfaces.
+
+| Preview | View |
+| --- | --- |
+| [Whole town](Previews/Neris-Expanded-Overview.png) | Expanded footprint |
+| [Royal district](Previews/Neris-Royal-District.png) | Castle, bridge, moat and HQ |
+| [City Hall](Previews/Neris-City-Hall-Approach.png) | Unobstructed civic approach |
+| [Estates](Previews/Neris-Rich-Neighborhood.png) | Large homes and gardens |
+| [Middle homes](Previews/Neris-Middle-Neighborhood.png) | Moderate plots |
+| [Workers' homes](Previews/Neris-Workers-Neighborhood.png) | Compact shared courts |
+
+### Expansion owners and rebuilding
+
+`expansion_architecture.py` owns shared architectural parts;
+`residential_expansion.py` owns the three home templates; `royal_district.py`
+owns castle/HQ exteriors; `expand_town.py` owns placement and non-overlapping paving.
+`expansion-layout.json` records footprint, roads, home lots and landmark locations.
+`render_minimap.ps1` uses Windows System.Drawing for the map and alpha marker.
+
+Run installed Blender in background with `Blend/Neris-Town-Detailed.blend` loaded
+and `--python-exit-code 1 --python Source/expand_town.py`. Then open the resulting
+expanded file in background and run `Source/export_native.py` followed by
+`Source/export_layout.py`. Finish with `pwsh -File Source/render_minimap.ps1` and
+the native Viewer build. Run these sequentially; the compiler may lock source
+files while the placement exporter writes generated data.
+
+The native export contains 28 static chunks / 100 parts / 2,776,669 triangles and
+53 unique material groups. Two shared tree templates supply 73 placements (292
+part objects); a ten-leaf pool adds one reusable mesh. The manifest records current
+source/export hashes. No renderer capacity was increased. Water uses five paired
+surface/refraction batches: two canals, two fountains and one closed moat strip.
+
+The Viewer starts with Floor and Grid off. O resumes a cinematic orbit; mouse pan,
+orbit and zoom remain shared arena controls. The map fades with actual party
+movement, including followers gathering. Navigation accounts for district homes,
+castle walls/moat/bridge, HQ walls/parade lawn and the relocated tower.
+These are exterior inspection models; interiors and NPC interactions remain outside scope.
+
+### Expansion validation
+
+The native build and `scripts/test-neris-town.ps1` pass with all 28 static chunks,
+four party actors and the published minimap images. Focused checks cover district
+collision, moat and gate routes, paving heights, water geometry, Floor/Grid
+defaults, O input, follower gathering, map projection/fading and resource cleanup.
+Viewer hardening and native calibration round trips also pass, including 58 shared
+graphics, pointer and audio checks. The ten preceding Arin frame-zero reference
+rows and all 24 accepted pose keys are preserved when TownIdle is appended.
+
+Manual native inspection covers startup, the expanded scene, relaxed Arin idle,
+pan, zoom in/out and O restoring cinematic orbit. Saved Blender previews show all three neighborhoods, the royal
+district and the open City Hall approach. Movement-driven map fading is covered
+by the real-asset scene check. Web validation remains on hold.
