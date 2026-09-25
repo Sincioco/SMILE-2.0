@@ -130,7 +130,10 @@ float4 ShadeWater(float4 pixel, float2 uv, float4 base, float3 world, float3 sur
     float foamNoise = sin(world.x*.62 + sin(world.z*.41)*2 + seconds*2.8) *
         sin(world.y*.83 - world.z*.36 + seconds*1.9);
     float foam = smoothstep(.72,.94,foamNoise) * waterParameters.z * (1-smoothstep(.8,3,footprint));
-    float3 result = lerp(transmission, reflection, fresnel) + highlight;
+    // Honor the artist's material/vertex tint across the water body, including
+    // its reflected environment. Otherwise grazing views erase deep-water color.
+    // White preserves existing water; direct sunlight still produces white glints.
+    float3 result = lerp(transmission, reflection, fresnel) * ToLinear(saturate(base.rgb)) + highlight;
     result = lerp(result, float3(.72,.83,.85), foam);
     float opacity = saturate(base.a * (1.15 + fresnel*.45 + foam*.5));
     if (atlasOutput.z < .5) result = pow(saturate(result), 1.0/2.2);

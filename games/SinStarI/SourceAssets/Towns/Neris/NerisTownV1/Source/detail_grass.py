@@ -114,7 +114,7 @@ def apply():
             continue
         if lawn:
             ground[y0:y1,x0:x1] = np.maximum(ground[y0:y1,x0:x1],hi[2])
-        elif item.name.startswith(('Unified Expanded Road Mortar','Unified Expanded Slate Tiles')):
+        elif item.get('neris_paving_surface') or item.name.startswith(('Unified Expanded Road Mortar','Unified Expanded Slate Tiles')):
             # These meshes combine disconnected road tiles. Their whole-object
             # box includes the lawns between streets; mask each actual tile.
             for face in item.data.polygons:
@@ -134,7 +134,7 @@ def apply():
     cells = np.argwhere(free)
     print('GRASS placement mask:',len(cells),'open cells',flush=True)
     assert len(cells) >= 13000, 'Grass placement must retain the open town lawns.'
-    assert free[int((-40+120)/cell),int((-115+135)/cell)], 'The estate lawn between streets must remain grass.'
+    assert free[int((-12+120)/cell),int((-120+135)/cell)], 'The estate lawn between streets must remain grass.'
     rng = random.Random(92626)
     vertices, faces, colors = [], [], []
     placements = []

@@ -11,6 +11,8 @@ Public Type State
     Headlight As Image
     Opacity As Double
     HoldRemaining As Number
+    Disabled As Boolean
+    ManualVisible As Boolean
 End Type
 
 Public Function Create(ByRef Value As State) As Boolean
@@ -26,9 +28,29 @@ Public Function Create(ByRef Value As State) As Boolean
 
 End Function
 
+''' Manual on/off overrides automatic fading until this town session ends.
+Public Sub Toggle(ByRef Value As State)
+
+    Value.Disabled = Value.Opacity > 0.0
+    Value.ManualVisible = Not Value.Disabled
+
+    If Value.Disabled Then
+        Value.Opacity = 0.0
+        Value.HoldRemaining = 0
+    Else
+        Value.Opacity = 80.0
+        Value.HoldRemaining = 10000
+    End If
+
+End Sub
+
 Public Sub Update(ByRef Value As State, Moving As Boolean, Elapsed As Number)
 
     Dim FadeElapsed As Number
+
+    If Value.Disabled Or Value.ManualVisible Then
+        Return
+    End If
 
     If Moving Then
 
@@ -49,7 +71,7 @@ Public Function MapX(WorldX As Double, Origin As Number, Size As Number) As Numb
 
     Dim Result As Number
 
-    Result = Origin + ToNumber(Round((Clamp(WorldX, -1350.0, 1350.0) + 1350.0) * ToDouble(Size) / 2700.0))
+    Result = Origin + ToNumber(Round((Clamp(WorldX, -3270.0, 1780.0) + 3270.0) * ToDouble(Size) / 5050.0))
 
     Return Result
 
@@ -59,7 +81,7 @@ Public Function MapY(WorldZ As Double, Origin As Number, Size As Number) As Numb
 
     Dim Result As Number
 
-    Result = Origin + ToNumber(Round((1820.0 - Clamp(WorldZ, -1200.0, 1820.0)) * ToDouble(Size) / 3020.0))
+    Result = Origin + ToNumber(Round((2830.0 - Clamp(WorldZ, -1200.0, 2830.0)) * ToDouble(Size) / 4030.0))
 
     Return Result
 
@@ -96,10 +118,10 @@ Public Sub Draw(ByRef Value As State, Position As P.Vector3, Yaw As Double)
     End If
 
     Width = Min(300, Max(225, Window_Width() / 5))
-    Height = Width * 1080 / 900
+    Height = Width * 1080 / 1140
     X = Window_Width() - Width - 20
     Y = 104
-    MarkerX = MapX(Position.X, X + Width * 30 / 900, Width * 840 / 900)
+    MarkerX = MapX(Position.X, X + Width * 30 / 1140, Width * 1080 / 1140)
     MarkerY = MapY(Position.Z, Y + Height * 90 / 1080, Height * 940 / 1080)
     Frame = HeadingFrame(Yaw)
     SourceX = (Frame Mod 12) * 96

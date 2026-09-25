@@ -8,10 +8,11 @@ Import Smile.Simple3D.Graphics3D As G
 Import Smile.Simple3D.Precision3D As P
 Import Smile.Tools.Character3DViewerCalibration As Numbers
 
-Public Const CHUNK_COUNT = 31
+Public Const TOWN_CHUNK_COUNT = 33
+Public Const CHUNK_COUNT = 47
 
 Public Type State
-    Models[31] As Core.Model3D
+    Models[47] As Core.Model3D
     Objects[448] As Core.Object3D
     Loaded As Number
     ObjectCount As Number
@@ -26,18 +27,28 @@ Public Sub LoadNext(ByRef Value As State)
     Dim Name As Text
     Dim Object As Core.Object3D
     Dim Ok As Boolean
+    Dim Chunk As Number
+    Dim Prefix As Text
 
     If Value.Loaded >= CHUNK_COUNT Or Value.Failed Then
         Return
     End If
 
-    Name = Numbers.NumberText(Value.Loaded)
+    Chunk = Value.Loaded
+    Prefix = "Neris-"
 
-    If Value.Loaded < 10 Then
+    If Chunk >= TOWN_CHUNK_COUNT Then
+        Chunk = Chunk - TOWN_CHUNK_COUNT
+        Prefix = "Castle-"
+    End If
+
+    Name = Numbers.NumberText(Chunk)
+
+    If Chunk < 10 Then
         Name = "0" + Name
     End If
 
-    Value.Models[Value.Loaded] = G.LoadModel3D("Assets/Neris/Neris-" + Name + ".sm3d")
+    Value.Models[Value.Loaded] = G.LoadModel3D("Assets/Neris/" + Prefix + Name + ".sm3d")
     Ok = Value.Models[Value.Loaded].GeometryReady
     Value.Stage = 1
     Value.ErrorCode = G.LastError()
@@ -60,8 +71,15 @@ Public Sub LoadNext(ByRef Value As State)
 
         Object = G.CreateModelPart3D(Value.Models[Value.Loaded], Part)
         Ok = Object.Handle <> 0 And Ok
-        Ok = P.SetScale(Object, 1000.0, 1000.0, 1000.0) And Ok
-        Ok = P.SetPosition(Object, 0.0, 21.0, 0.0) And Ok
+
+        If Value.Loaded >= TOWN_CHUNK_COUNT Then
+            Ok = P.SetScale(Object, 170000.0, 170000.0, 170000.0) And Ok
+            Ok = P.SetPosition(Object, -2280.0, -299.88, 1760.0) And Ok
+        Else
+            Ok = P.SetScale(Object, 1000.0, 1000.0, 1000.0) And Ok
+            Ok = P.SetPosition(Object, 0.0, 21.0, 0.0) And Ok
+        End If
+
         Value.Objects[Value.ObjectCount] = Object
         Value.ObjectCount = Value.ObjectCount + 1
     End For

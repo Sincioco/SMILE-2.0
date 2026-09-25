@@ -1,0 +1,99 @@
+{
+  "source_sha256": "e64612df7a9a5a7d494318afe1da626b1e4931109182e532dbcb2811f6d4c106",
+  "triangles": 1770324,
+  "repaired_degenerate_tangents": 5,
+  "parts": 28,
+  "chunks": [
+    {
+      "file": "Castle-00.glb",
+      "parts": 2,
+      "triangles": 130000,
+      "sha256": "fa568b329ebd9bead2459416970259c6982dbfd96420435915c35e130fcb0d36"
+    },
+    {
+      "file": "Castle-01.glb",
+      "parts": 2,
+      "triangles": 130000,
+      "sha256": "3ede1e7bb506832e95505b0b4b91116183a08df217a21c2e7a35825add81c0ad"
+    },
+    {
+      "file": "Castle-02.glb",
+      "parts": 2,
+      "triangles": 130000,
+      "sha256": "fdb5c46dda55ba1c640983802248e75bae51acb6a6833d13b0ee41430e71aac5"
+    },
+    {
+      "file": "Castle-03.glb",
+      "parts": 2,
+      "triangles": 130000,
+      "sha256": "57dbf0abda4e1ab0d0865b91b8e635e724c8f01bef90151e72f7cbd8c3a93232"
+    },
+    {
+      "file": "Castle-04.glb",
+      "parts": 2,
+      "triangles": 130000,
+      "sha256": "c44527787ccbe9aa84d96ac710ee180d8e021e361549414136a76401e9577fcb"
+    },
+    {
+      "file": "Castle-05.glb",
+      "parts": 2,
+      "triangles": 130000,
+      "sha256": "dc2d927de2d2f19f3a8ad737d5081d7daf34196acd01be44c155412dedbf8679"
+    },
+    {
+      "file": "Castle-06.glb",
+      "parts": 2,
+      "triangles": 130000,
+      "sha256": "8e12b41ccf5aca576ada76d18e9abfe42d42c3684db0f2f647e5a6a58ac2c6c0"
+    },
+    {
+      "file": "Castle-07.glb",
+      "parts": 2,
+      "triangles": 130000,
+      "sha256": "698f35c1f13b18a8d342dc2b4dd98686942ec295e6736cb38f36953a778ba98a"
+    },
+    {
+      "file": "Castle-08.glb",
+      "parts": 2,
+      "triangles": 130000,
+      "sha256": "1239f003a2efcb3903a5ea3e89f871c471182766fe60bf584c5083e310adff94"
+    },
+    {
+      "file": "Castle-09.glb",
+      "parts": 2,
+      "triangles": 130000,
+      "sha256": "368a2b6e7b59af63d9c55ba50cfa61ec77da5df9f60a349d80dfb3362ba53bfb"
+    },
+    {
+      "file": "Castle-10.glb",
+      "parts": 2,
+      "triangles": 130000,
+      "sha256": "cbf6d52f9d9d1037ff43a3e93ba756d80de2dc744bf89b9b418a3d4f0da457b0"
+    },
+    {
+      "file": "Castle-11.glb",
+      "parts": 2,
+      "triangles": 130000,
+      "sha256": "0344047829e592204ebfd5f14a209b6ca8c33932bb257ab9322389ed3b60f97a"
+    },
+    {
+      "file": "Castle-12.glb",
+      "parts": 2,
+      "triangles": 130000,
+      "sha256": "c94591d856ce09d5c2ef8727abb3076efe49a65e9ca7528b0f5fd0a34d81aab9"
+    },
+    {
+      "file": "Castle-13.glb",
+      "parts": 2,
+      "triangles": 80324,
+      "sha256": "bd626a2e61337afe5846e7e5fc818bb84bc9be3e7ab5515d39dea685e2c0918a"
+    }
+  ],
+  "placement": {
+    "x": -228,
+    "y": 176,
+    "scale": 170,
+    "floor": 0.212,
+    "groundAnchor": 0.19
+  }
+}

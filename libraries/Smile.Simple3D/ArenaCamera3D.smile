@@ -228,6 +228,48 @@ Public Function ComposeDistance(Base As P.Camera3D, Controls As Camera.Controls,
 
 End Function
 
+''' Ease upright arena framing along the shortest yaw arc without crossing the target.
+Public Function BlendFraming(First As P.Camera3D, Last As P.Camera3D,
+    Progress As Double) As P.Camera3D
+
+    Dim Result As P.Camera3D
+    Dim StartOffset As P.Vector3
+    Dim EndOffset As P.Vector3
+    Dim Amount As Double
+    Dim Distance As Double
+    Dim Yaw As Double
+    Dim EndYaw As Double
+    Dim Pitch As Double
+    Dim EndPitch As Double
+
+    Amount = Clamp(Progress, 0.0, 1.0)
+
+    If Amount = 0.0 Then
+        Return First
+    Else If Amount = 1.0 Then
+        Return Last
+    End If
+
+    Amount = Amount * Amount * (3.0 - 2.0 * Amount)
+    StartOffset = M.Subtract(First.Position, First.Target)
+    EndOffset = M.Subtract(Last.Position, Last.Target)
+    Distance = M.Length(StartOffset) + (M.Length(EndOffset) - M.Length(StartOffset)) * Amount
+    Yaw = Atan2(StartOffset.X, StartOffset.Z) * 180.0 / 3.141592653589793
+    EndYaw = Atan2(EndOffset.X, EndOffset.Z) * 180.0 / 3.141592653589793
+    Yaw = M.Radians(Yaw + Camera.NormalizeAngle(EndYaw - Yaw) * Amount)
+    Pitch = Atan2(StartOffset.Y, Sqrt(StartOffset.X * StartOffset.X + StartOffset.Z * StartOffset.Z))
+    EndPitch = Atan2(EndOffset.Y, Sqrt(EndOffset.X * EndOffset.X + EndOffset.Z * EndOffset.Z))
+    Pitch = Pitch + (EndPitch - Pitch) * Amount
+    Result = Last
+    Result.Target = M.Lerp(First.Target, Last.Target, Amount)
+    Result.Position = M.Add(Result.Target, P.Vector(Sin(Yaw) * Cos(Pitch) * Distance,
+        Sin(Pitch) * Distance, Cos(Yaw) * Cos(Pitch) * Distance))
+    Result.FovDegrees = First.FovDegrees + (Last.FovDegrees - First.FovDegrees) * Amount
+
+    Return Result
+
+End Function
+
 Public Function Compose(Base As P.Camera3D, Controls As Camera.Controls) As P.Camera3D
 
     Dim Result As P.Camera3D

@@ -7,10 +7,12 @@ Native scene policy remains in `NerisTown`; shared arena distance zoom is opt-in
 `NerisTownDistricts` owns expanded collision and surface heights. Navigation composes
 that owner with the original district, canals, trees and movement substeps.
 Generated `NerisTownLayout` supplies exact tree/lamp placements and paving rectangles.
-Its larger size is declarative generated data (73 trees, 82 lamps and paving bounds),
+Its larger size is declarative generated tree/lamp placement data and paving bounds,
 reviewed separately from behavior complexity; no threshold or exclusion is changed.
 
-`NerisTownMap.State` owns three image handles, fade opacity and a ten-second hold.
+`NerisTownMap.State` owns three image handles, fade opacity, a ten-second hold,
+and explicit manual-visible/disabled flags for M. The shared language/native input
+contract now exposes KEY_M (42); Web input adoption remains held.
 The party supplies movement, leader position and facing; the map borrows no actor
 or camera state. One 72-frame sheet supplies the headlight cone through the existing
 image source-rectangle API. North remains up; maximum opacity is 80%.
@@ -18,12 +20,21 @@ image source-rectangle API. North remains up; maximum opacity is 80%.
 only in town. Character asset/calibration identity migration preserves all 24 keys
 and the ten earlier clips; saved JSON remains authoritative.
 
-Appearance retains its existing water/material ownership. One closed moat ribbon
-and one royal fountain extend water to five paired batches; tree instances grow to
-292 part objects. The native asset exporter remains within its 105-static-part guard
-(104 used). Current exports use 31 models. Sin authorized increasing native
+Appearance retains its water/material ownership. Two closed moat ribbons
+and a royal fountain extend water to six paired batches; tree instances grow to
+292 part objects. The export check now counts the entire native mesh allocation: static town parts
+plus 28 imported-castle parts and the existing 23-slot party/arena reserve must fit
+the supported 256-mesh pool. This replaces the obsolete 105+23/128 allowance,
+without changing renderer capacity or excluding geometry. The model check also
+reserves 14 imported-castle models, five actors and three vegetation models.
+The remodeled town exports use 33 models. The linked Tripo castle adds 14 models /
+28 parts with shared external 4K textures; it is excluded from the static town exporter. Sin authorized increasing native
 material capacity from 128 to 512. Material handles use nine slot bits and retain
-sixteen generation bits. Mesh/model capacities and held Web are unchanged.
+sixteen generation bits. Native meshes now use 256 zero-based slots with sixteen generation bits, needed
+for the detailed comparison castle; model capacity and held Web are unchanged.
+Build-time Model3DAsset declarations allow 128 items (68 currently declared),
+separate from the live model pool. The lifecycle fixture checks the highest mesh
+slot, exhaustion, stale handles and cleanup.
 The native-only map image mirror is ignored; the build publishes it under Assets/Neris.
 Studio and Web inventories exclude these town assets and modules.
 
@@ -65,17 +76,22 @@ leader. It owns no input, actor handles, animation, global state or game data.
 
 Town camera policy composes the shared `ArenaViewport3D` / `ArenaCamera3D` controls.
 It reuses the reflective arena, grid and backgrounds. `NerisTownAppearance` owns
-town-scale lighting, the water clock, two canal strips, two fountain disks and a closed moat strip, with
+town-scale lighting, the water clock, two canal strips, two fountain disks and two closed moat strips, with
 matching distortion batches. It uses the existing native water material and releases
-all ten batches before its two materials. No camera or party state is borrowed.
+all twelve batches before its three materials. No camera or party state is borrowed.
 Town input policy bounds absolute orbit elevation to 10–80 degrees and vertical pan
 to a target Y of at least 25. This keeps both overview and follow cameras above the
 town independently of arena-floor visibility, without copying shared camera math.
 The camera near plane is 25 town units: the former 1-unit plane let thin paving
 layers collapse into the same 24-bit depth value at overview distance. Water sits
 above its opaque color backing with enough separation for the same depth buffer.
-Movement begins a following view; direct mouse manipulation pauses cinematic
-orbit. This does not implement a general scene editor or resume Studio work.
+Only Tab changes following mode. It captures the displayed camera and eases the
+target, distance and shortest yaw arc over 700 ms. Shared ArenaViewport3D owns the
+optional transition state; ArenaCamera3D owns pure framing interpolation. Movement
+stops cinematic orbit without changing follow mode, pan or zoom.
+Pan, manual orbit and primary scene clicks pause cinematic rotation; wheel zoom
+keeps it running. O/C retains zoom (converting follow distance through the existing
+ComposeDistance curve); only right-click resets the overview. This does not implement a general scene editor or resume Studio work.
 
 `NerisTownTrees` owns two reusable tree models, 292 placed part objects and a pool
 of ten leaf objects sharing one mesh/material. Existing precise transforms supply
@@ -89,7 +105,9 @@ receiving the leader's position and facing. Appearance delegates these effect ow
 
 Native shaders filter procedural water octaves by pixel footprint and broaden
 PBR/water highlights using normal variance. A default-preserving optional ripple
-strength is added to the existing water operation. The renderer has no town
+strength is added to the existing water operation. Native water now honors the existing material tint across transmission and
+reflected environment, retaining direct sun glints; white preserves prior behavior. Moats use a
+separate blue material at 24% ripples / one-third speed; canals retain 8% / one-eighth. The renderer has no town
 dependency or new resource type. Web adoption remains held.
 
 Detailed vegetation is authored by `Source/detail_trees.py` in a separate
@@ -136,7 +154,7 @@ tile tones; `align_paving.py` applies it to old streets, new roads and bridges.
 `castle_architecture.py` owns the detailed royal exterior. `royal_terrain.py` cuts
 the moat out of the ground and slab and lowers its blue bed. The exporter omits the
 duplicate static moat surface: the native water effect alone draws its surface.
-This separates it from the bed by 6.35 world units. The 105-static-part guard stays.
+This separates it from the bed by 6.35 world units. The current combined resource check above supersedes the former 105-part allowance.
 
 Focused native acceptance covers the raised entrance stairs, 31 chunks, four actors,
 129/512 materials, 127/128 meshes, map delay/heading, common camera zoom range,
@@ -1372,3 +1390,21 @@ Do not use live user calibration for failure tests.
 native isolation runner. It owns only complete-pose recovery assertions: all 20
 channels plus wrist/equipment world matrices. Production state ownership remains
 in ViewerCalibration and ViewerCalibrationEditing; no persistence code changed.
+
+### Current royal rebuild and camera change review
+
+The clean royal castle is separately authored in the named Blender collection;
+`castle_architecture.py` owns the masses and `castle_facades.py` the ornament.
+`refine_castle.py` updates the saved site without touching an interactive session.
+The 33 native town chunks contain 109 parts / 3,188,159 triangles. The imported
+candidate retains its separate 14 models / 28 parts. Generated layout contains
+73 trees and 86 lamp positions. Collision converts the enlarged royal site into
+its local building coordinates; party state and camera state remain independent.
+
+Changed owner sizes: ArenaCamera3D 243→285 lines; ArenaViewport3D 129→158;
+NerisTown 338→391; Appearance 205→234; Districts 174→203. Generated placement
+inventory is 1,348 lines, with no behavior algorithms. Bootstrap and host sources
+are unchanged. No architecture size baseline, exemption or exclusion was changed.
+The mesh export allowance is explicitly derived from the existing native resource
+pool, including both castles and reserved actor/effect handles; model capacity
+remains 64. No new dependency or compiler feature was needed for camera easing.

@@ -10,6 +10,7 @@ Import Smile.Simple3D.Precision3D As P
 Import Smile.Simple3D.PrecisionMath3D As Math3D
 Import Smile.Simple3D.Character3D As Character
 Import Smile.Simple3D.ArenaCamera3D As Motion
+Import Smile.Simple3D.ArenaViewport3D As Arena
 Import Smile.Simple3D.Graphics3D As G
 Import Smile.Tools.Character3DViewerCalibration As Calibration
 Import Smile.Tools.NerisTownTrees As Trees
@@ -44,13 +45,14 @@ Call Check(Value.Look.Gems.Ready, "Town Crystal And Lamp Effects Load")
 Call Check(Value.Look.Ready, "Town Water And Garden Resources Load")
 Call Check(G.LiveMaterialCount3D() < G.MaximumMaterialCount3D(), "Complete Town Keeps Material Headroom")
 Call Check(G.MaximumMaterialCount3D() >= 512, "Native Viewer Uses Expanded Material Capacity")
+Call Check(G.MaximumMeshCount3D() >= 256, "Detailed Castle And Town Have Mesh Capacity")
 
 If Value.Ready Then
 
     Call CheckCamera(Value)
     Call CheckSpeed(Value)
     Call CheckGarden(Value)
-    Call Check(TownMap.MapX(0.0, 0, 200) = 100 And TownMap.MapY(310.0, 0, 180) = 90,
+    Call Check(TownMap.MapX(-745.0, 0, 200) = 100 And TownMap.MapY(815.0, 0, 180) = 90,
         "Minimap Maps Town Center")
     Call Check(TownMap.MapY(400.0, 0, 180) < TownMap.MapY(-400.0, 0, 180),
         "Minimap Keeps North Up")
@@ -73,6 +75,14 @@ If Value.Ready Then
     Call TownMap.Update(Value.Map, True, 1)
     Call TownMap.Update(Value.Map, False, 10400)
     Call Check(Value.Map.Opacity = 40.0, "Movement Restarts Hold And Large Frames Fade Only Remaining Time")
+    Call Town.Input(Value, KEY_M, True)
+    Call TownMap.Update(Value.Map, True, 200)
+    Call Check(Value.Map.Disabled And Value.Map.Opacity = 0.0, "M Keeps Minimap Off While Moving")
+    Call Town.Input(Value, KEY_M, True)
+    Call Check(Not Value.Map.Disabled And Value.Map.Opacity = 80.0 And
+        Value.Map.HoldRemaining = 10000, "M Reveals Map And Restarts Ten Second Hold")
+    Call TownMap.Update(Value.Map, False, 12000)
+    Call Check(Value.Map.Opacity = 80.0, "Manually Shown Map Stays Visible Until M Hides It")
     Call Check(Value.People.Members[0].IdleName = "TownIdle" And
         Character.HasClip(Value.People.Members[0].Body.Actor, "TownIdle"),
         "Arin Uses His Relaxed Town Standing Clip")
@@ -140,8 +150,10 @@ If Value.Ready Then
     Call Town.Draw(Value)
     Call Check(G.LightValue3D(G.LIGHT_QUERY_DIRECTIONAL, 0, 8) = 2600 And
         G.LightValue3D(G.LIGHT_QUERY_AMBIENT, 0, 4) = 380 And
-        G.LightValue3D(G.LIGHT_QUERY_LOCAL, 3, 11) = 2600,
-        "Town Keeps Sun Ambient Fill And Restored Local Highlights")
+        G.LightValue3D(G.LIGHT_QUERY_LOCAL, 1, 11) = 4800 And
+        G.LightValue3D(G.LIGHT_QUERY_LOCAL, 2, 11) = 4800 And
+        G.LightValue3D(G.LIGHT_QUERY_LOCAL, 3, 11) = 4300,
+        "Town Keeps Sun Ambient Fill And Dedicated Castle And Military Lights")
     Call Town.Overlay(Value)
     Call Check(Not Value.Failed And Value.People.Ready, "Town Renders With Shared Reflective Arena")
     Call Check(Value.Look.Ready And Value.Look.Time = 16,
@@ -150,8 +162,8 @@ If Value.Ready Then
         Value.Look.Surfaces[1].PointCount = 2 And Value.Look.Surfaces[2].PointCount = 49,
         "Both Canals And Fountain Have Native Water Surfaces")
     Call Check(Value.Look.Surfaces[3].PointCount = 5 And
-        Value.Look.Surfaces[4].PointCount = 49, "Castle Moat And Fountain Have Water")
-    Call Check(G.DistortionValue3D(G.DISTORTION_QUERY_EMITTERS) = 5 And
+        Value.Look.Surfaces[4].PointCount = 49 And Value.Look.Surfaces[5].PointCount = 5, "Castle Moat And Fountain Have Water")
+    Call Check(G.DistortionValue3D(G.DISTORTION_QUERY_EMITTERS) = 6 And
         G.DistortionValue3D(G.DISTORTION_QUERY_COMPOSITE_DRAWS) > 0,
         "Water Captures And Refracts The Town Scene")
 
@@ -162,7 +174,7 @@ End If
 Call Town.Destroy(Value)
 Call Check(Not Value.Ready And Value.Town.ObjectCount = 0 And Value.People.Loaded = 0,
     "Town Releases Owned Resources")
-Call Check(Value.Look.Water.Handle = 0 And Value.Look.Refraction.Handle = 0 And
+Call Check(Value.Look.Water.Handle = 0 And Value.Look.Refraction.Handle = 0 And Value.Look.MoatWater.Handle = 0 And
     Value.Look.Surfaces[2].Handle = 0 And Value.Look.Distortion[2].Handle = 0,
     "Town Releases Water Materials And Surfaces")
 
@@ -216,6 +228,7 @@ Sub CheckCamera(ByRef Scene As Town.State)
 
     Dim Pointer As Motion.PointerInput
     Dim Changed As Boolean
+    Dim Distance As Double
 
     Call Check(Scene.BaseCamera.NearPlane = 25.0,
         "Town Camera Preserves Depth Precision For Thin Paving Layers")
@@ -244,8 +257,12 @@ Sub CheckCamera(ByRef Scene As Town.State)
         Scene.View.Controls.OrbitPitch = -15.0, "Moderate Horizontal And Vertical Orbit")
     Call Town.Input(Scene, KEY_O, True)
     Call Check(Scene.Cinematic And Not Scene.Follow And
-        Scene.View.Controls.OrbitYaw = 0.0 And Scene.View.Controls.OrbitPitch = 0.0,
-        "O Resets Camera And Resumes Cinematic Overview")
+        Scene.View.Controls.OrbitYaw = 25.0 And Scene.View.Controls.OrbitPitch = -15.0,
+        "O Resumes Cinematic Overview Without Resetting Orbit")
+    Call Town.ResetOverview(Scene)
+    Call Check(Scene.View.Controls.OrbitYaw = 0.0 And
+        Scene.View.Controls.Zoom = ToDouble(Motion.DEFAULT_ZOOM),
+        "Right Click Reset Command Restores Default Overview")
 
     Scene.View.FloorVisible = False
     Scene.View.Controls.OrbitPitch = -75.0
@@ -280,10 +297,113 @@ Sub CheckCamera(ByRef Scene As Town.State)
         Scene.View.LiveCamera.Target)) - 8500.0) < 0.01,
         "Overview And Follow Share The Same Maximum Distance")
 
+    Scene.Follow = True
+    Scene.View.Controls.Zoom = -40.0
+
+    Call Town.Update(Scene, 0)
+
+    Distance = Math3D.Length(Math3D.Subtract(Scene.View.LiveCamera.Position, Scene.View.LiveCamera.Target))
+
+    Call Town.StartOrbit(Scene)
+    Call Town.Update(Scene, 0)
+    Call Check(Abs(Math3D.Length(Math3D.Subtract(Scene.View.LiveCamera.Position,
+        Scene.View.LiveCamera.Target)) - Distance) < 0.01, "O Preserves Current Follow Zoom Distance")
+
+    Scene.Follow = True
+    Scene.View.Controls.Zoom = 100.0
+
+    Call Town.Update(Scene, 0)
+
+    Distance = Math3D.Length(Math3D.Subtract(Scene.View.LiveCamera.Position, Scene.View.LiveCamera.Target))
+
+    Call Town.StartOrbit(Scene)
+    Call Town.Update(Scene, 0)
+    Call Check(Abs(Math3D.Length(Math3D.Subtract(Scene.View.LiveCamera.Position,
+        Scene.View.LiveCamera.Target)) - Distance) < 0.01, "O Preserves Zoomed Out Follow Distance")
+
     Scene.View.FloorVisible = True
 
     Call Town.Input(Scene, KEY_C, True)
     Call Town.Update(Scene, 0)
+
+    Scene.Cinematic = True
+    Scene.Follow = False
+    Scene.View.Controls.PanX = 150.0
+    Scene.View.Controls.Zoom = ToDouble(Motion.ZOOM_OUT_LIMIT)
+
+    Call Town.OnMovement(Scene, True)
+    Call Check(Not Scene.Follow And Not Scene.Cinematic And Scene.View.Controls.PanX = 150.0 And
+        Scene.View.Controls.Zoom = ToDouble(Motion.ZOOM_OUT_LIMIT),
+        "Movement Stops Orbit Without Changing Overview Framing")
+
+    Scene.Follow = True
+    Scene.View.Controls.PanX = 12.0
+
+    Call Town.OnMovement(Scene, False)
+    Call Town.OnMovement(Scene, True)
+    Call Check(Scene.Follow And Scene.View.Controls.PanX = 12.0 And
+        Scene.View.Controls.Zoom = ToDouble(Motion.ZOOM_OUT_LIMIT),
+        "Restarting Movement Preserves User Selected Follow Framing")
+    Call CheckTransition(Scene)
+    Call Town.Input(Scene, KEY_C, True)
+
+End Sub
+
+Sub CheckTransition(ByRef Scene As Town.State)
+
+    Dim StartView As P.Camera3D
+    Dim EndView As P.Camera3D
+    Dim HalfView As P.Camera3D
+    Dim StartDistance As Double
+    Dim HalfDistance As Double
+
+    Call Town.ResetOverview(Scene)
+    Call Town.Update(Scene, 0)
+
+    StartView = Scene.View.LiveCamera
+    StartDistance = Math3D.Length(Math3D.Subtract(StartView.Position, StartView.Target))
+
+    Call Town.Input(Scene, KEY_TAB, True)
+
+    Scene.View.TransitionElapsed = 0
+
+    Call Town.Update(Scene, 0)
+    Call Check(Scene.Follow And Math3D.Length(Math3D.Subtract(
+        StartView.Position, Scene.View.LiveCamera.Position)) < 0.001,
+        "Tab Starts At The Displayed Camera Without Snapping")
+    Call Arena.AdvanceTransition(Scene.View, 350)
+    Call Town.Update(Scene, 0)
+
+    HalfView = Scene.View.LiveCamera
+    HalfDistance = Math3D.Length(Math3D.Subtract(HalfView.Position, HalfView.Target))
+
+    Call Check(HalfDistance < StartDistance And HalfDistance > 450.0 And
+        HalfView.Position.Y > 25.0 And HalfView.FovDegrees = 32.0,
+        "Tab Eases Distance And Target With A Fixed Lens")
+    Call Arena.ComposeCamera(Scene.View, Scene.BaseCamera)
+    Call Check(Math3D.Length(Math3D.Subtract(HalfView.Position,
+        Scene.View.LiveCamera.Position)) < 0.001, "Drawing Does Not Advance Or Snap Transition")
+    Call Arena.AdvanceTransition(Scene.View, 350)
+    Call Town.Update(Scene, 0)
+
+    EndView = Scene.View.LiveCamera
+
+    Call Check(Scene.View.TransitionDuration = 0 And
+        Math3D.Length(Math3D.Subtract(EndView.Position, EndView.Target)) < 450.0,
+        "Tab Reaches The Party View After Seven Hundred Milliseconds")
+
+    StartView = EndView
+    StartView.Position.X = StartView.Target.X - (EndView.Position.X - EndView.Target.X)
+    StartView.Position.Z = StartView.Target.Z - (EndView.Position.Z - EndView.Target.Z)
+    HalfView = Motion.BlendFraming(StartView, EndView, 0.5)
+
+    Call Check(Math3D.Length(Math3D.Subtract(HalfView.Position, HalfView.Target)) > 350.0,
+        "Opposing Camera Views Ease Around The Subject Instead Of Through It")
+    Call Town.Input(Scene, KEY_TAB, True)
+    Call Check(Not Scene.Follow And Scene.View.TransitionDuration > 0,
+        "Tab Also Eases Back To Overview")
+    Call Town.ResetOverview(Scene)
+    Call Check(Scene.View.TransitionDuration = 0, "Explicit Overview Reset Cancels Easing")
 
 End Sub
 

@@ -25,7 +25,7 @@ The compiler has narrow game-window-only numeric, image-owning, and text-path Re
 - a separately compiled PBR-lite HLSL pipeline with tangent input, four texture channels, bounded lights, blend/depth policy, and single/double-sided raster states;
 - an output-size D24S8 depth texture recreated after device/size changes;
 - indexed triangle lists with depth testing;
-- 128 mesh, 512 object, 128 texture, and 128 material slots with typed generation-checked handles;
+- 256 mesh, 1,024 object, 128 texture, and 512 material slots with typed generation-checked handles; native mesh slots use the full low byte with zero-based indexing and sixteen generation bits;
 - explicit cleanup on destroy, reset, resize, and graphics shutdown.
 
 `Begin3D` suspends the current Direct2D draw, binds D3D11/depth state, and clears the 3D target. Direct LDR keeps immediate single-object drawing. Shadow or HDR profiles record immutable, tagged object submissions in a fixed queue and render them at `End3D`; the native renderer prefers a 4x multisampled color/depth pair and falls back to 2x or 1x according to device support. Target replacement is transactional: a complete candidate replaces the last valid compatible bundle, while failure preserves that bundle without advancing its generation. `End3D` unbinds every shader/resource/sampler/raster/depth/blend target it owns before resuming Direct2D, so the HUD remains sharp and ordinary 2D painter order is unchanged. The 2D backend vtable and GDI renderer are unchanged. `RendererAvailable()` is false when DirectX is unavailable.
@@ -34,7 +34,7 @@ The compiler has narrow game-window-only numeric, image-owning, and text-path Re
 
 The generated four-file Web package remains exactly `index.html`, `smile-runtime.js`, `game.js`, and `smile.css`. The runtime lazily creates one offscreen WebGL2 canvas, compiles the simple and optional PBR-lite GLSL programs once, uploads the same indexed vertices, enables `DEPTH_TEST`, and draws triangle lists. PBR drawing reuses fixed matrices/light arrays and the M5.1 queue uses preallocated typed-array snapshot/palette storage; neither creates typed arrays in the draw path. Production animation uses one shared RGBA32F 4-by-128 vertex palette texture with cached animator/revision uploads; legacy 32-bone uniforms remain unchanged. Web target bundles use candidate/completeness checks and atomic install/rollback without global `gl.getError()` polling. `End3D` clears framebuffer, texture-unit, program, buffer, attribute, blend, cull, polygon-offset, and depth-write state before compositing into the Canvas 2D back buffer; subsequent SMILE 2D commands therefore remain painter-order overlays.
 
-The Web renderer enforces the same live resource limits, rejects deleted handles, regenerates its backing dimensions with the logical canvas, and recomputes perspective aspect from the current backing width and height. WebGL2 absence returns unavailable without changing Console programs or Renderer2D behavior.
+The Web renderer enforces its own bounded live resource pools, rejects deleted handles, regenerates its backing dimensions with the logical canvas, and recomputes perspective aspect from the current backing width and height. The native Neris mesh/material capacity increases have not been adopted by held Web work. WebGL2 absence returns unavailable without changing Console programs or Renderer2D behavior.
 
 ## Primitive and lifecycle policy
 

@@ -272,6 +272,10 @@ if ($Target -in @('Native', 'All')) {
     foreach ($file in Get-ChildItem -LiteralPath $townSource -File) {
         Copy-Item -LiteralPath $file.FullName -Destination $townMirror -Force
     }
+    $castleSource = Join-Path $repositoryRoot 'games\SinStarI\SourceAssets\Towns\Neris\TripoCastleV1\Runtime'
+    foreach ($file in Get-ChildItem -LiteralPath $castleSource -File | Where-Object Name -ne 'manifest.json') {
+        Copy-Item -LiteralPath $file.FullName -Destination $townMirror -Force
+    }
     $partyMirror = Join-Path $townMirror 'Party'
     $null = New-Item -ItemType Directory -Path $partyMirror -Force
     foreach ($entry in @(

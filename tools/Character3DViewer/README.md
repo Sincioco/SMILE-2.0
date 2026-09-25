@@ -15,38 +15,55 @@ plus 13,000 short tufts (39,000 modeled blades). Blades stay clear of streets,
 water and buildings and use fixed geometry with no per-frame spawning.
 
 A global warm sun and stronger cool ambient fill light the entire town. The four
-local town lights Sin preferred remain, adding bronze and enamel highlights.
-Canals, fountains and the castle moat use calm native water at 8% ripple strength and one-eighth
-speed. Crystals have faint cyan halos and slow sparkles; 82 door lamps have warm
+local lights add bronze and enamel highlights: a civic fill plus a dedicated
+spotlight for the original castle, Tripo castle and military headquarters.
+Canals and fountains use calm native water at 8% ripple strength and one-eighth
+speed. Both castle moats use deeper blue material tint, 24% ripple strength and
+one-third speed, with their terrain cut away beneath the water. Crystals have faint cyan halos and slow sparkles; 82 door lamps have warm
 amber halos centered on their luminous geometry. Depth precision and shader filtering
 address paving, water and highlight shimmer. This uses native PBR lighting, without
 Blender's HDR environment lighting. The upper-right map tracks Arin and labels City
 Hall, Weapon, Armor and Item shops, castle, military HQ and residential districts.
 It fades in to 80% opacity while the party moves, holds for ten seconds after they stop,
-then fades out over 0.8 seconds. Moving again restarts the hold.
+then fades out over 0.8 seconds. Moving again restarts the hold. M immediately
+shows a hidden map or hides a visible one; that manual choice lasts until town reentry.
 North stays up while the camera orbits. A soft gold headlight cone shows Arin’s
-facing direction, including his last facing while stopped. A soft gold headlight cone shows Arin’s
 facing direction, including his last facing while stopped.
 
 The **Neris Town** tab reconstructs the accepted Blender town using its evaluated
-geometry: 37 buildings, including a moated royal castle, parade headquarters and
+geometry: 38 buildings, including two moated castle candidates, parade headquarters and
 22 new homes divided into four spacious estates, six middle-class homes and twelve
 workers' homes. City Hall has an open forecourt; the relay tower stands near military HQ.
 Models load incrementally with progress. The town sits on the same reflective arena
 with the shared grid, backgrounds and camera controls. Floor and grid start hidden;
-F and G reveal the enlarged arena beneath the 270 × 302 m town.
+F and G reveal the enlarged arena beneath the expanded 505 × 403 m bounds.
+The detailed Tripo castle is twice its initial comparison size (170× source scale),
+grounded by its entrance deck and placed on a western island with a supported crossing.
+Its original export, cleaned Blender source, 4K textures and lossless mesh partitions
+are preserved in `games/SinStarI/SourceAssets/Towns/Neris/TripoCastleV1`.
+The original clean castle has been independently remodeled from the four-view images
+and the Tripo reference: a rounded central keep, recessed lancets and layered
+stone surrounds, projecting cornices, crystal crowns, curved garden stairs,
+balconies, heraldry and planted terraces. No Tripo topology or baked textures are
+used by that reconstruction. It is twice the former castle scale at (-37,184 m),
+roughly matching the imported candidate beside it. Military HQ moves to (115,172 m).
+Both have dedicated lighting, connected entrance roads and separate moats.
+Streets form connected four-sided neighborhood loops, sharing one two-metre grid.
+Tree height varies deterministically, with a few especially tall and short trees.
 
 | Control | Action |
 | --- | --- |
-| W / A / S / D or Arrow Keys | Move Arin relative to the camera; start the following view |
+| W / A / S / D or Arrow Keys | Move Arin relative to the camera; stop orbit without changing zoom |
 | R | Toggle Walk / Run without moving the party |
 | + / − (Main Keyboard or Numpad) | Increase / decrease locomotion speed by 25 percentage points |
 | Middle Mouse Drag | Orbit; pauses cinematic rotation |
-| Left Mouse Drag | Pan; pauses cinematic rotation |
-| Mouse Wheel | Smooth zoom |
+| Left Mouse Drag / Scene Click | Pan / click; pauses cinematic rotation |
+| Mouse Wheel | Smooth zoom; cinematic rotation continues |
 | F / G / B | Toggle floor / grid / cycle shared backgrounds |
-| O / C / Right Click | Return to the cinematic town overview |
-| Tab | Toggle the party following view |
+| O / C | Resume cinematic orbit at the current zoom |
+| Right Click | Reset the cinematic overview to its closer default framing |
+| M | Show / hide the minimap |
+| Tab | Ease into / out of the party following view (0.7 seconds) |
 
 Followers emerge in order, walk Arin's route around corners, gather at his stopping
 point, finish their gait animation and hide. Arin remains visible. Exterior collision

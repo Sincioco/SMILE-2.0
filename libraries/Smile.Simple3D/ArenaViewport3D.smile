@@ -15,6 +15,9 @@ Public Type State
     Controls As Camera.Controls
     Zoom As Camera.ZoomState
     LiveCamera As P.Camera3D
+    TransitionFrom As P.Camera3D
+    TransitionElapsed As Number
+    TransitionDuration As Number
     FloorVisible As Boolean
     GridVisible As Boolean
     BackgroundIndex As Number
@@ -69,8 +72,29 @@ Public Sub Update(ByRef Value As State, Key As Number, Optional Blocked As Boole
     CurrentTime = Timer()
 
     Call Motion.Advance(Value.Controls, Value.Zoom, CurrentTime - Value.PreviousTime)
+    Call AdvanceTransition(Value, CurrentTime - Value.PreviousTime)
 
     Value.PreviousTime = CurrentTime
+
+End Sub
+
+''' Capture the displayed view before changing framing; zero duration cancels a transition.
+Public Sub BeginTransition(ByRef Value As State, Optional Duration As Number = 700)
+
+    Value.TransitionFrom = Value.LiveCamera
+    Value.TransitionElapsed = 0
+    Value.TransitionDuration = Max(0, Duration)
+
+End Sub
+
+Public Sub AdvanceTransition(ByRef Value As State, Elapsed As Number)
+
+    Value.TransitionElapsed = Min(Value.TransitionDuration,
+        Value.TransitionElapsed + Max(0, Elapsed))
+
+    If Value.TransitionElapsed >= Value.TransitionDuration Then
+        Value.TransitionDuration = 0
+    End If
 
 End Sub
 
@@ -84,6 +108,11 @@ Public Sub ComposeCamera(ByRef Value As State, BaseCamera As P.Camera3D)
 
         BaseCamera.FovDegrees = BaseCamera.FovDegrees - ToDouble(Motion.DEFAULT_ZOOM)
         Value.LiveCamera = Motion.Compose(BaseCamera, Value.Controls)
+    End If
+
+    If Value.TransitionDuration > 0 Then
+        Value.LiveCamera = Motion.BlendFraming(Value.TransitionFrom, Value.LiveCamera,
+            ToDouble(Value.TransitionElapsed) / ToDouble(Value.TransitionDuration))
     End If
 
     If Value.FloorVisible Then

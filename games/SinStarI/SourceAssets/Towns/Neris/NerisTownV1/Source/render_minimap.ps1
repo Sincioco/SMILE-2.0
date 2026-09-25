@@ -3,7 +3,7 @@ $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.Drawing
 $package = Split-Path $PSScriptRoot -Parent
 $layout = Get-Content (Join-Path $package 'expansion-layout.json') -Raw | ConvertFrom-Json
-$bitmap = [Drawing.Bitmap]::new(900,1080)
+$bitmap = [Drawing.Bitmap]::new(1140,1080)
 $graphics = [Drawing.Graphics]::FromImage($bitmap)
 $graphics.SmoothingMode = [Drawing.Drawing2D.SmoothingMode]::AntiAlias
 $graphics.TextRenderingHint = [Drawing.Text.TextRenderingHint]::AntiAliasGridFit
@@ -14,10 +14,10 @@ $estate=Ink 218 184 117; $family=Ink 183 203 207; $workers=Ink 179 169 157
 $white=Ink 235 243 246
 $font=[Drawing.Font]::new('Segoe UI',30,[Drawing.FontStyle]::Regular,[Drawing.GraphicsUnit]::Pixel)
 $title=[Drawing.Font]::new('Segoe UI',38,[Drawing.FontStyle]::Bold,[Drawing.GraphicsUnit]::Pixel)
-function MapX([double]$x) { [single](30+($x+135)*840/270) }
-function MapY([double]$y) { [single](90+(182-$y)*940/302) }
+function MapX([double]$x) { [single](30+($x+327)*1080/505) }
+function MapY([double]$y) { [single](90+(283-$y)*940/403) }
 function Rect($brush,[double]$x,[double]$y,[double]$w,[double]$d) {
-    $graphics.FillRectangle($brush,(MapX ($x-$w/2)),(MapY ($y+$d/2)),[single]($w*840/270),[single]($d*940/302))
+    $graphics.FillRectangle($brush,(MapX ($x-$w/2)),(MapY ($y+$d/2)),[single]($w*1080/505),[single]($d*940/403))
 }
 function Label([string]$text,[double]$x,[double]$y) {
     $size=$graphics.MeasureString($text,$font)
@@ -26,16 +26,19 @@ function Label([string]$text,[double]$x,[double]$y) {
     $graphics.DrawString($text,$font,$white,[single]$px,[single]$py)
 }
 $graphics.Clear([Drawing.Color]::Transparent)
-$graphics.FillRectangle($navy,0,0,900,1080)
-$graphics.FillRectangle($green,30,90,840,940)
+$graphics.FillRectangle($navy,0,0,1140,1080)
+$graphics.FillRectangle($green,30,90,1080,940)
 $graphics.DrawString('NERIS',$title,$ivory,30,22)
-$graphics.DrawString('N ↑',$font,$ivory,792,27)
+$graphics.DrawString('N ↑',$font,$ivory,1032,27)
 foreach($road in $layout.roads) { Rect $slate $road[0] $road[1] $road[2] $road[3] }
 Rect $slate 0 -3 17 79
 Rect $slate 0 25 27 29
 foreach($y in @(-32,-10,14,39)) { Rect $slate 0 $y 90 4.8 }
 foreach($x in @(-21,21)) { Rect $slate $x 0 5 81 }
-foreach($x in @(-12.5,12.5)) { Rect $water $x -12 2.8 53 }
+foreach($x in @(-12.5,12.5)) {
+    Rect $water $x -12 2.8 53
+    foreach($y in @(-32,-10,14)) { Rect $slate $x $y 4.2 4.8 }
+}
 foreach($residence in $layout.homes) {
     $brush=switch($residence.style) { Large {$estate}; Medium {$family}; Small {$workers} }
     Rect $brush $residence.x $residence.y $residence.width $residence.depth
@@ -44,20 +47,24 @@ foreach($p in @(@(-34,25),@(-34,6),@(-34,-14),@(-34,-33),@(-36,39),@(-24,-54),@(
     Rect $family $p[0] $p[1] 8 8
 }
 foreach($band in $layout.water) { Rect $water $band[0] $band[1] $band[2] $band[3] }
-Rect $ivory -48 127 74 60
-Rect $slate -48 127 69 55
-Rect $estate -48 140 58 21
-Rect $slate -48 89 9 22
-Rect $ivory 66 125 74 66
-Rect $slate 66 125 70 62
-Rect $green 66 118 50 33
-Rect $gold 66 146 70 21
+foreach($band in $layout.comparisonWater) { Rect $water $band[0] $band[1] $band[2] $band[3] }
+Rect $slate -228 85 16 26
+Rect $ivory -228 176 148 165
+Label 'Tripo Castle' -228 262
+Rect $ivory -37 184 148 120
+Rect $slate -37 184 138 110
+Rect $estate -37 210 116 42
+Rect $slate -37 108 18 44
+Rect $ivory 115 172 74 66
+Rect $slate 115 172 70 62
+Rect $green 115 165 50 33
+Rect $gold 115 193 70 21
 Rect $gold 0 26 22 17
 Rect $gold 15 75 13 12
 foreach($y in @(-22,0,22)) { Rect $gold 32 $y 11 13 }
-Label 'Castle' -48 154
-Label 'Military HQ' 66 166
-Label 'Parade' 66 113
+Label 'Royal Castle' -37 259
+Label 'Military HQ' 115 228
+Label 'Parade' 115 160
 Label 'Relay' 15 86
 Label 'City Hall' 0 43
 Label 'Weapon' 31 23

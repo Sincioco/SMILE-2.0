@@ -1,0 +1,11 @@
+{
+  "source_sha256": "99bf5141d365b6a43943ba09c7da0f0629ad25c259160993b17ba8220ecfe690",
+  "source_triangles": 1934613,
+  "removed_underside": 16529,
+  "removed_water": 115575,
+  "removed_detached_low_fragments": 32185,
+  "retained_triangles": 1770324,
+  "retained_vertices": 1018614,
+  "minimum_height": 0.085174560546875,
+  "decimation": false
+}

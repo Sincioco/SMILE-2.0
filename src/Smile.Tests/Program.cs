@@ -235,6 +235,9 @@ Run("Viewer and game letter shortcuts are shared named input constants", () =>
     Equal(40L, SyntaxFacts.GetBuiltInConstantValue(SyntaxKind.KeyMinusKeyword));
     Equal(SyntaxKind.KeyCKeyword, SyntaxFacts.GetKeywordKind("key_c"));
     Equal(41L, SyntaxFacts.GetBuiltInConstantValue(SyntaxKind.KeyCKeyword));
+    Equal(SyntaxKind.KeyMKeyword, SyntaxFacts.GetKeywordKind("key_m"));
+    Equal(42L, SyntaxFacts.GetBuiltInConstantValue(SyntaxKind.KeyMKeyword));
+    Equal(false, Analyze("Option Explicit\nGame Window \"Map\"\nDim Held As Boolean\nHeld = Key_Held(KEY_M) Or Key_Event_Held(KEY_M)\n").HasErrors);
     Equal(false, Analyze("Option Explicit\nGame Window \"Camera\"\nDim Held As Boolean\nHeld = Key_Held(KEY_C) Or Key_Event_Held(KEY_C)\n").HasErrors);
     Equal(false, Analyze("Game Window \"UI\"\nDim Key As Number\nDim Held As Boolean\nGet Key Key\nHeld = Key_Held(KEY_BACKTICK)\nIf Key = KEY_X Or Key = KEY_Y Or Key = KEY_Z Or Key = KEY_E Then\nPrint Held\nEnd If\n").HasErrors);
 });
@@ -1010,6 +1013,19 @@ Run("Invalid Model3DAsset profile sample rate and logical path report stable SML
         Equal("SML3709", SmileProjectSourceSet.Load(projectPath).Model3DAssets.Diagnostics.Single().Code);
         File.WriteAllText(projectPath, Project("LogicalPath=\"../Model.sm3d\" Profile=\"Static\""));
         Equal("SML3704", SmileProjectSourceSet.Load(projectPath).Model3DAssets.Diagnostics.Single().Code);
+        var many = XElement.Parse(Project("LogicalPath=\"Assets/Model.sm3d\" Profile=\"Static\""));
+        var group = many.Element("ItemGroup")!;
+        group.Elements("Model3DAsset").Remove();
+        for (var index = 0; index < 128; index++)
+            group.Add(new XElement("Model3DAsset", new XAttribute("Include", "Model.glb"),
+                new XAttribute("LogicalPath", $"Assets/Model{index}.sm3d"), new XAttribute("Profile", "Static")));
+        many.Save(projectPath);
+        Equal(128, SmileProjectSourceSet.Load(projectPath).Model3DAssets.Items.Count);
+        Equal(0, SmileProjectSourceSet.Load(projectPath).Model3DAssets.Diagnostics.Count);
+        group.Add(new XElement("Model3DAsset", new XAttribute("Include", "Model.glb"),
+            new XAttribute("LogicalPath", "Assets/Overflow.sm3d"), new XAttribute("Profile", "Static")));
+        many.Save(projectPath);
+        Equal("SML3701", SmileProjectSourceSet.Load(projectPath).Model3DAssets.Diagnostics.Single().Code);
     }
     finally
     {

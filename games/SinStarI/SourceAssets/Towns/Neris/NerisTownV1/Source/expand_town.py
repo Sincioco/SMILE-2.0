@@ -148,7 +148,10 @@ finish_paving(site)
 from royal_terrain import apply as prepare_moat
 prepare_moat()
 from align_paving import apply as align_paving
-align_paving(paved)
+layout={'bounds':[-135,-120,135,182],'homes':placements,'roads':roads,'paving':paved,'water':water,
+        'tower':[15,75],'cityHall':[0,26],'castle':[-48,127],'military':[66,125],
+        'treeCount':len([o for o in bpy.data.objects if o.name.startswith('Garden Tree ')])}
+align_paving(layout)
 from detail_grass import apply as apply_grass
 apply_grass()
 
@@ -184,9 +187,6 @@ scene.world.color=(.15,.15,.15)
 for image in bpy.data.images:
     if image.source=='FILE' and not image.packed_file: image.pack()
 bpy.context.view_layer.update()
-layout={'bounds':[-135,-120,135,182],'homes':placements,'roads':roads,'paving':paved,'water':water,
-        'tower':[15,75],'cityHall':[0,26],'castle':[-48,127],'military':[66,125],
-        'treeCount':len([o for o in bpy.data.objects if o.name.startswith('Garden Tree ')])}
 (ROOT/'expansion-layout.json').write_text(json.dumps(layout,indent=2)+'\n')
 bpy.ops.wm.save_as_mainfile(filepath=str(ROOT/'Blend/Neris-Town-Expanded.blend'),compress=True)
 scene.render.filepath=str(ROOT/'Previews/Neris-Expanded-Overview.png')

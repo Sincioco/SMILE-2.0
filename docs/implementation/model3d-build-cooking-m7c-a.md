@@ -65,7 +65,7 @@ Visual Studio projects the source under its physical folder and labels it with t
 
 | Resource | Limit/owner |
 | --- | --- |
-| `Model3DAsset` items | 64 per application project; project model owns declarations. |
+| `Model3DAsset` items | 128 per application project; project model owns declarations. The Neris castle comparison raised the former 64-declaration bound; this does not raise the simultaneous live model limit. |
 | Source GLB/glTF | 64 MiB; cooker owns build-time bytes only. |
 | JSON chunk/document | 4 MiB. |
 | Buffer dependency | 64 MiB each. |

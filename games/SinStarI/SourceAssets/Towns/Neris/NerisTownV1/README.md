@@ -7,13 +7,15 @@ Created by: Louiery R. Sincioco (Sin). September 25, 2026.
 **[Open the complete Blender town](Blend/Neris-Town-V1.blend)**
 
 **[Open the expanded town](Blend/Neris-Town-Expanded.blend)** — current native
-Viewer source, with residential districts, castle, moat, bridge and military HQ.
+Viewer source, with connected residential streets, two castle candidates and
+their moats, entrance crossings and military HQ. The new Tripo castle is twice its
+initial comparison size and grounded at its entrance deck.
 
 **[Open the detailed-tree revision](Blend/Neris-Town-Detailed.blend)** — preserved
 pre-expansion revision. The original town and its hand-editable scene remain intact.
 See the [new trees preview](Previews/Neris-Detailed-Trees.png).
 
-The self-contained Blender 5.2.1 LTS file opens with a material-preview overview.
+The original self-contained Blender 5.2.1 LTS file opens with a material-preview overview.
 It embeds the five previously modeled Neris buildings, eight new homes in three
 styles, and all streets, landscape and props. No external textures or linked
 Blender libraries are needed to open it. The original building files are preserved.
@@ -36,6 +38,53 @@ Middle-drag orbits, Shift + middle-drag pans, and the wheel zooms using Blender'
 standard controls. Toggle overlays to see/select helpers. The scene was shown in
 a separate Blender window placed to the right of Codex; the user's previous
 unsaved Blender scene was preserved.
+
+## Current castle comparison and connected streets
+
+The expanded town now links `../TripoCastleV1/Blend/Neris-Castle-Cleaned.blend`.
+**Keep that adjacent package with the town**; the original V1 remains self-contained.
+The current map bounds are X=-327..178 and Y=-120..283 metres. The western
+extension holds the doubled Tripo castle, a blue moat on all four sides and a
+supported entrance crossing. The original royal castle and military HQ remain.
+
+### Clean royal reconstruction
+
+The current original castle is newly modeled from geometric architectural parts.
+`castle_architecture.py` owns the building masses, towers, gardens and bridge;
+`castle_facades.py` owns stone surrounds, window tracery, cornices and stairs.
+The supplied four-view images and imported 3D candidate guide proportions and detail;
+none of its topology, UVs or texture atlases are copied into the clean reconstruction.
+
+`Source/refine_castle.py` replaces only the named clean-castle collection, moves it
+to (-37,184,.152) at scale 2, relocates HQ to (115,172,.13), and rebuilds the royal
+terrain/roads around both moats. Run in background Blender with the saved expanded
+town loaded; preserve interactive unsaved edits separately first. This is the
+current revision entry point; the earlier placement script rejects a royal-rebuild
+layout so it cannot silently restore the obsolete site. Then export native assets,
+layout and minimap. The castle remains separately editable in its own collection.
+
+[Front](Previews/Royal-Rebuild-Front.png) · [Façade detail](Previews/Royal-Rebuild-Detail.png) ·
+[Rear](Previews/Royal-Rebuild-Rear.png) · [Equal-scale comparison](Previews/Royal-Rebuild-Comparison.png).
+
+`Source/paving_plan.py` owns the connected two-metre street grid, residential
+perimeter loops and entrance connections. `align_paving.py` builds one union,
+subtracting canals and moat openings before adding actual crossings. It does not
+reconstruct complex paths from broad object bounding boxes. All 22 new homes and
+the comparison entrance have road routes to City Hall. `tree_variation.py` keeps
+stable, varied tree heights without compounding scale on successive exports.
+
+`Source/place_comparison_castle.py` repositions the linked castle, rebuilds its
+island/moat and streets, and refreshes previews. It owns the earlier comparison-placement stage, before the clean royal rebuild.
+For the current revision use `refine_castle.py`. Then run
+`export_native.py`, `export_layout.py`, and `render_minimap.ps1` to update the native
+assets, moving-effect placements, paving heights and map. The static town exporter
+excludes the linked textured castle and both animated moat surfaces. Runtime castle
+partitions are owned by the separate package, not a flattened town mesh.
+
+Native camera, M-map, Tab-only eased follow, O-resume and right-click reset behavior
+are documented in the Character Viewer README. Native water uses material tint;
+both moats are blue with gentle visible ripples. Each castle and military HQ has a
+dedicated native spotlight. The larger ground/grid start hidden as before.
 
 ## Original layout and Paseo reference
 
@@ -296,7 +345,7 @@ weave. The fixed geometry needs no runtime spawning or extra shader capability.
 `expand_town.py` applies this step automatically. For an existing expanded file,
 run Blender in background with `--python Source/detail_grass.py`, then export the
 native chunks and layout sequentially as above. The 104 static parts remain within
-the existing 105-part guard; do not raise the renderer budget to add more blades.
+the current total-scene resource guard; do not raise renderer capacity to add more blades.
 See [the lawn close-up](Previews/Neris-Grass-Detail.png).
 
 ### September 26 refinements
@@ -332,3 +381,27 @@ export replacement during a transient Windows file lock. The native material
 fixture fills all 512 slots, tests exhaustion, reuse and stale handles, draws the
 highest slot and releases the pool. Existing Viewer hardening and calibration
 round trips pass; Web remains held.
+
+## Current reconstruction validation — September 26
+
+- Native town acceptance passes: 47 town/castle chunks, four actors, 160/256 meshes,
+  149/512 materials, all 24 accepted Arin keys and complete resource cleanup.
+- Camera acceptance covers movement preserving framing, Tab's exact start,
+  intermediate and settled states, shortest-arc interpolation, fixed lens and reset.
+- Four paving checks pass, including every residential door and both castle/HQ
+  approaches reaching City Hall; both static GLB writer checks pass.
+- The shared native hardening gate passes its 58 graphics/input/audio checks.
+- The Blender castle is independently authored, approximately 154 m wide and 120 m
+  tall including its below-ground bridge supports. Its bridge deck is at 0.212 m,
+  exactly the paving elevation. Both moats have terrain openings; all three royal
+  buildings have dedicated spotlights. Source and all 33 exported chunk hashes verified.
+- Blender's town viewport near clip is 0.5 m (far 3000 m); the former 0.01 m default
+  visibly broke distant paving into overlapping triangles. This fixes viewport
+  depth precision without changing geometry. The previous unsaved Blender session
+  was preserved; the updated saved town was opened separately.
+
+The static export contains 109 parts / 3,188,159 triangles. The resource check
+includes 28 imported-castle parts plus 23 reserved actor/arena slots against the
+already-supported 256 native meshes. It no longer assumes the former 128 pool.
+The live model pool remains 64; the export also reserves 14 imported-castle models,
+five actors and three vegetation models. No geometry decimation is applied.

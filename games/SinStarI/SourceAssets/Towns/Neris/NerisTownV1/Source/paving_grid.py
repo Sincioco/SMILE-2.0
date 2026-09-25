@@ -5,16 +5,16 @@ TILE_SIZE = 2.0
 HALF_GAP = .025
 
 
-def tiles(rectangles):
+def tiles(rectangles, gap=HALF_GAP):
     """Yield non-overlapping (bounds, tone) faces with seams only on the world grid."""
     cells = {}
     for left, front, right, back in rectangles:
         for i in range(math.floor(left / TILE_SIZE), math.ceil(right / TILE_SIZE)):
             for j in range(math.floor(front / TILE_SIZE), math.ceil(back / TILE_SIZE)):
-                bounds = (max(left, i*TILE_SIZE+HALF_GAP),
-                          max(front, j*TILE_SIZE+HALF_GAP),
-                          min(right, (i+1)*TILE_SIZE-HALF_GAP),
-                          min(back, (j+1)*TILE_SIZE-HALF_GAP))
+                bounds = (max(left, i*TILE_SIZE+gap),
+                          max(front, j*TILE_SIZE+gap),
+                          min(right, (i+1)*TILE_SIZE-gap),
+                          min(back, (j+1)*TILE_SIZE-gap))
                 if bounds[0] < bounds[2] and bounds[1] < bounds[3]:
                     cells.setdefault((i, j), []).append(bounds)
     for (i, j), regions in sorted(cells.items()):
@@ -38,7 +38,8 @@ def tiles(rectangles):
                 else:
                     strips[previous] = (strips[previous][0], y0, x1, y1)
         # The same tile keeps its tone across separate promenade/bridge meshes.
-        tone = int(((i*73856093) ^ (j*19349663)) % 100 < 8)
+        # Fine stone grain supplies variation; dark random slabs looked unmaintained.
+        tone = 0
         for bounds in strips:
             yield bounds, tone
 

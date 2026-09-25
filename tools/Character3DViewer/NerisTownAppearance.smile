@@ -13,8 +13,9 @@ Import Smile.Tools.NerisTownTrees As Trees
 Public Type State
     Water As Core.Material3D
     Refraction As Core.Material3D
-    Surfaces[5] As Core.RibbonBatch3D
-    Distortion[5] As Core.RibbonBatch3D
+    MoatWater As Core.Material3D
+    Surfaces[6] As Core.RibbonBatch3D
+    Distortion[6] As Core.RibbonBatch3D
     Time As Number
     Gems As Crystals.State
     Garden As Trees.State
@@ -29,9 +30,12 @@ Private Function ApplyLighting() As Boolean
     Ok = G.SetAmbientLight3D(200, 215, 235, 38) And Ok
     Ok = G.SetDirectionalLight3D(-40, -65, -25, 255, 237, 214, 260) And Ok
     Ok = G.SetPointLight3D(0, -600, 550, -380, 195, 218, 255, 300, 1800) And Ok
-    Ok = G.SetPointLight3D(1, 580, 780, 260, 255, 230, 190, 420, 2200) And Ok
-    Ok = G.SetPointLight3D(2, -350, 280, 560, 240, 246, 255, 170, 1300) And Ok
-    Ok = G.SetPointLight3D(3, 0, 900, -600, 235, 245, 255, 260, 1800) And Ok
+    Ok = G.SetSpotLight3D(1, -2500, 1500, 1100, 255, 236, 209, 480, 2700) And Ok
+    Ok = G.SetSpotLightCone3D(1, 22, -70, 43, 40, 65) And Ok
+    Ok = G.SetSpotLight3D(2, -770, 1800, 1060, 255, 237, 215, 480, 3000) And Ok
+    Ok = G.SetSpotLightCone3D(2, 40, -130, 78, 40, 65) And Ok
+    Ok = G.SetSpotLight3D(3, 1150, 1000, 1350, 231, 241, 255, 430, 1800) And Ok
+    Ok = G.SetSpotLightCone3D(3, 0, -70, 35, 42, 65) And Ok
 
     Call Scene.UseCustomLighting()
 
@@ -45,11 +49,11 @@ Private Function BuildSurface(ByRef Batch As Core.RibbonBatch3D, Surface As Numb
     Dim Points As Number
     Dim LeftPoint As P.Vector3
     Dim RightPoint As P.Vector3
-    Dim SwapPoint As P.Vector3
     Dim Angle As Double
     Dim CenterX As Double
     Dim CenterZ As Double
     Dim Height As Double
+    Dim Radius As Double
     Dim Ok As Boolean
 
     Points = 2
@@ -59,7 +63,7 @@ Private Function BuildSurface(ByRef Batch As Core.RibbonBatch3D, Surface As Numb
         Points = 49
     End If
 
-    If Surface = 3 Then
+    If Surface = 3 Or Surface = 5 Then
         Points = 5
     End If
 
@@ -70,41 +74,55 @@ Private Function BuildSurface(ByRef Batch As Core.RibbonBatch3D, Surface As Numb
             CenterX = 0.0
             CenterZ = -200.0
             Height = 29.5
+            Radius = 36.6
 
             If Surface = 4 Then
 
-                CenterX = -480.0
-                CenterZ = 1110.0
-                Height = 30.1
+                CenterX = -370.0
+                CenterZ = 1520.0
+                Height = 37.9
+                Radius = 73.2
 
             End If
 
             Angle = ToDouble(Index) * 6.283185307179586 / 48.0
             LeftPoint = P.Vector(CenterX, Height, CenterZ)
-            RightPoint = P.Vector(CenterX + Cos(Angle) * 36.6, Height,
-                CenterZ + Sin(Angle) * 36.6)
+            RightPoint = P.Vector(CenterX + Cos(Angle) * Radius, Height,
+                CenterZ + Sin(Angle) * Radius)
+
+        Else If Surface = 5 Then
+
+            Select Case Index
+                Case 1
+                    LeftPoint = P.Vector(-3170.0, 21.85, 2750.0)
+                    RightPoint = P.Vector(-3050.0, 21.85, 2630.0)
+                Case 2
+                    LeftPoint = P.Vector(-1390.0, 21.85, 2750.0)
+                    RightPoint = P.Vector(-1510.0, 21.85, 2630.0)
+                Case 3
+                    LeftPoint = P.Vector(-1390.0, 21.85, 770.0)
+                    RightPoint = P.Vector(-1510.0, 21.85, 890.0)
+                Case Else
+                    LeftPoint = P.Vector(-3170.0, 21.85, 770.0)
+                    RightPoint = P.Vector(-3050.0, 21.85, 890.0)
+            End Select
 
         Else If Surface = 3 Then
 
-            ' One closed ribbon follows both edges of the rectangular moat.
             Select Case Index
                 Case 1
-                    LeftPoint = P.Vector(-860.0, 21.85, 1610.0)
-                    RightPoint = P.Vector(-950.0, 21.85, 1690.0)
+                    LeftPoint = P.Vector(-1320.0, 21.85, 2680.0)
+                    RightPoint = P.Vector(-1140.0, 21.85, 2520.0)
                 Case 2
-                    LeftPoint = P.Vector(-100.0, 21.85, 1610.0)
-                    RightPoint = P.Vector(-10.0, 21.85, 1690.0)
+                    LeftPoint = P.Vector(580.0, 21.85, 2680.0)
+                    RightPoint = P.Vector(400.0, 21.85, 2520.0)
                 Case 3
-                    LeftPoint = P.Vector(-100.0, 21.85, 920.0)
-                    RightPoint = P.Vector(-10.0, 21.85, 840.0)
+                    LeftPoint = P.Vector(580.0, 21.85, 980.0)
+                    RightPoint = P.Vector(400.0, 21.85, 1140.0)
                 Case Else
-                    LeftPoint = P.Vector(-860.0, 21.85, 920.0)
-                    RightPoint = P.Vector(-950.0, 21.85, 840.0)
+                    LeftPoint = P.Vector(-1320.0, 21.85, 980.0)
+                    RightPoint = P.Vector(-1140.0, 21.85, 1140.0)
             End Select
-
-            SwapPoint = LeftPoint
-            LeftPoint = RightPoint
-            RightPoint = SwapPoint
 
         Else
 
@@ -138,13 +156,22 @@ Public Function Create(ByRef Value As State) As Boolean
     Ok = G.ConfigureDistortion3D(1, 2) And Ok
     Value.Water = G.CreateEffectMaterial3D(NoTexture, G.MATERIAL_ALPHA_BLEND, 100)
     Value.Refraction = G.CreateEffectMaterial3D(NoTexture, G.MATERIAL_ALPHA_BLEND, 100)
+    Value.MoatWater = G.CreateEffectMaterial3D(NoTexture, G.MATERIAL_ALPHA_BLEND, 100)
     Ok = Value.Water.Handle <> 0 And Value.Refraction.Handle <> 0 And Ok
     Ok = G.SetEffectMaterial3D(Value.Water, G.MATERIAL_ALPHA_BLEND, 255, 255, 255, 78, 100) And Ok
     Ok = G.SetEffectMaterialWater3D(Value.Water, True, 32, 0, 0, 8) And Ok
+    Ok = G.SetEffectMaterial3D(Value.MoatWater, G.MATERIAL_ALPHA_BLEND, 30, 100, 240, 100, 100) And Ok
+    Ok = G.SetEffectMaterialWater3D(Value.MoatWater, True, 45, 0, 0, 24) And Ok
     Ok = G.SetEffectMaterialDistortion3D(Value.Refraction, 1, 90, 0, 20, 80) And Ok
 
-    For Index = 0 To 4
-        Value.Surfaces[Index] = G.CreateRibbonBatch3D(49, Value.Water)
+    For Index = 0 To 5
+
+        If Index = 3 Or Index = 5 Then
+            Value.Surfaces[Index] = G.CreateRibbonBatch3D(49, Value.MoatWater)
+        Else
+            Value.Surfaces[Index] = G.CreateRibbonBatch3D(49, Value.Water)
+        End If
+
         Value.Distortion[Index] = G.CreateRibbonBatch3D(49, Value.Refraction)
         Ok = BuildSurface(Value.Surfaces[Index], Index) And Ok
         Ok = BuildSurface(Value.Distortion[Index], Index) And Ok
@@ -160,6 +187,7 @@ Public Sub Update(ByRef Value As State, Elapsed As Number)
 
     Value.Time = (Value.Time + Max(0, Elapsed)) Mod 3600000
     Value.Ready = G.SetEffectMaterialWater3D(Value.Water, True, 32, 0, Value.Time / 8, 8)
+    Value.Ready = G.SetEffectMaterialWater3D(Value.MoatWater, True, 45, 0, Value.Time / 3, 24) And Value.Ready
 
     Call Crystals.Update(Value.Gems, Elapsed)
     Call Trees.Update(Value.Garden, Elapsed)
@@ -173,7 +201,7 @@ Public Function Draw(ByRef Value As State) As Boolean
 
     Ok = Value.Ready And Trees.Draw(Value.Garden)
 
-    For Index = 0 To 4
+    For Index = 0 To 5
         Ok = G.DrawRibbonBatch3D(Value.Surfaces[Index]) And Ok
         Ok = G.DrawRibbonBatch3D(Value.Distortion[Index]) And Ok
     End For
@@ -188,13 +216,14 @@ Public Sub Destroy(ByRef Value As State)
 
     Dim Index As Number
 
-    For Index = 0 To 4
+    For Index = 0 To 5
         Call G.DestroyRibbonBatch3D(Value.Surfaces[Index])
         Call G.DestroyRibbonBatch3D(Value.Distortion[Index])
     End For
 
     Call G.DestroyMaterial3D(Value.Water)
     Call G.DestroyMaterial3D(Value.Refraction)
+    Call G.DestroyMaterial3D(Value.MoatWater)
     Call Crystals.Destroy(Value.Gems)
     Call Trees.Destroy(Value.Garden)
 

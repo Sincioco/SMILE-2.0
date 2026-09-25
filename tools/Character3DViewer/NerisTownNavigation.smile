@@ -134,51 +134,6 @@ Public Function GroundHeight(X As Double, Z As Double) As Double
 
     Result = Districts.GroundHeight(X, Z)
 
-    If (Abs(X) < 85.0 And
-        Z > -425.0 And
-        Z < 365.0) Then
-        Result = Max(Result, 21.92)
-    End If
-
-    If (Abs(X) < 135.0 And
-        Z > 105.0 And
-        Z < 395.0) Then
-        Result = Max(Result, 22.12)
-    End If
-
-    If Abs(Abs(X) - 210.0) < 25.0 And Abs(Z) < 405.0 Then
-        Result = Max(Result, 21.92)
-    End If
-
-    If (Abs(X) < 450.0 And
-        (Abs(Z + 320.0) < 24.0 Or Abs(Z + 100.0) < 24.0 Or
-        Abs(Z - 140.0) < 24.0 Or Abs(Z - 390.0) < 24.0)) Then
-        Result = Max(Result, 22.42)
-    End If
-
-    If (Abs(X - 320.0) < 90.0 And
-        (Abs(Z + 220.0) < 80.0 Or
-        Abs(Z) < 80.0 Or Abs(Z - 220.0) < 80.0)) Then
-        Result = Max(Result, 22.62)
-    End If
-
-    If (Abs(X + 340.0) < 90.0 And
-        (Abs(Z + 330.0) < 80.0 Or
-        Abs(Z + 140.0) < 80.0 Or Abs(Z - 60.0) < 80.0 Or Abs(Z - 250.0) < 80.0)) Then
-        Result = Max(Result, 22.62)
-    End If
-
-    If (Abs(Z - 360.0) < 60.0 And
-        (Abs(X + 360.0) < 60.0 Or
-        Abs(X + 200.0) < 60.0 Or Abs(X - 320.0) < 60.0)) Then
-        Result = Max(Result, 22.72)
-    End If
-
-    If ((Abs(X - 310.0) < 65.0 And Abs(Z + 360.0) < 55.0) Or
-        (Abs(X + 340.0) < 100.0 And Abs(Z + 35.0) < 25.0)) Then
-        Result = Max(Result, 22.72)
-    End If
-
     If (X + 220.0) * (X + 220.0) + (Z + 220.0) * (Z + 220.0) < 47.0 * 47.0 Then
         Result = 25.3
     End If

@@ -3,14 +3,15 @@ Option Explicit
 Import Smile.Simple3D.Core As Core
 Import Smile.Simple3D.Graphics3D As Graphics3D
 
-Const EXPECTED_MAX_MESHES = 128
+Const MESH_POOL_LIMIT = 256
 Const EXPECTED_MAX_OBJECTS = 1024
 Const FRAME_CYCLES = 2000
 Const RESTART_CYCLES = 100
 
 Dim Camera As Core.Camera3D
 Dim FrameReady As Boolean
-Dim MeshHandles[EXPECTED_MAX_MESHES] As Number
+Dim ExpectedMaxMeshes As Number
+Dim MeshHandles[MESH_POOL_LIMIT] As Number
 Dim Objects[EXPECTED_MAX_OBJECTS] As Core.Object3D
 Dim PrimaryObject As Core.Object3D
 Dim SharedObject As Core.Object3D
@@ -29,9 +30,16 @@ Game Window "Renderer3D Lifecycle Tests" Size 320 By 180
 
 Call Graphics3D.ResetRenderer3D()
 
+ExpectedMaxMeshes = Graphics3D.MaximumMeshCount3D()
+
+If ExpectedMaxMeshes < 128 Or ExpectedMaxMeshes > MESH_POOL_LIMIT Then
+    Print "Renderer3D mesh test pool out of range"
+    End Program
+End If
+
 If (Graphics3D.LiveMeshCount3D() <> 0 Or
     Graphics3D.LiveObjectCount3D() <> 0 Or
-    Graphics3D.MaximumMeshCount3D() <> EXPECTED_MAX_MESHES Or
+    Graphics3D.MaximumMeshCount3D() <> ExpectedMaxMeshes Or
     Graphics3D.MaximumObjectCount3D() <> EXPECTED_MAX_OBJECTS Or
     Graphics3D.DrawCallCount3D() <> 0 Or
     Graphics3D.SubmittedTriangleCount3D() <> 0) Then
@@ -78,7 +86,7 @@ If (Graphics3D.LiveMeshCount3D() <> 0 Or
     Failures = Failures + 1
 End If
 
-For Index = 0 To EXPECTED_MAX_MESHES - 1
+For Index = 0 To ExpectedMaxMeshes - 1
 
     MeshHandles[Index] = Graphics3D.CreateMesh3D(3, 3)
 
@@ -89,11 +97,26 @@ For Index = 0 To EXPECTED_MAX_MESHES - 1
 End For
 
 If (Graphics3D.CreateMesh3D(3, 3) <> 0 Or
-    Graphics3D.LiveMeshCount3D() <> EXPECTED_MAX_MESHES) Then
+    Graphics3D.LiveMeshCount3D() <> ExpectedMaxMeshes) Then
     Failures = Failures + 1
 End If
 
-StaleMeshHandle = MeshHandles[0]
+StaleMeshHandle = MeshHandles[ExpectedMaxMeshes - 1]
+SharedObject = Graphics3D.CreateObjectFromMesh3D(StaleMeshHandle)
+
+If SharedObject.Handle = 0 Or Not Graphics3D.MeshHandleValid3D(StaleMeshHandle) Then
+    Failures = Failures + 1
+End If
+
+Call Graphics3D.DestroyObject3D(SharedObject)
+
+NewMeshHandle = Graphics3D.CreateMesh3D(3, 3)
+
+If (Graphics3D.MeshHandleValid3D(StaleMeshHandle) Or
+    Not Graphics3D.MeshHandleValid3D(NewMeshHandle) Or
+    NewMeshHandle = StaleMeshHandle) Then
+    Failures = Failures + 1
+End If
 
 Call Graphics3D.ResetRenderer3D()
 

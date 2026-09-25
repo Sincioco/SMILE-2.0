@@ -24,10 +24,34 @@ Public Function CanStand(X As Double, Z As Double) As Boolean
     Dim CenterZ As Double
     Dim Bridge As Boolean
 
-    If (Abs(X) > 1310.0 Or
+    If (X < -3230.0 Or
+        X > 1740.0 Or
         Z < -1160.0 Or
-        Z > 1780.0) Then
+        Z > 2790.0) Then
         Return False
+    End If
+
+    If X < -1310.0 And Z < 540.0 Then
+        Return False
+    End If
+
+    ' The comparison is an exterior model; keep its walls collision-solid.
+
+    If InBox(X, Z, -2280.0, 1840.0, 1510.0, 1400.0) Then
+        Return False
+    End If
+
+    Bridge = Abs(X + 2280.0) < 74.0 And Z > 715.0 And Z < 985.0
+
+    If Not Bridge Then
+
+        If (InBox(X, Z, -2280.0, 830.0, 1780.0, 120.0) Or
+            InBox(X, Z, -2280.0, 2690.0, 1780.0, 120.0) Or
+            InBox(X, Z, -3110.0, 1760.0, 120.0, 1740.0) Or
+            InBox(X, Z, -1450.0, 1760.0, 120.0, 1740.0)) Then
+            Return False
+        End If
+
     End If
 
     For Column = 0 To 1
@@ -75,14 +99,30 @@ Public Function CanStand(X As Double, Z As Double) As Boolean
         Return False
     End If
 
+    If Not CastleCanStand((X + 370.0) / 2.0 - 480.0, (Z - 1840.0) / 2.0 + 1270.0) Then
+        Return False
+    End If
+
+    If Not HeadquartersCanStand(X - 1150.0 + 660.0, Z - 1720.0 + 1250.0) Then
+        Return False
+    End If
+
+    Return True
+
+End Function
+
+Private Function CastleCanStand(X As Double, Z As Double) As Boolean
+
+    Dim Bridge As Boolean
+
     Bridge = Abs(X + 480.0) < 39.0 And Z > 775.0 And Z < 1010.0
 
     If Not Bridge Then
 
-        If (InBox(X, Z, -480.0, 880.0, 940.0, 80.0) Or
-            InBox(X, Z, -480.0, 1650.0, 940.0, 80.0) Or
-            InBox(X, Z, -905.0, 1265.0, 90.0, 690.0) Or
-            InBox(X, Z, -55.0, 1265.0, 90.0, 690.0)) Then
+        If (InBox(X, Z, -480.0, 880.0, 950.0, 80.0) Or
+            InBox(X, Z, -480.0, 1650.0, 950.0, 80.0) Or
+            InBox(X, Z, -910.0, 1265.0, 90.0, 690.0) Or
+            InBox(X, Z, -50.0, 1265.0, 90.0, 690.0)) Then
             Return False
         End If
 
@@ -100,17 +140,19 @@ Public Function CanStand(X As Double, Z As Double) As Boolean
         Return False
     End If
 
-    ' Headquarters walls, rear command hall/barracks and central flag dais.
+    ' Sweeping raised garden stairs flank the traversable central approach.
 
-    ' Raised side gardens are decorative; the central entrance stair is walkable.
-
-    If (InBox(X, Z, -660.0, 1223.0, 46.0, 110.0) Or
-        InBox(X, Z, -300.0, 1223.0, 46.0, 110.0) Or
-        InBox(X, Z, -720.0, 1313.0, 46.0, 110.0) Or
-        InBox(X, Z, -240.0, 1313.0, 46.0, 110.0) Or
+    If (InBox(X, Z, -670.0, 1210.0, 180.0, 290.0) Or
+        InBox(X, Z, -290.0, 1210.0, 180.0, 290.0) Or
         InBox(X, Z, -480.0, 1285.0, 580.0, 8.0)) Then
         Return False
     End If
+
+    Return True
+
+End Function
+
+Private Function HeadquartersCanStand(X As Double, Z As Double) As Boolean
 
     If (InBox(X, Z, 290.0, 1250.0, 16.0, 660.0) Or
         InBox(X, Z, 1030.0, 1250.0, 16.0, 660.0) Or
@@ -134,36 +176,23 @@ Public Function GroundHeight(X As Double, Z As Double) As Double
 
     Result = Layout.PavingHeight(X, Z)
 
-    If (X > -855.0 And
-        X < -105.0 And
-        Z > 950.0 And
-        Z < 1590.0) Then
+    If (X > -1120.0 And X < 380.0 And Z > 1200.0 And Z < 2480.0) Then
+        Result = 22.52
+    End If
+
+    If (X > 765.0 And X < 1535.0 And Z > 1375.0 And Z < 2065.0) Then
         Result = 22.3
     End If
 
-    If (X > 275.0 And
-        X < 1045.0 And
-        Z > 905.0 And
-        Z < 1595.0) Then
-        Result = 22.3
+    If Abs(X + 370.0) < 86.0 And Z > 850.0 And Z < 1320.0 Then
+        Result = 23.24
     End If
 
-    If (Abs(X + 480.0) < 43.0 And
-        Z > 775.0 And
-        Z < 1010.0) Then
-        Result = 23.8
+    If Abs(X + 370.0) < 75.0 And Z >= 1676.1 And Z < 1863.9 Then
+        Result = 22.52 + Clamp(Floor((Z - 1676.1) / 7.2) + 1.0, 1.0, 26.0) * 5.0
     End If
 
-    If (Abs(X + 480.0) < 37.5 And
-        Z >= 1188.05 And
-        Z < 1281.95) Then
-        Result = 21.0 + Clamp(Floor((Z - 1188.05) / 3.6) + 1.0, 1.0, 26.0) * 2.5
-    End If
-
-    If (X > 410.0 And
-        X < 910.0 And
-        Z > 1015.0 And
-        Z < 1345.0) Then
+    If X > 900.0 And X < 1400.0 And Z > 1485.0 And Z < 1815.0 Then
         Result = 23.6
     End If
 

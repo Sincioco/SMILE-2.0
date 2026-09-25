@@ -7,6 +7,7 @@ from pathlib import Path
 import hashlib
 import json
 import sys
+import struct
 import bpy
 from mathutils import Vector
 
@@ -21,12 +22,15 @@ groups = {}
 material_keys = {}
 instance_count = 0
 degenerate_count = 0
+float3 = struct.Struct('<3f')
 for instance in depsgraph.object_instances:
     obj = instance.object
     if obj.name.startswith('Neris Detailed Tree '):
         continue  # Export reusable templates below, preserving each tree's root transform.
-    if obj.name.startswith('Castle Moat Water'):
+    if obj.name.startswith(('Castle Moat Water', 'Comparison Moat Water')):
         continue  # The native lit water owns this surface; a second shallow plane flickered.
+    if obj.name.startswith('Neris Tripo Castle'):
+        continue  # Separate lossless UV/PBR partitions preserve the supplied castle atlas.
     if obj.type not in {"MESH", "FONT", "CURVE", "SURFACE"}:
         continue
     mesh = obj.to_mesh()
@@ -35,8 +39,10 @@ for instance in depsgraph.object_instances:
     mesh.calc_loop_triangles()
     matrix = instance.matrix_world.copy()
     normal_matrix = matrix.to_3x3().inverted().transposed()
-    positions = [tuple(matrix @ vertex.co) for vertex in mesh.vertices]
-    normals = [tuple((normal_matrix @ normal.vector).normalized())
+    # GLB stores float32. Weld by those exact output values, rather than retaining
+    # duplicate vertices which differ only in discarded double-precision bits.
+    positions = [float3.unpack(float3.pack(*(matrix @ vertex.co))) for vertex in mesh.vertices]
+    normals = [float3.unpack(float3.pack(*(normal_matrix @ normal.vector).normalized()))
                for normal in mesh.corner_normals]
     materials = list(mesh.materials)
     for triangle in mesh.loop_triangles:
@@ -94,8 +100,13 @@ for part in sorted(parts, key=lambda value: value[3], reverse=True):
     batches[destination].append(part)
     counts[destination] += part[3]
 print(f"NERIS: {len(parts)} parts, {len(groups)} unique materials, {len(batches)} models", flush=True)
-assert len(parts) <= 105, "Reserve meshes for party and arena."
-assert len(batches) <= 56, "Leave native model slots for five actors and backgrounds."
+for material, triangles in groups.values():
+    if len(triangles)>100000:print(f"NERIS material: {material.name}: {len(triangles)} triangles",flush=True)
+# The former 105-part allowance reserved 23 slots in the old 128-mesh pool.
+# The native renderer now has 256 slots; preserve that reserve AND account for
+# all 28 imported-castle parts. This is a scene resource check, not an exclusion.
+assert len(parts) + 28 + 23 <= 256, "Town, imported castle, party and arena exceed native mesh capacity."
+assert len(batches) + 14 + 5 + 3 <= 64, "Reserve live models for both castles, actors, trees and leaf."
 source = Path(bpy.data.filepath)
 manifest = {"source": source.relative_to(ROOT).as_posix(), "source_sha256": hashlib.sha256(
     source.read_bytes()).hexdigest(),
