@@ -1,0 +1,37 @@
+{
+  "character": "Arin",
+  "source": "ZaraV1 RunUnarmed / WalkUnarmed",
+  "sourceSha256": "457e640bfe00b9b1fb2673965f5bfb843ba40fd40a48b9b04fb08ab659026812",
+  "acceptedModelSha256": "8eb932faf82f4f13ff9e2bf5273c5bee7ce510bdab2af693438b7d7d1ae0959e",
+  "townModelSha256": "1125a3e5e49bc3a1d740672d41a88f391e486c2079b5fa88cb4d8b4b880086e6",
+  "bindBodyMinimumY": 0.0034412500457121796,
+  "idleBodyMinimumY": 0.02304222987845158,
+  "originalModelSkinMaterialAndNonLocomotionClipsPreserved": true,
+  "privateTownVariantOnly": true,
+  "clips": {
+    "Walk": {
+      "sourceClip": "WalkUnarmed",
+      "frames": 32,
+      "durationSeconds": 1.0333333015441895,
+      "bodyMinimumY": 0.023042253601112297,
+      "bodyMaximumMinimumY": 0.044271026222950066,
+      "sourceGroundMinimumY": -0.03105883625183016,
+      "shoulderHeadingRangeDegrees": [
+        -2.390602011781708,
+        4.644101438646393
+      ]
+    },
+    "Run": {
+      "sourceClip": "RunUnarmed",
+      "frames": 22,
+      "durationSeconds": 0.699999988079071,
+      "bodyMinimumY": 0.023042226748111017,
+      "bodyMaximumMinimumY": 0.0680678838075427,
+      "sourceGroundMinimumY": -0.004590480038602823,
+      "shoulderHeadingRangeDegrees": [
+        -8.770703602295447,
+        7.395310143195516
+      ]
+    }
+  }
+}

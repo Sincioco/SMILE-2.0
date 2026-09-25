@@ -77,5 +77,25 @@ $paint.FillEllipse($navy,1,1,30,30)
 $paint.FillEllipse($gold,6,6,20,20)
 $marker.Save((Join-Path $package 'Textures/Neris-Minimap-Arin.png'),[Drawing.Imaging.ImageFormat]::Png)
 $paint.Dispose(); $marker.Dispose()
+# A small sprite sheet uses the existing source-rectangle image API. North first,
+# then clockwise in five-degree steps; the player marker covers the cone origin.
+$heading=[Drawing.Bitmap]::new(1152,576)
+$paint=[Drawing.Graphics]::FromImage($heading)
+$paint.SmoothingMode=[Drawing.Drawing2D.SmoothingMode]::AntiAlias
+$paint.Clear([Drawing.Color]::Transparent)
+$fan=[Drawing.Drawing2D.GraphicsPath]::new()
+$fan.AddPie(-43,-43,86,86,-130,80)
+$glow=[Drawing.Drawing2D.PathGradientBrush]::new($fan)
+$glow.CenterPoint=[Drawing.PointF]::new(0,0)
+$glow.CenterColor=[Drawing.Color]::FromArgb(230,255,230,144)
+$glow.SurroundColors=@([Drawing.Color]::FromArgb(0,255,230,144))
+for($frame=0;$frame -lt 72;$frame++) {
+    $paint.ResetTransform()
+    $paint.TranslateTransform(($frame%12)*96+48,[Math]::Floor($frame/12)*96+48)
+    $paint.RotateTransform($frame*5)
+    $paint.FillPath($glow,$fan)
+}
+$heading.Save((Join-Path $package 'Textures/Neris-Minimap-Heading.png'),[Drawing.Imaging.ImageFormat]::Png)
+$glow.Dispose(); $fan.Dispose(); $paint.Dispose(); $heading.Dispose()
 foreach($item in @($navy,$green,$slate,$ivory,$water,$gold,$estate,$family,$workers,$white,$font,$title)) { $item.Dispose() }
 Write-Output 'Rendered expanded minimap and alpha marker using Windows System.Drawing.'

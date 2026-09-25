@@ -272,6 +272,19 @@ if ($Target -in @('Native', 'All')) {
     foreach ($file in Get-ChildItem -LiteralPath $townSource -File) {
         Copy-Item -LiteralPath $file.FullName -Destination $townMirror -Force
     }
+    $partyMirror = Join-Path $townMirror 'Party'
+    $null = New-Item -ItemType Directory -Path $partyMirror -Force
+    foreach ($entry in @(
+        @('Arin', 'Paladin\ArinV57', 'ArinV57.sm3d.json'),
+        @('Orin', 'Tank\OrinV13', 'OrinV13.sm3d.json'),
+        @('Mira', 'Healer\MiraTripoV1', 'Mira.sm3d.json')
+    )) {
+        $package = Join-Path $repositoryRoot ('games\SinStarI\SourceAssets\Characters\' + $entry[1])
+        Copy-Item -LiteralPath (Join-Path $package ('Private\TownLocomotion\' + $entry[0] + '-Town.glb')) `
+            -Destination (Join-Path $partyMirror ($entry[0] + '.glb')) -Force
+        Copy-Item -LiteralPath (Join-Path $package $entry[2]) `
+            -Destination (Join-Path $partyMirror ($entry[0] + '.sm3d.json')) -Force
+    }
     $townImages = Join-Path $toolRoot 'Assets\Neris'
     $null = New-Item -ItemType Directory -Path $townImages -Force
     foreach ($file in Get-ChildItem -LiteralPath (Join-Path (Split-Path $townSource -Parent) 'Textures') -Filter 'Neris-Minimap*.png') {

@@ -1,6 +1,7 @@
 [CmdletBinding()]
 param(
-    [string]$Configuration = 'Release'
+    [string]$Configuration = 'Release',
+    [switch]$NativeOnly
 )
 
 $ErrorActionPreference = 'Stop'
@@ -32,6 +33,11 @@ try {
 
     if ($nativeText -cne $expectedText) {
         throw "Renderer3D native material assertions failed: $nativeText"
+    }
+
+    if ($NativeOnly) {
+        Write-Host 'Renderer3D native material sharing, full pool, high-slot draw, stale handle and cleanup tests passed.'
+        return
     }
 
     & $compiler --project $project --target web --configuration $Configuration --output-dir $webOutput

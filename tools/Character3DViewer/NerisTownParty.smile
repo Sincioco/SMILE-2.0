@@ -146,13 +146,23 @@ Public Sub LoadNext(ByRef Value As State)
     Dim Settings As Calibration.ConfigurationResult
     Dim HiddenEquipment As Actors.EquipmentVisibility
     Dim Ok As Boolean
+    Dim AssetPath As Text
 
     If Value.Loaded >= Value.MemberCount Or Value.Failed Then
         Return
     End If
 
     Index = Value.Loaded
-    Value.Members[Index].Body = Actors.LoadContext(ProfileAt(Index), Index * 64)
+
+    If Index = 0 Then
+        AssetPath = "Assets/Neris/Party/Arin.sm3d"
+    Else If Index = 1 Then
+        AssetPath = "Assets/Neris/Party/Orin.sm3d"
+    Else If Index = 3 Then
+        AssetPath = "Assets/Neris/Party/Mira.sm3d"
+    End If
+
+    Value.Members[Index].Body = Actors.LoadContext(ProfileAt(Index), Index * 64, AssetPath)
     Ok = Value.Members[Index].Body.Ready
 
     If Ok Then
@@ -303,7 +313,7 @@ Private Sub Present(ByRef Value As Member, ByRef Keys As Calibration.State,
         Grounded.Y + Navigation.GroundHeight(Position.X, Position.Z), Grounded.Z) And Ok
     Ok = Character.RotatePrecise(Value.Body.Actor, 0.0, Value.Yaw, 0.0) And Ok
 
-    If Value.Body.CalibrationAvailable Then
+    If Value.Body.CalibrationAvailable And Not Value.Walking Then
 
         Keys.KeyBase = Value.Body.KeyBase
 

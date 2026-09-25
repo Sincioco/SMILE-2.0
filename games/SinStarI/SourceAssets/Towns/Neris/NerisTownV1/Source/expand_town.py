@@ -145,6 +145,12 @@ for y in [83.7,169.3]:
 for x in [-107,10,116]:
     for y in [97,120,146,171]: tree(x,y,1.13)
 finish_paving(site)
+from royal_terrain import apply as prepare_moat
+prepare_moat()
+from align_paving import apply as align_paving
+align_paving(paved)
+from detail_grass import apply as apply_grass
+apply_grass()
 
 scene=bpy.context.scene
 scene['Neris Expansion']='Royal precinct, three residential neighborhoods, open civic plaza'

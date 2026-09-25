@@ -25,6 +25,8 @@ for instance in depsgraph.object_instances:
     obj = instance.object
     if obj.name.startswith('Neris Detailed Tree '):
         continue  # Export reusable templates below, preserving each tree's root transform.
+    if obj.name.startswith('Castle Moat Water'):
+        continue  # The native lit water owns this surface; a second shallow plane flickered.
     if obj.type not in {"MESH", "FONT", "CURVE", "SURFACE"}:
         continue
     mesh = obj.to_mesh()
@@ -51,7 +53,8 @@ for instance in depsgraph.object_instances:
                 for socket in ("Base Color", "Metallic", "Roughness", "Alpha", "Emission Color", "Emission Strength"):
                     value = node.inputs[socket].default_value
                     values.append(tuple(round(v, 6) for v in value) if hasattr(value, "__len__") else round(value, 6))
-                material_keys[name] = tuple(values)
+                material_keys[name] = (tuple(values), bool(material.get('neris_stone_texture')),
+                                       bool(material.get('neris_grass_texture')))
             else:
                 material_keys[name] = name
         key = material_keys[name]

@@ -117,3 +117,20 @@ Party playback uses 200 for Mira independently of another actor's speed, includi
 the Dragon demo companion and its return to Idle. Explicit Mira speed controls
 remain available. The native Water Lab already samples both animation and VFX at
 200 by default. Authored GLB animation samples, grounding and equipment are unchanged.
+
+## September 26: private unarmed town locomotion
+
+Sin requested Zara’s WalkUnarmed/RunUnarmed motion for Mira. The reusable
+`scripts/retarget-town-locomotion.py` tool maps anatomical rest axes and bone
+directions onto this character’s own rig; `character-motion-data.py` samples,
+measures and writes the private derivative. Invoke installed Blender in background
+with `--python scripts/retarget-town-locomotion.py -- Mira` from the repo root.
+
+`Private/TownLocomotion/Mira-Town.glb` remains local because it derives from
+Zara’s licensed motion. Only Neris loads it. The accepted public checkpoint, skin,
+materials, non-locomotion clips and saved calibration are unchanged. The town skips
+weapon wrist corrections while traveling. The report at
+`Source/town-locomotion-retarget.json` records source/target hashes, bind and Idle
+body minima, complete gait contact ranges, facing ranges and round-trip checks.
+Vertical airtime is retained relative to this character’s own accepted Idle height.
+Do not copy a different character’s grounding offset or replace the combat model.

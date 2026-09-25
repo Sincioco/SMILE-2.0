@@ -194,6 +194,40 @@ Public Function ComposeOrbit(Base As P.Camera3D, Controls As Camera.Controls,
 
 End Function
 
+''' Optional fixed-lens zoom uses shared input/easing and absolute scene distance bounds.
+Public Function ComposeDistance(Base As P.Camera3D, Controls As Camera.Controls,
+    MinimumDistance As Double, MaximumDistance As Double) As P.Camera3D
+
+    Dim Result As P.Camera3D
+    Dim OrbitControls As Camera.Controls
+    Dim BaseDistance As Double
+    Dim Distance As Double
+    Dim Progress As Double
+
+    OrbitControls = Controls
+    OrbitControls.Zoom = 0.0
+    Result = ComposeOrbit(Base, OrbitControls)
+    BaseDistance = Max(0.01, M.Length(M.Subtract(Result.Position, Result.Target)))
+    Distance = Clamp(BaseDistance, MinimumDistance, MaximumDistance)
+
+    If Controls.Zoom > ToDouble(DEFAULT_ZOOM) Then
+        Progress = Clamp((Controls.Zoom - ToDouble(DEFAULT_ZOOM)) /
+            ToDouble(ZOOM_OUT_LIMIT - DEFAULT_ZOOM), 0.0, 1.0)
+        Distance = Distance + (MaximumDistance - Distance) * Progress * Progress
+    Else
+
+        Progress = Clamp((ToDouble(DEFAULT_ZOOM) - Controls.Zoom) /
+            ToDouble(DEFAULT_ZOOM - ZOOM_IN_LIMIT), 0.0, 1.0)
+        Distance = Distance + (MinimumDistance - Distance) * Progress
+    End If
+
+    Result.Position = M.Add(Result.Target,
+        M.Scale(M.Subtract(Result.Position, Result.Target), Distance / BaseDistance))
+
+    Return Result
+
+End Function
+
 Public Function Compose(Base As P.Camera3D, Controls As Camera.Controls) As P.Camera3D
 
     Dim Result As P.Camera3D

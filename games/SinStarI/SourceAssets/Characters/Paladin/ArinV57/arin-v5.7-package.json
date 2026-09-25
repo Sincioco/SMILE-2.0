@@ -68,5 +68,13 @@
     "manifest": "Audio/attack-audio.json",
     "generator": "scripts/generate-character-attack-audio.py",
     "policy": "Original synthesized slash and crosscut cues, once per animation cycle."
+  },
+  "townLocomotion": {
+    "model": "Private/TownLocomotion/Arin-Town.glb",
+    "report": "Calibration/town-locomotion-retarget.json",
+    "builder": "scripts/retarget-town-locomotion.py",
+    "sourceMotion": "ZaraV1 WalkUnarmed / RunUnarmed",
+    "distribution": "Local licensed derivative; not committed",
+    "scope": "Native Neris Town only"
   }
 }

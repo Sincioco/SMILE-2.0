@@ -40,11 +40,12 @@ Public Sub Start(ByRef Value As State)
     Value.Cinematic = True
     Value.BaseCamera.UpDirection = P.Vector(0.0, 1.0, 0.0)
     ' Town-scale depth precision keeps thin paving layers separated during orbit.
-    Value.BaseCamera.NearPlane = 10.0
+    Value.BaseCamera.NearPlane = 25.0
     Value.BaseCamera.FarPlane = 12000.0
-    Value.BaseCamera.FovDegrees = 48.0
+    ' A narrower lens avoids wide-angle stretching; distance retains the town framing.
+    Value.BaseCamera.FovDegrees = 32.0
     Value.BaseCamera.Target = P.Vector(0.0, 80.0, 310.0)
-    Value.BaseCamera.Position = P.Vector(2350.0, 2550.0, -2950.0)
+    Value.BaseCamera.Position = P.Vector(3642.5, 3908.5, -4743.0)
     Ok = Rendering.PrepareAssetLoading(0)
     Value.Failed = Not Ok
 
@@ -81,6 +82,8 @@ Public Sub LoadNext(ByRef Value As State)
     End If
 
     Value.View = Arena.Create(3400, 4200, 6.0)
+    Value.View.MinimumDistance = 80.0
+    Value.View.MaximumDistance = 8500.0
     Value.View.FloorVisible = False
     Value.View.GridVisible = False
     Ok = Appearance.Create(Value.Look)
@@ -104,9 +107,7 @@ Public Sub Input(ByRef Value As State, Key As Number, Blocked As Boolean)
     Pointer = Motion.ReadPointer(Blocked)
 
     If Key = KEY_R Then
-        Call Party.SetRunning(Value.People, True)
-    Else If Key = KEY_W Then
-        Call Party.SetRunning(Value.People, False)
+        Call Party.SetRunning(Value.People, Not Value.People.Running)
     End If
 
     If Key = KEY_PLUS Then
@@ -150,19 +151,19 @@ Private Function WalkDirection(View As P.Camera3D) As P.Vector3
     Dim Z As Double
     Dim Ok As Boolean
 
-    If Key_Held(KEY_UP) Then
+    If Key_Held(KEY_UP) Or Key_Held(KEY_W) Then
         Z = Z + 1.0
     End If
 
-    If Key_Held(KEY_DOWN) Then
+    If Key_Held(KEY_DOWN) Or Key_Held(KEY_S) Then
         Z = Z - 1.0
     End If
 
-    If Key_Held(KEY_RIGHT) Then
+    If Key_Held(KEY_RIGHT) Or Key_Held(KEY_D) Then
         X = X + 1.0
     End If
 
-    If Key_Held(KEY_LEFT) Then
+    If Key_Held(KEY_LEFT) Or Key_Held(KEY_A) Then
         X = X - 1.0
     End If
 
@@ -221,10 +222,10 @@ Public Sub Update(ByRef Value As State, Elapsed As Number)
 
     If Value.Follow Then
         Value.BaseCamera.Target = M.Add(Leader, P.Vector(0.0, 10.0, 0.0))
-        Value.BaseCamera.Position = M.Add(Leader, P.Vector(75.0, 220.0, -140.0))
+        Value.BaseCamera.Position = M.Add(Leader, P.Vector(116.25, 335.5, -217.0))
     Else
         Value.BaseCamera.Target = P.Vector(0.0, 80.0, 310.0)
-        Value.BaseCamera.Position = P.Vector(2350.0, 2550.0, -2950.0)
+        Value.BaseCamera.Position = P.Vector(3642.5, 3908.5, -4743.0)
     End If
 
     Call ConstrainCamera(Value)
@@ -297,12 +298,12 @@ Public Sub Overlay(ByRef Value As State)
     Fill Rectangle 0, 0, Window_Width(), 94, RGB(12, 20, 32)
     Draw Text "Neris Town" At 18, 12 Size 23 Color WHITE
     Draw Text "Speed: " + Numbers.NumberText(Value.People.SpeedPercent) + "%  (+ / -)" At 405, 18 Size 16 Color WHITE
-    Draw Text "Arrows: Move    R: Run    W: Walk    Middle Drag: Orbit    Left Drag: Pan    Wheel: Zoom" At 18, Window_Height() - 48 Size 14 Color WHITE
+    Draw Text "WASD / Arrows: Move    R: Walk / Run    Middle Drag: Orbit    Left Drag: Pan    Wheel: Zoom" At 18, Window_Height() - 48 Size 14 Color WHITE
     Draw Text "F: Floor    G: Grid    B: Background    O / C / Right Click: Orbit Town    Tab: Follow Party" At 18, Window_Height() - 26 Size 14 Color WHITE
 
     If Value.Ready Then
 
-        Call TownMap.Draw(Value.Map, Value.People.Path.Positions[0])
+        Call TownMap.Draw(Value.Map, Value.People.Path.Positions[0], Value.People.Members[0].Yaw)
 
         If Value.People.Running Then
             Draw Text "Run" At 345, 18 Size 16 Color RGB(70, 210, 205)

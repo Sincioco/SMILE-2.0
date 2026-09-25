@@ -7,6 +7,7 @@ Import Smile.Tools.NerisTownParty As Party
 Import Smile.Tools.NerisTownAssets As Assets
 Import Smile.Tools.NerisTownNavigation As Navigation
 Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.PrecisionMath3D As Math3D
 Import Smile.Simple3D.Character3D As Character
 Import Smile.Simple3D.ArenaCamera3D As Motion
 Import Smile.Simple3D.Graphics3D As G
@@ -34,6 +35,15 @@ Call Check(Value.Town.Loaded = Assets.CHUNK_COUNT, "Every Town Chunk Loads")
 
 Print "Chunks " + Calibration.NumberText(Value.Town.Loaded) + " Stage " + Calibration.NumberText(Value.Town.Stage) + " Error " + Calibration.NumberText(Value.Town.ErrorCode)
 Print "Actors " + Calibration.NumberText(Value.People.Loaded) + " Error " + Calibration.NumberText(Character.LastError())
+Print "Meshes " + Calibration.NumberText(G.LiveMeshCount3D()) + "/" + Calibration.NumberText(G.MaximumMeshCount3D())
+Print "Materials " + Calibration.NumberText(G.LiveMaterialCount3D()) + "/" + Calibration.NumberText(G.MaximumMaterialCount3D())
+
+Call Check(Value.View.Ready, "Town Arena Loads")
+Call Check(Value.Look.Garden.Ready, "Town Trees And Leaves Load")
+Call Check(Value.Look.Gems.Ready, "Town Crystal And Lamp Effects Load")
+Call Check(Value.Look.Ready, "Town Water And Garden Resources Load")
+Call Check(G.LiveMaterialCount3D() < G.MaximumMaterialCount3D(), "Complete Town Keeps Material Headroom")
+Call Check(G.MaximumMaterialCount3D() >= 512, "Native Viewer Uses Expanded Material Capacity")
 
 If Value.Ready Then
 
@@ -45,13 +55,24 @@ If Value.Ready Then
     Call Check(TownMap.MapY(400.0, 0, 180) < TownMap.MapY(-400.0, 0, 180),
         "Minimap Keeps North Up")
     Call Check(Value.Map.Opacity = 0.0, "Minimap Starts Hidden")
+    Call Check(TownMap.HeadingFrame(180.0) = 0 And TownMap.HeadingFrame(270.0) = 18 And
+        TownMap.HeadingFrame(0.0) = 36 And TownMap.HeadingFrame(90.0) = 54,
+        "Headlight Follows Actor Facing In All Four Map Directions")
     Call TownMap.Update(Value.Map, True, 100)
-    Call Check(Value.Map.Opacity = 50.0, "Moving Minimap Fades In")
+    Call Check(Value.Map.Opacity = 40.0, "Moving Minimap Fades In")
     Call TownMap.Update(Value.Map, True, 100)
+    Call Check(Value.Map.Opacity = 80.0, "Minimap Maximum Opacity Is Eighty Percent")
+    Call TownMap.Update(Value.Map, False, 10000)
+    Call Check(Value.Map.Opacity = 80.0, "Stopped Minimap Holds For Ten Seconds")
     Call TownMap.Update(Value.Map, False, 400)
-    Call Check(Value.Map.Opacity = 50.0, "Stopped Minimap Fades Out Gradually")
+    Call Check(Value.Map.Opacity = 40.0, "Stopped Minimap Fades Out Gradually")
     Call TownMap.Update(Value.Map, False, 400)
     Call Check(Value.Map.Opacity = 0.0, "Stopped Minimap Disappears")
+    Call TownMap.Update(Value.Map, True, 200)
+    Call TownMap.Update(Value.Map, False, 9000)
+    Call TownMap.Update(Value.Map, True, 1)
+    Call TownMap.Update(Value.Map, False, 10400)
+    Call Check(Value.Map.Opacity = 40.0, "Movement Restarts Hold And Large Frames Fade Only Remaining Time")
     Call Check(Value.People.Members[0].IdleName = "TownIdle" And
         Character.HasClip(Value.People.Members[0].Body.Actor, "TownIdle"),
         "Arin Uses His Relaxed Town Standing Clip")
@@ -94,7 +115,7 @@ If Value.Ready Then
             "Followers Keep Spacing At Default Run Speed")
     End For
 
-    Call Town.Input(Value, KEY_W, True)
+    Call Town.Input(Value, KEY_R, True)
 
     Leader = Navigation.Move(Leader, 1.0, 0.0)
 
@@ -117,6 +138,10 @@ If Value.Ready Then
 
     Call Town.Update(Value, 16)
     Call Town.Draw(Value)
+    Call Check(G.LightValue3D(G.LIGHT_QUERY_DIRECTIONAL, 0, 8) = 2600 And
+        G.LightValue3D(G.LIGHT_QUERY_AMBIENT, 0, 4) = 380 And
+        G.LightValue3D(G.LIGHT_QUERY_LOCAL, 3, 11) = 2600,
+        "Town Keeps Sun Ambient Fill And Restored Local Highlights")
     Call Town.Overlay(Value)
     Call Check(Not Value.Failed And Value.People.Ready, "Town Renders With Shared Reflective Arena")
     Call Check(Value.Look.Ready And Value.Look.Time = 16,
@@ -155,10 +180,15 @@ Sub CheckSpeed(ByRef Scene As Town.State)
         Abs(Party.WalkingSpeed(Scene.People) - 280.0 / 3.0) < 0.001,
         "Default Run Is One Third Faster Than Previous Speed")
     Call Town.Input(Scene, KEY_W, True)
+    Call Check(Scene.People.Running, "W Movement Does Not Switch Run To Walk")
+    Call Town.Input(Scene, KEY_R, True)
     Call Check(Not Scene.People.Running And
         Abs(Party.WalkingSpeed(Scene.People) - 280.0 / 9.0) < 0.001,
         "Walk Is One Third Of Run Speed")
+    Call Town.Input(Scene, KEY_W, True)
+    Call Check(Not Scene.People.Running, "W Movement Preserves Selected Walk Mode")
     Call Town.Input(Scene, KEY_R, True)
+    Call Check(Scene.People.Running, "R Toggles Back From Walk To Run")
     Call Town.Input(Scene, KEY_PLUS, True)
     Call Check(Scene.People.SpeedPercent = 125, "Plus Speeds Up Locomotion")
     Call Town.Input(Scene, KEY_MINUS, True)
@@ -187,8 +217,10 @@ Sub CheckCamera(ByRef Scene As Town.State)
     Dim Pointer As Motion.PointerInput
     Dim Changed As Boolean
 
-    Call Check(Scene.BaseCamera.NearPlane = 10.0,
+    Call Check(Scene.BaseCamera.NearPlane = 25.0,
         "Town Camera Preserves Depth Precision For Thin Paving Layers")
+    Call Check(Scene.BaseCamera.FovDegrees = 32.0,
+        "Town Uses A Natural Narrower Lens")
     Call Check(Not Scene.View.FloorVisible And Not Scene.View.GridVisible,
         "Town Floor And Grid Start Hidden")
 
@@ -231,6 +263,22 @@ Sub CheckCamera(ByRef Scene As Town.State)
     Call Town.Update(Scene, 0)
     Call Check(Scene.View.LiveCamera.Position.Y > 25.0 And
         Scene.View.LiveCamera.Target.Y >= 24.999, "Follow Camera Cannot Move Beneath Town")
+    Call Check(Scene.View.LiveCamera.FovDegrees = 32.0,
+        "Following Retains The Town Lens")
+
+    Scene.View.Controls.Zoom = ToDouble(Motion.ZOOM_OUT_LIMIT)
+
+    Call Town.Update(Scene, 0)
+    Call Check(Abs(Math3D.Length(Math3D.Subtract(Scene.View.LiveCamera.Position,
+        Scene.View.LiveCamera.Target)) - 8500.0) < 0.01 And
+        Scene.View.LiveCamera.FovDegrees = 32.0, "Tab Follow Can Zoom Out To Whole Town Without Wide Angle")
+
+    Scene.Follow = False
+
+    Call Town.Update(Scene, 0)
+    Call Check(Abs(Math3D.Length(Math3D.Subtract(Scene.View.LiveCamera.Position,
+        Scene.View.LiveCamera.Target)) - 8500.0) < 0.01,
+        "Overview And Follow Share The Same Maximum Distance")
 
     Scene.View.FloorVisible = True
 

@@ -11,7 +11,7 @@ $null = New-Item -ItemType Directory -Path $logs -Force
 if (-not (Test-Path -LiteralPath (Join-Path $output 'Assets\Neris\Neris-00.sm3d'))) {
     throw 'Build Character3DViewer with -Target Native before running town acceptance.'
 }
-foreach ($image in @('Neris-Minimap.png', 'Neris-Minimap-Arin.png')) {
+foreach ($image in @('Neris-Minimap.png', 'Neris-Minimap-Arin.png', 'Neris-Minimap-Heading.png')) {
     if (-not (Test-Path -LiteralPath (Join-Path $output "Assets\Neris\$image"))) {
         throw "Published town map is missing: $image. Rebuild the native Viewer."
     }

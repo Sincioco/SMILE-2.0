@@ -6,7 +6,7 @@ Option Explicit
 Import Smile.Simple3D.Precision3D As P
 
 Public Const TREE_COUNT = 73
-Public Const LAMP_COUNT = 80
+Public Const LAMP_COUNT = 82
 
 Public Type TreePlacement
     Position As P.Vector3
@@ -556,6 +556,10 @@ Public Function LampAt(Index As Number) As P.Vector3
             Result = P.Vector(649.00012, 48.00000, -1070.20007)
         Case 79
             Result = P.Vector(670.99988, 48.00000, -1070.20007)
+        Case 80
+            Result = P.Vector(-539.00006, 72.30000, 952.00000)
+        Case 81
+            Result = P.Vector(-420.99994, 72.30000, 952.00000)
     End Select
 
     Return Result

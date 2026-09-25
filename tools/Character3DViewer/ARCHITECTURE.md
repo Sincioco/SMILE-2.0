@@ -3,15 +3,17 @@
 ## Neris residential and royal expansion
 
 The current source is `Neris-Town-Expanded.blend`, preserving V1 and Detailed.
-Native scene policy remains in `NerisTown`; the camera/arena libraries are unchanged.
+Native scene policy remains in `NerisTown`; shared arena distance zoom is opt-in.
 `NerisTownDistricts` owns expanded collision and surface heights. Navigation composes
 that owner with the original district, canals, trees and movement substeps.
 Generated `NerisTownLayout` supplies exact tree/lamp placements and paving rectangles.
-Its larger size is declarative generated data (73 trees, 80 lamps and paving bounds),
+Its larger size is declarative generated data (73 trees, 82 lamps and paving bounds),
 reviewed separately from behavior complexity; no threshold or exclusion is changed.
 
-`NerisTownMap.State` owns two image handles and fade opacity. The party reports
-whether any trail member is moving; the map does not borrow actor or camera state.
+`NerisTownMap.State` owns three image handles, fade opacity and a ten-second hold.
+The party supplies movement, leader position and facing; the map borrows no actor
+or camera state. One 72-frame sheet supplies the headlight cone through the existing
+image source-rectangle API. North remains up; maximum opacity is 80%.
 `NerisTownParty.Member` adds the selected IdleName, choosing Arin's canonical TownIdle
 only in town. Character asset/calibration identity migration preserves all 24 keys
 and the ten earlier clips; saved JSON remains authoritative.
@@ -19,7 +21,9 @@ and the ten earlier clips; saved JSON remains authoritative.
 Appearance retains its existing water/material ownership. One closed moat ribbon
 and one royal fountain extend water to five paired batches; tree instances grow to
 292 part objects. The native asset exporter remains within its 105-static-part guard
-(100 used). Current generated assets use 28 models, with no runtime cap changes.
+(104 used). Current exports use 31 models. Sin authorized increasing native
+material capacity from 128 to 512. Material handles use nine slot bits and retain
+sixteen generation bits. Mesh/model capacities and held Web are unchanged.
 The native-only map image mirror is ignored; the build publishes it under Assets/Neris.
 Studio and Web inventories exclude these town assets and modules.
 
@@ -36,8 +40,7 @@ The canonical assets remain in `SinStarI/SourceAssets/Towns/Neris/NerisTownV1/Ru
 the accepted Blender scene, including collection instances, removes invisible
 degenerate faces and combines identical PBR materials. `static_glb.py` writes the
 accepted positions/normals directly so a second Blender mesh export does not split
-shared normals and exceed SM3D limits. No geometry decimation or renderer capacity
-increase is involved. The manifest records source and output hashes.
+shared normals and exceed SM3D limits. No geometry decimation is involved. The manifest records source and output hashes.
 
 `NerisTownNavigation` owns exterior building/canal/boundary collision, bridge
 passages, axis sliding and paving heights. `NerisTownParty` owns the character
@@ -49,6 +52,9 @@ The party owns Run/Walk mode and session speed, initially 100% of the new run ba
 (93 1/3 world units/second). Walking is one-third of running. Town input adjusts speed
 in 25-point steps within 25–400%; leader movement and follower catch-up derive from
 the same rate. Only gait elapsed time is multiplied, with fractional time retained.
+W/A/S/D alias the held arrow directions in the existing town input owner. R toggles
+Walk/Run, leaving W exclusively for movement. Shared direction
+normalization prevents diagonal movement or two keys for one direction adding speed.
 
 `Smile.Simple3D.PartyTrail3D` owns only a bounded arc-length history and follower
 progress. The caller supplies a collision-resolved leader position; followers walk
@@ -65,7 +71,7 @@ all ten batches before its two materials. No camera or party state is borrowed.
 Town input policy bounds absolute orbit elevation to 10–80 degrees and vertical pan
 to a target Y of at least 25. This keeps both overview and follow cameras above the
 town independently of arena-floor visibility, without copying shared camera math.
-The camera near plane is 10 town units: the former 1-unit plane let thin paving
+The camera near plane is 25 town units: the former 1-unit plane let thin paving
 layers collapse into the same 24-bit depth value at overview distance. Water sits
 above its opaque color backing with enough separation for the same depth buffer.
 Movement begins a following view; direct mouse manipulation pauses cinematic
@@ -79,32 +85,67 @@ are allocated once and destroyed before their models. `NerisTownCrystals` owns c
 crystal halos/sparkles and warm lamp halos; both reuse one texture/material.
 `NerisTownLayout` is generated placement data from Blender, without rendering or
 input logic. `NerisTownMap` owns image handles, movement fade and coordinate projection,
-receiving only the party leader's position. Appearance delegates these effect owners.
+receiving the leader's position and facing. Appearance delegates these effect owners.
 
 Native shaders filter procedural water octaves by pixel footprint and broaden
 PBR/water highlights using normal variance. A default-preserving optional ripple
 strength is added to the existing water operation. The renderer has no town
-dependency, new resource type or capacity increase. Web adoption remains held.
+dependency or new resource type. Web adoption remains held.
 
 Detailed vegetation is authored by `Source/detail_trees.py` in a separate
 `Neris-Town-Detailed.blend`, preserving the original town file. Two deterministic
 tree templates replace the 27 canopy placeholders with tapered trunks, branches
-and 2,970 modeled leaves each. The static portion is 28 chunks / 100 parts /
-2,776,669 triangles; reusable tree meshes add eight parts and the leaf adds one.
+and 2,970 modeled leaves each. The static portion is 31 chunks / 104 parts /
+2,930,985 triangles; reusable tree meshes add eight parts and the leaf adds one.
 `detail_flowers.py` authors 14 planters; `detail_materials.py` authors the palette
 and two deterministic stone textures. The writer embeds these maps with planar UVs,
 preserving evaluated normals and avoiding external dependencies.
+`detail_grass.py` owns the seamless lawn maps and a single Blender batch containing
+39,000 short blades. Conservative evaluated-object bounds leave clearance around
+roads, buildings and props. The exporter splits it within existing mesh budgets.
+Grass uses world-planar UVs and a tangent aligned to their U direction; texture
+semantics participate in material grouping so equal colors cannot drop a texture.
 
 Growth review: this expansion changes no bootstrap or native host behavior.
-NerisTown has 337 lines and NerisTownParty 396. Appearance, assets, crystals,
+NerisTown has 338 lines and NerisTownParty 406. Appearance, assets, crystals,
 districts, map, navigation and trees remain below 300 lines each. Generated layout
-data grows to 1,019 formatted lines for the expanded placement inventory; it owns
+data grows to 1,023 formatted lines for the expanded placement inventory; it owns
 no feature algorithms. Profiles adds Arin's named TownIdle registration and asset
 fingerprint. Existing no-growth baselines, architecture checks, thresholds and
 exclusions are unchanged. The importer preserves Arin's ten previous clips and
 migrates the accepted calibration by name, keeping all 24 authored keys.
 Native scene checks cover loading/drawing/cleanup, water arguments, camera bounds,
 map coordinates, Run/Walk transitions and allocation-free leaf recycling.
+
+### September 26: town motion, fixed lens and royal geometry
+
+Town-only private Arin/Orin/Mira GLBs replace only Walk/Run with retargeted Zara
+unarmed tracks. `ViewerActors.LoadContext` accepts an optional asset path; profiles,
+rig/equipment identity, combat clips and authoritative calibration stay unchanged.
+The town presentation owner skips combat wrist corrections during locomotion.
+`scripts/retarget-town-locomotion.py` owns anatomical retargeting;
+`character-motion-data.py` owns GLB sampling, body measurement and variant writing.
+
+`ArenaCamera3D.ComposeDistance` reuses orbit/pan and zoom easing, fixing the caller’s
+lens and moving the camera between explicit distance bounds. `ArenaViewport3D`
+selects it only when its owner sets a valid distance range; existing consumers keep
+their previous behavior. Neris chooses 32 degrees and 80–8,500 units in both modes.
+
+`paving_grid.py` owns the shared two-meter rectangle-union grid and deterministic
+tile tones; `align_paving.py` applies it to old streets, new roads and bridges.
+`castle_architecture.py` owns the detailed royal exterior. `royal_terrain.py` cuts
+the moat out of the ground and slab and lowers its blue bed. The exporter omits the
+duplicate static moat surface: the native water effect alone draws its surface.
+This separates it from the bed by 6.35 world units. The 105-static-part guard stays.
+
+Focused native acceptance covers the raised entrance stairs, 31 chunks, four actors,
+129/512 materials, 127/128 meshes, map delay/heading, common camera zoom range,
+named locomotion transitions, 24 accepted Arin keys and resource destruction.
+The mesh pool has only one free slot; further geometry should be consolidated
+within the present exporter guard. No threshold, exclusion or baseline was raised.
+Sin confirmed that the restored lighting looks normal and the moat no longer
+flickers. Final interactive review of the retargeted gaits and minimap cone remains
+available in the rebuilt native Viewer; the native resource/behavior checks pass.
 
 ## Native battle planning and presentation
 

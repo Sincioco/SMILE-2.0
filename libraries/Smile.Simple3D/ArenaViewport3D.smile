@@ -19,6 +19,8 @@ Public Type State
     GridVisible As Boolean
     BackgroundIndex As Number
     WorldScale As Double
+    MinimumDistance As Double
+    MaximumDistance As Double
     PreviousTime As Number
     Ready As Boolean
 End Type
@@ -75,8 +77,14 @@ End Sub
 ''' BaseCamera describes the intended reset framing, independent of the zoom slider offset.
 Public Sub ComposeCamera(ByRef Value As State, BaseCamera As P.Camera3D)
 
-    BaseCamera.FovDegrees = BaseCamera.FovDegrees - ToDouble(Motion.DEFAULT_ZOOM)
-    Value.LiveCamera = Motion.Compose(BaseCamera, Value.Controls)
+    If Value.MinimumDistance > 0.0 And Value.MaximumDistance > Value.MinimumDistance Then
+        Value.LiveCamera = Motion.ComposeDistance(BaseCamera, Value.Controls,
+            Value.MinimumDistance, Value.MaximumDistance)
+    Else
+
+        BaseCamera.FovDegrees = BaseCamera.FovDegrees - ToDouble(Motion.DEFAULT_ZOOM)
+        Value.LiveCamera = Motion.Compose(BaseCamera, Value.Controls)
+    End If
 
     If Value.FloorVisible Then
         Call Camera.KeepCameraAboveGround(Value.LiveCamera, ToDouble(Value.Floor.FloorHeight + 1))

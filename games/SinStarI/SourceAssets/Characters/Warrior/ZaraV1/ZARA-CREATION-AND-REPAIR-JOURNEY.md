@@ -119,3 +119,11 @@ The descriptor exposes a generic Head socket on the verified existing head bone.
 The Party camera editor queries that animated socket through Character3D and lets
 the user offset/resize its framing box independently of pose calibration. This is
 attachment metadata only; the GLB, materials, animations and grounding are unchanged.
+
+## September 26: source for unarmed town movement
+
+Sin selected Zara’s WalkUnarmed and RunUnarmed as the source for Arin, Orin and
+Mira’s town-only variants. `scripts/retarget-town-locomotion.py` reads the unchanged
+private Zara animation GLB and writes local licensed derivatives in each recipient’s
+canonical package. Neither Zara’s rig/animation nor her usual Viewer tab changes.
+See each recipient’s `town-locomotion-retarget.json` for hashes/contact measurements.

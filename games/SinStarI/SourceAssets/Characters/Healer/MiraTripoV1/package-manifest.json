@@ -115,5 +115,13 @@
     "Source/victory-import.json"
   ],
   "checksumInventory": "checksums.sha256",
-  "heldWork": "All Web adoption/publication and Chrome acceptance remain on hold."
+  "heldWork": "All Web adoption/publication and Chrome acceptance remain on hold.",
+  "townLocomotion": {
+    "model": "Private/TownLocomotion/Mira-Town.glb",
+    "report": "Source/town-locomotion-retarget.json",
+    "builder": "scripts/retarget-town-locomotion.py",
+    "sourceMotion": "ZaraV1 WalkUnarmed / RunUnarmed",
+    "distribution": "Local licensed derivative; not committed",
+    "scope": "Native Neris Town only"
+  }
 }

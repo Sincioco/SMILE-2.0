@@ -73,5 +73,13 @@
     "acceptedDeathRepair": "scripts/repair-orin-death-root.py",
     "acceptedJumpAttackRepair": "scripts/repair-orin-jump-attack-grounding.py",
     "townWalkBuilder": "scripts/add-orin-town-walk.py"
+  },
+  "townLocomotion": {
+    "model": "Private/TownLocomotion/Orin-Town.glb",
+    "report": "Calibration/town-locomotion-retarget.json",
+    "builder": "scripts/retarget-town-locomotion.py",
+    "sourceMotion": "ZaraV1 WalkUnarmed / RunUnarmed",
+    "distribution": "Local licensed derivative; not committed",
+    "scope": "Native Neris Town only"
   }
 }

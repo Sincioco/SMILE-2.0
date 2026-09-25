@@ -102,6 +102,16 @@ Public Function CanStand(X As Double, Z As Double) As Boolean
 
     ' Headquarters walls, rear command hall/barracks and central flag dais.
 
+    ' Raised side gardens are decorative; the central entrance stair is walkable.
+
+    If (InBox(X, Z, -660.0, 1223.0, 46.0, 110.0) Or
+        InBox(X, Z, -300.0, 1223.0, 46.0, 110.0) Or
+        InBox(X, Z, -720.0, 1313.0, 46.0, 110.0) Or
+        InBox(X, Z, -240.0, 1313.0, 46.0, 110.0) Or
+        InBox(X, Z, -480.0, 1285.0, 580.0, 8.0)) Then
+        Return False
+    End If
+
     If (InBox(X, Z, 290.0, 1250.0, 16.0, 660.0) Or
         InBox(X, Z, 1030.0, 1250.0, 16.0, 660.0) Or
         InBox(X, Z, 660.0, 1580.0, 740.0, 16.0) Or
@@ -142,6 +152,12 @@ Public Function GroundHeight(X As Double, Z As Double) As Double
         Z > 775.0 And
         Z < 1010.0) Then
         Result = 23.8
+    End If
+
+    If (Abs(X + 480.0) < 37.5 And
+        Z >= 1188.05 And
+        Z < 1281.95) Then
+        Result = 21.0 + Clamp(Floor((Z - 1188.05) / 3.6) + 1.0, 1.0, 26.0) * 2.5
     End If
 
     If (X > 410.0 And

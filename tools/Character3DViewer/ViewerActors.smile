@@ -172,13 +172,19 @@ Public Sub Apply(Value As Context, ByRef Actor As Character3D.Actor,
 
 End Sub
 
-Public Function LoadContext(ProfileIndex As Number, KeyBase As Number) As Context
+Public Function LoadContext(ProfileIndex As Number, KeyBase As Number,
+    Optional AssetPath As Text = "") As Context
 
     Dim Bounds As Character3D.Bounds3D
     Dim Profile As CharacterViewer.Profile
     Dim Result As Context
 
     Profile = ViewerProfiles.ProfileAt(ProfileIndex)
+
+    If AssetPath <> "" Then
+        Profile.AssetPath = AssetPath
+    End If
+
     Result.Profile = ProfileIndex
     Result.KeyBase = KeyBase
     Result.Clip = 0

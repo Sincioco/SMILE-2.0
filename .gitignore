@@ -19,3 +19,9 @@ artifacts/
 tools/Character3DViewer/Assets/Audio/zara-*.wav
 tools/Character3DViewer/Assets/Battle/
 tools/Character3DViewer/Character3DViewer.BattleTests.smileproj
+# Town motion derives from the locally licensed Zara source animation package.
+games/SinStarI/SourceAssets/Characters/Paladin/ArinV57/Private/TownLocomotion/
+games/SinStarI/SourceAssets/Characters/Tank/OrinV13/Private/TownLocomotion/
+games/SinStarI/SourceAssets/Characters/Healer/MiraTripoV1/Private/TownLocomotion/
+# Generated Python import cache from asset-authoring scripts.
+scripts/__pycache__/

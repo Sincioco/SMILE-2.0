@@ -42,7 +42,7 @@ static double smile_3d_viewport_height(void) {
 #define SMILE_3D_MAX_MESHES 128
 #define SMILE_3D_MAX_OBJECTS 1024
 #define SMILE_3D_MAX_TEXTURES 128
-#define SMILE_3D_MAX_MATERIALS 128
+#define SMILE_3D_MAX_MATERIALS 512
 #define SMILE_3D_MAX_MODELS 64
 #define SMILE_3D_MAX_MODEL_PARTS 16
 #define SMILE_3D_MAX_MODEL_VERTICES 131072
@@ -1013,14 +1013,17 @@ static float smile_3d_degrees(long long degrees)
 
 static long long smile_3d_handle(long long kind, int slot, unsigned short generation)
 {
+    // Materials reserve nine slot bits for the 512-entry pool. Handles are opaque.
+    if (kind == SMILE_3D_MATERIAL_HANDLE)
+        return kind | ((long long)generation << 9) | (long long)slot;
     return kind | ((long long)generation << 8) | (long long)(slot + 1);
 }
 
 static long long smile_3d_object_handle(int slot, unsigned short generation)
 {
     /* Objects own a 1,024-entry pool, so their generation-safe handle reserves
-       ten low bits for the zero-based slot. Other resource pools remain at 128 or fewer and
-       retain their existing eight-bit layout. */
+       ten low bits for the zero-based slot. Materials use nine bits; the remaining
+       resource pools retain their existing eight-bit layout. */
     return SMILE_3D_OBJECT_HANDLE | ((long long)generation << 10) | (long long)slot;
 }
 
@@ -1065,8 +1068,8 @@ static SmileMaterial3D* smile_3d_material(long long handle)
     int slot;
     unsigned short generation;
     if ((handle & SMILE_3D_HANDLE_KIND) != SMILE_3D_MATERIAL_HANDLE) return 0;
-    slot = (int)(handle & 255LL) - 1;
-    generation = (unsigned short)((handle >> 8) & 65535LL);
+    slot = (int)(handle & 511LL);
+    generation = (unsigned short)((handle >> 9) & 65535LL);
     if (slot < 0 || slot >= SMILE_3D_MAX_MATERIALS || !smile_materials3d[slot].active ||
         smile_materials3d[slot].generation != generation) return 0;
     return &smile_materials3d[slot];

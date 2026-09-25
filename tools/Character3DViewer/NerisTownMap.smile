@@ -8,7 +8,9 @@ Import Smile.Simple3D.Precision3D As P
 Public Type State
     Backing As Image
     Marker As Image
+    Headlight As Image
     Opacity As Double
+    HoldRemaining As Number
 End Type
 
 Public Function Create(ByRef Value As State) As Boolean
@@ -17,7 +19,8 @@ Public Function Create(ByRef Value As State) As Boolean
 
     Load Image Value.Backing From "Assets/Neris/Neris-Minimap.png"
     Load Image Value.Marker From "Assets/Neris/Neris-Minimap-Arin.png"
-    Ok = Image_Loaded(Value.Backing) And Image_Loaded(Value.Marker)
+    Load Image Value.Headlight From "Assets/Neris/Neris-Minimap-Heading.png"
+    Ok = Image_Loaded(Value.Backing) And Image_Loaded(Value.Marker) And Image_Loaded(Value.Headlight)
 
     Return Ok
 
@@ -25,10 +28,19 @@ End Function
 
 Public Sub Update(ByRef Value As State, Moving As Boolean, Elapsed As Number)
 
+    Dim FadeElapsed As Number
+
     If Moving Then
-        Value.Opacity = Min(100.0, Value.Opacity + ToDouble(Elapsed) * 0.5)
+
+        Value.HoldRemaining = 10000
+        Value.Opacity = Min(80.0, Value.Opacity + ToDouble(Elapsed) * 0.4)
+
     Else
-        Value.Opacity = Max(0.0, Value.Opacity - ToDouble(Elapsed) * 0.125)
+
+        FadeElapsed = Max(0, Elapsed - Value.HoldRemaining)
+        Value.HoldRemaining = Max(0, Value.HoldRemaining - Elapsed)
+        Value.Opacity = Max(0.0, Value.Opacity - ToDouble(FadeElapsed) * 0.1)
+
     End If
 
 End Sub
@@ -53,7 +65,18 @@ Public Function MapY(WorldZ As Double, Origin As Number, Size As Number) As Numb
 
 End Function
 
-Public Sub Draw(ByRef Value As State, Position As P.Vector3)
+Public Function HeadingFrame(Yaw As Double) As Number
+
+    Dim Result As Number
+
+    ' Actors face -Z at zero yaw; the north-up sheet starts at +Z.
+    Result = ToNumber(Round((Yaw + 540.0) / 5.0)) Mod 72
+
+    Return Result
+
+End Function
+
+Public Sub Draw(ByRef Value As State, Position As P.Vector3, Yaw As Double)
 
     Dim X As Number
     Dim Y As Number
@@ -62,6 +85,9 @@ Public Sub Draw(ByRef Value As State, Position As P.Vector3)
     Dim Opacity As Number
     Dim MarkerX As Number
     Dim MarkerY As Number
+    Dim Frame As Number
+    Dim SourceX As Number
+    Dim SourceY As Number
 
     Opacity = ToNumber(Value.Opacity)
 
@@ -75,8 +101,12 @@ Public Sub Draw(ByRef Value As State, Position As P.Vector3)
     Y = 104
     MarkerX = MapX(Position.X, X + Width * 30 / 900, Width * 840 / 900)
     MarkerY = MapY(Position.Z, Y + Height * 90 / 1080, Height * 940 / 1080)
+    Frame = HeadingFrame(Yaw)
+    SourceX = (Frame Mod 12) * 96
+    SourceY = (Frame / 12) * 96
 
     Draw Image Value.Backing At X, Y Size Width By Height Opacity Opacity Filter Smooth
+    Draw Image Value.Headlight From SourceX, SourceY Size 96 By 96 At MarkerX - 28, MarkerY - 28 Size 56 By 56 Opacity Opacity Filter Smooth
     Draw Image Value.Marker At MarkerX - 5, MarkerY - 5 Size 10 By 10 Opacity Opacity Filter Smooth
 
 End Sub
@@ -85,8 +115,10 @@ Public Sub Destroy(ByRef Value As State)
 
     Unload Image Value.Backing
     Unload Image Value.Marker
+    Unload Image Value.Headlight
 
     Value.Opacity = 0.0
+    Value.HoldRemaining = 0
 
 End Sub
 

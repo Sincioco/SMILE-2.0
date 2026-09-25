@@ -242,9 +242,11 @@ use the union of one grid, avoiding overlapping coplanar tile surfaces.
 
 `expansion_architecture.py` owns shared architectural parts;
 `residential_expansion.py` owns the three home templates; `royal_district.py`
-owns castle/HQ exteriors; `expand_town.py` owns placement and non-overlapping paving.
+owns HQ exteriors and delegates the castle to `castle_architecture.py`.
+`royal_terrain.py` cuts the moat and colors its lowered bed. `expand_town.py` owns
+placement; `paving_grid.py` and `align_paving.py` align all roads and crossings.
 `expansion-layout.json` records footprint, roads, home lots and landmark locations.
-`render_minimap.ps1` uses Windows System.Drawing for the map and alpha marker.
+`render_minimap.ps1` uses Windows System.Drawing for the map, alpha marker and 72-frame facing cone.
 
 Run installed Blender in background with `Blend/Neris-Town-Detailed.blend` loaded
 and `--python-exit-code 1 --python Source/expand_town.py`. Then open the resulting
@@ -253,10 +255,12 @@ expanded file in background and run `Source/export_native.py` followed by
 the native Viewer build. Run these sequentially; the compiler may lock source
 files while the placement exporter writes generated data.
 
-The native export contains 28 static chunks / 100 parts / 2,776,669 triangles and
-53 unique material groups. Two shared tree templates supply 73 placements (292
+The native export contains 31 static chunks / 104 parts / 2,930,985 triangles and
+56 unique material groups. Two shared tree templates supply 73 placements (292
 part objects); a ten-leaf pool adds one reusable mesh. The manifest records current
-source/export hashes. No renderer capacity was increased. Water uses five paired
+source/export hashes. Native material capacity is now 512, as authorized by Sin;
+mesh/model capacities are unchanged. The complete scene uses 127/128 meshes and
+129/512 materials. Water uses five paired
 surface/refraction batches: two canals, two fountains and one closed moat strip.
 
 The Viewer starts with Floor and Grid off. O resumes a cinematic orbit; mouse pan,
@@ -267,7 +271,7 @@ These are exterior inspection models; interiors and NPC interactions remain outs
 
 ### Expansion validation
 
-The native build and `scripts/test-neris-town.ps1` pass with all 28 static chunks,
+The native build and `scripts/test-neris-town.ps1` pass with all 31 static chunks,
 four party actors and the published minimap images. Focused checks cover district
 collision, moat and gate routes, paving heights, water geometry, Floor/Grid
 defaults, O input, follower gathering, map projection/fading and resource cleanup.
@@ -279,3 +283,52 @@ Manual native inspection covers startup, the expanded scene, relaxed Arin idle,
 pan, zoom in/out and O restoring cinematic orbit. Saved Blender previews show all three neighborhoods, the royal
 district and the open City Hall approach. Movement-driven map fading is covered
 by the real-asset scene check. Web validation remains on hold.
+
+### Lawn detail
+
+`Source/detail_grass.py` creates seamless 1024-pixel grass color and normal maps,
+repeated every two meters in Blender and the native export. It scatters 13,000
+short tufts (39,000 modeled blades) on a conservative clearance mask made from
+evaluated scene bounds. Streets, water, buildings and decorative props stay clear.
+Blade heights vary from 12 to 24 cm; two matte greens complement the dense ground
+weave. The fixed geometry needs no runtime spawning or extra shader capability.
+
+`expand_town.py` applies this step automatically. For an existing expanded file,
+run Blender in background with `--python Source/detail_grass.py`, then export the
+native chunks and layout sequentially as above. The 104 static parts remain within
+the existing 105-part guard; do not raise the renderer budget to add more blades.
+See [the lawn close-up](Previews/Neris-Grass-Detail.png).
+
+### September 26 refinements
+
+The castle now has a pointed open gate, lifted portcullis, tiered terraces,
+balustrades, garden stairs, framed lancet windows, decorated towers and bridge
+piers. See [the refined castle](Previews/Neris-Castle-Refined.png). Its central
+entrance stairs have matching native surface heights; raised side gardens are
+decorative collision bounds. The royal moat uses a dark blue bed to imply depth.
+The native export excludes the duplicate static water plane, while the Blender
+scene retains its blue preview water. Terrain no longer passes through the moat.
+
+All original/expanded paths, bridge decks and courts share a two-meter world grid
+with a consistent grout gap and cell color, including intersections. The four
+source castle views also have `_4K.png` companions under `Assets/Towns/Neris`.
+They were restored in local ComfyUI with Kael’s SeedVR2 7B FP16 model, one step,
+CFG 1, Euler/simple and LAB matching; each PNG embeds the workflow and prompt.
+The upload copies are in `Assets/Towns/Neris/Neris Castle`. Lossless RGB encoding
+removes an entirely opaque alpha channel and compresses the embedded metadata.
+All four remain 4K with identical RGB pixels and are below 20,000,000 bytes:
+Front 19,838,814; Back 17,800,400; Left 19,189,729; Right 19,156,932.
+
+Native town input uses WASD/Arrows to move and R to toggle Walk/Run. The 32-degree
+fixed lens uses camera-distance zoom, retaining the full 80–8,500 range after Tab.
+The map reaches 80% opacity, holds ten seconds after movement, and shows a gold
+headlight-shaped facing indicator. A sun, stronger ambient fill and the four local
+lights provide the brighter town presentation. Shader/material ownership remains
+in the existing appearance module.
+
+Focused checks: `scripts/test-neris-paving.py` covers aligned bridge cells and
+non-overlapping intersections; `scripts/test-neris-static-glb.py` covers atomic
+export replacement during a transient Windows file lock. The native material
+fixture fills all 512 slots, tests exhaustion, reuse and stale handles, draws the
+highest slot and releases the pool. Existing Viewer hardening and calibration
+round trips pass; Web remains held.

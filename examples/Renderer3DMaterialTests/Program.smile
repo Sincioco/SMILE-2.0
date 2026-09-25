@@ -187,8 +187,85 @@ If (Graphics3D.LiveMeshCount3D() <> 0 Or
     Failures = Failures + 1
 End If
 
+Call CheckMaterialCapacity()
+
 If Failures = 0 Then
     Print "Renderer3D material tests passed"
 Else
     Print "Renderer3D material tests failed: "; Failures
 End If
+
+Sub CheckMaterialCapacity()
+
+    Dim Pool[512] As Core.Material3D
+    Dim Stale As Core.Material3D
+    Dim Extra As Core.Material3D
+    Dim Cube As Core.Object3D
+    Dim Limit As Number
+    Dim Slot As Number
+    Dim Ok As Boolean
+
+    Limit = Graphics3D.MaximumMaterialCount3D()
+
+    If Limit > 512 Or Limit < 128 Then
+        Failures = Failures + 1
+
+        Return
+    End If
+
+    For Slot = 0 To Limit - 1
+
+        If Slot Mod 2 = 0 Then
+            Pool[Slot] = Graphics3D.CreateEffectMaterial3D(EmptyTexture, Graphics3D.MATERIAL_ALPHA_BLEND)
+        Else
+            Pool[Slot] = Graphics3D.CreatePbrMaterial3D(EmptyTexture, EmptyTexture, EmptyTexture, EmptyTexture)
+        End If
+
+        If Not Graphics3D.MaterialHandleValid3D(Pool[Slot].Handle) Then
+            Failures = Failures + 1
+        End If
+
+    End For
+
+    Extra = Graphics3D.CreateEffectMaterial3D(EmptyTexture, Graphics3D.MATERIAL_ALPHA_BLEND)
+
+    If Extra.Handle <> 0 Or Graphics3D.LiveMaterialCount3D() <> Limit Then
+        Failures = Failures + 1
+    End If
+
+    Stale = Pool[Limit - 1]
+
+    Call Graphics3D.DestroyMaterial3D(Pool[Limit - 1])
+
+    Pool[Limit - 1] = Graphics3D.CreatePbrMaterial3D(EmptyTexture, EmptyTexture, EmptyTexture, EmptyTexture)
+    Cube = Graphics3D.CreateCube3D(36)
+    Ok = Graphics3D.SetObjectMaterial3D(Cube, Pool[Limit - 1])
+
+    If (Not Ok Or
+        Graphics3D.MaterialHandleValid3D(Stale.Handle) Or
+        Not Graphics3D.MaterialHandleValid3D(Pool[Limit - 1].Handle)) Then
+        Failures = Failures + 1
+    End If
+
+    FrameReady = Graphics3D.Begin3D(Graphics3D.DefaultCamera(), 2, 4, 12)
+
+    If FrameReady Then
+        FrameReady = Graphics3D.DrawObject3D(Cube)
+    End If
+
+    If Not FrameReady Then
+        Failures = Failures + 1
+    End If
+
+    Call Graphics3D.End3D()
+    Call Graphics3D.DestroyObject3D(Cube)
+
+    For Slot = 0 To Limit - 1
+        Call Graphics3D.DestroyMaterial3D(Pool[Slot])
+    End For
+
+    If Graphics3D.LiveMaterialCount3D() <> 0 Then
+        Failures = Failures + 1
+    End If
+
+End Sub

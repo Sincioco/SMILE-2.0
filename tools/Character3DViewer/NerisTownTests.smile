@@ -59,6 +59,11 @@ Call Check(Navigation.CanStand(0.0, 20.0), "Former Tower Site Opens City Hall Fo
 Call Check(Not Navigation.CanStand(150.0, 750.0), "Relocated Tower Blocks Walking")
 Call Check(Navigation.CanStand(-480.0, 880.0), "Castle Bridge Is Open")
 Call Check(Navigation.CanStand(-480.0, 970.0), "Castle Gate Is Open")
+Call Check(Navigation.CanStand(-480.0, 1250.0), "Central Castle Stair Is Walkable")
+Call Check(Not Navigation.CanStand(-480.0, 1285.0), "Closed Palace Door Blocks Walking")
+Call Check(Not Navigation.CanStand(-660.0, 1230.0), "Decorative Raised Garden Blocks Walking")
+Call Check(Navigation.GroundHeight(-480.0, 1250.0) > 60.0,
+    "Characters Climb The Central Castle Stair Instead Of Walking Through It")
 Call Check(Not Navigation.CanStand(-600.0, 880.0), "Castle Moat Blocks Walking")
 Call Check(Navigation.CanStand(660.0, 920.0), "Military Gate Is Open")
 Call Check(Navigation.CanStand(500.0, 1150.0), "Parade Ground Is Walkable")

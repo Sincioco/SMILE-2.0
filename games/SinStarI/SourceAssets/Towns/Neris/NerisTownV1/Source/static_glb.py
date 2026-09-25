@@ -3,6 +3,7 @@ from array import array
 import json
 import struct
 import math
+import time
 from pathlib import Path
 
 
@@ -60,16 +61,20 @@ def write(path, batch):
     for index, (name, material, triangles, _) in enumerate(batch):
         positions, normals, tangents, indices, uvs, shared = [], [], [], [], [], {}
         stone = bool(material.get('neris_stone_texture'))
+        grass = bool(material.get('neris_grass_texture'))
         for triangle in triangles:
             for corner in triangle:
                 if corner not in shared:
                     shared[corner] = len(shared)
                     p, n = corner
                     positions.extend((p[0], p[2], -p[1]))
-                    uvs.extend((p[0]/1.8, p[1]/1.8) if stone else (0.0,0.0))
+                    repeat = 2.0 if grass else 1.8
+                    uvs.extend((p[0]/repeat, p[1]/repeat) if stone or grass else (0.0,0.0))
                     nx, ny, nz = n[0], n[2], -n[1]
                     normals.extend((nx, ny, nz))
                     tx, ty, tz = (nz, 0.0, -nx) if abs(ny) < .9 else (0.0, -nz, ny)
+                    if grass and abs(ny) >= .9:
+                        tx, ty, tz = 1.0, 0.0, 0.0
                     length = math.sqrt(tx * tx + ty * ty + tz * tz)
                     tangents.extend((tx / length, ty / length, tz / length, 1.0))
                 indices.append(shared[corner])
@@ -85,6 +90,9 @@ def write(path, batch):
         if stone:
             document['materials'][-1]['pbrMetallicRoughness']['baseColorTexture'] = {'index':texture('Neris-Stone-Grain.png','color')}
             document['materials'][-1]['normalTexture'] = {'index':texture('Neris-Stone-Normal.png','normal'),'scale':.25}
+        if grass:
+            document['materials'][-1]['pbrMetallicRoughness']['baseColorTexture'] = {'index':texture('Neris-Grass-Color.png','color')}
+            document['materials'][-1]['normalTexture'] = {'index':texture('Neris-Grass-Normal.png','normal'),'scale':.55}
         document["meshes"].append({"name": name, "primitives": [{"attributes": attributes,
             "indices": accessor(indices, 1, 5125), "material": index, "mode": 4}]})
         document["nodes"].append({"mesh": index, "name": name})
@@ -99,4 +107,13 @@ def write(path, batch):
     temporary = path.with_suffix('.glb.tmp')
     temporary.write_bytes(header + struct.pack("<II", len(encoded), 0x4E4F534A) + encoded
                           + struct.pack("<II", len(binary), 0x004E4942) + binary)
-    temporary.replace(path)
+    # Windows can briefly lock a freshly written GLB during file inspection.
+    # Retain atomic replacement; bounded retries never delete the previous asset.
+    for attempt in range(20):
+        try:
+            temporary.replace(path)
+            break
+        except PermissionError:
+            if attempt == 19:
+                raise
+            time.sleep(.15)

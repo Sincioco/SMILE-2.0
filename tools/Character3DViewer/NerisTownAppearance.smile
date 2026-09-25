@@ -26,7 +26,7 @@ Private Function ApplyLighting() As Boolean
     Dim Ok As Boolean
 
     Ok = G.ClearAdditionalLights3DChecked()
-    Ok = G.SetAmbientLight3D(180, 192, 215, 20) And Ok
+    Ok = G.SetAmbientLight3D(200, 215, 235, 38) And Ok
     Ok = G.SetDirectionalLight3D(-40, -65, -25, 255, 237, 214, 260) And Ok
     Ok = G.SetPointLight3D(0, -600, 550, -380, 195, 218, 255, 300, 1800) And Ok
     Ok = G.SetPointLight3D(1, 580, 780, 260, 255, 230, 190, 420, 2200) And Ok
@@ -116,6 +116,7 @@ Private Function BuildSurface(ByRef Batch As Core.RibbonBatch3D, Surface As Numb
 
         Ok = P.SetRibbonPoint(Batch, Index, LeftPoint, RightPoint,
             ToDouble(Index) / ToDouble(Points - 1)) And Ok
+
         Ok = G.SetRibbonPointColor3D(Batch, Index, 255, 255, 255, 100) And Ok
     End For
 

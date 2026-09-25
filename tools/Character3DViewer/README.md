@@ -7,18 +7,26 @@ The native Viewer opens on **Neris Town**. Its 73 trees use branching trunks and
 Gentle breezes now sway the trees regularly. Ten preallocated mesh leaves occasionally
 fall, settle, then fade one at a time before recycling; no objects are created during
 playback. Fourteen planters have sculpted bowls, stems, leaves and layered flowers.
-Dark slate paving contrasts with ivory façades, retaining subtle stone grain,
+Dark slate paving uses one world-aligned two-metre grid across streets, bridges
+and courtyards. It contrasts with ivory façades, retaining subtle stone grain,
 shallow normal detail and a restrained polished sheen.
+The lawns use a seamless grass color/normal texture with jade-to-olive variation,
+plus 13,000 short tufts (39,000 modeled blades). Blades stay clear of streets,
+water and buildings and use fixed geometry with no per-frame spawning.
 
-Town-scale warm/cool lighting gives bronze and teal enamel directional highlights.
+A global warm sun and stronger cool ambient fill light the entire town. The four
+local town lights Sin preferred remain, adding bronze and enamel highlights.
 Canals, fountains and the castle moat use calm native water at 8% ripple strength and one-eighth
-speed. Crystals have faint cyan halos and slow sparkles; 80 door lamps have warm
+speed. Crystals have faint cyan halos and slow sparkles; 82 door lamps have warm
 amber halos centered on their luminous geometry. Depth precision and shader filtering
 address paving, water and highlight shimmer. This uses native PBR lighting, without
 Blender's HDR environment lighting. The upper-right map tracks Arin and labels City
 Hall, Weapon, Armor and Item shops, castle, military HQ and residential districts.
-It fades in while the party moves and fades out over 0.8 seconds after they stop.
-North stays up while the camera orbits.
+It fades in to 80% opacity while the party moves, holds for ten seconds after they stop,
+then fades out over 0.8 seconds. Moving again restarts the hold.
+North stays up while the camera orbits. A soft gold headlight cone shows Arin’s
+facing direction, including his last facing while stopped. A soft gold headlight cone shows Arin’s
+facing direction, including his last facing while stopped.
 
 The **Neris Town** tab reconstructs the accepted Blender town using its evaluated
 geometry: 37 buildings, including a moated royal castle, parade headquarters and
@@ -30,8 +38,8 @@ F and G reveal the enlarged arena beneath the 270 × 302 m town.
 
 | Control | Action |
 | --- | --- |
-| Arrow Keys | Move Arin relative to the camera; start the following view |
-| R / W | Select Run / Walk without moving the party |
+| W / A / S / D or Arrow Keys | Move Arin relative to the camera; start the following view |
+| R | Toggle Walk / Run without moving the party |
 | + / − (Main Keyboard or Numpad) | Increase / decrease locomotion speed by 25 percentage points |
 | Middle Mouse Drag | Orbit; pauses cinematic rotation |
 | Left Mouse Drag | Pan; pauses cinematic rotation |
@@ -49,12 +57,19 @@ Run is the default: 93 1/3 world units per second, one-third faster than the pre
 70. Walk is one-third of Run (31 1/9 units/second). The header starts at 100% of this
 new baseline; +/- adjusts 25–400% until the town is reopened. Leader movement,
 follower catch-up and gait animation scale together; other animation clocks do not.
-Every member uses their own Walk and Run. Orin's new Mixamo Walk was retargeted to
-his accepted bind axes and grounded, while preserving his nine existing clips.
+Arin, Orin and Mira use private town-only Walk/Run variants retargeted from Zara’s
+unarmed locomotion. Their accepted combat models and authored calibration stay intact.
+Orin shares the source forward axis instead of carrying his weapon stance into travel.
+The source motion and derivatives remain local under each versioned package’s
+`Private/TownLocomotion`; rebuild with Blender and `scripts/retarget-town-locomotion.py`.
+Every member uses their own rig. The original Mixamo locomotion remains available
+in the normal character/party tabs; only Neris uses the Zara-derived variants.
 Town equipment is hidden. Arin uses a separate relaxed **TownIdle** with his hands
 at his sides; his existing combat clips and 24 saved pose corrections are preserved.
 Other tabs retain normal equipment and calibration.
 
+Town uses a fixed 32-degree lens. Zoom moves the camera, with the same 80–8,500-unit
+distance range in overview and Tab following, avoiding wide-angle stretching.
 Orbit elevation stays between 10 and 80 degrees. Vertical pan keeps the target at
 least 25 world units high, above the town paving, even when F hides the arena floor.
 This policy applies to both overview and party-follow framing, including close zoom.

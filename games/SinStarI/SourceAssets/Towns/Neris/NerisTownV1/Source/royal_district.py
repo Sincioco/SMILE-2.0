@@ -44,57 +44,8 @@ def curtain(g,w,d,h,gate=9):
 
 
 def create_castle(mats):
-    g=Architecture('Royal Castle of Neris',mats)
-    g.root.location=(-48,127,.13)
-    g.root['Design Reference']='Neris - Castle.png'
-    g.box('Castle Island',(0,0,-.25),(77,64,.5),'trim',.15)
-    curtain(g,74,60,10,10)
-    for x in [-35,35]:
-        for y in [-28,28]: tower(g,x,y,20,2.5)
-    # Tiered palace: wide lower wings, elevated central keep, soaring lantern dome.
-    block(g,'Lower Palace Wings',0,13,58,21,16)
-    block(g,'Upper Palace Terraces',0,14,42,18,26)
-    block(g,'King’s Central Keep',0,13,24,20,43)
-    dome(g,0,13,43.5,12.4,9.5)
-    for x in [-20,20]:
-        for y in [6,21]: tower(g,x,y,31,1.8)
-    for x in [-12,12]:
-        for y in [3,23]: tower(g,x,y,45,1.45)
-    arch(g,0,-2.4,0,.25,6.2,9,True)
-    arch(g,0,-2.85,0,12,8.2,27,glass='roof')
-    star(g,0,-2.8,0,26,2.9,.42)
-    for side,plane,u in [(1,12,13),(2,23,0),(3,12,-13)]:
-        arch(g,side,plane,u,15,7,24,glass='roof')
-    for x in [-25,25]:
-        hip_roof(g,x,13,16.3,9,22,3.2)
-    for x in [-16.5,16.5]:
-        hip_roof(g,x,15,26.3,9,18,3.0)
-    for x in [-25,-17,17,25]:
-        for z in [2,9]: arch(g,0,-2.5,x,z,2.4,5.0)
-    for x in [-16,16]:
-        arch(g,0,-5,x,18,2.8,6)
-    for side in [1,3]:
-        for u in [4,13,22]:
-            for z in [2,9]: arch(g,side,29,u if side==1 else -u,z,2.3,5)
-    for x in [-9,9]: banner(g,0,-2.8,x,39,2.5,16,'')
-    for x in [-27,27]:
-        for y in [-17,-7,1]: cypress(g,x,y,.1,5)
-    for x in [-15,15]:
-        for y in [-18,-7]: planter(g,x,y,.1,1.7)
-    g.cylinder('Royal Fountain Basin',(0,-16,.35),4.2,.7,'trim',40)
-    g.cylinder('Royal Fountain Water',(0,-16,.72),3.6,.08,'water',40)
-    crystal(g,(0,-16,.80),4.2,.8)
-    for x in [-19,19]:
-        balcony(g,x,2.5,16.3,16,1.8)
-    # Level three-span stone bridge over the moat, raised banks and gold rails.
-    g.box('Royal Bridge Deck',(0,-38,.02),(9,22,.26),'pavinglight',.04)
-    for x in [-4.6,4.6]:
-        g.beam('Bridge Gold Handrail',(x,-49,1.25),(x,-27,1.25),.085)
-        for y in [-48,-44,-40,-36,-32,-28]:
-            g.beam('Bridge Baluster',(x,y,.16),(x,y,1.25),.045,'iron')
-    for y in [-44,-37,-30]:
-        g.box('Bridge Pier',(0,y,-.55),(8.8,.7,1.1),'stone',.03)
-    return g
+    from castle_architecture import create
+    return create(mats, curtain)
 
 
 def create_headquarters(mats):
