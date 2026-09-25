@@ -1,0 +1,23 @@
+{
+  "source_objects": 1685,
+  "triangles": 370342,
+  "source_triangles_before_cleanup": 370840,
+  "export_material_groups": 19,
+  "bounds_min": [
+    -11.199999809265137,
+    -9.239999771118164,
+    0.0
+  ],
+  "bounds_max": [
+    11.199999809265137,
+    8.149999618530273,
+    18.940000534057617
+  ],
+  "name": "Neris-City-Hall",
+  "dimensions_design": {
+    "width": 24,
+    "depth": 20,
+    "height": 19.15
+  },
+  "reference": "Neris City Hall.png"
+}

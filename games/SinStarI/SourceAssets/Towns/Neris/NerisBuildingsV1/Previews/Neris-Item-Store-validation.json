@@ -1,0 +1,23 @@
+{
+  "source_objects": 1149,
+  "triangles": 261446,
+  "source_triangles_before_cleanup": 261796,
+  "export_material_groups": 22,
+  "bounds_min": [
+    -6.654999732971191,
+    -5.630000114440918,
+    0.0
+  ],
+  "bounds_max": [
+    6.654999732971191,
+    5.208249568939209,
+    12.229999542236328
+  ],
+  "name": "Neris-Item-Store",
+  "dimensions_design": {
+    "width": 13.6,
+    "depth": 11.8,
+    "height": 12.3
+  },
+  "reference": "Neris - Item Store.png"
+}

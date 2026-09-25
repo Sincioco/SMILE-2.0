@@ -1,0 +1,155 @@
+{
+  "blender": "5.2.1 LTS",
+  "models": [
+    {
+      "model": "Neris-Armor-Store",
+      "status": "PASS",
+      "triangles": 254170,
+      "material_groups": 21,
+      "glb_bytes": 9166812,
+      "glb_sha256": "d518626a6ef3e0350a1cb6fbe722af45b73d95d3774fd3d9b02f2ed943fcfacf",
+      "blend_sha256": "df90cb3b6794605e26ec91596bb0ca972938b15b22529b613272cb7339741a0d",
+      "reference_sha256": "6c76fd126b2929a0a0565661166463427e266d417d6a8925e6a13d30cf33f411",
+      "bounds_min_xyz_m": [
+        -6.654999732971191,
+        -5.630000114440918,
+        -0.004999995231628418
+      ],
+      "bounds_max_xyz_m": [
+        6.730000019073486,
+        5.260000228881836,
+        12.229999542236328
+      ],
+      "checks": [
+        "Blend reload",
+        "Packed reference matches original",
+        "Metric units",
+        "GLB independent import",
+        "Triangle count preserved",
+        "Bounds preserved within 1 mm",
+        "No camera or light exported",
+        "Finite coordinates and assigned materials"
+      ]
+    },
+    {
+      "model": "Neris-City-Hall",
+      "status": "PASS",
+      "triangles": 370342,
+      "material_groups": 19,
+      "glb_bytes": 15274656,
+      "glb_sha256": "df8058ac2ee1843ceb6211e10e1d7d53b77b4012cccec096f244b528a64b0dea",
+      "blend_sha256": "296c07baa8658c106b0191db9930ef7445ebdc98bd5e4dec177dba03f9208330",
+      "reference_sha256": "ce4763b9a339e9eb1f7489651a5add2d969f3ec6c5149f2100874dfcda6e45ef",
+      "bounds_min_xyz_m": [
+        -11.199999809265137,
+        -9.239999771118164,
+        0.0
+      ],
+      "bounds_max_xyz_m": [
+        11.199999809265137,
+        8.149999618530273,
+        18.940000534057617
+      ],
+      "checks": [
+        "Blend reload",
+        "Packed reference matches original",
+        "Metric units",
+        "GLB independent import",
+        "Triangle count preserved",
+        "Bounds preserved within 1 mm",
+        "No camera or light exported",
+        "Finite coordinates and assigned materials"
+      ]
+    },
+    {
+      "model": "Neris-Communication-Tower",
+      "status": "PASS",
+      "triangles": 184192,
+      "material_groups": 14,
+      "glb_bytes": 5347136,
+      "glb_sha256": "c210eed8567c6e593702ebccc2ddd900018c4221ea920e652ad73dd8ec2ade27",
+      "blend_sha256": "4d33e4f1d63403d13da3af9c098019b86ee4b84050a23f179375d6e0a8ae1f90",
+      "reference_sha256": "a1f005961403b696a8a75db0bcd60a8d4189b698601e8e081dccc8899e72ca94",
+      "bounds_min_xyz_m": [
+        -6.552745819091797,
+        -5.960000038146973,
+        0.0
+      ],
+      "bounds_max_xyz_m": [
+        6.552745819091797,
+        5.687376022338867,
+        25.0
+      ],
+      "checks": [
+        "Blend reload",
+        "Packed reference matches original",
+        "Metric units",
+        "GLB independent import",
+        "Triangle count preserved",
+        "Bounds preserved within 1 mm",
+        "No camera or light exported",
+        "Finite coordinates and assigned materials"
+      ]
+    },
+    {
+      "model": "Neris-Item-Store",
+      "status": "PASS",
+      "triangles": 261446,
+      "material_groups": 22,
+      "glb_bytes": 9354596,
+      "glb_sha256": "0f8f617c112a3453b272f7a7c726503e8940d00f82e509e408310b4c89cad45d",
+      "blend_sha256": "09165709cd6f787a447eaac8f2cbc8dbf3d26d3ee5d9d664de526c952626e441",
+      "reference_sha256": "8fbc0fbe2e1d31f42d972ab29e9d4743ef885a2ebe7662b6f4a7f9aa733d3127",
+      "bounds_min_xyz_m": [
+        -6.654999732971191,
+        -5.630000114440918,
+        0.0
+      ],
+      "bounds_max_xyz_m": [
+        6.654999732971191,
+        5.208249568939209,
+        12.229999542236328
+      ],
+      "checks": [
+        "Blend reload",
+        "Packed reference matches original",
+        "Metric units",
+        "GLB independent import",
+        "Triangle count preserved",
+        "Bounds preserved within 1 mm",
+        "No camera or light exported",
+        "Finite coordinates and assigned materials"
+      ]
+    },
+    {
+      "model": "Neris-Weapon-Store",
+      "status": "PASS",
+      "triangles": 251804,
+      "material_groups": 21,
+      "glb_bytes": 9135824,
+      "glb_sha256": "d06a975315b3c424b58e340a917434bff98a85bddfb1012c1cbcde2efd82b0f2",
+      "blend_sha256": "d630b1f4159e2aedf4d8af8d2935bdea030029d351542e22ea40fa1e39df911b",
+      "reference_sha256": "52f07c02929232d22df1876ba563baf2b91bfb4d5c84f56c79b34d747904a1b4",
+      "bounds_min_xyz_m": [
+        -6.654999732971191,
+        -5.630000114440918,
+        -0.004999995231628418
+      ],
+      "bounds_max_xyz_m": [
+        6.654999732971191,
+        5.210000038146973,
+        12.229999542236328
+      ],
+      "checks": [
+        "Blend reload",
+        "Packed reference matches original",
+        "Metric units",
+        "GLB independent import",
+        "Triangle count preserved",
+        "Bounds preserved within 1 mm",
+        "No camera or light exported",
+        "Finite coordinates and assigned materials"
+      ]
+    }
+  ]
+}

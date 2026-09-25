@@ -1,0 +1,23 @@
+{
+  "source_objects": 474,
+  "triangles": 184192,
+  "source_triangles_before_cleanup": 184508,
+  "export_material_groups": 14,
+  "bounds_min": [
+    -6.552745819091797,
+    -5.960000038146973,
+    0.0
+  ],
+  "bounds_max": [
+    6.552745819091797,
+    5.687376022338867,
+    25.0
+  ],
+  "name": "Neris-Communication-Tower",
+  "dimensions_design": {
+    "width": 14.9,
+    "depth": 12.3,
+    "height": 25.1
+  },
+  "reference": "Neris - Communication Tower.png"
+}

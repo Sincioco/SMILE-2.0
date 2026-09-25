@@ -1,0 +1,23 @@
+{
+  "source_objects": 1029,
+  "triangles": 254170,
+  "source_triangles_before_cleanup": 254576,
+  "export_material_groups": 21,
+  "bounds_min": [
+    -6.654999732971191,
+    -5.630000114440918,
+    -0.004999995231628418
+  ],
+  "bounds_max": [
+    6.730000019073486,
+    5.260000228881836,
+    12.229999542236328
+  ],
+  "name": "Neris-Armor-Store",
+  "dimensions_design": {
+    "width": 13.6,
+    "depth": 11.8,
+    "height": 12.3
+  },
+  "reference": "Neris - Armor Store.png"
+}
