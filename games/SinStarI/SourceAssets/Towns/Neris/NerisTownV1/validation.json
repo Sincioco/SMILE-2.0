@@ -1,0 +1,323 @@
+{
+  "status": "PASS",
+  "blender_version": "5.2.1 LTS",
+  "scene_objects": 446,
+  "building_count": 13,
+  "unique_mesh_triangles_before_modifiers_and_instancing": 1377934,
+  "building_footprint_overlaps": [],
+  "reachable_grid_cells": 6089,
+  "route_check_scope": "1 m plan grid, building bounds and canal crossings only; not runtime navigation.",
+  "buildings": [
+    {
+      "name": "Neris-City-Hall",
+      "bounds": [
+        [
+          -11.199999809265137,
+          16.760000228881836,
+          0.1599999964237213
+        ],
+        [
+          11.199999809265137,
+          34.150001525878906,
+          19.100000381469727
+        ]
+      ],
+      "angle": 0,
+      "approach_point": [
+        0,
+        15
+      ],
+      "approach_reachable": true
+    },
+    {
+      "name": "Neris-Communication-Tower",
+      "bounds": [
+        [
+          -6.552745819091797,
+          -3.9600000381469727,
+          0.1599999964237213
+        ],
+        [
+          6.552745819091797,
+          7.687376022338867,
+          25.15999984741211
+        ]
+      ],
+      "angle": 0,
+      "approach_point": [
+        0,
+        -5
+      ],
+      "approach_reachable": true
+    },
+    {
+      "name": "Neris-Weapon-Store",
+      "bounds": [
+        [
+          26.369998931884766,
+          15.345000267028809,
+          0.19500000774860382
+        ],
+        [
+          37.209999084472656,
+          28.655000686645508,
+          12.429999351501465
+        ]
+      ],
+      "angle": -1.5707963267948966,
+      "approach_point": [
+        25,
+        22
+      ],
+      "approach_reachable": true
+    },
+    {
+      "name": "Neris-Item-Store",
+      "bounds": [
+        [
+          26.369998931884766,
+          -6.654999732971191,
+          0.20000000298023224
+        ],
+        [
+          37.208248138427734,
+          6.65500020980835,
+          12.429999351501465
+        ]
+      ],
+      "angle": -1.5707963267948966,
+      "approach_point": [
+        25,
+        0
+      ],
+      "approach_reachable": true
+    },
+    {
+      "name": "Neris-Armor-Store",
+      "bounds": [
+        [
+          26.369998931884766,
+          -28.729999542236328,
+          0.19500000774860382
+        ],
+        [
+          37.26000213623047,
+          -15.345000267028809,
+          12.429999351501465
+        ]
+      ],
+      "angle": -1.5707963267948966,
+      "approach_point": [
+        25,
+        -22
+      ],
+      "approach_reachable": true
+    },
+    {
+      "name": "Home 01 \u2014 Family House",
+      "bounds": [
+        [
+          -38.19700241088867,
+          20.101322174072266,
+          0.19999998807907104
+        ],
+        [
+          -29.19499969482422,
+          29.8986759185791,
+          9.739999771118164
+        ]
+      ],
+      "angle": 1.5707963267948966,
+      "approach_point": [
+        -28,
+        25
+      ],
+      "approach_reachable": true
+    },
+    {
+      "name": "Home 02 \u2014 Courtyard Cottage",
+      "bounds": [
+        [
+          -37.69700241088867,
+          1.7999999523162842,
+          0.19999998807907104
+        ],
+        [
+          -29.69499969482422,
+          10.199999809265137,
+          7.340000152587891
+        ]
+      ],
+      "angle": 1.5707963267948966,
+      "approach_point": [
+        -28,
+        6
+      ],
+      "approach_reachable": true
+    },
+    {
+      "name": "Home 03 \u2014 Garden Pavilion",
+      "bounds": [
+        [
+          -37.92000198364258,
+          -17.920000076293945,
+          0.19999998807907104
+        ],
+        [
+          -29.295000076293945,
+          -10.079999923706055,
+          9.100000381469727
+        ]
+      ],
+      "angle": 1.5707963267948966,
+      "approach_point": [
+        -28,
+        -14
+      ],
+      "approach_reachable": true
+    },
+    {
+      "name": "Home 04 \u2014 Family House",
+      "bounds": [
+        [
+          -38.19700241088867,
+          -37.898677825927734,
+          0.19999998807907104
+        ],
+        [
+          -29.19499969482422,
+          -28.1013240814209,
+          9.739999771118164
+        ]
+      ],
+      "angle": 1.5707963267948966,
+      "approach_point": [
+        -28,
+        -33
+      ],
+      "approach_reachable": true
+    },
+    {
+      "name": "Home 05 \u2014 Courtyard Cottage",
+      "bounds": [
+        [
+          -40.19999694824219,
+          34.69499969482422,
+          0.19999998807907104
+        ],
+        [
+          -31.80000114440918,
+          42.69700241088867,
+          7.340000152587891
+        ]
+      ],
+      "angle": 0,
+      "approach_point": [
+        -36,
+        33
+      ],
+      "approach_reachable": true
+    },
+    {
+      "name": "Home 06 \u2014 Garden Pavilion",
+      "bounds": [
+        [
+          -23.920000076293945,
+          30.295000076293945,
+          0.19999998807907104
+        ],
+        [
+          -16.079999923706055,
+          38.92000198364258,
+          9.100000381469727
+        ]
+      ],
+      "angle": 0,
+      "approach_point": [
+        -20,
+        29
+      ],
+      "approach_reachable": true
+    },
+    {
+      "name": "Home 07 \u2014 Family House",
+      "bounds": [
+        [
+          27.1013240814209,
+          32.19499969482422,
+          0.19999998807907104
+        ],
+        [
+          36.898677825927734,
+          41.19700241088867,
+          9.739999771118164
+        ]
+      ],
+      "angle": 0,
+      "approach_point": [
+        32,
+        31
+      ],
+      "approach_reachable": true
+    },
+    {
+      "name": "Home 08 \u2014 Courtyard Cottage",
+      "bounds": [
+        [
+          27.30299949645996,
+          -40.20000076293945,
+          0.19999998807907104
+        ],
+        [
+          35.30500030517578,
+          -31.80000114440918,
+          7.340000152587891
+        ]
+      ],
+      "angle": 1.5707963267948966,
+      "approach_point": [
+        37,
+        -36
+      ],
+      "approach_reachable": true
+    }
+  ],
+  "previews": {
+    "overview": {
+      "size": [
+        1920,
+        1080
+      ],
+      "sha256": "521c3e08a4dff55e2a02706ef1dead40966dc9380632fe7de482a765e5b0e7cd"
+    },
+    "plan": {
+      "size": [
+        1920,
+        1920
+      ],
+      "sha256": "095d7ea4881f620895e2397d497ae6145a36de08a7154838ce017a09c36907ef"
+    },
+    "arrival": {
+      "size": [
+        1920,
+        1080
+      ],
+      "sha256": "8c86b5d207c27e0e5666f506b31b1c8d5185b1eef9c1ec52d3fc4b0ee9a9d6a6"
+    },
+    "market": {
+      "size": [
+        1920,
+        1080
+      ],
+      "sha256": "7cf4c1f03e33df1e14b7ab2e88bc7cfa5d8023a693f73b2dc3e6e666d3229ec6"
+    },
+    "homes": {
+      "size": [
+        1920,
+        1080
+      ],
+      "sha256": "4b22a89416de07bffd439baf21791c086144e5d8916ffb52efebaf69daa40639"
+    }
+  },
+  "blend_sha256": "d67bd21b18c89fc42e7da0bf96fb0a9c0d94338a031bdeeb2fffb66c4940bf99"
+}

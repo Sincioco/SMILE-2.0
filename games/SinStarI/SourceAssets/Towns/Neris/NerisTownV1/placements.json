@@ -1,0 +1,134 @@
+[
+  {
+    "name": "Neris-City-Hall",
+    "location": [
+      0,
+      26,
+      0.16
+    ],
+    "angle": 0,
+    "objects": 19,
+    "source": "Assets/Towns/Neris/ModelsV1/Neris-City-Hall.glb",
+    "sha256": "df8058ac2ee1843ceb6211e10e1d7d53b77b4012cccec096f244b528a64b0dea"
+  },
+  {
+    "name": "Neris-Communication-Tower",
+    "location": [
+      0,
+      2,
+      0.16
+    ],
+    "angle": 0,
+    "objects": 14,
+    "source": "Assets/Towns/Neris/ModelsV1/Neris-Communication-Tower.glb",
+    "sha256": "c210eed8567c6e593702ebccc2ddd900018c4221ea920e652ad73dd8ec2ade27"
+  },
+  {
+    "name": "Neris-Weapon-Store",
+    "location": [
+      32,
+      22,
+      0.2
+    ],
+    "angle": -1.5707963267948966,
+    "objects": 21,
+    "source": "Assets/Towns/Neris/ModelsV1/Neris-Weapon-Store.glb",
+    "sha256": "d06a975315b3c424b58e340a917434bff98a85bddfb1012c1cbcde2efd82b0f2"
+  },
+  {
+    "name": "Neris-Item-Store",
+    "location": [
+      32,
+      0,
+      0.2
+    ],
+    "angle": -1.5707963267948966,
+    "objects": 22,
+    "source": "Assets/Towns/Neris/ModelsV1/Neris-Item-Store.glb",
+    "sha256": "0f8f617c112a3453b272f7a7c726503e8940d00f82e509e408310b4c89cad45d"
+  },
+  {
+    "name": "Neris-Armor-Store",
+    "location": [
+      32,
+      -22,
+      0.2
+    ],
+    "angle": -1.5707963267948966,
+    "objects": 21,
+    "source": "Assets/Towns/Neris/ModelsV1/Neris-Armor-Store.glb",
+    "sha256": "d518626a6ef3e0350a1cb6fbe722af45b73d95d3774fd3d9b02f2ed943fcfacf"
+  },
+  {
+    "name": "Home 01 \u2014 Family House",
+    "location": [
+      -34.0,
+      25.0,
+      0.20000000298023224
+    ],
+    "angle": 1.5707963267948966
+  },
+  {
+    "name": "Home 02 \u2014 Courtyard Cottage",
+    "location": [
+      -34.0,
+      6.0,
+      0.20000000298023224
+    ],
+    "angle": 1.5707963267948966
+  },
+  {
+    "name": "Home 03 \u2014 Garden Pavilion",
+    "location": [
+      -34.0,
+      -14.0,
+      0.20000000298023224
+    ],
+    "angle": 1.5707963267948966
+  },
+  {
+    "name": "Home 04 \u2014 Family House",
+    "location": [
+      -34.0,
+      -33.0,
+      0.20000000298023224
+    ],
+    "angle": 1.5707963267948966
+  },
+  {
+    "name": "Home 05 \u2014 Courtyard Cottage",
+    "location": [
+      -36.0,
+      39.0,
+      0.20000000298023224
+    ],
+    "angle": 0
+  },
+  {
+    "name": "Home 06 \u2014 Garden Pavilion",
+    "location": [
+      -20.0,
+      35.0,
+      0.20000000298023224
+    ],
+    "angle": 0
+  },
+  {
+    "name": "Home 07 \u2014 Family House",
+    "location": [
+      32.0,
+      37.0,
+      0.20000000298023224
+    ],
+    "angle": 0
+  },
+  {
+    "name": "Home 08 \u2014 Courtyard Cottage",
+    "location": [
+      31.0,
+      -36.0,
+      0.20000000298023224
+    ],
+    "angle": 1.5707963267948966
+  }
+]
