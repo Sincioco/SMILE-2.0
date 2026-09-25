@@ -1,0 +1,306 @@
+''' Town actors reuse canonical character assets, grounding and saved calibration.
+Module Smile.Tools.NerisTownParty
+
+Option Explicit
+
+Import Smile.Simple3D.Character3D As Character
+Import Smile.Simple3D.Graphics3D As G
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.PrecisionMath3D As M
+Import Smile.Simple3D.PartyTrail3D As Trail
+Import Smile.Tools.Character3DViewerActors As Actors
+Import Smile.Tools.Character3DViewerProfiles As Profiles
+Import Smile.Tools.Character3DViewerCalibration As Calibration
+Import Smile.Tools.NerisTownNavigation As Navigation
+
+Public Type Member
+    Body As Actors.Context
+    ReferenceScale As Number
+    PositionScale As Double
+    BaseY As Double
+    Previous As P.Vector3
+    Yaw As Double
+    IdleClip As Number
+    WalkClip As Number
+    TravelName As Text
+    TravelRate As Number
+    AnimationRemainder As Number
+    Walking As Boolean
+    SettleTime As Number
+    Visible As Boolean
+End Type
+
+Public Type State
+    Members[5] As Member
+    Keys As Calibration.State
+    Path As Trail.State
+    MemberCount As Number
+    Loaded As Number
+    Ready As Boolean
+    Failed As Boolean
+End Type
+
+Public Function ProfileAt(Index As Number) As Number
+
+    Dim Unassigned As Number
+
+    Select Case Index
+        Case 0
+            Return Profiles.PROFILE_ARIN
+        Case 1
+            Return Profiles.PROFILE_ORIN
+        Case 2
+            Return Profiles.PROFILE_ZARA
+        Case 3
+            Return Profiles.PROFILE_MIRA
+    End Select
+
+    Unassigned = -1
+
+    Return Unassigned
+
+End Function
+
+Public Sub Start(ByRef Value As State)
+
+    Dim Empty As State
+
+    Value = Empty
+    Value.MemberCount = 4
+
+    Call Trail.Reset(Value.Path, P.Vector(0.0, 22.42, -330.0), Value.MemberCount, 22.0)
+
+End Sub
+
+Public Function ClipIndex(Actor As Character.Actor, Name As Text) As Number
+
+    Dim Index As Number
+
+    For Index = 0 To Character.ClipCount(Actor) - 1
+
+        If Character.ClipName(Actor, Index) = Name Then
+            Return Index
+        End If
+
+    End For
+
+    Return 0
+
+End Function
+
+Public Sub LoadNext(ByRef Value As State)
+
+    Dim Index As Number
+    Dim Bounds As Character.Bounds3D
+    Dim Settings As Calibration.ConfigurationResult
+    Dim Ok As Boolean
+
+    If Value.Loaded >= Value.MemberCount Or Value.Failed Then
+        Return
+    End If
+
+    Index = Value.Loaded
+    Value.Members[Index].Body = Actors.LoadContext(ProfileAt(Index), Index * 64)
+    Ok = Value.Members[Index].Body.Ready
+
+    If Ok Then
+
+        Bounds = Character.LocalBounds(Value.Members[Index].Body.Actor)
+        Value.Members[Index].ReferenceScale = Value.Members[Index].Body.Frame.ScalePercent
+        Value.Members[Index].Body.Frame.ScalePercent = ToNumber(Round(2200000.0 / ToDouble(Max(1, Bounds.Size.Y))))
+        Value.Members[Index].PositionScale = ToDouble(Value.Members[Index].Body.Frame.ScalePercent) / ToDouble(Max(1, Value.Members[Index].ReferenceScale))
+        Value.Members[Index].BaseY = Value.Members[Index].Body.Frame.PositionY * Value.Members[Index].PositionScale
+        Ok = Character.SetScale(Value.Members[Index].Body.Actor, Value.Members[Index].Body.Frame.ScalePercent) And Ok
+        Ok = Character.SetRootMotion(Value.Members[Index].Body.Actor, Character.ROOT_MOTION_IGNORE) And Ok
+        Value.Members[Index].IdleClip = ClipIndex(Value.Members[Index].Body.Actor, "Idle")
+        Value.Members[Index].TravelName = "Walk"
+        Value.Members[Index].TravelRate = 100
+
+        If Not Character.HasClip(Value.Members[Index].Body.Actor, "Walk") Then
+            Value.Members[Index].TravelName = "Run"
+            Value.Members[Index].TravelRate = 65
+        End If
+
+        Ok = Character.HasClip(Value.Members[Index].Body.Actor, Value.Members[Index].TravelName) And Ok
+        Value.Members[Index].WalkClip = ClipIndex(Value.Members[Index].Body.Actor, Value.Members[Index].TravelName)
+        Value.Members[Index].Body.Clip = Value.Members[Index].IdleClip
+        Value.Members[Index].Previous = Value.Path.Positions[Index]
+        Ok = Character.PlayAnimation(Value.Members[Index].Body.Actor, "Idle", True) And Ok
+
+        If Index < 2 Then
+
+            Settings = Calibration.ConfigureForActor(Value.Keys, ProfileAt(Index), Index * 64,
+                Value.Members[Index].Body.Actor)
+            Value.Members[Index].Body.CalibrationAvailable = Settings.Available
+            Value.Members[Index].Body.WeaponWrist = Settings.SwordWristNode
+            Value.Members[Index].Body.ShieldWrist = Settings.ShieldWristNode
+
+        End If
+
+    End If
+
+    Value.Loaded = Value.Loaded + 1
+    Value.Failed = Not Ok
+    Value.Ready = Value.Loaded = Value.MemberCount And Not Value.Failed
+
+End Sub
+
+Private Sub Animate(ByRef Value As Member, Moving As Boolean, Elapsed As Number)
+
+    Dim Ok As Boolean
+    Dim Duration As Number
+    Dim AnimationElapsed As Number
+
+    Ok = True
+    AnimationElapsed = Elapsed
+
+    If Moving Or Value.Walking Then
+
+        Value.AnimationRemainder = Value.AnimationRemainder + Elapsed * Value.TravelRate
+        AnimationElapsed = Value.AnimationRemainder / 100
+        Value.AnimationRemainder = Value.AnimationRemainder Mod 100
+
+    End If
+
+    If Moving Then
+
+        If Not Value.Walking Then
+
+            Ok = Character.CrossFade(Value.Body.Actor, Value.TravelName, 120, G.ANIMATION_LOOP)
+            Value.Body.Clip = Value.WalkClip
+            Value.Walking = True
+
+        End If
+
+        Value.SettleTime = -1
+
+    Else If Value.Walking Then
+
+        If Value.SettleTime < 0 Then
+            Duration = Max(1, Character.ClipDuration(Value.Body.Actor, Value.WalkClip))
+            Value.SettleTime = Duration - (Character.AnimationTime(Value.Body.Actor) Mod Duration)
+        End If
+
+        Value.SettleTime = Max(0, Value.SettleTime - AnimationElapsed)
+
+        If Value.SettleTime = 0 Then
+
+            Ok = Character.CrossFade(Value.Body.Actor, "Idle", 160, G.ANIMATION_LOOP)
+            Value.Body.Clip = Value.IdleClip
+            Value.Walking = False
+            Value.SettleTime = 160
+
+        End If
+
+    Else
+        Value.SettleTime = Max(0, Value.SettleTime - Elapsed)
+
+    End If
+
+    Ok = Character.Update(Value.Body.Actor, AnimationElapsed) And Ok
+    Value.Body.Ready = Value.Body.Ready And Ok
+
+End Sub
+
+Private Sub Present(ByRef Value As Member, ByRef Keys As Calibration.State,
+    Position As P.Vector3, Moving As Boolean, Visible As Boolean, Elapsed As Number)
+
+    Dim Delta As P.Vector3
+    Dim Grounded As P.Vector3
+    Dim Applied As Calibration.ApplicationResult
+    Dim Ok As Boolean
+
+    Call Animate(Value, Moving, Elapsed)
+
+    Delta = M.Subtract(Position, Value.Previous)
+
+    If Abs(Delta.X) + Abs(Delta.Z) > 0.00001 Then
+        Value.Yaw = Atan2(Delta.X, Delta.Z) * 180.0 / 3.141592653589793 + 180.0
+    End If
+
+    Value.Previous = Position
+    Value.Body.Frame.PositionX = Position.X
+    Value.Body.Frame.PositionY = Value.BaseY
+    Value.Body.Frame.PositionZ = Position.Z
+    Ok = Actors.ApplyPresentationOffset(Value.Body.Actor, Value.Body.Profile,
+        Value.Body.Clip, Value.Body.Frame)
+    Ok = Character.TryPosition(Value.Body.Actor, Grounded) And Ok
+    Ok = Character.PlacePrecise(Value.Body.Actor, Grounded.X,
+        Grounded.Y + Navigation.GroundHeight(Position.X, Position.Z), Grounded.Z) And Ok
+    Ok = Character.RotatePrecise(Value.Body.Actor, 0.0, Value.Yaw, 0.0) And Ok
+
+    If Value.Body.CalibrationAvailable Then
+
+        Keys.KeyBase = Value.Body.KeyBase
+
+        Call Calibration.Evaluate(Keys, Value.Body.Actor, Value.Body.Clip,
+            Calibration.CurrentAnimationFrame(Value.Body.Actor, Value.Body.Clip), False)
+
+        Ok = Calibration.ApplyWristOffsets(Keys, Value.Body.Actor, Value.Body.Clip,
+            Value.Body.WeaponWrist, Value.Body.ShieldWrist, True) And Ok
+        Applied = Calibration.ApplyEquipmentTransforms(Keys, Value.Body.Actor, Value.Body.Clip,
+            Value.Body.WeaponGlow, Value.Body.ShieldGlow, False, Value.Body.GlowVisible,
+            Value.Yaw - 180.0, Value.PositionScale)
+        Ok = Applied.Ready And Ok
+
+    End If
+
+    Value.Visible = Visible Or Value.Walking Or Value.SettleTime > 0
+    Ok = Character.SetVisible(Value.Body.Actor, Value.Visible) And Ok
+    Value.Body.Ready = Value.Body.Ready And Ok
+
+End Sub
+
+Public Sub Update(ByRef Value As State, Leader As P.Vector3, Elapsed As Number)
+
+    Dim Index As Number
+    Dim Visible As Boolean
+    Dim Separation As Double
+    Dim PreviousSeparation As Double
+
+    Call Trail.Advance(Value.Path, Leader, Elapsed, 42.0)
+
+    For Index = 0 To Value.MemberCount - 1
+
+        Separation = M.Length(M.Subtract(Value.Path.Positions[Index], Leader))
+        PreviousSeparation = M.Length(M.Subtract(Value.Path.Positions[Index],
+            Value.Path.Positions[Max(0, Index - 1)]))
+        Visible = Index = 0 Or (Separation > 7.0 And PreviousSeparation > 7.0)
+
+        Call Present(Value.Members[Index], Value.Keys, Value.Path.Positions[Index],
+            Value.Path.Moving[Index], Visible, Elapsed)
+
+        Value.Ready = Value.Ready And Value.Members[Index].Body.Ready
+    End For
+
+End Sub
+
+Public Function Draw(ByRef Value As State) As Boolean
+
+    Dim Index As Number
+    Dim Result As Boolean
+
+    Result = True
+
+    For Index = 0 To Value.Loaded - 1
+        Result = Character.Draw(Value.Members[Index].Body.Actor) And Result
+    End For
+
+    Return Result
+
+End Function
+
+Public Sub Destroy(ByRef Value As State)
+
+    Dim Index As Number
+
+    For Index = 0 To Value.Loaded - 1
+        Call Actors.Destroy(Value.Members[Index].Body)
+    End For
+
+    Value.Ready = False
+    Value.Loaded = 0
+
+End Sub
+
+End Module

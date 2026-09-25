@@ -1,0 +1,280 @@
+''' Native town scene lifecycle. Static assets, party and navigation have separate owners.
+Module Smile.Tools.NerisTown
+
+Option Explicit
+
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.PrecisionMath3D As M
+Import Smile.Simple3D.PrecisionCamera3D As Camera
+Import Smile.Simple3D.ArenaViewport3D As Arena
+Import Smile.Simple3D.ArenaCamera3D As Motion
+Import Smile.Simple3D.Scene3D As Scene
+Import Smile.Simple3D.Character3D As Character
+Import Smile.Tools.Character3DViewerRendering As Rendering
+Import Smile.Tools.NerisTownAssets As Assets
+Import Smile.Tools.NerisTownParty As Party
+Import Smile.Tools.NerisTownNavigation As Navigation
+
+Public Type State
+    Town As Assets.State
+    People As Party.State
+    View As Arena.State
+    Lighting As Rendering.State
+    BaseCamera As P.Camera3D
+    Cinematic As Boolean
+    Follow As Boolean
+    Ready As Boolean
+    Failed As Boolean
+End Type
+
+Public Sub Start(ByRef Value As State)
+
+    Dim Empty As State
+    Dim Ok As Boolean
+
+    Value = Empty
+    Value.Cinematic = True
+    Value.BaseCamera.UpDirection = P.Vector(0.0, 1.0, 0.0)
+    Value.BaseCamera.NearPlane = 1.0
+    Value.BaseCamera.FarPlane = 5000.0
+    Value.BaseCamera.FovDegrees = 48.0
+    Value.BaseCamera.Target = P.Vector(0.0, 40.0, 0.0)
+    Value.BaseCamera.Position = P.Vector(780.0, 880.0, -1080.0)
+    Ok = Rendering.PrepareAssetLoading(0)
+    Value.Failed = Not Ok
+
+    Call Party.Start(Value.People)
+
+End Sub
+
+Public Sub LoadNext(ByRef Value As State)
+
+    Dim Ok As Boolean
+
+    If Value.Ready Or Value.Failed Then
+        Return
+    End If
+
+    If Value.Town.Loaded < Assets.CHUNK_COUNT Then
+
+        Call Assets.LoadNext(Value.Town)
+
+        Value.Failed = Value.Town.Failed
+
+        Return
+
+    End If
+
+    If Value.People.Loaded < Value.People.MemberCount Then
+
+        Call Party.LoadNext(Value.People)
+
+        Value.Failed = Value.People.Failed
+
+        Return
+
+    End If
+
+    Value.View = Arena.Create(1500, 1400, 2.5)
+    Ok = Rendering.ApplyLighting(Value.Lighting)
+    Ok = Scene.SetShadowArea(0, 110, 0, 1400, 1400, 1, 2200) And Ok
+    Value.Ready = Value.View.Ready And Value.People.Ready And Ok
+    Value.Failed = Not Value.Ready
+
+    Call Party.Update(Value.People, Value.People.Path.Positions[0], 0)
+
+End Sub
+
+Public Sub Input(ByRef Value As State, Key As Number, Blocked As Boolean)
+
+    Dim Pointer As Motion.PointerInput
+
+    If Not Value.Ready Then
+        Return
+    End If
+
+    Pointer = Motion.ReadPointer(Blocked)
+
+    If Not Blocked And (Pointer.OrbitPressed Or Pointer.PanPressed Or Pointer.Wheel <> 0) Then
+        Value.Cinematic = False
+    End If
+
+    If Key = KEY_C Or (Not Blocked And Pointer_Pressed(POINTER_SECONDARY)) Then
+
+        Value.Cinematic = True
+        Value.Follow = False
+
+        Call Motion.Reset(Value.View.Controls, Value.View.Zoom)
+
+    Else If Key = KEY_TAB Then
+
+        Value.Follow = Not Value.Follow
+        Value.Cinematic = False
+
+        Call Motion.Reset(Value.View.Controls, Value.View.Zoom)
+
+    End If
+
+    Call Arena.Update(Value.View, Key, Blocked)
+
+End Sub
+
+Private Function WalkDirection(View As P.Camera3D) As P.Vector3
+
+    Dim Forward As P.Vector3
+    Dim RightValue As P.Vector3
+    Dim Result As P.Vector3
+    Dim X As Double
+    Dim Z As Double
+    Dim Ok As Boolean
+
+    If Key_Held(KEY_W) Or Key_Held(KEY_UP) Then
+        Z = Z + 1.0
+    End If
+
+    If Key_Held(KEY_S) Or Key_Held(KEY_DOWN) Then
+        Z = Z - 1.0
+    End If
+
+    If Key_Held(KEY_D) Or Key_Held(KEY_RIGHT) Then
+        X = X + 1.0
+    End If
+
+    If Key_Held(KEY_A) Or Key_Held(KEY_LEFT) Then
+        X = X - 1.0
+    End If
+
+    Forward = M.Subtract(View.Target, View.Position)
+    Forward.Y = 0.0
+    Ok = M.TryNormalize(Forward, Forward)
+    RightValue = P.Vector(Forward.Z, 0.0, -Forward.X)
+    Result = M.Add(M.Scale(Forward, Z), M.Scale(RightValue, X))
+
+    If M.Length(Result) > 0.001 Then
+        Ok = M.TryNormalize(Result, Result)
+    End If
+
+    Return Result
+
+End Function
+
+Public Sub Update(ByRef Value As State, Elapsed As Number)
+
+    Dim Direction As P.Vector3
+    Dim Leader As P.Vector3
+    Dim Distance As Double
+
+    If Not Value.Ready Then
+        Call LoadNext(Value)
+
+        Return
+    End If
+
+    Direction = WalkDirection(Value.View.LiveCamera)
+    Leader = Value.People.Path.Positions[0]
+
+    If M.Length(Direction) > 0.001 Then
+
+        If Value.Cinematic Then
+
+            Value.Cinematic = False
+            Value.Follow = True
+
+            Call Motion.Reset(Value.View.Controls, Value.View.Zoom)
+
+        End If
+
+        Distance = 35.0 * ToDouble(Elapsed) / 1000.0
+        Leader = Navigation.Move(Leader, Direction.X * Distance, Direction.Z * Distance)
+
+    End If
+
+    Call Party.Update(Value.People, Leader, Elapsed)
+
+    If Value.Cinematic Then
+        Value.View.Controls.OrbitYaw = Camera.NormalizeAngle(Value.View.Controls.OrbitYaw + ToDouble(Elapsed) * 0.0025)
+    End If
+
+    If Value.Follow Then
+        Value.BaseCamera.Target = M.Add(Leader, P.Vector(0.0, 10.0, 0.0))
+        Value.BaseCamera.Position = M.Add(Leader, P.Vector(75.0, 220.0, -140.0))
+    Else
+        Value.BaseCamera.Target = P.Vector(0.0, 40.0, 0.0)
+        Value.BaseCamera.Position = P.Vector(780.0, 880.0, -1080.0)
+    End If
+
+    Call Arena.ComposeCamera(Value.View, Value.BaseCamera)
+
+End Sub
+
+Public Sub Draw(ByRef Value As State)
+
+    Dim Ok As Boolean
+
+    If Not Value.Ready Then
+
+        Clear RGB(12, 20, 32)
+        Draw Text "Neris Town" At 38, 132 Size 32 Color WHITE
+
+        If Value.Failed Then
+
+            Draw Text "The Town Could Not Be Loaded. Select Another Tab To Retry." At 38, 185 Size 18 Color WHITE
+
+        Else
+            Draw Text "Loading Buildings And Party..." At 38, 185 Size 18 Color WHITE
+            Fill Rectangle 38, 226, 520, 10, RGB(40, 52, 65)
+            Fill Rectangle 38, 226, 520 * (Value.Town.Loaded + Value.People.Loaded) / (Assets.CHUNK_COUNT + Value.People.MemberCount), 10, RGB(70, 210, 205)
+
+        End If
+
+        Return
+
+    End If
+
+    Ok = Arena.BeginFrame(Value.View, Value.BaseCamera)
+
+    If Ok Then
+
+        Ok = Arena.Draw(Value.View) And Ok
+        Ok = Assets.Draw(Value.Town) And Ok
+        Ok = Party.Draw(Value.People) And Ok
+        Ok = Scene.EndScene() And Ok
+
+    End If
+
+    Value.Failed = Value.Failed Or Not Ok Or Not Value.People.Ready
+
+End Sub
+
+Public Sub Overlay(ByRef Value As State)
+
+    Fill Rectangle 0, 0, Window_Width(), 94, RGB(12, 20, 32)
+    Draw Text "Neris Town" At 18, 12 Size 23 Color WHITE
+    Draw Text "WASD / Arrows: Walk    Middle Drag: Orbit    Left Drag: Pan    Wheel: Zoom" At 18, Window_Height() - 48 Size 14 Color WHITE
+    Draw Text "F: Floor    G: Grid    B: Background    C / Right Click: Cinematic Overview    Tab: Follow Party" At 18, Window_Height() - 26 Size 14 Color WHITE
+
+    If Value.Ready Then
+
+        If Value.Cinematic Then
+            Draw Text "Cinematic Orbit" At 180, 18 Size 16 Color RGB(70, 210, 205)
+        Else If Value.Follow Then
+            Draw Text "Follow Party" At 180, 18 Size 16 Color RGB(70, 210, 205)
+        End If
+
+    End If
+
+End Sub
+
+Public Sub Destroy(ByRef Value As State)
+
+    Call Party.Destroy(Value.People)
+    Call Assets.Destroy(Value.Town)
+    Call Arena.Destroy(Value.View)
+    Call Character.Shutdown()
+    Call Scene.Shutdown()
+
+    Value.Ready = False
+
+End Sub
+
+End Module

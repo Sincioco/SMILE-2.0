@@ -1,0 +1,76 @@
+''' Focused route-following and town navigation checks; no renderer or UI required.
+
+Option Explicit
+
+Import Smile.Simple3D.PartyTrail3D As Trail
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.PrecisionMath3D As M
+Import Smile.Tools.NerisTownNavigation As Navigation
+
+Dim Path As Trail.State
+Dim Leader As P.Vector3
+Dim Position As P.Vector3
+Dim Index As Number
+Dim MemberIndex As Number
+Dim Failures As Number
+
+Call Trail.Reset(Path, P.Vector(0.0, 0.0, 0.0), 5, 22.0)
+
+For Index = 1 To 100
+    Leader = P.Vector(ToDouble(Index), 0.0, 0.0)
+
+    Call Trail.Advance(Path, Leader, 25, 40.0)
+End For
+
+Call Check(Abs(Path.Positions[4].X - 12.0) < 0.001, "Five Members Preserve Spacing")
+
+For Index = 1 To 50
+
+    Leader = P.Vector(100.0, 0.0, ToDouble(Index))
+
+    Call Trail.Advance(Path, Leader, 25, 40.0)
+
+    For MemberIndex = 1 To 4
+        Call Check(Abs(Path.Positions[MemberIndex].X - 100.0) < 0.001 Or
+            Abs(Path.Positions[MemberIndex].Z) < 0.001, "Followers Take The Corner")
+    End For
+End For
+
+For Index = 1 To 150
+    Call Trail.Advance(Path, Leader, 25, 40.0)
+End For
+
+For MemberIndex = 1 To 4
+    Call Check(M.Length(M.Subtract(Path.Positions[MemberIndex], Leader)) < 0.001,
+        "Stopped Party Gathers At Leader")
+    Call Check(Not Path.Moving[MemberIndex], "Gathered Member Stops")
+End For
+
+Leader.X = Leader.X + 1.0
+
+Call Trail.Advance(Path, Leader, 25, 40.0)
+Call Check(Abs(Path.Positions[4].X - 100.0) < 0.001, "Restart Does Not Pull Followers Backward")
+Call Check(Not Navigation.CanStand(0.0, 260.0), "City Hall Blocks Walking")
+Call Check(Not Navigation.CanStand(125.0, -200.0), "Canal Blocks Walking")
+Call Check(Navigation.CanStand(125.0, -320.0), "South Bridge Is Open")
+Call Check(Navigation.CanStand(210.0, 0.0), "Shop Promenade Is Open")
+Call Check(Not Navigation.CanStand(490.0, 0.0), "Town Boundary Blocks Walking")
+
+Position = Navigation.Move(P.Vector(80.0, 22.8, -200.0), 100.0, 0.0)
+
+Call Check(Position.X < 103.0, "Large Movement Cannot Tunnel Through Canal")
+
+If Failures = 0 Then
+    Print "PASS Neris Town Routes"
+Else
+    Print "FAIL Neris Town Routes"
+End If
+
+Sub Check(Condition As Boolean, Label As Text)
+
+    If Not Condition Then
+        Failures = Failures + 1
+        Print "FAIL " + Label
+    End If
+
+End Sub

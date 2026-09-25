@@ -1,4 +1,4 @@
-# Neris Town V1 — Blender Exterior Scene
+# Neris Town V1 — Blender Scene and Native Viewer Assets
 
 Created by: Louiery R. Sincioco (Sin). September 25, 2026.
 
@@ -61,9 +61,10 @@ events, teleport mechanics or other gameplay were implemented.
 
 ## Editing and source ownership
 
-Town changes live entirely in this package. No compiler, runtime, Studio, Character
-Viewer or website code changed. The build reuses the existing building package's
-geometry, material and architectural-detail helpers instead of duplicating them.
+The editable town and its static native exports live in this package. The native
+Character Viewer owns navigation, party presentation and tab integration; Studio
+and website adoption remain on hold. The Blender builder reuses the existing
+building package's geometry, material and architectural-detail helpers.
 
 The five landmarks are embedded from the validated `Assets/Towns/Neris/ModelsV1`
 GLBs. They retain separately editable material meshes under named placement roots.
@@ -121,19 +122,49 @@ camera positions were also moved away from foreground lamps and trees.
 
 ## Scope and limitations
 
-This is a detailed, editable **exterior town concept**, not an integrated playable
-level. It has no interiors, collision meshes, navmesh, NPCs, gameplay triggers,
-LOD meshes or baked lighting. Water jets are static geometry. Approach checks
-establish plan connectivity, not character collision or accessibility acceptance;
-small curbs, stairs and furniture still need runtime collision treatment.
+This is a detailed, editable **exterior town** with a bounded native Viewer walk
+mode. It has no interiors, authored collision meshes, navmesh, NPCs, gameplay
+triggers, LOD meshes or baked lighting. Water jets are static geometry. The Viewer
+uses building footprints and simple obstacle bounds rather than triangle-mesh
+collision. Small decorative props are generally nonblocking.
 
 The original detailed building meshes dominate the scene's geometry. Collection
 instances reduce scene duplication; this is not a low-poly optimization pass.
-The town is delivered as `.blend` with PNG previews, not as an additional whole-town
-GLB or a video. No .NET rebuild, application restart or browser refresh is required.
+The package includes the `.blend`, PNG previews and chunked static GLBs for the
+native Viewer. Rebuilding the Blender source does not automatically update the
+Viewer: regenerate the static exports, then build and relaunch the native Viewer.
 
 ## Handoff
 
-Open the saved town to review placement, scale and the three home styles. Any
-future gameplay integration or mesh optimization should be a separate bounded
-task with an agreed runtime budget. Existing Studio/Web holds remain unchanged.
+Open the saved town to edit placement, scale and the three home styles. Select
+**Neris Town** in the native Viewer to explore it with the walking party. Further
+gameplay or mesh optimization remains a separate bounded task. Existing
+Studio/Web holds remain unchanged.
+
+## September 25: native Character Viewer reconstruction
+
+The native Viewer now imports this accepted scene through `Runtime/`, retaining
+1,830,062 visible triangles in 22 static GLBs / 83 mesh parts. Export evaluates
+all 5,511 mesh instances; 190,542 zero-area or sub-microscopic degenerate triangles
+are discarded. Identical PBR materials and exact shared position/normal vertices
+are combined without decimation. The Blender scene and existing previews are
+unchanged. `Runtime/manifest.json` records source and export SHA-256 checksums.
+
+Rebuild the static export with installed Blender 5.2:
+
+```powershell
+& 'C:\Program Files\Blender Foundation\Blender 5.2\blender.exe' --background `
+  'Blend/Neris-Town-V1.blend' --python-exit-code 1 --python 'Source/export_native.py'
+```
+
+Run from this package directory. `static_glb.py` preserves the evaluated normals
+and supplies a valid orthonormal tangent basis for the flat PBR materials. It avoids
+Blender's second-export vertex splitting. A changed chunk count requires updating
+`NerisTownAssets.CHUNK_COUNT` and the native project asset inventory.
+
+The Viewer provides a small exterior navigation layer, grounded party followers
+and the common arena/camera controls; it is not a complete game level. Small
+decorative props are generally nonblocking. The fifth requested character, Mila,
+still needs a model identity/path. See the Viewer README for the available roster
+and controls. Native acceptance: `scripts/test-neris-town.ps1`; shared Viewer
+checks: `scripts/test-character-3d-viewer-hardening.ps1 -NativeOnly`.

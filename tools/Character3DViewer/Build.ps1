@@ -32,6 +32,10 @@ if ($Studio) {
 }
 $nativeBattleSources = @(
     'NativeViewerHost.smile',
+    'NerisTown.smile',
+    'NerisTownAssets.smile',
+    'NerisTownNavigation.smile',
+    'NerisTownParty.smile',
     'BattlePlanning.smile',
     'BattleProgression.smile',
     'BattleGrowthView.smile',
@@ -168,6 +172,7 @@ function Preserve-ExistingHost([xml]$ProjectXml) {
         if ($item.Name -eq 'SmileSource' -and $item.Include -eq 'NativeProgram.smile') {
             $item.SetAttribute('Include', 'Program.smile')
         } elseif (($item.Name -eq 'SmileSource' -and $item.Include -in $nativeBattleSources) -or
+            ($item.Name -eq 'Model3DAsset' -and $item.LogicalPath -like 'Assets\Neris\*') -or
             ($item.Name -eq 'Asset' -and $item.Include -in @('Assets\Battle\BitmapFont.png', 'BattleExperienceTick.wav'))) {
             $null = $item.ParentNode.RemoveChild($item)
         }
@@ -254,6 +259,12 @@ if ($PrepareOnly) {
     return
 }
 if ($Target -in @('Native', 'All')) {
+    $townSource = Join-Path $repositoryRoot 'games\SinStarI\SourceAssets\Towns\Neris\NerisTownV1\Runtime'
+    $townMirror = Join-Path $toolRoot 'BuildAssets\Neris'
+    $null = New-Item -ItemType Directory -Path $townMirror -Force
+    foreach ($file in Get-ChildItem -LiteralPath $townSource -File) {
+        Copy-Item -LiteralPath $file.FullName -Destination $townMirror -Force
+    }
     $output = Join-Path $outputRoot 'Character3DViewer.exe'
     if ($Studio) {
         $output = Join-Path $outputRoot 'SmileStudio.exe'

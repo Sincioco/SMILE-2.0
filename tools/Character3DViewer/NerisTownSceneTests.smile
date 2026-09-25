@@ -1,0 +1,131 @@
+''' Native real-asset acceptance for loading, calibrated actors, gather and cleanup.
+
+Option Explicit
+
+Import Smile.Tools.NerisTown As Town
+Import Smile.Tools.NerisTownParty As Party
+Import Smile.Tools.NerisTownAssets As Assets
+Import Smile.Tools.NerisTownNavigation As Navigation
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.Character3D As Character
+Import Smile.Simple3D.ArenaCamera3D As Motion
+Import Smile.Tools.Character3DViewerCalibration As Calibration
+
+Dim Value As Town.State
+Dim Leader As P.Vector3
+Dim Index As Number
+Dim MemberIndex As Number
+Dim Failures As Number
+Dim KeyTotal As Number
+
+Game Window "Neris Town Asset Check" Size 1100 By 720
+
+Call Town.Start(Value)
+
+For Index = 0 To Assets.CHUNK_COUNT + 6
+    Call Town.LoadNext(Value)
+End For
+
+Call Check(Value.Ready And Not Value.Failed, "All Town And Character Assets Load")
+Call Check(Value.Town.Loaded = Assets.CHUNK_COUNT, "Every Town Chunk Loads")
+
+Print "Chunks " + Calibration.NumberText(Value.Town.Loaded) + " Stage " + Calibration.NumberText(Value.Town.Stage) + " Error " + Calibration.NumberText(Value.Town.ErrorCode)
+Print "Actors " + Calibration.NumberText(Value.People.Loaded) + " Error " + Calibration.NumberText(Character.LastError())
+
+If Value.Ready Then
+
+    Call CheckCamera(Value)
+
+    Value.People.Keys.KeyBase = 0
+
+    For Index = 0 To 9
+        KeyTotal = KeyTotal + Calibration.KeyCount(Value.People.Keys, Index)
+    End For
+
+    Print "Arin Pose Keys " + Calibration.NumberText(KeyTotal)
+
+    For MemberIndex = 0 To Value.People.MemberCount - 1
+        Call Check(Value.People.Members[MemberIndex].Visible = (MemberIndex = 0),
+            "Only Arin Visible Before Walking")
+        Call Check(Character.HasClip(Value.People.Members[MemberIndex].Body.Actor,
+            Value.People.Members[MemberIndex].TravelName), "Character Has Real Locomotion Animation")
+    End For
+
+    Leader = Value.People.Path.Positions[0]
+
+    For Index = 1 To 180
+        Leader = Navigation.Move(Leader, 0.8, 0.0)
+
+        Call Party.Update(Value.People, Leader, 25)
+    End For
+
+    For MemberIndex = 0 To Value.People.MemberCount - 1
+        Call Check(Value.People.Members[MemberIndex].Visible,
+            "Every Party Member Emerges While Walking")
+    End For
+
+    For Index = 1 To 250
+        Call Party.Update(Value.People, Leader, 25)
+    End For
+
+    For MemberIndex = 0 To Value.People.MemberCount - 1
+        Call Check(Value.People.Members[MemberIndex].Visible = (MemberIndex = 0),
+            "Followers Hide After Gathering And Settling")
+    End For
+
+    Call Town.Update(Value, 16)
+    Call Town.Draw(Value)
+    Call Check(Not Value.Failed And Value.People.Ready, "Town Renders With Shared Reflective Arena")
+
+    Show Screen
+
+End If
+
+Call Town.Destroy(Value)
+Call Check(Not Value.Ready And Value.Town.ObjectCount = 0 And Value.People.Loaded = 0,
+    "Town Releases Owned Resources")
+
+If Failures = 0 Then
+    Print "PASS Neris Town Scene"
+Else
+    Print "FAIL Neris Town Scene"
+End If
+
+Sub CheckCamera(ByRef Scene As Town.State)
+
+    Dim Pointer As Motion.PointerInput
+    Dim Changed As Boolean
+
+    Pointer.OrbitPressed = True
+    Pointer.OrbitHeld = True
+    Pointer.DeltaX = 1
+    Pointer.DeltaY = 1
+    Changed = Motion.UpdatePointer(Scene.View.Controls, Scene.View.Zoom, Pointer,
+        900.0, 550.0, Scene.View.WorldScale)
+
+    Call Check(Changed And Scene.View.Controls.OrbitYaw = 1.0 And
+        Scene.View.Controls.OrbitPitch = 1.0, "Slow Horizontal And Vertical Orbit")
+
+    Pointer.OrbitPressed = False
+    Pointer.DeltaX = 24
+    Pointer.DeltaY = -16
+    Changed = Motion.UpdatePointer(Scene.View.Controls, Scene.View.Zoom, Pointer,
+        900.0, 550.0, Scene.View.WorldScale)
+
+    Call Check(Changed And Scene.View.Controls.OrbitYaw = 25.0 And
+        Scene.View.Controls.OrbitPitch = -15.0, "Moderate Horizontal And Vertical Orbit")
+    Call Town.Input(Scene, KEY_C, True)
+    Call Check(Scene.Cinematic And Not Scene.Follow And
+        Scene.View.Controls.OrbitYaw = 0.0 And Scene.View.Controls.OrbitPitch = 0.0,
+        "C Resets Camera And Resumes Cinematic Overview")
+
+End Sub
+
+Sub Check(Condition As Boolean, Label As Text)
+
+    If Not Condition Then
+        Failures = Failures + 1
+        Print "FAIL " + Label
+    End If
+
+End Sub

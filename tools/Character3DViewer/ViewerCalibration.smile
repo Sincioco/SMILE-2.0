@@ -1042,7 +1042,8 @@ End Sub
 
 Private Function ApplyGlowTransform(ByRef Value As State, Clip As Number,
     Glow As Core.Object3D, Pivot As Precision3D.Vector3,
-    PositionChannel As Number, RotationChannel As Number, Yaw As Double) As Boolean
+    PositionChannel As Number, RotationChannel As Number, Yaw As Double,
+    PositionScale As Double) As Boolean
 
     Dim Transform As Precision3D.Transform3D
     Dim Rotation As Precision3D.Vector3
@@ -1064,9 +1065,9 @@ Private Function ApplyGlowTransform(ByRef Value As State, Clip As Number,
         ToDouble(ChannelValue(Value, Clip, PositionChannel + 1)),
         ToDouble(ChannelValue(Value, Clip, PositionChannel + 2))), Precision3D.Vector(0.0, Yaw, 0.0))
     Result = Precision3D.SetPosition(Glow,
-        Transform.Position.X + Position.X,
-        Transform.Position.Y + Position.Y,
-        Transform.Position.Z + Position.Z)
+        Transform.Position.X + Position.X * PositionScale,
+        Transform.Position.Y + Position.Y * PositionScale,
+        Transform.Position.Z + Position.Z * PositionScale)
     Result = Precision3D.SetPivotRotation(Glow, Pivot, Rotation) And Result
 
     Return Result
@@ -1077,7 +1078,7 @@ Public Function ApplyEquipmentTransforms(ByRef Value As State,
     ByRef Actor As Character3D.Actor, Clip As Number,
     ByRef SwordGlow As Core.Object3D, ByRef ShieldGlow As Core.Object3D,
     GlowAvailable As Boolean, ByRef GlowVisible As Boolean,
-    Optional Yaw As Double = 0.0) As ApplicationResult
+    Optional Yaw As Double = 0.0, Optional PositionScale As Double = 1.0) As ApplicationResult
 
     Dim GlowReady As Boolean
     Dim OperationReady As Boolean
@@ -1104,7 +1105,7 @@ Public Function ApplyEquipmentTransforms(ByRef Value As State,
         ToDouble(ChannelValue(Value, Clip, 13)), ToDouble(ChannelValue(Value, Clip, 14))),
         Precision3D.Vector(0.0, Yaw, 0.0))
     OperationReady = Character3D.SetPartPositionOffsetPrecise(
-        Actor, WEAPON_PART_INDEX, Position.X, Position.Y, Position.Z)
+        Actor, WEAPON_PART_INDEX, Position.X * PositionScale, Position.Y * PositionScale, Position.Z * PositionScale)
 
     Call CaptureApplicationFailure(Result, OperationReady, 71)
 
@@ -1112,7 +1113,7 @@ Public Function ApplyEquipmentTransforms(ByRef Value As State,
         ToDouble(ChannelValue(Value, Clip, 16)), ToDouble(ChannelValue(Value, Clip, 17))),
         Precision3D.Vector(0.0, Yaw, 0.0))
     OperationReady = Character3D.SetPartPositionOffsetPrecise(
-        Actor, SHIELD_PART_INDEX, Position.X, Position.Y, Position.Z)
+        Actor, SHIELD_PART_INDEX, Position.X * PositionScale, Position.Y * PositionScale, Position.Z * PositionScale)
 
     Call CaptureApplicationFailure(Result, OperationReady, 72)
 
@@ -1134,8 +1135,8 @@ Public Function ApplyEquipmentTransforms(ByRef Value As State,
 
     If GlowVisible Then
 
-        GlowReady = ApplyGlowTransform(Value, Clip, SwordGlow, SwordPivot, 12, 6, Yaw)
-        GlowReady = ApplyGlowTransform(Value, Clip, ShieldGlow, ShieldPivot, 15, 9, Yaw) And GlowReady
+        GlowReady = ApplyGlowTransform(Value, Clip, SwordGlow, SwordPivot, 12, 6, Yaw, PositionScale)
+        GlowReady = ApplyGlowTransform(Value, Clip, ShieldGlow, ShieldPivot, 15, 9, Yaw, PositionScale) And GlowReady
 
         If Not GlowReady Then
             GlowVisible = False

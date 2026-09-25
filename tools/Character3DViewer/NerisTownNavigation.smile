@@ -1,0 +1,234 @@
+''' Exterior collision and paving height, in arena world units.
+Module Smile.Tools.NerisTownNavigation
+
+Option Explicit
+
+Import Smile.Simple3D.Precision3D As P
+
+Private Function InBox(X As Double, Z As Double,
+    MinimumX As Double, Front As Double, MaximumX As Double, Back As Double) As Boolean
+
+    Dim Result As Boolean
+
+    Result = X > MinimumX - 4.0 And X < MaximumX + 4.0 And Z > Front - 4.0 And Z < Back + 4.0
+
+    Return Result
+
+End Function
+
+Public Function CanStand(X As Double, Z As Double) As Boolean
+
+    Dim Canal As Boolean
+    Dim Bridge As Boolean
+    Dim Index As Number
+    Dim TreeZ As Double
+
+    If Abs(X) > 480.0 Or Abs(Z) > 423.0 Then
+        Return False
+    End If
+
+    ''' Neris-City-Hall
+
+    If InBox(X, Z, -112.000, 167.600, 112.000, 341.500) Then
+        Return False
+    End If
+
+    ''' Neris-Communication-Tower
+
+    If InBox(X, Z, -65.527, -39.600, 65.527, 76.874) Then
+        Return False
+    End If
+
+    ''' Neris-Weapon-Store
+
+    If InBox(X, Z, 263.700, 153.450, 372.100, 286.550) Then
+        Return False
+    End If
+
+    ''' Neris-Item-Store
+
+    If InBox(X, Z, 263.700, -66.550, 372.082, 66.550) Then
+        Return False
+    End If
+
+    ''' Neris-Armor-Store
+
+    If InBox(X, Z, 263.700, -287.300, 372.600, -153.450) Then
+        Return False
+    End If
+
+    ''' Home 01 — Family House
+
+    If InBox(X, Z, -381.970, 201.013, -291.950, 298.987) Then
+        Return False
+    End If
+
+    ''' Home 02 — Courtyard Cottage
+
+    If InBox(X, Z, -376.970, 18.000, -296.950, 102.000) Then
+        Return False
+    End If
+
+    ''' Home 03 — Garden Pavilion
+
+    If InBox(X, Z, -379.200, -179.200, -292.950, -100.800) Then
+        Return False
+    End If
+
+    ''' Home 04 — Family House
+
+    If InBox(X, Z, -381.970, -378.987, -291.950, -281.013) Then
+        Return False
+    End If
+
+    ''' Home 05 — Courtyard Cottage
+
+    If InBox(X, Z, -402.000, 346.950, -318.000, 426.970) Then
+        Return False
+    End If
+
+    ''' Home 06 — Garden Pavilion
+
+    If InBox(X, Z, -239.200, 302.950, -160.800, 389.200) Then
+        Return False
+    End If
+
+    ''' Home 07 — Family House
+
+    If InBox(X, Z, 271.013, 321.950, 368.987, 411.970) Then
+        Return False
+    End If
+
+    ''' Home 08 — Courtyard Cottage
+
+    If InBox(X, Z, 273.030, -402.000, 353.050, -318.000) Then
+        Return False
+    End If
+
+    Canal = Abs(Abs(X) - 125.0) < 22.0 And Z > -390.0 And Z < 150.0
+    Bridge = Abs(Z + 320.0) < 15.0 Or Abs(Z + 100.0) < 15.0 Or Abs(Z - 140.0) < 15.0
+
+    If Canal And Not Bridge Then
+        Return False
+    End If
+
+    If X * X + (Z + 200.0) * (Z + 200.0) < 54.0 * 54.0 Then
+        Return False
+    End If
+
+    If Abs(Abs(X) - 66.0) < 12.0 And Abs(Z + 390.0) < 14.0 Then
+        Return False
+    End If
+
+    If InBox(X, Z, -303.0, -45.0, -258.0, -15.0) Or InBox(X, Z, -423.0, -55.0, -377.0, -25.0) Then
+        Return False
+    End If
+
+    For Index = 0 To 2
+
+        TreeZ = -250.0 + ToDouble(Index) * 220.0
+
+        If Abs(Abs(X) - 170.0) < 12.0 And Abs(Z - TreeZ) < 12.0 Then
+            Return False
+        End If
+
+    End For
+
+    Return True
+
+End Function
+
+Public Function GroundHeight(X As Double, Z As Double) As Double
+
+    Dim Result As Double
+
+    Result = 20.9
+
+    If (Abs(X) < 85.0 And
+        Z > -425.0 And
+        Z < 365.0) Then
+        Result = 21.92
+    End If
+
+    If (Abs(X) < 135.0 And
+        Z > 105.0 And
+        Z < 395.0) Then
+        Result = 22.12
+    End If
+
+    If Abs(Abs(X) - 210.0) < 25.0 And Abs(Z) < 405.0 Then
+        Result = Max(Result, 21.92)
+    End If
+
+    If (Abs(X) < 450.0 And
+        (Abs(Z + 320.0) < 24.0 Or Abs(Z + 100.0) < 24.0 Or
+        Abs(Z - 140.0) < 24.0 Or Abs(Z - 390.0) < 24.0)) Then
+        Result = Max(Result, 22.42)
+    End If
+
+    If (Abs(X - 320.0) < 90.0 And
+        (Abs(Z + 220.0) < 80.0 Or
+        Abs(Z) < 80.0 Or Abs(Z - 220.0) < 80.0)) Then
+        Result = Max(Result, 22.62)
+    End If
+
+    If (Abs(X + 340.0) < 90.0 And
+        (Abs(Z + 330.0) < 80.0 Or
+        Abs(Z + 140.0) < 80.0 Or Abs(Z - 60.0) < 80.0 Or Abs(Z - 250.0) < 80.0)) Then
+        Result = Max(Result, 22.62)
+    End If
+
+    If (Abs(Z - 360.0) < 60.0 And
+        (Abs(X + 360.0) < 60.0 Or
+        Abs(X + 200.0) < 60.0 Or Abs(X - 320.0) < 60.0)) Then
+        Result = Max(Result, 22.72)
+    End If
+
+    If ((Abs(X - 310.0) < 65.0 And Abs(Z + 360.0) < 55.0) Or
+        (Abs(X + 340.0) < 100.0 And Abs(Z + 35.0) < 25.0)) Then
+        Result = Max(Result, 22.72)
+    End If
+
+    If (X + 220.0) * (X + 220.0) + (Z + 220.0) * (Z + 220.0) < 47.0 * 47.0 Then
+        Result = 25.3
+    End If
+
+    If (Abs(Abs(X) - 125.0) < 21.0 And
+        (Abs(Z + 320.0) < 24.0 Or
+        Abs(Z + 100.0) < 24.0 Or Abs(Z - 140.0) < 24.0)) Then
+        Result = 24.12
+    End If
+
+    Return Result
+
+End Function
+
+''' Substeps prevent tunnelling; axis sliding keeps building edges comfortable.
+Public Function Move(Position As P.Vector3, DeltaX As Double, DeltaZ As Double) As P.Vector3
+
+    Dim Index As Number
+    Dim Steps As Number
+    Dim Result As P.Vector3
+
+    Result = Position
+    Steps = Max(1, ToNumber(Ceiling(Max(Abs(DeltaX), Abs(DeltaZ)) / 2.0)))
+
+    For Index = 1 To Steps
+
+        If CanStand(Result.X + DeltaX / ToDouble(Steps), Result.Z) Then
+            Result.X = Result.X + DeltaX / ToDouble(Steps)
+        End If
+
+        If CanStand(Result.X, Result.Z + DeltaZ / ToDouble(Steps)) Then
+            Result.Z = Result.Z + DeltaZ / ToDouble(Steps)
+        End If
+
+    End For
+
+    Result.Y = GroundHeight(Result.X, Result.Z)
+
+    Return Result
+
+End Function
+
+End Module

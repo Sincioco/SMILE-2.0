@@ -1057,3 +1057,12 @@ including glow. Wrist corrections remain local. No saved channel is rewritten;
 zero delta preserves the existing editor/game behavior. Model, animation,
 descriptor and canonical 24-key JSON are unchanged. The native scene fixture
 checks that the actual Run SwordTip rotates with the body on the return leg.
+
+## September 25: native Neris town scale
+
+The town presenter reuses the accepted Arin model, named Idle/Walk clips and all
+24 saved pose keys. ViewerCalibration now accepts an optional runtime position
+scale, defaulting to 1 for existing consumers. Town equipment translations scale
+by the ratio to the original Viewer auto-fit, while saved rotations remain intact
+and rotate with travel facing. No model, descriptor or canonical pose JSON is
+rewritten. The native Neris fixture compares the loaded key count to this package.

@@ -1,0 +1,128 @@
+''' Caller-owned arc-length trail. Rendering, input and animation belong to the caller.
+Module Smile.Simple3D.PartyTrail3D
+
+Option Explicit
+
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.PrecisionMath3D As M
+
+Public Type Point
+    Position As P.Vector3
+    Distance As Double
+End Type
+
+Public Type State
+    Points[2048] As Point
+    Head As Number
+    PointCount As Number
+    Distance As Double
+    Positions[8] As P.Vector3
+    Progress[8] As Double
+    Moving[8] As Boolean
+    Members As Number
+    Spacing As Double
+End Type
+
+Public Sub Reset(ByRef Value As State, Origin As P.Vector3,
+    Members As Number, Spacing As Double)
+
+    Dim Empty As State
+    Dim Index As Number
+
+    Value = Empty
+    Value.PointCount = 1
+    Value.Members = Min(8, Max(1, Members))
+    Value.Spacing = Max(0.1, Spacing)
+    Value.Points[0].Position = Origin
+
+    For Index = 0 To Value.Members - 1
+        Value.Positions[Index] = Origin
+    End For
+
+End Sub
+
+Public Function Sample(ByRef Value As State, Distance As Double) As P.Vector3
+
+    Dim Index As Number
+    Dim Previous As Number
+    Dim StepIndex As Number
+    Dim Span As Double
+    Dim Fraction As Double
+    Dim Result As P.Vector3
+
+    Index = Value.Head
+    Result = Value.Points[Index].Position
+
+    If Distance >= Value.Distance Then
+        Return Result
+    End If
+
+    For StepIndex = 1 To Value.PointCount - 1
+
+        Previous = (Index + 2047) Mod 2048
+
+        If Value.Points[Previous].Distance <= Distance Then
+
+            Span = Value.Points[Index].Distance - Value.Points[Previous].Distance
+            Fraction = Clamp((Distance - Value.Points[Previous].Distance) / Max(0.00001, Span), 0.0, 1.0)
+            Result = M.Add(Value.Points[Previous].Position,
+                M.Scale(M.Subtract(Value.Points[Index].Position,
+                    Value.Points[Previous].Position), Fraction))
+
+            Return Result
+
+        End If
+
+        Index = Previous
+    End For
+
+    Result = Value.Points[Index].Position
+
+    Return Result
+
+End Function
+
+''' Add the collision-resolved leader position, then advance followers along that path.
+Public Sub Advance(ByRef Value As State, Leader As P.Vector3,
+    Elapsed As Number, Speed As Double)
+
+    Dim Index As Number
+    Dim Delta As Double
+    Dim Target As Double
+    Dim NextDistance As Double
+    Dim Budget As Double
+
+    Delta = M.Length(M.Subtract(Leader, Value.Positions[0]))
+    Value.Moving[0] = Delta > 0.00001
+
+    If Value.Moving[0] Then
+
+        Value.Distance = Value.Distance + Delta
+        Value.Head = (Value.Head + 1) Mod 2048
+        Value.PointCount = Min(2048, Value.PointCount + 1)
+        Value.Points[Value.Head].Position = Leader
+        Value.Points[Value.Head].Distance = Value.Distance
+
+    End If
+
+    Value.Positions[0] = Leader
+    Value.Progress[0] = Value.Distance
+    Budget = Max(0.0, Speed) * ToDouble(Max(0, Elapsed)) / 1000.0
+
+    For Index = 1 To Value.Members - 1
+
+        Target = Value.Distance
+
+        If Value.Moving[0] Then
+            Target = Max(Value.Progress[Index], Value.Distance - Value.Spacing * ToDouble(Index))
+        End If
+
+        NextDistance = Min(Target, Value.Progress[Index] + Budget)
+        Value.Moving[Index] = NextDistance > Value.Progress[Index] + 0.00001
+        Value.Progress[Index] = NextDistance
+        Value.Positions[Index] = Sample(Value, NextDistance)
+    End For
+
+End Sub
+
+End Module

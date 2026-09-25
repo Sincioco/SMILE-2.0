@@ -1,0 +1,142 @@
+{
+  "source": "Blend/Neris-Town-V1.blend",
+  "source_sha256": "d67bd21b18c89fc42e7da0bf96fb0a9c0d94338a031bdeeb2fffb66c4940bf99",
+  "evaluated_instances": 5511,
+  "triangles": 1830062,
+  "removed_degenerate_triangles": 190542,
+  "coordinate_mapping": "Blender XYZ -> SMILE XZY; runtime scale 10, height +21",
+  "chunks": [
+    {
+      "file": "Neris-00.glb",
+      "parts": 4,
+      "triangles": 97124,
+      "sha256": "0fbf69c3a91ecdbd9078414c82d65e586b6ba2475585b50ef49406f183c12e82"
+    },
+    {
+      "file": "Neris-01.glb",
+      "parts": 4,
+      "triangles": 104219,
+      "sha256": "6a7566ee79d23bcbc0bef7390b267f433189fcf33afa6bb733d123b129318942"
+    },
+    {
+      "file": "Neris-02.glb",
+      "parts": 5,
+      "triangles": 103992,
+      "sha256": "7e154a457e2ce3add50ba3bfc468540a2a1c64a76ba6f3dc900b7d7418864c96"
+    },
+    {
+      "file": "Neris-03.glb",
+      "parts": 5,
+      "triangles": 103610,
+      "sha256": "aa027dbe37474c96802e328082a5d9dfb9f2d70d3bf80bcf1929caa98d60b278"
+    },
+    {
+      "file": "Neris-04.glb",
+      "parts": 6,
+      "triangles": 49956,
+      "sha256": "879d06c15e813dbaea8fbd78f6a0ee5160deae9c026a24220789407aaaf45d78"
+    },
+    {
+      "file": "Neris-05.glb",
+      "parts": 3,
+      "triangles": 80244,
+      "sha256": "707cdbdc8f600e11fcbbff77cbee960adc3dc4ed2dcf610741e9cc390a41cd48"
+    },
+    {
+      "file": "Neris-06.glb",
+      "parts": 2,
+      "triangles": 60000,
+      "sha256": "79d1dd089b0be67bee36d52651cd2bdd3ecb59ecc9ef1d63e4c736ee94836a49"
+    },
+    {
+      "file": "Neris-07.glb",
+      "parts": 2,
+      "triangles": 60000,
+      "sha256": "a6e71bdfd57ce8b42db6dcf05b8daced0170d9eaa0bd52827f78bb5fecee8f59"
+    },
+    {
+      "file": "Neris-08.glb",
+      "parts": 2,
+      "triangles": 41750,
+      "sha256": "a8e288054f7097cf6ea406eb4116ef622e1c9ae36dc3469e830a9ae9828f3674"
+    },
+    {
+      "file": "Neris-09.glb",
+      "parts": 2,
+      "triangles": 95003,
+      "sha256": "afcf9df8a66a4eb3d448b4e0f5c042ec54ef9acad43c50fd5058f50c2354bc97"
+    },
+    {
+      "file": "Neris-10.glb",
+      "parts": 2,
+      "triangles": 50452,
+      "sha256": "51e9bb993b2de578c169453de9f17bcfd5473e2531a3d02f5484a63148aad28a"
+    },
+    {
+      "file": "Neris-11.glb",
+      "parts": 2,
+      "triangles": 84577,
+      "sha256": "9fdaeb8b80bbd6ab2763e32b5f0706cda6776c856b22685f422d70f5fe4e7006"
+    },
+    {
+      "file": "Neris-12.glb",
+      "parts": 2,
+      "triangles": 41524,
+      "sha256": "28e3d2b3436431c08624d640a8395a1deaacc47fbe0c18ddcfebce8f3f805f6a"
+    },
+    {
+      "file": "Neris-13.glb",
+      "parts": 3,
+      "triangles": 95429,
+      "sha256": "0cbd1c28df2a89881d5256198eb1a365cc1b646938ef61fa465e7ef4c7b50ca1"
+    },
+    {
+      "file": "Neris-14.glb",
+      "parts": 3,
+      "triangles": 81437,
+      "sha256": "aa5fc30f7af1fa083326d57be42227c22bbde830d916d561fe5126706ee22042"
+    },
+    {
+      "file": "Neris-15.glb",
+      "parts": 2,
+      "triangles": 130000,
+      "sha256": "cf3b4d265b3f8eb9d4729b1c48714c0d525f3f237ae2af84ef2ac63aff8d634c"
+    },
+    {
+      "file": "Neris-16.glb",
+      "parts": 4,
+      "triangles": 51258,
+      "sha256": "4f37fa43ee0a4626812e9a6277d8f0a7e83dc7b015fc3742d0b86fdc1866a015"
+    },
+    {
+      "file": "Neris-17.glb",
+      "parts": 5,
+      "triangles": 105804,
+      "sha256": "27d0d74b75faa0158776b0d758ccf150d176c0a8cb73c1cd586156c204fa9c97"
+    },
+    {
+      "file": "Neris-18.glb",
+      "parts": 3,
+      "triangles": 128396,
+      "sha256": "0ed2429f4686c1894a40d8e261870703ccf7c396adf7cb2c533e3e12d689fbea"
+    },
+    {
+      "file": "Neris-19.glb",
+      "parts": 6,
+      "triangles": 128255,
+      "sha256": "11293f36ff5a3de7d1320952a9c706e5bfc9cda05ca7945d49ce932f50cb6319"
+    },
+    {
+      "file": "Neris-20.glb",
+      "parts": 8,
+      "triangles": 88663,
+      "sha256": "94b5206c03d185e4205dadf88bff72b44869789ff16792b959fb6c450253d4e5"
+    },
+    {
+      "file": "Neris-21.glb",
+      "parts": 8,
+      "triangles": 48369,
+      "sha256": "69a6cf2f9b688f76b8e84c276745908def01fb3b3162262edad528d80277e987"
+    }
+  ]
+}

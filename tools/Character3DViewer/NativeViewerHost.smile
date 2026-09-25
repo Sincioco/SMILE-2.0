@@ -11,10 +11,12 @@ Import Smile.Tools.ViewerBattleUi As BattleUi
 Import Smile.Tools.ViewerBattleOutcome As Outcome
 Import Smile.Tools.ViewerBattleHud As Hud
 Import Smile.Tools.ViewerBattleCinematics As Cinematics
+Import Smile.Tools.NerisTown As Town
 Import Smile.UI.Controls As UI
 Import SinStarI.BattleRules As Rules
 
 Public Const BATTLE_TAB = 15
+Public Const TOWN_TAB = 16
 
 Public Function TabAt(Position As Number) As Number
 
@@ -41,6 +43,8 @@ Public Function TabAt(Position As Number) As Number
             Return Profiles.CHARACTER_TAB_KAEL
         Case 10
             Return Profiles.CHARACTER_TAB_PARTY_KAEL
+        Case 12
+            Return TOWN_TAB
     End Select
 
     Return BATTLE_TAB
@@ -72,6 +76,8 @@ Public Function TabLabel(Position As Number) As Text
             Return "Kael"
         Case 10
             Return "Kael Party"
+        Case 12
+            Return "Neris Town"
     End Select
 
     Return "Battle System"
@@ -80,9 +86,11 @@ End Function
 
 Public Function TabWidth(Position As Number) As Number
 
-    If Position = 11 Then
+    If Position = 11 Or Position = 12 Then
         Return 106
-    Else If Position = 7 Or Position = 8 Or Position = 10 Then
+    Else If (Position = 7 Or
+        Position = 8 Or
+        Position = 10) Then
         Return 84
     End If
 
@@ -105,6 +113,7 @@ Public Class Session
     Private BattleActive As Boolean
     Private HeaderHidden As Boolean
     Private Paused As Boolean
+    Private TownScene As Town.State
 
     Public Sub Start(Viewer As Workflow.Session, InitialTab As Number, Hosted As Boolean, Width As Number, Height As Number)
 
@@ -114,6 +123,16 @@ Public Class Session
         Me.BattlePanel = True
         Me.SelectedTab = InitialTab
         ViewerTab = InitialTab
+
+        If InitialTab = TOWN_TAB Then
+
+            Call Town.Start(Me.TownScene)
+
+            Me.PreviousTime = Timer()
+
+            Return
+
+        End If
 
         If InitialTab = BATTLE_TAB Then
             ViewerTab = Profiles.CHARACTER_TAB_PARTY_KAEL
@@ -146,6 +165,27 @@ Public Class Session
 
         If Me.BattleActive Then
             Call Presentation.Destroy(Me.Visual)
+        End If
+
+        If Index = TOWN_TAB Then
+
+            If Me.SelectedTab <> TOWN_TAB Then
+                Call Viewer.Release()
+                Call Town.Start(Me.TownScene)
+            End If
+
+            Me.SelectedTab = TOWN_TAB
+            Me.BattleActive = False
+            Me.HeaderHidden = False
+            Me.PreviousTime = Timer()
+
+            Return
+
+        End If
+
+        If Me.SelectedTab = TOWN_TAB Then
+            Call Town.Destroy(Me.TownScene)
+            Call Viewer.Start(ViewerTab, False, Window_Width(), Window_Height())
         End If
 
         Call Viewer.ConfigureExternalHost(False)
@@ -221,18 +261,22 @@ Public Class Session
         Dim Layout As Hud.Layout
 
         X = 18
-        Blocked = Not Me.HeaderHidden And UI.Contains(18, 62, 850, 26)
+        Blocked = Not Me.HeaderHidden And UI.Contains(18, 62, 980, 26)
 
         Call BattleUi.ObserveActivity(Me.Menus, Key)
 
-        If (Me.BattleActive And Key = KEY_SPACE And
-            Viewer.CanSwitchTab() And Not Me.Menus.Stats.Visible) Then
+        If (Me.BattleActive And
+            Key = KEY_SPACE And
+            Viewer.CanSwitchTab() And
+            Not Me.Menus.Stats.Visible) Then
             Me.Paused = Not Me.Paused
             Return
         End If
 
-        If (Me.BattleActive And Key = KEY_C And
-            Viewer.SceneReady() And Viewer.CanSwitchTab() And
+        If (Me.BattleActive And
+            Key = KEY_C And
+            Viewer.SceneReady() And
+            Viewer.CanSwitchTab() And
             Not Me.Menus.Stats.Visible) Then
 
             Call Cinematics.ReturnToOrders(Me.Camera, Viewer)
@@ -257,8 +301,10 @@ Public Class Session
             Return
         End If
 
-        If (Me.BattleActive And Key = KEY_BACKTICK And
-            Viewer.PanelVisibility() = 2 And Not Me.Menus.Stats.Visible) Then
+        If (Me.BattleActive And
+            Key = KEY_BACKTICK And
+            Viewer.PanelVisibility() = 2 And
+            Not Me.Menus.Stats.Visible) Then
 
             Me.HeaderHidden = Not Me.HeaderHidden
 
@@ -270,7 +316,7 @@ Public Class Session
 
         If Not Me.Menus.Stats.Visible And Not Me.HeaderHidden Then
 
-            For Index = 0 To 11
+            For Index = 0 To 12
 
                 If UI.Clicked(X, 62, TabWidth(Index) - 4, 26) Then
                     Call Me.SelectTab(Viewer, TabAt(Index))
@@ -284,6 +330,12 @@ Public Class Session
         End If
 
         ViewerKey = Key
+
+        If Me.SelectedTab = TOWN_TAB Then
+            Call Town.Input(Me.TownScene, Key, Pointer_Y() < 94 Or Blocked)
+
+            Return
+        End If
 
         If Me.BattleActive Then
 
@@ -313,8 +365,10 @@ Public Class Session
                 Blocked = Blocked Or Pointer_X() < 278 Or Pointer_X() >= Window_Width() - 278 Or Pointer_Y() >= Window_Height() - 100
             End If
 
-            If (Me.Menus.Stats.Visible Or Key = KEY_ENTER Or
-                Key = KEY_SPACE Or Key = KEY_ESCAPE Or
+            If (Me.Menus.Stats.Visible Or
+                Key = KEY_ENTER Or
+                Key = KEY_SPACE Or
+                Key = KEY_ESCAPE Or
                 (Me.Encounter.Planning And (Key = KEY_UP Or Key = KEY_DOWN Or
                 Key = KEY_LEFT Or Key = KEY_RIGHT))) Then
                 ViewerKey = KEY_NONE
@@ -341,6 +395,12 @@ Public Class Session
         Me.Elapsed = Min(100, FrameElapsed)
         CameraElapsed = Me.Elapsed
         Me.PreviousTime = Now
+
+        If Me.SelectedTab = TOWN_TAB Then
+            Call Town.Update(Me.TownScene, Me.Elapsed)
+
+            Return
+        End If
 
         If Me.Paused And Not Me.Camera.DefaultRequested Then
             CameraElapsed = 0
@@ -370,7 +430,9 @@ Public Class Session
             Call Viewer.PauseDirectedPlayback(Me.Paused Or Me.Inspecting Or
                 (Me.Menus.Stats.Visible And Me.Encounter.Planning))
 
-            If Not Me.Paused And Not Me.Inspecting And Viewer.SceneReady() Then
+            If (Not Me.Paused And
+                Not Me.Inspecting And
+                Viewer.SceneReady()) Then
 
                 Random EscapeRoll From 0 To 99
                 Random TargetRoll From 0 To 3
@@ -396,7 +458,9 @@ Public Class Session
                     Call Me.RestartBattle(Viewer)
                 End If
 
-                If Me.Encounter.Planning And Not WasPlanning And Not Me.Camera.Enabled Then
+                If (Me.Encounter.Planning And
+                    Not WasPlanning And
+                    Not Me.Camera.Enabled) Then
                     Call Presentation.OrdersCamera(Viewer)
                 End If
 
@@ -404,7 +468,9 @@ Public Class Session
 
         End If
 
-        If (Me.BattleActive And Viewer.SceneReady() And Viewer.CanSwitchTab() And
+        If (Me.BattleActive And
+            Viewer.SceneReady() And
+            Viewer.CanSwitchTab() And
             (Not Me.Ending.Started Or Me.Ending.OrbitTime >= Outcome.ORBIT_DURATION)) Then
             Call Cinematics.Update(Me.Camera, Viewer, Me.Encounter.Combat,
                 CameraElapsed, Width, Height)
@@ -416,7 +482,12 @@ Public Class Session
 
     Public Sub DrawFrame(Viewer As Workflow.Session)
 
-        Call Viewer.DrawFrame()
+        If Me.SelectedTab = TOWN_TAB Then
+            Call Town.Draw(Me.TownScene)
+        Else
+
+            Call Viewer.DrawFrame()
+        End If
 
     End Sub
 
@@ -425,13 +496,18 @@ Public Class Session
         Dim Index As Number
         Dim X As Number
 
-        Call Viewer.DrawStandaloneOverlay()
+        If Me.SelectedTab = TOWN_TAB Then
+            Call Town.Overlay(Me.TownScene)
+        Else
+
+            Call Viewer.DrawStandaloneOverlay()
+        End If
 
         X = 18
 
         If Not Me.HeaderHidden Then
 
-            For Index = 0 To 11
+            For Index = 0 To 12
                 Call UI.DrawButton(X, 62, TabWidth(Index) - 4, 26,
                     TabLabel(Index), Me.SelectedTab = TabAt(Index))
 
@@ -458,6 +534,12 @@ Public Class Session
     End Sub
 
     Public Sub Release(Viewer As Workflow.Session)
+
+        If Me.SelectedTab = TOWN_TAB Then
+            Call Town.Destroy(Me.TownScene)
+
+            Return
+        End If
 
         If Me.BattleActive Then
             Call Presentation.Destroy(Me.Visual)

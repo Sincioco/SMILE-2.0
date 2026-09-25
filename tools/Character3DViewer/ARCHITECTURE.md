@@ -1,5 +1,46 @@
 # Character Viewer Architecture
 
+## Native Neris town scene
+
+`NativeViewerHost` adds a Neris Town tab and delegates its scene lifecycle to
+`NerisTown`. Entering it releases the previous scene after the existing unsaved-edit
+guard; leaving destroys town resources before restarting the selected Viewer scene.
+The native-only project inventory excludes this feature from held Studio/Web hosts.
+
+`NerisTownAssets` loads one bounded static model per frame with progress displayed.
+The canonical assets remain in `SinStarI/SourceAssets/Towns/Neris/NerisTownV1/Runtime`;
+`BuildAssets/Neris` is an ignored cooking mirror. `Source/export_native.py` evaluates
+the accepted Blender scene, including collection instances, removes invisible
+degenerate faces and combines identical PBR materials. `static_glb.py` writes the
+accepted positions/normals directly so a second Blender mesh export does not split
+shared normals and exceed SM3D limits. No geometry decimation or renderer capacity
+increase is involved. The manifest records source and output hashes.
+
+`NerisTownNavigation` owns exterior building/canal/boundary collision, bridge
+passages, axis sliding and paving heights. `NerisTownParty` owns the character
+handles, named Idle/Walk clips, grounded presentation, saved calibration and
+visibility after the finishing gait cycle. Calibration's optional position scale
+defaults to one for existing callers; smaller actors scale authored equipment
+translations while preserving rotations and the authoritative JSON.
+
+`Smile.Simple3D.PartyTrail3D` owns only a bounded arc-length history and follower
+progress. The caller supplies a collision-resolved leader position; followers walk
+the same path rather than cutting corners. Stopping advances them toward the
+leader. It owns no input, actor handles, animation, global state or game data.
+`NerisTownTests` checks corners, gathering, restart and obstacle routes;
+`NerisTownSceneTests` exercises actual models, accepted keys, visibility and cleanup.
+
+Town camera policy composes the shared `ArenaViewport3D` / `ArenaCamera3D` controls.
+It reuses the reflective arena, grid, backgrounds and Viewer lighting recipe.
+Movement begins a following view; direct mouse manipulation pauses cinematic
+orbit. This does not implement a general scene editor or resume Studio work.
+
+Growth review: the native coordinator grows from 472 to 554 lines; new town owners
+remain below 310 lines each. Existing ViewerCalibration grows by one net line for
+the optional translation scale. No startup algorithms, source-size exclusions,
+renderer limits or dependency cycles were added. The only reusable new behavior
+in the library is the caller-owned follower trail.
+
 ## Native battle planning and presentation
 
 `NativeProgram` owns only the native window/frame loop and constructs Workflow

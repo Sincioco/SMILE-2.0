@@ -1,5 +1,46 @@
 # SMILE 2.0 - 3D Viewer, Animation Editor
 
+## Native Neris Town
+
+The **Neris Town** tab reconstructs the accepted Blender town using its evaluated
+geometry: 13 buildings including the relay tower, canals, bridges, gardens and street furniture.
+Models load incrementally with progress. The town sits on the same reflective arena
+with the shared grid, backgrounds and camera controls.
+
+| Control | Action |
+| --- | --- |
+| WASD / Arrow Keys | Walk Arin relative to the camera; start the following view |
+| Middle Mouse Drag | Orbit; pauses cinematic rotation |
+| Left Mouse Drag | Pan; pauses cinematic rotation |
+| Mouse Wheel | Smooth zoom |
+| F / G / B | Toggle floor / grid / cycle shared backgrounds |
+| C / Right Click | Return to the cinematic town overview |
+| Tab | Toggle the party following view |
+
+Followers emerge in order, walk Arin's route around corners, gather at his stopping
+point, finish their gait animation and hide. Arin remains visible. Exterior collision
+keeps the party out of buildings and canals; bridges remain traversable. Building
+interiors and NPC interactions are outside this scene.
+
+Orin v1.3 has Run but no Walk clip, so his existing Run plays at 65% speed in town.
+Arin, Zara and Mira use their Walk clips. Original character packages stay unchanged.
+
+The current identified roster is Arin, Orin, Zara and Mira. Mila's model identity
+is awaiting clarification; the controller supports a fifth member without substituting
+another character under her name.
+
+Native build: `pwsh -File tools/Character3DViewer/Launch.ps1 -Build`.
+See `NerisTownTests.smileproj` for route checks and `NerisTownSceneTests.smile`
+for the real-asset acceptance fixture. Studio and Web adoption remain held.
+
+September 25 acceptance: native build, route/obstacle and real-asset scene checks,
+24 accepted Arin keys, follower appearance/gathering, resource cleanup and shared
+Viewer hardening passed. Visible checks covered town/Arin tab switching, follow
+framing, slow/moderate pan, zoom in/out, reset and F/G/B. Slow/moderate horizontal
+and vertical orbit are checked through the shared pointer-input path; the desktop
+automation interface cannot issue a held middle-button drag. Original Blender and
+all 22 exported GLB hashes match the package manifest.
+
 ## Native Battle System
 
 The native Viewer opens directly on **Battle System**, using the existing Kael

@@ -1,0 +1,108 @@
+''' Static town resources, loaded one chunk per frame under the host progress display.
+Module Smile.Tools.NerisTownAssets
+
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Graphics3D As G
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Tools.Character3DViewerCalibration As Numbers
+
+Public Const CHUNK_COUNT = 22
+
+Public Type State
+    Models[22] As Core.Model3D
+    Objects[352] As Core.Object3D
+    Loaded As Number
+    ObjectCount As Number
+    Failed As Boolean
+    ErrorCode As Number
+    Stage As Number
+End Type
+
+Public Sub LoadNext(ByRef Value As State)
+
+    Dim Part As Number
+    Dim Name As Text
+    Dim Object As Core.Object3D
+    Dim Ok As Boolean
+
+    If Value.Loaded >= CHUNK_COUNT Or Value.Failed Then
+        Return
+    End If
+
+    Name = Numbers.NumberText(Value.Loaded)
+
+    If Value.Loaded < 10 Then
+        Name = "0" + Name
+    End If
+
+    Value.Models[Value.Loaded] = G.LoadModel3D("Assets/Neris/Neris-" + Name + ".sm3d")
+    Ok = Value.Models[Value.Loaded].GeometryReady
+    Value.Stage = 1
+    Value.ErrorCode = G.LastError()
+
+    If Ok Then
+
+        Ok = G.PrepareModelPbr3D(Value.Models[Value.Loaded], 1, 1, 4)
+        Value.Stage = 2
+        Value.ErrorCode = G.LastError()
+
+    End If
+
+    If Not Ok Then
+        Value.Failed = True
+
+        Return
+    End If
+
+    For Part = 0 To Value.Models[Value.Loaded].PartCount - 1
+
+        Object = G.CreateModelPart3D(Value.Models[Value.Loaded], Part)
+        Ok = Object.Handle <> 0 And Ok
+        Ok = P.SetScale(Object, 1000.0, 1000.0, 1000.0) And Ok
+        Ok = P.SetPosition(Object, 0.0, 21.0, 0.0) And Ok
+        Value.Objects[Value.ObjectCount] = Object
+        Value.ObjectCount = Value.ObjectCount + 1
+    End For
+
+    Value.Loaded = Value.Loaded + 1
+    Value.Failed = Not Ok
+    Value.Stage = 3
+    Value.ErrorCode = G.LastError()
+
+End Sub
+
+Public Function Draw(ByRef Value As State) As Boolean
+
+    Dim Index As Number
+    Dim Result As Boolean
+
+    Result = True
+
+    For Index = 0 To Value.ObjectCount - 1
+        Result = G.DrawObject3D(Value.Objects[Index]) And Result
+    End For
+
+    Return Result
+
+End Function
+
+Public Sub Destroy(ByRef Value As State)
+
+    Dim Index As Number
+    Dim Empty As State
+
+    For Index = 0 To Value.ObjectCount - 1
+        Call G.DestroyObject3D(Value.Objects[Index])
+    End For
+
+    For Index = 0 To CHUNK_COUNT - 1
+        Call G.DestroyModel3D(Value.Models[Index])
+    End For
+
+    Value = Empty
+
+End Sub
+
+End Module

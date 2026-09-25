@@ -315,3 +315,11 @@ adjustment, so it must not turn the running direction sideways. Arrival restores
 the captured battle stance. This is presenter state only; original Party demo,
 model, clips, grounding, equipment and zero-key calibration remain unchanged.
 The native scene fixture checks both travel directions and restored facing.
+
+## September 25: native Neris town locomotion
+
+Orin v1.3 has Run but no Walk clip. Neris uses that existing Run at 65% playback
+speed, with fractional elapsed time retained, instead of requesting a nonexistent
+Walk. The body follows the model-forward axis; the battle-only -55-degree hammer
+stance is not applied to town travel. Grounding and saved equipment translations
+scale with the smaller actor. The source model and zero-key JSON remain unchanged.

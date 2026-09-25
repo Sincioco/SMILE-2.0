@@ -37,6 +37,7 @@
     <SmileSource Include="ArenaCamera3D.smile" />
     <SmileSource Include="ArenaBackdrop3D.smile" />
     <SmileSource Include="ArenaViewport3D.smile" />
+    <SmileSource Include="PartyTrail3D.smile" />
     <SmileSource Include="StaticBackdrop3D.smile" />
   </ItemGroup>
 </SmileProject>
