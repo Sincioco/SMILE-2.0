@@ -35,7 +35,7 @@ for x,y,label in [(-366,110,'Tripo bridge landing'),(-116,140,'Royal bridge'),
         (-231,-331,'West/south corner'),(251,-331,'East/south corner'),
         (-477,220,'West castle circuit'),(-250,344,'North castle circuit'),
         (12,220,'East castle circuit'),(145,344,'North HQ road'),(251,242,'East HQ road'),
-        (0,24,'Tower front approach'),(0,-339,'Southern arrival avenue'),
+        (0,layout['tower'][1]-36,'Tower front approach'),(0,-339,'Southern arrival avenue'),
         (-172,25,'Estates crossroads'),(-172,-205,'Middle crossroads'),
         (174,-5,'Workers crossroads'),(174,-234,'Shops crossroads')]:
     connected(x,y,label)

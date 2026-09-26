@@ -51,7 +51,7 @@ Leader.X = Leader.X + 1.0
 Call Trail.Advance(Path, Leader, 25, 40.0)
 Call Check(Abs(Path.Positions[4].X - 100.0) < 0.001, "Restart Does Not Pull Followers Backward")
 Call Check(Not Navigation.CanStand(0.0, -750.0), "City Hall Walls Block Walking")
-Call Check(Not Navigation.CanStand(0.0, 600.0), "Relay Walls Block Walking")
+Call Check(Not Navigation.CanStand(0.0, 375.0), "Comm Tower Walls Block Walking")
 Call Check(Not Navigation.CanStand(580.0, -2200.0), "Civic Canal Blocks Walking")
 Call Check(Navigation.CanStand(580.0, -2800.0), "Civic Bridge Is Open")
 Call Check(Navigation.CanStand(-580.0, -1120.0), "West City Hall Crossroad Bridge Is Open")
@@ -107,13 +107,13 @@ End For
 
 Call Check(Position.X <= 401.0, "Party Crosses East Canal Directly Into City Hall Forecourt")
 
-Position = P.Vector(0.0, Navigation.GroundHeight(0.0, 330.0), 330.0)
+Position = P.Vector(0.0, Navigation.GroundHeight(0.0, 105.0), 105.0)
 
 For Index = 1 To 95
     Position = Navigation.Move(Position, 0.0, 1.0)
 End For
 
-Call Check(Position.Z > 420.0 And Position.Y > 50.0, "Party Climbs The Scaled Relay Stairs To Its Door")
+Call Check(Position.Z > 195.0 And Position.Y > 50.0, "Party Climbs The Scaled Comm Tower Stairs To Its Door")
 
 Position = P.Vector(0.0, Navigation.GroundHeight(0.0, -945.0), -945.0)
 

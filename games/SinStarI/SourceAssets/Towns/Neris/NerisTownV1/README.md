@@ -28,7 +28,7 @@ Y=-355..355. The Old Castle is a western addition to Sin's district diagram.
 | Old Castle (Tripo) | -366, 226 | 170 times imported source |
 | Royal Castle | -116, 235 | 2 times authored palace |
 | Military HQ | 145, 242 | 2 times original |
-| Comm Tower | 0, 60 | 4 times original, proportionate |
+| Comm Tower | 0, 37.5 | 4 times original, proportionate |
 | City Hall | 0, -75 | 2 times original |
 | Kingdom of Neris arch | 0, -265 | Original proportions |
 
@@ -38,6 +38,8 @@ streets, district crossroads and short front paths serve eight rich-district
 houses, ten middle houses plus six older cottages, twelve lower-district houses
 plus two older cottages, and Weapon/Item/Armor shops. Homes and shops face inward;
 landmark doors face south. No redundant inner enclosing roads remain.
+The Comm Tower platform is centred between the City Hall canal's north bank and
+the northern main road, leaving 30.5 m of clear avenue on each side.
 
 Two bridges join the City Hall forecourt directly to the west/east district
 crossroad. All seven civic bridge rails stop at the water banks; castle and HQ

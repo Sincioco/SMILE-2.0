@@ -149,7 +149,7 @@ Public Function SolidAt(Index As Number) As Region
         Case 2
             Result = Box(-1408.000, 2402.000, -912.000, 2898.000)
         Case 3
-            Result = Box(-258.000, 394.000, 258.000, 806.000)
+            Result = Box(-258.000, 169.000, 258.000, 581.000)
         Case 4
             Result = Box(1177.400, 2667.400, 1722.600, 3012.600)
         Case 5
@@ -325,13 +325,13 @@ Public Function SolidAt(Index As Number) As Region
         Case 90
             Result = Box(-1425.000, 2375.000, -1355.000, 2445.000)
         Case 91
-            Result = Box(86.800, 374.000, 122.800, 464.000)
+            Result = Box(-122.800, 511.000, -86.800, 601.000)
         Case 92
-            Result = Box(-122.800, 374.000, -86.800, 464.000)
+            Result = Box(86.800, 511.000, 122.800, 601.000)
         Case 93
-            Result = Box(86.800, 736.000, 122.800, 826.000)
+            Result = Box(-122.800, 149.000, -86.800, 239.000)
         Case 94
-            Result = Box(-122.800, 736.000, -86.800, 826.000)
+            Result = Box(86.800, 149.000, 122.800, 239.000)
         Case 95
             Result = Box(-1070.400, 1270.000, -1065.600, 1810.000)
         Case 96
@@ -373,9 +373,9 @@ Public Function SolidAt(Index As Number) As Region
         Case 114
             Result = Box(-858.200, 1971.800, -821.800, 2008.200)
         Case 115
-            Result = Box(50.200, 775.800, 85.800, 811.400)
+            Result = Box(-85.800, 550.800, -50.200, 586.400)
         Case 116
-            Result = Box(-85.800, 775.800, -50.200, 811.400)
+            Result = Box(50.200, 550.800, 85.800, 586.400)
         Case 117
             Result = Box(-854.847, 1974.544, -825.512, 2011.019)
         Case 118

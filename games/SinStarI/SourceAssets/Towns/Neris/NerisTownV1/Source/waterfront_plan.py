@@ -13,7 +13,8 @@ CASTLE = (-116, 235)
 TRIPO = (-366, 226)
 MILITARY = (145, 242)
 HALL = (0, -75)
-TOWER = (0, 60)
+# Midway between the City Hall canal's north bank (-28) and road edge (103).
+TOWER = (0, 37.5)
 TOWER_SCALE = 4
 HALL_SCALE = 2
 # Stair foot is Y=-93.48; the retained fountain at -112 bisects this forecourt.

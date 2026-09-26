@@ -81,7 +81,7 @@ Public Function DoorAt(Index As Number) As Door
             Result.Label = "City Hall"
 
         Case 6
-            Result.Position = P.Vector(0.00000, 40.40000, 777.60010)
+            Result.Position = P.Vector(0.00000, 40.40000, 552.60010)
             Result.Width = 52.20000
             Result.Height = 98.58000
             Result.RightX = -1.00000
@@ -89,7 +89,7 @@ Public Function DoorAt(Index As Number) As Door
             Result.Label = "Communication Tower"
 
         Case 7
-            Result.Position = P.Vector(0.00000, 58.40000, 422.39990)
+            Result.Position = P.Vector(0.00000, 58.40000, 197.39990)
             Result.Width = 93.96000
             Result.Height = 178.55999
             Result.RightX = 1.00000
@@ -2526,7 +2526,7 @@ Public Function SurfaceAt(Index As Number) As Surface
 
         Case 217
             Result.X = 0.00000
-            Result.Z = 398.79997
+            Result.Z = 173.79999
             Result.Height = 28.40000
             Result.RightX = 1.00000
             Result.RightZ = 0.00000
@@ -2535,7 +2535,7 @@ Public Function SurfaceAt(Index As Number) As Surface
 
         Case 218
             Result.X = 0.00000
-            Result.Z = 405.00000
+            Result.Z = 180.00000
             Result.Height = 34.20000
             Result.RightX = 1.00000
             Result.RightZ = 0.00000
@@ -2544,7 +2544,7 @@ Public Function SurfaceAt(Index As Number) As Surface
 
         Case 219
             Result.X = 0.00000
-            Result.Z = 411.20003
+            Result.Z = 186.20001
             Result.Height = 40.00000
             Result.RightX = 1.00000
             Result.RightZ = 0.00000
@@ -2553,7 +2553,7 @@ Public Function SurfaceAt(Index As Number) As Surface
 
         Case 220
             Result.X = 0.00000
-            Result.Z = 417.39998
+            Result.Z = 192.40000
             Result.Height = 45.80000
             Result.RightX = 1.00000
             Result.RightZ = 0.00000
@@ -2562,7 +2562,7 @@ Public Function SurfaceAt(Index As Number) As Surface
 
         Case 221
             Result.X = 0.00000
-            Result.Z = 423.60001
+            Result.Z = 198.60001
             Result.Height = 51.60000
             Result.RightX = 1.00000
             Result.RightZ = 0.00000
@@ -2571,7 +2571,7 @@ Public Function SurfaceAt(Index As Number) As Surface
 
         Case 222
             Result.X = 0.00000
-            Result.Z = 429.80000
+            Result.Z = 204.80000
             Result.Height = 57.40000
             Result.RightX = 1.00000
             Result.RightZ = 0.00000
@@ -2580,7 +2580,7 @@ Public Function SurfaceAt(Index As Number) As Surface
 
         Case 223
             Result.X = 0.00000
-            Result.Z = 454.93694
+            Result.Z = 229.93694
             Result.Height = 58.20000
             Result.RightX = 1.00000
             Result.RightZ = 0.00000
@@ -2589,7 +2589,7 @@ Public Function SurfaceAt(Index As Number) As Surface
 
         Case 224
             Result.X = 0.00000
-            Result.Z = 757.59995
+            Result.Z = 532.59998
             Result.Height = 40.20000
             Result.RightX = -1.00000
             Result.RightZ = -0.00000

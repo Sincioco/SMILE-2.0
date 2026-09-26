@@ -1,6 +1,6 @@
 {
   "source": "Blend/Neris-Town-Waterfront.blend",
-  "source_sha256": "5fdab26f15658921a58d34e6735a7c3ccb255a98eda6d989521301aeb16ac666",
+  "source_sha256": "3b0ba0c534197429781ff4a25fadf1e58913be8979e15fa5a269269a71537eb4",
   "evaluated_instances": 29536,
   "triangles": 4029482,
   "removed_degenerate_triangles": 243342,
@@ -16,7 +16,7 @@
       "file": "Neris-01.glb",
       "parts": 6,
       "triangles": 63996,
-      "sha256": "4c556bb7bc89f5b60bc1fbd3f4f06b8c69652546f3c40bdceb5fd32603d94bd4"
+      "sha256": "232a137206809bf6f071490a656c27d90007dba3783b45695b6a1be80c608ac4"
     },
     {
       "file": "Neris-02.glb",
@@ -33,44 +33,44 @@
     {
       "file": "Neris-04.glb",
       "parts": 2,
-      "triangles": 83792,
-      "sha256": "37e3c1c92eccda63087f13060f1cbceb1fffc7f47d70de9dfa2465556395f197"
+      "triangles": 97039,
+      "sha256": "0fe7078a5fd9e10e1eb81289ff35171df7e4d0b3b75dc45ca441b18e7e651302"
     },
     {
       "file": "Neris-05.glb",
       "parts": 2,
-      "triangles": 84490,
-      "sha256": "dd0e35ad46c886c2c96d53a0b4d8f37498604a1f5ba2b9e839bda2bef05cb164"
+      "triangles": 60543,
+      "sha256": "49f77adda3ee868ba14ebf627e42fc700b340bcdf2e41e4599278f0bb2c21727"
     },
     {
       "file": "Neris-06.glb",
       "parts": 2,
-      "triangles": 75667,
-      "sha256": "d09bc5fc0fe2c598f29537b65ae7577d978fd09fa2063b5443225123d50eb2f3"
+      "triangles": 93640,
+      "sha256": "d07aa5a6b62f3cec5920301643d3b4c16304802d5ac80bbe305a2c0a14ce20ae"
     },
     {
       "file": "Neris-07.glb",
       "parts": 2,
-      "triangles": 60118,
-      "sha256": "a921453760f5d518cf7a9bc6379a90f04c52453a2bd015cd8f88dc50854358f6"
+      "triangles": 66598,
+      "sha256": "63fc4a258efa532400115ddd81daf9c0566160e83b77d921aa98bce813aeb690"
     },
     {
       "file": "Neris-08.glb",
       "parts": 2,
-      "triangles": 73831,
-      "sha256": "ee017051882ae4f65a07d946f0d41cf4e001b4017584f6a9eb496743f17099a5"
+      "triangles": 60086,
+      "sha256": "aa1af054eda8bdce1763639387b36963c4e635902d5639709ff4c6c6d02a13d7"
     },
     {
       "file": "Neris-09.glb",
       "parts": 3,
       "triangles": 66854,
-      "sha256": "f361600520f5a748a005c591a2ce77d814982b3afd35a57cc2755dafa53f21df"
+      "sha256": "cf5d3d04c2ee3b08375120398456769631a75e59486ef78cbb3fdeea58c4056d"
     },
     {
       "file": "Neris-10.glb",
       "parts": 3,
-      "triangles": 62484,
-      "sha256": "a35c3479b12f753674e55c068fd42667753b9475eaca0939eb8428a92625490c"
+      "triangles": 62476,
+      "sha256": "cdf0f2067523efe1723e2dfc2efce3449f33b40129691059a698f1dd164ffaed"
     },
     {
       "file": "Neris-11.glb",
@@ -88,19 +88,19 @@
       "file": "Neris-13.glb",
       "parts": 3,
       "triangles": 127730,
-      "sha256": "34782e8af048c0482cb34ffcb84b5390436abb6f9feb4b4a0433794c25b0f684"
+      "sha256": "2f9f60062d743e261a43f5b7829288f2e46e5f90409ca3ef5565ebe6c852fa67"
     },
     {
       "file": "Neris-14.glb",
       "parts": 5,
       "triangles": 113759,
-      "sha256": "0ddb08db52fbc5031c9bd205730292bc234363ecaaa09d32f73e737775ec39f0"
+      "sha256": "d79de4642ca193b1852988c035da013877348f5dc5d82eacc8818983dfd05d57"
     },
     {
       "file": "Neris-15.glb",
       "parts": 3,
       "triangles": 113507,
-      "sha256": "ddb25cf8e01aba7b64390efba7492a7e1df86caec5c3b7b05a66c8cb1cec09f3"
+      "sha256": "9c0ac534134c4a3a57f313b18bbcc13bd6cb6b81f7f93655680dc7cc64f02cd3"
     },
     {
       "file": "Neris-16.glb",
@@ -112,31 +112,31 @@
       "file": "Neris-17.glb",
       "parts": 4,
       "triangles": 123828,
-      "sha256": "714f7a27dae7c3c2d82b7b6ea5aa1b1ee027844b6d17a6b85c638c0adce2097d"
+      "sha256": "d7f694237d4b84916527182ed5577f6f2b26ccc5219696de9600ba0d7da81aff"
     },
     {
       "file": "Neris-18.glb",
       "parts": 4,
       "triangles": 121468,
-      "sha256": "f3a823eb612dd36c8a719ee8b00a6975021ff0554ec4a20e30173f6255783561"
+      "sha256": "25cef599493bd3c64810d6dc32ff24e081e0ede3d4a92d24c359b7716aa83394"
     },
     {
       "file": "Neris-19.glb",
       "parts": 3,
       "triangles": 114719,
-      "sha256": "6823b698bc8bb93c567d0b3a5212ac6f2c279ac288950918311ca898f330a1b0"
+      "sha256": "e18a7a871853b014153ca124f5a73b3669a43b28aac28ee644121ece50e6c3d9"
     },
     {
       "file": "Neris-20.glb",
       "parts": 2,
       "triangles": 117782,
-      "sha256": "c7e2c09f26abe420b08540f9a22472f0b50a44fb240a83230d5b331a50454fd3"
+      "sha256": "a89231942f1e23d8da84720478642d10875e7e5cef132facf3511915d6d9d306"
     },
     {
       "file": "Neris-21.glb",
       "parts": 2,
       "triangles": 130000,
-      "sha256": "d982b03a7f0c04488f1db6c7501127788154a17e9d12b50ae68331f43167513d"
+      "sha256": "79d44920a6c02e066385576d4a4590f589c79c14ce66a6b9f96aab13c7e61b47"
     },
     {
       "file": "Neris-22.glb",
@@ -148,7 +148,7 @@
       "file": "Neris-23.glb",
       "parts": 2,
       "triangles": 130000,
-      "sha256": "194bada50990479008b73357b9c9bce7e8541fa068f9d415c5071e4b5d1985ef"
+      "sha256": "abe237260142739e23290fcba9a99d45372ccfc62262cee5b1344af96e4e14c9"
     },
     {
       "file": "Neris-24.glb",
@@ -178,7 +178,7 @@
       "file": "Neris-28.glb",
       "parts": 2,
       "triangles": 130000,
-      "sha256": "99b0b029e413cea300042bf083a7ea0c10a190153f02388480f622b4f1ab744f"
+      "sha256": "d79d6ee505631bac60e41c2a00902f0c1d8776021188ef8e3706dc2d8affccaf"
     },
     {
       "file": "Neris-29.glb",
@@ -196,7 +196,7 @@
       "file": "Neris-31.glb",
       "parts": 2,
       "triangles": 130000,
-      "sha256": "8e1435f9581b3414beeefb294cb5cc383d940a032f757a20e2369c6e094f999b"
+      "sha256": "e391bd14247f2e42df4f2667cd25fafa62513e72efcd3656f37b1e6cc4414cd2"
     },
     {
       "file": "Neris-32.glb",
@@ -214,7 +214,7 @@
       "file": "Neris-34.glb",
       "parts": 2,
       "triangles": 130000,
-      "sha256": "09e7f43d41563154c0af13eb54ed70e75b84aaf0118909c3e03ae549c92d02c8"
+      "sha256": "11b16e6c64d63d1d0409f899056b97fdc97541dedcab2874ffcdcac243eb36d2"
     },
     {
       "file": "Neris-35.glb",
@@ -3419,12 +3419,12 @@
     [
       -71.99998,
       174.59998,
-      416.00003
+      191.0
     ],
     [
       71.99998,
       174.59998,
-      416.00003
+      191.0
     ],
     [
       1204.49976,
@@ -4816,92 +4816,92 @@
     [
       -0.0,
       498.67322,
-      466.0
+      241.00003
     ],
     [
       -104.79999,
       485.94733,
-      479.99994
+      255.0
     ],
     [
       104.79999,
       485.94733,
-      479.99994
+      255.0
     ],
     [
       -184.0,
       146.32632,
-      475.99994
+      251.00003
     ],
     [
       183.99997,
       146.32632,
-      475.99994
+      251.00003
     ],
     [
       133.99998,
       498.67322,
-      600.0
+      375.0
     ],
     [
       124.00001,
       146.32632,
-      416.0
+      191.00003
     ],
     [
       124.00001,
       146.32632,
-      784.00012
+      559.00012
     ],
     [
       104.79999,
       485.94733,
-      720.0
+      494.99994
     ],
     [
       -104.79999,
       485.94733,
-      720.0
+      494.99994
     ],
     [
       183.99997,
       146.32632,
-      724.00012
+      499.00006
     ],
     [
       -184.0,
       146.32632,
-      724.00012
+      499.00006
     ],
     [
       -134.0,
       498.67322,
-      600.0
+      375.0
     ],
     [
       -124.0,
       146.32632,
-      784.00012
+      559.00012
     ],
     [
       -124.0,
       146.32632,
-      416.0
+      191.00003
     ],
     [
       -186.0,
       747.13043,
-      666.0
+      440.99994
     ],
     [
       185.99998,
       747.13043,
-      666.0
+      440.99994
     ],
     [
       0.0,
       803.64429,
-      600.0
+      375.00003
     ],
     [
       1250.0,

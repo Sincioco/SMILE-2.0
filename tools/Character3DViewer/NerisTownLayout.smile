@@ -1173,9 +1173,9 @@ Public Function LampAt(Index As Number) As P.Vector3
         Case 95
             Result = P.Vector(67.00000, 118.60001, -882.80005)
         Case 96
-            Result = P.Vector(-71.99998, 174.59998, 416.00003)
+            Result = P.Vector(-71.99998, 174.59998, 191.00000)
         Case 97
-            Result = P.Vector(71.99998, 174.59998, 416.00003)
+            Result = P.Vector(71.99998, 174.59998, 191.00000)
         Case 98
             Result = P.Vector(1204.49976, 50.70000, -1537.19983)
         Case 99
@@ -1742,41 +1742,41 @@ Public Function CrystalAt(Index As Number) As P.Vector3
         Case 264
             Result = P.Vector(143.99998, 56.75579, -904.40002)
         Case 265
-            Result = P.Vector(-0.00000, 498.67322, 466.00000)
+            Result = P.Vector(-0.00000, 498.67322, 241.00003)
         Case 266
-            Result = P.Vector(-104.79999, 485.94733, 479.99994)
+            Result = P.Vector(-104.79999, 485.94733, 255.00000)
         Case 267
-            Result = P.Vector(104.79999, 485.94733, 479.99994)
+            Result = P.Vector(104.79999, 485.94733, 255.00000)
         Case 268
-            Result = P.Vector(-184.00000, 146.32632, 475.99994)
+            Result = P.Vector(-184.00000, 146.32632, 251.00003)
         Case 269
-            Result = P.Vector(183.99997, 146.32632, 475.99994)
+            Result = P.Vector(183.99997, 146.32632, 251.00003)
         Case 270
-            Result = P.Vector(133.99998, 498.67322, 600.00000)
+            Result = P.Vector(133.99998, 498.67322, 375.00000)
         Case 271
-            Result = P.Vector(124.00001, 146.32632, 416.00000)
+            Result = P.Vector(124.00001, 146.32632, 191.00003)
         Case 272
-            Result = P.Vector(124.00001, 146.32632, 784.00012)
+            Result = P.Vector(124.00001, 146.32632, 559.00012)
         Case 273
-            Result = P.Vector(104.79999, 485.94733, 720.00000)
+            Result = P.Vector(104.79999, 485.94733, 494.99994)
         Case 274
-            Result = P.Vector(-104.79999, 485.94733, 720.00000)
+            Result = P.Vector(-104.79999, 485.94733, 494.99994)
         Case 275
-            Result = P.Vector(183.99997, 146.32632, 724.00012)
+            Result = P.Vector(183.99997, 146.32632, 499.00006)
         Case 276
-            Result = P.Vector(-184.00000, 146.32632, 724.00012)
+            Result = P.Vector(-184.00000, 146.32632, 499.00006)
         Case 277
-            Result = P.Vector(-134.00000, 498.67322, 600.00000)
+            Result = P.Vector(-134.00000, 498.67322, 375.00000)
         Case 278
-            Result = P.Vector(-124.00000, 146.32632, 784.00012)
+            Result = P.Vector(-124.00000, 146.32632, 559.00012)
         Case 279
-            Result = P.Vector(-124.00000, 146.32632, 416.00000)
+            Result = P.Vector(-124.00000, 146.32632, 191.00003)
         Case 280
-            Result = P.Vector(-186.00000, 747.13043, 666.00000)
+            Result = P.Vector(-186.00000, 747.13043, 440.99994)
         Case 281
-            Result = P.Vector(185.99998, 747.13043, 666.00000)
+            Result = P.Vector(185.99998, 747.13043, 440.99994)
         Case 282
-            Result = P.Vector(0.00000, 803.64429, 600.00000)
+            Result = P.Vector(0.00000, 803.64429, 375.00003)
         Case 283
             Result = P.Vector(1250.00000, 137.52844, -1560.00000)
         Case 284
@@ -2143,7 +2143,7 @@ Public Function PavingHeight(X As Double, Z As Double) As Double
     End If
 
     If (X >= -360.0 And X <= 360.0 And
-        Z >= 250.0 And Z <= 950.0) Then
+        Z >= 20.0 And Z <= 730.0) Then
         Return 23.12
     End If
 
