@@ -16,6 +16,8 @@ HALL = (0, -75)
 TOWER = (0, 60)
 TOWER_SCALE = 4
 HALL_SCALE = 2
+# Stair foot is Y=-93.48; the retained fountain at -112 bisects this forecourt.
+HALL_PLAZA = (-50, -130.52, 50, -44)
 ARRIVAL_SIGN_Y = -265
 LEGACY_HOMES = [(-214,-163,90),(-214,-247,90),(-214,-289,90),
                 (-122,-163,90),(-122,-247,90),(-122,-289,90),
@@ -35,6 +37,7 @@ CIVIC_WATER = [(-66,-340,-50,-44),(50,-340,66,-44),(-66,-44,66,-28)]
 OUTER_WATER = subtract([BOUNDS], [MAIN, TRIPO_LAND, TRIPO_CONNECTION])
 WATER = ROYAL_WATER + TRIPO_WATER + HQ_WATER + CIVIC_WATER + OUTER_WATER
 BRIDGES = [(-125,127,-107,181),(-374,106,-358,148),(131,140,159,194),
+           (-73,-117,-43,-107),(43,-117,73,-107),
            (-73,-176,-43,-164),(43,-176,73,-164),(-73,-286,-43,-274),
            (43,-286,73,-274),(-7,-52,7,-20)]
 
@@ -71,10 +74,9 @@ def roads():
     result += [rect(-162,y,152,8) for y in (25,-205)]
     result += [rect(172,y,172,8) for y in (-5,-234)]
     # Shops and broad civic forecourt remain distinct districts.
-    result += [rect(0,-106,84,36),rect(0,-229,14,222)]
-    result += [rect(0,-49,60,10)]
+    result += [HALL_PLAZA,rect(0,-229,14,222)]
     result += [rect(0,y,176,12) for y in (-170,-280)]
-    result += [rect(*HALL,60,48),rect(*TOWER,72,70)]
+    result += [rect(*TOWER,72,70)]
     for home in homes():
         x,y = home['x'],home['y']
         dx = home['depth']/2

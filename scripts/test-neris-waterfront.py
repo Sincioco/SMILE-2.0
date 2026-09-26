@@ -31,6 +31,7 @@ def connected(x,y,label):
 
 for x,y,label in [(-366,110,'Tripo bridge landing'),(-116,140,'Royal bridge'),
         (145,145,'HQ entrance road'),(251,-112,'Worker/shop junction'),
+        (-58,-112,'West City Hall crossing'),(58,-112,'East City Hall crossing'),
         (-231,-331,'West/south corner'),(251,-331,'East/south corner'),
         (-477,220,'West castle circuit'),(-250,344,'North castle circuit'),
         (12,220,'East castle circuit'),(145,344,'North HQ road'),(251,242,'East HQ road'),

@@ -68,9 +68,15 @@ def build():
     # Move the complete original welcome arch, including its lettering, pillars,
     # banners and crystals, just north of the southern crossing (Sin's yellow mark).
     bpy.context.view_layer.update()
-    for obj in bpy.data.objects['03 Plaza and Street Furniture'].children:
+    for obj in list(bpy.data.objects['03 Plaza and Street Furniture'].children):
         if obj.type not in {'MESH','CURVE','FONT'}:continue
         points=[obj.matrix_basis @ Vector(p) for p in obj.bound_box]
+        # Remove the isolated original crystal circle west of the park avenue,
+        # including its rays, pylons and crystals. Other garden circles remain.
+        if (points and min(p.x for p in points)>=-27 and max(p.x for p in points)<=-17
+                and min(p.y for p in points)>=-27 and max(p.y for p in points)<=-17):
+            bpy.data.objects.remove(obj,do_unlink=True)
+            continue
         if points and min(p.y for p in points)>=-40.7 and max(p.y for p in points)<=-37.3:
             obj.location.y+=layout['arrivalSign'][1]+199
         if (points and min(p.x for p in points)>=-5.1 and max(p.x for p in points)<=5.1
@@ -131,14 +137,23 @@ def build():
     for a,b,c,d in layout['bridges']:
         site.box('Waterfront Bridge Deck',((a+c)/2,(b+d)/2,.015),(c-a,d-b,.27),'stone',0)
         # Rails run along the crossing, leaving both ends open.
+        rail_a,rail_b,rail_c,rail_d=a,b,c,d
+        if d<0:
+            # Civic bridges keep their broad landings; rails stop at the banks.
+            wet=[(max(a,x0),max(b,y0),min(c,x1),min(d,y1))
+                 for x0,y0,x1,y1 in layout['waterRectangles']
+                 if min(c,x1)>max(a,x0) and min(d,y1)>max(b,y0)]
+            assert wet, 'Civic bridge must cross water'
+            rail_a=min(r[0] for r in wet);rail_b=min(r[1] for r in wet)
+            rail_c=max(r[2] for r in wet);rail_d=max(r[3] for r in wet)
         if d-b>c-a:
             for x in (a+.3,c-.3):
-                site.box('Waterfront Bridge Parapet',(x,(b+d)/2,.75),(.45,d-b,1.05),'trim',0)
-                site.box('Waterfront Bridge Bronze',(x,(b+d)/2,1.3),(.48,d-b,.07),'gold',0)
+                site.box('Waterfront Bridge Parapet',(x,(rail_b+rail_d)/2,.75),(.45,rail_d-rail_b,1.05),'trim',0)
+                site.box('Waterfront Bridge Bronze',(x,(rail_b+rail_d)/2,1.3),(.48,rail_d-rail_b,.07),'gold',0)
         else:
             for y in (b+.3,d-.3):
-                site.box('Waterfront Bridge Parapet',((a+c)/2,y,.75),(c-a,.45,1.05),'trim',0)
-                site.box('Waterfront Bridge Bronze',((a+c)/2,y,1.3),(c-a,.48,.07),'gold',0)
+                site.box('Waterfront Bridge Parapet',((rail_a+rail_c)/2,y,.75),(rail_c-rail_a,.45,1.05),'trim',0)
+                site.box('Waterfront Bridge Bronze',((rail_a+rail_c)/2,y,1.3),(rail_c-rail_a,.48,.07),'gold',0)
     # Quay edging follows actual land/water boundaries. Shared internal rectangle
     # edges never become pale lines across the canals or moats.
     shoreline(site,land,layout['bridges'])

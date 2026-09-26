@@ -39,6 +39,12 @@ houses, ten middle houses plus six older cottages, twelve lower-district houses
 plus two older cottages, and Weapon/Item/Armor shops. Homes and shops face inward;
 landmark doors face south. No redundant inner enclosing roads remain.
 
+Two bridges join the City Hall forecourt directly to the west/east district
+crossroad. All seven civic bridge rails stop at the water banks; castle and HQ
+rails retain their full lengths. City Hall paving fills both side strips to the
+canal banks and reaches Y=-130.52. The fountain at Y=-112 sits 18.52 m from both
+the stair foot and the southern plaza edge. The isolated original crystal circle
+west of the park avenue is removed; the other garden circles remain.
 The arrival avenue reaches the southern edge. Its sign sits just north of the
 lower crossroad, at Sin's yellow mark. Arin initially stands 13 m south of it.
 The avenue forms a grand park with trees, benches, lamps and flower beds. Other
@@ -95,7 +101,7 @@ looks slightly upward and moves closer in royal/HQ grounds and near doors.
 Manual controls permit looking up. Fit retains orbit, which automatically hides
 the minimap. The map shows the leader's name and X/Y/Z.
 
-The static town is 37 models / 92 parts / 4,027,200 triangles. Trees and flower
+The static town is 37 models / 92 parts / 4,029,482 triangles. Trees and flower
 planters use reusable templates and draw objects. The separate Old Castle has
 14 models / 28 parts, shared 2K runtime maps and unchanged 4K originals. Identical
 cooked static textures share publication paths. A local native check measured
@@ -113,7 +119,8 @@ logo interval are additional; this is not a cold-start guarantee.
 - Waterfront checks cover connected main/district roads, all home/shop approaches,
   full south junctions and managed garden footprints clear of roads/water.
 - Paving checks cover one tile grid, no duplicate faces and open water outside bridges.
-  Background Blender checks all eight bridge support/grout/tile separations.
+  Background Blender checks all ten bridge support/grout/tile separations and
+  civic rail footprints at the water banks.
 
 Collision uses conservative solid rectangles and authored stair surfaces, not a
 full triangle navmesh. The Old Castle is a fused reference mesh without separately

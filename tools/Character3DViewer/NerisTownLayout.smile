@@ -7,7 +7,7 @@ Import Smile.Simple3D.Precision3D As P
 
 Public Const TREE_COUNT = 147
 Public Const LAMP_COUNT = 110
-Public Const CRYSTAL_COUNT = 356
+Public Const CRYSTAL_COUNT = 353
 
 Public Const FOUNTAIN_COUNT = 7
 
@@ -242,7 +242,7 @@ Public Function TreeAt(Index As Number) As Placement
             Result.Yaw = -86.14996
             Result.Variant = 1
         Case 42
-            Result.Position = P.Vector(-320.00000, 21.30000, -1320.00000)
+            Result.Position = P.Vector(-320.00000, 21.30000, -1350.00000)
             Result.Scale = P.Vector(910.44015, 894.24789, 910.44015)
             Result.Yaw = -343.63061
             Result.Variant = 0
@@ -262,7 +262,7 @@ Public Function TreeAt(Index As Number) As Placement
             Result.Yaw = -18.42078
             Result.Variant = 1
         Case 46
-            Result.Position = P.Vector(320.00000, 21.30000, -1320.00000)
+            Result.Position = P.Vector(320.00000, 21.30000, -1350.00000)
             Result.Scale = P.Vector(1100.42441, 1197.34955, 1100.42441)
             Result.Yaw = -294.86036
             Result.Variant = 0
@@ -914,11 +914,11 @@ Public Function FlowerAt(Index As Number) As Placement
             Result.Scale = P.Vector(649.99998, 649.99998, 649.99998)
             Result.Yaw = -0.00000
         Case 34
-            Result.Position = P.Vector(-200.00000, 22.80000, -1300.00000)
+            Result.Position = P.Vector(-200.00000, 22.80000, -1380.00000)
             Result.Scale = P.Vector(649.99998, 649.99998, 649.99998)
             Result.Yaw = -0.00000
         Case 35
-            Result.Position = P.Vector(200.00000, 22.80000, -1300.00000)
+            Result.Position = P.Vector(200.00000, 22.80000, -1380.00000)
             Result.Scale = P.Vector(649.99998, 649.99998, 649.99998)
             Result.Yaw = -0.00000
         Case 36
@@ -1246,9 +1246,9 @@ Public Function CrystalAt(Index As Number) As P.Vector3
         Case 16
             Result = P.Vector(-1039.99988, 60.35580, 1200.00000)
         Case 17
-            Result = P.Vector(-100.00001, 60.35580, -1300.00000)
+            Result = P.Vector(-100.00001, 60.35580, -1380.00012)
         Case 18
-            Result = P.Vector(99.99999, 60.35580, -1300.00000)
+            Result = P.Vector(99.99999, 60.35580, -1380.00012)
         Case 19
             Result = P.Vector(-100.00001, 60.35580, -1500.00000)
         Case 20
@@ -1266,662 +1266,656 @@ Public Function CrystalAt(Index As Number) As P.Vector3
         Case 26
             Result = P.Vector(99.99999, 60.35580, -3060.00024)
         Case 27
-            Result = P.Vector(-220.00000, 48.40422, -1786.49963)
-        Case 28
-            Result = P.Vector(-249.01186, 48.40422, -1836.75024)
-        Case 29
-            Result = P.Vector(-190.98814, 48.40422, -1836.75024)
-        Case 30
             Result = P.Vector(-2180.00000, 60.35580, -820.00000)
-        Case 31
+        Case 28
             Result = P.Vector(-1860.00012, 60.35580, -820.00000)
-        Case 32
+        Case 29
             Result = P.Vector(-1460.00012, 60.35580, -820.00000)
-        Case 33
+        Case 30
             Result = P.Vector(-1140.00000, 60.35580, -820.00000)
-        Case 34
+        Case 31
             Result = P.Vector(-1500.00012, 60.35580, -1749.99988)
-        Case 35
+        Case 32
             Result = P.Vector(-1500.00012, 60.35580, -2510.00000)
-        Case 36
+        Case 33
             Result = P.Vector(-1500.00012, 60.35580, -2950.00024)
-        Case 37
+        Case 34
             Result = P.Vector(1499.99988, 60.35580, 420.00000)
-        Case 38
+        Case 35
             Result = P.Vector(1499.99988, 60.35580, -620.00000)
-        Case 39
+        Case 36
             Result = P.Vector(2139.99976, 60.35580, -1879.99988)
-        Case 40
+        Case 37
             Result = P.Vector(2139.99976, 60.35580, -2900.00024)
-        Case 41
+        Case 38
             Result = P.Vector(1279.99988, 60.35580, -3090.00024)
-        Case 42
+        Case 39
             Result = P.Vector(1499.99988, 60.35580, -1889.99988)
-        Case 43
+        Case 40
             Result = P.Vector(-2190.00000, 60.35580, -3020.00049)
-        Case 44
+        Case 41
             Result = P.Vector(-2190.00000, 60.35580, -2140.00024)
-        Case 45
+        Case 42
             Result = P.Vector(-2190.00000, 60.35580, -1240.00012)
-        Case 46
+        Case 43
             Result = P.Vector(-2190.00000, 60.35580, 60.00000)
-        Case 47
+        Case 44
             Result = P.Vector(-2190.00000, 60.35580, 1010.00012)
-        Case 48
+        Case 45
             Result = P.Vector(-2190.00000, 60.35580, 1299.99988)
-        Case 49
+        Case 46
             Result = P.Vector(2380.00000, 60.35580, -3020.00049)
-        Case 50
+        Case 47
             Result = P.Vector(2380.00000, 60.35580, -2140.00024)
-        Case 51
+        Case 48
             Result = P.Vector(2380.00000, 60.35580, -1240.00012)
-        Case 52
+        Case 49
             Result = P.Vector(2380.00000, 60.35580, 60.00000)
-        Case 53
+        Case 50
             Result = P.Vector(2380.00000, 60.35580, 1010.00012)
-        Case 54
+        Case 51
             Result = P.Vector(2380.00000, 60.35580, 1299.99988)
-        Case 55
+        Case 52
             Result = P.Vector(-2020.00000, 157.06633, -455.00000)
-        Case 56
+        Case 53
             Result = P.Vector(-2139.99976, 157.06633, -455.00000)
-        Case 57
+        Case 54
             Result = P.Vector(-2020.00000, 157.06633, -305.00000)
-        Case 58
+        Case 55
             Result = P.Vector(-2139.99976, 157.06633, -305.00000)
-        Case 59
+        Case 56
             Result = P.Vector(-2090.00000, 190.37614, -380.00003)
-        Case 60
+        Case 57
             Result = P.Vector(-2020.00000, 157.06633, -35.00000)
-        Case 61
+        Case 58
             Result = P.Vector(-2139.99976, 157.06633, -35.00000)
-        Case 62
+        Case 59
             Result = P.Vector(-2020.00000, 157.06633, 115.00000)
-        Case 63
+        Case 60
             Result = P.Vector(-2139.99976, 157.06633, 115.00000)
-        Case 64
+        Case 61
             Result = P.Vector(-2090.00000, 190.37614, 40.00000)
-        Case 65
+        Case 62
             Result = P.Vector(-2020.00000, 157.06633, 385.00000)
-        Case 66
+        Case 63
             Result = P.Vector(-2139.99976, 157.06633, 385.00000)
-        Case 67
+        Case 64
             Result = P.Vector(-2020.00000, 157.06633, 535.00006)
-        Case 68
+        Case 65
             Result = P.Vector(-2139.99976, 157.06633, 535.00006)
-        Case 69
+        Case 66
             Result = P.Vector(-2090.00000, 190.37614, 459.99994)
-        Case 70
+        Case 67
             Result = P.Vector(-2020.00000, 157.06633, 805.00000)
-        Case 71
+        Case 68
             Result = P.Vector(-2139.99976, 157.06633, 805.00000)
-        Case 72
+        Case 69
             Result = P.Vector(-2020.00000, 157.06633, 955.00000)
-        Case 73
+        Case 70
             Result = P.Vector(-2139.99976, 157.06633, 955.00000)
-        Case 74
+        Case 71
             Result = P.Vector(-2090.00000, 190.37614, 880.00000)
-        Case 75
+        Case 72
             Result = P.Vector(-2054.99976, 127.06631, -1470.00000)
-        Case 76
+        Case 73
             Result = P.Vector(-2144.99976, 127.06631, -1470.00000)
-        Case 77
+        Case 74
             Result = P.Vector(-2054.99976, 127.06631, -1370.00000)
-        Case 78
+        Case 75
             Result = P.Vector(-2144.99976, 127.06631, -1370.00000)
-        Case 79
+        Case 76
             Result = P.Vector(-2101.99976, 147.44240, -1420.00000)
-        Case 80
+        Case 77
             Result = P.Vector(-2054.99976, 127.06631, -1890.00000)
-        Case 81
+        Case 78
             Result = P.Vector(-2144.99976, 127.06631, -1890.00000)
-        Case 82
+        Case 79
             Result = P.Vector(-2054.99976, 127.06631, -1790.00000)
-        Case 83
+        Case 80
             Result = P.Vector(-2144.99976, 127.06631, -1790.00000)
-        Case 84
+        Case 81
             Result = P.Vector(-2101.99976, 147.44240, -1840.00000)
-        Case 85
+        Case 82
             Result = P.Vector(-2054.99976, 127.06631, -2310.00000)
-        Case 86
+        Case 83
             Result = P.Vector(-2144.99976, 127.06631, -2310.00000)
-        Case 87
+        Case 84
             Result = P.Vector(-2054.99976, 127.06631, -2210.00000)
-        Case 88
+        Case 85
             Result = P.Vector(-2144.99976, 127.06631, -2210.00000)
-        Case 89
+        Case 86
             Result = P.Vector(-2101.99976, 147.44240, -2260.00000)
-        Case 90
+        Case 87
             Result = P.Vector(-2054.99976, 127.06631, -2730.00000)
-        Case 91
+        Case 88
             Result = P.Vector(-2144.99976, 127.06631, -2730.00000)
-        Case 92
+        Case 89
             Result = P.Vector(-2054.99976, 127.06631, -2630.00000)
-        Case 93
+        Case 90
             Result = P.Vector(-2144.99976, 127.06631, -2630.00000)
-        Case 94
+        Case 91
             Result = P.Vector(-2101.99976, 147.44240, -2680.00000)
-        Case 95
+        Case 92
             Result = P.Vector(-2054.99976, 127.06631, -3150.00000)
-        Case 96
+        Case 93
             Result = P.Vector(-2144.99976, 127.06631, -3150.00000)
-        Case 97
+        Case 94
             Result = P.Vector(-2054.99976, 127.06631, -3050.00000)
-        Case 98
+        Case 95
             Result = P.Vector(-2144.99976, 127.06631, -3050.00000)
-        Case 99
+        Case 96
             Result = P.Vector(-2101.99976, 147.44240, -3100.00024)
-        Case 100
+        Case 97
             Result = P.Vector(-1135.00000, 127.06631, -1470.00000)
-        Case 101
+        Case 98
             Result = P.Vector(-1225.00000, 127.06631, -1470.00000)
-        Case 102
+        Case 99
             Result = P.Vector(-1135.00000, 127.06631, -1370.00000)
-        Case 103
+        Case 100
             Result = P.Vector(-1225.00000, 127.06631, -1370.00000)
-        Case 104
+        Case 101
             Result = P.Vector(-1181.99976, 147.44240, -1420.00000)
-        Case 105
+        Case 102
             Result = P.Vector(1155.00000, 112.06631, 840.00000)
-        Case 106
+        Case 103
             Result = P.Vector(1225.00000, 112.06631, 840.00000)
-        Case 107
+        Case 104
             Result = P.Vector(1155.00000, 112.06631, 760.00000)
-        Case 108
+        Case 105
             Result = P.Vector(1225.00000, 112.06631, 760.00000)
-        Case 109
+        Case 106
             Result = P.Vector(1191.99988, 131.65393, 800.00000)
-        Case 110
+        Case 107
             Result = P.Vector(1155.00000, 112.06631, 500.00000)
-        Case 111
+        Case 108
             Result = P.Vector(1225.00000, 112.06631, 500.00000)
-        Case 112
+        Case 109
             Result = P.Vector(1155.00000, 112.06631, 420.00000)
-        Case 113
+        Case 110
             Result = P.Vector(1225.00000, 112.06631, 420.00000)
-        Case 114
+        Case 111
             Result = P.Vector(1191.99988, 131.65393, 460.00006)
-        Case 115
+        Case 112
             Result = P.Vector(1155.00000, 112.06631, 160.00000)
-        Case 116
+        Case 113
             Result = P.Vector(1225.00000, 112.06631, 160.00000)
-        Case 117
+        Case 114
             Result = P.Vector(1155.00000, 112.06631, 80.00000)
-        Case 118
+        Case 115
             Result = P.Vector(1225.00000, 112.06631, 80.00000)
-        Case 119
+        Case 116
             Result = P.Vector(1191.99988, 131.65393, 119.99999)
-        Case 120
+        Case 117
             Result = P.Vector(1155.00000, 112.06631, -180.00000)
-        Case 121
+        Case 118
             Result = P.Vector(1225.00000, 112.06631, -180.00000)
-        Case 122
+        Case 119
             Result = P.Vector(1155.00000, 112.06631, -260.00000)
-        Case 123
+        Case 120
             Result = P.Vector(1225.00000, 112.06631, -260.00000)
-        Case 124
+        Case 121
             Result = P.Vector(1191.99988, 131.65393, -220.00002)
-        Case 125
+        Case 122
             Result = P.Vector(1155.00000, 112.06631, -520.00006)
-        Case 126
+        Case 123
             Result = P.Vector(1225.00000, 112.06631, -520.00006)
-        Case 127
+        Case 124
             Result = P.Vector(1155.00000, 112.06631, -600.00006)
-        Case 128
+        Case 125
             Result = P.Vector(1225.00000, 112.06631, -600.00006)
-        Case 129
+        Case 126
             Result = P.Vector(1191.99988, 131.65393, -559.99994)
-        Case 130
+        Case 127
             Result = P.Vector(1155.00000, 112.06631, -860.00000)
-        Case 131
+        Case 128
             Result = P.Vector(1225.00000, 112.06631, -860.00000)
-        Case 132
+        Case 129
             Result = P.Vector(1155.00000, 112.06631, -940.00000)
-        Case 133
+        Case 130
             Result = P.Vector(1225.00000, 112.06631, -940.00000)
-        Case 134
+        Case 131
             Result = P.Vector(1191.99988, 131.65393, -900.00000)
-        Case 135
+        Case 132
             Result = P.Vector(2094.99976, 112.06631, 840.00000)
-        Case 136
+        Case 133
             Result = P.Vector(2165.00000, 112.06631, 840.00000)
-        Case 137
+        Case 134
             Result = P.Vector(2094.99976, 112.06631, 760.00000)
-        Case 138
+        Case 135
             Result = P.Vector(2165.00000, 112.06631, 760.00000)
-        Case 139
+        Case 136
             Result = P.Vector(2131.99976, 131.65393, 800.00000)
-        Case 140
+        Case 137
             Result = P.Vector(2094.99976, 112.06631, 500.00000)
-        Case 141
+        Case 138
             Result = P.Vector(2165.00000, 112.06631, 500.00000)
-        Case 142
+        Case 139
             Result = P.Vector(2094.99976, 112.06631, 420.00000)
-        Case 143
+        Case 140
             Result = P.Vector(2165.00000, 112.06631, 420.00000)
-        Case 144
+        Case 141
             Result = P.Vector(2131.99976, 131.65393, 460.00006)
-        Case 145
+        Case 142
             Result = P.Vector(2094.99976, 112.06631, 160.00000)
-        Case 146
+        Case 143
             Result = P.Vector(2165.00000, 112.06631, 160.00000)
-        Case 147
+        Case 144
             Result = P.Vector(2094.99976, 112.06631, 80.00000)
-        Case 148
+        Case 145
             Result = P.Vector(2165.00000, 112.06631, 80.00000)
-        Case 149
+        Case 146
             Result = P.Vector(2131.99976, 131.65393, 119.99999)
-        Case 150
+        Case 147
             Result = P.Vector(2094.99976, 112.06631, -180.00000)
-        Case 151
+        Case 148
             Result = P.Vector(2165.00000, 112.06631, -180.00000)
-        Case 152
+        Case 149
             Result = P.Vector(2094.99976, 112.06631, -260.00000)
-        Case 153
+        Case 150
             Result = P.Vector(2165.00000, 112.06631, -260.00000)
-        Case 154
+        Case 151
             Result = P.Vector(2131.99976, 131.65393, -220.00002)
-        Case 155
+        Case 152
             Result = P.Vector(2094.99976, 112.06631, -520.00006)
-        Case 156
+        Case 153
             Result = P.Vector(2165.00000, 112.06631, -520.00006)
-        Case 157
+        Case 154
             Result = P.Vector(2094.99976, 112.06631, -600.00006)
-        Case 158
+        Case 155
             Result = P.Vector(2165.00000, 112.06631, -600.00006)
-        Case 159
+        Case 156
             Result = P.Vector(2131.99976, 131.65393, -559.99994)
-        Case 160
+        Case 157
             Result = P.Vector(2094.99976, 112.06631, -860.00000)
-        Case 161
+        Case 158
             Result = P.Vector(2165.00000, 112.06631, -860.00000)
-        Case 162
+        Case 159
             Result = P.Vector(2094.99976, 112.06631, -940.00000)
-        Case 163
+        Case 160
             Result = P.Vector(2165.00000, 112.06631, -940.00000)
-        Case 164
+        Case 161
             Result = P.Vector(2131.99976, 131.65393, -900.00000)
-        Case 165
+        Case 162
             Result = P.Vector(-1200.00000, 157.06633, -455.00000)
-        Case 166
+        Case 163
             Result = P.Vector(-1320.00000, 157.06633, -455.00000)
-        Case 167
+        Case 164
             Result = P.Vector(-1200.00000, 157.06633, -305.00000)
-        Case 168
+        Case 165
             Result = P.Vector(-1320.00000, 157.06633, -305.00000)
-        Case 169
+        Case 166
             Result = P.Vector(-1270.00012, 190.37614, -380.00003)
-        Case 170
+        Case 167
             Result = P.Vector(-1200.00000, 157.06633, -35.00000)
-        Case 171
+        Case 168
             Result = P.Vector(-1320.00000, 157.06633, -35.00000)
-        Case 172
+        Case 169
             Result = P.Vector(-1200.00000, 157.06633, 115.00000)
-        Case 173
+        Case 170
             Result = P.Vector(-1320.00000, 157.06633, 115.00000)
-        Case 174
+        Case 171
             Result = P.Vector(-1270.00012, 190.37614, 40.00000)
-        Case 175
+        Case 172
             Result = P.Vector(-1200.00000, 157.06633, 385.00000)
-        Case 176
+        Case 173
             Result = P.Vector(-1320.00000, 157.06633, 385.00000)
-        Case 177
+        Case 174
             Result = P.Vector(-1200.00000, 157.06633, 535.00006)
-        Case 178
+        Case 175
             Result = P.Vector(-1320.00000, 157.06633, 535.00006)
-        Case 179
+        Case 176
             Result = P.Vector(-1270.00012, 190.37614, 459.99994)
-        Case 180
+        Case 177
             Result = P.Vector(-1200.00000, 157.06633, 805.00000)
-        Case 181
+        Case 178
             Result = P.Vector(-1320.00000, 157.06633, 805.00000)
-        Case 182
+        Case 179
             Result = P.Vector(-1200.00000, 157.06633, 955.00000)
-        Case 183
+        Case 180
             Result = P.Vector(-1320.00000, 157.06633, 955.00000)
-        Case 184
+        Case 181
             Result = P.Vector(-1270.00012, 190.37614, 880.00000)
-        Case 185
+        Case 182
             Result = P.Vector(-1135.00000, 127.06631, -1890.00000)
-        Case 186
+        Case 183
             Result = P.Vector(-1225.00000, 127.06631, -1890.00000)
-        Case 187
+        Case 184
             Result = P.Vector(-1135.00000, 127.06631, -1790.00000)
-        Case 188
+        Case 185
             Result = P.Vector(-1225.00000, 127.06631, -1790.00000)
-        Case 189
+        Case 186
             Result = P.Vector(-1181.99976, 147.44240, -1840.00000)
-        Case 190
+        Case 187
             Result = P.Vector(-1135.00000, 127.06631, -2310.00000)
-        Case 191
+        Case 188
             Result = P.Vector(-1225.00000, 127.06631, -2310.00000)
-        Case 192
+        Case 189
             Result = P.Vector(-1135.00000, 127.06631, -2210.00000)
-        Case 193
+        Case 190
             Result = P.Vector(-1225.00000, 127.06631, -2210.00000)
-        Case 194
+        Case 191
             Result = P.Vector(-1181.99976, 147.44240, -2260.00000)
-        Case 195
+        Case 192
             Result = P.Vector(-1135.00000, 127.06631, -2730.00000)
-        Case 196
+        Case 193
             Result = P.Vector(-1225.00000, 127.06631, -2730.00000)
-        Case 197
+        Case 194
             Result = P.Vector(-1135.00000, 127.06631, -2630.00000)
-        Case 198
+        Case 195
             Result = P.Vector(-1225.00000, 127.06631, -2630.00000)
-        Case 199
+        Case 196
             Result = P.Vector(-1181.99976, 147.44240, -2680.00000)
-        Case 200
+        Case 197
             Result = P.Vector(-1135.00000, 127.06631, -3150.00000)
-        Case 201
+        Case 198
             Result = P.Vector(-1225.00000, 127.06631, -3150.00000)
-        Case 202
+        Case 199
             Result = P.Vector(-1135.00000, 127.06631, -3050.00000)
-        Case 203
+        Case 200
             Result = P.Vector(-1225.00000, 127.06631, -3050.00000)
-        Case 204
+        Case 201
             Result = P.Vector(-1181.99976, 147.44240, -3100.00024)
-        Case 205
+        Case 202
             Result = P.Vector(1325.99988, 198.43262, 1760.00012)
-        Case 206
+        Case 203
             Result = P.Vector(1574.00012, 198.43262, 1760.00012)
-        Case 207
+        Case 204
             Result = P.Vector(750.00000, 462.62006, 1800.00000)
-        Case 208
+        Case 205
             Result = P.Vector(750.00000, 462.62006, 3040.00024)
-        Case 209
+        Case 206
             Result = P.Vector(2150.00000, 462.62006, 1800.00000)
-        Case 210
+        Case 207
             Result = P.Vector(2150.00000, 462.62006, 3040.00024)
-        Case 211
+        Case 208
             Result = P.Vector(1450.00000, 614.67194, 2840.00000)
-        Case 212
+        Case 209
             Result = P.Vector(1450.00012, 521.43268, 2300.00024)
-        Case 213
+        Case 210
             Result = P.Vector(-1274.00012, 262.65265, 1750.00012)
-        Case 214
+        Case 211
             Result = P.Vector(-1046.00000, 262.65265, 1750.00012)
-        Case 215
+        Case 212
             Result = P.Vector(-1860.00012, 566.67578, 1790.00000)
-        Case 216
+        Case 213
             Result = P.Vector(-1860.00012, 566.67578, 2910.00000)
-        Case 217
+        Case 214
             Result = P.Vector(-460.00000, 566.67578, 1790.00000)
-        Case 218
+        Case 215
             Result = P.Vector(-460.00000, 566.67578, 2910.00000)
-        Case 219
+        Case 216
             Result = P.Vector(-1330.00000, 423.43365, 1749.99988)
-        Case 220
+        Case 217
             Result = P.Vector(-990.00000, 423.43365, 1749.99988)
-        Case 221
+        Case 218
             Result = P.Vector(-1160.00000, 1111.24951, 2650.00000)
-        Case 222
+        Case 219
             Result = P.Vector(-1160.00000, 1150.55505, 2650.00000)
-        Case 223
+        Case 220
             Result = P.Vector(-1720.00000, 548.57056, 2390.00000)
-        Case 224
+        Case 221
             Result = P.Vector(-1720.00000, 548.57056, 2850.00000)
-        Case 225
+        Case 222
             Result = P.Vector(-600.00000, 548.57056, 2390.00000)
-        Case 226
+        Case 223
             Result = P.Vector(-600.00000, 548.57056, 2850.00000)
-        Case 227
+        Case 224
             Result = P.Vector(-1560.00000, 777.54321, 2429.99976)
-        Case 228
+        Case 225
             Result = P.Vector(-1560.00000, 777.54321, 2850.00000)
-        Case 229
+        Case 226
             Result = P.Vector(-760.00006, 777.54321, 2429.99976)
-        Case 230
+        Case 227
             Result = P.Vector(-760.00006, 777.54321, 2850.00000)
-        Case 231
+        Case 228
             Result = P.Vector(-1390.00012, 983.18091, 2410.00000)
-        Case 232
+        Case 229
             Result = P.Vector(-1390.00012, 983.18091, 2890.00000)
-        Case 233
+        Case 230
             Result = P.Vector(-930.00000, 983.18091, 2410.00000)
-        Case 234
+        Case 231
             Result = P.Vector(-930.00000, 983.18091, 2890.00000)
-        Case 235
+        Case 232
             Result = P.Vector(-1283.99963, 798.30127, 2394.00000)
-        Case 236
+        Case 233
             Result = P.Vector(-1035.99988, 798.30127, 2394.00000)
-        Case 237
+        Case 234
             Result = P.Vector(-1035.99988, 798.30127, 2906.00049)
-        Case 238
+        Case 235
             Result = P.Vector(-1283.99963, 798.30127, 2906.00049)
-        Case 239
+        Case 236
             Result = P.Vector(-1159.99988, 65.75368, 2029.99988)
-        Case 240
+        Case 237
             Result = P.Vector(-1266.00000, 74.78526, 1270.00012)
-        Case 241
+        Case 238
             Result = P.Vector(-1054.00012, 74.78526, 1270.00012)
-        Case 242
+        Case 239
             Result = P.Vector(-0.00000, 368.28638, -750.00000)
-        Case 243
+        Case 240
             Result = P.Vector(-123.00002, 318.67795, -871.40009)
-        Case 244
+        Case 241
             Result = P.Vector(-123.00002, 298.67795, -628.59998)
-        Case 245
+        Case 242
             Result = P.Vector(-123.00002, 240.66806, -890.99988)
-        Case 246
+        Case 243
             Result = P.Vector(123.00002, 318.67795, -871.40009)
-        Case 247
+        Case 244
             Result = P.Vector(123.00002, 298.67795, -628.59998)
-        Case 248
+        Case 245
             Result = P.Vector(123.00002, 240.66806, -890.99988)
-        Case 249
+        Case 246
             Result = P.Vector(0.00000, 236.79500, -887.39990)
-        Case 250
+        Case 247
             Result = P.Vector(-66.99999, 181.32843, -882.39990)
-        Case 251
+        Case 248
             Result = P.Vector(66.99999, 181.32843, -882.39990)
-        Case 252
+        Case 249
             Result = P.Vector(174.00000, 215.67896, -864.68011)
-        Case 253
+        Case 250
             Result = P.Vector(174.00000, 215.67896, -635.31995)
-        Case 254
+        Case 251
             Result = P.Vector(163.56001, 215.67896, -627.99994)
-        Case 255
+        Case 252
             Result = P.Vector(-163.56003, 215.67896, -627.99994)
-        Case 256
+        Case 253
             Result = P.Vector(-173.99997, 215.67896, -635.31995)
-        Case 257
+        Case 254
             Result = P.Vector(-173.99997, 215.67896, -864.68011)
-        Case 258
+        Case 255
             Result = P.Vector(-188.00000, 163.27370, -848.00018)
-        Case 259
+        Case 256
             Result = P.Vector(-188.00000, 124.10326, -863.79999)
-        Case 260
+        Case 257
             Result = P.Vector(-188.00000, 163.27370, -750.00000)
-        Case 261
+        Case 258
             Result = P.Vector(-188.00000, 163.27370, -651.99988)
-        Case 262
+        Case 259
             Result = P.Vector(-144.00000, 56.75579, -904.40002)
-        Case 263
+        Case 260
             Result = P.Vector(187.99997, 163.27370, -848.00018)
-        Case 264
+        Case 261
             Result = P.Vector(188.00003, 124.10326, -863.79999)
-        Case 265
+        Case 262
             Result = P.Vector(187.99997, 163.27370, -750.00000)
-        Case 266
+        Case 263
             Result = P.Vector(187.99997, 163.27370, -651.99988)
-        Case 267
+        Case 264
             Result = P.Vector(143.99998, 56.75579, -904.40002)
-        Case 268
+        Case 265
             Result = P.Vector(-0.00000, 498.67322, 466.00000)
-        Case 269
+        Case 266
             Result = P.Vector(-104.79999, 485.94733, 479.99994)
-        Case 270
+        Case 267
             Result = P.Vector(104.79999, 485.94733, 479.99994)
-        Case 271
+        Case 268
             Result = P.Vector(-184.00000, 146.32632, 475.99994)
-        Case 272
+        Case 269
             Result = P.Vector(183.99997, 146.32632, 475.99994)
-        Case 273
+        Case 270
             Result = P.Vector(133.99998, 498.67322, 600.00000)
-        Case 274
+        Case 271
             Result = P.Vector(124.00001, 146.32632, 416.00000)
-        Case 275
+        Case 272
             Result = P.Vector(124.00001, 146.32632, 784.00012)
-        Case 276
+        Case 273
             Result = P.Vector(104.79999, 485.94733, 720.00000)
-        Case 277
+        Case 274
             Result = P.Vector(-104.79999, 485.94733, 720.00000)
-        Case 278
+        Case 275
             Result = P.Vector(183.99997, 146.32632, 724.00012)
-        Case 279
+        Case 276
             Result = P.Vector(-184.00000, 146.32632, 724.00012)
-        Case 280
+        Case 277
             Result = P.Vector(-134.00000, 498.67322, 600.00000)
-        Case 281
+        Case 278
             Result = P.Vector(-124.00000, 146.32632, 784.00012)
-        Case 282
+        Case 279
             Result = P.Vector(-124.00000, 146.32632, 416.00000)
-        Case 283
+        Case 280
             Result = P.Vector(-186.00000, 747.13043, 666.00000)
-        Case 284
+        Case 281
             Result = P.Vector(185.99998, 747.13043, 666.00000)
-        Case 285
+        Case 282
             Result = P.Vector(0.00000, 803.64429, 600.00000)
-        Case 286
+        Case 283
             Result = P.Vector(1250.00000, 137.52844, -1560.00000)
-        Case 287
+        Case 284
             Result = P.Vector(1210.19995, 127.86632, -1514.79980)
-        Case 288
+        Case 285
             Result = P.Vector(1289.80005, 121.86631, -1514.79980)
-        Case 289
+        Case 286
             Result = P.Vector(1202.09985, 100.82223, -1514.79993)
-        Case 290
+        Case 287
             Result = P.Vector(1210.19995, 127.86632, -1605.19995)
-        Case 291
+        Case 288
             Result = P.Vector(1289.80005, 121.86631, -1605.19995)
-        Case 292
+        Case 289
             Result = P.Vector(1202.09985, 100.82223, -1605.20007)
-        Case 293
+        Case 290
             Result = P.Vector(1205.09998, 63.25449, -1524.29980)
-        Case 294
+        Case 291
             Result = P.Vector(1205.09998, 63.25449, -1595.70007)
-        Case 295
+        Case 292
             Result = P.Vector(1222.00000, 63.25449, -1615.89990)
-        Case 296
+        Case 293
             Result = P.Vector(1278.00012, 63.25449, -1615.89990)
-        Case 297
+        Case 294
             Result = P.Vector(1294.90002, 63.25449, -1595.70007)
-        Case 298
+        Case 295
             Result = P.Vector(1294.90002, 63.25449, -1524.29980)
-        Case 299
+        Case 296
             Result = P.Vector(1278.00012, 63.25449, -1504.10010)
-        Case 300
+        Case 297
             Result = P.Vector(1222.00000, 63.25449, -1504.10010)
-        Case 301
+        Case 298
             Result = P.Vector(1201.00000, 113.69599, -1560.00000)
-        Case 302
+        Case 299
             Result = P.Vector(1250.00000, 137.52844, -2600.00000)
-        Case 303
+        Case 300
             Result = P.Vector(1210.19995, 127.86632, -2554.80029)
-        Case 304
+        Case 301
             Result = P.Vector(1289.80005, 121.86631, -2554.80029)
-        Case 305
+        Case 302
             Result = P.Vector(1202.09985, 100.82223, -2554.80029)
-        Case 306
+        Case 303
             Result = P.Vector(1210.19995, 127.86632, -2645.19971)
-        Case 307
+        Case 304
             Result = P.Vector(1289.80005, 121.86631, -2645.19971)
-        Case 308
+        Case 305
             Result = P.Vector(1202.09985, 100.82223, -2645.19995)
-        Case 309
+        Case 306
             Result = P.Vector(1205.09998, 63.25449, -2564.29932)
-        Case 310
+        Case 307
             Result = P.Vector(1205.09998, 63.25449, -2635.70044)
-        Case 311
+        Case 308
             Result = P.Vector(1222.00000, 63.25449, -2655.90039)
-        Case 312
+        Case 309
             Result = P.Vector(1278.00012, 63.25449, -2655.90039)
-        Case 313
+        Case 310
             Result = P.Vector(1294.90002, 63.25449, -2635.70044)
-        Case 314
+        Case 311
             Result = P.Vector(1294.90002, 63.25449, -2564.29932)
-        Case 315
+        Case 312
             Result = P.Vector(1278.00012, 63.25449, -2544.10010)
-        Case 316
+        Case 313
             Result = P.Vector(1222.00000, 63.25449, -2544.10010)
-        Case 317
+        Case 314
             Result = P.Vector(1250.00000, 137.52844, -2080.00000)
-        Case 318
+        Case 315
             Result = P.Vector(1210.19995, 127.86632, -2034.80005)
-        Case 319
+        Case 316
             Result = P.Vector(1289.80005, 121.86631, -2034.80005)
-        Case 320
+        Case 317
             Result = P.Vector(1202.09985, 100.82223, -2034.79993)
-        Case 321
+        Case 318
             Result = P.Vector(1210.19995, 127.86632, -2125.19995)
-        Case 322
+        Case 319
             Result = P.Vector(1289.80005, 121.86631, -2125.19995)
-        Case 323
+        Case 320
             Result = P.Vector(1202.09985, 100.82223, -2125.19995)
-        Case 324
+        Case 321
             Result = P.Vector(1205.09998, 63.25449, -2044.29980)
-        Case 325
+        Case 322
             Result = P.Vector(1205.09998, 63.25449, -2115.70020)
-        Case 326
+        Case 323
             Result = P.Vector(1222.00000, 63.25449, -2135.90015)
-        Case 327
+        Case 324
             Result = P.Vector(1278.00012, 63.25449, -2135.90015)
-        Case 328
+        Case 325
             Result = P.Vector(1294.90002, 63.25449, -2115.70020)
-        Case 329
+        Case 326
             Result = P.Vector(1294.90002, 63.25449, -2044.29980)
-        Case 330
+        Case 327
             Result = P.Vector(1278.00012, 63.25449, -2024.10022)
-        Case 331
+        Case 328
             Result = P.Vector(1222.00000, 63.25449, -2024.10022)
-        Case 332
+        Case 329
             Result = P.Vector(1207.50000, 126.37682, -2080.00000)
-        Case 333
+        Case 330
             Result = P.Vector(-2019.99988, 49.13263, -820.00000)
-        Case 334
+        Case 331
             Result = P.Vector(-1300.00000, 49.13263, -820.00000)
-        Case 335
+        Case 332
             Result = P.Vector(-1500.00012, 48.40422, -1636.49963)
-        Case 336
+        Case 333
             Result = P.Vector(-1529.01172, 48.40422, -1686.75024)
-        Case 337
+        Case 334
             Result = P.Vector(-1470.98853, 48.40422, -1686.75024)
-        Case 338
+        Case 335
             Result = P.Vector(-1500.00000, 49.13263, -2430.00000)
-        Case 339
+        Case 336
             Result = P.Vector(-1500.00012, 48.40422, -2836.50000)
-        Case 340
+        Case 337
             Result = P.Vector(-1529.01172, 48.40422, -2886.75000)
-        Case 341
+        Case 338
             Result = P.Vector(-1470.98853, 48.40422, -2886.75000)
-        Case 342
+        Case 339
             Result = P.Vector(1499.99988, 48.40422, 533.49988)
-        Case 343
+        Case 340
             Result = P.Vector(1470.98828, 48.40422, 483.25009)
-        Case 344
+        Case 341
             Result = P.Vector(1529.01172, 48.40422, 483.25009)
-        Case 345
+        Case 342
             Result = P.Vector(1499.99988, 48.40422, -506.50009)
-        Case 346
+        Case 343
             Result = P.Vector(1470.98828, 48.40422, -556.74994)
-        Case 347
+        Case 344
             Result = P.Vector(1529.01172, 48.40422, -556.74994)
-        Case 348
+        Case 345
             Result = P.Vector(2140.00000, 48.40422, -1766.49963)
-        Case 349
+        Case 346
             Result = P.Vector(2110.98828, 48.40422, -1816.75024)
-        Case 350
+        Case 347
             Result = P.Vector(2169.01172, 48.40422, -1816.75024)
-        Case 351
+        Case 348
             Result = P.Vector(2140.00000, 49.13263, -2819.99976)
-        Case 352
+        Case 349
             Result = P.Vector(1280.00000, 48.40422, -2976.50000)
-        Case 353
+        Case 350
             Result = P.Vector(1250.98828, 48.40422, -3026.75000)
-        Case 354
+        Case 351
             Result = P.Vector(1309.01172, 48.40422, -3026.75000)
-        Case 355
+        Case 352
             Result = P.Vector(1500.00000, 49.13263, -1810.00012)
     End Select
 
@@ -2108,8 +2102,8 @@ Public Function PavingHeight(X As Double, Z As Double) As Double
         Return 23.12
     End If
 
-    If (X >= -420.0 And X <= 420.0 And
-        Z >= -1240.0 And Z <= -880.0) Then
+    If (X >= -500.0 And X <= 500.0 And
+        Z >= -1310.0 And Z <= -440.0) Then
         Return 23.12
     End If
 
@@ -2118,11 +2112,6 @@ Public Function PavingHeight(X As Double, Z As Double) As Double
         Return 23.12
     End If
 
-    If (X >= -300.0 And X <= 300.0 And
-        Z >= -540.0 And Z <= -440.0) Then
-        Return 23.12
-    End If
-
     If (X >= -880.0 And X <= -660.0 And
         Z >= -1760.0 And Z <= -1640.0) Then
         Return 23.12
@@ -2150,11 +2139,6 @@ Public Function PavingHeight(X As Double, Z As Double) As Double
 
     If (X >= 660.0 And X <= 880.0 And
         Z >= -2860.0 And Z <= -2740.0) Then
-        Return 23.12
-    End If
-
-    If (X >= -300.0 And X <= 300.0 And
-        Z >= -990.0 And Z <= -510.0) Then
         Return 23.12
     End If
 
@@ -2380,6 +2364,16 @@ Public Function PavingHeight(X As Double, Z As Double) As Double
 
     If (X >= 1310.0 And X <= 1590.0 And
         Z >= 1400.0 And Z <= 1940.0) Then
+        Return 23.12
+    End If
+
+    If (X >= -730.0 And X <= -430.0 And
+        Z >= -1170.0 And Z <= -1070.0) Then
+        Return 23.12
+    End If
+
+    If (X >= 430.0 And X <= 730.0 And
+        Z >= -1170.0 And Z <= -1070.0) Then
         Return 23.12
     End If
 

@@ -21,7 +21,7 @@ Public Function Hovered() As Boolean
     Result = ((Pointer_X() >= 12 And Pointer_X() <= 292 And
         Pointer_Y() >= Window_Height() - 214 And Pointer_Y() <= Window_Height() - 116) Or
         (Pointer_X() >= Window_Width() - 292 And Pointer_X() <= Window_Width() - 12 And
-        Pointer_Y() >= Window_Height() - 116 And Pointer_Y() <= Window_Height() - 82))
+        Pointer_Y() >= Window_Height() - 40 And Pointer_Y() <= Window_Height() - 6))
 
     Return Result
 
@@ -67,7 +67,7 @@ Public Function Input(ByRef Value As State, ByRef View As Arena.State,
             View.Controls.OrbitYaw = Amount * 360.0 - 180.0 - M.Degrees(Atan2(Offset.X, Offset.Z))
             Result = 3
         Else If Value.DragRow = 2 Then
-            View.Controls.OrbitPitch = Amount * 70.0 + 10.0 - M.Degrees(Atan2(Offset.Y, Sqrt(Offset.X * Offset.X + Offset.Z * Offset.Z)))
+            View.Controls.OrbitPitch = Amount * 100.0 - 20.0 - M.Degrees(Atan2(Offset.Y, Sqrt(Offset.X * Offset.X + Offset.Z * Offset.Z)))
             Result = 3
         Else
             View.Zoom.Target = ToDouble(Motion.ZOOM_IN_LIMIT) + Amount * ToDouble(Motion.ZOOM_OUT_LIMIT - Motion.ZOOM_IN_LIMIT)
@@ -109,10 +109,10 @@ Public Sub Draw(ByRef View As Arena.State, Orbiting As Boolean)
     Vertical = M.Degrees(Atan2(Offset.Y, Sqrt(Offset.X * Offset.X + Offset.Z * Offset.Z)))
 
     Call Slider("H Orbit", 1, (Horizontal + 180.0) / 360.0, ToNumber(Round(Horizontal)))
-    Call Slider("V Orbit", 2, (Vertical - 10.0) / 70.0, ToNumber(Round(Vertical)))
+    Call Slider("V Orbit", 2, (Vertical + 20.0) / 100.0, ToNumber(Round(Vertical)))
     Call Slider("Zoom", 3, (View.Zoom.Target - ToDouble(Motion.ZOOM_IN_LIMIT)) / ToDouble(Motion.ZOOM_OUT_LIMIT - Motion.ZOOM_IN_LIMIT), ToNumber(Round(M.Length(Offset))))
-    Call UI.DrawButton(Window_Width() - 280, Window_Height() - 114, 122, 24, "Orbit", Orbiting)
-    Call UI.DrawButton(Window_Width() - 152, Window_Height() - 114, 128, 24, "Fit", False)
+    Call UI.DrawButton(Window_Width() - 280, Window_Height() - 38, 122, 24, "Orbit", Orbiting)
+    Call UI.DrawButton(Window_Width() - 152, Window_Height() - 38, 128, 24, "Fit", False)
 
 End Sub
 

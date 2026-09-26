@@ -35,7 +35,9 @@ All water uses the deep-blue moat tint.
 | M | Show / hide minimap |
 
 H Orbit, V Orbit and Zoom controls sit at the lower left with no panel background.
-Only Orbit and Fit buttons occupy the lower right. The minimap shows the selected
+Only Orbit and Fit buttons occupy the lower right, 14 pixels above the bottom edge.
+The V Orbit slider spans the full -20 to 80 degree elevation range.
+The minimap shows the selected
 leader's name and X/Y/Z, **Old Castle** and **Comm Tower** labels. Movement fades
 it to 80%, with a ten-second hold after stopping; M explicitly overrides visibility.
 Automatic orbit hides it until orbit stops.

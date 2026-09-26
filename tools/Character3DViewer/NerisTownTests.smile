@@ -54,6 +54,8 @@ Call Check(Not Navigation.CanStand(0.0, -750.0), "City Hall Walls Block Walking"
 Call Check(Not Navigation.CanStand(0.0, 600.0), "Relay Walls Block Walking")
 Call Check(Not Navigation.CanStand(580.0, -2200.0), "Civic Canal Blocks Walking")
 Call Check(Navigation.CanStand(580.0, -2800.0), "Civic Bridge Is Open")
+Call Check(Navigation.CanStand(-580.0, -1120.0), "West City Hall Crossroad Bridge Is Open")
+Call Check(Navigation.CanStand(580.0, -1120.0), "East City Hall Crossroad Bridge Is Open")
 Call Check(Navigation.CanStand(860.0, -2100.0), "Shop Main Avenue Is Open")
 Call Check(Not Navigation.CanStand(2800.0, 0.0), "Waterfront Boundary Blocks Walking")
 Call Check(Navigation.CanStand(-3660.0, 1250.0), "Tripo Bridge Crosses Its Moat")
@@ -88,6 +90,22 @@ Call Check(Position.Z >= 1839.0, "Party Crosses The Entire Royal Bridge And Open
 Position = Navigation.Move(P.Vector(450.0, 20.9, -2200.0), 200.0, 0.0)
 
 Call Check(Position.X < 500.0, "Large Movement Cannot Tunnel Through Canal")
+
+Position = P.Vector(-860.0, 23.12, -1120.0)
+
+For Index = 1 To 230
+    Position = Navigation.Move(Position, 2.0, 0.0)
+End For
+
+Call Check(Position.X >= -401.0, "Party Crosses West Canal Directly Into City Hall Forecourt")
+
+Position = P.Vector(860.0, 23.12, -1120.0)
+
+For Index = 1 To 230
+    Position = Navigation.Move(Position, -2.0, 0.0)
+End For
+
+Call Check(Position.X <= 401.0, "Party Crosses East Canal Directly Into City Hall Forecourt")
 
 Position = P.Vector(0.0, Navigation.GroundHeight(0.0, 330.0), 330.0)
 

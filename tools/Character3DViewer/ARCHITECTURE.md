@@ -69,7 +69,7 @@ full navigation mesh or general interior collision system.
 
 ### Rendering, loading and validation
 
-Static geometry uses 37 models / 92 parts / 4,027,200 triangles. Old Castle retains
+Static geometry uses 37 models / 92 parts / 4,029,482 triangles. Old Castle retains
 14 models / 28 parts with shared 2K runtime maps and preserved 4K originals. Two
 tree templates reuse eight draw objects for 147 placements; one flower template
 reuses eight for 48 placements. Native draw submissions snapshot transforms, so
@@ -87,7 +87,7 @@ Character texture identity is unchanged; the cooker version invalidates caches.
 Focused checks: `test-neris-town.ps1` (actual routes, all actors, full draw, fade,
 water, camera, 66 doors, leader cycle, cleanup); `test-neris-waterfront.py`
 (connected roads/clear gardens); `test-neris-paving.py` (tile union/seams/clear water);
-Blender `test-neris-bridge.py` (eight bridge layer separations);
+Blender `test-neris-bridge.py` (ten bridge layer separations and civic rail banks);
 `test-model3d-shared-textures.ps1` (cooked-pixel identity); native Viewer hardening.
 The gate regression walks the whole bridge and entrance; isolated open-point
 checks did not catch the hollow-arch blockage.
@@ -1334,3 +1334,9 @@ EntranceNavigation 79, Entrances 185 and Flowers 83. Generated site/placement
 tables are data growth, not new runtime algorithms. The existing native renderer
 changes by three net lines for opacity handling and frame capacity; no new global
 feature state or bootstrap behavior was introduced. No guardrail exception applied.
+
+The civic paving/bridge follow-through stays in the existing Blender plan and
+builder (+2/+15 net source lines). Camera controls remain 119 lines; their only
+changes are bottom-edge placement and the existing pitch range mapping. The route
+fixture adds 18 lines to protect the two reported missing crossings. Regenerated
+meshes and placement/collision tables add no runtime owner or dependency.
