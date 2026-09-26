@@ -100,7 +100,8 @@ def terrain(document):
                 x += 1
             if kind:
                 material = 0 if kind == 1 else 1 if kind == 2 else 2
-                height = .15 if kind == 1 else .085 if kind == 2 else .212
+                # Keep the authored lawn below the castle/HQ floors, not coplanar.
+                height = -.01 if kind == 1 else .085 if kind == 2 else .212
                 quad(xs[start], zs[z], xs[x], zs[z+1], height, material)
         for x in range(cols):
             if cell(x, z) == 4:
@@ -112,15 +113,6 @@ def terrain(document):
                     rail(xs[x], zs[z]-2.25, xs[x+1], zs[z]+2.25)
                 if cell(x, z+1) == 2:
                     rail(xs[x], zs[z+1]-2.25, xs[x+1], zs[z+1]+2.25)
-            if cell(x, z) in (2, 4):
-                if cell(x-1, z) not in (2, 4):
-                    quad(xs[x]-.3, zs[z], xs[x]+.3, zs[z+1], .225, 3)
-                if cell(x+1, z) not in (2, 4):
-                    quad(xs[x+1]-.3, zs[z], xs[x+1]+.3, zs[z+1], .225, 3)
-                if cell(x, z-1) not in (2, 4):
-                    quad(xs[x], zs[z]-.3, xs[x+1], zs[z]+.3, .225, 3)
-                if cell(x, z+1) not in (2, 4):
-                    quad(xs[x], zs[z+1]-.3, xs[x+1], zs[z+1]+.3, .225, 3)
     mesh = bpy.data.meshes.new('Town Editable Surface')
     mesh.from_pydata(vertices, [], faces)
     for name in ('Town Grass', 'Royal Deep Blue Water', 'Town Paving', 'Pale Carved Stone', 'Aged Gold'):

@@ -15,8 +15,8 @@ wheel zooms; WASD/arrows inspect. Tab leaves editing and enables party control.
 
 Surfaces provide Ground, Road and Water with two-click Line and Rectangle tools.
 Line width is in metres, including the exact nonuniform Neris grid. Erase restores
-grass inside the rectangle. Road over water becomes a bridge. Rebuilt outer banks
-follow connected water/bridge cells; bridge rails stop at the water crossing.
+grass inside the rectangle. Road over water becomes a bridge. Shorelines have no
+thin trim; bridge rails stop at the water crossing.
 Pending surfaces replace the live geometry only after the complete build succeeds.
 
 Sun exposes RGB, intensity, ambient strength, azimuth, elevation, day/night presets
@@ -70,6 +70,12 @@ at two metres per cell. The reusable grid supports at most 512 by 512. Sixteen
 base-eight cells pack into each Number. Generated tables contain data only.
 Template navigation follows moved/rotated stairs, doors and solid bounds. Camera
 volumes refresh after edits/movement using a bounded nearby 512-box snapshot.
+
+Editable lawns retain the original Blender -0.01 m surface (native Y=20.9), below
+the Royal Castle and Military HQ floors. The earlier +0.15 m lawn overlapped those
+floors and flickered during camera motion. Roads/bridges retain their +0.212 m
+height, and water remains +0.085 m. This is a terrain-render/save correction, not
+a change to building transforms, saved documents, or navigation clearance.
 
 ## Saves and background work
 
@@ -145,3 +151,9 @@ verified. The right palette and complete scene were visually inspected in an
 isolated native preview without injecting mouse/keyboard input. The refreshed
 VSIX payload was installed and hash-verified. Manual acceptance of the editing
 workflow remains available to Sin after the release relaunch.
+
+`scripts/test-town-terrain.py` runs in background Blender without saving the
+catalog. It measures actual castle/HQ floor faces, checks at least 0.1 m clearance
+from generated lawns, verifies native/Blender height parity and unchanged road/water
+heights, and requires bare shores without removing bridge rails. The native
+rendering fixture also checks that bare shores produce no extra trim mesh.

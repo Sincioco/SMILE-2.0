@@ -1408,3 +1408,12 @@ party/calibration/camera/cleanup), `test-town-blender-save.py` (isolated actual 
 duplicate protection and Viewer snapshot), the normal native Viewer hardening gate,
 compiler/text suites and the existing Neris scene fixture. Native visual review is
 separate from these assertions. Studio and Web execution/adoption remain held.
+
+Terrain correction: `TownSurfaceRenderer` restores the authored lawn height and
+omits narrow shoreline trim; the Blender save owner mirrors that geometry. This
+removes lawn/floor overlap at Royal Castle, Military HQ and bridge approaches.
+Building transforms, surface documents, navigation and bridge rails are unchanged.
+The surface renderer shrinks by 23 lines and the Blender worker by eight; the
+native rendering fixture gains 24 lines and `test-town-terrain.py` measures actual
+Blender floor/bridge clearance and cross-output height parity. No new production
+owner, dependency, guardrail exception or coordinator growth is introduced.

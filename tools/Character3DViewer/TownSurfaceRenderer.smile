@@ -177,45 +177,25 @@ Private Sub ScanRow(ByRef Value As State)
 
         Surface = Grid.ReadCell(Pending, X, Z)
 
-        If Grid.Water(Surface) Then
+        If Surface = Grid.SURFACE_BRIDGE Then
 
             X0 = Pending.XEdges[X]
             X1 = Pending.XEdges[X + 1]
 
-            If Surface = Grid.SURFACE_BRIDGE Then
-
-                If Grid.ReadCell(Pending, X - 1, Z) = Grid.SURFACE_WATER Then
-                    Call Rail(Value, X0, Z0, X0, Z1, 2)
-                End If
-
-                If Grid.ReadCell(Pending, X + 1, Z) = Grid.SURFACE_WATER Then
-                    Call Rail(Value, X1, Z0, X1, Z1, 2)
-                End If
-
-                If Grid.ReadCell(Pending, X, Z - 1) = Grid.SURFACE_WATER Then
-                    Call Rail(Value, X0, Z0, X1, Z0, 1)
-                End If
-
-                If Grid.ReadCell(Pending, X, Z + 1) = Grid.SURFACE_WATER Then
-                    Call Rail(Value, X0, Z1, X1, Z1, 1)
-                End If
-
+            If Grid.ReadCell(Pending, X - 1, Z) = Grid.SURFACE_WATER Then
+                Call Rail(Value, X0, Z0, X0, Z1, 2)
             End If
 
-            If Grid.Bank(Pending, X, Z, X - 1, Z) Then
-                Call AddPatch(Value, X0 - 0.3, Z0, X0 + 0.3, Z1, 4)
+            If Grid.ReadCell(Pending, X + 1, Z) = Grid.SURFACE_WATER Then
+                Call Rail(Value, X1, Z0, X1, Z1, 2)
             End If
 
-            If Grid.Bank(Pending, X, Z, X + 1, Z) Then
-                Call AddPatch(Value, X1 - 0.3, Z0, X1 + 0.3, Z1, 4)
+            If Grid.ReadCell(Pending, X, Z - 1) = Grid.SURFACE_WATER Then
+                Call Rail(Value, X0, Z0, X1, Z0, 1)
             End If
 
-            If Grid.Bank(Pending, X, Z, X, Z - 1) Then
-                Call AddPatch(Value, X0, Z0 - 0.3, X1, Z0 + 0.3, 4)
-            End If
-
-            If Grid.Bank(Pending, X, Z, X, Z + 1) Then
-                Call AddPatch(Value, X0, Z1 - 0.3, X1, Z1 + 0.3, 4)
+            If Grid.ReadCell(Pending, X, Z + 1) = Grid.SURFACE_WATER Then
+                Call Rail(Value, X0, Z1, X1, Z1, 1)
             End If
 
         End If
@@ -273,12 +253,11 @@ Private Sub UploadNext(ByRef Value As State)
     Loop
 
     Ok = True
-    Height = 22.5
+    ' Match the authored lawn (-0.01 m), below castle/HQ floors at 0.13-0.152 m.
+    Height = 20.9
 
     If Value.Kind = 3 Then
         Height = 23.12
-    Else If Value.Kind = 4 Then
-        Height = 23.25
     End If
 
     If Total > 0 Then
@@ -344,8 +323,6 @@ Private Sub UploadNext(ByRef Value As State)
 
                     If Part.Y0 > 0.0 Then
                         Height = Part.Y0
-                    Else If Value.Kind = 4 Then
-                        Height = 23.25
                     End If
 
                     Ok = Vertex(Mesh, Point, Part.X0, Height, Part.Z0, Value.Kind) And Ok

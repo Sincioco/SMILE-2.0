@@ -152,6 +152,30 @@ Call Check(Not Ground.Failed And Ground.LiveRevision = Town.Surface.Revision,
 Call Attachments.Destroy(Doors)
 Call Terrain.Destroy(Ground)
 Call Renderer.Destroy(Assets)
+
+' A bare shore needs grass and road meshes plus water, never a thin trim mesh.
+Ok = Grid.Initialize(Town.Surface, 3, 1, 0.0, 0.0, 20.0, Grid.SURFACE_GROUND)
+
+Call Grid.PaintRectangle(Town.Surface, 1, 0, 1, 0, Grid.SURFACE_WATER)
+Call Grid.PaintRectangle(Town.Surface, 2, 0, 2, 0, Grid.SURFACE_ROAD)
+
+Ok = Terrain.Create(Ground) And Ok
+
+Call Terrain.BeginBuild(Ground, Town.Surface)
+
+Frames = 0
+
+Do
+
+    Call Terrain.Update(Ground, 16)
+
+    Frames = Frames + 1
+
+Loop Until Ground.Stage = 0 Or Ground.Failed Or Frames >= 200
+
+Call Check(Ok And Not Ground.Failed And Ground.ObjectCount = 2 And Ground.WaterCount = 1,
+    "Bare Shore Has No Shimmering Trim Geometry")
+Call Terrain.Destroy(Ground)
 Call Check(G.LiveMeshCount3D() = 0 And G.LiveObjectCount3D() = 0 And
     G.LiveMaterialCount3D() = 0 And G.LiveModelCount3D() = 0,
     "Catalog Resources Release Cleanly")
