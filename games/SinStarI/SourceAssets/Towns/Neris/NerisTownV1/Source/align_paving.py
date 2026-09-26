@@ -8,7 +8,7 @@ from mathutils import Matrix
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT/'Source'))
 from paving_grid import geometry, tiles
-from paving_plan import plan, subtract, CANALS, BRIDGES, COMPARISON_MOAT, COMPARISON_BRIDGE, ROYAL_MOAT
+from paving_plan import plan, subtract, CANALS, BRIDGES, COMPARISON_MOAT, COMPARISON_BRIDGE, ROYAL_MOAT, ROYAL_BRIDGE
 
 
 def replace_surface(obj, rectangles, height, grout=False):
@@ -40,13 +40,13 @@ def apply(layout=None):
     if 'comparisonCastle' in layout:
         footprint=subtract(footprint,COMPARISON_MOAT)+[COMPARISON_BRIDGE]
     if 'royalRebuild' in layout:
-        footprint=subtract(footprint,ROYAL_MOAT)
+        footprint=subtract(footprint,ROYAL_MOAT+[ROYAL_BRIDGE])
     bpy.context.view_layer.update()
     # Remove obsolete slabs and tops, including their coplanar overlaps.
     prefixes=('Central Promenade','Civic Forecourt','District Walk','Cross Street',
               'Building Courtyard','North Home Court','South Home Court',
               'Neighborhood Market Court','Canal Footbridge','Unified Expanded',
-              'Connected Town','Connected Canal')
+              'Connected Town','Connected Canal','Connected Royal','Royal Bridge Deck Aligned Tiles')
     for obj in list(bpy.data.objects):
         if obj.type=='MESH' and obj.name.startswith(prefixes):
             bpy.data.objects.remove(obj,do_unlink=True)
@@ -55,10 +55,18 @@ def apply(layout=None):
         ('Connected Town Grout',footprint,.19,True),
         ('Connected Town Tiles',footprint,.212,False),
         ('Connected Canal Bridge Grout',BRIDGES,.29,True),
-        ('Connected Canal Bridge Tiles',BRIDGES,.312,False)]:
+        ('Connected Canal Bridge Tiles',BRIDGES,.312,False),
+        ('Connected Royal Bridge Grout',[ROYAL_BRIDGE],.19,True),
+        ('Connected Royal Bridge Tiles',[ROYAL_BRIDGE],.212,False)]:
         obj=bpy.data.objects.new(name,bpy.data.meshes.new(name));collection.objects.link(obj)
         replace_surface(obj,regions,height,grout)
-    for name in ['Royal Bridge Deck','Military Precinct']:
+    # Support tops stay below grout, never coplanar with its visible grid lines.
+    for name in ['Royal Bridge Deck','Comparison Bridge Deck']:
+        base=bpy.data.objects[name]
+        top=max((base.matrix_world@v.co).z for v in base.data.vertices)
+        move=Matrix.Translation((0,0,.15-top))
+        base.matrix_world=move@base.matrix_world
+    for name in ['Military Precinct']:
         base=bpy.data.objects[name]
         points=[base.matrix_world@v.co for v in base.data.vertices]
         bounds=[min(p.x for p in points),min(p.y for p in points),max(p.x for p in points),max(p.y for p in points)]

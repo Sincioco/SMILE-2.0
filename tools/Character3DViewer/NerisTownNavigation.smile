@@ -6,113 +6,30 @@ Option Explicit
 Import Smile.Simple3D.Precision3D As P
 Import Smile.Tools.NerisTownDistricts As Districts
 Import Smile.Tools.NerisTownLayout As Layout
-
-Private Function InBox(X As Double, Z As Double,
-    MinimumX As Double, Front As Double, MaximumX As Double, Back As Double) As Boolean
-
-    Dim Result As Boolean
-
-    Result = X > MinimumX - 4.0 And X < MaximumX + 4.0 And Z > Front - 4.0 And Z < Back + 4.0
-
-    Return Result
-
-End Function
+Import Smile.Tools.NerisTownSite As Site
+Import Smile.Tools.NerisTownEntranceNavigation As Entries
+Import Smile.Tools.NerisTownEntrancesData As DoorData
 
 Public Function CanStand(X As Double, Z As Double) As Boolean
 
-    Dim Canal As Boolean
-    Dim Bridge As Boolean
     Dim Index As Number
-    Dim Tree As Layout.TreePlacement
+    Dim Tree As Layout.Placement
 
     If Not Districts.CanStand(X, Z) Then
         Return False
     End If
 
-    ''' Neris-City-Hall
-
-    If InBox(X, Z, -112.000, 167.600, 112.000, 341.500) Then
-        Return False
+    If Entries.DoorwayAt(X, Z) >= 0 Or Entries.SurfaceHeight(X, Z) > -9000.0 Then
+        Return True
     End If
 
-    ''' Neris-Weapon-Store
+    For Index = 0 To Site.SOLID_COUNT - 1
 
-    If InBox(X, Z, 263.700, 153.450, 372.100, 286.550) Then
-        Return False
-    End If
+        If Site.Contains(Site.SolidAt(Index), X, Z, 3.0) Then
+            Return False
+        End If
 
-    ''' Neris-Item-Store
-
-    If InBox(X, Z, 263.700, -66.550, 372.082, 66.550) Then
-        Return False
-    End If
-
-    ''' Neris-Armor-Store
-
-    If InBox(X, Z, 263.700, -287.300, 372.600, -153.450) Then
-        Return False
-    End If
-
-    ''' Home 01 — Family House
-
-    If InBox(X, Z, -381.970, 201.013, -291.950, 298.987) Then
-        Return False
-    End If
-
-    ''' Home 02 — Courtyard Cottage
-
-    If InBox(X, Z, -376.970, 18.000, -296.950, 102.000) Then
-        Return False
-    End If
-
-    ''' Home 03 — Garden Pavilion
-
-    If InBox(X, Z, -379.200, -179.200, -292.950, -100.800) Then
-        Return False
-    End If
-
-    ''' Home 04 — Family House
-
-    If InBox(X, Z, -381.970, -378.987, -291.950, -281.013) Then
-        Return False
-    End If
-
-    ''' Home 05 — Courtyard Cottage
-
-    If InBox(X, Z, -402.000, 346.950, -318.000, 426.970) Then
-        Return False
-    End If
-
-    ''' Home 07 — Family House
-
-    If InBox(X, Z, 271.013, 321.950, 368.987, 411.970) Then
-        Return False
-    End If
-
-    ''' Home 08 — Courtyard Cottage
-
-    If InBox(X, Z, 273.030, -402.000, 353.050, -318.000) Then
-        Return False
-    End If
-
-    Canal = Abs(Abs(X) - 125.0) < 22.0 And Z > -390.0 And Z < 150.0
-    Bridge = Abs(Z + 320.0) < 15.0 Or Abs(Z + 100.0) < 15.0 Or Abs(Z - 140.0) < 15.0
-
-    If Canal And Not Bridge Then
-        Return False
-    End If
-
-    If X * X + (Z + 200.0) * (Z + 200.0) < 54.0 * 54.0 Then
-        Return False
-    End If
-
-    If Abs(Abs(X) - 66.0) < 12.0 And Abs(Z + 390.0) < 14.0 Then
-        Return False
-    End If
-
-    If InBox(X, Z, -303.0, -45.0, -258.0, -15.0) Or InBox(X, Z, -423.0, -55.0, -377.0, -25.0) Then
-        Return False
-    End If
+    End For
 
     For Index = 0 To Layout.TREE_COUNT - 1
 
@@ -131,17 +48,20 @@ End Function
 Public Function GroundHeight(X As Double, Z As Double) As Double
 
     Dim Result As Double
+    Dim Door As Number
+    Dim Item As DoorData.Door
 
-    Result = Districts.GroundHeight(X, Z)
+    Result = Max(Districts.GroundHeight(X, Z), Entries.SurfaceHeight(X, Z))
+    Door = Entries.DoorwayAt(X, Z)
 
-    If (X + 220.0) * (X + 220.0) + (Z + 220.0) * (Z + 220.0) < 47.0 * 47.0 Then
-        Result = 25.3
-    End If
+    If Door >= 0 Then
 
-    If (Abs(Abs(X) - 125.0) < 21.0 And
-        (Abs(Z + 320.0) < 24.0 Or
-        Abs(Z + 100.0) < 24.0 Or Abs(Z - 140.0) < 24.0)) Then
-        Result = 24.12
+        Item = DoorData.DoorAt(Door)
+
+        If Entries.Along(Item, X, Z) >= -1.0 Then
+            Result = Max(Result, Item.Position.Y)
+        End If
+
     End If
 
     Return Result
@@ -160,12 +80,16 @@ Public Function Move(Position As P.Vector3, DeltaX As Double, DeltaZ As Double) 
 
     For Index = 1 To Steps
 
-        If CanStand(Result.X + DeltaX / ToDouble(Steps), Result.Z) Then
+        If (CanStand(Result.X + DeltaX / ToDouble(Steps), Result.Z) And
+            GroundHeight(Result.X + DeltaX / ToDouble(Steps), Result.Z) <= Result.Y + 12.0) Then
             Result.X = Result.X + DeltaX / ToDouble(Steps)
+            Result.Y = GroundHeight(Result.X, Result.Z)
         End If
 
-        If CanStand(Result.X, Result.Z + DeltaZ / ToDouble(Steps)) Then
+        If (CanStand(Result.X, Result.Z + DeltaZ / ToDouble(Steps)) And
+            GroundHeight(Result.X, Result.Z + DeltaZ / ToDouble(Steps)) <= Result.Y + 12.0) Then
             Result.Z = Result.Z + DeltaZ / ToDouble(Steps)
+            Result.Y = GroundHeight(Result.X, Result.Z)
         End If
 
     End For

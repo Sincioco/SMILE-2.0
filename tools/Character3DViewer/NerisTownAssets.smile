@@ -8,17 +8,19 @@ Import Smile.Simple3D.Graphics3D As G
 Import Smile.Simple3D.Precision3D As P
 Import Smile.Tools.Character3DViewerCalibration As Numbers
 
-Public Const TOWN_CHUNK_COUNT = 33
-Public Const CHUNK_COUNT = 47
+Public Const TOWN_CHUNK_COUNT = 37
+Public Const CHUNK_COUNT = 51
 
 Public Type State
-    Models[47] As Core.Model3D
+    Models[51] As Core.Model3D
     Objects[448] As Core.Object3D
     Loaded As Number
     ObjectCount As Number
     Failed As Boolean
     ErrorCode As Number
     Stage As Number
+    GeometryMs[2] As Number
+    MaterialsMs[2] As Number
 End Type
 
 Public Sub LoadNext(ByRef Value As State)
@@ -29,6 +31,8 @@ Public Sub LoadNext(ByRef Value As State)
     Dim Ok As Boolean
     Dim Chunk As Number
     Dim Prefix As Text
+    Dim Started As Number
+    Dim Group As Number
 
     If Value.Loaded >= CHUNK_COUNT Or Value.Failed Then
         Return
@@ -38,8 +42,11 @@ Public Sub LoadNext(ByRef Value As State)
     Prefix = "Neris-"
 
     If Chunk >= TOWN_CHUNK_COUNT Then
+
         Chunk = Chunk - TOWN_CHUNK_COUNT
         Prefix = "Castle-"
+        Group = 1
+
     End If
 
     Name = Numbers.NumberText(Chunk)
@@ -48,14 +55,18 @@ Public Sub LoadNext(ByRef Value As State)
         Name = "0" + Name
     End If
 
-    Value.Models[Value.Loaded] = G.LoadModel3D("Assets/Neris/" + Prefix + Name + ".sm3d")
+    Started = Timer()
+    Value.Models[Value.Loaded] = G.LoadModelGeometry3D("Assets/Neris/" + Prefix + Name + ".sm3d")
+    Value.GeometryMs[Group] = Value.GeometryMs[Group] + Timer() - Started
     Ok = Value.Models[Value.Loaded].GeometryReady
     Value.Stage = 1
     Value.ErrorCode = G.LastError()
 
     If Ok Then
 
-        Ok = G.PrepareModelPbr3D(Value.Models[Value.Loaded], 1, 1, 4)
+        Started = Timer()
+        Ok = G.PrepareModelPbr3D(Value.Models[Value.Loaded], G.TEXTURE_FILTER_ANISOTROPIC, 1, 16)
+        Value.MaterialsMs[Group] = Value.MaterialsMs[Group] + Timer() - Started
         Value.Stage = 2
         Value.ErrorCode = G.LastError()
 
@@ -74,7 +85,7 @@ Public Sub LoadNext(ByRef Value As State)
 
         If Value.Loaded >= TOWN_CHUNK_COUNT Then
             Ok = P.SetScale(Object, 170000.0, 170000.0, 170000.0) And Ok
-            Ok = P.SetPosition(Object, -2280.0, -299.88, 1760.0) And Ok
+            Ok = P.SetPosition(Object, -3660.0, -299.88, 2260.0) And Ok
         Else
             Ok = P.SetScale(Object, 1000.0, 1000.0, 1000.0) And Ok
             Ok = P.SetPosition(Object, 0.0, 21.0, 0.0) And Ok

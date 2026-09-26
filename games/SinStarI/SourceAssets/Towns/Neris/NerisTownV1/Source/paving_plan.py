@@ -4,11 +4,12 @@ import math
 CANALS = [(x-1.5, -38.5, x+1.5, 14.5) for x in (-12.5, 12.5)]
 BRIDGES = [(x-2.1, y-2.4, x+2.1, y+2.4)
            for x in (-12.5, 12.5) for y in (-32, -10, 14)]
-COMPARISON_MOAT = [(-317,77,-139,89),(-317,263,-139,275),
-                   (-317,89,-305,263),(-151,89,-139,263)]
-COMPARISON_BRIDGE = (-236,72,-220,98)
-ROYAL_MOAT = [(-132,98,58,114),(-132,252,58,268),
-              (-132,114,-114,252),(40,114,58,252)]
+COMPARISON_MOAT = [(-359,65,-157,89),(-359,263,-157,287),
+                   (-359,89,-335,263),(-181,89,-157,263)]
+COMPARISON_BRIDGE = (-266,60,-250,98)
+ROYAL_MOAT = [(-150,82,76,114),(-150,252,76,284),
+              (-150,114,-114,252),(40,114,76,252)]
+ROYAL_BRIDGE = (-46,76,-28,130)
 DISTRICTS = {
     'Estates': ([-128, -96, -56], [-46, 0, 46]),
     'Homes': ([56, 94, 128], [-46, -14, 16, 46]),
@@ -38,13 +39,13 @@ def plan(layout):
     roads += [rect(x, -86, 4, 56) for x in (-80, 80)]
     # Temporary comparison castle remains beside the accepted royal castle.
     if 'comparisonCastle' in layout:
-        roads += [rect(-224,60,190,8),rect(-228,79,12,38),
-                  rect(-323,176,4,206),rect(-135,176,4,206),
-                  rect(-229,72,192,4),rect(-229,279,192,4)]
+        roads += [rect(-245,60,244,8),rect(-258,79,12,38),
+                  rect(-365,176,4,234),rect(-154,176,4,234),
+                  rect(-260,293,214,4)]
     if 'royalRebuild' in layout:
         roads += [rect(-37,77,14,38),rect(-37,105,17,40),
                   rect(115,60,118,8),rect(115,102,12,84),
-                  rect(171,170,4,214),rect(20,277,306,4)]
+                  rect(171,177,4,228),rect(9,293,328,4)]
     for x, ys in [(32, [-22, 0, 22]), (-34, [-33, -14, 6, 25])]:
         roads += [rect(x, y, 20, 18) for y in ys]
     roads += [rect(x, 36, 14, 12) for x in (-36, 32)]

@@ -15,6 +15,13 @@ Import Smile.Simple3D.Graphics3D As G
 Import Smile.Tools.Character3DViewerCalibration As Calibration
 Import Smile.Tools.NerisTownTrees As Trees
 Import Smile.Tools.NerisTownMap As TownMap
+Import Smile.Tools.NerisTownCamera As Drone
+Import Smile.Simple3D.FollowCamera3D As Follow
+Import Smile.Simple3D.CameraClearance3D As Clearance
+Import Smile.Tools.NerisTownSite As Site
+Import Smile.Tools.NerisTownLayout As Layout
+Import Smile.Tools.NerisTownEntrances As Doors
+Import Smile.Tools.NerisTownEntrancesData As DoorData
 
 Dim Value As Town.State
 Dim Leader As P.Vector3
@@ -22,6 +29,7 @@ Dim Index As Number
 Dim MemberIndex As Number
 Dim Failures As Number
 Dim KeyTotal As Number
+Dim SawFade As Boolean
 
 Game Window "Neris Town Asset Check" Size 1100 By 720
 
@@ -38,6 +46,10 @@ Print "Chunks " + Calibration.NumberText(Value.Town.Loaded) + " Stage " + Calibr
 Print "Actors " + Calibration.NumberText(Value.People.Loaded) + " Error " + Calibration.NumberText(Character.LastError())
 Print "Meshes " + Calibration.NumberText(G.LiveMeshCount3D()) + "/" + Calibration.NumberText(G.MaximumMeshCount3D())
 Print "Materials " + Calibration.NumberText(G.LiveMaterialCount3D()) + "/" + Calibration.NumberText(G.MaximumMaterialCount3D())
+Print "Load Town Geometry Ms " + Calibration.NumberText(Value.Town.GeometryMs[0])
+Print "Load Town Materials Ms " + Calibration.NumberText(Value.Town.MaterialsMs[0])
+Print "Load Tripo Geometry Ms " + Calibration.NumberText(Value.Town.GeometryMs[1])
+Print "Load Tripo Materials Ms " + Calibration.NumberText(Value.Town.MaterialsMs[1])
 
 Call Check(Value.View.Ready, "Town Arena Loads")
 Call Check(Value.Look.Garden.Ready, "Town Trees And Leaves Load")
@@ -50,9 +62,10 @@ Call Check(G.MaximumMeshCount3D() >= 256, "Detailed Castle And Town Have Mesh Ca
 If Value.Ready Then
 
     Call CheckCamera(Value)
+    Call CheckDrone()
     Call CheckSpeed(Value)
     Call CheckGarden(Value)
-    Call Check(TownMap.MapX(-745.0, 0, 200) = 100 And TownMap.MapY(815.0, 0, 180) = 90,
+    Call Check(TownMap.MapX(-1075.0, 0, 200) = 100 And TownMap.MapY(0.0, 0, 180) = 90,
         "Minimap Maps Town Center")
     Call Check(TownMap.MapY(400.0, 0, 180) < TownMap.MapY(-400.0, 0, 180),
         "Minimap Keeps North Up")
@@ -108,7 +121,7 @@ If Value.Ready Then
 
     Leader = Value.People.Path.Positions[0]
 
-    For Index = 1 To 82
+    For Index = 1 To 45
         Leader = Navigation.Move(Leader, Party.WalkingSpeed(Value.People) * 0.025, 0.0)
 
         Call Party.Update(Value.People, Leader, 25)
@@ -138,8 +151,18 @@ If Value.Ready Then
         Value.People.Members[0].TravelName = "Run", "Settling Walk Can Switch Back To Run")
 
     For Index = 1 To 250
+
         Call Party.Update(Value.People, Leader, 25)
+
+        For MemberIndex = 1 To Value.People.MemberCount - 1
+            SawFade = SawFade Or (Value.People.Members[MemberIndex].Opacity > 0.0 And Value.People.Members[MemberIndex].Opacity < 100.0)
+
+            Call Check(Math3D.Distance(Value.People.Path.Positions[MemberIndex], Leader) >= 13.999,
+                "Stopped Followers Never Collide With Arin")
+        End For
     End For
+
+    Call Check(SawFade, "Followers Fade Gradually Before Hiding")
 
     For MemberIndex = 0 To Value.People.MemberCount - 1
         Call Check(Value.People.Members[MemberIndex].Visible = (MemberIndex = 0),
@@ -152,20 +175,24 @@ If Value.Ready Then
         G.LightValue3D(G.LIGHT_QUERY_AMBIENT, 0, 4) = 380 And
         G.LightValue3D(G.LIGHT_QUERY_LOCAL, 1, 11) = 4800 And
         G.LightValue3D(G.LIGHT_QUERY_LOCAL, 2, 11) = 4800 And
-        G.LightValue3D(G.LIGHT_QUERY_LOCAL, 3, 11) = 4300,
+        G.LightValue3D(G.LIGHT_QUERY_LOCAL, 3, 11) = 4600,
         "Town Keeps Sun Ambient Fill And Dedicated Castle And Military Lights")
     Call Town.Overlay(Value)
     Call Check(Not Value.Failed And Value.People.Ready, "Town Renders With Shared Reflective Arena")
     Call Check(Value.Look.Ready And Value.Look.Time = 16,
         "Water Surface Clock Advances Independently Of Walking")
-    Call Check(Value.Look.Surfaces[0].PointCount = 2 And
-        Value.Look.Surfaces[1].PointCount = 2 And Value.Look.Surfaces[2].PointCount = 49,
-        "Both Canals And Fountain Have Native Water Surfaces")
-    Call Check(Value.Look.Surfaces[3].PointCount = 5 And
-        Value.Look.Surfaces[4].PointCount = 49 And Value.Look.Surfaces[5].PointCount = 5, "Castle Moat And Fountain Have Water")
-    Call Check(G.DistortionValue3D(G.DISTORTION_QUERY_EMITTERS) = 6 And
+    Call Check(Value.Look.Surfaces[0].PointCount = Site.WATER_COUNT * 4,
+        "All Waterfront Rectangles Have Native Water")
+
+    For Index = 1 To Layout.FOUNTAIN_COUNT
+        Call Check(Value.Look.Surfaces[Index].PointCount = 49, "Every Authored Fountain Has Native Water")
+    End For
+
+    Call Check(G.DistortionValue3D(G.DISTORTION_QUERY_EMITTERS) = Layout.FOUNTAIN_COUNT + 1 And
         G.DistortionValue3D(G.DISTORTION_QUERY_COMPOSITE_DRAWS) > 0,
         "Water Captures And Refracts The Town Scene")
+    Call CheckDoors(Value)
+    Call CheckLeaderCycle(Value)
 
     Show Screen
 
@@ -184,27 +211,90 @@ Else
     Print "FAIL Neris Town Scene"
 End If
 
+Sub CheckLeaderCycle(ByRef Scene As Town.State)
+
+    Dim Index As Number
+    Dim MemberIndex As Number
+    Dim Position As P.Vector3
+    Dim ObjectsBefore As Number
+    Dim ActorHandles[4] As Number
+
+    Position = Scene.People.Path.Positions[0]
+    ObjectsBefore = G.LiveObjectCount3D()
+
+    For Index = 0 To 3
+        ActorHandles[Index] = Scene.People.Members[Index].Body.Actor.Handle
+    End For
+
+    For Index = 1 To 4
+
+        Call Party.CycleLeader(Scene.People)
+        Call Check(Scene.People.Members[0].Body.Profile = Party.ProfileAt(Index Mod 4),
+            "Leader Cycles Arin Orin Zara Mira And Wraps")
+        Call Check(Math3D.Length(Math3D.Subtract(Scene.People.Path.Positions[0], Position)) < 0.001,
+            "Leader Change Preserves The Party Location")
+        Call Check(Scene.People.Members[0].Visible And Scene.People.Members[0].Opacity = 100.0,
+            "Selected Leader Is Visible Even When Followers Were Hidden")
+
+        For MemberIndex = 0 To 3
+            Call Check(Scene.People.Members[MemberIndex].Body.Actor.Handle =
+                ActorHandles[(Index + MemberIndex) Mod 4], "Leader Change Preserves Every Actor Identity")
+        End For
+    End For
+
+    Call Check(Scene.People.Ready And G.LiveObjectCount3D() = ObjectsBefore,
+        "Cycling Reuses Loaded Actors And Their Calibration")
+
+End Sub
+
+Sub CheckDoors(ByRef Scene As Town.State)
+
+    Dim Index As Number
+    Dim Item As DoorData.Door
+    Dim Point As P.Vector3
+
+    Call Check(Scene.Doors.Ready And Scene.Doors.ObjectCount = DoorData.DOOR_COUNT * 4,
+        "All Authored Doors Share The Reusable Hinged Leaves")
+
+    For Index = 0 To DoorData.DOOR_COUNT - 1
+
+        Item = DoorData.DoorAt(Index)
+        Point = Item.Position
+        Point.X = Point.X + Item.RightZ * 3.0
+        Point.Z = Point.Z - Item.RightX * 3.0
+
+        Call Doors.Update(Scene.Doors, Point, 750)
+        Call Check(Scene.Doors.Angles[Index] = 90.0, "Door Opens Inward On Approach")
+        Call Check(Doors.ConsumeEntry(Scene.Doors) = Index, "Door Emits Its Entry Event")
+        Call Doors.Update(Scene.Doors, Point, 16)
+        Call Check(Doors.ConsumeEntry(Scene.Doors) = -1, "Door Does Not Repeat Entry Every Frame")
+        Call Doors.Update(Scene.Doors, P.Vector(2800.0, 21.0, -3400.0), 2000)
+        Call Check(Scene.Doors.Angles[Index] = 0.0, "Door Closes After Leaving")
+    End For
+
+End Sub
+
 Sub CheckSpeed(ByRef Scene As Town.State)
 
     Dim StepIndex As Number
 
-    Call Check(Scene.People.SpeedPercent = 100 And Scene.People.Running And
-        Abs(Party.WalkingSpeed(Scene.People) - 280.0 / 3.0) < 0.001,
-        "Default Run Is One Third Faster Than Previous Speed")
+    Call Check(Scene.People.SpeedPercent = 200 And Scene.People.Running And
+        Abs(Party.WalkingSpeed(Scene.People) - 560.0 / 3.0) < 0.001,
+        "Default Run Is Two Hundred Percent")
     Call Town.Input(Scene, KEY_W, True)
     Call Check(Scene.People.Running, "W Movement Does Not Switch Run To Walk")
     Call Town.Input(Scene, KEY_R, True)
     Call Check(Not Scene.People.Running And
-        Abs(Party.WalkingSpeed(Scene.People) - 280.0 / 9.0) < 0.001,
+        Abs(Party.WalkingSpeed(Scene.People) - 560.0 / 9.0) < 0.001,
         "Walk Is One Third Of Run Speed")
     Call Town.Input(Scene, KEY_W, True)
     Call Check(Not Scene.People.Running, "W Movement Preserves Selected Walk Mode")
     Call Town.Input(Scene, KEY_R, True)
     Call Check(Scene.People.Running, "R Toggles Back From Walk To Run")
     Call Town.Input(Scene, KEY_PLUS, True)
-    Call Check(Scene.People.SpeedPercent = 125, "Plus Speeds Up Locomotion")
+    Call Check(Scene.People.SpeedPercent = 225, "Plus Speeds Up Locomotion")
     Call Town.Input(Scene, KEY_MINUS, True)
-    Call Check(Scene.People.SpeedPercent = 100, "Minus Slows Down Locomotion")
+    Call Check(Scene.People.SpeedPercent = 200, "Minus Slows Down Locomotion")
 
     For StepIndex = 1 To 20
         Call Town.Input(Scene, KEY_MINUS, True)
@@ -218,7 +308,7 @@ Sub CheckSpeed(ByRef Scene As Town.State)
 
     Call Check(Scene.People.SpeedPercent = 400, "Walking Speed Has An Upper Bound")
 
-    For StepIndex = 1 To 12
+    For StepIndex = 1 To 8
         Call Town.Input(Scene, KEY_MINUS, True)
     End For
 
@@ -229,6 +319,9 @@ Sub CheckCamera(ByRef Scene As Town.State)
     Dim Pointer As Motion.PointerInput
     Dim Changed As Boolean
     Dim Distance As Double
+
+    Call Check(Scene.Flight.Enabled And Scene.Follow, "Drone Starts Enabled Behind Arin")
+    Call Town.ResetOverview(Scene)
 
     Call Check(Scene.BaseCamera.NearPlane = 25.0,
         "Town Camera Preserves Depth Precision For Thin Paving Layers")
@@ -287,14 +380,14 @@ Sub CheckCamera(ByRef Scene As Town.State)
 
     Call Town.Update(Scene, 0)
     Call Check(Abs(Math3D.Length(Math3D.Subtract(Scene.View.LiveCamera.Position,
-        Scene.View.LiveCamera.Target)) - 8500.0) < 0.01 And
+        Scene.View.LiveCamera.Target)) - 18000.0) < 0.01 And
         Scene.View.LiveCamera.FovDegrees = 32.0, "Tab Follow Can Zoom Out To Whole Town Without Wide Angle")
 
     Scene.Follow = False
 
     Call Town.Update(Scene, 0)
     Call Check(Abs(Math3D.Length(Math3D.Subtract(Scene.View.LiveCamera.Position,
-        Scene.View.LiveCamera.Target)) - 8500.0) < 0.01,
+        Scene.View.LiveCamera.Target)) - 18000.0) < 0.01,
         "Overview And Follow Share The Same Maximum Distance")
 
     Scene.Follow = True
@@ -344,8 +437,85 @@ Sub CheckCamera(ByRef Scene As Town.State)
     Call Check(Scene.Follow And Scene.View.Controls.PanX = 12.0 And
         Scene.View.Controls.Zoom = ToDouble(Motion.ZOOM_OUT_LIMIT),
         "Restarting Movement Preserves User Selected Follow Framing")
+
+    Scene.Flight.Enabled = False
+
     Call CheckTransition(Scene)
+
+    Scene.Flight.Enabled = True
+
     Call Town.Input(Scene, KEY_C, True)
+    Call Town.FitTown(Scene)
+    Call Check(Scene.Cinematic And Not Scene.Follow,
+        "Fit Keeps An Active Orbit Running")
+    Call Arena.AdvanceTransition(Scene.View, 700)
+    Call Town.Update(Scene, 0)
+    Call Check(Math3D.Distance(Scene.View.LiveCamera.Position, Scene.View.LiveCamera.Target) > 12500.0,
+        "Fit Encloses Both Castles And All Neighborhoods")
+
+    Scene.Cinematic = False
+
+    Call Town.FitTown(Scene)
+    Call Check(Not Scene.Cinematic, "Fit Also Preserves A Stopped Orbit")
+
+End Sub
+
+Sub CheckDrone()
+
+    Dim World As Clearance.World
+    Dim Flight As Follow.State
+    Dim Desired As P.Camera3D
+    Dim Displayed As P.Camera3D
+    Dim Previous As P.Vector3
+    Dim StepIndex As Number
+    Dim DroneState As Drone.State
+    Dim Leader As P.Vector3
+
+    World.BoxCount = 1
+    World.Boxes[0] = Clearance.Box(-50.0, 0.0, -50.0, 50.0, 300.0, 50.0)
+    Desired.Target = P.Vector(0.0, 40.0, -160.0)
+    Desired.Position = P.Vector(0.0, 120.0, 150.0)
+
+    Call Check(Clearance.Fraction(World, Desired.Target, Desired.Position, 18.0) < 1.0,
+        "Camera Sweeps Detect A Building Between Party And Eye")
+    Call Follow.Reset(Flight, P.Vector(-180.0, 120.0, 100.0))
+
+    For StepIndex = 1 To 100
+
+        Previous = Flight.Position
+        Displayed = Follow.Update(Flight, World, Desired, 16, 18.0)
+
+        Call Check(Clearance.IsClear(World, Displayed.Position, 18.0),
+            "Drone Remains Outside Building Bounds")
+        Call Check(Math3D.Distance(Previous, Displayed.Position) < 4.5,
+            "Avoidable Camera Motion Remains Smooth")
+    End For
+
+    Call Check(Flight.Avoiding And Clearance.Fraction(World, Desired.Target,
+        Displayed.Position, 18.0, True) > 0.999, "Drone Finds A Clear View Around Building")
+
+    Leader = P.Vector(-1160.0, 23.12, 1800.0)
+    DroneState.Yaw = 180.0
+    DroneState.Enabled = True
+
+    For StepIndex = 1 To 180
+        Displayed = Drone.Frame(DroneState, Desired, Leader, 180.0, False, 16)
+    End For
+
+    Call Check(Math3D.Distance(Displayed.Position, Leader) < 110.0,
+        "Castle Grounds Use A Close Trailing Distance")
+
+    Leader = P.Vector(0.0, Navigation.GroundHeight(0.0, 405.0), 405.0)
+    DroneState.CloseAmount = 1.0
+    Displayed = Drone.Frame(DroneState, Desired, Leader, 180.0, False, 16)
+
+    Call Check(Displayed.Target.Z > Displayed.Position.Z And
+        Displayed.Target.Y > Displayed.Position.Y, "Close Drone Looks North And Up The Stairs")
+
+    Call Check(Abs(Drone.BoundaryYaw(P.Vector(-4800.0, 0.0, 2200.0), 90.0) + 90.0) < 0.001,
+        "West Boundary Places Drone Outside Looking Into Town")
+    Call Check(Abs(Drone.BoundaryYaw(P.Vector(0.0, 0.0, 3370.0), 180.0)) < 0.001,
+        "North Boundary Reverses The Camera To Look Into Town")
 
 End Sub
 
@@ -365,32 +535,37 @@ Sub CheckTransition(ByRef Scene As Town.State)
 
     Call Town.Input(Scene, KEY_TAB, True)
 
+    Call Check(Scene.View.TransitionDuration = 1000 And Scene.Flight.Yaw = 180.0 And
+        Not Scene.Cinematic, "Tab Uses One Second And Faces North After Orbit")
+
     Scene.View.TransitionElapsed = 0
 
     Call Town.Update(Scene, 0)
     Call Check(Scene.Follow And Math3D.Length(Math3D.Subtract(
         StartView.Position, Scene.View.LiveCamera.Position)) < 0.001,
         "Tab Starts At The Displayed Camera Without Snapping")
-    Call Arena.AdvanceTransition(Scene.View, 350)
+    Call Arena.AdvanceTransition(Scene.View, 500)
     Call Town.Update(Scene, 0)
 
     HalfView = Scene.View.LiveCamera
     HalfDistance = Math3D.Length(Math3D.Subtract(HalfView.Position, HalfView.Target))
 
-    Call Check(HalfDistance < StartDistance And HalfDistance > 450.0 And
+    Call Check(HalfDistance < StartDistance And HalfDistance > 530.0 And
         HalfView.Position.Y > 25.0 And HalfView.FovDegrees = 32.0,
         "Tab Eases Distance And Target With A Fixed Lens")
     Call Arena.ComposeCamera(Scene.View, Scene.BaseCamera)
     Call Check(Math3D.Length(Math3D.Subtract(HalfView.Position,
         Scene.View.LiveCamera.Position)) < 0.001, "Drawing Does Not Advance Or Snap Transition")
-    Call Arena.AdvanceTransition(Scene.View, 350)
+    Call Arena.AdvanceTransition(Scene.View, 500)
     Call Town.Update(Scene, 0)
 
     EndView = Scene.View.LiveCamera
 
     Call Check(Scene.View.TransitionDuration = 0 And
-        Math3D.Length(Math3D.Subtract(EndView.Position, EndView.Target)) < 450.0,
-        "Tab Reaches The Party View After Seven Hundred Milliseconds")
+        Math3D.Length(Math3D.Subtract(EndView.Position, EndView.Target)) < 533.0,
+        "Tab Reaches The Party View After One Second")
+    Call Check(EndView.Target.Z > EndView.Position.Z And EndView.Target.Y > EndView.Position.Y,
+        "Tab Ends In A North-Facing Horizon Shot")
 
     StartView = EndView
     StartView.Position.X = StartView.Target.X - (EndView.Position.X - EndView.Target.X)
@@ -400,8 +575,8 @@ Sub CheckTransition(ByRef Scene As Town.State)
     Call Check(Math3D.Length(Math3D.Subtract(HalfView.Position, HalfView.Target)) > 350.0,
         "Opposing Camera Views Ease Around The Subject Instead Of Through It")
     Call Town.Input(Scene, KEY_TAB, True)
-    Call Check(Not Scene.Follow And Scene.View.TransitionDuration > 0,
-        "Tab Also Eases Back To Overview")
+    Call Check(Scene.Follow And Scene.View.TransitionDuration > 0,
+        "Tab Refocuses Behind Arin Without Switching To Overview")
     Call Town.ResetOverview(Scene)
     Call Check(Scene.View.TransitionDuration = 0, "Explicit Overview Reset Cancels Easing")
 

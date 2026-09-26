@@ -13,70 +13,16 @@ Public Type State
     Material As Core.Material3D
     Particles As Core.ParticleBatch3D
     Lamps As Core.ParticleBatch3D
-    Positions[33] As P.Vector3
     LightCount As Number
     Time As Double
     Ready As Boolean
 End Type
 
-Private Sub Add(ByRef Value As State, X As Double, Y As Double, Z As Double)
-
-    Value.Positions[Value.LightCount] = P.Vector(X, Y, Z)
-    Value.LightCount = Value.LightCount + 1
-
-End Sub
-
 Public Function Create(ByRef Value As State) As Boolean
 
-    Dim Side As Number
-    Dim Index As Number
-    Dim Z As Double
     Dim Ok As Boolean
 
-    For Side = 0 To 1
-
-        For Index = 0 To 4
-
-            Select Case Index
-                Case 0
-                    Z = -340.0
-                Case 1
-                    Z = -250.0
-                Case 2
-                    Z = -120.0
-                Case 3
-                    Z = 110.0
-                Case 4
-                    Z = 170.0
-            End Select
-
-            Call Add(Value, -70.0 + ToDouble(Side) * 140.0, 61.0, Z)
-        End For
-
-        For Index = 0 To 4
-
-            Select Case Index
-                Case 0
-                    Z = -350.0
-                Case 1
-                    Z = -170.0
-                Case 2
-                    Z = 30.0
-                Case 3
-                    Z = 250.0
-                Case 4
-                    Z = 370.0
-            End Select
-
-            Call Add(Value, -200.0 + ToDouble(Side) * 400.0, 61.0, Z)
-        End For
-    End For
-
-    Call Add(Value, 0.0, 53.0, -200.0)
-    Call Add(Value, -80.0, 34.5, -390.0)
-    Call Add(Value, 80.0, 34.5, -390.0)
-    Call Add(Value, 150.0, 231.0, 750.0)
-    Call Add(Value, 0.0, 197.0, 260.0)
+    Value.LightCount = Layout.CRYSTAL_COUNT
 
     Value.Texture = G.LoadTexture3D("Assets/Fire/ember-shape.png",
         G.TEXTURE_FILTER_LINEAR, G.TEXTURE_WRAP_CLAMP)
@@ -107,7 +53,7 @@ Public Sub Update(ByRef Value As State, Elapsed As Number)
 
     For Index = 0 To Value.LightCount - 1
 
-        Point = Value.Positions[Index]
+        Point = Layout.CrystalAt(Index)
         Ok = P.SetParticle(Value.Particles, Index * 3, Point, 8.0, 0.0, 0) And Ok
         Ok = G.SetParticleColor3D(Value.Particles, Index * 3, 65, 205, 255,
             20 + ToNumber(4.0 * Sin(Value.Time * 0.65 + ToDouble(Index)))) And Ok
@@ -115,7 +61,7 @@ Public Sub Update(ByRef Value As State, Elapsed As Number)
         For Spark = 1 To 2
 
             Phase = Value.Time * 0.65 + ToDouble(Index) * 1.71 + ToDouble(Spark) * 2.3
-            Point = Value.Positions[Index]
+            Point = Layout.CrystalAt(Index)
             Point.X = Point.X + Cos(Phase) * 3.2
             Point.Z = Point.Z + Sin(Phase) * 3.2
             Point.Y = Point.Y + Sin(Phase * 0.7) * 4.0

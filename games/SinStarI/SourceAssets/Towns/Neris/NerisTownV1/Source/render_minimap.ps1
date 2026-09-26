@@ -14,10 +14,10 @@ $estate=Ink 218 184 117; $family=Ink 183 203 207; $workers=Ink 179 169 157
 $white=Ink 235 243 246
 $font=[Drawing.Font]::new('Segoe UI',30,[Drawing.FontStyle]::Regular,[Drawing.GraphicsUnit]::Pixel)
 $title=[Drawing.Font]::new('Segoe UI',38,[Drawing.FontStyle]::Bold,[Drawing.GraphicsUnit]::Pixel)
-function MapX([double]$x) { [single](30+($x+327)*1080/505) }
-function MapY([double]$y) { [single](90+(283-$y)*940/403) }
+function MapX([double]$x) { [single](30+($x-$layout.bounds[0])*1080/($layout.bounds[2]-$layout.bounds[0])) }
+function MapY([double]$y) { [single](90+($layout.bounds[3]-$y)*940/($layout.bounds[3]-$layout.bounds[1])) }
 function Rect($brush,[double]$x,[double]$y,[double]$w,[double]$d) {
-    $graphics.FillRectangle($brush,(MapX ($x-$w/2)),(MapY ($y+$d/2)),[single]($w*1080/505),[single]($d*940/403))
+    $graphics.FillRectangle($brush,(MapX ($x-$w/2)),(MapY ($y+$d/2)),[single]($w*1080/($layout.bounds[2]-$layout.bounds[0])),[single]($d*940/($layout.bounds[3]-$layout.bounds[1])))
 }
 function Label([string]$text,[double]$x,[double]$y) {
     $size=$graphics.MeasureString($text,$font)
@@ -27,53 +27,33 @@ function Label([string]$text,[double]$x,[double]$y) {
 }
 $graphics.Clear([Drawing.Color]::Transparent)
 $graphics.FillRectangle($navy,0,0,1140,1080)
-$graphics.FillRectangle($green,30,90,1080,940)
+$graphics.FillRectangle($water,30,90,1080,940)
 $graphics.DrawString('NERIS',$title,$ivory,30,22)
 $graphics.DrawString('N ↑',$font,$ivory,1032,27)
-foreach($road in $layout.roads) { Rect $slate $road[0] $road[1] $road[2] $road[3] }
-Rect $slate 0 -3 17 79
-Rect $slate 0 25 27 29
-foreach($y in @(-32,-10,14,39)) { Rect $slate 0 $y 90 4.8 }
-foreach($x in @(-21,21)) { Rect $slate $x 0 5 81 }
-foreach($x in @(-12.5,12.5)) {
-    Rect $water $x -12 2.8 53
-    foreach($y in @(-32,-10,14)) { Rect $slate $x $y 4.2 4.8 }
-}
+function BoundsRect($brush,$r) { Rect $brush (($r[0]+$r[2])/2) (($r[1]+$r[3])/2) ($r[2]-$r[0]) ($r[3]-$r[1]) }
+foreach($land in $layout.land) { BoundsRect $green $land }
+foreach($band in $layout.waterRectangles) { BoundsRect $water $band }
+foreach($road in $layout.paving) { Rect $slate $road[0] $road[1] $road[2] $road[3] }
 foreach($residence in $layout.homes) {
     $brush=switch($residence.style) { Large {$estate}; Medium {$family}; Small {$workers} }
-    Rect $brush $residence.x $residence.y $residence.width $residence.depth
+    Rect $brush $residence.x $residence.y $residence.depth $residence.width
 }
-foreach($p in @(@(-34,25),@(-34,6),@(-34,-14),@(-34,-33),@(-36,39),@(-24,-54),@(32,37),@(31,-36))) {
+foreach($p in $layout.legacyHomes) {
     Rect $family $p[0] $p[1] 8 8
 }
-foreach($band in $layout.water) { Rect $water $band[0] $band[1] $band[2] $band[3] }
-foreach($band in $layout.comparisonWater) { Rect $water $band[0] $band[1] $band[2] $band[3] }
-Rect $slate -228 85 16 26
-Rect $ivory -228 176 148 165
-Label 'Tripo Castle' -228 262
-Rect $ivory -37 184 148 120
-Rect $slate -37 184 138 110
-Rect $estate -37 210 116 42
-Rect $slate -37 108 18 44
-Rect $ivory 115 172 74 66
-Rect $slate 115 172 70 62
-Rect $green 115 165 50 33
-Rect $gold 115 193 70 21
-Rect $gold 0 26 22 17
-Rect $gold 15 75 13 12
-foreach($y in @(-22,0,22)) { Rect $gold 32 $y 11 13 }
-Label 'Royal Castle' -37 259
-Label 'Military HQ' 115 228
-Label 'Parade' 115 160
-Label 'Relay' 15 86
-Label 'City Hall' 0 43
-Label 'Weapon' 31 23
-Label 'Item' 31 1
-Label 'Armor' 31 -22
-Label 'Estates' -96 45
-Label 'Homes' 96 44
-Label 'Workers' 0 -116
-$graphics.DrawString('● Arin',$font,$gold,30,1038)
+Rect $ivory $layout.comparisonCastle.position[0] $layout.comparisonCastle.position[1] 148 165
+Rect $ivory $layout.castle[0] $layout.castle[1] 148 120
+Rect $slate $layout.castle[0] $layout.castle[1] 138 110
+Rect $estate $layout.castle[0] ($layout.castle[1]+26) 116 42
+Rect $ivory $layout.military[0] $layout.military[1] 148 132
+Rect $slate $layout.military[0] $layout.military[1] 140 124
+Rect $green $layout.military[0] ($layout.military[1]-14) 100 66
+Rect $gold $layout.military[0] ($layout.military[1]+42) 140 42
+Rect $gold $layout.cityHall[0] $layout.cityHall[1] (24*$layout.cityHallScale) (20*$layout.cityHallScale)
+Rect $gold $layout.tower[0] $layout.tower[1] (13*$layout.towerScale) (12*$layout.towerScale)
+foreach($y in @(-156,-208,-260)) { Rect $gold 125 $y 13 11 }
+foreach($label in $layout.labels) { Label $label[0] $label[1] $label[2] }
+$graphics.DrawString('● Leader',$font,$gold,30,1038)
 $bitmap.Save((Join-Path $package 'Textures/Neris-Minimap.png'),[Drawing.Imaging.ImageFormat]::Png)
 $graphics.Dispose(); $bitmap.Dispose()
 $marker=[Drawing.Bitmap]::new(32,32)

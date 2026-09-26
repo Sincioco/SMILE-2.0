@@ -62,7 +62,7 @@ static double smile_3d_viewport_height(void) {
 #define SMILE_3D_MAX_MODEL_ANIMATION_SOCKETS 64
 #define SMILE_3D_MAX_PENDING_MODEL_EVENTS 32
 #define SMILE_3D_MAX_LOCAL_LIGHTS 4
-#define SMILE_3D_MAX_FRAME_SUBMISSIONS 512
+#define SMILE_3D_MAX_FRAME_SUBMISSIONS 2048
 #define SMILE_3D_MAX_FRAME_PALETTES 512
 #define SMILE_3D_MAX_PARTICLE_BATCHES 64
 #define SMILE_3D_MAX_PARTICLES_PER_BATCH 4096
@@ -5117,7 +5117,7 @@ static int smile_3d_create_pipeline(void)
         "float3 ApplyLdrOutputTransfer(float3 c){float3 low=c*12.92;float3 high=1.055*pow(max(c,0),1.0/2.4)-.055;return lerp(low,high,step(.0031308,c));}"
         "float4 main(float4 p:SV_POSITION,float3 world:TEXCOORD1,float3 inputNormal:NORMAL,float4 inputTangent:TANGENT,float2 uv:TEXCOORD0,float4 sp:TEXCOORD2,bool front:SV_IsFrontFace):SV_TARGET{if(reflection.x>.5&&world.y<reflection.y+.01)discard;"
         "float4 sampled=textureFlags.x>.5?baseTexture.Sample(baseSampler,uv):float4(1,1,1,1);float4 base=baseFactor*objectColor*sampled;"
-        "if(emissiveAlpha.w>=0&&base.a<emissiveAlpha.w)discard;float3 N=normalize(inputNormal);if(!front)N=-N;"
+        "if(emissiveAlpha.w>=0&&baseFactor.a*sampled.a<emissiveAlpha.w)discard;float3 N=normalize(inputNormal);if(!front)N=-N;"
         "float3 T=normalize(inputTangent.xyz-N*dot(N,inputTangent.xyz));float3 B=normalize(cross(N,T)*inputTangent.w);"
         "if(textureFlags.y>.5){float3 mapped=normalMap.Sample(normalSampler,uv).xyz*2-1;mapped.xy*=surfaceFactors.z;N=normalize(T*mapped.x+B*mapped.y+N*mapped.z);}"
         "float3 orm=textureFlags.z>.5?ormTexture.Sample(ormSampler,uv).rgb:float3(1,1,1);"
@@ -7473,6 +7473,9 @@ static int smile_3d_capture_submission(long long handle, SmileSubmission3D* subm
         submission->has_material = 1;
         submission->material = *material;
         submission->alpha_mode = material->alpha_mode;
+        // Per-object fades blend without changing shared materials or cutout masks.
+        if (submission->alpha_mode <= 1 && object->color[3] < 0.999f)
+            submission->alpha_mode = 2;
         submission->double_sided = material->double_sided;
         memcpy(submission->texture_handles, material->texture_handles,
             sizeof(submission->texture_handles));
@@ -7941,8 +7944,8 @@ static int smile_3d_draw_pbr(const SmileSubmission3D* submission)
         constants.bones[bone] = submission->palette_index < 0
             ? smile_3d_identity() : smile_frame_palettes3d[submission->palette_index].bones[bone];
     context->UpdateSubresource(smile_pbr_constant_buffer3d, 0, 0, &constants, 0, 0);
-    context->OMSetBlendState(material->alpha_mode == 2 ? smile_blend_state3d : 0, 0, 0xffffffff);
-    context->OMSetDepthStencilState(material->alpha_mode == 2 ? smile_depth_read_state3d : smile_depth_state3d, 0);
+    context->OMSetBlendState(submission->alpha_mode == 2 ? smile_blend_state3d : 0, 0, 0xffffffff);
+    context->OMSetDepthStencilState(submission->alpha_mode == 2 ? smile_depth_read_state3d : smile_depth_state3d, 0);
     smile_3d_set_object_raster(context, object, material->double_sided);
     context->IASetInputLayout(smile_pbr_input_layout3d);
     context->IASetVertexBuffers(0, 1, &mesh->vertex_buffer, &stride, &offset);
@@ -8375,7 +8378,7 @@ static int smile_3d_draw_submission(const SmileSubmission3D* submission)
     for (int bone = 0; bone < SMILE_3D_MAX_BONES; ++bone)
         constants.bones[bone] = submission->palette_index < 0
             ? smile_3d_identity() : smile_frame_palettes3d[submission->palette_index].bones[bone];
-    alpha_mode = material == 0 ? (constants.color[3] < 0.999f ? 2 : 0) : material->alpha_mode;
+    alpha_mode = submission->alpha_mode;
     context->UpdateSubresource(smile_constant_buffer3d, 0, 0, &constants, 0, 0);
     smile_3d_set_object_raster(context, object, 1);
     context->IASetInputLayout(smile_input_layout3d);

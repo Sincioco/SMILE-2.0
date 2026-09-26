@@ -33,12 +33,20 @@ if ($Studio) {
 $nativeBattleSources = @(
     'NativeViewerHost.smile',
     'NerisTown.smile',
+    'NerisTownCamera.smile',
+    'NerisTownCameraPanel.smile',
+    'NerisTownObstacles.smile',
+    'NerisTownSite.smile',
+    'NerisTownEntrancesData.smile',
+    'NerisTownEntranceNavigation.smile',
+    'NerisTownEntrances.smile',
     'NerisTownAssets.smile',
     'NerisTownAppearance.smile',
     'NerisTownCrystals.smile',
     'NerisTownLayout.smile',
     'NerisTownMap.smile',
     'NerisTownTrees.smile',
+    'NerisTownFlowers.smile',
     'NerisTownNavigation.smile',
     'NerisTownDistricts.smile',
     'NerisTownParty.smile',
@@ -281,6 +289,7 @@ if ($Target -in @('Native', 'All')) {
     foreach ($entry in @(
         @('Arin', 'Paladin\ArinV57', 'ArinV57.sm3d.json'),
         @('Orin', 'Tank\OrinV13', 'OrinV13.sm3d.json'),
+        @('Zara', 'Warrior\ZaraV1', 'ZaraV1.sm3d.json'),
         @('Mira', 'Healer\MiraTripoV1', 'Mira.sm3d.json')
     )) {
         $package = Join-Path $repositoryRoot ('games\SinStarI\SourceAssets\Characters\' + $entry[1])

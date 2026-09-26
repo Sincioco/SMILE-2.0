@@ -18,7 +18,7 @@ def textures():
     rng = np.random.default_rng(92626)
     y, x = np.mgrid[0:size, 0:size] * math.tau / size
     tone = .85 + .08*np.sin(3*x+2*y) + .06*np.sin(5*y-x) + .04*np.sin(9*x+7*y)
-    tone += rng.normal(0, .025, (size, size))
+    tone += rng.normal(0, .008, (size, size))
     rgb = tone[..., None] * np.array([.115, .29, .032])
     height = np.zeros((size, size))
     # Thousands of overlapping tapered strokes give the ground a dense cut-grass
@@ -28,17 +28,20 @@ def textures():
         angle = rng.uniform(0, math.tau)
         length = rng.uniform(7, 29)
         width = rng.uniform(.7, 2.2)
-        tint = np.array([.095, .27, .025]) * rng.uniform(.55, 1.65)
+        tint = np.array([.105, .275, .030]) * rng.uniform(.88, 1.12)
         for t in np.linspace(0, 1, int(length*1.6)):
             for across in [-1, 0, 1]:
                 dx = across*width*(1-t)
                 ix = int(px+math.cos(angle)*length*t-math.sin(angle)*dx) % size
                 iy = int(py+math.sin(angle)*length*t+math.cos(angle)*dx) % size
-                rgb[iy, ix] = tint*(.8+.35*t)
-                height[iy, ix] = max(height[iy, ix], .004*math.sin(math.pi*t))
+                rgb[iy, ix] = tint*(.94+.10*t)
+                height[iy, ix] = max(height[iy, ix], .0007*math.sin(math.pi*t))
     # Gentle smoothing keeps fine blade relief stable as the camera moves.
-    height = (height*4 + np.roll(height,1,0) + np.roll(height,-1,0)
-              + np.roll(height,1,1) + np.roll(height,-1,1))/8
+    for _ in range(4):
+        height = (height*4 + np.roll(height,1,0) + np.roll(height,-1,0)
+                  + np.roll(height,1,1) + np.roll(height,-1,1))/8
+        rgb = (rgb*4 + np.roll(rgb,1,0) + np.roll(rgb,-1,0)
+               + np.roll(rgb,1,1) + np.roll(rgb,-1,1))/8
     dx = (np.roll(height,-1,1)-np.roll(height,1,1))*size/4
     dy = (np.roll(height,-1,0)-np.roll(height,1,0))*size/4
     normal = np.stack((-dx,-dy,np.ones_like(height)), axis=2)
@@ -78,7 +81,7 @@ def apply():
     for tex in [albedo,relief]:
         links.new(scale.outputs[0],tex.inputs['Vector'])
     links.new(albedo.outputs['Color'],shader.inputs['Base Color'])
-    bump = nodes.new('ShaderNodeNormalMap'); bump.inputs['Strength'].default_value = .55
+    bump = nodes.new('ShaderNodeNormalMap'); bump.inputs['Strength'].default_value = .18
     links.new(relief.outputs['Color'],bump.inputs['Color'])
     links.new(bump.outputs[0],shader.inputs['Normal'])
     grass['neris_grass_texture'] = True
@@ -92,8 +95,11 @@ def apply():
     # Rasterize evaluated object bounds once. This avoids thousands of expensive
     # scene ray casts across the town's 23,000 collection instances. Conservative
     # clearance also leaves short grass out from under building eaves and shrubs.
-    cell = .30
-    shape = (math.ceil(302/cell), math.ceil(270/cell))
+    cell = .50
+    import json
+    bounds = json.loads((ROOT/'expansion-layout.json').read_text())['bounds']
+    west, south, east, north = bounds
+    shape = (math.ceil((north-south)/cell), math.ceil((east-west)/cell))
     ground = np.full(shape, -100.0)
     blockers = []
     for inst in depsgraph.object_instances:
@@ -106,10 +112,10 @@ def apply():
         slots = list(item.data.materials)
         lawn = slots and all(m and m.name == grass.name for m in slots)
         padding = 0 if lawn else .18
-        x0 = max(0,math.floor((lo[0]-padding+135)/cell))
-        x1 = min(shape[1],math.ceil((hi[0]+padding+135)/cell))
-        y0 = max(0,math.floor((lo[1]-padding+120)/cell))
-        y1 = min(shape[0],math.ceil((hi[1]+padding+120)/cell))
+        x0 = max(0,math.floor((lo[0]-padding-west)/cell))
+        x1 = min(shape[1],math.ceil((hi[0]+padding-west)/cell))
+        y0 = max(0,math.floor((lo[1]-padding-south)/cell))
+        y1 = min(shape[0],math.ceil((hi[1]+padding-south)/cell))
         if x0>=x1 or y0>=y1:
             continue
         if lawn:
@@ -119,10 +125,10 @@ def apply():
             # box includes the lawns between streets; mask each actual tile.
             for face in item.data.polygons:
                 corners = [inst.matrix_world @ item.data.vertices[v].co for v in face.vertices]
-                fx0 = max(0,math.floor((min(p.x for p in corners)-.18+135)/cell))
-                fx1 = min(shape[1],math.ceil((max(p.x for p in corners)+.18+135)/cell))
-                fy0 = max(0,math.floor((min(p.y for p in corners)-.18+120)/cell))
-                fy1 = min(shape[0],math.ceil((max(p.y for p in corners)+.18+120)/cell))
+                fx0 = max(0,math.floor((min(p.x for p in corners)-.18-west)/cell))
+                fx1 = min(shape[1],math.ceil((max(p.x for p in corners)+.18-west)/cell))
+                fy0 = max(0,math.floor((min(p.y for p in corners)-.18-south)/cell))
+                fy1 = min(shape[0],math.ceil((max(p.y for p in corners)+.18-south)/cell))
                 blockers.append((fy0,fy1,fx0,fx1,hi[2]))
         else:
             blockers.append((y0,y1,x0,x1,hi[2]))
@@ -134,18 +140,17 @@ def apply():
     cells = np.argwhere(free)
     print('GRASS placement mask:',len(cells),'open cells',flush=True)
     assert len(cells) >= 13000, 'Grass placement must retain the open town lawns.'
-    assert free[int((-12+120)/cell),int((-120+135)/cell)], 'The estate lawn between streets must remain grass.'
     rng = random.Random(92626)
     vertices, faces, colors = [], [], []
     placements = []
     for j,i in rng.sample(list(map(tuple,cells)),min(13000,len(cells))):
-        x,y = -135+(i+.5)*cell,-120+(j+.5)*cell
+        x,y = west+(i+.5)*cell,south+(j+.5)*cell
         point = Vector((x,y,float(ground[j,i])))
         placements.append([round(x,3),round(y,3),round(point.z,3)])
         for _ in range(3):
             a = rng.uniform(0,math.tau)
             base = point + Vector((rng.uniform(-.10,.10),rng.uniform(-.10,.10),.006))
-            h,w = rng.uniform(.12,.24),rng.uniform(.015,.03)
+            h,w = rng.uniform(.10,.18),rng.uniform(.045,.07)
             side = Vector((math.cos(a),math.sin(a),0))
             bend = side*rng.uniform(-.055,.055)
             i = len(vertices)
@@ -155,8 +160,8 @@ def apply():
             colors.append(rng.randrange(2))
     mesh = bpy.data.meshes.new('Neris Short Lawn Blades')
     mesh.from_pydata(vertices,[],faces); mesh.update()
-    for name,rgb in [('Neris Grass Blades Jade',(.055,.22,.025)),
-                     ('Neris Grass Blades Sunlit',(.17,.37,.045))]:
+    for name,rgb in [('Neris Grass Blades Jade',(.09,.24,.027)),
+                     ('Neris Grass Blades Sunlit',(.115,.295,.035))]:
         material = bpy.data.materials.get(name) or bpy.data.materials.new(name)
         material.use_nodes = True; material.use_backface_culling = False
         node = material.node_tree.nodes.get('Principled BSDF')

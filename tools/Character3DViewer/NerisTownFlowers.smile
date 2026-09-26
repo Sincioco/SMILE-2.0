@@ -1,0 +1,83 @@
+''' One authored flower model shared by all placed garden planters.
+Module Smile.Tools.NerisTownFlowers
+
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Graphics3D As G
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Tools.NerisTownLayout As Layout
+
+Public Type State
+    Model As Core.Model3D
+    Objects[16] As Core.Object3D
+    ObjectCount As Number
+    Ready As Boolean
+End Type
+
+Public Function Create(ByRef Value As State) As Boolean
+
+    Dim Part As Number
+    Dim Ok As Boolean
+
+    Value.Model = G.LoadModel3D("Assets/Neris/Flowers.sm3d")
+    Ok = G.PrepareModelPbr3D(Value.Model, 1, 1, 4)
+    Ok = Value.Model.PartCount = Layout.FLOWER_PARTS And Ok
+
+    For Part = 0 To Value.Model.PartCount - 1
+        Value.Objects[Part] = G.CreateModelPart3D(Value.Model, Part)
+        Value.ObjectCount = Value.ObjectCount + 1
+        Ok = Value.Objects[Part].Handle <> 0 And Ok
+    End For
+
+    Value.Ready = Ok
+
+    Return Ok
+
+End Function
+
+Public Function Draw(ByRef Value As State) As Boolean
+
+    Dim Index As Number
+    Dim Part As Number
+    Dim Place As Layout.Placement
+    Dim Object As Core.Object3D
+    Dim Ok As Boolean
+
+    Ok = Value.Ready
+
+    For Index = 0 To Layout.FLOWER_COUNT - 1
+
+        Place = Layout.FlowerAt(Index)
+
+        For Part = 0 To Value.ObjectCount - 1
+
+            Object = Value.Objects[Part]
+            Ok = P.SetPosition(Object, Place.Position.X, Place.Position.Y, Place.Position.Z) And Ok
+            Ok = P.SetScale(Object, Place.Scale.X, Place.Scale.Y, Place.Scale.Z) And Ok
+            Ok = P.SetRotation(Object, 0.0, Place.Yaw, 0.0) And Ok
+            ' The renderer snapshots each submission, including the shadow transform.
+            Ok = G.DrawObject3D(Object) And Ok
+        End For
+    End For
+
+    Return Ok
+
+End Function
+
+Public Sub Destroy(ByRef Value As State)
+
+    Dim Index As Number
+
+    For Index = 0 To Value.ObjectCount - 1
+        Call G.DestroyObject3D(Value.Objects[Index])
+    End For
+
+    Call G.DestroyModel3D(Value.Model)
+
+    Value.ObjectCount = 0
+    Value.Ready = False
+
+End Sub
+
+End Module

@@ -1,0 +1,107 @@
+''' Caller-owned conservative camera volumes. No scene, input or renderer dependency.
+Module Smile.Simple3D.CameraClearance3D
+
+Option Explicit
+
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.PrecisionMath3D As M
+
+Public Type Bounds
+    Low As P.Vector3
+    High As P.Vector3
+End Type
+
+Public Type World
+    Boxes[512] As Bounds
+    BoxCount As Number
+End Type
+
+Public Function Box(X0 As Double, Y0 As Double, Z0 As Double,
+    X1 As Double, Y1 As Double, Z1 As Double) As Bounds
+
+    Dim Result As Bounds
+
+    Result.Low = P.Vector(X0, Y0, Z0)
+    Result.High = P.Vector(X1, Y1, Z1)
+
+    Return Result
+
+End Function
+
+Private Function Slab(Start As Double, Delta As Double, Low As Double,
+    High As Double, ByRef Entry As Double, ByRef ExitValue As Double) As Boolean
+
+    Dim First As Double
+    Dim Last As Double
+    Dim Result As Boolean
+
+    If Abs(Delta) < 0.000001 Then
+        Result = Start >= Low And Start <= High
+
+        Return Result
+    End If
+
+    First = (Low - Start) / Delta
+    Last = (High - Start) / Delta
+    Entry = Max(Entry, Min(First, Last))
+    ExitValue = Min(ExitValue, Max(First, Last))
+    Result = Entry <= ExitValue
+
+    Return Result
+
+End Function
+
+''' A padded segment catches both the near plane and tunneling across thin walls.
+Public Function Fraction(ByRef Value As World, Start As P.Vector3, Finish As P.Vector3,
+    Radius As Double, Optional IgnoreContainingStart As Boolean = False) As Double
+
+    Dim Delta As P.Vector3
+    Dim Item As Bounds
+    Dim Index As Number
+    Dim Entry As Double
+    Dim ExitValue As Double
+    Dim Result As Double
+    Dim Inside As Boolean
+    Dim Hit As Boolean
+
+    Result = 1.0
+    Delta = M.Subtract(Finish, Start)
+
+    For Index = 0 To Min(512, Value.BoxCount) - 1
+
+        Item = Value.Boxes[Index]
+        Inside = (Start.X >= Item.Low.X - Radius And Start.X <= Item.High.X + Radius And
+            Start.Y >= Item.Low.Y - Radius And Start.Y <= Item.High.Y + Radius And
+            Start.Z >= Item.Low.Z - Radius And Start.Z <= Item.High.Z + Radius)
+
+        If Not Inside Or Not IgnoreContainingStart Then
+
+            Entry = 0.0
+            ExitValue = Result
+            Hit = Slab(Start.X, Delta.X, Item.Low.X - Radius, Item.High.X + Radius, Entry, ExitValue)
+            Hit = Slab(Start.Y, Delta.Y, Item.Low.Y - Radius, Item.High.Y + Radius, Entry, ExitValue) And Hit
+            Hit = Slab(Start.Z, Delta.Z, Item.Low.Z - Radius, Item.High.Z + Radius, Entry, ExitValue) And Hit
+
+            If Hit Then
+                Result = Min(Result, Entry)
+            End If
+
+        End If
+
+    End For
+
+    Return Result
+
+End Function
+
+Public Function IsClear(ByRef Value As World, Position As P.Vector3, Radius As Double) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Fraction(Value, Position, Position, Radius) = 1.0
+
+    Return Result
+
+End Function
+
+End Module

@@ -1,0 +1,194 @@
+''' Smooth camera recovery around supplied solid bounds; callers own framing policy.
+Module Smile.Simple3D.FollowCamera3D
+
+Option Explicit
+
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.PrecisionMath3D As M
+Import Smile.Simple3D.CameraClearance3D As Clearance
+
+Public Type State
+    Position As P.Vector3
+    Velocity As P.Vector3
+    Target As P.Vector3
+    TargetReady As Boolean
+    Ready As Boolean
+    Avoiding As Boolean
+End Type
+
+Public Sub Reset(ByRef Value As State, Position As P.Vector3)
+
+    Value.Position = Position
+    Value.Velocity = P.Vector(0.0, 0.0, 0.0)
+    Value.TargetReady = False
+    Value.Ready = True
+    Value.Avoiding = False
+
+End Sub
+
+Private Function Candidate(Target As P.Vector3, Offset As P.Vector3,
+    Turn As Double, Lift As Double, Scale As Double) As P.Vector3
+
+    Dim Result As P.Vector3
+
+    Result = M.Rotate(M.Scale(Offset, Scale), P.Vector(0.0, Turn, 0.0))
+    Result.Y = Result.Y + Lift
+    Result = M.Add(Target, Result)
+
+    Return Result
+
+End Function
+
+''' Prefer the intended shot, then a side-step, a rise, or a shorter boom.
+Private Function FindShot(ByRef Value As State, ByRef World As Clearance.World,
+    Desired As P.Camera3D, Radius As Double) As P.Vector3
+
+    Dim Best As P.Vector3
+    Dim Point As P.Vector3
+    Dim Offset As P.Vector3
+    Dim Score As Double
+    Dim BestScore As Double
+    Dim Turn As Double
+    Dim Lift As Double
+    Dim Scale As Double
+    Dim Index As Number
+    Dim Mode As Number
+
+    Offset = M.Subtract(Desired.Position, Desired.Target)
+
+    If (Clearance.IsClear(World, Desired.Position, Radius + 10.0) And
+        Clearance.Fraction(World, Desired.Target, Desired.Position, Radius, True) = 1.0 And
+        Clearance.Fraction(World, Value.Position, Desired.Position, Radius) = 1.0) Then
+        Best = Desired.Position
+
+        Return Best
+    End If
+
+    Best = Desired.Position
+    BestScore = 1000000000000.0
+
+    For Mode = 0 To 3
+
+        Lift = 0.0
+        Scale = 1.0
+
+        If Mode = 1 Then
+            Lift = M.Length(Offset) * 0.55
+        Else If Mode = 2 Then
+            Scale = 0.58
+        Else If Mode = 3 Then
+            Lift = M.Length(Offset) * 1.5
+        End If
+
+        For Index = 0 To 8
+
+            Turn = ToDouble((Index + 1) / 2) * 40.0
+
+            If Index Mod 2 = 0 Then
+                Turn = -Turn
+            End If
+
+            Point = Candidate(Desired.Target, Offset, Turn, Lift, Scale)
+
+            If (Clearance.IsClear(World, Point, Radius + 10.0) And
+                Clearance.Fraction(World, Desired.Target, Point, Radius, True) > 0.999) Then
+
+                Score = M.Distance(Point, Desired.Position) + M.Distance(Point, Value.Position) * 0.55
+
+                If Clearance.Fraction(World, Value.Position, Point, Radius) < 0.999 Then
+                    Score = Score + M.Length(Offset) * 2.0
+                End If
+
+                If Score < BestScore Then
+                    BestScore = Score
+                    Best = Point
+                End If
+
+            End If
+
+        End For
+    End For
+
+    If BestScore = 1000000000000.0 Then
+        Best = M.Lerp(Desired.Target, Desired.Position,
+            Max(0.0, Clearance.Fraction(World, Desired.Target, Desired.Position, Radius, True) - 0.02))
+    End If
+
+    Return Best
+
+End Function
+
+Public Function Update(ByRef Value As State, ByRef World As Clearance.World,
+    Desired As P.Camera3D, Elapsed As Number, Radius As Double) As P.Camera3D
+
+    Dim Result As P.Camera3D
+    Dim Goal As P.Vector3
+    Dim StepValue As P.Vector3
+    Dim Raised As P.Vector3
+    Dim Amount As Double
+    Dim Hit As Double
+    Dim Seconds As Double
+    Dim DesiredVelocity As P.Vector3
+    Dim Acceleration As P.Vector3
+    Dim Change As Double
+
+    If Not Value.Ready Then
+        Call Reset(Value, Desired.Position)
+    End If
+
+    Goal = FindShot(Value, World, Desired, Radius)
+    Value.Avoiding = M.Distance(Goal, Desired.Position) > 1.0
+    Seconds = Clamp(ToDouble(Elapsed), 0.0, 50.0) / 1000.0
+    DesiredVelocity = M.Scale(M.Subtract(Goal, Value.Position), 1.0 / 1.4)
+
+    If M.Length(DesiredVelocity) > 260.0 Then
+        DesiredVelocity = M.Scale(DesiredVelocity, 260.0 / M.Length(DesiredVelocity))
+    End If
+
+    Acceleration = M.Subtract(DesiredVelocity, Value.Velocity)
+    Change = M.Length(Acceleration)
+
+    If Change > 220.0 * Seconds And Change > 0.0 Then
+        Acceleration = M.Scale(Acceleration, 220.0 * Seconds / Change)
+    End If
+
+    Value.Velocity = M.Add(Value.Velocity, Acceleration)
+    StepValue = M.Add(Value.Position, M.Scale(Value.Velocity, Seconds))
+    Hit = Clearance.Fraction(World, Value.Position, StepValue, Radius)
+
+    If Hit < 1.0 Then
+
+        StepValue = M.Lerp(Value.Position, StepValue, Max(0.0, Hit - 0.02))
+        Raised = M.Add(StepValue, P.Vector(0.0, Seconds * 70.0, 0.0))
+
+        If Clearance.Fraction(World, StepValue, Raised, Radius) = 1.0 Then
+            StepValue = Raised
+        End If
+
+    End If
+
+    ' Even recovery from an initially obstructed eye stays slow; never teleport.
+
+    If Not Clearance.IsClear(World, StepValue, Radius) Then
+        StepValue = M.Add(Value.Position, P.Vector(0.0, Seconds * 70.0, 0.0))
+        Value.Velocity = P.Vector(0.0, 70.0, 0.0)
+    End If
+
+    Value.Position = StepValue
+    Result = Desired
+    Result.Position = StepValue
+
+    If Not Value.TargetReady Then
+        Value.Target = Desired.Target
+        Value.TargetReady = True
+    End If
+
+    Amount = Clamp(ToDouble(Elapsed), 0.0, 50.0) / (550.0 + Clamp(ToDouble(Elapsed), 0.0, 50.0))
+    Value.Target = M.Lerp(Value.Target, Desired.Target, Amount)
+    Result.Target = Value.Target
+
+    Return Result
+
+End Function
+
+End Module

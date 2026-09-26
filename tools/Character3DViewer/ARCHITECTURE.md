@@ -1,169 +1,100 @@
 # Character Viewer Architecture
 
-## Neris residential and royal expansion
+## Native Neris town ownership
 
-The current source is `Neris-Town-Expanded.blend`, preserving V1 and Detailed.
-Native scene policy remains in `NerisTown`; shared arena distance zoom is opt-in.
-`NerisTownDistricts` owns expanded collision and surface heights. Navigation composes
-that owner with the original district, canals, trees and movement substeps.
-Generated `NerisTownLayout` supplies exact tree/lamp placements and paving rectangles.
-Its larger size is declarative generated tree/lamp placement data and paving bounds,
-reviewed separately from behavior complexity; no threshold or exclusion is changed.
+The native host retains top tabs and delegates town lifecycle to `NerisTown`.
+Battle System uses the same visible tab strip. Unsaved calibration guards scene
+replacement. Studio/Web adoption remains held.
 
-`NerisTownMap.State` owns three image handles, fade opacity, a ten-second hold,
-and explicit manual-visible/disabled flags for M. The shared language/native input
-contract now exposes KEY_M (42); Web input adoption remains held.
-The party supplies movement, leader position and facing; the map borrows no actor
-or camera state. One 72-frame sheet supplies the headlight cone through the existing
-image source-rectangle API. North remains up; maximum opacity is 80%.
-`NerisTownParty.Member` adds the selected IdleName, choosing Arin's canonical TownIdle
-only in town. Character asset/calibration identity migration preserves all 24 keys
-and the ten earlier clips; saved JSON remains authoritative.
+| Owner | Responsibility |
+| --- | --- |
+| `NerisTown` | Lifecycle, input and camera/party/effect coordination |
+| `NerisTownAssets` | Incremental static/Old Castle loading and progress/timings |
+| `NerisTownParty` | Actor contexts, gait/rate, fade, calibration and leader selection |
+| `PartyTrail3D` | Bounded arc-length history and ordered follower slots, no actors/input |
+| `NerisTownNavigation` / `NerisTownDistricts` | Movement substeps, sliding, land/water/solid collision and height |
+| `NerisTownEntranceNavigation` | Authored stair surfaces and oriented door approaches |
+| `NerisTownEntrances` | Shared hinged leaves, open/close clocks and one-shot doorway IDs |
+| `NerisTownCamera` | Low horizon framing, close grounds, heading/boundary policy |
+| `FollowCamera3D` / `CameraClearance3D` | Reusable acceleration-limited following and padded segment/AABB clearance |
+| `ArenaViewport3D` / `ArenaCamera3D` | Shared input, distance zoom and framing transition |
+| `NerisTownCameraPanel` | Standalone numeric controls and Orbit/Fit; no panel background |
+| `NerisTownAppearance` | Lighting/water clock and effect lifecycle |
+| `NerisTownTrees` / `NerisTownFlowers` | Reused template draw objects; trees also own recycled leaves |
+| `NerisTownCrystals` / `NerisTownMap` | Halos/sparkles; map images/projection/fade/leader coordinates |
+| Generated `Layout`, `Site`, `Obstacles`, `EntrancesData` | Saved Blender data; no behavior |
 
-Appearance retains its water/material ownership. Two closed moat ribbons
-and a royal fountain extend water to six paired batches; tree instances grow to
-292 part objects. The export check now counts the entire native mesh allocation: static town parts
-plus 28 imported-castle parts and the existing 23-slot party/arena reserve must fit
-the supported 256-mesh pool. This replaces the obsolete 105+23/128 allowance,
-without changing renderer capacity or excluding geometry. The model check also
-reserves 14 imported-castle models, five actors and three vegetation models.
-The remodeled town exports use 33 models. The linked Tripo castle adds 14 models /
-28 parts with shared external 4K textures; it is excluded from the static town exporter. Sin authorized increasing native
-material capacity from 128 to 512. Material handles use nine slot bits and retain
-sixteen generation bits. Native meshes now use 256 zero-based slots with sixteen generation bits, needed
-for the detailed comparison castle; model capacity and held Web are unchanged.
-Build-time Model3DAsset declarations allow 128 items (68 currently declared),
-separate from the live model pool. The lifecycle fixture checks the highest mesh
-slot, exhaustion, stale handles and cleanup.
-The native-only map image mirror is ignored; the build publishes it under Assets/Neris.
-Studio and Web inventories exclude these town assets and modules.
+### Blender and export boundary
 
-## Native Neris town scene
+`Blend/Neris-Town-Waterfront.blend` is current; the reproducible input is preserved
+`Neris-Town-Expanded.blend`. `waterfront_plan.py` owns coordinates;
+`waterfront_town.py` places architecture/terrain/streets; `waterfront_landscape.py`
+places checked gardens/furniture. No script saves a live interactive Blender session.
+`export_waterfront.py` derives entrances, static models, effects, camera bounds and
+site collision after saving Blender. `static_glb.py` preserves evaluated normals
+without decimating architecture. `export_flowers.py` separates the flower template.
+`collision_bounds.py` separates royal portal jambs and crowns for both walk and
+camera export: whole-mesh bounds previously sealed the hollow gate.
+`paving_grid.py` owns unioned two-metre tiles; only bridges cross water.
 
-`NativeViewerHost` adds a Neris Town tab and delegates its scene lifecycle to
-`NerisTown`. Entering it releases the previous scene after the existing unsaved-edit
-guard; leaving destroys town resources before restarting the selected Viewer scene.
-The native-only project inventory excludes this feature from held Studio/Web hosts.
+Blender XYZ maps to native XZY at ten units/metre, height +21. The sign is at
+(0,-265 m); the initial leader is (0,23.12,-2780 native units). City Hall/tower scales
+are 2/4; HQ is doubled. The town README owns district counts and rebuilding steps.
 
-`NerisTownAssets` loads one bounded static model per frame with progress displayed.
-The canonical assets remain in `SinStarI/SourceAssets/Towns/Neris/NerisTownV1/Runtime`;
-`BuildAssets/Neris` is an ignored cooking mirror. `Source/export_native.py` evaluates
-the accepted Blender scene, including collection instances, removes invisible
-degenerate faces and combines identical PBR materials. `static_glb.py` writes the
-accepted positions/normals directly so a second Blender mesh export does not split
-shared normals and exceed SM3D limits. No geometry decimation is involved. The manifest records source and output hashes.
+### Motion and camera contracts
 
-`NerisTownNavigation` owns exterior building/canal/boundary collision, bridge
-passages, axis sliding and paving heights. `NerisTownParty` owns the character
-handles, named Idle/Walk/Run clips, town-only equipment hiding, grounded presentation, saved calibration and
-visibility after the finishing gait cycle. Calibration's optional position scale
-defaults to one for existing callers; smaller actors scale authored equipment
-translations while preserving rotations and the authoritative JSON.
-The party owns Run/Walk mode and session speed, initially 100% of the new run baseline
-(93 1/3 world units/second). Walking is one-third of running. Town input adjusts speed
-in 25-point steps within 25–400%; leader movement and follower catch-up derive from
-the same rate. Only gait elapsed time is multiplied, with fractional time retained.
-W/A/S/D alias the held arrow directions in the existing town input owner. R toggles
-Walk/Run, leaving W exclusively for movement. Shared direction
-normalization prevents diagonal movement or two keys for one direction adding speed.
+Town starts Run at 200%; movement and catch-up share one rate. High-speed run
+cadence follows a square-root curve, retaining fractional elapsed time. Private
+town clips reduce airtime; public model and calibration identities are unchanged.
+`Character3D.SetOpacity` fades owned objects without mutating shared materials.
 
-`Smile.Simple3D.PartyTrail3D` owns only a bounded arc-length history and follower
-progress. The caller supplies a collision-resolved leader position; followers walk
-the same path rather than cutting corners. Stopping advances them toward the
-leader. It owns no input, actor handles, animation, global state or game data.
-`NerisTownTests` checks corners, gathering, restart and obstacle routes;
-`NerisTownSceneTests` exercises actual models, accepted keys, visibility and cleanup.
+Ctrl+Tab rotates complete Member contexts through route slots; slot zero always
+leads. Camera, map, navigation and doors consume that slot. There is no duplicate
+selected-index state. Each context retains its actor, profile, key base and clips.
+Previous presentation positions reset to prevent reordering from changing facing.
+No actor or route reload occurs.
 
-Town camera policy composes the shared `ArenaViewport3D` / `ArenaCamera3D` controls.
-It reuses the reflective arena, grid and backgrounds. `NerisTownAppearance` owns
-town-scale lighting, the water clock, two canal strips, two fountain disks and two closed moat strips, with
-matching distortion batches. It uses the existing native water material and releases
-all twelve batches before its three materials. No camera or party state is borrowed.
-Town input policy bounds absolute orbit elevation to 10–80 degrees and vertical pan
-to a target Y of at least 25. This keeps both overview and follow cameras above the
-town independently of arena-floor visibility, without copying shared camera math.
-The camera near plane is 25 town units: the former 1-unit plane let thin paving
-layers collapse into the same 24-bit depth value at overview distance. Water sits
-above its opaque color backing with enough separation for the same depth buffer.
-Only Tab changes following mode. It captures the displayed camera and eases the
-target, distance and shortest yaw arc over 700 ms. Shared ArenaViewport3D owns the
-optional transition state; ArenaCamera3D owns pure framing interpolation. Movement
-stops cinematic orbit without changing follow mode, pan or zoom.
-Pan, manual orbit and primary scene clicks pause cinematic rotation; wheel zoom
-keeps it running. O/C retains zoom (converting follow distance through the existing
-ComposeDistance curve); only right-click resets the overview. This does not implement a general scene editor or resume Studio work.
+Tab sets north yaw and a 1,000 ms arena transition. During this explicit ease,
+`NerisTown` settles the follow solver at the displayed camera instead of adding
+its slow velocity limits. Ground correction translates eye and target together,
+preserving angle and distance. Close grounds ease from 30 m to 8.5 m behind the
+leader and raise aim for stairs. Manual pitch is -20..80 degrees. Boundary turns
+look inward slowly. Ctrl+F retains F for floor; Fit preserves automatic orbit.
+Movement stops orbit; manual camera input suspends following.
 
-`NerisTownTrees` owns two reusable tree models, 292 placed part objects and a pool
-of ten leaf objects sharing one mesh/material. Existing precise transforms supply
-root-anchored sway; no shader or per-frame mesh extension is needed. The leaf clock
-stages falling, settling and a two-second fade at four-second intervals. All handles
-are allocated once and destroyed before their models. `NerisTownCrystals` owns cyan
-crystal halos/sparkles and warm lamp halos; both reuse one texture/material.
-`NerisTownLayout` is generated placement data from Blender, without rendering or
-input logic. `NerisTownMap` owns image handles, movement fade and coordinate projection,
-receiving the leader's position and facing. Appearance delegates these effect owners.
+Sixty-six authored doors swing inward and expose one-shot IDs. Interior/cutscene
+loading is a future consumer; no destination content was created. Old Castle's
+fused mesh has no authored hinged leaves. Conservative exterior bounds are not a
+full navigation mesh or general interior collision system.
 
-Native shaders filter procedural water octaves by pixel footprint and broaden
-PBR/water highlights using normal variance. A default-preserving optional ripple
-strength is added to the existing water operation. Native water now honors the existing material tint across transmission and
-reflected environment, retaining direct sun glints; white preserves prior behavior. Moats use a
-separate blue material at 24% ripples / one-third speed; canals retain 8% / one-eighth. The renderer has no town
-dependency or new resource type. Web adoption remains held.
+### Rendering, loading and validation
 
-Detailed vegetation is authored by `Source/detail_trees.py` in a separate
-`Neris-Town-Detailed.blend`, preserving the original town file. Two deterministic
-tree templates replace the 27 canopy placeholders with tapered trunks, branches
-and 2,970 modeled leaves each. The static portion is 31 chunks / 104 parts /
-2,930,985 triangles; reusable tree meshes add eight parts and the leaf adds one.
-`detail_flowers.py` authors 14 planters; `detail_materials.py` authors the palette
-and two deterministic stone textures. The writer embeds these maps with planar UVs,
-preserving evaluated normals and avoiding external dependencies.
-`detail_grass.py` owns the seamless lawn maps and a single Blender batch containing
-39,000 short blades. Conservative evaluated-object bounds leave clearance around
-roads, buildings and props. The exporter splits it within existing mesh budgets.
-Grass uses world-planar UVs and a tangent aligned to their U direction; texture
-semantics participate in material grouping so equal colors cannot drop a texture.
+Static geometry uses 37 models / 92 parts / 4,027,200 triangles. Old Castle retains
+14 models / 28 parts with shared 2K runtime maps and preserved 4K originals. Two
+tree templates reuse eight draw objects for 147 placements; one flower template
+reuses eight for 48 placements. Native draw submissions snapshot transforms, so
+later object reuse cannot relocate earlier draws. Ten leaves recycle without
+allocation. Seven fountains plus town water use eight water and eight distortion
+batches, reaching the current 16-ribbon limit.
 
-Growth review: this expansion changes no bootstrap or native host behavior.
-NerisTown has 338 lines and NerisTownParty 406. Appearance, assets, crystals,
-districts, map, navigation and trees remain below 300 lines each. Generated layout
-data grows to 1,023 formatted lines for the expanded placement inventory; it owns
-no feature algorithms. Profiles adds Arin's named TownIdle registration and asset
-fingerprint. Existing no-growth baselines, architecture checks, thresholds and
-exclusions are unchanged. The importer preserves Arin's ten previous clips and
-migrates the accepted calibration by name, keeping all 24 authored keys.
-Native scene checks cover loading/drawing/cleanup, water arguments, camera bounds,
-map coordinates, Run/Walk transitions and allocation-free leaf recycling.
+The native fixture uses 155/256 meshes and 144/512 materials. The populated scene
+exhausted 512 frame submissions; native capacity is now 2,048. Other pool limits
+stay unchanged. PBR blending follows captured object opacity; cutout masking uses
+material/texture alpha. Renderer code has no town dependency. Static texture names
+hash converted pixels, avoiding ORM collisions and sharing partition textures.
+Character texture identity is unchanged; the cooker version invalidates caches.
 
-### September 26: town motion, fixed lens and royal geometry
+Focused checks: `test-neris-town.ps1` (actual routes, all actors, full draw, fade,
+water, camera, 66 doors, leader cycle, cleanup); `test-neris-waterfront.py`
+(connected roads/clear gardens); `test-neris-paving.py` (tile union/seams/clear water);
+Blender `test-neris-bridge.py` (eight bridge layer separations);
+`test-model3d-shared-textures.ps1` (cooked-pixel identity); native Viewer hardening.
+The gate regression walks the whole bridge and entrance; isolated open-point
+checks did not catch the hollow-arch blockage.
 
-Town-only private Arin/Orin/Mira GLBs replace only Walk/Run with retargeted Zara
-unarmed tracks. `ViewerActors.LoadContext` accepts an optional asset path; profiles,
-rig/equipment identity, combat clips and authoritative calibration stay unchanged.
-The town presentation owner skips combat wrist corrections during locomotion.
-`scripts/retarget-town-locomotion.py` owns anatomical retargeting;
-`character-motion-data.py` owns GLB sampling, body measurement and variant writing.
-
-`ArenaCamera3D.ComposeDistance` reuses orbit/pan and zoom easing, fixing the caller’s
-lens and moving the camera between explicit distance bounds. `ArenaViewport3D`
-selects it only when its owner sets a valid distance range; existing consumers keep
-their previous behavior. Neris chooses 32 degrees and 80–8,500 units in both modes.
-
-`paving_grid.py` owns the shared two-meter rectangle-union grid and deterministic
-tile tones; `align_paving.py` applies it to old streets, new roads and bridges.
-`castle_architecture.py` owns the detailed royal exterior. `royal_terrain.py` cuts
-the moat out of the ground and slab and lowers its blue bed. The exporter omits the
-duplicate static moat surface: the native water effect alone draws its surface.
-This separates it from the bed by 6.35 world units. The current combined resource check above supersedes the former 105-part allowance.
-
-Focused native acceptance covers the raised entrance stairs, 31 chunks, four actors,
-129/512 materials, 127/128 meshes, map delay/heading, common camera zoom range,
-named locomotion transitions, 24 accepted Arin keys and resource destruction.
-The mesh pool has only one free slot; further geometry should be consolidated
-within the present exporter guard. No threshold, exclusion or baseline was raised.
-Sin confirmed that the restored lighting looks normal and the moat no longer
-flickers. Final interactive review of the retargeted gaits and minimap cone remains
-available in the rebuilt native Viewer; the native resource/behavior checks pass.
+No architecture baseline, threshold, exclusion or dependency was relaxed.
+Generated placement tables account for most growth. Behavior stays in focused
+owners. Bootstrap is unchanged; the host change preserves Battle System tabs.
 
 ## Native battle planning and presentation
 
@@ -1391,20 +1322,15 @@ native isolation runner. It owns only complete-pose recovery assertions: all 20
 channels plus wrist/equipment world matrices. Production state ownership remains
 in ViewerCalibration and ViewerCalibrationEditing; no persistence code changed.
 
-### Current royal rebuild and camera change review
+### Change-size review
 
-The clean royal castle is separately authored in the named Blender collection;
-`castle_architecture.py` owns the masses and `castle_facades.py` the ornament.
-`refine_castle.py` updates the saved site without touching an interactive session.
-The 33 native town chunks contain 109 parts / 3,188,159 triangles. The imported
-candidate retains its separate 14 models / 28 parts. Generated layout contains
-73 trees and 86 lamp positions. Collision converts the enlarged royal site into
-its local building coordinates; party state and camera state remain independent.
+- `NerisTown.smile`: 391 -> 512 lines.
+- `NerisTownParty.smile`: 406 -> 480 lines.
+- `NerisTownTrees.smile`: 201 -> 200 lines.
+- `NativeViewerHost.smile`: 554 -> 554 lines.
 
-Changed owner sizes: ArenaCamera3D 243→285 lines; ArenaViewport3D 129→158;
-NerisTown 338→391; Appearance 205→234; Districts 174→203. Generated placement
-inventory is 1,348 lines, with no behavior algorithms. Bootstrap and host sources
-are unchanged. No architecture size baseline, exemption or exclusion was changed.
-The mesh export allowance is explicitly derived from the existing native resource
-pool, including both castles and reserved actor/effect handles; model capacity
-remains 64. No new dependency or compiler feature was needed for camera easing.
+New behavior owners remain bounded: Camera 215 lines, camera controls 119,
+EntranceNavigation 79, Entrances 185 and Flowers 83. Generated site/placement
+tables are data growth, not new runtime algorithms. The existing native renderer
+changes by three net lines for opacity handling and frame capacity; no new global
+feature state or bootstrap behavior was introduced. No guardrail exception applied.

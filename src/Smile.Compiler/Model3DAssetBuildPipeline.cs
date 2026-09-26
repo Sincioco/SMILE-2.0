@@ -15,6 +15,7 @@ internal static class Model3DAssetBuildPipeline
     public static Model3DAssetBuildAssets Prepare(SmileProjectSourceSet project, bool includeWebLoadingLogo = false)
     {
         var generated = new List<SmileProjectAssetItem>();
+        var sharedTextures = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         if (includeWebLoadingLogo && project.WebLoadingLogoPath is string logoPath)
         {
             try
@@ -72,8 +73,13 @@ internal static class Model3DAssetBuildPipeline
             };
             Console.WriteLine($"{status} Model3DAsset {item.Include} -> {item.LogicalPath} [{result.CacheKey}]");
             foreach (var output in result.Outputs)
+            {
+                if (output.IsTexture && sharedTextures.TryGetValue(output.LogicalPath, out var hash) &&
+                    hash == output.Sha256) continue;
+                if (output.IsTexture) sharedTextures.TryAdd(output.LogicalPath, output.Sha256);
                 generated.Add(new SmileProjectAssetItem(output.LogicalPath, output.FullPath,
                     Array.Empty<SmileProjectAssetInclude>()));
+            }
         }
 
         var allItems = project.AssetManifest.Items.Concat(generated)

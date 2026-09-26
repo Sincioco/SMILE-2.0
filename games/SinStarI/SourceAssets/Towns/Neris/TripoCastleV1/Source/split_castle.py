@@ -61,7 +61,7 @@ while start<len(triangles):
     parts.append((start,end,used));start=end
 manifest={'source_sha256':hashlib.sha256(blob).hexdigest(),'triangles':len(triangles),
           'repaired_degenerate_tangents':int(invalid.sum()),
-          'parts':len(parts),'chunks':[],'placement':{'x':-228,'y':176,'scale':170,'floor':.212,'groundAnchor':.19}}
+          'parts':len(parts),'chunks':[],'placement':{'x':-366,'y':226,'scale':170,'floor':.212,'groundAnchor':.19}}
 for batch_index in range(0,len(parts),2):
     batch=parts[batch_index:batch_index+2]
     result={'asset':{'version':'2.0','generator':'Sin and Codex: lossless castle partition'},

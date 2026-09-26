@@ -19,6 +19,8 @@ module = importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
 MotionData = module.MotionData
 SOURCE = PACKAGES/'Warrior/ZaraV1/Private/Zara-v1-animation-set.glb'
 CONFIG = {
+    'Zara': ('Warrior/ZaraV1', 'Private/Zara-v1-animation-set.glb',
+             lambda name: name.startswith('Zara_Part') and name != 'Zara_Part_03'),
     'Arin': ('Paladin/ArinV57', 'arin-v5.7-idle-equipment-checkpoint.glb',
              lambda name: name.startswith('tripo_part')),
     'Orin': ('Tank/OrinV13', 'orin-v1.3-animation-checkpoint.glb', lambda name: name == '02_Body'),
@@ -54,10 +56,10 @@ def run(character):
     output.mkdir(parents=True, exist_ok=True)
     target = MotionData(accepted, body)
     source = MotionData(SOURCE, lambda name: name.startswith('Zara_Part') and name != 'Zara_Part_03')
-    names = mapping(character)
+    names = {name:name for name in target.names if name in source.names} if character=='Zara' else mapping(character)
     pairs = {target.names[t]: source.names[s] for t, s in names.items()}
     inverse_pairs = {s: t for t, s in pairs.items()}
-    hip = target.names['Hip' if character == 'Orin' else 'mixamorig:Hips']
+    hip = target.names['pelvis' if character=='Zara' else 'Hip' if character == 'Orin' else 'mixamorig:Hips']
     source_hip = source.names['pelvis']
     joints = set(n for skin in target.doc['skins'] for n in skin['joints'])
     # Orient the target's rest frame to Zara using anatomical shoulder/up axes.
@@ -66,8 +68,8 @@ def run(character):
         across.y = 0; across.normalize()
         up = Vector((0, 1, 0)); forward = across.cross(up).normalized()
         return Matrix((across, up, forward)).transposed().to_quaternion()
-    left = 'L_Clavicle' if character == 'Orin' else 'mixamorig:LeftShoulder'
-    right = 'R_Clavicle' if character == 'Orin' else 'mixamorig:RightShoulder'
+    left = 'clavicle_l' if character=='Zara' else 'L_Clavicle' if character == 'Orin' else 'mixamorig:LeftShoulder'
+    right = 'clavicle_r' if character=='Zara' else 'R_Clavicle' if character == 'Orin' else 'mixamorig:RightShoulder'
     alignment = body_frame(source, 'clavicle_l', 'clavicle_r') @ body_frame(target, left, right).inverted()
     corrections = {}
     # Align anatomical bone directions as well as rest axes: A-pose and T-pose
@@ -113,7 +115,9 @@ def run(character):
                 solve(t)
             # Keep the accepted in-place origin. Copy Zara's vertical airtime,
             # measuring the actual skinned body, rather than flattening a run jump.
-            desired_min = idle_min+max(0, source_minima[index]-floor)*scale
+            # Town sprint keeps the stance contacts while reducing airborne bounce.
+            airtime_scale = .35 if name=='Run' else 1.0
+            desired_min = idle_min+max(0, source_minima[index]-floor)*scale*airtime_scale
             correction = desired_min-target.minimum([cache[i] for i in range(len(local))])
             parent = cache[target.parents[hip]] if hip in target.parents else Matrix.Identity(4)
             local[hip].translation += parent.inverted().to_3x3() @ Vector((0, correction, 0))
@@ -126,6 +130,7 @@ def run(character):
         frames[-1] = [m.copy() for m in frames[0]]
         motions[name] = (times, frames, sorted(joints))
         reports[name] = {'sourceClip': source_name, 'frames': len(frames), 'durationSeconds': duration,
+            'airtimeScale': airtime_scale,
             'bodyMinimumY': min(minima), 'bodyMaximumMinimumY': max(minima),
             'sourceGroundMinimumY': floor, 'shoulderHeadingRangeDegrees': [min(headings), max(headings)]}
     model = output/(character+'-Town.glb')

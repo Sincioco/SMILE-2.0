@@ -55,7 +55,7 @@ public sealed class Model3DAssetCookResult
 
 public static class Model3DAssetCooker
 {
-    public const string ConverterVersion = "smile-model3d-cooker-m7c-a-v4";
+    public const string ConverterVersion = "smile-model3d-cooker-m7c-a-v6";
     private const int MaximumSourceBytes = 64 * 1024 * 1024;
     private const int MaximumJsonBytes = 4 * 1024 * 1024;
     private const int MaximumImageBytes = 32 * 1024 * 1024;
@@ -358,9 +358,18 @@ public static class Model3DAssetCooker
                     ApplyOrmChannels(source, occlusion: source, neutralOcclusion: true,
                         neutralMetallicRoughness: false);
             }
+            // Preserve character package fingerprints and their accepted calibration.
+            // Static partitions share cooked pixels, including ORM channel conversion.
             var hash = Hash(bytes).Substring(0, 12).ToLowerInvariant();
             var modelName = SafeName(Path.GetFileNameWithoutExtension(request.LogicalPath));
             var fileName = $"{modelName}-m{use.MaterialIndex}-{semantic}-{hash}.png";
+            if (request.Profile.Equals("Static", StringComparison.OrdinalIgnoreCase))
+            {
+                using var pixels = new MemoryStream();
+                source.Save(pixels, ImageFormat.Png);
+                hash = Hash(pixels.ToArray()).ToLowerInvariant();
+                fileName = $"pbr-{semantic}-{hash}.png";
+            }
             var logical = request.TextureOutputDirectory.TrimEnd('/') + "/" + fileName;
             var texture = new PreparedTexture(pair.Key, logical, semantic, mime, source.Width, source.Height,
                 mime.Equals("image/jpeg", StringComparison.OrdinalIgnoreCase), source);

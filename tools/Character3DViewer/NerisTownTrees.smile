@@ -13,7 +13,7 @@ Public Const LEAF_COUNT = 10
 
 Public Type State
     Models[2] As Core.Model3D
-    Objects[292] As Core.Object3D
+    Objects[8] As Core.Object3D
     LeafModel As Core.Model3D
     Leaves[10] As Core.Object3D
     Time As Double
@@ -26,7 +26,6 @@ Public Function Create(ByRef Value As State) As Boolean
 
     Dim Index As Number
     Dim Part As Number
-    Dim Place As Layout.TreePlacement
     Dim Ok As Boolean
 
     Value.Models[0] = G.LoadModel3D("Assets/Neris/Tree-0.sm3d")
@@ -37,17 +36,11 @@ Public Function Create(ByRef Value As State) As Boolean
     Ok = G.PrepareModelPbr3D(Value.LeafModel, 1, 1, 4) And Ok
     Ok = Value.Models[0].PartCount = 4 And Value.Models[1].PartCount = 4 And Ok
 
-    For Index = 0 To Layout.TREE_COUNT - 1
-
-        Place = Layout.TreeAt(Index)
+    For Index = 0 To 1
 
         For Part = 0 To 3
-
-            Value.Objects[Index * 4 + Part] = G.CreateModelPart3D(Value.Models[Place.Variant], Part)
-            Ok = P.SetPosition(Value.Objects[Index * 4 + Part], Place.Position.X,
-                Place.Position.Y, Place.Position.Z) And Ok
-            Ok = P.SetScale(Value.Objects[Index * 4 + Part], Place.Scale.X,
-                Place.Scale.Y, Place.Scale.Z) And Ok
+            Value.Objects[Index * 4 + Part] = G.CreateModelPart3D(Value.Models[Index], Part)
+            Ok = Value.Objects[Index * 4 + Part].Handle <> 0 And Ok
         End For
     End For
 
@@ -86,7 +79,7 @@ Private Function UpdateLeaf(ByRef Value As State, Index As Number) As Boolean
     Dim Spin As Double
     Dim Ground As Double
     Dim Opacity As Number
-    Dim Place As Layout.TreePlacement
+    Dim Place As Layout.Placement
     Dim Point As P.Vector3
     Dim Ok As Boolean
 
@@ -127,8 +120,6 @@ End Function
 Public Sub Update(ByRef Value As State, Elapsed As Number)
 
     Dim Index As Number
-    Dim Part As Number
-    Dim Place As Layout.TreePlacement
     Dim Sway As Double
     Dim Ok As Boolean
 
@@ -138,15 +129,8 @@ Public Sub Update(ByRef Value As State, Elapsed As Number)
     Ok = Value.Ready
 
     For Index = 0 To Layout.TREE_COUNT - 1
-
-        Place = Layout.TreeAt(Index)
         Sway = Breeze(Value.Time, Index)
         Value.Sway = Max(Value.Sway, Abs(Sway))
-
-        For Part = 0 To 3
-            Ok = P.SetRotation(Value.Objects[Index * 4 + Part], Sway,
-                Place.Yaw, Sway * 0.6) And Ok
-        End For
     End For
 
     For Index = 0 To LEAF_COUNT - 1
@@ -160,12 +144,27 @@ End Sub
 Public Function Draw(ByRef Value As State) As Boolean
 
     Dim Index As Number
+    Dim Part As Number
+    Dim Object As Core.Object3D
+    Dim Place As Layout.Placement
+    Dim Sway As Double
     Dim Ok As Boolean
 
     Ok = Value.Ready
 
-    For Index = 0 To Layout.TREE_COUNT * 4 - 1
-        Ok = G.DrawObject3D(Value.Objects[Index]) And Ok
+    For Index = 0 To Layout.TREE_COUNT - 1
+
+        Place = Layout.TreeAt(Index)
+        Sway = Breeze(Value.Time, Index)
+
+        For Part = 0 To 3
+
+            Object = Value.Objects[Place.Variant * 4 + Part]
+            Ok = P.SetPosition(Object, Place.Position.X, Place.Position.Y, Place.Position.Z) And Ok
+            Ok = P.SetScale(Object, Place.Scale.X, Place.Scale.Y, Place.Scale.Z) And Ok
+            Ok = P.SetRotation(Object, Sway, Place.Yaw, Sway * 0.6) And Ok
+            Ok = G.DrawObject3D(Object) And Ok
+        End For
     End For
 
     For Index = 0 To LEAF_COUNT - 1
@@ -180,7 +179,7 @@ Public Sub Destroy(ByRef Value As State)
 
     Dim Index As Number
 
-    For Index = 0 To Layout.TREE_COUNT * 4 - 1
+    For Index = 0 To 7
         Call G.DestroyObject3D(Value.Objects[Index])
     End For
 

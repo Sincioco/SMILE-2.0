@@ -90,10 +90,31 @@
     }
   ],
   "placement": {
-    "x": -228,
-    "y": 176,
+    "x": -366,
+    "y": 226,
     "scale": 170,
     "floor": 0.212,
     "groundAnchor": 0.19
-  }
+  },
+  "runtimeTextures": [
+    {
+      "sha256": "c8ccdaf8451adfb7d941b8637a0b0ff316f6c8d141fb608702ecd8eb80825f71",
+      "height": 2048,
+      "width": 2048,
+      "file": "Castle-PBR-0.png"
+    },
+    {
+      "sha256": "d3ec1b937c6233f2552bec91f6531131d5fed421729d6e01b61f437bfad98006",
+      "height": 2048,
+      "width": 2048,
+      "file": "Castle-PBR-1.jpg"
+    },
+    {
+      "sha256": "b2fa05c106ded2c4c9b2b58cab30a6c12b62baec0e597f17bf1209e60ccaaf28",
+      "height": 2048,
+      "width": 2048,
+      "file": "Castle-PBR-2.jpg"
+    }
+  ],
+  "texturePolicy": "2K runtime derivative; original 4K textures preserved in the cleaned source GLB and Blender file."
 }

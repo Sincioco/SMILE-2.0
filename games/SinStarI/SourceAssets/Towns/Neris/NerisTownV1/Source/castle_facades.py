@@ -115,7 +115,7 @@ def stair_sweep(g, sign, balustrade):
 
 def bridge_inlay(g):
     for x in [-3.95,3.65,3.95]:
-        g.box('Bridge Bronze Inlay',(x,-38,.17),(.055,20,.025),'gold',0)
-    for y in [-47.8,-28.2]:g.box('Bridge Bronze Inlay',(0,y,.17),(7.9,.055,.025),'gold',0)
-    for y in [-47,-29]:
+        g.box('Bridge Bronze Inlay',(x,-40.5,.17),(.055,25,.025),'gold',0)
+    for y in [-52.8,-28.2]:g.box('Bridge Bronze Inlay',(0,y,.17),(7.9,.055,.025),'gold',0)
+    for y in [-52,-29]:
         g.path('Bridge Diamond Emblem',[(-1.2,y,.20),(0,y+1,.20),(1.2,y,.20),(0,y-1,.20)],.035,'gold',True)

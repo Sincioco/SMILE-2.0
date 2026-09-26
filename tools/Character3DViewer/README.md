@@ -2,106 +2,86 @@
 
 ## Native Neris Town
 
-The native Viewer opens on **Neris Town**. Its 73 trees use branching trunks and
-2,970 modeled leaves each, with a higher-contrast jade/lime palette and richer grass.
-Gentle breezes now sway the trees regularly. Ten preallocated mesh leaves occasionally
-fall, settle, then fade one at a time before recycling; no objects are created during
-playback. Fourteen planters have sculpted bowls, stems, leaves and layered flowers.
-Dark slate paving uses one world-aligned two-metre grid across streets, bridges
-and courtyards. It contrasts with ivory façades, retaining subtle stone grain,
-shallow normal detail and a restrained polished sheen.
-The lawns use a seamless grass color/normal texture with jade-to-olive variation,
-plus 13,000 short tufts (39,000 modeled blades). Blades stay clear of streets,
-water and buildings and use fixed geometry with no per-frame spawning.
+The native Viewer opens on **Neris Town**, built from the saved
+`games/SinStarI/SourceAssets/Towns/Neris/NerisTownV1/Blend/Neris-Town-Waterfront.blend`.
+Two moated castles share the northern street circuit, beside military HQ. Eight
+estates occupy the northwest residential area, sixteen homes the southwest,
+fourteen smaller homes the northeast, and three shops the southeast. House/shop
+fronts face inward; civic landmarks and castles face south. City Hall is 2x and
+the communication tower 4x their original size; military HQ is doubled.
 
-A global warm sun and stronger cool ambient fill light the entire town. The four
-local lights add bronze and enamel highlights: a civic fill plus a dedicated
-spotlight for the original castle, Tripo castle and military headquarters.
-Canals and fountains use calm native water at 8% ripple strength and one-eighth
-speed. Both castle moats use deeper blue material tint, 24% ripple strength and
-one-third speed, with their terrain cut away beneath the water. Crystals have faint cyan halos and slow sparkles; 82 door lamps have warm
-amber halos centered on their luminous geometry. Depth precision and shader filtering
-address paving, water and highlight shimmer. This uses native PBR lighting, without
-Blender's HDR environment lighting. The upper-right map tracks Arin and labels City
-Hall, Weapon, Armor and Item shops, castle, military HQ and residential districts.
-It fades in to 80% opacity while the party moves, holds for ten seconds after they stop,
-then fades out over 0.8 seconds. Moving again restarts the hold. M immediately
-shows a hidden map or hides a visible one; that manual choice lasts until town reentry.
-North stays up while the camera orbits. A soft gold headlight cone shows Arin’s
-facing direction, including his last facing while stopped.
-
-The **Neris Town** tab reconstructs the accepted Blender town using its evaluated
-geometry: 38 buildings, including two moated castle candidates, parade headquarters and
-22 new homes divided into four spacious estates, six middle-class homes and twelve
-workers' homes. City Hall has an open forecourt; the relay tower stands near military HQ.
-Models load incrementally with progress. The town sits on the same reflective arena
-with the shared grid, backgrounds and camera controls. Floor and grid start hidden;
-F and G reveal the enlarged arena beneath the expanded 505 × 403 m bounds.
-The detailed Tripo castle is twice its initial comparison size (170× source scale),
-grounded by its entrance deck and placed on a western island with a supported crossing.
-Its original export, cleaned Blender source, 4K textures and lossless mesh partitions
-are preserved in `games/SinStarI/SourceAssets/Towns/Neris/TripoCastleV1`.
-The original clean castle has been independently remodeled from the four-view images
-and the Tripo reference: a rounded central keep, recessed lancets and layered
-stone surrounds, projecting cornices, crystal crowns, curved garden stairs,
-balconies, heraldry and planted terraces. No Tripo topology or baked textures are
-used by that reconstruction. It is twice the former castle scale at (-37,184 m),
-roughly matching the imported candidate beside it. Military HQ moves to (115,172 m).
-Both have dedicated lighting, connected entrance roads and separate moats.
-Streets form connected four-sided neighborhood loops, sharing one two-metre grid.
-Tree height varies deterministically, with a few especially tall and short trees.
+The **Kingdom of Neris** arch is just north of the southern crossroad (Blender
+Y=-265). Arin starts 13 m south of it, facing the town. Connected roads and bridges
+serve tree-lined parks, benches, lamps, flowers, seven fountains and crystal circles.
+Managed decoration footprints avoid roads, water and door approaches. There are
+147 detailed trees and 48 shared flower planters. Two-metre paving retains its
+seams but has no wavy texture. Filtered low-contrast grass reduces shimmer.
+All water uses the deep-blue moat tint.
 
 | Control | Action |
 | --- | --- |
-| W / A / S / D or Arrow Keys | Move Arin relative to the camera; stop orbit without changing zoom |
-| R | Toggle Walk / Run without moving the party |
-| + / − (Main Keyboard or Numpad) | Increase / decrease locomotion speed by 25 percentage points |
-| Middle Mouse Drag | Orbit; pauses cinematic rotation |
-| Left Mouse Drag / Scene Click | Pan / click; pauses cinematic rotation |
-| Mouse Wheel | Smooth zoom; cinematic rotation continues |
-| F / G / B | Toggle floor / grid / cycle shared backgrounds |
-| O / C | Resume cinematic orbit at the current zoom |
-| Right Click | Reset the cinematic overview to its closer default framing |
-| M | Show / hide the minimap |
-| Tab | Ease into / out of the party following view (0.7 seconds) |
+| WASD / Arrow Keys | Move the current leader relative to the camera |
+| R | Toggle Walk / Run |
+| + / - | Change speed in 25-point steps, within 25-400% |
+| Ctrl+Tab | Cycle Arin > Orin > Zara > Mira > Arin as leader |
+| Tab | Face north behind the leader with a one-second ease |
+| Ctrl+F | Toggle the cinematic drone, initially enabled |
+| Middle Drag / Left Drag | Manual orbit / pan; suspend automatic following |
+| Wheel | Ease zoom without stopping orbit |
+| F / G / B | Floor / grid / shared background |
+| O / C or Orbit | Start/resume orbit at the current zoom |
+| Right Click | Reset cinematic overview |
+| Fit | Fit the entire town; preserve active orbit |
+| M | Show / hide minimap |
 
-Followers emerge in order, walk Arin's route around corners, gather at his stopping
-point, finish their gait animation and hide. Arin remains visible. Exterior collision
-keeps the party out of buildings and canals; bridges remain traversable. Building
-interiors and NPC interactions are outside this scene.
+H Orbit, V Orbit and Zoom controls sit at the lower left with no panel background.
+Only Orbit and Fit buttons occupy the lower right. The minimap shows the selected
+leader's name and X/Y/Z, **Old Castle** and **Comm Tower** labels. Movement fades
+it to 80%, with a ten-second hold after stopping; M explicitly overrides visibility.
+Automatic orbit hides it until orbit stops.
 
-Run is the default: 93 1/3 world units per second, one-third faster than the previous
-70. Walk is one-third of Run (31 1/9 units/second). The header starts at 100% of this
-new baseline; +/- adjusts 25–400% until the town is reopened. Leader movement,
-follower catch-up and gait animation scale together; other animation clocks do not.
-Arin, Orin and Mira use private town-only Walk/Run variants retargeted from Zara’s
-unarmed locomotion. Their accepted combat models and authored calibration stay intact.
-Orin shares the source forward axis instead of carrying his weapon stance into travel.
-The source motion and derivatives remain local under each versioned package’s
-`Private/TownLocomotion`; rebuild with Blender and `scripts/retarget-town-locomotion.py`.
-Every member uses their own rig. The original Mixamo locomotion remains available
-in the normal character/party tabs; only Neris uses the Zara-derived variants.
-Town equipment is hidden. Arin uses a separate relaxed **TownIdle** with his hands
-at his sides; his existing combat clips and 24 saved pose corrections are preserved.
-Other tabs retain normal equipment and calibration.
+Run defaults to **200%**, or 186 2/3 native units/second; Walk is one-third of Run.
+Run cadence above 100% uses a square-root speed curve, and private town clips retain
+35% of source airtime to reduce bouncing. Each member uses their own rig/animations;
+accepted character assets and calibration remain authoritative. Followers fade
+before crowding the leader. Ctrl+Tab rotates complete actor contexts in existing
+route slots without changing party location or heading. Each retains its actor,
+clips and calibration; the chosen leader becomes visible immediately.
 
-Town uses a fixed 32-degree lens. Zoom moves the camera, with the same 80–8,500-unit
-distance range in overview and Tab following, avoiding wide-angle stretching.
-Orbit elevation stays between 10 and 80 degrees. Vertical pan keeps the target at
-least 25 world units high, above the town paving, even when F hides the arena floor.
-This policy applies to both overview and party-follow framing, including close zoom.
+The fixed 32-degree lens uses distance zoom (80-18,000 native units). Normal drone
+following stays low, slightly looking up toward the horizon, with slow translation
+and turning. Royal/HQ grounds and doorway approaches use a close trailing view;
+upward stair height raises its aim. Manual elevation allows -20 to 80 degrees.
+Explicit Tab framing bypasses the slow follow solver during its one-second ease.
 
-The current identified roster is Arin, Orin, Zara and Mira. Mila's model identity
-is awaiting clarification; the controller supports a fifth member without substituting
-another character under her name.
+The party walks authored stairs and thresholds. Sixty-six authored doors swing
+inward and expose one-shot IDs through `NerisTownEntrances.ConsumeEntry`.
+Interior scenes/cutscenes are not authored or loaded yet. The imported Old Castle
+is a reference mesh without separate interactive door leaves. Collision uses
+conservative rectangles, not a complete triangle navmesh. Camera/gait feel remains
+subject to user review.
 
-Native build: `pwsh -File tools/Character3DViewer/Launch.ps1 -Build`.
-See `NerisTownTests.smileproj` for route checks and `NerisTownSceneTests.smile`
-for the real-asset acceptance fixture. Studio and Web adoption remain held.
+### Native loading and validation
 
-Current expansion validation is recorded in the canonical town package README.
-Use `scripts/test-neris-town.ps1` for routes, the actual scene and resource cleanup;
-use the native hardening gate for calibration and shared Viewer contracts.
+The static town uses 37 models; the Old Castle uses 14 shared-texture partitions.
+Tree/flower templates reuse draw objects. Old Castle runtime textures are 2K;
+its original 4K source is preserved. Static PBR cooking shares identical converted
+pixels, including ORM maps, without changing character fingerprints. The complete
+scene uses 155/256 meshes and 144/512 materials. Native frame submission capacity
+is 2,048; other resource capacities are unchanged by this pass.
+
+A focused local run measured about 0.63 seconds for town and Old Castle geometry
+plus material preparation, including about 0.24 seconds for Old Castle. This
+excludes party loading, frame scheduling and the required visible logo interval;
+it is not a cold-start guarantee.
+
+Build/launch: `pwsh -File tools/Character3DViewer/Launch.ps1 -Build`.
+Checks: `scripts/test-neris-town.ps1`, `test-neris-waterfront.py`,
+`test-neris-paving.py`, background Blender `test-neris-bridge.py`,
+`test-model3d-shared-textures.ps1`, and the native Viewer hardening gate.
+They cover complete gate traversal, stairs/doors, leader cycling, actual full-scene
+draw/cleanup, camera framing, follower fade and 24 accepted Arin keys.
+Studio and Web adoption remain on hold.
 
 ## Native Battle System
 

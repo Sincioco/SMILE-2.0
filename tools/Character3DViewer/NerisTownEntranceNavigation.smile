@@ -1,0 +1,79 @@
+''' Authored stair surfaces and short doorway approaches, independent of rendering.
+Module Smile.Tools.NerisTownEntranceNavigation
+
+Option Explicit
+
+Import Smile.Tools.NerisTownEntrancesData As DoorData
+
+Public Function SurfaceHeight(X As Double, Z As Double) As Double
+
+    Dim Index As Number
+    Dim Item As DoorData.Surface
+    Dim Across As Double
+    Dim Along As Double
+    Dim Result As Double
+
+    Result = -10000.0
+
+    For Index = 0 To DoorData.SURFACE_COUNT - 1
+
+        Item = DoorData.SurfaceAt(Index)
+        Across = (X - Item.X) * Item.RightX + (Z - Item.Z) * Item.RightZ
+        Along = -(X - Item.X) * Item.RightZ + (Z - Item.Z) * Item.RightX
+
+        If Abs(Across) < Item.HalfWidth - 0.3 And Abs(Along) < Item.HalfDepth + 0.15 Then
+            Result = Max(Result, Item.Height)
+        End If
+
+    End For
+
+    Return Result
+
+End Function
+
+Public Function Across(Item As DoorData.Door, X As Double, Z As Double) As Double
+
+    Dim Result As Double
+
+    Result = (X - Item.Position.X) * Item.RightX + (Z - Item.Position.Z) * Item.RightZ
+
+    Return Result
+
+End Function
+
+Public Function Along(Item As DoorData.Door, X As Double, Z As Double) As Double
+
+    Dim Result As Double
+
+    Result = -(X - Item.Position.X) * Item.RightZ + (Z - Item.Position.Z) * Item.RightX
+
+    Return Result
+
+End Function
+
+Public Function DoorwayAt(X As Double, Z As Double) As Number
+
+    Dim Index As Number
+    Dim Item As DoorData.Door
+    Dim Depth As Double
+    Dim Missing As Number
+
+    For Index = 0 To DoorData.DOOR_COUNT - 1
+
+        Item = DoorData.DoorAt(Index)
+        Depth = Along(Item, X, Z)
+
+        If (Abs(Across(Item, X, Z)) < Max(3.0, Item.Width / 2.0 - 3.0) And
+            Depth >= -18.0 And Depth <= 4.0) Then
+            Return Index
+        End If
+
+    End For
+
+    Missing = -1
+
+    Return Missing
+
+End Function
+
+End Module

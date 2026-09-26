@@ -1,0 +1,215 @@
+''' Town drone framing and inward-facing boundary policy; arena retains input/zoom.
+Module Smile.Tools.NerisTownCamera
+
+Option Explicit
+
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.PrecisionMath3D As M
+Import Smile.Simple3D.PrecisionCamera3D As Camera
+Import Smile.Simple3D.CameraClearance3D As Clearance
+Import Smile.Simple3D.FollowCamera3D As Follow
+Import Smile.Tools.NerisTownObstacles As Obstacles
+Import Smile.Tools.NerisTownNavigation As Navigation
+Import Smile.Tools.NerisTownEntranceNavigation As Entries
+
+Public Type State
+    World As Clearance.World
+    Flight As Follow.State
+    Enabled As Boolean
+    Arrival As Boolean
+    Focusing As Boolean
+    CloseAmount As Double
+    Suspended As Boolean
+    Yaw As Double
+    MovementView As P.Camera3D
+    WasMoving As Boolean
+    OrbitAtParty As Boolean
+    OrbitOffset As P.Vector3
+End Type
+
+Public Sub Start(ByRef Value As State)
+
+    Dim Empty As State
+
+    Value = Empty
+    Value.Enabled = True
+
+    Call Obstacles.Populate(Value.World)
+
+End Sub
+
+Public Sub Focus(ByRef Value As State, Yaw As Double, Displayed As P.Camera3D)
+
+    Value.Arrival = False
+    Value.Yaw = Yaw
+    Value.Suspended = False
+    Value.WasMoving = False
+    Value.OrbitAtParty = False
+
+    Call Follow.Reset(Value.Flight, Displayed.Position)
+
+End Sub
+
+''' Freeze input axes for each continuous movement gesture, avoiding chase-yaw feedback.
+Public Function MovementCamera(ByRef Value As State, Displayed As P.Camera3D,
+    Moving As Boolean) As P.Camera3D
+
+    Dim Result As P.Camera3D
+
+    If Not Value.WasMoving Or Not Value.Enabled Or Value.Suspended Then
+        Value.MovementView = Displayed
+    End If
+
+    Value.WasMoving = Moving
+    Result = Value.MovementView
+
+    Return Result
+
+End Function
+
+''' Blend the trailing bearing toward the nearest outside edge: the eye looks inward.
+Public Function BoundaryYaw(Position As P.Vector3, Heading As Double) As Double
+
+    Dim Distance As Double
+    Dim EdgeYaw As Double
+    Dim Candidate As Double
+    Dim South As Double
+    Dim West As Double
+    Dim Amount As Double
+    Dim Result As Double
+
+    South = -3400.0
+    West = -2400.0
+
+    If Position.X < -2400.0 Then
+        South = 900.0
+        West = -4840.0
+    End If
+
+    Distance = Position.Z - South
+    EdgeYaw = 180.0
+    Candidate = 3400.0 - Position.Z
+
+    If Candidate < Distance Then
+        Distance = Candidate
+        EdgeYaw = 0.0
+    End If
+
+    Candidate = Position.X - West
+
+    If Candidate < Distance Then
+        Distance = Candidate
+        EdgeYaw = -90.0
+    End If
+
+    Candidate = 2600.0 - Position.X
+
+    If Candidate < Distance Then
+        Distance = Candidate
+        EdgeYaw = 90.0
+    End If
+
+    Amount = Clamp((600.0 - Distance) / 500.0, 0.0, 1.0)
+    Amount = Amount * Amount * (3.0 - 2.0 * Amount)
+    Result = Heading + Camera.NormalizeAngle(EdgeYaw - Heading) * Amount
+
+    Return Result
+
+End Function
+
+''' Courtyards and doorway approaches need a close trailing view, even when clear.
+Public Function CloseGrounds(Leader As P.Vector3) As Boolean
+
+    Dim Result As Boolean
+
+    Result = ((Leader.X >= -1930.0 And Leader.X <= -390.0 And
+        Leader.Z >= 1650.0 And Leader.Z <= 3030.0) Or
+        (Leader.X >= 680.0 And Leader.X <= 2220.0 And
+        Leader.Z >= 1730.0 And Leader.Z <= 3110.0) Or
+        Entries.DoorwayAt(Leader.X, Leader.Z) >= 0)
+
+    Return Result
+
+End Function
+
+Public Function Frame(ByRef Value As State, Base As P.Camera3D, Leader As P.Vector3,
+    Heading As Double, Moving As Boolean, Elapsed As Number) As P.Camera3D
+
+    Dim Result As P.Camera3D
+    Dim Goal As Double
+    Dim StepValue As Double
+    Dim Angle As Double
+    Dim DesiredClose As Double
+    Dim Distance As Double
+    Dim Height As Double
+    Dim Ahead As Double
+    Dim StepHeight As Double
+    Dim LookAhead As P.Vector3
+
+    If Value.Arrival Then
+        Return Base
+    End If
+
+    If Value.Suspended And Value.OrbitAtParty Then
+
+        Result = Base
+        Result.Target = M.Add(Leader, P.Vector(0.0, 14.0, 0.0))
+        Result.Position = M.Add(Result.Target, Value.OrbitOffset)
+
+        Return Result
+
+    End If
+
+    If Value.Enabled And Not Value.Suspended And Moving Then
+
+        Goal = BoundaryYaw(Leader, Heading)
+        StepValue = (Camera.NormalizeAngle(Goal - Value.Yaw) *
+            ToDouble(Max(0, Elapsed)) / (1800.0 + ToDouble(Max(0, Elapsed))))
+        Value.Yaw = Camera.NormalizeAngle(Value.Yaw + Clamp(StepValue,
+            -ToDouble(Elapsed) * 0.018, ToDouble(Elapsed) * 0.018))
+
+    End If
+
+    Angle = M.Radians(Value.Yaw)
+    DesiredClose = 0.0
+
+    If CloseGrounds(Leader) Then
+        DesiredClose = 1.0
+    End If
+
+    Value.CloseAmount = (Value.CloseAmount + (DesiredClose - Value.CloseAmount) *
+        ToDouble(Max(0, Elapsed)) / (1200.0 + ToDouble(Max(0, Elapsed))))
+    Distance = 300.0 - 215.0 * Value.CloseAmount
+    Height = 26.0 - 2.0 * Value.CloseAmount
+    Ahead = 55.0 - 29.0 * Value.CloseAmount
+    LookAhead = M.Add(Leader, P.Vector(-Sin(Angle) * Ahead, 0.0, -Cos(Angle) * Ahead))
+    StepHeight = Clamp(Navigation.GroundHeight(LookAhead.X, LookAhead.Z) - Leader.Y, 0.0, 38.0)
+    Result = Base
+    Result.Target = M.Add(LookAhead, P.Vector(0.0, 42.0 + (StepHeight - 16.0) * Value.CloseAmount, 0.0))
+    Result.Position = M.Add(Leader, P.Vector(Sin(Angle) * Distance, Height, Cos(Angle) * Distance))
+
+    Return Result
+
+End Function
+
+Public Sub Settle(ByRef Value As State, Displayed As P.Camera3D)
+
+    Call Follow.Reset(Value.Flight, Displayed.Position)
+
+    Value.Flight.Target = Displayed.Target
+    Value.Flight.TargetReady = True
+
+End Sub
+
+Public Function Resolve(ByRef Value As State, Desired As P.Camera3D,
+    Elapsed As Number) As P.Camera3D
+
+    Dim Result As P.Camera3D
+
+    Result = Follow.Update(Value.Flight, Value.World, Desired, Elapsed, 18.0 - 12.0 * Value.CloseAmount)
+
+    Return Result
+
+End Function
+
+End Module

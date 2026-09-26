@@ -127,3 +127,12 @@ Mira’s town-only variants. `scripts/retarget-town-locomotion.py` reads the unc
 private Zara animation GLB and writes local licensed derivatives in each recipient’s
 canonical package. Neither Zara’s rig/animation nor her usual Viewer tab changes.
 See each recipient’s `town-locomotion-retarget.json` for hashes/contact measurements.
+
+### Town run smoothing and leader selection
+
+The private town Run derivative retains 35% of source airtime above its grounded
+contact, reducing bounce without changing the accepted combat source. Neris starts
+movement at 200%; run cadence above 100% grows with the square root of that speed
+ratio. This policy belongs to NerisTownParty, not the character profile. The same
+owner rotates complete actor contexts for Ctrl+Tab leader selection, preserving
+each actor's rig, clips, key base and calibration. No source pose is overwritten.

@@ -122,11 +122,13 @@ Public Sub ComposeCamera(ByRef Value As State, BaseCamera As P.Camera3D)
 End Sub
 
 Public Function BeginFrame(ByRef Value As State, BaseCamera As P.Camera3D,
-    Optional UseScene As Boolean = True) As Boolean
+    Optional UseScene As Boolean = True, Optional ComposeView As Boolean = True) As Boolean
 
     Dim Result As Boolean
 
-    Call ComposeCamera(Value, BaseCamera)
+    If ComposeView Then
+        Call ComposeCamera(Value, BaseCamera)
+    End If
 
     Result = Arena.ConfigureForFrame(Value.Floor, Value.FloorVisible, True)
     Result = P.SetCamera(Value.LiveCamera) And Result

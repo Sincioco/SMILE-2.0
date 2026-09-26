@@ -4,6 +4,7 @@ Module Smile.Tools.NerisTownParty
 Option Explicit
 
 Import Smile.Simple3D.Character3D As Character
+Import Smile.Simple3D.CharacterViewer As Viewer
 Import Smile.Simple3D.Graphics3D As G
 Import Smile.Simple3D.Precision3D As P
 Import Smile.Simple3D.PrecisionMath3D As M
@@ -29,6 +30,7 @@ Public Type Member
     Walking As Boolean
     SettleTime As Number
     Visible As Boolean
+    Opacity As Double
 End Type
 
 Public Type State
@@ -74,16 +76,63 @@ Public Function ProfileAt(Index As Number) As Number
 
 End Function
 
+Public Function LeaderName(ByRef Value As State) As Text
+
+    Dim ReturnValue As Text
+
+    Dim Profile As Viewer.Profile
+
+    Profile = Profiles.ProfileAt(Value.Members[0].Body.Profile)
+
+    ReturnValue = Profile.DisplayName
+
+    Return ReturnValue
+
+End Function
+
+''' Rotate complete actor contexts; the route and camera stay at the same place.
+Public Sub CycleLeader(ByRef Value As State)
+
+    Dim PreviousLeader As Member
+    Dim Index As Number
+
+    If Not Value.Ready Or Value.MemberCount < 2 Then
+        Return
+    End If
+
+    PreviousLeader = Value.Members[0]
+
+    For Index = 0 To Value.MemberCount - 2
+        Value.Members[Index] = Value.Members[Index + 1]
+    End For
+
+    Value.Members[Value.MemberCount - 1] = PreviousLeader
+    Value.Members[0].Yaw = PreviousLeader.Yaw
+
+    For Index = 0 To Value.MemberCount - 1
+        Value.Members[Index].Previous = Value.Path.Positions[Index]
+        Value.Members[Index].Opacity = 0.0
+    End For
+
+    Call Update(Value, Value.Path.Positions[0], 0)
+
+End Sub
+
 Public Sub Start(ByRef Value As State)
 
     Dim Empty As State
+    Dim Index As Number
 
     Value = Empty
     Value.MemberCount = 4
-    Value.SpeedPercent = 100
+    Value.SpeedPercent = 200
     Value.Running = True
 
-    Call Trail.Reset(Value.Path, P.Vector(0.0, 22.42, -330.0), Value.MemberCount, 22.0)
+    For Index = 0 To Value.MemberCount - 1
+        Value.Members[Index].Yaw = 180.0
+    End For
+
+    Call Trail.Reset(Value.Path, P.Vector(0.0, 23.12, -2780.0), Value.MemberCount, 22.0)
 
 End Sub
 
@@ -158,6 +207,8 @@ Public Sub LoadNext(ByRef Value As State)
         AssetPath = "Assets/Neris/Party/Arin.sm3d"
     Else If Index = 1 Then
         AssetPath = "Assets/Neris/Party/Orin.sm3d"
+    Else If Index = 2 Then
+        AssetPath = "Assets/Neris/Party/Zara.sm3d"
     Else If Index = 3 Then
         AssetPath = "Assets/Neris/Party/Mira.sm3d"
     End If
@@ -225,9 +276,15 @@ Private Sub Animate(ByRef Value As Member, Moving As Boolean, Elapsed As Number,
     Dim Ok As Boolean
     Dim Duration As Number
     Dim AnimationElapsed As Number
+    Dim GaitPercent As Number
 
     Ok = True
     AnimationElapsed = Elapsed
+    GaitPercent = SpeedPercent
+
+    If Value.TravelName = "Run" And SpeedPercent > 100 Then
+        GaitPercent = ToNumber(Round(Sqrt(ToDouble(SpeedPercent) / 100.0) * 100.0))
+    End If
 
     If Value.Walking And Value.Body.Clip <> Value.TravelClip Then
 
@@ -239,7 +296,7 @@ Private Sub Animate(ByRef Value As Member, Moving As Boolean, Elapsed As Number,
 
     If Moving Or Value.Walking Then
 
-        Value.AnimationRemainder = Value.AnimationRemainder + Elapsed * Value.TravelRate * SpeedPercent
+        Value.AnimationRemainder = Value.AnimationRemainder + Elapsed * Value.TravelRate * GaitPercent
         AnimationElapsed = Value.AnimationRemainder / 10000
         Value.AnimationRemainder = Value.AnimationRemainder Mod 10000
 
@@ -286,7 +343,7 @@ Private Sub Animate(ByRef Value As Member, Moving As Boolean, Elapsed As Number,
 End Sub
 
 Private Sub Present(ByRef Value As Member, ByRef Keys As Calibration.State,
-    Position As P.Vector3, Moving As Boolean, Visible As Boolean, Elapsed As Number,
+    Position As P.Vector3, Moving As Boolean, Opacity As Number, Elapsed As Number,
     SpeedPercent As Number)
 
     Dim Delta As P.Vector3
@@ -329,7 +386,8 @@ Private Sub Present(ByRef Value As Member, ByRef Keys As Calibration.State,
 
     End If
 
-    Value.Visible = Visible Or Value.Walking Or Value.SettleTime > 0
+    Value.Visible = Opacity > 0
+    Ok = Character.SetOpacity(Value.Body.Actor, Opacity) And Ok
     Ok = Character.SetVisible(Value.Body.Actor, Value.Visible) And Ok
     Value.Body.Ready = Value.Body.Ready And Ok
 
@@ -338,21 +396,37 @@ End Sub
 Public Sub Update(ByRef Value As State, Leader As P.Vector3, Elapsed As Number)
 
     Dim Index As Number
-    Dim Visible As Boolean
+    Dim TargetOpacity As Double
     Dim Separation As Double
     Dim PreviousSeparation As Double
 
-    Call Trail.Advance(Value.Path, Leader, Elapsed, WalkingSpeed(Value) * 1.2)
+    Call Trail.Advance(Value.Path, Leader, Elapsed, WalkingSpeed(Value) * 1.2, 14.0)
 
     For Index = 0 To Value.MemberCount - 1
 
         Separation = M.Length(M.Subtract(Value.Path.Positions[Index], Leader))
         PreviousSeparation = M.Length(M.Subtract(Value.Path.Positions[Index],
             Value.Path.Positions[Max(0, Index - 1)]))
-        Visible = Index = 0 Or (Separation > 7.0 And PreviousSeparation > 7.0)
+        TargetOpacity = 0.0
+
+        If Index = 0 Then
+            Value.Members[Index].Opacity = 100.0
+            TargetOpacity = 100.0
+        Else If (Separation > 14.0 And PreviousSeparation > 14.0 And
+            (Value.Path.Moving[0] Or Separation > 28.0)) Then
+            TargetOpacity = 100.0
+        End If
+
+        If Value.Members[Index].Opacity < TargetOpacity Then
+            Value.Members[Index].Opacity = Min(TargetOpacity,
+                Value.Members[Index].Opacity + ToDouble(Max(0, Elapsed)) / 3.0)
+        Else
+            Value.Members[Index].Opacity = Max(TargetOpacity,
+                Value.Members[Index].Opacity - ToDouble(Max(0, Elapsed)) / 3.0)
+        End If
 
         Call Present(Value.Members[Index], Value.Keys, Value.Path.Positions[Index],
-            Value.Path.Moving[Index], Visible, Elapsed, Value.SpeedPercent)
+            Value.Path.Moving[Index], ToNumber(Round(Value.Members[Index].Opacity)), Elapsed, Value.SpeedPercent)
 
         Value.Ready = Value.Ready And Value.Members[Index].Body.Ready
     End For

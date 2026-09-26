@@ -50,38 +50,60 @@ Leader.X = Leader.X + 1.0
 
 Call Trail.Advance(Path, Leader, 25, 40.0)
 Call Check(Abs(Path.Positions[4].X - 100.0) < 0.001, "Restart Does Not Pull Followers Backward")
-Call Check(Not Navigation.CanStand(0.0, 260.0), "City Hall Blocks Walking")
-Call Check(Not Navigation.CanStand(125.0, -200.0), "Canal Blocks Walking")
-Call Check(Navigation.CanStand(125.0, -320.0), "South Bridge Is Open")
-Call Check(Navigation.CanStand(210.0, 0.0), "Shop Promenade Is Open")
-Call Check(Not Navigation.CanStand(1750.0, 0.0), "Expanded Town Boundary Blocks Walking")
-Call Check(Navigation.CanStand(-2280.0, 830.0), "New Castle Bridge Crosses Its Moat")
-Call Check(Not Navigation.CanStand(-2500.0, 830.0), "New Castle Moat Blocks Walking")
-Call Check(Not Navigation.CanStand(-2280.0, 2000.0), "New Castle Architecture Blocks Walking")
-Call Check(Navigation.CanStand(0.0, 20.0), "Former Tower Site Opens City Hall Forecourt")
-Call Check(Not Navigation.CanStand(150.0, 750.0), "Relocated Tower Blocks Walking")
-Call Check(Navigation.CanStand(-370.0, 1060.0), "Castle Bridge Is Open")
-Call Check(Navigation.CanStand(-370.0, 1240.0), "Castle Gate Is Open")
-Call Check(Navigation.CanStand(-370.0, 1800.0), "Central Castle Stair Is Walkable")
-Call Check(Not Navigation.CanStand(-370.0, 1870.0), "Closed Palace Door Blocks Walking")
-Call Check(Not Navigation.CanStand(-730.0, 1760.0), "Decorative Raised Garden Blocks Walking")
-Call Check(Navigation.GroundHeight(-370.0, 1800.0) > 60.0,
-    "Characters Climb The Central Castle Stair Instead Of Walking Through It")
-Call Check(Not Navigation.CanStand(-610.0, 1060.0), "Castle Moat Blocks Walking")
-Call Check(Navigation.CanStand(1150.0, 1390.0), "Military Gate Is Open")
-Call Check(Navigation.CanStand(990.0, 1620.0), "Parade Ground Is Walkable")
-Call Check(Not Navigation.CanStand(-1150.0, 220.0), "Large Homes Block Walking")
-Call Check(Not Navigation.CanStand(750.0, 10.0), "Medium Homes Block Walking")
-Call Check(Not Navigation.CanStand(-660.0, -770.0), "Small Homes Block Walking")
-Call Check(Abs(Navigation.GroundHeight(-370.0, 1060.0) - 23.24) < 0.001, "Castle Bridge Height")
-Call Check(Abs(Navigation.GroundHeight(990.0, 1620.0) - 23.6) < 0.001, "Parade Lawn Height")
-Call Check(Abs(Navigation.GroundHeight(-1250.0, 650.0) - 20.9) < 0.001,
-    "Grass Does Not Inherit Street Height")
-Call Check(Abs(Navigation.GroundHeight(0.0, 70.0) - 23.12) < 0.001, "New Civic Paving Height")
+Call Check(Not Navigation.CanStand(0.0, -750.0), "City Hall Walls Block Walking")
+Call Check(Not Navigation.CanStand(0.0, 600.0), "Relay Walls Block Walking")
+Call Check(Not Navigation.CanStand(580.0, -2200.0), "Civic Canal Blocks Walking")
+Call Check(Navigation.CanStand(580.0, -2800.0), "Civic Bridge Is Open")
+Call Check(Navigation.CanStand(860.0, -2100.0), "Shop Main Avenue Is Open")
+Call Check(Not Navigation.CanStand(2800.0, 0.0), "Waterfront Boundary Blocks Walking")
+Call Check(Navigation.CanStand(-3660.0, 1250.0), "Tripo Bridge Crosses Its Moat")
+Call Check(Navigation.CanStand(-3500.0, 1100.0), "Tripo Landing Joins Main Avenue On Land")
+Call Check(Not Navigation.CanStand(-4500.0, 2000.0), "Tripo Moat Blocks Walking")
+Call Check(Navigation.CanStand(-4770.0, 2200.0), "West Castle Circuit Is Walkable")
+Call Check(Navigation.CanStand(-2500.0, 2200.0), "Shared Castle Street Is Walkable")
+Call Check(Navigation.CanStand(-1160.0, 1450.0), "Royal Bridge Is Open")
+Call Check(Navigation.CanStand(-1160.0, 1750.0), "Royal Gate Is Open")
+Call Check(Navigation.CanStand(-1160.0, 2240.0), "Royal Central Stairs Are Walkable")
+Call Check(Navigation.GroundHeight(-1160.0, 2240.0) > 60.0, "Royal Stairs Raise The Party")
+Call Check(Not Navigation.CanStand(-2150.0, 2000.0), "Royal Moat Blocks Walking")
+Call Check(Navigation.CanStand(1450.0, 1550.0), "Military Bridge Is Open")
+Call Check(Navigation.CanStand(1450.0, 3440.0), "Northern HQ Road Is Open")
+Call Check(Navigation.CanStand(2510.0, 2420.0), "Eastern HQ Road Is Open")
+Call Check(Not Navigation.CanStand(-2080.0, 880.0), "Estate Walls Block Walking")
+Call Check(Not Navigation.CanStand(-2100.0, -1420.0), "Middle Home Walls Block Walking")
+Call Check(Not Navigation.CanStand(1190.0, 800.0), "Workers Home Walls Block Walking")
+Call Check(Abs(Navigation.GroundHeight(-1160.0, 1450.0) - 23.12) < 0.001, "Bridge Height")
 
-Position = Navigation.Move(P.Vector(80.0, 22.8, -200.0), 100.0, 0.0)
+Position = P.Vector(-1160.0, Navigation.GroundHeight(-1160.0, 1200.0), 1200.0)
 
-Call Check(Position.X < 103.0, "Large Movement Cannot Tunnel Through Canal")
+For Index = 1 To 320
+    Position = Navigation.Move(Position, 0.0, 2.0)
+End For
+
+Print "Royal Entry Reached"
+Print Position.Z
+
+Call Check(Position.Z >= 1839.0, "Party Crosses The Entire Royal Bridge And Open Gate")
+
+Position = Navigation.Move(P.Vector(450.0, 20.9, -2200.0), 200.0, 0.0)
+
+Call Check(Position.X < 500.0, "Large Movement Cannot Tunnel Through Canal")
+
+Position = P.Vector(0.0, Navigation.GroundHeight(0.0, 330.0), 330.0)
+
+For Index = 1 To 95
+    Position = Navigation.Move(Position, 0.0, 1.0)
+End For
+
+Call Check(Position.Z > 420.0 And Position.Y > 50.0, "Party Climbs The Scaled Relay Stairs To Its Door")
+
+Position = P.Vector(0.0, Navigation.GroundHeight(0.0, -945.0), -945.0)
+
+For Index = 1 To 70
+    Position = Navigation.Move(Position, 0.0, 1.0)
+End For
+
+Call Check(Position.Z > -881.0 And Position.Y > 40.0, "Party Climbs City Hall Stairs To Its Door")
 
 If Failures = 0 Then
     Print "PASS Neris Town Routes"

@@ -1,170 +1,39 @@
-''' Expanded residential and royal precinct collision and surface heights.
+''' Saved waterfront land, water and ground heights; native coordinates.
 Module Smile.Tools.NerisTownDistricts
 
 Option Explicit
 
 Import Smile.Tools.NerisTownLayout As Layout
-
-Public Function InBox(X As Double, Z As Double, CenterX As Double,
-    CenterZ As Double, Width As Double, Depth As Double) As Boolean
-
-    Dim Result As Boolean
-
-    Result = Abs(X - CenterX) < Width / 2.0 + 4.0 And Abs(Z - CenterZ) < Depth / 2.0 + 4.0
-
-    Return Result
-
-End Function
+Import Smile.Tools.NerisTownSite As Site
 
 Public Function CanStand(X As Double, Z As Double) As Boolean
 
-    Dim Row As Number
-    Dim Column As Number
-    Dim CenterX As Double
-    Dim CenterZ As Double
-    Dim Bridge As Boolean
+    Dim Index As Number
+    Dim OnLand As Boolean
 
-    If (X < -3230.0 Or
-        X > 1740.0 Or
-        Z < -1160.0 Or
-        Z > 2790.0) Then
+    For Index = 0 To Site.BRIDGE_COUNT - 1
+
+        If Site.Contains(Site.BridgeAt(Index), X, Z, -4.0) Then
+            Return True
+        End If
+
+    End For
+
+    For Index = 0 To Site.LAND_COUNT - 1
+        OnLand = OnLand Or Site.Contains(Site.LandAt(Index), X, Z, -4.0)
+    End For
+
+    If Not OnLand Then
         Return False
     End If
 
-    If X < -1310.0 And Z < 540.0 Then
-        Return False
-    End If
+    For Index = 0 To Site.WATER_COUNT - 1
 
-    ' The comparison is an exterior model; keep its walls collision-solid.
-
-    If InBox(X, Z, -2280.0, 1840.0, 1510.0, 1400.0) Then
-        Return False
-    End If
-
-    Bridge = Abs(X + 2280.0) < 74.0 And Z > 715.0 And Z < 985.0
-
-    If Not Bridge Then
-
-        If (InBox(X, Z, -2280.0, 830.0, 1780.0, 120.0) Or
-            InBox(X, Z, -2280.0, 2690.0, 1780.0, 120.0) Or
-            InBox(X, Z, -3110.0, 1760.0, 120.0, 1740.0) Or
-            InBox(X, Z, -1450.0, 1760.0, 120.0, 1740.0)) Then
+        If Site.Contains(Site.WaterAt(Index), X, Z, 3.0) Then
             Return False
         End If
 
-    End If
-
-    For Column = 0 To 1
-
-        For Row = 0 To 1
-
-            If InBox(X, Z, -1150.0 + ToDouble(Column) * 380.0,
-                -230.0 + ToDouble(Row) * 450.0, 170.0, 150.0) Then
-                Return False
-            End If
-
-        End For
-
-        For Row = 0 To 2
-
-            If InBox(X, Z, 750.0 + ToDouble(Column) * 360.0,
-                -280.0 + ToDouble(Row) * 290.0, 112.0, 120.0) Then
-                Return False
-            End If
-
-        End For
     End For
-
-    For Column = 0 To 5
-
-        CenterX = -660.0 + ToDouble(Column) * 240.0
-
-        If Column >= 3 Then
-            CenterX = CenterX + 120.0
-        End If
-
-        For Row = 0 To 1
-
-            If InBox(X, Z, CenterX, -770.0 - ToDouble(Row) * 260.0, 93.0, 95.0) Then
-                Return False
-            End If
-
-        End For
-    End For
-
-    ' Relocated relay tower and garden pavilion.
-
-    If (InBox(X, Z, 150.0, 750.0, 133.0, 118.0) Or
-        InBox(X, Z, -240.0, -540.0, 80.0, 87.0)) Then
-        Return False
-    End If
-
-    If Not CastleCanStand((X + 370.0) / 2.0 - 480.0, (Z - 1840.0) / 2.0 + 1270.0) Then
-        Return False
-    End If
-
-    If Not HeadquartersCanStand(X - 1150.0 + 660.0, Z - 1720.0 + 1250.0) Then
-        Return False
-    End If
-
-    Return True
-
-End Function
-
-Private Function CastleCanStand(X As Double, Z As Double) As Boolean
-
-    Dim Bridge As Boolean
-
-    Bridge = Abs(X + 480.0) < 39.0 And Z > 775.0 And Z < 1010.0
-
-    If Not Bridge Then
-
-        If (InBox(X, Z, -480.0, 880.0, 950.0, 80.0) Or
-            InBox(X, Z, -480.0, 1650.0, 950.0, 80.0) Or
-            InBox(X, Z, -910.0, 1265.0, 90.0, 690.0) Or
-            InBox(X, Z, -50.0, 1265.0, 90.0, 690.0)) Then
-            Return False
-        End If
-
-    End If
-
-    ' Castle walls and keep; the gate and courtyard remain traversable.
-
-    If (InBox(X, Z, -850.0, 1270.0, 16.0, 600.0) Or
-        InBox(X, Z, -110.0, 1270.0, 16.0, 600.0) Or
-        InBox(X, Z, -480.0, 1570.0, 740.0, 16.0) Or
-        InBox(X, Z, -690.0, 970.0, 320.0, 16.0) Or
-        InBox(X, Z, -270.0, 970.0, 320.0, 16.0) Or
-        InBox(X, Z, -480.0, 1400.0, 590.0, 220.0) Or
-        InBox(X, Z, -480.0, 1110.0, 90.0, 90.0)) Then
-        Return False
-    End If
-
-    ' Sweeping raised garden stairs flank the traversable central approach.
-
-    If (InBox(X, Z, -670.0, 1210.0, 180.0, 290.0) Or
-        InBox(X, Z, -290.0, 1210.0, 180.0, 290.0) Or
-        InBox(X, Z, -480.0, 1285.0, 580.0, 8.0)) Then
-        Return False
-    End If
-
-    Return True
-
-End Function
-
-Private Function HeadquartersCanStand(X As Double, Z As Double) As Boolean
-
-    If (InBox(X, Z, 290.0, 1250.0, 16.0, 660.0) Or
-        InBox(X, Z, 1030.0, 1250.0, 16.0, 660.0) Or
-        InBox(X, Z, 660.0, 1580.0, 740.0, 16.0) Or
-        InBox(X, Z, 447.5, 920.0, 315.0, 16.0) Or
-        InBox(X, Z, 872.5, 920.0, 315.0, 16.0) Or
-        InBox(X, Z, 660.0, 1460.0, 280.0, 180.0) Or
-        InBox(X, Z, 410.0, 1430.0, 200.0, 210.0) Or
-        InBox(X, Z, 910.0, 1430.0, 200.0, 210.0) Or
-        InBox(X, Z, 660.0, 1190.0, 44.0, 44.0)) Then
-        Return False
-    End If
 
     Return True
 
@@ -176,24 +45,12 @@ Public Function GroundHeight(X As Double, Z As Double) As Double
 
     Result = Layout.PavingHeight(X, Z)
 
-    If (X > -1120.0 And X < 380.0 And Z > 1200.0 And Z < 2480.0) Then
-        Result = 22.52
+    If X > -1910.0 And X < -410.0 And Z > 1710.0 And Z < 2990.0 Then
+        Result = Max(Result, 22.52)
     End If
 
-    If (X > 765.0 And X < 1535.0 And Z > 1375.0 And Z < 2065.0) Then
-        Result = 22.3
-    End If
-
-    If Abs(X + 370.0) < 86.0 And Z > 850.0 And Z < 1320.0 Then
-        Result = 23.24
-    End If
-
-    If Abs(X + 370.0) < 75.0 And Z >= 1676.1 And Z < 1863.9 Then
-        Result = 22.52 + Clamp(Floor((Z - 1676.1) / 7.2) + 1.0, 1.0, 26.0) * 5.0
-    End If
-
-    If X > 900.0 And X < 1400.0 And Z > 1485.0 And Z < 1815.0 Then
-        Result = 23.6
+    If X > 680.0 And X < 2220.0 And Z > 1730.0 And Z < 3110.0 Then
+        Result = Max(Result, 23.6)
     End If
 
     Return Result

@@ -214,7 +214,7 @@ Public Class Session
 
         Me.BattleActive = True
         Me.Paused = False
-        Me.HeaderHidden = True
+        Me.HeaderHidden = False
         Me.Menus = EmptyMenus
         Me.Ending = EmptyEnding
 

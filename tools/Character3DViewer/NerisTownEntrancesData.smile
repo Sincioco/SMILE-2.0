@@ -1,0 +1,3307 @@
+''' Generated doorway and stair footprints from Blender; no mutable scene state.
+Module Smile.Tools.NerisTownEntrancesData
+
+Option Explicit
+
+Import Smile.Simple3D.Precision3D As P
+
+Public Const DOOR_COUNT = 66
+Public Const SURFACE_COUNT = 303
+
+Public Type Door
+    Position As P.Vector3
+    Width As Double
+    Height As Double
+    RightX As Double
+    RightZ As Double
+    Label As Text
+End Type
+
+Public Type Surface
+    X As Double
+    Z As Double
+    Height As Double
+    RightX As Double
+    RightZ As Double
+    HalfWidth As Double
+    HalfDepth As Double
+End Type
+
+Public Function DoorAt(Index As Number) As Door
+
+    Dim Result As Door
+
+    Select Case Index
+        Case 0
+            Result.Position = P.Vector(1207.60002, 30.85000, -2600.00000)
+            Result.Width = 33.06000
+            Result.Height = 36.73500
+            Result.RightX = -0.00000
+            Result.RightZ = -1.00000
+            Result.Label = "Armor Store"
+
+        Case 1
+            Result.Position = P.Vector(1250.00000, 27.45000, -2653.39996)
+            Result.Width = 9.13500
+            Result.Height = 21.39000
+            Result.RightX = 1.00000
+            Result.RightZ = -0.00000
+            Result.Label = "Armor Store"
+
+        Case 2
+            Result.Position = P.Vector(1250.00000, 27.45000, -2546.60004)
+            Result.Width = 9.13500
+            Result.Height = 21.39000
+            Result.RightX = -1.00000
+            Result.RightZ = -0.00000
+            Result.Label = "Armor Store"
+
+        Case 3
+            Result.Position = P.Vector(1292.40005, 27.75000, -2572.00012)
+            Result.Width = 9.57000
+            Result.Height = 21.39000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.Label = "Armor Store"
+
+        Case 4
+            Result.Position = P.Vector(0.00000, 47.10000, -876.80000)
+            Result.Width = 88.74000
+            Result.Height = 96.72000
+            Result.RightX = 1.00000
+            Result.RightZ = 0.00000
+            Result.Label = "City Hall"
+
+        Case 5
+            Result.Position = P.Vector(0.00000, 35.90000, -623.20000)
+            Result.Width = 27.84000
+            Result.Height = 61.38000
+            Result.RightX = -1.00000
+            Result.RightZ = -0.00000
+            Result.Label = "City Hall"
+
+        Case 6
+            Result.Position = P.Vector(0.00000, 40.40000, 777.60010)
+            Result.Width = 52.20000
+            Result.Height = 98.58000
+            Result.RightX = -1.00000
+            Result.RightZ = -0.00000
+            Result.Label = "Communication Tower"
+
+        Case 7
+            Result.Position = P.Vector(0.00000, 58.40000, 422.39990)
+            Result.Width = 93.96000
+            Result.Height = 178.55999
+            Result.RightX = 1.00000
+            Result.RightZ = 0.00000
+            Result.Label = "Communication Tower"
+
+        Case 8
+            Result.Position = P.Vector(-2106.60004, 27.25000, -2470.00000)
+            Result.Width = 12.61500
+            Result.Height = 23.25000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.Label = "Courtyard Cottage"
+
+        Case 9
+            Result.Position = P.Vector(-1186.60004, 27.25000, -2470.00000)
+            Result.Width = 12.61500
+            Result.Height = 23.25000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.Label = "Courtyard Cottage"
+
+        Case 10
+            Result.Position = P.Vector(2286.60004, 27.25000, -730.00000)
+            Result.Width = 12.61500
+            Result.Height = 23.25000
+            Result.RightX = -0.00000
+            Result.RightZ = -1.00000
+            Result.Label = "Courtyard Cottage"
+
+        Case 11
+            Result.Position = P.Vector(-2101.60004, 27.25000, -1630.00000)
+            Result.Width = 12.61500
+            Result.Height = 23.25000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.Label = "Family House"
+
+        Case 12
+            Result.Position = P.Vector(-1181.60004, 27.25000, -1630.00000)
+            Result.Width = 12.61500
+            Result.Height = 23.25000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.Label = "Family House"
+
+        Case 13
+            Result.Position = P.Vector(2281.60004, 27.25000, 290.00000)
+            Result.Width = 12.61500
+            Result.Height = 23.25000
+            Result.RightX = -0.00000
+            Result.RightZ = -1.00000
+            Result.Label = "Family House"
+
+        Case 14
+            Result.Position = P.Vector(-2102.59995, 27.25000, -2890.00000)
+            Result.Width = 12.61500
+            Result.Height = 23.25000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.Label = "Garden Pavilion"
+
+        Case 15
+            Result.Position = P.Vector(-1182.60002, 27.25000, -2890.00000)
+            Result.Width = 12.61500
+            Result.Height = 23.25000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.Label = "Garden Pavilion"
+
+        Case 16
+            Result.Position = P.Vector(1207.60002, 30.85000, -2080.00000)
+            Result.Width = 33.06000
+            Result.Height = 36.73500
+            Result.RightX = -0.00000
+            Result.RightZ = -1.00000
+            Result.Label = "Item Store"
+
+        Case 17
+            Result.Position = P.Vector(1250.00000, 27.45000, -2133.39996)
+            Result.Width = 9.13500
+            Result.Height = 21.39000
+            Result.RightX = 1.00000
+            Result.RightZ = -0.00000
+            Result.Label = "Item Store"
+
+        Case 18
+            Result.Position = P.Vector(1250.00000, 27.45000, -2026.60004)
+            Result.Width = 9.13500
+            Result.Height = 21.39000
+            Result.RightX = -1.00000
+            Result.RightZ = -0.00000
+            Result.Label = "Item Store"
+
+        Case 19
+            Result.Position = P.Vector(1292.39990, 27.75000, -2051.99997)
+            Result.Width = 9.57000
+            Result.Height = 21.39000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.Label = "Item Store"
+
+        Case 20
+            Result.Position = P.Vector(1450.00000, 28.30000, 2667.60010)
+            Result.Width = 92.00000
+            Result.Height = 144.00000
+            Result.RightX = 1.00000
+            Result.RightZ = 0.00000
+            Result.Label = "Neris Military Headquarters"
+
+        Case 21
+            Result.Position = P.Vector(-2012.29996, 26.80000, -380.00000)
+            Result.Width = 25.00000
+            Result.Height = 29.00000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.Label = "Neris New Large Home"
+
+        Case 22
+            Result.Position = P.Vector(-2012.29996, 26.80000, 40.00000)
+            Result.Width = 25.00000
+            Result.Height = 29.00000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.Label = "Neris New Large Home"
+
+        Case 23
+            Result.Position = P.Vector(-2012.29996, 26.80000, 460.00000)
+            Result.Width = 25.00000
+            Result.Height = 29.00000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.Label = "Neris New Large Home"
+
+        Case 24
+            Result.Position = P.Vector(-2012.29996, 26.80000, 880.00000)
+            Result.Width = 25.00000
+            Result.Height = 29.00000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.Label = "Neris New Large Home"
+
+        Case 25
+            Result.Position = P.Vector(-1192.30003, 26.80000, -380.00000)
+            Result.Width = 25.00000
+            Result.Height = 29.00000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.Label = "Neris New Large Home"
+
+        Case 26
+            Result.Position = P.Vector(-1192.30003, 26.80000, 40.00000)
+            Result.Width = 25.00000
+            Result.Height = 29.00000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.Label = "Neris New Large Home"
+
+        Case 27
+            Result.Position = P.Vector(-1192.30003, 26.80000, 460.00000)
+            Result.Width = 25.00000
+            Result.Height = 29.00000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.Label = "Neris New Large Home"
+
+        Case 28
+            Result.Position = P.Vector(-1192.30003, 26.80000, 880.00000)
+            Result.Width = 25.00000
+            Result.Height = 29.00000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.Label = "Neris New Large Home"
+
+        Case 29
+            Result.Position = P.Vector(-2053.60001, 26.80000, -3122.99988)
+            Result.Width = 15.50000
+            Result.Height = 29.00000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.Label = "Neris New Medium Home"
+
+        Case 30
+            Result.Position = P.Vector(-2053.60001, 26.80000, -3077.00012)
+            Result.Width = 15.50000
+            Result.Height = 29.00000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.Label = "Neris New Medium Home"
+
+        Case 31
+            Result.Position = P.Vector(-2053.60001, 26.80000, -2702.99988)
+            Result.Width = 15.50000
+            Result.Height = 29.00000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.Label = "Neris New Medium Home"
+
+        Case 32
+            Result.Position = P.Vector(-2053.60001, 26.80000, -2657.00012)
+            Result.Width = 15.50000
+            Result.Height = 29.00000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.Label = "Neris New Medium Home"
+
+        Case 33
+            Result.Position = P.Vector(-2053.60001, 26.80000, -2283.00003)
+            Result.Width = 15.50000
+            Result.Height = 29.00000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.Label = "Neris New Medium Home"
+
+        Case 34
+            Result.Position = P.Vector(-2053.60001, 26.80000, -2236.99997)
+            Result.Width = 15.50000
+            Result.Height = 29.00000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.Label = "Neris New Medium Home"
+
+        Case 35
+            Result.Position = P.Vector(-2053.60001, 26.80000, -1863.00003)
+            Result.Width = 15.50000
+            Result.Height = 29.00000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.Label = "Neris New Medium Home"
+
+        Case 36
+            Result.Position = P.Vector(-2053.60001, 26.80000, -1816.99997)
+            Result.Width = 15.50000
+            Result.Height = 29.00000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.Label = "Neris New Medium Home"
+
+        Case 37
+            Result.Position = P.Vector(-2053.60001, 26.80000, -1443.00003)
+            Result.Width = 15.50000
+            Result.Height = 29.00000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.Label = "Neris New Medium Home"
+
+        Case 38
+            Result.Position = P.Vector(-2053.60001, 26.80000, -1396.99997)
+            Result.Width = 15.50000
+            Result.Height = 29.00000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.Label = "Neris New Medium Home"
+
+        Case 39
+            Result.Position = P.Vector(-1133.60001, 26.80000, -3122.99988)
+            Result.Width = 15.50000
+            Result.Height = 29.00000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.Label = "Neris New Medium Home"
+
+        Case 40
+            Result.Position = P.Vector(-1133.60001, 26.80000, -3077.00012)
+            Result.Width = 15.50000
+            Result.Height = 29.00000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.Label = "Neris New Medium Home"
+
+        Case 41
+            Result.Position = P.Vector(-1133.60001, 26.80000, -2702.99988)
+            Result.Width = 15.50000
+            Result.Height = 29.00000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.Label = "Neris New Medium Home"
+
+        Case 42
+            Result.Position = P.Vector(-1133.60001, 26.80000, -2657.00012)
+            Result.Width = 15.50000
+            Result.Height = 29.00000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.Label = "Neris New Medium Home"
+
+        Case 43
+            Result.Position = P.Vector(-1133.60001, 26.80000, -2283.00003)
+            Result.Width = 15.50000
+            Result.Height = 29.00000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.Label = "Neris New Medium Home"
+
+        Case 44
+            Result.Position = P.Vector(-1133.60001, 26.80000, -2236.99997)
+            Result.Width = 15.50000
+            Result.Height = 29.00000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.Label = "Neris New Medium Home"
+
+        Case 45
+            Result.Position = P.Vector(-1133.60001, 26.80000, -1863.00003)
+            Result.Width = 15.50000
+            Result.Height = 29.00000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.Label = "Neris New Medium Home"
+
+        Case 46
+            Result.Position = P.Vector(-1133.60001, 26.80000, -1816.99997)
+            Result.Width = 15.50000
+            Result.Height = 29.00000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.Label = "Neris New Medium Home"
+
+        Case 47
+            Result.Position = P.Vector(-1133.60001, 26.80000, -1443.00003)
+            Result.Width = 15.50000
+            Result.Height = 29.00000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.Label = "Neris New Medium Home"
+
+        Case 48
+            Result.Position = P.Vector(-1133.60001, 26.80000, -1396.99997)
+            Result.Width = 15.50000
+            Result.Height = 29.00000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.Label = "Neris New Medium Home"
+
+        Case 49
+            Result.Position = P.Vector(1153.60001, 26.80000, -900.00000)
+            Result.Width = 15.50000
+            Result.Height = 29.00000
+            Result.RightX = -0.00000
+            Result.RightZ = -1.00000
+            Result.Label = "Neris New Small Home"
+
+        Case 50
+            Result.Position = P.Vector(1153.60001, 26.80000, -560.00000)
+            Result.Width = 15.50000
+            Result.Height = 29.00000
+            Result.RightX = -0.00000
+            Result.RightZ = -1.00000
+            Result.Label = "Neris New Small Home"
+
+        Case 51
+            Result.Position = P.Vector(1153.60001, 26.80000, -220.00000)
+            Result.Width = 15.50000
+            Result.Height = 29.00000
+            Result.RightX = -0.00000
+            Result.RightZ = -1.00000
+            Result.Label = "Neris New Small Home"
+
+        Case 52
+            Result.Position = P.Vector(1153.60001, 26.80000, 120.00000)
+            Result.Width = 15.50000
+            Result.Height = 29.00000
+            Result.RightX = -0.00000
+            Result.RightZ = -1.00000
+            Result.Label = "Neris New Small Home"
+
+        Case 53
+            Result.Position = P.Vector(1153.60001, 26.80000, 460.00000)
+            Result.Width = 15.50000
+            Result.Height = 29.00000
+            Result.RightX = -0.00000
+            Result.RightZ = -1.00000
+            Result.Label = "Neris New Small Home"
+
+        Case 54
+            Result.Position = P.Vector(1153.60001, 26.80000, 800.00000)
+            Result.Width = 15.50000
+            Result.Height = 29.00000
+            Result.RightX = -0.00000
+            Result.RightZ = -1.00000
+            Result.Label = "Neris New Small Home"
+
+        Case 55
+            Result.Position = P.Vector(2093.60001, 26.80000, -900.00000)
+            Result.Width = 15.50000
+            Result.Height = 29.00000
+            Result.RightX = -0.00000
+            Result.RightZ = -1.00000
+            Result.Label = "Neris New Small Home"
+
+        Case 56
+            Result.Position = P.Vector(2093.60001, 26.80000, -560.00000)
+            Result.Width = 15.50000
+            Result.Height = 29.00000
+            Result.RightX = -0.00000
+            Result.RightZ = -1.00000
+            Result.Label = "Neris New Small Home"
+
+        Case 57
+            Result.Position = P.Vector(2093.60001, 26.80000, -220.00000)
+            Result.Width = 15.50000
+            Result.Height = 29.00000
+            Result.RightX = -0.00000
+            Result.RightZ = -1.00000
+            Result.Label = "Neris New Small Home"
+
+        Case 58
+            Result.Position = P.Vector(2093.60001, 26.80000, 120.00000)
+            Result.Width = 15.50000
+            Result.Height = 29.00000
+            Result.RightX = -0.00000
+            Result.RightZ = -1.00000
+            Result.Label = "Neris New Small Home"
+
+        Case 59
+            Result.Position = P.Vector(2093.60001, 26.80000, 460.00000)
+            Result.Width = 15.50000
+            Result.Height = 29.00000
+            Result.RightX = -0.00000
+            Result.RightZ = -1.00000
+            Result.Label = "Neris New Small Home"
+
+        Case 60
+            Result.Position = P.Vector(2093.60001, 26.80000, 800.00000)
+            Result.Width = 15.50000
+            Result.Height = 29.00000
+            Result.RightX = -0.00000
+            Result.RightZ = -1.00000
+            Result.Label = "Neris New Small Home"
+
+        Case 61
+            Result.Position = P.Vector(-1160.00000, 152.52000, 2371.60004)
+            Result.Width = 122.00000
+            Result.Height = 148.00000
+            Result.RightX = 1.00000
+            Result.RightZ = 0.00000
+            Result.Label = "Royal Castle of Neris"
+
+        Case 62
+            Result.Position = P.Vector(1207.60002, 30.85000, -1560.00000)
+            Result.Width = 33.06000
+            Result.Height = 36.73500
+            Result.RightX = -0.00000
+            Result.RightZ = -1.00000
+            Result.Label = "Weapon Store"
+
+        Case 63
+            Result.Position = P.Vector(1250.00000, 27.45000, -1613.39996)
+            Result.Width = 9.13500
+            Result.Height = 21.39000
+            Result.RightX = 1.00000
+            Result.RightZ = -0.00000
+            Result.Label = "Weapon Store"
+
+        Case 64
+            Result.Position = P.Vector(1250.00008, 27.45000, -1506.60004)
+            Result.Width = 9.13500
+            Result.Height = 21.39000
+            Result.RightX = -1.00000
+            Result.RightZ = -0.00000
+            Result.Label = "Weapon Store"
+
+        Case 65
+            Result.Position = P.Vector(1292.39990, 27.75000, -1531.99997)
+            Result.Width = 9.57000
+            Result.Height = 21.39000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.Label = "Weapon Store"
+
+    End Select
+
+    Return Result
+
+End Function
+
+Public Function SurfaceAt(Index As Number) As Surface
+
+    Dim Result As Surface
+
+    Select Case Index
+        Case 0
+            Result.X = -2111.60004
+            Result.Z = -2470.00000
+            Result.Height = 27.20000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 6.30750
+            Result.HalfDepth = 5.00000
+
+        Case 1
+            Result.X = -2107.59995
+            Result.Z = -2890.00000
+            Result.Height = 27.20000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 6.30750
+            Result.HalfDepth = 5.00000
+
+        Case 2
+            Result.X = -2106.60004
+            Result.Z = -1630.00000
+            Result.Height = 27.20000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 6.30750
+            Result.HalfDepth = 5.00000
+
+        Case 3
+            Result.X = -2059.13742
+            Result.Z = -3122.99988
+            Result.Height = 26.75000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 7.75000
+            Result.HalfDepth = 5.53750
+
+        Case 4
+            Result.X = -2059.13742
+            Result.Z = -3077.00012
+            Result.Height = 26.75000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 7.75000
+            Result.HalfDepth = 5.53750
+
+        Case 5
+            Result.X = -2059.13742
+            Result.Z = -2702.99988
+            Result.Height = 26.75000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 7.75000
+            Result.HalfDepth = 5.53750
+
+        Case 6
+            Result.X = -2059.13742
+            Result.Z = -2657.00012
+            Result.Height = 26.75000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 7.75000
+            Result.HalfDepth = 5.53750
+
+        Case 7
+            Result.X = -2059.13742
+            Result.Z = -2283.00003
+            Result.Height = 26.75000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 7.75000
+            Result.HalfDepth = 5.53750
+
+        Case 8
+            Result.X = -2059.13742
+            Result.Z = -2236.99997
+            Result.Height = 26.75000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 7.75000
+            Result.HalfDepth = 5.53750
+
+        Case 9
+            Result.X = -2059.13742
+            Result.Z = -1863.00003
+            Result.Height = 26.75000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 7.75000
+            Result.HalfDepth = 5.53750
+
+        Case 10
+            Result.X = -2059.13742
+            Result.Z = -1816.99997
+            Result.Height = 26.75000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 7.75000
+            Result.HalfDepth = 5.53750
+
+        Case 11
+            Result.X = -2059.13742
+            Result.Z = -1443.00003
+            Result.Height = 26.75000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 7.75000
+            Result.HalfDepth = 5.53750
+
+        Case 12
+            Result.X = -2059.13742
+            Result.Z = -1396.99997
+            Result.Height = 26.75000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 7.75000
+            Result.HalfDepth = 5.53750
+
+        Case 13
+            Result.X = -2046.99997
+            Result.Z = -3100.00000
+            Result.Height = 26.80000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 4.00000
+
+        Case 14
+            Result.X = -2046.99997
+            Result.Z = -2680.00000
+            Result.Height = 26.80000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 4.00000
+
+        Case 15
+            Result.X = -2046.99997
+            Result.Z = -2260.00000
+            Result.Height = 26.80000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 4.00000
+
+        Case 16
+            Result.X = -2046.99997
+            Result.Z = -1840.00000
+            Result.Height = 26.80000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 4.00000
+
+        Case 17
+            Result.X = -2046.99997
+            Result.Z = -1420.00000
+            Result.Height = 26.80000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 4.00000
+
+        Case 18
+            Result.X = -2043.99994
+            Result.Z = -3100.00000
+            Result.Height = 25.40000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 5.50000
+
+        Case 19
+            Result.X = -2043.99994
+            Result.Z = -2680.00000
+            Result.Height = 25.40000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 5.50000
+
+        Case 20
+            Result.X = -2043.99994
+            Result.Z = -2260.00000
+            Result.Height = 25.40000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 5.50000
+
+        Case 21
+            Result.X = -2043.99994
+            Result.Z = -1840.00000
+            Result.Height = 25.40000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 5.50000
+
+        Case 22
+            Result.X = -2043.99994
+            Result.Z = -1420.00000
+            Result.Height = 25.40000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 5.50000
+
+        Case 23
+            Result.X = -2041.00006
+            Result.Z = -3100.00000
+            Result.Height = 24.00000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 7.00000
+
+        Case 24
+            Result.X = -2041.00006
+            Result.Z = -2680.00000
+            Result.Height = 24.00000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 7.00000
+
+        Case 25
+            Result.X = -2041.00006
+            Result.Z = -2260.00000
+            Result.Height = 24.00000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 7.00000
+
+        Case 26
+            Result.X = -2041.00006
+            Result.Z = -1840.00000
+            Result.Height = 24.00000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 7.00000
+
+        Case 27
+            Result.X = -2041.00006
+            Result.Z = -1420.00000
+            Result.Height = 24.00000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 7.00000
+
+        Case 28
+            Result.X = -2020.92499
+            Result.Z = -380.00000
+            Result.Height = 26.75000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 12.50000
+            Result.HalfDepth = 8.62500
+
+        Case 29
+            Result.X = -2020.92499
+            Result.Z = 40.00000
+            Result.Height = 26.75000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 12.50000
+            Result.HalfDepth = 8.62500
+
+        Case 30
+            Result.X = -2020.92499
+            Result.Z = 460.00000
+            Result.Height = 26.75000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 12.50000
+            Result.HalfDepth = 8.62500
+
+        Case 31
+            Result.X = -2020.92499
+            Result.Z = 880.00000
+            Result.Height = 26.75000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 12.50000
+            Result.HalfDepth = 8.62500
+
+        Case 32
+            Result.X = -2011.99997
+            Result.Z = -380.00000
+            Result.Height = 26.85000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 4.00000
+
+        Case 33
+            Result.X = -2011.99997
+            Result.Z = 40.00000
+            Result.Height = 26.85000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 4.00000
+
+        Case 34
+            Result.X = -2011.99997
+            Result.Z = 460.00000
+            Result.Height = 26.85000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 4.00000
+
+        Case 35
+            Result.X = -2011.99997
+            Result.Z = 880.00000
+            Result.Height = 26.85000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 4.00000
+
+        Case 36
+            Result.X = -2008.99994
+            Result.Z = -380.00000
+            Result.Height = 25.40000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 5.50000
+
+        Case 37
+            Result.X = -2008.99994
+            Result.Z = 40.00000
+            Result.Height = 25.40000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 5.50000
+
+        Case 38
+            Result.X = -2008.99994
+            Result.Z = 460.00000
+            Result.Height = 25.40000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 5.50000
+
+        Case 39
+            Result.X = -2008.99994
+            Result.Z = 880.00000
+            Result.Height = 25.40000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 5.50000
+
+        Case 40
+            Result.X = -2006.00006
+            Result.Z = -380.00000
+            Result.Height = 24.00000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 7.00000
+
+        Case 41
+            Result.X = -2006.00006
+            Result.Z = 40.00000
+            Result.Height = 24.00000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 7.00000
+
+        Case 42
+            Result.X = -2006.00006
+            Result.Z = 460.00000
+            Result.Height = 24.00000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 7.00000
+
+        Case 43
+            Result.X = -2006.00006
+            Result.Z = 880.00000
+            Result.Height = 24.00000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 7.00000
+
+        Case 44
+            Result.X = -1649.93011
+            Result.Z = 2454.67392
+            Result.Height = 304.92000
+            Result.RightX = 0.99991
+            Result.RightZ = 0.01313
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 5.97655
+
+        Case 45
+            Result.X = -1649.65027
+            Result.Z = 2444.02176
+            Result.Height = 298.83304
+            Result.RightX = 0.99923
+            Result.RightZ = 0.03936
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 5.98022
+
+        Case 46
+            Result.X = -1649.09119
+            Result.Z = 2433.36960
+            Result.Height = 292.74608
+            Result.RightX = 0.99786
+            Result.RightZ = 0.06546
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 5.98753
+
+        Case 47
+            Result.X = -1648.25317
+            Result.Z = 2422.71744
+            Result.Height = 286.65914
+            Result.RightX = 0.99582
+            Result.RightZ = 0.09135
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 5.99845
+
+        Case 48
+            Result.X = -1647.13745
+            Result.Z = 2412.06528
+            Result.Height = 280.57218
+            Result.RightX = 0.99314
+            Result.RightZ = 0.11695
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 6.01289
+
+        Case 49
+            Result.X = -1645.74524
+            Result.Z = 2401.41312
+            Result.Height = 274.48522
+            Result.RightX = 0.98984
+            Result.RightZ = 0.14218
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 6.03075
+
+        Case 50
+            Result.X = -1644.07806
+            Result.Z = 2390.76080
+            Result.Height = 268.39826
+            Result.RightX = 0.98596
+            Result.RightZ = 0.16698
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 6.05193
+
+        Case 51
+            Result.X = -1642.13806
+            Result.Z = 2380.10864
+            Result.Height = 262.31130
+            Result.RightX = 0.98153
+            Result.RightZ = 0.19129
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 6.07629
+
+        Case 52
+            Result.X = -1639.92737
+            Result.Z = 2369.45648
+            Result.Height = 256.22436
+            Result.RightX = 0.97661
+            Result.RightZ = 0.21503
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 6.10366
+
+        Case 53
+            Result.X = -1637.44873
+            Result.Z = 2358.80432
+            Result.Height = 250.13740
+            Result.RightX = 0.97123
+            Result.RightZ = 0.23816
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 6.13389
+
+        Case 54
+            Result.X = -1634.70474
+            Result.Z = 2348.15216
+            Result.Height = 244.05044
+            Result.RightX = 0.96544
+            Result.RightZ = 0.26064
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 6.16677
+
+        Case 55
+            Result.X = -1631.69876
+            Result.Z = 2337.50000
+            Result.Height = 237.96348
+            Result.RightX = 0.95929
+            Result.RightZ = 0.28243
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 6.20212
+
+        Case 56
+            Result.X = -1628.43430
+            Result.Z = 2326.84784
+            Result.Height = 231.87652
+            Result.RightX = 0.95284
+            Result.RightZ = 0.30348
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 6.23972
+
+        Case 57
+            Result.X = -1624.91516
+            Result.Z = 2316.19568
+            Result.Height = 225.78956
+            Result.RightX = 0.94613
+            Result.RightZ = 0.32379
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 6.27935
+
+        Case 58
+            Result.X = -1621.14548
+            Result.Z = 2305.54352
+            Result.Height = 219.70262
+            Result.RightX = 0.93921
+            Result.RightZ = 0.34333
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 6.32079
+
+        Case 59
+            Result.X = -1617.12952
+            Result.Z = 2294.89136
+            Result.Height = 213.61566
+            Result.RightX = 0.93214
+            Result.RightZ = 0.36209
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 6.36381
+
+        Case 60
+            Result.X = -1612.87216
+            Result.Z = 2284.23920
+            Result.Height = 207.52870
+            Result.RightX = 0.92496
+            Result.RightZ = 0.38006
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 6.40818
+
+        Case 61
+            Result.X = -1608.37830
+            Result.Z = 2273.58688
+            Result.Height = 201.44174
+            Result.RightX = 0.91771
+            Result.RightZ = 0.39724
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 6.45365
+
+        Case 62
+            Result.X = -1603.65295
+            Result.Z = 2262.93472
+            Result.Height = 195.35478
+            Result.RightX = 0.91044
+            Result.RightZ = 0.41364
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 6.50000
+
+        Case 63
+            Result.X = -1598.70193
+            Result.Z = 2252.28256
+            Result.Height = 189.26782
+            Result.RightX = 0.90319
+            Result.RightZ = 0.42925
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 6.54699
+
+        Case 64
+            Result.X = -1593.53088
+            Result.Z = 2241.63040
+            Result.Height = 183.18088
+            Result.RightX = 0.89599
+            Result.RightZ = 0.44408
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 6.59438
+
+        Case 65
+            Result.X = -1588.14590
+            Result.Z = 2230.97824
+            Result.Height = 177.09392
+            Result.RightX = 0.88887
+            Result.RightZ = 0.45816
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 6.64196
+
+        Case 66
+            Result.X = -1582.55310
+            Result.Z = 2220.32608
+            Result.Height = 171.00696
+            Result.RightX = 0.88188
+            Result.RightZ = 0.47148
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 6.68949
+
+        Case 67
+            Result.X = -1576.75919
+            Result.Z = 2209.67392
+            Result.Height = 164.92000
+            Result.RightX = 0.87503
+            Result.RightZ = 0.48407
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 6.73676
+
+        Case 68
+            Result.X = -1570.77087
+            Result.Z = 2199.02176
+            Result.Height = 158.83304
+            Result.RightX = 0.86835
+            Result.RightZ = 0.49595
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 6.78356
+
+        Case 69
+            Result.X = -1564.59503
+            Result.Z = 2188.36960
+            Result.Height = 152.74608
+            Result.RightX = 0.86187
+            Result.RightZ = 0.50713
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 6.82968
+
+        Case 70
+            Result.X = -1558.23883
+            Result.Z = 2177.71744
+            Result.Height = 146.65912
+            Result.RightX = 0.85561
+            Result.RightZ = 0.51763
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 6.87492
+
+        Case 71
+            Result.X = -1551.71005
+            Result.Z = 2167.06528
+            Result.Height = 140.57218
+            Result.RightX = 0.84958
+            Result.RightZ = 0.52746
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 6.91910
+
+        Case 72
+            Result.X = -1545.01587
+            Result.Z = 2156.41296
+            Result.Height = 134.48522
+            Result.RightX = 0.84380
+            Result.RightZ = 0.53666
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 6.96203
+
+        Case 73
+            Result.X = -1538.16437
+            Result.Z = 2145.76080
+            Result.Height = 128.39826
+            Result.RightX = 0.83829
+            Result.RightZ = 0.54523
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 7.00355
+
+        Case 74
+            Result.X = -1531.16333
+            Result.Z = 2135.10864
+            Result.Height = 122.31130
+            Result.RightX = 0.83305
+            Result.RightZ = 0.55320
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 7.04347
+
+        Case 75
+            Result.X = -1524.02100
+            Result.Z = 2124.45648
+            Result.Height = 116.22434
+            Result.RightX = 0.82810
+            Result.RightZ = 0.56057
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 7.08166
+
+        Case 76
+            Result.X = -1516.74591
+            Result.Z = 2113.80432
+            Result.Height = 110.13738
+            Result.RightX = 0.82346
+            Result.RightZ = 0.56738
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 7.11797
+
+        Case 77
+            Result.X = -1509.34616
+            Result.Z = 2103.15216
+            Result.Height = 104.05044
+            Result.RightX = 0.81911
+            Result.RightZ = 0.57363
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 7.15225
+
+        Case 78
+            Result.X = -1501.83060
+            Result.Z = 2092.50000
+            Result.Height = 97.96348
+            Result.RightX = 0.81509
+            Result.RightZ = 0.57934
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 7.18438
+
+        Case 79
+            Result.X = -1494.20807
+            Result.Z = 2081.84784
+            Result.Height = 91.87652
+            Result.RightX = 0.81138
+            Result.RightZ = 0.58452
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 7.21425
+
+        Case 80
+            Result.X = -1486.48727
+            Result.Z = 2071.19568
+            Result.Height = 85.78957
+            Result.RightX = 0.80799
+            Result.RightZ = 0.58919
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 7.24175
+
+        Case 81
+            Result.X = -1478.67737
+            Result.Z = 2060.54352
+            Result.Height = 79.70261
+            Result.RightX = 0.80494
+            Result.RightZ = 0.59336
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 7.26678
+
+        Case 82
+            Result.X = -1470.78735
+            Result.Z = 2049.89136
+            Result.Height = 73.61565
+            Result.RightX = 0.80221
+            Result.RightZ = 0.59704
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 7.28924
+
+        Case 83
+            Result.X = -1462.82639
+            Result.Z = 2039.23920
+            Result.Height = 67.52870
+            Result.RightX = 0.79982
+            Result.RightZ = 0.60023
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 7.30907
+
+        Case 84
+            Result.X = -1454.80392
+            Result.Z = 2028.58704
+            Result.Height = 61.44174
+            Result.RightX = 0.79777
+            Result.RightZ = 0.60296
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 7.32620
+
+        Case 85
+            Result.X = -1446.72928
+            Result.Z = 2017.93488
+            Result.Height = 55.35478
+            Result.RightX = 0.79606
+            Result.RightZ = 0.60522
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 7.34056
+
+        Case 86
+            Result.X = -1438.61176
+            Result.Z = 2007.28256
+            Result.Height = 49.26782
+            Result.RightX = 0.79469
+            Result.RightZ = 0.60702
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 7.35211
+
+        Case 87
+            Result.X = -1430.46082
+            Result.Z = 1996.63040
+            Result.Height = 43.18087
+            Result.RightX = 0.79366
+            Result.RightZ = 0.60836
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 7.36080
+
+        Case 88
+            Result.X = -1422.28607
+            Result.Z = 1985.97824
+            Result.Height = 37.09391
+            Result.RightX = 0.79297
+            Result.RightZ = 0.60926
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 7.36662
+
+        Case 89
+            Result.X = -1414.09698
+            Result.Z = 1975.32608
+            Result.Height = 31.00696
+            Result.RightX = 0.79263
+            Result.RightZ = 0.60971
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 7.36953
+
+        Case 90
+            Result.X = -1200.92499
+            Result.Z = -380.00000
+            Result.Height = 26.75000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 12.50000
+            Result.HalfDepth = 8.62500
+
+        Case 91
+            Result.X = -1200.92499
+            Result.Z = 40.00000
+            Result.Height = 26.75000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 12.50000
+            Result.HalfDepth = 8.62500
+
+        Case 92
+            Result.X = -1200.92499
+            Result.Z = 460.00000
+            Result.Height = 26.75000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 12.50000
+            Result.HalfDepth = 8.62500
+
+        Case 93
+            Result.X = -1200.92499
+            Result.Z = 880.00000
+            Result.Height = 26.75000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 12.50000
+            Result.HalfDepth = 8.62500
+
+        Case 94
+            Result.X = -1191.99997
+            Result.Z = -380.00000
+            Result.Height = 26.85000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 4.00000
+
+        Case 95
+            Result.X = -1191.99997
+            Result.Z = 40.00000
+            Result.Height = 26.85000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 4.00000
+
+        Case 96
+            Result.X = -1191.99997
+            Result.Z = 460.00000
+            Result.Height = 26.85000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 4.00000
+
+        Case 97
+            Result.X = -1191.99997
+            Result.Z = 880.00000
+            Result.Height = 26.85000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 4.00000
+
+        Case 98
+            Result.X = -1191.59996
+            Result.Z = -2470.00000
+            Result.Height = 27.20000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 6.30750
+            Result.HalfDepth = 5.00000
+
+        Case 99
+            Result.X = -1189.00002
+            Result.Z = -380.00000
+            Result.Height = 25.40000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 5.50000
+
+        Case 100
+            Result.X = -1189.00002
+            Result.Z = 40.00000
+            Result.Height = 25.40000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 5.50000
+
+        Case 101
+            Result.X = -1189.00002
+            Result.Z = 460.00000
+            Result.Height = 25.40000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 5.50000
+
+        Case 102
+            Result.X = -1189.00002
+            Result.Z = 880.00000
+            Result.Height = 25.40000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 5.50000
+
+        Case 103
+            Result.X = -1187.59995
+            Result.Z = -2890.00000
+            Result.Height = 27.20000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 6.30750
+            Result.HalfDepth = 5.00000
+
+        Case 104
+            Result.X = -1186.59996
+            Result.Z = -1630.00000
+            Result.Height = 27.20000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 6.30750
+            Result.HalfDepth = 5.00000
+
+        Case 105
+            Result.X = -1185.99998
+            Result.Z = -380.00000
+            Result.Height = 24.00000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 7.00000
+
+        Case 106
+            Result.X = -1185.99998
+            Result.Z = 40.00000
+            Result.Height = 24.00000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 7.00000
+
+        Case 107
+            Result.X = -1185.99998
+            Result.Z = 460.00000
+            Result.Height = 24.00000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 7.00000
+
+        Case 108
+            Result.X = -1185.99998
+            Result.Z = 880.00000
+            Result.Height = 24.00000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 7.00000
+
+        Case 109
+            Result.X = -1160.00000
+            Result.Z = 2190.00000
+            Result.Height = 27.52000
+            Result.RightX = 1.00000
+            Result.RightZ = 0.00000
+            Result.HalfWidth = 75.00000
+            Result.HalfDepth = 3.90000
+
+        Case 110
+            Result.X = -1160.00000
+            Result.Z = 2197.20001
+            Result.Height = 32.52000
+            Result.RightX = 1.00000
+            Result.RightZ = 0.00000
+            Result.HalfWidth = 75.00000
+            Result.HalfDepth = 3.90000
+
+        Case 111
+            Result.X = -1160.00000
+            Result.Z = 2204.40002
+            Result.Height = 37.52000
+            Result.RightX = 1.00000
+            Result.RightZ = 0.00000
+            Result.HalfWidth = 75.00000
+            Result.HalfDepth = 3.90000
+
+        Case 112
+            Result.X = -1160.00000
+            Result.Z = 2211.60004
+            Result.Height = 42.52000
+            Result.RightX = 1.00000
+            Result.RightZ = 0.00000
+            Result.HalfWidth = 75.00000
+            Result.HalfDepth = 3.90000
+
+        Case 113
+            Result.X = -1160.00000
+            Result.Z = 2218.80005
+            Result.Height = 47.52000
+            Result.RightX = 1.00000
+            Result.RightZ = 0.00000
+            Result.HalfWidth = 75.00000
+            Result.HalfDepth = 3.90000
+
+        Case 114
+            Result.X = -1160.00000
+            Result.Z = 2226.00006
+            Result.Height = 52.52000
+            Result.RightX = 1.00000
+            Result.RightZ = 0.00000
+            Result.HalfWidth = 75.00000
+            Result.HalfDepth = 3.90000
+
+        Case 115
+            Result.X = -1160.00000
+            Result.Z = 2233.20007
+            Result.Height = 57.52000
+            Result.RightX = 1.00000
+            Result.RightZ = 0.00000
+            Result.HalfWidth = 75.00000
+            Result.HalfDepth = 3.90000
+
+        Case 116
+            Result.X = -1160.00000
+            Result.Z = 2240.39993
+            Result.Height = 62.52000
+            Result.RightX = 1.00000
+            Result.RightZ = 0.00000
+            Result.HalfWidth = 75.00000
+            Result.HalfDepth = 3.90000
+
+        Case 117
+            Result.X = -1160.00000
+            Result.Z = 2247.59995
+            Result.Height = 67.52000
+            Result.RightX = 1.00000
+            Result.RightZ = 0.00000
+            Result.HalfWidth = 75.00000
+            Result.HalfDepth = 3.90000
+
+        Case 118
+            Result.X = -1160.00000
+            Result.Z = 2254.79996
+            Result.Height = 72.52000
+            Result.RightX = 1.00000
+            Result.RightZ = 0.00000
+            Result.HalfWidth = 75.00000
+            Result.HalfDepth = 3.90000
+
+        Case 119
+            Result.X = -1160.00000
+            Result.Z = 2261.99997
+            Result.Height = 77.52000
+            Result.RightX = 1.00000
+            Result.RightZ = 0.00000
+            Result.HalfWidth = 75.00000
+            Result.HalfDepth = 3.90000
+
+        Case 120
+            Result.X = -1160.00000
+            Result.Z = 2269.19998
+            Result.Height = 82.52000
+            Result.RightX = 1.00000
+            Result.RightZ = 0.00000
+            Result.HalfWidth = 75.00000
+            Result.HalfDepth = 3.90000
+
+        Case 121
+            Result.X = -1160.00000
+            Result.Z = 2276.39999
+            Result.Height = 87.52000
+            Result.RightX = 1.00000
+            Result.RightZ = 0.00000
+            Result.HalfWidth = 75.00000
+            Result.HalfDepth = 3.90000
+
+        Case 122
+            Result.X = -1160.00000
+            Result.Z = 2283.60001
+            Result.Height = 92.52000
+            Result.RightX = 1.00000
+            Result.RightZ = 0.00000
+            Result.HalfWidth = 75.00000
+            Result.HalfDepth = 3.90000
+
+        Case 123
+            Result.X = -1160.00000
+            Result.Z = 2290.80002
+            Result.Height = 97.52000
+            Result.RightX = 1.00000
+            Result.RightZ = 0.00000
+            Result.HalfWidth = 75.00000
+            Result.HalfDepth = 3.90000
+
+        Case 124
+            Result.X = -1160.00000
+            Result.Z = 2298.00003
+            Result.Height = 102.52000
+            Result.RightX = 1.00000
+            Result.RightZ = 0.00000
+            Result.HalfWidth = 75.00000
+            Result.HalfDepth = 3.90000
+
+        Case 125
+            Result.X = -1160.00000
+            Result.Z = 2305.20004
+            Result.Height = 107.52000
+            Result.RightX = 1.00000
+            Result.RightZ = 0.00000
+            Result.HalfWidth = 75.00000
+            Result.HalfDepth = 3.90000
+
+        Case 126
+            Result.X = -1160.00000
+            Result.Z = 2312.40005
+            Result.Height = 112.52000
+            Result.RightX = 1.00000
+            Result.RightZ = 0.00000
+            Result.HalfWidth = 75.00000
+            Result.HalfDepth = 3.90000
+
+        Case 127
+            Result.X = -1160.00000
+            Result.Z = 2319.60007
+            Result.Height = 117.52000
+            Result.RightX = 1.00000
+            Result.RightZ = 0.00000
+            Result.HalfWidth = 75.00000
+            Result.HalfDepth = 3.90000
+
+        Case 128
+            Result.X = -1160.00000
+            Result.Z = 2326.79993
+            Result.Height = 122.52000
+            Result.RightX = 1.00000
+            Result.RightZ = 0.00000
+            Result.HalfWidth = 75.00000
+            Result.HalfDepth = 3.90000
+
+        Case 129
+            Result.X = -1160.00000
+            Result.Z = 2333.99994
+            Result.Height = 127.52000
+            Result.RightX = 1.00000
+            Result.RightZ = 0.00000
+            Result.HalfWidth = 75.00000
+            Result.HalfDepth = 3.90000
+
+        Case 130
+            Result.X = -1160.00000
+            Result.Z = 2341.19995
+            Result.Height = 132.52000
+            Result.RightX = 1.00000
+            Result.RightZ = 0.00000
+            Result.HalfWidth = 75.00000
+            Result.HalfDepth = 3.90000
+
+        Case 131
+            Result.X = -1160.00000
+            Result.Z = 2348.39996
+            Result.Height = 137.52000
+            Result.RightX = 1.00000
+            Result.RightZ = 0.00000
+            Result.HalfWidth = 75.00000
+            Result.HalfDepth = 3.90000
+
+        Case 132
+            Result.X = -1160.00000
+            Result.Z = 2355.59998
+            Result.Height = 142.52000
+            Result.RightX = 1.00000
+            Result.RightZ = 0.00000
+            Result.HalfWidth = 75.00000
+            Result.HalfDepth = 3.90000
+
+        Case 133
+            Result.X = -1160.00000
+            Result.Z = 2362.79999
+            Result.Height = 147.52000
+            Result.RightX = 1.00000
+            Result.RightZ = 0.00000
+            Result.HalfWidth = 75.00000
+            Result.HalfDepth = 3.90000
+
+        Case 134
+            Result.X = -1160.00000
+            Result.Z = 2370.00000
+            Result.Height = 152.52000
+            Result.RightX = 1.00000
+            Result.RightZ = 0.00000
+            Result.HalfWidth = 75.00000
+            Result.HalfDepth = 3.90000
+
+        Case 135
+            Result.X = -1160.00000
+            Result.Z = 2412.24991
+            Result.Height = 152.42000
+            Result.RightX = 1.00000
+            Result.RightZ = 0.00000
+            Result.HalfWidth = 61.00000
+            Result.HalfDepth = 40.65000
+
+        Case 136
+            Result.X = -1139.13750
+            Result.Z = -3122.99988
+            Result.Height = 26.75000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 7.75000
+            Result.HalfDepth = 5.53750
+
+        Case 137
+            Result.X = -1139.13750
+            Result.Z = -3077.00012
+            Result.Height = 26.75000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 7.75000
+            Result.HalfDepth = 5.53750
+
+        Case 138
+            Result.X = -1139.13750
+            Result.Z = -2702.99988
+            Result.Height = 26.75000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 7.75000
+            Result.HalfDepth = 5.53750
+
+        Case 139
+            Result.X = -1139.13750
+            Result.Z = -2657.00012
+            Result.Height = 26.75000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 7.75000
+            Result.HalfDepth = 5.53750
+
+        Case 140
+            Result.X = -1139.13750
+            Result.Z = -2283.00003
+            Result.Height = 26.75000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 7.75000
+            Result.HalfDepth = 5.53750
+
+        Case 141
+            Result.X = -1139.13750
+            Result.Z = -2236.99997
+            Result.Height = 26.75000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 7.75000
+            Result.HalfDepth = 5.53750
+
+        Case 142
+            Result.X = -1139.13750
+            Result.Z = -1863.00003
+            Result.Height = 26.75000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 7.75000
+            Result.HalfDepth = 5.53750
+
+        Case 143
+            Result.X = -1139.13750
+            Result.Z = -1816.99997
+            Result.Height = 26.75000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 7.75000
+            Result.HalfDepth = 5.53750
+
+        Case 144
+            Result.X = -1139.13750
+            Result.Z = -1443.00003
+            Result.Height = 26.75000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 7.75000
+            Result.HalfDepth = 5.53750
+
+        Case 145
+            Result.X = -1139.13750
+            Result.Z = -1396.99997
+            Result.Height = 26.75000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 7.75000
+            Result.HalfDepth = 5.53750
+
+        Case 146
+            Result.X = -1126.99997
+            Result.Z = -3100.00000
+            Result.Height = 26.80000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 4.00000
+
+        Case 147
+            Result.X = -1126.99997
+            Result.Z = -2680.00000
+            Result.Height = 26.80000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 4.00000
+
+        Case 148
+            Result.X = -1126.99997
+            Result.Z = -2260.00000
+            Result.Height = 26.80000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 4.00000
+
+        Case 149
+            Result.X = -1126.99997
+            Result.Z = -1840.00000
+            Result.Height = 26.80000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 4.00000
+
+        Case 150
+            Result.X = -1126.99997
+            Result.Z = -1420.00000
+            Result.Height = 26.80000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 4.00000
+
+        Case 151
+            Result.X = -1124.00002
+            Result.Z = -3100.00000
+            Result.Height = 25.40000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 5.50000
+
+        Case 152
+            Result.X = -1124.00002
+            Result.Z = -2680.00000
+            Result.Height = 25.40000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 5.50000
+
+        Case 153
+            Result.X = -1124.00002
+            Result.Z = -2260.00000
+            Result.Height = 25.40000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 5.50000
+
+        Case 154
+            Result.X = -1124.00002
+            Result.Z = -1840.00000
+            Result.Height = 25.40000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 5.50000
+
+        Case 155
+            Result.X = -1124.00002
+            Result.Z = -1420.00000
+            Result.Height = 25.40000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 5.50000
+
+        Case 156
+            Result.X = -1120.99998
+            Result.Z = -3100.00000
+            Result.Height = 24.00000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 7.00000
+
+        Case 157
+            Result.X = -1120.99998
+            Result.Z = -2680.00000
+            Result.Height = 24.00000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 7.00000
+
+        Case 158
+            Result.X = -1120.99998
+            Result.Z = -2260.00000
+            Result.Height = 24.00000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 7.00000
+
+        Case 159
+            Result.X = -1120.99998
+            Result.Z = -1840.00000
+            Result.Height = 24.00000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 7.00000
+
+        Case 160
+            Result.X = -1120.99998
+            Result.Z = -1420.00000
+            Result.Height = 24.00000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 7.00000
+
+        Case 161
+            Result.X = -905.90309
+            Result.Z = 1975.32608
+            Result.Height = 31.00696
+            Result.RightX = 0.79263
+            Result.RightZ = -0.60971
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 7.36953
+
+        Case 162
+            Result.X = -897.71400
+            Result.Z = 1985.97824
+            Result.Height = 37.09391
+            Result.RightX = 0.79297
+            Result.RightZ = -0.60926
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 7.36662
+
+        Case 163
+            Result.X = -889.53918
+            Result.Z = 1996.63040
+            Result.Height = 43.18087
+            Result.RightX = 0.79366
+            Result.RightZ = -0.60836
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 7.36080
+
+        Case 164
+            Result.X = -881.38832
+            Result.Z = 2007.28256
+            Result.Height = 49.26782
+            Result.RightX = 0.79469
+            Result.RightZ = -0.60702
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 7.35211
+
+        Case 165
+            Result.X = -873.27072
+            Result.Z = 2017.93488
+            Result.Height = 55.35478
+            Result.RightX = 0.79606
+            Result.RightZ = -0.60522
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 7.34056
+
+        Case 166
+            Result.X = -865.19608
+            Result.Z = 2028.58704
+            Result.Height = 61.44174
+            Result.RightX = 0.79777
+            Result.RightZ = -0.60296
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 7.32620
+
+        Case 167
+            Result.X = -857.17354
+            Result.Z = 2039.23920
+            Result.Height = 67.52870
+            Result.RightX = 0.79982
+            Result.RightZ = -0.60023
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 7.30907
+
+        Case 168
+            Result.X = -849.21265
+            Result.Z = 2049.89136
+            Result.Height = 73.61565
+            Result.RightX = 0.80221
+            Result.RightZ = -0.59704
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 7.28924
+
+        Case 169
+            Result.X = -841.32263
+            Result.Z = 2060.54352
+            Result.Height = 79.70261
+            Result.RightX = 0.80494
+            Result.RightZ = -0.59336
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 7.26678
+
+        Case 170
+            Result.X = -833.51273
+            Result.Z = 2071.19568
+            Result.Height = 85.78957
+            Result.RightX = 0.80799
+            Result.RightZ = -0.58919
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 7.24175
+
+        Case 171
+            Result.X = -825.79193
+            Result.Z = 2081.84784
+            Result.Height = 91.87652
+            Result.RightX = 0.81138
+            Result.RightZ = -0.58452
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 7.21425
+
+        Case 172
+            Result.X = -818.16940
+            Result.Z = 2092.50000
+            Result.Height = 97.96348
+            Result.RightX = 0.81509
+            Result.RightZ = -0.57934
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 7.18438
+
+        Case 173
+            Result.X = -810.65384
+            Result.Z = 2103.15216
+            Result.Height = 104.05044
+            Result.RightX = 0.81911
+            Result.RightZ = -0.57363
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 7.15225
+
+        Case 174
+            Result.X = -803.25417
+            Result.Z = 2113.80432
+            Result.Height = 110.13738
+            Result.RightX = 0.82346
+            Result.RightZ = -0.56738
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 7.11797
+
+        Case 175
+            Result.X = -795.97900
+            Result.Z = 2124.45648
+            Result.Height = 116.22434
+            Result.RightX = 0.82810
+            Result.RightZ = -0.56057
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 7.08166
+
+        Case 176
+            Result.X = -788.83667
+            Result.Z = 2135.10864
+            Result.Height = 122.31130
+            Result.RightX = 0.83305
+            Result.RightZ = -0.55320
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 7.04347
+
+        Case 177
+            Result.X = -781.83571
+            Result.Z = 2145.76080
+            Result.Height = 128.39826
+            Result.RightX = 0.83829
+            Result.RightZ = -0.54523
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 7.00355
+
+        Case 178
+            Result.X = -774.98413
+            Result.Z = 2156.41296
+            Result.Height = 134.48522
+            Result.RightX = 0.84380
+            Result.RightZ = -0.53666
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 6.96203
+
+        Case 179
+            Result.X = -768.28995
+            Result.Z = 2167.06528
+            Result.Height = 140.57218
+            Result.RightX = 0.84958
+            Result.RightZ = -0.52746
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 6.91910
+
+        Case 180
+            Result.X = -761.76109
+            Result.Z = 2177.71744
+            Result.Height = 146.65912
+            Result.RightX = 0.85561
+            Result.RightZ = -0.51763
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 6.87492
+
+        Case 181
+            Result.X = -755.40497
+            Result.Z = 2188.36960
+            Result.Height = 152.74608
+            Result.RightX = 0.86187
+            Result.RightZ = -0.50713
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 6.82968
+
+        Case 182
+            Result.X = -749.22913
+            Result.Z = 2199.02176
+            Result.Height = 158.83304
+            Result.RightX = 0.86835
+            Result.RightZ = -0.49595
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 6.78356
+
+        Case 183
+            Result.X = -743.24081
+            Result.Z = 2209.67392
+            Result.Height = 164.92000
+            Result.RightX = 0.87503
+            Result.RightZ = -0.48407
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 6.73676
+
+        Case 184
+            Result.X = -737.44690
+            Result.Z = 2220.32608
+            Result.Height = 171.00696
+            Result.RightX = 0.88188
+            Result.RightZ = -0.47148
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 6.68949
+
+        Case 185
+            Result.X = -731.85410
+            Result.Z = 2230.97824
+            Result.Height = 177.09392
+            Result.RightX = 0.88887
+            Result.RightZ = -0.45816
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 6.64196
+
+        Case 186
+            Result.X = -726.46912
+            Result.Z = 2241.63040
+            Result.Height = 183.18088
+            Result.RightX = 0.89599
+            Result.RightZ = -0.44408
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 6.59438
+
+        Case 187
+            Result.X = -721.29807
+            Result.Z = 2252.28256
+            Result.Height = 189.26782
+            Result.RightX = 0.90319
+            Result.RightZ = -0.42925
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 6.54699
+
+        Case 188
+            Result.X = -716.34705
+            Result.Z = 2262.93472
+            Result.Height = 195.35478
+            Result.RightX = 0.91044
+            Result.RightZ = -0.41364
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 6.50000
+
+        Case 189
+            Result.X = -711.62170
+            Result.Z = 2273.58688
+            Result.Height = 201.44174
+            Result.RightX = 0.91771
+            Result.RightZ = -0.39724
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 6.45365
+
+        Case 190
+            Result.X = -707.12784
+            Result.Z = 2284.23920
+            Result.Height = 207.52870
+            Result.RightX = 0.92496
+            Result.RightZ = -0.38006
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 6.40818
+
+        Case 191
+            Result.X = -702.87041
+            Result.Z = 2294.89136
+            Result.Height = 213.61566
+            Result.RightX = 0.93214
+            Result.RightZ = -0.36209
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 6.36381
+
+        Case 192
+            Result.X = -698.85452
+            Result.Z = 2305.54352
+            Result.Height = 219.70262
+            Result.RightX = 0.93921
+            Result.RightZ = -0.34333
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 6.32079
+
+        Case 193
+            Result.X = -695.08484
+            Result.Z = 2316.19568
+            Result.Height = 225.78956
+            Result.RightX = 0.94613
+            Result.RightZ = -0.32379
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 6.27935
+
+        Case 194
+            Result.X = -691.56570
+            Result.Z = 2326.84784
+            Result.Height = 231.87652
+            Result.RightX = 0.95284
+            Result.RightZ = -0.30348
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 6.23972
+
+        Case 195
+            Result.X = -688.30124
+            Result.Z = 2337.50000
+            Result.Height = 237.96348
+            Result.RightX = 0.95929
+            Result.RightZ = -0.28243
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 6.20212
+
+        Case 196
+            Result.X = -685.29526
+            Result.Z = 2348.15216
+            Result.Height = 244.05044
+            Result.RightX = 0.96544
+            Result.RightZ = -0.26064
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 6.16677
+
+        Case 197
+            Result.X = -682.55127
+            Result.Z = 2358.80432
+            Result.Height = 250.13740
+            Result.RightX = 0.97123
+            Result.RightZ = -0.23816
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 6.13389
+
+        Case 198
+            Result.X = -680.07256
+            Result.Z = 2369.45648
+            Result.Height = 256.22436
+            Result.RightX = 0.97661
+            Result.RightZ = -0.21503
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 6.10366
+
+        Case 199
+            Result.X = -677.86186
+            Result.Z = 2380.10864
+            Result.Height = 262.31130
+            Result.RightX = 0.98153
+            Result.RightZ = -0.19129
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 6.07629
+
+        Case 200
+            Result.X = -675.92186
+            Result.Z = 2390.76080
+            Result.Height = 268.39826
+            Result.RightX = 0.98596
+            Result.RightZ = -0.16698
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 6.05193
+
+        Case 201
+            Result.X = -674.25476
+            Result.Z = 2401.41312
+            Result.Height = 274.48522
+            Result.RightX = 0.98984
+            Result.RightZ = -0.14218
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 6.03075
+
+        Case 202
+            Result.X = -672.86255
+            Result.Z = 2412.06528
+            Result.Height = 280.57218
+            Result.RightX = 0.99314
+            Result.RightZ = -0.11695
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 6.01289
+
+        Case 203
+            Result.X = -671.74683
+            Result.Z = 2422.71744
+            Result.Height = 286.65914
+            Result.RightX = 0.99582
+            Result.RightZ = -0.09135
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 5.99845
+
+        Case 204
+            Result.X = -670.90889
+            Result.Z = 2433.36960
+            Result.Height = 292.74608
+            Result.RightX = 0.99786
+            Result.RightZ = -0.06546
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 5.98753
+
+        Case 205
+            Result.X = -670.34973
+            Result.Z = 2444.02176
+            Result.Height = 298.83304
+            Result.RightX = 0.99923
+            Result.RightZ = -0.03936
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 5.98022
+
+        Case 206
+            Result.X = -670.06996
+            Result.Z = 2454.67392
+            Result.Height = 304.92000
+            Result.RightX = 0.99991
+            Result.RightZ = -0.01313
+            Result.HalfWidth = 38.00000
+            Result.HalfDepth = 5.97655
+
+        Case 207
+            Result.X = 0.00000
+            Result.Z = -905.20004
+            Result.Height = 25.60000
+            Result.RightX = 1.00000
+            Result.RightZ = 0.00000
+            Result.HalfWidth = 60.00000
+            Result.HalfDepth = 29.60000
+
+        Case 208
+            Result.X = 0.00000
+            Result.Z = -901.50002
+            Result.Height = 28.60000
+            Result.RightX = 1.00000
+            Result.RightZ = 0.00000
+            Result.HalfWidth = 60.00000
+            Result.HalfDepth = 25.90000
+
+        Case 209
+            Result.X = 0.00000
+            Result.Z = -897.79999
+            Result.Height = 31.60000
+            Result.RightX = 1.00000
+            Result.RightZ = 0.00000
+            Result.HalfWidth = 60.00000
+            Result.HalfDepth = 22.20000
+
+        Case 210
+            Result.X = 0.00000
+            Result.Z = -894.10004
+            Result.Height = 34.60000
+            Result.RightX = 1.00000
+            Result.RightZ = 0.00000
+            Result.HalfWidth = 60.00000
+            Result.HalfDepth = 18.50000
+
+        Case 211
+            Result.X = 0.00000
+            Result.Z = -890.40001
+            Result.Height = 37.60000
+            Result.RightX = 1.00000
+            Result.RightZ = 0.00000
+            Result.HalfWidth = 60.00000
+            Result.HalfDepth = 14.80000
+
+        Case 212
+            Result.X = 0.00000
+            Result.Z = -886.69998
+            Result.Height = 40.60000
+            Result.RightX = 1.00000
+            Result.RightZ = 0.00000
+            Result.HalfWidth = 60.00000
+            Result.HalfDepth = 11.10000
+
+        Case 213
+            Result.X = 0.00000
+            Result.Z = -883.00003
+            Result.Height = 43.60000
+            Result.RightX = 1.00000
+            Result.RightZ = 0.00000
+            Result.HalfWidth = 60.00000
+            Result.HalfDepth = 7.40000
+
+        Case 214
+            Result.X = 0.00000
+            Result.Z = -879.30000
+            Result.Height = 46.60000
+            Result.RightX = 1.00000
+            Result.RightZ = 0.00000
+            Result.HalfWidth = 60.00000
+            Result.HalfDepth = 3.70000
+
+        Case 215
+            Result.X = 0.00000
+            Result.Z = -846.95946
+            Result.Height = 47.00000
+            Result.RightX = 1.00000
+            Result.RightZ = 0.00000
+            Result.HalfWidth = 44.37000
+            Result.HalfDepth = 29.84050
+
+        Case 216
+            Result.X = 0.00000
+            Result.Z = -633.24799
+            Result.Height = 35.80000
+            Result.RightX = -1.00000
+            Result.RightZ = -0.00000
+            Result.HalfWidth = 13.92000
+            Result.HalfDepth = 10.04800
+
+        Case 217
+            Result.X = 0.00000
+            Result.Z = 398.79997
+            Result.Height = 28.40000
+            Result.RightX = 1.00000
+            Result.RightZ = 0.00000
+            Result.HalfWidth = 71.00000
+            Result.HalfDepth = 37.20000
+
+        Case 218
+            Result.X = 0.00000
+            Result.Z = 405.00000
+            Result.Height = 34.20000
+            Result.RightX = 1.00000
+            Result.RightZ = 0.00000
+            Result.HalfWidth = 71.00000
+            Result.HalfDepth = 31.00000
+
+        Case 219
+            Result.X = 0.00000
+            Result.Z = 411.20003
+            Result.Height = 40.00000
+            Result.RightX = 1.00000
+            Result.RightZ = 0.00000
+            Result.HalfWidth = 71.00000
+            Result.HalfDepth = 24.80000
+
+        Case 220
+            Result.X = 0.00000
+            Result.Z = 417.39998
+            Result.Height = 45.80000
+            Result.RightX = 1.00000
+            Result.RightZ = 0.00000
+            Result.HalfWidth = 71.00000
+            Result.HalfDepth = 18.60000
+
+        Case 221
+            Result.X = 0.00000
+            Result.Z = 423.60001
+            Result.Height = 51.60000
+            Result.RightX = 1.00000
+            Result.RightZ = 0.00000
+            Result.HalfWidth = 71.00000
+            Result.HalfDepth = 12.40000
+
+        Case 222
+            Result.X = 0.00000
+            Result.Z = 429.80000
+            Result.Height = 57.40000
+            Result.RightX = 1.00000
+            Result.RightZ = 0.00000
+            Result.HalfWidth = 71.00000
+            Result.HalfDepth = 6.20000
+
+        Case 223
+            Result.X = 0.00000
+            Result.Z = 454.93694
+            Result.Height = 58.20000
+            Result.RightX = 1.00000
+            Result.RightZ = 0.00000
+            Result.HalfWidth = 46.98000
+            Result.HalfDepth = 32.53700
+
+        Case 224
+            Result.X = 0.00000
+            Result.Z = 757.59995
+            Result.Height = 40.20000
+            Result.RightX = -1.00000
+            Result.RightZ = -0.00000
+            Result.HalfWidth = 26.10000
+            Result.HalfDepth = 20.00000
+
+        Case 225
+            Result.X = 1140.99998
+            Result.Z = -900.00000
+            Result.Height = 24.00000
+            Result.RightX = -0.00000
+            Result.RightZ = -1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 7.00000
+
+        Case 226
+            Result.X = 1140.99998
+            Result.Z = -560.00000
+            Result.Height = 24.00000
+            Result.RightX = -0.00000
+            Result.RightZ = -1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 7.00000
+
+        Case 227
+            Result.X = 1140.99998
+            Result.Z = -220.00000
+            Result.Height = 24.00000
+            Result.RightX = -0.00000
+            Result.RightZ = -1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 7.00000
+
+        Case 228
+            Result.X = 1140.99998
+            Result.Z = 120.00000
+            Result.Height = 24.00000
+            Result.RightX = -0.00000
+            Result.RightZ = -1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 7.00000
+
+        Case 229
+            Result.X = 1140.99998
+            Result.Z = 460.00000
+            Result.Height = 24.00000
+            Result.RightX = -0.00000
+            Result.RightZ = -1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 7.00000
+
+        Case 230
+            Result.X = 1140.99998
+            Result.Z = 800.00000
+            Result.Height = 24.00000
+            Result.RightX = -0.00000
+            Result.RightZ = -1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 7.00000
+
+        Case 231
+            Result.X = 1144.00002
+            Result.Z = -900.00000
+            Result.Height = 25.40000
+            Result.RightX = -0.00000
+            Result.RightZ = -1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 5.50000
+
+        Case 232
+            Result.X = 1144.00002
+            Result.Z = -560.00000
+            Result.Height = 25.40000
+            Result.RightX = -0.00000
+            Result.RightZ = -1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 5.50000
+
+        Case 233
+            Result.X = 1144.00002
+            Result.Z = -220.00000
+            Result.Height = 25.40000
+            Result.RightX = -0.00000
+            Result.RightZ = -1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 5.50000
+
+        Case 234
+            Result.X = 1144.00002
+            Result.Z = 120.00000
+            Result.Height = 25.40000
+            Result.RightX = -0.00000
+            Result.RightZ = -1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 5.50000
+
+        Case 235
+            Result.X = 1144.00002
+            Result.Z = 460.00000
+            Result.Height = 25.40000
+            Result.RightX = -0.00000
+            Result.RightZ = -1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 5.50000
+
+        Case 236
+            Result.X = 1144.00002
+            Result.Z = 800.00000
+            Result.Height = 25.40000
+            Result.RightX = -0.00000
+            Result.RightZ = -1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 5.50000
+
+        Case 237
+            Result.X = 1146.99997
+            Result.Z = -900.00000
+            Result.Height = 26.80000
+            Result.RightX = -0.00000
+            Result.RightZ = -1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 4.00000
+
+        Case 238
+            Result.X = 1146.99997
+            Result.Z = -560.00000
+            Result.Height = 26.80000
+            Result.RightX = -0.00000
+            Result.RightZ = -1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 4.00000
+
+        Case 239
+            Result.X = 1146.99997
+            Result.Z = -220.00000
+            Result.Height = 26.80000
+            Result.RightX = -0.00000
+            Result.RightZ = -1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 4.00000
+
+        Case 240
+            Result.X = 1146.99997
+            Result.Z = 120.00000
+            Result.Height = 26.80000
+            Result.RightX = -0.00000
+            Result.RightZ = -1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 4.00000
+
+        Case 241
+            Result.X = 1146.99997
+            Result.Z = 460.00000
+            Result.Height = 26.80000
+            Result.RightX = -0.00000
+            Result.RightZ = -1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 4.00000
+
+        Case 242
+            Result.X = 1146.99997
+            Result.Z = 800.00000
+            Result.Height = 26.80000
+            Result.RightX = -0.00000
+            Result.RightZ = -1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 4.00000
+
+        Case 243
+            Result.X = 1159.13750
+            Result.Z = -900.00000
+            Result.Height = 26.75000
+            Result.RightX = -0.00000
+            Result.RightZ = -1.00000
+            Result.HalfWidth = 7.75000
+            Result.HalfDepth = 5.53750
+
+        Case 244
+            Result.X = 1159.13750
+            Result.Z = -560.00000
+            Result.Height = 26.75000
+            Result.RightX = -0.00000
+            Result.RightZ = -1.00000
+            Result.HalfWidth = 7.75000
+            Result.HalfDepth = 5.53750
+
+        Case 245
+            Result.X = 1159.13750
+            Result.Z = -220.00000
+            Result.Height = 26.75000
+            Result.RightX = -0.00000
+            Result.RightZ = -1.00000
+            Result.HalfWidth = 7.75000
+            Result.HalfDepth = 5.53750
+
+        Case 246
+            Result.X = 1159.13750
+            Result.Z = 120.00000
+            Result.Height = 26.75000
+            Result.RightX = -0.00000
+            Result.RightZ = -1.00000
+            Result.HalfWidth = 7.75000
+            Result.HalfDepth = 5.53750
+
+        Case 247
+            Result.X = 1159.13750
+            Result.Z = 460.00000
+            Result.Height = 26.75000
+            Result.RightX = -0.00000
+            Result.RightZ = -1.00000
+            Result.HalfWidth = 7.75000
+            Result.HalfDepth = 5.53750
+
+        Case 248
+            Result.X = 1159.13750
+            Result.Z = 800.00000
+            Result.Height = 26.75000
+            Result.RightX = -0.00000
+            Result.RightZ = -1.00000
+            Result.HalfWidth = 7.75000
+            Result.HalfDepth = 5.53750
+
+        Case 249
+            Result.X = 1201.44997
+            Result.Z = -2600.00000
+            Result.Height = 24.50000
+            Result.RightX = -0.00000
+            Result.RightZ = -1.00000
+            Result.HalfWidth = 22.00000
+            Result.HalfDepth = 7.75000
+
+        Case 250
+            Result.X = 1201.44997
+            Result.Z = -2080.00000
+            Result.Height = 24.50000
+            Result.RightX = -0.00000
+            Result.RightZ = -1.00000
+            Result.HalfWidth = 22.00000
+            Result.HalfDepth = 7.75000
+
+        Case 251
+            Result.X = 1201.44997
+            Result.Z = -1560.00000
+            Result.Height = 24.50000
+            Result.RightX = -0.00000
+            Result.RightZ = -1.00000
+            Result.HalfWidth = 22.00000
+            Result.HalfDepth = 7.75000
+
+        Case 252
+            Result.X = 1203.00003
+            Result.Z = -2600.00000
+            Result.Height = 26.00000
+            Result.RightX = -0.00000
+            Result.RightZ = -1.00000
+            Result.HalfWidth = 22.00000
+            Result.HalfDepth = 6.20000
+
+        Case 253
+            Result.X = 1203.00003
+            Result.Z = -2080.00000
+            Result.Height = 26.00000
+            Result.RightX = -0.00000
+            Result.RightZ = -1.00000
+            Result.HalfWidth = 22.00000
+            Result.HalfDepth = 6.20000
+
+        Case 254
+            Result.X = 1203.00003
+            Result.Z = -1560.00000
+            Result.Height = 26.00000
+            Result.RightX = -0.00000
+            Result.RightZ = -1.00000
+            Result.HalfWidth = 22.00000
+            Result.HalfDepth = 6.20000
+
+        Case 255
+            Result.X = 1204.55002
+            Result.Z = -2600.00000
+            Result.Height = 27.50000
+            Result.RightX = -0.00000
+            Result.RightZ = -1.00000
+            Result.HalfWidth = 22.00000
+            Result.HalfDepth = 4.65000
+
+        Case 256
+            Result.X = 1204.55002
+            Result.Z = -2080.00000
+            Result.Height = 27.50000
+            Result.RightX = -0.00000
+            Result.RightZ = -1.00000
+            Result.HalfWidth = 22.00000
+            Result.HalfDepth = 4.65000
+
+        Case 257
+            Result.X = 1204.55002
+            Result.Z = -1560.00000
+            Result.Height = 27.50000
+            Result.RightX = -0.00000
+            Result.RightZ = -1.00000
+            Result.HalfWidth = 22.00000
+            Result.HalfDepth = 4.65000
+
+        Case 258
+            Result.X = 1206.10001
+            Result.Z = -2600.00000
+            Result.Height = 29.00000
+            Result.RightX = -0.00000
+            Result.RightZ = -1.00000
+            Result.HalfWidth = 22.00000
+            Result.HalfDepth = 3.10000
+
+        Case 259
+            Result.X = 1206.10001
+            Result.Z = -2080.00000
+            Result.Height = 29.00000
+            Result.RightX = -0.00000
+            Result.RightZ = -1.00000
+            Result.HalfWidth = 22.00000
+            Result.HalfDepth = 3.10000
+
+        Case 260
+            Result.X = 1206.10001
+            Result.Z = -1560.00000
+            Result.Height = 29.00000
+            Result.RightX = -0.00000
+            Result.RightZ = -1.00000
+            Result.HalfWidth = 22.00000
+            Result.HalfDepth = 3.10000
+
+        Case 261
+            Result.X = 1207.64999
+            Result.Z = -2600.00000
+            Result.Height = 30.50000
+            Result.RightX = -0.00000
+            Result.RightZ = -1.00000
+            Result.HalfWidth = 22.00000
+            Result.HalfDepth = 1.55000
+
+        Case 262
+            Result.X = 1207.64999
+            Result.Z = -2080.00000
+            Result.Height = 30.50000
+            Result.RightX = -0.00000
+            Result.RightZ = -1.00000
+            Result.HalfWidth = 22.00000
+            Result.HalfDepth = 1.55000
+
+        Case 263
+            Result.X = 1207.64999
+            Result.Z = -1560.00000
+            Result.Height = 30.50000
+            Result.RightX = -0.00000
+            Result.RightZ = -1.00000
+            Result.HalfWidth = 22.00000
+            Result.HalfDepth = 1.55000
+
+        Case 264
+            Result.X = 1218.84445
+            Result.Z = -2600.00000
+            Result.Height = 30.80000
+            Result.RightX = -0.00000
+            Result.RightZ = -1.00000
+            Result.HalfWidth = 16.53000
+            Result.HalfDepth = 11.24450
+
+        Case 265
+            Result.X = 1218.84445
+            Result.Z = -2080.00000
+            Result.Height = 30.80000
+            Result.RightX = -0.00000
+            Result.RightZ = -1.00000
+            Result.HalfWidth = 16.53000
+            Result.HalfDepth = 11.24450
+
+        Case 266
+            Result.X = 1218.84445
+            Result.Z = -1560.00000
+            Result.Height = 30.80000
+            Result.RightX = -0.00000
+            Result.RightZ = -1.00000
+            Result.HalfWidth = 16.53000
+            Result.HalfDepth = 11.24450
+
+        Case 267
+            Result.X = 1250.00000
+            Result.Z = -2648.39996
+            Result.Height = 27.40000
+            Result.RightX = 1.00000
+            Result.RightZ = -0.00000
+            Result.HalfWidth = 4.56750
+            Result.HalfDepth = 5.00000
+
+        Case 268
+            Result.X = 1250.00000
+            Result.Z = -2551.60004
+            Result.Height = 27.40000
+            Result.RightX = -1.00000
+            Result.RightZ = -0.00000
+            Result.HalfWidth = 4.56750
+            Result.HalfDepth = 5.00000
+
+        Case 269
+            Result.X = 1250.00000
+            Result.Z = -2128.39996
+            Result.Height = 27.40000
+            Result.RightX = 1.00000
+            Result.RightZ = -0.00000
+            Result.HalfWidth = 4.56750
+            Result.HalfDepth = 5.00000
+
+        Case 270
+            Result.X = 1250.00000
+            Result.Z = -2031.60004
+            Result.Height = 27.40000
+            Result.RightX = -1.00000
+            Result.RightZ = -0.00000
+            Result.HalfWidth = 4.56750
+            Result.HalfDepth = 5.00000
+
+        Case 271
+            Result.X = 1250.00000
+            Result.Z = -1608.39996
+            Result.Height = 27.40000
+            Result.RightX = 1.00000
+            Result.RightZ = -0.00000
+            Result.HalfWidth = 4.56750
+            Result.HalfDepth = 5.00000
+
+        Case 272
+            Result.X = 1250.00008
+            Result.Z = -1511.60004
+            Result.Height = 27.40000
+            Result.RightX = -1.00000
+            Result.RightZ = -0.00000
+            Result.HalfWidth = 4.56750
+            Result.HalfDepth = 5.00000
+
+        Case 273
+            Result.X = 1287.39990
+            Result.Z = -2051.99997
+            Result.Height = 27.70000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 4.78500
+            Result.HalfDepth = 5.00000
+
+        Case 274
+            Result.X = 1287.39990
+            Result.Z = -1531.99997
+            Result.Height = 27.70000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 4.78500
+            Result.HalfDepth = 5.00000
+
+        Case 275
+            Result.X = 1287.40005
+            Result.Z = -2572.00012
+            Result.Height = 27.70000
+            Result.RightX = -0.00000
+            Result.RightZ = 1.00000
+            Result.HalfWidth = 4.78500
+            Result.HalfDepth = 5.00000
+
+        Case 276
+            Result.X = 1450.00000
+            Result.Z = 2698.50006
+            Result.Height = 28.20000
+            Result.RightX = 1.00000
+            Result.RightZ = 0.00000
+            Result.HalfWidth = 46.00000
+            Result.HalfDepth = 30.90000
+
+        Case 277
+            Result.X = 2081.00006
+            Result.Z = -900.00000
+            Result.Height = 24.00000
+            Result.RightX = -0.00000
+            Result.RightZ = -1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 7.00000
+
+        Case 278
+            Result.X = 2081.00006
+            Result.Z = -560.00000
+            Result.Height = 24.00000
+            Result.RightX = -0.00000
+            Result.RightZ = -1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 7.00000
+
+        Case 279
+            Result.X = 2081.00006
+            Result.Z = -220.00000
+            Result.Height = 24.00000
+            Result.RightX = -0.00000
+            Result.RightZ = -1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 7.00000
+
+        Case 280
+            Result.X = 2081.00006
+            Result.Z = 120.00000
+            Result.Height = 24.00000
+            Result.RightX = -0.00000
+            Result.RightZ = -1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 7.00000
+
+        Case 281
+            Result.X = 2081.00006
+            Result.Z = 460.00000
+            Result.Height = 24.00000
+            Result.RightX = -0.00000
+            Result.RightZ = -1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 7.00000
+
+        Case 282
+            Result.X = 2081.00006
+            Result.Z = 800.00000
+            Result.Height = 24.00000
+            Result.RightX = -0.00000
+            Result.RightZ = -1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 7.00000
+
+        Case 283
+            Result.X = 2083.99994
+            Result.Z = -900.00000
+            Result.Height = 25.40000
+            Result.RightX = -0.00000
+            Result.RightZ = -1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 5.50000
+
+        Case 284
+            Result.X = 2083.99994
+            Result.Z = -560.00000
+            Result.Height = 25.40000
+            Result.RightX = -0.00000
+            Result.RightZ = -1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 5.50000
+
+        Case 285
+            Result.X = 2083.99994
+            Result.Z = -220.00000
+            Result.Height = 25.40000
+            Result.RightX = -0.00000
+            Result.RightZ = -1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 5.50000
+
+        Case 286
+            Result.X = 2083.99994
+            Result.Z = 120.00000
+            Result.Height = 25.40000
+            Result.RightX = -0.00000
+            Result.RightZ = -1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 5.50000
+
+        Case 287
+            Result.X = 2083.99994
+            Result.Z = 460.00000
+            Result.Height = 25.40000
+            Result.RightX = -0.00000
+            Result.RightZ = -1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 5.50000
+
+        Case 288
+            Result.X = 2083.99994
+            Result.Z = 800.00000
+            Result.Height = 25.40000
+            Result.RightX = -0.00000
+            Result.RightZ = -1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 5.50000
+
+        Case 289
+            Result.X = 2086.99997
+            Result.Z = -900.00000
+            Result.Height = 26.80000
+            Result.RightX = -0.00000
+            Result.RightZ = -1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 4.00000
+
+        Case 290
+            Result.X = 2086.99997
+            Result.Z = -560.00000
+            Result.Height = 26.80000
+            Result.RightX = -0.00000
+            Result.RightZ = -1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 4.00000
+
+        Case 291
+            Result.X = 2086.99997
+            Result.Z = -220.00000
+            Result.Height = 26.80000
+            Result.RightX = -0.00000
+            Result.RightZ = -1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 4.00000
+
+        Case 292
+            Result.X = 2086.99997
+            Result.Z = 120.00000
+            Result.Height = 26.80000
+            Result.RightX = -0.00000
+            Result.RightZ = -1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 4.00000
+
+        Case 293
+            Result.X = 2086.99997
+            Result.Z = 460.00000
+            Result.Height = 26.80000
+            Result.RightX = -0.00000
+            Result.RightZ = -1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 4.00000
+
+        Case 294
+            Result.X = 2086.99997
+            Result.Z = 800.00000
+            Result.Height = 26.80000
+            Result.RightX = -0.00000
+            Result.RightZ = -1.00000
+            Result.HalfWidth = 20.00000
+            Result.HalfDepth = 4.00000
+
+        Case 295
+            Result.X = 2099.13742
+            Result.Z = -900.00000
+            Result.Height = 26.75000
+            Result.RightX = -0.00000
+            Result.RightZ = -1.00000
+            Result.HalfWidth = 7.75000
+            Result.HalfDepth = 5.53750
+
+        Case 296
+            Result.X = 2099.13742
+            Result.Z = -560.00000
+            Result.Height = 26.75000
+            Result.RightX = -0.00000
+            Result.RightZ = -1.00000
+            Result.HalfWidth = 7.75000
+            Result.HalfDepth = 5.53750
+
+        Case 297
+            Result.X = 2099.13742
+            Result.Z = -220.00000
+            Result.Height = 26.75000
+            Result.RightX = -0.00000
+            Result.RightZ = -1.00000
+            Result.HalfWidth = 7.75000
+            Result.HalfDepth = 5.53750
+
+        Case 298
+            Result.X = 2099.13742
+            Result.Z = 120.00000
+            Result.Height = 26.75000
+            Result.RightX = -0.00000
+            Result.RightZ = -1.00000
+            Result.HalfWidth = 7.75000
+            Result.HalfDepth = 5.53750
+
+        Case 299
+            Result.X = 2099.13742
+            Result.Z = 460.00000
+            Result.Height = 26.75000
+            Result.RightX = -0.00000
+            Result.RightZ = -1.00000
+            Result.HalfWidth = 7.75000
+            Result.HalfDepth = 5.53750
+
+        Case 300
+            Result.X = 2099.13742
+            Result.Z = 800.00000
+            Result.Height = 26.75000
+            Result.RightX = -0.00000
+            Result.RightZ = -1.00000
+            Result.HalfWidth = 7.75000
+            Result.HalfDepth = 5.53750
+
+        Case 301
+            Result.X = 2286.60004
+            Result.Z = 290.00000
+            Result.Height = 27.20000
+            Result.RightX = -0.00000
+            Result.RightZ = -1.00000
+            Result.HalfWidth = 6.30750
+            Result.HalfDepth = 5.00000
+
+        Case 302
+            Result.X = 2291.60004
+            Result.Z = -730.00000
+            Result.Height = 27.20000
+            Result.RightX = -0.00000
+            Result.RightZ = -1.00000
+            Result.HalfWidth = 6.30750
+            Result.HalfDepth = 5.00000
+
+    End Select
+
+    Return Result
+
+End Function
+
+End Module

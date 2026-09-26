@@ -1628,6 +1628,34 @@ Public Function SetVisible(ByRef Value As Actor, Visible As Boolean) As Boolean
 
 End Function
 
+''' Fade one actor without modifying materials shared by other actors.
+Public Function SetOpacity(ByRef Value As Actor, Percent As Number) As Boolean
+
+    Dim Slot As Number
+    Dim PartIndex As Number
+
+    Slot = ActorSlot(Value)
+
+    If Slot < 0 Then
+        Return False
+    End If
+
+    If Percent < 0 Or Percent > 100 Then
+        Call SetActorFailure(Slot, CHARACTER_ERROR_INVALID_ARGUMENT, 0)
+
+        Return False
+    End If
+
+    For PartIndex = 0 To ActorPartCounts[Slot] - 1
+        Call Graphics3D.SetObjectOpacity(ActorParts[Slot, PartIndex], Percent)
+    End For
+
+    Call ClearActorError(Slot)
+
+    Return True
+
+End Function
+
 ''' Applies cast/receive shadow participation to every owned actor part transactionally.
 Public Function SetShadows(
     ByRef Value As Actor,

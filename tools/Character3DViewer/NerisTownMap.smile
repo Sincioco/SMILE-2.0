@@ -4,6 +4,7 @@ Module Smile.Tools.NerisTownMap
 Option Explicit
 
 Import Smile.Simple3D.Precision3D As P
+Import Smile.Tools.Character3DViewerCalibration As Numbers
 
 Public Type State
     Backing As Image
@@ -71,7 +72,7 @@ Public Function MapX(WorldX As Double, Origin As Number, Size As Number) As Numb
 
     Dim Result As Number
 
-    Result = Origin + ToNumber(Round((Clamp(WorldX, -3270.0, 1780.0) + 3270.0) * ToDouble(Size) / 5050.0))
+    Result = Origin + ToNumber(Round((Clamp(WorldX, -4900.0, 2750.0) + 4900.0) * ToDouble(Size) / 7650.0))
 
     Return Result
 
@@ -81,7 +82,7 @@ Public Function MapY(WorldZ As Double, Origin As Number, Size As Number) As Numb
 
     Dim Result As Number
 
-    Result = Origin + ToNumber(Round((2830.0 - Clamp(WorldZ, -1200.0, 2830.0)) * ToDouble(Size) / 4030.0))
+    Result = Origin + ToNumber(Round((3550.0 - Clamp(WorldZ, -3550.0, 3550.0)) * ToDouble(Size) / 7100.0))
 
     Return Result
 
@@ -98,7 +99,8 @@ Public Function HeadingFrame(Yaw As Double) As Number
 
 End Function
 
-Public Sub Draw(ByRef Value As State, Position As P.Vector3, Yaw As Double)
+Public Sub Draw(ByRef Value As State, Position As P.Vector3, Yaw As Double,
+    Orbiting As Boolean, Optional LeaderName As Text = "Arin")
 
     Dim X As Number
     Dim Y As Number
@@ -110,10 +112,11 @@ Public Sub Draw(ByRef Value As State, Position As P.Vector3, Yaw As Double)
     Dim Frame As Number
     Dim SourceX As Number
     Dim SourceY As Number
+    Dim Coordinates As Text
 
     Opacity = ToNumber(Value.Opacity)
 
-    If Opacity <= 0 Then
+    If Opacity <= 0 Or Orbiting Then
         Return
     End If
 
@@ -123,6 +126,7 @@ Public Sub Draw(ByRef Value As State, Position As P.Vector3, Yaw As Double)
     Y = 104
     MarkerX = MapX(Position.X, X + Width * 30 / 1140, Width * 1080 / 1140)
     MarkerY = MapY(Position.Z, Y + Height * 90 / 1080, Height * 940 / 1080)
+    Coordinates = LeaderName + " X: " + Numbers.NumberText(ToNumber(Round(Position.X))) + "  Y: " + Numbers.NumberText(ToNumber(Round(Position.Y))) + "  Z: " + Numbers.NumberText(ToNumber(Round(Position.Z)))
     Frame = HeadingFrame(Yaw)
     SourceX = (Frame Mod 12) * 96
     SourceY = (Frame / 12) * 96
@@ -130,6 +134,8 @@ Public Sub Draw(ByRef Value As State, Position As P.Vector3, Yaw As Double)
     Draw Image Value.Backing At X, Y Size Width By Height Opacity Opacity Filter Smooth
     Draw Image Value.Headlight From SourceX, SourceY Size 96 By 96 At MarkerX - 28, MarkerY - 28 Size 56 By 56 Opacity Opacity Filter Smooth
     Draw Image Value.Marker At MarkerX - 5, MarkerY - 5 Size 10 By 10 Opacity Opacity Filter Smooth
+
+    Draw Text Coordinates At X + 6, Y + Height - 13 Size 11 Color RGB(236, 229, 196)
 
 End Sub
 

@@ -17,6 +17,9 @@ Import Smile.Tools.NerisTownNavigation As Navigation
 Import Smile.Tools.Character3DViewerCalibration As Numbers
 Import Smile.Tools.NerisTownAppearance As Appearance
 Import Smile.Tools.NerisTownMap As TownMap
+Import Smile.Tools.NerisTownCamera As Drone
+Import Smile.Tools.NerisTownCameraPanel As CameraPanel
+Import Smile.Tools.NerisTownEntrances As Entrances
 
 Public Type State
     Town As Assets.State
@@ -27,29 +30,34 @@ Public Type State
     BaseCamera As P.Camera3D
     Cinematic As Boolean
     Follow As Boolean
+    Flight As Drone.State
+    Panel As CameraPanel.State
+    Doors As Entrances.State
     Ready As Boolean
     Failed As Boolean
 End Type
 
 Public Sub Start(ByRef Value As State)
 
-    Dim Empty As State
     Dim Ok As Boolean
 
+    Dim Empty As State
+
     Value = Empty
-    Value.Cinematic = True
+    Value.Follow = True
     Value.BaseCamera.UpDirection = P.Vector(0.0, 1.0, 0.0)
     ' Town-scale depth precision keeps thin paving layers separated during orbit.
     Value.BaseCamera.NearPlane = 25.0
-    Value.BaseCamera.FarPlane = 12000.0
+    Value.BaseCamera.FarPlane = 25000.0
     ' A narrower lens avoids wide-angle stretching; distance retains the town framing.
     Value.BaseCamera.FovDegrees = 32.0
-    Value.BaseCamera.Target = P.Vector(-700.0, 140.0, 680.0)
-    Value.BaseCamera.Position = P.Vector(1900.0, 2940.0, -3170.0)
+    Value.BaseCamera.Target = P.Vector(-85.0, 65.12, -2540.0)
+    Value.BaseCamera.Position = P.Vector(-20.0, 49.12, -3000.0)
     Ok = Rendering.PrepareAssetLoading(0)
     Value.Failed = Not Ok
 
     Call Party.Start(Value.People)
+    Call Drone.Start(Value.Flight)
 
 End Sub
 
@@ -81,30 +89,68 @@ Public Sub LoadNext(ByRef Value As State)
 
     End If
 
-    Value.View = Arena.Create(6800, 6000, 6.0)
+    Value.View = Arena.Create(11000, 10000, 6.0)
     Value.View.MinimumDistance = 80.0
-    Value.View.MaximumDistance = 8500.0
+    Value.View.MaximumDistance = 18000.0
     Value.View.FloorVisible = False
     Value.View.GridVisible = False
     Ok = Appearance.Create(Value.Look)
     Ok = TownMap.Create(Value.Map) And Ok
-    Ok = Scene.SetShadowArea(-745, 650, 815, 5400, 4300, 1, 8500) And Ok
+    Ok = Entrances.Create(Value.Doors) And Ok
+    Ok = Scene.SetShadowArea(-1000, 650, 0, 8000, 7600, 1, 11000) And Ok
     Value.Ready = Value.View.Ready And Value.People.Ready And Ok
     Value.Failed = Not Value.Ready
 
     Call Party.Update(Value.People, Value.People.Path.Positions[0], 0)
+
+    Call Arena.ComposeCamera(Value.View, Value.BaseCamera)
+    Call Drone.Focus(Value.Flight, Value.People.Members[0].Yaw, Value.View.LiveCamera)
+
+    Value.Flight.Arrival = True
 
 End Sub
 
 Public Sub Input(ByRef Value As State, Key As Number, Blocked As Boolean)
 
     Dim Pointer As Motion.PointerInput
+    Dim ArenaKey As Number
+    Dim PanelAction As Number
 
     If Not Value.Ready Then
         Return
     End If
 
+    PanelAction = CameraPanel.Input(Value.Panel, Value.View, Value.BaseCamera, Blocked)
+    Blocked = Blocked Or CameraPanel.Hovered() Or Value.Panel.DragRow > 0
+
+    If PanelAction = 1 Then
+
+        If Value.Cinematic Then
+            Value.Cinematic = False
+        Else
+
+            Call StartOrbit(Value)
+        End If
+
+    Else If PanelAction = 2 Then
+
+        Call FitTown(Value)
+
+    Else If PanelAction = 3 Then
+
+        Value.Cinematic = False
+        Value.Flight.Suspended = True
+
+    End If
+
     Pointer = Motion.ReadPointer(Blocked)
+    ArenaKey = Key
+
+    If Key = KEY_F And Key_Event_Held(KEY_CONTROL) Then
+        ArenaKey = 0
+
+        Call ToggleDrone(Value)
+    End If
 
     If Key = KEY_M Then
         Call TownMap.Toggle(Value.Map)
@@ -123,6 +169,13 @@ Public Sub Input(ByRef Value As State, Key As Number, Blocked As Boolean)
     If (Not Blocked And
         (Pointer.OrbitPressed Or Pointer.PanPressed Or Pointer_Pressed(POINTER_PRIMARY))) Then
         Value.Cinematic = False
+        Value.Flight.Suspended = True
+    End If
+
+    If Not Blocked And Pointer.OrbitPressed And Value.Follow Then
+        Call StartOrbit(Value)
+
+        Value.Cinematic = False
     End If
 
     If Not Blocked And Pointer_Pressed(POINTER_SECONDARY) Then
@@ -133,55 +186,97 @@ Public Sub Input(ByRef Value As State, Key As Number, Blocked As Boolean)
 
         Call StartOrbit(Value)
 
+    Else If Key = KEY_TAB And Key_Event_Held(KEY_CONTROL) Then
+
+        Call Party.CycleLeader(Value.People)
+
     Else If Key = KEY_TAB Then
 
-        Call Arena.BeginTransition(Value.View)
+        Value.Flight.Focusing = True
+        Value.Flight.Enabled = True
 
-        Value.Follow = Not Value.Follow
+        Call Arena.BeginTransition(Value.View, 1000)
+
+        Value.Follow = True
         Value.Cinematic = False
 
+        Call Drone.Focus(Value.Flight, 180.0, Value.View.LiveCamera)
         Call Motion.Reset(Value.View.Controls, Value.View.Zoom)
 
     End If
 
-    Call Arena.Update(Value.View, Key, Blocked)
+    Call Arena.Update(Value.View, ArenaKey, Blocked)
 
 End Sub
 
-''' Resume at the current distance. Only the right-click command resets framing.
-Public Sub StartOrbit(ByRef Value As State)
+Public Sub ToggleDrone(ByRef Value As State)
 
-    Dim Distance As Double
-    Dim BaseDistance As Double
-    Dim Zoom As Double
-    Dim Progress As Double
+    Value.Flight.Enabled = Not Value.Flight.Enabled
+    Value.Cinematic = False
 
-    Call Arena.BeginTransition(Value.View, 0)
+    If Value.Flight.Enabled Then
 
-    If Value.Follow Then
+        Call Arena.BeginTransition(Value.View)
+        Call Drone.Focus(Value.Flight, Value.People.Members[0].Yaw, Value.View.LiveCamera)
 
-        Distance = M.Length(M.Subtract(Value.View.LiveCamera.Position, Value.View.LiveCamera.Target))
-        BaseDistance = M.Length(P.Vector(2600.0, 2800.0, -3850.0))
+        Value.Follow = True
 
-        If Distance > BaseDistance Then
-            Progress = Sqrt(Clamp((Distance - BaseDistance) /
-                (Value.View.MaximumDistance - BaseDistance), 0.0, 1.0))
-            Zoom = ToDouble(Motion.DEFAULT_ZOOM) + Progress * ToDouble(Motion.ZOOM_OUT_LIMIT - Motion.DEFAULT_ZOOM)
-        Else
-            Progress = Clamp((BaseDistance - Distance) /
-                (BaseDistance - Value.View.MinimumDistance), 0.0, 1.0)
-            Zoom = ToDouble(Motion.DEFAULT_ZOOM) - Progress * ToDouble(Motion.DEFAULT_ZOOM - Motion.ZOOM_IN_LIMIT)
-        End If
-
-        Value.View.Zoom.Current = Zoom
-        Value.View.Zoom.Target = Zoom
-        Value.View.Controls.Zoom = Zoom
-        Value.View.Controls.ZoomTarget = Zoom
+    Else
+        Value.BaseCamera = Value.View.LiveCamera
+        Value.Follow = False
 
     End If
 
-    Value.Follow = False
+    Call Motion.Reset(Value.View.Controls, Value.View.Zoom)
+
+End Sub
+
+''' Keep the selected town/party center and zoom; only right-click restores the overview.
+Public Sub StartOrbit(ByRef Value As State)
+
+    Dim Offset As P.Vector3
+
+    Offset = M.Subtract(Value.View.LiveCamera.Position, Value.View.LiveCamera.Target)
+
+    If Value.Follow Or M.Length(Offset) < 1000.0 Then
+
+        Value.Follow = True
+        Value.Flight.OrbitAtParty = True
+        Value.Flight.OrbitOffset = Offset
+        Value.BaseCamera = Value.View.LiveCamera
+
+        Call Arena.BeginTransition(Value.View, 0)
+        Call Motion.Reset(Value.View.Controls, Value.View.Zoom)
+
+    End If
+
     Value.Cinematic = True
+    Value.Flight.Suspended = True
+
+End Sub
+
+''' Fit a sphere enclosing all town geometry, preserving an active orbit and bearing.
+Public Sub FitTown(ByRef Value As State)
+
+    Dim Direction As P.Vector3
+    Dim Angle As Double
+    Dim Distance As Double
+    Dim Ok As Boolean
+
+    Direction = M.Subtract(Value.View.LiveCamera.Position, Value.View.LiveCamera.Target)
+    Ok = M.TryNormalize(Direction, Direction)
+    Angle = M.Radians(Value.BaseCamera.FovDegrees / 2.0)
+    Angle = Atan2(Sin(Angle) * Min(1.0, ToDouble(Window_Width()) / ToDouble(Max(1, Window_Height()))), Cos(Angle))
+    Distance = 5200.0 / Sin(Angle)
+
+    Call Arena.BeginTransition(Value.View)
+
+    Value.Follow = False
+    Value.Flight.Suspended = True
+    Value.BaseCamera.Target = P.Vector(-1075.0, 650.0, 0.0)
+    Value.BaseCamera.Position = M.Add(Value.BaseCamera.Target, M.Scale(Direction, Distance))
+
+    Call Motion.Reset(Value.View.Controls, Value.View.Zoom)
 
 End Sub
 
@@ -189,9 +284,13 @@ Public Sub ResetOverview(ByRef Value As State)
 
     Value.Cinematic = True
     Value.Follow = False
+    Value.Flight.Suspended = True
+    Value.BaseCamera.Target = P.Vector(-900.0, 160.0, 0.0)
+    Value.BaseCamera.Position = P.Vector(3000.0, 4700.0, -5800.0)
 
     Call Arena.BeginTransition(Value.View, 0)
     Call Motion.Reset(Value.View.Controls, Value.View.Zoom)
+    Call Arena.ComposeCamera(Value.View, Value.BaseCamera)
 
 End Sub
 
@@ -239,6 +338,8 @@ Public Sub Update(ByRef Value As State, Elapsed As Number)
     Dim Direction As P.Vector3
     Dim Leader As P.Vector3
     Dim Distance As Double
+    Dim MovingInput As Boolean
+    Dim GroundLift As Double
 
     If Not Value.Ready Then
         Call LoadNext(Value)
@@ -246,7 +347,10 @@ Public Sub Update(ByRef Value As State, Elapsed As Number)
         Return
     End If
 
-    Direction = WalkDirection(Value.View.LiveCamera)
+    MovingInput = (Key_Held(KEY_UP) Or Key_Held(KEY_W) Or Key_Held(KEY_DOWN) Or
+        Key_Held(KEY_S) Or Key_Held(KEY_LEFT) Or Key_Held(KEY_A) Or
+        Key_Held(KEY_RIGHT) Or Key_Held(KEY_D))
+    Direction = WalkDirection(Drone.MovementCamera(Value.Flight, Value.View.LiveCamera, MovingInput))
     Leader = Value.People.Path.Positions[0]
 
     Call OnMovement(Value, M.Length(Direction) > 0.001)
@@ -258,6 +362,7 @@ Public Sub Update(ByRef Value As State, Elapsed As Number)
 
     Call Party.Update(Value.People, Leader, Elapsed)
     Call Appearance.Update(Value.Look, Elapsed)
+    Call Entrances.Update(Value.Doors, Leader, Elapsed)
     Call TownMap.Update(Value.Map, Party.IsMoving(Value.People), Elapsed)
 
     If Value.Cinematic Then
@@ -265,15 +370,24 @@ Public Sub Update(ByRef Value As State, Elapsed As Number)
     End If
 
     If Value.Follow Then
-        Value.BaseCamera.Target = M.Add(Leader, P.Vector(0.0, 10.0, 0.0))
-        Value.BaseCamera.Position = M.Add(Leader, P.Vector(116.25, 335.5, -217.0))
-    Else
-        Value.BaseCamera.Target = P.Vector(-700.0, 140.0, 680.0)
-        Value.BaseCamera.Position = P.Vector(1900.0, 2940.0, -3170.0)
+        Value.BaseCamera = Drone.Frame(Value.Flight, Value.BaseCamera, Leader,
+            Value.People.Members[0].Yaw, Party.IsMoving(Value.People), Elapsed)
     End If
 
     Call ConstrainCamera(Value)
     Call Arena.ComposeCamera(Value.View, Value.BaseCamera)
+
+    GroundLift = Max(0.0, 25.01 - Value.View.LiveCamera.Position.Y)
+    Value.View.LiveCamera.Position.Y = Value.View.LiveCamera.Position.Y + GroundLift
+    Value.View.LiveCamera.Target.Y = Value.View.LiveCamera.Target.Y + GroundLift
+
+    If Value.Flight.Focusing Then
+        Call Drone.Settle(Value.Flight, Value.View.LiveCamera)
+
+        Value.Flight.Focusing = Value.View.TransitionDuration > 0
+    Else If Value.Follow And Value.Flight.Enabled And Not Value.Flight.Suspended Then
+        Value.View.LiveCamera = Drone.Resolve(Value.Flight, Value.View.LiveCamera, Elapsed)
+    End If
 
 End Sub
 
@@ -281,6 +395,7 @@ End Sub
 Public Sub OnMovement(ByRef Value As State, Moving As Boolean)
 
     If Moving Then
+        Value.Flight.Arrival = False
         Value.Cinematic = False
     End If
 
@@ -293,11 +408,13 @@ Private Sub ConstrainCamera(ByRef Value As State)
     Dim BasePitch As Double
     Dim Pitch As Double
     Dim MinimumPan As Double
+    Dim MinimumPitch As Double
 
     Offset = M.Subtract(Value.BaseCamera.Position, Value.BaseCamera.Target)
     BasePitch = Atan2(Offset.Y, Sqrt(Offset.X * Offset.X + Offset.Z * Offset.Z))
+    MinimumPitch = -20.0
     Pitch = Clamp(BasePitch + M.Radians(Value.View.Controls.OrbitPitch),
-        M.Radians(10.0), M.Radians(80.0))
+        M.Radians(MinimumPitch), M.Radians(80.0))
     Value.View.Controls.OrbitPitch = (Pitch - BasePitch) * 180.0 / 3.141592653589793
     MinimumPan = (25.0 - Value.BaseCamera.Target.Y) / Cos(Pitch)
     Value.View.Controls.PanY = Max(MinimumPan, Value.View.Controls.PanY)
@@ -328,9 +445,7 @@ Public Sub Draw(ByRef Value As State)
 
     End If
 
-    Call ConstrainCamera(Value)
-
-    Ok = Arena.BeginFrame(Value.View, Value.BaseCamera)
+    Ok = Arena.BeginFrame(Value.View, Value.BaseCamera, True, False)
 
     If Ok Then
 
@@ -338,6 +453,7 @@ Public Sub Draw(ByRef Value As State)
         Ok = Assets.Draw(Value.Town) And Ok
         Ok = Party.Draw(Value.People) And Ok
         Ok = Appearance.Draw(Value.Look) And Ok
+        Ok = Entrances.Draw(Value.Doors) And Ok
         Ok = Scene.EndScene() And Ok
 
     End If
@@ -351,12 +467,16 @@ Public Sub Overlay(ByRef Value As State)
     Fill Rectangle 0, 0, Window_Width(), 94, RGB(12, 20, 32)
     Draw Text "Neris Town" At 18, 12 Size 23 Color WHITE
     Draw Text "Speed: " + Numbers.NumberText(Value.People.SpeedPercent) + "%  (+ / -)" At 405, 18 Size 16 Color WHITE
-    Draw Text "WASD / Arrows: Move    R: Walk / Run    Middle Drag: Orbit    Left Drag: Pan    Wheel: Zoom" At 18, Window_Height() - 48 Size 14 Color WHITE
-    Draw Text "F: Floor    G: Grid    B: Background    M: Map    O / C: Orbit   Right Click: Reset    Tab: Follow Party" At 18, Window_Height() - 26 Size 14 Color WHITE
+    Draw Text "WASD / Arrows: Move   R: Walk / Run   Middle Drag: Orbit   Left Drag: Pan   Wheel: Zoom" At 18, Window_Height() - 70 Size 14 Color WHITE
+    Draw Text "F: Floor   Ctrl+F: Drone   G: Grid   B: Background   M: Map   O / C: Orbit   Right Click: Reset" At 18, Window_Height() - 48 Size 14 Color WHITE
+    Draw Text "Tab: Behind Leader   Ctrl+Tab: Next Leader   Leader: " + Party.LeaderName(Value.People) At 18, Window_Height() - 26 Size 14 Color WHITE
+
+    Call CameraPanel.Draw(Value.View, Value.Cinematic)
 
     If Value.Ready Then
 
-        Call TownMap.Draw(Value.Map, Value.People.Path.Positions[0], Value.People.Members[0].Yaw)
+        Call TownMap.Draw(Value.Map, Value.People.Path.Positions[0], Value.People.Members[0].Yaw,
+            Value.Cinematic, Party.LeaderName(Value.People))
 
         If Value.People.Running Then
             Draw Text "Run" At 345, 18 Size 16 Color RGB(70, 210, 205)
@@ -376,6 +496,7 @@ End Sub
 
 Public Sub Destroy(ByRef Value As State)
 
+    Call Entrances.Destroy(Value.Doors)
     Call Appearance.Destroy(Value.Look)
     Call TownMap.Destroy(Value.Map)
     Call Party.Destroy(Value.People)

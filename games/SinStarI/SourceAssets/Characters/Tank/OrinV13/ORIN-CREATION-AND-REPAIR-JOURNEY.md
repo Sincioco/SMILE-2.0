@@ -361,5 +361,14 @@ materials, non-locomotion clips and saved calibration are unchanged. The town sk
 weapon wrist corrections while traveling. The report at
 `Calibration/town-locomotion-retarget.json` records source/target hashes, bind and Idle
 body minima, complete gait contact ranges, facing ranges and round-trip checks.
-Vertical airtime is retained relative to this character’s own accepted Idle height.
+Vertical airtime is measured relative to this character’s own accepted Idle height.
 Do not copy a different character’s grounding offset or replace the combat model.
+
+### Town run smoothing and leader selection
+
+The private town Run derivative retains 35% of source airtime above its grounded
+contact, reducing bounce without changing the accepted combat source. Neris starts
+movement at 200%; run cadence above 100% grows with the square root of that speed
+ratio. This policy belongs to NerisTownParty, not the character profile. The same
+owner rotates complete actor contexts for Ctrl+Tab leader selection, preserving
+each actor's rig, clips, key base and calibration. No source pose is overwritten.

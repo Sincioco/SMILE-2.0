@@ -157,19 +157,19 @@ def create(mats, curtain):
     g.cylinder('Royal Fountain Basin',(0,-16,.35),4.2,.7,'trim',48)
     g.cylinder('Royal Fountain Water',(0,-16,.72),3.6,.08,'water',48)
     crystal(g,(0,-16,.80),4.2,.8)
-    # The bridge keeps its accepted footprint and traversal elevation.
-    g.box('Royal Bridge Deck',(0,-38,.02),(9,22,.26),'pavinglight',.04)
+    # Extend the crossing over the wider moat; paving owns its walking surface.
+    g.box('Royal Bridge Deck',(0,-40.5,.02),(9,27,.26),'pavinglight',.04)
     bridge_inlay(g)
     for x in [-4.6,4.6]:
-        balustrade(g,(x,-49,.20),(x,-27,.20))
-        for y in [-48,-37,-28]:
+        balustrade(g,(x,-54,.20),(x,-27,.20))
+        for y in [-53,-44.5,-36,-28]:
             g.box('Bridge Carved Pier',(x,y,-.30),(.8,1.3,1.7),'trim',.04)
-        for y in [-44,-33]:
+        for y in [-49,-40.5,-32]:
             arch_points=[(x,y+4.5*math.cos(a),-1.3+.9*math.sin(a)) for a in [i*math.pi/16 for i in range(17)]]
             g.path('Bridge Stone Arch',arch_points,.24,'trim')
     for x in [-5.3,5.3]:
-        g.box('Bridge Crystal Pedestal',(x,-49,.9),(1.6,1.6,1.8),'stone',.04)
-        crystal(g,(x,-49,1.9),2.2,.36)
+        g.box('Bridge Crystal Pedestal',(x,-54,.9),(1.6,1.6,1.8),'stone',.04)
+        crystal(g,(x,-54,1.9),2.2,.36)
     # Formal terrace gardens echo the reference without aging or dirt textures.
     for sign in [-1,1]:
         for x,y,z,h in [(30,-16,.1,6.8),(30,-6,.1,7.5),(8,-3,.1,8),

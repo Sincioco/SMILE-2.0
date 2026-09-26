@@ -84,7 +84,7 @@ End Function
 
 ''' Add the collision-resolved leader position, then advance followers along that path.
 Public Sub Advance(ByRef Value As State, Leader As P.Vector3,
-    Elapsed As Number, Speed As Double)
+    Elapsed As Number, Speed As Double, Optional GatherDistance As Double = 0.0)
 
     Dim Index As Number
     Dim Delta As Double
@@ -111,7 +111,7 @@ Public Sub Advance(ByRef Value As State, Leader As P.Vector3,
 
     For Index = 1 To Value.Members - 1
 
-        Target = Value.Distance
+        Target = Max(Value.Progress[Index], Value.Distance - Max(0.0, GatherDistance))
 
         If Value.Moving[0] Then
             Target = Max(Value.Progress[Index], Value.Distance - Value.Spacing * ToDouble(Index))

@@ -18,6 +18,8 @@ ROOT = Path(__file__).resolve().parents[1]
 OUTPUT = ROOT / "Runtime"
 OUTPUT.mkdir(exist_ok=True)
 depsgraph = bpy.context.evaluated_depsgraph_get()
+from export_flowers import export as export_flowers
+flowers,flower_objects=export_flowers(OUTPUT,depsgraph)
 groups = {}
 material_keys = {}
 instance_count = 0
@@ -25,9 +27,13 @@ degenerate_count = 0
 float3 = struct.Struct('<3f')
 for instance in depsgraph.object_instances:
     obj = instance.object
+    if obj.name in flower_objects:
+        continue  # Keep authored collection instances instead of baking every flower again.
+    if obj.get('neris_door_leaf'):
+        continue  # Shared hinged leaves are drawn by the native entrance owner.
     if obj.name.startswith('Neris Detailed Tree '):
         continue  # Export reusable templates below, preserving each tree's root transform.
-    if obj.name.startswith(('Castle Moat Water', 'Comparison Moat Water')):
+    if obj.get('neris_native_water') or obj.name.startswith(('Castle Moat Water', 'Comparison Moat Water')):
         continue  # The native lit water owns this surface; a second shallow plane flickered.
     if obj.name.startswith('Neris Tripo Castle'):
         continue  # Separate lossless UV/PBR partitions preserve the supplied castle atlas.
@@ -105,15 +111,15 @@ for material, triangles in groups.values():
 # The former 105-part allowance reserved 23 slots in the old 128-mesh pool.
 # The native renderer now has 256 slots; preserve that reserve AND account for
 # all 28 imported-castle parts. This is a scene resource check, not an exclusion.
-assert len(parts) + 28 + 23 <= 256, "Town, imported castle, party and arena exceed native mesh capacity."
-assert len(batches) + 14 + 5 + 3 <= 64, "Reserve live models for both castles, actors, trees and leaf."
+assert len(parts) + 28 + 23 + 4 + flowers['parts'] <= 256, "Town, castle, party, doors and arena exceed native mesh capacity."
+assert len(batches) + 14 + 5 + 3 + 1 + 1 <= 64, "Reserve live models for castles, actors, vegetation and doors."
 source = Path(bpy.data.filepath)
 manifest = {"source": source.relative_to(ROOT).as_posix(), "source_sha256": hashlib.sha256(
     source.read_bytes()).hexdigest(),
     "evaluated_instances": instance_count, "triangles": source_triangles,
     "removed_degenerate_triangles": degenerate_count,
     "coordinate_mapping": "Blender XYZ -> SMILE XZY; runtime scale 10, height +21",
-    "chunks": []}
+    "chunks": [], "flowers": flowers}
 for index, batch in enumerate(batches):
     filename = f"Neris-{index:02d}.glb"
     write(OUTPUT / filename, batch)

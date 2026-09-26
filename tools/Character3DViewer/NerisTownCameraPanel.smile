@@ -1,0 +1,119 @@
+''' Town-only camera controls. The scene handles Orbit/Fit; arena owns camera motion.
+Module Smile.Tools.NerisTownCameraPanel
+
+Option Explicit
+
+Import Smile.UI.Controls As UI
+Import Smile.Simple3D.PrecisionMath3D As M
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.ArenaViewport3D As Arena
+Import Smile.Simple3D.ArenaCamera3D As Motion
+Import Smile.Tools.Character3DViewerCalibration As Numbers
+
+Public Type State
+    DragRow As Number
+End Type
+
+Public Function Hovered() As Boolean
+
+    Dim Result As Boolean
+
+    Result = ((Pointer_X() >= 12 And Pointer_X() <= 292 And
+        Pointer_Y() >= Window_Height() - 214 And Pointer_Y() <= Window_Height() - 116) Or
+        (Pointer_X() >= Window_Width() - 292 And Pointer_X() <= Window_Width() - 12 And
+        Pointer_Y() >= Window_Height() - 116 And Pointer_Y() <= Window_Height() - 82))
+
+    Return Result
+
+End Function
+
+''' 1 toggles orbit, 2 fits the town, 3 signals manual rotation; zoom preserves orbit.
+Public Function Input(ByRef Value As State, ByRef View As Arena.State,
+    Base As P.Camera3D, Blocked As Boolean) As Number
+
+    Dim Row As Number
+    Dim Amount As Double
+    Dim Offset As P.Vector3
+    Dim Result As Number
+
+    If Not Blocked And Hovered() And Pointer_Pressed(POINTER_PRIMARY) Then
+
+        If Pointer_X() >= Window_Width() - 292 Then
+
+            If Pointer_X() < Window_Width() - 152 Then
+                Return 1
+            End If
+
+            Return 2
+
+        End If
+
+        For Row = 1 To 3
+
+            If Abs(Pointer_Y() - (Window_Height() - 222 + Row * 30)) <= 12 Then
+                Value.DragRow = Row
+            End If
+
+        End For
+
+    End If
+
+    If Value.DragRow > 0 And Pointer_Held(POINTER_PRIMARY) Then
+
+        Amount = Clamp(ToDouble(Pointer_X() - 110) / 164.0, 0.0, 1.0)
+        Offset = M.Subtract(Base.Position, Base.Target)
+
+        If Value.DragRow = 1 Then
+            View.Controls.OrbitYaw = Amount * 360.0 - 180.0 - M.Degrees(Atan2(Offset.X, Offset.Z))
+            Result = 3
+        Else If Value.DragRow = 2 Then
+            View.Controls.OrbitPitch = Amount * 70.0 + 10.0 - M.Degrees(Atan2(Offset.Y, Sqrt(Offset.X * Offset.X + Offset.Z * Offset.Z)))
+            Result = 3
+        Else
+            View.Zoom.Target = ToDouble(Motion.ZOOM_IN_LIMIT) + Amount * ToDouble(Motion.ZOOM_OUT_LIMIT - Motion.ZOOM_IN_LIMIT)
+            View.Controls.ZoomTarget = View.Zoom.Target
+        End If
+
+    End If
+
+    If Pointer_Released(POINTER_PRIMARY) Or Not Pointer_Held(POINTER_PRIMARY) Then
+        Value.DragRow = 0
+    End If
+
+    Return Result
+
+End Function
+
+Private Sub Slider(Label As Text, Row As Number, Amount As Double, Reading As Number)
+
+    Dim PanelX As Number
+    Dim SliderY As Number
+
+    PanelX = 12
+    SliderY = Window_Height() - 222 + Row * 30
+    Draw Text Label At PanelX + 12, SliderY - 8 Size 12 Color WHITE
+    Fill Rectangle PanelX + 98, SliderY - 2, 164, 4, RGB(62, 83, 104)
+    Fill Rectangle PanelX + 98 + ToNumber(Round(Clamp(Amount, 0.0, 1.0) * 164.0)) - 3, SliderY - 6, 6, 12, RGB(70, 210, 205)
+    Draw Text Numbers.NumberText(Reading) At PanelX + 202, SliderY - 20 Size 11 Color RGB(160, 220, 230)
+
+End Sub
+
+Public Sub Draw(ByRef View As Arena.State, Orbiting As Boolean)
+
+    Dim Offset As P.Vector3
+    Dim Horizontal As Double
+    Dim Vertical As Double
+
+    Offset = M.Subtract(View.LiveCamera.Position, View.LiveCamera.Target)
+    Horizontal = M.Degrees(Atan2(Offset.X, Offset.Z))
+    Vertical = M.Degrees(Atan2(Offset.Y, Sqrt(Offset.X * Offset.X + Offset.Z * Offset.Z)))
+
+    Call Slider("H Orbit", 1, (Horizontal + 180.0) / 360.0, ToNumber(Round(Horizontal)))
+    Call Slider("V Orbit", 2, (Vertical - 10.0) / 70.0, ToNumber(Round(Vertical)))
+    Call Slider("Zoom", 3, (View.Zoom.Target - ToDouble(Motion.ZOOM_IN_LIMIT)) / ToDouble(Motion.ZOOM_OUT_LIMIT - Motion.ZOOM_IN_LIMIT), ToNumber(Round(M.Length(Offset))))
+    Call UI.DrawButton(Window_Width() - 280, Window_Height() - 114, 122, 24, "Orbit", Orbiting)
+    Call UI.DrawButton(Window_Width() - 152, Window_Height() - 114, 128, 24, "Fit", False)
+
+End Sub
+
+End Module

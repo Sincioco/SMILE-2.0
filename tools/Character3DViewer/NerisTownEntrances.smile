@@ -1,0 +1,185 @@
+''' Reusable door-leaf instances, inward hinges and one-shot entrance events.
+Module Smile.Tools.NerisTownEntrances
+
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Graphics3D As G
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.PrecisionMath3D As M
+Import Smile.Tools.NerisTownEntrancesData As DoorData
+Import Smile.Tools.NerisTownEntranceNavigation As Navigation
+
+Public Type State
+    Model As Core.Model3D
+    Objects[320] As Core.Object3D
+    Angles[80] As Double
+    Hold[80] As Number
+    Entered[80] As Boolean
+    ObjectCount As Number
+    PendingEntry As Number
+    ActiveEntry As Number
+    Ready As Boolean
+End Type
+
+Public Function Create(ByRef Value As State) As Boolean
+
+    Dim Index As Number
+    Dim Part As Number
+    Dim Item As DoorData.Door
+    Dim Ok As Boolean
+    Dim Yaw As Double
+
+    Value.PendingEntry = -1
+    Value.ActiveEntry = -1
+    Value.Model = G.LoadModelGeometry3D("Assets/Neris/Door-Leaves.sm3d")
+    Ok = Value.Model.GeometryReady And Value.Model.PartCount = 4
+
+    If Ok Then
+        Ok = G.PrepareModelPbr3D(Value.Model, 1, 1, 4)
+    End If
+
+    If Ok Then
+
+        For Index = 0 To DoorData.DOOR_COUNT - 1
+
+            Item = DoorData.DoorAt(Index)
+            Yaw = -M.Degrees(Atan2(Item.RightZ, Item.RightX))
+
+            For Part = 0 To 3
+
+                Value.Objects[Value.ObjectCount] = G.CreateModelPart3D(Value.Model, Part)
+                Ok = P.SetScale(Value.Objects[Value.ObjectCount], Item.Width * 100.0,
+                    Item.Height * 100.0, 700.0) And Ok
+                Ok = P.SetPosition(Value.Objects[Value.ObjectCount], Item.Position.X,
+                    Item.Position.Y, Item.Position.Z) And Ok
+                Ok = P.SetRotation(Value.Objects[Value.ObjectCount], 0.0, Yaw, 0.0) And Ok
+                Value.ObjectCount = Value.ObjectCount + 1
+            End For
+        End For
+
+    End If
+
+    Value.Ready = Ok
+
+    Return Ok
+
+End Function
+
+Public Sub Update(ByRef Value As State, Leader As P.Vector3, Elapsed As Number)
+
+    Dim Index As Number
+    Dim Part As Number
+    Dim Side As Double
+    Dim Depth As Double
+    Dim Width As Double
+    Dim OldAngle As Double
+    Dim Pivot As P.Vector3
+    Dim Item As DoorData.Door
+    Dim Near As Boolean
+    Dim Ok As Boolean
+
+    Value.ActiveEntry = -1
+
+    For Index = 0 To DoorData.DOOR_COUNT - 1
+
+        Item = DoorData.DoorAt(Index)
+        Depth = Navigation.Along(Item, Leader.X, Leader.Z)
+        Width = Abs(Navigation.Across(Item, Leader.X, Leader.Z))
+        Near = (Width < Item.Width / 2.0 + 7.0 And Depth > -24.0 And Depth < 14.0 And
+            Abs(Leader.Y - Item.Position.Y) < 15.0)
+        OldAngle = Value.Angles[Index]
+
+        If Near Then
+
+            Value.Hold[Index] = 700
+            Value.Angles[Index] = Min(90.0, OldAngle + ToDouble(Elapsed) * 0.12)
+
+        Else
+
+            Value.Hold[Index] = Max(0, Value.Hold[Index] - Elapsed)
+            Value.Entered[Index] = False
+
+            If Value.Hold[Index] = 0 Then
+                Value.Angles[Index] = Max(0.0, OldAngle - ToDouble(Elapsed) * 0.09)
+            End If
+
+        End If
+
+        If Near And Depth >= -5.0 And Width < Item.Width / 2.0 And Value.Angles[Index] >= 75.0 Then
+
+            Value.ActiveEntry = Index
+
+            If Not Value.Entered[Index] Then
+                Value.PendingEntry = Index
+                Value.Entered[Index] = True
+            End If
+
+        End If
+
+        If Value.Angles[Index] <> OldAngle Then
+
+            For Part = 0 To 3
+
+                Side = -1.0
+
+                If Part >= 2 Then
+                    Side = 1.0
+                End If
+
+                Pivot = M.Add(Item.Position, P.Vector(Item.RightX * Item.Width * Side / 2.0,
+                    0.0, Item.RightZ * Item.Width * Side / 2.0))
+                Ok = P.SetPivotRotation(Value.Objects[Index * 4 + Part], Pivot,
+                    P.Vector(0.0, Value.Angles[Index] * Side, 0.0))
+                Value.Ready = Value.Ready And Ok
+            End For
+
+        End If
+
+    End For
+
+End Sub
+
+''' A future interior/cutscene owner consumes the doorway ID once per approach.
+Public Function ConsumeEntry(ByRef Value As State) As Number
+
+    Dim Result As Number
+
+    Result = Value.PendingEntry
+    Value.PendingEntry = -1
+
+    Return Result
+
+End Function
+
+Public Function Draw(ByRef Value As State) As Boolean
+
+    Dim Index As Number
+    Dim Ok As Boolean
+
+    Ok = Value.Ready
+
+    For Index = 0 To Value.ObjectCount - 1
+        Ok = G.DrawObject3D(Value.Objects[Index]) And Ok
+    End For
+
+    Return Ok
+
+End Function
+
+Public Sub Destroy(ByRef Value As State)
+
+    Dim Index As Number
+
+    For Index = 0 To Value.ObjectCount - 1
+        Call G.DestroyObject3D(Value.Objects[Index])
+    End For
+
+    Call G.DestroyModel3D(Value.Model)
+
+    Value.Ready = False
+    Value.ObjectCount = 0
+
+End Sub
+
+End Module

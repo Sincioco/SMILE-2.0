@@ -14,10 +14,23 @@ data=json.loads((ROOT/'Runtime/manifest.json').read_text())
 # Imported buildings combine each lantern pair into one mesh. Find connected
 # luminous components, so halos sit at the actual lamps, not midway between them.
 lamps=[]
+crystals=[]
+fountains=[]
 for instance in bpy.context.evaluated_depsgraph_get().object_instances:
     obj=instance.object
     if obj.type!='MESH': continue
+    if obj.name.startswith(('Fountain Water','Royal Fountain Water')):
+        points=[instance.matrix_world@Vector(p) for p in obj.bound_box]
+        lo=[min(p[i] for p in points) for i in range(3)]
+        hi=[max(p[i] for p in points) for i in range(3)]
+        fountains.append([(lo[0]+hi[0])*5,hi[2]*10+21.4,(lo[1]+hi[1])*5,(hi[0]-lo[0])*5-.15])
+    crystal_slots={i for i,m in enumerate(obj.data.materials) if m and
+                   m.name.startswith(('Cyan Relay Crystal','Crystal Bright Facets'))}
     slots={i for i,m in enumerate(obj.data.materials) if m and m.name.startswith('Warm Lantern')}
+    targets=lamps
+    if not slots:
+        slots=crystal_slots
+        targets=crystals
     if not slots: continue
     links={}
     positions={}
@@ -35,9 +48,12 @@ for instance in bpy.context.evaluated_depsgraph_get().object_instances:
             pending.extend(links.pop(key)); component.append(positions[key])
         center=sum(component,Vector())/len(component)
         point=Vector((center.x*10,center.z*10+21,center.y*10))
-        if not any((point-Vector(old)).length<3 for old in lamps):
-            lamps.append([round(v,5) for v in point])
+        if not any((point-Vector(old)).length<3 for old in targets):
+            targets.append([round(v,5) for v in point])
 data['lamps']=lamps
+data['crystals']=crystals
+data['fountains']=fountains
+assert len(fountains)<=7, 'Native fountain surface inventory must match the authored scene.'
 mat=bpy.data.materials['Neris Young Olive Leaves'].copy()
 mat.name='Falling Jade Leaf'
 mat.use_backface_culling=False
@@ -55,21 +71,42 @@ data['leaf']={'file':'Leaf.glb','parts':1,'triangles':len(triangles),
 lines=["''' Generated from the accepted Blender town. Regenerate with Source/export_layout.py.",
        'Module Smile.Tools.NerisTownLayout','','Option Explicit','',
        'Import Smile.Simple3D.Precision3D As P','',
-       f'Public Const TREE_COUNT = {len(data["trees"])}',f'Public Const LAMP_COUNT = {len(data["lamps"])}','',
-       'Public Type TreePlacement','    Position As P.Vector3','    Scale As P.Vector3',
+       f'Public Const TREE_COUNT = {len(data["trees"])}',f'Public Const LAMP_COUNT = {len(data["lamps"])}',
+       f'Public Const CRYSTAL_COUNT = {len(crystals)}','',
+       f'Public Const FOUNTAIN_COUNT = {len(fountains)}','',
+       f'Public Const FLOWER_COUNT = {len(data["flowers"]["placements"])}',
+       f'Public Const FLOWER_PARTS = {data["flowers"]["parts"]}','',
+       'Public Type WaterDisk','    Position As P.Vector3','    Radius As Double','End Type','',
+       'Public Type Placement','    Position As P.Vector3','    Scale As P.Vector3',
        '    Yaw As Double','    Variant As Number','End Type','',
-       'Public Function TreeAt(Index As Number) As TreePlacement','',
-       '    Dim Result As TreePlacement','','    Select Case Index']
+       'Public Function TreeAt(Index As Number) As Placement','',
+       '    Dim Result As Placement','','    Select Case Index']
 def vector(values): return 'P.Vector('+', '.join(f'{x:.5f}' for x in values)+')'
 for i,t in enumerate(data['trees']):
     lines += [f'        Case {i}',f'            Result.Position = {vector(t["position"])}',
               f'            Result.Scale = {vector(t["scale"])}',f'            Result.Yaw = {t["yaw"]:.5f}',
               f'            Result.Variant = {t["variant"]}']
 lines += ['    End Select','','    Return Result','','End Function','',
+          'Public Function FlowerAt(Index As Number) As Placement','',
+          '    Dim Result As Placement','','    Select Case Index']
+for i,p in enumerate(data['flowers']['placements']):
+    lines += [f'        Case {i}',f'            Result.Position = {vector(p["position"])}',
+              f'            Result.Scale = {vector(p["scale"])}',f'            Result.Yaw = {p["yaw"]:.5f}']
+lines += ['    End Select','','    Return Result','','End Function','',
           'Public Function LampAt(Index As Number) As P.Vector3','','    Dim Result As P.Vector3','',
           '    Select Case Index']
 for i,p in enumerate(data['lamps']):
     lines += [f'        Case {i}',f'            Result = {vector(p)}']
+lines += ['    End Select','','    Return Result','','End Function','',
+          'Public Function CrystalAt(Index As Number) As P.Vector3','','    Dim Result As P.Vector3','',
+          '    Select Case Index']
+for i,p in enumerate(crystals):
+    lines += [f'        Case {i}',f'            Result = {vector(p)}']
+lines += ['    End Select','','    Return Result','','End Function','',
+          'Public Function FountainAt(Index As Number) As WaterDisk','','    Dim Result As WaterDisk','',
+          '    Select Case Index']
+for i,p in enumerate(fountains):
+    lines += [f'        Case {i}',f'            Result.Position = {vector(p[:3])}',f'            Result.Radius = {p[3]:.5f}']
 lines += ['    End Select','','    Return Result','','End Function','',
           'Public Function PavingHeight(X As Double, Z As Double) As Double','']
 layout=json.loads((ROOT/'expansion-layout.json').read_text())

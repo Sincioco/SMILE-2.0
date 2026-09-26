@@ -92,7 +92,7 @@ def write(path, batch):
             document['materials'][-1]['normalTexture'] = {'index':texture('Neris-Stone-Normal.png','normal'),'scale':.25}
         if grass:
             document['materials'][-1]['pbrMetallicRoughness']['baseColorTexture'] = {'index':texture('Neris-Grass-Color.png','color')}
-            document['materials'][-1]['normalTexture'] = {'index':texture('Neris-Grass-Normal.png','normal'),'scale':.55}
+            document['materials'][-1]['normalTexture'] = {'index':texture('Neris-Grass-Normal.png','normal'),'scale':.18}
         document["meshes"].append({"name": name, "primitives": [{"attributes": attributes,
             "indices": accessor(indices, 1, 5125), "material": index, "mode": 4}]})
         document["nodes"].append({"mesh": index, "name": name})

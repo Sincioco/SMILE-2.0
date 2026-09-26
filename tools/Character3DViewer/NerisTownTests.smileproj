@@ -8,6 +8,9 @@
     <SmileSource Include="NerisTownNavigation.smile" />
     <SmileSource Include="NerisTownDistricts.smile" />
     <SmileSource Include="NerisTownLayout.smile" />
+    <SmileSource Include="NerisTownSite.smile" />
+    <SmileSource Include="NerisTownEntrancesData.smile" />
+    <SmileSource Include="NerisTownEntranceNavigation.smile" />
     <SmileProjectReference Include="..\..\libraries\Smile.Simple3D\Smile.Simple3D.smilelibproj" />
   </ItemGroup>
 </SmileProject>
