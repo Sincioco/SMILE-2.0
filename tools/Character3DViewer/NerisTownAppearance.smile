@@ -13,6 +13,9 @@ Import Smile.Tools.NerisTownFlowers As Flowers
 Import Smile.Tools.NerisTownSite As Site
 Import Smile.Tools.NerisTownLayout As Layout
 
+Public Const MOAT_ROUGHNESS = 68
+Public Const MOAT_RIPPLES = 2
+
 Public Type State
     Water As Core.Material3D
     Refraction As Core.Material3D
@@ -133,7 +136,7 @@ Public Function Create(ByRef Value As State) As Boolean
     Ok = G.SetEffectMaterial3D(Value.Water, G.MATERIAL_ALPHA_BLEND, 30, 100, 240, 100, 100) And Ok
     Ok = G.SetEffectMaterialWater3D(Value.Water, True, 45, 0, 0, 24) And Ok
     Ok = G.SetEffectMaterial3D(Value.MoatWater, G.MATERIAL_ALPHA_BLEND, 30, 100, 240, 100, 100) And Ok
-    Ok = G.SetEffectMaterialWater3D(Value.MoatWater, True, 45, 0, 0, 24) And Ok
+    Ok = G.SetEffectMaterialWater3D(Value.MoatWater, True, MOAT_ROUGHNESS, 0, 0, MOAT_RIPPLES) And Ok
     Ok = G.SetEffectMaterialDistortion3D(Value.Refraction, 1, 90, 0, 20, 80) And Ok
 
     For Index = 0 To Layout.FOUNTAIN_COUNT
@@ -159,7 +162,8 @@ Public Sub Update(ByRef Value As State, Elapsed As Number)
 
     Value.Time = (Value.Time + Max(0, Elapsed)) Mod 3600000
     Value.Ready = G.SetEffectMaterialWater3D(Value.Water, True, 45, 0, Value.Time / 3, 24)
-    Value.Ready = G.SetEffectMaterialWater3D(Value.MoatWater, True, 45, 0, Value.Time / 3, 24) And Value.Ready
+    Value.Ready = G.SetEffectMaterialWater3D(Value.MoatWater, True, MOAT_ROUGHNESS, 0,
+        Value.Time / 8, MOAT_RIPPLES) And Value.Ready
 
     Call Crystals.Update(Value.Gems, Elapsed)
     Call Trees.Update(Value.Garden, Elapsed)

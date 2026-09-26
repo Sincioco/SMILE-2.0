@@ -9,9 +9,12 @@ Import Smile.Simple3D.Precision3D As P
 Import Smile.Simple3D.ArenaViewport3D As Arena
 Import Smile.Simple3D.ArenaCamera3D As Motion
 Import Smile.Tools.Character3DViewerCalibration As Numbers
+Import Smile.Tools.Character3DViewerTiming As Timing
 
 Public Type State
     DragRow As Number
+    FrameRate As Timing.FrameRateState
+    PreviousTime As Number
 End Type
 
 Public Function Hovered() As Boolean
@@ -35,6 +38,15 @@ Public Function Input(ByRef Value As State, ByRef View As Arena.State,
     Dim Amount As Double
     Dim Offset As P.Vector3
     Dim Result As Number
+    Dim Now As Number
+
+    Now = Timer()
+
+    If Value.PreviousTime > 0 Then
+        Call Timing.Advance(Value.FrameRate, Max(0, Now - Value.PreviousTime))
+    End If
+
+    Value.PreviousTime = Now
 
     If Not Blocked And Hovered() And Pointer_Pressed(POINTER_PRIMARY) Then
 
@@ -98,7 +110,8 @@ Private Sub Slider(Label As Text, Row As Number, Amount As Double, Reading As Nu
 
 End Sub
 
-Public Sub Draw(ByRef View As Arena.State, Orbiting As Boolean)
+Public Sub Draw(ByRef Value As State, ByRef View As Arena.State,
+    Orbiting As Boolean, PartyControl As Boolean, DroneEnabled As Boolean)
 
     Dim Offset As P.Vector3
     Dim Horizontal As Double
@@ -113,6 +126,50 @@ Public Sub Draw(ByRef View As Arena.State, Orbiting As Boolean)
     Call Slider("Zoom", 3, (View.Zoom.Target - ToDouble(Motion.ZOOM_IN_LIMIT)) / ToDouble(Motion.ZOOM_OUT_LIMIT - Motion.ZOOM_IN_LIMIT), ToNumber(Round(M.Length(Offset))))
     Call UI.DrawButton(Window_Width() - 280, Window_Height() - 38, 122, 24, "Orbit", Orbiting)
     Call UI.DrawButton(Window_Width() - 152, Window_Height() - 38, 128, 24, "Fit", False)
+    Call Diagnostics(Value.FrameRate, View.LiveCamera, Horizontal, Vertical,
+        Orbiting, PartyControl, DroneEnabled)
+
+End Sub
+
+Private Sub Diagnostics(ByRef FrameRate As Timing.FrameRateState, Camera As P.Camera3D,
+    Yaw As Double, Pitch As Double, Orbiting As Boolean,
+    PartyControl As Boolean, DroneEnabled As Boolean)
+
+    Dim X As Number
+    Dim Y As Number
+    Dim Mode As Text
+
+    X = Window_Width() - 280
+    Y = Window_Height() - 150
+    Mode = "Inspect"
+
+    If Orbiting Then
+        Mode = "Orbit"
+    Else If PartyControl And DroneEnabled Then
+        Mode = "Drone / Party"
+    Else If PartyControl Then
+        Mode = "Party"
+    End If
+
+    Fill Rectangle X - 8, Y - 6, 276, 112, RGB(12, 20, 32) Opacity 80
+    Draw Text "FPS" At X, Y Size 12 Color LIGHT_GRAY
+    Draw Number Timing.FramesPerSecond(FrameRate) At X + 96, Y Size 12 Color GREEN
+    Draw Text "Camera" At X, Y + 18 Size 12 Color LIGHT_GRAY
+    Draw Text Mode At X + 96, Y + 18 Size 12 Color CYAN
+    Draw Text "Pos XYZ" At X, Y + 36 Size 12 Color LIGHT_GRAY
+    Draw Text "Aim XYZ" At X, Y + 54 Size 12 Color LIGHT_GRAY
+    Draw Number ToNumber(Round(Camera.Position.X)) At X + 96, Y + 36 Size 12 Color CYAN
+    Draw Number ToNumber(Round(Camera.Position.Y)) At X + 152, Y + 36 Size 12 Color CYAN
+    Draw Number ToNumber(Round(Camera.Position.Z)) At X + 208, Y + 36 Size 12 Color CYAN
+    Draw Number ToNumber(Round(Camera.Target.X)) At X + 96, Y + 54 Size 12 Color CYAN
+    Draw Number ToNumber(Round(Camera.Target.Y)) At X + 152, Y + 54 Size 12 Color CYAN
+    Draw Number ToNumber(Round(Camera.Target.Z)) At X + 208, Y + 54 Size 12 Color CYAN
+    Draw Text "Yaw / Pitch" At X, Y + 72 Size 12 Color LIGHT_GRAY
+    Draw Number ToNumber(Round(Yaw)) At X + 96, Y + 72 Size 12 Color CYAN
+    Draw Number ToNumber(Round(Pitch)) At X + 152, Y + 72 Size 12 Color CYAN
+    Draw Text "FOV / Dist" At X, Y + 90 Size 12 Color LIGHT_GRAY
+    Draw Number ToNumber(Round(Camera.FovDegrees)) At X + 96, Y + 90 Size 12 Color CYAN
+    Draw Number ToNumber(Round(M.Distance(Camera.Position, Camera.Target))) At X + 152, Y + 90 Size 12 Color CYAN
 
 End Sub
 

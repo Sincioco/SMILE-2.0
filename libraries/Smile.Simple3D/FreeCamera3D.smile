@@ -1,0 +1,75 @@
+''' Smooth free inspection translation. Input bindings and scene limits belong to callers.
+Module Smile.Simple3D.FreeCamera3D
+
+Option Explicit
+
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.PrecisionMath3D As M
+
+Public Type State
+    Velocity As P.Vector3
+End Type
+
+Public Sub Reset(ByRef Value As State)
+
+    Value.Velocity = P.Vector(0.0, 0.0, 0.0)
+
+End Sub
+
+''' Camera-relative travel, optionally projected onto the horizontal ground plane.
+Public Function Direction(Camera As P.Camera3D, Sideways As Double,
+    ForwardAmount As Double, Grounded As Boolean) As P.Vector3
+
+    Dim Forward As P.Vector3
+    Dim RightValue As P.Vector3
+    Dim Result As P.Vector3
+    Dim Ok As Boolean
+
+    Forward = M.Subtract(Camera.Target, Camera.Position)
+
+    If Grounded Then
+        Forward.Y = 0.0
+    End If
+
+    Ok = M.TryNormalize(Forward, Forward)
+    RightValue = P.Vector(Forward.Z, 0.0, -Forward.X)
+    Ok = M.TryNormalize(RightValue, RightValue)
+    Result = M.Add(M.Scale(Forward, ForwardAmount), M.Scale(RightValue, Sideways))
+
+    If M.Length(Result) > 0.001 Then
+        Ok = M.TryNormalize(Result, Result)
+    End If
+
+    Return Result
+
+End Function
+
+Public Function Step(ByRef Value As State, Camera As P.Camera3D,
+    Direction As P.Vector3, Speed As Double, Elapsed As Number) As P.Camera3D
+
+    Dim Result As P.Camera3D
+    Dim TargetVelocity As P.Vector3
+    Dim Delta As P.Vector3
+    Dim Seconds As Double
+    Dim Blend As Double
+
+    Result = Camera
+    Seconds = ToDouble(Min(100, Max(0, Elapsed))) / 1000.0
+    TargetVelocity = M.Scale(Direction, Max(0.0, Speed))
+    Blend = Min(1.0, Seconds * 8.0)
+    Value.Velocity = M.Add(Value.Velocity,
+        M.Scale(M.Subtract(TargetVelocity, Value.Velocity), Blend))
+
+    If M.Length(Value.Velocity) < 0.01 Then
+        Value.Velocity = P.Vector(0.0, 0.0, 0.0)
+    End If
+
+    Delta = M.Scale(Value.Velocity, Seconds)
+    Result.Position = M.Add(Result.Position, Delta)
+    Result.Target = M.Add(Result.Target, Delta)
+
+    Return Result
+
+End Function
+
+End Module

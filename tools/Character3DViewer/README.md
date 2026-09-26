@@ -16,17 +16,18 @@ serve tree-lined parks, benches, lamps, flowers, seven fountains and crystal cir
 Managed decoration footprints avoid roads, water and door approaches. There are
 147 detailed trees and 48 shared flower planters. Two-metre paving retains its
 seams but has no wavy texture. Filtered low-contrast grass reduces shimmer.
-All water uses the deep-blue moat tint.
+All water uses the deep-blue moat tint. Moats use subtle, slower ripples and a
+rougher surface to soften the repeating wave highlights; fountains retain movement.
 
 | Control | Action |
 | --- | --- |
-| WASD / Arrow Keys | Move the current leader relative to the camera |
+| WASD / Arrow Keys | Inspect by moving the camera; move the leader only after Tab |
 | R | Toggle Walk / Run |
 | + / - | Change speed in 25-point steps, within 25-400% |
 | Ctrl+Tab | Cycle Arin > Orin > Zara > Mira > Arin as leader |
-| Tab | Face north behind the leader with a one-second ease |
+| Tab | Enable party control; face north behind the leader with a one-second ease |
 | Ctrl+F | Toggle the cinematic drone, initially enabled |
-| Middle Drag / Left Drag | Manual orbit / pan; suspend automatic following |
+| Middle Drag / Left Drag | Manual orbit / pan; return movement keys to inspection |
 | Wheel | Ease zoom without stopping orbit |
 | F / G / B | Floor / grid / shared background |
 | O / C or Orbit | Start/resume orbit at the current zoom |
@@ -35,7 +36,14 @@ All water uses the deep-blue moat tint.
 | M | Show / hide minimap |
 
 H Orbit, V Orbit and Zoom controls sit at the lower left with no panel background.
-Only Orbit and Fit buttons occupy the lower right, 14 pixels above the bottom edge.
+Orbit and Fit sit at the lower right, 14 pixels above the bottom edge.
+Directly above them, a compact panel with an 80% opaque background shows sampled FPS, camera/control mode,
+camera position and target XYZ, yaw/pitch, fixed lens FOV and eye-to-target distance.
+FPS uses actual frame time rather than the capped animation clock.
+Town entry opens centered behind Arin through the Kingdom of Neris sign. After
+20 seconds without keyboard or mouse activity, inspection orbit starts. Any input
+stops that automatic orbit and restarts the idle countdown. Party control still
+requires Tab.
 The V Orbit slider spans the full -20 to 80 degree elevation range.
 The minimap shows the selected
 leader's name and X/Y/Z, **Old Castle** and **Comm Tower** labels. Movement fades
@@ -55,6 +63,11 @@ following stays low, slightly looking up toward the horizon, with slow translati
 and turning. Royal/HQ grounds and doorway approaches use a close trailing view;
 upward stair height raises its aim. Manual elevation allows -20 to 80 degrees.
 Explicit Tab framing bypasses the slow follow solver during its one-second ease.
+Wheel zoom is applied after drone following so the eye and target retain their
+angle and settle promptly. It never feeds the zoomed camera back into the slow
+follow solver. Inspection translates the camera in its viewing direction and
+sideways while every party member stays in place. Pan, orbit and wheel zoom remain
+available while inspecting; Tab explicitly switches the keys back to party control.
 
 The party walks authored stairs and thresholds. Sixty-six authored doors swing
 inward and expose one-shot IDs through `NerisTownEntrances.ConsumeEntry`.

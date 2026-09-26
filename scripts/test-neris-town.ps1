@@ -33,6 +33,9 @@ $project.SmileProject.PropertyGroup.ApplicationId = 'smile.tests.neris-town.run-
 $project.SmileProject.PropertyGroup.RememberWindowPlacement = 'false'
 $entry = $project.SmileProject.ItemGroup.SmileSource | Where-Object StartupOnly -eq 'true'
 $entry.SetAttribute('Include', 'NerisTownSceneTests.smile')
+$inspectionTests = $project.CreateElement('SmileSource')
+$inspectionTests.SetAttribute('Include', 'NerisTownInspectionTests.smile')
+$null = $project.SmileProject.ItemGroup.AppendChild($inspectionTests)
 foreach ($item in @($project.SmileProject.ItemGroup.ChildNodes)) {
     if ($item.Name -in @('Model3DAsset', 'Asset')) { $null = $item.ParentNode.RemoveChild($item) }
 }

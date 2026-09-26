@@ -22,6 +22,7 @@ Import Smile.Tools.NerisTownSite As Site
 Import Smile.Tools.NerisTownLayout As Layout
 Import Smile.Tools.NerisTownEntrances As Doors
 Import Smile.Tools.NerisTownEntrancesData As DoorData
+Import Smile.Tools.NerisTownInspectionTests As InspectionTests
 
 Dim Value As Town.State
 Dim Leader As P.Vector3
@@ -62,6 +63,7 @@ Call Check(G.MaximumMeshCount3D() >= 256, "Detailed Castle And Town Have Mesh Ca
 If Value.Ready Then
 
     Call CheckCamera(Value)
+    Call InspectionTests.Run(Value, Failures)
     Call CheckDrone()
     Call CheckSpeed(Value)
     Call CheckGarden(Value)
@@ -320,7 +322,15 @@ Sub CheckCamera(ByRef Scene As Town.State)
     Dim Changed As Boolean
     Dim Distance As Double
 
-    Call Check(Scene.Flight.Enabled And Scene.Follow, "Drone Starts Enabled Behind Arin")
+    Call Check(Scene.Flight.Enabled And Scene.Follow And Not Scene.PartyControl,
+        "Town Starts With Arrival Framing And Inspection Keys")
+
+    Call Town.Update(Scene, 0)
+    Call Check(Scene.Flight.Arrival And Abs(Scene.View.LiveCamera.Position.X) < 0.001 And
+        Scene.View.LiveCamera.Position.Z < Scene.People.Path.Positions[0].Z And
+        Scene.View.LiveCamera.Target.Z > Scene.People.Path.Positions[0].Z And
+        Abs(Scene.View.LiveCamera.Target.X) < 0.001,
+        "Arrival Looks North Behind Arin Through The Kingdom Sign")
     Call Town.ResetOverview(Scene)
 
     Call Check(Scene.BaseCamera.NearPlane = 25.0,

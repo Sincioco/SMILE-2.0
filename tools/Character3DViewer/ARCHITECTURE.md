@@ -17,6 +17,7 @@ replacement. Studio/Web adoption remains held.
 | `NerisTownEntrances` | Shared hinged leaves, open/close clocks and one-shot doorway IDs |
 | `NerisTownCamera` | Low horizon framing, close grounds, heading/boundary policy |
 | `FollowCamera3D` / `CameraClearance3D` | Reusable acceleration-limited following and padded segment/AABB clearance |
+| `FreeCamera3D` | Input-independent eased translation of the eye and target together |
 | `ArenaViewport3D` / `ArenaCamera3D` | Shared input, distance zoom and framing transition |
 | `NerisTownCameraPanel` | Standalone numeric controls and Orbit/Fit; no panel background |
 | `NerisTownAppearance` | Lighting/water clock and effect lifecycle |
@@ -61,6 +62,30 @@ preserving angle and distance. Close grounds ease from 30 m to 8.5 m behind the
 leader and raise aim for stairs. Manual pitch is -20..80 degrees. Boundary turns
 look inward slowly. Ctrl+F retains F for floor; Fit preserves automatic orbit.
 Movement stops orbit; manual camera input suspends following.
+
+Party movement is explicitly enabled by Tab. Town startup, orbit, pan and camera
+framing commands leave WASD/arrows in inspection mode. `NerisTown` owns the mode
+and dispatches movement; `FreeCamera3D` owns only translation velocity, and
+`NerisTownParty.Stand` keeps all route slots stationary while presenting idle poses.
+`NerisTownCamera.Compose` resolves the unzoomed drone shot before applying arena
+zoom and paired ground clearance. Feeding the zoomed shot to the slow follow
+solver caused the reported skyward tilt and long zoom drift. The focused native
+inspection fixture reproduces release drift on the former implementation and
+checks angle preservation, zoom settling and stationary party positions.
+
+Arrival is a centered, north-facing shot through the Kingdom sign; it bypasses
+obstacle-driven reframing while idle. Twenty seconds without keyboard/mouse
+activity starts inspection orbit; input stops only the automatic idle orbit.
+The camera panel owns actual frame-time sampling through existing `ViewerTiming`
+and displays the final composed camera above Orbit/Fit with an 80% opaque backing.
+
+September 26 inspection/zoom review: `NerisTown` is 584 lines (+72), camera policy
+265 (+50), camera panel 176 (+57), party 496 (+16), and shared `FreeCamera3D` 75
+new lines. Camera constraint/composition moved to its existing camera owner;
+the host and renderer did not grow. No thresholds, exclusions, dependencies or
+baselines changed. Native scene/route regression, 49 calibration checks and
+58 graphics/input/audio checks pass. Native build/relaunch passed; final visual
+framing and the panel remain available for Sin's review. Web checks stayed held.
 
 Sixty-six authored doors swing inward and expose one-shot IDs. Interior/cutscene
 loading is a future consumer; no destination content was created. Old Castle's

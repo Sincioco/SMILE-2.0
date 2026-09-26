@@ -8,6 +8,7 @@ Import Smile.Simple3D.PrecisionMath3D As M
 Import Smile.Simple3D.PrecisionCamera3D As Camera
 Import Smile.Simple3D.CameraClearance3D As Clearance
 Import Smile.Simple3D.FollowCamera3D As Follow
+Import Smile.Simple3D.ArenaViewport3D As Arena
 Import Smile.Tools.NerisTownObstacles As Obstacles
 Import Smile.Tools.NerisTownNavigation As Navigation
 Import Smile.Tools.NerisTownEntranceNavigation As Entries
@@ -198,6 +199,55 @@ Public Sub Settle(ByRef Value As State, Displayed As P.Camera3D)
 
     Value.Flight.Target = Displayed.Target
     Value.Flight.TargetReady = True
+
+End Sub
+
+''' Follow the unzoomed shot first. Direct zoom must never enter the slow drone solver.
+Public Sub Compose(ByRef Value As State, ByRef View As Arena.State,
+    Base As P.Camera3D, Following As Boolean, Elapsed As Number)
+
+    Dim Resolved As P.Camera3D
+    Dim Lift As Double
+    Dim FloorVisible As Boolean
+
+    Resolved = Base
+
+    If Value.Focusing Or Value.Arrival Then
+        Call Settle(Value, Base)
+    Else If Following And Value.Enabled And Not Value.Suspended Then
+        Resolved = Resolve(Value, Base, Elapsed)
+    End If
+
+    Call Constrain(View, Resolved)
+
+    ' Apply town ground clearance once, translating both eye and target to retain pitch.
+    FloorVisible = View.FloorVisible
+    View.FloorVisible = False
+
+    Call Arena.ComposeCamera(View, Resolved)
+
+    View.FloorVisible = FloorVisible
+    Lift = Max(0.0, 25.01 - View.LiveCamera.Position.Y)
+    View.LiveCamera.Position.Y = View.LiveCamera.Position.Y + Lift
+    View.LiveCamera.Target.Y = View.LiveCamera.Target.Y + Lift
+    Value.Focusing = Value.Focusing And View.TransitionDuration > 0
+
+End Sub
+
+Private Sub Constrain(ByRef View As Arena.State, Base As P.Camera3D)
+
+    Dim Offset As P.Vector3
+    Dim BasePitch As Double
+    Dim Pitch As Double
+    Dim MinimumPan As Double
+
+    Offset = M.Subtract(Base.Position, Base.Target)
+    BasePitch = Atan2(Offset.Y, Sqrt(Offset.X * Offset.X + Offset.Z * Offset.Z))
+    Pitch = Clamp(BasePitch + M.Radians(View.Controls.OrbitPitch),
+        M.Radians(-20.0), M.Radians(80.0))
+    View.Controls.OrbitPitch = M.Degrees(Pitch - BasePitch)
+    MinimumPan = (25.0 - Base.Target.Y) / Cos(Pitch)
+    View.Controls.PanY = Max(MinimumPan, View.Controls.PanY)
 
 End Sub
 

@@ -393,6 +393,22 @@ Private Sub Present(ByRef Value As Member, ByRef Keys As Calibration.State,
 
 End Sub
 
+''' Inspection leaves every route position fixed while idle animation continues.
+Public Sub Stand(ByRef Value As State, Elapsed As Number)
+
+    Dim Index As Number
+
+    For Index = 0 To Value.MemberCount - 1
+        Value.Path.Moving[Index] = False
+
+        Call Present(Value.Members[Index], Value.Keys, Value.Path.Positions[Index],
+            False, ToNumber(Round(Value.Members[Index].Opacity)), Elapsed, Value.SpeedPercent)
+
+        Value.Ready = Value.Ready And Value.Members[Index].Body.Ready
+    End For
+
+End Sub
+
 Public Sub Update(ByRef Value As State, Leader As P.Vector3, Elapsed As Number)
 
     Dim Index As Number

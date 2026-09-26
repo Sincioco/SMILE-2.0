@@ -1,0 +1,179 @@
+''' Focused native regressions for town inspection and direct wheel zoom.
+Module Smile.Tools.NerisTownInspectionTests
+
+Option Explicit
+
+Import Smile.Tools.NerisTown As Town
+Import Smile.Tools.NerisTownParty As Party
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.PrecisionMath3D As M
+Import Smile.Simple3D.ArenaViewport3D As Arena
+Import Smile.Simple3D.ArenaCamera3D As Motion
+
+Public Sub Run(ByRef Value As Town.State, ByRef Failures As Number)
+
+    Call ZoomAfterTab(Value, Failures)
+    Call InspectionMovement(Value, Failures)
+    Call IdleOrbit(Value, Failures)
+
+    Value.Look.Time = 0
+
+End Sub
+
+Private Sub IdleOrbit(ByRef Value As Town.State, ByRef Failures As Number)
+
+    Call Town.ResetOverview(Value)
+
+    Value.Cinematic = False
+    Value.IdleOrbit = False
+    Value.IdleTime = 0
+
+    Call Town.UpdateIdle(Value, False, 19999)
+    Call Check(Not Value.Cinematic, "Idle Orbit Waits The Full Twenty Seconds", Failures)
+    Call Town.UpdateIdle(Value, True, 1)
+    Call Check(Value.IdleTime = 0, "Input Restarts The Idle Countdown", Failures)
+    Call Town.UpdateIdle(Value, False, 20000)
+    Call Check(Value.Cinematic And Value.IdleOrbit And Not Value.PartyControl,
+        "Twenty Seconds Of Inactivity Starts Inspection Orbit", Failures)
+    Call Town.UpdateIdle(Value, True, 1)
+    Call Check(Not Value.Cinematic And Not Value.IdleOrbit And Value.IdleTime = 0,
+        "Input Immediately Stops Automatic Idle Orbit", Failures)
+
+End Sub
+
+Private Sub InspectionMovement(ByRef Value As Town.State, ByRef Failures As Number)
+
+    Dim Positions[4] As P.Vector3
+    Dim StartView As P.Camera3D
+    Dim StopView As P.Camera3D
+    Dim Index As Number
+    Dim Frame As Number
+
+    Call Town.ResetOverview(Value)
+
+    Value.Cinematic = False
+    StartView = Value.View.LiveCamera
+
+    For Index = 0 To 3
+        Positions[Index] = Value.People.Path.Positions[Index]
+    End For
+
+    For Frame = 1 To 60
+        Call Town.InspectMove(Value, P.Vector(1.0, 0.0, 0.0), 16)
+        Call Town.Update(Value, 0)
+    End For
+
+    Call Check(Not Value.PartyControl And Not Value.Follow And
+        Value.View.LiveCamera.Position.X > StartView.Position.X + 100.0,
+        "Inspection Moves The Camera Without Enabling Party Control", Failures)
+    Call Check(M.Distance(M.Subtract(StartView.Target, StartView.Position),
+        M.Subtract(Value.View.LiveCamera.Target, Value.View.LiveCamera.Position)) < 0.001,
+        "Inspection Translation Preserves Zoom And Viewing Angle", Failures)
+
+    For Frame = 1 To 120
+        Call Town.Update(Value, 16)
+    End For
+
+    StopView = Value.View.LiveCamera
+
+    Call Town.Update(Value, 100)
+    Call Check(Not Value.InspectMoving And
+        M.Distance(StopView.Position, Value.View.LiveCamera.Position) < 0.001,
+        "Inspection Eases To A Complete Stop After Key Release", Failures)
+
+    For Index = 0 To 3
+        Call Check(M.Distance(Positions[Index], Value.People.Path.Positions[Index]) < 0.001 And
+            Not Value.People.Path.Moving[Index],
+            "Every Party Member Stays In Place During Inspection", Failures)
+    End For
+
+    Call Town.Input(Value, KEY_TAB, True)
+
+    StartView = Value.BaseCamera
+
+    Call Town.InspectMove(Value, P.Vector(1.0, 0.0, 0.0), 100)
+    Call Check(Value.PartyControl And M.Distance(StartView.Position,
+        Value.BaseCamera.Position) < 0.001, "Tab Enables Party Control And Disables Free Travel", Failures)
+    Call Town.StartOrbit(Value)
+    Call Check(Not Value.PartyControl, "Orbit Returns The Keys To Inspection", Failures)
+    Call Town.ResetOverview(Value)
+
+End Sub
+
+Private Sub ZoomAfterTab(ByRef Value As Town.State, ByRef Failures As Number)
+
+    Dim Pointer As Motion.PointerInput
+    Dim Before As P.Vector3
+    Dim After As P.Vector3
+    Dim Settled As P.Camera3D
+    Dim Index As Number
+    Dim Ok As Boolean
+    Dim StableAngle As Boolean
+
+    Value.View.FloorVisible = False
+    StableAngle = True
+
+    Call Town.Input(Value, KEY_TAB, True)
+    Call Arena.AdvanceTransition(Value.View, 1000)
+    Call Town.Update(Value, 0)
+
+    Ok = M.TryNormalize(M.Subtract(Value.View.LiveCamera.Target,
+        Value.View.LiveCamera.Position), Before)
+    Pointer.Wheel = -5
+    Ok = Motion.UpdatePointer(Value.View.Controls, Value.View.Zoom, Pointer)
+
+    For Index = 1 To 180
+
+        Call Motion.Advance(Value.View.Controls, Value.View.Zoom, 16)
+        Call Town.Update(Value, 16)
+
+        Ok = M.TryNormalize(M.Subtract(Value.View.LiveCamera.Target,
+            Value.View.LiveCamera.Position), After)
+        StableAngle = StableAngle And M.Distance(Before, After) < 0.001
+    End For
+
+    Settled = Value.View.LiveCamera
+    Ok = M.TryNormalize(M.Subtract(Settled.Target, Settled.Position), After)
+
+    Call Check(StableAngle,
+        "Tab Wheel Zoom Preserves The Horizon Angle", Failures)
+    Call Check(Value.View.Zoom.Current = Value.View.Zoom.Target,
+        "Wheel Zoom Reaches Its Requested Target", Failures)
+
+    For Index = 1 To 60
+        Call Motion.Advance(Value.View.Controls, Value.View.Zoom, 16)
+        Call Town.Update(Value, 16)
+    End For
+
+    Call Check(M.Distance(Settled.Position, Value.View.LiveCamera.Position) < 0.01 And
+        M.Distance(Settled.Target, Value.View.LiveCamera.Target) < 0.01,
+        "Released Wheel Leaves No Slow Drone Zoom Drift", Failures)
+
+    Pointer.Wheel = 5
+    Ok = Motion.UpdatePointer(Value.View.Controls, Value.View.Zoom, Pointer)
+
+    For Index = 1 To 60
+        Call Motion.Advance(Value.View.Controls, Value.View.Zoom, 16)
+        Call Town.Update(Value, 16)
+    End For
+
+    Ok = M.TryNormalize(M.Subtract(Value.View.LiveCamera.Target,
+        Value.View.LiveCamera.Position), After)
+
+    Call Check(M.Distance(Before, After) < 0.001 And
+        M.Distance(Value.View.LiveCamera.Position, Value.View.LiveCamera.Target) < 400.0,
+        "Wheel Zoom In Returns To The Same Party Framing", Failures)
+    Call Town.ResetOverview(Value)
+
+End Sub
+
+Private Sub Check(Condition As Boolean, Label As Text, ByRef Failures As Number)
+
+    If Not Condition Then
+        Failures = Failures + 1
+        Print "FAIL " + Label
+    End If
+
+End Sub
+
+End Module
