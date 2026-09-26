@@ -1,0 +1,672 @@
+{
+  "schema": 1,
+  "source": "D:\\SMILE 2.0\\games\\SinStarI\\SourceAssets\\Towns\\Neris\\NerisTownV1\\Blend\\Neris-Town-Waterfront.blend",
+  "instances": 358,
+  "templates": {
+    "collection:Courtyard Cottage": {
+      "label": "Courtyard Cottage",
+      "category": "building",
+      "instances": 3,
+      "triangles": 50072,
+      "materials": [
+        "Aged Gold",
+        "Amber Window Glass",
+        "Fresh Green Leaves",
+        "Ivory Limestone",
+        "Limestone Block Tone 1",
+        "Limestone Block Tone 2",
+        "Limestone Block Tone 3",
+        "Limestone Block Tone 4",
+        "Moss Green Leaves",
+        "Pale Carved Stone",
+        "Patinated Iron",
+        "Polished Gold Edge",
+        "Recess Shadow",
+        "Teal Enamel Roof",
+        "Warm Lantern"
+      ],
+      "source": "Home 02 \u2014 Courtyard Cottage"
+    },
+    "collection:Family House": {
+      "label": "Family House",
+      "category": "building",
+      "instances": 3,
+      "triangles": 84080,
+      "materials": [
+        "Aged Gold",
+        "Amber Window Glass",
+        "Fresh Green Leaves",
+        "Ivory Limestone",
+        "Limestone Block Tone 1",
+        "Limestone Block Tone 2",
+        "Limestone Block Tone 3",
+        "Limestone Block Tone 4",
+        "Moss Green Leaves",
+        "Pale Carved Stone",
+        "Patinated Iron",
+        "Polished Gold Edge",
+        "Recess Shadow",
+        "Teal Enamel Roof",
+        "Warm Lantern"
+      ],
+      "source": "Home 01 \u2014 Family House"
+    },
+    "collection:Garden Pavilion": {
+      "label": "Garden Pavilion",
+      "category": "building",
+      "instances": 2,
+      "triangles": 66758,
+      "materials": [
+        "Aged Gold",
+        "Amber Window Glass",
+        "Crystal Bright Facets",
+        "Cyan Relay Crystal",
+        "Fresh Green Leaves",
+        "Ivory Limestone",
+        "Limestone Block Tone 1",
+        "Limestone Block Tone 2",
+        "Limestone Block Tone 3",
+        "Limestone Block Tone 4",
+        "Moss Green Leaves",
+        "Pale Carved Stone",
+        "Patinated Iron",
+        "Polished Gold Edge",
+        "Recess Shadow",
+        "Teal Enamel Alternate",
+        "Teal Enamel Roof",
+        "Warm Lantern"
+      ],
+      "source": "Home 03 \u2014 Garden Pavilion"
+    },
+    "collection:Neris New Large Home": {
+      "label": "Estate House",
+      "category": "building",
+      "instances": 8,
+      "triangles": 25872,
+      "materials": [
+        "Aged Gold",
+        "Amber Window Glass",
+        "Crystal Bright Facets",
+        "Cyan Relay Crystal",
+        "Dark Walnut",
+        "Fresh Green Leaves",
+        "Ivory Limestone",
+        "Moss Green Leaves",
+        "Neris Teal Banner",
+        "Pale Carved Stone",
+        "Patinated Iron",
+        "Polished Gold Edge",
+        "Recess Shadow",
+        "Teal Enamel Roof",
+        "Warm Lantern"
+      ],
+      "source": "Large Residence 01"
+    },
+    "collection:Neris New Medium Home": {
+      "label": "Middle Class House",
+      "category": "building",
+      "instances": 10,
+      "triangles": 24826,
+      "materials": [
+        "Aged Gold",
+        "Amber Window Glass",
+        "Crystal Bright Facets",
+        "Cyan Relay Crystal",
+        "Fresh Green Leaves",
+        "Ivory Limestone",
+        "Moss Green Leaves",
+        "Neris Teal Banner",
+        "Pale Carved Stone",
+        "Patinated Iron",
+        "Polished Gold Edge",
+        "Recess Shadow",
+        "Teal Enamel Roof",
+        "Warm Lantern"
+      ],
+      "source": "Medium Residence 05"
+    },
+    "collection:Neris New Small Home": {
+      "label": "Small House",
+      "category": "building",
+      "instances": 12,
+      "triangles": 22760,
+      "materials": [
+        "Aged Gold",
+        "Amber Window Glass",
+        "Crystal Bright Facets",
+        "Cyan Relay Crystal",
+        "Fresh Green Leaves",
+        "Ivory Limestone",
+        "Moss Green Leaves",
+        "Neris Teal Banner",
+        "Pale Carved Stone",
+        "Patinated Iron",
+        "Polished Gold Edge",
+        "Recess Shadow",
+        "Teal Enamel Roof",
+        "Warm Lantern"
+      ],
+      "source": "Small Residence 11"
+    },
+    "collection:Neris Tripo Castle Architecture": {
+      "label": "Old Castle",
+      "category": "building",
+      "instances": 1,
+      "triangles": 1770324,
+      "materials": [
+        "tripo_mat_1f6646f8-ae4a-4247-8070-0215861da2ee"
+      ],
+      "source": "Neris Tripo Castle Comparison"
+    },
+    "root:Neris Military Headquarters": {
+      "label": "Military HQ",
+      "category": "building",
+      "instances": 1,
+      "triangles": 36450,
+      "materials": [
+        "Aged Gold",
+        "Amber Window Glass",
+        "Crystal Bright Facets",
+        "Cyan Relay Crystal",
+        "Dark Walnut",
+        "Fresh Green Leaves",
+        "Ivory Limestone",
+        "Moss Green Leaves",
+        "Neris Teal Banner",
+        "Pale Carved Stone",
+        "Patinated Iron",
+        "Polished Gold Edge",
+        "Recess Shadow",
+        "Teal Enamel Roof",
+        "Town Grass",
+        "Town Pavinglight"
+      ],
+      "source": "Neris Military Headquarters"
+    },
+    "root:Neris-Armor-Store Editable": {
+      "label": "Armor Shop",
+      "category": "building",
+      "instances": 1,
+      "triangles": 429072,
+      "materials": [
+        "Aged Gold",
+        "Amber Window Glass",
+        "Crystal Bright Facets",
+        "Cyan Relay Crystal",
+        "Dark Walnut",
+        "Fresh Green Leaves",
+        "Ivory Limestone",
+        "Limestone Block Tone 1",
+        "Limestone Block Tone 2",
+        "Limestone Block Tone 3",
+        "Limestone Block Tone 4",
+        "Moss Green Leaves",
+        "Neris Teal Banner",
+        "Pale Carved Stone",
+        "Patinated Iron",
+        "Polished Gold Edge",
+        "Recess Shadow",
+        "Teal Enamel Alternate",
+        "Teal Enamel Roof",
+        "Walnut Light Grain",
+        "Warm Lantern"
+      ],
+      "source": "Neris-Armor-Store Editable"
+    },
+    "root:Neris-City-Hall Editable": {
+      "label": "City Hall",
+      "category": "building",
+      "instances": 1,
+      "triangles": 597778,
+      "materials": [
+        "Aged Gold",
+        "Amber Window Glass",
+        "Crystal Bright Facets",
+        "Cyan Relay Crystal",
+        "Fresh Green Leaves",
+        "Ivory Limestone",
+        "Limestone Block Tone 1",
+        "Limestone Block Tone 2",
+        "Limestone Block Tone 3",
+        "Limestone Block Tone 4",
+        "Moss Green Leaves",
+        "Neris Teal Banner",
+        "Pale Carved Stone",
+        "Patinated Iron",
+        "Polished Gold Edge",
+        "Recess Shadow",
+        "Teal Enamel Alternate",
+        "Teal Enamel Roof",
+        "Warm Lantern"
+      ],
+      "source": "Neris-City-Hall Editable"
+    },
+    "root:Neris-Communication-Tower Editable": {
+      "label": "Comm Tower",
+      "category": "building",
+      "instances": 1,
+      "triangles": 334412,
+      "materials": [
+        "Aged Gold",
+        "Amber Window Glass",
+        "Crystal Bright Facets",
+        "Cyan Relay Crystal",
+        "Dark Walnut",
+        "Ivory Limestone",
+        "Neris Teal Banner",
+        "Pale Carved Stone",
+        "Patinated Iron",
+        "Polished Gold Edge",
+        "Recess Shadow",
+        "Teal Enamel Roof",
+        "Walnut Light Grain",
+        "Warm Lantern"
+      ],
+      "source": "Neris-Communication-Tower Editable"
+    },
+    "root:Neris-Item-Store Editable": {
+      "label": "Item Shop",
+      "category": "building",
+      "instances": 1,
+      "triangles": 430640,
+      "materials": [
+        "Aged Gold",
+        "Amber Window Glass",
+        "Blue Potion Ceramic",
+        "Crystal Bright Facets",
+        "Cyan Relay Crystal",
+        "Dark Walnut",
+        "Fresh Green Leaves",
+        "Ivory Limestone",
+        "Limestone Block Tone 1",
+        "Limestone Block Tone 2",
+        "Limestone Block Tone 3",
+        "Limestone Block Tone 4",
+        "Moss Green Leaves",
+        "Neris Teal Banner",
+        "Pale Carved Stone",
+        "Patinated Iron",
+        "Polished Gold Edge",
+        "Recess Shadow",
+        "Teal Enamel Alternate",
+        "Teal Enamel Roof",
+        "Walnut Light Grain",
+        "Warm Lantern"
+      ],
+      "source": "Neris-Item-Store Editable"
+    },
+    "root:Neris-Weapon-Store Editable": {
+      "label": "Weapon Shop",
+      "category": "building",
+      "instances": 1,
+      "triangles": 423656,
+      "materials": [
+        "Aged Gold",
+        "Amber Window Glass",
+        "Crystal Bright Facets",
+        "Cyan Relay Crystal",
+        "Dark Walnut",
+        "Fresh Green Leaves",
+        "Ivory Limestone",
+        "Limestone Block Tone 1",
+        "Limestone Block Tone 2",
+        "Limestone Block Tone 3",
+        "Limestone Block Tone 4",
+        "Moss Green Leaves",
+        "Neris Teal Banner",
+        "Pale Carved Stone",
+        "Patinated Iron",
+        "Polished Gold Edge",
+        "Recess Shadow",
+        "Teal Enamel Alternate",
+        "Teal Enamel Roof",
+        "Walnut Light Grain",
+        "Warm Lantern"
+      ],
+      "source": "Neris-Weapon-Store Editable"
+    },
+    "root:Royal Castle of Neris": {
+      "label": "Royal Castle",
+      "category": "building",
+      "instances": 1,
+      "triangles": 463788,
+      "materials": [
+        "Aged Gold",
+        "Amber Window Glass",
+        "Crystal Bright Facets",
+        "Cyan Relay Crystal",
+        "Dark Walnut",
+        "Fresh Green Leaves",
+        "Ivory Limestone",
+        "Moss Green Leaves",
+        "Neris Teal Banner",
+        "Pale Carved Stone",
+        "Patinated Iron",
+        "Polished Gold Edge",
+        "Recess Shadow",
+        "Royal Deep Blue Water",
+        "Teal Enamel Roof",
+        "Town Pavinglight",
+        "Warm Lantern"
+      ],
+      "source": "Royal Castle of Neris"
+    },
+    "collection:Bench": {
+      "label": "Bench",
+      "category": "decoration",
+      "instances": 54,
+      "triangles": 844,
+      "materials": [
+        "Aged Gold",
+        "Dark Walnut",
+        "Pale Carved Stone"
+      ],
+      "source": "Avenue Bench"
+    },
+    "collection:Crystal Lamp": {
+      "label": "Crystal Lamp",
+      "category": "decoration",
+      "instances": 45,
+      "triangles": 412,
+      "materials": [
+        "Aged Gold",
+        "Crystal Bright Facets",
+        "Cyan Relay Crystal"
+      ],
+      "source": "Avenue Crystal Lamp"
+    },
+    "collection:Detailed Neris Flower Planter": {
+      "label": "Flower Planter",
+      "category": "decoration",
+      "instances": 48,
+      "triangles": 26100,
+      "materials": [
+        "Aged Gold",
+        "Blush Petal Silk",
+        "Flower Jade Foliage",
+        "Golden Pollen",
+        "Ivory Petal Silk",
+        "Pale Carved Stone",
+        "Planter Dark Earth",
+        "Rose Petal Silk"
+      ],
+      "source": "Estate Park Flower Planter"
+    },
+    "collection:Market Stall Template": {
+      "label": "Market Stall",
+      "category": "decoration",
+      "instances": 2,
+      "triangles": 3584,
+      "materials": [
+        "Aged Gold",
+        "Amber Window Glass",
+        "Blue Potion Ceramic",
+        "Dark Walnut",
+        "Neris Teal Banner",
+        "Pale Carved Stone",
+        "Patinated Iron",
+        "Walnut Light Grain"
+      ],
+      "source": "Neighborhood Market Stall 1"
+    },
+    "collection:Neris Detailed Tree 1": {
+      "label": "Leafy Tree",
+      "category": "decoration",
+      "instances": 111,
+      "triangles": 23024,
+      "materials": [
+        "Neris Mature Jade Leaves",
+        "Neris Ridged Chestnut Bark",
+        "Neris Sunlit Leaf Tips",
+        "Neris Young Olive Leaves"
+      ],
+      "source": "Garden Tree 01"
+    },
+    "collection:Neris Detailed Tree 2": {
+      "label": "Slender Tree",
+      "category": "decoration",
+      "instances": 36,
+      "triangles": 23024,
+      "materials": [
+        "Neris Mature Jade Leaves",
+        "Neris Ridged Chestnut Bark",
+        "Neris Sunlit Leaf Tips",
+        "Neris Young Olive Leaves"
+      ],
+      "source": "Garden Tree 02"
+    },
+    "group:Fountain Water": {
+      "label": "Fountain",
+      "category": "decoration",
+      "instances": 1,
+      "triangles": 5832,
+      "materials": [
+        "Aged Gold",
+        "Crystal Bright Facets",
+        "Cyan Relay Crystal",
+        "Ivory Limestone",
+        "Pale Carved Stone",
+        "Town Water"
+      ],
+      "source": "Fountain Water"
+    },
+    "group:Fountain Water.001": {
+      "label": "Fountain",
+      "category": "decoration",
+      "instances": 1,
+      "triangles": 5832,
+      "materials": [
+        "Aged Gold",
+        "Crystal Bright Facets",
+        "Cyan Relay Crystal",
+        "Ivory Limestone",
+        "Pale Carved Stone",
+        "Royal Deep Blue Water"
+      ],
+      "source": "Fountain Water.001"
+    },
+    "group:Fountain Water.002": {
+      "label": "Fountain",
+      "category": "decoration",
+      "instances": 1,
+      "triangles": 5832,
+      "materials": [
+        "Aged Gold",
+        "Crystal Bright Facets",
+        "Cyan Relay Crystal",
+        "Ivory Limestone",
+        "Pale Carved Stone",
+        "Royal Deep Blue Water"
+      ],
+      "source": "Fountain Water.002"
+    },
+    "group:Fountain Water.003": {
+      "label": "Fountain",
+      "category": "decoration",
+      "instances": 1,
+      "triangles": 5832,
+      "materials": [
+        "Aged Gold",
+        "Crystal Bright Facets",
+        "Cyan Relay Crystal",
+        "Ivory Limestone",
+        "Pale Carved Stone",
+        "Royal Deep Blue Water"
+      ],
+      "source": "Fountain Water.003"
+    },
+    "group:Fountain Water.004": {
+      "label": "Fountain",
+      "category": "decoration",
+      "instances": 1,
+      "triangles": 5832,
+      "materials": [
+        "Aged Gold",
+        "Crystal Bright Facets",
+        "Cyan Relay Crystal",
+        "Ivory Limestone",
+        "Pale Carved Stone",
+        "Royal Deep Blue Water"
+      ],
+      "source": "Fountain Water.004"
+    },
+    "group:Fountain Water.005": {
+      "label": "Fountain",
+      "category": "decoration",
+      "instances": 1,
+      "triangles": 5832,
+      "materials": [
+        "Aged Gold",
+        "Crystal Bright Facets",
+        "Cyan Relay Crystal",
+        "Ivory Limestone",
+        "Pale Carved Stone",
+        "Royal Deep Blue Water"
+      ],
+      "source": "Fountain Water.005"
+    },
+    "group:Kingdom of Neris Sign": {
+      "label": "Kingdom Sign",
+      "category": "decoration",
+      "instances": 1,
+      "triangles": 82240,
+      "materials": [
+        "Aged Gold",
+        "Crystal Bright Facets",
+        "Cyan Relay Crystal",
+        "Ivory Limestone",
+        "Neris Teal Banner",
+        "Pale Carved Stone",
+        "Polished Gold Edge",
+        "Teal Enamel Roof"
+      ],
+      "source": "Kingdom of Neris Sign"
+    },
+    "group:Wayfarer Plaza": {
+      "label": "Crystal Circle",
+      "category": "decoration",
+      "instances": 1,
+      "triangles": 1124,
+      "materials": [
+        "Aged Gold",
+        "Crystal Bright Facets",
+        "Cyan Relay Crystal",
+        "Pale Carved Stone",
+        "Teal Enamel Roof"
+      ],
+      "source": "Wayfarer Plaza"
+    },
+    "group:Wayfarer Plaza.001": {
+      "label": "Crystal Circle",
+      "category": "decoration",
+      "instances": 1,
+      "triangles": 1124,
+      "materials": [
+        "Aged Gold",
+        "Crystal Bright Facets",
+        "Cyan Relay Crystal",
+        "Pale Carved Stone",
+        "Teal Enamel Roof"
+      ],
+      "source": "Wayfarer Plaza.001"
+    },
+    "group:Wayfarer Plaza.002": {
+      "label": "Crystal Circle",
+      "category": "decoration",
+      "instances": 1,
+      "triangles": 1124,
+      "materials": [
+        "Aged Gold",
+        "Crystal Bright Facets",
+        "Cyan Relay Crystal",
+        "Pale Carved Stone",
+        "Teal Enamel Roof"
+      ],
+      "source": "Wayfarer Plaza.002"
+    },
+    "group:Wayfarer Plaza.003": {
+      "label": "Crystal Circle",
+      "category": "decoration",
+      "instances": 1,
+      "triangles": 1124,
+      "materials": [
+        "Aged Gold",
+        "Crystal Bright Facets",
+        "Cyan Relay Crystal",
+        "Pale Carved Stone",
+        "Teal Enamel Roof"
+      ],
+      "source": "Wayfarer Plaza.003"
+    },
+    "group:Wayfarer Plaza.004": {
+      "label": "Crystal Circle",
+      "category": "decoration",
+      "instances": 1,
+      "triangles": 1124,
+      "materials": [
+        "Aged Gold",
+        "Crystal Bright Facets",
+        "Cyan Relay Crystal",
+        "Pale Carved Stone",
+        "Teal Enamel Roof"
+      ],
+      "source": "Wayfarer Plaza.004"
+    },
+    "group:Wayfarer Plaza.005": {
+      "label": "Crystal Circle",
+      "category": "decoration",
+      "instances": 1,
+      "triangles": 1124,
+      "materials": [
+        "Aged Gold",
+        "Crystal Bright Facets",
+        "Cyan Relay Crystal",
+        "Pale Carved Stone",
+        "Teal Enamel Roof"
+      ],
+      "source": "Wayfarer Plaza.005"
+    },
+    "group:Wayfinding Post": {
+      "label": "Wayfinding Sign",
+      "category": "decoration",
+      "instances": 1,
+      "triangles": 14640,
+      "materials": [
+        "Aged Gold",
+        "Neris Teal Banner",
+        "Polished Gold Edge"
+      ],
+      "source": "Wayfinding Post"
+    },
+    "group:Wayfinding Post.001": {
+      "label": "Wayfinding Sign",
+      "category": "decoration",
+      "instances": 1,
+      "triangles": 14640,
+      "materials": [
+        "Aged Gold",
+        "Neris Teal Banner",
+        "Polished Gold Edge"
+      ],
+      "source": "Wayfinding Post.001"
+    },
+    "group:Wayfinding Post.002": {
+      "label": "Wayfinding Sign",
+      "category": "decoration",
+      "instances": 1,
+      "triangles": 9312,
+      "materials": [
+        "Aged Gold",
+        "Neris Teal Banner",
+        "Polished Gold Edge"
+      ],
+      "source": "Wayfinding Post.002"
+    }
+  },
+  "unowned": {
+    "Waterfront Terrain and Bridges": 358,
+    "Waterfront Grout": 1,
+    "Waterfront Slate Tiles": 1,
+    "Neris Lawn Blade Batch": 1
+  }
+}

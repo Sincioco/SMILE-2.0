@@ -1,0 +1,6313 @@
+''' Generated local entrance, collision and water data. No state ownership.
+Module Smile.Tools.TownCatalogFeatures
+
+Option Explicit
+
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.CameraClearance3D As Clearance
+
+Public Type Box
+    X0 As Double
+    Z0 As Double
+    X1 As Double
+    Z1 As Double
+    Height As Double
+End Type
+
+Public Type Door
+    Position As P.Vector3
+    Width As Double
+    Height As Double
+    Yaw As Double
+End Type
+
+Public Type WaterDisk
+    Position As P.Vector3
+    RadiusX As Double
+    RadiusZ As Double
+End Type
+
+Public Function SolidAt(TemplateIndex As Number, Index As Number) As Box
+
+    Dim Result As Box
+    Dim Key As Number
+
+    Key = TemplateIndex * 256 + Index
+
+    Select Case Key
+        Case 0
+            Result.X0 = -38.250030
+            Result.Z0 = -33.250010
+            Result.X1 = 38.249910
+            Result.Z1 = 33.249930
+
+        Case 1
+            Result.X0 = 20.249880
+            Result.Z0 = -42.750140
+            Result.X1 = 29.750000
+            Result.Z1 = -33.250010
+
+        Case 2
+            Result.X0 = -29.750120
+            Result.Z0 = -42.750130
+            Result.X1 = -20.250000
+            Result.Z1 = -33.250010
+
+        Case 3
+            Result.X0 = 35.399870
+            Result.Z0 = 12.249860
+            Result.X1 = 40.199990
+            Result.Z1 = 25.749920
+
+        Case 4
+            Result.X0 = 35.399870
+            Result.Z0 = -25.750010
+            Result.X1 = 40.199990
+            Result.Z1 = -12.249950
+
+        Case 5
+            Result.X0 = -26.750090
+            Result.Z0 = 30.399890
+            Result.X1 = -13.250030
+            Result.Z1 = 35.200000
+
+        Case 6
+            Result.X0 = -40.200100
+            Result.Z0 = 12.249870
+            Result.X1 = -35.399990
+            Result.Z1 = 25.749930
+
+        Case 7
+            Result.X0 = -40.200100
+            Result.Z0 = -25.750010
+            Result.X1 = -35.399990
+            Result.Z1 = -12.249950
+
+        Case 8
+            Result.X0 = 13.249910
+            Result.Z0 = 30.399890
+            Result.X1 = 26.749970
+            Result.Z1 = 35.200000
+
+        Case 9
+            Result.X0 = -30.250150
+            Result.Z0 = -35.200090
+            Result.X1 = -16.750090
+            Result.Z1 = -30.399980
+
+        Case 10
+            Result.X0 = 16.749970
+            Result.Z0 = -35.200090
+            Result.X1 = 30.250030
+            Result.Z1 = -30.399980
+
+        Case 11
+            Result.X0 = -8.649660
+            Result.Z0 = -34.400070
+            Result.X1 = 8.649540
+            Result.Z1 = -31.600080
+
+        Case 12
+            Result.X0 = -38.500120
+            Result.Z0 = -33.500100
+            Result.X1 = -33.500120
+            Result.Z1 = -28.500100
+
+        Case 13
+            Result.X0 = -38.500120
+            Result.Z0 = 28.500020
+            Result.X1 = -33.500120
+            Result.Z1 = 33.500020
+
+        Case 14
+            Result.X0 = 33.500000
+            Result.Z0 = -33.500110
+            Result.X1 = 38.500000
+            Result.Z1 = -28.500110
+
+        Case 15
+            Result.X0 = 33.500000
+            Result.Z0 = 28.500020
+            Result.X1 = 38.500000
+            Result.Z1 = 33.500020
+
+        Case 16
+            Result.X0 = -14.100100
+            Result.Z0 = -38.100170
+            Result.X1 = -9.899960
+            Result.Z1 = -33.900040
+
+        Case 17
+            Result.X0 = 13.099910
+            Result.Z0 = -41.965070
+            Result.X1 = 14.500060
+            Result.Z1 = -32.034960
+
+        Case 18
+            Result.X0 = -14.500180
+            Result.Z0 = -41.965070
+            Result.X1 = -13.100040
+            Result.Z1 = -32.034960
+
+        Case 19
+            Result.X0 = -7.629910
+            Result.Z0 = -34.780010
+            Result.X1 = 7.629790
+            Result.Z1 = -34.020130
+
+        Case 256
+            Result.X0 = -45.250000
+            Result.Z0 = -38.249900
+            Result.X1 = 45.249880
+            Result.Z1 = 38.250040
+
+        Case 257
+            Result.X0 = -29.750120
+            Result.Z0 = -47.750020
+            Result.X1 = -20.250000
+            Result.Z1 = -38.249900
+
+        Case 258
+            Result.X0 = 20.249880
+            Result.Z0 = -47.750020
+            Result.X1 = 29.750000
+            Result.Z1 = -38.249900
+
+        Case 259
+            Result.X0 = -26.750090
+            Result.Z0 = 35.400000
+            Result.X1 = -13.250030
+            Result.Z1 = 40.200110
+
+        Case 260
+            Result.X0 = -47.200070
+            Result.Z0 = -25.749900
+            Result.X1 = -42.399960
+            Result.Z1 = -12.249840
+
+        Case 261
+            Result.X0 = 42.399840
+            Result.Z0 = -25.749900
+            Result.X1 = 47.199950
+            Result.Z1 = -12.249840
+
+        Case 262
+            Result.X0 = -47.200070
+            Result.Z0 = 12.249980
+            Result.X1 = -42.399960
+            Result.Z1 = 25.750040
+
+        Case 263
+            Result.X0 = -30.250150
+            Result.Z0 = -40.199970
+            Result.X1 = -16.750090
+            Result.Z1 = -35.399860
+
+        Case 264
+            Result.X0 = 13.249910
+            Result.Z0 = 35.400000
+            Result.X1 = 26.749970
+            Result.Z1 = 40.200110
+
+        Case 265
+            Result.X0 = 16.749970
+            Result.Z0 = -40.199970
+            Result.X1 = 30.250030
+            Result.Z1 = -35.399860
+
+        Case 266
+            Result.X0 = 42.399850
+            Result.Z0 = 12.249980
+            Result.X1 = 47.199950
+            Result.Z1 = 25.750040
+
+        Case 267
+            Result.X0 = -8.649660
+            Result.Z0 = -39.399950
+            Result.X1 = 8.649540
+            Result.Z1 = -36.599970
+
+        Case 268
+            Result.X0 = -45.500090
+            Result.Z0 = -38.499990
+            Result.X1 = -40.500090
+            Result.Z1 = -33.499990
+
+        Case 269
+            Result.X0 = -45.500090
+            Result.Z0 = 33.500130
+            Result.X1 = -40.500090
+            Result.Z1 = 38.500130
+
+        Case 270
+            Result.X0 = 40.499970
+            Result.Z0 = -38.499990
+            Result.X1 = 45.499970
+            Result.Z1 = -33.499990
+
+        Case 271
+            Result.X0 = 40.499970
+            Result.Z0 = 33.500130
+            Result.X1 = 45.499970
+            Result.Z1 = 38.500130
+
+        Case 272
+            Result.X0 = -14.100100
+            Result.Z0 = -43.100060
+            Result.X1 = -9.899960
+            Result.Z1 = -38.899920
+
+        Case 273
+            Result.X0 = 13.099910
+            Result.Z0 = -46.964960
+            Result.X1 = 14.500060
+            Result.Z1 = -37.034840
+
+        Case 274
+            Result.X0 = -14.500180
+            Result.Z0 = -46.964960
+            Result.X1 = -13.100040
+            Result.Z1 = -37.034840
+
+        Case 275
+            Result.X0 = -7.629910
+            Result.Z0 = -39.779900
+            Result.X1 = 7.629790
+            Result.Z1 = -39.020010
+
+        Case 512
+            Result.X0 = -37.249970
+            Result.Z0 = -37.250090
+            Result.X1 = 37.250160
+            Result.Z1 = 37.250040
+
+        Case 513
+            Result.X0 = 20.250030
+            Result.Z0 = -46.750060
+            Result.X1 = 29.750150
+            Result.Z1 = -37.249930
+
+        Case 514
+            Result.X0 = -29.749970
+            Result.Z0 = -46.750050
+            Result.X1 = -20.249850
+            Result.Z1 = -37.249930
+
+        Case 515
+            Result.X0 = 13.250220
+            Result.Z0 = 34.399840
+            Result.X1 = 26.749970
+            Result.Z1 = 39.199960
+
+        Case 516
+            Result.X0 = -30.249850
+            Result.Z0 = -39.200010
+            Result.X1 = -16.750090
+            Result.Z1 = -34.399900
+
+        Case 517
+            Result.X0 = 16.750270
+            Result.Z0 = -39.200010
+            Result.X1 = 30.250030
+            Result.Z1 = -34.399900
+
+        Case 518
+            Result.X0 = -26.749780
+            Result.Z0 = 34.399850
+            Result.X1 = -13.250030
+            Result.Z1 = 39.199960
+
+        Case 519
+            Result.X0 = -39.199740
+            Result.Z0 = 12.249880
+            Result.X1 = -34.399930
+            Result.Z1 = 25.749950
+
+        Case 520
+            Result.X0 = -39.199740
+            Result.Z0 = -25.749990
+            Result.X1 = -34.399930
+            Result.Z1 = -12.249930
+
+        Case 521
+            Result.X0 = 34.400120
+            Result.Z0 = -25.750000
+            Result.X1 = 39.199920
+            Result.Z1 = -12.249940
+
+        Case 522
+            Result.X0 = 34.400120
+            Result.Z0 = 12.249880
+            Result.X1 = 39.199920
+            Result.Z1 = 25.749940
+
+        Case 523
+            Result.X0 = -8.649510
+            Result.Z0 = -38.399990
+            Result.X1 = 8.649690
+            Result.Z1 = -35.600000
+
+        Case 524
+            Result.X0 = -37.499910
+            Result.Z0 = -37.500020
+            Result.X1 = -32.499910
+            Result.Z1 = -32.500020
+
+        Case 525
+            Result.X0 = -37.499900
+            Result.Z0 = 32.499980
+            Result.X1 = -32.499900
+            Result.Z1 = 37.499980
+
+        Case 526
+            Result.X0 = 32.500090
+            Result.Z0 = -37.500030
+            Result.X1 = 37.500090
+            Result.Z1 = -32.500030
+
+        Case 527
+            Result.X0 = 32.500100
+            Result.Z0 = 32.499970
+            Result.X1 = 37.500100
+            Result.Z1 = 37.499970
+
+        Case 528
+            Result.X0 = -14.099940
+            Result.Z0 = -42.100090
+            Result.X1 = -9.900120
+            Result.Z1 = -37.899960
+
+        Case 529
+            Result.X0 = -14.500030
+            Result.Z0 = -45.965140
+            Result.X1 = -13.099880
+            Result.Z1 = -36.035030
+
+        Case 530
+            Result.X0 = 13.100070
+            Result.Z0 = -45.965150
+            Result.X1 = 14.500210
+            Result.Z1 = -36.035030
+
+        Case 531
+            Result.X0 = -7.629910
+            Result.Z0 = -38.779930
+            Result.X1 = 7.630100
+            Result.Z1 = -38.020050
+
+        Case 768
+            Result.X0 = -76.300000
+            Result.Z0 = -61.300030
+            Result.X1 = 76.300030
+            Result.Z1 = 61.300070
+
+        Case 769
+            Result.X0 = -26.300000
+            Result.Z0 = -67.300100
+            Result.X1 = 26.300020
+            Result.Z1 = -39.700000
+
+        Case 770
+            Result.X0 = -63.600000
+            Result.Z0 = -77.600080
+            Result.X1 = -50.400000
+            Result.Z1 = -64.400010
+
+        Case 771
+            Result.X0 = 50.400020
+            Result.Z0 = -77.600080
+            Result.X1 = 63.600020
+            Result.Z1 = -64.400010
+
+        Case 772
+            Result.X0 = 50.400020
+            Result.Z0 = -74.099870
+            Result.X1 = 60.600000
+            Result.Z1 = -63.899980
+
+        Case 773
+            Result.X0 = -60.599970
+            Result.Z0 = -74.099860
+            Result.X1 = -50.400000
+            Result.Z1 = -63.899970
+
+        Case 774
+            Result.X0 = -89.799990
+            Result.Z0 = -59.799940
+            Result.X1 = -80.200000
+            Result.Z1 = -50.200020
+
+        Case 775
+            Result.X0 = 80.200010
+            Result.Z0 = -59.799940
+            Result.X1 = 89.800000
+            Result.Z1 = -50.200030
+
+        Case 776
+            Result.X0 = -13.497070
+            Result.Z0 = -69.400010
+            Result.X1 = 13.497100
+            Result.Z1 = -67.399880
+
+        Case 777
+            Result.X0 = 71.800010
+            Result.Z0 = -63.200060
+            Result.X1 = 78.200010
+            Result.Z1 = -56.799910
+
+        Case 778
+            Result.X0 = 71.800020
+            Result.Z0 = 56.799940
+            Result.X1 = 78.200020
+            Result.Z1 = 63.200090
+
+        Case 779
+            Result.X0 = -78.199990
+            Result.Z0 = -63.200050
+            Result.X1 = -71.799990
+            Result.Z1 = -56.799910
+
+        Case 780
+            Result.X0 = -78.199980
+            Result.Z0 = 56.799950
+            Result.X1 = -71.799980
+            Result.Z1 = 63.200090
+
+        Case 781
+            Result.X0 = -54.598990
+            Result.Z0 = -62.900070
+            Result.X1 = -41.400970
+            Result.Z1 = -60.899940
+
+        Case 782
+            Result.X0 = -48.599000
+            Result.Z0 = 60.899980
+            Result.X1 = -35.400980
+            Result.Z1 = 62.900100
+
+        Case 783
+            Result.X0 = 35.401020
+            Result.Z0 = 60.899980
+            Result.X1 = 48.599030
+            Result.Z1 = 62.900100
+
+        Case 784
+            Result.X0 = 41.401000
+            Result.Z0 = -62.900070
+            Result.X1 = 54.599010
+            Result.Z1 = -60.899950
+
+        Case 785
+            Result.X0 = 75.900020
+            Result.Z0 = -36.598950
+            Result.X1 = 77.900020
+            Result.Z1 = -23.401020
+
+        Case 786
+            Result.X0 = 75.900020
+            Result.Z0 = 23.401050
+            Result.X1 = 77.900020
+            Result.Z1 = 36.598980
+
+        Case 787
+            Result.X0 = -77.899960
+            Result.Z0 = -36.598950
+            Result.X1 = -75.899990
+            Result.Z1 = -23.401010
+
+        Case 788
+            Result.X0 = -77.899960
+            Result.Z0 = 23.401050
+            Result.X1 = -75.899990
+            Result.Z1 = 36.598990
+
+        Case 789
+            Result.X0 = 9.110000
+            Result.Z0 = -73.389880
+            Result.X1 = 12.889990
+            Result.Z1 = -69.699850
+
+        Case 790
+            Result.X0 = -12.889960
+            Result.Z0 = -73.389870
+            Result.X1 = -9.109980
+            Result.Z1 = -69.699840
+
+        Case 791
+            Result.X0 = 36.400010
+            Result.Z0 = 60.699930
+            Result.X1 = 47.600040
+            Result.Z1 = 61.700000
+
+        Case 792
+            Result.X0 = -53.599990
+            Result.Z0 = -61.699960
+            Result.X1 = -42.399960
+            Result.Z1 = -60.699900
+
+        Case 793
+            Result.X0 = 42.399990
+            Result.Z0 = -61.699970
+            Result.X1 = 53.600020
+            Result.Z1 = -60.699910
+
+        Case 794
+            Result.X0 = -47.600000
+            Result.Z0 = 60.699940
+            Result.X1 = -36.399980
+            Result.Z1 = 61.700000
+
+        Case 795
+            Result.X0 = -76.699970
+            Result.Z0 = -35.599960
+            Result.X1 = -75.699980
+            Result.Z1 = -24.400010
+
+        Case 796
+            Result.X0 = -76.699970
+            Result.Z0 = 24.400040
+            Result.X1 = -75.699980
+            Result.Z1 = 35.599990
+
+        Case 797
+            Result.X0 = 75.700010
+            Result.Z0 = -35.599960
+            Result.X1 = 76.700000
+            Result.Z1 = -24.400010
+
+        Case 798
+            Result.X0 = 75.700010
+            Result.Z0 = 24.400040
+            Result.X1 = 76.700000
+            Result.Z1 = 35.599990
+
+        Case 799
+            Result.X0 = -77.950010
+            Result.Z0 = -34.815960
+            Result.X1 = -77.449980
+            Result.Z1 = -25.184000
+
+        Case 800
+            Result.X0 = -77.950010
+            Result.Z0 = 25.184040
+            Result.X1 = -77.449980
+            Result.Z1 = 34.816000
+
+        Case 801
+            Result.X0 = 77.450020
+            Result.Z0 = -34.815960
+            Result.X1 = 77.950020
+            Result.Z1 = -25.184010
+
+        Case 802
+            Result.X0 = 77.450020
+            Result.Z0 = 25.184040
+            Result.X1 = 77.950020
+            Result.Z1 = 34.815990
+
+        Case 803
+            Result.X0 = 43.183980
+            Result.Z0 = -62.949970
+            Result.X1 = 52.816020
+            Result.Z1 = -62.450090
+
+        Case 804
+            Result.X0 = -46.816010
+            Result.Z0 = 62.450120
+            Result.X1 = -37.183970
+            Result.Z1 = 62.950000
+
+        Case 805
+            Result.X0 = -52.816000
+            Result.Z0 = -62.949960
+            Result.X1 = -43.183970
+            Result.Z1 = -62.450080
+
+        Case 806
+            Result.X0 = 37.184010
+            Result.Z0 = 62.450120
+            Result.X1 = 46.816040
+            Result.Z1 = 62.950000
+
+        Case 1024
+            Result.X0 = -51.300110
+            Result.Z0 = -46.299990
+            Result.X1 = 51.299990
+            Result.Z1 = 46.300110
+
+        Case 1025
+            Result.X0 = -42.099980
+            Result.Z0 = -59.099820
+            Result.X1 = -31.900090
+            Result.Z1 = -48.899930
+
+        Case 1026
+            Result.X0 = 31.899960
+            Result.Z0 = -59.099820
+            Result.X1 = 42.099850
+            Result.Z1 = -48.899930
+
+        Case 1027
+            Result.X0 = -53.200140
+            Result.Z0 = -48.200010
+            Result.X1 = -46.799990
+            Result.Z1 = -41.799860
+
+        Case 1028
+            Result.X0 = -53.200130
+            Result.Z0 = 41.799990
+            Result.X1 = -46.799980
+            Result.Z1 = 48.200140
+
+        Case 1029
+            Result.X0 = 46.799860
+            Result.Z0 = -48.200010
+            Result.X1 = 53.200010
+            Result.Z1 = -41.799860
+
+        Case 1030
+            Result.X0 = 46.799870
+            Result.Z0 = 41.799990
+            Result.X1 = 53.200020
+            Result.Z1 = 48.200140
+
+        Case 1031
+            Result.X0 = 14.251040
+            Result.Z0 = -48.077030
+            Result.X1 = 31.748900
+            Result.Z1 = -46.122980
+
+        Case 1032
+            Result.X0 = -31.749020
+            Result.Z0 = -48.077030
+            Result.X1 = -14.251160
+            Result.Z1 = -46.122980
+
+        Case 1033
+            Result.X0 = 50.899900
+            Result.Z0 = 15.901090
+            Result.X1 = 52.900030
+            Result.Z1 = 29.099030
+
+        Case 1034
+            Result.X0 = -52.900150
+            Result.Z0 = 15.901100
+            Result.X1 = -50.900020
+            Result.Z1 = 29.099030
+
+        Case 1035
+            Result.X0 = -34.599060
+            Result.Z0 = 45.900030
+            Result.X1 = -21.401120
+            Result.Z1 = 47.900150
+
+        Case 1036
+            Result.X0 = 21.401000
+            Result.Z0 = 45.900030
+            Result.X1 = 34.598940
+            Result.Z1 = 47.900150
+
+        Case 1037
+            Result.X0 = 50.899900
+            Result.Z0 = -29.098910
+            Result.X1 = 52.900020
+            Result.Z1 = -15.900970
+
+        Case 1038
+            Result.X0 = -52.900150
+            Result.Z0 = -29.098900
+            Result.X1 = -50.900030
+            Result.Z1 = -15.900970
+
+        Case 1039
+            Result.X0 = -38.599000
+            Result.Z0 = -47.900020
+            Result.X1 = -27.268890
+            Result.Z1 = -45.899900
+
+        Case 1040
+            Result.X0 = 27.268770
+            Result.Z0 = -47.900020
+            Result.X1 = 38.598880
+            Result.Z1 = -45.899900
+
+        Case 1041
+            Result.X0 = -13.889990
+            Result.Z0 = -52.089930
+            Result.X1 = -10.110080
+            Result.Z1 = -48.310030
+
+        Case 1042
+            Result.X0 = 10.109950
+            Result.Z0 = -52.089930
+            Result.X1 = 13.889860
+            Result.Z1 = -48.310030
+
+        Case 1043
+            Result.X0 = 32.109920
+            Result.Z0 = -52.089930
+            Result.X1 = 35.889830
+            Result.Z1 = -48.310030
+
+        Case 1044
+            Result.X0 = -35.889950
+            Result.Z0 = -52.089930
+            Result.X1 = -32.110050
+            Result.Z1 = -48.310030
+
+        Case 1045
+            Result.X0 = 50.699860
+            Result.Z0 = 16.900080
+            Result.X1 = 51.699920
+            Result.Z1 = 28.100040
+
+        Case 1046
+            Result.X0 = -33.600070
+            Result.Z0 = 45.699980
+            Result.X1 = -22.400110
+            Result.Z1 = 46.700040
+
+        Case 1047
+            Result.X0 = 50.699860
+            Result.Z0 = -28.099920
+            Result.X1 = 51.699920
+            Result.Z1 = -16.899960
+
+        Case 1048
+            Result.X0 = -51.700040
+            Result.Z0 = -28.099910
+            Result.X1 = -50.699980
+            Result.Z1 = -16.899960
+
+        Case 1049
+            Result.X0 = -51.700040
+            Result.Z0 = 16.900090
+            Result.X1 = -50.699980
+            Result.Z1 = 28.100040
+
+        Case 1050
+            Result.X0 = 22.400000
+            Result.Z0 = 45.699980
+            Result.X1 = 33.599950
+            Result.Z1 = 46.700040
+
+        Case 1051
+            Result.X0 = -37.600010
+            Result.Z0 = -46.699920
+            Result.X1 = -27.966070
+            Result.Z1 = -45.699860
+
+        Case 1052
+            Result.X0 = 27.965940
+            Result.Z0 = -46.699920
+            Result.X1 = 37.599880
+            Result.Z1 = -45.699860
+
+        Case 1053
+            Result.X0 = 52.450040
+            Result.Z0 = -27.315920
+            Result.X1 = 52.949920
+            Result.Z1 = -17.683960
+
+        Case 1054
+            Result.X0 = 52.450040
+            Result.Z0 = 17.684080
+            Result.X1 = 52.949920
+            Result.Z1 = 27.316040
+
+        Case 1055
+            Result.X0 = -52.950040
+            Result.Z0 = 17.684090
+            Result.X1 = -52.450160
+            Result.Z1 = 27.316040
+
+        Case 1056
+            Result.X0 = -32.816070
+            Result.Z0 = 47.450170
+            Result.X1 = -23.184110
+            Result.Z1 = 47.950040
+
+        Case 1057
+            Result.X0 = 23.183990
+            Result.Z0 = 47.450170
+            Result.X1 = 32.815950
+            Result.Z1 = 47.950040
+
+        Case 1058
+            Result.X0 = -52.950040
+            Result.Z0 = -27.315910
+            Result.X1 = -52.450170
+            Result.Z1 = -17.683960
+
+        Case 1059
+            Result.X0 = -36.816010
+            Result.Z0 = -47.949920
+            Result.X1 = -30.875000
+            Result.Z1 = -47.450040
+
+        Case 1060
+            Result.X0 = 30.874880
+            Result.Z0 = -47.949920
+            Result.X1 = 36.815890
+            Result.Z1 = -47.450040
+
+        Case 1280
+            Result.X0 = -41.299950
+            Result.Z0 = -36.300010
+            Result.X1 = 41.300000
+            Result.Z1 = 36.299940
+
+        Case 1281
+            Result.X0 = -34.699990
+            Result.Z0 = -49.100070
+            Result.X1 = -24.499940
+            Result.Z1 = -38.900030
+
+        Case 1282
+            Result.X0 = 24.500000
+            Result.Z0 = -49.100070
+            Result.X1 = 34.700040
+            Result.Z1 = -38.900030
+
+        Case 1283
+            Result.X0 = 36.800020
+            Result.Z0 = 31.799970
+            Result.X1 = 43.200020
+            Result.Z1 = 38.199960
+
+        Case 1284
+            Result.X0 = -43.199970
+            Result.Z0 = -38.200030
+            Result.X1 = -36.799980
+            Result.Z1 = -31.800040
+
+        Case 1285
+            Result.X0 = -43.199970
+            Result.Z0 = 31.799970
+            Result.X1 = -36.799980
+            Result.Z1 = 38.199960
+
+        Case 1286
+            Result.X0 = 36.800030
+            Result.Z0 = -38.200030
+            Result.X1 = 43.200020
+            Result.Z1 = -31.800040
+
+        Case 1287
+            Result.X0 = -8.748830
+            Result.Z0 = -38.077120
+            Result.X1 = 8.748880
+            Result.Z1 = -36.122930
+
+        Case 1288
+            Result.X0 = -28.999000
+            Result.Z0 = 35.900000
+            Result.X1 = -15.800910
+            Result.Z1 = 37.899970
+
+        Case 1289
+            Result.X0 = 15.800960
+            Result.Z0 = 35.900010
+            Result.X1 = 28.999050
+            Result.Z1 = 37.899980
+
+        Case 1290
+            Result.X0 = 19.000960
+            Result.Z0 = -37.900040
+            Result.X1 = 32.199050
+            Result.Z1 = -35.900070
+
+        Case 1291
+            Result.X0 = -42.899990
+            Result.Z0 = -24.099080
+            Result.X1 = -40.900020
+            Result.Z1 = -10.900990
+
+        Case 1292
+            Result.X0 = -42.899990
+            Result.Z0 = 10.900920
+            Result.X1 = -40.900020
+            Result.Z1 = 24.099010
+
+        Case 1293
+            Result.X0 = 40.900060
+            Result.Z0 = -24.099080
+            Result.X1 = 42.900030
+            Result.Z1 = -10.900990
+
+        Case 1294
+            Result.X0 = 40.900060
+            Result.Z0 = 10.900920
+            Result.X1 = 42.900030
+            Result.Z1 = 24.099010
+
+        Case 1295
+            Result.X0 = -32.198990
+            Result.Z0 = -37.900040
+            Result.X1 = -19.000900
+            Result.Z1 = -35.900080
+
+        Case 1296
+            Result.X0 = 9.109980
+            Result.Z0 = -42.090030
+            Result.X1 = 12.890040
+            Result.Z1 = -38.309970
+
+        Case 1297
+            Result.X0 = -12.889990
+            Result.Z0 = -42.090030
+            Result.X1 = -9.109930
+            Result.Z1 = -38.309970
+
+        Case 1298
+            Result.X0 = -41.700030
+            Result.Z0 = -23.100010
+            Result.X1 = -40.699970
+            Result.Z1 = -11.900060
+
+        Case 1299
+            Result.X0 = 40.700020
+            Result.Z0 = -23.100010
+            Result.X1 = 41.700080
+            Result.Z1 = -11.900060
+
+        Case 1300
+            Result.X0 = -41.700030
+            Result.Z0 = 11.899990
+            Result.X1 = -40.699970
+            Result.Z1 = 23.099940
+
+        Case 1301
+            Result.X0 = 40.700020
+            Result.Z0 = 11.899990
+            Result.X1 = 41.700080
+            Result.Z1 = 23.099940
+
+        Case 1302
+            Result.X0 = -27.999930
+            Result.Z0 = 35.699960
+            Result.X1 = -16.799980
+            Result.Z1 = 36.700020
+
+        Case 1303
+            Result.X0 = 16.800030
+            Result.Z0 = 35.699960
+            Result.X1 = 27.999980
+            Result.Z1 = 36.700020
+
+        Case 1304
+            Result.X0 = -31.199920
+            Result.Z0 = -36.700090
+            Result.X1 = -19.999970
+            Result.Z1 = -35.700030
+
+        Case 1305
+            Result.X0 = 20.000030
+            Result.Z0 = -36.700090
+            Result.X1 = 31.199980
+            Result.Z1 = -35.700030
+
+        Case 1306
+            Result.X0 = 20.784020
+            Result.Z0 = -37.950020
+            Result.X1 = 30.415980
+            Result.Z1 = -37.449980
+
+        Case 1307
+            Result.X0 = -30.415930
+            Result.Z0 = -37.950020
+            Result.X1 = -20.783970
+            Result.Z1 = -37.449990
+
+        Case 1308
+            Result.X0 = -27.215940
+            Result.Z0 = 37.449920
+            Result.X1 = -17.583980
+            Result.Z1 = 37.949950
+
+        Case 1309
+            Result.X0 = 17.584020
+            Result.Z0 = 37.449920
+            Result.X1 = 27.215980
+            Result.Z1 = 37.949950
+
+        Case 1310
+            Result.X0 = -42.949960
+            Result.Z0 = 12.683980
+            Result.X1 = -42.449930
+            Result.Z1 = 22.315940
+
+        Case 1311
+            Result.X0 = 42.449980
+            Result.Z0 = -22.316010
+            Result.X1 = 42.950010
+            Result.Z1 = -12.684050
+
+        Case 1312
+            Result.X0 = 42.449980
+            Result.Z0 = 12.683990
+            Result.X1 = 42.950010
+            Result.Z1 = 22.315950
+
+        Case 1313
+            Result.X0 = -42.949960
+            Result.Z0 = -22.316010
+            Result.X1 = -42.449930
+            Result.Z1 = -12.684060
+
+        Case 1536
+            Result.X0 = -4.371950
+            Result.Z0 = -4.903260
+            Result.X1 = 4.355770
+            Result.Z1 = 4.830320
+
+        Case 1792
+            Result.X0 = -136.300010
+            Result.Z0 = 123.699950
+            Result.X1 = 136.299970
+            Result.Z1 = 296.300050
+
+        Case 1793
+            Result.X0 = -346.300010
+            Result.Z0 = 78.699950
+            Result.X1 = -153.699990
+            Result.Z1 = 281.300050
+
+        Case 1794
+            Result.X0 = 153.700030
+            Result.Z0 = 78.699950
+            Result.X1 = 346.299970
+            Result.Z1 = 281.300050
+
+        Case 1795
+            Result.X0 = -370.000000
+            Result.Z0 = 324.499970
+            Result.X1 = 370.000000
+            Result.Z1 = 335.500030
+
+        Case 1796
+            Result.X0 = 364.499970
+            Result.Z0 = -330.000000
+            Result.X1 = 375.500030
+            Result.Z1 = 330.000000
+
+        Case 1797
+            Result.X0 = -375.499990
+            Result.Z0 = -330.000000
+            Result.X1 = -364.500010
+            Result.Z1 = 330.000000
+
+        Case 1798
+            Result.X0 = -370.000000
+            Result.Z0 = -335.500030
+            Result.X1 = -55.000000
+            Result.Z1 = -324.499970
+
+        Case 1799
+            Result.X0 = 55.000000
+            Result.Z0 = -335.500030
+            Result.X1 = 370.000000
+            Result.Z1 = -324.499970
+
+        Case 1800
+            Result.X0 = -374.000020
+            Result.Z0 = -334.000020
+            Result.X1 = -325.999980
+            Result.Z1 = -285.999980
+
+        Case 1801
+            Result.X0 = 325.999980
+            Result.Z0 = -334.000020
+            Result.X1 = 374.000020
+            Result.Z1 = -285.999980
+
+        Case 1802
+            Result.X0 = -374.000020
+            Result.Z0 = 286.000060
+            Result.X1 = -325.999980
+            Result.Z1 = 333.999940
+
+        Case 1803
+            Result.X0 = 325.999980
+            Result.Z0 = 286.000060
+            Result.X1 = 374.000020
+            Result.Z1 = 333.999940
+
+        Case 1804
+            Result.X0 = -20.999980
+            Result.Z0 = -80.999980
+            Result.X1 = 20.999980
+            Result.Z1 = -39.000020
+
+        Case 1805
+            Result.X0 = -88.100010
+            Result.Z0 = -308.099980
+            Result.X1 = -71.900020
+            Result.Z1 = -291.900020
+
+        Case 1806
+            Result.X0 = 71.900020
+            Result.Z0 = -308.099980
+            Result.X1 = 88.099980
+            Result.Z1 = -291.900020
+
+        Case 1807
+            Result.X0 = -23.998410
+            Result.Z0 = 122.099910
+            Result.X1 = 23.998410
+            Result.Z1 = 124.100040
+
+        Case 1808
+            Result.X0 = 285.199970
+            Result.Z0 = -224.800030
+            Result.X1 = 294.800030
+            Result.Z1 = -215.199970
+
+        Case 1809
+            Result.X0 = 285.199970
+            Result.Z0 = -124.800030
+            Result.X1 = 294.800030
+            Result.Z1 = -115.199970
+
+        Case 1810
+            Result.X0 = 285.199970
+            Result.Z0 = -24.800030
+            Result.X1 = 294.800030
+            Result.Z1 = -15.199970
+
+        Case 1811
+            Result.X0 = -294.800000
+            Result.Z0 = -224.800030
+            Result.X1 = -285.200000
+            Result.Z1 = -215.199970
+
+        Case 1812
+            Result.X0 = -294.800000
+            Result.Z0 = -124.800030
+            Result.X1 = -285.200000
+            Result.Z1 = -115.199970
+
+        Case 1813
+            Result.X0 = -294.800000
+            Result.Z0 = -24.800030
+            Result.X1 = -285.200000
+            Result.Z1 = -15.199970
+
+        Case 1814
+            Result.X0 = 285.199970
+            Result.Z0 = 65.199970
+            Result.X1 = 294.800030
+            Result.Z1 = 74.799960
+
+        Case 1815
+            Result.X0 = -294.800000
+            Result.Z0 = 65.199970
+            Result.X1 = -285.200000
+            Result.Z1 = 74.799960
+
+        Case 1816
+            Result.X0 = -318.249280
+            Result.Z0 = 77.099910
+            Result.X1 = -301.750720
+            Result.Z1 = 79.100040
+
+        Case 1817
+            Result.X0 = -278.249280
+            Result.Z0 = 77.099910
+            Result.X1 = -261.750720
+            Result.Z1 = 79.100040
+
+        Case 1818
+            Result.X0 = -238.249280
+            Result.Z0 = 77.099910
+            Result.X1 = -221.750720
+            Result.Z1 = 79.100040
+
+        Case 1819
+            Result.X0 = -198.249280
+            Result.Z0 = 77.099910
+            Result.X1 = -181.750720
+            Result.Z1 = 79.100040
+
+        Case 1820
+            Result.X0 = 181.750720
+            Result.Z0 = 77.099910
+            Result.X1 = 198.249280
+            Result.Z1 = 79.100040
+
+        Case 1821
+            Result.X0 = 221.750720
+            Result.Z0 = 77.099910
+            Result.X1 = 238.249280
+            Result.Z1 = 79.100040
+
+        Case 1822
+            Result.X0 = 261.750720
+            Result.Z0 = 77.099910
+            Result.X1 = 278.249280
+            Result.Z1 = 79.100040
+
+        Case 1823
+            Result.X0 = 301.750720
+            Result.Z0 = 77.099910
+            Result.X1 = 318.249280
+            Result.Z1 = 79.100040
+
+        Case 2048
+            Result.X0 = -52.200070
+            Result.Z0 = -41.199990
+            Result.X1 = 52.199960
+            Result.Z1 = 41.199990
+
+        Case 2049
+            Result.X0 = -20.750170
+            Result.Z0 = -44.199940
+            Result.X1 = 20.750070
+            Result.Z1 = -39.399990
+
+        Case 2050
+            Result.X0 = 44.649910
+            Result.Z0 = -51.549950
+            Result.X1 = 57.350110
+            Result.Z1 = -38.849900
+
+        Case 2051
+            Result.X0 = -57.350060
+            Result.Z0 = -51.549950
+            Result.X1 = -44.650170
+            Result.Z1 = -38.849910
+
+        Case 2052
+            Result.X0 = 44.750000
+            Result.Z0 = 29.250070
+            Result.X1 = 57.250000
+            Result.Z1 = 41.750070
+
+        Case 2053
+            Result.X0 = -57.250120
+            Result.Z0 = 29.250070
+            Result.X1 = -44.750120
+            Result.Z1 = 41.750060
+
+        Case 2054
+            Result.X0 = -51.400050
+            Result.Z0 = -46.000030
+            Result.X1 = -38.999990
+            Result.Z1 = -33.599970
+
+        Case 2055
+            Result.X0 = -51.400050
+            Result.Z0 = 33.600040
+            Result.X1 = -39.000000
+            Result.Z1 = 45.999940
+
+        Case 2056
+            Result.X0 = 38.999890
+            Result.Z0 = -46.000020
+            Result.X1 = 51.399790
+            Result.Z1 = -33.599970
+
+        Case 2057
+            Result.X0 = 38.999880
+            Result.Z0 = 33.600040
+            Result.X1 = 51.399780
+            Result.Z1 = 45.999950
+
+        Case 2058
+            Result.X0 = -49.882560
+            Result.Z0 = 42.317540
+            Result.X1 = -40.117550
+            Result.Z1 = 52.082550
+
+        Case 2059
+            Result.X0 = 52.582650
+            Result.Z0 = 13.082540
+            Result.X1 = 61.417480
+            Result.Z1 = 21.917540
+
+        Case 2060
+            Result.X0 = -35.250000
+            Result.Z0 = 39.399910
+            Result.X1 = -20.749870
+            Result.Z1 = 44.200020
+
+        Case 2061
+            Result.X0 = -55.200100
+            Result.Z0 = -6.999930
+            Result.X1 = -50.399990
+            Result.Z1 = 7.000000
+
+        Case 2062
+            Result.X0 = 50.400030
+            Result.Z0 = -6.999930
+            Result.X1 = 55.199840
+            Result.Z1 = 7.000010
+
+        Case 2063
+            Result.X0 = 9.749700
+            Result.Z0 = 48.900180
+            Result.X1 = 26.249940
+            Result.Z1 = 52.500040
+
+        Case 2064
+            Result.X0 = 25.700020
+            Result.Z0 = 41.100040
+            Result.X1 = 33.300110
+            Result.Z1 = 48.700140
+
+        Case 2065
+            Result.X0 = 28.200020
+            Result.Z0 = 42.099950
+            Result.X1 = 35.800110
+            Result.Z1 = 49.700050
+
+        Case 2066
+            Result.X0 = -37.800040
+            Result.Z0 = -50.899930
+            Result.X1 = -30.199940
+            Result.Z1 = -43.299980
+
+        Case 2067
+            Result.X0 = -25.900020
+            Result.Z0 = -48.399930
+            Result.X1 = -19.700060
+            Result.Z1 = -42.199970
+
+        Case 2068
+            Result.X0 = 19.699960
+            Result.Z0 = -48.399930
+            Result.X1 = 25.899910
+            Result.Z1 = -42.199970
+
+        Case 2069
+            Result.X0 = 33.099920
+            Result.Z0 = -52.799950
+            Result.X1 = 38.699900
+            Result.Z1 = -47.199970
+
+        Case 2070
+            Result.X0 = 24.299870
+            Result.Z0 = -52.799950
+            Result.X1 = 29.899850
+            Result.Z1 = -47.199970
+
+        Case 2071
+            Result.X0 = 59.699950
+            Result.Z0 = 1.600080
+            Result.X1 = 65.299940
+            Result.Z1 = 7.200050
+
+        Case 2072
+            Result.X0 = -38.700000
+            Result.Z0 = -52.799950
+            Result.X1 = -33.100030
+            Result.Z1 = -47.199970
+
+        Case 2073
+            Result.X0 = -29.899950
+            Result.Z0 = -52.799950
+            Result.X1 = -24.299980
+            Result.Z1 = -47.199970
+
+        Case 2074
+            Result.X0 = 59.699960
+            Result.Z0 = -7.199970
+            Result.X1 = 65.299940
+            Result.Z1 = -1.600000
+
+        Case 2075
+            Result.X0 = -35.499930
+            Result.Z0 = -51.499980
+            Result.X1 = -27.500050
+            Result.Z1 = -48.499950
+
+        Case 2076
+            Result.X0 = 27.499950
+            Result.Z0 = -51.499980
+            Result.X1 = 35.499830
+            Result.Z1 = -48.499950
+
+        Case 2077
+            Result.X0 = 61.000010
+            Result.Z0 = -3.999980
+            Result.X1 = 63.999890
+            Result.Z1 = 4.000060
+
+        Case 2078
+            Result.X0 = 29.099980
+            Result.Z0 = -52.399940
+            Result.X1 = 33.899790
+            Result.Z1 = -47.599980
+
+        Case 2079
+            Result.X0 = 60.100050
+            Result.Z0 = -2.399940
+            Result.X1 = 64.899850
+            Result.Z1 = 2.400020
+
+        Case 2080
+            Result.X0 = -33.899890
+            Result.Z0 = -52.399940
+            Result.X1 = -29.100090
+            Result.Z1 = -47.599980
+
+        Case 2081
+            Result.X0 = -65.377400
+            Result.Z0 = -18.179970
+            Result.X1 = -52.122700
+            Result.Z1 = -16.779980
+
+        Case 2082
+            Result.X0 = -65.377410
+            Result.Z0 = 16.780050
+            Result.X1 = -52.122710
+            Result.Z1 = 18.180040
+
+        Case 2083
+            Result.X0 = 52.122750
+            Result.Z0 = -18.179970
+            Result.X1 = 65.377140
+            Result.Z1 = -16.779970
+
+        Case 2084
+            Result.X0 = 52.122750
+            Result.Z0 = 16.780050
+            Result.X1 = 65.377140
+            Result.Z1 = 18.180050
+
+        Case 2085
+            Result.X0 = -35.049800
+            Result.Z0 = 41.649970
+            Result.X1 = -30.950070
+            Result.Z1 = 45.750010
+
+        Case 2086
+            Result.X0 = -28.849850
+            Result.Z0 = 41.750070
+            Result.X1 = -24.750120
+            Result.Z1 = 45.850110
+
+        Case 2087
+            Result.X0 = -36.179860
+            Result.Z0 = -51.046030
+            Result.X1 = -26.820120
+            Result.Z1 = -49.953960
+
+        Case 2088
+            Result.X0 = 26.820020
+            Result.Z0 = -51.046030
+            Result.X1 = 36.179760
+            Result.Z1 = -49.953960
+
+        Case 2089
+            Result.X0 = 62.453860
+            Result.Z0 = -4.679980
+            Result.X1 = 63.545780
+            Result.Z1 = 4.680060
+
+        Case 2090
+            Result.X0 = 8.600100
+            Result.Z0 = 50.950050
+            Result.X1 = 16.599980
+            Result.Z1 = 52.049900
+
+        Case 2091
+            Result.X0 = 19.399970
+            Result.Z0 = 50.950050
+            Result.X1 = 27.399850
+            Result.Z1 = 52.049900
+
+        Case 2092
+            Result.X0 = 26.528570
+            Result.Z0 = -51.652950
+            Result.X1 = 36.471200
+            Result.Z1 = -50.950970
+
+        Case 2093
+            Result.X0 = -36.471300
+            Result.Z0 = -51.652950
+            Result.X1 = -26.528680
+            Result.Z1 = -50.950970
+
+        Case 2094
+            Result.X0 = 63.450870
+            Result.Z0 = -4.971200
+            Result.X1 = 64.152780
+            Result.Z1 = 4.971280
+
+        Case 2095
+            Result.X0 = -37.193660
+            Result.Z0 = -51.749920
+            Result.X1 = -30.806330
+            Result.Z1 = -50.849950
+
+        Case 2096
+            Result.X0 = 28.806400
+            Result.Z0 = 41.250040
+            Result.X1 = 35.193730
+            Result.Z1 = 42.150000
+
+        Case 2097
+            Result.X0 = 10.149780
+            Result.Z0 = 48.800090
+            Result.X1 = 11.449830
+            Result.Z1 = 52.600140
+
+        Case 2098
+            Result.X0 = 24.549810
+            Result.Z0 = 48.800090
+            Result.X1 = 25.849860
+            Result.Z1 = 52.600140
+
+        Case 2099
+            Result.X0 = 63.999890
+            Result.Z0 = -2.417940
+            Result.X1 = 64.599860
+            Result.Z1 = 2.418020
+
+        Case 2100
+            Result.X0 = -33.917900
+            Result.Z0 = -52.099950
+            Result.X1 = -29.082080
+            Result.Z1 = -51.499980
+
+        Case 2101
+            Result.X0 = 29.081980
+            Result.Z0 = -52.099950
+            Result.X1 = 33.917790
+            Result.Z1 = -51.499980
+
+        Case 2102
+            Result.X0 = 34.479920
+            Result.Z0 = 41.850010
+            Result.X1 = 35.280090
+            Result.Z1 = 42.449990
+
+        Case 2103
+            Result.X0 = 26.219730
+            Result.Z0 = 40.850110
+            Result.X1 = 27.019900
+            Result.Z1 = 41.450080
+
+        Case 2104
+            Result.X0 = 31.979920
+            Result.Z0 = 40.850110
+            Result.X1 = 32.780090
+            Result.Z1 = 41.450080
+
+        Case 2304
+            Result.X0 = -112.000000
+            Result.Z0 = -81.500020
+            Result.X1 = 112.000000
+            Result.Z1 = 81.500000
+
+        Case 2305
+            Result.X0 = -97.650000
+            Result.Z0 = -83.650020
+            Result.X1 = -84.350000
+            Result.Z1 = -70.350000
+
+        Case 2306
+            Result.X0 = -56.650000
+            Result.Z0 = -86.650010
+            Result.X1 = -43.350000
+            Result.Z1 = -73.349990
+
+        Case 2307
+            Result.X0 = 43.350000
+            Result.Z0 = -86.650010
+            Result.X1 = 56.650000
+            Result.Z1 = -73.349990
+
+        Case 2308
+            Result.X0 = 84.350000
+            Result.Z0 = -83.650020
+            Result.X1 = 97.650000
+            Result.Z1 = -70.350000
+
+        Case 2309
+            Result.X0 = -78.600000
+            Result.Z0 = -83.800010
+            Result.X1 = -65.400000
+            Result.Z1 = -70.600010
+
+        Case 2310
+            Result.X0 = 65.400000
+            Result.Z0 = -83.800010
+            Result.X1 = 78.600000
+            Result.Z1 = -70.600010
+
+        Case 2311
+            Result.X0 = -36.450000
+            Result.Z0 = -86.950000
+            Result.X1 = -30.550000
+            Result.Z1 = -81.050030
+
+        Case 2312
+            Result.X0 = 30.550000
+            Result.Z0 = -86.950000
+            Result.X1 = 36.450000
+            Result.Z1 = -81.050030
+
+        Case 2313
+            Result.X0 = -36.450000
+            Result.Z0 = -90.949970
+            Result.X1 = -30.550000
+            Result.Z1 = -85.050010
+
+        Case 2314
+            Result.X0 = -36.450000
+            Result.Z0 = -82.949980
+            Result.X1 = -30.550000
+            Result.Z1 = -77.050020
+
+        Case 2315
+            Result.X0 = 30.550000
+            Result.Z0 = -90.949970
+            Result.X1 = 36.450000
+            Result.Z1 = -85.050010
+
+        Case 2316
+            Result.X0 = 30.550000
+            Result.Z0 = -82.949980
+            Result.X1 = 36.450000
+            Result.Z1 = -77.050020
+
+        Case 2560
+            Result.X0 = -64.500000
+            Result.Z0 = -51.500000
+            Result.X1 = 64.500000
+            Result.Z1 = 51.500000
+
+        Case 2561
+            Result.X0 = -30.700000
+            Result.Z0 = -56.500000
+            Result.X1 = -21.700000
+            Result.Z1 = -34.000000
+
+        Case 2562
+            Result.X0 = -30.700000
+            Result.Z0 = 34.000000
+            Result.X1 = -21.700000
+            Result.Z1 = 56.500000
+
+        Case 2563
+            Result.X0 = 21.700000
+            Result.Z0 = -56.500000
+            Result.X1 = 30.700000
+            Result.Z1 = -34.000000
+
+        Case 2564
+            Result.X0 = 21.700000
+            Result.Z0 = 34.000000
+            Result.X1 = 30.700000
+            Result.Z1 = 56.500000
+
+        Case 2565
+            Result.X0 = -21.450000
+            Result.Z0 = 43.950000
+            Result.X1 = -12.550000
+            Result.Z1 = 52.850000
+
+        Case 2566
+            Result.X0 = 12.550000
+            Result.Z0 = 43.950000
+            Result.X1 = 21.450000
+            Result.Z1 = 52.850000
+
+        Case 2816
+            Result.X0 = -52.200070
+            Result.Z0 = -41.200010
+            Result.X1 = 52.199960
+            Result.Z1 = 41.199970
+
+        Case 2817
+            Result.X0 = -20.750020
+            Result.Z0 = -44.199970
+            Result.X1 = 20.749920
+            Result.Z1 = -39.400010
+
+        Case 2818
+            Result.X0 = -12.749990
+            Result.Z0 = -53.499970
+            Result.X1 = 12.749890
+            Result.Z1 = -46.500000
+
+        Case 2819
+            Result.X0 = -57.350060
+            Result.Z0 = -51.549970
+            Result.X1 = -44.650170
+            Result.Z1 = -38.849930
+
+        Case 2820
+            Result.X0 = 44.650060
+            Result.Z0 = -51.549970
+            Result.X1 = 57.349950
+            Result.Z1 = -38.849930
+
+        Case 2821
+            Result.X0 = -57.250120
+            Result.Z0 = 29.250040
+            Result.X1 = -44.750120
+            Result.Z1 = 41.750040
+
+        Case 2822
+            Result.X0 = 44.750000
+            Result.Z0 = 29.250050
+            Result.X1 = 57.250000
+            Result.Z1 = 41.750050
+
+        Case 2823
+            Result.X0 = -51.400050
+            Result.Z0 = -46.000050
+            Result.X1 = -39.000140
+            Result.Z1 = -33.599990
+
+        Case 2824
+            Result.X0 = 39.000040
+            Result.Z0 = -46.000050
+            Result.X1 = 51.399940
+            Result.Z1 = -33.599990
+
+        Case 2825
+            Result.X0 = 39.000030
+            Result.Z0 = 33.600020
+            Result.X1 = 51.399940
+            Result.Z1 = 45.999930
+
+        Case 2826
+            Result.X0 = -51.400050
+            Result.Z0 = 33.600020
+            Result.X1 = -39.000150
+            Result.Z1 = 45.999920
+
+        Case 2827
+            Result.X0 = -43.250020
+            Result.Z0 = -53.950030
+            Result.X1 = -25.750020
+            Result.Z1 = -48.450000
+
+        Case 2828
+            Result.X0 = -61.449950
+            Result.Z0 = -8.749990
+            Result.X1 = -55.950060
+            Result.Z1 = 8.750010
+
+        Case 2829
+            Result.X0 = 55.949950
+            Result.Z0 = -8.749980
+            Result.X1 = 61.449840
+            Result.Z1 = 8.750020
+
+        Case 2830
+            Result.X0 = 12.250000
+            Result.Z0 = 44.950120
+            Result.X1 = 29.750000
+            Result.Z1 = 50.450000
+
+        Case 2831
+            Result.X0 = -49.882560
+            Result.Z0 = 42.317520
+            Result.X1 = -40.117550
+            Result.Z1 = 52.082530
+
+        Case 2832
+            Result.X0 = 52.582340
+            Result.Z0 = 13.082520
+            Result.X1 = 61.417480
+            Result.Z1 = 21.917510
+
+        Case 2833
+            Result.X0 = -35.250150
+            Result.Z0 = 39.399880
+            Result.X1 = -20.750030
+            Result.Z1 = 44.200000
+
+        Case 2834
+            Result.X0 = -55.200100
+            Result.Z0 = -6.999960
+            Result.X1 = -50.399990
+            Result.Z1 = 6.999980
+
+        Case 2835
+            Result.X0 = 50.399880
+            Result.Z0 = -6.999950
+            Result.X1 = 55.199990
+            Result.Z1 = 6.999990
+
+        Case 2836
+            Result.X0 = 25.699860
+            Result.Z0 = 41.100020
+            Result.X1 = 33.299960
+            Result.Z1 = 48.700120
+
+        Case 2837
+            Result.X0 = 28.199860
+            Result.Z0 = 42.099930
+            Result.X1 = 35.799960
+            Result.Z1 = 49.700030
+
+        Case 2838
+            Result.X0 = -37.800040
+            Result.Z0 = -50.899950
+            Result.X1 = -30.199940
+            Result.Z1 = -43.300000
+
+        Case 2839
+            Result.X0 = -25.900020
+            Result.Z0 = -48.399950
+            Result.X1 = -19.700060
+            Result.Z1 = -42.200000
+
+        Case 2840
+            Result.X0 = 19.699960
+            Result.Z0 = -48.399950
+            Result.X1 = 25.899910
+            Result.Z1 = -42.200000
+
+        Case 2841
+            Result.X0 = -65.377400
+            Result.Z0 = -18.180000
+            Result.X1 = -52.122700
+            Result.Z1 = -16.780000
+
+        Case 2842
+            Result.X0 = 52.122590
+            Result.Z0 = 16.780030
+            Result.X1 = 65.377290
+            Result.Z1 = 18.180030
+
+        Case 2843
+            Result.X0 = 52.122600
+            Result.Z0 = -18.179990
+            Result.X1 = 65.377300
+            Result.Z1 = -16.780000
+
+        Case 2844
+            Result.X0 = -65.377410
+            Result.Z0 = 16.780030
+            Result.X1 = -52.122710
+            Result.Z1 = 18.180020
+
+        Case 2845
+            Result.X0 = -35.050110
+            Result.Z0 = 41.649950
+            Result.X1 = -30.950070
+            Result.Z1 = 45.749980
+
+        Case 2846
+            Result.X0 = -28.850000
+            Result.Z0 = 41.750040
+            Result.X1 = -24.749970
+            Result.Z1 = 45.850080
+
+        Case 2847
+            Result.X0 = 28.806250
+            Result.Z0 = 41.250010
+            Result.X1 = 35.193580
+            Result.Z1 = 42.149980
+
+        Case 2848
+            Result.X0 = -43.750050
+            Result.Z0 = -53.950030
+            Result.X1 = -42.749990
+            Result.Z1 = -48.450000
+
+        Case 2849
+            Result.X0 = -26.250050
+            Result.Z0 = -53.950030
+            Result.X1 = -25.249990
+            Result.Z1 = -48.450000
+
+        Case 2850
+            Result.X0 = 11.749970
+            Result.Z0 = 44.950120
+            Result.X1 = 12.750040
+            Result.Z1 = 50.450000
+
+        Case 2851
+            Result.X0 = -61.449950
+            Result.Z0 = 8.249980
+            Result.X1 = -55.950070
+            Result.Z1 = 9.250040
+
+        Case 2852
+            Result.X0 = -61.449940
+            Result.Z0 = -9.250020
+            Result.X1 = -55.950060
+            Result.Z1 = -8.249960
+
+        Case 2853
+            Result.X0 = 29.249970
+            Result.Z0 = 44.950120
+            Result.X1 = 30.250030
+            Result.Z1 = 50.450000
+
+        Case 2854
+            Result.X0 = 55.949950
+            Result.Z0 = 8.249990
+            Result.X1 = 61.449830
+            Result.Z1 = 9.250050
+
+        Case 2855
+            Result.X0 = 55.949960
+            Result.Z0 = -9.250010
+            Result.X1 = 61.449840
+            Result.Z1 = -8.249950
+
+        Case 2856
+            Result.X0 = 26.220040
+            Result.Z0 = 40.850080
+            Result.X1 = 27.019900
+            Result.Z1 = 41.450060
+
+        Case 2857
+            Result.X0 = 31.980080
+            Result.Z0 = 40.850080
+            Result.X1 = 32.779940
+            Result.Z1 = 41.450060
+
+        Case 2858
+            Result.X0 = 34.480080
+            Result.Z0 = 41.849990
+            Result.X1 = 35.279940
+            Result.Z1 = 42.449970
+
+        Case 3072
+            Result.X0 = -52.200070
+            Result.Z0 = -41.200040
+            Result.X1 = 52.199960
+            Result.Z1 = 41.199950
+
+        Case 3073
+            Result.X0 = -20.750020
+            Result.Z0 = -44.199990
+            Result.X1 = 20.749920
+            Result.Z1 = -39.400030
+
+        Case 3074
+            Result.X0 = -57.350060
+            Result.Z0 = -51.550000
+            Result.X1 = -44.650170
+            Result.Z1 = -38.849950
+
+        Case 3075
+            Result.X0 = 44.650060
+            Result.Z0 = -51.549990
+            Result.X1 = 57.349950
+            Result.Z1 = -38.849950
+
+        Case 3076
+            Result.X0 = 44.750000
+            Result.Z0 = 29.250020
+            Result.X1 = 57.250000
+            Result.Z1 = 41.750030
+
+        Case 3077
+            Result.X0 = -57.250120
+            Result.Z0 = 29.250020
+            Result.X1 = -44.750120
+            Result.Z1 = 41.750020
+
+        Case 3078
+            Result.X0 = -51.400050
+            Result.Z0 = -46.000070
+            Result.X1 = -39.000140
+            Result.Z1 = -33.600020
+
+        Case 3079
+            Result.X0 = 39.000040
+            Result.Z0 = -46.000070
+            Result.X1 = 51.399940
+            Result.Z1 = -33.600010
+
+        Case 3080
+            Result.X0 = 39.000030
+            Result.Z0 = 33.600000
+            Result.X1 = 51.399940
+            Result.Z1 = 45.999900
+
+        Case 3081
+            Result.X0 = -51.400050
+            Result.Z0 = 33.600000
+            Result.X1 = -39.000150
+            Result.Z1 = 45.999900
+
+        Case 3082
+            Result.X0 = -49.882560
+            Result.Z0 = 42.317500
+            Result.X1 = -40.117550
+            Result.Z1 = 52.082510
+
+        Case 3083
+            Result.X0 = 52.582340
+            Result.Z0 = 13.082500
+            Result.X1 = 61.417480
+            Result.Z1 = 21.917490
+
+        Case 3084
+            Result.X0 = -35.250150
+            Result.Z0 = 39.399860
+            Result.X1 = -20.750030
+            Result.Z1 = 44.199970
+
+        Case 3085
+            Result.X0 = -55.200100
+            Result.Z0 = -6.999980
+            Result.X1 = -50.399990
+            Result.Z1 = 6.999960
+
+        Case 3086
+            Result.X0 = 50.399880
+            Result.Z0 = -6.999980
+            Result.X1 = 55.199990
+            Result.Z1 = 6.999960
+
+        Case 3087
+            Result.X0 = 25.749920
+            Result.Z0 = -51.500020
+            Result.X1 = 42.249860
+            Result.Z1 = -47.900010
+
+        Case 3088
+            Result.X0 = 59.399970
+            Result.Z0 = -8.249970
+            Result.X1 = 62.999830
+            Result.Z1 = 8.249960
+
+        Case 3089
+            Result.X0 = 11.749970
+            Result.Z0 = 48.400110
+            Result.X1 = 28.249910
+            Result.Z1 = 51.999960
+
+        Case 3090
+            Result.X0 = 28.199860
+            Result.Z0 = 42.099910
+            Result.X1 = 35.799960
+            Result.Z1 = 49.700010
+
+        Case 3091
+            Result.X0 = 25.699860
+            Result.Z0 = 41.100000
+            Result.X1 = 33.299960
+            Result.Z1 = 48.700100
+
+        Case 3092
+            Result.X0 = -37.800040
+            Result.Z0 = -50.899970
+            Result.X1 = -30.199940
+            Result.Z1 = -43.300030
+
+        Case 3093
+            Result.X0 = -25.900020
+            Result.Z0 = -48.399970
+            Result.X1 = -19.700060
+            Result.Z1 = -42.200020
+
+        Case 3094
+            Result.X0 = 19.699960
+            Result.Z0 = -48.399970
+            Result.X1 = 25.899910
+            Result.Z1 = -42.200020
+
+        Case 3095
+            Result.X0 = -65.377410
+            Result.Z0 = 16.780000
+            Result.X1 = -52.122710
+            Result.Z1 = 18.180000
+
+        Case 3096
+            Result.X0 = -65.377400
+            Result.Z0 = -18.180020
+            Result.X1 = -52.122700
+            Result.Z1 = -16.780020
+
+        Case 3097
+            Result.X0 = 52.122600
+            Result.Z0 = -18.180010
+            Result.X1 = 65.377300
+            Result.Z1 = -16.780020
+
+        Case 3098
+            Result.X0 = 52.122590
+            Result.Z0 = 16.780010
+            Result.X1 = 65.377290
+            Result.Z1 = 18.180000
+
+        Case 3099
+            Result.X0 = -35.050110
+            Result.Z0 = 41.649920
+            Result.X1 = -30.950070
+            Result.Z1 = 45.749960
+
+        Case 3100
+            Result.X0 = -28.850000
+            Result.Z0 = 41.750020
+            Result.X1 = -24.749970
+            Result.Z1 = 45.850060
+
+        Case 3101
+            Result.X0 = 35.400030
+            Result.Z0 = -51.050040
+            Result.X1 = 43.399910
+            Result.Z1 = -49.950030
+
+        Case 3102
+            Result.X0 = 24.600010
+            Result.Z0 = -51.050040
+            Result.X1 = 32.599890
+            Result.Z1 = -49.950030
+
+        Case 3103
+            Result.X0 = 61.449990
+            Result.Z0 = -9.400030
+            Result.X1 = 62.549840
+            Result.Z1 = -1.400000
+
+        Case 3104
+            Result.X0 = 61.449990
+            Result.Z0 = 1.399990
+            Result.X1 = 62.549840
+            Result.Z1 = 9.400020
+
+        Case 3105
+            Result.X0 = 10.600070
+            Result.Z0 = 50.450120
+            Result.X1 = 18.599950
+            Result.Z1 = 51.549980
+
+        Case 3106
+            Result.X0 = 21.399940
+            Result.Z0 = 50.450120
+            Result.X1 = 29.399810
+            Result.Z1 = 51.549980
+
+        Case 3107
+            Result.X0 = -37.320150
+            Result.Z0 = -47.004020
+            Result.X1 = -28.680010
+            Result.Z1 = -45.996030
+
+        Case 3108
+            Result.X0 = -37.588860
+            Result.Z0 = -47.572030
+            Result.X1 = -28.411310
+            Result.Z1 = -46.924070
+
+        Case 3109
+            Result.X0 = -37.193660
+            Result.Z0 = -51.749960
+            Result.X1 = -30.806330
+            Result.Z1 = -50.850000
+
+        Case 3110
+            Result.X0 = 28.806250
+            Result.Z0 = 41.250000
+            Result.X1 = 35.193580
+            Result.Z1 = 42.149960
+
+        Case 3111
+            Result.X0 = 40.549870
+            Result.Z0 = -51.600040
+            Result.X1 = 41.849920
+            Result.Z1 = -47.799990
+
+        Case 3112
+            Result.X0 = 59.299870
+            Result.Z0 = -7.850040
+            Result.X1 = 63.099920
+            Result.Z1 = -6.549990
+
+        Case 3113
+            Result.X0 = 59.299870
+            Result.Z0 = 6.549980
+            Result.X1 = 63.099920
+            Result.Z1 = 7.850030
+
+        Case 3114
+            Result.X0 = 26.149850
+            Result.Z0 = -51.600040
+            Result.X1 = 27.449900
+            Result.Z1 = -47.799990
+
+        Case 3115
+            Result.X0 = 26.549930
+            Result.Z0 = 48.300010
+            Result.X1 = 27.849980
+            Result.Z1 = 52.100060
+
+        Case 3116
+            Result.X0 = 12.149910
+            Result.Z0 = 48.300010
+            Result.X1 = 13.449950
+            Result.Z1 = 52.100060
+
+        Case 3117
+            Result.X0 = -37.280020
+            Result.Z0 = -51.149990
+            Result.X1 = -36.480150
+            Result.Z1 = -50.550010
+
+        Case 3118
+            Result.X0 = -31.519980
+            Result.Z0 = -51.149990
+            Result.X1 = -30.720110
+            Result.Z1 = -50.550010
+
+        Case 3119
+            Result.X0 = 26.220040
+            Result.Z0 = 40.850060
+            Result.X1 = 27.019900
+            Result.Z1 = 41.450040
+
+        Case 3120
+            Result.X0 = 31.980080
+            Result.Z0 = 40.850060
+            Result.X1 = 32.779940
+            Result.Z1 = 41.450040
+
+        Case 3121
+            Result.X0 = 34.480080
+            Result.Z0 = 41.849970
+            Result.X1 = 35.279940
+            Result.Z1 = 42.449950
+
+        Case 3328
+            Result.X0 = -291.299970
+            Result.Z0 = 13.700030
+            Result.X1 = 291.299990
+            Result.Z1 = 266.300050
+
+        Case 3329
+            Result.X0 = -124.000020
+            Result.Z0 = 25.999980
+            Result.X1 = 124.000020
+            Result.Z1 = 273.999940
+
+        Case 3330
+            Result.X0 = -370.000000
+            Result.Z0 = 292.749940
+            Result.X1 = 370.000000
+            Result.Z1 = 307.250060
+
+        Case 3331
+            Result.X0 = -377.500000
+            Result.Z0 = -300.000000
+            Result.X1 = -362.500000
+            Result.Z1 = 300.000000
+
+        Case 3332
+            Result.X0 = 362.500000
+            Result.Z0 = -300.000000
+            Result.X1 = 377.500000
+            Result.Z1 = 300.000000
+
+        Case 3333
+            Result.X0 = -284.000020
+            Result.Z0 = -14.000020
+            Result.X1 = -195.999980
+            Result.Z1 = 74.000020
+
+        Case 3334
+            Result.X0 = 195.999980
+            Result.Z0 = -14.000020
+            Result.X1 = 284.000000
+            Result.Z1 = 74.000020
+
+        Case 3335
+            Result.X0 = -42.000010
+            Result.Z0 = -201.999970
+            Result.X1 = 42.000010
+            Result.Z1 = -118.000030
+
+        Case 3336
+            Result.X0 = -370.000000
+            Result.Z0 = -307.249980
+            Result.X1 = -70.000000
+            Result.Z1 = -292.750020
+
+        Case 3337
+            Result.X0 = 70.000000
+            Result.Z0 = -307.249980
+            Result.X1 = 370.000000
+            Result.Z1 = -292.750020
+
+        Case 3338
+            Result.X0 = -382.500000
+            Result.Z0 = -312.500000
+            Result.X1 = -317.500000
+            Result.Z1 = -247.500000
+
+        Case 3339
+            Result.X0 = -382.500000
+            Result.Z0 = 247.500000
+            Result.X1 = -317.500000
+            Result.Z1 = 312.500000
+
+        Case 3340
+            Result.X0 = 317.500000
+            Result.Z0 = -312.500000
+            Result.X1 = 382.500000
+            Result.Z1 = -247.500000
+
+        Case 3341
+            Result.X0 = 317.500000
+            Result.Z0 = 247.500000
+            Result.X1 = 382.500000
+            Result.Z1 = 312.500000
+
+        Case 3342
+            Result.X0 = -370.000000
+            Result.Z0 = -305.500030
+            Result.X1 = -50.000000
+            Result.Z1 = -294.499970
+
+        Case 3343
+            Result.X0 = 50.000000
+            Result.Z0 = -305.500030
+            Result.X1 = 370.000000
+            Result.Z1 = -294.499970
+
+        Case 3344
+            Result.X0 = -112.500000
+            Result.Z0 = -327.500000
+            Result.X1 = -57.500000
+            Result.Z1 = -272.500000
+
+        Case 3345
+            Result.X0 = 57.500000
+            Result.Z0 = -327.500000
+            Result.X1 = 112.500000
+            Result.Z1 = -272.500000
+
+        Case 3346
+            Result.X0 = -221.500020
+            Result.Z0 = 228.500060
+            Result.X1 = -178.499980
+            Result.Z1 = 271.499940
+
+        Case 3347
+            Result.X0 = 178.499980
+            Result.Z0 = 228.500060
+            Result.X1 = 221.500020
+            Result.Z1 = 271.499940
+
+        Case 3348
+            Result.X0 = -300.000000
+            Result.Z0 = 0.000000
+            Result.X1 = -260.000000
+            Result.Z1 = 40.000000
+
+        Case 3349
+            Result.X0 = -300.000000
+            Result.Z0 = 230.000000
+            Result.X1 = -260.000000
+            Result.Z1 = 270.000000
+
+        Case 3350
+            Result.X0 = 260.000000
+            Result.Z0 = 0.000000
+            Result.X1 = 300.000000
+            Result.Z1 = 40.000000
+
+        Case 3351
+            Result.X0 = 260.000000
+            Result.Z0 = 230.000000
+            Result.X1 = 300.000000
+            Result.Z1 = 270.000000
+
+        Case 3352
+            Result.X0 = -132.500000
+            Result.Z0 = 12.500000
+            Result.X1 = -97.500000
+            Result.Z1 = 47.500000
+
+        Case 3353
+            Result.X0 = -132.500000
+            Result.Z0 = 252.500000
+            Result.X1 = -97.500000
+            Result.Z1 = 287.500000
+
+        Case 3354
+            Result.X0 = 97.500000
+            Result.Z0 = 12.500000
+            Result.X1 = 132.500000
+            Result.Z1 = 47.500000
+
+        Case 3355
+            Result.X0 = 97.500000
+            Result.Z0 = 252.500000
+            Result.X1 = 132.500000
+            Result.Z1 = 287.500000
+
+        Case 3356
+            Result.X0 = -47.199970
+            Result.Z0 = -540.000000
+            Result.X1 = -44.800000
+            Result.Z1 = -270.000000
+
+        Case 3357
+            Result.X0 = 44.800000
+            Result.Z0 = -540.000000
+            Result.X1 = 47.199970
+            Result.Z1 = -270.000000
+
+        Case 3358
+            Result.X0 = -310.500030
+            Result.Z0 = -170.500030
+            Result.X1 = -289.499970
+            Result.Z1 = -149.499970
+
+        Case 3359
+            Result.X0 = -310.500030
+            Result.Z0 = -70.500030
+            Result.X1 = -289.499970
+            Result.Z1 = -49.499970
+
+        Case 3360
+            Result.X0 = -90.500030
+            Result.Z0 = -40.500030
+            Result.X1 = -69.499970
+            Result.Z1 = -19.499970
+
+        Case 3361
+            Result.X0 = 69.500010
+            Result.Z0 = -40.500030
+            Result.X1 = 90.499990
+            Result.Z1 = -19.499970
+
+        Case 3362
+            Result.X0 = 289.500010
+            Result.Z0 = -170.500030
+            Result.X1 = 310.499990
+            Result.Z1 = -149.499970
+
+        Case 3363
+            Result.X0 = 289.500010
+            Result.Z0 = -70.500030
+            Result.X1 = 310.499990
+            Result.Z1 = -49.499970
+
+        Case 3364
+            Result.X0 = -169.100040
+            Result.Z0 = -189.100040
+            Result.X1 = -150.899960
+            Result.Z1 = -170.899960
+
+        Case 3365
+            Result.X0 = -99.100040
+            Result.Z0 = -89.100040
+            Result.X1 = -80.899960
+            Result.Z1 = -70.899960
+
+        Case 3366
+            Result.X0 = 150.900000
+            Result.Z0 = -189.100040
+            Result.X1 = 169.100000
+            Result.Z1 = -170.899960
+
+        Case 3367
+            Result.X0 = 80.900000
+            Result.Z0 = -89.100040
+            Result.X1 = 99.100000
+            Result.Z1 = -70.899960
+
+        Case 3368
+            Result.X0 = 152.576410
+            Result.Z0 = -187.728200
+            Result.X1 = 167.243840
+            Result.Z1 = -169.490280
+
+        Case 3369
+            Result.X0 = -167.243800
+            Result.Z0 = -187.728200
+            Result.X1 = -152.576450
+            Result.Z1 = -169.490280
+
+        Case 3370
+            Result.X0 = -155.002900
+            Result.Z0 = -203.752290
+            Result.X1 = -140.274200
+            Result.Z1 = -185.591280
+
+        Case 3371
+            Result.X0 = 140.274240
+            Result.Z0 = -203.752290
+            Result.X1 = 155.002940
+            Result.Z1 = -185.591280
+
+        Case 3372
+            Result.X0 = -121.966480
+            Result.Z0 = -178.390050
+            Result.X1 = -107.299730
+            Result.Z1 = -160.309910
+
+        Case 3373
+            Result.X0 = 107.299770
+            Result.Z0 = -178.390050
+            Result.X1 = 121.966440
+            Result.Z1 = -160.309910
+
+        Case 3374
+            Result.X0 = 119.535370
+            Result.Z0 = -162.452700
+            Result.X1 = 134.017260
+            Result.Z1 = -144.459230
+
+        Case 3375
+            Result.X0 = -134.017180
+            Result.Z0 = -162.452700
+            Result.X1 = -119.535370
+            Result.Z1 = -144.459230
+
+        Case 3376
+            Result.X0 = -187.780000
+            Result.Z0 = 8.000030
+            Result.X1 = -152.220000
+            Result.Z1 = 15.200040
+
+        Case 3377
+            Result.X0 = 152.220000
+            Result.Z0 = 8.000030
+            Result.X1 = 187.780000
+            Result.Z1 = 15.200040
+
+        Case 3378
+            Result.X0 = -60.999980
+            Result.Z0 = -547.999990
+            Result.X1 = -45.000000
+            Result.Z1 = -531.999970
+
+        Case 3379
+            Result.X0 = 45.000000
+            Result.Z0 = -547.999990
+            Result.X1 = 60.999980
+            Result.Z1 = -531.999970
+
+        Case 3380
+            Result.X0 = -255.240020
+            Result.Z0 = 264.799960
+            Result.X1 = -224.759980
+            Result.Z1 = 271.999970
+
+        Case 3381
+            Result.X0 = -185.240020
+            Result.Z0 = 264.799960
+            Result.X1 = -154.759980
+            Result.Z1 = 271.999970
+
+        Case 3382
+            Result.X0 = 154.760020
+            Result.Z0 = 264.799960
+            Result.X1 = 185.239980
+            Result.Z1 = 271.999970
+
+        Case 3383
+            Result.X0 = 224.760020
+            Result.Z0 = 264.799960
+            Result.X1 = 255.239980
+            Result.Z1 = 271.999970
+
+        Case 3384
+            Result.X0 = -296.999970
+            Result.Z0 = 35.394970
+            Result.X1 = -289.799960
+            Result.Z1 = 64.605030
+
+        Case 3385
+            Result.X0 = 289.800000
+            Result.Z0 = 35.394970
+            Result.X1 = 297.000010
+            Result.Z1 = 64.605030
+
+        Case 3386
+            Result.X0 = -296.999970
+            Result.Z0 = 195.395050
+            Result.X1 = -289.799960
+            Result.Z1 = 224.604950
+
+        Case 3387
+            Result.X0 = 289.800000
+            Result.Z0 = 195.395050
+            Result.X1 = 297.000010
+            Result.Z1 = 224.604950
+
+        Case 3388
+            Result.X0 = -296.999970
+            Result.Z0 = 115.395050
+            Result.X1 = -289.799960
+            Result.Z1 = 144.604950
+
+        Case 3389
+            Result.X0 = 289.800000
+            Result.Z0 = 115.395050
+            Result.X1 = 297.000010
+            Result.Z1 = 144.604950
+
+        Case 3390
+            Result.X0 = -66.250000
+            Result.Z0 = -321.399990
+            Result.X1 = -49.749980
+            Result.Z1 = -312.599950
+
+        Case 3391
+            Result.X0 = 49.749980
+            Result.Z0 = -321.399990
+            Result.X1 = 66.250000
+            Result.Z1 = -312.599950
+
+        Case 3392
+            Result.X0 = -255.439610
+            Result.Z0 = 265.299990
+            Result.X1 = -224.560390
+            Result.Z1 = 269.299930
+
+        Case 3393
+            Result.X0 = -185.439610
+            Result.Z0 = 265.299990
+            Result.X1 = -154.560390
+            Result.Z1 = 269.299930
+
+        Case 3394
+            Result.X0 = 154.560390
+            Result.Z0 = 265.299990
+            Result.X1 = 185.439610
+            Result.Z1 = 269.299930
+
+        Case 3395
+            Result.X0 = 224.560390
+            Result.Z0 = 265.299990
+            Result.X1 = 255.439610
+            Result.Z1 = 269.299930
+
+        Case 3396
+            Result.X0 = -294.300000
+            Result.Z0 = 115.120390
+            Result.X1 = -290.299990
+            Result.Z1 = 144.879610
+
+        Case 3397
+            Result.X0 = 290.299990
+            Result.Z0 = 115.120390
+            Result.X1 = 294.300000
+            Result.Z1 = 144.879610
+
+        Case 3398
+            Result.X0 = -294.300000
+            Result.Z0 = 35.120390
+            Result.X1 = -290.299990
+            Result.Z1 = 64.879610
+
+        Case 3399
+            Result.X0 = 290.299990
+            Result.Z0 = 35.120390
+            Result.X1 = 294.300000
+            Result.Z1 = 64.879610
+
+        Case 3400
+            Result.X0 = -294.300000
+            Result.Z0 = 195.120390
+            Result.X1 = -290.299990
+            Result.Z1 = 224.879610
+
+        Case 3401
+            Result.X0 = 290.299990
+            Result.Z0 = 195.120390
+            Result.X1 = 294.300000
+            Result.Z1 = 224.879610
+
+        Case 3402
+            Result.X0 = -286.500020
+            Result.Z0 = 264.299930
+            Result.X1 = -273.499980
+            Result.Z1 = 273.099980
+
+        Case 3403
+            Result.X0 = -216.500020
+            Result.Z0 = 264.299930
+            Result.X1 = -203.499980
+            Result.Z1 = 273.099980
+
+        Case 3404
+            Result.X0 = -136.500020
+            Result.Z0 = 264.299930
+            Result.X1 = -123.499980
+            Result.Z1 = 273.099980
+
+        Case 3405
+            Result.X0 = 123.499980
+            Result.Z0 = 264.299930
+            Result.X1 = 136.500020
+            Result.Z1 = 273.099980
+
+        Case 3406
+            Result.X0 = 203.499980
+            Result.Z0 = 264.299930
+            Result.X1 = 216.500020
+            Result.Z1 = 273.099980
+
+        Case 3407
+            Result.X0 = -136.500020
+            Result.Z0 = 6.399990
+            Result.X1 = -123.499980
+            Result.Z1 = 15.200040
+
+        Case 3408
+            Result.X0 = 123.499980
+            Result.Z0 = 6.399990
+            Result.X1 = 136.500020
+            Result.Z1 = 15.200040
+
+        Case 3409
+            Result.X0 = 273.500000
+            Result.Z0 = 264.299930
+            Result.X1 = 286.500000
+            Result.Z1 = 273.099980
+
+        Case 3410
+            Result.X0 = -50.000000
+            Result.Z0 = -536.500020
+            Result.X1 = -41.999970
+            Result.Z1 = -523.499980
+
+        Case 3411
+            Result.X0 = -50.000000
+            Result.Z0 = -451.500020
+            Result.X1 = -41.999970
+            Result.Z1 = -438.499980
+
+        Case 3412
+            Result.X0 = -50.000000
+            Result.Z0 = -366.500020
+            Result.X1 = -41.999970
+            Result.Z1 = -353.499980
+
+        Case 3413
+            Result.X0 = -50.000000
+            Result.Z0 = -286.500020
+            Result.X1 = -41.999970
+            Result.Z1 = -273.499980
+
+        Case 3414
+            Result.X0 = 41.999970
+            Result.Z0 = -536.500020
+            Result.X1 = 50.000000
+            Result.Z1 = -523.499980
+
+        Case 3415
+            Result.X0 = 41.999970
+            Result.Z0 = -451.500020
+            Result.X1 = 50.000000
+            Result.Z1 = -438.499980
+
+        Case 3416
+            Result.X0 = 41.999970
+            Result.Z0 = -366.500020
+            Result.X1 = 50.000000
+            Result.Z1 = -353.499980
+
+        Case 3417
+            Result.X0 = 41.999970
+            Result.Z0 = -286.500020
+            Result.X1 = 50.000000
+            Result.Z1 = -273.499980
+
+        Case 3418
+            Result.X0 = -314.800030
+            Result.Z0 = 5.199970
+            Result.X1 = -305.199970
+            Result.Z1 = 14.800030
+
+        Case 3419
+            Result.X0 = -274.800030
+            Result.Z0 = -184.800030
+            Result.X1 = -265.199970
+            Result.Z1 = -175.199970
+
+        Case 3420
+            Result.X0 = -274.800030
+            Result.Z0 = -84.800030
+            Result.X1 = -265.199970
+            Result.Z1 = -75.199970
+
+        Case 3421
+            Result.X0 = -144.800030
+            Result.Z0 = -64.800030
+            Result.X1 = -135.199970
+            Result.Z1 = -55.199970
+
+        Case 3422
+            Result.X0 = 135.200000
+            Result.Z0 = -64.800030
+            Result.X1 = 144.800000
+            Result.Z1 = -55.199970
+
+        Case 3423
+            Result.X0 = 265.200000
+            Result.Z0 = -184.800030
+            Result.X1 = 274.800000
+            Result.Z1 = -175.199970
+
+        Case 3424
+            Result.X0 = 265.200000
+            Result.Z0 = -84.800030
+            Result.X1 = 274.800000
+            Result.Z1 = -75.199970
+
+        Case 3425
+            Result.X0 = 305.200000
+            Result.Z0 = 5.199970
+            Result.X1 = 314.800000
+            Result.Z1 = 14.800030
+
+        Case 3426
+            Result.X0 = -255.599980
+            Result.Z0 = -223.600010
+            Result.X1 = -248.399960
+            Result.Z1 = -216.399990
+
+        Case 3427
+            Result.X0 = -255.599980
+            Result.Z0 = -123.600010
+            Result.X1 = -248.399960
+            Result.Z1 = -116.399990
+
+        Case 3428
+            Result.X0 = -243.600010
+            Result.Z0 = -223.600010
+            Result.X1 = -236.399990
+            Result.Z1 = -216.399990
+
+        Case 3429
+            Result.X0 = -243.600010
+            Result.Z0 = -123.600010
+            Result.X1 = -236.399990
+            Result.Z1 = -116.399990
+
+        Case 3430
+            Result.X0 = -231.600040
+            Result.Z0 = -223.600010
+            Result.X1 = -224.400020
+            Result.Z1 = -216.399990
+
+        Case 3431
+            Result.X0 = -231.600040
+            Result.Z0 = -123.600010
+            Result.X1 = -224.400020
+            Result.Z1 = -116.399990
+
+        Case 3432
+            Result.X0 = 236.399990
+            Result.Z0 = -223.600010
+            Result.X1 = 243.600010
+            Result.Z1 = -216.399990
+
+        Case 3433
+            Result.X0 = 236.399990
+            Result.Z0 = -123.600010
+            Result.X1 = 243.600010
+            Result.Z1 = -116.399990
+
+        Case 3434
+            Result.X0 = 224.399990
+            Result.Z0 = -223.600010
+            Result.X1 = 231.600000
+            Result.Z1 = -216.399990
+
+        Case 3435
+            Result.X0 = 224.399990
+            Result.Z0 = -123.600010
+            Result.X1 = 231.600000
+            Result.Z1 = -116.399990
+
+        Case 3436
+            Result.X0 = 248.400000
+            Result.Z0 = -223.600010
+            Result.X1 = 255.600010
+            Result.Z1 = -216.399990
+
+        Case 3437
+            Result.X0 = 248.400000
+            Result.Z0 = -123.600010
+            Result.X1 = 255.600010
+            Result.Z1 = -116.399990
+
+        Case 3438
+            Result.X0 = -47.399980
+            Result.Z0 = -517.388920
+            Result.X1 = -44.599990
+            Result.Z1 = -514.963990
+
+        Case 3439
+            Result.X0 = -47.399980
+            Result.Z0 = -501.506580
+            Result.X1 = -44.599990
+            Result.Z1 = -499.081650
+
+        Case 3440
+            Result.X0 = -47.399980
+            Result.Z0 = -493.565370
+            Result.X1 = -44.599990
+            Result.Z1 = -491.140440
+
+        Case 3441
+            Result.X0 = -47.399980
+            Result.Z0 = -485.624240
+            Result.X1 = -44.599990
+            Result.Z1 = -483.199310
+
+        Case 3442
+            Result.X0 = -47.399980
+            Result.Z0 = -461.800690
+            Result.X1 = -44.599990
+            Result.Z1 = -459.375760
+
+        Case 3443
+            Result.X0 = -47.399980
+            Result.Z0 = -453.859560
+            Result.X1 = -44.599990
+            Result.Z1 = -451.434630
+
+        Case 3444
+            Result.X0 = -47.399980
+            Result.Z0 = -430.036010
+            Result.X1 = -44.599990
+            Result.Z1 = -427.611080
+
+        Case 3445
+            Result.X0 = -47.399980
+            Result.Z0 = -382.388920
+            Result.X1 = -44.599990
+            Result.Z1 = -379.963990
+
+        Case 3446
+            Result.X0 = -47.399980
+            Result.Z0 = -366.506580
+            Result.X1 = -44.599990
+            Result.Z1 = -364.081650
+
+        Case 3447
+            Result.X0 = -47.399980
+            Result.Z0 = -350.624240
+            Result.X1 = -44.599990
+            Result.Z1 = -348.199310
+
+        Case 3448
+            Result.X0 = -47.399980
+            Result.Z0 = -326.800690
+            Result.X1 = -44.599990
+            Result.Z1 = -324.375760
+
+        Case 3449
+            Result.X0 = 44.599990
+            Result.Z0 = -517.388920
+            Result.X1 = 47.399980
+            Result.Z1 = -514.963990
+
+        Case 3450
+            Result.X0 = 44.599990
+            Result.Z0 = -501.506580
+            Result.X1 = 47.399980
+            Result.Z1 = -499.081650
+
+        Case 3451
+            Result.X0 = 44.599990
+            Result.Z0 = -493.565370
+            Result.X1 = 47.399980
+            Result.Z1 = -491.140440
+
+        Case 3452
+            Result.X0 = 44.599990
+            Result.Z0 = -485.624240
+            Result.X1 = 47.399980
+            Result.Z1 = -483.199310
+
+        Case 3453
+            Result.X0 = 44.599990
+            Result.Z0 = -461.800690
+            Result.X1 = 47.399980
+            Result.Z1 = -459.375760
+
+        Case 3454
+            Result.X0 = 44.599990
+            Result.Z0 = -453.859560
+            Result.X1 = 47.399980
+            Result.Z1 = -451.434630
+
+        Case 3455
+            Result.X0 = 44.599990
+            Result.Z0 = -430.036010
+            Result.X1 = 47.399980
+            Result.Z1 = -427.611080
+
+        Case 3456
+            Result.X0 = 44.599990
+            Result.Z0 = -382.388920
+            Result.X1 = 47.399980
+            Result.Z1 = -379.963990
+
+        Case 3457
+            Result.X0 = 44.599990
+            Result.Z0 = -366.506580
+            Result.X1 = 47.399980
+            Result.Z1 = -364.081650
+
+        Case 3458
+            Result.X0 = 44.599990
+            Result.Z0 = -350.624240
+            Result.X1 = 47.399980
+            Result.Z1 = -348.199310
+
+        Case 3459
+            Result.X0 = 44.599990
+            Result.Z0 = -326.800690
+            Result.X1 = 47.399980
+            Result.Z1 = -324.375760
+
+        Case 3460
+            Result.X0 = -47.399980
+            Result.Z0 = -318.859560
+            Result.X1 = -44.599990
+            Result.Z1 = -316.434630
+
+        Case 3461
+            Result.X0 = -47.399980
+            Result.Z0 = -310.918350
+            Result.X1 = -44.599990
+            Result.Z1 = -308.493420
+
+        Case 3462
+            Result.X0 = -47.399980
+            Result.Z0 = -295.036010
+            Result.X1 = -44.599990
+            Result.Z1 = -292.611080
+
+        Case 3463
+            Result.X0 = 44.599990
+            Result.Z0 = -318.859560
+            Result.X1 = 47.399980
+            Result.Z1 = -316.434630
+
+        Case 3464
+            Result.X0 = 44.599990
+            Result.Z0 = -310.918350
+            Result.X1 = 47.399980
+            Result.Z1 = -308.493420
+
+        Case 3465
+            Result.X0 = 44.599990
+            Result.Z0 = -295.036010
+            Result.X1 = 47.399980
+            Result.Z1 = -292.611080
+
+        Case 3466
+            Result.X0 = -142.886660
+            Result.Z0 = -203.894350
+            Result.X1 = -140.086670
+            Result.Z1 = -201.469420
+
+        Case 3467
+            Result.X0 = -109.913330
+            Result.Z0 = -178.530580
+            Result.X1 = -107.113340
+            Result.Z1 = -176.105650
+
+        Case 3468
+            Result.X0 = 107.113340
+            Result.Z0 = -178.530580
+            Result.X1 = 109.913330
+            Result.Z1 = -176.105650
+
+        Case 3469
+            Result.X0 = 140.086670
+            Result.Z0 = -203.894350
+            Result.X1 = 142.886660
+            Result.Z1 = -201.469420
+
+        Case 3470
+            Result.X0 = -47.399980
+            Result.Z0 = -477.683110
+            Result.X1 = -44.599990
+            Result.Z1 = -475.258180
+
+        Case 3471
+            Result.X0 = -47.399980
+            Result.Z0 = -469.741820
+            Result.X1 = -44.599990
+            Result.Z1 = -467.316890
+
+        Case 3472
+            Result.X0 = -47.399980
+            Result.Z0 = -342.683110
+            Result.X1 = -44.599990
+            Result.Z1 = -340.258180
+
+        Case 3473
+            Result.X0 = -47.399980
+            Result.Z0 = -334.741820
+            Result.X1 = -44.599990
+            Result.Z1 = -332.316890
+
+        Case 3474
+            Result.X0 = 44.599990
+            Result.Z0 = -477.683110
+            Result.X1 = 47.399980
+            Result.Z1 = -475.258180
+
+        Case 3475
+            Result.X0 = 44.599990
+            Result.Z0 = -469.741820
+            Result.X1 = 47.399980
+            Result.Z1 = -467.316890
+
+        Case 3476
+            Result.X0 = 44.599990
+            Result.Z0 = -342.683110
+            Result.X1 = 47.399980
+            Result.Z1 = -340.258180
+
+        Case 3477
+            Result.X0 = 44.599990
+            Result.Z0 = -334.741820
+            Result.X1 = 47.399980
+            Result.Z1 = -332.316890
+
+        Case 3478
+            Result.X0 = -47.399980
+            Result.Z0 = -414.153590
+            Result.X1 = -44.599990
+            Result.Z1 = -411.728670
+
+        Case 3479
+            Result.X0 = -47.399980
+            Result.Z0 = -398.271330
+            Result.X1 = -44.599990
+            Result.Z1 = -395.846410
+
+        Case 3480
+            Result.X0 = 44.599990
+            Result.Z0 = -414.153590
+            Result.X1 = 47.399980
+            Result.Z1 = -411.728670
+
+        Case 3481
+            Result.X0 = 44.599990
+            Result.Z0 = -398.271330
+            Result.X1 = 47.399980
+            Result.Z1 = -395.846410
+
+        Case 3482
+            Result.X0 = -47.399980
+            Result.Z0 = -525.330120
+            Result.X1 = -44.599990
+            Result.Z1 = -522.905200
+
+        Case 3483
+            Result.X0 = -47.399980
+            Result.Z0 = -509.447780
+            Result.X1 = -44.599990
+            Result.Z1 = -507.022860
+
+        Case 3484
+            Result.X0 = -47.399980
+            Result.Z0 = -437.977140
+            Result.X1 = -44.599990
+            Result.Z1 = -435.552220
+
+        Case 3485
+            Result.X0 = -47.399980
+            Result.Z0 = -422.094800
+            Result.X1 = -44.599990
+            Result.Z1 = -419.669880
+
+        Case 3486
+            Result.X0 = -47.399980
+            Result.Z0 = -406.212460
+            Result.X1 = -44.599990
+            Result.Z1 = -403.787540
+
+        Case 3487
+            Result.X0 = -47.399980
+            Result.Z0 = -390.330120
+            Result.X1 = -44.599990
+            Result.Z1 = -387.905200
+
+        Case 3488
+            Result.X0 = -47.399980
+            Result.Z0 = -374.447780
+            Result.X1 = -44.599990
+            Result.Z1 = -372.022860
+
+        Case 3489
+            Result.X0 = -47.399980
+            Result.Z0 = -302.977140
+            Result.X1 = -44.599990
+            Result.Z1 = -300.552220
+
+        Case 3490
+            Result.X0 = -47.399980
+            Result.Z0 = -287.094800
+            Result.X1 = -44.599990
+            Result.Z1 = -284.669880
+
+        Case 3491
+            Result.X0 = -47.399980
+            Result.Z0 = -271.212460
+            Result.X1 = -44.599990
+            Result.Z1 = -268.787540
+
+        Case 3492
+            Result.X0 = 44.599990
+            Result.Z0 = -525.330120
+            Result.X1 = 47.399980
+            Result.Z1 = -522.905200
+
+        Case 3493
+            Result.X0 = 44.599990
+            Result.Z0 = -509.447780
+            Result.X1 = 47.399980
+            Result.Z1 = -507.022860
+
+        Case 3494
+            Result.X0 = 44.599990
+            Result.Z0 = -437.977140
+            Result.X1 = 47.399980
+            Result.Z1 = -435.552220
+
+        Case 3495
+            Result.X0 = 44.599990
+            Result.Z0 = -422.094800
+            Result.X1 = 47.399980
+            Result.Z1 = -419.669880
+
+        Case 3496
+            Result.X0 = 44.599990
+            Result.Z0 = -406.212460
+            Result.X1 = 47.399980
+            Result.Z1 = -403.787540
+
+        Case 3497
+            Result.X0 = 44.599990
+            Result.Z0 = -390.330120
+            Result.X1 = 47.399980
+            Result.Z1 = -387.905200
+
+        Case 3498
+            Result.X0 = 44.599990
+            Result.Z0 = -374.447780
+            Result.X1 = 47.399980
+            Result.Z1 = -372.022860
+
+        Case 3499
+            Result.X0 = 44.599990
+            Result.Z0 = -302.977140
+            Result.X1 = 47.399980
+            Result.Z1 = -300.552220
+
+        Case 3500
+            Result.X0 = 44.599990
+            Result.Z0 = -287.094800
+            Result.X1 = 47.399980
+            Result.Z1 = -284.669880
+
+        Case 3501
+            Result.X0 = 44.599990
+            Result.Z0 = -271.212460
+            Result.X1 = 47.399980
+            Result.Z1 = -268.787540
+
+        Case 3502
+            Result.X0 = -47.399980
+            Result.Z0 = -541.212430
+            Result.X1 = -44.599990
+            Result.Z1 = -538.787570
+
+        Case 3503
+            Result.X0 = 44.599990
+            Result.Z0 = -541.212430
+            Result.X1 = 47.399980
+            Result.Z1 = -538.787570
+
+        Case 3584
+            Result.X0 = -11.499840
+            Result.Z0 = -0.899990
+            Result.X1 = 11.500030
+            Result.Z1 = 0.899940
+
+        Case 3585
+            Result.X0 = -11.499840
+            Result.Z0 = -3.100000
+            Result.X1 = 11.500030
+            Result.Z1 = -1.300070
+
+        Case 3586
+            Result.X0 = -11.499840
+            Result.Z0 = 1.300030
+            Result.X1 = 11.500030
+            Result.Z1 = 3.099950
+
+        Case 3587
+            Result.X0 = -11.499840
+            Result.Z0 = 2.899910
+            Result.X1 = 11.500030
+            Result.Z1 = 3.899970
+
+        Case 3588
+            Result.X0 = -9.699920
+            Result.Z0 = -3.000050
+            Result.X1 = -7.300010
+            Result.Z1 = 3.000010
+
+        Case 3589
+            Result.X0 = 7.300210
+            Result.Z0 = -3.000050
+            Result.X1 = 9.700110
+            Result.Z1 = 3.000010
+
+        Case 3590
+            Result.X0 = 8.549900
+            Result.Z0 = 2.850010
+            Result.X1 = 9.450170
+            Result.Z1 = 3.749980
+
+        Case 3591
+            Result.X0 = -9.449980
+            Result.Z0 = 2.850020
+            Result.X1 = -8.549710
+            Result.Z1 = 3.749980
+
+        Case 3840
+            Result.X0 = -3.599760
+            Result.Z0 = -3.600030
+            Result.X1 = 3.599950
+            Result.Z1 = 3.599990
+
+        Case 4096
+            Result.X0 = -6.467290
+            Result.Z0 = -3.945240
+            Result.X1 = -5.527340
+            Result.Z1 = -3.005290
+
+        Case 4097
+            Result.X0 = 4.364620
+            Result.Z0 = 7.965770
+            Result.X1 = 5.304570
+            Result.Z1 = 8.905720
+
+        Case 4098
+            Result.X0 = -6.166690
+            Result.Z0 = -7.295460
+            Result.X1 = -5.226750
+            Result.Z1 = -6.355510
+
+        Case 4099
+            Result.X0 = -8.673710
+            Result.Z0 = -0.130310
+            Result.X1 = -7.733760
+            Result.Z1 = 0.809630
+
+        Case 4100
+            Result.X0 = -0.870060
+            Result.Z0 = 8.190540
+            Result.X1 = 0.069890
+            Result.Z1 = 9.130480
+
+        Case 4101
+            Result.X0 = 5.625310
+            Result.Z0 = 4.666820
+            Result.X1 = 6.565250
+            Result.Z1 = 5.606770
+
+        Case 4102
+            Result.X0 = -1.762700
+            Result.Z0 = 4.338990
+            Result.X1 = -0.822750
+            Result.Z1 = 5.278930
+
+        Case 4103
+            Result.X0 = 2.220150
+            Result.Z0 = -6.219480
+            Result.X1 = 3.160100
+            Result.Z1 = -5.279540
+
+        Case 4104
+            Result.X0 = 4.888610
+            Result.Z0 = 1.486890
+            Result.X1 = 5.828550
+            Result.Z1 = 2.426830
+
+        Case 4105
+            Result.X0 = 5.514530
+            Result.Z0 = -6.426090
+            Result.X1 = 6.454470
+            Result.Z1 = -5.486150
+
+        Case 4106
+            Result.X0 = 8.710630
+            Result.Z0 = -4.712600
+            Result.X1 = 9.650570
+            Result.Z1 = -3.772660
+
+        Case 4107
+            Result.X0 = -6.048580
+            Result.Z0 = 1.832810
+            Result.X1 = -5.108640
+            Result.Z1 = 2.772750
+
+        Case 4108
+            Result.X0 = -1.463010
+            Result.Z0 = -8.130340
+            Result.X1 = -0.523070
+            Result.Z1 = -7.190400
+
+        Case 4109
+            Result.X0 = -0.203550
+            Result.Z0 = -3.507690
+            Result.X1 = 0.736390
+            Result.Z1 = -2.567750
+
+        Case 4110
+            Result.X0 = 1.519170
+            Result.Z0 = 5.871350
+            Result.X1 = 2.459110
+            Result.Z1 = 6.811290
+
+        Case 4111
+            Result.X0 = 1.618960
+            Result.Z0 = -9.759670
+            Result.X1 = 2.558900
+            Result.Z1 = -8.819730
+
+        Case 4112
+            Result.X0 = 8.554380
+            Result.Z0 = 0.743710
+            Result.X1 = 9.494320
+            Result.Z1 = 1.683650
+
+        Case 4113
+            Result.X0 = -4.765930
+            Result.Z0 = 5.640720
+            Result.X1 = -3.825990
+            Result.Z1 = 6.580660
+
+        Case 4114
+            Result.X0 = -4.447020
+            Result.Z0 = 9.034960
+            Result.X1 = -3.507080
+            Result.Z1 = 9.974900
+
+        Case 4115
+            Result.X0 = -4.021300
+            Result.Z0 = -10.340270
+            Result.X1 = -3.081360
+            Result.Z1 = -9.400330
+
+        Case 4116
+            Result.X0 = -2.187500
+            Result.Z0 = 1.103210
+            Result.X1 = -1.247560
+            Result.Z1 = 2.043150
+
+        Case 4117
+            Result.X0 = 0.774840
+            Result.Z0 = -0.469970
+            Result.X1 = 1.714780
+            Result.Z1 = 0.469970
+
+        Case 4118
+            Result.X0 = 3.389280
+            Result.Z0 = -2.925110
+            Result.X1 = 4.329220
+            Result.Z1 = -1.985170
+
+        Case 4119
+            Result.X0 = -4.536130
+            Result.Z0 = -1.189120
+            Result.X1 = -3.596190
+            Result.Z1 = -0.249180
+
+        Case 4120
+            Result.X0 = -2.938230
+            Result.Z0 = -5.221790
+            Result.X1 = -1.998290
+            Result.Z1 = -4.281850
+
+        Case 4121
+            Result.X0 = 1.738280
+            Result.Z0 = 2.410430
+            Result.X1 = 2.678220
+            Result.Z1 = 3.350370
+
+        Case 4122
+            Result.X0 = 6.567380
+            Result.Z0 = -2.017440
+            Result.X1 = 7.507320
+            Result.Z1 = -1.077500
+
+        Case 4123
+            Result.X0 = -9.921260
+            Result.Z0 = -3.484270
+            Result.X1 = -8.981320
+            Result.Z1 = -2.544330
+
+        Case 4124
+            Result.X0 = -8.116760
+            Result.Z0 = 4.851230
+            Result.X1 = -7.176820
+            Result.Z1 = 5.791170
+
+        Case 4352
+            Result.X0 = -19.000000
+            Result.Z0 = -10.600000
+            Result.X1 = 19.000000
+            Result.Z1 = -3.400000
+
+        Case 4353
+            Result.X0 = 5.550000
+            Result.Z0 = -1.550000
+            Result.X1 = 14.450000
+            Result.Z1 = 7.350000
+
+        Case 4354
+            Result.X0 = -13.680000
+            Result.Z0 = -0.680000
+            Result.X1 = -6.320000
+            Result.Z1 = 6.680000
+
+        Case 4355
+            Result.X0 = 6.279490
+            Result.Z0 = -2.400000
+            Result.X1 = 13.720510
+            Result.Z1 = -1.500000
+
+        Case 4356
+            Result.X0 = -18.599990
+            Result.Z0 = 8.900000
+            Result.X1 = -17.400000
+            Result.Z1 = 10.100000
+
+        Case 4357
+            Result.X0 = 17.400000
+            Result.Z0 = 8.900000
+            Result.X1 = 18.599990
+            Result.Z1 = 10.100000
+
+        Case 4358
+            Result.X0 = 12.999990
+            Result.Z0 = -1.800000
+            Result.X1 = 13.800010
+            Result.Z1 = -1.200000
+
+        Case 4359
+            Result.X0 = 6.199990
+            Result.Z0 = -1.800000
+            Result.X1 = 7.000010
+            Result.Z1 = -1.200000
+
+        Case 4608
+            Result.X0 = -8.000000
+            Result.Z0 = -8.000000
+            Result.X1 = 8.000000
+            Result.Z1 = 8.000000
+
+        Case 4864
+            Result.X0 = -8.000000
+            Result.Z0 = -8.000000
+            Result.X1 = 8.000000
+            Result.Z1 = 8.000000
+
+        Case 5120
+            Result.X0 = -43.000000
+            Result.Z0 = -43.000030
+            Result.X1 = 43.000000
+            Result.Z1 = 43.000030
+
+        Case 5376
+            Result.X0 = -43.000030
+            Result.Z0 = -43.000030
+            Result.X1 = 43.000030
+            Result.Z1 = 43.000030
+
+        Case 5632
+            Result.X0 = -43.000030
+            Result.Z0 = -43.000030
+            Result.X1 = 43.000030
+            Result.Z1 = 43.000030
+
+        Case 5888
+            Result.X0 = -43.000030
+            Result.Z0 = -43.000030
+            Result.X1 = 43.000030
+            Result.Z1 = 43.000030
+
+        Case 6144
+            Result.X0 = -43.000030
+            Result.Z0 = -42.999880
+            Result.X1 = 43.000030
+            Result.Z1 = 42.999880
+
+        Case 6400
+            Result.X0 = -43.000030
+            Result.Z0 = -43.000030
+            Result.X1 = 43.000030
+            Result.Z1 = 43.000030
+
+        Case 6656
+            Result.X0 = -71.900000
+            Result.Z0 = -5.899960
+            Result.X1 = -60.100000
+            Result.Z1 = 5.899960
+
+        Case 6657
+            Result.X0 = 60.100000
+            Result.Z0 = -5.899960
+            Result.X1 = 71.900000
+            Result.Z1 = 5.899960
+
+        Case 6658
+            Result.X0 = -84.200000
+            Result.Z0 = -3.637390
+            Result.X1 = -75.800000
+            Result.Z1 = 3.637390
+
+        Case 6659
+            Result.X0 = 75.800000
+            Result.Z0 = -3.637390
+            Result.X1 = 84.200000
+            Result.Z1 = 3.637390
+
+        Case 6912
+            Result.X0 = -33.511810
+            Result.Z0 = -21.250000
+            Result.X1 = -24.511870
+            Result.Z1 = -12.250060
+
+        Case 6913
+            Result.X0 = -4.499970
+            Result.Z0 = 29.000090
+            Result.X1 = 4.499970
+            Result.Z1 = 38.000030
+
+        Case 6914
+            Result.X0 = 24.511870
+            Result.Z0 = -21.250000
+            Result.X1 = 33.511810
+            Result.Z1 = -12.250060
+
+        Case 7168
+            Result.X0 = -4.499970
+            Result.Z0 = 28.999940
+            Result.X1 = 4.499970
+            Result.Z1 = 38.000180
+
+        Case 7169
+            Result.X0 = -33.511810
+            Result.Z0 = -21.250000
+            Result.X1 = -24.511870
+            Result.Z1 = -12.249760
+
+        Case 7170
+            Result.X0 = 24.511870
+            Result.Z0 = -21.250000
+            Result.X1 = 33.511810
+            Result.Z1 = -12.249760
+
+        Case 7424
+            Result.X0 = -33.511810
+            Result.Z0 = -21.250000
+            Result.X1 = -24.511870
+            Result.Z1 = -12.249980
+
+        Case 7425
+            Result.X0 = 24.511870
+            Result.Z0 = -21.250000
+            Result.X1 = 33.511810
+            Result.Z1 = -12.249980
+
+        Case 7426
+            Result.X0 = -4.499970
+            Result.Z0 = 28.999980
+            Result.X1 = 4.499970
+            Result.Z1 = 37.999990
+
+        Case 7680
+            Result.X0 = -33.511810
+            Result.Z0 = -21.250000
+            Result.X1 = -24.511870
+            Result.Z1 = -12.249980
+
+        Case 7681
+            Result.X0 = 24.511870
+            Result.Z0 = -21.250000
+            Result.X1 = 33.511810
+            Result.Z1 = -12.249980
+
+        Case 7682
+            Result.X0 = -4.499970
+            Result.Z0 = 28.999980
+            Result.X1 = 4.499970
+            Result.Z1 = 37.999990
+
+        Case 7936
+            Result.X0 = -33.511810
+            Result.Z0 = -21.250000
+            Result.X1 = -24.511870
+            Result.Z1 = -12.250060
+
+        Case 7937
+            Result.X0 = -4.499970
+            Result.Z0 = 29.000090
+            Result.X1 = 4.499970
+            Result.Z1 = 38.000030
+
+        Case 7938
+            Result.X0 = 24.511870
+            Result.Z0 = -21.250000
+            Result.X1 = 33.511810
+            Result.Z1 = -12.250060
+
+        Case 8192
+            Result.X0 = -4.499970
+            Result.Z0 = 28.999940
+            Result.X1 = 4.499970
+            Result.Z1 = 38.000180
+
+        Case 8193
+            Result.X0 = -33.511810
+            Result.Z0 = -21.250000
+            Result.X1 = -24.511870
+            Result.Z1 = -12.249760
+
+        Case 8194
+            Result.X0 = 24.511870
+            Result.Z0 = -21.250000
+            Result.X1 = 33.511810
+            Result.Z1 = -12.249760
+
+        Case 8448
+            Result.X0 = -12.999990
+            Result.Z0 = -0.700070
+            Result.X1 = 12.999990
+            Result.Z1 = 0.700070
+
+        Case 8449
+            Result.X0 = -1.000000
+            Result.Z0 = -1.000060
+            Result.X1 = 1.000000
+            Result.Z1 = 1.000060
+
+        Case 8704
+            Result.X0 = -12.999990
+            Result.Z0 = -0.700070
+            Result.X1 = 12.999990
+            Result.Z1 = 0.700070
+
+        Case 8705
+            Result.X0 = -1.000000
+            Result.Z0 = -1.000060
+            Result.X1 = 1.000000
+            Result.Z1 = 1.000060
+
+    End Select
+
+    Return Result
+
+End Function
+
+Public Function StepAt(TemplateIndex As Number, Index As Number) As Box
+
+    Dim Result As Box
+    Dim Key As Number
+
+    Key = TemplateIndex * 256 + Index
+
+    Select Case Key
+        Case 0
+            Result.X0 = -6.307560
+            Result.Z0 = -33.399980
+            Result.X1 = 6.307440
+            Result.Z1 = -23.399980
+            Result.Height = 4.200000
+
+        Case 256
+            Result.X0 = -6.307560
+            Result.Z0 = -38.399860
+            Result.X1 = 6.307440
+            Result.Z1 = -28.399860
+            Result.Height = 4.200000
+
+        Case 512
+            Result.X0 = -6.307410
+            Result.Z0 = -37.400050
+            Result.X1 = 6.307590
+            Result.Z1 = -27.400050
+            Result.Height = 4.200000
+
+        Case 768
+            Result.X0 = -19.999990
+            Result.Z0 = -80.999930
+            Result.X1 = 20.000010
+            Result.Z1 = -66.999930
+            Result.Height = 1.000000
+
+        Case 769
+            Result.X0 = -19.999990
+            Result.Z0 = -76.500050
+            Result.X1 = 20.000010
+            Result.Z1 = -65.500040
+            Result.Height = 2.400000
+
+        Case 770
+            Result.X0 = -19.999990
+            Result.Z0 = -72.000020
+            Result.X1 = 20.000010
+            Result.Z1 = -64.000020
+            Result.Height = 3.850000
+
+        Case 771
+            Result.X0 = -12.499990
+            Result.Z0 = -67.699970
+            Result.X1 = 12.500010
+            Result.Z1 = -50.449970
+            Result.Height = 3.750000
+
+        Case 1024
+            Result.X0 = -30.750090
+            Result.Z0 = -46.399980
+            Result.X1 = -15.250090
+            Result.Z1 = -35.324990
+            Result.Height = 3.750000
+
+        Case 1025
+            Result.X0 = -20.000060
+            Result.Z0 = -65.999880
+            Result.X1 = 19.999940
+            Result.Z1 = -51.999880
+            Result.Height = 1.000000
+
+        Case 1026
+            Result.X0 = -20.000060
+            Result.Z0 = -61.500000
+            Result.X1 = 19.999940
+            Result.Z1 = -50.500000
+            Result.Height = 2.400000
+
+        Case 1027
+            Result.X0 = -20.000060
+            Result.Z0 = -56.999970
+            Result.X1 = 19.999940
+            Result.Z1 = -48.999970
+            Result.Height = 3.800000
+
+        Case 1028
+            Result.X0 = 15.249970
+            Result.Z0 = -46.399980
+            Result.X1 = 30.749970
+            Result.Z1 = -35.324990
+            Result.Height = 3.750000
+
+        Case 1280
+            Result.X0 = -19.999970
+            Result.Z0 = -56.000050
+            Result.X1 = 20.000030
+            Result.Z1 = -42.000050
+            Result.Height = 1.000000
+
+        Case 1281
+            Result.X0 = -19.999970
+            Result.Z0 = -51.500020
+            Result.X1 = 20.000030
+            Result.Z1 = -40.500020
+            Result.Height = 2.400000
+
+        Case 1282
+            Result.X0 = -19.999970
+            Result.Z0 = -47.000060
+            Result.X1 = 20.000030
+            Result.Z1 = -39.000060
+            Result.Height = 3.800000
+
+        Case 1283
+            Result.X0 = -7.749970
+            Result.Z0 = -36.400010
+            Result.X1 = 7.750030
+            Result.Z1 = -25.325010
+            Result.Height = 3.750000
+
+        Case 1792
+            Result.X0 = -23.000000
+            Result.Z0 = 123.800060
+            Result.X1 = 23.000000
+            Result.Z1 = 154.700060
+            Result.Height = 2.950000
+
+        Case 2048
+            Result.X0 = -53.399990
+            Result.Z0 = -4.567470
+            Result.X1 = -43.399990
+            Result.Z1 = 4.567540
+            Result.Height = 4.400000
+
+        Case 2049
+            Result.X0 = -32.784940
+            Result.Z0 = 32.400060
+            Result.X1 = -23.214930
+            Result.Z1 = 42.400060
+            Result.Height = 4.700000
+
+        Case 2050
+            Result.X0 = -22.000050
+            Result.Z0 = -56.300000
+            Result.X1 = 21.999950
+            Result.Z1 = -40.799990
+            Result.Height = 1.500000
+
+        Case 2051
+            Result.X0 = -22.000050
+            Result.Z0 = -53.199930
+            Result.X1 = 21.999950
+            Result.Z1 = -40.799930
+            Result.Height = 3.000000
+
+        Case 2052
+            Result.X0 = -22.000050
+            Result.Z0 = -50.099950
+            Result.X1 = 21.999950
+            Result.Z1 = -40.799940
+            Result.Height = 4.500000
+
+        Case 2053
+            Result.X0 = -22.000050
+            Result.Z0 = -46.999960
+            Result.X1 = 21.999950
+            Result.Z1 = -40.799960
+            Result.Height = 6.000000
+
+        Case 2054
+            Result.X0 = -22.000050
+            Result.Z0 = -43.899970
+            Result.X1 = 21.999950
+            Result.Z1 = -40.799970
+            Result.Height = 7.500000
+
+        Case 2055
+            Result.X0 = -16.530050
+            Result.Z0 = -42.399980
+            Result.X1 = 16.529950
+            Result.Z1 = -19.910980
+            Result.Height = 7.800000
+
+        Case 2056
+            Result.X0 = 43.400030
+            Result.Z0 = -4.567460
+            Result.X1 = 53.400030
+            Result.Z1 = 4.567540
+            Result.Height = 4.400000
+
+        Case 2304
+            Result.X0 = -30.000000
+            Result.Z0 = -92.400020
+            Result.X1 = 30.000000
+            Result.Z1 = -62.800020
+            Result.Height = 1.500000
+
+        Case 2305
+            Result.X0 = -30.000000
+            Result.Z0 = -88.700010
+            Result.X1 = 30.000000
+            Result.Z1 = -62.800010
+            Result.Height = 3.000000
+
+        Case 2306
+            Result.X0 = -30.000000
+            Result.Z0 = -84.999990
+            Result.X1 = 30.000000
+            Result.Z1 = -62.799990
+            Result.Height = 4.500000
+
+        Case 2307
+            Result.X0 = -30.000000
+            Result.Z0 = -81.300020
+            Result.X1 = 30.000000
+            Result.Z1 = -62.800020
+            Result.Height = 6.000000
+
+        Case 2308
+            Result.X0 = -30.000000
+            Result.Z0 = -77.600000
+            Result.X1 = 30.000000
+            Result.Z1 = -62.800010
+            Result.Height = 7.500000
+
+        Case 2309
+            Result.X0 = -30.000000
+            Result.Z0 = -73.899990
+            Result.X1 = 30.000000
+            Result.Z1 = -62.799990
+            Result.Height = 9.000000
+
+        Case 2310
+            Result.X0 = -30.000000
+            Result.Z0 = -70.200010
+            Result.X1 = 30.000000
+            Result.Z1 = -62.800020
+            Result.Height = 10.500000
+
+        Case 2311
+            Result.X0 = -30.000000
+            Result.Z0 = -66.500000
+            Result.X1 = 30.000000
+            Result.Z1 = -62.800000
+            Result.Height = 12.000000
+
+        Case 2312
+            Result.X0 = -22.185000
+            Result.Z0 = -63.399990
+            Result.X1 = 22.185000
+            Result.Z1 = -33.559490
+            Result.Height = 12.200000
+
+        Case 2313
+            Result.X0 = -6.960000
+            Result.Z0 = 53.352010
+            Result.X1 = 6.960000
+            Result.Z1 = 63.400020
+            Result.Height = 6.600000
+
+        Case 2560
+            Result.X0 = -17.750000
+            Result.Z0 = -59.600000
+            Result.X1 = 17.750000
+            Result.Z1 = -41.000000
+            Result.Height = 1.450000
+
+        Case 2561
+            Result.X0 = -17.750000
+            Result.Z0 = -56.500000
+            Result.X1 = 17.750000
+            Result.Z1 = -41.000000
+            Result.Height = 2.900000
+
+        Case 2562
+            Result.X0 = -17.750000
+            Result.Z0 = -53.400000
+            Result.X1 = 17.750000
+            Result.Z1 = -41.000000
+            Result.Height = 4.350000
+
+        Case 2563
+            Result.X0 = -17.750000
+            Result.Z0 = -50.300000
+            Result.X1 = 17.750000
+            Result.Z1 = -41.000000
+            Result.Height = 5.800000
+
+        Case 2564
+            Result.X0 = -17.750000
+            Result.Z0 = -47.200000
+            Result.X1 = 17.750000
+            Result.Z1 = -41.000000
+            Result.Height = 7.250000
+
+        Case 2565
+            Result.X0 = -17.750000
+            Result.Z0 = -44.100000
+            Result.X1 = 17.750000
+            Result.Z1 = -41.000000
+            Result.Height = 8.700000
+
+        Case 2566
+            Result.X0 = -11.745000
+            Result.Z0 = -44.400010
+            Result.X1 = 11.745000
+            Result.Z1 = -28.131510
+            Result.Height = 8.900000
+
+        Case 2567
+            Result.X0 = -6.525000
+            Result.Z0 = 34.399990
+            Result.X1 = 6.525000
+            Result.Z1 = 44.400000
+            Result.Height = 4.400000
+
+        Case 2816
+            Result.X0 = -53.399990
+            Result.Z0 = -4.567490
+            Result.X1 = -43.399990
+            Result.Z1 = 4.567510
+            Result.Height = 4.400000
+
+        Case 2817
+            Result.X0 = -32.785090
+            Result.Z0 = 32.399890
+            Result.X1 = -23.215090
+            Result.Z1 = 42.399890
+            Result.Height = 4.700000
+
+        Case 2818
+            Result.X0 = -22.000050
+            Result.Z0 = -56.300020
+            Result.X1 = 21.999950
+            Result.Z1 = -40.800020
+            Result.Height = 1.500000
+
+        Case 2819
+            Result.X0 = -22.000050
+            Result.Z0 = -53.199950
+            Result.X1 = 21.999950
+            Result.Z1 = -40.799960
+            Result.Height = 3.000000
+
+        Case 2820
+            Result.X0 = -22.000050
+            Result.Z0 = -50.099970
+            Result.X1 = 21.999950
+            Result.Z1 = -40.799970
+            Result.Height = 4.500000
+
+        Case 2821
+            Result.X0 = -22.000050
+            Result.Z0 = -46.999980
+            Result.X1 = 21.999950
+            Result.Z1 = -40.799980
+            Result.Height = 6.000000
+
+        Case 2822
+            Result.X0 = -22.000050
+            Result.Z0 = -43.899990
+            Result.X1 = 21.999950
+            Result.Z1 = -40.799990
+            Result.Height = 7.500000
+
+        Case 2823
+            Result.X0 = -16.530050
+            Result.Z0 = -42.400000
+            Result.X1 = 16.529950
+            Result.Z1 = -19.911000
+            Result.Height = 7.800000
+
+        Case 2824
+            Result.X0 = 43.399880
+            Result.Z0 = -4.567480
+            Result.X1 = 53.399880
+            Result.Z1 = 4.567520
+            Result.Height = 4.400000
+
+        Case 3072
+            Result.X0 = -53.399990
+            Result.Z0 = -4.567430
+            Result.X1 = -43.399990
+            Result.Z1 = 4.567570
+            Result.Height = 4.400000
+
+        Case 3073
+            Result.X0 = -32.785090
+            Result.Z0 = 32.399860
+            Result.X1 = -23.215090
+            Result.Z1 = 42.399860
+            Result.Height = 4.700000
+
+        Case 3074
+            Result.X0 = -22.000050
+            Result.Z0 = -56.300040
+            Result.X1 = 21.999950
+            Result.Z1 = -40.800040
+            Result.Height = 1.500000
+
+        Case 3075
+            Result.X0 = -22.000050
+            Result.Z0 = -53.199980
+            Result.X1 = 21.999950
+            Result.Z1 = -40.799980
+            Result.Height = 3.000000
+
+        Case 3076
+            Result.X0 = -22.000050
+            Result.Z0 = -50.099990
+            Result.X1 = 21.999950
+            Result.Z1 = -40.799990
+            Result.Height = 4.500000
+
+        Case 3077
+            Result.X0 = -22.000050
+            Result.Z0 = -47.000000
+            Result.X1 = 21.999950
+            Result.Z1 = -40.800000
+            Result.Height = 6.000000
+
+        Case 3078
+            Result.X0 = -22.000050
+            Result.Z0 = -43.900020
+            Result.X1 = 21.999950
+            Result.Z1 = -40.800010
+            Result.Height = 7.500000
+
+        Case 3079
+            Result.X0 = -16.530050
+            Result.Z0 = -42.400030
+            Result.X1 = 16.529950
+            Result.Z1 = -19.911020
+            Result.Height = 7.800000
+
+        Case 3080
+            Result.X0 = 43.399880
+            Result.Z0 = -4.567510
+            Result.X1 = 53.399880
+            Result.Z1 = 4.567490
+            Result.Height = 4.400000
+
+        Case 3328
+            Result.X0 = -264.002670
+            Result.Z0 = 49.099400
+            Result.X1 = -225.927450
+            Result.Z1 = 55.574520
+            Result.Height = 141.200000
+
+        Case 3329
+            Result.X0 = -263.928090
+            Result.Z0 = 43.275270
+            Result.X1 = -225.722180
+            Result.Z1 = 50.746490
+            Result.Height = 138.156520
+
+        Case 3330
+            Result.X0 = -263.700810
+            Result.Z0 = 37.453770
+            Result.X1 = -225.390380
+            Result.Z1 = 45.915830
+            Result.Height = 135.113040
+
+        Case 3331
+            Result.X0 = -263.321110
+            Result.Z0 = 31.636460
+            Result.X1 = -224.932060
+            Result.Z1 = 41.080980
+            Result.Height = 132.069570
+
+        Case 3332
+            Result.X0 = -262.789940
+            Result.Z0 = 25.824840
+            Result.X1 = -224.347520
+            Result.Z1 = 36.240440
+            Result.Height = 129.026090
+
+        Case 3333
+            Result.X0 = -262.108330
+            Result.Z0 = 20.020340
+            Result.X1 = -223.636910
+            Result.Z1 = 31.392780
+            Result.Height = 125.982610
+
+        Case 3334
+            Result.X0 = -261.277540
+            Result.Z0 = 14.224210
+            Result.X1 = -222.800520
+            Result.Z1 = 26.536590
+            Result.Height = 122.939130
+
+        Case 3335
+            Result.X0 = -260.299340
+            Result.Z0 = 8.437830
+            Result.X1 = -221.838720
+            Result.Z1 = 21.670810
+            Result.Height = 119.895650
+
+        Case 3336
+            Result.X0 = -259.175450
+            Result.Z0 = 2.662230
+            Result.X1 = -220.751910
+            Result.Z1 = 16.794260
+            Result.Height = 116.852180
+
+        Case 3337
+            Result.X0 = -257.908080
+            Result.Z0 = -3.101640
+            Result.X1 = -219.540650
+            Result.Z1 = 11.905960
+            Result.Height = 113.808700
+
+        Case 3338
+            Result.X0 = -256.499310
+            Result.Z0 = -8.852910
+            Result.X1 = -218.205430
+            Result.Z1 = 7.005070
+            Result.Height = 110.765220
+
+        Case 3339
+            Result.X0 = -254.951690
+            Result.Z0 = -14.590890
+            Result.X1 = -216.747070
+            Result.Z1 = 2.090890
+            Result.Height = 107.721740
+
+        Case 3340
+            Result.X0 = -253.267880
+            Result.Z0 = -20.314990
+            Result.X1 = -215.166420
+            Result.Z1 = -2.837170
+            Result.Height = 104.678260
+
+        Case 3341
+            Result.X0 = -251.450610
+            Result.Z0 = -26.024750
+            Result.X1 = -213.464550
+            Result.Z1 = -7.779570
+            Result.Height = 101.634780
+
+        Case 3342
+            Result.X0 = -249.502870
+            Result.Z0 = -31.719850
+            Result.X1 = -211.642610
+            Result.Z1 = -12.736630
+            Result.Height = 98.591310
+
+        Case 3343
+            Result.X0 = -247.427600
+            Result.Z0 = -37.400060
+            Result.X1 = -209.701920
+            Result.Z1 = -17.708580
+            Result.Height = 95.547830
+
+        Case 3344
+            Result.X0 = -245.228080
+            Result.Z0 = -43.065260
+            Result.X1 = -207.644080
+            Result.Z1 = -22.695540
+            Result.Height = 92.504350
+
+        Case 3345
+            Result.X0 = -242.907520
+            Result.Z0 = -48.715500
+            Result.X1 = -205.470770
+            Result.Z1 = -27.697620
+            Result.Height = 89.460870
+
+        Case 3346
+            Result.X0 = -240.469190
+            Result.Z0 = -54.350670
+            Result.X1 = -203.183770
+            Result.Z1 = -32.714610
+            Result.Height = 86.417390
+
+        Case 3347
+            Result.X0 = -237.916660
+            Result.Z0 = -59.970970
+            Result.X1 = -200.785270
+            Result.Z1 = -37.746470
+            Result.Height = 83.373910
+
+        Case 3348
+            Result.X0 = -235.253410
+            Result.Z0 = -65.576590
+            Result.X1 = -198.277470
+            Result.Z1 = -42.793010
+            Result.Height = 80.330440
+
+        Case 3349
+            Result.X0 = -232.483040
+            Result.Z0 = -71.167760
+            Result.X1 = -195.662860
+            Result.Z1 = -47.854000
+            Result.Height = 77.286960
+
+        Case 3350
+            Result.X0 = -229.609180
+            Result.Z0 = -76.744740
+            Result.X1 = -192.943920
+            Result.Z1 = -52.929180
+            Result.Height = 74.243480
+
+        Case 3351
+            Result.X0 = -226.635670
+            Result.Z0 = -82.307850
+            Result.X1 = -190.123520
+            Result.Z1 = -58.018230
+            Result.Height = 71.200000
+
+        Case 3352
+            Result.X0 = -223.566270
+            Result.Z0 = -87.857420
+            Result.X1 = -187.204610
+            Result.Z1 = -63.120830
+            Result.Height = 68.156520
+
+        Case 3353
+            Result.X0 = -220.404820
+            Result.Z0 = -93.393780
+            Result.X1 = -184.190220
+            Result.Z1 = -68.236620
+            Result.Height = 65.113040
+
+        Case 3354
+            Result.X0 = -217.155270
+            Result.Z0 = -98.917300
+            Result.X1 = -181.083560
+            Result.Z1 = -73.365260
+            Result.Height = 62.069560
+
+        Case 3355
+            Result.X0 = -213.821770
+            Result.Z0 = -104.428340
+            Result.X1 = -177.888280
+            Result.Z1 = -78.506380
+            Result.Height = 59.026090
+
+        Case 3356
+            Result.X0 = -210.408230
+            Result.Z0 = -109.927330
+            Result.X1 = -174.607640
+            Result.Z1 = -83.659710
+            Result.Height = 55.982610
+
+        Case 3357
+            Result.X0 = -206.918890
+            Result.Z0 = -115.414480
+            Result.X1 = -171.245480
+            Result.Z1 = -88.824720
+            Result.Height = 52.939130
+
+        Case 3358
+            Result.X0 = -203.357850
+            Result.Z0 = -120.890200
+            Result.X1 = -167.805480
+            Result.Z1 = -94.001160
+            Result.Height = 49.895650
+
+        Case 3359
+            Result.X0 = -199.729390
+            Result.Z0 = -126.354840
+            Result.X1 = -164.291610
+            Result.Z1 = -99.188680
+            Result.Height = 46.852170
+
+        Case 3360
+            Result.X0 = -196.037920
+            Result.Z0 = -131.808720
+            Result.X1 = -160.707990
+            Result.Z1 = -104.386960
+            Result.Height = 43.808690
+
+        Case 3361
+            Result.X0 = -192.287640
+            Result.Z0 = -137.252140
+            Result.X1 = -157.058530
+            Result.Z1 = -109.595700
+            Result.Height = 40.765220
+
+        Case 3362
+            Result.X0 = -188.483050
+            Result.Z0 = -142.685390
+            Result.X1 = -153.347560
+            Result.Z1 = -114.814610
+            Result.Height = 37.721740
+
+        Case 3363
+            Result.X0 = -184.628660
+            Result.Z0 = -148.108750
+            Result.X1 = -149.579420
+            Result.Z1 = -120.043410
+            Result.Height = 34.678260
+
+        Case 3364
+            Result.X0 = -180.728890
+            Result.Z0 = -153.522450
+            Result.X1 = -145.758380
+            Result.Z1 = -125.281870
+            Result.Height = 31.634780
+
+        Case 3365
+            Result.X0 = -176.788390
+            Result.Z0 = -158.926730
+            Result.X1 = -141.888970
+            Result.Z1 = -130.529750
+            Result.Height = 28.591300
+
+        Case 3366
+            Result.X0 = -172.811700
+            Result.Z0 = -164.321800
+            Result.X1 = -137.975650
+            Result.Z1 = -135.786840
+            Result.Height = 25.547830
+
+        Case 3367
+            Result.X0 = -168.803420
+            Result.Z0 = -169.707850
+            Result.X1 = -134.022960
+            Result.Z1 = -141.052950
+            Result.Height = 22.504350
+
+        Case 3368
+            Result.X0 = -164.768330
+            Result.Z0 = -175.085030
+            Result.X1 = -130.035590
+            Result.Z1 = -146.327940
+            Result.Height = 19.460870
+
+        Case 3369
+            Result.X0 = -160.711100
+            Result.Z0 = -180.453470
+            Result.X1 = -126.018180
+            Result.Z1 = -151.611660
+            Result.Height = 16.417390
+
+        Case 3370
+            Result.X0 = -156.636380
+            Result.Z0 = -185.813370
+            Result.X1 = -121.975370
+            Result.Z1 = -156.904060
+            Result.Height = 13.373910
+
+        Case 3371
+            Result.X0 = -152.548940
+            Result.Z0 = -191.164680
+            Result.X1 = -117.911870
+            Result.Z1 = -162.204910
+            Result.Height = 10.330440
+
+        Case 3372
+            Result.X0 = -148.453590
+            Result.Z0 = -196.507550
+            Result.X1 = -113.832480
+            Result.Z1 = -167.514210
+            Result.Height = 7.286960
+
+        Case 3373
+            Result.X0 = -144.355050
+            Result.Z0 = -201.842000
+            Result.X1 = -109.741940
+            Result.Z1 = -172.831920
+            Result.Height = 4.243480
+
+        Case 3374
+            Result.X0 = -37.500000
+            Result.Z0 = -81.950000
+            Result.X1 = 37.500000
+            Result.Z1 = -78.050000
+            Result.Height = 2.500000
+
+        Case 3375
+            Result.X0 = -37.500000
+            Result.Z0 = -78.350000
+            Result.X1 = 37.500000
+            Result.Z1 = -74.449990
+            Result.Height = 5.000000
+
+        Case 3376
+            Result.X0 = -37.500000
+            Result.Z0 = -74.749990
+            Result.X1 = 37.500000
+            Result.Z1 = -70.849990
+            Result.Height = 7.500000
+
+        Case 3377
+            Result.X0 = -37.500000
+            Result.Z0 = -71.149980
+            Result.X1 = 37.500000
+            Result.Z1 = -67.249980
+            Result.Height = 10.000000
+
+        Case 3378
+            Result.X0 = -37.500000
+            Result.Z0 = -67.549980
+            Result.X1 = 37.500000
+            Result.Z1 = -63.649970
+            Result.Height = 12.500000
+
+        Case 3379
+            Result.X0 = -37.500000
+            Result.Z0 = -63.949970
+            Result.X1 = 37.500000
+            Result.Z1 = -60.049970
+            Result.Height = 15.000000
+
+        Case 3380
+            Result.X0 = -37.500000
+            Result.Z0 = -60.349970
+            Result.X1 = 37.500000
+            Result.Z1 = -56.449960
+            Result.Height = 17.500000
+
+        Case 3381
+            Result.X0 = -37.500000
+            Result.Z0 = -56.750040
+            Result.X1 = 37.500000
+            Result.Z1 = -52.850030
+            Result.Height = 20.000000
+
+        Case 3382
+            Result.X0 = -37.500000
+            Result.Z0 = -53.150030
+            Result.X1 = 37.500000
+            Result.Z1 = -49.250030
+            Result.Height = 22.500000
+
+        Case 3383
+            Result.X0 = -37.500000
+            Result.Z0 = -49.550020
+            Result.X1 = 37.500000
+            Result.Z1 = -45.650020
+            Result.Height = 25.000000
+
+        Case 3384
+            Result.X0 = -37.500000
+            Result.Z0 = -45.950020
+            Result.X1 = 37.500000
+            Result.Z1 = -42.050010
+            Result.Height = 27.500000
+
+        Case 3385
+            Result.X0 = -37.500000
+            Result.Z0 = -42.350010
+            Result.X1 = 37.500000
+            Result.Z1 = -38.450010
+            Result.Height = 30.000000
+
+        Case 3386
+            Result.X0 = -37.500000
+            Result.Z0 = -38.750000
+            Result.X1 = 37.500000
+            Result.Z1 = -34.850000
+            Result.Height = 32.500000
+
+        Case 3387
+            Result.X0 = -37.500000
+            Result.Z0 = -35.150000
+            Result.X1 = 37.500000
+            Result.Z1 = -31.250000
+            Result.Height = 35.000000
+
+        Case 3388
+            Result.X0 = -37.500000
+            Result.Z0 = -31.549990
+            Result.X1 = 37.500000
+            Result.Z1 = -27.649990
+            Result.Height = 37.500000
+
+        Case 3389
+            Result.X0 = -37.500000
+            Result.Z0 = -27.949980
+            Result.X1 = 37.500000
+            Result.Z1 = -24.049990
+            Result.Height = 40.000000
+
+        Case 3390
+            Result.X0 = -37.500000
+            Result.Z0 = -24.349980
+            Result.X1 = 37.500000
+            Result.Z1 = -20.449980
+            Result.Height = 42.500000
+
+        Case 3391
+            Result.X0 = -37.500000
+            Result.Z0 = -20.749970
+            Result.X1 = 37.500000
+            Result.Z1 = -16.849970
+            Result.Height = 45.000000
+
+        Case 3392
+            Result.X0 = -37.500000
+            Result.Z0 = -17.149970
+            Result.X1 = 37.500000
+            Result.Z1 = -13.249970
+            Result.Height = 47.500000
+
+        Case 3393
+            Result.X0 = -37.500000
+            Result.Z0 = -13.550040
+            Result.X1 = 37.500000
+            Result.Z1 = -9.650040
+            Result.Height = 50.000000
+
+        Case 3394
+            Result.X0 = -37.500000
+            Result.Z0 = -9.950030
+            Result.X1 = 37.500000
+            Result.Z1 = -6.050030
+            Result.Height = 52.500000
+
+        Case 3395
+            Result.X0 = -37.500000
+            Result.Z0 = -6.350020
+            Result.X1 = 37.500000
+            Result.Z1 = -2.450020
+            Result.Height = 55.000000
+
+        Case 3396
+            Result.X0 = -37.500000
+            Result.Z0 = -2.750020
+            Result.X1 = 37.500000
+            Result.Z1 = 1.149980
+            Result.Height = 57.500000
+
+        Case 3397
+            Result.X0 = -37.500000
+            Result.Z0 = 0.849990
+            Result.X1 = 37.500000
+            Result.Z1 = 4.749990
+            Result.Height = 60.000000
+
+        Case 3398
+            Result.X0 = -37.500000
+            Result.Z0 = 4.449990
+            Result.X1 = 37.500000
+            Result.Z1 = 8.349990
+            Result.Height = 62.500000
+
+        Case 3399
+            Result.X0 = -37.500000
+            Result.Z0 = 8.050000
+            Result.X1 = 37.500000
+            Result.Z1 = 11.950000
+            Result.Height = 65.000000
+
+        Case 3400
+            Result.X0 = -30.500000
+            Result.Z0 = 10.799980
+            Result.X1 = 30.500000
+            Result.Z1 = 51.449990
+            Result.Height = 64.950000
+
+        Case 3401
+            Result.X0 = 109.741900
+            Result.Z0 = -201.842000
+            Result.X1 = 144.355010
+            Result.Z1 = -172.831920
+            Result.Height = 4.243480
+
+        Case 3402
+            Result.X0 = 113.832450
+            Result.Z0 = -196.507550
+            Result.X1 = 148.453550
+            Result.Z1 = -167.514210
+            Result.Height = 7.286960
+
+        Case 3403
+            Result.X0 = 117.911870
+            Result.Z0 = -191.164680
+            Result.X1 = 152.548940
+            Result.Z1 = -162.204910
+            Result.Height = 10.330440
+
+        Case 3404
+            Result.X0 = 121.975340
+            Result.Z0 = -185.813370
+            Result.X1 = 156.636340
+            Result.Z1 = -156.904060
+            Result.Height = 13.373910
+
+        Case 3405
+            Result.X0 = 126.018180
+            Result.Z0 = -180.453470
+            Result.X1 = 160.711100
+            Result.Z1 = -151.611660
+            Result.Height = 16.417390
+
+        Case 3406
+            Result.X0 = 130.035590
+            Result.Z0 = -175.085030
+            Result.X1 = 164.768330
+            Result.Z1 = -146.327940
+            Result.Height = 19.460870
+
+        Case 3407
+            Result.X0 = 134.023000
+            Result.Z0 = -169.707850
+            Result.X1 = 168.803460
+            Result.Z1 = -141.052950
+            Result.Height = 22.504350
+
+        Case 3408
+            Result.X0 = 137.975650
+            Result.Z0 = -164.321800
+            Result.X1 = 172.811700
+            Result.Z1 = -135.786840
+            Result.Height = 25.547830
+
+        Case 3409
+            Result.X0 = 141.888970
+            Result.Z0 = -158.926730
+            Result.X1 = 176.788390
+            Result.Z1 = -130.529750
+            Result.Height = 28.591300
+
+        Case 3410
+            Result.X0 = 145.758380
+            Result.Z0 = -153.522450
+            Result.X1 = 180.728890
+            Result.Z1 = -125.281870
+            Result.Height = 31.634780
+
+        Case 3411
+            Result.X0 = 149.579420
+            Result.Z0 = -148.108750
+            Result.X1 = 184.628660
+            Result.Z1 = -120.043410
+            Result.Height = 34.678260
+
+        Case 3412
+            Result.X0 = 153.347560
+            Result.Z0 = -142.685390
+            Result.X1 = 188.483050
+            Result.Z1 = -114.814610
+            Result.Height = 37.721740
+
+        Case 3413
+            Result.X0 = 157.058530
+            Result.Z0 = -137.252140
+            Result.X1 = 192.287640
+            Result.Z1 = -109.595700
+            Result.Height = 40.765220
+
+        Case 3414
+            Result.X0 = 160.707950
+            Result.Z0 = -131.808720
+            Result.X1 = 196.037880
+            Result.Z1 = -104.386960
+            Result.Height = 43.808690
+
+        Case 3415
+            Result.X0 = 164.291610
+            Result.Z0 = -126.354840
+            Result.X1 = 199.729390
+            Result.Z1 = -99.188680
+            Result.Height = 46.852170
+
+        Case 3416
+            Result.X0 = 167.805480
+            Result.Z0 = -120.890200
+            Result.X1 = 203.357850
+            Result.Z1 = -94.001160
+            Result.Height = 49.895650
+
+        Case 3417
+            Result.X0 = 171.245440
+            Result.Z0 = -115.414480
+            Result.X1 = 206.918850
+            Result.Z1 = -88.824720
+            Result.Height = 52.939130
+
+        Case 3418
+            Result.X0 = 174.607640
+            Result.Z0 = -109.927330
+            Result.X1 = 210.408230
+            Result.Z1 = -83.659710
+            Result.Height = 55.982610
+
+        Case 3419
+            Result.X0 = 177.888280
+            Result.Z0 = -104.428340
+            Result.X1 = 213.821770
+            Result.Z1 = -78.506380
+            Result.Height = 59.026090
+
+        Case 3420
+            Result.X0 = 181.083600
+            Result.Z0 = -98.917300
+            Result.X1 = 217.155300
+            Result.Z1 = -73.365260
+            Result.Height = 62.069560
+
+        Case 3421
+            Result.X0 = 184.190220
+            Result.Z0 = -93.393780
+            Result.X1 = 220.404820
+            Result.Z1 = -68.236620
+            Result.Height = 65.113040
+
+        Case 3422
+            Result.X0 = 187.204610
+            Result.Z0 = -87.857420
+            Result.X1 = 223.566270
+            Result.Z1 = -63.120830
+            Result.Height = 68.156520
+
+        Case 3423
+            Result.X0 = 190.123520
+            Result.Z0 = -82.307850
+            Result.X1 = 226.635670
+            Result.Z1 = -58.018230
+            Result.Height = 71.200000
+
+        Case 3424
+            Result.X0 = 192.943920
+            Result.Z0 = -76.744740
+            Result.X1 = 229.609180
+            Result.Z1 = -52.929180
+            Result.Height = 74.243480
+
+        Case 3425
+            Result.X0 = 195.662860
+            Result.Z0 = -71.167760
+            Result.X1 = 232.483040
+            Result.Z1 = -47.854000
+            Result.Height = 77.286960
+
+        Case 3426
+            Result.X0 = 198.277470
+            Result.Z0 = -65.576590
+            Result.X1 = 235.253410
+            Result.Z1 = -42.793010
+            Result.Height = 80.330440
+
+        Case 3427
+            Result.X0 = 200.785270
+            Result.Z0 = -59.970970
+            Result.X1 = 237.916660
+            Result.Z1 = -37.746470
+            Result.Height = 83.373910
+
+        Case 3428
+            Result.X0 = 203.183770
+            Result.Z0 = -54.350670
+            Result.X1 = 240.469190
+            Result.Z1 = -32.714610
+            Result.Height = 86.417390
+
+        Case 3429
+            Result.X0 = 205.470770
+            Result.Z0 = -48.715500
+            Result.X1 = 242.907520
+            Result.Z1 = -27.697620
+            Result.Height = 89.460870
+
+        Case 3430
+            Result.X0 = 207.644080
+            Result.Z0 = -43.065260
+            Result.X1 = 245.228080
+            Result.Z1 = -22.695540
+            Result.Height = 92.504350
+
+        Case 3431
+            Result.X0 = 209.701960
+            Result.Z0 = -37.400060
+            Result.X1 = 247.427640
+            Result.Z1 = -17.708580
+            Result.Height = 95.547830
+
+        Case 3432
+            Result.X0 = 211.642610
+            Result.Z0 = -31.719850
+            Result.X1 = 249.502870
+            Result.Z1 = -12.736630
+            Result.Height = 98.591310
+
+        Case 3433
+            Result.X0 = 213.464550
+            Result.Z0 = -26.024750
+            Result.X1 = 251.450610
+            Result.Z1 = -7.779570
+            Result.Height = 101.634780
+
+        Case 3434
+            Result.X0 = 215.166420
+            Result.Z0 = -20.314990
+            Result.X1 = 253.267880
+            Result.Z1 = -2.837170
+            Result.Height = 104.678260
+
+        Case 3435
+            Result.X0 = 216.747070
+            Result.Z0 = -14.590890
+            Result.X1 = 254.951690
+            Result.Z1 = 2.090890
+            Result.Height = 107.721740
+
+        Case 3436
+            Result.X0 = 218.205430
+            Result.Z0 = -8.852910
+            Result.X1 = 256.499310
+            Result.Z1 = 7.005070
+            Result.Height = 110.765220
+
+        Case 3437
+            Result.X0 = 219.540650
+            Result.Z0 = -3.101640
+            Result.X1 = 257.908080
+            Result.Z1 = 11.905960
+            Result.Height = 113.808700
+
+        Case 3438
+            Result.X0 = 220.751950
+            Result.Z0 = 2.662230
+            Result.X1 = 259.175490
+            Result.Z1 = 16.794260
+            Result.Height = 116.852180
+
+        Case 3439
+            Result.X0 = 221.838760
+            Result.Z0 = 8.437830
+            Result.X1 = 260.299380
+            Result.Z1 = 21.670810
+            Result.Height = 119.895650
+
+        Case 3440
+            Result.X0 = 222.800560
+            Result.Z0 = 14.224210
+            Result.X1 = 261.277580
+            Result.Z1 = 26.536590
+            Result.Height = 122.939130
+
+        Case 3441
+            Result.X0 = 223.636910
+            Result.Z0 = 20.020340
+            Result.X1 = 262.108330
+            Result.Z1 = 31.392780
+            Result.Height = 125.982610
+
+        Case 3442
+            Result.X0 = 224.347520
+            Result.Z0 = 25.824840
+            Result.X1 = 262.789940
+            Result.Z1 = 36.240440
+            Result.Height = 129.026090
+
+        Case 3443
+            Result.X0 = 224.932060
+            Result.Z0 = 31.636460
+            Result.X1 = 263.321110
+            Result.Z1 = 41.080980
+            Result.Height = 132.069570
+
+        Case 3444
+            Result.X0 = 225.390340
+            Result.Z0 = 37.453770
+            Result.X1 = 263.700770
+            Result.Z1 = 45.915830
+            Result.Height = 135.113040
+
+        Case 3445
+            Result.X0 = 225.722180
+            Result.Z0 = 43.275270
+            Result.X1 = 263.928090
+            Result.Z1 = 50.746490
+            Result.Height = 138.156520
+
+        Case 3446
+            Result.X0 = 225.927410
+            Result.Z0 = 49.099400
+            Result.X1 = 264.002630
+            Result.Z1 = 55.574520
+            Result.Height = 141.200000
+
+    End Select
+
+    Return Result
+
+End Function
+
+Public Function DoorAt(TemplateIndex As Number, Index As Number) As Door
+
+    Dim Result As Door
+    Dim Key As Number
+
+    Key = TemplateIndex * 256 + Index
+
+    Select Case Key
+        Case 0
+            Result.Position = P.Vector(-0.000061, 4.250000, -33.400009)
+            Result.Width = 12.615000
+            Result.Height = 23.249999
+            Result.Yaw = -0.000000
+
+        Case 256
+            Result.Position = P.Vector(-0.000061, 4.250000, -38.399892)
+            Result.Width = 12.615000
+            Result.Height = 23.249999
+            Result.Yaw = -0.000000
+
+        Case 512
+            Result.Position = P.Vector(0.000092, 4.250000, -37.400081)
+            Result.Width = 12.615000
+            Result.Height = 23.249999
+            Result.Yaw = -0.000000
+
+        Case 768
+            Result.Position = P.Vector(0.000012, 3.800000, -67.700028)
+            Result.Width = 25.000000
+            Result.Height = 29.000001
+            Result.Yaw = -0.000000
+
+        Case 1024
+            Result.Position = P.Vector(-23.000093, 3.800000, -46.399932)
+            Result.Width = 15.500000
+            Result.Height = 29.000001
+            Result.Yaw = -0.000000
+
+        Case 1025
+            Result.Position = P.Vector(22.999969, 3.800000, -46.399932)
+            Result.Width = 15.500000
+            Result.Height = 29.000001
+            Result.Yaw = -0.000000
+
+        Case 1280
+            Result.Position = P.Vector(0.000026, 3.800000, -36.400030)
+            Result.Width = 15.500000
+            Result.Height = 29.000001
+            Result.Yaw = -0.000000
+
+        Case 1792
+            Result.Position = P.Vector(0.000000, 3.000000, 123.800049)
+            Result.Width = 45.999999
+            Result.Height = 71.999998
+            Result.Yaw = -0.000000
+
+        Case 2048
+            Result.Position = P.Vector(-0.000053, 7.850000, -42.399940)
+            Result.Width = 33.060000
+            Result.Height = 36.734999
+            Result.Yaw = -0.000000
+
+        Case 2049
+            Result.Position = P.Vector(-27.999935, 4.750000, 42.400093)
+            Result.Width = 9.570000
+            Result.Height = 21.390000
+            Result.Yaw = 179.999991
+
+        Case 2050
+            Result.Position = P.Vector(53.399911, 4.450001, 0.000040)
+            Result.Width = 9.135000
+            Result.Height = 21.390000
+            Result.Yaw = -89.999996
+
+        Case 2051
+            Result.Position = P.Vector(-53.400016, 4.450001, 0.000035)
+            Result.Width = 9.135000
+            Result.Height = 21.390000
+            Result.Yaw = 89.999996
+
+        Case 2304
+            Result.Position = P.Vector(0.000000, 12.249999, -63.400002)
+            Result.Width = 44.369998
+            Result.Height = 48.360000
+            Result.Yaw = -0.000000
+
+        Case 2305
+            Result.Position = P.Vector(0.000000, 6.650000, 63.400002)
+            Result.Width = 13.920000
+            Result.Height = 30.690001
+            Result.Yaw = 179.999991
+
+        Case 2560
+            Result.Position = P.Vector(0.000000, 8.950000, -44.400024)
+            Result.Width = 23.490000
+            Result.Height = 44.639998
+            Result.Yaw = -0.000000
+
+        Case 2561
+            Result.Position = P.Vector(0.000000, 4.450000, 44.400024)
+            Result.Width = 13.049999
+            Result.Height = 24.645000
+            Result.Yaw = 179.999991
+
+        Case 2816
+            Result.Position = P.Vector(-0.000053, 7.850000, -42.399964)
+            Result.Width = 33.060000
+            Result.Height = 36.734999
+            Result.Yaw = -0.000000
+
+        Case 2817
+            Result.Position = P.Vector(-28.000088, 4.750000, 42.399917)
+            Result.Width = 9.570000
+            Result.Height = 21.390000
+            Result.Yaw = 179.999991
+
+        Case 2818
+            Result.Position = P.Vector(53.399911, 4.450001, 0.000017)
+            Result.Width = 9.135000
+            Result.Height = 21.390000
+            Result.Yaw = -89.999996
+
+        Case 2819
+            Result.Position = P.Vector(-53.400016, 4.450001, 0.000012)
+            Result.Width = 9.135000
+            Result.Height = 21.390000
+            Result.Yaw = 89.999996
+
+        Case 3072
+            Result.Position = P.Vector(-0.000053, 7.850000, -42.399988)
+            Result.Width = 33.060000
+            Result.Height = 36.734999
+            Result.Yaw = -0.000000
+
+        Case 3073
+            Result.Position = P.Vector(-28.000088, 4.750000, 42.399893)
+            Result.Width = 9.570000
+            Result.Height = 21.390000
+            Result.Yaw = 179.999991
+
+        Case 3074
+            Result.Position = P.Vector(53.399911, 4.450001, -0.000006)
+            Result.Width = 9.135000
+            Result.Height = 21.390000
+            Result.Yaw = -89.999996
+
+        Case 3075
+            Result.Position = P.Vector(-53.400016, 4.450001, 0.000066)
+            Result.Width = 9.135000
+            Result.Height = 21.390000
+            Result.Yaw = 89.999996
+
+        Case 3328
+            Result.Position = P.Vector(0.000000, 65.000000, 10.800018)
+            Result.Width = 60.999999
+            Result.Height = 74.000001
+            Result.Yaw = -0.000000
+
+    End Select
+
+    Return Result
+
+End Function
+
+Public Function WaterAt(TemplateIndex As Number, Index As Number) As WaterDisk
+
+    Dim Result As WaterDisk
+    Dim Key As Number
+
+    Key = TemplateIndex * 256 + Index
+
+    Select Case Key
+        Case 3328
+            Result.Position = P.Vector(0.000000, 8.000000, -160.000000)
+            Result.RadiusX = 35.850000
+            Result.RadiusZ = 35.850000
+
+        Case 5120
+            Result.Position = P.Vector(0.000000, 8.400000, 0.000000)
+            Result.RadiusX = 36.650000
+            Result.RadiusZ = 36.650000
+
+        Case 5376
+            Result.Position = P.Vector(0.000000, 8.400000, 0.000000)
+            Result.RadiusX = 36.650000
+            Result.RadiusZ = 36.650000
+
+        Case 5632
+            Result.Position = P.Vector(0.000000, 8.400000, 0.000000)
+            Result.RadiusX = 36.650000
+            Result.RadiusZ = 36.650000
+
+        Case 5888
+            Result.Position = P.Vector(0.000000, 8.400000, 0.000000)
+            Result.RadiusX = 36.650000
+            Result.RadiusZ = 36.650000
+
+        Case 6144
+            Result.Position = P.Vector(0.000000, 8.400000, 0.000000)
+            Result.RadiusX = 36.650000
+            Result.RadiusZ = 36.650000
+
+        Case 6400
+            Result.Position = P.Vector(0.000000, 8.400000, 0.000000)
+            Result.RadiusX = 36.650000
+            Result.RadiusZ = 36.650000
+
+    End Select
+
+    Return Result
+
+End Function
+
+Public Function CameraAt(TemplateIndex As Number, Index As Number) As Clearance.Bounds
+
+    Dim Result As Clearance.Bounds
+    Dim Key As Number
+
+    Key = TemplateIndex * 256 + Index
+
+    Select Case Key
+        Case 0
+            Result = Clearance.Box(-42.000030, 0.000000, -42.894480, 41.999910, 71.400000, 36.921950)
+
+        Case 256
+            Result = Clearance.Box(-48.986730, 0.000000, -47.894370, 48.986610, 95.400000, 41.907880)
+
+        Case 512
+            Result = Clearance.Box(-38.449920, 0.000000, -46.894560, 38.450110, 77.400000, 38.449990)
+
+        Case 513
+            Result = Clearance.Box(-2.300020, 79.000010, -1.991910, 2.300200, 89.000010, 1.991860)
+
+        Case 768
+            Result = Clearance.Box(-89.799990, -0.000000, -77.799970, 89.800000, 177.540000, 65.363940)
+
+        Case 1024
+            Result = Clearance.Box(-55.428380, -0.000000, -56.499880, 55.428260, 132.660000, 50.360480)
+
+        Case 1280
+            Result = Clearance.Box(-45.440960, -0.000000, -46.500050, 45.441000, 116.000000, 40.382660)
+
+        Case 1536
+            Result = Clearance.Box(-4.371950, 0.851750, -4.903260, 4.355770, 8.114930, 4.830320)
+
+        Case 1792
+            Result = Clearance.Box(-136.300010, -0.000000, 122.099910, 136.299970, 221.100010, 296.300050)
+
+        Case 1793
+            Result = Clearance.Box(-350.427090, 0.000000, 65.199970, -149.572910, 143.442940, 285.320890)
+
+        Case 1794
+            Result = Clearance.Box(149.572910, 0.000000, 65.199970, 350.427090, 143.442940, 285.320890)
+
+        Case 1795
+            Result = Clearance.Box(-104.199980, 224.000000, 105.800020, 104.199980, 286.299990, 314.199980)
+
+        Case 1796
+            Result = Clearance.Box(-370.000000, 0.000000, 324.499970, 370.000000, 75.500000, 335.500030)
+
+        Case 1797
+            Result = Clearance.Box(364.499970, 0.000000, -330.000000, 375.500030, 75.500000, 330.000000)
+
+        Case 1798
+            Result = Clearance.Box(-375.499990, 0.000000, -330.000000, -364.500010, 75.500000, 330.000000)
+
+        Case 1799
+            Result = Clearance.Box(-372.000010, -0.000000, -335.000000, -327.999990, 159.999990, -288.000030)
+
+        Case 1800
+            Result = Clearance.Box(328.000030, -0.000000, -335.000000, 371.999970, 159.999990, -288.000030)
+
+        Case 1801
+            Result = Clearance.Box(-372.000010, -0.000000, 288.000030, -327.999990, 159.999990, 331.999970)
+
+        Case 1802
+            Result = Clearance.Box(328.000030, -0.000000, 288.000030, 371.999970, 159.999990, 331.999970)
+
+        Case 1803
+            Result = Clearance.Box(-370.000000, 0.000000, -335.500030, -55.000000, 75.500000, -324.499970)
+
+        Case 1804
+            Result = Clearance.Box(55.000000, 0.000000, -335.500030, 370.000000, 75.500000, -324.499970)
+
+        Case 1805
+            Result = Clearance.Box(322.974240, 154.400010, -337.025760, 377.025760, 214.800000, -282.974240)
+
+        Case 1806
+            Result = Clearance.Box(322.974240, 154.400010, 282.974240, 377.025760, 214.800000, 337.025760)
+
+        Case 1807
+            Result = Clearance.Box(-377.025720, 154.400010, -337.025760, -322.974280, 214.800000, -282.974240)
+
+        Case 1808
+            Result = Clearance.Box(-377.025720, 154.400010, 282.974240, -322.974280, 214.800000, 337.025760)
+
+        Case 1809
+            Result = Clearance.Box(-374.000020, 1.900000, -334.000020, -325.999980, 5.100000, -285.999980)
+
+        Case 1810
+            Result = Clearance.Box(325.999980, 1.900000, -334.000020, 374.000020, 5.100000, -285.999980)
+
+        Case 1811
+            Result = Clearance.Box(-374.000020, 62.400000, -334.000020, -325.999980, 65.600000, -285.999980)
+
+        Case 1812
+            Result = Clearance.Box(325.999980, 62.400000, -334.000020, 374.000020, 65.600000, -285.999980)
+
+        Case 1813
+            Result = Clearance.Box(-374.000020, 1.900000, 286.000060, -325.999980, 5.100000, 333.999940)
+
+        Case 1814
+            Result = Clearance.Box(325.999980, 1.900000, 286.000060, 374.000020, 5.100000, 333.999940)
+
+        Case 1815
+            Result = Clearance.Box(-374.000020, 62.400000, 286.000060, -325.999980, 65.600000, 333.999940)
+
+        Case 1816
+            Result = Clearance.Box(325.999980, 62.400000, 286.000060, 374.000020, 65.600000, 333.999940)
+
+        Case 1817
+            Result = Clearance.Box(-7.724990, 285.499990, 203.309940, 7.724990, 318.459990, 216.690060)
+
+        Case 1818
+            Result = Clearance.Box(-65.199970, 0.000000, -333.200000, -58.799970, 95.500000, -326.800000)
+
+        Case 1819
+            Result = Clearance.Box(58.799970, 0.000000, -333.200000, 65.199970, 95.500000, -326.800000)
+
+        Case 1820
+            Result = Clearance.Box(285.199970, 1.000000, -224.800030, 294.800030, 37.500000, -215.199970)
+
+        Case 1821
+            Result = Clearance.Box(285.199970, 1.000000, -124.800030, 294.800030, 37.500000, -115.199970)
+
+        Case 1822
+            Result = Clearance.Box(285.199970, 1.000000, -24.800030, 294.800030, 37.500000, -15.199970)
+
+        Case 1823
+            Result = Clearance.Box(-294.800000, 1.000000, -224.800030, -285.200000, 37.500000, -215.199970)
+
+        Case 1824
+            Result = Clearance.Box(-294.800000, 1.000000, -124.800030, -285.200000, 37.500000, -115.199970)
+
+        Case 1825
+            Result = Clearance.Box(-294.800000, 1.000000, -24.800030, -285.200000, 37.500000, -15.199970)
+
+        Case 1826
+            Result = Clearance.Box(-87.500000, 1.000000, -307.500000, -72.500000, 7.000000, -292.500000)
+
+        Case 1827
+            Result = Clearance.Box(72.500000, 1.000000, -307.500000, 87.500000, 7.000000, -292.500000)
+
+        Case 1828
+            Result = Clearance.Box(-352.799990, 214.000000, 307.575070, -347.200010, 232.999990, 312.424930)
+
+        Case 1829
+            Result = Clearance.Box(347.200010, 214.000000, 307.575070, 352.799990, 232.999990, 312.424930)
+
+        Case 1830
+            Result = Clearance.Box(-352.799990, 214.000000, -312.424850, -347.200010, 232.999990, -307.575150)
+
+        Case 1831
+            Result = Clearance.Box(347.200010, 214.000000, -312.424850, 352.799990, 232.999990, -307.575150)
+
+        Case 1832
+            Result = Clearance.Box(-88.100010, 6.600000, -308.099980, -71.900020, 7.800000, -291.900020)
+
+        Case 1833
+            Result = Clearance.Box(71.900020, 6.600000, -308.099980, 88.099980, 7.800000, -291.900020)
+
+        Case 1834
+            Result = Clearance.Box(-66.699980, 80.900000, -334.700010, -57.299960, 83.099990, -325.299990)
+
+        Case 1835
+            Result = Clearance.Box(57.299960, 80.900000, -334.700010, 66.699980, 83.099990, -325.299990)
+
+        Case 1836
+            Result = Clearance.Box(-1.999970, 246.000000, -61.732030, 1.999970, 257.000010, -58.267970)
+
+        Case 1837
+            Result = Clearance.Box(-2.440030, 245.600010, -62.440030, 2.440030, 246.800000, -57.559970)
+
+        Case 1838
+            Result = Clearance.Box(-84.844820, 12.800000, -301.927570, -82.244870, 14.000000, -299.327620)
+
+        Case 1839
+            Result = Clearance.Box(75.155180, 12.800000, -301.927570, 77.755130, 14.000000, -299.327620)
+
+        Case 1840
+            Result = Clearance.Box(-80.984950, 12.800000, -304.886170, -78.385010, 14.000000, -302.286220)
+
+        Case 1841
+            Result = Clearance.Box(-79.109880, 12.800000, -298.442760, -76.509930, 14.000000, -295.842820)
+
+        Case 1842
+            Result = Clearance.Box(-77.699970, 12.800000, -301.299970, -75.100020, 14.000000, -298.700030)
+
+        Case 1843
+            Result = Clearance.Box(79.015050, 12.800000, -304.886170, 81.614990, 14.000000, -302.286220)
+
+        Case 1844
+            Result = Clearance.Box(80.890120, 12.800000, -298.442760, 83.490070, 14.000000, -295.842820)
+
+        Case 1845
+            Result = Clearance.Box(82.300030, 12.800000, -301.299970, 84.899980, 14.000000, -298.700030)
+
+        Case 1846
+            Result = Clearance.Box(-83.954620, 12.800000, -298.868330, -81.354680, 14.000000, -296.268390)
+
+        Case 1847
+            Result = Clearance.Box(76.045380, 12.800000, -298.868330, 78.645320, 14.000000, -296.268390)
+
+        Case 2048
+            Result = Clearance.Box(-66.304680, 0.000000, -55.815160, 66.304570, 122.300000, 52.030060)
+
+        Case 2304
+            Result = Clearance.Box(-106.500000, 0.000000, -90.949970, 106.500000, 189.400010, 70.250020)
+
+        Case 2305
+            Result = Clearance.Box(-112.000000, -0.000000, -81.500020, 112.000000, 6.000000, 81.500000)
+
+        Case 2560
+            Result = Clearance.Box(-56.873760, 1.500000, -56.873760, 56.873760, 121.750000, 56.873760)
+
+        Case 2561
+            Result = Clearance.Box(-34.900000, 60.000000, -34.712430, 34.900000, 173.150010, 34.900000)
+
+        Case 2562
+            Result = Clearance.Box(-64.500000, -0.000000, -51.500000, 64.500000, 3.600000, 51.500000)
+
+        Case 2563
+            Result = Clearance.Box(-65.527460, 141.935250, 0.352690, -35.158420, 175.199990, 32.647300)
+
+        Case 2564
+            Result = Clearance.Box(35.158420, 141.935250, 0.352690, 65.527460, 175.199990, 32.647300)
+
+        Case 2565
+            Result = Clearance.Box(-35.400000, 204.599990, -35.400000, 35.400000, 206.399990, 35.400000)
+
+        Case 2566
+            Result = Clearance.Box(-35.400000, 210.900000, -35.400000, 35.400000, 212.700000, 35.400000)
+
+        Case 2567
+            Result = Clearance.Box(-5.600000, 169.000000, -4.849740, 5.600000, 250.000000, 4.849740)
+
+        Case 2568
+            Result = Clearance.Box(-31.900000, 201.600000, -31.900000, 31.900000, 203.400000, 31.900000)
+
+        Case 2569
+            Result = Clearance.Box(-31.900000, 213.799990, -31.900000, 31.900000, 215.599990, 31.900000)
+
+        Case 2570
+            Result = Clearance.Box(-48.100000, 3.000000, 14.900000, -44.900000, 196.000000, 18.099990)
+
+        Case 2571
+            Result = Clearance.Box(44.900000, 3.000000, 14.900000, 48.100000, 196.000000, 18.099990)
+
+        Case 2572
+            Result = Clearance.Box(-47.353730, 127.306350, 15.400000, -26.146270, 152.693650, 17.599990)
+
+        Case 2573
+            Result = Clearance.Box(26.146270, 127.306350, 15.400000, 47.353730, 152.693650, 17.599990)
+
+        Case 2574
+            Result = Clearance.Box(-1.100000, 171.652160, -35.543560, 1.100000, 205.347840, -22.456450)
+
+        Case 2575
+            Result = Clearance.Box(-35.543550, 171.652160, -1.100000, -22.456450, 205.347840, 1.100000)
+
+        Case 2576
+            Result = Clearance.Box(-1.100000, 171.652160, 22.456450, 1.100000, 205.347840, 35.543550)
+
+        Case 2577
+            Result = Clearance.Box(22.456450, 171.652160, -1.100000, 35.543550, 205.347840, 1.100000)
+
+        Case 2578
+            Result = Clearance.Box(-47.079210, 141.616340, 14.999990, -24.420790, 153.383660, 18.000000)
+
+        Case 2579
+            Result = Clearance.Box(24.420790, 141.616340, 14.999990, 47.079210, 153.383660, 18.000000)
+
+        Case 2580
+            Result = Clearance.Box(-35.150000, 197.999990, -0.650000, -33.850000, 233.999980, 0.650000)
+
+        Case 2581
+            Result = Clearance.Box(-0.650000, 197.999990, -35.150000, 0.650000, 233.999980, -33.850000)
+
+        Case 2582
+            Result = Clearance.Box(33.850000, 197.999990, -0.650000, 35.150000, 233.999980, 0.650000)
+
+        Case 2583
+            Result = Clearance.Box(-0.650000, 197.999990, 33.850000, 0.650000, 233.999980, 35.149990)
+
+        Case 2584
+            Result = Clearance.Box(-35.800000, 232.999990, -1.300000, -33.200000, 239.499990, 1.300000)
+
+        Case 2585
+            Result = Clearance.Box(-1.300000, 232.999990, -35.800000, 1.300000, 239.499990, -33.200000)
+
+        Case 2586
+            Result = Clearance.Box(-1.300000, 232.999990, 33.200000, 1.300000, 239.499990, 35.800000)
+
+        Case 2587
+            Result = Clearance.Box(33.200000, 232.999990, -1.300000, 35.800000, 239.499990, 1.300000)
+
+        Case 2588
+            Result = Clearance.Box(-24.945190, 205.000000, 23.845180, -23.845180, 212.000010, 24.945180)
+
+        Case 2589
+            Result = Clearance.Box(23.845180, 205.000000, 23.845180, 24.945190, 212.000010, 24.945180)
+
+        Case 2590
+            Result = Clearance.Box(-24.945190, 205.000000, -24.945180, -23.845180, 212.000010, -23.845190)
+
+        Case 2591
+            Result = Clearance.Box(23.845180, 205.000000, -24.945180, 24.945190, 212.000010, -23.845190)
+
+        Case 2816
+            Result = Clearance.Box(-66.304680, 0.000000, -55.815190, 66.304570, 122.300000, 52.030040)
+
+        Case 3072
+            Result = Clearance.Box(-66.304680, 0.000000, -55.815210, 66.304570, 122.300000, 52.030020)
+
+        Case 3328
+            Result = Clearance.Box(-314.800030, 0.000000, -170.500030, 314.800000, 588.650020, 289.000090)
+
+        Case 3329
+            Result = Clearance.Box(314.000000, 0.000000, 243.999940, 385.999980, 290.999980, 316.000060)
+
+        Case 3330
+            Result = Clearance.Box(-385.999980, 0.000000, 243.999940, -314.000020, 290.999980, 316.000060)
+
+        Case 3331
+            Result = Clearance.Box(314.000000, 0.000000, -315.999980, 385.999980, 290.999980, -244.000020)
+
+        Case 3332
+            Result = Clearance.Box(-385.999980, 0.000000, -315.999980, -314.000020, 290.999980, -244.000020)
+
+        Case 3333
+            Result = Clearance.Box(-115.999980, -11.500000, -334.741820, -35.499990, 215.999980, -268.787540)
+
+        Case 3334
+            Result = Clearance.Box(35.499990, -11.500000, -334.741820, 115.999980, 215.999980, -268.787540)
+
+        Case 3335
+            Result = Clearance.Box(-370.000000, 0.000000, 294.499970, 370.000000, 107.500000, 305.500030)
+
+        Case 3336
+            Result = Clearance.Box(-375.500030, 0.000000, -300.000000, -364.499970, 107.500000, 300.000000)
+
+        Case 3337
+            Result = Clearance.Box(364.500010, 0.000000, -300.000000, 375.499990, 107.500000, 300.000000)
+
+        Case 3338
+            Result = Clearance.Box(-370.000000, 0.000000, -305.500030, -50.000000, 107.500000, -294.499970)
+
+        Case 3339
+            Result = Clearance.Box(50.000000, 0.000000, -305.500030, 370.000000, 107.500000, -294.499970)
+
+        Case 3340
+            Result = Clearance.Box(-370.000000, -0.000000, 292.749940, 370.000000, 13.000000, 307.250060)
+
+        Case 3341
+            Result = Clearance.Box(-60.000000, 99.320000, -315.550000, 60.000000, 127.999990, -285.999980)
+
+        Case 3342
+            Result = Clearance.Box(-370.000000, -0.000000, -307.249980, -70.000000, 13.000000, -292.750020)
+
+        Case 3343
+            Result = Clearance.Box(70.000000, -0.000000, -307.249980, 370.000000, 13.000000, -292.750020)
+
+        Case 3344
+            Result = Clearance.Box(-42.000010, 0.000000, -201.999970, 42.000010, 7.000000, -118.000030)
+
+        Case 3345
+            Result = Clearance.Box(-53.993490, 63.260000, -321.674960, 53.993490, 107.000000, -313.499980)
+
+        Case 3346
+            Result = Clearance.Box(-370.000000, 87.249990, 292.749940, 370.000000, 90.750000, 307.250060)
+
+        Case 3347
+            Result = Clearance.Box(-48.242190, 73.580000, -315.550000, -9.150010, 114.000000, -292.049940)
+
+        Case 3348
+            Result = Clearance.Box(9.150010, 73.580000, -315.550000, 48.242190, 114.000000, -292.049940)
+
+        Case 3349
+            Result = Clearance.Box(-370.000000, 95.099990, 292.749940, 370.000000, 97.900000, 307.250060)
+
+        Case 3350
+            Result = Clearance.Box(-377.500000, 87.599990, -300.000000, -362.500000, 90.400000, 300.000000)
+
+        Case 3351
+            Result = Clearance.Box(-377.500000, 95.099990, -300.000000, -362.500000, 97.900000, 300.000000)
+
+        Case 3352
+            Result = Clearance.Box(362.500000, 87.599990, -300.000000, 377.500000, 90.400000, 300.000000)
+
+        Case 3353
+            Result = Clearance.Box(362.500000, 95.099990, -300.000000, 377.500000, 97.900000, 300.000000)
+
+        Case 3354
+            Result = Clearance.Box(-377.500000, 6.600000, -300.000000, -362.500000, 9.400000, 300.000000)
+
+        Case 3355
+            Result = Clearance.Box(362.500000, 6.600000, -300.000000, 377.500000, 9.400000, 300.000000)
+
+        Case 3356
+            Result = Clearance.Box(290.499990, 6.400000, -169.499970, 309.500010, 74.400000, -150.500030)
+
+        Case 3357
+            Result = Clearance.Box(-309.499970, 6.400000, -169.499970, -290.500030, 74.400000, -150.500030)
+
+        Case 3358
+            Result = Clearance.Box(-370.000000, 87.249990, -307.249980, -70.000000, 90.750000, -292.750020)
+
+        Case 3359
+            Result = Clearance.Box(70.000000, 87.249990, -307.249980, 370.000000, 90.750000, -292.750020)
+
+        Case 3360
+            Result = Clearance.Box(-370.000000, 95.099990, -307.249980, -70.000000, 97.900000, -292.750020)
+
+        Case 3361
+            Result = Clearance.Box(70.000000, 95.099990, -307.249980, 370.000000, 97.900000, -292.750020)
+
+        Case 3362
+            Result = Clearance.Box(-64.000020, 128.500000, -315.500030, 64.000020, 131.500000, -284.499970)
+
+        Case 3363
+            Result = Clearance.Box(-7.999990, 8.000000, -166.928180, 7.999990, 50.000000, -153.071820)
+
+        Case 3364
+            Result = Clearance.Box(-167.547380, 10.883230, -187.994840, -152.272870, 33.437140, -169.223630)
+
+        Case 3365
+            Result = Clearance.Box(152.272870, 10.883230, -187.994840, 167.547380, 33.437140, -169.223630)
+
+        Case 3366
+            Result = Clearance.Box(-155.306020, 1.753010, -204.019850, -139.971080, 24.306640, -185.323720)
+
+        Case 3367
+            Result = Clearance.Box(139.971120, 1.753010, -204.019850, 155.306050, 24.306640, -185.323720)
+
+        Case 3368
+            Result = Clearance.Box(164.506610, 20.014030, -171.881710, 179.599300, 42.567470, -153.038940)
+
+        Case 3369
+            Result = Clearance.Box(-179.599230, 20.014030, -171.881710, -164.506610, 42.567470, -153.038940)
+
+        Case 3370
+            Result = Clearance.Box(-122.269820, 1.753860, -178.657990, -106.996380, 24.306390, -160.041960)
+
+        Case 3371
+            Result = Clearance.Box(106.996380, 1.753860, -178.657990, 122.269820, 24.306390, -160.041960)
+
+        Case 3372
+            Result = Clearance.Box(-191.335370, 29.145370, -155.677030, -176.544570, 51.697630, -136.764980)
+
+        Case 3373
+            Result = Clearance.Box(176.544610, 29.145370, -155.677030, 191.335410, 51.697630, -136.764980)
+
+        Case 3374
+            Result = Clearance.Box(-134.321590, 10.885800, -162.720490, -119.230960, 33.436390, -144.191440)
+
+        Case 3375
+            Result = Clearance.Box(119.231000, 10.885800, -162.720490, 134.321630, 33.436390, -144.191440)
+
+        Case 3376
+            Result = Clearance.Box(-60.999980, -0.000000, -547.999990, -44.599990, 19.800000, -530.846410)
+
+        Case 3377
+            Result = Clearance.Box(44.599990, -0.000000, -547.999990, 60.999980, 19.800000, -530.846410)
+
+        Case 3378
+            Result = Clearance.Box(-274.800030, 1.000000, -184.800030, -265.199970, 54.500000, -175.199970)
+
+        Case 3379
+            Result = Clearance.Box(265.200000, 1.000000, -184.800030, 274.800000, 54.500000, -175.199970)
+
+        Case 3380
+            Result = Clearance.Box(-169.100040, 1.000000, -189.100040, -150.899960, 7.800000, -170.899960)
+
+        Case 3381
+            Result = Clearance.Box(150.900000, 1.000000, -189.100040, 169.100000, 7.800000, -170.899960)
+
+        Case 3382
+            Result = Clearance.Box(-47.500000, 11.700950, -540.000000, -44.499970, 14.299050, -270.000000)
+
+        Case 3383
+            Result = Clearance.Box(44.499970, 11.700950, -540.000000, 47.500000, 14.299050, -270.000000)
+
+        Case 3384
+            Result = Clearance.Box(-50.000000, -11.500000, -536.500020, -41.999970, 5.500000, -523.499980)
+
+        Case 3385
+            Result = Clearance.Box(-50.000000, -11.500000, -451.500020, -41.999970, 5.500000, -438.499980)
+
+        Case 3386
+            Result = Clearance.Box(-50.000000, -11.500000, -366.500020, -41.999970, 5.500000, -353.499980)
+
+        Case 3387
+            Result = Clearance.Box(41.999970, -11.500000, -536.500020, 50.000000, 5.500000, -523.499980)
+
+        Case 3388
+            Result = Clearance.Box(41.999970, -11.500000, -451.500020, 50.000000, 5.500000, -438.499980)
+
+        Case 3389
+            Result = Clearance.Box(41.999970, -11.500000, -366.500020, 50.000000, 5.500000, -353.499980)
+
+        Case 3390
+            Result = Clearance.Box(-56.600000, 19.000000, -543.117680, -49.399990, 41.000000, -536.882320)
+
+        Case 3391
+            Result = Clearance.Box(49.399990, 19.000000, -543.117680, 56.600000, 41.000000, -536.882320)
+
+        Case 3392
+            Result = Clearance.Box(-24.500010, 131.000000, -317.000050, -15.499990, 141.000000, -309.000020)
+
+        Case 3393
+            Result = Clearance.Box(-4.500010, 131.000000, -317.000050, 4.500010, 141.000000, -309.000020)
+
+        Case 3394
+            Result = Clearance.Box(15.499990, 131.000000, -317.000050, 24.500010, 141.000000, -309.000020)
+
+        Case 3395
+            Result = Clearance.Box(-255.599980, 8.000000, -223.600010, -248.399960, 14.000000, -216.399990)
+
+        Case 3396
+            Result = Clearance.Box(-243.600010, 8.000000, -223.600010, -236.399990, 14.000000, -216.399990)
+
+        Case 3397
+            Result = Clearance.Box(-231.600040, 8.000000, -223.600010, -224.400020, 14.000000, -216.399990)
+
+        Case 3398
+            Result = Clearance.Box(236.399990, 8.000000, -223.600010, 243.600010, 14.000000, -216.399990)
+
+        Case 3399
+            Result = Clearance.Box(224.399990, 8.000000, -223.600010, 231.600000, 14.000000, -216.399990)
+
+        Case 3400
+            Result = Clearance.Box(248.400000, 8.000000, -223.600010, 255.600010, 14.000000, -216.399990)
+
+        Case 3401
+            Result = Clearance.Box(-40.000000, 79.350480, -301.749950, 40.000000, 80.649520, -300.250020)
+
+        Case 3402
+            Result = Clearance.Box(-40.000000, 89.350480, -301.749950, 40.000000, 90.649520, -300.250020)
+
+        Case 3403
+            Result = Clearance.Box(-256.199950, 13.600000, -224.199980, -247.799990, 14.800000, -215.800020)
+
+        Case 3404
+            Result = Clearance.Box(-244.199980, 13.600000, -224.199980, -235.800020, 14.800000, -215.800020)
+
+        Case 3405
+            Result = Clearance.Box(-232.200010, 13.600000, -224.199980, -223.800050, 14.800000, -215.800020)
+
+        Case 3406
+            Result = Clearance.Box(223.800010, 13.600000, -224.199980, 232.199970, 14.800000, -215.800020)
+
+        Case 3407
+            Result = Clearance.Box(235.800020, 13.600000, -224.199980, 244.199980, 14.800000, -215.800020)
+
+        Case 3408
+            Result = Clearance.Box(247.800030, 13.600000, -224.199980, 256.199990, 14.800000, -215.800020)
+
+        Case 3409
+            Result = Clearance.Box(-0.849990, 77.000000, -301.736070, 0.849990, 110.000000, -300.263900)
+
+        Case 3410
+            Result = Clearance.Box(-47.399980, 2.000000, -517.388920, -44.599990, 13.000000, -514.963990)
+
+        Case 3411
+            Result = Clearance.Box(-47.399980, 2.000000, -501.506580, -44.599990, 13.000000, -499.081650)
+
+        Case 3412
+            Result = Clearance.Box(-47.399980, 2.000000, -493.565370, -44.599990, 13.000000, -491.140440)
+
+        Case 3413
+            Result = Clearance.Box(-47.399980, 2.000000, -485.624240, -44.599990, 13.000000, -483.199310)
+
+        Case 3414
+            Result = Clearance.Box(-47.399980, 2.000000, -461.800690, -44.599990, 13.000000, -459.375760)
+
+        Case 3415
+            Result = Clearance.Box(-47.399980, 2.000000, -453.859560, -44.599990, 13.000000, -451.434630)
+
+        Case 3416
+            Result = Clearance.Box(-47.399980, 2.000000, -445.918350, -44.599990, 13.000000, -443.493420)
+
+        Case 3417
+            Result = Clearance.Box(-47.399980, 2.000000, -430.036010, -44.599990, 13.000000, -427.611080)
+
+        Case 3418
+            Result = Clearance.Box(-47.399980, 2.000000, -382.388920, -44.599990, 13.000000, -379.963990)
+
+        Case 3419
+            Result = Clearance.Box(-47.399980, 2.000000, -366.506580, -44.599990, 13.000000, -364.081650)
+
+        Case 3420
+            Result = Clearance.Box(-47.399980, 2.000000, -358.565370, -44.599990, 13.000000, -356.140440)
+
+        Case 3421
+            Result = Clearance.Box(-47.399980, 2.000000, -350.624240, -44.599990, 13.000000, -348.199310)
+
+        Case 3422
+            Result = Clearance.Box(44.599990, 2.000000, -517.388920, 47.399980, 13.000000, -514.963990)
+
+        Case 3423
+            Result = Clearance.Box(44.599990, 2.000000, -501.506580, 47.399980, 13.000000, -499.081650)
+
+        Case 3424
+            Result = Clearance.Box(44.599990, 2.000000, -493.565370, 47.399980, 13.000000, -491.140440)
+
+        Case 3425
+            Result = Clearance.Box(44.599990, 2.000000, -485.624240, 47.399980, 13.000000, -483.199310)
+
+        Case 3426
+            Result = Clearance.Box(44.599990, 2.000000, -461.800690, 47.399980, 13.000000, -459.375760)
+
+        Case 3427
+            Result = Clearance.Box(44.599990, 2.000000, -453.859560, 47.399980, 13.000000, -451.434630)
+
+        Case 3428
+            Result = Clearance.Box(44.599990, 2.000000, -445.918350, 47.399980, 13.000000, -443.493420)
+
+        Case 3429
+            Result = Clearance.Box(44.599990, 2.000000, -430.036010, 47.399980, 13.000000, -427.611080)
+
+        Case 3430
+            Result = Clearance.Box(44.599990, 2.000000, -382.388920, 47.399980, 13.000000, -379.963990)
+
+        Case 3431
+            Result = Clearance.Box(44.599990, 2.000000, -366.506580, 47.399980, 13.000000, -364.081650)
+
+        Case 3432
+            Result = Clearance.Box(44.599990, 2.000000, -358.565370, 47.399980, 13.000000, -356.140440)
+
+        Case 3433
+            Result = Clearance.Box(44.599990, 2.000000, -350.624240, 47.399980, 13.000000, -348.199310)
+
+        Case 3434
+            Result = Clearance.Box(-47.399980, 2.000000, -477.683110, -44.599990, 13.000000, -475.258180)
+
+        Case 3435
+            Result = Clearance.Box(-47.399980, 2.000000, -469.741820, -44.599990, 13.000000, -467.316890)
+
+        Case 3436
+            Result = Clearance.Box(-47.399980, 2.000000, -342.683110, -44.599990, 13.000000, -340.258180)
+
+        Case 3437
+            Result = Clearance.Box(44.599990, 2.000000, -477.683110, 47.399980, 13.000000, -475.258180)
+
+        Case 3438
+            Result = Clearance.Box(44.599990, 2.000000, -469.741820, 47.399980, 13.000000, -467.316890)
+
+        Case 3439
+            Result = Clearance.Box(44.599990, 2.000000, -342.683110, 47.399980, 13.000000, -340.258180)
+
+        Case 3440
+            Result = Clearance.Box(-47.399980, 2.000000, -414.153590, -44.599990, 13.000000, -411.728670)
+
+        Case 3441
+            Result = Clearance.Box(-47.399980, 2.000000, -398.271330, -44.599990, 13.000000, -395.846410)
+
+        Case 3442
+            Result = Clearance.Box(44.599990, 2.000000, -414.153590, 47.399980, 13.000000, -411.728670)
+
+        Case 3443
+            Result = Clearance.Box(44.599990, 2.000000, -398.271330, 47.399980, 13.000000, -395.846410)
+
+        Case 3444
+            Result = Clearance.Box(-47.399980, 2.000000, -525.330120, -44.599990, 13.000000, -522.905200)
+
+        Case 3445
+            Result = Clearance.Box(-47.399980, 2.000000, -509.447780, -44.599990, 13.000000, -507.022860)
+
+        Case 3446
+            Result = Clearance.Box(-47.399980, 2.000000, -437.977140, -44.599990, 13.000000, -435.552220)
+
+        Case 3447
+            Result = Clearance.Box(-47.399980, 2.000000, -422.094800, -44.599990, 13.000000, -419.669880)
+
+        Case 3448
+            Result = Clearance.Box(-47.399980, 2.000000, -406.212460, -44.599990, 13.000000, -403.787540)
+
+        Case 3449
+            Result = Clearance.Box(-47.399980, 2.000000, -390.330120, -44.599990, 13.000000, -387.905200)
+
+        Case 3450
+            Result = Clearance.Box(-47.399980, 2.000000, -374.447780, -44.599990, 13.000000, -372.022860)
+
+        Case 3451
+            Result = Clearance.Box(44.599990, 2.000000, -525.330120, 47.399980, 13.000000, -522.905200)
+
+        Case 3452
+            Result = Clearance.Box(44.599990, 2.000000, -509.447780, 47.399980, 13.000000, -507.022860)
+
+        Case 3453
+            Result = Clearance.Box(44.599990, 2.000000, -437.977140, 47.399980, 13.000000, -435.552220)
+
+        Case 3454
+            Result = Clearance.Box(44.599990, 2.000000, -422.094800, 47.399980, 13.000000, -419.669880)
+
+        Case 3455
+            Result = Clearance.Box(44.599990, 2.000000, -406.212460, 47.399980, 13.000000, -403.787540)
+
+        Case 3456
+            Result = Clearance.Box(44.599990, 2.000000, -390.330120, 47.399980, 13.000000, -387.905200)
+
+        Case 3457
+            Result = Clearance.Box(44.599990, 2.000000, -374.447780, 47.399980, 13.000000, -372.022860)
+
+        Case 3458
+            Result = Clearance.Box(237.425770, 19.800000, -220.132750, 242.351260, 21.000000, -217.328570)
+
+        Case 3459
+            Result = Clearance.Box(225.425760, 19.800000, -220.132750, 230.351220, 21.000000, -217.328570)
+
+        Case 3460
+            Result = Clearance.Box(249.425770, 19.800000, -220.132750, 254.351230, 21.000000, -217.328570)
+
+        Case 3461
+            Result = Clearance.Box(-242.574230, 19.800000, -220.132750, -237.648770, 21.000000, -217.328570)
+
+        Case 3462
+            Result = Clearance.Box(-230.574190, 19.800000, -220.132750, -225.648800, 21.000000, -217.328570)
+
+        Case 3463
+            Result = Clearance.Box(-255.001530, 19.800000, -221.601180, -251.974260, 21.000000, -217.532810)
+
+        Case 3464
+            Result = Clearance.Box(238.851200, 19.800000, -223.021320, 241.451230, 21.000000, -220.421370)
+
+        Case 3465
+            Result = Clearance.Box(226.851200, 19.800000, -223.021320, 229.451220, 21.000000, -220.421370)
+
+        Case 3466
+            Result = Clearance.Box(250.851170, 19.800000, -223.021320, 253.451190, 21.000000, -220.421370)
+
+        Case 3467
+            Result = Clearance.Box(224.998440, 19.800000, -221.601180, 227.598460, 21.000000, -219.001240)
+
+        Case 3468
+            Result = Clearance.Box(228.428000, 19.800000, -221.299970, 231.028020, 21.000000, -218.700030)
+
+        Case 3469
+            Result = Clearance.Box(236.998440, 19.800000, -221.601180, 239.598460, 21.000000, -219.001240)
+
+        Case 3470
+            Result = Clearance.Box(240.427970, 19.800000, -221.299970, 243.027990, 21.000000, -218.700030)
+
+        Case 3471
+            Result = Clearance.Box(248.998450, 19.800000, -221.601180, 251.598470, 21.000000, -219.001240)
+
+        Case 3472
+            Result = Clearance.Box(252.428020, 19.800000, -221.299970, 255.028040, 21.000000, -218.700030)
+
+        Case 3473
+            Result = Clearance.Box(-253.148730, 19.800000, -223.021320, -250.548780, 21.000000, -220.421370)
+
+        Case 3474
+            Result = Clearance.Box(-241.148760, 19.800000, -223.021320, -238.548810, 21.000000, -220.421370)
+
+        Case 3475
+            Result = Clearance.Box(-229.148790, 19.800000, -223.021320, -226.548840, 21.000000, -220.421370)
+
+        Case 3476
+            Result = Clearance.Box(-227.571950, 19.800000, -221.299970, -224.972000, 21.000000, -218.700030)
+
+        Case 3477
+            Result = Clearance.Box(-252.248760, 19.800000, -219.928510, -249.648820, 21.000000, -217.328570)
+
+        Case 3478
+            Result = Clearance.Box(-251.571960, 19.800000, -221.299970, -248.972020, 21.000000, -218.700030)
+
+        Case 3479
+            Result = Clearance.Box(-243.001480, 19.800000, -221.601180, -240.401540, 21.000000, -219.001240)
+
+        Case 3480
+            Result = Clearance.Box(-239.571990, 19.800000, -221.299970, -236.972050, 21.000000, -218.700030)
+
+        Case 3481
+            Result = Clearance.Box(-231.001510, 19.800000, -221.601180, -228.401570, 21.000000, -219.001240)
+
+        Case 3840
+            Result = Clearance.Box(-3.599760, 0.000000, -3.600030, 3.599950, 34.500000, 3.599990)
+
+        Case 3841
+            Result = Clearance.Box(-2.000030, 34.800000, -1.732050, 2.000220, 43.300000, 1.732000)
+
+        Case 4352
+            Result = Clearance.Box(-20.000000, 25.500000, -12.500000, 20.000000, 31.500000, 12.500000)
+
+        Case 4353
+            Result = Clearance.Box(5.750010, -0.000000, -1.250000, 14.249990, 8.500000, 7.250000)
+
+        Case 4354
+            Result = Clearance.Box(-19.000000, 8.200000, -10.600000, 19.000000, 10.200000, -3.400000)
+
+        Case 4355
+            Result = Clearance.Box(-13.680000, 0.000000, -0.680000, -6.320000, 8.000000, 6.680000)
+
+        Case 4356
+            Result = Clearance.Box(-14.450000, 10.300000, -8.450000, 13.650000, 14.900000, -5.550000)
+
+        Case 5120
+            Result = Clearance.Box(-43.000000, 3.500000, -43.000030, 43.000000, 11.000000, 43.000030)
+
+        Case 5121
+            Result = Clearance.Box(-11.000000, 4.500000, -10.999980, 11.000000, 21.600000, 10.999980)
+
+        Case 5122
+            Result = Clearance.Box(-4.800000, 21.000000, -4.156950, 4.800000, 43.000000, 4.156950)
+
+        Case 5376
+            Result = Clearance.Box(-43.000030, 3.500000, -43.000030, 43.000030, 11.000000, 43.000030)
+
+        Case 5377
+            Result = Clearance.Box(-11.000060, 4.500000, -10.999980, 11.000060, 21.600000, 10.999980)
+
+        Case 5378
+            Result = Clearance.Box(-4.799960, 21.000000, -4.156950, 4.799960, 43.000000, 4.156950)
+
+        Case 5632
+            Result = Clearance.Box(-43.000030, 3.500000, -43.000030, 43.000030, 11.000000, 43.000030)
+
+        Case 5633
+            Result = Clearance.Box(-11.000060, 4.500000, -10.999980, 11.000060, 21.600000, 10.999980)
+
+        Case 5634
+            Result = Clearance.Box(-4.799960, 21.000000, -4.156950, 4.799960, 43.000000, 4.156950)
+
+        Case 5888
+            Result = Clearance.Box(-43.000030, 3.500000, -43.000030, 43.000030, 11.000000, 43.000030)
+
+        Case 5889
+            Result = Clearance.Box(-11.000060, 4.500000, -11.000060, 11.000060, 21.600000, 11.000060)
+
+        Case 5890
+            Result = Clearance.Box(-4.799960, 21.000000, -4.156950, 4.799960, 43.000000, 4.156950)
+
+        Case 6144
+            Result = Clearance.Box(-43.000030, 3.500000, -42.999880, 43.000030, 11.000000, 42.999880)
+
+        Case 6145
+            Result = Clearance.Box(-11.000060, 4.500000, -11.000060, 11.000060, 21.600000, 11.000060)
+
+        Case 6146
+            Result = Clearance.Box(-4.799960, 21.000000, -4.156800, 4.799960, 43.000000, 4.156800)
+
+        Case 6400
+            Result = Clearance.Box(-43.000030, 3.500000, -43.000030, 43.000030, 11.000000, 43.000030)
+
+        Case 6401
+            Result = Clearance.Box(-11.000060, 4.500000, -11.000060, 11.000060, 21.600000, 11.000060)
+
+        Case 6402
+            Result = Clearance.Box(-4.799960, 21.000000, -4.156950, 4.799960, 43.000000, 4.156950)
+
+        Case 6656
+            Result = Clearance.Box(-73.000000, 65.500000, -5.750120, 73.000000, 73.500000, 5.750120)
+
+        Case 6657
+            Result = Clearance.Box(-71.500000, 0.000000, -5.499880, -60.500000, 67.000000, 5.499880)
+
+        Case 6658
+            Result = Clearance.Box(60.500000, 0.000000, -5.499880, 71.500000, 67.000000, 5.499880)
+
+        Case 6659
+            Result = Clearance.Box(-84.200000, 0.000000, -3.637390, -75.800000, 27.000000, 3.637390)
+
+        Case 6660
+            Result = Clearance.Box(75.800000, 0.000000, -3.637390, 84.200000, 27.000000, 3.637390)
+
+        Case 6661
+            Result = Clearance.Box(-72.450000, 64.200000, -6.449890, -59.550000, 66.500000, 6.449890)
+
+        Case 6662
+            Result = Clearance.Box(59.550000, 64.200000, -6.449890, 72.450000, 66.500000, 6.449890)
+
+        Case 6663
+            Result = Clearance.Box(-72.850000, 67.000000, -6.849980, -59.150000, 68.800000, 6.849980)
+
+        Case 6664
+            Result = Clearance.Box(59.150000, 67.000000, -6.849980, 72.850000, 68.800000, 6.849980)
+
+        Case 6665
+            Result = Clearance.Box(-68.420000, 68.500000, -2.095640, -63.580000, 82.250000, 2.095640)
+
+        Case 6666
+            Result = Clearance.Box(63.580000, 68.500000, -2.095640, 68.420000, 82.250000, 2.095640)
+
+        Case 6912
+            Result = Clearance.Box(-33.511810, 4.000000, -21.250000, -24.511870, 24.000000, -12.250060)
+
+        Case 6913
+            Result = Clearance.Box(-4.499970, 4.000000, 29.000090, 4.499970, 24.000000, 38.000030)
+
+        Case 6914
+            Result = Clearance.Box(24.511870, 4.000000, -21.250000, 33.511810, 24.000000, -12.250060)
+
+        Case 6915
+            Result = Clearance.Box(-2.100070, 24.000000, 31.681370, 2.100070, 34.500000, 35.318760)
+
+        Case 6916
+            Result = Clearance.Box(-31.111910, 24.000000, -18.568730, -26.911770, 34.500000, -14.931340)
+
+        Case 6917
+            Result = Clearance.Box(26.911770, 24.000000, -18.568730, 31.111910, 34.500000, -14.931340)
+
+        Case 7168
+            Result = Clearance.Box(-4.499970, 4.000000, 28.999940, 4.499970, 24.000000, 38.000180)
+
+        Case 7169
+            Result = Clearance.Box(-33.511810, 4.000000, -21.250000, -24.511870, 24.000000, -12.249760)
+
+        Case 7170
+            Result = Clearance.Box(24.511870, 4.000000, -21.250000, 33.511810, 24.000000, -12.249760)
+
+        Case 7171
+            Result = Clearance.Box(-2.100070, 24.000000, 31.681520, 2.100070, 34.500000, 35.318600)
+
+        Case 7172
+            Result = Clearance.Box(-31.111910, 24.000000, -18.568420, -26.911770, 34.500000, -14.931340)
+
+        Case 7173
+            Result = Clearance.Box(26.911770, 24.000000, -18.568420, 31.111910, 34.500000, -14.931340)
+
+        Case 7424
+            Result = Clearance.Box(-33.511810, 4.000000, -21.250000, -24.511870, 24.000000, -12.249980)
+
+        Case 7425
+            Result = Clearance.Box(24.511870, 4.000000, -21.250000, 33.511810, 24.000000, -12.249980)
+
+        Case 7426
+            Result = Clearance.Box(-4.499970, 4.000000, 28.999980, 4.499970, 24.000000, 37.999990)
+
+        Case 7427
+            Result = Clearance.Box(-2.100070, 24.000000, 31.681330, 2.100070, 34.500000, 35.318640)
+
+        Case 7428
+            Result = Clearance.Box(-31.111910, 24.000000, -18.568650, -26.911770, 34.500000, -14.931340)
+
+        Case 7429
+            Result = Clearance.Box(26.911770, 24.000000, -18.568650, 31.111910, 34.500000, -14.931340)
+
+        Case 7680
+            Result = Clearance.Box(-33.511810, 4.000000, -21.250000, -24.511870, 24.000000, -12.249980)
+
+        Case 7681
+            Result = Clearance.Box(24.511870, 4.000000, -21.250000, 33.511810, 24.000000, -12.249980)
+
+        Case 7682
+            Result = Clearance.Box(-4.499970, 4.000000, 28.999980, 4.499970, 24.000000, 37.999990)
+
+        Case 7683
+            Result = Clearance.Box(-2.100070, 24.000000, 31.681330, 2.100070, 34.500000, 35.318640)
+
+        Case 7684
+            Result = Clearance.Box(-31.111910, 24.000000, -18.568650, -26.911770, 34.500000, -14.931340)
+
+        Case 7685
+            Result = Clearance.Box(26.911770, 24.000000, -18.568650, 31.111910, 34.500000, -14.931340)
+
+        Case 7936
+            Result = Clearance.Box(-33.511810, 4.000000, -21.250000, -24.511870, 24.000000, -12.250060)
+
+        Case 7937
+            Result = Clearance.Box(-4.499970, 4.000000, 29.000090, 4.499970, 24.000000, 38.000030)
+
+        Case 7938
+            Result = Clearance.Box(24.511870, 4.000000, -21.250000, 33.511810, 24.000000, -12.250060)
+
+        Case 7939
+            Result = Clearance.Box(-2.100070, 24.000000, 31.681370, 2.100070, 34.500000, 35.318760)
+
+        Case 7940
+            Result = Clearance.Box(-31.111910, 24.000000, -18.568730, -26.911770, 34.500000, -14.931340)
+
+        Case 7941
+            Result = Clearance.Box(26.911770, 24.000000, -18.568730, 31.111910, 34.500000, -14.931340)
+
+        Case 8192
+            Result = Clearance.Box(-4.499970, 4.000000, 28.999940, 4.499970, 24.000000, 38.000180)
+
+        Case 8193
+            Result = Clearance.Box(-33.511810, 4.000000, -21.250000, -24.511870, 24.000000, -12.249760)
+
+        Case 8194
+            Result = Clearance.Box(24.511870, 4.000000, -21.250000, 33.511810, 24.000000, -12.249760)
+
+        Case 8195
+            Result = Clearance.Box(26.911770, 24.000000, -18.568420, 31.111910, 34.500000, -14.931340)
+
+        Case 8196
+            Result = Clearance.Box(-2.099990, 24.000000, 31.681520, 2.100070, 34.500000, 35.318600)
+
+        Case 8197
+            Result = Clearance.Box(-31.111830, 24.000000, -18.568420, -26.911850, 34.500000, -14.931340)
+
+        Case 8448
+            Result = Clearance.Box(-1.000000, 0.000000, -1.000060, 1.000000, 30.000000, 1.000060)
+
+        Case 8704
+            Result = Clearance.Box(-1.000000, 0.000000, -1.000060, 1.000000, 30.000000, 1.000060)
+
+    End Select
+
+    Return Result
+
+End Function
+
+End Module

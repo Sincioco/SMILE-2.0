@@ -805,3 +805,22 @@ that same contract. After changing these owners, run the existing
 `scripts/test-fixed-array-hardening.ps1`. The real compiled fixtures cover nested,
 forwarded and With locations, single evaluation, copies, bounds, Class identity,
 exact error traces and returned-image cleanup; no assembly rewriting is required.
+
+### Native text prompts and editor keys
+
+`Text_Prompt(Title As Text, Message As Text, Initial As Text) As Text` requires
+`Game Window`. It opens an owner-modal Unicode text dialog and returns the entered
+text on OK; Cancel returns empty text. The title is bounded to 256 UTF-16 code
+units, message to 1,024 and initial/result to 256. An empty result can also mean
+accepted empty input; callers should validate their own names. The native owner
+continues painting and consumes game shortcuts while the dialog is open. Web
+source uses the browser prompt; editor adoption/browser acceptance remains held.
+
+`Text_From_Code(Code As Number) As Text` returns one Unicode scalar, or empty text
+for a negative value, a surrogate code point, or a value above U+10FFFF. It pairs
+with the scalar-based `Text_Code_At` and `Text_Length` operations.
+
+`KEY_SHIFT` (43) and `KEY_DELETE` (44) are appended shared key constants. They work
+with `Get Key`, `Key_Held` and queued `Key_Event_Held`; earlier numeric identities
+are unchanged. The native town editor uses Shift+left drag for camera panning and
+Delete for the active category selection.

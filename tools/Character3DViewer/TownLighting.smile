@@ -1,0 +1,32 @@
+''' Document-owned sun settings applied through the shared renderer.
+Module Smile.Tools.TownLighting
+
+Option Explicit
+
+Import Smile.Simple3D.Graphics3D As G
+Import Smile.Simple3D.Scene3D As Scene
+Import Smile.Simple3D.PrecisionMath3D As M
+Import Smile.Tools.TownDocument As Document
+
+Public Function Apply(Light As Document.Sun) As Boolean
+
+    Dim Azimuth As Double
+    Dim Elevation As Double
+    Dim Ok As Boolean
+
+    Azimuth = M.Radians(Light.Azimuth)
+    Elevation = M.Radians(Light.Elevation)
+    Ok = G.ClearAdditionalLights3DChecked()
+    Ok = G.SetAmbientLight3D(200, 215, 235, Light.Ambient) And Ok
+    Ok = G.SetDirectionalLight3D(ToNumber(-Sin(Azimuth) * Cos(Elevation) * 1000.0),
+        ToNumber(-Sin(Elevation) * 1000.0), ToNumber(-Cos(Azimuth) * Cos(Elevation) * 1000.0),
+        Light.RedValue, Light.GreenValue, Light.BlueValue, Light.Intensity) And Ok
+    Ok = Scene.SetShadows(Light.Shadows) And Ok
+
+    Call Scene.UseCustomLighting()
+
+    Return Ok
+
+End Function
+
+End Module

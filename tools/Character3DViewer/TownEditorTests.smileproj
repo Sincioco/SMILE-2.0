@@ -1,0 +1,17 @@
+<SmileProject Version="1.0">
+  <PropertyGroup>
+    <ProjectKind>Console</ProjectKind>
+    <ApplicationId>smile.tests.town-editor</ApplicationId>
+    <StartupFile>TownEditorTests.smile</StartupFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <SmileSource Include="TownEditorTests.smile" StartupOnly="true" />
+    <SmileSource Include="TownDocument.smile" />
+    <SmileSource Include="TownSelection.smile" />
+    <SmileSource Include="TownCatalogData.smile" />
+    <SmileSource Include="TownInitialSurface.smile" />
+    <SmileSource Include="TownDocumentStore.smile" />
+    <SmileSource Include="TownWorldDocument.smile" />
+    <SmileProjectReference Include="..\..\libraries\Smile.Simple3D\Smile.Simple3D.smilelibproj" />
+  </ItemGroup>
+</SmileProject>

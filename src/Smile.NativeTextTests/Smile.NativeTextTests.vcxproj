@@ -41,6 +41,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="NativeTextTests.c" />
+    <ClCompile Include="TextPromptTests.c" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>

@@ -3585,6 +3585,13 @@ internal static class WebOutputWriter
                 return safe(Math.ceil(height > 0 ? height : safe(size)));
             }
 
+            function textFromCode(value) {
+                const code = Number(value);
+                if (!Number.isInteger(code) || code < 0 || code > 0x10ffff ||
+                    (code >= 0xd800 && code <= 0xdfff)) return "";
+                return String.fromCodePoint(code);
+            }
+
             function textLength(text) { return safe(Array.from(String(text)).length); }
 
             function textCodeAt(text, index) {
@@ -3672,6 +3679,9 @@ internal static class WebOutputWriter
                     case "Digit3": return 20;
                     case "Digit4": return 22;
                     case "Tab": return 21;
+                    case "ShiftLeft": return 43;
+                    case "ShiftRight": return 43;
+                    case "Delete": return 44;
                     default: return 19;
                 }
             }
@@ -3920,6 +3930,24 @@ internal static class WebOutputWriter
             const FILE_TRANSFER_MAX_BYTES = 8 * 1024 * 1024;
             const fileTransferUrls = new Set();
             let cancelFileImport = null;
+
+            function textPrompt(title, message, initialValue) {
+                if (!canvas || typeof window.prompt !== "function") return "";
+                title = String(title); message = String(message); initialValue = String(initialValue);
+                if (title.length > 256 || message.length > 1024 || initialValue.length > 256) return "";
+                const result = window.prompt(title + "\n" + message, initialValue);
+                if (result === null) return "";
+                const text = String(result).slice(0, 256);
+                // Match the native UTF-16 edit limit without returning a broken surrogate.
+                for (let index = 0; index < text.length; index++) {
+                    const code = text.charCodeAt(index);
+                    if (code >= 0xd800 && code <= 0xdbff) {
+                        const next = text.charCodeAt(++index);
+                        if (!(next >= 0xdc00 && next <= 0xdfff)) return "";
+                    } else if (code >= 0xdc00 && code <= 0xdfff) return "";
+                }
+                return text;
+            }
 
             function fileExport(fileName, contents) {
                 fileName = String(fileName);
@@ -4249,11 +4277,11 @@ internal static class WebOutputWriter
                 fillRoundedRectangle, drawRoundedRectangle, fillCircle, drawCircle, drawArc,
                 fillQuadrilateral, drawQuadrilateral, drawLine, drawText, drawNumber, loadImage, imageRetain,
                 imageRelease, imageAssign, imageMoveAssign, imageLoaded, imageWidth, imageHeight, drawImage,
-                pushClip, popClip, textWidth, textHeight, textLength, textCodeAt, textSlice, showScreen,
+                pushClip, popClip, textWidth, textHeight, textLength, textCodeAt, textSlice, textFromCode, showScreen,
                 print, clearScreen, wait, getKey, keyHeld, keyEventHeld, windowWidth, windowHeight, windowTitle, windowActivate, windowLoading, windowDeferClose, windowCloseRequested, pointerX, pointerY, pointerDeltaX, pointerDeltaY,
                 pointerWheelDelta, pointerWheelRemainder, pointerInside, pointerHeld, pointerPressed, pointerReleased,
                 playSound, stopSound,
-                playMusic, pauseMusic, resumeMusic, stopMusic, setMusicVolume, loadTextFile, fileExport, fileImport,
+                playMusic, pauseMusic, resumeMusic, stopMusic, setMusicVolume, loadTextFile, fileExport, fileImport, textPrompt,
                 loadInt, saveInt, loadData, saveData, loadDataChecked, saveDataChecked, renderer3DDouble, renderer3DDoubleValue, renderer3D, renderer3DImage, renderer3DText, renderer3DTextValue,
                 gameClosed, endProgram, mediaShutdown, mediaDiagnostics, run
             };

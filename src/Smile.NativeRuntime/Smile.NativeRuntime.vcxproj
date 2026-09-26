@@ -73,6 +73,7 @@
     <ClCompile Include="graphics\graphics_gdi_image.cpp" />
     <ClCompile Include="graphics\image_resource.cpp" />
     <ClCompile Include="input\pointer_state.c" />
+    <ClCompile Include="input\text_prompt.cpp" />
     <ClCompile Include="runtime.c" />
     <ClCompile Include="startup\startup.cpp">
       <AdditionalIncludeDirectories>$(IntDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>

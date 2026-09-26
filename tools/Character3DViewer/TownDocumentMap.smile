@@ -1,0 +1,143 @@
+''' Small committed document map. Rebuilt on edits, independently of the 3D renderer.
+Module Smile.Tools.TownDocumentMap
+
+Option Explicit
+
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.SurfaceGrid3D As Grid
+Import Smile.Tools.TownDocument As Document
+Import Smile.Tools.TownCatalogData As Catalog
+Import Smile.Tools.TownEditorPanel As Panel
+
+Private Dim Cells[64, 64] As Number
+Private Dim Revision As Number
+
+Private Function Coordinate(Value As Double, Low As Double, High As Double) As Number
+
+    Dim Result As Number
+
+    Result = ToNumber(Clamp((Value - Low) * 64.0 / Max(1.0, High - Low), 0.0, 63.0))
+
+    Return Result
+
+End Function
+
+Private Sub Rebuild(ByRef Town As Document.State)
+
+    Dim X As Number
+    Dim Z As Number
+    Dim MX As Number
+    Dim MZ As Number
+    Dim SX As Number
+    Dim SZ As Number
+    Dim EX As Number
+    Dim EZ As Number
+    Dim Surface As Number
+
+    For Z = 0 To 63
+
+        For X = 0 To 63
+            Cells[X, Z] = 0
+        End For
+    End For
+
+    For Z = 0 To Town.Surface.Rows - 1
+
+        SZ = Coordinate(Town.Surface.ZEdges[Z], Town.Surface.OriginZ, Town.Surface.ZEdges[Town.Surface.Rows])
+        EZ = Coordinate(Town.Surface.ZEdges[Z + 1], Town.Surface.OriginZ, Town.Surface.ZEdges[Town.Surface.Rows])
+
+        For X = 0 To Town.Surface.Columns - 1
+
+            Surface = Grid.ReadCell(Town.Surface, X, Z)
+            SX = Coordinate(Town.Surface.XEdges[X], Town.Surface.OriginX, Town.Surface.XEdges[Town.Surface.Columns])
+            EX = Coordinate(Town.Surface.XEdges[X + 1], Town.Surface.OriginX, Town.Surface.XEdges[Town.Surface.Columns])
+
+            For MZ = SZ To EZ
+
+                For MX = SX To EX
+                    Cells[MX, MZ] = Max(Cells[MX, MZ], Surface)
+                End For
+            End For
+        End For
+    End For
+
+    Revision = Town.Revision
+
+End Sub
+
+Public Sub Draw(ByRef Town As Document.State, Position As P.Vector3,
+    Opacity As Number, LeaderName As Text)
+
+    Dim X As Number
+    Dim Z As Number
+    Dim StartX As Number
+    Dim Kind As Number
+    Dim ColorValue As Number
+    Dim MapLeft As Number
+    Dim Index As Number
+    Dim Shape As Catalog.Template
+
+    If Opacity <= 0 Then
+        Return
+    End If
+
+    If Revision <> Town.Revision Then
+        Call Rebuild(Town)
+    End If
+
+    MapLeft = Window_Width() - 276
+    Fill Rectangle MapLeft - 6, 133, 268, 294, RGB(10, 22, 35) Opacity Opacity
+    Draw Text Text_Slice(Town.Name, 0, 28) At MapLeft, 139 Size 12 Color WHITE
+
+    For Z = 0 To 63
+
+        X = 0
+
+        Do
+            StartX = X
+            Kind = Cells[X, Z]
+
+            Do
+                X = X + 1
+
+            Loop Until X >= 64 Or Cells[X, Z] <> Kind
+
+            ColorValue = RGB(35, 77, 37)
+
+            If Kind = 2 Then
+                ColorValue = RGB(12, 54, 103)
+            Else If Kind >= 3 Then
+                ColorValue = RGB(123, 147, 158)
+            End If
+
+            Fill Rectangle MapLeft + StartX * 4, 155 + (63 - Z) * 4, (X - StartX) * 4, 4, ColorValue Opacity Opacity
+
+        Loop Until X >= 64
+
+    End For
+
+    For Index = 0 To Town.ItemCount - 1
+
+        If Town.Items[Index].Active And Town.Items[Index].Category = Document.CATEGORY_BUILDINGS Then
+
+            X = Coordinate(Town.Items[Index].Position.X, Town.Surface.OriginX, Town.Surface.XEdges[Town.Surface.Columns])
+            Z = Coordinate(Town.Items[Index].Position.Z, Town.Surface.OriginZ, Town.Surface.ZEdges[Town.Surface.Rows])
+            Fill Rectangle MapLeft + X * 4 - 3, 155 + (63 - Z) * 4 - 3, 7, 7, RGB(226, 200, 133) Opacity Opacity
+            Shape = Catalog.TemplateAt(Town.Items[Index].Template)
+
+            If Shape.Label = "City Hall" Or Shape.Label = "Comm Tower" Or Shape.Label = "Old Castle" Or Shape.Label = "Royal Castle" Or Shape.Label = "Military HQ" Then
+                Draw Text Shape.Label At MapLeft + X * 4 - 24, 155 + (63 - Z) * 4 Size 9 Color WHITE
+            End If
+
+        End If
+
+    End For
+
+    X = Coordinate(Position.X, Town.Surface.OriginX, Town.Surface.XEdges[Town.Surface.Columns])
+    Z = Coordinate(Position.Z, Town.Surface.OriginZ, Town.Surface.ZEdges[Town.Surface.Rows])
+    Fill Rectangle MapLeft + X * 4 - 2, 155 + (63 - Z) * 4 - 2, 5, 5, CYAN
+    Draw Text LeaderName + " X:" + Panel.NumberLabel(ToNumber(Position.X)) + " Y:" + Panel.NumberLabel(ToNumber(Position.Y)) + " Z:" + Panel.NumberLabel(ToNumber(Position.Z)) At MapLeft, 414 Size 11 Color WHITE
+
+End Sub
+
+End Module

@@ -1,0 +1,205 @@
+''' Focused authoring checks; no renderer or input automation.
+
+Option Explicit
+
+Import Smile.Simple3D.SurfaceGrid3D As Grid
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Tools.TownDocument As Document
+Import Smile.Tools.TownSelection As Selection
+Import Smile.Tools.TownCatalogData As Catalog
+Import Smile.Tools.TownInitialSurface As Initial
+Import Smile.Tools.TownDocumentStore As Storage
+Import Smile.Tools.TownWorldDocument As World
+
+Dim Town As Document.State
+Dim Selected As Selection.State
+Dim Sample As Document.Item
+Dim Placed As Number
+Dim Revision As Number
+Dim Surface As Grid.State
+Dim Ok As Boolean
+Dim Failures As Number
+Dim X As Number
+Dim Map As World.State
+Dim LoadedMap As World.State
+Dim RequestId As Number
+Dim BadBytes[8] As Number
+Dim Status As Number
+
+Ok = Grid.Initialize(Surface, 12, 10, -40.0, -20.0, 20.0, Grid.SURFACE_GROUND)
+
+Call Check(Ok And Grid.CellX(Surface, -40.01) = -1 And
+    Grid.CellZ(Surface, 0.0) = 1, "World Picking Uses Floor At Negative Coordinates")
+Call Grid.PaintLine(Surface, 1, 2, 8, 2, Grid.SURFACE_ROAD)
+
+For X = 1 To 8
+    Call Check(Grid.ReadCell(Surface, X, 2) = Grid.SURFACE_ROAD, "Line Includes Every Endpoint Cell")
+End For
+
+Call Check(Grid.ReadCell(Surface, 0, 2) = Grid.SURFACE_GROUND And
+    Grid.ReadCell(Surface, 9, 2) = Grid.SURFACE_GROUND, "Line Does Not Paint Beyond Endpoints")
+Call Grid.PaintRectangle(Surface, 8, 8, 3, 4, Grid.SURFACE_WATER)
+Call Grid.PaintRectangle(Surface, 9, 4, 11, 8, Grid.SURFACE_WATER)
+Call Check(Not Grid.Bank(Surface, 8, 6, 9, 6), "Joined Water Has No Internal Bank")
+Call Check(Grid.Bank(Surface, 3, 4, 2, 4), "Expanded Water Keeps Its Outer Bank")
+Call Grid.PaintLine(Surface, 2, 6, 11, 6, Grid.SURFACE_ROAD)
+Call Check(Grid.ReadCell(Surface, 4, 6) = Grid.SURFACE_BRIDGE,
+    "Road Across Water Retains Its Underlying Water")
+Call Check(Not Grid.Bank(Surface, 4, 5, 4, 6), "Bridge Does Not Split A Water Border")
+Call Grid.PaintRectangle(Surface, 3, 4, 11, 8, Grid.SURFACE_GROUND)
+Call Check(Grid.ReadCell(Surface, 4, 6) = Grid.SURFACE_GROUND,
+    "Ground Erases Road And Water Together")
+
+Ok = Grid.Initialize(Surface, 12, 10, 0.0, 0.0, 20.0, Grid.SURFACE_GROUND)
+
+Call Grid.PaintLine(Surface, 2, 2, 7, 7, Grid.SURFACE_ROAD, 3)
+Call Check(Grid.ReadCell(Surface, 1, 1) = Grid.SURFACE_ROAD And
+    Grid.ReadCell(Surface, 8, 8) = Grid.SURFACE_ROAD And
+    Grid.ReadCell(Surface, 3, 2) = Grid.SURFACE_ROAD,
+    "Wide Diagonal Line Includes Continuous Width And Both Ends")
+Call Grid.PaintRectangle(Surface, -10, -10, -1, -1, Grid.SURFACE_WATER)
+Call Check(Grid.ReadCell(Surface, 0, 0) = Grid.SURFACE_GROUND,
+    "Out Of Bounds Rectangle Does Not Touch The Grid")
+
+Ok = Grid.Initialize(Surface, Grid.MAX_COLUMNS, Grid.MAX_ROWS,
+    0.0, 0.0, 20.0, Grid.SURFACE_GROUND)
+
+Call Check(Ok, "Maximum Grid Initializes Without A Native Stack Overflow")
+Call Grid.PaintRectangle(Surface, 15, 0, 16, 0, Grid.SURFACE_WATER)
+Call Check(Grid.ReadCell(Surface, 14, 0) = Grid.SURFACE_GROUND And
+    Grid.ReadCell(Surface, 15, 0) = Grid.SURFACE_WATER And
+    Grid.ReadCell(Surface, 16, 0) = Grid.SURFACE_WATER And
+    Grid.ReadCell(Surface, 17, 0) = Grid.SURFACE_GROUND,
+    "Packed Cell Boundaries Preserve Their Neighbors")
+Call Grid.PaintRectangle(Surface, Grid.MAX_COLUMNS - 1, Grid.MAX_ROWS - 1,
+    Grid.MAX_COLUMNS - 1, Grid.MAX_ROWS - 1, Grid.SURFACE_ROAD)
+Call Check(Grid.ReadCell(Surface, Grid.MAX_COLUMNS - 1, Grid.MAX_ROWS - 1) =
+    Grid.SURFACE_ROAD, "Maximum Grid Last Cell Is Addressable")
+
+Surface.XEdges[1] = 13.25
+
+Call Check(Grid.CellX(Surface, 13.24) = 0 And Grid.CellX(Surface, 13.25) = 1,
+    "Refined Surface Edges Preserve Authored Coordinates")
+
+Ok = Document.Blank(Town, "Test Town", 20, 20, 20.0)
+Sample.Category = Document.CATEGORY_BUILDINGS
+Sample.Template = 2
+Sample.Position = P.Vector(0.0, 21.16, 0.0)
+Sample.Scale = P.Vector(2000.0, 2000.0, 2000.0)
+Placed = Document.Place(Town, Sample, 80.0, 90.0)
+
+Call Check(Ok And Placed = 0 And Town.Items[0].Position.Y = 21.16,
+    "Placing An Assembly Preserves Its Authored Vertical Position")
+Call Selection.SetCategory(Selected, Document.CATEGORY_DECORATIONS)
+
+Ok = Selection.Add(Selected, Town, 0)
+
+Call Check(Not Ok And Selected.SelectedCount = 0, "Decoration Mode Cannot Select A Building")
+Call Selection.SetCategory(Selected, Document.CATEGORY_BUILDINGS)
+
+Ok = Selection.Add(Selected, Town, 0)
+Placed = Document.Place(Town, Sample, 120.0, 90.0)
+Ok = Selection.Add(Selected, Town, Placed) And Ok
+Revision = Town.Revision
+
+Call Selection.BeginDrag(Selected, Town, P.Vector(0.0, 0.0, 0.0))
+Call Selection.Drag(Selected, Town, P.Vector(15.0, 800.0, -20.0))
+Call Check(Ok And Selected.SelectedCount = 2 And Town.Items[0].Position.X = 95.0 And
+    Town.Items[1].Position.X = 135.0 And Town.Items[0].Position.Z = 70.0 And
+    Town.Items[0].Position.Y = 21.16, "Group Drag Changes Only Horizontal Coordinates")
+Call Selection.EndDrag(Selected, Town, True)
+Call Check(Town.Items[0].Position.X = 80.0 And Town.Items[1].Position.X = 120.0 And
+    Town.Revision = Revision, "Cancelled Drag Restores Every Selected Assembly")
+Call Selection.BeginDrag(Selected, Town, P.Vector(0.0, 0.0, 0.0))
+Call Selection.Drag(Selected, Town, P.Vector(15.0, 0.0, -20.0))
+Call Selection.EndDrag(Selected, Town, False)
+Call Check(Town.Revision = Revision + 1, "Group Drag Commits One Document Revision")
+Call Selection.Rotate(Selected, Town, 90.0)
+Call Check(Town.Items[0].Yaw = 90.0 And Town.Items[1].Yaw = 90.0,
+    "Selected Buildings Rotate Together")
+Call Selection.RemoveSelected(Selected, Town)
+Call Check(Not Town.Items[0].Active And Not Town.Items[1].Active And Selected.SelectedCount = 0,
+    "Delete Affects Selected Items And Clears Selection")
+
+Call Initial.Populate(Surface)
+
+Sample = Catalog.InitialItem(0)
+
+Call Check(Surface.Columns > 380 And Surface.Rows > 350 And Sample.Active,
+    "Saved Town Catalog And Exact Terrain Load")
+Call Check(Grid.ReadCell(Surface, Grid.CellX(Surface, 0.0), Grid.CellZ(Surface, -3000.0)) =
+    Grid.SURFACE_ROAD, "Initial Main Avenue Remains Paved")
+Call Check(Grid.ReadCell(Surface, Grid.CellX(Surface, -580.0), Grid.CellZ(Surface, -2000.0)) =
+    Grid.SURFACE_WATER, "Initial Civic Canal Remains Water")
+Call Check(Grid.ReadCell(Surface, Grid.CellX(Surface, -580.0), Grid.CellZ(Surface, -1700.0)) =
+    Grid.SURFACE_BRIDGE, "Initial Bridge Retains Road Over Water")
+
+Town.Surface = Surface
+Town.Name = "Neris " + Text_From_Code(22478) + Text_From_Code(127795)
+Placed = Document.Place(Town, Sample, 32.25, -18.625)
+Ok = Storage.SaveDocument(Town, "TownEditor.FoundationFixture")
+
+Call Check(Ok And Not Document.Dirty(Town), "Viewer Save Commits A Complete Town")
+
+Town.Name = "Temporary"
+Town.Items[0].Position.X = 999.0
+Ok = Storage.LoadDocument(Town, "TownEditor.FoundationFixture")
+
+Call Check(Ok And Town.Name = "Neris " + Text_From_Code(22478) + Text_From_Code(127795) And
+    Town.Items[0].Position.X = 32.25 And Town.Items[0].Position.Z = -18.625,
+    "Named Town And Precise Positions Round Trip Through Native Save Storage")
+Call Check(Grid.ReadCell(Town.Surface, Grid.CellX(Town.Surface, -580.0),
+    Grid.CellZ(Town.Surface, -1700.0)) = Grid.SURFACE_BRIDGE,
+    "Packed Terrain Round Trip Preserves Bridges")
+
+Revision = Town.Revision
+Ok = Storage.LoadDocument(Town, "TownEditor.MissingFixture")
+
+Call Check(Not Ok And Town.Revision = Revision And Town.Items[0].Position.X = 32.25,
+    "Failed Load Preserves The Current Document")
+
+Call Grid.PaintLine(Surface, -5, -5, -1, -1, Grid.SURFACE_ROAD)
+
+Ok = Grid.Initialize(Surface, 8, 8, 0.0, 0.0, 20.0, Grid.SURFACE_GROUND)
+Surface.XEdges[1] = 1.0
+
+Call Grid.PaintWorldLine(Surface, 10.0, 50.0, 140.0, 50.0, Grid.SURFACE_ROAD, 20.0)
+Call Check(Grid.ReadCell(Surface, 1, 2) = Grid.SURFACE_ROAD And
+    Grid.ReadCell(Surface, 1, 1) = Grid.SURFACE_GROUND,
+    "Physical Line Width Does Not Depend On Refined Edge Density")
+
+Save Data BadBytes Count 8 To "TownEditor.CorruptFixture" Status Status
+Revision = Town.Revision
+Ok = Storage.LoadDocument(Town, "TownEditor.CorruptFixture")
+
+Call Check(Not Ok And Town.Revision = Revision, "Corrupt Payload Cannot Replace The Town")
+
+Map.Name = "World " + Text_From_Code(22478)
+Ok = World.Add(Map, Town.Name, 120, 400)
+Ok = World.Add(Map, "Another Town", 820, 670) And Ok
+Map.Links[0, 1] = True
+Map.Links[1, 0] = True
+Ok = World.SaveWorld(Map) And Ok
+Ok = World.LoadWorld(LoadedMap, Map.Name) And Ok
+
+Call Check(Ok And LoadedMap.NodeCount = 2 And LoadedMap.Nodes[0].Town = Town.Name And
+    LoadedMap.Nodes[1].X = 820 And LoadedMap.Links[1, 0], "World Towns Positions And Routes Round Trip")
+
+RequestId = Storage.QueueBlender(Town, 2)
+
+Call Check(RequestId > 0, "Complete Blender Request Is Written Atomically")
+
+If Failures = 0 Then
+    Print "PASS Town Editor Foundations"
+Else
+    Print "FAIL Town Editor Foundations"
+End If
+
+Sub Check(Condition As Boolean, Label As Text)
+
+    If Not Condition Then
+        Failures = Failures + 1
+        Print "FAIL " + Label
+    End If
+
+End Sub

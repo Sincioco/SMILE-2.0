@@ -67,6 +67,8 @@ static void check(int condition, const char* message)
     }
 }
 
+int test_text_prompt(void);
+
 int main(void)
 {
     long long initial_allocations = smile_text_allocation_count();
@@ -285,6 +287,8 @@ int main(void)
     }
     smile_sfx_shutdown();
     smile_media_shutdown();
+
+    failures += test_text_prompt();
 
     if (failures != 0)
     {

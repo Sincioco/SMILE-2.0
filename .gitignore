@@ -25,3 +25,5 @@ games/SinStarI/SourceAssets/Characters/Tank/OrinV13/Private/TownLocomotion/
 games/SinStarI/SourceAssets/Characters/Healer/MiraTripoV1/Private/TownLocomotion/
 # Generated Python import cache from asset-authoring scripts.
 scripts/__pycache__/
+tools/Character3DViewer/__pycache__/
+tools/Character3DViewer/Character3DViewer.TownSessionTests.smileproj

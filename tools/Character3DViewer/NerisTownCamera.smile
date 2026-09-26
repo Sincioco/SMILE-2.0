@@ -9,9 +9,11 @@ Import Smile.Simple3D.PrecisionCamera3D As Camera
 Import Smile.Simple3D.CameraClearance3D As Clearance
 Import Smile.Simple3D.FollowCamera3D As Follow
 Import Smile.Simple3D.ArenaViewport3D As Arena
+Import Smile.Simple3D.ArenaCamera3D As Motion
 Import Smile.Tools.NerisTownObstacles As Obstacles
 Import Smile.Tools.NerisTownNavigation As Navigation
 Import Smile.Tools.NerisTownEntranceNavigation As Entries
+Import Smile.Tools.TownDocumentNavigation As Edited
 
 Public Type State
     World As Clearance.World
@@ -26,6 +28,7 @@ Public Type State
     WasMoving As Boolean
     OrbitAtParty As Boolean
     OrbitOffset As P.Vector3
+    Peeking As Boolean
 End Type
 
 Public Sub Start(ByRef Value As State)
@@ -46,10 +49,48 @@ Public Sub Focus(ByRef Value As State, Yaw As Double, Displayed As P.Camera3D)
     Value.Suspended = False
     Value.WasMoving = False
     Value.OrbitAtParty = False
+    Value.Peeking = False
 
     Call Follow.Reset(Value.Flight, Displayed.Position)
 
 End Sub
+
+''' A drag while walking borrows the view without replacing movement axes or party control.
+Public Function MovingGesture(ByRef Value As State, ByRef View As Arena.State,
+    Input As Motion.PointerInput, PartyControl As Boolean, MovingHeld As Boolean) As Boolean
+
+    Dim Held As Boolean
+    Dim Owned As Boolean
+
+    Held = Input.PanHeld Or Input.OrbitHeld
+    Owned = Value.Peeking Or (PartyControl And MovingHeld And Not Input.Blocked And Held)
+
+    If PartyControl And MovingHeld And Not Input.Blocked And Held Then
+
+        Value.Peeking = True
+        Value.Arrival = False
+        Value.Enabled = True
+        Value.Suspended = False
+        Value.OrbitAtParty = False
+
+    Else If Value.Peeking And Not Held Then
+
+        Call Arena.BeginTransition(View, 1000)
+
+        View.Controls.PanX = 0.0
+        View.Controls.PanY = 0.0
+        View.Controls.OrbitYaw = 0.0
+        View.Controls.OrbitPitch = 0.0
+        View.Controls.Panning = False
+        View.Controls.Orbiting = False
+        Value.Peeking = False
+        Value.Focusing = True
+
+    End If
+
+    Return Owned
+
+End Function
 
 ''' Freeze input axes for each continuous movement gesture, avoiding chase-yaw feedback.
 Public Function MovementCamera(ByRef Value As State, Displayed As P.Camera3D,
@@ -122,6 +163,11 @@ End Function
 Public Function CloseGrounds(Leader As P.Vector3) As Boolean
 
     Dim Result As Boolean
+
+    If Edited.Active() Then
+        Result = Edited.InsideStructure(Leader)
+        Return Result
+    End If
 
     Result = ((Leader.X >= -1930.0 And Leader.X <= -390.0 And
         Leader.Z >= 1650.0 And Leader.Z <= 3030.0) Or
@@ -202,6 +248,21 @@ Public Sub Settle(ByRef Value As State, Displayed As P.Camera3D)
 
 End Sub
 
+Public Sub ArrivalFrame(ByRef Value As State, ByRef View As Arena.State,
+    ByRef Base As P.Camera3D, Leader As P.Vector3)
+
+    Base.Target = M.Add(Leader, P.Vector(0.0, 42.0, 55.0))
+    Base.Position = M.Add(Leader, P.Vector(0.0, 26.0, -300.0))
+
+    Call Focus(Value, 180.0, Base)
+    Call Motion.Reset(View.Controls, View.Zoom)
+    Call Arena.BeginTransition(View, 0)
+    Call Arena.ComposeCamera(View, Base)
+
+    Value.Arrival = True
+
+End Sub
+
 ''' Follow the unzoomed shot first. Direct zoom must never enter the slow drone solver.
 Public Sub Compose(ByRef Value As State, ByRef View As Arena.State,
     Base As P.Camera3D, Following As Boolean, Elapsed As Number)
@@ -255,6 +316,10 @@ Public Function Resolve(ByRef Value As State, Desired As P.Camera3D,
     Elapsed As Number) As P.Camera3D
 
     Dim Result As P.Camera3D
+
+    If Edited.Active() Then
+        Call Edited.PopulateCamera(Value.World, Desired.Target)
+    End If
 
     Result = Follow.Update(Value.Flight, Value.World, Desired, Elapsed, 18.0 - 12.0 * Value.CloseAmount)
 

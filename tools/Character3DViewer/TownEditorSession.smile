@@ -1,0 +1,599 @@
+''' Single active town document, retained across Viewer tabs; delegates editing and rendering.
+Module Smile.Tools.TownEditorSession
+
+Option Explicit
+
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Tools.TownDocument As Document
+Import Smile.Tools.TownCatalogData As Catalog
+Import Smile.Tools.TownInitialSurface As Initial
+Import Smile.Tools.TownEditor As Editor
+Import Smile.Tools.TownEditorPanel As Panel
+Import Smile.Tools.TownCatalogRenderer As Renderer
+Import Smile.Tools.TownSurfaceRenderer As Terrain
+Import Smile.Tools.TownAttachments As Attachments
+Import Smile.Tools.TownLighting As Lighting
+Import Smile.Tools.TownDocumentNavigation As Navigation
+Import Smile.Tools.TownDocumentStore As Storage
+Import Smile.Tools.TownLibrary As Library
+Import Smile.Tools.TownDocumentMap As Map
+Import Smile.Simple3D.PrecisionMath3D As Math3D
+Import Smile.Tools.TownWorldEditor As World
+Import Smile.Tools.TownSelection As Selection
+Import Smile.Simple3D.SurfaceGrid3D As Grid
+
+Private Dim Town As Document.State
+Private Dim PendingSave As Document.State
+Private Dim Controls As Editor.State
+Private Dim Assets As Renderer.State
+Private Dim Ground As Terrain.State
+Private Dim Details As Attachments.State
+Private Dim AttemptedRecovery As Boolean
+Private Dim HaveDocument As Boolean
+Private Dim Ready As Boolean
+Private Dim Prepared As Boolean
+Private Dim AppliedRevision As Number
+Private Dim RecoveryRevision As Number
+Private Dim RecoveryClock As Number
+Private Dim RequestId As Number
+Private Dim RequestRevision As Number
+Private Dim RequestName As Text
+Private Dim RequestClock As Number
+Private Dim RequestElapsed As Number
+Private Dim TeleportPending As Boolean
+Private Dim LiveSurface As Grid.State
+
+Public Function Available() As Boolean
+
+    If Not AttemptedRecovery Then
+
+        AttemptedRecovery = True
+        HaveDocument = Library.Recover(Town)
+        TeleportPending = HaveDocument
+
+    End If
+
+    Return HaveDocument
+
+End Function
+
+Public Sub BeginEditing()
+
+    Dim Index As Number
+
+    If Not HaveDocument Then
+
+        Town.Name = "Neris Town"
+
+        Call Initial.Populate(Town.Surface)
+        Call Document.DefaultSun(Town.Light)
+
+        Town.ItemCount = Catalog.INITIAL_ITEMS
+        Town.NextIdentity = Town.ItemCount + 1
+
+        For Index = 0 To Town.ItemCount - 1
+            Town.Items[Index] = Catalog.InitialItem(Index)
+        End For
+
+        Town.Revision = 1
+        Town.SavedRevision = 1
+        HaveDocument = True
+
+    End If
+
+    Call Editor.Start(Controls)
+
+End Sub
+
+Public Function Editing() As Boolean
+
+    Dim ReturnValue As Boolean
+
+    ReturnValue = Controls.Enabled
+
+    Return ReturnValue
+
+End Function
+
+Public Function GestureActive() As Boolean
+
+    Dim Result As Boolean
+
+    Result = Controls.Selected.Dragging Or Controls.Rubber Or Controls.Anchored Or World.Active()
+
+    Return Result
+
+End Function
+
+Public Function CameraBlocked() As Boolean
+
+    Dim Result As Boolean
+
+    Result = World.Active() Or (Controls.Enabled And (Panel.Hovered() Or
+        (Not Key_Held(KEY_SHIFT) And Pointer_Held(POINTER_PRIMARY)) Or GestureActive()))
+
+    Return Result
+
+End Function
+
+Public Function LoadNext() As Boolean
+
+    Dim Ok As Boolean
+
+    If Assets.Loaded < Catalog.CHUNK_COUNT + 14 Then
+        Call Renderer.LoadNext(Assets)
+
+        Return False
+    End If
+
+    If Not Prepared Then
+
+        Ok = Terrain.Create(Ground)
+        Ok = Attachments.Create(Details) And Ok
+        Ok = Lighting.Apply(Town.Light) And Ok
+        Assets.Failed = Assets.Failed Or Not Ok
+        Prepared = True
+
+        Call Terrain.BeginBuild(Ground, Town.Surface)
+
+    End If
+
+    Call Terrain.Update(Ground, 16)
+
+    If Ground.Stage = 0 And Not Ground.Failed And Not Assets.Failed Then
+
+        Ready = True
+        AppliedRevision = Town.Revision
+        RecoveryRevision = Town.Revision
+        LiveSurface = Town.Surface
+
+        Call Navigation.Rebuild(Town)
+
+    End If
+
+    Return Ready
+
+End Function
+
+Public Function Failed() As Boolean
+
+    Dim Result As Boolean
+
+    Result = Assets.Failed Or Ground.Failed
+
+    Return Result
+
+End Function
+
+Public Function Progress() As Number
+
+    Dim Result As Number
+
+    Result = Assets.Loaded * 70 / (Catalog.CHUNK_COUNT + 14)
+
+    If Prepared Then
+        Result = 70 + Ground.Row * 20 / Max(1, Town.Surface.Rows)
+    End If
+
+    If Ground.Stage = 2 Then
+        Result = 90 + Ground.Kind * 2
+    End If
+
+    If Ready Then
+        Result = 100
+    End If
+
+    Return Result
+
+End Function
+
+Private Sub FileCommand(Action As Number)
+
+    Dim Name As Text
+    Dim OldName As Text
+    Dim Ok As Boolean
+    Dim Mode As Number
+
+    If Ground.Stage <> 0 Then
+        Controls.Ui.Message = "Finishing terrain; try saving when ready."
+        Return
+    End If
+
+    If Action = 300 Then
+
+        Ok = Library.SaveCurrent(Town)
+        Controls.Ui.Message = "Saved for Viewer."
+
+        If Not Ok Then
+            Controls.Ui.Message = "Save failed; your edits are retained."
+        End If
+
+    Else If Action = 301 Or Action = 302 Then
+
+        If RequestId > 0 Then
+            Controls.Ui.Message = "A Blender save is still running."
+            Return
+        End If
+
+        OldName = Town.Name
+        Mode = 1
+
+        If Action = 302 Then
+
+            Name = Text_Prompt("New Town Version", "Name the new version. The original will be kept.", Town.Name + " Version 2")
+
+            If Not Document.ValidName(Name) Then
+                Return
+            End If
+
+            If Storage.Exists("TownEditor.Town." + Name) Or Storage.Exists("TownEditor.Recovery." + Name) Then
+                Controls.Ui.Message = "That name already exists. Choose another."
+                Return
+            End If
+
+            Town.Name = Name
+            Mode = 2
+
+        End If
+
+        RequestId = Storage.QueueBlender(Town, Mode)
+        PendingSave = Town
+        Town.Name = OldName
+        RequestRevision = Town.Revision
+        RequestName = OldName
+        RequestClock = 0
+        RequestElapsed = 0
+        Controls.Ui.Busy = RequestId > 0
+        Controls.Ui.ProgressPercent = 0
+        Controls.Ui.Message = "Saving Blender version in background..."
+
+        If RequestId = 0 Then
+            Controls.Ui.Message = "Could not queue the Blender save."
+        End If
+
+    Else If Action = 303 Then
+
+        Name = Text_Prompt("New Town / Environment", "Name the new blank environment.", "New Town")
+
+        If Not Document.ValidName(Name) Then
+            Return
+        End If
+
+        If Storage.Exists("TownEditor.Town." + Name) Or Storage.Exists("TownEditor.Recovery." + Name) Then
+            Controls.Ui.Message = "That name already exists. Choose another."
+            Return
+        End If
+
+        Ok = Library.Remember(Town)
+
+        If Ok Then
+            Ok = Document.Blank(Town, Name, 128, 128, 20.0)
+            TeleportPending = Ok
+        End If
+
+    Else If Action = 304 Or Action = 306 Then
+
+        Ok = Library.Remember(Town)
+
+        If Ok Then
+            Call World.Open(Action = 304, Town.Name)
+
+            Controls.Ui.Message = World.LastMessage()
+        End If
+
+    Else If Action = 305 Then
+
+        Name = Text_Prompt("Open Town / Environment", "Enter the saved town or version name.", Town.Name)
+
+        If Text_Length(Name) = 0 Then
+            Return
+        End If
+
+        Ok = Library.OpenNamed(Town, Name)
+        TeleportPending = Ok
+        Controls.Ui.Message = "Town opened."
+
+        If Not Ok Then
+            Controls.Ui.Message = "Town not found; current edits retained."
+        End If
+
+    End If
+
+    If TeleportPending Then
+        Call Editor.Cancel(Controls, Town)
+        Call Selection.ClearSelection(Controls.Selected)
+    End If
+
+End Sub
+
+Public Sub Input(View As P.Camera3D, Key As Number, Blocked As Boolean)
+
+    Dim Action As Number
+    Dim Name As Text
+    Dim Ok As Boolean
+
+    If World.Active() Then
+
+        Name = World.Input(Key)
+
+        If Text_Length(Name) > 0 Then
+
+            Ok = Library.OpenNamed(Town, Name)
+            TeleportPending = Ok
+
+            Call Selection.ClearSelection(Controls.Selected)
+
+        End If
+
+        Return
+
+    End If
+
+    Action = Editor.Input(Controls, Town, View, Key, Blocked)
+
+    If Action = 400 Or Key = KEY_TAB Then
+        Call Editor.Cancel(Controls, Town)
+
+        Controls.Enabled = False
+    Else If Action >= 300 And Action <= 306 Then
+        Call FileCommand(Action)
+    End If
+
+End Sub
+
+Public Sub Update(Leader As P.Vector3, Elapsed As Number)
+
+    Dim Ok As Boolean
+    Dim Status As Storage.BridgeStatus
+
+    If Not Ready Then
+        Return
+    End If
+
+    If AppliedRevision <> Town.Revision Then
+
+        Ok = Lighting.Apply(Town.Light)
+
+        If Ground.LiveRevision = Town.Surface.Revision Then
+            Call Navigation.Rebuild(Town)
+        End If
+
+        AppliedRevision = Town.Revision
+        RecoveryClock = 0
+
+    End If
+
+    If Ground.PendingRevision <> Town.Surface.Revision Then
+        Call Terrain.BeginBuild(Ground, Town.Surface)
+    End If
+
+    Call Terrain.Update(Ground, Elapsed)
+
+    Controls.Ui.Busy = Ground.Stage <> 0 Or RequestId > 0
+
+    If Ground.Stage <> 0 Then
+        Controls.Ui.ProgressPercent = Ground.Row * 90 / Max(1, Town.Surface.Rows)
+    End If
+
+    If Ground.Failed Then
+
+        Town.Surface = LiveSurface
+        Town.Revision = Town.Revision + 1
+        Controls.Ui.Message = "Terrain limit reached; edit reverted."
+
+        Call Terrain.BeginBuild(Ground, Town.Surface)
+
+    Else If Ground.LiveRevision = Town.Surface.Revision And LiveSurface.Revision <> Town.Surface.Revision Then
+
+        LiveSurface = Town.Surface
+
+        Call Navigation.Rebuild(Town)
+
+    End If
+
+    Call Attachments.Update(Details, Town, Leader, Elapsed)
+
+    RecoveryClock = RecoveryClock + Elapsed
+
+    If RecoveryRevision <> Town.Revision And RecoveryClock >= 1500 Then
+
+        Ok = Library.Remember(Town)
+
+        If Ok Then
+            RecoveryRevision = Town.Revision
+        End If
+
+    End If
+
+    If RequestId > 0 Then
+
+        RequestClock = RequestClock + Elapsed
+        RequestElapsed = RequestElapsed + Elapsed
+
+        If RequestClock >= 500 Then
+
+            Status = Storage.ReadBridgeStatus()
+            RequestClock = 0
+
+            If Status.RequestId <> RequestId And RequestElapsed >= 5000 Then
+                Controls.Ui.Message = "Waiting for worker; use Launch.ps1."
+            End If
+
+            If Status.RequestId = RequestId Then
+
+                Controls.Ui.Message = Status.Message
+                Controls.Ui.ProgressPercent = Status.Progress
+
+                If Status.Status = 1 Then
+
+                    Ok = Library.SaveCurrent(PendingSave)
+
+                    If Town.Name = RequestName And Town.Revision = RequestRevision Then
+                        Town.Name = PendingSave.Name
+                        Town.SavedRevision = Town.Revision
+                    End If
+
+                    Ok = Library.Remember(Town) And Ok
+
+                    If Not Ok Then
+                        Controls.Ui.Message = "Blender saved; Viewer save failed."
+                    End If
+
+                    RequestId = 0
+
+                Else If Status.Status = 2 Then
+
+                    RequestId = 0
+
+                End If
+
+            End If
+
+        End If
+
+    End If
+
+End Sub
+
+Public Function Draw() As Boolean
+
+    Dim Ok As Boolean
+
+    Ok = Renderer.Draw(Assets, Town)
+    Ok = Terrain.Draw(Ground) And Ok
+    Ok = Attachments.Draw(Details, Town) And Ok
+
+    Return Ok
+
+End Function
+
+Public Sub Overlay(View As P.Camera3D)
+
+    Call Editor.Draw(Controls, Town, View)
+    Call World.Draw()
+
+End Sub
+
+Public Function TakeSpawn(ByRef Position As P.Vector3) As Boolean
+
+    Dim X As Number
+    Dim Z As Number
+    Dim Found As Boolean
+
+    If Not TeleportPending Or Ground.LiveRevision <> Town.Surface.Revision Then
+        Return False
+    End If
+
+    TeleportPending = False
+    Position = P.Vector(0.0, 23.12, 0.0)
+
+    If Navigation.CanStand(0.0, -2780.0) Then
+        Position.Z = -2780.0
+    End If
+
+    Found = Navigation.CanStand(Position.X, Position.Z)
+
+    If Not Found Then
+
+        For Z = 0 To Town.Surface.Rows - 1
+
+            For X = 0 To Town.Surface.Columns - 1
+
+                If (Grid.ReadCell(Town.Surface, X, Z) = Grid.SURFACE_ROAD Or
+                    Grid.ReadCell(Town.Surface, X, Z) = Grid.SURFACE_GROUND) Then
+
+                    Position.X = (Town.Surface.XEdges[X] + Town.Surface.XEdges[X + 1]) * 0.5
+                    Position.Z = (Town.Surface.ZEdges[Z] + Town.Surface.ZEdges[Z + 1]) * 0.5
+                    Found = Navigation.CanStand(Position.X, Position.Z)
+
+                    If Found Then
+                        Exit For
+                    End If
+
+                End If
+
+            End For
+
+            If Found Then
+                Exit For
+            End If
+
+        End For
+
+    End If
+
+    Position.Y = Navigation.GroundHeight(Position.X, Position.Z)
+
+    Return True
+
+End Function
+
+Public Sub Release()
+
+    Dim Ok As Boolean
+
+    If HaveDocument Then
+        Call Editor.Cancel(Controls, Town)
+
+        Ok = Library.Remember(Town)
+    End If
+
+    Call World.Close()
+    Call Attachments.Destroy(Details)
+    Call Terrain.Destroy(Ground)
+    Call Renderer.Destroy(Assets)
+    Call Navigation.Disable()
+
+    Ready = False
+    Prepared = False
+    TeleportPending = HaveDocument
+
+End Sub
+
+Public Function TownName() As Text
+
+    Dim ReturnValue As Text
+
+    If HaveDocument Then
+        ReturnValue = Town.Name
+
+        Return ReturnValue
+    End If
+
+    Return "Neris Town"
+
+End Function
+
+Public Sub DrawMap(Position As P.Vector3, Opacity As Number, LeaderName As Text)
+
+    Call Map.Draw(Town, Position, Opacity, LeaderName)
+
+End Sub
+
+Public Sub FrameDocument(ByRef Camera As P.Camera3D, Optional Overview As Boolean = False)
+
+    Dim Direction As P.Vector3
+    Dim Radius As Double
+    Dim Angle As Double
+    Dim Ok As Boolean
+
+    Direction = Math3D.Subtract(Camera.Position, Camera.Target)
+
+    If Overview Then
+        Direction = P.Vector(0.4, 0.7, -0.9)
+    End If
+
+    Ok = Math3D.TryNormalize(Direction, Direction)
+    Camera.Target = P.Vector((Town.Surface.OriginX + Town.Surface.XEdges[Town.Surface.Columns]) * 0.5,
+        150.0, (Town.Surface.OriginZ + Town.Surface.ZEdges[Town.Surface.Rows]) * 0.5)
+    Radius = Sqrt((Town.Surface.XEdges[Town.Surface.Columns] - Town.Surface.OriginX) *
+        (Town.Surface.XEdges[Town.Surface.Columns] - Town.Surface.OriginX) +
+        (Town.Surface.ZEdges[Town.Surface.Rows] - Town.Surface.OriginZ) *
+        (Town.Surface.ZEdges[Town.Surface.Rows] - Town.Surface.OriginZ)) * 0.5
+    Angle = Math3D.Radians(Camera.FovDegrees * 0.5)
+    Angle = Atan2(Sin(Angle) * Min(1.0, ToDouble(Window_Width()) / ToDouble(Max(1, Window_Height()))), Cos(Angle))
+    Camera.Position = Math3D.Add(Camera.Target, Math3D.Scale(Direction, Radius / Sin(Angle)))
+
+End Sub
+
+End Module

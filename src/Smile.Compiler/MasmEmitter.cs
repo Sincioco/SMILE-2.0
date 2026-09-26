@@ -269,6 +269,8 @@ internal sealed class MasmEmitter
         Line("EXTERN smile_file_reveal:PROC");
         Line("EXTERN smile_file_export:PROC");
         Line("EXTERN smile_file_import:PROC");
+        Line("EXTERN smile_text_prompt:PROC");
+        Line("EXTERN smile_text_from_code:PROC");
         if (_rememberWindowPlacement) Line("EXTERN smile_window_persistence_configure:PROC");
         if (_responsiveWindow) Line("EXTERN smile_window_responsive_configure:PROC");
         Line("EXTERN smile_game_clear:PROC");
@@ -809,7 +811,7 @@ internal sealed class MasmEmitter
             foreach (var symbol in routine.LocalSymbols.Values.Where(symbol => !symbol.IsConstant)
                          .OrderBy(symbol => symbol.DeclarationSpan.Start))
             {
-                offset += Math.Max(1, symbol.ArraySize) * Math.Max(8, symbol.Type.Size);
+                offset += LocalStorageSize(symbol);
                 localOffsets[symbol] = offset;
             }
 
@@ -827,6 +829,10 @@ internal sealed class MasmEmitter
         }
     }
 
+    private static int LocalStorageSize(VariableSymbol symbol) =>
+        symbol.ParameterMode == ParameterPassingMode.ByRef
+            ? 8 : Math.Max(1, symbol.ArraySize) * Math.Max(8, symbol.Type.Size);
+
     private void EmitRoutine(RoutineSymbol routine)
     {
         _currentSource = routine.Source;
@@ -841,7 +847,7 @@ internal sealed class MasmEmitter
         Line("    mov rbp, rsp");
         AllocateStack(_currentFrame.FrameSize);
         foreach (var symbol in routine.LocalSymbols.Values.Where(symbol => !symbol.IsConstant))
-            for (var index = 0; index < Math.Max(1, symbol.ArraySize) * Math.Max(1, symbol.Type.Size / 8); index++)
+            for (var index = 0; index < LocalStorageSize(symbol) / 8; index++)
                 Line($"    mov QWORD PTR [rbp-{_currentFrame.LocalOffsets[symbol] - index * 8}], 0");
         foreach (var temporary in _currentFrame.Temporaries.Where(temporary => temporary.RequiresCleanup))
             for (var index = 0; index < temporary.Size / 8; index++)
@@ -1894,13 +1900,15 @@ internal sealed class MasmEmitter
                 Line("    mov rcx, rax");
                 CallAligned("smile_file_reveal");
                 break;
+            case SyntaxKind.TextPromptKeyword:
             case SyntaxKind.FileExportKeyword:
                 foreach (var argument in call.Arguments)
                 {
                     EmitExpression(argument.Expression);
                     PushRax();
                 }
-                EmitNativeCall("smile_file_export", 2);
+                EmitNativeCall(call.Identifier.Kind == SyntaxKind.TextPromptKeyword
+                    ? "smile_text_prompt" : "smile_file_export", call.Arguments.Count);
                 break;
             case SyntaxKind.FileImportKeyword:
                 CallAligned("smile_file_import");
@@ -1962,6 +1970,11 @@ internal sealed class MasmEmitter
                 PushRax();
                 EmitNativeCall(call.Identifier.Kind == SyntaxKind.TextWidthKeyword
                     ? "smile_text_width_value" : "smile_text_height_value", 2);
+                break;
+            case SyntaxKind.TextFromCodeKeyword:
+                EmitExpression(call.Arguments[0].Expression);
+                Line("    mov rcx, rax");
+                CallAligned("smile_text_from_code");
                 break;
             case SyntaxKind.TextLengthKeyword:
                 EmitExpression(call.Arguments[0].Expression);

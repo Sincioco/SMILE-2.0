@@ -1,0 +1,90 @@
+''' Coordinates for complete horizontal assemblies, including their attached features.
+Module Smile.Tools.TownGeometry
+
+Option Explicit
+
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.PrecisionMath3D As M
+Import Smile.Tools.TownDocument As Document
+Import Smile.Tools.TownCatalogData As Catalog
+
+Public Function ToWorld(Item As Document.Item, LocalPoint As P.Vector3) As P.Vector3
+
+    Dim Result As P.Vector3
+
+    Result = P.Vector(LocalPoint.X * Item.Scale.X / 1000.0,
+        LocalPoint.Y * Item.Scale.Y / 1000.0, LocalPoint.Z * Item.Scale.Z / 1000.0)
+    Result = M.Add(Item.Position, M.Rotate(Result, P.Vector(0.0, Item.Yaw, 0.0)))
+
+    Return Result
+
+End Function
+
+Public Function ToLocal(Item As Document.Item, WorldPoint As P.Vector3) As P.Vector3
+
+    Dim Result As P.Vector3
+
+    Result = M.Rotate(M.Subtract(WorldPoint, Item.Position), P.Vector(0.0, -Item.Yaw, 0.0))
+    Result = P.Vector(Result.X * 1000.0 / Item.Scale.X,
+        Result.Y * 1000.0 / Item.Scale.Y, Result.Z * 1000.0 / Item.Scale.Z)
+
+    Return Result
+
+End Function
+
+Public Function Contains(Item As Document.Item, X As Double, Z As Double,
+    Optional Margin As Double = 0.0) As Boolean
+
+    Dim LocalPoint As P.Vector3
+    Dim Shape As Catalog.Template
+    Dim Result As Boolean
+
+    Shape = Catalog.TemplateAt(Item.Template)
+    LocalPoint = ToLocal(Item, P.Vector(X, Item.Position.Y, Z))
+    Result = (LocalPoint.X >= Shape.Low.X - Margin And LocalPoint.X <= Shape.High.X + Margin And
+        LocalPoint.Z >= Shape.Low.Z - Margin And LocalPoint.Z <= Shape.High.Z + Margin)
+
+    Return Result
+
+End Function
+
+''' Reserve room for surfaces, actors and overlays before accepting more placements.
+Public Function DrawCost(ByRef Town As Document.State) As Number
+
+    Dim Index As Number
+    Dim Shape As Catalog.Template
+    Dim Result As Number
+
+    For Index = 0 To Town.ItemCount - 1
+
+        If Town.Items[Index].Active Then
+            Shape = Catalog.TemplateAt(Town.Items[Index].Template)
+            Result = Result + Shape.PartCount + Shape.DoorCount * 4 + Shape.WaterCount
+        End If
+
+    End For
+
+    Return Result
+
+End Function
+
+Public Function WaterCount(ByRef Town As Document.State) As Number
+
+    Dim Index As Number
+    Dim Result As Number
+    Dim Shape As Catalog.Template
+
+    For Index = 0 To Town.ItemCount - 1
+
+        If Town.Items[Index].Active Then
+            Shape = Catalog.TemplateAt(Town.Items[Index].Template)
+            Result = Result + Shape.WaterCount
+        End If
+
+    End For
+
+    Return Result
+
+End Function
+
+End Module

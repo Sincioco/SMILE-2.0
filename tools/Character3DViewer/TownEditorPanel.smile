@@ -1,0 +1,263 @@
+''' Right-side editing controls. Reports commands; document mutations belong to the editor.
+Module Smile.Tools.TownEditorPanel
+
+Option Explicit
+
+Import Smile.Tools.TownDocument As Document
+Import Smile.Tools.TownCatalogData As Catalog
+
+Public Type Control
+    X As Number
+    Y As Number
+    Width As Number
+    Height As Number
+    Action As Number
+End Type
+
+Public Type State
+    Controls[80] As Control
+    ControlCount As Number
+    Section As Number
+    Category As Number
+    Tool As Number
+    Template As Number
+    Page As Number
+    Surface As Number
+    Width As Number
+    Message As Text
+    Busy As Boolean
+    ProgressPercent As Number
+End Type
+
+Public Function NumberLabel(Value As Number) As Text
+
+    Dim Result As Text
+    Dim Negative As Boolean
+
+    Negative = Value < 0
+    Value = Abs(Value)
+
+    Do
+        Result = Text_From_Code(48 + Value Mod 10) + Result
+        Value = Value / 10
+
+    Loop Until Value = 0
+
+    If Negative Then
+        Result = "-" + Result
+    End If
+
+    Return Result
+
+End Function
+
+Public Function LeftEdge() As Number
+
+    Dim Result As Number
+
+    Result = Window_Width() - 306
+
+    Return Result
+
+End Function
+
+Public Function Hovered() As Boolean
+
+    Dim Result As Boolean
+
+    Result = Pointer_X() >= LeftEdge() And Pointer_Y() >= 128
+
+    Return Result
+
+End Function
+
+Public Function Input(ByRef Value As State) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Index As Number
+    Dim Item As Control
+
+    If Not Pointer_Pressed(POINTER_PRIMARY) Then
+        Return 0
+    End If
+
+    For Index = 0 To Value.ControlCount - 1
+
+        Item = Value.Controls[Index]
+
+        If (Pointer_X() >= Item.X And Pointer_X() < Item.X + Item.Width And
+            Pointer_Y() >= Item.Y And Pointer_Y() < Item.Y + Item.Height) Then
+            ReturnValue = Item.Action
+
+            Return ReturnValue
+        End If
+
+    End For
+
+    Return 0
+
+End Function
+
+Public Sub Button(ByRef Value As State, Action As Number, X As Number, Y As Number,
+    Width As Number, Label As Text, Optional Selected As Boolean = False)
+
+    Dim ColorValue As Number
+    Dim Index As Number
+
+    ColorValue = RGB(29, 48, 65)
+
+    If Selected Then
+        ColorValue = RGB(22, 106, 119)
+    End If
+
+    Fill Rectangle X, Y, Width, 26, ColorValue
+    Draw Text Label At X + 7, Y + 5 Size 14 Color WHITE
+    Index = Value.ControlCount
+    Value.Controls[Index].X = X
+    Value.Controls[Index].Y = Y
+    Value.Controls[Index].Width = Width
+    Value.Controls[Index].Height = 26
+    Value.Controls[Index].Action = Action
+    Value.ControlCount = Index + 1
+
+End Sub
+
+Private Sub Library(ByRef Value As State, X As Number)
+
+    Dim Index As Number
+    Dim Row As Number
+    Dim Matching As Number
+    Dim Shape As Catalog.Template
+    Dim Rows As Number
+
+    Call Button(Value, 1, X, 206, 91, "Buildings", Value.Category = 1)
+    Call Button(Value, 2, X + 96, 206, 91, "Surfaces", Value.Category = 2)
+    Call Button(Value, 3, X + 192, 206, 91, "Decor", Value.Category = 3)
+
+    If Value.Category = 2 Then
+
+        Call Button(Value, 40, X, 240, 91, "Ground", Value.Surface = 1)
+        Call Button(Value, 41, X + 96, 240, 91, "Road", Value.Surface = 3)
+        Call Button(Value, 42, X + 192, 240, 91, "Water", Value.Surface = 2)
+        Call Button(Value, 12, X, 274, 91, "Line", Value.Tool = 12)
+        Call Button(Value, 13, X + 96, 274, 91, "Rectangle", Value.Tool = 13)
+        Call Button(Value, 14, X + 192, 274, 91, "Erase", Value.Tool = 14)
+        Call Button(Value, 44, X, 314, 34, "-")
+        Call Button(Value, 45, X + 248, 314, 34, "+")
+
+        Draw Text "Line Width: " + NumberLabel(Value.Width * 2) + " m" At X + 45, 321 Size 14 Color WHITE
+        Draw Text "Click the start, then the end." At X, 350 Size 14 Color WHITE
+        Draw Text "Esc cancels the preview." At X, 372 Size 14 Color WHITE
+        Draw Text "Erase restores grass." At X, 394 Size 14 Color WHITE
+
+    Else
+
+        Call Button(Value, 10, X, 240, 139, "Select / Move", Value.Tool = 10)
+        Call Button(Value, 11, X + 144, 240, 139, "Place Copy", Value.Tool = 11)
+        Call Button(Value, 20, X, 274, 60, "Prev")
+        Call Button(Value, 21, X + 223, 274, 60, "Next")
+
+        Draw Text "Palette" At X + 108, 281 Size 14 Color WHITE
+        Rows = Max(2, Min(9, (Window_Height() - 570) / 28))
+
+        For Index = 0 To Catalog.TEMPLATE_COUNT - 1
+
+            Shape = Catalog.TemplateAt(Index)
+
+            If Shape.Category = Value.Category Then
+
+                If Matching >= Value.Page * Rows And Row < Rows Then
+                    Call Button(Value, 100 + Index, X, 312 + Row * 28, 283,
+                        Shape.Label, Value.Template = Index)
+
+                    Row = Row + 1
+                End If
+
+                Matching = Matching + 1
+
+            End If
+
+        End For
+
+        Call Button(Value, 22, X, 316 + Rows * 28, 91, "Rotate -15")
+        Call Button(Value, 23, X + 96, 316 + Rows * 28, 91, "Rotate +15")
+        Call Button(Value, 24, X + 192, 316 + Rows * 28, 91, "Delete")
+
+    End If
+
+End Sub
+
+Private Sub LightRow(ByRef Value As State, X As Number, Row As Number, Label As Text, Setting As Number)
+
+    Dim Y As Number
+
+    Y = 212 + Row * Min(32, Max(16, (Window_Height() - 510) / 7))
+    Draw Text Label At X, Y + 6 Size 14 Color WHITE
+
+    Call Button(Value, 200 + Row * 2, X + 170, Y, 30, "-")
+    Call Button(Value, 201 + Row * 2, X + 252, Y, 30, "+")
+
+    Draw Text NumberLabel(Setting) At X + 207, Y + 6 Size 14 Color RGB(70, 225, 220)
+
+End Sub
+
+Public Sub Draw(ByRef Value As State, ByRef Town As Document.State, SelectedCount As Number)
+
+    Dim X As Number
+    Dim LightBottom As Number
+    Dim FileStep As Number
+
+    X = LeftEdge() + 10
+    LightBottom = 212 + 7 * Min(32, Max(16, (Window_Height() - 510) / 7))
+    FileStep = Min(34, Max(26, (Window_Height() - 455) / 7))
+    Value.ControlCount = 0
+    Fill Rectangle X - 10, 128, 306, Max(0, Window_Height() - 298), RGB(12, 23, 36)
+    Draw Text "Town Editor" At X, 138 Size 21 Color WHITE
+
+    Call Button(Value, 400, X + 222, 136, 62, "Done")
+    Call Button(Value, 50, X, 174, 91, "Items", Value.Section = 0)
+    Call Button(Value, 51, X + 96, 174, 91, "Sun", Value.Section = 1)
+    Call Button(Value, 52, X + 192, 174, 91, "Files", Value.Section = 2)
+
+    If Value.Section = 0 Then
+
+        Call Library(Value, X)
+
+    Else If Value.Section = 1 Then
+
+        Call LightRow(Value, X, 0, "Sun Red", Town.Light.RedValue)
+        Call LightRow(Value, X, 1, "Sun Green", Town.Light.GreenValue)
+        Call LightRow(Value, X, 2, "Sun Blue", Town.Light.BlueValue)
+        Call LightRow(Value, X, 3, "Intensity %", Town.Light.Intensity)
+        Call LightRow(Value, X, 4, "Ambient %", Town.Light.Ambient)
+        Call LightRow(Value, X, 5, "Azimuth", ToNumber(Town.Light.Azimuth))
+        Call LightRow(Value, X, 6, "Elevation", ToNumber(Town.Light.Elevation))
+        Call Button(Value, 220, X, LightBottom, 283, "Shadows", Town.Light.Shadows)
+        Call Button(Value, 221, X, LightBottom + 32, 139, "Day")
+        Call Button(Value, 222, X + 144, LightBottom + 32, 139, "Night")
+
+    Else
+
+        Call Button(Value, 300, X, 212 + 0 * FileStep, 283, "Save For Viewer")
+        Call Button(Value, 301, X, 212 + 1 * FileStep, 283, "Save To Blender")
+        Call Button(Value, 302, X, 212 + 2 * FileStep, 283, "Save New Version")
+        Call Button(Value, 303, X, 212 + 3 * FileStep, 283, "New Town / Environment")
+        Call Button(Value, 304, X, 212 + 4 * FileStep, 283, "New Linked World")
+        Call Button(Value, 305, X, 212 + 5 * FileStep, 283, "Open Town / Environment")
+        Call Button(Value, 306, X, 212 + 6 * FileStep, 283, "Open Linked World")
+
+    End If
+
+    Draw Text Text_Slice(Town.Name, 0, 30) At X, Window_Height() - 227 Size 14 Color WHITE
+    Draw Text NumberLabel(SelectedCount) + " selected" At X, Window_Height() - 205 Size 13 Color RGB(70, 225, 220)
+    Draw Text Text_Slice(Value.Message, 0, 39) At X, Window_Height() - 183 Size 12 Color RGB(240, 205, 140)
+
+    If Value.Busy Then
+        Fill Rectangle X, Window_Height() - 169, 283, 4, RGB(29, 48, 65)
+        Fill Rectangle X, Window_Height() - 169, 283 * Max(0, Min(100, Value.ProgressPercent)) / 100, 4, RGB(70, 225, 220)
+    End If
+
+End Sub
+
+End Module

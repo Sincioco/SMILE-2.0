@@ -36,6 +36,19 @@ function renderer3DDouble(command, resource, ...values) {
         renderer3DClearPendingCamera();
         return 1;
     }
+    if (command === 8) {
+        if (!Number.isInteger(a) || !values.slice(1, 4).every(value => Math.abs(value) <= 1000000)) {
+            renderer3DLastError = 5; return 0;
+        }
+        const mesh = renderer3DRequireMesh(resource);
+        if (!mesh || a < 0 || a >= mesh.vertexCount) { renderer3DLastError = 5; return 0; }
+        if (mesh.inFlight) { renderer3DLastError = 53; return 0; }
+        mesh.vertices[a * 20] = Math.fround(b);
+        mesh.vertices[a * 20 + 1] = Math.fround(c);
+        mesh.vertices[a * 20 + 2] = Math.fround(d);
+        mesh.committed = false;
+        return 1;
+    }
     if (command === 7) {
         if (!values.slice(3, 8).every(value => Number.isInteger(value) && Math.abs(value) <= 1000000)) {
             renderer3DLastError = 43; return 0;

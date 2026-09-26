@@ -1,0 +1,4415 @@
+''' Generated from the saved Blender catalog. Data only; no input or renderer ownership.
+Module Smile.Tools.TownCatalogData
+
+Option Explicit
+
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Tools.TownDocument As Document
+
+Public Const FINGERPRINT = "a0be1e73b6bd14876474e016d063eb257fd031c2de7ad2a332cbac25d8541d9d"
+Public Const CHUNK_COUNT = 30
+Public Const TEMPLATE_COUNT = 35
+Public Const INITIAL_ITEMS = 358
+
+Public Type Template
+    Label As Text
+    Category As Number
+    Low As P.Vector3
+    High As P.Vector3
+    PartCount As Number
+    Parts[32] As Number
+    SolidCount As Number
+    CameraCount As Number
+    StepCount As Number
+    DoorCount As Number
+    WaterCount As Number
+End Type
+
+Public Function TemplateAt(Index As Number) As Template
+
+    Dim Result As Template
+
+    Select Case Index
+        Case 0
+            Result.Label = "Courtyard Cottage"
+            Result.Category = 1
+            Result.Low = P.Vector(-41.969995, -0.000000, -43.050041)
+            Result.High = P.Vector(41.969881, 71.400003, 36.969895)
+            Result.PartCount = 14
+            Result.SolidCount = 20
+            Result.CameraCount = 1
+            Result.StepCount = 1
+            Result.DoorCount = 1
+            Result.WaterCount = 0
+            Result.Parts[0] = 132
+            Result.Parts[1] = 225
+            Result.Parts[2] = 182
+            Result.Parts[3] = 228
+            Result.Parts[4] = 229
+            Result.Parts[5] = 233
+            Result.Parts[6] = 275
+            Result.Parts[7] = 281
+            Result.Parts[8] = 294
+            Result.Parts[9] = 315
+            Result.Parts[10] = 334
+            Result.Parts[11] = 19
+            Result.Parts[12] = 83
+            Result.Parts[13] = 134
+
+        Case 1
+            Result.Label = "Family House"
+            Result.Category = 1
+            Result.Low = P.Vector(-48.970118, -0.000000, -48.049927)
+            Result.High = P.Vector(48.970003, 95.400000, 41.970015)
+            Result.PartCount = 14
+            Result.SolidCount = 20
+            Result.CameraCount = 1
+            Result.StepCount = 1
+            Result.DoorCount = 1
+            Result.WaterCount = 0
+            Result.Parts[0] = 197
+            Result.Parts[1] = 198
+            Result.Parts[2] = 208
+            Result.Parts[3] = 209
+            Result.Parts[4] = 211
+            Result.Parts[5] = 214
+            Result.Parts[6] = 256
+            Result.Parts[7] = 265
+            Result.Parts[8] = 274
+            Result.Parts[9] = 316
+            Result.Parts[10] = 335
+            Result.Parts[11] = 354
+            Result.Parts[12] = 365
+            Result.Parts[13] = 478
+
+        Case 2
+            Result.Label = "Garden Pavilion"
+            Result.Category = 1
+            Result.Low = P.Vector(-39.199834, -0.000000, -47.049966)
+            Result.High = P.Vector(39.200022, 89.000006, 39.199901)
+            Result.PartCount = 17
+            Result.SolidCount = 20
+            Result.CameraCount = 2
+            Result.StepCount = 1
+            Result.DoorCount = 1
+            Result.WaterCount = 0
+            Result.Parts[0] = 210
+            Result.Parts[1] = 217
+            Result.Parts[2] = 218
+            Result.Parts[3] = 226
+            Result.Parts[4] = 99
+            Result.Parts[5] = 227
+            Result.Parts[6] = 276
+            Result.Parts[7] = 277
+            Result.Parts[8] = 295
+            Result.Parts[9] = 314
+            Result.Parts[10] = 317
+            Result.Parts[11] = 318
+            Result.Parts[12] = 336
+            Result.Parts[13] = 398
+            Result.Parts[14] = 452
+            Result.Parts[15] = 3
+            Result.Parts[16] = 479
+
+        Case 3
+            Result.Label = "Estate House"
+            Result.Category = 1
+            Result.Low = P.Vector(-89.799986, -0.000000, -80.999928)
+            Result.High = P.Vector(89.800005, 177.539997, 65.699949)
+            Result.PartCount = 15
+            Result.SolidCount = 39
+            Result.CameraCount = 1
+            Result.StepCount = 4
+            Result.DoorCount = 1
+            Result.WaterCount = 0
+            Result.Parts[0] = 199
+            Result.Parts[1] = 255
+            Result.Parts[2] = 289
+            Result.Parts[3] = 133
+            Result.Parts[4] = 343
+            Result.Parts[5] = 355
+            Result.Parts[6] = 361
+            Result.Parts[7] = 379
+            Result.Parts[8] = 384
+            Result.Parts[9] = 388
+            Result.Parts[10] = 391
+            Result.Parts[11] = 407
+            Result.Parts[12] = 200
+            Result.Parts[13] = 221
+            Result.Parts[14] = 465
+
+        Case 4
+            Result.Label = "Middle Class House"
+            Result.Category = 1
+            Result.Low = P.Vector(-55.699997, -0.000000, -65.999875)
+            Result.High = P.Vector(55.699873, 132.659998, 50.699997)
+            Result.PartCount = 14
+            Result.SolidCount = 37
+            Result.CameraCount = 1
+            Result.StepCount = 5
+            Result.DoorCount = 2
+            Result.WaterCount = 0
+            Result.Parts[0] = 244
+            Result.Parts[1] = 253
+            Result.Parts[2] = 288
+            Result.Parts[3] = 324
+            Result.Parts[4] = 325
+            Result.Parts[5] = 347
+            Result.Parts[6] = 350
+            Result.Parts[7] = 380
+            Result.Parts[8] = 387
+            Result.Parts[9] = 405
+            Result.Parts[10] = 408
+            Result.Parts[11] = 418
+            Result.Parts[12] = 421
+            Result.Parts[13] = 446
+
+        Case 5
+            Result.Label = "Small House"
+            Result.Category = 1
+            Result.Low = P.Vector(-45.699987, -0.000000, -56.000047)
+            Result.High = P.Vector(45.700035, 116.000004, 40.699978)
+            Result.PartCount = 14
+            Result.SolidCount = 34
+            Result.CameraCount = 1
+            Result.StepCount = 4
+            Result.DoorCount = 1
+            Result.WaterCount = 0
+            Result.Parts[0] = 246
+            Result.Parts[1] = 258
+            Result.Parts[2] = 290
+            Result.Parts[3] = 332
+            Result.Parts[4] = 351
+            Result.Parts[5] = 363
+            Result.Parts[6] = 381
+            Result.Parts[7] = 385
+            Result.Parts[8] = 389
+            Result.Parts[9] = 406
+            Result.Parts[10] = 409
+            Result.Parts[11] = 419
+            Result.Parts[12] = 422
+            Result.Parts[13] = 466
+
+        Case 6
+            Result.Label = "Old Castle"
+            Result.Category = 1
+            Result.Low = P.Vector(-4.371949, 0.851746, -4.903260)
+            Result.High = P.Vector(4.355775, 8.114929, 4.830323)
+            Result.PartCount = 28
+            Result.SolidCount = 1
+            Result.CameraCount = 1
+            Result.StepCount = 0
+            Result.DoorCount = 0
+            Result.WaterCount = 0
+            Result.Parts[0] = 480
+            Result.Parts[1] = 481
+            Result.Parts[2] = 496
+            Result.Parts[3] = 497
+            Result.Parts[4] = 512
+            Result.Parts[5] = 513
+            Result.Parts[6] = 528
+            Result.Parts[7] = 529
+            Result.Parts[8] = 544
+            Result.Parts[9] = 545
+            Result.Parts[10] = 560
+            Result.Parts[11] = 561
+            Result.Parts[12] = 576
+            Result.Parts[13] = 577
+            Result.Parts[14] = 592
+            Result.Parts[15] = 593
+            Result.Parts[16] = 608
+            Result.Parts[17] = 609
+            Result.Parts[18] = 624
+            Result.Parts[19] = 625
+            Result.Parts[20] = 640
+            Result.Parts[21] = 641
+            Result.Parts[22] = 656
+            Result.Parts[23] = 657
+            Result.Parts[24] = 672
+            Result.Parts[25] = 673
+            Result.Parts[26] = 688
+            Result.Parts[27] = 689
+
+        Case 7
+            Result.Label = "Military HQ"
+            Result.Category = 1
+            Result.Low = P.Vector(-390.000000, -2.000000, -350.000000)
+            Result.High = P.Vector(390.000000, 318.459988, 350.000000)
+            Result.PartCount = 15
+            Result.SolidCount = 32
+            Result.CameraCount = 56
+            Result.StepCount = 1
+            Result.DoorCount = 1
+            Result.WaterCount = 0
+            Result.Parts[0] = 196
+            Result.Parts[1] = 239
+            Result.Parts[2] = 291
+            Result.Parts[3] = 299
+            Result.Parts[4] = 115
+            Result.Parts[5] = 330
+            Result.Parts[6] = 337
+            Result.Parts[7] = 344
+            Result.Parts[8] = 360
+            Result.Parts[9] = 378
+            Result.Parts[10] = 386
+            Result.Parts[11] = 416
+            Result.Parts[12] = 423
+            Result.Parts[13] = 424
+            Result.Parts[14] = 116
+
+        Case 8
+            Result.Label = "Armor Shop"
+            Result.Category = 1
+            Result.Low = P.Vector(-66.550112, -0.050000, -56.299996)
+            Result.High = P.Vector(67.299948, 122.299995, 52.600112)
+            Result.PartCount = 22
+            Result.SolidCount = 57
+            Result.CameraCount = 1
+            Result.StepCount = 9
+            Result.DoorCount = 4
+            Result.WaterCount = 0
+            Result.Parts[0] = 65
+            Result.Parts[1] = 98
+            Result.Parts[2] = 114
+            Result.Parts[3] = 147
+            Result.Parts[4] = 163
+            Result.Parts[5] = 164
+            Result.Parts[6] = 165
+            Result.Parts[7] = 192
+            Result.Parts[8] = 230
+            Result.Parts[9] = 234
+            Result.Parts[10] = 149
+            Result.Parts[11] = 247
+            Result.Parts[12] = 264
+            Result.Parts[13] = 279
+            Result.Parts[14] = 292
+            Result.Parts[15] = 296
+            Result.Parts[16] = 301
+            Result.Parts[17] = 319
+            Result.Parts[18] = 342
+            Result.Parts[19] = 352
+            Result.Parts[20] = 392
+            Result.Parts[21] = 447
+
+        Case 9
+            Result.Label = "City Hall"
+            Result.Category = 1
+            Result.Low = P.Vector(-111.999998, 0.000000, -92.400017)
+            Result.High = P.Vector(111.999998, 189.400005, 81.499996)
+            Result.PartCount = 22
+            Result.SolidCount = 13
+            Result.CameraCount = 2
+            Result.StepCount = 10
+            Result.DoorCount = 2
+            Result.WaterCount = 0
+            Result.Parts[0] = 0
+            Result.Parts[1] = 49
+            Result.Parts[2] = 64
+            Result.Parts[3] = 80
+            Result.Parts[4] = 81
+            Result.Parts[5] = 97
+            Result.Parts[6] = 82
+            Result.Parts[7] = 144
+            Result.Parts[8] = 179
+            Result.Parts[9] = 224
+            Result.Parts[10] = 235
+            Result.Parts[11] = 2
+            Result.Parts[12] = 252
+            Result.Parts[13] = 263
+            Result.Parts[14] = 270
+            Result.Parts[15] = 285
+            Result.Parts[16] = 311
+            Result.Parts[17] = 320
+            Result.Parts[18] = 338
+            Result.Parts[19] = 364
+            Result.Parts[20] = 393
+            Result.Parts[21] = 467
+
+        Case 10
+            Result.Label = "Comm Tower"
+            Result.Category = 1
+            Result.Low = P.Vector(-65.527458, 0.000000, -59.600000)
+            Result.High = P.Vector(65.527458, 250.000000, 56.873755)
+            Result.PartCount = 15
+            Result.SolidCount = 7
+            Result.CameraCount = 32
+            Result.StepCount = 8
+            Result.DoorCount = 2
+            Result.WaterCount = 0
+            Result.Parts[0] = 32
+            Result.Parts[1] = 129
+            Result.Parts[2] = 145
+            Result.Parts[3] = 195
+            Result.Parts[4] = 278
+            Result.Parts[5] = 283
+            Result.Parts[6] = 287
+            Result.Parts[7] = 326
+            Result.Parts[8] = 327
+            Result.Parts[9] = 329
+            Result.Parts[10] = 333
+            Result.Parts[11] = 345
+            Result.Parts[12] = 348
+            Result.Parts[13] = 394
+            Result.Parts[14] = 468
+
+        Case 11
+            Result.Label = "Item Shop"
+            Result.Category = 1
+            Result.Low = P.Vector(-66.550112, 0.000000, -56.300020)
+            Result.High = P.Vector(66.550007, 122.299995, 52.082524)
+            Result.PartCount = 23
+            Result.SolidCount = 43
+            Result.CameraCount = 1
+            Result.StepCount = 9
+            Result.DoorCount = 4
+            Result.WaterCount = 0
+            Result.Parts[0] = 33
+            Result.Parts[1] = 128
+            Result.Parts[2] = 131
+            Result.Parts[3] = 148
+            Result.Parts[4] = 161
+            Result.Parts[5] = 176
+            Result.Parts[6] = 180
+            Result.Parts[7] = 193
+            Result.Parts[8] = 231
+            Result.Parts[9] = 236
+            Result.Parts[10] = 240
+            Result.Parts[11] = 245
+            Result.Parts[12] = 248
+            Result.Parts[13] = 250
+            Result.Parts[14] = 257
+            Result.Parts[15] = 269
+            Result.Parts[16] = 273
+            Result.Parts[17] = 280
+            Result.Parts[18] = 321
+            Result.Parts[19] = 339
+            Result.Parts[20] = 183
+            Result.Parts[21] = 395
+            Result.Parts[22] = 448
+
+        Case 12
+            Result.Label = "Weapon Shop"
+            Result.Category = 1
+            Result.Low = P.Vector(-66.550112, -0.050000, -56.300044)
+            Result.High = P.Vector(66.550007, 122.299995, 52.100039)
+            Result.PartCount = 22
+            Result.SolidCount = 50
+            Result.CameraCount = 1
+            Result.StepCount = 9
+            Result.DoorCount = 4
+            Result.WaterCount = 0
+            Result.Parts[0] = 48
+            Result.Parts[1] = 113
+            Result.Parts[2] = 130
+            Result.Parts[3] = 160
+            Result.Parts[4] = 162
+            Result.Parts[5] = 177
+            Result.Parts[6] = 181
+            Result.Parts[7] = 194
+            Result.Parts[8] = 232
+            Result.Parts[9] = 237
+            Result.Parts[10] = 241
+            Result.Parts[11] = 249
+            Result.Parts[12] = 251
+            Result.Parts[13] = 272
+            Result.Parts[14] = 282
+            Result.Parts[15] = 297
+            Result.Parts[16] = 309
+            Result.Parts[17] = 322
+            Result.Parts[18] = 340
+            Result.Parts[19] = 353
+            Result.Parts[20] = 396
+            Result.Parts[21] = 449
+
+        Case 13
+            Result.Label = "Royal Castle"
+            Result.Category = 1
+            Result.Low = P.Vector(-386.448555, -14.060316, -547.999992)
+            Result.High = P.Vector(386.448555, 588.650017, 320.000000)
+            Result.PartCount = 20
+            Result.SolidCount = 176
+            Result.CameraCount = 154
+            Result.StepCount = 119
+            Result.DoorCount = 1
+            Result.WaterCount = 1
+            Result.Parts[0] = 1
+            Result.Parts[1] = 16
+            Result.Parts[2] = 17
+            Result.Parts[3] = 96
+            Result.Parts[4] = 112
+            Result.Parts[5] = 178
+            Result.Parts[6] = 212
+            Result.Parts[7] = 216
+            Result.Parts[8] = 238
+            Result.Parts[9] = 243
+            Result.Parts[10] = 261
+            Result.Parts[11] = 298
+            Result.Parts[12] = 308
+            Result.Parts[13] = 310
+            Result.Parts[14] = 323
+            Result.Parts[15] = 331
+            Result.Parts[16] = 346
+            Result.Parts[17] = 362
+            Result.Parts[18] = 425
+            Result.Parts[19] = 426
+
+        Case 14
+            Result.Label = "Bench"
+            Result.Category = 3
+            Result.Low = P.Vector(-11.499904, 0.000000, -3.100034)
+            Result.High = P.Vector(11.500095, 12.500000, 3.899942)
+            Result.PartCount = 3
+            Result.SolidCount = 8
+            Result.CameraCount = 0
+            Result.StepCount = 0
+            Result.DoorCount = 0
+            Result.WaterCount = 0
+            Result.Parts[0] = 312
+            Result.Parts[1] = 349
+            Result.Parts[2] = 451
+
+        Case 15
+            Result.Label = "Crystal Lamp"
+            Result.Category = 3
+            Result.Low = P.Vector(-3.599904, 0.000000, -3.600021)
+            Result.High = P.Vector(3.600096, 44.570785, 3.599980)
+            Result.PartCount = 3
+            Result.SolidCount = 1
+            Result.CameraCount = 2
+            Result.StepCount = 0
+            Result.DoorCount = 0
+            Result.WaterCount = 0
+            Result.Parts[0] = 390
+            Result.Parts[1] = 453
+            Result.Parts[2] = 150
+
+        Case 16
+            Result.Label = "Flower Planter"
+            Result.Category = 3
+            Result.Low = P.Vector(-15.000000, 0.300000, -15.000000)
+            Result.High = P.Vector(15.000000, 11.253076, 15.000000)
+            Result.PartCount = 8
+            Result.SolidCount = 29
+            Result.CameraCount = 0
+            Result.StepCount = 0
+            Result.DoorCount = 0
+            Result.WaterCount = 0
+            Result.Parts[0] = 254
+            Result.Parts[1] = 259
+            Result.Parts[2] = 260
+            Result.Parts[3] = 262
+            Result.Parts[4] = 313
+            Result.Parts[5] = 328
+            Result.Parts[6] = 356
+            Result.Parts[7] = 417
+
+        Case 17
+            Result.Label = "Market Stall"
+            Result.Category = 3
+            Result.Low = P.Vector(-20.400000, 0.000000, -12.673093)
+            Result.High = P.Vector(20.400000, 31.860609, 12.673093)
+            Result.PartCount = 8
+            Result.SolidCount = 8
+            Result.CameraCount = 5
+            Result.StepCount = 0
+            Result.DoorCount = 0
+            Result.WaterCount = 0
+            Result.Parts[0] = 293
+            Result.Parts[1] = 341
+            Result.Parts[2] = 220
+            Result.Parts[3] = 358
+            Result.Parts[4] = 359
+            Result.Parts[5] = 427
+            Result.Parts[6] = 469
+            Result.Parts[7] = 470
+
+        Case 18
+            Result.Label = "Leafy Tree"
+            Result.Category = 3
+            Result.Low = P.Vector(-26.059792, -0.411583, -29.044349)
+            Result.High = P.Vector(29.240658, 56.127005, 28.645635)
+            Result.PartCount = 4
+            Result.SolidCount = 1
+            Result.CameraCount = 0
+            Result.StepCount = 0
+            Result.DoorCount = 0
+            Result.WaterCount = 0
+            Result.Parts[0] = 215
+            Result.Parts[1] = 219
+            Result.Parts[2] = 266
+            Result.Parts[3] = 286
+
+        Case 19
+            Result.Label = "Slender Tree"
+            Result.Category = 3
+            Result.Low = P.Vector(-27.225800, -0.411583, -27.990031)
+            Result.High = P.Vector(28.298943, 56.180882, 26.659205)
+            Result.PartCount = 4
+            Result.SolidCount = 1
+            Result.CameraCount = 0
+            Result.StepCount = 0
+            Result.DoorCount = 0
+            Result.WaterCount = 0
+            Result.Parts[0] = 213
+            Result.Parts[1] = 242
+            Result.Parts[2] = 267
+            Result.Parts[3] = 284
+
+        Case 20
+            Result.Label = "Fountain"
+            Result.Category = 3
+            Result.Low = P.Vector(-50.000000, 0.000000, -50.000000)
+            Result.High = P.Vector(50.000000, 43.000002, 50.000000)
+            Result.PartCount = 6
+            Result.SolidCount = 1
+            Result.CameraCount = 3
+            Result.StepCount = 0
+            Result.DoorCount = 0
+            Result.WaterCount = 1
+            Result.Parts[0] = 302
+            Result.Parts[1] = 372
+            Result.Parts[2] = 428
+            Result.Parts[3] = 454
+            Result.Parts[4] = 100
+            Result.Parts[5] = 471
+
+        Case 21
+            Result.Label = "Fountain"
+            Result.Category = 3
+            Result.Low = P.Vector(-50.000000, 0.000000, -50.000000)
+            Result.High = P.Vector(50.000000, 43.000002, 50.000000)
+            Result.PartCount = 6
+            Result.SolidCount = 1
+            Result.CameraCount = 3
+            Result.StepCount = 0
+            Result.DoorCount = 0
+            Result.WaterCount = 1
+            Result.Parts[0] = 303
+            Result.Parts[1] = 373
+            Result.Parts[2] = 429
+            Result.Parts[3] = 455
+            Result.Parts[4] = 460
+            Result.Parts[5] = 472
+
+        Case 22
+            Result.Label = "Fountain"
+            Result.Category = 3
+            Result.Low = P.Vector(-50.000000, 0.000000, -50.000000)
+            Result.High = P.Vector(50.000000, 43.000002, 50.000000)
+            Result.PartCount = 6
+            Result.SolidCount = 1
+            Result.CameraCount = 3
+            Result.StepCount = 0
+            Result.DoorCount = 0
+            Result.WaterCount = 1
+            Result.Parts[0] = 304
+            Result.Parts[1] = 374
+            Result.Parts[2] = 430
+            Result.Parts[3] = 456
+            Result.Parts[4] = 461
+            Result.Parts[5] = 473
+
+        Case 23
+            Result.Label = "Fountain"
+            Result.Category = 3
+            Result.Low = P.Vector(-50.000000, 0.000000, -50.000000)
+            Result.High = P.Vector(50.000000, 43.000002, 50.000000)
+            Result.PartCount = 6
+            Result.SolidCount = 1
+            Result.CameraCount = 3
+            Result.StepCount = 0
+            Result.DoorCount = 0
+            Result.WaterCount = 1
+            Result.Parts[0] = 305
+            Result.Parts[1] = 375
+            Result.Parts[2] = 431
+            Result.Parts[3] = 457
+            Result.Parts[4] = 462
+            Result.Parts[5] = 474
+
+        Case 24
+            Result.Label = "Fountain"
+            Result.Category = 3
+            Result.Low = P.Vector(-50.000000, 0.000000, -50.000000)
+            Result.High = P.Vector(50.000000, 43.000002, 50.000000)
+            Result.PartCount = 6
+            Result.SolidCount = 1
+            Result.CameraCount = 3
+            Result.StepCount = 0
+            Result.DoorCount = 0
+            Result.WaterCount = 1
+            Result.Parts[0] = 306
+            Result.Parts[1] = 376
+            Result.Parts[2] = 432
+            Result.Parts[3] = 458
+            Result.Parts[4] = 463
+            Result.Parts[5] = 475
+
+        Case 25
+            Result.Label = "Fountain"
+            Result.Category = 3
+            Result.Low = P.Vector(-50.000000, 0.000000, -50.000000)
+            Result.High = P.Vector(50.000000, 43.000002, 50.000000)
+            Result.PartCount = 6
+            Result.SolidCount = 1
+            Result.CameraCount = 3
+            Result.StepCount = 0
+            Result.DoorCount = 0
+            Result.WaterCount = 1
+            Result.Parts[0] = 307
+            Result.Parts[1] = 377
+            Result.Parts[2] = 433
+            Result.Parts[3] = 459
+            Result.Parts[4] = 464
+            Result.Parts[5] = 476
+
+        Case 26
+            Result.Label = "Kingdom Sign"
+            Result.Category = 3
+            Result.Low = P.Vector(-85.123997, -0.400000, -7.300000)
+            Result.High = P.Vector(85.123997, 82.250004, 7.300000)
+            Result.PartCount = 8
+            Result.SolidCount = 4
+            Result.CameraCount = 11
+            Result.StepCount = 0
+            Result.DoorCount = 0
+            Result.WaterCount = 0
+            Result.Parts[0] = 146
+            Result.Parts[1] = 268
+            Result.Parts[2] = 300
+            Result.Parts[3] = 357
+            Result.Parts[4] = 166
+            Result.Parts[5] = 397
+            Result.Parts[6] = 420
+            Result.Parts[7] = 450
+
+        Case 27
+            Result.Label = "Crystal Circle"
+            Result.Category = 3
+            Result.Low = P.Vector(-46.999998, 0.700000, -46.999998)
+            Result.High = P.Vector(46.999998, 34.500000, 46.999998)
+            Result.PartCount = 5
+            Result.SolidCount = 3
+            Result.CameraCount = 6
+            Result.StepCount = 0
+            Result.DoorCount = 0
+            Result.WaterCount = 0
+            Result.Parts[0] = 366
+            Result.Parts[1] = 399
+            Result.Parts[2] = 410
+            Result.Parts[3] = 434
+            Result.Parts[4] = 440
+
+        Case 28
+            Result.Label = "Crystal Circle"
+            Result.Category = 3
+            Result.Low = P.Vector(-46.999998, 0.700000, -46.999998)
+            Result.High = P.Vector(46.999998, 34.500000, 46.999998)
+            Result.PartCount = 5
+            Result.SolidCount = 3
+            Result.CameraCount = 6
+            Result.StepCount = 0
+            Result.DoorCount = 0
+            Result.WaterCount = 0
+            Result.Parts[0] = 367
+            Result.Parts[1] = 400
+            Result.Parts[2] = 411
+            Result.Parts[3] = 435
+            Result.Parts[4] = 441
+
+        Case 29
+            Result.Label = "Crystal Circle"
+            Result.Category = 3
+            Result.Low = P.Vector(-46.999998, 0.700000, -46.999998)
+            Result.High = P.Vector(46.999998, 34.500000, 46.999998)
+            Result.PartCount = 5
+            Result.SolidCount = 3
+            Result.CameraCount = 6
+            Result.StepCount = 0
+            Result.DoorCount = 0
+            Result.WaterCount = 0
+            Result.Parts[0] = 368
+            Result.Parts[1] = 401
+            Result.Parts[2] = 412
+            Result.Parts[3] = 436
+            Result.Parts[4] = 442
+
+        Case 30
+            Result.Label = "Crystal Circle"
+            Result.Category = 3
+            Result.Low = P.Vector(-46.999998, 0.700000, -46.999998)
+            Result.High = P.Vector(46.999998, 34.500000, 46.999998)
+            Result.PartCount = 5
+            Result.SolidCount = 3
+            Result.CameraCount = 6
+            Result.StepCount = 0
+            Result.DoorCount = 0
+            Result.WaterCount = 0
+            Result.Parts[0] = 369
+            Result.Parts[1] = 402
+            Result.Parts[2] = 413
+            Result.Parts[3] = 437
+            Result.Parts[4] = 443
+
+        Case 31
+            Result.Label = "Crystal Circle"
+            Result.Category = 3
+            Result.Low = P.Vector(-46.999998, 0.700000, -46.999998)
+            Result.High = P.Vector(46.999998, 34.500000, 46.999998)
+            Result.PartCount = 5
+            Result.SolidCount = 3
+            Result.CameraCount = 6
+            Result.StepCount = 0
+            Result.DoorCount = 0
+            Result.WaterCount = 0
+            Result.Parts[0] = 370
+            Result.Parts[1] = 403
+            Result.Parts[2] = 414
+            Result.Parts[3] = 438
+            Result.Parts[4] = 444
+
+        Case 32
+            Result.Label = "Crystal Circle"
+            Result.Category = 3
+            Result.Low = P.Vector(-46.999998, 0.700000, -46.999998)
+            Result.High = P.Vector(46.999998, 34.500000, 46.999998)
+            Result.PartCount = 5
+            Result.SolidCount = 3
+            Result.CameraCount = 6
+            Result.StepCount = 0
+            Result.DoorCount = 0
+            Result.WaterCount = 0
+            Result.Parts[0] = 371
+            Result.Parts[1] = 404
+            Result.Parts[2] = 415
+            Result.Parts[3] = 439
+            Result.Parts[4] = 445
+
+        Case 33
+            Result.Label = "Wayfinding Sign"
+            Result.Category = 3
+            Result.Low = P.Vector(-13.000000, 0.000000, -1.080061)
+            Result.High = P.Vector(13.000000, 30.000000, 1.000000)
+            Result.PartCount = 3
+            Result.SolidCount = 2
+            Result.CameraCount = 1
+            Result.StepCount = 0
+            Result.DoorCount = 0
+            Result.WaterCount = 0
+            Result.Parts[0] = 18
+            Result.Parts[1] = 382
+            Result.Parts[2] = 184
+
+        Case 34
+            Result.Label = "Wayfinding Sign"
+            Result.Category = 3
+            Result.Low = P.Vector(-13.000000, 0.000000, -1.080061)
+            Result.High = P.Vector(13.000000, 30.000000, 1.000000)
+            Result.PartCount = 3
+            Result.SolidCount = 2
+            Result.CameraCount = 1
+            Result.StepCount = 0
+            Result.DoorCount = 0
+            Result.WaterCount = 0
+            Result.Parts[0] = 271
+            Result.Parts[1] = 383
+            Result.Parts[2] = 477
+
+    End Select
+
+    Return Result
+
+End Function
+
+Public Function InitialItem(Index As Number) As Document.Item
+
+    Dim Result As Document.Item
+
+    Select Case Index
+        Case 0
+            Result.Identity = 1
+            Result.SourceIndex = 0
+            Result.Template = 0
+            Result.Category = 1
+            Result.Active = True
+            Result.Position = P.Vector(-2140.000000, 23.000000, -2470.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -90.000009
+
+        Case 1
+            Result.Identity = 2
+            Result.SourceIndex = 1
+            Result.Template = 0
+            Result.Category = 1
+            Result.Active = True
+            Result.Position = P.Vector(-1220.000000, 23.000000, -2470.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -90.000009
+
+        Case 2
+            Result.Identity = 3
+            Result.SourceIndex = 2
+            Result.Template = 0
+            Result.Category = 1
+            Result.Active = True
+            Result.Position = P.Vector(2320.000000, 23.000000, -730.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = 90.000009
+
+        Case 3
+            Result.Identity = 4
+            Result.SourceIndex = 3
+            Result.Template = 1
+            Result.Category = 1
+            Result.Active = True
+            Result.Position = P.Vector(-2140.000000, 23.000000, -1630.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -90.000009
+
+        Case 4
+            Result.Identity = 5
+            Result.SourceIndex = 4
+            Result.Template = 1
+            Result.Category = 1
+            Result.Active = True
+            Result.Position = P.Vector(-1220.000000, 23.000000, -1630.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -90.000009
+
+        Case 5
+            Result.Identity = 6
+            Result.SourceIndex = 5
+            Result.Template = 1
+            Result.Category = 1
+            Result.Active = True
+            Result.Position = P.Vector(2320.000000, 23.000000, 290.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = 90.000009
+
+        Case 6
+            Result.Identity = 7
+            Result.SourceIndex = 6
+            Result.Template = 2
+            Result.Category = 1
+            Result.Active = True
+            Result.Position = P.Vector(-2140.000000, 23.000000, -2890.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -90.000009
+
+        Case 7
+            Result.Identity = 8
+            Result.SourceIndex = 7
+            Result.Template = 2
+            Result.Category = 1
+            Result.Active = True
+            Result.Position = P.Vector(-1220.000000, 23.000000, -2890.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -90.000009
+
+        Case 8
+            Result.Identity = 9
+            Result.SourceIndex = 8
+            Result.Template = 3
+            Result.Category = 1
+            Result.Active = True
+            Result.Position = P.Vector(-2080.000000, 23.000000, -380.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -90.000009
+
+        Case 9
+            Result.Identity = 10
+            Result.SourceIndex = 9
+            Result.Template = 3
+            Result.Category = 1
+            Result.Active = True
+            Result.Position = P.Vector(-2080.000000, 23.000000, 40.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -90.000009
+
+        Case 10
+            Result.Identity = 11
+            Result.SourceIndex = 10
+            Result.Template = 3
+            Result.Category = 1
+            Result.Active = True
+            Result.Position = P.Vector(-2080.000000, 23.000000, 460.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -90.000009
+
+        Case 11
+            Result.Identity = 12
+            Result.SourceIndex = 11
+            Result.Template = 3
+            Result.Category = 1
+            Result.Active = True
+            Result.Position = P.Vector(-2080.000000, 23.000000, 880.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -90.000009
+
+        Case 12
+            Result.Identity = 13
+            Result.SourceIndex = 12
+            Result.Template = 3
+            Result.Category = 1
+            Result.Active = True
+            Result.Position = P.Vector(-1260.000000, 23.000000, -380.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -90.000009
+
+        Case 13
+            Result.Identity = 14
+            Result.SourceIndex = 13
+            Result.Template = 3
+            Result.Category = 1
+            Result.Active = True
+            Result.Position = P.Vector(-1260.000000, 23.000000, 40.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -90.000009
+
+        Case 14
+            Result.Identity = 15
+            Result.SourceIndex = 14
+            Result.Template = 3
+            Result.Category = 1
+            Result.Active = True
+            Result.Position = P.Vector(-1260.000000, 23.000000, 460.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -90.000009
+
+        Case 15
+            Result.Identity = 16
+            Result.SourceIndex = 15
+            Result.Template = 3
+            Result.Category = 1
+            Result.Active = True
+            Result.Position = P.Vector(-1260.000000, 23.000000, 880.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -90.000009
+
+        Case 16
+            Result.Identity = 17
+            Result.SourceIndex = 16
+            Result.Template = 4
+            Result.Category = 1
+            Result.Active = True
+            Result.Position = P.Vector(-2100.000000, 23.000000, -1420.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -90.000009
+
+        Case 17
+            Result.Identity = 18
+            Result.SourceIndex = 17
+            Result.Template = 4
+            Result.Category = 1
+            Result.Active = True
+            Result.Position = P.Vector(-2100.000000, 23.000000, -1840.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -90.000009
+
+        Case 18
+            Result.Identity = 19
+            Result.SourceIndex = 18
+            Result.Template = 4
+            Result.Category = 1
+            Result.Active = True
+            Result.Position = P.Vector(-2100.000000, 23.000000, -2260.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -90.000009
+
+        Case 19
+            Result.Identity = 20
+            Result.SourceIndex = 19
+            Result.Template = 4
+            Result.Category = 1
+            Result.Active = True
+            Result.Position = P.Vector(-2100.000000, 23.000000, -2680.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -90.000009
+
+        Case 20
+            Result.Identity = 21
+            Result.SourceIndex = 20
+            Result.Template = 4
+            Result.Category = 1
+            Result.Active = True
+            Result.Position = P.Vector(-2100.000000, 23.000000, -3100.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -90.000009
+
+        Case 21
+            Result.Identity = 22
+            Result.SourceIndex = 21
+            Result.Template = 4
+            Result.Category = 1
+            Result.Active = True
+            Result.Position = P.Vector(-1180.000000, 23.000000, -1420.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -90.000009
+
+        Case 22
+            Result.Identity = 23
+            Result.SourceIndex = 22
+            Result.Template = 4
+            Result.Category = 1
+            Result.Active = True
+            Result.Position = P.Vector(-1180.000000, 23.000000, -3100.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -90.000009
+
+        Case 23
+            Result.Identity = 24
+            Result.SourceIndex = 23
+            Result.Template = 4
+            Result.Category = 1
+            Result.Active = True
+            Result.Position = P.Vector(-1180.000000, 23.000000, -1840.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -90.000009
+
+        Case 24
+            Result.Identity = 25
+            Result.SourceIndex = 24
+            Result.Template = 4
+            Result.Category = 1
+            Result.Active = True
+            Result.Position = P.Vector(-1180.000000, 23.000000, -2260.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -90.000009
+
+        Case 25
+            Result.Identity = 26
+            Result.SourceIndex = 25
+            Result.Template = 4
+            Result.Category = 1
+            Result.Active = True
+            Result.Position = P.Vector(-1180.000000, 23.000000, -2680.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -90.000009
+
+        Case 26
+            Result.Identity = 27
+            Result.SourceIndex = 26
+            Result.Template = 5
+            Result.Category = 1
+            Result.Active = True
+            Result.Position = P.Vector(1190.000000, 23.000000, 800.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = 90.000009
+
+        Case 27
+            Result.Identity = 28
+            Result.SourceIndex = 27
+            Result.Template = 5
+            Result.Category = 1
+            Result.Active = True
+            Result.Position = P.Vector(1190.000000, 23.000000, 460.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = 90.000009
+
+        Case 28
+            Result.Identity = 29
+            Result.SourceIndex = 28
+            Result.Template = 5
+            Result.Category = 1
+            Result.Active = True
+            Result.Position = P.Vector(1190.000000, 23.000000, 120.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = 90.000009
+
+        Case 29
+            Result.Identity = 30
+            Result.SourceIndex = 29
+            Result.Template = 5
+            Result.Category = 1
+            Result.Active = True
+            Result.Position = P.Vector(1190.000000, 23.000000, -220.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = 90.000009
+
+        Case 30
+            Result.Identity = 31
+            Result.SourceIndex = 30
+            Result.Template = 5
+            Result.Category = 1
+            Result.Active = True
+            Result.Position = P.Vector(1190.000000, 23.000000, -560.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = 90.000009
+
+        Case 31
+            Result.Identity = 32
+            Result.SourceIndex = 31
+            Result.Template = 5
+            Result.Category = 1
+            Result.Active = True
+            Result.Position = P.Vector(1190.000000, 23.000000, -900.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = 90.000009
+
+        Case 32
+            Result.Identity = 33
+            Result.SourceIndex = 32
+            Result.Template = 5
+            Result.Category = 1
+            Result.Active = True
+            Result.Position = P.Vector(2130.000000, 23.000000, 800.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = 90.000009
+
+        Case 33
+            Result.Identity = 34
+            Result.SourceIndex = 33
+            Result.Template = 5
+            Result.Category = 1
+            Result.Active = True
+            Result.Position = P.Vector(2130.000000, 23.000000, 460.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = 90.000009
+
+        Case 34
+            Result.Identity = 35
+            Result.SourceIndex = 34
+            Result.Template = 5
+            Result.Category = 1
+            Result.Active = True
+            Result.Position = P.Vector(2130.000000, 23.000000, 120.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = 90.000009
+
+        Case 35
+            Result.Identity = 36
+            Result.SourceIndex = 35
+            Result.Template = 5
+            Result.Category = 1
+            Result.Active = True
+            Result.Position = P.Vector(2130.000000, 23.000000, -220.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = 90.000009
+
+        Case 36
+            Result.Identity = 37
+            Result.SourceIndex = 36
+            Result.Template = 5
+            Result.Category = 1
+            Result.Active = True
+            Result.Position = P.Vector(2130.000000, 23.000000, -560.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = 90.000009
+
+        Case 37
+            Result.Identity = 38
+            Result.SourceIndex = 37
+            Result.Template = 5
+            Result.Category = 1
+            Result.Active = True
+            Result.Position = P.Vector(2130.000000, 23.000000, -900.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = 90.000009
+
+        Case 38
+            Result.Identity = 39
+            Result.SourceIndex = 38
+            Result.Template = 6
+            Result.Category = 1
+            Result.Active = True
+            Result.Position = P.Vector(-3660.000000, -299.880013, 2260.000000)
+            Result.Scale = P.Vector(170000.000000, 170000.000000, 170000.000000)
+            Result.Yaw = -0.000000
+
+        Case 39
+            Result.Identity = 40
+            Result.SourceIndex = 39
+            Result.Template = 7
+            Result.Category = 1
+            Result.Active = True
+            Result.Position = P.Vector(1450.000000, 22.300000, 2420.000000)
+            Result.Scale = P.Vector(2000.000000, 2000.000000, 2000.000000)
+            Result.Yaw = -0.000000
+
+        Case 40
+            Result.Identity = 41
+            Result.SourceIndex = 40
+            Result.Template = 8
+            Result.Category = 1
+            Result.Active = True
+            Result.Position = P.Vector(1250.000000, 23.000000, -2600.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = 90.000009
+
+        Case 41
+            Result.Identity = 42
+            Result.SourceIndex = 41
+            Result.Template = 9
+            Result.Category = 1
+            Result.Active = True
+            Result.Position = P.Vector(0.000000, 22.600000, -750.000000)
+            Result.Scale = P.Vector(2000.000000, 2000.000000, 2000.000000)
+            Result.Yaw = -0.000000
+
+        Case 42
+            Result.Identity = 43
+            Result.SourceIndex = 42
+            Result.Template = 10
+            Result.Category = 1
+            Result.Active = True
+            Result.Position = P.Vector(0.000000, 22.600000, 375.000000)
+            Result.Scale = P.Vector(4000.000000, 4000.000000, 4000.000000)
+            Result.Yaw = -0.000000
+
+        Case 43
+            Result.Identity = 44
+            Result.SourceIndex = 43
+            Result.Template = 11
+            Result.Category = 1
+            Result.Active = True
+            Result.Position = P.Vector(1250.000000, 23.000000, -2080.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = 90.000009
+
+        Case 44
+            Result.Identity = 45
+            Result.SourceIndex = 44
+            Result.Template = 12
+            Result.Category = 1
+            Result.Active = True
+            Result.Position = P.Vector(1250.000000, 23.000000, -1560.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = 90.000009
+
+        Case 45
+            Result.Identity = 46
+            Result.SourceIndex = 45
+            Result.Template = 13
+            Result.Category = 1
+            Result.Active = True
+            Result.Position = P.Vector(-1160.000000, 22.520000, 2350.000000)
+            Result.Scale = P.Vector(2000.000000, 2000.000000, 2000.000000)
+            Result.Yaw = -0.000000
+
+        Case 46
+            Result.Identity = 47
+            Result.SourceIndex = 46
+            Result.Template = 14
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-2190.000000, 23.100000, -2990.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -90.000009
+
+        Case 47
+            Result.Identity = 48
+            Result.SourceIndex = 47
+            Result.Template = 14
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-2160.000000, 23.100000, -2140.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -90.000009
+
+        Case 48
+            Result.Identity = 49
+            Result.SourceIndex = 48
+            Result.Template = 14
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-2160.000000, 23.100000, -1240.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -90.000009
+
+        Case 49
+            Result.Identity = 50
+            Result.SourceIndex = 49
+            Result.Template = 14
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-2190.000000, 23.100000, 90.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -90.000009
+
+        Case 50
+            Result.Identity = 51
+            Result.SourceIndex = 50
+            Result.Template = 14
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-2190.000000, 23.100000, 890.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -90.000009
+
+        Case 51
+            Result.Identity = 52
+            Result.SourceIndex = 51
+            Result.Template = 14
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-2160.000000, 23.100000, 1300.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -90.000009
+
+        Case 52
+            Result.Identity = 53
+            Result.SourceIndex = 52
+            Result.Template = 14
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(2410.000000, 23.100000, -3020.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -90.000009
+
+        Case 53
+            Result.Identity = 54
+            Result.SourceIndex = 53
+            Result.Template = 14
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(2410.000000, 23.100000, -2140.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -90.000009
+
+        Case 54
+            Result.Identity = 55
+            Result.SourceIndex = 54
+            Result.Template = 14
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(2410.000000, 23.100000, -1240.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -90.000009
+
+        Case 55
+            Result.Identity = 56
+            Result.SourceIndex = 55
+            Result.Template = 14
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(2410.000000, 23.100000, 60.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -90.000009
+
+        Case 56
+            Result.Identity = 57
+            Result.SourceIndex = 56
+            Result.Template = 14
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(2410.000000, 23.100000, 980.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -90.000009
+
+        Case 57
+            Result.Identity = 58
+            Result.SourceIndex = 57
+            Result.Template = 14
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(2410.000000, 23.100000, 1300.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -90.000009
+
+        Case 58
+            Result.Identity = 59
+            Result.SourceIndex = 58
+            Result.Template = 14
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-260.000000, 23.100000, -1500.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -90.000009
+
+        Case 59
+            Result.Identity = 60
+            Result.SourceIndex = 59
+            Result.Template = 14
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(260.000000, 23.100000, -1500.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = 90.000009
+
+        Case 60
+            Result.Identity = 61
+            Result.SourceIndex = 60
+            Result.Template = 14
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-260.000000, 23.100000, -1850.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -90.000009
+
+        Case 61
+            Result.Identity = 62
+            Result.SourceIndex = 61
+            Result.Template = 14
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(260.000000, 23.100000, -1850.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = 90.000009
+
+        Case 62
+            Result.Identity = 63
+            Result.SourceIndex = 62
+            Result.Template = 14
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-2120.000000, 23.100000, -720.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = 179.999991
+
+        Case 63
+            Result.Identity = 64
+            Result.SourceIndex = 63
+            Result.Template = 14
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-1920.000000, 23.100000, -720.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = 179.999991
+
+        Case 64
+            Result.Identity = 65
+            Result.SourceIndex = 64
+            Result.Template = 14
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-2120.000000, 23.100000, -920.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -0.000000
+
+        Case 65
+            Result.Identity = 66
+            Result.SourceIndex = 65
+            Result.Template = 14
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-1920.000000, 23.100000, -920.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -0.000000
+
+        Case 66
+            Result.Identity = 67
+            Result.SourceIndex = 66
+            Result.Template = 14
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-1400.000000, 23.100000, -720.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = 179.999991
+
+        Case 67
+            Result.Identity = 68
+            Result.SourceIndex = 67
+            Result.Template = 14
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-1200.000000, 23.100000, -720.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = 179.999991
+
+        Case 68
+            Result.Identity = 69
+            Result.SourceIndex = 68
+            Result.Template = 14
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-1400.000000, 23.100000, -920.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -0.000000
+
+        Case 69
+            Result.Identity = 70
+            Result.SourceIndex = 69
+            Result.Template = 14
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-1200.000000, 23.100000, -920.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -0.000000
+
+        Case 70
+            Result.Identity = 71
+            Result.SourceIndex = 70
+            Result.Template = 14
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-260.000000, 23.100000, -2350.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -90.000009
+
+        Case 71
+            Result.Identity = 72
+            Result.SourceIndex = 71
+            Result.Template = 14
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(260.000000, 23.100000, -2350.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = 90.000009
+
+        Case 72
+            Result.Identity = 73
+            Result.SourceIndex = 72
+            Result.Template = 14
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-260.000000, 23.100000, -2950.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -90.000009
+
+        Case 73
+            Result.Identity = 74
+            Result.SourceIndex = 73
+            Result.Template = 14
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(260.000000, 23.100000, -2950.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = 90.000009
+
+        Case 74
+            Result.Identity = 75
+            Result.SourceIndex = 74
+            Result.Template = 14
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-1580.000000, 23.100000, -1670.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -90.000009
+
+        Case 75
+            Result.Identity = 76
+            Result.SourceIndex = 75
+            Result.Template = 14
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-1420.000000, 23.100000, -1670.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -90.000009
+
+        Case 76
+            Result.Identity = 77
+            Result.SourceIndex = 76
+            Result.Template = 14
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-1580.000000, 23.100000, -2430.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -90.000009
+
+        Case 77
+            Result.Identity = 78
+            Result.SourceIndex = 77
+            Result.Template = 14
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-1420.000000, 23.100000, -2430.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -90.000009
+
+        Case 78
+            Result.Identity = 79
+            Result.SourceIndex = 78
+            Result.Template = 14
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-1580.000000, 23.100000, -2870.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -90.000009
+
+        Case 79
+            Result.Identity = 80
+            Result.SourceIndex = 79
+            Result.Template = 14
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-1420.000000, 23.100000, -2870.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -90.000009
+
+        Case 80
+            Result.Identity = 81
+            Result.SourceIndex = 80
+            Result.Template = 14
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(1420.000000, 23.100000, 500.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -90.000009
+
+        Case 81
+            Result.Identity = 82
+            Result.SourceIndex = 81
+            Result.Template = 14
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(1580.000000, 23.100000, 500.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -90.000009
+
+        Case 82
+            Result.Identity = 83
+            Result.SourceIndex = 82
+            Result.Template = 14
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(1420.000000, 23.100000, -540.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -90.000009
+
+        Case 83
+            Result.Identity = 84
+            Result.SourceIndex = 83
+            Result.Template = 14
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(1580.000000, 23.100000, -540.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -90.000009
+
+        Case 84
+            Result.Identity = 85
+            Result.SourceIndex = 84
+            Result.Template = 14
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(2060.000000, 23.100000, -1800.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -90.000009
+
+        Case 85
+            Result.Identity = 86
+            Result.SourceIndex = 85
+            Result.Template = 14
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(2220.000000, 23.100000, -1800.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -90.000009
+
+        Case 86
+            Result.Identity = 87
+            Result.SourceIndex = 86
+            Result.Template = 14
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(2060.000000, 23.100000, -2820.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -90.000009
+
+        Case 87
+            Result.Identity = 88
+            Result.SourceIndex = 87
+            Result.Template = 14
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(2220.000000, 23.100000, -2820.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -90.000009
+
+        Case 88
+            Result.Identity = 89
+            Result.SourceIndex = 88
+            Result.Template = 14
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(1200.000000, 23.100000, -3010.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -90.000009
+
+        Case 89
+            Result.Identity = 90
+            Result.SourceIndex = 89
+            Result.Template = 14
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(1360.000000, 23.100000, -3010.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -90.000009
+
+        Case 90
+            Result.Identity = 91
+            Result.SourceIndex = 90
+            Result.Template = 14
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(1420.000000, 23.100000, -1810.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -90.000009
+
+        Case 91
+            Result.Identity = 92
+            Result.SourceIndex = 91
+            Result.Template = 14
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(1580.000000, 23.100000, -1810.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -90.000009
+
+        Case 92
+            Result.Identity = 93
+            Result.SourceIndex = 92
+            Result.Template = 14
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-210.000000, 23.100000, -2980.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -90.000009
+
+        Case 93
+            Result.Identity = 94
+            Result.SourceIndex = 93
+            Result.Template = 14
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-240.000000, 23.100000, -2520.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -90.000009
+
+        Case 94
+            Result.Identity = 95
+            Result.SourceIndex = 94
+            Result.Template = 14
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-210.000000, 23.100000, -2160.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -90.000009
+
+        Case 95
+            Result.Identity = 96
+            Result.SourceIndex = 95
+            Result.Template = 14
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-240.000000, 23.100000, -1400.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -90.000009
+
+        Case 96
+            Result.Identity = 97
+            Result.SourceIndex = 96
+            Result.Template = 14
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(210.000000, 23.100000, -2980.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = 90.000009
+
+        Case 97
+            Result.Identity = 98
+            Result.SourceIndex = 97
+            Result.Template = 14
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(240.000000, 23.100000, -2520.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = 90.000009
+
+        Case 98
+            Result.Identity = 99
+            Result.SourceIndex = 98
+            Result.Template = 14
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(210.000000, 23.100000, -2160.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = 90.000009
+
+        Case 99
+            Result.Identity = 100
+            Result.SourceIndex = 99
+            Result.Template = 14
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(240.000000, 23.100000, -1400.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = 90.000009
+
+        Case 100
+            Result.Identity = 101
+            Result.SourceIndex = 100
+            Result.Template = 15
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-2190.000000, 22.800000, -3020.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -90.000009
+
+        Case 101
+            Result.Identity = 102
+            Result.SourceIndex = 101
+            Result.Template = 15
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-2190.000000, 22.800000, -2140.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -90.000009
+
+        Case 102
+            Result.Identity = 103
+            Result.SourceIndex = 102
+            Result.Template = 15
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-2190.000000, 22.800000, -1240.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -90.000009
+
+        Case 103
+            Result.Identity = 104
+            Result.SourceIndex = 103
+            Result.Template = 15
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-2190.000000, 22.800000, 60.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -90.000009
+
+        Case 104
+            Result.Identity = 105
+            Result.SourceIndex = 104
+            Result.Template = 15
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-2190.000000, 22.800000, 1010.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -90.000009
+
+        Case 105
+            Result.Identity = 106
+            Result.SourceIndex = 105
+            Result.Template = 15
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-2190.000000, 22.800000, 1300.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -90.000009
+
+        Case 106
+            Result.Identity = 107
+            Result.SourceIndex = 106
+            Result.Template = 15
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(2380.000000, 22.800000, -3020.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -90.000009
+
+        Case 107
+            Result.Identity = 108
+            Result.SourceIndex = 107
+            Result.Template = 15
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(2380.000000, 22.800000, -2140.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -90.000009
+
+        Case 108
+            Result.Identity = 109
+            Result.SourceIndex = 108
+            Result.Template = 15
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(2380.000000, 22.800000, -1240.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -90.000009
+
+        Case 109
+            Result.Identity = 110
+            Result.SourceIndex = 109
+            Result.Template = 15
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(2380.000000, 22.800000, 60.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -90.000009
+
+        Case 110
+            Result.Identity = 111
+            Result.SourceIndex = 110
+            Result.Template = 15
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(2380.000000, 22.800000, 1010.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -90.000009
+
+        Case 111
+            Result.Identity = 112
+            Result.SourceIndex = 111
+            Result.Template = 15
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(2380.000000, 22.800000, 1300.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -90.000009
+
+        Case 112
+            Result.Identity = 113
+            Result.SourceIndex = 112
+            Result.Template = 15
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-2180.000000, 22.800000, -820.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -0.000000
+
+        Case 113
+            Result.Identity = 114
+            Result.SourceIndex = 113
+            Result.Template = 15
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-1860.000000, 22.800000, -820.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -0.000000
+
+        Case 114
+            Result.Identity = 115
+            Result.SourceIndex = 114
+            Result.Template = 15
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-1460.000000, 22.800000, -820.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -0.000000
+
+        Case 115
+            Result.Identity = 116
+            Result.SourceIndex = 115
+            Result.Template = 15
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-1140.000000, 22.800000, -820.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -0.000000
+
+        Case 116
+            Result.Identity = 117
+            Result.SourceIndex = 116
+            Result.Template = 15
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-100.000000, 22.800000, -1380.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -0.000000
+
+        Case 117
+            Result.Identity = 118
+            Result.SourceIndex = 117
+            Result.Template = 15
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(100.000000, 22.800000, -1380.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -0.000000
+
+        Case 118
+            Result.Identity = 119
+            Result.SourceIndex = 118
+            Result.Template = 15
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-100.000000, 22.800000, -1500.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -0.000000
+
+        Case 119
+            Result.Identity = 120
+            Result.SourceIndex = 119
+            Result.Template = 15
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(100.000000, 22.800000, -1500.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -0.000000
+
+        Case 120
+            Result.Identity = 121
+            Result.SourceIndex = 120
+            Result.Template = 15
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-100.000000, 22.800000, -2100.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -0.000000
+
+        Case 121
+            Result.Identity = 122
+            Result.SourceIndex = 121
+            Result.Template = 15
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(100.000000, 22.800000, -2100.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -0.000000
+
+        Case 122
+            Result.Identity = 123
+            Result.SourceIndex = 122
+            Result.Template = 15
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-100.000000, 22.800000, -2500.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -0.000000
+
+        Case 123
+            Result.Identity = 124
+            Result.SourceIndex = 123
+            Result.Template = 15
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(100.000000, 22.800000, -2500.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -0.000000
+
+        Case 124
+            Result.Identity = 125
+            Result.SourceIndex = 124
+            Result.Template = 15
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-100.000000, 22.800000, -3060.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -0.000000
+
+        Case 125
+            Result.Identity = 126
+            Result.SourceIndex = 125
+            Result.Template = 15
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(100.000000, 22.800000, -3060.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -0.000000
+
+        Case 126
+            Result.Identity = 127
+            Result.SourceIndex = 126
+            Result.Template = 15
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-1500.000000, 22.800000, -1750.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -0.000000
+
+        Case 127
+            Result.Identity = 128
+            Result.SourceIndex = 127
+            Result.Template = 15
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-1500.000000, 22.800000, -2510.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -0.000000
+
+        Case 128
+            Result.Identity = 129
+            Result.SourceIndex = 128
+            Result.Template = 15
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-1500.000000, 22.800000, -2950.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -0.000000
+
+        Case 129
+            Result.Identity = 130
+            Result.SourceIndex = 129
+            Result.Template = 15
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(1500.000000, 22.800000, 420.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -0.000000
+
+        Case 130
+            Result.Identity = 131
+            Result.SourceIndex = 130
+            Result.Template = 15
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(1500.000000, 22.800000, -620.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -0.000000
+
+        Case 131
+            Result.Identity = 132
+            Result.SourceIndex = 131
+            Result.Template = 15
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(2140.000000, 22.800000, -1880.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -0.000000
+
+        Case 132
+            Result.Identity = 133
+            Result.SourceIndex = 132
+            Result.Template = 15
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(2140.000000, 22.800000, -2900.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -0.000000
+
+        Case 133
+            Result.Identity = 134
+            Result.SourceIndex = 133
+            Result.Template = 15
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(1280.000000, 22.800000, -3090.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -0.000000
+
+        Case 134
+            Result.Identity = 135
+            Result.SourceIndex = 134
+            Result.Template = 15
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(1500.000000, 22.800000, -1890.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -0.000000
+
+        Case 135
+            Result.Identity = 136
+            Result.SourceIndex = 135
+            Result.Template = 15
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-800.000000, 22.800000, -1040.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -0.000000
+
+        Case 136
+            Result.Identity = 137
+            Result.SourceIndex = 136
+            Result.Template = 15
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-800.000000, 22.800000, -1610.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -0.000000
+
+        Case 137
+            Result.Identity = 138
+            Result.SourceIndex = 137
+            Result.Template = 15
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-800.000000, 22.800000, -2710.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -0.000000
+
+        Case 138
+            Result.Identity = 139
+            Result.SourceIndex = 138
+            Result.Template = 15
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-800.000000, 22.800000, 990.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -0.000000
+
+        Case 139
+            Result.Identity = 140
+            Result.SourceIndex = 139
+            Result.Template = 15
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(800.000000, 22.800000, -1040.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -0.000000
+
+        Case 140
+            Result.Identity = 141
+            Result.SourceIndex = 140
+            Result.Template = 15
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(800.000000, 22.800000, -1610.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -0.000000
+
+        Case 141
+            Result.Identity = 142
+            Result.SourceIndex = 141
+            Result.Template = 15
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(800.000000, 22.800000, -2710.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -0.000000
+
+        Case 142
+            Result.Identity = 143
+            Result.SourceIndex = 142
+            Result.Template = 15
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(800.000000, 22.800000, 990.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -0.000000
+
+        Case 143
+            Result.Identity = 144
+            Result.SourceIndex = 143
+            Result.Template = 15
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-1280.000000, 22.800000, 1200.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -0.000000
+
+        Case 144
+            Result.Identity = 145
+            Result.SourceIndex = 144
+            Result.Template = 15
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-1040.000000, 22.800000, 1200.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -0.000000
+
+        Case 145
+            Result.Identity = 146
+            Result.SourceIndex = 145
+            Result.Template = 16
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-2090.000000, 22.800000, -690.000000)
+            Result.Scale = P.Vector(649.999976, 649.999976, 649.999976)
+            Result.Yaw = -0.000000
+
+        Case 146
+            Result.Identity = 147
+            Result.SourceIndex = 146
+            Result.Template = 16
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-1950.000000, 22.800000, -690.000000)
+            Result.Scale = P.Vector(649.999976, 649.999976, 649.999976)
+            Result.Yaw = -0.000000
+
+        Case 147
+            Result.Identity = 148
+            Result.SourceIndex = 147
+            Result.Template = 16
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-2090.000000, 22.800000, -890.000000)
+            Result.Scale = P.Vector(649.999976, 649.999976, 649.999976)
+            Result.Yaw = -0.000000
+
+        Case 148
+            Result.Identity = 149
+            Result.SourceIndex = 148
+            Result.Template = 16
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-1890.000000, 22.800000, -890.000000)
+            Result.Scale = P.Vector(649.999976, 649.999976, 649.999976)
+            Result.Yaw = -0.000000
+
+        Case 149
+            Result.Identity = 150
+            Result.SourceIndex = 149
+            Result.Template = 16
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-1370.000000, 22.800000, -690.000000)
+            Result.Scale = P.Vector(649.999976, 649.999976, 649.999976)
+            Result.Yaw = -0.000000
+
+        Case 150
+            Result.Identity = 151
+            Result.SourceIndex = 150
+            Result.Template = 16
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-1170.000000, 22.800000, -690.000000)
+            Result.Scale = P.Vector(649.999976, 649.999976, 649.999976)
+            Result.Yaw = -0.000000
+
+        Case 151
+            Result.Identity = 152
+            Result.SourceIndex = 151
+            Result.Template = 16
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-1370.000000, 22.800000, -890.000000)
+            Result.Scale = P.Vector(649.999976, 649.999976, 649.999976)
+            Result.Yaw = -0.000000
+
+        Case 152
+            Result.Identity = 153
+            Result.SourceIndex = 152
+            Result.Template = 16
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-1170.000000, 22.800000, -890.000000)
+            Result.Scale = P.Vector(649.999976, 649.999976, 649.999976)
+            Result.Yaw = -0.000000
+
+        Case 153
+            Result.Identity = 154
+            Result.SourceIndex = 153
+            Result.Template = 16
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-1610.000000, 22.800000, -1640.000000)
+            Result.Scale = P.Vector(649.999976, 649.999976, 649.999976)
+            Result.Yaw = -90.000009
+
+        Case 154
+            Result.Identity = 155
+            Result.SourceIndex = 154
+            Result.Template = 16
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-1390.000000, 22.800000, -1640.000000)
+            Result.Scale = P.Vector(649.999976, 649.999976, 649.999976)
+            Result.Yaw = -90.000009
+
+        Case 155
+            Result.Identity = 156
+            Result.SourceIndex = 155
+            Result.Template = 16
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-1610.000000, 22.800000, -2400.000000)
+            Result.Scale = P.Vector(649.999976, 649.999976, 649.999976)
+            Result.Yaw = -90.000009
+
+        Case 156
+            Result.Identity = 157
+            Result.SourceIndex = 156
+            Result.Template = 16
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-1390.000000, 22.800000, -2400.000000)
+            Result.Scale = P.Vector(649.999976, 649.999976, 649.999976)
+            Result.Yaw = -90.000009
+
+        Case 157
+            Result.Identity = 158
+            Result.SourceIndex = 157
+            Result.Template = 16
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-1610.000000, 22.800000, -2840.000000)
+            Result.Scale = P.Vector(649.999976, 649.999976, 649.999976)
+            Result.Yaw = -90.000009
+
+        Case 158
+            Result.Identity = 159
+            Result.SourceIndex = 158
+            Result.Template = 16
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-1390.000000, 22.800000, -2840.000000)
+            Result.Scale = P.Vector(649.999976, 649.999976, 649.999976)
+            Result.Yaw = -90.000009
+
+        Case 159
+            Result.Identity = 160
+            Result.SourceIndex = 159
+            Result.Template = 16
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(1390.000000, 22.800000, 530.000000)
+            Result.Scale = P.Vector(649.999976, 649.999976, 649.999976)
+            Result.Yaw = -90.000009
+
+        Case 160
+            Result.Identity = 161
+            Result.SourceIndex = 160
+            Result.Template = 16
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(1610.000000, 22.800000, 530.000000)
+            Result.Scale = P.Vector(649.999976, 649.999976, 649.999976)
+            Result.Yaw = -90.000009
+
+        Case 161
+            Result.Identity = 162
+            Result.SourceIndex = 161
+            Result.Template = 16
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(1390.000000, 22.800000, -510.000000)
+            Result.Scale = P.Vector(649.999976, 649.999976, 649.999976)
+            Result.Yaw = -90.000009
+
+        Case 162
+            Result.Identity = 163
+            Result.SourceIndex = 162
+            Result.Template = 16
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(1610.000000, 22.800000, -510.000000)
+            Result.Scale = P.Vector(649.999976, 649.999976, 649.999976)
+            Result.Yaw = -90.000009
+
+        Case 163
+            Result.Identity = 164
+            Result.SourceIndex = 163
+            Result.Template = 16
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(2030.000000, 22.800000, -1770.000000)
+            Result.Scale = P.Vector(649.999976, 649.999976, 649.999976)
+            Result.Yaw = -90.000009
+
+        Case 164
+            Result.Identity = 165
+            Result.SourceIndex = 164
+            Result.Template = 16
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(2250.000000, 22.800000, -1770.000000)
+            Result.Scale = P.Vector(649.999976, 649.999976, 649.999976)
+            Result.Yaw = -90.000009
+
+        Case 165
+            Result.Identity = 166
+            Result.SourceIndex = 165
+            Result.Template = 16
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(2030.000000, 22.800000, -2790.000000)
+            Result.Scale = P.Vector(649.999976, 649.999976, 649.999976)
+            Result.Yaw = -90.000009
+
+        Case 166
+            Result.Identity = 167
+            Result.SourceIndex = 166
+            Result.Template = 16
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(2250.000000, 22.800000, -2790.000000)
+            Result.Scale = P.Vector(649.999976, 649.999976, 649.999976)
+            Result.Yaw = -90.000009
+
+        Case 167
+            Result.Identity = 168
+            Result.SourceIndex = 167
+            Result.Template = 16
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(1170.000000, 22.800000, -2980.000000)
+            Result.Scale = P.Vector(649.999976, 649.999976, 649.999976)
+            Result.Yaw = -90.000009
+
+        Case 168
+            Result.Identity = 169
+            Result.SourceIndex = 168
+            Result.Template = 16
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(1390.000000, 22.800000, -2980.000000)
+            Result.Scale = P.Vector(649.999976, 649.999976, 649.999976)
+            Result.Yaw = -90.000009
+
+        Case 169
+            Result.Identity = 170
+            Result.SourceIndex = 169
+            Result.Template = 16
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(1390.000000, 22.800000, -1780.000000)
+            Result.Scale = P.Vector(649.999976, 649.999976, 649.999976)
+            Result.Yaw = -90.000009
+
+        Case 170
+            Result.Identity = 171
+            Result.SourceIndex = 170
+            Result.Template = 16
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(1610.000000, 22.800000, -1780.000000)
+            Result.Scale = P.Vector(649.999976, 649.999976, 649.999976)
+            Result.Yaw = -90.000009
+
+        Case 171
+            Result.Identity = 172
+            Result.SourceIndex = 171
+            Result.Template = 16
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-200.000000, 22.800000, -3040.000000)
+            Result.Scale = P.Vector(649.999976, 649.999976, 649.999976)
+            Result.Yaw = -0.000000
+
+        Case 172
+            Result.Identity = 173
+            Result.SourceIndex = 172
+            Result.Template = 16
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-200.000000, 22.800000, -2450.000000)
+            Result.Scale = P.Vector(649.999976, 649.999976, 649.999976)
+            Result.Yaw = -0.000000
+
+        Case 173
+            Result.Identity = 174
+            Result.SourceIndex = 173
+            Result.Template = 16
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-170.000000, 22.800000, -2090.000000)
+            Result.Scale = P.Vector(649.999976, 649.999976, 649.999976)
+            Result.Yaw = -0.000000
+
+        Case 174
+            Result.Identity = 175
+            Result.SourceIndex = 174
+            Result.Template = 16
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-170.000000, 22.800000, -1440.000000)
+            Result.Scale = P.Vector(649.999976, 649.999976, 649.999976)
+            Result.Yaw = -0.000000
+
+        Case 175
+            Result.Identity = 176
+            Result.SourceIndex = 175
+            Result.Template = 16
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(200.000000, 22.800000, -3040.000000)
+            Result.Scale = P.Vector(649.999976, 649.999976, 649.999976)
+            Result.Yaw = -0.000000
+
+        Case 176
+            Result.Identity = 177
+            Result.SourceIndex = 176
+            Result.Template = 16
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(200.000000, 22.800000, -2450.000000)
+            Result.Scale = P.Vector(649.999976, 649.999976, 649.999976)
+            Result.Yaw = -0.000000
+
+        Case 177
+            Result.Identity = 178
+            Result.SourceIndex = 177
+            Result.Template = 16
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(230.000000, 22.800000, -2090.000000)
+            Result.Scale = P.Vector(649.999976, 649.999976, 649.999976)
+            Result.Yaw = -0.000000
+
+        Case 178
+            Result.Identity = 179
+            Result.SourceIndex = 178
+            Result.Template = 16
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(230.000000, 22.800000, -1440.000000)
+            Result.Scale = P.Vector(649.999976, 649.999976, 649.999976)
+            Result.Yaw = -0.000000
+
+        Case 179
+            Result.Identity = 180
+            Result.SourceIndex = 179
+            Result.Template = 16
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-200.000000, 22.800000, -1380.000000)
+            Result.Scale = P.Vector(649.999976, 649.999976, 649.999976)
+            Result.Yaw = -0.000000
+
+        Case 180
+            Result.Identity = 181
+            Result.SourceIndex = 180
+            Result.Template = 16
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(200.000000, 22.800000, -1380.000000)
+            Result.Scale = P.Vector(649.999976, 649.999976, 649.999976)
+            Result.Yaw = -0.000000
+
+        Case 181
+            Result.Identity = 182
+            Result.SourceIndex = 181
+            Result.Template = 16
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-200.000000, 22.800000, -1480.000000)
+            Result.Scale = P.Vector(649.999976, 649.999976, 649.999976)
+            Result.Yaw = -0.000000
+
+        Case 182
+            Result.Identity = 183
+            Result.SourceIndex = 182
+            Result.Template = 16
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(200.000000, 22.800000, -1480.000000)
+            Result.Scale = P.Vector(649.999976, 649.999976, 649.999976)
+            Result.Yaw = -0.000000
+
+        Case 183
+            Result.Identity = 184
+            Result.SourceIndex = 183
+            Result.Template = 16
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-200.000000, 22.800000, -2120.000000)
+            Result.Scale = P.Vector(649.999976, 649.999976, 649.999976)
+            Result.Yaw = -0.000000
+
+        Case 184
+            Result.Identity = 185
+            Result.SourceIndex = 184
+            Result.Template = 16
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(200.000000, 22.800000, -2120.000000)
+            Result.Scale = P.Vector(649.999976, 649.999976, 649.999976)
+            Result.Yaw = -0.000000
+
+        Case 185
+            Result.Identity = 186
+            Result.SourceIndex = 185
+            Result.Template = 16
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-200.000000, 22.800000, -2500.000000)
+            Result.Scale = P.Vector(649.999976, 649.999976, 649.999976)
+            Result.Yaw = -0.000000
+
+        Case 186
+            Result.Identity = 187
+            Result.SourceIndex = 186
+            Result.Template = 16
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(200.000000, 22.800000, -2500.000000)
+            Result.Scale = P.Vector(649.999976, 649.999976, 649.999976)
+            Result.Yaw = -0.000000
+
+        Case 187
+            Result.Identity = 188
+            Result.SourceIndex = 187
+            Result.Template = 16
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-200.000000, 22.800000, -3100.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -0.000000
+
+        Case 188
+            Result.Identity = 189
+            Result.SourceIndex = 188
+            Result.Template = 16
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(200.000000, 22.800000, -3100.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -0.000000
+
+        Case 189
+            Result.Identity = 190
+            Result.SourceIndex = 189
+            Result.Template = 16
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-1840.000000, 22.800000, -60.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -0.000000
+
+        Case 190
+            Result.Identity = 191
+            Result.SourceIndex = 190
+            Result.Template = 16
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-1150.000000, 22.800000, -60.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -0.000000
+
+        Case 191
+            Result.Identity = 192
+            Result.SourceIndex = 191
+            Result.Template = 16
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-1840.000000, 22.800000, 600.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -0.000000
+
+        Case 192
+            Result.Identity = 193
+            Result.SourceIndex = 192
+            Result.Template = 16
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-1180.000000, 22.800000, 600.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -0.000000
+
+        Case 193
+            Result.Identity = 194
+            Result.SourceIndex = 193
+            Result.Template = 17
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-280.000000, 23.000000, -30.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -0.000000
+
+        Case 194
+            Result.Identity = 195
+            Result.SourceIndex = 194
+            Result.Template = 17
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-400.000000, 23.000000, -40.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -0.000000
+
+        Case 195
+            Result.Identity = 196
+            Result.SourceIndex = 195
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-2210.000000, 21.300000, -600.000000)
+            Result.Scale = P.Vector(971.549034, 1019.505739, 971.549034)
+            Result.Yaw = -23.808726
+
+        Case 196
+            Result.Identity = 197
+            Result.SourceIndex = 196
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-1920.000000, 21.300000, -600.000000)
+            Result.Scale = P.Vector(1029.983759, 1062.363267, 1029.983759)
+            Result.Yaw = -156.018897
+
+        Case 197
+            Result.Identity = 198
+            Result.SourceIndex = 197
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-2210.000000, 21.300000, -210.000000)
+            Result.Scale = P.Vector(1252.504945, 1286.988378, 1252.504945)
+            Result.Yaw = 66.158633
+
+        Case 198
+            Result.Identity = 199
+            Result.SourceIndex = 198
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-2180.000000, 21.300000, 320.000000)
+            Result.Scale = P.Vector(1161.269426, 1285.167217, 1161.269426)
+            Result.Yaw = 115.662683
+
+        Case 199
+            Result.Identity = 200
+            Result.SourceIndex = 199
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-1920.000000, 21.300000, 320.000000)
+            Result.Scale = P.Vector(1329.887033, 1304.561377, 1329.887033)
+            Result.Yaw = 179.439014
+
+        Case 200
+            Result.Identity = 201
+            Result.SourceIndex = 200
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-2210.000000, 21.300000, 680.000000)
+            Result.Scale = P.Vector(1002.551436, 961.226821, 1002.551436)
+            Result.Yaw = 148.730784
+
+        Case 201
+            Result.Identity = 202
+            Result.SourceIndex = 201
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-1920.000000, 21.300000, 680.000000)
+            Result.Scale = P.Vector(862.972796, 938.232541, 862.972796)
+            Result.Yaw = 126.135767
+
+        Case 202
+            Result.Identity = 203
+            Result.SourceIndex = 202
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-2240.000000, 21.300000, 1190.000000)
+            Result.Scale = P.Vector(1044.433117, 985.397398, 1044.433117)
+            Result.Yaw = 7.663464
+
+        Case 203
+            Result.Identity = 204
+            Result.SourceIndex = 203
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-1420.000000, 21.300000, -600.000000)
+            Result.Scale = P.Vector(1188.254118, 1268.691778, 1188.254118)
+            Result.Yaw = 135.099735
+
+        Case 204
+            Result.Identity = 205
+            Result.SourceIndex = 204
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-1100.000000, 21.300000, -600.000000)
+            Result.Scale = P.Vector(1055.270314, 1035.175800, 1055.270314)
+            Result.Yaw = 31.227454
+
+        Case 205
+            Result.Identity = 206
+            Result.SourceIndex = 205
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-1390.000000, 21.300000, -180.000000)
+            Result.Scale = P.Vector(1187.557578, 1180.866957, 1187.557578)
+            Result.Yaw = 73.366422
+
+        Case 206
+            Result.Identity = 207
+            Result.SourceIndex = 206
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-1070.000000, 21.300000, -180.000000)
+            Result.Scale = P.Vector(1049.252033, 1068.842411, 1049.252033)
+            Result.Yaw = -93.638437
+
+        Case 207
+            Result.Identity = 208
+            Result.SourceIndex = 207
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-1420.000000, 21.300000, 180.000000)
+            Result.Scale = P.Vector(1247.763991, 1226.158261, 1247.763991)
+            Result.Yaw = -64.138147
+
+        Case 208
+            Result.Identity = 209
+            Result.SourceIndex = 208
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-1100.000000, 21.300000, 180.000000)
+            Result.Scale = P.Vector(1110.082269, 1121.058464, 1110.082269)
+            Result.Yaw = 0.203420
+
+        Case 209
+            Result.Identity = 210
+            Result.SourceIndex = 209
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-1100.000000, 21.300000, 680.000000)
+            Result.Scale = P.Vector(777.515471, 827.422857, 777.515471)
+            Result.Yaw = 155.527806
+
+        Case 210
+            Result.Identity = 211
+            Result.SourceIndex = 210
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-1420.000000, 21.300000, 1190.000000)
+            Result.Scale = P.Vector(968.327761, 979.562461, 968.327761)
+            Result.Yaw = 61.420968
+
+        Case 211
+            Result.Identity = 212
+            Result.SourceIndex = 211
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-1100.000000, 21.300000, 1010.000000)
+            Result.Scale = P.Vector(889.564157, 987.253010, 889.564157)
+            Result.Yaw = 81.209228
+
+        Case 212
+            Result.Identity = 213
+            Result.SourceIndex = 212
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-2220.000000, 21.300000, -1690.000000)
+            Result.Scale = P.Vector(1163.772345, 1162.945747, 1163.772345)
+            Result.Yaw = 70.171417
+
+        Case 213
+            Result.Identity = 214
+            Result.SourceIndex = 213
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-2220.000000, 21.300000, -2530.000000)
+            Result.Scale = P.Vector(900.053561, 881.757200, 900.053561)
+            Result.Yaw = 171.838107
+
+        Case 214
+            Result.Identity = 215
+            Result.SourceIndex = 214
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-1300.000000, 21.300000, -1690.000000)
+            Result.Scale = P.Vector(1266.987801, 1309.931993, 1266.987801)
+            Result.Yaw = -72.588129
+
+        Case 215
+            Result.Identity = 216
+            Result.SourceIndex = 215
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-1300.000000, 21.300000, -2530.000000)
+            Result.Scale = P.Vector(1036.957026, 1129.599571, 1036.957026)
+            Result.Yaw = -129.950783
+
+        Case 216
+            Result.Identity = 217
+            Result.SourceIndex = 216
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-320.000000, 21.300000, -1350.000000)
+            Result.Scale = P.Vector(910.440207, 894.247890, 910.440207)
+            Result.Yaw = 16.369382
+
+        Case 217
+            Result.Identity = 218
+            Result.SourceIndex = 217
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-320.000000, 21.300000, -2360.000000)
+            Result.Scale = P.Vector(836.266458, 803.631008, 836.266458)
+            Result.Yaw = -176.710927
+
+        Case 218
+            Result.Identity = 219
+            Result.SourceIndex = 218
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(320.000000, 21.300000, -1350.000000)
+            Result.Scale = P.Vector(1100.424409, 1197.349548, 1100.424409)
+            Result.Yaw = 65.139644
+
+        Case 219
+            Result.Identity = 220
+            Result.SourceIndex = 219
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(320.000000, 21.300000, -2360.000000)
+            Result.Scale = P.Vector(855.485499, 817.027867, 855.485499)
+            Result.Yaw = -85.818622
+
+        Case 220
+            Result.Identity = 221
+            Result.SourceIndex = 220
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(320.000000, 21.300000, -3000.000000)
+            Result.Scale = P.Vector(1215.825319, 1311.025143, 1215.825319)
+            Result.Yaw = -85.566807
+
+        Case 221
+            Result.Identity = 222
+            Result.SourceIndex = 221
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-1700.000000, 21.300000, 1210.000000)
+            Result.Scale = P.Vector(1314.442158, 1302.129388, 1314.442158)
+            Result.Yaw = -91.272610
+
+        Case 222
+            Result.Identity = 223
+            Result.SourceIndex = 222
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(2100.000000, 21.300000, 1210.000000)
+            Result.Scale = P.Vector(806.641757, 819.133580, 806.641757)
+            Result.Yaw = -7.882119
+
+        Case 223
+            Result.Identity = 224
+            Result.SourceIndex = 223
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-2410.000000, 21.300000, 2200.000000)
+            Result.Scale = P.Vector(1208.175421, 1145.778537, 1208.175421)
+            Result.Yaw = 25.547027
+
+        Case 224
+            Result.Identity = 225
+            Result.SourceIndex = 224
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(240.000000, 21.300000, 3160.000000)
+            Result.Scale = P.Vector(1166.965008, 1263.515830, 1166.965008)
+            Result.Yaw = 169.662391
+
+        Case 225
+            Result.Identity = 226
+            Result.SourceIndex = 225
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(2220.000000, 21.300000, 3360.000000)
+            Result.Scale = P.Vector(1293.044209, 1308.836102, 1293.044209)
+            Result.Yaw = 10.122877
+
+        Case 226
+            Result.Identity = 227
+            Result.SourceIndex = 226
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(1000.000000, 21.300000, 1480.000000)
+            Result.Scale = P.Vector(793.957710, 861.284554, 793.957710)
+            Result.Yaw = -161.959249
+
+        Case 227
+            Result.Identity = 228
+            Result.SourceIndex = 227
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(1150.000000, 21.300000, 3360.000000)
+            Result.Scale = P.Vector(759.694517, 803.822875, 759.694517)
+            Result.Yaw = 96.308932
+
+        Case 228
+            Result.Identity = 229
+            Result.SourceIndex = 228
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(950.000000, 21.300000, -1450.000000)
+            Result.Scale = P.Vector(956.900835, 904.166996, 956.900835)
+            Result.Yaw = 177.117119
+
+        Case 229
+            Result.Identity = 230
+            Result.SourceIndex = 229
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(950.000000, 21.300000, -2490.000000)
+            Result.Scale = P.Vector(1162.044644, 1234.900117, 1162.044644)
+            Result.Yaw = 0.573016
+
+        Case 230
+            Result.Identity = 231
+            Result.SourceIndex = 230
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(2250.000000, 21.300000, -1520.000000)
+            Result.Scale = P.Vector(1109.010935, 1060.070038, 1109.010935)
+            Result.Yaw = -157.514804
+
+        Case 231
+            Result.Identity = 232
+            Result.SourceIndex = 231
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(2250.000000, 21.300000, -2600.000000)
+            Result.Scale = P.Vector(1102.365375, 1185.022354, 1102.365375)
+            Result.Yaw = -111.701563
+
+        Case 232
+            Result.Identity = 233
+            Result.SourceIndex = 232
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-2190.000000, 21.300000, -3080.000000)
+            Result.Scale = P.Vector(1437.325001, 1388.784766, 1437.325001)
+            Result.Yaw = -61.909265
+
+        Case 233
+            Result.Identity = 234
+            Result.SourceIndex = 233
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-2190.000000, 21.300000, -2200.000000)
+            Result.Scale = P.Vector(1308.574319, 1355.051994, 1308.574319)
+            Result.Yaw = 164.173091
+
+        Case 234
+            Result.Identity = 235
+            Result.SourceIndex = 234
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-2190.000000, 21.300000, -1300.000000)
+            Result.Scale = P.Vector(1577.947736, 1503.368258, 1577.947736)
+            Result.Yaw = 53.776060
+
+        Case 235
+            Result.Identity = 236
+            Result.SourceIndex = 235
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-2190.000000, 21.300000, 0.000000)
+            Result.Scale = P.Vector(1565.719485, 1503.839493, 1565.719485)
+            Result.Yaw = -28.525483
+
+        Case 236
+            Result.Identity = 237
+            Result.SourceIndex = 236
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-2190.000000, 21.300000, 950.000000)
+            Result.Scale = P.Vector(1409.188867, 1424.639106, 1409.188867)
+            Result.Yaw = 0.139353
+
+        Case 237
+            Result.Identity = 238
+            Result.SourceIndex = 237
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-2160.000000, 21.300000, 1240.000000)
+            Result.Scale = P.Vector(1406.593442, 1419.710636, 1406.593442)
+            Result.Yaw = -124.857934
+
+        Case 238
+            Result.Identity = 239
+            Result.SourceIndex = 238
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(2380.000000, 21.300000, -3080.000000)
+            Result.Scale = P.Vector(1360.694289, 1400.520682, 1360.694289)
+            Result.Yaw = 15.301389
+
+        Case 239
+            Result.Identity = 240
+            Result.SourceIndex = 239
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(2380.000000, 21.300000, -2200.000000)
+            Result.Scale = P.Vector(1399.324298, 1424.262762, 1399.324298)
+            Result.Yaw = 159.699030
+
+        Case 240
+            Result.Identity = 241
+            Result.SourceIndex = 240
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(2380.000000, 21.300000, -1300.000000)
+            Result.Scale = P.Vector(1414.009333, 1425.078750, 1414.009333)
+            Result.Yaw = 23.549145
+
+        Case 241
+            Result.Identity = 242
+            Result.SourceIndex = 241
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(2380.000000, 21.300000, 30.000000)
+            Result.Scale = P.Vector(1473.537326, 1514.081478, 1473.537326)
+            Result.Yaw = -127.041273
+
+        Case 242
+            Result.Identity = 243
+            Result.SourceIndex = 242
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(2380.000000, 21.300000, 950.000000)
+            Result.Scale = P.Vector(1324.522853, 1289.774299, 1324.522853)
+            Result.Yaw = 160.054692
+
+        Case 243
+            Result.Identity = 244
+            Result.SourceIndex = 243
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(2380.000000, 21.300000, 1240.000000)
+            Result.Scale = P.Vector(1426.424980, 1487.063408, 1426.424980)
+            Result.Yaw = -4.059004
+
+        Case 244
+            Result.Identity = 245
+            Result.SourceIndex = 244
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-2200.000000, 21.300000, -680.000000)
+            Result.Scale = P.Vector(1271.888018, 1359.719992, 1271.888018)
+            Result.Yaw = 122.152483
+
+        Case 245
+            Result.Identity = 246
+            Result.SourceIndex = 245
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-2200.000000, 21.300000, -980.000000)
+            Result.Scale = P.Vector(1588.451028, 1512.781262, 1588.451028)
+            Result.Yaw = 129.956029
+
+        Case 246
+            Result.Identity = 247
+            Result.SourceIndex = 246
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-1860.000000, 21.300000, -680.000000)
+            Result.Scale = P.Vector(1303.451180, 1399.629831, 1303.451180)
+            Result.Yaw = 154.971965
+
+        Case 247
+            Result.Identity = 248
+            Result.SourceIndex = 247
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-1860.000000, 21.300000, -980.000000)
+            Result.Scale = P.Vector(1282.502294, 1270.700455, 1282.502294)
+            Result.Yaw = 94.464733
+
+        Case 248
+            Result.Identity = 249
+            Result.SourceIndex = 248
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-1580.000000, 21.300000, -680.000000)
+            Result.Scale = P.Vector(1567.467332, 1506.245852, 1567.467332)
+            Result.Yaw = -96.852861
+
+        Case 249
+            Result.Identity = 250
+            Result.SourceIndex = 249
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-1580.000000, 21.300000, -980.000000)
+            Result.Scale = P.Vector(1381.319642, 1503.454566, 1381.319642)
+            Result.Yaw = -30.289819
+
+        Case 250
+            Result.Identity = 251
+            Result.SourceIndex = 250
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-1030.000000, 21.300000, -680.000000)
+            Result.Scale = P.Vector(1437.275887, 1546.993613, 1437.275887)
+            Result.Yaw = -39.575011
+
+        Case 251
+            Result.Identity = 252
+            Result.SourceIndex = 251
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-1030.000000, 21.300000, -980.000000)
+            Result.Scale = P.Vector(1384.371400, 1330.968142, 1384.371400)
+            Result.Yaw = 137.697324
+
+        Case 252
+            Result.Identity = 253
+            Result.SourceIndex = 252
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-1590.000000, 21.300000, -1790.000000)
+            Result.Scale = P.Vector(1227.614284, 1265.171289, 1227.614284)
+            Result.Yaw = 133.598801
+
+        Case 253
+            Result.Identity = 254
+            Result.SourceIndex = 253
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-1410.000000, 21.300000, -1550.000000)
+            Result.Scale = P.Vector(1536.890388, 1500.468612, 1536.890388)
+            Result.Yaw = 19.205717
+
+        Case 254
+            Result.Identity = 255
+            Result.SourceIndex = 254
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-1590.000000, 21.300000, -1550.000000)
+            Result.Scale = P.Vector(1446.836829, 1454.512596, 1446.836829)
+            Result.Yaw = -111.393801
+
+        Case 255
+            Result.Identity = 256
+            Result.SourceIndex = 255
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-1410.000000, 21.300000, -1790.000000)
+            Result.Scale = P.Vector(1334.082723, 1445.436597, 1334.082723)
+            Result.Yaw = 9.108348
+
+        Case 256
+            Result.Identity = 257
+            Result.SourceIndex = 256
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-1590.000000, 21.300000, -2550.000000)
+            Result.Scale = P.Vector(1523.502707, 1458.194494, 1523.502707)
+            Result.Yaw = 23.907674
+
+        Case 257
+            Result.Identity = 258
+            Result.SourceIndex = 257
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-1410.000000, 21.300000, -2310.000000)
+            Result.Scale = P.Vector(1268.412471, 1342.215419, 1268.412471)
+            Result.Yaw = 145.416257
+
+        Case 258
+            Result.Identity = 259
+            Result.SourceIndex = 258
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-1590.000000, 21.300000, -2310.000000)
+            Result.Scale = P.Vector(1336.316109, 1328.150988, 1336.316109)
+            Result.Yaw = 69.720426
+
+        Case 259
+            Result.Identity = 260
+            Result.SourceIndex = 259
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-1410.000000, 21.300000, -2550.000000)
+            Result.Scale = P.Vector(1380.264878, 1507.336974, 1380.264878)
+            Result.Yaw = -110.008468
+
+        Case 260
+            Result.Identity = 261
+            Result.SourceIndex = 260
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-1590.000000, 21.300000, -2990.000000)
+            Result.Scale = P.Vector(1404.871821, 1395.888686, 1404.871821)
+            Result.Yaw = -18.200769
+
+        Case 261
+            Result.Identity = 262
+            Result.SourceIndex = 261
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-1410.000000, 21.300000, -2750.000000)
+            Result.Scale = P.Vector(1217.857599, 1250.359774, 1217.857599)
+            Result.Yaw = 122.979509
+
+        Case 262
+            Result.Identity = 263
+            Result.SourceIndex = 262
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-1590.000000, 21.300000, -2750.000000)
+            Result.Scale = P.Vector(1574.896812, 1521.900773, 1574.896812)
+            Result.Yaw = 72.952144
+
+        Case 263
+            Result.Identity = 264
+            Result.SourceIndex = 263
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-1410.000000, 21.300000, -2990.000000)
+            Result.Scale = P.Vector(1404.471874, 1470.680833, 1404.471874)
+            Result.Yaw = -49.954631
+
+        Case 264
+            Result.Identity = 265
+            Result.SourceIndex = 264
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(1410.000000, 21.300000, 380.000000)
+            Result.Scale = P.Vector(1325.263023, 1386.091232, 1325.263023)
+            Result.Yaw = -161.149284
+
+        Case 265
+            Result.Identity = 266
+            Result.SourceIndex = 265
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(1590.000000, 21.300000, 620.000000)
+            Result.Scale = P.Vector(1504.591227, 1455.878973, 1504.591227)
+            Result.Yaw = -23.033085
+
+        Case 266
+            Result.Identity = 267
+            Result.SourceIndex = 266
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(1410.000000, 21.300000, 620.000000)
+            Result.Scale = P.Vector(1302.458644, 1376.816273, 1302.458644)
+            Result.Yaw = -119.005227
+
+        Case 267
+            Result.Identity = 268
+            Result.SourceIndex = 267
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(1590.000000, 21.300000, 380.000000)
+            Result.Scale = P.Vector(1269.245148, 1271.204591, 1269.245148)
+            Result.Yaw = -136.537449
+
+        Case 268
+            Result.Identity = 269
+            Result.SourceIndex = 268
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(1410.000000, 21.300000, -660.000000)
+            Result.Scale = P.Vector(1474.546432, 1418.878436, 1474.546432)
+            Result.Yaw = 105.904993
+
+        Case 269
+            Result.Identity = 270
+            Result.SourceIndex = 269
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(1590.000000, 21.300000, -420.000000)
+            Result.Scale = P.Vector(1363.091350, 1496.726990, 1363.091350)
+            Result.Yaw = 158.659666
+
+        Case 270
+            Result.Identity = 271
+            Result.SourceIndex = 270
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(1410.000000, 21.300000, -420.000000)
+            Result.Scale = P.Vector(1281.090617, 1259.911656, 1281.090617)
+            Result.Yaw = 13.202092
+
+        Case 271
+            Result.Identity = 272
+            Result.SourceIndex = 271
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(1590.000000, 21.300000, -660.000000)
+            Result.Scale = P.Vector(1419.067740, 1378.677487, 1419.067740)
+            Result.Yaw = -142.940942
+
+        Case 272
+            Result.Identity = 273
+            Result.SourceIndex = 272
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(2050.000000, 21.300000, -1920.000000)
+            Result.Scale = P.Vector(1435.283780, 1529.509068, 1435.283780)
+            Result.Yaw = 13.479972
+
+        Case 273
+            Result.Identity = 274
+            Result.SourceIndex = 273
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(2230.000000, 21.300000, -1680.000000)
+            Result.Scale = P.Vector(1339.357853, 1404.528737, 1339.357853)
+            Result.Yaw = 16.169424
+
+        Case 274
+            Result.Identity = 275
+            Result.SourceIndex = 274
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(2050.000000, 21.300000, -1680.000000)
+            Result.Scale = P.Vector(1540.642858, 1459.985614, 1540.642858)
+            Result.Yaw = 32.853282
+
+        Case 275
+            Result.Identity = 276
+            Result.SourceIndex = 275
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(2230.000000, 21.300000, -1920.000000)
+            Result.Scale = P.Vector(1521.493673, 1444.666266, 1521.493673)
+            Result.Yaw = 12.814407
+
+        Case 276
+            Result.Identity = 277
+            Result.SourceIndex = 276
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(2050.000000, 21.300000, -2940.000000)
+            Result.Scale = P.Vector(1160.277128, 1257.898688, 1160.277128)
+            Result.Yaw = -17.080010
+
+        Case 277
+            Result.Identity = 278
+            Result.SourceIndex = 277
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(2230.000000, 21.300000, -2700.000000)
+            Result.Scale = P.Vector(1379.579663, 1435.656428, 1379.579663)
+            Result.Yaw = -6.516975
+
+        Case 278
+            Result.Identity = 279
+            Result.SourceIndex = 278
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(2050.000000, 21.300000, -2700.000000)
+            Result.Scale = P.Vector(1284.403443, 1290.862322, 1284.403443)
+            Result.Yaw = 129.524443
+
+        Case 279
+            Result.Identity = 280
+            Result.SourceIndex = 279
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(2230.000000, 21.300000, -2940.000000)
+            Result.Scale = P.Vector(1225.836158, 1279.354572, 1225.836158)
+            Result.Yaw = -93.941206
+
+        Case 280
+            Result.Identity = 281
+            Result.SourceIndex = 280
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(1190.000000, 21.300000, -3130.000000)
+            Result.Scale = P.Vector(1585.817456, 1513.355136, 1585.817456)
+            Result.Yaw = -173.080409
+
+        Case 281
+            Result.Identity = 282
+            Result.SourceIndex = 281
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(1370.000000, 21.300000, -2890.000000)
+            Result.Scale = P.Vector(1425.059319, 1406.919479, 1425.059319)
+            Result.Yaw = -104.830324
+
+        Case 282
+            Result.Identity = 283
+            Result.SourceIndex = 282
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(1190.000000, 21.300000, -2890.000000)
+            Result.Scale = P.Vector(1335.880399, 1419.470072, 1335.880399)
+            Result.Yaw = 77.222030
+
+        Case 283
+            Result.Identity = 284
+            Result.SourceIndex = 283
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(1370.000000, 21.300000, -3130.000000)
+            Result.Scale = P.Vector(1449.686408, 1543.655276, 1449.686408)
+            Result.Yaw = -168.141444
+
+        Case 284
+            Result.Identity = 285
+            Result.SourceIndex = 284
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(1410.000000, 21.300000, -1930.000000)
+            Result.Scale = P.Vector(1136.371255, 1253.354073, 1136.371255)
+            Result.Yaw = -58.299592
+
+        Case 285
+            Result.Identity = 286
+            Result.SourceIndex = 285
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(1590.000000, 21.300000, -1690.000000)
+            Result.Scale = P.Vector(1295.553923, 1274.669528, 1295.553923)
+            Result.Yaw = -24.142695
+
+        Case 286
+            Result.Identity = 287
+            Result.SourceIndex = 286
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(1410.000000, 21.300000, -1690.000000)
+            Result.Scale = P.Vector(1207.545996, 1273.230672, 1207.545996)
+            Result.Yaw = 17.512952
+
+        Case 287
+            Result.Identity = 288
+            Result.SourceIndex = 287
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(1590.000000, 21.300000, -1930.000000)
+            Result.Scale = P.Vector(1495.312810, 1470.935225, 1495.312810)
+            Result.Yaw = -18.973723
+
+        Case 288
+            Result.Identity = 289
+            Result.SourceIndex = 288
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-130.000000, 21.300000, -3100.000000)
+            Result.Scale = P.Vector(1346.077323, 1420.133948, 1346.077323)
+            Result.Yaw = -168.257175
+
+        Case 289
+            Result.Identity = 290
+            Result.SourceIndex = 289
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-130.000000, 21.300000, -2920.000000)
+            Result.Scale = P.Vector(1307.293415, 1298.211455, 1307.293415)
+            Result.Yaw = 135.606740
+
+        Case 290
+            Result.Identity = 291
+            Result.SourceIndex = 290
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-130.000000, 21.300000, -2600.000000)
+            Result.Scale = P.Vector(1446.812749, 1528.629065, 1446.812749)
+            Result.Yaw = -108.080196
+
+        Case 291
+            Result.Identity = 292
+            Result.SourceIndex = 291
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-130.000000, 21.300000, -2420.000000)
+            Result.Scale = P.Vector(1457.021594, 1541.764379, 1457.021594)
+            Result.Yaw = -169.064298
+
+        Case 292
+            Result.Identity = 293
+            Result.SourceIndex = 292
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-130.000000, 21.300000, -2240.000000)
+            Result.Scale = P.Vector(1461.241364, 1531.773925, 1461.241364)
+            Result.Yaw = -86.148090
+
+        Case 293
+            Result.Identity = 294
+            Result.SourceIndex = 293
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-130.000000, 21.300000, -2060.000000)
+            Result.Scale = P.Vector(1183.579087, 1265.047312, 1183.579087)
+            Result.Yaw = -152.960461
+
+        Case 294
+            Result.Identity = 295
+            Result.SourceIndex = 294
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-130.000000, 21.300000, -1880.000000)
+            Result.Scale = P.Vector(1361.888051, 1399.689078, 1361.888051)
+            Result.Yaw = -131.568117
+
+        Case 295
+            Result.Identity = 296
+            Result.SourceIndex = 295
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-130.000000, 21.300000, -1520.000000)
+            Result.Scale = P.Vector(1317.013144, 1314.876795, 1317.013144)
+            Result.Yaw = 43.450129
+
+        Case 296
+            Result.Identity = 297
+            Result.SourceIndex = 296
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-130.000000, 21.300000, -1340.000000)
+            Result.Scale = P.Vector(1420.525312, 1423.931241, 1420.525312)
+            Result.Yaw = -54.862982
+
+        Case 297
+            Result.Identity = 298
+            Result.SourceIndex = 297
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(130.000000, 21.300000, -3100.000000)
+            Result.Scale = P.Vector(1343.204379, 1365.594149, 1343.204379)
+            Result.Yaw = -23.291594
+
+        Case 298
+            Result.Identity = 299
+            Result.SourceIndex = 298
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(130.000000, 21.300000, -2920.000000)
+            Result.Scale = P.Vector(1368.043303, 1354.253054, 1368.043303)
+            Result.Yaw = 110.274729
+
+        Case 299
+            Result.Identity = 300
+            Result.SourceIndex = 299
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(130.000000, 21.300000, -2600.000000)
+            Result.Scale = P.Vector(1568.431973, 1506.314039, 1568.431973)
+            Result.Yaw = -177.530045
+
+        Case 300
+            Result.Identity = 301
+            Result.SourceIndex = 300
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(130.000000, 21.300000, -2420.000000)
+            Result.Scale = P.Vector(1347.880602, 1371.892214, 1347.880602)
+            Result.Yaw = 38.085999
+
+        Case 301
+            Result.Identity = 302
+            Result.SourceIndex = 301
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(130.000000, 21.300000, -2240.000000)
+            Result.Scale = P.Vector(1263.962388, 1319.649458, 1263.962388)
+            Result.Yaw = 126.789239
+
+        Case 302
+            Result.Identity = 303
+            Result.SourceIndex = 302
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(130.000000, 21.300000, -2060.000000)
+            Result.Scale = P.Vector(1577.546477, 1507.995844, 1577.546477)
+            Result.Yaw = 71.105090
+
+        Case 303
+            Result.Identity = 304
+            Result.SourceIndex = 303
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(130.000000, 21.300000, -1880.000000)
+            Result.Scale = P.Vector(1412.502885, 1410.972476, 1412.502885)
+            Result.Yaw = -81.380235
+
+        Case 304
+            Result.Identity = 305
+            Result.SourceIndex = 304
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(130.000000, 21.300000, -1520.000000)
+            Result.Scale = P.Vector(1457.026005, 1374.979615, 1457.026005)
+            Result.Yaw = 61.274522
+
+        Case 305
+            Result.Identity = 306
+            Result.SourceIndex = 305
+            Result.Template = 18
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(130.000000, 21.300000, -1340.000000)
+            Result.Scale = P.Vector(1208.003879, 1262.511969, 1208.003879)
+            Result.Yaw = 167.993366
+
+        Case 306
+            Result.Identity = 307
+            Result.SourceIndex = 306
+            Result.Template = 19
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-2210.000000, 21.300000, -160.000000)
+            Result.Scale = P.Vector(1267.316461, 1243.870139, 1267.316461)
+            Result.Yaw = -163.513977
+
+        Case 307
+            Result.Identity = 308
+            Result.SourceIndex = 307
+            Result.Template = 19
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-1920.000000, 21.300000, -160.000000)
+            Result.Scale = P.Vector(1225.745201, 1196.842074, 1225.745201)
+            Result.Yaw = 149.429308
+
+        Case 308
+            Result.Identity = 309
+            Result.SourceIndex = 308
+            Result.Template = 19
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-1890.000000, 21.300000, -180.000000)
+            Result.Scale = P.Vector(805.971086, 866.047084, 805.971086)
+            Result.Yaw = -33.519259
+
+        Case 309
+            Result.Identity = 310
+            Result.SourceIndex = 309
+            Result.Template = 19
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-2180.000000, 21.300000, 180.000000)
+            Result.Scale = P.Vector(1264.373064, 1289.185405, 1264.373064)
+            Result.Yaw = 113.631467
+
+        Case 310
+            Result.Identity = 311
+            Result.SourceIndex = 310
+            Result.Template = 19
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-1920.000000, 21.300000, 180.000000)
+            Result.Scale = P.Vector(822.287560, 855.037212, 822.287560)
+            Result.Yaw = -153.825217
+
+        Case 311
+            Result.Identity = 312
+            Result.SourceIndex = 311
+            Result.Template = 19
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-2210.000000, 21.300000, 630.000000)
+            Result.Scale = P.Vector(879.265010, 937.424362, 879.265010)
+            Result.Yaw = 83.617676
+
+        Case 312
+            Result.Identity = 313
+            Result.SourceIndex = 312
+            Result.Template = 19
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-1890.000000, 21.300000, 660.000000)
+            Result.Scale = P.Vector(1013.971806, 1007.201791, 1013.971806)
+            Result.Yaw = -38.033061
+
+        Case 313
+            Result.Identity = 314
+            Result.SourceIndex = 313
+            Result.Template = 19
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-1920.000000, 21.300000, 1190.000000)
+            Result.Scale = P.Vector(975.040972, 1020.757437, 975.040972)
+            Result.Yaw = 146.827115
+
+        Case 314
+            Result.Identity = 315
+            Result.SourceIndex = 314
+            Result.Template = 19
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-1420.000000, 21.300000, -160.000000)
+            Result.Scale = P.Vector(908.810198, 959.334910, 908.810198)
+            Result.Yaw = -124.828387
+
+        Case 315
+            Result.Identity = 316
+            Result.SourceIndex = 315
+            Result.Template = 19
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-1100.000000, 21.300000, -160.000000)
+            Result.Scale = P.Vector(1003.909230, 948.709905, 1003.909230)
+            Result.Yaw = -150.969625
+
+        Case 316
+            Result.Identity = 317
+            Result.SourceIndex = 316
+            Result.Template = 19
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-1420.000000, 21.300000, 320.000000)
+            Result.Scale = P.Vector(1165.272951, 1173.630953, 1165.272951)
+            Result.Yaw = 113.608551
+
+        Case 317
+            Result.Identity = 318
+            Result.SourceIndex = 317
+            Result.Template = 19
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-1100.000000, 21.300000, 320.000000)
+            Result.Scale = P.Vector(1057.143569, 1016.599774, 1057.143569)
+            Result.Yaw = -176.486433
+
+        Case 318
+            Result.Identity = 319
+            Result.SourceIndex = 318
+            Result.Template = 19
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-1420.000000, 21.300000, 680.000000)
+            Result.Scale = P.Vector(826.576591, 883.206606, 826.576591)
+            Result.Yaw = 139.530369
+
+        Case 319
+            Result.Identity = 320
+            Result.SourceIndex = 319
+            Result.Template = 19
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-1390.000000, 21.300000, 660.000000)
+            Result.Scale = P.Vector(1091.994643, 1090.743661, 1091.994643)
+            Result.Yaw = -124.359071
+
+        Case 320
+            Result.Identity = 321
+            Result.SourceIndex = 320
+            Result.Template = 19
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-1070.000000, 21.300000, 660.000000)
+            Result.Scale = P.Vector(903.823853, 859.152794, 903.823853)
+            Result.Yaw = -23.965331
+
+        Case 321
+            Result.Identity = 322
+            Result.SourceIndex = 321
+            Result.Template = 19
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-2220.000000, 21.300000, -1270.000000)
+            Result.Scale = P.Vector(936.721325, 1011.852384, 936.721325)
+            Result.Yaw = -39.369217
+
+        Case 322
+            Result.Identity = 323
+            Result.SourceIndex = 322
+            Result.Template = 19
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-2220.000000, 21.300000, -2110.000000)
+            Result.Scale = P.Vector(1234.381557, 1224.924803, 1234.381557)
+            Result.Yaw = 150.481935
+
+        Case 323
+            Result.Identity = 324
+            Result.SourceIndex = 323
+            Result.Template = 19
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-2220.000000, 21.300000, -2950.000000)
+            Result.Scale = P.Vector(812.568724, 889.164329, 812.568724)
+            Result.Yaw = -85.899068
+
+        Case 324
+            Result.Identity = 325
+            Result.SourceIndex = 324
+            Result.Template = 19
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-1300.000000, 21.300000, -1270.000000)
+            Result.Scale = P.Vector(992.735445, 938.903987, 992.735445)
+            Result.Yaw = -67.592365
+
+        Case 325
+            Result.Identity = 326
+            Result.SourceIndex = 325
+            Result.Template = 19
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-1300.000000, 21.300000, -2110.000000)
+            Result.Scale = P.Vector(793.288767, 829.243958, 793.288767)
+            Result.Yaw = 64.920224
+
+        Case 326
+            Result.Identity = 327
+            Result.SourceIndex = 326
+            Result.Template = 19
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-1300.000000, 21.300000, -2950.000000)
+            Result.Scale = P.Vector(1269.059181, 1304.268718, 1269.059181)
+            Result.Yaw = -86.149955
+
+        Case 327
+            Result.Identity = 328
+            Result.SourceIndex = 327
+            Result.Template = 19
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-320.000000, 21.300000, -1980.000000)
+            Result.Scale = P.Vector(1316.278458, 1276.376009, 1316.278458)
+            Result.Yaw = -97.131499
+
+        Case 328
+            Result.Identity = 329
+            Result.SourceIndex = 328
+            Result.Template = 19
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-320.000000, 21.300000, -3000.000000)
+            Result.Scale = P.Vector(1273.388624, 1227.805018, 1273.388624)
+            Result.Yaw = -18.420778
+
+        Case 329
+            Result.Identity = 330
+            Result.SourceIndex = 329
+            Result.Template = 19
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(320.000000, 21.300000, -1980.000000)
+            Result.Scale = P.Vector(1206.856251, 1195.384264, 1206.856251)
+            Result.Yaw = 67.095318
+
+        Case 330
+            Result.Identity = 331
+            Result.SourceIndex = 330
+            Result.Template = 19
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-2200.000000, 21.300000, 1210.000000)
+            Result.Scale = P.Vector(889.690936, 947.695732, 889.690936)
+            Result.Yaw = 84.340719
+
+        Case 331
+            Result.Identity = 332
+            Result.SourceIndex = 331
+            Result.Template = 19
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-680.000000, 21.300000, 1210.000000)
+            Result.Scale = P.Vector(953.843176, 1010.962844, 953.843176)
+            Result.Yaw = 111.789884
+
+        Case 332
+            Result.Identity = 333
+            Result.SourceIndex = 332
+            Result.Template = 19
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(400.000000, 21.300000, 1190.000000)
+            Result.Scale = P.Vector(1235.259891, 1304.315567, 1235.259891)
+            Result.Yaw = -25.580204
+
+        Case 333
+            Result.Identity = 334
+            Result.SourceIndex = 333
+            Result.Template = 19
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-2380.000000, 21.300000, 3160.000000)
+            Result.Scale = P.Vector(1221.099377, 1172.947645, 1221.099377)
+            Result.Yaw = -73.384304
+
+        Case 334
+            Result.Identity = 335
+            Result.SourceIndex = 334
+            Result.Template = 19
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(380.000000, 21.300000, 3160.000000)
+            Result.Scale = P.Vector(1251.765728, 1282.243609, 1251.765728)
+            Result.Yaw = -146.585586
+
+        Case 335
+            Result.Identity = 336
+            Result.SourceIndex = 335
+            Result.Template = 19
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(2220.000000, 21.300000, 1480.000000)
+            Result.Scale = P.Vector(858.472347, 847.560287, 858.472347)
+            Result.Yaw = -102.909162
+
+        Case 336
+            Result.Identity = 337
+            Result.SourceIndex = 336
+            Result.Template = 19
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(2220.000000, 21.300000, 1320.000000)
+            Result.Scale = P.Vector(1244.536638, 1196.721077, 1244.536638)
+            Result.Yaw = -39.436020
+
+        Case 337
+            Result.Identity = 338
+            Result.SourceIndex = 337
+            Result.Template = 19
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(2000.000000, 21.300000, 1480.000000)
+            Result.Scale = P.Vector(958.099067, 952.756166, 958.099067)
+            Result.Yaw = 45.234881
+
+        Case 338
+            Result.Identity = 339
+            Result.SourceIndex = 338
+            Result.Template = 19
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(1800.000000, 21.300000, 3360.000000)
+            Result.Scale = P.Vector(875.718951, 904.600084, 875.718951)
+            Result.Yaw = -47.156538
+
+        Case 339
+            Result.Identity = 340
+            Result.SourceIndex = 339
+            Result.Template = 19
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(950.000000, 21.300000, -1970.000000)
+            Result.Scale = P.Vector(1046.037316, 1105.547190, 1046.037316)
+            Result.Yaw = -49.303478
+
+        Case 340
+            Result.Identity = 341
+            Result.SourceIndex = 340
+            Result.Template = 19
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(950.000000, 21.300000, -3120.000000)
+            Result.Scale = P.Vector(1023.465872, 1080.625772, 1023.465872)
+            Result.Yaw = -148.500593
+
+        Case 341
+            Result.Identity = 342
+            Result.SourceIndex = 341
+            Result.Template = 19
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(2250.000000, 21.300000, -2080.000000)
+            Result.Scale = P.Vector(1015.598893, 967.560410, 1015.598893)
+            Result.Yaw = 148.698518
+
+        Case 342
+            Result.Identity = 343
+            Result.SourceIndex = 342
+            Result.Template = 20
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(0.000000, 21.000000, -1120.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -0.000000
+
+        Case 343
+            Result.Identity = 344
+            Result.SourceIndex = 343
+            Result.Template = 21
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-2020.000000, 21.000000, -820.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -0.000000
+
+        Case 344
+            Result.Identity = 345
+            Result.SourceIndex = 344
+            Result.Template = 22
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-1300.000000, 21.000000, -820.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -0.000000
+
+        Case 345
+            Result.Identity = 346
+            Result.SourceIndex = 345
+            Result.Template = 23
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-1500.000000, 21.000000, -2430.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -0.000000
+
+        Case 346
+            Result.Identity = 347
+            Result.SourceIndex = 346
+            Result.Template = 24
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(2140.000000, 21.000000, -2820.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -0.000000
+
+        Case 347
+            Result.Identity = 348
+            Result.SourceIndex = 347
+            Result.Template = 25
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(1500.000000, 21.000000, -1810.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -0.000000
+
+        Case 348
+            Result.Identity = 349
+            Result.SourceIndex = 348
+            Result.Template = 26
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(0.000000, 21.000000, -2650.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -0.000000
+
+        Case 349
+            Result.Identity = 350
+            Result.SourceIndex = 349
+            Result.Template = 27
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-1500.000000, 21.000000, -1670.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -0.000000
+
+        Case 350
+            Result.Identity = 351
+            Result.SourceIndex = 350
+            Result.Template = 28
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-1500.000000, 21.000000, -2870.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -0.000000
+
+        Case 351
+            Result.Identity = 352
+            Result.SourceIndex = 351
+            Result.Template = 29
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(1500.000000, 21.000000, 500.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -0.000000
+
+        Case 352
+            Result.Identity = 353
+            Result.SourceIndex = 352
+            Result.Template = 30
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(1500.000000, 21.000000, -540.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -0.000000
+
+        Case 353
+            Result.Identity = 354
+            Result.SourceIndex = 353
+            Result.Template = 31
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(2140.000000, 21.000000, -1800.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -0.000000
+
+        Case 354
+            Result.Identity = 355
+            Result.SourceIndex = 354
+            Result.Template = 32
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(1280.000000, 21.000000, -3010.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -0.000000
+
+        Case 355
+            Result.Identity = 356
+            Result.SourceIndex = 355
+            Result.Template = 33
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(-260.000000, 21.000000, -1460.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -0.000000
+
+        Case 356
+            Result.Identity = 357
+            Result.SourceIndex = 356
+            Result.Template = 33
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(250.000000, 21.000000, -1460.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -0.000000
+
+        Case 357
+            Result.Identity = 358
+            Result.SourceIndex = 357
+            Result.Template = 34
+            Result.Category = 3
+            Result.Active = True
+            Result.Position = P.Vector(250.000000, 21.000000, -1700.000000)
+            Result.Scale = P.Vector(1000.000000, 1000.000000, 1000.000000)
+            Result.Yaw = -0.000000
+
+    End Select
+
+    Return Result
+
+End Function
+
+End Module

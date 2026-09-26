@@ -268,6 +268,10 @@ public enum SyntaxKind
     TextToDoubleKeyword,
     Renderer3DDoubleKeyword,
     Renderer3DDoubleValueKeyword,
+    TextPromptKeyword,
+    TextFromCodeKeyword,
+    KeyShiftKeyword,
+    KeyDeleteKeyword,
 }
 
 public static class SyntaxFacts
@@ -353,6 +357,8 @@ public static class SyntaxFacts
         ["File_Reveal"] = SyntaxKind.FileRevealKeyword,
         ["File_Export"] = SyntaxKind.FileExportKeyword,
         ["File_Import"] = SyntaxKind.FileImportKeyword,
+        ["Text_Prompt"] = SyntaxKind.TextPromptKeyword,
+        ["Text_From_Code"] = SyntaxKind.TextFromCodeKeyword,
         ["Key_Held"] = SyntaxKind.KeyHeldKeyword,
         ["Key_Event_Held"] = SyntaxKind.KeyEventHeldKeyword,
         ["Pointer_X"] = SyntaxKind.PointerXKeyword,
@@ -481,6 +487,8 @@ public static class SyntaxFacts
         ["KEY_P"] = SyntaxKind.KeyPKeyword,
         ["KEY_B"] = SyntaxKind.KeyBKeyword,
         ["KEY_CONTROL"] = SyntaxKind.KeyControlKeyword,
+        ["KEY_SHIFT"] = SyntaxKind.KeyShiftKeyword,
+        ["KEY_DELETE"] = SyntaxKind.KeyDeleteKeyword,
         ["KEY_BACKTICK"] = SyntaxKind.KeyBacktickKeyword,
         ["KEY_X"] = SyntaxKind.KeyXKeyword,
         ["KEY_Y"] = SyntaxKind.KeyYKeyword,
@@ -546,13 +554,13 @@ public static class SyntaxFacts
 
     public static bool IsKeyword(SyntaxKind kind) =>
         (kind >= SyntaxKind.DimKeyword && kind <= SyntaxKind.OptionalKeyword) ||
-        (kind >= SyntaxKind.ImageKeyword && kind <= SyntaxKind.ChannelKeyword) || kind == SyntaxKind.DoubleKeyword || (DoubleSemantics.IsIntrinsic(kind) || Renderer3DPrecisionSemantics.IsIntrinsic(kind));
+        (kind >= SyntaxKind.ImageKeyword && kind <= SyntaxKind.ChannelKeyword) || kind == SyntaxKind.DoubleKeyword || (DoubleSemantics.IsIntrinsic(kind) || Renderer3DPrecisionSemantics.IsIntrinsic(kind)) || kind is SyntaxKind.TextPromptKeyword or SyntaxKind.TextFromCodeKeyword;
 
     public static bool IsBuiltInConstant(SyntaxKind kind) =>
-        kind >= SyntaxKind.NoneKeyword && kind <= SyntaxKind.DataStatusTooLargeKeyword || kind == SyntaxKind.DownKeyword;
+        kind >= SyntaxKind.NoneKeyword && kind <= SyntaxKind.DataStatusTooLargeKeyword || kind is SyntaxKind.DownKeyword or SyntaxKind.KeyShiftKeyword or SyntaxKind.KeyDeleteKeyword;
 
     public static bool IsBuiltInFunction(SyntaxKind kind) =>
-        kind >= SyntaxKind.TimerKeyword && kind <= SyntaxKind.Renderer3DTextValueKeyword || (DoubleSemantics.IsIntrinsic(kind) || Renderer3DPrecisionSemantics.IsIntrinsic(kind));
+        kind >= SyntaxKind.TimerKeyword && kind <= SyntaxKind.Renderer3DTextValueKeyword || (DoubleSemantics.IsIntrinsic(kind) || Renderer3DPrecisionSemantics.IsIntrinsic(kind)) || kind is SyntaxKind.TextPromptKeyword or SyntaxKind.TextFromCodeKeyword;
 
     public static IReadOnlyList<string> GetBuiltInFunctionParameters(SyntaxKind kind)
     {
@@ -573,6 +581,8 @@ public static class SyntaxFacts
             SyntaxKind.TextWidthKeyword or SyntaxKind.TextHeightKeyword => TextSizeParameters,
             SyntaxKind.WindowTitleKeyword or SyntaxKind.FileRevealKeyword => TextParameter,
             SyntaxKind.FileExportKeyword => new[] { "fileName", "contents" },
+            SyntaxKind.TextPromptKeyword => new[] { "title", "message", "initialValue" },
+            SyntaxKind.TextFromCodeKeyword => ValueParameter,
             SyntaxKind.TextLengthKeyword => TextParameter,
             SyntaxKind.TextCodeAtKeyword => TextIndexParameters,
             SyntaxKind.TextSliceKeyword => TextSliceParameters,
@@ -673,6 +683,8 @@ public static class SyntaxFacts
             SyntaxKind.KeyPKeyword => 31,
             SyntaxKind.KeyBKeyword => 32,
             SyntaxKind.KeyControlKeyword => 33,
+            SyntaxKind.KeyShiftKeyword => 43,
+            SyntaxKind.KeyDeleteKeyword => 44,
             SyntaxKind.KeyBacktickKeyword => 34,
             SyntaxKind.KeyXKeyword => 35,
             SyntaxKind.KeyYKeyword => 36,

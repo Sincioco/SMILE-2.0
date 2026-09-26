@@ -1166,3 +1166,39 @@ matched the live saved calibration. No production persistence defect was reprodu
 The fixture uses a unique application identity and never deletes live user keys.
 Wrist translation is not a saved control; wrist rotations and equipment transforms
 are the supported contract. Save the edited frame before downloading a backup.
+
+## Native World and Town Editor
+
+Open **Neris Town**, then **Edit**. **Items** contains Buildings, Surfaces and Decor;
+choose a palette item and **Place Copy**, or use **Select / Move**. Drag on empty
+ground to select a group; Ctrl adds; drag a selected item to move the group;
+**Rotate -15 / +15**, **Delete**, and Esc operate on that selection. Vertical height
+and scale stay authored. Shift+left drag pans while editing; middle drag orbits,
+wheel zooms and WASD/arrows inspect. **Done** returns to inspection; Tab enables the
+party. While holding movement keys in party mode, left/middle drags keep the party
+moving and release returns to the drone view in one second, preserving wheel zoom.
+
+For roads/water choose **Surfaces**, a material, then **Line** or **Rectangle**;
+click the first and second corners/endpoints. Width is metres. **Erase** restores
+grass in the marked rectangle. Water banks rebuild on the outside of joined cells;
+road across water creates a bridge. **Sun** exposes color, intensity, ambient light,
+azimuth/elevation, shadows and day/night presets.
+
+**Files** supports **Save For Viewer**, **Save To Blender**, **Save New Version**,
+**New Town / Environment**, **Open Town / Environment**, **New Linked World** and
+**Open Linked World**. Enter the saved name when opening. New blank environments
+are 256 metres square. Linked maps contain up to sixteen saved town references:
+add a town, drag its node, connect nodes, save, or open the selected town. They are
+editable navigation maps, not an overworld gameplay simulation.
+
+Use `Launch.ps1` so Blender save requests have their background worker. New versions
+appear in `games/SinStarI/SourceAssets/Towns/Neris/NerisTownV1/Versions`; Neris save-back
+updates the saved `Blend/Neris-Town-Waterfront.blend`. It does not save or replace
+an already open Blender session. Reopen the saved file in Blender when ready to
+review it, preserving any unsaved Blender edits first. A progress bar/message
+reports surface rebuilds and Blender saves; Viewer edits continue in the meantime.
+
+Working copies recover across tabs/relaunches. Saved document names are limited to
+80 Unicode characters; duplicate version names are refused. Files are tied to the
+current catalog fingerprint. Limits, ownership, tests and known presentation
+boundaries are documented in [town authoring](../../docs/architecture/town-authoring.md).

@@ -1,0 +1,168 @@
+''' Exclusive-category item selection and horizontal group transformations.
+Module Smile.Tools.TownSelection
+
+Option Explicit
+
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.PrecisionMath3D As M
+Import Smile.Tools.TownDocument As Document
+
+Public Type State
+    Category As Number
+    Selected[1024] As Boolean
+    Original[1024] As P.Vector3
+    SelectedCount As Number
+    Dragging As Boolean
+    Anchor As P.Vector3
+    Changed As Boolean
+End Type
+
+Public Sub ClearSelection(ByRef Value As State)
+
+    Dim Index As Number
+
+    For Index = 0 To Document.MAX_ITEMS - 1
+        Value.Selected[Index] = False
+    End For
+
+    Value.SelectedCount = 0
+    Value.Dragging = False
+    Value.Changed = False
+
+End Sub
+
+Public Sub SetCategory(ByRef Value As State, Category As Number)
+
+    Call ClearSelection(Value)
+
+    Value.Category = Category
+
+End Sub
+
+Public Function Add(ByRef Value As State, ByRef Town As Document.State, Index As Number) As Boolean
+
+    If Index < 0 Or Index >= Town.ItemCount Then
+        Return False
+    End If
+
+    If Not Town.Items[Index].Active Or Town.Items[Index].Category <> Value.Category Then
+        Return False
+    End If
+
+    If Not Value.Selected[Index] Then
+        Value.Selected[Index] = True
+        Value.SelectedCount = Value.SelectedCount + 1
+    End If
+
+    Return True
+
+End Function
+
+Public Sub BeginDrag(ByRef Value As State, ByRef Town As Document.State, Anchor As P.Vector3)
+
+    Dim Index As Number
+
+    Value.Anchor = Anchor
+    Value.Dragging = Value.SelectedCount > 0
+    Value.Changed = False
+
+    For Index = 0 To Town.ItemCount - 1
+
+        If Value.Selected[Index] Then
+            Value.Original[Index] = Town.Items[Index].Position
+        End If
+
+    End For
+
+End Sub
+
+Public Sub Drag(ByRef Value As State, ByRef Town As Document.State, Current As P.Vector3)
+
+    Dim Index As Number
+    Dim DeltaX As Double
+    Dim DeltaZ As Double
+
+    If Not Value.Dragging Then
+        Return
+    End If
+
+    DeltaX = Current.X - Value.Anchor.X
+    DeltaZ = Current.Z - Value.Anchor.Z
+    Value.Changed = Abs(DeltaX) > 0.001 Or Abs(DeltaZ) > 0.001
+
+    For Index = 0 To Town.ItemCount - 1
+
+        If Value.Selected[Index] Then
+            Town.Items[Index].Position.X = Value.Original[Index].X + DeltaX
+            Town.Items[Index].Position.Z = Value.Original[Index].Z + DeltaZ
+        End If
+
+    End For
+
+End Sub
+
+Public Sub EndDrag(ByRef Value As State, ByRef Town As Document.State, Cancelled As Boolean)
+
+    Dim Index As Number
+
+    If Not Value.Dragging Then
+        Return
+    End If
+
+    If Cancelled Then
+
+        For Index = 0 To Town.ItemCount - 1
+
+            If Value.Selected[Index] Then
+                Town.Items[Index].Position = Value.Original[Index]
+            End If
+
+        End For
+
+    Else If Value.Changed Then
+
+        Town.Revision = Town.Revision + 1
+
+    End If
+
+    Value.Dragging = False
+    Value.Changed = False
+
+End Sub
+
+Public Sub Rotate(ByRef Value As State, ByRef Town As Document.State, Degrees As Double)
+
+    Dim Index As Number
+
+    For Index = 0 To Town.ItemCount - 1
+
+        If Value.Selected[Index] Then
+            Town.Items[Index].Yaw = M.WrapDegrees(Town.Items[Index].Yaw + Degrees)
+        End If
+
+    End For
+
+    If Value.SelectedCount > 0 Then
+        Town.Revision = Town.Revision + 1
+    End If
+
+End Sub
+
+Public Sub RemoveSelected(ByRef Value As State, ByRef Town As Document.State)
+
+    Dim Index As Number
+    Dim Removed As Boolean
+
+    For Index = 0 To Town.ItemCount - 1
+
+        If Value.Selected[Index] Then
+            Removed = Document.RemoveItem(Town, Index)
+        End If
+
+    End For
+
+    Call ClearSelection(Value)
+
+End Sub
+
+End Module

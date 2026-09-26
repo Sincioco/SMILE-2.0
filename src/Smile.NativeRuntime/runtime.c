@@ -42,6 +42,8 @@
 #define SMILE_KEY_MINUS 40
 #define SMILE_KEY_C 41
 #define SMILE_KEY_M 42
+#define SMILE_KEY_SHIFT 43
+#define SMILE_KEY_DELETE 44
 #define SMILE_KEY_UP 10
 #define SMILE_KEY_DOWN 11
 #define SMILE_KEY_LEFT 12
@@ -923,6 +925,31 @@ long long smile_text_code_at(void* owned_value, long long requested_index)
     return result;
 }
 
+void* smile_text_from_code(long long code)
+{
+    char bytes[4];
+    int count = 1;
+    if (code < 0 || code > 0x10ffff || (code >= 0xd800 && code <= 0xdfff)) return 0;
+    if (code < 0x80) bytes[0] = (char)code;
+    else if (code < 0x800) {
+        bytes[0] = (char)(0xc0 | (code >> 6));
+        bytes[1] = (char)(0x80 | (code & 0x3f));
+        count = 2;
+    } else if (code < 0x10000) {
+        bytes[0] = (char)(0xe0 | (code >> 12));
+        bytes[1] = (char)(0x80 | ((code >> 6) & 0x3f));
+        bytes[2] = (char)(0x80 | (code & 0x3f));
+        count = 3;
+    } else {
+        bytes[0] = (char)(0xf0 | (code >> 18));
+        bytes[1] = (char)(0x80 | ((code >> 12) & 0x3f));
+        bytes[2] = (char)(0x80 | ((code >> 6) & 0x3f));
+        bytes[3] = (char)(0x80 | (code & 0x3f));
+        count = 4;
+    }
+    return smile_text_from_utf8(bytes, count);
+}
+
 void* smile_text_slice(void* owned_value, long long start, long long count)
 {
     SmileText* text = (SmileText*)owned_value;
@@ -1213,6 +1240,8 @@ static long long smile_map_key(WCHAR character, WORD virtual_key)
     if (virtual_key == VK_ESCAPE) return SMILE_KEY_ESCAPE;
     if (virtual_key == VK_SPACE) return SMILE_KEY_SPACE;
     if (virtual_key == VK_CONTROL) return SMILE_KEY_CONTROL;
+    if (virtual_key == VK_SHIFT) return SMILE_KEY_SHIFT;
+    if (virtual_key == VK_DELETE) return SMILE_KEY_DELETE;
     if (character == L'`' || virtual_key == VK_OEM_3) return SMILE_KEY_BACKTICK;
     if (virtual_key == '1') return SMILE_KEY_1;
     if (virtual_key == '2') return SMILE_KEY_2;
@@ -1252,6 +1281,8 @@ static int smile_key_virtual(long long key)
         case SMILE_KEY_ESCAPE: return VK_ESCAPE;
         case SMILE_KEY_SPACE: return VK_SPACE;
         case SMILE_KEY_CONTROL: return VK_CONTROL;
+        case SMILE_KEY_SHIFT: return VK_SHIFT;
+        case SMILE_KEY_DELETE: return VK_DELETE;
         case SMILE_KEY_BACKTICK: return VK_OEM_3;
         case SMILE_KEY_1: return '1';
         case SMILE_KEY_2: return '2';
@@ -1281,7 +1312,7 @@ static void smile_queue_key(long long key)
     if (next == smile_key_head)
         return;
     smile_key_queue[smile_key_tail] = key;
-    for (held_key = 1; held_key <= SMILE_KEY_M; held_key++)
+    for (held_key = 1; held_key <= SMILE_KEY_DELETE; held_key++)
     {
         if (smile_key_is_held(held_key))
             held_mask |= UINT64_C(1) << held_key;
@@ -1368,7 +1399,7 @@ long long smile_key_held(long long key)
 
 long long smile_key_event_held(long long key)
 {
-    return key > 0 && key <= SMILE_KEY_M &&
+    return key > 0 && key <= SMILE_KEY_DELETE &&
         (smile_key_event_held_mask & (UINT64_C(1) << key)) != 0;
 }
 
@@ -1937,6 +1968,12 @@ static int smile_file_dialog(WCHAR* path, int capacity, int exporting)
     if (show != 0) result = show(&dialog) != 0;
     FreeLibrary(library);
     return result;
+}
+
+extern void* smile_text_prompt_window(HWND, void*, void*, void*);
+void* smile_text_prompt(void* title, void* message, void* initial)
+{
+    return smile_text_prompt_window(smile_window, title, message, initial);
 }
 
 long long smile_file_export(void* owned_name, void* owned_contents)

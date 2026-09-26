@@ -9,11 +9,20 @@ Import Smile.Tools.NerisTownLayout As Layout
 Import Smile.Tools.NerisTownSite As Site
 Import Smile.Tools.NerisTownEntranceNavigation As Entries
 Import Smile.Tools.NerisTownEntrancesData As DoorData
+Import Smile.Tools.TownDocumentNavigation As Edited
 
 Public Function CanStand(X As Double, Z As Double) As Boolean
 
+    Dim ReturnValue As Boolean
+
     Dim Index As Number
     Dim Tree As Layout.Placement
+
+    If Edited.Active() Then
+        ReturnValue = Edited.CanStand(X, Z)
+
+        Return ReturnValue
+    End If
 
     If Not Districts.CanStand(X, Z) Then
         Return False
@@ -50,6 +59,12 @@ Public Function GroundHeight(X As Double, Z As Double) As Double
     Dim Result As Double
     Dim Door As Number
     Dim Item As DoorData.Door
+
+    If Edited.Active() Then
+        Result = Edited.GroundHeight(X, Z)
+
+        Return Result
+    End If
 
     Result = Max(Districts.GroundHeight(X, Z), Entries.SurfaceHeight(X, Z))
     Door = Entries.DoorwayAt(X, Z)

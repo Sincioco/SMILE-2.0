@@ -1,0 +1,120 @@
+''' Shared template GPU resources. Instance transforms are captured by each draw.
+Module Smile.Tools.TownCatalogRenderer
+
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Graphics3D As G
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Tools.TownDocument As Document
+Import Smile.Tools.TownCatalogData As Catalog
+
+Public Type State
+    Models[48] As Core.Model3D
+    Objects[768] As Core.Object3D
+    Loaded As Number
+    ObjectCount As Number
+    Failed As Boolean
+    ErrorCode As Number
+End Type
+
+Public Sub LoadNext(ByRef Value As State)
+
+    Dim Chunk As Number
+    Dim Part As Number
+    Dim Path As Text
+    Dim Name As Text
+    Dim Ok As Boolean
+
+    If Value.Failed Or Value.Loaded >= Catalog.CHUNK_COUNT + 14 Then
+        Return
+    End If
+
+    Chunk = Value.Loaded
+    Path = "Assets/Neris/Catalog/Catalog-"
+
+    If Chunk >= Catalog.CHUNK_COUNT Then
+        Chunk = Chunk - Catalog.CHUNK_COUNT
+        Path = "Assets/Neris/Castle-"
+    End If
+
+    Name = Text_From_Code(48 + Chunk / 10) + Text_From_Code(48 + Chunk Mod 10)
+
+    Value.Models[Value.Loaded] = G.LoadModelGeometry3D(Path + Name + ".sm3d")
+    Ok = Value.Models[Value.Loaded].GeometryReady
+
+    If Ok Then
+        Ok = G.PrepareModelPbr3D(Value.Models[Value.Loaded], G.TEXTURE_FILTER_ANISOTROPIC, 1, 16)
+    End If
+
+    If Ok Then
+
+        For Part = 0 To Value.Models[Value.Loaded].PartCount - 1
+            Value.Objects[Value.Loaded * 16 + Part] = G.CreateModelPart3D(Value.Models[Value.Loaded], Part)
+            Ok = Value.Objects[Value.Loaded * 16 + Part].Handle <> 0 And Ok
+            Value.ObjectCount = Value.ObjectCount + 1
+        End For
+
+    End If
+
+    Value.ErrorCode = G.LastError()
+    Value.Failed = Not Ok
+    Value.Loaded = Value.Loaded + 1
+
+End Sub
+
+Public Function Draw(ByRef Value As State, ByRef Town As Document.State) As Boolean
+
+    Dim Index As Number
+    Dim Part As Number
+    Dim Slot As Number
+    Dim Item As Document.Item
+    Dim Shape As Catalog.Template
+    Dim Ok As Boolean
+
+    Ok = Not Value.Failed
+
+    For Index = 0 To Town.ItemCount - 1
+
+        Item = Town.Items[Index]
+
+        If Item.Active Then
+
+            Shape = Catalog.TemplateAt(Item.Template)
+
+            For Part = 0 To Shape.PartCount - 1
+
+                Slot = Shape.Parts[Part]
+                Ok = P.SetPosition(Value.Objects[Slot], Item.Position.X, Item.Position.Y, Item.Position.Z) And Ok
+                Ok = P.SetScale(Value.Objects[Slot], Item.Scale.X, Item.Scale.Y, Item.Scale.Z) And Ok
+                Ok = P.SetRotation(Value.Objects[Slot], 0.0, Item.Yaw, 0.0) And Ok
+                Ok = G.DrawObject3D(Value.Objects[Slot]) And Ok
+            End For
+
+        End If
+
+    End For
+
+    Return Ok
+
+End Function
+
+Public Sub Destroy(ByRef Value As State)
+
+    Dim Index As Number
+
+    For Index = 0 To 767
+        Call G.DestroyObjectInstance3D(Value.Objects[Index])
+    End For
+
+    For Index = 0 To 47
+        Call G.DestroyModel3D(Value.Models[Index])
+    End For
+
+    Value.Loaded = 0
+    Value.ObjectCount = 0
+    Value.Failed = False
+
+End Sub
+
+End Module

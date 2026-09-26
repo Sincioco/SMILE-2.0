@@ -136,6 +136,22 @@ Public Sub Start(ByRef Value As State)
 
 End Sub
 
+Public Sub Teleport(ByRef Value As State, Position As P.Vector3)
+
+    Dim Index As Number
+
+    Call Trail.Reset(Value.Path, Position, Value.MemberCount, 22.0)
+
+    For Index = 0 To Value.MemberCount - 1
+        Value.Members[Index].Previous = Position
+        Value.Members[Index].Yaw = 180.0
+        Value.Members[Index].Opacity = 0.0
+    End For
+
+    Call Update(Value, Position, 0)
+
+End Sub
+
 Public Function WalkingSpeed(ByRef Value As State) As Double
 
     Dim Result As Double

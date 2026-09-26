@@ -1,0 +1,159 @@
+''' Precise ground/ray picking and projected assembly bounds; no document mutations.
+Module Smile.Tools.TownPicking
+
+Option Explicit
+
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.PrecisionMath3D As M
+Import Smile.Simple3D.PrecisionCamera3D As Camera
+Import Smile.Tools.TownDocument As Document
+Import Smile.Tools.TownCatalogData As Catalog
+Import Smile.Tools.TownGeometry As Geometry
+
+Public Type ScreenBox
+    X0 As Number
+    Y0 As Number
+    X1 As Number
+    Y1 As Number
+    Visible As Boolean
+End Type
+
+Public Function Ground(View As P.Camera3D, X As Number, Y As Number,
+    Width As Number, Height As Number, ByRef Point As P.Vector3) As Boolean
+
+    Dim Ray As P.Vector3
+    Dim Distance As Double
+
+    Ray = M.Subtract(Camera.CursorPointAtDepth(View, X, Y, 1000.0, Width, Height), View.Position)
+
+    If Abs(Ray.Y) < 0.00001 Then
+        Return False
+    End If
+
+    Distance = (23.12 - View.Position.Y) / Ray.Y
+
+    If Distance <= 0.0 Or Distance > 100.0 Then
+        Return False
+    End If
+
+    Point = M.Add(View.Position, M.Scale(Ray, Distance))
+
+    Return True
+
+End Function
+
+Private Function ClipAxis(Origin As Double, Direction As Double, Low As Double,
+    High As Double, ByRef NearValue As Double, ByRef FarValue As Double) As Boolean
+
+    Dim First As Double
+    Dim Second As Double
+    Dim Result As Boolean
+
+    If Abs(Direction) < 0.00001 Then
+        Result = Origin >= Low And Origin <= High
+
+        Return Result
+    End If
+
+    First = (Low - Origin) / Direction
+    Second = (High - Origin) / Direction
+    NearValue = Max(NearValue, Min(First, Second))
+    FarValue = Min(FarValue, Max(First, Second))
+    Result = FarValue >= NearValue
+
+    Return Result
+
+End Function
+
+Public Function ItemAt(ByRef Town As Document.State, Category As Number, View As P.Camera3D,
+    X As Number, Y As Number, Width As Number, Height As Number) As Number
+
+    Dim Index As Number
+    Dim Result As Number
+    Dim Nearest As Double
+    Dim NearValue As Double
+    Dim FarValue As Double
+    Dim Point As P.Vector3
+    Dim Origin As P.Vector3
+    Dim Ray As P.Vector3
+    Dim Shape As Catalog.Template
+    Dim Ok As Boolean
+
+    Result = -1
+    Nearest = 1000000.0
+    Point = Camera.CursorPointAtDepth(View, X, Y, 1000.0, Width, Height)
+
+    For Index = 0 To Town.ItemCount - 1
+
+        If Town.Items[Index].Active And Town.Items[Index].Category = Category Then
+
+            Shape = Catalog.TemplateAt(Town.Items[Index].Template)
+            Origin = Geometry.ToLocal(Town.Items[Index], View.Position)
+            Ray = M.Subtract(Geometry.ToLocal(Town.Items[Index], Point), Origin)
+            NearValue = 0.0
+            FarValue = Nearest
+            Ok = ClipAxis(Origin.X, Ray.X, Shape.Low.X, Shape.High.X, NearValue, FarValue)
+            Ok = ClipAxis(Origin.Y, Ray.Y, Shape.Low.Y, Shape.High.Y, NearValue, FarValue) And Ok
+            Ok = ClipAxis(Origin.Z, Ray.Z, Shape.Low.Z, Shape.High.Z, NearValue, FarValue) And Ok
+
+            If Ok And NearValue < Nearest Then
+                Nearest = NearValue
+                Result = Index
+            End If
+
+        End If
+
+    End For
+
+    Return Result
+
+End Function
+
+Public Function Project(Item As Document.Item, View As P.Camera3D,
+    Width As Number, Height As Number) As ScreenBox
+
+    Dim Shape As Catalog.Template
+    Dim Point As P.Vector3
+    Dim Pixel As Camera.ProjectedPoint
+    Dim Corner As Number
+    Dim Result As ScreenBox
+
+    Shape = Catalog.TemplateAt(Item.Template)
+    Result.X0 = Width
+    Result.Y0 = Height
+
+    For Corner = 0 To 7
+
+        Point = Shape.Low
+
+        If Corner Mod 2 = 1 Then
+            Point.X = Shape.High.X
+        End If
+
+        If (Corner / 2) Mod 2 = 1 Then
+            Point.Y = Shape.High.Y
+        End If
+
+        If Corner >= 4 Then
+            Point.Z = Shape.High.Z
+        End If
+
+        Pixel = Camera.ProjectViewerPoint(Geometry.ToWorld(Item, Point), View, Width, Height)
+
+        If Pixel.Visible Then
+
+            Result.X0 = Min(Result.X0, ToNumber(Pixel.X))
+            Result.Y0 = Min(Result.Y0, ToNumber(Pixel.Y))
+            Result.X1 = Max(Result.X1, ToNumber(Pixel.X))
+            Result.Y1 = Max(Result.Y1, ToNumber(Pixel.Y))
+            Result.Visible = True
+
+        End If
+
+    End For
+
+    Return Result
+
+End Function
+
+End Module

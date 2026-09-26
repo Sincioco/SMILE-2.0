@@ -1,0 +1,569 @@
+''' Versioned, bounded town persistence. Decoding commits only a complete valid document.
+Module Smile.Tools.TownDocumentStore
+
+Option Explicit
+
+Import Smile.Simple3D.SurfaceGrid3D As Grid
+Import Smile.Tools.TownDocument As Document
+Import Smile.Tools.TownCatalogData As Catalog
+
+Private Const CAPACITY = 524288
+Private Dim Bytes[524288] As Number
+Private Dim Offset As Number
+Private Dim ByteCount As Number
+Private Dim Valid As Boolean
+Private Dim Candidate As Document.State
+
+Public Type BridgeStatus
+    RequestId As Number
+    Status As Number
+    Progress As Number
+    Message As Text
+End Type
+
+Private Sub WriteByte(Value As Number)
+
+    If Offset >= CAPACITY Then
+        Valid = False
+        Return
+    End If
+
+    Bytes[Offset] = Value
+    Offset = Offset + 1
+
+End Sub
+
+Private Function ReadByte() As Number
+
+    Dim Result As Number
+
+    If Offset >= ByteCount Then
+        Valid = False
+        Return 0
+    End If
+
+    Result = Bytes[Offset]
+    Offset = Offset + 1
+
+    Return Result
+
+End Function
+
+''' Zigzag/base-128 integers. Eight bytes cover every admitted document value.
+Private Sub WriteInteger(Value As Number)
+
+    Dim Encoded As Number
+    Dim Digit As Number
+
+    If Abs(Value) > 1000000000000000 Then
+        Valid = False
+        Return
+    End If
+
+    Encoded = Value * 2
+
+    If Value < 0 Then
+        Encoded = -Value * 2 - 1
+    End If
+
+    Do
+
+        Digit = Encoded Mod 128
+        Encoded = Encoded / 128
+
+        If Encoded > 0 Then
+            Digit = Digit + 128
+        End If
+
+        Call WriteByte(Digit)
+
+    Loop Until Encoded = 0
+
+End Sub
+
+Private Function ReadInteger() As Number
+
+    Dim Result As Number
+    Dim Encoded As Number
+    Dim Factor As Number
+    Dim Digit As Number
+    Dim Index As Number
+
+    Factor = 1
+
+    For Index = 0 To 7
+
+        Digit = ReadByte()
+        Encoded = Encoded + (Digit Mod 128) * Factor
+
+        If Digit < 128 Then
+
+            Result = Encoded / 2
+
+            If Encoded Mod 2 <> 0 Then
+                Result = -Result - 1
+            End If
+
+            Return Result
+
+        End If
+
+        Factor = Factor * 128
+    End For
+
+    Valid = False
+
+    Return 0
+
+End Function
+
+Private Sub WritePrecise(Value As Double)
+
+    If Abs(Value) > 1000000000.0 Then
+        Valid = False
+        Return
+    End If
+
+    Call WriteInteger(ToNumber(Round(Value * 1000000.0)))
+
+End Sub
+
+Private Function ReadPrecise() As Double
+
+    Dim Result As Double
+
+    Result = ToDouble(ReadInteger()) / 1000000.0
+
+    If Abs(Result) > 1000000000.0 Then
+        Valid = False
+    End If
+
+    Return Result
+
+End Function
+
+Private Sub WriteName(Value As Text)
+
+    Dim Index As Number
+
+    If Not Document.ValidName(Value) Then
+        Valid = False
+        Return
+    End If
+
+    Call WriteInteger(Text_Length(Value))
+
+    For Index = 0 To Text_Length(Value) - 1
+        Call WriteInteger(Text_Code_At(Value, Index))
+    End For
+
+End Sub
+
+Private Function ReadName() As Text
+
+    Dim Result As Text
+    Dim Length As Number
+    Dim Index As Number
+    Dim Code As Number
+
+    Length = ReadInteger()
+
+    If Length < 1 Or Length > 80 Then
+        Valid = False
+        Return ""
+    End If
+
+    For Index = 0 To Length - 1
+
+        Code = ReadInteger()
+
+        If Code < 32 Or Code > 1114111 Or (Code >= 55296 And Code <= 57343) Then
+            Valid = False
+            Return ""
+        End If
+
+        Result = Result + Text_From_Code(Code)
+    End For
+
+    Return Result
+
+End Function
+
+Private Sub WriteItem(Value As Document.Item)
+
+    Call WriteInteger(Value.Identity)
+    Call WriteInteger(Value.Template)
+    Call WriteInteger(Value.SourceIndex)
+    Call WritePrecise(Value.Position.X)
+    Call WritePrecise(Value.Position.Y)
+    Call WritePrecise(Value.Position.Z)
+    Call WritePrecise(Value.Scale.X)
+    Call WritePrecise(Value.Scale.Y)
+    Call WritePrecise(Value.Scale.Z)
+    Call WritePrecise(Value.Yaw)
+
+End Sub
+
+Private Function ReadItem() As Document.Item
+
+    Dim Result As Document.Item
+    Dim Template As Catalog.Template
+
+    Result.Identity = ReadInteger()
+    Result.Template = ReadInteger()
+    Result.SourceIndex = ReadInteger()
+    Result.Position.X = ReadPrecise()
+    Result.Position.Y = ReadPrecise()
+    Result.Position.Z = ReadPrecise()
+    Result.Scale.X = ReadPrecise()
+    Result.Scale.Y = ReadPrecise()
+    Result.Scale.Z = ReadPrecise()
+    Result.Yaw = ReadPrecise()
+    Result.Active = True
+
+    If (Result.Identity < 1 Or Result.Identity > 1000000000 Or
+        Result.Template < 0 Or Result.Template >= Catalog.TEMPLATE_COUNT Or
+        Result.SourceIndex < -1 Or Result.SourceIndex >= Catalog.INITIAL_ITEMS Or
+        Result.Scale.X <= 0.0 Or Result.Scale.Y <= 0.0 Or Result.Scale.Z <= 0.0) Then
+        Valid = False
+        Return Result
+    End If
+
+    Template = Catalog.TemplateAt(Result.Template)
+    Result.Category = Template.Category
+
+    Return Result
+
+End Function
+
+Private Sub Encode(ByRef Value As Document.State, MarkSaved As Boolean)
+
+    Dim Index As Number
+    Dim ActiveCount As Number
+
+    Offset = 0
+    Valid = True
+
+    Call WriteByte(84)
+    Call WriteByte(87)
+    Call WriteByte(78)
+    Call WriteByte(1)
+    Call WriteName(Catalog.FINGERPRINT)
+    Call WriteName(Value.Name)
+
+    If Document.Dirty(Value) And Not MarkSaved Then
+        Call WriteByte(1)
+    Else
+
+        Call WriteByte(0)
+    End If
+
+    Call WriteInteger(Value.Surface.Columns)
+    Call WriteInteger(Value.Surface.Rows)
+    Call WritePrecise(Value.Surface.CellSize)
+
+    For Index = 0 To Value.Surface.Columns
+        Call WritePrecise(Value.Surface.XEdges[Index])
+    End For
+
+    For Index = 0 To Value.Surface.Rows
+        Call WritePrecise(Value.Surface.ZEdges[Index])
+    End For
+
+    For Index = 0 To (Value.Surface.Columns * Value.Surface.Rows + 15) / 16 - 1
+        Call WriteInteger(Value.Surface.Cells[Index])
+    End For
+
+    For Index = 0 To Value.ItemCount - 1
+
+        If Value.Items[Index].Active Then
+            ActiveCount = ActiveCount + 1
+        End If
+
+    End For
+
+    Call WriteInteger(ActiveCount)
+
+    For Index = 0 To Value.ItemCount - 1
+
+        If Value.Items[Index].Active Then
+            Call WriteItem(Value.Items[Index])
+        End If
+
+    End For
+
+    Call WriteInteger(Value.Light.RedValue)
+    Call WriteInteger(Value.Light.GreenValue)
+    Call WriteInteger(Value.Light.BlueValue)
+    Call WriteInteger(Value.Light.Intensity)
+    Call WriteInteger(Value.Light.Ambient)
+    Call WritePrecise(Value.Light.Azimuth)
+    Call WritePrecise(Value.Light.Elevation)
+
+    If Value.Light.Shadows Then
+        Call WriteByte(1)
+    Else
+
+        Call WriteByte(0)
+    End If
+
+    ByteCount = Offset
+
+End Sub
+
+Private Function Decode() As Boolean
+
+    Dim Index As Number
+    Dim Other As Number
+    Dim Packed As Number
+    Dim Digit As Number
+    Dim Shadows As Number
+
+    Offset = 0
+    Valid = True
+
+    If ReadByte() <> 84 Or ReadByte() <> 87 Or ReadByte() <> 78 Or ReadByte() <> 1 Then
+        Return False
+    End If
+
+    If ReadName() <> Catalog.FINGERPRINT Then
+        Return False
+    End If
+
+    Candidate.Name = ReadName()
+    Candidate.SavedRevision = ReadByte()
+
+    If Candidate.SavedRevision < 0 Or Candidate.SavedRevision > 1 Then
+        Return False
+    End If
+
+    Candidate.Surface.Columns = ReadInteger()
+    Candidate.Surface.Rows = ReadInteger()
+    Candidate.Surface.CellSize = ReadPrecise()
+
+    If (Not Valid Or Candidate.Surface.Columns < 1 Or Candidate.Surface.Columns > Grid.MAX_COLUMNS Or
+        Candidate.Surface.Rows < 1 Or Candidate.Surface.Rows > Grid.MAX_ROWS Or
+        Candidate.Surface.CellSize <= 0.0) Then
+        Return False
+    End If
+
+    For Index = 0 To Candidate.Surface.Columns
+
+        Candidate.Surface.XEdges[Index] = ReadPrecise()
+
+        If Index > 0 And Candidate.Surface.XEdges[Index] <= Candidate.Surface.XEdges[Index - 1] Then
+            Return False
+        End If
+
+    End For
+
+    For Index = 0 To Candidate.Surface.Rows
+
+        Candidate.Surface.ZEdges[Index] = ReadPrecise()
+
+        If Index > 0 And Candidate.Surface.ZEdges[Index] <= Candidate.Surface.ZEdges[Index - 1] Then
+            Return False
+        End If
+
+    End For
+
+    Candidate.Surface.OriginX = Candidate.Surface.XEdges[0]
+    Candidate.Surface.OriginZ = Candidate.Surface.ZEdges[0]
+
+    For Index = 0 To (Candidate.Surface.Columns * Candidate.Surface.Rows + 15) / 16 - 1
+
+        Packed = ReadInteger()
+        Candidate.Surface.Cells[Index] = Packed
+
+        If Packed < 0 Or Packed > 281474976710655 Then
+            Return False
+        End If
+
+        For Digit = 0 To 15
+
+            If Packed Mod 8 > Grid.SURFACE_BRIDGE Then
+                Return False
+            End If
+
+            Packed = Packed / 8
+        End For
+    End For
+
+    Candidate.ItemCount = ReadInteger()
+    Candidate.NextIdentity = 1
+
+    If Candidate.ItemCount < 0 Or Candidate.ItemCount > Document.MAX_ITEMS Then
+        Return False
+    End If
+
+    For Index = 0 To Candidate.ItemCount - 1
+
+        Candidate.Items[Index] = ReadItem()
+        Candidate.NextIdentity = Max(Candidate.NextIdentity, Candidate.Items[Index].Identity + 1)
+
+        For Other = 0 To Index - 1
+
+            If Candidate.Items[Index].Identity = Candidate.Items[Other].Identity Then
+                Return False
+            End If
+
+        End For
+    End For
+
+    Candidate.Light.RedValue = ReadInteger()
+    Candidate.Light.GreenValue = ReadInteger()
+    Candidate.Light.BlueValue = ReadInteger()
+    Candidate.Light.Intensity = ReadInteger()
+    Candidate.Light.Ambient = ReadInteger()
+    Candidate.Light.Azimuth = ReadPrecise()
+    Candidate.Light.Elevation = ReadPrecise()
+    Shadows = ReadByte()
+    Candidate.Light.Shadows = Shadows = 1
+
+    If (Candidate.Light.RedValue < 0 Or Candidate.Light.RedValue > 255 Or
+        Candidate.Light.GreenValue < 0 Or Candidate.Light.GreenValue > 255 Or
+        Candidate.Light.BlueValue < 0 Or Candidate.Light.BlueValue > 255 Or
+        Candidate.Light.Intensity < 0 Or Candidate.Light.Intensity > 1000 Or
+        Candidate.Light.Ambient < 0 Or Candidate.Light.Ambient > 100 Or
+        Shadows < 0 Or Shadows > 1 Or Offset <> ByteCount) Then
+        Return False
+    End If
+
+    Return Valid
+
+End Function
+
+Public Function SaveDocument(ByRef Value As Document.State, Key As Text,
+    Optional MarkSaved As Boolean = True) As Boolean
+
+    Dim Status As Number
+
+    Call Encode(Value, MarkSaved)
+
+    If Not Valid Then
+        Return False
+    End If
+
+    Save Data Bytes Count ByteCount To Key Status Status
+
+    If Status <> DATA_STATUS_OK Then
+        Return False
+    End If
+
+    If MarkSaved Then
+        Value.SavedRevision = Value.Revision
+    End If
+
+    Return True
+
+End Function
+
+Public Function LoadDocument(ByRef Value As Document.State, Key As Text,
+    Optional PreserveDirty As Boolean = False) As Boolean
+
+    Dim Status As Number
+    Dim Revision As Number
+    Dim WasDirty As Boolean
+
+    Load Data Key Into Bytes Count ByteCount Status Status
+
+    If Status <> DATA_STATUS_OK Or Not Decode() Then
+        Return False
+    End If
+
+    Revision = Value.Revision + 1
+    WasDirty = Candidate.SavedRevision = 1
+    Value = Candidate
+    Value.Revision = Revision
+    Value.SavedRevision = Revision
+    Value.Surface.Revision = Revision
+
+    If PreserveDirty And WasDirty Then
+        Value.SavedRevision = -1
+    End If
+
+    Return True
+
+End Function
+
+Public Function Exists(Key As Text) As Boolean
+
+    Dim Status As Number
+    Dim Result As Boolean
+
+    Load Data Key Into Bytes Count ByteCount Status Status
+    Result = Status = DATA_STATUS_OK
+
+    Return Result
+
+End Function
+
+''' One atomic request contains the complete document and an integral operation/id trailer.
+Public Function QueueBlender(ByRef Value As Document.State, Mode As Number) As Number
+
+    Dim RequestId As Number
+    Dim Status As Number
+    Dim Ok As Boolean
+
+    Ok = SaveDocument(Value, "TownEditor.PendingBlender", False)
+
+    If Not Ok Then
+        Return 0
+    End If
+
+    Load RequestId From "TownEditor.BlenderSequence" Default 0
+    RequestId = RequestId + 1
+    Save RequestId To "TownEditor.BlenderSequence"
+
+    Call Encode(Value, True)
+    Call WriteInteger(Mode)
+    Call WriteInteger(RequestId)
+
+    ByteCount = Offset
+
+    If Not Valid Then
+        Return 0
+    End If
+
+    Save Data Bytes Count ByteCount To "TownEditor.Blender.Request" Status Status
+
+    If Status <> DATA_STATUS_OK Then
+        Return 0
+    End If
+
+    Return RequestId
+
+End Function
+
+Public Function ReadBridgeStatus() As BridgeStatus
+
+    Dim Result As BridgeStatus
+    Dim Status As Number
+
+    Load Data "TownEditor.Blender.Response" Into Bytes Count ByteCount Status Status
+
+    If Status <> DATA_STATUS_OK Then
+        Return Result
+    End If
+
+    Offset = 0
+    Valid = True
+
+    If ReadByte() <> 84 Or ReadByte() <> 87 Or ReadByte() <> 82 Or ReadByte() <> 1 Then
+        Return Result
+    End If
+
+    Result.RequestId = ReadInteger()
+    Result.Status = ReadInteger()
+    Result.Progress = ReadInteger()
+    Result.Message = ReadName()
+
+    If Not Valid Or Offset <> ByteCount Then
+        Result.RequestId = 0
+    End If
+
+    Return Result
+
+End Function
+
+End Module

@@ -55,6 +55,7 @@ The typed family has its own command namespace, without changing legacy IDs:
 | Mutation | 3 / 4 / 5 | Object position / rotation / scale XYZ, remaining slots zero |
 | Mutation | 6 | Object pivot XYZ in world units, followed by XYZ rotation in degrees |
 | Mutation | 7 | Existing point-light slot: XYZ, integral RGB components, intensity percent and range; style fields are validated before explicit conversion |
+| Mutation | 8 | Existing mesh vertex: integral vertex index, XYZ coordinates; rejects invalid handles, nonfinite/out-of-range coordinates and an in-flight frame |
 | Mutation | 10000 + Index | Existing ribbon point, Index 0–8191: left XYZ, right XYZ, U in 0–1 |
 | Mutation | 20000 + AtlasFrame × 4096 + Index | Existing particle instance, Index 0–4095 and AtlasFrame 0–255: XYZ, size, rotation degrees |
 | Mutation | 2000000 + Slot | Existing GPU particle spawn staging, Slot 0–32767: XYZ, velocity XYZ in world units/second |

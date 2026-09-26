@@ -1,0 +1,501 @@
+''' Incremental surface generation. Keep the live terrain until its replacement is complete.
+Module Smile.Tools.TownSurfaceRenderer
+
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Graphics3D As G
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.SurfaceGrid3D As Grid
+
+Private Type Patch
+    X0 As Double
+    Z0 As Double
+    X1 As Double
+    Z1 As Double
+    Kind As Number
+    Y0 As Double
+    Y1 As Double
+    Plane As Number
+End Type
+
+Private Dim Pending As Grid.State
+Private Dim Patches[32768] As Patch
+Private Dim PatchCount As Number
+
+Public Type State
+    Objects[32] As Core.Object3D
+    NextObjects[32] As Core.Object3D
+    Water[4] As Core.RibbonBatch3D
+    NextWater[4] As Core.RibbonBatch3D
+    Materials[6] As Core.Material3D
+    Textures[2] As Core.Texture3D
+    LiveRevision As Number
+    PendingRevision As Number
+    Stage As Number
+    Row As Number
+    Kind As Number
+    Cursor As Number
+    ObjectCount As Number
+    WaterCount As Number
+    NextCount As Number
+    NextWaterCount As Number
+    Failed As Boolean
+    Time As Number
+End Type
+
+Public Function Create(ByRef Value As State) As Boolean
+
+    Dim EmptyTexture As Core.Texture3D
+    Dim Ok As Boolean
+
+    Value.Textures[0] = G.LoadTexture3D("Assets/Neris/Neris-Grass-Color.png", 1, 1)
+    Value.Textures[1] = G.LoadTexture3D("Assets/Neris/Neris-Paving.png", 1, 1)
+    Value.Materials[1] = G.CreateMaterial3D(Value.Textures[0], 0, 255, 255, 255, 100, False, 0, 0)
+    Value.Materials[3] = G.CreateMaterial3D(Value.Textures[1], 0, 255, 255, 255, 100, False, 0, 0)
+    Value.Materials[4] = G.CreateMaterial3D(EmptyTexture, 0, 220, 214, 188, 100, False, 0, 0)
+    Value.Materials[5] = G.CreateMaterial3D(EmptyTexture, 0, 175, 136, 66, 100, False, 0, 0)
+    Value.Materials[2] = G.CreateEffectMaterial3D(EmptyTexture, G.MATERIAL_ALPHA_BLEND, 100)
+    Ok = G.SetEffectMaterial3D(Value.Materials[2], G.MATERIAL_ALPHA_BLEND, 30, 100, 240, 100, 100)
+    Ok = G.SetEffectMaterialWater3D(Value.Materials[2], True, 68, 0, 0, 2) And Ok
+    Ok = (Value.Materials[1].Handle <> 0 And Value.Materials[3].Handle <> 0 And
+        Value.Materials[4].Handle <> 0 And Ok)
+    Value.LiveRevision = -1
+    Value.Failed = Not Ok
+
+    Return Ok
+
+End Function
+
+Public Sub BeginBuild(ByRef Value As State, ByRef Surface As Grid.State)
+
+    Dim Index As Number
+
+    For Index = 0 To Value.NextCount - 1
+        Call G.DestroyObject3D(Value.NextObjects[Index])
+    End For
+
+    For Index = 0 To Value.NextWaterCount - 1
+        Call G.DestroyRibbonBatch3D(Value.NextWater[Index])
+    End For
+
+    Pending = Surface
+    PatchCount = 0
+    Value.PendingRevision = Surface.Revision
+    Value.Row = 0
+    Value.Kind = 1
+    Value.Cursor = 0
+    Value.NextCount = 0
+    Value.NextWaterCount = 0
+    Value.Failed = False
+    Value.Stage = 1
+
+End Sub
+
+Private Sub AddPatch(ByRef Value As State, X0 As Double, Z0 As Double,
+    X1 As Double, Z1 As Double, Kind As Number, Optional Y0 As Double = 0.0,
+    Optional Y1 As Double = 0.0, Optional Plane As Number = 0)
+
+    If PatchCount >= 32768 Then
+        Value.Failed = True
+        Return
+    End If
+
+    Patches[PatchCount].X0 = X0
+    Patches[PatchCount].Z0 = Z0
+    Patches[PatchCount].X1 = X1
+    Patches[PatchCount].Z1 = Z1
+    Patches[PatchCount].Kind = Kind
+    Patches[PatchCount].Y0 = Y0
+    Patches[PatchCount].Y1 = Y1
+    Patches[PatchCount].Plane = Plane
+    PatchCount = PatchCount + 1
+
+End Sub
+
+''' Rails follow only the bridge/water edge; dry road approaches stay completely open.
+Private Sub Rail(ByRef Value As State, X0 As Double, Z0 As Double,
+    X1 As Double, Z1 As Double, Plane As Number)
+
+    Dim Width As Double
+
+    Width = 4.5
+
+    If Plane = 1 Then
+
+        Call AddPatch(Value, X0, Z0 - Width * 0.5, X1, Z0 + Width * 0.5, 5, 34.0)
+        Call AddPatch(Value, X0, Z0 - Width * 0.5, X1, Z0 - Width * 0.5, 4, 23.2, 33.3, 1)
+        Call AddPatch(Value, X0, Z0 + Width * 0.5, X1, Z0 + Width * 0.5, 4, 23.2, 33.3, 1)
+
+    Else
+
+        Call AddPatch(Value, X0 - Width * 0.5, Z0, X0 + Width * 0.5, Z1, 5, 34.0)
+        Call AddPatch(Value, X0 - Width * 0.5, Z0, X0 - Width * 0.5, Z1, 4, 23.2, 33.3, 2)
+        Call AddPatch(Value, X0 + Width * 0.5, Z0, X0 + Width * 0.5, Z1, 4, 23.2, 33.3, 2)
+
+    End If
+
+End Sub
+
+Private Sub ScanRow(ByRef Value As State)
+
+    Dim X As Number
+    Dim StartX As Number
+    Dim Surface As Number
+    Dim Kind As Number
+    Dim Z As Number
+    Dim X0 As Double
+    Dim X1 As Double
+    Dim Z0 As Double
+    Dim Z1 As Double
+
+    Z = Value.Row
+    Z0 = Pending.ZEdges[Z]
+    Z1 = Pending.ZEdges[Z + 1]
+
+    Do
+        StartX = X
+        Surface = Grid.ReadCell(Pending, X, Z)
+        Kind = Surface
+
+        If Surface = Grid.SURFACE_BRIDGE Then
+            Kind = Grid.SURFACE_ROAD
+        End If
+
+        Do
+            X = X + 1
+
+        Loop Until X >= Pending.Columns Or Grid.ReadCell(Pending, X, Z) <> Surface
+
+        If Kind > 0 Then
+            Call AddPatch(Value, Pending.XEdges[StartX], Z0, Pending.XEdges[X], Z1, Kind)
+        End If
+
+    Loop Until X >= Pending.Columns
+
+    For X = 0 To Pending.Columns - 1
+
+        Surface = Grid.ReadCell(Pending, X, Z)
+
+        If Grid.Water(Surface) Then
+
+            X0 = Pending.XEdges[X]
+            X1 = Pending.XEdges[X + 1]
+
+            If Surface = Grid.SURFACE_BRIDGE Then
+
+                If Grid.ReadCell(Pending, X - 1, Z) = Grid.SURFACE_WATER Then
+                    Call Rail(Value, X0, Z0, X0, Z1, 2)
+                End If
+
+                If Grid.ReadCell(Pending, X + 1, Z) = Grid.SURFACE_WATER Then
+                    Call Rail(Value, X1, Z0, X1, Z1, 2)
+                End If
+
+                If Grid.ReadCell(Pending, X, Z - 1) = Grid.SURFACE_WATER Then
+                    Call Rail(Value, X0, Z0, X1, Z0, 1)
+                End If
+
+                If Grid.ReadCell(Pending, X, Z + 1) = Grid.SURFACE_WATER Then
+                    Call Rail(Value, X0, Z1, X1, Z1, 1)
+                End If
+
+            End If
+
+            If Grid.Bank(Pending, X, Z, X - 1, Z) Then
+                Call AddPatch(Value, X0 - 0.3, Z0, X0 + 0.3, Z1, 4)
+            End If
+
+            If Grid.Bank(Pending, X, Z, X + 1, Z) Then
+                Call AddPatch(Value, X1 - 0.3, Z0, X1 + 0.3, Z1, 4)
+            End If
+
+            If Grid.Bank(Pending, X, Z, X, Z - 1) Then
+                Call AddPatch(Value, X0, Z0 - 0.3, X1, Z0 + 0.3, 4)
+            End If
+
+            If Grid.Bank(Pending, X, Z, X, Z + 1) Then
+                Call AddPatch(Value, X0, Z1 - 0.3, X1, Z1 + 0.3, 4)
+            End If
+
+        End If
+
+    End For
+
+End Sub
+
+Private Function Vertex(Mesh As Number, Index As Number, X As Double,
+    Y As Double, Z As Double, Kind As Number) As Boolean
+
+    Dim Ok As Boolean
+    Dim Period As Double
+
+    Period = 20.0
+
+    If Kind = 1 Then
+        Period = 160.0
+    End If
+
+    Ok = P.SetMeshVertex(Mesh, Index, P.Vector(X, Y, Z))
+    Ok = G.SetMeshUv3D(Mesh, Index, ToNumber(X * 1000.0 / Period),
+        ToNumber(Z * 1000.0 / Period)) And Ok
+    Ok = G.SetMeshNormal3D(Mesh, Index, 0, 1000, 0) And Ok
+
+    Return Ok
+
+End Function
+
+Private Sub UploadNext(ByRef Value As State)
+
+    Dim Index As Number
+    Dim StopIndex As Number
+    Dim Total As Number
+    Dim Mesh As Number
+    Dim Point As Number
+    Dim Part As Patch
+    Dim Height As Double
+    Dim Ok As Boolean
+
+    StopIndex = Value.Cursor
+
+    Do
+
+        If StopIndex >= PatchCount Or Total = 2048 Then
+            Exit Do
+        End If
+
+        If Patches[StopIndex].Kind = Value.Kind Then
+            Total = Total + 1
+        End If
+
+        StopIndex = StopIndex + 1
+
+    Loop
+
+    Ok = True
+    Height = 22.5
+
+    If Value.Kind = 3 Then
+        Height = 23.12
+    Else If Value.Kind = 4 Then
+        Height = 23.25
+    End If
+
+    If Total > 0 Then
+
+        If Value.Kind = 2 Then
+
+            If Value.NextWaterCount >= 4 Then
+                Value.Failed = True
+                Return
+            End If
+
+            Value.NextWater[Value.NextWaterCount] = G.CreateRibbonBatch3D(Total * 4, Value.Materials[2])
+            Ok = Value.NextWater[Value.NextWaterCount].Handle <> 0
+
+        Else
+
+            If Value.NextCount >= 32 Then
+                Value.Failed = True
+                Return
+            End If
+
+            Mesh = G.CreateMesh3D(Total * 4, Total * 6)
+            Ok = Mesh <> 0
+
+        End If
+
+        For Index = Value.Cursor To StopIndex - 1
+
+            Part = Patches[Index]
+
+            If Part.Kind = Value.Kind Then
+
+                If Value.Kind = 2 Then
+
+                    Ok = P.SetRibbonPoint(Value.NextWater[Value.NextWaterCount], Point,
+                        P.Vector(Part.X0, 21.85, Part.Z0), P.Vector(Part.X0, 21.85, Part.Z0), 0.0) And Ok
+                    Ok = P.SetRibbonPoint(Value.NextWater[Value.NextWaterCount], Point + 1,
+                        P.Vector(Part.X0, 21.85, Part.Z0), P.Vector(Part.X1, 21.85, Part.Z0), 0.0) And Ok
+                    Ok = P.SetRibbonPoint(Value.NextWater[Value.NextWaterCount], Point + 2,
+                        P.Vector(Part.X0, 21.85, Part.Z1), P.Vector(Part.X1, 21.85, Part.Z1), 1.0) And Ok
+                    Ok = P.SetRibbonPoint(Value.NextWater[Value.NextWaterCount], Point + 3,
+                        P.Vector(Part.X1, 21.85, Part.Z1), P.Vector(Part.X1, 21.85, Part.Z1), 1.0) And Ok
+                    Ok = G.SetRibbonPointColor3D(Value.NextWater[Value.NextWaterCount], Point, 255, 255, 255, 100) And Ok
+                    Ok = G.SetRibbonPointColor3D(Value.NextWater[Value.NextWaterCount], Point + 1, 255, 255, 255, 100) And Ok
+                    Ok = G.SetRibbonPointColor3D(Value.NextWater[Value.NextWaterCount], Point + 2, 255, 255, 255, 100) And Ok
+                    Ok = G.SetRibbonPointColor3D(Value.NextWater[Value.NextWaterCount], Point + 3, 255, 255, 255, 100) And Ok
+
+                Else If Part.Plane = 1 Then
+
+                    Ok = Vertex(Mesh, Point, Part.X0, Part.Y0, Part.Z0, Value.Kind) And Ok
+                    Ok = Vertex(Mesh, Point + 1, Part.X0, Part.Y1, Part.Z0, Value.Kind) And Ok
+                    Ok = Vertex(Mesh, Point + 2, Part.X1, Part.Y1, Part.Z0, Value.Kind) And Ok
+                    Ok = Vertex(Mesh, Point + 3, Part.X1, Part.Y0, Part.Z0, Value.Kind) And Ok
+
+                Else If Part.Plane = 2 Then
+
+                    Ok = Vertex(Mesh, Point, Part.X0, Part.Y0, Part.Z0, Value.Kind) And Ok
+                    Ok = Vertex(Mesh, Point + 1, Part.X0, Part.Y1, Part.Z0, Value.Kind) And Ok
+                    Ok = Vertex(Mesh, Point + 2, Part.X0, Part.Y1, Part.Z1, Value.Kind) And Ok
+                    Ok = Vertex(Mesh, Point + 3, Part.X0, Part.Y0, Part.Z1, Value.Kind) And Ok
+
+                Else
+
+                    If Part.Y0 > 0.0 Then
+                        Height = Part.Y0
+                    Else If Value.Kind = 4 Then
+                        Height = 23.25
+                    End If
+
+                    Ok = Vertex(Mesh, Point, Part.X0, Height, Part.Z0, Value.Kind) And Ok
+                    Ok = Vertex(Mesh, Point + 1, Part.X0, Height, Part.Z1, Value.Kind) And Ok
+                    Ok = Vertex(Mesh, Point + 2, Part.X1, Height, Part.Z1, Value.Kind) And Ok
+                    Ok = Vertex(Mesh, Point + 3, Part.X1, Height, Part.Z0, Value.Kind) And Ok
+
+                End If
+
+                If Value.Kind <> 2 Then
+                    Ok = G.SetMeshTriangle3D(Mesh, Point / 2, Point, Point + 1, Point + 2) And Ok
+                    Ok = G.SetMeshTriangle3D(Mesh, Point / 2 + 1, Point, Point + 2, Point + 3) And Ok
+                End If
+
+                Point = Point + 4
+
+            End If
+
+        End For
+
+        If Value.Kind = 2 Then
+
+            Ok = G.CommitRibbonBatch3D(Value.NextWater[Value.NextWaterCount], Total * 4) And Ok
+            Value.NextWaterCount = Value.NextWaterCount + 1
+
+        Else
+            Ok = G.CommitMesh3D(Mesh) And Ok
+            Value.NextObjects[Value.NextCount] = G.CreateObjectFromMesh3D(Mesh)
+            Ok = G.SetObjectMaterial3D(Value.NextObjects[Value.NextCount], Value.Materials[Value.Kind]) And Ok
+            Ok = G.SetObjectCullMode3D(Value.NextObjects[Value.NextCount], G.OBJECT_CULL_NONE) And Ok
+            Value.NextCount = Value.NextCount + 1
+
+        End If
+
+    End If
+
+    Value.Failed = Not Ok
+    Value.Cursor = StopIndex
+
+    If Value.Cursor >= PatchCount Then
+        Value.Kind = Value.Kind + 1
+        Value.Cursor = 0
+    End If
+
+End Sub
+
+Public Sub Update(ByRef Value As State, Elapsed As Number)
+
+    Dim Index As Number
+    Dim Ok As Boolean
+
+    Value.Time = (Value.Time + Max(0, Elapsed)) Mod 3600000
+    Ok = G.SetEffectMaterialWater3D(Value.Materials[2], True, 68, 0, Value.Time / 8, 2)
+
+    If Value.Failed Then
+        Return
+    End If
+
+    If Value.Stage = 1 Then
+
+        For Index = 1 To 12
+
+            Call ScanRow(Value)
+
+            Value.Row = Value.Row + 1
+
+            If Value.Row >= Pending.Rows Or Value.Failed Then
+                Value.Stage = 2
+                Exit For
+            End If
+
+        End For
+
+    Else If Value.Stage = 2 Then
+
+        Call UploadNext(Value)
+
+        If Value.Kind > 5 And Not Value.Failed Then
+
+            For Index = 0 To 31
+                Call G.DestroyObject3D(Value.Objects[Index])
+
+                Value.Objects[Index] = Value.NextObjects[Index]
+                Value.NextObjects[Index].Handle = 0
+                Value.NextObjects[Index].MeshHandle = 0
+            End For
+
+            For Index = 0 To 3
+                Call G.DestroyRibbonBatch3D(Value.Water[Index])
+
+                Value.Water[Index] = Value.NextWater[Index]
+                Value.NextWater[Index].Handle = 0
+            End For
+
+            Value.ObjectCount = Value.NextCount
+            Value.WaterCount = Value.NextWaterCount
+            Value.NextCount = 0
+            Value.NextWaterCount = 0
+            Value.LiveRevision = Value.PendingRevision
+            Value.Stage = 0
+
+        End If
+
+    End If
+
+End Sub
+
+Public Function Draw(ByRef Value As State) As Boolean
+
+    Dim Index As Number
+    Dim Ok As Boolean
+
+    Ok = True
+
+    For Index = 0 To Value.ObjectCount - 1
+        Ok = G.DrawObject3D(Value.Objects[Index]) And Ok
+    End For
+
+    For Index = 0 To Value.WaterCount - 1
+        Ok = G.DrawRibbonBatch3D(Value.Water[Index]) And Ok
+    End For
+
+    Return Ok
+
+End Function
+
+Public Sub Destroy(ByRef Value As State)
+
+    Dim Index As Number
+
+    For Index = 0 To 31
+        Call G.DestroyObject3D(Value.Objects[Index])
+        Call G.DestroyObject3D(Value.NextObjects[Index])
+    End For
+
+    For Index = 0 To 3
+        Call G.DestroyRibbonBatch3D(Value.Water[Index])
+        Call G.DestroyRibbonBatch3D(Value.NextWater[Index])
+    End For
+
+    For Index = 1 To 5
+        Call G.DestroyMaterial3D(Value.Materials[Index])
+    End For
+
+    For Index = 0 To 1
+        Call G.DestroyTexture3D(Value.Textures[Index])
+    End For
+
+    Value.Stage = 0
+
+End Sub
+
+End Module

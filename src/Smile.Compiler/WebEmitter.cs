@@ -1006,6 +1006,8 @@ internal sealed class WebEmitter
             SyntaxKind.FileRevealKeyword => $"(({arguments}), false)",
             SyntaxKind.FileExportKeyword => $"smile.fileExport({arguments})",
             SyntaxKind.FileImportKeyword => "await smile.fileImport()",
+            SyntaxKind.TextPromptKeyword => $"smile.textPrompt({arguments})",
+            SyntaxKind.TextFromCodeKeyword => $"smile.textFromCode({arguments})",
             SyntaxKind.KeyHeldKeyword => $"smile.isTrue(smile.keyHeld({arguments}))",
             SyntaxKind.KeyEventHeldKeyword => $"smile.isTrue(smile.keyEventHeld({arguments}))",
             SyntaxKind.PointerXKeyword => "smile.pointerX()",

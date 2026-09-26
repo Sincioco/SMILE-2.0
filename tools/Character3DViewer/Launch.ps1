@@ -199,6 +199,10 @@ foreach ($character in $characters) {
 }
 
 if (-not $Studio) {
+    $townArguments = '-NoProfile -File "{0}" -ViewerProcessId {1}' -f `
+        (Join-Path $toolRoot 'Watch-TownSaves.ps1'), $viewerProcess.Id
+    Start-Process -FilePath $shellCommand.Source -ArgumentList $townArguments `
+        -WindowStyle Hidden | Out-Null
     $recoveryArguments = '-NoProfile -File "{0}" -Mode Watch -ViewerProcessId {1}' -f `
         $recoveryScript, $viewerProcess.Id
     Start-Process -FilePath $shellCommand.Source -ArgumentList $recoveryArguments `

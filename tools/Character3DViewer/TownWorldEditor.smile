@@ -1,0 +1,325 @@
+''' Saved town references, draggable map nodes and bidirectional routes.
+Module Smile.Tools.TownWorldEditor
+
+Option Explicit
+
+Import Smile.Tools.TownWorldDocument As Document
+Import Smile.Tools.TownDocumentStore As Storage
+Import Smile.Tools.TownEditorPanel As Panel
+
+Private Dim Map As Document.State
+Private Dim Ui As Panel.State
+Private Dim Enabled As Boolean
+Private Dim Selected As Number
+Private Dim Linking As Boolean
+Private Dim Dragging As Boolean
+Private Dim Dirty As Boolean
+
+Public Function Active() As Boolean
+
+    Return Enabled
+
+End Function
+
+Public Sub Open(CreateNew As Boolean, Town As Text)
+
+    Dim Name As Text
+    Dim Empty As Document.State
+    Dim Ok As Boolean
+
+    Ui.Message = ""
+
+    If Dirty Then
+
+        Ok = Document.SaveWorld(Map)
+
+        If Not Ok Then
+
+            Ui.Message = "World save failed; changes retained."
+            Enabled = True
+            Return
+
+        End If
+
+    End If
+
+    Name = Text_Prompt("Linked World", "Enter the world name.", "My World")
+
+    If Text_Length(Name) < 1 Or Text_Length(Name) > 80 Then
+        Return
+    End If
+
+    If CreateNew Then
+
+        If Storage.Exists("TownEditor.World." + Name) Then
+            Ui.Message = "That world name already exists."
+            Return
+        End If
+
+        Map = Empty
+        Map.Name = Name
+        Ok = Document.Add(Map, Town, 500, 500)
+        Dirty = True
+
+    Else
+        Ok = Document.LoadWorld(Map, Name)
+
+        If Not Ok Then
+            Ui.Message = "World not found."
+            Return
+        End If
+
+    End If
+
+    Enabled = True
+    Selected = 0
+    Linking = False
+    Dragging = False
+
+End Sub
+
+Private Function ScreenX(Index As Number) As Number
+
+    Dim Result As Number
+
+    Result = 100 + Map.Nodes[Index].X * Max(100, Panel.LeftEdge() - 200) / 1000
+
+    Return Result
+
+End Function
+
+Private Function ScreenY(Index As Number) As Number
+
+    Dim Result As Number
+
+    Result = 200 + Map.Nodes[Index].Y * Max(100, Window_Height() - 400) / 1000
+
+    Return Result
+
+End Function
+
+Private Sub RemoveSelected()
+
+    Dim Index As Number
+    Dim Other As Number
+
+    If Selected < 0 Or Selected >= Map.NodeCount Then
+        Return
+    End If
+
+    For Index = Selected To Map.NodeCount - 2
+
+        Map.Nodes[Index] = Map.Nodes[Index + 1]
+
+        For Other = 0 To Map.NodeCount - 1
+            Map.Links[Index, Other] = Map.Links[Index + 1, Other]
+        End For
+    End For
+
+    For Index = 0 To Map.NodeCount - 1
+
+        For Other = Selected To Map.NodeCount - 2
+            Map.Links[Index, Other] = Map.Links[Index, Other + 1]
+        End For
+
+        Map.Links[Index, Map.NodeCount - 1] = False
+        Map.Links[Map.NodeCount - 1, Index] = False
+    End For
+
+    Map.NodeCount = Map.NodeCount - 1
+    Selected = -1
+    Dirty = True
+
+End Sub
+
+Public Function Input(Key As Number) As Text
+
+    Dim Action As Number
+    Dim Index As Number
+    Dim Picked As Number
+    Dim Name As Text
+    Dim Ok As Boolean
+    Dim Result As Text
+
+    If Not Enabled Then
+        Return ""
+    End If
+
+    Action = Panel.Input(Ui)
+
+    If Action = 1 Then
+
+        Name = Text_Prompt("Add Town To World", "Enter a saved town or version name.", "Neris Town")
+        Ok = Storage.Exists("TownEditor.Town." + Name) Or Storage.Exists("TownEditor.Recovery." + Name)
+
+        If Ok Then
+            Ok = Document.Add(Map, Name, 250 + (Map.NodeCount Mod 3) * 250, 250 + (Map.NodeCount Mod 2) * 500)
+            Dirty = Dirty Or Ok
+        End If
+
+        Ui.Message = "Town added."
+
+        If Not Ok Then
+            Ui.Message = "Save the town first; no duplicates (max 16)."
+        End If
+
+    Else If Action = 2 Then
+
+        Linking = Not Linking
+        Ui.Message = "Select one town, then another to toggle a route."
+
+    Else If Action = 3 Or Key = KEY_DELETE Then
+
+        Call RemoveSelected()
+
+    Else If Action = 4 Then
+
+        Ok = Document.SaveWorld(Map)
+        Ui.Message = "World saved."
+        Dirty = Not Ok
+
+        If Not Ok Then
+            Ui.Message = "Save failed; changes retained."
+        End If
+
+    Else If Action = 5 Or Action = 6 Or Key = KEY_ESCAPE Then
+
+        Ok = Document.SaveWorld(Map)
+
+        If Ok Then
+
+            Dirty = False
+            Enabled = False
+
+            If Action = 5 And Selected >= 0 And Selected < Map.NodeCount Then
+                Result = Map.Nodes[Selected].Town
+            End If
+
+        Else
+            Ui.Message = "Save failed; changes retained."
+
+        End If
+
+    End If
+
+    If Pointer_Pressed(POINTER_PRIMARY) And Pointer_X() < Panel.LeftEdge() Then
+
+        Picked = -1
+
+        For Index = 0 To Map.NodeCount - 1
+
+            If Abs(Pointer_X() - ScreenX(Index)) < 80 And Abs(Pointer_Y() - ScreenY(Index)) < 22 Then
+                Picked = Index
+            End If
+
+        End For
+
+        If Linking And Picked >= 0 And Selected >= 0 And Picked <> Selected Then
+
+            Map.Links[Selected, Picked] = Not Map.Links[Selected, Picked]
+            Map.Links[Picked, Selected] = Map.Links[Selected, Picked]
+            Dirty = True
+
+        End If
+
+        Selected = Picked
+        Dragging = Picked >= 0 And Not Linking
+
+    End If
+
+    If Dragging And Pointer_Held(POINTER_PRIMARY) Then
+
+        Map.Nodes[Selected].X = Max(0, Min(1000, (Pointer_X() - 100) * 1000 / Max(100, Panel.LeftEdge() - 200)))
+        Map.Nodes[Selected].Y = Max(0, Min(1000, (Pointer_Y() - 200) * 1000 / Max(100, Window_Height() - 400)))
+        Dirty = True
+
+    Else
+        Dragging = False
+
+    End If
+
+    If Dirty And Not Dragging Then
+        Ok = Document.SaveWorld(Map)
+        Dirty = Not Ok
+    End If
+
+    Return Result
+
+End Function
+
+Public Sub Draw()
+
+    Dim Index As Number
+    Dim Other As Number
+    Dim ColorValue As Number
+    Dim X As Number
+
+    If Not Enabled Then
+        Return
+    End If
+
+    Fill Rectangle 0, 125, Window_Width(), Window_Height() - 125, RGB(12, 23, 36)
+    Draw Text Map.Name At 30, 142 Size 24 Color WHITE
+
+    For Index = 0 To Map.NodeCount - 1
+
+        For Other = Index + 1 To Map.NodeCount - 1
+
+            If Map.Links[Index, Other] Then
+                Draw Line ScreenX(Index), ScreenY(Index), ScreenX(Other), ScreenY(Other), RGB(60, 185, 184)
+            End If
+
+        End For
+    End For
+
+    For Index = 0 To Map.NodeCount - 1
+
+        ColorValue = RGB(28, 55, 76)
+
+        If Selected = Index Then
+            ColorValue = RGB(22, 110, 135)
+        End If
+
+        Fill Rectangle ScreenX(Index) - 80, ScreenY(Index) - 22, 160, 44, ColorValue
+        Draw Text Text_Slice(Map.Nodes[Index].Town, 0, 20) At ScreenX(Index) - 74, ScreenY(Index) - 7 Size 13 Color WHITE
+    End For
+
+    X = Panel.LeftEdge() + 10
+    Ui.ControlCount = 0
+
+    Call Panel.Button(Ui, 1, X, 180, 283, "Add Saved Town")
+    Call Panel.Button(Ui, 2, X, 218, 283, "Connect Towns", Linking)
+    Call Panel.Button(Ui, 3, X, 256, 283, "Remove From Map")
+    Call Panel.Button(Ui, 4, X, 294, 283, "Save World")
+    Call Panel.Button(Ui, 5, X, 332, 283, "Enter Selected Town")
+    Call Panel.Button(Ui, 6, X, 370, 283, "Back To Town Editor")
+
+    Draw Text "Drag towns to arrange the map." At 30, Window_Height() - 65 Size 15 Color WHITE
+    Draw Text Ui.Message At 30, Window_Height() - 40 Size 14 Color RGB(240, 205, 140)
+
+End Sub
+
+Public Sub Close()
+
+    Dim Ok As Boolean
+
+    If Dirty Then
+        Ok = Document.SaveWorld(Map)
+        Dirty = Not Ok
+    End If
+
+    Enabled = False
+
+End Sub
+
+Public Function LastMessage() As Text
+
+    Dim ReturnValue As Text
+
+    ReturnValue = Ui.Message
+
+    Return ReturnValue
+
+End Function
+
+End Module

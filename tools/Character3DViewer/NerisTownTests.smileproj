@@ -6,6 +6,11 @@
   <ItemGroup>
     <SmileSource Include="NerisTownTests.smile" StartupOnly="true" />
     <SmileSource Include="NerisTownNavigation.smile" />
+    <SmileSource Include="TownDocumentNavigation.smile" />
+    <SmileSource Include="TownDocument.smile" />
+    <SmileSource Include="TownCatalogData.smile" />
+    <SmileSource Include="TownCatalogFeatures.smile" />
+    <SmileSource Include="TownGeometry.smile" />
     <SmileSource Include="NerisTownDistricts.smile" />
     <SmileSource Include="NerisTownLayout.smile" />
     <SmileSource Include="NerisTownSite.smile" />

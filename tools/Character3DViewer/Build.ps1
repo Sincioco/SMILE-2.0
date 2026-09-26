@@ -33,6 +33,26 @@ if ($Studio) {
 $nativeBattleSources = @(
     'NativeViewerHost.smile',
     'NerisTown.smile',
+    'TownDocument.smile',
+    'TownPicking.smile',
+    'TownEditorPanel.smile',
+    'TownEditor.smile',
+    'TownLibrary.smile',
+    'TownDocumentMap.smile',
+    'TownWorldDocument.smile',
+    'TownWorldEditor.smile',
+    'TownEditorSession.smile',
+    'TownSelection.smile',
+    'TownCatalogData.smile',
+    'TownCatalogFeatures.smile',
+    'TownInitialSurface.smile',
+    'TownDocumentStore.smile',
+    'TownGeometry.smile',
+    'TownDocumentNavigation.smile',
+    'TownCatalogRenderer.smile',
+    'TownSurfaceRenderer.smile',
+    'TownLighting.smile',
+    'TownAttachments.smile',
     'NerisTownCamera.smile',
     'NerisTownCameraPanel.smile',
     'NerisTownObstacles.smile',
@@ -274,6 +294,7 @@ if ($PrepareOnly) {
     return
 }
 if ($Target -in @('Native', 'All')) {
+    & (Join-Path $toolRoot 'Prepare-TownEditorAssets.ps1')
     $townSource = Join-Path $repositoryRoot 'games\SinStarI\SourceAssets\Towns\Neris\NerisTownV1\Runtime'
     $townMirror = Join-Path $toolRoot 'BuildAssets\Neris'
     $null = New-Item -ItemType Directory -Path $townMirror -Force

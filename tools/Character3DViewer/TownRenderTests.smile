@@ -1,0 +1,173 @@
+''' Native real-catalog loading, precise surface rebuild and cleanup acceptance.
+
+Option Explicit
+
+Import Smile.Simple3D.Graphics3D As G
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.Scene3D As Scene
+Import Smile.Simple3D.SurfaceGrid3D As Grid
+Import Smile.Tools.TownDocument As Document
+Import Smile.Tools.TownCatalogData As Catalog
+Import Smile.Tools.TownInitialSurface As Initial
+Import Smile.Tools.TownCatalogRenderer As Renderer
+Import Smile.Tools.TownSurfaceRenderer As Terrain
+Import Smile.Tools.TownLighting As Lighting
+Import Smile.Tools.TownAttachments As Attachments
+Import Smile.Tools.TownDocumentNavigation As Navigation
+Import Smile.Tools.TownEditor As Editor
+
+Dim Town As Document.State
+Dim Assets As Renderer.State
+Dim Ground As Terrain.State
+Dim Doors As Attachments.State
+Dim Camera As P.Camera3D
+Dim Index As Number
+Dim Ok As Boolean
+Dim Failures As Number
+Dim Frames As Number
+Dim Before As Number
+Dim Meshes[512] As Number
+Dim Temporary As Core.Object3D
+Dim Controls As Editor.State
+Dim UntilTime As Number
+
+Game Window "Town Editor Catalog Check" Size 1100 By 720
+
+For Index = 0 To 511
+    Meshes[Index] = G.CreateMesh3D(3, 3)
+End For
+
+Call Check(Meshes[0] <> Meshes[256] And Meshes[255] <> Meshes[511],
+    "Mesh Handles Remain Distinct Above Slot 255")
+Call Check(G.CreateMesh3D(3, 3) = 0, "Mesh Pool Rejects Allocation Beyond Its Limit")
+
+For Index = 0 To 511
+    Ok = P.SetMeshVertex(Meshes[Index], 0, P.Vector(0.125, 23.125, -0.625))
+
+    Call Check(Ok, "Every Mesh Slot Accepts Fractional Vertices")
+
+    Temporary.MeshHandle = Meshes[Index]
+
+    Call G.DestroyObject3D(Temporary)
+End For
+
+Call Initial.Populate(Town.Surface)
+Call Document.DefaultSun(Town.Light)
+
+Town.ItemCount = Catalog.INITIAL_ITEMS
+
+For Index = 0 To Catalog.INITIAL_ITEMS - 1
+    Town.Items[Index] = Catalog.InitialItem(Index)
+End For
+
+For Index = 0 To Catalog.CHUNK_COUNT + 13
+    Call Renderer.LoadNext(Assets)
+End For
+
+Call Check(Not Assets.Failed, "Catalog Loads Within Resource Limits")
+
+Ok = Terrain.Create(Ground)
+Ok = Attachments.Create(Doors) And Ok
+Ok = Lighting.Apply(Town.Light) And Ok
+
+Call Check(Ok, "Surface, Light And Door Resources")
+Call Terrain.BeginBuild(Ground, Town.Surface)
+
+Do
+
+    Call Terrain.Update(Ground, 16)
+
+    Frames = Frames + 1
+
+Loop Until Ground.Stage = 0 Or Ground.Failed Or Frames >= 200
+
+Call Check(Ground.Stage = 0 And Not Ground.Failed, "Complete Initial Terrain Builds")
+Call Navigation.Rebuild(Town)
+Call Check(Navigation.CanStand(0.0, -2780.0), "Arrival Road Remains Walkable")
+Call Check(Not Navigation.CanStand(-580.0, -2000.0), "Canal Remains Impassable")
+
+Camera.Position = P.Vector(-2200.0, 6100.0, -7800.0)
+Camera.Target = P.Vector(-1100.0, 300.0, 0.0)
+Camera.UpDirection = P.Vector(0.0, 1.0, 0.0)
+Camera.FovDegrees = 45.0
+Camera.NearPlane = 20.0
+Camera.FarPlane = 25000.0
+
+Call Attachments.Update(Doors, Town, P.Vector(0.0, 23.12, -2780.0), 16)
+
+Ok = Scene.SetShadowArea(-1000, 650, 0, 8000, 7600, 1, 11000)
+Ok = Scene.BeginPrecise(Camera, 12, 20, 32) And Ok
+Ok = Renderer.Draw(Assets, Town) And Ok
+Ok = Terrain.Draw(Ground) And Ok
+Ok = Attachments.Draw(Doors, Town) And Ok
+Ok = Scene.EndScene() And Ok
+
+Call Check(Ok, "Complete Catalog, Water And Hinged Leaves Draw")
+
+Print "Meshes"
+Print G.LiveMeshCount3D()
+Print "Materials"
+Print G.LiveMaterialCount3D()
+Show Screen
+
+Call Editor.Start(Controls)
+
+Town.Name = "Neris Town"
+UntilTime = Timer() + 1000
+
+Do
+    Ok = Scene.BeginPrecise(Camera, 12, 20, 32)
+    Ok = Renderer.Draw(Assets, Town) And Ok
+    Ok = Terrain.Draw(Ground) And Ok
+    Ok = Attachments.Draw(Doors, Town) And Ok
+    Ok = Scene.EndScene() And Ok
+
+    Call Editor.Draw(Controls, Town, Camera)
+
+    Show Screen
+    Wait 16 Milliseconds
+
+Loop Until Timer() >= UntilTime Or Game_Closed()
+
+Before = Ground.LiveRevision
+
+Call Grid.PaintRectangle(Town.Surface, 2, 2, 8, 8, Grid.SURFACE_ROAD)
+Call Terrain.BeginBuild(Ground, Town.Surface)
+Call Terrain.Update(Ground, 16)
+Call Check(Ground.LiveRevision = Before, "Old Terrain Remains Until Replacement Is Ready")
+
+Frames = 0
+
+Do
+
+    Call Terrain.Update(Ground, 16)
+
+    Frames = Frames + 1
+
+Loop Until Ground.Stage = 0 Or Ground.Failed Or Frames >= 200
+
+Call Check(Not Ground.Failed And Ground.LiveRevision = Town.Surface.Revision,
+    "Edited Terrain Commits As One Complete Replacement")
+Call Attachments.Destroy(Doors)
+Call Terrain.Destroy(Ground)
+Call Renderer.Destroy(Assets)
+Call Check(G.LiveMeshCount3D() = 0 And G.LiveObjectCount3D() = 0 And
+    G.LiveMaterialCount3D() = 0 And G.LiveModelCount3D() = 0,
+    "Catalog Resources Release Cleanly")
+Call Scene.Shutdown()
+
+If Failures = 0 Then
+    Print "PASS Town Editor Rendering"
+Else
+    Print "FAIL Town Editor Rendering"
+End If
+
+Sub Check(Condition As Boolean, Label As Text)
+
+    If Not Condition Then
+        Print "FAIL " + Label
+        Failures = Failures + 1
+    End If
+
+End Sub

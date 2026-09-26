@@ -1,0 +1,111 @@
+''' Editable town with the actual party, camera, overlay and shared native resource pools.
+
+Option Explicit
+
+Import Smile.Tools.NerisTown As Town
+Import Smile.Tools.TownEditorSession As Editor
+Import Smile.Tools.Character3DViewerCalibration As Calibration
+Import Smile.Tools.NerisTownInspectionTests As Inspection
+Import Smile.Tools.TownEditor As Commands
+Import Smile.Tools.TownDocument As Document
+Import Smile.Tools.TownCatalogData As Catalog
+Import Smile.Simple3D.Graphics3D As G
+
+Dim Value As Town.State
+Dim Index As Number
+Dim Failures As Number
+Dim Ok As Boolean
+Dim KeyTotal As Number
+Dim Draft As Document.State
+Dim Controls As Commands.State
+Dim Action As Number
+Dim Shape As Catalog.Template
+
+Game Window "Town Editor Session Check" Size 1100 By 720
+
+Call Commands.Start(Controls)
+
+Action = Commands.Command(Controls, Draft, 3)
+Shape = Catalog.TemplateAt(Controls.Ui.Template)
+
+Call Check(Shape.Category = 3, "Changing Category Selects A Matching Placement Template")
+
+Ok = Editor.Available()
+
+Call Editor.BeginEditing()
+Call Town.Start(Value)
+
+For Index = 0 To 180
+
+    Call Town.LoadNext(Value)
+
+    If Value.Ready Or Value.Failed Then
+        Exit For
+    End If
+
+End For
+
+Call Check(Value.Ready And Value.Edited And Not Value.Failed, "Editable Town And Party Load Together")
+
+Print "Meshes " + Calibration.NumberText(G.LiveMeshCount3D())
+Print "Materials " + Calibration.NumberText(G.LiveMaterialCount3D())
+
+If Value.Ready Then
+
+    Call Town.Update(Value, 16)
+    Call Town.Draw(Value)
+    Call Town.Overlay(Value)
+    Call Check(Not Value.Failed, "Editor Scene With Actors And Overlay Draws")
+
+    Show Screen
+    Value.People.Keys.KeyBase = 0
+
+    For Index = 0 To 10
+        KeyTotal = KeyTotal + Calibration.KeyCount(Value.People.Keys, Index)
+    End For
+
+    Print "Arin Pose Keys " + Calibration.NumberText(KeyTotal)
+
+    Call Check(KeyTotal > 0, "Accepted Arin Calibration Is Retained")
+    Call Town.Input(Value, KEY_TAB, False)
+    Call Check(Value.PartyControl And Not Editor.Editing(), "Tab Leaves Editing And Enables Party Control")
+    Call Inspection.Run(Value, Failures)
+
+End If
+
+Call Town.Destroy(Value)
+
+Call Town.Start(Value)
+
+For Index = 0 To 180
+
+    Call Town.LoadNext(Value)
+
+    If Value.Ready Or Value.Failed Then
+        Exit For
+    End If
+
+End For
+
+Call Town.Update(Value, 16)
+Call Check(Value.Ready And Value.Flight.Arrival And Not Value.PartyControl And
+    Value.People.Path.Positions[0].Z = -2780.0 And Abs(Value.View.LiveCamera.Position.X) < 0.001,
+    "Reentering The Edited Town Restores The Centered Arrival")
+Call Town.Destroy(Value)
+Call Check(G.LiveMeshCount3D() = 0 And G.LiveMaterialCount3D() = 0 And G.LiveObjectCount3D() = 0,
+    "Editable Town And Actor Resources Release")
+
+If Failures = 0 Then
+    Print "PASS Town Editor Session"
+Else
+    Print "FAIL Town Editor Session"
+End If
+
+Sub Check(Condition As Boolean, Label As Text)
+
+    If Not Condition Then
+        Print "FAIL " + Label
+        Failures = Failures + 1
+    End If
+
+End Sub

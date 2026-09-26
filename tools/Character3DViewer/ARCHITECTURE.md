@@ -1365,3 +1365,46 @@ builder (+2/+15 net source lines). Camera controls remain 119 lines; their only
 changes are bottom-edge placement and the existing pitch range mapping. The route
 fixture adds 18 lines to protect the two reported missing crossings. Regenerated
 meshes and placement/collision tables add no runtime owner or dependency.
+
+## Native town authoring ownership (September 26)
+
+The [town-authoring contract](../../docs/architecture/town-authoring.md) is the current
+map for the native editor. `TownEditorSession` owns one private town, pending save
+snapshot and lifecycle state. Gesture state belongs to `TownEditor`/`TownSelection`;
+control geometry belongs to `TownEditorPanel`; immutable catalog data has no behavior.
+`TownCatalogRenderer`, `TownSurfaceRenderer` and `TownAttachments` own independent
+GPU lifetimes. `TownDocumentNavigation` keeps the committed surface/item snapshot
+and nearby camera bounds; `TownDocumentMap` rebuilds only when the document changes.
+`TownDocumentStore` owns its codec buffer/candidate, `TownLibrary` recovery policy,
+and `TownWorldDocument`/`TownWorldEditor` the bounded linked-map data and interaction.
+No editor algorithms or persistence were added to the program or shared Viewer host.
+
+Public routes are `BeginEditing`, `Input`, `Update`, `Draw`, `Overlay`, `Release`,
+`FrameDocument` and `TakeSpawn`. The native host still delegates only to `NerisTown`.
+Static town resources are destroyed before editable assets load; the actual party
+and authoritative calibration contexts are retained. `NerisTownCamera.MovingGesture`
+owns temporary walking pan/orbit and the one-second return. Movement axes remain
+frozen for the held-key gesture and wheel zoom is preserved on camera return.
+
+Size review: `NerisTown` 584 -> 738 lines is a reviewed coordination expansion:
+load/draw/release branches, input routing, edited-map presentation and camera-mode
+routing. It adds no document/mesh/codec algorithms. Camera policy is 265 -> 330,
+party 496 -> 512. New session coordination is about 600 lines; store about 570 and
+incremental surface renderer about 500. Generated catalog/feature/surface accessors
+are data-only tables. Existing Viewer bootstrap/workflow modules did not grow.
+The session's file-command branch owns coordination only; codecs, Blender rebuilding
+and map editing remain separate. No guardrail threshold, baseline or exception changed.
+
+Native mesh capacity is measured at 512 slots/4,096 submissions, with matching
+nine-bit mesh handles; the full editor and party use 392 meshes/374 materials.
+ByRef record frame storage in the native compiler changed from full-record space
+to an eight-byte address, fixing the reproduced nested-call stack overflow without
+changing record value semantics or ownership. `MasmEmitter` grows 13 net lines.
+The editor adds no third-party or RPG library dependency. Shared precise vertex,
+Unicode prompt/scalar and Shift/Delete additions remain focused existing boundaries.
+
+Validation owners: `test-town-editor.ps1` (data, reused edited routes, real rendering,
+party/calibration/camera/cleanup), `test-town-blender-save.py` (isolated actual save,
+duplicate protection and Viewer snapshot), the normal native Viewer hardening gate,
+compiler/text suites and the existing Neris scene fixture. Native visual review is
+separate from these assertions. Studio and Web execution/adoption remain held.

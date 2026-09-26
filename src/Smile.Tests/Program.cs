@@ -318,6 +318,30 @@ Run("UTF-8 file transfer uses shared types and both emitters", () =>
     Equal(true, web.Contains("await smile.fileImport()", StringComparison.Ordinal));
     Equal(true, web.Contains("smile.fileExport(\"snapshot.json\"", StringComparison.Ordinal));
 });
+Run("Unicode scalar construction has one shared Number to Text contract", () =>
+{
+    Equal(SyntaxKind.TextFromCodeKeyword, SyntaxFacts.GetKeywordKind("text_from_code"));
+    var analysis = Analyze("Dim Name As Text\nName = Text_From_Code(127795)\n");
+    Equal(false, analysis.HasErrors);
+    Equal(true, Analyze("Print Text_From_Code(\"A\")\n").HasErrors);
+    Equal(true, Analyze("Print Text_From_Code()\n").HasErrors);
+    Equal(true, new MasmEmitter(analysis, SmileGraphicsBackend.DirectX, true, false).Emit()
+        .Contains("call smile_text_from_code", StringComparison.Ordinal));
+    Equal(true, new WebEmitter(analysis).Emit().Contains("smile.textFromCode(", StringComparison.Ordinal));
+});
+Run("Text prompts use shared Text types and require a game window", () =>
+{
+    Equal(SyntaxKind.TextPromptKeyword, SyntaxFacts.GetKeywordKind("text_prompt"));
+    const string source = "Game Window \"Prompt\"\nDim Name As Text\nName = Text_Prompt(\"New Town\", \"Name\", \"Neris\")\n";
+    var analysis = Analyze(source);
+    Equal(false, analysis.HasErrors);
+    Equal(true, Analyze("Print Text_Prompt(\"Town\", \"Name\", \"\")\n").HasErrors);
+    Equal(true, Analyze("Game Window \"Prompt\"\nPrint Text_Prompt(1, \"Name\", \"\")\n").HasErrors);
+    Equal(true, Analyze("Game Window \"Prompt\"\nPrint Text_Prompt(\"Town\", \"Name\")\n").HasErrors);
+    var native = new MasmEmitter(analysis, SmileGraphicsBackend.DirectX, true, false).Emit();
+    Equal(true, native.Contains("call smile_text_prompt", StringComparison.Ordinal));
+    Equal(true, new WebEmitter(analysis).Emit().Contains("smile.textPrompt(", StringComparison.Ordinal));
+});
 Run("Renderer3D is a bounded game-window bridge on both targets", () =>
 {
     Equal(SyntaxKind.Renderer3DKeyword, SyntaxFacts.GetKeywordKind("renderer3d"));
@@ -389,6 +413,19 @@ Run("Phase 4 media keywords and constants are shared", () =>
     Equal(16L, SyntaxFacts.GetBuiltInConstantValue(SyntaxKind.SoundChannelCountKeyword));
     Equal(1048576L, SyntaxFacts.GetBuiltInConstantValue(SyntaxKind.DataBlockMaxBytesKeyword));
     Equal(true, SyntaxFacts.IsKeyword(SyntaxKind.PixelKeyword));
+});
+Run("Native ByRef records reserve one address instead of the full record", () =>
+{
+    const string source = "Option Explicit\nType Large\nValues[32768] As Number\nLabel As Text\nEnd Type\n" +
+        "Dim Data As Large\nCall First(Data)\n" +
+        "Sub First(ByRef Value As Large)\nCall Second(Value)\nEnd Sub\n" +
+        "Sub Second(ByRef Value As Large)\nValue.Values[32767] = 42\nValue.Label = \"Retained\"\nEnd Sub\n";
+    var analysis = Analyze(source);
+    Equal(false, analysis.HasErrors);
+    var native = new MasmEmitter(analysis, SmileGraphicsBackend.Auto, true, false).Emit();
+    foreach (System.Text.RegularExpressions.Match frame in
+             System.Text.RegularExpressions.Regex.Matches(native, @"sub rsp, (\d+)"))
+        Equal(true, int.Parse(frame.Groups[1].Value) < 1024);
 });
 Run("Image works in variables arrays records parameters ByRef and returns", () =>
 {

@@ -1,0 +1,475 @@
+''' Editor gestures and document commands. GPU resources and persistence are separate owners.
+Module Smile.Tools.TownEditor
+
+Option Explicit
+
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.PrecisionCamera3D As Camera
+Import Smile.Simple3D.SurfaceGrid3D As Grid
+Import Smile.Tools.TownDocument As Document
+Import Smile.Tools.TownSelection As Selection
+Import Smile.Tools.TownCatalogData As Catalog
+Import Smile.Tools.TownGeometry As Geometry
+Import Smile.Tools.TownPicking As Picking
+Import Smile.Tools.TownEditorPanel As Panel
+
+Public Type State
+    Ui As Panel.State
+    Selected As Selection.State
+    Enabled As Boolean
+    Anchored As Boolean
+    Anchor As P.Vector3
+    Current As P.Vector3
+    Rubber As Boolean
+    StartX As Number
+    StartY As Number
+End Type
+
+Public Sub Start(ByRef Value As State)
+
+    Value.Enabled = True
+    Value.Ui.Category = 1
+    Value.Ui.Tool = 10
+    Value.Ui.Surface = Grid.SURFACE_ROAD
+    Value.Ui.Width = 3
+
+    Call Selection.SetCategory(Value.Selected, 1)
+
+End Sub
+
+Public Sub Cancel(ByRef Value As State, ByRef Town As Document.State)
+
+    Call Selection.EndDrag(Value.Selected, Town, True)
+
+    Value.Rubber = False
+    Value.Anchored = False
+
+End Sub
+
+Private Sub ChangeLight(ByRef Town As Document.State, Action As Number)
+
+    Dim Amount As Number
+    Dim Row As Number
+
+    Amount = 5
+
+    If Action Mod 2 = 0 Then
+        Amount = -5
+    End If
+
+    Row = (Action - 200) / 2
+
+    Select Case Row
+        Case 0
+            Town.Light.RedValue = Max(0, Min(255, Town.Light.RedValue + Amount))
+        Case 1
+            Town.Light.GreenValue = Max(0, Min(255, Town.Light.GreenValue + Amount))
+        Case 2
+            Town.Light.BlueValue = Max(0, Min(255, Town.Light.BlueValue + Amount))
+        Case 3
+            Town.Light.Intensity = Max(0, Min(1000, Town.Light.Intensity + Amount * 2))
+        Case 4
+            Town.Light.Ambient = Max(0, Min(100, Town.Light.Ambient + Amount))
+        Case 5
+            Town.Light.Azimuth = Town.Light.Azimuth + ToDouble(Amount)
+        Case 6
+            Town.Light.Elevation = Max(-85.0, Min(85.0, Town.Light.Elevation + ToDouble(Amount)))
+    End Select
+
+    Town.Revision = Town.Revision + 1
+
+End Sub
+
+Public Function Command(ByRef Value As State, ByRef Town As Document.State, Action As Number) As Number
+
+    Dim Index As Number
+    Dim Matching As Number
+    Dim Rows As Number
+    Dim Shape As Catalog.Template
+
+    If Action = 0 Then
+        Return 0
+    End If
+
+    Call Cancel(Value, Town)
+
+    If Action >= 1 And Action <= 3 Then
+
+        Value.Ui.Category = Action
+        Value.Ui.Page = 0
+        Value.Ui.Tool = 10
+
+        For Index = 0 To Catalog.TEMPLATE_COUNT - 1
+
+            Shape = Catalog.TemplateAt(Index)
+
+            If Shape.Category = Action Then
+                Value.Ui.Template = Index
+                Exit For
+            End If
+
+        End For
+
+        If Action = 2 Then
+            Value.Ui.Tool = 12
+        End If
+
+        Call Selection.SetCategory(Value.Selected, Action)
+
+    Else If Action >= 10 And Action <= 14 Then
+
+        Value.Ui.Tool = Action
+
+    Else If Action = 20 Or Action = 21 Then
+
+        For Index = 0 To Catalog.TEMPLATE_COUNT - 1
+
+            Shape = Catalog.TemplateAt(Index)
+
+            If Shape.Category = Value.Ui.Category Then
+                Matching = Matching + 1
+            End If
+
+        End For
+
+        Rows = Max(2, Min(9, (Window_Height() - 570) / 28))
+        Index = -1
+
+        If Action = 21 Then
+            Index = 1
+        End If
+
+        Value.Ui.Page = Max(0, Min((Matching - 1) / Rows, Value.Ui.Page + Index))
+
+    Else If Action = 22 Then
+
+        Call Selection.Rotate(Value.Selected, Town, -15.0)
+
+    Else If Action = 23 Then
+
+        Call Selection.Rotate(Value.Selected, Town, 15.0)
+
+    Else If Action = 24 Then
+
+        Call Selection.RemoveSelected(Value.Selected, Town)
+
+    Else If Action >= 40 And Action <= 42 Then
+
+        Value.Ui.Surface = Grid.SURFACE_GROUND
+
+        If Action = 41 Then
+            Value.Ui.Surface = Grid.SURFACE_ROAD
+        Else If Action = 42 Then
+            Value.Ui.Surface = Grid.SURFACE_WATER
+        End If
+
+    Else If Action = 44 Then
+
+        Value.Ui.Width = Max(1, Value.Ui.Width - 1)
+
+    Else If Action = 45 Then
+
+        Value.Ui.Width = Min(32, Value.Ui.Width + 1)
+
+    Else If Action >= 50 And Action <= 52 Then
+
+        Value.Ui.Section = Action - 50
+
+    Else If Action >= 100 And Action < 100 + Catalog.TEMPLATE_COUNT Then
+
+        Value.Ui.Template = Action - 100
+        Value.Ui.Tool = 11
+
+    Else If Action >= 200 And Action <= 213 Then
+
+        Call ChangeLight(Town, Action)
+
+    Else If Action = 220 Then
+
+        Town.Light.Shadows = Not Town.Light.Shadows
+        Town.Revision = Town.Revision + 1
+
+    Else If Action = 221 Then
+
+        Call Document.DefaultSun(Town.Light)
+
+        Town.Revision = Town.Revision + 1
+
+    Else If Action = 222 Then
+
+        Town.Light.RedValue = 140
+        Town.Light.GreenValue = 174
+        Town.Light.BlueValue = 255
+        Town.Light.Intensity = 35
+        Town.Light.Ambient = 8
+        Town.Light.Elevation = 25.0
+        Town.Revision = Town.Revision + 1
+
+    Else
+        Return Action
+
+    End If
+
+    Return 0
+
+End Function
+
+Private Sub PlaceCopy(ByRef Value As State, ByRef Town As Document.State)
+
+    Dim Index As Number
+    Dim Sample As Document.Item
+    Dim Shape As Catalog.Template
+    Dim Ok As Boolean
+
+    Shape = Catalog.TemplateAt(Value.Ui.Template)
+
+    If (Geometry.DrawCost(Town) + Shape.PartCount + Shape.DoorCount * 4 + Shape.WaterCount > 3500 Or
+        Geometry.WaterCount(Town) + Shape.WaterCount > 160) Then
+        Value.Ui.Message = "Scene is full; remove an item first."
+        Return
+    End If
+
+    For Index = 0 To Catalog.INITIAL_ITEMS - 1
+
+        Sample = Catalog.InitialItem(Index)
+
+        If Sample.Template = Value.Ui.Template Then
+            Exit For
+        End If
+
+    End For
+
+    Index = Document.Place(Town, Sample, Value.Current.X, Value.Current.Z)
+
+    Call Selection.ClearSelection(Value.Selected)
+
+    Ok = Selection.Add(Value.Selected, Town, Index)
+    Value.Ui.Message = "Placed " + Shape.Label
+
+End Sub
+
+Private Sub Paint(ByRef Value As State, ByRef Town As Document.State)
+
+    Dim X1 As Number
+    Dim Z1 As Number
+    Dim X2 As Number
+    Dim Z2 As Number
+    Dim Surface As Number
+    Dim Before As Number
+
+    X1 = Grid.CellX(Town.Surface, Value.Anchor.X)
+    Z1 = Grid.CellZ(Town.Surface, Value.Anchor.Z)
+    X2 = Grid.CellX(Town.Surface, Value.Current.X)
+    Z2 = Grid.CellZ(Town.Surface, Value.Current.Z)
+    Surface = Value.Ui.Surface
+    Before = Town.Surface.Revision
+
+    If Value.Ui.Tool = 14 Then
+        Surface = Grid.SURFACE_GROUND
+    End If
+
+    If Value.Ui.Tool = 12 Then
+        Call Grid.PaintWorldLine(Town.Surface, Value.Anchor.X, Value.Anchor.Z,
+            Value.Current.X, Value.Current.Z, Surface, ToDouble(Value.Ui.Width * 20))
+    Else
+
+        Call Grid.PaintRectangle(Town.Surface, X1, Z1, X2, Z2, Surface)
+    End If
+
+    If Town.Surface.Revision <> Before Then
+        Town.Revision = Town.Revision + 1
+        Value.Ui.Message = "Rebuilding terrain..."
+    End If
+
+    Value.Anchored = False
+
+End Sub
+
+Public Function Input(ByRef Value As State, ByRef Town As Document.State,
+    View As P.Camera3D, Key As Number, Blocked As Boolean) As Number
+
+    Dim Action As Number
+    Dim Picked As Number
+    Dim Index As Number
+    Dim Ok As Boolean
+    Dim OnGround As Boolean
+    Dim Box As Picking.ScreenBox
+
+    If Not Value.Enabled Then
+        Return 0
+    End If
+
+    If Not Blocked Then
+        Action = Command(Value, Town, Panel.Input(Value.Ui))
+    End If
+
+    If Key = KEY_ESCAPE Then
+        Call Cancel(Value, Town)
+    Else If Key = KEY_DELETE Then
+        Call Selection.RemoveSelected(Value.Selected, Town)
+    End If
+
+    OnGround = Picking.Ground(View, Pointer_X(), Pointer_Y(), Window_Width(), Window_Height(), Value.Current)
+    OnGround = (OnGround And Value.Current.X >= Town.Surface.XEdges[0] And
+        Value.Current.X < Town.Surface.XEdges[Town.Surface.Columns] And
+        Value.Current.Z >= Town.Surface.ZEdges[0] And
+        Value.Current.Z < Town.Surface.ZEdges[Town.Surface.Rows])
+
+    If Value.Selected.Dragging Then
+
+        If OnGround Then
+            Call Selection.Drag(Value.Selected, Town, Value.Current)
+        End If
+
+        If Not Pointer_Held(POINTER_PRIMARY) Then
+            Call Selection.EndDrag(Value.Selected, Town, False)
+        End If
+
+    Else If Value.Rubber And Not Pointer_Held(POINTER_PRIMARY) Then
+
+        For Index = 0 To Town.ItemCount - 1
+
+            If Town.Items[Index].Active And Town.Items[Index].Category = Value.Ui.Category Then
+
+                Box = Picking.Project(Town.Items[Index], View, Window_Width(), Window_Height())
+
+                If (Box.Visible And Box.X1 >= Min(Value.StartX, Pointer_X()) And
+                    Box.X0 <= Max(Value.StartX, Pointer_X()) And Box.Y1 >= Min(Value.StartY, Pointer_Y()) And
+                    Box.Y0 <= Max(Value.StartY, Pointer_Y())) Then
+                    Ok = Selection.Add(Value.Selected, Town, Index)
+                End If
+
+            End If
+
+        End For
+
+        Value.Rubber = False
+
+    Else If Not Blocked And Not Panel.Hovered() And Not Key_Held(KEY_SHIFT) And Pointer_Pressed(POINTER_PRIMARY) Then
+
+        If Value.Ui.Category = 2 And OnGround Then
+
+            If Value.Anchored Then
+                Call Paint(Value, Town)
+            Else
+                Value.Anchor = Value.Current
+                Value.Anchored = True
+            End If
+
+        Else If Value.Ui.Tool = 11 And OnGround Then
+
+            Call PlaceCopy(Value, Town)
+
+        Else
+            Picked = Picking.ItemAt(Town, Value.Ui.Category, View, Pointer_X(), Pointer_Y(), Window_Width(), Window_Height())
+
+            If Picked >= 0 Then
+
+                If Not Value.Selected.Selected[Picked] And Not Key_Held(KEY_CONTROL) Then
+                    Call Selection.ClearSelection(Value.Selected)
+                End If
+
+                Ok = Selection.Add(Value.Selected, Town, Picked)
+
+                If OnGround Then
+                    Call Selection.BeginDrag(Value.Selected, Town, Value.Current)
+                End If
+
+            Else
+
+                If Not Key_Held(KEY_CONTROL) Then
+                    Call Selection.ClearSelection(Value.Selected)
+                End If
+
+                Value.Rubber = True
+                Value.StartX = Pointer_X()
+                Value.StartY = Pointer_Y()
+
+            End If
+
+        End If
+
+    End If
+
+    Return Action
+
+End Function
+
+Private Sub Outline(X0 As Number, Y0 As Number, X1 As Number, Y1 As Number)
+
+    Dim ColorValue As Number
+
+    ColorValue = RGB(70, 230, 215)
+    Draw Line X0, Y0, X1, Y0, ColorValue
+    Draw Line X1, Y0, X1, Y1, ColorValue
+    Draw Line X1, Y1, X0, Y1, ColorValue
+    Draw Line X0, Y1, X0, Y0, ColorValue
+
+End Sub
+
+Public Sub Draw(ByRef Value As State, ByRef Town As Document.State, View As P.Camera3D)
+
+    Dim Index As Number
+    Dim Box As Picking.ScreenBox
+    Dim First As Camera.ProjectedPoint
+    Dim Second As Camera.ProjectedPoint
+    Dim Third As Camera.ProjectedPoint
+    Dim Fourth As Camera.ProjectedPoint
+
+    If Not Value.Enabled Then
+        Return
+    End If
+
+    For Index = 0 To Town.ItemCount - 1
+
+        If Value.Selected.Selected[Index] Then
+
+            Box = Picking.Project(Town.Items[Index], View, Window_Width(), Window_Height())
+
+            If Box.Visible Then
+                Call Outline(Box.X0, Max(94, Box.Y0), Min(Panel.LeftEdge(), Box.X1), Box.Y1)
+            End If
+
+        End If
+
+    End For
+
+    If Value.Rubber Then
+        Call Outline(Value.StartX, Value.StartY, Pointer_X(), Pointer_Y())
+    End If
+
+    If Value.Anchored Then
+
+        First = Camera.ProjectViewerPoint(Value.Anchor, View, Window_Width(), Window_Height())
+        Second = Camera.ProjectViewerPoint(Value.Current, View, Window_Width(), Window_Height())
+
+        If First.Visible And Second.Visible Then
+
+            If Value.Ui.Tool = 12 Then
+
+                Draw Line ToNumber(First.X), ToNumber(First.Y), ToNumber(Second.X), ToNumber(Second.Y), RGB(70, 230, 215)
+
+            Else
+                Third = Camera.ProjectViewerPoint(P.Vector(Value.Anchor.X, Value.Anchor.Y, Value.Current.Z), View, Window_Width(), Window_Height())
+                Fourth = Camera.ProjectViewerPoint(P.Vector(Value.Current.X, Value.Anchor.Y, Value.Anchor.Z), View, Window_Width(), Window_Height())
+
+                If Third.Visible And Fourth.Visible Then
+
+                    Draw Line ToNumber(First.X), ToNumber(First.Y), ToNumber(Third.X), ToNumber(Third.Y), RGB(70, 230, 215)
+                    Draw Line ToNumber(Third.X), ToNumber(Third.Y), ToNumber(Second.X), ToNumber(Second.Y), RGB(70, 230, 215)
+                    Draw Line ToNumber(Second.X), ToNumber(Second.Y), ToNumber(Fourth.X), ToNumber(Fourth.Y), RGB(70, 230, 215)
+                    Draw Line ToNumber(Fourth.X), ToNumber(Fourth.Y), ToNumber(First.X), ToNumber(First.Y), RGB(70, 230, 215)
+
+                End If
+
+            End If
+
+        End If
+
+    End If
+
+    Call Panel.Draw(Value.Ui, Town, Value.Selected.SelectedCount)
+
+End Sub
+
+End Module

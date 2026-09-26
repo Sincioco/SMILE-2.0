@@ -13,6 +13,7 @@ Private Const COMMAND_ROTATION = 4
 Private Const COMMAND_SCALE = 5
 Private Const COMMAND_PIVOT = 6
 Private Const COMMAND_POINT_LIGHT = 7
+Private Const COMMAND_MESH_VERTEX = 8
 Private Const COMMAND_RIBBON_POINT_BASE = 10000
 Private Const COMMAND_PARTICLE_BASE = 20000
 Private Const COMMAND_GPU_SPAWN_BASE = 2000000
@@ -184,6 +185,18 @@ Public Function FromCamera(Value As Core.Camera3D) As Camera3D
         End If
 
     End If
+
+    Return Result
+
+End Function
+
+''' Writes a fractional mesh vertex; commit through Graphics3D before drawing.
+Public Function SetMeshVertex(MeshHandle As Number, Index As Number, Position As Vector3) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Renderer3DDouble(COMMAND_MESH_VERTEX, MeshHandle, ToDouble(Index),
+        Position.X, Position.Y, Position.Z, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0) <> 0
 
     Return Result
 

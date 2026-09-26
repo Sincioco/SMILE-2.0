@@ -1,0 +1,227 @@
+''' Linked-world authoring data: up to sixteen saved town references and their routes.
+Module Smile.Tools.TownWorldDocument
+
+Option Explicit
+
+Public Const MAX_NODES = 16
+
+Public Type Node
+    Town As Text
+    X As Number
+    Y As Number
+End Type
+
+Public Type State
+    Name As Text
+    Nodes[16] As Node
+    NodeCount As Number
+    Links[16, 16] As Boolean
+End Type
+
+Private Dim Bytes[8192] As Number
+Private Dim Offset As Number
+Private Dim Length As Number
+Private Dim Valid As Boolean
+Private Dim Candidate As State
+
+Private Sub Put(Value As Number)
+
+    Dim Index As Number
+
+    For Index = 0 To 2
+        Bytes[Offset] = Value Mod 256
+        Value = Value / 256
+        Offset = Offset + 1
+    End For
+
+End Sub
+
+Private Function ReadInteger() As Number
+
+    Dim Value As Number
+
+    If Offset + 3 > Length Then
+        Valid = False
+        Return 0
+    End If
+
+    Value = Bytes[Offset] + Bytes[Offset + 1] * 256 + Bytes[Offset + 2] * 65536
+    Offset = Offset + 3
+
+    Return Value
+
+End Function
+
+Private Sub PutName(Value As Text)
+
+    Dim Index As Number
+
+    Call Put(Text_Length(Value))
+
+    For Index = 0 To Text_Length(Value) - 1
+        Call Put(Text_Code_At(Value, Index))
+    End For
+
+End Sub
+
+Private Function GetName() As Text
+
+    Dim Result As Text
+    Dim NameLength As Number
+    Dim Index As Number
+    Dim Code As Number
+
+    NameLength = ReadInteger()
+
+    If NameLength < 1 Or NameLength > 80 Then
+        Valid = False
+        Return ""
+    End If
+
+    For Index = 0 To NameLength - 1
+
+        Code = ReadInteger()
+
+        If Code < 32 Or Code > 1114111 Or (Code >= 55296 And Code <= 57343) Then
+            Valid = False
+            Return ""
+        End If
+
+        Result = Result + Text_From_Code(Code)
+    End For
+
+    Return Result
+
+End Function
+
+Public Function Add(ByRef Value As State, Name As Text, X As Number, Y As Number) As Boolean
+
+    Dim Index As Number
+
+    If Value.NodeCount >= MAX_NODES Or Text_Length(Name) < 1 Or Text_Length(Name) > 80 Then
+        Return False
+    End If
+
+    For Index = 0 To Value.NodeCount - 1
+
+        If Value.Nodes[Index].Town = Name Then
+            Return False
+        End If
+
+    End For
+
+    Value.Nodes[Value.NodeCount].Town = Name
+    Value.Nodes[Value.NodeCount].X = Max(0, Min(1000, X))
+    Value.Nodes[Value.NodeCount].Y = Max(0, Min(1000, Y))
+    Value.NodeCount = Value.NodeCount + 1
+
+    Return True
+
+End Function
+
+Public Function SaveWorld(ByRef Value As State) As Boolean
+
+    Dim Index As Number
+    Dim Other As Number
+    Dim Status As Number
+    Dim Result As Boolean
+
+    Offset = 0
+
+    Call Put(1)
+    Call PutName(Value.Name)
+    Call Put(Value.NodeCount)
+
+    For Index = 0 To Value.NodeCount - 1
+        Call PutName(Value.Nodes[Index].Town)
+        Call Put(Value.Nodes[Index].X)
+        Call Put(Value.Nodes[Index].Y)
+    End For
+
+    For Index = 0 To Value.NodeCount - 1
+
+        For Other = 0 To Value.NodeCount - 1
+
+            If Value.Links[Index, Other] Then
+                Call Put(1)
+            Else
+
+                Call Put(0)
+            End If
+
+        End For
+    End For
+
+    Save Data Bytes Count Offset To "TownEditor.World." + Value.Name Status Status
+    Result = Status = DATA_STATUS_OK
+
+    Return Result
+
+End Function
+
+Public Function LoadWorld(ByRef Value As State, Name As Text) As Boolean
+
+    Dim Empty As State
+    Dim Index As Number
+    Dim Other As Number
+    Dim Status As Number
+    Dim Link As Number
+
+    Load Data "TownEditor.World." + Name Into Bytes Count Length Status Status
+
+    If Status <> DATA_STATUS_OK Then
+        Return False
+    End If
+
+    Candidate = Empty
+    Offset = 0
+    Valid = True
+
+    If ReadInteger() <> 1 Then
+        Return False
+    End If
+
+    Candidate.Name = GetName()
+    Candidate.NodeCount = ReadInteger()
+
+    If Candidate.Name <> Name Or Candidate.NodeCount < 0 Or Candidate.NodeCount > MAX_NODES Then
+        Return False
+    End If
+
+    For Index = 0 To Candidate.NodeCount - 1
+
+        Candidate.Nodes[Index].Town = GetName()
+        Candidate.Nodes[Index].X = ReadInteger()
+        Candidate.Nodes[Index].Y = ReadInteger()
+
+        If Candidate.Nodes[Index].X > 1000 Or Candidate.Nodes[Index].Y > 1000 Then
+            Return False
+        End If
+
+    End For
+
+    For Index = 0 To Candidate.NodeCount - 1
+
+        For Other = 0 To Candidate.NodeCount - 1
+
+            Link = ReadInteger()
+
+            If Link > 1 Then
+                Return False
+            End If
+
+            Candidate.Links[Index, Other] = Link = 1
+        End For
+    End For
+
+    If Not Valid Or Offset <> Length Then
+        Return False
+    End If
+
+    Value = Candidate
+
+    Return True
+
+End Function
+
+End Module

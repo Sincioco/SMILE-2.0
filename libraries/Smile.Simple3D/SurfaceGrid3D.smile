@@ -1,0 +1,348 @@
+''' Editable horizontal surface cells. Rendering, documents and input belong to callers.
+Module Smile.Simple3D.SurfaceGrid3D
+
+Option Explicit
+
+Public Const MAX_COLUMNS = 512
+Public Const MAX_ROWS = 512
+Public Const SURFACE_EMPTY = 0
+Public Const SURFACE_GROUND = 1
+Public Const SURFACE_WATER = 2
+Public Const SURFACE_ROAD = 3
+Public Const SURFACE_BRIDGE = 4
+
+Public Type State
+    Columns As Number
+    Rows As Number
+    OriginX As Double
+    OriginZ As Double
+    CellSize As Double
+    XEdges[513] As Double
+    ZEdges[513] As Double
+    ' Sixteen three-bit surface IDs per Number, below the exact integer range on both targets.
+    Cells[16384] As Number
+    Revision As Number
+End Type
+
+Public Function Initialize(ByRef Value As State, Columns As Number, Rows As Number,
+    OriginX As Double, OriginZ As Double, CellSize As Double,
+    InitialSurface As Number) As Boolean
+
+    Dim Index As Number
+    Dim Packed As Number
+
+    If (Columns < 1 Or Columns > MAX_COLUMNS Or Rows < 1 Or Rows > MAX_ROWS Or
+        CellSize <= 0.0 Or InitialSurface < 0 Or InitialSurface > SURFACE_BRIDGE) Then
+        Return False
+    End If
+
+    Value.Columns = Columns
+    Value.Rows = Rows
+    Value.OriginX = OriginX
+    Value.OriginZ = OriginZ
+    Value.CellSize = CellSize
+    Value.Revision = Value.Revision + 1
+
+    For Index = 0 To Columns
+        Value.XEdges[Index] = OriginX + ToDouble(Index) * CellSize
+    End For
+
+    For Index = 0 To Rows
+        Value.ZEdges[Index] = OriginZ + ToDouble(Index) * CellSize
+    End For
+
+    For Index = 0 To 15
+        Packed = Packed * 8 + InitialSurface
+    End For
+
+    For Index = 0 To (Columns * Rows + 15) / 16 - 1
+        Value.Cells[Index] = Packed
+    End For
+
+    Return True
+
+End Function
+
+Private Function LocateCell(ByRef Value As State, Coordinate As Double, Horizontal As Boolean) As Number
+
+    Dim Low As Number
+    Dim High As Number
+    Dim Middle As Number
+    Dim Edge As Double
+
+    High = Value.Rows
+
+    If Horizontal Then
+        High = Value.Columns
+    End If
+
+    Low = -1
+
+    Do
+
+        Middle = (Low + High + 1) / 2
+        Edge = Value.ZEdges[Middle]
+
+        If Horizontal Then
+            Edge = Value.XEdges[Middle]
+        End If
+
+        If Coordinate < Edge Then
+            High = Middle - 1
+        Else
+            Low = Middle
+        End If
+
+    Loop Until Low >= High
+
+    Return Low
+
+End Function
+
+''' Edges start uniformly spaced. A document may refine them to preserve authored boundaries.
+Public Function CellX(ByRef Value As State, X As Double) As Number
+
+    Dim Result As Number
+
+    Result = LocateCell(Value, X, True)
+
+    Return Result
+
+End Function
+
+Public Function CellZ(ByRef Value As State, Z As Double) As Number
+
+    Dim Result As Number
+
+    Result = LocateCell(Value, Z, False)
+
+    Return Result
+
+End Function
+
+Private Function CellFactor(Index As Number) As Number
+
+    Dim Result As Number
+    Dim Digit As Number
+
+    Result = 1
+
+    For Digit = 1 To Index Mod 16
+        Result = Result * 8
+    End For
+
+    Return Result
+
+End Function
+
+Public Function ReadCell(ByRef Value As State, X As Number, Z As Number) As Number
+
+    Dim Result As Number
+
+    If X < 0 Or Z < 0 Or X >= Value.Columns Or Z >= Value.Rows Then
+        Return SURFACE_EMPTY
+    End If
+
+    Result = (Value.Cells[(Z * Value.Columns + X) / 16] /
+        CellFactor(Z * Value.Columns + X)) Mod 8
+
+    Return Result
+
+End Function
+
+Public Function Water(Surface As Number) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Surface = SURFACE_WATER Or Surface = SURFACE_BRIDGE
+
+    Return Result
+
+End Function
+
+''' A border exists only where water meets another surface or the grid boundary.
+Public Function Bank(ByRef Value As State, X As Number, Z As Number,
+    NeighborX As Number, NeighborZ As Number) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Water(ReadCell(Value, X, Z)) And Not Water(ReadCell(Value, NeighborX, NeighborZ))
+
+    Return Result
+
+End Function
+
+Private Function PaintCell(ByRef Value As State, X As Number, Z As Number,
+    Surface As Number) As Boolean
+
+    Dim Previous As Number
+    Dim NextSurface As Number
+
+    If X < 0 Or Z < 0 Or X >= Value.Columns Or Z >= Value.Rows Then
+        Return False
+    End If
+
+    Previous = ReadCell(Value, X, Z)
+    NextSurface = Surface
+
+    If Surface = SURFACE_ROAD And Water(Previous) Then
+        NextSurface = SURFACE_BRIDGE
+    End If
+
+    If Previous = NextSurface Then
+        Return False
+    End If
+
+    Value.Cells[(Z * Value.Columns + X) / 16] = (Value.Cells[(Z * Value.Columns + X) / 16] +
+        (NextSurface - Previous) * CellFactor(Z * Value.Columns + X))
+
+    Return True
+
+End Function
+
+''' Endpoints are inclusive. Painting ground also removes road/water from those cells.
+Public Sub PaintRectangle(ByRef Value As State, X1 As Number, Z1 As Number,
+    X2 As Number, Z2 As Number, Surface As Number)
+
+    Dim X As Number
+    Dim Z As Number
+    Dim Changed As Boolean
+
+    If Surface < 0 Or Surface > SURFACE_BRIDGE Then
+        Return
+    End If
+
+    For Z = Max(0, Min(Z1, Z2)) To Min(Value.Rows - 1, Max(Z1, Z2))
+
+        For X = Max(0, Min(X1, X2)) To Min(Value.Columns - 1, Max(X1, X2))
+            Changed = PaintCell(Value, X, Z, Surface) Or Changed
+        End For
+    End For
+
+    If Changed Then
+        Value.Revision = Value.Revision + 1
+    End If
+
+End Sub
+
+''' Integer line rasterization joins endpoint cells; width expands around the centerline.
+Public Sub PaintLine(ByRef Value As State, X1 As Number, Z1 As Number,
+    X2 As Number, Z2 As Number, Surface As Number, Optional Width As Number = 1)
+
+    Dim DeltaX As Number
+    Dim DeltaZ As Number
+    Dim StepX As Number
+    Dim StepZ As Number
+    Dim Error As Number
+    Dim Twice As Number
+    Dim Low As Number
+    Dim High As Number
+
+    If Value.Columns < 1 Or Value.Rows < 1 Then
+        Return
+    End If
+
+    If (Max(X1, X2) < 0 Or Min(X1, X2) >= Value.Columns Or
+        Max(Z1, Z2) < 0 Or Min(Z1, Z2) >= Value.Rows) Then
+        Return
+    End If
+
+    X1 = Max(0, Min(X1, Value.Columns - 1))
+    X2 = Max(0, Min(X2, Value.Columns - 1))
+    Z1 = Max(0, Min(Z1, Value.Rows - 1))
+    Z2 = Max(0, Min(Z2, Value.Rows - 1))
+    Width = Max(1, Min(Width, 32))
+    Low = (Width - 1) / 2
+    High = Width / 2
+    DeltaX = Abs(X2 - X1)
+    DeltaZ = -Abs(Z2 - Z1)
+    StepX = 1
+    StepZ = 1
+
+    If X1 > X2 Then
+        StepX = -1
+    End If
+
+    If Z1 > Z2 Then
+        StepZ = -1
+    End If
+
+    Error = DeltaX + DeltaZ
+
+    Do
+
+        Call PaintRectangle(Value, X1 - Low, Z1 - Low, X1 + High, Z1 + High, Surface)
+
+        If X1 = X2 And Z1 = Z2 Then
+            Exit Do
+        End If
+
+        Twice = Error * 2
+
+        If Twice >= DeltaZ Then
+            Error = Error + DeltaZ
+            X1 = X1 + StepX
+        End If
+
+        If Twice <= DeltaX Then
+            Error = Error + DeltaX
+            Z1 = Z1 + StepZ
+        End If
+
+    Loop
+
+End Sub
+
+''' A world-width brush uses physical coordinates, even on a refined nonuniform grid.
+Public Sub PaintWorldLine(ByRef Value As State, X0 As Double, Z0 As Double,
+    X1 As Double, Z1 As Double, Surface As Number, Width As Double)
+
+    Dim X As Number
+    Dim Z As Number
+    Dim CenterX As Double
+    Dim CenterZ As Double
+    Dim DeltaX As Double
+    Dim DeltaZ As Double
+    Dim LengthSquared As Double
+    Dim Amount As Double
+    Dim Distance As Double
+    Dim Radius As Double
+    Dim Changed As Boolean
+
+    If Width <= 0.0 Or Surface < 0 Or Surface > SURFACE_BRIDGE Then
+        Return
+    End If
+
+    DeltaX = X1 - X0
+    DeltaZ = Z1 - Z0
+    LengthSquared = Max(0.000001, DeltaX * DeltaX + DeltaZ * DeltaZ)
+    Radius = Width * 0.5
+
+    For Z = Max(0, CellZ(Value, Min(Z0, Z1) - Radius)) To Min(Value.Rows - 1, CellZ(Value, Max(Z0, Z1) + Radius))
+
+        CenterZ = (Value.ZEdges[Z] + Value.ZEdges[Z + 1]) * 0.5
+
+        For X = Max(0, CellX(Value, Min(X0, X1) - Radius)) To Min(Value.Columns - 1, CellX(Value, Max(X0, X1) + Radius))
+
+            CenterX = (Value.XEdges[X] + Value.XEdges[X + 1]) * 0.5
+            Amount = Clamp(((CenterX - X0) * DeltaX + (CenterZ - Z0) * DeltaZ) / LengthSquared, 0.0, 1.0)
+            Distance = Sqrt((CenterX - X0 - Amount * DeltaX) * (CenterX - X0 - Amount * DeltaX) +
+                (CenterZ - Z0 - Amount * DeltaZ) * (CenterZ - Z0 - Amount * DeltaZ))
+
+            If Distance <= Radius Then
+                Changed = PaintCell(Value, X, Z, Surface) Or Changed
+            End If
+
+        End For
+    End For
+
+    Changed = PaintCell(Value, CellX(Value, X0), CellZ(Value, Z0), Surface) Or Changed
+    Changed = PaintCell(Value, CellX(Value, X1), CellZ(Value, Z1), Surface) Or Changed
+
+    If Changed Then
+        Value.Revision = Value.Revision + 1
+    End If
+
+End Sub
+
+End Module

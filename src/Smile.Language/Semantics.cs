@@ -4272,6 +4272,19 @@ internal sealed class SemanticAnalyzer
                 RequireType(arguments[1], SmileType.Number, "SML3505", $"Built-in '{identifier.Text}' requires Number size.");
             return SmileType.Number;
         }
+        if (identifier.Kind == SyntaxKind.TextFromCodeKeyword)
+        {
+            foreach (var argument in arguments)
+                RequireType(argument, SmileType.Number, "SML3003", "Built-in 'Text_From_Code' requires Number.");
+            return SmileType.Text;
+        }
+        if (identifier.Kind == SyntaxKind.TextPromptKeyword)
+        {
+            RequireGameWindow(identifier.Span, "Built-in 'Text_Prompt'");
+            foreach (var argument in arguments)
+                RequireType(argument, SmileType.Text, "SML3003", "Built-in 'Text_Prompt' requires Text arguments.");
+            return SmileType.Text;
+        }
         if (identifier.Kind == SyntaxKind.FileImportKeyword)
             return SmileType.Text;
         if (identifier.Kind == SyntaxKind.FileExportKeyword)

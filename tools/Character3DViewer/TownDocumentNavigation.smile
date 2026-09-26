@@ -1,0 +1,321 @@
+''' Committed spatial snapshot for party movement through an edited town.
+Module Smile.Tools.TownDocumentNavigation
+
+Option Explicit
+
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.PrecisionMath3D As M
+Import Smile.Simple3D.SurfaceGrid3D As Grid
+Import Smile.Tools.TownDocument As Document
+Import Smile.Tools.TownCatalogData As Catalog
+Import Smile.Tools.TownCatalogFeatures As Features
+Import Smile.Tools.TownGeometry As Geometry
+Import Smile.Simple3D.CameraClearance3D As Clearance
+
+Private Dim Surface As Grid.State
+Private Dim Items[1024] As Document.Item
+Private Dim Shapes[35] As Catalog.Template
+Private Dim ItemCount As Number
+Private Dim Enabled As Boolean
+Private Dim CameraDirty As Boolean
+Private Dim CameraAnchor As P.Vector3
+Private Dim CameraWorld As Clearance.World
+
+Public Sub Rebuild(ByRef Town As Document.State)
+
+    Dim Index As Number
+
+    Surface = Town.Surface
+    ItemCount = Town.ItemCount
+
+    For Index = 0 To ItemCount - 1
+        Items[Index] = Town.Items[Index]
+    End For
+
+    For Index = 0 To Catalog.TEMPLATE_COUNT - 1
+        Shapes[Index] = Catalog.TemplateAt(Index)
+    End For
+
+    Enabled = True
+    CameraDirty = True
+
+End Sub
+
+Public Sub Disable()
+
+    Enabled = False
+
+End Sub
+
+Public Function Active() As Boolean
+
+    Return Enabled
+
+End Function
+
+Private Function InBox(Box As Features.Box, Point As P.Vector3, Margin As Double) As Boolean
+
+    Dim Result As Boolean
+
+    Result = (Point.X >= Box.X0 - Margin And Point.X <= Box.X1 + Margin And
+        Point.Z >= Box.Z0 - Margin And Point.Z <= Box.Z1 + Margin)
+
+    Return Result
+
+End Function
+
+Private Function NearItem(Index As Number, Point As P.Vector3) As Boolean
+
+    Dim Shape As Catalog.Template
+    Dim Result As Boolean
+
+    Shape = Shapes[Items[Index].Template]
+    Result = (Point.X >= Shape.Low.X - 20.0 And Point.X <= Shape.High.X + 20.0 And
+        Point.Z >= Shape.Low.Z - 20.0 And Point.Z <= Shape.High.Z + 20.0)
+
+    Return Result
+
+End Function
+
+Private Function Approach(Item As Document.Item, Point As P.Vector3, Optional HeightOnly As Boolean = False) As Double
+
+    Dim Index As Number
+    Dim Door As Features.Door
+    Dim Relative As P.Vector3
+    Dim Height As Double
+    Dim Shape As Catalog.Template
+
+    Height = -10000.0
+    Shape = Shapes[Item.Template]
+
+    For Index = 0 To Shape.DoorCount - 1
+
+        Door = Features.DoorAt(Item.Template, Index)
+        Relative = M.Rotate(M.Subtract(Point, Door.Position), P.Vector(0.0, -Door.Yaw, 0.0))
+
+        If (Abs(Relative.X) < Max(0.1, Door.Width / 2.0 - 3000.0 / Item.Scale.X) And
+            Relative.Z >= -18000.0 / Item.Scale.Z And Relative.Z <= 4000.0 / Item.Scale.Z) Then
+
+            If Not HeightOnly Or Relative.Z >= -1000.0 / Item.Scale.Z Then
+                Height = Max(Height, Door.Position.Y)
+            End If
+
+        End If
+
+    End For
+
+    Return Height
+
+End Function
+
+Public Function CanStand(X As Double, Z As Double) As Boolean
+
+    Dim Index As Number
+    Dim Part As Number
+    Dim Cell As Number
+    Dim Point As P.Vector3
+    Dim Shape As Catalog.Template
+    Dim Blocked As Boolean
+
+    Cell = Grid.ReadCell(Surface, Grid.CellX(Surface, X), Grid.CellZ(Surface, Z))
+
+    If Cell = Grid.SURFACE_EMPTY Or Cell = Grid.SURFACE_WATER Then
+        Return False
+    End If
+
+    For Index = 0 To ItemCount - 1
+
+        If Items[Index].Active Then
+
+            Point = Geometry.ToLocal(Items[Index], P.Vector(X, Items[Index].Position.Y, Z))
+
+            If NearItem(Index, Point) Then
+
+                Shape = Shapes[Items[Index].Template]
+
+                If Approach(Items[Index], Point) > -9000.0 Then
+                    Return True
+                End If
+
+                For Part = 0 To Shape.StepCount - 1
+
+                    If InBox(Features.StepAt(Items[Index].Template, Part), Point, 0.015) Then
+                        Return True
+                    End If
+
+                End For
+
+                For Part = 0 To Shape.SolidCount - 1
+
+                    If InBox(Features.SolidAt(Items[Index].Template, Part), Point,
+                        3000.0 / Max(Items[Index].Scale.X, Items[Index].Scale.Z)) Then
+                        Blocked = True
+                    End If
+
+                End For
+
+            End If
+
+        End If
+
+    End For
+
+    Blocked = Not Blocked
+
+    Return Blocked
+
+End Function
+
+Public Function GroundHeight(X As Double, Z As Double) As Double
+
+    Dim Index As Number
+    Dim Part As Number
+    Dim Cell As Number
+    Dim Point As P.Vector3
+    Dim Shape As Catalog.Template
+    Dim Box As Features.Box
+    Dim Height As Double
+    Dim LocalHeight As Double
+
+    Cell = Grid.ReadCell(Surface, Grid.CellX(Surface, X), Grid.CellZ(Surface, Z))
+    Height = 22.5
+
+    If Cell = Grid.SURFACE_ROAD Or Cell = Grid.SURFACE_BRIDGE Then
+        Height = 23.12
+    End If
+
+    For Index = 0 To ItemCount - 1
+
+        If Items[Index].Active Then
+
+            Point = Geometry.ToLocal(Items[Index], P.Vector(X, Items[Index].Position.Y, Z))
+
+            If NearItem(Index, Point) Then
+
+                Shape = Shapes[Items[Index].Template]
+                LocalHeight = Approach(Items[Index], Point, True)
+
+                For Part = 0 To Shape.StepCount - 1
+
+                    Box = Features.StepAt(Items[Index].Template, Part)
+
+                    If InBox(Box, Point, 0.015) Then
+                        LocalHeight = Max(LocalHeight, Box.Height)
+                    End If
+
+                End For
+
+                If LocalHeight > -9000.0 Then
+                    Height = Max(Height, Items[Index].Position.Y + LocalHeight * Items[Index].Scale.Y / 1000.0)
+                End If
+
+            End If
+
+        End If
+
+    End For
+
+    Return Height
+
+End Function
+
+Public Function InsideStructure(Position As P.Vector3) As Boolean
+
+    Dim Index As Number
+    Dim Point As P.Vector3
+
+    For Index = 0 To ItemCount - 1
+
+        If Items[Index].Active And Items[Index].Category = Document.CATEGORY_BUILDINGS Then
+
+            Point = Geometry.ToLocal(Items[Index], Position)
+
+            If NearItem(Index, Point) Then
+                Return True
+            End If
+
+        End If
+
+    End For
+
+    Return False
+
+End Function
+
+''' Refresh nearby template volumes after edits or meaningful camera movement.
+Public Sub PopulateCamera(ByRef World As Clearance.World, Focus As P.Vector3)
+
+    Dim Index As Number
+    Dim Part As Number
+    Dim Corner As Number
+    Dim LocalPoint As P.Vector3
+    Dim Point As P.Vector3
+    Dim Box As Clearance.Bounds
+    Dim Bounds As Clearance.Bounds
+    Dim Shape As Catalog.Template
+    Dim Margin As Double
+
+    If CameraDirty Or M.Distance(Focus, CameraAnchor) > 80.0 Then
+
+        CameraWorld.BoxCount = 0
+        CameraAnchor = Focus
+        CameraDirty = False
+
+        For Index = 0 To ItemCount - 1
+
+            If Items[Index].Active Then
+
+                Shape = Shapes[Items[Index].Template]
+                LocalPoint = Geometry.ToLocal(Items[Index], Focus)
+                Margin = 1000000.0 / Min(Items[Index].Scale.X, Items[Index].Scale.Z)
+
+                If (LocalPoint.X >= Shape.Low.X - Margin And LocalPoint.X <= Shape.High.X + Margin And
+                    LocalPoint.Z >= Shape.Low.Z - Margin And LocalPoint.Z <= Shape.High.Z + Margin) Then
+
+                    For Part = 0 To Shape.CameraCount - 1
+
+                        Box = Features.CameraAt(Items[Index].Template, Part)
+                        Bounds.Low = P.Vector(1000000000.0, 1000000000.0, 1000000000.0)
+                        Bounds.High = P.Vector(-1000000000.0, -1000000000.0, -1000000000.0)
+
+                        For Corner = 0 To 7
+
+                            Point = Box.Low
+
+                            If Corner Mod 2 = 1 Then
+                                Point.X = Box.High.X
+                            End If
+
+                            If (Corner / 2) Mod 2 = 1 Then
+                                Point.Y = Box.High.Y
+                            End If
+
+                            If Corner >= 4 Then
+                                Point.Z = Box.High.Z
+                            End If
+
+                            Point = Geometry.ToWorld(Items[Index], Point)
+                            Bounds.Low = P.Vector(Min(Bounds.Low.X, Point.X), Min(Bounds.Low.Y, Point.Y), Min(Bounds.Low.Z, Point.Z))
+                            Bounds.High = P.Vector(Max(Bounds.High.X, Point.X), Max(Bounds.High.Y, Point.Y), Max(Bounds.High.Z, Point.Z))
+                        End For
+
+                        If CameraWorld.BoxCount < 512 Then
+                            CameraWorld.Boxes[CameraWorld.BoxCount] = Bounds
+                            CameraWorld.BoxCount = CameraWorld.BoxCount + 1
+                        End If
+
+                    End For
+
+                End If
+
+            End If
+
+        End For
+
+    End If
+
+    World = CameraWorld
+
+End Sub
+
+End Module

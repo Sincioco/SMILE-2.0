@@ -1,0 +1,250 @@
+''' Reused hinged leaves and one fountain-water batch, transformed with each assembly.
+Module Smile.Tools.TownAttachments
+
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Graphics3D As G
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.PrecisionMath3D As M
+Import Smile.Tools.TownDocument As Document
+Import Smile.Tools.TownCatalogData As Catalog
+Import Smile.Tools.TownCatalogFeatures As Features
+Import Smile.Tools.TownGeometry As Geometry
+
+Public Type State
+    Model As Core.Model3D
+    Leaves[4] As Core.Object3D
+    Angles[4096] As Double
+    Hold[4096] As Number
+    Identities[1024] As Number
+    Water As Core.RibbonBatch3D
+    Material As Core.Material3D
+    WaterPoints As Number
+    Clock As Number
+    Ready As Boolean
+End Type
+
+Public Function Create(ByRef Value As State) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    Dim Part As Number
+    Dim EmptyTexture As Core.Texture3D
+    Dim Ok As Boolean
+
+    Value.Model = G.LoadModelGeometry3D("Assets/Neris/Door-Leaves.sm3d")
+    Ok = Value.Model.GeometryReady And Value.Model.PartCount = 4
+
+    If Ok Then
+        Ok = G.PrepareModelPbr3D(Value.Model, 1, 1, 4)
+    End If
+
+    For Part = 0 To 3
+        Value.Leaves[Part] = G.CreateModelPart3D(Value.Model, Part)
+        Ok = Value.Leaves[Part].Handle <> 0 And Ok
+    End For
+
+    Value.Material = G.CreateEffectMaterial3D(EmptyTexture, G.MATERIAL_ALPHA_BLEND, 100)
+    Ok = G.SetEffectMaterial3D(Value.Material, G.MATERIAL_ALPHA_BLEND, 30, 100, 240, 100, 100) And Ok
+    Ok = G.SetEffectMaterialWater3D(Value.Material, True, 68, 0, 0, 2) And Ok
+    Value.Water = G.CreateRibbonBatch3D(8192, Value.Material)
+    Value.Ready = Value.Water.Handle <> 0 And Ok
+
+    ReturnValue = Value.Ready
+
+    Return ReturnValue
+
+End Function
+
+Private Sub AddWater(ByRef Value As State, Item As Document.Item, Disk As Features.WaterDisk)
+
+    Dim Index As Number
+    Dim Angle As Double
+    Dim Center As P.Vector3
+    Dim Edge As P.Vector3
+    Dim LeftPoint As P.Vector3
+    Dim Ok As Boolean
+
+    If Value.WaterPoints + 51 > 8192 Then
+        Value.Ready = False
+        Return
+    End If
+
+    Center = Geometry.ToWorld(Item, Disk.Position)
+
+    For Index = 0 To 50
+
+        Angle = ToDouble(Max(0, Min(Index - 1, 48))) * 6.283185307179586 / 48.0
+        Edge = Geometry.ToWorld(Item, M.Add(Disk.Position,
+            P.Vector(Cos(Angle) * Disk.RadiusX, 0.0, Sin(Angle) * Disk.RadiusZ)))
+        LeftPoint = Center
+
+        If Index = 0 Or Index = 50 Then
+            Edge = Center
+        End If
+
+        Ok = P.SetRibbonPoint(Value.Water, Value.WaterPoints, LeftPoint, Edge, ToDouble(Index) / 50.0)
+        Ok = G.SetRibbonPointColor3D(Value.Water, Value.WaterPoints, 255, 255, 255, 100) And Ok
+        Value.Ready = Value.Ready And Ok
+        Value.WaterPoints = Value.WaterPoints + 1
+    End For
+
+End Sub
+
+Public Sub Update(ByRef Value As State, ByRef Town As Document.State,
+    Leader As P.Vector3, Elapsed As Number)
+
+    Dim Index As Number
+    Dim Part As Number
+    Dim Slot As Number
+    Dim Item As Document.Item
+    Dim Door As Features.Door
+    Dim Shape As Catalog.Template
+    Dim Relative As P.Vector3
+    Dim Ok As Boolean
+
+    Value.WaterPoints = 0
+    Value.Clock = (Value.Clock + Max(0, Elapsed)) Mod 3600000
+    Value.Ready = G.SetEffectMaterialWater3D(Value.Material, True, 68, 0, Value.Clock / 8, 2)
+
+    For Index = 0 To Town.ItemCount - 1
+
+        Item = Town.Items[Index]
+
+        If Item.Active Then
+
+            Shape = Catalog.TemplateAt(Item.Template)
+
+            If Value.Identities[Index] <> Item.Identity Then
+
+                Value.Identities[Index] = Item.Identity
+
+                For Part = 0 To 3
+                    Value.Angles[Index * 4 + Part] = 0.0
+                    Value.Hold[Index * 4 + Part] = 0
+                End For
+
+            End If
+
+            For Part = 0 To Shape.DoorCount - 1
+
+                Slot = Index * 4 + Part
+                Door = Features.DoorAt(Item.Template, Part)
+                Relative = Geometry.ToLocal(Item, Leader)
+                Relative = M.Rotate(M.Subtract(Relative, Door.Position), P.Vector(0.0, -Door.Yaw, 0.0))
+
+                If (Abs(Relative.X) < Door.Width / 2.0 + 7000.0 / Item.Scale.X And
+                    Relative.Z > -24000.0 / Item.Scale.Z And Relative.Z < 14000.0 / Item.Scale.Z And
+                    Abs(Relative.Y) < 15000.0 / Item.Scale.Y) Then
+
+                    Value.Hold[Slot] = 700
+                    Value.Angles[Slot] = Min(90.0, Value.Angles[Slot] + ToDouble(Elapsed) * 0.12)
+
+                Else
+                    Value.Hold[Slot] = Max(0, Value.Hold[Slot] - Elapsed)
+
+                    If Value.Hold[Slot] = 0 Then
+                        Value.Angles[Slot] = Max(0.0, Value.Angles[Slot] - ToDouble(Elapsed) * 0.09)
+                    End If
+
+                End If
+
+            End For
+
+            For Part = 0 To Shape.WaterCount - 1
+                Call AddWater(Value, Item, Features.WaterAt(Item.Template, Part))
+            End For
+
+        End If
+
+    End For
+
+    If Value.WaterPoints > 0 Then
+        Ok = G.CommitRibbonBatch3D(Value.Water, Value.WaterPoints)
+        Value.Ready = Value.Ready And Ok
+    End If
+
+End Sub
+
+Public Function Draw(ByRef Value As State, ByRef Town As Document.State) As Boolean
+
+    Dim Index As Number
+    Dim DoorIndex As Number
+    Dim Part As Number
+    Dim Shape As Catalog.Template
+    Dim Door As Features.Door
+    Dim Item As Document.Item
+    Dim Position As P.Vector3
+    Dim Pivot As P.Vector3
+    Dim RightValue As P.Vector3
+    Dim Width As Double
+    Dim Yaw As Double
+    Dim Side As Double
+    Dim Ok As Boolean
+
+    Ok = Value.Ready
+
+    For Index = 0 To Town.ItemCount - 1
+
+        Item = Town.Items[Index]
+
+        If Item.Active Then
+
+            Shape = Catalog.TemplateAt(Item.Template)
+
+            For DoorIndex = 0 To Shape.DoorCount - 1
+
+                Door = Features.DoorAt(Item.Template, DoorIndex)
+                Position = Geometry.ToWorld(Item, Door.Position)
+                Yaw = Item.Yaw + Door.Yaw
+                Width = Door.Width * Item.Scale.X / 1000.0
+                RightValue = M.Rotate(P.Vector(1.0, 0.0, 0.0), P.Vector(0.0, Yaw, 0.0))
+
+                For Part = 0 To 3
+
+                    Side = -1.0
+
+                    If Part >= 2 Then
+                        Side = 1.0
+                    End If
+
+                    Pivot = M.Add(Position, M.Scale(RightValue, Side * Width / 2.0))
+                    Ok = P.SetPosition(Value.Leaves[Part], Position.X, Position.Y, Position.Z) And Ok
+                    Ok = P.SetScale(Value.Leaves[Part], Width * 100.0, Door.Height * Item.Scale.Y / 10.0, 700.0) And Ok
+                    Ok = P.SetRotation(Value.Leaves[Part], 0.0, Yaw, 0.0) And Ok
+                    Ok = P.SetPivotRotation(Value.Leaves[Part], Pivot,
+                        P.Vector(0.0, Side * Value.Angles[Index * 4 + DoorIndex], 0.0)) And Ok
+                    Ok = G.DrawObject3D(Value.Leaves[Part]) And Ok
+                End For
+            End For
+
+        End If
+
+    End For
+
+    If Value.WaterPoints > 0 Then
+        Ok = G.DrawRibbonBatch3D(Value.Water) And Ok
+    End If
+
+    Return Ok
+
+End Function
+
+Public Sub Destroy(ByRef Value As State)
+
+    Dim Index As Number
+
+    For Index = 0 To 3
+        Call G.DestroyObjectInstance3D(Value.Leaves[Index])
+    End For
+
+    Call G.DestroyModel3D(Value.Model)
+    Call G.DestroyRibbonBatch3D(Value.Water)
+    Call G.DestroyMaterial3D(Value.Material)
+
+    Value.Ready = False
+
+End Sub
+
+End Module

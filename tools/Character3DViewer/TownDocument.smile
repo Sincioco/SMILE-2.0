@@ -1,0 +1,180 @@
+''' Editable town data. No renderer handles, pointer input or file operations.
+Module Smile.Tools.TownDocument
+
+Option Explicit
+
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.SurfaceGrid3D As Grid
+
+Public Const MAX_ITEMS = 1024
+Public Const CATEGORY_BUILDINGS = 1
+Public Const CATEGORY_SURFACES = 2
+Public Const CATEGORY_DECORATIONS = 3
+
+Public Type Item
+    Identity As Number
+    Template As Number
+    SourceIndex As Number
+    Category As Number
+    Position As P.Vector3
+    Scale As P.Vector3
+    Yaw As Double
+    Active As Boolean
+End Type
+
+Public Type Sun
+    RedValue As Number
+    GreenValue As Number
+    BlueValue As Number
+    Intensity As Number
+    Ambient As Number
+    Azimuth As Double
+    Elevation As Double
+    Shadows As Boolean
+End Type
+
+Public Type State
+    Name As Text
+    Surface As Grid.State
+    Items[1024] As Item
+    ItemCount As Number
+    NextIdentity As Number
+    Light As Sun
+    Revision As Number
+    SavedRevision As Number
+End Type
+
+Public Sub DefaultSun(ByRef Value As Sun)
+
+    Value.RedValue = 255
+    Value.GreenValue = 237
+    Value.BlueValue = 214
+    Value.Intensity = 260
+    Value.Ambient = 38
+    Value.Azimuth = 58.0
+    Value.Elevation = 54.0
+    Value.Shadows = True
+
+End Sub
+
+Public Function ValidName(Name As Text) As Boolean
+
+    Dim Index As Number
+    Dim Code As Number
+
+    If Text_Length(Name) < 1 Or Text_Length(Name) > 80 Then
+        Return False
+    End If
+
+    For Index = 0 To Text_Length(Name) - 1
+
+        Code = Text_Code_At(Name, Index)
+
+        If Code < 32 Or Code > 1114111 Or (Code >= 55296 And Code <= 57343) Then
+            Return False
+        End If
+
+    End For
+
+    Return True
+
+End Function
+
+Public Function Blank(ByRef Value As State, Name As Text, Columns As Number,
+    Rows As Number, CellSize As Double) As Boolean
+
+    Dim Ok As Boolean
+    Dim Index As Number
+    Dim Empty As Item
+
+    If Not ValidName(Name) Then
+        Return False
+    End If
+
+    Ok = Grid.Initialize(Value.Surface, Columns, Rows,
+        -ToDouble(Columns) * CellSize * 0.5, -ToDouble(Rows) * CellSize * 0.5,
+        CellSize, Grid.SURFACE_GROUND)
+
+    If Not Ok Then
+        Return False
+    End If
+
+    For Index = 0 To Value.ItemCount - 1
+        Value.Items[Index] = Empty
+    End For
+
+    Value.Name = Name
+    Value.ItemCount = 0
+    Value.NextIdentity = 1
+    Value.Revision = Value.Revision + 1
+    Value.SavedRevision = -1
+
+    Call DefaultSun(Value.Light)
+
+    Return True
+
+End Function
+
+''' A placed copy preserves the template's authored vertical placement and scale.
+Public Function Place(ByRef Value As State, Sample As Item, X As Double, Z As Double) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Index As Number
+
+    For Index = 0 To Value.ItemCount - 1
+
+        If Not Value.Items[Index].Active Then
+            Exit For
+        End If
+
+    End For
+
+    If Index >= MAX_ITEMS Then
+        ReturnValue = -1
+
+        Return ReturnValue
+    End If
+
+    Sample.Identity = Value.NextIdentity
+    Sample.SourceIndex = -1
+    Sample.Position.X = X
+    Sample.Position.Z = Z
+    Sample.Active = True
+    Value.Items[Index] = Sample
+    Value.ItemCount = Max(Value.ItemCount, Index + 1)
+    Value.NextIdentity = Value.NextIdentity + 1
+    Value.Revision = Value.Revision + 1
+
+    Return Index
+
+End Function
+
+Public Function RemoveItem(ByRef Value As State, Index As Number) As Boolean
+
+    If Index < 0 Or Index >= Value.ItemCount Then
+        Return False
+    End If
+
+    If Not Value.Items[Index].Active Then
+        Return False
+    End If
+
+    Value.Items[Index].Active = False
+    Value.Revision = Value.Revision + 1
+
+    Return True
+
+End Function
+
+Public Function Dirty(ByRef Value As State) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Value.Revision <> Value.SavedRevision
+
+    Return Result
+
+End Function
+
+End Module

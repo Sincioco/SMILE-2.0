@@ -58,6 +58,17 @@ extern "C" long long smile_renderer3d_double(long long command, long long resour
         smile_3d_clear_pending_camera();
         return 1;
     }
+    if (command == 8)
+    {
+        SmileMesh3D* mesh = smile_3d_mesh(resource);
+        if (!mesh || floor(a) != a || a < 0 || a >= mesh->vertex_count ||
+            fabs(b) > 1000000.0 || fabs(c) > 1000000.0 || fabs(d) > 1000000.0)
+        { smile_last_error3d = 5; return 0; }
+        if (mesh->in_flight != 0) { smile_last_error3d = 53; return 0; }
+        smile_3d_vertex(mesh, (unsigned int)a, (float)b, (float)c, (float)d);
+        mesh->committed = 0;
+        return 1;
+    }
     if (command == 7)
     {
         for (int index = 3; index < 8; ++index)

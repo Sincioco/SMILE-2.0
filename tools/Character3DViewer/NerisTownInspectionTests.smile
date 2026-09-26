@@ -5,6 +5,7 @@ Option Explicit
 
 Import Smile.Tools.NerisTown As Town
 Import Smile.Tools.NerisTownParty As Party
+Import Smile.Tools.NerisTownCamera As Drone
 Import Smile.Simple3D.Precision3D As P
 Import Smile.Simple3D.PrecisionMath3D As M
 Import Smile.Simple3D.ArenaViewport3D As Arena
@@ -15,8 +16,49 @@ Public Sub Run(ByRef Value As Town.State, ByRef Failures As Number)
     Call ZoomAfterTab(Value, Failures)
     Call InspectionMovement(Value, Failures)
     Call IdleOrbit(Value, Failures)
+    Call WalkingCameraGesture(Value, Failures)
 
     Value.Look.Time = 0
+
+End Sub
+
+Private Sub WalkingCameraGesture(ByRef Value As Town.State, ByRef Failures As Number)
+
+    Dim Input As Motion.PointerInput
+    Dim Owned As Boolean
+    Dim OriginalZoom As Double
+    Dim Index As Number
+
+    Call Town.Input(Value, KEY_TAB, True)
+
+    OriginalZoom = Value.View.Zoom.Target
+
+    For Index = 0 To 1
+
+        Input.PanHeld = Index = 0
+        Input.OrbitHeld = Index = 1
+        Owned = Drone.MovingGesture(Value.Flight, Value.View, Input, Value.PartyControl, True)
+
+        Call Motion.ApplyDrag(Value.View.Controls, Input.OrbitHeld, Input.PanHeld, 20, 10, 360.0, 220.0)
+        Call Check(Owned And Value.Flight.Peeking And Value.PartyControl And Not Value.Flight.Suspended,
+            "Walking Pan And Orbit Retain Party Control", Failures)
+
+        Input.PanHeld = False
+        Input.OrbitHeld = False
+        Owned = Drone.MovingGesture(Value.Flight, Value.View, Input, Value.PartyControl, True)
+
+        Call Check(Owned And Not Value.Flight.Peeking And Value.View.TransitionDuration = 1000 And
+            Value.View.Controls.PanX = 0.0 And Value.View.Controls.OrbitYaw = 0.0 And
+            Value.View.Zoom.Target = OriginalZoom And Value.PartyControl,
+            "Released Walking Gesture Eases Back In One Second And Retains Zoom", Failures)
+        Call Arena.AdvanceTransition(Value.View, 1000)
+    End For
+
+    Input.PanHeld = True
+    Owned = Drone.MovingGesture(Value.Flight, Value.View, Input, False, True)
+
+    Call Check(Not Owned, "Inspection Drag Does Not Enable Party Control", Failures)
+    Call Town.ResetOverview(Value)
 
 End Sub
 

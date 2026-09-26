@@ -1,0 +1,78 @@
+''' Native document saves and recovery. Named versions retain their own working copy.
+Module Smile.Tools.TownLibrary
+
+Option Explicit
+
+Import Smile.Tools.TownDocument As Document
+Import Smile.Tools.TownDocumentStore As Storage
+
+Public Function Recover(ByRef Town As Document.State) As Boolean
+
+    Dim Ok As Boolean
+
+    Ok = Storage.LoadDocument(Town, "TownEditor.Working", True)
+
+    If Not Ok Then
+        Ok = Storage.LoadDocument(Town, "TownEditor.Current")
+    End If
+
+    Return Ok
+
+End Function
+
+Public Function Remember(ByRef Town As Document.State) As Boolean
+
+    Dim Ok As Boolean
+
+    Ok = Storage.SaveDocument(Town, "TownEditor.Recovery." + Town.Name, False)
+    Ok = Storage.SaveDocument(Town, "TownEditor.Working", False) And Ok
+
+    Return Ok
+
+End Function
+
+Public Function SaveCurrent(ByRef Town As Document.State) As Boolean
+
+    Dim Ok As Boolean
+    Dim SavedRevision As Number
+
+    SavedRevision = Town.SavedRevision
+    Ok = Storage.SaveDocument(Town, "TownEditor.Town." + Town.Name)
+    Ok = Storage.SaveDocument(Town, "TownEditor.Current") And Ok
+
+    If Not Ok Then
+        Town.SavedRevision = SavedRevision
+        Return False
+    End If
+
+    Ok = Remember(Town)
+
+    Return Ok
+
+End Function
+
+Public Function OpenNamed(ByRef Town As Document.State, Name As Text) As Boolean
+
+    Dim Ok As Boolean
+
+    If Text_Length(Name) < 1 Or Text_Length(Name) > 80 Then
+        Return False
+    End If
+
+    Ok = Remember(Town)
+
+    If Not Ok Then
+        Return False
+    End If
+
+    Ok = Storage.LoadDocument(Town, "TownEditor.Recovery." + Name, True)
+
+    If Not Ok Then
+        Ok = Storage.LoadDocument(Town, "TownEditor.Town." + Name)
+    End If
+
+    Return Ok
+
+End Function
+
+End Module
