@@ -1,0 +1,300 @@
+''' Temporary construction guides and placement snapping. Never part of a town save.
+Module Smile.Tools.TownGuides
+
+Option Explicit
+
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.PrecisionMath3D As M
+Import Smile.Simple3D.PrecisionCamera3D As Camera
+Import Smile.Simple3D.SurfaceGrid3D As Grid
+
+Public Const MAX_MARKERS = 128
+
+Public Type Marker
+    First As P.Vector3
+    Last As P.Vector3
+    IsRectangle As Boolean
+End Type
+
+Public Type Drawing
+    Markers[128] As Marker
+    EntryCount As Number
+    Revision As Number
+End Type
+
+Public Type State
+    Ink As Drawing
+    ShowGrid As Boolean
+    SnapMode As Number
+    Spacing As Number
+End Type
+
+Public Sub Start(ByRef Value As State)
+
+    If Value.Spacing < 1 Then
+        Value.Spacing = 2
+    End If
+
+End Sub
+
+Public Function Add(ByRef Value As Drawing, First As P.Vector3,
+    Last As P.Vector3, IsRectangle As Boolean) As Boolean
+
+    If Value.EntryCount >= MAX_MARKERS Then
+        Return False
+    End If
+
+    If Abs(First.X - Last.X) < 0.001 And Abs(First.Z - Last.Z) < 0.001 Then
+        Return False
+    End If
+
+    First.Y = 23.12
+    Last.Y = First.Y
+    Value.Markers[Value.EntryCount].First = First
+    Value.Markers[Value.EntryCount].Last = Last
+    Value.Markers[Value.EntryCount].IsRectangle = IsRectangle
+    Value.EntryCount = Value.EntryCount + 1
+    Value.Revision = Value.Revision + 1
+
+    Return True
+
+End Function
+
+Public Sub ClearMarkers(ByRef Value As Drawing)
+
+    If Value.EntryCount > 0 Then
+        Value.EntryCount = 0
+        Value.Revision = Value.Revision + 1
+    End If
+
+End Sub
+
+Public Function Corner(Value As Marker, Index As Number) As P.Vector3
+
+    Dim Result As P.Vector3
+
+    Result = Value.First
+
+    If Index = 1 Then
+        Result.X = Value.Last.X
+    Else If Index = 2 Then
+        Result = Value.Last
+    Else If Index = 3 Then
+        Result.Z = Value.Last.Z
+    End If
+
+    Return Result
+
+End Function
+
+Public Function Closest(Point As P.Vector3, First As P.Vector3, Last As P.Vector3) As P.Vector3
+
+    Dim Result As P.Vector3
+    Dim X As Double
+    Dim Z As Double
+    Dim Length As Double
+    Dim Amount As Double
+
+    X = Last.X - First.X
+    Z = Last.Z - First.Z
+    Length = X * X + Z * Z
+
+    If Length > 0.000001 Then
+        Amount = Clamp(((Point.X - First.X) * X + (Point.Z - First.Z) * Z) / Length, 0.0, 1.0)
+    End If
+
+    Result = P.Vector(First.X + X * Amount, Point.Y, First.Z + Z * Amount)
+
+    Return Result
+
+End Function
+
+Private Sub Consider(Point As P.Vector3, Candidate As P.Vector3,
+    ByRef Best As Double, ByRef Result As P.Vector3, ByRef Found As Boolean)
+
+    Dim Distance As Double
+
+    Distance = ((Point.X - Candidate.X) * (Point.X - Candidate.X) +
+        (Point.Z - Candidate.Z) * (Point.Z - Candidate.Z))
+
+    If Distance <= Best Then
+
+        Best = Distance
+        Result = P.Vector(Candidate.X, Point.Y, Candidate.Z)
+        Found = True
+
+    End If
+
+End Sub
+
+Public Function Snap(ByRef Value As State, Point As P.Vector3, Radius As Double) As P.Vector3
+
+    Dim Index As Number
+    Dim Part As Number
+    Dim EntryCount As Number
+    Dim Pass As Number
+    Dim Mark As Marker
+    Dim First As P.Vector3
+    Dim Last As P.Vector3
+    Dim Candidate As P.Vector3
+    Dim Result As P.Vector3
+    Dim Best As Double
+    Dim StepSize As Double
+    Dim Found As Boolean
+
+    Result = Point
+    StepSize = ToDouble(Max(1, Value.Spacing) * 10)
+
+    If Value.SnapMode = 1 Or Value.SnapMode = 3 Then
+        Result.X = Round(Point.X / StepSize) * StepSize
+        Result.Z = Round(Point.Z / StepSize) * StepSize
+    End If
+
+    If Value.SnapMode < 2 Then
+        Return Result
+    End If
+
+    ' Endpoints/corners take precedence, then the nearest segment within the radius.
+
+    For Pass = 0 To 1
+
+        Best = Max(0.0, Radius) * Max(0.0, Radius)
+
+        For Index = 0 To Value.Ink.EntryCount - 1
+
+            Mark = Value.Ink.Markers[Index]
+            EntryCount = 1
+
+            If Mark.IsRectangle Then
+                EntryCount = 4
+            End If
+
+            For Part = 0 To EntryCount - 1
+
+                First = Mark.First
+                Last = Mark.Last
+
+                If Mark.IsRectangle Then
+                    First = Corner(Mark, Part)
+                    Last = Corner(Mark, (Part + 1) Mod 4)
+                End If
+
+                If Pass = 0 Then
+                    Call Consider(Point, First, Best, Result, Found)
+                    Call Consider(Point, Last, Best, Result, Found)
+                Else
+                    Candidate = Closest(Point, First, Last)
+
+                    Call Consider(Point, Candidate, Best, Result, Found)
+                End If
+
+            End For
+        End For
+
+        If Found Then
+            Exit For
+        End If
+
+    End For
+
+    Return Result
+
+End Function
+
+Private Sub Segment(First As P.Vector3, Last As P.Vector3, View As P.Camera3D, ColorValue As Number)
+
+    Dim FirstPoint As Camera.ProjectedPoint
+    Dim LastPoint As Camera.ProjectedPoint
+    Dim Amount As Double
+
+    FirstPoint = Camera.ProjectViewerPoint(First, View, Window_Width(), Window_Height())
+    LastPoint = Camera.ProjectViewerPoint(Last, View, Window_Width(), Window_Height())
+
+    If Not FirstPoint.Visible And Not LastPoint.Visible Then
+        Return
+    End If
+
+    If Not FirstPoint.Visible Then
+
+        Amount = (View.NearPlane + 0.001 - FirstPoint.Depth) / (LastPoint.Depth - FirstPoint.Depth)
+        First = M.Add(First, M.Scale(M.Subtract(Last, First), Amount))
+        FirstPoint = Camera.ProjectViewerPoint(First, View, Window_Width(), Window_Height())
+
+    Else If Not LastPoint.Visible Then
+
+        Amount = (View.NearPlane + 0.001 - LastPoint.Depth) / (FirstPoint.Depth - LastPoint.Depth)
+        Last = M.Add(Last, M.Scale(M.Subtract(First, Last), Amount))
+        LastPoint = Camera.ProjectViewerPoint(Last, View, Window_Width(), Window_Height())
+
+    End If
+
+    If FirstPoint.Visible And LastPoint.Visible Then
+        Draw Line ToNumber(FirstPoint.X), ToNumber(FirstPoint.Y), ToNumber(LastPoint.X), ToNumber(LastPoint.Y), ColorValue
+    End If
+
+End Sub
+
+Public Sub DrawMarker(Value As Marker, View As P.Camera3D, ColorValue As Number)
+
+    Dim Part As Number
+
+    If Value.IsRectangle Then
+
+        For Part = 0 To 3
+            Call Segment(Corner(Value, Part), Corner(Value, (Part + 1) Mod 4), View, ColorValue)
+        End For
+
+    Else
+
+        Call Segment(Value.First, Value.Last, View, ColorValue)
+
+    End If
+
+End Sub
+
+Public Sub Draw(ByRef Value As State, ByRef Surface As Grid.State, View As P.Camera3D, RightEdge As Number)
+
+    Dim Index As Number
+    Dim StepSize As Double
+    Dim PixelStep As Double
+    Dim Extent As Double
+    Dim AtValue As Double
+    Dim Point As Camera.ProjectedPoint
+
+    Clip Rectangle 0, 128, Max(0, RightEdge), Max(0, Window_Height() - 128)
+
+    If Value.ShowGrid Then
+
+        StepSize = ToDouble(Max(1, Value.Spacing) * 10)
+        Point = Camera.ProjectViewerPoint(View.Target, View, Window_Width(), Window_Height())
+        PixelStep = Camera.WorldSizeForPixels(12, Max(View.NearPlane, Point.Depth), View.FovDegrees, Window_Height())
+        Extent = Max(Surface.XEdges[Surface.Columns] - Surface.XEdges[0],
+            Surface.ZEdges[Surface.Rows] - Surface.ZEdges[0])
+        ' Retain the chosen snap spacing; omit intermediate lines when zoomed far out.
+        StepSize = StepSize * Max(1.0, Ceiling(Max(PixelStep, Extent / 128.0) / StepSize))
+
+        For Index = ToNumber(Ceiling(Surface.XEdges[0] / StepSize)) To ToNumber(Floor(Surface.XEdges[Surface.Columns] / StepSize))
+            AtValue = ToDouble(Index) * StepSize
+
+            Call Segment(P.Vector(AtValue, 23.12, Surface.ZEdges[0]),
+                P.Vector(AtValue, 23.12, Surface.ZEdges[Surface.Rows]), View, RGB(73, 120, 138))
+        End For
+
+        For Index = ToNumber(Ceiling(Surface.ZEdges[0] / StepSize)) To ToNumber(Floor(Surface.ZEdges[Surface.Rows] / StepSize))
+            AtValue = ToDouble(Index) * StepSize
+
+            Call Segment(P.Vector(Surface.XEdges[0], 23.12, AtValue),
+                P.Vector(Surface.XEdges[Surface.Columns], 23.12, AtValue), View, RGB(73, 120, 138))
+        End For
+
+    End If
+
+    For Index = 0 To Value.Ink.EntryCount - 1
+        Call DrawMarker(Value.Ink.Markers[Index], View, RGB(255, 209, 94))
+    End For
+
+    End Clip
+
+End Sub
+
+End Module

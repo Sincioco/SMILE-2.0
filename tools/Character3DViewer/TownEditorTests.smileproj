@@ -7,7 +7,10 @@
   <ItemGroup>
     <SmileSource Include="TownEditorTests.smile" StartupOnly="true" />
     <SmileSource Include="TownDocument.smile" />
+    <SmileSource Include="TownGeometry.smile" />
     <SmileSource Include="TownSelection.smile" />
+    <SmileSource Include="TownGuides.smile" />
+    <SmileSource Include="TownHistory.smile" />
     <SmileSource Include="TownCatalogData.smile" />
     <SmileSource Include="TownInitialSurface.smile" />
     <SmileSource Include="TownDocumentStore.smile" />

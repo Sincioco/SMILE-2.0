@@ -5,6 +5,7 @@ Option Explicit
 
 Import Smile.Tools.TownDocument As Document
 Import Smile.Tools.TownCatalogData As Catalog
+Import Smile.Tools.TownGuides As Guides
 
 Public Type Control
     X As Number
@@ -27,6 +28,8 @@ Public Type State
     Message As Text
     Busy As Boolean
     ProgressPercent As Number
+    CanUndo As Boolean
+    CanRedo As Boolean
 End Type
 
 Public Function NumberLabel(Value As Number) As Text
@@ -61,11 +64,21 @@ Public Function LeftEdge() As Number
 
 End Function
 
+Public Function ContainsPoint(X As Number, Y As Number, ViewWidth As Number, ViewHeight As Number) As Boolean
+
+    Dim Result As Boolean
+
+    Result = X >= ViewWidth - 306 And X < ViewWidth And Y >= 128 And Y < ViewHeight - 160
+
+    Return Result
+
+End Function
+
 Public Function Hovered() As Boolean
 
     Dim Result As Boolean
 
-    Result = Pointer_X() >= LeftEdge() And Pointer_Y() >= 128
+    Result = ContainsPoint(Pointer_X(), Pointer_Y(), Window_Width(), Window_Height())
 
     Return Result
 
@@ -100,19 +113,26 @@ Public Function Input(ByRef Value As State) As Number
 End Function
 
 Public Sub Button(ByRef Value As State, Action As Number, X As Number, Y As Number,
-    Width As Number, Label As Text, Optional Selected As Boolean = False)
+    Width As Number, Label As Text, Optional Selected As Boolean = False, Optional Enabled As Boolean = True)
 
     Dim ColorValue As Number
     Dim Index As Number
+    Dim TextColor As Number
 
     ColorValue = RGB(29, 48, 65)
+    TextColor = WHITE
 
     If Selected Then
         ColorValue = RGB(22, 106, 119)
     End If
 
+    If Not Enabled Then
+        TextColor = RGB(106, 122, 137)
+        Action = 0
+    End If
+
     Fill Rectangle X, Y, Width, 26, ColorValue
-    Draw Text Label At X + 7, Y + 5 Size 14 Color WHITE
+    Draw Text Label At X + 7, Y + 5 Size 14 Color TextColor
     Index = Value.ControlCount
     Value.Controls[Index].X = X
     Value.Controls[Index].Y = Y
@@ -122,6 +142,16 @@ Public Sub Button(ByRef Value As State, Action As Number, X As Number, Y As Numb
     Value.ControlCount = Index + 1
 
 End Sub
+
+Public Function PaletteRows() As Number
+
+    Dim Result As Number
+
+    Result = Max(1, Min(9, (Window_Height() - 636) / 28))
+
+    Return Result
+
+End Function
 
 Private Sub Library(ByRef Value As State, X As Number)
 
@@ -159,7 +189,7 @@ Private Sub Library(ByRef Value As State, X As Number)
         Call Button(Value, 21, X + 223, 274, 60, "Next")
 
         Draw Text "Palette" At X + 108, 281 Size 14 Color WHITE
-        Rows = Max(2, Min(9, (Window_Height() - 570) / 28))
+        Rows = PaletteRows()
 
         For Index = 0 To Catalog.TEMPLATE_COUNT - 1
 
@@ -183,6 +213,7 @@ Private Sub Library(ByRef Value As State, X As Number)
         Call Button(Value, 22, X, 316 + Rows * 28, 91, "Rotate -15")
         Call Button(Value, 23, X + 96, 316 + Rows * 28, 91, "Rotate +15")
         Call Button(Value, 24, X + 192, 316 + Rows * 28, 91, "Delete")
+        Call Button(Value, 34, X, 348 + Rows * 28, 283, "Duplicate Selected (Ctrl+D)")
 
     End If
 
@@ -192,7 +223,7 @@ Private Sub LightRow(ByRef Value As State, X As Number, Row As Number, Label As 
 
     Dim Y As Number
 
-    Y = 212 + Row * Min(32, Max(16, (Window_Height() - 510) / 7))
+    Y = 212 + Row * Min(32, Max(16, (Window_Height() - 537) / 7))
     Draw Text Label At X, Y + 6 Size 14 Color WHITE
 
     Call Button(Value, 200 + Row * 2, X + 170, Y, 30, "-")
@@ -202,23 +233,53 @@ Private Sub LightRow(ByRef Value As State, X As Number, Row As Number, Label As 
 
 End Sub
 
-Public Sub Draw(ByRef Value As State, ByRef Town As Document.State, SelectedCount As Number)
+Private Sub Construction(ByRef Value As State, ByRef Guide As Guides.State, X As Number)
+
+    Dim Label As Text
+
+    Label = "Snap: Off"
+
+    If Guide.SnapMode = 1 Then
+        Label = "Snap: Grid"
+    Else If Guide.SnapMode = 2 Then
+        Label = "Snap: Markers"
+    Else If Guide.SnapMode = 3 Then
+        Label = "Snap: Grid + Markers"
+    End If
+
+    Call Button(Value, 73, X, 212, 283, "Show Grid", Guide.ShowGrid)
+    Call Button(Value, 74, X, 246, 283, Label, Guide.SnapMode > 0)
+    Call Button(Value, 75, X, 280, 34, "-")
+    Call Button(Value, 76, X + 248, 280, 34, "+")
+    Call Button(Value, 15, X, 314, 139, "Marker Line", Value.Tool = 15)
+    Call Button(Value, 16, X + 144, 314, 139, "Rectangle", Value.Tool = 16)
+    Call Button(Value, 72, X, 348, 283, "Clear All Markers")
+
+    Draw Text "Grid: " + NumberLabel(Guide.Spacing) + " m" At X + 50, 286 Size 14 Color WHITE
+    Draw Text "Click the start, then the end." At X, 388 Size 14 Color WHITE
+    Draw Text "Temporary; excluded from saves." At X, 410 Size 13 Color RGB(240, 205, 140)
+
+End Sub
+
+Public Sub Draw(ByRef Value As State, ByRef Town As Document.State,
+    ByRef Guide As Guides.State, SelectedCount As Number)
 
     Dim X As Number
     Dim LightBottom As Number
     Dim FileStep As Number
 
     X = LeftEdge() + 10
-    LightBottom = 212 + 7 * Min(32, Max(16, (Window_Height() - 510) / 7))
+    LightBottom = 212 + 7 * Min(32, Max(16, (Window_Height() - 537) / 7))
     FileStep = Min(34, Max(26, (Window_Height() - 455) / 7))
     Value.ControlCount = 0
     Fill Rectangle X - 10, 128, 306, Max(0, Window_Height() - 298), RGB(12, 23, 36)
     Draw Text "Town Editor" At X, 138 Size 21 Color WHITE
 
     Call Button(Value, 400, X + 222, 136, 62, "Done")
-    Call Button(Value, 50, X, 174, 91, "Items", Value.Section = 0)
-    Call Button(Value, 51, X + 96, 174, 91, "Sun", Value.Section = 1)
-    Call Button(Value, 52, X + 192, 174, 91, "Files", Value.Section = 2)
+    Call Button(Value, 50, X, 174, 67, "Items", Value.Section = 0)
+    Call Button(Value, 51, X + 72, 174, 67, "Sun", Value.Section = 1)
+    Call Button(Value, 53, X + 144, 174, 67, "Guides", Value.Section = 3)
+    Call Button(Value, 52, X + 216, 174, 67, "Files", Value.Section = 2)
 
     If Value.Section = 0 Then
 
@@ -237,6 +298,10 @@ Public Sub Draw(ByRef Value As State, ByRef Town As Document.State, SelectedCoun
         Call Button(Value, 221, X, LightBottom + 32, 139, "Day")
         Call Button(Value, 222, X + 144, LightBottom + 32, 139, "Night")
 
+    Else If Value.Section = 3 Then
+
+        Call Construction(Value, Guide, X)
+
     Else
 
         Call Button(Value, 300, X, 212 + 0 * FileStep, 283, "Save For Viewer")
@@ -248,6 +313,9 @@ Public Sub Draw(ByRef Value As State, ByRef Town As Document.State, SelectedCoun
         Call Button(Value, 306, X, 212 + 6 * FileStep, 283, "Open Linked World")
 
     End If
+
+    Call Button(Value, 32, X, Window_Height() - 261, 139, "Undo (Ctrl+Z)", False, Value.CanUndo)
+    Call Button(Value, 33, X + 144, Window_Height() - 261, 139, "Redo (Ctrl+Y)", False, Value.CanRedo)
 
     Draw Text Text_Slice(Town.Name, 0, 30) At X, Window_Height() - 227 Size 14 Color WHITE
     Draw Text NumberLabel(SelectedCount) + " selected" At X, Window_Height() - 205 Size 13 Color RGB(70, 225, 220)

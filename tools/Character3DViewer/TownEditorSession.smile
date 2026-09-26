@@ -105,12 +105,13 @@ Public Function GestureActive() As Boolean
 
 End Function
 
-Public Function CameraBlocked() As Boolean
+Public Function CameraBlocked(Optional CameraControl As Boolean = False) As Boolean
 
     Dim Result As Boolean
 
-    Result = World.Active() Or (Controls.Enabled And (Panel.Hovered() Or
-        (Not Key_Held(KEY_SHIFT) And Pointer_Held(POINTER_PRIMARY)) Or GestureActive()))
+    Result = (World.Active() Or (Controls.Enabled And (Panel.Hovered() Or
+        (Not CameraControl And ((Not Key_Held(KEY_SHIFT) And
+        Pointer_Held(POINTER_PRIMARY)) Or GestureActive())))))
 
     Return Result
 
@@ -300,8 +301,7 @@ Private Sub FileCommand(Action As Number)
     End If
 
     If TeleportPending Then
-        Call Editor.Cancel(Controls, Town)
-        Call Selection.ClearSelection(Controls.Selected)
+        Call Editor.ResetDocument(Controls, Town)
     End If
 
 End Sub
@@ -321,7 +321,9 @@ Public Sub Input(View As P.Camera3D, Key As Number, Blocked As Boolean)
             Ok = Library.OpenNamed(Town, Name)
             TeleportPending = Ok
 
-            Call Selection.ClearSelection(Controls.Selected)
+            If Ok Then
+                Call Editor.ResetDocument(Controls, Town)
+            End If
 
         End If
 
@@ -380,6 +382,8 @@ Public Sub Update(Leader As P.Vector3, Elapsed As Number)
         Town.Surface = LiveSurface
         Town.Revision = Town.Revision + 1
         Controls.Ui.Message = "Terrain limit reached; edit reverted."
+
+        Call Editor.ResetHistory(Controls, Town)
 
         Call Terrain.BeginBuild(Ground, Town.Surface)
 

@@ -43,6 +43,8 @@ $nativeBattleSources = @(
     'TownWorldEditor.smile',
     'TownEditorSession.smile',
     'TownSelection.smile',
+    'TownGuides.smile',
+    'TownHistory.smile',
     'TownCatalogData.smile',
     'TownCatalogFeatures.smile',
     'TownInitialSurface.smile',

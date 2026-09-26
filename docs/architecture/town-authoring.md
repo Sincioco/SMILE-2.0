@@ -19,6 +19,28 @@ grass inside the rectangle. Road over water becomes a bridge. Shorelines have no
 thin trim; bridge rails stop at the water crossing.
 Pending surfaces replace the live geometry only after the complete build succeeds.
 
+Undo and Redo buttons are available on every editor tab. Ctrl+Z undoes; Ctrl+Y
+or Ctrl+Shift+Z redoes. The session retains twenty completed edits, including
+placement, grouped movement/rotation/deletion/duplication, surfaces, lighting,
+marker creation and marker clearing. A drag is one edit; Esc cancels its preview.
+A new edit after undo clears the redo branch. Opening a different town clears
+history and markers. Saving does not clear history, but undo never changes the
+current save name or rewinds its save status; save again after undoing town edits.
+
+Select one or more items and use Duplicate Selected or Ctrl+D. Copies retain the
+original template, height, scale and rotation, get new identities, and become the
+selection. They appear one grid interval to the right, ready to drag into place.
+Resource limits are checked for the entire group before creating any copies.
+
+Guides provides temporary two-click Marker Line and Rectangle tools, Clear All
+Markers, Show Grid, 1-20 metre grid spacing, and Snap: Off / Grid / Markers /
+Grid + Markers. Guides follow the town ground as the camera moves. Snapping
+preserves height and group spacing, using the first selected assembly's origin.
+Nearby marker endpoints/corners take priority over segments, then grid snapping.
+Distant grid lines are thinned for readability; the actual snap interval stays
+unchanged. Guides, grid preferences and history are session-only: they are excluded
+from Viewer saves, recovery files and Blender exports. Up to 128 guides are kept.
+
 Sun exposes RGB, intensity, ambient strength, azimuth, elevation, day/night presets
 and shadow toggle through the existing Scene3D light/shadow owner. Neris buildings
 and trees submit geometry to the same shadow pass.
@@ -31,6 +53,7 @@ and trees submit geometry to the same shadow pass.
 | `TownDocument` | Caller-owned identities, horizontal transforms, surface and sun; no GPU handles |
 | Shared `SurfaceGrid3D` | Packed cells, physical line/rectangle painting and exterior-bank predicates |
 | `TownSelection`, `TownPicking`, `TownEditor` | Category selection, cancelable group gestures, projection and commands |
+| `TownGuides`, `TownHistory` | Caller-owned temporary construction drawing/snapping and bounded edit snapshots; no persistence |
 | `TownEditorPanel` | Palette/control hit rectangles and progress; no persistence or GPU ownership |
 | `TownCatalogRenderer`, `TownSurfaceRenderer`, `TownAttachments`, `TownLighting` | Shared-template submission, incremental surfaces, door/water attachments and light application |
 | `TownGeometry`, `TownDocumentNavigation` | Template transforms and a committed movement/camera snapshot |
@@ -131,7 +154,7 @@ session reproduces the previous overflow. Camera gesture checks cover walking
 pan/orbit, one-second return and preserved zoom, with no injected user input.
 
 This is an instance/surface editor, not a mesh modeler. No vertical/scale authoring,
-undo history, catalog migration or automatic placement collision avoidance is
+catalog migration or automatic placement collision avoidance is
 included. Decorative falling leaves and crystal billboard halos from the static
 showcase are not reproduced in editable mode; catalog materials, fountain water,
 opening doors, stairs and navigation are retained. The old one-shot doorway event
@@ -157,3 +180,11 @@ catalog. It measures actual castle/HQ floor faces, checks at least 0.1 m clearan
 from generated lawns, verifies native/Blender height parity and unchanged road/water
 heights, and requires bare shores without removing bridge rails. The native
 rendering fixture also checks that bare shores produce no extra trim mesh.
+
+September 27 follow-through: the native editor foundations, routes, rendering and
+full session pass with twenty-step undo/redo, temporary guides, snapping and
+duplication. Native interaction checked grid visibility, two-click rectangles,
+clear/undo/redo, selected-object duplication and undo, and Fit during editing.
+The bridge depth regression fails with the former fixed near plane and passes
+with height-based near clipping; Royal/HQ bridges were inspected at multiple
+overview angles and zoom levels. The release Viewer was rebuilt and relaunched.

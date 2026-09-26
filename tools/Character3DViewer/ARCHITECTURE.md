@@ -1417,3 +1417,47 @@ The surface renderer shrinks by 23 lines and the Blender worker by eight; the
 native rendering fixture gains 24 lines and `test-town-terrain.py` measures actual
 Blender floor/bridge clearance and cross-output height parity. No new production
 owner, dependency, guardrail exception or coordinator growth is introduced.
+
+### Town guides, history and duplication (September 27)
+
+`TownEditor` owns a caller-held `TownHistory.State` and `TownGuides.State` alongside
+its selection/gesture state. `TownHistory` stores a twenty-edit circular history;
+per-step town/surface flags keep marker-only undo out of document persistence and
+object-only undo out of terrain rebuilding. Live document/surface revisions stay
+monotonic for their consumers; save identity and allocated item identities are
+never rolled back. New/open document routes reset history and temporary guides.
+The existing terrain-limit rollback resets history after rejecting an edit.
+
+`TownGuides` owns bounded ground-anchored line/rectangle data, endpoint/segment/grid
+snapping and projected overlay rendering. Grid rendering thins distant lines,
+while snapping retains the selected interval. `TownSelection` owns duplication
+resource preflight and group-origin snapping; clicking an off-grid item does not
+move it until an actual drag begins. `TownEditorPanel` exposes the controls and
+shortcut labels; `NerisTown` suppresses inspection movement during editor Ctrl
+shortcuts. Save codecs and Blender contracts have no guide/history fields.
+
+Growth review: Editor 475 -> 588 lines, Panel 263 -> 331, Selection 168 -> 265;
+new Guides 300 and History 158. Session 599 -> 603 adds document/history reset
+coordination to existing lifecycle paths. NerisTown 738 -> 739 routes camera controls
+ahead of editor canvas gestures; panel hit regions exclude those controls. The native
+entry point is unchanged. Dependencies point from editor/selection/panel to the
+focused guide/history owners; neither reaches back into the session. No compiler,
+runtime, public save format, threshold, baseline or dependency exception changed.
+
+Validation: focused foundation checks cover bounded/branched history, grouped
+duplication, grid/marker snapping, selection-without-drag, terrain restoration,
+save identity and marker-only history. The real renderer fixture exercises the
+buttons and guide overlay; the full native editor/session and Viewer hardening
+gates pass. Native interaction and release relaunch complete the user-facing check.
+
+Bridge orbit precision stays in `NerisTownCamera.Compose` (+3 lines). The Royal/HQ
+bridge paving is only 0.62 native units (6.2 cm) above its support deck; the old
+fixed near plane loses this separation in the 24-bit depth buffer at distant
+overview angles. Near clipping now scales with eye height above town ground,
+retaining the existing 25-unit minimum for close, ground-level shots. Position,
+aim, movement, authored geometry and collision remain unchanged. The focused
+inspection fixture checks nine distant depths against four depth-buffer bins
+and verifies the ground-level Tab shot retains its original near clipping plane.
+An isolated negative control using the old fixed near plane fails that exact
+bridge assertion. The corrected native fixture passes; overview orbit, pan and
+closer zoom inspection show distinct Royal/HQ bridge surfaces.

@@ -17,8 +17,50 @@ Public Sub Run(ByRef Value As Town.State, ByRef Failures As Number)
     Call InspectionMovement(Value, Failures)
     Call IdleOrbit(Value, Failures)
     Call WalkingCameraGesture(Value, Failures)
+    Call BridgeDepthPrecision(Value, Failures)
 
     Value.Look.Time = 0
+
+End Sub
+
+Private Sub BridgeDepthPrecision(ByRef Value As Town.State, ByRef Failures As Number)
+
+    Dim Depth As Double
+    Dim NearValue As Double
+    Dim FarValue As Double
+    Dim Gap As Double
+    Dim PavingDepth As Double
+    Dim SupportDepth As Double
+    Dim Index As Number
+    Dim Separated As Boolean
+
+    Call Town.ResetOverview(Value)
+    Call Town.Update(Value, 0)
+
+    NearValue = Value.View.LiveCamera.NearPlane
+    FarValue = Value.View.LiveCamera.FarPlane
+    ' Native bridge deck is Y22.5; paving is Y23.12. At 35 degrees this
+    ' projects to about 0.356 camera-depth units, below one old depth-buffer step.
+    Gap = 0.62 * Sin(M.Radians(35.0))
+    Separated = True
+
+    For Index = 0 To 8
+
+        Depth = 18000.0 + ToDouble(Index) * 500.0
+        PavingDepth = (FarValue / (FarValue - NearValue) -
+            FarValue * NearValue / ((FarValue - NearValue) * Depth))
+        SupportDepth = (FarValue / (FarValue - NearValue) -
+            FarValue * NearValue / ((FarValue - NearValue) * (Depth + Gap)))
+        Separated = Separated And (SupportDepth - PavingDepth) * 16777215.0 > 4.0
+    End For
+
+    Call Check(Separated, "Moving Overview Keeps Bridge Deck And Paving Depths Distinct", Failures)
+    Call Town.Input(Value, KEY_TAB, True)
+    Call Arena.AdvanceTransition(Value.View, 1000)
+    Call Town.Update(Value, 0)
+    Call Check(Value.View.LiveCamera.NearPlane = 25.0,
+        "Ground-Level Party Shot Retains Its Close Clipping Distance", Failures)
+    Call Town.ResetOverview(Value)
 
 End Sub
 

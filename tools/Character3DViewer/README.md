@@ -63,6 +63,9 @@ following stays low, slightly looking up toward the horizon, with slow translati
 and turning. Royal/HQ grounds and doorway approaches use a close trailing view;
 upward stair height raises its aim. Manual elevation allows -20 to 80 degrees.
 Explicit Tab framing bypasses the slow follow solver during its one-second ease.
+Elevated views increase the near clipping distance with camera height to retain
+depth precision between bridge paving and its support deck. Ground-level and
+indoor shots retain the close clipping distance; camera position and angle are unchanged.
 Wheel zoom is applied after drone following so the eye and target retain their
 angle and settle promptly. It never feeds the zoomed camera back into the slow
 follow solver. Inspection translates the camera in its viewing direction and
@@ -1180,7 +1183,7 @@ moving and release returns to the drone view in one second, preserving wheel zoo
 
 For roads/water choose **Surfaces**, a material, then **Line** or **Rectangle**;
 click the first and second corners/endpoints. Width is metres. **Erase** restores
-grass in the marked rectangle. Water banks rebuild on the outside of joined cells;
+grass in the marked rectangle. Water uses clean shorelines without narrow trim;
 road across water creates a bridge. **Sun** exposes color, intensity, ambient light,
 azimuth/elevation, shadows and day/night presets.
 
@@ -1202,3 +1205,16 @@ Working copies recover across tabs/relaunches. Saved document names are limited 
 80 Unicode characters; duplicate version names are refused. Files are tied to the
 current catalog fingerprint. Limits, ownership, tests and known presentation
 boundaries are documented in [town authoring](../../docs/architecture/town-authoring.md).
+
+### Town Editor guides and history
+
+In Edit mode, use **Ctrl+Z** to undo and **Ctrl+Y** or **Ctrl+Shift+Z** to redo
+(up to twenty edits). Select an item or group and press **Ctrl+D** to duplicate;
+the new copies are selected for placement. These actions also have buttons.
+
+The **Guides** tab provides two-click line/rectangle markers, **Clear All Markers**,
+**Show Grid**, grid spacing, and a **Snap** button cycling Off, Grid, Markers, and
+Grid + Markers. Guides stay anchored to the town while you inspect it. They are
+temporary and never enter Viewer/Blender saves. Opening another town clears them.
+See the [town-authoring contract](../../docs/architecture/town-authoring.md) for
+ownership, limits, save behavior and validation.

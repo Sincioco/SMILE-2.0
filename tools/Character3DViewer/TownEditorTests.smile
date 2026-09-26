@@ -10,6 +10,8 @@ Import Smile.Tools.TownCatalogData As Catalog
 Import Smile.Tools.TownInitialSurface As Initial
 Import Smile.Tools.TownDocumentStore As Storage
 Import Smile.Tools.TownWorldDocument As World
+Import Smile.Tools.TownGuides As Guides
+Import Smile.Tools.TownHistory As History
 
 Dim Town As Document.State
 Dim Selected As Selection.State
@@ -25,6 +27,11 @@ Dim LoadedMap As World.State
 Dim RequestId As Number
 Dim BadBytes[8] As Number
 Dim Status As Number
+Dim Guide As Guides.State
+Dim Journal As History.State
+Dim Point As P.Vector3
+Dim Identity As Number
+Dim BeforeSurface As Number
 
 Ok = Grid.Initialize(Surface, 12, 10, -40.0, -20.0, 20.0, Grid.SURFACE_GROUND)
 
@@ -189,6 +196,8 @@ RequestId = Storage.QueueBlender(Town, 2)
 
 Call Check(RequestId > 0, "Complete Blender Request Is Written Atomically")
 
+Call CheckEditing()
+
 If Failures = 0 Then
     Print "PASS Town Editor Foundations"
 Else
@@ -201,5 +210,157 @@ Sub Check(Condition As Boolean, Label As Text)
         Failures = Failures + 1
         Print "FAIL " + Label
     End If
+
+End Sub
+
+Sub CheckEditing()
+
+    Ok = Document.Blank(Town, "History Fixture", 20, 20, 20.0)
+    Sample = Catalog.InitialItem(0)
+    Sample.Yaw = 35.0
+    Placed = Document.Place(Town, Sample, 13.0, 47.0)
+    Placed = Document.Place(Town, Sample, 53.0, 47.0)
+
+    Call Guides.Start(Guide)
+    Call Selection.SetCategory(Selected, Sample.Category)
+
+    Ok = Selection.Add(Selected, Town, 0)
+    Ok = Selection.Add(Selected, Town, 1) And Ok
+
+    Call History.Reset(Journal, Town, Guide.Ink)
+
+    Guide.SnapMode = 1
+
+    Call Selection.BeginDrag(Selected, Town, P.Vector(18.0, 23.12, 45.0))
+    Call Selection.DragSnapped(Selected, Town, P.Vector(18.0, 23.12, 45.0), Guide, 5.0)
+    Call Check(Town.Items[0].Position.X = 13.0 And Not Selected.Changed,
+        "Selecting An Off-Grid Item Does Not Snap Or Move It")
+    Call Selection.DragSnapped(Selected, Town, P.Vector(27.0, 23.12, 50.0), Guide, 5.0)
+    Call Check(Town.Items[0].Position.X = 20.0 And Town.Items[0].Position.Z = 60.0 And
+        Town.Items[1].Position.X = 60.0, "Grid Snaps Assembly Origin And Preserves Group Spacing")
+    Call Selection.EndDrag(Selected, Town, False)
+    Call History.Record(Journal, Town, Guide.Ink)
+    Call History.Record(Journal, Town, Guide.Ink)
+    Call Check(History.UndoCount(Journal) = 1, "Complete Group Drag Is One Undo Step")
+
+    Ok = History.Restore(Journal, Town, Guide.Ink, False)
+
+    Call Check(Ok And Town.Items[0].Position.X = 13.0 And Town.Items[1].Position.X = 53.0,
+        "Undo Restores The Whole Group")
+
+    Ok = History.Restore(Journal, Town, Guide.Ink, True)
+    Ok = Selection.Duplicate(Selected, Town, 20.0) And Ok
+
+    Call History.Record(Journal, Town, Guide.Ink)
+    Call Check(Ok And Town.ItemCount = 4 And Selected.SelectedCount = 2 And
+        Selected.Selected[2] And Not Selected.Selected[0] And Town.Items[2].Yaw = 35.0 And
+        Town.Items[2].Scale.X = Sample.Scale.X And Town.Items[2].Position.Y = Sample.Position.Y And
+        Town.Items[2].Position.X = 40.0 And Town.Items[3].Position.X = 80.0,
+        "Duplicate Selects New Identities And Preserves Every Authored Transform")
+
+    Identity = Town.Items[3].Identity
+    Ok = History.Restore(Journal, Town, Guide.Ink, False)
+
+    Call Check(Ok And Town.ItemCount = 2, "Undo Removes A Duplicate Group")
+
+    Ok = History.Restore(Journal, Town, Guide.Ink, True)
+    Town.Name = "Saved Version"
+    Town.SavedRevision = Town.Revision
+    Revision = Town.SavedRevision
+    BeforeSurface = Town.Surface.Revision
+
+    Call Grid.PaintRectangle(Town.Surface, 1, 1, 3, 3, Grid.SURFACE_WATER)
+
+    Town.Revision = Town.Revision + 1
+
+    Call History.Record(Journal, Town, Guide.Ink)
+
+    Ok = History.Restore(Journal, Town, Guide.Ink, False)
+
+    Call Check(Ok And Grid.ReadCell(Town.Surface, 2, 2) = Grid.SURFACE_GROUND And
+        Town.Surface.Revision > BeforeSurface And Town.Name = "Saved Version" And
+        Town.SavedRevision = Revision, "Undo Rebuilds Terrain Without Rolling Back Save Identity")
+
+    Ok = History.Restore(Journal, Town, Guide.Ink, True)
+
+    Call Check(Ok And Grid.ReadCell(Town.Surface, 2, 2) = Grid.SURFACE_WATER, "Redo Restores Painted Water")
+
+    Ok = History.Restore(Journal, Town, Guide.Ink, False)
+    Placed = Document.Place(Town, Sample, 99.0, 99.0)
+
+    Call History.Record(Journal, Town, Guide.Ink)
+    Call Check(History.RedoCount(Journal) = 0 And Town.Items[Placed].Identity > Identity,
+        "New Edit Discards Redo Without Reusing Item Identities")
+
+    For X = 1 To 25
+        Town.Light.Ambient = X
+        Town.Revision = Town.Revision + 1
+
+        Call History.Record(Journal, Town, Guide.Ink)
+    End For
+
+    Call Check(History.UndoCount(Journal) = 20, "History Retains Twenty Bounded Undo Steps")
+
+    For X = 1 To 20
+        Ok = History.Restore(Journal, Town, Guide.Ink, False)
+    End For
+
+    Call Check(Ok And Town.Light.Ambient = 5 And History.UndoCount(Journal) = 0,
+        "Wrapped History Restores Lighting In Order")
+
+    Revision = Town.Revision
+    BeforeSurface = Town.Surface.Revision
+    Town.SavedRevision = Town.Revision
+
+    Call History.Reset(Journal, Town, Guide.Ink)
+
+    Ok = Guides.Add(Guide.Ink, P.Vector(0.0, 0.0, 0.0), P.Vector(100.0, 0.0, 0.0), False)
+    Ok = Guides.Add(Guide.Ink, P.Vector(30.0, 0.0, 30.0), P.Vector(80.0, 0.0, 70.0), True) And Ok
+
+    Call History.Record(Journal, Town, Guide.Ink)
+    Call Guides.ClearMarkers(Guide.Ink)
+    Call History.Record(Journal, Town, Guide.Ink)
+
+    Ok = History.Restore(Journal, Town, Guide.Ink, False) And Ok
+
+    Call Check(Ok And Guide.Ink.EntryCount = 2 And Town.Revision = Revision And
+        Town.Surface.Revision = BeforeSurface And Not Document.Dirty(Town),
+        "Clear Markers Is Undoable Without Mutating The Saved Town Or Terrain")
+
+    Guide.SnapMode = 2
+    Point = Guides.Snap(Guide, P.Vector(99.0, 47.0, 2.0), 5.0)
+
+    Call Check(Point.X = 100.0 And Point.Z = 0.0 And Point.Y = 47.0,
+        "Marker Endpoints Snap Without Changing Height")
+
+    Point = Guides.Snap(Guide, P.Vector(50.0, 0.0, 2.0), 5.0)
+
+    Call Check(Point.X = 50.0 And Point.Z = 0.0, "Line Interior Snaps To Nearest Segment")
+
+    Point = Guides.Snap(Guide, P.Vector(50.0, 0.0, 32.0), 5.0)
+
+    Call Check(Point.X = 50.0 And Point.Z = 30.0, "Rectangle Edge Is A Snap Guide")
+
+    Point = Guides.Snap(Guide, P.Vector(78.0, 0.0, 68.0), 5.0)
+
+    Call Check(Point.X = 80.0 And Point.Z = 70.0, "Rectangle Corner Takes Priority")
+
+    Point = Guides.Snap(Guide, P.Vector(-31.0, 0.0, -51.0), 5.0)
+
+    Call Check(Point.X = -31.0 And Point.Z = -51.0, "Distant Markers Do Not Attract Placement")
+
+    Guide.SnapMode = 3
+    Point = Guides.Snap(Guide, P.Vector(-31.0, 0.0, -51.0), 5.0)
+
+    Call Check(Point.X = -40.0 And Point.Z = -60.0, "Combined Mode Falls Back To Grid At Negative Coordinates")
+
+    Point = Guides.Snap(Guide, P.Vector(50.0, 0.0, 32.0), 5.0)
+
+    Call Check(Point.X = 50.0 And Point.Z = 30.0, "Nearby Marker Takes Priority Over Grid")
+
+    Guide.SnapMode = 0
+    Point = Guides.Snap(Guide, P.Vector(11.5, 0.0, 12.5), 5.0)
+
+    Call Check(Point.X = 11.5 And Point.Z = 12.5, "Snap Off Preserves Free Placement")
 
 End Sub

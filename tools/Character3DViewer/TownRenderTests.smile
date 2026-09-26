@@ -16,6 +16,10 @@ Import Smile.Tools.TownLighting As Lighting
 Import Smile.Tools.TownAttachments As Attachments
 Import Smile.Tools.TownDocumentNavigation As Navigation
 Import Smile.Tools.TownEditor As Editor
+Import Smile.Tools.TownGuides As Guides
+Import Smile.Tools.TownSelection As Selection
+Import Smile.Tools.TownHistory As History
+Import Smile.Tools.TownEditorPanel As Panel
 
 Dim Town As Document.State
 Dim Assets As Renderer.State
@@ -31,8 +35,14 @@ Dim Meshes[512] As Number
 Dim Temporary As Core.Object3D
 Dim Controls As Editor.State
 Dim UntilTime As Number
+Dim Action As Number
 
 Game Window "Town Editor Catalog Check" Size 1100 By 720
+
+Call Check(Panel.ContainsPoint(1050, 220, 1100, 720) And
+    Not Panel.ContainsPoint(1050, 695, 1100, 720) And
+    Not Panel.ContainsPoint(220, 528, 1100, 720),
+    "Editor Hit Region Excludes Orbit Fit And Camera Sliders")
 
 For Index = 0 To 511
     Meshes[Index] = G.CreateMesh3D(3, 3)
@@ -114,6 +124,41 @@ Show Screen
 Call Editor.Start(Controls)
 
 Town.Name = "Neris Town"
+Town.NextIdentity = Town.ItemCount + 1
+Before = Town.ItemCount
+Ok = Selection.Add(Controls.Selected, Town, 0)
+Action = Editor.Command(Controls, Town, 34)
+
+Call Check(Ok And Town.ItemCount = Before + 1, "Duplicate Command Creates A Selected Assembly")
+
+Action = Editor.Command(Controls, Town, 32)
+
+Call Check(Town.ItemCount = Before, "Undo Button Restores The Document")
+
+Action = Editor.Command(Controls, Town, 33)
+
+Call Check(Town.ItemCount = Before + 1, "Redo Button Restores The Duplicate")
+
+Action = Editor.Command(Controls, Town, 32)
+Action = Editor.Command(Controls, Town, 53)
+Action = Editor.Command(Controls, Town, 73)
+Action = Editor.Command(Controls, Town, 74)
+Ok = Guides.Add(Controls.Guide.Ink, P.Vector(-1400.0, 23.12, -2100.0),
+    P.Vector(-900.0, 23.12, -1100.0), True)
+Ok = Guides.Add(Controls.Guide.Ink, P.Vector(-1400.0, 23.12, -2100.0),
+    P.Vector(200.0, 23.12, -1100.0), False) And Ok
+
+Call History.Record(Controls.HistoryState, Town, Controls.Guide.Ink)
+
+Action = Editor.Command(Controls, Town, 72)
+
+Call Check(Ok And Controls.Guide.Ink.EntryCount = 0, "Clear Markers Command")
+
+Action = Editor.Command(Controls, Town, 32)
+
+Call Check(Controls.Guide.Ink.EntryCount = 2 And Controls.Guide.ShowGrid And
+    Controls.Guide.SnapMode = 1, "Undo Restores Guides Without Changing Grid Preferences")
+
 UntilTime = Timer() + 1000
 
 Do

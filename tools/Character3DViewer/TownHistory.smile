@@ -1,0 +1,158 @@
+''' Bounded in-memory edit history; file identity and save state stay with the live document.
+Module Smile.Tools.TownHistory
+
+Option Explicit
+
+Import Smile.Tools.TownDocument As Document
+Import Smile.Tools.TownGuides As Guides
+
+Public Const CAPACITY = 21
+
+Public Type Snapshot
+    Town As Document.State
+    Ink As Guides.Drawing
+    TownChanged As Boolean
+    SurfaceChanged As Boolean
+End Type
+
+Public Type State
+    Entries[21] As Snapshot
+    First As Number
+    EntryCount As Number
+    Cursor As Number
+    TownRevision As Number
+    SurfaceRevision As Number
+    InkRevision As Number
+End Type
+
+Public Sub Reset(ByRef Value As State, ByRef Town As Document.State, ByRef Ink As Guides.Drawing)
+
+    Value.First = 0
+    Value.EntryCount = 1
+    Value.Cursor = 0
+    Value.Entries[0].Town = Town
+    Value.Entries[0].Ink = Ink
+    Value.TownRevision = Town.Revision
+    Value.SurfaceRevision = Town.Surface.Revision
+    Value.InkRevision = Ink.Revision
+
+End Sub
+
+Public Sub Ensure(ByRef Value As State, ByRef Town As Document.State, ByRef Ink As Guides.Drawing)
+
+    If Value.EntryCount = 0 Then
+        Call Reset(Value, Town, Ink)
+    End If
+
+End Sub
+
+Public Sub Record(ByRef Value As State, ByRef Town As Document.State, ByRef Ink As Guides.Drawing)
+
+    Dim Index As Number
+
+    Call Ensure(Value, Town, Ink)
+
+    If Value.TownRevision = Town.Revision And Value.InkRevision = Ink.Revision Then
+        Return
+    End If
+
+    Value.EntryCount = Value.Cursor + 1
+
+    If Value.EntryCount = CAPACITY Then
+        Value.First = (Value.First + 1) Mod CAPACITY
+        Value.EntryCount = Value.EntryCount - 1
+    End If
+
+    Index = (Value.First + Value.EntryCount) Mod CAPACITY
+    Value.Entries[Index].Town = Town
+    Value.Entries[Index].Ink = Ink
+    Value.Entries[Index].TownChanged = Value.TownRevision <> Town.Revision
+    Value.Entries[Index].SurfaceChanged = Value.SurfaceRevision <> Town.Surface.Revision
+    Value.EntryCount = Value.EntryCount + 1
+    Value.Cursor = Value.EntryCount - 1
+    Value.TownRevision = Town.Revision
+    Value.SurfaceRevision = Town.Surface.Revision
+    Value.InkRevision = Ink.Revision
+
+End Sub
+
+Public Function UndoCount(ByRef Value As State) As Number
+
+    Dim Result As Number
+
+    Result = Value.Cursor
+
+    Return Result
+
+End Function
+
+Public Function RedoCount(ByRef Value As State) As Number
+
+    Dim Result As Number
+
+    Result = Max(0, Value.EntryCount - Value.Cursor - 1)
+
+    Return Result
+
+End Function
+
+Public Function Restore(ByRef Value As State, ByRef Town As Document.State,
+    ByRef Ink As Guides.Drawing, Redo As Boolean) As Boolean
+
+    Dim Index As Number
+    Dim Item As Number
+    Dim SurfaceRevision As Number
+    Dim InkRevision As Number
+    Dim Before As Number
+
+    If (Redo And RedoCount(Value) = 0) Or (Not Redo And UndoCount(Value) = 0) Then
+        Return False
+    End If
+
+    Before = (Value.First + Value.Cursor) Mod CAPACITY
+
+    If Redo Then
+        Value.Cursor = Value.Cursor + 1
+    Else
+        Value.Cursor = Value.Cursor - 1
+    End If
+
+    Index = (Value.First + Value.Cursor) Mod CAPACITY
+
+    If Redo Then
+        Before = Index
+    End If
+
+    If Value.Entries[Before].TownChanged Then
+
+        If Value.Entries[Before].SurfaceChanged Then
+
+            SurfaceRevision = Town.Surface.Revision + 1
+            Town.Surface = Value.Entries[Index].Town.Surface
+            Town.Surface.Revision = SurfaceRevision
+
+        End If
+
+        Town.ItemCount = Value.Entries[Index].Town.ItemCount
+        Town.NextIdentity = Max(Town.NextIdentity, Value.Entries[Index].Town.NextIdentity)
+        Town.Light = Value.Entries[Index].Town.Light
+        Town.Revision = Town.Revision + 1
+
+        For Item = 0 To Document.MAX_ITEMS - 1
+            Town.Items[Item] = Value.Entries[Index].Town.Items[Item]
+        End For
+
+    End If
+
+    InkRevision = Ink.Revision + 1
+    Ink = Value.Entries[Index].Ink
+    Ink.Revision = InkRevision
+    Value.TownRevision = Town.Revision
+    Value.SurfaceRevision = Town.Surface.Revision
+    Value.InkRevision = Ink.Revision
+
+    Return True
+
+End Function
+
+End Module

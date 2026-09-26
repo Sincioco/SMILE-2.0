@@ -6,6 +6,9 @@ Option Explicit
 Import Smile.Simple3D.Precision3D As P
 Import Smile.Simple3D.PrecisionMath3D As M
 Import Smile.Tools.TownDocument As Document
+Import Smile.Tools.TownCatalogData As Catalog
+Import Smile.Tools.TownGeometry As Geometry
+Import Smile.Tools.TownGuides As Guides
 
 Public Type State
     Category As Number
@@ -101,6 +104,36 @@ Public Sub Drag(ByRef Value As State, ByRef Town As Document.State, Current As P
 
 End Sub
 
+Public Sub DragSnapped(ByRef Value As State, ByRef Town As Document.State,
+    Current As P.Vector3, ByRef Guide As Guides.State, Radius As Double)
+
+    Dim Index As Number
+    Dim Desired As P.Vector3
+
+    ' Selecting an off-grid item must not move it until the pointer starts a drag.
+
+    If (Guide.SnapMode > 0 And Not Value.Changed And
+        M.Length(M.Subtract(Current, Value.Anchor)) < Max(0.001, Radius / 7.0)) Then
+        Return
+    End If
+
+    For Index = 0 To Town.ItemCount - 1
+
+        If Value.Selected[Index] Then
+
+            Desired = M.Add(Value.Original[Index], M.Subtract(Current, Value.Anchor))
+            Desired = Guides.Snap(Guide, Desired, Radius)
+            Current = M.Add(Value.Anchor, M.Subtract(Desired, Value.Original[Index]))
+            Exit For
+
+        End If
+
+    End For
+
+    Call Drag(Value, Town, Current)
+
+End Sub
+
 Public Sub EndDrag(ByRef Value As State, ByRef Town As Document.State, Cancelled As Boolean)
 
     Dim Index As Number
@@ -164,5 +197,69 @@ Public Sub RemoveSelected(ByRef Value As State, ByRef Town As Document.State)
     Call ClearSelection(Value)
 
 End Sub
+
+Public Function Duplicate(ByRef Value As State, ByRef Town As Document.State, Offset As Double) As Boolean
+
+    Dim Index As Number
+    Dim EntryCount As Number
+    Dim Free As Number
+    Dim Cost As Number
+    Dim Water As Number
+    Dim Copies[1024] As Number
+    Dim Shape As Catalog.Template
+    Dim Sample As Document.Item
+    Dim OriginalCount As Number
+    Dim Ok As Boolean
+
+    If Value.SelectedCount = 0 Then
+        Return False
+    End If
+
+    Free = Document.MAX_ITEMS - Town.ItemCount
+
+    For Index = 0 To Town.ItemCount - 1
+
+        If Not Town.Items[Index].Active Then
+
+            Free = Free + 1
+
+        Else If Value.Selected[Index] Then
+
+            Shape = Catalog.TemplateAt(Town.Items[Index].Template)
+            Cost = Cost + Shape.PartCount + Shape.DoorCount * 4 + Shape.WaterCount
+            Water = Water + Shape.WaterCount
+
+        End If
+
+    End For
+
+    If (Free < Value.SelectedCount Or Geometry.DrawCost(Town) + Cost > 3500 Or
+        Geometry.WaterCount(Town) + Water > 160) Then
+        Return False
+    End If
+
+    OriginalCount = Town.ItemCount
+
+    For Index = 0 To OriginalCount - 1
+
+        If Value.Selected[Index] Then
+
+            Sample = Town.Items[Index]
+            Copies[EntryCount] = Document.Place(Town, Sample, Sample.Position.X + Offset, Sample.Position.Z)
+            EntryCount = EntryCount + 1
+
+        End If
+
+    End For
+
+    Call ClearSelection(Value)
+
+    For Index = 0 To EntryCount - 1
+        Ok = Add(Value, Town, Copies[Index])
+    End For
+
+    Return True
+
+End Function
 
 End Module

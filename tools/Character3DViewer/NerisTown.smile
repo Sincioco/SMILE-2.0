@@ -179,9 +179,10 @@ Public Sub Input(ByRef Value As State, Key As Number, Blocked As Boolean)
     End If
 
     If Value.Edited Then
-        Call Authoring.Input(Value.View.LiveCamera, Key, Blocked)
+        Call Authoring.Input(Value.View.LiveCamera, Key,
+            Blocked Or CameraPanel.Hovered() Or Value.Panel.DragRow > 0)
 
-        Blocked = Blocked Or Authoring.CameraBlocked()
+        Blocked = Blocked Or Authoring.CameraBlocked(CameraPanel.Hovered() Or Value.Panel.DragRow > 0)
     End If
 
     Value.InputActive = (Key <> KEY_NONE Or Pointer_Delta_X() <> 0 Or
@@ -486,7 +487,7 @@ Public Sub Update(ByRef Value As State, Elapsed As Number)
         Direction = WalkDirection(Value.View.LiveCamera, False)
     End If
 
-    If Authoring.CameraBlocked() Then
+    If Authoring.CameraBlocked() Or (Authoring.Editing() And Key_Held(KEY_CONTROL)) Then
         Direction = P.Vector(0.0, 0.0, 0.0)
     End If
 

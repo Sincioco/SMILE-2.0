@@ -9,6 +9,8 @@
     <SmileSource Include="TownRenderTests.smile" StartupOnly="true" />
     <SmileSource Include="TownDocument.smile" />
     <SmileSource Include="TownSelection.smile" />
+    <SmileSource Include="TownGuides.smile" />
+    <SmileSource Include="TownHistory.smile" />
     <SmileSource Include="TownPicking.smile" />
     <SmileSource Include="TownEditorPanel.smile" />
     <SmileSource Include="TownEditor.smile" />

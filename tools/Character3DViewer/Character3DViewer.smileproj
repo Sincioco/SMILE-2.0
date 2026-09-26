@@ -25,6 +25,8 @@
     <SmileSource Include="TownWorldEditor.smile" />
     <SmileSource Include="TownEditorSession.smile" />
     <SmileSource Include="TownSelection.smile" />
+    <SmileSource Include="TownGuides.smile" />
+    <SmileSource Include="TownHistory.smile" />
     <SmileSource Include="TownCatalogData.smile" />
     <SmileSource Include="TownCatalogFeatures.smile" />
     <SmileSource Include="TownInitialSurface.smile" />

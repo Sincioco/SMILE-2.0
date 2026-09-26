@@ -291,6 +291,9 @@ Public Sub Compose(ByRef Value As State, ByRef View As Arena.State,
     Lift = Max(0.0, 25.01 - View.LiveCamera.Position.Y)
     View.LiveCamera.Position.Y = View.LiveCamera.Position.Y + Lift
     View.LiveCamera.Target.Y = View.LiveCamera.Target.Y + Lift
+    ' Elevated town views need more depth precision than a nearby character shot.
+    ' The 6.2 cm bridge paving/deck gap otherwise collapses in the 24-bit buffer.
+    View.LiveCamera.NearPlane = Max(25.0, (View.LiveCamera.Position.Y - 25.0) * 0.05)
     Value.Focusing = Value.Focusing And View.TransitionDuration > 0
 
 End Sub
